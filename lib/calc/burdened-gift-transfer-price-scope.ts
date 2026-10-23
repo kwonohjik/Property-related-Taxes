@@ -35,6 +35,7 @@ import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 import { isFullFractionalBundle } from "./transfer-tax-api-asset-basics";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { burdenedGiftPerAssetTotals } from "@/lib/tax-engine/burdened-gift-totals";
+import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 
 /**
  * 이 자산의 양도가액을 **엔진이 스스로 산정**하는가(= 입력칸이 없고, 넣어도 쓰이지 않는다).
@@ -109,6 +110,7 @@ export function stdPriceAtTransferComesFromElsewhere(asset: AssetForm): boolean 
        * 환산 분모로 양도시 기준시가를 쓴다(소령 §176의2②2호 · ④가 `standardPriceAtTransfer`를
        * 그대로 싣는다) — 그때는 공용 칸이 있어야 한다(2026-09-30 B2).
        */
-      (asset.bgValuationMode === "sangjeungbeop_market" && asset.bgAcquisitionMethod !== "converted"))
+      // 의제취득일 전 상속·증여 토지·주택(시가)은 ③의 분모를 상속·증여 의제 섹션의 칸이 받는다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18).
+      (asset.bgValuationMode === "sangjeungbeop_market" && (asset.bgAcquisitionMethod !== "converted" || isBgPreDeemedAsset(asset))))
   );
 }

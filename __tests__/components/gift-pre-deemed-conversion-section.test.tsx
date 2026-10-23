@@ -39,10 +39,17 @@ describe("③ 카드 노출", () => {
     expect(within(card).getByText(/위 §164④ 토지등급을 모두 입력하면/)).toBeTruthy();
   });
 
-  it("1988 증여 · 부담부증여 · 상속 → 카드 없음", () => {
+  it("부담부증여(기준시가 평가) → 의제취득일 기준시가 카드 (계획서 §18 Q-25 — 종전에는 카드 없음)", () => {
+    cause(gift({ transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_standard" }));
+    const card = screen.getByTestId("gift-pre-deemed-conversion");
+    expect(within(card).getByText("의제취득일(1985.1.1.) 전 증여 — 의제취득일 기준시가")).toBeTruthy();
+    // 양도시 기준시가는 부담부증여 양도정보 칸이 받는다 — 여기 중복하지 않는다
+    expect(within(card).queryByText("양도시 기준시가")).toBeNull();
+  });
+
+  it("1988 증여 · 상속 → 카드 없음", () => {
     for (const a of [
       gift({ acquisitionDate: "1988-03-01" }),
-      gift({ transferType: "burdened_gift" }),
       gift({ acquisitionCause: "inheritance", inheritanceStartDate: "1980-03-01" }),
     ]) {
       cause(a);

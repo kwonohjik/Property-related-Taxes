@@ -49,6 +49,7 @@ import {
   apportionAcquisitionPrice,
   estimatedDeductionForBurdenedGift,
   fractionalHighValueDenominator,
+  withDeemedAcquisitionStd,
 } from "./burdened-gift-valuation";
 
 export {
@@ -100,8 +101,22 @@ export function buildBurdenedGiftBreakdown(params: {
    * 미전달·1.0이면 완전 무변경(단독 소유).
    */
   ownershipRatio?: number;
+  /**
+   * 의제취득일(1985.1.1.) 전 상속·증여 자산 — STEP 0.45 결과(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18).
+   * 취득시 기준시가 슬롯을 의제취득일 기준시가(`stdAtDeemed`, 물건 전체)로 바꾸고(Q-25 · 개산공제 base도 같다),
+   * 괄호 미발동이면 `acquisition`(①②③ 중 큰 금액, 지분 축소 후·안분 전)을 사용자가 고른 산정방식 대신 쓴다(Q-24).
+   */
+  preDeemed?: {
+    stdAtDeemed: number;
+    acquisition: number;
+    selected: "reported" | "sec164" | "converted";
+    reported: number | null;
+    sec164: number | null;
+    converted: number;
+  };
 }): TransferBurdenedGiftBreakdown {
-  const { info: rawInfo, isUnregistered = false, ownershipRatio } = params;
+  const { isUnregistered = false, ownershipRatio, preDeemed } = params;
+  const rawInfo = preDeemed ? withDeemedAcquisitionStd(params.info, preDeemed.stdAtDeemed) : params.info;
 
   // 지분 축소는 **여기 한 곳**에서만 한다 — 이하 로직은 이미 지분분이 된 값을 그대로 쓴다.
   // params의 기준시가 4필드는 info와 동일 소스(step 배선)이므로 스케일된 info에서 되읽는다.
@@ -294,9 +309,37 @@ export function buildBurdenedGiftBreakdown(params: {
 
   if (acqStdPriceForced) {
     // K-1~K-3: 취득시 기준시가 × 채무비율 (A괄호). 분모 giftValuation.max (Excel 정합).
+    //   의제취득일 전 자산은 그 기준시가가 의제취득일 기준시가다(위 `withDeemedAcquisitionStd` — Q-25). 없으면 취득가액 0이 되어 막히지 않는 오답이다.
+    if (preDeemed && landStdPriceAtAcquisition + buildingStdPriceAtAcquisition <= 0) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        "[burdened_gift] 의제취득일(1985.1.1.) 전에 취득한 자산을 기준시가로 평가해 부담부증여하면 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 " +
+          "취득가액을 의제취득일 현재 기준시가(같은 영 제164조 제4항~제7항)로 산정해야 합니다. 의제취득일 기준시가를 입력하세요.",
+      );
+    }
     acquisitionMethodUsed = "standard_price";
     landAcquisitionPrice = apportionAcquisitionPrice(landStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
     buildingAcquisitionPrice = apportionAcquisitionPrice(buildingStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
+  } else if (preDeemed) {
+    // 의제취득일 전 상속·증여 × 시가 평가 (Q-24): A = max(①,②,③) — 안분 전 전체 금액으로 고른 값 — × B/C.
+    //   ①② = 실지거래가액 의제(영 §163⑨)라 실제 필요경비, ③ = 환산(영 §176조의2④)이라 개산공제 + §97②2호 단서(STEP 5·5.5가 그대로 처리).
+    //   토지·건물은 의제취득일 기준시가 비율로 나눈다(K-4 단일 총액과 같은 근거). 사용자가 고른 산정방식은 이 구간에서 쓰지 않는다.
+    acquisitionMethodUsed = preDeemed.selected === "converted" ? "converted" : "actual";
+    const totalAcqStd = landStdPriceAtAcquisition + buildingStdPriceAtAcquisition;
+    const totalTransferStd = landStdPriceAtTransfer + buildingStdPriceAtTransfer;
+    const landWhole =
+      totalAcqStd > 0
+        ? safeMultiplyThenDivide(preDeemed.acquisition, landStdPriceAtAcquisition, totalAcqStd)
+        : totalTransferStd > 0
+          ? safeMultiplyThenDivide(preDeemed.acquisition, landStdPriceAtTransfer, totalTransferStd)
+          : preDeemed.acquisition;
+    const buildingWhole = preDeemed.acquisition - landWhole;
+    if (acquisitionMethodUsed === "actual") {
+      landActualAcquisition = landWhole;
+      buildingActualAcquisition = buildingWhole;
+    }
+    landAcquisitionPrice = apportionAcquisitionPrice(landWhole, assumedDebtAmount, giftValuation.max);
+    buildingAcquisitionPrice = apportionAcquisitionPrice(buildingWhole, assumedDebtAmount, giftValuation.max);
   } else if (info.acquisitionMethod === "actual" || isRightToMoveInValuation) {
     // K-4: 실지취득가액 × 채무비율 (§159①1호 본문).
     //   조합원입주권은 **항상 이 경로**다 — §166①1호가 쓰는 취득가액이 「기존건물과 그 부수토지의
@@ -618,6 +661,21 @@ export function buildBurdenedGiftBreakdown(params: {
     gratuitousPortion,
     taxpayer: "donor",
     acquisitionMethodUsed,
+    ...(preDeemed
+      ? {
+          preDeemed: acqStdPriceForced
+            ? { basis: "deemed_std" as const, stdAtDeemed: preDeemed.stdAtDeemed }
+            : {
+                basis: "three_way" as const,
+                stdAtDeemed: preDeemed.stdAtDeemed,
+                reported: preDeemed.reported,
+                sec164: preDeemed.sec164,
+                converted: preDeemed.converted,
+                selected: preDeemed.selected,
+                wholeAcquisition: preDeemed.acquisition,
+              },
+        }
+      : {}),
     ...(necessaryExpenseSwap ? { necessaryExpenseSwap } : {}),
     ...(convertedAcquisitionBeforeSwap ? { convertedAcquisitionBeforeSwap } : {}),
     ...(carryoverGiftTax ? { carryoverGiftTax } : {}),

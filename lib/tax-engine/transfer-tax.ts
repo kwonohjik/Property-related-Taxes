@@ -179,7 +179,7 @@ export function calculateTransferTax(
     //      post-deemed의 「채택 여부가 아니라 확인 가능 여부」 계약을 명시적으로 표현하는 지점이기도 하다.
     let redevInput = effectiveInput;
     if (
-      effectiveInput.acquisitionCause === "inheritance" &&
+      effectiveInput.acquisitionCause === "inheritance" && !transferBurdenedGiftBreakdown /* 부담부증여는 §159 채무비율 안분값을 덮지 않는다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18 결함 R) */ &&
       options?.acquisitionOverride === undefined
     ) {
       const inhAcqPrice = resolveInheritedRedevelopmentAcqPrice(inheritedAcquisitionStep);

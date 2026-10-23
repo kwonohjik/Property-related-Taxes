@@ -31,6 +31,7 @@ import {
   mixedBgHousingAppraisal,
   mixedTransferStdTotal,
 } from "./burdened-gift-mixed-use-scope";
+import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 
 export interface BurdenedGiftInfoPayload {
   valuationMode: "sangjeungbeop_standard" | "sangjeungbeop_market";
@@ -298,6 +299,9 @@ export function buildBurdenedGiftInfo(
     debtScaleRatio !== undefined && debtScaleRatio > 0 && debtScaleRatio < 1;
   /** 채무 성분 전용 — 평가액·기준시가에는 쓰지 않는다(엔진 `scaleBurdenedGiftInfo` 소관). */
   const d = (v: number): number => (scaleDebt ? applyRatio(v, debtScaleRatio!) : v);
+  // 의제취득일 전 상속·증여 토지·주택 — §159①1호 A를 엔진이 STEP 0.45 결과(3자 max·의제취득일 기준시가)로 정한다(계획서
+  // inheritance-pre-deemed-clause-b-revisit.plan.md §18). ⑤가 산정방식 라디오·방식별 금액 칸을 숨기므로 남은 값을 싣지 않는다.
+  const preDeemed = isBgPreDeemedAsset(primary);
   const common = {
     valuationMode: (primary.bgValuationMode || "sangjeungbeop_standard") as
       | "sangjeungbeop_standard"
@@ -315,17 +319,17 @@ export function buildBurdenedGiftInfo(
       ? parseAmount(primary.bgMarketValueAtAcquisition)
       : undefined,
     // K-4/K-5 취득가액 산정방식 (시가 모드). 미선택 시 undefined → 엔진 backward-compat.
-    acquisitionMethod: primary.bgAcquisitionMethod || undefined,
+    acquisitionMethod: preDeemed ? undefined : primary.bgAcquisitionMethod || undefined,
     actualLandAcquisitionPrice:
-      usesActualAcquisitionFields(primary) && primary.bgActualAcquisitionLand
+      !preDeemed && usesActualAcquisitionFields(primary) && primary.bgActualAcquisitionLand
         ? parseAmount(primary.bgActualAcquisitionLand) || undefined
         : undefined,
     actualBuildingAcquisitionPrice:
-      usesActualAcquisitionFields(primary) && primary.bgActualAcquisitionBuilding
+      !preDeemed && usesActualAcquisitionFields(primary) && primary.bgActualAcquisitionBuilding
         ? parseAmount(primary.bgActualAcquisitionBuilding) || undefined
         : undefined,
     actualAcquisitionTotal:
-      usesActualAcquisitionFields(primary) && primary.bgActualAcquisitionTotal
+      !preDeemed && usesActualAcquisitionFields(primary) && primary.bgActualAcquisitionTotal
         ? parseAmount(primary.bgActualAcquisitionTotal) || undefined
         : undefined,
     /**
@@ -334,7 +338,7 @@ export function buildBurdenedGiftInfo(
      * 엔진 STEP 4가 분리 칸이 하나라도 있으면 총액을 무시하므로, 자산 종류를 바꾸고 남은 stale 칸이 새면 안 된다.
      * **0과 미입력은 다르다** — 빈 문자열만 undefined로 떨어뜨린다(`parseAmount("") || undefined`로 쓰면 입력한 0이 둔갑한다).
      */
-    ...buildPresumedAcquisition(primary),
+    ...(preDeemed ? {} : buildPresumedAcquisition(primary)),
     ...buildExtensionAppraisal(primary),
     ...donorBuiltExtensionAppraisal(primary),
     // 증여재산 평가용 건물 기준시가 (층별 가감율 적용 — 미입력 시 양도세용 값 fallback)

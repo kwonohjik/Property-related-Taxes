@@ -141,10 +141,13 @@ function collateralForcesStdAcquisition(bg: BurdenedGiftLike): boolean {
  *   관계 → 직계비속으로 증여세 계산.
  */
 export function refineBurdenedGiftInputs(
-  data: { transferType?: string; burdenedGiftInfo?: BurdenedGiftLike },
+  data: { transferType?: string; burdenedGiftInfo?: BurdenedGiftLike; inheritedAcquisition?: { mode?: string } | null },
   ctx: z.RefinementCtx,
 ) {
   if (data.transferType !== "burdened_gift") return;
+  // 의제취득일 전 상속·증여 자산 — 시가 평가의 §159①1호 A는 엔진이 3자 max로 정해 산정방식·방식별 금액을 읽지 않는다
+  // (계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18 · ⑧ `transfer-tax-validate-bg.ts`도 요구하지 않는다).
+  const preDeemed = data.inheritedAcquisition?.mode === "pre-deemed";
   const issue = issuer(ctx);
   const bg = data.burdenedGiftInfo;
   if (!bg) {
@@ -154,7 +157,9 @@ export function refineBurdenedGiftInputs(
   if (bg.valuationMode === "sangjeungbeop_market") {
     if (!positive(bg.marketValueAtTransfer))
       issue(["burdenedGiftInfo", "marketValueAtTransfer"], "부담부증여 시가 모드는 양도시 시가 평가액이 필요합니다");
-    if (!bg.acquisitionMethod) {
+    if (preDeemed) {
+      // 위 주석 — 3자 max(①②③)
+    } else if (!bg.acquisitionMethod) {
       issue(["burdenedGiftInfo", "acquisitionMethod"], "부담부증여 시가 모드는 취득가액 산정방식(actual·salesCase·appraisal·converted)이 필요합니다 (소득세법 §100①)");
     } else if (collateralForcesStdAcquisition(bg)) {
       // 담보 승 — 엔진이 방식별 금액을 읽지 않는다(아래 함수 주석). ⑤가 그 칸을 숨기고 ⑧도 요구하지 않는다(O-5).
@@ -166,7 +171,7 @@ export function refineBurdenedGiftInputs(
     ) {
       issue(["burdenedGiftInfo", "actualAcquisitionTotal"], "부담부증여 실지취득가액 안분은 실지취득가액이 필요합니다");
     }
-    if ((bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") && !collateralForcesStdAcquisition(bg)) {
+    if (!preDeemed && (bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") && !collateralForcesStdAcquisition(bg)) {
       const label = bg.acquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
       const donor = bg.carryoverDonorBasis;
       if (donor) {
