@@ -46,6 +46,10 @@ import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandV
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { gbLandPreDeemed, GB_PRE_DEEMED_LAND_NOTE } from "@/lib/calc/gb-pre-deemed";
+import { gbBgPre1990LandNote } from "@/lib/calc/gb-pre-deemed";
+import { gbBgUsesStdAcq } from "@/lib/calc/bg-pre-deemed-mode";
+import { bgCollateralParenEraUncertain } from "@/lib/calc/burdened-gift-collateral-win";
+import { BG_COLLATERAL_PAREN_ERA_SUFFIX } from "@/lib/calc/burdened-gift-collateral-win";
 import {
   isGbLandPre1990Sec163_9,
   gbLandAcquisitionDate,
@@ -469,14 +473,25 @@ export function GeneralBuildingAcquisitionCards({
         {isGbLandPre1990Sec163_9(asset) && (
           <ToneCard
             tone="amber"
-            title={`1990.8.30. 이전 ${asset.acquisitionCause === "gift" ? "증여" : "상속"} 토지 — §164④ 등급환산 (소득세법 시행령 §163⑨1호)`}
+            title={`1990.8.30. 이전 ${asset.acquisitionCause === "gift" ? "증여" : "상속"} 토지 — §164④ 등급환산 (소득세법 시행령 ${asset.transferType === "burdened_gift" ? "§159①1호" : "§163⑨1호"})`}
           >
-            <p className="text-xs text-amber-800 dark:text-amber-200">
-              {asset.acquisitionCause === "gift" ? "증여일" : "상속개시일"} 현재 개별공시지가가 고시되기 전이라
-              토지등급으로 환산합니다. 아래 환산값과 {asset.acquisitionCause === "gift" ? "증여 신고가액" : "상속개시일 평가액"} 중{" "}
-              <span className="font-semibold">많은 금액</span>이 토지 취득가액이 됩니다.
-            </p>
-            {gbLandPreDeemed(asset) && (
+            {/* 부담부증여는 §159가 취득가액을 정한다 — §163⑨ 「많은 금액」·§176조의2④ 「셋 중 큰 금액」 안내를 쓰지 않는다(PR-7b-2 G-4). */}
+            {asset.transferType === "burdened_gift" ? (
+              <p data-testid="gb-bg-pre1990-land-note" className="text-xs text-amber-800 dark:text-amber-200">
+                {gbBgPre1990LandNote(
+                  asset,
+                  !gbBgUsesStdAcq(asset) ? "market" : asset.bgValuationMode === "sangjeungbeop_market" ? "collateral" : "standard",
+                  bgCollateralParenEraUncertain(transferDate) ? BG_COLLATERAL_PAREN_ERA_SUFFIX : "",
+                )}
+              </p>
+            ) : (
+              <p className="text-xs text-amber-800 dark:text-amber-200">
+                {asset.acquisitionCause === "gift" ? "증여일" : "상속개시일"} 현재 개별공시지가가 고시되기 전이라
+                토지등급으로 환산합니다. 아래 환산값과 {asset.acquisitionCause === "gift" ? "증여 신고가액" : "상속개시일 평가액"} 중{" "}
+                <span className="font-semibold">많은 금액</span>이 토지 취득가액이 됩니다.
+              </p>
+            )}
+            {asset.transferType !== "burdened_gift" && gbLandPreDeemed(asset) && (
               <p data-testid="gb-pre-deemed-land-note" className="text-xs text-amber-800 dark:text-amber-200">
                 {GB_PRE_DEEMED_LAND_NOTE}
               </p>

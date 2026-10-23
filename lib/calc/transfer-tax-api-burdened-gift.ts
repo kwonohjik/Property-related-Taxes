@@ -32,6 +32,7 @@ import {
   mixedTransferStdTotal,
 } from "./burdened-gift-mixed-use-scope";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
+import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 
 export interface BurdenedGiftInfoPayload {
   valuationMode: "sangjeungbeop_standard" | "sangjeungbeop_market";
@@ -289,10 +290,17 @@ function buildPresumedAcquisition(
  *
  * @param debtScaleRatio 축 B일 때 지분율(0<r<1). 미전달·1.0이면 축 A/단독 — 완전 무변경.
  */
+/**
+ * `buildBurdenedGiftInfo`의 양도일 인자 — 일반건물만 넘긴다(1990.8.30. 전 토지 등급 환산값 · PR-7b-2 G-3). 겸용은 호출부마다 종전대로 둔다.
+ * 엔진 §159는 info의 취득시 기준시가를 읽으므로 카드 info·물건 전체 info(표시 전용)가 같은 값이어야 한다.
+ */
+export const gbBgInfoTransferDate = (asset: AssetForm, transferDate: string | undefined): string | undefined =>
+  asset.assetKind === "general_building" ? transferDate : undefined;
+
 export function buildBurdenedGiftInfo(
   primary: AssetForm,
   debtScaleRatio?: number,
-  /** 겸용 취득시 기준시가 합계의 1990.8.30. 이전 토지 환산 fallback에 쓰는 양도일(폼-전역). 겸용이 아니면 쓰지 않는다. */
+  /** 겸용·일반건물 취득시 기준시가의 1990.8.30. 이전 토지 환산 fallback에 쓰는 양도일(폼-전역). 그 밖의 자산은 쓰지 않는다. */
   transferDate?: string,
 ): BurdenedGiftInfoPayload {
   const scaleDebt =
@@ -413,7 +421,8 @@ export function buildBurdenedGiftInfo(
   if (primary.assetKind === "general_building") {
     const landArea = parseFloat(primary.gbLandArea) || 0;
     const landStdAtTransfer = (parseAmount(primary.gbTransferLandPricePerSqm) || 0) * landArea;
-    const landStdAtAcquisition = (parseAmount(primary.gbAcqLandPricePerSqm) || 0) * landArea;
+    // 1990.8.30. 전 상속·증여 토지는 등급 환산값(⑤ display fallback·⑧과 같은 leaf · PR-7b-2 G-3). 엔진 §159는 이 info 값을 읽는다(route 인자가 아니다).
+    const landStdAtAcquisition = effectiveGbLandPriceAtAcq(primary, transferDate ?? "") * landArea;
     return {
       ...common,
       landStdPriceAtTransfer: Math.floor(landStdAtTransfer),

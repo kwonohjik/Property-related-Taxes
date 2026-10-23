@@ -85,7 +85,8 @@ export function validateGeneralBuildingAsset(
       return fieldError("gbLandArea", `${label}: 토지면적을 입력하세요.`);
     if (!parseAmount(asset.gbTransferLandPricePerSqm))
       return fieldError("gbTransferLandPricePerSqm", `${label}: 양도시 토지 공시지가를 입력하세요.`);
-    if (!parseAmount(asset.gbAcqLandPricePerSqm))
+    // 1990.8.30. 전 상속·증여 토지는 등급 환산값 — ④(`buildBurdenedGiftInfo`)·⑤ display fallback과 같은 leaf(PR-7b-2 G-3)
+    if (!effectiveGbLandPriceAtAcq(asset, formTransferDate ?? ""))
       return fieldError("gbAcqLandPricePerSqm", `${label}: 취득시 토지 공시지가를 입력하세요.`);
     if (!parseAmount(asset.gbTransferBuildingValue))
       return fieldError("gbTransferBuildingValue", `${label}: 양도시 건물기준시가 총액을 입력하세요.`);

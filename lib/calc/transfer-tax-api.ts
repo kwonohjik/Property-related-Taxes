@@ -64,6 +64,7 @@ import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
 import { buildBurdenedGiftInfo, burdenedGiftBundleTotalSalePrice } from "./transfer-tax-api-burdened-gift";
 import { buildCompanionBurdenedGiftWholeInfo } from "./transfer-tax-api-burdened-gift";
+import { gbBgInfoTransferDate } from "./transfer-tax-api-burdened-gift";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 import {
   buildInheritedAcquisitionPayload,
@@ -654,7 +655,7 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
      * 축 B가 아니면 보내지 않는다(단건은 `bgInfo` 자체가 물건 전체다).
      */
     ...(isBurdenedGift && fractionalBundleMerge
-      ? { burdenedGiftWholeInfo: buildBurdenedGiftInfo(primary) }
+      ? { burdenedGiftWholeInfo: buildBurdenedGiftInfo(primary, undefined, gbBgInfoTransferDate(primary, form.transferDate)) }
       : {}),
     /**
      * ⑬ 컴패니언(다른 물건) 함께 부담부증여 — **증여계약 전체 §159 정보**(합산).
@@ -663,7 +664,7 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     ...(companionBgDebtOverrides !== undefined
       ? {
           burdenedGiftWholeInfo: buildCompanionBurdenedGiftWholeInfo(
-            form.assets.map((a) => buildBurdenedGiftInfo(a)),
+            form.assets.map((a) => buildBurdenedGiftInfo(a, undefined, gbBgInfoTransferDate(a, form.transferDate))),
             form.assets.map((a) => getOwnershipRatio(a)),
           ),
         }

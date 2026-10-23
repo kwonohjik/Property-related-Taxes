@@ -65,6 +65,8 @@ import { gbFirstDisclosureUsesLegacyLandTotal } from "@/lib/calc/gb-first-disclo
 import { gbShowsAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { needsGbSec1639BuildingStdPrice } from "@/lib/calc/transfer-tax-validate-gb-required";
 import { gbBuildingPreDeemed, GB_PRE_DEEMED_BUILDING_HINT } from "@/lib/calc/gb-pre-deemed";
+import { gbBgAcqStdBasis, gbLandPreDeemed } from "@/lib/calc/gb-pre-deemed";
+import { isGbLandPre1990Sec163_9, deriveGbPre1990LandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-gb-bridge";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
@@ -210,6 +212,7 @@ export function GeneralBuildingBlock({
    *   · market_collateral — 담보평가(상증법 §66) 승: 산정방식과 무관하게 취득가액 = 취득시 기준시가 × 채무비율(§159①1호 괄호 · O-5)
    * 평가 모드 미선택("")은 ④가 기준시가 모드로 보낸다(`transfer-tax-api-burdened-gift.ts`).
    */
+  const bgPre1990Land = isBurdenedGift && isGbLandPre1990Sec163_9(asset);
   const bgStdUse = !isBurdenedGift
     ? null
     : asset.bgValuationMode !== "sangjeungbeop_market"
@@ -457,13 +460,16 @@ export function GeneralBuildingBlock({
                 <LandPriceLookupField
                   data-field="gbAcqLandPricePerSqm"
                   label="취득시 토지 공시지가"
-                  pricePerSqm={asset.gbAcqLandPricePerSqm}
+                  // 부담부증여 · 1990.8.30. 전 상속·증여 토지 — 등급 환산값을 보인다(④·⑧과 같은 leaf · PR-7b-2 G-3)
+                  pricePerSqm={asset.gbAcqLandPricePerSqm || (bgPre1990Land ? deriveGbPre1990LandPricePerSqmAtAcqString(asset, transferDate ?? "") : "")}
                   onPricePerSqmChange={(v) => onChange({ gbAcqLandPricePerSqm: v })}
                   area={parseDecimal(asset.gbLandArea) || undefined}
                   referenceDate={asset.landAcquisitionDate}
                   jibun={asset.addressJibun}
                   hint={
-                    // 상가와 같은 트랙 분기 — 일괄 계산기의 취득 공시지가(≤2000)는 2001.1.1 기준이다.
+                    bgPre1990Land
+                      ? `${gbBgAcqStdBasis(gbLandPreDeemed(asset))} 토지 ㎡당 가액. 1990.8.30. 전 상속·증여 토지는 개별공시지가가 없어 「§164④ 등급환산」 카드의 환산값이 들어갑니다 — 직접 입력하면 그 값을 씁니다.`
+                    : // 상가와 같은 트랙 분기 — 일괄 계산기의 취득 공시지가(≤2000)는 2001.1.1 기준이다.
                     gbAcqYear != null && gbAcqYear <= 2000
                       ? "일괄 계산기에 넣은 2001.1.1 기준 공시지가는 위치지수 산정용이라 이 칸에 자동 입력되지 않습니다 — 취득 당시 개별공시지가를 직접 입력하세요."
                       : "취득일 전년도 기준 개별공시지가 (원/㎡)"
@@ -613,15 +619,15 @@ export function GeneralBuildingBlock({
                   unit="원"
                   hint={
                     bgStdUse === "standard" || bgStdUse === "market_collateral"
-                      ? "취득일 기준 건물기준시가 총액. 이 금액 × 채무비율이 건물 취득가액이자 개산공제(§163⑥) 기준액입니다."
+                      ? `${gbBgAcqStdBasis(gbBuildingPreDeemed(asset))} 건물기준시가 총액. 이 금액 × 채무비율이 건물 취득가액이자 개산공제(§163⑥) 기준액입니다.`
                       : bgStdUse === "market_actual"
-                        ? "취득일 기준 건물기준시가 총액. 자본적지출을 토지·건물로 나누는 비율에만 쓰입니다 (취득가액은 실지취득가액 · 개산공제 미적용)."
+                        ? `${gbBgAcqStdBasis(gbBuildingPreDeemed(asset))} 건물기준시가 총액. 자본적지출을 토지·건물로 나누는 비율에만 쓰입니다 (취득가액은 실지취득가액 · 개산공제 미적용).`
                         : bgStdUse === "market_converted"
-                          ? "취득일 기준 건물기준시가 총액. 건물 환산취득가액 산정에 쓰이고, 이 금액 × 채무비율이 개산공제(§163⑥) 기준액입니다."
+                          ? `${gbBgAcqStdBasis(gbBuildingPreDeemed(asset))} 건물기준시가 총액. 건물 환산취득가액 산정에 쓰이고, 이 금액 × 채무비율이 개산공제(§163⑥) 기준액입니다.`
                           : bgStdUse === "market_presumed"
-                          ? "취득일 기준 건물기준시가 총액. 취득가액에는 쓰이지 않고(입력한 매매사례가액·감정가액 × 채무비율), 이 금액 × 채무비율이 개산공제(§163⑥) 기준액입니다."
+                          ? `${gbBgAcqStdBasis(gbBuildingPreDeemed(asset))} 건물기준시가 총액. 취득가액에는 쓰이지 않고(입력한 매매사례가액·감정가액 × 채무비율), 이 금액 × 채무비율이 개산공제(§163⑥) 기준액입니다.`
                           : bgStdUse === "market_unset"
-                            ? "취득일 기준 건물기준시가 총액."
+                            ? `${gbBgAcqStdBasis(gbBuildingPreDeemed(asset))} 건물기준시가 총액.`
                             : gbBuildingPreDeemed(asset)
                               ? GB_PRE_DEEMED_BUILDING_HINT
                             : gbExtOn

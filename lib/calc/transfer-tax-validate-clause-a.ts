@@ -34,6 +34,7 @@ import { isGiftPreDeemedConversionAsset } from "./gift-pre-deemed";
 import { mixedSec163_9CompareOf } from "./mixed-use-sec163-9";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { bgPreDeemedUsesThreeWay } from "./bg-pre-deemed-mode";
+import { gbBgUsesStdAcq } from "./bg-pre-deemed-mode";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
 import {
@@ -100,6 +101,8 @@ export function needsClauseADeclaration(asset: AssetForm): boolean {
   if (mixedSec163_9CompareOf(asset)) return false;
   // 기준시가로 평가한 부담부증여(§159①1호 괄호)는 의제취득일 기준시가만 쓴다 — ①③이 후보가 아니라 선언이 갈 곳이 없다(Q-25 · `bgPreDeemedError`가 그 기준시가를 요구).
   if (isBgPreDeemedAsset(asset) && !bgPreDeemedUsesThreeWay(asset)) return false;
+  //   일반건물도 같다 — GB 취득시 기준시가 칸(의제취득일 기준) × 채무비율(PR-7b-2 · G-1). 일반건물 화면에는 선언 토글이 없어 종전에는 막다른 길이었다.
+  if (gbBgUsesStdAcq(asset)) return false;
   // 범위 밖 증여(재개발·입주권·부담부증여 등)는 종전대로 — 실거래가는 「증여 신고가액을 입력하세요」가 막고, 추계 계열만 선언을 요구한다.
   if (asset.acquisitionCause === "gift" && !isEstimatingMode(asset)) return false;
   if (clauseAReportedValue(asset) > 0) return false;
