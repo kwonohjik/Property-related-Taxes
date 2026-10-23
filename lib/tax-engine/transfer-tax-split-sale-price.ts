@@ -30,6 +30,7 @@
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { SaleSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
+import { saleSplitContractOf, judgeSaleSplitByContract, contractJudgmentDetail } from "./sale-split-contract-judgment";
 import { sec100_3Era } from "./data/sec100-3-split-era";
 import { resolveSaleApportionBasis } from "./sale-split-apportion-basis";
 import type { ApportionBasisKind, SaleApportionBasisResult } from "./sale-split-apportion-basis";
@@ -46,13 +47,17 @@ import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
  *    화면이 「왜 감정가액이 안 쓰였는지」를 말할 수 있다. 「양쪽 다 있을 때만 전달」로 좁히면
  *    한쪽 누락이 **침묵 무시**가 된다(정상 경로는 validate가 먼저 막는다).
  */
-function resolveBasis(input: TransferTaxInput): SaleApportionBasisResult {
+function resolveBasis(
+  input: TransferTaxInput,
+  /** 안분할 총액 — 기본은 이 자산(지분)의 양도가액. 공유지분 계약서 판정은 계약 총액(100%)을 넘긴다. */
+  totalTransferPrice: number = input.transferPrice,
+): SaleApportionBasisResult {
   const landStd = input.landStandardPriceAtTransfer;
   const buildingStd = input.buildingStandardPriceAtTransfer;
   const landApp = input.landAppraisalAtTransfer;
   const buildingApp = input.buildingAppraisalAtTransfer;
   return resolveSaleApportionBasis({
-    totalTransferPrice: input.transferPrice,
+    totalTransferPrice,
     ...(landStd != null && buildingStd != null
       ? { stdPrice: { land: landStd, building: buildingStd } }
       : {}),
@@ -125,11 +130,30 @@ export function resolveTransferPriceSplit(input: TransferTaxInput): {
     );
   }
 
+  const exemption = input.saleSplitExemption ? { exemption: input.saleSplitExemption } : {};
+  const basisEcho = {
+    ...(hasBasis ? { basisKind: basis.kind! } : {}),
+    ...(basis.appraisalRejected ? { appraisalRejected: basis.appraisalRejected } : {}),
+  };
+
+  // 공유지분 — 계약서(100%) 금액으로 판정하고 결론만 지분에 적용한다(`sale-split-contract-judgment.ts` Q-1 a · Q-2 a).
+  const ratio = input.ownershipRatio;
+  const contract = ratio !== undefined && ratio > 0 && ratio < 1
+    ? saleSplitContractOf(input.contractLandTransferPrice, input.contractBuildingTransferPrice, input.totalPropertyTransferPrice, ratio)
+    : undefined;
+  if (contract) {
+    const contractApportioned = resolveBasis(input, contract.land + contract.building).apportioned ?? null;
+    const c = judgeSaleSplitByContract({
+      contract, contractApportioned, shareDeclared: declared, shareApportioned: basis.apportioned ?? declared, era, ...exemption,
+    });
+    return { ...c.shareApplied, judgment: contractJudgmentDetail(c, contract.ownershipRatio, basisEcho) };
+  }
+
   const judged = judgeDeemedUnclearSplit({
     declared,
     apportioned: basis.apportioned ?? null,
     era,
-    ...(input.saleSplitExemption ? { exemption: input.saleSplitExemption } : {}),
+    ...exemption,
   });
 
   return {

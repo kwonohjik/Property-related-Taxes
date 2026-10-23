@@ -1423,6 +1423,13 @@ export interface TransferTaxInput {
   landTransferPrice?: number;
   /** 건물 양도가액 (실제 모드 or 안분 override 시) */
   buildingTransferPrice?: number;
+  /**
+   * 공유지분 — 지분 몫으로 줄이기 전 **계약서 구분 기재(100%)**. 위 두 값은 지분 몫이다.
+   * 있으면 §100③을 계약서 금액으로 판정하고 결론만 지분에 적용한다(`sale-split-contract-judgment.ts`).
+   * 한쪽만 기재했으면 반대쪽은 `totalPropertyTransferPrice`로 정한다.
+   */
+  contractLandTransferPrice?: number;
+  contractBuildingTransferPrice?: number;
   /** 토지 취득가액 (실거래가 모드 시) */
   landAcquisitionPrice?: number;
   /** 건물 취득가액 (실거래가 모드 시) */

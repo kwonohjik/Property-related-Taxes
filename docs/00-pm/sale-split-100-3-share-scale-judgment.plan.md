@@ -148,3 +148,27 @@
   - 기존 일반건물·구분양도·지분 테스트 211파일 중 기대값이 바뀐 것은 2파일 5건뿐이다(모두 의도한 변경):
     - `transfer.route.gb-share-scale` leaf: 계약서 필드가 생겼다.
     - `gb-fractional-result-blocks`: 안분 가액이 지분 합(…488)에서 계약 100%(…489)로 바뀌었다. 경계 시료는 지분별 블록 대신 판정 하나다.
+
+### 9.2 PR-2 주택 구분양도 (2026-10-23)
+
+- **④** `transfer-tax-api-split.ts` `declaredSaleWire`(공유지분일 때만, `buildSplitPayload`의 `shareRatio` 옵션):
+  - 토지만 지분 몫으로 줄이고 건물은 비운다. 엔진이 「지분 양도가액 − 토지」로 정한다(Q-4 a — 일반건물 `scaleDeclaredSaleSplitToShare`와 같은 규칙).
+  - 계약서 금액(100%)을 `contractLandTransferPrice`·`contractBuildingTransferPrice`로 따로 싣는다.
+  - 단건(`transfer-tax-api.ts`)·함께 양도(`transfer-tax-api-companion-payload.ts`)가 지분율을 넘긴다. 축 B는 함께 양도 경로를 탄다.
+  - 다건 계산(`/multi` — `multi-transfer-tax-api.ts`·`multi/route.ts`)도 같은 결함이라 함께 배선했다(§8 확인 필요 항목 해소).
+- **⑫** 메인(`transfer-tax-schema-base-shape.ts`)·컴패니언(`transfer-tax-schema-split.ts`) 두 필드 · **⑭** `engine-input.ts`·`bundled-split-helpers.ts` 매핑.
+- **엔진** `resolveTransferPriceSplit`:
+  - `ownershipRatio` < 1이고 계약서 금액이 있으면 같은 basis로 계약 총액을 안분해 leaf로 판정한다.
+  - 한쪽만 기재했으면 `totalPropertyTransferPrice`로 반대쪽을 정한다.
+- **검증**
+  - anchor `split-sale-split-contract-judgment`(11):
+    - 단건 1/3·2/3·1/7 × 정확히 +30%: 100%와 같은 「불분명」, 세액 = 안분 모드.
+    - Q-4 합 = 지분 양도가액.
+    - 함께 양도·축 B.
+    - 엔진 ± 경계 탐색(홀수 기준시가 437,000,003): 종전 결함 재현 후 일치.
+    - 다건 계산(`/multi`) 1건.
+  - 뮤테이션 11/11.
+  - 의도적으로 바꾼 기존 기대값 2건:
+    - `transfer-fractional-part-field-ratio`: 지분 와이어 건물 칸 비움(Q-4).
+    - `multi-key-coverage-f12`: 새 키 분류.
+  - E2E SSJ-2: 수정을 무력화하면 실패하는 것을 확인했다. 단건 주택은 ⑧ 보유 상황 확정 플래그 두 개가 필요하다.
