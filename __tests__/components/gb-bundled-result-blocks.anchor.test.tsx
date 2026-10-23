@@ -57,7 +57,7 @@ const blocksText = (testId: string, heading?: string) => {
 };
 const threeWay = () => screen.getByText(/일반건물 3-자산 요약/).closest("div.rounded-lg") as HTMLElement;
 
-const BLOCK_SAMPLES: GbSample[] = ["S100-est", "S100-act", "INH", "INH-est", "PRE", "CONV", "UNENT-act", "SWAP"];
+const BLOCK_SAMPLES: GbSample[] = ["S100-est", "S100-act", "INH", "INH-C2", "PRE", "CONV", "UNENT-act", "SWAP"];
 
 describe("블록 6종 — 함께 양도 자산별 묶음 = 단건", () => {
   it.each(BLOCK_SAMPLES)("%s — 일반건물이 첫 자산이든 둘째 자산이든 단건 블록과 같은 텍스트", async (s) => {

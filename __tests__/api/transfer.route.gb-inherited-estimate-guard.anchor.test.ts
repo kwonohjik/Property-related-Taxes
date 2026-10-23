@@ -88,10 +88,12 @@ describe("S-2 — 상속·증여 파트 추계는 ⑫가 막는다", () => {
   it("직접 본문 — 상속 건물을 감정가액·매매사례가액으로 보내도 400(환산만이 아니다)", async () => {
     for (const mode of ["appraisal", "salesCase"]) {
       const b = await bodyOf(single(T, INH));
+      delete b.generalBuildingValuation!.actualPriceMode; // 환산 경로 — 실가 경로는 파트 모드를 읽지 않는다
       b.generalBuildingValuation!.buildingAcqMode = mode;
       const r = await post(b);
       expect(r.status, mode).toBe(400);
-      expect(Object.keys(r.fieldErrors)).toEqual(["generalBuildingValuation.buildingAcqMode"]);
+      // 매매사례가액은 기존 규칙(그 파트의 매매사례가액 필수 · I2)도 함께 걸린다 — 이 규칙의 경로·문구만 본다.
+      expect(r.fieldErrors["generalBuildingValuation.buildingAcqMode"], mode).toEqual([GB_BUILDING_INHERITED_ESTIMATION_MESSAGE]);
     }
   });
 
@@ -99,6 +101,15 @@ describe("S-2 — 상속·증여 파트 추계는 ⑫가 막는다", () => {
     const b = await bodyOf(single(T, INH));
     delete b.generalBuildingValuation!.landAcqMode;
     delete b.generalBuildingValuation!.buildingAcqMode;
+    const r = await post(b);
+    expect(r.status).toBe(200);
+    expect(r.tax).toBe(301_110_000);
+  });
+
+  it("실가 경로(actualPriceMode)에 남은 파트 추계 모드는 엔진이 읽지 않는다 → 막지 않는다(부담부증여 B-2와 같은 축 · 세액 = 정상 상속)", async () => {
+    const b = await bodyOf(single(T, INH));
+    b.generalBuildingValuation!.landAcqMode = "estimated";
+    b.generalBuildingValuation!.buildingAcqMode = "estimated";
     const r = await post(b);
     expect(r.status).toBe(200);
     expect(r.tax).toBe(301_110_000);

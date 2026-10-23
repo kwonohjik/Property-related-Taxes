@@ -91,14 +91,15 @@ export function refineGbValuationRequired(v: GbValuationLike, ctx: z.RefinementC
    *   ⑧ `transfer-tax-validate-gb.ts` `blockEstimation`의 거울이다(주택 분할은 `transfer-split-part-cause.ts`가 같은 규칙).
    *   화면은 ⑤(라디오 없음·G3 patch)·③(`migrateAsset`)·⑧이 막지만, API 직접 호출은 그대로 엔진에 닿아
    *   평가액 대신 환산으로 계산됐다(1988 상속: 301,110,000 → 310,092,558 · `gb-share-mode-mix-and-inherited-estimate-guard.plan.md`).
-   *   파트 모드가 없으면 엔진 기본값으로 본다 — 환산 경로는 `estimated`(`general-building-entry.ts`), 실가 경로는 실가.
-   *   의제취득일 전 상속·증여는 ④가 파트 모드를 `actual`로 보내고 ①②③ 재선택을 별도 필드로 한다 — 이 규칙에 걸리지 않는다.
+   *   **환산 경로에서만** 본다 — 실가 경로(`actualPriceMode`)는 파트 모드를 읽지 않는다(`general-building-route-actual.ts`).
+   *   부담부증여는 실가 경로로 가며 남은 환산 플래그를 무시한다(#2459 · `bg-pre-deemed-12-scope` B-2). 환산 경로에서 파트 모드가 없으면 엔진 기본값 `estimated`(`general-building-entry.ts`).
+   *   의제취득일 전 상속·증여는 ④가 실가 경로 + ①②③ 별도 필드로 보낸다 — 이 규칙에 걸리지 않는다.
    */
-  const defaultMode: PartMode = v.actualPriceMode === true ? "actual" : "estimated";
+  const modeOf = (mode?: PartMode): PartMode => (v.actualPriceMode === true ? "actual" : (mode ?? "estimated"));
   const isSec163_9 = (cause?: string) => cause === "inheritance" || cause === "gift";
-  if (isSec163_9(v.landAcquisitionCause) && (v.landAcqMode ?? defaultMode) !== "actual")
+  if (isSec163_9(v.landAcquisitionCause) && modeOf(v.landAcqMode) !== "actual")
     issue(["landAcqMode"], LAND_INHERITED_ESTIMATION_MESSAGE);
-  if (isSec163_9(v.buildingAcquisitionCause) && (v.buildingAcqMode ?? defaultMode) !== "actual")
+  if (isSec163_9(v.buildingAcquisitionCause) && modeOf(v.buildingAcqMode) !== "actual")
     issue(["buildingAcqMode"], GB_BUILDING_INHERITED_ESTIMATION_MESSAGE);
 
   // 의제취득일 전 상속·증여 파트 — ③ 분자(의제취득일 기준시가)가 없으면 엔진이 비교하지 못한다(PR-4 · 엔진과 같은 문구).
