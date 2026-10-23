@@ -98,13 +98,17 @@ describe("취득 정보 — 상속 의제 칸", () => {
 });
 
 describe("칸 노출 술어 — ⑤⑧ 공용", () => {
-  it("U-0 범위 — 1984-12-31 상속·증여까지 · 1985-01-01부터 밖 · 주택·상가·건물 포함(PR-7b-1) · 재개발·일반건물·겸용 제외", () => {
+  it("U-0 범위 — 1984-12-31 상속·증여까지 · 1985-01-01부터 밖 · 주택·상가·건물(PR-7b-1)·재개발 완공 아파트 원조합원(PR-7b-4) 포함 · 입주권·승계조합원·일반건물·겸용 제외", () => {
     expect(isBgPreDeemedAsset(asset({ acquisitionDate: "1984-12-31", inheritanceStartDate: "1984-12-31" }))).toBe(true);
     expect(isBgPreDeemedAsset(asset({ acquisitionDate: "1985-01-01", inheritanceStartDate: "1985-01-01" }))).toBe(false);
     expect(isBgPreDeemedAsset(asset({ assetKind: "housing" }))).toBe(true);
     expect(isBgPreDeemedAsset(asset({ assetKind: "commercial_building" }))).toBe(true);
     expect(isBgPreDeemedAsset(asset({ assetKind: "building" }))).toBe(true);
-    expect(isBgPreDeemedAsset(asset({ assetKind: "redevelopment_apt" }))).toBe(false);
+    expect(isBgPreDeemedAsset(asset({ assetKind: "redevelopment_apt", redevSubject: "apt" }))).toBe(true);
+    // 입주권(Q-30 범위 밖) — 자산 종류든 양도 대상이 입주권으로 남은 stale 값이든 · 승계조합원(§166 밖)
+    expect(isBgPreDeemedAsset(asset({ assetKind: "right_to_move_in" }))).toBe(false);
+    expect(isBgPreDeemedAsset(asset({ assetKind: "redevelopment_apt", redevSubject: "right" }))).toBe(false);
+    expect(isBgPreDeemedAsset(asset({ assetKind: "redevelopment_apt", redevSubject: "apt", redevIsSuccessorMember: "yes" }))).toBe(false);
     expect(isBgPreDeemedAsset(asset({ assetKind: "general_building" }))).toBe(false);
     expect(isBgPreDeemedAsset(asset({ assetKind: "housing", isMixedUseHouse: true }))).toBe(false);
     expect(isBgPreDeemedAsset(asset({ transferType: "regular" }))).toBe(false);

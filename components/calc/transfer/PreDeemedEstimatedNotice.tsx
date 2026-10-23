@@ -68,7 +68,9 @@ export function PreDeemedEstimatedNotice({
       </p>
       <p className="text-xs text-amber-700 dark:text-amber-300">
         두 값을 모두 확인할 수 없다면 아래에서 선택하세요.{" "}
-        {isRedev
+        {isRedev && asset.transferType === "burdened_gift"
+          ? "§166③ 환산취득가액만으로 계산합니다 — 아래 재개발 블록 「인가전 분 종전 부동산 취득가액」의 §166③ 칸을 채우세요."
+          : isRedev
           ? "§166③ 환산취득가액만으로 계산합니다 — 재개발 입력 ⑤ 「인가전 분 종전 부동산 취득가액」에서 「환산취득가액」을 고르고 §166③ 칸을 채우세요."
           : "환산취득가액 등 추계(§176조의2④)만으로 계산합니다."}
       </p>

@@ -117,7 +117,8 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         transferDate={transferDate}
         baseDate={inheritanceDate}
         showHouseValuation={showHouseValuation}
-        hideFields={isRedev}
+        // 재개발 종전자산의 ③은 §166③ 칸이 받는다 — 단 부담부증여 기준시가 평가(Q-25)는 이 칸의 의제취득일 기준시가가 취득가액의 원천이다(PR-7b-4)
+        hideFields={isRedev && !bgDeemedStdOnly}
         hideTransferField={bgDeemedStdOnly}
         between={
           showPre1990 && (
@@ -182,6 +183,12 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         <p className="text-caption text-muted-foreground" data-testid="pre-deemed-bg-note">
           {bgDeemedStdOnly ? (
             <>부담부증여(기준시가 평가) — 취득가액 = <b>의제취득일 기준시가</b> × 채무비율입니다(소득세법 시행령 §159①1호 괄호).</>
+          ) : isRedev ? (
+            // 재개발 완공 아파트(원조합원) — ③은 §166③(PR-7b-4 · Q-8 a). 칸은 아래 재개발 블록이 늘 보인다(`redevPreApprovalAcqMode`)
+            <>
+              부담부증여(시가 평가) — 취득가액 = <b>①·②·③ 중 많은 금액</b> × 채무비율입니다. ③ §166③ 환산취득가 = 평가액 ×{" "}
+              <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" /> (아래 재개발 블록 칸)
+            </>
           ) : (
             <>
               부담부증여(시가 평가) — 취득가액 = <b>①·②·③ 중 많은 금액</b> × 채무비율입니다. ③ 환산취득가 = 증여가액 ×{" "}

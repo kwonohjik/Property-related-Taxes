@@ -16,9 +16,14 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export function RedevelopmentDeemedAcquisitionNotice({
   acquisitionCause,
+  isBurdenedGift = false,
 }: {
   acquisitionCause?: string;
+  /** 부담부증여 — ⑤ 실가·환산 라디오가 없고 의제취득일 전이면 §166③ 칸이 늘 뜬다(`redevPreApprovalAcqMode` · PR-7b-4) */
+  isBurdenedGift?: boolean;
 }) {
+  // ③(§166③)의 입력 위치 — 일반 양도는 ⑤ 라디오의 「환산취득가액」, 부담부증여는 아래 §166③ 칸(라디오 없음)
+  const sec166Where = isBurdenedGift ? "아래 §166③ 칸" : "아래 ⑤에서 「환산취득가액」 선택 시";
   if (acquisitionCause === "inheritance") {
     return (
       <ToneCard
@@ -30,8 +35,8 @@ export function RedevelopmentDeemedAcquisitionNotice({
           상속으로 취득한 종전자산은 상속개시일 현재 상증법 §60~66 평가액(상속세 신고가액)을 종전자산
           취득가액으로 봅니다(위 &ldquo;상속개시일 평가액&rdquo; 입력값). 이 값이 확인되면 §166③ 환산취득가·
           §163⑥ 개산공제는 적용하지 않습니다. 상속개시일 평가액을 확인할 수 없는 경우에만 아래 환산 기준시가로
-          §166③ 환산을 적용합니다. 다만 의제취득일(1985.1.1.) 전 상속이면 §166③ 환산취득가액(아래 ⑤에서
-          「환산취득가액」 선택 시)과 비교해 큰 금액을 취득가액으로 합니다.
+          §166③ 환산을 적용합니다. 다만 의제취득일(1985.1.1.) 전 상속이면 §166③ 환산취득가액({sec166Where})과
+          비교해 큰 금액을 취득가액으로 합니다.
         </p>
       </ToneCard>
     );
@@ -48,8 +53,7 @@ export function RedevelopmentDeemedAcquisitionNotice({
           증여로 취득한 종전자산은 증여일 현재 상증법 §60~66 평가액(증여세 신고가액)을 종전자산 취득가액으로
           봅니다. 증여 신고가액은 항상 확인 가능하므로 §166③ 환산취득가·§163⑥ 개산공제는 적용하지 않습니다.
           평가액은 <span className="font-semibold">③ 취득정보의 &ldquo;증여 신고가액&rdquo;</span> 입력값을 씁니다.
-          다만 의제취득일(1985.1.1.) 전 증여면 §166③ 환산취득가액(아래 ⑤에서 「환산취득가액」 선택 시)과 비교해 큰
-          금액을 취득가액으로 합니다.
+          다만 의제취득일(1985.1.1.) 전 증여면 §166③ 환산취득가액({sec166Where})과 비교해 큰 금액을 취득가액으로 합니다.
         </p>
       </ToneCard>
     );
@@ -104,12 +108,21 @@ export function RedevelopmentSec163_9PriorityNotice({ asset }: { asset: AssetFor
         data-testid="redev-pre-deemed-166-3-notice"
       >
         <p className="font-semibold">의제취득일(1985.1.1.) 전 {isGift ? "증여" : "상속"} — 세 금액 중 큰 금액이 종전자산 취득가액입니다</p>
-        <p>
-          ① ③ 취득정보의 &ldquo;{sourceLabel}&rdquo; · ② 취득당시 기준시가(§164④~⑦) · ③ §166③ 환산취득가액 중 큰 금액으로
-          계산합니다. ③은 아래에서 <span className="font-semibold">「환산취득가액」</span>을 고르고 §166③ 칸을 채우면 계산되고,
-          ③이 채택되면 개산공제(§163⑥)가 함께 적용됩니다. 「실지거래가액」을 고르면 ③ 없이 ①·② 중 큰 금액이며, 그때 아래
-          실지거래가액 칸 값은 계산에 쓰이지 않습니다.
-        </p>
+        {asset.transferType === "burdened_gift" ? (
+          // 부담부증여(시가 평가) — 라디오 없이 §166③ 칸이 늘 뜬다. 세 금액은 안분 전 전체 금액으로 비교하고 채택값에 채무비율을 곱한다(PR-7b-4)
+          <p data-testid="redev-pre-deemed-166-3-notice-bg">
+            ① ③ 취득정보의 &ldquo;{sourceLabel}&rdquo; · ② 취득당시 기준시가(§164④~⑦) · ③ 아래 §166③ 환산취득가액 중 큰 금액에
+            채무비율을 곱합니다(소득세법 시행령 §159①1호). ③이 채택되면 인가 전 분 필요경비는 개산공제(§163⑥)이고, ①·②가 채택되면
+            인가 전 분 실비를 씁니다.
+          </p>
+        ) : (
+          <p>
+            ① ③ 취득정보의 &ldquo;{sourceLabel}&rdquo; · ② 취득당시 기준시가(§164④~⑦) · ③ §166③ 환산취득가액 중 큰 금액으로
+            계산합니다. ③은 아래에서 <span className="font-semibold">「환산취득가액」</span>을 고르고 §166③ 칸을 채우면 계산되고,
+            ③이 채택되면 개산공제(§163⑥)가 함께 적용됩니다. 「실지거래가액」을 고르면 ③ 없이 ①·② 중 큰 금액이며, 그때 아래
+            실지거래가액 칸 값은 계산에 쓰이지 않습니다.
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
           <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />
           <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="소령 §166③" />
