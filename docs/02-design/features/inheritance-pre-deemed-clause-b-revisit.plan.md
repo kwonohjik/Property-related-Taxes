@@ -914,3 +914,46 @@ E2E 실측 메모: 구분 기재 토지 6억·건물 3억에 양도시 기준시
 - 결함 R: `transfer-tax.ts:181-189` 재개발 덮어쓰기에 부담부증여 가드 · ④가 부담부증여에서 숨은 상속 입력을 어떻게 보낼지 정리.
 - ⑤⑧⑫: ①② 칸 재노출 · K-4 막다른 길 · 1983 증여 ⑧↔⑫ 정합 · 선언 카드 문구.
 - 확인 필요(착수 전 실측): 재개발·일반건물·겸용·공동주택 × 1985 전 부담부증여 · §164⑨(수용·경락) 분모 · 장기보유특별공제 기산일(실측 1983-07-26 — 부칙 §8 의제와의 관계) · 2020.2.11. 이후 괄호 결정례 부재.
+
+### 18.6 Do 결과 — PR-7a (양도세 계산기 · 토지·주택) · 2026-10-23
+
+범위: 양도세 계산기 주 자산 중 의제취득일 전 상속·증여 **토지·주택**(재개발·겸용 제외 — 술어 `isBgPreDeemedAsset`). 상가·일반건물·건물·재개발·겸용·증여세 계산기 경로는 PR-7b.
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| 엔진 | `burdened-gift-valuation.ts` | `burdenedGiftPreDeemedBasis`(증여가액 C·괄호 발동을 §159와 같은 함수로) · `withDeemedAcquisitionStd`(취득시 기준시가 슬롯 = 의제취득일 기준시가 — 토지 슬롯/주택·건물 슬롯) |
+| 엔진 | `inheritance-acquisition-helpers.ts` | STEP 0.45 — 부담부증여 × 의제취득일 전이면 ③의 양도가액 = C(종전 ④의 채무 합계 placeholder — §14.4 미결 해소) · `bgPreDeemed` echo |
+| 엔진 | `transfer-tax-burdened-gift-step.ts` · `transfer-tax-precalc.ts` | STEP 0.45 결과를 §159에 넘긴다 · 기준시가 평가면 상속 의제 단계·카드를 지운다 |
+| 엔진 | `burdened-gift-apportionment.ts` | 괄호 발동 → 의제취득일 기준시가 × β(0이면 400) · 미발동 → max(①②③) × β, ①② = `actual`(실제 경비) / ③ = `converted`(개산공제·단서) · echo `preDeemed` |
+| 엔진 | `transfer-tax.ts:182` | 결함 R — 재개발 덮어쓰기에 부담부증여 가드(줄 수 순증가 0) |
+| ④ | `transfer-tax-api-inheritance.ts` | 부담부증여는 범위 안(`isBgPreDeemedAsset`)만 상속 의제 입력을 싣는다(그 밖 — 1985 이후·재개발 등 — 은 화면에 없는 ①이 닿지 않게) · 증여 부담부증여도 ③ 분자·분모 전송 |
+| ④ | `transfer-tax-api-burdened-gift.ts` | 범위 안이면 산정방식·방식별 금액(실지·매매사례·감정)을 싣지 않는다 |
+| ⑫ | `transfer-tax-schema-required-refines.ts` | 상속 의제 `pre-deemed`면 시가 모드 산정방식 요구 면제 |
+| ⑧ | `transfer-tax-validate-bg-pre-deemed.ts`(신규) · `-validate-bg.ts` · `-validate-clause-a.ts` | 기준시가 평가 → 의제취득일 기준시가 원천 필수 · 시가 × 증여 → ① 필수(Q-14) · 시가 산정방식 검사 면제 · 기준시가 평가는 E-1·PD-1 면제 |
+| ⑤ | `bg-pre-deemed.ts`·`bg-pre-deemed-mode.ts`(신규 술어) · `BgPreDeemedNotice.tsx`(신규) · `BurdenedGiftBlock` · `CompanionAcqInheritanceBlock` · `PreDeemedInputs` · `PreDeemedConversionFields` · `GiftPreDeemedConversionSection` · `CompanionAcquisitionCauseSection` · 칸 술어 3종(`burdened-gift-acq-std-price`·`-expense-scope`·`-transfer-price-scope`) | 시가: 라디오 숨김·①②③ 칸 노출·경비 칸 노출·양도시 기준시가는 상속 의제 칸 / 기준시가: ① 칸 숨김·의제취득일 기준시가 칸(등급·3시점 자동값)·양도시 기준시가는 부담부증여 칸 |
+| ⑦ | `BgPreDeemedAcqRows.tsx`(신규) · `BurdenedGiftDetailCard` · `FilingFormTable` | ①②③ 후보·채택값 × 채무비율 행 / 의제취득일 기준시가 안내 · 신고서 배지 툴팁 |
+
+실측(mock 세율 · 1983 상속 토지 · 2023 부담부증여 · 채무 4.6억):
+
+| 시료 | 종전 | 이후 |
+|---|---:|---:|
+| 기준시가 평가 · 칸 202,620,000 | 80,931,647 | 80,931,647 |
+| 기준시가 평가 · 토지 등급 84,443,174 | 80,931,647 | **92,910,511** |
+| 시가 · ① 3억 (③ 149,925,925) | 방식별(K-5 80,721,398) | **61,570,000** (① × 0.5 = 150,000,000) |
+| 시가 · ② 등급 84,443,174 (③ 62,482,583) | 방식별 | **90,239,058** |
+| 시가 · ① 없음 + 선언 | 방식별 | 80,721,398 (③) |
+| 1983 증여 · 기준시가 | ⑧ 통과 ↔ ⑫ 400 | 80,931,647 |
+| 결함 R(재개발 · 숨은 ① 2억) | 69,332,857 | **112,975,428**(매매 대조와 같음) |
+
+검증: 신규 테스트 30건(route 앵커 12 · 화면 12 · 엔진 6) · 갱신 1건(`gift-pre-deemed-conversion-section` — 부담부증여 증여에 카드가 생긴 의도된 변화) · 관련 vitest 862파일 통과 · ⑧↔⑫ 매트릭스 102조합 불일치 0(probe).
+
+### 18.7 한계 · 확인 필요 (PR-7a)
+
+- PR-7b: 상가·일반건물·건물·재개발 완공 아파트·겸용 × 의제취득일 전 부담부증여 — 종전대로 사용자가 고른 산정방식(상속 의제 입력은 싣지 않는다). 기준시가 평가의 「취득시 기준시가」 칸 라벨은 아직 의제취득일 안내가 없다.
+- PR-7b: 증여세 계산기 부담부증여 경로(`BurdenedGiftTransferSection`) — 의제취득일 전 입력 없음(종전 그대로).
+- 함께 양도(컴패니언)·지분 분할 취득(축 B) × 의제취득일 전 부담부증여 미실측.
+- 주택 3시점 자동값이 ③ 분모(양도 당시 개별주택가격)를 정할 때 부담부증여 양도시 기준시가 칸과 다를 수 있다 — 같은 값이어야 정상이나 교차검증은 없다.
+- 리뷰 게이트(acquisition-cost-review, 2026-10-23): FAIL 0. 남긴 확인 필요 —
+  - API 직접 호출로 상가·일반건물에 `inheritedAcquisition`(pre-deemed)을 실으면 ⑫가 산정방식 없이 통과하고 엔진이 3자 max를 적용한다(엔진·⑫는 자산 종류를 한정하지 않는다). 화면 경로는 ④가 싣지 않는다 — PR-7b에서 그 자산을 열 때 함께 정한다.
+  - 기준시가 평가에서 양도시 기준시가가 비어도 ⑧을 통과해 세액 0이 되는 기존 갭(종전부터 · 이번 변경 무관)은 이 경로도 물려받는다.
+  - anchor 기대값은 mock 세율 실측이다 — 외부 결정례 금액에 묶인 anchor는 없다(국심2007서2099·수원고법 2021누12905는 산식 근거).

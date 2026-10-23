@@ -12,6 +12,7 @@ import { deriveSec163_9BaseDate, isSec163_9Cause } from "./transfer-163-9-base-d
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { buildApartNtsPricePayload } from "./apart-nts-price";
 import { isGiftPreDeemedConversionAsset } from "./gift-pre-deemed";
+import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { preDeemedSentStdPrices } from "./pre-deemed-auto-std-price";
 import {
   sec164HouseStatus,
@@ -43,6 +44,9 @@ export function buildInheritedAcquisitionPayload(
   // D2(건물 상속·증여 + 토지 매매) — 건물 평가액은 건물 파트 취득가액 칸(`buildingAcquisitionPrice`)이 정본이다. 자산 단위 의제는
   // 파트 가액을 덮지 못하면서 결과에 실제와 다른 취득가액 단계를 남긴다(V-11) → 보내지 않는다(⑫ Y7이 직접 호출을 막는다).
   if (effectiveBuildingCauseMix(primary)) return {};
+  // 부담부증여는 §159가 취득가액을 정한다 — 의제취득일 전 토지·주택(`isBgPreDeemedAsset`)만 그 A를 3자 max·의제취득일 기준시가로 정하려고 싣는다
+  // (계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18). 그 밖은 ①② 칸이 화면에 없어 남은 값이 엔진에 닿으면 안 된다(결함 R).
+  if (primary.transferType === "burdened_gift" && !isBgPreDeemedAsset(primary)) return {};
   const isGift = primary.acquisitionCause === "gift";
   const triggerable =
     isSec163_9Cause(primary.acquisitionCause) &&
@@ -66,7 +70,7 @@ export function buildInheritedAcquisitionPayload(
     //   매매에서 남은 값이 보이지 않는 채 실리면 ③이 세액을 바꾼다(계획서 §16).
     //   칸이 자동값(토지 등급·주택 3시점)을 보여 주는 동안은 store 값을 싣지 않는다 — 엔진이 같은 자동값을 주입한다
     //   (`preDeemedSentStdPrices`). 종전에는 보이지 않는 남은 값이 자동값을 이겼다(엔진은 보낸 분자를 우선한다).
-    const conversionInputShown = !isGift || isGiftPreDeemedConversionAsset(primary);
+    const conversionInputShown = !isGift || isGiftPreDeemedConversionAsset(primary) || isBgPreDeemedAsset(primary);
     const sent = conversionInputShown
       ? preDeemedSentStdPrices(primary, inheritanceStartDate)
       : { atDeemed: 0, atTransfer: 0 };

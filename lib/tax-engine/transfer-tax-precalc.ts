@@ -241,10 +241,16 @@ export function runPreCalculationSteps(
         ...(workingInput.penaltyDonorBuilt && rawInput.transferType === "burdened_gift" ? donorBuiltFactsOf(workingInput) : {}),
       }
     : rawInput;
-  const bgStep = runBurdenedGiftStep(bgSourceInput, workingInput, steps);
+  const bgStep = runBurdenedGiftStep(bgSourceInput, workingInput, steps, inheritedAcquisitionStep);
   const transferBurdenedGiftBreakdown = bgStep.breakdown;
   workingInput = bgStep.workingInput;
   warnings.push(...bgStep.notices);
+  // 의제취득일 전 자산을 기준시가로 평가한 부담부증여(Q-25)는 3자 max를 쓰지 않는다 — 적용되지 않는 ①②③ 비교 단계·카드를 남기지 않는다.
+  if (transferBurdenedGiftBreakdown?.preDeemed?.basis === "deemed_std" && inheritedAcquisitionStep) {
+    const at = steps.indexOf(inheritedAcquisitionStep.step);
+    if (at >= 0) steps.splice(at, 1);
+    inheritedAcquisitionStep = undefined;
+  }
 
   /**
    * §99의4①·§98의9①의 「그 주택 취득 **전에 보유하던** 다른 주택」 판정용 일반주택 취득일 (D4-05).

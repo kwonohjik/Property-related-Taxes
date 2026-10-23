@@ -24,6 +24,7 @@ import { isRedevelopmentActive } from "./redevelopment-dispatch";
 import { resolveRedevelopment166_3AcquisitionPrice } from "./redevelopment-166-3-price";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { resolveConversionDenominatorAtTransfer } from "./transfer-tax-expropriation-valuation";
+import { burdenedGiftPreDeemedBasis } from "./burdened-gift-valuation";
 
 /** STEP 0.45 실행 결과 */
 export interface InheritedAcquisitionStepResult {
@@ -31,6 +32,12 @@ export interface InheritedAcquisitionStepResult {
   result: InheritanceAcquisitionResult;
   step: CalculationStep;
   houseValuationResult?: InheritanceHouseValuationResult;
+  /**
+   * 의제취득일 전 상속·증여 자산 × 부담부증여 — STEP 0.48(§159)이 읽는다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18).
+   * `acqStdPriceForced`면 §159①1호 괄호(기준시가 평가)라 3자 max가 아니라 의제취득일 기준시가(`stdAtDeemed`, 물건 전체)를 쓴다(Q-25).
+   * 아니면 위 `result`가 ③을 증여가액 C로 환산한 3자 max(안분 전 전체 금액)다(Q-24).
+   */
+  bgPreDeemed?: { acqStdPriceForced: boolean; stdAtDeemed: number };
 }
 
 /**
@@ -64,8 +71,20 @@ export function runInheritedAcquisitionStep(
   );
 
   const redevelopment166_3Price = resolvePreDeemedRedevelopment166_3Price(rawInput);
+  // 부담부증여면 ③의 양도가액은 ④가 채운 채무 합계가 아니라 증여가액 C다(Q-24 · 국심2007서2099) — ①②(물건 전체)와 같은 축으로 비교한다.
+  // 재개발 종전자산은 ③이 §166③이라 해당 없다(§166 경로가 β로 안분한다).
+  const bgBasis =
+    rawInput.transferType === "burdened_gift" &&
+    rawInput.burdenedGiftInfo &&
+    redevelopment166_3Price === undefined &&
+    resolvedInput.inheritanceDate.getTime() < DEEMED_ACQUISITION_DATE.getTime()
+      ? burdenedGiftPreDeemedBasis(rawInput.burdenedGiftInfo, rawInput.ownershipRatio)
+      : undefined;
   const result = withApartNotes(
-    calculateInheritanceAcquisitionPrice(withConversionDenominator(resolvedInput, currentInput), redevelopment166_3Price),
+    calculateInheritanceAcquisitionPrice(
+      withConversionDenominator(bgBasis ? { ...resolvedInput, transferPrice: bgBasis.giftValue } : resolvedInput, currentInput),
+      redevelopment166_3Price,
+    ),
     apartGate,
   );
 
@@ -78,7 +97,15 @@ export function runInheritedAcquisitionStep(
     legalBasis: result.legalBasis,
   };
 
-  return { updatedInput, result, step, houseValuationResult };
+  return {
+    updatedInput,
+    result,
+    step,
+    houseValuationResult,
+    ...(bgBasis && {
+      bgPreDeemed: { acqStdPriceForced: bgBasis.acqStdPriceForced, stdAtDeemed: resolvedInput.standardPriceAtDeemedDate ?? 0 },
+    }),
+  };
 }
 
 /**

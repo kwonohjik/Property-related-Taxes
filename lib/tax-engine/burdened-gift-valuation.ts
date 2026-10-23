@@ -348,6 +348,45 @@ export function resolveBgAcquisitionBasis(
   };
 }
 
+/**
+ * 의제취득일(1985.1.1.) 전 상속·증여 자산 × 부담부증여 — §159①1호 A의 경로를 STEP 0.45(상속 취득가액 의제)가 미리 알아야 한다
+ * (계획서 `inheritance-pre-deemed-clause-b-revisit.plan.md` §18 · 사용자 결정 Q-24·Q-25).
+ *
+ * · 괄호 발동(기준시가 평가) → 취득가액 = 의제취득일 기준시가 × B/C (Q-25 — 3자 max 없음)
+ * · 미발동(시가 평가) → max(①,②,③)를 **안분 전 전체 금액**으로 고른 뒤 × B/C (Q-24 · 국심2007서2099).
+ *   ③(영 §176조의2④)의 양도가액은 증여가액 C다 — 국심2007서2099가 「증여재산가액」으로 환산한 뒤 채무비율을 곱했다.
+ *
+ * `buildBurdenedGiftBreakdown`과 **같은 함수**(지분 축소·증여세 평가 축·괄호 판정)로 정한다 — 비교에 쓴 C와 안분에 쓰는 C가 같다.
+ */
+export function burdenedGiftPreDeemedBasis(
+  info: BurdenedGiftInfo,
+  ownershipRatio?: number,
+): { giftValue: number; acqStdPriceForced: boolean } {
+  const scaled = scaleBurdenedGiftInfo(info, ownershipRatio);
+  const transferAxis = computeSangjeungbeopValuation(scaled.landStdPriceAtTransfer, scaled.buildingStdPriceAtTransfer, scaled);
+  const giftAxis = computeSangjeungbeopValuation(
+    scaled.landStdPriceAtTransfer,
+    scaled.giftBuildingStdPriceAtTransfer ?? scaled.buildingStdPriceAtTransfer,
+    scaled,
+  );
+  return {
+    giftValue: giftAxis.max,
+    acqStdPriceForced: resolveBgAcquisitionBasis(scaled, transferAxis.selectedMode).acqStdPriceForced,
+  };
+}
+
+/**
+ * 의제취득일 전 자산의 취득시 기준시가 슬롯을 **의제취득일 기준시가**(물건 전체)로 바꾼다 (Q-25 · 부칙 법률 제4803호 §8 · 영 §164④~⑦).
+ * 슬롯은 양도시 기준시가가 실린 쪽을 따른다 — 토지는 토지 슬롯, 주택·건물(단일 공시가격)은 건물 슬롯(④ 관행). 둘 다면 양도시 비율로 나눈다.
+ */
+export function withDeemedAcquisitionStd(info: BurdenedGiftInfo, stdAtDeemed: number): BurdenedGiftInfo {
+  const land = info.landStdPriceAtTransfer;
+  const building = info.buildingStdPriceAtTransfer;
+  const landPart =
+    building === 0 ? stdAtDeemed : land === 0 ? 0 : safeMultiplyThenDivide(stdAtDeemed, land, land + building);
+  return { ...info, landStdPriceAtAcquisition: landPart, buildingStdPriceAtAcquisition: stdAtDeemed - landPart };
+}
+
 // ============================================================
 // 채무비율 산정 (소령 §159 — B / C)
 // ============================================================

@@ -17,6 +17,7 @@
  */
 
 import { mixedSec163_9CompareOf } from "@/lib/calc/mixed-use-sec163-9";
+import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -58,7 +59,8 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
    * ⚠️ 부담부증여 K-4(실지취득가 안분)의 입력은 `bgActualAcquisition*` **전용 필드**이고
    *    `BurdenedGiftBlock`에 따로 있다 — 여기서 숨겨도 입력 경로가 사라지지 않는다.
    */
-  const isBurdenedGift = asset.transferType === "burdened_gift";
+  // 의제취득일 전 토지·주택은 예외다 — §159①1호 A가 ①②③(시가)·의제취득일 기준시가(기준시가)로 정해져 그 입력이 계산에 쓰인다(계획서 §18).
+  const isBurdenedGift = asset.transferType === "burdened_gift" && !isBgPreDeemedAsset(asset);
   return (
     <div className="space-y-3 rounded-md border border-border bg-background py-3 px-2 sm:px-3">
       <div className="grid grid-cols-2 gap-3">

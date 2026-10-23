@@ -26,6 +26,8 @@ import { ApartNtsPriceQuestion } from "./ApartNtsPriceQuestion";
 import { apartNtsQuestionRelevant, apartSec164FormOpen, isApartSec163_9Asset } from "@/lib/calc/apart-nts-price";
 import { inheritanceReportedValuePartSuffix } from "@/lib/calc/inheritance-reported-value-scope";
 import { isRedev166_3PreDeemedAsset } from "@/lib/calc/transfer-tax-validate-clause-a";
+import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
+import { bgPreDeemedUsesThreeWay } from "@/lib/calc/bg-pre-deemed-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 개별주택가격 최초 공시일 */
@@ -50,6 +52,9 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
   const isRedev = isRedev166_3PreDeemedAsset(asset);
   // 일반건물은 이 칸이 토지분이다(건물분 전용 칸이 따로 있다) — 판정·문구는 공용 단일 소스.
   const partSuffix = inheritanceReportedValuePartSuffix(asset.assetKind);
+  // 부담부증여(계획서 §18) — 기준시가 평가면 ①③을 쓰지 않고 의제취득일 기준시가만 쓴다(Q-25). 양도시 기준시가는 부담부증여 칸이 받는다.
+  const bgPreDeemed = isBgPreDeemedAsset(asset);
+  const bgDeemedStdOnly = bgPreDeemed && !bgPreDeemedUsesThreeWay(asset);
 
   // 주택 자산 + 상속개시일 < 2005-04-30: 개별주택가격 미공시 → 3-시점 보조 입력
   const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
@@ -113,6 +118,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         baseDate={inheritanceDate}
         showHouseValuation={showHouseValuation}
         hideFields={isRedev}
+        hideTransferField={bgDeemedStdOnly}
         between={
           showPre1990 && (
           <Pre1990LandValuationInput
@@ -147,7 +153,8 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         }
       />
 
-      {/* ① 상증법 §60~66 평가액 (상속세 신고가액) — ②·③과 함께 3자 max(엔진 `calcPreDeemed`) */}
+      {/* ① 상증법 §60~66 평가액 (상속세 신고가액) — ②·③과 함께 3자 max(엔진 `calcPreDeemed`). 기준시가 평가 부담부증여는 쓰지 않는다. */}
+      {!bgDeemedStdOnly && (
       <FieldCard
         label={`상속세 신고가액 (상증법 평가액)${partSuffix.label}`}
         // §163⑨ 본문 괄호가 소스 서열을 **강행**으로 정한다 — 결정·경정액이 있으면 그 가액이다(U2-F).
@@ -169,8 +176,20 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
           placeholder="신고가액 입력 (원)"
         />
       </FieldCard>
+      )}
 
-      {isRedev ? (
+      {bgPreDeemed ? (
+        <p className="text-caption text-muted-foreground" data-testid="pre-deemed-bg-note">
+          {bgDeemedStdOnly ? (
+            <>부담부증여(기준시가 평가) — 취득가액 = <b>의제취득일 기준시가</b> × 채무비율입니다(소득세법 시행령 §159①1호 괄호).</>
+          ) : (
+            <>
+              부담부증여(시가 평가) — 취득가액 = <b>①·②·③ 중 많은 금액</b> × 채무비율입니다. ③ 환산취득가 = 증여가액 ×{" "}
+              <Frac top="의제취득일 기준시가" bottom="양도시 기준시가" />
+            </>
+          )}
+        </p>
+      ) : isRedev ? (
         <p className="text-caption text-muted-foreground" data-testid="pre-deemed-redev-166-3-note">
           취득가액 = <b>① 상속세 신고가액</b>, <b>② 취득당시 기준시가(§164④~⑦)</b>, <b>③ §166③ 환산취득가액</b> 중
           많은 금액입니다. 재개발·재건축 종전자산의 ③은 아래 재개발 입력 ⑤ 「인가전 분 종전 부동산 취득가액」에서

@@ -24,6 +24,8 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { formatOwnershipPercent } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { needsBgAcqStdPriceInput, resolveBgAcqStdPrice } from "./burdened-gift-acq-std-price";
+import { isBgPreDeemedAsset } from "./bg-pre-deemed";
+import { bgPreDeemedError } from "./transfer-tax-validate-bg-pre-deemed";
 import { bgMixedUseBlock, isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 import { mixedBgCompanionBlockMessage } from "./burdened-gift-mixed-use-preview";
 import {
@@ -234,7 +236,10 @@ export function validateBurdenedGiftAsset(
     // 담보 승이면 취득가액은 산정방식과 무관하게 취득시 기준시가 × 채무비율이다(엔진 `acqStdPriceForced`) — 방식별 금액 칸은 쓰이지 않아
     // 요구하지 않는다(⑤가 그 칸을 숨긴다). 산정방식 선택 자체는 ⑫가 요구하므로 아래 「미지정」 검사는 남긴다. 취득시 기준시가는 (5-c)가 요구한다.
     const collateralForced = bgCollateralForcesStdAcq(asset);
-    if (collateralForced) {
+    if (isBgPreDeemedAsset(asset)) {
+      // 의제취득일 전 상속·증여 토지·주택 — 산정방식 대신 엔진이 ①②③ 중 큰 금액(담보 승이면 의제취득일 기준시가)을 쓴다.
+      //   ⑤가 라디오를 숨기고 ⑫도 요구하지 않는다. ①②③ 입력은 아래 `bgPreDeemedError`·E-1·PD-1이 본다(계획서 §18).
+    } else if (collateralForced) {
       // 재개발 완공 아파트 × 매매사례가액·감정가액 — 엔진이 담보 승 여부보다 먼저 막는다(`transfer-tax-burdened-gift-step.ts`).
       //   ⑤는 두 옵션을 비활성화하므로 자산 종류를 바꿔 값이 남은 경우다. 상속 사유는 담보 승에서 엔진이 방식을 읽지 않아 막지 않는다.
       const presumedBlock = isBgPresumedMethod(acqMethod) ? bgPresumedBlock(asset) : null;
@@ -418,6 +423,10 @@ export function validateBurdenedGiftAsset(
    * ⚠️ 게이트·값 해석은 **UI(⑤)와 같은 함수**를 쓴다 — 술어가 갈리면 「칸은 뜨는데 계산은
    *    막힌다」가 된다. `general_building`은 (5-b)가 gb* 축으로 따로 검사한다.
    */
+  // (5-c′) 의제취득일 전 상속·증여 토지·주택 — 의제취득일 기준시가(기준시가 평가) 또는 증여 신고가액(시가 평가) (계획서 §18)
+  const preDeemedErr = bgPreDeemedError(asset, label, formTransferDate);
+  if (preDeemedErr) return preDeemedErr;
+
   if (needsBgAcqStdPriceInput(asset) && resolveBgAcqStdPrice(asset) <= 0) {
     // 시가 모드 담보 승 — 엔진이 같은 상태에서 400을 낸다(「취득시 기준시가를 입력하세요」). 칸은 ⑤가 같은 술어로 연다(O-5).
     if (bgCollateralForcesStdAcq(asset)) {
