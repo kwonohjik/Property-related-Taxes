@@ -598,6 +598,16 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * buildingType === "extension" + 감정가액 + 5년·85㎡ 게이트가 열릴 때만 입력·필수. 부담부증여는 `bgPresumedExtensionAppraisal`.
    */
   extensionAppraisalValue: string;
+  /**
+   * 일체 주택 본인 신축 × 감정가액 — 감정평가서에 **구분 표시된 건물 감정가액** (원). 소득세법 §114조의2① 「해당 건물의 감정가액」.
+   * `selfBuiltHousingScope(...).directAppraisal` 이 참일 때만 칸이 열리고 ④가 싣고 ⑧이 요구한다(3중 패턴). 계획서 `self-built-housing-building-base-114-2.plan.md` Q-3.
+   */
+  selfBuiltBuildingAppraisal: string;
+  /**
+   * 일체 주택 본인 신축 × 감정가액 — 감정평가서에 건물 가액이 **구분 표시되어 있지 않다**(true) → 취득 당시 토지·건물 기준시가 비율로 나눈다
+   * (영 §166⑥ · 부가가치세법 시행령 §64①1호). 기본 false = 건물 감정가액 직접 입력.
+   */
+  selfBuiltAppraisalNoSplit: boolean;
 
   // ── 토지/건물 취득일 분리 → SplitAcquisitionFormSlice (calc-wizard-asset-split-acq.ts) ──
 

@@ -12,8 +12,7 @@
  * 순환 import 를 피하려고 `transfer-tax-api-carryover.ts`와 분리했다(`transfer-tax-api-split.ts`가 그쪽을 import 한다).
  */
 import { parseAmount, parseDecimal } from "@/lib/calc/number-parse";
-import { applyRatio } from "@/lib/tax-engine/tax-utils";
-import { saleSplitProvisoApplies } from "./sale-split-100-3-era";
+import { buildSaleSplitWire } from "./transfer-tax-api-sale-split";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import { donorBuiltActive, donorBuiltNeedsHousingSplit, type DonorBuiltScopeCtx } from "./donor-built-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -22,24 +21,8 @@ const pos = (n: number): number | undefined => (n > 0 ? n : undefined);
 
 function buildHousing(asset: AssetForm, ctx: DonorBuiltScopeCtx, ownershipRatio: number) {
   const c = asset.carryover!;
-  const scale = (n: number) => (ownershipRatio < 1 ? applyRatio(n, ownershipRatio) : n);
-  const mode = asset.saleSplitMode ?? "apportioned";
-  const landPrice = pos(parseAmount(asset.landTransferPrice));
-  const buildingPrice = pos(parseAmount(asset.buildingTransferPrice));
-  const landApp = pos(parseAmount(asset.landAppraisalAtTransfer));
-  const buildingApp = pos(parseAmount(asset.buildingAppraisalAtTransfer));
-  const sale = {
-    // 구분 기재 — «actual» 일 때만. 안분 모드로 되돌린 뒤 남은 직접 입력값이 엔진에서 구분 기재로 읽히는 길을 막는다(엔진은 모드가 아니라 값의 유무를 본다)
-    ...(mode === "actual" && landPrice != null ? { landTransferPrice: scale(landPrice) } : {}),
-    ...(mode === "actual" && buildingPrice != null ? { buildingTransferPrice: scale(buildingPrice) } : {}),
-    // 감정평가 — «appraisal»(안분 basis) 또는 «actual»(§100③ 30% 판정의 비교 대상)
-    ...(mode !== "apportioned" && landApp != null ? { landAppraisalAtTransfer: landApp } : {}),
-    ...(mode !== "apportioned" && buildingApp != null ? { buildingAppraisalAtTransfer: buildingApp } : {}),
-    // 시행령 §166⑧ 예외 — 구분 기재가 있을 때만, 양도일 2025.1.1. 이후만 효력
-    ...(mode === "actual" && asset.saleSplitExemption && saleSplitProvisoApplies(ctx.transferDate)
-      ? { saleSplitExemption: asset.saleSplitExemption }
-      : {}),
-  };
+  // 양도가액 구분(`sale`)은 본인 신축 일체 주택(`transfer-tax-api-self-built-housing.ts`)과 같은 leaf — 복제하면 era·모드 게이트가 갈린다.
+  const sale = buildSaleSplitWire(asset, ctx.transferDate, ownershipRatio);
   return {
     landPricePerSqmAtAcquisition: parseAmount(c.donorBuiltLandPricePerSqm),
     landArea: parseDecimal(c.donorBuiltLandArea),

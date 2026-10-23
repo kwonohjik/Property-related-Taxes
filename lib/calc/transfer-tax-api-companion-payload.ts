@@ -39,6 +39,7 @@ import { buildLandPartCausePayload } from "./transfer-tax-api-split";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { selfBuiltActive } from "./self-built-scope";
 import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
+import { withSelfBuiltHousing } from "./transfer-tax-api-self-built-housing";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 import { legacyExpenseMovesToParts } from "./split-legacy-expense";
 import { toEngineReductions, toSelfCultivatedExpropriatedLand } from "./transfer-tax-api-reductions";
@@ -436,6 +437,11 @@ export function buildAssetPayload(
                 : parseAmount(asset.extensionAppraisalValue)
               : undefined,
         }),
+    /**
+     * ⑬ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — 단건 ④와 **같은 빌더·같은 술어**(`selfBuiltHousingScope`, 함께 양도 자산은 `isNonPrimary`).
+     * 지분 카드(`ratio < 1`)는 구분 기재 양도가액·건물 감정가액만 지분 스케일한다. 범위 밖이면 키를 싣지 않는다 — 누락 시 침묵 strip 이라 그 자산만 전체 base 로 남는다.
+     */
+    ...withSelfBuiltHousing(asset, { transferDate, isNonPrimary: true }, ratio),
     /**
      * ⑬ 부담부증여(소령 §159) — 축 B(지분 분할 취득) 컴패니언. 누락 시 **침묵 stripping**이라
      * 그 지분만 §159를 타지 않아 세액이 조용히 틀린다.

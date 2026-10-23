@@ -54,6 +54,7 @@ import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { selfBuiltActive } from "./self-built-scope";
 import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
+import { withSelfBuiltHousing } from "./transfer-tax-api-self-built-housing";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
@@ -307,6 +308,8 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
       primary?.buildingType === "extension" && primary?.extensionFloorArea
         ? parseFloat(primary.extensionFloorArea)
         : undefined,
+    // ⑬ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — 단건 ④와 같은 빌더·같은 술어(`selfBuiltHousingScope`). 범위 밖이면 키를 싣지 않는다.
+    ...withSelfBuiltHousing(primary, { transferDate: form.transferDate, isNonPrimary: false }, primaryRatio),
     // ⑬ 토지·건물 분리 축 — 반드시 `standardPriceAtAcquisition` **뒤**에 둔다(별개 취득이면 빌더가
     //    그 값을 undefined로 덮는다 — 단건 ④와 같은 순서). 종전에는 소유자 분리(`selfOwns`)가 화면에
     //    뜨는데 전송되지 않아 비소유 파트까지 과세됐다(29,216,000 → 35,953,500).
