@@ -34,7 +34,7 @@ export function BurdenedTransferPreDeemedLines({ brkd }: { brkd: TransferBurdene
     <div className="mt-1 space-y-0.5 text-amber-700 dark:text-amber-300" data-testid="gift-bg-pre-deemed-three-way">
       <p>※ 취득가액 산정 — 의제취득일(1985.1.1.) 전 상속: ①②③ 중 큰 금액 × 채무비율 (소득세법 시행령 §159①1호 · §163⑨ · §176조의2④)</p>
       {p.reported != null && <p data-candidate="reported">① 상속개시일 현재 상증법 평가액 {fmt(p.reported)}{mark("reported")}</p>}
-      {p.sec164 != null && <p data-candidate="sec164">② §164④ 기준시가(의제취득일) {fmt(p.sec164)}{mark("sec164")}</p>}
+      {p.sec164 != null && <p data-candidate="sec164">② §164④~⑦ 취득당시 기준시가(의제취득일) {fmt(p.sec164)}{mark("sec164")}</p>}
       <p data-candidate="converted">
         ③ 환산취득가액 = 증여가액 {fmt(brkd.giftValuation.max)} × <Frac top={`의제취득일 기준시가 ${fmt(p.stdAtDeemed)}`} bottom="양도시 기준시가" /> ={" "}
         {fmt(p.converted ?? 0)}

@@ -15,6 +15,7 @@ import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import {
+  giftBgCommercial164Applies,
   giftBgPreDeemedClauseAFilled,
   giftBgPreDeemedInScope,
   giftBgPreDeemedUsesThreeWay,
@@ -42,16 +43,19 @@ export function BurdenedGiftPreDeemedFields({ item, bgt, set, isLandType, transf
     );
   }
   const clauseAFilled = giftBgPreDeemedClauseAFilled(item, transferDate);
+  // 비주택 건물(상가)은 §164⑥ 8칸이 ②다(PR-7b-3b · Q-38) — 칸은 `BurdenedGiftCommercial164Fields`
+  const commercial164 = giftBgCommercial164Applies(item);
+  const hasSec164 = isLandType || commercial164;
   return (
     <div className="space-y-2" data-testid="bg-pre-deemed-three-way">
       <ToneCard tone="violet" title="의제취득일(1985.1.1.) 전 상속 — 취득가액 = ①②③ 중 큰 금액 × 채무비율" className="py-2">
         <p className="text-xs">
           ① 상속개시일 현재 상증법 평가액
-          {isLandType ? " · ② §164④ 기준시가(토지등급 환산)" : ""} · ③ 환산취득가액(증여가액 ×{" "}
+          {isLandType ? " · ② §164④ 기준시가(토지등급 환산)" : commercial164 ? " · ② §164⑥ 취득당시 기준시가" : ""} · ③ 환산취득가액(증여가액 ×{" "}
           <Frac top="의제취득일 기준시가" bottom="양도시 기준시가" />) 중 큰 금액에 채무비율을 곱합니다. 취득가액 산정방식은 고르지 않습니다
           (소득세법 시행령 §159①1호 · §163⑨ · §176조의2④).
         </p>
-        {!isLandType && (
+        {!hasSec164 && (
           <p data-testid="bg-pre-deemed-no-sec164" className="text-xs">
             ② §164⑤~⑦ 가액(건물 기준시가 고시 전 상속 건물 — 소득세법 시행령 §163⑨2호)은 이 화면에서 입력할 수 없어 비교에서 빠집니다.
             해당되면 양도소득세 계산기에서 계산하세요.
@@ -76,7 +80,7 @@ export function BurdenedGiftPreDeemedFields({ item, bgt, set, isLandType, transf
           tone="amber"
           size="sm"
           title="상증법 평가액을 확인할 수 없음"
-          description={`①${isLandType ? "·②" : ""}를 모두 확인할 수 없으면 ③ 환산취득가액으로 계산합니다 — 선택해야 계산할 수 있습니다.`}
+          description={`①${hasSec164 ? "·②" : ""}를 모두 확인할 수 없으면 ③ 환산취득가액으로 계산합니다 — 선택해야 계산할 수 있습니다.`}
           checked={bgt.preDeemedClauseAUnconfirmed === true}
           onCheckedChange={(v) => set({ preDeemedClauseAUnconfirmed: v || undefined })}
           data-testid="bg-pre-deemed-unconfirmed"

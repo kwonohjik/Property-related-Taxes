@@ -114,10 +114,20 @@ export function runInheritedAcquisitionStep(
  * 계획서 inheritance-pre-deemed-bg-pr7b.plan.md). 시가 평가 ③의 분자는 바꾸지 않는다(일반 양도와 같은 칸 값 — 별건 확인 필요).
  */
 function bgStdAtDeemed(rawInput: TransferTaxInput, resolvedInput: InheritanceAcquisitionInput): number {
-  if (rawInput.propertyType === "commercial_building" && rawInput.commercialInheritanceValuation) {
+  if (takesCommercial164_6(rawInput) && rawInput.commercialInheritanceValuation) {
     return computeCommercial164_6StdPrice(rawInput.commercialInheritanceValuation);
   }
   return resolvedInput.standardPriceAtDeemedDate ?? 0;
+}
+
+/**
+ * §164⑥ payload(`commercialInheritanceValuation`)를 받는 자산 종류 — 상가, 그리고 비주택 건물(`building`).
+ * 증여세 계산기는 상가를 비주택 건물(`building`)로 보낸다(`resolvePropertyType`) — 사용자 결정 Q-38로 그 경로에도 §164⑥ 입력을 열었다(PR-7b-3b).
+ * Zod는 payload만 있으면 ②가 있다고 본다(`transfer-tax-schema-required-refines-2a.ts`) — 종전에는 `building`이면 엔진만 payload를 버렸다.
+ * 양도세 계산기는 상가(`commercial_building`)에서만 payload를 싣는다(`sec164CommercialStatus`) — 그 경로는 바뀌지 않는다.
+ */
+function takesCommercial164_6(rawInput: TransferTaxInput): boolean {
+  return rawInput.propertyType === "commercial_building" || rawInput.propertyType === "building";
 }
 
 /**
@@ -325,7 +335,7 @@ function resolveInheritedAcquisitionInput(
   // 주택과 같은 이유로 pre/post 구분 없다(2026-08-05 확장).
   // opt-in — commercialInheritanceValuation payload 있을 때만(주택 inheritedHouseValuation opt-in 미러).
   const shouldInjectCommercialMax =
-    rawInput.propertyType === "commercial_building" &&
+    takesCommercial164_6(rawInput) &&
     !!rawInput.commercialInheritanceValuation &&
     base.inheritanceDate.getTime() < COMMERCIAL_FIRST_DISCLOSURE_DATE.getTime();
 
