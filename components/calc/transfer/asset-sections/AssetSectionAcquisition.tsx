@@ -63,6 +63,8 @@ interface Props {
   isFirst: boolean;
   /** 형제 자산 존재(assets.length>1) — 토글 B OFF Dialog 표시 조건 */
   hasSiblings: boolean;
+  /** 지분 분할(축 B) 주 자산 카드에만 — 전 지분. 일반건물 최초공시 토글의 노출 축(`GeneralBuildingBlock.fractionalShares`). */
+  gbFractionalShares?: readonly AssetForm[];
 }
 
 export function AssetSectionAcquisition({
@@ -77,6 +79,7 @@ export function AssetSectionAcquisition({
   onFractionalToggle,
   isFirst,
   hasSiblings,
+  gbFractionalShares,
 }: Props) {
   const [pendingFractionalOff, setPendingFractionalOff] = useState(false);
 
@@ -329,6 +332,7 @@ export function AssetSectionAcquisition({
            * 지분마다 다른 값이 들어가 Zod superRefine이 400을 던진다(설계 D1-3).
            */
           shareAcquisitionOnly={splitMode === "fractional" && !isFirst}
+          fractionalShares={gbFractionalShares}
         />
       )}
 

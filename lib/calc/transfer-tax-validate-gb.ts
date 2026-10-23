@@ -39,6 +39,7 @@ import { gbCapexBeforeExtensionIssue } from "./gb-extension-capex-timing";
  * @param asset  자산 폼 상태
  * @param label  오류 메시지 앞에 붙는 자산 라벨
  * @param formTransferDate  폼-전역 양도일 (YYYY-MM-DD) — 증축일 상한 검증에 사용
+ * @param fdApplicable  최초공시 검증 축 — 지분 분할이면 호출부가 물건 단위로 정한다(`isGbFirstDisclosureApplicableForProperty`). 생략하면 이 자산만 본다
  * @returns 오류 메시지 (있을 경우) | null (검증 통과)
  */
 
@@ -46,6 +47,7 @@ export function validateGeneralBuildingAsset(
   asset: AssetForm,
   label: string,
   formTransferDate?: string,
+  fdApplicable: boolean = isGbFirstDisclosureApplicable(asset),
 ): string | null {
   const carryoverIssue = validateGbCarryover(asset, label);
   if (carryoverIssue) return carryoverIssue;
@@ -720,7 +722,7 @@ export function validateGeneralBuildingAsset(
    * 토지는 ㎡당 단가 × 면적으로 파생하되 구형 총액 입력을 fallback으로 받는다 —
    * **UI·API와 같은 순수 함수**를 쓴다(⑧ 규칙: fallback 있는 필드는 validate도 같은 fallback).
    */
-  if (asset.gbHasFirstDisclosure === true && isGbFirstDisclosureApplicable(asset)) {
+  if (asset.gbHasFirstDisclosure === true && fdApplicable) {
     if (!parseAmount(asset.gbFirstDisclosurePrice)) {
       return fieldError("gbFirstDisclosurePrice", `${label}: 최초공시주택가격을 입력하세요 (§99-164-10).`);
     }

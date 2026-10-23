@@ -92,6 +92,8 @@ interface Props {
   onFractionalToggle: (yes: boolean) => void;
   /** 형제 자산 존재(assets.length>1) — 토글 B OFF Dialog 조건 */
   hasSiblings: boolean;
+  /** 지분 분할(축 B) 주 자산 카드에만 — 전 지분. 일반건물 최초공시 토글의 노출 축(`GeneralBuildingBlock.fractionalShares`). */
+  gbFractionalShares?: readonly AssetForm[];
 }
 
 const SECTION_CHIPS = [
@@ -129,6 +131,7 @@ export function CompanionAssetCard({
   splitMode,
   onFractionalToggle,
   hasSiblings,
+  gbFractionalShares,
 }: Props) {
   const isMultiBundled = !singleMode && bundledSaleMode !== undefined;
   // 위치로 판정한다 — 저장 필드 `isPrimaryForHouseholdFlags`는 첫 자산 삭제·옛 저장분에서 어긋날 수 있다(같은 카드의 `isFirst`와 같은 축).
@@ -417,6 +420,7 @@ export function CompanionAssetCard({
           onFractionalToggle={onFractionalToggle}
           isFirst={index === 0}
           hasSiblings={hasSiblings}
+          gbFractionalShares={gbFractionalShares}
         />
       </AssetSection>
 

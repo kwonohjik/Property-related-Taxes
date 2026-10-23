@@ -66,6 +66,27 @@ export const GB_SHARE_PROPERTY_LEVEL_PATHS = [
   "firstDisclosureBuildingStdPrice",
 ] as const;
 
+/**
+ * 위 목록 중 **환산 경로(`actualPriceMode !== true`)만 싣는** 키 — 환산 지분끼리만 비교한다.
+ *
+ * ④는 지분마다 경로를 고른다(`buildGeneralBuildingValuation`). 실가 경로는 이 키들을 싣지 않는다 —
+ *  - `buildingArea`: 엔진이 읽지 않는 값이라 실가 본문에 없다.
+ *  - 최초공시 4칸: 실가 경로에 실으면 실가 취득가액이 환산주택가격으로 조용히 바뀌므로 일부러 막았다(`anyEstimated` 게이트 · 2026-08-13).
+ *
+ * 🔴 종전에는 전 지분 쌍을 비교해, 지분마다 실가·환산이 섞이면 같은 면적을 넣어도
+ *    「지분 간 물건-수준 값이 다릅니다(buildingArea)」로 400이 났다 — ⑧은 통과해 화면에서 고칠 수 없는 막다른 길
+ *    (`docs/00-pm/gb-share-mode-mix-and-inherited-estimate-guard.plan.md` S-1 · Q-1 a).
+ *    「안 쓰는 경로라 안 실었다」와 「값이 다르다」를 가르는 축은 키의 존재가 아니라 지분의 경로다
+ *    (존재로 가르면 버그로 빠진 값도 통과한다).
+ */
+export const GB_SHARE_ESTIMATED_PATH_ONLY: ReadonlySet<string> = new Set([
+  "buildingArea",
+  "hasFirstDisclosure",
+  "firstDisclosurePrice",
+  "firstDisclosureLandStdPrice",
+  "firstDisclosureBuildingStdPrice",
+] satisfies (typeof GB_SHARE_PROPERTY_LEVEL_PATHS)[number][]);
+
 /** 지분 1건. `valuation`은 물건-수준 병합이 끝난 **완결** payload다. */
 export const generalBuildingShareSchema = z.object({
   shareId: z.string().min(1),
@@ -122,10 +143,15 @@ export const generalBuildingSharesSchema = z
   .superRefine((shares, ctx) => {
     // (1) 물건-수준 동일성 — 어긋나면 지분마다 다른 물건을 계산하게 된다.
     const first = shares[0]?.valuation as Record<string, unknown> | undefined;
+    // 환산 전용 키의 기준 — 첫 **환산** 지분(위 `GB_SHARE_ESTIMATED_PATH_ONLY`).
+    const isEstimatedPath = (v: unknown) => (v as { actualPriceMode?: boolean }).actualPriceMode !== true;
+    const firstEstimated = shares.find((s) => isEstimatedPath(s.valuation))?.valuation;
     if (first) {
       for (let i = 1; i < shares.length; i++) {
         for (const path of GB_SHARE_PROPERTY_LEVEL_PATHS) {
-          const a = atPath(first, path);
+          const estimatedOnly = GB_SHARE_ESTIMATED_PATH_ONLY.has(path);
+          if (estimatedOnly && (!isEstimatedPath(shares[i].valuation) || shares[i].valuation === firstEstimated)) continue;
+          const a = atPath(estimatedOnly ? firstEstimated : first, path);
           const b = atPath(shares[i].valuation, path);
           const norm = (v: unknown) => (v instanceof Date ? v.getTime() : v);
           if (norm(a) !== norm(b)) {
