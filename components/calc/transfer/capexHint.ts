@@ -10,9 +10,13 @@
  */
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 
-export function capexHint(label: string, mode: PartAcqMode): string {
+export function capexHint(label: string, mode: PartAcqMode, withExtension = false): string {
   if (mode === "estimated") {
     return `${label}이 환산취득가여서 「환산취득가 + 개산공제」와 「자본적지출」 중 큰 쪽만 필요경비가 됩니다 (소득세법 §97②2호). 없으면 비워두세요`;
+  }
+  if ((mode === "appraisal" || mode === "salesCase") && withExtension) {
+    // 일반건물 증축 — 원건물은 개산공제만이지만 증축분은 자기 취득방식대로 받는다(`gb-extension-capex-timing.plan.md` §10).
+    return `원건물은 추계 취득가액이라 개산공제(§163⑥)만 적용되고 자본적지출은 차감되지 않습니다. 증축 후 지출의 증축분 몫은 증축분 취득방식대로 반영됩니다(실지거래가액이면 가산, 환산취득가액이면 개산공제와 비교 — §97②). 없으면 비워두세요`;
   }
   if (mode === "appraisal" || mode === "salesCase") {
     return `${label}은 추계 취득가액이라 개산공제(§163⑥)가 적용되고 자본적지출은 차감되지 않습니다. 없으면 비워두세요`;

@@ -233,11 +233,11 @@ export function PartAcqModeField({
       )}
       {/* 감정·매매사례는 개산공제만 인정 — 자본적지출 칸 위에 알린다(허용 원인 파트에서만; stale 값에는 ⑧이 오류를 낸다). */}
       {(mode === "appraisal" || mode === "salesCase") && gbPartAllowedModes(partCause).includes(mode) && (
-        <GbDeductionOnlyNotice />
+        <GbDeductionOnlyNotice extension={!isLand && asset.gbHasExtension} />
       )}
       {/* 자본적지출 — 직접 귀속분은 안분하지 않는다(「소득세법」 제100조 제2항 후문의 유추). */}
       {showCapex && (
-        <FieldCard label={`${label} 자본적지출`} unit="원" hint={capexHint(label, mode)}>
+        <FieldCard label={`${label} 자본적지출`} unit="원" hint={capexHint(label, mode, !isLand && asset.gbHasExtension)}>
           <CurrencyInput
             label={`${label} 자본적지출`}
             hideUnit
