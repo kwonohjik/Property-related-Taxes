@@ -52,6 +52,7 @@ import { resolvePopulationDecline71_2 } from "./transfer-reductions/population-d
 import { resolveHouseCountExclusion, resolveSpecialHouseExclusions } from "./transfer-reductions";
 import type { HouseCountExclusionDetail } from "./transfer-reductions/unsold-98-9";
 import { resolveArticle89Clause2, type Article89Clause2Result } from "./transfer-tax-89-2-exclusion";
+import { mixedUseUnmetNotices } from "./transfer-tax-mixed-use-unmet-notices";
 import { isOldSurchargeClauseEra } from "./data/surcharge-old-clauses-era";
 import {
   article89Clause2Notices,
@@ -284,40 +285,38 @@ export function judgeMixedUseOneHouseExemption(
     houseCountExclusionApplied,
     verifiedSpecial.specialActVerified15Count,
   );
-  const deemedOneHouseBy155 = resolveDeemedOneHouseBy155(
-    {
-      ...exemptionReqInput,
-      isRegulatedArea:
-        asset.multiHouse?.isRegulatedArea ?? asset.surchargeFallback?.isRegulatedArea ?? false,
-      isOneHousehold: asset.multiHouse?.isOneHousehold ?? asset.isOneHousehold ?? false,
-      temporaryTwoHouse: asset.temporaryTwoHouse,
-      // 이 호출은 중과 15호 ① 요소와 §155①④⑤ 비과세 축을 겸한다 — §155⑦ 농어촌주택은 여기 넘기지 않는다
-      //   (`ruralHouse` 미전달 → §155⑦ 불성립). ⑥·⑦·⑧의 **비과세** 판정은 아래 `special155Basis`(`article155SpecialHouses`)가 맡는다(S08-3).
-      //   중과 쪽으로의 전달은 아래 `culturalOrUnavoidableDeemingBasis`(#16 — 상속·조특법 제외로 2주택이 된 세대의 ⑥·⑧)가 맡는다.
-      // `householdHousingCount`는 §155①(일시적 2주택)·④⑤ 합가 의제의 「2주택」 판정에 쓴다 —
-      //   단건 E-3·E-3.5와 같은 비과세 축(폼 세대 주택 수, 겸용주택 자신 포함 · 조특법 제외 후)이다.
-      //   E-14 — 단건 15호 ① 요소와 같은 규칙(`surcharge15HouseCount`) · E-14d §155②③ 제외 포함.
-      householdHousingCount: surcharge15Count,
-      ruralHouse: undefined,
-      marriageMerge: asset.multiHouse?.marriageMerge,
-      parentalCareMerge: asset.multiHouse?.parentalCareMerge,
-      isFirstTransferredInMerge: asset.isFirstTransferredInMerge,
-      /**
-       * §155④⑤ 합가 전 구성(`resolveMergeComposition`) — 겸용은 명부를 **원시 롤스터**
-       * (`asset.multiHouse.houses`)로 갖고 있다. `householdHousingCount`를 위에서 제외 후
-       * 수치(`surcharge15Count`)로 강제하므로 롤스터 행 수와 항상 어긋나는데, 위에서 이미
-       * 계산한 제외 건(`hceAppliedForMerge`·`specialEntriesForMerge`·`inheritedExclusion`)
-       * 중 명부 행으로 특정된 몫은 `knownHouseExclusionHouseIds`로 빼고 다시 센다(PR-3,
-       * 사용자 결정 Q-4). 2026-10-05 — `merge-composition-unknown-unfavorable.plan.md` §3-4.
-       */
-      houses: asset.multiHouse?.houses,
-      sellingHouseId: asset.multiHouse?.sellingHouseId,
-      knownHouseExclusionCount: houseCountExclusionApplied + inheritedExcludedCount,
-      inheritedHouseExclusionCount: inheritedExcludedCount,
-      knownHouseExclusionHouseIds,
-    },
-    oneHouseSpecialRules,
-  );
+  const deemedInput = {
+    ...exemptionReqInput,
+    isRegulatedArea:
+      asset.multiHouse?.isRegulatedArea ?? asset.surchargeFallback?.isRegulatedArea ?? false,
+    isOneHousehold: asset.multiHouse?.isOneHousehold ?? asset.isOneHousehold ?? false,
+    temporaryTwoHouse: asset.temporaryTwoHouse,
+    // 이 호출은 중과 15호 ① 요소와 §155①④⑤ 비과세 축을 겸한다 — §155⑦ 농어촌주택은 여기 넘기지 않는다
+    //   (`ruralHouse` 미전달 → §155⑦ 불성립). ⑥·⑦·⑧의 **비과세** 판정은 아래 `special155Basis`(`article155SpecialHouses`)가 맡는다(S08-3).
+    //   중과 쪽으로의 전달은 아래 `culturalOrUnavoidableDeemingBasis`(#16 — 상속·조특법 제외로 2주택이 된 세대의 ⑥·⑧)가 맡는다.
+    // `householdHousingCount`는 §155①(일시적 2주택)·④⑤ 합가 의제의 「2주택」 판정에 쓴다 —
+    //   단건 E-3·E-3.5와 같은 비과세 축(폼 세대 주택 수, 겸용주택 자신 포함 · 조특법 제외 후)이다.
+    //   E-14 — 단건 15호 ① 요소와 같은 규칙(`surcharge15HouseCount`) · E-14d §155②③ 제외 포함.
+    householdHousingCount: surcharge15Count,
+    ruralHouse: undefined,
+    marriageMerge: asset.multiHouse?.marriageMerge,
+    parentalCareMerge: asset.multiHouse?.parentalCareMerge,
+    isFirstTransferredInMerge: asset.isFirstTransferredInMerge,
+    /**
+     * §155④⑤ 합가 전 구성(`resolveMergeComposition`) — 겸용은 명부를 **원시 롤스터**
+     * (`asset.multiHouse.houses`)로 갖고 있다. `householdHousingCount`를 위에서 제외 후
+     * 수치(`surcharge15Count`)로 강제하므로 롤스터 행 수와 항상 어긋나는데, 위에서 이미
+     * 계산한 제외 건(`hceAppliedForMerge`·`specialEntriesForMerge`·`inheritedExclusion`)
+     * 중 명부 행으로 특정된 몫은 `knownHouseExclusionHouseIds`로 빼고 다시 센다(PR-3,
+     * 사용자 결정 Q-4). 2026-10-05 — `merge-composition-unknown-unfavorable.plan.md` §3-4.
+     */
+    houses: asset.multiHouse?.houses,
+    sellingHouseId: asset.multiHouse?.sellingHouseId,
+    knownHouseExclusionCount: houseCountExclusionApplied + inheritedExcludedCount,
+    inheritedHouseExclusionCount: inheritedExcludedCount,
+    knownHouseExclusionHouseIds,
+  };
+  const deemedOneHouseBy155 = resolveDeemedOneHouseBy155(deemedInput, oneHouseSpecialRules);
   // 제외 후 1채 이하면 주택 수 축이 충족된다(§89①3호 가목). 제외가 0이면 호출부 판정 그대로.
   // §155 의제가 성립하면 「1세대1주택으로 보아」 주택 수 축이 충족된다(OH-09).
   // E-14i — 제외 분기도 「1세대가」(§89①3호가목·영 §154①)를 본다. 조특법 §99의4①·§98의9①·§98의7② 등은 주택 수에서
@@ -443,6 +442,15 @@ export function judgeMixedUseOneHouseExemption(
       surchargeDeclarationMatters: isOldSurchargeClauseEra(transferDate),
     }),
   );
+  // 4호 미충족 · §155① 취득 선후 — 일반 경로와 같은 문장·같은 게이트(1세대 · 비과세 아님 · 핵심 판정 불성립 — 단건 `coreWouldPass`).
+  if (deemedInput.isOneHousehold && !isOneHouseExempt && !(houseCountOk && meetsOneHouseRequirements && !isUnregistered)) {
+    warnings.push(
+      ...mixedUseUnmetNotices(deemedInput, oneHouseSpecialRules, {
+        transferDate,
+        oneHouseExemptionProviso: asset.oneHouseExemptionProviso,
+      }),
+    );
+  }
   // 배제 확정 — 단건은 판정 결과(`article89Clause2`)를 결과 카드가 보여 주지만 겸용 결과뷰에는 그 칸이 없다 ⇒ 경고로 사유를 싣는다.
   if (clause2Excluded && houseCountOk && meetsOneHouseRequirements && !isUnregistered) {
     warnings.push(

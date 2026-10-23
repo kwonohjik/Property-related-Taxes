@@ -44,6 +44,7 @@
   - 취득 선후: `temporaryTwoHouseOrderReason`(`one-house/new-house-origin.ts`) — 겸용의 `asset.temporaryTwoHouse` 두 날짜로 부른다.
 - **D-2 게이트(결론을 가를 때만)** — 일반 경로와 같은 조건을 쓴다.
   - 4호: 4호를 선언했고, 그 사유로 §154① 거주요건이 막혀 과세가 된 경우(`houseCountOk && !meetsOneHouseRequirements`). 이미 다른 이유(주택 수 · 미등기 · §89② 배제)로 과세면 내지 않는다.
+  - **초판 정정(구현 시)**: 위 「다른 이유로 과세면 내지 않는다」는 일반 경로와 다르다. 일반 경로는 핵심 판정이 불성립이면 사유를 모두 낸다(V-6). 겸용도 일반 경로와 같은 게이트로 맞췄다. 주택 수가 2 이상이면 ④가 §154① 단서를 아예 싣지 않아(`provisoGate`) 두 경로 모두 4호 사유가 없다 — MW-5가 그 동치를 고정한다.
   - 취득 선후: `temporaryTwoHouse`가 있고 순서가 역전(같은 날 포함)이며 §155① 의제가 서지 않아 주택 수 축이 막힌 경우. 같은 날이면 「확인 필요」 문장(#2491 Q-1 (a)).
 - **D-3 위치** — `judgeMixedUseOneHouseExemption`의 기존 경고 push 구간(§89② 고지 직후 · `:440` 뒤)에 넣는다. 파일은 558줄이라 분리 기준과 거리가 있다.
 - **신규 입력 0** · Zod·route 변경 없음 · 세액 불변.
@@ -52,8 +53,8 @@
 
 | ID | 질문 | 선택지와 달라지는 것 | 상태 |
 |---|---|---|---|
-| Q-1 | 범위 | (a) W6 2종(4호 · 취득 선후)만 — 화면 경로에서 실측한 것 (b) W6 + W7 합가 「모름」 — 화면은 ⑧이 막아 API 직접에서만 차이 (c) W3~W9 전부 — 겸용 판정이 사유 목록을 내도록 구조 변경(판정 결과 모양을 정본과 맞추는 큰 작업) | ⏳ 권장 (a) |
-| Q-2 | §154⑤ 재기산(V-3)이 세액 차이로 확인되면 | (a) 이 계획서와 분리한 별건 L3 계획서 (b) 이 PR에 포함 | ⏳ 권장 (a) |
+| Q-1 | 범위 | (a) W6 2종(4호 · 취득 선후)만 — 화면 경로에서 실측한 것 (b) W6 + W7 합가 「모름」 — 화면은 ⑧이 막아 API 직접에서만 차이 (c) W3~W9 전부 — 겸용 판정이 사유 목록을 내도록 구조 변경(판정 결과 모양을 정본과 맞추는 큰 작업) | ✅ (a) — 2026-10-24 사용자 결정 |
+| Q-2 | §154⑤ 재기산(V-3)이 세액 차이로 확인되면 | (a) 이 계획서와 분리한 별건 L3 계획서 (b) 이 PR에 포함 | ✅ (a) — 2026-10-24 사용자 결정 · V-3에서 차이 확인 → `mixed-use-final-house-restart.plan.md` |
 
 ## 5. 미검증 레지스터
 
@@ -61,10 +62,10 @@
 |---|---|---|---|---|
 | V-1 | W3 — 2022-01-01 이후 양도에서 겸용주택에 성립하는 판정 보류(지정 지구 미선언 · 별도세대 상속 분양권 · 역순 이중 합가 · 상속 제외 2중첩) | 종류별 probe(일반 주택 짝 대조) | Q-1 (c) 판단 근거 | ⏳ |
 | V-2 | W4 — 겸용 중과 판정(`resolveSurchargeApplication`)에서 지구 미선언 고지 조건이 성립하는가 | probe | 범위 | ⏳ |
-| V-3 | W5 — §154⑤ 단서 재기산(2021.1.1.~2022.5.9. 양도 · 다주택자가 다른 주택을 처분하고 남은 1주택)을 겸용 판정이 쓰지 않아 **보유기간이 달라지는가** — 겸용 양도일 하한 2022.1.1.(`transfer-tax-mixed-use.ts:111`)이라 2022.1.1.~5.9. 구간이 겹친다 | probe(같은 사실 · 일반 vs 겸용 세액) | 세액이 다르면 별건 L3(Q-2) | ⏳ |
+| V-3 | W5 — §154⑤ 단서 재기산(2021.1.1.~2022.5.9. 양도 · 다주택자가 다른 주택을 처분하고 남은 1주택)을 겸용 판정이 쓰지 않아 **보유기간이 달라지는가** — 겸용 양도일 하한 2022.1.1.(`transfer-tax-mixed-use.ts:111`)이라 2022.1.1.~5.9. 구간이 겹친다 | probe(같은 사실 · 일반 vs 겸용 세액) | 세액이 다르면 별건 L3(Q-2) | ✅ **세액 차이** — 2015 취득 · 2021-06-01 다른 주택 처분 · 2022-03-01 양도: 일반 과세 160,160,000 / 겸용 비과세 0(계산기 화면 경로 · ⑭가 `finalOneHouseRestart`를 버림) ⇒ 별건 `mixed-use-final-house-restart.plan.md` |
 | V-4 | W8 — 겸용주택 × §155⑦3호 귀농 일반주택 의제에서 사후관리 고지가 필요한가 | 코드 대조 + probe | 범위 | ⏳ |
 | V-5 | W9 — 겸용 `resolveDeemedOneHouseBy155`가 ①+④⑤ 중첩 의제를 돌려줄 수 있는가 | 코드 대조 + probe | 범위 | ⏳ |
-| V-6 | D-2 게이트가 일반 경로와 같은 반사실(「4호가 적용됐다면 비과세였는가」)을 보는가 — 일반 경로 `collectRental4hoUnmet`은 4호 판정이 `excluded`일 때만 내고, 결론 게이트는 `CALC_WARNING_UNMET_IDS` 필터가 아니라 판정 메뉴 규칙을 따른다 | 코드 대조 | D-2 | ⏳ |
+| V-6 | D-2 게이트가 일반 경로와 같은 반사실(「4호가 적용됐다면 비과세였는가」)을 보는가 — 일반 경로 `collectRental4hoUnmet`은 4호 판정이 `excluded`일 때만 내고, 결론 게이트는 `CALC_WARNING_UNMET_IDS` 필터가 아니라 판정 메뉴 규칙을 따른다 | 코드 대조 | D-2 | ✅ 일반 경로 게이트는 반사실이 아니라 「비과세 아님(`settled` 아님) · 핵심 판정 불성립(`!coreWouldPass`)」 + 1세대·주택이다(`transfer-tax-exemption.ts` `unmetExceptions` · `one-house/unmet-exceptions.ts` 자산 게이트). 겸용은 같은 값 `houseCountOk && meetsOneHouseRequirements && !isUnregistered`(§89② 고지의 `coreWouldPass`와 같은 식)로 건다 |
 
 ## 6. 테스트 계획
 
@@ -74,7 +75,7 @@
 | MW-2 | 옛 저장 이력 · 겸용 · 역순 + 3호(§1 W6-order) — 순서 사유 1건 |
 | MW-3 | 같은 날 취득 — 「확인 필요」 문장 |
 | MW-4 | 짝 — 정순 + 3호(비과세) · 4호 충족(비과세) — 사유 없음 |
-| MW-5 | 다른 이유로 이미 과세(주택 수 3) — 4호 사유를 내지 않는다(D-2 게이트) |
+| MW-5 | 주택 수 3 — 일반 주택과 같다(D-2 초판 정정 참조) |
 | MW-6 | Q-1 (b)면 합가 「모름」 API 직접 |
 
 - mutation: 4호 push 제거 → MW-1 · 순서 push 제거 → MW-2 · 게이트 제거 → MW-5.
@@ -90,5 +91,18 @@
 
 ## 8. verdict
 
-- 미해소: Q-1·Q-2 · V-1~V-6.
-- ⇒ **`needs-fix`** — 세액 불변(L2)이라 법령 근거 대기는 없다. Q-1 결정과 V-6 뒤 착수한다. V-3은 착수와 별개로 먼저 실측한다(세액 축).
+- Q-1·Q-2 ✅ (a) · V-3 ✅(별건 분리) · V-6 ✅ ⇒ PR-1 구현(§9). V-1·V-2·V-4·V-5는 Q-1 (a) 범위 밖이라 남긴다.
+
+## 9. PR-1 구현 (2026-10-24)
+
+- **D-1** `lib/tax-engine/transfer-tax-mixed-use-unmet-notices.ts` `mixedUseUnmetNotices` — §155① 판정에 넘긴 입력 그대로 `twoHouseSpecialCountHolds` + `evaluateTemporaryTwoHouseTiming` → `temporaryTwoHouseOrderReason` · `collectRental4hoUnmet` → 공용 형식 `unmetExceptionWarning`(`transfer-tax-one-house-warnings.ts`에서 꺼냄 — 일반·완공APT 경로도 같은 함수).
+- **D-2·D-3** `judgeMixedUseOneHouseExemption` — §155① 판정 입력을 `deemedInput`으로 꺼내 재사용 · §89② 고지 뒤에서 게이트(1세대 · 비과세 아님 · 핵심 판정 불성립)로 push.
+- 앵커 `__tests__/calc/mixed-use-one-house-warnings.anchor.test.ts` MW-1~MW-6(MW-6: 4호 미충족이지만 거주 3년으로 비과세 → 사유 없음 — 게이트 고정) · E2E `e2e/mixed-use-one-house-warnings.spec.ts` MUW-1.
+- 세액 불변.
+
+| P-n | 무력화 | 실패한 앵커 |
+|---|---|---|
+| P-1 | 겸용 push 제거 | MW-1 · MW-2 · MW-3 (E2E MUW-1도 실패) |
+| P-2 | 게이트 제거(항상 push) | MW-6 |
+| P-3 | 순서 사유 제거 | MW-2 · MW-3 |
+| P-4 | 4호 사유 제거 | MW-1 |
