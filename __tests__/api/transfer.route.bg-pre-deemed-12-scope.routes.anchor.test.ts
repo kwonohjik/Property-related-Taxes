@@ -33,7 +33,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
-type Body = Record<string, any>;
+/** route 응답 — 헬퍼가 json을 느슨한 타입으로 돌려준다. */
+type Res = Awaited<ReturnType<typeof postTransfer>>;
 
 const form = (a: Record<string, unknown>, transferDate: string, extra: Record<string, unknown> = {}): TransferFormData =>
   Object.assign(createDefaultTransferFormData(), {
@@ -47,14 +48,14 @@ const form = (a: Record<string, unknown>, transferDate: string, extra: Record<st
   }) as TransferFormData;
 
 /** API 직접 호출 — 산정방식을 빼고 의제취득일 전 상속 입력을 싣는다. */
-const directPreDeemed = (body: Body, ia: unknown) => ({
+const directPreDeemed = (body: Record<string, unknown>, ia: unknown) => ({
   ...body,
   inheritedAcquisition: ia,
-  burdenedGiftInfo: { ...body.burdenedGiftInfo, acquisitionMethod: undefined },
+  burdenedGiftInfo: { ...(body.burdenedGiftInfo as Record<string, unknown>), acquisitionMethod: undefined },
 });
-const fieldErrorsOf = (r: { json?: any }) => Object.keys(r.json?.error?.fieldErrors ?? {});
-const taxOf = (r: { json?: any; result?: any }) => r.json?.data?.aggregated?.determinedTax ?? r.result?.determinedTax;
-const bgOf = (r: { json?: any; result?: any }) =>
+const fieldErrorsOf = (r: Res) => Object.keys(r.json?.error?.fieldErrors ?? {});
+const taxOf = (r: Res) => r.json?.data?.aggregated?.determinedTax ?? r.result?.determinedTax;
+const bgOf = (r: Res) =>
   r.json?.data?.transferBurdenedGiftBreakdown ?? r.json?.data?.aggregated?.transferBurdenedGiftBreakdown ?? r.result?.transferBurdenedGiftBreakdown;
 
 // ── 재개발 완공 아파트 · 1980 상속 종전주택 · 2026 부담부증여 · β 0.4 ──
