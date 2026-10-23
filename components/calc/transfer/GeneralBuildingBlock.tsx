@@ -59,7 +59,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
-import { isGbFirstDisclosureApplicable } from "@/lib/calc/gb-first-disclosure";
+import { isGbFirstDisclosureApplicableForProperty } from "@/lib/calc/gb-first-disclosure";
 import { gbFirstDisclosureLandStdPriceOf } from "@/lib/calc/gb-first-disclosure";
 import { gbFirstDisclosureUsesLegacyLandTotal } from "@/lib/calc/gb-first-disclosure";
 import { gbShowsAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -101,6 +101,11 @@ interface Props {
    *   물건-수준 입력이지만, ①이 지분 카드에서 통째로 숨겨지므로 이 플래그가 관여하지 않는다.
    */
   shareAcquisitionOnly?: boolean;
+  /**
+   * 지분 분할(축 B)의 **주 자산 카드**에만 — 전 지분. 최초공시(물건 사건) 토글을 「환산 지분이 하나라도 있으면」 연다
+   * (`isGbFirstDisclosureApplicableForProperty`). 생략하면 이 자산의 산정방식으로만 판단한다(종전).
+   */
+  fractionalShares?: readonly AssetForm[];
 }
 
 export function GeneralBuildingBlock({
@@ -108,6 +113,7 @@ export function GeneralBuildingBlock({
   onChange,
   transferDate,
   shareAcquisitionOnly = false,
+  fractionalShares,
 }: Props) {
   const isEstimated = asset.useEstimatedAcquisition;
 
@@ -160,7 +166,7 @@ export function GeneralBuildingBlock({
    * API는 보낼 준비가 됐는데 토글이 없어 입력 경로가 사라진다. UI·validate·API가
    * `isGbFirstDisclosureApplicable` 하나를 공유한다(계획서 §7.5).
    */
-  const fdApplicable = isGbFirstDisclosureApplicable(asset);
+  const fdApplicable = isGbFirstDisclosureApplicableForProperty(asset, fractionalShares);
   /**
    * ①② 안의 최초공시 시점 박스 렌더 조건 — **토글과 항상 함께** 뜨고 함께 사라진다.
    *

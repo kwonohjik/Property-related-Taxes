@@ -155,6 +155,8 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           splitMode={splitMode}
           onFractionalToggle={onFractionalToggle}
           hasSiblings={assets.length > 1}
+          // 일반건물 최초공시(물건 사건) 토글 — 주 자산 카드가 전 지분의 산정방식을 본다(축 B만).
+          gbFractionalShares={splitMode === "fractional" && idx === 0 ? assets : undefined}
         />
       ))}
 
