@@ -17,7 +17,10 @@ import { carryoverExclusionShape, carryoverGiftEventShape, carryoverHouseholdSta
 import {
   donorBuiltRejectedKey,
   donorBuiltShape,
+  gbDonorBuiltPartShape,
   refineDonorBuiltInCarryover,
+  refineGbBuildingDonorBuilt,
+  rejectDonorBuiltHousingRefine,
   rejectDonorBuiltRefine,
 } from "./transfer-tax-schema-donor-built";
 
@@ -80,7 +83,7 @@ export const carryoverTaxationEngineShape = z.object({
    * 분모(양도 당시)는 받지 않는다 — 일반건물이 이미 안다.
    */
   donorStandardPriceAtAcquisition: z.number().int().nonnegative().optional(),
-  /** 증여자가 신축·증축한 건물(§114조의2) — 단건 인라인 shape과 parity. 컴패니언이 쓴다. GB 파트(`land/buildingCarryoverTaxation`)는 아래에서 거부한다 */
+  /** 증여자가 신축·증축한 건물(§114조의2) — 단건 인라인 shape과 parity. 컴패니언이 쓰고, GB 건물 파트(`buildingCarryoverTaxation`)도 받는다(PR-5a). GB 토지 파트(`landCarryoverTaxation`)는 아래에서 거부한다 */
   donorBuilt: donorBuiltShape.optional(),
   exclusionDeclared: carryoverExclusionShape.optional(),
 }).superRefine(refineCarryoverHouseholdStart).superRefine(refineDonorBuiltInCarryover);
@@ -101,9 +104,12 @@ const carryoverPartShape = z.object({
    * 분모(양도 당시)는 받지 않는다 — 일반건물이 이미 안다.
    */
   donorStandardPriceAtAcquisition: z.number().int().nonnegative().optional(),
-  /** 증여자 신축·증축 가산세는 이 경로를 아직 지원하지 않는다 — 받아 놓고 무시하지 않고 거부 */
+  /** 증여자 신축·증축 가산세는 이 경로(토지 파트)를 지원하지 않는다 — 받아 놓고 무시하지 않고 거부. 건물 파트는 아래 `buildingCarryoverPartShape` */
   donorBuilt: donorBuiltRejectedKey,
 });
+
+/** 건물 파트의 신규 파트 모양 — 증여자 신축·증축 가산세(§114조의2, PR-5a)를 받는다. 토지 파트와 달리 건물분 그 자체라 일체 주택 안분 입력이 없다. */
+const buildingCarryoverPartShape = carryoverPartShape.extend({ donorBuilt: gbDonorBuiltPartShape.optional() });
 
 /**
  * ⑨⑫ 일반건물(토지+건물 일괄) 환산취득가 계산 입력 스키마.
@@ -373,7 +379,7 @@ export const generalBuildingValuationSchema = z.object({
    * ⑫ 건물 파트 이월과세 (§97의2) — `buildingAcquisitionCause === "carryover_gift"` 시.
    * 토지의 `landCarryoverTaxation`과 **같은 모양**이다(엔진이 카드별로 같은 규칙을 쓴다).
    */
-  buildingCarryoverTaxation: carryoverTaxationEngineShape.superRefine(rejectDonorBuiltRefine).optional(),
+  buildingCarryoverTaxation: carryoverTaxationEngineShape.superRefine(rejectDonorBuiltHousingRefine).optional(),
   /**
    * ⑫ **증여 사건** (파트로 나뉘지 않는 사실) — 영 §163의2②1호·3호.
    *
@@ -388,7 +394,7 @@ export const generalBuildingValuationSchema = z.object({
    *    route가 `apportionGiftTax(event, giftDateAssetValue)`로 산정해 엔진 모양으로 조립한다.
    */
   landCarryoverPart: carryoverPartShape.optional(),
-  buildingCarryoverPart: carryoverPartShape.optional(),
+  buildingCarryoverPart: buildingCarryoverPartShape.optional(),
   /**
    * ⑫ 사례 33 증축: 토지+건물1 일괄 취득가액 (원).
    * 환산취득가 모드에서 body.acquisitionPrice=0이므로 여기서 명시 전달.
@@ -531,6 +537,7 @@ export const generalBuildingValuationSchema = z.object({
     }
   }
   refineGbValuationRequired(val, ctx); // D1·D3·I2 (2026-09-30 2차 — `transfer-tax-schema-required-refines-gb.ts`)
+  refineGbBuildingDonorBuilt(val, ctx); // 건물 파트 × 증여자 신축·증축 §114조의2 (PR-5a)
 });
 
 export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;

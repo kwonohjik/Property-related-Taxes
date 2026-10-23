@@ -11,6 +11,7 @@ import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carry
 import { fieldError } from "./transfer-tax-validate-field";
 import { gbCarryoverEventSource } from "./transfer-tax-api-gb-carryover";
 import { carryoverEstimationModeSupported } from "./phd-toggle-scope";
+import { validateDonorBuiltGb } from "./transfer-tax-validate-donor-built-gb";
 
 /**
  * ⑧ 이월과세(§97의2) 입력 검증 — 일반건물 전용.
@@ -88,6 +89,11 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
         return fieldError(isBuildingPart ? "buildingCarryover.estimationMode" : "carryover.estimationMode", `${partLabel}: 일반건물 이월과세의 환산취득가액은 「일반 기준시가 환산」만 지원합니다 — 환산 방식을 「일반 기준시가 환산」으로 선택하세요 (개별주택가격 미공시·공동주택 최초고시 전 방식은 이 자산의 계산에 반영되지 않습니다).`);
       if (!parseAmount(p.donorStandardPriceAtAcquisition))
         return fieldError(isBuildingPart ? "buildingCarryover.donorStandardPriceAtAcquisition" : "carryover.donorStandardPriceAtAcquisition", `${partLabel}: 증여자 취득 당시 기준시가를 입력하세요 (환산 분자).`);
+      // 건물 파트의 «증여자 신축·증축»(§114조의2, PR-5a) — 환산 입력 다음 질문이라 검증 순서도 그 뒤다. 토지 파트는 대상이 아니다(D4).
+      if (isBuildingPart) {
+        const donorBuiltErr = validateDonorBuiltGb(asset, partLabel);
+        if (donorBuiltErr) return donorBuiltErr;
+      }
     } else if (!parseAmount(p.donorAcquisitionPrice)) {
       return fieldError(isBuildingPart ? "buildingCarryover.donorAcquisitionPrice" : "carryover.donorAcquisitionPrice", `${partLabel}: 증여자의 취득가액을 입력하세요 (「소득세법」 제97조의2 제1항 제1호).`);
     }

@@ -99,6 +99,18 @@ const FIELD_LABEL: Record<string, string> = {
   "buildingCarryoverPart.donorBuilt.extensionFloorArea": "증축 바닥면적",
   "buildingCarryoverPart.donorBuilt.extensionStdPriceAtAcquisition": "증축 부분 취득 당시 기준시가",
 
+  // 일반건물 건물 파트 이월과세(PR-5a) — 엔진 모양(`buildingCarryoverTaxation`)·신규 파트 모양(`buildingCarryoverPart`) 둘 다 같은 화면 라벨
+  "generalBuildingValuation.buildingCarryoverTaxation.donorBuilt": "증여자 신축·증축 정보",
+  "generalBuildingValuation.buildingCarryoverTaxation.donorBuilt.buildingType": "증여자 신축·증축 구분",
+  "generalBuildingValuation.buildingCarryoverTaxation.donorBuilt.constructionDate": "증여자 신축·증축일",
+  "generalBuildingValuation.buildingCarryoverTaxation.donorBuilt.extensionFloorArea": "증축 바닥면적",
+  "generalBuildingValuation.buildingCarryoverTaxation.donorBuilt.extensionStdPriceAtAcquisition": "증축 부분 취득 당시 기준시가",
+  "generalBuildingValuation.buildingCarryoverPart.donorBuilt": "증여자 신축·증축 정보",
+  "generalBuildingValuation.buildingCarryoverPart.donorBuilt.buildingType": "증여자 신축·증축 구분",
+  "generalBuildingValuation.buildingCarryoverPart.donorBuilt.constructionDate": "증여자 신축·증축일",
+  "generalBuildingValuation.buildingCarryoverPart.donorBuilt.extensionFloorArea": "증축 바닥면적",
+  "generalBuildingValuation.buildingCarryoverPart.donorBuilt.extensionStdPriceAtAcquisition": "증축 부분 취득 당시 기준시가",
+
   // 1990 토지
   "pre1990Land.acquisitionDate": "1990 토지 취득일",
   "pre1990Land.gradeAtAcquisition": "1990 취득시 토지등급",

@@ -194,7 +194,16 @@ export function appendLateStageItems(
     // 산정기준액은 어댑터 경유 result에서 0이다(자산별 값이 합쳐지지 않는다) — 없으면 꼬리를 생략한다.
     // 이월과세 × 증여자 신축·증축(§114조의2) — 신축자가 증여자임과 건물분 산식을 같은 문장 정본(`donorBuiltPenaltyView`)으로 밝힌다.
     const donorView = donorBuiltPenaltyView(resultDonorBuiltEcho(result));
-    if (donorView?.applied) {
+    const aggDonor = (result.donorBuiltPenaltyEchoes ?? []).filter((e) => e.echo.applied);
+    if (aggDonor.length > 0) {
+      // 집계(일반건물·일괄·다건) — 카드마다 echo 가 따로다. 증여자 신축분은 카드별로 밝히고, 나머지(본인 신축 등)는 남은 금액으로 둔다.
+      for (const { label, echo } of aggDonor) {
+        const method = echo.burdenedGift?.method === "appraisal" ? "감정가액" : "환산취득가액";
+        penaltyParts.push(`§114조의2 증여자 신축·증축 ${method} 가산세 ${echo.penalty!.toLocaleString()} [${label}] — ${donorBuiltPenaltyView(echo)!.formulaLines.join(" · ")}`);
+      }
+      const rest = section114_2Penalty - aggDonor.reduce((sum, { echo }) => sum + (echo.penalty ?? 0), 0);
+      if (rest > 0) penaltyParts.push(`§114조의2 ${penaltyMethod} 가산세 ${rest.toLocaleString()}`);
+    } else if (donorView?.applied) {
       penaltyParts.push(`§114조의2 증여자 신축·증축 ${penaltyMethod} 가산세 ${section114_2Penalty.toLocaleString()} — ${donorView.formulaLines.join(" · ")}`);
     } else penaltyParts.push(
       result.penaltyBase > 0

@@ -9,6 +9,7 @@
  */
 import { TRANSFER } from "./legal-codes";
 import type { DonorBuiltPenaltyEcho } from "./types/transfer-carryover.types";
+import type { DonorBuiltEchoEntry } from "./gb-result-donor-built-echoes";
 
 const won = (n: number): string => n.toLocaleString("ko-KR");
 const typeLabel = (e: DonorBuiltPenaltyEcho): string => (e.buildingType === "extension" ? "증축" : "신축");
@@ -124,6 +125,20 @@ export function resultDonorBuiltEcho(
     | undefined,
 ): DonorBuiltPenaltyEcho | undefined {
   return r?.carryoverTaxationDetail?.donorBuiltPenalty ?? r?.splitDetail?.building?.carryover?.donorBuiltPenalty;
+}
+
+/**
+ * 결과 4뷰가 읽는 **카드별 echo 목록** — 집계 어댑터 result(`donorBuiltPenaltyEchoes`, PR-5a)면 그 목록(자산 라벨 포함),
+ * 단건 result 면 위 `resultDonorBuiltEcho` 하나를 라벨 없이 담는다. 집계는 한 화면에 echo 가 여러 장일 수 있다(지분 분할 · 다건).
+ */
+export function resultDonorBuiltEchoes(
+  r:
+    | (Parameters<typeof resultDonorBuiltEcho>[0] & { donorBuiltPenaltyEchoes?: DonorBuiltEchoEntry[] })
+    | undefined,
+): Array<{ label?: string; echo: DonorBuiltPenaltyEcho }> {
+  if (r?.donorBuiltPenaltyEchoes) return r.donorBuiltPenaltyEchoes;
+  const single = resultDonorBuiltEcho(r);
+  return single ? [{ echo: single }] : [];
 }
 
 /** `result.warnings` 에 넣는 문장 — 입력이 없으면 undefined */

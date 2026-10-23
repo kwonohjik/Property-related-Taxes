@@ -4,8 +4,9 @@
  * `ResultPdfDocument.tsx`에서 분리했다(800줄 정책). 그 파일은 문서 전체의 조립을 맡고,
  * 여기는 양도세 세목 섹션만 맡는다. 방향은 한쪽뿐이다(문서 → 여기).
  */
+import { Fragment } from "react";
 import { type R, C, s, fmt, fmtRate, num, str, bool } from "./ResultPdfPrimitives";
-import { donorBuiltPenaltyView, resultDonorBuiltEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
+import { donorBuiltPenaltyView, resultDonorBuiltEchoes } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
 import {
   View,
   Text,
@@ -83,7 +84,11 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
   const penaltyTax = ((num(r.penaltyTax) ?? 0) as number) + penaltyDetailTotal;
   const determinedTax = (num(r.determinedTax) ?? 0) as number;
   const totalDeterminedTax = determinedTax + penaltyTax;
-  const donorView = donorBuiltPenaltyView(resultDonorBuiltEcho(r as Parameters<typeof resultDonorBuiltEcho>[0]));
+  // 단건은 echo 하나, 집계(일반건물·일괄·다건)는 카드별 여러 장 — 카드 라벨을 붙여 각각 그린다
+  const donorViews = resultDonorBuiltEchoes(r as Parameters<typeof resultDonorBuiltEchoes>[0]).flatMap(({ label, echo }) => {
+    const v = donorBuiltPenaltyView(echo);
+    return v ? [{ label, view: v }] : [];
+  });
   return (
     <>
       <Text style={s.sectionTitle}>신고서 양식</Text>
@@ -106,8 +111,12 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
         <View style={s.rowBg}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(determinedTax)}</Text></View>
         {penaltyTax > 0 && (<View style={s.row}><Text style={s.lbl}>가산세액</Text><Text style={s.val}>{fmt(penaltyTax)}</Text></View>)}
         {/* 이월과세 × 증여자 신축·증축 §114조의2 — 가산세 근거·고지(화면과 같은 문장 정본). 입력이 없으면 아무것도 그리지 않는다. */}
-        {donorView && donorView.formulaLines.map((line, i) => (<View key={`db${i}`} style={s.row}><Text style={s.lblSub}>{line}</Text></View>))}
-        {donorView && (<View style={s.row}><Text style={s.lblSub}>{donorView.notice}</Text></View>)}
+        {donorViews.map(({ label, view }, k) => (
+          <Fragment key={`dbv${k}`}>
+            {view.formulaLines.map((line, i) => (<View key={`db${k}-${i}`} style={s.row}><Text style={s.lblSub}>{label ? `[${label}] ${line}` : line}</Text></View>))}
+            <View style={s.row}><Text style={s.lblSub}>{label ? `[${label}] ${view.notice}` : view.notice}</Text></View>
+          </Fragment>
+        ))}
         <View style={s.rowBg}><Text style={s.lbl}>총결정세액</Text><Text style={s.valAccent}>{fmt(totalDeterminedTax)}</Text></View>
         {ruralSurtax > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세</Text><Text style={s.val}>{fmt(ruralSurtax)}</Text></View>)}
         {num(r.localIncomeTax) !== undefined && (<View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>)}

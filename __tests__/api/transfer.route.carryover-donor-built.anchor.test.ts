@@ -5,7 +5,7 @@
  * 침묵 strip 방지가 이 파일의 존재 이유다 — ⑫에 없는 키는 400이 아니라 200 + 가산세 0으로 조용히 사라진다(TS 미감지).
  *  · DBR-1 단건 인라인 shape(⑫)·route 매핑(⑭)을 지나 엔진에 닿는다 — 비주택 25,000,000 / 일체 주택 건물분 9,375,000
  *  · DBR-2 ⑫ 거부 — 실가 승계·자산 종류·PHD·취득원인·일체 주택 입력 누락
- *  · DBR-3 컴패니언(엔진 shape)은 수용하고 ⑭가 일자를 Date 로 바꾼다 / GB 파트·split 파트 wire 는 명시 거부(침묵 strip 금지)
+ *  · DBR-3 컴패니언(엔진 shape)은 수용하고 ⑭가 일자를 Date 로 바꾼다 / GB 토지 파트·split 토지 파트 wire 는 명시 거부(침묵 strip 금지) — GB 건물 파트는 PR-5a 부터 수용
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -209,14 +209,16 @@ describe("DBR-3 컴패니언 ⑭ · wire 별 수용/거부", () => {
     expect(engineInput.carryoverTaxation!.donorBuilt!.constructionDate).toBeInstanceOf(Date);
   });
 
-  it("GB 파트(land/buildingCarryoverTaxation)는 거부 — 받아서 무시하지 않는다", () => {
+  it("GB 토지 파트(landCarryoverTaxation)는 거부 · 건물 파트(buildingCarryoverTaxation)는 PR-5a 부터 수용(일체 주택 housing 만 거부) — 받아서 무시하지 않는다", () => {
     type Field = { safeParse: (v: unknown) => { success: boolean } };
     const shape = (generalBuildingValuationSchema as unknown as { shape: Record<string, Field> }).shape;
     expect(shape.landCarryoverTaxation).toBeDefined(); // 키가 없으면 아래 단언이 공허해진다
     expect(shape.buildingCarryoverTaxation).toBeDefined();
     expect(shape.landCarryoverTaxation.safeParse({ ...CT }).success).toBe(true);
     expect(shape.landCarryoverTaxation.safeParse({ ...CT, donorBuilt: DB_NEW }).success).toBe(false);
-    expect(shape.buildingCarryoverTaxation.safeParse({ ...CT, donorBuilt: DB_NEW }).success).toBe(false);
+    expect(shape.buildingCarryoverTaxation.safeParse({ ...CT }).success).toBe(true);
+    expect(shape.buildingCarryoverTaxation.safeParse({ ...CT, donorBuilt: DB_NEW }).success).toBe(true);
+    expect(shape.buildingCarryoverTaxation.safeParse({ ...CT, donorBuilt: { ...DB_NEW, housing: HOUSING } }).success).toBe(false);
   });
 
   it("split 파트 wire — 토지 파트(splitCarryoverPartShape)는 donorBuilt 거부, 건물 파트(splitCarryoverBuildingPartShape)만 수용(PR-3)", () => {

@@ -21,6 +21,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { buildDonorBuiltGbPayload, type GbDonorBuiltPayload } from "./transfer-tax-api-donor-built-gb";
 
 /** 빈 문자열·0을 `undefined`로 — payload에 0을 실으면 「입력했다」와 구별되지 않는다. */
 const amountOrUndefined = (s: string | undefined): number | undefined => {
@@ -36,6 +37,8 @@ export interface GbCarryoverPartPayload {
   giftDateAssetValue: number;
   useEstimatedAcquisition: boolean;
   donorStandardPriceAtAcquisition: number | undefined;
+  /** 증여자 신축·증축(§114조의2, PR-5a) — **건물 파트에만** 싣는다(토지 파트는 대상이 아니다, D4). */
+  donorBuilt?: GbDonorBuiltPayload;
 }
 
 /** 엔진 모양 — legacy(사용자 안분) 경로. `landCarryoverTaxation`·`buildingCarryoverTaxation`. */
@@ -50,6 +53,8 @@ export interface GbCarryoverEngineShapedPayload {
   donorCapitalExpenditure: number | undefined;
   giftDateValuation: number;
   donorStandardPriceAtAcquisition: number | undefined;
+  /** 증여자 신축·증축(§114조의2, PR-5a) — 건물 파트에만 싣는다. */
+  donorBuilt?: GbDonorBuiltPayload;
   exclusionDeclared?: {
     expropriationWithin2Years: boolean | undefined;
     legacyOneHouseExemptionDeclared: boolean | undefined;
@@ -67,7 +72,7 @@ export interface GbCarryoverGiftEventPayload {
   exclusionDeclared?: GbCarryoverEngineShapedPayload["exclusionDeclared"];
 }
 
-function buildPart(c: CarryoverTaxationForm | undefined): GbCarryoverPartPayload | undefined {
+function buildPart(c: CarryoverTaxationForm | undefined, donorBuilt?: GbDonorBuiltPayload): GbCarryoverPartPayload | undefined {
   if (!c?.donorAcquisitionDate) return undefined;
   return {
     donorAcquisitionDate: c.donorAcquisitionDate,
@@ -82,6 +87,7 @@ function buildPart(c: CarryoverTaxationForm | undefined): GbCarryoverPartPayload
     donorStandardPriceAtAcquisition: c.useEstimatedAcquisition
       ? amountOrUndefined(c.donorStandardPriceAtAcquisition)
       : undefined,
+    ...(donorBuilt ? { donorBuilt } : {}),
   };
 }
 
@@ -99,6 +105,7 @@ function buildEngineShaped(
    * 그대로 두면 건물만 배제되지 않는다.
    */
   relationSource: CarryoverTaxationForm | undefined = c,
+  donorBuilt?: GbDonorBuiltPayload,
 ): GbCarryoverEngineShapedPayload | undefined {
   if (!c?.giftRegistryDate || !c.donorAcquisitionDate) return undefined;
   return {
@@ -117,6 +124,7 @@ function buildEngineShaped(
     donorStandardPriceAtAcquisition: c.useEstimatedAcquisition
       ? amountOrUndefined(c.donorStandardPriceAtAcquisition)
       : undefined,
+    ...(donorBuilt ? { donorBuilt } : {}),
     ...(c.exclusionDeclared
       ? {
           exclusionDeclared: {
@@ -182,6 +190,7 @@ const PART_SCALE: Record<keyof GbCarryoverPartPayload, boolean> = {
   giftDateAssetValue: true,
   useEstimatedAcquisition: false,
   donorStandardPriceAtAcquisition: false, // 🔴 기준시가 — 위 2번
+  donorBuilt: false, // 신축·증축 구분·일자·바닥면적 — 금액이 아니다. 증축 부분 기준시가도 환산 분자라 위 2번 규율(물건 전체 기준, 이중 축소 금지)
 };
 
 const ENGINE_SHAPED_SCALE: Record<keyof GbCarryoverEngineShapedPayload, boolean> = {
@@ -196,6 +205,7 @@ const ENGINE_SHAPED_SCALE: Record<keyof GbCarryoverEngineShapedPayload, boolean>
   /** legacy 이름의 `giftDateAssetValue` — 시나리오 B 취득가액. */
   giftDateValuation: true,
   donorStandardPriceAtAcquisition: false, // 🔴 기준시가 — 위 2번
+  donorBuilt: false, // 위 PART_SCALE 과 같다
   exclusionDeclared: false,
 };
 
@@ -292,6 +302,14 @@ export function gbCarryoverEventSource(
 }
 
 /**
+ * ④가 «신규 파트 모양(사건 1벌 + 파트)»으로 보내는가 — 증여세 **산출세액·과세가액 두 칸이 모두 차 있을 때만**이다(하나만 있으면 분모가 없어 legacy 엔진 모양).
+ * ⑧ `validateDonorBuiltGb`가 증여 등기접수일의 출처(사건 출처 vs 건물 서브폼)를 가를 때 같은 함수를 쓴다.
+ */
+export function gbCarryoverUsesPartShape(eventSource: CarryoverTaxationForm | undefined): boolean {
+  return parseAmount(eventSource?.giftTaxCalculated ?? "") > 0 && parseAmount(eventSource?.giftTaxBase ?? "") > 0;
+}
+
+/**
  * 일반건물 payload에 얹을 이월과세 조각.
  *
  * @returns 해당 없으면 `{}` — 스프레드해도 무해하다.
@@ -331,11 +349,13 @@ export function buildGbCarryoverPayload(asset: AssetForm): GbCarryoverPayload {
    *   안분해 넣은 값을 쓴다. 기존 sessionStorage와 API 직접 호출자가 여기 해당한다.
    *   ⑧ validate가 신규 2칸을 권장·강제하지만, **못 채웠다고 이월과세를 꺼버리진 않는다.**
    */
-  if (!(giftTaxCalculated > 0) || !(giftTaxBase > 0)) {
+  // 증여자 신축·증축(§114조의2) — 건물 파트에만 싣는다(D4 건물분만). 게이트는 ⑤·⑧과 같은 술어.
+  const donorBuilt = buildDonorBuiltGbPayload(asset);
+  if (!gbCarryoverUsesPartShape(c)) {
     return {
       ...(landIsCarryover ? { landCarryoverTaxation: buildEngineShaped(c) } : {}),
       ...(buildingIsCarryover
-        ? { buildingCarryoverTaxation: buildEngineShaped(asset.buildingCarryover ?? c, c) }
+        ? { buildingCarryoverTaxation: buildEngineShaped(asset.buildingCarryover ?? c, c, donorBuilt) }
         : {}),
     };
   }
@@ -363,7 +383,7 @@ export function buildGbCarryoverPayload(asset: AssetForm): GbCarryoverPayload {
     ...(landIsCarryover ? { landCarryoverPart: buildPart(c) } : {}),
     // 건물은 자기 파트 입력을 쓰고, 없으면 토지 것과 같은 증여라 보고 토지 파트를 재사용한다.
     ...(buildingIsCarryover
-      ? { buildingCarryoverPart: buildPart(asset.buildingCarryover ?? c) }
+      ? { buildingCarryoverPart: buildPart(asset.buildingCarryover ?? c, donorBuilt) }
       : {}),
   };
 }
