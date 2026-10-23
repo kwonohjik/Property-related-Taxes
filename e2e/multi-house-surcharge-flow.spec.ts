@@ -6,7 +6,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
-import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
+import { DIRECT_RESIDENCE, selectDirectResidenceInput } from "./_helpers/residence-direct";
 
 const GANGNAM = "1168010100";
 const house = (id: string) => ({
@@ -101,6 +101,42 @@ test.describe("다주택 중과 판정 — 흐름", () => {
     await expect(page.getByTestId("surcharge-sim-b-total")).toHaveText("160,688,000");
     await expect(page.getByTestId("surcharge-sim-difference")).toHaveText("186,747,000");
     await expect(page.getByTestId("surcharge-sim-a-rate-sub")).toHaveText("가산 30%p 포함");
+  });
+
+  test("MHF-5 홈 카드는 새 건으로 연다 — 남아 있던 입력을 비운다(D5)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await gotoResult(page);
+    await page.goto("/");
+    await page.getByRole("link", { name: /다주택 중과 판정/ }).click();
+    await expect(page).toHaveURL(/\/calc\/multi-house-surcharge/);
+    await expect(page.getByTestId("one-house-household")).toBeVisible();
+    await expect
+      .poll(async () =>
+        page.evaluate(() => JSON.parse(sessionStorage.getItem("one-house-judgment-wizard") ?? "{}").state?.formData?.houses?.length ?? 0),
+      )
+      .toBe(0);
+  });
+
+  test("MHF-6 보유 주택을 양도 예정 주택으로 바꿔 판정 — 확인 → ② 고지 → 다시 판정하면 그 주택이 양도 예정 주택", async ({ page }) => {
+    test.setTimeout(90_000);
+    // h1은 양도 주택(2015)보다 나중(2018) 취득 — 맞바꾼 뒤 옛 양도 주택이 더 오래된 행이 되어 §155① 취득 경위 질문이 생기지 않는다
+    await gotoResult(page, { houses: [{ ...house("h1"), acquisitionDate: "2018-01-01" }, house("h2")] });
+    await page.getByTestId("surcharge-swap-h1").click();
+    await page.getByRole("button", { name: "바꿔서 판정" }).click();
+    await expect(page.getByTestId("surcharge-swap-notice")).toBeVisible();
+    await expect(page.getByTestId("surcharge-swap-cleared")).toContainText("예상 양도가액");
+    const swapped = await page.evaluate(() => {
+      const f = JSON.parse(sessionStorage.getItem("one-house-judgment-wizard") ?? "{}").state?.formData;
+      return { acq: f?.assets?.[0]?.acquisitionDate, rows: f?.houses?.map((h: { id: string; acquisitionDate: string }) => `${h.id}:${h.acquisitionDate}`) };
+    });
+    // h1 자리에 옛 양도 주택(2015)이 들어가고, 새 양도 주택은 h1이던 2018 취득 주택이다
+    expect(swapped).toEqual({ acq: "2018-01-01", rows: ["h1:2015-01-01", "h2:2010-01-01"] });
+    // 새 양도 주택의 양도 사실 — 양도가액과 거주기간(전환은 거주를 비워 ⑧이 다시 묻게 한다)
+    await page.getByTestId("one-house-sale-price").fill("900000000");
+    await selectDirectResidenceInput(page);
+    await page.getByRole("button", { name: "다음" }).click();
+    await page.getByTestId("surcharge-judge-cta").click();
+    await expect(page.getByTestId("surcharge-conclusion-label")).toHaveText("3주택 이상 중과");
   });
 
   test("MHF-3 두 메뉴 교차 링크는 입력을 유지한다", async ({ page }) => {
