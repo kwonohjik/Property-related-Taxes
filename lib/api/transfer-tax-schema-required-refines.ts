@@ -153,6 +153,7 @@ export function refineBurdenedGiftInputs(
     inheritedAcquisition?: { mode?: string } | null;
     propertyType?: string;
     redevelopment?: { isSuccessorMember?: boolean } | null;
+    generalBuildingValuation?: unknown;
   },
   ctx: z.RefinementCtx,
 ) {
@@ -166,6 +167,11 @@ export function refineBurdenedGiftInputs(
     BG_PRE_DEEMED_ENGINE_PROPERTY_TYPES.has(data.propertyType ?? "") &&
     // 재개발 승계조합원은 §166 밖이라 3자 max 범위가 아니다(④ `isBgPreDeemedAsset`와 같은 축)
     data.redevelopment?.isSuccessorMember !== true;
+  // 일반건물 — 토지·건물 두 파트가 모두 의제취득일 전이면 §159가 파트마다 3자 max를 써서 산정방식을 읽지 않는다(사용자 결정 Q-28 · PR-7b-6).
+  // 한 파트만이면 다른 파트가 고른 산정방식을 쓰므로 종전대로 요구한다(엔진도 `BG_PART_METHOD_REQUIRED_MESSAGE`로 막는다).
+  const gbv = data.generalBuildingValuation as { landPreDeemedClauseA?: unknown; buildingPreDeemedClauseA?: unknown } | null | undefined;
+  const gbAllPartsPreDeemed =
+    data.propertyType === "general_building" && !!gbv?.landPreDeemedClauseA && !!gbv?.buildingPreDeemedClauseA;
   const issue = issuer(ctx);
   const bg = data.burdenedGiftInfo;
   if (!bg) {
@@ -175,7 +181,7 @@ export function refineBurdenedGiftInputs(
   if (bg.valuationMode === "sangjeungbeop_market") {
     if (!positive(bg.marketValueAtTransfer))
       issue(["burdenedGiftInfo", "marketValueAtTransfer"], "부담부증여 시가 모드는 양도시 시가 평가액이 필요합니다");
-    if (preDeemed) {
+    if (preDeemed || gbAllPartsPreDeemed) {
       // 위 주석 — 3자 max(①②③)
     } else if (!bg.acquisitionMethod) {
       issue(["burdenedGiftInfo", "acquisitionMethod"], "부담부증여 시가 모드는 취득가액 산정방식(actual·salesCase·appraisal·converted)이 필요합니다 (소득세법 §100①)");
@@ -189,7 +195,7 @@ export function refineBurdenedGiftInputs(
     ) {
       issue(["burdenedGiftInfo", "actualAcquisitionTotal"], "부담부증여 실지취득가액 안분은 실지취득가액이 필요합니다");
     }
-    if (!preDeemed && (bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") && !collateralForcesStdAcquisition(bg)) {
+    if (!(preDeemed || gbAllPartsPreDeemed) && (bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") && !collateralForcesStdAcquisition(bg)) {
       const label = bg.acquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
       const donor = bg.carryoverDonorBasis;
       if (donor) {

@@ -195,7 +195,8 @@ function dispatchCoercedGeneralBuilding(
   });
   /**
    * 의제취득일 전 상속·증여 파트 — ③(환산취득가액)과 비교해 이긴 파트만 환산 파트로 바꿔 환산 경로로 보낸다(PR-4).
-   * ③이 지면 payload가 그대로라 종전 경로가 그대로 돈다. 부담부증여는 §159가 취득가액을 정하므로 범위 밖(PR-7).
+   * ③이 지면 payload가 그대로라 종전 경로가 그대로 돈다. 부담부증여는 여기서 고르지 않는다 — §159가 같은 ①②로 파트별 3자 max를 한다
+   * (③의 양도가액이 증여가액이라 이 시험 계산과 다르다 · `burdened-gift-part-pre-deemed.ts` · PR-7b-6).
    */
   const preDeemed = burdenedGiftInfo
     ? { raw: coercedGbRaw }
