@@ -101,6 +101,23 @@ function sameDayConfirm(label: string, R: Date): string {
   );
 }
 
+/**
+ * §155① 종전·신규 주택의 **취득 선후**가 맞지 않을 때의 사유(`judgeTemporaryTwoHouseTiming`의 `acquiredInOrder` 거짓) — 요건 표 note와
+ * 미충족 특례 사유가 같은 문장을 쓴다. 같은 날이면 어느 쪽이 먼저인지 알 수 없어 확인 필요를 붙인다(위 `sameDayConfirm`과 같은 규칙 · 결정 Q-1).
+ */
+export function temporaryTwoHouseOrderReason(previous: Date, next: Date): string {
+  if (day(next) === day(previous)) {
+    return (
+      `신규주택을 종전주택과 같은 날(${fmt(next)}) 취득해 어느 쪽이 먼저인지 알 수 없어 ` +
+      `일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)으로 보지 않았습니다(확인 필요).`
+    );
+  }
+  return (
+    `신규주택(${fmt(next)} 취득)을 종전주택(${fmt(previous)} 취득)보다 먼저 취득했습니다 — 양도하는 주택이 나중에 취득한 주택이라 ` +
+    `일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)이 적용되지 않습니다. 1년 요건을 면제하는 사유가 있어도 같습니다(서면-2021-법규재산-6773 · 기획재정부 재산세제과-1181).`
+  );
+}
+
 /** 신규 주택 경위 판정 — `oneYearWaived`는 §154① 단서로 「종전주택 취득 후 1년」이 면제되는가(`waivesPriorHouseOneYearGap`). */
 export function judgeNewHouseOrigin(input: NewHouseOriginInput, oneYearWaived: boolean): NewHouseOriginVerdict {
   const tth = input.temporaryTwoHouse;
