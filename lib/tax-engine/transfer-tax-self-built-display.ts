@@ -9,6 +9,7 @@
  * 증여자/본인 분기 문구가 갈라지는 지점이 많고, 일반화하면 이월과세 4뷰의 회귀 면적이 커진다.
  *
  * 계획서: docs/00-pm/self-built-housing-building-base-114-2.plan.md §7.9 · Q-7 · Q-8 · Q-13
+ * 영 §164⑨ 특례 문구: docs/00-pm/self-built-housing-164-9-plan.md §5.4 · Q-6 · Q-7
  */
 import { TRANSFER } from "./legal-codes";
 import type { SelfBuiltEchoEntry, SelfBuiltHousingPenaltyEcho } from "./types/transfer-self-built-housing.types";
@@ -19,6 +20,10 @@ const won = (n: number): string => n.toLocaleString("ko-KR");
 const UNCONFIRMED = "일체 주택의 건물분만 기준으로 하는 정면 해석례는 확인하지 못했습니다 — 확인 필요.";
 
 const NOTICE_HEAD = `본인이 신축한 일체 주택(토지와 건물을 함께 공시한 개별주택가격·공동주택가격)은 ${TRANSFER.BUILDING_PENALTY} 「해당 건물」의 `;
+
+/** 영 §164⑨ 특례 이름 — echo `housingSplit.sec164_9` 가 있을 때만(불발 포함 — 결과 화면의 특례 카드와 같은 시점) */
+const sec164_9Law = (k: "expropriation" | "auction"): string =>
+  k === "expropriation" ? `${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1} 공익수용 특례` : `${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_2} 공매·경락 특례`;
 
 type Basis = "estimated" | "appraisal_direct" | "appraisal_apportioned";
 const basisOf = (e: SelfBuiltHousingPenaltyEcho): Basis =>
@@ -36,6 +41,13 @@ const NOTICE: Record<Basis, string> = {
   appraisal_direct: `${NOTICE_HEAD}감정가액을 가산세 기준으로 보아 감정평가서에 구분 표시된 건물 감정가액만 적용했습니다(토지분 제외). ${UNCONFIRMED}`,
   appraisal_apportioned: `${NOTICE_HEAD}감정가액을 가산세 기준으로 보아 건물분만 적용했습니다(토지분 제외). 감정평가서에 토지와 건물의 가액이 구분 표시되지 않아 감정가액 총액을 취득 당시 토지 기준시가와 건물 기준시가의 비율로 나누어 구했습니다. ${UNCONFIRMED}`,
 };
+
+/**
+ * 환산 × 영 §164⑨ 특례 고지 — `NOTICE.estimated` 와 같은 구조에 특례 문장을 더하되 「확인 필요」 가 **한 번만** 나오게 한 문장으로 합친다(`UNCONFIRMED` 를 덧붙이지 않는다 —
+ * E2E SB-10 이 화면 전체의 「확인 필요」 출현 1회를 단언한다).
+ */
+const noticeEstimatedSec164_9 = (k: "expropriation" | "auction"): string =>
+  `${NOTICE_HEAD}환산취득가액을 가산세 기준으로 보아 건물분만 적용했습니다(토지분 제외). 건물분은 주택공시가격을 토지 기준시가와 건물 기준시가의 비율로 나누어 구했고, 양도 당시 주택공시가격은 ${sec164_9Law(k)}에 따른 금액을 같은 비율로 나누었습니다. 일체 주택의 건물분만 기준으로 하는 정면 해석례와 특례 적용 금액을 토지·건물로 나누는 정면 해석례는 확인하지 못했습니다 — 확인 필요.`;
 
 export interface SelfBuiltPenaltyView {
   /** 카드 제목 */
@@ -62,8 +74,18 @@ export function selfBuiltPenaltyView(e: SelfBuiltHousingPenaltyEcho | undefined)
         `${BASIS_LABEL.estimated} ${won(e.base)} = 건물분 양도가액 ${won(f.multiplicand)} × (취득 당시 건물분 기준시가 ${won(f.numerator)}) ÷ (양도 당시 건물분 기준시가 ${won(f.denominator)})`,
       );
       lines.push(`취득 당시 주택공시가격 ${won(h.acquisitionHousing)} = 토지분 ${won(h.acquisitionLand)} + 건물분 ${won(h.acquisitionBuilding)}`);
+      const sp = h.sec164_9;
+      if (sp) {
+        const cand =
+          sp.kind === "expropriation"
+            ? `개별주택가격 ${won(sp.standardHousing)}·보상액 ${won(sp.candidates.compensation ?? 0)}·보상산정 기초 기준시가 ${won(sp.candidates.basis ?? 0)} 중 가장 작은 금액`
+            : `개별주택가격 ${won(sp.standardHousing)}·공매·경락가액 ${won(sp.candidates.auction ?? 0)} 중 작은 금액`;
+        lines.push(`양도 당시 주택공시가격 ${won(h.transferHousing)}은 ${sec164_9Law(sp.kind)}에 따라 ${cand}입니다.`);
+      }
       lines.push(`양도 당시 주택공시가격 ${won(h.transferHousing)} = 토지분 ${won(h.transferLand)} + 건물분 ${won(h.transferBuilding)}`);
-      lines.push("건물분 기준시가는 주택공시가격을 토지 기준시가와 건물 기준시가의 비율로 나눈 값입니다 — 토지분은 가산세 대상에서 제외합니다 (소득세법 §99①1호, 시행령 §166⑥).");
+      lines.push(
+        `건물분 기준시가는 주택공시가격${sp ? "(특례 적용 금액)" : ""}을 토지 기준시가와 건물 기준시가의 비율로 나눈 값입니다 — 토지분은 가산세 대상에서 제외합니다 (소득세법 §99①1호, 시행령 §166⑥).`,
+      );
     } else {
       lines.push(`가산세 기준액 = ${BASIS_LABEL.estimated} ${won(e.base)}`);
     }
@@ -81,14 +103,20 @@ export function selfBuiltPenaltyView(e: SelfBuiltHousingPenaltyEcho | undefined)
     title: `본인 신축 건물 ${e.method === "estimated" ? "환산취득가액" : "감정가액"} 가산세 (${TRANSFER.BUILDING_PENALTY})`,
     windowLine: `신축 취득일 ${e.constructionDate}부터 5년이 되는 날(${e.fifthAnniversary})까지 양도하는 경우입니다.`,
     formulaLines: lines,
-    notice: NOTICE[basis],
+    notice: basis === "estimated" && e.housingSplit?.sec164_9 ? noticeEstimatedSec164_9(e.housingSplit.sec164_9.kind) : NOTICE[basis],
   };
 }
 
 /** 집계·상세명세서 자산별 줄 — 「가산세 N (건물분 환산취득가액 B × 5%)」의 괄호 안 */
 export function selfBuiltPenaltyBasisFormula(e: SelfBuiltHousingPenaltyEcho | undefined): string | undefined {
-  return e ? `${BASIS_LABEL[basisOf(e)]} ${won(e.base)} × 5%` : undefined;
+  return e ? `${BASIS_LABEL[basisOf(e)]} ${won(e.base)} × 5%${sec164_9Suffix(e)}` : undefined;
 }
+
+/** 환산식 뒤 한 마디 — 특례를 쓴 환산만. 신고서 각주·상세명세서 자산별 줄 */
+const sec164_9Suffix = (e: SelfBuiltHousingPenaltyEcho): string => {
+  const k = e.housingSplit?.sec164_9?.kind;
+  return k ? ` · ${sec164_9Law(k)} 적용` : "";
+};
 
 /** 신고서 «가산세액» 칸 각주 — 값은 echo 그대로, 한 문장 */
 export function selfBuiltPenaltyFilingNote(e: SelfBuiltHousingPenaltyEcho | undefined): string | undefined {
@@ -96,7 +124,7 @@ export function selfBuiltPenaltyFilingNote(e: SelfBuiltHousingPenaltyEcho | unde
   const head = `${TRANSFER.BUILDING_PENALTY} 본인 신축 건물 가산세 ${won(e.penalty)} (= ${BASIS_LABEL[basisOf(e)]} ${won(e.base)} × 5%)`;
   const f = e.formula;
   if (e.method === "estimated" && f) {
-    return `${head} · 건물분 양도가액 ${won(f.multiplicand)} × (취득 당시 건물분 기준시가 ${won(f.numerator)}) ÷ (양도 당시 건물분 기준시가 ${won(f.denominator)})`;
+    return `${head} · 건물분 양도가액 ${won(f.multiplicand)} × (취득 당시 건물분 기준시가 ${won(f.numerator)}) ÷ (양도 당시 건물분 기준시가 ${won(f.denominator)})${sec164_9Suffix(e)}`;
   }
   return head;
 }

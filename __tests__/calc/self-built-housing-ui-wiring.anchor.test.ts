@@ -3,8 +3,9 @@
  * 계획서: docs/00-pm/self-built-housing-building-base-114-2.plan.md (§7.4~7.7 · §9 PR-2)
  *
  * 경로: 폼 → ⑧ `collectStepIssues(0~5)` → ④ `callTransferTaxAPI` 본문 → route POST(⑫⑭ + 엔진).
- *  · W — 입력을 채우면 `selfBuiltHousing` 중첩 객체가 실리고 base 가 건물분이 된다(키가 없으면 PR-4 이후 엔진이 400 — 종전 500,000,000 / 25,000,000 은 영 §164⑨ 공익수용 결합에만 남는다)
- *  · N — 범위 밖(실가·5년 경과·방식 전환·비주택·겸용·증축·분리·공익수용 등)이면 키를 싣지 않고 ⑧도 요구하지 않는다(숨은 입력 = 미전송 = 미요구)
+ *  · W — 입력을 채우면 `selfBuiltHousing` 중첩 객체가 실리고 base 가 건물분이 된다(키가 없으면 PR-4 이후 엔진이 400)
+ *  · X — 영 §164⑨ 공익수용·공매 특례(PR-A): 카드가 열리고 ④ 가 §164⑨ 입력(최상위)과 `selfBuiltHousing` 을 함께 싣는다 — 새 입력 칸은 없다
+ *  · N — 범위 밖(실가·5년 경과·방식 전환·비주택·겸용·증축·분리 등)이면 키를 싣지 않고 ⑧도 요구하지 않는다(숨은 입력 = 미전송 = 미요구)
  *  · B — 칸이 비면 ⑧이 칸 단위로 차단한다(자동 채움·합계 뺄셈 없음)
  */
 import { describe, it, expect, vi } from "vitest";
@@ -155,7 +156,6 @@ describe("N — 범위 밖이면 키를 싣지 않고 ⑧도 요구하지 않는
     ["증축", { buildingType: "extension", extensionFloorArea: "120", extensionStdPriceAtAcquisition: "40000000" }],
     ["비주택(건물 단독)", { assetKind: "building" }],
     ["겸용주택", { isMixedUseHouse: true }],
-    ["공익수용(영 §164⑨)", { transferCause: "public_expropriation" }],
   ];
   it.each(cases)("N %s → 키 없음 · 우리 칸 요구 없음", async (_n, over, formOver) => {
     // 칸은 채워 둔 채(stale) — 범위 밖이면 보내지도 요구하지도 않아야 한다. ⑧ 오류가 나는 조합(증축 등)은 우리 칸이 없는 것만 본다.
@@ -184,6 +184,61 @@ describe("N — 범위 밖이면 키를 싣지 않고 ⑧도 요구하지 않는
     const r = await calc(sbForm({ ...SB_APPRAISAL, selfBuiltAppraisalNoSplit: true, selfBuiltBuildingAppraisal: "" }));
     expect(ours(r)).toEqual([]);
     expect(sb(r)).toEqual({ landPricePerSqmAtAcquisition: 1_000_000, landArea: 100, buildingStdPriceAtAcquisition: 60_000_000 });
+  });
+});
+
+describe("X — 영 §164⑨ 공익수용·공매 특례 × 환산 (PR-A): 칸은 그대로, ④ 가 §164⑨ 입력과 건물분을 함께 싣는다", () => {
+  const X3 = { transferCause: "public_expropriation", housingCompensationTotal: "300000000", housingCompensationBasisTotal: "350000000" } as Partial<AssetForm>;
+  const A3 = { isAuctionTransfer: true, auctionPrice: "300000000" } as Partial<AssetForm>;
+  const S3 = { actualSalePrice: "300000000" } as Partial<AssetForm>;
+  const f3 = (over: Partial<AssetForm>) => sbForm({ ...S3, ...over }, { contractTotalPrice: "300000000" });
+
+  it("X-1 수용(S=3억·보상 3억/3.5억) → 보상액 2값(최상위)과 selfBuiltHousing 5값이 동시에 실린다 · base 75,000,000 · 가산세 3,750,000 · 총납부 19,959,720 (종전 키 없음 → 200,000,000 / 10,000,000 / 26,834,720)", async () => {
+    const r = await calc(f3(X3));
+    expect(r.issues).toEqual([]);
+    expect(r.body).toMatchObject({ transferCause: "public_expropriation", housingCompensationTotal: 300_000_000, housingCompensationBasisTotal: 350_000_000 });
+    expect(sb(r)).toBeDefined();
+    expect(r.result).toMatchObject({ penaltyBase: 75_000_000, penaltyTax: 3_750_000, totalTax: 19_959_720 });
+    expect(r.result?.selfBuiltHousingPenalty).toBeDefined();
+  });
+  it("X-2 공매·경락(S=3억·경락 3억) → isAuctionTransfer·auctionPrice 와 selfBuiltHousing 이 함께 · 같은 값", async () => {
+    const r = await calc(f3(A3));
+    expect(r.issues).toEqual([]);
+    expect(r.body).toMatchObject({ isAuctionTransfer: true, auctionPrice: 300_000_000 });
+    expect(sb(r)).toBeDefined();
+    expect(r.result).toMatchObject({ penaltyBase: 75_000_000, penaltyTax: 3_750_000, totalTax: 19_959_720 });
+  });
+  it("X-3 특례 불발(보상액·기초 5억 ≥ H_T 4억) → 187,500,000 / 9,375,000 / 총 180,649,700 — 종전 자산 전체 500,000,000 / 25,000,000 / 197,837,200", async () => {
+    const r = await calc(sbForm({ transferCause: "public_expropriation", housingCompensationTotal: "500000000", housingCompensationBasisTotal: "500000000" }));
+    expect(r.issues).toEqual([]);
+    expect(r.result).toMatchObject({ penaltyBase: 187_500_000, penaltyTax: 9_375_000, totalTax: 180_649_700 });
+  });
+  it("X-4 ⑧ 순서(계산 순서 = 화면 순서) — 보상액을 비우면 보상액 칸이 먼저 막고, 채우면 건물분 칸이 비었을 때 그 칸이 막는다", async () => {
+    const noComp = await calc(f3({ ...X3, housingCompensationTotal: "" }));
+    expect(noComp.issues[0]?.field).toBe("housingCompensationTotal");
+    const noBuilding = await calc(f3({ ...X3, ...blank("buildingStandardPriceAtAcq") }));
+    expect(noBuilding.issues[0]?.field).toBe("buildingStandardPriceAtAcq");
+  });
+  it("X-5 구별력 — 공익수용을 켰다가 일반 양도로 되돌리면 §164⑨ 입력은 안 실리고(값은 보존) 건물분은 특례 없는 187,500,000", async () => {
+    const r = await calc(sbForm({ transferCause: "general", housingCompensationTotal: "300000000", housingCompensationBasisTotal: "350000000" }));
+    expect(r.issues).toEqual([]);
+    expect(r.body.transferCause).toBe("general");
+    expect(r.body.housingCompensationTotal).toBeUndefined();
+    expect(r.result).toMatchObject({ penaltyBase: 187_500_000, penaltyTax: 9_375_000 });
+  });
+  it("X-6 감정 × 수용·공매 → 감정은 §164⑨ 와 무관: 보상액 칸을 요구하지 않고 건물 감정가액만 실린다 · base 110,000,000 (종전 자산 전체 300,000,000 / 15,000,000)", async () => {
+    for (const x of [{ transferCause: "public_expropriation" } as Partial<AssetForm>, A3]) {
+      const r = await calc(sbForm({ ...SB_APPRAISAL, selfBuiltBuildingAppraisal: "110000000", ...x }));
+      expect(r.issues, JSON.stringify(x)).toEqual([]);
+      expect(sb(r)).toEqual({ buildingAppraisalValue: 110_000_000 });
+      expect(r.result).toMatchObject({ penaltyBase: 110_000_000, penaltyTax: 5_500_000 });
+    }
+  });
+  it("X-7 stale 공매 플래그 — 환산+공매 입력 후 감정으로 바꿔도(플래그 잔존) 감정 건물분으로 계산된다", async () => {
+    const r = await calc(sbForm({ ...SB_APPRAISAL, selfBuiltBuildingAppraisal: "110000000", isAuctionTransfer: true, auctionPrice: "300000000" }));
+    expect(r.issues).toEqual([]);
+    expect(r.result).toMatchObject({ penaltyBase: 110_000_000, penaltyTax: 5_500_000 });
+    expect(r.result?.selfBuiltHousingPenalty?.housingSplit).toBeUndefined();
   });
 });
 

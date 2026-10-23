@@ -10,7 +10,8 @@
  *   · 정적 거부 — 비주택·부담부증여·매매 외 취득·본인 신축 아님·겸용·증축·PHD  → 모두 null
  *   · 게이트 — 신축일부터 5년 이내(당일 포함) ∧ 환산은 양도일 ≥ 2018-01-01, 감정은 ≥ 2020-01-01. 실지거래가·매매사례는 조문 대상이 아니다
  *   · 분리 — 토지·건물 취득일 분리·소유자 분리·배율 초과분 분리는 `isSplitPayloadActive` 가 참 → null (그 카드(S3-1·#17)가 같은 칸을 받는다 — `data-field` 중복 방지)
- *   · 영 §164⑨ 공익수용·공매 특례(환산 분모가 바뀐다)와는 결합하지 않는다 → null. 엔진도 던지지 않고 종전 base(자산 전체)를 유지하며 «확인 필요» 를 싣는다(`selfBuiltHousingSec164_9Fallback`)
+ *   · 영 §164⑨ 공익수용·공매 특례는 범위 밖이 아니다(Q-12 후속 PR-A) — 환산이면 H_T′(차감 후)를 같은 비례 규칙으로 나눠 건물분을 구하고, 감정은 양도 당시 기준시가를 쓰지 않아 무관하다. 새 입력 칸은 없다(보상액·보상기초·경락가는 ② 양도정보 입력) —
+ *     카드는 `sec164_9` 로 안내 문단만 띄운다(`selfBuiltHousingSec164_9Kind`).
  *   · 방식 — ④가 싣는 방식과 같다. 환산·감정 플래그가 함께 켜진 잔재는 첫 자산=감정, 함께 양도 자산=환산(아래). 엄격화(PR-4)로 엔진이 입력 부재를 던지므로 이 집합이 엔진이 던지는 집합과 같아야 한다
  *
  * 증축은 Q-4 확정으로 제외한다(기준시가 비례 안분이면 수학적으로 같은 값 — 현행 증축부분 한정 base 유지).
@@ -40,6 +41,16 @@ export interface SelfBuiltHousingScope {
   sale: boolean;
   /** 건물 감정가액 직접 입력 — 감정 + 감정서에 건물 가액이 구분 표시됨 */
   directAppraisal: boolean;
+  /** 환산 ∧ 영 §164⑨ 공익수용(1호)·공매·경락(2호) — 카드 안내 문단 판정. 엔진이 분모를 H_T′ 로 쓰는 셀과 같은 원 플래그(1호 우선) */
+  sec164_9?: "expropriation" | "auction";
+}
+
+/** 환산 ∧ 영 §164⑨ 특례 원 플래그 — 1호(수용)가 2호(공매·경락)보다 우선한다(`resolveConversionDenominatorAtTransfer` 의 N3 배타와 같은 순서). 감정이면 없음. */
+function selfBuiltHousingSec164_9Kind(asset: AssetForm, method: "estimated" | "appraisal"): "expropriation" | "auction" | undefined {
+  if (method !== "estimated") return undefined;
+  if (asset.transferCause === "public_expropriation") return "expropriation";
+  if (asset.isAuctionTransfer === true && isAuctionEligibleAssetKind(asset.assetKind)) return "auction";
+  return undefined;
 }
 
 /** 감정평가서에 건물 가액이 구분 표시되어 있지 않다(= 취득 당시 기준시가 비율로 나눈다) — ⑤·⑧·④가 같은 기본값(false = 직접 입력)을 읽는다. */
@@ -72,16 +83,15 @@ export function selfBuiltHousingScope(asset: AssetForm | undefined, ctx: SelfBui
   const companionEstimatedWins = ctx.isNonPrimary === true && flags.isAppraisal && asset.useEstimatedAcquisition === true;
   const method = flags.isAppraisal ? (companionEstimatedWins ? "estimated" : "appraisal") : flags.isEstimated ? "estimated" : null;
   if (!method) return null;
-  // 영 §164⑨ 공익수용(1호)·공매(2호) — 환산 분모가 바뀌어 엔진이 결합을 거부한다. 화면에서도 이 입력을 열지 않는다.
-  if (asset.transferCause === "public_expropriation") return null;
-  if (asset.isAuctionTransfer === true && isAuctionEligibleAssetKind(asset.assetKind)) return null;
   if (!gateOpen(asset, ctx.transferDate, method)) return null;
   const isNonPrimary = ctx.isNonPrimary === true;
   if (isSplitPayloadActive(asset, false, { transferDate: ctx.transferDate, isNonPrimary })) return null;
   if (usesPhdGate(asset, isNonPrimary)) return null;
 
   const noSplit = selfBuiltAppraisalNoSplit(asset);
+  const sec164_9 = selfBuiltHousingSec164_9Kind(asset, method);
+  const sec = sec164_9 ? { sec164_9 } : {};
   return method === "estimated"
-    ? { method, acq: true, sale: true, directAppraisal: false }
-    : { method, acq: noSplit, sale: false, directAppraisal: !noSplit };
+    ? { method, acq: true, sale: true, directAppraisal: false, ...sec }
+    : { method, acq: noSplit, sale: false, directAppraisal: !noSplit, ...sec };
 }

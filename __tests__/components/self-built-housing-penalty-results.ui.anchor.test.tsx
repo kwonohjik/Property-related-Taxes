@@ -5,6 +5,7 @@
  * 실제 폼 → ④ → route(POST) → 결과를 4뷰가 같은 문장 정본(`selfBuiltPenaltyView`)으로 읽는지 잠근다.
  *  · echo 가 있으면(건물분 base) 산식·5년 기산·고지(「적용했다 + 정면 해석례 미확보 — 확인 필요」)가 한 번씩 뜬다
  *  · echo 가 없으면(비주택·증축·분리·실가·5년 경과·이월과세 등) 어느 뷰에도 흔적이 없고 종전 문구 그대로다(회귀 0)
+ *  · 영 §164⑨ 공익수용·공매 특례(PR-A): 환산이면 특례 줄·고지 변형·각주 접미가 4뷰에 같은 문장으로 뜬다 — 계획서 docs/00-pm/self-built-housing-164-9-plan.md §5.4
  */
 import { describe, it, expect, afterEach, vi, beforeAll } from "vitest";
 import type { ReactElement } from "react";
@@ -323,5 +324,101 @@ describe("다건 합산(MultiTransferTaxResultView) — 건별 카드·합산 PD
     expect(screen.queryByTestId("self-built-penalty-card")).toBeNull();
     expect(container.textContent).not.toContain(CONFIRM);
     expect(collect(TransferMultiSection({ r: m.data as Record<string, unknown> })).join("\n")).not.toContain(CONFIRM);
+  });
+});
+
+describe("영 §164⑨ 공익수용·공매 특례 × 환산 (PR-A) — 4뷰·함께 양도·다건이 같은 정본을 읽는다", () => {
+  const CONFIRM_SEC = "특례 적용 금액을 토지·건물로 나누는 정면 해석례는 확인하지 못했습니다 — 확인 필요.";
+  const X3 = { transferCause: "public_expropriation", housingCompensationTotal: "300000000", housingCompensationBasisTotal: "350000000", actualSalePrice: "300000000" } as Partial<AssetForm>;
+  const A3 = { isAuctionTransfer: true, auctionPrice: "300000000", actualSalePrice: "300000000" } as Partial<AssetForm>;
+  const NOT_FIRED = { transferCause: "public_expropriation", housingCompensationTotal: "500000000", housingCompensationBasisTotal: "500000000" } as Partial<AssetForm>;
+  let EXPR: Cell;
+  let AUC: Cell;
+  let NF: Cell;
+  const s3 = async (over: Partial<AssetForm>): Promise<Cell> => {
+    const f = sbForm(over, { contractTotalPrice: String(over.actualSalePrice ?? "1000000000") });
+    const out = await calc(f);
+    expect(out.status, JSON.stringify(out.json)).toBe(200);
+    return { r: out.result as unknown as TransferTaxResult, f };
+  };
+  beforeAll(async () => {
+    EXPR = await s3(X3);
+    AUC = await s3(A3);
+    NF = await s3(NOT_FIRED);
+  });
+
+  it("echo 전제 — 분모 H_T′ 가 양도차익 분모(특례 카드의 적용 양도당시 기준시가)와 같은 숫자 · 불발도 echo 를 싣는다(Q-7)", () => {
+    expect(EXPR.r.selfBuiltHousingPenalty).toMatchObject({
+      base: 75_000_000,
+      penalty: 3_750_000,
+      housingSplit: { transferHousing: 300_000_000, transferLand: 180_000_000, transferBuilding: 120_000_000, sec164_9: { kind: "expropriation", standardHousing: 400_000_000, candidates: { compensation: 300_000_000, basis: 350_000_000 } } },
+    });
+    expect(EXPR.r.housingExpropriationValuationDetail?.denominator).toBe(300_000_000);
+    expect(AUC.r.selfBuiltHousingPenalty?.housingSplit?.sec164_9).toEqual({ kind: "auction", standardHousing: 400_000_000, candidates: { auction: 300_000_000 } });
+    expect(AUC.r.auctionValuationDetail?.denominator).toBe(300_000_000);
+    expect(NF.r.selfBuiltHousingPenalty?.housingSplit).toMatchObject({ transferHousing: 400_000_000, sec164_9: { kind: "expropriation", standardHousing: 400_000_000 } });
+    expect(NF.r.housingExpropriationValuationDetail?.denominator).toBe(400_000_000);
+  });
+
+  it("① 카드 — 특례 줄(후보 3값 중 최솟값) → 주택공시가격 분해 → 설명줄 · 고지 변형(확인 필요 1회) · 특례 카드와 같은 숫자", () => {
+    const { container } = renderView(EXPR);
+    const t = screen.getByTestId("self-built-penalty-card").textContent!;
+    expect(t).toContain("양도 당시 주택공시가격 300,000,000은 소득세법 시행령 §164⑨ 1호 공익수용 특례에 따라 개별주택가격 400,000,000·보상액 300,000,000·보상산정 기초 기준시가 350,000,000 중 가장 작은 금액입니다.");
+    expect(t).toContain("양도 당시 주택공시가격 300,000,000 = 토지분 180,000,000 + 건물분 120,000,000");
+    expect(t).toContain("건물분 기준시가는 주택공시가격(특례 적용 금액)을 토지 기준시가와 건물 기준시가의 비율로 나눈 값입니다");
+    const notice = screen.getByTestId("self-built-notice").textContent!;
+    expect(notice).toContain(CONFIRM_SEC);
+    expect(notice.split("확인 필요").length - 1).toBe(1);
+    expect(notice).toContain("양도 당시 주택공시가격은 소득세법 시행령 §164⑨ 1호 공익수용 특례에 따른 금액을 같은 비율로 나누었습니다");
+    expect(count(container.textContent!, CONFIRM_SEC)).toBe(1);
+    // 기존 특례 카드의 «적용 양도당시 기준시가» 와 같은 숫자로 이어진다
+    expect(container.textContent).toContain("주택 수용 양도당시 기준시가 특례");
+    expect(container.textContent).toMatch(/적용 양도당시 기준시가\s*300,000,000/);
+    expect(t).not.toMatch(/유리|불리|절감|floor|B_acq|B_tr|S_b|\d원/);
+  });
+  it("① 카드 — 공매·경락(2호) 줄 · 특례 불발(H_T′ = H_T)도 줄이 뜬다", () => {
+    renderView(AUC);
+    expect(screen.getByTestId("self-built-penalty-card").textContent).toContain(
+      "양도 당시 주택공시가격 300,000,000은 소득세법 시행령 §164⑨ 2호 공매·경락 특례에 따라 개별주택가격 400,000,000·공매·경락가액 300,000,000 중 작은 금액입니다.",
+    );
+    expect(screen.getByTestId("self-built-notice").textContent).toContain("소득세법 시행령 §164⑨ 2호 공매·경락 특례");
+    cleanup();
+    renderView(NF);
+    expect(screen.getByTestId("self-built-penalty-card").textContent).toContain("양도 당시 주택공시가격 400,000,000은 소득세법 시행령 §164⑨ 1호 공익수용 특례에 따라");
+  });
+  it("특례가 없는 환산은 종전 문구 그대로 — 특례 줄·고지 변형·각주 접미 없음(회귀 0)", () => {
+    const v = selfBuiltPenaltyView(EST.r.selfBuiltHousingPenalty)!;
+    expect(v.formulaLines.join("\n")).not.toContain("§164⑨");
+    expect(v.notice).not.toContain("§164⑨");
+    expect(v.notice).toContain(CONFIRM);
+    expect(penaltyRow(EST.r).roseNotes!.total).not.toContain("§164⑨");
+    expect(stmtPenalty(EST.r)).not.toContain("§164⑨");
+    // 감정은 §164⑨ 와 무관
+    expect(AP_DIRECT.r.selfBuiltHousingPenalty?.housingSplit).toBeUndefined();
+  });
+
+  it("② 상세명세서 · ③ 신고서 각주 · ④ PDF — 환산식 뒤 «특례 적용» 한 마디 · 특례 줄 · 고지 1회", () => {
+    expect(stmtPenalty(EXPR.r)).toContain("양도 당시 주택공시가격 300,000,000은 소득세법 시행령 §164⑨ 1호 공익수용 특례에 따라");
+    const row = penaltyRow(EXPR.r);
+    expect(row.values.total).toBe(3_750_000);
+    expect(row.roseNotes!.total).toContain("(양도 당시 건물분 기준시가 120,000,000) · 소득세법 시행령 §164⑨ 1호 공익수용 특례 적용");
+    const pdf = pdfText(EXPR.r);
+    expect(pdf).toContain("양도 당시 주택공시가격 300,000,000은 소득세법 시행령 §164⑨ 1호 공익수용 특례에 따라");
+    expect(count(pdf, CONFIRM_SEC)).toBe(1);
+    expect(penaltyRow(AUC.r).roseNotes!.total).toContain("소득세법 시행령 §164⑨ 2호 공매·경락 특례 적용");
+  });
+  it("③ 상세명세서 자산별 줄 — 집계 산식 괄호 안에도 특례 접미", async () => {
+    const b = await (async () => {
+      const f = { ...bundledForm({ transferCause: "public_expropriation", housingCompensationTotal: "300000000", housingCompensationBasisTotal: "350000000" }) } as TransferFormData;
+      const out = await calc(f);
+      expect(out.status, JSON.stringify(out.json)).toBe(200);
+      return { aggregated: (out.json as { data: { aggregated: never } }).data.aggregated, apportionment: (out.json as { data: { apportionment: never } }).data.apportionment, form: f };
+    })();
+    const { container } = render(<BundledAllocationCard apportionment={b.apportionment} aggregated={b.aggregated} formData={b.form} />);
+    const card = screen.getByTestId("self-built-penalty-card");
+    expect(card.textContent).toContain("건물분 환산취득가액 125,000,000 = 건물분 양도가액 200,000,000 ×");
+    expect(card.textContent).toContain("양도 당시 주택공시가격 300,000,000은 소득세법 시행령 §164⑨ 1호 공익수용 특례에 따라");
+    expect(container.textContent).toContain("소득세법 §114조의2 6,250,000 (건물분 환산취득가액 125,000,000 × 5% · 소득세법 시행령 §164⑨ 1호 공익수용 특례 적용)");
+    expect(count(container.textContent!, CONFIRM_SEC)).toBe(1);
   });
 });

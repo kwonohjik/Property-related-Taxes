@@ -19,7 +19,12 @@
  *
  * **던지는 집합 = UI 술어(`lib/calc/self-built-housing-scope.ts` `selfBuiltHousingScope`)가 카드를 띄우는 집합**이어야 한다 — 화면이 칸을 보여주지 않는 조합에서 엔진이 던지면 사용자가
  * 빠져나갈 수 없다(dead-end). 그래서 정적 사유({@link unreachableReason})·게이트·**분리 계산 중 여부(`splitActive` — 엔진이 실제로 건물 파트를 축으로 쓰는지)**를 모두 본다.
- * 영 §164⑨ 공익수용·공매와의 결합은 던지지 않고 종전 base 를 유지하며 «확인 필요» 를 싣는다 — 한 함수({@link selfBuiltHousingSec164_9Fallback})에 격리했다.
+ *
+ * ## 영 §164⑨ 공익수용(1호)·공매·경락(2호) 특례 (Q-12 후속 PR-A · 계획서 docs/00-pm/self-built-housing-164-9-plan.md)
+ * 특례는 환산 분모(양도 당시 기준시가)를 H_T → H_T′ = min(H_T, 보상액, 보상기초)(1호) / min(H_T, 경락가)(2호)로 낮춘다 — 법 §99①1호 라목 «주택 가액» 하나(토지+건물 총액)의 차감값이다.
+ * 건물분 B_tr 도 **그 H_T′ 를 같은 비례 규칙**(H_T′ × N_T ÷ (L_T+N_T))으로 나눠 구한다 — 양도차익의 환산취득가액과 **같은 분모**를 쓴다(`resolveConversionDenominatorAtTransfer` 단일 소스).
+ * 특례가 걸리지 않으면(보상액 불발·감정) 그 함수가 H_T 를 돌려주므로 종전 값과 바이트 동일하다. 감정은 양도 당시 기준시가를 쓰지 않아 특례와 무관하다.
+ * 정면 해석례는 확인하지 못했다(계획서 V-1) — 결과 화면이 «확인 필요» 를 싣는다. 이월과세 `donorBuilt.housing` 정렬은 별건(PR-B).
  *
  * 순환 의존을 피하려고 `transfer-tax-carryover-donor-penalty.ts` 를 import 하지 않는다(헬퍼를 직접 쓴다).
  */
@@ -123,30 +128,15 @@ export function assertSelfBuiltHousingInput(input: TransferTaxInput): void {
     invalid("일체 주택의 건물분을 구하려면 취득 당시 주택공시가격(개별주택가격·공동주택가격)이 필요합니다.", "standardPriceAtAcquisition");
   if (!positive(input.standardPriceAtTransfer))
     invalid("일체 주택의 건물분을 구하려면 양도 당시 주택공시가격(개별주택가격·공동주택가격)이 필요합니다.", "standardPriceAtTransfer");
-  // §164⑨ 공익수용 특례는 환산 분모(양도 당시 기준시가)를 바꾼다 — 그 분모를 건물분으로 나누는 법리는 확인 전이라 받지 않는다(조용히 어긋나지 않게)
-  if (resolveConversionDenominatorAtTransfer(input).denominator !== input.standardPriceAtTransfer)
-    invalid(`양도 당시 기준시가 특례(영 §164⑨ 공익수용·공매)와 건물분 가산세 base(${law})의 결합은 아직 지원하지 않습니다.`);
 }
 
 /**
- * 🔶 영 §164⑨ **공익수용(1호)·공매·경락(2호)** × 일체 주택 본인 신축 — 건물분 base 를 지원하지 않는 조합. **이 함수 하나가 그 경계**다(나중에 사용자 결정에 따라 바꿀 때 여기만).
- *
- * 특례는 환산 분모(양도 당시 기준시가)를 낮추는데, 그 분모를 토지·건물로 나누는 법리를 확인하지 못했다(V-4). 그래서 UI 술어(`selfBuiltHousingScope`)는 카드를 열지 않고 ④ 는 보내지 않는다 —
- * 엔진도 던지지 않고 **종전 동작(자산 전체 base)** 을 유지하며, 건물분이 아닌 전체 base 라는 사실을 «확인 필요» 로 싣는다({@link selfBuiltHousingFallbackNotice} · 침묵 금지).
- * UI 술어와 같은 **원 플래그**(`transferCause`·`isAuctionTransfer`)로 판정한다 — 보상액 입력 여부(`resolveConversionDenominatorAtTransfer` 가 실제로 분모를 바꿨는지)로 판정하면
- * 보상액을 비운 공익수용에서 UI 는 칸을 안 여는데 엔진은 던지는 dead-end 가 된다. 감정가액도 같다(UI 술어가 방식과 무관하게 null).
- */
-export function selfBuiltHousingSec164_9Fallback(input: TransferTaxInput): boolean {
-  return input.transferCause === "public_expropriation" || input.isAuctionTransfer === true;
-}
-
-/**
- * `selfBuiltHousing` 이 **없을 때**의 처리 — `required`(던진다) / `sec164_9`(종전 base + 고지) / `none`(관여 안 함).
+ * `selfBuiltHousing` 이 **없을 때**의 처리 — `required`(던진다) / `none`(관여 안 함).
  * 정적 사유 없음 ∧ 분리 계산 중 아님 ∧ 가산세 게이트 개방 — 이 셋이 UI 술어와 같은 집합이다. 분리 계산 중이면 건물 파트가 이미 축이라 `none`.
  */
-function missingInputDisposition(input: TransferTaxInput, splitActive: boolean): "required" | "sec164_9" | "none" {
+function missingInputDisposition(input: TransferTaxInput, splitActive: boolean): "required" | "none" {
   if (splitActive || unreachableReason(input) !== undefined || !selfBuiltHousingGateOpen(input)) return "none";
-  return selfBuiltHousingSec164_9Fallback(input) ? "sec164_9" : "required";
+  return "required";
 }
 
 /** 입력 부재 오류 — 무엇을 보내야 하는지 방식별로 명시한다(직접 API 호출자용). */
@@ -162,14 +152,6 @@ function missingInputError(input: TransferTaxInput): never {
       );
 }
 
-/** §164⑨ 결합으로 종전 base(자산 전체)를 유지했다는 «확인 필요» 고지 — 해당 없으면 undefined. 정상·손실 두 경로가 같은 함수를 부른다. */
-export function selfBuiltHousingFallbackNotice(input: TransferTaxInput, splitActive: boolean): string | undefined {
-  if (input.selfBuiltHousing !== undefined || missingInputDisposition(input, splitActive) !== "sec164_9") return undefined;
-  const target = input.acquisitionMethod === "appraisal" ? "감정가액" : "환산취득가액";
-  const cause = input.transferCause === "public_expropriation" ? "공익수용" : "공매·경락";
-  return `본인이 신축한 일체 주택을 ${target}으로 계산하면서 ${cause} 특례(소득세법 시행령 §164⑨)가 함께 적용되는 경우, 소득세법 §114조의2 가산세의 기준액(「해당 건물」의 ${target})을 건물분으로 나누는 계산은 지원하지 않아 토지분을 포함한 자산 전체의 ${target}을 기준으로 5%를 계산했습니다 — 건물분 기준 여부는 확인 필요.`;
-}
-
 /** 이 자산의 §114조의2 base 를 건물분으로 구해야 하는가 — 서버 거울(UI 술어와 같은 집합). `splitActive` = 토지·건물 분리 계산 중(건물 파트가 이미 축). */
 function applies(input: TransferTaxInput, splitActive: boolean): input is TransferTaxInput & { selfBuiltHousing: SelfBuiltHousingInput } {
   return input.selfBuiltHousing !== undefined && !splitActive && unreachableReason(input) === undefined && selfBuiltHousingGateOpen(input);
@@ -177,10 +159,10 @@ function applies(input: TransferTaxInput, splitActive: boolean): input is Transf
 
 /**
  * 건물분 §114조의2 base — finalize STEP 10.5 와 손실 조기반환이 **같은 이 함수**를 같은 순서로 읽는다.
- * 해당 없으면 `undefined`(현행 base 유지). **입력이 필요한데 없으면 던진다**(INVALID_INPUT) — 닿지 않는 조합·분리 계산 중·§164⑨ 결합은 던지지 않는다.
+ * 해당 없으면 `undefined`(현행 base 유지). **입력이 필요한데 없으면 던진다**(INVALID_INPUT) — 닿지 않는 조합·분리 계산 중은 던지지 않는다.
  */
 export function resolveSelfBuiltHousingPenaltyAxis(input: TransferTaxInput, splitActive: boolean): SelfBuiltHousingAxis | undefined {
-  // 입력 부재 — 필요한 조합이면 던진다(PR-4 엄격화). 닿지 않는 조합·§164⑨ 결합은 종전대로 undefined.
+  // 입력 부재 — 필요한 조합이면 던진다(PR-4 엄격화). 닿지 않는 조합은 종전대로 undefined.
   if (input.selfBuiltHousing === undefined && missingInputDisposition(input, splitActive) === "required") missingInputError(input);
   if (!applies(input, splitActive)) return undefined;
   const sb = input.selfBuiltHousing;
@@ -218,8 +200,9 @@ export function resolveSelfBuiltHousingPenaltyAxis(input: TransferTaxInput, spli
   // ① 취득 당시 건물분 B_acq = 주택공시가격 H 를 토지:건물 기준시가 비율로 안분한 건물 몫
   const landAtAcq = calcLandStdPriceAtAcq(sb.landPricePerSqmAtAcquisition!, sb.landArea!)!;
   const acq = apportionByStdPrice(input.standardPriceAtAcquisition!, landAtAcq, sb.buildingStdPriceAtAcquisition!);
-  // ② 양도 당시 건물분 B_tr
-  const tr = apportionByStdPrice(input.standardPriceAtTransfer!, sb.landStdPriceAtTransfer!, sb.buildingStdPriceAtTransfer!);
+  // ② 양도 당시 건물분 B_tr — 영 §164⑨ 특례가 걸리면 차감 후 주택 가액 H_T′ 를 같은 비례 규칙으로 나눈다(양도차익의 환산 분모와 같은 값 — 단일 소스)
+  const conv = resolveConversionDenominatorAtTransfer(input);
+  const tr = apportionByStdPrice(conv.denominator, sb.landStdPriceAtTransfer!, sb.buildingStdPriceAtTransfer!);
   // ③ 양도가액 건물분 S_b — 법정 서열(구분 기재 → §100③ 30% → 감정 → 기준시가 비례) 그대로
   const sale = sb.sale ?? {};
   const saleBuilding = resolveTransferPriceSplit({
@@ -246,14 +229,27 @@ export function resolveSelfBuiltHousingPenaltyAxis(input: TransferTaxInput, spli
         acquisitionHousing: input.standardPriceAtAcquisition!,
         acquisitionLand: acq.land,
         acquisitionBuilding: acq.building,
-        transferHousing: input.standardPriceAtTransfer!,
+        transferHousing: conv.denominator,
         transferLand: tr.land,
         transferBuilding: tr.building,
         saleBuilding,
+        ...sec164_9Echo(conv),
       },
       formula: { multiplicand: saleBuilding, numerator: acq.building, denominator: tr.building },
     },
   };
+}
+
+/**
+ * 영 §164⑨ 특례 echo — 특례 detail 이 있을 때만(불발이어도 detail 은 존재 — 결과 화면의 특례 카드와 같은 시점에 뜬다). detail 값을 **복사**한다(재계산 금지 — 표시 단일 소스).
+ * `transferHousing` 은 차감 후(H_T′), `standardHousing` 은 특례 전(H_T).
+ */
+function sec164_9Echo(conv: ReturnType<typeof resolveConversionDenominatorAtTransfer>): { sec164_9?: NonNullable<SelfBuiltHousingPenaltyEcho["housingSplit"]>["sec164_9"] } {
+  const h = conv.housingExpropriationValuationDetail;
+  if (h) return { sec164_9: { kind: "expropriation", standardHousing: h.standardTotal, candidates: { compensation: h.compensationTotal, basis: h.compensationBasisTotal } } };
+  const a = conv.auctionValuationDetail;
+  if (a) return { sec164_9: { kind: "auction", standardHousing: a.standardTotal, candidates: { auction: a.auctionPrice } } };
+  return {};
 }
 
 /** 결과 echo — 축이 base 를 정했을 때만 싣는다. `penalty` 는 호출부(finalize·손실 조기반환)가 계산한 §114조의2 가산세. */

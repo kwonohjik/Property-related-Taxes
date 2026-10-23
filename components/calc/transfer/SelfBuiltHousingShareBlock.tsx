@@ -8,6 +8,8 @@
  * · 노출은 `selfBuiltHousingScope` 하나(⑤) — ④ 전송·⑧ 필수와 **같은 술어**다. 범위 밖(5년 경과·방식 변경·PHD·분리·증축·겸용·부담부증여…)이면 렌더하지 않는다(값은 지우지 않는다).
  * · 마운트는 `SelfBuiltSection`(본인 신축 토글) 본문 끝이다 — 구분·완공일을 입력해야 5년 창이 판정되므로 위→아래로 자연스럽게 진행된다.
  * · 개별주택가격·공동주택가격은 토지+건물 합계라 위 «취득시/양도시 기준시가»(주택 전체)를 토지:건물 기준시가 비율로 나눈 건물분이 기준이다. 합계에서 토지분을 빼 대신하지 않는다.
+ * · 영 §164⑨ 공익수용·공매·경락 특례(Q-12 후속 PR-A)는 카드를 닫지 않는다 — 환산이면 ② 양도정보에서 정한 특례 금액(H_T′)을 같은 비례 규칙으로 나눈다. 새 칸은 없고 `scope.sec164_9` 로 안내 문단만 더한다
+ *   (보상액을 여기서 다시 입력해야 하는지 혼동하기 쉽다).
  * · 새 폼 칸은 감정(`selfBuiltBuildingAppraisal` · `selfBuiltAppraisalNoSplit`) 2개뿐 — 환산은 S3-1·#17·이월과세가 쓰는 기존 자산 칸(㎡당 공시지가·건물 기준시가·양도가액 구분)을 재사용한다.
  *   그 카드들은 `isSplitPayloadActive` 가 참일 때만 열리고 이 카드는 그때 열리지 않으므로 `data-field` 가 겹치지 않는다.
  * · `useEffect → store` 미러링 없음 — 모든 쓰기는 onChange 에서 한 번에 한다.
@@ -23,6 +25,7 @@ import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { selfBuiltAppraisalNoSplit, selfBuiltHousingScope } from "@/lib/calc/self-built-housing-scope";
 import { isPartialAreaScenario } from "@/lib/calc/transfer-pre1990-housing-land-bridge";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -48,6 +51,14 @@ export function SelfBuiltHousingShareBlock({ asset, onChange, transferDate, isNo
             ? " 감정평가서에 건물 가액이 구분 표시되어 있으면 그 금액을 쓰고, 없으면 취득 당시 토지·건물 기준시가 비율로 나눕니다 (소득세법 시행령 §166⑥, 부가가치세법 시행령 §64①)."
             : " 개별주택가격·공동주택가격은 토지와 건물을 합친 가격이라, 위 «취득시/양도시 기준시가»(주택 전체)를 토지 기준시가와 건물 기준시가의 비율로 나눈 건물분으로 가산세 기준액을 구합니다 (소득세법 §99①1호, 시행령 §166⑥)."}
         </p>
+        {scope.sec164_9 && (
+          <p className="text-xs text-muted-foreground leading-relaxed" data-testid="self-built-housing-sec164-9-note">
+            {scope.sec164_9 === "expropriation"
+              ? `공익수용 특례(${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1})가 적용되어 양도 당시 주택공시가격은 ② 양도정보에서 정한 특례 금액(개별주택가격·보상액·보상산정 기초 기준시가 중 가장 작은 금액)을 씁니다.`
+              : `공매·경락 특례(${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_2})가 적용되어 양도 당시 주택공시가격은 ② 양도정보에서 정한 특례 금액(개별주택가격·공매·경락가액 중 작은 금액)을 씁니다.`}{" "}
+            이 금액도 아래 양도 당시 토지·건물 기준시가의 비율로 나누므로, 보상액·공매·경락가액을 여기서 다시 입력할 필요는 없습니다.
+          </p>
+        )}
         {partial && (
           <p className="text-xs text-muted-foreground leading-relaxed" data-testid="self-built-housing-partial-note">
             일부 양도입니다. 주택공시가격은 주택 전체 값이므로 토지 기준시가도 «취득 당시 전체 토지 면적»({parseDecimal(asset.acquisitionArea) || "미입력"}㎡)으로 계산합니다.

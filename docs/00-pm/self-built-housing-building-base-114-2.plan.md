@@ -1,6 +1,6 @@
 # 일체 주택 **본인 신축** × 「소득세법」 §114조의2 환산·감정가액 5% 가산세 — base를 건물분으로 수정 계획서 (상위 계획 Q-12)
 
-**상태**: **PR-0~PR-4 전 PR 구현 완료**(2026-10-23, PR-4 = 엔진 엄격화 — §9 PR-4 Do 기록) · 남은 것은 §164⑨ 공익수용·공매 결합의 법리 결정(§12 V-4·V-16)뿐. **Plan 확정**: 사용자가 §11 Q-1~Q-15를 **전부 권장안(★)으로 확정**했다. 진행 순서 **PR-0 → PR-1 → PR-2 → PR-3 → PR-4**(§9). 결정 Q는 **§11**(엔진·UI 통합 Q-1~Q-15, 권장안 표시). 이 문서는 계획서뿐이고 소스는 건드리지 않았다(실측은 작성 시 throwaway probe — 저장소 미보존). UI 시니어 조사 내용은 §7.1~7.11에 승격했다.
+**상태**: **PR-0~PR-4 전 PR 구현 완료**(2026-10-23, PR-4 = 엔진 엄격화 — §9 PR-4 Do 기록) · §164⑨ 공익수용·공매 결합(§12 V-4·V-16)은 **후속 PR-A 로 종결**(2026-10-24 — `docs/00-pm/self-built-housing-164-9-plan.md` §9.6: 환산은 H_T′ 를 같은 비례 규칙으로 나눈 건물분 base, 감정은 §164⑨ 무관). 이월과세 `donorBuilt.housing` 정렬만 PR-B 로 남았다. **Plan 확정**: 사용자가 §11 Q-1~Q-15를 **전부 권장안(★)으로 확정**했다. 진행 순서 **PR-0 → PR-1 → PR-2 → PR-3 → PR-4**(§9). 결정 Q는 **§11**(엔진·UI 통합 Q-1~Q-15, 권장안 표시). 이 문서는 계획서뿐이고 소스는 건드리지 않았다(실측은 작성 시 throwaway probe — 저장소 미보존). UI 시니어 조사 내용은 §7.1~7.11에 승격했다.
 **브랜치**: `docs/self-built-housing-building-base-plan` (origin/master 4397071e7 기준)
 **상위 계획**: `docs/00-pm/gb-card-built-penalty-114-2.plan.md` §10.1(H1, Q-12 「별건 계획서로 분리」 확정) · `docs/00-pm/carryover-donor-built-114-2.plan.md` §3.2·§3.3(`donorBuilt.housing`·`housingBase`·`LandBuildingSaleSplitSection` 재사용 — 상위 픽스처 base 187,500,000 → 9,375,000).
 **사용자 확정 해석(재론 금지)**: ① §114조의2는 **건물 부분에만** 적용(토지분 제외) · ② **[이월과세 계획 Q-2]** 일체 주택 건물분 기준시가 = 주택공시가격 × 건물기준시가 ÷ (토지공시가격(개별공시지가×면적) + 건물기준시가) — 취득 당시·양도 당시 각각 · ③ **[이월과세 계획 Q-6 (b)]** 건물 양도가액 S_b는 `resolveTransferPriceSplit` 법정 서열(구분 기재 → §100③ 30% 판정 → 감정평가 → 기준시가 비례). **이 계획은 같은 조문이라 본인 신축에도 그대로 적용된다는 전제로 쓴다**(그 전제 자체는 §11 Q-1에서 한 번 확인받는다).
@@ -652,7 +652,7 @@ useEffect→store 미러링 없음(토글 `onCheckedChange` 단일 patch, 파생
 | V-1 | 일체 취득 주택의 가산세 base에서 토지분을 제외하는 **정면 해석례** | **확인 필요** — 법문·재산세제과-939 「해당 건물분」만 확인 |
 | V-2 | 감정가액 일체의 건물분 안분(기준시가 비례) 정면 해석례 | **확인 필요** |
 | V-3 | 본인 신축 L 산정 면적(`acquisitionArea`)이 취득 전체 면적인지 양도분인지 — H 쪽과 동척도인지(`usesTransferAreaForAcqStdPrice`) | **해소(PR-2)** — H·H_T 가 주택 전체 총액이라 **전체 면적**(`acquisitionArea`)이 같은 척도. 실측: partial 에서 양도분 면적이면 base 136,363,637(+45%) · 채택 93,750,000 (§9 PR-2 Do 기록) |
-| V-4 | 공익수용 §164⑨ 환산 분모 특례(`resolveConversionDenominatorAtTransfer`)와 B_tr 안분의 상호작용 | **확인 필요** — PR-1: `selfBuiltHousing` 을 보내면 거부 · PR-2: UI 술어 null · **PR-4: 보내지 않으면 던지지 않고 종전 base(자산 전체) + «확인 필요» 고지**(V-16) |
+| V-4 | 공익수용 §164⑨ 환산 분모 특례(`resolveConversionDenominatorAtTransfer`)와 B_tr 안분의 상호작용 | ✅ **종결**(PR-A, 2026-10-24) — B_tr = H_T′ × N_T ÷ (L_T+N_T). 종전 이력: PR-1 `selfBuiltHousing` 을 보내면 거부 · PR-2 UI 술어 null · PR-4 보내지 않으면 던지지 않고 종전 base(자산 전체) + «확인 필요» 고지(V-16). 정면 해석례는 여전히 없어 결과 고지에 «확인 필요» 유지(`self-built-housing-164-9-plan.md` V-1) |
 | V-5 | 겸용주택 §114조의2 미배선(엔진) · 토글 불일치(⑤) | 별건 후보 — 의도 여부 **확인 필요** |
 | V-6 | 오피스텔·상업용 건물(`commercial_building`) 일괄 고시 가격의 건물분 | 이번 범위 밖 · ⑤ 토글 미노출 |
 | V-7 | 신축 직후(개별주택가격 첫 공시 전) 양도는 PHD 경로로 이미 건물 파트 — 첫 공시 **후** 취득한 신축 주택의 H 취득시점(신축일 직전 공시에는 건물이 없음) 해석 | 현행 거동 유지 · 별건 **확인 필요** |
@@ -663,7 +663,7 @@ useEffect→store 미러링 없음(토글 `onCheckedChange` 단일 patch, 파생
 | V-15 | (UI §10-8) 영향 기존 테스트의 분류: E2E 미실행 — `transfer-companion-self-built-penalty.spec.ts` CS-2·CS-3, `transfer-extension-appraisal-penalty.spec.ts` EA-3 (§10) | **확인 필요**(CI e2e 12샤드) |
 | V-10 | 다건 ④(`multi-transfer-tax-api.ts:291`)는 `selfBuiltActive(primary)`만 보고 겸용 제외가 없다(단건 `transfer-tax-api.ts:425`는 `!isMixed`) — 비대칭이 실제 오전송을 일으키는지 | **확인 필요**(UI 메모 §10-6) |
 | V-11 | (UI 조사 §10-1) PHD 경로가 실제로 건물분을 base로 쓰는지 | **해소** — probe 실측 base 191,860,465·가산세 9,593,023(건물 파트, `phdSplitPathTaken`→`calcSplitGainPreDisclosure`) |
-| V-16 | (PR-4) 영 §164⑨ 공익수용·공매 × 일체 주택 본인 신축 — 건물분 base 를 지원할지(분모를 건물분으로 나누는 법리) 아니면 지금처럼 자산 전체 base + 고지를 유지할지 | **사용자 결정 대기** — 바꿀 때는 `selfBuiltHousingSec164_9Fallback` 한 곳 + UI 술어 같은 두 줄 |
+| V-16 | (PR-4) 영 §164⑨ 공익수용·공매 × 일체 주택 본인 신축 — 건물분 base 를 지원할지(분모를 건물분으로 나누는 법리) 아니면 지금처럼 자산 전체 base + 고지를 유지할지 | ✅ **종결**(PR-A) — 사용자가 Q-1 (가) 확정(2026-10-23). `selfBuiltHousingSec164_9Fallback`·`selfBuiltHousingFallbackNotice` 삭제, UI 술어 두 줄 삭제. 감정 × §164⑨ 도 같은 PR 에서 열었다(법리 무관) |
 | V-9 | KoreanLaw MCP: 소득세법 MST 280405 §114조의2·§97·§100, 영 MST 290841 §166·§176의2, 부가령 MST 283641 §64 | **확인 완료**(2026-10-23) |
 
 ---

@@ -4,7 +4,7 @@
  * 계획서: docs/00-pm/self-built-housing-building-base-114-2.plan.md (§3 · §5 · §9 Pre-Do anchor 1~8 · 사용자 확정 Q-1~Q-15)
  *
  * 규칙 요약
- *  · 입력 `selfBuiltHousing` 중첩 객체가 있으면 base 가 건물분으로 바뀐다. **필요한데 없으면 던진다**(PR-4 엄격화 · Q-2 — `self-built-housing-strict.anchor.test.ts`). 영 §164⑨ 공익수용·공매 결합만 자산 전체 base 를 유지한다.
+ *  · 입력 `selfBuiltHousing` 중첩 객체가 있으면 base 가 건물분으로 바뀐다. **필요한데 없으면 던진다**(PR-4 엄격화 · Q-2 — `self-built-housing-strict.anchor.test.ts`). 영 §164⑨ 공익수용·공매도 PR-A 부터 같다(환산은 H_T′ 를 같은 비례 규칙으로 나눈 건물분 — `strict.anchor` [S3]).
  *  · 환산: base = 건물분 양도가액 S_b × 취득 당시 건물분 기준시가 B_acq ÷ 양도 당시 건물분 기준시가 B_tr
  *      (B = 주택공시가격을 토지:건물 기준시가 비율로 안분한 건물분 — 취득·양도 시점 각각, S_b = `resolveTransferPriceSplit` 법정 서열)
  *  · 감정: 건물 감정가액 직접 입력(`buildingAppraisalValue`) → 없으면 감정가액 총액 × 취득 당시 N ÷ (L+N)
@@ -64,9 +64,8 @@ const echo = (r: R) => (r as unknown as { selfBuiltHousingPenalty?: Record<strin
 const pick = (r: R) => ({ base: r.penaltyBase, pen: r.penaltyTax, det: r.determinedTax, lit: r.localIncomeTax, total: r.totalTax });
 
 /**
- * 영 §164⑨ 공익수용 결합 — 건물분 base 를 지원하지 않아 종전 동작(자산 전체 base)이 그대로 남는 조합(PR-4: 입력 부재의 유일한 예외).
- * PR-1~3 의 «현행 고정» 수치(500,000,000 / 25,000,000 …)를 이 결합이 보존한다 — 아래 [B] 가 «건물분일 때 얼마나 줄어드는가» 의 비교 기준으로 쓴다.
- * (보상액을 비운 공익수용은 환산 분모가 바뀌지 않으므로 수치가 종전과 같다.)
+ * 영 §164⑨ 공익수용(보상액 미입력 — 환산 분모가 바뀌지 않는다) 결합. PR-4 까지는 건물분 base 를 지원하지 않아 자산 전체 base(500,000,000 / 25,000,000 …)로 계산했다.
+ * PR-A 부터는 다른 조합과 같다 — 입력 부재는 던지고, 입력이 있으면 건물분이다. 종전 수치는 아래 [A]·[B] 의 «종전» 주석에 남긴다.
  */
 const EXPR = { transferCause: "public_expropriation" } as Partial<TransferTaxInput>;
 const fallback = (over: Partial<TransferTaxInput> = {}) => cell({ ...EXPR, ...over });
@@ -81,39 +80,45 @@ const absent = (i: TransferTaxInput) => {
   throw new Error("던지지 않았다");
 };
 
-describe("[A] 입력 부재 — PR-4 엄격화: 던진다 / 영 §164⑨ 공익수용 결합은 종전 수치(자산 전체 base) 그대로", () => {
-  it("S-A 일체 환산: 부재 → 던짐 · 공익수용 결합 500,000,000 / 25,000,000 / 총 197,837,200", () => {
+describe("[A] 입력 부재 — PR-4 엄격화: 던진다 · 영 §164⑨ 공익수용 결합도 PR-A 부터 던지고, 입력이 있으면 건물분이다", () => {
+  it("S-A 일체 환산: 부재 → 던짐 · 공익수용 결합도 던짐(종전 500,000,000 / 25,000,000 / 총 197,837,200) → selfBuiltHousing 이 있으면 187,500,000 / 9,375,000 / 총 180,649,700", () => {
     absent(cell());
-    expect(pick(run(fallback()))).toEqual({ base: 500_000_000, pen: 25_000_000, det: 154_852_000, lit: 17_985_200, total: 197_837_200 });
-    expect(echo(run(fallback()))).toBeUndefined();
+    absent(fallback());
+    expect(pick(run(withSb(EXPR)))).toEqual({ base: 187_500_000, pen: 9_375_000, det: 154_852_000, lit: 16_422_700, total: 180_649_700 });
+    expect(echo(run(withSb(EXPR)))).toBeDefined();
   });
-  it("S-B 일체 감정(총액 3억): 부재 → 던짐 · 공익수용 결합 300,000,000 / 15,000,000 / 총 270,788,760", () => {
+  it("S-B 일체 감정(총액 3억): 부재 → 던짐 · 공익수용 결합도 던짐(종전 300,000,000 / 15,000,000 / 총 270,788,760) → 건물 감정가액 직접 1.1억이면 110,000,000 / 5,500,000 / 총 260,338,760", () => {
     absent(cell(APPRAISAL));
-    expect(pick(run(fallback(APPRAISAL)))).toEqual({ base: 300_000_000, pen: 15_000_000, det: 231_171_600, lit: 24_617_160, total: 270_788_760 });
+    absent(fallback(APPRAISAL));
+    expect(pick(run(withSb({ ...EXPR, ...APPRAISAL }, { buildingAppraisalValue: 110_000_000 })))).toMatchObject({ base: 110_000_000, pen: 5_500_000, total: 260_338_760 });
   });
   it("X 증축 37,500,000 / 1,875,000 (이 축이 아니다 — 부재여도 던지지 않는다)", () => {
     const r = run(cell({ buildingType: "extension", extensionFloorArea: 100, extensionStdPriceAtAcquisition: 15_000_000 }));
     expect(r.penaltyBase).toBe(37_500_000);
     expect(r.penaltyTax).toBe(1_875_000);
   });
-  it("지분 50%(양도가 5억): 부재 → 던짐 · 공익수용 결합 250,000,000 / 12,500,000 / 총 85,757,320", () => {
+  it("지분 50%(양도가 5억): 부재 → 던짐 · 공익수용 결합도 던짐(종전 250,000,000 / 12,500,000 / 총 85,757,320) → 입력이 있으면 93,750,000 / 4,687,500 / 총 77,163,570", () => {
     const over = { transferPrice: 500_000_000, ownershipRatio: 0.5 };
     absent(cell(over));
-    expect(pick(run(fallback(over)))).toMatchObject({ base: 250_000_000, pen: 12_500_000, total: 85_757_320 });
+    absent(fallback(over));
+    expect(pick(run(withSb({ ...EXPR, ...over })))).toMatchObject({ base: 93_750_000, pen: 4_687_500, total: 77_163_570 });
   });
-  it("양도차손(§97②2호 단서 swap): 부재 → 던짐 · 공익수용 결합 500,000,000 / 25,000,000 / 총 27,500,000", () => {
+  it("양도차손(§97②2호 단서 swap): 부재 → 던짐 · 공익수용 결합도 던짐(종전 500,000,000 / 25,000,000 / 총 27,500,000) → 입력이 있으면 187,500,000 / 9,375,000 / 총 10,312,500", () => {
     const over = { capitalExpenditure: 1_200_000_000 };
     absent(cell(over));
-    expect(pick(run(fallback(over)))).toEqual({ base: 500_000_000, pen: 25_000_000, det: 0, lit: 2_500_000, total: 27_500_000 });
+    absent(fallback(over));
+    expect(pick(run(withSb({ ...EXPR, ...over })))).toEqual({ base: 187_500_000, pen: 9_375_000, det: 0, lit: 937_500, total: 10_312_500 });
   });
-  it("고가주택(15억·거주 48개월): 부재 → 던짐 · 공익수용 결합 500,000,000 / 25,000,000 / 총 61,599,340", () => {
+  it("고가주택(15억·거주 48개월): 부재 → 던짐 · 공익수용 결합도 던짐(종전 500,000,000 / 25,000,000 / 총 61,599,340) → 입력이 있으면 187,500,000 / 9,375,000 / 총 44,411,840", () => {
     const hi = { isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: 48, transferPrice: 1_500_000_000, standardPriceAtTransfer: 600_000_000 };
     absent(cell(hi));
-    expect(pick(run(fallback(hi)))).toMatchObject({ base: 500_000_000, pen: 25_000_000, total: 61_599_340 });
+    absent(fallback(hi));
+    expect(pick(run(withSb({ ...EXPR, ...hi }, { ...SB, landStdPriceAtTransfer: 360_000_000, buildingStdPriceAtTransfer: 240_000_000 })))).toMatchObject({ base: 187_500_000, pen: 9_375_000, total: 44_411_840 });
   });
-  it("미등기: 부재 → 던짐 · 공익수용 결합 500,000,000 / 25,000,000", () => {
+  it("미등기: 부재 → 던짐 · 공익수용 결합도 던짐(종전 500,000,000 / 25,000,000 / 총 412,038,000) → 입력이 있으면 187,500,000 / 9,375,000 / 총 394,850,500", () => {
     absent(cell({ isUnregistered: true }));
-    expect(pick(run(fallback({ isUnregistered: true })))).toMatchObject({ base: 500_000_000, pen: 25_000_000, total: 412_038_000 });
+    absent(fallback({ isUnregistered: true }));
+    expect(pick(run(withSb({ ...EXPR, isUnregistered: true })))).toMatchObject({ base: 187_500_000, pen: 9_375_000, total: 394_850_500 });
   });
 });
 
@@ -142,12 +147,13 @@ describe("[B] 신 산식 — 환산 건물분", () => {
   });
 
   it("결정세액·양도차익은 불변 — 가산세와 지방소득세만 움직인다(Q-14)", () => {
-    const off = run(fallback()); // 입력 부재는 던지므로 자산 전체 base 비교 기준은 공익수용 결합([A])이다
+    // 가산세 축이 없는 같은 거래(본인 신축 아님)로 양도차익·세액을 대조하고, 종전(PR-4) 자산 전체 base 총납부 197,837,200 과의 차이를 고정한다
+    const off = run(cell({ isSelfBuilt: false }));
     const on = run(withSb());
     expect(on.transferGain).toBe(off.transferGain);
     expect(on.determinedTax).toBe(off.determinedTax);
     expect(on.calculatedTax).toBe(off.calculatedTax);
-    expect(on.totalTax - off.totalTax).toBe(-17_187_500);
+    expect(on.totalTax - 197_837_200).toBe(-17_187_500);
   });
 
   it("손실(결정세액 0)도 같은 축 — 9,375,000 / 지방소득세 937,500 / 총 10,312,500 (§114조의2②)", () => {
@@ -447,10 +453,11 @@ describe("[G] 입력 거부 — 있는데 닿을 수 없는 조합은 조용히 
     expect(invalid(withSb({ standardPriceAtAcquisition: undefined }))?.field).toBe("standardPriceAtAcquisition");
     expect(invalid(withSb({ standardPriceAtTransfer: undefined }))?.field).toBe("standardPriceAtTransfer");
   });
-  it("영 §164⑨ 공익수용 특례(환산 분모 변경)와는 결합하지 않는다 — 분모를 건물분으로 나누는 법리 확인 전(V-4)", () => {
+  it("영 §164⑨ 공익수용 특례(환산 분모 변경)와 결합한다 — 거부하지 않는다(종전 «결합은 지원하지 않습니다» 거부 → 250,000,000 / 12,500,000)", () => {
     const expr = { transferCause: "public_expropriation", housingCompensationTotal: 300_000_000, housingCompensationBasisTotal: 350_000_000 } as Partial<TransferTaxInput>;
-    expect(() => run(cell(expr))).not.toThrow(); // 특례만(selfBuiltHousing 없음)은 현행 그대로 계산된다
-    expect(invalid(withSb(expr))?.field).toBe("selfBuiltHousing");
+    expect(() => run(cell(expr))).toThrow(); // 입력 부재는 던진다(자산 전체 base 로 흘러가지 않는다)
+    expect(() => run(withSb(expr))).not.toThrow();
+    expect(pick(run(withSb(expr)))).toMatchObject({ base: 250_000_000, pen: 12_500_000, total: 116_650_306 });
   });
   it("감정 — 건물 감정가액도 비례 입력도 없으면 거부", () => {
     expect(invalid(withSb(APPRAISAL, {}))?.field).toBe("selfBuiltHousing.buildingAppraisalValue");

@@ -20,7 +20,7 @@ import { emitPenaltySteps } from "./transfer-tax-penalty-steps";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { buildTransferResultDetails } from "./transfer-tax-finalize";
 import { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty";
-import { resolveSelfBuiltHousingPenaltyAxis, selfBuiltHousingEchoOf, selfBuiltHousingFallbackNotice } from "./transfer-tax-self-built-housing-penalty";
+import { resolveSelfBuiltHousingPenaltyAxis, selfBuiltHousingEchoOf } from "./transfer-tax-self-built-housing-penalty";
 import { TRANSFER } from "./legal-codes/transfer";
 import type { RateClause } from "./transfer-tax-rate-clause";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
@@ -105,9 +105,6 @@ export function buildLossTransferTaxResult({
   const splitBuildingAxis = resolveSplitBuildingPenaltyAxis(splitDetail, effectiveInput.penaltyDonorBuilt ? effectiveInput : input);
   //    ④ 일체 주택 본인 신축의 환산·감정은 «해당 건물»분(Q-12) — 없으면 undefined 라 종전과 같다.
   const selfBuiltAxis = resolveSelfBuiltHousingPenaltyAxis(effectiveInput, splitDetail != null);
-  //    §164⑨ 공익수용·공매 결합은 던지지 않고 자산 전체 base 를 유지한다 — 그 사실을 «확인 필요» 로 싣는다(정상 경로 `transfer-tax-normal-return.ts` 와 같은 함수).
-  const selfBuiltFallbackNotice = selfBuiltHousingFallbackNotice(effectiveInput, splitDetail != null);
-  if (selfBuiltFallbackNotice) warnings.push(selfBuiltFallbackNotice);
   const penaltyAxis = splitBuildingAxis ?? selfBuiltAxis ?? input.penaltyAxis ?? effectiveInput.penaltyAxis;
   if (penaltyAxis) pb0 = penaltyAxis.base;
   // §114조의2① 손실(산출세액 0, ②) 경로도 증축부분 한정 base 적용 — 정상 경로 finalize와 동일 헬퍼(dual-truth 방지).

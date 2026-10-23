@@ -54,10 +54,19 @@ export interface SelfBuiltHousingPenaltyEcho {
     acquisitionHousing: number;
     acquisitionLand: number;
     acquisitionBuilding: number;
+    /** 양도 당시 주택공시가격 — 영 §164⑨ 특례가 걸리면 차감 후(H_T′), 아니면 개별주택가격·공동주택가격 */
     transferHousing: number;
     transferLand: number;
     transferBuilding: number;
     saleBuilding: number;
+    /** 영 §164⑨ 공익수용(1호)·공매·경락(2호) 특례 산출근거 — 특례 detail 이 있을 때만(불발 포함). 값은 detail 복사 */
+    sec164_9?: {
+      kind: "expropriation" | "auction";
+      /** 특례 전 양도 당시 주택공시가격 H_T */
+      standardHousing: number;
+      /** 1호 compensation·basis / 2호 auction — 비교한 후보 */
+      candidates: { compensation?: number; basis?: number; auction?: number };
+    };
   };
   /** 환산 — base = multiplicand × numerator ÷ denominator */
   formula?: { multiplicand: number; numerator: number; denominator: number };

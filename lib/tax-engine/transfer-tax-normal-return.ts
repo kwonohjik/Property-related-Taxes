@@ -9,7 +9,6 @@
  * 인자로 받는 것 외에 바뀐 것이 없다.
  */
 import { finalizeTransferTax, buildTransferResultDetails } from "./transfer-tax-finalize";
-import { selfBuiltHousingFallbackNotice } from "./transfer-tax-self-built-housing-penalty";
 import { publicExpropriationPartWiseNotice } from "./public-expropriation-reduction";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
@@ -97,9 +96,6 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
   // 5B — §77 「소급 2년 이전 취득」 요건을 토지·건물 파트별로 판정해 감면대상을 한 파트로 한정했으면 확인 필요 고지.
   const partWiseNotice = publicExpropriationPartWiseNotice(finalize.publicExpropriationDetail);
   if (partWiseNotice) warnings.push(partWiseNotice);
-  // Q-12 PR-4 — 일체 주택 본인 신축 × 영 §164⑨ 공익수용·공매: 건물분이 아닌 자산 전체 base 로 §114조의2 가산세를 계산했다는 확인 필요(손실 경로 `transfer-tax-loss-return.ts` 가 같은 함수).
-  const selfBuiltFallbackNotice = selfBuiltHousingFallbackNotice(effectiveInput, splitDetailForRate != null);
-  if (selfBuiltFallbackNotice) warnings.push(selfBuiltFallbackNotice);
   const {
     new993FinalResult,
     new99FinalResult,
