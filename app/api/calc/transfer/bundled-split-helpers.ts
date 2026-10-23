@@ -233,6 +233,8 @@ export function buildCompanionEngineInputs(
     saleSplitMode: c.saleSplitMode,
     landTransferPrice: c.landTransferPrice,
     buildingTransferPrice: c.buildingTransferPrice,
+    contractLandTransferPrice: c.contractLandTransferPrice,
+    contractBuildingTransferPrice: c.contractBuildingTransferPrice,
     landAppraisalAtTransfer: c.landAppraisalAtTransfer,
     buildingAppraisalAtTransfer: c.buildingAppraisalAtTransfer,
     // 🔴 엔진은 **Date**를 요구한다 — string 그대로 두면 감정 유효창

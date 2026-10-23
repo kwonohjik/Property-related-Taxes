@@ -244,7 +244,7 @@ export function resolveSelfBuiltHousingPenaltyAxis(input: TransferTaxInput, spli
  * 영 §164⑨ 특례 echo — 특례 detail 이 있을 때만(불발이어도 detail 은 존재 — 결과 화면의 특례 카드와 같은 시점에 뜬다). detail 값을 **복사**한다(재계산 금지 — 표시 단일 소스).
  * `transferHousing` 은 차감 후(H_T′), `standardHousing` 은 특례 전(H_T).
  */
-function sec164_9Echo(conv: ReturnType<typeof resolveConversionDenominatorAtTransfer>): { sec164_9?: NonNullable<SelfBuiltHousingPenaltyEcho["housingSplit"]>["sec164_9"] } {
+export function sec164_9Echo(conv: ReturnType<typeof resolveConversionDenominatorAtTransfer>): { sec164_9?: NonNullable<SelfBuiltHousingPenaltyEcho["housingSplit"]>["sec164_9"] } {
   const h = conv.housingExpropriationValuationDetail;
   if (h) return { sec164_9: { kind: "expropriation", standardHousing: h.standardTotal, candidates: { compensation: h.compensationTotal, basis: h.compensationBasisTotal } } };
   const a = conv.auctionValuationDetail;

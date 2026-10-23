@@ -276,6 +276,7 @@ export function buildAssetPayload(
       usesPhd: false,
       ratioed: makeRatioed(ratio, fractional),
       primaryCtx: excessCtx,
+      ...(fractional ? { shareRatio: ratio } : {}),
     }),
     /**
      * ④ 토지분 취득시 기준시가 채널(㎡당 개별공시지가 × 면적, 소득법 §99①1호 가목) — 단건과 **같은 leaf**.

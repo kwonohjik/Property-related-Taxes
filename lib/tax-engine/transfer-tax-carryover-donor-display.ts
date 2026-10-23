@@ -10,6 +10,7 @@
 import { TRANSFER } from "./legal-codes";
 import type { DonorBuiltPenaltyEcho } from "./types/transfer-carryover.types";
 import type { DonorBuiltEchoEntry } from "./gb-result-donor-built-echoes";
+import { sec164_9HousingLine, sec164_9Law } from "./transfer-tax-self-built-display";
 
 const won = (n: number): string => n.toLocaleString("ko-KR");
 const typeLabel = (e: DonorBuiltPenaltyEcho): string => (e.buildingType === "extension" ? "증축" : "신축");
@@ -30,6 +31,13 @@ export const DONOR_BUILT_OUTSIDE_WINDOW_NOTICE =
 /** 가산세를 적용한 경우의 고지 — 「적용했다 + 정면 해석례 미확보」(사용자 확정 Q-5). */
 export const DONOR_BUILT_APPLIED_NOTICE =
   `증여자가 신축·증축한 건물에 ${TRANSFER.BUILDING_PENALTY} 환산취득가액 가산세를 적용했습니다(증여자 신축·증축일 기산, 증여자 기준 환산취득가액의 건물분 5%, 증축은 증축 부분). 증여자 신축분에 대한 정면 해석례는 확인하지 못했습니다 — 확인 필요.`;
+
+/**
+ * 일체 주택 건물분에 영 §164⑨ 특례(공익수용 1호·공매·경락 2호)가 걸린 경우의 적용 고지 — `DONOR_BUILT_APPLIED_NOTICE` 와 같은 구조에 특례 문장을 더하되
+ * 「확인 필요」 가 **한 번만** 나오게 한 문장으로 합친다(본인 신축 `noticeEstimatedSec164_9` 와 같은 규칙).
+ */
+const donorBuiltAppliedNoticeSec164_9 = (k: "expropriation" | "auction"): string =>
+  `증여자가 신축·증축한 건물에 ${TRANSFER.BUILDING_PENALTY} 환산취득가액 가산세를 적용했습니다(증여자 신축·증축일 기산, 증여자 기준 환산취득가액의 건물분 5%, 증축은 증축 부분). 건물분은 주택공시가격을 토지 기준시가와 건물 기준시가의 비율로 나누어 구했고, 양도 당시 주택공시가격은 ${sec164_9Law(k)}에 따른 금액을 같은 비율로 나누었습니다. 증여자 신축분에 대한 정면 해석례와 특례 적용 금액을 토지·건물로 나누는 정면 해석례는 확인하지 못했습니다 — 확인 필요.`;
 
 /** 부담부증여 K-7(감정가액) 적용 고지 — 「적용했다 + 정면 해석례 미확보」(Q-5)의 감정가액판. */
 export const DONOR_BUILT_APPLIED_APPRAISAL_NOTICE =
@@ -91,8 +99,10 @@ export function donorBuiltPenaltyView(e: DonorBuiltPenaltyEcho | undefined): Don
     lines.push(
       `건물분 환산취득가액 ${won(e.base!)} = 건물분 양도가액 ${won(f.multiplicand)} × (${e.buildingType === "extension" ? "증축 완공 당시 증축 부분 기준시가" : "취득 당시 건물분 기준시가"} ${won(f.numerator)}) ÷ (양도 당시 건물분 기준시가 ${won(f.denominator)})`,
     );
+    const sp = e.housingSplit.sec164_9;
+    if (sp) lines.push(sec164_9HousingLine(e.housingSplit.transferHousing!, sp));
     lines.push(
-      "건물분 기준시가는 주택공시가격을 토지 기준시가와 건물 기준시가의 비율로 나눈 값입니다 — 토지분은 가산세 대상에서 제외합니다 (소득세법 §99①1호, 시행령 §166⑥).",
+      `건물분 기준시가는 주택공시가격${sp ? "(특례 적용 금액)" : ""}을 토지 기준시가와 건물 기준시가의 비율로 나눈 값입니다 — 토지분은 가산세 대상에서 제외합니다 (소득세법 §99①1호, 시행령 §166⑥).`,
     );
   } else if (f) {
     lines.push(
@@ -107,7 +117,11 @@ export function donorBuiltPenaltyView(e: DonorBuiltPenaltyEcho | undefined): Don
     title,
     windowLine: `증여자 ${dateLabel(e)} ${e.constructionDate}부터 5년이 되는 날(${e.fifthAnniversary})까지 양도하는 경우입니다.`,
     formulaLines: lines,
-    notice: appraisal ? DONOR_BUILT_APPLIED_APPRAISAL_NOTICE : DONOR_BUILT_APPLIED_NOTICE,
+    notice: appraisal
+      ? DONOR_BUILT_APPLIED_APPRAISAL_NOTICE
+      : e.housingSplit?.sec164_9
+        ? donorBuiltAppliedNoticeSec164_9(e.housingSplit.sec164_9.kind)
+        : DONOR_BUILT_APPLIED_NOTICE,
   };
 }
 
@@ -151,5 +165,6 @@ export function donorBuiltPenaltyFilingNote(e: DonorBuiltPenaltyEcho | undefined
   const v = donorBuiltPenaltyView(e);
   if (!v?.applied) return undefined;
   const basis = e!.burdenedGift?.method === "appraisal" ? "채무비율 안분 후 건물 감정가액" : e!.burdenedGift ? "채무비율 안분 후 건물 환산취득가액" : "건물분 환산취득가액";
-  return `${TRANSFER.BUILDING_PENALTY} 증여자 ${typeLabel(e!)} 건물 가산세 ${won(e!.penalty!)} (= ${basis} ${won(e!.base!)} × 5%)`;
+  const k = e!.housingSplit?.sec164_9?.kind;
+  return `${TRANSFER.BUILDING_PENALTY} 증여자 ${typeLabel(e!)} 건물 가산세 ${won(e!.penalty!)} (= ${basis} ${won(e!.base!)} × 5%)${k ? ` · ${sec164_9Law(k)} 적용` : ""}`;
 }

@@ -238,6 +238,9 @@ export async function POST(request: NextRequest) {
       buildingSalesCaseValue: p.buildingSalesCaseValue,
       landTransferPrice: p.landTransferPrice,
       buildingTransferPrice: p.buildingTransferPrice,
+      // 공유지분 — 계약서 구분 기재(100%). §100③을 계약서 금액으로 판정한다(`sale-split-contract-judgment.ts`).
+      contractLandTransferPrice: p.contractLandTransferPrice,
+      contractBuildingTransferPrice: p.contractBuildingTransferPrice,
       landAppraisalAtTransfer: p.landAppraisalAtTransfer,
       buildingAppraisalAtTransfer: p.buildingAppraisalAtTransfer,
       appraisalDateAtTransfer: toOptionalDate(p.appraisalDateAtTransfer),

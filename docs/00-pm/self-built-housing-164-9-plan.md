@@ -1,6 +1,6 @@
 # 일체 주택 **본인 신축** × 영 §164⑨ 양도 당시 기준시가 특례(공익수용·공매) × 「소득세법」 §114조의2 가산세 — 건물분 base 수정 계획서 (Q-12 후속 · V-4/V-16 종결)
 
-**상태**: **PR-A 구현 완료**(2026-10-24 — 감정 5a + 환산 5b (가) 병합, §9.6 Do 기록) · **PR-B(이월과세 `donorBuilt.housing` 정렬)는 미착수**. **Plan 확정**(2026-10-23) — 사용자가 §10 Q-1~Q-9를 **전부 권장안(★)으로 확정**했다(「모두 권장안으로 진행해」). Q-1 (가)가 즉시 확정돼 Q-3 단서대로 감정(5a)+환산(5b)을 **한 PR(PR-A)** 로 묶었고, 이월과세 donorBuilt 정렬(Q-4, 출하 수치 +1,031,250 승인됨)은 **PR-B**로 분리한다. 실측은 작성 시 throwaway probe(저장소 미보존, 원복·삭제 완료)이고, UI 시니어 조사(읽기 전용)는 §5에 본문으로 승격했다(요약 아님).
+**상태**: **전 PR 완료** — **PR-A 구현 완료**(2026-10-24 — 감정 5a + 환산 5b (가) 병합, §9.6 Do 기록) · **PR-B 구현 완료**(2026-10-24 — 이월과세 `donorBuilt.housing` 건물분 분모를 (가)로 정렬, §9.7 Do 기록, 커밋까지·머지는 별도). **Plan 확정**(2026-10-23) — 사용자가 §10 Q-1~Q-9를 **전부 권장안(★)으로 확정**했다(「모두 권장안으로 진행해」). Q-1 (가)가 즉시 확정돼 Q-3 단서대로 감정(5a)+환산(5b)을 **한 PR(PR-A)** 로 묶었고, 이월과세 donorBuilt 정렬(Q-4, 출하 수치 +1,031,250 승인됨)은 **PR-B**로 분리한다. 실측은 작성 시 throwaway probe(저장소 미보존, 원복·삭제 완료)이고, UI 시니어 조사(읽기 전용)는 §5에 본문으로 승격했다(요약 아님).
 **브랜치**: `docs/self-built-housing-164-9-plan` (Q-12 PR-4 head `30a49870e` 위)
 **상위 계획**: `docs/00-pm/self-built-housing-building-base-114-2.plan.md` — §9 PR-1~PR-4 Do 기록 · §12 **V-4**(§164⑨ × B_tr 안분) · **V-16**(PR-4: 자산 전체 base + 「확인 필요」 고지로 남긴 건)을 이 문서가 닫는다.
 **관련 계획**: `docs/02-design/features/expropriation-valuation-164-9-scope-expansion.plan.md`(§164⑨ 구현 계획 — §4-6 split 토지분만 · §4-7 일반건물 토지분만 · Q6 주택 split 미지원 · P5 주택 총액 트랙) · `docs/00-pm/carryover-donor-built-114-2.plan.md`(이월과세 × 증여자 신축 — 본인 신축이 선례로 삼은 `donorBuilt.housing`).
@@ -248,7 +248,7 @@ E2E 중 본인 신축과 §164⑨ 를 동시에 쓰는 spec 은 **없다**(`e2e/
 | 감정(단건·컴패니언·다건) | 5a — 방식 한정 해제 | H: 16,500,000 → 6,050,000(직접)/6,187,500(비례); H2(S=10억 이익) 270,788,760 → 260,338,760 / 260,476,260 |
 | 분리 계산(취득일 분리·소유자 분리·배율 초과분)·PHD | **제외** — 건물 파트가 축(PHD 는 이미 낮춘 분모, F-4) | 불변 |
 | 겸용·부담부증여·증축·비주택 | 제외 | 불변 |
-| 이월과세 `donorBuilt.housing` | 5c 조건부(Q-4) | 18,928,470 → 19,959,720 (+1,031,250) |
+| 이월과세 `donorBuilt.housing` | 5c = PR-B ✅(§9.7) | 18,928,470 → 19,959,720 (+1,031,250) — route 실측 일치 |
 | 일반건물·상가 | 해당 없음 | 불변 |
 
 **저장 이력**: `CalculationRecord.resultData` 스냅샷은 바뀌지 않는다. 재계산 시 5b 후 ⑧ 이 건물분 칸을 요구한다(§5.5). 이력에 앱 버전 구분 수단이 없어(상위 V-8) 한시 허용은 두지 않는다.
@@ -306,7 +306,7 @@ E2E 중 본인 신축과 §164⑨ 를 동시에 쓰는 spec 은 **없다**(`e2e/
 |---|---|---|
 | **5a** (PR-A 에 병합 ✅) | 감정 × §164⑨ — UI 술어·엔진 fallback 을 «방식 = 환산» 한정, 고지 감정분 제거, 테스트 §5.6 감정 셀 갱신, E2E SB-13·14. **법리 무관 — Q-1 을 기다리지 않는다** | — |
 | **5b** (PR-A ✅) | 환산 × §164⑨ (가): 술어 2줄 삭제 · leaf 분모 교체 · fallback·고지 함수 삭제 · echo/표시/카드 안내 · 테스트 §5.6 · E2E SB-15~21 · **상위 계획 V-4/V-16 «종결» 기록** | Q-1 확정, 5a |
-| **5c = PR-B** (미착수) | 이월과세 `donorBuilt.housing` 분모 정렬(출하 수치 변경 +1,031,250 — 사용자 승인됨) | PR-A |
+| **5c = PR-B** (✅ §9.7) | 이월과세 `donorBuilt.housing` 분모 정렬(출하 수치 변경 +1,031,250 — 사용자 승인됨) | PR-A |
 
 ### 9.2 Pre-Do anchor (구현 전에 먼저 작성·실행 — «현행 일치 예상» 금지)
 1. **현행 고정**: A 200,000,000 / 10,000,000 / 총 26,834,720 · J 500,000,000 / 25,000,000 / 197,837,200 · H 300,000,000 / 15,000,000 · 컴패니언 333,333,333 / 16,666,666 · donor × 수용 56,250,000 / 2,812,500.
@@ -402,6 +402,63 @@ E2E 중 본인 신축과 §164⑨ 를 동시에 쓰는 spec 은 **없다**(`e2e/
 - 정면 해석례 부재(V-1)·MCP 연결 실패(V-2)는 그대로 — 결과 고지에 «확인 필요» 유지. 이 PR 은 신규 법령 인용을 만들지 않았다(기존 `TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1/2` 상수만).
 - 일부 양도·지분 × 수용의 H_T 척도(V-4/Q-8)는 범위 밖 그대로.
 - 워크트리 `node_modules` 를 심링크에서 APFS 복제(`cp -cR`)로 바꿨다(Turbopack E2E 기동용 — 메인 트리 무영향, git 비추적).
+
+### 9.7 PR-B Do 기록 (2026-10-24 — 이월과세 `donorBuilt.housing` 건물분 분모 정렬 · PR-A head `25d0b241b` 위, 커밋까지 · push/PR/머지 없음)
+
+**사용자 확정(재론 금지)**: Q-4 «정렬» — 출하 수치 상승(+1,031,250 예)을 알고 승인.
+
+**먼저 실측한 것 — A 시나리오의 §164⑨ 분모는 어떤 입력인가**: 증여자 기준이 아니라 **양도 시점 입력 그대로**다. `calcCarryoverScenarios` 의 A 입력(`inputABase = {...rawInput, …}`)은 `transferCause`·`housingCompensation*`·`isAuctionTransfer`·`auctionPrice`·`standardPriceAtTransfer`·최상위 `useEstimatedAcquisition` 을 `rawInput` 에서 그대로 물려받고, 양도차익은 `calcTransferGain` → `resolveConversionDenominatorAtTransfer(inputABase)` 로 H_T′ 를 분모로 쓴다(수용 A 셀: 보상 3억/3.5억 → 분모 3억, 양도차익 94,000,000 = 3억 − 환산취득가액 2억 − 개산공제 600만, `housingExpropriationValuationDetail.denominator = 300,000,000`). 증여자 취득 당시 값(H·L·N)은 분자(B_acq)에만 쓰이고 §164⑨(양도 당시)와 무관하다. 그래서 `withDonorBuiltPenalty` 가 가진 `rawInput` 을 같은 단일 소스에 넣으면 분모가 정확히 같다. **`adoptedInput` 은 쓸 수 없다** — 증여세 상당액>0 이면 A 입력이 실가로 전환되며(`useEstimatedAcquisition:false`·`standardPriceAtTransfer:undefined`) 분모 재료가 지워진다(실측 H 셀 — 그 경우도 `rawInput` 기준이라 정렬된다).
+
+**변경 (소스 5파일, 테스트 2파일 신규)**
+
+| 파일 | 변경 |
+|---|---|
+| `lib/tax-engine/transfer-tax-carryover-donor-penalty.ts` | `housingBase` 의 B_tr 를 `resolveConversionDenominatorAtTransfer(rawInput).denominator`(H_T′)로 안분. 특례 detail 이 있을 때만 `housingSplit.transferHousing`(H_T′)·`housingSplit.sec164_9` 를 싣는다(없으면 응답 바이트 동일). 436 → 446줄 |
+| `lib/tax-engine/transfer-tax-self-built-housing-penalty.ts` | `sec164_9Echo` 를 `export`(1단어) — donor 가 본인 신축과 **같은 echo 생성 함수**를 쓴다(detail 값 복사·재계산 없음) |
+| `lib/tax-engine/types/transfer-carryover.types.ts` | `DonorBuiltPenaltyEcho.housingSplit` 에 optional `transferHousing`·`sec164_9`(본인 신축 echo 와 같은 타입 참조) |
+| `lib/tax-engine/transfer-tax-carryover-donor-display.ts` | 건물분 줄 뒤 «양도 당시 주택공시가격 H_T′ 은 영 §164⑨ … 중 가장 작은 금액입니다» 한 줄 + «(특례 적용 금액)» 설명 + 고지 변형(`donorBuiltAppliedNoticeSec164_9` — 「확인 필요」 1회) + 신고서 각주 접미 «· 소득세법 시행령 §164⑨ 1호 공익수용 특례 적용» |
+| `lib/tax-engine/transfer-tax-self-built-display.ts` | `sec164_9Law`·`sec164_9HousingLine` 을 `export`(본인 신축 줄 생성 코드를 함수로 뽑은 것 — 문장 동일, PR-A 테스트 그대로 통과) — 본인 신축·증여자 신축이 **같은 문장**을 쓴다 |
+
+신규 입력 칸 0 · ①②③⑥⑫⑬⑭ 무변경(⑫ `refineDonorBuiltOuter` 는 §164⑨ 를 거르지 않고 ⑭ `engine-input.ts`·`bundled-split-helpers.ts` 가 §164⑨ 키를 이미 싣는다 — grid 로 단건·컴패니언 도달 확인). **⑧**: 새 fallback·새 필수 칸이 없어 변경 없음 — donor 일체 주택 칸(L·N·L_T·N_T·H·H_T)은 ⑧ 이 이미 요구하고, §164⑨ 값은 게이트가 열릴 때 ⑧ 이 요구한다(UI 통과↔validate 차단 모순 없음, 아래 «확인 필요» ② 참조).
+
+**Pre-Do anchor — 수정 전 → 후 (route 실측, mock 세율; 공통: 양도가 3억, 증여자 H=2억 → B_acq 75,000,000, H_T=4억)**
+
+| 셀 | 수정 전 base / 가산세 / 총납부 | 수정 후 |
+|---|---|---|
+| A 수용 보상 3억/3.5억 | 56,250,000 / 2,812,500 / 18,928,470 | **75,000,000 / 3,750,000 / 19,959,720 (+1,031,250)** · echo `transferHousing` 3억 · B_tr′ 120,000,000 |
+| B 공매·경락 3억 | 56,250,000 / 2,812,500 / 18,928,470 | 75,000,000 / 3,750,000 / 19,959,720 · 2호 echo |
+| 수용+공매 동시(N3: 1호 우선) | 56,250,000 / 18,928,470 | 75,000,000 / 19,959,720 · 1호 echo |
+| E 구분 기재 토지 2억/건물 1억 | 46,875,000 / 2,343,750 / 18,412,845 | 62,500,000 / 3,125,000 / 19,272,220 |
+| F 양도차손(자본적지출 12억) | 56,250,000 / 2,812,500 / 3,093,750 | 75,000,000 / 3,750,000 / 4,125,000 |
+| G 지분 50%(양도가 1.5억) | 28,125,000 / 1,406,250 / 6,882,975 | 37,500,000 / 1,875,000 / 7,398,600 |
+| 증여세 상당액 1천만(A 실가 전환 경로) | 56,250,000 / 2,812,500 / 16,499,670 | 75,000,000 / 3,750,000 / 17,530,920 |
+| 증축(증축 부분 3천만) | 22,500,000 / 1,125,000 / 17,072,220 | 30,000,000 / 1,500,000 / 17,484,720 |
+| 미등기 | 56,250,000 / 2,812,500 / 79,631,750 | 75,000,000 / 3,750,000 / 80,663,000 |
+| 컴패니언 수용·공매 | 93,750,000 / 4,687,500 / 177,840,116 | **125,000,000 / 6,250,000 / 179,558,866**(계획서 §3 산식 값 일치) |
+| 불발(보상 5억/5억, S=10억) | 187,500,000 / 9,375,000 / 180,649,700 | **수치 동일** + echo `sec164_9`·`transferHousing` 4억 추가(본인 신축 Q-7 과 같은 규칙 — 특례 detail 이 있으면 싣는다) |
+| 특례 없음 · 보상액 = H_T · 보상 399,999,999(건물 몫 160,000,000 동일) · 보상 미입력 · ②3호 B 채택 · 5년 경과 · 최상위 환산 OFF · donorBuilt 없음 | 56,250,000 / 2,812,500 / 36,152,050 등 | **동일** (보상액 = H_T 는 echo 만 추가) |
+
+**항등(anchor DP-3)**: echo `transferHousing` = `housingExpropriationValuationDetail.denominator`(공매는 `auctionValuationDetail`) = 3억 · 양도차익 94,000,000 = 3억 − ⌊3억 × 2억 ÷ 3억⌋ − 개산공제 · base = ⌊환산취득가액 × B_acq ÷ H⌋ = 75,000,000(기준시가 비례 S_b).
+
+**회귀 근거 — 응답 JSON sha256 격자 1,016셀** (donor 일체 주택 단건 768[특례 8값 × 신축/증축 × 구분기재 × 이익/손실 × 지분 × 증여세 × 시나리오 A/B × S 3억/10억] + 변형 40[5년 경과·미등기·최상위 환산 OFF·1세대1주택·donorBuilt 없음 × 8값] + 컴패니언 128 + **비donor 대조 80**[일반 환산·본인 신축 신축/증축·이월과세(donorBuilt 없음) 이익/손실·감정·실가·상속 × 8값 + donor 비주택 건물 신축/증축 × 8값]). 기준선 = 변경 소스 5파일을 `git show HEAD:` 로 임시 복원한 트리(`cp` 백업 · md5 대조 · 종료 후 5파일 md5 원본 동일 — `git checkout/stash` 없음), 수정 후 2회 sha 동일(비결정 0 — `asset-<ts>-<n>` 정규화).
+- 차이 **522셀 = 전부 donor 일체 주택**(D1 468 · 컴패니언 48 · 변형 6). **비donor 대조 80셀·donor 비주택 건물 변경 0**.
+- **수치(가산세·총납부)가 바뀐 255셀** = 특례 {수용 · 공매 · 동시} 셀 351 중 가산세가 붙은 셀(②3호 A 채택 ∧ 5년 이내 ∧ 최상위 환산 ON). **전부 base 상승, 하락 0**, 총납부 +206,250 ~ +3,437,500. 나머지 96셀은 가산세 0(B 채택·5년 경과·비과세·donorBuilt 없음 93)이거나 최상위 환산 OFF(3) 라 응답 동일.
+- **echo 만 추가된 267셀** = 특례 {불발 · 보상액 = H_T · 공매 불발} — 숫자 동일, `housingSplit.transferHousing`/`sec164_9` 추가(특례 detail 이 있는 셀). 이 셀의 표시는 «양도 당시 주택공시가격 400,000,000은 … 중 가장 작은 금액입니다» 한 줄이 늘어난다(수치 불변).
+- 특례 없음·보상 미입력(자동 합성 없음) 셀 응답 바이트 동일.
+
+**기존 테스트 갱신: 0건.** donor × §164⑨ 를 («특례 무시» 로) 고정한 기존 테스트는 없었다(`grep -rln "donorBuilt" __tests__` 중 §164⑨ 키를 쓰는 파일 0 — 계획서 §2.2 F-3 의 «고지도 없음» 이 테스트도 없었다는 뜻). 관련 세트(`__tests__/calc/` · `__tests__/tax-engine/transfer-tax/` · `__tests__/tax-engine/transfer/` · `__tests__/api/` · `__tests__/components/` 2,347파일)는 수정 후에도 전부 통과. 신규: `__tests__/api/transfer.route.carryover-donor-built-164-9.anchor.test.ts` 26건(DP-1 단건 3 · DP-2 분기쌍 6 · DP-3 단일 소스 항등 3 · DP-4 불변 8 + 고지 2 · DP-5 컴패니언 3 · DP-6 범위 밖 고정 1) · `__tests__/components/carryover-donor-built-164-9-results.ui.anchor.test.tsx` 9건(폼 → ④ → route → 카드·상세명세서·신고서·PDF·경고).
+
+**뮤테이션 17건 → 17 KILLED** (cp 백업 · label+file md5 · 변이별 md5 기록 · 종료 후 원본 동일, 실행기는 저장소 미보존): (13) B_tr 를 H_T 로 되돌림(M01, 계획서 §9.4 (13)) · 1호 무시(M02) · 2호 무시(M03) · echo `transferHousing` 을 H_T 로(M04) · `sec164_9` echo 누락(M05) · echo 게이트에서 2호 제외(M06) · 안분 land/building 인자 뒤바꿈(M07) · 보상 후보 오입력(M08) · 특례 없는 셀에도 `transferHousing` 싣기(M09, 응답 바이트 가드) · 표시 특례 줄 제거(M10) · «(특례 적용 금액)» 제거(M11) · 고지 변형 제거(M12) · 각주 접미 제거(M13) · 고지 「확인 필요」 중복(M14) · echo 후보 뒤바꿈(M15) · 1호 문구 보상액 오귀속(M16) · 2호 법 문구를 1호로(M17).
+
+**E2E** (headless Chromium, `E2E_PORT=3302`, 자기 dev 서버만 — 종료 후 3302 리스너 0, `next.config.ts` md5 `63dd5caa…` 불변[turbopack.root 임시 변경 → 원복]): 영향 spec 은 donor/본인 신축 표시 정본을 공유하는 것이라 인접 **60건 통과** — `carryover-donor-built-114-2` · `gb-carryover-donor-built-114-2` · `transfer-self-built-housing-164-9`(PR-A) · `transfer-self-built-housing-base`(SB-10 「확인 필요」 1회 포함) 33건 + `carryover-donor-built-bg` · `gb-bg-carryover-donor-built-114-2` · `transfer-split-part-carryover-donor-built` · `transfer-companion-self-built-penalty` · `transfer-housing-expropriation-total` · `transfer-auction-clause2` 27건. **신규 E2E 는 만들지 않았다** — 정상 폼 경로에서는 이월과세 자산에 §164⑨ 칸이 열리지 않는다(아래 ②). 사람이 직접 한 브라우저 수동 확인은 미수행.
+
+**검증**: `npx tsc --noEmit` 0 · eslint(변경 7파일) 0 · 전체 `npm test` **3,395파일 통과(1 skipped) · 40,979 passed · 0 failed**(13 skipped · 309 todo, 최종 수정 후 1회) · 800줄: 변경 소스 최대 456줄(`transfer-carryover.types.ts` 타입 전용), 신규 테스트 360·226줄.
+
+**확인 필요 · 이번 PR 이 건드리지 않은 것**
+1. **비주택 건물 단독 신축 donor(`base = detail.scenarioA.acquisitionPrice`) · 비주택 증축(`rawInput.standardPriceAtTransfer`)도 같은 부류** — A 의 양도차익은 §164⑨ 분모(1호 ㎡당 · 2호 경락가)를 쓰는데 가산세 base 는 특례 전 분모라 어긋난다. 실측(공매 경락 2억, S=3억): 건물 신축 base **150,000,000**(특례 없는 셀과 같은 값 — 총납부 8,250,000 = 가산세 7,500,000 + 지방소득세 750,000, 결정세액 0; 특례 없는 셀은 총납부 41,308,300이라 A 양도차익은 분모 2억으로 계산되고 있다) · 증축 22,500,000(특례 없는 셀과 동일). 요청 범위가 «일체 주택 건물분» 이고 «다른 모든 경로 불변» 이라 고정만 했다(DP-6). 정렬하면 출하 수치가 바뀌므로(분모 4억 → 2억이면 base 가 2배 방향) 별도 승인이 필요하다.
+2. **정상 폼 경로 도달성**: 이월과세 자산은 자산 단위 «환산» 토글이 없어(`isCarryoverGeneral ? true` 로 최상위만 true 송신) ② 양도정보의 보상액·경락가 칸이 열리지 않고(`convertsAtAssetLevel`) ④ 도 보상액을 싣지 않는다(실측: 수용만 선택하면 body 에 `transferCause` 만, 보상액 키 없음). 공매는 `isAuctionTransfer`·`auctionPrice` 가 환산 여부와 무관하게 실리므로 **화면에 칸이 없는 stale 플래그**로만 도달한다. 즉 이 변경은 직접 API·stale 플래그 입력에서 나타나는 어긋남을 닫는 것이고 정상 폼 입력의 수치는 바뀌지 않는다. ⑧ 은 §164⑨ 값을 이월과세 자산에 요구하지 않는다(게이트 닫힘) — 현행 유지.
+3. **이월과세 A 카드의 표시값 드리프트(기존)**: A 카드 «취득가액» `scenarioA.acquisitionPrice`(150,000,000)·«양도시 기준시가» `estimatedStdPriceAtTransfer`(400,000,000)는 특례 전 분모 기준인데 실제 양도차익(94,000,000)은 H_T′ 3억 기준 환산취득가액 2억으로 계산된다. donor 여부와 무관한 §164⑨ × 이월과세 환산 공통 사항이고 세액은 정확하다(표시만). 이번 PR 범위 밖 — 별건으로 판단 필요.
+4. 정면 해석례 부재(V-1)·MCP 연결 실패(V-2)는 그대로 — 결과 고지에 「확인 필요」 유지(donor 변형 고지도 1회).
 
 ---
 

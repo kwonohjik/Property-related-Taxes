@@ -25,6 +25,8 @@ import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { apportionByStdPrice } from "./std-price-apportion";
 import { calculateBuildingPenalty, splitExtensionPenaltyBase } from "./transfer-tax-building-penalty";
 import { resolveTransferPriceSplit } from "./transfer-tax-split-sale-price";
+import { resolveConversionDenominatorAtTransfer } from "./transfer-tax-expropriation-valuation";
+import { sec164_9Echo } from "./transfer-tax-self-built-housing-penalty";
 import { calcLandStdPriceAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -137,8 +139,11 @@ function housingBase(
   // ① 취득 당시 건물분 B_acq = H − floor(H × L ÷ (L+N)) — `calcAcqStdPair` 주택 비-별개 분기와 같은 함수
   const landAtAcq = calcLandStdPriceAtAcq(h.landPricePerSqmAtAcquisition, h.landArea)!;
   const acquisitionBuilding = apportionByStdPrice(rawInput.standardPriceAtAcquisition!, landAtAcq, h.buildingStdPriceAtAcquisition).building;
-  // ② 양도 당시 건물분 B_tr — `calcSplitAcquisitionPrice`의 양도시 안분(:507-512)과 같은 호출
-  const transferBuilding = apportionByStdPrice(rawInput.standardPriceAtTransfer!, h.landStdPriceAtTransfer, h.buildingStdPriceAtTransfer).building;
+  // ② 양도 당시 건물분 B_tr — `calcSplitAcquisitionPrice`의 양도시 안분(:507-512)과 같은 호출. 안분하는 주택 가액은 **양도차익의 환산 분모와 같은 값**이어야 한다:
+  //    A 시나리오의 양도차익은 `calcTransferGain` 이 `resolveConversionDenominatorAtTransfer` 로 영 §164⑨ 특례(공익수용 1호·공매·경락 2호)가 걸린 H_T′ 를 분모로 쓰므로,
+  //    가산세 base 도 같은 단일 소스를 읽는다(특례가 없으면 H_T 그대로 — 종전과 바이트 동일). 본인 신축 leaf(`resolveSelfBuiltHousingPenaltyAxis`)와 같은 규칙.
+  const conv = resolveConversionDenominatorAtTransfer(rawInput);
+  const transferBuilding = apportionByStdPrice(conv.denominator, h.landStdPriceAtTransfer, h.buildingStdPriceAtTransfer).building;
   // ③ 양도가액 건물분 S_b — 법정 서열(구분 기재 → §100③ 30% → 감정 → 기준시가) 그대로
   const sale = h.sale ?? {};
   const saleBuilding = resolveTransferPriceSplit({
@@ -158,7 +163,12 @@ function housingBase(
   const numerator = db.buildingType === "extension" ? db.extensionStdPriceAtAcquisition! : acquisitionBuilding;
   return {
     base: calculateEstimatedAcquisitionPrice(saleBuilding, numerator, transferBuilding),
-    split: { acquisitionBuilding, transferBuilding, saleBuilding },
+    split: {
+      acquisitionBuilding,
+      transferBuilding,
+      saleBuilding,
+      ...(conv.housingExpropriationValuationDetail || conv.auctionValuationDetail ? { transferHousing: conv.denominator, ...sec164_9Echo(conv) } : {}),
+    },
     formula: { multiplicand: saleBuilding, numerator, denominator: transferBuilding },
   };
 }

@@ -70,7 +70,7 @@ describe("⑤ MixedUseSaleSplitSection", () => {
 });
 
 /** 사례 p.772 — 엔진 결과를 그대로 렌더한다(anchor `mixed-use-sale-split-basis.anchor.test.ts`와 같은 입력). */
-function caseResult(extra: Partial<MixedUseAssetInput>) {
+function caseResult(extra: Partial<MixedUseAssetInput>, transferPrice = 200_000_000) {
   const asset: MixedUseAssetInput = {
     isMixedUseHouse: true, residentialFloorArea: 30, nonResidentialFloorArea: 70, buildingFootprintArea: 100, totalLandArea: 400,
     landAcquisitionDate: new Date("2020-12-01"), buildingAcquisitionDate: new Date("2023-03-20"),
@@ -80,7 +80,7 @@ function caseResult(extra: Partial<MixedUseAssetInput>) {
     residencePeriodYears: 3, isMetropolitanArea: false, zoneType: "agriculture_forest", isOneHouseExempt: true,
     ...extra,
   };
-  return calcMixedUseTransferTax(200_000_000, new Date("2026-07-01"), asset, makeMockRates());
+  return calcMixedUseTransferTax(transferPrice, new Date("2026-07-01"), asset, makeMockRates());
 }
 
 describe("⑦ 결과 — ① 양도가액 안분 · 상가건물 안내", () => {
@@ -102,6 +102,40 @@ describe("⑦ 결과 — ① 양도가액 안분 · 상가건물 안내", () => 
     render(<MixedUseResultCard breakdown={r} />);
     expect(screen.getByTestId("mixed-sale-split-fallback").textContent).toContain("30% 이상");
     expect(screen.queryByTestId("mixed-sale-split-result")).toBeNull();
+  });
+
+  /** 공유지분 2/3 · 계약서 토지 1.2억 / 건물 0.8억 → 지분 몫 토지 80,000,000 · 건물 53,333,333(잔액). */
+  const share = (extra: Partial<MixedUseAssetInput> = {}) =>
+    caseResult({
+      ownershipRatio: 2 / 3, totalPropertyTransferPrice: 200_000_000,
+      landTransferPrice: 80_000_000, buildingTransferPrice: 53_333_333,
+      contractLandTransferPrice: 120_000_000, contractBuildingTransferPrice: 80_000_000, ...extra,
+    }, 133_333_333);
+
+  it("[R-3] 공유지분 구분 기재 적용 — 판정은 계약서 금액, 행은 지분 몫(Q-3 a)", () => {
+    render(<MixedUseResultCard breakdown={share()} />);
+    const note = screen.getByTestId("mixed-sale-split-contract").textContent;
+    expect(note).toContain("120,000,000");
+    expect(note).toContain("80,000,000");
+    expect(note).toContain("66.67%");
+    const sec = screen.getByTestId("mixed-sale-split-result").textContent;
+    expect(sec).toContain("계약서 토지 120,000,000 × 지분 66.67%");
+    expect(sec).not.toContain("계약서에 구분 기재된 금액");
+  });
+
+  it("[R-4] 공유지분 의제 후 기준시가 — 사유와 함께 계약서 금액을 밝힌다", () => {
+    render(<MixedUseResultCard breakdown={share({
+      landTransferPrice: 120_000_000, buildingTransferPrice: 13_333_333,
+      contractLandTransferPrice: 180_000_000, contractBuildingTransferPrice: 20_000_000,
+    })} />);
+    expect(screen.getByTestId("mixed-sale-split-fallback")).toBeTruthy();
+    expect(screen.getByTestId("mixed-sale-split-contract").textContent).toContain("180,000,000");
+  });
+
+  it("[R-5] 단독 소유 — 계약서 금액 문장 없음 · 종전 산식", () => {
+    render(<MixedUseResultCard breakdown={caseResult({ landTransferPrice: 120_000_000, buildingTransferPrice: 80_000_000 })} />);
+    expect(screen.queryByTestId("mixed-sale-split-contract")).toBeNull();
+    expect(screen.getByTestId("mixed-sale-split-result").textContent).toContain("계약서에 구분 기재된 금액");
   });
 });
 

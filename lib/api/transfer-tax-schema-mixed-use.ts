@@ -140,6 +140,9 @@ export const mixedUseAssetSchema = z.object({
    */
   landTransferPrice: z.number().int().nonnegative().optional(),
   buildingTransferPrice: z.number().int().nonnegative().optional(),
+  // 공유지분 계약서(100%) 구분 기재 — §100③ 판정 전용(위 두 칸은 지분 몫).
+  contractLandTransferPrice: z.number().int().nonnegative().optional(),
+  contractBuildingTransferPrice: z.number().int().nonnegative().optional(),
   landAppraisalAtTransfer: z.number().int().nonnegative().optional(),
   buildingAppraisalAtTransfer: z.number().int().nonnegative().optional(),
   saleSplitExemption: z.enum(["other_law", "demolished_land_only"]).optional(),
@@ -297,6 +300,11 @@ function refineMixedSaleSplit(
   const declaredOne = (v.landTransferPrice !== undefined) !== (v.buildingTransferPrice !== undefined);
   if (declaredOne) {
     ctx.addIssue({ code: "custom", message: "계약서 구분가액은 토지·건물을 모두 입력해야 합니다 (소득세법 §100②)", path: ["landTransferPrice"] });
+  }
+  // 계약서(100%) 금액은 지분 몫 구분가액과 짝이다 — 혼자 오면 판정에 쓰이지 않고 사라진다.
+  const contractOne = (v.contractLandTransferPrice !== undefined) !== (v.contractBuildingTransferPrice !== undefined);
+  if (contractOne || (v.contractLandTransferPrice !== undefined && v.landTransferPrice === undefined)) {
+    ctx.addIssue({ code: "custom", message: "계약서 구분가액(물건 전체)은 토지·건물을 모두, 지분 몫 구분가액과 함께 보내야 합니다 (소득세법 §100③)", path: ["contractLandTransferPrice"] });
   }
   const appraisalOne = (v.landAppraisalAtTransfer !== undefined) !== (v.buildingAppraisalAtTransfer !== undefined);
   if (appraisalOne) {

@@ -445,7 +445,7 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
         ? ratioed(primary.extensionAppraisalValue) || undefined
         : undefined,
     // ④⑬ 토지·건물 분리 축 (소령 §166⑥·§168②) — 게이트·파트 필드 전체를 sibling 빌더에 위임.
-    ...buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed, primaryCtx: { transferDate: form.transferDate } }),
+    ...buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed, primaryCtx: { transferDate: form.transferDate }, ...(primaryFractional ? { shareRatio: primaryRatio } : {}) }),
     /**
      * 엔진 `acquisitionArea` — **취득 당시 단가에 곱할 면적**이며, 일부양도(`partial`)에서는
      * 취득 전체 면적이 아니라 **양도한 부분의 면적**이다.
