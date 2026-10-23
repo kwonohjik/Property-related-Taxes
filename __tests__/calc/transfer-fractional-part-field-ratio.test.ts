@@ -75,11 +75,11 @@ describe("지분 50% — 파트 필드에 지분 스케일 적용", () => {
     await callTransferTaxAPI(makeForm());
     expect(cap.body?.transferPrice).toBe(500_000_000);
     expect(cap.body?.landTransferPrice).toBe(300_000_000);
-    expect(cap.body?.buildingTransferPrice).toBe(200_000_000);
-    expect(
-      (cap.body?.landTransferPrice ?? 0) + (cap.body?.buildingTransferPrice ?? 0),
-      "파트 합이 총액과 어긋나면 엔진 splitPair가 스케일이 섞인 값을 쓴다",
-    ).toBe(cap.body?.transferPrice);
+    // 건물은 비운다 — 엔진이 「지분 양도가액 − 토지」(200,000,000)로 정해 파트 합이 늘 총액과 같다. 따로 버림하면 1/3 지분에서
+    // 1원 모자랐다(`sale-split-100-3-share-scale-judgment.plan.md` Q-4). §100③ 판정용 계약서 금액(100%)은 따로 싣는다(Q-1 a).
+    expect(cap.body?.buildingTransferPrice).toBeUndefined();
+    expect((cap.body?.transferPrice ?? 0) - (cap.body?.landTransferPrice ?? 0)).toBe(200_000_000);
+    expect([cap.body?.contractLandTransferPrice, cap.body?.contractBuildingTransferPrice]).toEqual([600_000_000, 400_000_000]);
   });
 
   it("🔴 취득가액 파트 — P2a 이후 총액 안분이 흡수하지 않으므로 세액 직결", async () => {

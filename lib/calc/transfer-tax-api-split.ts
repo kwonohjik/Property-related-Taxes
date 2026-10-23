@@ -99,6 +99,31 @@ export function isSplitPayloadActive(
   );
 }
 
+/**
+ * 구분 기재 양도가액(「소득세법」 §100②) 와이어 — 계획서 `sale-split-100-3-share-scale-judgment.plan.md` PR-2.
+ *
+ * 공유지분이면:
+ * - **토지만 지분 몫으로 줄이고 건물은 비운다** — 엔진이 「지분 양도가액 − 토지」로 정한다(Q-4 a). 토지·건물을 따로 버림하면 합이 지분
+ *   양도가액보다 1원 모자랐다(1/3·2/3 실측 — 세액 1원 차). 일반건물 `scaleDeclaredSaleSplitToShare`와 같은 규칙이다. 건물만 기재면 건물을 줄인다.
+ * - §100③ 판정용 **계약서 금액(100%)**을 따로 싣는다(Q-1 a) — 지분 몫으로 판정하면 30% 경계에서 결론이 뒤집힌다.
+ */
+function declaredSaleWire(
+  primary: AssetForm,
+  ratioed: (v: string | undefined) => number | undefined,
+  shareRatio: number | undefined,
+): Record<string, number | undefined> {
+  if (shareRatio === undefined) {
+    return { landTransferPrice: ratioed(primary.landTransferPrice), buildingTransferPrice: ratioed(primary.buildingTransferPrice) };
+  }
+  const land = parseAmount(primary.landTransferPrice) || undefined;
+  const building = parseAmount(primary.buildingTransferPrice) || undefined;
+  return {
+    ...(land !== undefined ? { landTransferPrice: ratioed(primary.landTransferPrice) } : { buildingTransferPrice: ratioed(primary.buildingTransferPrice) }),
+    ...(land !== undefined ? { contractLandTransferPrice: land } : {}),
+    ...(building !== undefined ? { contractBuildingTransferPrice: building } : {}),
+  };
+}
+
 /** 분리 축 전송 페이로드 — 본체 body에 그대로 spread한다. */
 export function buildSplitPayload(
   rawPrimary: AssetForm,
@@ -109,6 +134,8 @@ export function buildSplitPayload(
     ratioed: (v: string | undefined) => number | undefined;
     /** 양도일 — «같은 날 취득 주택의 배율 초과분 분리»(#17) 게이트(주 자산·함께 양도 주택 카드 공통) */
     primaryCtx?: ExcessSplitCtx;
+    /** 공유지분율(0 < r < 1)일 때만 — 구분 기재 양도가액의 지분 축소·계약서 금액 전송(`declaredSaleWire`). 단독 소유는 생략. */
+    shareRatio?: number;
   },
 ): Record<string, unknown> {
   const { isBurdenedGift, usesPhd, ratioed, primaryCtx } = opts;
@@ -259,12 +286,7 @@ export function buildSplitPayload(
       ? { standardPriceAtTransfer: parseAmount(primary.standardPriceAtTransfer) }
       : {}),
     // 양도가액 2필드 — 구분양도 게이트.
-    ...(saleDirectActive
-      ? {
-          landTransferPrice: ratioed(primary.landTransferPrice),
-          buildingTransferPrice: ratioed(primary.buildingTransferPrice),
-        }
-      : {}),
+    ...(saleDirectActive ? declaredSaleWire(primary, ratioed, opts.shareRatio) : {}),
     // 양도가액 안분 basis — **감정평가가액**(부가령 §64①1호 단서 · 서열 1순위). 분리 축이
     // 활성이면 **항상 전송**한다 — 일괄양도(안분 basis)와 구분양도(30% 판정의 비교 대상) 양쪽에서
     // 쓰이므로 `saleDirectActive`로 좁히면 일괄양도에서 감정가액이 조용히 무시된다.

@@ -388,6 +388,9 @@ export const propertyBaseShape = {
   landTransferPrice: z.number().int().positive().optional(),
   /** 건물 양도가액 (원) */
   buildingTransferPrice: z.number().int().positive().optional(),
+  /** 공유지분 — 지분 몫으로 줄이기 전 계약서 구분 기재(100%). §100③ 판정 전용(`sale-split-contract-judgment.ts`). */
+  contractLandTransferPrice: z.number().int().positive().optional(),
+  contractBuildingTransferPrice: z.number().int().positive().optional(),
   /**
    * 양도시 감정평가가액 — 안분 basis 서열 1순위(부가령 §64①1호 단서 · 소령 §166⑥ 차용).
    * `positive()`가 아니라 `nonnegative()`다: 0은 「그 파트를 평가하지 않았다」는 뜻이고,
