@@ -35,6 +35,9 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
+/** route body·응답 탐색용 느슨한 타입(기존 anchor와 같은 관례) */
+type Loose = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
 const REDEV: Record<string, unknown> = {
   addressJibun: "서울 강남구 테스트동 1-1",
   assetKind: "redevelopment_apt",
@@ -78,9 +81,9 @@ const form = (a: Record<string, unknown>): TransferFormData =>
 async function run(a: Record<string, unknown>) {
   const f = form(a);
   const issues = allIssues(f);
-  const body = (await captureBody(f)) as Record<string, any>;
+  const body = (await captureBody(f)) as Loose;
   const r = await postTransfer(body);
-  const res = r.result as Record<string, any> | undefined;
+  const res = r.result as Loose | undefined;
   const bg = res?.transferBurdenedGiftBreakdown;
   return {
     issues,
@@ -234,7 +237,7 @@ describe("PR-7b-4 · 리뷰 게이트 반영 (F-1 컴패니언 · F-2 입주권 
       ],
     }) as TransferFormData;
     const fields = allIssues(f).map((i: { field?: string }) => i.field);
-    const body = (await captureBody(f)) as Record<string, any>;
+    const body = (await captureBody(f)) as Loose;
     const r = await postTransfer(body);
     const comp = r.json?.data?.aggregated?.properties?.[1];
     return { fields, status: r.status, companion: body.companionAssets?.[0], total: r.json?.data?.aggregated?.determinedTax, compTax: comp?.determinedTax };
@@ -268,7 +271,7 @@ describe("PR-7b-4 · 리뷰 게이트 반영 (F-1 컴패니언 · F-2 입주권 
 
   it("F-2 입주권 · API에 의제 입력(① 3억)을 직접 실어도 엔진이 3자 max로 받지 않는다 — K-4 25,188,413 그대로", async () => {
     const f = form({ ...MARKET, assetKind: "right_to_move_in", redevSubject: "right", preDeemedClauseAUnconfirmed: true, bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "100,000,000" });
-    const body = (await captureBody(f)) as Record<string, any>;
+    const body = (await captureBody(f)) as Loose;
     const ia = { mode: "pre-deemed", inheritanceStartDate: "1980-01-01", assetKind: "house_individual", reportedValue: 300_000_000 };
     for (const extra of [{ inheritedAcquisition: ia }, { inheritedAcquisition: ia, useEstimatedAcquisition: true }]) {
       const r = await postTransfer({ ...body, ...extra });
@@ -280,7 +283,7 @@ describe("PR-7b-4 · 리뷰 게이트 반영 (F-1 컴패니언 · F-2 입주권 
 
   it("F-2b 승계조합원 · 의제 입력 + 산정방식 없음 → ⑫ 400 산정방식(§166 밖 — 면제 아님)", async () => {
     const f = form({ ...MARKET, redevIsSuccessorMember: "yes", acquisitionPrice: "100,000,000", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "100,000,000" });
-    const body = (await captureBody(f)) as Record<string, any>;
+    const body = (await captureBody(f)) as Loose;
     const r = await postTransfer({
       ...body,
       inheritedAcquisition: { mode: "pre-deemed", inheritanceStartDate: "1980-01-01", assetKind: "house_individual", reportedValue: 200_000_000 },
