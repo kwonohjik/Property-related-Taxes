@@ -16,6 +16,12 @@ import { z } from "zod";
 import { usesBundledPartAcquisition } from "@/lib/tax-engine/general-building-part-acq";
 import { partialAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
 import { GB_PRE_DEEMED_NUMERATOR_MESSAGE } from "@/lib/tax-engine/general-building-pre-deemed";
+import { LAND_INHERITED_ESTIMATION_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
+
+/** 주택 분할 경로의 토지 문구(`LAND_INHERITED_ESTIMATION_MESSAGE`)와 짝 — 일반건물은 건물 파트도 상속·증여일 수 있다. */
+export const GB_BUILDING_INHERITED_ESTIMATION_MESSAGE =
+  "상속·증여로 취득한 건물은 취득가액을 환산취득가·감정가액·매매사례가액으로 산정할 수 없습니다 — "
+  + "상속개시일·증여일 현재 평가액이 취득당시 실지거래가액입니다 (소득세법 §97①1호·같은 법 시행령 §163⑨)";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx, prefix: (string | number)[]): Issue => (path, message) =>
@@ -79,6 +85,21 @@ export type GbValuationLike = {
  */
 export function refineGbValuationRequired(v: GbValuationLike, ctx: z.RefinementCtx) {
   const issue = issuer(ctx, []);
+
+  /*
+   * S-2 — 상속·증여 파트는 추계(환산·감정·매매사례)할 수 없다(소득세법 §97①1호 단서·같은 법 시행령 §163⑨).
+   *   ⑧ `transfer-tax-validate-gb.ts` `blockEstimation`의 거울이다(주택 분할은 `transfer-split-part-cause.ts`가 같은 규칙).
+   *   화면은 ⑤(라디오 없음·G3 patch)·③(`migrateAsset`)·⑧이 막지만, API 직접 호출은 그대로 엔진에 닿아
+   *   평가액 대신 환산으로 계산됐다(1988 상속: 301,110,000 → 310,092,558 · `gb-share-mode-mix-and-inherited-estimate-guard.plan.md`).
+   *   파트 모드가 없으면 엔진 기본값으로 본다 — 환산 경로는 `estimated`(`general-building-entry.ts`), 실가 경로는 실가.
+   *   의제취득일 전 상속·증여는 ④가 파트 모드를 `actual`로 보내고 ①②③ 재선택을 별도 필드로 한다 — 이 규칙에 걸리지 않는다.
+   */
+  const defaultMode: PartMode = v.actualPriceMode === true ? "actual" : "estimated";
+  const isSec163_9 = (cause?: string) => cause === "inheritance" || cause === "gift";
+  if (isSec163_9(v.landAcquisitionCause) && (v.landAcqMode ?? defaultMode) !== "actual")
+    issue(["landAcqMode"], LAND_INHERITED_ESTIMATION_MESSAGE);
+  if (isSec163_9(v.buildingAcquisitionCause) && (v.buildingAcqMode ?? defaultMode) !== "actual")
+    issue(["buildingAcqMode"], GB_BUILDING_INHERITED_ESTIMATION_MESSAGE);
 
   // 의제취득일 전 상속·증여 파트 — ③ 분자(의제취득일 기준시가)가 없으면 엔진이 비교하지 못한다(PR-4 · 엔진과 같은 문구).
   //   ⑧은 같은 값을 영 §163⑨ 단서 ②로 이미 요구한다(1985 전이면 늘 단서 구간) — 여기서는 API 직접 호출을 막는다.
