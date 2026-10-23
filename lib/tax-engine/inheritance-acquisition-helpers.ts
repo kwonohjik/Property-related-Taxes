@@ -103,9 +103,21 @@ export function runInheritedAcquisitionStep(
     step,
     houseValuationResult,
     ...(bgBasis && {
-      bgPreDeemed: { acqStdPriceForced: bgBasis.acqStdPriceForced, stdAtDeemed: resolvedInput.standardPriceAtDeemedDate ?? 0 },
+      bgPreDeemed: { acqStdPriceForced: bgBasis.acqStdPriceForced, stdAtDeemed: bgStdAtDeemed(rawInput, resolvedInput) },
     }),
   };
+}
+
+/**
+ * 부담부증여 기준시가 평가(Q-25)의 의제취득일 기준시가(물건 전체). 토지·주택은 위 주입이 ②(§164④·⑦)를 이 자리에 넣었다.
+ * 상가는 §164⑥ 8칸(④가 다 찼을 때만 싣는다)이 있으면 그 값이다 — 안분 전 값(아래 ②는 지분 안분 후). 없으면 칸 값(사용자 결정 Q-27 ·
+ * 계획서 inheritance-pre-deemed-bg-pr7b.plan.md). 시가 평가 ③의 분자는 바꾸지 않는다(일반 양도와 같은 칸 값 — 별건 확인 필요).
+ */
+function bgStdAtDeemed(rawInput: TransferTaxInput, resolvedInput: InheritanceAcquisitionInput): number {
+  if (rawInput.propertyType === "commercial_building" && rawInput.commercialInheritanceValuation) {
+    return computeCommercial164_6StdPrice(rawInput.commercialInheritanceValuation);
+  }
+  return resolvedInput.standardPriceAtDeemedDate ?? 0;
 }
 
 /**

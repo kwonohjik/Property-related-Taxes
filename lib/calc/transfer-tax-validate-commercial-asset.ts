@@ -37,6 +37,8 @@ import { parseDecimal } from "@/lib/calc/number-parse";
 import { sec164CommercialStatus, isFullyFilled } from "./sec164-required-fields";
 import { deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
 import { isSec163_9PreDeemed } from "./transfer-163-9-base-date";
+import { isBgPreDeemedAsset } from "./bg-pre-deemed";
+import { bgPreDeemedUsesThreeWay } from "./bg-pre-deemed-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
 
@@ -57,10 +59,13 @@ export function validateCommercialInheritanceAsset(asset: AssetForm, label: stri
   //   막힌다(probe Y-5). pre-deemed에는 ③(환산)까지 있어 「확인 불가」 선언도 통과 사유다.
   //   ⚠️ post-deemed는 나목이 §163⑨ 의제로 대체돼 **③이 없다** — 선언해도 갈 곳이 없어
   //      인정하지 않는다(anchor X-12c).
+  //   기준시가로 평가한 의제취득일 전 부담부증여는 ①을 쓰지 않는다 — 의제취득일 기준시가 × 채무비율(Q-25)이고 그 기준시가는
+  //   `bgPreDeemedError`가 요구한다(E-1 `needsClauseADeclaration`과 같은 판정 · PR-7b-1).
   const cbClauseAOk =
     parseAmount(asset.publishedValueAtInheritance) > 0 ||
     isFullyFilled(sec164CommercialStatus(asset)) ||
-    (isSec163_9PreDeemed(asset) && asset.preDeemedClauseAUnconfirmed === true);
+    (isSec163_9PreDeemed(asset) && asset.preDeemedClauseAUnconfirmed === true) ||
+    (isBgPreDeemedAsset(asset) && !bgPreDeemedUsesThreeWay(asset));
   if (!cbClauseAOk) return fieldError("publishedValueAtInheritance", `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요.`);
 
   // §164⑥ **부분 입력 차단은 진입부 `sec164PartialInputError`로 이관**(2026-08-06) — 증여도

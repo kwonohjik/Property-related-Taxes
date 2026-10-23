@@ -72,7 +72,7 @@ export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
     // 겸용주택 — 취득시 기준시가는 4부분 겸용 패널(`mixedAcq*`)이 정본이다. 총액 칸을 띄우면 엔진이 읽지 않는 값을 받는다(설계 UI R2 §4 DUP-2).
     !isMixedBurdenedGift({ assetKind: asset.assetKind, transferType: asset.transferType, isMixedUseHouse: asset.isMixedUseHouse }) &&
     !(asset.assetKind === "redevelopment_apt" && redevPreApprovalAcqMode(asset) === "estimated") &&
-    // 의제취득일 전 상속·증여 토지·주택 — 취득시 기준시가는 의제취득일 기준시가이고 상속·증여 의제 섹션의 칸(등급·3시점 자동값 포함)이 받는다
+    // 의제취득일 전 상속·증여 토지·주택·상가·건물 — 취득시 기준시가는 의제취득일 기준시가이고 상속·증여 의제 섹션의 칸(등급·3시점 자동값 포함)이 받는다
     //   (계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18 · ⑧ `bgPreDeemedError`).
     !isBgPreDeemedAsset(asset as AssetForm)
   );

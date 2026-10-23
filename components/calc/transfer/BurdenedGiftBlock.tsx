@@ -155,7 +155,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
    * (계획서 `burdened-gift-carryover-159-97-2.plan.md` §5.6)
    */
   const isCarryover = asset.acquisitionCause === "carryover_gift";
-  /** 의제취득일 전 상속·증여 토지·주택 — 산정방식 대신 ①②③ 중 큰 금액(시가)·의제취득일 기준시가(기준시가)다(계획서 §18). */
+  /** 의제취득일 전 상속·증여 토지·주택·상가·건물 — 산정방식 대신 ①②③ 중 큰 금액(시가)·의제취득일 기준시가(기준시가)다(계획서 §18). */
   const preDeemed = isBgPreDeemedAsset(asset);
   /** K-1~K-3(기준시가) · K-5(환산) 모두 **취득시 기준시가**를 쓴다 — 환산은 이 값을 분자로 자동 추종. */
   const coDonorNeedsStdPrice =
@@ -365,7 +365,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         그래서 이 블록을 「시가 모드」 카드 **밖으로** 뺐다. 안에 두면 기준시가 모드를 고른
         입주권 사용자에게 칸이 뜨지 않아 ⑧이 요구하는 값을 넣을 곳이 없어진다.
       */}
-      {/* 의제취득일 전 상속·증여 토지·주택 — 시가·기준시가 모두 이 안내가 산정 기준을 알린다 */}
+      {/* 의제취득일 전 상속·증여 토지·주택·상가·건물 — 시가·기준시가 모두 이 안내가 산정 기준을 알린다 */}
       <BgPreDeemedNotice asset={asset} />
 
       {((isMarketMode && !collateralForced && !preDeemed && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (

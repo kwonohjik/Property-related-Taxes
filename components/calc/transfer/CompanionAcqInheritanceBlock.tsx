@@ -166,8 +166,9 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
         </ToneCard>
       )}
 
-      {/* 상가건물·오피스텔 상속 — 자산구분(토지/주택) 무의미(상증법 §60~66 평가액 직접). 안내만. */}
-      {!isBurdenedGift && !isMixedUse && asset.assetKind === "commercial_building" && (
+      {/* 상가건물·오피스텔 상속 — 자산구분(토지/주택) 무의미(상증법 §60~66 평가액 직접). 안내만.
+          의제취득일 전 부담부증여는 §159가 정한다(부담부증여 블록의 안내 — PR-7b-1). */}
+      {asset.transferType !== "burdened_gift" && !isMixedUse && asset.assetKind === "commercial_building" && (
         <ToneCard
           tone="amber"
           title="취득가액 — 상속개시일 상증법 평가액"
