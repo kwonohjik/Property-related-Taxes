@@ -24,6 +24,7 @@ import { PartialExemptBasisCard } from "@/components/calc/results/shared/Partial
 import { FalseContractPriceNotice } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { burdenedGiftTransferPrice } from "@/lib/calc/burdened-gift-transfer-price-scope";
+import { BurdenedTransferPreDeemedLines } from "./BurdenedTransferPreDeemedLines";
 
 // ─── 행 컴포넌트 ─────────────────────────────────────────────────────────────
 
@@ -326,6 +327,9 @@ function SingleTransferResultCard({
             const bldg = brkd?.perAsset.building;
             const deductionTotal =
               (land?.estimatedDeduction ?? 0) + (bldg?.estimatedDeduction ?? 0);
+
+            // 의제취득일(1985.1.1.) 전 상속 — 엔진이 3자 max·의제취득일 기준시가로 정했다(PR-7b-3 · S-1). 산정방식 문구로 그리면 ② 채택도 K-4로 보인다.
+            if (brkd?.preDeemed) return <BurdenedTransferPreDeemedLines brkd={brkd} />;
 
             if (method === "actual") {
               return (

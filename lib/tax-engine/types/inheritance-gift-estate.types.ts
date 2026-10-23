@@ -1290,6 +1290,23 @@ export interface BurdenedGiftTransferTaxInput {
   acquisitionCause?: "purchase" | "inheritance";
   /** 피상속인 취득일 (YYYY-MM-DD) — 「소득세법」 §104②1호 세율 보유기간 기산 */
   decedentAcquisitionDate?: string;
+  /*
+   * ── 의제취득일(1985.1.1.) 전 상속 자산 (PR-7b-3 · `lib/calc/gift-burdened-pre-deemed.ts`) ──
+   * 시가 평가면 취득가액 = max(① 상증법 평가액, ② §164④ 가액, ③ 환산취득가액) × 채무비율, 기준시가 평가면 의제취득일 기준시가 × 채무비율.
+   * 의제취득일 기준시가는 위 `standardPriceAtAcquisition` 칸(범위 안이면 라벨이 「의제취득일」)이나 토지 등급 환산이다. 옛 record에는 없다.
+   */
+  /** ① 상속개시일 현재 상증법 평가액(상속세 신고·결정가액) — 시가 평가(3자 max)에서만 쓴다 */
+  reportedValueAtInheritance?: number;
+  /** ①·② 모두 확인할 수 없음 선언 — 시가 평가에서 ③만으로 계산하려면 필수(계산기 E-1과 같다) */
+  preDeemedClauseAUnconfirmed?: boolean;
+  /** 토지 §164④ 등급 환산 — 양도세 계산기 `Pre1990FormSlice`와 같은 이름(같은 위젯 `Pre1990LandValuationInput`) */
+  pre1990Enabled?: boolean;
+  pre1990PricePerSqm_1990?: string;
+  pre1990PricePerSqm_atTransfer?: string;
+  pre1990Grade_current?: string;
+  pre1990Grade_prev?: string;
+  pre1990Grade_atAcq?: string;
+  pre1990GradeMode?: "number" | "value";
   /** 「소득세법 시행령」 §154⑧3호 — 상속개시 당시 피상속인과 동일세대 */
   decedentSameHouseholdBeforeInheritance?: boolean;
   /** §154⑧3호 — 상속개시 전 동일세대 거주·보유 개시일 (YYYY-MM-DD) */
