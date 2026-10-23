@@ -228,6 +228,54 @@ describe("PR-7b-3 증여세 계산기 부담부증여 × 의제취득일 전 상
     expect((body.inheritedAcquisition as Obj).assetKind).toBe("house_individual");
   });
 
+  it("F2-a 등급 환산을 켰는데 직전 등급이 비었다 — ⑧ 차단(②가 조용히 빠지지 않게 · 리뷰 F2)", () => {
+    const it_ = item({ ...GRADE, pre1990Grade_prev: "", reportedValueAtInheritance: 300_000_000 }, { market: true });
+    expect(validateStep(1, form(it_))).toContain("토지등급 환산을 켰지만 환산되지 않았습니다");
+  });
+
+  it("F2-b 기준시가 평가 · 등급이 표 범위 밖(400) — ⑧ 차단(칸 값으로 조용히 계산하지 않는다)", () => {
+    const it_ = item({ ...GRADE, pre1990Grade_atAcq: "400" });
+    expect(validateStep(1, form(it_))).toContain("토지등급 환산을 켰지만 환산되지 않았습니다");
+  });
+
+  it("F1 시가 · 선언 · 자본적지출 1.5억 + 양도비 1천만 — ③ 채택 · §97②2호 단서(실비가 더 크다)", async () => {
+    const r = await run(item({ preDeemedClauseAUnconfirmed: true, capitalExpenditure: 150_000_000, transferExpense: 10_000_000 }, { market: true }));
+    expect(r.issue).toBeNull();
+    expect(r.bg?.preDeemed?.selected).toBe("converted");
+    expect((r.bg as { necessaryExpenseSwap?: { chosen: string } } | undefined)?.necessaryExpenseSwap?.chosen).toBe("direct");
+    expect(r.tax).toBe(80_190_000);
+  });
+
+  it("M-1b 시가 · ① 3억 + 자본적지출 2천만 — ① 채택이라 실비 × 채무비율(1천만) 공제", async () => {
+    const r = await run(item({ reportedValueAtInheritance: 300_000_000, capitalExpenditure: 20_000_000 }, { market: true }));
+    expect(r.issue).toBeNull();
+    expect(r.tax).toBe(58_910_000);
+  });
+
+  it("M-6b 담보 승 세액 — 의제취득일 기준시가 × 채무비율 1", async () => {
+    const it_ = item({});
+    Object.assign(it_, { marketValue: 400_000_000 });
+    const r = await run(it_);
+    expect(r.tax).toBe(45_956_172);
+  });
+
+  it("D-1 경계: 상속개시일 1984-12-31(Date)은 범위 안 · 1985-01-01은 범위 밖(종전 규칙 — 산정방식 요구)", async () => {
+    const inS = await run(item({ acquisitionDate: new Date("1984-12-31"), reportedValueAtInheritance: 300_000_000 } as never, { market: true }));
+    expect(inS.issue).toBeNull();
+    expect(inS.tax).toBe(61_570_000);
+    const outS = item({ acquisitionDate: new Date("1985-01-01"), reportedValueAtInheritance: 300_000_000 } as never, { market: true });
+    expect(buildGiftBurdenedTransferBody(outS, form(outS)).inheritedAcquisition).toBeUndefined();
+    expect(validateStep(1, form(outS))).toContain("취득가액 산정방식");
+  });
+
+  it("H-2 단독주택(건물 · 주택) 시가 ① 3억 — API까지 3자 max", async () => {
+    const r = await run(item({ isHousing: true, reportedValueAtInheritance: 300_000_000 }, { category: "real_estate_building", market: true }));
+    expect(r.issue).toBeNull();
+    expect(r.status).toBe(200);
+    expect(r.bg?.preDeemed?.selected).toBe("reported");
+    expect(r.tax).toBe(61_570_000);
+  });
+
   it("B-1 범위 밖: 1990 상속 — 상속 의제 입력을 싣지 않고 종전 규칙(환산 차단)", async () => {
     const it_ = item({ acquisitionMethod: "converted" }, { market: true, acqDate: "1990-07-26" });
     const r = await run(it_);

@@ -35,6 +35,7 @@ import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-b
 import { giftBgEffectiveStdAtAcquisition } from "@/lib/calc/gift-burdened-pre-deemed";
 import { giftBgPreDeemedInScope } from "@/lib/calc/gift-burdened-pre-deemed";
 import { giftBgPreDeemedThreeWayError } from "@/lib/calc/gift-burdened-pre-deemed";
+import { giftBgPre1990IncompleteError } from "@/lib/calc/gift-burdened-pre-deemed";
 import { giftBgPreDeemedUsesThreeWay } from "@/lib/calc/gift-burdened-pre-deemed";
 import {
   BG_PRESUMED_LABEL,
@@ -155,7 +156,10 @@ export function validateStep(step: number, form: FormState): string | null {
       const acqStdPriceInert =
         isMarketMode && !acqForcedToStandard && !preDeemedThreeWay && bgt.acquisitionMethod === "actual" && propertyType !== "land";
       // 의제취득일 전 상속 토지는 등급 환산값도 원천이다(④·⑤와 같은 leaf)
-      if (!acqStdPriceInert && giftBgEffectiveStdAtAcquisition(bgItem, form.giftDate) <= 0) {
+      // 의제취득일 전 상속 토지 · 등급 환산을 켰는데 환산되지 않음 — ②가 조용히 빠지지 않게 먼저 막는다(리뷰 F2)
+      const pre1990Incomplete = giftBgPre1990IncompleteError(bgItem, form.giftDate);
+      if (pre1990Incomplete) return `${itemLabel}: ${pre1990Incomplete}`;
+      if (!acqStdPriceInert && !(giftBgEffectiveStdAtAcquisition(bgItem, form.giftDate) > 0)) {
         return giftBgPreDeemedInScope(bgt)
           ? `${itemLabel}: 의제취득일(1985.1.1.) 현재 기준시가를 입력하세요 — 1984.12.31. 이전 상속 자산은 취득시기가 1985.1.1.로 의제됩니다${propertyType === "land" ? "(토지는 토지등급 환산으로도 구할 수 있습니다)" : ""} (소득세법 시행령 §159①1호·§164④).`
           : `${itemLabel}: 취득시 기준시가를 입력하세요. (양도소득세 계산 필수)`;

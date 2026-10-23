@@ -51,10 +51,16 @@ export function BurdenedGiftPreDeemedFields({ item, bgt, set, isLandType, transf
           <Frac top="의제취득일 기준시가" bottom="양도시 기준시가" />) 중 큰 금액에 채무비율을 곱합니다. 취득가액 산정방식은 고르지 않습니다
           (소득세법 시행령 §159①1호 · §163⑨ · §176조의2④).
         </p>
+        {!isLandType && (
+          <p data-testid="bg-pre-deemed-no-sec164" className="text-xs">
+            ② §164⑤~⑦ 가액(건물 기준시가 고시 전 상속 건물 — 소득세법 시행령 §163⑨2호)은 이 화면에서 입력할 수 없어 비교에서 빠집니다.
+            해당되면 양도소득세 계산기에서 계산하세요.
+          </p>
+        )}
       </ToneCard>
       <FieldCard
         label="① 상속개시일 현재 상증법 평가액 (원)"
-        hint="상속세 신고·결정가액. 이 금액(또는 ②)이 채택되면 실지거래가액으로 보아 아래 자본적지출·양도비를 채무비율로 나눠 공제합니다."
+        hint="상속개시일 현재 「상속세 및 증여세법」 §60~§66에 따라 평가한 가액(세무서장이 결정·경정했으면 그 가액). 이 금액(또는 ②)이 채택되면 실지거래가액으로 보아 아래 자본적지출·양도비에 채무비율을 곱해 공제합니다."
       >
         <CurrencyInput
           label="상속개시일 평가액"
@@ -76,7 +82,7 @@ export function BurdenedGiftPreDeemedFields({ item, bgt, set, isLandType, transf
           data-testid="bg-pre-deemed-unconfirmed"
         />
       )}
-      <FieldCard label="자본적 지출 (원)" hint="①·②가 채택되면 채무비율로 나눠 공제합니다. ③이 채택되면 「③ + 개산공제」보다 클 때만 그 대신 씁니다(소득세법 §97②2호 단서). 미입력 시 0.">
+      <FieldCard label="자본적 지출 (원)" hint="①·②가 채택되면 채무비율을 곱해 공제합니다. ③이 채택되면 「③ + 개산공제」보다 클 때만 그 대신 씁니다(소득세법 §97②2호 단서). 미입력 시 0.">
         <CurrencyInput
           label="자본적 지출"
           value={bgt.capitalExpenditure && bgt.capitalExpenditure > 0 ? String(bgt.capitalExpenditure) : ""}
@@ -86,7 +92,7 @@ export function BurdenedGiftPreDeemedFields({ item, bgt, set, isLandType, transf
           data-testid="bg-capital-expenditure"
         />
       </FieldCard>
-      <FieldCard label="양도비용 (원)" hint="①·②가 채택되면 채무비율로 나눠 공제합니다. ③이 채택되면 「③ + 개산공제」보다 클 때만 그 대신 씁니다(소득세법 §97②2호 단서). 미입력 시 0.">
+      <FieldCard label="양도비용 (원)" hint="①·②가 채택되면 채무비율을 곱해 공제합니다. ③이 채택되면 「③ + 개산공제」보다 클 때만 그 대신 씁니다(소득세법 §97②2호 단서). 미입력 시 0.">
         <CurrencyInput
           label="양도비용"
           value={bgt.transferExpense && bgt.transferExpense > 0 ? String(bgt.transferExpense) : ""}

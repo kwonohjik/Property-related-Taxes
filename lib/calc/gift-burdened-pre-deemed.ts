@@ -11,6 +11,7 @@
  */
 import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import { DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
+import { toDate } from "@/lib/api/date-coerce";
 import { giftBurdenedValuationBasis } from "./gift-burdened-valuation-basis";
 import { parseAmount } from "./number-parse";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -49,8 +50,8 @@ export function giftBgPre1990LandStd(item: EstateItem, giftDate: string | undefi
   if (!payload) return null;
   try {
     return calculatePre1990LandValuation({
-      acquisitionDate: new Date(payload.acquisitionDate),
-      transferDate: new Date(payload.transferDate),
+      acquisitionDate: toDate(payload.acquisitionDate, "acquisitionDate"),
+      transferDate: toDate(payload.transferDate, "transferDate"),
       areaSqm: payload.areaSqm,
       pricePerSqm_1990: payload.pricePerSqm_1990,
       // 환산에는 쓰지 않는다 — validateInput 통과용 같은 값(GB·상가 브리지와 같다)
@@ -149,7 +150,7 @@ export function giftBgPreDeemedThreeWayError(item: EstateItem, giftDate: string 
       "확인할 수 없으면 「상증법 평가액을 확인할 수 없음」을 선택하세요 (소득세법 시행령 §159①1호·§163⑨·§176조의2④)."
     );
   }
-  if (giftBgStdAtTransfer(item) <= 0) {
+  if (!(giftBgStdAtTransfer(item) > 0)) {
     return `${item.category === "real_estate_land" ? "양도시(증여시) 개별공시지가 총액" : "양도시(증여시) 기준시가"}를 입력하세요 — ③ 환산취득가액의 분모입니다 (소득세법 시행령 §176조의2④).`;
   }
   return null;
@@ -166,4 +167,18 @@ export function giftBgPre1990Slice(bgt: BurdenedGiftTransferTaxInput) {
     pre1990Grade_atAcq: bgt.pre1990Grade_atAcq ?? "",
     pre1990GradeMode: bgt.pre1990GradeMode ?? ("number" as const),
   };
+}
+
+/**
+ * ⑧ — 토지 등급 환산을 켰는데 입력이 모자라거나 등급이 범위 밖이라 환산되지 않은 상태(리뷰 F2). 막지 않으면 ②가 비교에서 조용히 빠지고
+ * 기준시가 평가에서는 칸 값으로 계산된다. 계산기는 같은 상태를 §164④ 일부 입력 검사로 막는다(`sec164LandStatus`). 문구 앞 자산 라벨은 호출부.
+ */
+export function giftBgPre1990IncompleteError(item: EstateItem, giftDate: string | undefined): string | null {
+  const bgt = item.burdenedGiftTransferTax;
+  if (!bgt || !giftBgPre1990LandApplies(item) || bgt.pre1990Enabled !== true) return null;
+  if (giftBgPre1990LandStd(item, giftDate) !== null) return null;
+  return (
+    "토지등급 환산을 켰지만 환산되지 않았습니다 — 1990.1.1. 기준 개별공시지가·등급 3칸·토지 면적을 모두 채우고 등급이 표의 범위 안인지 확인하세요. " +
+    "등급으로 환산하지 않으려면 환산을 끄고 의제취득일 기준시가를 직접 입력하세요 (소득세법 시행령 §164④)."
+  );
 }

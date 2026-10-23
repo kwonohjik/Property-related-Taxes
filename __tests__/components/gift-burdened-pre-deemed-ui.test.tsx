@@ -101,6 +101,17 @@ describe("PR-7b-3 ⑤ 증여세 계산기 부담부증여 × 의제취득일 전
     expect(v.text).toContain("의제취득일(1985.1.1.) 공동주택공시가격");
   });
 
+  it("U-5b 비주택 건물 · 시가 — ②(§164⑤~⑦)가 비교에서 빠진다는 고지(리뷰 F3) · 토지는 고지 없음", () => {
+    const { container } = render(
+      <BurdenedGiftTransferSection item={item({ isHousing: false }, { market: true, category: "real_estate_building" })} onChange={() => {}} hasOtherBurdenedGiftTransfer={false} transferDate="2023-02-16" />,
+    );
+    expect(container.querySelector('[data-testid="bg-pre-deemed-no-sec164"]')).not.toBeNull();
+    cleanup();
+    const land = render(<BurdenedGiftTransferSection item={item({}, { market: true })} onChange={() => {}} hasOtherBurdenedGiftTransfer={false} transferDate="2023-02-16" />);
+    expect(land.container.querySelector('[data-testid="bg-pre-deemed-no-sec164"]')).toBeNull();
+    cleanup();
+  });
+
   it("U-6 범위 밖(1990 상속 · 시가) — 종전 화면(산정방식 라디오 · 「취득시」 라벨)", () => {
     const v = view(item({}, { market: true, acqDate: "1990-07-26" }));
     expect(v.radio).toBe(true);
@@ -112,12 +123,13 @@ describe("PR-7b-3 ⑤ 증여세 계산기 부담부증여 × 의제취득일 전
 });
 
 describe("PR-7b-3 ⑦ 결과 카드 의제 분기 (S-1)", () => {
-  const brkd = (p: TransferBurdenedGiftBreakdown["preDeemed"]) =>
+  const brkd = (p: TransferBurdenedGiftBreakdown["preDeemed"], over: object = {}) =>
     ({
       preDeemed: p,
       debtRatio: 0.5,
       giftValuation: { max: 920_000_000 },
-      perAsset: { land: { acquisitionPrice: 42_221_587 }, building: { acquisitionPrice: 0 } },
+      perAsset: { land: { acquisitionPrice: 42_221_587, estimatedDeduction: 1_000_000 }, building: { acquisitionPrice: 0, estimatedDeduction: 0 } },
+      ...over,
     }) as unknown as TransferBurdenedGiftBreakdown;
 
   it("R-1 ② 채택 — 「← 채택」이 ②에 · K-4 문구 없음", () => {
@@ -146,6 +158,35 @@ describe("PR-7b-3 ⑦ 결과 카드 의제 분기 (S-1)", () => {
     const { container } = render(<BurdenedTransferTaxResultCard transferTaxResults={[result]} />);
     expect(container.querySelector('[data-testid="gift-bg-pre-deemed-three-way"]')).not.toBeNull();
     expect(container.textContent).not.toContain("K-4");
+    cleanup();
+  });
+
+  it("R-3 ③ 채택 · §97②2호 단서 — 취득가액 줄이 0이 아니라 스왑 전 값 · 실비 대체 문구(리뷰 F1)", () => {
+    const { container } = render(
+      <BurdenedTransferPreDeemedLines
+        brkd={brkd(
+          { basis: "three_way", stdAtDeemed: 202_620_000, reported: null, sec164: null, converted: 149_925_925, selected: "converted", wholeAcquisition: 149_925_925 },
+          {
+            perAsset: { land: { acquisitionPrice: 0, estimatedDeduction: 80_000_000 }, building: { acquisitionPrice: 0, estimatedDeduction: 0 } },
+            convertedAcquisitionBeforeSwap: { land: 74_962_962, building: 0 },
+            necessaryExpenseSwap: { estimatedSide: 78_002_262, directSide: 80_000_000, chosen: "direct" },
+          },
+        )}
+      />,
+    );
+    expect(container.textContent).toContain("= 74,962,962");
+    expect(container.textContent).not.toContain("50.0000% = 0");
+    expect(container.querySelector('[data-testid="gift-bg-pre-deemed-expense"]')?.textContent).toContain("자본적지출·양도비 80,000,000가 커서");
+    cleanup();
+  });
+
+  it("R-4 ①·② 채택 — 공제한 실비 금액을 보인다(채무비율을 곱한 값)", () => {
+    const { container } = render(
+      <BurdenedTransferPreDeemedLines
+        brkd={brkd({ basis: "three_way", stdAtDeemed: 202_620_000, reported: 300_000_000, sec164: null, converted: 149_925_925, selected: "reported", wholeAcquisition: 300_000_000 })}
+      />,
+    );
+    expect(container.querySelector('[data-testid="gift-bg-pre-deemed-expense"]')?.textContent).toContain("채무비율을 곱한 1,000,000");
     cleanup();
   });
 

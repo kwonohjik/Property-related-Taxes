@@ -22,7 +22,14 @@ export function BurdenedTransferPreDeemedLines({ brkd }: { brkd: TransferBurdene
     );
   }
   const mark = (key: "reported" | "sec164" | "converted") => (p.selected === key ? " ← 채택" : "");
-  const acquisition = brkd.perAsset.land.acquisitionPrice + brkd.perAsset.building.acquisitionPrice;
+  const swap = brkd.necessaryExpenseSwap;
+  const direct = p.selected === "converted" && swap?.chosen === "direct";
+  // §97②2호 단서(③ 채택 · 실비가 더 크다)면 엔진이 취득가액 슬롯을 0으로 두고 스왑 전 값을 따로 남긴다 — 그 값을 보인다(리뷰 F1)
+  const before = brkd.convertedAcquisitionBeforeSwap;
+  const acquisition = direct && before
+    ? before.land + before.building
+    : brkd.perAsset.land.acquisitionPrice + brkd.perAsset.building.acquisitionPrice;
+  const expense = (brkd.perAsset.land.estimatedDeduction ?? 0) + (brkd.perAsset.building.estimatedDeduction ?? 0);
   return (
     <div className="mt-1 space-y-0.5 text-amber-700 dark:text-amber-300" data-testid="gift-bg-pre-deemed-three-way">
       <p>※ 취득가액 산정 — 의제취득일(1985.1.1.) 전 상속: ①②③ 중 큰 금액 × 채무비율 (소득세법 시행령 §159①1호 · §163⑨ · §176조의2④)</p>
@@ -36,12 +43,12 @@ export function BurdenedTransferPreDeemedLines({ brkd }: { brkd: TransferBurdene
       <p>
         취득가액 = {fmt(p.wholeAcquisition ?? 0)} × 채무비율 {rate} = {fmt(acquisition)}
       </p>
-      <p>
-        {p.selected === "converted"
-          ? brkd.necessaryExpenseSwap?.chosen === "direct"
-            ? "③ 채택 — 자본적지출·양도비가 ③과 개산공제의 합보다 커서 그 금액을 필요경비로 썼습니다(소득세법 §97②2호 단서)."
-            : "③ 채택 — 추계라 개산공제(의제취득일 기준시가 × 채무비율 × 율, 소득세법 시행령 §163⑥)를 필요경비로 적용합니다."
-          : "①·② 채택 — 실지거래가액 의제(소득세법 시행령 §163⑨)라 자본적지출·양도비를 채무비율로 나눠 필요경비로 공제합니다."}
+      <p data-testid="gift-bg-pre-deemed-expense">
+        {direct && swap
+          ? `③ 채택 — ③ + 개산공제 ${fmt(swap.estimatedSide)}보다 자본적지출·양도비 ${fmt(swap.directSide)}가 커서 그 금액을 필요경비로 대신 씁니다. 이때 취득가액은 따로 빼지 않습니다 (소득세법 §97②2호 단서).`
+          : p.selected === "converted"
+            ? `③ 채택 — 추계라 개산공제 ${fmt(expense)}(의제취득일 기준시가 × 채무비율 × 율, 소득세법 시행령 §163⑥)를 필요경비로 적용합니다.`
+            : `①·② 채택 — 실지거래가액 의제(소득세법 시행령 §163⑨)라 자본적지출·양도비에 채무비율을 곱한 ${fmt(expense)}를 필요경비로 공제합니다.`}
       </p>
     </div>
   );
