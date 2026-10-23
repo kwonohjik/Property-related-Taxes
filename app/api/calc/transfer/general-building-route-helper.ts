@@ -132,7 +132,7 @@ export function dispatchGeneralBuilding(
   assetLevel?: GbAssetLevelInputs,
 ): GeneralBuildingRouteResult {
   // 공유 지분 — 계약서 구분 기재 양도가액(100% 기준)을 지분 양도가액에 맞춘다(지분·컴패니언 카드 `buildGbPartCards`와 같은 leaf).
-  const coercedGbRaw = scaleDeclaredSaleSplitToShare(coerceGeneralBuildingPayload(gbRaw), ownershipRatio);
+  const coercedGbRaw = scaleDeclaredSaleSplitToShare(coerceGeneralBuildingPayload(gbRaw), ownershipRatio, assetLevel?.contractTotalPrice);
   const buildingAcqDate = coercedGbRaw.buildingAcquisitionDate as Date | undefined;
   const landAcqDateCoerced = coercedGbRaw.landAcquisitionDate as Date | undefined;
   const buildingAcqCause = coercedGbRaw.buildingAcquisitionCause as

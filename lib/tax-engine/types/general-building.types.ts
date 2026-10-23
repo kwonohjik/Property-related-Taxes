@@ -46,6 +46,8 @@ export type GeneralBuildingInput = {
   landTransferPrice?: number;
   /** 구분 기재된 건물 양도가액 (원) — 위와 동일한 규칙 */
   buildingTransferPrice?: number;
+  /** 공유지분 — 지분 몫으로 줄이기 전 계약서 구분 기재(100%). §100③을 이 값으로 판정한다(`sale-split-contract-judgment.ts`). */
+  saleSplitContract?: import("../sale-split-contract-judgment").SaleSplitContract;
   /**
    * 「소득세법 시행령」 제166조 제8항 예외 — 선택 시 §100③ 30% 의제가 **발동하지 않는다**.
    * 자동 판정이 불가능해(계약 근거·사실관계) 사용자 입력으로 받는다.

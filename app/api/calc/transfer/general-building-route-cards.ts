@@ -69,6 +69,11 @@ export interface GbAssetLevelInputs {
    * 자산별로 흘러들지 않도록 aggregate가 `:163`에서 per-asset amendment를 strip한다.
    */
   amendment?: import("@/lib/tax-engine/types/transfer-amendment.types").AmendmentInput;
+  /**
+   * 공유지분 단건 — 계약 총액(물건 전체 100% · `totalPropertyTransferPrice`). 한쪽만 기재한 계약서의 반대쪽을 정해
+   * §100③을 계약서 금액으로 판정한다(`scaleDeclaredSaleSplitToShare`).
+   */
+  contractTotalPrice?: number;
 }
 
 export interface GeneralBuildingRouteResult {

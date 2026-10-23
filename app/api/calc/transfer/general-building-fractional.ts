@@ -46,48 +46,27 @@ import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-
 import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
 import { buildGbPartCards, tagGbCards, remapGbSwap } from "./general-building-part-cards";
 import type { GbPartCards } from "./general-building-part-cards";
-import { judgeDeemedUnclearSplit } from "@/lib/tax-engine/sale-split-deemed-unclear";
-import type { SaleSplitExemption, SaleSplitPair } from "@/lib/tax-engine/sale-split-deemed-unclear";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import type { GbShareBlockEcho } from "@/lib/tax-engine/types/transfer-aggregate.types";
 
 /**
- * 지분 판정을 **물건 전체(계약서 한 장)** 판정으로 합친다 — `gb-fractional-result-blocks.plan.md` D-2(Q-1 a).
+ * 지분 판정을 **물건 전체(계약서 한 장)** 판정 하나로 싣는다 — `gb-fractional-result-blocks.plan.md` D-2(Q-1 a).
  *
- * §100③은 계약 단위 판정인데 엔진은 지분마다 지분율로 줄여 판정한다(`scaleDeclaredSaleSplitToShare`). 지분 몫을 그대로 보이면
- * 사용자가 적은 계약서 금액이 화면 어디에도 없다. 그래서 금액은 지분 값의 **합**(구분 기재 합 = 계약서 기재액)으로,
- * 판정·이탈률은 엔진 함수를 합산값으로 **다시 불러** 얻는다 — 표시 계층이 판정 규칙을 다시 구현하지 않는다.
+ * 지분마다 계약서(100%) 금액으로 판정하므로(`sale-split-100-3-share-scale-judgment.plan.md` — 축 B는 총양도가가 계약 총액이다)
+ * 전 지분의 판정 표는 같다. 그 표에서 지분 적용 가액 행(`share`)만 뺀 것이 물건 전체 판정이다.
  *
- * 🔴 지분 판정 중 하나라도 합산 판정과 결론이 다르면(30% 경계 반올림) `undefined` — 블록이 계산과 다른 결론을 말하지 않게 한다.
+ * 🔴 계약서 판정이 아닌 지분이 있거나 결론이 갈리면 `undefined` — 블록이 계산과 다른 결론을 말하지 않게 한다.
  *    그때 화면은 지분별 판정(`shareBlockEcho`)을 그대로 그린다.
  */
 export function propertySaleSplitJudgment(
   judgments: Array<SaleSplitJudgmentDetail | undefined>,
-  exemption: SaleSplitExemption | undefined,
 ): SaleSplitJudgmentDetail | undefined {
-  if (judgments.length === 0 || judgments.some((j) => j === undefined)) return undefined;
+  if (judgments.length === 0 || judgments.some((j) => !j?.share)) return undefined;
   const all = judgments as SaleSplitJudgmentDetail[];
-  const sum = (pick: (j: SaleSplitJudgmentDetail) => SaleSplitPair): SaleSplitPair =>
-    all.reduce((s, j) => ({ land: s.land + pick(j).land, building: s.building + pick(j).building }), { land: 0, building: 0 });
-  const apportioned = all.every((j) => j.apportioned) ? sum((j) => j.apportioned!) : null;
   const first = all[0];
-  const judged = judgeDeemedUnclearSplit({
-    declared: sum((j) => j.declared),
-    apportioned,
-    era: first.era,
-    ...(exemption ? { exemption } : {}),
-  });
-  if (all.some((j) => j.deemedUnclear !== judged.deemedUnclear)) return undefined;
-  return {
-    deemedUnclear: judged.deemedUnclear,
-    declared: sum((j) => j.declared),
-    ...(apportioned ? { apportioned } : {}),
-    // 실제 계산에 쓴 가액의 합 — 판정이 같으므로 엔진 `applied`(구분값 또는 안분값)와 같은 쪽이다.
-    applied: sum((j) => j.applied),
-    ...(first.basisKind ? { basisKind: first.basisKind } : {}),
-    ...(first.appraisalRejected ? { appraisalRejected: first.appraisalRejected } : {}),
-    ...judged.detail,
-  };
+  if (all.some((j) => j.deemedUnclear !== first.deemedUnclear)) return undefined;
+  const { share: _share, ...contract } = first;
+  return contract;
 }
 
 /** 라우트가 받는 지분 1건 (Zod 통과 후). `valuation`은 물건-수준 병합이 끝난 완결 payload. */
@@ -243,6 +222,8 @@ export function calculateGeneralBuildingFractional(
       // 부담부증여 — 그 지분의 §159 정보 + 지분율(A·C 지분 축소). 비부담부증여면 둘 다 undefined(종전 경로 그대로).
       burdened ? share.burdenedGiftInfo : undefined,
       burdened ? share.ownershipRatio : undefined,
+      // 계약 총액(100%) — 전 지분이 같은 계약서로 §100③을 판정한다(지분끼리 결론이 갈리지 않는다).
+      totalTransferPrice,
     );
 
     // (4) 접미사 — 카드와 swap Map을 **같은 시점에** 태깅한다
@@ -352,10 +333,7 @@ export function calculateGeneralBuildingFractional(
   aggregated.generalBuildingValuationDetail = {
     ...(detailBase ?? {}),
     // §100③ 판정 — 물건 전체(계약서 기재액) 한 번. 지분 판정이 갈리면 비우고 지분별 판정만 남긴다(D-2).
-    saleSplitJudgment: propertySaleSplitJudgment(
-      shares.map((_, idx) => shareBlockEcho[String(idx)]?.saleSplitJudgment),
-      shares[0]?.valuation.saleSplitExemption as SaleSplitExemption | undefined,
-    ),
+    saleSplitJudgment: propertySaleSplitJudgment(shares.map((_, idx) => shareBlockEcho[String(idx)]?.saleSplitJudgment)),
     // §163⑨ 상속 표지·의제취득일 전 ①②③ 비교는 **지분마다** 다르다 — 첫 지분 값을 물건 전체로 싣지 않고 `shareBlockEcho`로만 싣는다(D-1).
     acquisitionByInheritance: undefined,
     buildingAcquisitionByInheritance: undefined,

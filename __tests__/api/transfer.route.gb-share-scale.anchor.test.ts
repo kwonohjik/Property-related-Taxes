@@ -230,8 +230,18 @@ describe("leaf", () => {
 
   it("scaleDeclaredSaleSplitToShare — 토지만 줄이고 건물은 비운다 · 건물만 기재면 건물 · 단독 소유는 그대로", () => {
     const both = { landTransferPrice: 1_302_000_000, buildingTransferPrice: 298_000_000, landArea: 205 };
-    expect(scaleDeclaredSaleSplitToShare(both, 1 / 3)).toEqual({ landTransferPrice: 434_000_000, landArea: 205 });
+    // 판정용 계약서 금액(100%)은 따로 싣는다(`sale-split-100-3-share-scale-judgment.plan.md` Q-1 a).
+    expect(scaleDeclaredSaleSplitToShare(both, 1 / 3)).toEqual({
+      landTransferPrice: 434_000_000,
+      landArea: 205,
+      saleSplitContract: { land: 1_302_000_000, building: 298_000_000, ownershipRatio: 1 / 3 },
+    });
+    // 한쪽만 기재 — 계약 총액을 모르면 계약서 금액을 만들 수 없다(종전 지분 판정), 알면 반대쪽을 정한다.
     expect(scaleDeclaredSaleSplitToShare({ buildingTransferPrice: 298_000_000 }, 0.5)).toEqual({ buildingTransferPrice: 149_000_000 });
+    expect(scaleDeclaredSaleSplitToShare({ buildingTransferPrice: 298_000_000 }, 0.5, T)).toEqual({
+      buildingTransferPrice: 149_000_000,
+      saleSplitContract: { land: T - 298_000_000, building: 298_000_000, ownershipRatio: 0.5 },
+    });
     expect(scaleDeclaredSaleSplitToShare(both, undefined)).toBe(both);
     expect(scaleDeclaredSaleSplitToShare(both, 1)).toBe(both);
     expect(scaleDeclaredSaleSplitToShare({ landArea: 205 }, 0.5)).toEqual({ landArea: 205 });
