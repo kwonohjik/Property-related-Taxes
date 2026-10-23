@@ -201,6 +201,14 @@ describe("L2 ⑫ 「그중 증축 전」 필수 · ④ 칸이 있을 때만 전�
     expect(gvOf(hidden.body).capitalExpenditure).toBeUndefined();
     expect(JSON.stringify(hidden.json.data)).toBe(JSON.stringify(clean.json.data));
   });
+
+  it("🔴 부담부증여 · 숨은 양도비 칸 잔존값도 ④ 미전송 — #2459 라우팅(부담부증여 → 실가 갈래) 뒤에도 같은 규칙", async () => {
+    const hidden = await run(form([asset(1, OFF, EXT, BG, { capitalExpenditure: "", gbCapexBeforeExtension: "", transferExpense: "20000000" })]));
+    const clean = await run(form([asset(1, OFF, EXT, BG, { capitalExpenditure: "", gbCapexBeforeExtension: "" })]));
+    expect(hidden.status).toBe(200);
+    expect(gvOf(hidden.body).transferExpense).toBeUndefined();
+    expect(JSON.stringify(hidden.json.data)).toBe(JSON.stringify(clean.json.data));
+  });
 });
 
 describe("O-1 숨은 파트 자본적지출 칸 잔존값 — ④ 미전송", () => {
