@@ -38,7 +38,7 @@ export function housingFlagResetPatchForAssetKind(
   nextKind: AssetForm["assetKind"],
 ): Partial<AssetForm> {
   /**
-   * §155⑳ 특례는 **입주권도 대상**이라 축이 다르다 — 주택 전용 플래그와 조건을 공유할 수 없다.
+   * §155⑳ 특례는 **재개발 완공APT도 대상**(입주권은 아님)이라 축이 다르다 — 주택 전용 플래그와 조건을 공유할 수 없다.
    * 술어는 `rental-housing-exception-scope.ts` 단일 소스를 쓴다(⑤·⑧·④와 같은 것).
    *
    * ⚠️ 이 초기화만으로는 부족하다 — stale sessionStorage·이력 복원분은 전환을 거치지 않는다.
