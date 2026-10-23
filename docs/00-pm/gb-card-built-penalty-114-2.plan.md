@@ -424,3 +424,46 @@ mock 세율 기준 상대값. 지방소득세 10% 포함 총납부 기준.
 
 ### 뮤테이션 (cp 백업 · label+file md5 · 건별 sha 대조 · bash)
 술어 분기 제거 / 컴패니언 항상 true / ⑧ 차단 제거 / ⑧ 컴패니언 플래그 미전달 / ⑧ 앵커 오지정 / ⑤ prop 미전달 / ⑤ 안내 제거 · 항상 · phd 만 / ⑤ 안내가 주 자산 포함 / PHD 패널 술어 컴패니언 미반영 — **12건 전부 KILLED**(초판 안내 제거 1건이 생존 → 안내를 `data-testid` 로 단언하도록 보강 후 KILLED), E2E 변형 1건 KILLED. 건별 `[RESTORED]`, 끝난 뒤 변경 파일 sha 전후 동일.
+
+---
+
+## 17. PR-5b Do 기록 (2026-10-23) — 일반건물 부담부증여 K-5(환산)·K-7(감정) × 양도인 본인 신축 §114조의2 (Q-8·Q-13·Q-14 확정)
+
+브랜치 `feat/gb-bg-self-built-penalty`(PR-0c head fd8511f31에서 분기). 계획서 §3.3 설계 그대로 구현했다. **기존 계산이 바뀐다 — 일반건물 부담부증여(K-5·K-7) + 신축 + 5년 이내 입력은 가산세가 새로 붙어 총납부가 늘어난다.**
+
+### Pre-Do 실측 (V-3·V-4)
+- **V-3** (서버가 일반건물 부담부증여 × 증축을 막는가): **막지 않고 조용히 무시한다.** `actualPriceMode:true`(부담부증여는 실가 경로)면 `extensionInfo`는 읽히지 않아 신축과 같은 결과(가산세 0 → 구현 後에도 증축 부분 신호 없음), `actualPriceMode:false`로 보내면(API 직접 호출) 환산 경로로 가서 **부담부증여 자체가 무시**된다. UI는 증축 토글을 숨기지만(`GeneralBuildingAcquisitionCards.tsx:299`) 증축 켠 상태 stale 로 `anyEstimated || gbHasExtension` 게이트(`transfer-tax-api-gb.ts:321`)가 환산 경로로 라우팅할 수 있다 — 기존 라우팅 결함 후보, **이번 범위 밖·확인 필요**. 그래서 **5b 는 신축만 다룬다**(증축은 일반건물 부담부증여에서 도달 불가).
+- **V-4** (지분·컴패니언 + 부담부증여): 지분(`generalBuildingShares`) 분기는 `burdenedGiftInfo`를 넘기지 않아(`route.ts:169-189`) 부담부증여가 **조용히 무시**된다(실측: 지분 + K-5 신축 가산세 0, 양도차익이 부담부증여가 아닌 일반 양도 값). 컴패니언 일반건물은 `generalBuildingValuation`만 전달(`bundled-split-helpers.ts:715-721`). 5b 범위 밖, 기존 한계로 기록.
+
+### 변경 (입력·⑫·⑧ 변경 없음 — 계획대로)
+| 파일 | 변경 |
+|---|---|
+| `lib/tax-engine/general-building-bg-penalty-signal.ts` (신규 52줄) | `gbBurdenedGiftSelfBuiltPenaltyAxis` — 단건 `runBurdenedGiftStep` 규칙을 건물 카드로 옮긴 순수 leaf: K-5 = `convertedAcquisitionBeforeSwap?.building ?? perAsset.building.acquisitionPrice`(swap 前), K-7 = 안분 후 건물 감정가액, 환산 요청인데 §159 가 기준시가로 강제(1h-G1-2)하면 신호 없음, 발동 게이트(5년·시행일)를 같은 `calculateBuildingPenalty`로 미리 본다(닫히면 신호 없음 → `penaltyBase` 에코도 종전 0). + 적용 고지 상수 `GB_BG_SELF_BUILT_NOTICE`(Q-14) |
+| `app/api/calc/transfer/general-building-route-actual.ts` (626→640) | 건물 카드에 `isSelfBuilt`·신축일·`penaltyAxis` 실음 + 가산세가 붙으면 `aggregated.warnings`에 고지 |
+| `app/api/calc/transfer/general-building-route-cards.ts` (377→380) | `buildProperties`: `card.penaltyAxis` 우선, 없으면 종전 감정 모드 축(기존 로직 유지) |
+| `lib/tax-engine/types/general-building.types.ts` (742→744) | `AssetCardForAggregate.penaltyAxis?` 2줄(위험구간이라 최소) |
+| `lib/tax-engine/penalty-method-of-properties.ts` (신규 32줄) + `BundledAllocationSubCards.tsx` + `BundledAllocationCard.tsx` + `DetailedStatementLateStages.ts` + `transfer-result.types.ts`(606→608) | **Q-13**: 결과 카드 §114조의2 행을 산정방식별(환산/감정)로 — 건별 step note(「… + 감정가액 적용」)를 읽는 leaf. 어댑터 `aggregateToFilingResult`가 `penaltyMethod:"appraisal"` echo(감정만 있을 때) → 상세명세서 라벨 |
+| `components/calc/transfer/GeneralBuildingAcquisitionCardsParts.tsx` | 안내 배지 `gbPenaltyBadgeMethod`: 부담부증여 시가 모드 K-5→환산 · K-7→감정, 그 밖 null |
+**finalize·aggregate·loss-return 무변경.** 14지점: ①②③④⑫⑬⑭ 변경 없음(와이어에 이미 `buildingAcquisitionCause`·`buildingAcquisitionDate` 있음 — `transfer-tax-api-gb.ts:544-545`, ⑧ 신축일 필수는 모드 무관 `transfer-tax-validate-gb.ts:546`), ⑤ 배지, ⑥ 사이드바 N/A, ⑦ 결과, ⑧↔⑫ 신규 입력이 없어 모순 격자 해당 없음.
+
+### anchor 전/후
+`__tests__/api/transfer.route.gb-burdened-gift-self-built-penalty.anchor.test.ts` 11건 — 계획서 세액 재현(K-5: base 125,000,000 · 가산세 6,250,000 · 총납부 64,780,100→**71,655,100**(+6,875,000) / K-7: 150,000,000 · 7,500,000 · 63,317,100→**71,567,100**(+8,250,000), 결정세액 불변) · 토지 카드 0 · 5년 경계(당일 포함·하루 전 제외 + 게이트 닫힘 base 에코 0) · 신축 아님 0 · swap(자본적지출 6억) 에도 base 125,000,000 · 담보평가 승 신호 없음 · K-4·K-1 0 · 시행일(환산 2017-12-31·감정 2019-12-31) 0 · 비부담부증여 GB 본인 신축 12,500,000 불변. **수정 前 실패 3건**(K-5·K-7·경계), 0 이어야 하는 대조 8건은 통과 → 수정 後 11/11. `__tests__/components/gb-penalty-method-labels.anchor.test.tsx` 9건(라벨·상세명세서·고지·배지·혼합).
+
+### 세액 변화·회귀 0
+- 부담부증여 격자 480셀(방식 K-1·K-4·K-5·K-6·K-7 × 신축/매매 × 신축일 4 × 양도일 3 × 채무 2 × 자본적지출 0/6억; 취득일>양도일 조합 240셀은 ⑫ 400이라 비교 제외) 수정 前(HEAD 파일 복원 — sha 대조)·後 응답 비교: 변한 셀 **20 = K-5/K-7 ∧ 신축 ∧ 발동 게이트 열림(5년 이내 · 환산 ≥2018.1.1. · 감정 ≥2020.1.1.) 20셀 전부**, 게이트 닫힌 28셀·신축 아님·K-1/K-4/K-6 **변화 0**. 변한 20셀 모두 결정세액 불변 · 총납부 증가 = 가산세 × 1.1(지방소득세 10%).
+- 비부담부증여 일반건물 격자(PR-0b 의 1,296셀 — 환산·실가·증축·이월과세 donor 등) **변화 0**. 단건·컴패니언·지분 본인 신축 불변(전체 vitest).
+- **Q-13 범위**: 결과 카드 §114조의2 행과 상세명세서(어댑터) 라벨이 산정방식별로 바뀐다 — **비부담부증여 감정가액 경로(환산 경로의 건물 파트 감정, 종전 「환산취득가액 가산세 … 건물 환산취득가」 오표기)도 같이 고쳐진다**(anchor: 감정 300,000,000 → 「감정가액 가산세 … 건물 감정가액 300,000,000 × 5%」). 감정·환산이 섞이면 종전 표기(환산) 유지. 신고서·PDF 는 가산세 금액만 싣고 산정방식 문구가 없어 변화 없다.
+
+### 뮤테이션 (cp 백업 · label+file md5 · 건별 sha 대조 · bash)
+23건(leaf 분기·swap 前 값·K-7 base·가드 · route 신호/신축일/buildProperties 우선 · 고지 제거/항상 · 라벨 감정행·방식 반전 · 어댑터 echo·혼합 · 배지 반전·시가모드 가드): 초판 SURVIVED 4건(환산 불일치 가드·게이트 제거·고지 항상·혼합 감정) → anchor 보강(담보평가 승 · 게이트 닫힘 base 에코 · 혼합 echo) 후 KILLED, **동치 1건(K-7 `acquisitionMethodUsed` 재확인 — §159 가 감정 요청이면 항상 감정을 씀)은 코드에서 제거**. E2E 변형(route 신호 제거) → GP-1·GP-2 실패. 건별 `[RESTORED]`, 끝난 뒤 변경 파일 sha 전후 동일.
+
+### E2E
+`e2e/gb-burdened-gift-self-built-penalty.spec.ts` 4건(포트 3293, `next.config.ts` Turbopack root 임시 지정 후 원복 — sha 동일): GP-1 K-5 결과 카드 라벨·6,250,000·확인 필요 고지 / GP-2 K-7 감정 라벨·7,500,000 / GP-3 신축 아님 회귀 0 / GP-4 입력 단계 배지 K-5·K-7. 스크린샷 `scratchpad/dnb8/shots/gp1-k5-result.png`·`gp2-k7-result.png`(결과 «합산 과세 내역»에 「환산취득가액 가산세 … = 건물 환산취득가 125,000,000 × 5%」 6,250,000, 결정세액 58,891,000 불변).
+
+### 이탈·한계
+- 증축은 도달 불가라 신축만(V-3). F27(이월과세) 증여자 신축은 5c.
+- 일반건물 지분·컴패니언 + 부담부증여는 기존에 부담부증여가 무시된다(V-4) — 5b 와 무관, 별건.
+- `penaltyBase` 에코: 발동 게이트가 닫힌 셀은 신호를 싣지 않아 종전과 같이 0.
+
+### 검증
+`tsc --noEmit` 0건 · eslint(변경 파일) 신규 0건(기존 경고 1건) · 전체 `vitest run` 3328파일 중 정적 가드 `internal-term-policy`(사용자 문구에 `base` 금지) 1건이 라벨 템플릿의 내부 필드명 `.base`를 잡아 `.basis`로 개명, 이후 `__tests__/components`·`__tests__/api`·`general-building gb- burdened-gift bundled` 범위 **1027파일 10139 passed 0 failed**. 브라우저 확인은 E2E 4건(위)으로 갈음.

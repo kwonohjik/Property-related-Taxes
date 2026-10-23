@@ -222,9 +222,12 @@ export function buildProperties(
       //   파트-국소 축을 직접 싣는다. ⚠️ `acquisitionMethod:"appraisal"`로 싣지 말 것 — 단건 `calcTransferGain`
       //   감정 분기가 개산공제를 `standardPriceAtAcquisition`(카드엔 없음)으로 재계산해 카드 `expenses`를 0으로 덮는다(G-2 재현).
       //   매매사례는 조문 대상이 아니라 싣지 않는다(`buildingPenaltyMethodApplies`).
-      ...(isBuilding && card.acquisitionMode === "appraisal"
-        ? { penaltyAxis: { acquisitionMethod: "appraisal" as const, base: card.acquisitionPrice } }
-        : {}),
+      //   부담부증여(§159) K-5/K-7 × 본인 신축은 조립 단계가 base 를 정해 `card.penaltyAxis`로 준다(`general-building-bg-penalty-signal.ts`) — 이 값이 우선.
+      ...(isBuilding && card.penaltyAxis
+        ? { penaltyAxis: card.penaltyAxis }
+        : isBuilding && card.acquisitionMode === "appraisal"
+          ? { penaltyAxis: { acquisitionMethod: "appraisal" as const, base: card.acquisitionPrice } }
+          : {}),
       isSelfBuilt: isBuilding ? (card.isSelfBuilt ?? false) : false,
       // buildingAcquisitionDate → 엔진 input의 constructionDate로 단일 원천 매핑
       constructionDate: isBuilding ? card.buildingAcquisitionDate : undefined,

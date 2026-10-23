@@ -513,6 +513,8 @@ export type AssetCardForAggregate = {
    * 건물 LTHD 보유기간 기산점.
    */
   buildingAcquisitionDate?: Date;
+  /** 건물 카드만 — 부담부증여 K-5/K-7 × 본인 신축의 §114조의2 신호(`general-building-bg-penalty-signal.ts`). `buildProperties`가 `penaltyAxis`로 싣는다. */
+  penaltyAxis?: { acquisitionMethod: "estimated" | "appraisal"; base: number };
   /**
    * 토지 취득일 (M-1a, 2026-08-05). `acquisitionDate`는 **건물** 취득일이므로
    * 토지 카드의 보유기간·세율 기산일은 이 값이다. 미입력 시 `acquisitionDate` fallback(분리 OFF).

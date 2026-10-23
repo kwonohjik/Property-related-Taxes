@@ -55,7 +55,14 @@ export function gbPenaltyBadgeMethod(
   transferDate: string | undefined,
 ): "estimated" | "appraisal" | null {
   if (asset.gbBuildingAcquisitionCause !== "newConstruction" || !asset.acquisitionDate || !transferDate) return null;
-  const method = gbPartModes(asset).building;
+  // 부담부증여(§159)는 파트 모드가 아니라 시가 모드의 취득가액 산정방식이 정한다 — 환산 K-5 · 감정 K-7만 대상(엔진 `gbBurdenedGiftSelfBuiltPenaltyAxis`와 같다, PR-5b).
+  const isBg = asset.transferType === "burdened_gift";
+  const method: PartAcqMode | null = isBg
+    ? asset.bgValuationMode === "sangjeungbeop_market"
+      ? asset.bgAcquisitionMethod === "converted" ? "estimated" : asset.bgAcquisitionMethod === "appraisal" ? "appraisal" : null
+      : null
+    : gbPartModes(asset).building;
+  if (method === null) return null;
   if (method !== "estimated" && method !== "appraisal") return null;
   if (!buildingPenaltyMethodApplies(method, new Date(transferDate))) return null;
   return isWithin5Years(asset.acquisitionDate, transferDate) ? method : null;

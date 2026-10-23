@@ -301,6 +301,8 @@ export interface TransferTaxResult {
    * 결과 카드 산식 표시용 ("건물 환산취득가 X × 5%"). 가산세 미발동 시 0.
    */
   penaltyBase: number;
+  /** [echo, 어댑터 전용] §114조의2 가산세의 산정방식 — 집계에는 건별 step 이 없어 어댑터가 싣는다. 감정가액만이면 `"appraisal"`(상세명세서 라벨), 아니면 undefined(환산취득가액). */
+  penaltyMethod?: "appraisal";
   /**
    * [echo] 지방소득세 과세표준에 산입되는 가산세 = **§114조의2분만**.
    *
