@@ -57,18 +57,18 @@
 
 | ID | 질문 | 선택지와 달라지는 것 | 상태 |
 |---|---|---|---|
-| Q-1 | 범위 | (a) W2~W9 전부 공용 leaf로 — 완공APT가 일반 주택과 같은 안내를 받는다. `transfer-tax.ts` 800줄 초과도 함께 해소 (b) W6만 — 실측한 두 건만. 나머지 7종은 같은 누락이 남는다 | ⏳ 권장 (a) |
-| Q-2 | 겸용주택 경로 | (a) 별건으로 미룬다 — 자체 판정이라 경고 출처부터 다르다 (b) 이 PR에 포함 | ⏳ 권장 (a) |
+| Q-1 | 범위 | (a) W2~W9 전부 공용 leaf로 — 완공APT가 일반 주택과 같은 안내를 받는다. `transfer-tax.ts` 800줄 초과도 함께 해소 (b) W6만 — 실측한 두 건만. 나머지 7종은 같은 누락이 남는다 | ✅ (a) — 2026-10-23 사용자 결정 |
+| Q-2 | 겸용주택 경로 | (a) 별건으로 미룬다 — 자체 판정이라 경고 출처부터 다르다 (b) 이 PR에 포함 | ✅ (a) — 2026-10-23 사용자 결정 |
 
 ## 4. 미검증 레지스터
 
 | ID | 항목 | 검증 방법 | 설계 영향 | 상태 |
 |---|---|---|---|---|
-| V-1 | W2~W5·W7~W9 각각 — 완공APT에서 그 안내가 나올 사실관계가 실제로 성립하는가(예: 완공APT × §155④⑤ 합가 · ⑦3호 귀농 · §154⑤ 재기산) | 종류별 probe(일반 주택 짝과 대조) | 앵커 목록 · 성립하지 않는 종류는 「호출해도 빈 배열」로만 고정 | ⏳ |
-| V-2 | 중복 — 완공APT 자체 안내 2종(토지 출자 거주요건 · 증여 승계 거주 통산)과 W2~W9가 같은 사실을 두 번 말하는가 | 문장 대조 + probe | D-3 순서·제외 | ⏳ |
-| V-3 | W4가 읽는 「원본 입력」 — 완공APT는 `redevInput`(상속 취득가액 보정본)과 `input` 중 무엇이어야 일반 경로와 같은가 | 코드 대조 · probe | D-3 인자 | ⏳ |
-| V-4 | W1 — 완공APT 경로가 §155⑳ 세대 구성 회수 단계(`revokeExemptionOnRentalCompositionExceeded`)를 거치지 않는 것이 결론 차이(세액)를 만드는가 | probe(완공APT 거주주택 + 장기임대 3중첩) | 세액이 다르면 **별건 L3** | ⏳ |
-| V-5 | D-1 이동이 일반 경로 동작을 바꾸지 않는가 | 이동 전후 전체 테스트 · 경고 문장 대조 probe | 없음(바뀌면 이동 오류) | ⏳ 구현 시 |
+| V-1 | W2~W5·W7~W9 각각 — 완공APT에서 그 안내가 나올 사실관계가 실제로 성립하는가(예: 완공APT × §155④⑤ 합가 · ⑦3호 귀농 · §154⑤ 재기산) | 종류별 probe(일반 주택 짝과 대조) | 앵커 목록 · 성립하지 않는 종류는 「호출해도 빈 배열」로만 고정 | ✅ 부분 — **W7 실측**: 원조합원 완공APT × 혼인 합가 전 보유자 미선택 → 일반 주택과 같은 문장 1건(RW-4). 승계조합원은 판정이 보는 취득일(사용승인일 2021-02-15)이 혼인(2020-01-01) 뒤라 합가 요건이 서지 않아 고지 없음(RW-5) — **원본 입력을 넘기면 「보유자를 고르면 판정합니다」를 잘못 낸다**(뮤테이션 P-2 실측) ⇒ D-3의 「번역 입력」이 필요하다는 근거. W6 2종은 RW-1·RW-2. **W2~W5·W8·W9는 완공APT에서 개별 실측하지 않았다** — 같은 leaf를 같은 판정 결과로 부르므로 문장·조건은 일반 경로 기존 테스트가 지키지만, 완공APT에서 그 사실관계가 성립하는지는 확인 필요로 남긴다 |
+| V-2 | 중복 — 완공APT 자체 안내 2종(토지 출자 거주요건 · 증여 승계 거주 통산)과 W2~W9가 같은 사실을 두 번 말하는가 | 문장 대조 + probe | D-3 순서·제외 | ✅ 중복 없음 — 자체 2종은 거주요건 독법(`redevLandAptResidenceNotices`)·증여 승계 거주 통산(`redevSuccessorGiftNotices`)이고, W2~W9는 판정 결과의 `article89Clause2`·`undetermined`·`unmetExceptions`·`finalOneHouseRestart`·`exemptReason`과 합가 입력만 읽는다(출처가 겹치지 않음 — 코드 대조). 앵커는 각 문장이 **1건**인지 단언한다 |
+| V-3 | W4가 읽는 「원본 입력」 — 완공APT는 `redevInput`(상속 취득가액 보정본)과 `input` 중 무엇이어야 일반 경로와 같은가 | 코드 대조 · probe | D-3 인자 | ✅ `input` — 일반 경로와 같다. W4(`surchargeRegulatedAreaNotices`)는 `houses`·`sellingHouseId`·`transferDate`만 읽고 `redevInput`은 `acquisitionPrice`·`useEstimatedAcquisition`만 바꾸므로 두 값이 같다(코드 대조) |
+| V-4 | W1 — 완공APT 경로가 §155⑳ 세대 구성 회수 단계(`revokeExemptionOnRentalCompositionExceeded`)를 거치지 않는 것이 결론 차이(세액)를 만드는가 | probe(완공APT 거주주택 + 장기임대 3중첩) | 세액이 다르면 **별건 L3** | ✅ 계산기 화면에서 닿지 않는다 — §155⑳ 특례는 ⑤·⑧·④가 같은 술어 `isRentalHousingExceptionApplicable`(`lib/calc/rental-housing-exception-scope.ts:33` — `housing`·`right_to_move_in`만)로 막아 완공APT 본문에 `rentalHousingException`이 실리지 않는다. 그러므로 회수 단계 생략은 화면 경로에서 세액 차이를 만들지 않는다. 🟠 **별건**: 완공APT(법령상 「주택」)가 거주주택 특례 대상에서 빠진 것 자체가 범위 공백인지는 이 계획서 밖이다(§6) |
+| V-5 | D-1 이동이 일반 경로 동작을 바꾸지 않는가 | 이동 전후 전체 테스트 · 경고 문장 대조 probe | 없음(바뀌면 이동 오류) | ✅ 이동만 한 상태로 `__tests__/tax-engine/`·`calc/`·`api/` 2,402파일 실행 — 실패 1건(`transfer-land-part-cause.d1-4.predo` 128셀 격자)은 동시 부하 시간 초과로, 단독 재실행 35/35 통과 ⇒ 회귀 0 |
 
 ## 5. 테스트 계획
 
@@ -86,6 +86,7 @@
 
 ## 6. 별건
 
+- **완공APT × §155⑳ 거주주택 특례 범위**(V-4) — `isRentalHousingExceptionApplicable`이 `redevelopment_apt`를 받지 않아, 완공 신축주택을 거주주택으로 양도하는 경우 특례 입력 자체가 없다. 범위 공백인지(법령상 「주택」이다) 의도된 제외인지 조사가 먼저다.
 - **겸용주택 경로**(Q-2) — `judgeMixedUseOneHouseExemption`은 W2만 옮긴다. §155① 선후 확인(#2491)은 `resolveDeemedOneHouseBy155` → 타이밍 leaf로 결론에는 반영되지만 사유 문장은 없다. 판정 구조가 달라 경고 출처를 먼저 정해야 한다.
 
 ## 7. PR 분할
@@ -93,9 +94,24 @@
 | PR | 내용 | 착수 조건 |
 |---|---|---|
 | PR-0 | 이 계획서 | 없음 |
-| PR-1 | D-1 + D-2 + D-3 · 앵커 RW · E2E 1건 | Q-1·Q-2 결정 · V-1~V-3(V-4는 결과에 따라 별건) |
+| PR-1 | D-1 + D-2 + D-3 · 앵커 RW · E2E 1건 | ✅ 구현 — §9 |
 
 ## 8. verdict
 
-- 미해소: Q-1·Q-2 결정 · V-1~V-4.
-- ⇒ **`needs-fix`** — 세액 불변(L2)이라 법령 근거 대기는 없다. Q 결정과 V-1~V-3 실측 뒤 착수한다.
+- Q-1·Q-2 ✅ (a) · V-1(부분 — 남은 종류는 확인 필요로 명시)·V-2~V-5 ✅ ⇒ PR-1 착수·구현(§9).
+
+## 9. PR-1 구현 (2026-10-23)
+
+- **D-1** `lib/tax-engine/transfer-tax-one-house-warnings.ts` `oneHouseJudgmentWarnings(exemptionResult, { input, judgeInput, surchargeApplicable, oneHouseRules })` — W2~W9 문장·조건·순서 그대로.
+- **D-2** `transfer-tax.ts` 인라인 블록 → 위 함수 호출. **804 → 746줄**(분리 기준 아래).
+- **D-3** `judgeRedevAptOneHouseExemption`이 `judgeInput`(번역본)을 함께 돌려준다(단독신고는 돌려주지 않음) → `transfer-tax.ts` STEP 0.65a 직후 같은 함수를 부른다.
+- 앵커 `__tests__/calc/redev-apt-one-house-warnings.anchor.test.ts` RW-1~RW-5 · E2E `e2e/redev-apt-one-house-warnings.spec.ts` RAW-1.
+- 세액 불변 — 결론은 같은 정본 판정이 내리고 이 PR은 경고만 더한다.
+
+| P-n | 무력화 | 실패한 앵커 |
+|---|---|---|
+| P-1 | 완공APT 경로 호출 제거 | RW-1 · RW-2 · RW-4 (E2E RAW-1도 실패) |
+| P-2 | 번역 입력 대신 `redevInput` | RW-5 |
+| P-3 | 단독신고도 판정 결과·입력 반환 | RW-3 |
+
+- 남은 한계: W2~W5·W8·W9의 완공APT 개별 실측(V-1) · §6 별건 2건.

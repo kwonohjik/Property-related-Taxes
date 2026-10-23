@@ -54,6 +54,8 @@ export function judgeRedevAptOneHouseExemption(
    * 단독신고(`receiveOnlyMode`)에서도 채운다(청산금분 양도일 기준 판정). subject≠"apt"면 undefined.
    */
   oneHouseTable2Axis: boolean | undefined;
+  /** 판정이 실제로 본 입력(번역본) — 공용 판정 안내(`oneHouseJudgmentWarnings`)가 같은 술어를 보게 한다. `exemptionResult`와 함께만 채운다. */
+  judgeInput?: TransferTaxInput;
 } {
   const redev = redevInput.redevelopment;
   if (redev?.subject !== "apt") {
@@ -165,5 +167,5 @@ export function judgeRedevAptOneHouseExemption(
   // 증여 승계의 종전주택 거주 통산(사전-2020-법령해석재산-0691) 고지 — 통산 적용(비과세 쪽 정면 해석 없음) · 미확인.
   if (warnings && !isReceiveOnly) warnings.push(...redevSuccessorGiftNotices(exemptionJudgeInput));
   if (isReceiveOnly) return { exemptionResult: undefined, houseCountExclusion: undefined, oneHouseTable2Axis };
-  return { exemptionResult, houseCountExclusion, oneHouseTable2Axis };
+  return { exemptionResult, houseCountExclusion, oneHouseTable2Axis, judgeInput: translatedJudgeInput };
 }
