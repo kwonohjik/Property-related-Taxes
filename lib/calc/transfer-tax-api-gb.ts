@@ -324,7 +324,9 @@ export function buildGeneralBuildingValuation(
 
   // 한 파트라도 **actual이 아니면**(환산·감정·매매사례) 환산 경로로 보낸다(혼합 모드 라우팅 확정 2026-08-05 · D-1 2026-10-06).
   // 그 경로만 파트별 기준시가·개산공제 구조를 갖는다 — 계획서 §3.3·`general-building-part-acq.ts`.
-  if (anyEstimated || asset.gbHasExtension || (anyNonActual && !isBurdenedGiftGb)) {
+  // 부담부증여는 환산 플래그도 보지 않는다 — 일반 양도에서 켠 환산이 부담부증여 전환 뒤 남으면 §159가 빠졌다
+  // (계획서 inheritance-pre-deemed-bg-pr7b.plan.md B-2 · 2005 상속 기준시가 평가 95,756,000 → 91,681,200).
+  if (asset.gbHasExtension || (anyNonActual && !isBurdenedGiftGb)) {
     // 취득시 기준시가 — **환산 파트만** 필수다(2026-08-05 P7 정정).
     //
     // 🔴 종전에는 두 값을 무조건 요구해 `undefined`를 반환했다. validate V-5는 실가 파트의

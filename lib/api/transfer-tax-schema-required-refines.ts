@@ -136,18 +136,32 @@ function collateralForcesStdAcquisition(bg: BurdenedGiftLike): boolean {
 }
 
 /**
+ * 단건 STEP 0.45가 의제취득일 전 3자 max를 §159에 넘기는 자산 종류(`inheritance-acquisition-helpers.ts` `bgBasis`) — 아래 면제 범위.
+ * 재개발·입주권(`isRedevelopmentActive`는 이 두 종류만 본다)·일반건물·겸용·분양권은 빠진다.
+ */
+const BG_PRE_DEEMED_ENGINE_PROPERTY_TYPES: ReadonlySet<string> = new Set(["land", "housing", "building", "commercial_building"]);
+
+/**
  * 부담부증여 (⑧ `transfer-tax-validate-bg.ts`). 비우면:
  *   정보 없음 → 일반 양도로 계산 · 양도시 시가 → 양도가액 0 · 산정방식 → legacy 분기 · 실지취득가 → 0 ·
  *   관계 → 직계비속으로 증여세 계산.
  */
 export function refineBurdenedGiftInputs(
-  data: { transferType?: string; burdenedGiftInfo?: BurdenedGiftLike; inheritedAcquisition?: { mode?: string } | null },
+  data: {
+    transferType?: string;
+    burdenedGiftInfo?: BurdenedGiftLike;
+    inheritedAcquisition?: { mode?: string } | null;
+    propertyType?: string;
+  },
   ctx: z.RefinementCtx,
 ) {
   if (data.transferType !== "burdened_gift") return;
   // 의제취득일 전 상속·증여 자산 — 시가 평가의 §159①1호 A는 엔진이 3자 max로 정해 산정방식·방식별 금액을 읽지 않는다
   // (계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18 · ⑧ `transfer-tax-validate-bg.ts`도 요구하지 않는다).
-  const preDeemed = data.inheritedAcquisition?.mode === "pre-deemed";
+  // 단 엔진이 그 3자 max를 쓰는 자산만이다 — 일반건물·겸용은 전용 경로가 상속 의제 입력을 읽지 않고, 재개발·입주권은 ③이 §166③이라
+  // STEP 0.45가 §159에 넘기지 않는다. 그 자산까지 면제하면 엔진이 산정방식 없이 취득가액 0으로 계산했다(계획서 inheritance-pre-deemed-bg-pr7b.plan.md B-1).
+  const preDeemed =
+    data.inheritedAcquisition?.mode === "pre-deemed" && BG_PRE_DEEMED_ENGINE_PROPERTY_TYPES.has(data.propertyType ?? "");
   const issue = issuer(ctx);
   const bg = data.burdenedGiftInfo;
   if (!bg) {
