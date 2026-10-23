@@ -365,6 +365,19 @@ export interface BurdenedGiftCarryoverDonorBasis {
   donorBuilt?: import("./transfer-carryover.types").DonorBuiltInput;
 }
 
+/**
+ * 일반건물 파트별 3자 max의 한 파트(PR-7b-6 · `burdened-gift-part-pre-deemed.ts`). 금액은 지분 축소 후·채무비율 안분 전이다.
+ * `stdAtDeemed` = 그 파트의 취득시(의제취득일) 기준시가 슬롯 · `converted` = ③(파트 증여가액 × 의제취득일 기준시가 ÷ 양도시 기준시가).
+ */
+export interface BgPartPreDeemedEcho {
+  stdAtDeemed: number;
+  reported: number | null;
+  sec164: number | null;
+  converted: number;
+  selected: "reported" | "sec164" | "converted";
+  wholeAcquisition: number;
+}
+
 /** 실제 적용된 취득가액 산정 경로 — `TransferBurdenedGiftBreakdown.acquisitionMethodUsed`·`perAsset.*.acquisitionMethod`. */
 export type TransferBurdenedGiftAcquisitionMethodUsed =
   | "standard_price"
@@ -508,13 +521,15 @@ export interface TransferBurdenedGiftBreakdown {
   cards?: Array<{ propertyId: string; label?: string; breakdown: TransferBurdenedGiftBreakdown }>;
 
   preDeemed?: {
-    basis: "deemed_std" | "three_way";
+    /** `three_way_parts` — 일반건물 파트별 3자 max(사용자 결정 Q-28 · PR-7b-6). 값은 `parts`에 있고 `stdAtDeemed`는 그 파트들의 합이다. */
+    basis: "deemed_std" | "three_way" | "three_way_parts";
     stdAtDeemed: number;
     reported?: number | null;
     sec164?: number | null;
     converted?: number;
     selected?: "reported" | "sec164" | "converted";
     wholeAcquisition?: number;
+    parts?: { land?: BgPartPreDeemedEcho; building?: BgPartPreDeemedEcho };
   };
 
   /**

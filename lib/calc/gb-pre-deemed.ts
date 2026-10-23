@@ -21,7 +21,7 @@ export const gbLandPreDeemed = (asset: GbAsset): boolean =>
 export const gbBuildingPreDeemed = (asset: GbAsset): boolean =>
   isPreDeemedLandPart(asset.gbBuildingAcquisitionCause, asset.acquisitionDate);
 
-/** ④ payload 필드 — ①②를 따로 싣는다. 부담부증여는 §159가 취득가액을 정하므로 범위 밖(PR-7). */
+/** ④ payload 필드 — ①②를 따로 싣는다. 부담부증여는 아직 싣지 않는다 — 엔진 §159의 파트별 3자 max(PR-7b-6a)를 화면이 여는 것은 PR-7b-6b. */
 export function gbPreDeemedClauseAFields(
   asset: GbAsset,
   isBurdenedGift: boolean,

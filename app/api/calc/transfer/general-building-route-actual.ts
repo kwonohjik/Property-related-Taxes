@@ -64,6 +64,7 @@ export function buildActualGeneralBuildingCards(
     actualAcquisitionPrice, actualExpenses,
     acquisitionLandPricePerSqm, acquisitionBuildingStdPrice,
     burdenedGiftInfo, burdenedGiftOwnershipRatio, donorBuiltPenalty,
+    landPreDeemedClauseA, buildingPreDeemedClauseA,
     houseToCommercialConversion, conversionDate, wasMultiHouseAtConversion,
     acquisitionByInheritance, buildingAcquisitionByInheritance,
     inheritedLandValue, inheritedBuildingValue,
@@ -273,6 +274,10 @@ export function buildActualGeneralBuildingCards(
       info: burdenedGiftInfo,
       ownershipRatio: burdenedGiftOwnershipRatio, // 축 B 지분 카드만 — A·C 지분 축소(단건·컴패니언은 undefined = 종전)
       giftDate: transferDate, // 증여일 = 양도일 (의제)
+      // 의제취득일(1985.1.1.) 전 상속·증여 파트 — 시가 평가면 그 파트만 3자 max(사용자 결정 Q-28 · PR-7b-6). 괄호(기준시가)면 §159가 쓰지 않는다.
+      ...(landPreDeemedClauseA || buildingPreDeemedClauseA
+        ? { preDeemedParts: { land: landPreDeemedClauseA, building: buildingPreDeemedClauseA } }
+        : {}),
       /**
        * K-4(실지취득가) 실비 — 채무비율 안분 후 `estimatedDeduction` 슬롯에 반영.
        *
