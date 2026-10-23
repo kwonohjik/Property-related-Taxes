@@ -11,6 +11,7 @@ import {
   bgParenthesisEraNotice,
   apportionAcquisitionPrice,
   scaleBurdenedGiftInfo,
+  assertBgMarketAcquisitionSource,
 } from "./burdened-gift-valuation";
 import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
@@ -73,6 +74,8 @@ export function runBurdenedGiftStep(
           "취득가액이 아니라 기존건물과 그 부수토지의 「평가액」(관리처분계획등 인가일 전후) 산정에 쓰입니다. 취득가액 산정방식을 「실지취득가액」으로 선택하세요.",
       );
     }
+    const preDeemedParam = preDeemedParamOf(inheritedStep);
+    assertBgMarketAcquisitionSource(rawInput.burdenedGiftInfo, ownershipRatio, "preDeemed" in preDeemedParam);
     transferBurdenedGiftBreakdown = buildBurdenedGiftBreakdown({
       landStdPriceAtTransfer: rawInput.burdenedGiftInfo.landStdPriceAtTransfer,
       buildingStdPriceAtTransfer: rawInput.burdenedGiftInfo.buildingStdPriceAtTransfer,
@@ -87,7 +90,7 @@ export function runBurdenedGiftStep(
       // §104③ 미등기양도자산 — 개산공제율 0.3% (소령 §163⑥1호 단서). transfer 미등기 토글 재사용. (H-25)
       isUnregistered: rawInput.isUnregistered,
       ownershipRatio,
-      ...preDeemedParamOf(inheritedStep),
+      ...preDeemedParam,
     });
     /**
      * 재개발·재건축 완공 아파트(원조합원) × 시가 모드 × 환산(K-5) — 취득가액은 **종전 부동산**(기존건물과 그 부수토지)의 취득가액이고,

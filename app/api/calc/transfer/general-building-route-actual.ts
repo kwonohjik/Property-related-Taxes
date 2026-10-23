@@ -59,7 +59,7 @@ export function buildActualGeneralBuildingCards(
     zoneType, unapprovedBuilding = false, isDesignatedArea,
     actualAcquisitionPrice, actualExpenses,
     acquisitionLandPricePerSqm, acquisitionBuildingStdPrice,
-    burdenedGiftInfo,
+    burdenedGiftInfo, burdenedGiftOwnershipRatio,
     houseToCommercialConversion, conversionDate, wasMultiHouseAtConversion,
     acquisitionByInheritance, buildingAcquisitionByInheritance,
     inheritedLandValue, inheritedBuildingValue,
@@ -266,6 +266,7 @@ export function buildActualGeneralBuildingCards(
       landStdPriceAtAcquisition: acquisitionLandPricePerSqm * landArea,
       buildingStdPriceAtAcquisition: acquisitionBuildingStdPrice,
       info: burdenedGiftInfo,
+      ownershipRatio: burdenedGiftOwnershipRatio, // 축 B 지분 카드만 — A·C 지분 축소(단건·컴패니언은 undefined = 종전)
       giftDate: transferDate, // 증여일 = 양도일 (의제)
       /**
        * K-4(실지취득가) 실비 — 채무비율 안분 후 `estimatedDeduction` 슬롯에 반영.

@@ -35,6 +35,8 @@ import { buildProperties } from "./general-building-route-cards";
 import { resolveGbPreDeemedRoute } from "@/lib/tax-engine/general-building-pre-deemed";
 import { scaleDeclaredSaleSplitToShare } from "@/lib/tax-engine/general-building-entry";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
+import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 
 export interface GbPartCards {
   cards: AssetCardForAggregate[];
@@ -91,6 +93,16 @@ export function buildGbPartCards(
    */
   actualAcquisitionPrice: number,
   actualExpenses: number,
+  /**
+   * 부담부증여(소령 §159) — 있으면 **실가 카드 경로가 §159로 취득가액·개산공제를 채무비율 안분**한다(단건 `dispatchGeneralBuilding`과 같은 소비처).
+   *
+   * 🔴 종전에는 이 인자가 없어 컴패니언 GB 카드가 일반 양도로 계산됐다(취득가액 0 · 양도차익 = 채무액 전부 — 계획서 §2.2).
+   * 환산 payload 는 이 값을 읽지 않으므로 **실가가 아니면 던진다** — 침묵 무시 금지(⑫ `refineGbBurdenedGiftActualPath`가 입구에서 먼저 400).
+   * 의제취득일 전 상속·증여 재선택(PR-4)은 건너뛴다 — 부담부증여는 §159가 취득가액을 정한다(단건 `dispatchCoercedGeneralBuilding`과 같다).
+   */
+  burdenedGiftInfo?: BurdenedGiftInfo,
+  /** 축 B(지분) 전용 — §159의 A·C를 줄일 지분율. 컴패니언은 넘기지 않는다(`burdenedGiftOwnershipRatio` 주석). */
+  burdenedGiftOwnershipRatio?: number,
 ): GbPartCards {
   const estimatedPayloadOf = (raw: Record<string, unknown>): GeneralBuildingValuationPayload => ({
     ...(raw as unknown as GeneralBuildingValuationPayload),
@@ -107,9 +119,17 @@ export function buildGbPartCards(
   // 공유 지분 — 계약서 구분 기재 양도가액(100% 기준)을 이 지분의 양도가액에 맞춘다(단건 `dispatchGeneralBuilding`과 같은 leaf).
   const gbvShare = scaleDeclaredSaleSplitToShare(gbvIn, ownershipRatio);
   // 의제취득일 전 상속·증여 파트 — 단건 `dispatchCoercedGeneralBuilding`과 같은 재선택(PR-4).
-  const preDeemed = resolveGbPreDeemedRoute(gbvShare, actualExpenses, (r) =>
-    buildEstimatedGeneralBuildingCards(estimatedPayloadOf(r)).gbOut.acquisition);
+  const preDeemed = burdenedGiftInfo
+    ? { raw: gbvShare, echo: undefined }
+    : resolveGbPreDeemedRoute(gbvShare, actualExpenses, (r) =>
+        buildEstimatedGeneralBuildingCards(estimatedPayloadOf(r)).gbOut.acquisition);
   const gbv = preDeemed.raw;
+  if (burdenedGiftInfo && gbv.actualPriceMode !== true) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "일반건물 부담부증여(소령 §159)는 실지 경로로만 계산됩니다. 환산취득가·증축 입력은 부담부증여에서 쓰이지 않습니다.",
+    );
+  }
   const echo = preDeemed.echo ? { preDeemedAcquisition: preDeemed.echo } : {};
   const landArea = (gbv.landArea as number) ?? 0;
   const landStdAtTransfer = ((gbv.transferLandPricePerSqm as number) ?? 0) * landArea;
@@ -131,6 +151,7 @@ export function buildGbPartCards(
       buildingAcquisitionDate: acquisitionDate,
       actualAcquisitionPrice,
       actualExpenses,
+      ...(burdenedGiftInfo ? { burdenedGiftInfo, burdenedGiftOwnershipRatio } : {}),
     });
     return {
       cards: built.cards,
@@ -245,7 +266,7 @@ export function buildGbCompanionItems(
   /** 컴패니언 엔진 입력 — 5-a 안분 결과·Date 변환·감면 매핑이 끝난 값. */
   engine: Pick<
     TransferTaxItemInput,
-    "transferPrice" | "transferDate" | "acquisitionDate" | "acquisitionPrice" | "expenses" | "reductions"
+    "transferPrice" | "transferDate" | "acquisitionDate" | "acquisitionPrice" | "expenses" | "reductions" | "burdenedGiftInfo" | "transferType"
   >,
   src: { ownershipRatio?: number; assetId: string; assetLabel: string },
   /**
@@ -271,6 +292,9 @@ export function buildGbCompanionItems(
      */
     (gbv.bundledAcquisitionPrice as number | undefined) ?? engine.acquisitionPrice ?? 0,
     (gbv.bundledExpenses as number | undefined) ?? engine.expenses ?? 0,
+    // ⑭ 부담부증여(§159) — 컴패니언 엔진 입력의 `burdenedGiftInfo`(⑫→`bundled-split-helpers.ts:547`·주 자산은 `engineInput`)를 카드 빌더까지 운반한다.
+    //    `transferType` 표지와 함께 있을 때만(단건 `route.ts`가 읽는 조건과 같다). 신고 단위 채무 재배분(`assumedDebtOverride`)은 info 안에 있다.
+    engine.transferType === "burdened_gift" ? engine.burdenedGiftInfo : undefined,
   );
   const tagged = tagGbCards(built.cards, src.assetId, src.assetLabel);
   const swap = built.swap ? remapGbSwap(built.swap, src.assetId) : undefined;

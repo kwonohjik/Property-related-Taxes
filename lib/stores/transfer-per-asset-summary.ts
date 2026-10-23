@@ -26,6 +26,7 @@ import { isMixedBurdenedGift, mixedBgNoTransferNote, mixedBgNoTransferNoteOfForm
 import { isSuccessorRightTransfer } from "@/lib/calc/transfer-successor-right";
 import { burdenedGiftTransferPrice, isBlockedMixedBurdenedGiftBundle, usesSelfComputedTransferPrice } from "@/lib/calc/burdened-gift-transfer-price-scope";
 import { burdenedGiftPerAssetTotals } from "@/lib/tax-engine/burdened-gift-totals";
+import { SHARE_ID_SEPARATOR } from "@/lib/tax-engine/general-building-share-id";
 import { parseRaw, isParcelMode, isRedevelopmentPath, parcelAcqSum, directAcqRaw, directExpenseRaw } from "./transfer-per-asset-direct";
 import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -371,6 +372,15 @@ export function computeTransferPerAssetSummary(
           )
         : null;
 
+    // 축 B 일반건물 지분 × 부담부증여 — 그 지분 카드(`land#i`·`building#i`) 합 = 엔진이 §159로 정한 값. `bundledMatch`(폼 assetId)·`bundledCards`(단건 전용)가
+    // 못 잡아 계산 후에도 «계산 후 표시»에 갇혔다(PR-3 실측). 비부담부증여 지분 행은 종전 그대로.
+    const gbShareBgCards =
+      axisBBundle && bundledResult && a.assetKind === "general_building" && usesSelfComputedTransferPrice(a)
+        ? bundledResult.apportionment.apportioned
+            .filter((p) => p.assetId.endsWith(`${SHARE_ID_SEPARATOR}${i}`))
+            .reduce((acc, p) => ({ n: acc.n + 1, sale: acc.sale + p.allocatedSalePrice, acq: acc.acq + p.allocatedAcquisitionPrice, exp: acc.exp + p.allocatedExpenses }), { n: 0, sale: 0, acq: 0, exp: 0 })
+        : null;
+
     // ── 양도가액 ──
     let salePrice = 0;
     let salePending = false;
@@ -401,6 +411,7 @@ export function computeTransferPerAssetSummary(
        */
       const brkd = singleResult?.transferBurdenedGiftBreakdown;
       if (bundledMatch) salePrice = bundledMatch.allocatedSalePrice;
+      else if (gbShareBgCards?.n) salePrice = gbShareBgCards.sale;
       else if (isSingle && brkd) salePrice = burdenedGiftTransferPrice(brkd);
       else salePending = true;
     } else if (bundledMatch) {
@@ -482,6 +493,11 @@ export function computeTransferPerAssetSummary(
       // 자산카드 분해(일반건물) — 카드별 취득가액 합. 엔진이 실제 쓴 값이라 환산·실가 모두 정확.
       // §97③ 감가상각비는 `buildApportionment`가 이미 공제한 **후** 값이다 — 아래에서 또 빼지 않는다.
       acqPrice = bundledCards.acq;
+      acqPending = false;
+      depAlreadyDeducted = true;
+    } else if (gbShareBgCards?.n) {
+      // 축 B 일반건물 지분 × 부담부증여 — 그 지분 카드의 §159 취득가액 합(엔진이 실제 쓴 값 — 감가상각은 §159 경로에서 공제 대상이 아니다).
+      acqPrice = gbShareBgCards.acq;
       acqPending = false;
       depAlreadyDeducted = true;
     } else if (isParcelMode(a) && singleResult?.parcelDetails?.length) {
@@ -627,6 +643,8 @@ export function computeTransferPerAssetSummary(
     } else if (bundledCards) {
       // 자산카드 분해(일반건물) — 카드별 필요경비 합(개산공제 포함).
       expense = bundledCards.exp;
+    } else if (gbShareBgCards?.n) {
+      expense = gbShareBgCards.exp; // 축 B 일반건물 지분 × 부담부증여 — 그 지분 카드의 개산공제·실비 합
     } else if (isParcelMode(a) && singleResult?.parcelDetails?.length) {
       // 다필지 — 필지별 결과 필요경비 합(환산 필지의 개산공제 §163⑥ 포함). pending 해소.
       expense = singleResult.parcelDetails.reduce((s, p) => s + p.expenses, 0);

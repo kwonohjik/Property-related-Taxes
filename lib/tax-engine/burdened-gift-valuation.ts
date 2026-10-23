@@ -19,6 +19,7 @@ import {
   applyRatio,
   computeEstimatedDeduction,
 } from "./tax-utils";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type {
   BurdenedGiftInfo,
   TransferBurdenedGiftBreakdown,
@@ -373,6 +374,25 @@ export function burdenedGiftPreDeemedBasis(
     giftValue: giftAxis.max,
     acqStdPriceForced: resolveBgAcquisitionBasis(scaled, transferAxis.selectedMode).acqStdPriceForced,
   };
+}
+
+/**
+ * 시가 평가인데 §159①1호 A의 원천이 없으면 막는다 — 산정방식도, 의제취득일 전 3자 max(`preDeemed`)도, legacy 취득시 시가도 없고
+ * 괄호(기준시가 강제)도 발동하지 않으면 `buildBurdenedGiftBreakdown`의 legacy 분기가 취득가액 0으로 떨어진다(막히지 않는 오답 —
+ * 계획서 `inheritance-pre-deemed-bg-pr7b.plan.md` B-1: 재개발·일반건물 body에 의제취득일 전 상속 입력만 싣고 산정방식을 빼면 그랬다).
+ * API에서는 ⑫ `refineBurdenedGiftInputs`가 먼저 막는다 — 이 함수는 엔진을 직접 부르는 경우의 방어다. 단건 STEP 0.48만 부른다
+ * (일반건물 route는 ⑫ 면제 대상이 아니라 도달하지 않고, 묶음 결과의 물건 전체 재계산 `transfer-tax-aggregate.ts`는 표시용이다).
+ */
+export function assertBgMarketAcquisitionSource(info: BurdenedGiftInfo, ownershipRatio: number | undefined, hasPreDeemed: boolean): void {
+  if (info.valuationMode !== "sangjeungbeop_market" || info.acquisitionMethod || hasPreDeemed) return;
+  // 조합원입주권은 산정방식과 무관하게 K-4(실지취득가액)다 — `buildBurdenedGiftBreakdown` STEP 4.
+  if (info.marketValueAtAcquisition !== undefined || info.rightValuation !== undefined) return;
+  if (burdenedGiftPreDeemedBasis(info, ownershipRatio).acqStdPriceForced) return;
+  throw new TaxCalculationError(
+    TaxErrorCode.INVALID_INPUT,
+    "[burdened_gift] 상속세 및 증여세법상 시가로 평가한 부담부증여는 취득가액 산정방식(실지취득가액·매매사례가액·감정가액·환산취득가액)이 필요합니다 " +
+      "(「소득세법」 제100조 제1항 · 같은 법 시행령 제159조 제1항 제1호).",
+  );
 }
 
 /**

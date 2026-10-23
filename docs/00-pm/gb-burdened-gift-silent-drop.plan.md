@@ -1,6 +1,6 @@
 # 일반건물 × 부담부증여 «침묵 소실» 2건 수정 계획서
 
-> 상태: **v0.2 (2026-10-23) 사용자 결정 반영 — Q-1~Q-6 전부 권장안 확정.** 순서 PR-1(결함 2) → PR-2(컴패니언) → PR-3(지분). PR-1 Do 기록은 §12.
+> 상태: **v0.2 (2026-10-23) 사용자 결정 반영 — Q-1~Q-6 전부 권장안 확정.** 순서 PR-1(결함 2) → PR-2(컴패니언) → PR-3(지분). PR-1 Do 기록 §12 · PR-2 Do 기록 §13 · PR-3 Do 기록 §14.
 > 계기: PR-5b(#2456, 일반건물 부담부증여 K-5·K-7 × 본인 신축 §114조의2) 작업 중 발견. 입력은 받는데 계산에 반영되지 않는다.
 > 1. 일반건물 **지분 분할 취득(축 B `generalBuildingShares`)** · **함께 양도(컴패니언)** 일반건물 + 부담부증여 → §159가 조용히 무시된다.
 > 2. 일반건물 부담부증여 + **환산·증축을 켠 뒤 남은 값(stale)** → 환산 경로로 라우팅되어 §159가 조용히 무시된다.
@@ -284,3 +284,127 @@ M1 ④ 원복 → 9 실패 · M2 환산 stale만 새게 → 5 · M3 증축만 �
 
 ### 12.8 남은 것
 PR-2(컴패니언)·PR-3(지분) 대기. 서버 안전망은 컴패니언·지분 payload까지 이미 덮는다(PR-2·3은 «지원 구현»).
+
+---
+
+## 13. PR-2 Do 기록 (컴패니언 — 결함 1-b · 2026-10-23)
+
+**base**: PR-1 head `1107da1d8` (브랜치 `fix/gb-bg-companion`, 워크트리 `-gbsd2`).
+
+### 13.1 재확인 — ④·⑫는 이미 되어 있다
+`companionAssets[].burdenedGiftInfo`·`transferType`은 ④(`transfer-tax-api-primary-context.ts`의 `companionBgDebtOverrides`·`buildBurdenedGiftInfo`)가 싣고 ⑫ `companionAssetSchema`가 받는다. 엔진 item에 이미 도달한다(`bundled-split-helpers.ts:547` · 주 자산은 `engineInput`) — 프로토타입 로그 `[true,true]`. 막고 있던 것은 ⑭ 카드 빌더뿐이었다. **`bundled-split-helpers.ts`(776줄)는 한 줄도 건드리지 않았다** — `companionEngine`이 이미 두 필드를 담고 있어 빌더의 `Pick` 타입만 넓히면 된다.
+
+### 13.2 변경
+| 파일 | 변경 |
+|---|---|
+| `app/api/calc/transfer/general-building-part-cards.ts` (263→285줄) | `buildGbPartCards`에 선택 인자 `burdenedGiftInfo` — 실가 카드 payload에 실어 `buildActualGeneralBuildingCards`의 §159 분기를 켠다. 부담부증여면 의제취득일 전 재선택(PR-4)은 우회(단건 `dispatchCoercedGeneralBuilding`과 같다). 비-실가 payload면 `TaxCalculationError`(⑫ 안전망 뒤 2차 방어). `buildGbCompanionItems`는 `engine.transferType === "burdened_gift" ? engine.burdenedGiftInfo : undefined`를 넘긴다(엔진 STEP 0.48의 게이트와 같은 표지) |
+| `app/api/calc/transfer/bundled-route.ts` (378→385줄) | 전 자산 부담부증여 묶음에서 카드에 §114조의2 `penaltyAxis`가 있으면 PR-5b의 «확인 필요» 고지(`GB_BG_SELF_BUILT_NOTICE`) 1회 |
+| `__tests__/api/transfer.route.gb-burdened-gift-companion.anchor.test.ts` (신규) | 23건 |
+| `e2e/gb-burdened-gift-companion.spec.ts` (신규) | 2건 |
+
+### 13.3 14지점 · ⑧↔⑫ 격자
+①②③ 변경 없음 · ④ 변경 없음(이미 전송) · ⑤ 변경 없음(이미 열림) · ⑥ 확인 필요(V-3 — 미실측) · ⑦ 변경 없음(물건 단위 §159 명세는 이미 뜸 — 이번에 카드 숫자가 명세와 일치해짐, §13.5) · ⑧ 변경 없음(통과 ↔ 반영 일치로 모순 해소) · ⑨⑩ 변경 없음 · ⑫ 변경 없음(PR-1 안전망이 컴패니언 `generalBuildingValuation.actualPriceMode`를 이미 덮음) · ⑬ 변경 없음 · **⑭ 변경(카드 빌더·고지)**. ⑧↔⑫ 모순 0: ⑧ 통과 셀(GB+GB·주택+GB·GB+주택 전 자산 부담부증여)은 ⑫ 통과 · 반영. 혼합 묶음(일반 양도 + 부담부증여)은 ⑧ 차단 · ⑩ 400 유지.
+
+### 13.4 Pre-Do anchor 와 세액 변화
+수정 전 15건 중 **10 실패**(나머지 5 = 주택+주택 대조·회귀 0 4건). 수정 후 전부 통과.
+
+| 조합 | 수정 전 | 수정 후 | 차이 |
+|---|---:|---:|---:|
+| GB+GB K-5 | 319,671,000 | 139,906,800 | −179,764,200 |
+| GB+GB K-4 | 319,671,000 | 211,563,000 | −108,108,000 |
+| GB+GB K-6 / K-7 | 319,671,000 | 139,906,800 | −179,764,200 |
+| GB+GB STD | 107,646,000 | 40,311,700 (= 주택+주택 대조) | −67,334,300 |
+| 주택(주)+GB | 148,744,200 | 88,738,606 | −60,005,594 |
+| GB(주)+주택 | 148,744,200 | 88,738,606 | −60,005,594 |
+
+### 13.5 한 화면 모순 해소 (증여세 카드 ↔ 양도세 카드)
+수정 전: «부담부증여 평가 명세»(물건 단위)는 채무비율 50% · 토지·건물 환산취득가 250,000,000씩인데 카드는 취득가액 0 · 양도차익 250,000,000씩. 수정 후 Σ 카드 양도가액 = 명세 채무액(1,000,000,000), Σ 취득가액 = 명세 환산취득가 합(500,000,000), Σ 필요경비 = 명세 개산공제 합 — K-5·STD를 anchor(GC-3)로 고정.
+UI(Playwright): 컴패니언 GB+GB 총납부 139,906,800 · 양도차익 494,000,000 · «부담부증여 평가 명세 (소득세법 시행령 §159)— 일반건물» 카드의 채무비율·자산별 환산취득가가 단건 GB 부담부증여 화면과 같은 구조로 뜬다. 스크린샷: scratchpad `g2/shots/co-gb-gb-bg.png`(컴패니언) · `single-gb-bg.png`(단건 대조).
+
+### 13.6 §114조의2 본인 신축 신호(PR-5b) × 컴패니언
+카드 빌더가 `buildActualGeneralBuildingCards`를 그대로 쓰므로 **신호가 자동으로 붙는다**(`penaltyAxis`) — 같은 규칙: K-5 건물 환산취득가 125,000,000 × 5% = 6,250,000 / K-7 감정 150,000,000 × 5% = 7,500,000, 토지 카드엔 안 붙음(D4), 신축이 아니면 0. 두 자산 모두 신축: K-5 12,500,000(총납부 168,872,000) · K-7 15,000,000(168,542,000), 컴패니언만 신축이면 그 자산 건물에만. **빠졌던 것은 «확인 필요» 고지**(단건은 `runActualGeneralBuildingOnce`가 push, 일괄 경로는 없음) — `bundled-route.ts`에서 같은 문구로 1회 추가했다(전 자산 부담부증여 묶음 + 카드 `penaltyAxis`일 때만 — 일반 양도 감정 카드의 `penaltyAxis`는 혼합 묶음 ⑧ 차단이라 해당 없음, 회귀 anchor GC-5e).
+
+### 13.7 회귀 0 근거
+- 수정 **전** 실측으로 고정한 대조: 비부담부증여 컴패니언 GB+GB 141,966,000 · 주택+주택 부담부증여 40,311,700 · 단건 GB 부담부증여 K-5 57,552,880 / K-4 91,135,000 · 혼합 묶음 ⑧ 차단 메시지 유지 — 수정 후 동일.
+- 전체 vitest **3341파일 40,073 통과** · `tsc --noEmit` 0 · eslint 0.
+- E2E: 신규 2건 + 기존 `gb-burdened-gift-self-built-penalty` 4 · `general-building-burdened-gift-split` 4 · `gb-burdened-gift-stale-routing` 3 · `transfer-companion-burdened-gift` 2 통과.
+
+### 13.8 뮤테이션 8종 — 전부 killed (cp 백업 + md5 + 건별 sha 대조, 종료 후 sha 동일, bash)
+M1 info 미전달 → 13실패 · M2 `transferType` 표지 게이트 제거 → 1(처음엔 살아남아 «표지 없으면 소비 안 함» 단위 단언 추가) · M3 payload에 info 미포함 → 12 · M4 비-실가 가드 제거 → 1 · M5 의제취득일 우회 제거 → 1(처음엔 살아남아 ①② 있는 입력 단언 추가) · M6 고지 push 제거 → 2 · M7 고지 게이트 `isAllBurdenedGift` 제거 → 1 · M8 고지 게이트 `penaltyAxis` 제거 → 1. E2E도 ④ 격 M1 변이로 2건 모두 실패 확인 후 복원.
+E2E 서버: 빈 포트 `:3294` · 본인 PID 종료 · `next.config.ts` 원복(sha 동일).
+
+### 13.9 800줄
+`general-building-part-cards.ts` 285 · `bundled-route.ts` 385 — 여유. `bundled-split-helpers.ts` 776 변경 없음.
+
+### 13.10 발견 · 미확인 (이 PR 범위 밖)
+- **V-9** 물건 단위 §159 명세(`buildCompanionBurdenedGiftWholeInfo`)는 K-4 실지·K-6/K-7 취득가액을 **주 자산 값 그대로** 두고 합산하지 않는다 — 명세의 취득가액이 카드 합의 절반(예: K-4 150M vs 300M). **비-GB 컴패니언(주택 K-4)에서도 같다**(실측). 표시 전용·세액 무관. 별건.
+- **V-10** 결과 화면(스크린)만 확인했다. PDF·인쇄·요약 카드·신고서 PDF 등 다른 결과뷰는 같은 `aggregated`/`transferBurdenedGiftBreakdown`을 읽지만 개별 렌더는 **미확인**.
+- V-3(사이드바 ⑥) 여전히 미확인. V-5(공유 소유 컴패니언 GB의 `ownershipRatio` 미전달)는 단건과 같은 한계로 유지(비율불변 모드에서는 동치 추정, 담보·임대평가 승은 확인 필요).
+
+---
+
+## 14. PR-3 Do 기록 (지분 축 B — 결함 1-a · 2026-10-23)
+
+**base**: PR-2 head `8794aac3a` (브랜치 `fix/gb-bg-shares`, 워크트리 `-gbsd3`). 두 커밋 — ① 리팩터(동작 무변경) ② 기능.
+
+### 14.1 커밋 ① 리팩터 `5e01330d9` — 지분 스키마 분리
+`transfer-tax-building-schemas.ts`의 `generalBuildingShare(s)Schema`·`GB_SHARE_PROPERTY_LEVEL_PATHS`(135줄)를 `transfer-tax-building-share-schemas.ts`(신규)로 이동. 원 파일 **749→632줄**(≥750 위험구간 해소). 원 파일 재export는 **순환 import**(새 파일이 `generalBuildingValuationSchema`를 가져온다)라 두지 않고 소비처 import 경로를 갱신(base-shape·테스트 2). 동작 무변경 — 관련 4파일 68 테스트 통과.
+
+### 14.2 커밋 ② 기능 — 변경
+| 파일 | 변경 |
+|---|---|
+| `lib/api/transfer-tax-building-share-schemas.ts` | ⑫ share 에 `burdenedGiftInfo` 추가 (없으면 침묵 stripping) |
+| `lib/calc/transfer-tax-api-gb-shares.ts` (263줄) | ④ 부담부증여면 **지분마다** `buildBurdenedGiftInfo(merged, r_k, transferDate)` — 채무는 지분율 안분(B/C 보존), 취득 쪽 값(`gbAcq*`·`bgPresumedAcquisition*`)은 지분 자기 값 |
+| `app/api/calc/transfer/route.ts` (435줄) | 5-0 → fractional 에 `{wholeInfo: data.burdenedGiftWholeInfo, date}` 전달, 응답에 `transferBurdenedGiftBreakdown` |
+| `app/api/calc/transfer/general-building-fractional.ts` (308줄) | 지분 info·지분율을 카드 빌더에, 물건 단위 `burdenedGiftWholeInfo`를 aggregate 에 1회(증여세 N회 차감 방지), §114조의2 고지 1회, 응답 명세 |
+| `app/api/calc/transfer/general-building-part-cards.ts` (287줄) · `-route-actual.ts` (641줄) · `-route-actual.types.ts` | `burdenedGiftOwnershipRatio`(축 B 전용)를 카드 빌더 → `buildBurdenedGiftBreakdown({ownershipRatio})`. **단건·컴패니언은 싣지 않는다**(종전 거동 — 컴패니언 PR-2 값 불변) |
+| `lib/api/transfer-tax-schema-gb-bg-refines.ts` (61줄) | ⑫ 부담부증여인데 지분에 `burdenedGiftInfo`가 없으면 400(옛 클라이언트 침묵 무시 금지) |
+| `lib/stores/transfer-per-asset-summary.ts` (730→748줄) | ⑥ 사이드바 — 부담부증여 지분 행이 그 지분 카드 합(§159)을 읽는다(아래 14.6) |
+| `lib/calc/transfer-tax-validate.ts` | 주석 정정만 — «부담부증여 차단 전건 해제»는 일반건물 지분에는 사실이 아니었다 |
+| `__tests__/api/transfer.route.gb-burdened-gift-shares.anchor.test.ts` (신규 25건) · `e2e/gb-burdened-gift-shares.spec.ts` (신규 3건) | |
+
+**④ `transferPrice`에 채무를 싣는 문제**: 그대로 두었다 — 지분 카드는 `burdenedGiftInfo`가 있으면 §159 breakdown 에서 양도가액을 정하고 `totalTransferPrice`·`contractTotalPrice`를 읽지 않는다. anchor GS-1이 총 양도가액 입력 10억/3억이 세액을 바꾸지 않음을 고정했다(placeholder 의미).
+
+### 14.3 법령·규약 명시 (계획서 §3 재확인)
+소령 §159①②는 «증여계약 단위 채무액 B / 증여가액 C»만 정하고 **지분율 적용 순서는 말하지 않는다**(KoreanLaw MCP, 현행 본문). **지분별 채무 안분 + 평가액 엔진 지분 축소는 저장소 축 B 규약**(`buildBurdenedGiftInfo` `debtScaleRatio` 주석 · `scaleBurdenedGiftInfo`)이며 법문 직접 근거가 아니다. 같은 물건을 취득일 달리 나눠 가진 경우의 §159 적용 해석례는 확인하지 못했다(V-1 유지).
+
+### 14.4 Pre-Do anchor 와 세액 변화
+수정 전 18건 중 **14 실패**(나머지 4 = 비부담부증여 지분 · 컴패니언 PR-2 값 · 단건 · 신축 아님 대조). 수정 후 전부 통과(최종 25건).
+
+| 조합 | 수정 전 | 수정 후 | 차이 |
+|---|---:|---:|---:|
+| 60/40 K-5 | 141,966,000 | 57,552,880 (= 단건 100%) | −84,413,120 |
+| K-4 | 141,966,000 | 91,135,000 | −50,831,000 |
+| K-6 / K-7 | 141,966,000 | 57,552,880 | −84,413,120 |
+| STD | 42,229,000 | 12,978,240 | −29,250,760 |
+| K-5 취득일 2009/2015 | 131,406,000 | 52,597,072 | −78,808,928 |
+
+지분별 취득시 기준시가가 다른 셀(지분2: 토지 1,500,000/㎡·건물 150,000,000)은 «각 카드 양도차익 = 그 지분 자기 입력으로 돌린 단건 카드 × 지분율(±1)»로, 지분별 감정가액이 다른 셀(K-7, 지분2 3억+4억)은 «카드 취득가액 = 그 지분 감정가액 × 채무비율 × 지분율»(60,000,000 / 90,000,000 / 60,000,000 / 80,000,000)로 독립 대조.
+
+### 14.5 §114조의2 본인 신축 × 지분 스케일 (실측)
+**base 가 지분율만큼 줄어든다 — 비부담부증여 지분 선례(`gb-card-built-penalty` SH1: 60% 지분 base 150,000,000 / 7,500,000)와 같은 규약이다.** K-5 두 지분 모두 신축: 건물 카드 base 75,000,000 / 50,000,000(= 125,000,000 × 0.6 / 0.4), 가산세 3,750,000 / 2,500,000, **합 6,250,000 = 단건**, 총납부 71,655,100 = 단건. 60%만 신축 K-7: base 90,000,000(= 150,000,000 × 0.6) · 4,500,000. «확인 필요» 고지는 1회(지분 경로도 같은 문구).
+
+### 14.6 ⑥ 사이드바 (V-3 해소)
+수정 전 실측: 지분 부담부증여 행이 **계산 후에도 «계산 후 표시»에 갇혔다**(양도가액·취득가액 `pending`). 원인 — 부담부증여 분기가 `bundledMatch`(폼 assetId)·`isSingle`만 보는데 지분 카드 id 는 `land#0`·`building#0`. 수정 후(계산 후): 양도가액 300,000,000 / 200,000,000 · 취득가액 150,000,000 / 100,000,000 · 필요경비(개산공제) 1,800,000 / 1,200,000(Σ = §159 채무 5억·명세 취득가액 2.5억·개산공제 3백만). 비부담부증여 지분 행(총액 × 지분율 · 입력값 × 지분율)은 계산 전·후 불변(anchor GS-7). UI 확인: Playwright 가 입력 단계로 복귀해 사이드바 값을 읽는다(스크린샷 `g3/gsh-1-sidebar.png`).
+
+### 14.7 `ownershipRatio` 전달의 판별력 — 실측으로 확인한 것
+시가·기준시가 모드에서는 B·A·C 가 약분돼 **스케일 유무가 결과를 못 바꾼다**(K-5/K-4/K-6/K-7/STD 전부 — 임대평가도 시가 모드 `max`에 들지 않는다). 지분 스케일이 필요한 유일한 조합은 **담보평가 승**(시가 < 담보)인데 ⑧이 «채무 > 시가»를 막아 폼으로는 못 만든다 — 서버는 API 직접 body 를 받으므로 GS-1c 가 그 조합(지분 합 = 단건 100% = 취득가액 200,000,000; 스케일 제거 시 지분 합 140,000,000)으로 고정했다. 단건·컴패니언에 연결하지 않은 이유(공유 소유 단건 `ownershipRatio` 미전달 = V-5)는 그대로다.
+
+### 14.8 14지점 · ⑧↔⑫ 격자
+①②③ 없음 · ④ 지분별 info · ⑤ 없음(이미 열림) · ⑥ 사이드바 · ⑦ 응답 `transferBurdenedGiftBreakdown`(§159 명세·증여세 카드 — Q-6) · ⑧ 변경 없음(통과 ↔ 반영 일치) · ⑨⑩ 없음 · ⑫ share 스키마 + 누락 400 · ⑬ 지분 배열 안에 포함(별도 spread 없음) · ⑭ 5-0 → fractional → 카드 빌더. ⑧↔⑫ 모순 0: 지분 부담부증여 ⑧ 통과 셀은 ⑫ 통과 · §159 반영, 지분별 info 누락만 400.
+
+### 14.9 회귀 0 근거
+수정 **전** 실측으로 고정: 비부담부증여 GB 지분(양도 10억·취득 2.5억) 229,581,000 = 단건 · 컴패니언 GB+GB 부담부증여(PR-2) 139,906,800 · 단건 GB 부담부증여 57,552,880. 전체 vitest **3343파일 40,097 통과**(1건은 `aggregate-rental-housing-split-part-income` 384셀이 5초 기본 타임아웃에 걸린 부하 플레이크 — 단독 재실행 20/20 통과, 이 변경과 무관). `tsc --noEmit` 0 · eslint 0 errors. E2E: 신규 3 + 기존 `gb-burdened-gift-companion`·`-stale-routing`·`-self-built-penalty`·`general-building-fractional-share`·`gb-fractional-reductions`·`transfer-companion-burdened-gift` 17건 통과.
+
+### 14.10 뮤테이션 18종 — 16 killed · 2 equivalent (cp 백업 + md5 + 건별 sha 대조, 종료 후 sha 동일, bash)
+M1 지분 info 미전달(14실패) · M3 whole info 제거(3) · M4 고지 push 제거(1) · M6 응답 명세 제거(3) · M7 route 인자 제거(14) · M8 route 응답 명세 제거(3) · M9 ④ info 제거(15) · M10 ④ 채무 안분 제거(14) · M13 ⑫ 누락 400 검사 제거(1) · M14 ⑫ 필드 제거(15) · M15~M17 사이드바 양도가액·취득가액·필요경비 분기(각 1) · **M2 지분율 미전달 · M11 breakdown ownershipRatio 제거 · M12 part-cards 운반 제거(각 1 — 처음 3종은 살아남아 §14.7 의 GS-1c 추가 후 killed)**.
+**동치 변이 2종**: M5(고지 게이트 `burdened &&` 제거 — 지분 경로의 `allCards.penaltyAxis`는 부담부증여 조립에서만 생기고 비부담부증여 감정 축은 `buildProperties` 단계라 카드에는 없다) · M18(사이드바 `gbShareBgCards`의 부담부증여 게이트 제거 — 비부담부증여 지분은 카드 합 = 입력값 × 지분율이라 같은 값, 자본적지출 입력 포함 확인). 둘 다 방어적 게이트로 남긴다.
+E2E: ④ 대신 route 5-0 인자 제거 변이로 신규 3건 전부 실패 확인 후 복원(sha 동일). 서버 빈 포트 `:3295`·본인 PID 종료·`next.config.ts` 원복(sha 동일).
+
+### 14.11 800줄
+`transfer-tax-building-schemas.ts` 632(분리 후) · 신규 share 스키마 152 · `fractional` 308 · `route` 435 · `gb-shares` 263 · `part-cards` 287 · `route-actual` 641 · `summary` **748**(≥750 직전 — 다음 변경 때 분리 검토) · `refines` 61 — 전부 <800.
+
+### 14.12 발견 · 미확인 (이 PR 범위 밖)
+- **V-11** «계산결과 상세명세서»의 지분 부담부증여 산식 표시가 100% 값으로 풀어 쓴 채 결과만 지분분이다(예: `양도가액 = 500,000,000 × 500,000,000 / 1,000,000,000 = 150,000,000`; 필요경비 `100,000,000 × ½ × 3% = 1,500,000 → 900,000`). **세액 무관 · 표시 전용**(`DetailedStatementBgFormulas` 가 지분율을 모른다). 별건.
+- V-9(물건 단위 명세의 K-4·K-6·K-7 취득가액 미합산)는 지분에서도 같다 — 지분별 K-6/K-7 이 다르면 명세의 «자산별 취득가액»은 주 자산 값 기준이다(카드·사이드바는 정확).
+- V-10(PDF·인쇄·요약 카드) 미확인 · V-5(공유 소유 단건·컴패니언 `ownershipRatio`) 유지.

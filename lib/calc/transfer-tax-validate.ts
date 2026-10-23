@@ -140,6 +140,9 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
        * 종전 사유는 「지분 분할 양도가액 = 총양도가 × 지분율이라 부담부증여(§159 채무액
        * 기반)·공익수용(보상가액)과 비양립」이었다. **둘 다 전제가 틀렸다**:
        *
+       * ⚠️ **일반건물 지분은 이 «해제»에 실제로는 포함되지 않았다**(2026-10-23 실측 정정). 위 실측(60%+40% = 단건 100%)은 **주택**이었고 일반건물 지분은 route 5-0 이
+       *    `burdenedGiftInfo`를 넘기지 않아 지분 카드가 일반 양도로 계산됐다(채무 전액이 양도차익 — K-5 141,966,000 vs 57,552,880).
+       *    PR-3(`docs/00-pm/gb-burdened-gift-silent-drop.plan.md` §14)이 지분별 info 를 싣는 것으로 정말 해제했다 — 회귀 anchor `transfer.route.gb-burdened-gift-shares.anchor`.
        * - **부담부증여**: §159는 총양도가를 쓰지 않고 `양도가액 = A × B/C`로 자체 산정한다.
        *   축 B는 채무도 지분 안분해 B/C를 보존한다(`buildBurdenedGiftInfo`의 `debtScaleRatio`).
        *   실측: 60%+40% 합계 = 단건 100% (64,600,360).
