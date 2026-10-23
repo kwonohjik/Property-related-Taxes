@@ -252,6 +252,52 @@ test.describe("일반건물 × 지분 분할 취득", () => {
   });
 
   // ══════════════════════════════════════════════════════════════════
+  // GBF-30 — 결과 카드 §163⑨ 블록이 상속 지분의 행만 그 지분 이름으로 그린다 🔴
+  // ══════════════════════════════════════════════════════════════════
+  /**
+   * 종전: 실가 지분은 §163⑨ 블록이 통째로 없었고, 환산 경로는 **첫 지분 재료**로 떴다 — 지분 2만 상속이면 블록이 사라졌다
+   * (`docs/00-pm/gb-fractional-result-blocks.plan.md` §1 I3·I7). vitest anchor(`gb-fractional-result-blocks.anchor`)가 렌더 결과를,
+   * 이 spec이 실제 화면을 잡는다.
+   */
+  test("GBF-30: 지분 2만 실가 상속 → §163⑨ 블록에 「자산 2 (지분 40%)」 행만", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedAndOpen(page, [
+      {},
+      {
+        acquisitionCause: "inheritance",
+        gbBuildingAcquisitionCause: "inheritance",
+        acquisitionDate: "1988-05-01",
+        landAcquisitionDate: "1988-05-01",
+        decedentAcquisitionDate: "1970-01-01",
+        useEstimatedAcquisition: false,
+        landAcqMode: "actual",
+        buildingAcqMode: "actual",
+        publishedValueAtInheritance: "300000000",
+        gbBuildingInheritedValue: "100000000",
+      },
+    ]);
+    for (const step of ["보유 상황", "감면·공제", "가산세"]) {
+      await page.getByRole("button", { name: step }).first().click();
+    }
+    const calcResponse = page.waitForResponse(
+      (r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByRole("button", { name: /계산하기/ }).click();
+    const resp = await calcResponse;
+    expect(resp.ok(), `계산 API 비정상 응답 ${resp.status()} ${await resp.text()}`).toBe(true);
+    const props = (await resp.json()).data.aggregated.properties as { propertyId: string; acquisitionPrice: number }[];
+    const acq = (id: string) => props.find((p) => p.propertyId === id)!.acquisitionPrice.toLocaleString("ko-KR");
+
+    const block = page.getByText("상속 취득가액 직접 산정 — 소득세법 시행령 §163⑨").locator("..");
+    await expect(block).toBeVisible({ timeout: 15_000 });
+    const rows = block.locator("li");
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toHaveText(`자산 2 (지분 40%) 토지분 취득가액(상속개시일 평가액)${acq("land#1")}`, { useInnerText: false });
+    await expect(rows.nth(1)).toHaveText(`자산 2 (지분 40%) 건물분 취득가액(상속개시일 평가액)${acq("building#1")}`, { useInnerText: false });
+  });
+
+  // ══════════════════════════════════════════════════════════════════
   // GBF-28 — 표시 계층이 지분 접미사를 인식한다 🔴
   // ══════════════════════════════════════════════════════════════════
   /**

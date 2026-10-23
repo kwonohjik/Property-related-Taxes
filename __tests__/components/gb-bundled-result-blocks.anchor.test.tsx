@@ -179,7 +179,7 @@ describe("불변", () => {
     }
   });
 
-  it("지분 분할(축 B) 실가 → 판정·상속 표지를 싣지 않는다(Q-3 a — 지분마다 다르다)", async () => {
+  it("지분 분할(축 B) 실가 → 첫 지분의 판정·상속 표지를 물건 전체로 싣지 않는다(지분별은 `gb-fractional-result-blocks.anchor`)", async () => {
     for (const s of ["S100-act", "INH"] as const) {
       const over = GB_SAMPLES[s][0];
       const f = form(T, [asset(1, ...over, { ownershipNumerator: "50" }), asset(2, ...over, { ownershipNumerator: "50", acquisitionDate: "1990-05-01", landAcquisitionDate: "1990-05-01" })], {
@@ -189,7 +189,8 @@ describe("불변", () => {
       expect(r.status).toBe(200);
       const d = r.aggregated.generalBuildingValuationDetail!;
       expect(d.assetCards.map((c) => c.propertyId)).toEqual(["land#0", "building#0", "land#1", "building#1"]);
-      expect(d.saleSplitJudgment).toBeUndefined();
+      // 판정은 지분 몫(6.5억·1.5억)이 아니라 물건 전체(계약서 기재액) 한 번 — `gb-fractional-result-blocks.plan.md` D-2.
+      expect(d.saleSplitJudgment?.declared).toEqual(s === "S100-act" ? { land: 1_300_000_000, building: 300_000_000 } : undefined);
       expect(d.acquisitionByInheritance).toBeUndefined();
       expect(d.buildingAcquisitionByInheritance).toBeUndefined();
     }

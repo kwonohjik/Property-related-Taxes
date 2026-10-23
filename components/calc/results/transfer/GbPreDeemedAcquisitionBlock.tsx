@@ -16,15 +16,23 @@ const PARTS = [
   { key: "building", label: "건물분", sec164: "② 영 §164⑤ 가액" },
 ] as const;
 
-export function GbPreDeemedAcquisitionBlock({ echo }: { echo: GbPreDeemedEcho }) {
+export function GbPreDeemedAcquisitionBlock({
+  echo,
+  share,
+}: {
+  echo: GbPreDeemedEcho;
+  /** 지분 분할(축 B)만 — 지분마다 블록을 하나씩 그리고 제목에 지분 이름을 단다(`gb-fractional-result-blocks.plan.md` Q-3 a). */
+  share?: { key: string; name: string };
+}) {
   const rows = PARTS.flatMap((p) => {
     const e: GbPreDeemedPartEcho | undefined = echo[p.key];
     return e ? [{ ...p, e }] : [];
   });
   if (rows.length === 0) return null;
+  const title = "의제취득일(1985.1.1.) 전 상속·증여 — 취득가액 ①②③ 중 큰 금액";
   return (
-    <div data-testid="gb-pre-deemed-acquisition">
-      <ToneCard tone="emerald" title="의제취득일(1985.1.1.) 전 상속·증여 — 취득가액 ①②③ 중 큰 금액" bodyClassName="space-y-2">
+    <div data-testid={share ? `gb-pre-deemed-acquisition-${share.key}` : "gb-pre-deemed-acquisition"}>
+      <ToneCard tone="emerald" title={share ? `${share.name} — ${title}` : title} bodyClassName="space-y-2">
         <p className="text-xs text-muted-foreground">
           ① 상증법 평가액·② 영 §164 가액 중 큰 금액과 ③ 환산취득가액(양도가액에 의제취득일 기준시가와 양도시 기준시가의 비율을 곱한 금액)을
           비교해 큰 금액을 취득가액으로 봅니다. ③이 적용된 파트는 추계라 개산공제를 더합니다

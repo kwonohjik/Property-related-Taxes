@@ -10,6 +10,7 @@
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
 import type {
   AggregateTransferResult,
+  GbShareBlockEcho,
   GbSwapComparison,
   PerPropertyBreakdown,
 } from "@/lib/tax-engine/types/transfer-aggregate.types";
@@ -30,6 +31,16 @@ export interface GbBlockView {
   partAcquisitionPrice: (kind: "land" | "building") => number | undefined;
   /** §97②2호 단서 발동 비교 — 미발동이면 `undefined`. */
   swapComparison?: GbSwapComparison;
+  /** 지분 분할(축 B)만 — 지분별 블록 재료(지분 순서). 저장된 옛 결과는 없다(종전 표시). */
+  shares?: GbShareBlockView[];
+}
+
+/** 지분 하나의 블록 뷰 — 파트 값·추계 여부는 그 지분 카드(`#key`)에서 읽는다(`gb-fractional-result-blocks.plan.md` D-3). */
+export interface GbShareBlockView extends GbShareBlockEcho {
+  key: string;
+  partAcquisitionPrice: (kind: "land" | "building") => number | undefined;
+  /** 그 지분의 파트 카드가 ③(추계)으로 계산됐는가 — ①②③ echo가 없을 때의 상속 라벨 근거. */
+  partConverted: (kind: "land" | "building") => boolean;
 }
 
 /** 파트 카드 중 §163⑨ 블록의 토지분·건물분 — 증축분(건물2)은 상속 대상이 아니라 뺀다(`partConverted`와 같은 축). */
@@ -45,6 +56,7 @@ export function gbBlockViewsOf(
 ): GbBlockView[] {
   const single = aggregated.generalBuildingValuationDetail;
   if (single) {
+    const shareEcho = single.shareBlockEcho;
     return [
       {
         detail: single,
@@ -52,6 +64,25 @@ export function gbBlockViewsOf(
         partAcquisitionPrice: (kind) =>
           apportionment.apportioned.find((a) => a.assetKind === kind)?.allocatedAcquisitionPrice,
         ...(aggregated.swapApplied && aggregated.swapComparison ? { swapComparison: aggregated.swapComparison } : {}),
+        ...(shareEcho
+          ? {
+              shares: Object.keys(shareEcho)
+                .sort((a, b) => Number(a) - Number(b))
+                .map((key) => {
+                  const partCard = (kind: "land" | "building") =>
+                    single.assetCards.find((c) => cardSuffixOf(c.propertyId) === key && isPartCard(c, kind));
+                  return {
+                    ...shareEcho[key],
+                    key,
+                    partAcquisitionPrice: (kind) => {
+                      const card = partCard(kind);
+                      return card ? aggregated.properties.find((p) => p.propertyId === card.propertyId)?.acquisitionPrice : undefined;
+                    },
+                    partConverted: (kind) => !!partCard(kind)?.usedEstimatedAcquisition,
+                  } satisfies GbShareBlockView;
+                }),
+            }
+          : {}),
       },
     ];
   }

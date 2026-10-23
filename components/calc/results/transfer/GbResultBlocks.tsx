@@ -19,7 +19,8 @@ import { SaleSplitJudgmentBlock } from "@/components/calc/results/transfer/SaleS
 import { SaleSplitUnenteredNotice } from "@/components/calc/results/transfer/SaleSplitUnenteredNotice";
 import { isSaleSplitActual, saleSplitUnenteredNotice } from "@/components/calc/results/transfer/sale-split-unentered-notice";
 import { GbPreDeemedAcquisitionBlock } from "@/components/calc/results/transfer/GbPreDeemedAcquisitionBlock";
-import type { GbBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
+import type { GbBlockView, GbShareBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
+import type { GbPreDeemedEcho } from "@/lib/tax-engine/types/general-building.types";
 
 /** §163⑨ 상속 블록의 파트 라벨 — 의제취득일 전 상속 파트는 엔진이 채택한 후보를 따른다(PR-4). */
 const PRE_DEEMED_ADOPTED_LABEL = {
@@ -28,25 +29,61 @@ const PRE_DEEMED_ADOPTED_LABEL = {
   converted: "(환산취득가액)",
 } as const;
 
+/**
+ * §163⑨·①②③ 블록의 단위 — 단건·함께 양도 자산은 물건 하나, 지분 분할은 지분 하나(`gb-fractional-result-blocks.plan.md` Q-2 a·Q-3 a).
+ * 지분마다 취득원인·평가액이 달라 첫 지분 재료로 물건 전체를 대표할 수 없다.
+ */
+interface InheritUnit {
+  key: string;
+  /** 지분 분할만 — 「자산 1 (지분 50%)」. */
+  name?: string;
+  land?: boolean;
+  building?: boolean;
+  preDeemed?: GbPreDeemedEcho;
+  acq: (kind: "land" | "building") => number | undefined;
+  converted: (kind: "land" | "building") => boolean;
+}
+
+const shareName = (s: GbShareBlockView) =>
+  `${s.label} (지분 ${(s.ownershipRatio * 100).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}%)`;
+
 export function GbResultBlocks({ view }: { view: GbBlockView }) {
   const d = view.detail;
-  const preDeemed = d.preDeemedAcquisition;
-  /**
-   * 그 파트 카드가 ③(추계)으로 계산됐는가 — 지분 분할은 비교 echo를 싣지 않으므로(지분마다 다름) 카드가 유일한 소스다.
-   * 증축분(건물2)은 상속 대상이 아니라 뺀다.
-   */
+  /** 그 파트 카드가 ③(추계)으로 계산됐는가 — 증축분(건물2)은 상속 대상이 아니라 뺀다. */
   const partConverted = (kind: "land" | "building") =>
     (d.assetCards ?? []).some((c) =>
       c.usedEstimatedAcquisition &&
       (kind === "land" ? c.propertyType === "land" : c.propertyType === "general_building_unit" && !c.propertyId.includes("building2")));
-  const inheritedOf = (kind: "land" | "building") =>
-    kind === "land" ? d.acquisitionByInheritance : d.buildingAcquisitionByInheritance;
-  const inheritedConverted = (kind: "land" | "building") => !!inheritedOf(kind) && partConverted(kind);
+  const units: InheritUnit[] = view.shares
+    ? view.shares.map((s) => ({
+        key: s.key,
+        name: shareName(s),
+        land: s.acquisitionByInheritance,
+        building: s.buildingAcquisitionByInheritance,
+        preDeemed: s.preDeemedAcquisition,
+        acq: s.partAcquisitionPrice,
+        converted: s.partConverted,
+      }))
+    : [{
+        key: "",
+        land: d.acquisitionByInheritance,
+        building: d.buildingAcquisitionByInheritance,
+        preDeemed: d.preDeemedAcquisition,
+        acq: view.partAcquisitionPrice,
+        converted: partConverted,
+      }];
+  const inheritedUnits = units.filter((u) => u.land || u.building);
+  const preDeemedUnits = units.filter((u) => u.preDeemed);
+  // 지분 판정이 30% 경계에서 갈려 물건 전체 판정을 싣지 못한 경우(엔진 D-2 🔴) — 지분별 판정을 그대로 그린다.
+  const shareJudgments = d.saleSplitJudgment ? [] : (view.shares ?? []).filter((s) => s.saleSplitJudgment);
 
   // «구분 기재 + 두 칸 비움» — 판정이 비는 자리(구분 기재 없이 안분)에서만 뜬다. 폼 선택 ∧ 엔진 echo(판정과 배타).
   const unentered = saleSplitUnenteredNotice(isSaleSplitActual(view.asset), d.saleApportionBasisKind);
-  const inheritance = !!(d.acquisitionByInheritance || d.buildingAcquisitionByInheritance);
-  if (!unentered && !d.saleSplitJudgment && !inheritance && !preDeemed && !d.convertedHousing && !view.swapComparison) return null;
+  if (
+    !unentered && !d.saleSplitJudgment && shareJudgments.length === 0 && inheritedUnits.length === 0 &&
+    preDeemedUnits.length === 0 && !d.convertedHousing && !view.swapComparison
+  ) return null;
+  const exemptionNote = view.asset?.saleSplitExemptionNote ? { exemptionNote: view.asset.saleSplitExemptionNote } : {};
 
   return (
     <div className="space-y-6" data-testid={view.assetId ? `gb-result-blocks-${view.assetId}` : "gb-result-blocks"}>
@@ -61,12 +98,18 @@ export function GbResultBlocks({ view }: { view: GbBlockView }) {
         <SaleSplitJudgmentBlock
           j={d.saleSplitJudgment}
           // 근거 문구는 엔진을 거치지 않는다(계획서 §15.3) — 폼에서 직접 읽는다.
-          {...(view.asset?.saleSplitExemptionNote ? { exemptionNote: view.asset.saleSplitExemptionNote } : {})}
+          {...exemptionNote}
         />
       )}
+      {shareJudgments.map((s) => (
+        <div key={s.key} className="space-y-1" data-testid={`gb-sale-split-share-${s.key}`}>
+          <p className="text-sm font-semibold">{shareName(s)}</p>
+          <SaleSplitJudgmentBlock j={s.saleSplitJudgment!} {...exemptionNote} />
+        </div>
+      ))}
 
-      {/* §163⑨ 상속 취득가액 직접 산정 — **파트별**(C1 전부 상속 · C2·C2′·C3 부분 상속). */}
-      {inheritance && (
+      {/* §163⑨ 상속 취득가액 직접 산정 — **파트별**(C1 전부 상속 · C2·C2′·C3 부분 상속). 지분 분할은 상속 지분마다 행을 단다. */}
+      {inheritedUnits.length > 0 && (
         <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 text-sm space-y-1 dark:bg-violet-950/40">
           <p className="font-semibold text-violet-900 dark:text-violet-200">
             상속 취득가액 직접 산정 — 소득세법 시행령 §163⑨
@@ -74,35 +117,40 @@ export function GbResultBlocks({ view }: { view: GbBlockView }) {
           <p className="text-xs text-violet-800 dark:text-violet-200">
             상속개시일 현재 「상속세 및 증여세법」 §60~§66 평가액을 취득당시의 실지거래가액으로
             봅니다. 그 파트는 환산취득가·개산공제(§163⑥)를 적용하지 않습니다.
-            {(preDeemed || inheritedConverted("land") || inheritedConverted("building")) &&
+            {inheritedUnits.some((u) => u.preDeemed || (u.land && u.converted("land")) || (u.building && u.converted("building"))) &&
               " 다만 1985.1.1. 전 상속 파트는 환산취득가액이 더 크면 환산취득가액과 개산공제를 적용합니다."}
           </p>
           <ul className="text-xs text-violet-900 space-y-0.5 pt-1 dark:text-violet-200">
-            {(["land", "building"] as const).map((kind) => {
-              const acq = view.partAcquisitionPrice(kind);
-              if (acq === undefined) return null;
-              return (
-                <li key={kind} className="flex items-baseline justify-between gap-3">
-                  <span>
-                    {kind === "land" ? "토지분" : "건물분"} 취득가액
-                    <span className="ml-1 text-violet-700 dark:text-violet-400">
-                      {inheritedOf(kind)
-                        ? PRE_DEEMED_ADOPTED_LABEL[preDeemed?.[kind]?.adopted ?? (partConverted(kind) ? "converted" : "reported")]
-                        : "(상속 아님 — 종전 산정)"}
+            {inheritedUnits.flatMap((u) =>
+              (["land", "building"] as const).map((kind) => {
+                const acq = u.acq(kind);
+                if (acq === undefined) return null;
+                return (
+                  <li key={`${u.key}-${kind}`} className="flex items-baseline justify-between gap-3">
+                    <span>
+                      {u.name && `${u.name} `}
+                      {kind === "land" ? "토지분" : "건물분"} 취득가액
+                      <span className="ml-1 text-violet-700 dark:text-violet-400">
+                        {u[kind]
+                          ? PRE_DEEMED_ADOPTED_LABEL[u.preDeemed?.[kind]?.adopted ?? (u.converted(kind) ? "converted" : "reported")]
+                          : "(상속 아님 — 종전 산정)"}
+                      </span>
                     </span>
-                  </span>
-                  <span className="font-mono tabular-nums font-semibold whitespace-nowrap">
-                    {formatKRW(acq)}
-                  </span>
-                </li>
-              );
-            })}
+                    <span className="font-mono tabular-nums font-semibold whitespace-nowrap">
+                      {formatKRW(acq)}
+                    </span>
+                  </li>
+                );
+              }),
+            )}
           </ul>
         </div>
       )}
 
       {/* 의제취득일 전 상속·증여 파트 — ①②③ 비교(PR-4). 증여 파트는 위 상속 블록이 없으므로 따로 그린다. */}
-      {preDeemed && <GbPreDeemedAcquisitionBlock echo={preDeemed} />}
+      {preDeemedUnits.map((u) => (
+        <GbPreDeemedAcquisitionBlock key={u.key} echo={u.preDeemed!} {...(u.name ? { share: { key: u.key, name: u.name } } : {})} />
+      ))}
 
       {/* §99-164-10 환산주택가격 — 취득당시 기준시가를 **덮어쓴 근거**. */}
       {d.convertedHousing && (() => {
