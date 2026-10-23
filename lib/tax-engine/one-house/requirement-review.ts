@@ -24,7 +24,7 @@
  * 다른 특례(상속·농어촌·대체주택 등)로 결론이 났거나 §89② 배제면 싣지 않는다. 그 요건은
  * 이 행들과 다르고, 「적용된 특례」·「선언했으나 적용되지 않은 특례」 카드가 따로 말한다.
  */
-import { NEW_HOUSE_ORIGIN_LABEL } from "./new-house-origin";
+import { NEW_HOUSE_ORIGIN_LABEL, temporaryTwoHouseOrderReason } from "./new-house-origin";
 import { deadlineEndFrom, deadlineEndNote, isAfterPeriod, isOnOrBeforeDay, isWithinDeadline } from "../civil-period";
 import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
 import {
@@ -178,7 +178,21 @@ function temporaryTwoHouseItems(
 
   // ① 「종전의 주택을 취득한 날부터 1년 이상이 지난 후 신규 주택을 취득」
   const oneYearNatural = isAfterPeriod(tth.previousAcquisitionDate, 1, tth.newAcquisitionDate);
-  if (!isOneYearHoldRequiredForTemporaryTwoHouse(input.transferDate)) {
+  // 선후가 맞지 않으면 1년 요건 면제·연혁과 무관하게 불성립이다(`timing.acquiredInOrder` — D-1). 두 갈래 모두 같은 사유를 단다.
+  const orderNote = timing.acquiredInOrder ? undefined : temporaryTwoHouseOrderReason(tth.previousAcquisitionDate, tth.newAcquisitionDate);
+  if (orderNote && !isOneYearHoldRequiredForTemporaryTwoHouse(input.transferDate)) {
+    items.push({
+      id: "one-year",
+      label: "종전주택을 먼저 취득한 뒤 신규주택 취득",
+      status: "unmet",
+      facts: [
+        { label: "종전주택 취득일", value: fmt(tth.previousAcquisitionDate) },
+        { label: "신규주택 취득일", value: fmt(tth.newAcquisitionDate) },
+      ],
+      note: orderNote,
+      legalBasis: basis155,
+    });
+  } else if (!isOneYearHoldRequiredForTemporaryTwoHouse(input.transferDate)) {
     /**
      * 2012.6.29. 전 양도분 §155①에는 이 요건이 없다(대통령령 제23887호가 도입 — 2012.2.2. 시행본 원문 확인).
      * `timing.oneYearMet`가 참인 것은 그 때문이지 §155⑯ 지방이전·§154① 단서 면제가 아니다 — 사유를 가리지 않고
@@ -205,7 +219,9 @@ function temporaryTwoHouseItems(
         { label: "1년 경과일", value: fmt(timing.oneYearThreshold) },
         { label: "신규주택 취득일", value: fmt(tth.newAcquisitionDate) },
       ],
-      ...(!oneYearNatural && timing.oneYearMet
+      ...(orderNote
+        ? { note: orderNote }
+        : !oneYearNatural && timing.oneYearMet
         ? {
             note: provisoRelaxesHolding
               ? "§154① 단서 사유에 해당해 1년 요건을 적용하지 않습니다."

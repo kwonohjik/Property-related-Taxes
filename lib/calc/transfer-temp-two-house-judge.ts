@@ -32,7 +32,7 @@ import {
 import { TEMP_TWO_HOUSE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
 import type { TemporaryTwoHouseDelayReason, TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
-import { judgeNewHouseOrigin } from "@/lib/tax-engine/one-house/new-house-origin";
+import { judgeNewHouseOrigin, temporaryTwoHouseOrderReason } from "@/lib/tax-engine/one-house/new-house-origin";
 import type { RightThreeYearException } from "@/lib/tax-engine/types/transfer.types";
 
 /**
@@ -49,6 +49,8 @@ export type TempTwoHouseVerdict =
       oneYearThreshold: Date;
       oneYearMet: boolean;
       oneYearWaived: boolean;
+      /** 신규 주택을 종전 주택보다 먼저(같은 날 포함) 취득했으면 그 사유 — 요건 A가 면제 사유와 무관하게 미충족이다(엔진 `acquiredInOrder` · 요건 표와 같은 문장) */
+      orderNote?: string;
       deadline: Date;
       /** 처분기한 말일이 민법 §161로 늘어났거나 공휴일 표 밖이면 한 줄 설명(엔진 값 그대로) */
       deadlineNote?: string;
@@ -284,6 +286,7 @@ export function judgeTempTwoHouseFromForm(p: {
     ...(originVerdict && originNotes.length > 0 ? { origin: { blocked: originVerdict.blocked, notes: originNotes } } : {}),
     oneYearThreshold: t.oneYearThreshold,
     oneYearMet: t.oneYearMet,
+    ...(t.acquiredInOrder ? {} : { orderNote: temporaryTwoHouseOrderReason(prev, nw) }),
     // ⑯ 후단도 1년 면제 사유다 — 카드 문구가 "면제"를 표시해야 판정과 설명이 어긋나지 않는다.
     oneYearWaived: oneYearWaived || relocation,
     deadline: t.deadline,

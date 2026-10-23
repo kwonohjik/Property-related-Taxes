@@ -32,6 +32,9 @@ import {
 } from "./data/temporary-two-house-deadline-era";
 import { resolveDisposalDelay, type DisposalDelayResolution } from "./data/temporary-two-house-delay-era";
 
+/** 날짜 단위 비교 — 같은 날(시각 차이)은 같은 값이다(`one-house/new-house-origin.ts`와 같은 규약). */
+const dayIndex = (d: Date) => Math.floor(d.getTime() / 86_400_000);
+
 /** §155⑯ 전단 — 공공기관 지방이전 시 처분기한 5년 */
 const PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS = 5;
 
@@ -50,6 +53,11 @@ export function temporaryTwoHouseDeadlineEnd(
  * - 요건 A(1년): 「종전의 주택을 취득한 날부터 1년 이상이 지난 후」 — 초일불산입(국기법 §4→민법 §157)이라
  *   종전취득일의 **응당일은 미충족**, 그 다음날부터 충족(조심2019서1704). 단 oneYearWaived(§154①1·2가·3호) 시 면제.
  *   `oneYearThreshold`는 **최초 충족일**(=만료일 다음날) — 판정 카드가 「1년 경과일」로 표시한다.
+ * - 선후: 「1주택을 소유한 1세대가 그 주택을 양도하기 **전에** 다른 주택을 취득」 — 신규 주택은 종전 주택보다 **나중에**(같은 날 제외)
+ *   취득해야 한다(`acquiredInOrder`). 1년 요건의 면제(§154①1·2가·3호 · ⑯ 후단 · 2012-06-29 전 양도분)는 「1년 이상 지난 후」만 없앨 뿐
+ *   종전·신규의 정의는 그대로라 이 항은 면제되지 않는다(서면-2021-법규재산-6773 ← 기획재정부 재산세제과-1181 — 순차 취득이면 §155① 부적용).
+ *   🔑 `overall`이 아니라 **`oneYearMet` 안에** 둔다 — 판정 보류(`one-house/pending.ts`)가 「1년 충족 + 기한만 미충족」이면 처분기한을
+ *   약속하므로, 역순인데 기한을 안내하지 않게 한다(`docs/00-pm/temp-two-house-acquisition-order.plan.md` D-1).
  * - 요건 B(3년): 「다른 주택을 취득한 날부터 3년 이내」 — 초일불산입, 만료일(`deadline`) 당일까지
  *   (조정지역 부칙은 caller가 반영해 주입). 규칙: `civil-period.ts` 유형 A·B.
  *   말일이 토요일·공휴일이면 익일(민법 §161 — L-1). `deadline`은 **연장된** 말일이고 `deadlineNote`가 이유를 말한다.
@@ -83,6 +91,8 @@ export function judgeTemporaryTwoHouseTiming(p: {
   moveInMet?: boolean;
 }): {
   oneYearThreshold: Date;
+  /** 신규 주택을 종전 주택보다 나중에(같은 날 제외) 취득했는가 — 거짓이면 `oneYearMet`도 거짓이다 */
+  acquiredInOrder: boolean;
   oneYearMet: boolean;
   deadline: Date;
   /** 말일이 민법 §161로 늘어났거나 공휴일 표 밖이면 한 줄 설명 */
@@ -97,12 +107,14 @@ export function judgeTemporaryTwoHouseTiming(p: {
   const oneYearThreshold = firstDayAfterPeriod(p.previousAcquisitionDate, 1);
   // §155⑯ 후단: "…종전의 주택을 취득한 날부터 1년 이상이 지난 후 다른 주택을 취득하는 요건을
   //   적용하지 아니한다." — 기한 5년(전단)과 **별개의 두 번째 효과**다.
+  const acquiredInOrder = dayIndex(p.newAcquisitionDate) > dayIndex(p.previousAcquisitionDate);
   const oneYearMet =
-    p.oneYearWaived ||
-    p.publicInstitutionRelocation === true ||
-    // D14 — 2012-06-29 전 양도분 §155①에는 이 요건이 없다(제23887호가 도입).
-    !isOneYearHoldRequiredForTemporaryTwoHouse(p.transferDate) ||
-    isAfterPeriod(p.previousAcquisitionDate, 1, p.newAcquisitionDate);
+    acquiredInOrder &&
+    (p.oneYearWaived ||
+      p.publicInstitutionRelocation === true ||
+      // D14 — 2012-06-29 전 양도분 §155①에는 이 요건이 없다(제23887호가 도입).
+      !isOneYearHoldRequiredForTemporaryTwoHouse(p.transferDate) ||
+      isAfterPeriod(p.previousAcquisitionDate, 1, p.newAcquisitionDate));
   const dl = temporaryTwoHouseDeadlineEnd(p.newAcquisitionDate, { years: p.deadlineYears, deadlineDate: p.deadlineDate });
   const deadline = dl.end;
   const deadlineNote = deadlineEndNote(dl);
@@ -120,6 +132,7 @@ export function judgeTemporaryTwoHouseTiming(p: {
   const moveInOk = p.moveInMet !== false;
   return {
     oneYearThreshold,
+    acquiredInOrder,
     oneYearMet,
     deadline,
     ...(deadlineNote ? { deadlineNote } : {}),
