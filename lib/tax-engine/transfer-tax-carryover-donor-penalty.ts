@@ -156,6 +156,11 @@ function housingBase(
     landAppraisalAtTransfer: sale.landAppraisalAtTransfer,
     buildingAppraisalAtTransfer: sale.buildingAppraisalAtTransfer,
     saleSplitExemption: sale.saleSplitExemption,
+    // 공유지분 — §100③을 계약서(100%) 금액으로 판정한다(`sale-split-100-3-share-scale-judgment.plan.md` PR-4)
+    contractLandTransferPrice: sale.contractLandTransferPrice,
+    contractBuildingTransferPrice: sale.contractBuildingTransferPrice,
+    ownershipRatio: rawInput.ownershipRatio,
+    totalPropertyTransferPrice: rawInput.totalPropertyTransferPrice,
   } as TransferTaxInput).building;
   if (!(transferBuilding > 0))
     invalid("양도 당시 건물분 기준시가가 0이라 환산취득가액을 구할 수 없습니다.", "carryoverTaxation.donorBuilt.housing.buildingStdPriceAtTransfer");

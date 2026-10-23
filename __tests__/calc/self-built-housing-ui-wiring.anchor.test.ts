@@ -86,7 +86,10 @@ describe("W — 입력을 채우면 ④가 싣고 base 가 건물분이 된다",
     const r = await calc(
       sbForm({ ownershipNumerator: "50", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes", saleSplitMode: "actual", landTransferPrice: "700000000", buildingTransferPrice: "300000000" }),
     );
-    expect(sb(r)?.sale).toEqual({ landTransferPrice: 350_000_000, buildingTransferPrice: 150_000_000 });
+    expect(sb(r)?.sale).toEqual(
+      // 공유지분 — 토지만 지분 몫 · 건물은 엔진이 「지분 양도가액 − 토지」로 정한다 · 판정용 계약서 금액(100%) (`sale-split-100-3-share-scale-judgment.plan.md` PR-4)
+      { landTransferPrice: 350_000_000, contractLandTransferPrice: 700_000_000, contractBuildingTransferPrice: 300_000_000 },
+    );
   });
 
   it("W-7 양도차손(§97②2호 단서 swap)도 건물분 — 총납부 10,312,500 (없으면 27,500,000)", async () => {

@@ -197,3 +197,25 @@
   - ⑦ 컴포넌트 3건(`mixed-use-sale-split-ui` R-3~R-5).
   - 뮤테이션 11/11(엔진·④·⑫ 8 + 표시 3).
   - E2E SSJ-3: 수정을 무력화하면 실패한다. 겸용 E2E 114건이 통과한다.
+
+### 9.4 PR-4 본인 신축·증여자 신축 §114조의2 가산세 base (2026-10-24)
+
+- **원인**
+  - 두 가산세는 건물 양도가액 S_b를 `resolveTransferPriceSplit`로 정한다(`transfer-tax-self-built-housing-penalty.ts`·`transfer-tax-carryover-donor-penalty.ts`).
+  - PR-2의 계약 판정 분기는 그 함수 안에 이미 있다. 그런데 두 호출부가 지분율·계약서 금액을 넘기지 않았다. 그래서 지분 몫 판정이 그대로 남아 있었다.
+- **④** `buildSaleSplitWire`(본인 신축·증여자 신축 공용):
+  - 공유지분이면 주택 구분양도 `declaredSaleWire`와 같은 규칙을 쓴다. 토지만 지분 몫으로 보내고 건물은 비운다(Q-4 a). 계약서(100%) 금액은 `contractLandTransferPrice`·`contractBuildingTransferPrice`로 싣는다.
+  - 함께 양도·다건 계산도 이 함수를 쓴다.
+- **⑫**: 두 필드를 `donorBuiltHousingShape.sale`에 추가했다. 본인 신축 `selfBuiltHousingShape`가 이 객체를 그대로 물려받는다.
+- **⑭**: `selfBuiltHousing`은 객체째, `donorBuilt`는 펼쳐서 엔진에 넘긴다. 그래서 추가 매핑이 없다.
+- **엔진**: 두 호출부가 `contractLand/BuildingTransferPrice`·`ownershipRatio`·`totalPropertyTransferPrice`를 넘긴다.
+- **⑦**: 바꾸지 않았다. 가산세 결과는 base·S_b만 보여 주고, 판정 표가 없다.
+- **검증** anchor `self-built-sale-split-contract-judgment`(10):
+  - 본인 신축 단건 1/3·2/3·1/7 × 정확히 +30%: 가산세 = 안분 모드.
+  - 1/3은 §1 값과 같다. 종전 와이어로 다시 계산하면 4,062,499, 이제 3,125,000이다.
+  - 토지만 기재, 단독 소유, Q-4(건물 146,666,667 — 종전 146,666,666).
+  - 증여자 신축 2/3: 종전 와이어 값과 다르다는 것을 확인했고, 토지만 기재한 경우도 넣었다.
+    - 1/3·1/7은 이 셀에서 세액 비교로 B 시나리오가 채택된다(`scenario_b`). 가산세가 닫혀 판정과 무관하므로 빼고 2/3로 봤다.
+  - 함께 양도(둘째 자산 1/3): 계약서 금액을 싣고, 가산세 = 안분 모드.
+  - 뮤테이션 10/10. 계약서 금액 한쪽 누락·계약 총액 누락은 「토지만 기재」 케이스가 잡는다. 두 칸이 다 있으면 반대쪽이 도출되어 결과가 같아지기 때문이다.
+  - 의도한 기대값 변경 3건: 지분 50% 와이어 테스트(`carryover-donor-built-114-2` DBC-P · `self-built-housing-ui-wiring` W-6 · `self-built-housing-validate-parity` 다건). 건물 칸이 비고 계약서 금액이 생겼다.
