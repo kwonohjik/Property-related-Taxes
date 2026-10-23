@@ -40,6 +40,11 @@ export interface GeneralBuildingActualPricePayload {
    * 취득시 기준시가 × 채무비율로 환산.
    */
   burdenedGiftInfo?: BurdenedGiftInfo;
+  /**
+   * 축 B(지분 분할 취득) 전용 — §159의 A·C(평가액·기준시가)를 지분분으로 줄일 지분율(0<r<1). 지분 카드 빌더만 싣는다.
+   * 단건·컴패니언은 싣지 않는다(종전 거동 유지 — 공유 소유 단건의 `ownershipRatio` 미전달은 별건, 계획서 V-5).
+   */
+  burdenedGiftOwnershipRatio?: number;
   // ── 사례 35: 주택→상가 용도변경 (자산 공통 — actual 경로도 동일 분기) ──
   houseToCommercialConversion?: boolean;
   conversionDate?: Date;

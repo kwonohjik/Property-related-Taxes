@@ -29,7 +29,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { cAsset, cForm, bodyOf, routeOf, issuesOf } from "@/__tests__/calc/_helpers/split-carryover-c-form";
 import { runMulti } from "@/__tests__/calc/_helpers/single-multi-route-parity";
 import { partialAppraisal, usableAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
-import { generalBuildingShareSchema } from "@/lib/api/transfer-tax-building-schemas";
+import { generalBuildingShareSchema } from "@/lib/api/transfer-tax-building-share-schemas";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);

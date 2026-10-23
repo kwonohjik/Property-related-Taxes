@@ -92,6 +92,8 @@ export function buildGbPartCards(
    * 의제취득일 전 상속·증여 재선택(PR-4)은 건너뛴다 — 부담부증여는 §159가 취득가액을 정한다(단건 `dispatchCoercedGeneralBuilding`과 같다).
    */
   burdenedGiftInfo?: BurdenedGiftInfo,
+  /** 축 B(지분) 전용 — §159의 A·C를 줄일 지분율. 컴패니언은 넘기지 않는다(`burdenedGiftOwnershipRatio` 주석). */
+  burdenedGiftOwnershipRatio?: number,
 ): GbPartCards {
   const estimatedPayloadOf = (raw: Record<string, unknown>): GeneralBuildingValuationPayload => ({
     ...(raw as unknown as GeneralBuildingValuationPayload),
@@ -140,7 +142,7 @@ export function buildGbPartCards(
       buildingAcquisitionDate: acquisitionDate,
       actualAcquisitionPrice,
       actualExpenses,
-      ...(burdenedGiftInfo ? { burdenedGiftInfo } : {}),
+      ...(burdenedGiftInfo ? { burdenedGiftInfo, burdenedGiftOwnershipRatio } : {}),
     });
     return {
       cards: built.cards,

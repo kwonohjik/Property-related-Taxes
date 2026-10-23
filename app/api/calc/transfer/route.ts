@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       data.generalBuildingShares &&
       data.generalBuildingShares.length > 1
     ) {
-      const { apportionment, aggregated } = calculateGeneralBuildingFractional(
+      const { apportionment, aggregated, transferBurdenedGiftBreakdown } = calculateGeneralBuildingFractional(
         data.generalBuildingShares as never,
         // 물건 전체(100%) 양도가액. 지분 모드에서는 `totalPropertyTransferPrice`가 정본이다.
         data.totalPropertyTransferPrice ?? data.transferPrice,
@@ -185,9 +185,12 @@ export async function POST(request: NextRequest) {
         engineInput.delayedPaymentDetails,
         // 첫 지분 감면 — 형제 두 GB 경로와 같은 값(둘째 지분부터는 지분 payload의 `reductions`).
         engineInput.reductions,
+        // 부담부증여(소령 §159) — 지분별 info 는 지분 payload 안에 있다. 물건 단위 증여세·§159 명세는 `burdenedGiftWholeInfo`(④ 축 B 전용).
+        //   🔴 이 조건 없이 info 를 안 넘기면 지분이 일반 양도로 계산된다(종전 결함 — 채무 전액이 양도차익).
+        data.transferType === "burdened_gift" ? { wholeInfo: data.burdenedGiftWholeInfo, date: transferDate } : undefined,
       );
       return okJson(
-        { data: { mode: "bundled" as const, apportionment, aggregated } },
+        { data: { mode: "bundled" as const, apportionment, aggregated, ...(transferBurdenedGiftBreakdown ? { transferBurdenedGiftBreakdown } : {}) } },
       );
     }
 
