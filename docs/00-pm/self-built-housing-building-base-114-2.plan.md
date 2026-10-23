@@ -412,7 +412,7 @@ useEffect→store 미러링 없음(토글 `onCheckedChange` 단일 patch, 파생
 | **PR-0** ✅ | `bundled-split-helpers.ts` 779줄 분리 선처리(≥750) → 566 + 타입 파일 228 | 분리 전후 컴패니언 격자 응답 해시 동일 |
 | **PR-1** ✅ | 엔진 leaf + 타입 + finalize/loss-return 배선 + ⑫(메인·컴패니언·다건 분류) + ⑭(3곳). **`selfBuiltHousing` 부재 시 현행 base 유지**(관대) | 아래 Pre-Do 1~9 · 키 없는 응답 해시 불변 · 다건 키 분류 가드 |
 | **PR-2** ✅ | ④ 3곳 + ⑤ 입력 UI + ⑧ validate + ①②③ + 술어 leaf | ⑧↔⑫ 격자 · ④ stale 미전송 · 브라우저/Playwright E2E 신규 spec |
-| **PR-3** | ⑦ 결과 echo 4뷰 + 고지 문구 + 결과 카드 라벨 | 4뷰 단일 접점 anchor · 합산 pickers |
+| **PR-3** ✅ | ⑦ 결과 echo 4뷰 + 고지 문구 + 결과 카드 라벨 + `TransferTaxResultView.tsx` 790줄 분리(Q-15) | 4뷰 단일 접점 anchor · 합산 pickers · 4뷰 해시 매트릭스 |
 | **PR-4** | 엔진 엄격화(throw) + 기존 테스트 fixture 갱신(§10) + 주석/문서 정리 | §10 영향 테스트 전수 갱신 · 그 외 불변 |
 
 ### PR-0 Do 기록 (2026-10-23, 동작 무변경 리팩터 — 커밋 전 master `87cc68edf` 병합 후 측정)
@@ -508,6 +508,38 @@ useEffect→store 미러링 없음(토글 `onCheckedChange` 단일 patch, 파생
 - `SelfBuiltSection` description 에 «일체 주택은 건물분만 대상» 한 문장 추가(§7.6)는 하지 않았다 — 그 섹션은 asset 을 모르는 props-only 컴포넌트이고 카드 본문이 같은 말을 한다.
 - E2E SB-8 이 첫 시도에서 반복 실패한 원인 = 시드에 `regionCode` 가 있으면 주소 판정으로 조정대상지역이 켜져 «같은 날 양도 순서»(§154⑨) 차단이 간헐로 걸림(`sameDayHousingBundleIssue`) — 시드에서 `regionCode` 를 뺐다(기존 CS spec 도 없다). 제품 결함 아님.
 - 결과 4뷰의 건물분 산식·고지(echo)는 **PR-3**, 엔진 엄격화(throw)는 **PR-4**. V-13 ② «`same` 면적에서 양도 토지 면적 카드 중복» 의 실제 UX 는 브라우저 육안 확인이 남았다.
+
+### PR-3 Do 기록 (2026-10-23, ⑦ 결과 4뷰 echo 표시 + 고지 + Q-8 + `TransferTaxResultView.tsx` 분리 — PR-2 head `8a4c15cfe` 에서 분기)
+
+**커밋 2개**: ① 분리 `2779b8d59`(동작 무변경 리팩터 — 먼저) → ② 기능(이 문서 포함). 엔진·⑫·⑭·폼 상태는 건드리지 않았다(표시 전용 · 세액 불변).
+
+**① 분리 (Q-15)** — `TransferTaxResultView.tsx` **790 → 598줄**(기능 커밋 후 602). 이음매 2개: `transfer/ParcelDisclosure.tsx`(70, 필지별 펼침) · `transfer/SingleDetailCards.tsx`(161, `hasSingleDetailCards` 술어 + ⑦ 상세 산출근거 카드 묶음). `PrintSection id="detail-cards"` 래퍼와 렌더 게이트는 뷰에 남겼다(인쇄 leaf id·소스 가드 `CalculationWarningsCard`·`OneHouseJudgmentProvenanceLine`·`FalseContractPriceNotice` 사용처가 뷰에 있어야 한다). 분리 전후 **결과 4뷰 해시 매트릭스 28셀 동일**(아래).
+
+**② 표시 정본** — 신규 `lib/tax-engine/transfer-tax-self-built-display.ts`(120줄, Q-13: donor 정본 일반화 안 함) · 신규 `components/calc/results/transfer/SelfBuiltPenaltyCard.tsx`(ToneCard amber). 값은 전부 엔진 echo(`selfBuiltHousingPenalty`)이고 재계산하지 않는다.
+- 환산: `건물분 환산취득가액 B = 건물분 양도가액 S × (취득 당시 건물분 기준시가 a) ÷ (양도 당시 건물분 기준시가 b)` · `취득/양도 당시 주택공시가격 H = 토지분 L + 건물분 N` 두 줄 · 건물분 기준시가 설명 · `가산세 P = B × 5%`
+- 감정 직접: `건물 감정가액 B (감정평가서에 구분 표시된 건물 감정가액 — 토지분을 안분하지 않습니다)` / 구분 표시 없음: `건물분 감정가액 B = 감정가액 총액 A × (취득 당시 건물 기준시가 N) ÷ (취득 당시 토지 기준시가 L + 건물 기준시가 N)`
+- 고지(Q-7 초안 B): 「본인이 신축한 일체 주택(…)은 소득세법 §114조의2 「해당 건물」의 환산취득가액|감정가액을 가산세 기준으로 보아 건물분만 적용했습니다(토지분 제외) … 일체 주택의 건물분만 기준으로 하는 정면 해석례는 확인하지 못했습니다 — 확인 필요.」 방식별 3문장. 유리/불리/절감 표현 없음. **카드와 PDF 에만**(뷰당 1회) — 명세서·신고서는 산식만(donor 선례).
+- 네 뷰 배선: 결과 카드(`TransferTaxResultView` — 경고 카드 아래 `SelfBuiltPenaltyCard`; 함께 양도·다건은 공용 `ValuationDetailCards` 가 자산별로) · 상세명세서(`DetailedStatementLateStages` 단건 branch + 집계 `[자산] — 산식` 목록 + 남은 금액 차감, 자산별 줄 `buildPenaltyFormula` 에 «(건물분 환산취득가액 B × 5%)») · 신고서(`FilingFormTableHelpers` 단건 각주 · `FilingFormTableAggregateHelpers` 합계 칸 각주 `[자산] …`) · PDF(`TransferSection` 단건·집계 어댑터 · `TransferMultiSection` 다건).
+- **어댑터 명시 매핑**(침묵 strip 방지): `aggregateToFilingResult` 가 `selfBuiltPenaltyEchoes`(신규 optional, 카드별 `{label, echo}`)를 싣고, `breakdownToFilingResult` 가 `selfBuiltHousingPenalty` 를 싣는다. 읽는 쪽은 단일 지점 `resultSelfBuiltEchoes`.
+
+**Q-8 라벨**: PR-5b(`penaltyMethodSums` — step note 「감정가액 적용」)가 결과 카드 가산세 행·상세명세서 라벨을 **이미** 산정방식별로 고쳤고 본인 신축 감정도 그 경로를 탄다는 것을 **실측으로 확인**(수정 전에도 통과) — 새 anchor 로 고정했다. 이 PR 이 더한 것은 카드 제목·상세명세서 줄의 «본인 신축 건물 환산취득가액|감정가액 가산세».
+
+**Pre-Do anchor — 수정 전(PR-2 head 를 `git archive` 로 내려 같은 anchor 를 돌린 실측) → 수정 후**: 신규 `__tests__/components/self-built-housing-penalty-results.ui.anchor.test.tsx` 20건 — 수정 전 **10 실패 · 10 통과**(실패 = 건물분 산식·카드·각주·PDF·집계 어댑터 라벨·다건, 통과 = echo 전제 3 + echo 없음 회귀 핀 + Q-8 가산세 행 라벨) → 수정 후 20/20. 셀: 환산·감정 직접·감정 구분 없음(단건 4뷰) · 비주택·증축·분리·실가(echo 없음 — 종전 문구 그대로) · 함께 양도(환산·감정·echo 없음 3종) · 다건(환산·실가). 분리 조각 핀 `transfer-result-view-split-parts.anchor.test.tsx` 3건.
+
+**회귀 0 근거 — 결과 4뷰 렌더 해시 매트릭스**(임시 하네스 저장소 미보존): 실제 ④→route 결과 28셀(단건 18(1셀은 route 가 400 이라 렌더 제외): 환산·구분 기재·감정 2종·지분 50% / 실가·5년 경과(환산·감정)·본인 신축 아님·본인 신축 아님+감정·증축·비주택·토지·건물 취득일 분리·이월과세 donor 4종 / 함께 양도 6 / 다건 4)을 `TransferTaxResultView`·`BundledAllocationCard`·`MultiTransferTaxResultView` 렌더(innerHTML)와 상세명세서 항목·신고서 행·PDF 텍스트로 sha256. 기준선 = PR-2 head `git archive` 사본(현재 트리 무접촉, `git checkout/stash` 없음), 기준선 2회 동일. **분리 후(당시 25셀): 전부 동일(차이 0)** · **기능 후(28셀): echo 없는 18셀 전부 동일(차이 0), echo 있는 10셀(환산 5 + 함께 양도 3 + 다건 2)만 변경**(단건 4뷰 모두 · 집계 2뷰).
+
+**뮤테이션 32건(cp 백업 · label+file md5 키 · 종료 후 전 파일 md5 원본 동일 확인, 실행기는 저장소 미보존 `run_mut.sh`) → 32 KILLED**: 표시 정본 14(라벨·고지·분수 분모·5년 기산·가산세 줄·제목 방식·감정 안분 분모·주택공시가격 분해·모드 뒤집기·각주·목록 우선순위·수집기) · 마운트 4(뷰·`ValuationDetailCards` 마운트·`hasAny`·카드 null) · 상세명세서 5(단건 branch·집계 루프·남은 금액 차감·집계 조건·자산별 줄) · 신고서 2 · PDF 2 · 어댑터 2 · 분리 3. 1차에서 분리 조각 2건(`ParcelDisclosure` 인쇄 펼침·상가 카드 `taxableIncome`)이 **SURVIVED** 였고 기존 테스트가 그 값을 단언하지 않는 공백이라 핀 테스트를 더해 KILLED. 집계 «남은 금액» 변이(M21)는 이 PR 의 anchor 가 `§114조의2` 1회 출현을 단언해 잡는다.
+
+**E2E**(headless, `E2E_PORT=3299`, `next.config.ts` turbopack.root 임시 변경 후 원복 — md5 `63dd5caa…` 동일 확인, 서버는 Playwright 가 기동·종료 — 포트 3299 리스너 0): `transfer-self-built-housing-base.spec.ts` **11건 ×3회 전부 통과**(기존 8 + 신규 SB-10 환산 결과·인쇄 / SB-11 감정 2종 / SB-12 echo 없음 구별력; SB-8 은 함께 양도 결과 자산 카드까지 확장). SB-10: 카드 산식·고지 1회(`document.body.innerText` 출현 1) · 신고서 각주 · 상세명세서 · **「전체 선택」 후** `emulateMedia print` 에서 카드·각주 보임 · 결과 화면 375px 가로 스크롤 없음. 인접(donor 3 spec · 상가 swap/상속 · 선택 출력 · 함께 양도 신축 CS) **27건 통과**.
+
+**검증**: `tsc --noEmit` 0 · eslint 변경 파일 error 0(경고 1건 `TransferTaxResultView.tsx` `LawArticleModal` 미사용 import 는 종전부터 — 손대지 않음) · `npm run test:transfer` 1437파일 17,966 passed · 전체 `npm test` **3,381파일 통과 · 1 skipped(3,382) · 40,765 passed**(13 skipped · 309 todo). 1차 전체 실행에서 `formula-fraction-render-path` 가드가 신고서 각주의 «× 기준시가 ÷ 기준시가» 괄호 없는 나눗셈을 잡아(분수 변환 대상 규약) 각주를 `× (분자) ÷ (분모)` 괄호형으로 고치고 재실행했다.
+
+**계획과 어긋난 점·확인 필요**
+- 고지를 `result.warnings` 에 넣지 않았다(엔진 무변경 범위) — donor 는 경고 카드에도 같은 문장이 들어가지만 본인 신축은 **카드·PDF 에만** 뜬다. 경고 카드에도 원하면 엔진(`finalize`)에서 한 줄 추가가 필요(별건).
+- 다건 건별 행 라벨 「환산가액적용가산세」(`MultiTransferPropertyBreakdown.tsx`)와 엔진 step 라벨 「환산가액적용가산세 (§114조의2)」는 **그대로** 두었다 — 감정에서도 고정이지만 echo 없는 모든 경로의 문구라 바꾸면 «echo 없는 셀 불변» 이 깨진다. 본인 신축은 같은 화면의 카드 제목이 방식을 밝힌다.
+- 상세명세서 «가산세액» 항목의 `formula` 문자열이 길다(산식 + 주택공시가격 분해 + 설명문 `·` 이음). 화면 줄바꿈·가독성은 **수동 확인 미수행**.
+- 컴패니언 양도 당시 건물분 기준시가 400,000,001 / 건물분 환산취득가액 37,499,999 의 «+1»·«−1» 은 PR-2 에서 확정한 값(건물 = 주택공시가격 − 토지분)이라 이 PR 은 echo 를 그대로 읽는다.
+- 증축(Q-4 제외)·겸용(Q-9 별건)은 echo 가 없어 표시 불변. 사람이 브라우저로 직접 한 수동 확인은 **미수행**(headless 만).
 
 ### Pre-Do anchor (구현 전에 먼저 작성·실행 — 「현행 일치 예상」 금지)
 1. **현행 고정**: S-A 500,000,000/25,000,000/총 197,837,200 · S-B 300,000,000/15,000,000 · X 증축 37,500,000/1,875,000.

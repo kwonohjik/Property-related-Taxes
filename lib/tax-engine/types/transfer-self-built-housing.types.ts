@@ -71,3 +71,10 @@ export interface SelfBuiltHousingPenaltyEcho {
     buildingStdPriceAtAcquisition?: number;
   };
 }
+
+/** 집계(함께 양도·다건) 결과에서 카드(자산)별로 모은 echo — 어댑터(`aggregateToFilingResult`)가 실어 결과 4뷰가 같은 목록을 읽는다. */
+export interface SelfBuiltEchoEntry {
+  /** 어느 카드(자산)의 echo 인가 */
+  label: string;
+  echo: SelfBuiltHousingPenaltyEcho;
+}

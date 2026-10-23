@@ -18,6 +18,7 @@
 import { separateAcqExpenseText, separateAcqFormulaText } from "@/components/calc/results/mixed-use/mixed-use-separate-acq-text";
 import { createElement, Fragment, type ReactNode } from "react";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { selfBuiltPenaltyBasisFormula } from "@/lib/tax-engine/transfer-tax-self-built-display";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { SplitAcqMode } from "@/lib/tax-engine/transfer-tax-split-display";
 import { LOSS_OFFSET_PART_LABEL } from "@/lib/tax-engine/transfer-tax-split-display";
@@ -192,7 +193,9 @@ export function buildDeterminedTaxFormula(p: PerPropertyBreakdown): string {
  */
 export function buildPenaltyFormula(p: PerPropertyBreakdown): string {
   const parts: string[] = [];
-  if (p.penaltyTax > 0) parts.push(`소득세법 §114조의2 ${fmt(p.penaltyTax)}`);
+  // 일체 주택 본인 신축은 가산세 base 가 건물분이다 — 자산별 줄에도 그 사실을 밝힌다(echo 값 그대로, Q-12 PR-3).
+  const selfBasis = selfBuiltPenaltyBasisFormula(p.selfBuiltHousingPenalty);
+  if (p.penaltyTax > 0) parts.push(`소득세법 §114조의2 ${fmt(p.penaltyTax)}${selfBasis ? ` (${selfBasis})` : ""}`);
   if (p.filingDelayedPenaltyTax > 0)
     parts.push(`국세기본법 §47의2~§47의4 신고불성실·납부지연 ${fmt(p.filingDelayedPenaltyTax)}`);
   if (parts.length === 0) return "가산세 없음";
