@@ -97,6 +97,14 @@ export function SaleSplitJudgmentBlock({
             </>
           )}
           {row("적용 가액", j.applied.land.toLocaleString(), j.applied.building.toLocaleString(), true)}
+          {/* 공유지분 — 위 표는 계약서(100%) 금액이고, 판정 결론을 그 지분에 적용한 가액이 이것이다(엔진 echo 그대로). */}
+          {j.share &&
+            row(
+              `지분 ${(j.share.ownershipRatio * 100).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}% 적용 가액`,
+              j.share.applied.land.toLocaleString(),
+              j.share.applied.building.toLocaleString(),
+              true,
+            )}
         </div>
         {beforeEffective ? (
           <p className="text-caption mt-1.5 leading-snug text-muted-foreground">

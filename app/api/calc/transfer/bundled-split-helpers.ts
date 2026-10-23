@@ -507,7 +507,7 @@ export function buildCompanionEngineInputs(
     return buildGbCompanionItems(
       c.generalBuildingValuation as unknown as Record<string, unknown>,
       companionEngine,
-      { ownershipRatio: c.ownershipRatio, assetId: c.assetId, assetLabel: c.assetLabel ?? "" },
+      { ownershipRatio: c.ownershipRatio, assetId: c.assetId, assetLabel: c.assetLabel ?? "", totalPropertyTransferPrice: c.totalPropertyTransferPrice },
       ctx.onGbDetail,
     );
   }

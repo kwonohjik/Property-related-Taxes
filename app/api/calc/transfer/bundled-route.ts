@@ -253,7 +253,7 @@ export function calculateBundledTransfer(
       // ⑭ 주 자산 일반건물도 토지·건물(+증축) 파트 카드로 펼친다 — 컴패니언과 같은 leaf(종전엔 토지 1장·취득가액 0으로 계산됐다).
       if (data.propertyType === "general_building" && data.generalBuildingValuation) {
         return buildGbCompanionItems(data.generalBuildingValuation as Record<string, unknown>, primaryItem, {
-          ownershipRatio: data.ownershipRatio, assetId: "primary", assetLabel: a.assetLabel ?? "",
+          ownershipRatio: data.ownershipRatio, assetId: "primary", assetLabel: a.assetLabel ?? "", totalPropertyTransferPrice: data.totalPropertyTransferPrice,
         }, onGbDetail);
       }
       return reverseUnit ? splitReversePrimaryLand(primaryItem, reverseUnit, transferDate) : [primaryItem];

@@ -98,9 +98,9 @@ describe("축 B §100③ — 물건 전체(계약서 기재액) 판정 한 번 (
     expect(j.deemedUnclear).toBe(false);
     // 이탈률·결론은 단건 100%와 같다(§1 실측: A1 12bp·55bp · A2 52bp·2330bp).
     expect([j.landDeviationBp, j.buildingDeviationBp]).toEqual(name === "A2" ? [52, 2330] : [12, 55]);
-    // 안분 가액 = 지분 안분값의 합(그 지분 계산에 실제로 쓴 값).
-    const shares = Object.values(c.res.aggregated.generalBuildingValuationDetail!.shareBlockEcho!);
-    expect(j.apportioned!.land).toBe(shares.reduce((s, e) => s + e.saleSplitJudgment!.apportioned!.land, 0));
+    // 안분 가액 = 계약 총액(100%)의 안분값 — 단건 100%와 같다(`sale-split-100-3-share-scale-judgment.plan.md` — 종전엔 지분 안분값의 합이라 1원 달랐다).
+    expect(j.apportioned).toEqual(name === "A2" ? { land: 904_725_192, building: 20_274_808 } : { land: 1_301_667_489, building: 298_332_511 });
+    expect(j.share).toBeUndefined();
     renderCard(c);
     expect(screen.getAllByText("구분 기재 가액")).toHaveLength(1);
     expect(screen.queryByTestId("gb-sale-split-share-0")).toBeNull();
@@ -108,8 +108,9 @@ describe("축 B §100③ — 물건 전체(계약서 기재액) 판정 한 번 (
     expect(screen.getAllByText(amount).length).toBeGreaterThan(0);
   });
 
-  it("30% 경계에서 지분 판정이 갈리면 물건 전체 판정을 싣지 않고 지분별 판정을 그린다(D-2 🔴)", async () => {
-    // 실측(2026-10-23): 지분 1/3 + 2/3, 토지 1,212,167,734 · 건물 387,832,266 — 지분 1은 30% 미만, 지분 2는 불분명.
+  it("30% 경계 시료도 결론이 하나 — 물건 전체 판정 블록 1개 · 지분별 판정 블록 없음", async () => {
+    // 종전 실측(2026-10-23): 지분 1/3 + 2/3, 토지 1,212,167,734 — 지분 1은 30% 미만, 지분 2는 불분명으로 갈렸다.
+    // 이제 전 지분이 계약서(100%)로 판정한다(`sale-split-100-3-share-scale-judgment.plan.md` Q-1 a) — 100% 결론은 불분명.
     const land = 1_212_167_734;
     const split = { landTransferPrice: String(land), buildingTransferPrice: String(T - land) };
     const f = form(T, [
@@ -119,13 +120,11 @@ describe("축 B §100③ — 물건 전체(계약서 기재액) 판정 한 번 (
     const res = await run(f);
     expect(res.status).toBe(200);
     const d = res.aggregated.generalBuildingValuationDetail!;
-    expect(d.saleSplitJudgment).toBeUndefined();
-    expect(d.shareBlockEcho!["0"].saleSplitJudgment!.deemedUnclear).toBe(false);
-    expect(d.shareBlockEcho!["1"].saleSplitJudgment!.deemedUnclear).toBe(true);
+    expect(d.saleSplitJudgment!.deemedUnclear).toBe(true);
+    expect(Object.values(d.shareBlockEcho!).map((e) => e.saleSplitJudgment!.deemedUnclear)).toEqual([true, true]);
     renderCard({ res, f });
-    expect(flat(screen.getByTestId("gb-sale-split-share-0"))).toMatch(/^자산 1 \(지분 33\.33%\)구분 기재 가액이 안분가액과 30% 미만/);
-    expect(flat(screen.getByTestId("gb-sale-split-share-1"))).toMatch(/^자산 2 \(지분 66\.67%\)/);
-    expect(flat(screen.getByTestId("gb-sale-split-share-1"))).not.toContain("30% 미만 차이로 그대로 적용");
+    expect(screen.getAllByTestId("sale-split-judgment")).toHaveLength(1);
+    expect(screen.queryByTestId("gb-sale-split-share-0")).toBeNull();
   });
 });
 

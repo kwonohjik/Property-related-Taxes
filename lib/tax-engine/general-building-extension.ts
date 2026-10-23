@@ -29,6 +29,7 @@ import { splitLandCarryover } from "./carryover-land-split";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
+import { judgeSaleSplitByContract, contractJudgmentDetail } from "./sale-split-contract-judgment";
 import { sec100_3Era } from "./data/sec100-3-split-era";
 import { applyPartAcqModes } from "./general-building-part-acq";
 import { applyCarryoverEstimationBasis } from "./general-building-carryover-basis";
@@ -145,12 +146,28 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       land: apportionedLand,
       building: apportionedBuilding1 + apportionedBuilding2,
     };
-    const judged = judgeDeemedUnclearSplit({
-      declared,
-      apportioned,
-      era: sec100_3Era(input.transferDate),
-      ...(input.saleSplitExemption ? { exemption: input.saleSplitExemption } : {}),
-    });
+    const era = sec100_3Era(input.transferDate);
+    const exemption = input.saleSplitExemption ? { exemption: input.saleSplitExemption } : {};
+    // 공유지분 — 계약서(100%) 금액으로 판정하고 결론만 지분에 적용한다(`sale-split-contract-judgment.ts`).
+    //   계약 안분값도 같은 3-way 분모로 만든다 — 토지 floor, 건물(본체+증축) = 잔액.
+    const contract = input.saleSplitContract;
+    const contractTotal = contract ? contract.land + contract.building : 0;
+    const byContract = contract
+      ? judgeSaleSplitByContract({
+          contract,
+          contractApportioned: (() => {
+            const land = Math.floor(safeMultiplyThenDivide(contractTotal, landStdTotal, denom3));
+            return { land, building: contractTotal - land };
+          })(),
+          shareDeclared: declared,
+          shareApportioned: apportioned,
+          era,
+          ...exemption,
+        })
+      : undefined;
+    const judged = byContract
+      ? { deemedUnclear: byContract.deemedUnclear, applied: byContract.shareApplied, detail: byContract.detail }
+      : judgeDeemedUnclearSplit({ declared, apportioned, era, ...exemption });
 
     if (!judged.deemedUnclear) {
       // 구분값 채택 — 건물 몫을 **양도시 기준시가 비율**로 본체·증축에 나눈다(잔액 흡수).
@@ -165,14 +182,16 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     }
     // 발동 시에는 3-way 안분값(초기값)을 그대로 둔다.
 
-    saleSplitJudgment = {
-      deemedUnclear: judged.deemedUnclear,
-      declared,
-      apportioned,
-      applied: judged.applied,
-      basisKind: "std_price",
-      ...judged.detail,
-    };
+    saleSplitJudgment = byContract
+      ? contractJudgmentDetail(byContract, contract!.ownershipRatio, { basisKind: "std_price" })
+      : {
+          deemedUnclear: judged.deemedUnclear,
+          declared,
+          apportioned,
+          applied: judged.applied,
+          basisKind: "std_price",
+          ...judged.detail,
+        };
   }
 
   // ── Step 2: 토지+건물1 취득가·필요경비 결정 (원건물 모드 분기) ───────

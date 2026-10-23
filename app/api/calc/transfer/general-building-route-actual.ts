@@ -74,7 +74,7 @@ export function buildActualGeneralBuildingCards(
     capitalExpenditure, transferExpense,
     landTransferPrice, buildingTransferPrice,
     landAppraisalAtTransfer, buildingAppraisalAtTransfer,
-    saleSplitExemption,
+    saleSplitExemption, saleSplitContract,
     landCarryoverTaxation, buildingCarryoverTaxation,
   } = payload;
 
@@ -168,6 +168,7 @@ export function buildActualGeneralBuildingCards(
       ...(landAppraisalAtTransfer !== undefined ? { landAppraisalAtTransfer } : {}),
       ...(buildingAppraisalAtTransfer !== undefined ? { buildingAppraisalAtTransfer } : {}),
       ...(saleSplitExemption ? { saleSplitExemption } : {}),
+      ...(saleSplitContract ? { saleSplitContract } : {}),
     });
   }
 

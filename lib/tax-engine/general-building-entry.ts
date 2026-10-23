@@ -19,6 +19,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { toEngineDonorBuilt } from "@/lib/api/donor-built-engine-input";
 import type { DonorBuiltWire } from "@/lib/api/transfer-tax-schema-donor-built";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { saleSplitContractOf } from "@/lib/tax-engine/sale-split-contract-judgment";
 import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { apportionGiftTax } from "@/lib/tax-engine/carryover-gift-tax-apportion";
@@ -217,6 +218,11 @@ export function coerceGeneralBuildingPayload(
 export function scaleDeclaredSaleSplitToShare(
   gbRaw: Record<string, unknown>,
   ownershipRatio: number | undefined,
+  /**
+   * 계약 총액(물건 전체 100%) — 한쪽만 기재한 계약서의 반대쪽을 정하는 데 쓴다. 단건 지분은 `totalPropertyTransferPrice`, 축 B는 총양도가.
+   * 모르면 한쪽 기재 계약서는 종전처럼 지분 몫으로 판정한다(`saleSplitContractOf`).
+   */
+  contractTotal?: number,
 ): Record<string, unknown> {
   if (ownershipRatio === undefined || !(ownershipRatio > 0 && ownershipRatio < 1)) return gbRaw;
   const land = gbRaw.landTransferPrice as number | undefined;
@@ -227,6 +233,10 @@ export function scaleDeclaredSaleSplitToShare(
   delete out.buildingTransferPrice;
   if (land != null) out.landTransferPrice = applyRatio(land, ownershipRatio);
   else out.buildingTransferPrice = applyRatio(building as number, ownershipRatio);
+  // §100③은 줄이기 전 계약서 금액으로 판정한다 — 지분 몫은 따로 버림돼 30% 경계에서 결론이 뒤집힌다
+  //   (`sale-split-100-3-share-scale-judgment.plan.md` Q-1 a). 금액(지분 몫)은 위 값 그대로 쓴다(Q-2 a).
+  const contract = saleSplitContractOf(land, building, contractTotal, ownershipRatio);
+  if (contract) out.saleSplitContract = contract;
   return out;
 }
 
