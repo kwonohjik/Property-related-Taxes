@@ -682,14 +682,25 @@ export interface AggregateTransferResult {
   /**
    * 함께 양도(§166⑥ 일괄양도) 묶음의 일반건물 자산별 결과 상세 — 키 = 자산 id(주 자산 `primary` · 컴패니언 `assetId` = 카드 id 접미사).
    * 카드 id·echo 키에 접미사가 붙어 있다. 위 단건 슬롯과 따로 둔다 — 그 슬롯은 수정신고 진입이 「일반건물 단독」을 가르는 판별자다
-   * (`lib/calc/transfer-amendment-entry.ts`). 결과 화면 산식 전용(`gb-bundled-result-formulas.plan.md`).
+   * (`lib/calc/transfer-amendment-entry.ts`). 결과 화면 산식·결과 카드 블록 전용(`gb-bundled-result-formulas.plan.md` · `gb-bundled-result-blocks.plan.md`).
    */
-  generalBuildingDetailsByAsset?: Record<string, import("../general-building-valuation").GeneralBuildingOutput>;
+  generalBuildingDetailsByAsset?: Record<string, GbBundledAssetDetail>;
   /**
    * §97②2호 단서 swap 발동 여부 (일반건물 환산 자산총액 판정 — 안 A).
    * 나목(자본적지출+양도비) > 가목(환산취득가+개산공제 합) 시 true. 결과뷰 표시용.
    */
   swapApplied?: boolean;
   /** §97②2호 단서 swap 비교 (자산총액). */
-  swapComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
+  swapComparison?: GbSwapComparison;
 }
+
+/** §97②2호 단서 발동 비교 — 환산측(가목) < 직접측(나목)이면 나목 채택. */
+export interface GbSwapComparison { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" }
+
+/**
+ * 함께 양도 일반건물 자산 하나의 결과 상세 — 단건 상세 + 그 자산의 §97②2호 단서 발동 비교.
+ * 단건은 같은 값을 `AggregateTransferResult.swapComparison`에 싣는다(물건이 하나라 집계 단위와 같다).
+ */
+export type GbBundledAssetDetail = import("../general-building-valuation").GeneralBuildingOutput & {
+  swapComparison?: GbSwapComparison;
+};

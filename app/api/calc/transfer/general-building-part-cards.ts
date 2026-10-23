@@ -25,6 +25,9 @@ import { extensionBundledInjection } from "./general-building-route-helper";
 import type { GeneralBuildingValuationPayload } from "./general-building-route-helper";
 import { buildActualGeneralBuildingCards } from "./general-building-route-actual";
 import { actualExpenseEcho } from "./general-building-route-actual";
+import { actualBlockEcho } from "./general-building-route-actual";
+import { gbSwapComparison } from "./general-building-route-helper";
+import type { GbBundledAssetDetail } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/types/general-building.types";
 import type { GeneralBuildingActualPricePayload } from "./general-building-route-actual";
 import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
@@ -60,6 +63,12 @@ export interface GbPartCards {
   legalBasis: string;
   /** 실가 분기 필요경비 산식 echo — 이 자산(지분) 금액이라 `detailBase`(물건-수준)에 넣지 않는다. */
   actualExpenseEcho?: Partial<GeneralBuildingOutput>;
+  /**
+   * 실가 분기 결과 카드 블록 echo(§100③ 판정·§163⑨ 상속 표지) — 함께 양도 자산별 상세에만 펼친다.
+   * `detailBase`에 넣지 않는 이유: 지분 분할(축 B)이 첫 지분의 `detailBase`를 물건 상세로 쓰므로 다른 지분의 값으로 오독된다
+   * (`gb-bundled-result-blocks.plan.md` Q-3 a).
+   */
+  actualBlockEcho?: Partial<GeneralBuildingOutput>;
 }
 
 /**
@@ -164,6 +173,7 @@ export function buildGbPartCards(
       usedEstimated: false,
       legalBasis: "소득세법 시행령 §166⑥ · §104의3",
       actualExpenseEcho: actualExpenseEcho(built),
+      actualBlockEcho: actualBlockEcho(built),
     };
   }
 
@@ -263,7 +273,7 @@ export function buildGbCompanionItems(
    * 그 자산의 결과 상세(산식 재료)를 받는 곳 — 함께 양도는 일반건물이 여럿일 수 있어 자산 id별로 모은다(`bundled-route.ts`).
    * 단건 슬롯(`generalBuildingValuationDetail`)에 넣지 않는다 — 수정신고 판별자다(`gb-bundled-result-formulas.plan.md` C-1).
    */
-  onDetail?: (assetId: string, detail: GeneralBuildingOutput) => void,
+  onDetail?: (assetId: string, detail: GbBundledAssetDetail) => void,
 ): TransferTaxItemInput[] {
   const gbv = coerceGeneralBuildingPayload(generalBuildingValuation);
   const bldAcqDate = (gbv.buildingAcquisitionDate as Date | undefined) ?? engine.acquisitionDate;
@@ -288,6 +298,7 @@ export function buildGbCompanionItems(
   );
   const tagged = tagGbCards(built.cards, src.assetId, src.assetLabel);
   const swap = built.swap ? remapGbSwap(built.swap, src.assetId) : undefined;
+  const swapComparison = built.swap ? gbSwapComparison(built.swap) : undefined;
   // 결과 상세 — 축 B(`general-building-fractional.ts`)와 같은 조립. 카드 id·echo 키는 접미사가 붙은 값이어야 산식이 카드를 찾는다(C-2).
   onDetail?.(src.assetId, {
     ...built.detailBase,
@@ -301,7 +312,10 @@ export function buildGbCompanionItems(
         }
       : {}),
     ...built.actualExpenseEcho,
-  } as GeneralBuildingOutput);
+    ...built.actualBlockEcho,
+    // §97②2호 단서 발동 비교 — 단건은 `aggregated.swapComparison`(물건 하나 = 집계 단위)이다.
+    ...(swapComparison ? { swapComparison } : {}),
+  } as GbBundledAssetDetail);
   return buildProperties(
     tagged,
     built.nonBusinessRatio,

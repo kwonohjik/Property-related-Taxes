@@ -127,4 +127,25 @@ test.describe("컴패니언 × 일반건물 (시행령 §166⑥ 2단 안분)", (
     const bases = props.slice(1).map((p) => p.propertyId.split("#")[0]);
     expect(bases).toEqual(["land", "building"]);
   });
+
+  /**
+   * 결과 카드 일반건물 블록 — 함께 양도에서도 자산 소제목 아래 뜬다(`docs/00-pm/gb-bundled-result-blocks.plan.md`).
+   * 종전에는 단건 슬롯만 읽어 §97②2호 단서 등 7종이 전부 사라졌다(세액에는 반영).
+   */
+  test("§97②2호 단서 swap 블록이 그 일반건물 소제목 아래 뜬다", async ({ page }) => {
+    test.setTimeout(90_000);
+    const assets = [ASSETS[0], { ...ASSETS[1], capitalExpenditure: "500000000" }];
+    await seedAndOpen(page, assets);
+
+    const resp = await calculate(page);
+    expect(resp.ok(), `계산 API 비정상 응답 ${resp.status()}`).toBe(true);
+    const gbId = (assets[1] as { assetId: string }).assetId;
+    const body = await resp.json();
+    expect(body.data.aggregated.generalBuildingDetailsByAsset?.[gbId]?.swapComparison?.chosen).toBe("direct");
+
+    const blocks = page.getByTestId(`gb-result-blocks-${gbId}`);
+    await expect(blocks).toBeVisible();
+    await expect(blocks.getByRole("heading", { name: /^일반건물 — / })).toBeVisible();
+    await expect(blocks).toContainText("필요경비 swap 적용 — 소득세법 §97② 2호 단서");
+  });
 });

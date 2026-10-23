@@ -572,6 +572,18 @@ export function actualExpenseEcho(built: ReturnType<typeof buildActualGeneralBui
 }
 
 /**
+ * 실가 경로 결과 카드 블록 echo — §100③ 판정 명세·§163⑨ 상속 표지(`GbResultBlocks`).
+ * 단건과 함께 양도 자산별 상세가 같이 쓴다. 지분 분할은 싣지 않는다 — 지분마다 다르다(`gb-bundled-result-blocks.plan.md` Q-3 a).
+ */
+export function actualBlockEcho(built: ReturnType<typeof buildActualGeneralBuildingCards>): Partial<GeneralBuildingOutput> {
+  return {
+    ...(built.saleSplitJudgment ? { saleSplitJudgment: built.saleSplitJudgment } : {}),
+    ...(built.acquisitionByInheritance ? { acquisitionByInheritance: true } : {}),
+    ...(built.buildingAcquisitionByInheritance ? { buildingAcquisitionByInheritance: true } : {}),
+  };
+}
+
+/**
  * 실거래가/감정가 모드 — 카드 조립(위) + aggregate.
  *
  * 단건 진입점. 지분 분할은 `general-building-fractional.ts`가
@@ -631,17 +643,12 @@ export function runActualGeneralBuildingOnce(
     buildingStdTotal: built.transferBuildingStdPrice,
     ...actualExpenseEcho(built),
     /**
-     * §100③ 판정 명세 — 화면(`BundledAllocationCard.tsx:575`)이 이 키를 읽는다.
-     * 🔴 종전에는 이 객체를 만들면서 이 키만 빠져 있었다 ⇒ 판정해도 화면에 안 떴다(P-1).
+     * §100③ 판정 명세·§163⑨ 상속 표지 — 결과 카드 블록(`GbResultBlocks`)이 읽는다.
+     * 🔴 종전에는 이 객체를 만들면서 판정 키만 빠져 있었다 ⇒ 판정해도 화면에 안 떴다(P-1).
      */
-    ...(built.saleSplitJudgment ? { saleSplitJudgment: built.saleSplitJudgment } : {}),
+    ...actualBlockEcho(built),
     // 구분 기재 없이 안분한 경우 엔진이 쓴 basis 종류(표시 전용 echo — 판정과 배타).
     ...(built.saleApportionBasisKind ? { saleApportionBasisKind: built.saleApportionBasisKind } : {}),
-    // §163⑨ 상속 취득가액 직접 산정 echo (결과 카드 라벨 분기용).
-    ...(built.acquisitionByInheritance ? { acquisitionByInheritance: true } : {}),
-    ...(built.buildingAcquisitionByInheritance
-      ? { buildingAcquisitionByInheritance: true }
-      : {}),
   } as GeneralBuildingOutput;
 
   return {
