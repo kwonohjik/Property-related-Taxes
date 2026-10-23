@@ -36,6 +36,7 @@ import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bri
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount } from "./household-house-count";
 import { isMixedBurdenedGift, resolveMixedBgAcquisition } from "./burdened-gift-mixed-use-scope";
+import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
 import { mixedSec163_9CompareOf } from "./mixed-use-sec163-9";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildMixedSaleSplitFields } from "./transfer-tax-api-mixed-use-sale-split";
@@ -113,12 +114,13 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
    *  · PHD는 **실효값**(환산 파트가 있을 때만 — X-7) · 취득시 H는 `mixedPartAcqNeeds`가 참일 때만(B0·나목은 아래 어댑터가 같은 술어).
    */
   /**
-   * 🔴 겸용 × 부담부증여 — 취득 입력의 정본은 BG 블록이다(설계 UI R2 §4). 겸용 화면의 취득 플래그·총액·파트별 실비·상속증여 reported 값은 BG에서
-   * **숨겨져 있어 사용자가 고칠 수 없는 stale**이다 → 읽지 않는다. 취득 플래그는 BG 산정방식에서 파생한다(`resolveMixedBgAcquisition`).
+   * 🔴 겸용 × 부담부증여 — 취득 입력의 정본은 BG 블록이다(설계 UI R2 §4). 겸용 화면의 취득 플래그·총액·파트별 실비는 BG에서
+   * **숨겨져 있어 사용자가 고칠 수 없는 stale**이다 → 읽지 않는다. 상속증여 reported 값(①)은 시가 평가의 상속·증여 취득에서만 보이고 그때만 싣는다(PR-7b-7a). 취득 플래그는 BG 산정방식에서 파생한다(`resolveMixedBgAcquisition`).
    * 별개 취득 파트 모델(`mixedAcqPerPartMode`)도 BG에서는 그 토글이 숨겨져 끌 수 없으므로 **무시**한다(보내면 MB-3이 고칠 수 없는 오류가 된다).
    * PHD·보유 중 용도변경은 토글이 보이므로(ON 전이만 비활성) 그대로 보내 엔진 MB-2·MB-4가 알린다.
    */
   const bgMixed = isMixedBurdenedGift(primary);
+  const bgDeemed = isMixedBgDeemedPath(primary);
   const sec163_9Compare = mixedSec163_9CompareOf(primary);
   const bgAcq = resolveMixedBgAcquisition(primary);
   const isPerPart = !bgMixed && isMixedUsePerPartAcq(primary);
@@ -335,14 +337,15 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
       (primary.acquisitionDate ?? "") >= "1985-01-01",
     // §163⑨ 단서 자산 합계 비교 구간(PR-6) — 의제취득일 전이면 위 두 플래그는 꺼진 채(③ 경로) 엔진이 ①②③을 합계로 비교한다.
     ...(sec163_9Compare ? { sec163_9Compare } : {}),
+    // 부담부증여는 상속·증여 취득(시가 평가)일 때만 싣는다 — 그때 평가액이 취득가액이고 엔진이 두 칸을 요구한다(`isMixedBgDeemedPath` · PR-7b-7a).
     // reported 값(B1) — 엔진은 동일 필드 소비. ⚠️ blind || 금지: 취득원인 전환 시 반대편 override 폼필드가
     // 클리어되지 않으므로(stale), **현재 acquisitionCause에 종속**해 선택(상속→상속필드·증여→증여필드).
-    housingInheritedValue: bgMixed ? undefined : share(
+    housingInheritedValue: bgMixed && !bgDeemed ? undefined : share(
       (primary.acquisitionCause === "gift"
         ? parseAmount(primary.mixedHousingGiftValueOverride)
         : parseAmount(primary.mixedHousingInheritedValueOverride)) || undefined,
     ),
-    commercialInheritedValue: bgMixed ? undefined : share(
+    commercialInheritedValue: bgMixed && !bgDeemed ? undefined : share(
       (primary.acquisitionCause === "gift"
         ? parseAmount(primary.mixedCommercialGiftValueOverride)
         : parseAmount(primary.mixedCommercialInheritedValueOverride)) || undefined,

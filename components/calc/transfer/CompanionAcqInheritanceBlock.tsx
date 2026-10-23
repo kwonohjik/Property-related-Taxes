@@ -28,6 +28,7 @@ import { InheritedCohabitationCard } from "./InheritedCohabitationCard";
 import { buildingDatePatch } from "@/lib/calc/transfer-land-part-cause";
 import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { isMixedBgDeemedPath } from "@/lib/calc/burdened-gift-mixed-use-scope";
 
 interface Props {
   asset: AssetForm;
@@ -153,7 +154,8 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
 
       {/* 부담부증여 — §159가 취득가액을 정하므로 아래 취득가액 축을 숨긴다(위 주석). 일반건물 · 시가 · 의제취득일 전 토지는 ①을 같은 카드의
           「① 상증법 평가액」 칸에서 받으므로(PR-7b-6b) 「입력란을 표시하지 않습니다」 안내를 띄우지 않는다. */}
-      {isBurdenedGift && !gbBgThreeWayParts(asset).land && (
+      {/* 겸용 · 시가 평가는 상속개시일 평가액(주택분·상가분)이 취득가액이다 — 칸은 아래 「주택·상가 기준시가」(PR-7b-7a) */}
+      {isBurdenedGift && !gbBgThreeWayParts(asset).land && !isMixedBgDeemedPath(asset) && (
         <ToneCard
           tone="amber"
           title="취득가액 — 부담부증여 §159 자동 산정"

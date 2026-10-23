@@ -229,6 +229,7 @@ export function applyMixedBurdenedGift(args: {
     gratuitousPortion,
     taxpayer: "donor",
     acquisitionMethodUsed: method,
+    ...(bg.acqPath === "deemed" ? { deemedCause: bg.assetOverrides.acquisitionByGift ? ("gift" as const) : ("inheritance" as const) } : {}),
     ...(proviso ? { necessaryExpenseSwap: proviso } : {}),
     giftTax,
     perPart,

@@ -28,6 +28,22 @@ export function isMixedBurdenedGift(a: ScopeAsset): boolean {
   return a.assetKind === "housing" && a.isMixedUseHouse === true && a.transferType === "burdened_gift";
 }
 
+/**
+ * 겸용 × 부담부증여 × 시가 평가 × 증여자가 상속·증여로 취득 — 상속개시일·증여일 현재 주택분·상가분 상증법 평가액이 취득 당시 실지거래가액이다
+ * (소령 §163⑨ — 엔진 `analyzeMixedBurdenedGift`의 `deemedPath`와 같은 판정 · PR-7b-7a). 산정방식을 고르지 않는다.
+ * ⑤ 라디오 숨김·① 칸 필수 · ④ 평가액 전송·산정방식 미전송 · ⑧ 방식 면제가 이 함수 하나를 쓴다.
+ * 기준시가 평가는 §159①1호 괄호가 취득시 기준시가를 쓰게 해 평가액을 읽지 않는다(매매와 같다).
+ */
+export function isMixedBgDeemedPath(
+  a: ScopeAsset & Pick<AssetForm, "bgValuationMode" | "acquisitionCause">,
+): boolean {
+  return (
+    isMixedBurdenedGift(a) &&
+    a.bgValuationMode === "sangjeungbeop_market" &&
+    (a.acquisitionCause === "inheritance" || a.acquisitionCause === "gift")
+  );
+}
+
 // ───────────────────────── 채무 귀속 (D-7) ─────────────────────────
 
 export type BgAttrItem = "deposit" | "mortgage";
@@ -232,6 +248,8 @@ export interface MixedBgAcquisitionFlags {
 export function resolveMixedBgAcquisition(a: AssetForm): MixedBgAcquisitionFlags {
   const none: MixedBgAcquisitionFlags = { useActualAcquisition: false, useAppraisalSalesAcquisition: false, acquisitionActualTotalPrice: undefined };
   if (a.bgValuationMode !== "sangjeungbeop_market") return none;
+  // 상속·증여 취득 — 산정방식이 없다(평가액이 취득가액 · 엔진이 상속·증여 플래그로 덮어쓴다). 숨은 방식·총액 칸의 stale 값을 싣지 않는다.
+  if (isMixedBgDeemedPath(a)) return none;
   if (a.bgAcquisitionMethod === "actual") {
     const t = parseAmount(a.bgActualAcquisitionTotal);
     return { useActualAcquisition: true, useAppraisalSalesAcquisition: false, acquisitionActualTotalPrice: t > 0 ? t : undefined };
@@ -257,13 +275,6 @@ export interface MixedBgUiBlock {
 /** 취득원인 옵션이 겸용 × 부담부증여에서 막히는가 — 라디오 옵션 `disabled` 판정(⑤)과 ⑧이 같은 함수를 쓴다. */
 export function mixedBgBlockedCause(cause: string | undefined): MixedBgUiBlock | null {
   switch (cause) {
-    case "inheritance":
-    case "gift":
-      return {
-        field: "acquisitionCause",
-        short: "겸용주택 부담부증여는 증여자가 매매로 취득한 경우만 계산합니다",
-        long: "증여자가 상속 또는 증여로 취득한 겸용주택의 부담부증여는 현재 계산하지 않습니다 — 상속개시일·증여일 현재 평가액을 주택분·상가분으로 입력받는 화면이 부담부증여와 연결되어 있지 않습니다. 취득원인이 매매인 경우만 계산합니다.",
-      };
     case "carryover_gift":
       return {
         field: "acquisitionCause",
@@ -284,7 +295,8 @@ export function mixedBgBlockedCause(cause: string | undefined): MixedBgUiBlock |
 /**
  * UI 전용 제한 — 엔진 MB-1~MB-18에 **없는** 것만 둔다(엔진 판정은 collector가 한다 — 복제 금지).
  *
- *  · 취득원인: 엔진이 허용하는 상속·증여도 P1에서는 막는다(UI 허용 ⊂ 엔진 허용). 나머지 셋은 엔진 MB-9·MB-15와 같은 결론이라 문구도 같다.
+ *  · 취득원인: 이월과세·신축은 엔진 MB-9·MB-15와 같은 결론이라 문구도 같다. 상속·증여는 PR-7b-7a부터 연다(1985.1.1. 전은 엔진 MB-16,
+ *    시가 평가의 1985.1.1.~2005.4.29.은 MB-18이 막는다 — collector가 ⑧에 알린다).
  *  · 신축·증축 **값**: 엔진 MB-15는 API `acquisitionCause === "newConstruction"`만 본다. 취득원인이 매매인데 `isSelfBuilt`가 켜져 있으면 겸용 ④는
  *    그 값을 보내지 않아(`transfer-tax-api.ts:420` `!isMixed && …`) 엔진이 모르는 채 §114조의2 가산세 없이 계산된다 → 화면에서 막는다.
  */

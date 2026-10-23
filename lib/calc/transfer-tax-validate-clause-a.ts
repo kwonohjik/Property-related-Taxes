@@ -32,6 +32,7 @@ import { isSec163_9PreDeemed } from "./transfer-163-9-base-date";
 import { deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
 import { isGiftPreDeemedConversionAsset } from "./gift-pre-deemed";
 import { mixedSec163_9CompareOf } from "./mixed-use-sec163-9";
+import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { bgPreDeemedUsesThreeWay } from "./bg-pre-deemed-mode";
 import { gbBgUsesStdAcq } from "./bg-pre-deemed-mode";
@@ -100,6 +101,9 @@ export function needsClauseADeclaration(asset: AssetForm): boolean {
   // 겸용주택은 ①(주택분·상가분 평가액)·②(취득시 기준시가)를 자기 칸으로 받고 엔진이 자산 합계로 비교한다(PR-6) —
   //   ②가 늘 필수라 「확인 불가」 선언이 갈 곳이 없다. 종전에는 이 술어가 겸용 ① 칸을 읽지 못해 ①을 넣어도 선언을 요구했다.
   if (mixedSec163_9CompareOf(asset)) return false;
+  //   부담부증여 겸용은 위 술어 밖이다 — 취득가액 판정은 엔진 leaf(`analyzeMixedBurdenedGift` — 의제취득일 전은 MB-16)가 하고 ⑧이 그 문구를 낸다.
+  //   선언 토글이 갈 곳이 없어, 여기서 요구하면 그 문구 대신 막다른 오류가 먼저 나왔다(PR-7b-7a — 종전에는 취득원인 차단이 앞서 가려졌다).
+  if (isMixedBurdenedGift(asset)) return false;
   // 기준시가로 평가한 부담부증여(§159①1호 괄호)는 의제취득일 기준시가만 쓴다 — ①③이 후보가 아니라 선언이 갈 곳이 없다(Q-25 · `bgPreDeemedError`가 그 기준시가를 요구).
   if (isBgPreDeemedAsset(asset) && !bgPreDeemedUsesThreeWay(asset)) return false;
   //   일반건물도 같다 — GB 취득시 기준시가 칸(의제취득일 기준) × 채무비율(PR-7b-2 · G-1). 일반건물 화면에는 선언 토글이 없어 종전에는 막다른 길이었다.

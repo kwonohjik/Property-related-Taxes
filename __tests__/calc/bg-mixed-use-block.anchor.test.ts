@@ -192,8 +192,16 @@ describe("겸용주택 × 부담부증여", () => {
     expect(hit?.message).toMatch(/미공시 환산/);
   });
 
-  it("[M-1c] ⑧: 증여자 상속·증여 취득 → 취득 원인 칸 (엔진 MB-8 · UI P1 범위)", () => {
-    expect(firstIssue({ acquisitionCause: "inheritance" })?.field).toBe("acquisitionCause");
+  it("[M-1c] ⑧: 증여자 상속 취득(시가) — PR-7b-7a부터 계산한다. 취득 원인 칸으로 막지 않고 상속개시일 주택분 평가액 칸을 요구한다(소령 §163⑨ · 엔진 MB-11)", () => {
+    // 종전: 취득 원인 칸(UI P1 좁힘) → 이후: 평가액 칸
+    const hit = firstIssue({ acquisitionCause: "inheritance", inheritanceStartDate: "2009-03-01", decedentAcquisitionDate: "2000-01-01" });
+    expect(hit?.field).toBe("mixedHousingInheritedValueOverride");
+    expect(hit?.message).toMatch(/주택분·상가분 상증법 평가액/);
+  });
+
+  it("[M-1c'] 🔴 짝: 이월과세·신축 취득은 계속 취득 원인 칸으로 막는다(엔진 MB-9·MB-15와 같은 결론)", () => {
+    expect(firstIssue({ acquisitionCause: "carryover_gift" })?.field).toBe("acquisitionCause");
+    expect(firstIssue({ acquisitionCause: "newConstruction" })?.field).toBe("acquisitionCause");
   });
 
   it("[M-1d] ⑧: 화면에 입력칸이 남아 있지 않은 신축 값(isSelfBuilt)이 켜져 있으면 그 칸으로 이동 — 숨은 값으로 계산하지 않는다", () => {

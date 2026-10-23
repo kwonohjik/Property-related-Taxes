@@ -17,6 +17,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { MixedBgIssue } from "@/lib/tax-engine/mixed-use-burdened-gift-prepare";
 import { analyzeMixedBgOfForm, mixedBgIssueField } from "./burdened-gift-mixed-use-preview";
+import { mixedBgReportedField } from "./burdened-gift-mixed-use-preview";
 import { mixedBgDebtAttribution, mixedBgDebtAttrMessage, mixedBgOverflowField } from "./burdened-gift-mixed-use-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import { validateMixedUseDatesAndAreas } from "./transfer-tax-validate-mixed-use-asset";
@@ -45,7 +46,9 @@ export function validateMixedUseBurdenedGift(
   const analysis = analyzeMixedBgOfForm(asset, form, transferDate, { isCompanion });
   if (!analysis) return null;
   const issues = analysis.issues;
-  const fail = (i: MixedBgIssue, field?: string) => fieldError((field ?? mixedBgIssueField(i)) as never, `${label}: ${i.message}`);
+  const issueField = (i: MixedBgIssue) =>
+    i.path.join(".") === "mixedUse.housingInheritedValue" ? mixedBgReportedField(asset) : mixedBgIssueField(i);
+  const fail = (i: MixedBgIssue, field?: string) => fieldError((field ?? issueField(i)) as never, `${label}: ${i.message}`);
 
   // 2) 차단 조합(MB-1~6·8·9·12·15·16·18)
   const hard = firstIssue(issues, (i) => HARD_BLOCKS.has(i.code));
