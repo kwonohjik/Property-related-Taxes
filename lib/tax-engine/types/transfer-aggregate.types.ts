@@ -685,7 +685,7 @@ export interface AggregateTransferResult {
    * UI 자산별 산식 인라인 표시(`DetailedCalculationStatementCard`)에서 분모/분자 변수로 사용.
    * `landStdTotal`·`buildingStdTotal`·`extensionStdTotal`·`acqLandStdTotal` 등 §166⑥·§176의2② 안분 변수 포함.
    */
-  generalBuildingValuationDetail?: import("../general-building-valuation").GeneralBuildingOutput;
+  generalBuildingValuationDetail?: GbValuationDetail;
   /**
    * 함께 양도(§166⑥ 일괄양도) 묶음의 일반건물 자산별 결과 상세 — 키 = 자산 id(주 자산 `primary` · 컴패니언 `assetId` = 카드 id 접미사).
    * 카드 id·echo 키에 접미사가 붙어 있다. 위 단건 슬롯과 따로 둔다 — 그 슬롯은 수정신고 진입이 「일반건물 단독」을 가르는 판별자다
@@ -710,4 +710,22 @@ export interface GbSwapComparison { estimatedSide: number; directSide: number; c
  */
 export type GbBundledAssetDetail = import("../general-building-valuation").GeneralBuildingOutput & {
   swapComparison?: GbSwapComparison;
+};
+
+/**
+ * 지분 분할(축 B) 지분 하나의 결과 카드 블록 재료 — §100③ 판정 · §163⑨ 상속 표지 · 의제취득일 전 ①②③.
+ * 지분마다 취득원인·평가액이 달라 물건 상세 한 벌에 실을 수 없다(`gb-fractional-result-blocks.plan.md` D-1).
+ */
+export type GbShareBlockEcho = Pick<
+  import("../general-building-valuation").GeneralBuildingOutput,
+  "saleSplitJudgment" | "acquisitionByInheritance" | "buildingAcquisitionByInheritance" | "preDeemedAcquisition"
+> & {
+  /** 지분 이름 — 카드 라벨 머리(`tagGbCards`)와 같은 값(「자산 1」). */
+  label: string;
+  ownershipRatio: number;
+};
+
+/** 일반건물 결과 상세 슬롯 — 지분 분할이면 지분별 블록 재료가 붙는다(키 = 지분 인덱스 = 카드 id 접미사). */
+export type GbValuationDetail = import("../general-building-valuation").GeneralBuildingOutput & {
+  shareBlockEcho?: Record<string, GbShareBlockEcho>;
 };

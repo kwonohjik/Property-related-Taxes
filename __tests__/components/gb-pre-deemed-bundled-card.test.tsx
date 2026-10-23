@@ -105,13 +105,15 @@ describe("§163⑨ 블록 — 라벨·문구가 엔진 채택을 따른다", () 
     expect(text).toContain("①②③ 중 큰 금액");
   });
 
-  it("🔴 지분 분할 1980(50%+50%) — echo가 없어도 「(상속개시일 평가액)」이 아니라 「(환산취득가액)」", async () => {
+  it("🔴 지분 분할 1980(50%+50%) — 「(상속개시일 평가액)」이 아니라 「(환산취득가액)」 · ①②③은 지분마다(`gb-fractional-result-blocks.plan.md` Q-3 a)", async () => {
     const half = { ownershipNumerator: "50", ownershipDenominator: "100" };
     const text = await view(form([asset(1, INH, half), asset(2, INH, half)]));
     expect(text).not.toContain("(상속개시일 평가액)");
-    expect(text).toContain("토지분 취득가액(환산취득가액)");
+    expect(text).toContain("자산 1 (지분 50%) 토지분 취득가액(환산취득가액)");
+    expect(text).toContain("자산 2 (지분 50%) 토지분 취득가액(환산취득가액)");
     expect(text).toContain(NOTE);
-    expect(text).not.toContain("①②③ 중 큰 금액");
+    // 종전(PR-4 한계)엔 지분마다 비교가 달라 블록을 숨겼다 — 이제 지분 이름을 단 블록이 지분마다 하나.
+    expect(text.match(/①②③ 중 큰 금액/g)).toHaveLength(2);
   });
 
   it("①이 두 파트 모두 이기면 「(상속개시일 평가액)」", async () => {
