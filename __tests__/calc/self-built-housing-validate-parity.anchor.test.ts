@@ -246,7 +246,10 @@ describe("다건 합산 — 건별 ④·⑧·⑫", () => {
     const f = sbForm({ ownershipNumerator: "50", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes", saleSplitMode: "actual", landTransferPrice: "700000000", buildingTransferPrice: "300000000" });
     const body = await buildMultiBody([f]);
     const sb = (body.properties as Record<string, unknown>[])[0].selfBuiltHousing as Record<string, unknown>;
-    expect(sb.sale).toEqual({ landTransferPrice: 350_000_000, buildingTransferPrice: 150_000_000 });
+    expect(sb.sale).toEqual(
+      // 공유지분 — 토지만 지분 몫 · 건물은 엔진이 「지분 양도가액 − 토지」로 정한다 · 판정용 계약서 금액(100%) (`sale-split-100-3-share-scale-judgment.plan.md` PR-4)
+      { landTransferPrice: 350_000_000, contractLandTransferPrice: 700_000_000, contractBuildingTransferPrice: 300_000_000 },
+    );
     expect(sb.landStdPriceAtTransfer).toBe(240_000_000);
     expect((await postMulti(body)).status).toBe(200);
   });

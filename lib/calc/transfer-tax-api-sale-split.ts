@@ -23,10 +23,17 @@ export function buildSaleSplitWire(asset: AssetForm, transferDate: string | unde
   const buildingPrice = pos(parseAmount(asset.buildingTransferPrice));
   const landApp = pos(parseAmount(asset.landAppraisalAtTransfer));
   const buildingApp = pos(parseAmount(asset.buildingAppraisalAtTransfer));
+  // 공유지분 구분 기재 — 주택 구분양도 `declaredSaleWire`와 같은 규칙(계획서 `sale-split-100-3-share-scale-judgment.plan.md` PR-4):
+  // 토지만 지분 몫으로 줄이고 건물은 비워 엔진이 「지분 양도가액 − 토지」로 정한다(Q-4 a — 따로 버림하면 합이 1원 모자란다).
+  // §100③ 판정용 계약서 금액(100%)은 따로 싣는다(Q-1 a — 지분 몫으로 판정하면 30% 경계에서 결론이 뒤집힌다).
+  const fractional = ownershipRatio < 1;
+  const sendBuilding = !fractional || landPrice == null;
   return {
     // 구분 기재 — «actual» 일 때만. 안분 모드로 되돌린 뒤 남은 직접 입력값이 엔진에서 구분 기재로 읽히는 길을 막는다(엔진은 모드가 아니라 값의 유무를 본다)
     ...(mode === "actual" && landPrice != null ? { landTransferPrice: scale(landPrice) } : {}),
-    ...(mode === "actual" && buildingPrice != null ? { buildingTransferPrice: scale(buildingPrice) } : {}),
+    ...(mode === "actual" && buildingPrice != null && sendBuilding ? { buildingTransferPrice: scale(buildingPrice) } : {}),
+    ...(mode === "actual" && fractional && landPrice != null ? { contractLandTransferPrice: landPrice } : {}),
+    ...(mode === "actual" && fractional && buildingPrice != null ? { contractBuildingTransferPrice: buildingPrice } : {}),
     // 감정평가 — «appraisal»(안분 basis) 또는 «actual»(§100③ 30% 판정의 비교 대상)
     ...(mode !== "apportioned" && landApp != null ? { landAppraisalAtTransfer: landApp } : {}),
     ...(mode !== "apportioned" && buildingApp != null ? { buildingAppraisalAtTransfer: buildingApp } : {}),
