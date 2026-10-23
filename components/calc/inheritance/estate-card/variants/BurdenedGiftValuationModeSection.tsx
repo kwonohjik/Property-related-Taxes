@@ -33,6 +33,8 @@ import {
   isBgPresumedMethod,
 } from "@/lib/calc/gift-burdened-presumed-acquisition";
 import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
+import { giftBgPreDeemedUsesThreeWay } from "@/lib/calc/gift-burdened-pre-deemed";
+import { BurdenedGiftPreDeemedFields } from "./BurdenedGiftPreDeemedFields";
 
 
 /** Date → YYYY-MM-DD (DateInput 교환용). new Date 직접 호출 금지 — 역변환은 toOptionalDate. */
@@ -65,7 +67,9 @@ export function ValuationModeSection({
   const isMarketMode = valuation.mode === "sangjeungbeop_market";
   // 시가 평가인데 담보평가(§66)가 시가보다 커서 증여가액이 담보평가 — 취득가액도 기준시가로 산정(산정방식 선택 없음)
   const collateralForced = isMarketMode && valuation.collateralForcesStandardAcquisition;
-  const showAcqMethod = isMarketMode && !collateralForced;
+  // 의제취득일 전 상속 · 시가 평가 — 엔진이 ①②③ 3자 max로 정한다(Q-24) → 산정방식을 고르지 않는다(④·⑧과 같은 술어)
+  const preDeemedThreeWay = giftBgPreDeemedUsesThreeWay(item);
+  const showAcqMethod = isMarketMode && !collateralForced && !preDeemedThreeWay;
   const currentAcqMethod = bgt.acquisitionMethod;
   const isActual = currentAcqMethod === "actual";
   const isConverted = currentAcqMethod === "converted";
@@ -137,6 +141,9 @@ export function ValuationModeSection({
           </p>
         </ToneCard>
       )}
+
+      {/* 의제취득일(1985.1.1.) 전 상속 — 3자 max(① 칸·선언·실비) 또는 의제취득일 기준시가 안내 */}
+      <BurdenedGiftPreDeemedFields item={item} bgt={bgt} set={set} isLandType={isLandType} transferDate={transferDate} />
 
       {/* 취득가액 산정방식 (실지 K-4 vs 환산 K-5) */}
       {showAcqMethod && (

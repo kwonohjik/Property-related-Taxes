@@ -1,0 +1,48 @@
+/**
+ * 증여세 결과 — 부담부증여 양도세 카드의 의제취득일(1985.1.1.) 전 상속 자산 취득가액 산정 (PR-7b-3 · S-1).
+ *
+ * 엔진 echo `preDeemed`를 문단으로 그린다(양도세 결과의 `BgPreDeemedAcqRows`는 표 행이라 이 카드에 못 끼운다 — 같은 값·같은 문구 축).
+ * 종전에는 `acquisitionMethodUsed`만 보고 ② 채택도 「실지취득가액 (K-4)」로 표시했다.
+ */
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+
+const fmt = (n: number) => n.toLocaleString("ko-KR");
+
+export function BurdenedTransferPreDeemedLines({ brkd }: { brkd: TransferBurdenedGiftBreakdown }) {
+  const p = brkd.preDeemed;
+  if (!p) return null;
+  const rate = `${(brkd.debtRatio * 100).toFixed(4)}%`;
+  if (p.basis === "deemed_std") {
+    return (
+      <p className="mt-1" data-testid="gift-bg-pre-deemed-std">
+        ※ 취득가액 산정: 의제취득일(1985.1.1.) 기준시가 {fmt(p.stdAtDeemed)} × 채무비율 {rate} — 1984.12.31. 이전 상속분은 취득시기가 1985.1.1.로
+        의제됩니다 (소득세법 부칙 법률 제4803호 §8 · 시행령 §159①1호 괄호)
+      </p>
+    );
+  }
+  const mark = (key: "reported" | "sec164" | "converted") => (p.selected === key ? " ← 채택" : "");
+  const acquisition = brkd.perAsset.land.acquisitionPrice + brkd.perAsset.building.acquisitionPrice;
+  return (
+    <div className="mt-1 space-y-0.5 text-amber-700 dark:text-amber-300" data-testid="gift-bg-pre-deemed-three-way">
+      <p>※ 취득가액 산정 — 의제취득일(1985.1.1.) 전 상속: ①②③ 중 큰 금액 × 채무비율 (소득세법 시행령 §159①1호 · §163⑨ · §176조의2④)</p>
+      {p.reported != null && <p data-candidate="reported">① 상속개시일 현재 상증법 평가액 {fmt(p.reported)}{mark("reported")}</p>}
+      {p.sec164 != null && <p data-candidate="sec164">② §164④ 기준시가(의제취득일) {fmt(p.sec164)}{mark("sec164")}</p>}
+      <p data-candidate="converted">
+        ③ 환산취득가액 = 증여가액 {fmt(brkd.giftValuation.max)} × <Frac top={`의제취득일 기준시가 ${fmt(p.stdAtDeemed)}`} bottom="양도시 기준시가" /> ={" "}
+        {fmt(p.converted ?? 0)}
+        {mark("converted")}
+      </p>
+      <p>
+        취득가액 = {fmt(p.wholeAcquisition ?? 0)} × 채무비율 {rate} = {fmt(acquisition)}
+      </p>
+      <p>
+        {p.selected === "converted"
+          ? brkd.necessaryExpenseSwap?.chosen === "direct"
+            ? "③ 채택 — 자본적지출·양도비가 ③과 개산공제의 합보다 커서 그 금액을 필요경비로 썼습니다(소득세법 §97②2호 단서)."
+            : "③ 채택 — 추계라 개산공제(의제취득일 기준시가 × 채무비율 × 율, 소득세법 시행령 §163⑥)를 필요경비로 적용합니다."
+          : "①·② 채택 — 실지거래가액 의제(소득세법 시행령 §163⑨)라 자본적지출·양도비를 채무비율로 나눠 필요경비로 공제합니다."}
+      </p>
+    </div>
+  );
+}

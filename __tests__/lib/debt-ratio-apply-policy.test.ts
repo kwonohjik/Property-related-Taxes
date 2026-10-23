@@ -19,8 +19,9 @@ const ROOT = process.cwd();
 export const GUARDED_FILES = [
   "lib/tax-engine/redevelopment-burdened-gift.ts",
   "lib/tax-engine/redevelopment-split.ts",
-  // 주식 부담부증여 ④ (PR-2 · 계획서 F3) — B·C 원값을 safeMultiplyThenDivide로
+  // 주식 부담부증여 ④ (PR-2 · 계획서 F3) — B·C 원값을 safeMultiplyThenDivide로. PR-7b-3에서 주식 부분을 아래 파일로 분리했다(부동산 파일도 계속 본다).
   "lib/calc/gift-burdened-transfer-api.ts",
+  "lib/calc/gift-burdened-stock-transfer-api.ts",
   // 주식 엔진 (S-2 · `stock-burdened-debt-fraction-wire.plan.md`) — 와이어에 증여가액 C를 싣고 safeMultiplyThenDivide(base, B, C).
   // S-1 때는 와이어에 소수 비율뿐이라 `applyRatio`를 허용했으나(FLOOR_ONLY), 이제 `applyRatio(…, 비율)`도 금지다.
   "lib/tax-engine/stock-transfer/stock-acquisition-basis.ts",
@@ -32,6 +33,7 @@ export const LEGACY_RATIO_FIELD = "burdenedGiftDebtRatio";
 export const LEGACY_FIELD_FORBIDDEN_FILES = [
   "lib/api/stock-transfer-tax-schema.ts",
   "lib/calc/gift-burdened-transfer-api.ts",
+  "lib/calc/gift-burdened-stock-transfer-api.ts",
   "lib/tax-engine/stock-transfer/stock-acquisition-basis.ts",
   "lib/tax-engine/stock-transfer/types/stock-transfer.types.ts",
   "lib/api/stock-transfer-engine-input.ts",
@@ -44,6 +46,7 @@ export const LEGACY_FIELD_FORBIDDEN_FILES = [
  */
 export const IDENTIFIER_GUARDED_FILES = [
   "lib/calc/gift-burdened-transfer-api.ts",
+  "lib/calc/gift-burdened-stock-transfer-api.ts",
   "lib/tax-engine/redevelopment-burdened-gift.ts",
   "lib/tax-engine/redevelopment-split.ts",
   "lib/tax-engine/redevelopment.ts",
@@ -185,7 +188,7 @@ describe("부담부증여 채무비율 — 소수 비율을 곱하지 않는다"
         .match(/\bsafeMultiplyThenDivide\(/g)?.length ?? 0;
     expect(count("lib/tax-engine/redevelopment-burdened-gift.ts")).toBeGreaterThanOrEqual(1); // β 4항 공용 scale()
     expect(count("lib/tax-engine/redevelopment-split.ts")).toBeGreaterThanOrEqual(1); // 개산공제 base 외 기존 안분 호출도 포함
-    expect(count("lib/calc/gift-burdened-transfer-api.ts")).toBeGreaterThanOrEqual(1); // ④ actual 모드 안분 취득가
+    expect(count("lib/calc/gift-burdened-stock-transfer-api.ts")).toBeGreaterThanOrEqual(1); // ④ actual 모드 안분 취득가(주식 — PR-7b-3에서 분리)
     expect(count("lib/tax-engine/stock-transfer/stock-acquisition-basis.ts")).toBeGreaterThanOrEqual(1); // 주식 엔진 개산공제 base 안분
   });
 

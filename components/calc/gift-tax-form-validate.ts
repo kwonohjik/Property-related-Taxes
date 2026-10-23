@@ -32,6 +32,10 @@ import {
 } from "@/lib/calc/gift-burdened-stock-unlisted";
 import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate";
 import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
+import { giftBgEffectiveStdAtAcquisition } from "@/lib/calc/gift-burdened-pre-deemed";
+import { giftBgPreDeemedInScope } from "@/lib/calc/gift-burdened-pre-deemed";
+import { giftBgPreDeemedThreeWayError } from "@/lib/calc/gift-burdened-pre-deemed";
+import { giftBgPreDeemedUsesThreeWay } from "@/lib/calc/gift-burdened-pre-deemed";
 import {
   BG_PRESUMED_LABEL,
   GIFT_BG_EXTENSION_APPRAISAL_REQUIRED_ERROR,
@@ -146,16 +150,22 @@ export function validateStep(step: number, form: FormState): string | null {
       //   K-4(실지): 비-토지 자산은 실지취득가액이 전액 건물분으로 귀속(landStd=0)되어
       //     취득시 기준시가가 양도차익 계산에 영향이 없음(inert) → 입력 불필요.
       //     토지는 공시지가 비율로 토지/건물 분배 라우팅에 필요 → 필수 유지.
+      //   의제취득일(1985.1.1.) 전 상속 · 시가 평가(3자 max)는 산정방식이 없고 이 값이 ③의 분자라 늘 필수다(PR-7b-3).
+      const preDeemedThreeWay = giftBgPreDeemedUsesThreeWay(bgItem);
       const acqStdPriceInert =
-        isMarketMode && !acqForcedToStandard && bgt.acquisitionMethod === "actual" && propertyType !== "land";
-      if (
-        !acqStdPriceInert &&
-        (!bgt.standardPriceAtAcquisition || bgt.standardPriceAtAcquisition <= 0)
-      ) {
-        return `${itemLabel}: 취득시 기준시가를 입력하세요. (양도소득세 계산 필수)`;
+        isMarketMode && !acqForcedToStandard && !preDeemedThreeWay && bgt.acquisitionMethod === "actual" && propertyType !== "land";
+      // 의제취득일 전 상속 토지는 등급 환산값도 원천이다(④·⑤와 같은 leaf)
+      if (!acqStdPriceInert && giftBgEffectiveStdAtAcquisition(bgItem, form.giftDate) <= 0) {
+        return giftBgPreDeemedInScope(bgt)
+          ? `${itemLabel}: 의제취득일(1985.1.1.) 현재 기준시가를 입력하세요 — 1984.12.31. 이전 상속 자산은 취득시기가 1985.1.1.로 의제됩니다${propertyType === "land" ? "(토지는 토지등급 환산으로도 구할 수 있습니다)" : ""} (소득세법 시행령 §159①1호·§164④).`
+          : `${itemLabel}: 취득시 기준시가를 입력하세요. (양도소득세 계산 필수)`;
       }
 
-      if (isMarketMode && !acqForcedToStandard) {
+      if (preDeemedThreeWay) {
+        // 의제취득일 전 상속 · 시가 평가 — ①②③ 3자 max(Q-24·Q-32). 산정방식·실지·추계 금액은 묻지 않는다(④도 싣지 않는다).
+        const preDeemedError = giftBgPreDeemedThreeWayError(bgItem, form.giftDate);
+        if (preDeemedError) return `${itemLabel}: ${preDeemedError}`;
+      } else if (isMarketMode && !acqForcedToStandard) {
         // K-4/K-5 시가 모드: 분모 C의 시가항은 증여재산 평가의 시가·감정가·매매사례가에서 온다(파생) — 별도 입력 없음.
         // 취득가액 산정방식 필수
         if (!bgt.acquisitionMethod) {

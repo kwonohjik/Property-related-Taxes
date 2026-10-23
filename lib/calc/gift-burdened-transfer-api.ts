@@ -30,6 +30,9 @@ import type { FormState } from "@/components/calc/gift-tax-form-shared";
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
+import { buildGiftBgPreDeemedPayload } from "@/lib/calc/gift-burdened-pre-deemed";
+import { giftBgEffectiveStdAtAcquisition } from "@/lib/calc/gift-burdened-pre-deemed";
+import { giftBgPreDeemedUsesThreeWay } from "@/lib/calc/gift-burdened-pre-deemed";
 import { eraFormWithOriginDates, toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
 import { declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
 import { buildTempTwoHouseDeadlineExceptionFacts } from "@/lib/calc/transfer-tax-api-body-blocks";
@@ -126,7 +129,13 @@ export function buildGiftBurdenedTransferBody(
   const isMarketMode = valuationMode === "sangjeungbeop_market";
   // 시가 평가인데 담보평가(§66)가 이겨 취득가액도 기준시가로 산정(엔진이 강제) — 산정방식 선택은 의미가 없다(확인 필요 고지는 엔진).
   const acquisitionForcedToStandard = isMarketMode && valuation.collateralForcesStandardAcquisition;
-  const acquisitionMethod = acquisitionForcedToStandard ? ("converted" as const) : bgt.acquisitionMethod;
+  // 의제취득일 전 상속 · 시가 평가(담보 패) — 엔진이 ①②③ 3자 max로 정한다(Q-24 · ⑤가 산정방식 라디오를 숨긴다). 남은 산정방식·금액은 싣지 않는다.
+  const preDeemedThreeWay = giftBgPreDeemedUsesThreeWay(item);
+  const acquisitionMethod = acquisitionForcedToStandard
+    ? ("converted" as const)
+    : preDeemedThreeWay
+      ? undefined
+      : bgt.acquisitionMethod;
   // K-6/K-7 — 매매사례가액·감정가액(§176의2③1·2호). 담보평가가 이겨 기준시가로 강제되면 이미 "converted"라 여기 오지 않는다.
   const isPresumedMethod = isBgPresumedMethod(acquisitionMethod);
 
@@ -138,7 +147,8 @@ export function buildGiftBurdenedTransferBody(
     (item.category === "real_estate_building"
       ? (item.appurtenantLandStandardPrice ?? 0)
       : 0);
-  const stdAtAcquisition = bgt.standardPriceAtAcquisition;
+  // 의제취득일 전 상속 토지는 등급 환산값이 서면 그 값(⑤ 표시·⑧과 같은 leaf) — 범위 밖이면 칸 값 그대로
+  const stdAtAcquisition = giftBgEffectiveStdAtAcquisition(item, form.giftDate);
 
   // 표준 모드(K-1~K-3): 기준시가 안분용 분자/분모
   const landStdAtTransfer = isLandType ? stdAtTransfer : 0;
@@ -368,6 +378,8 @@ export function buildGiftBurdenedTransferBody(
   //   엔진에서 바뀌는 축: §104②1호 세율 보유기간(주택·토지·건물 모두) · 영 §154⑧3호 동일세대 통산(주택만 —
   //   `isHousingType` 게이트, `gift-burdened-one-house.ts`). ⑤·⑧과 같은 게이트.
   Object.assign(body, buildGiftBurdenedInheritancePayload(bgt, isHousingType));
+  // 의제취득일(1985.1.1.) 전 상속 — 양도세 계산기 PR-7a·7b-1과 같은 엔진 입력(`inheritedAcquisition` pre-deemed · 토지 등급 `pre1990Land`)
+  Object.assign(body, buildGiftBgPreDeemedPayload(item, form.giftDate));
 
   // ─── 1세대1주택 후속 입력 (E-1 후속) — 주택 전용, ⑤·⑧과 같은 게이트(`gift-burdened-one-house.ts`) ───
   if (isHousingType) {

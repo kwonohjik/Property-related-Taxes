@@ -258,15 +258,16 @@ describe("G6 ⑧ — 상속개시일 평가액이 가목이라 환산(K-5)은 �
   it("V-G6-1 ★ 상속(개시 2020-06-01) + K-5 → 차단(§163⑨ · §97①1호 단서 안내)", () => {
     expect(v("2021-06-01", market({ acquisitionMethod: "converted" }))).toContain("환산취득가액(K-5)을 쓸 수 없습니다");
   });
-  it("V-G6-2 부정 짝 — 상속 + K-4(평가액) 통과 · 매매 + K-5 통과 · 상속개시 1985.1.1. 전(의제취득일 경로 — 확인 필요)은 막지 않는다", () => {
+  it("V-G6-2 부정 짝 — 상속 + K-4(평가액) 통과 · 매매 + K-5 통과 · 상속개시 1985.1.1. 전은 이 차단(K-5 금지)이 아니라 3자 max 경로", () => {
     expect(v("2021-06-01", market({ acquisitionMethod: "actual", actualAcquisitionTotal: 250_000_000 }))).toBeNull();
     expect(v("2021-06-01", market({ acquisitionMethod: "converted", acquisitionCause: "purchase" }))).toBeNull();
-    expect(
-      v(
-        "2021-06-01",
-        market({ acquisitionMethod: "converted", acquisitionDate: new Date("1984-06-01"), decedentAcquisitionDate: "1970-01-01" }),
-      ),
-    ).toBeNull();
+    // PR-7b-3(Q-24·Q-32): 의제취득일 전 상속 · 시가 평가는 산정방식(남은 K-5)을 쓰지 않고 ①②③ 3자 max — ①② 또는 「확인할 수 없음」 선언이 필요하다.
+    //   종전 단언(「막지 않는다 — 확인 필요」)은 이 경로에 의제취득일 입력이 없던 때의 것이다. 선언이 있으면 통과, 없으면 그 선언을 요구한다(K-5 금지 문구가 아니다).
+    const pre1985 = { acquisitionMethod: "converted" as const, acquisitionDate: new Date("1984-06-01"), decedentAcquisitionDate: "1970-01-01" };
+    expect(v("2021-06-01", market({ ...pre1985, preDeemedClauseAUnconfirmed: true }))).toBeNull();
+    const blocked = v("2021-06-01", market(pre1985));
+    expect(blocked).toContain("상증법 평가액을 확인할 수 없음");
+    expect(blocked).not.toContain("환산취득가액(K-5)을 쓸 수 없습니다");
   });
 });
 
