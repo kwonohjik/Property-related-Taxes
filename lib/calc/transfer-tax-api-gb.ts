@@ -17,6 +17,7 @@ import { gbBuildingOwnDecedentDate } from "./transfer-tax-validate-gb-required";
 import { saleSplitProvisoApplies } from "./sale-split-100-3-era";
 import { gbSec1639Acquisition } from "./transfer-tax-api-gb-sec163-9";
 import { gbCapexBeforeExtensionSlots } from "./gb-extension-capex-timing";
+import { bgExpenseUnusedBasis } from "./burdened-gift-expense-scope";
 
 /**
  * 수유자(상속인 아닌 유증·사인증여) — 상속 취득 블록의 토글(취득원인 = 상속일 때 뜬다)을 환산·실가 두 경로에 같은 키로 싣는다.
@@ -578,10 +579,11 @@ export function buildGeneralBuildingValuation(
      *    개산공제도 쓰지 않아 단서 요건을 충족하지 않는다. 적용 조문은 같은 항 **1호**
      *    (「해당 실지거래가액 + 제1항제2호·제3호의 금액」)의 **단순 가산**이다.
      *
-     * ⚠️ 증축 제외 게이트(`!gbHasExtension`)를 여기 걸지 않는다 — 증축은 애초에 환산 경로로
-     *    가므로(`:217` `anyEstimated || gbHasExtension`) 이 return에 도달하지 않는다.
+     * ⚠️ 부담부증여는 증축·환산이어도 이 실가 경로로 온다(#2459 — 환산·증축 분기에서 제외). 취득가액이
+     *    기준시가·감정가액·매매사례가액이면 자본적지출 칸이 숨으므로(`bgExpenseUnusedBasis`) 숨은 칸 값은 싣지 않는다 —
+     *    환산 분기의 `gbCapexBeforeExtensionSlots`와 같은 술어(#2460, ⑫ 「증축 전」 필수 규칙과 ⑧이 갈리지 않게).
      */
-    ...(parseAmount(asset.capitalExpenditure)
+    ...(parseAmount(asset.capitalExpenditure) && bgExpenseUnusedBasis(asset) === null
       ? { capitalExpenditure: parseAmount(asset.capitalExpenditure) }
       : {}),
     ...(parseAmount(asset.transferExpense)
