@@ -724,6 +724,11 @@ export type GeneralBuildingOutput = {
    * 나눠 적는다(`gb-extension-capex-timing.plan.md` · echo-field-pattern). 증축 전 지출이 없으면 없다.
    */
   partBeforeExtensionCapex?: Record<string, number>;
+  /**
+   * 지분 분할(축 B) 실가 경로 — 지분별 필요경비 산식 echo(`bundledActual*` 등). 키 = 지분 인덱스(카드 id 접미사).
+   * 금액이 지분마다 달라 결과 상세 한 벌에 실을 수 없다 — 표시 계층이 그 카드의 지분 값으로 덮어 읽는다(gb-extension-capex-residuals L1).
+   */
+  shareActualExpenseEcho?: Record<string, Partial<GeneralBuildingOutput>>;
 
   /**
    * §164⑨ 1호 공익수용 특례 산출근거 (토지 전용 — 계획 D16-GB).

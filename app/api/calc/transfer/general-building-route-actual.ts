@@ -547,6 +547,29 @@ export function buildActualGeneralBuildingCards(
 }
 
 /**
+ * 실가 경로 필요경비 산식 echo — 결과 화면이 「양도비 안분 + 자본적지출」을 적는 데 쓴다(`DetailedStatementGbFormulas`).
+ * 단건은 결과 상세에 그대로, 지분 분할은 지분별로(`shareActualExpenseEcho`) 싣는다 — 금액이 지분마다 다르다.
+ */
+export function actualExpenseEcho(built: ReturnType<typeof buildActualGeneralBuildingCards>): Partial<GeneralBuildingOutput> {
+  return {
+    acqLandStdTotal: built.acqLandStdTotal,
+    acqBuilding1StdTotal: built.acqBuilding1StdTotal,
+    bundledActualAcquisitionPrice: built.bundledActualAcquisitionPrice,
+    bundledActualExpenses: built.bundledActualExpenses,
+    ...(built.bundledActualTransferBasis
+      ? {
+          bundledActualCapitalExpenditure: built.bundledActualCapitalExpenditure,
+          bundledActualTransferExpense: built.bundledActualTransferExpense,
+          bundledActualTransferBasis: built.bundledActualTransferBasis,
+          ...(built.bundledActualPartCapitalExpenditure
+            ? { bundledActualPartCapitalExpenditure: built.bundledActualPartCapitalExpenditure }
+            : {}),
+        }
+      : {}),
+  };
+}
+
+/**
  * 실거래가/감정가 모드 — 카드 조립(위) + aggregate.
  *
  * 단건 진입점. 지분 분할은 `general-building-fractional.ts`가
@@ -604,20 +627,7 @@ export function runActualGeneralBuildingOnce(
     nonBusinessRatio,
     landStdTotal: landStdAtTransfer,
     buildingStdTotal: built.transferBuildingStdPrice,
-    acqLandStdTotal: built.acqLandStdTotal,
-    acqBuilding1StdTotal: built.acqBuilding1StdTotal,
-    bundledActualAcquisitionPrice: built.bundledActualAcquisitionPrice,
-    bundledActualExpenses: built.bundledActualExpenses,
-    ...(built.bundledActualTransferBasis
-      ? {
-          bundledActualCapitalExpenditure: built.bundledActualCapitalExpenditure,
-          bundledActualTransferExpense: built.bundledActualTransferExpense,
-          bundledActualTransferBasis: built.bundledActualTransferBasis,
-          ...(built.bundledActualPartCapitalExpenditure
-            ? { bundledActualPartCapitalExpenditure: built.bundledActualPartCapitalExpenditure }
-            : {}),
-        }
-      : {}),
+    ...actualExpenseEcho(built),
     /**
      * §100③ 판정 명세 — 화면(`BundledAllocationCard.tsx:575`)이 이 키를 읽는다.
      * 🔴 종전에는 이 객체를 만들면서 이 키만 빠져 있었다 ⇒ 판정해도 화면에 안 떴다(P-1).

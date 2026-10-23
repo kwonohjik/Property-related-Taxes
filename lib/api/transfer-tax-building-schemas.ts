@@ -456,12 +456,19 @@ export const generalBuildingValuationSchema = z.object({
       message: "용도지역(zoneType)이 필요합니다 — 비사업용토지 판정 배율 결정 (무허가 건물은 제외)",
     });
   }
-  // 자본적지출 중 증축 전 지출액은 그 총액을 넘을 수 없다(⑧ `transfer-tax-validate-gb.ts`와 같은 규칙). 비움은 ⑧만 막는다 —
-  // API 직접 호출의 종전 payload는 「전부 증축 후」(종전 배분)로 계산된다.
+  // 증축 × 자본적지출 — 그중 증축 전 지출액은 필수이고(⑧ `gbCapexBeforeExtensionIssue`와 같은 규칙 · 비움을 「전부 증축 후」로
+  // 읽지 않는다) 총액을 넘을 수 없다. ④는 칸이 화면에 있을 때만 총액을 싣는다(`gb-extension-capex-residuals.plan.md` L2).
   for (const [pre, total, label] of [
     ["capitalExpenditureBeforeExtension", "capitalExpenditure", "자본적지출"],
     ["buildingDirectExpensesBeforeExtension", "buildingDirectExpenses", "건물 자본적지출"],
   ] as const) {
+    if (val.extensionInfo !== undefined && (val[total] ?? 0) > 0 && val[pre] === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [pre],
+        message: `증축 자산의 ${label} 중 증축 전에 지출한 금액이 필요합니다(없으면 0).`,
+      });
+    }
     if ((val[pre] ?? 0) > (val[total] ?? 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

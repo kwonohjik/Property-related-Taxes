@@ -24,6 +24,8 @@ import { buildEstimatedGeneralBuildingCards } from "./general-building-route-hel
 import { extensionBundledInjection } from "./general-building-route-helper";
 import type { GeneralBuildingValuationPayload } from "./general-building-route-helper";
 import { buildActualGeneralBuildingCards } from "./general-building-route-actual";
+import { actualExpenseEcho } from "./general-building-route-actual";
+import type { GeneralBuildingOutput } from "@/lib/tax-engine/types/general-building.types";
 import type { GeneralBuildingActualPricePayload } from "./general-building-route-actual";
 import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
 import { buildProperties } from "./general-building-route-cards";
@@ -54,6 +56,8 @@ export interface GbPartCards {
   extensionStdAtAcq: number;
   usedEstimated: boolean;
   legalBasis: string;
+  /** 실가 분기 필요경비 산식 echo — 이 자산(지분) 금액이라 `detailBase`(물건-수준)에 넣지 않는다. */
+  actualExpenseEcho?: Partial<GeneralBuildingOutput>;
 }
 
 /**
@@ -138,6 +142,7 @@ export function buildGbPartCards(
       extensionStdAtAcq,
       usedEstimated: false,
       legalBasis: "소득세법 시행령 §166⑥ · §104의3",
+      actualExpenseEcho: actualExpenseEcho(built),
     };
   }
 
@@ -188,7 +193,13 @@ export function remapGbSwap(
 ): GeneralBuildingSwapDecision {
   const remap = (m: Map<string, number>) =>
     new Map([...m.entries()].map(([k, v]) => [tagId(k, suffix), v] as const));
-  return { ...swap, allocation: remap(swap.allocation), addition: remap(swap.addition) };
+  return {
+    ...swap,
+    allocation: remap(swap.allocation),
+    addition: remap(swap.addition),
+    // 결과 산식 echo(증축 전 자본적지출) — `addition`과 같은 키 축이어야 산식이 접미사 카드를 찾는다.
+    ...(swap.beforeExtensionAddition ? { beforeExtensionAddition: remap(swap.beforeExtensionAddition) } : {}),
+  };
 }
 
 /** 카드에 접미사·라벨을 입힌다. **swap 재맵핑과 반드시 같은 시점에** 부를 것. */

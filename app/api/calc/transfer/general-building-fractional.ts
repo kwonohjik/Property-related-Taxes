@@ -134,6 +134,12 @@ export function calculateGeneralBuildingFractional(
   let anySwapApplied = false;
   let swapEstimatedSide = 0;
   let swapDirectSide = 0;
+  // §97②1호 가산분 결과 산식 echo — 단건 경로(`general-building-route-helper.ts`)와 같은 키를 지분 접미사 카드 id로 모은다.
+  //   없으면 산식이 가산분을 「자산별 양도비」·「사용자 직접 입력」으로 적는다(`gb-extension-capex-residuals.plan.md` L1).
+  const partDirectAddition: Record<string, number> = {};
+  const partBeforeExtensionCapex: Record<string, number> = {};
+  // 실가 분기 필요경비 산식 echo — 지분마다 금액이 달라 지분 인덱스로 싣는다(단건은 결과 상세에 그대로 · `actualExpenseEcho`).
+  const shareActualExpenseEcho: Record<string, unknown> = {};
 
   shares.forEach((share, idx) => {
     /**
@@ -185,6 +191,11 @@ export function calculateGeneralBuildingFractional(
     // 접미사는 문자열이다 — 컴패니언 축이 `assetId`를 쓰므로 leaf가 일반화됐다.
     const tagged = tagGbCards(built.cards, String(idx), share.shareLabel);
     const swap = built.swap ? remapGbSwap(built.swap, String(idx)) : undefined;
+    if (swap) {
+      Object.assign(partDirectAddition, Object.fromEntries(swap.addition));
+      Object.assign(partBeforeExtensionCapex, Object.fromEntries(swap.beforeExtensionAddition ?? []));
+    }
+    if (built.actualExpenseEcho) shareActualExpenseEcho[String(idx)] = built.actualExpenseEcho;
 
     // §104③ 미등기 — 지분 경로도 토지·건물 축을 싣는다. 여기서 빠뜨리면 **지분 모드에서만**
     // 미등기가 조용히 무시된다(단독 모드는 정상이라 발견이 늦다).
@@ -272,6 +283,9 @@ export function calculateGeneralBuildingFractional(
     assetCards: allCards,
     ...(lastLandStdTotal !== undefined ? { landStdTotal: lastLandStdTotal } : {}),
     ...(lastBuildingStdTotal !== undefined ? { buildingStdTotal: lastBuildingStdTotal } : {}),
+    ...(Object.keys(partDirectAddition).length > 0 ? { partDirectAddition } : {}),
+    ...(Object.keys(partBeforeExtensionCapex).length > 0 ? { partBeforeExtensionCapex } : {}),
+    ...(Object.keys(shareActualExpenseEcho).length > 0 ? { shareActualExpenseEcho } : {}),
   } as never;
 
   return {
