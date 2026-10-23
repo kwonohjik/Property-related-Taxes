@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 import { carryoverTaxationEngineShape } from "./transfer-tax-building-schemas";
+import { selfBuiltHousingShape } from "./transfer-tax-schema-self-built-housing";
 import { commercialAppurtenantLandSchema } from "./transfer-tax-building-schemas";
 import { commercialBuildingValuationRequiredSchema } from "./transfer-tax-schema-commercial-refines";
 import { redevelopmentSchema } from "./transfer-tax-redevelopment-schema";
@@ -307,6 +308,11 @@ export const companionAssetSchema = z.object({
   extensionStdPriceAtAcquisition: z.number().nonnegative().optional(),
   /** §114조의2① 감정가액 × 증축 — 증축한 부분에 한정한 감정가액(본체와 같은 필드). */
   extensionAppraisalValue: z.number().nonnegative().optional(),
+  /**
+   * ⑫ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — 본체(`transfer-tax-schema-base-shape.ts`)와 같은 shape.
+   * 없으면 이 컴패니언 주택도 종전 base. 기준시가·감정 입력은 물건 단위 값이라 지분 스케일 없이 보내고, 양도가액 구분(`sale`)만 ④가 지분 스케일한다.
+   */
+  selfBuiltHousing: selfBuiltHousingShape.optional(),
   /** 본인 취득일 (YYYY-MM-DD) — 보유기간 산정용 */
   acquisitionDate: z.string().date().optional(),
   /** Round 9 (2026-05-06): 자산-수준 매매계약일 — §99의3 등 13개 매매계약일 기준 조문 시한 판정 */

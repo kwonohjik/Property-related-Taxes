@@ -410,7 +410,7 @@ useEffect→store 미러링 없음(토글 `onCheckedChange` 단일 patch, 파생
 | PR | 범위 | 핵심 anchor |
 |---|---|---|
 | **PR-0** ✅ | `bundled-split-helpers.ts` 779줄 분리 선처리(≥750) → 566 + 타입 파일 228 | 분리 전후 컴패니언 격자 응답 해시 동일 |
-| **PR-1** | 엔진 leaf + 타입 + finalize/loss-return 배선 + ⑫(메인·컴패니언·다건 분류) + ⑭(3곳). **`selfBuiltHousing` 부재 시 현행 base 유지**(관대) | 아래 Pre-Do 1~9 · 키 없는 응답 해시 불변 · 다건 키 분류 가드 |
+| **PR-1** ✅ | 엔진 leaf + 타입 + finalize/loss-return 배선 + ⑫(메인·컴패니언·다건 분류) + ⑭(3곳). **`selfBuiltHousing` 부재 시 현행 base 유지**(관대) | 아래 Pre-Do 1~9 · 키 없는 응답 해시 불변 · 다건 키 분류 가드 |
 | **PR-2** | ④ 3곳 + ⑤ 입력 UI + ⑧ validate + ①②③ + 술어 leaf | ⑧↔⑫ 격자 · ④ stale 미전송 · 브라우저/Playwright E2E 신규 spec |
 | **PR-3** | ⑦ 결과 echo 4뷰 + 고지 문구 + 결과 카드 라벨 | 4뷰 단일 접점 anchor · 합산 pickers |
 | **PR-4** | 엔진 엄격화(throw) + 기존 테스트 fixture 갱신(§10) + 주석/문서 정리 | §10 영향 테스트 전수 갱신 · 그 외 불변 |
@@ -427,6 +427,46 @@ useEffect→store 미러링 없음(토글 `onCheckedChange` 단일 patch, 파생
 - **PR-2 여유**: `companionEngine` 매핑(:259-446)이 있는 `bundled-split-helpers.ts`가 566줄이라 `selfBuiltHousing` 매핑 +~6줄을 받아도 ≈572. 위 §8의 `:472-659`·`:688` 줄 번호는 이 분리로 낡았다 — 현재 위치는 `companionEngine` :259-446, `satisfies` :446, 키 커버리지 가드 :474.
 - **회귀 0 격자(응답 해시)**: `vi.mock`으로 `POST`(단건)·`MULTI`(다건)·`calculateBundledTransfer`·`buildCompanionEngineInputs`·`resolveHousingContextFromCompanion`·`toApportionKind`를 감싸 입력·출력 sha256을 기록하는 임시 setup(저장소 미보존)으로 컴패니언·함께 양도 관련 테스트 335파일(주택·일반건물·겸용·분양권/입주권·재개발·split·이월과세·부담부증여·지분 축 B·신축 등)을 돌렸다. 기록 **17,053셀**(POST 8,967 · MULTI 302 · calculateBundledTransfer 5,288 (+throw 9) · buildCompanionEngineInputs 991 · resolveHousingContextFromCompanion 538 · toApportionKind 958). asset id의 `Date.now()`·UUID는 정규화(미정규화 시 베이스라인 자체가 실행마다 달라졌다 — 1163셀). 베이스라인 2회 해시 동일 → 분리 후 **정렬 전체 sha256 `d406abff…2922` 동일, 차이 0행**. 감도 확인: `ownershipRatio: c.ownershipRatio` → `undefined` 뮤테이션 시 해당 anchor 테스트는 13건 모두 통과했지만 격자는 **16셀 diff**로 잡았다(원복 후 동일 재확인).
 - 검증: `tsc --noEmit` 0 · `npm run test:transfer` 1434파일 17,879 passed · eslint 변경 파일 error 0(경고 6건은 분리 전부터 있던 미사용 import — 이동과 무관해 손대지 않음).
+
+### PR-1 Do 기록 (2026-10-23, 입력 부재 시 현행 base 유지 = 관대 — PR-0 head `6d8feadcf` 에서 분기)
+
+**변경**: 신규 5 — `lib/tax-engine/transfer-tax-self-built-housing-penalty.ts`(leaf 약 215줄: 환산·감정 건물분 base + 정적 거부 `assertSelfBuiltHousingInput` + 단일 소스 `unreachableReason`) · `lib/tax-engine/types/transfer-self-built-housing.types.ts`(입력·echo 타입) · `lib/api/transfer-tax-schema-self-built-housing.ts`(⑫ shape + `refineSelfBuiltHousing`, 64줄) · anchor 2파일(엔진 49 · route 24). 수정 15 — `finalize`(+~6)·`loss-return`(+~5) 가 **같은 순서**로 축을 읽음(`splitBuildingAxis ?? selfBuiltAxis ?? penaltyAxis`) · `precalc`(+2: `assertSelfBuiltHousingInput(rawInput)` — `transfer-tax.ts` 가 이미 804줄이라 거기 대신 STEP 0 에 둠) · `normal-return`(echo 구조분해 — 빠지면 조용히 소실) · `transfer.types.ts`/`transfer-result.types.ts`(+7/+7, 타입 전용) · ⑫ `base-shape`(단건·다건 공유)·`companion`·`refines`(+`addPropertyRefines` 호출)·`transfer-tax-schema.ts`(컴패니언 루프) · ⑭ `engine-input.ts`·`bundled-split-helpers.ts`(566→568)·`multi/route.ts` 각 +1 · `aggregate-pickers`(echo 승계: 평가·판정 14종→**15종**, 가드 테스트 숫자 갱신).
+
+**확정한 설계**
+- ⑫ shape = `donorBuiltHousingShape.partial().extend({ buildingAppraisalValue }).strict()` — 방식별 필수 칸 판정은 방식을 아는 엔진(`assertSelfBuiltHousingInput`)이 한다(감정은 직접 입력 **또는** L·N 비례, 환산은 5칸+H·H_T). ⑫ refine 은 **정적 모순만** 400: 비주택·본인 신축 아님·매매 외 취득원인·부담부증여·겸용·증축·PHD·분리(취득일 분리·소유자 분리·별개 취득). 게이트(5년·시행일·방식)가 닫힌 조합은 허용 — stale 값에 거짓 요구 없음. **⑧(PR-2)·⑫·엔진은 같은 술어 집합**이어야 한다(`unreachableReason` 이 엔진 단일 소스, ⑫ 는 같은 사실로 환원).
+- 동적 split(건물 파트가 이미 축)은 `splitActive` 로 leaf 가 내지 않는다 — 이익·손실 두 경로 anchor 로 고정. 그 경우 `selfBuiltHousing` 은 **조용히 무시**된다(⑫ 가 정적으로 아는 분리 키는 거부하지만, `housingExcessNeedsLandSplit` 같은 계산 중 판정은 엔진만 안다) → **PR-2 의 UI 술어가 `isSplitPayloadActive` 를 그대로 거울로 써서 이 조합을 아예 보내지 않게 해야 한다.**
+- `영 §164⑨` 공익수용 특례(환산 분모 변경)와는 **결합 거부**(V-4 를 «닫음» — 분모를 건물분으로 나누는 법리는 여전히 확인 필요). `resolveConversionDenominatorAtTransfer` 가 현행 분모와 다르면 INVALID_INPUT.
+- echo `selfBuiltHousingPenalty`(base·penalty·housingSplit·formula|appraisal)를 엔진 결과에 싣고 컴패니언·다건 per-asset 로도 승계(표시 4뷰는 PR-3).
+
+**Pre-Do anchor 1~9 — 수정 전 실측(65건 중 22 통과 · 43 실패) → 수정 후(엔진 49 + route 24 = 73건 전부 통과)**
+
+| # | 셀 | 수정 전(실측) | 수정 후 |
+|---|---|---|---|
+| 1 | S-A 환산 / S-B 감정 / X 증축 | 500,000,000·25,000,000·총 197,837,200 / 300,000,000·15,000,000 / 37,500,000·1,875,000 | 불변(PASS 고정) |
+| 2 | fx 환산 | 위와 같음(FAIL) | base 187,500,000 · 9,375,000 · 총 180,649,700 (B_acq 75,000,000 · B_tr 160,000,000 · S_b 400,000,000) |
+| 3 | 손실 / 지분 50% / 고가 15억 / 미등기 | 25,000,000 (총 27,500,000 / 85,757,320 / 61,599,340) | 9,375,000 (총 10,312,500) / 4,687,500 (77,163,570) / 9,375,000 (44,411,840) / 9,375,000 |
+| 4 | 감정 | 300,000,000·15,000,000 | 직접 1.1억 → 5,500,000(총 260,338,760) · 비례 → 5,625,000(260,476,260) |
+| 5 | 구분 기재·§100③ 경계 | 500,000,000 | 700/300 → 140,625,000·7,031,250·총 178,071,575 · 건물 280M(정확히 30%) → 187,500,000 · 281M → 131,718,750 · 520M → 187,500,000 · 519M → 243,281,250 · 한쪽만 기재 → 총액−입력값 · other_law 280M → 131,250,000 |
+| 6 | 경계(echo 로 확인) | — | 5년 되는 날 2027-01-10 포함 / 01-11 제외 · 윤년 2020-02-29 → 2025-02-28 포함 / 03-01 제외 · 환산 2017-12-31 제외 / 2018-01-01 포함 · 감정 2019-12-31 제외 / 2020-01-01 포함 |
+| 7 | 변하지 않는 셀 | 분리 취득 225,000,000·11,250,000 · PHD 169,332,955·8,466,647 · BG K-5 50,000,000·2,500,000 · 비주택 건물 500,000,000 · 증축 1,875,000 · 실가·매매사례 0 · 5년 경과 0 | 전부 동일(PASS 고정) |
+| 8 | 컴패니언·다건 | 컴패니언 환산 250,000,000·12,500,000 / 감정 300,000,000·15,000,000 · 다건 500,000,000·25,000,000 | 컴패니언 93,750,000·4,687,500 / 직접 5,500,000·비례 5,625,000 · 다건 187,500,000·9,375,000 / 5,500,000 |
+| 9 | 침묵 strip 가드 | — | 컴패니언 `_companionKeyCoverageGuards` 가 ⑭ 누락 시 **TS2322 로 실제 발화**(키를 `bundled-split-helpers` 에 넣기 전 확인) · 다건 키 분류 가드·`bundled-swallows-special` 계약 가드 통과 |
+
+⚠️ 계획 §5·§9 의 PHD 셀 191,860,465/9,593,023 은 **그 픽스처를 복원하지 못해** 이 PR 의 PHD 고정 셀은 다른 픽스처(`pre-housing-disclosure-fixture`, 신축일 2019-01-01)로 실측한 169,332,955/8,466,647 이다 — 불변 확인이 목적이라 값이 달라도 판정은 같다.
+
+**회귀 0 근거 — 응답 JSON sha256 격자 15,450셀**(임시 하네스 저장소 미보존): 단건 14,400(자산 3종 × 산정방식 4 × 신축·증축·5년 이내/초과·미신축 5 × 양도일 5(2017-12-31 · 2018-01-01 · 2019-12-31 · 2020-01-01 · 2026) × 분리 4(없음·별개·소유자·PHD) × 부담부증여 3(없음·K-5·K-7) × 지분 2 × 비과세 2) + 컴패니언 450 + 다건 600. 기준선 = 변경 15파일을 `git show HEAD:` 로 임시 복원한 소스(cp 백업·md5 대조, 종료 후 15파일 md5 원본 동일) — **기준선 2회 sha 동일 → 수정 후 `selfBuiltHousing` 미전송 sha 동일(`d8823a1c…c73b50`), 차이 0행**. 감도: 같은 격자에 `selfBuiltHousing` 을 housing 셀에 실으면 4,890셀이 바뀌는데 200→200 변경은 **정확히 {housing · 분리 없음 · 부담부증여 없음 · 본인 신축(5년 이내) · 환산|감정 · 게이트 열림 · 비과세 조기반환 아님}**(단건 환산 11·감정 5, 컴패니언 12, 다건 12)뿐이고 나머지는 ⑫ 400(받고 무시하지 않음)이다.
+
+**뮤테이션 68건(cp 백업 · label+file md5 키 · 종료 후 전 파일 md5 원본 동일)**: leaf 산식 항(B_acq·B_tr·S_b·안분 인자 뒤바꿈·구분 기재 3입력·감정 직접/비례 분기·방식 echo·5년 echo) · 게이트 · 입력 거부 분기 전부(정적 7종·직접>총액·공익수용·충분성 7종·assert 호출) · finalize·손실·echo 배선 · ⑫(키 2곳·refine 호출 2곳·strict·거부 7종·`isSeparatedLike` 2) · ⑭ 3곳(제거·오배선 각 3) → **64 KILLED · 4 SURVIVED(전부 동치)**: W02·W05(`splitBuildingAxis` ↔ `selfBuiltAxis` 우선순위 — leaf 가 `splitActive` 면 undefined 라 두 축이 배타) · W07(`effectiveInput` 대신 `input` — 이 축이 읽는 필드를 파생 단계가 바꾸지 않음, 환산 게이트는 종전부터 `effectiveInput`) · A19(`applies` 의 정적 판정 — `precalc` 의 assert 가 먼저 던짐; 방어선으로 둔다). 1차 실행에서 생존한 L04~L06(구분 기재 개별 입력)·F12·F14·A02·A18 은 한쪽만 기재·`other_law`·PHD/selfOwns 단독·BG/겸용 사유 단언 셀을 추가해 KILLED, G04~G06 은 정적 판정을 `unreachableReason` 단일 소스로 합쳐 사라졌다.
+
+**검증**: `tsc --noEmit` 0 · eslint 변경 파일 error 0(경고 8건은 종전부터 있던 미사용 import — 손대지 않음) · `npm run test:transfer` 1436파일 17,952 passed · 전체 `npm test` 3368파일 40,510 passed(skipped 13 · todo 309). 브라우저 수동 확인은 미수행 — 이 PR 은 UI 에 닿지 않는다(④⑤⑧ 은 PR-2).
+
+**계획과 어긋난 점·확인 필요**
+- leaf 는 계획 ~130줄 → 215줄(입력 거부·echo 포함). finalize 650→658, loss-return 220→224.
+- 계획 §3.3 의 「accept missing → throw」는 **PR-4**. 이 PR 의 throw 는 «있는데 닿을 수 없거나 불충분»뿐이고 입력 부재는 현행 base.
+- **V-3 미해소** — L 산정 면적(`acquisitionArea` 의미)은 이 PR 이 `selfBuiltHousing.landArea` 로 따로 받아 ④(PR-2) 책임으로 넘겼다. 일부 양도에서 H(총액)와 같은 척도인지 PR-2 Pre-Do 에서 실측.
+- **PHD 외 동적 split + `selfBuiltHousing`** 은 조용히 무시된다(위 설계). PR-2 술어가 거울이 아니면 침묵 무시가 열린다.
+- 분리(split) + 건물 파트 실가 + 자산 수준 환산 게이트 열림 조합은 **종전부터** 가산세 base 가 토지 실가까지 섞인 350,000,000(양도차손 경로 포함)으로 나온다(실측 — 이 PR 이 바꾸지 않음, 모순 입력이라 UI 도달 가능성은 확인 필요).
+- 기존 컴패니언 C-1·C-2·V-1 anchor 는 ④ 가 `selfBuiltHousing` 을 안 보내 **불변**이다 — 계획 §10 의 갱신 3건·E2E 2 spec 은 PR-2/PR-4.
 
 ### Pre-Do anchor (구현 전에 먼저 작성·실행 — 「현행 일치 예상」 금지)
 1. **현행 고정**: S-A 500,000,000/25,000,000/총 197,837,200 · S-B 300,000,000/15,000,000 · X 증축 37,500,000/1,875,000.

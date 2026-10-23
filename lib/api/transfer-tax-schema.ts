@@ -22,6 +22,7 @@ export {
 } from "./transfer-tax-building-schemas";
 export type { GeneralBuildingValuationSchemaInput } from "./transfer-tax-building-schemas";
 import { addCompanionAcquisitionCauseRefines } from "./transfer-tax-schema-companion-refines";
+import { refineSelfBuiltHousing, isSeparatedLike } from "./transfer-tax-schema-self-built-housing";
 import { refineUnregisteredSelfFarming } from "./transfer-tax-schema-refines";
 import { refineCompanionGbUnregisteredAxis } from "./transfer-tax-schema-refines";
 import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
@@ -292,6 +293,24 @@ export const propertySchema = z
 
       // ── 컴패니언별 acquisitionCause 검증 — 별도 파일로 분리 (800줄 정책, F16) ──
       addCompanionAcquisitionCauseRefines(companions, data.transferDate, ctx);
+      // ── 일체 주택 본인 신축 × 건물분 가산세 입력(Q-12) — 닿을 수 없는 컴패니언 조합은 400 (단건·다건은 `addPropertyRefines`) ──
+      companions.forEach((c, i) =>
+        refineSelfBuiltHousing(
+          c.selfBuiltHousing !== undefined,
+          {
+            isHousing: c.assetKind === "housing",
+            isSelfBuilt: c.isSelfBuilt,
+            acquisitionCause: c.acquisitionCause,
+            burdenedGift: c.burdenedGiftInfo !== undefined,
+            mixedUse: c.mixedUse !== undefined || c.assetKind === "mixed_use_house",
+            buildingType: c.buildingType,
+            separated: isSeparatedLike(c),
+            preHousingDisclosure: false,
+          },
+          ctx,
+          ["companionAssets", i, "selfBuiltHousing"],
+        ),
+      );
 
       // assetId 중복 금지
       const ids = companions.map((a) => a.assetId);

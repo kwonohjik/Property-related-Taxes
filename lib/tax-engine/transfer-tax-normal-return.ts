@@ -127,6 +127,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     determinedTax,
     penaltyTax,
     penaltyBase,
+    selfBuiltHousingPenalty,
     localIncomeTax,
     penaltyDetail,
     // 농특세 총액 — 구조분해에서 빠뜨리면 조용히 소실된다(위 §77의3·§77의2와 같은 사고).
@@ -192,6 +193,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     determinedTax,
     penaltyTax,
     penaltyBase,
+    ...(selfBuiltHousingPenalty ? { selfBuiltHousingPenalty } : {}),
     localIncomeTax,
     ruralSurtax,
     totalTax,

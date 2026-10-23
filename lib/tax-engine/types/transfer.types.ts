@@ -33,6 +33,7 @@ import type {
 import type { ParcelInput } from "../multi-parcel-transfer";
 import type { LandRebuildPriorHouse } from "../transfer-land-rebuild-rate";
 import type { SaleSplitExemption } from "../sale-split-deemed-unclear";
+import type { SelfBuiltHousingInput } from "./transfer-self-built-housing.types";
 import type { InheritanceAcquisitionInput, CommercialInheritanceValuationInput } from "./inheritance-acquisition.types";
 export type { TransferReductionStub } from "./transfer-reductions-stub.types";
 export type { Rental97Result } from "../transfer-reductions/types";
@@ -1151,6 +1152,12 @@ export interface TransferTaxInput {
    * `resolvePenaltyAxis`(`transfer-tax-finalize.ts`)가 splitDetail 축보다 뒤에 읽는다.
    */
   penaltyAxis?: { acquisitionMethod: "estimated" | "appraisal"; base: number };
+  /**
+   * 일체 주택 **본인 신축** × §114조의2 가산세 base 를 「해당 건물」분으로 구하는 입력 (Q-12, `transfer-tax-self-built-housing-penalty.ts`).
+   * 있으면 환산·감정 가산세 base 가 토지분을 뺀 건물분이 된다(양도차익·결정세액 불변). **없으면 종전 base(자산 전체) 그대로**(PR-1 관대).
+   * 주택·본인 신축·매매 취득·환산|감정 전용 — 부담부증여·이월과세·분리(split)·PHD·겸용·증축·비주택 건물에는 받지 않는다.
+   */
+  selfBuiltHousing?: SelfBuiltHousingInput;
   /**
    * §114조의2 가산세가 **이월과세 증여자 신축·증축**(`carryoverTaxation.donorBuilt`)에서 왔다는 표식 — 가산세 설명 문구만 가른다.
    * 이월과세 해결자(`transfer-tax-carryover-donor-penalty.ts`)가 A 채택 입력에만 싣는 **내부 값**이며 와이어(Zod)에는 없다.

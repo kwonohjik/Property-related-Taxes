@@ -500,6 +500,8 @@ export async function POST(request: NextRequest) {
       // ⑭ ④와 짝 — 한쪽만 배선하면 엔진에 도달하지 않는다(§114조의2 환산 base).
       extensionStdPriceAtAcquisition: p.extensionStdPriceAtAcquisition,
       extensionAppraisalValue: p.extensionAppraisalValue,
+      // ⑭ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — ⑫(단건 shape 공유)를 통과한 값이 여기서 빠지면 침묵 strip. 중첩 객체에 Date 없음.
+      selfBuiltHousing: p.selfBuiltHousing,
       pre1990Land: p.pre1990Land
         ? {
             acquisitionDate: toDate(p.pre1990Land.acquisitionDate, "pre1990Land.acquisitionDate"),
