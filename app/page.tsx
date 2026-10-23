@@ -79,6 +79,14 @@ const MENU = [
     tone: "violet",
   },
   {
+    // 판정 전용 메뉴 — 세액이 아니라 다주택 중과 여부와 사유를 답한다. 1주택 판정과 입력을 함께 쓴다(새 건으로 연다 — D5).
+    href: "/calc/multi-house-surcharge?new=1",
+    title: "다주택 중과 판정",
+    subtitle: "보유 주택으로 중과 여부·사유 판정",
+    icon: "⚖️",
+    tone: "rose",
+  },
+  {
     href: "/calc/transfer-tax/multi?new=1",
     title: "양도소득세 (다건)",
     subtitle: "복수 양도 연간 합산·차손 통산",

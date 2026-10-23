@@ -10,7 +10,7 @@
  * 전용 분기와 anchor가 많다. 안전장치는 그대로 이어받는다(§5.6): 의뢰인 격리 표시 방어 · 응답 귀속 가드 · 점프 관문 ·
  * 결과 단계 제자리 클릭 무시 · 경고 파생 · `?new=1` 초기화. **이력 자동저장은 하지 않는다**(D4).
  */
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
@@ -18,6 +18,8 @@ import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { ValidationWarnings } from "@/components/calc/shared/ValidationWarnings";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MultiHouseSurchargeSidebar } from "@/components/calc/multi-house-surcharge/MultiHouseSurchargeSidebar";
 import { Step1 } from "@/app/calc/one-house-exemption/steps/Step1";
 import { Step2 } from "@/app/calc/one-house-exemption/steps/Step2";
@@ -34,9 +36,11 @@ import {
   validateSurchargeStepByIndex,
 } from "@/lib/calc/multi-house-surcharge-validate";
 import { surchargeSimulationInputError } from "@/lib/calc/surcharge-simulation-input";
+import { swapSellingHouse } from "@/lib/calc/swap-selling-house";
 
 /** ⚠️ 사이드바 `STEP_LABELS`와 같은 문자열 — 파일명 Step3(양도 대상)이 2번째, Step2(보유 주택)가 3번째다(1주택 메뉴와 같은 이유). */
 const SURCHARGE_STEPS = ["세대", "양도 대상 주택", "보유 주택·권리", "판정 결과", "세부담 시뮬레이션"] as const;
+const SELLING_STEP = 1;
 const RESULT_STEP = 3;
 /** 선택 단계(T9) — 결과 화면 안 입력은 판정 결과를 지우므로 결과 뒤 단계로 둔다 */
 const SIMULATION_STEP = 4;
@@ -63,6 +67,13 @@ export default function MultiHouseSurchargeCalculator() {
 
   const activeClientId = useProfessionalStore((s) => s.activeClientId);
   const router = useRouter();
+
+  /**
+   * D6 전환 — 확인 대화상자를 띄울 행 · 전환 뒤 ② 단계에 띄울 「옮기지 못해 비운 입력」 고지.
+   * 둘 다 이 화면의 일회성 표시라 store에 두지 않는다(입력 사실이 아니다). 고지는 단계를 옮기면 닫는다.
+   */
+  const [pendingSwapId, setPendingSwapId] = useState<string | null>(null);
+  const [swapNotice, setSwapNotice] = useState<string[] | null>(null);
 
   /** 다른 의뢰인이 만든 결과는 쓰지 않는다 — store 구독이 놓친 경로를 막는 표시 단계 방어(1주택 메뉴 S13-3과 같다). */
   const result = storeResult !== null && resultClientId !== activeClientId ? null : storeResult;
@@ -105,14 +116,30 @@ export default function MultiHouseSurchargeCalculator() {
       return;
     }
     setError(null);
+    setSwapNotice(null);
     setStep(currentStep + 1);
   }, [validateCurrent, setError, setStep, currentStep]);
 
   const handleBack = useCallback(() => {
     if (currentStep === 0) return;
     setError(null);
+    setSwapNotice(null);
     setStep(currentStep - 1);
   }, [currentStep, setError, setStep]);
+
+  /**
+   * D6 맞바꾸기 확정 — `updateFormData` 한 번이라 두 판정 메뉴의 결과가 함께 무효화된다(F-9 고지는 확인 대화상자).
+   * 새 양도 주택의 양도 행위 사실(양도가액·거주기간 등)은 비어 있으므로 ② 양도 대상 주택 단계로 보낸다.
+   */
+  const handleConfirmSwap = useCallback(() => {
+    if (!pendingSwapId) return;
+    const { form: next, cleared } = swapSellingHouse(formData, pendingSwapId);
+    updateFormData(next);
+    setSwapNotice(cleared);
+    setError(null);
+    setStep(SELLING_STEP);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [pendingSwapId, formData, updateFormData, setError, setStep]);
 
   const handleJudge = useCallback(async () => {
     // 마지막 관문 — 어떤 경로로 결과 단계에 왔든 판정 불가 입력으로는 판정하지 않는다.
@@ -186,6 +213,7 @@ export default function MultiHouseSurchargeCalculator() {
       if (target === currentStep && currentStep === RESULT_STEP) return;
       if (target > currentStep && blockOnFirstInvalidStep(target)) return;
       setError(null);
+      setSwapNotice(null);
       setStep(target);
     },
     [currentStep, blockOnFirstInvalidStep, setError, setStep],
@@ -244,6 +272,22 @@ export default function MultiHouseSurchargeCalculator() {
           </div>
         )}
 
+        {swapNotice && currentStep === SELLING_STEP && (
+          <div className="mb-4" data-testid="surcharge-swap-notice">
+            <ToneCard tone="amber" title="양도 예정 주택을 바꿨습니다">
+              <p className="text-sm leading-relaxed">
+                새 양도 예정 주택의 양도가액·거주기간 등 양도에 관한 사실을 입력하세요. 주택 속성(소재지·취득일·기준시가·상속 여부·중과 배제
+                사실)은 두 주택 사이에서 서로 옮겼습니다.
+              </p>
+              {swapNotice.length > 0 && (
+                <p className="text-sm leading-relaxed" data-testid="surcharge-swap-cleared">
+                  옮길 칸이 없어 비운 입력: {swapNotice.join(" · ")}
+                </p>
+              )}
+            </ToneCard>
+          </div>
+        )}
+
         <ValidationWarnings
           items={stepWarnings}
           title={currentStep === RESULT_STEP ? "판정 시 전제된 주의사항" : "확인이 필요합니다"}
@@ -265,6 +309,7 @@ export default function MultiHouseSurchargeCalculator() {
                 formRights={formData.presaleRights ?? []}
                 sellingStdPrice={formData.assets?.[0]?.standardPriceAtTransfer}
                 onCalculateTax={handleCalculateTax}
+                onSwapSelling={setPendingSwapId}
               />
             )}
             {currentStep === SIMULATION_STEP && (
@@ -321,6 +366,17 @@ export default function MultiHouseSurchargeCalculator() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingSwapId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingSwapId(null);
+        }}
+        title="이 주택을 양도 예정 주택으로 바꿀까요?"
+        description="양도 예정 주택이 바뀌고, 입력을 함께 쓰는 1세대1주택 비과세 판정 메뉴에도 반영됩니다. 지금 양도 예정 주택은 보유 주택 목록으로 옮겨지고, 양도가액·거주기간처럼 양도에 관한 입력은 비워집니다."
+        confirmLabel="바꿔서 판정"
+        onConfirm={handleConfirmSwap}
+      />
     </div>
   );
 }

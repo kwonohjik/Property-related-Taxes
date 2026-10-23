@@ -28,6 +28,8 @@ type Props = {
   sellingStdPrice: string | undefined;
   /** 응답의 중과 판정 주택 수(정밀 판정 echo) — 화면이 행을 세어 다시 만들지 않는다(F-8) */
   effectiveHouseCount: number;
+  /** D6 「이 주택을 양도 예정 주택으로 바꿔 판정」 — 확인 대화상자와 맞바꾸기는 폼을 가진 오케스트레이터가 한다 */
+  onSwapSelling?: (houseId: string) => void;
 };
 
 function Yes({ label }: { label: string }) {
@@ -56,7 +58,15 @@ function criteriaCell(row: SurchargeHouseRow, entry: HouseEntry | undefined): st
   return `${capital ? "지역기준" : "가액기준"} · 주소 미입력`;
 }
 
-export function SurchargeHouseTable({ houses, rights, formHouses, formRights, sellingStdPrice, effectiveHouseCount }: Props) {
+export function SurchargeHouseTable({
+  houses,
+  rights,
+  formHouses,
+  formRights,
+  sellingStdPrice,
+  effectiveHouseCount,
+  onSwapSelling,
+}: Props) {
   const judged = new Set(houses.map((h) => h.houseId));
   const notOwned = formHouses.filter((h) => !judged.has(h.id));
 
@@ -122,6 +132,16 @@ export function SurchargeHouseTable({ houses, rights, formHouses, formRights, se
                           <li key={s.id}>확인 필요 — {s.message}</li>
                         ))}
                       </ul>
+                    )}
+                    {onSwapSelling && id !== SELLING && entry && (
+                      <button
+                        type="button"
+                        data-testid={`surcharge-swap-${id}`}
+                        className="mt-1 block text-left text-xs font-medium text-primary hover:underline print:hidden"
+                        onClick={() => onSwapSelling(id)}
+                      >
+                        이 주택을 양도 예정 주택으로 바꿔 판정
+                      </button>
                     )}
                   </td>
                 </tr>
