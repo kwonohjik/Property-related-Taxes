@@ -266,7 +266,8 @@ function noRosterSellingHouse(workingInput: TransferTaxInput): NonNullable<Trans
   return {
     id: "selling",
     acquisitionDate: workingInput.acquisitionDate,
-    officialPrice: workingInput.standardPriceAtTransfer ?? 0,
+    // 양도 당시 기준시가 — ④가 전용 키로 싣는다(실가 모드는 `standardPriceAtTransfer`를 싣지 않는다). 옛 본문은 종전 키로 후퇴.
+    officialPrice: workingInput.sellingHouseStdPriceAtTransfer ?? workingInput.standardPriceAtTransfer ?? 0,
     region:
       regionCode && classifyRegionCriteriaByCode(regionCode) === "VALUE" ? ("non_capital" as const) : ("capital" as const),
     regionCode,

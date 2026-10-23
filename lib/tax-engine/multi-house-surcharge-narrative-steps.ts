@@ -125,6 +125,10 @@ function criteriaStep(selling: HouseInfo, rules: HouseCountExclusionRules, check
   const low = resolveLowPriceLocalHouse(selling, rules);
   if (criteria === "REGION") {
     sentences.push("지역기준 지역의 주택은 기준시가와 관계없이 주택 수에 산입하고 중과 판정 대상이 됩니다.");
+  } else if ((selling.transferOfficialPrice ?? selling.officialPrice) <= 0) {
+    sentences.push(
+      "양도 당시 기준시가가 입력되지 않아 한도 이하인지 판정하지 못했습니다 — 주택 수에 산입하고 중과 판정 대상으로 보았습니다.",
+    );
   } else if (low) {
     sentences.push(
       `양도 당시 기준시가(${won(low.price)})가 한도(${won(low.threshold)}) 이하이므로 주택 수에 산입하지 않고, 이 주택을 양도할 때 다주택 중과를 적용하지 않습니다.`,
@@ -137,7 +141,14 @@ function criteriaStep(selling: HouseInfo, rules: HouseCountExclusionRules, check
   return {
     id: "criteria",
     title: "판정기준(지역기준·가액기준)",
-    verdict: criteria === "REGION" ? "지역기준" : low ? "가액기준 — 기준시가 이하" : "가액기준 — 기준시가 초과",
+    verdict:
+      criteria === "REGION"
+        ? "지역기준"
+        : low
+          ? "가액기준 — 기준시가 이하"
+          : (selling.transferOfficialPrice ?? selling.officialPrice) <= 0
+            ? "가액기준 — 기준시가 미입력"
+            : "가액기준 — 기준시가 초과",
     sentences,
     houseNotes: [],
     basis: [MULTI_HOUSE.LOW_PRICE_LOCAL_BASIS],

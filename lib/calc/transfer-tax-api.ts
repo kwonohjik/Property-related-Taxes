@@ -7,6 +7,7 @@
  */
 
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
+import { sellingHouseStdPricePayload } from "@/lib/calc/selling-std-price-scope";
 import { buildExemptionProvisoPayload } from "./exemption-proviso-payload";
 import { depreciationSupport } from "./depreciation-scope";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
@@ -467,6 +468,8 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
      * Q-8 — **명부가 정본, 스칼라는 간이 입력**(계획서 §5.11).
      * 파싱 기본값(`|| 0`)은 **그대로 둔다** — 이 호출부의 규약이다(`household-house-count.ts` 🔑).
      */
+    // ⑬ 양도 주택의 양도 당시 기준시가 — 명부 없는 중과 판정 구성의 양도 주택 행(명부 양도 행 `officialPrice`와 같은 leaf)
+    ...sellingHouseStdPricePayload(primary),
     householdHousingCount: resolveHouseholdHousingCount({
       primaryKind: primary.assetKind,
       declared: parseInt(form.householdHousingCount) || 0,
