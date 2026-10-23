@@ -351,8 +351,13 @@ describe("B. 공유 키 `pre1990*`·`acquisitionArea` — 이 상태에서 다�
       landCauseHost: "",
       landAcquisitionDate: "2015-03-10",
       acquisitionDate: "2003-01-01",
+      // PHD(§164⑦)는 환산에서만 성립한다(방식 축 — docs/00-pm/phd-appraisal-dead-end.plan.md). 갱신 전: 방식 무관(두 파트 실가 기본)으로 true — 후: 두 파트 환산을 명시.
+      landAcqMode: "estimated",
+      buildingAcqMode: "estimated",
     });
     expect((await bodyOf(noCause)).preHousingDisclosure).toBeDefined();
+    // 방식 짝: 같은 입력도 두 파트가 환산이 아니면(실가) PHD 는 실리지 않는다
+    expect((await bodyOf({ ...noCause, landAcqMode: "actual", buildingAcqMode: "actual" })).preHousingDisclosure).toBeUndefined();
     // 토지 자산(assetKind=land) + 1984 취득 + 환산 래치 → pre1990Land 전송
     const land = {
       ...makeDefaultAsset(1),

@@ -16,6 +16,7 @@
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { PartialAcqApportionSection } from "./PartialAcqApportionSection";
 import { SalesCaseSection } from "./SalesCaseSection";
+import { PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 
 interface Props {
@@ -69,6 +70,7 @@ export function CompanionAcqAmountSection({
         buildingName={props.asset?.buildingName}
         standardPriceAtAcq={props.standardPriceAtAcq}
         onStandardPriceAtAcqChange={props.onStandardPriceAtAcqChange}
+        isHousing={props.assetKind === "housing"}
       />
     );
   }
@@ -187,7 +189,7 @@ export function CompanionAcqAmountSection({
           data-field="standardPriceAtAcq"
           value={props.standardPriceAtAcq}
           onChange={props.onStandardPriceAtAcqChange}
-          hint="필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%."
+          hint={`필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%.${props.assetKind === "housing" ? ` ${PRE_DISCLOSURE_STD_PRICE_HINT}` : ""}`}
         />
       )}
     </>

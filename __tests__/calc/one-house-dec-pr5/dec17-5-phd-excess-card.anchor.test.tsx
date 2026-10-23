@@ -50,19 +50,19 @@ describe("HousingExcessSplitCard — PHD 환산 안내 카드", () => {
     expect(screen.queryByTestId("housing-excess-split-card")).toBeNull();
   });
 
-  it("#17-5 ① 후속 — 실가 + 1990-08-30 이후 2005-04-30 전 취득은 5칸 카드이되 취득시 개별주택가격 칸이 영 §164⑦ 추정값을 받는다", () => {
+  it("#17-5 ① 후속 — 실가 + 1990-08-30 이후 2005-04-30 전 취득은 5칸 카드이되 취득시 개별주택가격 칸이 영 §164⑦ 환산 개별주택가격을 받는다", () => {
     render(<HousingExcessSplitCard asset={make({ useEstimatedAcquisition: false, usePreHousingDisclosure: false })} onChange={noop} transferDate="2023-02-16" />);
     expect(screen.getByTestId("housing-excess-split-card")).toBeTruthy();
     expect(screen.queryByTestId("housing-excess-phd-card")).toBeNull();
     expect(screen.getByTestId("housing-excess-acq-total")).toBeTruthy();
-    expect(screen.getByText(/영 §164⑦ 추정값/)).toBeTruthy();
+    expect(screen.getByText(/영 §164⑦ 환산 개별주택가격/)).toBeTruthy();
     expect(screen.getByText(/최초 공시 개별주택가격에, 취득 당시 토지\+건물 기준시가 합계를/)).toBeTruthy();
   });
 
   it("대조 — 2005-04-30 이후 취득은 일반 문구(§164⑦ 안내 없음)", () => {
     render(<HousingExcessSplitCard asset={make({ acquisitionDate: "2012-01-02", useEstimatedAcquisition: false, usePreHousingDisclosure: false })} onChange={noop} transferDate="2023-02-16" />);
     expect(screen.getByTestId("housing-excess-acq-total")).toBeTruthy();
-    expect(screen.queryByText(/영 §164⑦ 추정값/)).toBeNull();
+    expect(screen.queryByText(/영 §164⑦ 환산 개별주택가격/)).toBeNull();
   });
 
   it("함께 양도 카드(isNonPrimary) — PHD 플래그가 남아 있어도 PHD 안내가 아니라 5칸 카드다(2005-04-30 이후 취득)", () => {

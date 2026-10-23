@@ -1,6 +1,6 @@
 # 개별주택가격 미공시 환산(PHD · 영 §164⑦) 플래그 × 환산 아닌 취득가액 방식 — ⑧ 통과 후 route 400 · 침묵 오산 수정 계획서
 
-**상태**: **Plan 부분 확정**(2026-10-24) — 사용자가 §11 **Q-4를 제외한 Q-1~Q-3·Q-5~Q-11을 권장안(★)으로 확정**했다. **Q-4 = (b) 확정**(2026-10-24 — 「환산 개별주택가격 계산해 채우기」 버튼). **용어 지시**: 법령에 없는 «환산 개별주택가격»·«법정 환산 개별주택가격»을 쓰지 않고 §164⑦ 산식 결과는 **«환산 개별주택가격»**으로 부른다(사용자 지시). 소스는 건드리지 않았다(실측은 작성 시 throwaway probe — 저장소 미보존).
+**상태**: **PR-1 Do 완료(커밋, push·PR 전 — §9.1)** · **Plan 부분 확정**(2026-10-24) — 사용자가 §11 **Q-4를 제외한 Q-1~Q-3·Q-5~Q-11을 권장안(★)으로 확정**했다. **Q-4 = (b) 확정**(2026-10-24 — 「환산 개별주택가격 계산해 채우기」 버튼). **용어 지시**: 법령에 없는 «환산 개별주택가격»·«법정 환산 개별주택가격»을 쓰지 않고 §164⑦ 산식 결과는 **«환산 개별주택가격»**으로 부른다(사용자 지시). 소스는 건드리지 않았다(실측은 작성 시 throwaway probe — 저장소 미보존).
 **브랜치**: `docs/phd-appraisal-dead-end-plan` (origin/master `dca56587f` 위)
 **발단**: `docs/00-pm/self-built-housing-building-base-114-2.plan.md` §9 PR-4 Do 기록 «기존(종전부터): PHD × 감정 조합은 ⑧ 을 통과하나 route 가 400». 이 문서가 그 «확인 필요»를 닫는다.
 **작성**: 엔진(transfer-tax-senior) + UI(transfer-tax-ui-senior) 병렬 조사 통합. UI 조사 내용은 §6·§7.2·§9 에 승격했다.
@@ -261,6 +261,40 @@ harness: `collectStepIssues(0~5)`(⑧) → `callTransferTaxAPI` 가로채기(④
 | PR-2(Q-4 = (b) 확정) | (라) «§164⑦ 환산 개별주택가격 채우기» 버튼, 또는 (다) 엔진 base 도출 | PR-1 |
 | 별건 | 겸용 비환산 × PHD 차단 문구(V-5) · 파트 혼합 PHD 침묵 무시(V-4) | — |
 
+
+### 9.1 PR-1 Do 기록 (2026-10-24 — 커밋까지, push·PR 전)
+
+**구현**: `lib/calc/phd-toggle-scope.ts` +65줄(181→246) — `phdAcqMethodEstimated`(방식 leaf) 신설, `phdFlagEffective` 가 AND, `phdPayloadActive`/`phdFlagEffective` 의 Pick 에 방식 7필드 추가(TS 가 부분 객체 호출부를 잡는다 — 호출부 변경 0). ⑤ `CompanionAcqPurchaseBlock.tsx` 의 토글·«첫 자산 아님» 안내 두 곳이 같은 leaf(`phdMethodEstimated`). 자동 ON effect·③ normalize·저장값은 그대로(읽는 쪽 파생). **750줄 근처 5파일 변경 0**(split-acq-mode 749 · api 735 · validate-split 733 · refines-2a 730 · validate-acquisition 721). 순환 import 회피: leaf 가 `deriveLegacyPartAcqMode`·`isSeparateAcquisition` 의 3줄 규칙을 자체 보유 — 동치는 anchor 가 잠근다.
+
+**V-3 결정 — 별개 취득도 방식 축 적용(후퇴 불필요)**: D6 격자(비별개 8플래그 · 별개 파트 5×5 × 8플래그 = 200조합 · 별개 토글만 켜진 비별개 400조합)에서 leaf ≡ `deriveLegacyPartAcqMode`/`effectivePartAcqMode`(불일치 0). 종전 ⑤ 노출 조건(raw `useEstimatedAcquisition` ∨ 별개∧파트 환산)과의 차이는 208조합 중 **60**이고 전부 «raw 환산 플래그 잔재 ∧ 실제 방식(우선순위·파트)은 환산 아님» 한 갈래(방향은 «토글 숨김»뿐) — 우선순위·파트 모드가 정본이라는 ④⑧ 규칙과 ⑤ 를 맞춘 것이다.
+
+**실측 전/후** (대표 셀 — 취득 2003-01-10 · 양도 2026-03-01 · 양도가 10억 · 2주택 · 3억 · 기준시가 2억/4억, throwaway 하네스 → 정식 anchor 로 승격):
+
+| 셀 | 수정 전 | 수정 후 |
+|---|---|---|
+| R-1 실거래가 + 플래그만 | ⑧ 0건 · route **400**(양도시 토지·건물 기준시가) | 200 · 185,966,000 · PHD 키·분리 후퇴 없음 |
+| R-2 감정 + 플래그만 / R-3 매매사례 | ⑧ 0건 · **400** | 200 · 184,118,000 · 개산공제 6,000,000 |
+| R-4 감정 + 11칸 | 200 · **개산공제 0 · 185,966,000** | 200 · 개산공제 6,000,000 · **184,118,000**(= 플래그 OFF 쌍둥이) |
+| R-5 감정 + 11칸 + 취득일 2010-01-10 | **400**(`preHousingDisclosure.firstDisclosureDate`) | 200 |
+| 환산 대조 | OFF 122,518,000 · 11칸 206,154,088 | 불변 (응답·본문 sha256 동일) |
+| 다건 감정 + 플래그 잔재 | «단건 계산기에서만 지원» 차단(Q-6) | 차단 없음 · 다건 route 200 · 환산 + PHD 는 종전대로 차단 |
+
+**격자(1,332셀: 비별개 768 · 별개 취득 324 · 대조군 240 — 경로 3 × 취득일 2 × 방식 8 × PHD 4 × 기준시가 2 × 지분 2 · 파트 3×3 × raw 환산 잔재 · 겸용·이월과세·토지·상속·증여·함께 양도 둘째)**: 비환산 × PHD ON 에서 ⑧ 통과 ∧ 400 은 **단건 112 · 함께 양도 56 · 다건(차단 통과분) 0 + 별개 0 → 0**, 감정류 개산공제 0(침묵 오산) 단건 48 · 함께 양도 12 → **0**. 응답·본문 해시가 바뀐 셀 610 전부가 «PHD ON ∧ 비환산 ∧ 첫 자산 주택» 집합(main 504 · 별개 88 · 토지 상속 시료 18) 안에 있고 **집합 밖 변화 0** — 환산 96셀 · PHD OFF 300셀(환산 OFF 8셀 중복) · 대조군(토지·겸용·상속·증여·이월과세·함께 양도 둘째) 204셀은 바이트 동일. 집합 안인데 안 바뀐 8셀은 함께 양도·플래그만·기준시가 없음(관측 차이 없음). 수정 후 2회 해시 동일(비결정 0). 다건 비환산 «단건 전용» 차단 168 → 0(⑧ 통과분은 route 200 — 96셀).
+
+**D1~D6**: D1(⑧ 통과 ⇒ route ≠ 400, 다건은 «단건 전용» 통과분만) · D2(비환산 PHD ON ⇒ ④ 에 PHD 키 없음, 환산 ∧ 11칸 ⇒ 키 있음) · D3(비환산 PHD ON 의 ⑧ 이슈·상태·세액·개산공제·본문·응답 해시 = 플래그 OFF 쌍둥이) · D4(환산 대표값 고정) · D5(다건 차단은 환산 PHD 에만) · D6(leaf 동치) 모두 `phd-non-estimated-method-axis.anchor.test.ts`. 부수로 ⑧ 이 새로 요구하는 것: 감정·매매사례 + 플래그 잔재에서 취득시 기준시가(A-12) — 단건 감정류 nostd 셀이 ⑧ 통과 → ⑧ 차단으로 이동(칸이 화면에 있다).
+
+**기존 테스트 갱신(V-8 실측 — 단언 삭제 0)**: ① `lump-sum-deduction-required-stdprice` A-12: 감정·매매사례 + 2003 + PHD 플래그 + 기준시가 빈 → 전 null(통과) → 후 «취득 당시 기준시가» 오류(+ A-12b 환산은 면제 유지) · ② `multi-transfer-api-sync` «PHD» 차단: 전 기본 시료(비환산) + 플래그 → 차단 → 후 환산 시료만 차단 + 비환산 3종(실거래가·감정·매매사례) null 신규 · ③ `transfer-land-part-cause.d1-4.predo` B1′: 전 두 파트 실가 + PHD → 키 있음 → 후 키 없음(긍정 짝은 두 파트 환산 명시 · 실가 쌍 추가) · ④ `d1.predo` C11: 전 `usesPhdGate(…landCauseHost "")` true → 후 false(긍정 짝은 파트 환산 명시) · ⑤ `d2-2.check` #1: 전 매매 + 플래그 → `phdFlagEffective` true → 후 false(환산 명시 true · 실거래가 false 짝) · ⑥ `ui-review-high-remaining` C-3: 전 housing + 플래그 → payload true → 후 false(환산 명시 true · 실거래가 false 짝). **영향 없음 실측**(전체 vitest — 1차 3,399 파일 전부 통과 · 최종 재실행은 머신 부하(load avg ~38)로 4파일 기본 타임아웃(무관 3 + 본 anchor 의 D6 루프 → 60s 로 상향), 4파일 단독 재실행 71건 통과): `separate-land-date-required.g2` · `owner-split-building-std-leaf-parity` · `self-built-housing-scope/validate-parity/strict-parity`(SPLIT[phd] 셀은 방식에 따라 범위 안/밖이 바뀌지만 격자가 즉석 계산이라 기대 재산출 불필요 — D1·D2·D3 통과).
+
+**용어(사용자 지시 «추정값» 금지 → «환산 개별주택가격»)**: 사용자 노출 문구 변경 3곳 — `transfer-tax-validate-housing-excess.ts:65`(⑧ 메시지) · `HousingExcessSplitCard.tsx:106`(라벨)·`:111`(hint). 주석 변경 — `housing-excess-split.ts:88·114`·`HousingExcessSplitCard.tsx:76`. 테스트 문자열 — `one-house-dec-pr5/` 4파일(card 단언 regex·제목·⑧ 메시지에 «환산 개별주택가격» 포함 + «추정» 불포함 단언 추가). **미변경(확인 필요)**: 결과 카드 `PreHousingDisclosureDetailSection.tsx` «추정 취득시 주택가격»(5곳) · 감면 PHD `ReductionPhdInput.tsx:359` «취득시 추정 공동주택가격» · 상속 주택 평가 `HouseValuationSection.tsx:475-476` «추정 공식» · `InheritedHouseValuationDetailCard.tsx:90·124` «{price} 추정» — §164⑦ 의 공동주택가격·상속 평가·결과 표기라 용어 대상(환산 «개별주택가격»)이 같은 뜻인지 사용자 확인 후 일괄(별건).
+
+**hint(§7.2)**: 신규 `pre-disclosure-std-hint.ts` 한 줄 상수 «취득일이 개별주택가격 최초 공시일 전이면 소득세법 시행령 §164⑦ 산식으로 계산한 환산 개별주택가격(부수토지 포함 총액)을 입력합니다.» — 감정(`CompanionAcqAmountSection`)·매매사례(`SalesCaseSection` `isHousing`)·실거래가 안분 칸(`CompanionAcqStdPriceSection` 주택). 환산 칸에는 붙이지 않는다(PHD 3-시점이 대신). 실거래가 비분리 단건은 취득시 기준시가 칸이 열리지 않는다(`useEstimatedAcquisition ∨ isSplit` 게이트) — 그 경우 hint 도 없다.
+
+**뮤테이션 22건(cp 백업 · label+file md5 · 변이별 sha · 종료 후 원본 동일 확인)**: 계획 12건을 소비처 단위로 풀어 22건 — M01 방식 항 제거 · M02 raw `useEstimatedAcquisition` · M03 우선순위 뒤집기 · M04 겸용 제외 제거 · M04b 이월과세 제외 제거 · M05 별개 분기 제거 · M06 종류 축 제거 · M12 파트 `||`→`&&` · M13 건물 파트 레거시 후퇴 제거 · M14 «같은 날 아님» 제거 · M21 토지 취득일 truthy 제거 · M22 종류 축 housing 만 · M07 `usesPhdGate` 만 방식 제거 · M08 `phdPayloadActive` 만 제거 · M09 다건 ⑧ 원시 · M10/M10b/M10c `selling-std-price-scope` 3곳 · M11 ⑤ 토글 노출 raw · M15 자동 ON effect 에 방식 조건(불필요 변경 감지) · M16 `StdPriceSection` 자동 도출 문구 raw · M17 소유자 분리 건물 기준시가 · M19 ④ `usesPhd` 원시 · M20 다건 ④ `usesPhd` 원시 · M18 `validate-split` 토지 취득일 후퇴 원시. 결과: **KILLED 21 · SURVIVED 1(M18, 동치 변이)**. M14·M22 는 초기 SURVIVED 라 anchor 보강(같은 날/토지 취득일 미입력 400조합 · building 종류 truth-table) 후 KILLED 로 재측정. M18 은 `landDateSent` 가 land 원인이 있는 가지(`LAND_CAUSE_DATE_REQUIRED`)에서만 읽히는데 그때는 `landCauseMixActive` 로 `phdFlagEffective` 가 방식과 무관하게 false 라 관측 차이가 없다(동치 변이 — 전 이월과세 PR-3 N02 와 달리 분기 쌍을 만들 입력 자체가 없다).
+
+**E2E(`e2e/transfer-phd-non-estimated-mode.spec.ts` PH-1·2·3a·3b·4·5·6·7, :3303)**: 수정 후 8/8 통과(`--repeat-each=3` 24/24). **방식 항 제거(수정 전 동치) 변이에서 6건 실패(PH-1·2·3a·3b·4·6)** · PH-5(환산 불변)·PH-7(둘째 자산)은 변이에서도 통과 — 계획서 §1.2 와 일치. 시드 경합 2종을 spec 에서 막았다: ① 서울 주소 시료의 조정대상지역 판정이 비동기로 풀려 «같은 날 주택 2채 함께양도»(§154⑨) ⑧ 이 타이밍에 걸림 → 함께 양도 시료는 춘천 · ② 시드 직후 reload 전 첫 로드 지연 persist 가 시드를 덮는 경합 → 자산 수 확인 + 재시도. 워크트리 Turbopack 은 `next.config.ts` turbopack.root 임시 변경으로 띄우고 원복(sha256 b91da05e… 동일).
+
+**확인 필요**(이 PR 이 건드리지 않은 것): ① V-6 원시 플래그 소비처 — `depreciation-scope.ts:84`(PHD 플래그면 감가상각비 입력 숨김 — **비환산 + 자동 ON 잔재에서 입력이 숨는다**, 미변경) · `reverse-appurtenant-swap.ts:126` · `transfer-phrp-stdprice-link.ts:30` · 공익수용 4곳(`expropriation-required-gate` 등 — `useEstimatedAcquisition`/`convertsAtAssetLevel` 게이트가 앞서 걸려 비환산에서는 도달하지 않는 판독, 격자 밖) · ② PHD 와 무관한 기존 ⑧↔⑫ 불일치 2종(대조군에서 발견 · 종전과 동일 바이트): 비주택(토지) + 환산 + 자동 ON 잔재 플래그(`standardPriceAtAcquisition`·`standardPriceAtTransfer` 400 — ④ `usesPhd` 가 종류 축을 안 봄, 종류 변경 리셋 `housing-flag-reset.ts` 가 막는 세션 경로 밖의 잔재) · 토지 상속 파트 시료 × 매매사례(PHD OFF 에서도 ⑧ 통과 ∧ 400) · ③ 브라우저 수동 확인은 Playwright E2E 로 갈음(사람 눈 확인 미수행).
+
 ---
 
 ## 10. 자가 점검 (3대 정책)
@@ -297,12 +331,12 @@ harness: `collectStepIssues(0~5)`(⑧) → `callTransferTaxAPI` 가로채기(④
 |---|---|---|
 | V-1 | 브라우저 수동 확인(DateInput 완성형 입력 시 자동 ON 발화 시점 · 환산→감정 전환 직후 토글 소거) | **미수행** — jsdom 마운트 + ④→route probe 로 대체 |
 | V-2 | 법령: DRF 직접 확인(MST 290841). MCP 연결 실패 | ✅ §164⑦·§163⑥·§176의2③ verbatim 확인. `verify:legal` 매니페스트 등록은 이번 PR 이 새 조문을 `legal-codes/` 에 인용하지 않으므로 해당 없음 |
-| V-3 | 별개 취득에서 방식 leaf 의 정확한 정의(⑤ 노출 «한 파트라도 환산» vs `housing-excess-split.ts:65` 선례 «레거시 단일 플래그» vs 엔진 «양쪽 환산») | **확인 필요** — D6 격자로 동치 증명, 불일치 시 별개 취득은 방식 축 미적용으로 후퇴 |
+| V-3 | 별개 취득에서 방식 leaf 의 정확한 정의(⑤ 노출 «한 파트라도 환산» vs `housing-excess-split.ts:65` 선례 «레거시 단일 플래그» vs 엔진 «양쪽 환산») | ✅ **PR-1 결정**(§9.1) — D6 격자 동치(불일치 0), 별개 취득도 방식 축 적용 |
 | V-4 | 파트 혼합(환산 + 비환산)에서 PHD 키가 가지만 엔진이 무시(세액 PHD OFF 와 동일) | 관측(probe) — 별건 |
 | V-5 | 겸용주택 비환산 × PHD(자동 ON) ⑧ 차단이 막다른 길인가 — 겸용 PHD 토글이 비환산에서 보이는지 | **확인 필요**(probe: ⑧ 문구 확인, UI 노출 미확인) |
 | V-6 | 원시 `usePreHousingDisclosure` 를 직접 읽는 소비처(`ExpropriationBlock:86`·`expropriation-required-gate:141,164`·`validate-expropriation:53`·`UnifiedReductionPanel:148`·`transfer-phrp-stdprice-link:30`·`reverse-appurtenant-swap:126`)가 술어를 경유하게 할지 | **확인 필요** — 코드 판독만 |
 | V-7 | `selling-std-price-scope` 앵커 불일치(`phdTransferHousingPrice` 가 안 보임)의 실제 막다른 길 여부 — 가액기준 지역 ∧ 조정대상지역 ∧ 2018-04-01 이후 | **미실측**(코드 판독) |
-| V-8 | 기존 테스트 영향 목록(§8.1-4)은 정적 판독 — 술어 수정 시 실제 실패 목록은 착수 시 실측 | 이번 작성에서 소스 수정 probe 가 환경 정책으로 거부돼 **미실측** |
+| V-8 | 기존 테스트 영향 목록(§8.1-4)은 정적 판독 — 술어 수정 시 실제 실패 목록은 착수 시 실측 | ✅ **PR-1 실측**(§9.1) — 갱신 6파일(A-12 등)·영향 없음 파일 목록 |
 | V-9 | 감정·매매사례 개산공제 수치(매매사례)는 감정과 같은 분기 구조(`transfer-tax-helpers.ts`)지만 UI 가 측정한 증상 B 수치는 감정 한 방식 | 매매사례는 단건 격자 R-3 으로 400 만 확인, 증상 B 세액은 별도 측정 안 함 |
 | V-10 | 1세대1주택 비과세 시료에서도 R-1 400 재현(확인) · 비과세 후 세액 0 이어도 ⑫ 가 먼저 막는다 | ✅ |
 

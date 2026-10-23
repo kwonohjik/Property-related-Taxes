@@ -142,14 +142,72 @@ export function carryoverEstimationModeSupported(
 export function phdFlagEffective(
   asset: Pick<
     AssetForm,
-    "usePreHousingDisclosure" | "acquisitionCause" | "assetKind" | "isMixedUseHouse" | "landAcquisitionCause" | "hasSeperateLandAcquisitionDate"
+    | "usePreHousingDisclosure"
+    | "acquisitionCause"
+    | "assetKind"
+    | "isMixedUseHouse"
+    | "landAcquisitionCause"
+    | "hasSeperateLandAcquisitionDate"
+    | "landAcquisitionDate"
+    | "acquisitionDate"
+    | "useEstimatedAcquisition"
+    | "isAppraisalAcquisition"
+    | "isSalesCaseAcquisition"
+    | "landAcqMode"
+    | "buildingAcqMode"
   > & { landCauseHost?: string; transferType?: string; carryoverDonorSplit?: boolean; selfOwns?: AssetForm["selfOwns"] },
 ): boolean {
   // P2 C — 파트 이월과세는 PHD 환산을 지원하지 않는다(P6 파트 환산은 기준시가 원값뿐). 취득일이 오래된 주택에서 매매 블록이 자동으로 켠 PHD 잔재가 남아 있어도 무시한다(엔진 S4 PHD 차단과 같은 입력).
   if (effectiveCarryoverDonorSplit(asset)) return false;
   // D2 합성 술어 — 건물 상속·증여 + 토지 매매도 PHD를 무시한다(상속·증여 건물은 환산 불가, 엔진 R-X2 purchase판).
   // 토글이 렌더되지 않는 취득원인(상속·증여·신축)에 남은 자동 ON 잔재도 무시한다(`phdToggleCauseReachable` — D2-2 Check).
-  return asset.usePreHousingDisclosure === true && !landCauseMixActive(asset) && phdToggleCauseReachable(asset);
+  // 취득가액 산정 방식 축 — 환산이 아니면(실거래가·감정가액·매매사례가액) §164⑦ 3-시점 환산은 성립하지 않는다(`phdAcqMethodEstimated`).
+  return asset.usePreHousingDisclosure === true && !landCauseMixActive(asset) && phdToggleCauseReachable(asset) && phdAcqMethodEstimated(asset);
+}
+
+/**
+ * **취득가액 산정 방식이 환산인가** — ⑤ PHD 토글 노출 조건 · ⑧ 11칸/개산공제 base 게이트 · ④ 전송이 공유하는 방식 축 leaf.
+ *
+ * ## 왜 필요한가 — 켠 적 없는 플래그가 환산 아닌 방식을 막다른 길로 몰았다 (docs/00-pm/phd-appraisal-dead-end.plan.md)
+ *
+ * 취득일 < 2005-04-29 주택이면 ⑤ effect 가 **방식과 무관하게** `usePreHousingDisclosure` 를 자동으로 켠다. 토글(카드)은 환산에서만
+ * 보이므로 실거래가·감정가액·매매사례가액 사용자는 켜진 줄도 모르는데, ④ 는 그 플래그를 방식 없이 읽어 취득시 기준시가를 지우고
+ * `landAcquisitionDate` 후퇴만 실었다 → ⑫ 가 화면에 없는 양도시 파트 기준시가를 요구해 400(증상 A), 칸이 차 있으면 200 이지만 감정·매매사례의
+ * 개산공제 base 가 사라져 개산공제 0(증상 B). 엔진·⑧ 11칸 게이트는 이미 환산 전용이라(`phdSplitPathTaken`·`isEstimated`) 방식 축만 빠져 있었다.
+ *
+ * ## 정의
+ * - 비별개 취득: 우선순위 매매사례 > 감정 > 환산 > 실거래가 — ④ `primaryAcquisitionModeFlags`·⑧ `isEstimated`·`deriveLegacyPartAcqMode` 와 같다.
+ * - 별개 취득(토지·건물 취득일 다름): 토지·건물 파트 중 **하나라도** 환산 — ⑤ 노출 조건과 같다.
+ * - **적용 밖(true)**: 겸용주택(자기 패널 `MixedUseLegacyStdPrice`·자기 ⑧)·이월과세(`carryoverPhdMode` — 자기 `estimationMode` 축)·
+ *   PHD 가 닿지 않는 자산 종류(`phdToggleReachable` 의 종류 축 밖) — 종전 그대로.
+ *
+ * ⚠️ `transfer-tax-split-acq-mode.ts` 가 이 파일의 `phdFlagEffective` 를 import 하므로(순환) `deriveLegacyPartAcqMode`·`isSeparateAcquisition`
+ *    을 import 하지 않고 같은 규칙을 여기에 둔다. 동치는 `phd-non-estimated-method-axis.anchor.test.ts` 의 D6 격자(8플래그 × 파트 모드)가 잠근다.
+ * 저장값은 지우지 않는다 — 읽는 쪽 파생이라 환산으로 돌아오면 11칸·토글이 그대로 복귀한다.
+ */
+export function phdAcqMethodEstimated(
+  asset: Pick<
+    AssetForm,
+    | "assetKind"
+    | "isMixedUseHouse"
+    | "acquisitionCause"
+    | "hasSeperateLandAcquisitionDate"
+    | "landAcquisitionDate"
+    | "acquisitionDate"
+    | "useEstimatedAcquisition"
+    | "isAppraisalAcquisition"
+    | "isSalesCaseAcquisition"
+    | "landAcqMode"
+    | "buildingAcqMode"
+  >,
+): boolean {
+  if (asset.isMixedUseHouse || asset.acquisitionCause === "carryover_gift") return true;
+  if (!(asset.assetKind === "housing" || (asset.assetKind === "building" && !!asset.hasSeperateLandAcquisitionDate))) return true;
+  const legacy = asset.isSalesCaseAcquisition ? "salesCase" : asset.isAppraisalAcquisition ? "appraisal" : asset.useEstimatedAcquisition ? "estimated" : "actual";
+  const separate =
+    !!asset.hasSeperateLandAcquisitionDate && !!asset.landAcquisitionDate && !!asset.acquisitionDate && asset.landAcquisitionDate !== asset.acquisitionDate;
+  if (separate) return (asset.landAcqMode || legacy) === "estimated" || (asset.buildingAcqMode || legacy) === "estimated";
+  return legacy === "estimated";
 }
 
 /**
@@ -173,6 +231,13 @@ export function phdPayloadActive(
     | "carryoverDonorSplit"
     | "selfOwns"
     | "transferType"
+    | "landAcquisitionDate"
+    | "acquisitionDate"
+    | "useEstimatedAcquisition"
+    | "isAppraisalAcquisition"
+    | "isSalesCaseAcquisition"
+    | "landAcqMode"
+    | "buildingAcqMode"
   >,
 ): boolean {
   if (carryoverPhdMode(asset)) return true;

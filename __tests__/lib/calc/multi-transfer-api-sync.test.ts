@@ -228,7 +228,8 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     ["겸용주택", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "housing", isMixedUseHouse: true }; }],
     ["일반건물", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "general_building" }; }],
     ["이월과세", (f) => { f.assets[0] = { ...f.assets[0], acquisitionCause: "carryover_gift" }; }],
-    ["PHD", (f) => { f.assets[0] = { ...f.assets[0], usePreHousingDisclosure: true }; }],
+    // PHD(§164⑦)는 환산에서만 성립한다 — 비환산 + 플래그 잔재는 차단하지 않는다(아래 별도 테스트·phd-non-estimated-method-axis.anchor).
+    ["PHD(환산)", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "housing", useEstimatedAcquisition: true, usePreHousingDisclosure: true }; }],
     // "1990토지"는 2026-07-06 지원 전환 — 아래 별도 통과 테스트로 이동.
     ["다필지", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "land", parcelMode: true }; }],
     // "토지건물분리"는 2026-09-19 지원 전환(F-12) — 아래 별도 통과 테스트로 이동.
@@ -243,6 +244,14 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     const form = baseForm();
     mutate(form);
     expect(validateMultiSupportedMode(form)).not.toBeNull();
+  });
+
+  it("PHD 플래그 잔재 + 환산이 아닌 취득가액(실거래가·감정·매매사례)은 차단하지 않는다 — 켠 적 없는 자동 ON 플래그로 다건이 막히지 않는다", () => {
+    for (const mode of [{}, { isAppraisalAcquisition: true }, { isSalesCaseAcquisition: true }]) {
+      const form = baseForm();
+      form.assets[0] = { ...form.assets[0], assetKind: "housing", useEstimatedAcquisition: false, usePreHousingDisclosure: true, ...mode };
+      expect(validateMultiSupportedMode(form), JSON.stringify(mode)).toBeNull();
+    }
   });
 
   it("companion(자산 2건) 차단", () => {

@@ -62,7 +62,7 @@ export function validateHousingExcessSplitInputs(
     return fieldError(
       "standardPriceAtAcq",
       isBeforeHousePriceFirstDisclosure(a.acquisitionDate)
-        ? `${head} 취득일이 개별주택가격 최초 공시일(2005-04-30) 전이라 영 §164⑦ 산식으로 추정한 취득 당시 기준시가(부수토지 포함 총액)를 입력하세요.`
+        ? `${head} 취득일이 개별주택가격 최초 공시일(2005-04-30) 전이라 영 §164⑦ 산식으로 계산한 환산 개별주택가격(부수토지 포함 총액)을 입력하세요.`
         : `${head} 취득 당시 개별주택가격(부수토지 포함 총액)을 입력하세요.`,
     );
   }
