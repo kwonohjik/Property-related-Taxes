@@ -98,7 +98,7 @@ export function buildGbPartCards(
    *
    * 🔴 종전에는 이 인자가 없어 컴패니언 GB 카드가 일반 양도로 계산됐다(취득가액 0 · 양도차익 = 채무액 전부 — 계획서 §2.2).
    * 환산 payload 는 이 값을 읽지 않으므로 **실가가 아니면 던진다** — 침묵 무시 금지(⑫ `refineGbBurdenedGiftActualPath`가 입구에서 먼저 400).
-   * 의제취득일 전 상속·증여 재선택(PR-4)은 건너뛴다 — 부담부증여는 §159가 취득가액을 정한다(단건 `dispatchCoercedGeneralBuilding`과 같다).
+   * 의제취득일 전 상속·증여 재선택(PR-4)은 건너뛴다 — 부담부증여는 §159가 같은 ①②로 파트별 3자 max를 한다(단건 `dispatchCoercedGeneralBuilding`과 같다 · PR-7b-6).
    */
   burdenedGiftInfo?: BurdenedGiftInfo,
   /** 축 B(지분) 전용 — §159의 A·C를 줄일 지분율. 컴패니언은 넘기지 않는다(`burdenedGiftOwnershipRatio` 주석). */
