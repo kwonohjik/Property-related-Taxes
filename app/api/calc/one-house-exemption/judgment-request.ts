@@ -8,7 +8,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
-import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
+import { preloadTaxRates, loadFallbackTransferRates, type TaxRatesMap } from "@/lib/db/tax-rates";
 import { TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
@@ -164,9 +164,12 @@ export function buildJudgmentEngineInput(data: PropertySchemaInput): {
   return { engineInput, transferDate, isRightSale };
 }
 
-/** 단계 5: 세율 로드 — 계산기와 동일한 graceful fallback 정책 */
-export async function loadJudgmentRates(transferDate: Date, logTag: string): Promise<ParsedRates> {
-  let rates;
+/**
+ * 단계 5: 세율 로드(원본 맵) — 계산기와 동일한 graceful fallback 정책.
+ * 다주택 중과 판정의 세부담 시뮬레이션(`calculateTransferTax`)은 원본 맵을 받는다.
+ */
+export async function loadJudgmentRateMap(transferDate: Date, logTag: string): Promise<TaxRatesMap> {
+  let rates: TaxRatesMap;
   if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
     try {
       rates = await preloadTaxRates(["transfer"], transferDate);
@@ -178,7 +181,12 @@ export async function loadJudgmentRates(transferDate: Date, logTag: string): Pro
   } else {
     rates = loadFallbackTransferRates(transferDate);
   }
-  return parseRatesFromMap(rates);
+  return rates;
+}
+
+/** 단계 5: 세율 로드(판정용 파싱) */
+export async function loadJudgmentRates(transferDate: Date, logTag: string): Promise<ParsedRates> {
+  return parseRatesFromMap(await loadJudgmentRateMap(transferDate, logTag));
 }
 
 /**

@@ -30,6 +30,7 @@ import { appurtenantLimitShareOf } from "./bundled-companion-split";
 import { asReverseUnitHouse, resolveReverseAppurtenantUnit, reverseUnitHouseFacts, splitReversePrimaryLand } from "./bundled-reverse-appurtenant";
 import { aggregateWithSameDayRightWarning } from "@/lib/tax-engine/one-house/same-day-right";
 import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
+import type { GeneralBuildingOutput } from "@/lib/tax-engine/types/general-building.types";
 
 export function calculateBundledTransfer(
   data: PropertySchemaInput,
@@ -178,6 +179,12 @@ export function calculateBundledTransfer(
     },
   } satisfies MixedUseCompanionContext;
 
+  // 일반건물 자산별 결과 상세(산식 재료) — 자산 id 키. 단건 슬롯과 다른 키다(수정신고 판별자 · `gb-bundled-result-formulas.plan.md`).
+  const gbDetailsByAsset: Record<string, GeneralBuildingOutput> = {};
+  const onGbDetail = (assetId: string, detail: GeneralBuildingOutput) => {
+    gbDetailsByAsset[assetId] = detail;
+  };
+
   const itemsRaw: TransferTaxItemInput[] = apportionment.apportioned.flatMap((a, idx) => {
     if (a.assetId === "primary") {
       // 주 자산: engineInput을 복제 + 안분 결과로 양도·취득·필요경비 덮어쓰기
@@ -247,7 +254,7 @@ export function calculateBundledTransfer(
       if (data.propertyType === "general_building" && data.generalBuildingValuation) {
         return buildGbCompanionItems(data.generalBuildingValuation as Record<string, unknown>, primaryItem, {
           ownershipRatio: data.ownershipRatio, assetId: "primary", assetLabel: a.assetLabel ?? "",
-        });
+        }, onGbDetail);
       }
       return reverseUnit ? splitReversePrimaryLand(primaryItem, reverseUnit, transferDate) : [primaryItem];
     }
@@ -310,6 +317,7 @@ export function calculateBundledTransfer(
        * ⚠️ 날짜를 갖는 값은 전부 `engineInput` 변환본이다(Zod 출력은 string).
        */
       mixedUseCtx,
+      onGbDetail,
     });
     return reverseUnit && c.assetId === reverseUnit.houseAssetId
       ? built.map((it) => asReverseUnitHouse(it, reverseUnit, engineInput))
@@ -365,6 +373,7 @@ export function calculateBundledTransfer(
   if (isAllBurdenedGift && items.some((it) => it.penaltyAxis) && !aggregated.warnings.includes(GB_BG_SELF_BUILT_NOTICE)) {
     aggregated.warnings.push(GB_BG_SELF_BUILT_NOTICE);
   }
+  if (Object.keys(gbDetailsByAsset).length > 0) aggregated.generalBuildingDetailsByAsset = gbDetailsByAsset;
 
   return {
     mode: "bundled" as const,

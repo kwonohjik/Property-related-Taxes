@@ -4,6 +4,7 @@
  * `transfer-tax-api-helpers.ts` 800줄 정책에 따라 GB 전용 변환(buildExtensionInfo·
  * buildGeneralBuildingValuation)을 분리. 함수 로직 변경 없이 순수 추출 + §163⑨ 상속 게이트.
  */
+import { bgExpenseInputsUnused } from "./burdened-gift-expense-scope";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { depreciationSupport } from "./depreciation-scope";
 import { parseDecimal } from "@/lib/calc/number-parse";
@@ -281,7 +282,13 @@ export function buildGeneralBuildingValuation(
   const bothEstimated = landMode === "estimated" && buildingMode === "estimated";
   // 증축 × 자본적지출 — 그중 증축 전 지출액(증축분에 배분하지 않는다 · `gb-extension-capex-timing.plan.md`). 0도 싣는다(⑧이 비움을 막는다).
   const capexBeforeExt = gbCapexBeforeExtensionSlots(asset);
-  const partExpensePayload = !bothEstimated
+  /*
+   * 파트 자본적지출 칸은 **화면에 있을 때만** 싣는다 — 분리 ON 건물 카드(`isSeparate`) · `showPartCapex`(두 파트 모두 환산 제외) ·
+   * 부담부증여면 `PartAcqModeField`가 통째로 숨는다. 숨은 칸의 잔존값이 공제되던 것을 막는다
+   * (`gb-extension-capex-residuals.plan.md` O-1 · 증축이면 ⑫ 「증축 전 지출액」 필수 규칙과 같은 자리).
+   */
+  const partExpenseShown = separate && !bothEstimated && asset.transferType !== "burdened_gift";
+  const partExpensePayload = partExpenseShown
     ? {
         ...(parseAmount(asset.landDirectExpenses) ? { landDirectExpenses: parseAmount(asset.landDirectExpenses) } : {}),
         ...(parseAmount(asset.buildingDirectExpenses) ? { buildingDirectExpenses: parseAmount(asset.buildingDirectExpenses) } : {}),
@@ -425,7 +432,8 @@ export function buildGeneralBuildingValuation(
       // §97②2호 단서 swap(자산총액) — G2(전체환산)·G4(NBL)·G3(증축) 공통.
       // capitalExpenditure는 항상 전달 — bundledExpenses fallback(transferExpense·directExpenses)에
       //   포함되지 않아 증축에서도 이중소비 없음.
-      ...(parseAmount(asset.capitalExpenditure)
+      // 증축이면 「그중 증축 전 지출액」 칸이 있는 자리에서만 싣는다(부담부증여로 칸이 숨으면 미전송) — ⑫가 증축 전 키를 필수로 본다.
+      ...(parseAmount(asset.capitalExpenditure) && (!asset.gbHasExtension || capexBeforeExt.asset)
         ? { capitalExpenditure: parseAmount(asset.capitalExpenditure) }
         : {}),
       ...(capexBeforeExt.asset
@@ -571,13 +579,15 @@ export function buildGeneralBuildingValuation(
      *    개산공제도 쓰지 않아 단서 요건을 충족하지 않는다. 적용 조문은 같은 항 **1호**
      *    (「해당 실지거래가액 + 제1항제2호·제3호의 금액」)의 **단순 가산**이다.
      *
-     * ⚠️ 증축 제외 게이트(`!gbHasExtension`)를 여기 걸지 않는다 — 증축은 애초에 환산 경로로
-     *    가므로(`:217` `anyEstimated || gbHasExtension`) 이 return에 도달하지 않는다.
+     * ⚠️ 증축 제외 게이트(`!gbHasExtension`)를 여기 걸지 않는다 — 증축은 환산 경로로 간다. 단 부담부증여는 증축이어도
+     *    이 return에 온다(PR #2459 라우팅 — 증축 토글이 숨어 `gbHasExtension`이 잔존값일 수 있다).
+     * 🔴 부담부증여로 두 칸이 화면에서 숨으면(`bgExpenseInputsUnused` — 기준시가·감정·매매사례 산정은 개산공제뿐) 잔존값을 싣지 않는다.
+     *    ⑤가 숨긴 입력은 ④가 보내지 않는다(3중 패턴 — `gb-extension-capex-residuals` L2). 엔진도 그 갈래에서 이 값을 쓰지 않아 세액은 같다.
      */
-    ...(parseAmount(asset.capitalExpenditure)
+    ...(parseAmount(asset.capitalExpenditure) && !bgExpenseInputsUnused(asset)
       ? { capitalExpenditure: parseAmount(asset.capitalExpenditure) }
       : {}),
-    ...(parseAmount(asset.transferExpense)
+    ...(parseAmount(asset.transferExpense) && !bgExpenseInputsUnused(asset)
       ? { transferExpense: parseAmount(asset.transferExpense) }
       : {}),
     // §97③ 감가상각비 — 건물분(실가 경로). 지분 스케일은 `applyShareScale`이 한다.

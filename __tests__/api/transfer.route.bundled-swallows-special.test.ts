@@ -268,11 +268,16 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
     );
   });
 
-  it("🔴 일반건물 — 단건 토지·건물 분리 안분이 함께양도에서 소실", async () => {
-    const r = await compare(GB, "generalBuilding");
+  it("🟢 일반건물 — 함께양도도 일반건물 산식 재료를 싣는다(자산별 `generalBuildingDetailsByAsset`)", async () => {
+    // 종전 🔴: 함께양도 응답에 일반건물 결과 상세가 없어 결과 화면 산식이 범용 문구로 떨어졌다.
+    //   토지·건물 파트 카드 분리 자체는 `buildGbCompanionItems`가 이미 하고 있었다 — 빠진 것은 표시 재료였다
+    //   (`docs/00-pm/gb-bundled-result-formulas.plan.md`). 단건 슬롯은 수정신고 판별자라 함께양도에는 싣지 않는다.
+    const r = await compare(GB, "generalBuildingDetailsByAsset");
     expect(r.singleStatus).toBe(200);
-    expect(r.inSingle).toBe(true);
-    expect(r.inBundled).toBe(false);
+    expect(r.bundledStatus).toBe(200);
+    expect(r.inSingle).toBe(false);
+    expect(r.inBundled).toBe(true);
+    expect((await compare(GB, "generalBuildingValuationDetail")).inBundled).toBe(false);
   });
 
   it("🟢 일반건물 — 용도지역 누락은 이제 ⑫가 단건·함께양도 모두 400으로 막는다", async () => {
