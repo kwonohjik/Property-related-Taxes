@@ -4,10 +4,12 @@
  * D1 교재식 표 — 보유 주택마다 ①판정기준 ②기준시가 ③주택 수 산입 ④조정대상지역 ⑤「이 주택을 양도한다면」
  * (계획서 `multi-house-surcharge-judgment-menu.plan.md` §5.5 · P7).
  *
- * 행: 양도 예정 주택(맨 위·강조) → 명부 순서 → 분양권·입주권 → 양도일 현재 미보유. 판정은 하지 않는다 — 응답의 행 판정과
+ * 행: 양도 예정 주택(맨 위·강조) → 명부 순서 → 분양권·입주권 → 양도일 현재 미보유. 조합원입주권을 양도하면 양도 예정 입주권 행이
+ * 맨 위이고 주택 행은 모두 간이 판정이다(V-5). 판정은 하지 않는다 — 응답의 행 판정과
  * 입력 사실(기준시가·명부 순번)만 옮긴다(T5). ⑤의 다른 행은 같은 양도일에 그 주택을 판다고 본 **간이 판정**이다(D6 · F-6).
  */
 import { REGION_REASON_TEXT } from "@/lib/tax-engine/multi-house-surcharge-narrative-steps";
+import { SELLING_RIGHT_ROW_ID } from "@/lib/tax-engine/multi-house-surcharge-narrative-steps";
 import { EXCLUDED_REASON_LABEL } from "@/components/calc/MultiHouseSurchargeDetailCard";
 import { countExclusionHouseRef } from "@/components/calc/results/transfer/count-exclusion-house-ref";
 import type {
@@ -26,8 +28,10 @@ type Props = {
   formHouses: readonly HouseEntry[];
   formRights: readonly PresaleRightEntry[];
   sellingStdPrice: string | undefined;
-  /** 응답의 중과 판정 주택 수(정밀 판정 echo) — 화면이 행을 세어 다시 만들지 않는다(F-8) */
-  effectiveHouseCount: number;
+  /** 양도 조합원입주권의 종전 주택의 가격(입력값) — 양도 예정 입주권 행 ② */
+  sellingRightValue?: string;
+  /** 응답의 중과 판정 주택 수(정밀 판정 echo) — 화면이 행을 세어 다시 만들지 않는다(F-8). 응답에 없으면(입주권 양도에서 행마다 다르면) 줄을 그리지 않는다 */
+  effectiveHouseCount: number | undefined;
   /** D6 「이 주택을 양도 예정 주택으로 바꿔 판정」 — 확인 대화상자와 맞바꾸기는 폼을 가진 오케스트레이터가 한다 */
   onSwapSelling?: (houseId: string) => void;
 };
@@ -58,16 +62,45 @@ function criteriaCell(row: SurchargeHouseRow, entry: HouseEntry | undefined): st
   return `${capital ? "지역기준" : "가액기준"} · 주소 미입력`;
 }
 
+/** 조합원입주권·분양권 행 — 주택이 아니라 ①④는 비우고 ⑤는 언제나 「중과 없음」(자산 게이트) */
+function RightRow({ right, name, price, selling }: { right: SurchargeRightRow; name: string; price: string | undefined; selling?: boolean }) {
+  return (
+    <tr
+      data-testid={`surcharge-row-${right.rightId}`}
+      className={`border-b align-top ${selling ? "bg-violet-50 font-medium dark:bg-violet-950/30" : ""}`}
+    >
+      <td className="px-2 py-2">{name}</td>
+      <td className="px-2 py-2">—</td>
+      <td className="whitespace-nowrap px-2 py-2 text-right font-mono tabular-nums">{priceCell(price)}</td>
+      <td className="px-2 py-2" data-testid={`surcharge-cell-counted-${right.rightId}`}>
+        {right.countReason === "counted" && !right.spouseSubtracted ? (
+          <Yes label="산입" />
+        ) : (
+          <>
+            <No label="불산입" />{" "}
+            {right.spouseSubtracted ? "혼인 배우자 보유 차감(§167의4⑤)" : RIGHT_COUNT_REASON_LABEL[right.countReason]}
+          </>
+        )}
+      </td>
+      <td className="px-2 py-2">—</td>
+      <td className="px-2 py-2">중과 없음 (주택이 아님)</td>
+    </tr>
+  );
+}
+
 export function SurchargeHouseTable({
   houses,
   rights,
   formHouses,
   formRights,
   sellingStdPrice,
+  sellingRightValue,
   effectiveHouseCount,
   onSwapSelling,
 }: Props) {
   const judged = new Set(houses.map((h) => h.houseId));
+  const sellingRight = rights.find((r) => r.rightId === SELLING_RIGHT_ROW_ID);
+  const heldRights = rights.filter((r) => r.rightId !== SELLING_RIGHT_ROW_ID);
   const notOwned = formHouses.filter((h) => !judged.has(h.id));
 
   const nameOf = (id: string) => (id === SELLING ? "양도 예정 주택" : (countExclusionHouseRef(formHouses, id) ?? "보유 주택"));
@@ -75,7 +108,10 @@ export function SurchargeHouseTable({
   return (
     <div data-testid="surcharge-table" className="space-y-2">
       <p className="text-sm leading-relaxed text-muted-foreground">
-        ⑤는 <b>같은 양도일에 그 주택을 양도한다고 볼 때</b>의 결론입니다. 양도 예정 주택은 정밀 판정, 나머지는 간이 판정입니다.
+        ⑤는 <b>같은 양도일에 그 주택을 양도한다고 볼 때</b>의 결론입니다.{" "}
+        {sellingRight
+          ? "양도 대상이 조합원입주권이라 주택은 모두 간이 판정이고, 그 입주권은 보유 권리로 셉니다."
+          : "양도 예정 주택은 정밀 판정, 나머지는 간이 판정입니다."}
       </p>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] border-collapse text-sm">
@@ -90,6 +126,9 @@ export function SurchargeHouseTable({
             </tr>
           </thead>
           <tbody>
+            {sellingRight && (
+              <RightRow right={sellingRight} name="양도 예정 조합원입주권" price={sellingRightValue} selling />
+            )}
             {/* 응답 행은 이미 「양도 예정 주택 → 명부 순서」다(④ 본문 순서 그대로 · RV-1이 고정) */}
             {houses.map((row) => {
               const entry = formHouses.find((h) => h.id === row.houseId);
@@ -147,30 +186,15 @@ export function SurchargeHouseTable({
                 </tr>
               );
             })}
-            {rights.map((r) => {
+            {heldRights.map((r) => {
               const i = formRights.findIndex((x) => x.id === r.rightId);
               return (
-                <tr key={r.rightId} data-testid={`surcharge-row-${r.rightId}`} className="border-b align-top">
-                  <td className="px-2 py-2">
-                    {RIGHT_TYPE_LABEL[r.type]} {i >= 0 ? i + 1 : ""}
-                  </td>
-                  <td className="px-2 py-2">—</td>
-                  <td className="whitespace-nowrap px-2 py-2 text-right font-mono tabular-nums">
-                    {priceCell(i >= 0 ? formRights[i].rightValue : undefined)}
-                  </td>
-                  <td className="px-2 py-2" data-testid={`surcharge-cell-counted-${r.rightId}`}>
-                    {r.countReason === "counted" && !r.spouseSubtracted ? (
-                      <Yes label="산입" />
-                    ) : (
-                      <>
-                        <No label="불산입" />{" "}
-                        {r.spouseSubtracted ? "혼인 배우자 보유 차감(§167의4⑤)" : RIGHT_COUNT_REASON_LABEL[r.countReason]}
-                      </>
-                    )}
-                  </td>
-                  <td className="px-2 py-2">—</td>
-                  <td className="px-2 py-2">중과 없음 (주택이 아님)</td>
-                </tr>
+                <RightRow
+                  key={r.rightId}
+                  right={r}
+                  name={`${RIGHT_TYPE_LABEL[r.type]} ${i >= 0 ? i + 1 : ""}`}
+                  price={i >= 0 ? formRights[i].rightValue : undefined}
+                />
               );
             })}
             {notOwned.map((h) => (
@@ -184,9 +208,11 @@ export function SurchargeHouseTable({
           </tbody>
         </table>
       </div>
-      <p data-testid="surcharge-count-summary" className="text-sm text-muted-foreground">
-        중과 판정 주택 수(조합원입주권·분양권 포함) <b className="text-foreground">{effectiveHouseCount}</b>
-      </p>
+      {effectiveHouseCount !== undefined && (
+        <p data-testid="surcharge-count-summary" className="text-sm text-muted-foreground">
+          중과 판정 주택 수(조합원입주권·분양권 포함) <b className="text-foreground">{effectiveHouseCount}</b>
+        </p>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 /**
  * 다주택 중과 **판정** API Route (계획서 `docs/00-pm/multi-house-surcharge-judgment-menu.plan.md` §4.1 · P4)
  *
- * POST /api/calc/multi-house-surcharge-judgment  `{ property, simulation? }`
+ * POST /api/calc/multi-house-surcharge-judgment  `{ property, sellingRightValue?, simulation? }`
  *
  * Layer 1 (Orchestrator): Rate limit → Zod(`propertySchema`) → Date 변환 · 엔진 input · 주택 수 명부 도출 → 세율 로드
  *   → 1세대1주택 비과세 요약(D3a) → 양도 예정 주택 정밀 판정 · 행별 판정 · 설명문 · 세율 영향
@@ -34,6 +34,12 @@ export type { SurchargeSimulation, SurchargeSimulationSide } from "./surcharge-s
 
 const requestSchema = z.object({
   property: propertySchema,
+  /**
+   * 양도 조합원입주권의 종전 주택의 가격(「도시 및 주거환경정비법」 §74①5호) — 입주권 양도 표(V-5)에서 그 입주권을
+   * 보유 권리로 셀 때 영 §167의4②1호·§167의11②1호(가액기준 지역 3억 이하 불산입)를 가른다. 판정 사실이 아니라
+   * 이 메뉴의 표 입력이라 `property`(1주택 판정과 같은 본문) 밖에 둔다. 없으면 산입한다.
+   */
+  sellingRightValue: z.number().int().positive().optional(),
   simulation: z
     .object({
       acquisitionPrice: z.number().int().positive(),
@@ -59,7 +65,7 @@ export async function POST(request: NextRequest) {
     // 비과세 요약의 기한 기준일은 오늘, 중과 판정 기준일은 양도일 — 둘 다 응답에 싣는다.
     const judgmentBaseDate = resolveJudgmentBaseDate();
     const exemption = buildOneHouseExemptionPayload(engineInput, parsedRates, judgmentBaseDate, isRightSale);
-    const payload = buildSurchargeJudgmentPayload(engineInput, parsedRates, judgmentBaseDate, exemption);
+    const payload = buildSurchargeJudgmentPayload(engineInput, parsedRates, judgmentBaseDate, exemption, parsed.data.sellingRightValue);
     // 판정 범위 밖(2018.4.1. 전·입주권 양도 등)이면 중과 비교가 성립하지 않는다 — 시뮬레이션을 싣지 않는다.
     if (parsed.data.simulation && payload.scope.supported) {
       payload.simulation = runSurchargeSimulation(engineInput, rateMap, parsed.data.simulation);

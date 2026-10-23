@@ -308,6 +308,7 @@ export default function MultiHouseSurchargeCalculator() {
                 formHouses={formData.houses ?? []}
                 formRights={formData.presaleRights ?? []}
                 sellingStdPrice={formData.assets?.[0]?.standardPriceAtTransfer}
+                sellingRightValue={formData.surchargeSellingRightValue}
                 onCalculateTax={handleCalculateTax}
                 onSwapSelling={setPendingSwapId}
               />

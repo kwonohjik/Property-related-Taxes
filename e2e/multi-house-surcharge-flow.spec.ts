@@ -1,6 +1,8 @@
 /**
  * 다주택 중과 판정 메뉴 — 시드 → 판정 → 표·상세 → 계산기 넘기기 (계획서 `multi-house-surcharge-judgment-menu.plan.md` §7.3 · P7).
  *
+ * MHF-7 조합원입주권 양도 표(V-5 · `multi-house-surcharge-menu-residuals.plan.md` §2).
+ *
  * 단위 anchor는 route·뷰를 따로 본다. 여기서는 **폼 → ④ 본문 → Zod → route → 엔진 → 결과 뷰 → 계산기 store**가 한 줄로
  * 이어지는지 본다(`feedback_leaf_anchor_skips_zod_layer`).
  */
@@ -137,6 +139,27 @@ test.describe("다주택 중과 판정 — 흐름", () => {
     await page.getByRole("button", { name: "다음" }).click();
     await page.getByTestId("surcharge-judge-cta").click();
     await expect(page.getByTestId("surcharge-conclusion-label")).toHaveText("3주택 이상 중과");
+  });
+
+  test("MHF-7 조합원입주권 양도 — ② 종전 주택의 가격 입력 → 범위 밖 사유와 함께 보유 주택별 표(입주권 불산입 · 주택 수 2)", async ({ page }) => {
+    test.setTimeout(90_000);
+    const right = { ...seedForm().state.formData.assets[0], assetKind: "right_to_move_in", regionCode: "4719010100" };
+    await page.goto("/calc/multi-house-surcharge");
+    await expect(page.getByTestId("one-house-household")).toBeVisible();
+    await page.evaluate((s) => sessionStorage.setItem("one-house-judgment-wizard", JSON.stringify(s)), seedForm({ assets: [right] }));
+    await page.reload();
+    await page.getByRole("button", { name: "다음" }).click();
+    await page.getByTestId("surcharge-selling-right-value").fill("250000000");
+    await page.getByRole("button", { name: "다음" }).click();
+    const req = page.waitForRequest((r) => r.url().includes("/api/calc/multi-house-surcharge-judgment"));
+    await page.getByTestId("surcharge-judge-cta").click();
+    expect((await req).postDataJSON().sellingRightValue).toBe(250000000);
+    await expect(page.getByTestId("surcharge-scope-unsupported")).toContainText("조합원입주권");
+    await expect(page.getByTestId("surcharge-row-selling-right")).toContainText("양도 예정 조합원입주권");
+    await expect(page.getByTestId("surcharge-cell-counted-selling-right")).toContainText("불산입");
+    await expect(page.getByTestId("surcharge-cell-ifSold-h1")).toContainText("(간이)");
+    await expect(page.getByTestId("surcharge-count-summary")).toContainText("2");
+    await expect(page.getByTestId("surcharge-swap-h1")).toHaveCount(0);
   });
 
   test("MHF-3 두 메뉴 교차 링크는 입력을 유지한다", async ({ page }) => {

@@ -4,7 +4,7 @@
  * 다주택 중과 판정 결과 뷰 — 조립(계획서 `multi-house-surcharge-judgment-menu.plan.md` §5.5 · P7).
  *
  * 순서: 고지 → 결론 → D1 표 → D1 양도 예정 주택 상세 → D3b 세율 영향 → D3a 비과세 요약 → D3d 계산기 넘기기.
- * 판정 범위 밖(2018.4.1. 전·입주권 양도 등)이면 사유와 비과세 요약만 보인다.
+ * 판정 범위 밖(2018.4.1. 전 등)이면 사유와 비과세 요약만 보인다. 조합원입주권 양도는 사유와 함께 보유 주택별 표(모두 간이 판정 · V-5)를 보인다.
  *
  * 🔑 이 뷰는 응답과 **입력 사실 몇 가지**(명부 순번·기준시가)만 받는다 — store를 읽지 않는다. 화면은 판정하지 않는다(T5).
  * 섹션 번호는 그려지는 것만 센다(1주택 결과뷰와 같은 규약 — 고정 번호는 「1 · 2 · 5」로 건너뛴다).
@@ -34,6 +34,8 @@ type Props = {
   formHouses: readonly HouseEntry[];
   formRights: readonly PresaleRightEntry[];
   sellingStdPrice: string | undefined;
+  /** 양도 조합원입주권의 종전 주택의 가격(입력값) — 입주권 양도 표의 양도 예정 입주권 행 ②에 보인다 */
+  sellingRightValue?: string;
   /** D3d 「이 사실로 양도세 계산」 — 사실(폼)을 아는 것은 오케스트레이터다 */
   onCalculateTax?: () => void;
   /** D6 「이 주택을 양도 예정 주택으로 바꿔 판정」 */
@@ -45,6 +47,7 @@ export function MultiHouseSurchargeResultView({
   formHouses,
   formRights,
   sellingStdPrice,
+  sellingRightValue,
   onCalculateTax,
   onSwapSelling,
 }: Props) {
@@ -79,7 +82,7 @@ export function MultiHouseSurchargeResultView({
         </div>
       )}
 
-      {headline && rows && (
+      {rows && (
         <ToneCard tone="slate" sectionNum={next()} title="보유 주택별 판정">
           <SurchargeHouseTable
             houses={rows.houses}
@@ -87,8 +90,10 @@ export function MultiHouseSurchargeResultView({
             formHouses={formHouses}
             formRights={formRights}
             sellingStdPrice={sellingStdPrice}
-            effectiveHouseCount={headline.result.effectiveHouseCount}
-            onSwapSelling={onSwapSelling}
+            sellingRightValue={sellingRightValue}
+            effectiveHouseCount={headline?.result.effectiveHouseCount ?? result.rightSaleHouseCount}
+            // 입주권 양도에는 맞바꿀 양도 예정 「주택」이 없다 — 전환(P9)은 주택 양도에서만
+            onSwapSelling={headline ? onSwapSelling : undefined}
           />
         </ToneCard>
       )}

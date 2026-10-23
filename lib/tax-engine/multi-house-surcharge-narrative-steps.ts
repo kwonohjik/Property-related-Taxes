@@ -24,6 +24,8 @@ import {
 import type { DecisionStage } from "./multi-house-surcharge-narrative";
 import type { HouseCountExclusionRules, HouseInfo, MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
 
+/** 조합원입주권을 양도할 때 표에 넣는 양도 예정 입주권 행 id(V-5 — `rightSaleRowInput`). 화면 표도 이 값으로 그 행을 찾는다. */
+export const SELLING_RIGHT_ROW_ID = "selling-right";
 export type NarrativeStepId = "regulated" | "criteria" | "count" | "exclusion" | "suspension" | "conclusion";
 
 export interface NarrativeStep {

@@ -4,9 +4,10 @@
  * - SM-1 ② 양도 대상: M1 양도 당시 기준시가 칸은 중과 메뉴에만 · 가액기준이면 필수 표시(⑧과 같은 술어)
  * - SM-2 ③ 보유 주택: 중과 메뉴는 양도 주택 자체 배제 섹션을 연다 · 1주택 메뉴(기본값)는 종전대로 닫는다
  * - SM-3 ③ 한시배제 창 안 안내는 중과 메뉴에만
+ * - SM-4 ② 양도 조합원입주권의 종전 주택의 가격 칸(V-5)은 중과 메뉴 · 입주권 양도에만 · 입력이 폼 칸으로 간다
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { Step2 } from "@/app/calc/one-house-exemption/steps/Step2";
 import { Step3 } from "@/app/calc/one-house-exemption/steps/Step3";
 import {
@@ -82,5 +83,29 @@ describe("SM-3 — 한시배제 창 안 안내", () => {
     cleanup();
     render(<Step2 form={form(GANGNAM)} onChange={() => {}} menu="surcharge" />);
     expect(screen.queryByTestId("surcharge-judgment-suspended-notice")).toBeNull();
+  });
+});
+
+describe("SM-4 — 양도 조합원입주권의 종전 주택의 가격 칸(V-5)", () => {
+  const rightSale = () => {
+    const f = form(ASAN);
+    f.assets = [{ ...f.assets[0], assetKind: "right_to_move_in" }];
+    return f;
+  };
+  it("중과 메뉴 · 입주권 양도에만 있다", () => {
+    render(<Step3 form={rightSale()} onChange={() => {}} />);
+    expect(screen.queryByTestId("surcharge-selling-right-value")).toBeNull();
+    cleanup();
+    render(<Step3 form={form(ASAN)} onChange={() => {}} menu="surcharge" />);
+    expect(screen.queryByTestId("surcharge-selling-right-value")).toBeNull();
+    cleanup();
+    render(<Step3 form={rightSale()} onChange={() => {}} menu="surcharge" />);
+    expect(screen.getByTestId("surcharge-selling-right-value")).toBeTruthy();
+  });
+  it("입력은 `surchargeSellingRightValue`로 간다", () => {
+    const onChange = vi.fn();
+    render(<Step3 form={rightSale()} onChange={onChange} menu="surcharge" />);
+    fireEvent.change(screen.getByTestId("surcharge-selling-right-value"), { target: { value: "250000000" } });
+    expect(onChange).toHaveBeenCalledWith({ surchargeSellingRightValue: "250000000" });
   });
 });

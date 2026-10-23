@@ -17,12 +17,20 @@ import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { gracePeriodInScope } from "./grace-period-scope";
 import { formatFieldErrors } from "./transfer-tax-error-format";
 import { withDerivedHouseCount, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { toSurchargeSimulationPayload, type SurchargeSimulationInputForm } from "./surcharge-simulation-input";
 import type { MultiHouseSurchargeJudgmentResponse } from "@/app/api/calc/multi-house-surcharge-judgment/route";
 
-export function buildMultiHouseSurchargeApiBody(form: OneHouseJudgmentFormData): { property: Record<string, unknown> } {
+export function buildMultiHouseSurchargeApiBody(form: OneHouseJudgmentFormData): {
+  property: Record<string, unknown>;
+  sellingRightValue?: number;
+} {
   const base = buildOneHouseExemptionApiBody(form);
   const primary = form.assets[0];
+  // V-5 — 양도 조합원입주권의 종전 주택의 가격. 입주권 양도일 때만 싣는다(칸 노출과 같은 술어). 0·빈 값은 미입력이라 싣지 않는다
+  //   (보유 권리 목록 ④ `buildPresaleRightsPayload`와 같은 규칙 — route는 산입으로 판정한다).
+  const sellingRightValue =
+    primary.assetKind === "right_to_move_in" ? parseAmount(form.surchargeSellingRightValue) || undefined : undefined;
   const houses = buildHousesPayload(primary, form.houses, form.presaleRights.length, form.sellingHouseExclusion, form.transferDate, {
     includeSellingWithoutRoster: true,
   });
@@ -32,6 +40,7 @@ export function buildMultiHouseSurchargeApiBody(form: OneHouseJudgmentFormData):
       ...(houses ? { houses, sellingHouseId: "selling" } : {}),
       ...(gracePeriodInScope(withDerivedHouseCount(form)) && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
     },
+    ...(sellingRightValue ? { sellingRightValue } : {}),
   };
 }
 

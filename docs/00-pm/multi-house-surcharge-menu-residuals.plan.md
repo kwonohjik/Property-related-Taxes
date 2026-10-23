@@ -139,6 +139,21 @@
 
 ---
 
+### 2.6 PR-2 구현 결과 (2026-10-23)
+
+- **V-D 해소**: 판정 본문은 입주권 양도에도 그 자리에 「selling」 주택 행을 싣는다(`HOUSING_LIKE_ASSET_KINDS`에 `right_to_move_in` — 1주택 판정이 세대 명부를 받는 자리). route는 주택 수에서 그 행을 뺀다(`deriveHouseholdHousingCount(…, !isRightSale)`).
+  - 행 판정 입력 `rightSaleRowInput`(`lib/tax-engine/multi-house-surcharge-narrative.ts`)이 그 행을 빼고 권리 행으로 더한다: `redevelopment_right` · 취득일 = 본문 취득일 · 소재지·지정 지구 = 그 행 값 · 가액 = 새 칸.
+  - 조합원입주권은 산입에 날짜 게이트가 없고(`presaleRightCountReason`), 배우자 차감(§167의4⑤)은 양도자 본인 권리라 해당이 없어 칸을 두지 않는다.
+  - 양도 예정 주택이 없으므로 `judgeSurchargeRows`의 headline을 선택 인자로 바꿔 모든 주택 행을 간이 판정한다. ③ 불산입 사유는 그 행 자신의 판정에서 찾는다.
+- **V-E 해소 — 신규 칸**: 판정 메뉴의 입주권 양도 본문은 판정 사실만 담는 좁은 블록이라 금액 칸이 없다. 계산기 재개발 블록의 「권리가액」은 §166④ 평가액(관리처분계획 가격)으로 라벨·개념이 「종전 주택의 가격(도정법 §74①5호)」과 같다고 확인하지 못해 재사용하지 않는다.
+- **새 칸 14지점**:
+  - ① `OneHouseJudgmentSurchargeFields.surchargeSellingRightValue`(판정 메뉴 전용 묶음 — 비거주자·잔금 전 멸실과 같은 관례) · ② 기본값 "" · ③ 정규화는 초기값 덮기 그대로
+  - ④ `buildMultiHouseSurchargeApiBody`가 입주권 양도일 때만 `property` **밖**의 `sellingRightValue`로 싣는다(0·빈 값 미전송) · 넘기기(`toTransferFormPatch`)에서 뺀다
+  - ⑤ ② 단계 2-C 칸(중과 메뉴 · 입주권 양도에만) · ⑥ 사이드바 해당 없음(합계 칸 아님) · ⑦ 표 맨 위 「양도 예정 조합원입주권」 행 · ⑧ 선택 칸이라 검증 없음
+  - ⑫ route `requestSchema.sellingRightValue`(양의 정수) · ⑭ `buildSurchargeJudgmentPayload` 인자 · ⑨⑩⑪⑬ 해당 없음(1주택 본문·계산기 경로 밖)
+- 응답: `scope`는 그대로 `non_housing_sale`이고 `rows`와 `rightSaleHouseCount`(주택 행 간이 판정의 주택 수가 모두 같을 때만)를 더 싣는다. 결과 화면은 사유 카드 아래에 표를 그리고, 전환 버튼(P9)은 숨긴다(맞바꿀 양도 예정 「주택」이 없다).
+- 전환(P9)이 이 칸을 비울 때 고지 이름: 「양도 조합원입주권의 종전 주택의 가격」.
+
 ## 3. V-9 잔여 — 페이지 메타데이터 인용
 
 - 현재(`app/calc/multi-house-surcharge/page.tsx:7`): 「(소득세법 §104⑦, 시행령 §167의3·§167의10)」.
@@ -164,7 +179,7 @@
 |---|---|---|
 | PR-0 | 이 계획서 + 원 계획서 §4 정정 | 없음 |
 | PR-1 | V-4 엔진(:36·:55) + leaf(Q-1) + V-9 메타데이터 | Q-1 결정 · V-A·V-B·V-C 해소 |
-| PR-2 | V-5 표 열기 | Q-2 = (a) · V-D·V-E 해소 |
+| PR-2 | V-5 표 열기 | Q-2 = (a) · V-D·V-E 해소 ✅(§2.6) |
 
 ## 6. 미검증 레지스터
 
@@ -173,8 +188,8 @@
 | V-A | `resolveHceGeneralHouseAcquisitionDate` 4갈래 중 판정 메뉴·계산기 폼에서 닿는 갈래와 폼 출처(`houseCountExclusionAcquisitionDate`를 싣는 ④가 있는지 · 이월과세 갈래가 판정 메뉴에서 닿는지) | grep ④ 빌더 · probe | leaf helper가 받을 폼 키 | ✅ §1.6 |
 | V-B | leaf 정정이 계산기 ④ 본문을 바꾸는 사례가 있는가 — 일시적 2주택 신규 주택 도출에서 제외 행 집합이 달라지는 시료 | probe(넘기기 전후 본문 대조) | 있으면 계산기 세액 변화 → GH-6 필수 · 원 계획서 「계산기 불변」 범위를 넘는다고 보고 | ✅ §1.6 — 토지 출자 갈래에서 있음 → Q-3 |
 | V-C | :55(`resolveRentalResidenceComposition`) 날짜가 결론을 가르는 시료가 있는가 | probe | 없으면 :55는 parity 목적으로만 고치고 GH-4는 mutation 동치로 기록 | ✅ §1.6 — 가른다(GH-4) |
-| V-D | (Q-2 a) 권리 행 변환 시 `acquisitionDate`·지역·배우자 3-state 등 권리 행 전용 칸의 값 — `rightsOwnedAtTransfer` 필터·§167의4⑤ 배우자 차감과의 관계 | Read `multi-house-surcharge-count.ts`·행 판정 조립부 | 변환 helper 시그니처 | ⏳ |
-| V-E | (Q-2 a) 「종전 주택의 가격」을 계산기 재개발 블록의 기존 칸에서 가져올 수 있는가(넘기기 때 값 이동) | grep `calc-wizard-asset-redev.ts` | 신규 필드인지 기존 필드 재사용인지 | ⏳ |
+| V-D | (Q-2 a) 권리 행 변환 시 `acquisitionDate`·지역·배우자 3-state 등 권리 행 전용 칸의 값 — `rightsOwnedAtTransfer` 필터·§167의4⑤ 배우자 차감과의 관계 | Read `multi-house-surcharge-count.ts`·행 판정 조립부 | 변환 helper 시그니처 | ✅ §2.6 |
+| V-E | (Q-2 a) 「종전 주택의 가격」을 계산기 재개발 블록의 기존 칸에서 가져올 수 있는가(넘기기 때 값 이동) | grep `calc-wizard-asset-redev.ts` | 신규 필드인지 기존 필드 재사용인지 | ✅ §2.6 — 신규 칸 |
 
 ## 7. 결정 게이트
 

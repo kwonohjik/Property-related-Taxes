@@ -12,10 +12,10 @@ import { transitionExemptionMonths } from "./multi-house-surcharge-exclusion";
 import { withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
 import { assembleSurchargeHouseSet, linkSurchargeHousesForSelling } from "./transfer-tax-judgment-steps";
 import { SURCHARGE_TRANSITION } from "./legal-codes";
-import { buildNarrativeSteps, type SurchargeNarrative } from "./multi-house-surcharge-narrative-steps";
+import { buildNarrativeSteps, SELLING_RIGHT_ROW_ID, type SurchargeNarrative } from "./multi-house-surcharge-narrative-steps";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import type { TransferTaxInput } from "./types/transfer.types";
-import type { HouseInfo, MultiHouseSurchargeInput, MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
+import type { HouseInfo, MultiHouseSurchargeInput, MultiHouseSurchargeResult, PresaleRight } from "./types/multi-house-surcharge.types";
 
 /**
  * 판정이 끝난 단계 — `determineMultiHouseSurcharge`의 반환 경로(Step 3·4·4.5·5·6·7)를 결과 신호로 가린다.
@@ -165,17 +165,18 @@ export function surchargeRowSensitivity(
 /**
  * 표 ⑤ — 양도 예정 주택(headline)과 명부 주택 행마다 「같은 양도일에 이 주택을 양도한다면」.
  * 명부 밖 구성 행(§155⑳ 카드 임대 호 등)은 표의 행이 아니라 판정 집합에만 들어간다. 권리 행은 호출부가 자산 게이트로 따로 둔다.
+ * 입주권을 양도하는 세대(`rightSaleRowInput`)는 양도 예정 주택이 없어 headline 없이 모든 행이 간이 판정이다.
  */
 export function judgeSurchargeRows(
   workingInput: TransferTaxInput,
   parsedRates: ParsedRates,
-  headline: MultiHouseSurchargeResult,
+  headline: MultiHouseSurchargeResult | undefined,
   generalHouseAcquisitionDate?: Date,
 ): SurchargeRowJudgment[] {
   const sellingId = workingInput.sellingHouseId;
   const rows: SurchargeRowJudgment[] = [];
   for (const h of workingInput.houses ?? []) {
-    if (h.id === sellingId) {
+    if (h.id === sellingId && headline) {
       rows.push({ houseId: h.id, basis: "headline", result: headline, stage: decisionStageOf(headline), sensitivity: [], regionCodeMissing: !h.regionCode });
       continue;
     }
@@ -191,6 +192,33 @@ export function judgeSurchargeRows(
     });
   }
   return rows;
+}
+
+/**
+ * 조합원입주권을 양도하는 세대의 행 판정 입력(`multi-house-surcharge-menu-residuals.plan.md` §2 · V-5).
+ *
+ * 판정 본문은 양도 입주권 자리에도 「selling」 주택 행을 싣는다(④ `buildHousesPayload` — 1주택 판정이 세대 명부를 받는 자리).
+ * 「다른 주택을 대신 양도한다면」에서는 그 입주권이 **보유 권리**이므로 그 행을 빼고 권리 행으로 더한다.
+ * - 소재지·지정 지구는 그 행 값을 그대로 쓴다 — 가액기준 지역이면 영 §167의4②1호·§167의11②1호(종전 주택의 가격 3억 이하 불산입)를 가른다.
+ * - 가액은 「도시 및 주거환경정비법」 §74①5호 종전 주택의 가격이다. 없으면 산입한다(모름 = 혜택 불성립 — 보유 권리 행과 같은 규칙).
+ */
+export function rightSaleRowInput(engineInput: TransferTaxInput, rightValue: number | undefined): TransferTaxInput {
+  const sellingId = engineInput.sellingHouseId;
+  const sellingRow = (engineInput.houses ?? []).find((h) => h.id === sellingId);
+  const right: PresaleRight = {
+    id: SELLING_RIGHT_ROW_ID,
+    type: "redevelopment_right",
+    acquisitionDate: engineInput.acquisitionDate,
+    region: sellingRow?.region ?? "capital",
+    ...(sellingRow?.regionCode ? { regionCode: sellingRow.regionCode, inDesignatedDistrict: sellingRow.inDesignatedDistrict } : {}),
+    ...(rightValue !== undefined ? { rightValue } : {}),
+  };
+  return {
+    ...engineInput,
+    houses: (engineInput.houses ?? []).filter((h) => h.id !== sellingId),
+    sellingHouseId: undefined,
+    presaleRights: [...(engineInput.presaleRights ?? []), right],
+  };
 }
 
 /**
