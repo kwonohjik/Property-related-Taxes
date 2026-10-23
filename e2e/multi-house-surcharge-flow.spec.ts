@@ -89,6 +89,20 @@ test.describe("다주택 중과 판정 — 흐름", () => {
     expect(exclusion).toEqual({ isCulturalHeritage: true });
   });
 
+  test("MHF-4 세부담 시뮬레이션 — 취득가액을 넣어 비교하면 판정대로(A)·중과가 없다면(B)와 차액이 나온다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await gotoResult(page);
+    await page.getByTestId("surcharge-to-simulation").click();
+    await page.getByTestId("surcharge-sim-acquisition-price").fill("500000000");
+    await page.getByTestId("surcharge-sim-expenses").fill("10000000");
+    await page.getByTestId("surcharge-simulate-cta").click();
+    // 강남 3주택 · 양도 10억 · 취득 5억 · 필요경비 1천만 · 2015-01-01 취득 → 2021-06-01 양도(route anchor S-1과 같은 값)
+    await expect(page.getByTestId("surcharge-sim-a-total")).toHaveText("347,435,000");
+    await expect(page.getByTestId("surcharge-sim-b-total")).toHaveText("160,688,000");
+    await expect(page.getByTestId("surcharge-sim-difference")).toHaveText("186,747,000");
+    await expect(page.getByTestId("surcharge-sim-a-rate-sub")).toHaveText("가산 30%p 포함");
+  });
+
   test("MHF-3 두 메뉴 교차 링크는 입력을 유지한다", async ({ page }) => {
     test.setTimeout(90_000);
     await gotoResult(page);

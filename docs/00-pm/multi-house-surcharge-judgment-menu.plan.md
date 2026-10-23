@@ -203,6 +203,13 @@ store.surcharge.result ──> MultiHouseSurchargeResultView
 - 🔴 **초판 정정(F-1)**: 초판은 「플래그가 서면 중과 결과를 `undefined`로 둔다」였다. **틀렸다** — 결과가 `undefined`면 `resolveSurchargeApplication`이 원시 플래그(`isRegulatedArea && householdHousingCount >= 2`)로 fallback해(`transfer-tax-surcharge-predicate.ts:146-151`) **B도 중과로 계산된다**. ⇒ 플래그를 술어 입력(`SurchargeApplicationInput`)에 더하고 술어 최상단에서 `isSurchargeCase=false`로 닫는다. 술어 호출부 4곳이 입력을 만드는 방식이 다르다 — `transfer-tax.ts:585`(장특 축)는 **4필드 리터럴을 새로 만들므로 플래그를 명시 전달**해야 하고, `transfer-tax-rate-calc.ts:370`(세율 축)은 입력 전체를 넘긴다. `transfer-tax-redevelopment-steps.ts:325`·`transfer-tax-mixed-use.ts:233`은 D8 범위 밖이지만 같은 전달을 넣어 경로 간 차이를 남기지 않는다. 다른 경로(일시적 2주택 기한 판정의 `isRegulatedArea` 등)는 건드리지 않는다.
 - 표시: 양도차익·장특공제·과세표준·적용세율(기본+가산)·산출세액·지방소득세·합계, 차액 = A − B. 비과세면 「비과세라 비교 해당 없음」. 금액 칸 정렬 표준(amount-column-align).
 - A의 `multiHouseSurchargeEvaluation`(`transfer-result.types.ts:369`)이 headline과 같아야 한다(parity anchor MH-P2 재사용).
+- **구현 정밀화(P8, 2026-10-23)**:
+  - 입력 두 칸은 공유 폼(`formData`)이 아니라 store 중과 슬롯 `simulationInput`에 둔다. 공유 폼에 두면 칸을 고칠 때마다 두 메뉴의 판정 결과가 함께 무효화된다(T9가 피하려던 것). 또 계산기 넘기기가 계산기의 필요경비 구조(자본적지출 칸 + 폼 수준 양도비 안분 — `transfer-tax-api.ts` `expenses`·`capitalExpenditure`)와 엇갈린다. ⇒ 넘기기에는 실리지 않는다.
+  - 입력을 고치면 **시뮬레이션만** 비우고 판정은 둔다(`setSurchargeSimulationInput`). 판정 사실을 고치면 기존대로 판정이 비고 입력은 남는다.
+  - 「세액 비교하기」는 같은 route에 `{ property, simulation }`을 보내 판정과 시뮬레이션을 한 응답으로 받는다. 응답 귀속 가드에 시뮬레이션 입력 동일성을 더했다.
+  - 세율 로드는 `loadJudgmentRateMap`(원본 맵)과 `loadJudgmentRates`(파싱)로 나눴다 — `calculateTransferTax`가 원본 맵을 받는다. 1주택 route는 그대로 파싱 함수를 쓴다.
+  - D8 지원 범위는 화면 술어(`surchargeSimulationUnsupportedReason` — 주택 양도 ∧ 매매 취득)가 정한다. 판정 본문은 상속·증여 원인을 사실이 다 갖춰졌을 때만 싣는다. 그래서 route(`runSurchargeSimulation`)는 본문에 보이는 원인·자산 종류만 다시 확인해 `unsupported`로 답한다.
+  - 판정 범위 밖(`scope.supported = false`)이면 `simulation`을 싣지 않는다.
 
 ### 4.8 응답 타입 (초안)
 
@@ -444,7 +451,7 @@ lib/tax-engine/multi-house-surcharge-narrative.ts  # 설명문·decisionStageOf�
 | P6a ✅ #2438 | 단계 화면 `menu` prop(Step2 플래그 · Step3 2-C 문구 · T11 창 안 안내) · **M1** 양도 당시 기준시가 칸(`HousingStdPriceLookupField`, 가액기준이면 필수) · ⑧ `multi-house-surcharge-validate.ts`(1주택 단계 검증 전부 + 중과 축 leaf · 가액기준 행 기준시가) · 술어 leaf `surcharge-price-criteria.ts` | VC-0~6 · MH-P8 · SM-1~3 · mutation 12/12 |
 | P6b ✅ #2441 | 라우트 `app/calc/multi-house-surcharge/`(page · `MultiHouseSurchargeCalculator` · `steps/StepResult` — 결과는 **최소 표시**: 범위 밖 사유·설명문 ①~⑥·확인 필요·고지. 표·세율 영향·비과세 요약·넘기기는 P7) · `MultiHouseSurchargeSidebar`(1주택 요약 + 양도일 조정대상지역 입력값 + 결과 echo 중과 주택 수) · 교차 링크는 **중과 → 1주택 한쪽만**(1주택 → 중과 링크는 결과 뷰가 완성되는 P7에서 — 그 전엔 미완 결과 화면으로 들어오는 경로를 만들지 않는다) · 이력 자동저장 없음(D4) | CI-1~7(11건) · mutation 9/9(점프 관문 단독 무력화는 결과 단계 마지막 관문이 같은 결과를 내는 이중 방어 — 둘 다 끄면 CI-3 실패) · 브라우저(Playwright): 전주 완산구+강남 2채 → M1 차단 배너 → 4억 입력 → 본문 양도 주택 행 400,000,000 → 3주택 이상 중과 설명문 · 375px 가로 스크롤 0 |
 | P7 ✅ #2442 | 결과 뷰 `MultiHouseSurchargeResultView`(고지 → 결론 → D1 표 `SurchargeHouseTable` → D1 상세 `SurchargeSellingDetail`(설명문 번호·결론 단계·`LawArticleModal`·확인 필요) → D3b `SurchargeRateImpactCard` → D3a `ExemptionSummaryCard`(`oneHouseVerdictOf`) → 인쇄 · D3d 「이 사실로 양도세 계산」) · 1주택 → 중과 교차 링크 · 두 메뉴 초기화·홈 확인 문구 · 사유 라벨 표 export 재사용(`MultiHouseSurchargeDetailCard`) · 표 요약은 응답 echo(F-8). 권리 양도(V-5)는 종전대로 범위 밖 사유 + 비과세 요약만 | RV-1~9(12건) · CI-8·9 · E2E `multi-house-surcharge-flow.spec.ts` MHF-1~3 · mutation 17/17(동치 2건 — 선택 주택 맨 앞 조건·정렬은 응답 순서와 같아 코드 삭제) · 브라우저: 라이트·다크·375(머리줄 세로 눌림 → 좁은 화면 2줄로 정정) |
-| P8 | 시뮬레이션 단계(D3c) | MH-P6 화면 · E2E |
+| P8 ✅ | 선택 단계 ⑤ `StepSimulation`(취득가액·필요경비 합계 → 「세액 비교하기」) · `SurchargeSimulationCard`(판정대로 A / 중과가 없다면 B / 차액) · route `simulation` 블록 + `surcharge-simulation.ts`(`calculateTransferTax` ×2, B = `forceNoMultiHouseSurcharge`) · store 슬롯 `simulationInput` · 세율 로드 분리(`loadJudgmentRateMap`) — §4.7 구현 정밀화 | MH-P6 S-1~9 · SS-1~7(10건) · E2E MHF-4 |
 | P9 | 전환 버튼(D6) · 홈 카드 · E2E 정리 | swap 테스트 · 홈 레이아웃 · 모바일·다크 |
 
 - `lib/stores/**`·`lib/tax-engine/**` 변경 PR은 pre-push 전체 테스트가 돈다.

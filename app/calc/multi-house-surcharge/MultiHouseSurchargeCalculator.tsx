@@ -3,7 +3,7 @@
 /**
  * 다주택 중과 **판정 메뉴** 오케스트레이터 (계획서 `docs/00-pm/multi-house-surcharge-judgment-menu.plan.md` §5.1 · §5.6 · P6b)
  *
- * 4단계: ① 세대 → ② 양도 대상 주택 → ③ 보유 주택·권리 → ④ 판정 결과 — 1주택 판정 메뉴와 **같은 단계 화면**을 `menu="surcharge"`로
+ * 4단계: ① 세대 → ② 양도 대상 주택 → ③ 보유 주택·권리 → ④ 판정 결과(+ 선택 ⑤ 세부담 시뮬레이션 — P8) — 1주택 판정 메뉴와 **같은 단계 화면**을 `menu="surcharge"`로
  * 쓰고 **입력(store `formData`)도 함께 쓴다**(D2). 결과·단계·오류·로딩은 store의 `surcharge` 슬롯이다(T7).
  *
  * 1주택 오케스트레이터(`OneHouseJudgmentCalculator.tsx`)를 일반화하지 않고 새로 둔다(T8) — 그쪽은 AI·자동저장·`resultAtMount` 등
@@ -23,6 +23,7 @@ import { Step1 } from "@/app/calc/one-house-exemption/steps/Step1";
 import { Step2 } from "@/app/calc/one-house-exemption/steps/Step2";
 import { Step3 } from "@/app/calc/one-house-exemption/steps/Step3";
 import { StepResult } from "./steps/StepResult";
+import { StepSimulation } from "./steps/StepSimulation";
 import { useOneHouseJudgmentStore } from "@/lib/stores/one-house-judgment-store";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
@@ -32,10 +33,13 @@ import {
   validateAllSurchargeSteps,
   validateSurchargeStepByIndex,
 } from "@/lib/calc/multi-house-surcharge-validate";
+import { surchargeSimulationInputError } from "@/lib/calc/surcharge-simulation-input";
 
 /** ⚠️ 사이드바 `STEP_LABELS`와 같은 문자열 — 파일명 Step3(양도 대상)이 2번째, Step2(보유 주택)가 3번째다(1주택 메뉴와 같은 이유). */
-const SURCHARGE_STEPS = ["세대", "양도 대상 주택", "보유 주택·권리", "판정 결과"] as const;
+const SURCHARGE_STEPS = ["세대", "양도 대상 주택", "보유 주택·권리", "판정 결과", "세부담 시뮬레이션"] as const;
 const RESULT_STEP = 3;
+/** 선택 단계(T9) — 결과 화면 안 입력은 판정 결과를 지우므로 결과 뒤 단계로 둔다 */
+const SIMULATION_STEP = 4;
 
 /** 두 판정 메뉴가 입력을 함께 쓴다는 사실을 초기화·홈 이동 확인에 알린다(§5.8 · R2). */
 const SHARED_INPUT_NOTE = "1세대1주택 비과세 판정과 다주택 중과 판정은 입력을 함께 씁니다.";
@@ -48,6 +52,8 @@ export default function MultiHouseSurchargeCalculator() {
   const resultClientId = useOneHouseJudgmentStore((s) => s.surcharge.resultClientId);
   const error = useOneHouseJudgmentStore((s) => s.surcharge.error);
   const isLoading = useOneHouseJudgmentStore((s) => s.surcharge.isLoading);
+  const simulationInput = useOneHouseJudgmentStore((s) => s.surcharge.simulationInput);
+  const setSimulationInput = useOneHouseJudgmentStore((s) => s.setSurchargeSimulationInput);
   const updateFormData = useOneHouseJudgmentStore((s) => s.updateFormData);
   const setStep = useOneHouseJudgmentStore((s) => s.setSurchargeStep);
   const setResult = useOneHouseJudgmentStore((s) => s.setSurchargeResult);
@@ -71,7 +77,7 @@ export default function MultiHouseSurchargeCalculator() {
   /** 경고는 파생값 — store에 넣지 않는다. 결과 단계에서는 전 단계를 모은다(건너뛴 단계의 경고를 놓치지 않게). */
   const stepWarnings = useMemo(
     () =>
-      currentStep === RESULT_STEP ? validateAllSurchargeSteps(formData) : validateSurchargeStepByIndex(formData, currentStep),
+      currentStep >= RESULT_STEP ? validateAllSurchargeSteps(formData) : validateSurchargeStepByIndex(formData, currentStep),
     [formData, currentStep],
   );
 
@@ -131,7 +137,39 @@ export default function MultiHouseSurchargeCalculator() {
     }
   }, [formData, activeClientId, setLoading, setError, setResult, blockOnFirstInvalidStep]);
 
-  const isResult = currentStep === RESULT_STEP && result !== null;
+  /**
+   * ⑤ 「세액 비교하기」 — 판정과 시뮬레이션을 한 요청으로 받는다(입력 사실이 바뀌어 판정이 비었어도 함께 채운다).
+   * 귀속 가드는 판정과 같고, 시뮬레이션 입력이 그사이 바뀌어도 늦은 응답을 버린다.
+   */
+  const handleSimulate = useCallback(async () => {
+    if (blockOnFirstInvalidStep(RESULT_STEP)) return;
+    const inputError = surchargeSimulationInputError(simulationInput);
+    if (inputError) {
+      setError(inputError);
+      return;
+    }
+    const requestClientId = activeClientId;
+    const isCurrent = () => {
+      const s = useOneHouseJudgmentStore.getState();
+      return (
+        s.formData === formData &&
+        s.surcharge.simulationInput === simulationInput &&
+        useProfessionalStore.getState().activeClientId === requestClientId
+      );
+    };
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await callMultiHouseSurchargeJudgmentAPI(formData, simulationInput);
+      if (isCurrent()) setResult(res, requestClientId);
+    } catch (e) {
+      if (isCurrent()) setError(e instanceof Error ? e.message : "계산에 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  }, [formData, simulationInput, activeClientId, setLoading, setError, setResult, blockOnFirstInvalidStep]);
+
+  const isResult = currentStep >= RESULT_STEP && result !== null;
 
   /**
    * D3d 「이 사실로 양도세 계산」 — 넘기는 것은 **폼(사실)** 이다. 계산기는 같은 엔진으로 다시 판정한다. 판정 이력을 남기지 않으므로(D4)
@@ -229,6 +267,17 @@ export default function MultiHouseSurchargeCalculator() {
                 onCalculateTax={handleCalculateTax}
               />
             )}
+            {currentStep === SIMULATION_STEP && (
+              <StepSimulation
+                form={formData}
+                result={result}
+                input={simulationInput}
+                onInputChange={setSimulationInput}
+                onSimulate={handleSimulate}
+                isLoading={isLoading}
+                error={error}
+              />
+            )}
 
             <div className="mt-8 flex items-center justify-between border-t pt-6 print:hidden">
               <WizardBackNav isFirstStep={currentStep === 0} onBack={handleBack} />
@@ -250,6 +299,17 @@ export default function MultiHouseSurchargeCalculator() {
                 >
                   판정 결과 보기
                 </CtaButton>
+              )}
+              {currentStep === RESULT_STEP && result !== null && (
+                <NavButton
+                  direction="next"
+                  label="세부담 시뮬레이션"
+                  data-testid="surcharge-to-simulation"
+                  onClick={() => {
+                    setError(null);
+                    setStep(SIMULATION_STEP);
+                  }}
+                />
               )}
             </div>
           </div>

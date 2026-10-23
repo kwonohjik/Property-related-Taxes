@@ -5,7 +5,7 @@
  * `resolveSurchargeExclusionByReduction` → `runMultiHouseSurchargeStep(…, resolveHceGeneralHouseAcquisitionDate)` →
  * `resolveSurchargeApplication`. 다른 행·설명문은 P3b·P3c의 순수 함수를 그대로 부른다. 화면은 다시 계산하지 않는다(T5).
  *
- * 시뮬레이션(D3c)은 P8에서 붙인다.
+ * 시뮬레이션(D3c)은 route가 요청을 받았을 때 따로 붙인다(`surcharge-simulation.ts`).
  */
 import { format } from "date-fns";
 import { isRegulatedByBjdCode, type RegulatedAreaJudgment } from "@/lib/tax-engine/data/regulated-areas";
@@ -36,6 +36,7 @@ import type { ParsedRates } from "@/lib/tax-engine/transfer-tax-helpers";
 import type { ExcludedHouse, MultiHouseSurchargeResult, PresaleRight } from "@/lib/tax-engine/types/multi-house-surcharge.types";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import type { OneHouseExemptionResponse } from "../one-house-exemption/judgment-request";
+import type { SurchargeSimulation } from "./surcharge-simulation";
 
 /**
  * 판정하지 않는 범위.
@@ -100,6 +101,8 @@ export interface MultiHouseSurchargeJudgmentResponse {
   };
   rows?: { houses: SurchargeHouseRow[]; rights: SurchargeRightRow[] };
   rateImpact?: SurchargeRateImpact;
+  /** D3c 세부담 시뮬레이션 — 요청에 `simulation`이 있고 `scope.supported`일 때만 */
+  simulation?: SurchargeSimulation;
   notices: string[];
 }
 
