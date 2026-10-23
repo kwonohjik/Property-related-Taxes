@@ -33,6 +33,7 @@ import {
 } from "./general-building-route-cards";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
+import { gbBurdenedGiftSelfBuiltPenaltyAxis, GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
 
 export type { GeneralBuildingActualPricePayload, ActualGbCardsResult } from "./general-building-route-actual.types";
 import type { GeneralBuildingActualPricePayload, ActualGbCardsResult } from "./general-building-route-actual.types";
@@ -425,11 +426,20 @@ export function buildActualGeneralBuildingCards(
       carryoverTaxation: landCarryoverTaxation,
     } as unknown as AssetCardForAggregate);
   }
+  /**
+   * 부담부증여 K-5(환산)·K-7(감정) × 양도인 본인 신축 → §114조의2 신호 (PR-5b). 카드는 §159 안분 취득가액(`usedEstimatedAcquisition:false`)으로 계산하되
+   * 가산세만 `penaltyAxis`·신축일로 싣는다 — base 규칙은 단건 `runBurdenedGiftStep`과 같은 leaf 가 정한다.
+   */
+  const bgPenaltyAxis =
+    burdenedGiftInfo && transferBurdenedGiftBreakdown
+      ? gbBurdenedGiftSelfBuiltPenaltyAxis(burdenedGiftInfo, transferBurdenedGiftBreakdown, buildingAcquisitionCause === "newConstruction", buildingCardDate, transferDate)
+      : undefined;
   cards.push({
     propertyId: "building", propertyLabel: "건물(3001)", propertyType: "general_building_unit",
     transferPrice: buildingTransfer, acquisitionPrice: buildingAcq, expenses: buildingExp,
     usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
     acquisitionDate: buildingCardDate, transferDate, isNonBusinessLand: false,
+    ...(bgPenaltyAxis ? { isSelfBuilt: true, buildingAcquisitionDate: buildingCardDate, penaltyAxis: bgPenaltyAxis } : {}),
     /**
      * 건물 이월과세 — 법 §97의2①은 「토지·건물 등」이라 건물도 대상이다. 환산 경로와 달리
      * 실가 경로의 건물 카드는 **1장뿐**이라 분할이 없다(NBL은 토지 축이다).
@@ -575,6 +585,10 @@ export function runActualGeneralBuildingOnce(
     },
     rates,
   );
+
+  // 부담부증여 K-5/K-7 × 본인 신축 가산세가 붙었으면 고지(Q-14) — 신호는 발동 게이트(5년·시행일)가 열렸을 때만 실리므로 신호 유무가 곧 가산세 유무다.
+  if (cards.some((c) => c.penaltyAxis))
+    aggregated.warnings.push(GB_BG_SELF_BUILT_NOTICE);
 
   const apportionment = buildApportionment(
     cards, totalStd, nonBusinessRatio,

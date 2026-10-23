@@ -6,6 +6,7 @@
  */
 "use client";
 
+import { penaltyMethodSums } from "@/lib/tax-engine/penalty-method-of-properties";
 import { cn } from "@/lib/utils";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
@@ -252,17 +253,25 @@ export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTran
             <>
               <Row label="가산세" value={`+ ${formatKRW(totalPenalty)}`} />
               {buildingPenaltySum > 0 && (() => {
-                // penaltyBase: PerPropertyBreakdown 정식 필드 (사례 32 후속 PR로 승격, 캐스트 제거)
-                const penaltyBaseSum = aggregated.properties.reduce(
-                  (s, p) => s + (p.penaltyBase ?? 0),
-                  0,
-                );
+                // 산정방식별 행 — 감정가액 건물 파트(비부담부증여 환산 경로 · 부담부증여 K-7)를 「환산취득가액」으로 적던 라벨을 바로잡는다(Q-13).
+                const m = penaltyMethodSums(aggregated.properties);
                 return (
-                  <Row
-                    label={`· 환산취득가액 가산세 (소득세법 §114조의2 ①)${penaltyBaseSum > 0 ? ` = 건물 환산취득가 ${formatKRW(penaltyBaseSum)} × 5%` : ""}`}
-                    value={formatKRW(buildingPenaltySum)}
-                    sub
-                  />
+                  <>
+                    {m.estimated.tax > 0 && (
+                      <Row
+                        label={`· 환산취득가액 가산세 (소득세법 §114조의2 ①)${m.estimated.basis > 0 ? ` = 건물 환산취득가 ${formatKRW(m.estimated.basis)} × 5%` : ""}`}
+                        value={formatKRW(m.estimated.tax)}
+                        sub
+                      />
+                    )}
+                    {m.appraisal.tax > 0 && (
+                      <Row
+                        label={`· 감정가액 가산세 (소득세법 §114조의2 ①)${m.appraisal.basis > 0 ? ` = 건물 감정가액 ${formatKRW(m.appraisal.basis)} × 5%` : ""}`}
+                        value={formatKRW(m.appraisal.tax)}
+                        sub
+                      />
+                    )}
+                  </>
                 );
               })()}
               {filingDelayedSum > 0 && (

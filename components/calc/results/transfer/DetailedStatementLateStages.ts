@@ -190,7 +190,7 @@ export function appendLateStageItems(
     // §114조의2①은 「감정가액 또는 환산취득가액」을 취득가액으로 한 경우다 — 산정방식은 엔진이 가산세 step에 싣는
     // `calculateBuildingPenalty` note(「… + 감정가액 적용」)가 정본이다. 어댑터 경유 result에는 그 step이 없어 종전 표기를 유지한다.
     const penaltyStep = findStepByLabel(result.steps, "환산가액적용가산세");
-    const penaltyMethod = penaltyStep?.formula?.includes("감정가액 적용") ? "감정가액" : "환산취득가액";
+    const penaltyMethod = penaltyStep?.formula?.includes("감정가액 적용") || result.penaltyMethod === "appraisal" ? "감정가액" : "환산취득가액";
     // 산정기준액은 어댑터 경유 result에서 0이다(자산별 값이 합쳐지지 않는다) — 없으면 꼬리를 생략한다.
     // 이월과세 × 증여자 신축·증축(§114조의2) — 신축자가 증여자임과 건물분 산식을 같은 문장 정본(`donorBuiltPenaltyView`)으로 밝힌다.
     const donorView = donorBuiltPenaltyView(resultDonorBuiltEcho(result));
