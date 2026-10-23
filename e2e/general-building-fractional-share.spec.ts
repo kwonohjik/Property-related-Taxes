@@ -40,7 +40,7 @@ const PROPERTY_LEVEL = {
   gbZoneType: "general_residential",
 };
 
-function seedForm() {
+function seedForm(over: [Record<string, unknown>, Record<string, unknown>] = [{}, {}]) {
   return {
     state: {
       formData: {
@@ -58,6 +58,7 @@ function seedForm() {
             buildingAcqMode: "estimated",
             gbAcqLandPricePerSqm: "1000000",
             gbAcqBuildingValue: "100000000",
+            ...over[0],
           },
           {
             // 🔑 `makeDefaultAsset`이라 `assetKind`가 "housing"이다 — 실제 앱과 **같은 상태**.
@@ -73,6 +74,7 @@ function seedForm() {
             buildingAcqMode: "estimated",
             gbAcqLandPricePerSqm: "1500000",
             gbAcqBuildingValue: "150000000",
+            ...over[1],
           },
         ],
         transferDate: "2024-03-01",
@@ -90,12 +92,12 @@ function seedForm() {
   };
 }
 
-async function seedAndOpen(page: Page) {
+async function seedAndOpen(page: Page, over?: Parameters<typeof seedForm>[0]) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(),
+    seedForm(over),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -213,6 +215,40 @@ test.describe("일반건물 × 지분 분할 취득", () => {
     });
     // 지분 라벨이 결과에 노출된다
     await expect(page.getByText(/지분/).first()).toBeVisible();
+  });
+
+  // ══════════════════════════════════════════════════════════════════
+  // GBF-29 — 지분마다 실가·환산이 섞여도 계산된다 🔴
+  // ══════════════════════════════════════════════════════════════════
+  /**
+   * 종전: ⑧은 통과하는데 ⑫가 「지분 간 물건-수준 값이 다릅니다(buildingArea)」로 400 — 실가 지분 본문에는 환산 전용 키가 없다.
+   * 화면에서 고칠 칸이 없는 막다른 길이었다(`docs/00-pm/gb-share-mode-mix-and-inherited-estimate-guard.plan.md` S-1).
+   * 주 자산이 실가여도 환산 지분이 있으면 최초공시 토글이 주 자산 카드에 뜬다(§4).
+   */
+  test("GBF-29: 지분 1 실가 + 지분 2 환산 → 계산 200 · 최초공시 토글이 자산 1에 있다", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedAndOpen(page, [
+      { useEstimatedAcquisition: false, landAcqMode: "actual", buildingAcqMode: "actual", fixedAcquisitionPrice: "500000000" },
+      {},
+    ]);
+
+    const asset1 = page.locator('[data-asset-card-index="0"]');
+    await asset1.getByRole("button", { name: /취득/ }).first().click();
+    await expect(asset1.getByText("주택으로 최초공시 후 상가로 용도변경 (환산취득가)")).toBeVisible();
+
+    for (const step of ["보유 상황", "감면·공제", "가산세"]) {
+      await page.getByRole("button", { name: step }).first().click();
+    }
+    const calcResponse = page.waitForResponse(
+      (r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByRole("button", { name: /계산하기/ }).click();
+    const resp = await calcResponse;
+    const reqBody = JSON.parse(resp.request().postData() ?? "{}");
+    expect(reqBody.generalBuildingShares.map((s: { valuation: { actualPriceMode?: boolean } }) => s.valuation.actualPriceMode === true)).toEqual([true, false]);
+    expect(resp.ok(), `계산 API 비정상 응답 ${resp.status()} ${await resp.text()}`).toBe(true);
+    await expect(page.getByText(/결정세액|납부세액|양도소득/).first()).toBeVisible({ timeout: 15_000 });
   });
 
   // ══════════════════════════════════════════════════════════════════

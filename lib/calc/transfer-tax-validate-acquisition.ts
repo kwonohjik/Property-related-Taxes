@@ -10,6 +10,8 @@
  *
  * 종전 import 경로 호환을 위해 `transfer-tax-validate-asset.ts`가 재export한다.
  */
+import { isGbFirstDisclosureApplicable } from "./gb-first-disclosure";
+import { isGbFirstDisclosureApplicableForProperty } from "./gb-first-disclosure";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { validateCarryoverAsset } from "./transfer-tax-validate-carryover-asset";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
@@ -225,7 +227,15 @@ export function validateAssetAcquisition(
 
   // ── 일반건물(토지+건물 일괄) 전용 검증 — transfer-tax-validate-gb.ts 위임 ──
   if (asset.assetKind === "general_building") {
-    return validateGeneralBuildingAsset(asset, label, formTransferDate);
+    /*
+     * 최초공시는 물건 사건이라 지분 분할에서는 주 자산 카드에서 한 번 받고 ④가 전 지분에 복사한다 —
+     * 주 자산은 「환산 지분이 하나라도 있으면」 검증하고(⑤ 토글과 같은 축), 둘째 이후 지분은 그 칸이 화면에 없어 검증하지 않는다.
+     */
+    const fdApplicable =
+      isFractionalSplitAxis && form
+        ? !isNonPrimaryAsset && isGbFirstDisclosureApplicableForProperty(asset, form.assets)
+        : isGbFirstDisclosureApplicable(asset);
+    return validateGeneralBuildingAsset(asset, label, formTransferDate, fdApplicable);
   }
 
   // 입주권 「조합원 유형」 질문의 위치 — 축 B 둘째 이후 지분 카드는 ① 기본정보를 숨겨 ③ 취득정보에 있다(UI와 같은 leaf).

@@ -51,6 +51,21 @@ export function isGbFirstDisclosureApplicable(asset: GateAsset): boolean {
   return land === "estimated" || building === "estimated";
 }
 
+/**
+ * 최초공시 노출·검증 축 — **물건 단위**. 지분 분할(축 B)이면 지분 전체를 넘긴다(그 밖은 생략).
+ *
+ * 최초공시는 물건 사건이라 주 자산 카드에서 한 번 받고 ④가 전 지분에 복사한다(`mergeGbPropertyLevel`).
+ * ④는 지분마다 **그 지분이 환산일 때** 싣는다 ⇒ 노출은 「환산 지분이 하나라도 있으면」이다.
+ * 주 자산 단독 축이면 「주 자산 실가 + 지분 2 환산」에서 지분 2에 필요한 칸이 화면에 없다
+ * (`docs/00-pm/gb-share-mode-mix-and-inherited-estimate-guard.plan.md` S-1 §4). ⑤·⑧이 이 함수를 공유한다.
+ */
+export function isGbFirstDisclosureApplicableForProperty(
+  asset: GateAsset,
+  fractionalShares?: readonly GateAsset[],
+): boolean {
+  return fractionalShares ? fractionalShares.some(isGbFirstDisclosureApplicable) : isGbFirstDisclosureApplicable(asset);
+}
+
 /** `gbFirstDisclosureLandStdPriceOf`가 읽는 필드만. */
 type LandStdAsset = Pick<
   AssetForm,
