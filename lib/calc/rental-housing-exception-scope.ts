@@ -25,15 +25,18 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 /**
- * 이 자산 종류에 §155⑳ 특례를 적용할 수 있는가.
+ * 이 자산 종류에 §155⑳ 특례를 적용할 수 있는가 — 양도하는 「거주주택」이 주택일 때.
  *
- * 「거주주택」이 대상이므로 주택과 조합원입주권만 해당한다 — 입주권은 §155⑳ 판정에서
- * 주택으로 취급되는 축이 있어 ⑤가 처음부터 함께 열어 두었다.
+ * - `housing` · `redevelopment_apt`(재개발·재건축 완공 신축주택) — 거주주택이 재건축된 뒤 양도해도 특례를 적용한다
+ *   (부동산납세과-827 · 서면-2015-부동산-1491 · 영 §155⑳ 1호 「보유기간 중 거주기간」 — 계획서
+ *   `redev-apt-rental-residence-155-20.plan.md`). 종전에는 완공APT가 빠져 같은 사실에서 일반 주택만 비과세였다.
+ * - `right_to_move_in`은 **아니다** — 「관리처분계획인가 후 조합원입주권을 양도하는 경우에는 해당 규정이 적용되지 않는 것」
+ *   (서면-2017-법령해석재산-1581). 종전에는 카드가 열려 있었으나 엔진(입주권 경로)이 그 입력을 읽지 않아 결과에 반영되지 않았다(Q-4 (a)).
  */
 export function isRentalHousingExceptionApplicable(
   assetKind: AssetForm["assetKind"],
 ): boolean {
-  return assetKind === "housing" || assetKind === "right_to_move_in";
+  return assetKind === "housing" || assetKind === "redevelopment_apt";
 }
 
 /**

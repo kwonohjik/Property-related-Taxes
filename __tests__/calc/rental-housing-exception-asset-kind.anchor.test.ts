@@ -31,9 +31,12 @@ function withException(assetKind: AssetForm["assetKind"], units: unknown[] = [])
 }
 
 describe("§155⑳ 자산 종류 술어", () => {
-  it("S-1: 주택·입주권만 대상이다", () => {
+  // 2026-10-24 — 재개발 완공APT 추가 · 입주권 제외(계획서 redev-apt-rental-residence-155-20.plan.md Q-1·Q-4 (a) ·
+  //   부동산납세과-827 · 서면-2017-법령해석재산-1581). 비주택 4종이 대상이 아닌 것은 그대로다.
+  it("S-1: 주택·재개발 완공APT만 대상이다(입주권 양도는 아니다)", () => {
     expect(isRentalHousingExceptionApplicable("housing")).toBe(true);
-    expect(isRentalHousingExceptionApplicable("right_to_move_in")).toBe(true);
+    expect(isRentalHousingExceptionApplicable("redevelopment_apt")).toBe(true);
+    expect(isRentalHousingExceptionApplicable("right_to_move_in")).toBe(false);
     for (const k of ["land", "building", "general_building", "commercial_building"] as const) {
       expect(isRentalHousingExceptionApplicable(k)).toBe(false);
     }
@@ -77,9 +80,10 @@ describe("§155⑳ 자산 종류 술어", () => {
     expect(toRentalHousingExceptionApi(withException("housing", [unit]))).toBeDefined();
   });
 
-  it("S-4: 자산 종류 전환 patch가 특례 값을 초기화한다 (입주권은 유지)", () => {
+  it("S-4: 자산 종류 전환 patch가 특례 값을 초기화한다 (완공APT는 유지 · 입주권은 초기화)", () => {
     expect(housingFlagResetPatchForAssetKind("land")).toHaveProperty("rentalHousingException");
-    expect(housingFlagResetPatchForAssetKind("right_to_move_in")).not.toHaveProperty(
+    expect(housingFlagResetPatchForAssetKind("right_to_move_in")).toHaveProperty("rentalHousingException");
+    expect(housingFlagResetPatchForAssetKind("redevelopment_apt")).not.toHaveProperty(
       "rentalHousingException",
     );
     expect(housingFlagResetPatchForAssetKind("housing")).not.toHaveProperty(

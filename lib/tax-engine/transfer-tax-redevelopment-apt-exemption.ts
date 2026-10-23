@@ -24,6 +24,7 @@ import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step"
 import { redevLandAptResidenceNotices } from "./transfer-tax-redevelopment-land-apt-notices";
 import { redevSuccessorGiftNotices } from "./transfer-tax-redevelopment-successor-gift-notices";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
+import { prepareRedevAptRentalResidence } from "./transfer-tax-redevelopment-apt-rental-residence";
 import { resolveRightSaleSpecialExclusion } from "./one-house/right-sale-special-act-exclusion";
 import { rightSalePopDeclineUnconfirmedNotice } from "./one-house/right-sale-special-act-exclusion";
 import { presaleRightStartDate, type ParsedRates } from "./transfer-tax-helpers";
@@ -138,15 +139,27 @@ export function judgeRedevAptOneHouseExemption(
    *    `translateRedevAptForHousingJudgment` leaf에 있다(G8-4). 중과 STEP 0.5 ①②도 같은 leaf를 쓴다 —
    *    비과세와 중과 배제가 **같은 입력**을 봐야 한다. 승계조합원의 취득시기가 준공일인 근거는 leaf 주석.
    */
-  const translatedJudgeInput = translateRedevAptForHousingJudgment(exemptionJudgeInput);
-  const exemptionResult = judgeOneHouseExemptionFromInput(
+  const translatedForRental = translateRedevAptForHousingJudgment(exemptionJudgeInput);
+  // §155⑳ 장기임대주택 거주주택 특례 — 요건이 서면 임대주택을 뺀 주택 수로 판정 · 서지 않으면 되돌린 주택 수로 판정하고 세대 구성 불성립만 거둔다.
+  //   청산금 수령 단독신고는 판정 결과를 쓰지 않으므로 적용하지 않는다(Q-3 (a) — 별건).
+  const rental = isReceiveOnly
+    ? undefined
+    : prepareRedevAptRentalResidence(translatedForRental, parsedRates, hceGeneralHouseAcquisitionDate);
+  const translatedJudgeInput = rental?.judgeInput ?? translatedForRental;
+  const coreResult = judgeOneHouseExemptionFromInput(
     translatedJudgeInput,
     parsedRates.oneHouseSpecialRules,
     presaleRightStartDate(parsedRates),
   );
+  const exemptionResult = rental ? rental.finalize(coreResult) : coreResult;
+  if (rental) {
+    steps.push(...rental.steps);
+    warnings?.push(...rental.warnings);
+  }
   const oneHouseTable2Axis = resolveRedevAptOneHouseTable2Axis({
     isOneHousehold: exemptionJudgeInput.isOneHousehold,
-    judgeHousingCount: exemptionJudgeInput.householdHousingCount,
+    // §155⑳이 서면 「1주택으로 보는」 주택이다(영 §159의4) — 판정이 실제로 본 주택 수.
+    judgeHousingCount: translatedJudgeInput.householdHousingCount,
     deemedOneHouseBy155: exemptionResult.deemedOneHouseBy155,
   });
   // #12 — 토지 출자 원조합원 완공APT의 거주요건 판정 고지(결론을 가를 때만). 단독신고는 신축주택을 양도하지 않아 아래에서 제외한다.
