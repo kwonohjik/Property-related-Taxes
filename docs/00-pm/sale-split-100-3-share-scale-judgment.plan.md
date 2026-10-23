@@ -172,3 +172,28 @@
     - `transfer-fractional-part-field-ratio`: 지분 와이어 건물 칸 비움(Q-4).
     - `multi-key-coverage-f12`: 새 키 분류.
   - E2E SSJ-2: 수정을 무력화하면 실패하는 것을 확인했다. 단건 주택은 ⑧ 보유 상황 확정 플래그 두 개가 필요하다.
+
+### 9.3 PR-3 겸용주택 (2026-10-23)
+
+- **범위**: 겸용 안분 입력은 단건 전용이다(`mixedSaleSplitScope` — 함께 양도·축 B는 ④·⑫가 막는다). 그래서 단건 한 경로만 고쳤다.
+- **④** `transfer-tax-api-mixed-use-sale-split.ts`: 지분 몫 구분가액(토지 버림 · 건물 잔액 — 종전 그대로)과 함께, 공유지분일 때만 계약서(100%) 금액을 `mixedUse.contractLandTransferPrice`·`contractBuildingTransferPrice`로 싣는다.
+- **⑫** `transfer-tax-schema-mixed-use.ts`: 두 필드 추가. 한쪽만 오거나 지분 몫 구분가액 없이 오면 400이다(혼자 오면 판정에 쓰이지 않고 사라진다).
+- **⑭**: 겸용 route는 `mixedUse` 객체를 펼쳐 엔진에 넘긴다(`mixed-use-asset-input.ts` `...s.mixedUse`). 그래서 추가 매핑이 없다.
+- **엔진** `mixed-use-sale-split.ts`:
+  - `judgeDeclared`: 지분율 < 1이고 계약서 금액이 있으면, 계약 총액을 같은 basis 함수(`resolveSaleApportionBasis`)로 안분해 판정한다.
+  - 적용 가액은 지분 몫 구분가액 그대로다(Q-2 a). 불분명이면 종전과 같이 감정 basis 또는 기준시가 경로로 간다.
+  - 판정 echo `MixedDeemedUnclear.contract`에 계약서 금액·안분 가액·지분율을 싣는다.
+  - 판정 규칙(`judgeDeemedUnclearSplit`)은 그대로 호출한다. 공용 leaf `judgeSaleSplitByContract`는 쓰지 않았다. 겸용은 불분명이면 지분 안분 가액이 아니라 감정·기준시가 경로로 가서, leaf의 `shareApplied`가 쓰이지 않기 때문이다.
+- **⑦** `MixedUseApportionSection`:
+  - 「30% 판정은 계약서 금액(물건 전체)으로 했습니다 — 구분 기재 · 안분가액 · 지분 x% 몫」 문장을 넣었다. 구분 기재 적용과 기준시가 후퇴 양쪽에 나온다.
+  - 토지 행 산식은 「계약서 토지 × 지분 → 내림」, 건물 행 산식은 「총 양도가액 − 토지」로 바꿨다(종전에는 지분 몫 값을 「계약서에 구분 기재된 금액」이라고 적었다).
+- **검증**
+  - 경계 탐색 시료: 교재 p.772 겸용(총 2억)에 상가건물 기준시가를 63,000,003으로 바꿨다. 원래 기준시가(63,000,000)에서도 갈린다. 예: 1/3 · 건물 123,157,896은 안분 94,736,843의 정확히 +30%인데 종전 지분 판정은 「30% 미만」이었다.
+  - anchor `transfer.route.mixed-use-sale-split-contract-judgment`(7):
+    - A 1/3: 100% 불분명. 종전은 구분 기재였다. 이제 기준시가로 가고, 세액 = 안분 모드.
+    - B 2/3: 100% 구분 기재. 종전은 불분명이었다. 이제 지분 몫 구분가액을 쓰고, 세액 = 예외로 구분 기재를 강제한 값.
+    - 단독 소유, ⑫ 400 2건, ④ 지분·단독.
+    - 엔진 ± 경계 탐색(1/3·2/3·1/7·37/100): 종전 결함을 재현하고, 수정 후 100% 판정과 일치한다.
+  - ⑦ 컴포넌트 3건(`mixed-use-sale-split-ui` R-3~R-5).
+  - 뮤테이션 11/11(엔진·④·⑫ 8 + 표시 3).
+  - E2E SSJ-3: 수정을 무력화하면 실패한다. 겸용 E2E 114건이 통과한다.

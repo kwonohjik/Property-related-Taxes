@@ -23,6 +23,12 @@ export interface MixedUseSaleSplitFields {
   landAppraisalAtTransfer?: number;
   /** 양도시 건물 감정평가가액(물건 전체). */
   buildingAppraisalAtTransfer?: number;
+  /**
+   * 공유지분일 때만 — 계약서(물건 전체 100%) 구분 기재. 위 두 칸은 지분 몫으로 줄인 값이다.
+   * §100③ 30% 판정은 이 금액으로 하고 결론만 지분에 적용한다(`sale-split-100-3-share-scale-judgment.plan.md` PR-3).
+   */
+  contractLandTransferPrice?: number;
+  contractBuildingTransferPrice?: number;
   /** 「소득세법 시행령」 §166⑧ 예외 사유 — 계약서 구분 모드에서만 의미가 있다. */
   saleSplitExemption?: SaleSplitExemption;
   /**
@@ -63,7 +69,14 @@ export interface MixedUseSaleSplitEcho {
   /** 2차 비율의 근거가 된 양도시 기준시가 4파트. */
   transferStd: MixedTransferStd4;
   /** 계약서 구분 모드의 §100③ 판정(판정하지 않은 경우 undefined). */
-  deemedUnclear?: { deemed: boolean; detail: DeemedUnclearDetail };
+  deemedUnclear?: MixedDeemedUnclear;
+}
+
+/** §100③ 판정 결과. `contract`는 공유지분일 때만 — 판정에 쓴 계약서(100%) 금액이다(위 `landBuilding`은 지분 몫). */
+export interface MixedDeemedUnclear {
+  deemed: boolean;
+  detail: DeemedUnclearDetail;
+  contract?: { declared: SaleSplitPair; apportioned: SaleSplitPair | null; ownershipRatio: number };
 }
 
 /**
@@ -77,6 +90,6 @@ export type MixedSaleSplitResult =
   | {
       applies: false;
       reason: "no_input" | "deemed_to_std" | "appraisal_incomplete";
-      deemedUnclear?: { deemed: boolean; detail: DeemedUnclearDetail };
+      deemedUnclear?: MixedDeemedUnclear;
       appraisalRejected?: AppraisalRejectReason;
     };
