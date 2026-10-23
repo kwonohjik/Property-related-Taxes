@@ -36,6 +36,8 @@ import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggre
 import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
 import { splitAcqBasisFormula } from "@/lib/tax-engine/transfer-tax-split-display";
 import { splitAcqBasisView } from "@/lib/tax-engine/transfer-tax-split-display";
+import { gbResultDonorBuiltEchoes } from "@/lib/tax-engine/gb-result-donor-built-echoes";
+import { donorBuiltPenaltyFilingNote } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
 
 /** 일반건물이 엔진 내부에서 분해하는 카드 id (지분 접미사 제거 후 기준). */
 const GB_CARD_BASE_IDS = new Set([
@@ -464,6 +466,12 @@ export function buildAggregateRows(
   setNum("reductionTax", "total", aggregated.reductionAmount);
   setNum("determinedTax", "total", aggregated.determinedTax);
   setNum("penaltyTax", "total", aggregated.penaltyTax);
+  // 증여자 신축·증축 §114조의2 — 가산세가 붙은 카드의 근거를 합계 칸 각주로 밝힌다(새 수를 만들지 않는다 · 단건 신고서 `donorBuiltPenaltyFilingNote` 와 같은 문장).
+  const donorNotes = gbResultDonorBuiltEchoes(properties).flatMap(({ label, echo }) => {
+    const note = donorBuiltPenaltyFilingNote(echo);
+    return note ? [`[${label}] ${note}`] : [];
+  });
+  const penaltyRoseNotes: Record<string, string> = donorNotes.length > 0 ? { total: donorNotes.join(" / ") } : {};
   setNum("totalDeterminedTax", "total", aggregated.determinedTax + aggregated.penaltyTax);
   /**
    * 농어촌특별세 — 엔진 2-pass 산정값(`transfer-tax-aggregate.ts`)을 그대로 싣는다.
@@ -552,7 +560,7 @@ export function buildAggregateRows(
     ["calculatedTax", "산출세액", Object.keys(taxNotes).length > 0 ? { notes: taxNotes } : undefined],
     ["reductionTax", "감면세액"],
     ["determinedTax", "결정세액", { highlight: true }],
-    ["penaltyTax", "가산세액"],
+    ["penaltyTax", "가산세액", Object.keys(penaltyRoseNotes).length > 0 ? { roseNotes: penaltyRoseNotes } : undefined],
     ["totalDeterminedTax", "총결정세액", { highlight: true }],
     ["priorPaidTax", "기납부세액 (예정신고, §111③)"],
     ["deductedPayable", "차감납부할세액(환급세액)", { highlight: true, separatorAfter: true }],

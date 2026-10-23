@@ -1,6 +1,7 @@
 "use client";
 
 import { penaltyMethodSums } from "@/lib/tax-engine/penalty-method-of-properties";
+import { gbResultDonorBuiltEchoes } from "@/lib/tax-engine/gb-result-donor-built-echoes";
 import { aggregateAcqModes, allEstimated } from "@/components/calc/results/transfer/split-acq-text";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
@@ -112,6 +113,8 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     penaltyBase: 0, // 어댑터: 합계 카드 표시용으로 자산별 penaltyBase는 BundledAllocationCard에서 별도 합산
     // §114조의2 산정방식 — 감정가액 건물 파트만 있으면 상세명세서 라벨을 「감정가액」으로(Q-13). 섞여 있으면 종전 표기(환산취득가액) 유지.
     ...((() => { const m = penaltyMethodSums(a.properties); return m.appraisal.tax > 0 && m.estimated.tax === 0; })() ? { penaltyMethod: "appraisal" as const } : {}),
+    // 카드별 증여자 신축·증축 §114조의2 echo — 어댑터가 싣지 않으면 상세명세서·PDF 가 증여자 신축 근거를 읽을 수 없다(PR-5a).
+    ...((() => { const e = gbResultDonorBuiltEchoes(a.properties); return e.length > 0 ? { donorBuiltPenaltyEchoes: e } : {}; })()),
     // `a.penaltyTax`는 국기법분까지 합한 **총액**이라 지방소득세 base로 못 쓴다.
     // 엔진이 실제로 base에 넣은 §114조의2분 echo를 그대로 승계한다.
     localTaxPenalty: a.buildingPenaltyTax ?? 0,

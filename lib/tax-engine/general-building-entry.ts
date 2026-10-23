@@ -16,6 +16,8 @@
  */
 
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { toEngineDonorBuilt } from "@/lib/api/donor-built-engine-input";
+import type { DonorBuiltWire } from "@/lib/api/transfer-tax-schema-donor-built";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
@@ -27,6 +29,18 @@ import type { GeneralBuildingInput } from "@/lib/tax-engine/general-building-val
 
 /** `generalBuildingValuation` payload — 엔진 input과 같은 모양. */
 export type GeneralBuildingValuationPayload = GeneralBuildingInput;
+
+/**
+ * ⑭ 증여자 신축·증축(§114조의2) 신축일 변환 — **입력 도중(토글 ON · 신축일 아직 비어 있음)인 값은 버린다.**
+ *
+ * 이 함수의 클라이언트 호출자(사이드바 환산 프리뷰 `transfer-estimated-preview.ts`)는 ⑧이 막기 전의 미완성 폼으로 부른다 —
+ * 엄격 변환(`toEngineDonorBuilt`)이 던지면 토글을 켜는 순간 페이지가 에러 바운더리로 떨어진다(E2E 로 실측).
+ * 서버 route 는 ⑫(`z.string().date()`)가 빈 일자를 400 으로 먼저 막아 이 분기에 도달하지 않는다 — 여기서 버려도 침묵 오답이 되지 않는다.
+ */
+function coerceDonorBuilt(db: unknown, label: string) {
+  const wire = db as DonorBuiltWire | undefined;
+  return wire && wire.constructionDate ? toEngineDonorBuilt(wire, label) : undefined;
+}
 
 /**
  * 이월과세 서브객체 조립 — **파트 입력(신규)** 과 **엔진 모양(하위 호환)** 을 모두 받는다.
@@ -53,6 +67,7 @@ function composeGbCarryover(gbRaw: Record<string, unknown>): {
     if (!event || !partRaw) return undefined;
     const part = partRaw as Record<string, unknown>;
     const assetValue = (part.giftDateAssetValue as number) ?? 0;
+    const donorBuilt = coerceDonorBuilt(part.donorBuilt, "buildingCarryoverPart");
     return {
       giftRegistryDate: toOptionalDate(event.giftRegistryDate),
       donorAcquisitionDate: toOptionalDate(part.donorAcquisitionDate),
@@ -75,16 +90,22 @@ function composeGbCarryover(gbRaw: Record<string, unknown>): {
       exclusionDeclared: event.exclusionDeclared,
       // 환산 모드 분자 — 카드 조립 시 `standardPriceAtAcquisition`으로 꺼낸다(D9-8)
       donorStandardPriceAtAcquisition: part.donorStandardPriceAtAcquisition,
+      // ⑭ 증여자 신축·증축(§114조의2, PR-5a) — 위 필드를 하나씩 옮기는 갈래라 여기서 빠지면 침묵 strip 이다. 신축일 string → Date.
+      ...(donorBuilt ? { donorBuilt } : {}),
     };
   };
 
   const legacy = (raw: unknown): Record<string, unknown> | undefined => {
     if (!raw) return undefined;
-    const ct = raw as Record<string, unknown>;
+    // `donorBuilt` 는 `...ct` 로 날것(문자열 신축일) 그대로 실려 가지 않게 떼어 내 변환한다 — 입력 도중 값이면 통째로 버린다.
+    const { donorBuilt: rawDonorBuilt, ...ct } = raw as Record<string, unknown>;
+    const donorBuilt = coerceDonorBuilt(rawDonorBuilt, "buildingCarryoverTaxation");
     return {
       ...ct,
       giftRegistryDate: toOptionalDate(ct.giftRegistryDate),
       donorAcquisitionDate: toOptionalDate(ct.donorAcquisitionDate),
+      // ⑭ 증여자 신축·증축(§114조의2, PR-5a) — `...ct` 가 그대로 실어 오는 문자열 신축일을 Date 로 바꾼다(`Date < string` 침묵 false 방지)
+      ...(donorBuilt ? { donorBuilt } : {}),
     };
   };
 

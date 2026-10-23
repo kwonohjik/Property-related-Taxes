@@ -278,6 +278,16 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           onChange={onChange}
           onCarryoverChange={updateCarryover}
         />
+        {/* 일반건물 건물 파트 — 같은 질문을 건물 서브폼(`buildingCarryover`)에서 받는다(PR-5a). 토지 블록(`part="land"`)에는 뜨지 않는다(건물분만 대상, D4). */}
+        {isBuildingPart && (
+          <CarryoverDonorBuiltSection
+            mode="gb"
+            asset={asset}
+            transferDate={transferDate}
+            onChange={onChange}
+            onCarryoverChange={updateCarryover}
+          />
+        )}
       </div>
 
       {/* ③ 필요경비 가산 */}

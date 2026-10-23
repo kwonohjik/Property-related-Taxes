@@ -5,9 +5,10 @@
  *
  * 이 객체는 **단건 인라인 shape(`transfer-tax-schema-base-shape.ts`)과 엔진 shape(`carryoverTaxationEngineShape` — 컴패니언·GB 파트)가
  * 함께 쓴다.** 한쪽에만 두면 다른 쪽에서 **침묵 strip**된다(400이 아니라 200 + 가산세 0).
- * GB 파트(`landCarryoverTaxation`·`buildingCarryoverTaxation`)·일반건물 `carryoverPartShape`와 split **토지 파트**(`splitCarryoverPartShape`)는
+ * GB **토지** 파트(`landCarryoverTaxation`·`landCarryoverPart`)와 split **토지 파트**(`splitCarryoverPartShape`)는
  * 범위 밖이라 **명시 거부**한다(`rejectDonorBuiltRefine`·`donorBuiltRejectedKey`) — 받아 놓고 무시하면 침묵 오답이다.
  * split **건물 파트**(`buildingCarryoverPart`)는 PR-3 부터 수용한다 — `lib/api/transfer-tax-schema-split-carryover.ts`의 `splitCarryoverBuildingPartShape`.
+ * 일반건물 **건물 파트**(`buildingCarryoverTaxation`·`buildingCarryoverPart`)는 PR-5a 부터 수용한다 — 아래 `refineGbBuildingDonorBuilt`.
  */
 import { z } from "zod";
 import { toDate } from "./date-coerce";
@@ -73,11 +74,11 @@ type CtLike = {
  * 이월과세 서브객체 수준 규칙 — 엔진 `assertDonorBuiltInput`·⑧과 같은 조건(UI 통과 ↔ validate 차단 모순 금지).
  * 자산 종류 의존 규칙(일체 주택의 `housing` 필수 등)은 이 서브객체에 propertyType 이 없어 `refineDonorBuiltOuter`가 맡는다.
  */
-export function refineDonorBuiltInCarryover(ct: CtLike, ctx: z.RefinementCtx): void {
+export function refineDonorBuiltInCarryover(ct: CtLike, ctx: z.RefinementCtx, pathPrefix: (string | number)[] = []): void {
   const db = ct.donorBuilt;
   if (!db) return;
   const issue = (path: (string | number)[], message: string) =>
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["donorBuilt", ...path], message });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...pathPrefix, "donorBuilt", ...path], message });
   if (!ct.useEstimatedAcquisition)
     issue([], "증여자 신축·증축 가산세(소득세법 §114조의2)는 증여자 취득가액을 환산취득가액으로 계산할 때만 적용됩니다 — 실지거래가액 승계에는 보낼 수 없습니다");
   if (db.constructionDate < ct.donorAcquisitionDate || db.constructionDate > ct.giftRegistryDate)
@@ -104,6 +105,70 @@ export const donorBuiltRejectedKey = z
   .any()
   .optional()
   .refine((v) => v === undefined, "이 입력 경로의 증여자 신축·증축 가산세(소득세법 §114조의2)는 아직 지원하지 않습니다");
+
+/**
+ * 일반건물 **건물 파트**(PR-5a)의 신규 파트 모양 `buildingCarryoverPart.donorBuilt` — 일체 주택 안분(`housing`)은 받지 않는다(토지·건물이 카드로 이미 나뉘어 건물분 그 자체).
+ * 받으면 조용히 strip 되므로 `.strict()`로 400.
+ */
+export const gbDonorBuiltPartShape = donorBuiltShape.omit({ housing: true }).strict();
+
+/** 일반건물 건물 파트의 엔진 모양(`buildingCarryoverTaxation`)이 공유 shape(`donorBuiltShape`)의 `housing` 을 받지 않도록 막는다 — 위 `.strict()` 와 같은 규칙 */
+export function rejectDonorBuiltHousingRefine(ct: { donorBuilt?: { housing?: unknown } }, ctx: z.RefinementCtx): void {
+  if (ct.donorBuilt?.housing !== undefined)
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["donorBuilt", "housing"],
+      message: "일반건물 건물 파트에는 일체 주택 건물분 입력(housing)을 보낼 수 없습니다 — 토지·건물이 이미 나뉘어 있습니다",
+    });
+}
+
+type GbBuildingDonorBuiltOuterLike = {
+  buildingAcquisitionCause?: string;
+  extensionInfo?: unknown;
+  carryoverGiftEvent?: { giftRegistryDate: string };
+  buildingCarryoverTaxation?: { donorBuilt?: unknown };
+  buildingCarryoverPart?: {
+    donorAcquisitionDate: string;
+    useEstimatedAcquisition: boolean;
+    donorBuilt?: z.infer<typeof gbDonorBuiltPartShape>;
+  };
+};
+
+/**
+ * 일반건물 건물 파트 × 증여자 신축·증축 (⑫, PR-5a) — `generalBuildingValuationSchema` 의 superRefine 이 부른다.
+ * 엔진 `assertDonorBuiltInput`(`general_building_unit`)·⑧ `validateDonorBuiltGb` 와 **같은 조건**이다(UI 통과 ⇒ ⑫ 통과).
+ *
+ * 환산 여부·신축일 범위·증축 필수 칸은 엔진 모양(`carryoverTaxationEngineShape`)이 이미 자기 superRefine 으로 검사한다 —
+ * 여기서는 (a) 신규 파트 모양에 같은 규칙을 걸고 (b) 두 모양 공통의 **자산 수준** 규칙(취득원인·증축 3-way·사건 동반)을 건다.
+ */
+export function refineGbBuildingDonorBuilt(val: GbBuildingDonorBuiltOuterLike, ctx: z.RefinementCtx): void {
+  const legacy = val.buildingCarryoverTaxation?.donorBuilt;
+  const part = val.buildingCarryoverPart?.donorBuilt;
+  if (!legacy && !part) return;
+  const where = legacy ? "buildingCarryoverTaxation" : "buildingCarryoverPart";
+  const issue = (path: (string | number)[], message: string) =>
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [where, "donorBuilt", ...path], message });
+
+  if (val.buildingAcquisitionCause === "newConstruction")
+    issue([], "증여자 신축·증축 가산세(소득세법 §114조의2)는 양도인 본인 신축과 다른 축입니다 — 건물 취득 원인이 본인 신축이면 함께 보낼 수 없습니다");
+  else if (val.buildingAcquisitionCause !== "carryover_gift")
+    issue([], "증여자 신축·증축 정보는 건물 취득 원인이 이월과세(증여)일 때만 보낼 수 있습니다");
+  if (val.extensionInfo !== undefined)
+    issue([], "증축(3-way) 일반건물의 건물 이월과세에서는 증여자 신축·증축 가산세를 아직 지원하지 않습니다");
+
+  const p = val.buildingCarryoverPart;
+  if (part && p) {
+    // 신규 파트 모양은 증여 사건(등기접수일)이 짝으로 있어야 조립된다(`composeGbCarryover`) — 없으면 donorBuilt 가 조용히 버려진다
+    if (!val.carryoverGiftEvent)
+      issue([], "증여자 신축·증축 정보는 증여 사건(carryoverGiftEvent)과 함께 보내야 합니다");
+    else
+      refineDonorBuiltInCarryover(
+        { donorAcquisitionDate: p.donorAcquisitionDate, giftRegistryDate: val.carryoverGiftEvent.giftRegistryDate, useEstimatedAcquisition: p.useEstimatedAcquisition, donorBuilt: part },
+        ctx,
+        ["buildingCarryoverPart"],
+      );
+  }
+}
 
 type OuterLike = {
   propertyType?: string;

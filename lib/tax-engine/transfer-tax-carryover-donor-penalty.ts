@@ -90,8 +90,11 @@ export function assertDonorBuiltInput(rawInput: TransferTaxInput, ct: Ct): void 
       `증여자가 신축·증축한 건물의 가산세(${law})는 증여자 취득가액을 환산취득가액으로 계산할 때만 적용됩니다 — 실지거래가액 승계에는 보낼 수 없습니다.`,
       "carryoverTaxation.donorBuilt",
     );
-  if (rawInput.propertyType !== "housing" && rawInput.propertyType !== "building")
+  if (rawInput.propertyType !== "housing" && rawInput.propertyType !== "building" && rawInput.propertyType !== "general_building_unit")
     invalid(`증여자 신축·증축 가산세(${law})는 주택·건물에만 적용됩니다.`, "carryoverTaxation.donorBuilt");
+  // 일반건물 건물 카드(PR-5a)는 토지·건물이 카드로 이미 나뉘어 건물분 안분 입력(housing)이 필요 없다 — 받으면 조용히 무시되므로 던진다
+  if (rawInput.propertyType === "general_building_unit" && db.housing)
+    invalid(`일반건물 건물 카드의 증여자 신축·증축 가산세(${law})에는 일체 주택 건물분 입력(housing)을 보낼 수 없습니다.`, "carryoverTaxation.donorBuilt.housing");
   if (rawInput.preHousingDisclosure)
     invalid(
       `증여자 신축·증축 가산세(${law})는 개별주택가격·공동주택가격 최초공시 전 환산(${TRANSFER.PRE_HOUSING_DISCLOSURE_APPORTION})과 함께 쓸 수 없습니다 — 신축 후 5년 이내 양도 건물은 최초공시 이후 취득입니다. 일반 기준시가 환산을 선택하세요.`,
