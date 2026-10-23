@@ -22,12 +22,14 @@
 import { apportionByStdPrice } from "./std-price-apportion";
 import { resolveSaleApportionBasis } from "./sale-split-apportion-basis";
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
-import type { DeemedUnclearDetail, SaleSplitExemption, SaleSplitPair } from "./sale-split-deemed-unclear";
+import type { SaleSplitExemption, SaleSplitPair } from "./sale-split-deemed-unclear";
+import type { SaleSplitContract } from "./sale-split-contract-judgment";
 import { sec100_3Era } from "./data/sec100-3-split-era";
 import { splitMixedUseHousingStd } from "./mixed-use-housing-std";
 import { multiplyByArea } from "./area-utils";
 import { calculateEstimatedAcquisitionPrice, safeMultiplyThenDivide } from "./tax-utils";
 import type {
+  MixedDeemedUnclear,
   MixedPart4,
   MixedSaleSplitResult,
   MixedTransferStd4,
@@ -48,6 +50,8 @@ export interface MixedSaleSplitInput {
   exemption?: SaleSplitExemption;
   /** 양도시 기준시가 4파트. */
   transferStd: MixedTransferStd4;
+  /** 공유지분이면 계약서(물건 전체 100%) 구분 기재 — §100③ 판정은 이 금액으로 한다(`judgeDeclared`). */
+  contract?: SaleSplitContract;
 }
 
 /** 잔액 흡수 2분할 — basis 합이 0이면 산출 불가(호출 전 ⑧·⑫가 막는다). */
@@ -71,7 +75,7 @@ export function splitLandBuildingToParts(landBuilding: SaleSplitPair, std: Mixed
 }
 
 export function resolveMixedSaleSplit(input: MixedSaleSplitInput): MixedSaleSplitResult {
-  const { totalTransferPrice, transferDate, declared, appraisal, exemption, transferStd } = input;
+  const { totalTransferPrice, declared, appraisal, transferStd } = input;
   if (!declared && !appraisal) return { applies: false, reason: "no_input" };
 
   const stdPair: SaleSplitPair = {
@@ -90,15 +94,9 @@ export function resolveMixedSaleSplit(input: MixedSaleSplitInput): MixedSaleSpli
         `겸용주택 양도가액 안분: 계약서 구분가액 합(${declared.land + declared.building})이 양도가액(${totalTransferPrice})과 다릅니다.`,
       );
     }
-    const judged = judgeDeemedUnclearSplit({
-      declared,
-      apportioned: basis.apportioned,
-      era: sec100_3Era(transferDate),
-      ...(exemption ? { exemption } : {}),
-    });
-    const deemedUnclear = { deemed: judged.deemedUnclear, detail: judged.detail };
-    if (!judged.deemedUnclear) {
-      return applied("declared", judged.applied, transferStd, deemedUnclear);
+    const deemedUnclear = judgeDeclared(input, declared, stdPair, basis.apportioned);
+    if (!deemedUnclear.deemed) {
+      return applied("declared", declared, transferStd, deemedUnclear);
     }
     if (basis.kind === "appraisal" && basis.apportioned) {
       return applied("appraisal", basis.apportioned, transferStd, deemedUnclear);
@@ -121,11 +119,43 @@ export function resolveMixedSaleSplit(input: MixedSaleSplitInput): MixedSaleSpli
   };
 }
 
+/**
+ * §100③ 판정. 공유지분이면 계약서(100%) 금액과 계약 총액의 안분 가액(같은 basis 함수)으로 판정한다 — 비율 판정이라 지분율은
+ * 결론에 영향이 없어야 하는데, 지분 몫(버림)끼리 비교하면 30% 근처에서 뒤집혔다(`sale-split-100-3-share-scale-judgment.plan.md` PR-3).
+ * 적용 가액은 호출부가 그대로 지분 몫을 쓴다(Q-2 a).
+ */
+function judgeDeclared(
+  input: MixedSaleSplitInput,
+  declared: SaleSplitPair,
+  stdPair: SaleSplitPair,
+  shareApportioned: SaleSplitPair | null,
+): MixedDeemedUnclear {
+  const era = sec100_3Era(input.transferDate);
+  const exemption = input.exemption ? { exemption: input.exemption } : {};
+  const c = input.contract;
+  if (!c) {
+    const j = judgeDeemedUnclearSplit({ declared, apportioned: shareApportioned, era, ...exemption });
+    return { deemed: j.deemedUnclear, detail: j.detail };
+  }
+  const contractDeclared = { land: c.land, building: c.building };
+  const contractApportioned = resolveSaleApportionBasis({
+    totalTransferPrice: c.land + c.building,
+    stdPrice: stdPair,
+    ...(input.appraisal ? { appraisal: { value: input.appraisal } } : {}),
+  }).apportioned;
+  const j = judgeDeemedUnclearSplit({ declared: contractDeclared, apportioned: contractApportioned, era, ...exemption });
+  return {
+    deemed: j.deemedUnclear,
+    detail: j.detail,
+    contract: { declared: contractDeclared, apportioned: contractApportioned, ownershipRatio: c.ownershipRatio },
+  };
+}
+
 function applied(
   basis: "declared" | "appraisal",
   landBuilding: SaleSplitPair,
   transferStd: MixedTransferStd4,
-  deemedUnclear?: { deemed: boolean; detail: DeemedUnclearDetail },
+  deemedUnclear?: MixedDeemedUnclear,
 ): MixedSaleSplitResult {
   return {
     applies: true,
@@ -250,6 +280,7 @@ export function prepareMixedSaleSplit(args: {
       : {}),
     ...(asset.saleSplitExemption ? { exemption: asset.saleSplitExemption } : {}),
     transferStd: mixedTransferStd4(asset, derived),
+    ...(hasDeclared ? contractOf(asset) : {}),
   });
   if (!result.applies) return { apportionment: base, fallback: result };
 
@@ -269,6 +300,14 @@ export function prepareMixedSaleSplit(args: {
     parts,
     echo: result.echo,
   };
+}
+
+/** 공유지분 계약서(100%) 금액 — 지분율 < 1이고 두 칸이 다 있을 때만(단독 소유·옛 요청은 종전 지분 값 판정). */
+function contractOf(asset: MixedUseAssetInput): { contract?: SaleSplitContract } {
+  const ratio = asset.ownershipRatio ?? 1;
+  const { contractLandTransferPrice: land, contractBuildingTransferPrice: building } = asset;
+  if (!(ratio < 1) || land === undefined || building === undefined) return {};
+  return { contract: { land, building, ownershipRatio: ratio } };
 }
 
 /**

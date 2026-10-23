@@ -9,6 +9,7 @@
  * - 입력은 있었으나 기준시가로 넘어간 경우(`saleSplitFallback`)는 그 사유를 밝힌다(침묵 후퇴 금지).
  */
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
+import type { MixedDeemedUnclear } from "@/lib/tax-engine/types/transfer-mixed-use-sale-split.types";
 import { fmt, fmtPlain, fmtPct, ResultSection, Row, DivRow, Frac, FLine } from "./MixedUseResultCardParts";
 
 interface Props {
@@ -22,6 +23,22 @@ const EXEMPTION_TEXT = {
   demolished_land_only: "건물을 철거하고 토지만 사용하는 경우",
 } as const;
 
+/**
+ * 공유지분 — §100③ 판정에 쓴 계약서(물건 전체) 금액을 밝힌다. 아래 행은 지분 몫이라 그 숫자로는 30% 판정을 검산할 수 없다
+ * (계획서 `sale-split-100-3-share-scale-judgment.plan.md` Q-3 a).
+ */
+function ContractJudgmentNote({ du }: { du?: MixedDeemedUnclear }) {
+  const c = du?.contract;
+  if (!c) return null;
+  return (
+    <p className="text-caption leading-snug text-muted-foreground" data-testid="mixed-sale-split-contract">
+      30% 판정은 계약서 금액(물건 전체)으로 했습니다 — 구분 기재 토지 {fmtPlain(c.declared.land)} · 건물 {fmtPlain(c.declared.building)}
+      {c.apportioned ? `, 안분가액 토지 ${fmtPlain(c.apportioned.land)} · 건물 ${fmtPlain(c.apportioned.building)}` : ""}. 아래 금액은 지분{" "}
+      {fmtPct(c.ownershipRatio)} 몫입니다 (소득세법 §100③).
+    </p>
+  );
+}
+
 export function MixedUseApportionSection({ breakdown, open, onToggle }: Props) {
   const a = breakdown.apportionment;
   const totalTransfer = a.housingTransferPrice + a.commercialTransferPrice;
@@ -29,6 +46,7 @@ export function MixedUseApportionSection({ breakdown, open, onToggle }: Props) {
 
   if (ss) {
     const { landBuilding: lb, parts: p, transferStd: std } = ss;
+    const contract = ss.deemedUnclear?.contract;
     const exemption = ss.deemedUnclear?.detail.exemptionApplied;
     const deemedToAppraisal = ss.basis === "appraisal" && ss.deemedUnclear?.deemed === true;
     return (
@@ -55,12 +73,17 @@ export function MixedUseApportionSection({ breakdown, open, onToggle }: Props) {
               그대로 적용했습니다 (소득세법 시행령 §166⑧).
             </p>
           )}
+          <ContractJudgmentNote du={ss.deemedUnclear} />
           <Row
             label="토지 양도가액"
             value={fmt(lb.land)}
             formula={
               ss.basis === "declared" ? (
-                "계약서에 구분 기재된 금액"
+                contract ? (
+                  `계약서 토지 ${fmtPlain(contract.declared.land)} × 지분 ${fmtPct(contract.ownershipRatio)} → 내림`
+                ) : (
+                  "계약서에 구분 기재된 금액"
+                )
               ) : (
                 <Frac top={`총 양도가액 ${fmtPlain(totalTransfer)} × 토지 감정평가가액`} bottom="토지 감정평가가액 + 건물 감정평가가액" />
               )
@@ -70,7 +93,7 @@ export function MixedUseApportionSection({ breakdown, open, onToggle }: Props) {
             label="건물 양도가액"
             value={fmt(lb.building)}
             formula={
-              ss.basis === "declared"
+              ss.basis === "declared" && !contract
                 ? "계약서에 구분 기재된 금액"
                 : `총 양도가액 - 토지 양도가액 = ${fmtPlain(totalTransfer)} - ${fmtPlain(lb.land)}`
             }
@@ -143,6 +166,7 @@ export function MixedUseApportionSection({ breakdown, open, onToggle }: Props) {
             : "감정평가가액이 토지·건물 중 한쪽만 있어 양도시 기준시가 비율로 안분했습니다 (부가가치세법 시행령 §64①1호)."}
         </p>
       )}
+      <ContractJudgmentNote du={fallback?.deemedUnclear} />
       <Row
         label="양도시 개별주택공시가격"
         value={fmt(a.housingStandardPrice)}
