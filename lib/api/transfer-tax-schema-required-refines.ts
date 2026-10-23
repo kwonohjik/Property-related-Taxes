@@ -137,9 +137,9 @@ function collateralForcesStdAcquisition(bg: BurdenedGiftLike): boolean {
 
 /**
  * 단건 STEP 0.45가 의제취득일 전 3자 max를 §159에 넘기는 자산 종류(`inheritance-acquisition-helpers.ts` `bgBasis`) — 아래 면제 범위.
- * 재개발·입주권(`isRedevelopmentActive`는 이 두 종류만 본다)·일반건물·겸용·분양권은 빠진다.
+ * 재개발 완공 아파트는 ③이 §166③이고 §159가 채택 결과로 실지·환산 분기를 고른다(PR-7b-4). 입주권(Q-30 — §159가 K-4 고정)·일반건물·겸용·분양권은 빠진다.
  */
-const BG_PRE_DEEMED_ENGINE_PROPERTY_TYPES: ReadonlySet<string> = new Set(["land", "housing", "building", "commercial_building"]);
+const BG_PRE_DEEMED_ENGINE_PROPERTY_TYPES: ReadonlySet<string> = new Set(["land", "housing", "building", "commercial_building", "redevelopment_apt"]);
 
 /**
  * 부담부증여 (⑧ `transfer-tax-validate-bg.ts`). 비우면:
@@ -152,16 +152,20 @@ export function refineBurdenedGiftInputs(
     burdenedGiftInfo?: BurdenedGiftLike;
     inheritedAcquisition?: { mode?: string } | null;
     propertyType?: string;
+    redevelopment?: { isSuccessorMember?: boolean } | null;
   },
   ctx: z.RefinementCtx,
 ) {
   if (data.transferType !== "burdened_gift") return;
   // 의제취득일 전 상속·증여 자산 — 시가 평가의 §159①1호 A는 엔진이 3자 max로 정해 산정방식·방식별 금액을 읽지 않는다
   // (계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18 · ⑧ `transfer-tax-validate-bg.ts`도 요구하지 않는다).
-  // 단 엔진이 그 3자 max를 쓰는 자산만이다 — 일반건물·겸용은 전용 경로가 상속 의제 입력을 읽지 않고, 재개발·입주권은 ③이 §166③이라
-  // STEP 0.45가 §159에 넘기지 않는다. 그 자산까지 면제하면 엔진이 산정방식 없이 취득가액 0으로 계산했다(계획서 inheritance-pre-deemed-bg-pr7b.plan.md B-1).
+  // 단 엔진이 그 3자 max를 쓰는 자산만이다 — 일반건물·겸용은 전용 경로가 상속 의제 입력을 읽지 않고, 입주권은 §159가 K-4 고정이다.
+  // 그 자산까지 면제하면 엔진이 산정방식 없이 취득가액 0으로 계산했다(계획서 inheritance-pre-deemed-bg-pr7b.plan.md B-1). 재개발 완공 아파트는 PR-7b-4부터 받는다.
   const preDeemed =
-    data.inheritedAcquisition?.mode === "pre-deemed" && BG_PRE_DEEMED_ENGINE_PROPERTY_TYPES.has(data.propertyType ?? "");
+    data.inheritedAcquisition?.mode === "pre-deemed" &&
+    BG_PRE_DEEMED_ENGINE_PROPERTY_TYPES.has(data.propertyType ?? "") &&
+    // 재개발 승계조합원은 §166 밖이라 3자 max 범위가 아니다(④ `isBgPreDeemedAsset`와 같은 축)
+    data.redevelopment?.isSuccessorMember !== true;
   const issue = issuer(ctx);
   const bg = data.burdenedGiftInfo;
   if (!bg) {

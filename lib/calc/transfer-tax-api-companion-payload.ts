@@ -8,6 +8,8 @@
  * ⚠️ **명시 필드 매핑**(spread 아님)이라 신규 엔진 필드는 여기 추가하지 않으면 **침묵 strip**된다
  *    (memory `feedback_explicit_prop_mapping_strip`). ⑫ Zod(`companionAssetSchema`)도 함께 넓힐 것.
  */
+import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
+import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { exprCompensationSendGates } from "./transfer-tax-validate-expropriation";
 import { depreciationSupport } from "./depreciation-scope";
@@ -592,8 +594,14 @@ export function buildAssetPayload(
       ? (fractional ? totalContractPrice : undefined)
       : shareInCompanion ? fixedSalePriceRaw : undefined,
     acquisitionCause: asset.acquisitionCause,
+    // 의제취득일 전 상속·증여 재개발 완공 아파트 × 부담부증여 · 시가 3자 max — §166③이 ③ 후보다. 엔진은 이 값이 true일 때만
+    // §166③을 ③으로 쓴다(`resolvePreDeemedRedevelopment166_3Price`) — 주 자산 ④(`transfer-tax-api.ts`)와 같은 판정(PR-7b-4)
     useEstimatedAcquisition:
-      asset.acquisitionCause === "purchase" ? asset.useEstimatedAcquisition : undefined,
+      asset.acquisitionCause === "purchase"
+        ? asset.useEstimatedAcquisition
+        : isBgPreDeemedAsset(asset) && asset.assetKind === "redevelopment_apt" && redevPreApprovalAcqMode(asset) === "estimated"
+          ? true
+          : undefined,
     // CP-5: 이월과세는 주 자산과 같은 fallback(증여 등기접수일) — ⑭는 더 이상 주 자산 취득일로 대신 채우지 않는다.
     acquisitionDate:
       (asset.acquisitionCause === "carryover_gift"
@@ -703,6 +711,6 @@ function ownsAcquisitionSubobject(asset: AssetForm): boolean {
     (asset.assetKind === "housing" && asset.isMixedUseHouse === true) ||
     asset.assetKind === "general_building" ||
     asset.assetKind === "right_to_move_in" ||
-    asset.assetKind === "redevelopment_apt"
+    (asset.assetKind === "redevelopment_apt" && !isBgPreDeemedAsset(asset))
   );
 }

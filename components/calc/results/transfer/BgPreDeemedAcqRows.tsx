@@ -7,11 +7,23 @@ import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/trans
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 
-export function BgPreDeemedThreeWayRows({ bg }: { bg: TransferBurdenedGiftBreakdown }) {
+export function BgPreDeemedThreeWayRows({
+  bg,
+  isRedev = false,
+  redevSec166,
+}: {
+  bg: TransferBurdenedGiftBreakdown;
+  /** 재개발·재건축 완공 아파트(원조합원) — ③이 §166③이다(PR-7b-4 · Q-8 a) */
+  isRedev?: boolean;
+  /** ③ 채택 시 재개발 경로가 §166③으로 실제 계산한 값(`redevSec166DisplayOf`) — §159 명세 슬롯이 아니라 이 값으로 계산된다 */
+  redevSec166?: { acquisition: number; lumpDeduction: number };
+}) {
   const p = bg.preDeemed;
   if (!p || p.basis !== "three_way") return null;
   const mark = (key: "reported" | "sec164" | "converted") => (p.selected === key ? " ← 채택" : " (미적용 — 더 작은 금액)");
-  const acquisition = bg.perAsset.land.acquisitionPrice + bg.perAsset.building.acquisitionPrice;
+  // ③(§166③)이 채택된 재개발은 재개발 경로가 평가액 × 채무비율로 §166③을 다시 계산한다 — §159 명세 슬롯은 쓰이지 않는다(§97②2호 단서면 0)
+  const redevConverted = isRedev && p.selected === "converted" && redevSec166 !== undefined;
+  const acquisition = redevConverted ? redevSec166.acquisition : bg.perAsset.land.acquisitionPrice + bg.perAsset.building.acquisitionPrice;
   const rate = `${(bg.debtRatio * 100).toFixed(4)}%`;
   return (
     <>
@@ -29,20 +41,31 @@ export function BgPreDeemedThreeWayRows({ bg }: { bg: TransferBurdenedGiftBreakd
       )}
       <tr data-testid="bg-pre-deemed-candidate" data-candidate="converted">
         <td className="py-1 pr-2 pl-3">
-          ③ 환산취득가액 = 증여가액 {fmt(bg.giftValuation.max)} × <Frac top={`의제취득일 기준시가 ${fmt(p.stdAtDeemed)}`} bottom="양도시 기준시가" />
+          {isRedev ? (
+            <>
+              ③ 환산취득가액 = 평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" /> (시행령 §166③)
+            </>
+          ) : (
+            <>
+              ③ 환산취득가액 = 증여가액 {fmt(bg.giftValuation.max)} × <Frac top={`의제취득일 기준시가 ${fmt(p.stdAtDeemed)}`} bottom="양도시 기준시가" />
+            </>
+          )}
           {mark("converted")}
         </td>
         <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(p.converted ?? 0)}</td>
       </tr>
       <tr data-testid="bg-pre-deemed-acquisition">
         <td className="py-1 pr-2 pl-3">
-          취득가액 = ①②③ 중 큰 금액 {fmt(p.wholeAcquisition ?? 0)} × 채무비율 {rate} (소득세법 시행령 §159①1호 · §163⑨ · §176조의2④)
+          취득가액 = ①②③ 중 큰 금액 {fmt(p.wholeAcquisition ?? 0)} × 채무비율 {rate} (소득세법 시행령 §159①1호 · §163⑨ ·{" "}
+          {isRedev ? "§166③" : "§176조의2④"})
         </td>
         <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(acquisition)}</td>
       </tr>
       <tr>
         <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-700 dark:text-fuchsia-400">
-          {p.selected === "converted"
+          {redevConverted
+            ? `※ ③ 채택 — 재개발 경로가 평가액 × 채무비율로 §166③을 계산하고 인가전 분 개산공제 ${fmt(redevSec166.lumpDeduction)}(취득일 기준시가 × 채무비율 × 율, 소득세법 시행령 §163⑥)를 적용합니다 — 재개발·재건축 상세 참조.`
+            : p.selected === "converted"
             ? bg.necessaryExpenseSwap?.chosen === "direct"
               ? "※ ③ 채택 — 자본적지출·양도비가 ③과 개산공제의 합보다 커서 그 금액을 필요경비로 썼습니다(소득세법 §97②2호 단서). 취득가액은 따로 빼지 않습니다."
               : "※ ③ 채택 — 추계라 개산공제(의제취득일 기준시가 × 채무비율 × 율, 소득세법 시행령 §163⑥)를 필요경비로 적용합니다."

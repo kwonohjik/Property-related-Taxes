@@ -199,11 +199,13 @@ describe("결함 R — 재개발 × 부담부증여 × 상속: 숨은 ①이 §1
     expect(hidden.result.determinedTax).toBe(plain.result.determinedTax);
   });
 
-  it("R-2 의제취득일 전(1983) 재개발도 같다 — 재개발은 PR-7 범위 밖이라 상속 의제 입력을 싣지 않는다", async () => {
+  it("R-2 의제취득일 전(1983) 재개발 · 기준시가 평가 — 상속 의제 입력을 싣고(PR-7b-4) 의제취득일 기준시가 × β = 4천만(남은 ① 2억이 실려도 기준시가 평가는 쓰지 않는다)", async () => {
     const over = { acquisitionDate: "1983-07-26", inheritanceStartDate: "1983-07-26", publishedValueAtInheritance: "200000000" };
     const r = await runCalc(apt(over));
     expect(r.status).toBe(200);
-    expect(r.body.inheritedAcquisition).toBeUndefined();
+    // 종전(PR-7b-4 전)에는 재개발이 범위 밖이라 싣지 않았다. ④는 토지·주택(PR-7a)처럼 ①도 싣지만 기준시가 평가(Q-25)의 엔진은 deemed_std라 쓰지 않는다
+    expect(r.body.inheritedAcquisition).toMatchObject({ mode: "pre-deemed", standardPriceAtDeemedDate: 100_000_000, reportedValue: 200_000_000 });
+    expect(r.result.transferBurdenedGiftBreakdown.preDeemed).toEqual({ basis: "deemed_std", stdAtDeemed: 100_000_000 });
     expect(r.result.redevelopmentDetail.preApproval.apportionedAcquisition).toBe(40_000_000);
   });
 });

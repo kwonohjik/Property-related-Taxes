@@ -39,6 +39,7 @@ import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
 import { landContributedOriginalApt } from "@/lib/calc/redev-field-scope";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -112,6 +113,8 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
   const isRightSubject = asset.redevSubject === "right" || asset.assetKind === "right_to_move_in";
   /** ⑤ 「인가전 분 종전 부동산 취득가액」 방식 — ⑧·④·PHD 트리거와 같은 leaf */
   const redevAcqMode = redevPreApprovalAcqMode(asset);
+  // 의제취득일 전 상속·증여 · 시가 평가 3자 max(PR-7b-4) — 인가 전 실비는 ①② 채택일 때만 쓴다(아래 칸 안내 · `redevPreApprovalExpensesUnused`와 같은 축)
+  const bgPreDeemedThreeWay = isBgPreDeemedAsset(asset) && redevAcqMode === "estimated";
   // 완공APT 안분 가이드의 고가주택 기준금액 — 양도일 기준(안내 전용, 세액은 엔진이 다시 정한다)
   const highValueLabel = highValueThresholdForDisplay(transferDate).label;
 
@@ -143,7 +146,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
   return (
     <div className="space-y-3">
       {/* 상속·증여 종전자산 취득가액 안내 — §163⑨: 상속개시일/증여일 평가액을 취득가액(실가)으로 사용 */}
-      <RedevelopmentDeemedAcquisitionNotice acquisitionCause={asset.acquisitionCause} />
+      <RedevelopmentDeemedAcquisitionNotice acquisitionCause={asset.acquisitionCause} isBurdenedGift={asset.transferType === "burdened_gift"} />
 
       {/*
         §⑥ 1세대1입주권 (사례 36 — subject="right" 전용).
@@ -425,7 +428,15 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
             </ToneCard>
           )}
           {asset.redevIsSuccessorMember !== "yes" && !redevPreApprovalExpensesUnused(asset) && (
-            <FieldCard label="인가전 분 필요경비" field="redevPreApprovalExpenses">
+            <FieldCard
+              label="인가전 분 필요경비"
+              field="redevPreApprovalExpenses"
+              hint={
+                bgPreDeemedThreeWay
+                  ? "의제취득일(1985.1.1.) 전 상속·증여 종전자산 — ①·②가 채택되면 채무비율을 곱해 공제하고, ③(§166③ 환산)이 채택되면 개산공제(시행령 §163⑥)를 적용해 이 금액은 쓰이지 않습니다 (소득세법 시행령 §166①1호)."
+                  : undefined
+              }
+            >
               <CurrencyInput label=""
                 value={asset.redevPreApprovalExpenses}
                 onChange={(v) => onChange({ redevPreApprovalExpenses: v })}
@@ -508,7 +519,13 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
               섹션 전체에 걸리는 사실이다(실측 8조합). */}
           <RedevelopmentSec163_9PriorityNotice asset={asset} />
 
-          {asset.transferType === "burdened_gift" ? (
+          {bgPreDeemedThreeWay ? (
+            // 의제취득일 전 상속·증여 · 시가 평가 — 산정방식을 고르지 않는다(③ 후보 · 위 안내 · PR-7b-4)
+            <p className="text-xs text-sky-800 dark:text-sky-200" data-testid="redev-bg-pre-deemed-sec166-3-notice">
+              아래 칸은 ③ §166③ 환산취득가액(평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" />)의 입력입니다 —
+              ①·②와 비교해 큰 금액에 채무비율을 곱합니다. ③은 늘 비교 후보라 ①·②가 있어도 필수입니다.
+            </p>
+          ) : asset.transferType === "burdened_gift" ? (
             <p className="text-xs text-sky-800 dark:text-sky-200" data-testid="redev-bg-sec166-3-notice">
               부담부증여 취득가액 산정방식을 「환산취득가액」으로 골랐습니다 — 종전 부동산의 취득가액을 「소득세법 시행령」 제166조 제3항
               (평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" />)으로 환산하고, 인가전 분 필요경비는 개산공제(같은 영

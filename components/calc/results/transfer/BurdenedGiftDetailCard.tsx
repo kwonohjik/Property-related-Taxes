@@ -202,7 +202,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
             </td>
           </tr>
           {bg.preDeemed?.basis === "three_way" ? (
-            <BgPreDeemedThreeWayRows bg={bg} />
+            <BgPreDeemedThreeWayRows bg={bg} isRedev={propertyType === "redevelopment_apt"} redevSec166={redevSec166} />
           ) : bg.acquisitionMethodUsed === "converted" && redevSec166 ? (
             <>
               <tr>

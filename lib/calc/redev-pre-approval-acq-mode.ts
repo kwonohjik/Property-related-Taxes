@@ -4,7 +4,7 @@
  * | 반환 | 언제 | 취득가액 |
  * |---|---|---|
  * | `"actual"` | 일반 양도 · 재개발 블록 ⑤ 라디오 = 실가 | `redevActualAcquisitionPrice` |
- * | `"estimated"` | 일반 양도 · ⑤ 라디오 = 환산 **또는** 부담부증여 × 완공 아파트(원조합원) × 시가 모드 × 환산(K-5) · 담보 승 아님 | §166③ 환산(평가액 × 취득일 기준시가 ÷ 인가일 기준시가) |
+ * | `"estimated"` | 일반 양도 · ⑤ 라디오 = 환산 **또는** 부담부증여 × 완공 아파트(원조합원) × 시가 모드 × (환산(K-5) 또는 의제취득일 전 상속·증여 — ③ 후보) · 담보 승 아님 | §166③ 환산(평가액 × 취득일 기준시가 ÷ 인가일 기준시가) |
  * | `"burdened_gift"` | 그 밖의 부담부증여 | 부담부증여 블록이 정한다(§159① — 실지취득가액 K-4 · 기준시가 모드는 기준시가) |
  *
  * 부담부증여에서는 ⑤ 라디오를 쓰지 않는다 — 산정방식은 부담부증여 블록의 K-4/K-5가 정하고, 엔진은 §159 안분값으로 계산한다
@@ -14,6 +14,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
+import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 
 export type RedevPreApprovalAcqMode = "actual" | "estimated" | "burdened_gift";
 
@@ -41,7 +42,9 @@ export function redevPreApprovalAcqMode(asset: RedevPreApprovalAcqModeFields): R
       // 양도 대상이 입주권으로 남은 stale 값이면 엔진 자산 종류가 `right_to_move_in`이 되어 §166③이 켜지지 않는다(④ `primaryEnginePropertyType`)
       asset.redevSubject !== "right" &&
       asset.bgValuationMode === "sangjeungbeop_market" &&
-      asset.bgAcquisitionMethod === "converted" &&
+      // 의제취득일(1985.1.1.) 전 상속·증여 종전자산 · 시가 평가는 산정방식 없이 ①②③ 3자 max이고 ③이 §166③이다(PR-7b-4 · Q-24 · Q-8 a) —
+      // §166③ 칸을 늘 보이고(⑤) 싣는다(④ `useEstimatedAcquisition` — 엔진이 그때만 §166③을 ③으로 쓴다).
+      (asset.bgAcquisitionMethod === "converted" || isBgPreDeemedAsset(asset as AssetForm)) &&
       // 담보 승(상증법 §66)이면 엔진이 산정방식과 무관하게 취득시 기준시가로 강제한다(§159①1호 괄호) — §166③ 환산이 아니다(O-5).
       !bgCollateralForcesStdAcq(asset as AssetForm)
       ? "estimated"
@@ -87,6 +90,8 @@ export function redevPreApprovalExpensesUnused(asset: RedevPreApprovalAcqModeFie
     return (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") && redevPreApprovalAcqMode(asset) === "estimated";
   }
   if (asset.assetKind !== "redevelopment_apt" || asset.redevSubject === "right") return false;
+  // 의제취득일 전 상속·증여 · 시가 평가 3자 max — ①② 채택이면 실지(K-4)라 인가 전 실비를 쓴다(③ 채택이면 §166③ + 개산공제 · PR-7b-4).
+  if (isBgPreDeemedAsset(asset as AssetForm) && redevPreApprovalAcqMode(asset) === "estimated") return false;
   return (
     redevPreApprovalAcqMode(asset) === "estimated" ||
     asset.bgValuationMode !== "sangjeungbeop_market" ||
