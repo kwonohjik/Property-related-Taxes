@@ -25,8 +25,20 @@ export function sellingHouseOriginQuestionVisible(
 /**
  * §155① 종전주택 취득일의 **대체값** — 기존주택의 연장이면 헐기 전 주택 취득일, 아니면 `undefined`(호출부가 제 기준 취득일을 그대로 쓴다).
  * 질문이 닫혀 있으면 남아 있는 옛 값(stale)은 읽지 않는다. 호출부마다 기준 취득일의 규약이 달라(`primaryAcquisitionDateOf` 등) 값을 합치지 않고 대체만 돌려준다.
+ *
+ * 승계조합원 완공APT는 질문과 무관하게 **준공일(사용승인서 교부일)** 이다(F-1 Q-1 (c)) — 영 §162①4호 · 서면-2022-부동산-0565
+ * (승계 입주권으로 취득한 주택의 취득시기 = 사용승인서 교부일). 엔진 판정 번역(`translateRedevAptForHousingJudgment`)과 같은 날짜다.
+ * 본문 `acquisitionDate`(입주권 승계일)는 §166 산식·명부 양도 행에 그대로 쓴다. 준공일이 비면 대체하지 않는다(⑧이 먼저 막는다).
+ * 사용승인 전에 취득한 명부 주택은 이 날짜보다 먼저라 신규 주택 후보에서 빠진다 — 양도 주택이 나중에 취득한 주택이기 때문이다.
  */
 export function sellingHousePreviousDateOverride(primary: SellingAsset | undefined, houseCount: number | undefined): string | undefined {
+  if (
+    primary?.assetKind === "redevelopment_apt" &&
+    primary.redevIsSuccessorMember === "yes" &&
+    (primary.redevSubject || "apt") === "apt"
+  ) {
+    return primary.redevCompletionDate || undefined;
+  }
   if (!primary || !sellingHouseOriginQuestionVisible(primary, houseCount)) return undefined;
   if (!primary.sellingHouseRebuildKind || !primary.sellingHouseExistingAcquisitionDate) return undefined;
   return primary.sellingHouseExistingAcquisitionDate;
