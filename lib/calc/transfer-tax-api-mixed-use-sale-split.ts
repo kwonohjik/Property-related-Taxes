@@ -47,6 +47,11 @@ export function buildMixedSaleSplitFields(
     const landSent = scale(land);
     out.landTransferPrice = landSent;
     out.buildingTransferPrice = scale(land + building) - landSent;
+    // §100③ 판정은 계약서(100%) 금액으로 한다 — 지분 몫(버림)끼리 비교하면 30% 근처에서 결론이 뒤집힌다(계약 판정 계획서 PR-3).
+    if (fractional) {
+      out.contractLandTransferPrice = land;
+      out.contractBuildingTransferPrice = building;
+    }
     // 단서(영 §166⑧)는 2025.1.1. 이후 양도분만 — ⑤가 칸을 여는 조건과 같다.
     if (primary.saleSplitExemption && saleSplitProvisoApplies(form.transferDate)) {
       out.saleSplitExemption = primary.saleSplitExemption as NonNullable<MixedUseSaleSplitFields["saleSplitExemption"]>;
