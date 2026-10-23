@@ -1,6 +1,6 @@
 # 일반건물 × 부담부증여 «침묵 소실» 2건 수정 계획서
 
-> 상태: **v0.2 (2026-10-23) 사용자 결정 반영 — Q-1~Q-6 전부 권장안 확정.** 순서 PR-1(결함 2) → PR-2(컴패니언) → PR-3(지분). PR-1 Do 기록은 §12.
+> 상태: **v0.2 (2026-10-23) 사용자 결정 반영 — Q-1~Q-6 전부 권장안 확정.** 순서 PR-1(결함 2) → PR-2(컴패니언) → PR-3(지분). PR-1 Do 기록 §12 · PR-2 Do 기록 §13.
 > 계기: PR-5b(#2456, 일반건물 부담부증여 K-5·K-7 × 본인 신축 §114조의2) 작업 중 발견. 입력은 받는데 계산에 반영되지 않는다.
 > 1. 일반건물 **지분 분할 취득(축 B `generalBuildingShares`)** · **함께 양도(컴패니언)** 일반건물 + 부담부증여 → §159가 조용히 무시된다.
 > 2. 일반건물 부담부증여 + **환산·증축을 켠 뒤 남은 값(stale)** → 환산 경로로 라우팅되어 §159가 조용히 무시된다.
@@ -284,3 +284,59 @@ M1 ④ 원복 → 9 실패 · M2 환산 stale만 새게 → 5 · M3 증축만 �
 
 ### 12.8 남은 것
 PR-2(컴패니언)·PR-3(지분) 대기. 서버 안전망은 컴패니언·지분 payload까지 이미 덮는다(PR-2·3은 «지원 구현»).
+
+---
+
+## 13. PR-2 Do 기록 (컴패니언 — 결함 1-b · 2026-10-23)
+
+**base**: PR-1 head `1107da1d8` (브랜치 `fix/gb-bg-companion`, 워크트리 `-gbsd2`).
+
+### 13.1 재확인 — ④·⑫는 이미 되어 있다
+`companionAssets[].burdenedGiftInfo`·`transferType`은 ④(`transfer-tax-api-primary-context.ts`의 `companionBgDebtOverrides`·`buildBurdenedGiftInfo`)가 싣고 ⑫ `companionAssetSchema`가 받는다. 엔진 item에 이미 도달한다(`bundled-split-helpers.ts:547` · 주 자산은 `engineInput`) — 프로토타입 로그 `[true,true]`. 막고 있던 것은 ⑭ 카드 빌더뿐이었다. **`bundled-split-helpers.ts`(776줄)는 한 줄도 건드리지 않았다** — `companionEngine`이 이미 두 필드를 담고 있어 빌더의 `Pick` 타입만 넓히면 된다.
+
+### 13.2 변경
+| 파일 | 변경 |
+|---|---|
+| `app/api/calc/transfer/general-building-part-cards.ts` (263→285줄) | `buildGbPartCards`에 선택 인자 `burdenedGiftInfo` — 실가 카드 payload에 실어 `buildActualGeneralBuildingCards`의 §159 분기를 켠다. 부담부증여면 의제취득일 전 재선택(PR-4)은 우회(단건 `dispatchCoercedGeneralBuilding`과 같다). 비-실가 payload면 `TaxCalculationError`(⑫ 안전망 뒤 2차 방어). `buildGbCompanionItems`는 `engine.transferType === "burdened_gift" ? engine.burdenedGiftInfo : undefined`를 넘긴다(엔진 STEP 0.48의 게이트와 같은 표지) |
+| `app/api/calc/transfer/bundled-route.ts` (378→385줄) | 전 자산 부담부증여 묶음에서 카드에 §114조의2 `penaltyAxis`가 있으면 PR-5b의 «확인 필요» 고지(`GB_BG_SELF_BUILT_NOTICE`) 1회 |
+| `__tests__/api/transfer.route.gb-burdened-gift-companion.anchor.test.ts` (신규) | 23건 |
+| `e2e/gb-burdened-gift-companion.spec.ts` (신규) | 2건 |
+
+### 13.3 14지점 · ⑧↔⑫ 격자
+①②③ 변경 없음 · ④ 변경 없음(이미 전송) · ⑤ 변경 없음(이미 열림) · ⑥ 확인 필요(V-3 — 미실측) · ⑦ 변경 없음(물건 단위 §159 명세는 이미 뜸 — 이번에 카드 숫자가 명세와 일치해짐, §13.5) · ⑧ 변경 없음(통과 ↔ 반영 일치로 모순 해소) · ⑨⑩ 변경 없음 · ⑫ 변경 없음(PR-1 안전망이 컴패니언 `generalBuildingValuation.actualPriceMode`를 이미 덮음) · ⑬ 변경 없음 · **⑭ 변경(카드 빌더·고지)**. ⑧↔⑫ 모순 0: ⑧ 통과 셀(GB+GB·주택+GB·GB+주택 전 자산 부담부증여)은 ⑫ 통과 · 반영. 혼합 묶음(일반 양도 + 부담부증여)은 ⑧ 차단 · ⑩ 400 유지.
+
+### 13.4 Pre-Do anchor 와 세액 변화
+수정 전 15건 중 **10 실패**(나머지 5 = 주택+주택 대조·회귀 0 4건). 수정 후 전부 통과.
+
+| 조합 | 수정 전 | 수정 후 | 차이 |
+|---|---:|---:|---:|
+| GB+GB K-5 | 319,671,000 | 139,906,800 | −179,764,200 |
+| GB+GB K-4 | 319,671,000 | 211,563,000 | −108,108,000 |
+| GB+GB K-6 / K-7 | 319,671,000 | 139,906,800 | −179,764,200 |
+| GB+GB STD | 107,646,000 | 40,311,700 (= 주택+주택 대조) | −67,334,300 |
+| 주택(주)+GB | 148,744,200 | 88,738,606 | −60,005,594 |
+| GB(주)+주택 | 148,744,200 | 88,738,606 | −60,005,594 |
+
+### 13.5 한 화면 모순 해소 (증여세 카드 ↔ 양도세 카드)
+수정 전: «부담부증여 평가 명세»(물건 단위)는 채무비율 50% · 토지·건물 환산취득가 250,000,000씩인데 카드는 취득가액 0 · 양도차익 250,000,000씩. 수정 후 Σ 카드 양도가액 = 명세 채무액(1,000,000,000), Σ 취득가액 = 명세 환산취득가 합(500,000,000), Σ 필요경비 = 명세 개산공제 합 — K-5·STD를 anchor(GC-3)로 고정.
+UI(Playwright): 컴패니언 GB+GB 총납부 139,906,800 · 양도차익 494,000,000 · «부담부증여 평가 명세 (소득세법 시행령 §159)— 일반건물» 카드의 채무비율·자산별 환산취득가가 단건 GB 부담부증여 화면과 같은 구조로 뜬다. 스크린샷: scratchpad `g2/shots/co-gb-gb-bg.png`(컴패니언) · `single-gb-bg.png`(단건 대조).
+
+### 13.6 §114조의2 본인 신축 신호(PR-5b) × 컴패니언
+카드 빌더가 `buildActualGeneralBuildingCards`를 그대로 쓰므로 **신호가 자동으로 붙는다**(`penaltyAxis`) — 같은 규칙: K-5 건물 환산취득가 125,000,000 × 5% = 6,250,000 / K-7 감정 150,000,000 × 5% = 7,500,000, 토지 카드엔 안 붙음(D4), 신축이 아니면 0. 두 자산 모두 신축: K-5 12,500,000(총납부 168,872,000) · K-7 15,000,000(168,542,000), 컴패니언만 신축이면 그 자산 건물에만. **빠졌던 것은 «확인 필요» 고지**(단건은 `runActualGeneralBuildingOnce`가 push, 일괄 경로는 없음) — `bundled-route.ts`에서 같은 문구로 1회 추가했다(전 자산 부담부증여 묶음 + 카드 `penaltyAxis`일 때만 — 일반 양도 감정 카드의 `penaltyAxis`는 혼합 묶음 ⑧ 차단이라 해당 없음, 회귀 anchor GC-5e).
+
+### 13.7 회귀 0 근거
+- 수정 **전** 실측으로 고정한 대조: 비부담부증여 컴패니언 GB+GB 141,966,000 · 주택+주택 부담부증여 40,311,700 · 단건 GB 부담부증여 K-5 57,552,880 / K-4 91,135,000 · 혼합 묶음 ⑧ 차단 메시지 유지 — 수정 후 동일.
+- 전체 vitest **3341파일 40,073 통과** · `tsc --noEmit` 0 · eslint 0.
+- E2E: 신규 2건 + 기존 `gb-burdened-gift-self-built-penalty` 4 · `general-building-burdened-gift-split` 4 · `gb-burdened-gift-stale-routing` 3 · `transfer-companion-burdened-gift` 2 통과.
+
+### 13.8 뮤테이션 8종 — 전부 killed (cp 백업 + md5 + 건별 sha 대조, 종료 후 sha 동일, bash)
+M1 info 미전달 → 13실패 · M2 `transferType` 표지 게이트 제거 → 1(처음엔 살아남아 «표지 없으면 소비 안 함» 단위 단언 추가) · M3 payload에 info 미포함 → 12 · M4 비-실가 가드 제거 → 1 · M5 의제취득일 우회 제거 → 1(처음엔 살아남아 ①② 있는 입력 단언 추가) · M6 고지 push 제거 → 2 · M7 고지 게이트 `isAllBurdenedGift` 제거 → 1 · M8 고지 게이트 `penaltyAxis` 제거 → 1. E2E도 ④ 격 M1 변이로 2건 모두 실패 확인 후 복원.
+E2E 서버: 빈 포트 `:3294` · 본인 PID 종료 · `next.config.ts` 원복(sha 동일).
+
+### 13.9 800줄
+`general-building-part-cards.ts` 285 · `bundled-route.ts` 385 — 여유. `bundled-split-helpers.ts` 776 변경 없음.
+
+### 13.10 발견 · 미확인 (이 PR 범위 밖)
+- **V-9** 물건 단위 §159 명세(`buildCompanionBurdenedGiftWholeInfo`)는 K-4 실지·K-6/K-7 취득가액을 **주 자산 값 그대로** 두고 합산하지 않는다 — 명세의 취득가액이 카드 합의 절반(예: K-4 150M vs 300M). **비-GB 컴패니언(주택 K-4)에서도 같다**(실측). 표시 전용·세액 무관. 별건.
+- **V-10** 결과 화면(스크린)만 확인했다. PDF·인쇄·요약 카드·신고서 PDF 등 다른 결과뷰는 같은 `aggregated`/`transferBurdenedGiftBreakdown`을 읽지만 개별 렌더는 **미확인**.
+- V-3(사이드바 ⑥) 여전히 미확인. V-5(공유 소유 컴패니언 GB의 `ownershipRatio` 미전달)는 단건과 같은 한계로 유지(비율불변 모드에서는 동치 추정, 담보·임대평가 승은 확인 필요).
