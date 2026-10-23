@@ -11,13 +11,16 @@
  */
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 
-export function GbDeductionOnlyNotice() {
+/** `extension` — 일반건물 증축의 건물 파트: 증축분 몫은 증축분 취득방식대로 반영된다(`gb-extension-capex-timing.plan.md` §10). */
+export function GbDeductionOnlyNotice({ extension = false }: { extension?: boolean } = {}) {
   return (
     <ToneCard tone="amber" bodyClassName="space-y-1">
       <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="gb-deduction-only-notice">
         감정가액·매매사례가액은 추계 취득가액이라 필요경비는 개산공제(취득시 기준시가 × 율 — 3%, 미등기양도자산
         0.3%; 「소득세법 시행령」 §163⑥)만 인정됩니다. 자본적지출·양도비는 필요경비에 산입되지 않으므로 입력해도
         세액이 바뀌지 않습니다 (「소득세법」 §97②2호 본문).
+        {extension &&
+          " 다만 증축이 있으면 증축 후 지출과 양도비 중 증축분 몫은 증축분 취득방식대로 반영됩니다(실지거래가액이면 가산, 환산취득가액이면 개산공제와 비교)."}
       </p>
     </ToneCard>
   );

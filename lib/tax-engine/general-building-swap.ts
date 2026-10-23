@@ -310,7 +310,11 @@ function resolvePerPart(
      * 따라서 자본적지출·양도비는 어느 쪽으로도 반영되지 않는다(개산공제는 이미 카드에 실려 있다).
      * `capexHint`가 화면에서 같은 내용을 고지한다.
      */
-    if (mode === "appraisal" || mode === "salesCase") {
+    // 증축이 있는 건물 파트 — 지출 시점별 배분(2026-10-23 · `docs/00-pm/gb-extension-capex-timing.plan.md` D-1·D-3).
+    // 원건물이 감정·매매사례여도 증축분은 자기 취득방식대로 받는다(같은 계획서 §10) — 아래 갈래 4보다 먼저 가른다.
+    const extCard = part === "building" ? partCards.find((c) => c.propertyId === EXTENSION_CARD_ID) : undefined;
+
+    if ((mode === "appraisal" || mode === "salesCase") && !extCard) {
       perPart[part] = { estimatedSide: 0, directSide: 0, swapApplied: false };
       continue;
     }
@@ -320,9 +324,7 @@ function resolvePerPart(
     if (partDirectSide <= 0) continue;
     directSide += partDirectSide;
 
-    // 증축이 있는 건물 파트 — 지출 시점별 배분(2026-10-23 · `docs/00-pm/gb-extension-capex-timing.plan.md` D-1·D-3).
-    const extCard = part === "building" ? partCards.find((c) => c.propertyId === EXTENSION_CARD_ID) : undefined;
-    if (extCard && (mode === "actual" || mode === "estimated")) {
+    if (extCard && mode !== undefined) {
       const detail = resolveExtensionBuildingPart(
         partCards, extCard, mode, input?.direct ?? 0, input?.directBeforeExtension ?? 0, partTransferExpense.building,
         allocation, addition, beforeExtensionAddition,
@@ -389,7 +391,7 @@ function resolvePerPart(
 function resolveExtensionBuildingPart(
   partCards: AssetCardForAggregate[],
   extCard: AssetCardForAggregate,
-  mode: "actual" | "estimated",
+  mode: PartAcqMode,
   direct: number,
   directBeforeExtension: number,
   transferExpense: number,
@@ -406,6 +408,21 @@ function resolveExtensionBuildingPart(
   const extTransfer = shareOf(partCards, transferExpense, byPrice, extCard);
   const extIsActual = !extCard.usedEstimatedAcquisition;
   const partDirectSide = direct + transferExpense;
+
+  if (mode === "appraisal" || mode === "salesCase") {
+    // 원건물 = 갈래 4(§97②2호 본문 — 개산공제만): 증축 전 지출·원건물 몫은 반영되지 않는다. 증축분은 자기 몫(증축 후 자본적지출 +
+    // 양도비)을 실가면 §97②1호로 가산하고, 환산이면 그 몫을 나목으로 단서 비교한다(나목 = 그 자산의 자본적지출 + 양도비 — §97②2호 나목).
+    const extShare = extCapex + extTransfer;
+    if (extShare <= 0) return { estimatedSide: 0, directSide: 0, swapApplied: false };
+    if (extIsActual) {
+      addTo(addition, extCard.propertyId, extShare);
+      return { estimatedSide: 0, directSide: extShare, swapApplied: false };
+    }
+    const extSide = sideOf(extCard);
+    const swapApplied = extShare > extSide;
+    if (swapApplied) allocation.set(extCard.propertyId, extShare);
+    return { estimatedSide: extSide, directSide: extShare, swapApplied };
+  }
 
   if (mode === "actual") {
     if (extIsActual) {

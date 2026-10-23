@@ -24,6 +24,7 @@ import { allIssues, captureBody, newForm } from "../calc/_one-house-pr3a-calc-ro
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { buildGbExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementGbFormulas";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { capexHint } from "@/components/calc/transfer/capexHint";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -223,5 +224,44 @@ describe("⑧ 「그중 증축 전」 칸 — 필요한 자리에서만 필수",
     const json = (await res.json()) as any;
     expect(res.status).toBe(400);
     expect(Object.keys(json.error.fieldErrors)).toEqual(["generalBuildingValuation.capitalExpenditureBeforeExtension"]);
+  });
+});
+
+/**
+ * 원건물 건물 파트 감정가액·매매사례가액 × 증축 (계획서 §10 · 2026-10-23) — 분리 ON에서만 만들 수 있다(분리 OFF는 Q-A3 차단).
+ * 종전: 건물 파트가 갈래 4(§97②2호 본문)면 증축분까지 통째로 건너뛰어 증축분 몫이 소실됐다(⑧ 통과).
+ * 원건물은 그대로 개산공제만이고, 증축분은 자기 취득방식대로 받는다 — 실가 가산(§97②1호) · 환산 단서 비교(나목 = 그 몫의 자본적지출 + 양도비).
+ */
+describe("원건물 감정·매매사례 × 증축 — 증축분은 자기 방식대로 (§10)", () => {
+  const APR = { buildingAcqMode: "appraisal", buildingAcquisitionPrice: "200000000" } as Partial<AssetForm>;
+  const SC = { buildingAcqMode: "salesCase", buildingSalesCaseValue: "200000000" } as Partial<AssetForm>;
+  it("🔴 감정 · 증축분 실가 · 양도비 1천만 → 증축분 279,830 가산(종전 0) · 원건물은 개산공제 그대로", async () => {
+    const r = await ok(asset(ACQ.buyOn, APR, EXT_ACTUAL, { transferExpense: "10000000" }));
+    expect([r.land, r.b1, r.b2, r.tax]).toEqual([7_907_768, 4_500_000, 279_830, 237_885_948]);
+  });
+  it("매매사례도 같다", async () => {
+    const r = await ok(asset(ACQ.buyOn, SC, EXT_ACTUAL, { transferExpense: "10000000" }));
+    expect([r.b1, r.b2]).toEqual([4_500_000, 279_830]);
+  });
+  it("🔴 감정 · 증축분 실가 · 건물 자본적지출 2천만(증축 후) → 증축분 몫 2,674,938 가산(종전 세액 240,328,361 불변)", async () => {
+    const r = await ok(asset(ACQ.buyOn, APR, EXT_ACTUAL, PARTB, preB("0")));
+    expect([r.b1, r.b2, r.tax]).toEqual([4_500_000, 2_674_938, 239_204_887]);
+  });
+  it("감정 · 전부 증축 전 → 증축분 몫 없음 · 원건물은 개산공제만", async () => {
+    const r = await ok(asset(ACQ.buyOn, APR, EXT_ACTUAL, PARTB, preB("20000000")));
+    expect([r.b1, r.b2, r.tax]).toEqual([4_500_000, 0, 240_328_361]);
+  });
+  it("감정 · 증축분 환산 · 자본적지출 8억 → 증축분 몫 106,997,506 > 가목 → 단서 적용", async () => {
+    const r = await ok(asset(ACQ.buyOn, APR, EXT_ESTIMATED, { buildingDirectExpenses: "800000000" }, preB("0")));
+    expect([r.b1, r.b2]).toEqual([4_500_000, 106_997_506]);
+  });
+  it("감정 · 증축분 환산 · 양도비 8억 → 증축분 몫이 가목보다 작아 본문(개산공제 900,000) 그대로", async () => {
+    const r = await ok(asset(ACQ.buyOn, APR, EXT_ESTIMATED, { transferExpense: "800000000" }));
+    expect([r.b1, r.b2]).toEqual([4_500_000, 900_000]);
+  });
+  it("⑤ 건물 파트 안내는 증축분 몫이 반영된다고 적는다(증축 없으면 종전 문구)", () => {
+    expect(capexHint("건물", "appraisal", true)).toContain("증축분 몫은 증축분 취득방식대로 반영");
+    expect(capexHint("건물", "appraisal")).toContain("자본적지출은 차감되지 않습니다");
+    expect(capexHint("건물", "appraisal")).not.toContain("증축분");
   });
 });
