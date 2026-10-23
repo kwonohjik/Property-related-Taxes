@@ -46,6 +46,8 @@ import { giftBgPreDeemedInScope } from "@/lib/calc/gift-burdened-pre-deemed";
 import { giftBgPre1990LandApplies } from "@/lib/calc/gift-burdened-pre-deemed";
 import { giftBgPre1990LandStd } from "@/lib/calc/gift-burdened-pre-deemed";
 import { giftBgPre1990Slice } from "@/lib/calc/gift-burdened-pre-deemed";
+import { giftBgCommercial164Std } from "@/lib/calc/gift-burdened-pre-deemed";
+import { BurdenedGiftCommercial164Fields } from "./BurdenedGiftCommercial164Fields";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 
 
@@ -472,6 +474,7 @@ export function BurdenedGiftTransferSection({
                 transferStdPriceLabel={transferStdPriceLabel}
                 item={item}
                 transferDate={transferDate}
+                jibun={jibun}
               />
             )}
           </div>
@@ -541,9 +544,11 @@ interface NonHousingFieldSetProps {
   item: EstateItem;
   /** 증여일(= 양도일) — 감정가액 × 증축 5년 이내 차단 판정 */
   transferDate?: string;
+  /** 자산 소재지 jibun — §164⑥ 공시지가 조회 */
+  jibun?: string;
 }
 
-function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, item, transferDate }: NonHousingFieldSetProps) {
+function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, item, transferDate, jibun }: NonHousingFieldSetProps) {
   // 평가방식은 증여세 평가에서 파생한다(1h-G1-2 · 결정 #23) — ④·⑧과 같은 leaf.
   const valuation = giftBurdenedValuationBasis(item);
   const isMarketMode = valuation.mode === "sangjeungbeop_market";
@@ -552,6 +557,8 @@ function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStd
   // 의제취득일 전 상속 · 시가 평가(3자 max)는 이 값이 ③의 분자라 늘 쓴다(PR-7b-3)
   const acqStdInert = isMarketMode && !collateralForced && !giftBgPreDeemedUsesThreeWay(item) && bgt.acquisitionMethod === "actual";
   const transferStdRequired = !isMarketMode || collateralForced || bgt.acquisitionMethod === "converted" || giftBgPreDeemedUsesThreeWay(item);
+  // 기준시가 평가 · §164⑥ 8칸이 다 차면 그 값이 의제취득일 기준시가라 이 칸은 쓰지 않는다(Q-27 · ⑧과 같은 판정 · PR-7b-3b)
+  const acqStdBy164_6 = !giftBgPreDeemedUsesThreeWay(item) && giftBgCommercial164Std(item) !== null;
   return (
     <div className="space-y-2">
       <FieldCard label="취득일 (증여자 당초 취득일)" required>
@@ -577,9 +584,11 @@ dateToStr(bgt.acquisitionDate)
         hint={
           acqStdInert
             ? "실지취득가액(K-4) 모드에서는 입력하지 않아도 됩니다 — 결과(양도차익)에 영향 없음."
-            : stdPriceHint
+            : acqStdBy164_6
+              ? "아래 §164⑥ 8개 항목이 모두 차 있어 그 값을 의제취득일 기준시가로 씁니다 — 이 칸은 입력하지 않아도 됩니다 (소득세법 시행령 §164⑥)."
+              : stdPriceHint
         }
-        required={!acqStdInert}
+        required={!acqStdInert && !acqStdBy164_6}
       >
         <CurrencyInput
           label={stdPriceLabel}
@@ -590,6 +599,9 @@ dateToStr(bgt.acquisitionDate)
           data-testid="bg-transfer-acq-stdprice"
         />
       </FieldCard>
+
+      {/* 의제취득일 전 상속 비주택 건물 — §164⑥ 8칸(시가 평가 ② · 기준시가 평가 의제취득일 기준시가 · Q-38) */}
+      <BurdenedGiftCommercial164Fields item={item} bgt={bgt} set={set} jibun={jibun} transferDate={transferDate} />
 
       {/* 평가방식·취득가액 산정 (K-4/K-5) — 평가방식은 증여세 평가에서 파생(읽기 전용) */}
       <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} transferDate={transferDate} />

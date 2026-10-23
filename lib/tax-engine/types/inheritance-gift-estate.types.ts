@@ -1307,6 +1307,24 @@ export interface BurdenedGiftTransferTaxInput {
   pre1990Grade_prev?: string;
   pre1990Grade_atAcq?: string;
   pre1990GradeMode?: "number" | "value";
+  /*
+   * 비주택 건물(상가) §164⑥ 취득당시 기준시가(PR-7b-3b · 사용자 결정 Q-38) — 양도세 계산기 `cb*` 8칸과 같은 물리량.
+   * 8칸이 다 차면 그 값이 시가 평가의 ②, 기준시가 평가의 의제취득일 기준시가다(Q-27). `cb` 접두어는 위 전환사채 필드가 쓴다.
+   */
+  c164ExclusiveArea?: string;
+  c164SharedArea?: string;
+  c164LandArea?: string;
+  /** 최초고시(2005) ㎡당 호별고시가 */
+  c164UnitPriceAtFirst?: string;
+  /** 취득시(의제취득일 1985.1.1.) 개별공시지가(원/㎡) */
+  c164LandPricePerSqmAtAcq?: string;
+  /** 최초고시시(2005) 개별공시지가(원/㎡) */
+  c164LandPricePerSqmAtFirst?: string;
+  /** 취득시(의제취득일) 건물 기준시가 총액 — §164⑥ 단서 · §164⑤ 준용 */
+  c164BuildingStdPriceAtAcq?: string;
+  c164BuildingStdPriceAtFirst?: string;
+  /** 취득시 건물 기준시가를 §164⑤ 준용으로 산정했음 — 8칸을 채웠으면 필수(양도세 계산기 `cbAcqBuildingStdBy164_5`) */
+  c164AcqBuildingStdBy164_5?: boolean;
   /** 「소득세법 시행령」 §154⑧3호 — 상속개시 당시 피상속인과 동일세대 */
   decedentSameHouseholdBeforeInheritance?: boolean;
   /** §154⑧3호 — 상속개시 전 동일세대 거주·보유 개시일 (YYYY-MM-DD) */

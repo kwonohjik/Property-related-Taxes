@@ -23,6 +23,18 @@ const GRADE: Partial<BurdenedGiftTransferTaxInput> = {
   pre1990PricePerSqm_1990: "1100000",
   pre1990GradeMode: "number",
 };
+/** §164⑥ 8칸 + §164⑤ 준용 확인 — 취득당시 기준시가 509,090,909(anchor `gift-burdened-pre-deemed-pr7b3b`와 같다) */
+const C164: Partial<BurdenedGiftTransferTaxInput> = {
+  c164ExclusiveArea: "50",
+  c164SharedArea: "20",
+  c164LandArea: "100",
+  c164UnitPriceAtFirst: "10000000",
+  c164LandPricePerSqmAtAcq: "500000",
+  c164LandPricePerSqmAtFirst: "700000",
+  c164BuildingStdPriceAtAcq: "30000000",
+  c164BuildingStdPriceAtFirst: "40000000",
+  c164AcqBuildingStdBy164_5: true,
+};
 function item(bgt: Partial<BurdenedGiftTransferTaxInput>, o: { market?: boolean; category?: string; acqDate?: string } = {}): EstateItem {
   return {
     id: "x-1",
@@ -101,15 +113,49 @@ describe("PR-7b-3 ⑤ 증여세 계산기 부담부증여 × 의제취득일 전
     expect(v.text).toContain("의제취득일(1985.1.1.) 공동주택공시가격");
   });
 
-  it("U-5b 비주택 건물 · 시가 — ②(§164⑤~⑦)가 비교에서 빠진다는 고지(리뷰 F3) · 토지는 고지 없음", () => {
+  it("U-5b 주택 건물 · 시가 — ②(§164⑤~⑦)가 비교에서 빠진다는 고지(리뷰 F3) · 비주택 건물은 §164⑥ 칸이 있어 고지 없음(PR-7b-3b) · 토지도 없음", () => {
+    const has = (it_: EstateItem, id: string) => {
+      const { container } = render(<BurdenedGiftTransferSection item={it_} onChange={() => {}} hasOtherBurdenedGiftTransfer={false} transferDate="2023-02-16" />);
+      const found = container.querySelector(`[data-testid="${id}"]`) !== null;
+      cleanup();
+      return found;
+    };
+    const bld = { market: true, category: "real_estate_building" };
+    expect(has(item({ isHousing: true }, bld), "bg-pre-deemed-no-sec164")).toBe(true);
+    expect(has(item({ isHousing: false }, bld), "bg-pre-deemed-no-sec164")).toBe(false);
+    expect(has(item({}, { market: true }), "bg-pre-deemed-no-sec164")).toBe(false);
+  });
+
+  it("U-7 비주택 건물 — §164⑥ 8칸 블록 · 안내에 「② §164⑥」 · 주택 건물·토지·범위 밖은 블록 없음", () => {
+    const html = (it_: EstateItem) => {
+      const { container } = render(<BurdenedGiftTransferSection item={it_} onChange={() => {}} hasOtherBurdenedGiftTransfer={false} transferDate="2023-02-16" />);
+      const out = { block: container.querySelector('[data-testid="bg-c164"]') !== null, text: container.textContent ?? "" };
+      cleanup();
+      return out;
+    };
+    const bld = { market: true, category: "real_estate_building" };
+    const nonHousing = html(item({ isHousing: false }, bld));
+    expect(nonHousing.block).toBe(true);
+    expect(nonHousing.text).toContain("② §164⑥ 취득당시 기준시가");
+    expect(nonHousing.text).toContain("② 후보");
+    expect(html(item({ isHousing: true }, bld)).block).toBe(false);
+    expect(html(item({}, { market: true })).block).toBe(false);
+    expect(html(item({ isHousing: false }, { ...bld, acqDate: "1990-07-26" })).block).toBe(false);
+  });
+
+  it("U-8 비주택 건물 · 기준시가 평가 · 8칸 — §164⑥ 값 509,090,909 표시 · 선언 없음 · 의제취득일 기준시가 칸이 필수가 아니다(⑧ K-2와 같다)", () => {
     const { container } = render(
-      <BurdenedGiftTransferSection item={item({ isHousing: false }, { market: true, category: "real_estate_building" })} onChange={() => {}} hasOtherBurdenedGiftTransfer={false} transferDate="2023-02-16" />,
+      <BurdenedGiftTransferSection item={item({ ...C164, isHousing: false, standardPriceAtAcquisition: 0 }, { category: "real_estate_building" })} onChange={() => {}} hasOtherBurdenedGiftTransfer={false} transferDate="2023-02-16" />,
     );
-    expect(container.querySelector('[data-testid="bg-pre-deemed-no-sec164"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="bg-c164-std"]')?.textContent).toBe("509,090,909");
+    expect(container.querySelector('[data-testid="bg-c164-note"]')?.textContent).toContain("의제취득일(1985.1.1.) 기준시가로 씁니다");
+    expect(container.textContent).toContain("이 칸은 입력하지 않아도 됩니다");
     cleanup();
-    const land = render(<BurdenedGiftTransferSection item={item({}, { market: true })} onChange={() => {}} hasOtherBurdenedGiftTransfer={false} transferDate="2023-02-16" />);
-    expect(land.container.querySelector('[data-testid="bg-pre-deemed-no-sec164"]')).toBeNull();
-    cleanup();
+  });
+
+  it("U-9 비주택 건물 · 시가 · 8칸 — ②가 있어 「확인할 수 없음」 선언이 사라진다", () => {
+    const v = view(item({ ...C164, isHousing: false }, { market: true, category: "real_estate_building" }));
+    expect(v.unconfirmed).toBe(false);
   });
 
   it("U-6 범위 밖(1990 상속 · 시가) — 종전 화면(산정방식 라디오 · 「취득시」 라벨)", () => {
@@ -140,6 +186,8 @@ describe("PR-7b-3 ⑦ 결과 카드 의제 분기 (S-1)", () => {
     );
     const sec164 = container.querySelector('[data-candidate="sec164"]')?.textContent ?? "";
     expect(sec164).toContain("← 채택");
+    // 토지 §164④ · 상가 §164⑥(PR-7b-3b) 둘 다 이 줄이다 — 양도세 결과 행(`BgPreDeemedAcqRows`)과 같은 문구
+    expect(sec164).toContain("② §164④~⑦ 취득당시 기준시가(의제취득일)");
     expect(container.querySelector('[data-candidate="reported"]')).toBeNull();
     expect(container.textContent).not.toContain("K-4");
     expect(container.textContent).toContain("①·② 채택");
