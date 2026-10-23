@@ -238,3 +238,49 @@ K-4 실지 150M+150M · K-6/K-7 토지 2억+건물 3억 · «기준시가»(STD)
 - 지분: 자산 1 = GB 전체 입력 + `ownershipNumerator 60/denominator 100` + 부담부증여 입력, 자산 2 = `ownershipNumerator 40` + 취득일 + `gbAcqLandPricePerSqm`/`gbAcqBuildingValue`(지분 카드는 ② 숨김 → `transferType` 기본 «일반»), `assetSplitMode: "fractional"`, `contractTotalPrice` 입력.
 - 컴패니언: GB 두 자산 모두 부담부증여 + `assetSplitMode: "companion"`.
 - stale: 일반 양도 입력(`useEstimatedAcquisition: true` 또는 `gbHasExtension` + 증축 필수칸 + `fixedAcquisitionPrice`) 시드 후 UI에서 양도 형태 라디오만 부담부증여로 전환.
+
+---
+
+## 12. PR-1 Do 기록 (결함 2 — 2026-10-23)
+
+**base**: `origin/master`(`0e427721b`, PR-5b #2456 머지 포함)를 merge(rebase·force 없음) 후 착수.
+
+### 12.1 변경
+| 파일 | 변경 |
+|---|---|
+| `lib/calc/transfer-tax-api-gb.ts` | ④ 라우팅 `if (!isBurdenedGiftGb && (anyEstimated \|\| gbHasExtension \|\| anyNonActual))` — 부담부증여는 환산·증축 분기 밖(2-가). JSDoc에 근거 기록 (+8/−3줄, 611줄) |
+| `lib/api/transfer-tax-schema-gb-bg-refines.ts` (신규 50줄) | ⑫ 안전망 `refineGbBurdenedGiftActualPath` — 주 자산·지분·컴패니언 GB가 `burdenedGiftInfo`를 갖는데 `actualPriceMode !== true`면 400(메시지 `GB_BG_ACTUAL_PATH_REQUIRED_MESSAGE`, 경로 `…actualPriceMode`). 실가 + `extensionInfo`는 거부하지 않음 |
+| `lib/api/transfer-tax-schema.ts` | `propertySchema.superRefine`에서 호출 (+3줄, 466줄) |
+| `__tests__/api/transfer.route.gb-burdened-gift-stale-routing.anchor.test.ts` (신규) | 30건 anchor |
+| `__tests__/api/transfer.route.bg-aggregate-columns-n3.anchor.test.ts` | 픽스처 1곳 정정 — N3 `converted` 모드가 `actualPriceMode:false`(환산 경로)로 보내 §159를 무시한 채 200이었다. K-5는 «산정방식»이지 «환산 경로»가 아니므로 실가 payload + `acquisitionMethod: "converted"`로 바꿨다. 열 산술 단언은 그대로 통과 |
+| `e2e/gb-burdened-gift-stale-routing.spec.ts` (신규) | 3건 |
+
+⑧(validate)은 **변경 없음** — 의도적이다. 숨은 입력을 요구하면 끌 칸 없는 영구 차단(2-나 기각). 3중 패턴: ⑤ 비노출 = ④ 비전송 = ⑧ 미요구, 서버가 400으로 마지막 방어.
+서버 400 위치: **⑫ Zod `propertySchema.superRefine`**(route 입구, 엔진 도달 전). 응답 `fieldErrors["generalBuildingValuation.actualPriceMode"]` 등.
+
+### 12.2 Pre-Do anchor (수정 전 실패 → 후 통과)
+- 수정 전: 28건 중 **12 실패** — stale 4종 × K-5/K-4 8건 · API 직접 3건(`false`·생략·`false`+`extensionInfo`) · 옛 이력 재계산 1건. 16건(대조 K-5/K-4 · actualPriceMode true · 비부담부증여 7격자 · S4/S5)은 통과(= 회귀 0 기준선).
+- 수정 후: 30건 전부 통과(컴패니언·지분 안전망 2건 추가).
+- 세액 변화(총납부, mock 세율표): 환산 stale 56,574,760 → **57,552,880**(K-4 91,135,000) · 증축 stale(환산/실가 모드) **0 → 57,552,880**(K-4 91,135,000) · 분리 ON 파트 환산 stale 65,703,880 → 57,552,880(K-4 91,135,000) · API `actualPriceMode:false`/생략/`false`+증축: 200 → **400**.
+
+### 12.3 회귀 0 근거
+- 비부담부증여 GB 7격자(실가 141,966,000 · 환산 139,906,800 · 증축 환산 121,076,267 · 증축 실가 116,152,667 · 분리 혼합 192,463,920 · 감정 139,906,800 · 매매사례 139,906,800) — **수정 전 실측값을 고정**, 수정 후 동일.
+- 단건 GB 부담부증여 대조(K-5 57,552,880 / K-4 91,135,000) 불변, 감정·매매사례 stale(S4·S5) 불변.
+- `npm run test:transfer` 1418파일 17573 통과 · 전체 vitest 3341파일 중 실패 1건(위 N3 픽스처 — 정정 후 통과). `tsc --noEmit` 0 · eslint 0.
+- 기존 E2E `gb-burdened-gift-self-built-penalty.spec.ts` 4건 통과.
+
+### 12.4 옛 이력 (Q-5)
+`migrateAsset`은 stale(`useEstimatedAcquisition`·`gbHasExtension`)을 지우지 않는다(SR-5로 고정). 복원 → 재계산하면 대조값(57,552,880)으로 정정된다. 저장된 `resultData`는 자동 갱신하지 않는다(확정 Q-5). 별도 안내 없음.
+
+### 12.5 뮤테이션 9종 — 전부 killed (cp 백업 + md5 + 건별 sha 대조, 종료 후 sha 동일)
+M1 ④ 원복 → 9 실패 · M2 환산 stale만 새게 → 5 · M3 증축만 새게 → 5 · M4 파트 환산만 새게 → 9 · M5 ⑫ 호출 제거 → 3 · M6 `=== false`(생략 통과) → 1 · M7 컴패니언 분기 제거 → 1 · M8 지분 분기 제거 → 1 · M9 부담부증여 게이트 제거 → 7.
+처음 M7·M8이 살아남았다(컴패니언·지분 400이 다른 refine의 400과 구별되지 않았음) → 단언을 «이 안전망의 메시지 + 경로»로 강화해 killed.
+
+### 12.6 E2E
+`e2e/gb-burdened-gift-stale-routing.spec.ts` 3건(환산 stale · 증축 stale · stale 없음) 통과. ④를 원복하면 ST-1·ST-2 실패(정확히 결함 재현), 복원 후 통과. dev 서버 `:3293`(본인 PID) 종료, `next.config.ts` 원복(sha 동일).
+
+### 12.7 800줄
+`transfer-tax-api-gb.ts` 611 · `transfer-tax-schema.ts` 466 · 신규 leaf 50 — 전부 여유.
+
+### 12.8 남은 것
+PR-2(컴패니언)·PR-3(지분) 대기. 서버 안전망은 컴패니언·지분 payload까지 이미 덮는다(PR-2·3은 «지원 구현»).
