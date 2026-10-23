@@ -8,6 +8,7 @@
  */
 
 import { donorBuiltPenaltyFilingNote, resultDonorBuiltEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
+import { resultSelfBuiltEchoes, selfBuiltPenaltyFilingNote } from "@/lib/tax-engine/transfer-tax-self-built-display";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { separateAcqFilingNotes } from "@/components/calc/results/mixed-use/mixed-use-separate-acq-text";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -687,6 +688,12 @@ export function buildRows(
   // 이월과세 × 증여자 신축·증축 §114조의2 — 가산세가 붙었으면 칸 값을 설명하는 각주(새 수를 만들지 않는다)
   const donorNote = donorBuiltPenaltyFilingNote(resultDonorBuiltEcho(result));
   if (donorNote) setRoseNote("penaltyTax", "total", donorNote);
+  // 일체 주택 본인 신축 §114조의2 — base 가 건물분임을 같은 방식으로 밝힌다(echo 가 있을 때만 · 증여자 신축과 상호 배타)
+  const selfNotes = resultSelfBuiltEchoes(result).flatMap(({ label, echo }) => {
+    const note = selfBuiltPenaltyFilingNote(echo);
+    return note ? [label ? `[${label}] ${note}` : note] : [];
+  });
+  if (!donorNote && selfNotes.length > 0) setRoseNote("penaltyTax", "total", selfNotes.join(" / "));
   setNum("totalDeterminedTax", "total", result.determinedTax + totalPenalty);
   // Round 11 (2026-05-06): §99의3 등 감면 적용 시 농어촌특별세 (감면세액 × 20%, 농특세법 §3·§5)
   // 농특세는 **총액 echo가 정본**이다 — 종전 `incomeDeductionRuralSurtax`는 소득금액차감형

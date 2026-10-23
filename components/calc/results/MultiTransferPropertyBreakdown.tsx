@@ -126,6 +126,8 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     determinedTax,
     penaltyTax: totalPenalty,
     penaltyBase: b.penaltyBase ?? 0,
+    // 일체 주택 본인 신축 §114조의2(건물분) echo — 자산별 신고서 각주가 읽는다(Q-12 PR-3). 없으면 undefined.
+    selfBuiltHousingPenalty: b.selfBuiltHousingPenalty,
     // `penaltyTax` 슬롯에 국기법분이 섞여 있으므로 지방소득세 산식용 §114조의2분을 따로 싣는다.
     localTaxPenalty: b.penaltyTax,
     // 농특세는 「감면 전 산출세액 − 감면 후 산출세액」의 20%라 **자산별로 나뉘지 않는다**

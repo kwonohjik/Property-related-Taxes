@@ -21,6 +21,7 @@ import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurch
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { formatRate, downloadSelectedPdf } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
+import { SelfBuiltPenaltyCard } from "@/components/calc/results/transfer/SelfBuiltPenaltyCard";
 import { ParcelDisclosure } from "@/components/calc/results/transfer/ParcelDisclosure";
 import { SingleDetailCards, hasSingleDetailCards } from "@/components/calc/results/transfer/SingleDetailCards";
 import { CarryoverComparisonCard } from "@/components/calc/results/transfer/CarryoverComparisonCard";
@@ -370,6 +371,9 @@ export function TransferTaxResultView({
         {!result.transferBurdenedGiftBreakdown && (
           <CalculationWarningsCard warnings={result.warnings} />
         )}
+
+        {/* 일체 주택 본인 신축 §114조의2 가산세(건물분) — 근거 산식·고지. echo 가 있을 때만 뜬다(Q-12 PR-3). */}
+        <SelfBuiltPenaltyCard echo={result.selfBuiltHousingPenalty} />
 
         {/* 부분 비과세(고가주택) 근거 — 전액 비과세는 위 카드가 이미 exemptReason을 표시한다.
             어느 특례로 1세대1주택 의제가 성립했는지 남기지 않으면 기준금액 초과분만 과세된 이유를

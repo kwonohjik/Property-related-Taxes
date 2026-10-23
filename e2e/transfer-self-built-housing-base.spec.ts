@@ -15,7 +15,12 @@
  *  SB-8 컴패니언: 함께 양도 자산 2 의 신축 → companionAssets[0].selfBuiltHousing · 자산 2 가산세
  *  SB-9 375px 가로 스크롤 없음 · 카드 안내 글자 라이트·다크 대비 4.5 이상
  *
- * 결과 화면의 건물분 산식 줄(4뷰)은 PR-3 범위다. 사람이 브라우저로 직접 한 수동 확인은 아니다(headless).
+ *  SB-10 결과 화면(PR-3 ⑦): 환산 — 결과 카드 건물분 산식·고지(1회) · 신고서 각주 · 상세명세서 · 인쇄(전체 선택 후) 에서도 보인다
+ *  SB-11 결과 화면: 감정 직접 / 「구분 표시 없음」 — 제목·산식이 감정가액 (Q-8)
+ *  SB-12 결과 화면 구별력: echo 없는 가산세(증축)는 카드·각주가 없고 종전 문구 그대로
+ *  SB-8 은 함께 양도 결과의 자산 2 카드까지 본다
+ *
+ * 사람이 브라우저로 직접 한 수동 확인은 아니다(headless).
  * 실행(워크트리): E2E_PORT=3298 npx playwright test e2e/transfer-self-built-housing-base.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -262,6 +267,76 @@ test.describe("일체 주택 본인 신축 §114조의2 base 건물분", () => {
     const props = (await resp.json()).data.aggregated.properties as { penaltyTax: number; penaltyBase: number }[];
     expect(props[0].penaltyTax).toBe(0);
     expect(props[1]).toMatchObject({ penaltyBase: 37_499_999, penaltyTax: 1_874_999 });
+    // 결과 화면 — 자산 2 의 카드에 건물분 산식, 고지는 한 번 (PR-3)
+    await expect(page.getByTestId("self-built-penalty-card")).toHaveCount(1, { timeout: 60_000 });
+    await expect(page.getByTestId("self-built-penalty-card")).toContainText("건물분 환산취득가액 37,499,999 = 건물분 양도가액 200,000,000");
+    await expect(page.getByTestId("self-built-penalty-line")).toHaveText("가산세 1,874,999 = 37,499,999 × 5%");
+  });
+
+  const CONFIRM = "일체 주택의 건물분만 기준으로 하는 정면 해석례는 확인하지 못했습니다 — 확인 필요.";
+  const bodyCount = (page: Page, needle: string) => page.evaluate((n) => document.body.innerText.split(n).length - 1, needle);
+  const stmtFormula = (page: Page) => page.locator('[data-statement-row="가산세액"]').first().evaluate((el) => (el.textContent ?? "").replace(/\s+/g, " "));
+  const roseNote = (page: Page) => page.locator('[data-print-id="form-table"]').first().getByTestId("filing-rose-note");
+
+  test("SB-10 결과 화면(환산): 카드 건물분 산식·고지 1회 · 신고서 각주 · 상세명세서 · 인쇄(전체 선택 후)", async ({ page }) => {
+    test.setTimeout(180_000);
+    const errors = trackPageErrors(page);
+    await seedWizard(page, seed([asset()]));
+    await calculate(page);
+    // ① 결과 카드
+    const c = page.getByTestId("self-built-penalty-card");
+    await expect(c).toBeVisible();
+    await expect(page.getByText("본인 신축 건물 환산취득가액 가산세 (소득세법 §114조의2)")).toBeVisible();
+    await expect(page.getByTestId("self-built-window")).toHaveText("신축 취득일 2022-01-10부터 5년이 되는 날(2027-01-10)까지 양도하는 경우입니다.");
+    await expect(c).toContainText("건물분 환산취득가액 187,500,000 = 건물분 양도가액 400,000,000");
+    await expect(c.locator("span.inline-flex.flex-col").first()).toContainText("취득 당시 건물분 기준시가 75,000,000");
+    await expect(c.locator("span.inline-flex.flex-col").first()).toContainText("양도 당시 건물분 기준시가 160,000,000");
+    await expect(c).toContainText("취득 당시 주택공시가격 200,000,000 = 토지분 125,000,000 + 건물분 75,000,000");
+    await expect(page.getByTestId("self-built-penalty-line")).toHaveText("가산세 9,375,000 = 187,500,000 × 5%");
+    await expect(page.getByTestId("self-built-notice")).toContainText(CONFIRM);
+    expect(await bodyCount(page, CONFIRM), "고지는 한 번").toBe(1);
+    // ② 신고서 각주 · ③ 상세명세서
+    await expect(roseNote(page)).toContainText("소득세법 §114조의2 본인 신축 건물 가산세 9,375,000 (= 건물분 환산취득가액 187,500,000 × 5%)");
+    expect(num((await formRow(page, "가산세액"))[1])).toBe(9_375_000);
+    expect(await stmtFormula(page)).toContain("§114조의2 본인 신축 건물 환산취득가액 가산세 9,375,000 — 건물분 환산취득가액 187,500,000 = 건물분 양도가액 400,000,000");
+    // ④ 인쇄 — 「전체 선택」 없이는 인쇄 대상이 없다(기본 전체 미선택). 선택 후 print 매체에서도 보인다.
+    await page.getByRole("button", { name: "전체 선택" }).first().click();
+    await page.emulateMedia({ media: "print" });
+    await expect(c).toBeVisible();
+    await expect(roseNote(page)).toBeVisible();
+    await page.emulateMedia({ media: "screen" });
+    // 결과 화면(카드·각주 포함)이 375px 에서 페이지를 가로로 밀지 않는다
+    await expectNoPageHScroll(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("SB-11 결과 화면(감정): 직접 입력 = 건물 감정가액 · 구분 표시 없음 = 총액 × 건물 ÷ (토지 + 건물) 기준시가", async ({ page }) => {
+    test.setTimeout(240_000);
+    await seedWizard(page, seed([asset({ ...APPRAISAL, selfBuiltBuildingAppraisal: "110000000" })]));
+    await calculate(page);
+    await expect(page.getByText("본인 신축 건물 감정가액 가산세 (소득세법 §114조의2)")).toBeVisible();
+    await expect(page.getByTestId("self-built-penalty-card")).toContainText("건물 감정가액 110,000,000 (감정평가서에 구분 표시된 건물 감정가액 — 토지분을 안분하지 않습니다)");
+    await expect(page.getByTestId("self-built-penalty-line")).toHaveText("가산세 5,500,000 = 110,000,000 × 5%");
+    await expect(roseNote(page)).toContainText("(= 건물 감정가액 110,000,000 × 5%)");
+    expect(await stmtFormula(page)).toContain("§114조의2 본인 신축 건물 감정가액 가산세 5,500,000");
+
+    await seedWizard(page, seed([asset({ ...APPRAISAL, selfBuiltAppraisalNoSplit: true })]));
+    await calculate(page);
+    await expect(page.getByTestId("self-built-penalty-card")).toContainText("건물분 감정가액 112,500,000 = 감정가액 총액 300,000,000");
+    await expect(page.getByTestId("self-built-penalty-card").locator("span.inline-flex.flex-col").first()).toContainText("취득 당시 건물 기준시가 60,000,000");
+    await expect(page.getByTestId("self-built-penalty-line")).toHaveText("가산세 5,625,000 = 112,500,000 × 5%");
+    await expect(roseNote(page)).toContainText("(= 건물분 감정가액 112,500,000 × 5%)");
+  });
+
+  test("SB-12 결과 화면 구별력: echo 없는 가산세(증축)는 카드·각주 없이 종전 문구 그대로", async ({ page }) => {
+    test.setTimeout(180_000);
+    await seedWizard(page, seed([asset({ buildingType: "extension", extensionFloorArea: "100", extensionStdPriceAtAcquisition: "15000000" })]));
+    await calculate(page);
+    expect(num((await formRow(page, "가산세액"))[1])).toBe(1_875_000);
+    await expect(page.getByTestId("self-built-penalty-card")).toHaveCount(0);
+    await expect(roseNote(page).filter({ hasText: "본인 신축 건물" })).toHaveCount(0);
+    expect(await stmtFormula(page)).toContain("§114조의2 환산취득가액 가산세 1,875,000 (= 37,500,000 × 5%)");
+    expect(await bodyCount(page, CONFIRM)).toBe(0);
   });
 
   test("SB-9 375px 가로 스크롤 없음 · 카드 안내 글자 라이트·다크 대비", async ({ page }) => {

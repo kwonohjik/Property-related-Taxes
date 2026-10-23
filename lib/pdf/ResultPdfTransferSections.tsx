@@ -7,6 +7,7 @@
 import { Fragment } from "react";
 import { type R, C, s, fmt, fmtRate, num, str, bool } from "./ResultPdfPrimitives";
 import { donorBuiltPenaltyView, resultDonorBuiltEchoes } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
+import { resultSelfBuiltEchoes, selfBuiltPenaltyView, selfBuiltResultEchoes } from "@/lib/tax-engine/transfer-tax-self-built-display";
 import {
   View,
   Text,
@@ -89,6 +90,11 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
     const v = donorBuiltPenaltyView(echo);
     return v ? [{ label, view: v }] : [];
   });
+  // 일체 주택 본인 신축 §114조의2(건물분) — 화면과 같은 문장 정본. 단건은 echo 하나, 집계 어댑터는 카드별 목록.
+  const selfViews = resultSelfBuiltEchoes(r as Parameters<typeof resultSelfBuiltEchoes>[0]).flatMap(({ label, echo }) => {
+    const v = selfBuiltPenaltyView(echo);
+    return v ? [{ label, view: v }] : [];
+  });
   return (
     <>
       <Text style={s.sectionTitle}>신고서 양식</Text>
@@ -114,6 +120,12 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
         {donorViews.map(({ label, view }, k) => (
           <Fragment key={`dbv${k}`}>
             {view.formulaLines.map((line, i) => (<View key={`db${k}-${i}`} style={s.row}><Text style={s.lblSub}>{label ? `[${label}] ${line}` : line}</Text></View>))}
+            <View style={s.row}><Text style={s.lblSub}>{label ? `[${label}] ${view.notice}` : view.notice}</Text></View>
+          </Fragment>
+        ))}
+        {selfViews.map(({ label, view }, k) => (
+          <Fragment key={`sbv${k}`}>
+            {view.formulaLines.map((line, i) => (<View key={`sb${k}-${i}`} style={s.row}><Text style={s.lblSub}>{label ? `[${label}] ${line}` : line}</Text></View>))}
             <View style={s.row}><Text style={s.lblSub}>{label ? `[${label}] ${view.notice}` : view.notice}</Text></View>
           </Fragment>
         ))}
@@ -365,6 +377,11 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
   const determinedTax = (num(r.determinedTax) ?? 0) as number;
   const penaltyTax = (num(r.penaltyTax) ?? 0) as number;
   const totalDeterminedTax = determinedTax + penaltyTax;
+  // 일체 주택 본인 신축 §114조의2(건물분) — 자산별 echo (카드 라벨 = 자산 라벨)
+  const selfViews = selfBuiltResultEchoes(props as unknown as Parameters<typeof selfBuiltResultEchoes>[0]).flatMap(({ label, echo }) => {
+    const v = selfBuiltPenaltyView(echo);
+    return v ? [{ label, view: v }] : [];
+  });
 
   return (
     <>
@@ -392,6 +409,12 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
         {(num(r.reductionAmount) ?? 0) > 0 && (<View style={s.row}><Text style={s.lbl}>감면세액 합계</Text><Text style={s.val}>- {fmt(r.reductionAmount)}</Text></View>)}
         <View style={s.rowBg}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(determinedTax)}</Text></View>
         {penaltyTax > 0 && (<View style={s.row}><Text style={s.lbl}>가산세액</Text><Text style={s.val}>{fmt(penaltyTax)}</Text></View>)}
+        {selfViews.map(({ label, view }, k) => (
+          <Fragment key={`sbv${k}`}>
+            {view.formulaLines.map((line, i) => (<View key={`sb${k}-${i}`} style={s.row}><Text style={s.lblSub}>{label ? `[${label}] ${line}` : line}</Text></View>))}
+            <View style={s.row}><Text style={s.lblSub}>{label ? `[${label}] ${view.notice}` : view.notice}</Text></View>
+          </Fragment>
+        ))}
         <View style={s.rowBg}><Text style={s.lbl}>총결정세액</Text><Text style={s.valAccent}>{fmt(totalDeterminedTax)}</Text></View>
         {aggRuralSurtax > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세</Text><Text style={s.val}>{fmt(aggRuralSurtax)}</Text></View>)}
         <View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>
