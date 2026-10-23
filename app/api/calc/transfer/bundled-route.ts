@@ -29,7 +29,7 @@ import { shareWholePropertyPrice } from "./bundled-apportionment";
 import { appurtenantLimitShareOf } from "./bundled-companion-split";
 import { asReverseUnitHouse, resolveReverseAppurtenantUnit, reverseUnitHouseFacts, splitReversePrimaryLand } from "./bundled-reverse-appurtenant";
 import { aggregateWithSameDayRightWarning } from "@/lib/tax-engine/one-house/same-day-right";
-import type { GeneralBuildingOutput } from "@/lib/tax-engine/types/general-building.types";
+import type { GbBundledAssetDetail } from "@/lib/tax-engine/types/transfer-aggregate.types";
 
 export function calculateBundledTransfer(
   data: PropertySchemaInput,
@@ -179,8 +179,8 @@ export function calculateBundledTransfer(
   } satisfies MixedUseCompanionContext;
 
   // 일반건물 자산별 결과 상세(산식 재료) — 자산 id 키. 단건 슬롯과 다른 키다(수정신고 판별자 · `gb-bundled-result-formulas.plan.md`).
-  const gbDetailsByAsset: Record<string, GeneralBuildingOutput> = {};
-  const onGbDetail = (assetId: string, detail: GeneralBuildingOutput) => {
+  const gbDetailsByAsset: Record<string, GbBundledAssetDetail> = {};
+  const onGbDetail = (assetId: string, detail: GbBundledAssetDetail) => {
     gbDetailsByAsset[assetId] = detail;
   };
 

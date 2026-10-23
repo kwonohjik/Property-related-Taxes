@@ -27,6 +27,7 @@ import {
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { resolveGeneralBuildingSwap } from "@/lib/tax-engine/general-building-swap";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import type { GbSwapComparison } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import {
   buildProperties,
   buildApportionment,
@@ -61,6 +62,25 @@ import {
   type GeneralBuildingValuationPayload,
 } from "@/lib/tax-engine/general-building-entry";
 import { resolveGbPreDeemedRoute, type GbPreDeemedEcho } from "@/lib/tax-engine/general-building-pre-deemed";
+
+/**
+ * §97②2호 단서 발동 표시값 — 미발동이면 `undefined`. 단건(`aggregated.swapComparison`)과 함께 양도 자산별 상세가 같이 쓴다.
+ *
+ * 자산총액 판정은 top-level 1개로 충분하지만, **파트 단위 판정에서는 발동한 파트만 합산**한다.
+ * 미발동 파트의 가목·나목까지 더하면 「이 금액을 나목으로 채택했다」는 표시가 실제 채택액과
+ * 어긋난다(메모리 `feedback_engine_result_display_drift`).
+ */
+export function gbSwapComparison(
+  swap: ReturnType<typeof buildEstimatedGeneralBuildingCards>["swap"],
+): GbSwapComparison | undefined {
+  if (!swap.swapApplied) return undefined;
+  const applied = swap.perPart ? Object.values(swap.perPart).filter((p) => p.swapApplied) : undefined;
+  return {
+    estimatedSide: applied ? applied.reduce((s, p) => s + p.estimatedSide, 0) : swap.estimatedSideTotal,
+    directSide: applied ? applied.reduce((s, p) => s + p.directSide, 0) : swap.directSide,
+    chosen: "direct",
+  };
+}
 
 /** 의제취득일 전 상속·증여 파트의 ①②③ 비교를 결과 detail에 싣는다 — 결과 카드의 유일한 소스. */
 export function withGbPreDeemedEcho<T extends { generalBuildingValuationDetail?: object }>(
@@ -305,27 +325,11 @@ export function calculateGeneralBuildingTransfer(
           ...(swap.beforeExtensionAddition ? { partBeforeExtensionCapex: Object.fromEntries(swap.beforeExtensionAddition) } : {}),
         }
       : gbOut;
-  /**
-   * §97②2호 단서 발동 시 결과뷰 표시용(F10).
-   *
-   * 자산총액 판정은 top-level 1개로 충분하지만, **파트 단위 판정에서는 발동한 파트만 합산**한다.
-   * 미발동 파트의 가목·나목까지 더하면 「이 금액을 나목으로 채택했다」는 표시가 실제 채택액과
-   * 어긋난다(메모리 `feedback_engine_result_display_drift`).
-   */
-  if (swap.swapApplied) {
-    const applied = swap.perPart
-      ? Object.values(swap.perPart).filter((p) => p.swapApplied)
-      : undefined;
+  // §97②2호 단서 발동 시 결과뷰 표시용(F10).
+  const swapComparison = gbSwapComparison(swap);
+  if (swapComparison) {
     aggregated.swapApplied = true;
-    aggregated.swapComparison = {
-      estimatedSide: applied
-        ? applied.reduce((s, p) => s + p.estimatedSide, 0)
-        : swap.estimatedSideTotal,
-      directSide: applied
-        ? applied.reduce((s, p) => s + p.directSide, 0)
-        : swap.directSide,
-      chosen: "direct",
-    };
+    aggregated.swapComparison = swapComparison;
   }
 
   const landStdAtTransfer = gbv.transferLandPricePerSqm * gbv.landArea;

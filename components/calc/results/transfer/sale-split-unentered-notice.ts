@@ -18,6 +18,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
+import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
 
 const BASIS_LABEL: Record<ApportionBasisKind, string> = {
   appraisal: "양도시 감정평가가액",
@@ -61,7 +62,7 @@ function assetOfProperty(
  * 화면(결과·신고서·명세서)에 띄울 안내 문장들.
  *
  *  - 단건: `result.splitDetail` / `result.generalBuildingValuationDetail` + `asset ?? formData.assets[0]`
- *  - 합산(aggregate): 자산별 `properties[].splitDetail`(split·컴패니언·다건) + `aggregated.generalBuildingValuationDetail`(일반건물)
+ *  - 합산(aggregate): 자산별 `properties[].splitDetail`(split·컴패니언·다건) + `aggregated.generalBuildingValuationDetail`(일반건물) + `aggregated.generalBuildingDetailsByAsset`(함께 양도 일반건물)
  *  - 자산이 둘 이상 한 화면에 있는 split은 어느 자산인지 `propertyLabel`을 앞에 붙인다.
  */
 export function collectSaleSplitUnenteredNotices(args: {
@@ -89,6 +90,20 @@ export function collectSaleSplitUnenteredNotices(args: {
       const gbAsset = assets.find((a) => a.assetKind === "general_building") ?? assets[0];
       const text = saleSplitUnenteredNotice(isSaleSplitActual(gbAsset), gbKind);
       if (text) lines.push(text);
+    }
+    /*
+     * 함께 양도 일반건물 — 자산별 상세(키 = 자산 id = 카드 접미사 · 단건 슬롯과 배타). 폼도 그 자산의 것을 본다(`gb-bundled-result-blocks.plan.md` C-3).
+     * 라벨은 그 자산 카드 라벨의 자산 머리(「주 자산 토지(1001)」 → 「주 자산」 — `tagGbCards`가 붙인 것)다.
+     */
+    for (const [assetId, d] of Object.entries(aggregate.aggregated.generalBuildingDetailsByAsset ?? {})) {
+      const text = saleSplitUnenteredNotice(
+        isSaleSplitActual(assetOfProperty(assetId, formData, aggregate.propertyFormMap)),
+        d.saleApportionBasisKind,
+      );
+      if (!text) continue;
+      const cardLabel = aggregate.properties.find((p) => cardSuffixOf(p.propertyId) === assetId)?.propertyLabel ?? "";
+      const label = cardLabel.slice(0, Math.max(0, cardLabel.lastIndexOf(" "))).trim();
+      lines.push(many && label ? `${label}: ${text}` : text);
     }
     return lines;
   }
