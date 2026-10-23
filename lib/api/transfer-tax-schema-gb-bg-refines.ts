@@ -24,9 +24,12 @@ interface Subject {
   transferType?: string;
   burdenedGiftInfo?: unknown;
   generalBuildingValuation?: Gbv;
-  generalBuildingShares?: { valuation?: Gbv }[];
+  generalBuildingShares?: { valuation?: Gbv; burdenedGiftInfo?: unknown }[];
   companionAssets?: { assetKind?: string; burdenedGiftInfo?: unknown; generalBuildingValuation?: Gbv }[];
 }
+
+export const GB_BG_SHARE_INFO_REQUIRED_MESSAGE =
+  "일반건물 지분 분할 취득의 부담부증여(소령 §159)는 지분마다 부담부증여 정보(burdenedGiftInfo)가 필요합니다 — 빠진 지분은 일반 양도로 계산되어 취득가액이 0이 됩니다.";
 
 export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementCtx): void {
   const issue = (path: (string | number)[]) =>
@@ -38,6 +41,14 @@ export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementC
     if (gbv && gbv.actualPriceMode !== true) issue(["generalBuildingValuation", "actualPriceMode"]);
     (data.generalBuildingShares ?? []).forEach((s, i) => {
       if (s.valuation && s.valuation.actualPriceMode !== true) issue(["generalBuildingShares", i, "valuation", "actualPriceMode"]);
+    });
+  }
+  // 지분(축 B) — 부담부증여면 **모든 지분**이 info 를 가져야 한다. 누락 지분은 일반 양도로 계산된다(침묵 무시 금지).
+  if (data.propertyType === "general_building" && data.transferType === "burdened_gift") {
+    (data.generalBuildingShares ?? []).forEach((s, i) => {
+      if (!s.burdenedGiftInfo) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["generalBuildingShares", i, "burdenedGiftInfo"], message: GB_BG_SHARE_INFO_REQUIRED_MESSAGE });
+      }
     });
   }
   // 컴패니언 — `burdenedGiftInfo` 존재가 부담부증여 표지다(`bundled-route.ts` · `transfer-tax-schema-companion-refines.ts`와 같은 규율).

@@ -14,6 +14,7 @@ import { getOwnershipRatio, mergePrimaryBasic, isFullFractionalBundle } from "./
 import { fixedAcquisitionPriceRaw } from "./transfer-tax-api-companion-payload";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { toEngineReductions } from "./transfer-tax-api-reductions";
+import { buildBurdenedGiftInfo, type BurdenedGiftInfoPayload } from "./transfer-tax-api-burdened-gift";
 
 /**
  * 물건-수준 GB 폼 필드 — primary에서 복사한다.
@@ -200,6 +201,12 @@ export interface GeneralBuildingSharePayloadOut {
    * `docs/00-pm/burdened-gift-bundle-residuals.plan.md` Q-2 a). 종전에는 실을 칸이 없어 감면이 엔진에 닿지 않았다.
    */
   reductions?: ReturnType<typeof toEngineReductions>;
+  /**
+   * 그 지분의 부담부증여(소령 §159) 정보 — **부담부증여일 때 전 지분**. 채무는 이 지분율로 안분(`buildBurdenedGiftInfo`의 `debtScaleRatio` —
+   * B/C 보존), 평가액·기준시가는 물건 전체 값(엔진 `scaleBurdenedGiftInfo`가 지분율만큼 줄인다). 취득 쪽 값(취득시 기준시가·K-6/K-7 금액)은 **지분 자기 값**이다
+   * (`mergePrimaryBasic`이 `bgPresumedAcquisition*`·`gbAcq*`를 병합하지 않는다). 계획서 `docs/00-pm/gb-burdened-gift-silent-drop.plan.md` PR-3.
+   */
+  burdenedGiftInfo?: BurdenedGiftInfoPayload;
 }
 
 /**
@@ -219,6 +226,8 @@ export function buildGeneralBuildingShares(
   if (!isFullFractionalBundle(assets, declaredMode)) return undefined;
 
   const out: GeneralBuildingSharePayloadOut[] = [];
+  // 부담부증여 표지 — ④ 주 자산 판정(`transfer-tax-api-primary-context.ts`)과 같은 조건. 지분 카드는 `mergePrimaryBasic`으로 `transferType`을 승계한다.
+  const isBurdenedGift = primary.transferType === "burdened_gift" || primary.acquisitionCause === "burdened_gift";
   for (let i = 0; i < assets.length; i++) {
     const asset = assets[i];
     const ratio = getOwnershipRatio(asset);
@@ -246,6 +255,8 @@ export function buildGeneralBuildingShares(
       // 자본적지출·양도비는 `valuation` 안에 있고 `applyShareScale`이 이미 × r 했다.
       valuation: scaled,
       ...(i > 0 ? { reductions: toEngineReductions(asset.reductions ?? [], merged, asset.expropriationNoticeDate) } : {}),
+      // 🔴 지분마다 싣는다 — 빠지면 route 5-0이 그 지분을 일반 양도로 계산한다(채무 전액이 양도차익, 취득가액 0). ⑫가 누락을 400으로 막는다.
+      ...(isBurdenedGift ? { burdenedGiftInfo: buildBurdenedGiftInfo(merged, ratio, transferDate) } : {}),
     });
   }
   return out;

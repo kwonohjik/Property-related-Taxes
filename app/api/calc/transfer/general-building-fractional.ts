@@ -42,6 +42,8 @@ import {
 import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
 import type { TransferReduction } from "@/lib/tax-engine/transfer-tax";
+import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
 import { buildGbPartCards, tagGbCards, remapGbSwap } from "./general-building-part-cards";
 import type { GbPartCards } from "./general-building-part-cards";
 
@@ -66,6 +68,8 @@ export interface GeneralBuildingSharePayload {
   valuation: Record<string, unknown>;
   /** 그 지분의 조특법 감면(Zod 통과본) — 둘째 지분부터. 첫 지분은 `primaryReductions`(최상위)가 정본이다. */
   reductions?: Parameters<typeof mapReductionsToEngine>[0];
+  /** 그 지분의 부담부증여(소령 §159) 정보 — 부담부증여일 때 전 지분(⑫ `refineGbBurdenedGiftActualPath`가 누락을 400). 채무는 지분율 안분 완료, 평가액은 엔진이 지분 축소. */
+  burdenedGiftInfo?: BurdenedGiftInfo;
 }
 
 /** 그 지분의 **건물** 취득일 — 물건 사건 前/後 판정의 기준일. */
@@ -116,6 +120,12 @@ export function calculateGeneralBuildingFractional(
    * (계획서 `docs/00-pm/burdened-gift-bundle-residuals.plan.md` §1.2).
    */
   primaryReductions?: TransferReduction[],
+  /**
+   * 부담부증여(소령 §159) — **물건 전체** 증여세·§159 명세를 aggregate 에 1회 싣는다(Q-6). 지분마다 쪼개면 증여재산공제가 N번 차감된다.
+   * 있으면 지분의 `burdenedGiftInfo`를 카드 빌더가 소비한다(지분 양도가액 = 총양도가 × 지분율은 쓰이지 않는다 — 양도가액은 §159가 정한다).
+   * 계획서 `docs/00-pm/gb-burdened-gift-silent-drop.plan.md` PR-3.
+   */
+  burdened?: { wholeInfo?: BurdenedGiftInfo; date: Date },
 ): GeneralBuildingRouteResult {
   const allProperties: TransferTaxItemInput[] = [];
   const allApportioned: BundledLikeApportionmentResult["apportioned"] = [];
@@ -179,6 +189,9 @@ export function calculateGeneralBuildingFractional(
       // 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축 — 증축 일괄값이 있으면 그것, 없으면 지분 값.
       (gated.bundledAcquisitionPrice as number | undefined) ?? share.acquisitionPrice ?? 0,
       (gated.bundledExpenses as number | undefined) ?? share.expenses ?? 0,
+      // 부담부증여 — 그 지분의 §159 정보 + 지분율(A·C 지분 축소). 비부담부증여면 둘 다 undefined(종전 경로 그대로).
+      burdened ? share.burdenedGiftInfo : undefined,
+      burdened ? share.ownershipRatio : undefined,
     );
 
     // (4) 접미사 — 카드와 swap Map을 **같은 시점에** 태깅한다
@@ -246,9 +259,15 @@ export function calculateGeneralBuildingFractional(
       // 🔴 G-13: 신고서 단위 가산세도 같은 층위에서 1회만 소비한다.
       filingPenaltyDetails,
       delayedPaymentDetails,
+      // 부담부증여 — 물건 단위 §159·증여세(1회). 카드별 합이 아니다(집계 M-0.5).
+      ...(burdened?.wholeInfo ? { burdenedGiftWholeInfo: burdened.wholeInfo, burdenedGiftDate: burdened.date } : {}),
     },
     rates,
   );
+  // 본인 신축 §114조의2 가산세(K-5/K-7)가 붙었으면 «확인 필요» 고지 — 단건·컴패니언과 같은 문구·같은 조건.
+  if (burdened && allCards.some((c) => c.penaltyAxis) && !aggregated.warnings.includes(GB_BG_SELF_BUILT_NOTICE)) {
+    aggregated.warnings.push(GB_BG_SELF_BUILT_NOTICE);
+  }
 
   if (anySwapApplied) {
     aggregated.swapApplied = true;
@@ -283,5 +302,7 @@ export function calculateGeneralBuildingFractional(
       warnings: [],
     },
     aggregated,
+    // 결과뷰의 «부담부증여 평가 명세»·증여세 신고서 슬롯 — 컴패니언(`bundled-route.ts`)·단건과 같은 키.
+    ...(aggregated.burdenedGift ? { transferBurdenedGiftBreakdown: aggregated.burdenedGift } : {}),
   };
 }

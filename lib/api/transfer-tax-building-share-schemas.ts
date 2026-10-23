@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { generalBuildingValuationSchema } from "./transfer-tax-building-schemas";
 import { reductionSchema } from "./transfer-tax-schema-reductions";
+import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 
 // ── ⑫ 일반건물 × 지분(%) 분할 취득 ──────────────────────────────────────
 
@@ -92,6 +93,12 @@ export const generalBuildingShareSchema = z.object({
    * 감면이 엔진에 닿지 않는다(계획서 `docs/00-pm/burdened-gift-bundle-residuals.plan.md` §1.2).
    */
   reductions: z.array(reductionSchema).optional(),
+  /**
+   * ⑫ 그 지분의 부담부증여(소령 §159) 정보 — 부담부증여일 때 **모든 지분**이 갖는다(없으면 `refineGbBurdenedGiftActualPath`가 400).
+   * 채무는 ④가 이미 그 지분율로 안분했고(`buildBurdenedGiftInfo`의 `debtScaleRatio`), 평가액·기준시가는 물건 전체 값이며 엔진
+   * `scaleBurdenedGiftInfo`가 지분율만큼 줄인다 — 저장소 축 B 규약(법문 직접 근거 아님). 정의가 없으면 침묵 stripping으로 §159가 사라진다.
+   */
+  burdenedGiftInfo: burdenedGiftInfoSchema.optional(),
 });
 
 /** 점 표기 경로로 중첩 값을 꺼낸다. */
