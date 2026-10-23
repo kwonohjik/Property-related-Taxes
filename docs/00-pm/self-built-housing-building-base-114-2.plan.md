@@ -411,7 +411,7 @@ useEffect→store 미러링 없음(토글 `onCheckedChange` 단일 patch, 파생
 |---|---|---|
 | **PR-0** ✅ | `bundled-split-helpers.ts` 779줄 분리 선처리(≥750) → 566 + 타입 파일 228 | 분리 전후 컴패니언 격자 응답 해시 동일 |
 | **PR-1** ✅ | 엔진 leaf + 타입 + finalize/loss-return 배선 + ⑫(메인·컴패니언·다건 분류) + ⑭(3곳). **`selfBuiltHousing` 부재 시 현행 base 유지**(관대) | 아래 Pre-Do 1~9 · 키 없는 응답 해시 불변 · 다건 키 분류 가드 |
-| **PR-2** | ④ 3곳 + ⑤ 입력 UI + ⑧ validate + ①②③ + 술어 leaf | ⑧↔⑫ 격자 · ④ stale 미전송 · 브라우저/Playwright E2E 신규 spec |
+| **PR-2** ✅ | ④ 3곳 + ⑤ 입력 UI + ⑧ validate + ①②③ + 술어 leaf | ⑧↔⑫ 격자 · ④ stale 미전송 · 브라우저/Playwright E2E 신규 spec |
 | **PR-3** | ⑦ 결과 echo 4뷰 + 고지 문구 + 결과 카드 라벨 | 4뷰 단일 접점 anchor · 합산 pickers |
 | **PR-4** | 엔진 엄격화(throw) + 기존 테스트 fixture 갱신(§10) + 주석/문서 정리 | §10 영향 테스트 전수 갱신 · 그 외 불변 |
 
@@ -467,6 +467,47 @@ useEffect→store 미러링 없음(토글 `onCheckedChange` 단일 patch, 파생
 - **PHD 외 동적 split + `selfBuiltHousing`** 은 조용히 무시된다(위 설계). PR-2 술어가 거울이 아니면 침묵 무시가 열린다.
 - 분리(split) + 건물 파트 실가 + 자산 수준 환산 게이트 열림 조합은 **종전부터** 가산세 base 가 토지 실가까지 섞인 350,000,000(양도차손 경로 포함)으로 나온다(실측 — 이 PR 이 바꾸지 않음, 모순 입력이라 UI 도달 가능성은 확인 필요).
 - 기존 컴패니언 C-1·C-2·V-1 anchor 는 ④ 가 `selfBuiltHousing` 을 안 보내 **불변**이다 — 계획 §10 의 갱신 3건·E2E 2 spec 은 PR-2/PR-4.
+
+### PR-2 Do 기록 (2026-10-23, ④ 3곳 + ⑤ 입력 UI + ⑧ + ①②③ + 술어 leaf — PR-1 head `8b1a2e4c3` 에서 분기)
+
+**변경**: 신규 — `lib/calc/self-built-housing-scope.ts`(84줄 · ⑤⑧④ 공용 술어 `selfBuiltHousingScope`) · `lib/calc/transfer-tax-api-self-built-housing.ts`(88 · ④ 와이어 빌더 `buildSelfBuiltHousingPayload`/`withSelfBuiltHousing`) · `lib/calc/transfer-tax-api-sale-split.ts`(38 · **양도가액 구분 `sale` 조립 공용 leaf** — 이월과세 donor ④(`buildHousing`)가 같은 함수를 호출하도록 추출, 복제 없음) · `lib/calc/transfer-tax-validate-self-built-housing.ts`(63 · ⑧) · `components/calc/transfer/SelfBuiltHousingShareBlock.tsx`(126 · ⑤ 카드). 수정 — ①② `calc-wizard-asset{,-factory}.ts`(신규 폼 칸 2개) · ④ `transfer-tax-api.ts`(+3)·`multi-transfer-tax-api.ts`(+2)·`transfer-tax-api-companion-payload.ts`(+6)·`transfer-tax-api-donor-built.ts`(`sale` 조립을 공용 leaf 로) · ⑧ `transfer-tax-validate-acquisition.ts`(+4, 신축·증축 블록 뒤 호출) · `SelfBuiltSection.tsx`(`children` 슬롯) · `CompanionAcqPurchaseBlock.tsx`(카드 마운트 +12). 줄 수는 전부 800 미만(`transfer-tax-api.ts` 735 · `validate-acquisition` 721 · `companion-payload` 708).
+
+**신규 폼 칸(①②③)**: `selfBuiltBuildingAppraisal: string`(건물 감정가액, 초기 `""`) · `selfBuiltAppraisalNoSplit: boolean`(감정평가서에 건물 가액이 구분 표시 없음, 초기 `false` = 직접 입력이 기본). 환산은 **신규 0칸** — S3-1·#17·이월과세가 쓰는 기존 자산 칸(`standardPricePerSqmAtAcq`·`acquisitionArea`·`buildingStandardPriceAtAcq`·`standardPricePerSqmAtTransfer`·`buildingStandardPriceAtTransfer`·`saleSplitMode`…)을 재사용한다. ③ 구 세션 복원은 `migrateAsset` 의 `fillMissingFromFactory` 가 factory 기본값으로 채우므로 **손으로 가드를 달지 않았다**(2줄을 달았다가 뮤테이션이 «제거해도 통과 = 등가» 로 판정해 걷어냈다 — `migrate.ts` 무변경). anchor 3건(초기값·구 세션 복원·저장값 보존) + 뮤테이션 T05 로 고정.
+
+**확정한 설계**
+- **술어 leaf 1개**가 ⑤ 카드 노출·⑧ 요구·④ 전송을 모두 정한다 — `selfBuiltActive ∧ housing ∧ !겸용 ∧ !부담부증여 ∧ buildingType==="new" ∧ 환산|감정(상호 배타 잔재 제외) ∧ !공익수용·공매(영 §164⑨) ∧ 5년·시행일 게이트(엔진 `calculateBuildingPenalty` 단일 소스) ∧ !isSplitPayloadActive ∧ !usesPhdGate`. 반환은 `{method, acq, sale, directAppraisal}` — 감정은 기본이 직접 입력 한 칸(`directAppraisal`)이고 「구분 표시 없음」을 켜면 취득 3칸(`acq`)으로 바뀐다(Q-3 C). 엔진 `unreachableReason`·`splitActive` 와 같은 집합 — 동적 split(배율 초과분 #17 등)일 때 `selfBuiltHousing` 을 보내지 않으므로 PR-1 이 경고한 «엔진 조용히 무시» 가 열리지 않는다(격자로 확인).
+- **술어가 참이면 키를 항상 싣는다** — 칸이 비었으면 값만 비운다(0·합성 없음). ⑧이 먼저 막고, 직접 호출은 ⑫·엔진이 400(`donor` 규약). 술어가 거짓이면 키 자체가 없다 → 응답 불변.
+- **마운트** = `SelfBuiltSection` ToggleCard 본문 끝(`children` 슬롯, Q-11). 첫 자산·함께 양도·지분 카드가 같은 `CompanionAcqPurchaseBlock` 이라 한 번에 닿는다(`isNonPrimaryAsset` 전달). 카드는 ToneCard amber(가: 취득 당시) + emerald(나: 양도 당시, `LandBuildingSaleSplitSection` 3-way 전체 — Q-10).
+- **⑧ 순서** = 화면 순서: (감정) 건물 감정가액·총액 초과 → (가) 취득 ㎡당 단가 → 면적(①) → 건물 기준시가 → (나) `validateSaleStdAndAppraisal`(donor ⑧ 와 같은 호출). 앵커는 기존 `data-field` + 신규 `selfBuiltBuildingAppraisal` 1개 — E2E 로 각 1개 확인.
+
+**V-3 결론 (landArea 척도) — 전체 면적(`acquisitionArea`)**. 주택공시가격 H·H_T 는 `StandardPriceInput` 이 **주택 전체 총액** 한 칸으로 받는다(면적 칸 없음). 따라서 같은 척도의 L 은 취득 당시 **전체** 토지 면적이다. 일부 양도(`partial`)의 `transferArea` 는 양도분 면적이라 쓰면 안 된다(`resolveAcqAreaForStdPrice` 를 쓰지 않은 이유). 실측(partial: 전체 100㎡ 중 50㎡ · 양도가 5억 · H 2억/4억 · N 6천만/1.6억): 전체 면적 **93,750,000**(채택) vs `landArea`=양도분 50㎡ **136,363,637**(+45%) · 구분 기재(건물 2.2억)는 채택 **103,125,000** vs 양도분 면적 **150,000,001**. 양도 당시 토지 L_T 도 같은 이유로 `단가 × acquisitionArea`(안분 모드에서는 B_tr 이 분모·분자에서 약분돼 값이 같지만 구분 기재·감정 모드에서 갈린다 — L_T=양도분이면 §100③ 판정이 달라져 93,749,999). 한 면적(`same`)이면 둘이 같다. ⑤ 카드가 일부 양도일 때 이 사실을 안내한다.
+
+**Pre-Do anchor — 수정 전(= PR-1 head 를 `git archive` 로 내려 같은 anchor 를 돌린 실측) → 수정 후**
+
+| anchor | 수정 전 | 수정 후 |
+|---|---|---|
+| `self-built-housing-ui-wiring` W·N·B 21건 | **11 실패 · 10 통과** (W-1~7 · B-1~3 · N-감정 구분표시 없음 — ④ 가 키를 안 싣고 ⑧ 이 안 막음, base 500,000,000/25,000,000/총 197,837,200) | 21건(+V-3 2건·W-sale 3건 = **26건**) 전부 통과: 환산 187,500,000/9,375,000/총 180,649,700 · 구분 기재 700/300 140,625,000/7,031,250 · 감정 직접 110,000,000/5,500,000 · 구분 표시 없음 112,500,000/5,625,000 · 지분 50% 93,750,000/4,687,500 · 손실 총 10,312,500 |
+| 컴패니언 C-1·C-2·V-1 | 통과(99,999,999 · 4,999,999 / 감정 300,000,000 · 15,000,000) | **갱신 필요** — 입력 없이 ④ 가 `selfBuiltHousing:{}` 를 실어 400. 건물분 입력을 시드해 갱신(아래) |
+| 컴패니언 `companion-self-built-penalty` 12건 | 12 통과 | 3건(C-1·C-2·V-1)만 값 변경, 나머지 9 불변 · 갱신 후 12 통과 |
+
+**기존 anchor·E2E 값 갱신(근거 = Q-1 확정)**: C-1(함께 양도 환산 신축) base 99,999,999 → **37,499,999**, 가산세 4,999,999 → **1,874,999** (S_b 2억 × B_acq 7,500만 ÷ B_tr 400,000,001 — 건물 = 총액 − 토지분이라 +1) · C-2 첫 자산 4,999,999 → **1,874,999**(구별력 유지: 컴패니언 0) · V-1(감정 신축) 300,000,000/15,000,000 → 건물 감정가액 직접 1.1억 **110,000,000/5,500,000**. E2E CS-2 4,999,999 → 1,874,999 · CS-3 15,000,000 → 5,500,000(개산공제 6,000,000 불변) · EA-3 15,000,000 → 5,500,000. **수정 전 spec 을 수정 후 코드에 돌린 실측**: CS-2·CS-3·EA-3 만 실패(⑧ 이 입력 칸을 요구해 요청이 안 나감 → `waitForResponse` 30s 타임아웃), CS-1·CS-4·EA-1·EA-2 는 통과 — 계획 §10 의 «갱신 필요 3건 + E2E 2 spec» 과 정확히 일치.
+
+**⑧↔⑫↔④↔엔진 격자(vitest 47건) · 술어 진리표 29건 · ⑤ 카드 21건(jsdom)**: 단건·함께 양도·다건 × {필수 칸을 하나씩 비움(11) ⇒ ⑧ 차단 ∧ route 400 · 채움(10) ⇒ ⑧ 통과 ∧ 키 실림 ∧ route 200 · 숨김(실거래가·5년 경과·토글 OFF) ⇒ 요구 없음 ∧ 키 없음 ∧ 200 · 숨김(겸용·공익수용·공매·PHD·소유자 분리·취득일 분리, route 가 다른 입력을 요구하는 조합) ⇒ 요구 없음 ∧ 키 없음}. 함께 양도: 채움·빈 칸 3종·감정 직접(지분 카드 50% 스케일)·숨김 3종·PHD 잔재(⑧ 이 요구 ∧ route 400, ④ 는 키 실림 ∧ 200). 다건: 채움·빈 칸·지분 50% 구분 기재 스케일·숨김. **허용한 비대칭 1건**: 일부 양도에서 양도분 면적(`transferArea`)을 비우면 ⑧ 이 그 칸으로 막지만(화면에 있는 칸 — 다른 ⑧ 규칙도 요구) ④ 는 전체 면적으로 L_T 를 보내 route 는 통과한다(⑧ 이 더 엄격한 방향 — dead-end 아님).
+
+**회귀 0 근거 — ④ body JSON sha256 + ⑧ issues 격자 4,752셀**(임시 하네스 저장소 미보존): 경로 3(단건·컴패니언 두 번째 자산·다건) × 자산 3종(housing·building·land) × 방식 4(실가·환산·감정·매매사례) × 본인 신축 3(OFF·신축·증축) × 양도일 6 × 분리 5(없음·별개 취득·소유자 분리·PHD·배율 초과분 #17) × 변주 5(없음·겸용·부담부증여·지분 50%·공익수용) × 입력 {채움·비움}. 기준선 = PR-1 head 를 `git archive`로 내린 사본(node_modules symlink, 현재 트리 무접촉 — `git checkout/stash` 없음). **기준선 2회 sha 동일 → 수정 후 2회 sha 동일**. 차이: **body 84셀 변경, 전부 «`selfBuiltHousing` 키 하나가 추가된 것»뿐**(키를 제거하면 기준선과 동일 — 다른 diff 0행), 그 84셀은 격자에서 계산한 술어 집합(housing ∧ 환산|감정 ∧ 신축 ∧ 비분리 ∧ 비부담부증여 ∧ 비겸용 ∧ 비수용 ∧ 게이트 개방, + 함께 양도 자산의 PHD 잔재)과 **정확히 일치**(집합 동등 — 술어 안인데 안 바뀐 셀 0, 밖인데 바뀐 셀 0). 배율 초과분 #17(진짜 split: 면적 900㎡·정착 50㎡·소재지 3배) 셀은 단건·컴패니언·다건 모두 불변 — PR-1 이 경고한 «동적 split 에서 엔진이 조용히 무시» 조합은 ④ 가 보내지 않는다. ⑧ issues 변경 14셀은 전부 «술어 안 ∧ 칸 비움 ∧ 양도일 게이트 개방» 셀의 신규 요구뿐(채움 셀의 ⑧ 은 불변).
+
+**뮤테이션 58건(cp 백업 · label+file md5 키 · 종료 후 전 파일 md5 원본 동일 확인, 실행기는 저장소 미보존 `run_mut.py`) → 57 KILLED · 1 SURVIVED(동치)**: 술어 각 항 17(housing·`selfBuiltActive`·겸용·부담부증여·증축·환산/감정 잔재·공익수용·공매·5년 게이트·게이트 방식·분리·PHD·`isNonPrimary`·감정 모드 매핑·환산 취득/양도 칸·완공일) · 와이어 12(직접 감정 지분 스케일·`landArea`=`transferArea`·partial L_T·`sale`·취득/양도/직접 감정 분기·구분 기재 지분 스케일·구분 기재/감정평가 모드 게이트 3·§166⑧ era) · ④ 3곳 8(배선 제거·`isNonPrimary`·지분율) · ⑧ 9(규칙 각 칸·양도 칸·호출 제거·`isNonPrimary`) · ⑤ 마운트·입력 9(children 슬롯·블록 마운트·`isNonPrimary` 전달·토글 뒤집기·쓰기 키·partial 안내·`showStdCard`·건물 기준시가 칸·직접 감정 칸) · ①②③ 3(factory 초기값 2 · 복원 채움 1). 1차 실행 결과 **47 KILLED · 10 SURVIVED · 2 SKIP**(SKIP 은 치환 문자열이 2곳에 매치 — 문자열을 좁혀 재실행). 생존 9건(공매 제외 · 구분 기재 토지/건물 모드 게이트 · 감정평가 모드 게이트 · §166⑧ era 게이트 · 다건 지분율 · ⑧ `isNonPrimary` + SKIP 2)은 «stale 구분 기재 값이 안분 모드에서 안 새는가·era·함께 양도 PHD 잔재의 ⑧·지분 스케일» 을 직접 단언하는 테스트를 추가해 **재실행 전부 KILLED**. 마지막 1건 `S17`(`gateOpen` 의 완공일 필수) 은 엔진 `calculateBuildingPenalty` 가 `constructionDate` 없으면 이미 null 을 돌려줘 제거해도 같은 결과 — **동치**로 둔다.
+
+**검증**: `tsc --noEmit` 0 · eslint 변경 파일 error 0(경고 1건은 종전부터 있던 `CompanionAcqPurchaseBlock.tsx:208` useEffect deps — 손대지 않음) · `npm run test:transfer` 1437파일 17,966 passed(PR-2 anchor 반영 전 시점 — 직후 anchor 추가분은 아래 전체 실행에 포함) · 전체 `npm test` **3,377파일 통과 · 1 skipped(3,378) · 40,714 passed**(13 skipped · 309 todo) · **Playwright E2E**(headless, `E2E_PORT=3298`, `next.config.ts` turbopack.root 임시 변경 후 원복 — sha `b91da05e…` 동일 확인): 신규 `transfer-self-built-housing-base.spec.ts` SB-1~6·8·9 = 8건 · 갱신한 CS 4건·EA 3건 · 인접(이월과세 donor 7건·분리 건물 파트 2건) — 전부 통과(신규 8 + CS 4 + EA 3 = 15건 ×2 반복 = 30건 통과 · 앞서 SB 7건 ×3 반복 21건 통과 — SB-8 의 간헐 실패 원인은 아래). **브라우저 수동 확인(사람이 직접)은 미수행**.
+
+**계획과 어긋난 점·확인 필요**
+- 계획 §7.5 «비어 있는 필수 칸은 0 으로 보내» 는 **칸을 비워 보낸다(값 생략)** 로 구현했다 — `{}` 도 ⑫ 는 통과하고 엔진 `assertSelfBuiltHousingInput` 이 400 으로 거부하므로 결과가 같고(격자로 확인) 0 을 지어내지 않는다.
+- **공익수용·공매(영 §164⑨)와는 결합하지 않는다** — 술어가 null 이라 카드가 안 뜨고 ④ 도 안 싣는다(엔진 PR-1 이 환산 분모가 바뀌는 조합을 거부하기 때문). 그 조합은 **종전처럼 자산 전체 base 로 조용히 계산된다**(이 PR 이 바꾸지 않음). 막을지·입력을 받을지는 PR-4(엄격화) 에서 결정할 **확인 필요**(V-4 후속).
+- 구분 기재 양도가액의 합 ≠ 총액(overflow) 은 이 ⑧ 이 검사하지 않는다 — donor ⑧ 선례와 같고 엔진도 400 이 아니다. 필요하면 별건.
+- 일부 양도(`partial`)에서 «양도시 토지 기준시가» 칸의 캐시(`landStandardPriceAtTransfer`)는 양도분 면적 기준이라 ④ 가 보내는 값(전체 면적 기준)과 다르다 — 카드에 안내를 뒀다. 화면 표시와 전송값 일치를 원하면 별건.
+- `SelfBuiltSection` description 에 «일체 주택은 건물분만 대상» 한 문장 추가(§7.6)는 하지 않았다 — 그 섹션은 asset 을 모르는 props-only 컴포넌트이고 카드 본문이 같은 말을 한다.
+- E2E SB-8 이 첫 시도에서 반복 실패한 원인 = 시드에 `regionCode` 가 있으면 주소 판정으로 조정대상지역이 켜져 «같은 날 양도 순서»(§154⑨) 차단이 간헐로 걸림(`sameDayHousingBundleIssue`) — 시드에서 `regionCode` 를 뺐다(기존 CS spec 도 없다). 제품 결함 아님.
+- 결과 4뷰의 건물분 산식·고지(echo)는 **PR-3**, 엔진 엄격화(throw)는 **PR-4**. V-13 ② «`same` 면적에서 양도 토지 면적 카드 중복» 의 실제 UX 는 브라우저 육안 확인이 남았다.
 
 ### Pre-Do anchor (구현 전에 먼저 작성·실행 — 「현행 일치 예상」 금지)
 1. **현행 고정**: S-A 500,000,000/25,000,000/총 197,837,200 · S-B 300,000,000/15,000,000 · X 증축 37,500,000/1,875,000.
@@ -534,7 +575,7 @@ useEffect→store 미러링 없음(토글 `onCheckedChange` 단일 patch, 파생
 |---|---|---|
 | V-1 | 일체 취득 주택의 가산세 base에서 토지분을 제외하는 **정면 해석례** | **확인 필요** — 법문·재산세제과-939 「해당 건물분」만 확인 |
 | V-2 | 감정가액 일체의 건물분 안분(기준시가 비례) 정면 해석례 | **확인 필요** |
-| V-3 | 본인 신축 L 산정 면적(`acquisitionArea`)이 취득 전체 면적인지 양도분인지 — H 쪽과 동척도인지(`usesTransferAreaForAcqStdPrice`) | **확인 필요** — Do 전 probe |
+| V-3 | 본인 신축 L 산정 면적(`acquisitionArea`)이 취득 전체 면적인지 양도분인지 — H 쪽과 동척도인지(`usesTransferAreaForAcqStdPrice`) | **해소(PR-2)** — H·H_T 가 주택 전체 총액이라 **전체 면적**(`acquisitionArea`)이 같은 척도. 실측: partial 에서 양도분 면적이면 base 136,363,637(+45%) · 채택 93,750,000 (§9 PR-2 Do 기록) |
 | V-4 | 공익수용 §164⑨ 환산 분모 특례(`resolveConversionDenominatorAtTransfer`)와 B_tr 안분의 상호작용 | **확인 필요** — 이번 범위에서 특례 적용 시 거부할지 |
 | V-5 | 겸용주택 §114조의2 미배선(엔진) · 토글 불일치(⑤) | 별건 후보 — 의도 여부 **확인 필요** |
 | V-6 | 오피스텔·상업용 건물(`commercial_building`) 일괄 고시 가격의 건물분 | 이번 범위 밖 · ⑤ 토글 미노출 |
