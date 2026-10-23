@@ -281,7 +281,13 @@ export function buildGeneralBuildingValuation(
   const bothEstimated = landMode === "estimated" && buildingMode === "estimated";
   // 증축 × 자본적지출 — 그중 증축 전 지출액(증축분에 배분하지 않는다 · `gb-extension-capex-timing.plan.md`). 0도 싣는다(⑧이 비움을 막는다).
   const capexBeforeExt = gbCapexBeforeExtensionSlots(asset);
-  const partExpensePayload = !bothEstimated
+  /*
+   * 파트 자본적지출 칸은 **화면에 있을 때만** 싣는다 — 분리 ON 건물 카드(`isSeparate`) · `showPartCapex`(두 파트 모두 환산 제외) ·
+   * 부담부증여면 `PartAcqModeField`가 통째로 숨는다. 숨은 칸의 잔존값이 공제되던 것을 막는다
+   * (`gb-extension-capex-residuals.plan.md` O-1 · 증축이면 ⑫ 「증축 전 지출액」 필수 규칙과 같은 자리).
+   */
+  const partExpenseShown = separate && !bothEstimated && asset.transferType !== "burdened_gift";
+  const partExpensePayload = partExpenseShown
     ? {
         ...(parseAmount(asset.landDirectExpenses) ? { landDirectExpenses: parseAmount(asset.landDirectExpenses) } : {}),
         ...(parseAmount(asset.buildingDirectExpenses) ? { buildingDirectExpenses: parseAmount(asset.buildingDirectExpenses) } : {}),
@@ -425,7 +431,8 @@ export function buildGeneralBuildingValuation(
       // §97②2호 단서 swap(자산총액) — G2(전체환산)·G4(NBL)·G3(증축) 공통.
       // capitalExpenditure는 항상 전달 — bundledExpenses fallback(transferExpense·directExpenses)에
       //   포함되지 않아 증축에서도 이중소비 없음.
-      ...(parseAmount(asset.capitalExpenditure)
+      // 증축이면 「그중 증축 전 지출액」 칸이 있는 자리에서만 싣는다(부담부증여로 칸이 숨으면 미전송) — ⑫가 증축 전 키를 필수로 본다.
+      ...(parseAmount(asset.capitalExpenditure) && (!asset.gbHasExtension || capexBeforeExt.asset)
         ? { capitalExpenditure: parseAmount(asset.capitalExpenditure) }
         : {}),
       ...(capexBeforeExt.asset

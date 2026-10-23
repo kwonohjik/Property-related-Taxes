@@ -16,6 +16,7 @@ import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggre
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
+import { shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
 import { ESTIMATED_DEDUCTION_RATE } from "@/lib/tax-engine/legal-codes";
 import { capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
 import { splitAcqFormulaText, splitExpenseText } from "./split-acq-text";
@@ -517,9 +518,12 @@ function buildGbPartCapexExpenseFormula(
  */
 export function buildGbExpenseFormula(
   p: PerPropertyBreakdown,
-  gb: GeneralBuildingOutput | undefined,
+  gbIn: GeneralBuildingOutput | undefined,
   burdenedGift?: TransferBurdenedGiftBreakdown,
 ): string | undefined {
+  // 지분 분할 실가 경로 — 이 카드가 속한 지분의 필요경비 echo로 덮어 읽는다(지분마다 금액이 다르다).
+  const shareEcho = gbIn?.shareActualExpenseEcho?.[String(shareIndexOf(p.propertyId))];
+  const gb = gbIn && shareEcho ? { ...gbIn, ...shareEcho } : gbIn;
   // 부담부증여 §163⑥ 분기 — 자산별 개산공제 = 안분 취득가액 × 개산공제율
   if (burdenedGift) {
     const bgAsset = isLandProp(p.propertyId)
