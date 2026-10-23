@@ -299,8 +299,16 @@ export function buildGeneralBuildingValuation(
     : {};
 
   // §163⑨ 상속·증여 파트 취득가액(①② max · 1985 전 ①② 따로) — `transfer-tax-api-gb-sec163-9.ts`(800줄 정책 분리).
-  const { gbInheritanceEcho, gbInheritanceFields, landPartPrice, buildingPartPrice, preDeemedFields, acqLandPerSqm } =
-    gbSec1639Acquisition(asset, transferDate, isBurdenedGiftGb);
+  const {
+    gbInheritanceEcho,
+    gbInheritanceFields,
+    landPartPrice,
+    buildingPartPrice,
+    landSec1639Basis,
+    buildingSec1639Basis,
+    preDeemedFields,
+    acqLandPerSqm,
+  } = gbSec1639Acquisition(asset, transferDate, isBurdenedGiftGb);
 
   /**
    * 분리 OFF **자산 단위** 감정가액·매매사례가액(F-2) — 총액 하나가 `bundledAcquisitionPrice`로 간다.
@@ -317,8 +325,11 @@ export function buildGeneralBuildingValuation(
   const ownPartValues = bundledEstimateTotal > 0
     ? {} // 총액이 원천 — 파트 값 미전송
     : {
-        ...(landPartPrice ? { landAcquisitionPrice: landPartPrice } : {}),
-        ...(buildingPartPrice ? { buildingAcquisitionPrice: buildingPartPrice } : {}),
+        // §163⑨ 근거 echo는 그 파트 값이 실릴 때만 함께 싣는다(결과 산식 문구 전용).
+        ...(landPartPrice ? { landAcquisitionPrice: landPartPrice, ...(landSec1639Basis ? { landSec1639Basis } : {}) } : {}),
+        ...(buildingPartPrice
+          ? { buildingAcquisitionPrice: buildingPartPrice, ...(buildingSec1639Basis ? { buildingSec1639Basis } : {}) }
+          : {}),
       };
   /** F-1 — 파트별 매매사례가액은 **분리 ON + 그 파트가 매매사례일 때만** 싣는다(0이면 미전송). */
   const landSalesCase = separate && landMode === "salesCase" ? parseAmount(asset.landSalesCaseValue) : 0;

@@ -442,6 +442,7 @@ export function buildGeneralBuildingAssetCards(
    * 건물 카드는 아래 `buildingAcqDate`가 담당한다.
    */
   const landAcqDate = input.landAcquisitionDate ?? input.acquisitionDate;
+  const landSec1639 = input.landSec1639Basis ? { sec1639Basis: input.landSec1639Basis } : {}; // §163⑨ 근거 — 실가 파트 카드에만(표시 echo)
 
   const assetCards: AssetCardForAggregate[] = [];
 
@@ -463,7 +464,7 @@ export function buildGeneralBuildingAssetCards(
       expenses: estimatedDeduction.land,
       usedEstimatedAcquisition: partAcq.landUsedEstimated,
       acquisitionMode: partAcq.landMode,
-      ...(partAcq.landMode === "actual" ? { actualSource: "part_input" as const } : {}),
+      ...(partAcq.landMode === "actual" ? { actualSource: "part_input" as const, ...landSec1639 } : {}),
       estimatedBase: partAcq.landUsedEstimated ? acquisition.land : 0,
       estimatedDeduction: estimatedDeduction.land,
       acquisitionDate: landAcqDate,
@@ -499,7 +500,7 @@ export function buildGeneralBuildingAssetCards(
       expenses: landBusinessExp,
       usedEstimatedAcquisition: partAcq.landUsedEstimated,
       acquisitionMode: partAcq.landMode,
-      ...(partAcq.landMode === "actual" ? { actualSource: "part_input" as const } : {}),
+      ...(partAcq.landMode === "actual" ? { actualSource: "part_input" as const, ...landSec1639 } : {}),
       estimatedBase: partAcq.landUsedEstimated ? landBusinessAcq : 0,
       estimatedDeduction: landBusinessExp,
       acquisitionDate: landAcqDate,
@@ -520,7 +521,7 @@ export function buildGeneralBuildingAssetCards(
       expenses: estimatedDeduction.land - landBusinessExp,
       usedEstimatedAcquisition: partAcq.landUsedEstimated,
       acquisitionMode: partAcq.landMode,
-      ...(partAcq.landMode === "actual" ? { actualSource: "part_input" as const } : {}),
+      ...(partAcq.landMode === "actual" ? { actualSource: "part_input" as const, ...landSec1639 } : {}),
       estimatedBase: partAcq.landUsedEstimated ? acquisition.land - landBusinessAcq : 0,
       estimatedDeduction: estimatedDeduction.land - landBusinessExp,
       acquisitionDate: landAcqDate,
@@ -543,7 +544,7 @@ export function buildGeneralBuildingAssetCards(
       expenses: estimatedDeduction.land,
       usedEstimatedAcquisition: partAcq.landUsedEstimated,
       acquisitionMode: partAcq.landMode,
-      ...(partAcq.landMode === "actual" ? { actualSource: "part_input" as const } : {}),
+      ...(partAcq.landMode === "actual" ? { actualSource: "part_input" as const, ...landSec1639 } : {}),
       estimatedBase: partAcq.landUsedEstimated ? acquisition.land : 0,
       estimatedDeduction: estimatedDeduction.land,
       acquisitionDate: landAcqDate,
@@ -573,7 +574,7 @@ export function buildGeneralBuildingAssetCards(
     expenses: estimatedDeduction.building,
     usedEstimatedAcquisition: partAcq.buildingUsedEstimated,
     acquisitionMode: partAcq.buildingMode,
-    ...(partAcq.buildingMode === "actual" ? { actualSource: "part_input" as const } : {}),
+    ...(partAcq.buildingMode === "actual" ? { actualSource: "part_input" as const, ...(input.buildingSec1639Basis ? { sec1639Basis: input.buildingSec1639Basis } : {}) } : {}),
     estimatedBase: partAcq.buildingUsedEstimated ? acquisition.building : 0,
     estimatedDeduction: estimatedDeduction.building,
     acquisitionDate: buildingAcqDate,

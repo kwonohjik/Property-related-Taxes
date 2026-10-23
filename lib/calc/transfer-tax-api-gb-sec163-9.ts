@@ -12,6 +12,7 @@ import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { gbPreDeemedClauseAFields } from "./gb-pre-deemed";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import type { GbSec1639Basis } from "@/lib/tax-engine/types/general-building.types";
 
 export function gbSec1639Acquisition(asset: AssetForm, transferDate: string | undefined, isBurdenedGiftGb: boolean) {
   /**
@@ -177,5 +178,41 @@ export function gbSec1639Acquisition(asset: AssetForm, transferDate: string | un
         sec164BuildingValue,
       );
 
-  return { gbInheritanceEcho, gbInheritanceFields, landPartPrice, buildingPartPrice, preDeemedFields, acqLandPerSqm };
+  /**
+   * 파트 슬롯 값의 근거 — 결과 산식 문구 전용 echo(세액 무관). 본문 평가액(①)인가, 단서 1·2호의 영 §164④·⑤ 가액(②)이 더 많아 그것인가.
+   * 동점은 ①(위 단서 주석과 같은 규약).
+   */
+  const basisOf = (
+    cause: GbSec1639Basis["cause"],
+    reported: number,
+    applies: boolean,
+    sec164: number,
+  ): GbSec1639Basis => ({ cause, adopted: applies && sec164 > reported ? "sec164" : "reported" });
+  const landSec1639Basis =
+    !landPartPrice
+      ? undefined
+      : acquisitionByInheritance
+        ? basisOf("inheritance", reportedLandValue, landSec164Applies, sec164LandTotal)
+        : isLandGift
+          ? basisOf("gift", parseAmount(asset.landAcquisitionPrice), landSec164Applies, sec164LandTotal)
+          : undefined;
+  const buildingSec1639Basis =
+    !buildingPartPrice
+      ? undefined
+      : buildingAcquisitionByInheritance
+        ? basisOf("inheritance", reportedBuildingValue, buildingSec164Applies, sec164BuildingValue)
+        : isBuildingGift
+          ? basisOf("gift", parseAmount(asset.buildingAcquisitionPrice), buildingSec164Applies, sec164BuildingValue)
+          : undefined;
+
+  return {
+    gbInheritanceEcho,
+    gbInheritanceFields,
+    landPartPrice,
+    buildingPartPrice,
+    landSec1639Basis,
+    buildingSec1639Basis,
+    preDeemedFields,
+    acqLandPerSqm,
+  };
 }

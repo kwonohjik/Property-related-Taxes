@@ -67,7 +67,7 @@ export function buildActualGeneralBuildingCards(
     landPreDeemedClauseA, buildingPreDeemedClauseA,
     houseToCommercialConversion, conversionDate, wasMultiHouseAtConversion,
     acquisitionByInheritance, buildingAcquisitionByInheritance,
-    inheritedLandValue, inheritedBuildingValue,
+    inheritedLandValue, inheritedBuildingValue, landSec1639Basis, buildingSec1639Basis,
     landAcquisitionCause, decedentAcquisitionDate, donorAcquisitionDate, buildingDecedentAcquisitionDate,
     landAcquisitionDate, buildingAcquisitionDate, buildingAcquisitionCause,
     landDirectExpenses, buildingDirectExpenses,
@@ -481,6 +481,9 @@ export function buildActualGeneralBuildingCards(
   for (const c of cards) {
     c.acquisitionMode = "actual"; // E-1 echo — 실가 경로는 두 파트가 모두 실지거래가액(감정·매매사례는 환산 경로로 간다)
     if (actualSource) c.actualSource = actualSource; // E-U2 echo — 파트 직접 입력 vs 일괄 총액 안분(표시 전용)
+    // §163⑨ 상속·증여 파트의 근거 — 파트 값이 그대로 취득가액인 분기(C1 상속·파트 직접 배정)에서만. 일괄 총액 안분이면 그 값이 아니다.
+    const sec1639 = c.propertyType === "land" ? landSec1639Basis : buildingSec1639Basis;
+    if (sec1639 && (actualSource === "inherited" || actualSource === "part_input")) c.sec1639Basis = sec1639;
     if (c.propertyType === "land") {
       if (landAcquisitionCause) c.landAcquisitionCause = landAcquisitionCause;
       if (decedentAcquisitionDate) c.decedentAcquisitionDate = decedentAcquisitionDate;
