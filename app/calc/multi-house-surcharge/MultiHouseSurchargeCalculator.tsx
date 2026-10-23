@@ -227,7 +227,7 @@ export default function MultiHouseSurchargeCalculator() {
           <div className="min-w-0">
             <h1 className="text-2xl font-bold tracking-tight">다주택 중과 판정</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              소득세법 §104⑦ · 시행령 §167의3·§167의10 — 세액이 아니라 <b>중과 여부와 사유</b>를 판정합니다
+              소득세법 §104⑦ · <span className="whitespace-nowrap">시행령 §167의3·§167의4·§167의10·§167의11</span> — 세액이 아니라 <b>중과 여부와 사유</b>를 판정합니다
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2 print:hidden">

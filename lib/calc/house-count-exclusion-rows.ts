@@ -32,6 +32,9 @@ import type { HouseEntry, RowCountExclusionReduction } from "@/lib/stores/calc-w
 import { toEngineReductions } from "./transfer-tax-api-reductions";
 import { housesOwnedAtTransfer } from "./household-house-count";
 import { REDUCTION_TYPE_LABELS } from "@/lib/tax-engine/transfer-reduction-type-labels";
+import { resolveHouseCountExclusionDate } from "@/lib/tax-engine/one-house/gift-household-basis";
+import { calcGiftHouseholdBasis } from "./effective-regulated-at-acquisition";
+import { GIFT_HOUSEHOLD_SCOPE_PRIMARY } from "./effective-regulated-at-acquisition";
 
 /** 명부 행 ⑥이 받는 §99의4·§98의9 유형 — 계산기 ③ 감면 패널에서는 뺀다(Q-3). */
 export const ROW_COUNT_EXCLUSION_TYPES: ReadonlySet<string> = new Set([
@@ -137,7 +140,7 @@ export function rowSpecialHouseExclusions(
 
 type FormLike = {
   houses?: HouseEntry[];
-  assets?: Pick<AssetForm, "assetKind" | "acquisitionDate" | "acquisitionCause" | "reductions">[];
+  assets?: AssetForm[];
   specialHouseExclusions?: SpecialHouseExclusionFormItem[];
   transferDate?: string;
   /** D5 — §99의4 순서의 합가 맥락(엔진 `new994MergeOrderOf`와 같은 순서: 혼인 먼저). */
@@ -161,6 +164,29 @@ function linkedDeclarations(form: FormLike) {
 }
 
 /**
+ * §99의4①·§98의9① 「취득 전 보유」 판정의 일반주택(양도 주택) 취득일 — 엔진 `resolveHceGeneralHouseAcquisitionDate`
+ * (`transfer-tax-precalc.ts`)의 화면 거울. 증여받은 주택(이월과세·일반 증여)은 세대 보유 통산 시작일, 아니면 취득일이다.
+ *
+ * 증여 세대 사실은 ④가 싣는 것과 같은 basis(`calcGiftHouseholdBasis`)로 읽는다. 그 함수는 용도변경 주택이면 basis를 만들지 않지만
+ * (「취득 당시」 기준일은 용도변경 사용 개시일이 먼저라서), ④는 용도변경이어도 세대 사실을 싣고 엔진의 이 날짜는 용도변경을 보지
+ * 않는다 — 그래서 용도변경 여부를 끄고 부른다.
+ * 종전에는 취득일(증여일)만 봐서, 같은 세대로 증여받은 주택에서 엔진은 빼는 농어촌주택을 화면이 남겼다
+ * (`docs/00-pm/multi-house-surcharge-menu-residuals.plan.md` §1.3).
+ *
+ * ⚠️ 엔진의 토지만 출자한 원조합원 완공APT 갈래(사용승인일 — 영 §162①4호)는 **아직 따르지 않는다**(같은 계획서 Q-3 결정).
+ *    그 갈래를 따르면 계산기 일시적 2주택 도출이 「종전주택 취득일 = 토지 출자일」로 비과세를 내는 기존 경로에 합류하는데,
+ *    그 도출 자체가 별건으로 남은 확인 대상이다(§1.6).
+ */
+function houseCountExclusionGeneralDate(primary: AssetForm | undefined): Date | undefined {
+  const acquisition = toOptionalDate(primary?.acquisitionDate);
+  if (!primary || !acquisition) return undefined;
+  return resolveHouseCountExclusionDate(
+    acquisition,
+    calcGiftHouseholdBasis({ ...primary, hasNonHousingConversion: false }, GIFT_HOUSEHOLD_SCOPE_PRIMARY),
+  );
+}
+
+/**
  * 요건을 갖춰 §89①3호 판정에서 **소유주택으로 보지 않는** 명부 행 id.
  *
  * 엔진과 같은 평가기(`resolveHouseCountExclusion`·`resolveSpecialHouseExclusions`)를 부른다.
@@ -169,7 +195,7 @@ function linkedDeclarations(form: FormLike) {
  */
 export function eligibleCountExcludedHouseIds(form: FormLike): ReadonlySet<string> {
   const primary = form.assets?.[0];
-  const general = toOptionalDate(primary?.acquisitionDate);
+  const general = houseCountExclusionGeneralDate(primary);
   const transfer = toOptionalDate(form.transferDate);
   if (!primary || !general || !transfer) return new Set();
 

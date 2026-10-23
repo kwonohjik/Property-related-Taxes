@@ -7,6 +7,7 @@
  */
 import { presaleRightStartDate, type ParsedRates } from "@/lib/tax-engine/transfer-tax-helpers";
 import { runHouseCountExclusionStep } from "@/lib/tax-engine/transfer-tax-house-exclusion-step";
+import { resolveHceGeneralHouseAcquisitionDate } from "@/lib/tax-engine/transfer-tax-precalc";
 import {
   oneRightInputAfterSpecialActExclusionOf,
   rightSalePopDeclineUnconfirmedNotice,
@@ -31,9 +32,14 @@ export function runOneHouseJudgmentPipeline(
    *
    * 계산기(`transfer-tax.ts` STEP 0.9 → STEP 1)와 **같은 순서·같은 함수**다.
    * `steps`는 계산기 표시용이라 여기서는 받아서 버린다 — 판정 메뉴는 세액 산식을 보여주지 않는다.
+   *
+   * §99의4①·§98의9① 「취득 전 보유」의 일반주택 취득일도 계산기(`transfer-tax.ts` STEP 0.9)와 같은 값이다. 넘기지 않으면
+   * 증여일로 폴백해, 같은 세대로 증여받은 주택(세대 보유 통산 시작일)에서 농어촌주택 제외가 빠지고 계산기와 결론이 갈렸다
+   * (`docs/00-pm/multi-house-surcharge-menu-residuals.plan.md` §1).
    */
   const steps: CalculationStep[] = [];
-  const exclusion = runHouseCountExclusionStep(engineInput, steps);
+  const generalHouseAcquisitionDate = resolveHceGeneralHouseAcquisitionDate(engineInput);
+  const exclusion = runHouseCountExclusionStep(engineInput, steps, generalHouseAcquisitionDate);
   const coreJudgment = judgeOneHouseExemptionFromInput(
     exclusion.exemptionJudgeInput,
     parsedRates.oneHouseSpecialRules,
@@ -52,7 +58,7 @@ export function runOneHouseJudgmentPipeline(
   const rentalVerdict = buildRentalHousingVerdict(
     engineInput,
     engineInput.rentalHousingException?.applyException
-      ? resolveRentalResidenceComposition(engineInput, parsedRates)
+      ? resolveRentalResidenceComposition(engineInput, parsedRates, generalHouseAcquisitionDate)
       : undefined,
   );
   const afterRental = applyRentalHousingVerdict(coreJudgment, rentalVerdict);
