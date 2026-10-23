@@ -148,6 +148,28 @@
 
 PR-7b-4·6·7이 해당 자산을 열 때 ⑫ 술어를 함께 넓힌다.
 
+**Do 결과 (2026-10-23)**
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| ⑫ | `transfer-tax-schema-required-refines.ts` | 면제 = `mode === "pre-deemed"` **그리고** propertyType ∈ {land, housing, building, commercial_building}. 재개발 정보 조건은 넣지 않았다 — `isRedevelopmentActive`가 재개발·입주권 propertyType만 보므로 집합과 겹친다 |
+| 엔진 | `burdened-gift-valuation.ts` `assertBgMarketAcquisitionSource` · `transfer-tax-burdened-gift-step.ts` | 시가 · 산정방식 없음 · 3자 max 없음 · legacy 취득시 시가 없음 · 입주권 아님 · 괄호 미발동 → 400. 단건 STEP 0.48만 부른다. 일반건물 route에는 넣지 않았다 — 일반건물은 ⑫ 면제 밖이라 도달하지 않는다 |
+| ④ | `transfer-tax-api-gb.ts` | 부담부증여면 환산 플래그(`anyEstimated`)로 환산 경로를 열지 않는다(증축 라우팅은 그대로) |
+
+| 시료 (mock 세율) | 종전 | 이후 |
+|---|---:|---:|
+| 재개발 API 직접 · 산정방식 없음 + 의제취득일 전 상속 입력 | 200 · 26,042,413(취득가액 0) | 400 산정방식 |
+| 일반건물 API 직접 · 같은 조작 | 200 · 112,808,000(취득가액 0) | 400 산정방식 |
+| 함께 양도 부담부증여 API 직접 · 산정방식 없음(리뷰 실측) | 200 · 223,758,282(취득가액 0) | 400(엔진 방어) |
+| housing · `mode=pre-deemed` + 상속개시일 1985 이후 · 산정방식 없음(리뷰 실측) | 200 · 101,008,996(취득가액 0) | 400(엔진 방어) |
+| 일반건물 2005 상속 · 기준시가 평가 · 환산 플래그 잔존 | 91,681,200 | 95,756,000 |
+| 일반건물 시가 + 실지 · 환산 플래그 잔존(리뷰 실측) | 91,681,200 | 58,910,000 |
+| 토지·주택·건물·상가 · 의제취득일 전 · 산정방식 없음 | 3자 max | 같음 |
+
+검증: route anchor 7건 · 엔진 5건 · 뮤테이션 16종(15 KILLED · 1 동치 — 시가 모드 확인은 괄호·입주권 통과와 겹친다) · 관련 vitest 3,247파일 · 리뷰 게이트(acquisition-cost-review) FAIL 0.
+
+남긴 확인 필요(리뷰): 일반건물·재개발 **함께 양도 카드**의 부담부증여 시가 + 산정방식 없음 API 직접 호출은 전용 경로라 엔진 방어에 닿지 않는다(⑫ 컴패니언 refine에도 없음 — 기존 별건) · 일반건물 부담부증여에서 최초공시 환산주택가격 토글(`gbHasFirstDisclosure`)이 화면에 뜨는지 · `mode=pre-deemed` + 상속개시일 1985 이후 토지 body는 별 경로에서 500(`inheritance-acquisition-price.ts` legacyFallback · 기존).
+
 ### PR-7b-1 — 상가·건물
 
 - 술어 `bg-pre-deemed.ts:14`에 `commercial_building`·건물 종류 추가(정확한 assetKind 목록은 Do에서 확정).
