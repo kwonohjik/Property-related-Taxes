@@ -25,7 +25,7 @@ interface Props {
 }
 
 export function GiftPreDeemedConversionSection({ asset, onChange, transferDate }: Props) {
-  // 부담부증여(의제취득일 전 증여 토지·주택)도 같은 칸을 쓴다 — 시가면 ③의 분자·분모, 기준시가면 의제취득일 기준시가가 취득가액의 기준이다(계획서 §18).
+  // 부담부증여(의제취득일 전 증여 토지·주택·상가·건물)도 같은 칸을 쓴다 — 시가면 ③의 분자·분모, 기준시가면 의제취득일 기준시가가 취득가액의 기준이다(계획서 §18).
   const bgPreDeemed = asset.acquisitionCause === "gift" && isBgPreDeemedAsset(asset);
   if (!isGiftPreDeemedConversionAsset(asset) && !bgPreDeemed) return null;
   const bgDeemedStdOnly = bgPreDeemed && !bgPreDeemedUsesThreeWay(asset);

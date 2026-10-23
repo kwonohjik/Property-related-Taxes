@@ -110,7 +110,7 @@ export function stdPriceAtTransferComesFromElsewhere(asset: AssetForm): boolean 
        * 환산 분모로 양도시 기준시가를 쓴다(소령 §176의2②2호 · ④가 `standardPriceAtTransfer`를
        * 그대로 싣는다) — 그때는 공용 칸이 있어야 한다(2026-09-30 B2).
        */
-      // 의제취득일 전 상속·증여 토지·주택(시가)은 ③의 분모를 상속·증여 의제 섹션의 칸이 받는다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18).
+      // 의제취득일 전 상속·증여 토지·주택·상가·건물(시가)은 ③의 분모를 상속·증여 의제 섹션의 칸이 받는다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18).
       (asset.bgValuationMode === "sangjeungbeop_market" && (asset.bgAcquisitionMethod !== "converted" || isBgPreDeemedAsset(asset))))
   );
 }

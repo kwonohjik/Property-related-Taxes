@@ -27,7 +27,7 @@ export function bgExpenseUnusedBasis(asset: AssetForm): "기준시가" | "감정
   // 평가 모드 미선택은 ④가 기준시가 모드로 보낸다(`buildBurdenedGiftInfo` — `bgValuationMode || "sangjeungbeop_standard"`).
   // 시가 모드여도 담보평가(상증법 §66)가 이기면 취득가액이 취득시 기준시가로 강제된다(§159①1호 괄호 · 엔진 `acqStdPriceForced`) — 개산공제뿐(O-5).
   if (asset.bgValuationMode !== "sangjeungbeop_market" || bgCollateralForcesStdAcq(asset)) return "기준시가";
-  // 의제취득일 전 상속·증여 토지·주택(시가) — 산정방식 대신 ①②③ 중 큰 금액이다. ①②면 실제 필요경비, ③이면 §97②2호 단서 비교에 쓴다(계획서 §18).
+  // 의제취득일 전 상속·증여 토지·주택·상가·건물(시가) — 산정방식 대신 ①②③ 중 큰 금액이다. ①②면 실제 필요경비, ③이면 §97②2호 단서 비교에 쓴다(계획서 §18).
   if (isBgPreDeemedAsset(asset)) return null;
   if (!isBgPresumedMethod(asset.bgAcquisitionMethod)) return null;
   return asset.bgAcquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";

@@ -299,7 +299,7 @@ export function buildBurdenedGiftInfo(
     debtScaleRatio !== undefined && debtScaleRatio > 0 && debtScaleRatio < 1;
   /** 채무 성분 전용 — 평가액·기준시가에는 쓰지 않는다(엔진 `scaleBurdenedGiftInfo` 소관). */
   const d = (v: number): number => (scaleDebt ? applyRatio(v, debtScaleRatio!) : v);
-  // 의제취득일 전 상속·증여 토지·주택 — §159①1호 A를 엔진이 STEP 0.45 결과(3자 max·의제취득일 기준시가)로 정한다(계획서
+  // 의제취득일 전 상속·증여 토지·주택·상가·건물 — §159①1호 A를 엔진이 STEP 0.45 결과(3자 max·의제취득일 기준시가)로 정한다(계획서
   // inheritance-pre-deemed-clause-b-revisit.plan.md §18). ⑤가 산정방식 라디오·방식별 금액 칸을 숨기므로 남은 값을 싣지 않는다.
   const preDeemed = isBgPreDeemedAsset(primary);
   const common = {

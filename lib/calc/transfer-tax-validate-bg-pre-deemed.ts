@@ -1,5 +1,5 @@
 /**
- * ⑧ 의제취득일(1985.1.1.) 전 상속·증여 토지·주택 × 부담부증여 (계획서 `inheritance-pre-deemed-clause-b-revisit.plan.md` §18).
+ * ⑧ 의제취득일(1985.1.1.) 전 상속·증여 토지·주택·상가·건물 × 부담부증여 (계획서 `inheritance-pre-deemed-clause-b-revisit.plan.md` §18).
  *
  * · 기준시가 평가(§159①1호 괄호 · Q-25) — 취득가액 = 의제취득일 기준시가 × 채무비율. 그 기준시가가 없으면 엔진이 400을 낸다
  *   (`burdened-gift-apportionment.ts`) → 같은 판정(④ payload에 의제취득일 기준시가 원천이 실리는가)으로 먼저 막는다.
@@ -9,6 +9,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { bgPreDeemedUsesThreeWay } from "./bg-pre-deemed-mode";
 import { buildInheritedAcquisitionPayload, buildInheritedHouseValuationPayload } from "./transfer-tax-api-inheritance";
+import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-inheritance";
 import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -31,7 +32,9 @@ export function bgPreDeemedError(asset: AssetForm, label: string, formTransferDa
   const hasDeemedStd =
     (ia?.standardPriceAtDeemedDate ?? 0) > 0 ||
     "inheritedHouseValuation" in buildInheritedHouseValuationPayload(asset, td) ||
-    (asset.assetKind === "land" && "pre1990Land" in buildPre1990LandPayload(asset, td));
+    (asset.assetKind === "land" && "pre1990Land" in buildPre1990LandPayload(asset, td)) ||
+    // 상가 — §164⑥ 8칸이 다 차 있으면 그 값이 의제취득일 기준시가다(Q-27 · 엔진 `bgStdAtDeemed`)
+    "commercialInheritanceValuation" in buildCommercialInheritanceValuationPayload(asset);
   if (hasDeemedStd) return null;
   return fieldError(
     "standardPriceAtAcq",

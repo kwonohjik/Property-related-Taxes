@@ -10,6 +10,7 @@ import { render, screen, cleanup, within } from "@testing-library/react";
 import { BurdenedGiftBlock } from "@/components/calc/transfer/BurdenedGiftBlock";
 import { CompanionAcquisitionCauseSection } from "@/components/calc/transfer/CompanionAcquisitionCauseSection";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
+import { CommercialInheritanceStdPriceSection } from "@/components/calc/transfer/CommercialInheritanceStdPriceSection";
 import { buildBurdenedGiftBreakdown } from "@/lib/tax-engine/burdened-gift-apportionment";
 import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
@@ -97,13 +98,29 @@ describe("취득 정보 — 상속 의제 칸", () => {
 });
 
 describe("칸 노출 술어 — ⑤⑧ 공용", () => {
-  it("U-0 범위 — 1984-12-31 상속·증여까지 · 1985-01-01부터 밖 · 주택 포함 · 재개발·상가 제외", () => {
+  it("U-0 범위 — 1984-12-31 상속·증여까지 · 1985-01-01부터 밖 · 주택·상가·건물 포함(PR-7b-1) · 재개발·일반건물·겸용 제외", () => {
     expect(isBgPreDeemedAsset(asset({ acquisitionDate: "1984-12-31", inheritanceStartDate: "1984-12-31" }))).toBe(true);
     expect(isBgPreDeemedAsset(asset({ acquisitionDate: "1985-01-01", inheritanceStartDate: "1985-01-01" }))).toBe(false);
     expect(isBgPreDeemedAsset(asset({ assetKind: "housing" }))).toBe(true);
+    expect(isBgPreDeemedAsset(asset({ assetKind: "commercial_building" }))).toBe(true);
+    expect(isBgPreDeemedAsset(asset({ assetKind: "building" }))).toBe(true);
     expect(isBgPreDeemedAsset(asset({ assetKind: "redevelopment_apt" }))).toBe(false);
-    expect(isBgPreDeemedAsset(asset({ assetKind: "commercial_building" }))).toBe(false);
+    expect(isBgPreDeemedAsset(asset({ assetKind: "general_building" }))).toBe(false);
+    expect(isBgPreDeemedAsset(asset({ assetKind: "housing", isMixedUseHouse: true }))).toBe(false);
     expect(isBgPreDeemedAsset(asset({ transferType: "regular" }))).toBe(false);
+  });
+
+  it("U-13 상가 — §164⑥ 섹션 안내가 평가 방식별로 바뀌고, 「상속개시일 평가액을 취득가액으로」 카드는 뜨지 않는다", () => {
+    const cb = (over: Partial<AssetForm>) => asset({ assetKind: "commercial_building", ...over });
+    const market = render(<CommercialInheritanceStdPriceSection asset={cb({})} onChange={() => {}} transferDate="2023-02-16" />);
+    expect(market.getByTestId("cb164-6-bg-note").textContent).toContain("② 후보");
+    cleanup();
+    const std = render(<CommercialInheritanceStdPriceSection asset={cb({ bgValuationMode: "sangjeungbeop_standard" })} onChange={() => {}} transferDate="2023-02-16" />);
+    expect(std.getByTestId("cb164-6-bg-note").textContent).toContain("의제취득일(1985.1.1.) 기준시가");
+    cleanup();
+    cause(cb({}));
+    expect(screen.queryByText("취득가액 — 상속개시일 상증법 평가액")).toBeNull();
+    expect(screen.getByTestId("pre-deemed-bg-note")).toBeTruthy();
   });
 
   it("U-8 부담부증여 「취득시 기준시가」 칸은 열지 않는다(의제취득일 기준시가 칸이 대신) · 범위 밖은 종전", () => {
