@@ -42,10 +42,10 @@ import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 import { redevelopmentSchema } from "./transfer-tax-redevelopment-schema";
 import {
   generalBuildingValuationSchema,
-  generalBuildingSharesSchema,
   commercialAppurtenantLandSchema,
   refineCarryoverHouseholdStart,
 } from "./transfer-tax-building-schemas";
+import { generalBuildingSharesSchema } from "./transfer-tax-building-share-schemas";
 import { commercialBuildingValuationRequiredSchema } from "./transfer-tax-schema-commercial-refines";
 import { sec163_9AcquisitionShape } from "./transfer-tax-schema-sec163-9-shape";
 import {

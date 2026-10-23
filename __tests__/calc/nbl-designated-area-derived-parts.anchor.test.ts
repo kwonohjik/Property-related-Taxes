@@ -294,7 +294,7 @@ describe("④ 일반건물 payload — 환산·실가 두 조립 경로가 같�
 describe("⑫ 일반건물 지분(%) 분할 — 물건-수준이라 전 지분이 같은 선언을 쓴다", () => {
   it("primary의 선언이 지분 자산으로 복사되고, Zod 물건-수준 동일성 목록에 든다", async () => {
     const { mergeGbPropertyLevel } = await import("@/lib/calc/transfer-tax-api-gb-shares");
-    const { GB_SHARE_PROPERTY_LEVEL_PATHS } = await import("@/lib/api/transfer-tax-building-schemas");
+    const { GB_SHARE_PROPERTY_LEVEL_PATHS } = await import("@/lib/api/transfer-tax-building-share-schemas");
     const A = gb(1, gbEstimated, { isDesignatedArea: false });
     const B = gb(2, gbEstimated, {});
     expect(mergeGbPropertyLevel(B, A).isDesignatedArea).toBe(false);
