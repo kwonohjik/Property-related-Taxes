@@ -32,6 +32,7 @@ import { refineApartNtsPrice } from "./transfer-tax-schema-required-refines-2a";
 import { refineLandRebuild } from "./transfer-tax-schema-land-rebuild";
 import { refineSplitAcquisitionInputs } from "./transfer-tax-schema-required-refines-2a";
 import { refineMultiUnsupported } from "./transfer-tax-schema-multi-refines";
+import { refineGbBurdenedGiftActualPath } from "./transfer-tax-schema-gb-bg-refines";
 import { burdenedGiftBundleKind } from "@/lib/calc/burdened-gift-transfer-price-scope";
 import { MIXED_BURDENED_GIFT_BUNDLE_MESSAGE } from "@/lib/calc/burdened-gift-transfer-price-scope";
 
@@ -130,6 +131,8 @@ export const propertySchema = z
     addPropertyRefines(data, ctx);
     refinePropertyRequiredInputs(data, ctx);
     refineAmendmentInputs(data.amendment, ctx);
+    // 일반건물 × 부담부증여 — 환산·증축 payload 가 §159를 침묵 무시하는 것을 400 으로 (PR-1 · 안전망)
+    refineGbBurdenedGiftActualPath(data, ctx);
 
     // 수정신고 ↔ 무신고/과소신고 가산세 상호배타 (동시 전송 금지)
     if (data.amendment && (data.filingPenaltyDetails || data.delayedPaymentDetails)) {

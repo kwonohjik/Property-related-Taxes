@@ -260,8 +260,13 @@ export function buildGeneralBuildingValuation(
   const anyNonActual = landMode !== "actual" || buildingMode !== "actual";
   /**
    * 부담부증여(§159)는 **실가 경로**가 취득가액·개산공제를 채무비율로 정한다. 환산 경로는 `burdenedGiftInfo`를
-   * 소비하지 않으므로, stale 감정·매매사례 플래그가 새로 환산 경로로 새면 §159가 침묵 소실된다 — 신규 술어에만 건다
-   * (환산·증축의 종전 라우팅은 그대로).
+   * 소비하지 않으므로, 환산·증축·감정·매매사례 stale 이 환산 경로로 새면 §159가 침묵 소실된다.
+   *
+   * 🔴 라우팅 분기(아래 `if`)는 **부담부증여를 통째로 제외한다**(PR-1 · 계획서 `docs/00-pm/gb-burdened-gift-silent-drop.plan.md` §4 2-가).
+   *    부담부증여로 바꾸면 ③의 환산 라디오·증축 토글이 화면에서 숨는데(`CompanionAcqPurchaseBlock.tsx`·`GeneralBuildingAcquisitionCards.tsx`
+   *    `transferType !== "burdened_gift"`) 이전에 켠 `useEstimatedAcquisition`·`gbHasExtension`·분리 ON 파트 환산은 남는다 — 사용자가 끌 칸이 없다.
+   *    ⑤가 숨긴 입력은 ④가 보내지 않는다(3중 패턴). ⑧은 요구하지 않는다 — 요구하면 끌 칸 없는 영구 차단이다.
+   *    (종전에는 감정·매매사례 stale 만 이 술어로 막고 환산·증축은 새서, 실측 세액 −57,552,880(증축 stale → 양도차손 0원)~+8,151,000.)
    */
   const isBurdenedGiftGb =
     asset.transferType === "burdened_gift" || asset.acquisitionCause === "burdened_gift";
@@ -324,7 +329,7 @@ export function buildGeneralBuildingValuation(
 
   // 한 파트라도 **actual이 아니면**(환산·감정·매매사례) 환산 경로로 보낸다(혼합 모드 라우팅 확정 2026-08-05 · D-1 2026-10-06).
   // 그 경로만 파트별 기준시가·개산공제 구조를 갖는다 — 계획서 §3.3·`general-building-part-acq.ts`.
-  if (anyEstimated || asset.gbHasExtension || (anyNonActual && !isBurdenedGiftGb)) {
+  if (!isBurdenedGiftGb && (anyEstimated || asset.gbHasExtension || anyNonActual)) {
     // 취득시 기준시가 — **환산 파트만** 필수다(2026-08-05 P7 정정).
     //
     // 🔴 종전에는 두 값을 무조건 요구해 `undefined`를 반환했다. validate V-5는 실가 파트의
