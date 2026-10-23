@@ -238,6 +238,11 @@ export function buildGbCompanionItems(
     "transferPrice" | "transferDate" | "acquisitionDate" | "acquisitionPrice" | "expenses" | "reductions"
   >,
   src: { ownershipRatio?: number; assetId: string; assetLabel: string },
+  /**
+   * 그 자산의 결과 상세(산식 재료)를 받는 곳 — 함께 양도는 일반건물이 여럿일 수 있어 자산 id별로 모은다(`bundled-route.ts`).
+   * 단건 슬롯(`generalBuildingValuationDetail`)에 넣지 않는다 — 수정신고 판별자다(`gb-bundled-result-formulas.plan.md` C-1).
+   */
+  onDetail?: (assetId: string, detail: GeneralBuildingOutput) => void,
 ): TransferTaxItemInput[] {
   const gbv = coerceGeneralBuildingPayload(generalBuildingValuation);
   const bldAcqDate = (gbv.buildingAcquisitionDate as Date | undefined) ?? engine.acquisitionDate;
@@ -259,6 +264,20 @@ export function buildGbCompanionItems(
   );
   const tagged = tagGbCards(built.cards, src.assetId, src.assetLabel);
   const swap = built.swap ? remapGbSwap(built.swap, src.assetId) : undefined;
+  // 결과 상세 — 축 B(`general-building-fractional.ts`)와 같은 조립. 카드 id·echo 키는 접미사가 붙은 값이어야 산식이 카드를 찾는다(C-2).
+  onDetail?.(src.assetId, {
+    ...built.detailBase,
+    assetCards: tagged,
+    landStdTotal: built.landStdAtTransfer,
+    buildingStdTotal: built.buildingStdAtTransfer,
+    ...(swap && swap.addition.size > 0
+      ? {
+          partDirectAddition: Object.fromEntries(swap.addition),
+          ...(swap.beforeExtensionAddition ? { partBeforeExtensionCapex: Object.fromEntries(swap.beforeExtensionAddition) } : {}),
+        }
+      : {}),
+    ...built.actualExpenseEcho,
+  } as GeneralBuildingOutput);
   return buildProperties(
     tagged,
     built.nonBusinessRatio,

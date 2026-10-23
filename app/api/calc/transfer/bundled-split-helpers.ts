@@ -315,6 +315,8 @@ interface CompanionBuildContext {
    * 명시하게 만들어 조용한 누락(⑫는 통과하는데 ⑭가 못 받는 상태)을 컴파일 에러로 바꾼다.
    */
   mixedUseCtx: MixedUseCompanionContext | null;
+  /** 일반건물 컴패니언 결과 상세(산식 재료) 수집 — `buildGbCompanionItems` 참조. */
+  onGbDetail?: Parameters<typeof buildGbCompanionItems>[3];
 }
 
 /**
@@ -717,6 +719,7 @@ export function buildCompanionEngineInputs(
       c.generalBuildingValuation as unknown as Record<string, unknown>,
       companionEngine,
       { ownershipRatio: c.ownershipRatio, assetId: c.assetId, assetLabel: c.assetLabel ?? "" },
+      ctx.onGbDetail,
     );
   }
 
