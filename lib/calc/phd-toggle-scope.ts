@@ -118,8 +118,15 @@ export function carryoverPhdMode(
 export function carryoverEstimationModeSupported(
   assetKind: AssetForm["assetKind"] | undefined,
   mode: CarryoverEstimationMode | null | undefined,
+  opts: { isNonPrimary?: boolean } = {},
 ): boolean {
   if (mode == null) return true;
+  /**
+   * 함께 양도하는 두 번째 이후 자산(컴패니언)은 `general`만 지원한다(PR-0c).
+   * 컴패니언 ④는 `preHousingDisclosure`를 싣지 않고 ⑫ 컴패니언 스키마에도 PHD 필드가 없어, phd·apd 를 고르고 최초고시 칸을 채워도
+   * 증여자 취득가액이 0 으로 계산됐다(⑧은 통과 · 200 OK). 일반(general) 환산은 `topLevelOverrides`가 실어 정상이다.
+   */
+  if (opts.isNonPrimary) return mode === "general";
   return assetKind === "general_building" ? mode === "general" : true;
 }
 

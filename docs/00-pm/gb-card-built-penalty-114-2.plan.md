@@ -355,7 +355,7 @@ mock 세율 기준 상대값. 지방소득세 10% 포함 총납부 기준.
 
 ### 수정 방식 선택 근거 (두 방식을 단건 격자로 실측)
 단건 이월과세 격자 432셀(주택·건물 × 최상위 플래그 true/false × 실가/환산/PHD × 증여세 0/3천만 × 자본적지출 0/5천만/6억[swap] × 양도비 0/5백만 × 평가액 2 × 지분 2)에서:
-- **방식 ① 「환산 donor면 무조건 켠다」**(조건에서 일반건물 카드 한정을 뺀 형태): 단건 중 **최상위 플래그 false·환산 donor 64셀이 바뀐다**(API 직접 호출, 예: 증여세 0 양도차익 1,000,000,000→494,000,000) + 컴패니언 회귀 격자(`transfer.route.split-part-carryover.regression-grid.test.ts`)의 환산·PHD 컴패니언 16셀이 바뀐다(292,290,000→289,644,000 등) — 컴패니언 엔진 입력은 환산 donor여도 최상위 플래그가 false(`bundled-split-helpers.ts:503`, 컴패니언 ④는 매매 취득일 때만 전송 `transfer-tax-api-companion-payload.ts:588`)라 **같은 결함이 운영 경로에도 있다.** 사용자 지시(단건 결과가 바뀌는 방식은 택하지 말 것)에 따라 **택하지 않았다.**
+- **방식 ① 「환산 donor면 무조건 켠다」**(조건에서 일반건물 카드 한정을 뺀 형태): 단건 중 **최상위 플래그 false·환산 donor 64셀이 바뀐다**(API 직접 호출, 예: 증여세 0 양도차익 1,000,000,000→494,000,000) + 컴패니언 회귀 격자(`transfer.route.split-part-carryover.regression-grid.test.ts`)의 환산·PHD 컴패니언 16셀이 바뀐다(292,290,000→289,644,000 등) — 합성 body 의 컴패니언은 최상위 플래그가 false 였다(격자 `host()`가 걸러냄) — ~~같은 결함이 운영 경로에도 있다~~ **정정(§16): 운영 컴패니언 general 환산은 `...cp.topLevelOverrides`(`transfer-tax-api-companion-payload.ts:623-631`)가 플래그·기준시가를 실어 정상이다. 합성 격자만의 현상이다.** 사용자 지시(단건 결과가 바뀌는 방식은 택하지 말 것)에 따라 **택하지 않았다.**
 - **방식 ② 「일반건물 카드로 한정」(채택)**: 카드 표지는 `buildProperties`가 항상 boolean 으로 싣는 `usedEstimatedAcquisition`(토지·건물 파트 카드 공통 — 토지 카드는 propertyType 이 `land`라 propertyType 으로는 못 가른다). 단건 격자 432셀 **0셀 변경**, 컴패니언 회귀 격자 통과.
 
 수정 위치: `lib/tax-engine/transfer-tax-carryover.ts` Step 4c `inputABase`의 `useEstimatedAcquisition`(703→716줄) — `rawInput.useEstimatedAcquisition || (rawInput.usedEstimatedAcquisition !== undefined && ct.useEstimatedAcquisition)`. 이미 true 이던 단건 주택·건물은 `||` 앞 항이 true 라 값이 그대로다. 이 값이 켜지면 증여세 0은 엔진이 환산(양도가 × 분자 ÷ 분모 + 개산공제·§97②2호 단서 swap 포함)하고, 증여세>0은 `resultABeforeGiftTax`가 환산 기준으로 나와 `necessaryExpenseBeforeGift`(swap-aware 필요경비)·한도가 단건과 같은 방식으로 정해진 뒤 실가 전환한다 — 실가 전환 분기 자체는 한 줄도 바꾸지 않았다.
@@ -390,9 +390,37 @@ mock 세율 기준 상대값. 지방소득세 10% 포함 총납부 기준.
 `transfer-tax-carryover.ts`의 새 조건식에 8건 → 초판(가드 5개) 결과: 절 전체 제거 KILLED(15실패) · 카드 표지 제거(넓힘) KILLED(2: 컴패니언 회귀 격자 포함) · `ct` 환산 가드 제거 KILLED(1) · `||→&&` KILLED(19) · **`isBurdenedGift`·PHD·취득시/양도시 기준시가 가드 4건은 생존 = 동치(죽은 방어 코드)** — 일반건물 카드는 부담부증여·PHD 입력을 갖지 않고(부담부증여는 route 레벨 §159), 기준시가가 없는 카드는 플래그를 켜도 결과가 같다(anchor R8). 관례대로 **4가드를 코드에서 제거**하고 재실행: 절 제거 KILLED(15) · 카드 표지 제거 KILLED(2) · `ct` 환산 제거 KILLED(8) · `||→&&` KILLED(19), 격자(단건 432셀 0변경 · 일반건물 1,296셀 512변경) 제거 前후 동일. 건별 `[RESTORED]`, 끝난 뒤 변경 파일 sha 전후 동일.
 
 ### 이탈·한계
-- **Q-16 (신규, 범위 밖)**: 같은 결함이 ① 단건 주택·건물의 **최상위 플래그 false 입력(API 직접 호출)** ② **컴패니언(함께 양도) 이월과세 환산 donor**에도 있다. 후자는 운영 경로다 — 컴패니언 엔진 입력의 `useEstimatedAcquisition`이 취득원인이 매매일 때만 전송된다(`transfer-tax-api-companion-payload.ts:588`). 수정하면 단건/컴패니언 현행 결과가 바뀌므로(회귀 격자 16셀 292,290,000→289,644,000 등) 이번에 넣지 않았다. 별도 결정 필요.
+- **Q-16 (정정됨 — §16)**: ~~같은 결함이 단건 API 직접 호출·컴패니언 운영 경로에도 있다~~ → 컴패니언 **general** 환산은 운영 경로에서 정상(topLevelOverrides가 플래그 전송), `split-part-carryover.regression-grid`의 컴패니언 환산 16셀은 플래그를 걸러낸 합성 body 였다. 단건 API 직접 호출(최상위 false)은 폼이 항상 true 를 보내 UI 경로가 아니라 수정하지 않는다. 실제 컴패니언 결함은 **PHD/APD 환산** — §16.
 - **일반건물 이월과세 × 자본적지출(swap) 한계(미수정·기존)**: 자본적지출 6억 > 환산취득가+개산공제인 셀에서 비이월 대조군은 양도차익 200,000,000(swap)인데, 이월과세 A 시나리오는 247,000,000으로 자본적지출이 반영되지 않는다(수정 前 500,000,000). 일반건물 카드의 swap 은 GB 레이어에서 수증자 환산으로 판정돼 `buildProperties`가 `capitalExpenditure`를 단건 엔진 input 에 싣지 않기 때문 — 수정 後가 수정 前보다 정답에 가깝지만 완전하지 않다. **확인 필요 / 별건.**
 - 기존 anchor 5건(GBAC-06 · GBLE-01·02·04·05)의 고정값이 «개산공제 소실» 상태였다. 새 값으로 갱신하고 사유를 주석에 남겼다(GBLE-03 실가 donor 불변; 환산·실가가 우연히 같던 교차검증 주석 정정).
 
 ### 검증
 `npx tsc --noEmit` 0건 · eslint(변경 파일) 0건 · 전체 `vitest run` **3323파일 39828 passed 0 failed**(조건 단순화 前 실행 — 단순화 後는 격자 동일 확인 + 범위 `carryover general-building gb- bundled burdened-gift split-part companion` 385파일 4677 passed). 브라우저 확인: 수행하지 않음(엔진 시나리오 입력 변경, 화면·입력 변경 없음).
+
+---
+
+## 16. PR-0c Do 기록 (2026-10-23) — 컴패니언 이월과세 PHD/APD 환산 명시 차단 (Q-16 정정 · Q-17 B 확정)
+
+### 정정과 실제 결함
+§15의 Q-16(컴패니언 운영 경로 결함) 전제는 틀렸다 — 폼→④→route 운영 파이프라인으로 재측정했다(컴패니언 주택 + 이월과세 + general 환산, 비과세 아님): 플래그 true · 시나리오 A 취득가액 257,142,857 · 양도차익 253,809,524(증여세 0) / …523(1원) / 223,809,524(3천만) = 514,285,714 − 257,142,857 − 개산공제 3,333,333 − 증여세, 연속. **정상이다.** 실제 결함은 다른 모드다:
+- 컴패니언 + 이월과세 + `estimationMode: phd|apd`: ⑧(`transfer-tax-validate-carryover-asset.ts`)은 최초고시 칸을 요구하고 채우면 통과(issues=[]), ④ 컴패니언 payload는 `preHousingDisclosure`도 플래그도 싣지 않으며 ⑫ 컴패니언 스키마에 PHD 필드가 없다(단건 주 자산은 같은 입력으로 body 에 실린다). 엔진은 증여자 취득가액 0 → 200 OK(양도차익 514,285,714, 결정세액 351,810,000 / 증여세 3천만 342,990,000). 입력을 받고 반영하지 않는 침묵 오답.
+
+### 결정 (사용자 2026-10-23 Q-17 = B 명시 차단) · 변경
+컴패니언은 일반 기준시가 환산만 지원한다. 주 자산(첫 자산) PHD/APD 는 현행 그대로. **계산 엔진·④·⑫·⑭ 무변경.**
+
+| 지점 | 변경 |
+|---|---|
+| 술어 | `lib/calc/phd-toggle-scope.ts` `carryoverEstimationModeSupported(kind, mode, { isNonPrimary })` — 컴패니언이면 `general`만 true(일반건물 선례와 같은 함수·같은 자리). 기본값 `{}`라 기존 호출(일반건물 ⑧·⑤)은 불변 |
+| ⑤ | `CarryoverEstimationSection`(+`CarryoverGiftBlock`이 이미 가진 `isNonPrimaryAsset` 전달): 라디오·PHD/APD 패널을 같은 술어로 거른다. **옛 입력(phd/apd 저장값)**: 라디오는 비선택·PHD 패널 없음·안내(`data-testid=carryover-companion-mode-notice` — 「함께 양도 자산의 이월과세는 「일반 기준시가 환산」만 지원합니다 … 다시 선택하세요」). 「일반 기준시가 환산」 라디오는 그대로 열려 있어 **선택을 바꿀 입력 경로가 유지**된다(막다른 길 없음, `feedback_ui_gate_removes_sole_input_path`) |
+| ⑧ | `validateCarryoverAsset` (e) 환산 블록 맨 앞: 컴패니언 + phd/apd → `fieldError("carryover.estimationMode", …)` — 화면에 있는 칸(환산 방식 라디오)으로 이동. 이후 general/PHD 규칙은 그대로 |
+| ⑫ | **확인 결과**: 와이어에 환산 방식(`estimationMode`)을 나타내는 키가 **없다**(`lib/api`·`app/api` grep 0건) — 컴패니언 `carryoverTaxation`은 `useEstimatedAcquisition`·`donorStandardPriceAtAcquisition`만 싣고 PHD 모드를 표현할 수 없다. 따라서 ⑫에서 거부할 근거 키가 없고 **⑧이 유일한 관문**이다(API 직접 호출로 «환산 + 기준시가 없음»을 보내는 경우는 종전과 같이 취득가액 0 — 범위 밖, UI 경로 아님) |
+
+### anchor 전/후
+- `__tests__/calc/companion-carryover-phd-block.anchor.test.ts` 7건(술어 · ⑧ 컴패니언 phd·apd 차단+필드 앵커 · 주 자산 phd·apd 통과 · 컴패니언 general 통과 · 옛 입력→general 복구) + `__tests__/components/carryover-companion-estimation-modes.anchor.test.tsx` 4건(⑤ 라디오 1개 · 주 자산 3개 · 옛 입력 안내+복구 클릭 · general 기준시가 칸). **수정 前 11건 중 6건 실패**(술어·⑧ 3·⑤ 2), 불변 대조 5건(주 자산 phd·apd · 컴패니언 general)은 수정 前에도 통과 → 수정 後 11/11. 기존 `carryover-gb-estimation-modes`·`carryover-validate-parity` 통과.
+- E2E `e2e/carryover-companion-estimation-mode.spec.ts` 3건(포트 3292, `next.config.ts`에 Turbopack root 임시 지정 후 원복·sha 동일): CE-1 선택지 1개 + 옛 입력 안내 + 다시 고르면 store 가 general · CE-2 옛 apd 로 계산 시 안내로 멈추고 요청 없음 · CE-3 general 컴패니언은 요청에 `useEstimatedAcquisition:true`·기준시가 111,111,111 로 계산. 술어를 무력화한 변형에서 CE-1·CE-2 **실패**(CE-3 통과)로 E2E 가 구별력이 있음을 확인했다.
+
+### 회귀 0 · 세액
+계산 엔진·④·⑭ 무변경이라 주 자산·컴패니언 general 결과는 불변이다. 바뀌는 것은 컴패니언 phd/apd 환산 입력이 **계산되지 않고 ⑧에서 막히는 것**뿐이다(종전 잘못된 값 351,810,000 등 → 입력 불가 안내; 일반 기준시가 환산으로 바꾸면 정상 계산).
+
+### 뮤테이션 (cp 백업 · label+file md5 · 건별 sha 대조 · bash)
+술어 분기 제거 / 컴패니언 항상 true / ⑧ 차단 제거 / ⑧ 컴패니언 플래그 미전달 / ⑧ 앵커 오지정 / ⑤ prop 미전달 / ⑤ 안내 제거 · 항상 · phd 만 / ⑤ 안내가 주 자산 포함 / PHD 패널 술어 컴패니언 미반영 — **12건 전부 KILLED**(초판 안내 제거 1건이 생존 → 안내를 `data-testid` 로 단언하도록 보강 후 KILLED), E2E 변형 1건 KILLED. 건별 `[RESTORED]`, 끝난 뒤 변경 파일 sha 전후 동일.
