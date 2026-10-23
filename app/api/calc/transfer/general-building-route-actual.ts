@@ -240,7 +240,7 @@ export function buildActualGeneralBuildingCards(
   let landAcq: number;
   let buildingAcq: number;
   // E-U2 — 실거래가의 출처(상속·부담부증여 분기는 채우지 않는다)
-  let actualSource: "part_input" | "bundled_apportion" | undefined;
+  let actualSource: "part_input" | "bundled_apportion" | "inherited" | undefined;
   let landExp: number;
   let buildingExp: number;
   let transferBurdenedGiftBreakdown:
@@ -306,6 +306,7 @@ export function buildActualGeneralBuildingCards(
     transferExpenseBasis = saleAlloc.proportionBasis;
     landAcq = inheritedLandValue ?? 0;
     buildingAcq = inheritedBuildingValue ?? 0;
+    actualSource = "inherited";
     // 필요경비는 성질별 기준으로 안분하고 파트 자본적지출 칸을 직접 귀속한다(P-2·P5 — 매매 분기와 같은 규칙). 개산공제 아님 —
     // actual 모드는 이미 전 카드 estimatedDeduction:0(§163⑥ 미적용, §163⑨ 정합).
     ({ land: landExp, building: buildingExp } = resolvePartExpenses(saleAlloc.proportionBasis));

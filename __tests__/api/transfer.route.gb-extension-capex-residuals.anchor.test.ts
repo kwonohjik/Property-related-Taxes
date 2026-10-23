@@ -193,12 +193,14 @@ describe("L2 ⑫ 「그중 증축 전」 필수 · ④ 칸이 있을 때만 전�
     expect(r.status).toBe(200);
   });
 
-  it("🔴 부담부증여 · 증축 · 숨은 자본적지출 칸 2천만 → ⑧ 통과 = ⑫ 통과(200) · ④ 미전송 · 결과는 빈 칸과 같다", async () => {
+  it("🔴 부담부증여 · 증축 · 숨은 자본적지출 칸 2천만 → ⑧ 통과 = ⑫ 통과(200) · 증축으로 싣지 않는다 · 결과는 빈 칸과 같다", async () => {
     const hidden = await run(form([asset(1, OFF, EXT, BG, { capitalExpenditure: "20000000", gbCapexBeforeExtension: "" })]));
     const clean = await run(form([asset(1, OFF, EXT, BG, { capitalExpenditure: "", gbCapexBeforeExtension: "" })]));
     expect(hidden.issues).toEqual([]);
     expect(hidden.status).toBe(200);
-    expect(gvOf(hidden.body).capitalExpenditure).toBeUndefined();
+    // #2459 이후 부담부증여는 증축 토글이 숨어(⑤) 증축으로 계산하지 않는다 — 실가 경로라 ⑫ 「증축 전」 필수 규칙의 대상이 아니다.
+    //   (종전 단언 「④ 자본적지출 미전송」은 증축 경로 전제였다. 실가 경로의 §159는 이 평가 방식에서 자본적지출을 쓰지 않아 결과가 같다.)
+    expect(gvOf(hidden.body).extensionInfo).toBeUndefined();
     expect(JSON.stringify(hidden.json.data)).toBe(JSON.stringify(clean.json.data));
   });
 });

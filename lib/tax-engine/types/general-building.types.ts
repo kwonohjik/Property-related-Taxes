@@ -557,10 +557,12 @@ export type AssetCardForAggregate = {
    *  · `part_input` — 파트별 실거래가를 **직접 입력**(별개 취득, 실/환산 혼합의 실가 파트 등). 결과 산식은 입력값 그대로이며
    *    「양도가액 × 취득시/양도시 기준시가」 같은 환산·안분 등식을 붙이면 거짓이다.
    *  · `bundled_apportion` — 같은 취득일 **일괄 총액**을 취득시 기준시가 비율로 토지·건물에 안분(사례 35). 안분 산식이 맞다.
-   * 상속(§163⑨ 직접 평가액)·부담부증여 경로와 구 `resultData`는 채우지 않는다 — 소비처는 `undefined`면 종전 표시를 유지한다.
+   *  · `inherited` — 토지·건물 모두 상속(C1)의 상속개시일 평가액(「소득세법 시행령」 §163⑨ — 취득당시 실지거래가액으로 본다). 안분식이 아니다
+   *    (종전 표시: 「0 × … = 평가액」 거짓 등식 · `gb-bundled-result-formulas.plan.md` Q-2).
+   * 부담부증여 경로와 구 `resultData`는 채우지 않는다 — 소비처는 `undefined`면 종전 표시를 유지한다.
    * `bundledActualAcquisitionPrice > 0`으로 가르면 숨은 자산 단위 총액이 폼에 남아 있을 때(실거래가/실거래가 + stale) 틀린다.
    */
-  actualSource?: "part_input" | "bundled_apportion";
+  actualSource?: "part_input" | "bundled_apportion" | "inherited";
   /**
    * 건물 카드에만 set. 토지 카드는 undefined.
    * `propertyType === "general_building_unit"` 카드에만 의미 있음.

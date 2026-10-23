@@ -60,3 +60,12 @@ export function shareIndexOf(propertyId: string): number | undefined {
 export function isSameShare(a: string, b: string): boolean {
   return shareIndexOf(a) === shareIndexOf(b);
 }
+
+/**
+ * `land#asset-1` → `asset-1` · `land#0` → `0`. 접미사가 없으면 `undefined`.
+ * 지분 인덱스(숫자)와 함께 양도 자산 id를 가리지 않는다 — 함께 양도 결과 상세(`generalBuildingDetailsByAsset`)의 키가 이 값이다.
+ */
+export function cardSuffixOf(propertyId: string): string | undefined {
+  const i = propertyId.indexOf(SHARE_ID_SEPARATOR);
+  return i < 0 ? undefined : propertyId.slice(i + SHARE_ID_SEPARATOR.length);
+}
