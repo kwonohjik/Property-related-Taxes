@@ -234,24 +234,27 @@ describe("GBLE — GB × legacy 이월과세 × 환산: ⑫ 기준시가 침묵 
     const d = prop(r, "land")?.carryoverTaxationDetail;
     expect(d?.scenarioA.acquisitionPrice).toBe(150_000_000);
     expect(d?.adoptedScenario).toBe("A");
-    expect(d?.scenarioA.transferGain).toBe(320_000_000);
+    // PR-0b: 환산 donor 의 필요경비는 개산공제(§163⑥ = 증여자 취득시 기준시가 60,000,000 × 3% = 1,800,000)다 — 500,000,000 − 150,000,000 − 1,800,000.
+    //   종전 320,000,000 은 증여세 상당액이 있는 «실가 전환» 분기에서 개산공제가 소실된 값이었다.
+    expect(d?.scenarioA.transferGain).toBe(318_200_000);
   });
 
   /** 🔴 세액 고정 — strip 재발 시 실측 204,930,000(**43,470,000 과대과세**). */
-  it("GBLE-02: legacy 모양 × 환산 — 결정세액 155,532,000", async () => {
+  it("GBLE-02: legacy 모양 × 환산 — 결정세액 155,028,000", async () => {
     const r = await post(
       body({ landAcquisitionCause: "carryover_gift", landCarryoverTaxation: legacyEstimated() }),
     );
-    expect(r.determinedTax).toBe(155_532_000);
+    // PR-0b: 개산공제 1,800,000 반영 — 종전 155,532,000 (GBLE-03 실가 donor 와 같던 값은 개산공제가 소실된 상태의 우연한 일치였다)
+    expect(r.determinedTax).toBe(155_028_000);
   });
 
   // ══════════════════════════════════════════════════════════════════
   // GBLE-03·04 — 대조군 (수정이 건드리면 안 되는 경로)
   // ══════════════════════════════════════════════════════════════════
   /**
-   * 실가 모드는 애초에 기준시가를 읽지 않는다. 증여자 취득가액 150,000,000이
-   * GBLE-01의 환산 결과와 **같은 값**이라 세액도 같아야 한다 — 환산이 정상 동작하면
-   * 실가와 같은 곳에 착지한다는 교차검증을 겸한다.
+   * 실가 모드는 애초에 기준시가를 읽지 않는다. 증여자 취득가액은 GBLE-01의 환산 결과와 같은 150,000,000이지만
+   * 필요경비가 다르다 — 환산은 개산공제(§163⑥, 1,800,000), 실가는 실제 경비(여기서는 증여세 상당액뿐)다.
+   * PR-0b 이전에는 환산 쪽 개산공제가 소실돼 두 세액이 우연히 같았다(155,532,000).
    */
   it("GBLE-03: 대조군 — legacy × 실가는 불변 (결정세액 155,532,000)", async () => {
     const r = await post(
@@ -265,7 +268,7 @@ describe("GBLE — GB × legacy 이월과세 × 환산: ⑫ 기준시가 침묵 
    * 신규 part 경로는 ⑫가 처음부터 통과시켰다(K-14). 세액이 GBLE-02와 다른 것은
    * 증여세 상당액이 영 §163의2②로 **안분**되기 때문이지 취득가액 차이가 아니다.
    */
-  it("GBLE-04: 대조군 — 신규 part 경로는 불변 (취득가 150,000,000 · 결정세액 147,132,000)", async () => {
+  it("GBLE-04: 신규 part 경로 — 취득가 150,000,000 · 결정세액 146,628,000 (PR-0b: 개산공제 반영)", async () => {
     const r = await post(
       body({
         carryoverGiftEvent: GIFT_EVENT,
@@ -278,7 +281,7 @@ describe("GBLE — GB × legacy 이월과세 × 환산: ⑫ 기준시가 침묵 
       }),
     );
     expect(prop(r, "land")?.carryoverTaxationDetail?.scenarioA.acquisitionPrice).toBe(150_000_000);
-    expect(r.determinedTax).toBe(147_132_000);
+    expect(r.determinedTax).toBe(146_628_000); // 종전 147,132,000 (개산공제 1,800,000 소실)
   });
 
   // ══════════════════════════════════════════════════════════════════
@@ -291,7 +294,7 @@ describe("GBLE — GB × legacy 이월과세 × 환산: ⑫ 기준시가 침묵 
    * 기준시가는 **미스케일**이 계약이다(`ENGINE_SHAPED_SCALE`) — 100,000,000이 그대로 분자가 된다.
    * 🔴 strip 재발 시 실측: land#1 취득가 0 · 결정세액 141,063,200.
    */
-  it("GBLE-05: 지분 40% legacy × 환산 — land#1 취득가 100,000,000 · 결정세액 112,800,800", async () => {
+  it("GBLE-05: 지분 40% legacy × 환산 — land#1 취득가 100,000,000 · 결정세액 111,960,800 (PR-0b: 개산공제 반영)", async () => {
     const r = await postShares([
       share("share-a", "60"),
       share("share-b", "40", {
@@ -307,6 +310,6 @@ describe("GBLE — GB × legacy 이월과세 × 환산: ⑫ 기준시가 침묵 
     const land1 = prop(r, "land#1");
     expect(land1?.carryoverTaxationDetail?.scenarioA.acquisitionPrice).toBe(100_000_000);
     expect(land1?.acquisitionPrice).toBe(100_000_000);
-    expect(r.determinedTax).toBe(112_800_800);
+    expect(r.determinedTax).toBe(111_960_800); // 종전 112,800,800 (개산공제 소실)
   });
 });
