@@ -115,8 +115,11 @@ export const GB_SAMPLES = {
   "S100-act": [[BUY], T],
   /** §163⑨ — 실가 */
   INH: [[INH], T],
-  /** §163⑨ — 환산 */
-  "INH-est": [[INH, { landAcqMode: "estimated", buildingAcqMode: "estimated", useEstimatedAcquisition: true }], T],
+  /**
+   * §163⑨ — 환산 경로(토지 상속 실가 + 건물 매매 환산 · C2).
+   * 종전 시료는 「상속 파트 + 환산 모드」였다 — ⑧·⑫가 막는 입력이다(`gb-share-mode-mix-and-inherited-estimate-guard.plan.md` S-2).
+   */
+  "INH-C2": [[INH, { hasSeperateLandAcquisitionDate: true, gbBuildingAcquisitionCause: "purchase", buildingAcqMode: "estimated", landAcqMode: "actual", acquisitionDate: "2010-05-01" }], T],
   /** 의제취득일 전 상속 ①②③ */
   PRE: [[INH, { landAcquisitionDate: "1980-05-01", acquisitionDate: "1980-05-01", publishedValueAtInheritance: "50000000", gbBuildingInheritedValue: "20000000", actualSalePrice: "1620000000" }], 1_620_000_000],
   /** 환산주택가격(99-164-10) */

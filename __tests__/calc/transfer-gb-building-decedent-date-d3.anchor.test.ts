@@ -197,6 +197,15 @@ describe("D3 ⑧·⑫ — 비우면 막는다 (종전 ⑧ 통과 · 200 + 단기
  * 수유자(상속인 아닌 유증·사인증여) — 토지·건물 모두 상속(피상속인 2000)인 일반건물. 토글을 켜면 상속 카드(토지·건물)에서
  * §104②1호 통산을 하지 않는다(계획서 docs/00-pm/non-heir-bequest-followups.plan.md §1 B · route `buildProperties`).
  */
+/**
+ * 토지·건물 모두 상속이면서 **환산 경로**를 타는 합법 입력 — 증축(증축분 실가 매매)이 있으면 ④가 환산 경로로 보낸다.
+ * 종전 시료는 「상속 토지 + 환산 모드」였다 — ⑧이 막는 입력이고 ⑫도 이제 막는다(`gb-share-mode-mix-and-inherited-estimate-guard.plan.md` S-2).
+ */
+const EXT_ROUTE = {
+  gbHasExtension: true, gbExtensionDate: "2023-10-01", gbExtensionArea: "50", gbExtensionAcquisitionMode: "actual",
+  gbExtensionAcquisitionCause: "purchase", gbExtensionActualAcquisitionPrice: "50000000",
+  gbTransferExtensionBuildingStdPrice: "40000000", gbAcquisitionExtensionBuildingStdPrice: "30000000",
+};
 describe("수유자 — 일반건물 상속 카드의 §104②1호 통산 미적용 (실가 · 환산)", () => {
   const both = (over: Record<string, unknown> = {}) =>
     buildingOnly({
@@ -209,10 +218,11 @@ describe("수유자 — 일반건물 상속 카드의 §104②1호 통산 미적
   it.each([
     // 수유자 값 = 피상속인 취득일이 닿지 않던 base 값(위 D3 머리 표)과 같다
     ["실가", {}, 94_061_000, 126_269_000],
-    ["환산", { landAcqMode: "estimated" }, 108_042_000, 136_757_500],
+    ["환산", EXT_ROUTE, 76_850_999, 108_728_999],
   ] as const)("%s 경로 — 상속인 %i / 수유자 %i", async (_n, mode, heirTotal, nonHeirTotal) => {
     const heirBody = await uiBody(both(mode));
     const nonHeirBody = await uiBody(both({ ...mode, nonHeirBequest: true }));
+    expect(issues(both(mode))).toEqual([]); // ⑧이 받는 입력이다(종전 「상속 토지 + 환산 모드」는 ⑧이 막는 입력이었다)
     expect(gbv(heirBody).nonHeirBequest).toBeUndefined();
     expect(gbv(nonHeirBody).nonHeirBequest).toBe(true);
     const heir = await post(heirBody);

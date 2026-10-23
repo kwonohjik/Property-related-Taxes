@@ -44,6 +44,7 @@ import {
 import { ValuationModeSection } from "./BurdenedGiftValuationModeSection";
 import { GIFT_BURDENED_ONE_HOUSEHOLD_OFF_HINT } from "@/lib/calc/gift-burdened-household-notice";
 import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
+import { giftBgPreDeemedUsesThreeWay } from "@/lib/calc/gift-burdened-pre-deemed";
 import { dateToStr, strToDate } from "./burdened-gift-dates";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
@@ -117,9 +118,10 @@ export function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPri
   const isMarketMode = valuation.mode === "sangjeungbeop_market";
   const collateralForced = isMarketMode && valuation.collateralForcesStandardAcquisition;
   // 시가 모드 + 실지취득가액(K-4): 비-토지 자산은 취득시 기준시가가 결과에 무영향 → 입력 불필요. 담보평가 승은 기준시가를 쓰므로 필수.
-  const acqStdInert = isMarketMode && !collateralForced && bgt.acquisitionMethod === "actual";
+  // 의제취득일 전 상속 · 시가 평가(3자 max)는 이 값이 ③의 분자라 늘 쓴다(PR-7b-3)
+  const acqStdInert = isMarketMode && !collateralForced && !giftBgPreDeemedUsesThreeWay(item) && bgt.acquisitionMethod === "actual";
   // 양도시 기준시가(공시가격)는 기준시가 안분·담보평가 승·환산(K-5)의 분모에 쓰인다 — 실지(K-4)에서는 쓰이지 않는다.
-  const transferStdRequired = !isMarketMode || collateralForced || bgt.acquisitionMethod === "converted";
+  const transferStdRequired = !isMarketMode || collateralForced || bgt.acquisitionMethod === "converted" || giftBgPreDeemedUsesThreeWay(item);
   // §155⑯·⑱(E-1 한계 G3) — ④와 같은 필드 파생(신규 주택 시·군 코드는 소재지 법정동코드에서)
   const deadlineFields = giftBurdenedDeadlineExceptionFields(bgt);
   return (
