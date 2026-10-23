@@ -172,3 +172,49 @@ describe("RV-8·9", () => {
     expect(screen.queryByTestId("surcharge-calculate-tax")).toBeNull();
   });
 });
+
+describe("RV-10·11 조합원입주권 양도 표 (V-5)", () => {
+  // 구미(가액기준) 입주권 · 종전 주택의 가격 2.5억 + 강남 주택 2채
+  const rightSale = (value: string) => {
+    const f = form("2021-06-01", [row("h1", {}), row("h2", {})]);
+    return {
+      ...f,
+      assets: [{ ...f.assets[0], assetKind: "right_to_move_in", regionCode: "4719010100" }],
+      surchargeSellingRightValue: value,
+    } as OneHouseJudgmentFormData;
+  };
+  async function showRightSale(f: OneHouseJudgmentFormData, edit?: (r: MultiHouseSurchargeJudgmentResponse) => MultiHouseSurchargeJudgmentResponse) {
+    const result = await judge(f);
+    render(
+      <MultiHouseSurchargeResultView
+        result={edit ? edit(result) : result}
+        formHouses={f.houses}
+        formRights={f.presaleRights}
+        sellingStdPrice={undefined}
+        sellingRightValue={f.surchargeSellingRightValue}
+        onSwapSelling={() => {}}
+      />,
+    );
+  }
+
+  it("[RV-10] 범위 밖 사유 + 표 — 양도 예정 입주권 행이 맨 위 · 주택은 모두 간이 · 전환 버튼 없음 · 주택 수 2", async () => {
+    await showRightSale(rightSale("250000000"));
+    expect(screen.getByTestId("surcharge-scope-unsupported").textContent).toMatch(/조합원입주권/);
+    expect(screen.queryByTestId("surcharge-conclusion")).toBeNull();
+    const rows = within(screen.getByTestId("surcharge-table")).getAllByRole("row").slice(1);
+    expect(rows.map((r) => r.getAttribute("data-testid"))).toEqual(["surcharge-row-selling-right", "surcharge-row-h1", "surcharge-row-h2"]);
+    expect(rows[0].textContent).toContain("양도 예정 조합원입주권");
+    expect(rows[0].textContent).toContain("250,000,000");
+    expect(screen.getByTestId("surcharge-cell-counted-selling-right").textContent).toMatch(/불산입/);
+    expect(screen.getByTestId("surcharge-cell-ifSold-h1").textContent).toMatch(/\(간이\)/);
+    expect(screen.queryByTestId("surcharge-swap-h1")).toBeNull();
+    expect(screen.getByTestId("surcharge-table").textContent).toMatch(/양도 대상이 조합원입주권이라/);
+    expect(screen.getByTestId("surcharge-count-summary").textContent).toMatch(/2$/);
+  });
+
+  it("[RV-11] 응답에 주택 수가 없으면(행마다 다름) 요약 줄을 그리지 않는다", async () => {
+    await showRightSale(rightSale(""), (r) => ({ ...r, rightSaleHouseCount: undefined }));
+    expect(screen.getByTestId("surcharge-table")).toBeTruthy();
+    expect(screen.queryByTestId("surcharge-count-summary")).toBeNull();
+  });
+});

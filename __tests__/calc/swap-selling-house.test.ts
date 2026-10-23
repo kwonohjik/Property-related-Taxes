@@ -134,6 +134,10 @@ describe("SW-4·5", () => {
     expect({ ...f, ...next }.gracePeriod).toBeUndefined();
     expect(cleared).toContain("한시 유예 나·다목 사실");
   });
+  it("[SW-7] 중과 메뉴 전용 입력(양도 조합원입주권의 종전 주택의 가격)이 남아 있으면 그 이름으로 고지한다 — V-5", () => {
+    const f = { ...form(), surchargeSellingRightValue: "250000000" } as OneHouseJudgmentFormData;
+    expect(swapSellingHouse(f, "h2").cleared).toContain("양도 조합원입주권의 종전 주택의 가격");
+  });
   it("[SW-5] 없는 행 id → 그대로", () => {
     const f = form();
     expect(swapSellingHouse(f, "nope")).toEqual({ form: f, cleared: [] });

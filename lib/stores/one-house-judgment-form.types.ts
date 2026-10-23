@@ -88,11 +88,28 @@ export const oneHouseJudgmentDemolishedDefaults: OneHouseJudgmentDemolishedField
   demolishedBeforeBalanceContractDate: "",
 };
 
+/**
+ * 다주택 중과 판정 메뉴 전용 입력 — 1세대1주택 판정 본문에는 싣지 않고 계산기로도 넘기지 않는다(`toTransferFormPatch`가 뺀다).
+ */
+export interface OneHouseJudgmentSurchargeFields {
+  /**
+   * 양도하는 조합원입주권의 **종전 주택의 가격**(「도시 및 주거환경정비법」 §74①5호 — 관리처분계획의 종전 토지·건축물 가격).
+   * 보유 주택별 표에서 그 입주권을 보유 권리로 셀 때 가액기준 지역이면 3억원 이하 불산입(영 §167의4②1호·§167의11②1호)을 가른다.
+   * 비우면 산입한다(모름 = 혜택 불성립 — 보유 권리 목록의 같은 칸과 같은 규칙).
+   */
+  surchargeSellingRightValue: string;
+}
+
+export const oneHouseJudgmentSurchargeDefaults: OneHouseJudgmentSurchargeFields = {
+  surchargeSellingRightValue: "",
+};
+
 /** 판정 메뉴 폼 — `TransferFormData` 슈퍼셋(Q-8). */
 export type OneHouseJudgmentFormData = TransferFormData &
   OneHouseJudgmentExtraFields &
   OneHouseJudgmentNonResidentFields &
-  OneHouseJudgmentDemolishedFields;
+  OneHouseJudgmentDemolishedFields &
+  OneHouseJudgmentSurchargeFields;
 
 
 /**
@@ -110,6 +127,7 @@ export function createInitialOneHouseJudgmentForm(): OneHouseJudgmentFormData {
     ...oneHouseJudgmentExtraDefaults,
     ...oneHouseJudgmentNonResidentDefaults,
     ...oneHouseJudgmentDemolishedDefaults,
+    ...oneHouseJudgmentSurchargeDefaults,
   };
 }
 

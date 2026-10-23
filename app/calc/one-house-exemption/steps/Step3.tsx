@@ -409,6 +409,26 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
             testidPrefix="surcharge-selling-std-price"
           />
         )}
+
+        {/*
+          V-5 — 양도 조합원입주권의 종전 주택의 가격. 입주권 양도는 중과가 없지만(주택이 아님) 보유 주택별 표는 「다른 주택을 대신 양도한다면」을
+          보인다 — 그때 이 입주권은 보유 권리라 가액기준 지역이면 이 값이 주택 수 산입을 가른다. 선택 칸: 비우면 산입(④·route 같은 규칙).
+        */}
+        {menu === "surcharge" && isRightSale && (
+          <FieldCard
+            label="종전 주택의 가격 (선택)"
+            hint="도시정비법 §74①5호 종전 주택의 가격입니다. 가액기준 지역이면 3억원 이하일 때 이 입주권을 주택 수에 넣지 않습니다(소득세법 시행령 §167의4②1호·§167의11②1호). 비우면 넣습니다."
+          >
+            <CurrencyInput
+              data-testid="surcharge-selling-right-value"
+              label="종전 주택의 가격"
+              hideLabel
+              hideUnit
+              value={form.surchargeSellingRightValue}
+              onChange={(surchargeSellingRightValue) => onChange({ surchargeSellingRightValue })}
+            />
+          </FieldCard>
+        )}
       </ToneCard>
 
       {/*

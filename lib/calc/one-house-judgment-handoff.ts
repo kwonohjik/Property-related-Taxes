@@ -34,6 +34,7 @@ import {
   deriveJudgmentHouseCount,
   oneHouseJudgmentNonResidentDefaults,
   oneHouseJudgmentDemolishedDefaults,
+  oneHouseJudgmentSurchargeDefaults,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 import { oneHouseJudgmentExtraDefaults } from "@/lib/stores/one-house-extra-fields.types";
@@ -90,11 +91,12 @@ export function toTransferFormPatch(
    */
   judgmentInputHash?: string,
 ): Partial<TransferFormData> {
-  // 비거주자·잔금 전 멸실 사실은 판정 메뉴 전용이라 넘기지 않는다(`OneHouseJudgmentNonResidentFields`·`OneHouseJudgmentDemolishedFields` 주석).
+  // 비거주자·잔금 전 멸실 사실과 중과 메뉴 전용 입력은 판정 메뉴 전용이라 넘기지 않는다(`OneHouseJudgmentNonResidentFields`·`OneHouseJudgmentDemolishedFields`·`OneHouseJudgmentSurchargeFields` 주석).
   const extras = new Set([
     ...Object.keys(oneHouseJudgmentExtraDefaults),
     ...Object.keys(oneHouseJudgmentNonResidentDefaults),
     ...Object.keys(oneHouseJudgmentDemolishedDefaults),
+    ...Object.keys(oneHouseJudgmentSurchargeDefaults),
   ]);
   const base = {} as Record<string, unknown>;
   for (const [k, v] of Object.entries(form)) {

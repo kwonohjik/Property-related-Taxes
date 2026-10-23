@@ -191,6 +191,7 @@ function formKeyGroup(key: string): string {
   if (key.startsWith("finalHouseRestart")) return "최종 1주택 보유기간 재기산";
   if (key.startsWith("proviso")) return "보유·거주요건 단서(§154①)";
   if (key === "isUnregistered") return "미등기 여부";
+  if (key === "surchargeSellingRightValue") return "양도 조합원입주권의 종전 주택의 가격";
   return "1세대1주택 특례 입력";
 }
 
