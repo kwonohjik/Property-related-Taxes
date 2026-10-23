@@ -19,6 +19,7 @@ import {
   isHousingExprEligibleAssetKind,
 } from "@/lib/tax-engine/expropriation-scope";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
+import { gbBgInfoTransferDate } from "./transfer-tax-api-burdened-gift";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { withDonorBuilt } from "./transfer-tax-api-donor-built";
 import { carryoverAcquisitionDateFallback } from "./transfer-tax-api-carryover";
@@ -488,8 +489,7 @@ export function buildAssetPayload(
           // ⑬ 엔진 §159 게이트가 보는 값 — `burdenedGiftInfo`만으로는 발동하지 않는다.
           transferType: "burdened_gift" as const,
           burdenedGiftInfo: {
-            // 일반건물만 양도일을 넘긴다 — 1990.8.30. 전 토지 등급 환산값(⑧·`generalBuildingValuation`과 같은 leaf · PR-7b-2 G-3). 겸용은 종전대로.
-            ...buildBurdenedGiftInfo(asset, fractional ? ratio : undefined, asset.assetKind === "general_building" ? transferDate : undefined),
+            ...buildBurdenedGiftInfo(asset, fractional ? ratio : undefined, gbBgInfoTransferDate(asset, transferDate)),
             // 컴패니언(다른 물건) 축에서만 실린다. 축 B는 undefined라 스프레드가 무해하다.
             ...(burdenedGiftDebtOverride !== undefined
               ? { assumedDebtOverride: burdenedGiftDebtOverride }

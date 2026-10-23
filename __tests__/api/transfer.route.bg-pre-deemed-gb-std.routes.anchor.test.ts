@@ -165,6 +165,8 @@ describe("PR-7b-2 일반건물 × 의제취득일 전 × 부담부증여 · 기�
     expect(r.tax).toBe(91_330_480);
   });
 
+  // ⚠️ 양도일 2023-02-16은 영 §159①1호 괄호에 상증법 §66이 들어가기(2023.2.28.) 전이다 — 엔진은 현행 문언대로 계산하고 결과 화면이 시기 단서를 알린다
+  //    (`burdened-gift-valuation.ts` BG_PAREN_MORTGAGE_66_FROM · 2026-10-22 결정). 이 anchor는 그 계산 경로의 E-1 면제를 고정할 뿐 시기 해석을 확정하지 않는다.
   it("C-1 시가 평가 · 담보 승(시가 4억 < 채무 5억) — §159①1호 괄호라 기준시가 평가와 같이 E-1 면제", async () => {
     const r = await run({ bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "400000000", bgAcquisitionMethod: "converted" });
     expect(r.issues).toEqual([]);
@@ -218,6 +220,56 @@ describe("PR-7b-2 일반건물 × 의제취득일 전 × 부담부증여 · 기�
     const r = await postTransfer(await captureBody(f));
     expect(r.status).toBe(200);
     expect(r.json?.data?.aggregated?.determinedTax).toBe(47_510_000);
+  });
+
+  /** 축 B — 같은 물건 60/40 지분 · 두 지분 모두 1983 상속 */
+  const axisB = (land: Record<string, unknown>): TransferFormData => {
+    const share = (id: number, n: string) =>
+      ({ ...makeDefaultAsset(id), ...GB, ...STD, ...GRADE, ...land, ownershipNumerator: n, ownershipDenominator: "100" }) as unknown as AssetForm;
+    return Object.assign(form({}), { assets: [share(1, "60"), share(2, "40")], assetSplitMode: "fractional" }) as TransferFormData;
+  };
+  /** 함께 양도 — 일반건물(주) + 토지, 둘 다 부담부증여(증여계약 전체 §159 명세) */
+  const bundle = (land: Record<string, unknown>): TransferFormData => {
+    // 담보 승 자산은 함께 양도에서 막힌다(⑧) — 채무 2억(증여가액 4억)
+    const gb = { ...makeDefaultAsset(1), ...GB, ...STD, ...GRADE, bgMortgageDebtAmount: "200000000", ...land } as unknown as AssetForm;
+    const other = {
+      ...makeDefaultAsset(2),
+      addressJibun: "서울 강남구 테스트동 2-2",
+      assetKind: "land",
+      acquisitionCause: "purchase",
+      acquisitionDate: "2010-01-01",
+      acquisitionArea: "100",
+      transferArea: "100",
+      landNature: "standalone",
+      standardPriceAtAcq: "100,000,000",
+      standardPriceAtTransfer: "200,000,000",
+      ...STD,
+      transferType: "burdened_gift",
+      bgDonorRelation: "lineal_descendant",
+      bgLendingDepositTotal: "0",
+      bgMortgageDebtAmount: "0",
+    } as unknown as AssetForm;
+    return Object.assign(form({}), { assets: [gb, other] }) as TransferFormData;
+  };
+
+  it.each([
+    ["축 B 지분 카드", axisB],
+    ["함께 양도", bundle],
+  ] as const)("W-2 %s · 등급만 — 세액과 물건 전체 §159 명세(표시 전용 · 리뷰 발견 1)가 직접 입력(458,432)과 같다", async (_label, build) => {
+    const res = async (land: Record<string, unknown>) => {
+      const f = build(land);
+      const issues = allIssues(f);
+      const r = await postTransfer(await captureBody(f));
+      const data = r.json?.data;
+      return { issues, status: r.status, tax: data?.aggregated?.determinedTax, wholeLand: data?.transferBurdenedGiftBreakdown?.perAsset?.land?.acquisitionPrice };
+    };
+    const direct = await res({ gbAcqLandPricePerSqm: "458,432" });
+    const grade = await res({ gbAcqLandPricePerSqm: "" });
+    expect(direct.issues).toEqual([]);
+    expect(grade.issues).toEqual([]);
+    expect([direct.status, grade.status]).toEqual([200, 200]);
+    expect(direct.wholeLand).toBeGreaterThan(0);
+    expect(grade).toEqual(direct);
   });
 
   it("W-1 함께 양도 카드 일반건물 — 부담부증여 info·평가 payload 모두 등급 환산값", async () => {

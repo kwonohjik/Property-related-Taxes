@@ -79,6 +79,14 @@ describe("PR-7b-2 일반건물 부담부증여 안내", () => {
     expect(v.text).toContain("의제취득일(1985.1.1.) 기준 건물기준시가 총액. 건물 환산취득가액 산정에");
   });
 
+  it("U-2b 시가 평가 · 담보 승(시가 4억 < 채무 5억) — 「기준시가로 평가하면」이 아니라 담보평가 안내 · 2023.2.28. 전 양도 시기 단서(리뷰 발견 3)", () => {
+    const v = view(asset({ bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "400000000", bgAcquisitionMethod: "converted" }));
+    expect(v.note).toContain("담보평가액(상증법 §66)이 시가보다 커서");
+    expect(v.note).toContain("× 채무비율이 토지 취득가액");
+    expect(v.note).toContain("2023.2.28. 전 양도는");
+    expect(v.note).not.toContain("기준시가로 평가하면");
+  });
+
   it("U-3 1988 상속(의제취득일 후) — 등급 환산값은 보이고 기준 시점은 취득일", () => {
     const v = view(asset({ bgValuationMode: "sangjeungbeop_standard", acquisitionDate: "1988-07-26", inheritanceStartDate: "1988-07-26" }));
     expect(v.note).not.toContain("의제취득일");

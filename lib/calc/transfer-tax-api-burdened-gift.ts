@@ -290,6 +290,13 @@ function buildPresumedAcquisition(
  *
  * @param debtScaleRatio 축 B일 때 지분율(0<r<1). 미전달·1.0이면 축 A/단독 — 완전 무변경.
  */
+/**
+ * `buildBurdenedGiftInfo`의 양도일 인자 — 일반건물만 넘긴다(1990.8.30. 전 토지 등급 환산값 · PR-7b-2 G-3). 겸용은 호출부마다 종전대로 둔다.
+ * 엔진 §159는 info의 취득시 기준시가를 읽으므로 카드 info·물건 전체 info(표시 전용)가 같은 값이어야 한다.
+ */
+export const gbBgInfoTransferDate = (asset: AssetForm, transferDate: string | undefined): string | undefined =>
+  asset.assetKind === "general_building" ? transferDate : undefined;
+
 export function buildBurdenedGiftInfo(
   primary: AssetForm,
   debtScaleRatio?: number,
