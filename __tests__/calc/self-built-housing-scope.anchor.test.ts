@@ -54,13 +54,21 @@ describe("범위 밖 → null (칸 없음 · 요구 없음 · 미전송)", () =>
     ["취득원인 상속", { acquisitionCause: "inheritance" as const }],
     ["실지거래가액", { useEstimatedAcquisition: false }],
     ["매매사례가액", { useEstimatedAcquisition: false, isSalesCaseAcquisition: true }],
-    ["환산·감정 둘 다 켜진 잔재", { isAppraisalAcquisition: true }],
     ["공익수용 특례", { transferCause: "public_expropriation" as const }],
     ["공매·경락 특례(영 §164⑨2호 — 주택도 대상)", { isAuctionTransfer: true }],
     ["토지·건물 취득일 분리", { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2020-01-01" }],
     ["PHD(첫 자산)", { usePreHousingDisclosure: true }],
   ])("%s", (_n, over) => {
     expect(scope(over as Partial<AssetForm>)).toBeNull();
+  });
+
+  it("환산·감정 플래그가 함께 켜진 잔재는 ④가 싣는 방식을 따른다 — 첫 자산은 감정 우선, 함께 양도 자산은 환산 (엔진이 던지는 집합과 같아야 한다: PR-4)", () => {
+    const both = { useEstimatedAcquisition: true, isAppraisalAcquisition: true };
+    expect(scope(both)?.method).toBe("appraisal");
+    expect(scope(both, TD, true)?.method).toBe("estimated");
+    expect(scope(both, TD, true)).toEqual({ method: "estimated", acq: true, sale: true, directAppraisal: false });
+    // 매매사례가 함께 켜지면 어느 자산이든 범위 밖(첫 자산 ④는 salesCase 로 싣고, 함께 양도는 ⑧ 이 차단한다)
+    expect(scope({ ...both, isSalesCaseAcquisition: true })).toBeNull();
   });
 
   it("PHD 는 첫 자산에만 닿는다 — 함께 양도 자산의 PHD 잔재는 범위를 막지 않는다(컴패니언 ④는 PHD 를 싣지 않는다)", () => {

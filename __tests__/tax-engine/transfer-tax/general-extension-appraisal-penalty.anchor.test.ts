@@ -51,7 +51,8 @@ describe("§114조의2 통상 경로 감정가액 × 증축 — 증축한 부분
 
   it("[G-1b] 🔴 구별력 — 증축부분이 아니라 건물 전체를 base로 쓰면 값이 다르다(신축이면 300M → 15,000,000)", () => {
     const asNew = calculateTransferTax(
-      input({ buildingType: "new", extensionFloorArea: undefined, extensionAppraisalValue: undefined }),
+      // PR-4: 일체 주택 본인 신축 감정은 건물분 입력이 필요하다 — 건물 감정가액을 감정가액 총액과 같게(= 건물 전체) 직접 입력해 «건물 전체 base» 대조를 유지한다
+      input({ buildingType: "new", extensionFloorArea: undefined, extensionAppraisalValue: undefined, selfBuiltHousing: { buildingAppraisalValue: 300_000_000 } } as Partial<TransferTaxInput>),
       rates,
     );
     expect(asNew.penaltyBase).toBe(300_000_000);

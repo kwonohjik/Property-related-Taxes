@@ -367,7 +367,7 @@ export function buildTransferEngineInput(
     // ⑭ Phase 2 증축 — 침묵 strip 방지 명시 매핑
     extensionStdPriceAtAcquisition: data.extensionStdPriceAtAcquisition,
     extensionAppraisalValue: data.extensionAppraisalValue,
-    // ⑭ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — 누락 시 침묵 strip(200 + 종전 전체 base). 중첩 객체에 Date 없음.
+    // ⑭ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — 누락 시 침묵 strip → 엔진이 입력 부재로 400(PR-4 이전에는 200 + 종전 전체 base). 중첩 객체에 Date 없음.
     selfBuiltHousing: data.selfBuiltHousing,
     // 토지/건물 취득일 분리 (선택)
     landAcquisitionDate: toOptionalDate(data.landAcquisitionDate),

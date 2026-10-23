@@ -1154,7 +1154,7 @@ export interface TransferTaxInput {
   penaltyAxis?: { acquisitionMethod: "estimated" | "appraisal"; base: number };
   /**
    * 일체 주택 **본인 신축** × §114조의2 가산세 base 를 「해당 건물」분으로 구하는 입력 (Q-12, `transfer-tax-self-built-housing-penalty.ts`).
-   * 있으면 환산·감정 가산세 base 가 토지분을 뺀 건물분이 된다(양도차익·결정세액 불변). **없으면 종전 base(자산 전체) 그대로**(PR-1 관대).
+   * 있으면 환산·감정 가산세 base 가 토지분을 뺀 건물분이 된다(양도차익·결정세액 불변). **필요한데 없으면 던진다**(INVALID_INPUT · route 400 — PR-4 엄격화, Q-2). 영 §164⑨ 공익수용·공매 결합만 종전 base(자산 전체)를 유지하고 «확인 필요» 를 싣는다.
    * 주택·본인 신축·매매 취득·환산|감정 전용 — 부담부증여·이월과세·분리(split)·PHD·겸용·증축·비주택 건물에는 받지 않는다.
    */
   selfBuiltHousing?: SelfBuiltHousingInput;

@@ -441,7 +441,7 @@ export function buildAssetPayload(
         }),
     /**
      * ⑬ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — 단건 ④와 **같은 빌더·같은 술어**(`selfBuiltHousingScope`, 함께 양도 자산은 `isNonPrimary`).
-     * 지분 카드(`ratio < 1`)는 구분 기재 양도가액·건물 감정가액만 지분 스케일한다. 범위 밖이면 키를 싣지 않는다 — 누락 시 침묵 strip 이라 그 자산만 전체 base 로 남는다.
+     * 지분 카드(`ratio < 1`)는 구분 기재 양도가액·건물 감정가액만 지분 스케일한다. 범위 밖이면 키를 싣지 않는다 — 범위 안인데 누락되면 엔진이 입력 부재로 400(PR-4 이전에는 그 자산만 전체 base 로 남았다).
      */
     ...withSelfBuiltHousing(asset, { transferDate, isNonPrimary: true }, ratio),
     /**

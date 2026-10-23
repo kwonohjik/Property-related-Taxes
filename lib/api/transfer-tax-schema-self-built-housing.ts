@@ -3,7 +3,7 @@
  *
  * 계획서: docs/00-pm/self-built-housing-building-base-114-2.plan.md (§3.1 · §7 ⑫ · Q-5)
  *
- * 이 객체는 **단건·다건(= `propertyBaseShape` 공유)과 컴패니언이 함께 쓴다.** 한쪽에만 두면 다른 쪽에서 **침묵 strip**된다(400이 아니라 200 + 종전 base).
+ * 이 객체는 **단건·다건(= `propertyBaseShape` 공유)과 컴패니언이 함께 쓴다.** 한쪽에만 두면 다른 쪽에서 **침묵 strip**된다 — PR-4 이후로는 조용한 종전 base 가 아니라 엔진이 입력 부재로 400 을 낸다(그래도 ⑫ 에 키가 있어야 정상 입력이 닿는다).
  * 이월과세 증여자 신축의 `donorBuiltHousingShape`(`transfer-tax-schema-donor-built.ts`)를 그대로 가져와 칸을 **선택**으로 풀고 `buildingAppraisalValue` 를 더했다 —
  * 환산은 토지·건물 기준시가 5칸이, 감정은 건물 감정가액 한 칸(또는 비례 안분용 3칸)이 필요해 방식별 필수 여부는 방식을 아는 엔진(`assertSelfBuiltHousingInput`)이 판정한다.
  *
