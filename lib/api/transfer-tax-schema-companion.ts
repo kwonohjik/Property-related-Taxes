@@ -310,7 +310,7 @@ export const companionAssetSchema = z.object({
   extensionAppraisalValue: z.number().nonnegative().optional(),
   /**
    * ⑫ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — 본체(`transfer-tax-schema-base-shape.ts`)와 같은 shape.
-   * 없으면 이 컴패니언 주택도 종전 base. 기준시가·감정 입력은 물건 단위 값이라 지분 스케일 없이 보내고, 양도가액 구분(`sale`)만 ④가 지분 스케일한다.
+   * 필요한데 없으면 이 컴패니언 주택도 엔진이 400(PR-4). 기준시가·감정 입력은 물건 단위 값이라 지분 스케일 없이 보내고, 양도가액 구분(`sale`)만 ④가 지분 스케일한다.
    */
   selfBuiltHousing: selfBuiltHousingShape.optional(),
   /** 본인 취득일 (YYYY-MM-DD) — 보유기간 산정용 */
