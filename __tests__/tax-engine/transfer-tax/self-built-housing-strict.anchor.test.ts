@@ -6,15 +6,14 @@
  * 규칙
  *  · 건물분 base 입력(`selfBuiltHousing`)이 **필요한데 없으면** 엔진이 던진다(INVALID_INPUT → route 400). 종전(PR-1~3)은 관대하게 자산 전체 base 로 계산했다.
  *  · 던지는 집합 = UI 술어(`selfBuiltHousingScope`)가 카드를 띄우는 집합 — 화면이 칸을 보여주지 않는 조합에서 엔진이 던지면 사용자가 빠져나갈 수 없다(dead-end).
- *      throw 조건 = housing ∧ 본인 신축(증축 아님) ∧ 매매 ∧ 부담부증여·겸용·PHD 아님 ∧ 환산|감정 ∧ 5년·시행일 게이트 개방 ∧ **분리 계산 중 아님(엔진이 실제로 splitActive 인지)** ∧ §164⑨ 공익수용·공매 아님
- *  · 영 §164⑨ 공익수용·공매 × 일체 주택 본인 신축: 이번 PR 에서는 **종전 동작(자산 전체 base)을 유지하고 던지지 않는다** — 대신 결과에 「확인 필요」 고지를 싣는다(침묵 금지).
+ *      throw 조건 = housing ∧ 본인 신축(증축 아님) ∧ 매매 ∧ 부담부증여·겸용·PHD 아님 ∧ 환산|감정 ∧ 5년·시행일 게이트 개방 ∧ **분리 계산 중 아님(엔진이 실제로 splitActive 인지)**
+ *  · 영 §164⑨ 공익수용·공매 × 일체 주택 본인 신축: PR-A(docs/00-pm/self-built-housing-164-9-plan.md)부터 **다른 조합과 같다** — 입력 부재면 던지고, 있으면 건물분 base(환산은 H_T′ 를 같은 비례 규칙으로 나눔 · [S3]).
  *
  * 수치는 PR-1 anchor 와 같은 픽스처다(신축 2022-01-10 · 양도 2026-03-01 · 양도가 10억 · 주택공시가격 2억/4억).
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
-import { selfBuiltHousingFallbackNotice } from "@/lib/tax-engine/transfer-tax-self-built-housing-penalty";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 import { PHD_INPUT, PHD_TRANSFER_PRICE } from "./_helpers/pre-housing-disclosure-fixture";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
@@ -109,7 +108,6 @@ function thrown(i: TransferTaxInput): TaxCalculationError {
   throw new Error("던지지 않았다");
 }
 
-const SEC164_9_NOTICE = /시행령 §164⑨.*건물분.*확인 필요/;
 const notices = (r: ReturnType<typeof run>) => (r.warnings ?? []).filter((w) => /§164⑨/.test(w) && /일체 주택/.test(w));
 
 describe("[S1] 입력 부재 → 던진다 (닿는 조합: 이익·손실·지분·고가·미등기)", () => {
@@ -198,70 +196,108 @@ describe("[S2] 닿지 않는 조합 → 던지지 않고 종전 그대로 (UI �
   });
 });
 
-describe("[S3] 영 §164⑨ 공익수용·공매 × 일체 주택 본인 신축 — 종전(자산 전체 base) 유지 + 「확인 필요」 고지", () => {
+describe("[S3] 영 §164⑨ 공익수용·공매 × 일체 주택 본인 신축 — 건물분 base = H_T′ × N_T ÷ (L_T+N_T) (PR-A)", () => {
   const EXPR = { transferCause: "public_expropriation" } as Partial<TransferTaxInput>;
   const EXPR_FULL = { ...EXPR, housingCompensationTotal: 300_000_000, housingCompensationBasisTotal: 350_000_000 } as Partial<TransferTaxInput>;
+  const EXPR_NOT_FIRED = { ...EXPR, housingCompensationTotal: 500_000_000, housingCompensationBasisTotal: 500_000_000 } as Partial<TransferTaxInput>;
   const AUCTION = { isAuctionTransfer: true, auctionPrice: 300_000_000 } as Partial<TransferTaxInput>;
+  const S3억 = { transferPrice: 300_000_000 };
+  const withSb = (over: Partial<TransferTaxInput>, sb: object = SB) => cell({ ...over, selfBuiltHousing: sb } as Partial<TransferTaxInput>);
+  const housing = (r: ReturnType<typeof run>) => (echo(r) as { housingSplit?: Record<string, unknown> } | undefined)?.housingSplit;
 
-  it("공익수용(보상액 미입력 — 분모 불변) 환산 → 던지지 않고 500,000,000 / 25,000,000 / 총 197,837,200 + 고지", () => {
-    const r = run(cell(EXPR));
-    expect(pick(r)).toEqual({ base: 500_000_000, pen: 25_000_000, total: 197_837_200 });
-    expect(echo(r)).toBeUndefined();
-    expect(notices(r)).toHaveLength(1);
-    expect(notices(r)[0]).toMatch(SEC164_9_NOTICE);
-    expect(notices(r)[0]).toMatch(/환산취득가액/);
-    expect(notices(r)[0]).toMatch(/공익수용 특례/);
+  it("A 공익수용 S=3억(H_T′ 3억) → 75,000,000 / 3,750,000 / 총 19,959,720 (종전 자산 전체 200,000,000 / 10,000,000 / 26,834,720)", () => {
+    const r = run(withSb({ ...EXPR_FULL, ...S3억 }));
+    expect(pick(r)).toEqual({ base: 75_000_000, pen: 3_750_000, total: 19_959_720 });
+    expect(housing(r)).toMatchObject({ transferHousing: 300_000_000, transferLand: 180_000_000, transferBuilding: 120_000_000 });
+    expect(housing(r)?.sec164_9).toEqual({ kind: "expropriation", standardHousing: 400_000_000, candidates: { compensation: 300_000_000, basis: 350_000_000 } });
   });
-  it("공익수용(보상액 입력 — 분모가 낮아진다) 환산 → 던지지 않는다 · 분모 특례가 반영된 자산 전체 base", () => {
-    const r = run(cell(EXPR_FULL));
-    expect(r.penaltyBase).toBeGreaterThan(500_000_000); // 분모 ↓ → 환산취득가↑ — 종전 동작(기록)
-    expect(echo(r)).toBeUndefined();
-    expect(notices(r)).toHaveLength(1);
+  it("B 공매·경락 S=3억 → 75,000,000 / 3,750,000 / 총 19,959,720 + 2호 echo", () => {
+    const r = run(withSb({ ...AUCTION, ...S3억 }));
+    expect(pick(r)).toEqual({ base: 75_000_000, pen: 3_750_000, total: 19_959_720 });
+    expect(housing(r)?.sec164_9).toEqual({ kind: "auction", standardHousing: 400_000_000, candidates: { auction: 300_000_000 } });
   });
-  it("공매·경락 환산 → 던지지 않는다 + 고지", () => {
-    const r = run(cell(AUCTION));
-    expect(echo(r)).toBeUndefined();
-    expect(notices(r)).toHaveLength(1);
-    expect(notices(r)[0]).toMatch(/공매·경락 특례/);
+  it("C 특례 불발(보상액·보상기초 5억 ≥ H_T 4억) → 187,500,000 / 9,375,000 / 총 180,649,700 — 특례 없음과 같은 값 · echo 는 불발에도 싣는다(Q-7)", () => {
+    const r = run(withSb(EXPR_NOT_FIRED));
+    expect(pick(r)).toEqual({ base: 187_500_000, pen: 9_375_000, total: 180_649_700 });
+    expect(pick(run(withSb({})))).toEqual(pick(r));
+    expect(housing(r)).toMatchObject({ transferHousing: 400_000_000, transferBuilding: 160_000_000 });
+    expect(housing(r)?.sec164_9).toMatchObject({ kind: "expropriation", standardHousing: 400_000_000 });
+    expect(housing(run(withSb({})))?.sec164_9).toBeUndefined();
   });
-  it("고지 함수는 §164⑨ 결합에서만 문장을 낸다 — 입력이 필요한 조합(던지는 쪽)·닿지 않는 조합·분리 계산 중에는 없다", () => {
-    expect(selfBuiltHousingFallbackNotice(cell(EXPR), false)).toMatch(/확인 필요/);
-    expect(selfBuiltHousingFallbackNotice(cell(), false)).toBeUndefined(); // 던지는 조합은 고지가 아니라 오류
-    expect(selfBuiltHousingFallbackNotice(cell({ ...EXPR, isSelfBuilt: false }), false)).toBeUndefined();
-    expect(selfBuiltHousingFallbackNotice(cell(EXPR), true)).toBeUndefined();
+  it("D 원 픽스처 S=10억·보상 3억/3.5억 → 250,000,000 / 12,500,000 / 총 116,650,306", () => {
+    expect(pick(run(withSb(EXPR_FULL)))).toEqual({ base: 250_000_000, pen: 12_500_000, total: 116_650_306 });
   });
-  it("공익수용 감정 → 던지지 않고 감정가액 총액 300,000,000 / 15,000,000 + 감정가액 고지", () => {
-    const r = run(cell({ ...APPRAISAL, ...EXPR }));
-    expect(pick(r)).toMatchObject({ base: 300_000_000, pen: 15_000_000 });
-    expect(notices(r)).toHaveLength(1);
-    expect(notices(r)[0]).toMatch(/감정가액/);
+  it("E 양도가액 구분 기재(토지 2억/건물 1억) → 건물분 양도가액 1억이 그대로 — 62,500,000 / 3,125,000 / 총 19,272,220", () => {
+    const r = run(withSb({ ...EXPR_FULL, ...S3억 }, { ...SB, sale: { landTransferPrice: 200_000_000, buildingTransferPrice: 100_000_000 } }));
+    expect(pick(r)).toEqual({ base: 62_500_000, pen: 3_125_000, total: 19_272_220 });
   });
-  it("공익수용 × 양도차손(§114조의2② 손실 경로) → 던지지 않고 고지가 실린다", () => {
-    const r = run(cell({ ...EXPR, capitalExpenditure: 1_200_000_000 }));
+  it("F 양도차손(§114조의2② 손실 경로, 결정세액 0) → 같은 분모 — 75,000,000 / 3,750,000 / 총 4,125,000", () => {
+    const r = run(withSb({ ...EXPR_FULL, ...S3억, capitalExpenditure: 500_000_000 }));
     expect(r.determinedTax).toBe(0);
-    expect(r.penaltyBase).toBe(500_000_000);
-    expect(notices(r)).toHaveLength(1);
+    expect(pick(r)).toEqual({ base: 75_000_000, pen: 3_750_000, total: 4_125_000 });
+    expect(housing(r)).toMatchObject({ transferHousing: 300_000_000 });
   });
-  it("공익수용이어도 게이트가 닫히면(5년 경과·실가) 고지하지 않는다 — 가산세 자체가 없다", () => {
-    expect(notices(run(cell({ ...EXPR, transferDate: D("2027-01-11") })))).toHaveLength(0);
-    expect(notices(run(cell({ ...EXPR, useEstimatedAcquisition: false, acquisitionMethod: "actual", acquisitionPrice: 300_000_000 })))).toHaveLength(0);
+  it("G 지분 50%(양도가 1.5억, 기준시가·보상 물건 전체) → 37,500,000 / 1,875,000 / 총 7,398,600", () => {
+    expect(pick(run(withSb({ ...EXPR_FULL, transferPrice: 150_000_000, ownershipRatio: 0.5 })))).toEqual({ base: 37_500_000, pen: 1_875_000, total: 7_398_600 });
   });
-  it("분리 계산 중(건물 파트가 이미 축)이면 공익수용이어도 고지하지 않는다 — 이익·손실 두 경로", () => {
+  it("단일 소스 — echo.transferHousing 은 양도차익 분모(§164⑨ detail.denominator)와 같다: 1호·2호·불발·특례 없음 (이익 경로) · 손실 경로는 같은 입력의 이익 경로 분모", () => {
+    const denom = (r: ReturnType<typeof run>) => {
+      const x = r as unknown as { housingExpropriationValuationDetail?: { denominator: number }; auctionValuationDetail?: { denominator: number } };
+      return x.housingExpropriationValuationDetail?.denominator ?? x.auctionValuationDetail?.denominator ?? 400_000_000;
+    };
+    for (const over of [EXPR_FULL, EXPR_NOT_FIRED, AUCTION, {}]) {
+      const r = run(withSb(over as Partial<TransferTaxInput>));
+      expect(housing(r)?.transferHousing, JSON.stringify(over)).toBe(denom(r));
+      // 손실 경로(결과에 detail 이 실리지 않는다)는 같은 입력의 이익 경로 분모와 같아야 한다
+      const loss = run(withSb({ ...over, capitalExpenditure: 1_200_000_000 } as Partial<TransferTaxInput>));
+      expect(loss.determinedTax, JSON.stringify(over)).toBe(0);
+      expect(housing(loss)?.transferHousing, JSON.stringify(over)).toBe(denom(r));
+    }
+  });
+  it("경계 — 보상액 = H_T 정확히 / H_T − 1: 분모 4억(불변) / 399,999,999 (건물분은 안분 규칙대로 160,000,000 · 잔액 흡수)", () => {
+    const eq = run(withSb({ ...EXPR, housingCompensationTotal: 400_000_000, housingCompensationBasisTotal: 400_000_000 }));
+    expect(housing(eq)).toMatchObject({ transferHousing: 400_000_000, transferBuilding: 160_000_000 });
+    const m1 = run(withSb({ ...EXPR, housingCompensationTotal: 399_999_999, housingCompensationBasisTotal: 400_000_000 }));
+    expect(housing(m1)).toMatchObject({ transferHousing: 399_999_999 });
+    expect((housing(m1)!.transferLand as number) + (housing(m1)!.transferBuilding as number)).toBe(399_999_999);
+  });
+
+  it("입력 부재 → 던진다 (환산·감정 × 공익수용·공매 — 더는 자산 전체 base 로 흘러가지 않는다)", () => {
+    for (const over of [EXPR, EXPR_FULL, EXPR_NOT_FIRED, AUCTION, { ...APPRAISAL, ...EXPR }, { ...APPRAISAL, ...AUCTION }, { ...EXPR_FULL, capitalExpenditure: 1_200_000_000 }]) {
+      const e = thrown(cell(over as Partial<TransferTaxInput>));
+      expect(e.code, JSON.stringify(over)).toBe(TaxErrorCode.INVALID_INPUT);
+      expect((e.details as { field?: string } | undefined)?.field).toBe("selfBuiltHousing");
+    }
+  });
+  it("감정 × 공익수용·공매·stale 공매 플래그 — 양도 당시 기준시가를 쓰지 않아 특례와 무관: 건물 감정가액 직접 1.1억 → 5,500,000 · echo 에 sec164_9 없음", () => {
+    for (const over of [EXPR_FULL, AUCTION, { ...EXPR_FULL, ...AUCTION }]) {
+      const r = run(withSb({ ...APPRAISAL, ...over }, { buildingAppraisalValue: 110_000_000 }));
+      expect(pick(r)).toMatchObject({ base: 110_000_000, pen: 5_500_000 });
+      expect(notices(r)).toHaveLength(0);
+    }
+    // 양도차익은 특례 유/무 동일 — 감정은 분모를 쓰지 않는다
+    const gain = (o: Partial<TransferTaxInput>) => run(withSb({ ...APPRAISAL, ...o }, { buildingAppraisalValue: 110_000_000 })).transferGain;
+    expect(gain(EXPR_FULL)).toBe(gain({}));
+  });
+  it("stale 공매 플래그 — 환산 ∧ 공매 플래그는 1호 분모를 읽고, 감정이면 플래그가 남아 있어도 분모를 안 바꾼다", () => {
+    const est = run(withSb({ ...AUCTION, ...S3억 }));
+    expect(housing(est)?.transferHousing).toBe(300_000_000);
+    const app = run(withSb({ ...APPRAISAL, ...AUCTION }, { buildingAppraisalValue: 110_000_000 }));
+    expect(housing(app)).toBeUndefined();
+  });
+
+  it("공익수용이어도 게이트가 닫히면(5년 경과·실가) 가산세 자체가 없다 — 입력을 요구하지도 않는다", () => {
+    expect(run(cell({ ...EXPR, transferDate: D("2027-01-11") })).penaltyTax).toBe(0);
+    expect(() => run(cell({ ...EXPR, useEstimatedAcquisition: false, acquisitionMethod: "actual", acquisitionPrice: 300_000_000 }))).not.toThrow();
+  });
+  it("분리 계산 중(건물 파트가 이미 축)이면 공익수용이어도 던지지 않고 건물 파트 base 그대로 — 이익·손실 두 경로", () => {
     for (const over of [SPLIT_PART, SPLIT_LOSS]) {
       const r = run(cell({ ...over, ...EXPR }));
       expect(r.splitDetail).toBeDefined();
       expect(notices(r)).toHaveLength(0);
     }
   });
-  it("selfBuiltHousing 을 직접 보내는 감정 × 공익수용은 건물분 base 이고 고지하지 않는다", () => {
-    const r = run(cell({ ...APPRAISAL, ...EXPR, selfBuiltHousing: { buildingAppraisalValue: 110_000_000 } } as Partial<TransferTaxInput>));
-    expect(pick(r)).toMatchObject({ base: 110_000_000, pen: 5_500_000 });
-    expect(notices(r)).toHaveLength(0);
-  });
-  it("공익수용 아님 → 고지 없음", () => {
-    expect(notices(run(cell({ selfBuiltHousing: SB } as Partial<TransferTaxInput>)))).toHaveLength(0);
-  });
-  it("selfBuiltHousing 을 직접 보내는 호출자는 종전(PR-1)대로 — 환산 × 공익수용은 거부(분모 법리 확인 전)", () => {
-    expect(thrown(cell({ ...EXPR_FULL, selfBuiltHousing: SB } as Partial<TransferTaxInput>)).message).toMatch(/§164⑨/);
+  it("🔴 F-1 해소 — 종전엔 이 조합이 UI 술어에 막혀 «엔진은 계산 가능한데 화면이 안 연다»: selfBuiltHousing 을 직접 보내도 던지지 않는다(환산 × 공익수용)", () => {
+    expect(() => run(withSb(EXPR_FULL))).not.toThrow();
   });
 });

@@ -66,10 +66,43 @@ describe("SelfBuiltHousingShareBlock — 술어대로 칸을 그린다", () => {
     ["부담부증여", { transferType: "burdened_gift" as const }],
     ["PHD", { usePreHousingDisclosure: true }],
     ["토지·건물 취득일 분리", { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2020-01-01" }],
-    ["공익수용 특례", { transferCause: "public_expropriation" as const }],
   ])("🔴 구별력 — %s → 카드가 없다", (_n, over) => {
     block(asset(over as Partial<AssetForm>));
     expect(screen.queryByTestId("self-built-housing-share")).toBeNull();
+  });
+
+  it("영 §164⑨ 공익수용(1호) × 환산 → 카드가 열리고 안내 문단이 뜬다(새 칸 없음 — 보상액을 다시 입력할 필요 없음)", () => {
+    block(asset({ transferCause: "public_expropriation" }));
+    expect(screen.getByTestId("self-built-housing-share")).toBeTruthy();
+    const note = screen.getByTestId("self-built-housing-sec164-9-note").textContent ?? "";
+    expect(note).toContain("소득세법 시행령 §164⑨ 1호");
+    expect(note).toContain("개별주택가격·보상액·보상산정 기초 기준시가 중 가장 작은 금액");
+    expect(note).toContain("다시 입력할 필요는 없습니다");
+    // 칸은 §164⑨ 와 무관하게 같다 — 보상액 칸이 이 카드에 더해지지 않는다
+    expect(screen.getByTestId("self-built-housing-acq")).toBeTruthy();
+    expect(document.querySelectorAll('[data-field="housingCompensationTotal"]').length).toBe(0);
+  });
+  it("영 §164⑨ 공매·경락(2호) × 환산 → 2호 안내 문단 · 함께 양도 자산도 같다", () => {
+    block(asset({ isAuctionTransfer: true }));
+    expect(screen.getByTestId("self-built-housing-sec164-9-note").textContent).toContain("소득세법 시행령 §164⑨ 2호");
+    expect(screen.getByTestId("self-built-housing-sec164-9-note").textContent).toContain("개별주택가격·공매·경락가액 중 작은 금액");
+    cleanup();
+    block(asset({ isAuctionTransfer: true }), noop, true);
+    expect(screen.getByTestId("self-built-housing-sec164-9-note")).toBeTruthy();
+  });
+  it("🔴 구별력 — §164⑨ 가 아니면 안내 문단이 없다(일반 양도·공익수용을 일반으로 되돌린 stale 값) · 감정은 §164⑨ 와 무관해 문단이 없다(stale 공매 플래그 포함)", () => {
+    block(asset());
+    expect(screen.queryByTestId("self-built-housing-sec164-9-note")).toBeNull();
+    cleanup();
+    block(asset({ transferCause: "general", housingCompensationTotal: "300000000" }));
+    expect(screen.queryByTestId("self-built-housing-sec164-9-note")).toBeNull();
+    cleanup();
+    for (const over of [{ transferCause: "public_expropriation" as const }, { isAuctionTransfer: true }]) {
+      block(asset({ ...APPRAISAL, ...over }));
+      expect(screen.getByTestId("self-built-housing-share")).toBeTruthy(); // 감정 카드는 열린다
+      expect(screen.queryByTestId("self-built-housing-sec164-9-note")).toBeNull();
+      cleanup();
+    }
   });
 
   it("5년 경과 → 카드가 없다", () => {

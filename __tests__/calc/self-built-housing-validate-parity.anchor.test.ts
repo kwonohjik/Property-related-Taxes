@@ -61,6 +61,13 @@ const FILLED: [string, Partial<AssetForm>, Record<string, unknown>?][] = [
   ["감정 직접", AP_DIRECT],
   ["감정 직접 · 지분 50%", { ...AP_DIRECT, ownershipNumerator: "50", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes" }],
   ["감정 구분 표시 없음", AP_NOSPLIT],
+  // 영 §164⑨ 공익수용(1호)·공매·경락(2호) — PR-A: 범위 안(종전엔 «숨김» 으로 키 미전송 → 자산 전체 base). 환산은 ⑧ 이 보상액·경락가를 먼저 요구한다
+  ["환산 · 공익수용(S=3억·보상 3억/3.5억)", { transferCause: "public_expropriation", housingCompensationTotal: "300000000", housingCompensationBasisTotal: "350000000", actualSalePrice: "300000000" }, { contractTotalPrice: "300000000" }],
+  ["환산 · 공익수용 특례 불발(보상액 5억 ≥ H_T)", { transferCause: "public_expropriation", housingCompensationTotal: "500000000", housingCompensationBasisTotal: "500000000" }],
+  ["환산 · 공매·경락(S=3억)", { isAuctionTransfer: true, auctionPrice: "300000000", actualSalePrice: "300000000" }, { contractTotalPrice: "300000000" }],
+  ["환산 · 공익수용 · 양도차손", { transferCause: "public_expropriation", housingCompensationTotal: "300000000", housingCompensationBasisTotal: "350000000", actualSalePrice: "300000000", capitalExpenditure: "500000000" }, { contractTotalPrice: "300000000" }],
+  ["감정 직접 · 공익수용(감정은 §164⑨ 무관)", { ...AP_DIRECT, transferCause: "public_expropriation" }],
+  ["감정 직접 · 공매 플래그 잔재", { ...AP_DIRECT, isAuctionTransfer: true, auctionPrice: "300000000" }],
 ];
 
 /** 범위 밖 — 숨은 입력(칸은 채워 둔 stale)이라 ⑧ 요구 없음 ∧ 키 미전송 ∧ route 200 */
@@ -70,11 +77,9 @@ const HIDDEN: [string, Partial<AssetForm>, Record<string, unknown>?][] = [
   ["본인 신축 토글 OFF", { isSelfBuilt: false }],
 ];
 
-/** 범위 밖이지만 route 가 다른 이유로 입력을 요구하는 조합(겸용 서브객체·수용 보상액) — 키 미전송 ∧ ⑧ 요구 없음만 대조 */
+/** 범위 밖이지만 route 가 다른 이유로 입력을 요구하는 조합(겸용 서브객체) — 키 미전송 ∧ ⑧ 요구 없음만 대조 */
 const HIDDEN_OTHER_REQUIREMENTS: [string, Partial<AssetForm>][] = [
   ["겸용주택", { isMixedUseHouse: true }],
-  ["공익수용 특례(영 §164⑨ — 엔진이 결합을 거부)", { transferCause: "public_expropriation" }],
-  ["공매·경락 특례(영 §164⑨2호 — 환산 분모가 바뀐다)", { isAuctionTransfer: true }],
   ["PHD(첫 자산 — 건물 파트가 이미 축)", { usePreHousingDisclosure: true }],
   ["소유자 분리(건물만 소유 — 건물 파트가 이미 축)", { selfOwns: "building_only" }],
   ["토지·건물 취득일 분리(건물 파트가 이미 축)", { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2015-01-01" }],
@@ -85,6 +90,18 @@ describe("단건 — ⑧ ↔ ④ ↔ ⑫ 격자", () => {
     const r = await calc(sbForm(over, formOver as never));
     expect(oursOf(r.issues).length, "⑧").toBeGreaterThan(0);
     expect(r.status, JSON.stringify((r.json as { error?: unknown }).error)).toBe(400);
+  });
+
+  it("환산 × 공익수용 · 보상액 비움 → ⑧ 이 보상액 칸(housingCompensationTotal)에서 먼저 막고 route 400 — 건물분 칸 이전에 §164⑨ 입력이 선행(화면 순서 ② → ③)", async () => {
+    const f = sbForm({ transferCause: "public_expropriation", housingCompensationTotal: "", housingCompensationBasisTotal: "350000000" });
+    const r = await calc(f);
+    expect(r.issues[0]?.field).toBe("housingCompensationTotal");
+    expect(r.status).toBe(400);
+  });
+  it("환산 × 공매 · 경락가 비움 → ⑧ 이 auctionPrice 에서 막고 route 400", async () => {
+    const r = await calc(sbForm({ isAuctionTransfer: true, auctionPrice: "" }));
+    expect(r.issues[0]?.field).toBe("auctionPrice");
+    expect(r.status).toBe(400);
   });
 
   it.each(FILLED)("채움 %s → ⑧ 통과 ∧ 키 실림 ∧ route 200", async (_n, over, formOver) => {

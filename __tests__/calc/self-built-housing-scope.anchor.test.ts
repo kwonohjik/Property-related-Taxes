@@ -41,6 +41,36 @@ describe("범위 안", () => {
   });
 });
 
+describe("영 §164⑨ 공익수용·공매 특례는 범위 안이다 (PR-A — 종전 «범위 밖 null») — 환산은 안내 문단용 sec164_9, 감정은 무관", () => {
+  const EXPR = { transferCause: "public_expropriation" as const };
+  const AUC = { isAuctionTransfer: true };
+  const APP = { useEstimatedAcquisition: false, isAppraisalAcquisition: true };
+  it("환산 × 공익수용(1호) → 범위 안 + sec164_9 \"expropriation\" (취득·양도 칸은 그대로 — 새 칸 없음)", () => {
+    expect(scope(EXPR)).toEqual({ method: "estimated", acq: true, sale: true, directAppraisal: false, sec164_9: "expropriation" });
+  });
+  it("환산 × 공매·경락(2호 — 주택도 대상) → sec164_9 \"auction\"", () => {
+    expect(scope(AUC)).toEqual({ method: "estimated", acq: true, sale: true, directAppraisal: false, sec164_9: "auction" });
+  });
+  it("1호와 2호 플래그가 함께 남은 잔재 → 1호 우선(엔진 N3 배타와 같은 순서)", () => {
+    expect(scope({ ...EXPR, ...AUC })?.sec164_9).toBe("expropriation");
+  });
+  it("감정 × 공익수용·공매 → 범위 안, sec164_9 없음 (감정은 양도 당시 기준시가를 쓰지 않는다) — stale 공매 플래그가 남아도 같다", () => {
+    for (const over of [EXPR, AUC, { ...EXPR, ...AUC }]) {
+      expect(scope({ ...APP, ...over })).toEqual({ method: "appraisal", acq: false, sale: false, directAppraisal: true });
+    }
+  });
+  it("환산·감정 플래그 동시 잔재 + 공매 — 첫 자산은 감정(sec164_9 없음), 함께 양도 자산은 환산(sec164_9 \"auction\")", () => {
+    const both = { useEstimatedAcquisition: true, isAppraisalAcquisition: true, ...AUC };
+    expect(scope(both)?.sec164_9).toBeUndefined();
+    expect(scope(both, TD, true)?.sec164_9).toBe("auction");
+  });
+  it("범위 안의 다른 조건은 그대로 — 5년 경과·분리·PHD 는 §164⑨ 와 무관하게 null", () => {
+    expect(scope(EXPR, "2027-01-11")).toBeNull();
+    expect(scope({ ...EXPR, hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2020-01-01" })).toBeNull();
+    expect(scope({ ...AUC, usePreHousingDisclosure: true })).toBeNull();
+  });
+});
+
 describe("범위 밖 → null (칸 없음 · 요구 없음 · 미전송)", () => {
   it.each([
     ["본인 신축 토글 OFF", { isSelfBuilt: false }],
@@ -54,8 +84,6 @@ describe("범위 밖 → null (칸 없음 · 요구 없음 · 미전송)", () =>
     ["취득원인 상속", { acquisitionCause: "inheritance" as const }],
     ["실지거래가액", { useEstimatedAcquisition: false }],
     ["매매사례가액", { useEstimatedAcquisition: false, isSalesCaseAcquisition: true }],
-    ["공익수용 특례", { transferCause: "public_expropriation" as const }],
-    ["공매·경락 특례(영 §164⑨2호 — 주택도 대상)", { isAuctionTransfer: true }],
     ["토지·건물 취득일 분리", { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2020-01-01" }],
     ["PHD(첫 자산)", { usePreHousingDisclosure: true }],
   ])("%s", (_n, over) => {
