@@ -25,6 +25,8 @@ import { formatOwnershipPercent } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { needsBgAcqStdPriceInput, resolveBgAcqStdPrice } from "./burdened-gift-acq-std-price";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
+import { gbBgThreeWayParts } from "./bg-pre-deemed-mode";
+import { gbPartReportedField } from "./gb-pre-deemed";
 import { bgPreDeemedError } from "./transfer-tax-validate-bg-pre-deemed";
 import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { bgMixedUseBlock, isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
@@ -237,7 +239,9 @@ export function validateBurdenedGiftAsset(
     // 담보 승이면 취득가액은 산정방식과 무관하게 취득시 기준시가 × 채무비율이다(엔진 `acqStdPriceForced`) — 방식별 금액 칸은 쓰이지 않아
     // 요구하지 않는다(⑤가 그 칸을 숨긴다). 산정방식 선택 자체는 ⑫가 요구하므로 아래 「미지정」 검사는 남긴다. 취득시 기준시가는 (5-c)가 요구한다.
     const collateralForced = bgCollateralForcesStdAcq(asset);
-    if (isBgPreDeemedAsset(asset)) {
+    // 일반건물 — 의제취득일 전 상속·증여 파트만 3자 max(Q-28 · PR-7b-6). 두 파트 다면 산정방식이 없고, 한 파트면 다른 파트의 금액만 요구한다.
+    const gbParts = gbBgThreeWayParts(asset);
+    if (isBgPreDeemedAsset(asset) || gbParts.all) {
       // 의제취득일 전 상속·증여 토지·주택·상가·건물 — 산정방식 대신 엔진이 ①②③ 중 큰 금액(담보 승이면 의제취득일 기준시가)을 쓴다.
       //   ⑤가 라디오를 숨기고 ⑫도 요구하지 않는다. ①②③ 입력은 아래 `bgPreDeemedError`·E-1·PD-1이 본다(계획서 §18).
     } else if (collateralForced) {
@@ -252,7 +256,12 @@ export function validateBurdenedGiftAsset(
       }
     } else if (acqMethod === "actual") {
       // K-4 실지취득가액 안분 — 자산별 실지취득가 필수 (자동 안분 fallback 금지)
-      if (asset.assetKind === "general_building") {
+      if (asset.assetKind === "general_building" && gbParts.any) {
+        const field = gbParts.land ? "bgActualAcquisitionBuilding" : "bgActualAcquisitionLand";
+        if (!parseAmount(asset[field])) {
+          return fieldError(field, `${label}: 부담부증여 실지취득가액 — 의제취득일(1985.1.1.) 전 파트가 아닌 ${gbParts.land ? "건물" : "토지"}의 실지취득가액을 입력하세요 (§97①1호가목).`);
+        }
+      } else if (asset.assetKind === "general_building") {
         if (
           !parseAmount(asset.bgActualAcquisitionLand) &&
           !parseAmount(asset.bgActualAcquisitionBuilding)
@@ -295,6 +304,11 @@ export function validateBurdenedGiftAsset(
         }
         // 신축·증축 × 이월과세는 화면에서 도달하지 않는다 — 신축 입력은 매매 취득에서만 열린다(`selfBuiltActive`).
         //   API 직접 호출은 엔진 `assertCarryoverDonorBasis`가 막는다.
+      } else if (asset.assetKind === "general_building" && gbParts.any) {
+        const field = gbParts.land ? "bgPresumedAcquisitionBuilding" : "bgPresumedAcquisitionLand";
+        if (!parseAmount(asset[field])) {
+          return fieldError(field, `${label}: 부담부증여 ${methodLabel} — 의제취득일(1985.1.1.) 전 파트가 아닌 ${gbParts.land ? "건물" : "토지"}의 취득 당시 ${methodLabel}을 입력하세요 (소득세법 시행령 §176의2③${acqMethod === "appraisal" ? "2" : "1"}호).`);
+        }
       } else if (!hasBgPresumedAmount(asset)) {
         const kind = bgPresumedInputKind(asset.assetKind);
         const target = kind === "split" ? "토지 또는 건물의 " : kind === "land" ? "토지 " : "";
@@ -369,6 +383,17 @@ export function validateBurdenedGiftAsset(
     } else {
       // 미지정: 취득가액 산정방식 선택 강제 (시가 모드 입력 미완성 — collectStepIssues 단계 차단)
       return fieldError("bgAcquisitionMethod", `${label}: 부담부증여 시가 모드 — 취득가액 산정방식(실지취득가액·매매사례가액·감정가액·환산취득가액)을 선택하세요 (소득세법 §100①).`);
+    }
+    // 의제취득일 전 파트의 ① 상증법 평가액 — 필수(상속 Q-29 · 증여 Q-14·G-5). ②는 취득시 기준시가 칸이라 늘 있고, 선언으로 ③만 쓰는 길은 두지 않는다.
+    for (const part of ["land", "building"] as const) {
+      const field = gbPartReportedField(asset, part);
+      if (gbParts[part] && !parseAmount(asset[field])) {
+        const what = field === "publishedValueAtInheritance" || field === "gbBuildingInheritedValue" ? "상속개시일 평가액(상속세 신고·결정가액)" : "증여일 평가액(증여세 신고·결정가액)";
+        return fieldError(
+          field,
+          `${label}: 의제취득일(1985.1.1.) 전에 ${field === "publishedValueAtInheritance" || field === "gbBuildingInheritedValue" ? "상속" : "증여"}받은 ${part === "land" ? "토지" : "건물"}의 취득가액은 ① ${what}·② 의제취득일 기준시가·③ 환산취득가액 중 큰 금액에 채무비율을 곱합니다 — ①을 입력하세요 (소득세법 시행령 §159①1호·§163⑨·§176조의2④).`,
+        );
+      }
     }
     // B/C > 1 차단 — C는 증여가액이다.
     //

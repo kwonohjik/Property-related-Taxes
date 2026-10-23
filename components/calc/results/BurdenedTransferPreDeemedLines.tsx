@@ -11,7 +11,8 @@ const fmt = (n: number) => n.toLocaleString("ko-KR");
 
 export function BurdenedTransferPreDeemedLines({ brkd }: { brkd: TransferBurdenedGiftBreakdown }) {
   const p = brkd.preDeemed;
-  if (!p) return null;
+  // 일반건물 파트별 3자 max(`three_way_parts`)는 양도세 일반건물 경로만 낸다 — 증여세 계산기는 일반건물을 보내지 않는다(PR-7b-6)
+  if (!p || p.basis === "three_way_parts") return null;
   const rate = `${(brkd.debtRatio * 100).toFixed(4)}%`;
   if (p.basis === "deemed_std") {
     return (

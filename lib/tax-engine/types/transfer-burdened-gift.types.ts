@@ -371,6 +371,8 @@ export interface BurdenedGiftCarryoverDonorBasis {
  */
 export interface BgPartPreDeemedEcho {
   stdAtDeemed: number;
+  /** ③의 양도가액 — 증여가액 C를 양도시 기준시가 비율로 나눈 이 파트 몫(Q-24 · 결과 산식 표시용) */
+  giftValue: number;
   reported: number | null;
   sec164: number | null;
   converted: number;

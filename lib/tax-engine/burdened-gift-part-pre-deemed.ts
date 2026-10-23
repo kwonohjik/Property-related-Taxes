@@ -87,6 +87,7 @@ export function resolvePartwiseBgAcquisition(
     const whole = selected === "converted" ? converted : Math.max(clauseA.reported, clauseA.sec164);
     echo[p] = {
       stdAtDeemed: std[p].acq,
+      giftValue: giftOf[p],
       reported: clauseA.reported > 0 ? clauseA.reported : null,
       sec164: clauseA.sec164 > 0 ? clauseA.sec164 : null,
       converted,

@@ -35,6 +35,7 @@ import { mixedSec163_9CompareOf } from "./mixed-use-sec163-9";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { bgPreDeemedUsesThreeWay } from "./bg-pre-deemed-mode";
 import { gbBgUsesStdAcq } from "./bg-pre-deemed-mode";
+import { gbBgThreeWayParts } from "./bg-pre-deemed-mode";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
 import {
@@ -103,6 +104,8 @@ export function needsClauseADeclaration(asset: AssetForm): boolean {
   if (isBgPreDeemedAsset(asset) && !bgPreDeemedUsesThreeWay(asset)) return false;
   //   일반건물도 같다 — GB 취득시 기준시가 칸(의제취득일 기준) × 채무비율(PR-7b-2 · G-1). 일반건물 화면에는 선언 토글이 없어 종전에는 막다른 길이었다.
   if (gbBgUsesStdAcq(asset)) return false;
+  //   시가 평가(담보 패)는 파트별 3자 max이고 그 파트의 ①이 필수다(Q-29 · G-5 · `transfer-tax-validate-bg.ts`) — 선언으로 ③만 쓰는 길을 두지 않는다(PR-7b-6).
+  if (gbBgThreeWayParts(asset).any) return false;
   // 범위 밖 증여(재개발·입주권·부담부증여 등)는 종전대로 — 실거래가는 「증여 신고가액을 입력하세요」가 막고, 추계 계열만 선언을 요구한다.
   if (asset.acquisitionCause === "gift" && !isEstimatingMode(asset)) return false;
   if (clauseAReportedValue(asset) > 0) return false;

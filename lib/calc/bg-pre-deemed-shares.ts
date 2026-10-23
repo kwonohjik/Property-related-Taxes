@@ -8,6 +8,7 @@
  */
 import { axisBEffectiveAsset } from "./axis-b-effective-asset";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
+import { gbBgThreeWayParts } from "./bg-pre-deemed-mode";
 import { mergePrimaryBasic } from "./transfer-tax-api-helpers";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -18,6 +19,26 @@ export function bgFractionalHasOutOfScopeShare(shares: readonly AssetForm[] | un
 }
 
 /**
+ * 축 B × 일반건물 — 토지·건물이 모두 의제취득일 전(3자 max)이 아닌 지분이 있는가(PR-7b-6b · Q-34와 같은 규칙). 있으면 첫 카드가 두 파트 다
+ * 의제취득일 전이어도 산정방식 라디오를 남겨 그 지분이 쓸 방식을 받는다 — ④⑧은 지분마다 `gbBgThreeWayParts`로 판정한다.
+ */
+export function gbBgFractionalHasPartialShare(shares: readonly AssetForm[] | undefined): boolean {
+  if (!shares) return false;
+  const form = { assets: [...shares], assetSplitMode: "fractional" as const };
+  return shares.some((_, i) => !gbBgThreeWayParts(axisBEffectiveAsset(form, i)).all);
+}
+
+/**
+ * 축 B × 일반건물 — 파트별로 「모든 지분에서 의제취득일 전(3자 max)」인가. 실지·추계 금액 칸은 첫 카드에서 받아 지분마다 병합되고(`mergePrimaryBasic`)
+ * ⑧은 지분마다 자기 의제 파트가 아닌 쪽 칸을 요구한다 — 첫 카드는 모든 지분이 의제인 파트의 칸만 숨겨야 한다(리뷰 F-1 · PR-7b-6b).
+ */
+export function gbBgFractionalPreDeemedPartsAll(shares: readonly AssetForm[]): { land: boolean; building: boolean } {
+  const form = { assets: [...shares], assetSplitMode: "fractional" as const };
+  const parts = shares.map((_, i) => gbBgThreeWayParts(axisBEffectiveAsset(form, i)));
+  return { land: parts.every((p) => p.land), building: parts.every((p) => p.building) };
+}
+
+/**
  * 축 B 지분 카드의 ③ 취득정보가 의제취득일 전 술어(`isBgPreDeemedAsset` 등)를 판정할 값 — 병합 결과가 범위 안이면 양도 형태·부담부증여
  * 평가 값(②에서만 편집 — 지분 카드는 ②가 숨는다)을 첫 카드 병합값으로 준다. 범위 밖이면 빈 객체(종전 그대로).
  * 종전에는 원본 카드(`transferType` "regular")로 판정해 기준시가 평가에서도 쓰이지 않는 ①·양도시 기준시가 칸이 떴다(계획서 D-3).
@@ -25,7 +46,8 @@ export function bgFractionalHasOutOfScopeShare(shares: readonly AssetForm[] | un
  */
 export function bgPreDeemedShareJudgmentFields(share: AssetForm, primary: AssetForm): Partial<AssetForm> {
   const merged = mergePrimaryBasic(share, primary);
-  if (!isBgPreDeemedAsset(merged)) return {};
+  // 일반건물은 파트별 3자 max(시가 평가 · PR-7b-6b)일 때 — 지분 카드의 ① 칸·안내가 같은 병합값으로 판정한다
+  if (!isBgPreDeemedAsset(merged) && !gbBgThreeWayParts(merged).any) return {};
   return Object.fromEntries(
     Object.entries(merged).filter(([k]) => k === "transferType" || k.startsWith("bg")),
   ) as Partial<AssetForm>;

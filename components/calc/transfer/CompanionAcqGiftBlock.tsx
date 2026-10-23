@@ -35,6 +35,11 @@ interface BlockProps {
    * (`CompanionAcqPurchaseBlock.tsx:262`). 날짜 두 칸은 보유기간·단기 통산에 쓰이므로 남긴다.
    */
   isBurdenedGift?: boolean;
+  /**
+   * 일반건물 부담부증여 · 시가 평가 · 의제취득일 전 증여 토지 — 그 파트의 ①(증여일 평가액)은 같은 카드의 「① 상증법 평가액」 칸이 받는다(PR-7b-6b).
+   * 「입력란을 표시하지 않습니다」 안내가 그 칸과 모순되므로 이 경우에는 취득가액 자리를 비운다.
+   */
+  bgPartReportedElsewhere?: boolean;
   /** 증여일 칸의 검증 오류 이동 앵커 키(기본 `acquisitionDate`) — `CompanionAcqPurchaseBlock.types.ts`의 같은 prop */
   fieldAcquisitionDate?: string;
   /**
@@ -75,7 +80,7 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
         </div>
       </div>
 
-      {props.isBurdenedGift ? (
+      {props.isBurdenedGift && props.bgPartReportedElsewhere ? null : props.isBurdenedGift ? (
         <ToneCard
           tone="amber"
           title="취득가액 — 부담부증여 §159 자동 산정"

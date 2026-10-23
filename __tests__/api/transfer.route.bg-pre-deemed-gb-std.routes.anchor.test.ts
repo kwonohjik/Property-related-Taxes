@@ -174,9 +174,11 @@ describe("PR-7b-2 일반건물 × 의제취득일 전 × 부담부증여 · 기�
     expect(r.tax).toBe(95_756_000);
   });
 
-  it("M-1 경계: 시가 평가(담보 패) 상속은 E-1이 남는다 — 3자 max는 PR-7b-6(Q-28·Q-29)", async () => {
+  it("M-1 경계: 시가 평가(담보 패) 상속은 E-1 대신 파트 ①을 요구한다 — 파트별 3자 max(PR-7b-6 · Q-29 ① 필수)", async () => {
     const r = await run({ bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1000000000", bgAcquisitionMethod: "converted" });
-    expect(r.issues.map((i) => i.field)).toContain("preDeemedClauseAUnconfirmed");
+    const fields = r.issues.map((i) => i.field);
+    expect(fields).toContain("publishedValueAtInheritance");
+    expect(fields).not.toContain("preDeemedClauseAUnconfirmed");
   });
 
   // 경계 자산은 범위 밖인 입주권(Q-30)이다 — 종전 재개발 완공 아파트는 PR-7b-4로 기준시가 평가 E-1 면제(`isBgPreDeemedAsset`)가 되어 이 경계를 가렸다
@@ -194,12 +196,14 @@ describe("PR-7b-2 일반건물 × 의제취득일 전 × 부담부증여 · 기�
     expect(needsClauseADeclaration(redev)).toBe(true);
   });
 
-  it("M-2 시가 평가 · 환산 · 등급만 — 환산 분자도 등급 환산값(토지 57,304,000 = 5억 × 45,843,200/2억 × 0.5)", async () => {
+  it("M-2 시가 평가 · 등급만 — ③ 분자도 등급 환산값(토지 ③ 114,608,000 = 5억 × 45,843,200/2억 → × 0.5 = 57,304,000 · PR-7b-6 파트별 3자 max)", async () => {
     const r = await run({
       bgValuationMode: "sangjeungbeop_market",
       bgMarketValueAtTransfer: "1000000000",
       bgAcquisitionMethod: "converted",
-      preDeemedClauseAUnconfirmed: true,
+      // ①은 ③보다 작게 — 등급 환산값이 ③ 분자로 쓰이는 것을 본다(종전 환산 K-5와 같은 값)
+      publishedValueAtInheritance: "10,000,000",
+      gbBuildingInheritedValue: "10,000,000",
       ...GRADE_ONLY,
     });
     expect(r.issues).toEqual([]);

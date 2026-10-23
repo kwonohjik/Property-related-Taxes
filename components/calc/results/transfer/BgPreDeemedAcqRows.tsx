@@ -2,6 +2,7 @@
  * 부담부증여 결과 — 의제취득일(1985.1.1.) 전 상속·증여 자산의 §159①1호 A 행 (계획서 `inheritance-pre-deemed-clause-b-revisit.plan.md` §18).
  * 엔진 echo `preDeemed`를 그대로 그린다. 시가 평가(Q-24)는 ①②③ 비교와 채택값 × 채무비율, 기준시가 평가(Q-25)는 의제취득일 기준시가 안내.
  */
+import { Fragment } from "react";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
@@ -85,5 +86,107 @@ export function BgPreDeemedStdCaption({ bg }: { bg: TransferBurdenedGiftBreakdow
         (소득세법 부칙 법률 제4803호 §8 · 시행령 §159①1호 괄호 · §164④~⑦).
       </td>
     </tr>
+  );
+}
+
+/**
+ * 일반건물 파트별 3자 max(PR-7b-6 · 사용자 결정 Q-28 · 엔진 echo `preDeemed.basis === "three_way_parts"`) — 파트마다 ①②③ 비교·채택값 × 채무비율과 필요경비.
+ * 의제취득일 전이 아닌 파트는 고른 산정방식의 결과 값만 적는다. 금액은 모두 엔진 echo(`preDeemed.parts`·`perAsset`)다 — 화면에서 다시 계산하지 않는다.
+ */
+export function BgPreDeemedPartsRows({
+  bg,
+  methodLabels,
+}: {
+  bg: TransferBurdenedGiftBreakdown;
+  methodLabels: Record<TransferBurdenedGiftBreakdown["acquisitionMethodUsed"], string>;
+}) {
+  const parts = bg.preDeemed?.basis === "three_way_parts" ? bg.preDeemed.parts : undefined;
+  if (!parts) return null;
+  const rate = `${(bg.debtRatio * 100).toFixed(4)}%`;
+  const swapped = bg.necessaryExpenseSwap?.chosen === "direct";
+  return (
+    <>
+      {(["land", "building"] as const).map((key) => {
+        const label = key === "land" ? "토지" : "건물";
+        const a = bg.perAsset[key];
+        const e = parts[key];
+        const mark = (k: "reported" | "sec164" | "converted") => (e?.selected === k ? " ← 채택" : " (미적용 — 더 작은 금액)");
+        const expenseRow =
+          a.acquisitionMethod === "actual" ? (
+            <tr data-testid="bg-pre-deemed-part-expense" data-part={key}>
+              <td className="py-1 pr-2 pl-3">
+                {label} 필요경비 = 자본적지출·양도비 × 채무비율 {rate} 중 {label} 몫 (
+                {e ? "실지거래가액 의제 · 소득세법 시행령 §163⑨" : "실지거래가액 · 소득세법 §97①2호·3호"})
+              </td>
+              <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(a.estimatedDeduction)}</td>
+            </tr>
+          ) : a.acquisitionMethod === "converted" && swapped && a.acquisitionPrice === 0 ? (
+            <tr data-testid="bg-pre-deemed-part-expense" data-part={key}>
+              <td className="py-1 pr-2 pl-3">{label} 필요경비 = 자본적지출·양도비 중 {label} 몫 — 환산취득가액과 개산공제의 합보다 커서 이 금액을 씀 (소득세법 §97②2호 단서)</td>
+              <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(a.estimatedDeduction)}</td>
+            </tr>
+          ) : (
+            <tr data-testid="bg-pre-deemed-part-expense" data-part={key}>
+              <td className="py-1 pr-2 pl-3">
+                {label} 개산공제 = 취득시 기준시가 {fmt(a.stdPriceAtAcquisition)} × 채무비율 {rate} × 개산공제율{" "}
+                {((a.estimatedDeductionRate ?? 0) * 100).toFixed(1).replace(/\.0$/, "")}% (소득세법 시행령 §163⑥)
+              </td>
+              <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(a.estimatedDeduction)}</td>
+            </tr>
+          );
+        if (!e) {
+          return (
+            <Fragment key={key}>
+              <tr data-testid="bg-pre-deemed-part" data-part={key} data-basis="method">
+                <td className="py-1 pr-2 pl-3">{label} 취득가액 — {methodLabels[a.acquisitionMethod] ?? a.acquisitionMethod} × 채무비율 {rate} (의제취득일 전 파트 아님)</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(a.acquisitionPrice)}</td>
+              </tr>
+              {expenseRow}
+            </Fragment>
+          );
+        }
+        return (
+          <Fragment key={key}>
+            <tr data-testid="bg-pre-deemed-part" data-part={key} data-basis="three_way">
+              <td colSpan={2} className="py-1 pr-2 pl-3 text-caption font-semibold text-fuchsia-700 dark:text-fuchsia-300">
+                {label} — 의제취득일(1985.1.1.) 전 상속·증여 · ①②③ 중 큰 금액
+              </td>
+            </tr>
+            {e.reported != null && (
+              <tr data-testid="bg-pre-deemed-candidate" data-part={key} data-candidate="reported">
+                <td className="py-1 pr-2 pl-3">① 상증법 평가액(신고가액){mark("reported")}</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(e.reported)}</td>
+              </tr>
+            )}
+            {e.sec164 != null && (
+              <tr data-testid="bg-pre-deemed-candidate" data-part={key} data-candidate="sec164">
+                <td className="py-1 pr-2 pl-3">② §164④·⑤ 취득당시 기준시가(의제취득일){mark("sec164")}</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(e.sec164)}</td>
+              </tr>
+            )}
+            <tr data-testid="bg-pre-deemed-candidate" data-part={key} data-candidate="converted">
+              <td className="py-1 pr-2 pl-3">
+                ③ 환산취득가액 = 증여가액({label} 몫) {fmt(e.giftValue)} ×{" "}
+                <Frac top={`의제취득일 기준시가 ${fmt(e.stdAtDeemed)}`} bottom={`양도시 기준시가 ${fmt(a.stdPriceAtTransfer)}`} />
+                {mark("converted")}
+              </td>
+              <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(e.converted)}</td>
+            </tr>
+            <tr data-testid="bg-pre-deemed-acquisition" data-part={key}>
+              <td className="py-1 pr-2 pl-3">
+                {label} 취득가액 = ①②③ 중 큰 금액 {fmt(e.wholeAcquisition)} × 채무비율 {rate}
+                {swapped && a.acquisitionMethod === "converted" && a.acquisitionPrice === 0 ? " — 아래 필요경비로 대체(§97②2호 단서)" : ""}
+              </td>
+              <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(a.acquisitionPrice)}</td>
+            </tr>
+            {expenseRow}
+          </Fragment>
+        );
+      })}
+      <tr className="border-t border-fuchsia-300 font-semibold" data-testid="bg-pre-deemed-parts-total">
+        <td className="py-1 pr-2 pl-3">취득가액 합계 (토지 + 건물 · 소득세법 시행령 §159①1호 · §176조의2④)</td>
+        <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.land.acquisitionPrice + bg.perAsset.building.acquisitionPrice)}</td>
+      </tr>
+    </>
   );
 }

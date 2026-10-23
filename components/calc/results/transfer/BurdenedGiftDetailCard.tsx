@@ -17,6 +17,7 @@ import type {
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { BgPreDeemedThreeWayRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
 import { BgPreDeemedStdCaption } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
+import { BgPreDeemedPartsRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
 import { BgBundleCardAcqRows } from "@/components/calc/results/transfer/BgBundleCardAcqRows";
 import { BurdenedGiftGiftTaxRows } from "@/components/calc/results/transfer/BurdenedGiftGiftTaxRows";
 
@@ -199,6 +200,8 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
                 ? "카드별 계산 결과 · 소령 §159①1호"
                 : bg.preDeemed?.basis === "three_way"
                 ? "의제취득일 전 취득 — ①②③ 중 큰 금액 안분 · 소령 §159①1호"
+                : bg.preDeemed?.basis === "three_way_parts"
+                ? "토지·건물별 — 의제취득일 전 파트는 ①②③ 중 큰 금액 · 소령 §159①1호"
                 : bg.preDeemed?.basis === "deemed_std"
                   ? "의제취득일 기준시가 안분 · 소령 §159①1호 괄호"
                   : redevSec166 && bg.acquisitionMethodUsed === "converted" ? "환산취득가액 · 시행령 §166③" : (ACQ_METHOD_LABEL[bg.acquisitionMethodUsed] ?? bg.acquisitionMethodUsed)})
@@ -207,6 +210,8 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
           {bg.cards ? (
             // 묶음(함께 양도·축 B) × 의제취득일 전 카드 — 카드별 결과(PR-7b-5 · Q-33). 아래 단일 자산 분기는 물건 전체 재계산값이라 쓰지 않는다
             <BgBundleCardAcqRows bg={bg} methodLabels={ACQ_METHOD_LABEL} />
+          ) : bg.preDeemed?.basis === "three_way_parts" ? (
+            <BgPreDeemedPartsRows bg={bg} methodLabels={ACQ_METHOD_LABEL} />
           ) : bg.preDeemed?.basis === "three_way" ? (
             <BgPreDeemedThreeWayRows bg={bg} isRedev={propertyType === "redevelopment_apt"} redevSec166={redevSec166} />
           ) : bg.acquisitionMethodUsed === "converted" && redevSec166 ? (
