@@ -173,6 +173,8 @@ interface SectionProps {
   basisNote?: string;
   /** 폼-전역 양도일(= 증여일) — 증축 × 5년 이내 판정(「증축한 부분의 감정가액」 칸 노출). */
   transferDate?: string;
+  /** 일반건물 — 의제취득일 전 상속·증여 파트는 3자 max라 이 방식을 쓰지 않는다(Q-28 · PR-7b-6b) — 그 파트 칸을 숨긴다. */
+  hidePart?: "land" | "building";
 }
 
 /**
@@ -180,7 +182,7 @@ interface SectionProps {
  * 일반건물 토지·건물 2칸 / 토지 1칸 / 그 외(주택·건물·상업용·재개발 완공 APT) 총액 1칸.
  * 취득시 기준시가(개산공제 base)는 자산 종류별 기존 칸에서 받는다 — 일반건물은 취득 정보의 gb* 칸, 그 외는 「② 양도정보」.
  */
-export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method, carryover, fractionalSplit, basisNote, transferDate }: SectionProps) {
+export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method, carryover, fractionalSplit, basisNote, transferDate, hidePart }: SectionProps) {
   const label = BG_PRESUMED_LABEL[method];
   const kind = bgPresumedInputKind(asset.assetKind);
   // 이월과세면 당초 증여자 칸을 읽고 쓴다 — 칸 이름만 다르고 입력 형태·검증 규칙은 같다.
@@ -226,6 +228,7 @@ export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method
       )}
       {kind === "split" ? (
         <>
+          {hidePart !== "land" && (
           <FieldCard label={`${prefix}토지 ${label}`} hint={PRESUMED_HINT[method]}>
             <CurrencyInput
               label=""
@@ -235,6 +238,8 @@ export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method
               onChange={(v) => onChange({ [f.land]: v })}
             />
           </FieldCard>
+          )}
+          {hidePart !== "building" && (
           <FieldCard label={`${prefix}건물 ${label}`}>
             <CurrencyInput
               label=""
@@ -244,6 +249,7 @@ export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method
               onChange={(v) => onChange({ [f.building]: v })}
             />
           </FieldCard>
+          )}
         </>
       ) : kind === "land" ? (
         <FieldCard label={`${prefix}토지 ${label}`} hint={PRESUMED_HINT[method]}>

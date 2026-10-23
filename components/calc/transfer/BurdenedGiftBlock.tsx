@@ -25,6 +25,10 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { BgPreDeemedNotice } from "./BgPreDeemedNotice";
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
 import { bgFractionalHasOutOfScopeShare } from "@/lib/calc/bg-pre-deemed-shares";
+import { gbBgFractionalHasPartialShare } from "@/lib/calc/bg-pre-deemed-shares";
+import { gbBgFractionalPreDeemedPartsAll } from "@/lib/calc/bg-pre-deemed-shares";
+import { gbBgThreeWayParts } from "@/lib/calc/bg-pre-deemed-mode";
+import { GbBgPreDeemedMethodNotice } from "./GbBgPreDeemedMethodNotice";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BurdenedGiftRightValuationSection } from "./BurdenedGiftRightValuationSection";
 import { BurdenedGiftPriorGiftsBlock } from "./BurdenedGiftPriorGiftsBlock";
@@ -165,6 +169,23 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
    * 종전에는 첫 카드만 보고 숨겨 그 지분이 막혔거나(⑧) 숨은 값이 쓰였다. 이 카드 자신의 계산에는 쓰이지 않는다(④는 지분별로 싣는다).
    */
   const methodForOtherShares = preDeemed && isFractionalSplit === true && bgFractionalHasOutOfScopeShare(fractionalShares);
+  /**
+   * 일반건물 · 시가 평가(담보 패) — 의제취득일 전 상속·증여 파트만 3자 max(사용자 결정 Q-28 · PR-7b-6b). 두 파트 다면 산정방식이 없고(라디오·방식별 칸을 숨긴다),
+   * 한 파트면 라디오는 남고 그 파트의 방식별 금액 칸만 숨긴다. 축 B에서 이 카드가 두 파트 다여도 그렇지 않은 지분이 있으면 그 지분용으로 라디오를 남긴다(Q-34와 같다).
+   */
+  const gbParts = gbBgThreeWayParts(asset);
+  const gbMethodForOtherShares = gbParts.all && isFractionalSplit === true && gbBgFractionalHasPartialShare(fractionalShares);
+  const gbNoMethod = gbParts.all && !gbMethodForOtherShares;
+  // 숨길 금액 칸 — 축 B 첫 카드는 모든 지분이 의제인 파트만(다른 지분이 그 칸을 쓴다 · 리뷰 F-1), 그 밖에는 이 카드의 의제 파트
+  const gbHideScope = isFractionalSplit === true && fractionalShares ? gbBgFractionalPreDeemedPartsAll(fractionalShares) : gbParts;
+  const gbHidePart =
+    gbNoMethod || (gbHideScope.land && gbHideScope.building)
+      ? undefined
+      : gbHideScope.land
+        ? ("land" as const)
+        : gbHideScope.building
+          ? ("building" as const)
+          : undefined;
   /** K-1~K-3(기준시가) · K-5(환산) 모두 **취득시 기준시가**를 쓴다 — 환산은 이 값을 분자로 자동 추종. */
   const coDonorNeedsStdPrice =
     asset.bgValuationMode === "sangjeungbeop_standard" ||
@@ -314,7 +335,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               </p>
             </ToneCard>
           )}
-          {(!preDeemed || methodForOtherShares) && (
+          {gbParts.any && <GbBgPreDeemedMethodNotice parts={gbParts} forOtherShares={gbMethodForOtherShares} />}
+          {(!preDeemed || methodForOtherShares) && !gbNoMethod && (
             <BurdenedGiftAcquisitionMethodField
               asset={asset}
               onChange={onChange}
@@ -340,18 +362,19 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           )}
 
           {/* K-6/K-7: 매매사례가액·감정가액 입력 (§97①1호나목 · 시행령 §176의2③1·2호) */}
-          {isBgPresumedMethod(asset.bgAcquisitionMethod) && !isCarryover && !collateralForced && !preDeemed && (
+          {isBgPresumedMethod(asset.bgAcquisitionMethod) && !isCarryover && !collateralForced && !preDeemed && !gbNoMethod && (
             <BurdenedGiftPresumedAcquisitionSection
               asset={asset}
               onChange={onChange}
               method={asset.bgAcquisitionMethod}
               fractionalSplit={isFractionalSplit}
               transferDate={transferDate}
+              hidePart={gbHidePart}
             />
           )}
 
           {/* K-5: 환산취득가액 안내 (별도 입력 없음 — 취득시 기준시가 재사용) */}
-          {collateralForced || preDeemed ? null : asset.bgAcquisitionMethod === "converted" && redevPreApprovalAcqMode(asset) === "estimated" ? (
+          {collateralForced || preDeemed || gbNoMethod ? null : asset.bgAcquisitionMethod === "converted" && redevPreApprovalAcqMode(asset) === "estimated" ? (
             // 재개발 완공 아파트 — 취득가액은 종전 부동산의 취득가액이라 §166③으로 환산한다(일반 환산식이 아니다).
             <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
               종전 부동산 취득가액 = 평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" /> (시행령 §166③) × 채무비율.
@@ -385,7 +408,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
       <BgPreDeemedNotice asset={asset} />
 
       {/* 의제 첫 지분이라도 범위 밖 지분이 있으면 그 지분의 실지취득가액을 여기서 받는다(위 라디오와 같은 판정 · ⑧이 요구 — PR-7b-5) */}
-      {((isMarketMode && !collateralForced && (!preDeemed || methodForOtherShares) && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
+      {((isMarketMode && !collateralForced && (!preDeemed || methodForOtherShares) && !gbNoMethod && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
           <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2 dark:bg-amber-900/40">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">
@@ -414,16 +437,20 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             )}
             {asset.assetKind === "general_building" ? (
               <>
+                {gbHidePart !== "land" && (
                 <FieldCard label="토지 실지취득가액">
                   <CurrencyInput label="" hideUnit
                     value={asset.bgActualAcquisitionLand} data-field="bgActualAcquisitionLand"
                     onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
                 </FieldCard>
+                )}
+                {gbHidePart !== "building" && (
                 <FieldCard label="건물 실지취득가액">
                   <CurrencyInput label="" hideUnit
-                    value={asset.bgActualAcquisitionBuilding}
+                    value={asset.bgActualAcquisitionBuilding} data-field="bgActualAcquisitionBuilding"
                     onChange={(v) => onChange({ bgActualAcquisitionBuilding: v })} />
                 </FieldCard>
+                )}
               </>
             ) : asset.assetKind === "land" ? (
               <FieldCard label="토지 실지취득가액">

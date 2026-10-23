@@ -30,6 +30,9 @@ export const donorBuiltHousingShape = z.object({
     .object({
       landTransferPrice: z.number().int().nonnegative().optional(),
       buildingTransferPrice: z.number().int().nonnegative().optional(),
+      /** 공유지분 계약서(100%) 구분 기재 — §100③ 판정 전용(위 두 칸은 지분 몫). 본인 신축 `selfBuiltHousingShape`도 이 객체를 쓴다 */
+      contractLandTransferPrice: z.number().int().nonnegative().optional(),
+      contractBuildingTransferPrice: z.number().int().nonnegative().optional(),
       landAppraisalAtTransfer: z.number().int().nonnegative().optional(),
       buildingAppraisalAtTransfer: z.number().int().nonnegative().optional(),
       saleSplitExemption: z.enum(["other_law", "demolished_land_only"]).optional(),

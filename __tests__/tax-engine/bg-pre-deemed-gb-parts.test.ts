@@ -55,8 +55,8 @@ describe("§159①1호 A — 일반건물 의제취득일 전 파트별 3자 max
       basis: "three_way_parts",
       stdAtDeemed: 60_000_000,
       parts: {
-        land: { stdAtDeemed: 30_000_000, reported: 600_000_000, sec164: 30_000_000, converted: 75_000_000, selected: "reported", wholeAcquisition: 600_000_000 },
-        building: { stdAtDeemed: 30_000_000, reported: 10_000_000, sec164: 30_000_000, converted: 75_000_000, selected: "converted", wholeAcquisition: 75_000_000 },
+        land: { stdAtDeemed: 30_000_000, giftValue: 500_000_000, reported: 600_000_000, sec164: 30_000_000, converted: 75_000_000, selected: "reported", wholeAcquisition: 600_000_000 },
+        building: { stdAtDeemed: 30_000_000, giftValue: 500_000_000, reported: 10_000_000, sec164: 30_000_000, converted: 75_000_000, selected: "converted", wholeAcquisition: 75_000_000 },
       },
     });
   });

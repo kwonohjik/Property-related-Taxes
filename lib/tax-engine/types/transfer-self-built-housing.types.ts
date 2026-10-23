@@ -26,6 +26,9 @@ export interface SelfBuiltHousingInput {
   sale?: {
     landTransferPrice?: number;
     buildingTransferPrice?: number;
+    /** 공유지분 계약서(100%) 구분 기재 — §100③ 판정 전용(`resolveTransferPriceSplit`가 지분율 < 1일 때 쓴다). 위 두 칸은 지분 몫 */
+    contractLandTransferPrice?: number;
+    contractBuildingTransferPrice?: number;
     landAppraisalAtTransfer?: number;
     buildingAppraisalAtTransfer?: number;
     saleSplitExemption?: "other_law" | "demolished_land_only";

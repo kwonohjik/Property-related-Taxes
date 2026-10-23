@@ -31,6 +31,9 @@ import {
 } from "@/lib/tax-engine/data/rental-155-20-era";
 import { aptDeadlineExtensionIncomplete, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { fieldError } from "./transfer-tax-validate-field";
+import { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
+import { landContributedOriginalApt } from "./redev-field-scope";
+import { resolveAptResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "@/lib/tax-engine/one-house/threshold";
 import { consolidateResidenceMonths } from "@/lib/tax-engine/one-house/residence-months";
@@ -96,6 +99,15 @@ export function validateRentalHousingException(
    *    확인했다. ⑤가 같은 술어로 카드를 감춘다.
    */
   if (!canDeclareRentalHousingException(asset.assetKind, assetIndex)) return null;
+
+  // 재개발·재건축 완공 주택은 시나리오 A만 — B(§161 기간 안분)와 §166 산식을 결합할 근거가 없다(계획서 redev-apt-rental-residence-155-20.plan.md Q-2 (a)).
+  //   엔진도 같은 입력이 오면 비과세를 거두고 확인 필요를 알린다(`REDEV_APT_RENTAL_SCENARIO_B_NOTICE`).
+  if (asset.assetKind === "redevelopment_apt" && rh.scenario === "B") {
+    // 계산기 카드에는 시나리오 칸이 없다(판정 메뉴에서 넘겨받은 선언) — 칸 앵커 없이 문장으로 막는다(「임대주택 정보를 1호 이상」과 같은 형식).
+    return (
+      `${label}: 재개발·재건축으로 완공된 주택은 장기임대주택 특례의 직전거주주택보유주택(시나리오 B · 소득세법 시행령 §161 기간 안분)으로 계산하지 않습니다 — §161 안분과 §166 양도차익 산식을 결합할 근거를 확인하지 못했습니다(확인 필요). 판정 메뉴에서 시나리오 A에 해당하는지 확인하세요.`
+    );
+  }
 
   /**
    * 임대주택 1호 이상 필수 — **시나리오 A만**. B(PHRP)는 0호를 허용한다(I-5): 양도일 현재
@@ -391,7 +403,9 @@ export function validateRentalHousingException(
 
   // interval 모드는 residencePeriodMonthsAsset(raw)를 sync하지 않으므로 도출값 사용 —
   // 엔진 deriveResidencePeriodMonths와 동일 소스(interval 모드 거주기간 오차단 방지).
-  const liveMonthsVal = deriveResidencePeriodMonths(asset, formTransferDate ?? "", "");
+  const step4Months = deriveResidencePeriodMonths(asset, formTransferDate ?? "", "");
+  // 완공APT는 엔진이 재개발 카드의 분리 입력(종전·신축 거주 통산 — 부동산납세과-827)으로 센다 — 같은 leaf로 맞춘다(아래 함수).
+  const liveMonthsVal = asset.assetKind === "redevelopment_apt" ? redevAptResidenceMonths(asset, step4Months || 0) : step4Months;
   // 별건 ⑥ — 거주요건(2년)은 증여·상속 전 동일세대 거주를 통산한 값으로 본다(엔진 `judgeRentalHousingEligibility`와 같은 leaf).
   // B의 등록 이후 거주기간 검증은 본인 전체 거주기간과 비교하므로 통산값을 쓰지 않는다.
   const priorMonths = rentalResidencePriorHouseholdMonths(asset, assetIndex);
@@ -432,6 +446,26 @@ export function validateRentalHousingException(
   }
 
   return null;
+}
+
+/**
+ * 완공APT의 §155⑳1호 거주 개월 — 엔진 번역(`translateRedevAptForHousingJudgment`)과 같은 leaf(`resolveAptResidenceMonths`)에
+ * ④가 실제로 싣는 재개발 값(`buildRedevelopmentPayload`)을 넣는다. Step4 값만 보면 재개발 카드의 분리 입력(종전 12 + 신축 12)을
+ * 0으로 읽어 엔진은 충족인데 ⑧만 막는다(계획서 redev-apt-rental-residence-155-20.plan.md §10 실측).
+ * 토지 출자 원조합원의 세대원 건물 통산(#12)도 엔진처럼 더한다.
+ */
+function redevAptResidenceMonths(asset: AssetForm, step4Months: number): number {
+  const p = buildRedevelopmentPayload(asset);
+  const landContributed = landContributedOriginalApt(asset);
+  return (
+    resolveAptResidenceMonths({
+      isSuccessorMember: p.isSuccessorMember === true || landContributed,
+      successorGiftSameHousehold: p.isSuccessorMember === true ? p.successorGiftSameHousehold : undefined,
+      priorHouseResidenceMonths: p.priorHouseResidenceMonths,
+      newHouseResidenceMonths: p.newHouseResidenceMonths,
+      residencePeriodMonths: step4Months,
+    }) + (landContributed ? (p.householdBuilding?.residenceMonths ?? 0) : 0)
+  );
 }
 
 /**

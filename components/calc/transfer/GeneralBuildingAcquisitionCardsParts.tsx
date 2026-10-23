@@ -25,6 +25,7 @@ import { buildingPenaltyMethodApplies } from "@/lib/tax-engine/transfer-tax-buil
 import { capexHint } from "./capexHint";
 import { GbDeductionOnlyNotice } from "./GbDeductionOnlyNotice";
 import { gbCapexBeforeExtensionSlots } from "@/lib/calc/gb-extension-capex-timing";
+import { gbPartReportedField } from "@/lib/calc/gb-pre-deemed";
 
 export function toBuildingCause(
   cause: AssetForm["acquisitionCause"] | undefined,
@@ -302,6 +303,39 @@ export function GbBuildingInheritedValueCard({
         hint="상속세 신고서·결정통지서상 건물 평가액(상증법 §60~66). 상속개시일 평가액을 취득가액으로 직접 사용 — 환산·개산공제 미적용"
       />
     </ToneCard>
+  );
+}
+
+/**
+ * 부담부증여 · 시가 평가 — 의제취득일(1985.1.1.) 전 상속·증여 파트의 ① 상증법 평가액 (PR-7b-6b · 사용자 결정 Q-28·Q-29 · G-5).
+ * 그 파트의 취득가액은 ①·②(취득시 기준시가 칸)·③(환산취득가액) 중 큰 금액 × 채무비율이고 ①은 필수다(⑧ `transfer-tax-validate-bg.ts`).
+ * 칸은 일반 양도와 같은 필드다(`gbPartReportedField` — 상속은 평가액 칸, 증여는 파트 취득가액 칸) — ④ `gbSec1639Acquisition`이 같은 규칙으로 읽는다.
+ */
+export function GbBgPreDeemedReportedCard({
+  asset,
+  part,
+  onChange,
+}: {
+  asset: AssetForm;
+  part: "land" | "building";
+  onChange: (patch: Partial<AssetForm>) => void;
+}) {
+  const field = gbPartReportedField(asset, part);
+  const inherited = field === "publishedValueAtInheritance" || field === "gbBuildingInheritedValue";
+  const partLabel = part === "land" ? "토지" : "건물";
+  return (
+    <div data-testid={`gb-bg-pre-deemed-reported-${part}`}>
+      <ToneCard tone="violet" title={`① ${inherited ? "상속개시일" : "증여일"} ${partLabel} 평가액 — 의제취득일 전 부담부증여 (소득세법 시행령 §159①1호·§163⑨)`}>
+        <CurrencyInput
+          data-field={field}
+          label={`${partLabel} 평가액`}
+          value={asset[field]}
+          onChange={(v) => onChange({ [field]: v })}
+          required
+          hint={`${inherited ? "상속세" : "증여세"} 신고서·결정통지서상 ${partLabel} 평가액(상증법 §60~66 — 결정·경정한 가액이 있으면 그 가액). 이 금액, ② 취득시(의제취득일) 기준시가, ③ 이 파트 증여가액에 「취득시 기준시가를 양도시 기준시가로 나눈 비율」을 곱한 환산취득가액 중 큰 금액 × 채무비율이 ${partLabel} 취득가액입니다. 공유지분이어도 물건 전체(100%) 기준 금액을 입력하세요.`}
+        />
+      </ToneCard>
+    </div>
   );
 }
 

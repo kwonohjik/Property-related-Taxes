@@ -490,7 +490,10 @@ export function buildAssetPayload(
       const raw = asset.assetKind === "general_building"
         ? (buildGeneralBuildingValuationForCompanion(asset, transferDate) as Record<string, unknown> | undefined)
         : undefined;
-      const gbv = raw !== undefined ? applyShareScale(raw, ratio) : undefined;
+      // 부담부증여는 파트 ①②를 줄이지 않는다 — 이 카드의 §159는 지분 축소를 받지 않는다(`applyShareScale` 주석 · 축 B 일반건물 지분은 `generalBuildingShares` 경로).
+      const gbv = raw !== undefined
+        ? applyShareScale(raw, ratio, { keepPreDeemedClauseA: asset.transferType === "burdened_gift" })
+        : undefined;
       return gbv !== undefined ? { generalBuildingValuation: gbv } : {};
     })(),
     ...(asset.transferType === "burdened_gift"

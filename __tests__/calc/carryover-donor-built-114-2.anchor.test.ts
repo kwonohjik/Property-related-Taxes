@@ -211,7 +211,9 @@ describe("DBC-P ④ payload", () => {
     f.assets[0] = { ...f.assets[0], ownershipNumerator: "50", ownershipDenominator: "100" } as AssetForm;
     const db = donorBuiltOf(await bodyOf(f)) as { housing: Record<string, unknown> & { sale: Record<string, unknown> } };
     expect(db.housing.sale.landTransferPrice).toBe(350_000_000);
-    expect(db.housing.sale.buildingTransferPrice).toBe(150_000_000);
+    // 공유지분 — 건물은 비우고 엔진이 「지분 양도가액 − 토지」로 정한다 · 판정용 계약서 금액(100%)을 싣는다(계약 판정 계획서 PR-4)
+    expect(db.housing.sale.buildingTransferPrice).toBeUndefined();
+    expect(db.housing.sale).toMatchObject({ contractLandTransferPrice: 700_000_000, contractBuildingTransferPrice: 300_000_000 });
     expect(db.housing.sale.landAppraisalAtTransfer).toBe(300_000_000);
     expect(db.housing.landStdPriceAtTransfer).toBe(240_000_000);
     expect(db.housing.buildingStdPriceAtTransfer).toBe(160_000_000);

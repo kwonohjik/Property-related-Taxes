@@ -73,10 +73,14 @@ describe("PR-7b-2 일반건물 부담부증여 안내", () => {
     expect(v.text).toContain("의제취득일(1985.1.1.) 기준 건물기준시가 총액. 이 금액 × 채무비율이 건물 취득가액");
   });
 
-  it("U-2 시가 평가 · 환산 — 산정방식에 따른 쓰임 안내", () => {
-    const v = view(asset({ bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1000000000", bgAcquisitionMethod: "converted" }));
-    expect(v.note).toContain("고른 취득가액 산정방식에 따라");
-    expect(v.text).toContain("의제취득일(1985.1.1.) 기준 건물기준시가 총액. 건물 환산취득가액 산정에");
+  it("U-2 시가 평가 · 1983 상속 — 파트별 3자 max 안내(②이자 ③의 분자 · PR-7b-6) · 1988 상속(범위 밖)은 산정방식에 따른 쓰임 안내", () => {
+    const market = { bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1000000000", bgAcquisitionMethod: "converted" };
+    const v = view(asset(market));
+    expect(v.note).toContain("②(§164④ 가액)이자 ③(환산취득가액)의 분자");
+    expect(v.text).toContain("의제취득일(1985.1.1.) 기준 건물기준시가 총액. 의제취득일 전 건물은 이 금액이 ②(§164⑤ 가액)이자 ③(환산취득가액)의 분자");
+    const post = view(asset({ ...market, acquisitionDate: "1988-07-26", inheritanceStartDate: "1988-07-26" }));
+    expect(post.note).toContain("고른 취득가액 산정방식에 따라");
+    expect(post.text).toContain("취득일 기준 건물기준시가 총액. 건물 환산취득가액 산정에");
   });
 
   it("U-2b 시가 평가 · 담보 승(시가 4억 < 채무 5억) — 「기준시가로 평가하면」이 아니라 담보평가 안내 · 2023.2.28. 전 양도 시기 단서(리뷰 발견 3)", () => {

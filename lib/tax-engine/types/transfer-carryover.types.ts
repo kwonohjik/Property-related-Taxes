@@ -37,6 +37,9 @@ export interface DonorBuiltHousingInput {
     /** 계약서 토지·건물 구분 기재 (둘 중 하나만 있어도 나머지는 총액 − 입력값) */
     landTransferPrice?: number;
     buildingTransferPrice?: number;
+    /** 공유지분 계약서(100%) 구분 기재 — §100③ 판정 전용(`resolveTransferPriceSplit`가 지분율 < 1일 때 쓴다). 위 두 칸은 지분 몫 */
+    contractLandTransferPrice?: number;
+    contractBuildingTransferPrice?: number;
     /** 양도 당시 감정평가가액 — 양쪽이 모두 있어야 채택, 기준시가보다 우선 */
     landAppraisalAtTransfer?: number;
     buildingAppraisalAtTransfer?: number;

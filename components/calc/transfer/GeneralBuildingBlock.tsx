@@ -71,10 +71,9 @@ import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupFi
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
-import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisition";
-import { bgCollateralForcesStdAcq } from "@/lib/calc/burdened-gift-collateral-win";
-import { BG_COLLATERAL_PAREN_ERA_SUFFIX } from "@/lib/calc/burdened-gift-collateral-win";
-import { bgCollateralParenEraUncertain } from "@/lib/calc/burdened-gift-collateral-win";
+import { gbBgLandStdNote } from "@/lib/calc/gb-bg-std-use";
+import { gbBgAcqBuildingHint } from "@/lib/calc/gb-bg-std-use";
+import { GbBgAcquisitionNotice } from "./GbBgAcquisitionNotice";
 
 
 // 배율은 엔진 getBuildingSiteMultiplier가 단일 진실 — UI에서 재구현 금지.
@@ -206,32 +205,8 @@ export function GeneralBuildingBlock({
   }, [asset]);
 
   const isBurdenedGift = asset.transferType === "burdened_gift";
-  /**
-   * 부담부증여에서 기준시가의 **쓰임은 평가 모드·취득가액 산정방식마다 다르다** — 안내 문구 분기용.
-   * 엔진 분기(`burdened-gift-apportionment.ts` STEP 3~5)와 같은 축이다:
-   *   · standard         — 양도시 합계 = 증여가액 보충적 평가, 취득가액 = 취득시 기준시가 × 채무비율
-   *   · market_actual    — 금액에는 안 쓰이고 토지·건물 **배분 비율**로만 쓰인다
-   *                        (양도가액·양도비 = 양도시 비율, 자본적지출 = 취득시 비율)
-   *   · market_converted — 환산취득가액 = 자산별 양도가액 × 취득시 ÷ 양도시 기준시가
-   *   · market_presumed  — 매매사례가액·감정가액(K-6/K-7) × 채무비율. 취득시 기준시가는 **개산공제 base**로만 쓰인다
-   *   · market_unset     — 산정방식 미선택(⑧이 막는다)
-   *   · market_collateral — 담보평가(상증법 §66) 승: 산정방식과 무관하게 취득가액 = 취득시 기준시가 × 채무비율(§159①1호 괄호 · O-5)
-   * 평가 모드 미선택("")은 ④가 기준시가 모드로 보낸다(`transfer-tax-api-burdened-gift.ts`).
-   */
+  /** 부담부증여에서 기준시가의 쓰임(평가 모드·산정방식별) 안내 — `lib/calc/gb-bg-std-use.ts`(800줄 정책 분리). */
   const bgPre1990Land = isBurdenedGift && isGbLandPre1990Sec163_9(asset);
-  const bgStdUse = !isBurdenedGift
-    ? null
-    : asset.bgValuationMode !== "sangjeungbeop_market"
-      ? "standard"
-      : bgCollateralForcesStdAcq(asset)
-        ? "market_collateral"
-      : asset.bgAcquisitionMethod === "actual"
-        ? "market_actual"
-        : asset.bgAcquisitionMethod === "converted"
-          ? "market_converted"
-          : isBgPresumedMethod(asset.bgAcquisitionMethod)
-            ? "market_presumed"
-            : "market_unset";
   /** 일부 양도(O-4) — 증축분 취득가액·필요경비도 「양도분 기준」으로 안내한다. */
   const isPartialTransfer = (asset.areaScenario ?? "same") === "partial";
   /*
@@ -443,21 +418,10 @@ export function GeneralBuildingBlock({
           titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />}
         >
           <p className="text-caption text-slate-600 dark:text-slate-400">
-            {bgStdUse === "standard"
-              ? "부담부증여(기준시가 모드) — 양도시 ① 토지 · ② 건물 기준시가 합계가 증여가액의 보충적 평가액이 되고, 양도시 비율로 양도가액을 토지·건물로 나눕니다. 취득가액은 취득시 기준시가 × 채무비율입니다."
-              : bgStdUse === "market_collateral"
-                ? "부담부증여(시가 모드 · 담보평가 승) — 담보평가액이 시가보다 커서 증여가액이 담보평가액입니다(상증법 §66). 양도시 비율로 양도가액을 토지·건물로 나누고, 취득가액은 산정방식과 관계없이 취득시 기준시가 × 채무비율입니다(소령 §159①1호 괄호" + (bgCollateralParenEraUncertain(transferDate) ? BG_COLLATERAL_PAREN_ERA_SUFFIX : "") + ")."
-              : bgStdUse === "market_actual"
-                ? "부담부증여(시가 모드 · 실지취득가액) — 기준시가는 금액이 아니라 토지·건물 배분 비율로만 쓰입니다. 양도시 비율로 시가(양도가액)와 양도비를, 취득시 비율로 자본적지출을 나눕니다. 취득가액은 실지취득가액 × 채무비율입니다."
-                : bgStdUse === "market_converted"
-                  ? "부담부증여(시가 모드 · 환산취득가액) — 양도시 비율로 시가(양도가액)를 토지·건물로 나누고, 자산별 양도가액에 「취득시 기준시가를 양도시 기준시가로 나눈 비율」을 곱해 환산취득가액을 산정합니다."
-                  : bgStdUse === "market_presumed"
-                    ? "부담부증여(시가 모드 · 매매사례가액·감정가액) — 양도시 비율로 시가(양도가액)를 토지·건물로 나눕니다. 취득가액은 입력한 매매사례가액·감정가액 × 채무비율이고, 취득시 기준시가는 개산공제의 기준으로만 쓰입니다."
-                    : bgStdUse === "market_unset"
-                    ? "부담부증여(시가 모드) — ② 양도정보의 부담부증여 카드에서 취득가액 산정방식을 먼저 선택하세요. 선택에 따라 기준시가의 쓰임이 달라집니다."
-                    : isEstimated
-                      ? "① 토지 · ② 건물 기준시가가 환산취득가 분모와 양도가액 안분 기준을 구성합니다 (§166⑥)."
-                      : "① 토지 · ② 건물 기준시가가 실거래가 합계를 토지·건물로 안분하는 기준입니다 (§166⑥). 취득가액도 같은 비율로 안분됩니다."}
+            {gbBgLandStdNote(asset, transferDate) ??
+              (isEstimated
+                ? "① 토지 · ② 건물 기준시가가 환산취득가 분모와 양도가액 안분 기준을 구성합니다 (§166⑥)."
+                : "① 토지 · ② 건물 기준시가가 실거래가 합계를 토지·건물로 안분하는 기준입니다 (§166⑥). 취득가액도 같은 비율로 안분됩니다.")}
           </p>
 
           {showAcqStdPrice && (
@@ -624,21 +588,12 @@ export function GeneralBuildingBlock({
                   label={gbExtOn ? "취득시 원건물 기준시가" : "취득시 건물기준시가"}
                   unit="원"
                   hint={
-                    bgStdUse === "standard" || bgStdUse === "market_collateral"
-                      ? `${gbBgAcqStdBasis(gbBuildingPreDeemed(asset))} 건물기준시가 총액. 이 금액 × 채무비율이 건물 취득가액이자 개산공제(§163⑥) 기준액입니다.`
-                      : bgStdUse === "market_actual"
-                        ? `${gbBgAcqStdBasis(gbBuildingPreDeemed(asset))} 건물기준시가 총액. 자본적지출을 토지·건물로 나누는 비율에만 쓰입니다 (취득가액은 실지취득가액 · 개산공제 미적용).`
-                        : bgStdUse === "market_converted"
-                          ? `${gbBgAcqStdBasis(gbBuildingPreDeemed(asset))} 건물기준시가 총액. 건물 환산취득가액 산정에 쓰이고, 이 금액 × 채무비율이 개산공제(§163⑥) 기준액입니다.`
-                          : bgStdUse === "market_presumed"
-                          ? `${gbBgAcqStdBasis(gbBuildingPreDeemed(asset))} 건물기준시가 총액. 취득가액에는 쓰이지 않고(입력한 매매사례가액·감정가액 × 채무비율), 이 금액 × 채무비율이 개산공제(§163⑥) 기준액입니다.`
-                          : bgStdUse === "market_unset"
-                            ? `${gbBgAcqStdBasis(gbBuildingPreDeemed(asset))} 건물기준시가 총액.`
-                            : gbBuildingPreDeemed(asset)
+                    gbBgAcqBuildingHint(asset) ??
+                    (gbBuildingPreDeemed(asset)
                               ? GB_PRE_DEEMED_BUILDING_HINT
                             : gbExtOn
                               ? "취득일 기준 원건물(건물1) 기준시가 총액 — 증축분 제외. 이 금액의 3%가 건물 개산공제액 (§163⑥)"
-                              : "취득일 기준 건물기준시가 총액. 이 금액의 3%가 건물 개산공제액 (§163⑥)"
+                              : "취득일 기준 건물기준시가 총액. 이 금액의 3%가 건물 개산공제액 (§163⑥)")
                   }
                 >
                   <CurrencyInput label={gbExtOn ? "취득시 원건물 기준시가" : "취득시 건물기준시가"} hideUnit value={asset.gbAcqBuildingValue} onChange={(v) => onChange({ gbAcqBuildingValue: v })} />
@@ -727,48 +682,8 @@ export function GeneralBuildingBlock({
                기준시가를 받는지** 문구로 알린다. 여기에 다시 추가하지 말 것.
           */}
 
-          {/* 부담부증여 취득가액 안내 — 평가 모드·산정방식별(bgStdUse)로 실제 엔진 산식을 적는다 */}
-          {isBurdenedGift && (
-            <div className="rounded bg-fuchsia-50/60 border border-fuchsia-200 px-3 py-2 text-xs text-fuchsia-800 space-y-0.5 dark:text-fuchsia-200 dark:bg-fuchsia-950/40">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <p className="font-semibold">부담부증여 취득가액 (소득세법 시행령 §159①1호)</p>
-                <LawArticleModal legalBasis="소득세법 시행령 §159①" label="§159① 부담부증여" />
-              </div>
-              {bgStdUse === "standard" && (
-                <p>
-                  증여재산을 기준시가 모드로 평가했으므로 취득가액도 <b>취득시 기준시가 × 채무비율</b>로 산정합니다.
-                  일반 실거래가 입력값은 쓰이지 않습니다.
-                </p>
-              )}
-              {bgStdUse === "market_collateral" && (
-                <p data-testid="gb-bg-collateral-acq-notice">
-                  담보평가액이 시가보다 커서 증여가액이 담보평가액(상증법 §66)이므로 취득가액은 <b>취득시 기준시가 × 채무비율</b>로
-                  산정합니다(소령 §159①1호 괄호{bgCollateralParenEraUncertain(transferDate) && BG_COLLATERAL_PAREN_ERA_SUFFIX}). 선택한 산정방식의 금액은 쓰이지 않고, 필요경비는 개산공제입니다.
-                </p>
-              )}
-              {bgStdUse === "market_actual" && (
-                <p>
-                  취득가액 = ② 양도정보에 입력한 <b>토지·건물 실지취득가액 × 채무비율</b>입니다.
-                  위 취득시 기준시가는 취득가액에 쓰이지 않고 자본적지출을 토지·건물로 나누는 비율로만 쓰입니다.
-                </p>
-              )}
-              {bgStdUse === "market_converted" && (
-                <p>
-                  취득가액 = <b>자산별 양도가액 × 「취득시 기준시가를 양도시 기준시가로 나눈 비율」</b>(환산취득가액)이고,
-                  개산공제는 취득시 기준시가 × 채무비율을 기준으로 합니다.
-                </p>
-              )}
-              {bgStdUse === "market_presumed" && (
-                <p>
-                  취득가액 = ② 양도정보에 입력한 <b>토지·건물 매매사례가액(또는 감정가액) × 채무비율</b>입니다.
-                  위 취득시 기준시가는 취득가액에 쓰이지 않고 <b>개산공제(§163⑥)의 기준액</b>(취득시 기준시가 × 채무비율)으로만 쓰입니다.
-                </p>
-              )}
-              {bgStdUse === "market_unset" && (
-                <p>② 양도정보의 부담부증여 카드에서 취득가액 산정방식을 선택하세요.</p>
-              )}
-            </div>
-          )}
+          {/* 부담부증여 취득가액 안내 — 평가 모드·산정방식별로 실제 엔진 산식을 적는다(`GbBgAcquisitionNotice`) */}
+          {isBurdenedGift && <GbBgAcquisitionNotice asset={asset} transferDate={transferDate} />}
         </ToneCard>
 
         {/* ⑤ 증축 정보 — `GeneralBuildingExtensionSection`으로 분리(2026-08-12, 800줄 정책).

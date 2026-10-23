@@ -158,7 +158,9 @@ export function buildPrimaryContext(
   // 공유 지분(축 A·함께 양도 지분) — 100% 기준 입력 금액을 지분 몫으로(축 B 지분 배열과 같은 leaf). 축 B 최상위 값은 종전 그대로.
   const gbValuation =
     gbValuationRaw && fractionalBundleMerge === false
-      ? applyShareScale(gbValuationRaw as Record<string, unknown>, getOwnershipRatio(primary))
+      ? applyShareScale(gbValuationRaw as Record<string, unknown>, getOwnershipRatio(primary), {
+          keepPreDeemedClauseA: primary.transferType === "burdened_gift",
+        })
       : gbValuationRaw;
   /**
    * E-3 — **일반건물 분리 ON**이면 최상위 `acquisitionMethod`는 `"actual"`로 고정하고 `appraisalValue`·`similarSalesValue`는 싣지 않는다.
