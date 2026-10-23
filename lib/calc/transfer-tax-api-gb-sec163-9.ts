@@ -157,7 +157,8 @@ export function gbSec1639Acquisition(asset: AssetForm, transferDate: string | un
   );
   /** ③ 토지 분자 = ②와 같은 값(1990 전 등급 환산 포함) — 직접 입력 칸만 읽으면 등급만 넣은 자산에서 0이 된다. */
   /** ③ 토지 분자 = ②와 같은 값(1990 전 등급 환산 포함) — 직접 입력 칸만 읽으면 등급만 넣은 자산에서 0이 된다. */
-  const acqLandPerSqm = preDeemedFields.landPreDeemedClauseA
+  // 부담부증여도 — §159①1호 취득시 기준시가는 1990.8.30. 전 상속·증여 토지면 등급 환산값이다(⑤ 칸이 보이는 값 · PR-7b-2 G-3).
+  const acqLandPerSqm = preDeemedFields.landPreDeemedClauseA || isBurdenedGiftGb
     ? effectiveGbLandPriceAtAcq(asset, transferDate ?? "")
     : parseAmount(asset.gbAcqLandPricePerSqm);
 

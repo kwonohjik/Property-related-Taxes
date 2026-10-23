@@ -11,3 +11,13 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 export function bgPreDeemedUsesThreeWay(asset: AssetForm): boolean {
   return isBgPreDeemedAsset(asset) && asset.bgValuationMode === "sangjeungbeop_market" && !bgCollateralForcesStdAcq(asset);
 }
+
+/**
+ * 일반건물 부담부증여의 취득가액이 GB 취득시 기준시가 칸 × 채무비율인가 — 기준시가 평가 또는 시가 평가·담보 승(§159①1호 괄호 · Q-25).
+ * 1985.1.1. 전 상속·증여 파트면 그 칸이 의제취득일 기준시가라 ①③이 후보가 아니다 — ⑧ E-1 면제(G-1)·⑤ 등급 카드 문구(G-4)가 같은 술어를 쓴다(PR-7b-2).
+ * 시가 평가(파트별 3자 max · Q-28·Q-29)는 PR-7b-6.
+ */
+export function gbBgUsesStdAcq(asset: AssetForm): boolean {
+  if (asset.assetKind !== "general_building" || asset.transferType !== "burdened_gift") return false;
+  return asset.bgValuationMode !== "sangjeungbeop_market" || bgCollateralForcesStdAcq(asset);
+}

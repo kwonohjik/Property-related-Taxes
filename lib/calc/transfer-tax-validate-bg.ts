@@ -26,6 +26,7 @@ import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { needsBgAcqStdPriceInput, resolveBgAcqStdPrice } from "./burdened-gift-acq-std-price";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { bgPreDeemedError } from "./transfer-tax-validate-bg-pre-deemed";
+import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { bgMixedUseBlock, isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 import { mixedBgCompanionBlockMessage } from "./burdened-gift-mixed-use-preview";
 import {
@@ -404,7 +405,8 @@ export function validateBurdenedGiftAsset(
   // §159①1호 단서(양도가액을 §99 기준시가로 산정 시 취득가액도 기준시가)에 따라
   // 사용자가 실거래가를 입력했더라도 취득시 기준시가가 산식 입력으로 필요.
   if (asset.assetKind === "general_building") {
-    if (!parseAmount(asset.gbAcqLandPricePerSqm)) {
+    // 1990.8.30. 전 상속·증여 토지는 등급 환산값(④·⑤ display fallback과 같은 leaf · PR-7b-2 G-3)
+    if (!effectiveGbLandPriceAtAcq(asset, formTransferDate ?? "")) {
       return fieldError("gbAcqLandPricePerSqm", `${label}: 부담부증여 — 취득시 토지 ㎡당 공시지가를 입력하세요 (소령 §159①1호 환산).`);
     }
     if (!parseAmount(asset.gbAcqBuildingValue)) {
