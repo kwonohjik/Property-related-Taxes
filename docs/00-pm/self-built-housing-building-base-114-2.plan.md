@@ -409,11 +409,24 @@ useEffect→store 미러링 없음(토글 `onCheckedChange` 단일 patch, 파생
 
 | PR | 범위 | 핵심 anchor |
 |---|---|---|
-| **PR-0**(선택) | `bundled-split-helpers.ts` 779줄 분리 선처리(≥750) | 분리 전후 컴패니언 격자 응답 해시 동일 |
+| **PR-0** ✅ | `bundled-split-helpers.ts` 779줄 분리 선처리(≥750) → 566 + 타입 파일 228 | 분리 전후 컴패니언 격자 응답 해시 동일 |
 | **PR-1** | 엔진 leaf + 타입 + finalize/loss-return 배선 + ⑫(메인·컴패니언·다건 분류) + ⑭(3곳). **`selfBuiltHousing` 부재 시 현행 base 유지**(관대) | 아래 Pre-Do 1~9 · 키 없는 응답 해시 불변 · 다건 키 분류 가드 |
 | **PR-2** | ④ 3곳 + ⑤ 입력 UI + ⑧ validate + ①②③ + 술어 leaf | ⑧↔⑫ 격자 · ④ stale 미전송 · 브라우저/Playwright E2E 신규 spec |
 | **PR-3** | ⑦ 결과 echo 4뷰 + 고지 문구 + 결과 카드 라벨 | 4뷰 단일 접점 anchor · 합산 pickers |
 | **PR-4** | 엔진 엄격화(throw) + 기존 테스트 fixture 갱신(§10) + 주석/문서 정리 | §10 영향 테스트 전수 갱신 · 그 외 불변 |
+
+### PR-0 Do 기록 (2026-10-23, 동작 무변경 리팩터 — 커밋 전 master `87cc68edf` 병합 후 측정)
+
+| 파일 | 분리 전 | 분리 후 |
+|---|---|---|
+| `bundled-split-helpers.ts` | 779 | **566** |
+| `bundled-companion-types.ts` (신규, 타입 전용) | — | 228 |
+
+- **이음매**: 파일 중간의 타입 선언 블록 — `CompanionOwnedKeys`·`CompanionContextOnlyKeys`(키 커버리지 가드의 기준) · `CompanionRawAsset`(⑫ 파생) · `CompanionApportioned` · `CompanionBuildContext` · `MixedUseCompanionContext`. 로직이 없고 `buildCompanionEngineInputs` 한 곳이 소비하며, 이 블록의 소비처(`mixed-use-part-cards.ts`·`bundled-route.ts`)가 `MixedUseCompanionContext`를 가져오던 경로가 `mixed-use-part-cards.ts ↔ bundled-split-helpers.ts` 사이의 (타입 한정) 순환이었는데 새 파일로 풀렸다. 조립 함수 쪽을 쪼개지 않은 이유: `companionEngine` 객체 리터럴(:259-446)과 `satisfies` 키 커버리지 가드(:446·:474)는 한 지역 스코프를 공유하는 하나의 응집 단위라 가르면 억지 조각화다.
+- 변경은 **이동 + 선언 4개에 `export` 추가 + import 정리 + 소비처 2곳(`mixed-use-part-cards.ts`·`bundled-route.ts`)의 `MixedUseCompanionContext` import 경로 변경**뿐이다. 로직·주석은 그대로. `bundled-split-helpers.ts`는 `buildCompanionEngineInputs`·`toApportionKind`·`resolveHousingContextFromCompanion`과 `bundled-companion-split.ts` 재export를 그대로 export한다(재export 추가 없음).
+- **PR-2 여유**: `companionEngine` 매핑(:259-446)이 있는 `bundled-split-helpers.ts`가 566줄이라 `selfBuiltHousing` 매핑 +~6줄을 받아도 ≈572. 위 §8의 `:472-659`·`:688` 줄 번호는 이 분리로 낡았다 — 현재 위치는 `companionEngine` :259-446, `satisfies` :446, 키 커버리지 가드 :474.
+- **회귀 0 격자(응답 해시)**: `vi.mock`으로 `POST`(단건)·`MULTI`(다건)·`calculateBundledTransfer`·`buildCompanionEngineInputs`·`resolveHousingContextFromCompanion`·`toApportionKind`를 감싸 입력·출력 sha256을 기록하는 임시 setup(저장소 미보존)으로 컴패니언·함께 양도 관련 테스트 335파일(주택·일반건물·겸용·분양권/입주권·재개발·split·이월과세·부담부증여·지분 축 B·신축 등)을 돌렸다. 기록 **17,053셀**(POST 8,967 · MULTI 302 · calculateBundledTransfer 5,288 (+throw 9) · buildCompanionEngineInputs 991 · resolveHousingContextFromCompanion 538 · toApportionKind 958). asset id의 `Date.now()`·UUID는 정규화(미정규화 시 베이스라인 자체가 실행마다 달라졌다 — 1163셀). 베이스라인 2회 해시 동일 → 분리 후 **정렬 전체 sha256 `d406abff…2922` 동일, 차이 0행**. 감도 확인: `ownershipRatio: c.ownershipRatio` → `undefined` 뮤테이션 시 해당 anchor 테스트는 13건 모두 통과했지만 격자는 **16셀 diff**로 잡았다(원복 후 동일 재확인).
+- 검증: `tsc --noEmit` 0 · `npm run test:transfer` 1434파일 17,879 passed · eslint 변경 파일 error 0(경고 6건은 분리 전부터 있던 미사용 import — 이동과 무관해 손대지 않음).
 
 ### Pre-Do anchor (구현 전에 먼저 작성·실행 — 「현행 일치 예상」 금지)
 1. **현행 고정**: S-A 500,000,000/25,000,000/총 197,837,200 · S-B 300,000,000/15,000,000 · X 증축 37,500,000/1,875,000.

@@ -54,7 +54,7 @@ import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { buildMixedUseAssetInput } from "./mixed-use-asset-input";
 import { pickArticle89Clause2Facts } from "@/lib/tax-engine/transfer-tax-89-2-consequences";
 import type { MixedUseZodPayload } from "./mixed-use-asset-input";
-import type { MixedUseCompanionContext } from "./bundled-split-helpers";
+import type { MixedUseCompanionContext } from "./bundled-companion-types";
 import { reductionsForCard } from "./general-building-route-cards";
 import { resolveRateBasisAcquisitionDate } from "@/lib/tax-engine/transfer-rate-holding-basis";
 import { resolveBaseHoldingStartDate } from "@/lib/tax-engine/transfer-tax-exemption-holding";

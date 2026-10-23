@@ -17,7 +17,7 @@ import {
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
-import type { MixedUseCompanionContext } from "./bundled-split-helpers";
+import type { MixedUseCompanionContext } from "./bundled-companion-types";
 import { buildGbCompanionItems } from "./general-building-part-cards";
 import {
   resolveHousingContextFromCompanion,
