@@ -12,7 +12,7 @@
  */
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import type { TransferTaxInput } from "./types/transfer.types";
-import type { OneHouseJudgment } from "./one-house/types";
+import type { OneHouseJudgment, OneHouseUnmetException } from "./one-house/types";
 import { ERA_UNDETERMINED_IDS } from "./one-house/era-undetermined";
 import { returnToFarmPostManagementNotice } from "./one-house/rural-return-to-farm-facts";
 import { INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID, INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID, REVERSE_DOUBLE_MERGE_UNVERIFIED_ID } from "./one-house/pending";
@@ -24,6 +24,11 @@ import { CALC_WARNING_UNMET_IDS } from "./one-house/unmet-exceptions";
 import { article89Clause2Notices, surchargeDeclarationMatters } from "./transfer-tax-89-2-consequences";
 import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
 import { mergeConfirmWarnings } from "./one-house/merge-confirm-warnings";
+
+/** 「적용되지 않은 특례」 1건 → 결과 경고 문장 — 겸용주택 경로(`transfer-tax-mixed-use-unmet-notices.ts`)와 같은 형식. */
+export function unmetExceptionWarning(u: Pick<OneHouseUnmetException, "label" | "reasons" | "notice">): string {
+  return u.notice ?? `${u.label}을 적용하지 않았습니다 — ${u.reasons.join(" ")}`;
+}
 
 export function oneHouseJudgmentWarnings(
   exemptionResult: OneHouseJudgment,
@@ -77,8 +82,7 @@ export function oneHouseJudgmentWarnings(
   // OH-22 — §154⑤ 단서 재기산을 적용했으면 판정 메뉴 결과 카드와 같은 문장으로 알린다(재기산 기산일·근거).
   if (exemptionResult.finalOneHouseRestart?.applied) warnings.push(exemptionResult.finalOneHouseRestart.description);
   // OH-38 삭제 전 §154①4호 · §155① 취득 선후(D-1) 미충족이면 판정 메뉴의 「적용되지 않은 특례」와 같은 사유를 낸다.
-  for (const u of exemptionResult.unmetExceptions ?? [])
-    if (CALC_WARNING_UNMET_IDS.has(u.id)) warnings.push(u.notice ?? `${u.label}을 적용하지 않았습니다 — ${u.reasons.join(" ")}`);
+  for (const u of exemptionResult.unmetExceptions ?? []) if (CALC_WARNING_UNMET_IDS.has(u.id)) warnings.push(unmetExceptionWarning(u));
 
   /**
    * §155④⑤ 합가 — 「모름」으로 불성립했고 그것이 **결론을 가를 때만** 확인 필요를 고지한다
