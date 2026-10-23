@@ -48,6 +48,8 @@ export function pickValuationDetails(r: SingleResult): TransferValuationDetailSo
     carryoverTaxationDetail: r.carryoverTaxationDetail,
     splitDetail: r.splitDetail,
     pre1990LandValuationDetail: r.pre1990LandValuationDetail,
+    // 일체 주택 본인 신축의 §114조의2 base 를 건물분으로 구한 산정 내역(Q-12) — 컴패니언·다건 카드별로 따로 실린다(없으면 undefined).
+    selfBuiltHousingPenalty: r.selfBuiltHousingPenalty,
   };
 }
 

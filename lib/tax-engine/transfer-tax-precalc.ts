@@ -55,6 +55,7 @@ import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { TRANSFER } from "./legal-codes";
 import { carryoverExclusionReasonLabel } from "./transfer-carryover-exclusion-labels";
 import { isLandContributedOriginalApt } from "./one-house/redev-apt-judgment-input";
+import { assertSelfBuiltHousingInput } from "./transfer-tax-self-built-housing-penalty";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   TransferTaxInput,
@@ -94,6 +95,8 @@ export function runPreCalculationSteps(
 ): PreCalcResult {
   // STEP 0: 세율 파싱
   const parsedRates = parseRatesFromMap(rates);
+  // 일체 주택 본인 신축 건물분 가산세 입력(Q-12) — 닿을 수 없는 조합은 조용히 무시하지 않고 막는다(없으면 no-op)
+  assertSelfBuiltHousingInput(rawInput);
 
   // STEP 0.4: 1990.8.30. 이전 취득 토지 기준시가 환산 (pre1990Land 제공 시)
   // - 환산취득가 자동 활성화 + standardPriceAtAcquisition/Transfer 주입

@@ -28,6 +28,7 @@ import type { UnsoldHybridResult } from "../transfer-reductions/unsold-hybrid";
 import type { InheritanceHouseValuationResult } from "./inheritance-house-valuation.types";
 import type { MixedUseGainBreakdown } from "./transfer-mixed-use.types";
 import type { CarryoverTaxationDetail } from "./transfer-carryover.types";
+import type { SelfBuiltHousingPenaltyEcho } from "./transfer-self-built-housing.types";
 import type { TransferBurdenedGiftBreakdown } from "./transfer-burdened-gift.types";
 import type { CommercialBuildingValuationResult } from "./commercial-building.types";
 import type { RedevelopmentResult } from "./transfer-redevelopment.types";
@@ -302,6 +303,11 @@ export interface TransferTaxResult {
    * 결과 카드 산식 표시용 ("건물 환산취득가 X × 5%"). 가산세 미발동 시 0.
    */
   penaltyBase: number;
+  /**
+   * [echo] 일체 주택 본인 신축의 §114조의2 가산세 base 를 **건물분**으로 구했을 때의 산정 내역(`selfBuiltHousing` 입력이 base 를 정했을 때만).
+   * 표시부는 값을 재계산하지 않고 이 echo 를 읽는다.
+   */
+  selfBuiltHousingPenalty?: SelfBuiltHousingPenaltyEcho;
   /** [echo, 어댑터 전용] §114조의2 가산세의 산정방식 — 집계에는 건별 step 이 없어 어댑터가 싣는다. 감정가액만이면 `"appraisal"`(상세명세서 라벨), 아니면 undefined(환산취득가액). */
   penaltyMethod?: "appraisal";
   /** [echo, 어댑터 전용] 집계에 든 카드별 증여자 신축·증축 §114조의2 가산세 echo — 어댑터가 `properties[].carryoverTaxationDetail.donorBuiltPenalty` 를 모아 싣는다(PR-5a). 단건 result 는 `carryoverTaxationDetail`/`splitDetail` 로 읽는다. */
@@ -608,4 +614,5 @@ export type TransferValuationDetailSource = Pick<
   | "carryoverTaxationDetail"
   | "splitDetail"
   | "pre1990LandValuationDetail"
+  | "selfBuiltHousingPenalty"
 >;

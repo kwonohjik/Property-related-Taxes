@@ -20,6 +20,7 @@ import { emitPenaltySteps } from "./transfer-tax-penalty-steps";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { buildTransferResultDetails } from "./transfer-tax-finalize";
 import { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty";
+import { resolveSelfBuiltHousingPenaltyAxis, selfBuiltHousingEchoOf } from "./transfer-tax-self-built-housing-penalty";
 import { TRANSFER } from "./legal-codes/transfer";
 import type { RateClause } from "./transfer-tax-rate-clause";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
@@ -102,7 +103,9 @@ export function buildLossTransferTaxResult({
   //    ① 토지·건물 분리 자산의 건물 파트(증축이면 증축부분 base) ② 일반건물 카드 ③ 부담부증여 §159 스텝.
   //    🔴 종전엔 ①을 빠뜨려 분리 취득 건물 파트가 환산·감정이어도 손실이면 가산세가 0이었다(실측 — 2026-10-16).
   const splitBuildingAxis = resolveSplitBuildingPenaltyAxis(splitDetail, effectiveInput.penaltyDonorBuilt ? effectiveInput : input);
-  const penaltyAxis = splitBuildingAxis ?? input.penaltyAxis ?? effectiveInput.penaltyAxis;
+  //    ④ 일체 주택 본인 신축의 환산·감정은 «해당 건물»분(Q-12) — 없으면 undefined 라 종전과 같다.
+  const selfBuiltAxis = resolveSelfBuiltHousingPenaltyAxis(effectiveInput, splitDetail != null);
+  const penaltyAxis = splitBuildingAxis ?? selfBuiltAxis ?? input.penaltyAxis ?? effectiveInput.penaltyAxis;
   if (penaltyAxis) pb0 = penaltyAxis.base;
   // §114조의2① 손실(산출세액 0, ②) 경로도 증축부분 한정 base 적용 — 정상 경로 finalize와 동일 헬퍼(dual-truth 방지).
   //   분리 취득의 건물 파트 축은 증축부분 base까지 정했다 — 다시 덮지 않는다(finalize와 같다).
@@ -114,6 +117,7 @@ export function buildLossTransferTaxResult({
     pb0,
   );
   const pt0 = pr0?.penalty ?? 0;
+  const selfBuiltEcho = selfBuiltHousingEchoOf(selfBuiltAxis, pt0);
   const lit0 = pt0 > 0 ? applyRate(pt0, 0.1) : 0;
   if (pt0 > 0) {
     steps.push({ label: "지방소득세", formula: `${pt0.toLocaleString()} × 10%`, amount: lit0, legalBasis: TRANSFER.LOCAL_INCOME_TAX });
@@ -190,6 +194,7 @@ export function buildLossTransferTaxResult({
     determinedTax: 0,
     penaltyTax: pt0,
     penaltyBase: pt0 > 0 ? pb0 : 0,
+    ...selfBuiltEcho,
     localIncomeTax: lit0,
     // 국기법 §47의2~§47의4분(lossFilingDelayed)은 지방소득세 base에 넣지 않는다 — 위 주석 참조.
     penaltyDetail: lossPenaltyDetail,

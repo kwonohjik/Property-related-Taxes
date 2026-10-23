@@ -298,6 +298,8 @@ export function buildCompanionEngineInputs(
     extensionFloorArea: c.extensionFloorArea,
     extensionStdPriceAtAcquisition: c.extensionStdPriceAtAcquisition,
     extensionAppraisalValue: c.extensionAppraisalValue,
+    // ⑭ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — 컴패니언 주택도 자기 base 를 건물분으로 구한다. 중첩 객체에 Date 없음.
+    selfBuiltHousing: c.selfBuiltHousing,
     // §114조의2 가산세 게이트(`calculateBuildingPenalty`)는 산정방식을 본다 — 본체 ④는 `acquisitionMethod: "estimated"`를 싣지만 컴패니언 ④는
     // 방식 필드가 없어 환산 컴패니언은 신축이어도 게이트에서 막혔다. 엔진에서 「estimated」를 읽는 곳은 가산세·다필지뿐이라 신축·증축 × 환산일 때만 싣는다.
     // 감정가액 컴패니언은 ④가 싣는 표시로 엔진 감정 분기(감정가액 + 개산공제 §163⑥)를 태운다 — 종전엔 이 키가 없어 실가로 읽혀 개산공제가 0이었다.

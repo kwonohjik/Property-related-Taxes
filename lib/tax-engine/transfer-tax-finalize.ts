@@ -21,6 +21,7 @@ import type { IncomeDeductionDetails } from "./transfer-tax-income-deduction-det
 import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty";
+import { resolveSelfBuiltHousingPenaltyAxis, selfBuiltHousingEchoOf } from "./transfer-tax-self-built-housing-penalty";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import { summarizeSplitGain } from "./transfer-tax-split-display";
 import { attachSplitCarryoverEcho } from "./transfer-tax-split-carryover";
@@ -127,6 +128,8 @@ export interface FinalizeResult {
   determinedTax: number;
   penaltyTax: number;
   penaltyBase: number;
+  /** 일체 주택 본인 신축 — 가산세 base 를 건물분으로 구했을 때의 산정 내역 echo (`TransferTaxResult.selfBuiltHousingPenalty`) */
+  selfBuiltHousingPenalty?: TransferTaxResult["selfBuiltHousingPenalty"];
   determinedTaxWithPenalty: number;
   // 지방소득세
   localIncomeTax: number;
@@ -323,7 +326,10 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   //    일반건물 카드는 `input.penaltyAxis`로 같은 축을 직접 싣는다(Q-A5 — 건물 파트 감정가액).
   // 부담부증여 K-7(감정가액) 신축은 §159 스텝이 `effectiveInput.penaltyAxis`로 싣는다(원본 input에는 없다).
   const splitBuildingAxis = resolveSplitBuildingPenaltyAxis(splitDetailForRate, effectiveInput.penaltyDonorBuilt ? effectiveInput : input);
-  const splitPenaltyAxis = splitBuildingAxis ?? input.penaltyAxis ?? effectiveInput.penaltyAxis;
+  // 일체 주택 본인 신축의 환산·감정은 «해당 건물»분이 base 다(Q-12) — `selfBuiltHousing` 이 있을 때만 동작하고 없으면 undefined 라 종전과 같다.
+  //   손실 조기반환(`transfer-tax-loss-return.ts`)이 같은 순서로 읽는다(dual-truth 방지).
+  const selfBuiltAxis = resolveSelfBuiltHousingPenaltyAxis(effectiveInput, splitDetailForRate != null);
+  const splitPenaltyAxis = splitBuildingAxis ?? selfBuiltAxis ?? input.penaltyAxis ?? effectiveInput.penaltyAxis;
   let penaltyBase = splitPenaltyAxis
     ? splitPenaltyAxis.base
     : effectiveInput.acquisitionMethod === "appraisal"
@@ -349,6 +355,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   );
   const penaltyTax = penaltyResult?.penalty ?? 0;
   const determinedTaxWithPenalty = determinedTax + penaltyTax;
+  const selfBuiltEcho = selfBuiltHousingEchoOf(selfBuiltAxis, penaltyTax);
 
   // ── STEP 10: 지방소득세 (총결정세액 × 10%, 원 미만 절사) ──
   // 🔴 G-29: 근거는 「지방세법」 §103②(과세표준) × §103의3(세율) − §103의4(감면)이다.
@@ -471,6 +478,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     determinedTax,
     penaltyTax,
     penaltyBase,
+    ...selfBuiltEcho,
     determinedTaxWithPenalty,
     localIncomeTax,
     penaltyDetail,

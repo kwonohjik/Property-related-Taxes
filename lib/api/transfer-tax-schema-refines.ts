@@ -12,6 +12,7 @@ import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-br
 import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
 import { refineMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refines";
 import { refineDonorBuiltOuter, type DonorBuiltWire } from "./transfer-tax-schema-donor-built";
+import { refineSelfBuiltHousing, isSeparatedLike } from "./transfer-tax-schema-self-built-housing";
 /**
  * Q-1(D15) — 미등기 + 자경농지 감면(조특법 §69) 동시 입력 거부.
  *
@@ -86,6 +87,8 @@ export function addPropertyRefines(
     buildingType?: "new" | "extension";
     extensionFloorArea?: number;
     constructionDate?: string;
+    /** 일체 주택 본인 신축 × §114조의2 가산세 base 건물분 입력(Q-12) — 닿을 수 없는 조합은 `refineSelfBuiltHousing` 이 막는다 */
+    selfBuiltHousing?: unknown;
     /** §164⑦ PHD 입력 — 제공 시 standardPriceAt* 필수 검증 우회 + §164⑦ 취득일 게이트 */
     preHousingDisclosure?: { firstDisclosureDate?: string } | null;
     /** ⑩ 비주택 → 주택 용도변경(§95⑥) — 주거용 사용 개시일의 취득일·양도일 사이 검증 */
@@ -315,6 +318,22 @@ export function addPropertyRefines(
   refineMixedUseBurdenedGift(data, ctx);
   // 이월과세 × 증여자 신축·증축(§114조의2) — 자산 종류·취득원인 의존 규칙(서브객체 수준 규칙은 shape 가 한다)
   refineDonorBuiltOuter(data, ctx);
+  // 일체 주택 본인 신축 × 건물분 가산세 입력(Q-12) — 단건·다건 공용(컴패니언은 `transfer-tax-schema.ts` 루프)
+  refineSelfBuiltHousing(
+    data.selfBuiltHousing !== undefined,
+    {
+      isHousing: data.propertyType === "housing",
+      isSelfBuilt: data.isSelfBuilt,
+      acquisitionCause: data.acquisitionCause,
+      burdenedGift: data.transferType === "burdened_gift" || data.burdenedGiftInfo !== undefined,
+      mixedUse: !!data.mixedUse,
+      buildingType: data.buildingType,
+      separated: isSeparatedLike(data),
+      preHousingDisclosure: !!data.preHousingDisclosure,
+    },
+    ctx,
+    ["selfBuiltHousing"],
+  );
   if (data.acquisitionMethod === "appraisal" && !data.appraisalValue) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
