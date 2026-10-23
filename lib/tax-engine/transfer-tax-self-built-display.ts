@@ -21,9 +21,20 @@ const UNCONFIRMED = "일체 주택의 건물분만 기준으로 하는 정면 �
 
 const NOTICE_HEAD = `본인이 신축한 일체 주택(토지와 건물을 함께 공시한 개별주택가격·공동주택가격)은 ${TRANSFER.BUILDING_PENALTY} 「해당 건물」의 `;
 
-/** 영 §164⑨ 특례 이름 — echo `housingSplit.sec164_9` 가 있을 때만(불발 포함 — 결과 화면의 특례 카드와 같은 시점) */
-const sec164_9Law = (k: "expropriation" | "auction"): string =>
+/** 영 §164⑨ 특례 이름 — echo `housingSplit.sec164_9` 가 있을 때만(불발 포함 — 결과 화면의 특례 카드와 같은 시점). 증여자 신축 표시(`transfer-tax-carryover-donor-display.ts`)도 이 문구를 쓴다 */
+export const sec164_9Law = (k: "expropriation" | "auction"): string =>
   k === "expropriation" ? `${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1} 공익수용 특례` : `${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_2} 공매·경락 특례`;
+
+type Sec164_9Echo = NonNullable<NonNullable<SelfBuiltHousingPenaltyEcho["housingSplit"]>["sec164_9"]>;
+
+/** 양도 당시 주택공시가격이 영 §164⑨ 특례 금액임을 밝히는 한 줄 — 본인 신축·증여자 신축 표시가 같은 문장을 쓴다(값은 echo 그대로) */
+export function sec164_9HousingLine(transferHousing: number, sp: Sec164_9Echo): string {
+  const cand =
+    sp.kind === "expropriation"
+      ? `개별주택가격 ${won(sp.standardHousing)}·보상액 ${won(sp.candidates.compensation ?? 0)}·보상산정 기초 기준시가 ${won(sp.candidates.basis ?? 0)} 중 가장 작은 금액`
+      : `개별주택가격 ${won(sp.standardHousing)}·공매·경락가액 ${won(sp.candidates.auction ?? 0)} 중 작은 금액`;
+  return `양도 당시 주택공시가격 ${won(transferHousing)}은 ${sec164_9Law(sp.kind)}에 따라 ${cand}입니다.`;
+}
 
 type Basis = "estimated" | "appraisal_direct" | "appraisal_apportioned";
 const basisOf = (e: SelfBuiltHousingPenaltyEcho): Basis =>
@@ -75,13 +86,7 @@ export function selfBuiltPenaltyView(e: SelfBuiltHousingPenaltyEcho | undefined)
       );
       lines.push(`취득 당시 주택공시가격 ${won(h.acquisitionHousing)} = 토지분 ${won(h.acquisitionLand)} + 건물분 ${won(h.acquisitionBuilding)}`);
       const sp = h.sec164_9;
-      if (sp) {
-        const cand =
-          sp.kind === "expropriation"
-            ? `개별주택가격 ${won(sp.standardHousing)}·보상액 ${won(sp.candidates.compensation ?? 0)}·보상산정 기초 기준시가 ${won(sp.candidates.basis ?? 0)} 중 가장 작은 금액`
-            : `개별주택가격 ${won(sp.standardHousing)}·공매·경락가액 ${won(sp.candidates.auction ?? 0)} 중 작은 금액`;
-        lines.push(`양도 당시 주택공시가격 ${won(h.transferHousing)}은 ${sec164_9Law(sp.kind)}에 따라 ${cand}입니다.`);
-      }
+      if (sp) lines.push(sec164_9HousingLine(h.transferHousing, sp));
       lines.push(`양도 당시 주택공시가격 ${won(h.transferHousing)} = 토지분 ${won(h.transferLand)} + 건물분 ${won(h.transferBuilding)}`);
       lines.push(
         `건물분 기준시가는 주택공시가격${sp ? "(특례 적용 금액)" : ""}을 토지 기준시가와 건물 기준시가의 비율로 나눈 값입니다 — 토지분은 가산세 대상에서 제외합니다 (소득세법 §99①1호, 시행령 §166⑥).`,

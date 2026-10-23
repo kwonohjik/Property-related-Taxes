@@ -8,6 +8,7 @@
  */
 
 import type { RateBasisFacts } from "../transfer-rate-holding-basis";
+import type { SelfBuiltHousingPenaltyEcho } from "./transfer-self-built-housing.types";
 
 // ============================================================
 // 입력 타입
@@ -444,5 +445,12 @@ export interface DonorBuiltPenaltyEcho {
     transferBuilding: number;
     /** 양도가액 건물분 S_b */
     saleBuilding: number;
+    /**
+     * 양도 당시 주택공시가격 — 영 §164⑨ 특례가 걸리면 차감 후(H_T′). `transferBuilding` 은 이 금액을 토지·건물 기준시가 비율로 나눈 건물 몫이다.
+     * 특례 detail 이 있을 때만 싣는다(`sec164_9` 와 함께 — 특례 없는 셀의 응답은 종전과 바이트 동일).
+     */
+    transferHousing?: number;
+    /** 영 §164⑨ 공익수용(1호)·공매·경락(2호) 특례 산출근거 — 본인 신축 echo 와 같은 모양·같은 생성 함수. 특례 detail 이 있을 때만(불발 포함) */
+    sec164_9?: NonNullable<NonNullable<SelfBuiltHousingPenaltyEcho["housingSplit"]>["sec164_9"]>;
   };
 }
