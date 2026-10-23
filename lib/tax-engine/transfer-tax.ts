@@ -48,7 +48,7 @@ import {
   DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX,
   surchargeRegulatedAreaNotices,
 } from "./one-house/designated-district-undeclared";
-import { RENTAL_4HO_UNMET_ID } from "./one-house/rental-registration-4ho";
+import { CALC_WARNING_UNMET_IDS } from "./one-house/unmet-exceptions";
 import { article89Clause2Notices, surchargeDeclarationMatters } from "./transfer-tax-89-2-consequences";
 import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
 import { resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
@@ -299,9 +299,9 @@ export function calculateTransferTax(
   warnings.push(...surchargeRegulatedAreaNotices(input, multiHouseSurchargeResult?.surchargeApplicable, exemptionResult));
   // OH-22 — §154⑤ 단서 재기산을 적용했으면 판정 메뉴 결과 카드와 같은 문장으로 알린다(재기산 기산일·근거).
   if (exemptionResult.finalOneHouseRestart?.applied) warnings.push(exemptionResult.finalOneHouseRestart.description);
-  // OH-38 — 삭제 전 §154①4호를 선택했으나 요건 미충족이면 판정 메뉴의 「적용되지 않은 특례」와 같은 사유를 낸다.
+  // OH-38 삭제 전 §154①4호 · §155① 취득 선후(D-1) 미충족이면 판정 메뉴의 「적용되지 않은 특례」와 같은 사유를 낸다.
   for (const u of exemptionResult.unmetExceptions ?? [])
-    if (u.id === RENTAL_4HO_UNMET_ID) warnings.push(`${u.label}을 적용하지 않았습니다 — ${u.reasons.join(" ")}`);
+    if (CALC_WARNING_UNMET_IDS.has(u.id)) warnings.push(u.notice ?? `${u.label}을 적용하지 않았습니다 — ${u.reasons.join(" ")}`);
 
   /**
    * §155④⑤ 합가 — 「모름」으로 불성립했고 그것이 **결론을 가를 때만** 확인 필요를 고지한다

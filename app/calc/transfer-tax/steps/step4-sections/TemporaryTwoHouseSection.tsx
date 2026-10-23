@@ -267,12 +267,19 @@ function TempTwoHouseVerdictCard({
                 <>
                   <p>
                     {tempTwoHouseVerdict.oneYearMet ? "충족" : "미충족"} · 요건 A — 종전주택 취득 후 1년 경과 후 신규주택 취득
-                    {tempTwoHouseVerdict.oneYearWaived
+                    {tempTwoHouseVerdict.orderNote
+                      ? ""
+                      : tempTwoHouseVerdict.oneYearWaived
                       ? form.publicInstitutionRelocation
                         ? " (§155⑯ 공공기관 이전으로 1년 요건 면제)"
                         : " (§154① 단서 사유로 1년 요건 면제)"
                       : ` (1년 경과일 ${tempTwoHouseVerdict.oneYearThreshold.toISOString().slice(0, 10)})`}
                   </p>
+                  {tempTwoHouseVerdict.orderNote && (
+                    <p data-testid="temp-two-house-order-note" className="text-caption">
+                      {tempTwoHouseVerdict.orderNote}
+                    </p>
+                  )}
                   <p>
                     {tempTwoHouseVerdict.threeYearMet ? "충족" : "미충족"} · 요건 B — 신규주택 취득일부터{" "}
                     {tempTwoHouseVerdict.deadlineExtendedByTenant

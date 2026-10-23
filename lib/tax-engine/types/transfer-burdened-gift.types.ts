@@ -501,6 +501,12 @@ export interface TransferBurdenedGiftBreakdown {
    *   ①② 채택이면 `acquisitionMethodUsed` = "actual"(실제 필요경비), ③ 채택이면 "converted"(개산공제 + §97②2호 단서).
    * 금액은 지분 축소 후·채무비율 안분 전이다(`stdAtDeemed`만 물건 전체).
    */
+  /**
+   * 묶음(함께 양도·축 B) 결과 — 카드별 §159 결과(세액에 쓰인 값). 엔진 M-0.5(`transfer-tax-aggregate-burdened-gift.ts`)가 의제취득일 전
+   * 카드가 있을 때만 싣는다(사용자 결정 Q-33 · PR-7b-5). 이때 `perAsset` 취득가액·개산공제는 이 카드들의 합이다(물건 전체 재계산값이 아니다).
+   */
+  cards?: Array<{ propertyId: string; label?: string; breakdown: TransferBurdenedGiftBreakdown }>;
+
   preDeemed?: {
     basis: "deemed_std" | "three_way";
     stdAtDeemed: number;

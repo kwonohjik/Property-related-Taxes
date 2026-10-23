@@ -35,6 +35,8 @@ import { resolveSaleApportionBasis, type ApportionBasisKind } from "./sale-split
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
 import { sec100_3Era } from "./data/sec100-3-split-era";
 import type { SaleSplitExemption } from "./sale-split-deemed-unclear";
+import { judgeSaleSplitByContract, contractJudgmentDetail } from "./sale-split-contract-judgment";
+import type { SaleSplitContract } from "./sale-split-contract-judgment";
 import type { SaleSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 
 // ============================================================
@@ -124,6 +126,11 @@ export interface BundledSaleAllocationInput {
   /** §166⑧ 30% 의제 예외 사유 — 양도일이 단서 시행(2025.1.1.) 전이면 무시된다 */
   saleSplitExemption?: SaleSplitExemption;
   /**
+   * 공유지분 — 지분 몫으로 줄이기 전 계약서 구분 기재(100%). 있으면 §100③을 이 값으로 판정하고 결론만 지분에 적용한다.
+   * 위 `landTransferPrice`·`buildingTransferPrice`는 지분 몫이다(`scaleDeclaredSaleSplitToShare`).
+   */
+  saleSplitContract?: SaleSplitContract;
+  /**
    * 양도일 — §100③ 적용 구간(`sec100_3Era`)을 가른다. **필수**: 빠뜨리면 모든 양도일에 현행 규칙이 적용된다.
    * 두 경로(환산·실가)가 이 leaf를 공유하므로 둘 다 넘겨야 한다.
    */
@@ -155,8 +162,9 @@ export function allocateBundledTransferPrice(input: BundledSaleAllocationInput):
    * + 잔액 보정) — 그래서 회귀가 0이고, 그 대가로 「부가가치세법 시행령」 제64조 제1항의
    * basis 서열(감정평가가액 > 기준시가)이 일반건물에도 따라온다.
    */
-  const basis = resolveSaleApportionBasis({
-    totalTransferPrice: input.totalTransferPrice,
+  // 계약서(100%) 판정도 같은 basis로 안분한다 — 총액만 다르다(`sale-split-contract-judgment.ts`).
+  const basisOf = (totalTransferPrice: number) => resolveSaleApportionBasis({
+    totalTransferPrice,
     stdPrice: { land: landStdTotal, building: input.transferBuildingStdPrice },
     /**
      * 감정평가가액 — 서열 **1순위**(부가령 §64①1호 단서). split 경로
@@ -176,6 +184,7 @@ export function allocateBundledTransferPrice(input: BundledSaleAllocationInput):
         }
       : {}),
   });
+  const basis = basisOf(input.totalTransferPrice);
   if (!basis.apportioned) {
     // 토지·건물 기준시가 합이 0 — 나눌 근거가 없다. 0으로 메우면 조용한 오답이 된다.
     throw new TaxCalculationError(
@@ -220,12 +229,23 @@ export function allocateBundledTransferPrice(input: BundledSaleAllocationInput):
     land: landIn ?? input.totalTransferPrice - buildingIn!,
     building: buildingIn ?? input.totalTransferPrice - landIn!,
   };
-  const judged = judgeDeemedUnclearSplit({
-    declared,
-    apportioned,
-    era: sec100_3Era(input.transferDate),
-    ...(input.saleSplitExemption ? { exemption: input.saleSplitExemption } : {}),
-  });
+  const era = sec100_3Era(input.transferDate);
+  const exemption = input.saleSplitExemption ? { exemption: input.saleSplitExemption } : {};
+  const common = {
+    basisKind: basis.kind!,
+    ...(basis.appraisalRejected ? { appraisalRejected: basis.appraisalRejected } : {}),
+  };
+
+  // 공유지분 — 계약서(100%) 금액으로 판정하고 결론만 지분에 적용한다(`sale-split-contract-judgment.ts` Q-1 a · Q-2 a).
+  const contract = input.saleSplitContract;
+  if (contract) {
+    const contractApportioned = basisOf(contract.land + contract.building).apportioned;
+    const c = judgeSaleSplitByContract({ contract, contractApportioned, shareDeclared: declared, shareApportioned: apportioned, era, ...exemption });
+    const proportionBasis = c.deemedUnclear ? apportionBasisValue : c.shareApplied;
+    return { allocation: c.shareApplied, proportionBasis, judgment: contractJudgmentDetail(c, contract.ownershipRatio, common) };
+  }
+
+  const judged = judgeDeemedUnclearSplit({ declared, apportioned, era, ...exemption });
 
   return {
     allocation: judged.applied,
@@ -236,8 +256,7 @@ export function allocateBundledTransferPrice(input: BundledSaleAllocationInput):
       declared,
       apportioned,
       applied: judged.applied,
-      basisKind: basis.kind!,
-      ...(basis.appraisalRejected ? { appraisalRejected: basis.appraisalRejected } : {}),
+      ...common,
       ...judged.detail,
     },
   };

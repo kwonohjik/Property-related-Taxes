@@ -50,6 +50,8 @@ interface Props {
   isSingleAsset?: boolean;
   /** 첫 자산(양도 주택) — 다주택 중과의 양도 주택 행은 첫 자산만 싣는다(`buildHousesPayload`) */
   isPrimary?: boolean;
+  /** 축 B 첫 카드 — 지분 전체(부담부증여 산정방식 노출 판정 · PR-7b-5) */
+  fractionalShares?: readonly AssetForm[];
 }
 
 export function AssetSectionTransfer({
@@ -64,6 +66,7 @@ export function AssetSectionTransfer({
   isCompanionBundle,
   isSingleAsset,
   isPrimary,
+  fractionalShares,
 }: Props) {
   // 증환지 증가분: 당초분(assets[0]) 양도시 기준시가에서 live fallback (증가분 추가 순서와 무관하게 자동).
   // 사용자가 증가분 카드에서 직접 입력하면 자기 값이 우선(override). API·validate도 동일 fallback.
@@ -105,6 +108,7 @@ export function AssetSectionTransfer({
         transferDate={transferDate ?? ""}
         isFractionalSplit={isFractionalSplit}
         isCompanionBundle={isCompanionBundle}
+        fractionalShares={fractionalShares}
       />
 
       {/* 양도가액 — 부담부증여 시 엔진 자동 도출 (소령 §159) 안내 + 기준시가는 별도 유지 */}

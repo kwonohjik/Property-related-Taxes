@@ -367,6 +367,12 @@ export interface SaleSplitJudgmentDetail {
    * 사용자는 **이유를 알 수 없다**. 침묵 후퇴를 막으려고 결과에 싣는다(Phase 1-E).
    */
   appraisalRejected?: AppraisalRejectReason;
+  /**
+   * 공유지분 — 위 구분 기재·안분·적용 가액은 **계약서(100%)** 금액이고, 이것이 그 지분에 실제로 적용한 가액이다.
+   * 판정은 계약서 금액으로 하고 결론만 지분에 적용한다(`sale-split-contract-judgment.ts` · `sale-split-100-3-share-scale-judgment.plan.md` Q-3 a).
+   * 단독 소유·종전 결과는 없다(위 값이 곧 적용 가액).
+   */
+  share?: { ownershipRatio: number; applied: SaleSplitPair };
 }
 
 /**

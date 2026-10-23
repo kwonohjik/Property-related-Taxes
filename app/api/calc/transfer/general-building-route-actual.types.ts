@@ -120,6 +120,8 @@ export interface GeneralBuildingActualPricePayload {
   landAppraisalAtTransfer?: number;
   buildingAppraisalAtTransfer?: number;
   saleSplitExemption?: SaleSplitExemption;
+  /** 공유지분 — 지분 몫으로 줄이기 전 계약서 구분 기재(100%) · `scaleDeclaredSaleSplitToShare`가 싣는다. */
+  saleSplitContract?: import("@/lib/tax-engine/sale-split-contract-judgment").SaleSplitContract;
   buildingAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
   /** 상속 시 피상속인 취득일 (법 §104②1호). */
   decedentAcquisitionDate?: Date;

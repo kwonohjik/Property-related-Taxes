@@ -38,7 +38,11 @@ export function FilingFormTable({
   // 겸용주택은 `transferBurdenedGiftBreakdown`이 아니라 `mixedUseDetail.burdenedGift`(4부분 구조)에 싣는다.
   const burdenedGiftBreakdown = (
     result as unknown as {
-      transferBurdenedGiftBreakdown?: { acquisitionMethodUsed?: TransferBurdenedGiftAcquisitionMethodUsed; preDeemed?: { basis: "deemed_std" | "three_way" } };
+      transferBurdenedGiftBreakdown?: {
+        acquisitionMethodUsed?: TransferBurdenedGiftAcquisitionMethodUsed;
+        preDeemed?: { basis: "deemed_std" | "three_way" };
+        cards?: unknown[];
+      };
     }
   ).transferBurdenedGiftBreakdown ?? result.mixedUseDetail?.burdenedGift;
   const isBurdenedGift = Boolean(burdenedGiftBreakdown);
@@ -46,8 +50,12 @@ export function FilingFormTable({
   // 의제취득일 전 취득 자산은 산정 기준이 따로다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18) — 겸용 명세에는 이 echo가 없다.
   const preDeemedBasis =
     burdenedGiftBreakdown && "preDeemed" in burdenedGiftBreakdown ? burdenedGiftBreakdown.preDeemed?.basis : undefined;
+  // 묶음 × 의제취득일 전 카드 — 명세의 방식 값은 물건 전체 재계산의 것이라 카드별 산정 기준을 대신하지 못한다(PR-7b-5 · Q-33)
+  const bundleCards = burdenedGiftBreakdown && "cards" in burdenedGiftBreakdown ? burdenedGiftBreakdown.cards : undefined;
   const burdenedGiftAcqFormula =
-    preDeemedBasis === "three_way"
+    bundleCards
+      ? "자산별 §159①1호 취득가액(의제취득일 전 자산은 3자 max·의제취득일 기준시가) × 채무비율 — 부담부증여 명세 참조"
+      : preDeemedBasis === "three_way"
       ? "①상증법 평가액·②§164 기준시가·③환산취득가액 중 큰 금액 × 채무비율"
       : preDeemedBasis === "deemed_std"
         ? "의제취득일(1985.1.1.) 기준시가 × 채무비율"

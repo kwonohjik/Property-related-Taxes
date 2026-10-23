@@ -32,12 +32,13 @@ import {
   unavoidableResolvedDeadlineApplies,
   UNAVOIDABLE_REASON_LABEL,
 } from "../transfer-tax-exemption-requirements";
-import { collectRental4hoUnmet } from "./rental-registration-4ho";
+import { collectRental4hoUnmet, RENTAL_4HO_UNMET_ID } from "./rental-registration-4ho";
 import { PARENTAL_CARE_AGE_CONFIRM_NOTICE, PARENTAL_CARE_AGE_UNMET_REASON, parentalCareAgeVerdict } from "./parental-care-age";
 import { checkReturnToFarmFacts } from "./rural-return-to-farm-facts";
 import { deadlineHoldingUnmetReason } from "./deadline-holding";
 import { baseRequirementPhrase } from "./base-requirement-phrase";
 import { overlappedTemporaryTwoHouseTimingReasons } from "./unmet-deadline-reasons";
+import { temporaryTwoHouseOrderReason } from "./new-house-origin";
 import { collectInheritedUnmet } from "./unmet-inherited";
 import { deadlineEndFrom, isWithinDeadline } from "../civil-period";
 import type { OneHouseJudgeInput, OneHouseUnmetException } from "./types";
@@ -328,12 +329,18 @@ function pushInheritedBothPoolsCapReason(reasons: string[], input: OneHouseJudge
  *    ⑦ 농어촌 중첩 3주택(D3)의 기간 탈락만 낸다(2주택은 검토표가 같은 사유를 낸다).
  *    선언하지 않은 특례(`temporaryTwoHouse` 없음)는 말하지 않는다.
  */
+/** §155① 종전·신규 취득 선후 불충족(D-1) — 1년 요건 면제 사유가 있어도 불성립이라 따로 싣는다 */
+export const TEMP_TWO_HOUSE_ORDER_UNMET_ID = "155-1-acquisition-order";
+/** 계산기 결과 경고로 옮기는 미충족 특례 — 판정 메뉴 「적용되지 않은 특례」와 같은 사유를 계산기·부담부증여 결과에도 낸다 */
+export const CALC_WARNING_UNMET_IDS: ReadonlySet<string> = new Set([RENTAL_4HO_UNMET_ID, TEMP_TWO_HOUSE_ORDER_UNMET_ID]);
+
 function collectTemporaryTwoHouseUnmet(
   input: OneHouseJudgeInput,
   oneHouseRules: OneHouseSpecialRulesData,
 ): OneHouseUnmetException[] {
   if (!input.temporaryTwoHouse) return [];
   const reasons: string[] = [];
+  let orderReason: string | undefined;
   pushInheritedBothPoolsCapReason(reasons, input, "일시적 2주택 특례(§155①)");
   /**
    * D3 — ⑦ 농어촌주택이 겹친 3주택은 엔진이 §155① 분기로 본다(E-3 `ruralTemporaryTwoHouseOverlapCountHolds`). 기간 요건에서 탈락했으면
@@ -342,8 +349,12 @@ function collectTemporaryTwoHouseUnmet(
   const twoHouseRule = oneHouseRules.temporary_two_house;
   // 신규 주택의 취득 경위(분양권·조합원입주권 등 권리 유래) 때문에 불성립이면 그 사유를 밝힌다(결정 #43).
   if (twoHouseRule && (twoHouseSpecialCountHolds(input) || ruralTemporaryTwoHouseOverlapCountHolds(input))) {
-    const { origin } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
+    const { origin, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
     if (origin.blocked) reasons.push(...origin.reasons, ...origin.unconfirmed);
+    // 종전·신규 취득 선후가 맞지 않으면(D-1) 1년 요건 면제 사유가 있어도 불성립이다 — 요건 표와 같은 문장 · 계산기 경고로도 옮긴다(아래 항목).
+    if (!timing.acquiredInOrder) {
+      orderReason = temporaryTwoHouseOrderReason(input.temporaryTwoHouse.previousAcquisitionDate, input.temporaryTwoHouse.newAcquisitionDate);
+    }
   }
   if (twoHouseRule && ruralTemporaryTwoHouseOverlapCountHolds(input)) {
     reasons.push(
@@ -354,7 +365,18 @@ function collectTemporaryTwoHouseUnmet(
       ),
     );
   }
-  if (reasons.length === 0) return [];
+  const order: OneHouseUnmetException[] = orderReason
+    ? [
+        {
+          id: TEMP_TWO_HOUSE_ORDER_UNMET_ID,
+          label: "일시적 2주택 — 종전·신규 주택 취득 순서",
+          legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}①`,
+          reasons: [orderReason],
+          notice: orderReason,
+        },
+      ]
+    : [];
+  if (reasons.length === 0) return order;
   return [
     {
       id: "155-1-temporary-two-house",
@@ -363,6 +385,7 @@ function collectTemporaryTwoHouseUnmet(
       legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}①`,
       reasons,
     },
+    ...order,
   ];
 }
 

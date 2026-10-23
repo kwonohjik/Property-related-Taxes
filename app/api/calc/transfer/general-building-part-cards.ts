@@ -103,6 +103,8 @@ export function buildGbPartCards(
   burdenedGiftInfo?: BurdenedGiftInfo,
   /** 축 B(지분) 전용 — §159의 A·C를 줄일 지분율. 컴패니언은 넘기지 않는다(`burdenedGiftOwnershipRatio` 주석). */
   burdenedGiftOwnershipRatio?: number,
+  /** 공유지분 — 그 물건의 계약 총액(100%). 계약서 구분 기재로 §100③을 판정한다(`scaleDeclaredSaleSplitToShare`). */
+  contractTotal?: number,
 ): GbPartCards {
   const estimatedPayloadOf = (raw: Record<string, unknown>): GeneralBuildingValuationPayload => ({
     ...(raw as unknown as GeneralBuildingValuationPayload),
@@ -117,7 +119,7 @@ export function buildGbPartCards(
     ...extensionBundledInjection(raw, actualAcquisitionPrice, actualExpenses),
   });
   // 공유 지분 — 계약서 구분 기재 양도가액(100% 기준)을 이 지분의 양도가액에 맞춘다(단건 `dispatchGeneralBuilding`과 같은 leaf).
-  const gbvShare = scaleDeclaredSaleSplitToShare(gbvIn, ownershipRatio);
+  const gbvShare = scaleDeclaredSaleSplitToShare(gbvIn, ownershipRatio, contractTotal);
   // 의제취득일 전 상속·증여 파트 — 단건 `dispatchCoercedGeneralBuilding`과 같은 재선택(PR-4).
   const preDeemed = burdenedGiftInfo
     ? { raw: gbvShare, echo: undefined }
@@ -268,7 +270,7 @@ export function buildGbCompanionItems(
     TransferTaxItemInput,
     "transferPrice" | "transferDate" | "acquisitionDate" | "acquisitionPrice" | "expenses" | "reductions" | "burdenedGiftInfo" | "transferType"
   >,
-  src: { ownershipRatio?: number; assetId: string; assetLabel: string },
+  src: { ownershipRatio?: number; assetId: string; assetLabel: string; totalPropertyTransferPrice?: number },
   /**
    * 그 자산의 결과 상세(산식 재료)를 받는 곳 — 함께 양도는 일반건물이 여럿일 수 있어 자산 id별로 모은다(`bundled-route.ts`).
    * 단건 슬롯(`generalBuildingValuationDetail`)에 넣지 않는다 — 수정신고 판별자다(`gb-bundled-result-formulas.plan.md` C-1).
@@ -295,6 +297,9 @@ export function buildGbCompanionItems(
     // ⑭ 부담부증여(§159) — 컴패니언 엔진 입력의 `burdenedGiftInfo`(⑫→`bundled-split-helpers.ts:547`·주 자산은 `engineInput`)를 카드 빌더까지 운반한다.
     //    `transferType` 표지와 함께 있을 때만(단건 `route.ts`가 읽는 조건과 같다). 신고 단위 채무 재배분(`assumedDebtOverride`)은 info 안에 있다.
     engine.transferType === "burdened_gift" ? engine.burdenedGiftInfo : undefined,
+    undefined,
+    // 공유지분 — 그 물건 전체(100%) 양도가액. 모르면(안분 모드) 한쪽 기재 계약서만 종전 지분 판정으로 남는다.
+    src.totalPropertyTransferPrice,
   );
   const tagged = tagGbCards(built.cards, src.assetId, src.assetLabel);
   const swap = built.swap ? remapGbSwap(built.swap, src.assetId) : undefined;

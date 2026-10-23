@@ -381,6 +381,8 @@ export type OneHouseUnmetException = {
    * (「적용 안 됨」만 말하고 이유를 못 대면 안내가 아니라 혼란이다).
    */
   reasons: string[];
+  /** 계산기 결과 경고로 옮길 때의 문장(`CALC_WARNING_UNMET_IDS`) — 없으면 「{label}을 적용하지 않았습니다 — 사유」로 만든다 */
+  notice?: string;
 };
 
 /**

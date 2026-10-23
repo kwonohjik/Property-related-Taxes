@@ -346,6 +346,8 @@ export async function POST(request: NextRequest) {
           reductions: engineInput.reductions,
           filingPenaltyDetails: engineInput.filingPenaltyDetails,
           delayedPaymentDetails: engineInput.delayedPaymentDetails,
+          // 공유지분 — 계약 총액(100%). §100③을 계약서 금액으로 판정한다(`sale-split-100-3-share-scale-judgment.plan.md`).
+          contractTotalPrice: data.totalPropertyTransferPrice,
           /**
            * ⑭ 배우자등 이월과세 (F27) — **부담부증여 §159 분기가 소비한다**.
            *
