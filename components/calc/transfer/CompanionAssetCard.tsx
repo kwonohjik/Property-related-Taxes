@@ -13,6 +13,7 @@
  *  - 검증 오류 시 5개 전부 forceOpen(H2 — ValidationIssue에 section 키 없음).
  *  - assetKind 특수종류·겸용 토글 ON 시 ③ 자동 펼침(G7 — onChange 핸들러 로컬 setState, useEffect 아님).
  */
+import { bgPreDeemedShareJudgmentFields } from "@/lib/calc/bg-pre-deemed-shares";
 import { useMemo, useRef, useState } from "react";
 
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -162,7 +163,13 @@ export function CompanionAssetCard({
   const acquisitionAsset = useMemo(
     () =>
       hideInheritedSections && primaryAsset
-        ? { ...asset, assetKind: primaryAsset.assetKind, ...soleSplitRightJudgmentFacts(asset, primaryAsset) }
+        ? {
+            ...asset,
+            assetKind: primaryAsset.assetKind,
+            ...soleSplitRightJudgmentFacts(asset, primaryAsset),
+            // 의제취득일 전 상속·증여 지분 — ③ 술어가 병합 자산과 같게 판정하도록 양도 형태·부담부증여 평가 값(②에서만 편집)을 준다(PR-7b-5 D-3)
+            ...bgPreDeemedShareJudgmentFields(asset, primaryAsset),
+          }
         : asset,
     [hideInheritedSections, primaryAsset, asset],
   );
@@ -393,6 +400,7 @@ export function CompanionAssetCard({
             isCompanionBundle={splitMode === "companion"}
             isSingleAsset={!hasSiblings}
             isPrimary={index === 0}
+            fractionalShares={gbFractionalShares}
           />
         </AssetSection>
       )}

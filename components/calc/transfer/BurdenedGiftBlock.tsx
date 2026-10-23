@@ -24,6 +24,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { BgPreDeemedNotice } from "./BgPreDeemedNotice";
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
+import { bgFractionalHasOutOfScopeShare } from "@/lib/calc/bg-pre-deemed-shares";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BurdenedGiftRightValuationSection } from "./BurdenedGiftRightValuationSection";
 import { BurdenedGiftPriorGiftsBlock } from "./BurdenedGiftPriorGiftsBlock";
@@ -83,10 +84,12 @@ interface Props {
    * 침묵하면 사용자가 총액을 각 카드에 넣어 **자산 수만큼 곱해진다**(실측 2배).
    */
   isCompanionBundle?: boolean;
+  /** 축 B 첫 카드 — 지분 전체. 의제취득일 전 범위 밖 지분이 있으면 산정방식을 받는다(PR-7b-5 · `bgFractionalHasOutOfScopeShare`) */
+  fractionalShares?: readonly AssetForm[];
 }
 
 
-export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalSplit, isCompanionBundle }: Props) {
+export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalSplit, isCompanionBundle, fractionalShares }: Props) {
   /**
    * ④ 상속·증여 계산기 런처 사양 — null이면 미노출.
    * ⚠️ 주입 규칙(건물분 단독 vs 부수토지 합산)이 자산마다 반대다. 판단은 전부 이 함수에 있다.
@@ -157,6 +160,11 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   const isCarryover = asset.acquisitionCause === "carryover_gift";
   /** 의제취득일 전 상속·증여 토지·주택·상가·건물 — 산정방식 대신 ①②③ 중 큰 금액(시가)·의제취득일 기준시가(기준시가)다(계획서 §18). */
   const preDeemed = isBgPreDeemedAsset(asset);
+  /**
+   * 축 B에서 이 카드(첫 지분)는 의제취득일 전이지만 범위 밖 지분(매매 등)이 있다 — 그 지분이 쓸 산정방식을 여기서 받는다(Q-34).
+   * 종전에는 첫 카드만 보고 숨겨 그 지분이 막혔거나(⑧) 숨은 값이 쓰였다. 이 카드 자신의 계산에는 쓰이지 않는다(④는 지분별로 싣는다).
+   */
+  const methodForOtherShares = preDeemed && isFractionalSplit === true && bgFractionalHasOutOfScopeShare(fractionalShares);
   /** K-1~K-3(기준시가) · K-5(환산) 모두 **취득시 기준시가**를 쓴다 — 환산은 이 값을 분자로 자동 추종. */
   const coDonorNeedsStdPrice =
     asset.bgValuationMode === "sangjeungbeop_standard" ||
@@ -298,7 +306,15 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           {isMixed && <BurdenedGiftHousingAppraisalField asset={asset} onChange={onChange} />}
 
           {/* 취득가액 산정방식 (§100① 일치 원칙) — 4옵션 라디오는 분리 파일(800줄 한도). 의제취득일 전 자산은 산정방식이 없다(아래 안내). */}
-          {!preDeemed && (
+          {methodForOtherShares && (
+            <ToneCard tone="violet">
+              <p className="text-xs text-violet-900 dark:text-violet-200" data-testid="bg-pre-deemed-share-method-notice">
+                아래 산정방식은 의제취득일(1985.1.1.) 전에 상속·증여받은 지분이 아닌 <b>다른 지분</b>(매매 등)의 취득가액에만 씁니다. 의제취득일 전
+                지분은 시가 평가면 ①②③ 중 큰 금액, 기준시가 평가면 의제취득일 기준시가에 채무비율을 곱합니다(소득세법 시행령 §159①1호).
+              </p>
+            </ToneCard>
+          )}
+          {(!preDeemed || methodForOtherShares) && (
             <BurdenedGiftAcquisitionMethodField
               asset={asset}
               onChange={onChange}
@@ -368,7 +384,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
       {/* 의제취득일 전 상속·증여 토지·주택·상가·건물 — 시가·기준시가 모두 이 안내가 산정 기준을 알린다 */}
       <BgPreDeemedNotice asset={asset} />
 
-      {((isMarketMode && !collateralForced && !preDeemed && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
+      {/* 의제 첫 지분이라도 범위 밖 지분이 있으면 그 지분의 실지취득가액을 여기서 받는다(위 라디오와 같은 판정 · ⑧이 요구 — PR-7b-5) */}
+      {((isMarketMode && !collateralForced && (!preDeemed || methodForOtherShares) && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
           <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2 dark:bg-amber-900/40">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">
