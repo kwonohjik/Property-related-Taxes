@@ -1,6 +1,6 @@
 # 일반건물 카드 조립 × 「소득세법」 §114조의2 환산·감정가액 5% 가산세 — 본인 신축 + 증여자 신축 수정 계획서 (PR-5)
 
-**상태**: Plan 확정 (2026-10-23) — 사용자가 §11 Q-8~Q-14를 **전부 권장안으로 확정**했다. 진행 순서 **PR-0 → 5b → 5a → 5c**. Q-12(일체 주택 본인 신축 건물분 base)는 **별건 계획서로 분리**(이번 범위 아님). PR-0 Do 기록은 §14.
+**상태**: Plan 확정 (2026-10-23) — 사용자가 §11 Q-8~Q-14를 **전부 권장안으로 확정**했다. 진행 순서 **PR-0 → 5b → 5a → 5c**. Q-12(일체 주택 본인 신축 건물분 base)는 **별건 계획서로 분리**(이번 범위 아님). PR-0 Do 기록은 §14, PR-5c Do 기록은 §19.
 **브랜치**: `docs/gb-card-self-donor-built-114-2-plan` (origin/master 8a720d11e 기준)
 **상위 계획**: `docs/00-pm/carryover-donor-built-114-2.plan.md` (PR-1~4 머지: #2430·#2433·#2440·#2443). 그 §10 PR-5(M6)와 §17 「Q-7 (a)」(일반건물 부담부증여 M9/F27 제외)를 이어받는다. 사용자 지시(2026-10-23): **본인 신축과 증여자 신축을 일반건물 카드 조립에서 함께 검토**한다.
 **상위 계획의 사용자 확정 결정은 재론하지 않는다**: D1 거주자=신분 개념(증여자 포함) · 5년 기산=신축자(증여자면 증여자) 신축일 · D4 건물분만(토지 제외) · R2 이월과세는 A 채택일 때만 · Q-6 b 양도가액 건물분은 법정 서열.
@@ -532,3 +532,79 @@ mock 세율 기준 상대값. 지방소득세 10% 포함 총납부 기준.
 - 일반건물 부담부증여 지분·컴패니언 조합(V-4)은 5b 기록 그대로 범위 밖.
 - 위 A5 수치 불일치(180,632,320 vs 166,177,880)는 계획서 probe 픽스처 미보존으로 **확인 필요**(이번 anchor 수치는 코드로 재측정).
 - 브라우저 수동 확인은 Playwright E2E로 갈음했다.
+
+---
+
+## 19. PR-5c Do 기록 (2026-10-23) — 일반건물 부담부증여(F27) × 이월과세 × 당초 증여자 신축·증축 §114조의2 (Q-10 확정)
+
+브랜치 `feat/gb-bg-carryover-donor-built`(origin/master 19400ffb3 분기 — PR-0·0b·0c·5b·5a·침묵 소실 PR-1~3 포함). 계획서 §3.4 설계 그대로 — **A 시나리오 호출에만** 증여자 신축 신호를 싣는다. **입력 칸·기존 입력의 계산은 불변**(donorBuilt 미전송 셀 응답 해시 동일) — 신규 토글 ON 입력만 가산세가 붙는다.
+
+### 계획서 인용 재확인 (어긋난 곳)
+- `general-building-route-carryover.ts:90-103`(A 호출 payload) → 수정 前 :91-105, 구조 일치. `donor-built-bg-scope.ts:18-`·`transfer-tax-schema-donor-built.ts` 줄 번호는 이동했으나 구조 일치.
+- **카드 신호 모양**: 계획서 §3.3 의 `penalty114?: {axis, constructionDate, donor?: true}` 는 5b 구현에서 카드 필드 `penaltyAxis` + `isSelfBuilt` + `buildingAcquisitionDate` 로 갈렸다. 5c 는 `penaltyAxis.donor?: true`(1칸) + `buildProperties` 가 `penaltyDonorBuilt` 로 옮기는 것으로 얹었다 — 새 카드 필드 없음(`general-building.types.ts` 767줄 위험구간이라 주석만 고침).
+- **V-2 결론 (실측 grep)**: 카드(`AssetCardForAggregate`)의 `buildingAcquisitionDate` 소비처는 `general-building-route-cards.ts:233`(`constructionDate` 매핑) **한 곳뿐**이다(다른 `.buildingAcquisitionDate` 읽기는 겸용·split·payload 이다). 엔진 `constructionDate` 소비처는 §114조의2 leaf(`transfer-tax-building-penalty.ts`·donor-penalty)뿐이고 보유기간·장기보유특별공제 기산은 카드 `acquisitionDate`(증여자 취득일)가 맡는다. ⇒ 증여자 신축일을 카드 `buildingAcquisitionDate` 에 실어도 보유기간에 영향이 없다(DB-1: 결정세액 불변으로 확인) — 계획서 §3.4 의 «별도 필드(`penalty114.constructionDate`)가 필요» 전제는 불필요했다. 단 타입 주석이 «LTHD 보유기간 기산점»이라 적혀 있어 오독 위험이 있어 `penaltyAxis` 주석에 donor 케이스를 명시했다.
+- §2.2 M9e·V-4 («지분·컴패니언 + 부담부증여는 조용히 무시») 는 5b 시점 기록이다 — 침묵 소실 PR-1~3 이후 지분·컴패니언도 §159 카드를 탄다. 그러나 **F27(§97의2 이월과세)은 단건만 탄다**(아래 «범위 판단»).
+
+### 범위 판단 — 지분(축 B)·함께 양도(컴패니언)는 열지 않았다 (⑫ 거부)
+실측(수정 前, 지분 60/40 K-5 `generalBuildingShares[0].burdenedGiftInfo.carryoverDonorBasis`): ① 당초 증여자 기준시가를 1·1 로 바꿔도 결정세액·총납부 **전 필드 동일**(52,320,800 / 57,552,880 — Δ 0) ⇒ 지분 카드는 `buildActualGeneralBuildingCards` 를 직접 불러 §97의2 A/B 비교(F27)를 **타지 않는다**. ② 그 상태에서 `donorBuilt` 를 실어도 **200 + 가산세 0 으로 조용히 무시**된다(지분 스키마 `burdenedGiftInfo` 가 PR-4 의 `bgDonorBuiltShape` 를 그대로 받음). 컴패니언은 PR-4 부터 `companionAssetSchema.burdenedGiftInfo` 가 이미 거부한다. ⇒ 열려면 «지분·컴패니언에서 §97의2 비교 자체»부터 배선해야 하는 **별도 설계**라 열지 않고, 받아 놓고 무시하던 지분 경로를 ⑫ 로 막았다(`transfer-tax-building-share-schemas.ts` + 주 자산 payload 에 지분·컴패니언이 함께 있으면 `refineGbBgDonorBuilt` 거부). ⑤⑧ 은 기존 `bgBundled` 경로(끄기 전용 토글·«끄세요» 안내)가 GB 도 덮는다(E6).
+**남은 별건(확인 필요)**: 지분·컴패니언 일반건물 부담부증여 × 이월과세(`carryoverDonorBasis`)가 §97의2 로 반영되지 않는 것 자체(Δ 0)는 이 PR 범위 밖 기존 한계다.
+
+### K-7(감정)은 열지 않았다 — 발견한 별건 결함
+`general-building-route-carryover.ts`(F27)의 **B 시나리오 호출**이 `toTransferorBasisInfo`(K-6/K-7 의 B 는 증여 당시 평가액 `actual*` 로 읽는다 — 단건 `transfer-tax-carryover.ts:640`)를 거치지 않는다. 실측: 폼으로 K-7(감정) × 이월과세 × 일반건물 부담부증여 입력을 ⑧ 이 **통과**(issues [])시킨 뒤 route 가 `400 [burdened_gift] 취득가액 산정방식 「감정가액」은 취득 당시 감정가액을 입력해야 합니다` — 사용자가 못 쓰는 조합이다(K-6 도 같다 — 격자 실측 K-7·K-6 이월과세 576셀 전부 400). 5c 는 이를 고치지 않고(별건 — 고치면 GB K-6/K-7 이월과세 세액이 처음 계산되므로 단건과의 A/B 정합 검증이 필요) 일반건물 donorBuilt 는 **K-5 만** 받는다: ⑤④⑧ 술어(`donor-built-bg-scope.ts`) + ⑫(`refineGbBgDonorBuilt` — 감정 거부) + 엔진 방어선(`assertGbBgDonorBuiltInput`) 3중. 권장 후속: F27 B 호출에 `toTransferorBasisInfo(info)` 한 줄 + 단건 대조 anchor, 그 뒤 K-7 donorBuilt 개방.
+
+### 변경 (14개 수정 + 신규 테스트 · 소스 +229/−18)
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| 엔진 leaf | `general-building-bg-penalty-signal.ts`(+70) | `gbBurdenedGiftDonorBuiltPenaltySignal`(K-5 만 · 신축=swap 前 건물분 환산취득가, 증축=건물분 양도가 × 증축 부분 기준시가 ÷ 양도시 건물 기준시가 · 게이트 5년·시행일·85㎡ · base 0 이면 신호 없음) + `assertGbBgDonorBuiltInput`(직접 호출 방어선) |
+| 카드 조립 | `general-building-route-actual.ts` · `…-actual.types.ts` | payload 신규 필드 `donorBuiltPenalty`(**F27 A 호출만** 싣는다) → 카드 `isSelfBuilt`·`buildingAcquisitionDate`=증여자 신축일·`buildingType`·`extensionFloorArea`·`penaltyAxis{donor:true}`. 본인 신축 고지(`GB_BG_SELF_BUILT_NOTICE`)는 donor 축에서 제외 |
+| 항목 입력 | `general-building-route-cards.ts` | `penaltyAxis.donor` → 항목 `penaltyDonorBuilt:true`(가산세 step 라벨 «증여자 신축») |
+| F27 | `general-building-route-carryover.ts`(+66) | A 호출에만 신호 · ct 없는 donorBuilt 방어 · 이월과세 배제(②1·2호·③)/B 채택/A 적용/5년 밖/기준액 0 echo(`aggregated.donorBuiltPenalty`) + 고지(`warnings`) |
+| ⑤④⑧ 술어 | `donor-built-bg-scope.ts` | `general_building` 허용(K-5 만 · 건물 본인 신축 아님). ④(`buildDonorBuiltBgPayload`)·⑧(`validateDonorBuiltBg`)는 **같은 술어를 읽으므로 코드 변경 없음**(3중 패턴) |
+| ⑫ | `transfer-tax-schema-donor-built.ts` · `transfer-tax-building-share-schemas.ts` | `refineBgDonorBuilt` 에 일반건물 허용 + `refineGbBgDonorBuilt`(감정 거부 · gbv 필수 · 건물 본인 신축 동시 거부 · 지분·컴패니언 묶음 거부) · 지분 스키마 거부 · **날짜 형식 오류(빈 문자열 등)에서 `toISOString` 500 → Zod 400**(PR-4 부터 있던 잠복 결함) |
+| ⑭ | — | `constructionDate` Date 변환은 PR-4 의 `bgDonorBuiltShape` transform 이 한다(`burdenedGiftInfo` 객체째 흘러 route → F27 payload 에 Date 로 도달). 추가 변환 없음 |
+| ⑦ | `gb-result-donor-built-echoes.ts` · `transfer-aggregate.types.ts` · `BundledAllocationCard.tsx` · `FilingFormTableAggregateHelpers.ts` | 5a 수집 leaf 에 집계 echo 합류(`gbResultDonorBuiltEchoes(properties, aggregated.donorBuiltPenalty)`) → 상세명세서·신고서·PDF 가 5a 어댑터 경로(`donorBuiltPenaltyEchoes`)를 그대로 쓴다. 카드는 `CarryoverDonorBuiltPenaltyCard` 재사용(5a 정본 문구 `donorBuiltPenaltyView`의 부담부증여 변형은 PR-4 가 이미 보유) |
+| 기타 | `transfer-tax-carryover-donor-penalty.ts` | `assertDonorBuiltDatesAndExtension` export(1단어) |
+
+### anchor 전/후
+`transfer.route.gb-bg-carryover-donor-built.anchor.test.ts`(24건) · `….pipeline.anchor.test.ts`(59건 — 폼→④→⑧→⑫→route, ⑧↔⑫ 격자 44셀·지분·컴패니언) · `gb-bg-carryover-donor-built-results.ui.anchor.test.tsx`(9건 — 카드·상세명세서·신고서·PDF) · `gb-bg-donor-built-signal.anchor.test.ts`(12건 — leaf·방어선).
+| 파일 | 수정 前(소스 14파일 HEAD 복원 — sha 대조) | 수정 後 |
+|---|---|---|
+| route anchor | 당시 21건 중 15 실패(400 «주택·건물에만 적용») · 6 통과(대조) — 이후 뮤테이션 보강으로 3건 추가 | 24/24 |
+| pipeline | 59건 중 11 실패 · 48 통과(범위 밖·stale·미전송 셀) | 59/59 |
+| 결과 4뷰 | 9건 전부 skip(`beforeAll` route 400) | 9/9 |
+| leaf·방어선 | (신규 함수 — 해당 없음) | 12/12 |
+| 셀 | 수정 前 | 수정 後 |
+|---|---|---|
+| K-5 · 신축 2022-01-10 · A 채택 | 400 | base 50,000,000 · 가산세 2,500,000 · 결정세액 불변 · 총납부 +2,750,000 · 토지 0 |
+| 증축 90㎡ · 증축 부분 2천만 | 400 | base 25,000,000 · 1,250,000 / 85㎡ 0 · 85.01㎡ 대상 |
+| ②3호 B 채택 / ②1호 수용 배제 / 5년 경과 / 기준액 0 | 400 | 0 + 중립 안내 echo(scenario_b / carryover_excluded / outside_penalty_window / zero_base) |
+| 본인 신축(newConstruction) 동시 · K-4/K-1/K-7 · 비이월 · 지분 · 컴패니언 묶음 | 400(공통 사유) 또는 200+무시(지분) | 400(원인별 필드 경로) |
+
+### 회귀 0 근거
+GB 부담부증여 단건 격자 **1,296셀**(방식 4[K-5·K-4·K-7·K-6] × 당초 증여자 기준시가 2 × 이월과세 모양 4[적격·②1호 배제·③ 기간 초과·증여세 3천만] × 건물 취득원인 3[매매·본인 신축·이월과세] × 자본적지출 3 × 채무 2 × 양도일 2 × 이월과세 有/無; donorBuilt 전부 미전송) 응답 JSON sha256 을 수정 前(소스 14파일 HEAD 복원 — cp 백업 + sha 대조)·後 비교: **전 셀 해시 동일**(합본 md5 `081da9b266ab2ac8d9b06a14abbdbec4` 양쪽 동일 · 200 응답 324 · 400 응답 972[오류 본문 포함] ). 임시 격자 테스트는 저장소에 두지 않았다.
+
+### 세액 변화
+신규 `donorBuilt` 토글 ON 입력만 바뀐다(기본 OFF · 기존 저장 입력 불변). 예) K-5 · 신축 2022-01-10 · A 채택: 총납부 +2,750,000(= 2,500,000 + 지방소득세 250,000). §92③ 결정세액·②3호 비교·채택은 모든 셀에서 불변(가산세 前 비교).
+
+### 3중 패턴 · ⑧↔⑫ 격자
+숨긴 입력 = ④ 미전송 = ⑧ 미요구 — ⑤④⑧ 이 같은 술어 `donorBuiltBgApplicable/Active` 를 읽는다(PL-2: K-7 감정·K-4 실지·건물 본인 신축에서 켜 둔 stale 토글은 body 미전송·⑧ 미요구). 신축일은 증여자 취득일로 **자동 채우지 않는다**(E3: 토글 ON 직후 구분·일자 빈 값). `useEffect → store` 미러링 없음(모든 쓰기 onChange). PL-4 격자(구분 3 × 신축일 4 × 면적 3 × 증축 기준시가 3 → 44셀): ⑧ 이 통과시킨 셀은 route 200, ⑧ 이 막은 셀은 route 400.
+
+### 뮤테이션 (cp 백업 · label+file md5 키 · 건별 sha 대조 · bash)
+1차 47건(예측 분기마다 1개 이상: 술어 3 · ⑫ 9 · leaf 12 · 카드 조립 7 · 항목 입력 1 · F27 11 · 표시 4): **KILLED 41 · SURVIVED 6**. 생존 6건 처리 —
+- **테스트 보강 후 KILLED 4**: S4(⑫ 일반건물 입력 없이 donorBuilt → 400 케이스 추가) · S6a(주 자산 최상위 `burdenedGiftInfo.donorBuilt` + 지분 → 400 추가) · A3(카드 `buildingType` 누락 — 가산세 step 라벨 «증여자 증축» 단언 추가; 누락 시 증축이 신축으로 읽혀 85㎡ 게이트를 우회한다) · F5(F27 이 `assertGbBgDonorBuiltInput` 을 부르는지 — 엔진 직접 호출 anchor 로 본인 신축·신축일 범위 던짐 단언).
+- **동치 2건(코드에서 제거)**: L7(증축 환산의 입력 가드 — `safeMultiplyThenDivide` 가 분모 0·분자 0 에서 0 을 돌려 아래 `base > 0` 가드가 같은 결과 → 가드를 `?? 0` 로 단순화하고 재변이 L3b·L7b 모두 KILLED) · A1(카드 조립의 `!donorBuiltPenalty` 가드 — 본인 신축 동시 입력은 ⑫·F27 방어선이 먼저 막아 도달 불가 → 제거; 재변이 A1b 는 5b 영역이라 5b anchor 4건이 KILL).
+재실행 7건(S4·S6a·A3·F5·L3b·L7b·A1b): 6 KILLED + A1b(5b anchor 로 KILL). 대표 KILLED: 술어 GB 불허(11 실패) · ⑫ propertyType(16) · 카드 axis/신호 비활성(16) · F27 A 신호 미전달(16) · **B 호출에도 신호**(R2 위반, 3) · 적용 echo 제거(12) · echo 미부착(18) · swap 前 값(1) · 증축 base 건물 전체(3~4) · 게이트 85㎡ 입력(1) · donor 표지(4). 건별 `[RESTORED]`(변이 前後 sha 동일), 두 번 모두 끝난 뒤 변경 파일 14개 sha 전후 동일(`ALL_FILES_SHA_IDENTICAL`).
+
+### E2E
+`e2e/gb-bg-carryover-donor-built-114-2.spec.ts` 6건 통과(포트 3297, `next.config.ts` Turbopack root 임시 지정 후 원복 — sha `57dfa236…` 동일): E1 A 채택(body `burdenedGiftInfo.carryoverDonorBasis.donorBuilt`·이월과세 서브객체 미전송·카드 가산세 2,500,000·신고서·각주·상세명세서·본인 신축 고지 없음) · E2 B 채택 중립 안내 · E3 UI 입력 경로(토글→구분·신축일, 자동 채움 없음, 토글 1개) · E4 **토글 ON·신축일 빔에서 페이지가 깨지지 않고**(pageerror 0) ⑧ 이 «다음» 을 막아 그 칸으로 이동·앵커 각 1개 · E5 건물 본인 신축 stale(칸 없음·계산 안 막힘·미전송) · E6 지분 분할(끄기 전용 토글·«끄세요» 안내·끄면 미전송으로 계산). 스크린샷은 `gbbd-e1-result.png`(결과 «증여자 신축 건물 환산취득가액 가산세» 카드: 가산세 기준액 50,000,000 · 가산세 2,500,000 = 50,000,000 × 5%).
+UI 뮤턴트 4건 전부 실패로 구별력 확인(dev 서버 HMR): ① 술어에서 GB 제거(토글 사라짐 · body 미전송) → E1·E3 실패 ② 결과 카드 마운트 제거 → E1 실패 ③ F27 A 신호 미전달 → E1 실패 ④ 토글 ON 시 신축일을 증여자 취득일로 자동 채움 → E3 실패(자동 채움 금지 구별).
+
+### 이탈·남은 확인 필요
+- **K-7 개방은 별건 선행 필요**(위 — F27 B 호출 `toTransferorBasisInfo` 누락, GB K-6/K-7 × 이월과세 400).
+- 지분·컴패니언 일반건물 부담부증여 × 이월과세(§97의2 자체 미반영, Δ 0)는 기존 한계 — 별도 설계.
+- 증축 K-5 가산세의 «증축 부분 기준시가» 입력 칸은 부담부증여 주택·건물과 같은 칸을 재사용한다(일체 주택 안분 칸 없음).
+- 일반건물 부담부증여 증여자 신축에 대한 정면 해석례는 확인하지 못했다 — 결과 고지의 «확인 필요» 유지.
+- 브라우저 수동 확인은 Playwright E2E 6건으로 갈음했다.
+
+### 검증
+`npx tsc --noEmit` 0 · eslint(변경 파일 + 신규 테스트 5개) 0 errors(기존 경고 1건 `effectiveExpenses` — HEAD 부터 있던 것) · `npm run test:transfer` **1431파일 17,835 passed** · 전체 `npm test` **3360파일 통과 / 40,369 passed 0 failed**(13 skipped·309 todo 는 기존). 800줄: 변경 파일 중 `general-building.types.ts` 767(**증가 0줄** — 기존 주석·타입 줄만 수정) · `transfer-aggregate.types.ts` 702(+7) · `general-building-route-actual.ts` 674(+22 ≤700) · 나머지 ≤632. `transfer-per-asset-summary.ts` 미변경. 브라우저 수동 확인은 Playwright E2E 6건으로 갈음(위).
