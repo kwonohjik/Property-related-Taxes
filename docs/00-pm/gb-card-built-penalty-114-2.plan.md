@@ -467,3 +467,68 @@ mock 세율 기준 상대값. 지방소득세 10% 포함 총납부 기준.
 
 ### 검증
 `tsc --noEmit` 0건 · eslint(변경 파일) 신규 0건(기존 경고 1건) · 전체 `vitest run` 3328파일 중 정적 가드 `internal-term-policy`(사용자 문구에 `base` 금지) 1건이 라벨 템플릿의 내부 필드명 `.base`를 잡아 `.basis`로 개명, 이후 `__tests__/components`·`__tests__/api`·`general-building gb- burdened-gift bundled` 범위 **1027파일 10139 passed 0 failed**. 브라우저 확인은 E2E 4건(위)으로 갈음.
+
+---
+
+## 18. PR-5a Do 기록 (2026-10-23) — 일반건물 건물 파트 이월과세(비부담부증여) × 증여자 신축·증축 §114조의2 (Q-9 확정)
+
+브랜치 `feat/gb-carryover-donor-built`(origin/master 5a9491d92 분기 — 5b·PR-0·0b·0c 포함). 계획서 §3.2 설계 그대로. **입력 칸·기존 입력의 계산은 불변**(donorBuilt 미전송 셀 응답 해시 동일) — 신규 토글 ON 입력만 가산세가 붙는다.
+
+### 계획서 인용 재확인 (어긋난 곳)
+- `transfer-tax-building-schemas.ts`: 계획서 749줄 → 지분 스키마 분리 후 639줄(수정 前) → 646줄. 지분 `valuation`이 `generalBuildingValuationSchema`를 그대로 쓰므로 **지분 ⑫는 별도 수정 없이 같이 열린다**(`transfer-tax-building-share-schemas.ts` 무변경).
+- A5 「현행 285,945,000」은 **PR-0b 이전 값**이다. 이 PR의 anchor 픽스처(토지 매매 2024-05-01 포함 · 총 양도가 10억)로 재측정한 donorBuilt 부재 현행 총납부는 **166,177,880**(결정세액 불변, 가산세 0) — 계획서 §15 표의 180,632,320과도 다르다(그 probe 픽스처 미보존 · 토지 카드 구성 차이로 추정 — **확인 필요**). 가산세 12,500,000·base 250,000,000은 계획서와 일치.
+- `donor-built-scope.ts:33`·`CarryoverGiftBlock.tsx:273` 등 줄 번호는 이동했다(파일·구조는 일치).
+
+### 변경 (16개 수정 + 4개 신규, 소스 +239/−36)
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| 엔진 | `transfer-tax-carryover-donor-penalty.ts`(+5) | `assertDonorBuiltInput` 게이트에 `general_building_unit` 허용 + 일체 주택 `housing` 입력은 던진다. 후크·finalize·aggregate 합산 0줄 |
+| ⑭ | `general-building-entry.ts`(+23) | `composeGbCarryover` **두 갈래**(신규 파트·엔진 모양) 모두 `donorBuilt.constructionDate` → Date(`toEngineDonorBuilt`). 입력 도중(신축일 빔) 값은 버린다 — 아래 E2E 결함 |
+| ⑫ | `transfer-tax-schema-donor-built.ts`(+71) · `transfer-tax-building-schemas.ts`(+15) | 건물 파트 수용 전환(`buildingCarryoverPartShape` · `gbDonorBuiltPartShape` `.strict()` · `rejectDonorBuiltHousingRefine`) + valuation 수준 `refineGbBuildingDonorBuilt`(①환산 ②취득원인(본인 신축은 별 문구 ④) ③3-way 동시 거부 ⑤신축일 범위, Part는 사건 동반 필수). 토지 쪽(`landCarryoverTaxation`·`landCarryoverPart`) 거부 유지. `refineDonorBuiltInCarryover`에 `pathPrefix` 인자 |
+| ④ | `transfer-tax-api-gb-carryover.ts`(+28) · 신규 `transfer-tax-api-donor-built-gb.ts`(35) | 두 payload 모양에 `donorBuilt` 중첩(건물 파트에만), SCALE 표 2개 `donorBuilt:false`, `gbCarryoverUsesPartShape`(④·⑧ 공용) |
+| 술어 | 신규 `donor-built-gb-scope.ts`(41) | ⑤⑧④ 공용 leaf — 일반건물·건물 취득원인 이월과세·부담부증여 아님·증축(3-way) 아님·환산(일반)만. 입력 원천 `buildingCarryover ?? carryover` |
+| ⑤ | `CarryoverDonorBuiltSection.tsx`(`mode="gb"`) · `CarryoverGiftBlock.tsx`(건물 블록에서만 마운트) | 앵커 키는 정적 게이트(`transfer-validation-field-anchor-coverage`)가 읽도록 리터럴 삼항 |
+| ⑧ | 신규 `transfer-tax-validate-donor-built-gb.ts`(43) · `transfer-tax-validate-gb-carryover.ts`(+6) · `transfer-tax-error-format.ts`(+12) | 구분·신축일(자동 채움 없음)·범위(등기접수일 출처는 ④가 보내는 모양을 따름)·증축 칸. 앵커 `buildingCarryover.donorBuilt*` |
+| ⑦ | 신규 `gb-result-donor-built-echoes.ts`(27) · `BundledAllocationCard.tsx`(어댑터) · `transfer-result.types.ts` · `…donor-display.ts`(`resultDonorBuiltEchoes`) · `DetailedStatementLateStages.ts` · `FilingFormTableAggregateHelpers.ts` · `ResultPdfTransferSections.tsx` | 카드별 echo를 어댑터가 `donorBuiltPenaltyEchoes`로 싣고 상세명세서·신고서 합계 각주·PDF가 읽는다 |
+| 14지점 | ①②③ 변경 없음(기존 8칸) · ⑥ N/A · ⑨⑩ N/A · ⑪ N/A · ⑬ `generalBuildingValuation` 서브객체째(PL-1이 body 실측) · ⑭ 위 |
+
+### V-1 (4뷰 어댑터 경로에 echo가 실리는가) — 실측 결론
+수정 前 route 응답 JSON을 4뷰에 먹여 보니: **카드**(`PropertyCard`→`ValuationDetailCards`→`CarryoverComparisonCard`)와 **경고**(`aggregated.warnings` — 적용 고지·B 채택 중립 안내·요건 미충족 안내 전부)는 이미 건물 카드의 `carryoverTaxationDetail.donorBuiltPenalty`를 읽어 **그대로 표시된다**. 반면 `aggregateToFilingResult`는 detail을 싣지 않아 `resultDonorBuiltEcho(adapted)`가 undefined → **상세명세서·신고서·PDF에는 증여자 신축 근거가 없었다**(금액만 일반 «환산취득가액 가산세 12,500,000»). 그래서 어댑터가 echo 목록을 싣고 세 뷰가 읽게 했다. 집계는 echo가 여러 장일 수 있어(지분별 건물 카드) 라벨(`[건물(3001)]`)을 붙이고, 본인 신축분과 섞이면 «증여자 분은 카드별, 나머지는 남은 금액»으로 가른다(단건 result는 종전 문장 그대로).
+
+### V-5 (`hasFirstDisclosure` × donor 환산 base) — 실측 결론
+용도변경 + `hasFirstDisclosure`(§99-164-10)를 켜고 같은 donorBuilt를 보내면 **토지 카드의 자기 취득시 기준시가 override(토지 base 250M→375M)만 달라지고** 건물 donor 환산 base(250,000,000)·가산세(12,500,000)·채택(A)은 동일했다 — donor 환산 분자(`donorStandardPriceAtAcquisition`)는 별 입력이라 서로 건드리지 않는다. ⇒ ⑫ 동시 입력 거부 **불필요**(거부하지 않음).
+
+### anchor 전/후
+`transfer.route.gb-carryover-donor-built.anchor.test.ts`(22건)·`….pipeline.anchor.test.ts`(41건 — 폼→④→⑧→⑫→route→엔진, ⑧↔⑫ 격자 13셀·지분·컴패니언)·`gb-carryover-donor-built-results.ui.anchor.test.tsx`(10건 — 4뷰)·`gb-donor-built-engine-gate.test.ts`(5건). 수정 前(소스 8파일을 HEAD본으로 복원해 실행 — sha 대조) 55건 중 **32건 실패**: A 채택·실가 경로·신규 파트 모양·지분·컴패니언 가산세, 증축 85.01㎡, ②3호 B·5년 경과 echo, ⑧ 차단 6건(구분·신축일·범위·증축 칸·출처), 거부 이유 6건. 통과 23건 = donorBuilt 부재 회귀·stale 보내지 않음 등 0이어야 하는 셀. 수정 後 전부 통과.
+| 셀 | 수정 前 | 수정 後 |
+|---|---|---|
+| 2-way 환산 · donorBuilt ON · 신축 2022-01-10 | 400(건물 파트 거부) | 가산세 12,500,000 · base 250,000,000 · 결정세액 불변 · 총납부 +13,750,000 |
+| 신축 2020-12-31 | 400 | 0 · `outside_penalty_window` |
+| ②3호 B 채택(증여 당시 평가액 1억) | 400 | 0 · `scenario_b` + 중립 안내 |
+| 증여자 증축 85㎡ / 85.01㎡ | 400 | 0 / base 125,000,000 · 6,250,000 |
+| 실가 경로 · 신규 파트 모양 | 400 | 12,500,000 |
+| 지분 B(40%)만 건물 이월과세 | 400 | building#1 base 100,000,000 · 5,000,000 |
+| donorBuilt 부재(대조) | 총납부 166,177,880 | 166,177,880(동일) |
+세액이 달라지는 입력은 신규 토글 ON뿐이다(기본 OFF · 기존 저장 입력 불변).
+
+### 회귀 0 근거
+이월과세 GB 격자 **384셀**(이월과세 모양 3[엔진·파트·토지만] × 환산 on/off × 환산·실가 경로 × 증축 유무 × 지분 유무 × 증여세 0/3천만 × 증여 당시 평가액 2 × 양도일 2; donorBuilt 전부 미전송) 응답 JSON sha256 해시를 수정 前(소스 8파일 HEAD 복원 — sha 대조)·後 비교: 전 셀 해시 동일(전체 해시 `78b1e6806e6eb442`, 200 응답 288셀·400 응답 96셀 포함 — 400 셀의 오류 본문도 동일). 임시 격자 테스트는 저장소에 두지 않았다(고정 해시는 무관한 변경에 깨지는 취약 anchor).
+
+### E2E에서 잡은 결함 (vitest 가 못 본 것)
+토글을 켜는 순간(`donorBuiltDate` 빔) 페이지 전체가 에러 바운더리로 떨어졌다 — 사이드바 환산 프리뷰(`previewGeneralBuildingEstimated`)가 ⑧ 이전 미완성 폼으로 ⑭ `coerceGeneralBuildingPayload`를 부르는데 신축일을 엄격 변환(`toDate("")`)해 던진 것. 서버 route는 ⑫(`z.string().date()`)가 먼저 400이라 닿지 않는다. ⇒ ⑭에서 신축일이 빈 donorBuilt는 버린다(`coerceDonorBuilt`) + 회귀 anchor(PL-6, 프리뷰가 던지지 않고 값이 OFF와 같음 · 두 갈래 Date 변환).
+
+### E2E
+`e2e/gb-carryover-donor-built-114-2.spec.ts` 6건 통과(포트 3296, `next.config.ts` Turbopack root 임시 지정 후 원복 — sha `57dfa236…` 동일): E1 A 채택(body 건물 파트 donorBuilt·토지 미전송·카드 6행·신고서 12,500,000·각주·명세서) · E2 B 채택 중립 안내 · E3 UI 입력 경로(토글→구분·신축일, 자동 채움 없음, 토글 1개) · E4 ⑧ 차단→그 칸 이동·앵커 각 1개 · E5 실가 승계 stale 토글(칸 없음·계산 안 막힘·미전송) · E6 분리 ON(건물만 이월과세). UI 뮤턴트 4건(마운트 제거·토지 블록에도 마운트·술어 항상 true·앵커 접두 오류) 전부 실패로 구별력 확인.
+
+### 뮤테이션 (cp 백업 · label+file md5 키 · 건별 sha 전후 대조 · bash)
+61건: 엔진 게이트 3(허용 제거·GB 재거부·housing 가드) · ⑭ 5(파트 갈래 누락·엔진 모양 갈래 누락·Date 변환 제거·빈 값 가드 제거·날것 spread 잔존) · ⑫ 13(newConstruction 문구·취득원인·3-way·사건 동반·Part 규칙 호출·housing 거부·`.strict()`·pathPrefix·where·Part shape 거부화·valuation refine 호출·토지 거부 제거·건물 housing refine 제거) · ④ 8(엔진 모양·Part 미전송·토지에 실림 2종·파트 모양 술어·게이트·증축 면적·원천 폼) · 술어 8 · ⑧ 11(검사 6 · 등기접수일 출처 2 · 게이트 · 호출 제거 · 토지 파트 검증) · ⑦ 9(어댑터·명세서 2·신고서 2·PDF·leaf 라벨·표시 fallback 2) + UI 4. 초판 생존 6건(A3 토지 엔진 모양에 실림 · P3 환산 플래그 · P8 자산 종류 · V11 토지 파트 검증 · R3 명세서 남은 금액 · R5 신고서 라벨)은 **픽스처 부족**이라 anchor 보강(토지·건물 동시 이월과세 셀 · 환산 OFF+방식 잔재 · 자산 종류 잔재 · 건물 라벨 단언 · 본인 신축+증여자 혼합 지분 · 신고서 라벨 단언) 후 전부 KILLED. 마지막 점검: 변이 前후 변경 파일 전체 sha 동일(`ALL_FILES_SHA_IDENTICAL` 3회).
+동치(코드 미변경, 실행 안 함): SCALE 표의 `donorBuilt: false`→`true` — `scaleByMap`은 number 값만 곱하므로 객체 값은 영향이 없다(표는 `Record<keyof …>`라 키 누락은 tsc가 막는 목적).
+
+### 검증
+`tsc --noEmit` 0 · eslint(변경 파일) 0 errors(기존 경고 1건 `reductionSchema` — 이번 변경과 무관) · `npm run test:transfer` · **전체 `npm test` 3354파일 통과 / 40,242 passed 0 failed**. 기존 anchor 2건 갱신: PR-1 `transfer.route.carryover-donor-built.anchor.test.ts`의 «GB 파트 거부»는 건물 파트 수용으로 계약이 바뀌어 갱신(토지는 거부 유지·건물 `housing` 거부), 정적 게이트 `transfer-validation-field-anchor-coverage`는 템플릿 앵커를 못 읽어 리터럴 삼항으로 맞춤. 800줄: 변경 파일 최대 `transfer-tax-building-schemas.ts` 646(≤700) — `transfer-per-asset-summary.ts`는 건드리지 않음.
+
+### 이탈·남은 확인 필요
+- 증축(3-way) × 이월과세 × donor 증축은 거부로 격리(Q-9) — 별도 설계 대상. 부담부증여는 비노출·거부(5c).
+- 일반건물 부담부증여 지분·컴패니언 조합(V-4)은 5b 기록 그대로 범위 밖.
+- 위 A5 수치 불일치(180,632,320 vs 166,177,880)는 계획서 probe 픽스처 미보존으로 **확인 필요**(이번 anchor 수치는 코드로 재측정).
+- 브라우저 수동 확인은 Playwright E2E로 갈음했다.
