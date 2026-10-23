@@ -2,7 +2,7 @@
  * P5 anchor — 판정 store의 다주택 중과 슬롯(계획서 `multi-house-surcharge-judgment-menu.plan.md` §5.2 · T7 · R1 · P-9).
  *
  * 두 판정 메뉴는 입력(`formData`)을 함께 쓰고 결과·단계는 메뉴별로 둔다. 지키는 것:
- * - SS-1 입력이 바뀌면 **같은 `set`** 에서 두 메뉴의 결과를 함께 비운다(단계·오류는 둔다)
+ * - SS-1 입력이 바뀌면 **같은 `set`** 에서 두 메뉴의 결과를 함께 비운다(단계·오류·시뮬레이션 입력은 둔다 — P8)
  * - SS-2 `reset`은 슬롯까지 초기화
  * - SS-3 의뢰인이 바뀌면 결과가 있는 메뉴만 비우고 1단계로 — 입력 도중인 다른 메뉴의 단계는 둔다
  * - SS-4 rehydrate는 슬롯을 초기화하고, persist는 `formData`만 남긴다
@@ -25,15 +25,19 @@ beforeEach(() => {
 });
 
 describe("SS-1 — 입력 변경은 두 메뉴의 결과를 한 번에 비운다", () => {
-  it("중과 결과·의뢰인 귀속이 비고, 중과 단계·오류는 그대로다", () => {
+  it("중과 결과·의뢰인 귀속이 비고, 중과 단계·오류·시뮬레이션 입력은 그대로다", () => {
     st().setSurchargeStep(3);
     st().setSurchargeError("앞선 오류");
+    st().setSurchargeSimulationInput({ acquisitionPrice: "500000000" });
     st().setSurchargeResult(surchargeStub, "c1");
     expect(st().surcharge.resultClientId).toBe("c1");
 
     st().updateFormData({ transferDate: "2026-03-01" });
 
-    expect(st().surcharge).toEqual({ currentStep: 3, result: null, resultClientId: null, error: "앞선 오류", isLoading: false });
+    expect(st().surcharge).toEqual({
+      currentStep: 3, result: null, resultClientId: null, error: "앞선 오류", isLoading: false,
+      simulationInput: { acquisitionPrice: "500000000", expenses: "" },
+    });
   });
 
   it("1주택 결과도 같은 갱신에서 빈다 — 구독자가 한쪽만 빈 중간 상태를 보지 않는다", () => {

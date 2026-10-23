@@ -16,7 +16,7 @@ import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-f
 import type { MultiHouseSurchargeJudgmentResponse } from "@/app/api/calc/multi-house-surcharge-judgment/route";
 
 /** ⚠️ `MultiHouseSurchargeCalculator.tsx`의 `SURCHARGE_STEPS`와 같은 문자열이다 — 한쪽만 고치면 갈린다. */
-const STEP_LABELS = ["세대", "양도 대상 주택", "보유 주택·권리", "판정 결과"] as const;
+const STEP_LABELS = ["세대", "양도 대상 주택", "보유 주택·권리", "판정 결과", "세부담 시뮬레이션"] as const;
 
 /** 양도일 현재 조정대상지역 — 소재지 코드가 있으면 그 판정(엔진과 같은 함수), 없으면 ②의 직접 선택 */
 function transferRegulatedLabel(form: OneHouseJudgmentFormData): string | null {

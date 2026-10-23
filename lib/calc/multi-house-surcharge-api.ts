@@ -17,6 +17,7 @@ import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { gracePeriodInScope } from "./grace-period-scope";
 import { formatFieldErrors } from "./transfer-tax-error-format";
 import { withDerivedHouseCount, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
+import { toSurchargeSimulationPayload, type SurchargeSimulationInputForm } from "./surcharge-simulation-input";
 import type { MultiHouseSurchargeJudgmentResponse } from "@/app/api/calc/multi-house-surcharge-judgment/route";
 
 export function buildMultiHouseSurchargeApiBody(form: OneHouseJudgmentFormData): { property: Record<string, unknown> } {
@@ -34,14 +35,21 @@ export function buildMultiHouseSurchargeApiBody(form: OneHouseJudgmentFormData):
   };
 }
 
-/** ⑬ fetch — 판정 route envelope(`{ data }` · `{ error: { code, message, fieldErrors? } }`)는 1주택 판정과 같다. */
+/**
+ * ⑬ fetch — 판정 route envelope(`{ data }` · `{ error: { code, message, fieldErrors? } }`)는 1주택 판정과 같다.
+ * `simulation`을 주면 같은 요청이 판정과 세부담 시뮬레이션(D3c)을 함께 돌려준다.
+ */
 export async function callMultiHouseSurchargeJudgmentAPI(
   form: OneHouseJudgmentFormData,
+  simulation?: SurchargeSimulationInputForm,
 ): Promise<MultiHouseSurchargeJudgmentResponse> {
   const res = await fetch("/api/calc/multi-house-surcharge-judgment", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(buildMultiHouseSurchargeApiBody(form)),
+    body: JSON.stringify({
+      ...buildMultiHouseSurchargeApiBody(form),
+      ...(simulation ? { simulation: toSurchargeSimulationPayload(simulation) } : {}),
+    }),
   });
   const json = await res.json().catch(() => null);
   if (!res.ok) {
