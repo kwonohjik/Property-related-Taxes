@@ -98,7 +98,13 @@ export const generalBuildingShareSchema = z.object({
    * 채무는 ④가 이미 그 지분율로 안분했고(`buildBurdenedGiftInfo`의 `debtScaleRatio`), 평가액·기준시가는 물건 전체 값이며 엔진
    * `scaleBurdenedGiftInfo`가 지분율만큼 줄인다 — 저장소 축 B 규약(법문 직접 근거 아님). 정의가 없으면 침묵 stripping으로 §159가 사라진다.
    */
-  burdenedGiftInfo: burdenedGiftInfoSchema.optional(),
+  burdenedGiftInfo: burdenedGiftInfoSchema
+    .superRefine((info, ctx) => {
+      // 당초 증여자 신축·증축 §114조의2(PR-5c)는 단건 일반건물(F27)만 받는다 — 지분 카드는 이월과세 §97의2 를 타지 않아 받아 놓고 무시하게 되므로 거부
+      if (info.carryoverDonorBasis?.donorBuilt !== undefined)
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["carryoverDonorBasis", "donorBuilt"], message: "지분 분할 취득의 부담부증여는 당초 증여자 신축·증축 가산세(소득세법 §114조의2)를 아직 지원하지 않습니다" });
+    })
+    .optional(),
 });
 
 /** 점 표기 경로로 중첩 값을 꺼낸다. */

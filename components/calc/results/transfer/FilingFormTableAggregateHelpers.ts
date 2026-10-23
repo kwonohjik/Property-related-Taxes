@@ -467,7 +467,7 @@ export function buildAggregateRows(
   setNum("determinedTax", "total", aggregated.determinedTax);
   setNum("penaltyTax", "total", aggregated.penaltyTax);
   // 증여자 신축·증축 §114조의2 — 가산세가 붙은 카드의 근거를 합계 칸 각주로 밝힌다(새 수를 만들지 않는다 · 단건 신고서 `donorBuiltPenaltyFilingNote` 와 같은 문장).
-  const donorNotes = gbResultDonorBuiltEchoes(properties).flatMap(({ label, echo }) => {
+  const donorNotes = gbResultDonorBuiltEchoes(properties, aggregated.donorBuiltPenalty).flatMap(({ label, echo }) => {
     const note = donorBuiltPenaltyFilingNote(echo);
     return note ? [`[${label}] ${note}`] : [];
   });

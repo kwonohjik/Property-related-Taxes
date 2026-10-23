@@ -15,6 +15,7 @@
  */
 
 import type { BurdenedGiftInfo, TransferBurdenedGiftBreakdown } from "./transfer-burdened-gift.types";
+import type { DonorBuiltPenaltyEcho } from "./transfer-carryover.types";
 import type { RateClause } from "../transfer-tax-rate-clause";
 import type { NblSurchargeExclusionReason } from "./transfer-result.types";
 import type { TransferTaxPenaltyResult } from "../transfer-tax-penalty";
@@ -646,6 +647,12 @@ export interface AggregateTransferResult {
     /** §97의2①3호 증여세 상당액 (§159 안분 단계가 한도까지 처리) */
     giftTaxAmount: number;
   };
+  /**
+   * **일반건물 부담부증여 × 이월과세 × 당초 증여자 신축·증축** §114조의2 가산세 근거 echo (F27 · PR-5c) — `donorBuilt` 를 보냈을 때만 있다.
+   * 적용 여부·사유(A 채택 · B 채택 · 이월과세 배제 · 5년 밖 · 기준액 0)와 base·가산세를 싣는다. 가산세 금액 자체는 `properties[건물].penaltyTax` 에 이미 합산돼 있다.
+   * 단건 경로의 `carryoverTaxationDetail.donorBuiltPenalty` 와 같은 모양이다(결과 4뷰가 한 표시 정본을 쓴다).
+   */
+  donorBuiltPenalty?: DonorBuiltPenaltyEcho;
 
   /**
    * [echo] 지방소득세 과세표준에 산입되는 가산세 = 자산별 **§114조의2분 합계만**.

@@ -46,7 +46,7 @@ function invalid(message: string, field: string): never {
 }
 
 /** 신축·증축일 범위와 증축 필수 칸 — 자산 전체(`carryoverTaxation.donorBuilt`)와 split 건물 파트가 같은 규칙을 쓴다. */
-function assertDonorBuiltDatesAndExtension(
+export function assertDonorBuiltDatesAndExtension(
   db: DonorBuiltInput,
   ct: Pick<Ct, "donorAcquisitionDate" | "giftRegistryDate">,
   field: string,

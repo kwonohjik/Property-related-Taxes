@@ -6,7 +6,7 @@
  */
 import type { SaleSplitExemption } from "@/lib/tax-engine/sale-split-deemed-unclear";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
-import type { CarryoverTaxationInput } from "@/lib/tax-engine/types/transfer-carryover.types";
+import type { CarryoverTaxationInput, DonorBuiltInput } from "@/lib/tax-engine/types/transfer-carryover.types";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import type { AssetCardForAggregate } from "@/lib/tax-engine/general-building-valuation";
 
@@ -45,6 +45,11 @@ export interface GeneralBuildingActualPricePayload {
    * 단건·컴패니언은 싣지 않는다(종전 거동 유지 — 공유 소유 단건의 `ownershipRatio` 미전달은 별건, 계획서 V-5).
    */
   burdenedGiftOwnershipRatio?: number;
+  /**
+   * 부담부증여 × 이월과세(F27) 시나리오 **A 호출에만** 싣는 «당초 증여자 신축·증축» 신호 입력(§114조의2, PR-5c) — B 호출·지분·컴패니언은 싣지 않는다(R2).
+   * `burdenedGiftInfo.carryoverDonorBasis.donorBuilt` 와 같은 값이지만 **이 필드만** 카드 조립이 읽는다 — info 는 B 호출에도 같은 모양으로 흘러 가산세가 새면 안 된다.
+   */
+  donorBuiltPenalty?: DonorBuiltInput;
   // ── 사례 35: 주택→상가 용도변경 (자산 공통 — actual 경로도 동일 분기) ──
   houseToCommercialConversion?: boolean;
   conversionDate?: Date;

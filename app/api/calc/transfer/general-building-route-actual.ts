@@ -33,7 +33,11 @@ import {
 } from "./general-building-route-cards";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
-import { gbBurdenedGiftSelfBuiltPenaltyAxis, GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
+import {
+  gbBurdenedGiftSelfBuiltPenaltyAxis,
+  gbBurdenedGiftDonorBuiltPenaltySignal,
+  GB_BG_SELF_BUILT_NOTICE,
+} from "@/lib/tax-engine/general-building-bg-penalty-signal";
 
 export type { GeneralBuildingActualPricePayload, ActualGbCardsResult } from "./general-building-route-actual.types";
 import type { GeneralBuildingActualPricePayload, ActualGbCardsResult } from "./general-building-route-actual.types";
@@ -59,7 +63,7 @@ export function buildActualGeneralBuildingCards(
     zoneType, unapprovedBuilding = false, isDesignatedArea,
     actualAcquisitionPrice, actualExpenses,
     acquisitionLandPricePerSqm, acquisitionBuildingStdPrice,
-    burdenedGiftInfo, burdenedGiftOwnershipRatio,
+    burdenedGiftInfo, burdenedGiftOwnershipRatio, donorBuiltPenalty,
     houseToCommercialConversion, conversionDate, wasMultiHouseAtConversion,
     acquisitionByInheritance, buildingAcquisitionByInheritance,
     inheritedLandValue, inheritedBuildingValue,
@@ -436,12 +440,29 @@ export function buildActualGeneralBuildingCards(
     burdenedGiftInfo && transferBurdenedGiftBreakdown
       ? gbBurdenedGiftSelfBuiltPenaltyAxis(burdenedGiftInfo, transferBurdenedGiftBreakdown, buildingAcquisitionCause === "newConstruction", buildingCardDate, transferDate)
       : undefined;
+  /**
+   * 같은 자리에서 **당초 증여자** 신축·증축도 신호가 된다(F27 시나리오 A 호출만 `donorBuiltPenalty` 를 싣는다 · PR-5c) — 신축자가 증여자라 5년 기산점은 증여자 신축일이고(`buildingAcquisitionDate`),
+   * 카드의 `acquisitionDate`(증여자 취득일, 보유기간 축)는 건드리지 않는다. 두 축은 ⑫·F27 방어선(`assertGbBgDonorBuiltInput`)이 동시 입력을 막으므로 한쪽만 신호가 된다(막히지 않은 직접 호출이면 뒤 스프레드의 donor 가 이긴다).
+   */
+  const bgDonorSignal =
+    donorBuiltPenalty && burdenedGiftInfo && transferBurdenedGiftBreakdown
+      ? gbBurdenedGiftDonorBuiltPenaltySignal(burdenedGiftInfo, transferBurdenedGiftBreakdown, donorBuiltPenalty, transferDate)
+      : undefined;
   cards.push({
     propertyId: "building", propertyLabel: "건물(3001)", propertyType: "general_building_unit",
     transferPrice: buildingTransfer, acquisitionPrice: buildingAcq, expenses: buildingExp,
     usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
     acquisitionDate: buildingCardDate, transferDate, isNonBusinessLand: false,
     ...(bgPenaltyAxis ? { isSelfBuilt: true, buildingAcquisitionDate: buildingCardDate, penaltyAxis: bgPenaltyAxis } : {}),
+    ...(bgDonorSignal
+      ? {
+          isSelfBuilt: true,
+          buildingAcquisitionDate: bgDonorSignal.constructionDate,
+          buildingType: bgDonorSignal.buildingType,
+          ...(bgDonorSignal.extensionFloorArea !== undefined ? { extensionFloorArea: bgDonorSignal.extensionFloorArea } : {}),
+          penaltyAxis: bgDonorSignal.axis,
+        }
+      : {}),
     /**
      * 건물 이월과세 — 법 §97의2①은 「토지·건물 등」이라 건물도 대상이다. 환산 경로와 달리
      * 실가 경로의 건물 카드는 **1장뿐**이라 분할이 없다(NBL은 토지 축이다).
@@ -612,7 +633,8 @@ export function runActualGeneralBuildingOnce(
   );
 
   // 부담부증여 K-5/K-7 × 본인 신축 가산세가 붙었으면 고지(Q-14) — 신호는 발동 게이트(5년·시행일)가 열렸을 때만 실리므로 신호 유무가 곧 가산세 유무다.
-  if (cards.some((c) => c.penaltyAxis))
+  // (증여자 신축·증축분(`donor`)의 고지는 F27 이 A 채택일 때만 «증여자» 문구로 싣는다 — 여기서 본인 신축 문구가 섞이지 않게 한다.)
+  if (cards.some((c) => c.penaltyAxis && !c.penaltyAxis.donor))
     aggregated.warnings.push(GB_BG_SELF_BUILT_NOTICE);
 
   const apportionment = buildApportionment(

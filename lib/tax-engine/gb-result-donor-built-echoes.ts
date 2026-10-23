@@ -19,9 +19,17 @@ export function gbResultDonorBuiltEchoes(
     propertyLabel?: string;
     carryoverTaxationDetail?: { donorBuiltPenalty?: DonorBuiltPenaltyEcho };
   }>,
+  /**
+   * 일반건물 **부담부증여 × 이월과세**(F27, PR-5c)의 신고단위 echo — 카드(자산)마다 이월과세 detail 이 없어 집계 결과(`aggregated.donorBuiltPenalty`)에 하나 실린다.
+   * 건물 카드의 라벨로 귀속을 밝힌다. 카드 detail 경로와 상호배제다(부담부증여 카드는 `carryoverTaxationDetail` 이 없다).
+   */
+  aggregateEcho?: DonorBuiltPenaltyEcho,
 ): DonorBuiltEchoEntry[] {
-  return properties.flatMap((p) => {
+  const perCard = properties.flatMap((p) => {
     const echo = p.carryoverTaxationDetail?.donorBuiltPenalty;
     return echo ? [{ label: p.propertyLabel ?? p.propertyId, echo }] : [];
   });
+  if (!aggregateEcho) return perCard;
+  const building = properties.find((p) => p.propertyId === "building");
+  return [...perCard, { label: building?.propertyLabel ?? "건물", echo: aggregateEcho }];
 }

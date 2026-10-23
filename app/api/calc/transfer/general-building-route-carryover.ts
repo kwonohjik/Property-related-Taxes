@@ -4,12 +4,20 @@
  * `general-building-route-actual.ts` 800줄 정책 분리. 카드 조립(그쪽)과 **시나리오 비교**(이쪽)는
  * 층이 다르다 — 이쪽은 그쪽을 **두 번 호출**해 신고단위 결정세액을 비교한다.
  */
+import { addYears } from "date-fns";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { judgeCarryoverEligibility } from "@/lib/tax-engine/transfer-tax-carryover-eligibility";
 import {
   assertCarryoverDonorBasis,
   applyCarryoverDonorBasis,
 } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
+import { donorBuiltNotAppliedEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-penalty";
+import { donorBuiltPenaltyNotice } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
+import { calculateBuildingPenalty } from "@/lib/tax-engine/transfer-tax-building-penalty";
+import { assertGbBgDonorBuiltInput } from "@/lib/tax-engine/general-building-bg-penalty-signal";
+import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
+import type { DonorBuiltInput, DonorBuiltPenaltyEcho } from "@/lib/tax-engine/types/transfer-carryover.types";
+import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import {
   runActualGeneralBuildingOnce,
   type GeneralBuildingActualPricePayload,
@@ -18,6 +26,45 @@ import type {
   GeneralBuildingRouteResult,
   GbAssetLevelInputs,
 } from "./general-building-route-cards";
+
+const ymd = (d: Date): string => d.toISOString().slice(0, 10);
+
+/**
+ * 당초 증여자 신축·증축 §114조의2 가산세의 **결과 echo + 고지**를 채택 결과에 싣는다(PR-5c). 가산세 금액은 A 호출의 건물 카드가 이미 냈다 — 여기서는 새로 계산하지 않고 읽기만 한다.
+ * 사유 판별은 단건(`withBgDonorBuiltPenalty`)과 같다: B 채택 → scenario_b · 이월과세 배제 → carryover_excluded · A 채택인데 가산세 0 → 게이트(5년·시행일·증축 85㎡)가 닫혔으면
+ * outside_penalty_window, 열려 있는데 0 이면 zero_base(기준액 0 · 담보평가 승 등으로 환산취득가액이 쓰이지 않은 경우).
+ */
+function attachDonorBuiltEcho(
+  chosen: GeneralBuildingRouteResult,
+  echo: DonorBuiltPenaltyEcho,
+): GeneralBuildingRouteResult {
+  chosen.aggregated.donorBuiltPenalty = echo;
+  const notice = donorBuiltPenaltyNotice(echo);
+  if (notice) chosen.aggregated.warnings.push(notice);
+  return chosen;
+}
+
+function donorBuiltAppliedEcho(db: DonorBuiltInput, chosenA: GeneralBuildingRouteResult, transferDate: Date): DonorBuiltPenaltyEcho {
+  const fifth = ymd(addYears(db.constructionDate, 5));
+  const bld = chosenA.aggregated.properties.find((p) => p.propertyId === "building");
+  const penalty = bld?.penaltyTax ?? 0;
+  if (penalty > 0)
+    return {
+      applied: true,
+      buildingType: db.buildingType,
+      constructionDate: ymd(db.constructionDate),
+      fifthAnniversary: fifth,
+      base: bld?.penaltyBase ?? 0,
+      penalty,
+      burdenedGift: { method: "estimated" },
+    };
+  const gateOpen =
+    calculateBuildingPenalty(
+      { isSelfBuilt: true, penaltyDonorBuilt: true, acquisitionMethod: "estimated", transferDate, constructionDate: db.constructionDate, buildingType: db.buildingType, extensionFloorArea: db.extensionFloorArea } as TransferTaxInput,
+      1,
+    ) !== null;
+  return donorBuiltNotAppliedEcho(db, gateOpen ? "zero_base" : "outside_penalty_window", { fifthAnniversary: fifth });
+}
 
 /**
  * 일반건물(실가) × **부담부증여 × 배우자등 이월과세** — 「소득세법」 §97의2 배선 (F27, 2026-08-23)
@@ -73,12 +120,24 @@ export function calculateGeneralBuildingActualTransfer(
 
   const ct = assetLevel?.carryoverTaxation;
   const info = payload.burdenedGiftInfo;
+  // 당초 증여자 신축·증축(§114조의2, PR-5c) — 이 경로(단건 F27)만 받는다. ⑫(`refineBgDonorBuilt`)가 입구에서 먼저 막고, 이쪽은 직접 호출 방어선이다.
+  const donorBuilt = info?.carryoverDonorBasis?.donorBuilt;
+  if (donorBuilt && !ct)
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "당초 증여자 신축·증축 가산세(소득세법 §114조의2)는 이월과세(carryoverTaxation) 입력과 함께 보내야 합니다.",
+      { field: "burdenedGiftInfo.carryoverDonorBasis.donorBuilt" },
+    );
   // 부담부증여 × 이월과세 조합이 아니면 종전 그대로 (회귀 0).
   if (!ct || !info) return run(payload);
 
   // §97의2①괄호·②1·2호·③ — **단건 엔진과 같은 leaf**로 판정한다(복사 금지).
   const eligibility = judgeCarryoverEligibility(ct, payload.transferDate);
-  if (!eligibility.isEligible) return run(payload);
+  if (!eligibility.isEligible) {
+    const excluded = run(payload);
+    // 이월과세 배제(②1·2호·③) — 증여자 신축분 가산세는 없다(R2). 입력을 받고도 말이 없으면 침묵 소실이라 중립 안내를 싣는다.
+    return donorBuilt ? attachDonorBuiltEcho(excluded, donorBuiltNotAppliedEcho(donorBuilt, "carryover_excluded")) : excluded;
+  }
 
   /**
    * 「당초 증여자」 값 필수 — **fail-fast**. 없으면 시나리오 A = B가 되어 §97의2가 조용히
@@ -86,10 +145,13 @@ export function calculateGeneralBuildingActualTransfer(
    * (⑧이 앞에서 알려주므로 정상 경로에서는 여기 닿지 않는다.)
    */
   assertCarryoverDonorBasis(info, ct);
+  if (donorBuilt) assertGbBgDonorBuiltInput(info, ct, donorBuilt, payload.buildingAcquisitionCause === "newConstruction");
 
   const resultB = run(payload);
   const resultA = run({
     ...payload,
+    // 당초 증여자 신축·증축 신호는 **A 호출에만** 싣는다(R2) — B 는 수증자 기준(증여 당시 평가액)이라 가산세 대상이 아니다. 카드 조립이 이 필드만 읽는다.
+    ...(donorBuilt ? { donorBuiltPenalty: donorBuilt } : {}),
     // ①1호 취득가액 치환 + ①3호 증여세 상당액 — §159 안분 단계가 소비한다.
     burdenedGiftInfo: applyCarryoverDonorBasis(info, ct.giftTaxAmount),
     /**
@@ -116,5 +178,7 @@ export function calculateGeneralBuildingActualTransfer(
     donorAcquisitionDate: ct.donorAcquisitionDate,
     giftTaxAmount: ct.giftTaxAmount,
   };
+  if (donorBuilt)
+    attachDonorBuiltEcho(chosen, adopted === "B" ? donorBuiltNotAppliedEcho(donorBuilt, "scenario_b") : donorBuiltAppliedEcho(donorBuilt, resultA, payload.transferDate));
   return chosen;
 }

@@ -224,7 +224,7 @@ export function buildProperties(
       //   매매사례는 조문 대상이 아니라 싣지 않는다(`buildingPenaltyMethodApplies`).
       //   부담부증여(§159) K-5/K-7 × 본인 신축은 조립 단계가 base 를 정해 `card.penaltyAxis`로 준다(`general-building-bg-penalty-signal.ts`) — 이 값이 우선.
       ...(isBuilding && card.penaltyAxis
-        ? { penaltyAxis: card.penaltyAxis }
+        ? { penaltyAxis: { acquisitionMethod: card.penaltyAxis.acquisitionMethod, base: card.penaltyAxis.base }, ...(card.penaltyAxis.donor ? { penaltyDonorBuilt: true } : {}) }
         : isBuilding && card.acquisitionMode === "appraisal"
           ? { penaltyAxis: { acquisitionMethod: "appraisal" as const, base: card.acquisitionPrice } }
           : {}),
