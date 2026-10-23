@@ -266,6 +266,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
             onCarryoverChange={(patch) => updateCarryover(patch)}
             onAssetChange={(patch) => onChange(patch)}
             part={part}
+            isNonPrimaryAsset={isNonPrimaryAsset}
           />
         )}
 

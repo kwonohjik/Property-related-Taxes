@@ -24,6 +24,7 @@ import { gbPartAllowedModes } from "@/lib/calc/transfer-tax-gb-toggle-patches";
 import { buildingPenaltyMethodApplies } from "@/lib/tax-engine/transfer-tax-building-penalty";
 import { capexHint } from "./capexHint";
 import { GbDeductionOnlyNotice } from "./GbDeductionOnlyNotice";
+import { gbCapexBeforeExtensionSlots } from "@/lib/calc/gb-extension-capex-timing";
 
 export function toBuildingCause(
   cause: AssetForm["acquisitionCause"] | undefined,
@@ -244,6 +245,23 @@ export function PartAcqModeField({
             onChange={(v) =>
               onChange(isLand ? { landDirectExpenses: v } : { buildingDirectExpenses: v })
             }
+          />
+        </FieldCard>
+      )}
+      {/* 증축 — 건물 자본적지출 중 증축 전 지출은 원건물에만 배분한다. ④·⑧과 같은 leaf로 띄운다. */}
+      {showCapex && !isLand && gbCapexBeforeExtensionSlots(asset).building && (
+        <FieldCard
+          field="gbBuildingCapexBeforeExtension"
+          label="그중 증축 전에 지출한 금액"
+          unit="원"
+          hint="증축 전에 지출한 금액은 원건물에만, 증축 후 금액은 원건물과 증축분에 양도가액 비율로 나눕니다(「소득세법 시행령」 제163조 제3항). 없으면 0을 입력하세요"
+        >
+          <CurrencyInput
+            label="그중 증축 전에 지출한 금액"
+            hideUnit
+            data-testid="gb-building-capex-before-extension"
+            value={asset.gbBuildingCapexBeforeExtension ?? ""}
+            onChange={(v) => onChange({ gbBuildingCapexBeforeExtension: v })}
           />
         </FieldCard>
       )}

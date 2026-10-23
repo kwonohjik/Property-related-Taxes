@@ -62,6 +62,8 @@ export function buildTransferEngineInput(
     useEstimatedAcquisition: data.useEstimatedAcquisition,
     standardPriceAtAcquisition: data.standardPriceAtAcquisition,
     standardPriceAtTransfer: data.standardPriceAtTransfer,
+    // ⑭ 양도 주택의 양도 당시 기준시가 — 명부 없는 중과 판정 구성의 양도 주택 행(TS 미감지 strip 주의)
+    sellingHouseStdPriceAtTransfer: data.sellingHouseStdPriceAtTransfer,
     // ⑭ §164⑧ 동일조정기간 환산 (TS 미감지 침묵 strip 주의 — 중첩 객체 통째 매핑).
     //    날짜 필드가 없어 coerceDates는 불요하다.
     sameAdjustmentPeriod: data.sameAdjustmentPeriod,

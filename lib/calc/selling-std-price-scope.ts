@@ -66,6 +66,16 @@ export function sellingHouseStdPriceAtTransfer(asset: AssetForm): number {
   return std || parseAmount(asset.inhHouseValHousePriceAtTransfer);
 }
 
+/**
+ * ⑬ 명부 없는 중과 판정 구성(엔진 `noRosterSellingHouse`)의 양도 주택 행 값 — 전용 키로 싣는다(계획서 Q-4 a · PR-2).
+ * 명부가 있으면 같은 값이 `houses[selling].officialPrice`로 간다. 범위 밖 자산(겸용·부담부증여 시가 모드)은 화면에 없는 칸이라 싣지 않는다.
+ */
+export function sellingHouseStdPricePayload(asset: AssetForm): { sellingHouseStdPriceAtTransfer?: number } {
+  if (!isHouseSale(asset)) return {};
+  const value = sellingHouseStdPriceAtTransfer(asset);
+  return value > 0 ? { sellingHouseStdPriceAtTransfer: value } : {};
+}
+
 /** 매매 블록(환산 칸) — `CompanionAcqPurchaseBlock`이 마운트되고 환산 분모 칸을 그리는가 */
 function purchaseEstimatedFieldShown(asset: AssetForm): boolean {
   const purchaseBlock =

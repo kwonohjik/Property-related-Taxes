@@ -5,6 +5,7 @@
 
 import { calcEffectiveIsRegulatedAtTransfer, calcEffectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
+import { sellingHouseStdPricePayload } from "@/lib/calc/selling-std-price-scope";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
 import { buildCalcGiftHouseholdPayload } from "./gift-household-payload";
@@ -318,6 +319,8 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     ...(primary ? buildHouseFirstDisclosurePayload(primary) : {}),
     // 부수토지 배율 한도(영 §168의12) 입력 — 분리 축(별개 취득)에서 엔진이 소비한다.
     ...(primary ? buildNewConstructionPayload(primary) : {}),
+    // ⑬ 양도 주택의 양도 당시 기준시가 — 단건과 같은 leaf
+    ...(primary ? sellingHouseStdPricePayload(primary) : {}),
     // Q-8 — 명부 정본. 단건(`transfer-tax-api.ts`)과 **같은 leaf**를 쓴다(3중 패턴).
     householdHousingCount: resolveHouseholdHousingCount({
       primaryKind,
@@ -632,6 +635,7 @@ function humanizeFieldPath(path: string): string {
     propertyType: "자산 종류",
     standardPriceAtAcquisition: "취득시 기준시가",
     standardPriceAtTransfer: "양도시 기준시가",
+    sellingHouseStdPriceAtTransfer: "양도 주택 양도 당시 기준시가",
     useEstimatedAcquisition: "환산취득가 사용",
     householdHousingCount: "세대 주택 수",
     residencePeriodMonths: "거주기간",

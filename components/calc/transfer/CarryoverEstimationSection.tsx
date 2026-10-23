@@ -60,6 +60,8 @@ interface Props {
   onAssetChange: (patch: Partial<AssetForm>) => void;
   /** 일반건물 건물 파트면 앵커 키가 `buildingCarryover.*` — `CarryoverGiftBlock`의 같은 prop */
   part?: "land" | "building";
+  /** 함께 양도하는 두 번째 이후 자산 — 환산 방식은 `general`만(PR-0c). `CarryoverGiftBlock`의 같은 prop */
+  isNonPrimaryAsset?: boolean;
 }
 
 export function CarryoverEstimationSection({
@@ -69,6 +71,7 @@ export function CarryoverEstimationSection({
   onCarryoverChange,
   onAssetChange,
   part = "land",
+  isNonPrimaryAsset,
 }: Props) {
   const isBuildingPart = part === "building";
   /**
@@ -76,8 +79,12 @@ export function CarryoverEstimationSection({
    * 일반건물은 `general`만 — 엔진이 PHD·APD를 읽지 않아 고르면 칸이 없는 막다른 길이거나 고른 방식이 반영되지 않는다.
    * 세션에 PHD·APD가 남은 경우(구형 입력)엔 라디오가 비선택 상태가 되고 ⑧이 다시 고르게 한다.
    */
-  const modeOptions = ESTIMATION_MODE_OPTIONS.filter((o) => carryoverEstimationModeSupported(asset.assetKind, o.value));
-  const phdPanelsOpen = carryoverEstimationModeSupported(asset.assetKind, "phd");
+  const supportOpts = { isNonPrimary: isNonPrimaryAsset };
+  const modeOptions = ESTIMATION_MODE_OPTIONS.filter((o) => carryoverEstimationModeSupported(asset.assetKind, o.value, supportOpts));
+  const phdPanelsOpen = carryoverEstimationModeSupported(asset.assetKind, "phd", supportOpts);
+  /** 컴패니언에 phd·apd 가 남은 옛 입력 — 라디오는 비선택이 되고 ⑧이 막으므로, 왜 다시 고르는지 알린다(선택을 바꿀 입력 경로는 위 라디오가 유지한다). */
+  const staleUnsupportedMode =
+    !!isNonPrimaryAsset && (c.estimationMode === "phd" || c.estimationMode === "apd");
   return (
     <div className="space-y-3">
       {/* 환산 방식 선택 */}
@@ -94,6 +101,11 @@ export function CarryoverEstimationSection({
             onCarryoverChange({ estimationMode: v as CarryoverEstimationMode })
           }
         />
+        {staleUnsupportedMode && (
+          <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="carryover-companion-mode-notice">
+            함께 양도 자산의 이월과세는 「일반 기준시가 환산」만 지원합니다 — 이전에 고른 방식은 계산에 반영되지 않으므로 환산 방식을 다시 선택하세요.
+          </p>
+        )}
       </div>
 
       {/* 일반 기준시가 환산 입력 */}

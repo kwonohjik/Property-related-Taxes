@@ -28,6 +28,7 @@ import { validateGbExtensionUnifiedEstimate } from "./transfer-tax-validate-gb-r
 import { needsGbSec1639BuildingStdPrice } from "./transfer-tax-validate-gb-required";
 import { fieldError } from "./transfer-tax-validate-field";
 import { gbExtensionLegacyExpenseUnused } from "./gb-extension-legacy-expense";
+import { gbCapexBeforeExtensionIssue } from "./gb-extension-capex-timing";
 
 /**
  * 일반건물 자산 전용 검증.
@@ -612,6 +613,10 @@ export function validateGeneralBuildingAsset(
     // 이전 입력 형식 필요경비 × 파트 가격 대체 — 엔진이 덮어써 사라진다(E-1 Q-5 a). 칸을 나눠 입력하게 한다.
     if (gbExtensionLegacyExpenseUnused(asset, formTransferDate))
       return fieldError("directExpenses", `${label}: 「직접 귀속 필요경비 — 이전 입력 형식」은 증축이 있고 토지·건물 취득가액이 파트별 금액(분리 입력·상속·증여 평가액)인 경우 계산에 쓰이지 않습니다. 금액을 「자본적지출」과 「양도비」 칸에 나눠 입력하고 이 칸은 비우세요.`);
+
+    // 자본적지출 중 증축 전 지출액 — 증축분 배분이 지출 시점으로 갈린다(`gb-extension-capex-timing.plan.md` Q-1 a).
+    const capexTimingIssue = gbCapexBeforeExtensionIssue(asset);
+    if (capexTimingIssue) return fieldError(capexTimingIssue.field, `${label}: ${capexTimingIssue.message}`);
 
     // 공통 필수: 증축일
     if (!asset.gbExtensionDate)

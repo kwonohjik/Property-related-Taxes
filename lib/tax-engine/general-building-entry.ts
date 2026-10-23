@@ -276,15 +276,30 @@ export function buildEstimatedGeneralBuildingCards(gbv: GeneralBuildingValuation
     landMode !== buildingMode ||
     gbv.landDirectExpenses !== undefined ||
     gbv.buildingDirectExpenses !== undefined;
-  const assetCapex = extensionActual ? (gbv.capitalExpenditure ?? 0) : 0;
-  const assetCapexShare =
-    assetCapex > 0
+  /** 자산 단위 자본적지출의 토지 : 건물 — 취득시 기준시가(토지 : 원건물) 비율(E-1). */
+  const splitAssetCapex = (amount: number) =>
+    amount > 0
       ? apportionByStdPrice(
-          assetCapex,
+          amount,
           multiplyByArea(gbv.acquisitionLandPricePerSqm ?? 0, gbv.landArea ?? 0),
           gbv.acquisitionBuildingStdPrice ?? 0,
         )
       : { land: 0, building: 0 };
+  const assetCapex = extensionActual ? (gbv.capitalExpenditure ?? 0) : 0;
+  const assetCapexShare = splitAssetCapex(assetCapex);
+  /**
+   * 증축 전 지출(2026-10-23 · `docs/00-pm/gb-extension-capex-timing.plan.md`) — 증축분에 배분하지 않는다.
+   * 자산 단위 값은 토지분을 포함하므로 같은 취득시 기준시가 비율로 건물 몫을 구한다. 파트 칸이 있으면 그 칸의 증축 전 값이다.
+   */
+  const hasExtension = gbv.extensionInfo !== undefined;
+  const assetCapexBefore = hasExtension
+    ? Math.min(gbv.capitalExpenditureBeforeExtension ?? 0, gbv.capitalExpenditure ?? 0)
+    : 0;
+  const buildingBefore = !hasExtension
+    ? 0
+    : gbv.buildingDirectExpenses !== undefined
+      ? (gbv.buildingDirectExpensesBeforeExtension ?? 0)
+      : Math.min(splitAssetCapex(extensionActual ? assetCapexBefore : 0).building, assetCapexShare.building);
   const swap = resolveGeneralBuildingSwap(
     gbOut.assetCards,
     gbv.capitalExpenditure,
@@ -293,12 +308,23 @@ export function buildEstimatedGeneralBuildingCards(gbv: GeneralBuildingValuation
       ...(usePartAxis
         ? {
             land: { direct: gbv.landDirectExpenses ?? assetCapexShare.land, mode: landMode },
-            building: { direct: gbv.buildingDirectExpenses ?? assetCapexShare.building, mode: buildingMode },
+            building: {
+              direct: gbv.buildingDirectExpenses ?? assetCapexShare.building,
+              mode: buildingMode,
+              ...(buildingBefore > 0 ? { directBeforeExtension: buildingBefore } : {}),
+            },
           }
         : {}),
       // 양도비는 파트로 나누지 않고 넘긴다 — 엔진이 §100② 후문(가액 비례)으로 안분한다.
       ...(gbv.transferExpense !== undefined ? { transferExpense: gbv.transferExpense } : {}),
     },
+    // 자산총액 판정(두 파트 환산)의 증축 입력 — 증축 후 지출의 건물 몫은 토지 : 원건물 취득시 기준시가로(D-3).
+    hasExtension && !usePartAxis
+      ? {
+          capexBeforeExtension: assetCapexBefore,
+          capexAfterExtensionBuilding: splitAssetCapex((gbv.capitalExpenditure ?? 0) - assetCapexBefore).building,
+        }
+      : undefined,
   );
   return { gbOut, swap };
 }

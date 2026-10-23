@@ -156,12 +156,16 @@ test.describe("일반건물 증축 4조합 — 계산 도달", () => {
       capitalExpenditure: "",
       landDirectExpenses: "100000000",
       buildingDirectExpenses: "200000000",
+      // 그중 증축 전 지출액(2026-10-23) — 건물 파트 자본적지출이 있으면 ⑧이 요구한다.
+      gbBuildingCapexBeforeExtension: "0",
       transferExpense: "300000000",
     });
     await expandAssetSection(page, 3);
     // 파트별 산정방식 라디오 — 이 조합의 유일한 진입점.
     await expect(page.getByText("토지 취득가액 산정 방식").first()).toBeVisible();
     await expect(page.getByText("건물 취득가액 산정 방식").first()).toBeVisible();
+    // 건물 자본적지출 중 증축 전 지출액 칸 — 증축 + 건물 파트 자본적지출이면 화면에 있어야 ⑧이 막다른 길이 아니다.
+    await expect(page.getByTestId("gb-building-capex-before-extension")).toBeVisible();
 
     // 양도비 칸(§97① 나목)이 실재한다 — 배관이 살아도 칸이 없으면 no-op이다.
     await expandAssetSection(page, 4);
