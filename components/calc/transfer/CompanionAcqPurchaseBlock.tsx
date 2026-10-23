@@ -16,6 +16,7 @@ import { useState, useEffect } from "react";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 import { SelfBuiltSection } from "./SelfBuiltSection";
+import { SelfBuiltHousingShareBlock } from "./SelfBuiltHousingShareBlock";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
 import { CompanionAcqDateSection } from "./CompanionAcqDateSection";
 import { CompanionAcqAmountSection } from "./CompanionAcqAmountSection";
@@ -588,7 +589,17 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             showExtensionAppraisal={!!props.asset && generalExtensionAppraisalApplies(props.asset, props.transferDate)}
             extensionAppraisalValue={props.extensionAppraisalValue ?? ""}
             onExtensionAppraisalValueChange={props.onExtensionAppraisalValueChange}
-          />
+          >
+            {/* 일체 주택 본인 신축 × 환산·감정 — 가산세 base 를 건물분으로 구하는 입력(Q-12). 노출은 ④ 전송·⑧ 필수와 같은 술어(`selfBuiltHousingScope`). */}
+            {props.asset && props.onAssetChange && (
+              <SelfBuiltHousingShareBlock
+                asset={props.asset}
+                onChange={props.onAssetChange}
+                transferDate={props.transferDate}
+                isNonPrimary={props.isNonPrimaryAsset}
+              />
+            )}
+          </SelfBuiltSection>
         )}
     </div>
   );

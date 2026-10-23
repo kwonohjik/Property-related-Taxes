@@ -19,6 +19,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 
 export interface SelfBuiltSectionProps {
   isSelfBuilt: boolean;
@@ -39,6 +40,11 @@ export interface SelfBuiltSectionProps {
   showExtensionAppraisal?: boolean;
   extensionAppraisalValue?: string;
   onExtensionAppraisalValueChange?: (v: string) => void;
+  /**
+   * 토글 본문 **끝**에 놓을 입력 — 일체 주택 본인 신축의 «건물분 가산세 base» 카드(`SelfBuiltHousingShareBlock`).
+   * 이 섹션은 asset 을 모르는 props-only 컴포넌트라 호출부가 카드를 만들어 넘긴다. 카드가 렌더하지 않으면(`null`) 아무 것도 그려지지 않는다.
+   */
+  children?: ReactNode;
 }
 
 export function SelfBuiltSection({
@@ -55,6 +61,7 @@ export function SelfBuiltSection({
   showExtensionAppraisal,
   extensionAppraisalValue,
   onExtensionAppraisalValueChange,
+  children,
 }: SelfBuiltSectionProps) {
   return (
     <ToggleCard
@@ -154,6 +161,8 @@ export function SelfBuiltSection({
           </p>
         </div>
       )}
+
+      {children}
     </ToggleCard>
   );
 }

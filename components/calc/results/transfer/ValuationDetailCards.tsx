@@ -35,6 +35,7 @@ import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/t
 import { CarryoverComparisonCard } from "@/components/calc/results/transfer/CarryoverComparisonCard";
 import { SplitGainDetailSection } from "@/components/calc/results/transfer/SplitGainDetailSection";
 import { Pre1990LandValuationDetailCard } from "@/components/calc/results/transfer/Pre1990LandValuationDetailCard";
+import { SelfBuiltPenaltyCard } from "@/components/calc/results/transfer/SelfBuiltPenaltyCard";
 
 interface Props {
   /** `depreciationAmount`는 자산별 breakdown이 싣는 §97③ echo — 상가 환산 카드 산식이 공제 후 값과 맞도록 읽는다. */
@@ -84,7 +85,8 @@ export function ValuationDetailCards({
     !!result.familyBusinessDetail ||
     !!result.carryoverTaxationDetail ||
     !!result.splitDetail ||
-    !!result.pre1990LandValuationDetail;
+    !!result.pre1990LandValuationDetail ||
+    !!result.selfBuiltHousingPenalty;
 
   if (!hasAny) return null;
 
@@ -134,6 +136,8 @@ export function ValuationDetailCards({
       {result.pre1990LandValuationDetail && (
         <Pre1990LandValuationDetailCard detail={result.pre1990LandValuationDetail} />
       )}
+      {/* 일체 주택 본인 신축 §114조의2 가산세(건물분) — 자산별 echo (Q-12 PR-3) */}
+      <SelfBuiltPenaltyCard echo={result.selfBuiltHousingPenalty} />
       {/*
         🔴 `splitDetail` **안쪽** 중첩 detail 2종. 종전에는 단건 결과뷰에만 인라인으로 배선돼
            일괄·다건에서는 환산취득가액의 분모가 왜 낮아졌는지(§164⑨1호) 보여주는 근거가

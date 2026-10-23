@@ -28,6 +28,7 @@ import { validateCommercialAppurtenantLand } from "./transfer-tax-validate-comme
 import { validateCommercialEstimatedAsset } from "./transfer-tax-validate-commercial-asset";
 import { isPhdEligible } from "./phd-eligibility";
 import { lumpSumBaseRequired, usesPhdGate } from "./transfer-lump-sum-base-gate";
+import { validateSelfBuiltHousing } from "./transfer-tax-validate-self-built-housing";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { selfBuiltActive } from "./self-built-scope";
@@ -706,6 +707,10 @@ export function validateAssetAcquisition(
         return fieldError("extensionAppraisalValue", `${label}: 증축한 부분의 감정가액이 감정가액(${appraisal.toLocaleString()}원)보다 클 수 없습니다.`);
     }
   }
+
+  // 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — 요구 범위는 ⑤ 카드·④ 전송과 같은 술어(`selfBuiltHousingScope`). 숨은 입력은 요구하지 않는다.
+  const selfBuiltHousingErr = validateSelfBuiltHousing(asset, label, formTransferDate, { isNonPrimaryAsset });
+  if (selfBuiltHousingErr) return selfBuiltHousingErr;
 
   // 토지/건물 분리 직접 입력(§166⑥) — 입력 합이 총액을 초과하면 잔액이 음수가 된다.
   // 판정식은 엔진 splitPair와 단일 소스(isSplitPairOverflow) — ⑧ 규칙(UI 통과 ↔ validate 차단 모순) 방지.

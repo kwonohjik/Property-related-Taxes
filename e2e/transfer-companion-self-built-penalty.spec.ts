@@ -4,8 +4,9 @@
  * 종전에는 컴패니언 카드에도 「본인이 신축 또는 증축한 건물입니까?」 칸이 있는데 ⑫·④가 그 값을 싣지 않아
  * 첫 자산만 가산세가 붙고 컴패니언은 조용히 0이었다.
  *   CS-1. 부담부증여 지분 카드(축 B) × 신축 × 감정가액 — 자산 2의 신축이 가산세 6,000,000(감정가액 5억×40%×채무비율 0.6 = 1.2억의 5%)
- *   CS-2. 함께 양도(다른 물건) × 환산 × 신축 — 자산 2의 가산세 4,999,999가 payload·결과에 반영된다
- *   CS-3. 함께 양도 × 감정가액 × 신축(자산 2) — 가산세 15,000,000(감정가액 3억 × 5%) · 개산공제 6,000,000(§163⑥)
+ *   CS-2. 함께 양도(다른 물건) × 환산 × 신축 — 자산 2의 가산세가 payload·결과에 반영된다. 일체 주택은 «해당 건물»분이 base 라
+ *         건물분 입력(Q-12 PR-2)을 채운다: 1,874,999(종전 전체 base 99,999,999 · 4,999,999)
+ *   CS-3. 함께 양도 × 감정가액 × 신축(자산 2) — 가산세 5,500,000(건물 감정가액 1.1억 직접 입력 × 5%, 종전 감정가액 총액 3억 · 15,000,000) · 개산공제 6,000,000(§163⑥)
  *   CS-4. 함께 양도 × 감정가액 × 증축(자산 2) — 컴패니언 카드에 「증축한 부분의 감정가액」 칸이 뜨고 그 값(6천만)이 base(가산세 3,000,000)
  * 사람이 브라우저로 직접 한 수동 확인은 아니다(headless). 포트는 `baseURL` — 워크트리는 `E2E_PORT=<포트>`.
  */
@@ -14,6 +15,16 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 const SB = { isSelfBuilt: true, buildingType: "new", constructionDate: "2021-06-01" };
+/** 일체 주택 본인 신축 × 환산의 건물분 입력(Q-12 PR-2) — 취득 당시 토지 1억·건물 6천만, 양도 당시 토지 6억(㎡당 600만 × 100㎡)·건물 4억 */
+const SB_BLDG = {
+  standardPricePerSqmAtAcq: "1000000",
+  acquisitionArea: "100",
+  transferArea: "100",
+  buildingStandardPriceAtAcq: "60000000",
+  standardPricePerSqmAtTransfer: "6000000",
+  buildingStandardPriceAtTransfer: "400000000",
+  saleSplitMode: "apportioned",
+};
 
 const tranche = (id: number, num: string, acq: string, over: Record<string, unknown> = {}) => ({
   ...makeDefaultAsset(id),
@@ -110,11 +121,11 @@ test.describe("컴패니언 신축·증축 특례 §114조의2", () => {
     expect(props[1].penaltyTax).toBe(6_000_000);
   });
 
-  test("CS-2: 함께 양도 × 환산 × 신축(자산 2) → 자산 2 가산세 4,999,999", async ({ page }) => {
+  test("CS-2: 함께 양도 × 환산 × 신축(자산 2) → 자산 2 가산세 1,874,999(건물분 base 37,499,999)", async ({ page }) => {
     test.setTimeout(120_000);
     await seedAndOpen(page, [
       plain(1, { useEstimatedAcquisition: true }),
-      plain(2, { useEstimatedAcquisition: true, ...SB }),
+      plain(2, { useEstimatedAcquisition: true, ...SB, ...SB_BLDG }),
     ]);
     // 컴패니언 카드에 신축·증축 칸이 실제로 있고(입력 경로), 그 값이 켜져 있다
     for (const n of [1, 2, 3] as const) await expandAssetSection(page, n, 1);
@@ -125,20 +136,21 @@ test.describe("컴패니언 신축·증축 특례 §114조의2", () => {
     expect(sent.companionAssets?.[0].constructionDate).toBe("2021-06-01");
     const props = (await resp.json()).data.aggregated.properties as Prop[];
     expect(props[0].penaltyTax).toBe(0);
-    expect(props[1].penaltyTax).toBe(4_999_999);
+    expect(props[1].penaltyBase).toBe(37_499_999);
+    expect(props[1].penaltyTax).toBe(1_874_999);
   });
 
-  test("CS-3: 함께 양도 × 감정가액 × 신축(자산 2) → 가산세 15,000,000 · 개산공제 6,000,000", async ({ page }) => {
+  test("CS-3: 함께 양도 × 감정가액 × 신축(자산 2) → 가산세 5,500,000(건물 감정가액 1.1억) · 개산공제 6,000,000", async ({ page }) => {
     test.setTimeout(120_000);
     const appraisal = { isAppraisalAcquisition: true, fixedAcquisitionPrice: "300000000" };
-    await seedAndOpen(page, [plain(1, appraisal), plain(2, { ...appraisal, ...SB })]);
+    await seedAndOpen(page, [plain(1, appraisal), plain(2, { ...appraisal, ...SB, selfBuiltBuildingAppraisal: "110000000" })]);
     const resp = await calculate(page);
     const sent = resp.request().postDataJSON() as { companionAssets?: Record<string, unknown>[] };
     expect(sent.companionAssets?.[0].acquisitionMethod).toBe("appraisal");
     const props = (await resp.json()).data.aggregated.properties as (Prop & { necessaryExpense: number })[];
     expect(props[1].necessaryExpense).toBe(6_000_000);
-    expect(props[1].penaltyBase).toBe(300_000_000);
-    expect(props[1].penaltyTax).toBe(15_000_000);
+    expect(props[1].penaltyBase).toBe(110_000_000);
+    expect(props[1].penaltyTax).toBe(5_500_000);
   });
 
   test("CS-4: 함께 양도 × 감정가액 × 증축(자산 2) → 컴패니언 카드의 증축부분 감정가액 6천만이 base(가산세 3,000,000)", async ({ page }) => {

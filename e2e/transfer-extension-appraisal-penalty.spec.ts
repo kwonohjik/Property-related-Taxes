@@ -4,7 +4,7 @@
  * 종전에는 증축에도 건물 전체 감정가액을 가산세 base로 썼다. 조문은 「증축한 부분에 한정한 감정가액」이라 별도 칸을 받는다.
  *   EA-1. 증축 × 감정가액(건물 전체 300M · 증축부분 60M) → payload `extensionAppraisalValue` · base 60M · 가산세 3,000,000(종전 15,000,000)
  *   EA-2. 칸이 비면 계산을 막고 그 칸으로 안내한다(건물 전체로 대신하지 않는다)
- *   EA-3. 구별력 — 신축이면 칸이 없고 건물 전체 감정가액이 base(15,000,000)다
+ *   EA-3. 구별력 — 신축이면 증축부분 칸이 없고 일체 주택의 base 는 건물 감정가액(Q-12 PR-2: 1.1억 직접 입력 · 5,500,000, 종전 감정가액 총액 3억 · 15,000,000)이다
  * 사람이 브라우저로 직접 한 수동 확인은 아니다(headless Playwright). 포트는 `baseURL` — 워크트리는 `E2E_PORT=<포트> npx playwright test <spec>`.
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -112,10 +112,10 @@ test.describe("통상 경로 — 감정가액 × 증축 5년 이내 §114조의2
     expect(called).toBe(false);
   });
 
-  test("EA-3: 구별력 — 신축이면 칸이 없고 건물 전체 감정가액이 base(15,000,000)", async ({ page }) => {
+  test("EA-3: 구별력 — 신축이면 증축부분 칸이 없고 base 는 건물 감정가액(5,500,000)", async ({ page }) => {
     test.setTimeout(120_000);
     await seedAndOpen(page, [
-      seed({ buildingType: "new", extensionFloorArea: "", extensionStdPriceAtAcquisition: "", extensionAppraisalValue: "" }),
+      seed({ buildingType: "new", extensionFloorArea: "", extensionStdPriceAtAcquisition: "", extensionAppraisalValue: "", selfBuiltBuildingAppraisal: "110000000" }),
     ]);
     const card = page.locator('[data-asset-card-index="0"]');
     await expandAssetSection(page, 1);
@@ -124,7 +124,7 @@ test.describe("통상 경로 — 감정가액 × 증축 5년 이내 §114조의2
     const res = await calculate(page);
     const body = await res.json();
     const r = body.data?.result ?? body.result ?? body.data;
-    expect(r.penaltyBase).toBe(300_000_000);
-    expect(r.penaltyTax).toBe(15_000_000);
+    expect(r.penaltyBase).toBe(110_000_000);
+    expect(r.penaltyTax).toBe(5_500_000);
   });
 });

@@ -74,6 +74,7 @@ import {
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 import { selfBuiltActive } from "./self-built-scope";
 import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
+import { withSelfBuiltHousing } from "./transfer-tax-api-self-built-housing";
 import { primaryEnginePropertyType } from "./transfer-tax-api-helpers";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
@@ -434,6 +435,9 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
       primary.buildingType === "extension"
         ? parseAmount(primary.extensionStdPriceAtAcquisition) || undefined
         : undefined,
+    // ④⑬ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — 중첩 객체. 범위 판정은 ⑤·⑧과 같은 술어(`selfBuiltHousingScope`),
+    // 다건·컴패니언 ④도 같은 빌더를 부른다. 범위 밖이면 키를 싣지 않는다.
+    ...withSelfBuiltHousing(primary, { transferDate: form.transferDate, isNonPrimary: false }, primaryRatio),
     // ④⑬ §114조의2① 감정가액 × 증축 — 「증축한 부분에 한정한 감정가액」. ⑤ 칸·⑧과 같은 술어(`generalExtensionAppraisalApplies`)이고,
     // 감정가액(`appraisalValue`)과 같은 지분 스케일을 쓴다(base가 그 부분집합이므로).
     extensionAppraisalValue:

@@ -138,6 +138,19 @@ const bundle = () => [
 
 
 const SB = { isSelfBuilt: true, buildingType: "new", constructionDate: "2021-06-01" } as Record<string, unknown>;
+/**
+ * 일체 주택 본인 신축의 «건물분» 입력(Q-12 PR-2) — 가산세 base 가 토지 포함 전체가 아니라 건물분이 되므로, 환산 신축 컴패니언은 이 칸이 있어야 계산된다.
+ * 취득 당시 토지 1억(㎡당 100만 × 100㎡)·건물 6천만, 양도 당시 토지 6억(㎡당 600만 × 100㎡)·건물 4억(양도시 주택공시가격 1,000,000,001 ≈ 토지+건물).
+ */
+const SB_BLDG = {
+  standardPricePerSqmAtAcq: "1000000",
+  acquisitionArea: "100",
+  transferArea: "100",
+  buildingStandardPriceAtAcq: "60000000",
+  standardPricePerSqmAtTransfer: "6000000",
+  buildingStandardPriceAtTransfer: "400000000",
+  saleSplitMode: "apportioned",
+} as Record<string, unknown>;
 const EXT = {
   isSelfBuilt: true,
   buildingType: "extension",
@@ -165,19 +178,21 @@ type Props = { penaltyTax: number; penaltyBase: number }[];
 const propsOf = (d: BundledData | undefined) => (d?.aggregated as unknown as { properties?: Props })?.properties ?? [];
 
 describe("컴패니언 신축·증축 — ④⑫⑭ 배선", () => {
-  it("[C-1] 환산 컴패니언의 신축이 엔진에 닿는다 — 가산세 4,999,999(= 환산취득가 99,999,999 × 5%)", async () => {
-    const r = await run(form([plain(1, ESTIMATED), plain(2, { ...ESTIMATED, ...SB })]));
+  it("[C-1] 환산 컴패니언의 신축이 엔진에 닿는다 — 건물분 base 37,499,999 · 가산세 1,874,999 (종전 전체 base 99,999,999 · 4,999,999 — Q-12 값 변경)", async () => {
+    const r = await run(form([plain(1, ESTIMATED), plain(2, { ...ESTIMATED, ...SB, ...SB_BLDG })]));
     expect(r.status).toBe(200);
     const p = propsOf(r.data);
     expect(p[0].penaltyTax).toBe(0);
-    expect(p[1].penaltyTax).toBe(4_999_999);
-    expect(p[1].penaltyBase).toBe(99_999_999);
+    // 건물 양도가액 S_b = 5억 × 4억/(6억+4억) = 2억 · 건물분 B_acq = 2억 × 6천만/(1억+6천만) = 7,500만 ·
+    // B_tr = 1,000,000,001 − 토지분 floor(1,000,000,001 × 6/10 = 600,000,000.6) = 400,000,001 (건물 = 총액 − 토지) → 2억 × 7,500만 ÷ 400,000,001 = 37,499,999
+    expect(p[1].penaltyBase).toBe(37_499_999);
+    expect(p[1].penaltyTax).toBe(1_874_999);
   });
 
   it("[C-2] 🔴 구별력 — 신축을 첫 자산에만 켜면 컴패니언은 0이다(서로 번지지 않는다)", async () => {
-    const r = await run(form([plain(1, { ...ESTIMATED, ...SB }), plain(2, ESTIMATED)]));
+    const r = await run(form([plain(1, { ...ESTIMATED, ...SB, ...SB_BLDG }), plain(2, ESTIMATED)]));
     const p = propsOf(r.data);
-    expect(p[0].penaltyTax).toBe(4_999_999);
+    expect(p[0].penaltyTax).toBe(1_874_999);
     expect(p[1].penaltyTax).toBe(0);
   });
 
@@ -190,14 +205,15 @@ describe("컴패니언 신축·증축 — ④⑫⑭ 배선", () => {
   });
 
   it("[C-4] ④: 신축·증축 축이 살아 있을 때만 싣는다 — 토지로 바꾸면 stale 플래그가 새지 않는다", async () => {
-    const on = await run(form([plain(1, ESTIMATED), plain(2, { ...ESTIMATED, ...SB })]));
+    const on = await run(form([plain(1, ESTIMATED), plain(2, { ...ESTIMATED, ...SB, ...SB_BLDG })]));
     const c = (on.body.companionAssets as Record<string, unknown>[])[0];
     expect(c.isSelfBuilt).toBe(true);
     expect(c.buildingType).toBe("new");
     expect(c.constructionDate).toBe("2021-06-01");
-    const land = await run(form([plain(1, ESTIMATED), plain(2, { ...ESTIMATED, ...SB, assetKind: "land" })]));
+    const land = await run(form([plain(1, ESTIMATED), plain(2, { ...ESTIMATED, ...SB, ...SB_BLDG, assetKind: "land" })]));
     const cl = (land.body.companionAssets as Record<string, unknown>[])[0];
     expect(cl.isSelfBuilt).toBeUndefined();
+    expect(cl.selfBuiltHousing).toBeUndefined();
     expect(cl.constructionDate).toBeUndefined();
   });
 });
@@ -237,15 +253,15 @@ describe("일반 컴패니언 × 감정가액 × 신축·증축 — 이제 계�
   const issues = (f: TransferFormData) => collectStepIssues(0, f as never);
   const OLD_BLOCK = /두 번째 이후 자산\(또는 지분 카드\).*감정가액으로 산정하면/;
 
-  it("[V-1] 두 번째 자산 × 감정가액 × 신축 → 막지 않고 가산세 15,000,000(= 감정가액 3억 × 5%)", async () => {
-    const f = form([plain(1, APPRAISAL), plain(2, { ...APPRAISAL, ...SB })]);
+  it("[V-1] 두 번째 자산 × 감정가액 × 신축 → 막지 않고 건물 감정가액 직접 입력 1.1억 × 5% = 5,500,000 (종전 감정가액 총액 3억 · 15,000,000 — Q-12 값 변경)", async () => {
+    const f = form([plain(1, APPRAISAL), plain(2, { ...APPRAISAL, ...SB, selfBuiltBuildingAppraisal: "110000000" })]);
     expect(issues(f).some((i) => OLD_BLOCK.test(i.message))).toBe(false);
     const r = await run(f);
     expect(r.status).toBe(200);
     const p = propsOf(r.data);
     expect(p[0].penaltyTax).toBe(0);
-    expect(p[1].penaltyBase).toBe(300_000_000);
-    expect(p[1].penaltyTax).toBe(15_000_000);
+    expect(p[1].penaltyBase).toBe(110_000_000);
+    expect(p[1].penaltyTax).toBe(5_500_000);
   });
 
   it("[V-2] 두 번째 자산 × 감정가액 × 증축 → base는 증축한 부분의 감정가액(6천만 × 5% = 3,000,000)", async () => {

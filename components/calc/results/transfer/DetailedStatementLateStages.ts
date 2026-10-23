@@ -19,6 +19,7 @@
 
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 import { donorBuiltPenaltyView, resultDonorBuiltEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
+import { resultSelfBuiltEchoes, selfBuiltPenaltyView } from "@/lib/tax-engine/transfer-tax-self-built-display";
 import {
 } from "@/components/calc/results/transfer/exempt-gross-gain";
 import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
@@ -195,16 +196,27 @@ export function appendLateStageItems(
     // 이월과세 × 증여자 신축·증축(§114조의2) — 신축자가 증여자임과 건물분 산식을 같은 문장 정본(`donorBuiltPenaltyView`)으로 밝힌다.
     const donorView = donorBuiltPenaltyView(resultDonorBuiltEcho(result));
     const aggDonor = (result.donorBuiltPenaltyEchoes ?? []).filter((e) => e.echo.applied);
-    if (aggDonor.length > 0) {
-      // 집계(일반건물·일괄·다건) — 카드마다 echo 가 따로다. 증여자 신축분은 카드별로 밝히고, 나머지(본인 신축 등)는 남은 금액으로 둔다.
+    // 일체 주택 본인 신축(건물분, Q-12) — 집계는 카드별 목록, 단건·건별은 echo 하나. 증여자 신축과 한 가산세를 나눠 갖지 않는다(상호 배타).
+    const selfEchoes = resultSelfBuiltEchoes(result);
+    if (aggDonor.length > 0 || (result.selfBuiltPenaltyEchoes?.length ?? 0) > 0) {
+      // 집계(일반건물·일괄·다건) — 카드마다 echo 가 따로다. 증여자·본인 신축분은 카드별로 밝히고, 나머지는 남은 금액으로 둔다.
       for (const { label, echo } of aggDonor) {
         const method = echo.burdenedGift?.method === "appraisal" ? "감정가액" : "환산취득가액";
         penaltyParts.push(`§114조의2 증여자 신축·증축 ${method} 가산세 ${echo.penalty!.toLocaleString()} [${label}] — ${donorBuiltPenaltyView(echo)!.formulaLines.join(" · ")}`);
       }
-      const rest = section114_2Penalty - aggDonor.reduce((sum, { echo }) => sum + (echo.penalty ?? 0), 0);
+      for (const { label, echo } of result.selfBuiltPenaltyEchoes ?? []) {
+        const method = echo.method === "appraisal" ? "감정가액" : "환산취득가액";
+        penaltyParts.push(`§114조의2 본인 신축 건물 ${method} 가산세 ${echo.penalty.toLocaleString()} [${label}] — ${selfBuiltPenaltyView(echo)!.formulaLines.join(" · ")}`);
+      }
+      const rest =
+        section114_2Penalty -
+        aggDonor.reduce((sum, { echo }) => sum + (echo.penalty ?? 0), 0) -
+        (result.selfBuiltPenaltyEchoes ?? []).reduce((sum, { echo }) => sum + echo.penalty, 0);
       if (rest > 0) penaltyParts.push(`§114조의2 ${penaltyMethod} 가산세 ${rest.toLocaleString()}`);
     } else if (donorView?.applied) {
       penaltyParts.push(`§114조의2 증여자 신축·증축 ${penaltyMethod} 가산세 ${section114_2Penalty.toLocaleString()} — ${donorView.formulaLines.join(" · ")}`);
+    } else if (selfEchoes.length > 0) {
+      penaltyParts.push(`§114조의2 본인 신축 건물 ${penaltyMethod} 가산세 ${section114_2Penalty.toLocaleString()} — ${selfBuiltPenaltyView(selfEchoes[0].echo)!.formulaLines.join(" · ")}`);
     } else penaltyParts.push(
       result.penaltyBase > 0
         ? `§114조의2 ${penaltyMethod} 가산세 ${section114_2Penalty.toLocaleString()} (= ${result.penaltyBase.toLocaleString()} × 5%)`
