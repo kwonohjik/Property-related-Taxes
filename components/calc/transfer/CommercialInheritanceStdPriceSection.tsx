@@ -36,6 +36,8 @@ import {
   sec164AcqTimePointLabel,
 } from "@/lib/calc/transfer-163-9-base-date";
 import { sec164CommercialStatus } from "@/lib/calc/sec164-required-fields";
+import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
+import { bgPreDeemedUsesThreeWay } from "@/lib/calc/bg-pre-deemed-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 
@@ -79,13 +81,32 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
         <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨ 2호" label="§163⑨2호" />
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥" />
       </div>
-      <p className="text-xs text-amber-700 dark:text-amber-300">
-        상가 기준시가 최초고시(2005.1.1) 전 {causeLabel}받은 상가는 <b>{dateLabel} 상증법 평가액과 §164⑥ 취득당시 기준시가 중 큰 금액</b>를
-        취득가액으로 봅니다. 취득당시 기준시가는 최초고시(2005) 역환산으로 산정합니다.{" "}
-        <b>{sec164Status ? `${sec164Status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한
-        경우에만 비교합니다. 전부 비워두면 {dateLabel} 평가액만 사용하고,{" "}
-        <b>일부만 입력하면 계산할 때 오류로 안내</b>합니다.
-      </p>
+      {isBgPreDeemedAsset(asset) ? (
+        // 의제취득일 전 부담부증여 — §159①1호 A(사용자 결정 Q-24·Q-27 · 계획서 inheritance-pre-deemed-bg-pr7b.plan.md)
+        <p data-testid="cb164-6-bg-note" className="text-xs text-amber-700 dark:text-amber-300">
+          {bgPreDeemedUsesThreeWay(asset) ? (
+            <>
+              부담부증여를 시가로 평가하면 이 값이 <b>② 후보</b>입니다 — ① {dateLabel} 상증법 평가액·② 이 값·③ 환산취득가액 중 큰
+              금액에 채무비율을 곱합니다.
+            </>
+          ) : (
+            <>
+              부담부증여를 기준시가로 평가하면 이 값을 <b>의제취득일(1985.1.1.) 기준시가</b>로 씁니다 — 그 기준시가에 채무비율을 곱한 금액이
+              취득가액입니다. 전부 비워두면 위 의제취득일 기준시가 칸 값을 씁니다.
+            </>
+          )}{" "}
+          <b>{sec164Status ? `${sec164Status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한 경우에만 쓰고,{" "}
+          <b>일부만 입력하면 계산할 때 오류로 안내</b>합니다.
+        </p>
+      ) : (
+        <p className="text-xs text-amber-700 dark:text-amber-300">
+          상가 기준시가 최초고시(2005.1.1) 전 {causeLabel}받은 상가는 <b>{dateLabel} 상증법 평가액과 §164⑥ 취득당시 기준시가 중 큰 금액</b>를
+          취득가액으로 봅니다. 취득당시 기준시가는 최초고시(2005) 역환산으로 산정합니다.{" "}
+          <b>{sec164Status ? `${sec164Status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한
+          경우에만 비교합니다. 전부 비워두면 {dateLabel} 평가액만 사용하고,{" "}
+          <b>일부만 입력하면 계산할 때 오류로 안내</b>합니다.
+        </p>
+      )}
 
       {/* 면적 3필드(전용·공유·대지)는 ① 기본정보로 이전했다 (2026-08-04).
           취득원인 무관 단일 입력 — `asset-sections/AssetAreaCommercial.tsx`.

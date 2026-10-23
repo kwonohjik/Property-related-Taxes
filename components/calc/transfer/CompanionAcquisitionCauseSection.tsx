@@ -332,7 +332,7 @@ export function CompanionAcquisitionCauseSection({
           onDonorAcquisitionDateChange={(v) => onChange({ donorAcquisitionDate: v })}
           fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
           onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
-          // 의제취득일 전 토지·주택을 시가로 평가한 부담부증여는 ① 증여 신고가액이 3자 max 후보라 칸을 연다(계획서 §18 · Q-24·Q-14)
+          // 의제취득일 전 토지·주택·상가·건물을 시가로 평가한 부담부증여는 ① 증여 신고가액이 3자 max 후보라 칸을 연다(계획서 §18 · Q-24·Q-14)
           isBurdenedGift={asset.transferType === "burdened_gift" && !bgPreDeemedUsesThreeWay(asset)}
           donorDateRequiredForHousehold={giftHouseholdAsked}
         />
