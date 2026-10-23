@@ -16,6 +16,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
+import { CarryoverDonorBuiltPenaltyCard } from "@/components/calc/results/transfer/CarryoverDonorBuiltPenaltyCard";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import {
   BurdenedGiftFilingFormSection,
@@ -105,7 +106,7 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     // §114조의2 산정방식 — 감정가액 건물 파트만 있으면 상세명세서 라벨을 「감정가액」으로(Q-13). 섞여 있으면 종전 표기(환산취득가액) 유지.
     ...((() => { const m = penaltyMethodSums(a.properties); return m.appraisal.tax > 0 && m.estimated.tax === 0; })() ? { penaltyMethod: "appraisal" as const } : {}),
     // 카드별 증여자 신축·증축 §114조의2 echo — 어댑터가 싣지 않으면 상세명세서·PDF 가 증여자 신축 근거를 읽을 수 없다(PR-5a).
-    ...((() => { const e = gbResultDonorBuiltEchoes(a.properties); return e.length > 0 ? { donorBuiltPenaltyEchoes: e } : {}; })()),
+    ...((() => { const e = gbResultDonorBuiltEchoes(a.properties, a.donorBuiltPenalty); return e.length > 0 ? { donorBuiltPenaltyEchoes: e } : {}; })()),
     // `a.penaltyTax`는 국기법분까지 합한 **총액**이라 지방소득세 base로 못 쓴다.
     // 엔진이 실제로 base에 넣은 §114조의2분 echo를 그대로 승계한다.
     localTaxPenalty: a.buildingPenaltyTax ?? 0,
@@ -402,6 +403,9 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           reductionAmount: p.reductionAmount,
         }))}
       />
+
+      {/* 일반건물 부담부증여 × 이월과세 × 당초 증여자 신축·증축 §114조의2 근거(PR-5c) — 단건 `CarryoverComparisonCard` 와 같은 카드·같은 문구 정본. echo 가 없으면 렌더하지 않는다. */}
+      <CarryoverDonorBuiltPenaltyCard echo={aggregated.donorBuiltPenalty} />
 
       {/* 합산 과세 내역 (납부세액 요약 대체) */}
       <AggregatedTaxSummary aggregated={aggregated} />

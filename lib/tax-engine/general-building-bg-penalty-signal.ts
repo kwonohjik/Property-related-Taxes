@@ -14,8 +14,12 @@
  * 발동 게이트(5년·시행일 2018.1.1./2020.1.1.)는 호출 쪽 `calculateBuildingPenalty`(finalize STEP 10.5)가 최종 판정한다.
  */
 import { calculateBuildingPenalty } from "./transfer-tax-building-penalty";
+import { assertDonorBuiltDatesAndExtension } from "./transfer-tax-carryover-donor-penalty";
+import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { TRANSFER } from "./legal-codes";
 import type { BurdenedGiftInfo, TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
+import type { DonorBuiltInput } from "./types/transfer-carryover.types";
 import type { TransferTaxInput } from "./types/transfer.types";
 
 /** 적용 고지(Q-14) — 일반건물 부담부증여에 대한 정면 해석례는 확인하지 못했다. 결과 `warnings`에 싣는다. */
@@ -25,6 +29,8 @@ export const GB_BG_SELF_BUILT_NOTICE =
 export interface GbBgPenaltyAxis {
   acquisitionMethod: "estimated" | "appraisal";
   base: number;
+  /** 증여자 신축·증축분(PR-5c) — 신축자가 증여자임을 가산세 step 라벨(`penaltyDonorBuilt`)이 읽는다. 본인 신축이면 없다. */
+  donor?: true;
 }
 
 export function gbBurdenedGiftSelfBuiltPenaltyAxis(
@@ -49,4 +55,68 @@ export function gbBurdenedGiftSelfBuiltPenaltyAxis(
     1,
   );
   return gate ? axis : undefined;
+}
+
+/** 증여자 신축·증축 신호(PR-5c) — 카드에 싣는 필드 묶음. 5년 기산점은 증여자 신축일이고 카드의 `acquisitionDate`(증여자 취득일, 장기보유특별공제 축)와 다르다. */
+export interface GbBgDonorBuiltSignal {
+  axis: GbBgPenaltyAxis;
+  constructionDate: Date;
+  buildingType: "new" | "extension";
+  extensionFloorArea?: number;
+}
+
+/**
+ * 입력 거부 — 조용히 무시하지 않는다(⑧·⑫와 같은 규칙, 직접 호출 방어선). 일반건물 부담부증여 × 이월과세(F27)가 증여자 신축·증축을 받는 조건:
+ * 시가 모드 환산취득가액(K-5) · 건물 취득원인이 본인 신축이 아님 · 신축·증축일 범위와 증축 필수 칸(증축 부분 기준시가).
+ */
+export function assertGbBgDonorBuiltInput(
+  info: BurdenedGiftInfo,
+  ct: Parameters<typeof assertDonorBuiltDatesAndExtension>[1],
+  db: DonorBuiltInput,
+  buildingIsNewConstruction: boolean,
+): void {
+  const law = TRANSFER.BUILDING_PENALTY;
+  const field = "burdenedGiftInfo.carryoverDonorBasis.donorBuilt";
+  const reject = (message: string): never => {
+    throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, message, { field });
+  };
+  if (info.valuationMode !== "sangjeungbeop_market" || info.acquisitionMethod !== "converted")
+    reject(`일반건물 부담부증여의 증여자 신축·증축 가산세(${law})는 시가 모드의 취득가액 산정방식이 «환산취득가액»(K-5)일 때만 적용됩니다.`);
+  if (buildingIsNewConstruction)
+    reject(`일반건물 부담부증여에서 «양도인 본인 신축»(건물 취득 원인 newConstruction)과 «당초 증여자 신축»(donorBuilt)은 다른 축입니다 — 함께 입력할 수 없습니다.`);
+  assertDonorBuiltDatesAndExtension(db, ct, field, true);
+}
+
+/**
+ * 일반건물 부담부증여 K-5 × **당초 증여자** 신축·증축 → §114조의2 카드 신호 (PR-5c). 이월과세 **A 시나리오 호출에서만** 부른다(B 는 부르지 않는다 — R2).
+ * base 규칙은 본인 신축 K-5 와 같다(위 함수·단건 `runBurdenedGiftStep`): 채무비율 안분 **후** 건물분. A 의 `info` 는 이미 당초 증여자 취득 당시 기준시가로 치환돼 있어
+ * (`applyCarryoverDonorBasis`) 그 base 가 곧 «증여자 기준 건물분 환산취득가액»이다(D2·D4). 신축은 swap 前 값, 증축은 증축 부분만
+ * (`양도가액 건물분 × 증축 부분 취득 당시 기준시가 ÷ 양도 당시 건물 기준시가`).
+ * 게이트(5년·시행일·증축 85㎡)가 닫히거나 base 가 0 이면 신호 없음 — 호출부가 사유(outside_penalty_window / zero_base)를 가른다.
+ */
+export function gbBurdenedGiftDonorBuiltPenaltySignal(
+  info: BurdenedGiftInfo,
+  breakdown: TransferBurdenedGiftBreakdown,
+  db: DonorBuiltInput,
+  transferDate: Date,
+): GbBgDonorBuiltSignal | undefined {
+  if (info.acquisitionMethod !== "converted" || breakdown.acquisitionMethodUsed !== "converted") return undefined;
+  const building = breakdown.perAsset.building;
+  // 증축 부분 기준시가가 없거나(0) 양도시 건물 기준시가가 0 이면 환산이 0 이 되고(`safeMultiplyThenDivide`) 아래 base 0 가드가 신호를 없앤다 — 입력 필수는 ⑫·방어선이 지킨다.
+  const base =
+    db.buildingType === "extension"
+      ? calculateEstimatedAcquisitionPrice(building.transferPrice, db.extensionStdPriceAtAcquisition ?? 0, info.buildingStdPriceAtTransfer)
+      : (breakdown.convertedAcquisitionBeforeSwap?.building ?? building.acquisitionPrice);
+  if (!(base > 0)) return undefined;
+  const gate = calculateBuildingPenalty(
+    { isSelfBuilt: true, penaltyDonorBuilt: true, acquisitionMethod: "estimated", transferDate, constructionDate: db.constructionDate, buildingType: db.buildingType, extensionFloorArea: db.extensionFloorArea } as TransferTaxInput,
+    1,
+  );
+  if (!gate) return undefined;
+  return {
+    axis: { acquisitionMethod: "estimated", base, donor: true },
+    constructionDate: db.constructionDate,
+    buildingType: db.buildingType,
+    ...(db.extensionFloorArea !== undefined ? { extensionFloorArea: db.extensionFloorArea } : {}),
+  };
 }

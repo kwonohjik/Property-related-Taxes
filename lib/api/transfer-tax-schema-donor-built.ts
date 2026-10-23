@@ -194,7 +194,27 @@ type BgOuterLike = {
     carryoverDonorBasis?: { donorBuilt?: z.infer<typeof bgDonorBuiltShape> };
   };
   carryoverTaxation?: { donorAcquisitionDate?: string; giftRegistryDate?: string } | null;
+  /** 일반건물(PR-5c) — 건물 취득원인(본인 신축과 다른 축) · 묶음 경로(지분·함께 양도)는 F27 을 타지 않는다 */
+  generalBuildingValuation?: { buildingAcquisitionCause?: string } | null;
+  generalBuildingShares?: unknown[];
+  companionAssets?: unknown[];
 };
+
+/**
+ * 일반건물 부담부증여 × 증여자 신축·증축 (PR-5c) — 단건(F27: `general-building-route-carryover.ts`)만 받는다.
+ * · 환산취득가액(K-5)만 — 감정·매매사례(K-6/K-7)는 F27 의 시나리오 B 가 아직 계산하지 못한다(400)
+ * · 건물 취득원인이 본인 신축이면 가산세 축이 둘로 겹친다(양도인 신축 vs 증여자 신축) → 거부
+ * · 지분 분할 취득(축 B)·함께 양도(컴패니언) 묶음은 이월과세 §97의2 를 타지 않아 받아 놓고 무시하게 된다 → 거부
+ */
+function refineGbBgDonorBuilt(data: BgOuterLike, method: string | undefined, issue: (path: (string | number)[], message: string) => void): void {
+  if (method === "appraisal") // 그 밖의 방식(K-4·K-1~K-3·K-6)은 위 공통 규칙이 이미 거부한다
+    issue([], "일반건물 부담부증여의 증여자 신축·증축 가산세는 취득가액 산정방식이 환산취득가액(K-5)일 때만 적용됩니다 — 감정가액(K-7)은 아직 지원하지 않습니다");
+  if (!data.generalBuildingValuation) issue([], "일반건물 부담부증여의 증여자 신축·증축 정보는 일반건물 입력(generalBuildingValuation)과 함께 보내야 합니다");
+  if (data.generalBuildingValuation?.buildingAcquisitionCause === "newConstruction")
+    issue([], "일반건물 부담부증여에서 양도인 본인 신축(건물 취득 원인 newConstruction)과 당초 증여자 신축(donorBuilt)은 다른 축입니다 — 함께 보낼 수 없습니다");
+  if ((data.generalBuildingShares?.length ?? 0) > 0 || (data.companionAssets?.length ?? 0) > 0)
+    issue([], "지분 분할 취득·함께 양도 묶음의 일반건물은 당초 증여자 신축·증축 가산세(소득세법 §114조의2)를 아직 지원하지 않습니다");
+}
 
 /**
  * 부담부증여 × 증여자 신축·증축 값 검사 (⑫) — 엔진 `assertBgDonorBuiltInput`·⑧ `validateDonorBuiltBg`와 같은 조건(UI 통과 ⇒ ⑫ 통과).
@@ -210,13 +230,16 @@ export function refineBgDonorBuilt(data: BgOuterLike, ctx: z.RefinementCtx): voi
   const method = data.burdenedGiftInfo?.acquisitionMethod;
   if (data.burdenedGiftInfo?.valuationMode !== "sangjeungbeop_market" || (method !== "converted" && method !== "appraisal"))
     issue([], "부담부증여의 증여자 신축·증축 가산세는 시가 모드의 취득가액 산정방식이 환산취득가액(K-5) 또는 감정가액(K-7)일 때만 적용됩니다");
-  if (data.propertyType !== "housing" && data.propertyType !== "building") issue([], "증여자 신축·증축 가산세는 주택·건물에만 적용됩니다");
+  if (data.propertyType !== "housing" && data.propertyType !== "building" && data.propertyType !== "general_building")
+    issue([], "증여자 신축·증축 가산세는 주택·건물·일반건물에만 적용됩니다");
+  if (data.propertyType === "general_building") refineGbBgDonorBuilt(data, method, issue);
   if (data.mixedUse) issue([], "겸용주택 부담부증여는 증여자 신축·증축 가산세를 아직 지원하지 않습니다");
   if (data.isSelfBuilt === true)
     issue([], "부담부증여에서 양도인 본인 신축(isSelfBuilt)과 당초 증여자 신축(donorBuilt)은 다른 축입니다 — 함께 보낼 수 없습니다");
   const ct = data.carryoverTaxation;
-  const built = db.constructionDate.toISOString().slice(0, 10); // 스키마 transform 이 Date 로 바꿨다 — ISO 일자 문자열로 되돌려 비교한다
-  if ((ct?.donorAcquisitionDate && built < ct.donorAcquisitionDate) || (ct?.giftRegistryDate && built > ct.giftRegistryDate))
+  // 스키마 transform 이 Date 로 바꿨다 — ISO 일자 문자열로 되돌려 비교한다. 날짜 형식 자체가 틀리면(빈 문자열 등) transform 이 실패해 값이 문자열 그대로 온다 — 그 오류는 Zod 가 이미 냈으니 범위 비교는 건너뛴다(500 방지).
+  const built = db.constructionDate instanceof Date ? db.constructionDate.toISOString().slice(0, 10) : undefined;
+  if (built && ((ct?.donorAcquisitionDate && built < ct.donorAcquisitionDate) || (ct?.giftRegistryDate && built > ct.giftRegistryDate)))
     issue(["constructionDate"], "증여자의 신축·증축일은 증여자 취득일 이후, 증여 등기접수일 이전이어야 합니다");
   if (db.buildingType === "extension") {
     if (!db.extensionFloorArea) issue(["extensionFloorArea"], "증축은 바닥면적 합계가 필요합니다 (85㎡ 초과만 대상)");
