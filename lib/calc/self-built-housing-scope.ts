@@ -10,7 +10,8 @@
  *   · 정적 거부 — 비주택·부담부증여·매매 외 취득·본인 신축 아님·겸용·증축·PHD  → 모두 null
  *   · 게이트 — 신축일부터 5년 이내(당일 포함) ∧ 환산은 양도일 ≥ 2018-01-01, 감정은 ≥ 2020-01-01. 실지거래가·매매사례는 조문 대상이 아니다
  *   · 분리 — 토지·건물 취득일 분리·소유자 분리·배율 초과분 분리는 `isSplitPayloadActive` 가 참 → null (그 카드(S3-1·#17)가 같은 칸을 받는다 — `data-field` 중복 방지)
- *   · 엔진이 던지는 공익수용·공매 특례(영 §164⑨ — 환산 분모가 바뀐다)와는 결합하지 않는다 → null
+ *   · 영 §164⑨ 공익수용·공매 특례(환산 분모가 바뀐다)와는 결합하지 않는다 → null. 엔진도 던지지 않고 종전 base(자산 전체)를 유지하며 «확인 필요» 를 싣는다(`selfBuiltHousingSec164_9Fallback`)
+ *   · 방식 — ④가 싣는 방식과 같다. 환산·감정 플래그가 함께 켜진 잔재는 첫 자산=감정, 함께 양도 자산=환산(아래). 엄격화(PR-4)로 엔진이 입력 부재를 던지므로 이 집합이 엔진이 던지는 집합과 같아야 한다
  *
  * 증축은 Q-4 확정으로 제외한다(기준시가 비례 안분이면 수학적으로 같은 값 — 현행 증축부분 한정 base 유지).
  */
@@ -64,10 +65,12 @@ export function selfBuiltHousingScope(asset: AssetForm | undefined, ctx: SelfBui
   if (asset.isMixedUseHouse === true || asset.transferType === "burdened_gift") return null;
   // 증축 제외(Q-4) · 구분 미선택은 ⑧의 «구분 선택» 요구가 먼저다
   if (asset.buildingType !== "new") return null;
-  // 환산·감정은 상호 배타 — 둘 다 켜진 잔재는 ④가 방식을 한쪽으로 읽을 수 없어 범위 밖으로 둔다
-  if (asset.useEstimatedAcquisition === true && asset.isAppraisalAcquisition === true) return null;
   const flags = primaryAcquisitionModeFlags(asset);
-  const method = flags.isAppraisal ? "appraisal" : flags.isEstimated ? "estimated" : null;
+  // 환산·감정 플래그가 함께 켜진 잔재(구 세션 등)는 ④가 실제로 싣는 방식을 그대로 따른다 — 엔진이 그 방식으로 §114조의2 게이트를 판정하므로
+  // 범위 밖(null)으로 두면 화면에 칸이 없는데 엔진은 입력 부재로 던진다(PR-4 dead-end). 첫 자산은 감정 우선(`primaryAcquisitionModeFlags`),
+  // 함께 양도 자산 ④는 환산 플래그가 켜져 있으면 감정 표시를 싣지 않고 환산으로 싣는다(`transfer-tax-api-companion-payload.ts` `isAppraisalCompanion` · `bundled-split-helpers.ts` `acquisitionMethod`).
+  const companionEstimatedWins = ctx.isNonPrimary === true && flags.isAppraisal && asset.useEstimatedAcquisition === true;
+  const method = flags.isAppraisal ? (companionEstimatedWins ? "estimated" : "appraisal") : flags.isEstimated ? "estimated" : null;
   if (!method) return null;
   // 영 §164⑨ 공익수용(1호)·공매(2호) — 환산 분모가 바뀌어 엔진이 결합을 거부한다. 화면에서도 이 입력을 열지 않는다.
   if (asset.transferCause === "public_expropriation") return null;

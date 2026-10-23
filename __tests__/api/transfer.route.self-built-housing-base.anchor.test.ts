@@ -7,7 +7,7 @@
  *  · RS-2 함께 양도(컴패니언) — ⑫ 컴패니언 shape · ⑭ `bundled-split-helpers.ts` (키 커버리지 가드와 짝)
  *  · RS-3 다건 합산 — ⑫ `propertyItemSchema`(= 단건 base shape 공유) · ⑭ `multi/route.ts` (키 분류 가드와 짝)
  *  · RS-4 ⑫ 거부 — 받아 놓고 무시하면 침묵 오답이다(비주택·본인 신축 아님·이월과세·분리·PHD·증축·부담부증여)
- *  · RS-5 selfBuiltHousing 을 보내지 않은 요청은 종전 base 그대로(관대)
+ *  · RS-5 selfBuiltHousing 을 보내지 않은 요청은 400 — 엄격화(PR-4 · Q-2). 영 §164⑨ 공익수용 결합만 종전 base(자산 전체) 그대로 + 확인 필요
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -81,18 +81,28 @@ async function post(b: object, route: typeof POST = POST, url = "http://localhos
 }
 
 const fieldErrorsOf = (r: Res) => (r.error as { fieldErrors?: unknown } | undefined)?.fieldErrors;
+/** PR-4 — 입력 부재는 엔진이 던져 400(INVALID_INPUT)이다: 메시지가 무엇을 보내야 하는지 알려준다 */
+const expectAbsent400 = (r: Res) => {
+  expect(r.status).toBe(400);
+  expect(JSON.stringify(r.error)).toContain("selfBuiltHousing");
+};
+/** 영 §164⑨ 공익수용 결합 — 건물분 base 를 지원하지 않아 자산 전체 base 를 유지한다(PR-1~3 의 «없으면» 수치를 보존) */
+// 보상액·보상기초가 양도 당시 주택공시가격(4억) 이상이라 min[] 이 분모를 바꾸지 않는다 — ⑫ 가 수용 보상액을 필수로 요구하므로 채운다
+const EXPR = { transferCause: "public_expropriation", housingCompensationTotal: 500_000_000, housingCompensationBasisTotal: 500_000_000 };
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
 });
 
 describe("RS-1 단건 — ⑫·⑭ 를 지나 엔진에 닿는다 (strip 이면 종전 base)", () => {
-  it("환산: base 187,500,000 · 가산세 9,375,000 · 총납부 180,649,700 (없으면 500,000,000 / 25,000,000 / 197,837,200)", async () => {
+  it("환산: base 187,500,000 · 가산세 9,375,000 · 총납부 180,649,700 (없으면 400 · 공익수용 결합은 500,000,000 / 25,000,000 / 197,837,200)", async () => {
     const on = await post({ ...SINGLE, selfBuiltHousing: SB });
     expect(on.status, JSON.stringify(on.error)).toBe(200);
     expect(on.result).toMatchObject({ penaltyBase: 187_500_000, penaltyTax: 9_375_000, totalTax: 180_649_700 });
     expect(on.result?.selfBuiltHousingPenalty).toMatchObject({ base: 187_500_000 });
-    const off = await post(SINGLE);
+    expectAbsent400(await post(SINGLE));
+    const off = await post({ ...SINGLE, ...EXPR });
+    expect(off.status, JSON.stringify(off.error)).toBe(200);
     expect(off.result).toMatchObject({ penaltyBase: 500_000_000, penaltyTax: 25_000_000, totalTax: 197_837_200 });
     expect(off.result?.selfBuiltHousingPenalty).toBeUndefined();
   });
@@ -102,7 +112,7 @@ describe("RS-1 단건 — ⑫·⑭ 를 지나 엔진에 닿는다 (strip 이면 
     expect(r.result?.penaltyBase).toBe(140_625_000);
   });
 
-  it("감정: 건물 감정가액 직접 1.1억 → 5,500,000 / 비례 → 5,625,000 (없으면 15,000,000)", async () => {
+  it("감정: 건물 감정가액 직접 1.1억 → 5,500,000 / 비례 → 5,625,000 (없으면 400 · 공익수용 결합은 15,000,000)", async () => {
     const direct = await post({ ...SINGLE, ...APPRAISAL, selfBuiltHousing: { buildingAppraisalValue: 110_000_000 } });
     expect(direct.result).toMatchObject({ penaltyBase: 110_000_000, penaltyTax: 5_500_000 });
     const ratio = await post({
@@ -111,14 +121,16 @@ describe("RS-1 단건 — ⑫·⑭ 를 지나 엔진에 닿는다 (strip 이면 
       selfBuiltHousing: { landPricePerSqmAtAcquisition: 1_000_000, landArea: 100, buildingStdPriceAtAcquisition: 60_000_000 },
     });
     expect(ratio.result).toMatchObject({ penaltyBase: 112_500_000, penaltyTax: 5_625_000 });
-    const off = await post({ ...SINGLE, ...APPRAISAL });
+    expectAbsent400(await post({ ...SINGLE, ...APPRAISAL }));
+    const off = await post({ ...SINGLE, ...APPRAISAL, ...EXPR });
     expect(off.result).toMatchObject({ penaltyBase: 300_000_000, penaltyTax: 15_000_000 });
   });
 
-  it("양도차손도 닿는다 — 총납부 10,312,500 (없으면 27,500,000)", async () => {
+  it("양도차손도 닿는다 — 총납부 10,312,500 (없으면 400 · 공익수용 결합은 27,500,000)", async () => {
     const on = await post({ ...SINGLE, capitalExpenditure: 1_200_000_000, selfBuiltHousing: SB });
     expect(on.result).toMatchObject({ penaltyBase: 187_500_000, penaltyTax: 9_375_000, totalTax: 10_312_500 });
-    const off = await post({ ...SINGLE, capitalExpenditure: 1_200_000_000 });
+    expectAbsent400(await post({ ...SINGLE, capitalExpenditure: 1_200_000_000 }));
+    const off = await post({ ...SINGLE, ...EXPR, capitalExpenditure: 1_200_000_000 });
     expect(off.result?.totalTax).toBe(27_500_000);
   });
 
@@ -165,8 +177,11 @@ describe("RS-2 함께 양도(컴패니언) — ⑫ 컴패니언 shape · ⑭ bun
     return { status: r.status, error: r.error, p: ((r.data?.aggregated as { properties?: Props } | undefined)?.properties ?? []) as Props };
   };
 
-  it("환산 컴패니언: 건물분 93,750,000 / 4,687,500 (없으면 전체 base 250,000,000) — 키 strip 이면 종전 값", async () => {
-    const off = await props({ ...primary, companionAssets: [companion()] });
+  it("환산 컴패니언: 건물분 93,750,000 / 4,687,500 (없으면 400 — 키 strip 이면 종전 값이 아니라 400 으로 드러난다 · 공익수용 결합은 전체 base 250,000,000)", async () => {
+    const absent = await props({ ...primary, companionAssets: [companion()] });
+    expect(absent.status).toBe(400);
+    expect(JSON.stringify(absent.error)).toContain("selfBuiltHousing");
+    const off = await props({ ...primary, companionAssets: [companion(EXPR)] });
     expect(off.status, JSON.stringify(off.error)).toBe(200);
     expect(off.p[1].penaltyBase).toBe(250_000_000); // 종전: 배분 양도가 5억 × 200,000,000 ÷ 400,000,000
     const on = await props({ ...primary, companionAssets: [companion({ selfBuiltHousing: SB })] });
@@ -185,7 +200,8 @@ describe("RS-2 함께 양도(컴패니언) — ⑫ 컴패니언 shape · ⑭ bun
       companionAssets: [companion({ ...ap, selfBuiltHousing: { landPricePerSqmAtAcquisition: 1_000_000, landArea: 100, buildingStdPriceAtAcquisition: 60_000_000 } })],
     });
     expect(ratio.p[1]).toMatchObject({ penaltyBase: 112_500_000, penaltyTax: 5_625_000 });
-    const off = await props({ ...primary, companionAssets: [companion(ap)] });
+    expect((await props({ ...primary, companionAssets: [companion(ap)] })).status).toBe(400);
+    const off = await props({ ...primary, companionAssets: [companion({ ...ap, ...EXPR })] });
     expect(off.p[1]).toMatchObject({ penaltyBase: 300_000_000, penaltyTax: 15_000_000 });
   });
 });
@@ -200,12 +216,13 @@ describe("RS-3 다건 합산 — ⑭ multi/route.ts 매핑", () => {
   const call = (properties: object[]) => post({ taxYear: 2026, annualBasicDeductionUsed: 0, properties }, MULTI, "http://localhost/api/calc/transfer/multi");
   type Props = { penaltyBase: number; penaltyTax: number }[];
 
-  it("환산: 187,500,000 / 9,375,000 (없으면 500,000,000 / 25,000,000)", async () => {
+  it("환산: 187,500,000 / 9,375,000 (없으면 400 · 공익수용 결합은 500,000,000 / 25,000,000)", async () => {
     const on = await call([item({ selfBuiltHousing: SB })]);
     expect(on.status, JSON.stringify(on.error)).toBe(200);
     const p = (on.data as { properties?: Props }).properties!;
     expect(p[0]).toMatchObject({ penaltyBase: 187_500_000, penaltyTax: 9_375_000 });
-    const off = await call([item()]);
+    expectAbsent400(await call([item()]));
+    const off = await call([item(EXPR)]);
     expect((off.data as { properties?: Props }).properties![0]).toMatchObject({ penaltyBase: 500_000_000, penaltyTax: 25_000_000 });
   });
 

@@ -307,7 +307,7 @@ export const propertyBaseShape = {
   extensionStdPriceAtAcquisition: z.number().nonnegative().optional(),
   // ⑫ §114조의2① 감정가액 × 증축 — 증축한 부분에 한정한 감정가액(원). 부담부증여는 `burdenedGiftInfo.presumedExtensionAppraisalValue`.
   extensionAppraisalValue: z.number().nonnegative().optional(),
-  // ⑫ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — 단건·다건(= 이 shape 공유). 컴패니언은 `transfer-tax-schema-companion.ts`. 없으면 종전 base.
+  // ⑫ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — 단건·다건(= 이 shape 공유). 컴패니언은 `transfer-tax-schema-companion.ts`. 필요한데 없으면 엔진이 400(PR-4).
   selfBuiltHousing: selfBuiltHousingShape.optional(),
   // pre1990Land는 아래 `sec163_9AcquisitionShape` spread에 있다(컴패니언과 단일 소스 · CP-3)
   parcels: z.array(parcelSchema).max(10).optional(),
