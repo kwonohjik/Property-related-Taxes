@@ -267,6 +267,7 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     acquisitionCause: s.acquisitionCause,
     // 엔진 내부 전용(§163⑨ 자산 합계 비교가 후보로 다시 계산할 때만 켠다 — `mixed-use-sec163-9-compare.ts`). 요청으로는 받지 않는다.
     inheritedValuesAsIs: undefined,
+    bgPreDeemedConverted: undefined,
     partialUsageChange: s.mixedUse.partialUsageChange
       ? {
           ...s.mixedUse.partialUsageChange,

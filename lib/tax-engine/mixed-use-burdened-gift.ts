@@ -103,12 +103,16 @@ export function applyMixedBurdenedGift(args: {
     }
   };
 
+  // 양도시 쪽 기준시가 합계(주택 = 개별주택가격 · 상가 = 토지 + 건물) — ③ 후보 분모 · 결과 echo
+  const hs = bg.transferStd.hl + bg.transferStd.hb;
+  const cs = bg.transferStd.cl + bg.transferStd.cb;
   const rate = estimatedDeductionRate(asset.isUnregistered);
   const lump = (k: MixedUsePartKey) => computeEstimatedDeduction(scale(g(k).basis, k), rate);
 
   const acq = {} as Record<MixedUsePartKey, number>;
   const ded = {} as Record<MixedUsePartKey, number>;
   const beforeSwap: Partial<Record<MixedUsePartKey, number>> = {};
+  const beforeRatio: Partial<Record<MixedUsePartKey, number>> = {};
   let lumpRate: number | undefined;
   let proviso: MixedBgApplied["proviso"];
 
@@ -125,6 +129,17 @@ export function applyMixedBurdenedGift(args: {
         ded[k] = lump(k);
         lumpRate = rate;
         break;
+      case "converted_pre_deemed": {
+        // 의제취득일 전 상속·증여 ③(환산취득가액 · 소령 §176조의2④) — 양도가액은 증여가액의 쪽 몫(C_h·C_c)이다(Q-36).
+        //   ③ = C_side × 이 부분 의제취득일 기준시가 ÷ 그 쪽 양도시 기준시가 → 채무비율 × B'/C. 개산공제(§163⑥)는 기준시가 × B'/C.
+        const s = sideOf(k);
+        const sideT = s === "housing" ? hs : cs;
+        beforeRatio[k] = sideT > 0 ? safeMultiplyThenDivide(den[s], e.basis, sideT) : 0;
+        acq[k] = scale(beforeRatio[k]!, k);
+        ded[k] = lump(k);
+        lumpRate = rate;
+        break;
+      }
       case "salesCase":
       case "appraisal": // K-6/K-7 — 추계가액 × B'/C, 개산공제만(실비 미반영)
         acq[k] = scale(e.acq, k);
@@ -139,7 +154,7 @@ export function applyMixedBurdenedGift(args: {
 
   // §97②2호 단서 — K-5(환산취득가액) 한정 가목(환산+개산공제) < 나목(자본적지출+양도비)이면 나목. 동률은 본문.
   const provisoDeclared = asset.capitalExpenditure !== undefined || asset.transferExpense !== undefined;
-  if (bg.acqPath === "converted" && provisoDeclared) {
+  if ((bg.acqPath === "converted" || bg.acqPath === "converted_pre_deemed") && provisoDeclared) {
     const exp = args.expThunk();
     const directOf = (k: MixedUsePartKey) =>
       scale(
@@ -187,14 +202,12 @@ export function applyMixedBurdenedGift(args: {
   };
 
   const method: TransferBurdenedGiftAcquisitionMethodUsed =
-    bg.acqPath === "standard" ? "standard_price" : bg.acqPath === "deemed" ? "actual" : bg.acqPath;
+    bg.acqPath === "standard" ? "standard_price" : bg.acqPath === "deemed" ? "actual" : bg.acqPath === "converted_pre_deemed" ? "converted" : bg.acqPath;
 
   const stdT: Record<MixedUsePartKey, number> = {
     housingLand: bg.transferStd.hl, housingBuilding: bg.transferStd.hb,
     commercialLand: bg.transferStd.cl, commercialBuilding: bg.transferStd.cb,
   };
-  const hs = bg.transferStd.hl + bg.transferStd.hb;
-  const cs = bg.transferStd.cl + bg.transferStd.cb;
   const perPart = {} as Record<MixedUsePartKey, MixedUseBurdenedGiftPart>;
   for (const k of KEYS) {
     const s = sideOf(k);
@@ -211,6 +224,7 @@ export function applyMixedBurdenedGift(args: {
       acquisitionMethod: method,
       ...(beforeSwap[k] !== undefined ? { acquisitionBeforeSwap: beforeSwap[k] } : {}),
       ...(bg.acqPath === "deemed" ? { acquisitionBeforeRatio: g(k).acq } : {}),
+      ...(beforeRatio[k] !== undefined ? { acquisitionBeforeRatio: beforeRatio[k] } : {}),
       transferred: num[s] > 0,
     };
   }
@@ -232,6 +246,12 @@ export function applyMixedBurdenedGift(args: {
     gratuitousPortion,
     taxpayer: "donor",
     acquisitionMethodUsed: method,
+    ...(bg.acqPath === "converted_pre_deemed"
+      ? {
+          deemedCause: asset.acquisitionCause === "gift" ? ("gift" as const) : ("inheritance" as const),
+          deemedBasis: { housing: "converted" as const, commercial: "converted" as const, housingPhd: asset.usePreHousingDisclosure === true },
+        }
+      : {}),
     ...(bg.acqPath === "deemed"
       ? {
           deemedCause: bg.assetOverrides.acquisitionByGift ? ("gift" as const) : ("inheritance" as const),
@@ -242,6 +262,7 @@ export function applyMixedBurdenedGift(args: {
           },
         }
       : {}),
+    ...(bg.preDeemed ? { acquisitionStdAtDeemedDate: true as const } : {}),
     ...(proviso ? { necessaryExpenseSwap: proviso } : {}),
     giftTax,
     perPart,

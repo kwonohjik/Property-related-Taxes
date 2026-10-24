@@ -60,6 +60,26 @@ const PARTS: Record<Side, readonly [MixedUsePartKey, MixedUsePartKey]> = {
   commercial: ["commercialLand", "commercialBuilding"],
 };
 
+/** 부분별 `stdPriceAtAcquisition`의 이름 — 의제취득일(1985.1.1.) 전 상속·증여면 의제취득일 기준시가(엔진 echo `acquisitionStdAtDeemedDate`). */
+export function mixedBgAcqStdLabel(bg: MixedUseBurdenedGiftBreakdown): string {
+  return bg.acquisitionStdAtDeemedDate ? "의제취득일(1985.1.1.) 기준시가" : "취득시 기준시가";
+}
+
+/**
+ * 의제취득일 전 상속·증여의 ③ 환산취득가액(엔진 `converted_pre_deemed`) 표시값 — 양도가액은 증여가액의 쪽 몫(C_h·C_c)이고(Q-36),
+ * 분모는 그 쪽 양도시 기준시가 합계다. 매매 환산(K-5 — 양도가액 = 채무 상당액)과 산식이 다르다. 아니면 undefined.
+ */
+export function mixedBgPreDeemedConverted(bg: MixedUseBurdenedGiftBreakdown, k: MixedUsePartKey, side: Side) {
+  const p = bg.perPart[k];
+  if (!bg.deemedCause || p.acquisitionMethod !== "converted" || p.acquisitionBeforeRatio === undefined) return undefined;
+  const [a, b] = PARTS[side];
+  return {
+    giftValue: side === "housing" ? bg.debtAttribution.housingGiftValue : bg.debtAttribution.commercialGiftValue,
+    sideTransferStd: bg.perPart[a].stdPriceAtTransfer + bg.perPart[b].stdPriceAtTransfer,
+    beforeRatio: p.acquisitionBeforeRatio,
+  };
+}
+
 /** 부분별 채무비율 «양도로 보는 채무액 / 그 쪽 증여가액» — 분자·분모를 숫자로 적는다. */
 function ratioText(bg: MixedUseBurdenedGiftBreakdown, side: Side): string {
   const d = bg.debtAttribution;
@@ -125,9 +145,13 @@ export function buildBgMixedAcquisitionFormula(d: BgMixedDisplay): string {
     if (p.acquisitionBeforeSwap !== undefined) {
       return `${label}: 0 (소득세법 §97②2호 단서 — 환산취득가액 ${fmt(p.acquisitionBeforeSwap)} 대신 자본적지출·양도비를 필요경비로 정함)`;
     }
+    const pdc = mixedBgPreDeemedConverted(bg, k, side);
+    if (pdc) {
+      return `${label}: 증여가액 중 ${side === "housing" ? "주택분" : "상가분"} 몫 ${fmt(pdc.giftValue)} × 의제취득일(1985.1.1.) 기준시가 ${fmt(p.stdPriceAtAcquisition)} / ${side === "housing" ? "주택분" : "상가분"} 양도시 기준시가 ${fmt(pdc.sideTransferStd)} = 환산취득가액 ${fmt(pdc.beforeRatio)} × (${ratioText(bg, side)}) = ${fmt(p.acquisitionPrice)} (소득세법 시행령 §176조의2④·§159①1호)`;
+    }
     switch (p.acquisitionMethod) {
       case "standard_price":
-        return `${label}: 취득시 기준시가 ${fmt(p.stdPriceAtAcquisition)} × (${ratioText(bg, side)}) = ${fmt(p.acquisitionPrice)}`;
+        return `${label}: ${mixedBgAcqStdLabel(bg)} ${fmt(p.stdPriceAtAcquisition)} × (${ratioText(bg, side)}) = ${fmt(p.acquisitionPrice)}`;
       case "converted":
         return `${label}: 양도가액 ${fmt(p.transferPrice)} × 취득시 기준시가 ${fmt(p.stdPriceAtAcquisition)} / 양도시 기준시가 ${fmt(p.stdPriceAtTransfer)} = ${fmt(p.acquisitionPrice)} (시행령 §176의2②2호)`;
       default:
@@ -145,7 +169,7 @@ export function buildBgMixedExpenseFormula(d: BgMixedDisplay): string {
     if (p.estimatedDeductionRate === undefined) {
       return `${label}: 자본적지출·양도비 등 실제 필요경비 중 이 부분 몫 × (${ratioText(bg, side)}) = ${fmt(p.estimatedDeduction)}`;
     }
-    return `${label}: 취득시 기준시가 ${fmt(p.stdPriceAtAcquisition)} × (${ratioText(bg, side)}) × 개산공제율 ${pct(p.estimatedDeductionRate)} = ${fmt(p.estimatedDeduction)} (개산공제, 소령 §163⑥)`;
+    return `${label}: ${mixedBgAcqStdLabel(bg)} ${fmt(p.stdPriceAtAcquisition)} × (${ratioText(bg, side)}) × 개산공제율 ${pct(p.estimatedDeductionRate)} = ${fmt(p.estimatedDeduction)} (개산공제, 소령 §163⑥)`;
   });
 }
 

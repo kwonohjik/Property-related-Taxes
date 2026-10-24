@@ -9,6 +9,7 @@
 import { DEEMED_ACQUISITION_DATE, HOUSE_FIRST_DISCLOSURE } from "./transfer-163-9-base-date";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
+import { isMixedBgPreDeemedInherited } from "./burdened-gift-mixed-use-scope";
 import { SEC_163_9_GENERAL_BUILDING_FIRST_NOTICE } from "@/lib/tax-engine/transfer-split-part-cause";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -16,15 +17,15 @@ export type MixedSec163_9Compare = { era: "pre_deemed" | "clause"; cause: "inher
 
 export function mixedSec163_9CompareOf(asset: AssetForm): MixedSec163_9Compare | undefined {
   if (asset.assetKind !== "housing" || asset.isMixedUseHouse !== true) return undefined;
-  // 부담부증여 — 시가 평가 × 상속·증여 취득(소령 §163⑨ 평가액 경로)의 단서 구간만 비교한다(PR-7b-7a-2). 기준시가 평가는 §159①1호 괄호라 §163⑨를 쓰지 않고,
-  //   의제취득일 전은 엔진 MB-16이 막는다(PR-7b-7b).
+  // 부담부증여 — 시가 평가 × 상속·증여 취득(소령 §163⑨ 평가액 경로)만 비교한다(단서 구간 PR-7b-7a-2 · 의제취득일 전 PR-7b-7b). 기준시가 평가는 §159①1호 괄호라
+  //   §163⑨를 쓰지 않는다(의제취득일 전이면 의제취득일 기준시가 × 채무비율 — 비교 없음).
   const bg = isMixedBurdenedGift(asset);
   if (bg && !isMixedBgDeemedPath(asset)) return undefined;
   const cause =
     asset.acquisitionCause === "inheritance" ? "inheritance" : asset.acquisitionCause === "gift" ? "gift" : undefined;
   const date = asset.acquisitionDate ?? "";
   if (!cause || !date) return undefined;
-  if (date < DEEMED_ACQUISITION_DATE) return bg ? undefined : { era: "pre_deemed", cause };
+  if (date < DEEMED_ACQUISITION_DATE) return { era: "pre_deemed", cause };
   // 1985.1.1. 이후 개별주택가격 최초공시 전 — §163⑨ 단서 구간(Q-18 · Q-21). 상가분은 건물 기준시가 최초 고시(일반건물 2001-01-01)
   // 뒤면 단서 밖이다(Q-22 — 겸용 상가분을 일반건물로 본다 · 상업용 건물 고시(2005-01-01) 대상이면 2001~2004는 단서 안이라 확인 필요).
   if (date < HOUSE_FIRST_DISCLOSURE) {
@@ -37,7 +38,8 @@ export function mixedSec163_9CompareOf(asset: AssetForm): MixedSec163_9Compare |
 
 /** ⑤ 취득시 기준시가 칸의 시점 라벨 — 의제취득일 전이면 의제취득일 기준(§164④~⑦의 「취득당시」 = 의제취득일, PR-3·PR-4와 같다). */
 export function mixedAcqTimeLabel(asset: AssetForm, fallback: string): string {
-  return mixedSec163_9CompareOf(asset)?.era === "pre_deemed" ? "의제취득일(1985.1.1.)" : fallback;
+  // 부담부증여 기준시가 평가는 비교가 없지만 취득시 기준시가가 의제취득일 기준시가다(PR-7b-7b)
+  return mixedSec163_9CompareOf(asset)?.era === "pre_deemed" || isMixedBgPreDeemedInherited(asset) ? "의제취득일(1985.1.1.)" : fallback;
 }
 
 /** ⑤ ① 평가액 칸 안내 — 비교 구간이면 「두 칸 모두/모두 비움 · 합계로 비교」, 아니면 null(종전 문구). */
@@ -61,8 +63,12 @@ export function mixedSec163_9ExpenseHint(asset: AssetForm): string | null {
 
 /**
  * 부담부증여 × 상속·증여 취득(시가)에서 ① 평가액이 **선택**인가 — 단서 구간(자산 합계 비교)이거나 PHD(§164⑦ 가액이 ②)면 두 칸 모두 입력하거나 모두 비운다(PR-6 Q-19).
+ * 의제취득일 전은 상속만 선택이다(증여 필수).
  * 그 밖(본문)은 평가액이 유일한 취득가액이라 필수다. ⑤ 칸 제목·안내와 엔진 MB-11(`analyzeMixedBurdenedGift`)이 같은 조건이다(PR-7b-7a-2).
  */
 export function mixedBgReportedOptional(asset: AssetForm): boolean {
-  return isMixedBgDeemedPath(asset) && (asset.usePreHousingDisclosure === true || mixedSec163_9CompareOf(asset)?.era === "clause");
+  if (!isMixedBgDeemedPath(asset)) return false;
+  // 의제취득일 전 — 상속은 ①이 후보 중 하나라 선택(두 칸 짝), 증여는 필수(Q-14·Q-16 · PR-7b-7b · 엔진 MB-11과 같은 조건)
+  if (isMixedBgPreDeemedInherited(asset)) return asset.acquisitionCause !== "gift";
+  return asset.usePreHousingDisclosure === true || mixedSec163_9CompareOf(asset)?.era === "clause";
 }

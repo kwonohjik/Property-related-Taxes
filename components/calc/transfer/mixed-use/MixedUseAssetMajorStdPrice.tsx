@@ -20,6 +20,7 @@ import { MixedUseHousingBuildingStdField } from "./MixedUseHousingBuildingStdFie
 import { isMixedAcqDatesSeparate } from "@/lib/calc/mixed-use-acq-date-split";
 import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { isMixedBgDeemedPath } from "@/lib/calc/burdened-gift-mixed-use-scope";
+import { isMixedBgPreDeemedInherited } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { mixedBgReportedOptional } from "@/lib/calc/mixed-use-sec163-9";
 import { mixedSec163_9CompareOf } from "@/lib/calc/mixed-use-sec163-9";
 import {
@@ -120,8 +121,12 @@ export function MixedUseAssetMajorStdPrice({
   const bgReportedOptional = mixedBgReportedOptional(asset);
   const bgReportedRequired = bgDeemed && !bgReportedOptional;
   // §163⑨ 단서 구간(2005.4.30. 전 상속·증여) — 주택분 취득당시 기준시가는 §164⑦ 환산가액뿐이라 PHD 필수 · 직접 입력 칸을 숨긴다(사용자 결정 R-1 · ⑧·⑫·엔진 MB-11과 같은 술어)
-  const clausePhdRequired = mixedSec163_9CompareOf(asset)?.era === "clause";
-  const bgReportedHint = bgReportedRequired
+  // 부담부증여 × 의제취득일 전 상속·증여 — 주택분 의제취득일 기준시가도 §164⑦ 환산가액뿐이다(Q-37 · PR-7b-7b · 엔진 MB-11). 시가·기준시가 평가 공통.
+  const bgPreDeemed = isMixedBgPreDeemedInherited(asset);
+  const clausePhdRequired = mixedSec163_9CompareOf(asset)?.era === "clause" || bgPreDeemed;
+  const bgReportedHint = bgDeemed && bgPreDeemed && reportedHint
+    ? `${reportedHint} 부담부증여는 이긴 금액의 주택분·상가분에 각 채무비율을 곱합니다(같은 영 §159①1호).`
+    : bgReportedRequired
     ? `${isGift ? "증여세" : "상속세"} 신고가액(상증법 §60~66 평가액 — 세무서장등이 결정·경정한 가액이 있으면 그 가액). 부담부증여에서는 주택분·상가분 두 칸을 모두 입력하세요 — 이 평가액이 취득가액이고 주택·상가별 채무비율을 곱합니다(소득세법 시행령 §163⑨·§159①1호).`
     : bgDeemed && reportedHint
       ? `${reportedHint} 부담부증여는 그 금액에 주택·상가별 채무비율을 곱합니다(같은 영 §159①1호).`
@@ -291,11 +296,13 @@ export function MixedUseAssetMajorStdPrice({
             data-field="usePreHousingDisclosure"
             // 겸용 × 부담부증여는 PHD와 함께 계산하지 않는다(엔진 MB-2). **켜는 쪽만** 막는다 — 이미 켜져 있으면 사용자가 끌 수 있어야 한다(막다른 길 방지).
             //   상속·증여 취득(시가)은 예외 — §163⑨ 단서 2호의 §164⑦ 가액을 만드는 입력이다(PR-7b-7a-2 · 사용자 결정 M-1 (a)).
-            disabled={bgMixed && !bgDeemed && !asset.usePreHousingDisclosure}
+            disabled={bgMixed && !bgDeemed && !bgPreDeemed && !asset.usePreHousingDisclosure}
             disabledReason="겸용주택 부담부증여는 개별주택가격 미공시 환산(§164⑦)과 함께 계산할 수 없습니다"
             title={`${isDeemed163_9 ? acqLabel : "취득 당시"} 개별주택가격 미공시 (§164⑦ 3-시점 환산)`}
             description={
-              clausePhdRequired
+              bgPreDeemed
+                ? "의제취득일(1985.1.1.) 전 상속·증여라 켜야 계산됩니다 — 주택분 의제취득일 기준시가는 §164⑦ 환산가액입니다(소득세법 시행령 §164⑦·§176조의2④)"
+                : clausePhdRequired
                 ? "상속개시일·증여일이 개별주택가격 최초 공시(2005.4.30.) 전이라 켜야 계산됩니다 — 주택분 취득당시 기준시가는 §164⑦ 환산가액이고, 그 금액으로 평가액과 비교합니다(소득세법 시행령 §164⑦·§163⑨ 단서 2호)"
                 : bgDeemed
                 ? "상속개시일·증여일 당시 이 주택의 개별주택가격이 아직 공시되지 않았으면 켜고 최초 고시일을 입력하세요 — §164⑦ 환산가액을 평가액과 비교해 큰 금액을 씁니다(소득세법 시행령 §163⑨ 단서 2호)"
