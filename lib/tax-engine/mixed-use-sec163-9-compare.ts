@@ -51,8 +51,8 @@ export function calcMixedSec163_9Compare(asset: MixedUseAssetInput, run: Run): M
     throw new Error("겸용주택 상속·증여 평가액은 주택분·상가분을 모두 입력하거나 모두 비워야 합니다 (소득세법 시행령 §163⑨).");
   }
 
-  // ③ — 의제취득일 전 종전 경로(④가 상속·증여 플래그를 보내지 않았다)
-  const r3 = preDeemed ? run(plain) : undefined;
+  // ③ — 의제취득일 전 종전 경로(④가 상속·증여 플래그를 보내지 않았다). 부담부증여는 BG 모드가 취득 경로를 정하므로 ③ 경로를 명시한다(PR-7b-7b).
+  const r3 = preDeemed ? run(asset.burdenedGift ? { ...plain, bgPreDeemedConverted: true } : plain) : undefined;
   const echo = (
     selected: MixedSec163_9Comparison["selected"],
     reported: Totals | null,

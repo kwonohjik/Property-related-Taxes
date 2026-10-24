@@ -85,6 +85,8 @@ export interface MixedBgSource {
   sec163_9Compare?: { era?: string } | null;
   /** 엔진 내부 — 비교 후보 하나로 다시 계산 중이다(`calcMixedSec163_9Compare`). ⑫ 스키마에 없다 */
   inheritedValuesAsIs?: boolean;
+  /** ③ 후보(의제취득일 전 상속·증여 × 시가) 재계산 — 엔진 내부 전용(`calcMixedSec163_9Compare`) */
+  bgPreDeemedConverted?: boolean;
   separateAcquisition?: unknown;
   partialUsageChange?: unknown;
   transferCause?: string;
@@ -97,7 +99,7 @@ export interface MixedBgSource {
   isCompanion?: boolean;
 }
 
-export type MixedBgAcqPath = "standard" | "actual" | "converted" | "salesCase" | "appraisal" | "deemed";
+export type MixedBgAcqPath = "standard" | "actual" | "converted" | "salesCase" | "appraisal" | "deemed" | "converted_pre_deemed";
 
 export interface MixedBgPrepared {
   info: BurdenedGiftInfo;
@@ -133,6 +135,8 @@ export interface MixedBgPrepared {
   transferStd: { hl: number; hb: number; cl: number; cb: number };
   /** 증여자의 취득 경로 */
   acqPath: MixedBgAcqPath;
+  /** 의제취득일(1985.1.1.) 전 상속·증여 — 취득시 기준시가가 의제취득일 기준시가다(결과 라벨 echo · PR-7b-7b) */
+  preDeemed: boolean;
   /** 엔진 asset에 덮어쓸 값 — 취득 플래그는 BG 모드가 정본이다(asset의 stale 플래그를 신뢰하지 않는다) */
   assetOverrides: {
     useActualAcquisition: boolean;
@@ -180,7 +184,17 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   // PHD(§164⑦) — 상속·증여 취득(시가)은 §163⑨ 단서 2호의 §164⑦ 가액(②)을 만드는 입력이라 허용한다(PR-7b-7a-2 · 사용자 결정 M-1 (a)).
   //   매매·기준시가 평가는 종전대로 막는다(그 경로의 취득시 기준시가를 §164⑦로 바꾸는 계산은 아직 없다 — 의제취득일 전은 7b Q-37).
   const phd = src.usePreHousingDisclosure === true;
-  if (phd && !deemedPath) {
+  const landT = toTime(src.landAcquisitionDate);
+  const bldT = toTime(src.buildingAcquisitionDate);
+  const landPre = landT !== undefined && landT < DEEMED_ACQUISITION_TIME;
+  const bldPre = bldT !== undefined && bldT < DEEMED_ACQUISITION_TIME;
+  const preDeemed = landPre || bldPre;
+  // 토지·건물 모두 1985.1.1. 전(취득일이 없는 쪽은 따지지 않는다) — 상속·증여 3자 비교는 이 경우만 계산한다(한쪽만 전이면 아래 MB-16 · 리뷰 F-1).
+  const allPreDeemed = preDeemed && (landT === undefined || landPre) && (bldT === undefined || bldPre);
+  // 의제취득일(1985.1.1.) 전 상속·증여 — 의제취득일 기준시가의 주택분은 §164⑦ 환산이다(개별주택가격 공시 전 · Q-37 · 사용자 결정 R-1과 같은 근거). 시가·기준시가 평가 모두 PHD를 연다(PR-7b-7b).
+  const preDeemedInherited = allPreDeemed && byInheritOrGift;
+  // 취득일이 섞인 상속·증여(한쪽만 1985 전)는 아래 MB-16 하나로 안내한다
+  if (phd && !deemedPath && !(preDeemed && byInheritOrGift)) {
     add("MB-2", "겸용주택 부담부증여는 개별주택가격 미공시 환산(「소득세법 시행령」 제164조 제7항)과 함께 계산할 수 없습니다.", ["mixedUse", "usePreHousingDisclosure"]);
   }
   if (src.separateAcquisition !== undefined && src.separateAcquisition !== null) {
@@ -204,10 +218,21 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   if (cause === "newConstruction") {
     add("MB-15", "겸용주택 부담부증여는 증여자가 신축(자가건축)한 경우를 계산하지 않습니다 — 겸용 입력에 신축 정보가 없고 「소득세법」 제114조의2(신축·증축 5년 내 환산·감정 가산세)를 반영하지 못합니다.", ["acquisitionCause"]);
   }
-  const landT = toTime(src.landAcquisitionDate);
-  const bldT = toTime(src.buildingAcquisitionDate);
-  if ((landT !== undefined && landT < DEEMED_ACQUISITION_TIME) || (bldT !== undefined && bldT < DEEMED_ACQUISITION_TIME)) {
-    add("MB-16", "증여자의 토지 또는 건물 취득일이 1985.1.1. 전이면 의제취득일(1985.1.1.) 규정(「소득세법」 제97조 제2항 제1호나목, 같은 법 시행령 제176조의2 제4항)이 적용되는데 겸용주택 계산은 이를 반영하지 않아 계산하지 않습니다.", ["mixedUse", "landAcquisitionDate"]);
+  // MB-16 — 의제취득일(1985.1.1.) 전 **매매**는 계산하지 않는다(§176조의2④ 환산 — 범위 밖 · 계획서 §4 「결정에서 따라오는 것」).
+  //   상속·증여는 연다(Q-31): 시가 = 자산 합계 3자 비교(①②③ — `calcMixedSec163_9Compare`, ④가 era pre_deemed를 실을 때) → 이긴 후보 × 부분별 채무비율(Q-36),
+  //   기준시가 = 의제취득일 기준시가(주택분 §164⑦ · Q-37) × 부분별 채무비율. 비교 표시 없이 오면(API 직접) 3자 비교를 못 하므로 계속 막는다(fail closed).
+  const preDeemedCandidate = src.inheritedValuesAsIs === true || src.bgPreDeemedConverted === true;
+  if (preDeemed && !byInheritOrGift) {
+    add("MB-16", "증여자의 토지 또는 건물 취득일이 1985.1.1. 전이면 의제취득일(1985.1.1.) 규정(「소득세법」 제97조 제2항 제1호나목, 같은 법 시행령 제176조의2 제4항)이 적용되는데 겸용주택 계산은 매매 취득에 이를 반영하지 않아 계산하지 않습니다.", ["mixedUse", "landAcquisitionDate"]);
+  } else if (preDeemed && !allPreDeemed) {
+    // 토지·건물 중 한쪽만 1985.1.1. 전 — 파트마다 비교 구간(의제취득일 전 3자 / 단서 구간 2자)이 갈려 자산 합계 비교가 성립하지 않는다(리뷰 F-1 · 범위 밖).
+    add("MB-16", "증여자가 상속·증여로 취득한 겸용주택의 토지·건물 취득일 중 한쪽만 1985.1.1. 전이면 의제취득일 전후가 섞여 계산하지 않습니다 — 토지·건물을 함께 상속·증여받았으면 같은 취득일을 입력하세요.", ["mixedUse", "landAcquisitionDate"]);
+  } else if (preDeemed && deemedPath && src.sec163_9Compare?.era !== "pre_deemed" && !preDeemedCandidate) {
+    add("MB-16", "증여자가 의제취득일(1985.1.1.) 전에 상속·증여로 취득한 자산은 상속개시일·증여일 평가액·의제취득일 기준시가·환산취득가액 중 큰 금액이 취득가액인데(「소득세법」 제97조 제2항 제1호나목, 같은 법 시행령 제163조 제9항·제176조의2 제4항) 비교 구간 표시가 없어 계산하지 않습니다.", ["mixedUse", "landAcquisitionDate"]);
+  }
+  // 반대 방향(리뷰 F-2) — 의제취득일 전 비교 표시는 토지·건물 모두 1985.1.1. 전일 때만 받는다. 아니면 1985 이후 취득에 ③ 환산이 끼어든다(API 직접 호출).
+  if (src.sec163_9Compare?.era === "pre_deemed" && src.burdenedGift && !allPreDeemed) {
+    add("MB-16", "의제취득일(1985.1.1.) 전 비교 표시는 증여자의 토지·건물 취득일이 모두 1985.1.1. 전일 때만 쓸 수 있습니다.", ["mixedUse", "landAcquisitionDate"]);
   }
   // MB-18 — §163⑨ 단서 1·2호: 개별공시지가(1990.8.30.)·건물 기준시가 고시 전에 상속·증여받은 토지·건물은 평가액과 §164④·⑤~⑦ 가액 중 큰 금액이다.
   // 그 구간은 ④가 `sec163_9Compare`(era clause)를 실을 때 자산 합계 비교(`calcMixedSec163_9Compare` — PR-6 leaf)로 계산한다(PR-7b-7a-2).
@@ -249,6 +274,16 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
     add("MB-17", "주택·상가로 구분된 감정평가가액이 있는지 선택하세요 — 있으면 부가가치세법 시행령 제64조 제1항 제1호 단서에 따라 그 가액 비율로, 없으면 기준시가 비율로 시가를 주택·상가에 나눕니다.", ["burdenedGiftInfo", "housingAppraisal"]);
   }
 
+  // PHD 필수 안내를 다른 필수 칸보다 먼저 낸다 — PHD가 켜지면 주택건물 기준시가(나목)·취득시 개별주택가격 칸이 필요 없어진다(리뷰 권고 PR-7b-7a-2 반영).
+  // 단서 구간 비교 — 2005.4.30. 전에는 개별주택가격이 공시되지 않았으므로 ② 후보의 주택분(취득당시 기준시가)은 §164⑦ 환산가액뿐이다(「계산한 가액으로 한다」).
+  //   직접 입력한 「취득시 개별주택가격」은 받지 않는다 — PHD 필수(사용자 결정 R-1, 2026-10-24 · ⑫ `transfer-tax-schema-mixed-use.ts` 거울).
+  if (deemedPath && src.sec163_9Compare?.era === "clause" && !phd) {
+    add("MB-11", "겸용주택 부담부증여: 개별주택가격 공시(2005.4.30.) 전에 상속·증여받은 주택분의 취득당시 기준시가는 §164⑦ 환산가액입니다(소득세법 시행령 §164⑦·§163⑨ 단서 제2호) — 「주택 기준시가」의 개별주택가격 미공시(§164⑦) 토글을 켜고 환산 입력을 채우세요.", ["mixedUse", "usePreHousingDisclosure"]);
+  }
+  // 의제취득일 전 상속·증여 — 의제취득일 기준시가의 주택분도 §164⑦ 환산가액뿐이다(Q-37). 시가(②·③ 후보)·기준시가 평가 모두 PHD 필수.
+  if (preDeemedInherited && !phd) {
+    add("MB-11", "겸용주택 부담부증여: 의제취득일(1985.1.1.) 전에 상속·증여받은 주택분의 의제취득일 기준시가는 §164⑦ 환산가액입니다(소득세법 시행령 §164⑦·§176조의2④) — 「주택 기준시가」의 개별주택가격 미공시(§164⑦) 토글을 켜고 환산 입력을 채우세요.", ["mixedUse", "usePreHousingDisclosure"]);
+  }
   // ── 필수 입력 (MB-11) — 양도시·취득시 기준시가는 모드와 무관하게 필요하다 ──
   const ts = src.transferStandardPrice;
   const as = src.acquisitionStandardPrice;
@@ -270,11 +305,6 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   if (isHousingPriceAtAcqRequired({ usePhd: phd, byInheritanceOrGift: deemedPath })) {
     need(pos(acqHousing), "취득시 개별주택가격", ["mixedUse", "acquisitionStandardPrice", "housingPrice"]);
   }
-  // 단서 구간 비교 — 2005.4.30. 전에는 개별주택가격이 공시되지 않았으므로 ② 후보의 주택분(취득당시 기준시가)은 §164⑦ 환산가액뿐이다(「계산한 가액으로 한다」).
-  //   직접 입력한 「취득시 개별주택가격」은 받지 않는다 — PHD 필수(사용자 결정 R-1, 2026-10-24 · ⑫ `transfer-tax-schema-mixed-use.ts` 거울).
-  if (deemedPath && src.sec163_9Compare?.era === "clause" && !phd) {
-    add("MB-11", "겸용주택 부담부증여: 개별주택가격 공시(2005.4.30.) 전에 상속·증여받은 주택분의 취득당시 기준시가는 §164⑦ 환산가액입니다(소득세법 시행령 §164⑦·§163⑨ 단서 제2호) — 「주택 기준시가」의 개별주택가격 미공시(§164⑦) 토글을 켜고 환산 입력을 채우세요.", ["mixedUse", "usePreHousingDisclosure"]);
-  }
   if (
     as && isBuildingDayLandPriceRequired({
       landDate: src.landAcquisitionDate as Date | string | undefined,
@@ -293,9 +323,12 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
       // 그 밖(본문)은 평가액이 유일한 취득가액이라 두 칸 필수 — reported 평가액을 보충적평가로 대신하지 않는다(자동 fallback 금지)
       const h = pos(src.housingInheritedValue);
       const c = pos(src.commercialInheritedValue);
-      if (src.inheritedValuesAsIs === true) {
+      if (preDeemedCandidate) {
         // 비교 후보 — 후보별로 평가액을 비워 다시 계산한다
-      } else if (phd || clauseCompare) {
+      } else if (preDeemed && cause === "gift") {
+        // 의제취득일 전 증여는 평가액 필수(Q-14·Q-16 — 겸용 일반 양도 PR-6과 같다)
+        need(h && c, "의제취득일(1985.1.1.) 전 증여 — 증여일 현재 주택분·상가분 상증법 평가액", ["mixedUse", "housingInheritedValue"]);
+      } else if (phd || clauseCompare || preDeemed) {
         if (h !== c) add("MB-11", "겸용주택 부담부증여: 증여자가 상속·증여받은 때의 주택분·상가분 상증법 평가액은 두 칸 모두 입력하거나 모두 비워야 합니다(소득세법 시행령 §163⑨).", ["mixedUse", "housingInheritedValue"]);
       } else {
         need(h && c, "증여자가 상속·증여받은 때의 주택분·상가분 상증법 평가액", ["mixedUse", "housingInheritedValue"]);
@@ -377,7 +410,7 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   // ── 취득 경로 — BG 모드가 정본(asset의 stale 플래그를 덮어쓴다) ──
   let acqPath: MixedBgAcqPath;
   if (!isMarket) acqPath = "standard";
-  else if (deemedPath) acqPath = "deemed";
+  else if (deemedPath) acqPath = src.bgPreDeemedConverted === true ? "converted_pre_deemed" : "deemed";
   else acqPath = method === "actual" ? "actual" : method === "converted" ? "converted" : (method as "salesCase" | "appraisal");
   const totalFor =
     acqPath === "actual" ? info.actualAcquisitionTotal : acqPath === "salesCase" || acqPath === "appraisal" ? info.presumedAcquisitionTotal : undefined;
@@ -394,6 +427,7 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
       value: { whole: C, housing: Ch, commercial: Cc, isMarket, separateAppraisal, selectedMode: "supplementary" },
       transferStd,
       acqPath,
+      preDeemed: preDeemedInherited,
       assetOverrides: {
         useActualAcquisition: acqPath === "actual",
         useAppraisalSalesAcquisition: acqPath === "salesCase" || acqPath === "appraisal",

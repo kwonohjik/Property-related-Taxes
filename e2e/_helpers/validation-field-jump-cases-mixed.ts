@@ -224,6 +224,11 @@ export const MIXED_FIELD_JUMP_CASES: FieldJumpCase[] = [
     unreachableInUi: "날짜 칸(`DateInput`)이 월·일을 범위 안으로 자른다(`clampDay`) — 형식이 잘못된 날짜를 넣을 수 없다",
   },
 
+  {
+    name: "mixed: 겸용 × 부담부증여 — 의제취득일 전 상속은 §164⑦ 토글 필수(PR-7b-7b)", field: "usePreHousingDisclosure", step: 0, assetIndex: A,
+    message: /^자산: 겸용주택 부담부증여: 의제취득일\(1985\.1\.1\.\) 전에 상속·증여받은 주택분/,
+    form: mixed({ ...BG_MIXED, bgMortgageAttribution: "unallocated", acquisitionCause: "inheritance", acquisitionDate: "1983-03-15", inheritanceStartDate: "1983-03-15", decedentAcquisitionDate: "1970-01-01" }),
+  },
   // ── 상속·증여 취득 겸용 ──
   {
     name: "mixed: 단서 구간(2005.4.30. 전) 상속 — §164⑦ 토글 필수(R-1)", field: "usePreHousingDisclosure", step: 0, assetIndex: A,

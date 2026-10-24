@@ -14,6 +14,7 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
 import {
   mixedAcqCommercialBuildingStd,
   mixedAcqLandPricePerSqm,
@@ -42,6 +43,21 @@ export function isMixedBgDeemedPath(
     a.bgValuationMode === "sangjeungbeop_market" &&
     (a.acquisitionCause === "inheritance" || a.acquisitionCause === "gift")
   );
+}
+
+/**
+ * 겸용 부담부증여 × 증여자의 의제취득일(1985.1.1.) 전 상속·증여 취득(PR-7b-7b) — 시가·기준시가 평가 공통.
+ * 엔진 prepare의 `preDeemedInherited`(토지·건물 **모두** 1985.1.1. 전)와 같은 판정이다(④가 보내는 토지 취득일 = `landAcquisitionDate || acquisitionDate`, 건물 = `acquisitionDate`).
+ * 주택분 의제취득일 기준시가는 §164⑦ 환산이라(Q-37) ⑤가 PHD 토글을 열고 직접 입력 칸을 숨긴다.
+ */
+export function isMixedBgPreDeemedInherited(
+  a: ScopeAsset & Pick<AssetForm, "acquisitionCause" | "acquisitionDate" | "landAcquisitionDate">,
+): boolean {
+  if (!isMixedBurdenedGift(a) || (a.acquisitionCause !== "inheritance" && a.acquisitionCause !== "gift")) return false;
+  const building = a.acquisitionDate ?? "";
+  const land = a.landAcquisitionDate || building;
+  // 토지·건물 모두 1985.1.1. 전 — 한쪽만 전이면 엔진이 MB-16으로 막는다(리뷰 F-1) — 화면이 계산되는 것처럼 안내하지 않는다
+  return building !== "" && building < DEEMED_ACQUISITION_DATE && land < DEEMED_ACQUISITION_DATE;
 }
 
 // ───────────────────────── 채무 귀속 (D-7) ─────────────────────────

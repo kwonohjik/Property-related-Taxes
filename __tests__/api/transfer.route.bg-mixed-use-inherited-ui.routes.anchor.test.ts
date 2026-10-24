@@ -216,9 +216,11 @@ describe("PR-7b-7a-1 · 겸용 부담부증여 × 증여자 상속·증여 취�
     expect(r.tax).toBe(56_516_000);
   });
 
-  it("[S-9] 1983 상속 — 의제취득일 전은 계속 막는다(MB-16 · PR-7b-7b) · ⑧이 「확인할 수 없음」 선언(겸용 화면에 없는 칸)을 먼저 요구하지 않는다", async () => {
+  it("[S-9] 1983 상속 · PHD 없음 — 종전 MB-16 → PR-7b-7b부터 §164⑦ 토글로 안내(Q-37) · ⑧이 「확인할 수 없음」 선언(겸용 화면에 없는 칸)을 먼저 요구하지 않는다 · PHD 값은 7b anchor D-1", async () => {
     const r = await run(form({ ...INH, acquisitionDate: "1983-03-15", inheritanceStartDate: "1983-03-15", decedentAcquisitionDate: "1970-01-01" }));
-    expect(r.issues[0]?.message).toMatch(/1985\.1\.1\. 전/);
+    expect(r.issues[0]?.field).toBe("usePreHousingDisclosure");
+    expect(r.issues[0]?.message).toMatch(/의제취득일\(1985\.1\.1\.\) 전에 상속·증여받은 주택분/);
+    expect(r.issues.map((i) => i.message).join()).not.toMatch(/확인할 수 없음/);
     expect(r.status).toBe(400);
   });
 

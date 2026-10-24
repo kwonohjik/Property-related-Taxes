@@ -49,6 +49,7 @@ import {
 } from "./BurdenedGiftPresumedAcquisitionSection";
 import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { isMixedBgDeemedPath } from "@/lib/calc/burdened-gift-mixed-use-scope";
+import { isMixedBgPreDeemedInherited } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { BurdenedGiftDebtAttributionCard } from "./BurdenedGiftDebtAttributionCard";
 import { BurdenedGiftHousingAppraisalField, BurdenedGiftMixedUsePanel } from "./BurdenedGiftMixedUsePanel";
 import { bgCollateralForcesStdAcq } from "@/lib/calc/burdened-gift-collateral-win";
@@ -340,7 +341,20 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             </ToneCard>
           )}
           {gbParts.any && <GbBgPreDeemedMethodNotice parts={gbParts} forOtherShares={gbMethodForOtherShares} />}
-          {mixedDeemed && (
+          {mixedDeemed && isMixedBgPreDeemedInherited(asset) && (
+            <ToneCard tone="violet">
+              {/* 의제취득일 전 상속·증여 — 3자 자산 합계 비교 × 부분별 채무비율(Q-31·Q-36·Q-37 · PR-7b-7b) */}
+              <p className="text-xs text-violet-900 dark:text-violet-200" data-testid="bg-mixed-deemed-notice">
+                증여자가 의제취득일(1985.1.1.) 전에 {asset.acquisitionCause === "gift" ? "증여" : "상속"}로 취득한 겸용주택입니다 — ①{" "}
+                {asset.acquisitionCause === "gift" ? "증여일" : "상속개시일"} 현재 상증법 평가액, ②의제취득일 기준시가(주택분은 §164⑦ 환산가액), ③환산취득가액(증여가액의
+                주택·상가 몫에 의제취득일 기준시가를 양도시 기준시가로 나눈 비율을 곱한 금액)을 주택분·상가분 합계로 비교해 큰 금액을 쓰고(소득세법 시행령 §163⑨·§176조의2④), 그 주택분·상가분에
+                주택·상가별 채무비율을 곱합니다(같은 영 §159①1호). 산정방식은 고르지 않습니다. 평가액은 ③ 취득정보의 신고가액 칸에 입력하고
+                {asset.acquisitionCause === "gift" ? "(증여는 필수)" : "(상속은 비워 두어도 됩니다)"}, 「주택 기준시가」의 개별주택가격 미공시(§164⑦) 토글을 켜고 환산 입력을 채우세요.
+                자본적지출·양도비는 아래 「④ 자본적 지출, 필요경비」에 입력하세요 — ③이 채택되면 그 대신 개산공제(같은 영 §163⑥)를 적용합니다.
+              </p>
+            </ToneCard>
+          )}
+          {mixedDeemed && !isMixedBgPreDeemedInherited(asset) && (
             <ToneCard tone="violet">
               <p className="text-xs text-violet-900 dark:text-violet-200" data-testid="bg-mixed-deemed-notice">
                 증여자가 {asset.acquisitionCause === "gift" ? "증여" : "상속"}로 취득한 겸용주택입니다 —{" "}

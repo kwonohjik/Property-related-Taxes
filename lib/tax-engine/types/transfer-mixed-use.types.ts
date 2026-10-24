@@ -519,6 +519,12 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
   inheritedValuesAsIs?: boolean;
 
   /**
+   * 엔진 내부 전용(⑫ 스키마에 없다) — 부담부증여 × 의제취득일(1985.1.1.) 전 상속·증여(시가)의 ③ 후보(환산취득가액)로 다시 계산할 때 켠다.
+   * prepare가 취득 경로를 `converted_pre_deemed`로 정한다 — ③ = 증여가액의 파트 몫(C_h·C_c) × 의제취득일 기준시가 ÷ 양도시 기준시가(Q-36 · PR-7b-7b).
+   */
+  bgPreDeemedConverted?: boolean;
+
+  /**
    * 증여 취득가액 직접 산정 게이트(소령 §163⑨) — 순수 증여(§34~§42의3 증여의제 제외).
    * true면 상속과 **동일하게** reported 필드(housingInheritedValue 등)를 소비 —
    * 증여일 상증법 §60~66 평가액을 취득당시 실지거래가액으로 직접 사용(환산·개산공제 배제).

@@ -93,7 +93,13 @@ export type MixedUseBurdenedGiftBreakdown = Omit<
   deemedCause?: "inheritance" | "gift";
   /**
    * `deemedCause`가 있을 때 주택분·상가분 취득가액(채무비율 전)이 무엇으로 정해졌는가 — 결과 라벨용(PR-7b-7a-2).
-   * reported = 상속개시일·증여일 평가액(①) · standard = §164 가액(②: 주택분은 PHD면 §164⑦ 환산가액, 아니면 취득시 개별주택가격 · 상가분은 취득시 토지 + 건물 기준시가).
+   * reported = 상속개시일·증여일 평가액(①) · standard = §164 가액(②: 주택분은 PHD면 §164⑦ 환산가액, 아니면 취득시 개별주택가격 · 상가분은 취득시 토지 + 건물 기준시가)
+   * · converted = 의제취득일(1985.1.1.) 전 상속·증여의 ③ 환산취득가액(증여가액의 쪽 몫 × 의제취득일 기준시가 ÷ 양도시 기준시가 — PR-7b-7b · 이때 `acquisitionMethodUsed`는 "converted").
    */
-  deemedBasis?: { housing: "reported" | "standard"; commercial: "reported" | "standard"; housingPhd: boolean };
+  deemedBasis?: { housing: "reported" | "standard" | "converted"; commercial: "reported" | "standard" | "converted"; housingPhd: boolean };
+  /**
+   * 증여자가 의제취득일(1985.1.1.) 전에 상속·증여로 취득 — 부분별 `stdPriceAtAcquisition`은 의제취득일 기준시가다(주택분 §164⑦ · PR-7b-7b).
+   * 시가 평가는 ①평가액·②의제취득일 기준시가·③환산취득가액 자산 합계 비교(`sec163_9Comparison`), 기준시가 평가는 의제취득일 기준시가 × 채무비율. 그 밖에는 없다.
+   */
+  acquisitionStdAtDeemedDate?: true;
 };

@@ -63,6 +63,10 @@ export function FilingFormTable({
       ? "토지·건물별 — 의제취득일 전 파트는 ①상증법 평가액·②§164 기준시가·③환산취득가액 중 큰 금액 × 채무비율 — 부담부증여 명세 참조"
       : preDeemedBasis === "deemed_std"
         ? "의제취득일(1985.1.1.) 기준시가 × 채무비율"
+        : burdenedGiftBreakdown && "acquisitionStdAtDeemedDate" in burdenedGiftBreakdown && burdenedGiftBreakdown.acquisitionStdAtDeemedDate
+          ? burdenedGiftBreakdown.deemedCause
+            ? "주택분·상가분 취득가액(①상증법 평가액·②의제취득일 기준시가·③환산취득가액 중 자산 합계가 큰 금액 — 소득세법 시행령 §176조의2④) × 주택·상가별 채무비율 — 부담부증여 명세 참조"
+            : "의제취득일(1985.1.1.) 기준시가 × 주택·상가별 채무비율"
         : burdenedGiftBreakdown?.deemedCause
           ? burdenedGiftBreakdown.deemedBasis && (burdenedGiftBreakdown.deemedBasis.housing === "standard" || burdenedGiftBreakdown.deemedBasis.commercial === "standard")
             ? "주택분·상가분 취득가액(소득세법 시행령 §163⑨ — 평가액 또는 §164 기준시가) × 주택·상가별 채무비율 — 부담부증여 명세 참조"

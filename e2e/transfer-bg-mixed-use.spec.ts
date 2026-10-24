@@ -226,6 +226,27 @@ test.describe("겸용주택 × 부담부증여", () => {
     await expect(page.locator('[data-field="usePreHousingDisclosure"]')).toBeInViewport();
   });
 
+  test("BGMU-10 1983 상속(의제취득일 전) · §164⑦ · ① 비움 — 비교 카드에 ③ 환산취득가액 채택 · 취득가액 행은 「증여가액 중 주택분 몫」 산식 (PR-7b-7b)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seedAndOpen(page, {
+      ...Y95_PHD,
+      acquisitionDate: "1983-03-15",
+      inheritanceStartDate: "1983-03-15",
+      decedentAcquisitionDate: "1970-01-01",
+      mixedHousingInheritedValueOverride: "",
+      mixedCommercialInheritedValueOverride: "",
+    });
+    await expandAssetSection(page, 2);
+    await expect(page.getByTestId("bg-mixed-deemed-notice")).toContainText("§176조의2④");
+    await expandAssetSection(page, 3);
+    await expect(page.getByText("상속개시일 신고가액 직접 입력 (선택)")).toBeVisible();
+    await calc(page);
+    const card = page.getByTestId("mixed-sec163-9-comparison");
+    await expect(card.locator('tr[data-candidate="converted"]')).toContainText("← 채택");
+    await expect(page.getByTestId("bg-result-acq-housing")).toContainText("환산취득가액 — 의제취득일 전 상속·증여");
+    await expect(page.getByTestId("bg-result-acq-housing")).toContainText("증여가액 중 주택분 몫");
+  });
+
   test("BGMU-7 증여자 상속 취득에서 평가액을 비우면 «다음»이 막히고 상속개시일 주택분 신고가액 칸으로 이동한다", async ({ page }) => {
     test.setTimeout(90_000);
     await seedAndOpen(page, { ...INHERITED, mixedHousingInheritedValueOverride: "", mixedCommercialInheritedValueOverride: "" });

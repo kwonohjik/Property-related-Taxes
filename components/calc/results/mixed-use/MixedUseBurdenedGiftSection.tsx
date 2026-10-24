@@ -23,6 +23,8 @@ import type {
 import {
   MIXED_BG_PART_LABEL,
   mixedBgValueLabel,
+  mixedBgAcqStdLabel,
+  mixedBgPreDeemedConverted,
 } from "@/components/calc/results/transfer/DetailedStatementBgMixedFormulas";
 import {
   DivRow,
@@ -194,11 +196,21 @@ function acqFormulaLine(bg: MixedUseBurdenedGiftBreakdown, side: MixedBgSide, k:
   if (p.acquisitionBeforeSwap !== undefined) {
     return `${MIXED_BG_PART_LABEL[k]}: 환산취득가액 ${fmtPlain(p.acquisitionBeforeSwap)}은 필요경비(자본적지출·양도비)가 더 커서 차감하지 않습니다 (소득세법 §97②2호 단서)`;
   }
+  const pdc = mixedBgPreDeemedConverted(bg, k, side);
+  if (pdc) {
+    // 의제취득일 전 상속·증여 ③ — 양도가액은 증여가액의 쪽 몫(Q-36 · PR-7b-7b)
+    return (
+      <FLine>
+        {MIXED_BG_PART_LABEL[k]}: 증여가액 중 {side === "housing" ? "주택분" : "상가분"} 몫 {fmtPlain(pdc.giftValue)} ×{" "}
+        <Frac top={`의제취득일 기준시가 ${fmtPlain(p.stdPriceAtAcquisition)}`} bottom={`양도시 기준시가 ${fmtPlain(pdc.sideTransferStd)}`} /> × {ratioFrac(bg, side)}
+      </FLine>
+    );
+  }
   switch (p.acquisitionMethod) {
     case "standard_price":
       return (
         <FLine>
-          {MIXED_BG_PART_LABEL[k]}: 취득시 기준시가 {fmtPlain(p.stdPriceAtAcquisition)} × {ratioFrac(bg, side)}
+          {MIXED_BG_PART_LABEL[k]}: {mixedBgAcqStdLabel(bg)} {fmtPlain(p.stdPriceAtAcquisition)} × {ratioFrac(bg, side)}
         </FLine>
       );
     case "converted":
@@ -227,7 +239,15 @@ export function MixedUseBgAcqRows({ bg, side }: { bg: MixedUseBurdenedGiftBreakd
   return (
     <div className="space-y-2" data-testid={`bg-result-acq-${side}`}>
       <Row
-        label={`${label} 취득가액 · ${method === "actual" && bg.deemedCause ? `${mixedBgValueLabel(bg, method, side)} 안분 (소득세법 시행령 §163⑨)` : METHOD_LABEL[method]}`}
+        label={`${label} 취득가액 · ${
+          method === "actual" && bg.deemedCause
+            ? `${mixedBgValueLabel(bg, method, side)} 안분 (소득세법 시행령 §163⑨)`
+            : method === "converted" && bg.deemedCause
+              ? "환산취득가액 — 의제취득일 전 상속·증여 (소득세법 시행령 §176조의2④)"
+              : bg.acquisitionStdAtDeemedDate && method === "standard_price"
+                ? "의제취득일(1985.1.1.) 기준시가 안분 (시행령 §159①1호 괄호)"
+                : METHOD_LABEL[method]
+        }`}
         value={fmt(sumOf(bg, side, (p) => p.acquisitionPrice))}
         formula={
           <>
@@ -246,7 +266,7 @@ export function MixedUseBgAcqRows({ bg, side }: { bg: MixedUseBurdenedGiftBreakd
                 const p = bg.perPart[k];
                 return (
                   <FLine key={k}>
-                    {MIXED_BG_PART_LABEL[k]}: 취득시 기준시가 {fmtPlain(p.stdPriceAtAcquisition)} × {ratioFrac(bg, side)} × 개산공제율{" "}
+                    {MIXED_BG_PART_LABEL[k]}: {mixedBgAcqStdLabel(bg)} {fmtPlain(p.stdPriceAtAcquisition)} × {ratioFrac(bg, side)} × 개산공제율{" "}
                     {rateLabel(p.estimatedDeductionRate ?? 0)}
                   </FLine>
                 );

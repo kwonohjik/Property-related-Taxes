@@ -53,9 +53,9 @@ const major = (a: AssetForm) => render(<MixedUseAssetMajorStdPrice asset={a} onC
 const phdToggle = (c: HTMLElement) => c.querySelector('[data-field="usePreHousingDisclosure"]');
 
 describe("V-1 · 판정 — 부담부증여 비교 구간은 상속·증여 × 시가 × 단서 구간만", () => {
-  it("1995 상속 · 시가 → clause / 1983은 없음(7b) / 기준시가 평가는 없음 / 2010은 없음", () => {
+  it("1995 상속 · 시가 → clause / 1983은 pre_deemed(PR-7b-7b) / 기준시가 평가는 없음 / 2010은 없음", () => {
     expect(mixedSec163_9CompareOf(seed(Y95))).toEqual({ era: "clause", cause: "inheritance", commercialOutsideClause: undefined } as never);
-    expect(mixedSec163_9CompareOf(seed({ acquisitionDate: "1983-03-15", inheritanceStartDate: "1983-03-15" }))).toBeUndefined();
+    expect(mixedSec163_9CompareOf(seed({ acquisitionDate: "1983-03-15", inheritanceStartDate: "1983-03-15" }))).toEqual({ era: "pre_deemed", cause: "inheritance" });
     expect(mixedSec163_9CompareOf(seed({ ...Y95, bgValuationMode: "sangjeungbeop_standard" }))).toBeUndefined();
     expect(mixedSec163_9CompareOf(seed())).toBeUndefined();
   });
