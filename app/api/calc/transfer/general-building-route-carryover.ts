@@ -45,7 +45,7 @@ function attachDonorBuiltEcho(
   return chosen;
 }
 
-function donorBuiltAppliedEcho(db: DonorBuiltInput, chosenA: GeneralBuildingRouteResult, transferDate: Date): DonorBuiltPenaltyEcho {
+function donorBuiltAppliedEcho(db: DonorBuiltInput, chosenA: GeneralBuildingRouteResult, transferDate: Date, method: "estimated" | "appraisal"): DonorBuiltPenaltyEcho {
   const fifth = ymd(addYears(db.constructionDate, 5));
   const bld = chosenA.aggregated.properties.find((p) => p.propertyId === "building");
   const penalty = bld?.penaltyTax ?? 0;
@@ -57,11 +57,11 @@ function donorBuiltAppliedEcho(db: DonorBuiltInput, chosenA: GeneralBuildingRout
       fifthAnniversary: fifth,
       base: bld?.penaltyBase ?? 0,
       penalty,
-      burdenedGift: { method: "estimated" },
+      burdenedGift: { method },
     };
   const gateOpen =
     calculateBuildingPenalty(
-      { isSelfBuilt: true, penaltyDonorBuilt: true, acquisitionMethod: "estimated", transferDate, constructionDate: db.constructionDate, buildingType: db.buildingType, extensionFloorArea: db.extensionFloorArea } as TransferTaxInput,
+      { isSelfBuilt: true, penaltyDonorBuilt: true, acquisitionMethod: method, transferDate, constructionDate: db.constructionDate, buildingType: db.buildingType, extensionFloorArea: db.extensionFloorArea } as TransferTaxInput,
       1,
     ) !== null;
   return donorBuiltNotAppliedEcho(db, gateOpen ? "zero_base" : "outside_penalty_window", { fifthAnniversary: fifth });
@@ -146,7 +146,7 @@ export function calculateGeneralBuildingActualTransfer(
    * (⑧이 앞에서 알려주므로 정상 경로에서는 여기 닿지 않는다.)
    */
   assertCarryoverDonorBasis(info, ct);
-  if (donorBuilt) assertGbBgDonorBuiltInput(info, ct, donorBuilt, payload.buildingAcquisitionCause === "newConstruction");
+  if (donorBuilt) assertGbBgDonorBuiltInput(info, ct, donorBuilt, payload.buildingAcquisitionCause === "newConstruction", payload.transferDate);
 
   // B = 양도인(증여받은 사람) 기준 — K-6/K-7은 증여일 평가액(`actual*`)을 실지거래가액으로 읽는다(소령 §163⑨). 단건 `buildInputB`와 같은 leaf.
   // 종전에는 `info`를 그대로 넘겨 당초 증여자 방식(감정·매매사례)의 양도인 칸을 찾다가 400이었다(계획서 `gb-bg-carryover-presumed-scenario-b.plan.md`).
@@ -182,6 +182,6 @@ export function calculateGeneralBuildingActualTransfer(
     giftTaxAmount: ct.giftTaxAmount,
   };
   if (donorBuilt)
-    attachDonorBuiltEcho(chosen, adopted === "B" ? donorBuiltNotAppliedEcho(donorBuilt, "scenario_b") : donorBuiltAppliedEcho(donorBuilt, resultA, payload.transferDate));
+    attachDonorBuiltEcho(chosen, adopted === "B" ? donorBuiltNotAppliedEcho(donorBuilt, "scenario_b") : donorBuiltAppliedEcho(donorBuilt, resultA, payload.transferDate, info.acquisitionMethod === "appraisal" ? "appraisal" : "estimated"));
   return chosen;
 }
