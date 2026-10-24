@@ -38,7 +38,7 @@ describe("InheritedHouseValuationDetailCard — §164⑦ 신 모델", () => {
 
     // 배지 §164⑦ (구 §164⑤ 아님) — 이름은 «환산 개별주택가격»(법령에 없는 조어 «추정» 금지)
     expect(screen.getAllByText(/환산 개별주택가격/).length).toBeGreaterThan(0);
-    expect(screen.getByText("환산 개별주택가격")).toBeInTheDocument(); // 배지
+    expect(screen.getAllByText("환산 개별주택가격")).toHaveLength(2); // 배지 + (B) 환산취득가액 분자 — 같은 이름(서술형 «취득당시 개별주택가격» 아님)
     expect(screen.getByText(/환산 개별주택가격 \(소득세법 시행령 §164⑦ 산식\) · 합계기준시가 = 토지 \+ 건물/)).toBeInTheDocument(); // 소제목
     expect(document.body.textContent).not.toContain("추정");
     expect(screen.queryByText(/§164⑤ 토지비율/)).toBeNull();

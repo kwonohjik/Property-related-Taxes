@@ -248,15 +248,16 @@ export function housePriceLabels(agency: "nts" | "molit" | undefined): { price: 
 }
 
 /**
- * 산식으로 구한 취득 당시 주택 가격의 **이름** — «추정»은 법령에 없는 조어라 쓰지 않는다.
+ * 산식으로 구한 취득 당시 주택 가격의 **이름** — «추정»은 법령에 없는 조어라 쓰지 않는다. 이름은 둘뿐이다(2026-10-24 사용자 지정).
  *   · 단독·다가구(생략): 소득세법 시행령 §164⑦ 산식 결과 = «환산 개별주택가격»(저장소 용어 통일 — memory `feedback_no_coined_legal_terms`)
- *   · 공동주택 국토교통부 첫 공시: §164⑦ 산식 결과 = «환산 공동주택가격» (2026-10-24 사용자 지시 — 개별주택과 같은 규칙·용어는 이 둘뿐)
- *   · 공동주택 국세청 첫 고시: §164⑥ 산식 결과 — «§164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가»(영 §164⑥의 «취득당시의 기준시가»)
- * `sentence` = 문장 속 서술형(배지 등), `label` = 산식 첫 줄·소제목용 «이름 (조문 산식)» 꼴.
+ *   · 공동주택 국토교통부 첫 공시: §164⑦ 산식 결과 = «환산 공동주택가격»
+ *   · 공동주택 국세청 첫 고시: §164⑥ 산식 결과 = «환산 공동주택가격» — 이름은 같고 **조문만** 라벨의 «(… §164⑥ 산식)»으로 구분한다
+ * `sentence` = 이름만(배지·문장 속 지칭·산식 속 결과 자리), `label` = 산식 첫 줄·소제목용 «이름 (조문 산식)» 꼴.
+ * 고시 가격 자체를 가리키는 말(`housePriceLabels` — «공동주택 기준시가»·«공동주택가격»·«개별주택가격»)은 별개다.
  */
 export function convertedHousePriceNames(agency: "nts" | "molit" | undefined): { sentence: string; label: string } {
   if (agency === "nts") {
-    return { sentence: "§164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가", label: "취득 당시 공동주택 기준시가 (소득세법 시행령 §164⑥ 산식)" };
+    return { sentence: "환산 공동주택가격", label: "환산 공동주택가격 (소득세법 시행령 §164⑥ 산식)" };
   }
   if (agency === "molit") {
     return { sentence: "환산 공동주택가격", label: "환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)" };
@@ -299,7 +300,9 @@ function buildFormula(
   lines.push(``);
 
   // 환산취득가액 — 취득/양도 개별주택가격 비율 (토지 별도 가산 없음, 부수토지 포함)
-  lines.push(`환산취득가액 = 양도가액 × (취득당시 ${price}) ÷ (양도당시 ${input.apartFirstPriceAgency ? "공동주택가격" : "개별주택가격"})`);
+  // 분자: 산식으로 구했으면 «환산 …가격», 직접 입력이면 입력값 그대로 «취득당시 …»
+  const acqPriceInRatio = estimationMethod === "user_override" ? `취득당시 ${price}` : convertedHousePriceNames(input.apartFirstPriceAgency).sentence;
+  lines.push(`환산취득가액 = 양도가액 × (${acqPriceInRatio}) ÷ (양도당시 ${input.apartFirstPriceAgency ? "공동주택가격" : "개별주택가격"})`);
   lines.push(`  = 양도가액 × (${fmt(housePriceAtInheritanceUsed)} ÷ ${fmt(input.housePriceAtTransfer)})`);
 
   return lines.join("\n");

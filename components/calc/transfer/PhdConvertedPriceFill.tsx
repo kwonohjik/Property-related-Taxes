@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * «환산 개별주택가격 계산해 채우기» — 실거래가·감정가액·매매사례가액(환산 아닌 방식) 주택의 «취득시 기준시가» 칸 곁 계산 보조.
+ * «환산 개별주택가격(공동주택은 환산 공동주택가격) 계산해 채우기» — 실거래가·감정가액·매매사례가액(환산 아닌 방식) 주택의 «취득시 기준시가» 칸 곁 계산 보조.
  *
  * 취득일이 개별주택가격 최초 공시일 전이면 개산공제 base(영 §163⑥2호 가목 — 취득당시의 라목 가액)는 소득세법 시행령 §164⑦ 산식 결과(환산 개별주택가격)다.
  * 기존 PHD 입력 카드(`PreHousingDisclosureSection` — `mode="assist"`)를 재사용해 7칸을 받고, 버튼을 누르면 **한 번의 onChange** 로 그 칸을 채운다.
@@ -24,6 +24,7 @@ import {
   computeConvertedHousingPrice,
   phdFillAssistVisible,
 } from "@/lib/calc/phd-converted-housing-price";
+import { isPhdApartment, phdConvertedPriceName, phdDisclosedPriceName } from "@/lib/calc/phd-housing-term";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -44,12 +45,16 @@ export function PhdConvertedPriceFill({ asset, onAssetChange, transferDate, onFi
   if (!phdFillAssistVisible(asset)) return null;
 
   const calc = computeConvertedHousingPrice(asset, transferDate);
+  // 이름은 카드 안 라디오(주택유형 — `asset.phdHousingType`)를 따른다 — 결과 화면과 같은 단일 정의
+  const apartment = isPhdApartment(asset);
+  const convertedName = phdConvertedPriceName(apartment);
+  const disclosedName = phdDisclosedPriceName(apartment);
 
   return (
     <div data-testid="phd-fill-assist">
       <ToneCard
         tone="amber"
-        title="취득일이 개별주택가격 최초 공시일 전이면 — 환산 개별주택가격 계산 (소득세법 시행령 §164⑦)"
+        title={`취득일이 ${disclosedName} 최초 공시일 전이면 — ${convertedName} 계산 (소득세법 시행령 §164⑦)`}
         titleExtra={<ExpandToggleButton open={open} onClick={() => setOpen((o) => !o)} tone="amber" />}
         className="space-y-3"
       >
@@ -67,7 +72,7 @@ export function PhdConvertedPriceFill({ asset, onAssetChange, transferDate, onFi
             />
             {calc.ok ? (
               <p className="text-xs" data-testid="phd-fill-formula">
-                환산 개별주택가격 = 최초 고시 주택가격 {fmt(calc.firstDisclosureHousingPrice)} ×{" "}
+                {convertedName} = 최초 고시 주택가격 {fmt(calc.firstDisclosureHousingPrice)} ×{" "}
                 <Frac
                   top={<>취득 당시 토지+건물 기준시가 {fmt(calc.sumAtAcquisition)}</>}
                   bottom={<>최초 고시 당시 토지+건물 기준시가 {fmt(calc.sumAtFirstDisclosure)}</>}
@@ -94,7 +99,7 @@ export function PhdConvertedPriceFill({ asset, onAssetChange, transferDate, onFi
                   if (calc.ok) onFill(String(calc.value));
                 }}
               >
-                환산 개별주택가격 계산해 채우기
+                {convertedName} 계산해 채우기
               </Button>
               <span className="text-caption text-muted-foreground">입력을 바꾸면 다시 눌러 주세요. 자동으로 갱신하지 않습니다.</span>
             </div>

@@ -17,6 +17,7 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
+import { phdConvertedPriceName } from "@/lib/calc/phd-housing-term";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-phd-bridge";
 
@@ -28,7 +29,7 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
   /**
    * `"phd"`(기본) — 환산취득가 3-시점 입력(양도시 3칸 포함 11칸, ⑧ 이 요구하고 ④ 가 전송한다).
-   * `"assist"` — **계산 보조**: 환산이 아닌 방식(실거래가·감정가액·매매사례가액)의 «환산 개별주택가격 계산해 채우기»(`PhdConvertedPriceFill`)가
+   * `"assist"` — **계산 보조**: 환산이 아닌 방식(실거래가·감정가액·매매사례가액)의 «환산 …가격 계산해 채우기»(개별·공동주택)(`PhdConvertedPriceFill`)가
    * 같은 카드를 재사용한다. 양도시 입력(양도시 개별주택가격·③ 양도시 기준시가)은 환산 개별주택가격에 쓰이지 않아 숨기고, 입력값은 ④ 가 보내지 않고 ⑧ 도 요구하지 않는다
    * (`phdFlagEffective` 가 방식 축으로 false). 같은 `phd*` 칸을 쓰므로 환산으로 돌아오면 같은 사실(최초 고시·취득 당시·최초 고시 당시 값)이 그대로 복귀한다.
    */
@@ -73,6 +74,8 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
   const setHousingType = (v: HousingType) => onChange({ phdHousingType: v });
 
   const priceLabel = PRICE_LABEL[housingType];
+  // 보조(assist) 모드 문구의 §164⑦ 산식 결과 이름 — 위 라디오(주택유형)를 따른다(결과 화면과 같은 단일 정의)
+  const convertedName = phdConvertedPriceName(housingType === "apartment");
   // §164⑦ 게이트 비교일 — 이월과세(§97의2)는 증여자 취득가액 기준이므로 증여자 취득일
   const phdCompareDate =
     asset.acquisitionCause === "carryover_gift"
@@ -105,11 +108,11 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold">
-            {assist ? "환산 개별주택가격 계산용 입력" : "주택공시가격 미공시 취득 (3-시점 환산)"}
+            {assist ? `${convertedName} 계산용 입력` : "주택공시가격 미공시 취득 (3-시점 환산)"}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {assist
-              ? "취득 당시 주택공시가격이 고시되지 않은 주택의 환산 개별주택가격을 계산합니다. 양도시 값은 필요하지 않으며, 이 입력은 세금 계산에 전송되지 않습니다."
+              ? `취득 당시 주택공시가격이 고시되지 않은 주택의 ${convertedName}을 계산합니다. 양도시 값은 필요하지 않으며, 이 입력은 세금 계산에 전송되지 않습니다.`
               : "취득 당시 주택공시가격이 고시되지 않은 경우, 최초 공시일의 주택공시가격을 기준으로 취득시 기준시가를 역산합니다."}
           </p>
         </div>
@@ -164,7 +167,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
           <p className="font-medium">⚠️ 3-시점 환산(§164⑦) 대상이 아닙니다</p>
           <p className="mt-0.5 text-caption leading-relaxed text-rose-800 dark:text-rose-200">
             {assist
-              ? "취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후이므로 취득 당시 주택공시가격이 이미 고시되어 있습니다. 환산 개별주택가격을 계산하지 않고, 취득일 현재 고시된 주택공시가격을 취득시 기준시가 칸에 직접 입력하세요."
+              ? `취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후이므로 취득 당시 주택공시가격이 이미 고시되어 있습니다. ${convertedName}을 계산하지 않고, 취득일 현재 고시된 주택공시가격을 취득시 기준시가 칸에 직접 입력하세요.`
               : "취득일(이월과세는 증여자 취득일, 의제취득일 1985-01-01 반영)이 최초 고시일 이후이므로 취득 당시 주택공시가격이 이미 고시되어 있습니다. 3-시점 환산을 끄고 취득일 현재 고시된 주택공시가격(취득시 기준시가)을 직접 입력하세요. 이 상태로는 계산이 진행되지 않습니다."}
           </p>
         </div>

@@ -151,7 +151,7 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
             </table>
           </div>
           <p className="text-caption text-muted-foreground">
-            취득당시 {price} = {first} {price}{" "}
+            {convertedName.sentence} = {first} {price}{" "}
             <span className="font-mono text-foreground">{formatN(housePriceAtFirstDisclosure)}</span>
             {" "}× <Frac top={formatN(sumAtInheritance)} bottom={formatN(sumAtFirstDisclosure)} /> ={" "}
             <span className="font-mono text-foreground font-semibold">{formatN(housePriceAtInheritanceUsed)}</span>
@@ -193,7 +193,7 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
           <Frac
             top={
               <>
-                취득당시 {price}{" "}
+                {isEstimated ? convertedName.sentence : `취득당시 ${price}`}{" "}
                 <span className="font-mono text-foreground">{formatN(housePriceAtInheritanceUsed)}</span>
               </>
             }

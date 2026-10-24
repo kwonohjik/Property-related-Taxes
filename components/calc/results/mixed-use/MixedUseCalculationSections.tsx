@@ -186,7 +186,7 @@ export function MixedUseCalculationSections({
               <FLine>
                 시행령 §164⑦ 역산 환산: 주택 양도가액 {fmtPlain(a.housingTransferPrice)} ×{" "}
                 <Frac
-                  top={`역산한 취득시 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)}`}
+                  top={`환산 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)}`}
                   bottom={`양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)}`}
                 />
               </FLine>
@@ -338,7 +338,7 @@ export function MixedUseCalculationSections({
           );
           return (
             <Row
-              label={fp ? "  ▸ 역산한 취득시 개별주택가격 (Case A 4부분 안분)" : "  ▸ 역산한 취득시 개별주택가격"}
+              label={fp ? "  ▸ 환산 개별주택가격 (Case A 4부분 안분)" : "  ▸ 환산 개별주택가격"}
               value={fmtPlain(h.phdEstimatedAcqHousingPrice)}
               small
               formula={formula}

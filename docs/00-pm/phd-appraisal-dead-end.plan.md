@@ -390,11 +390,45 @@ harness: `collectStepIssues(0~5)`(⑧) → `callTransferTaxAPI` 가로채기(④
 **테스트**: 신규 `__tests__/calc/phd-result-housing-term.anchor.test.tsx` 15건(P1 섹션 3경우+함수 · P2·P3 단건 end-to-end 폼→④→route→엔진→결과 뷰(공동은 ④ 본문·응답이 단독과 바이트 동일) · P4 일괄 카드 · P5 다건 아코디언 · P6 상속 카드 3경로) + 신규 E2E `e2e/transfer-phd-result-housing-term.spec.ts` 3건(실제 브라우저, 시드 세션 → 계산 → 결과 화면). 기존 문자열 단언 갱신 2건(`converted-price-terms` T1 molit 행 · `transfer.route.apart-nts-price` A-3 산식 문자열) — 삭제 0.
 **뮤테이션(cp 백업 · md5 복원 확인)**: M1 단건 뷰 false · M2 일괄 카드 false · M3 `ValuationDetailCards` 전달 누락 · M4 다건 false · M5 이름 함수 기본값 반전 · M6 상속 molit 라벨 원복 · M7 섹션 산식 1곳 하드코딩 · M8 `isPhdApartment` 항상 true — **8건 전건 KILLED**. M9(일괄 카드 자산 조회를 `assets[0]` 고정)는 SURVIVED — 동치(PHD 3-시점은 첫 자산만 발동 `usesPhdGate`)라 `assetOfProperty` 경유는 방어적 선택이다. E2E 뮤테이션 M1 KILLED(TH-2 실패).
 
-**미결 (사용자 결정 필요)**:
+**미결 (사용자 결정 필요)** — ✅ 1·2·3 은 §9.5 에서 사용자 결정(2026-10-24 «1,2,3 모두 수정해»)대로 해소:
 1. 공동주택 **국세청 고시 경로(§164⑥)** 라벨 «§164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가» — 이번 지시(§164⑦) 범위 밖이라 불변. §164⑥ 결과도 «환산 …»으로 부를지 결정 필요.
 2. **입력 화면 통일 여부** — `ReductionPhdInput.tsx`의 «취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식)»(위젯 결과 박스, 감면 `phd-helper.ts` 산식 6단계 마지막 라벨 포함)과 상속 입력 hint는 입력 화면이라 불변. 통일하면 `reduction-phd-helper.test.ts:194`·`converted-price-terms` T3·T5가 함께 바뀐다.
 3. PHD 상세 섹션 **머리글** «개별주택가격 미공시 취득 환산 (소득세법 시행령 §164 ⑦)»은 공동주택일 때도 «개별주택가격»이다(산식 결과 이름이 아니라 불변). 입력 위젯 머리글은 «주택공시가격 미공시 취득(3-시점 환산)».
 4. 확인 필요: PDF(`lib/pdf/ResultPdfTransferSections.tsx:171`)에 «추정 취득시 주택가격 P_A_est» 라벨이 남아 있다(결과 화면이 아닌 출력물 · 변수 약어 포함) — 이번 범위 밖, 손대지 않았다. 사람 눈 브라우저 확인 미수행(실브라우저 E2E 3건으로 갈음).
+
+
+### 9.5 §164⑥·⑦ 산식 결과 이름 통일 후속 — 상속 국세청 경로 · 입력 화면 · PHD 머리글 (2026-10-24, 커밋까지 · push·PR 전)
+
+**사용자 결정(2026-10-24 «1,2,3 모두 수정해»)**: §9.4 미결 3건을 모두 반영한다. 용어는 이 둘뿐 — 개별(단독·다가구) «환산 개별주택가격» / 공동주택 «환산 공동주택가격». 근거 조문은 이름 뒤 «(소득세법 시행령 §164⑥ 산식)»·«(… §164⑦ 산식)»으로 구분. 엔진 계산 변경 0(문자열만). 14지점 변경 0.
+
+**단일 정의 2곳**: ① `lib/calc/phd-housing-term.ts`(§9.4의 `components/calc/results/transfer/phd-housing-term.ts`를 lib로 이동 — ⑧ 검증 메시지가 같은 이름을 써야 해서. 옛 경로는 재수출만 남겨 결과 화면·PDF import 불변. `import type`만 쓰므로 순환 없음) — `isPhdApartment`·`phdConvertedPriceName`·신규 `phdDisclosedPriceName`(고시 가격 자체 «공동주택가격»/«개별주택가격») ② `convertedHousePriceNames`(`inheritance-house-valuation.ts`) — 상속 경로.
+
+**결정 1 — 상속 국세청 고시(§164⑥)**: `convertedHousePriceNames("nts")` = {sentence «환산 공동주택가격», label «환산 공동주택가격 (소득세법 시행령 §164⑥ 산식)»}. 이름은 국토부 경로와 같고 조문만 라벨 꼬리로 구분. 배지·소제목·엔진 산식 문자열 첫 줄이 모두 이 함수 한 곳. 같은 값의 좌변 지칭도 이 이름으로 통일: 카드 합계기준시가 비율 좌변(종전 «취득당시 {price} = …»)·환산취득가액 분자(산식으로 구했을 때만 — 직접 입력이면 «취득당시 …» 그대로)·엔진 산식 문자열의 환산취득가액 식 분자.
+
+**결정 2 — 입력 화면**: 아래 표. 감면 위젯(`ReductionPhdInput`)은 **개별·공동주택 구분 입력이 없다**(값 필드가 `phdMode`·`firstDisclosure*`·면적·단가·건물 기준시가뿐이고 위젯 라벨도 «최초공시 공동주택가격 (원)» · hint «공동주택가격/개별주택가격 최초 고시일») → 지시대로 현재 대상(공동주택)만 «환산 공동주택가격»으로 바꿨다.
+
+**결정 3 — 결과 PHD 상세 머리글**: 공동주택 «공동주택가격 미공시 취득 환산 (소득세법 시행령 §164⑦)» · 개별·필드 없음(옛 이력) 종전 «개별주택가격 미공시 취득 환산 (소득세법 시행령 §164 ⑦)» 그대로(지시 문자열을 글자 그대로 따라 두 머리글의 «§164⑦»/«§164 ⑦» 띄어쓰기가 다르다). PDF에는 같은 머리글이 없다(PDF PHD 표는 섹션 «토지/건물 분리 내역 (§164⑤·§166⑥)» 안의 «환산 …가격 (취득시)» 행뿐, §9.4에서 이미 종류별) → 변경 없음.
+
+| # | 위치 | 전 | 후 | 종류 판정 |
+|---|---|---|---|---|
+| 1 | `inheritance-house-valuation.ts` `convertedHousePriceNames("nts")` · 상속 카드 배지/소제목/산식 첫 줄 | §164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가 / 취득 당시 공동주택 기준시가 (소득세법 시행령 §164⑥ 산식) | 환산 공동주택가격 / 환산 공동주택가격 (소득세법 시행령 §164⑥ 산식) | 첫 가격 기관 `apartFirstPriceAgency` |
+| 1b | 같은 카드 비율 좌변·(B) 환산취득가액 분자 · 엔진 산식 환산취득가액 식 | 취득당시 {개별주택가격/공동주택가격/공동주택 기준시가} | 환산 …가격(estimated 일 때만) | 〃 |
+| 2a | `ReductionPhdInput.tsx` 결과 박스 · `phd-helper.ts` 산식 6단계 마지막 라벨 | 취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식) | 환산 공동주택가격 (소득세법 시행령 §164⑦ 산식) | 구분 없음 → 공동주택 이름 고정(확인 필요 ①) |
+| 2b | `HouseValuationSection.tsx` 산식 결과 미리보기 라벨 · 건물기준시가 hint · 취득시점 건물기준시가 hint | 환산 가격 (§164⑦) / 취득시 개별주택가격 역산 시 … 개별주택가격과 별개 / §164⑦ 환산 가격 공식에 사용 | {이름} ({조문}) / {이름} 계산 시 … {고시 가격}과 별개 / {조문} {이름} 산식에 사용 | `isApart`·`inhApartFirstPriceAgency` |
+| 2c | `PreHousingDisclosureSection.tsx` assist 모드 머리글·설명·부적격 안내 | 환산 개별주택가격(고정) | `phdConvertedPriceName(라디오)` | `asset.phdHousingType`(같은 카드 안 라디오) |
+| 2d | `PhdConvertedPriceFill.tsx` 제목·산식·버튼 | 환산 개별주택가격 / 개별주택가격 최초 공시일(고정) | 이름·고시 가격 모두 종류별 | 〃 |
+| 2e | `pre-disclosure-std-hint.ts` `PRE_DISCLOSURE_STD_PRICE_HINT` | 환산 개별주택가격(부수토지 포함 총액)을 입력합니다. | 기존 문장 + «공동주택은 공동주택가격 최초 공시일 전이면 환산 공동주택가격(부수토지 포함 총액)을 입력합니다.» | **종류를 모름**(칸이 라디오보다 먼저·카드 밖) → 둘 다 적되 기존 개별 문장은 글자 그대로 둬 기존 anchor 유지 |
+| 2f | `HousingExcessSplitCard.tsx` 5칸 라벨·hint · PHD 안내 제목·본문 · ⑧ `transfer-tax-validate-housing-excess.ts` | 환산 개별주택가격 · 개별주택가격 최초 공시일(2005-04-30) | 종류별 이름. 공동주택은 개별주택 전용 날짜 «(2005-04-30)»를 붙이지 않음 | `phdHousingType` — 카드와 ⑧ 이 같은 단일 정의(UI 통과↔⑧ 차단 모순 없음) |
+| 3 | `PreHousingDisclosureDetailSection.tsx` 머리글 | 개별주택가격 미공시 취득 환산 (소득세법 시행령 §164 ⑦) | 공동주택: 공동주택가격 미공시 취득 환산 (소득세법 시행령 §164⑦) / 개별·옛 이력 불변 | `phdApartment` prop |
+| 4 | **(범위 확장 — 규칙 «그 밖의 조어 금지» 적용)** 겸용 결과 `MixedUseResultCardParts`·`MixedUseCalculationSections` · 재개발 입력 `RedevelopmentValuationSection` | 역산한 취득시 개별주택가격 · 취득시 개별주택가격 역산 산식 / §164⑦ 본문 — 취득당시 주택가격 = 최초공시 주택가격 × … | 환산 개별주택가격 (겸용·재개발은 단독주택 전용) | 개별 고정 |
+
+**일부러 바꾸지 않은 곳**: 고시 가격 자체를 가리키는 말 — 최초공시/양도시 «공동주택가격»·«개별주택가격»·«국세청 최초 고시 공동주택 기준시가»(`housePriceLabels`·`PRICE_LABEL`·`PostDeemedInputs`·`inheritance-acquisition-price.ts` «공동주택가격 미공시»·`ApartNtsPriceQuestion`·`HouseFirstDisclosureFields` 등) · 집행기준 99-164-9 «취득당시 주택가격»(겸용 별개 취득 — §164⑦ 산식이 아닌 다른 식, anchor 다수) · 집행기준 99-164-10 «환산주택가격» · 건물 기준시가 계산기 «취득당시 공동주택 기준시가 (환산)»(`BuildingStdPriceAdvancedResult` — 별도 계산기, 확인 필요 ②) · 입력 위젯 머리글 «주택공시가격 미공시 취득 (3-시점 환산)»(중립 표현).
+
+**테스트**: 신규 `__tests__/calc/phd-input-term-unify.anchor.test.tsx` 29건(I1 채우기 카드 · I2 assist 패널 · I3 hint 상수 · I4 분리 카드+⑧ 메시지 · I5 상속 3시점 입력 3경로 · I6 겸용 카드) · 기존 갱신(단언 삭제 0): `converted-price-terms` T1(3경로로 확장)·T3·T5, `phd-result-housing-term` P1(머리글 3경우 신규)·P6(nts 경로를 «종전 문구 그대로»에서 «환산 공동주택가격»으로), `inherited-house-valuation-card` A2, `reduction-phd-helper` :194, `transfer.route.apart-nts-price` A-2·A-3(산식 문자열) · E2E `transfer-phd-result-housing-term` TH-1~3에 머리글 단언, `transfer-phd-fill-button` FB-6(공동주택) 신규. 모든 곳에서 «추정» 불포함·반대 종류 이름 불포함 단언.
+**검증**: `tsc --noEmit` 0건 · `__tests__/calc/ + __tests__/components/` 1353파일 15874 passed · `__tests__/tax-engine/transfer-tax/ + transfer/ + api/` 1019파일 12435 passed · E2E(로컬 :3307) 6 spec 24건 passed.
+**뮤테이션(cp 백업 · md5 복원 확인, git checkout/stash 미사용)**: M1 nts 이름 원복 · M2 엔진 산식 분자 서술형 복귀 · M3 PHD 머리글 항상 개별 · M4 채우기 버튼 개별 고정 · M5 ⑧ 메시지 개별 고정 · M6 assist 패널 개별 고정 · M7 상속 입력 미리보기 개별 고정 · M8 분리 카드 hint 개별 고정 · M9 감면 라벨 원복 · M10 hint 공동주택 문장 제거 — **10건 전건 KILLED**.
+
+**확인 필요**: ① 감면 위젯은 구분이 없어 개별주택 감면 사용자에게도 «환산 공동주택가격»으로 보인다(종전에도 «공동주택가격») — 위젯에 주택 종류 입력을 두면 이름을 나눌 수 있으나 ④⑧ 14지점 작업이다. ② 건물 기준시가 계산기의 «취득당시 공동주택 기준시가 (환산)»는 §164 일반 환산 결과 이름이라 이번 지시 범위 밖으로 두었다 — 통일 여부 결정 필요. ③ 배율 초과 분리 카드의 비-PHD 경로는 종래 개별주택 전제(라벨 «취득시 개별주택가격», 날짜 2005-04-30)인데 공동주택 판정은 `phdHousingType`(PHD 패널을 한 번이라도 연 자산)뿐이다 — 공동주택 자산이 PHD 패널을 열지 않았다면 개별 이름이 남는다(종전과 같음). ④ 브라우저 사람 눈 확인 미수행(jsdom anchor + 실브라우저 E2E로 갈음).
 
 ---
 

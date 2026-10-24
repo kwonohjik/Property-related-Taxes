@@ -15,6 +15,7 @@ import { housingExcessAcqContractParts, housingExcessNeedsAcqContract } from "./
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import { fieldError } from "./transfer-tax-validate-field";
 import { isBeforeHousePriceFirstDisclosure } from "@/lib/tax-engine/housing-excess-split";
+import { isPhdApartment, phdConvertedPriceName, phdDisclosedPriceName } from "./phd-housing-term";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const positive = (v: string | undefined): boolean => parseAmount(v ?? "") > 0;
@@ -61,9 +62,10 @@ export function validateHousingExcessSplitInputs(
   if (!housingExcessUsesInheritedTotal(a, transferDate, isNonPrimary) && !positive(a.standardPriceAtAcq)) {
     return fieldError(
       "standardPriceAtAcq",
+      // 이름은 ⑤ 카드(`HousingExcessSplitCard`)와 같은 단일 정의 — 주택 종류(`phdHousingType`)를 따른다
       isBeforeHousePriceFirstDisclosure(a.acquisitionDate)
-        ? `${head} 취득일이 개별주택가격 최초 공시일(2005-04-30) 전이라 영 §164⑦ 산식으로 계산한 환산 개별주택가격(부수토지 포함 총액)을 입력하세요.`
-        : `${head} 취득 당시 개별주택가격(부수토지 포함 총액)을 입력하세요.`,
+        ? `${head} 취득일이 ${phdDisclosedPriceName(isPhdApartment(a))} 최초 공시일${isPhdApartment(a) ? "" : "(2005-04-30)"} 전이라 영 §164⑦ 산식으로 계산한 ${phdConvertedPriceName(isPhdApartment(a))}(부수토지 포함 총액)을 입력하세요.`
+        : `${head} 취득 당시 ${phdDisclosedPriceName(isPhdApartment(a))}(부수토지 포함 총액)을 입력하세요.`,
     );
   }
   if (!positive(a.standardPricePerSqmAtAcq)) {

@@ -41,6 +41,7 @@ import {
   housingExcessNeedsAcqContract,
 } from "@/lib/calc/housing-excess-acq-contract";
 import { deriveLegacyPartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { isPhdApartment, phdConvertedPriceName, phdDisclosedPriceName } from "@/lib/calc/phd-housing-term";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -54,13 +55,17 @@ interface Props {
 const COUNT_WORD: Record<number, string> = { 4: "네", 5: "다섯", 6: "여섯" };
 
 export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPrimary = false }: Props) {
+  // 가격 이름 — 주택 종류(`asset.phdHousingType`)를 따른다. 결과 이름은 «환산 개별주택가격»·«환산 공동주택가격» 둘뿐(단일 정의 `phd-housing-term`).
+  const apartment = isPhdApartment(asset);
+  const disclosedName = phdDisclosedPriceName(apartment);
+  const convertedName = phdConvertedPriceName(apartment);
   // §164⑦ 개별주택가격 미공시 3시점 환산 — 분리 경로는 타지만 받을 칸이 없다(환산 칸의 토지 값·건물 값으로 나눈다). 안내만 한다(#17-5).
   if (housingExcessUsesPhdSplit(asset, transferDate, isNonPrimary)) {
     return (
-      <ToneCard tone="amber" title="배율 초과 부수토지 분리 — 개별주택가격 미공시 환산 값으로 분리" bodyClassName="space-y-2">
+      <ToneCard tone="amber" title={`배율 초과 부수토지 분리 — ${disclosedName} 미공시 환산 값으로 분리`} bodyClassName="space-y-2">
         <p className="text-caption text-amber-900 leading-relaxed dark:text-amber-200" data-testid="housing-excess-phd-card">
           토지 면적이 건물 정착면적의 지역별 배율 한도를 <strong>{housingExcessAreaOfAsset(asset, transferDate).toFixed(2)}㎡</strong> 넘습니다.
-          한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지(소득세법 §104의3①5호)로 분리 과세합니다. 이 자산은 취득 당시 개별주택가격이 공시되기 전이라
+          한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지(소득세법 §104의3①5호)로 분리 과세합니다. 이 자산은 취득 당시 {disclosedName}이 공시되기 전이라
           §164⑦ 3시점 환산을 쓰므로, 위 환산 칸의 토지 값·건물 값으로 양도가액과 환산취득가액을 토지분·건물분으로 나누어 초과분을 분리합니다 — 이 카드에서 따로
           입력할 칸은 없습니다.
         </p>
@@ -103,13 +108,13 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
           ) : (
             <FieldCard
               field="standardPriceAtAcq"
-              label={preDisclosure ? "취득시 개별주택가격 (영 §164⑦ 환산 개별주택가격 · 부수토지 포함)" : "취득시 개별주택가격 (부수토지 포함)"}
+              label={preDisclosure ? `취득시 ${disclosedName} (영 §164⑦ ${convertedName} · 부수토지 포함)` : `취득시 ${disclosedName} (부수토지 포함)`}
               required
               unit="원"
               hint={
                 preDisclosure
-                  ? "취득일이 개별주택가격 최초 공시일(2005-04-30) 전이라 취득 당시 공시가격이 없습니다 — 영 §164⑦ 산식으로 계산한 환산 개별주택가격(최초 공시 개별주택가격에, 취득 당시 토지+건물 기준시가 합계를 최초 공시 당시 토지+건물 기준시가 합계로 나눈 비율을 곱한 값)을 입력하세요. 토지분 : 건물분은 아래 ㎡당 공시지가 : 건물 기준시가 비율로 나눕니다."
-                  : "취득일 직전 고시된 개별주택가격(토지 포함 결합 공시)입니다. 토지분 : 건물분 기준시가 비율로 취득가액을 나눕니다."
+                  ? `취득일이 ${disclosedName} 최초 공시일${apartment ? "" : "(2005-04-30)"} 전이라 취득 당시 공시가격이 없습니다 — 영 §164⑦ 산식으로 계산한 ${convertedName}(최초 공시 ${disclosedName}에, 취득 당시 토지+건물 기준시가 합계를 최초 공시 당시 토지+건물 기준시가 합계로 나눈 비율을 곱한 값)을 입력하세요. 토지분 : 건물분은 아래 ㎡당 공시지가 : 건물 기준시가 비율로 나눕니다.`
+                  : `취득일 직전 고시된 ${disclosedName}(토지 포함 결합 공시)입니다. 토지분 : 건물분 기준시가 비율로 취득가액을 나눕니다.`
               }
             >
               <CurrencyInput

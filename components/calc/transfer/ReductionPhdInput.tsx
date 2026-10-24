@@ -356,7 +356,7 @@ export function ReductionPhdInput({
                 ))}
               </div>
               <p className="mt-1.5 text-sm font-bold text-amber-900 dark:text-amber-100">
-                → 취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식) = {result.estimatedAcquisitionStdPrice.toLocaleString()}원
+                → 환산 공동주택가격 (소득세법 시행령 §164⑦ 산식) = {result.estimatedAcquisitionStdPrice.toLocaleString()}원
               </p>
               {onApplyResult && (
                 <button

@@ -2,9 +2,10 @@
  * anchor — 소득세법 시행령 §164⑦(·⑥) 산식으로 구한 취득 당시 주택 가격의 사용자 노출 명칭 (계획서 phd-appraisal-dead-end §9.3)
  *
  * «추정»·«추정값»·«법정 값»은 법령에 없는 조어다(memory `feedback_no_coined_legal_terms`). 이름은
- *   · 개별주택가격 산식 결과            → «환산 개별주택가격»
- *   · 공동주택가격 산식 결과(§164⑦)    → «환산 공동주택가격» / 라벨 «환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)» (2026-10-24 사용자 지시 — 종전 서술형 «§164⑦ 산식으로 계산한 취득 당시 공동주택가격»)
- *   · 국세청 고시 공동주택 기준시가(§164⑥) → «§164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가»
+ *   · 개별주택가격 산식 결과                 → «환산 개별주택가격»
+ *   · 공동주택가격 산식 결과(§164⑦ · 국토교통부) → «환산 공동주택가격» / 라벨 «환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)»
+ *   · 국세청 고시 공동주택 기준시가 산식 결과(§164⑥) → «환산 공동주택가격» / 라벨 «환산 공동주택가격 (소득세법 시행령 §164⑥ 산식)»
+ *     (2026-10-24 사용자 지정 — 이름은 둘뿐, 조문만 라벨 꼬리로 구분. 종전 서술형 «…산식으로 계산한 취득 당시 공동주택 기준시가»·«취득 당시 공동주택가격 (…)» 폐기)
  *
  *   T1 상속주택 환산 상세 카드(배지·소제목) — 개별 / 공동(국토교통부) / 공동(국세청) 3갈래
  *   T2 개별주택가격 미공시 취득 환산 상세 섹션(양도세 결과) — 5개 산식 자리가 모두 «환산 개별주택가격»
@@ -49,13 +50,22 @@ const DETAIL: InheritanceHouseValuationResult = {
 
 describe("T1 상속주택 환산 상세 카드", () => {
   it.each([
-    [undefined, "환산 개별주택가격", "환산 개별주택가격 (소득세법 시행령 §164⑦ 산식)"],
-    ["molit", "환산 공동주택가격", "환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)"],
-    ["nts", "§164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가", "취득 당시 공동주택 기준시가 (소득세법 시행령 §164⑥ 산식)"],
-  ] as const)("공동주택 기관=%s → 배지·소제목이 법령상 이름", (agency, badge, label) => {
+    [undefined, "환산 개별주택가격", "환산 개별주택가격 (소득세법 시행령 §164⑦ 산식)", "환산 공동주택가격"],
+    ["molit", "환산 공동주택가격", "환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)", "환산 개별주택가격"],
+    ["nts", "환산 공동주택가격", "환산 공동주택가격 (소득세법 시행령 §164⑥ 산식)", "환산 개별주택가격"],
+  ] as const)("공동주택 기관=%s → 배지·소제목·산식 속 결과 자리가 모두 같은 이름", (agency, badge, label, other) => {
     render(<InheritedHouseValuationDetailCard detail={{ ...DETAIL, apartFirstPriceAgency: agency }} />);
-    expect(screen.getByText(badge)).toBeInTheDocument();
+    // 배지 + 환산취득가액 분자 = 이름 단독 요소 2곳
+    expect(screen.getAllByText(badge)).toHaveLength(2);
     expect(text()).toContain(`${label} · 합계기준시가 = 토지 + 건물`);
+    // 합계기준시가 비율 산식의 좌변도 같은 이름 — 종전 «취득당시 …» 서술이 아니다
+    expect(text()).toContain(`${badge} = ${agency === "nts" ? "국세청 최초 고시 공동주택 기준시가" : agency === "molit" ? "최초공시 공동주택가격" : "최초공시 개별주택가격"}`);
+    expect(text()).toContain(`환산취득가액 = 양도가액 × ${badge}`);
+    // 반대 종류 이름·서술형·«추정» 없음
+    expect(text()).not.toContain(other);
+    expect(text()).not.toContain("산식으로 계산한 취득 당시");
+    expect(text()).not.toContain("취득 당시 공동주택");
+    expect(text()).not.toContain("취득당시 공동주택");
     expect(text()).not.toContain("추정");
     expect(convertedHousePriceNames(agency)).toEqual({ sentence: badge, label });
   });
@@ -75,7 +85,7 @@ describe("T2 개별주택가격 미공시 취득 환산 상세 섹션", () => {
 });
 
 describe("T3 감면 PHD 입력 위젯", () => {
-  it("환산 결과 박스 — «취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식)»", () => {
+  it("환산 결과 박스 — «환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)» (감면 입력은 주택 종류 구분이 없다)", () => {
     render(
       <ReductionPhdInput
         acquisitionDate="2003-09-23"
@@ -92,7 +102,9 @@ describe("T3 감면 PHD 입력 위젯", () => {
         onChange={() => {}}
       />,
     );
-    expect(text()).toMatch(/→ 취득 당시 공동주택가격 \(소득세법 시행령 §164⑦ 산식\) = [\d,]+원/);
+    expect(text()).toMatch(/→ 환산 공동주택가격 \(소득세법 시행령 §164⑦ 산식\) = [\d,]+원/);
+    expect(text()).not.toContain("환산 개별주택가격");
+    expect(text()).not.toContain("취득 당시 공동주택가격");
     expect(text()).not.toContain("추정");
   });
 });
@@ -120,7 +132,8 @@ describe("T5 엔진이 만드는 산식 문자열", () => {
       landPricePerSqmAtFirstDisclosure: 1_810_000,
     });
     expect(r.formulaSteps.map((s) => s.label).join("|")).not.toContain("추정");
-    expect(r.formulaSteps[5].label).toBe("취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식)");
+    expect(r.formulaSteps[5].label).toBe("환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)");
+    expect(r.formulaSteps.map((x) => x.label).join("|")).not.toContain("취득 당시 공동주택가격");
   });
 
   it.each([undefined, "molit", "nts"] as const)("상속주택 산식 첫 줄(공동주택 기관=%s) — 라벨 그대로, «추정» 없음", (agency) => {
@@ -139,6 +152,10 @@ describe("T5 엔진이 만드는 산식 문자열", () => {
       apartFirstPriceAgency: agency,
     } as never);
     expect(r.formula).toContain(convertedHousePriceNames(agency).label);
+    // 환산취득가액 식의 분자 자리도 같은 이름 — 서술형(«취득당시 …가격»)이 아니다
+    expect(r.formula).toContain(`환산취득가액 = 양도가액 × (${convertedHousePriceNames(agency).sentence})`);
+    expect(r.formula).not.toContain("취득당시 공동주택");
+    expect(r.formula).not.toContain("취득당시 개별주택");
     expect(r.formula).not.toContain("추정");
   });
 });

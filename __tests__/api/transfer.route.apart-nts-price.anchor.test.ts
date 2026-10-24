@@ -147,7 +147,10 @@ describe("A) 의제취득일 이후 상속·증여 공동주택 — 답이 ②�
       expect(x.r.inheritedAcquisitionDetail.formula).toContain("§164⑥");
       expect(x.r.inheritedHouseValuationDetail.apartFirstPriceAgency).toBe("nts");
       expect(x.r.inheritedHouseValuationDetail.legalBasis).toContain("소득세법 시행령 §164⑥");
-      expect(x.r.inheritedHouseValuationDetail.formula).toContain("취득 당시 공동주택 기준시가 (소득세법 시행령 §164⑥ 산식)");
+      expect(x.r.inheritedHouseValuationDetail.formula).toContain("환산 공동주택가격 (소득세법 시행령 §164⑥ 산식)");
+      expect(x.r.inheritedHouseValuationDetail.formula).toContain("환산취득가액 = 양도가액 × (환산 공동주택가격)");
+      expect(x.r.inheritedHouseValuationDetail.formula, "종전 서술형·개별 이름 없음").not.toContain("취득 당시 공동주택 기준시가");
+      expect(x.r.inheritedHouseValuationDetail.formula).not.toContain("환산 개별주택가격");
       expect(x.r.inheritedHouseValuationDetail.formula, "법령에 없는 조어 «추정» 금지").not.toContain("추정");
     });
     it(`A-3 ${name} · 없었음 + 국토교통부 첫 공시 → 같은 값 · 영 §164⑦ 표기`, async () => {
@@ -155,6 +158,8 @@ describe("A) 의제취득일 이후 상속·증여 공동주택 — 답이 ②�
       expect(x.r.transferGain).toBe(GAIN_SEC164);
       expect(x.r.inheritedAcquisitionDetail.legalBasis).toBe("소득세법 시행령 §163 ⑨ 2호 · §164 ⑦");
       expect(x.r.inheritedHouseValuationDetail.formula).toContain("환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)");
+      expect(x.r.inheritedHouseValuationDetail.formula).toContain("환산취득가액 = 양도가액 × (환산 공동주택가격)");
+      expect(x.r.inheritedHouseValuationDetail.formula).not.toContain("환산 개별주택가격");
       expect(x.r.inheritedHouseValuationDetail.formula, "법령에 없는 조어 «추정» 금지").not.toContain("추정");
     });
   }
