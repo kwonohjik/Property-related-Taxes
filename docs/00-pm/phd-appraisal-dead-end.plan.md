@@ -430,6 +430,52 @@ harness: `collectStepIssues(0~5)`(⑧) → `callTransferTaxAPI` 가로채기(④
 
 **확인 필요**: ① 감면 위젯은 구분이 없어 개별주택 감면 사용자에게도 «환산 공동주택가격»으로 보인다(종전에도 «공동주택가격») — 위젯에 주택 종류 입력을 두면 이름을 나눌 수 있으나 ④⑧ 14지점 작업이다. ② 건물 기준시가 계산기의 «취득당시 공동주택 기준시가 (환산)»는 §164 일반 환산 결과 이름이라 이번 지시 범위 밖으로 두었다 — 통일 여부 결정 필요. ③ 배율 초과 분리 카드의 비-PHD 경로는 종래 개별주택 전제(라벨 «취득시 개별주택가격», 날짜 2005-04-30)인데 공동주택 판정은 `phdHousingType`(PHD 패널을 한 번이라도 연 자산)뿐이다 — 공동주택 자산이 PHD 패널을 열지 않았다면 개별 이름이 남는다(종전과 같음). ④ 브라우저 사람 눈 확인 미수행(jsdom anchor + 실브라우저 E2E로 갈음).
 
+### 9.6 배율 초과분 분리 카드·⑧ 메시지의 주택 종류 판정 (2026-10-24, 커밋까지 · push·PR 전)
+
+**사용자 결정(2026-10-24)**: ① §9.5 확인 필요 ① 감면 위젯(`ReductionPhdInput`)에 주택 종류 입력을 두는 안 = **현행 유지**(공동주택 이름 고정). ② §9.5 확인 필요 ② 건물 기준시가 계산기 «취득당시 공동주택 기준시가 (환산)» 표기 = **현행 유지**. ③ §9.5 확인 필요 ③(배율 초과 분리 카드가 `phdHousingType` 하나만 읽어 PHD 패널을 연 적 없는 공동주택에도 개별주택 이름이 뜸) = **수정**. 이번 변경은 표시 문자열과 판정 함수뿐 — 엔진 계산·④⑫⑬⑭ 변경 0.
+
+**결함**: `phdHousingType`은 PHD 입력 패널 라디오의 값이고 **기본값이 «individual»**이다(`calc-wizard-asset-factory.ts:232` · `calc-wizard-asset-migrate-rental-split.ts:401-402`가 비어 있으면 «individual»로 채움). 그래서 패널을 연 적 없는 공동주택(비환산 방식 등)도 «individual»로 읽혀 카드·⑧에 «환산 개별주택가격»·«개별주택가격»이 떴다. 기본값과 사용자가 고른 «individual»은 구분할 수 없다.
+
+**조사 — AssetForm에서 「이 주택이 공동주택인가」를 나타내는 필드**
+
+| 필드 | 쓰는 곳 | 채워지는 때 | 기본값 | ④ 전송 → 엔진 영향 | 판정 |
+|---|---|---|---|---|---|
+| `phdHousingType` (`calc-wizard-asset-acq-conversion.ts:17`) | PHD 패널 라디오(`PreHousingDisclosureSection.tsx:73-74`) · 채우기 카드 · 결과 화면·PDF(`isPhdApartment`) | 사용자가 라디오를 고를 때만 | **"individual"** (항상 채워짐) | 아니오(표시 축 — grep 결과 `lib/calc/transfer-tax-api*` 읽는 곳 0) | `"apartment"`만 신호 |
+| `inheritanceAssetKind` (`calc-wizard-asset.ts:205`) | 주택 구분 픽커 `InheritanceHouseKindPicker`·`HouseFirstDisclosureFields`·`BuildingSec164Card`·`HouseLandSec164Card` · `deriveInheritanceHouseKind`(`transfer-tax-api-asset-basics.ts:30-36`) | 사용자가 픽커에서 고를 때만(상속·증여·단서 경로) | **"land"** (주택 구분 아님) | **예** — `inheritedAcquisition.assetKind`·`buildingHouseKind`·`houseLandKind`로 실림 | 명시값(`house_apart`/`house_individual`)이 신호 |
+| `addressDong` ∧ `addressHo` (`calc-wizard-asset.ts:278-280`) | `AssetSectionBasic.tsx:312-319`(소재지 검색 세대 선택) · `deriveInheritanceHouseKind` 폴백(`:35`) | 공동주택 세대 목록에서 동·호를 고를 때(개별주택 공시는 동·호가 빈 행 — `address-search.tsx:55-64`) | "" | 예(`transfer-tax-api-helpers.ts:164` 소재지 키) — 단 종류 판정이 아니라 식별자 | 둘 다 있으면 신호 |
+| `hasAddressUnits` (`calc-wizard-asset.ts:282-`) | ⑧ 동·호 게이트(`transfer-tax-validate-asset.ts:168-174`) | 소재지 검색 결과에 동 또는 호가 있는 행이 있을 때 | false | 아니오(UI 전용) | **쓰지 않음** — 같은 필지에 공동주택이 있는 토지·상가 자산에도 true가 된다. 세대를 고르면 동·호가 채워지므로 위 행이 대신한다 |
+| `assetKind` (`:78`) | `toPropertyKind`(`CompanionAcqPurchaseBlock.types.ts:176-182`) | 항상 | "housing" | 예 | **쓰지 않음** — `"housing"`이 단독과 공동을 함께 담는다(`calc-wizard-asset.ts:284-285` 주석). `toPropertyKind("housing")`는 항상 `house_individual` |
+| `HouseEntry.isApartment`·`rentalUnits[].isApartment`·감면 위젯 | 다른 보유 주택·임대주택 행(`HouseEntryEditor`·`transfer-tax-api-houses.ts`) | 행 입력 | false | 예 | **쓰지 않음** — 양도 주택 자신이 아니다 |
+| `inhApartNtsPriceExisted`·`inhApartFirstPriceAgency`·`inhApartFirstPriceDate` | `ApartNtsPriceQuestion` | 질문이 열릴 때(`isApartSec163_9Asset` = 상속·증여 ∧ 공동주택 — 이미 `deriveInheritanceHouseKind` 파생) | "" | 예 | **쓰지 않음** — 상속·증여 전용이고 종류를 새로 정하지 않는다(위 `inheritanceAssetKind`가 같은 사실) |
+
+배율 초과 카드가 보이는 시점(첫 자산 매매, 같은 날 취득)에 **모든 자산에서 확실히 채워져 있는 신호는 없다.**
+
+**고른 판정** — `lib/calc/phd-housing-term.ts`의 `resolveHousingKind(asset): "individual" | "apartment" | "unknown"` 하나(카드와 ⑧이 같은 함수). 우선순위(위가 이김):
+1. `phdHousingType === "apartment"` — 기본값이 아닌 값은 사용자가 라디오에서 골랐을 때뿐(사용자 지시: 명시한 값 우선).
+2. `inheritanceAssetKind` — `house_apart`→공동 / `house_individual`→개별(기본값 "land"는 신호 아님. ④가 엔진에 싣는 값과 같은 필드).
+3. 동·호 둘 다 채워짐 → 공동. **둘 다**여야 하는 이유: `deriveInheritanceHouseKind`(상속 경로 주택 구분 파생)가 같은 조건이라 한 화면의 두 곳이 어긋나지 않는다. 호만 있는 다세대는 «모름»으로 떨어진다(안전측 — 틀린 이름을 단정하지 않는다).
+4. 그 밖 → **«unknown»** — 이름을 추정하지 않고 두 이름을 함께 적는다: «환산 개별주택가격(공동주택은 환산 공동주택가격)» · «개별주택가격(공동주택은 공동주택가격)» · 날짜 «(개별주택은 2005-04-30)» (`PRE_DISCLOSURE_STD_PRICE_HINT`와 같은 방식). — **2026-10-24 사용자 결정: 모를 때 두 이름 함께 표시(이 안 확정).**
+PHD 라디오 «individual»은 **신호로 읽지 않는다**(기본값과 구분 불가).
+
+**일부러 PHD 환산 안내 분기는 바꾸지 않음**: 카드의 PHD 분기(`housingExcessUsesPhdSplit`)는 PHD 패널이 같은 화면에 있어 이름이 그 패널 라디오를 따라야 패널·결과 화면과 어긋나지 않는다 → 종전 `isPhdApartment`. ⑧ 메시지는 그 분기에 닿지 않는다(`housingExcessNeedsStdInputs`가 `!usesPhd`).
+
+**`isPhdApartment`(결과 화면·PDF)는 바꾸지 않음**: PHD 결과는 PHD 패널을 반드시 거치고, 그 패널의 라디오가 공시가격 조회(`StandardPriceInput.propertyKind`)도 정한다. 결과만 동·호 신호로 바꾸면 패널과 결과가 서로 다른 이름을 말한다.
+
+| # | 위치 | 전 | 후 |
+|---|---|---|---|
+| 1 | 카드 5칸 라벨·hint · 「…은 취득가액 산정 방식에서 입력한 「취득시 기준시가」를 그대로 씁니다」 · 취득시 건물 기준시가 hint(`AcqBuildingStdField` `priceName` 선택 prop — 다른 호출부는 기본값 «개별주택가격» 그대로) | `phdHousingType` 하나 | `resolveHousingKind` |
+| 2 | ⑧ `transfer-tax-validate-housing-excess.ts` 취득시 가격 칸 메시지 · 건물 기준시가 메시지(«개별주택가격을 토지 : 건물…» 고정이던 것) | 〃 | 〃 (카드와 같은 함수·같은 이름) |
+| 3 | 상속 평가액 안내 한 줄(«…상속·증여 평가액(개별주택가격)…») | 개별 고정 | **불변** — `isSuppValuedHouseInheritance`가 `house_individual`만 통과시켜 이 분기는 개별주택뿐이다 |
+
+**날짜 게이트 — 바꾸지 않았다(확인 필요)**: 카드·⑧은 `isBeforeHousePriceFirstDisclosure`(2005-04-30, **개별주택**가격 최초 공시일)로 「최초 공시 전」 문구와 칸 안내를 고른다. 공동주택에는 맞지 않을 수 있다 — 저장소 자신이 공동주택의 첫 가격 날짜를 **자산마다 다르다**고 적는다(`lib/tax-engine/apart-nts-price.ts:12` «공동주택의 첫 가격 날짜는 2005.4.30. 전일 수 있다(1992.1.1. 등)» · 같은 파일 :6 사전-2018-법령해석재산-0183 «1992.1.1. 최초 고시 아파트 → 영 §164⑥»). 즉 공동주택은 (a) 날짜가 2005-04-30이 아니고 (b) 국세청 고시면 §164⑥·국토부 공시면 §164⑦이라 «영 §164⑦ 산식»이라는 카드 문구도 그대로 맞지 않을 수 있다. 이번 지시는 이름만이라 ⑧ 차단·화면 동작이 달라지는 게이트는 건드리지 않았다. 법령 원문 대조는 KoreanLaw MCP 연결 실패(`www.law.go.kr` 연결 시간 초과)로 못 했다 — **확인 필요**: 공동주택 배율 초과 분리에 같은 게이트를 쓰는 것이 맞는지(공동주택별 첫 가격 날짜·기관을 묻는 `ApartNtsPriceQuestion` 같은 입력이 필요한지) — 결정 필요.
+
+**남은 불일치(확인 필요)**: PHD 채우기 카드·assist 패널 라디오가 «individual»(기본값)인 채 동·호가 채워져 있으면, 같은 단계의 5칸 카드는 «공동주택», 채우기 카드는 «개별주택»을 말한다. 채우기 카드 쪽 라디오 기본값을 동·호에서 파생하려면 표시 전용 파생 prop으로 해야 한다(`useEffect → store` 금지) — 별건.
+
+**테스트**: 신규 `__tests__/calc/housing-excess-kind-signal.anchor.test.ts` 6건(K1 판정표·우선순위 · K2 이름 3종 · K3 ④ 본문 불변 — `phdHousingType` 3값에서 fetch body 동일) · `phd-input-term-unify` I4: 격자 (PHD 라디오 apartment/individual/없음) × (동·호 신호 있음/없음) 6셀에서 카드(전·후 취득)·⑧이 같은 이름 + 우선순위·한쪽만 있는 동·호·건물 hint(기존 `KINDS` 기반 4건은 신호 기반 `SIG`로 옮기고 단언 유지 — «개별»/«필드 없음» 입력은 신호 없음 병기 단언으로 이동) · `dec17-5-phd-excess-card`의 개별 단독 단언은 주택 구분을 명시한 자산으로 갱신.
+**뮤테이션(cp 백업 · md5 복원 확인, git checkout/stash 미사용)**: M1 동·호 신호 제거 · M2 ⑧ 개별 고정 · M3 카드 개별 고정 · M4 우선순위 뒤집기 · M5 신호 없음=개별 추정 · M6 건물 hint 개별 고정 · M7 날짜 표기 — **7건 전건 KILLED**.
+**E2E**: 이 카드의 이름 문구를 단언하는 spec은 없다(`grep` 결과 — `transfer-phd-non-estimated-mode`의 단언은 `PRE_DISCLOSURE_STD_PRICE_HINT`로 불변). 카드가 뜨는 `housing-excess-acq-contract`·`-capex-split`·`-companion-split` + `transfer-phd-non-estimated-mode` 17건을 로컬 :3309에서 실행 — 17 passed. `next.config.ts` turbopack.root는 임시 변경 후 원복(sha1 `57dfa236…` 전후 동일).
+**검증**: `tsc --noEmit` 0건.
+
 ---
 
 ## 10. 자가 점검 (3대 정책)

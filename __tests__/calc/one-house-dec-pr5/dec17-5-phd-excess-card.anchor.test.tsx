@@ -51,7 +51,8 @@ describe("HousingExcessSplitCard — PHD 환산 안내 카드", () => {
   });
 
   it("#17-5 ① 후속 — 실가 + 1990-08-30 이후 2005-04-30 전 취득은 5칸 카드이되 취득시 개별주택가격 칸이 영 §164⑦ 환산 개별주택가격을 받는다", () => {
-    render(<HousingExcessSplitCard asset={make({ useEstimatedAcquisition: false, usePreHousingDisclosure: false })} onChange={noop} transferDate="2023-02-16" />);
+    // 주택 종류 신호가 없으면 두 이름을 함께 적는다 — 이 단언은 단독·다가구를 명시 선택한 자산으로 본다
+    render(<HousingExcessSplitCard asset={make({ useEstimatedAcquisition: false, usePreHousingDisclosure: false, inheritanceAssetKind: "house_individual" })} onChange={noop} transferDate="2023-02-16" />);
     expect(screen.getByTestId("housing-excess-split-card")).toBeTruthy();
     expect(screen.queryByTestId("housing-excess-phd-card")).toBeNull();
     expect(screen.getByTestId("housing-excess-acq-total")).toBeTruthy();

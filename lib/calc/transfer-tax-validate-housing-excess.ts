@@ -15,7 +15,7 @@ import { housingExcessAcqContractParts, housingExcessNeedsAcqContract } from "./
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import { fieldError } from "./transfer-tax-validate-field";
 import { isBeforeHousePriceFirstDisclosure } from "@/lib/tax-engine/housing-excess-split";
-import { isPhdApartment, phdConvertedPriceName, phdDisclosedPriceName } from "./phd-housing-term";
+import { housingConvertedPriceName, housingDisclosedPriceName, housingFirstDisclosureDateNote, resolveHousingKind } from "./phd-housing-term";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const positive = (v: string | undefined): boolean => parseAmount(v ?? "") > 0;
@@ -58,21 +58,22 @@ export function validateHousingExcessSplitInputs(
   const head =
     `${label}: 토지 면적이 건물 정착면적의 지역별 배율 한도를 ${excess.toFixed(2)}㎡ 넘습니다 — 한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지로 분리 과세하므로 ` +
     "토지·건물 가액을 나눌 기준시가가 필요합니다 (소득세법 §89①3호·§104의3①5호·시행령 §166⑥).";
+  const kind = resolveHousingKind(a);
   // #17-5 ② — 보충적 평가 상속·증여 주택은 취득시 개별주택가격 총액을 상속·증여 평가액으로 쓴다(평가액 칸이 정본 — ⑧이 따로 요구하지 않는다).
   if (!housingExcessUsesInheritedTotal(a, transferDate, isNonPrimary) && !positive(a.standardPriceAtAcq)) {
     return fieldError(
       "standardPriceAtAcq",
-      // 이름은 ⑤ 카드(`HousingExcessSplitCard`)와 같은 단일 정의 — 주택 종류(`phdHousingType`)를 따른다
+      // 이름은 ⑤ 카드(`HousingExcessSplitCard`)와 같은 단일 정의 — 주택 종류 신호(`resolveHousingKind`)를 따른다
       isBeforeHousePriceFirstDisclosure(a.acquisitionDate)
-        ? `${head} 취득일이 ${phdDisclosedPriceName(isPhdApartment(a))} 최초 공시일${isPhdApartment(a) ? "" : "(2005-04-30)"} 전이라 영 §164⑦ 산식으로 계산한 ${phdConvertedPriceName(isPhdApartment(a))}(부수토지 포함 총액)을 입력하세요.`
-        : `${head} 취득 당시 ${phdDisclosedPriceName(isPhdApartment(a))}(부수토지 포함 총액)을 입력하세요.`,
+        ? `${head} 취득일이 ${housingDisclosedPriceName(kind)} 최초 공시일${housingFirstDisclosureDateNote(kind)} 전이라 영 §164⑦ 산식으로 계산한 ${housingConvertedPriceName(kind)}(부수토지 포함 총액)을 입력하세요.`
+        : `${head} 취득 당시 ${housingDisclosedPriceName(kind)}(부수토지 포함 총액)을 입력하세요.`,
     );
   }
   if (!positive(a.standardPricePerSqmAtAcq)) {
     return fieldError("standardPricePerSqmAtAcq", `${head} 취득 당시 ㎡당 개별공시지가를 입력하세요.`);
   }
   if (!positive(a.buildingStandardPriceAtAcq)) {
-    return fieldError("buildingStandardPriceAtAcq", `${head} 취득 당시 건물 기준시가를 입력하세요 (개별주택가격을 토지 : 건물 기준시가 비율로 나눕니다).`);
+    return fieldError("buildingStandardPriceAtAcq", `${head} 취득 당시 건물 기준시가를 입력하세요 (${housingDisclosedPriceName(kind)}을 토지 : 건물 기준시가 비율로 나눕니다).`);
   }
   // #17-6 — 취득 당시 계약서 토지·건물 구분금액(선택). 하나라도 채우면 둘 다 필수이고 합이 취득가액과 같아야 한다(자동 보정·자동 안분 금지).
   //   칸이 열리는 조건(`housingExcessNeedsAcqContract`)은 ⑤·④와 같은 술어다 — 칸이 안 열리면 잔재가 있어도 요구하지 않는다.
