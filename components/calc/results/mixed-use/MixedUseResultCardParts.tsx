@@ -153,9 +153,9 @@ export function PartialUsageChangeCard({
       )}
       {isPhdCaseA && (
         <div className="rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 px-3 py-2 text-caption text-rose-900 dark:text-rose-200 space-y-1 leading-relaxed">
-          <p className="font-semibold">취득시 개별주택가격 역산 산식 — 건물 전체 기준 (시행령 §164⑦)</p>
+          <p className="font-semibold">환산 개별주택가격 산식 — 건물 전체 기준 (시행령 §164⑦)</p>
           <p>
-            역산한 취득시 개별주택가격 = 최초공시 개별주택가격 ×{" "}
+            환산 개별주택가격 = 최초공시 개별주택가격 ×{" "}
             <Frac
               top="취득시 토지기준시가 + 취득시 건물기준시가"
               bottom="최초공시 토지기준시가 + 최초공시 건물기준시가"

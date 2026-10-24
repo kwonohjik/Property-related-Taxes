@@ -259,7 +259,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
         {isPreDisclosureTriggered && (
           <div className="rounded-md border border-rose-200 bg-rose-50/60 p-3 space-y-3 dark:bg-rose-950/40">
             <p className="text-caption font-semibold text-rose-700 dark:text-rose-300">
-              §164⑦ 본문 발동 — 취득당시 주택가격 = 최초공시 주택가격 ×{" "}
+              §164⑦ 본문 발동 — 환산 개별주택가격 = 최초공시 주택가격 ×{" "}
               <Frac top="취득시 합계 기준시가" bottom="최초공시 당시 합계 기준시가" />
             </p>
 
@@ -383,7 +383,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
                   <span className="font-mono tabular-nums">{valuationPreview.sumAtFirst.toLocaleString()}</span>
                 </p>
                 <p className="text-rose-700 dark:text-rose-300">
-                  1단계 (§164⑦ 본문) — 취득당시 주택가격 = 최초공시 주택가격 ×{" "}
+                  1단계 (§164⑦ 본문) — 환산 개별주택가격 = 최초공시 주택가격 ×{" "}
               <Frac top="취득시 합계 기준시가" bottom="최초공시 당시 합계 기준시가" />
                 </p>
                 <p className="text-rose-700 font-mono tabular-nums dark:text-rose-300">
@@ -393,7 +393,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
             )}
             <p className="text-rose-700 dark:text-rose-300">
               2단계 (§166③) — 환산취득가 = 권리가액 ×{" "}
-              <Frac top="취득당시 주택가격" bottom="관리처분 인가일 주택가격" />
+              <Frac top={valuationPreview.canApplyMain ? "환산 개별주택가격" : "취득당시 주택가격"} bottom="관리처분 인가일 주택가격" />
             </p>
             <p className="text-rose-700 font-mono tabular-nums dark:text-rose-300">= <FormulaText value={valuationPreview.step2Formula} /></p>
             <p className="text-rose-700 font-mono tabular-nums dark:text-rose-300">= {valuationPreview.converted.toLocaleString()}</p>

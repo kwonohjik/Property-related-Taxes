@@ -18,7 +18,8 @@
  *
  * 본 헬퍼는 기존 `transfer-tax-pre-housing-disclosure.ts`의 풀 PHD 엔진을 단순화한 wrapper.
  * 풀 엔진은 양도가액 안분·개산공제 등 종합 산출이 필요한 반면, 감면 조문용은
- * "§164⑦ 산식으로 계산한 취득 당시 공동주택가격" (P_A_est)만 필요.
+ * 소득세법 시행령 §164⑦ 산식 결과 «환산 공동주택가격»(P_A_est)만 필요.
+ * (감면 입력은 개별주택·공동주택 구분이 없다 — 산식 마지막 단계 라벨은 공동주택 이름을 쓴다. 구분 입력이 생기면 이름을 나눈다.)
  *
  * 산식 (§164⑦ 본문):
  *   P_A_est = floor(P_F × Sum_A / Sum_F)
@@ -154,7 +155,7 @@ export function calcReductionAcquisitionStdPrice(
       formula: `${sumAtAcquisition.toLocaleString()} / ${sumAtFirstDisclosure.toLocaleString()} = ${(ratio * 100).toFixed(4)}%`,
     },
     {
-      label: "취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식)",
+      label: "환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)",
       value: estimatedAcquisitionStdPrice,
       formula: `최초공시 ${firstDisclosurePrice.toLocaleString()} × ${(ratio * 100).toFixed(4)}% = ${estimatedAcquisitionStdPrice.toLocaleString()}`,
     },

@@ -191,7 +191,9 @@ describe("formulaSteps — UI 표시용", () => {
     });
     expect(r.formulaSteps).toHaveLength(6);
     expect(r.formulaSteps[0].label).toContain("취득시 토지");
-    expect(r.formulaSteps[5].label).toBe("취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식)");
+    expect(r.formulaSteps[5].label).toBe("환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)");
+    expect(r.formulaSteps.map((x) => x.label).join("|"), "서술형 «취득 당시 공동주택가격» 폐기").not.toContain("취득 당시 공동주택가격");
+    expect(r.formulaSteps.map((x) => x.label).join("|")).not.toContain("환산 개별주택가격");
     expect(r.formulaSteps[5].label, "법령에 없는 조어 «추정» 금지").not.toContain("추정");
   });
 });

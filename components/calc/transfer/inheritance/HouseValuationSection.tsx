@@ -179,7 +179,7 @@ import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { HouseFirstDisclosureDateField } from "../HouseFirstDisclosureFields";
 import { effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
 import { isApartSec163_9Asset } from "@/lib/calc/apart-nts-price";
-import { housePriceLabels } from "@/lib/tax-engine/inheritance-house-valuation";
+import { convertedHousePriceNames, housePriceLabels } from "@/lib/tax-engine/inheritance-house-valuation";
 
 interface Props {
   asset: AssetForm;
@@ -215,8 +215,11 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
   const firstRef = isApart
     ? asset.inhApartFirstPriceDate || HOUSE_FIRST_DISCLOSURE_DATE
     : asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE;
-  const labels = housePriceLabels(isApart ? asset.inhApartFirstPriceAgency || "molit" : undefined);
+  const labelAgency = isApart ? asset.inhApartFirstPriceAgency || "molit" : undefined;
+  const labels = housePriceLabels(labelAgency);
   const clauseLabel = isApart ? labels.clause : "§164⑦";
+  // §164⑥·⑦ 산식 결과의 이름 — 개별 «환산 개별주택가격» / 공동주택 «환산 공동주택가격» (엔진 산식·결과 카드와 같은 함수)
+  const convertedName = convertedHousePriceNames(labelAgency).sentence;
 
   // 1990 이전 토지기준시가는 매 렌더 시 동기적으로 직접 계산 (useEffect 콜백 의존성 제거).
   // 엔진 측은 어차피 inheritedHouseValuation.pre1990 등급 데이터를 받아 자체 계산하므로
@@ -476,7 +479,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
               : `홈택스/부동산공시가격알리미 — 최초 공시 시점 ${labels.price}. ${clauseLabel} 산식의 분자 승수.`
           }
         />
-        <FieldCard label="최초 공시 당시 건물기준시가" unit="원" hint="국세청 기준시가 — 취득시 개별주택가격 역산 시 최초공시 합계(토지기준시가 + 이 값)의 건물 부분. 개별주택가격과 별개입니다." className="grid sm:grid-cols-[200px_1fr]">
+        <FieldCard label="최초 공시 당시 건물기준시가" unit="원" hint={`국세청 기준시가 — ${convertedName} 계산 시 최초공시 합계(토지기준시가 + 이 값)의 건물 부분. ${isApart ? "공동주택가격" : "개별주택가격"}과 별개입니다.`} className="grid sm:grid-cols-[200px_1fr]">
           <div className="w-1/2">
             <CurrencyInput
               label=""
@@ -556,7 +559,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         <FieldCard
           label={`${acqTimeLabel} 건물기준시가`}
           unit="원"
-          hint={`국세청 건물기준시가 (${acqTimeLabel} 당시). §164⑦ 환산 가격 공식에 사용.`}
+          hint={`국세청 건물기준시가 (${acqTimeLabel} 당시). ${clauseLabel} ${convertedName} 산식에 사용.`}
         >
           <CurrencyInput
             label=""
@@ -595,7 +598,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
 
           return (
             <div className="space-y-1">
-              <p className="text-caption text-muted-foreground font-medium">환산 가격 ({clauseLabel})</p>
+              <p className="text-caption text-muted-foreground font-medium">{convertedName} ({clauseLabel})</p>
               <div className="flex items-start justify-between rounded bg-muted/40 px-3 py-2 gap-3">
                 <div className="space-y-0.5">
                   <span className="text-caption text-muted-foreground leading-relaxed block">

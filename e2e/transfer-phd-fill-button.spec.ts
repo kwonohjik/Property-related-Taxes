@@ -182,6 +182,21 @@ test.describe("환산 개별주택가격 계산해 채우기 (PHD × 비환산)"
     await expect(stdInput(page)).toHaveValue("93,567,251");
   });
 
+  test("FB-6 공동주택(주택유형 라디오) — 버튼·제목·산식이 «환산 공동주택가격»이고 같은 값이 채워진다 · «환산 개별주택가격» 없음", async ({ page }) => {
+    test.setTimeout(150_000);
+    await seedForm(page, formOf([asset({ ...SEVEN, phdHousingType: "apartment" })]));
+    await expandAssetSection(page, 3);
+    const apt = page.getByRole("button", { name: "환산 공동주택가격 계산해 채우기" });
+    await expect(apt).toBeEnabled();
+    await expect(fillBtn(page)).toHaveCount(0); // 개별 이름의 버튼은 없다
+    const card = page.getByTestId("phd-fill-assist");
+    await expect(card).not.toContainText("환산 개별주택가격");
+    await expect(card).toContainText("환산 공동주택가격 계산 (소득세법 시행령 §164⑦)");
+    await expect(page.getByTestId("phd-fill-formula")).toContainText("환산 공동주택가격 = 최초 고시 주택가격");
+    await apt.click();
+    await expect(stdInput(page)).toHaveValue("93,567,251");
+  });
+
   test("FB-5 환산(대조): 버튼이 없고 PHD 3-시점 토글이 대신한다 / 취득일 2010(대조): 버튼 없음", async ({ page }) => {
     test.setTimeout(150_000);
     await seedForm(page, formOf([asset({ ...EST, usePreHousingDisclosure: true, ...SEVEN })]));

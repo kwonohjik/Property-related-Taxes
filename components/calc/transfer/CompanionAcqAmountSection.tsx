@@ -31,7 +31,7 @@ interface Props {
   /**
    * 「취득시 기준시가」 칸을 `CompanionAcqStdPriceSection`이 그린다 — 토지·건물 분리(같은 취득일)에서 두 섹션이 함께 렌더되면
    * 같은 `standardPriceAtAcq` 칸이 둘 뜬다. 부모가 `acqStdFieldInStdSection`으로 1회 계산해 주입한다(재파생 금지) —
-   * 참이면 이쪽 칸·«환산 개별주택가격 계산해 채우기» 보조 카드는 접고 그쪽이 맡는다(㎡당 단가·면적·공시가격 조회 등 그쪽에만 있는 입력을 잃지 않는다).
+   * 참이면 이쪽 칸·«환산 …가격 계산해 채우기»(개별·공동주택) 보조 카드는 접고 그쪽이 맡는다(㎡당 단가·면적·공시가격 조회 등 그쪽에만 있는 입력을 잃지 않는다).
    */
   acqStdFieldInStdSection: boolean;
 }
@@ -46,7 +46,7 @@ export function CompanionAcqAmountSection({
 }: Props) {
   if (props.useEstimatedAcquisition || isSeparateAcq || props.hideAssetAcqAxis) return null;
 
-  /* «환산 개별주택가격 계산해 채우기» — 취득시 기준시가 칸(감정가액·매매사례가액) 곁 계산 보조. 보이는 조건은 `phdFillAssistVisible`(컴포넌트 내부 게이트).
+  /* «환산 …가격 계산해 채우기»(개별·공동주택) — 취득시 기준시가 칸(감정가액·매매사례가액) 곁 계산 보조. 보이는 조건은 `phdFillAssistVisible`(컴포넌트 내부 게이트).
      이 칸이 접히는 경우(`acqStdFieldInStdSection`)에는 칸을 그리는 두 자리(아래 감정 칸 블록·`SalesCaseSection`)가 보조도 함께 접는다. */
   const phdFillAssist =
     props.asset && props.onAssetChange && props.assetKind === "housing" ? (

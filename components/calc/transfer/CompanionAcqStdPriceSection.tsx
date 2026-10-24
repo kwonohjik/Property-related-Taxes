@@ -198,7 +198,7 @@ export function CompanionAcqStdPriceSection({
               enableLookup={!(isLand && acqDatePre1990)}
               pricePerSqmDisabled={isLand && acqDatePre1990}
             />
-            {/* 주택 취득시 기준시가 칸 곁 «환산 개별주택가격 계산해 채우기». hint(`PRE_DISCLOSURE_STD_PRICE_HINT`)가 붙는 칸과 같은 조건이다.
+            {/* 주택 취득시 기준시가 칸 곁 «환산 …가격 계산해 채우기»(개별·공동주택). hint(`PRE_DISCLOSURE_STD_PRICE_HINT`)가 붙는 칸과 같은 조건이다.
                 보이는 조건은 컴포넌트 내부 게이트(`phdFillAssistVisible`).
                 감정가액·매매사례가액 + 토지·건물 분리(같은 취득일)에서는 «취득시 기준시가» 칸이 이 블록 한 곳에만 그려진다
                 (`acqStdFieldInStdSection` — `CompanionAcqAmountSection`·`SalesCaseSection`은 자기 칸을 접는다) → 보조 카드도 이 칸 곁에 하나다. */}

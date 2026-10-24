@@ -35,7 +35,7 @@ import { InheritedHouseValuationDetailCard } from "@/components/calc/results/tra
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { BundledAllocationCard } from "@/components/calc/results/BundledAllocationCard";
 import { PropertyBreakdownAccordion } from "@/components/calc/results/MultiTransferPropertyBreakdown";
-import { isPhdApartment, phdConvertedPriceName } from "@/components/calc/results/transfer/phd-housing-term";
+import { isPhdApartment, phdConvertedPriceName, phdDisclosedPriceName } from "@/components/calc/results/transfer/phd-housing-term";
 import { TransferSection } from "@/lib/pdf/ResultPdfTransferSections";
 import { ResultPdfDocument } from "@/lib/pdf/ResultPdfDocument";
 import type { ReactElement } from "react";
@@ -73,7 +73,20 @@ describe("P1 상세 섹션 — 주택 종류별 이름 (3경우)", () => {
   it("단독·다가구 → 환산 개별주택가격 5곳", () => expectTerm(view({ phdApartment: false }), INDIVIDUAL, APARTMENT));
   it("공동주택 → 환산 공동주택가격 5곳 · 환산 개별주택가격·추정 없음", () => expectTerm(view({ phdApartment: true }), APARTMENT, INDIVIDUAL));
   it("필드 없음(옛 결과 · prop 미전달) → 종전 표기 환산 개별주택가격", () => expectTerm(view({}), INDIVIDUAL, APARTMENT));
+  it.each([
+    [{ phdApartment: false }, "개별주택가격 미공시 취득 환산 (소득세법 시행령 §164⑦)", "공동주택가격 미공시 취득 환산"],
+    [{ phdApartment: true }, "공동주택가격 미공시 취득 환산 (소득세법 시행령 §164⑦)", "개별주택가격 미공시 취득 환산"],
+    [{}, "개별주택가격 미공시 취득 환산 (소득세법 시행령 §164⑦)", "공동주택가격 미공시 취득 환산"],
+  ] as const)("머리글 3경우 — phdApartment=%j", (props, header, other) => {
+    const t = view(props);
+    expect(t).toContain(header);
+    expect(t).not.toContain(other);
+    expect(t).not.toContain("추정");
+  });
   it("이름 함수·판정 함수", () => {
+    expect(phdDisclosedPriceName(true)).toBe("공동주택가격");
+    expect(phdDisclosedPriceName(false)).toBe("개별주택가격");
+    expect(phdDisclosedPriceName(undefined)).toBe("개별주택가격");
     expect(phdConvertedPriceName(true)).toBe(APARTMENT);
     expect(phdConvertedPriceName(false)).toBe(INDIVIDUAL);
     expect(phdConvertedPriceName(undefined)).toBe(INDIVIDUAL);
@@ -202,23 +215,32 @@ describe("P6 상속주택 환산 상세 카드 3경로", () => {
   it("개별(생략) → 환산 개별주택가격 (소득세법 시행령 §164⑦ 산식)", () => {
     const t = view(undefined);
     expect(t).toContain("환산 개별주택가격 (소득세법 시행령 §164⑦ 산식) · 합계기준시가 = 토지 + 건물");
+    expect(count(t, INDIVIDUAL)).toBe(4); // 배지 + 소제목 + 합계기준시가 비율 좌변 + 환산취득가액 분자
+    expect(t).not.toContain(APARTMENT);
+    expect(t).not.toContain("산식으로 계산한 취득 당시");
     expect(t).not.toContain("추정");
   });
   it("공동주택 국토교통부 공시(§164⑦) → 환산 공동주택가격 — 종전 서술형·«취득 당시 공동주택가격 (…산식)» 없음", () => {
     const t = view("molit");
     expect(t).toContain("환산 공동주택가격 (소득세법 시행령 §164⑦ 산식) · 합계기준시가 = 토지 + 건물");
-    expect(count(t, APARTMENT)).toBe(2); // 배지 + 소제목
+    expect(count(t, APARTMENT)).toBe(4); // 배지 + 소제목 + 합계기준시가 비율 좌변 + 환산취득가액 분자
     expect(t).not.toContain("§164⑦ 산식으로 계산한 취득 당시 공동주택가격");
     expect(t).not.toContain("취득 당시 공동주택가격 (");
+    expect(t).not.toContain("취득당시 공동주택가격 ");
     expect(t).not.toContain(INDIVIDUAL);
     expect(t).not.toContain("추정");
     expect(convertedHousePriceNames("molit")).toEqual({ sentence: APARTMENT, label: `${APARTMENT} (소득세법 시행령 §164⑦ 산식)` });
   });
-  it("공동주택 국세청 고시(§164⑥) → 이번 지시 범위 밖 — 종전 문구 그대로 (사용자 결정 필요)", () => {
+  it("공동주택 국세청 고시(§164⑥) → 같은 이름 «환산 공동주택가격», 조문만 «(… §164⑥ 산식)» — 종전 서술형·«취득 당시 공동주택 기준시가 (…)» 없음", () => {
     const t = view("nts");
-    expect(t).toContain("§164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가");
-    expect(t).toContain("취득 당시 공동주택 기준시가 (소득세법 시행령 §164⑥ 산식) · 합계기준시가 = 토지 + 건물");
-    expect(t).not.toContain(APARTMENT);
+    expect(t).toContain("환산 공동주택가격 (소득세법 시행령 §164⑥ 산식) · 합계기준시가 = 토지 + 건물");
+    expect(count(t, APARTMENT)).toBe(4);
+    expect(t).not.toContain("§164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가");
+    expect(t).not.toContain("취득 당시 공동주택 기준시가 (");
+    expect(t).not.toContain("취득당시 공동주택 기준시가");
+    expect(t).not.toContain(INDIVIDUAL);
+    expect(t).not.toContain("추정");
+    expect(convertedHousePriceNames("nts")).toEqual({ sentence: APARTMENT, label: `${APARTMENT} (소득세법 시행령 §164⑥ 산식)` });
   });
 });
 
