@@ -26,6 +26,7 @@ import { selfBuiltActive } from "./self-built-scope";
 import { buildDonorBuiltBgExtensionAppraisal, buildDonorBuiltBgPayload, type BgDonorBuiltPayload } from "./transfer-tax-api-donor-built-bg";
 import {
   isMixedBurdenedGift,
+  isMixedBgDeemedPath,
   mixedAcqStdTotal,
   mixedBgDebtAttribution,
   mixedBgHousingAppraisal,
@@ -407,6 +408,8 @@ export function buildBurdenedGiftInfo(
     void _al; void _ab; void _pl; void _pb; void _pe; void _gb; void _cd;
     return {
       ...allowed,
+      // 증여자 상속·증여 취득(시가 평가) — 평가액이 취득가액이라 산정방식·총액이 없다(⑤가 라디오·총액 칸을 숨긴다 · 숨은 값 미전송 · PR-7b-7a).
+      ...(isMixedBgDeemedPath(primary) ? { acquisitionMethod: undefined, actualAcquisitionTotal: undefined, presumedAcquisitionTotal: undefined } : {}),
       landStdPriceAtTransfer: 0,
       buildingStdPriceAtTransfer: mixedTransferStdTotal(primary).total,
       landStdPriceAtAcquisition: 0,

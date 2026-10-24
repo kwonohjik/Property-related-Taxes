@@ -157,4 +157,38 @@ test.describe("겸용주택 × 부담부증여", () => {
     await expect(page.getByTestId("bg-acq-std-price")).toHaveCount(0);
     await expectNoPageHScroll(page);
   });
+
+  /** PR-7b-7a-1 — 증여자 상속 취득(2010) · 시가 — 상속개시일 주택분·상가분 평가액 3.5억씩이 취득가액(소령 §163⑨) */
+  const INHERITED = {
+    bgMortgageAttribution: "unallocated",
+    acquisitionCause: "inheritance",
+    inheritanceStartDate: "2010-03-15",
+    decedentAcquisitionDate: "2000-01-01",
+    bgAcquisitionMethod: "",
+    bgActualAcquisitionTotal: "",
+    mixedHousingInheritedValueOverride: "350000000",
+    mixedCommercialInheritedValueOverride: "350000000",
+  };
+
+  test("BGMU-6 증여자 상속 취득 — 산정방식 라디오 대신 안내, 세액은 실지 7억 매매와 같은 69,094,001, 결과는 「상속개시일 평가액」", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seedAndOpen(page, INHERITED);
+    await expandAssetSection(page, 2);
+    await expect(page.getByTestId("bg-mixed-deemed-notice")).toContainText("상속개시일 현재 주택분·상가분 상증법 평가액");
+    await expect(page.locator('input[type="radio"][name^="bgAcquisitionMethod"]')).toHaveCount(0);
+    await expandAssetSection(page, 3);
+    await expect(page.getByText("상속개시일 신고가액 직접 입력 (필수)")).toBeVisible();
+    await calc(page);
+    const calcSection = page.locator('[data-print-id="calculation"]');
+    await expect(calcSection).toContainText("69,094,001");
+    await expect(page.getByTestId("bg-result-acq-housing")).toContainText("상속개시일 평가액 안분 (소득세법 시행령 §163⑨)");
+  });
+
+  test("BGMU-7 증여자 상속 취득에서 평가액을 비우면 «다음»이 막히고 상속개시일 주택분 신고가액 칸으로 이동한다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seedAndOpen(page, { ...INHERITED, mixedHousingInheritedValueOverride: "", mixedCommercialInheritedValueOverride: "" });
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await expect(page.getByTestId("validation-issues")).toContainText("주택분·상가분 상증법 평가액");
+    await expect(page.locator('[data-field="mixedHousingInheritedValueOverride"]').locator("input").first()).toBeFocused();
+  });
 });

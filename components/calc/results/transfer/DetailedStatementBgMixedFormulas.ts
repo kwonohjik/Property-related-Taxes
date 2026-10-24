@@ -39,6 +39,12 @@ export const MIXED_BG_VALUE_LABEL: Record<Method, string> = {
   appraisal: "감정가액",
 };
 
+/** 가액 이름 — 증여자가 상속·증여로 취득했으면(엔진 echo `deemedCause` · 소령 §163⑨) 「실지취득가액」 대신 그 날 현재 평가액이라고 적는다(PR-7b-7a). */
+export function mixedBgValueLabel(bg: MixedUseBurdenedGiftBreakdown, m: Method): string {
+  if (m === "actual" && bg.deemedCause) return bg.deemedCause === "gift" ? "증여일 평가액" : "상속개시일 평가액";
+  return MIXED_BG_VALUE_LABEL[m];
+}
+
 const PARTS: Record<Side, readonly [MixedUsePartKey, MixedUsePartKey]> = {
   housing: ["housingLand", "housingBuilding"],
   commercial: ["commercialLand", "commercialBuilding"],
@@ -115,7 +121,7 @@ export function buildBgMixedAcquisitionFormula(d: BgMixedDisplay): string {
       case "converted":
         return `${label}: 양도가액 ${fmt(p.transferPrice)} × 취득시 기준시가 ${fmt(p.stdPriceAtAcquisition)} / 양도시 기준시가 ${fmt(p.stdPriceAtTransfer)} = ${fmt(p.acquisitionPrice)} (시행령 §176의2②2호)`;
       default:
-        return `${label}: ${MIXED_BG_VALUE_LABEL[p.acquisitionMethod]} 중 이 부분 몫 × (${ratioText(bg, side)}) = ${fmt(p.acquisitionPrice)}`;
+        return `${label}: ${mixedBgValueLabel(bg, p.acquisitionMethod)} 중 이 부분 몫 × (${ratioText(bg, side)}) = ${fmt(p.acquisitionPrice)}`;
     }
   });
 }

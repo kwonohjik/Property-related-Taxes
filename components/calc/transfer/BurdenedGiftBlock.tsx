@@ -48,6 +48,7 @@ import {
   BurdenedGiftPresumedAcquisitionSection,
 } from "./BurdenedGiftPresumedAcquisitionSection";
 import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
+import { isMixedBgDeemedPath } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { BurdenedGiftDebtAttributionCard } from "./BurdenedGiftDebtAttributionCard";
 import { BurdenedGiftHousingAppraisalField, BurdenedGiftMixedUsePanel } from "./BurdenedGiftMixedUsePanel";
 import { bgCollateralForcesStdAcq } from "@/lib/calc/burdened-gift-collateral-win";
@@ -176,6 +177,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   const gbParts = gbBgThreeWayParts(asset);
   const gbMethodForOtherShares = gbParts.all && isFractionalSplit === true && gbBgFractionalHasPartialShare(fractionalShares);
   const gbNoMethod = gbParts.all && !gbMethodForOtherShares;
+  /** 겸용주택 · 시가 평가 · 증여자 상속·증여 취득 — 주택분·상가분 평가액이 취득가액(소령 §163⑨)이라 산정방식이 없다(PR-7b-7a · ④·⑧과 같은 술어). */
+  const mixedDeemed = isMixedBgDeemedPath(asset);
+  const noMethod = gbNoMethod || mixedDeemed;
   // 숨길 금액 칸 — 축 B 첫 카드는 모든 지분이 의제인 파트만(다른 지분이 그 칸을 쓴다 · 리뷰 F-1), 그 밖에는 이 카드의 의제 파트
   const gbHideScope = isFractionalSplit === true && fractionalShares ? gbBgFractionalPreDeemedPartsAll(fractionalShares) : gbParts;
   const gbHidePart =
@@ -336,7 +340,17 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             </ToneCard>
           )}
           {gbParts.any && <GbBgPreDeemedMethodNotice parts={gbParts} forOtherShares={gbMethodForOtherShares} />}
-          {(!preDeemed || methodForOtherShares) && !gbNoMethod && (
+          {mixedDeemed && (
+            <ToneCard tone="violet">
+              <p className="text-xs text-violet-900 dark:text-violet-200" data-testid="bg-mixed-deemed-notice">
+                증여자가 {asset.acquisitionCause === "gift" ? "증여" : "상속"}로 취득한 겸용주택입니다 —{" "}
+                {asset.acquisitionCause === "gift" ? "증여일" : "상속개시일"} 현재 주택분·상가분 상증법 평가액이 취득 당시 실지거래가액이므로(소득세법 시행령 §163⑨)
+                산정방식을 고르지 않습니다. 평가액은 ③ 취득정보의 「주택 기준시가」·「상가 기준시가」에 있는 신고가액 칸에 입력하고, 취득가액은 그 평가액에 주택·상가별
+                채무비율을 곱합니다(같은 영 §159①1호). 자본적지출·양도비는 아래 「④ 자본적 지출, 필요경비」에 입력하세요.
+              </p>
+            </ToneCard>
+          )}
+          {(!preDeemed || methodForOtherShares) && !noMethod && (
             <BurdenedGiftAcquisitionMethodField
               asset={asset}
               onChange={onChange}
@@ -362,7 +376,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           )}
 
           {/* K-6/K-7: 매매사례가액·감정가액 입력 (§97①1호나목 · 시행령 §176의2③1·2호) */}
-          {isBgPresumedMethod(asset.bgAcquisitionMethod) && !isCarryover && !collateralForced && !preDeemed && !gbNoMethod && (
+          {isBgPresumedMethod(asset.bgAcquisitionMethod) && !isCarryover && !collateralForced && !preDeemed && !noMethod && (
             <BurdenedGiftPresumedAcquisitionSection
               asset={asset}
               onChange={onChange}
@@ -374,7 +388,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           )}
 
           {/* K-5: 환산취득가액 안내 (별도 입력 없음 — 취득시 기준시가 재사용) */}
-          {collateralForced || preDeemed || gbNoMethod ? null : asset.bgAcquisitionMethod === "converted" && redevPreApprovalAcqMode(asset) === "estimated" ? (
+          {collateralForced || preDeemed || noMethod ? null : asset.bgAcquisitionMethod === "converted" && redevPreApprovalAcqMode(asset) === "estimated" ? (
             // 재개발 완공 아파트 — 취득가액은 종전 부동산의 취득가액이라 §166③으로 환산한다(일반 환산식이 아니다).
             <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
               종전 부동산 취득가액 = 평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" /> (시행령 §166③) × 채무비율.
@@ -408,7 +422,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
       <BgPreDeemedNotice asset={asset} />
 
       {/* 의제 첫 지분이라도 범위 밖 지분이 있으면 그 지분의 실지취득가액을 여기서 받는다(위 라디오와 같은 판정 · ⑧이 요구 — PR-7b-5) */}
-      {((isMarketMode && !collateralForced && (!preDeemed || methodForOtherShares) && !gbNoMethod && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
+      {((isMarketMode && !collateralForced && (!preDeemed || methodForOtherShares) && !noMethod && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
           <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2 dark:bg-amber-900/40">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">

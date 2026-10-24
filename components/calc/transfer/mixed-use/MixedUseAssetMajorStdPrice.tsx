@@ -19,6 +19,7 @@ import { MixedUseAcqHousingLandPriceField } from "./MixedUseAcqHousingLandPriceF
 import { MixedUseHousingBuildingStdField } from "./MixedUseHousingBuildingStdField";
 import { isMixedAcqDatesSeparate } from "@/lib/calc/mixed-use-acq-date-split";
 import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
+import { isMixedBgDeemedPath } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import {
   isMixedUsePerPartAcq,
   mixedAnyPartActual,
@@ -78,6 +79,16 @@ export function MixedUseAssetMajorStdPrice({
    * 파트별 실비 카드는 BG에서 숨긴다 — ④도 그 값을 전송하지 않는다(`buildMixedUsePayload`의 stale 가드). 설계 UI R2 §4 DUP-5.
    */
   const bgMixed = isMixedBurdenedGift(asset);
+  /**
+   * 부담부증여의 상속·증여 신고가액 칸 — 시가 평가에서만 취득가액(주택분·상가분 평가액 × 부분별 채무비율)이라 **필수**로 연다(PR-7b-7a · ④·⑧과 같은 술어).
+   * 기준시가 평가는 §159①1호 괄호가 취득시 기준시가를 쓰게 해 평가액이 계산에 쓰이지 않아 숨긴다. 칸 안의 실제 필요경비는 부담부증여에서 쓰이지 않는다
+   * (④가 보내지 않는다 — 자본적지출·양도비는 「자본적 지출, 필요경비」 공통 칸).
+   */
+  const bgDeemed = isMixedBgDeemedPath(asset);
+  const showReported = !bgMixed || bgDeemed;
+  const bgReportedHint = bgDeemed
+    ? `${isGift ? "증여세" : "상속세"} 신고가액(상증법 §60~66 평가액 — 세무서장등이 결정·경정한 가액이 있으면 그 가액). 부담부증여에서는 주택분·상가분 두 칸을 모두 입력하세요 — 이 평가액이 취득가액이고 주택·상가별 채무비율을 곱합니다(소득세법 시행령 §163⑨·§159①1호).`
+    : null;
   const isPurchaseActual = bgMixed
     ? false
     : isPerPart
@@ -193,10 +204,10 @@ export function MixedUseAssetMajorStdPrice({
             §11-6: PHD ON 시 위젯 자체 tone(amber/violet/emerald PointBlock)에 위임 — 별도 amber 컨테이너 미추가.
             시점 순서: 취득 → 양도 (PHD 3-시점 §164⑦ 법정 시계열과 정렬 — 계획 §2) */}
         <div className="space-y-2">
-          {isInheritance && (
+          {isInheritance && showReported && (
             <ToneCard
               tone="violet"
-              title="상속개시일 신고가액 직접 입력 (선택)"
+              title={bgDeemed ? "상속개시일 신고가액 직접 입력 (필수)" : "상속개시일 신고가액 직접 입력 (선택)"}
               titleExtra={<LawArticleModal legalBasis="상속세및증여세법 §60" label="상증법 §60" />}
             >
               <CurrencyInput
@@ -204,22 +215,24 @@ export function MixedUseAssetMajorStdPrice({
                 value={asset.mixedHousingInheritedValueOverride}
                 data-field="mixedHousingInheritedValueOverride"
                 onChange={(v) => onChange({ mixedHousingInheritedValueOverride: v })}
-                hint={reportedHint ?? "시가·감정·매매사례로 상속세 신고한 경우만 입력. 미입력 시 아래 개별주택공시가격(보충적평가)을 자동 사용"}
+                hint={bgReportedHint ?? reportedHint ?? "시가·감정·매매사례로 상속세 신고한 경우만 입력. 미입력 시 아래 개별주택공시가격(보충적평가)을 자동 사용"}
               />
-              <div className="pt-2">
-                <CurrencyInput
-                  label="실제 필요경비 — 자본적지출·양도비 (선택)"
-                  value={asset.mixedHousingInheritedExpense}
-                  onChange={(v) => onChange({ mixedHousingInheritedExpense: v })}
-                  hint={expenseHint ?? "상속(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"}
-                />
-              </div>
+              {!bgMixed && (
+                <div className="pt-2">
+                  <CurrencyInput
+                    label="실제 필요경비 — 자본적지출·양도비 (선택)"
+                    value={asset.mixedHousingInheritedExpense}
+                    onChange={(v) => onChange({ mixedHousingInheritedExpense: v })}
+                    hint={expenseHint ?? "상속(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"}
+                  />
+                </div>
+              )}
             </ToneCard>
           )}
-          {isGift && (
+          {isGift && showReported && (
             <ToneCard
               tone="violet"
-              title="증여일 신고가액 직접 입력 (선택)"
+              title={bgDeemed ? "증여일 신고가액 직접 입력 (필수)" : "증여일 신고가액 직접 입력 (선택)"}
               titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑨" label="소령 §163⑨" />}
             >
               <CurrencyInput
@@ -227,16 +240,18 @@ export function MixedUseAssetMajorStdPrice({
                 value={asset.mixedHousingGiftValueOverride}
                 data-field="mixedHousingGiftValueOverride"
                 onChange={(v) => onChange({ mixedHousingGiftValueOverride: v })}
-                hint={reportedHint ?? "증여세 신고서·결정통지서상 주택 평가액(상증법 §60~66). 미입력 시 아래 개별주택공시가격(보충적평가)을 자동 사용"}
+                hint={bgReportedHint ?? reportedHint ?? "증여세 신고서·결정통지서상 주택 평가액(상증법 §60~66). 미입력 시 아래 개별주택공시가격(보충적평가)을 자동 사용"}
               />
-              <div className="pt-2">
-                <CurrencyInput
-                  label="실제 필요경비 — 자본적지출·양도비 (선택)"
-                  value={asset.mixedHousingGiftExpense}
-                  onChange={(v) => onChange({ mixedHousingGiftExpense: v })}
-                  hint={expenseHint ?? "증여(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"}
-                />
-              </div>
+              {!bgMixed && (
+                <div className="pt-2">
+                  <CurrencyInput
+                    label="실제 필요경비 — 자본적지출·양도비 (선택)"
+                    value={asset.mixedHousingGiftExpense}
+                    onChange={(v) => onChange({ mixedHousingGiftExpense: v })}
+                    hint={expenseHint ?? "증여(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"}
+                  />
+                </div>
+              )}
             </ToneCard>
           )}
           {isPurchaseActual && (
@@ -369,10 +384,10 @@ export function MixedUseAssetMajorStdPrice({
           <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">상가 기준시가</p>
         </div>
 
-        {isInheritance && (
+        {isInheritance && showReported && (
           <ToneCard
             tone="violet"
-            title="상속개시일 신고가액 직접 입력 (선택, 상가 전체)"
+            title={bgDeemed ? "상속개시일 신고가액 직접 입력 (필수, 상가 전체)" : "상속개시일 신고가액 직접 입력 (선택, 상가 전체)"}
             titleExtra={<LawArticleModal legalBasis="상속세및증여세법 §60" label="상증법 §60" />}
           >
             <CurrencyInput
@@ -380,23 +395,25 @@ export function MixedUseAssetMajorStdPrice({
               value={asset.mixedCommercialInheritedValueOverride}
               data-field="mixedCommercialInheritedValueOverride"
               onChange={(v) => onChange({ mixedCommercialInheritedValueOverride: v })}
-              hint={reportedHint ?? "미입력 시 아래 상가건물 기준시가 + 개별공시지가 합계를 자동 사용"}
+              hint={bgReportedHint ?? reportedHint ?? "미입력 시 아래 상가건물 기준시가 + 개별공시지가 합계를 자동 사용"}
             />
-            <div className="pt-2">
-              <CurrencyInput
-                label="실제 필요경비 — 자본적지출·양도비 (선택)"
-                value={asset.mixedCommercialInheritedExpense}
-                onChange={(v) => onChange({ mixedCommercialInheritedExpense: v })}
-                hint={expenseHint ?? "상속(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"}
-              />
-            </div>
+            {!bgMixed && (
+              <div className="pt-2">
+                <CurrencyInput
+                  label="실제 필요경비 — 자본적지출·양도비 (선택)"
+                  value={asset.mixedCommercialInheritedExpense}
+                  onChange={(v) => onChange({ mixedCommercialInheritedExpense: v })}
+                  hint={expenseHint ?? "상속(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"}
+                />
+              </div>
+            )}
           </ToneCard>
         )}
 
-        {isGift && (
+        {isGift && showReported && (
           <ToneCard
             tone="violet"
-            title="증여일 신고가액 직접 입력 (선택, 상가 전체)"
+            title={bgDeemed ? "증여일 신고가액 직접 입력 (필수, 상가 전체)" : "증여일 신고가액 직접 입력 (선택, 상가 전체)"}
             titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑨" label="소령 §163⑨" />}
           >
             <CurrencyInput
@@ -404,16 +421,18 @@ export function MixedUseAssetMajorStdPrice({
               value={asset.mixedCommercialGiftValueOverride}
               data-field="mixedCommercialGiftValueOverride"
               onChange={(v) => onChange({ mixedCommercialGiftValueOverride: v })}
-              hint={reportedHint ?? "증여세 신고서·결정통지서상 상가 평가액(상증법 §60~66). 미입력 시 아래 상가건물 기준시가 + 개별공시지가 합계를 자동 사용"}
+              hint={bgReportedHint ?? reportedHint ?? "증여세 신고서·결정통지서상 상가 평가액(상증법 §60~66). 미입력 시 아래 상가건물 기준시가 + 개별공시지가 합계를 자동 사용"}
             />
-            <div className="pt-2">
-              <CurrencyInput
-                label="실제 필요경비 — 자본적지출·양도비 (선택)"
-                value={asset.mixedCommercialGiftExpense}
-                onChange={(v) => onChange({ mixedCommercialGiftExpense: v })}
-                hint={expenseHint ?? "증여(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"}
-              />
-            </div>
+            {!bgMixed && (
+              <div className="pt-2">
+                <CurrencyInput
+                  label="실제 필요경비 — 자본적지출·양도비 (선택)"
+                  value={asset.mixedCommercialGiftExpense}
+                  onChange={(v) => onChange({ mixedCommercialGiftExpense: v })}
+                  hint={expenseHint ?? "증여(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"}
+                />
+              </div>
+            )}
           </ToneCard>
         )}
         {isPurchaseActual && (

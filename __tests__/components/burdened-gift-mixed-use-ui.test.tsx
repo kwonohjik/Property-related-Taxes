@@ -247,22 +247,23 @@ describe("BGM-U7b · 레거시 레이아웃의 PHD 토글도 같은 규칙", () 
   });
 });
 
-describe("BGM-U8 · 취득 원인 — 증여자가 상속·증여로 취득한 조합은 선택지에서 막는다(현재 값은 막지 않는다)", () => {
+describe("BGM-U8 · 취득 원인 — 이월과세·신축은 선택지에서 막는다(현재 값은 막지 않는다) · 상속·증여는 PR-7b-7a부터 연다", () => {
   const radioEl = (c: HTMLElement, v: string) => c.querySelector<HTMLInputElement>(`input[type="radio"][name^="acquisitionCause"][value="${v}"]`)!;
 
-  it("매매 선택 상태: 상속·증여·이월과세·신축은 disabled, 매매는 선택 가능", () => {
+  it("매매 선택 상태: 이월과세·신축은 disabled, 매매·상속·증여는 선택 가능", () => {
     const { container } = render(<CompanionAcquisitionCauseSection asset={seed()} onChange={() => {}} transferDate="2024-03-01" isNewConstruction={false} />);
-    for (const v of ["inheritance", "gift", "carryover_gift", "newConstruction"]) {
+    for (const v of ["carryover_gift", "newConstruction"]) {
       expect(radioEl(container, v), v).not.toBeNull();
       expect(radioEl(container, v).disabled, v).toBe(true);
     }
-    expect(radioEl(container, "purchase").disabled).toBe(false);
+    // 종전: 상속·증여도 disabled(UI P1 좁힘) → 이후: 선택 가능(소령 §163⑨ 평가액 경로 · PR-7b-7a)
+    for (const v of ["purchase", "inheritance", "gift"]) expect(radioEl(container, v).disabled, v).toBe(false);
   });
 
-  it("🔴 짝1: 이미 상속으로 선택된 값은 막지 않는다 — ⑧이 점프시킨 칸에서 다른 옵션을 고를 수 있다", () => {
-    const { container } = render(<CompanionAcquisitionCauseSection asset={seed({ acquisitionCause: "inheritance" })} onChange={() => {}} transferDate="2024-03-01" isNewConstruction={false} />);
+  it("🔴 짝1: 이미 이월과세로 선택된 값은 막지 않는다 — ⑧이 점프시킨 칸에서 다른 옵션을 고를 수 있다", () => {
+    const { container } = render(<CompanionAcquisitionCauseSection asset={seed({ acquisitionCause: "carryover_gift" })} onChange={() => {}} transferDate="2024-03-01" isNewConstruction={false} />);
     expect(radioEl(container, "purchase").disabled).toBe(false);
-    expect(radioEl(container, "inheritance").disabled).toBe(false);
+    expect(radioEl(container, "carryover_gift").disabled).toBe(false);
   });
 
   it("🔴 짝2: 부담부증여가 아니면(일반 양도) 어느 옵션도 막지 않는다", () => {

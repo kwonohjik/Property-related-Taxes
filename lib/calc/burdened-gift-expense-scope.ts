@@ -17,6 +17,7 @@ import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 import { isSplitValidationActive } from "./transfer-tax-validate-split";
 import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
+import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
 
 /** 취득가액 산정 근거 — 안내 문구가 그 이름으로 말한다. 칸이 쓰이면 null. */
 export function bgExpenseUnusedBasis(asset: AssetForm): "기준시가" | "감정가액" | "매매사례가액" | null {
@@ -29,6 +30,8 @@ export function bgExpenseUnusedBasis(asset: AssetForm): "기준시가" | "감정
   if (asset.bgValuationMode !== "sangjeungbeop_market" || bgCollateralForcesStdAcq(asset)) return "기준시가";
   // 의제취득일 전 상속·증여 토지·주택·상가·건물(시가) — 산정방식 대신 ①②③ 중 큰 금액이다. ①②면 실제 필요경비, ③이면 §97②2호 단서 비교에 쓴다(계획서 §18).
   if (isBgPreDeemedAsset(asset)) return null;
+  // 겸용 · 증여자 상속·증여 취득 — 평가액(주택분·상가분)이 취득가액이라 실제 필요경비를 쓴다. 숨은 산정방식 라디오의 남은 값을 읽지 않는다(PR-7b-7a).
+  if (isMixedBgDeemedPath(asset)) return null;
   if (!isBgPresumedMethod(asset.bgAcquisitionMethod)) return null;
   return asset.bgAcquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
 }

@@ -22,7 +22,7 @@ import type {
 } from "@/lib/tax-engine/types/mixed-use-burdened-gift.types";
 import {
   MIXED_BG_PART_LABEL,
-  MIXED_BG_VALUE_LABEL,
+  mixedBgValueLabel,
 } from "@/components/calc/results/transfer/DetailedStatementBgMixedFormulas";
 import {
   DivRow,
@@ -211,7 +211,7 @@ function acqFormulaLine(bg: MixedUseBurdenedGiftBreakdown, side: MixedBgSide, k:
     default:
       return (
         <FLine>
-          {MIXED_BG_PART_LABEL[k]}: {MIXED_BG_VALUE_LABEL[p.acquisitionMethod]} 중 이 부분 몫 × {ratioFrac(bg, side)}
+          {MIXED_BG_PART_LABEL[k]}: {mixedBgValueLabel(bg, p.acquisitionMethod)} 중 이 부분 몫 × {ratioFrac(bg, side)}
         </FLine>
       );
   }
@@ -227,7 +227,7 @@ export function MixedUseBgAcqRows({ bg, side }: { bg: MixedUseBurdenedGiftBreakd
   return (
     <div className="space-y-2" data-testid={`bg-result-acq-${side}`}>
       <Row
-        label={`${label} 취득가액 · ${METHOD_LABEL[method]}`}
+        label={`${label} 취득가액 · ${method === "actual" && bg.deemedCause ? `${mixedBgValueLabel(bg, method)} 안분 (소득세법 시행령 §163⑨)` : METHOD_LABEL[method]}`}
         value={fmt(sumOf(bg, side, (p) => p.acquisitionPrice))}
         formula={
           <>

@@ -154,6 +154,8 @@ export function refineBurdenedGiftInputs(
     propertyType?: string;
     redevelopment?: { isSuccessorMember?: boolean } | null;
     generalBuildingValuation?: unknown;
+    acquisitionCause?: string;
+    mixedUse?: unknown;
   },
   ctx: z.RefinementCtx,
 ) {
@@ -172,6 +174,13 @@ export function refineBurdenedGiftInputs(
   const gbv = data.generalBuildingValuation as { landPreDeemedClauseA?: unknown; buildingPreDeemedClauseA?: unknown } | null | undefined;
   const gbAllPartsPreDeemed =
     data.propertyType === "general_building" && !!gbv?.landPreDeemedClauseA && !!gbv?.buildingPreDeemedClauseA;
+  // 겸용주택 — 증여자가 상속·증여로 취득했으면 상속개시일·증여일 현재 주택분·상가분 평가액이 취득가액이다(소령 §163⑨ · PR-7b-7a).
+  // 산정방식을 읽지 않고, 평가액 두 칸은 엔진 leaf(`collectMixedBurdenedGiftIssues` MB-11 — `refineMixedUseBurdenedGift`)가 요구한다.
+  // 트리거는 collector(`refineMixedUseBurdenedGift` — `propertyType === "mixed-use-house"`)와 같아야 한다 — 다르면 면제만 되고 요구는 안 돈다.
+  const mixedDeemed =
+    data.propertyType === "mixed-use-house" &&
+    (data.mixedUse as { isMixedUseHouse?: boolean } | null | undefined)?.isMixedUseHouse === true &&
+    (data.acquisitionCause === "inheritance" || data.acquisitionCause === "gift");
   const issue = issuer(ctx);
   const bg = data.burdenedGiftInfo;
   if (!bg) {
@@ -181,8 +190,8 @@ export function refineBurdenedGiftInputs(
   if (bg.valuationMode === "sangjeungbeop_market") {
     if (!positive(bg.marketValueAtTransfer))
       issue(["burdenedGiftInfo", "marketValueAtTransfer"], "부담부증여 시가 모드는 양도시 시가 평가액이 필요합니다");
-    if (preDeemed || gbAllPartsPreDeemed) {
-      // 위 주석 — 3자 max(①②③)
+    if (preDeemed || gbAllPartsPreDeemed || mixedDeemed) {
+      // 위 주석 — 3자 max(①②③) · 겸용 상속·증여 평가액
     } else if (!bg.acquisitionMethod) {
       issue(["burdenedGiftInfo", "acquisitionMethod"], "부담부증여 시가 모드는 취득가액 산정방식(actual·salesCase·appraisal·converted)이 필요합니다 (소득세법 §100①)");
     } else if (collateralForcesStdAcquisition(bg)) {
@@ -195,7 +204,7 @@ export function refineBurdenedGiftInputs(
     ) {
       issue(["burdenedGiftInfo", "actualAcquisitionTotal"], "부담부증여 실지취득가액 안분은 실지취득가액이 필요합니다");
     }
-    if (!(preDeemed || gbAllPartsPreDeemed) && (bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") && !collateralForcesStdAcquisition(bg)) {
+    if (!(preDeemed || gbAllPartsPreDeemed || mixedDeemed) && (bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") && !collateralForcesStdAcquisition(bg)) {
       const label = bg.acquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
       const donor = bg.carryoverDonorBasis;
       if (donor) {
