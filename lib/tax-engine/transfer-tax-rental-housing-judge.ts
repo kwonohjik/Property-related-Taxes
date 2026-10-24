@@ -32,8 +32,7 @@ import { isAddendumTransitionEffective } from "./data/rental-155-20-era";
 /**
  * §155⑳ 시나리오 B(임대→거주 전환 PHRP) 여부 — STEP 1a 전액 비과세 조기 반환 억제 게이트.
  * B는 §161①(직전거주주택 양도일 이후 기간분만 비과세) 안분이 필요하므로 일반 1세대1주택
- * 요건 충족이어도 조기 반환하면 안분 미도달 오답. A(거주주택 양도)는 eligibility 충족 시 전액 비과세가
- * 정답이므로 조기반환 가능하나, **미충족 시엔 조기반환하면 안 됨**(아래 isPrhpScenarioAIneligible).
+ * 요건 충족이어도 조기 반환하면 안분 미도달 오답. 특례가 **불성립**이면 §161 안분 대상이 아니다(`canEarlyReturnPrhp`).
  */
 export function isPrhpScenarioB(effectiveInput: TransferTaxInput): boolean {
   return (
@@ -102,21 +101,6 @@ export function judgeRentalHousingEligibility(
 }
 
 /**
- * §155⑳ 시나리오 A(거주주택 양도) + 임대주택 eligibility 미충족 여부 — STEP 1a 조기반환 억제 게이트.
- * A는 사용자가 householdHousingCount=1(임대주택 제외 전제)을 입력하면 checkExemption이 isExempt=true를
- * 내주는데, STEP 1a가 그대로 조기반환하면 STEP 2.5의 checkEligibility가 우회되어 임대 요건 미충족인데도
- * 전액 비과세되는 over-exemption 버그. 미충족 시 조기반환을 억제하면 STEP 2.5가 "적용 불가"(null)로
- * 정상 과세 경로에 넘긴다. eligible 케이스는 false 반환 → 현행 조기반환 유지(무변경).
- */
-export function isPrhpScenarioAIneligible(effectiveInput: TransferTaxInput): boolean {
-  if (effectiveInput.rentalHousingException?.scenario !== "A") return false;
-  const eligibility = judgeRentalHousingEligibility(effectiveInput);
-  // 특례 미선언(null)은 억제 대상이 아니다 — 종전 `applyException !== true → false`와 같다.
-  if (!eligibility) return false;
-  return !eligibility.passed;
-}
-
-/**
  * §155㉒ 사후 추징 안내 — ㉑(임대기간요건 충족 전 양도)로 특례를 받은 호가 있을 때만.
  * 계산은 ㉑대로 비과세하고, 이후 요건을 못 채우면 차액을 신고·납부해야 한다는 사실을 알린다.
  */
@@ -168,7 +152,9 @@ export function rentalNoticesForEarlyReturn(effectiveInput: TransferTaxInput): s
   if (effectiveInput.rentalHousingException?.scenario !== "A") return [];
   const eligibility = judgeRentalHousingEligibility(effectiveInput);
   if (!eligibility) return [];
-  const pending = buildRentalPeriodPendingNotice(eligibility.periodPendingUnitIndexes);
+  // 불성립(F-1 D-2)이면 ㉒ 사후 추징 안내(「…특례를 적용했습니다」)만 사실이 아니다 — 싣지 않는다. 판정 보류·확인 필요 고지(`notices`)와
+  // 거주 통산 문장은 불성립에서도 싣는다: 「모름」이 불성립의 원인일 수 있고, STEP 2.5 「적용 불가」 경로도 싣는다. 불성립 사실은 `prhpUnmetOtherExemptionNotice`가 단다.
+  const pending = eligibility.passed ? buildRentalPeriodPendingNotice(eligibility.periodPendingUnitIndexes) : undefined;
   const consolidation = rentalResidenceConsolidationText(effectiveInput);
   return [...(pending ? [pending] : []), ...(consolidation ? [consolidation] : []), ...(eligibility.notices ?? [])];
 }
@@ -191,11 +177,43 @@ export function rentalResidenceConsolidationText(effectiveInput: TransferTaxInpu
 }
 
 /**
- * STEP 1a 전액 비과세 조기반환 허용 여부 — §155⑳ 두 억제 게이트를 결합(orchestrator 800줄 정책).
- * B 시나리오(§161 안분 필요)·A 시나리오 eligibility 미충족(over-exemption 차단) 시 false → STEP 2.5 위임.
+ * STEP 1a 전액 비과세 조기반환 허용 여부 — §161① 안분이 필요한가(B 성립) 하나만 막는다.
+ *
+ * 🔴 F-1(2026-10-24 · `docs/00-pm/rental-155-20-unmet-blocks-155-1.plan.md` Q-1·Q-2 (a)): 종전에는 A·B **불성립**도 막았다.
+ *    그 비과세는 판정 엔진이 임대주택을 센 결과다 — 「주택 수 1(임대 제외)」 입력은 STEP 0.96(`restoreRentalUnitsToHouseCount`)이
+ *    판정 **전에** 되돌리고, 남은 입력(명부의 장기임대 행 · 명부 없음 + 주택 수 2 이상)은 이미 센 값이다. 임대주택이 일시적 2주택의
+ *    신규 주택(영 §155①)이면 그 비과세는 정당한데, 정상 경로는 전액 비과세를 처리하지 않아(`resolveTaxableGain`) 10억은 전액 과세,
+ *    15억은 12억 초과분만 과세로 역전했다. 영 §155⑳은 불성립이면 「…보아」가 없을 뿐 다른 특례를 배제하지 않는다.
  */
 export function canEarlyReturnPrhp(effectiveInput: TransferTaxInput): boolean {
-  return !isPrhpScenarioB(effectiveInput) && !isPrhpScenarioAIneligible(effectiveInput);
+  const eligibility = judgeRentalHousingEligibility(effectiveInput);
+  if (eligibility && !eligibility.passed) return true;
+  return !isPrhpScenarioB(effectiveInput);
+}
+
+/** §155⑳ 불성립 사유 한 줄 — STEP 2.5 「적용 불가」 단계와 불성립 고지가 같은 문장을 쓴다. */
+export function rentalUnmetReasonText(eligibility: EligibilityResult): string {
+  const reasons = [...eligibility.residenceFailReasons, ...eligibility.failReasons.map((r) => r.message)];
+  return reasons.length > 0 ? reasons.join(" · ") : "장기임대주택 거주주택 비과세 특례 요건 미충족";
+}
+
+/**
+ * F-1 D-2·D-3 — §155⑳이 **불성립**인데 판정 엔진이 임대주택을 센 채 다른 특례(일시적 2주택 등)로 비과세·부분 비과세를 낸 경우의 고지.
+ * 전액 비과세 조기반환과 12억 초과 정상 경로가 같은 문장을 쓴다. 이 고지가 서면 STEP 0.96 고지(「…적용하지 않습니다」)는 싣지 않는다.
+ */
+export function prhpUnmetOtherExemptionNotice(
+  effectiveInput: TransferTaxInput,
+  exemption: Pick<OneHouseJudgment, "isExempt" | "isPartialExempt" | "exemptReason">,
+): string | undefined {
+  if (!exemption.isExempt && !exemption.isPartialExempt) return undefined;
+  const eligibility = judgeRentalHousingEligibility(effectiveInput);
+  if (!eligibility || eligibility.passed) return undefined;
+  const b = effectiveInput.rentalHousingException?.scenario === "B";
+  return (
+    `장기임대주택 거주주택 특례(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20})는 요건을 충족하지 못해 적용하지 않았습니다` +
+    (b ? `(${TRANSFER_RENTAL_HOUSING.PIT_RD_161_1} 안분도 적용하지 않았습니다)` : "") +
+    ` — ${rentalUnmetReasonText(eligibility)}. 임대주택을 세대 주택 수에 넣어 판정했고, 적용한 비과세는 「${exemption.exemptReason ?? "1세대1주택 비과세"}」입니다.`
+  );
 }
 
 /**
@@ -295,7 +313,8 @@ export function restoreRentalUnitsToHouseCount<T extends TransferTaxInput>(
     `장기임대주택 거주주택 특례(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20})가 ${cause} 임대주택 ${restore.units}호를 ` +
     `세대 주택 수에 넣어(${restored}주택) 계산했습니다 — 1세대1주택 비과세·12억 초과분 안분·장기보유특별공제 표2를 적용하지 않습니다` +
     (restore.scenario === "B" ? `(${TRANSFER_RENTAL_HOUSING.PIT_RD_161_1} 안분도 적용하지 않았습니다)` : "") +
-    `. 임대주택이 다른 특례(일시적 2주택 등)에 해당하면 임대주택을 포함한 주택 수로 직접 입력해야 판정합니다.` +
+    // F-1 Q-4 — 주택 수만으로는 일시적 2주택 등의 사실(신규 주택 취득일)이 실리지 않는다(명부 없음 + 주택 수 2 → 과세 그대로).
+    `. 임대주택이 다른 특례(일시적 2주택 등)에 해당하는지는 「보유 주택 목록」에 임대주택을 취득일과 함께 넣어야 판정합니다.` +
     (surcharge
       ? ` 다주택 중과 판정의 주택 수에도 임대주택 ${restore.units}호를 넣었습니다 — 임대주택이 중과에서 빠지는 장기임대주택인지는 ` +
         `${MULTI_HOUSE.LONG_TERM_RENTAL_EXCLUSION_BASIS} 요건으로 따로 판정했습니다.` +
@@ -418,6 +437,8 @@ export function prhpUnappliedExemptionNotice(
   exemption: Pick<OneHouseJudgment, "isExempt" | "isPartialExempt">,
 ): string | undefined {
   if (!isPrhpScenarioB(effectiveInput) || !(exemption.isExempt || exemption.isPartialExempt)) return undefined;
+  // 불성립은 `prhpUnmetOtherExemptionNotice`가 사유와 함께 단다(F-1) — 여기는 성립했으나 적용되지 않은 B(세대 구성 등)만.
+  if (judgeRentalHousingEligibility(effectiveInput)?.passed === false) return undefined;
   return (
     "장기임대주택 거주주택 특례(§155⑳) 요건 미충족 — 임대주택이 주택수에 산입될 수 있어 1세대1주택 전제(주택수 입력)를 재확인하세요. " +
     (exemption.isPartialExempt

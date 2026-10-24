@@ -89,14 +89,14 @@ describe("X1-1 B 불충족 — 임대주택을 주택 수에 되돌린다", () =
     expect(r.totalTax).toBe(baseline(1_000_000_000).totalTax);
     expect(r.totalTax).toBe(165_726_000); // 전 77,341,000(표2 60%)
   });
-  it("B-3 고지 — 임대 호수·주택 수·표2/안분 미적용·§161 미적용·다른 특례 직접 입력, 「일반 과세 경로로 계산되었습니다」는 쓰지 않는다", () => {
+  it("B-3 고지 — 임대 호수·주택 수·표2/안분 미적용·§161 미적용·다른 특례는 보유 주택 목록 입력, 「일반 과세 경로로 계산되었습니다」는 쓰지 않는다", () => {
     const r = calculateTransferTax(input(1_500_000_000, 1, [unit(CAP_FAIL)]), rates);
     const w = (r.warnings ?? []).find((x) => x.includes("세대 주택 수에 넣어")) ?? "";
     expect(w).toContain("임대주택 1호");
     expect(w).toContain("(2주택)");
     expect(w).toContain("12억 초과분 안분");
     expect(w).toContain("소득세법 시행령 §161① 안분도 적용하지 않았습니다");
-    expect(w).toContain("직접 입력해야 판정합니다");
+    expect(w).toContain("「보유 주택 목록」에 임대주택을 취득일과 함께 넣어야 판정합니다"); // F-1 Q-4 — 주택 수만으로는 판정되지 않는다
     expect(w).not.toContain("일반 과세 경로로 계산되었습니다");
   });
   it("B-4 ★ 긍정 짝 — 요건 충족(상한 이내)이면 §161① 안분 그대로 (세액 불변 · 되돌림 고지 없음)", () => {

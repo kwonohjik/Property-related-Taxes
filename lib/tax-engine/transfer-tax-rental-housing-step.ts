@@ -27,6 +27,7 @@ import {
   buildRentalPeriodPendingNotice,
   prhpSurchargeUnverifiedNotice,
   rentalResidenceConsolidationText,
+  rentalUnmetReasonText,
 } from "./transfer-tax-rental-housing-judge";
 import type {
   TransferTaxInput,
@@ -53,7 +54,6 @@ import { landRebuildNoticeOf } from "./transfer-tax-rebuild-notice";
 export {
   isPrhpScenarioB,
   judgeRentalHousingEligibility,
-  isPrhpScenarioAIneligible,
   buildRentalPeriodPendingNotice,
   rentalNoticesForEarlyReturn,
   canEarlyReturnPrhp,
@@ -264,12 +264,7 @@ export function runRentalHousingExceptionStep(
 
   // applied=false: 미적용 사유를 steps에 기록하여 결과 화면에서 노출 (침묵 실패 차단)
   if (!rhe.applied) {
-    const reasons = [
-      ...rhe.eligibility.residenceFailReasons,
-      ...rhe.eligibility.failReasons.map((r) => r.message),
-    ];
-    const reasonText =
-      reasons.length > 0 ? reasons.join(" · ") : "장기임대주택 거주주택 비과세 특례 요건 미충족";
+    const reasonText = rentalUnmetReasonText(rhe.eligibility);
     steps.push({
       label: "장기임대주택 거주주택 비과세 특례 — 적용 불가",
       formula: reasonText,

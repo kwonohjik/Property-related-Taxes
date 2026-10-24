@@ -10,8 +10,8 @@
  * 보유자가 임대주택을 명부에서 빼고 판정하면 — 특례가 주택 수에서 빼 주는 것이 전제이므로
  * 그게 정상 입력이다 — 임대 요건을 **하나도 보지 않은 채** 「1주택 → 비과세」가 나왔다.
  *
- * RH-3·RH-4가 그 구멍을 고정한다. 계산기의 `isPrhpScenarioAIneligible`(STEP 1a 조기반환
- * 억제)이 막고 있는 것과 **같은 over-exemption**이다.
+ * RH-3·RH-4가 그 구멍을 고정한다. 계산기의 STEP 0.96(`restoreRentalUnitsToHouseCount` — 판정 전
+ * 임대 호수 되돌림)이 막고 있는 것과 **같은 over-exemption**이다.
  */
 import { describe, it, expect } from "vitest";
 import { NextRequest } from "next/server";
