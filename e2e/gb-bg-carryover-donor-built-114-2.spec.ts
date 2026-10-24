@@ -213,4 +213,38 @@ test.describe("일반건물 부담부증여 × 이월과세 × 증여자 신축�
     const body = (await calculate(page)) as { generalBuildingShares?: Array<{ burdenedGiftInfo?: Wire["burdenedGiftInfo"] }> };
     expect(body.generalBuildingShares?.[0]?.burdenedGiftInfo?.carryoverDonorBasis?.donorBuilt).toBeUndefined();
   });
+  // ── PR-2(`docs/00-pm/gb-bg-carryover-presumed-scenario-b.plan.md`) — 감정가액(K-7) × 당초 증여자 신축·증축 ──
+  const K7 = {
+    bgAcquisitionMethod: "appraisal", bgCoDonorPresumedAcquisitionLand: "100000000", bgCoDonorPresumedAcquisitionBuilding: "200000000",
+    bgActualAcquisitionLand: "300000000", bgActualAcquisitionBuilding: "300000000",
+  };
+
+  test("GBBD-E7 K-7 신축: 토글이 보이고 · 가산세 5,000,000 = 안분 후 건물 감정가액 100,000,000 × 5% · 「감정가액」 라벨", async ({ page }) => {
+    test.setTimeout(180_000);
+    await seedWizard(page, seed([gbBgAsset(DONOR_BUILT_NEW, K7)]));
+    await expandAssetSection(page, 2);
+    await expect(page.getByTestId("donor-built-toggle")).toHaveCount(1);
+    const body = (await calculate(page)) as Wire;
+    expect(donorBuiltOf(body)).toEqual({ buildingType: "new", constructionDate: "2022-01-10" });
+    await expect(page.getByTestId("donor-built-penalty-card").first()).toHaveAttribute("data-applied", "true");
+    await expect(page.getByTestId("donor-built-penalty-line").first()).toHaveText("가산세 5,000,000 = 100,000,000 × 5%");
+    expect(num((await formRow(page, "가산세액"))[1])).toBe(5_000_000);
+    const stmt = await stmtText(page, "가산세액");
+    expect(stmt).toContain("감정가액");
+    expect(stmt).not.toContain("환산취득가액 가산세");
+    if (process.env.E2E_SHOT_DIR) await page.getByTestId("donor-built-penalty-card").first().scrollIntoViewIfNeeded().then(() => page.screenshot({ path: `${process.env.E2E_SHOT_DIR}/gbbd-e7-k7.png` }));
+  });
+
+  test("GBBD-E8 K-7 증축 UI 경로: 증축 → 바닥면적 → 「증축한 부분의 감정가액」 칸(증축 부분 기준시가 칸 없음) → 가산세 1,500,000", async ({ page }) => {
+    test.setTimeout(180_000);
+    await seedWizard(page, seed([gbBgAsset({ donorBuilt: true, donorBuiltType: "extension", donorBuiltDate: "2022-01-10", donorBuiltExtensionArea: "90" }, K7)]));
+    await expandAssetSection(page, 2);
+    await expect(page.getByTestId("donor-built-ext-std")).toHaveCount(0);
+    const ext = page.getByTestId("donor-built-ext-appraisal").first();
+    await expect(ext).toBeVisible();
+    await ext.fill("60000000");
+    const body = (await calculate(page)) as Wire & { burdenedGiftInfo?: { presumedExtensionAppraisalValue?: number } };
+    expect(body.burdenedGiftInfo?.presumedExtensionAppraisalValue).toBe(60_000_000);
+    await expect(page.getByTestId("donor-built-penalty-line").first()).toHaveText("가산세 1,500,000 = 30,000,000 × 5%");
+  });
 });

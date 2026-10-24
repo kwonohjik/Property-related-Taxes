@@ -3,7 +3,7 @@
  *
  * 숨긴 입력 = ④ 미전송 = ⑧ 미요구 (3중 패턴) — 세 곳이 같은 술어(`donorBuiltBgApplicable`/`donorBuiltBgActive`)를 읽는다.
  *  · PL-1 켜진 입력이 body(`burdenedGiftInfo.carryoverDonorBasis.donorBuilt`)에 실려 route 가 가산세를 낸다 — 토지 카드에는 붙지 않는다
- *  · PL-2 범위 밖(K-7 감정·건물 본인 신축·토글 OFF)에서 켜 둔 stale 토글은 보내지도 요구하지도 않는다
+ *  · PL-2 범위 밖(K-6 매매사례·건물 본인 신축·토글 OFF)에서 켜 둔 stale 토글은 보내지도 요구하지도 않는다 (K-7 감정은 PR-2 에서 범위 안)
  *  · PL-3 ⑧ 차단 사유(구분·신축일·범위·증축 칸)와 필드 앵커
  *  · PL-4 ⑧ ↔ ⑫ 격자 전수 — ⑧ 이 통과시킨 입력은 route(⑫·엔진)도 200
  *  · PL-5 지분 분할 취득(축 B)·함께 부담부증여(컴패니언) — ⑧ 이 토글을 끄라고 알리고, 켜진 채 body 에 실리면 ⑫ 가 거부한다
@@ -129,9 +129,9 @@ describe("PL-1 폼 → body → route", () => {
 });
 
 describe("PL-2 범위 밖 stale 토글 — 보내지도 요구하지도 않는다", () => {
-  it("술어: K-5 만 · 건물 본인 신축 아님 · 이월과세 · 부담부증여", () => {
+  it("술어: K-5·K-7(PR-2) · 건물 본인 신축 아님 · 이월과세 · 부담부증여", () => {
     expect(donorBuiltBgApplicable(gbAsset())).toBe(true);
-    expect(donorBuiltBgApplicable(gbAsset({ bgAcquisitionMethod: "appraisal" }))).toBe(false); // K-7 은 아직 열지 않는다(PR-2 — `gb-bg-carryover-presumed-scenario-b.plan.md`)
+    expect(donorBuiltBgApplicable(gbAsset({ bgAcquisitionMethod: "appraisal" }))).toBe(true); // K-7 은 PR-2(`gb-bg-carryover-presumed-scenario-b.plan.md`)에서 열었다 — 매매사례(K-6)는 §114조의2 대상이 아니다
     expect(donorBuiltBgApplicable(gbAsset({ bgAcquisitionMethod: "salesCase" }))).toBe(false);
     expect(donorBuiltBgApplicable(gbAsset({ bgAcquisitionMethod: "actual" }))).toBe(false);
     expect(donorBuiltBgApplicable(gbAsset({ gbBuildingAcquisitionCause: "newConstruction" }))).toBe(false);
@@ -141,7 +141,7 @@ describe("PL-2 범위 밖 stale 토글 — 보내지도 요구하지도 않는�
   });
 
   it.each([
-    ["K-7 감정", { bgAcquisitionMethod: "appraisal", bgCoDonorPresumedAcquisitionLand: "100,000,000", bgCoDonorPresumedAcquisitionBuilding: "200,000,000", bgActualAcquisitionLand: "300,000,000", bgActualAcquisitionBuilding: "300,000,000" }],
+    ["K-6 매매사례", { bgAcquisitionMethod: "salesCase", bgCoDonorPresumedAcquisitionLand: "100,000,000", bgCoDonorPresumedAcquisitionBuilding: "200,000,000", bgActualAcquisitionLand: "300,000,000", bgActualAcquisitionBuilding: "300,000,000" }],
     ["K-4 실지", { bgAcquisitionMethod: "actual", bgCoDonorActualAcquisitionLand: "100,000,000", bgCoDonorActualAcquisitionBuilding: "100,000,000", bgActualAcquisitionLand: "100,000,000", bgActualAcquisitionBuilding: "100,000,000" }],
     ["건물 본인 신축", { gbBuildingAcquisitionCause: "newConstruction", gbBuildingAcquisitionDate: "2022-01-10" }],
   ])("%s — 토글이 켜져 있어도 ④ 미전송 · ⑧ 이 신축일 칸을 요구하지 않는다", async (_n, over) => {

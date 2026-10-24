@@ -10,7 +10,7 @@
  * · 5년 기산 = 증여자 신축일(증축이면 완공일) · 이월과세 **A 채택일 때만**(B 채택·②1·2호·③ 배제면 0 + 중립 안내)
  * · ②3호 비교는 가산세 前 결정세액이라 가산세가 채택을 바꾸지 않는다
  * · 일반건물 부담부증여 지분(축 B)·함께 양도(컴패니언)는 F27 을 타지 않는다(이월과세 §97의2 자체가 반영되지 않는다) → ⑫ 가 donorBuilt 를 400 으로 거부한다
- * · K-7(감정)은 이 PR 에서 열지 않았다 — 당시 B 시나리오 400(별건)이었고 PR-1(`gb-bg-carryover-presumed-scenario-b.plan.md`)이 그것을 고쳤다. 개방은 PR-2
+ * · K-7(감정)은 이 PR 에서 열지 않았다 — 당시 B 시나리오 400(별건)이었고 PR-1(`gb-bg-carryover-presumed-scenario-b.plan.md`)이 그것을 고쳤고 PR-2 가 열었다
  *
  * ## 픽스처
  * 토지 100㎡×2,000,000(양도시 2억)·건물 양도시 2억 · 양도 2026-03-01 · 증여 등기 2024-05-01 · 당초 증여자 취득 2015-01-01 · 시가 10억 · 채무 5억(채무비율 0.5) →
@@ -207,15 +207,12 @@ describe("DB-3 B 채택 · 이월과세 배제 — 가산세 0 + 중립 안내 (
 });
 
 describe("DB-4 ⑫ 거부 — 400 (조용히 무시하지 않는다)", () => {
-  it("취득가액 산정방식이 K-5 가 아니면 거부 — K-4 실지 · K-1 기준시가 · K-7 감정(일반건물은 K-5 만)", async () => {
+  it("취득가액 산정방식이 K-5·K-7 이 아니면 거부 — K-4 실지 · K-1 기준시가 (K-7 감정은 PR-2 에서 받는다 — `transfer.route.gb-bg-carryover-k7-donor-built.anchor.test.ts`)", async () => {
     const k4 = await post(body(INFO({ donorBuilt: DB_NEW, actualAcquisitionTotal: 100_000_000 }, { acquisitionMethod: "actual", actualLandAcquisitionPrice: 100_000_000, actualBuildingAcquisitionPrice: 100_000_000 })));
     expect(k4.status).toBe(400);
     expect(fields(k4)).toContain("burdenedGiftInfo.carryoverDonorBasis.donorBuilt");
     const k1 = await post(body({ ...INFO({ donorBuilt: DB_NEW }), valuationMode: "sangjeungbeop_standard", acquisitionMethod: undefined }));
     expect(k1.status).toBe(400);
-    const k7 = await post(body(INFO({ donorBuilt: DB_NEW, presumedLandAcquisitionPrice: 100_000_000, presumedBuildingAcquisitionPrice: 200_000_000 }, { acquisitionMethod: "appraisal" })));
-    expect(k7.status).toBe(400);
-    expect(k7.errText).toContain("환산취득가액(K-5)");
   });
   it("양도인 본인 신축(buildingAcquisitionCause = newConstruction)과 동시 입력 거부 — 두 축 혼동 차단", async () => {
     const r = await post(body(withDb(DB_NEW), {}, { buildingAcquisitionCause: "newConstruction" }));

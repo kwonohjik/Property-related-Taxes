@@ -205,13 +205,11 @@ type BgOuterLike = {
 
 /**
  * 일반건물 부담부증여 × 증여자 신축·증축 (PR-5c) — 단건(F27: `general-building-route-carryover.ts`)만 받는다.
- * · 환산취득가액(K-5)만 — 감정가액(K-7)은 PR-2에서 연다(`gb-bg-carryover-presumed-scenario-b.plan.md` — 시나리오 B 400은 PR-1에서 해소) · 매매사례(K-6)는 §114조의2 대상이 아니다
+ * · 환산취득가액(K-5)·감정가액(K-7) — 방식 규칙은 위 공통 규칙이 본다(K-7 은 PR-2 `gb-bg-carryover-presumed-scenario-b.plan.md` 에서 열었다)
  * · 건물 취득원인이 본인 신축이면 가산세 축이 둘로 겹친다(양도인 신축 vs 증여자 신축) → 거부
  * · 지분 분할 취득(축 B)·함께 양도(컴패니언) 묶음은 이월과세 §97의2 를 타지 않아 받아 놓고 무시하게 된다 → 거부
  */
-function refineGbBgDonorBuilt(data: BgOuterLike, method: string | undefined, issue: (path: (string | number)[], message: string) => void): void {
-  if (method === "appraisal") // 그 밖의 방식(K-4·K-1~K-3·K-6)은 위 공통 규칙이 이미 거부한다
-    issue([], "일반건물 부담부증여의 증여자 신축·증축 가산세는 취득가액 산정방식이 환산취득가액(K-5)일 때만 적용됩니다 — 감정가액(K-7)은 아직 지원하지 않습니다");
+function refineGbBgDonorBuilt(data: BgOuterLike, issue: (path: (string | number)[], message: string) => void): void {
   if (!data.generalBuildingValuation) issue([], "일반건물 부담부증여의 증여자 신축·증축 정보는 일반건물 입력(generalBuildingValuation)과 함께 보내야 합니다");
   if (data.generalBuildingValuation?.buildingAcquisitionCause === "newConstruction")
     issue([], "일반건물 부담부증여에서 양도인 본인 신축(건물 취득 원인 newConstruction)과 당초 증여자 신축(donorBuilt)은 다른 축입니다 — 함께 보낼 수 없습니다");
@@ -235,7 +233,7 @@ export function refineBgDonorBuilt(data: BgOuterLike, ctx: z.RefinementCtx): voi
     issue([], "부담부증여의 증여자 신축·증축 가산세는 시가 모드의 취득가액 산정방식이 환산취득가액(K-5) 또는 감정가액(K-7)일 때만 적용됩니다");
   if (data.propertyType !== "housing" && data.propertyType !== "building" && data.propertyType !== "general_building")
     issue([], "증여자 신축·증축 가산세는 주택·건물·일반건물에만 적용됩니다");
-  if (data.propertyType === "general_building") refineGbBgDonorBuilt(data, method, issue);
+  if (data.propertyType === "general_building") refineGbBgDonorBuilt(data, issue);
   if (data.mixedUse) issue([], "겸용주택 부담부증여는 증여자 신축·증축 가산세를 아직 지원하지 않습니다");
   if (data.isSelfBuilt === true)
     issue([], "부담부증여에서 양도인 본인 신축(isSelfBuilt)과 당초 증여자 신축(donorBuilt)은 다른 축입니다 — 함께 보낼 수 없습니다");
