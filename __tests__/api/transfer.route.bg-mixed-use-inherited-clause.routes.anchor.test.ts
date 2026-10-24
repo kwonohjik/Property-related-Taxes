@@ -55,7 +55,7 @@ const MIXED: Loose = {
   bgMortgageAttribution: "unallocated",
   bgAcquisitionMethod: "",
 };
-/** 1995 상속 · PHD 없음 · 취득시 개별주택가격 3억(② 주택분) · 상가 토지 2.5억 + 건물 5천만(② 상가분) */
+/** 1995 상속 · PHD 없음 · 취득시 개별주택가격 3억 직접 입력 — R-1(2026-10-24) 이후 단서 구간 비교에서는 막힌다(C-8). 상가 토지 2.5억 + 건물 5천만 */
 const Y95: Loose = {
   acquisitionDate: "1995-03-15",
   inheritanceStartDate: "1995-03-15",
@@ -128,39 +128,39 @@ const beforeRatio = (bg: Loose | undefined, side: "housing" | "commercial") =>
   (bg?.perPart?.[`${side}Land`]?.acquisitionBeforeRatio ?? 0) + (bg?.perPart?.[`${side}Building`]?.acquisitionBeforeRatio ?? 0);
 
 describe("PR-7b-7a-2 · 단서 구간(1985.1.1.~2005.4.29.) — 채무비율 전 자산 합계 비교", () => {
-  it("[C-1] 1995 상속 · ① 3.5억씩(7억) vs ② 3억 + 3억(6억) → ① 채택 · 부분별 × 0.4 · 64,230,000 (종전 MB-18 400)", async () => {
-    const r = await run(form({ ...Y95, ...RV("350000000", "350000000") }));
+  it("[C-1] 1995 상속 · PHD · ① 3.5억씩(7억) vs ②(§164⑦ 128,048,780 + 상가 1.1억) → ① 채택 · 부분별 × 0.4 · 64,230,001 (종전 MB-18 400 · R-1 전에는 ② 주택분이 직접 입력 3억이라 64,230,000)", async () => {
+    const r = await run(form({ ...PHD, ...Y95_PHD, ...RV("350000000", "350000000") }));
     expect(r.issues).toEqual([]);
     expect(r.status).toBe(200);
     expect(r.body.mixedUse.sec163_9Compare).toEqual({ era: "clause", cause: "inheritance" });
     expect(r.cmp?.selected).toBe("reported");
     expect(r.cmp?.reported).toEqual({ housing: 350_000_000, commercial: 350_000_000, total: 700_000_000 });
-    expect(r.cmp?.standard).toEqual({ housing: 300_000_000, commercial: 300_000_000, total: 600_000_000 });
-    expect(r.bg?.deemedBasis).toEqual({ housing: "reported", commercial: "reported", housingPhd: false });
+    expect(r.cmp?.standard).toEqual({ housing: 128_048_780, commercial: 110_000_000, total: 238_048_780 });
+    expect(r.bg?.deemedBasis).toEqual({ housing: "reported", commercial: "reported", housingPhd: true });
     expect(r.housingAcq).toBe(139_999_999);
     expect(r.commercialAcq).toBe(139_999_999);
-    expect(r.tax).toBe(64_230_000);
+    expect(r.tax).toBe(64_230_001); // 취득가액은 같고 토지·건물 몫 비율(§164⑦ 입력)이 달라 1원 차
   });
 
-  it("[C-2] ① 1억씩(2억) < ②(6억) → ② 채택(§164 기준시가) · 120,000,000씩 · 74,870,000", async () => {
-    const r = await run(form({ ...Y95, ...RV("100000000", "100000000") }));
+  it("[C-2] PHD · ① 1억씩(2억) < ②(238,048,780) → ② 채택(주택 §164⑦ · 상가 §164 기준시가) × 0.4 · 114,398,536 (R-1 전 직접 입력 3억 시료는 74,870,000)", async () => {
+    const r = await run(form({ ...PHD, ...Y95_PHD, ...RV("100000000", "100000000") }));
     expect(r.issues).toEqual([]);
     expect(r.cmp?.selected).toBe("standard");
-    expect(r.bg?.deemedBasis).toEqual({ housing: "standard", commercial: "standard", housingPhd: false });
-    expect(beforeRatio(r.bg, "housing")).toBe(300_000_000);
-    expect(r.housingAcq).toBe(120_000_000);
-    expect(r.tax).toBe(74_870_000);
+    expect(r.bg?.deemedBasis).toEqual({ housing: "standard", commercial: "standard", housingPhd: true });
+    expect(beforeRatio(r.bg, "housing")).toBe(128_048_780);
+    expect(r.housingAcq).toBe(51_219_512);
+    expect(r.tax).toBe(114_398_536);
   });
 
-  it("[C-3] 1995 증여 — 같은 비교(cause=gift) · ② 채택 74,870,000", async () => {
+  it("[C-3] 1995 증여 · PHD — 같은 비교(cause=gift) · ② 채택 114,398,536(C-2와 같은 세액)", async () => {
     const r = await run(form({
-      ...Y95, acquisitionCause: "gift", donorAcquisitionDate: "1980-01-01", giftDonorRelation: "lineal_ascendant", giftSameHousehold: "no",
+      ...PHD, ...Y95_PHD, acquisitionCause: "gift", donorAcquisitionDate: "1980-01-01", giftDonorRelation: "lineal_ascendant", giftSameHousehold: "no",
       mixedHousingGiftValueOverride: "100000000", mixedCommercialGiftValueOverride: "100000000",
     }));
     expect(r.issues).toEqual([]);
     expect(r.cmp?.cause).toBe("gift");
     expect(r.cmp?.selected).toBe("standard");
-    expect(r.tax).toBe(74_870_000);
+    expect(r.tax).toBe(114_398_536);
   });
 
   it("[C-4] 🔑 Q-36 — 채무가 상가에만 귀속(주택 채무비율 0)이어도 채무비율 전 합계로 비교한다: ① 9.5억 > ② 2.38억 → ① · 상가분 0.5억 × 0.8 = 39,999,999 (곱한 뒤 비교였다면 ② 88,000,000)", async () => {
@@ -189,17 +189,34 @@ describe("PR-7b-7a-2 · 단서 구간(1985.1.1.~2005.4.29.) — 채무비율 전
   });
 
   it("[C-6] 평가액 한 칸만 — ⑧ 빈 상가분 칸 · API 400(짝 규칙 · PR-6 Q-19)", async () => {
-    const r = await run(form({ ...Y95, ...RV("350000000", "") }));
+    const r = await run(form({ ...PHD, ...Y95_PHD, ...RV("350000000", "") }));
     expect(r.issues[0]?.field).toBe("mixedCommercialInheritedValueOverride");
     expect(r.issues[0]?.message).toMatch(/두 칸 모두 입력하거나 모두 비워야/);
     expect(r.status).toBe(400);
   });
 
-  it("[C-8] PHD 없이 취득시 개별주택가격을 비우면 — ⑧이 그 칸으로(§164⑦ 토글 안내) · API 400 (종전: ⑧ 통과 → 500 · 리뷰 권고)", async () => {
-    const r = await run(form({ ...Y95, ...RV("350000000", "350000000"), mixedAcqHousingPrice: "" }));
-    expect(r.issues[0]?.field).toBe("mixedAcqHousingPrice");
-    expect(r.issues[0]?.message).toMatch(/개별주택가격 미공시\(§164⑦\) 토글/);
-    expect(r.status).toBe(400);
+  it("[C-8] 🔴 PHD 없음 — 취득시 개별주택가격을 직접 넣어도·비워도 ⑧이 §164⑦ 토글로 · API 400 (사용자 결정 R-1 · 종전: 직접 입력 3억이면 ② 주택분으로 써서 64,230,000, 비우면 ⑧ 통과 → 500)", async () => {
+    for (const housing of ["300000000", ""]) {
+      const r = await run(form({ ...Y95, ...RV("350000000", "350000000"), mixedAcqHousingPrice: housing }));
+      expect(r.issues[0]?.field).toBe("usePreHousingDisclosure");
+      expect(r.issues[0]?.message).toMatch(/개별주택가격 미공시\(§164⑦\) 토글을 켜고/);
+      expect(r.status).toBe(400);
+      expect(r.fieldErrors?.["mixedUse.usePreHousingDisclosure"]?.[0]).toMatch(/§164⑦ 환산가액/);
+    }
+  });
+
+  it("[C-9] 🔴 1988 상속 · PHD · 토지등급 환산(§164④) — ⑧이 겸용 화면에 없는 「§164⑤~⑦ 8개 항목」 칸으로 막지 않는다 · ② × 0.4", async () => {
+    const r = await run(form({
+      ...PHD, ...Y95_PHD, acquisitionDate: "1988-05-01", inheritanceStartDate: "1988-05-01",
+      mixedAcqLandPricePerSqm: "", phdLandPricePerSqmAtAcq: "",
+      pre1990Enabled: true, pre1990GradeMode: "number", pre1990Grade_current: "150", pre1990Grade_prev: "148", pre1990Grade_atAcq: "140", pre1990PricePerSqm_1990: "1000000",
+      ...RV("", ""),
+    }));
+    expect(r.issues).toEqual([]);
+    expect(r.status).toBe(200);
+    expect(r.body.mixedUse.acquisitionStandardPrice.landPricePerSqm).toBe(643_302);
+    expect(r.cmp?.selected).toBe("standard");
+    expect(r.tax).toBe(118_293_820);
   });
 
   it("[C-7] API 직접: 비교 구간 표시(sec163_9Compare) 없이 오면 계속 막는다(MB-18 · fail closed)", async () => {

@@ -117,6 +117,8 @@ describe("의제취득일(1985.1.1.) 전 — max(Σ①, Σ②, Σ③)", () => {
       converted: tot(413_793_103, 206_896_551),
     });
     expect(res.total.determinedTax).toBe(676_747_759);
+    // R-1(PHD 필수)은 단서 구간만 — 의제취득일 전은 PR-7b-7b 범위라 PHD 없이도 막지 않는다
+    expect(r.issues.join()).not.toMatch(/§164⑦ 환산가액/);
   });
 
   it("🔴 1980 상속 · ① 비움 → 「확인할 수 없음」 선언을 요구하지 않는다(종전: 겸용 ① 칸을 못 읽어 늘 요구)", async () => {
@@ -177,12 +179,29 @@ describe("의제취득일(1985.1.1.) 전 — max(Σ①, Σ②, Σ③)", () => {
 });
 
 describe("1985 이후 개별주택가격 공시 전 — max(Σ①, Σ②) (Q-18 · Q-21)", () => {
-  it("🔴 1990 상속 · ① 3억+1억 < Σ② 6억 → ② 채택 · 751,935,000 → 688,935,000 (종전 ①만)", async () => {
+  it("🔴 1990 상속 · PHD 없이 취득시 개별주택가격 4억 직접 입력 → ⑧·⑫ 모두 §164⑦ 토글로 막는다(사용자 결정 R-1 · 종전: ② = 직접 입력 4억 채택 688,935,000)", async () => {
     const r = await run(form(asset(Y1990, inh("300000000", "100000000"))));
-    expect(r.issues.filter((m) => ACQ_ISSUE.test(m))).toEqual([]);
-    const res = r.json.data.result;
-    expect(res.sec163_9Comparison).toMatchObject({ era: "clause", selected: "standard", converted: null });
-    expect(res.total.determinedTax).toBe(688_935_000);
+    expect(r.issues.join()).toMatch(/개별주택가격 공시\(2005\.4\.30\.\) 전에 상속받은 주택분의 취득당시 기준시가는 §164⑦ 환산가액/);
+    expect(r.status).toBe(400);
+    expect(r.json.error.fieldErrors["mixedUse.usePreHousingDisclosure"][0]).toMatch(/§164⑦ 환산가액/);
+  });
+
+  it("🔴 1990 상속 · PHD 없이 ① 3억+1억 · 개별주택가격 비움 → 400(종전: ⑧ 통과 → API 500)", async () => {
+    const r = await run(form(asset(Y1990, inh("300000000", "100000000"), { mixedAcqHousingPrice: "" } as Partial<AssetForm>)));
+    expect(r.issues.join()).toMatch(/§164⑦ 환산가액/);
+    expect(r.status).toBe(400);
+  });
+
+  it("🔴 1990 상속 PHD · 최초 고시일을 상속개시일 전으로 잘못 넣으면 고시일을 고치라고 안내한다(종전: 「3-시점 환산을 끄고 직접 입력」 — 끄면 R-1이 막아 순환)", async () => {
+    const r = await run(form(asset(PHD, Y1990, inh("100000000", "100000000"), { phdFirstDisclosureDate: "1989-01-01" } as Partial<AssetForm>)));
+    expect(r.issues.join()).toMatch(/개별주택가격은 2005\.4\.30\.에 처음 공시되었으므로/);
+    expect(r.issues.join()).not.toMatch(/3-시점 환산을 끄고/);
+  });
+
+  it("1990 증여 · PHD 없음 → 같은 차단(⑧ 「증여받은」)", async () => {
+    const r = await run(form(asset(Y1990, GIFT, { mixedHousingGiftValueOverride: "300000000", mixedCommercialGiftValueOverride: "100000000" } as Partial<AssetForm>)));
+    expect(r.issues.join()).toMatch(/전에 증여받은 주택분의 취득당시 기준시가는 §164⑦ 환산가액/);
+    expect(r.status).toBe(400);
   });
 
   it("🔴 1990 상속 PHD · ① 1억+1억 → 자산 합계 ② 채택 · 상가분도 ②(2억) · 740,595,000 → 709,095,000 (종전 파트별: 주택 ② · 상가 ①)", async () => {
@@ -193,16 +212,17 @@ describe("1985 이후 개별주택가격 공시 전 — max(Σ①, Σ②) (Q-18 
     expect(res.total.determinedTax).toBe(709_095_000);
   });
 
-  it("🔴 2003 상속 · ① 1억+1억 → 상가분은 건물 기준시가 고시(2001.1.1.) 뒤라 단서 밖 — ② 후보의 상가분도 ①(1억) · 주택분만 ②(4억)로 (리뷰 F2 · Q-22)", async () => {
-    const r = await run(form(asset({ acquisitionDate: "2003-03-01", inheritanceStartDate: "2003-03-01" } as Partial<AssetForm>, inh("100000000", "100000000"))));
+  it("🔴 2003 상속 PHD · ① 1억+1억 → 상가분은 건물 기준시가 고시(2001.1.1.) 뒤라 단서 밖 — ② 후보의 상가분도 ①(1억) · 주택분만 ②(§164⑦)로 (리뷰 F2 · Q-22)", async () => {
+    // R-1 — 주택분 ②는 §164⑦(PHD) 336,000,000(종전 직접 입력 4억)
+    const r = await run(form(asset(PHD, { acquisitionDate: "2003-03-01", inheritanceStartDate: "2003-03-01" } as Partial<AssetForm>, inh("100000000", "100000000"))));
     const res = r.json.data.result;
-    expect(res.sec163_9Comparison).toMatchObject({ era: "clause", commercialOutsideClause: true, selected: "standard", standard: tot(400_000_000, 100_000_000) });
-    expect(res.housingPart.estimatedAcquisitionPrice).toBe(400_000_000);
+    expect(res.sec163_9Comparison).toMatchObject({ era: "clause", commercialOutsideClause: true, selected: "standard", standard: tot(336_000_000, 100_000_000) });
+    expect(res.housingPart.estimatedAcquisitionPrice).toBe(336_000_000);
     expect(res.commercialPart.estimatedAcquisitionPrice).toBe(100_000_000);
   });
 
-  it("2000-12-31 상속 → 상가분도 단서 안 — ② 후보 상가분 2억", async () => {
-    const r = await run(form(asset({ acquisitionDate: "2000-12-31", inheritanceStartDate: "2000-12-31" } as Partial<AssetForm>, inh("100000000", "100000000"))));
+  it("2000-12-31 상속 PHD → 상가분도 단서 안 — ② 후보 상가분 2억", async () => {
+    const r = await run(form(asset(PHD, { acquisitionDate: "2000-12-31", inheritanceStartDate: "2000-12-31" } as Partial<AssetForm>, inh("100000000", "100000000"))));
     const res = r.json.data.result;
     expect(res.sec163_9Comparison.commercialOutsideClause).toBeUndefined();
     expect(res.commercialPart.estimatedAcquisitionPrice).toBe(200_000_000);
@@ -215,14 +235,83 @@ describe("1985 이후 개별주택가격 공시 전 — max(Σ①, Σ②) (Q-18 
   });
 });
 
+describe("🔴 1985.1.1.~1990.8.29. 상속 × PHD × 토지등급 환산(§164④) — 화면 막다른 길 해소", () => {
+  // 그날 전에는 개별공시지가가 없어 취득시 ㎡당 가액은 PHD 패널의 토지등급 환산에서 온다(직접 칸 비움).
+  const Y1988 = {
+    acquisitionDate: "1988-05-01",
+    inheritanceStartDate: "1988-05-01",
+    mixedAcqLandPricePerSqm: "",
+    phdLandPricePerSqmAtAcq: "",
+    pre1990Enabled: true,
+    pre1990GradeMode: "number",
+    pre1990Grade_current: "150",
+    pre1990Grade_prev: "148",
+    pre1990Grade_atAcq: "140",
+    pre1990PricePerSqm_1990: "1000000",
+  } as Partial<AssetForm>;
+
+  it("① 1억+1억 → ⑧ 통과(종전: 겸용 화면에 없는 「§164⑤~⑦ 8개 항목」 칸으로 막음) · ②(§164⑦ + 상가) 채택", async () => {
+    const r = await run(form(asset(PHD, Y1988, inh("100000000", "100000000"))));
+    expect(r.issues.join()).not.toMatch(/8개 항목/);
+    expect(r.issues.filter((m) => ACQ_ISSUE.test(m))).toEqual([]);
+    expect(r.status, JSON.stringify(r.json.error)).toBe(200);
+    expect((r.body.mixedUse as { acquisitionStandardPrice: { landPricePerSqm: number } }).acquisitionStandardPrice.landPricePerSqm).toBe(643_302);
+    const res = r.json.data.result;
+    expect(res.sec163_9Comparison).toMatchObject({ era: "clause", selected: "standard" });
+    expect(res.housingPart.estimatedAcquisitionPrice).toBe(291_464_160);
+    expect(res.commercialPart.estimatedAcquisitionPrice).toBe(144_330_200);
+    expect(res.total.determinedTax).toBe(740_659_777);
+  });
+
+  it("① 비움 → ⑧ 통과(종전: 상가분 「개별공시지가」를 직접 칸만 봐서 막음 — ④는 등급 환산 값을 보낸다) · 같은 ② 채택", async () => {
+    const r = await run(form(asset(PHD, Y1988)));
+    expect(r.issues.filter((m) => ACQ_ISSUE.test(m))).toEqual([]);
+    expect(r.status, JSON.stringify(r.json.error)).toBe(200);
+    expect(r.json.data.result.sec163_9Comparison).toMatchObject({ reported: null, selected: "standard" });
+    expect(r.json.data.result.total.determinedTax).toBe(740_659_777);
+  });
+
+  it("🔴 짝: 토지등급 4칸 중 하나를 비우면 ⑧이 막는다(PHD 취득시 공시지가 없음)", async () => {
+    const r = await run(form(asset(PHD, Y1988, inh("100000000", "100000000"), { pre1990Grade_atAcq: "" } as Partial<AssetForm>)));
+    expect(r.issues.length).toBeGreaterThan(0);
+    expect(r.issues.join()).not.toMatch(/8개 항목/);
+  });
+});
+
+describe("🔴 상속 PHD × 공통 자본적지출·양도비 — 주택분 몫도 공제한다(§100② 후문 · 리뷰 게이트 2026-10-24)", () => {
+  const CX = { capitalExpenditure: "60000000", transferExpense: "20000000" } as Partial<AssetForm>;
+  const ded = (p: { landAppraisalDed: number; buildingAppraisalDed: number }) => p.landAppraisalDed + p.buildingAppraisalDed;
+
+  it("1990 상속 PHD · ① 1억+1억 · 자본적지출 6천만 + 양도비 2천만 → 주택분·상가분 몫의 합 8천만 · 687,203,276 → 683,895,000 (종전: 주택분 공제 0 · 합 68,965,518 — 주택분 양도비 몫 11,034,482 소실)", async () => {
+    const r = await run(form(asset(PHD, Y1990, inh("100000000", "100000000"), CX)));
+    expect(r.status, JSON.stringify(r.json.error)).toBe(200);
+    const res = r.json.data.result;
+    expect(ded(res.housingPart)).toBe(48_646_422);
+    expect(ded(res.housingPart) + ded(res.commercialPart)).toBe(80_000_000);
+    expect(res.total.determinedTax).toBe(683_895_000);
+  });
+
+  it("숨은 직접 칸(취득시 개별주택가격)에 남은 값이 있어도 같은 세액(종전: 공통 자본적지출 안분 축을 흔들어 숨은 값 9억이면 702,834,499)", async () => {
+    const base = (await run(form(asset(PHD, Y1990, inh("100000000", "100000000"), CX)))).json.data.result.total.determinedTax;
+    const stale = (await run(form(asset(PHD, Y1990, inh("100000000", "100000000"), CX, { mixedAcqHousingPrice: "900000000" } as Partial<AssetForm>)))).json.data.result.total.determinedTax;
+    expect(stale).toBe(base);
+  });
+
+  it("1990 증여 PHD — 같은 규칙", async () => {
+    const r = await run(form(asset(PHD, Y1990, GIFT, { mixedHousingGiftValueOverride: "100000000", mixedCommercialGiftValueOverride: "100000000" } as Partial<AssetForm>, CX)));
+    const res = r.json.data.result;
+    expect(ded(res.housingPart) + ded(res.commercialPart)).toBe(80_000_000);
+  });
+});
+
 describe("🔴 공유지분 — ② 기준시가 후보도 지분분이다(리뷰 F1 · ①·③과 같은 축)", () => {
   const HALF = { ownershipNumerator: "1", ownershipDenominator: "2" } as Partial<AssetForm>;
 
-  it("1990 상속 1/2 · ① 비움 → ② 지분분 주택 2억 + 상가 1억 (종전: 물건 전체 4억 + 2억)", async () => {
-    const r = await run(form(asset(HALF, Y1990)));
+  it("1990 상속 PHD 1/2 · ① 비움 → ② 지분분 주택 §164⑦ 168,000,000 + 상가 1억 (종전: 물건 전체 · R-1 전에는 직접 입력 주택 4억의 지분분 2억)", async () => {
+    const r = await run(form(asset(HALF, PHD, Y1990)));
     expect(r.status, JSON.stringify(r.json.error)).toBe(200);
     const res = r.json.data.result;
-    expect(res.housingPart.estimatedAcquisitionPrice).toBe(200_000_000);
+    expect(res.housingPart.estimatedAcquisitionPrice).toBe(168_000_000);
     expect(res.commercialPart.estimatedAcquisitionPrice).toBe(100_000_000);
   });
 

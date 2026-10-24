@@ -270,10 +270,10 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   if (isHousingPriceAtAcqRequired({ usePhd: phd, byInheritanceOrGift: deemedPath })) {
     need(pos(acqHousing), "취득시 개별주택가격", ["mixedUse", "acquisitionStandardPrice", "housingPrice"]);
   }
-  // 단서 구간 비교(PHD 없음) — ② 후보의 주택분은 취득시 개별주택가격이다. 평가액(①)이 있어도 ② 후보 계산에 필요하다(없으면 비교가 멈춘다 · 리뷰 권고 PR-7b-7a-2).
-  //   2005.4.30. 전에는 개별주택가격이 공시되지 않았으므로 §164⑦ 환산(PHD)을 켜는 것이 정본 경로다 — 문구가 그쪽을 먼저 안내한다.
-  if (deemedPath && clauseCompare && src.inheritedValuesAsIs !== true && !phd && !pos(acqHousing)) {
-    add("MB-11", "겸용주택 부담부증여: 개별주택가격 공시 전에 상속·증여받은 주택분은 상속개시일·증여일 평가액과 §164 가액 중 큰 금액을 씁니다(소득세법 시행령 §163⑨ 단서 제2호) — 「주택 기준시가」의 개별주택가격 미공시(§164⑦) 토글을 켜고 환산 입력을 채우거나, 취득시 개별주택가격을 입력하세요.", ["mixedUse", "acquisitionStandardPrice", "housingPrice"]);
+  // 단서 구간 비교 — 2005.4.30. 전에는 개별주택가격이 공시되지 않았으므로 ② 후보의 주택분(취득당시 기준시가)은 §164⑦ 환산가액뿐이다(「계산한 가액으로 한다」).
+  //   직접 입력한 「취득시 개별주택가격」은 받지 않는다 — PHD 필수(사용자 결정 R-1, 2026-10-24 · ⑫ `transfer-tax-schema-mixed-use.ts` 거울).
+  if (deemedPath && src.sec163_9Compare?.era === "clause" && !phd) {
+    add("MB-11", "겸용주택 부담부증여: 개별주택가격 공시(2005.4.30.) 전에 상속·증여받은 주택분의 취득당시 기준시가는 §164⑦ 환산가액입니다(소득세법 시행령 §164⑦·§163⑨ 단서 제2호) — 「주택 기준시가」의 개별주택가격 미공시(§164⑦) 토글을 켜고 환산 입력을 채우세요.", ["mixedUse", "usePreHousingDisclosure"]);
   }
   if (
     as && isBuildingDayLandPriceRequired({

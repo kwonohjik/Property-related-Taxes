@@ -208,6 +208,11 @@ export const mixedUseAssetSchema = z.object({
   ) {
     ctx.addIssue({ code: "custom", message: "상속·증여 겸용주택은 주택분 평가액(신고가액) 또는 취득시 개별주택가격이 필요합니다 (소득세법 시행령 §163⑨)", path: ["housingInheritedValue"] });
   }
+  // §163⑨ 단서 구간(2005.4.30. 전 상속·증여) — 주택분 ②(취득당시 기준시가)는 §164⑦ 환산가액뿐이라 PHD가 필수다(사용자 결정 R-1, 2026-10-24).
+  //   종전에는 직접 입력한 개별주택가격을 ②로 썼고, 그 칸이 비면 엔진이 던졌다(500). ⑧ `validateMixedUseInheritanceAsset`·엔진 MB-11(부담부증여) 거울.
+  if (v.sec163_9Compare?.era === "clause" && v.usePreHousingDisclosure !== true) {
+    ctx.addIssue({ code: "custom", message: "개별주택가격 공시(2005.4.30.) 전에 상속·증여받은 겸용주택의 주택분 취득당시 기준시가는 §164⑦ 환산가액입니다 — 개별주택가격 미공시(§164⑦) 환산 입력이 필요합니다 (소득세법 시행령 §164⑦·§163⑨ 단서 제2호)", path: ["usePreHousingDisclosure"] });
+  }
   // §163⑨ 단서 자산 합계 비교(PR-6) — ① 평가액은 주택분·상가분을 모두 넣거나 모두 비운다(Q-19).
   // 의제취득일 전 증여는 ①(증여 신고가액)이 필수다(Q-16 — 일반 증여 Q-14와 같다). ⑧ `mixedSec163_9ReportedError` 거울.
   if (v.sec163_9Compare) {

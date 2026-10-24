@@ -14,6 +14,8 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { fieldError } from "./transfer-tax-validate-field";
 import { mixedSec163_9CompareOf } from "./mixed-use-sec163-9";
+import { mixedAcqCommercialBuildingStd } from "./mixed-use-std-fallback";
+import { mixedAcqLandPricePerSqm } from "./mixed-use-std-fallback";
 
 /**
  * 상속·증여 취득 겸용주택 §163⑨ 검증. `acquisitionCause`가 inheritance·gift가 아니면 즉시 null.
@@ -23,6 +25,7 @@ import { mixedSec163_9CompareOf } from "./mixed-use-sec163-9";
 export function validateMixedUseInheritanceAsset(
   asset: AssetForm,
   label: string,
+  formTransferDate?: string,
 ): string | null {
   const isInheritance = asset.acquisitionCause === "inheritance";
   const isGift = asset.acquisitionCause === "gift";
@@ -63,6 +66,11 @@ export function validateMixedUseInheritanceAsset(
     }
   }
 
+  // §163⑨ 단서 구간 — 2005.4.30. 전에는 개별주택가격이 없어 주택분 ②는 §164⑦ 환산가액뿐이다. PHD 필수(사용자 결정 R-1 · ⑫ 거울).
+  if (cmp?.era === "clause" && !asset.usePreHousingDisclosure) {
+    return fieldError("usePreHousingDisclosure", `${label}: 개별주택가격 공시(2005.4.30.) 전에 ${kindLabel}받은 주택분의 취득당시 기준시가는 §164⑦ 환산가액입니다 — 「주택 기준시가」의 개별주택가격 미공시(§164⑦) 토글을 켜고 환산 입력을 채우세요 (소득세법 시행령 §164⑦·§163⑨ 단서 제2호).`);
+  }
+
   // 주택분 — PHD ON이면 PHD 자체 필수 검증이 이미 개별주택가격을 커버 → override는 항상 optional.
   // PHD OFF일 때만 override||기존필드 필수.
   if (!asset.usePreHousingDisclosure) {
@@ -78,8 +86,8 @@ export function validateMixedUseInheritanceAsset(
     : parseAmount(asset.mixedCommercialInheritedValueOverride);
   const commercialValue =
     commercialOverride ||
-    (parseAmount(asset.mixedAcqCommercialBuildingPrice) > 0 &&
-    parseAmount(asset.mixedAcqLandPricePerSqm) > 0
+    // ④ 페이로드와 같은 fallback leaf — 1990.8.30. 전 상속은 취득시 공시지가가 토지등급 환산(PHD 패널)에서 온다. 직접 칸만 보면 ④는 보내는데 ⑧이 막았다.
+    (mixedAcqCommercialBuildingStd(asset) > 0 && mixedAcqLandPricePerSqm(asset, formTransferDate ?? "") > 0
       ? 1 // 존재 플래그 — 실제 합계는 엔진이 재계산 (dual-truth 회피, feedback_ui_engine_dual_truth_avoidance)
       : 0);
   if (commercialValue <= 0) {
