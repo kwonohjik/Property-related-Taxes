@@ -288,6 +288,12 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
               ))}
             </ul>
           )}
+          {/* F-1 Q-3 — 불성립이어도 명부의 임대주택을 센 판정이 다른 특례(일시적 2주택 등)로 비과세를 냈다(엔진이 거두지 않은 경우만). */}
+          {!rental.passed && (judgment.isExempt || judgment.isPartialExempt) && (
+            <p className="text-sm" data-testid="one-house-rental-other-exemption">
+              임대주택을 세대 주택 수에 넣어 판정했고, 적용한 비과세는 <b>「{judgment.exemptReason ?? "1세대1주택 비과세"}」</b>입니다.
+            </p>
+          )}
           {/* §155㉑로 통과한 호 — ㉒ 사후 추징 대상임을 반드시 알린다(충족이라고 끝이 아니다). */}
           {rental.periodPendingUnitIndexes.length > 0 && (
             <p className="text-sm" data-testid="one-house-rental-period-pending">

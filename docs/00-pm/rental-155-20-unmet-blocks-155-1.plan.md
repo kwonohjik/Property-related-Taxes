@@ -280,3 +280,33 @@ export function canEarlyReturnPrhp(effectiveInput: TransferTaxInput): boolean {
   - 계산기 STEP 2.5 「적용 불가」 경로(`transfer-tax-rental-housing-step.ts` — 「미적용 경로에서도 보여야 한다」)
   - 판정 메뉴 카드(불성립 카드 안에 표시)
 - ⇒ 불성립에서 빼는 것은 「…특례를 적용했습니다」라고 말하는 ㉒ 사후 추징 안내뿐이다. UO-6은 확인 필요 고지 **유지**로 바꿨고, UO-6b를 추가했다.
+
+## 12. PR-2 구현 — 판정 메뉴 (2026-10-24 · Q-3 (a))
+
+- **D-4** `applyRentalHousingVerdict(judgment, verdict, rosterCountsRental)`:
+  - 호별·거주 요건 불성립이면서 명부에 「장기임대」 행이 있으면 비과세를 거두지 않는다.
+  - 세대 구성 불성립(`compositionFailReason` — D12 · 3중첩 등)은 계산기 D12처럼 그대로 거둔다.
+- **술어 단일화:** `rosterCountsRentalUnits`(`transfer-tax-rental-housing-judge.ts` 신규 export)를 판정 메뉴 파이프라인(`judgment-pipeline.ts`)과 계산기 STEP 0.96(`rentalUnitsToRestore`)이 함께 쓴다.
+- **결과 카드:** §155⑳ 카드는 불성립인데 판정이 비과세·부분 비과세이면 「임대주택을 세대 주택 수에 넣어 판정했고, 적용한 비과세는 「…」입니다」 한 줄을 더한다(`data-testid="one-house-rental-other-exemption"`). 계산기 불성립 고지와 같은 문형이다. 「요건 미충족 — 특례가 적용되지 않습니다」는 §155⑳ 자체의 결론이라 그대로 둔다.
+- **⑧ 경고:** 「명부에 다시 넣지 마세요(이중 계상)」 뒤에 처방을 덧붙였다. 「요건을 갖추지 못한 경우 … 명부에 취득일과 함께 넣고 「장기임대 등록주택」으로 표시하세요」(명부 토글 이름 그대로).
+- **anchor** `__tests__/calc/rental-155-20-unmet-menu.anchor.test.tsx` UO-8a~e (5건):
+
+  | # | 내용 |
+  |---|---|
+  | 8a | 메뉴 비과세 + 카드 한 줄 + 핸드오프 계산기 비과세 |
+  | 8b | 명부 없음 → 과세 불변 |
+  | 8c | 표시 없는 행 → 과세 불변 |
+  | 8d | ⑧ 처방 |
+  | 8e | 세대 구성 불성립은 거둠 · 호별만 유지 |
+
+- **E2E** `e2e/rental-155-20-unmet-menu.spec.ts` UOE-2와 기존 판정 메뉴 §155⑳ spec(OHR-1~6)이 통과했다. 결과 화면을 라이트·다크·375에서 확인했다. 가로 스크롤은 0이다.
+
+| P-n | 무력화 | 실패한 anchor |
+|---|---|---|
+| P-5a | 명부 술어 분기 제거(무조건 거둠) | UO-8a · UO-8e |
+| P-5c | 세대 구성 불성립 예외 제거 | UO-8e — 착수 전 안전망 0건(13,365건 통과)이라 단위 anchor를 추가했다 |
+| P-5v | 결과 카드 한 줄 제거 | UO-8a |
+
+- **별건(착수 안 함):** 계산기 D12(`revokeExemptionOnRentalCompositionExceeded`)는 A의 세대 구성 불성립이면 §155⑳ 호별 요건 성립 여부와 무관하게 비과세를 거둔다.
+  - 호별 불성립이면 임대주택은 일반 주택이므로, 판정 엔진이 그 주택을 센 비과세(예: §155② + ① 중첩)까지 거두는 것이 맞는지는 별도 확인이 필요하다.
+  - 이번 변경은 계산기와 같은 규칙(구성 불성립 → 거둠)을 유지했다.
