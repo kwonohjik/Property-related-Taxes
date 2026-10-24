@@ -54,8 +54,8 @@ export function BurdenedGiftCommercial164Fields({ item, bgt, set, jibun, transfe
       <p data-testid="bg-c164-note" className="text-xs text-amber-700 dark:text-amber-300">
         {threeWay ? (
           <>
-            상가 기준시가 최초고시(2005.1.1.) 전에 상속받은 상가는 이 값이 <b>② 후보</b>입니다 — ① 상속개시일 상증법 평가액·② 이 값·③
-            환산취득가액 중 큰 금액에 채무비율을 곱합니다.
+            상가 기준시가 최초고시(2005.1.1.) 전에 상속받은 상가는 이 값이 <b>② 후보</b>이자 <b>③ 환산취득가액의 의제취득일 기준시가</b>입니다
+            — ① 상속개시일 상증법 평가액·② 이 값·③ 환산취득가액 중 큰 금액에 채무비율을 곱합니다.
           </>
         ) : (
           <>

@@ -133,12 +133,16 @@ describe("시가 평가 (Q-24)", () => {
     expect(r.tax).toBe(4_665_000);
   });
 
-  it("M-3 §164⑥ 8칸 → ② 509,090,909 채택 × 0.5 = 254,545,454 · 34,021,364", async () => {
+  // 🔄 A안(2026-10-24 · 계획서 commercial-pre-deemed-converted-numerator.plan.md) — ③의 분자도 §164⑥ 값이라 ③ = 920M × 509,090,909 ÷ 4억.
+  //    종전에는 ③이 칸 값 2억으로 460,000,000이라 ② 509,090,909 채택 × 0.5 = 254,545,454 · 34,021,364였다.
+  it("M-3 §164⑥ 8칸 → ③ 1,170,909,090(분자 §164⑥) 채택 × 0.5 = 585,454,545 · 양도차손 0 (종전 ② 채택 · 34,021,364)", async () => {
     const r = await run({ ...MARKET, ...CB8, publishedValueAtInheritance: "300000000" });
     expect(r.issues).toEqual([]);
-    expect(r.bg?.preDeemed?.selected).toBe("sec164");
-    expect(r.acq).toBe(254_545_454);
-    expect(r.tax).toBe(34_021_364);
+    expect(r.bg?.preDeemed?.selected).toBe("converted");
+    expect(r.bg?.preDeemed?.sec164).toBe(509_090_909);
+    expect(r.bg?.preDeemed?.converted).toBe(1_170_909_090);
+    expect(r.acq).toBe(585_454_545);
+    expect(r.tax).toBe(0);
   });
 
   it("M-4 ① 없이 「확인할 수 없음」 선언 → ③ 230,000,000", async () => {

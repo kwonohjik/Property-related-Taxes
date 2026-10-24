@@ -595,6 +595,7 @@ type PreDeemedLike = Pick<
 > &
   Partial<Pick<Required2aLike, "acquisitionCause" | "transferType" | "useEstimatedAcquisition">> & {
     isSuccessorRightToMoveIn?: boolean;
+    burdenedGiftInfo?: { valuationMode?: string } | null;
   };
 
 export function refinePreDeemedAcquisitionSource(
@@ -631,6 +632,20 @@ export function refinePreDeemedAcquisitionSource(
   }
   if (d.generalBuildingValuation || d.redevelopment || d.mixedUse || d.commercialBuildingValuation) return;
   if (d.acquisitionMethod === "appraisal" || d.acquisitionMethod === "salesCase") return;
+  // 상가 §164⑥은 ②이자 ③의 분자다(사용자 결정 A안 · 계획서 commercial-pre-deemed-converted-numerator.plan.md) — 분모(양도시 기준시가)가
+  // 없으면 ③이 조용히 0이 된다. ①② 원천이 있어도 막는다(아래 clauseA 반환 전). 기준시가로 평가한 부담부증여는 ③이 없다(Q-25). ⑧ 같은 판정.
+  if (
+    d.commercialInheritanceValuation &&
+    !(d.transferType === "burdened_gift" && d.burdenedGiftInfo?.valuationMode === "sangjeungbeop_standard") &&
+    !positive(ia.standardPriceAtTransfer) &&
+    !positive(d.standardPriceAtTransfer)
+  ) {
+    issue(
+      ["inheritedAcquisition", "standardPriceAtTransfer"],
+      "의제취득일(1985.1.1.) 전 상속·증여 상가는 §164⑥ 취득당시 기준시가로 환산취득가액도 비교합니다 — 양도시 기준시가를 보내세요 (소득세법 시행령 §176의2④·§164⑥)",
+    );
+    return;
+  }
   if (clauseA) return;
   if (!positive(ia.standardPriceAtDeemedDate)) {
     issue(

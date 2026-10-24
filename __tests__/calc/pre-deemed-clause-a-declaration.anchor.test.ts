@@ -183,7 +183,12 @@ describe("D-5 — 상가 게이트 완화 (§163⑨2호 「많은 금액」 = �
   });
 
   it("★ X-12b: 상속 상가 · pre-deemed · ① 비움 · **② 충족** → 통과 (현행은 차단 — Y-5 정정)", () => {
-    expect(V(inhCommercial({ ...CB_8 }))).toBeNull();
+    // ③ 분자도 §164⑥ 값이라(A안 · 계획서 commercial-pre-deemed-converted-numerator.plan.md) 양도시 기준시가가 있어야 한다 — X-12d
+    expect(V(inhCommercial({ ...CB_8, standardPriceAtTransfer: "1243350000" }))).toBeNull();
+  });
+
+  it("X-12d: 상속 상가 · pre-deemed · ② 충족 · 양도시 기준시가 비움 → 양도시 기준시가 차단(A안 — 종전 통과 · ③ 0 침묵 소실)", () => {
+    expect(V(inhCommercial({ ...CB_8 }))).toMatch(/§164⑥ 취득당시 기준시가로 환산취득가액도 비교합니다 — 양도시 기준시가를 입력하세요/);
   });
 
   it("X-12c(회귀): 상속 상가 · **post-deemed** · ① 비움 · 선언 → **차단 유지** (③이 없어 선언 무의미)", () => {

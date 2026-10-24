@@ -165,12 +165,12 @@ export function validateStep(step: number, form: FormState): string | null {
       // 의제취득일 전 상속 비주택 건물 · §164⑥ 일부 입력·단서 확인(PR-7b-3b)
       const commercial164Error = giftBgCommercial164Error(bgItem);
       if (commercial164Error) return `${itemLabel}: ${commercial164Error}`;
-      // 기준시가 평가는 §164⑥ 8칸이 다 차면 그 값이 의제취득일 기준시가라 칸을 비워도 된다(Q-27 · 계산기 S-2b와 같다).
-      // 시가 평가(3자 max)는 칸 값이 ③의 분자라 그대로 필수다.
-      const deemedStdBy164_6 = !preDeemedThreeWay && giftBgCommercial164Std(bgItem) !== null;
+      // §164⑥ 8칸이 다 차면 그 값이 의제취득일 기준시가라 칸을 비워도 된다 — 기준시가 평가(Q-27 · 계산기 S-2b)와 시가 평가 ③의 분자
+      // (사용자 결정 A안 · 계획서 commercial-pre-deemed-converted-numerator.plan.md) 모두.
+      const deemedStdBy164_6 = giftBgCommercial164Std(bgItem) !== null;
       if (!acqStdPriceInert && !deemedStdBy164_6 && !(giftBgEffectiveStdAtAcquisition(bgItem, form.giftDate) > 0)) {
         return giftBgPreDeemedInScope(bgt)
-          ? `${itemLabel}: 의제취득일(1985.1.1.) 현재 기준시가를 입력하세요 — 1984.12.31. 이전 상속 자산은 취득시기가 1985.1.1.로 의제됩니다${propertyType === "land" ? "(토지는 토지등급 환산으로도 구할 수 있습니다)" : giftBgCommercial164Applies(bgItem) && !preDeemedThreeWay ? "(비주택 건물은 §164⑥ 8개 항목을 모두 채워도 됩니다)" : ""} (소득세법 시행령 §159①1호·§164④·⑥).`
+          ? `${itemLabel}: 의제취득일(1985.1.1.) 현재 기준시가를 입력하세요 — 1984.12.31. 이전 상속 자산은 취득시기가 1985.1.1.로 의제됩니다${propertyType === "land" ? "(토지는 토지등급 환산으로도 구할 수 있습니다)" : giftBgCommercial164Applies(bgItem) ? "(비주택 건물은 §164⑥ 8개 항목을 모두 채워도 됩니다)" : ""} (소득세법 시행령 §159①1호·§164④·⑥).`
           : `${itemLabel}: 취득시 기준시가를 입력하세요. (양도소득세 계산 필수)`;
       }
 

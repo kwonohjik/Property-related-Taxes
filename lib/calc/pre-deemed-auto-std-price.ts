@@ -6,12 +6,16 @@
  * (`inheritance-acquisition-helpers.ts` — 사용자가 보낸 분자가 있으면 자동 주입을 건너뛰므로, 보이지 않는 남은 값이 이기던 것을 막는다).
  *
  * 토지: §164④ 등급 환산(`calculatePre1990LandValuation`) · 주택: §164⑦ 3시점 환산 P_F × ΣA ÷ ΣF · 주택 분모: 양도 당시 공시 개별주택가격.
+ * 상가: §164⑥ 취득당시 기준시가(8칸이 다 찼을 때 — ②와 같은 값 · 사용자 결정 A안, 계획서 commercial-pre-deemed-converted-numerator.plan.md).
  */
 import { parseAmount } from "@/lib/calc/number-parse";
 import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { apartSec164FormOpen, isApartSec163_9Asset } from "./apart-nts-price";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
+import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-inheritance";
+import { computeCommercial164_6StdPrice } from "@/lib/tax-engine/inheritance-acquisition-helpers";
+import type { CommercialInheritanceValuationInput } from "@/lib/tax-engine/types/inheritance-acquisition.types";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 1990.8.30. 토지등급 → 개별공시지가 전환일 */
@@ -142,6 +146,14 @@ export function preDeemedAutoStdPrices(
     }
   })();
 
+  // 상가 §164⑥ 자동값 — ④가 싣는 payload(같은 판정 · 같은 산식)로 엔진 `shouldInjectCommercialDeemed`와 같은 값을 만든다.
+  // 분모(양도시 상가 기준시가)는 자동값이 없다 — 칸 그대로.
+  const commercialAutoDeemedPrice = ((): number | null => {
+    if (asset.assetKind !== "commercial_building") return null;
+    const v = buildCommercialInheritanceValuationPayload(asset).commercialInheritanceValuation;
+    return v ? computeCommercial164_6StdPrice(v as CommercialInheritanceValuationInput) : null;
+  })();
+
   // 양도시 기준시가 자동값: PHD inhHouseValHousePriceAtTransfer 사용
   const autoStdPriceAtTransfer = ((): number | null => {
     if (!showHouseValuation) return null;
@@ -149,7 +161,7 @@ export function preDeemedAutoStdPrices(
     return v > 0 ? v : null;
   })();
 
-  return { atDeemed: phdAutoDeemedPrice ?? pre1990AutoDeemedPrice, atTransfer: autoStdPriceAtTransfer };
+  return { atDeemed: phdAutoDeemedPrice ?? commercialAutoDeemedPrice ?? pre1990AutoDeemedPrice, atTransfer: autoStdPriceAtTransfer };
 }
 
 /** ④ 전송 판단 — 칸이 자동값을 보여 주는 동안은 store 값을 싣지 않는다(직접 입력 토글이 켜졌을 때만 싣는다). */

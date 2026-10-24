@@ -86,7 +86,7 @@ async function run(it: EstateItem) {
   const json = (await res.json()) as { data?: { result?: Obj } };
   const r = json.data?.result as Obj | undefined;
   const bg = r?.transferBurdenedGiftBreakdown as
-    | { preDeemed?: { basis: string; selected?: string; stdAtDeemed: number; sec164?: number | null }; perAsset: { land: { acquisitionPrice: number }; building: { acquisitionPrice: number } } }
+    | { preDeemed?: { basis: string; selected?: string; stdAtDeemed: number; sec164?: number | null; converted?: number }; perAsset: { land: { acquisitionPrice: number }; building: { acquisitionPrice: number } } }
     | undefined;
   return { issue, body, status: res.status, tax: r?.determinedTax, bg, acq: bg ? bg.perAsset.land.acquisitionPrice + bg.perAsset.building.acquisitionPrice : undefined };
 }
@@ -136,10 +136,25 @@ describe("PR-7b-3b 증여세 계산기 비주택 건물 §164⑥ × 의제취득
     expect(r.acq).toBe(300_000_000);
   });
 
-  it("M-3 시가 평가 · 칸 비움 + 8칸 — 칸은 ③ 분자라 여전히 필수(⑧)", () => {
-    const issue = validateStep(1, form(item({ ...C164, standardPriceAtAcquisition: 0 }, { market: true })));
-    expect(issue).toContain("의제취득일(1985.1.1.) 현재 기준시가를 입력하세요");
-    expect(issue).not.toContain("§164⑥ 8개 항목");
+  // 🔄 A안(2026-10-24 · 계획서 commercial-pre-deemed-converted-numerator.plan.md) — ③의 분자도 §164⑥ 값이라 칸을 비워도 된다(종전 ⑧ 차단).
+  it("M-3 시가 평가 · 칸 비움 + 8칸 — ⑧ 통과 · ③ = 920M × 509,090,909 ÷ 1,243,350,000 = 376,694,926 < ② → ② 채택(종전 ⑧ 「칸 필수」)", async () => {
+    const r = await run(item({ ...C164, standardPriceAtAcquisition: 0 }, { market: true }));
+    expect(r.issue).toBeNull();
+    expect((r.body.inheritedAcquisition as Obj).standardPriceAtDeemedDate).toBeUndefined();
+    expect(r.bg?.preDeemed?.converted).toBe(376_694_926);
+    expect(r.bg?.preDeemed?.selected).toBe("sec164");
+    expect(r.acq).toBe(254_545_454);
+  });
+
+  it("M-3b 시가 평가 · 칸 202,620,000 + 8칸 · 양도시 기준시가(standardPrice) 6억 — ③ 분자 §164⑥ → ③ 780,606,060 채택 × 0.5 = 390,303,030 · 4,881,363 (종전 master 실측: ③ 분자 칸 값 → 310,684,000 · ② 채택 · 254,545,454 · 34,021,364)", async () => {
+    const it_ = item({ ...C164 }, { market: true });
+    const r = await run({ ...it_, standardPrice: 600_000_000 } as EstateItem);
+    expect(r.issue).toBeNull();
+    expect((r.body.inheritedAcquisition as Obj).standardPriceAtDeemedDate).toBeUndefined();
+    expect(r.bg?.preDeemed?.converted).toBe(780_606_060);
+    expect(r.bg?.preDeemed?.selected).toBe("converted");
+    expect(r.acq).toBe(390_303_030);
+    expect(r.tax).toBe(4_881_363);
   });
 
   it("M-4 시가 평가 · 8칸 없이 선언 — 종전(3a C-1)과 같은 ③ 채택", async () => {

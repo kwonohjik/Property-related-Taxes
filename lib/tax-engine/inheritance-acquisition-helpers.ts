@@ -105,7 +105,7 @@ export function runInheritedAcquisitionStep(
     step,
     houseValuationResult,
     ...(bgBasis && {
-      bgPreDeemed: { acqStdPriceForced: bgBasis.acqStdPriceForced, stdAtDeemed: bgStdAtDeemed(rawInput, resolvedInput) },
+      bgPreDeemed: { acqStdPriceForced: bgBasis.acqStdPriceForced, stdAtDeemed: bgStdAtDeemed(rawInput, resolvedInput, bgBasis.acqStdPriceForced) },
     }),
   };
 }
@@ -113,9 +113,13 @@ export function runInheritedAcquisitionStep(
 /**
  * 부담부증여 기준시가 평가(Q-25)의 의제취득일 기준시가(물건 전체). 토지·주택은 위 주입이 ②(§164④·⑦)를 이 자리에 넣었다.
  * 상가는 §164⑥ 8칸(④가 다 찼을 때만 싣는다)이 있으면 그 값이다 — 안분 전 값(아래 ②는 지분 안분 후). 없으면 칸 값(사용자 결정 Q-27 ·
- * 계획서 inheritance-pre-deemed-bg-pr7b.plan.md). 시가 평가 ③의 분자는 바꾸지 않는다(일반 양도와 같은 칸 값 — 별건 확인 필요).
+ * 계획서 inheritance-pre-deemed-bg-pr7b.plan.md).
+ * 시가 평가(3자 max)는 ③의 분자와 같은 값이다 — 상가는 아래 `shouldInjectCommercialDeemed`가 §164⑥을 넣고(사용자 결정 A안 · 계획서
+ * commercial-pre-deemed-converted-numerator.plan.md), 직접 입력 토글로 보낸 칸 값이면 그 값이다. 이 값이 개산공제 base·결과 echo라서
+ * ③과 갈리면 표시와 계산이 달라진다(리뷰 게이트 R-1).
  */
-function bgStdAtDeemed(rawInput: TransferTaxInput, resolvedInput: InheritanceAcquisitionInput): number {
+function bgStdAtDeemed(rawInput: TransferTaxInput, resolvedInput: InheritanceAcquisitionInput, acqStdPriceForced: boolean): number {
+  if (!acqStdPriceForced) return resolvedInput.standardPriceAtDeemedDate ?? 0;
   if (takesCommercial164_6(rawInput) && rawInput.commercialInheritanceValuation) {
     return computeCommercial164_6StdPrice(rawInput.commercialInheritanceValuation);
   }
@@ -341,9 +345,16 @@ function resolveInheritedAcquisitionInput(
     !!rawInput.commercialInheritanceValuation &&
     base.inheritanceDate.getTime() < COMMERCIAL_FIRST_DISCLOSURE_DATE.getTime();
 
+  // case A + 상가 §164⑥: ②와 같은 값을 ③의 분자(의제취득일 기준시가)로도 주입 — 주택 §164⑦(B-2)·토지 §164④와 같은 규칙
+  // (사용자 결정 2026-10-24 A안 · 계획서 commercial-pre-deemed-converted-numerator.plan.md). §164⑥은 고시 전 취득 상가의
+  // 「취득당시의 기준시가」를 정하고, §176조의2②2호 환산의 분자도 「취득당시의 기준시가」다. 매매 상가 환산(C-01)도 같은 값을 쓴다.
+  // 보낸 분자(직접 입력 토글)가 있으면 그것이 먼저다(주택·토지와 같다 — ④ `preDeemedSentStdPrices`). 지분 안분 전 물건 전체 값이다
+  // — 양도가액이 이미 지분 몫이라 ③에 지분이 반영된다(주택과 같다).
+  const shouldInjectCommercialDeemed = shouldInjectCommercialMax && isPreDeemed && !base.standardPriceAtDeemedDate;
+
   // case A + 토지: STEP 0.4 결과 자동 주입 (사용자가 standardPriceAtDeemedDate 미입력 시, 주택 주입보다 낮은 우선순위)
   const shouldInjectPre1990 =
-    !shouldInjectHouseValuation && pre1990LandResult && isPreDeemed && !base.standardPriceAtDeemedDate;
+    !shouldInjectHouseValuation && !shouldInjectCommercialDeemed && pre1990LandResult && isPreDeemed && !base.standardPriceAtDeemedDate;
 
   // 토지 + 개별공시지가 최초고시(1990-08-30) 전 상속·증여: §164④ 취득당시 기준시가를
   // max 비교용(②)으로 주입 (소령 §163⑨**1호**). 주택 §164⑦(2호)과 같은 구조다.
@@ -386,6 +397,8 @@ function resolveInheritedAcquisitionInput(
       base.standardPriceAtTransfer ??
       rawInput.inheritedHouseValuation?.housePriceAtTransfer ??
       standardPriceAtTransfer;
+  } else if (shouldInjectCommercialDeemed) {
+    standardPriceAtDeemedDate = computeCommercial164_6StdPrice(rawInput.commercialInheritanceValuation!);
   } else if (shouldInjectPre1990) {
     standardPriceAtDeemedDate = pre1990LandResult.standardPriceAtAcquisition;
   }

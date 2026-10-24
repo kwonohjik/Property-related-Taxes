@@ -557,8 +557,9 @@ function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStd
   // 의제취득일 전 상속 · 시가 평가(3자 max)는 이 값이 ③의 분자라 늘 쓴다(PR-7b-3)
   const acqStdInert = isMarketMode && !collateralForced && !giftBgPreDeemedUsesThreeWay(item) && bgt.acquisitionMethod === "actual";
   const transferStdRequired = !isMarketMode || collateralForced || bgt.acquisitionMethod === "converted" || giftBgPreDeemedUsesThreeWay(item);
-  // 기준시가 평가 · §164⑥ 8칸이 다 차면 그 값이 의제취득일 기준시가라 이 칸은 쓰지 않는다(Q-27 · ⑧과 같은 판정 · PR-7b-3b)
-  const acqStdBy164_6 = !giftBgPreDeemedUsesThreeWay(item) && giftBgCommercial164Std(item) !== null;
+  // §164⑥ 8칸이 다 차면 그 값이 의제취득일 기준시가라 이 칸은 쓰지 않는다 — 기준시가 평가(Q-27 · PR-7b-3b)와 시가 평가 ③의 분자
+  // (사용자 결정 A안 · 계획서 commercial-pre-deemed-converted-numerator.plan.md) 모두. ⑧과 같은 판정.
+  const acqStdBy164_6 = giftBgCommercial164Std(item) !== null;
   return (
     <div className="space-y-2">
       <FieldCard label="취득일 (증여자 당초 취득일)" required>
@@ -585,7 +586,7 @@ dateToStr(bgt.acquisitionDate)
           acqStdInert
             ? "실지취득가액(K-4) 모드에서는 입력하지 않아도 됩니다 — 결과(양도차익)에 영향 없음."
             : acqStdBy164_6
-              ? "아래 §164⑥ 8개 항목이 모두 차 있어 그 값을 의제취득일 기준시가로 씁니다 — 이 칸은 입력하지 않아도 됩니다 (소득세법 시행령 §164⑥)."
+              ? "아래 §164⑥ 8개 항목이 모두 차 있어 그 값을 의제취득일 기준시가로 씁니다(시가 평가면 ③ 환산취득가액의 분자) — 이 칸은 입력하지 않아도 됩니다 (소득세법 시행령 §164⑥·§176조의2④)."
               : stdPriceHint
         }
         required={!acqStdInert && !acqStdBy164_6}

@@ -145,17 +145,18 @@ export function giftBgStdAtTransfer(item: EstateItem): number {
 /**
  * ④ — 범위 안이면 `inheritedAcquisition`(pre-deemed)과 토지 등급 `pre1990Land`. 범위 밖이면 키를 만들지 않는다(남은 값이 엔진에 닿지 않는다).
  * 엔진 자산 종류는 양도세 계산기 ④(`deriveEngineInheritanceAssetKind`)와 같다 — 토지 land · 단독주택 house_individual · 그 밖 house_apart.
- * ①은 3자 max일 때만 싣는다(⑤가 그때만 칸을 보인다). 등급 환산이 서면 의제취득일 기준시가를 싣지 않는다 — 엔진이 같은 값을 주입한다.
+ * ①은 3자 max일 때만 싣는다(⑤가 그때만 칸을 보인다). 등급 환산이나 §164⑥이 서면 의제취득일 기준시가를 싣지 않는다 — 엔진이 같은 값을
+ * 주입한다(§164⑥ = ③ 분자 · 사용자 결정 A안).
  */
 export function buildGiftBgPreDeemedPayload(item: EstateItem, giftDate: string | undefined): Record<string, unknown> {
   const bgt = item.burdenedGiftTransferTax;
   if (!bgt || !giftBgPreDeemedInScope(bgt)) return {};
   const gradeStd = giftBgPre1990LandStd(item, giftDate);
-  const stdAtDeemed = gradeStd === null ? bgt.standardPriceAtAcquisition : 0;
+  // 비주택 건물 §164⑥ — 시가 평가면 ②이자 ③의 분자, 기준시가 평가면 의제취득일 기준시가(엔진 `shouldInjectCommercialDeemed`·`bgStdAtDeemed` · Q-27)
+  const c164 = giftBgCommercial164Payload(item);
+  const stdAtDeemed = gradeStd === null && !c164 ? bgt.standardPriceAtAcquisition : 0;
   const stdAtTransfer = giftBgStdAtTransfer(item);
   const reported = giftBgPreDeemedUsesThreeWay(item) ? (bgt.reportedValueAtInheritance ?? 0) : 0;
-  // 비주택 건물 §164⑥ — 시가 평가면 ②, 기준시가 평가면 의제취득일 기준시가(엔진 `bgStdAtDeemed`가 칸 값보다 먼저 쓴다 · Q-27)
-  const c164 = giftBgCommercial164Payload(item);
   const assetKind =
     item.category === "real_estate_land"
       ? "land"
