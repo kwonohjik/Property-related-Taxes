@@ -15,7 +15,8 @@
  * | UO-3 | B 불성립 · 10억 | 과세 60,621,000 | 비과세 0 · §161 안분 없음 |
  * | UO-4 | 명부 없음(주택 수 1 · 2) | 124,366,000 | 불변 — 과다 비과세 미부활(STEP 0.96이 판정 전에 되돌림) |
  * | UO-5 | 임대 행 2007 취득(일시적 2주택 아님) | 124,366,000 | 불변 |
- * | UO-6 | UO-1 안내 | — | 불성립 고지 1건 · 성립 전제 문장(부칙 인정·㉒) 없음 / 성립 짝은 성립 문장 유지 |
+ * | UO-6 | UO-1 안내 | — | 불성립 고지 1건 · ㉒ 사후 추징 안내(「특례를 적용했습니다」) 없음 · 판정 확인 필요 고지(부칙 마목·바목)는 유지 / 성립 짝은 ㉒ 유지 |
+ * | UO-6b | ㉑ 통과 호 + 불성립 호 | — | ㉒ 안내 없음 |
  * | UO-7 | 명부 없음 · 주택 수 1 고지 | 「주택 수로 직접 입력」 | 「보유 주택 목록」에 취득일과 함께 넣으라는 처방 · 과세 결론 문장 유지 |
  * | UO-9 | 부담부증여(증여세 계산기) 같은 사실 | — | 특례 미선언 짝과 같은 비과세 |
  */
@@ -132,20 +133,30 @@ describe("§155⑳ 불성립 × 일시적 2주택(§155①) — 계산기 화면
     expect(unmetNotices(r.result.warnings)).toEqual([]);
   });
 
-  it("UO-6 안내 — 불성립은 불성립 고지 1건만(성립 전제 문장 없음) · 성립 짝은 성립 문장 유지", async () => {
+  it("UO-6 안내 — 불성립은 불성립 고지 1건 · ㉒(적용 전제) 없음 · 확인 필요 고지는 유지(STEP 2.5 적용 불가 경로와 같다) · 성립 짝은 ㉒ 유지", async () => {
     const r = await runCalc(form({}));
     const w: string[] = r.result.warnings ?? [];
     const n = unmetNotices(w);
     expect(n).toHaveLength(1);
     expect(n[0]).toContain("임대주택을 세대 주택 수에 넣어 판정했고, 적용한 비과세는 「일시적 2주택 비과세」입니다.");
-    expect(w.some((x) => x.includes("현행 문언대로 인정했습니다"))).toBe(false);
     expect(w.some((x) => x.includes("§155㉒"))).toBe(false);
+    // 판정 보류·확인 필요 고지는 불성립의 원인일 수 있어 남긴다 — 판정 메뉴 카드도 불성립에서 같은 고지를 보여준다
+    expect(w.some((x) => x.includes("현행 문언대로 인정했습니다"))).toBe(true);
 
     const ok = await runCalc(form({ rhe: RHE_A("250,000,000") }));
     const okW: string[] = ok.result.warnings ?? [];
     expect(ok.result.isExempt).toBe(true);
     expect(unmetNotices(okW)).toEqual([]);
     expect(okW.some((x) => x.includes("§155㉒"))).toBe(true);
+  });
+
+  it("UO-6b ㉑로 통과한 호가 있어도 다른 호가 불성립이면 ㉒ 안내(「특례를 적용했습니다」)를 싣지 않는다", async () => {
+    const r = await runCalc(form({ rhe: { ...RHE_A(), rentalUnits: [unit("250,000,000"), unit()] } }));
+    expect(r.issues).toEqual([]);
+    expect(r.result.isExempt).toBe(true);
+    const w: string[] = r.result.warnings ?? [];
+    expect(unmetNotices(w)).toHaveLength(1);
+    expect(w.some((x) => x.includes("§155㉒"))).toBe(false);
   });
 
   it("UO-7 명부 없음 · 주택 수 1 고지 — 처방은 「보유 주택 목록」에 취득일과 함께 넣기 · 과세 결론 문장 유지", async () => {

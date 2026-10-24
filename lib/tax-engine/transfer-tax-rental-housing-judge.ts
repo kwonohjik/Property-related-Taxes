@@ -151,9 +151,10 @@ export function buildPrhpTable2ReadingNotice(
 export function rentalNoticesForEarlyReturn(effectiveInput: TransferTaxInput): string[] {
   if (effectiveInput.rentalHousingException?.scenario !== "A") return [];
   const eligibility = judgeRentalHousingEligibility(effectiveInput);
-  // 불성립이면 특례 경로의 안내(㉒·통산·부칙 인정 고지)는 사실이 아니다 — 불성립 고지는 `prhpUnmetOtherExemptionNotice`가 단다(F-1 D-2).
-  if (!eligibility || !eligibility.passed) return [];
-  const pending = buildRentalPeriodPendingNotice(eligibility.periodPendingUnitIndexes);
+  if (!eligibility) return [];
+  // 불성립(F-1 D-2)이면 ㉒ 사후 추징 안내(「…특례를 적용했습니다」)만 사실이 아니다 — 싣지 않는다. 판정 보류·확인 필요 고지(`notices`)와
+  // 거주 통산 문장은 불성립에서도 싣는다: 「모름」이 불성립의 원인일 수 있고, STEP 2.5 「적용 불가」 경로도 싣는다. 불성립 사실은 `prhpUnmetOtherExemptionNotice`가 단다.
+  const pending = eligibility.passed ? buildRentalPeriodPendingNotice(eligibility.periodPendingUnitIndexes) : undefined;
   const consolidation = rentalResidenceConsolidationText(effectiveInput);
   return [...(pending ? [pending] : []), ...(consolidation ? [consolidation] : []), ...(eligibility.notices ?? [])];
 }
