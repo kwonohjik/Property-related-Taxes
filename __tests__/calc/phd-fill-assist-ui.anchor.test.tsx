@@ -145,6 +145,19 @@ describe("U1 보이는 조건", () => {
   });
 });
 
+describe("U6 카드는 하나 — 감정·매매사례 × 토지·건물 분리(같은 취득일)에서 두 섹션이 함께 렌더돼도 보조 카드는 1개", () => {
+  for (const [name, m] of Object.entries(METHOD)) {
+    if (name === "est") continue;
+    for (const split of [false, true]) {
+      if (name === "actual" && !split) continue; // 실거래가 비분리는 칸 자체가 없다(U1)
+      it(`${name} · 분리=${split} → 카드 1개`, () => {
+        render(<Harness init={{ ...SEVEN, ...m, ...(split ? { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2003-01-10" } : {}) }} />);
+        expect(screen.queryAllByTestId("phd-fill-assist")).toHaveLength(1);
+      });
+    }
+  }
+});
+
 describe("U2 클릭 → 취득시 기준시가 칸 채움 (한 번의 onChange)", () => {
   it.each([
     ["감정가액", METHOD.app],

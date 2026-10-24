@@ -189,8 +189,11 @@ export function CompanionAcqStdPriceSection({
               pricePerSqmDisabled={isLand && acqDatePre1990}
             />
             {/* 실거래가 + 토지·건물 안분 — 주택 취득시 기준시가 칸(개별주택가격 안분 base) 곁 «환산 개별주택가격 계산해 채우기».
-                hint(`PRE_DISCLOSURE_STD_PRICE_HINT`)가 붙는 칸과 같은 조건이다. 보이는 조건은 컴포넌트 내부 게이트(`phdFillAssistVisible`). */}
-            {!props.useEstimatedAcquisition && propertyKind === "house_individual" && props.asset && props.onAssetChange && (
+                hint(`PRE_DISCLOSURE_STD_PRICE_HINT`)가 붙는 칸과 같은 조건이다. 보이는 조건은 컴포넌트 내부 게이트(`phdFillAssistVisible`).
+                감정가액·매매사례가액은 `CompanionAcqAmountSection` 이 자기 «취득시 기준시가» 칸 곁에 같은 보조를 둔다 — 토지·건물 분리(같은 취득일)에서
+                두 섹션이 함께 렌더되면 카드가 둘 뜨므로 여기서는 실거래가만 맡는다. */}
+            {!props.useEstimatedAcquisition && !props.isAppraisalAcquisition && !props.isSalesCaseAcquisition
+              && propertyKind === "house_individual" && props.asset && props.onAssetChange && (
               <PhdConvertedPriceFill
                 asset={props.asset}
                 onAssetChange={props.onAssetChange}
