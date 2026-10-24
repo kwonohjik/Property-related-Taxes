@@ -282,10 +282,10 @@ export function calculateTransferTax(
     }),
   );
 
-  // STEP 1a: 전액 비과세 조기 반환. §155⑳ B 성립(→STEP 2.5 §161 안분)만 억제 — 불성립이면 임대주택을 센 판정이 정본이다(F-1).
+  // STEP 1a: 전액 비과세 조기 반환. §155⑳ B는 억제(→STEP 2.5 §161 안분 — 불성립이어도 영 §154⑩) · A 불성립은 임대주택을 센 판정이 정본(F-1).
   // G-2·G-3: 부수토지 중 배율 초과분(비사업용 토지)·보유 2년 미만분은 비과세 대상이 아니다 —
   //      조기 반환하면 과세할 토지분이 사라지므로 정상 경로로 흘려 STEP 3에서 분리한다(§5.2·§5.4).
-  if (exemptionResult.isExempt && canEarlyReturnPrhp(effectiveInput, prhpUnmet) && !hasHousingLandExemptExclusion(effectiveInput)) {
+  if (exemptionResult.isExempt && canEarlyReturnPrhp(effectiveInput) && !hasHousingLandExemptExclusion(effectiveInput)) {
     steps.push({
       label: "1세대1주택 비과세",
       formula: exemptionResult.exemptReason ?? "비과세",
@@ -499,6 +499,7 @@ export function calculateTransferTax(
       houseCountExclusionDetails,
       // 다른 특례 비과세가 서면 세대 구성 「확인 필요」(⑳ 겹침 해석 미확보)는 결론을 가르지 않는다(composition-revoke Q-3).
       otherExemptionStands: exemptionResult.isExempt || exemptionResult.isPartialExempt,
+      otherExemptReason: exemptionResult.exemptReason,
     });
     // 특례 경로의 배율 초과 파트도 8호 유예 «지정지역 확인 필요» 고지를 일반 경로와 같이 받는다(F-2). 미등기 고지는 이 경로에 없다(위 주석 — 미등기면 특례 부적용).
     if (rheResult) return withUnregisteredNotice(rheResult, nblNoticeInputOf(effectiveInput, rheResult.splitDetail));

@@ -70,8 +70,10 @@ export function oneHouseVerdictOf(
    * 후의 기간분에 대해서만 … 제154조제1항을 적용」한다. 판정 메뉴는 §161 안분 입력을 받지 않으므로(Q-7) 과세 범위를
    * 단정하지 않는다 — 「과세」도 「비과세」도 아닌 기간분 비과세로 적고, 과세 범위는 세액 계산이 정한다.
    * 이 술어가 결과뷰·이력·불러오기·계산기 출처 줄의 단일 소스라 한 곳에서 바꾼다.
+   * ⑳이 불성립이어도 다른 특례(일시적 2주택 등)로 비과세가 서면 같다 — §154⑩은 「제1항에 따른 1세대 1주택」에 건다
+   * (`rental-155-20-b-154-10-and-q4.plan.md` Q-1 (a) · 계산기 STEP 2.5와 같은 결론).
    */
-  if (rental?.scenario === "B" && rental.passed === true && (judgment.isExempt || judgment.isPartialExempt)) {
+  if (rental?.scenario === "B" && (judgment.isExempt || judgment.isPartialExempt)) {
     return {
       label: "기간분 비과세",
       tone: "amber",

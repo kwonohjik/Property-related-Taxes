@@ -13,6 +13,7 @@ import { applyRate, calculateHoldingPeriod, truncateToWon } from "./tax-utils";
 import { TRANSFER_RENTAL_HOUSING, NBL } from "./legal-codes/transfer";
 import { TRANSFER } from "./legal-codes/transfer";
 import { calculateRentalHousingException } from "./transfer-tax/rental-housing-exception";
+import type { EligibilityResult, RentalHousingExceptionInput } from "./transfer-tax/rental-housing-exception";
 import {
   isPhrpScenarioId,
   nontaxableIncomeLabel,
@@ -97,6 +98,8 @@ export interface RentalHousingStepArgs {
   generalHouseAcquisitionDate?: Date;
   /** 판정 엔진이 다른 특례로 비과세·부분 비과세를 냈는가 — 그러면 세대 구성 「확인 필요」를 싣지 않는다(결론을 가르지 않는다 · composition-revoke Q-3) */
   otherExemptionStands?: boolean;
+  /** 그 다른 특례의 비과세 사유 — ⑳ 불성립 B를 영 §154⑩으로 안분할 때 고지·전액 비과세 사유에 쓴다 */
+  otherExemptReason?: string;
   /**
    * [echo] STEP 0.9 보유 감면주택 주택수 제외(§89①3호 의제) 판정 — `SpecialHouseExclusionDetailCard`가 읽는다.
    * 이 step은 조기반환이라 넘겨받지 않으면 단건·다건 결과 화면에서 카드가 사라진다(`inheritedAcquisitionStep`과
@@ -217,8 +220,8 @@ export function runRentalHousingExceptionStep(
   const rulingFacts = rulingGateOpen ? buildRentalHighValueExcessRuling(effectiveInput, splitDetail!, nbl!) : undefined;
   // 장기보유특별공제는 토지·건물 **파트별 보유연수**로 구한다(§95④ — 일반 경로 split 분기와 같은 규칙). 분리 취득이 아니면 종전 단일 보유연수.
   const lthdParts = buildRentalLthdParts({ splitDetail, nonBusinessGain: nbl?.gain ?? 0, laterLandExcluded: !!laterLand, housingGain });
-  const rhe = calculateRentalHousingException(
-    effectiveInput.rentalHousingException!,
+  const calcRhe = (rhInput: RentalHousingExceptionInput, eligibilityOverride?: EligibilityResult) => calculateRentalHousingException(
+    rhInput,
     housingGain,
     resolveHighValueDenominator(effectiveInput),
     holdYears,
@@ -233,11 +236,29 @@ export function runRentalHousingExceptionStep(
     effectiveInput.transferDate,
     rulingFacts,
     lthdParts,
+    eligibilityOverride,
   );
+  let rhe = calcRhe(effectiveInput.rentalHousingException!);
+  /**
+   * 영 §154⑩ — ⑳이 불성립(호별·거주 · 세대 구성)인 B(직전거주주택보유주택)가 다른 특례(일시적 2주택 등)로 1세대1주택이 되면,
+   * §154⑩이 「제1항에 따른 1세대 1주택」에 걸어 직전거주주택 양도일 후 기간분만 비과세한다(§161① 안분 — 1호 등록 사실은 B 선언에 들어 있다).
+   * 거주요건은 그 특례를 낸 판정이 §154①로 이미 봤다 — ⑳1호는 보지 않는다(재산세제과-1081 · 서면-2023-법규재산-0426).
+   * 계획서 `rental-155-20-b-154-10-and-q4.plan.md` Q-1 (a)·Q-2 (b). 종전(F-1 #2513 · D12 #2519)에는 안분 없이 전액 비과세였다.
+   */
+  const phrp154_10 =
+    effectiveInput.rentalHousingException!.scenario === "B" && args.otherExemptionStands
+      ? () =>
+          calcRhe(
+            { ...effectiveInput.rentalHousingException!, rentalUnits: [] },
+            { passed: true, failReasons: [], residenceFailReasons: [], laws: [TRANSFER_RENTAL_HOUSING.PIT_RD_154_10] },
+          )
+      : undefined;
 
   // 근거 조문은 판정이 정한 `eligibility.laws`를 따른다 — §154⑩ 표준 경로(B · 0호)는 §155⑳ 본문이 성립하지 않는다(S06-13).
-  const rheBasis = rentalHousingBasisOf(rhe.eligibility.laws);
-  const rheBasisShort = rentalHousingBasisShort(rheBasis);
+  let rheBasis = rentalHousingBasisOf(rhe.eligibility.laws);
+  let rheBasisShort = rentalHousingBasisShort(rheBasis);
+  /** ⑳ 불성립 사유 — 있으면 아래에서 §154⑩ 안분(`phrp154_10`)으로 넘어간다 */
+  let phrpUnmetReason: string | undefined;
 
   if (composition.status === "exceeded") {
     steps.push({
@@ -254,7 +275,8 @@ export function runRentalHousingExceptionStep(
         legalBasis: rheBasis,
       });
     }
-    return null;
+    if (!phrp154_10) return null;
+    phrpUnmetReason = composition.reason;
   }
 
   // 별건 ⑥ — 통산한 거주 개월을 결과에 남긴다(정면 회신이 있어 확인 필요 고지는 내지 않는다 — 사용자 결정 2026-10-19 Q-1).
@@ -265,7 +287,7 @@ export function runRentalHousingExceptionStep(
   }
 
   // applied=false: 미적용 사유를 steps에 기록하여 결과 화면에서 노출 (침묵 실패 차단)
-  if (!rhe.applied) {
+  if (!phrpUnmetReason && !rhe.applied) {
     const reasonText = rentalUnmetReasonText(rhe.eligibility);
     steps.push({
       label: "장기임대주택 거주주택 비과세 특례 — 적용 불가",
@@ -283,7 +305,22 @@ export function runRentalHousingExceptionStep(
         legalBasis: rheBasis,
       });
     }
-    return null;
+    if (!phrp154_10) return null;
+    phrpUnmetReason = reasonText;
+  }
+
+  let phrp154_10Notice: string | undefined;
+  if (phrpUnmetReason) {
+    rhe = phrp154_10!();
+    // §161 기준시가 입력이 부실하면 안분할 수 없다 — 종전대로 일반 경로(판정 비과세 + 미적용 고지)로 둔다.
+    if (!rhe.applied) return null;
+    rheBasis = rentalHousingBasisOf(rhe.eligibility.laws);
+    rheBasisShort = rentalHousingBasisShort(rheBasis);
+    phrp154_10Notice =
+      `장기임대주택 거주주택 특례(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20})는 적용하지 않았습니다 — ${phrpUnmetReason.replace(/\.\s*$/, "")}. ` +
+      `다른 특례(「${args.otherExemptReason ?? "1세대1주택 비과세"}」)에 따라 1세대1주택이 되지만 이 주택은 직전거주주택보유주택이라 ` +
+      `${TRANSFER_RENTAL_HOUSING.PIT_RD_154_10}에 따라 직전거주주택 양도일 후 기간분만 비과세로 계산했습니다(${TRANSFER_RENTAL_HOUSING.PIT_RD_161_1} 안분).`;
+    steps.push({ label: "직전거주주택보유주택 — 영 §154⑩ 안분", formula: phrp154_10Notice, amount: 0, legalBasis: rheBasis });
   }
 
   // ── 특례 적용: taxableGain을 특례 결과로 대체하고 최종 결과 반환 ──
@@ -530,9 +567,10 @@ export function runRentalHousingExceptionStep(
     ...(unsold989Detail ? { unsold989Detail } : {}),
     ...(houseCountExclusionDetails ? { houseCountExclusionDetails } : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
-    ...(reductionNotice || lthdNotice || rebuildNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || laterLandNotice || laterLandPhrpNotice || rhe.eligibility.notices?.length
+    ...(phrp154_10Notice || reductionNotice || lthdNotice || rebuildNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || laterLandNotice || laterLandPhrpNotice || rhe.eligibility.notices?.length
       ? {
           warnings: [
+            phrp154_10Notice,
             reductionNotice,
             lthdNotice,
             appurtenantLthdNotice,
@@ -550,7 +588,10 @@ export function runRentalHousingExceptionStep(
       : {}),
     // 배율 초과분이 남아 있으면 자산 전체가 비과세된 것이 아니다(그 부분은 전액 과세된다).
     isExempt: totalTaxableIncome === 0,
-    exemptReason: totalTaxableIncome === 0 ? "장기임대주택 보유자 거주주택 비과세 (§155⑳)" : undefined,
+    exemptReason:
+      totalTaxableIncome === 0
+        ? phrp154_10Notice ? args.otherExemptReason : "장기임대주택 보유자 거주주택 비과세 (§155⑳)"
+        : undefined,
     transferGain,
     taxableGain: totalTaxableIncome,
     splitDetail,

@@ -87,9 +87,12 @@ describe("S09-3 판정 메뉴 B 충족 — 배지·이력·불러오기·출처 
       expect(oneHouseVerdictOf(j.data.judgment, undefined, j.data.contestedIssues, j.data.rentalHousingException).label).toBe("비과세");
     });
   });
-  it("[짝] 특례 정보가 없거나 B 미충족이면 종전 술어 그대로", () => {
+  it("[짝] 특례 정보가 없으면 종전 술어 그대로 · B 미충족이어도 다른 특례 비과세가 서면 기간분 비과세(영 §154⑩)", () => {
     expect(oneHouseVerdictOf({ isExempt: true }).label).toBe("비과세");
-    expect(oneHouseVerdictOf({ isExempt: true }, undefined, undefined, { scenario: "B", passed: false }).label).toBe("비과세");
+    // ⑳ 불성립 B가 비과세로 남는 것은 명부가 임대주택을 센 다른 특례 비과세뿐이다 — §154⑩이 「제1항에 따른 1세대 1주택」에 건다
+    // (`rental-155-20-b-154-10-and-q4.plan.md` Q-1 (a) · 종전 「비과세」).
+    expect(oneHouseVerdictOf({ isExempt: true }, undefined, undefined, { scenario: "B", passed: false }).label).toBe("기간분 비과세");
+    expect(oneHouseVerdictOf({ isExempt: true }, undefined, undefined, { scenario: "A", passed: false }).label).toBe("비과세");
     expect(oneHouseVerdictOf({ isExempt: false }, undefined, undefined, { scenario: "B", passed: true }).label).toBe("과세");
   });
 });

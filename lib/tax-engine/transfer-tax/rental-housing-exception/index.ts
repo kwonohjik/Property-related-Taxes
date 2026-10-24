@@ -36,6 +36,7 @@ import type {
   RentalHousingExceptionResult,
   FormulaTrace,
   HighValueExcessRulingTrace,
+  EligibilityResult,
 } from "./types";
 
 export type {
@@ -118,6 +119,11 @@ export function calculateRentalHousingException(
    * 파트 양도차익의 합은 `gain`과 같아야 한다 — 호출부가 보장하고 어긋나면 넘기지 않는다.
    */
   lthdParts?: RentalLthdParts,
+  /**
+   * 요건 판정을 대신할 결과 — §155⑳ 불성립 B(직전거주주택보유주택)가 다른 특례로 1세대1주택이 되어 영 §154⑩으로 §161 안분만 거는 경우.
+   * 거주요건은 그 특례를 낸 판정이 이미 §154①로 봤다(재산세제과-1081 · rental-155-20-b-154-10-and-q4 Q-2 (b)).
+   */
+  eligibilityOverride?: EligibilityResult,
 ): RentalHousingExceptionResult {
   const bothTables = (g: number, parts?: RentalLthdParts): Gain95BothTables | Gain95BothTablesByParts =>
     parts
@@ -147,13 +153,9 @@ export function calculateRentalHousingException(
   const { gain95Table1, gain95Table2 } = tables;
 
   // ─── Step 2: 요건 판정 ────────────────────────────────────
-  const eligibility = checkEligibility(
-    input.rentalUnits,
-    residenceHoldYears,
-    residenceLiveYears,
-    winWinResidenceExempt,
-    eligibilityContext,
-  );
+  const eligibility =
+    eligibilityOverride ??
+    checkEligibility(input.rentalUnits, residenceHoldYears, residenceLiveYears, winWinResidenceExempt, eligibilityContext);
 
   if (!eligibility.passed) {
     return withPartsEcho(makeIneligibleResult(eligibility, gain95Table1, gain95Table2), tables);
