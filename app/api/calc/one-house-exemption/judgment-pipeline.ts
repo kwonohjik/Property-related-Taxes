@@ -16,6 +16,7 @@ import { POP_DECLINE_71_2_UNCONFIRMED_ID } from "@/lib/tax-engine/transfer-reduc
 import { resolveRentalResidenceComposition } from "@/lib/tax-engine/transfer-tax-rental-residence-composition";
 import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judge";
 import { buildRentalHousingVerdict, applyRentalHousingVerdict } from "@/lib/tax-engine/one-house/rental-housing-verdict";
+import { rosterCountsRentalUnits } from "@/lib/tax-engine/transfer-tax-rental-housing-judge";
 import { buildOneRightVerdict, applyOneRightVerdict } from "@/lib/tax-engine/one-house/one-right-verdict";
 import { applyNonResidentVerdict } from "@/lib/tax-engine/one-house/non-resident";
 import { applyDemolishedBeforeBalanceVerdict } from "@/lib/tax-engine/one-house/demolished-before-balance";
@@ -61,7 +62,8 @@ export function runOneHouseJudgmentPipeline(
       ? resolveRentalResidenceComposition(engineInput, parsedRates, generalHouseAcquisitionDate)
       : undefined,
   );
-  const afterRental = applyRentalHousingVerdict(coreJudgment, rentalVerdict);
+  // F-1 Q-3 — 불성립이어도 명부에 「장기임대」 행이 있으면 엔진이 임대주택을 센 판정을 유지한다(계산기 STEP 0.96과 같은 술어).
+  const afterRental = applyRentalHousingVerdict(coreJudgment, rentalVerdict, rosterCountsRentalUnits(engineInput));
 
   /**
    * 단계 6.6: §89①4호 1세대1입주권 (P4-3b).
