@@ -87,7 +87,7 @@ PR-1 뒤에는 K-7 A 시나리오가 계산되므로 열 수 있다. 단건 선�
 
 ### 3.4 결과 화면 A/B 비교 표시 — Q-4 b (PR-4)
 
-F27이 싣는 `aggregated.burdenedGiftCarryoverDetail`(채택 시나리오·A/B 결정세액)을 읽는 컴포넌트가 **없다**(`components/` grep 0건). 단건 이월과세는 `CarryoverComparisonCard`로 A/B를 보여준다. K-5에서도 같은 상태이므로 PR-1의 결함은 아니다. 화면에서 실제로 무엇이 보이는지는 확인하지 않았다(확인 필요 — PR-4 Do 첫 단계에서 브라우저로 실측).
+F27이 싣는 `aggregated.burdenedGiftCarryoverDetail`(채택 시나리오·A/B 결정세액)을 읽는 컴포넌트가 **없다**(`components/` grep 0건). 단건 이월과세는 `CarryoverComparisonCard`로 A/B를 보여준다. K-5에서도 같은 상태이므로 PR-1의 결함은 아니다. 화면에서 실제로 무엇이 보이는지는 확인하지 않았다(확인 필요 — PR-4 Do 첫 단계에서 브라우저로 실측). → **실측 결과·구현은 §11**.
 
 **PR-4 설계(초안 — Do 첫 단계 실측 뒤 확정)**:
 - 지금 echo는 신고단위 결정세액 A·B·채택·증여자 취득일·증여세만 싣는다. 단건 카드(`CarryoverComparisonCard` — `ScenarioCol`·`InfoRow`)는 시나리오마다 **취득가액·보유기간·양도차익·결정세액**을 보여 준다. 일반건물은 카드가 토지·건물로 나뉘므로 F27이 두 결과(`resultA`·`resultB`)에서 **시나리오별 요약**(토지·건물 취득가액, 양도차익 합, 보유기간 기산일, 결정세액)을 echo에 더 싣는다 — 미채택 쪽 값은 지금 버려진다.
@@ -159,3 +159,16 @@ body 실측(수정 前): 지분 분할은 최상위 일반건물 객체에 `carr
 - 기존 테스트 갱신: PR-5c route anchor DB-4(지분 donorBuilt) · pipeline PL-5 2건 — 「donorBuilt만 끄면 계산된다」 대조가 이제 묶음 차단에 걸려 400(`carryoverTaxation`)이다. donorBuilt 거부가 **별도 필드로 함께** 나옴을 고정하도록 바꿨다. E2E GBBD-E6도 「토글을 끄면 계산」 → 「⑧이 이월과세 자체를 막고 그 칸으로 이동」으로 바꿨다.
 - 검증: anchor `transfer.route.gb-bg-carryover-bundled-block.anchor.test.ts` 12건 — 차단 7(지분 K-5 · 미선언 축 B · K-7 · 첫 지분만 · 묶음 첫 자산 K-5·K-7 · 묶음 둘째 자산) 수정 前 전부 red · 대조 5(단건 109,326,000 · 지분 증여 · 지분 일반 양도 × 이월과세 200 · 묶음 토지 쪽 이월과세 · 묶음 이월과세 아님) green. 뮤테이션 9/9 KILLED(처음 「⑧ 일반건물 조건」이 살아 토지 쪽 이월과세 대조를 추가). E2E 회귀 44 passed.
 - 남은 것: 지분·묶음에서 §97의2 비교 **배선**(비교 단위 설계 — 별도 계획서) · PR-4(결과 화면 A/B 비교).
+
+## 11. PR-4 구현 기록 (2026-10-24) — 결과 화면 [A]/[B] 비교 (Q-4 b)
+
+**Do 첫 단계 실측(수정 前, K-7 A 채택 시료)**: 결과 화면 전문에 「이월과세」·[A]/[B]·B 결정세액 79,000,000이 **한 번도 나오지 않았다**(결정세액 82,627,700만). 렌더 지점은 `BundledAllocationCard`다(`aggregated.donorBuiltPenalty`를 읽는 유일한 컴포넌트 — PR-5c 카드와 같은 자리).
+
+같은 실측에서 **신고서 표 자기모순**을 하나 더 찾았다: A 채택이면 엔진은 토지·건물 카드 보유기간을 당초 증여자 취득일(2015-01-01)부터 세어 장특공제율 22%(76,835,000 = 349,250,000 × 22%, 11년)를 냈는데, 신고서 표는 폼 취득일로 **취득일자 2024-05-01 · 보유기간 1년 10월**을 찍었다. 단건 경로의 #023(「보유 26년인데 장특 6%」)과 같은 종류다 — 단건은 `acquisitionDateOverride`로 이미 막았고 일반건물에만 없었다.
+
+- route F27 — `burdenedGiftCarryoverDetail.scenarioA`·`scenarioB`(표시 전용): 카드별 취득가액·양도차익 + 토지·건물 보유기간 기산일. 기산일은 그 호출에 넘긴 카드 취득일 그대로다(A = 당초 증여자 취득일 · B = `landAcquisitionDate ?? acquisitionDate`·`buildingAcquisitionDate ?? acquisitionDate`, `general-building-route-actual.ts`의 `landCardDate`·`buildingCardDate`와 같은 식). 미채택 쪽 카드 값은 종전에 버려졌다.
+- 화면 `GbBurdenedGiftCarryoverCard` — 단건 `ScenarioCol`·`InfoRow` 재사용. A·B 결정세액이 곧 신고 전체 결정세액이라 배지는 「✓ 채택 (더 큰 세액)」(단건과 같은 규칙) · B 채택이면 「← 비교과세 세액 역전」·「시나리오 B 채택 (세액 역전)」. 옛 저장 결과(요약 없음)는 결정세액만 보인다.
+- 신고서 표·상세명세서 — `gbCarryoverAcqDateOverride`(`FilingFormTableDateHelpers.ts`): A 채택이면 토지·원건물 카드 취득일을 `scenarioA` 기산일로 덮고 취득일자 칸에 각주(「당초 증여자 취득일 — 이월과세 적용(시나리오 A) · 소득세법 §95④ 단서」). B 채택·옛 결과·증축 카드는 그대로.
+- 범위: 결과 카드 · 신고서 표 · 상세명세서(보유개월). 단건처럼 신고서를 [A]/[B] 두 단으로 나누지는 않았다 — 일반건물 신고서는 카드 열이 여럿이라 채택 쪽 한 벌만 그리고, 미채택 쪽은 비교 카드가 보여 준다. 서버 PDF(`lib/pdf/ResultPdfTransferSections.tsx`)는 단건 A/B 비교 카드(`carryoverTaxationDetail`)도 싣지 않는다(파트 이월과세·§114조의2 카드만) — 단건 범위를 따라 PDF에는 붙이지 않았다. 일반건물 PDF는 취득일자·보유기간 칸이 없어(입력 요약은 `buildingStdSnapshots`만 받는다) 위 날짜 모순도 PDF에는 없다.
+- 실측(수정 後): A 열 토지 50,000,000·건물 100,000,000·기산일 2015-01-01·양도차익 349,250,000·결정세액 82,627,700 / B 열 150,000,000·150,000,000·2024-05-01·200,000,000·79,000,000 · 신고서 2015-01-01·11년 2월 · 375px 가로 스크롤 없음(스크린샷 확인).
+- 검증: route anchor +4(A 요약 = 응답 카드 · 미채택 B 요약 · B 채택 요약 = 응답 카드 · 토지만 다른 취득일이면 B 기산일이 갈림) — 수정 前 4 red · 뮤테이션 2/2 KILLED(B 토지 기산일 축 · A 요약 출처) · 헬퍼 anchor 2 · E2E GBPB-E3(A 채택 카드·신고서 날짜)·E4(B 채택 세액 역전·신고서 날짜 불변).

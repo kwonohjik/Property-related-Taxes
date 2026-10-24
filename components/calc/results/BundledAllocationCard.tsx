@@ -18,6 +18,7 @@ import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTa
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import { CarryoverDonorBuiltPenaltyCard } from "@/components/calc/results/transfer/CarryoverDonorBuiltPenaltyCard";
+import { GbBurdenedGiftCarryoverCard } from "@/components/calc/results/transfer/GbBurdenedGiftCarryoverCard";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import {
   BurdenedGiftFilingFormSection,
@@ -410,6 +411,9 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           reductionAmount: p.reductionAmount,
         }))}
       />
+
+      {/* 일반건물 부담부증여 × 이월과세 [A]/[B] 비교(F27 PR-4) — echo 가 없으면 렌더하지 않는다. */}
+      <GbBurdenedGiftCarryoverCard detail={aggregated.burdenedGiftCarryoverDetail} />
 
       {/* 일반건물 부담부증여 × 이월과세 × 당초 증여자 신축·증축 §114조의2 근거(PR-5c) — 단건 `CarryoverComparisonCard` 와 같은 카드·같은 문구 정본. echo 가 없으면 렌더하지 않는다. */}
       <CarryoverDonorBuiltPenaltyCard echo={aggregated.donorBuiltPenalty} />

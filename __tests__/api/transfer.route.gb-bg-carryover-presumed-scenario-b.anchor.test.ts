@@ -68,7 +68,9 @@ const formOf = (assets: AssetForm[], over: Record<string, unknown> = {}): Transf
     contractTotalPrice: "1,000,000,000", totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false, ...over,
   }) as unknown as TransferFormData;
 
-interface Run { status: number; det?: number; message?: string; fieldErrors: string[]; co?: { adoptedScenario: "A" | "B"; determinedTaxA: number; determinedTaxB: number } }
+type Part = { propertyLabel: string; acquisitionPrice: number; transferGain: number };
+type Summary = { parts: Part[]; landHoldingStartDate: string; buildingHoldingStartDate: string };
+interface Run { status: number; det?: number; message?: string; fieldErrors: string[]; props?: Part[]; co?: { adoptedScenario: "A" | "B"; determinedTaxA: number; determinedTaxB: number; scenarioA?: Summary; scenarioB?: Summary } }
 async function bodyOf(f: TransferFormData): Promise<Record<string, any>> { // eslint-disable-line @typescript-eslint/no-explicit-any
   let captured: Record<string, any> = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
   vi.stubGlobal("fetch", vi.fn(async (_u: string, init: RequestInit) => {
@@ -86,7 +88,7 @@ async function post(body: Record<string, any>): Promise<Run> { // eslint-disable
   }));
   const json = (await res.json()) as { data?: { aggregated?: Record<string, any> }; error?: { message?: string; fieldErrors?: Record<string, string[]> } }; // eslint-disable-line @typescript-eslint/no-explicit-any
   const a = json.data?.aggregated;
-  return { status: res.status, det: a?.determinedTax, message: json.error?.message, fieldErrors: Object.keys(json.error?.fieldErrors ?? {}), co: a?.burdenedGiftCarryoverDetail };
+  return { status: res.status, det: a?.determinedTax, message: json.error?.message, fieldErrors: Object.keys(json.error?.fieldErrors ?? {}), co: a?.burdenedGiftCarryoverDetail, props: a?.properties };
 }
 const run = async (f: TransferFormData): Promise<Run> => post(await bodyOf(f));
 const issues = (f: TransferFormData) => [0, 1, 2, 3, 4].flatMap((s) => collectStepIssues(s, f));
@@ -169,5 +171,36 @@ describe("⑧ ↔ ⑫ — 미입력은 둘 다 막는다(400이 엔진까지 가
     expect(iss.join("\n")).toContain(word);
     expect(r.status).toBe(400);
     expect(r.fieldErrors.length).toBeGreaterThan(0); // ⑫(Zod)에서 막힌다 — 엔진 throw 가 아니다
+  });
+});
+
+describe("PR-4 — 시나리오별 카드 요약 echo (결과 화면 [A]/[B] 비교 카드가 읽는다)", () => {
+  const pick = (ps: Part[] | undefined) => ps?.map(({ propertyLabel, acquisitionPrice, transferGain }) => ({ propertyLabel, acquisitionPrice, transferGain }));
+
+  it("K-7 A 채택: A 요약 = 응답 카드 그대로(토지 5천만·건물 1억 = 당초 증여자 감정가액 × 채무비율) · 기산일 2015-01-01", async () => {
+    const { r } = await calc(K7);
+    expect(r.co?.scenarioA?.parts).toEqual(pick(r.props));
+    expect(r.co?.scenarioA?.parts.map((p) => p.acquisitionPrice)).toEqual([50_000_000, 100_000_000]);
+    expect(r.co?.scenarioA).toMatchObject({ landHoldingStartDate: "2015-01-01", buildingHoldingStartDate: "2015-01-01" });
+  });
+
+  it("K-7 A 채택: 미채택 B 요약도 남는다(토지·건물 1.5억 = 증여일 평가액 3억 × 채무비율) · 기산일 2024-05-01", async () => {
+    const { r } = await calc(K7);
+    expect(r.co?.scenarioB?.parts.map((p) => p.acquisitionPrice)).toEqual([150_000_000, 150_000_000]);
+    expect(r.co?.scenarioB).toMatchObject({ landHoldingStartDate: "2024-05-01", buildingHoldingStartDate: "2024-05-01" });
+  });
+
+  it("②3호 B 채택(증여세 3천만): B 요약 = 응답 카드 그대로 · A 요약은 당초 증여자 값", async () => {
+    const { r } = await calc(K7, { giftTaxAmount: "30,000,000" });
+    expect(r.co?.adoptedScenario).toBe("B");
+    expect(r.co?.scenarioB?.parts).toEqual(pick(r.props));
+    expect(r.co?.scenarioA?.parts.map((p) => p.acquisitionPrice)).toEqual([50_000_000, 100_000_000]);
+  });
+
+  it("B 기산일은 카드 취득일 축을 따른다 — 토지 취득일만 다르면 토지·건물 기산일이 갈린다", async () => {
+    const { r } = await calc({ ...K7, landAcquisitionDate: "2024-04-01" } as Partial<AssetForm>);
+    expect(r.status, r.message).toBe(200);
+    expect(r.co?.scenarioB).toMatchObject({ landHoldingStartDate: "2024-04-01", buildingHoldingStartDate: "2024-05-01" });
+    expect(r.co?.scenarioA).toMatchObject({ landHoldingStartDate: "2015-01-01", buildingHoldingStartDate: "2015-01-01" });
   });
 });

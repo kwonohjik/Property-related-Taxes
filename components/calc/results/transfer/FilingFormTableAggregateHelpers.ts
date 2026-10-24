@@ -27,6 +27,7 @@ import {
   fmtPeriod,
   getAcqDateForCard,
 } from "./FilingFormTableHelpers";
+import { gbCarryoverAcqDateOverride } from "./FilingFormTableDateHelpers";
 import { fmtRatePct } from "./FilingFormTableRowDefs";
 import { resolveFilingRateCode } from "./filing-rate-code";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
@@ -168,6 +169,7 @@ export function buildAggregateRows(
   // 취득가액 행 주석: 영 §163⑨ 단서 1호·2호 채택값(D1-4·D2-4) — 단건 신고서(`FilingFormTableHelpers` split 분기)와 같은 leaf·같은 문구.
   //   종전엔 합산 신고서에만 없어 취득가액 칸이 평가액이 아닌 채택값인데 그 이유가 보이지 않았다(2026-10-11 #11).
   const acqNotes: Record<string, string> = {};
+  const acqDateNotes: Record<string, string> = {};
   /**
    * §102② 양도차손 통산 행 — 서식(별지 제84호 부표1)에는 이 행이 없어, 종전에는 「감면후 소득금액」
    * 칸의 각주로만 있었다(결과탭 코드리뷰 #072). 각주는 소멸분을 통산으로 적고 합계 열과 가로
@@ -199,7 +201,10 @@ export function buildAggregateRows(
       GB_CARD_BASE_IDS.has(baseCardId(col));
     // GB 카드별 정확한 취득일(원건물=건물취득일·증축건물=증축일·토지=토지취득일).
     // 일반 자산은 asset.acquisitionDate 그대로.
-    const acqDate = getAcqDateForCard(a, col);
+    // 부담부증여 × 이월과세 A 채택이면 당초 증여자 취득일(엔진 보유기간 축) — 각주로 밝힌다.
+    const carryoverAcqDate = gbCarryoverAcqDateOverride(aggregated.burdenedGiftCarryoverDetail, col);
+    if (carryoverAcqDate) acqDateNotes[col] = "당초 증여자 취득일 — 이월과세 적용(시나리오 A) · 소득세법 §95④ 단서";
+    const acqDate = carryoverAcqDate ?? getAcqDateForCard(a, col);
 
     // 머리 정보
     setStr("transferDate", col, fmtDate(colTransferDate));
@@ -531,7 +536,7 @@ export function buildAggregateRows(
     : "취득일자";
   const rowOrder: Array<[string, string, Partial<RowDef>?]> = [
     ["transferDate", "양도일자"],
-    ["acquisitionDate", acqDateRowLabel],
+    ["acquisitionDate", acqDateRowLabel, Object.keys(acqDateNotes).length > 0 ? { notes: acqDateNotes } : undefined],
     ["holdingPeriod", "보유기간"],
     ["moveOut", "퇴거일"],
     ["moveIn", "입주일"],

@@ -8,6 +8,7 @@ import { partAcquisitionDates } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { table2ResidencePct } from "@/lib/tax-engine/data/lthd-table2-era";
+import type { AggregateTransferResult } from "@/lib/tax-engine/types/transfer-aggregate.types";
 
 // ── 날짜·기간 포맷 헬퍼 ────────────────────────────────────────
 
@@ -91,6 +92,23 @@ export function getAcqDateForCard(asset: import("@/lib/stores/calc-wizard-asset"
     return partAcquisitionDates(asset).land;
   }
   return asset.acquisitionDate || "";
+}
+
+/**
+ * 일반건물 부담부증여 × 이월과세(F27) **A 채택** — 파트 카드의 보유기간은 당초 증여자 취득일부터 센다(소득세법 §95④ 단서).
+ * 엔진이 그 날짜로 장기보유특별공제를 계산했으므로 표시도 route echo(`scenarioA`)를 읽는다 — 폼 취득일(증여받은 날)을 쓰면
+ * 「보유 1년 10월 · 장특공제율 22%」 자기모순이 된다(PR-4 실측). B 채택·echo 없음(옛 결과)·토지·원건물 카드가 아니면 `undefined`.
+ */
+export function gbCarryoverAcqDateOverride(
+  detail: AggregateTransferResult["burdenedGiftCarryoverDetail"],
+  pid: string,
+): string | undefined {
+  const a = detail?.adoptedScenario === "A" ? detail.scenarioA : undefined;
+  if (!a) return undefined;
+  const base = baseCardId(pid);
+  if (base === "land" || base === "land_business" || base === "land_nbl") return a.landHoldingStartDate;
+  if (base === "building" || base === "building1") return a.buildingHoldingStartDate;
+  return undefined;
 }
 
 /**

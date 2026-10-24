@@ -646,6 +646,12 @@ export interface AggregateTransferResult {
     donorAcquisitionDate: Date;
     /** §97의2①3호 증여세 상당액 (§159 안분 단계가 한도까지 처리) */
     giftTaxAmount: number;
+    /**
+     * 시나리오별 카드 요약 (표시 전용 · PR-4) — 미채택 쪽 카드는 응답에 남지 않으므로 여기서만 보인다.
+     * 이 필드가 생기기 전에 저장된 결과에는 없다.
+     */
+    scenarioA?: GbBgCarryoverScenarioSummary;
+    scenarioB?: GbBgCarryoverScenarioSummary;
   };
   /**
    * **일반건물 부담부증여 × 이월과세 × 당초 증여자 신축·증축** §114조의2 가산세 근거 echo (F27 · PR-5c) — `donorBuilt` 를 보냈을 때만 있다.
@@ -702,6 +708,15 @@ export interface AggregateTransferResult {
 }
 
 /** §97②2호 단서 발동 비교 — 환산측(가목) < 직접측(나목)이면 나목 채택. */
+/** 일반건물 부담부증여 × 이월과세(F27) 한 시나리오의 카드 요약 — 결과 화면 [A]/[B] 비교 카드용 */
+export interface GbBgCarryoverScenarioSummary {
+  /** 카드별 취득가액·양도차익 (토지 카드 1~3장 + 건물 카드) */
+  parts: { propertyLabel: string; acquisitionPrice: number; transferGain: number }[];
+  /** 보유기간 기산일 (YYYY-MM-DD) — 토지 카드·건물 카드 */
+  landHoldingStartDate: string;
+  buildingHoldingStartDate: string;
+}
+
 export interface GbSwapComparison { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" }
 
 /**
