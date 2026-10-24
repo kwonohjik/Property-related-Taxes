@@ -81,3 +81,16 @@ export function housingFirstDisclosureDateNote(kind: HousingKind): string {
   if (kind === "apartment") return "";
   return kind === "unknown" ? "(개별주택은 2005-04-30)" : "(2005-04-30)";
 }
+
+/**
+ * 공동주택의 «취득시 공동주택가격(부수토지 포함 총액)» 입력 안내 — 배율 초과 분리 카드 hint와 ⑧ 메시지가 함께 읽는 **핵심 문장**. (단일 정의 — 끝에 마침표·붙임말 없음)
+ *
+ * 공동주택은 취득일(고정 2005-04-30)로 «공시가격이 없었다»를 단정하지 않는다 — 2005.4.30. 전 취득이라도 국세청장 고시 기준시가가 있던 아파트는 그 값이 맞고,
+ * 2005.4.30. 뒤 취득이라도 그 단지의 첫 공시가 늦으면 공시가격이 없다. 그래서 날짜와 무관하게 «있었으면 그 값, 없었으면 §164⑥·⑦ 산식 결과»를 한 문장으로 안내한다.
+ */
+export const APARTMENT_ACQ_PRICE_SENTENCE =
+  `취득 당시 ${phdDisclosedPriceName(true)}(국세청장이 고시한 기준시가 포함)이 있었으면 그 값을, ` +
+  `없었으면 소득세법 시행령 §164⑥·⑦ 산식으로 계산한 ${phdConvertedPriceName(true)}(부수토지 포함 총액)을 입력하세요`;
+
+/** 공동주택 카드 hint에 핵심 문장 뒤로 붙는 안내 — 처음 매겨진 가격의 주체에 따라 §164⑥/⑦이 갈린다(`apart-nts-price.ts` APART_FIRST_PRICE_AGENCY_REQUIRED_MESSAGE 참조). */
+export const APARTMENT_ACQ_PRICE_AGENCY_NOTE = "처음 매겨진 가격이 국세청장 고시면 §164⑥, 국토교통부장관 공시면 §164⑦입니다";

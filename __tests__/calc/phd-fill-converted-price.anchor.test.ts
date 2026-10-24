@@ -4,7 +4,7 @@
  * 비환산(실거래가·감정가액·매매사례가액) 주택의 «취득시 기준시가» 칸에 소득세법 시행령 §164⑦ 산식 결과(환산 개별주택가격)를 채우는 계산 보조.
  *   F1 버튼 결과 = 엔진 §164⑦ 값 (독립 BigInt 산식 · 환산 경로 route echo 와 일치)
  *   F2 대표 셀: 환산 개별주택가격 93,567,251 → 개산공제 2,807,017 → 총세액 185,101,438 (계획서 :108)
- *   F3 보이는 조건 격자 (방식 8 × 종류 × 취득일 경계 × 겸용·이월과세·취득원인)
+ *   F3 보이는 조건 격자 (방식 8 × 종류 × 취득일 — 취득일 조건 없음 × 겸용·이월과세·취득원인) · 늦은 공시 주택(취득 2015-09-01)
  *   F4 ④ 본문 불변 — 보조 입력(phd* 칸)은 전송되지 않는다 · 버튼 전후 차이는 standardPriceAtAcquisition 하나뿐
  *   F5 ⑧ 불변 — 보조 입력은 ⑧ 이슈를 바꾸지 않는다
  *   F6 막힘 — 칸 부족·최초 고시일 이후·합계 동일(§164⑧ 준용)은 값을 만들지 않는다(0 대입 금지)
@@ -102,12 +102,19 @@ describe("F1·F2 버튼 결과 = 엔진 §164⑦ 값", () => {
 });
 
 describe("F3 보이는 조건 격자", () => {
-  const dates: [string, boolean][] = [["2003-01-10", true], ["2005-04-28", true], ["2005-04-29", false], ["2005-04-30", false], ["2010-01-10", false], ["", false]];
-  it.each(PHD_METHODS)("방식 %s × 취득일 경계 — 환산이면 숨김(PHD 토글이 대신) · 비환산이면 취득일 < 2005-04-29 에서만", (id, mo) => {
-    for (const [d, before] of dates) {
-      const want = !phdMethodIsEstimated(id) && before;
+  // 취득일 조건은 없다 — 신축 직후 취득처럼 그 주택의 첫 공시가 늦으면 2005.4.30. 뒤 취득이어도 환산이 필요하다(적용 가능 여부는 계산 시점의 not_eligible 이 가른다).
+  const dates = ["2003-01-10", "2005-04-28", "2005-04-29", "2005-04-30", "2010-01-10", "2015-09-01", ""];
+  it.each(PHD_METHODS)("방식 %s × 취득일 — 환산이면 숨김(PHD 토글이 대신) · 비환산이면 취득일과 무관하게 보임", (id, mo) => {
+    for (const d of dates) {
+      const want = !phdMethodIsEstimated(id);
       expect(phdFillAssistVisible(asset({ ...mo, acquisitionDate: d })), `${id} ${d}`).toBe(want);
     }
+  });
+
+  it("늦게 공시된 주택(취득 2015-09-01) — 감정·매매사례·실거래가(기준시가 칸 있는 경우) 모두 보이고 환산이면 안 보인다", () => {
+    for (const id of ["actual", "app", "sales"] as const)
+      expect(phdFillAssistVisible(asset({ ...M[id], acquisitionDate: "2015-09-01" })), id).toBe(true);
+    expect(phdFillAssistVisible(asset({ ...M.est, acquisitionDate: "2015-09-01" }))).toBe(false); // 환산 — PHD 토글이 대신
   });
 
   it("자산 종류·취득원인·겸용·이월과세·토지 원인 혼합 — 범위 밖은 숨김, 같은 시료의 긍정 짝은 보임", () => {
@@ -184,6 +191,16 @@ describe("F6 막힘 — 값을 만들지 않는다 (자동 안분·0 대입 금�
   it("취득일 ≥ 최초 고시일 → not_eligible (isPhdEligible 단일 소스)", () => {
     const r = computeConvertedHousingPrice(asset({ ...SEVEN, acquisitionDate: "2005-04-30" }), PHD_TRANSFER_DATE);
     expect(r).toEqual({ ok: false, missing: [], blocked: "not_eligible" });
+  });
+
+  it("늦은 공시 — 취득 2015-09-01 · 최초 고시 2016-04-29 → 계산 ok / 취득 2017-01-01 · 최초 고시 2016-04-29 → not_eligible (취득일 ≥ 최초 고시일은 거부)", () => {
+    const late = { ...SEVEN, phdFirstDisclosureDate: "2016-04-29" };
+    const ok = computeConvertedHousingPrice(asset({ ...late, acquisitionDate: "2015-09-01" }), PHD_TRANSFER_DATE);
+    expect(ok.ok).toBe(true);
+    if (ok.ok) expect(ok.value).toBe(93_567_251); // 같은 7칸 — 최초 고시일만 다르다
+    expect(computeConvertedHousingPrice(asset({ ...late, acquisitionDate: "2017-01-01" }), PHD_TRANSFER_DATE)).toEqual({ ok: false, missing: [], blocked: "not_eligible" });
+    // 경계 — 취득일 = 최초 고시일은 취득 당시 이미 고시분이 있다(2005-04-30 not_eligible 과 같은 기준)
+    expect(computeConvertedHousingPrice(asset({ ...late, acquisitionDate: "2016-04-29" }), PHD_TRANSFER_DATE)).toEqual({ ok: false, missing: [], blocked: "not_eligible" });
   });
 
   it("취득 당시·최초 고시 당시 합계가 같고 취득연도 다음 연도 말 이전 최초 고시 → same_sum (§164⑧ 준용 대상 — ⑧ 이 환산에서 차단하는 조건과 같다)", () => {

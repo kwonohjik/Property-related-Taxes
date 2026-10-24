@@ -3,7 +3,8 @@
  *
  * ## 무엇이고 무엇이 아닌가
  *
- * - 대상: 취득가액을 **실거래가·감정가액·매매사례가액**으로 정하는 **주택**(비환산)이고 취득일이 개별주택가격 최초 공시일 전인 경우.
+ * - 대상: 취득가액을 **실거래가·감정가액·매매사례가액**으로 정하는 **주택**(비환산). 취득일로 거르지 않는다 — 취득 당시 그 주택의 가격이 공시되기 전인지는
+ *   사용자가 입력한 최초 고시일과 비교해 `computeConvertedHousingPrice` 가 가른다(취득일 ≥ 최초 고시일이면 계산을 거부).
  *   이 방식에서는 §164⑦ 3-시점 환산(PHD)이 성립하지 않는다(`phdAcqMethodEstimated`). 대신 개산공제 base(영 §163⑥2호 가목 — «취득당시의 라목 가액»)가
  *   곧 §164⑦ 산식 결과이므로, 사용자가 «취득시 기준시가» 칸에 그 값을 입력한다. 이 모듈은 그 값을 **계산해 주는 보조 도구**다.
  * - **전송·요구 없음**: 보조 입력(기존 `phd*` 칸)은 ④ 가 보내지 않고(`phdFlagEffective` false) ⑧ 도 요구하지 않는다. 엔진으로 가는 것은
@@ -29,12 +30,6 @@ import { calcPreHousingDisclosureGain } from "@/lib/tax-engine/transfer-tax-pre-
 import { classifySameAdjustmentPeriod } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
-/**
- * 버튼이 보이는 취득일 상한(미만) — 개별주택가격 최초 고시일(2005-04-30) 직전. ⑤ 자동 ON effect 의 `acqDatePrePHD` 와 같은 기준이다.
- * 그 이후 취득이라도 공동주택은 단지별 최초고시일이 달라 해당할 수 있으나(`PreHousingDisclosureSection` 안내), 환산 방식의 자동 트리거와 같은 기준으로 맞춘다 — 확인 필요(계획서 §9.2).
- */
-export const PHD_FILL_ACQUISITION_BEFORE = "2005-04-29";
-
 /** 이 자산·방식에서 «환산 개별주택가격 계산해 채우기» 보조가 **열리는가** (취득시 기준시가 칸이 있는 곳에서만 호출부가 렌더한다). */
 export function phdFillAssistVisible(asset: AssetForm): boolean {
   if (asset.assetKind !== "housing") return false;
@@ -42,8 +37,9 @@ export function phdFillAssistVisible(asset: AssetForm): boolean {
   if (!phdToggleCauseReachable(asset) || landCauseMixActive(asset)) return false;
   // 환산이면 PHD 3-시점 토글이 대신한다 — 두 카드가 함께 뜨지 않게 한다(같은 leaf 의 부정).
   // 이 leaf 는 겸용주택·이월과세(자기 패널·자기 게이트)에서도 true 라 그 둘도 여기서 함께 제외된다.
-  if (phdAcqMethodEstimated(asset)) return false;
-  return !!asset.acquisitionDate && asset.acquisitionDate < PHD_FILL_ACQUISITION_BEFORE;
+  // 취득일 조건은 두지 않는다 — 신축 직후 취득처럼 그 주택(공동주택은 단지)의 첫 공시가 늦으면 2005.4.30. 뒤 취득이어도 환산이 필요하다.
+  // 적용 가능 여부(취득일 < 입력한 최초 고시일)는 계산 시점의 `isPhdEligible`(`computeConvertedHousingPrice`)이 가른다.
+  return !phdAcqMethodEstimated(asset);
 }
 
 export type ConvertedHousingPriceResult =
