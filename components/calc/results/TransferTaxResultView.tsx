@@ -34,6 +34,7 @@ import { HousingExpropriationValuationCard } from "@/components/calc/results/tra
 import { SplitLandExpropriationValuationCard } from "@/components/calc/results/transfer/SplitLandExpropriationValuationCard";
 import { SplitGainDetailSection } from "@/components/calc/results/transfer/SplitGainDetailSection";
 import { isSaleSplitActual } from "@/components/calc/results/transfer/sale-split-unentered-notice";
+import { isPhdApartment } from "@/components/calc/results/transfer/phd-housing-term";
 import { Pre1990LandValuationDetailCard } from "@/components/calc/results/transfer/Pre1990LandValuationDetailCard";
 import { resolveRuralSurtax } from "@/components/calc/results/transfer/reduction-eligible-income";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -129,7 +130,11 @@ export function TransferTaxResultView({
         taxTypeLabel: "양도소득세",
         resultData: result as unknown as Record<string, unknown>,
         // 건물 기준시가 계산서(building-std-report) PDF는 inputData.buildingStdSnapshots에서 재유도.
-        inputData: { buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: formData?.assets }) },
+        inputData: {
+          buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: formData?.assets }),
+          // PHD(§164⑦) 결과 이름 — 화면과 같은 단일 정의(`isPhdApartment`). 표시 전용, 엔진·API 무관
+          phdApartment: isPhdApartment(resolvedAsset),
+        },
         filenamePrefix: "양도소득세_계산결과",
       },
       pdfSections,
@@ -516,6 +521,7 @@ export function TransferTaxResultView({
         <PrintSection id="phd" selectedIds={selectedPrintIds}>
         <PreHousingDisclosureDetailSection
           result={result}
+          phdApartment={isPhdApartment(resolvedAsset)}
         />
         </PrintSection>
       )}

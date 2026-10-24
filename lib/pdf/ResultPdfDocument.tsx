@@ -390,7 +390,7 @@ export function ResultPdfDocument({
         {inputData && <InputSection taxType={taxType} inputData={inputData} />}
 
         {/* 세금 유형별 상세 섹션 */}
-        {taxType === "transfer" && <TransferSection r={r} selectedSectionIds={selectedSectionIds} />}
+        {taxType === "transfer" && <TransferSection r={r} selectedSectionIds={selectedSectionIds} phdApartment={inputData?.phdApartment === true} />}
         {taxType === "transfer_multi" && <TransferMultiSection r={r} selectedSectionIds={selectedSectionIds} />}
         {taxType === "acquisition" && <AcquisitionSection r={r} selectedSectionIds={selectedSectionIds} />}
         {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} selectedSectionIds={selectedSectionIds} />}

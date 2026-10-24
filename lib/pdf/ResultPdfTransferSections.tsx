@@ -28,6 +28,7 @@ import {
 } from "@/lib/tax-engine/transfer-tax-split-display";
 import { lossOffsetGiverText } from "@/lib/tax-engine/transfer-tax-split-display";
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
+import { phdConvertedPriceName } from "@/components/calc/results/transfer/phd-housing-term";
 import {
   splitCarryoverAcquisitionText,
   splitCarryoverApportionText,
@@ -39,7 +40,7 @@ import {
 
 // ─── 세금 유형별 상세 섹션 ────────────────────────────────────────
 
-export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
+export function TransferSection({ r, selectedSectionIds, phdApartment }: { r: R; selectedSectionIds?: string[]; phdApartment?: boolean }) {
   if (bool(r.isExempt)) return null;
   // calculation 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (계산 내역, 검토 U1)
   if (selectedSectionIds !== undefined && !selectedSectionIds.includes("calculation")) return null;
@@ -98,7 +99,7 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
   return (
     <>
       <Text style={s.sectionTitle}>신고서 양식</Text>
-      <TransferSplitSection r={r} />
+      <TransferSplitSection r={r} phdApartment={phdApartment} />
       <View style={s.table}>
         {num(r.transferPrice) !== undefined && (<View style={s.row}><Text style={s.lbl}>양도가액</Text><Text style={s.val}>{fmt(r.transferPrice)}</Text></View>)}
         {num(r.acquisitionPrice) !== undefined && (<View style={s.row}><Text style={s.lbl}>취득가액</Text><Text style={s.val}>{fmt(r.acquisitionPrice)}</Text></View>)}
@@ -137,7 +138,7 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
   );
 }
 
-export function TransferSplitSection({ r }: { r: R }) {
+export function TransferSplitSection({ r, phdApartment }: { r: R; phdApartment?: boolean }) {
   const sd = r.splitDetail as R | undefined;
   const phd = r.preHousingDisclosureDetail as R | undefined;
   if (!sd) return null;
@@ -166,9 +167,9 @@ export function TransferSplitSection({ r }: { r: R }) {
       <Text style={s.sectionTitle}>토지/건물 분리 내역 (§164⑤·§166⑥)</Text>
       {phd && (
         <View style={s.table}>
-          <View style={s.row}><Text style={s.lbl}>취득시 기준시가 합계 Sum_A</Text><Text style={s.val}>{fmt(phd.sumAtAcquisition)}</Text></View>
-          <View style={s.row}><Text style={s.lbl}>최초공시일 기준시가 합계 Sum_F</Text><Text style={s.val}>{fmt(phd.sumAtFirstDisclosure)}</Text></View>
-          <View style={s.rowBg}><Text style={s.lbl}>추정 취득시 주택가격 P_A_est</Text><Text style={s.valAccent}>{fmt(phd.estimatedHousingPriceAtAcquisition)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>취득시 토지+건물 기준시가 합계</Text><Text style={s.val}>{fmt(phd.sumAtAcquisition)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>최초공시일 토지+건물 기준시가 합계</Text><Text style={s.val}>{fmt(phd.sumAtFirstDisclosure)}</Text></View>
+          <View style={s.rowBg}><Text style={s.lbl}>{phdConvertedPriceName(phdApartment)} (취득시)</Text><Text style={s.valAccent}>{fmt(phd.estimatedHousingPriceAtAcquisition)}</Text></View>
           <View style={s.row}><Text style={s.lbl}>총 환산취득가</Text><Text style={s.val}>{fmt(phd.totalEstimatedAcquisitionPrice)}</Text></View>
         </View>
       )}

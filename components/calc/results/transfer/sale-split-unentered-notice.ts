@@ -41,7 +41,7 @@ export function saleSplitUnenteredNotice(actual: boolean | undefined, kind: Appo
 }
 
 /** `FilingFormTableAggregateHelpers`의 `findAssetByPropertyId`와 같은 규약 — 카드 id → 폼 자산. */
-function assetOfProperty(
+export function assetOfProperty(
   propertyId: string,
   formData: TransferFormData | undefined,
   propertyFormMap: AggregateMeta["propertyFormMap"],

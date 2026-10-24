@@ -10,6 +10,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 // 단건 결과·일괄 자산별 breakdown 양쪽에서 쓰이므로 **필요한 필드만** 요구한다.
 type PhdSource = Pick<TransferTaxResult, "preHousingDisclosureDetail">;
 import { Frac, FormulaText } from "@/components/calc/results/shared/FormulaParts";
+import { phdConvertedPriceName } from "@/components/calc/results/transfer/phd-housing-term";
 
 interface PhdRowProps {
   label: string;
@@ -41,16 +42,23 @@ function PhdRow({ label, value, formula, highlight }: PhdRowProps) {
 
 interface Props {
   result: PhdSource;
+  /**
+   * PHD 주택 종류가 공동주택인가 — 엔진 result에 없어 폼(`AssetForm.phdHousingType`)에서 읽어 내려온다.
+   * 미전달·옛 이력은 «환산 개별주택가격»(종전 표기)이다.
+   */
+  phdApartment?: boolean;
   /** PR-F1: printScoped 제거(PrintSelectionPanel 통일) → optional. 미전달 시 자체 인쇄 버튼 숨김. */
   onPrint?: () => void;
 }
 
-export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
+export function PreHousingDisclosureDetailSection({ result, phdApartment, onPrint }: Props) {
   const phd = result.preHousingDisclosureDetail;
   if (!phd) return null;
   const i = phd.inputs;
   if (!i) return null;
   const fmt = (n: number) => n.toLocaleString();
+  // §164⑦ 산식 결과의 이름 — 주택 종류별(단독·다가구 «환산 개별주택가격» / 공동주택 «환산 공동주택가격»)
+  const convertedName = phdConvertedPriceName(phdApartment);
   /**
    * 개산공제 산식의 base·율은 **엔진 echo를 그대로** 쓴다 (결과탭 코드리뷰 #053).
    * 종전에는 지분 100% 스케일 `landHousingAtAcquisition`에 「× 3%」를 고정 표기해,
@@ -95,9 +103,9 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
         formula={`토지기준시가(${fmt(i.landPricePerSqmAtTransfer)}/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtTransfer)})`}
       />
 
-      {/* 2. 환산 개별주택가격 (§164⑦ 산식) */}
+      {/* 2. 환산 개별주택가격 / 환산 공동주택가격 (§164⑦ 산식) */}
       <PhdRow
-        label="환산 개별주택가격 (취득시)"
+        label={`${convertedName} (취득시)`}
         value={phd.estimatedHousingPriceAtAcquisition}
         highlight
         formula={
@@ -119,7 +127,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
           <>
             양도가액 {fmt(i.totalTransferPrice)} ×{" "}
             <Frac
-              top={`환산 개별주택가격 ${fmt(phd.estimatedHousingPriceAtAcquisition)}`}
+              top={`${convertedName} ${fmt(phd.estimatedHousingPriceAtAcquisition)}`}
               bottom={`양도시 주택가격 ${fmt(i.transferHousingPrice)}`}
             />
           </>
@@ -176,7 +184,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
           value={phd.landHousingAtAcquisition}
           formula={
             <>
-              환산 개별주택가격 {fmt(phd.estimatedHousingPriceAtAcquisition)} ×{" "}
+              {convertedName} {fmt(phd.estimatedHousingPriceAtAcquisition)} ×{" "}
               <Frac
                 top={`취득시 토지기준시가 ${fmt(phd.landStdAtAcquisition)}`}
                 bottom={`취득시 합계 ${fmt(phd.sumAtAcquisition)}`}
@@ -187,7 +195,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
         <PhdRow
           label="취득시 건물 주택가격 성분"
           value={phd.buildingHousingAtAcquisition}
-          formula={`환산 개별주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)}) - 취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)})`}
+          formula={`${convertedName}(${fmt(phd.estimatedHousingPriceAtAcquisition)}) - 취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)})`}
         />
         <PhdRow
           label="토지 환산취득가"
@@ -198,7 +206,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
               총 환산취득가 {fmt(phd.totalEstimatedAcquisitionPrice)} ×{" "}
               <Frac
                 top={`취득시 토지 성분 ${fmt(phd.landHousingAtAcquisition)}`}
-                bottom={`환산 개별주택가격 ${fmt(phd.estimatedHousingPriceAtAcquisition)}`}
+                bottom={`${convertedName} ${fmt(phd.estimatedHousingPriceAtAcquisition)}`}
               />
             </>
           }

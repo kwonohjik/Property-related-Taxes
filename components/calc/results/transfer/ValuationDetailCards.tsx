@@ -58,6 +58,8 @@ interface Props {
   exemptionNote?: string;
   /** 사용자가 양도가액 구분 방식을 «구분 기재»로 골랐는가 — 엔진 미전송이라 폼에서 읽어 내려온다(`SplitGainDetailSection`). */
   saleSplitActual?: boolean;
+  /** PHD(§164⑦ 환산) 주택 종류가 공동주택인가 — 엔진 미전송(표시 축)이라 폼(`phdHousingType`)에서 읽어 내려온다. */
+  phdApartment?: boolean;
   /** 전액 비과세 자산 — 분리 카드의 장특 행 설명용(`SplitGainDetailSection`). */
   isExempt?: boolean;
 }
@@ -71,6 +73,7 @@ export function ValuationDetailCards({
   assetKind,
   exemptionNote,
   saleSplitActual,
+  phdApartment,
   isExempt,
 }: Props) {
   const hasAny =
@@ -112,7 +115,7 @@ export function ValuationDetailCards({
         <HousingExpropriationValuationCard detail={result.housingExpropriationValuationDetail} />
       )}
       {result.preHousingDisclosureDetail && (
-        <PreHousingDisclosureDetailSection result={result} />
+        <PreHousingDisclosureDetailSection result={result} phdApartment={phdApartment} />
       )}
       {result.commercialBuildingValuationDetail && (
         <CommercialBuildingValuationDetailCard

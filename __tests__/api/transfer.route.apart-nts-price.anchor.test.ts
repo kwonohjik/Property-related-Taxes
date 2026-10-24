@@ -154,7 +154,7 @@ describe("A) 의제취득일 이후 상속·증여 공동주택 — 답이 ②�
       const x = await ok(mk(NO_MOLIT));
       expect(x.r.transferGain).toBe(GAIN_SEC164);
       expect(x.r.inheritedAcquisitionDetail.legalBasis).toBe("소득세법 시행령 §163 ⑨ 2호 · §164 ⑦");
-      expect(x.r.inheritedHouseValuationDetail.formula).toContain("취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식)");
+      expect(x.r.inheritedHouseValuationDetail.formula).toContain("환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)");
       expect(x.r.inheritedHouseValuationDetail.formula, "법령에 없는 조어 «추정» 금지").not.toContain("추정");
     });
   }
