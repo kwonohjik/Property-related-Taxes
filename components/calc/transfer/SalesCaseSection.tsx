@@ -11,7 +11,7 @@
  *   - 취득시 기준시가 입력 (개산공제 3% base)
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { RtmsSimilarSalesModal } from "@/components/calc/inheritance/estate-card/variants/RtmsSimilarSalesModal";
@@ -40,6 +40,8 @@ export interface SalesCaseSectionProps {
   onStandardPriceAtAcqChange: (v: string) => void;
   /** 주택 — 개별주택가격 최초 공시일 전 취득 시 §164⑦ 환산 개별주택가격 입력 안내를 hint 에 붙인다 */
   isHousing?: boolean;
+  /** «취득시 기준시가» 칸 바로 아래 계산 보조(환산 개별주택가격 계산해 채우기) — 보이는 조건은 그 컴포넌트가 판정한다 */
+  stdPriceFillAssist?: ReactNode;
 }
 
 export function SalesCaseSection({
@@ -56,6 +58,7 @@ export function SalesCaseSection({
   standardPriceAtAcq,
   onStandardPriceAtAcqChange,
   isHousing,
+  stdPriceFillAssist,
 }: SalesCaseSectionProps) {
   const [rtmsOpen, setRtmsOpen] = useState(false);
 
@@ -138,6 +141,7 @@ export function SalesCaseSection({
         onChange={onStandardPriceAtAcqChange}
         hint={`필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%.${isHousing ? ` ${PRE_DISCLOSURE_STD_PRICE_HINT}` : ""}`}
       />
+      {stdPriceFillAssist}
 
       {/* RTMS 자동조회 모달 */}
       {!rtmsDisabled && (
