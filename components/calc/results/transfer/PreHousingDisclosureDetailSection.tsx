@@ -95,9 +95,9 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
         formula={`토지기준시가(${fmt(i.landPricePerSqmAtTransfer)}/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtTransfer)})`}
       />
 
-      {/* 2. 추정 취득시 주택가격 */}
+      {/* 2. 환산 개별주택가격 (§164⑦ 산식) */}
       <PhdRow
-        label="취득시 환산 주택공시가격"
+        label="환산 개별주택가격 (취득시)"
         value={phd.estimatedHousingPriceAtAcquisition}
         highlight
         formula={
@@ -119,7 +119,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
           <>
             양도가액 {fmt(i.totalTransferPrice)} ×{" "}
             <Frac
-              top={`추정 취득시 주택가격 ${fmt(phd.estimatedHousingPriceAtAcquisition)}`}
+              top={`환산 개별주택가격 ${fmt(phd.estimatedHousingPriceAtAcquisition)}`}
               bottom={`양도시 주택가격 ${fmt(i.transferHousingPrice)}`}
             />
           </>
@@ -169,14 +169,14 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
       {/* 5. 환산취득가 분리 */}
       <div className="pt-2 mt-2 border-t border-border">
         <p className="text-caption font-medium text-muted-foreground mb-1">
-          환산취득가 분리 (취득시 추정 기준시가 비율 적용)
+          환산취득가 분리 (취득시 토지·건물 기준시가 비율 적용)
         </p>
         <PhdRow
           label="취득시 토지 주택가격 성분"
           value={phd.landHousingAtAcquisition}
           formula={
             <>
-              추정 취득시 주택가격 {fmt(phd.estimatedHousingPriceAtAcquisition)} ×{" "}
+              환산 개별주택가격 {fmt(phd.estimatedHousingPriceAtAcquisition)} ×{" "}
               <Frac
                 top={`취득시 토지기준시가 ${fmt(phd.landStdAtAcquisition)}`}
                 bottom={`취득시 합계 ${fmt(phd.sumAtAcquisition)}`}
@@ -187,7 +187,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
         <PhdRow
           label="취득시 건물 주택가격 성분"
           value={phd.buildingHousingAtAcquisition}
-          formula={`추정 취득시 주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)}) - 취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)})`}
+          formula={`환산 개별주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)}) - 취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)})`}
         />
         <PhdRow
           label="토지 환산취득가"
@@ -198,7 +198,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
               총 환산취득가 {fmt(phd.totalEstimatedAcquisitionPrice)} ×{" "}
               <Frac
                 top={`취득시 토지 성분 ${fmt(phd.landHousingAtAcquisition)}`}
-                bottom={`추정 취득시 주택가격 ${fmt(phd.estimatedHousingPriceAtAcquisition)}`}
+                bottom={`환산 개별주택가격 ${fmt(phd.estimatedHousingPriceAtAcquisition)}`}
               />
             </>
           }

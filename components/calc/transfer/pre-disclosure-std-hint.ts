@@ -7,3 +7,10 @@
  */
 export const PRE_DISCLOSURE_STD_PRICE_HINT =
   "취득일이 개별주택가격 최초 공시일 전이면 소득세법 시행령 §164⑦ 산식으로 계산한 환산 개별주택가격(부수토지 포함 총액)을 입력합니다.";
+
+/**
+ * 감정가액·매매사례가액의 «취득시 기준시가» 칸 — 개산공제 기준액 설명. 칸이 한 곳에서 그려지든(`CompanionAcqAmountSection`·`SalesCaseSection`)
+ * 토지·건물 분리 입력 블록(`CompanionAcqStdPriceSection`)에서 그려지든 같은 문장이다(두 칸이 같은 `standardPriceAtAcq`를 받는다).
+ */
+export const LUMP_SUM_DEDUCTION_BASE_HINT =
+  "필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%.";

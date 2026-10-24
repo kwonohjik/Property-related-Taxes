@@ -27,7 +27,7 @@ const DETAIL: InheritanceHouseValuationResult = {
   housePriceAtInheritanceUsed: 153_336_855, // est (§164⑦)
   housePriceAtTransfer: 1_287_000_000, // P_T
   estimationMethod: "estimated_phd",
-  formula: "취득당시 개별주택가격 추정 (§164⑦ · ⑤ 준용)",
+  formula: "환산 개별주택가격 (소득세법 시행령 §164⑦ 산식)",
   legalBasis: "소득세법 시행령 §164⑦",
   warnings: [],
 };
@@ -36,8 +36,11 @@ describe("InheritedHouseValuationDetailCard — §164⑦ 신 모델", () => {
   it("A2: 추정표 자기일관(토지+건물=합계) + 환산 개별주택가격 비율 + 인용 §164⑦", () => {
     render(<InheritedHouseValuationDetailCard detail={DETAIL} />);
 
-    // 배지 §164⑦ (구 §164⑤ 아님)
-    expect(screen.getByText(/§164⑦ 개별주택가격 추정/)).toBeInTheDocument();
+    // 배지 §164⑦ (구 §164⑤ 아님) — 이름은 «환산 개별주택가격»(법령에 없는 조어 «추정» 금지)
+    expect(screen.getAllByText(/환산 개별주택가격/).length).toBeGreaterThan(0);
+    expect(screen.getByText("환산 개별주택가격")).toBeInTheDocument(); // 배지
+    expect(screen.getByText(/환산 개별주택가격 \(소득세법 시행령 §164⑦ 산식\) · 합계기준시가 = 토지 \+ 건물/)).toBeInTheDocument(); // 소제목
+    expect(document.body.textContent).not.toContain("추정");
     expect(screen.queryByText(/§164⑤ 토지비율/)).toBeNull();
 
     // (A) 합계기준시가(토지+건물) 자기일관: Sum_A·Sum_F 표시

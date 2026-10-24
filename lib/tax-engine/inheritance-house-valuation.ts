@@ -79,8 +79,8 @@ export function calculateInheritanceHouseValuation(
     landStdAtFirstDisclosure,
   );
 
-  // ── Step 4: §164⑦ 취득당시 개별주택가격 추정용 합계기준시가 (토지 + 건물) ──
-  // 환산취득가는 개별주택가격 단일값(취득 est ÷ 양도 P_T)을 사용하므로, 이 sum은 추정 ratio 전용.
+  // ── Step 4: §164⑦ 산식(환산 개별주택가격)용 합계기준시가 (토지 + 건물) ──
+  // 환산취득가는 개별주택가격 단일값(취득 est ÷ 양도 P_T)을 사용하므로, 이 sum은 §164⑦ 산식 비율 전용.
   const buildingStdAtInheritance     = input.buildingStdPriceAtInheritance ?? 0;
   const buildingStdAtFirstDisclosure = input.buildingStdPriceAtFirstDisclosure ?? 0;
   const sumAtInheritance     = landStdAtInheritance + buildingStdAtInheritance;
@@ -217,7 +217,7 @@ function resolveHousePriceAtInheritance(
     };
   }
 
-  // §164⑦(⑤ 준용) 정식 공식 — 개별주택가격(부수토지 포함) 추정:
+  // §164⑦(⑤ 준용) 정식 공식 — 개별주택가격(부수토지 포함) 환산:
   //   P_A_est = P_F × (취득시 토지기준시가 + 취득시 건물기준시가)
   //                  / (최초고시 토지기준시가 + 최초고시 건물기준시가)
   // - P_F = housePriceAtFirstDisclosure (최초 공시된 개별주택가격, 분자 승수)
@@ -247,6 +247,23 @@ export function housePriceLabels(agency: "nts" | "molit" | undefined): { price: 
   return { price: "개별주택가격", clause: "§164⑦ · ⑤ 준용", first: "최초공시" };
 }
 
+/**
+ * 산식으로 구한 취득 당시 주택 가격의 **이름** — «추정»은 법령에 없는 조어라 쓰지 않는다.
+ *   · 단독·다가구(생략): 소득세법 시행령 §164⑦ 산식 결과 = «환산 개별주택가격»(저장소 용어 통일 — memory `feedback_no_coined_legal_terms`)
+ *   · 공동주택 국토교통부 첫 공시: §164⑦ 산식 결과 — 조문에 이름이 없어 «§164⑦ 산식으로 계산한 취득 당시 공동주택가격» 서술형(새 조어 금지)
+ *   · 공동주택 국세청 첫 고시: §164⑥ 산식 결과 — «§164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가»(영 §164⑥의 «취득당시의 기준시가»)
+ * `sentence` = 문장 속 서술형(배지 등), `label` = 산식 첫 줄·소제목용 «이름 (조문 산식)» 꼴.
+ */
+export function convertedHousePriceNames(agency: "nts" | "molit" | undefined): { sentence: string; label: string } {
+  if (agency === "nts") {
+    return { sentence: "§164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가", label: "취득 당시 공동주택 기준시가 (소득세법 시행령 §164⑥ 산식)" };
+  }
+  if (agency === "molit") {
+    return { sentence: "§164⑦ 산식으로 계산한 취득 당시 공동주택가격", label: "취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식)" };
+  }
+  return { sentence: "환산 개별주택가격", label: "환산 개별주택가격 (소득세법 시행령 §164⑦ 산식)" };
+}
+
 function buildFormula(
   input: InheritanceHouseValuationInput,
   landPricePerSqmAtInheritance: number,
@@ -268,12 +285,12 @@ function buildFormula(
   }
   lines.push(``);
 
-  // 취득당시 주택가격 (§164⑥·⑦ 추정 또는 직접 입력) — 부수토지 포함 단일값. 이름·조문은 주택 구분·첫 가격 기관으로 갈린다.
-  const { price, clause, first } = housePriceLabels(input.apartFirstPriceAgency);
+  // 취득당시 주택가격 (§164⑥·⑦ 산식 또는 직접 입력) — 부수토지 포함 단일값. 이름·조문은 주택 구분·첫 가격 기관으로 갈린다.
+  const { price, first } = housePriceLabels(input.apartFirstPriceAgency);
   if (estimationMethod === "user_override") {
     lines.push(`취득당시 ${price} = ${fmt(housePriceAtInheritanceUsed)} (직접 입력)`);
   } else {
-    lines.push(`취득당시 ${price} 추정 (${clause})`);
+    lines.push(convertedHousePriceNames(input.apartFirstPriceAgency).label);
     lines.push(`  = ${first} ${price}(${fmt(input.housePriceAtFirstDisclosure)}) × (취득 합계기준시가) ÷ (${first} 합계기준시가)`);
     lines.push(`  = ${fmt(input.housePriceAtFirstDisclosure)} × ${fmt(sumAtInheritance)} ÷ ${fmt(sumAtFirstDisclosure)}`);
     lines.push(`  = ${fmt(housePriceAtInheritanceUsed)}`);

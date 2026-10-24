@@ -128,7 +128,7 @@ const DETAIL: InheritanceHouseValuationResult = {
   housePriceAtInheritanceUsed: 153_336_855,
   housePriceAtTransfer: 1_287_000_000,
   estimationMethod: "estimated_phd",
-  formula: "취득당시 개별주택가격 추정 (§164⑦ · ⑤ 준용)",
+  formula: "환산 개별주택가격 (소득세법 시행령 §164⑦ 산식)",
   legalBasis: "소득세법 시행령 §164⑦",
   warnings: [],
   pre1990Result: PRE1990,

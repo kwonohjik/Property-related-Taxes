@@ -16,7 +16,7 @@
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { PartialAcqApportionSection } from "./PartialAcqApportionSection";
 import { SalesCaseSection } from "./SalesCaseSection";
-import { PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
+import { LUMP_SUM_DEDUCTION_BASE_HINT, PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
 import { PhdConvertedPriceFill } from "./PhdConvertedPriceFill";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 
@@ -28,6 +28,12 @@ interface Props {
   isBundledExtension: boolean;
   isMixedUse: boolean;
   isGeneralBuilding: boolean;
+  /**
+   * 「취득시 기준시가」 칸을 `CompanionAcqStdPriceSection`이 그린다 — 토지·건물 분리(같은 취득일)에서 두 섹션이 함께 렌더되면
+   * 같은 `standardPriceAtAcq` 칸이 둘 뜬다. 부모가 `acqStdFieldInStdSection`으로 1회 계산해 주입한다(재파생 금지) —
+   * 참이면 이쪽 칸·«환산 개별주택가격 계산해 채우기» 보조 카드는 접고 그쪽이 맡는다(㎡당 단가·면적·공시가격 조회 등 그쪽에만 있는 입력을 잃지 않는다).
+   */
+  acqStdFieldInStdSection: boolean;
 }
 
 export function CompanionAcqAmountSection({
@@ -36,10 +42,12 @@ export function CompanionAcqAmountSection({
   isBundledExtension,
   isMixedUse,
   isGeneralBuilding,
+  acqStdFieldInStdSection,
 }: Props) {
   if (props.useEstimatedAcquisition || isSeparateAcq || props.hideAssetAcqAxis) return null;
 
-  /* «환산 개별주택가격 계산해 채우기» — 취득시 기준시가 칸(감정가액·매매사례가액) 곁 계산 보조. 보이는 조건은 `phdFillAssistVisible`(컴포넌트 내부 게이트). */
+  /* «환산 개별주택가격 계산해 채우기» — 취득시 기준시가 칸(감정가액·매매사례가액) 곁 계산 보조. 보이는 조건은 `phdFillAssistVisible`(컴포넌트 내부 게이트).
+     이 칸이 접히는 경우(`acqStdFieldInStdSection`)에는 칸을 그리는 두 자리(아래 감정 칸 블록·`SalesCaseSection`)가 보조도 함께 접는다. */
   const phdFillAssist =
     props.asset && props.onAssetChange && props.assetKind === "housing" ? (
       <PhdConvertedPriceFill
@@ -84,6 +92,7 @@ export function CompanionAcqAmountSection({
         onStandardPriceAtAcqChange={props.onStandardPriceAtAcqChange}
         isHousing={props.assetKind === "housing"}
         stdPriceFillAssist={phdFillAssist}
+        hideStdPriceField={acqStdFieldInStdSection}
       />
     );
   }
@@ -195,7 +204,7 @@ export function CompanionAcqAmountSection({
       )}
       {/* 감정가액도 §97②2호 본문의 「나목 + 개산공제」다 — 매매사례(`SalesCaseSection`)와 같은 규칙.
           필수·hint 근거는 그쪽 주석 참조. */}
-      {props.isAppraisalAcquisition && !isGeneralBuilding && (
+      {props.isAppraisalAcquisition && !isGeneralBuilding && !acqStdFieldInStdSection && (
         <>
           <CurrencyInput
             label="취득시 기준시가 (원) — 개산공제 기준액"
@@ -203,7 +212,7 @@ export function CompanionAcqAmountSection({
             data-field="standardPriceAtAcq"
             value={props.standardPriceAtAcq}
             onChange={props.onStandardPriceAtAcqChange}
-            hint={`필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%.${props.assetKind === "housing" ? ` ${PRE_DISCLOSURE_STD_PRICE_HINT}` : ""}`}
+            hint={`${LUMP_SUM_DEDUCTION_BASE_HINT}${props.assetKind === "housing" ? ` ${PRE_DISCLOSURE_STD_PRICE_HINT}` : ""}`}
           />
           {phdFillAssist}
         </>

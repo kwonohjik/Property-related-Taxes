@@ -22,8 +22,8 @@ import { ownerSplitHousingNeedsBuildingStd } from "@/lib/calc/transfer-tax-split
 import { usesTransferAreaForAcqStdPrice } from "@/lib/calc/transfer-tax-api-helpers";
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
-import { phdFlagEffective } from "@/lib/calc/phd-toggle-scope";
-import { PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
+import { acqStdPriceBranch } from "./acq-std-price-branch";
+import { LUMP_SUM_DEDUCTION_BASE_HINT, PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
 import { PhdConvertedPriceFill } from "./PhdConvertedPriceFill";
 
 interface Props {
@@ -60,7 +60,6 @@ export function CompanionAcqStdPriceSection({
   transferPricePerSqm,
   onTransferPricePerSqmChange,
 }: Props) {
-  const isCommercialBuilding = props.assetKind === "commercial_building";
   const propertyKind = toPropertyKind(props.assetKind);
   const pre1990ForceYear = acqDatePre1990 ? "1990" : undefined;
   /**
@@ -73,6 +72,17 @@ export function CompanionAcqStdPriceSection({
    * (S3-1). ⑧ 필수·④ 전송·⑫ 요구·엔진이 같은 술어를 쓴다 — 칸이 열린 상태에서만 요구된다(막다른 길 없음).
    */
   const showAcqBuildingStd = !!props.asset && !!props.onAssetChange && ownerSplitHousingNeedsBuildingStd(props.asset);
+  /** 분기 — 부모가 AmountSection에 «취득시 기준시가 칸은 이쪽이 맡는다»를 알릴 때 쓰는 것과 **같은 함수**(`acq-std-price-branch.ts`). */
+  /** 감정가액·매매사례가액 — 이 칸이 개산공제 기준액(영 §163⑥)이기도 하다. 두 칸이 하나로 합쳐질 때 그쪽 hint를 잃지 않는다. */
+  const lumpSumBase = !props.useEstimatedAcquisition && (!!props.isAppraisalAcquisition || !!props.isSalesCaseAcquisition);
+  const branch = acqStdPriceBranch({
+    useEstimatedAcquisition: props.useEstimatedAcquisition,
+    isSplit,
+    isMixedUse,
+    assetKind: props.assetKind,
+    isGeneralBuilding,
+    asset: props.asset,
+  });
 
   // 취득시 기준시가 조회 단가 → pre1990PricePerSqm_1990 자동 입력
   function handleAcqPricePerSqmChange(v: string) {
@@ -92,25 +102,25 @@ export function CompanionAcqStdPriceSection({
           종전에는 `useEstimatedAcquisition`일 때만 렌더되어, 실거래가 분리 모드에서
           calcApportionRatio(split-gain.ts:26-36)가 null → calcSplitGain 전체가 null이 되어
           토지·건물 분리 계산이 **오류 없이 조용히 비활성화**됐다(계획서 §3.1, probe 실측). */}
-      {(props.useEstimatedAcquisition || isSplit) && (
-        isMixedUse ? (
+      {branch !== "hidden" && (
+        branch === "mixed" ? (
         // 겸용주택 모드: 양도시·취득시 기준시가는 위 "겸용주택 분리계산" 영역에서 입력.
         <p className="text-xs text-muted-foreground italic">
           취득시/양도시 기준시가는 위 겸용주택 분리계산 영역에서 입력합니다 (개별주택가격·상가건물·공시지가).
         </p>
-      ) : isCommercialBuilding ? (
+      ) : branch === "commercial" ? (
         // 상업용건물·오피스텔: 환산은 시행령 §164⑥·§176조의2②2호에 따라
         // 호별 ㎡당 고시가 + 건물 ㎡당 기준시가 + 개별공시지가로 산정 (CommercialBuildingBlock).
         <p className="text-xs text-muted-foreground italic">
           취득시/양도시 기준시가는 아래 상업용건물·오피스텔 환산 영역에서 입력합니다 (호별 고시가·건물 기준시가·개별공시지가).
         </p>
-      ) : isGeneralBuilding ? (
+      ) : branch === "general" ? (
         // 일반건물(토지+건물 일괄): 환산은 시행령 §176의2②·§163⑥에 따라
         // 토지(㎡당 공시지가 × 토지면적) + 건물(기준시가 총액)로 자산별 분리 산정 (GeneralBuildingBlock).
         <p className="text-xs text-muted-foreground italic">
           취득시/양도시 기준시가는 아래 일반건물 환산 영역에서 입력합니다 (토지·건물 분리 — 토지 ㎡당 공시지가·건물 기준시가 총액).
         </p>
-      ) : props.asset && phdFlagEffective(props.asset) ? (
+      ) : branch === "phd" ? (
         // §164⑦ PHD 모드: 위쪽 PreHousingDisclosureSection의 3-시점 입력으로 자동 도출.
         // 기존 "취득시/양도시 기준시가" 입력은 중복되므로 표시하지 않음.
         <p className="text-xs text-muted-foreground italic">
@@ -178,21 +188,21 @@ export function CompanionAcqStdPriceSection({
               hint={
                 props.useEstimatedAcquisition
                   ? "환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"
-                  : propertyKind === "house_individual"
+                  : (lumpSumBase ? `${LUMP_SUM_DEDUCTION_BASE_HINT} ` : "") + (propertyKind === "house_individual"
                     ? (showAcqBuildingStd
                         ? "개별주택가격(부수토지 포함)을 아래 토지·건물 기준시가 비율로 토지분·건물분에 나눕니다 (§166⑥). 토지 기준시가 = ㎡당 공시지가 × 면적"
                         : "토지·건물 안분 비율 산정 기준 (§166⑥)") + ` ${PRE_DISCLOSURE_STD_PRICE_HINT}`
-                    : "토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분"
+                    : "토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분")
               }
               forceYear={pre1990ForceYear}
               enableLookup={!(isLand && acqDatePre1990)}
               pricePerSqmDisabled={isLand && acqDatePre1990}
             />
-            {/* 실거래가 + 토지·건물 안분 — 주택 취득시 기준시가 칸(개별주택가격 안분 base) 곁 «환산 개별주택가격 계산해 채우기».
-                hint(`PRE_DISCLOSURE_STD_PRICE_HINT`)가 붙는 칸과 같은 조건이다. 보이는 조건은 컴포넌트 내부 게이트(`phdFillAssistVisible`).
-                감정가액·매매사례가액은 `CompanionAcqAmountSection` 이 자기 «취득시 기준시가» 칸 곁에 같은 보조를 둔다 — 토지·건물 분리(같은 취득일)에서
-                두 섹션이 함께 렌더되면 카드가 둘 뜨므로 여기서는 실거래가만 맡는다. */}
-            {!props.useEstimatedAcquisition && !props.isAppraisalAcquisition && !props.isSalesCaseAcquisition
+            {/* 주택 취득시 기준시가 칸 곁 «환산 개별주택가격 계산해 채우기». hint(`PRE_DISCLOSURE_STD_PRICE_HINT`)가 붙는 칸과 같은 조건이다.
+                보이는 조건은 컴포넌트 내부 게이트(`phdFillAssistVisible`).
+                감정가액·매매사례가액 + 토지·건물 분리(같은 취득일)에서는 «취득시 기준시가» 칸이 이 블록 한 곳에만 그려진다
+                (`acqStdFieldInStdSection` — `CompanionAcqAmountSection`·`SalesCaseSection`은 자기 칸을 접는다) → 보조 카드도 이 칸 곁에 하나다. */}
+            {!props.useEstimatedAcquisition
               && propertyKind === "house_individual" && props.asset && props.onAssetChange && (
               <PhdConvertedPriceFill
                 asset={props.asset}

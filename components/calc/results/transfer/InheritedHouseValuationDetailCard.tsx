@@ -9,7 +9,7 @@
 import type { InheritanceHouseValuationResult } from "@/lib/tax-engine/types/inheritance-house-valuation.types";
 import type { InheritanceAcquisitionResult } from "@/lib/tax-engine/types/inheritance-acquisition.types";
 import { Frac, FormulaText } from "@/components/calc/results/shared/FormulaParts";
-import { housePriceLabels } from "@/lib/tax-engine/inheritance-house-valuation";
+import { convertedHousePriceNames, housePriceLabels } from "@/lib/tax-engine/inheritance-house-valuation";
 
 interface Props {
   detail: InheritanceHouseValuationResult;
@@ -52,7 +52,8 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
   const isEstimated = estimationMethod === "estimated_phd";
   // 공동주택이면 가격 이름·조문이 첫 가격 기관으로 갈린다(영 §164⑥ 국세청 고시 / ⑦ 국토교통부 공시) — 엔진 산식과 같은 표기 함수
   const { price, first } = housePriceLabels(apartFirstPriceAgency);
-  const clause = apartFirstPriceAgency === "nts" ? "§164⑥" : "§164⑦";
+  // 산식으로 구한 취득 당시 가격의 이름 — 엔진 산식 첫 줄과 같은 함수(법령에 없는 조어를 쓰지 않는다)
+  const convertedName = convertedHousePriceNames(apartFirstPriceAgency);
   const transferPriceName = apartFirstPriceAgency ? "공동주택가격" : "개별주택가격";
 
   /**
@@ -87,7 +88,7 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
         <span className="text-micro text-muted-foreground">{legalBasis}</span>
         {estimationMethod === "estimated_phd" && (
           <span className="text-micro rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5">
-            {clause} {price} 추정
+            {convertedName.sentence}
           </span>
         )}
         {estimationMethod === "user_override" && (
@@ -117,11 +118,11 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
         </div>
       )}
 
-      {/* (A) §164⑦ 취득당시 개별주택가격 추정 — 합계기준시가(토지+건물) 비율. estimated 모드만 */}
+      {/* (A) §164⑦ 산식으로 구한 취득 당시 주택 가격 — 합계기준시가(토지+건물) 비율. estimated 모드만 */}
       {isEstimated && (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-sky-800 dark:text-sky-300">
-            취득당시 {price} 추정 ({clause} — 합계기준시가 = 토지 + 건물)
+            {convertedName.label} · 합계기준시가 = 토지 + 건물
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-xs border-collapse">

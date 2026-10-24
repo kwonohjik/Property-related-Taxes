@@ -23,6 +23,7 @@ import { CompanionAcqDateSection } from "./CompanionAcqDateSection";
 import { CompanionAcqAmountSection } from "./CompanionAcqAmountSection";
 import { CompanionAcqSpecialAssetNotices } from "./CompanionAcqSpecialAssetNotices";
 import { CompanionAcqStdPriceSection } from "./CompanionAcqStdPriceSection";
+import { acqStdFieldInStdSection } from "./acq-std-price-branch";
 import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isSeparateAcquisition } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -480,6 +481,16 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         isBundledExtension={isBundledExtension}
         isMixedUse={isMixedUse}
         isGeneralBuilding={isGeneralBuilding}
+        acqStdFieldInStdSection={acqStdFieldInStdSection({
+          useEstimatedAcquisition: props.useEstimatedAcquisition,
+          isSplit,
+          isMixedUse,
+          assetKind: props.assetKind,
+          isGeneralBuilding,
+          asset: props.asset,
+          acqStdPriceRequired,
+          isSeparateAcq,
+        })}
       />
 
       <CompanionAcqStdPriceSection
