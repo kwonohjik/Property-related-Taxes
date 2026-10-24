@@ -24,6 +24,8 @@ import {
   hasBurdenedGiftFilingForm,
 } from "@/components/calc/results/transfer/BurdenedGiftFilingFormSection";
 import { isSaleSplitActual } from "@/components/calc/results/transfer/sale-split-unentered-notice";
+import { assetOfProperty } from "@/components/calc/results/transfer/sale-split-unentered-notice";
+import { isPhdApartment } from "@/components/calc/results/transfer/phd-housing-term";
 import { GbResultBlocks } from "@/components/calc/results/transfer/GbResultBlocks";
 import { gbBlockViewsOf } from "@/components/calc/results/transfer/gb-result-block-views";
 // 800줄 정책 — 일반건물 3-way 요약 표(사례 33)를 별도 파일로 분리(2026-08-11).
@@ -390,6 +392,8 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
             )
               ? { saleSplitActual: true }
               : {})}
+            // PHD(§164⑦ 환산) 주택 종류(단독·다가구/공동주택)도 엔진 미전송(표시 축)이라 같은 경로로 읽는다 — 한도 초과 분리 카드 id(`__appurtenant`/`__excess`)까지 해석하는 단일 정의.
+            phdApartment={isPhdApartment(assetOfProperty(p.propertyId, formData, undefined))}
             // 일괄은 단건과 같은 폼 — 엔진 detail의 행 id(`houseId`)는 이 명부를 가리킨다(route 5-a 주 자산 = `...engineInput`).
             houses={formData.houses}
           />

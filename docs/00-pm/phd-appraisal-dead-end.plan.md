@@ -365,6 +365,37 @@ harness: `collectStepIssues(0~5)`(⑧) → `callTransferTaxAPI` 가로채기(④
 
 **확인 필요**: ① 양도세 PHD 상세 섹션(`PreHousingDisclosureDetailSection`)은 입력 위젯의 «단독·다가구 / 공동주택» 라디오(로컬 state — 저장·전송 안 됨)를 결과가 알 수 없어 «환산 개별주택가격»으로 통일했다 — 공동주택의 PHD 결과도 같은 이름으로 보인다(조문에 공동주택가격 산식 결과의 이름이 없다). 결과에 주택 종류가 echo 되면 공동주택은 서술형으로 갈릴 수 있다. ② `lib/tax-engine/**` 안 나머지 주석의 «추정»(`transfer-tax-pre-housing-disclosure.ts`·`types/*.ts`·`legal-codes/*.ts`·`inheritance-house-valuation.ts:28-29` 의 구 산식 설명 등)은 grep 범위 밖이라 두었다(사용자 노출 아님). ③ 브라우저 사람 눈 확인 미수행(jsdom 렌더 anchor 로 갈음).
 
+### 9.4 PHD 결과 «환산 …가격» 주택 종류별 표기 (2026-10-24, 커밋까지 · push·PR 전)
+
+**사용자 지시**: «결과 화면에서 공동주택을 "환산 공동주택가격"으로 표시». 용어는 이 둘뿐이다 — 소령 §164⑦ 산식으로 구한 취득 당시 주택가격이 단독·다가구면 «환산 개별주택가격», 공동주택이면 «환산 공동주택가격» (그 밖의 조어 «추정값»·«법정 값» 금지).
+
+**§9.3 확인 필요 ① 정정**: 「라디오가 로컬 state — 저장·전송 안 됨」은 이미 낡았다. 라디오 값은 폼 필드 `AssetForm.phdHousingType`("individual"|"apartment", R12 — `calc-wizard-asset-acq-conversion.ts`)이고 sessionStorage에 지속된다. ④는 싣지 않는다(표시 축).
+
+**주택 종류를 결과 화면까지 보내는 방법 — (a) 결과 뷰가 이미 받는 폼에서 읽기** (엔진 echo (b) 기각)
+- 근거 1: 이 저장소에 같은 규약이 이미 있다 — `saleSplitActual`·`exemptionNote`·`assetKind`는 «엔진을 거치지 않는 표시 축이라 폼에서 읽어 내려온다»(`ValuationDetailCards` Props). 엔진 result에 싣는 길은 «어댑터 화이트리스트가 침묵 strip한다»(`TransferTaxResultView.tsx:161` 주석)는 함정이 있다.
+- 근거 2: (b)는 ④⑫⑬⑭를 모두 건드린다 — 표시 문자열 하나에 비해 과하다. (a)는 14지점 변경 0(① ② ③ 이미 존재 · ④⑧⑫⑬⑭ 불변).
+- 옛 이력: 필드가 없는 저장 폼/세션은 `isPhdApartment(...) === false` → 종전 «환산 개별주택가격». `migrateAsset`이 없는 값을 "individual"로 채우므로 동일(0·다른 값으로 바꾸지 않는다).
+- 구현: 신규 `components/calc/results/transfer/phd-housing-term.ts` — `isPhdApartment(asset)`·`phdConvertedPriceName(apartment)` 단일 정의. `PreHousingDisclosureDetailSection`에 optional prop `phdApartment`(라벨 5곳이 한 변수 `convertedName`). 호출부 3곳이 폼 자산에서 읽어 내려보낸다: 단건 `TransferTaxResultView`(`resolvedAsset`) · 일괄 `BundledAllocationCard`→`PropertyCard`→`ValuationDetailCards`(`assetOfProperty` — 한도 초과 분리 카드 id `__appurtenant`/`__excess` 해석 포함, 기존 private 함수에 `export`만 추가) · 다건 `MultiTransferPropertyBreakdown`(`property.form.assets[0]`). 참고: 다건 계산기는 환산+PHD를 «단건 계산기에서만 지원»으로 차단(PH-6)해 실데이터로는 도달하지 않지만 배선은 `saleSplitActual`과 같은 모양으로 둔다.
+- 상속주택 카드: 공동주택 국토교통부 공시 경로(§164⑦)의 `convertedHousePriceNames("molit")`를 «환산 공동주택가격» / «환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)»으로(`inheritance-house-valuation.ts` — 표시 문자열만, 산식 계산 변경 0). 엔진이 만드는 산식 문자열 첫 줄도 같은 함수라 함께 바뀐다.
+
+| 위치 | 전 | 후 |
+|---|---|---|
+| 양도세 PHD 상세 — 공동주택 (행 라벨 1 + 산식 4) | 환산 개별주택가격 (취득시) 외 4곳 | **환산 공동주택가격 (취득시)** 외 4곳 |
+| 양도세 PHD 상세 — 단독·다가구 / 필드 없음(옛 결과) | 환산 개별주택가격 | 환산 개별주택가격 (불변) |
+| 상속주택 환산 카드 배지 — 공동주택 국토부 공시 | §164⑦ 산식으로 계산한 취득 당시 공동주택가격 | **환산 공동주택가격** |
+| 상속주택 환산 카드 소제목 — 같음 | 취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식) · 합계기준시가 = 토지 + 건물 | **환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)** · 합계기준시가 = 토지 + 건물 |
+| 상속주택 산식 문자열 첫 줄 — 같음 | 취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식) | **환산 공동주택가격 (소득세법 시행령 §164⑦ 산식)** |
+| 상속주택 카드 — 공동주택 국세청 고시(§164⑥) | §164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가 | 불변 (**사용자 결정 필요** — 아래) |
+
+**테스트**: 신규 `__tests__/calc/phd-result-housing-term.anchor.test.tsx` 15건(P1 섹션 3경우+함수 · P2·P3 단건 end-to-end 폼→④→route→엔진→결과 뷰(공동은 ④ 본문·응답이 단독과 바이트 동일) · P4 일괄 카드 · P5 다건 아코디언 · P6 상속 카드 3경로) + 신규 E2E `e2e/transfer-phd-result-housing-term.spec.ts` 3건(실제 브라우저, 시드 세션 → 계산 → 결과 화면). 기존 문자열 단언 갱신 2건(`converted-price-terms` T1 molit 행 · `transfer.route.apart-nts-price` A-3 산식 문자열) — 삭제 0.
+**뮤테이션(cp 백업 · md5 복원 확인)**: M1 단건 뷰 false · M2 일괄 카드 false · M3 `ValuationDetailCards` 전달 누락 · M4 다건 false · M5 이름 함수 기본값 반전 · M6 상속 molit 라벨 원복 · M7 섹션 산식 1곳 하드코딩 · M8 `isPhdApartment` 항상 true — **8건 전건 KILLED**. M9(일괄 카드 자산 조회를 `assets[0]` 고정)는 SURVIVED — 동치(PHD 3-시점은 첫 자산만 발동 `usesPhdGate`)라 `assetOfProperty` 경유는 방어적 선택이다. E2E 뮤테이션 M1 KILLED(TH-2 실패).
+
+**미결 (사용자 결정 필요)**:
+1. 공동주택 **국세청 고시 경로(§164⑥)** 라벨 «§164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가» — 이번 지시(§164⑦) 범위 밖이라 불변. §164⑥ 결과도 «환산 …»으로 부를지 결정 필요.
+2. **입력 화면 통일 여부** — `ReductionPhdInput.tsx`의 «취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식)»(위젯 결과 박스, 감면 `phd-helper.ts` 산식 6단계 마지막 라벨 포함)과 상속 입력 hint는 입력 화면이라 불변. 통일하면 `reduction-phd-helper.test.ts:194`·`converted-price-terms` T3·T5가 함께 바뀐다.
+3. PHD 상세 섹션 **머리글** «개별주택가격 미공시 취득 환산 (소득세법 시행령 §164 ⑦)»은 공동주택일 때도 «개별주택가격»이다(산식 결과 이름이 아니라 불변). 입력 위젯 머리글은 «주택공시가격 미공시 취득(3-시점 환산)».
+4. 확인 필요: PDF(`lib/pdf/ResultPdfTransferSections.tsx:171`)에 «추정 취득시 주택가격 P_A_est» 라벨이 남아 있다(결과 화면이 아닌 출력물 · 변수 약어 포함) — 이번 범위 밖, 손대지 않았다. 사람 눈 브라우저 확인 미수행(실브라우저 E2E 3건으로 갈음).
+
 ---
 
 ## 10. 자가 점검 (3대 정책)

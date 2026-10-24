@@ -33,6 +33,7 @@ import { ReductionDetailCards } from "@/components/calc/results/transfer/Reducti
 import { getRefDeterminedTax } from "@/components/calc/results/MultiTransferTaxSummaryCard";
 import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
 import { isSaleSplitActual } from "@/components/calc/results/transfer/sale-split-unentered-notice";
+import { isPhdApartment } from "@/components/calc/results/transfer/phd-housing-term";
 import { nblExclusionBadgeText } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 
 
@@ -505,6 +506,7 @@ export function PropertyBreakdownAccordion({
               ? { exemptionNote: property.form.assets[0].saleSplitExemptionNote }
               : {})}
             {...(isSaleSplitActual(property?.form?.assets?.[0]) ? { saleSplitActual: true } : {})}
+            phdApartment={isPhdApartment(property?.form?.assets?.[0])}
           />
 
           {/* 신고서 양식 표 — 자산별 (PR-F2: printScoped 버튼 제거, 패널 per-property로 통일) */}

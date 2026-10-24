@@ -52,6 +52,7 @@ export function PropertyCard({
   assetKind,
   exemptionNote,
   saleSplitActual,
+  phdApartment,
   houses,
 }: {
   breakdown: PerPropertyBreakdown;
@@ -62,6 +63,8 @@ export function PropertyCard({
   exemptionNote?: string;
   /** 사용자가 양도가액 구분 방식을 «구분 기재»로 골랐는가 — 엔진 미전송이라 폼에서 읽어 내려온다. */
   saleSplitActual?: boolean;
+  /** PHD(§164⑦ 환산) 주택 종류가 공동주택인가 — 엔진 미전송(표시 축)이라 폼(`phdHousingType`)에서 읽어 내려온다. */
+  phdApartment?: boolean;
   /**
    * 명부 — 조특법 주택 수 제외 카드에 「보유 주택 N」을 붙인다(단건·다건과 같은 prop).
    * 일괄은 단건과 **같은 폼**이라 `formData.houses`이고, 엔진 detail의 행 id도 그 명부를 가리킨다.
@@ -151,6 +154,7 @@ export function PropertyCard({
         isExempt={breakdown.isExempt}
         {...(exemptionNote ? { exemptionNote } : {})}
         {...(saleSplitActual ? { saleSplitActual } : {})}
+        phdApartment={phdApartment}
       />
     </div>
   );
