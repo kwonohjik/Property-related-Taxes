@@ -21,6 +21,14 @@ type Run = (asset: MixedUseAssetInput) => MixedUseGainBreakdown;
 type Totals = { housing: number; commercial: number; total: number };
 
 function totalsOf(r: MixedUseGainBreakdown): Totals {
+  // 부담부증여 — 채무비율을 곱하기 전 금액으로 비교한다(주택·상가 채무비율이 달라 곱한 뒤 합계는 순서가 뒤집힐 수 있다 · Q-36 · PR-7b-7a-2)
+  const pp = r.burdenedGift?.perPart;
+  if (pp) {
+    const before = (k: keyof typeof pp) => pp[k].acquisitionBeforeRatio ?? pp[k].acquisitionPrice;
+    const housing = before("housingLand") + before("housingBuilding");
+    const commercial = before("commercialLand") + before("commercialBuilding");
+    return { housing, commercial, total: housing + commercial };
+  }
   const housing = r.housingPart.estimatedAcquisitionPrice;
   const commercial = r.commercialPart.estimatedAcquisitionPrice;
   return { housing, commercial, total: housing + commercial };

@@ -21,6 +21,8 @@ import { mixedBgReportedField } from "./burdened-gift-mixed-use-preview";
 import { mixedBgDebtAttribution, mixedBgDebtAttrMessage, mixedBgOverflowField } from "./burdened-gift-mixed-use-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import { validateMixedUseDatesAndAreas } from "./transfer-tax-validate-mixed-use-asset";
+import { mixedUsePhdFieldError } from "./transfer-tax-validate-mixed-use-asset";
+import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
 
 /** 화면 순서로 정렬한 이슈 묶음 — 같은 묶음 안에서는 엔진이 낸 순서를 지킨다. */
 const HARD_BLOCKS = new Set(["MB-1", "MB-2", "MB-3", "MB-4", "MB-5", "MB-6", "MB-8", "MB-9", "MB-12", "MB-15", "MB-16", "MB-18"]);
@@ -53,6 +55,12 @@ export function validateMixedUseBurdenedGift(
   // 2) 차단 조합(MB-1~6·8·9·12·15·16·18)
   const hard = firstIssue(issues, (i) => HARD_BLOCKS.has(i.code));
   if (hard) return fail(hard);
+
+  // 2-a) 상속·증여 취득(시가)의 PHD — 칸별 검증(겸용 일반 양도와 같은 leaf). 엔진 MB-11은 PHD 입력 전체를 한 문장으로만 알린다(PR-7b-7a-2).
+  if (asset.usePreHousingDisclosure === true && isMixedBgDeemedPath(asset)) {
+    const phdErr = mixedUsePhdFieldError(asset, label, formTransferDate);
+    if (phdErr) return phdErr;
+  }
 
   // 3) 필수 입력 누락(MB-11) — 양도시·취득시 4부분 기준시가, 시가 총액, K 방식별 금액
   const missing = firstIssue(issues, (i) => i.code === "MB-11");
