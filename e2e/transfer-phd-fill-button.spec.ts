@@ -191,7 +191,7 @@ test.describe("환산 개별주택가격 계산해 채우기 (PHD × 비환산)"
     await expect(fillBtn(page)).toHaveCount(0); // 개별 이름의 버튼은 없다
     const card = page.getByTestId("phd-fill-assist");
     await expect(card).not.toContainText("환산 개별주택가격");
-    await expect(card).toContainText("환산 공동주택가격 계산 (소득세법 시행령 §164⑦)");
+    await expect(card).toContainText("환산 공동주택가격 계산 (소득세법 시행령 §164⑥·⑦)");
     await expect(page.getByTestId("phd-fill-formula")).toContainText("환산 공동주택가격 = 최초 고시 주택가격");
     await apt.click();
     await expect(stdInput(page)).toHaveValue("93,567,251");

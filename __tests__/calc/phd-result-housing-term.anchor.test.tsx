@@ -75,7 +75,7 @@ describe("P1 상세 섹션 — 주택 종류별 이름 (3경우)", () => {
   it("필드 없음(옛 결과 · prop 미전달) → 종전 표기 환산 개별주택가격", () => expectTerm(view({}), INDIVIDUAL, APARTMENT));
   it.each([
     [{ phdApartment: false }, "개별주택가격 미공시 취득 환산 (소득세법 시행령 §164⑦)", "공동주택가격 미공시 취득 환산"],
-    [{ phdApartment: true }, "공동주택가격 미공시 취득 환산 (소득세법 시행령 §164⑦)", "개별주택가격 미공시 취득 환산"],
+    [{ phdApartment: true }, "공동주택가격 미공시 취득 환산 (소득세법 시행령 §164⑥·⑦)", "개별주택가격 미공시 취득 환산"],
     [{}, "개별주택가격 미공시 취득 환산 (소득세법 시행령 §164⑦)", "공동주택가격 미공시 취득 환산"],
   ] as const)("머리글 3경우 — phdApartment=%j", (props, header, other) => {
     const t = view(props);

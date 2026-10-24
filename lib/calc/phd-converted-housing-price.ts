@@ -28,6 +28,7 @@ import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "@/lib/calc/trans
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { calcPreHousingDisclosureGain } from "@/lib/tax-engine/transfer-tax-pre-housing-disclosure";
 import { classifySameAdjustmentPeriod } from "@/lib/tax-engine/same-adjustment-period-std-price";
+import { isBeforeBuildingStdPriceNotice } from "@/lib/calc/commercial-164-6-proviso";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 이 자산·방식에서 «환산 개별주택가격 계산해 채우기» 보조가 **열리는가** (취득시 기준시가 칸이 있는 곳에서만 호출부가 렌더한다). */
@@ -58,8 +59,17 @@ export type ConvertedHousingPriceResult =
       /** 채워야 할 칸 라벨 */
       missing: string[];
       /** 칸은 찼으나 산식을 적용할 수 없는 사유 */
-      blocked?: "not_eligible" | "same_sum";
+      blocked?: "not_eligible" | "same_sum" | "needs_164_5_confirm";
     };
+
+/**
+ * 취득일·최초 고시일 중 하나라도 건물 기준시가(법 §99①1호 나목) 고시 전(연도 ≤2000)인가 — 그 시점 나목 가액이 없어
+ * §164⑤를 준용해 산정한다(소령 §164⑥·⑦ 후단). 의제취득일 전 취득은 1985-01-01로 보아도 2000년 이전이라 취득일 그대로 본다.
+ * 경계는 상가 §164⑥ 단서 게이트와 같은 단일 정의(`isBeforeBuildingStdPriceNotice`). 계획서: docs/00-pm/phd-fill-164-6-apartment.plan.md §9 (Q-4 (b))
+ */
+export function phdAssistNeeds164_5(asset: Pick<AssetForm, "acquisitionDate" | "phdFirstDisclosureDate">): boolean {
+  return isBeforeBuildingStdPriceNotice(asset.acquisitionDate) || isBeforeBuildingStdPriceNotice(asset.phdFirstDisclosureDate);
+}
 
 /** 입력 칸(`phd*` + 토지 면적)으로 §164⑦ 환산 개별주택가격을 계산한다. 값이 모자라거나 적용할 수 없으면 `ok:false` — **0 으로 대입하지 않는다**(자동 안분·침묵 fallback 금지). */
 export function computeConvertedHousingPrice(asset: AssetForm, transferDate: string): ConvertedHousingPriceResult {
@@ -111,6 +121,10 @@ export function computeConvertedHousingPrice(asset: AssetForm, transferDate: str
     }) === "clause_1"
   )
     return { ok: false, missing: [], blocked: "same_sum" };
+
+  // §164⑥·⑦ 후단(§164⑤ 준용) — 2000년 이전 시점의 건물 기준시가는 사용자가 준용 산정 값을 넣었다고 확인해야 채운다(상가 `cbAcqBuildingStdBy164_5`와 같은 방식).
+  if (phdAssistNeeds164_5(asset) && !asset.phdAssistBuildingStdBy164_5)
+    return { ok: false, missing: [], blocked: "needs_164_5_confirm" };
 
   return {
     ok: true,

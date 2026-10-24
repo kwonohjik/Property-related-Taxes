@@ -27,6 +27,7 @@ import { validateCommercialInheritanceAsset } from "./transfer-tax-validate-comm
 import { validateCommercialAppurtenantLand } from "./transfer-tax-validate-commercial-asset";
 import { validateCommercialEstimatedAsset } from "./transfer-tax-validate-commercial-asset";
 import { isPhdEligible } from "./phd-eligibility";
+import { isPhdApartment, phdAcqDisclosedPriceName, phdClause } from "./phd-housing-term";
 import { lumpSumBaseRequired, usesPhdGate } from "./transfer-lump-sum-base-gate";
 import { validateSelfBuiltHousing } from "./transfer-tax-validate-self-built-housing";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
@@ -526,7 +527,9 @@ export function validateAssetAcquisition(
     // 취득당시 고시분 존재 → 3-시점 환산 대상 아님 (isPhdEligible 단일 소스).
     // 이월과세(carryover_gift)는 위 전용 블록(:202~)에서 증여자 취득일 기준으로 별도 게이트.
     if (!isPhdEligible(asset.acquisitionDate, asset.phdFirstDisclosureDate)) {
-      return fieldError("phdFirstDisclosureDate", `${label}: 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 3-시점 환산을 끄고 취득시 기준시가를 직접 입력하세요.`);
+      // 공동주택은 처음 매겨진 가격이 국세청장 고시(§164⑥)일 수도 있다 — 이름·조문은 PHD 패널 라디오(`phdHousingType`)를 따른다
+      const apartment = isPhdApartment(asset);
+      return fieldError("phdFirstDisclosureDate", `${label}: 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 ${phdAcqDisclosedPriceName(apartment)}이 고시되어 있으므로 3-시점 환산(${phdClause(apartment)}) 대상이 아닙니다 — 3-시점 환산을 끄고 취득시 기준시가를 직접 입력하세요.`);
     }
     if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
       return fieldError("phdFirstDisclosureHousingPrice", `${label}: 최초 고시 개별주택가격을 입력하세요.`);
@@ -611,7 +614,8 @@ export function validateAssetAcquisition(
         transferDate: new Date(asset.phdFirstDisclosureDate),
       }) === "clause_1"
     ) {
-      return `${label}: 취득당시 기준시가합과 최초공시당시 기준시가합이 같습니다 — §164⑦ 산식 괄호 단서에 따라 §164⑧을 준용해야 하는데, 준용 산정에 필요한 전기(취득 직전 고시분) 기준시가합 입력 칸이 아직 없습니다. 3-시점 환산(§164⑦)을 끄고 취득시 기준시가를 직접 입력하세요.`;
+      const clause = phdClause(isPhdApartment(asset));
+      return `${label}: 취득당시 기준시가합과 최초공시당시 기준시가합이 같습니다 — ${clause} 산식 괄호 단서에 따라 §164⑧을 준용해야 하는데, 준용 산정에 필요한 전기(취득 직전 고시분) 기준시가합 입력 칸이 아직 없습니다. 3-시점 환산(${clause})을 끄고 취득시 기준시가를 직접 입력하세요.`;
     }
   }
 
