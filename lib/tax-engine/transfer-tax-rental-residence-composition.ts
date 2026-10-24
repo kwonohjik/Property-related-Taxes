@@ -18,6 +18,7 @@
  * | §155⑳ + 조특법 §99의4 농어촌주택 (+ §155①) | 적용 | 서면-2016-법령해석재산-3686(2016.12.14.) · 사전-2016-법령해석재산-0198(2017.7.10.) |
  * | §155⑳ + §155④ 동거봉양 합가 | 적용 | 부동산거래관리과-44(2012.1.17.) · 기준-2024-법규재산-0061(2026.8.20.) |
  * | §155⑳ + §155⑤ 혼인 합가 | 적용 | 상속증여세과-21(2013.3.28.) · 사전-2025-법규재산-1062(2025.11.28.) |
+ * | §155⑳ + §155④⑤ 합가 — 임대주택을 합가 **후** 취득(일시적 2주택 신규 주택) | 적용 | 상속증여세과-20(2013.3.28. — 2012 혼인 · 2013 임대 취득·등록) · 부동산거래관리과-244(혼인 전 임대) — 44의 「세대합가 후에 취득한 주택」은 상대 쪽 주택이다 |
  * | §155⑳ + §155⑦3호 귀농주택 | 적용 | 서면-2015-부동산-0193(2015.3.13.) |
  * | §155⑳ + 조특법 §99의2 감면주택 (+ §155①) | 적용 | 서면-2015-부동산-2422 · 사전-2019-법령해석재산-0398 · 서면-2021-부동산-5418 · 사전-2023-법규재산-0830 |
  * | §155⑳ + 조특법 §99의2② 같은 문형 조문 | 적용(같은 문형) | 사용자 결정 Q2(가) 2026-10-04 — E-14a(#1927) 15호 기준과 같다(아래 목록) |
@@ -260,7 +261,13 @@ function judgeOtherHouse(
     return { status: "met", via: "temporary_two_house" };
   }
   // §155④⑤ — 부동산거래관리과-44 · 상속증여세과-21 등(위 표)이 §155⑳과 겹쳐 적용한다.
-  if (deemed === "marriage_merge" || deemed === "parental_care_merge") return { status: "met", via: deemed };
+  // 신규 주택이 임대 행이라 ①이 이 행을 빼지 못했으면 ① 없이 합가를 다시 본다 — 그러지 않으면 임대주택 취득일만으로
+  // ⑳이 갈린다(상속증여세과-20 · `rental-155-20-merge-temp-composition.plan.md` Q-2 (a)).
+  const mergeDeemed =
+    deemed === "temporary_two_house"
+      ? resolveDeemedOneHouseBy155({ ...mergeDeemingInput, temporaryTwoHouse: undefined }, parsedRates.oneHouseSpecialRules)
+      : deemed;
+  if (mergeDeemed === "marriage_merge" || mergeDeemed === "parental_care_merge") return { status: "met", via: mergeDeemed };
   // 합가는 선언됐으나(`isFirstTransferredInMerge`) 합가 전 구성을 몰라(명부 없음·소유 쪽 미입력)
   // 성립하지 못했다 — 나머지 요건(기한 등)을 충족해 그것이 결론을 가를 때만 확인 필요를 싣는다
   // (§155⑳ 선례 — rentalResidenceSpecialActConfirmNotice 등과 같은 모양).
