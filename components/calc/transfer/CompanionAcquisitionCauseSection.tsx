@@ -125,6 +125,9 @@ export function CompanionAcquisitionCauseSection({
             // 남겨두면 토지 취득일이 채워진 채 상속으로 넘어갔을 때 `isSeparateAcquisition`이
             // true가 되어 파트별 취득가액 필수 → 입력 칸 없는 차단이 된다.
             ...(value !== "purchase" ? { hasSeperateLandAcquisitionDate: false } : {}),
+            // 겸용은 매매에서만 토지 취득일 칸을 그린다 — 매매에서 넣은 토지 날짜가 숨은 채 남으면 소비처(`landAcquisitionDate || acquisitionDate`)가
+            // 그 값을 읽어 상속개시일·증여일과 다른 토지 취득일로 계산했다(1985.1.1.을 사이에 두면 ⑫ 차단 · 2026-10-24). 비워서 건물 날짜를 따르게 한다.
+            ...(value !== "purchase" && asset.isMixedUseHouse ? { landAcquisitionDate: "" } : {}),
             // D1-2 — 토글을 켠 호스트를 떠나면 태그를 비운다(원인 값은 보존). 남기면 매매 → 상속 → 매매 후 「취득일 다름」만
             // 켜도 그 방문에서 켠 적 없는 토지 원인이 되살아났다(D1-2 Check F2).
             ...(asset.landCauseHost && asset.landCauseHost !== value ? { landCauseHost: "" as const } : {}),
