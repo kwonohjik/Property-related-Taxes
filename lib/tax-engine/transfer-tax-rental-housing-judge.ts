@@ -32,7 +32,7 @@ import { isAddendumTransitionEffective } from "./data/rental-155-20-era";
 /**
  * §155⑳ 시나리오 B(임대→거주 전환 PHRP) 여부 — STEP 1a 전액 비과세 조기 반환 억제 게이트.
  * B는 §161①(직전거주주택 양도일 이후 기간분만 비과세) 안분이 필요하므로 일반 1세대1주택
- * 요건 충족이어도 조기 반환하면 안분 미도달 오답. 특례가 **불성립**이면 §161 안분 대상이 아니다(`canEarlyReturnPrhp`).
+ * 요건 충족이어도 조기 반환하면 안분 미도달 오답. 특례가 **불성립**이어도 다른 특례로 1세대1주택이면 영 §154⑩ 안분 대상이다(`canEarlyReturnPrhp`).
  */
 export function isPrhpScenarioB(effectiveInput: TransferTaxInput): boolean {
   return (
@@ -185,9 +185,10 @@ export function rentalResidenceConsolidationText(effectiveInput: TransferTaxInpu
  *    판정 **전에** 되돌리고, 남은 입력(명부의 장기임대 행 · 명부 없음 + 주택 수 2 이상)은 이미 센 값이다. 임대주택이 일시적 2주택의
  *    신규 주택(영 §155①)이면 그 비과세는 정당한데, 정상 경로는 전액 비과세를 처리하지 않아(`resolveTaxableGain`) 10억은 전액 과세,
  *    15억은 12억 초과분만 과세로 역전했다. 영 §155⑳은 불성립이면 「…보아」가 없을 뿐 다른 특례를 배제하지 않는다.
+ * 🔴 B는 불성립이어도 막는다(`rental-155-20-b-154-10-and-q4.plan.md` Q-1 (a) — F-1 Q-2 정정): 다른 특례로 1세대1주택이 되어도
+ *    직전거주주택보유주택이면 영 §154⑩이 직전거주주택 양도일 후 기간분만 비과세하므로 STEP 2.5에서 §161 안분을 거친다.
  */
-export function canEarlyReturnPrhp(effectiveInput: TransferTaxInput, unmet: PrhpUnmet | undefined): boolean {
-  if (unmet) return true;
+export function canEarlyReturnPrhp(effectiveInput: TransferTaxInput): boolean {
   return !isPrhpScenarioB(effectiveInput);
 }
 

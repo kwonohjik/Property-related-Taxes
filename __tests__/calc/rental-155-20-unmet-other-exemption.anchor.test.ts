@@ -12,7 +12,8 @@
  * |---|---|---|---|
  * | UO-1 | A 불성립 · 10억 | 과세 60,621,000 | 비과세 0 (= 특례 미선언 짝) |
  * | UO-2 | A 불성립 · 15억 | 14,124,000 | 불변(정상 경로 부분 비과세) · 불성립 고지 추가 |
- * | UO-3 | B 불성립 · 10억 | 과세 60,621,000 | 비과세 0 · §161 안분 없음 |
+ * | UO-3 | B 불성립 · 10억 | 과세 60,621,000 | 50,171,000 — 영 §154⑩ 안분(= ⑳ 성립 짝 · b-154-10 Q-1 (a), 종전 F-1 결과 0 정정) |
+ * | UO-3b | B 불성립 · 15억 | — | 141,966,000 — §161② 안분(= ⑳ 성립 짝) |
  * | UO-4 | 명부 없음(주택 수 1 · 2) | 124,366,000 | 불변 — 과다 비과세 미부활(STEP 0.96이 판정 전에 되돌림) |
  * | UO-5 | 임대 행 2007 취득(일시적 2주택 아님) | 124,366,000 | 불변 |
  * | UO-6 | UO-1 안내 | — | 불성립 고지 1건 · ㉒ 사후 추징 안내(「특례를 적용했습니다」) 없음 · 판정 확인 필요 고지(부칙 마목·바목)는 유지 / 성립 짝은 ㉒ 유지 |
@@ -102,17 +103,34 @@ describe("§155⑳ 불성립 × 일시적 2주택(§155①) — 계산기 화면
     expect(n[0]).toMatch(/적용한 비과세는 「일시적 2주택 고가주택」입니다\.$/);
   });
 
-  it("UO-3 ★ B 불성립 · 10억 → 비과세 0 · §161 안분 단계 없음 (종전 과세 60,621,000)", async () => {
+  /**
+   * B(직전거주주택보유주택)는 ⑳이 불성립이어도 일시적 2주택으로 1세대1주택이 되면 영 §154⑩이 「제1항에 따른 1세대 1주택」에 걸어
+   * 직전거주주택 양도일 후 기간분만 비과세한다(§161① 안분) — `rental-155-20-b-154-10-and-q4.plan.md` Q-1 (a)·Q-2 (b).
+   * F-1(#2513)은 이 경우를 안분 없는 비과세 0으로 냈다(F-1 Q-2 — 초판 판정 정정).
+   */
+  it("UO-3 ★ B 불성립 · 10억 → 영 §154⑩ 안분 50,171,000 = ⑳ 성립 짝 (종전 과세 60,621,000 → F-1 0 → 정정)", async () => {
     const r = await runCalc(form({ rhe: RHE_B }));
     expect(r.issues).toEqual([]);
-    expect(r.result.isExempt).toBe(true);
-    expect(r.result.totalTax).toBe(0);
-    expect(labels(r)).toEqual(["1세대1주택 비과세"]);
-    const n = unmetNotices(r.result.warnings);
+    expect(r.result.isExempt).toBe(false);
+    expect(r.result.totalTax).toBe(50_171_000);
+    expect(labels(r)).toContain("직전거주주택보유주택 — 영 §154⑩ 안분");
+    const n = (r.result.warnings ?? []).filter((x: string) => x.includes("§154⑩에 따라 직전거주주택 양도일 후 기간분만 비과세로 계산했습니다"));
     expect(n).toHaveLength(1);
-    expect(n[0]).toContain("(소득세법 시행령 §161① 안분도 적용하지 않았습니다)");
-    // 종전 B 미적용 고지(「주택수 입력)를 재확인」)는 불성립 고지가 대신한다
-    expect((r.result.warnings ?? []).some((w: string) => w.includes("재확인하세요"))).toBe(false);
+    expect(n[0]).toContain("다른 특례(「일시적 2주택 비과세」)에 따라 1세대1주택이 되지만");
+    expect(n[0]).toContain("1호 임대개시일 기준시가 6억원 초과");
+    // ⑳이 서지 않았으므로 ㉒ 사후 추징 안내는 없다
+    expect((r.result.warnings ?? []).some((w: string) => w.includes("§155㉒"))).toBe(false);
+    const met = await runCalc(form({ rhe: { ...RHE_B, rentalUnits: [unit("250,000,000")] } }));
+    expect(met.result.totalTax).toBe(r.result.totalTax);
+  });
+
+  it("UO-3b B 불성립 · 15억 → §161② 안분 141,966,000 = ⑳ 성립 짝", async () => {
+    const r = await runCalc(form({ rhe: RHE_B, price: "1500000000" }));
+    expect(r.issues).toEqual([]);
+    expect(r.result.totalTax).toBe(141_966_000);
+    expect((r.result.warnings ?? []).some((x: string) => x.includes("다른 특례(「일시적 2주택 고가주택」)"))).toBe(true);
+    const met = await runCalc(form({ rhe: { ...RHE_B, rentalUnits: [unit("250,000,000")] }, price: "1500000000" }));
+    expect(met.result.totalTax).toBe(r.result.totalTax);
   });
 
   it("UO-4 명부 없음 → 과세 124,366,000 불변 — 주택 수 1은 STEP 0.96이 되돌리고, 2는 일시적 2주택 사실이 없다(과다 비과세 미부활)", async () => {

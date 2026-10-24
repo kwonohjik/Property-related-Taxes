@@ -12,6 +12,7 @@
  * | UO-8c | 불성립 · 명부의 행이 「장기임대」 표시 없음 | 과세 불변 — 술어는 표시한 행만 본다 | — |
  * | UO-8d | ⑧ 경고 | 「장기임대 등록주택」으로 표시하라는 처방 | — |
  * | UO-8e | 세대 구성 불성립(3중첩 등) + 명부에 임대 행 | 유지 — 계산기도 구성 회수(종전 D12)를 없앴다(composition-revoke Q-2 (a) · 2026-10-24 반전) | 명부 없으면 원인 무관 거둔다(짝) |
+ * | UO-8f | B 불성립 · 명부에 임대 행 | 「비과세」 → **「기간분 비과세」**(영 §154⑩ · b-154-10 Q-1 (a)) | §154⑩ 안분(UO-3) |
  * | CR-7 | 메뉴 · 임대 행 + 조특법 §98 행(⑳ 겹침 해석 미확보 → 세대 구성 불성립) | 종전 과세 → 비과세(호별 성립·불성립 모두) · 핸드오프 계산기도 비과세 | 임대 행 없는 메뉴 전제는 과세 불변 |
  */
 import { describe, it, expect } from "vitest";
@@ -89,6 +90,24 @@ describe("판정 메뉴 × §155⑳ 불성립 — 명부의 임대주택을 센 
       expect(r.issues).toEqual([]);
       expect(r.isExempt).toBe(true);
     });
+  });
+
+  // B(직전거주주택보유주택)는 ⑳ 불성립이어도 다른 특례 비과세가 서면 영 §154⑩ — 기간분 비과세(`rental-155-20-b-154-10-and-q4.plan.md` Q-1 (a)).
+  it("UO-8f B 불성립 · 명부에 임대 행 → 메뉴 「기간분 비과세」(종전 「비과세」 · 계산기 STEP 2.5 §154⑩ 안분과 같은 결론)", async () => {
+    const c = mk([row()]) as unknown as { form: { asset: { rentalHousingException: object } } };
+    c.form.asset.rentalHousingException = {
+      ...c.form.asset.rentalHousingException,
+      scenario: "B",
+      priorResidenceTransferDate: "2020-01-01",
+      postRegistrationResidenceMonths: "30",
+    };
+    const v = await judgeAndRender(c as never);
+    expect(v.status).toBe(200);
+    expect(errors(v.issues)).toEqual([]);
+    expect(v.data.rentalHousingException.passed).toBe(false);
+    expect(v.isExempt).toBe(true);
+    expect(v.text).toContain("기간분 비과세");
+    expect(v.text).toContain("직전거주주택 양도일 후의 기간분에 대해서만 1세대1주택 비과세를 적용합니다");
   });
 
   it("UO-8b 명부 없음(메뉴 전제) → 메뉴 과세 불변 · 카드 한 줄 없음 · 핸드오프 계산기도 과세", async () => {
