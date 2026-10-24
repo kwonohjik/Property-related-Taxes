@@ -279,6 +279,19 @@ export function buildBurdenedGiftBreakdown(params: {
     );
   }
 
+  /**
+   * 기준시가 평가인데 양도시 기준시가 합이 0 — 증여가액 C와 양도가액이 정해지지 않는다(「소득세법 시행령」 제159조 제1항 제2호).
+   * 그대로 두면 담보평가가 C가 되고 STEP 3이 양도가액을 0으로 두어, 취득가액만 남은 양도차손 → 세액 0이 된다.
+   * ⑧이 화면에서 먼저 막고, 여기는 API 직접 호출·일반건물·함께 양도를 한 곳에서 막는다(계획서 `bg-std-mode-transfer-std-required.plan.md` §3.2).
+   */
+  if (isStandardMode && sangjeungbeopValuation.supplementary === 0) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "[burdened_gift] 기준시가로 평가했는데 양도시 기준시가가 없습니다. 증여가액과 양도가액이 양도시 기준시가로 정해지므로 " +
+        "(「소득세법 시행령」 제159조 제1항 제2호) 양도시 기준시가를 입력하세요.",
+    );
+  }
+
   // 괄호 발동 판정(`acqStdPriceForced`)은 위 `resolveBgAcquisitionBasis`가 단일 소스 — 겸용 부담부증여도 같은 함수를 부른다.
 
   // STEP 4 ~ 5.5: 자산별 취득가액·필요경비 슬롯 — `burdened-gift-acquisition.ts`(파트별 3자 max는 `burdened-gift-part-pre-deemed.ts`).

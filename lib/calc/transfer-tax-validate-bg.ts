@@ -52,6 +52,8 @@ import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { validateDonorBuiltBg } from "./transfer-tax-validate-donor-built-bg";
 import { GB_BG_CARRYOVER_BUNDLED_MESSAGE } from "@/lib/api/transfer-tax-schema-donor-built";
 import { bgCollateralForcesStdAcq, bgWholeGiftValuation } from "./burdened-gift-collateral-win";
+import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
+import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
 
 /**
  * 부담부증여 지원 자산 종류 — **⑧ validate 층 게이트**(3층 중 하나).
@@ -452,6 +454,22 @@ export function validateBurdenedGiftAsset(
     }
     if (!parseAmount(asset.gbAcqBuildingValue)) {
       return fieldError("gbAcqBuildingValue", `${label}: 부담부증여 — 취득시 건물 기준시가를 입력하세요 (소령 §159①1호 환산).`);
+    }
+  }
+
+  /**
+   * (5-c⁰) 기준시가 모드 — **양도시 기준시가 필수** (계획서 `bg-std-mode-transfer-std-required.plan.md` §3.1).
+   *
+   * 증여가액 C와 양도가액이 이 값으로 정해진다(소득세법 시행령 제159조 제1항 제2호). 비우면 엔진이 담보평가액을 C로 고르고
+   * 양도가액을 0으로 계산해, 취득가액만 남은 양도차손 → 세액 0이 됐다(1985 이후 매매·증여·재개발·축 B 공통 실측).
+   * 판정 값은 ④가 엔진에 싣는 leaf 그대로다 — 토지는 「양도시 기준시가 ‖ ㎡당 공시지가 × 면적」(3중 패턴).
+   * 일반건물·겸용·조합원입주권은 공용 칸이 없어 각자 칸 규칙이 막는다(`stdPriceAtTransferComesFromElsewhere`).
+   */
+  if (asset.bgValuationMode === "sangjeungbeop_standard" && !stdPriceAtTransferComesFromElsewhere(asset)) {
+    const info = buildBurdenedGiftInfo(asset);
+    if (info.landStdPriceAtTransfer + info.buildingStdPriceAtTransfer <= 0) {
+      const what = asset.assetKind === "land" ? "양도시 기준시가(또는 양도 당시 ㎡당 공시지가 + 면적)를" : "「② 양도정보」의 양도시 기준시가를";
+      return fieldError("standardPriceAtTransfer", `${label}: 부담부증여 기준시가 평가 — ${what} 입력하세요. 증여가액과 양도가액이 이 값으로 정해지므로 비우면 계산할 수 없습니다 (소득세법 시행령 제159조 제1항 제2호).`);
     }
   }
 

@@ -109,6 +109,8 @@ describe("③ 「취득시 기준시가」 — ⑤ 노출과 ⑧ 요구가 같�
       bgValuationMode: "sangjeungbeop_standard",
       bgMortgageDebtAmount: "600,000,000",
       bgDonorRelation: "lineal_descendant",
+      // 양도시 기준시가는 그 앞 검사가 요구한다(bg-std-mode-transfer-std-required.plan.md §3.1) — 이 단언은 취득시 기준시가 요구만 본다.
+      standardPriceAtTransfer: "500,000,000",
       standardPriceAtAcq: "",
     });
     expect(validateBurdenedGiftAsset(withInputs, "자산1")).toMatch(/취득시 기준시가/);
