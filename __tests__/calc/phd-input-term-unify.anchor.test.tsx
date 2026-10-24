@@ -64,14 +64,15 @@ describe("I1 «계산해 채우기» 보조 카드", () => {
     const t = text();
     expect(screen.getByTestId("phd-fill-button").textContent).toBe(`${want} 계산해 채우기`);
     expect(screen.getByTestId("phd-fill-formula").textContent).toContain(`${want} = 최초 고시 주택가격`);
-    expect(t).toContain(`${want} 계산 (소득세법 시행령 §164⑦)`);
+    // 공동주택은 첫 가격이 국세청장 고시면 §164⑥, 국토교통부장관 공시면 §164⑦ — 함께 적는다(단독·다가구는 §164⑦뿐)
+    expect(t).toContain(`${want} 계산 (소득세법 시행령 ${want === APT ? "§164⑥·⑦" : "§164⑦"})`);
     // 한 카드 안에서 반대 이름이 섞이지 않는다(assist 패널 머리글 포함)
     expect(t).not.toContain(other);
     expect(t).not.toContain("추정");
   });
   it("고시 가격 이름도 종류를 따른다 — 「…가격 최초 공시일 전이면」", () => {
     render(<PhdConvertedPriceFill asset={housing({ ...SEVEN, phdHousingType: "apartment" })} onAssetChange={noop} transferDate="2026-03-01" onFill={noop} />);
-    expect(text()).toContain("취득일이 공동주택가격 최초 공시일 전이면");
+    expect(text()).toContain("취득일이 공동주택의 첫 가격(국세청장 고시 기준시가 또는 공동주택가격) 고시일 전이면");
     cleanup();
     render(<PhdConvertedPriceFill asset={housing({ ...SEVEN, phdHousingType: "individual" })} onAssetChange={noop} transferDate="2026-03-01" onFill={noop} />);
     expect(text()).toContain("취득일이 개별주택가격 최초 공시일 전이면");
@@ -105,7 +106,9 @@ describe("I2 PHD 입력 패널 assist 모드", () => {
 describe("I3 취득시 기준시가 칸 hint (주택 종류를 모르는 곳)", () => {
   it("둘 다 적는다 — 기존 개별 문장은 그대로, 공동주택 문장이 이어진다", () => {
     expect(PRE_DISCLOSURE_STD_PRICE_HINT).toContain(`소득세법 시행령 §164⑦ 산식으로 계산한 ${IND}(부수토지 포함 총액)`);
-    expect(PRE_DISCLOSURE_STD_PRICE_HINT).toContain(`공동주택은 공동주택가격 최초 공시일 전이면 ${APT}(부수토지 포함 총액)`);
+    expect(PRE_DISCLOSURE_STD_PRICE_HINT).toContain(
+      `공동주택은 첫 가격(국세청장 고시 기준시가 또는 공동주택가격) 고시일 전이면 소득세법 시행령 §164⑥·⑦ 산식으로 계산한 ${APT}(부수토지 포함 총액)`,
+    );
     expect(PRE_DISCLOSURE_STD_PRICE_HINT).not.toContain("추정");
     expect(PRE_DISCLOSURE_STD_PRICE_HINT).not.toContain("취득 당시 공동주택");
   });

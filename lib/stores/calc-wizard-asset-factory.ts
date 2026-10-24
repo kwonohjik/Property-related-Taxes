@@ -236,6 +236,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     phdLandPriceYearAtAcqIsManual: false,
     phdLandPricePerSqmAtAcq: "",
     phdLandPricePerSqmAtAcq2001: "",
+    phdAssistBuildingStdBy164_5: false,
     phdBuildingStdPriceAtAcq: "",
     phdLandPriceYearAtFirst: "",
     phdLandPriceYearAtFirstIsManual: false,

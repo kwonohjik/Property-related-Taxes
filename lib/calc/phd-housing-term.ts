@@ -94,3 +94,17 @@ export const APARTMENT_ACQ_PRICE_SENTENCE =
 
 /** 공동주택 카드 hint에 핵심 문장 뒤로 붙는 안내 — 처음 매겨진 가격의 주체에 따라 §164⑥/⑦이 갈린다(`apart-nts-price.ts` APART_FIRST_PRICE_AGENCY_REQUIRED_MESSAGE 참조). */
 export const APARTMENT_ACQ_PRICE_AGENCY_NOTE = "처음 매겨진 가격이 국세청장 고시면 §164⑥, 국토교통부장관 공시면 §164⑦입니다";
+
+/**
+ * PHD 산식 조문 표시 — 공동주택은 처음 매겨진 가격이 국세청장 고시 기준시가면 §164⑥, 국토교통부장관 공시 공동주택가격이면 §164⑦이다.
+ * 두 산식·두 단서(⑧·⑤ 준용)가 같아 값이 같으므로 고르게 하지 않고 함께 적는다. 단독·다가구는 §164⑦뿐이다(§164⑥은 오피스텔·상업용 건물·공동주택만).
+ * 계획서: docs/00-pm/phd-fill-164-6-apartment.plan.md §9 (Q-1 (a))
+ */
+export function phdClause(apartment: boolean | undefined): string {
+  return apartment ? "§164⑥·⑦" : "§164⑦";
+}
+
+/** 취득 당시 이미 있었는지 따지는 가격의 이름 — 공동주택은 국세청장 고시 기준시가를 포함한다(`APARTMENT_ACQ_PRICE_SENTENCE`와 같은 표현). */
+export function phdAcqDisclosedPriceName(apartment: boolean | undefined): string {
+  return apartment ? `${phdDisclosedPriceName(true)}(국세청장이 고시한 기준시가 포함)` : "주택공시가격";
+}

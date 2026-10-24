@@ -24,7 +24,13 @@ import {
   computeConvertedHousingPrice,
   phdFillAssistVisible,
 } from "@/lib/calc/phd-converted-housing-price";
-import { isPhdApartment, phdConvertedPriceName, phdDisclosedPriceName } from "@/lib/calc/phd-housing-term";
+import {
+  isPhdApartment,
+  phdAcqDisclosedPriceName,
+  phdClause,
+  phdConvertedPriceName,
+  phdDisclosedPriceName,
+} from "@/lib/calc/phd-housing-term";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -49,12 +55,17 @@ export function PhdConvertedPriceFill({ asset, onAssetChange, transferDate, onFi
   const apartment = isPhdApartment(asset);
   const convertedName = phdConvertedPriceName(apartment);
   const disclosedName = phdDisclosedPriceName(apartment);
+  // 공동주택은 처음 매겨진 가격이 국세청장 고시(§164⑥)일 수도 국토교통부장관 공시(§164⑦)일 수도 있다 — 산식이 같아 함께 적는다
+  const clause = phdClause(apartment);
+  const title = apartment
+    ? `취득일이 공동주택의 첫 가격(국세청장 고시 기준시가 또는 ${disclosedName}) 고시일 전이면 — ${convertedName} 계산 (소득세법 시행령 ${clause})`
+    : `취득일이 ${disclosedName} 최초 공시일 전이면 — ${convertedName} 계산 (소득세법 시행령 ${clause})`;
 
   return (
     <div data-testid="phd-fill-assist">
       <ToneCard
         tone="amber"
-        title={`취득일이 ${disclosedName} 최초 공시일 전이면 — ${convertedName} 계산 (소득세법 시행령 §164⑦)`}
+        title={title}
         titleExtra={<ExpandToggleButton open={open} onClick={() => setOpen((o) => !o)} tone="amber" />}
         className="space-y-3"
       >
@@ -82,10 +93,12 @@ export function PhdConvertedPriceFill({ asset, onAssetChange, transferDate, onFi
             ) : (
               <p className="text-caption text-muted-foreground" data-testid="phd-fill-reason">
                 {calc.blocked === "not_eligible"
-                  ? "취득일이 최초 고시일 이후라 계산하지 않습니다 — 취득일 현재 고시된 주택공시가격을 직접 입력하세요."
+                  ? `취득일이 최초 고시일 이후라 계산하지 않습니다 — 취득일 현재 고시된 ${phdAcqDisclosedPriceName(apartment)}을 직접 입력하세요.`
                   : calc.blocked === "same_sum"
-                    ? "취득 당시와 최초 고시 당시의 기준시가 합계가 같습니다 — 소득세법 시행령 §164⑦ 괄호 단서(§164⑧ 준용) 대상이라 이 계산으로는 산정하지 않습니다. 취득시 기준시가를 직접 입력하세요."
-                    : `입력이 필요합니다: ${calc.missing.join(" · ")}`}
+                    ? `취득 당시와 최초 고시 당시의 기준시가 합계가 같습니다 — 소득세법 시행령 ${clause} 괄호 단서(§164⑧ 준용) 대상이라 이 계산으로는 산정하지 않습니다. 취득시 기준시가를 직접 입력하세요.`
+                    : calc.blocked === "needs_164_5_confirm"
+                      ? `2000년 이전 시점의 건물 기준시가는 §164⑤를 준용해 산정합니다(소득세법 시행령 ${clause} 후단) — 산정한 값을 넣고 위 확인란을 체크하세요.`
+                      : `입력이 필요합니다: ${calc.missing.join(" · ")}`}
               </p>
             )}
             <div className="flex flex-wrap items-center gap-2">

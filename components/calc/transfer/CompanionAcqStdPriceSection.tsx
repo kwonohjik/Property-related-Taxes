@@ -25,6 +25,8 @@ import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.typ
 import { acqStdPriceBranch } from "./acq-std-price-branch";
 import { LUMP_SUM_DEDUCTION_BASE_HINT, PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
 import { PhdConvertedPriceFill } from "./PhdConvertedPriceFill";
+import { isPhdApartment } from "@/lib/calc/phd-housing-term";
+import { phdClause } from "@/lib/calc/phd-housing-term";
 
 interface Props {
   block: BlockProps;
@@ -124,7 +126,7 @@ export function CompanionAcqStdPriceSection({
         // §164⑦ PHD 모드: 위쪽 PreHousingDisclosureSection의 3-시점 입력으로 자동 도출.
         // 기존 "취득시/양도시 기준시가" 입력은 중복되므로 표시하지 않음.
         <p className="text-xs text-muted-foreground italic">
-          취득시/양도시 기준시가는 위 §164⑦ 3-시점 입력으로부터 자동 도출됩니다.
+          취득시/양도시 기준시가는 위 {phdClause(isPhdApartment(props.asset))} 3-시점 입력으로부터 자동 도출됩니다.
         </p>
       ) : (
         <>

@@ -32,6 +32,12 @@ export interface AcqPriceConversionFormSlice {
    * **엔진 미전달(UI 전용)**: 배치 모달 입력 보존 + 상가건물 모달 prefill 소스.
    */
   phdLandPricePerSqmAtAcq2001: string;
+  /**
+   * 계산 보조(«환산 …가격 계산해 채우기» — `PhdConvertedPriceFill`) 전용 확인 — 취득일·최초 고시일이 2000년 이전이면
+   * 그 시점 건물 기준시가(법 §99①1호 나목)가 없어 §164⑤ 준용 산정 값을 넣었다는 사용자 확인(소령 §164⑥·⑦ 후단).
+   * 체크해야 채우기 버튼이 켜진다. **엔진 미전달(UI 전용)** — 보조 입력은 ④가 보내지 않고 ⑧이 요구하지 않는다.
+   */
+  phdAssistBuildingStdBy164_5: boolean;
   /** 취득당시 건물 기준시가 (원) */
   phdBuildingStdPriceAtAcq: string;
   /** 최초공시일 선택 연도 */

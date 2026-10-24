@@ -73,7 +73,8 @@ export function PreHousingDisclosureDetailSection({ result, phdApartment, onPrin
     <div data-print-section="phd" className="rounded-lg border border-blue-500/50 bg-blue-50/40 dark:bg-blue-950/20 p-4 space-y-1">
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
-          {phdApartment ? "공동주택가격 미공시 취득 환산 (소득세법 시행령 §164⑦)" : "개별주택가격 미공시 취득 환산 (소득세법 시행령 §164⑦)"}
+          {/* 공동주택은 처음 매겨진 가격이 국세청장 고시면 §164⑥, 국토교통부장관 공시면 §164⑦ — 산식이 같아 함께 적는다 */}
+          {phdApartment ? "공동주택가격 미공시 취득 환산 (소득세법 시행령 §164⑥·⑦)" : "개별주택가격 미공시 취득 환산 (소득세법 시행령 §164⑦)"}
         </p>
         {onPrint && (
         <button

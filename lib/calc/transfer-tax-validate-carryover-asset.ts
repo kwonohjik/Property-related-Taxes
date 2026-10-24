@@ -1,6 +1,7 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import { validateCarryoverHouseholdFact } from "./transfer-tax-validate-carryover-household";
 import { isPhdEligible } from "./phd-eligibility";
+import { isPhdApartment, phdAcqDisclosedPriceName, phdClause } from "./phd-housing-term";
 import { carryoverEstimationModeSupported } from "./phd-toggle-scope";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
 import { validateSplitCarryoverParts } from "./transfer-tax-validate-split-carryover";
@@ -99,7 +100,7 @@ export function validateCarryoverAsset(
       if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일을 입력하세요.`);
       // §164⑦ 게이트 — 이월과세는 증여자 취득가액 기준: 비교일 = 증여자 취득일
       if (!isPhdEligible(c.donorAcquisitionDate, asset.phdFirstDisclosureDate))
-        return fieldError("phdFirstDisclosureDate", `${label}: 증여자 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 일반 기준시가 환산을 선택하세요.`);
+        return fieldError("phdFirstDisclosureDate", `${label}: 증여자 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 ${phdAcqDisclosedPriceName(isPhdApartment(asset))}이 고시되어 있으므로 3-시점 환산(${phdClause(isPhdApartment(asset))}) 대상이 아닙니다 — 일반 기준시가 환산을 선택하세요.`);
       if (parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
         return fieldError("phdFirstDisclosureHousingPrice", `${label}: 최초 고시 개별주택가격을 입력하세요.`);
       const transferPrice =
@@ -110,7 +111,8 @@ export function validateCarryoverAsset(
       if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일(공동주택 최초공시일)을 입력하세요.`);
       // §164⑦ 게이트 — 비교일 = 증여자 취득일 (phd 모드와 동일)
       if (!isPhdEligible(c.donorAcquisitionDate, asset.phdFirstDisclosureDate))
-        return fieldError("phdFirstDisclosureDate", `${label}: 증여자 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 일반 기준시가 환산을 선택하세요.`);
+        // APD는 공동주택 경로 — 처음 매겨진 가격이 국세청장 고시(§164⑥)일 수도 국토교통부장관 공시(§164⑦)일 수도 있다
+        return fieldError("phdFirstDisclosureDate", `${label}: 증여자 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 ${phdAcqDisclosedPriceName(true)}이 고시되어 있으므로 3-시점 환산(${phdClause(true)}) 대상이 아닙니다 — 일반 기준시가 환산을 선택하세요.`);
       if (parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
         return fieldError("phdFirstDisclosureHousingPrice", `${label}: 최초공시 공동주택가격을 입력하세요.`);
       const transferPrice =

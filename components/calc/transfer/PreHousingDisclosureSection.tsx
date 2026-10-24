@@ -17,7 +17,11 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
-import { phdConvertedPriceName } from "@/lib/calc/phd-housing-term";
+import { phdAcqDisclosedPriceName, phdClause, phdConvertedPriceName } from "@/lib/calc/phd-housing-term";
+import { phdAssistNeeds164_5 } from "@/lib/calc/phd-converted-housing-price";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-phd-bridge";
 
@@ -38,10 +42,11 @@ interface Props {
 
 // ─── 법령 배지 ─────────────────────────────────────────────────────
 
-function LegalBadge() {
+// 공동주택은 처음 매겨진 가격의 주체에 따라 §164⑥(국세청장 고시)·§164⑦(국토교통부장관 공시) — 산식이 같아 함께 적는다(`phdClause`)
+function LegalBadge({ apartment }: { apartment: boolean }) {
   return (
     <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-micro font-medium text-muted-foreground">
-      소득세법 시행령 §164 ⑦
+      {apartment ? `소득세법 시행령 ${phdClause(true)}` : "소득세법 시행령 §164 ⑦"}
     </span>
   );
 }
@@ -60,7 +65,7 @@ const HOUSING_TYPE_OPTIONS: { value: HousingType; label: string; description: st
 // 주택유형별 공시가격 라벨
 const PRICE_LABEL: Record<HousingType, { first: string; transfer: string }> = {
   individual: { first: "최초 고시 개별주택가격",  transfer: "양도시 개별주택가격" },
-  apartment:  { first: "최초 고시 공동주택가격",  transfer: "양도시 공동주택가격" },
+  apartment:  { first: "최초 고시 가격(국세청장 고시 기준시가 또는 공동주택가격)",  transfer: "양도시 공동주택가격" },
 };
 
 // ─── 메인 패널 ────────────────────────────────────────────────
@@ -75,7 +80,10 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
 
   const priceLabel = PRICE_LABEL[housingType];
   // 보조(assist) 모드 문구의 §164⑦ 산식 결과 이름 — 위 라디오(주택유형)를 따른다(결과 화면과 같은 단일 정의)
-  const convertedName = phdConvertedPriceName(housingType === "apartment");
+  const apartment = housingType === "apartment";
+  const convertedName = phdConvertedPriceName(apartment);
+  const clause = phdClause(apartment);
+  const acqDisclosedName = phdAcqDisclosedPriceName(apartment);
   // §164⑦ 게이트 비교일 — 이월과세(§97의2)는 증여자 취득가액 기준이므로 증여자 취득일
   const phdCompareDate =
     asset.acquisitionCause === "carryover_gift"
@@ -116,7 +124,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
               : "취득 당시 주택공시가격이 고시되지 않은 경우, 최초 공시일의 주택공시가격을 기준으로 취득시 기준시가를 역산합니다."}
           </p>
         </div>
-        <LegalBadge />
+        <LegalBadge apartment={apartment} />
       </div>
 
       {/* 주택유형 선택 */}
@@ -156,6 +164,8 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
           {housingType === "apartment" && (
             <p className="mt-1 text-caption text-amber-700 dark:text-amber-300">
               공동주택은 단지별 최초고시일이 다릅니다. 홈택스 기준시가 조회에서 해당 단지의 최초 고시일을 확인하세요.
+              처음 매겨진 가격이 국세청장 고시 기준시가면(§164⑥) 그 고시일과 금액을, 국토교통부장관 공시 공동주택가격이면(§164⑦) 그 공시일과 금액을 넣습니다.
+              아래 자동조회는 공동주택가격만 찾으므로 국세청장 고시 기준시가는 직접 입력하세요.
             </p>
           )}
         </FieldCard>
@@ -164,11 +174,11 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
       {/* §164⑦ 적용가능 게이트 경고 — 취득일(이월과세는 증여자 취득일·의제 1985-01-01 반영) ≥ 최초고시일 (validate ⑧과 동일 게이트) */}
       {!isPhdEligible(phdCompareDate, asset.phdFirstDisclosureDate) && (
         <div className="rounded-lg border border-rose-200 bg-rose-50/70 px-3 py-2 text-xs text-rose-900 dark:text-rose-200 dark:bg-rose-950/40">
-          <p className="font-medium">⚠️ 3-시점 환산(§164⑦) 대상이 아닙니다</p>
+          <p className="font-medium">⚠️ 3-시점 환산({clause}) 대상이 아닙니다</p>
           <p className="mt-0.5 text-caption leading-relaxed text-rose-800 dark:text-rose-200">
             {assist
-              ? `취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후이므로 취득 당시 주택공시가격이 이미 고시되어 있습니다. ${convertedName}을 계산하지 않고, 취득일 현재 고시된 주택공시가격을 취득시 기준시가 칸에 직접 입력하세요.`
-              : "취득일(이월과세는 증여자 취득일, 의제취득일 1985-01-01 반영)이 최초 고시일 이후이므로 취득 당시 주택공시가격이 이미 고시되어 있습니다. 3-시점 환산을 끄고 취득일 현재 고시된 주택공시가격(취득시 기준시가)을 직접 입력하세요. 이 상태로는 계산이 진행되지 않습니다."}
+              ? `취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후이므로 취득 당시 ${acqDisclosedName}이 이미 고시되어 있습니다. ${convertedName}을 계산하지 않고, 취득일 현재 고시된 ${acqDisclosedName}을 취득시 기준시가 칸에 직접 입력하세요.`
+              : `취득일(이월과세는 증여자 취득일, 의제취득일 1985-01-01 반영)이 최초 고시일 이후이므로 취득 당시 ${acqDisclosedName}이 이미 고시되어 있습니다. 3-시점 환산을 끄고 취득일 현재 고시된 ${acqDisclosedName}(취득시 기준시가)을 직접 입력하세요. 이 상태로는 계산이 진행되지 않습니다.`}
           </p>
         </div>
       )}
@@ -234,6 +244,37 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
               acquisitionDate={acqDateForPre1990 || undefined}
               transferDate={transferDate}
             />
+          </div>
+        )}
+
+        {/* §164⑥·⑦ 후단(§164⑤ 준용) — 보조 모드 전용 확인. 환산 모드는 3시점 일괄 계산기가 ≤2000을 준용 산정한다(`phd-building-std-batch.ts`).
+            보조 모드는 칸별 계산기라 사용자가 연도를 «취득연도»로 골라야 준용이 적용된다 — 확인해야 채우기 버튼이 켜진다(Q-4 (b)). */}
+        {assist && phdAssistNeeds164_5(asset) && (
+          <div data-field="phdAssistBuildingStdBy164_5">
+            <ToneCard tone="amber">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {apartment && <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥ 후단" />}
+                <LawArticleModal legalBasis="소득세법 시행령 §164 ⑦" label="§164⑦ 후단" />
+                <LawArticleModal legalBasis="소득세법 시행령 §164 ⑤" label="§164⑤" />
+              </div>
+              <p className="text-xs text-amber-800 dark:text-amber-200">
+                취득일(의제취득일 1985-01-01 반영) 또는 최초 고시일이 <b>2000년 이전</b>이면 그 시점의 건물 기준시가는{" "}
+                <b>국세청 고시 전이라 존재하지 않습니다</b>. {clause} 후단에 따라 <b>§164⑤를 준용</b>해 산정합니다 — 2001년 지수표 금액에
+                「취득당시 건물기준시가 산정기준율」을 적용합니다.
+              </p>
+              <p className="text-caption text-amber-700 dark:text-amber-300">
+                각 칸의 <b>[건물 기준시가 계산]</b>에서 그 시점의 연도를 <b>취득연도</b>로 고르면 준용이 적용됩니다(최초 고시 시점 칸도
+                같습니다). 계산기가 지원하지 않는 구조는 직접 산정한 금액을 입력하세요.
+              </p>
+              <ToggleCard
+                tone="amber"
+                variant="chip"
+                checked={!!asset.phdAssistBuildingStdBy164_5}
+                onCheckedChange={(v) => onChange({ phdAssistBuildingStdBy164_5: v })}
+                title="§164⑤ 준용으로 산정한 금액입니다"
+                description="확인해야 계산해 채우기 버튼이 켜집니다"
+              />
+            </ToneCard>
           </div>
         )}
 

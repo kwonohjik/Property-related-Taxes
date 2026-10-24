@@ -16,6 +16,7 @@ import { useState, useEffect } from "react";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 import { phdAcqMethodEstimated } from "@/lib/calc/phd-toggle-scope";
+import { isPhdApartment } from "@/lib/calc/phd-housing-term";
 import { SelfBuiltSection } from "./SelfBuiltSection";
 import { SelfBuiltHousingShareBlock } from "./SelfBuiltHousingShareBlock";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
@@ -457,7 +458,12 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         <ToggleCard
           tone="amber"
           size="sm"
-          title="취득 당시 개별주택가격 미공시 (§164⑦ 3-시점 계산)"
+          // 공동주택(아래 패널 라디오 — 결과 화면과 같은 단일 정의)은 첫 가격의 주체에 따라 §164⑥·⑦이라 함께 적는다
+          title={
+            isPhdApartment(props.asset)
+              ? "취득 당시 공동주택가격 미공시 (§164⑥·⑦ 3-시점 계산)"
+              : "취득 당시 개별주택가격 미공시 (§164⑦ 3-시점 계산)"
+          }
           checked={!!props.asset.usePreHousingDisclosure}
           onCheckedChange={(v) =>
             props.onAssetChange!({ usePreHousingDisclosure: v })

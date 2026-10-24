@@ -1,7 +1,7 @@
 # «환산 공동주택가격 계산해 채우기» × 처음 매겨진 가격이 국세청장 고시인 공동주택(영 §164⑥) — 수정 계획서
 
 > 상위 계획서: `docs/00-pm/phd-appraisal-dead-end.plan.md` §9.7 「남은 한계」 · PR #2538(8a4cc412c) 후속
-> 작성 2026-10-25 · 기준 master `1c2fbe0a4` · 상태: **Q-1~Q-4 사용자 결정 대기**
+> 작성 2026-10-25 · 기준 master `1c2fbe0a4` · 상태: **결정 확정(2026-10-25 — Q-1 (a) · Q-2 (b) · Q-3 (b) · Q-4 (b)) · 구현 §9**
 
 ## 0. 한 줄 요약
 
@@ -151,3 +151,49 @@ tsc 0 · eslint 변경 파일 0 · `npx vitest run __tests__/calc/` · pre-push 
 | V-2 | 보조 모드 칸별 건물 기준시가 계산기가 2000년 이전 연도에 §164⑤ 준용 값을 내는가(취득·최초 고시 두 시점) | **확인 필요** — 코드 판독은 버튼 노출까지만. Q-4 문구를 정하기 전에 실측한다 |
 | V-3 | 의제취득일(1985.1.1.) 전 취득 × 국세청 첫 고시 1985.1.1. 이후인 공동주택 — 유효 취득일 1985-01-01 < 최초 고시일이면 계산한다(현행 `isPhdEligible`) | 코드 판독 ✅ · 해석례 미확인(상위 계획서 Q-3 `APART_PRE_DEEMED_FIRST_PRICE_NOTE`와 같은 축) |
 | V-4 | §164⑥ 산식 결과의 이름 — 사용자 지시대로 공동주택은 기관과 무관하게 «환산 공동주택가격»(상위 계획서 §9.5 결정 1) | ✅ 결정됨 · 이 계획서는 이름을 바꾸지 않는다 |
+
+---
+
+## 9. 결정 확정 · 구현 (2026-10-25)
+
+사용자 결정: **Q-1 (a) 조건 문장 · Q-2 (b) 환산 경로까지 · Q-3 (b) 현행 유지 · Q-4 (b) 확인란**. §6의 권장안 설계 중 Q-2·Q-3·Q-4는 아래로 바뀐다.
+
+### 9.1 V-2 실측 (throwaway probe — 저장소 미보존)
+
+칸별 계산기(`BuildingStdPriceModalButton` → `calcBuildingStandardPrice`)에 철근콘크리트·주거용 100㎡, 신축 1990, 양도 2023을 넣었다.
+
+| 취득연도 | 결과 |
+|---|---|
+| 1992 | 취득 30,966,900 = 2001 지수표 32,700,000 × 산정기준율 0.947 (`acqBaseConversion` echo) — **§164⑤ 준용 값** |
+| 2001 | 취득 32,700,000 (준용 없음) |
+| 양도연도 1995 | 「1995년 양도시 지수 자료가 없습니다」 — 양도연도 목록은 2001년부터다(`availableYears`) |
+
+결론: 칸별 계산기는 **«취득연도»에 2000년 이전 연도를 넣으면** 준용 값을 낸다(취득연도 목록은 1985년까지 — `BuildingStdPriceForm.tsx:168`). 최초 고시 시점 칸도 같은 모달이라 그 연도를 «취득연도»로 골라야 한다. 3시점 일괄 계산기(환산 모드)는 최초공시 ≤2000을 이미 준용 산정한다(`phd-building-std-batch.ts:234`). V-2 ✅.
+
+### 9.2 바뀐 것
+
+| 결정 | 파일 | 내용 |
+|---|---|---|
+| Q-1 (a) | `lib/calc/phd-housing-term.ts` | `phdClause(apartment)` = 공동 «§164⑥·⑦» / 단독 «§164⑦», `phdAcqDisclosedPriceName(apartment)` = 공동 «공동주택가격(국세청장이 고시한 기준시가 포함)» / 단독 «주택공시가격» (단일 정의) |
+| Q-1 (a) | `PhdConvertedPriceFill.tsx` | 공동주택 제목 «취득일이 공동주택의 첫 가격(국세청장 고시 기준시가 또는 공동주택가격) 고시일 전이면 — 환산 공동주택가격 계산 (소득세법 시행령 §164⑥·⑦)» · 적용 불가·괄호 단서 사유도 같은 이름·조문. 단독 제목은 바이트 동일 |
+| Q-1 (a) | `pre-disclosure-std-hint.ts` | 공동주택 문장 «… 첫 가격(…) 고시일 전이면 소득세법 시행령 §164⑥·⑦ 산식으로 계산한 환산 공동주택가격(…)» |
+| Q-2 (b) | `PreHousingDisclosureSection.tsx` (보조·환산 공용) | 공동주택이면 배지 «소득세법 시행령 §164⑥·⑦», 최초 가격 라벨 «최초 고시 가격(국세청장 고시 기준시가 또는 공동주택가격)», 최초 고시일 아래 안내(§164⑥/⑦ 구분 · 자동조회는 공동주택가격만 → 국세청 고시는 직접 입력), 적용 불가 경고 «3-시점 환산(§164⑥·⑦)» |
+| Q-2 (b) | `PreHousingDisclosureDetailSection.tsx` | 결과 머리글 «공동주택가격 미공시 취득 환산 (소득세법 시행령 §164⑥·⑦)» |
+| Q-2 (b) | `CompanionAcqPurchaseBlock.tsx` | 환산 토글 제목 — 공동주택(패널 라디오 `isPhdApartment`)이면 «취득 당시 공동주택가격 미공시 (§164⑥·⑦ 3-시점 계산)» |
+| Q-2 (b) | `CompanionAcqStdPriceSection.tsx` | «취득시/양도시 기준시가는 위 §164⑥·⑦ 3-시점 입력으로부터 자동 도출됩니다.» |
+| Q-2 (b) ⑧ | `transfer-tax-validate-acquisition.ts` 적용 불가·괄호 단서 2곳 · `transfer-tax-validate-carryover-asset.ts` PHD(라디오 따름)·APD(공동주택 경로 — 항상 §164⑥·⑦) 2곳 | 공동주택 문장. 겸용(`transfer-tax-validate-mixed-use-asset.ts:275`)은 주택 종류 라디오가 없어(겸용주택 = 단독) 그대로 |
+| Q-3 (b) | — | 1990.8.30. 전 최초 고시도 현행대로 계산(입력 단가). 거부 분기 없음 |
+| Q-4 (b) | `phd-converted-housing-price.ts` | `phdAssistNeeds164_5` — 취득일·최초 고시일 중 하나라도 연도 ≤2000(`isBeforeBuildingStdPriceNotice` 단일 경계 — 상가 §164⑥ 단서와 같은 함수). 미확인이면 `blocked: "needs_164_5_confirm"`(적용 불가·괄호 단서보다 뒤 — 계산할 수 없는 경우를 확인하라고 하지 않는다) |
+| Q-4 (b) | `PreHousingDisclosureSection.tsx` (보조 모드만) | 안내 카드(§164⑥·⑦ 후단 → §164⑤ 준용 · 칸별 계산기는 연도를 «취득연도»로 고르기) + 확인 칩 «§164⑤ 준용으로 산정한 금액입니다» |
+| Q-4 (b) ①②③ | `calc-wizard-asset-acq-conversion.ts`·`-factory.ts`·`-migrate.ts` | 폼 전용 `phdAssistBuildingStdBy164_5: boolean`(기본 false). ④·⑧·⑫~⑭ 0 — 보조 입력과 같이 전송·요구하지 않는다 |
+
+### 9.3 바뀌지 않는 것
+
+- 엔진·④·⑫~⑭·계산값. 단독·다가구 문구 전부. 서버 Zod refine 메시지(`transfer-tax-schema-refines.ts:209`)는 주택 종류가 전송되지 않아 가를 수 없다 — 그대로(⑧이 먼저 막으므로 화면에는 ⑧ 문장이 보인다).
+- 확인란은 칸 값이 바뀌어도 자동 해제하지 않는다(상가 배치의 자동 체크·해제와 달리 보조 카드는 계산기 산정 여부를 알 수 없다).
+
+### 9.4 검증
+
+- anchor 신규 2파일 35건: `__tests__/calc/phd-fill-164-6-apartment.anchor.test.ts`(B1 §164⑥·⑦ 같은 값 60,377,358 = 독립 BigInt · B2 1990.8.30. 전 계산 유지 · B3 확인 경계 2000-12-31/2001-01-01·순서 · B4 ⑧ 4문장 · B5 ④ 본문 불변) · `…-ui.anchor.test.tsx`(A1 제목 · A2 공용 카드 두 모드 · A3 확인란 노출·버튼 · A4 토글 제목·자동 도출 안내).
+- 갱신 단언 5건(문구 변경): `phd-input-term-unify` 3 · `phd-result-housing-term` 1 · `ui-review-batch3` R12 1 · E2E `transfer-phd-result-housing-term.spec.ts:113`.
+- 뮤테이션 15/15 KILLED(cp 백업 · md5 복원 확인): 제목 분기 · 확인 게이트 제거 · 최초 고시일 무시 · 확인란 환산 모드 노출 · hint 원복 · ⑧ 3곳 · 이월과세 PHD 라디오 · 배지 · 토글 제목 · 결과 머리글 · 라벨 · 경고 제목 · 자동 도출 안내.

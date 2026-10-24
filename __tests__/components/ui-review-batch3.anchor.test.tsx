@@ -198,7 +198,8 @@ describe("R12 · PHD 주택유형이 로컬 state가 아니다", () => {
         onChange={vi.fn()}
       />,
     );
-    expect(screen.getByText(/최초 고시 공동주택가격/)).toBeDefined();
+    // 공동주택의 처음 매겨진 가격은 국세청장 고시 기준시가(§164⑥)일 수도 있다 — 라벨이 두 가격을 함께 적는다
+    expect(screen.getByText(/최초 고시 가격\(국세청장 고시 기준시가 또는 공동주택가격\)/)).toBeDefined();
   });
 
   it("🔴 대조군 — 기본값(단독·다가구)은 종전 라벨 그대로", () => {

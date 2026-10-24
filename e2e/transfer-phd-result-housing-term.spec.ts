@@ -110,7 +110,7 @@ test.describe("양도세 PHD 결과 — 환산 …가격 용어", () => {
     const apt = await seedAndCalc(page, phdForm({ phdHousingType: "apartment" }));
     expect(count(apt.text, "환산 공동주택가격")).toBe(5);
     expect(apt.text).toContain("환산 공동주택가격 (취득시)");
-    expect(apt.text).toContain("공동주택가격 미공시 취득 환산 (소득세법 시행령 §164⑦)");
+    expect(apt.text).toContain("공동주택가격 미공시 취득 환산 (소득세법 시행령 §164⑥·⑦)");
     expect(apt.text).not.toContain("개별주택가격 미공시 취득 환산");
     expect(apt.text).not.toContain("환산 개별주택가격");
     expect(apt.text).not.toContain("추정");
