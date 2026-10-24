@@ -249,3 +249,23 @@ D12 도입 경위: cf221aedf(2026-10-06 · 「3중첩 불허」 — 0584 · 조�
 | P-Q3 | 「확인 필요」 게이트 제거 | CR-4 |
 | P-R | 완공APT 고지 선택 제거 | CR-9 |
 
+
+## 13. PR-2 구현 — 판정 메뉴 (2026-10-24 · Q-2 (a))
+
+- **D-3** `applyRentalHousingVerdict`: 명부에 「장기임대」 행이 있으면(`rosterCountsRentalUnits`) 불성립 원인과 관계없이 판정을 유지한다. F-1 PR-2의 `!verdict.compositionFailReason` 조건을 지웠다. 명부에 임대 행이 없으면(메뉴 전제) 종전대로 거둔다.
+- **추가 — `settleRentalVerdictForOtherExemption`(신규).** 브라우저 확인 중 메뉴 카드에서 계산기와 어긋나는 문장 둘을 발견했다. 불성립인데 판정이 비과세를 낸 경우의 카드다.
+  - ㉑ 통과 호의 ㉒ 사후 추징 안내: ⑳을 적용하지 않았으므로 사실이 아니다.
+  - 세대 구성 「확인 필요」(⑳ 겹침 해석 미확보): 결론을 가르지 않는다(Q-3).
+  - 판정 파이프라인(`judgment-pipeline.ts`)이 판정을 확정한 뒤 verdict에서 `periodPendingUnitIndexes`를 비우고, 구성 `confirmNotice`를 뺀다. 계산기 PR-1의 D-2·Q-3와 같은 규칙이다.
+  - 판정 보류·확인 필요 고지(`eligibility.notices`)는 남긴다(F-1 정정).
+- **anchor** `__tests__/calc/rental-155-20-unmet-menu.anchor.test.tsx`:
+  - UO-8e 반전(구성 불성립 + 명부 임대 행 → 유지). 「명부 없으면 거둔다」 짝은 호별·구성 두 원인 모두 유지한다.
+  - CR-7(호별 성립·불성립 × 구성 불성립 → 메뉴·핸드오프 계산기 비과세 · ㉒·「확인 필요」 없음).
+  - CR-7 짝(메뉴 전제 → 과세 · 「확인 필요」 유지).
+  - 8건 통과.
+- **E2E** `e2e/rental-155-20-unmet-menu.spec.ts` CRE-2(카드에 구성 사유·적용한 비과세 한 줄 · ㉒·「확인 필요」 없음)와 기존 UOE-2·OHR-1~6이 통과했다. 결과 화면을 라이트·다크·375에서 확인했다. 가로 스크롤은 0이다.
+
+| P-n | 무력화 | 실패한 anchor |
+|---|---|---|
+| P-5 | `!verdict.compositionFailReason` 조건 복원 | CR-7(호별 성립·불성립) · UO-8e |
+| P-5s | verdict 정리 생략 | CR-7(호별 성립 — ㉒·「확인 필요」가 생기는 사례) |
