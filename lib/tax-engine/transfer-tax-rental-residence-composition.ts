@@ -23,13 +23,15 @@
  * | §155⑳ + 조특법 §99의2② 같은 문형 조문 | 적용(같은 문형) | 사용자 결정 Q2(가) 2026-10-04 — E-14a(#1927) 15호 기준과 같다(아래 목록) |
  * | §155⑳ + 조특법 §98의9 준공후미분양주택 | 적용(§99의4① 같은 문형) | 사용자 결정 2026-10-04 — §99의4 해석(3686 등) 기준 · §98의9 직접 해석 없음 |
  * | §155⑳ + §155③ 공동상속 소수지분 (2중첩) | 적용 | 사용자 결정 Q3(가) 2026-10-04 — 3중첩 불허 회신(0584·0029·2439·4283)이 2중첩 허용을 전제 · 서면-2021-부동산-7265(소수지분은 「소유주택으로 보지 아니하므로」) |
+ * | §155⑳ + §155⑦1호 상속 농어촌주택·2호 이농주택 (2중첩) | 적용(같은 ⑦ 본문) | 사용자 결정 Q-4 (c) 2026-10-24 — 직접 해석 없음. 3호(0193)와 한 본문(「…각각 1개씩 소유…」)을 쓴다 · 3중첩(+§155①)은 불가(부동산납세과-870) |
+ * | §155⑳ + 조특법 §98 미분양주택 | 적용(효과 같음) | 사용자 결정 Q-4 (c) 2026-10-24 — 직접 해석 없음. 조특령 §98② 「…해당 미분양주택 외의 다른 주택만을 기준으로 하여 「소득세법」제89조제1항제3호를 적용한다」가 §99의2·§99의4와 같은 효과 |
  *
  * ## 해석 미확보 — 「모름」은 불리하게 (사용자 결정 2026-10-04 · taxlaw.nts 재검색 2026-10-04)
  *
- * 아래 겹침은 직접 해석례를 찾지 못했다 ⇒ 특례 **불성립**(`exceeded` + `confirmNotice`)으로 계산하고,
- * 그 겹침이 결론을 가를 때만(나머지 요건 충족 — 호출부 `rhe.applied`) 「확인 필요」를 고지한다.
- * - §155⑦1호(상속받은 농어촌주택)·2호(이농주택)와의 2중첩 — 3중첩(+§155①)은 불가(부동산납세과-870).
- * - 확인 목록(`RENTAL_RESIDENCE_VERIFIED_SPECIAL_ACT`) **밖** 조특법 제외 — §98(근거가 시행령 §98②·⑥ · 문형 다름).
+ * 확인 목록(`RENTAL_RESIDENCE_VERIFIED_SPECIAL_ACT`) **밖** 조특법 제외는 특례 **불성립**(`exceeded` + `confirmNotice`)으로
+ * 계산하고, 그 겹침이 결론을 가를 때만(나머지 요건 충족 — 호출부 `rhe.applied`) 「확인 필요」를 고지한다.
+ * 2026-10-24 Q-4 (c)로 §98과 §155⑦1·2호를 위 표로 옮겨, 지금 이 축에 걸리는 조문은 없다 — 새 조특법 조문을
+ * 목록에 넣지 않으면 이 축으로 떨어진다.
  *
  * ## 중과 배제 13호·15호 ① 요소 — 법문 추론 (사용자 결정 Q1(가) 2026-10-04)
  *
@@ -41,9 +43,9 @@
  * ## 판정 (명부 `houses[]` 기준 — 장기임대주택 행은 `isLongTermRental`)
  *
  * - `met` — 거주주택 외 비임대 주택이 없거나, 한 채가 §155①(신규 주택 취득일이 그 행과 같은 날)·§155② 단독상속
- *   (그 행이 선순위 상속주택으로 제외)·§155③ 공동상속 소수지분·§155④⑤ 합가·§155⑦3호 귀농주택으로 빠진다.
+ *   (그 행이 선순위 상속주택으로 제외)·§155③ 공동상속 소수지분·§155④⑤ 합가·§155⑦ 농어촌주택(1~3호)으로 빠진다.
  *   확인 목록의 조특법 제외(§99의2와 같은 문형 조문·§99의4와 같은 문형 조문)는 주택이 없는 것으로 보고 나머지를 같은 규칙으로
- *   판정한다. → 비과세 적용 · 중과 배제 ① 요소 성립.
+ *   판정한다(§98 포함 — Q-4 (c)). → 비과세 적용 · 중과 배제 ① 요소 성립.
  * - `exceeded` — 거주주택 외 비임대 주택이 조특법 제외 후에도 2채 이상(3중첩)이거나, 한 채가 어느 특례로도
  *   빠지지 않거나, 위 「해석 미확보」 겹침이다. → 비과세 특례 적용 불가 · 중과 배제 불성립.
  * - `undetermined` — 명부 없음 + 세대 주택 수가 임대주택 수보다 작음(입력 모순) · 명부 없음 + 확인 목록의 조특법
@@ -107,14 +109,17 @@ export type RentalResidenceComposition =
  *   「§99의4와 같은 문형도 확인된 것으로 본다」). 13호·15호 단독 축(`SPECIAL_ACT_15HO_VERIFIED_ARTICLES`, E-14a)에도
  *   같은 날 §98의9·§99의4를 넣었다(사용자 결정 2026-10-04 · §99의4는 같은 문형 근거) — 아래 세 키는 그 목록과 겹친다.
  *   이 목록은 §155⑳ 구성 축 전용 상수로 남긴다(축별 결정이 다시 갈릴 수 있다).
- * - 넣지 않은 것: §98(①·③ 본문에 소유주택 제외 문언이 없고 ②가 「… 주택의 판정 … 은 대통령령으로 정한다」로
- *   시행령 §98②·⑥에 위임 — 문형이 다르다).
+ * - §98 — 법률 ①·③ 본문에 소유주택 제외 문언이 없고 시행령 §98②·⑥에 위임한다(문형이 다르다). 효과는 시행령 §98②
+ *   「…해당 미분양주택 외의 다른 주택만을 기준으로 하여 「소득세법」제89조제1항제3호를 적용한다」로 §99의2·§99의4와 같아
+ *   넣는다(사용자 결정 Q-4 (c) 2026-10-24 · 직접 해석 없음). 13호·15호 단독 축(`SPECIAL_ACT_15HO_VERIFIED_ARTICLES`)에는
+ *   넣지 않았다 — 그 축의 결정(「「조세특례제한법」에 따라」 문언)은 따로다.
  */
 const RENTAL_RESIDENCE_VERIFIED_SPECIAL_ACT: ReadonlySet<string> = new Set([
   ...SPECIAL_ACT_15HO_VERIFIED_ARTICLES,
   "new_99_4_rural",
   "new_99_4_hometown",
   "unsold_98_9",
+  "unsold_98",
 ]);
 
 const sameDay = (a: Date, b: Date) =>
@@ -258,7 +263,7 @@ function judgeOtherHouse(
   if (deemed === "marriage_merge" || deemed === "parental_care_merge") return { status: "met", via: deemed };
   // 합가는 선언됐으나(`isFirstTransferredInMerge`) 합가 전 구성을 몰라(명부 없음·소유 쪽 미입력)
   // 성립하지 못했다 — 나머지 요건(기한 등)을 충족해 그것이 결론을 가를 때만 확인 필요를 싣는다
-  // (§155⑳ 선례 — RENTAL_RESIDENCE_RURAL_CONFIRM_NOTICE 등과 같은 모양).
+  // (§155⑳ 선례 — rentalResidenceSpecialActConfirmNotice 등과 같은 모양).
   const mergeConfirmNotice = resolveMergeCompositionConfirmNotice(mergeDeemingInput);
   if (mergeConfirmNotice) {
     const basis = input.marriageMerge ? TRANSFER.MARRIAGE_MERGE_EXEMPT : TRANSFER.PARENTAL_CARE_MERGE_EXEMPT;
@@ -271,18 +276,8 @@ function judgeOtherHouse(
       confirmNotice: mergeConfirmNotice,
     };
   }
-  if (deemed === "rural_house") {
-    // §155⑦3호 귀농주택만 회신(서면-2015-부동산-0193)이 있다. 1호 상속·2호 이농은 해석 미확보.
-    if (input.ruralHouse?.kind === "return_to_farm") return { status: "met", via: "rural_house" };
-    return {
-      status: "exceeded",
-      otherHouseCount: 1,
-      reason:
-        `거주주택 외 주택 1채가 ${TRANSFER.RURAL_HOUSE} 상속받은 농어촌주택·이농주택인데, ` +
-        `${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}과 겹쳐 적용한 해석이 확인되지 않아 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}을 적용하지 않았습니다`,
-      confirmNotice: RENTAL_RESIDENCE_RURAL_CONFIRM_NOTICE,
-    };
-  }
+  // §155⑦ 1호 상속·2호 이농·3호 귀농 — 3호는 회신(서면-2015-부동산-0193), 1·2호는 같은 ⑦ 본문이라 함께 연다(Q-4 (c)).
+  if (deemed === "rural_house") return { status: "met", via: "rural_house" };
   return {
     status: "exceeded",
     otherHouseCount: 1,
@@ -345,16 +340,10 @@ export const RENTAL_RESIDENCE_NO_ROSTER_CONFIRM_NOTICE =
   `(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_2})으로 주택 수에서 빠지면 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}이 적용될 수 있습니다 — 다른 보유 주택 목록에 그 주택을 입력하면 ` +
   `판정합니다(확인 필요)`;
 
-/** §155⑦1호·2호 농어촌주택과의 겹침 — 「확인 필요」 고지 (결론을 가를 때만 싣는다). */
-export const RENTAL_RESIDENCE_RURAL_CONFIRM_NOTICE =
-  `거주주택·장기임대주택 외 주택이 상속받은 농어촌주택·이농주택(${TRANSFER.RURAL_HOUSE} 1호·2호)인 경우 ` +
-  `${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}을 겹쳐 적용하는지는 해석이 확인되지 않았습니다(귀농주택은 서면-2015-부동산-0193) — ` +
-  `적용하지 않고 계산했습니다(확인 필요)`;
-
-/** 조특법 소유주택 제외(확인 목록 밖 — §98)와의 겹침 — 「확인 필요」 고지 (결론을 가를 때만 싣는다). */
+/** 확인 목록(`RENTAL_RESIDENCE_VERIFIED_SPECIAL_ACT`) 밖 조특법 소유주택 제외와의 겹침 — 「확인 필요」 고지 (결론을 가를 때만 싣는다 · 2026-10-24 Q-4 (c) 뒤로 걸리는 조문 없음). */
 export function rentalResidenceSpecialActConfirmNotice(basis: string): string {
   return (
     `거주주택·장기임대주택 외 주택이 ${basis}에 따라 소유주택에서 빠지는 경우 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}을 ` +
-    `겹쳐 적용하는지는 해석이 확인되지 않았습니다(조특법 §99의2·§99의4와 같은 문형 조문만 확인) — 적용하지 않고 계산했습니다(확인 필요)`
+    `겹쳐 적용하는지는 해석이 확인되지 않았습니다 — 적용하지 않고 계산했습니다(확인 필요)`
   );
 }

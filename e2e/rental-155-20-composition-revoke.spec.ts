@@ -1,9 +1,9 @@
 /**
- * §155⑳ 세대 구성 불성립 × 임대주택을 센 일시적 2주택 — 브라우저 경로 (계획서 `docs/00-pm/rental-155-20-composition-revoke.plan.md` D-1·D-2 · Q-1 (a))
+ * §155⑳ 세대 구성 × 조특법 §98 감면주택 — 브라우저 경로 (계획서 `docs/00-pm/rental-155-20-b-154-10-and-q4.plan.md` PR-2 · Q-4 (c))
  *
- * 임대주택(2023 취득)이 일시적 2주택의 신규 주택이고 세대에 조특법 §98 감면주택이 한 채 더 있다. ⑳과 §98의 겹침 해석이 확인되지 않아
- * 세대 구성이 서지 않지만, 임대주택을 센 판정의 일시적 2주택 비과세는 거두지 않는다. 종전에는 과세 124,366,000이었다.
- * 세액·경로별 단언은 anchor(CR-1~10)가 고정한다.
+ * 조특령 §98② 「…해당 미분양주택 외의 다른 주택만을 기준으로 하여 「소득세법」제89조제1항제3호를 적용한다」가 §99의2·§99의4와 효과가 같아
+ * ⑳ 세대 구성에서 §98 주택을 뺀다(사용자 결정 2026-10-24). 임대주택(2007 취득)이 일시적 2주택의 신규 주택이 아니어도 ⑳ A가 선다 —
+ * 종전에는 세대 구성 불성립(겹침 해석 미확보)으로 과세 124,366,000이었다. 세액·경로별 단언은 anchor(CR-1~10b)가 고정한다.
  */
 import { test, expect } from "@playwright/test";
 import { gotoTransferHoldingsStep } from "./_helpers/transfer-seed";
@@ -11,10 +11,10 @@ import { makeDefaultRentalUnit } from "../lib/stores/calc-wizard-asset-factory";
 
 const ROW = { region: "non_capital", regionCode: "4682025021", officialPrice: "100000000", isInherited: false, isApartment: false, isOfficetel: false, isUnsoldHousing: false, acquisitionOrigin: "general" };
 
-test("[CRE-1] ⑳ 성립 · 세대 구성 불성립(§98 감면주택) + 임대주택이 일시적 2주택 신규 주택 — 비과세 · 구성 불성립 안내", async ({ page }) => {
+test("[CRE-1] ⑳ 성립 + §98 감면주택 행(Q-4 (c)) · 임대주택 2007 취득 — ⑳ 비과세 · 겹침 「확인 필요」 없음", async ({ page }) => {
   await gotoTransferHoldingsStep(page, {
     houses: [
-      { ...ROW, id: "r1", acquisitionDate: "2023-01-01", isLongTermRental: true },
+      { ...ROW, id: "r1", acquisitionDate: "2007-01-01", isLongTermRental: true },
       {
         ...ROW,
         id: "h3",
@@ -61,8 +61,7 @@ test("[CRE-1] ⑳ 성립 · 세대 구성 불성립(§98 감면주택) + 임대�
   const result = ((await resp.json()) as { data: { result: { isExempt: boolean; totalTax: number; exemptReason: string } } }).data.result;
   expect(result.isExempt).toBe(true);
   expect(result.totalTax).toBe(0);
-  expect(result.exemptReason).toBe("일시적 2주택 비과세");
-  await expect(
-    page.getByText(/세대 구성 요건\(「장기임대주택과 그 밖의 1주택」\)을 충족하지 못했습니다/).first(),
-  ).toBeVisible();
+  expect(result.exemptReason).toBe("장기임대주택 보유자 거주주택 비과세 (§155⑳)");
+  await expect(page.getByText(/겹쳐 적용하는지는 해석이 확인되지 않았습니다/)).toHaveCount(0);
+  await expect(page.getByText(/세대 구성 요건\(「장기임대주택과 그 밖의 1주택」\)을 충족하지 못했습니다/)).toHaveCount(0);
 });
