@@ -1,6 +1,6 @@
 /**
  * anchor — «환산 개별주택가격 계산해 채우기» UI (PHD × 비환산 PR-2, 계획서 §9.2)
- *   U1 보이는 조건(방식 × 취득일) · 환산에서는 PHD 토글이 대신하고 버튼은 없다
+ *   U1 보이는 조건(방식 — 취득일 조건 없음) · 환산에서는 PHD 토글이 대신하고 버튼은 없다
  *   U2 클릭 → «취득시 기준시가» 칸에 환산 개별주택가격이 **한 번** 채워진다 (실거래가 안분·감정·매매사례 3칸)
  *   U3 채운 뒤 직접 고칠 수 있고, 보조 입력이 바뀌어도 자동 갱신되지 않는다 (useEffect 미러링 금지)
  *   U4 칸이 모자라거나 적용할 수 없으면 버튼이 꺼지고 사유를 말한다
@@ -98,8 +98,12 @@ describe("U1 보이는 조건", () => {
     ["감정가액", METHOD.app],
     ["매매사례가액", METHOD.sales],
     ["실거래가(토지·건물 분리 입력)", ACTUAL_SPLIT],
-  ] as const)("%s + 취득일 < 2005-04-29 → 버튼이 있다", (_n, m) => {
+  ] as const)("%s + 취득일 2003 / 2015-09-01(늦게 공시된 주택) → 버튼이 있다", (_n, m) => {
     render(<Harness init={{ ...m, ...SEVEN }} />);
+    expect(button()).not.toBeNull();
+    cleanup();
+    // 실거래가 분리 입력은 토지·건물 같은 취득일에서만 칸이 열린다 → 토지 취득일도 같은 날로 맞춘다
+    render(<Harness init={{ ...m, ...SEVEN, acquisitionDate: "2015-09-01", phdFirstDisclosureDate: "2016-04-29", ...("landAcquisitionDate" in m ? { landAcquisitionDate: "2015-09-01" } : {}) }} />);
     expect(button()).not.toBeNull();
   });
 
@@ -117,12 +121,27 @@ describe("U1 보이는 조건", () => {
     expect(probe().dataset.std).toBe("93567251");
   });
 
-  it("취득일 ≥ 2005-04-29 / 비주택 → 없음 (긍정 짝은 위 케이스)", () => {
+  it("취득일이 2005-04-29 뒤여도 카드가 열린다(취득일 조건 없음) · 비주택 → 없음 (긍정 짝은 위 케이스)", () => {
     const a = render(<Harness init={{ ...METHOD.app, acquisitionDate: "2010-01-10" }} />);
-    expect(button()).toBeNull();
+    expect(screen.queryByTestId("phd-fill-assist")).not.toBeNull();
     a.unmount();
     render(<Harness init={{ ...METHOD.app, assetKind: "land" }} />);
     expect(button()).toBeNull();
+    expect(screen.queryByTestId("phd-fill-assist")).toBeNull();
+  });
+
+  it("별개 취득(토지·건물 취득일 다름)은 취득일이 2015-09-01 이어도 버튼 없음 — 긍정 짝은 같은 날로 맞춘 위 케이스", () => {
+    for (const m of [METHOD.app, METHOD.sales, ACTUAL_SPLIT]) {
+      render(<Harness init={{ ...m, ...SEVEN, acquisitionDate: "2015-09-01", hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2003-01-10" }} />);
+      expect(button()).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("늦은 공시 — 취득 2017-01-01 · 최초 고시 2016-04-29 → 카드는 열려도 버튼은 꺼지고 사유를 말한다(계산 거부)", () => {
+    render(<Harness init={{ ...METHOD.app, ...SEVEN, acquisitionDate: "2017-01-01", phdFirstDisclosureDate: "2016-04-29" }} />);
+    expect(screen.queryByTestId("phd-fill-assist")).not.toBeNull();
+    expect((button() as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("보조 카드는 양도시 입력(양도시 개별주택가격·③ 양도시 기준시가)을 받지 않는다 — 환산 개별주택가격에 쓰이지 않고 ④ 도 보내지 않는다 (긍정 짝: 환산 PHD 카드는 받는다)", () => {

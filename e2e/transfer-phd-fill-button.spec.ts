@@ -1,7 +1,7 @@
 /**
  * «환산 개별주택가격 계산해 채우기» E2E (PHD × 비환산 PR-2, 계획서 docs/00-pm/phd-appraisal-dead-end.plan.md §9.2)
  *
- * 비환산(감정가액·매매사례가액) 주택 + 취득일 < 2005-04-29: 취득시 기준시가 칸 곁에 기존 PHD 입력 카드(보조 모드)와 버튼이 뜬다.
+ * 비환산(감정가액·매매사례가액) 주택(취득일 조건 없음): 취득시 기준시가 칸 곁에 기존 PHD 입력 카드(보조 모드)와 버튼이 뜬다.
  * 버튼 → 칸이 환산 개별주택가격(§164⑦)으로 채워진다 → 계산 200 → 개산공제 = 채운 값 × 3%.
  * 보조 입력(phd* 칸)은 전송되지 않는다 — 본문에 preHousingDisclosure 없음.
  *
@@ -197,7 +197,7 @@ test.describe("환산 개별주택가격 계산해 채우기 (PHD × 비환산)"
     await expect(stdInput(page)).toHaveValue("93,567,251");
   });
 
-  test("FB-5 환산(대조): 버튼이 없고 PHD 3-시점 토글이 대신한다 / 취득일 2010(대조): 버튼 없음", async ({ page }) => {
+  test("FB-5 환산(대조): 버튼이 없고 PHD 3-시점 토글이 대신한다 / 취득일 2010(감정): 카드는 열린다(취득일 조건 없음)", async ({ page }) => {
     test.setTimeout(150_000);
     await seedForm(page, formOf([asset({ ...EST, usePreHousingDisclosure: true, ...SEVEN })]));
     await expandAssetSection(page, 3);
@@ -206,7 +206,7 @@ test.describe("환산 개별주택가격 계산해 채우기 (PHD × 비환산)"
     await expect(page.getByTestId("phd-fill-assist")).toHaveCount(0);
     await seedForm(page, formOf([asset({ ...SEVEN, acquisitionDate: "2010-01-10" })]));
     await expandAssetSection(page, 3);
-    await expect(stdInput(page)).toBeVisible(); // 긍정 짝 — 감정 모드 칸은 있다
-    await expect(page.getByTestId("phd-fill-assist")).toHaveCount(0);
+    await expect(stdInput(page)).toBeVisible(); // 감정 모드 칸은 있다
+    await expect(page.getByTestId("phd-fill-assist")).toBeVisible(); // 취득일 조건이 없다 — 늦게 공시된 주택도 환산 보조를 쓴다
   });
 });
