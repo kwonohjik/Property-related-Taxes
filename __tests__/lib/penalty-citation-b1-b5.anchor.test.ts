@@ -78,7 +78,8 @@ describe("G-29 지방소득세 — §103의3은 세율 조항이고 §114조의2
   it("B1-29-2: 복제 지점 6곳이 같은 축으로 정정됐다", () => {
     expectCitations("lib/tax-engine/types/transfer-result.types.ts", ["§103의9②"]);
     expectCitations("lib/tax-engine/types/transfer-aggregate.types.ts", ["§103의9②"]);
-    expectCitations("lib/tax-engine/transfer-tax-aggregate.ts", ["§103의9②"]);
+    // 🔄 2026-10-25 800줄 분리 — 집계 1회 계산(`computeAggregateOnce`)이 `-once.ts`로 나갔다(무동작 리팩터 · 문구 그대로).
+    expectCitations("lib/tax-engine/transfer-tax-aggregate-once.ts", ["§103의9②"]);
     expectCitations("components/calc/results/MultiTransferPropertyBreakdown.tsx", ["§103의9②"]);
     expectCitations("lib/tax-engine/transfer-tax-mixed-use-totals.ts", ["§103의2 3호"]);
     expectCitations("components/calc/results/mixed-use/MixedUseResultCardAdapter.ts", ["§103의2 3호"]);

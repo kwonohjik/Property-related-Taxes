@@ -282,13 +282,15 @@ export const GB_BG_CARRYOVER_BUNDLED_MESSAGE =
  * 일반건물 부담부증여 × 이월과세 × 지분 분할 취득(축 B)·함께 부담부증여 묶음 거부 (⑫ · 계획서 `gb-bg-carryover-presumed-scenario-b.plan.md` PR-3).
  * §97의2 시나리오 비교(F27 `general-building-route-carryover.ts`)는 단건만 탄다 — 묶음 카드는 이월과세 입력을 읽지 않고 양도인 기준(B) 값만 냈다(K-5 · Δ 0)
  * · K-6/K-7 은 400 이었다. 받아 놓고 무시하지 않도록 막는다. 일반건물이 첫 자산이면 최상위, 둘째 이후면 `companionAssets[i]`에 이월과세가 실린다.
+ * 지분은 최상위에 **첫 지분 것만** 실려, 둘째 지분만 이월과세면 그 지분 `burdenedGiftInfo.carryoverDonorBasis`가 유일한 흔적이다
+ * (수정 前 200 · 이월과세 소실 — 계획서 `gb-bg-carryover-share-bundled.plan.md` §1.3).
  */
 export function refineGbBgCarryoverBundled(
   data: {
     propertyType?: string;
     transferType?: string;
     carryoverTaxation?: unknown;
-    generalBuildingShares?: unknown[];
+    generalBuildingShares?: ReadonlyArray<{ burdenedGiftInfo?: { carryoverDonorBasis?: unknown } }>;
     companionAssets?: ReadonlyArray<{ assetKind?: string; transferType?: string; carryoverTaxation?: unknown }>;
   },
   ctx: z.RefinementCtx,
@@ -299,6 +301,10 @@ export function refineGbBgCarryoverBundled(
   const bundled = (data.generalBuildingShares?.length ?? 0) > 0 || companions.length > 0;
   if (bundled && isGbBgCarryover({ kind: data.propertyType, ...data }))
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["carryoverTaxation"], message: GB_BG_CARRYOVER_BUNDLED_MESSAGE });
+  data.generalBuildingShares?.forEach((sh, i) => {
+    if (sh.burdenedGiftInfo?.carryoverDonorBasis != null)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["generalBuildingShares", i, "burdenedGiftInfo", "carryoverDonorBasis"], message: GB_BG_CARRYOVER_BUNDLED_MESSAGE });
+  });
   companions.forEach((c, i) => {
     if (isGbBgCarryover({ kind: c.assetKind, ...c }))
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "carryoverTaxation"], message: GB_BG_CARRYOVER_BUNDLED_MESSAGE });

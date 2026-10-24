@@ -108,6 +108,8 @@ const blocked: Array<[string, () => TransferFormData, string]> = [
   ["지분 분할 50/50 · K-5 · 분할 방식 미선언(전 자산 지분 → 축 B)", () => formOf([gbAsset(half), second(gbAsset(half))]), "carryoverTaxation"],
   ["지분 분할 50/50 · K-7", () => formOf([gbAsset({ ...K7, ...half }), second(gbAsset({ ...K7, ...half }))], { assetSplitMode: "fractional" }), "carryoverTaxation"],
   ["지분 분할 · 첫 지분만 이월과세", () => formOf([gbAsset(half), second(gbAsset({ ...half, acquisitionCause: "gift" }))], { assetSplitMode: "fractional" }), "carryoverTaxation"],
+  // 🔴 수정 前 ⑧ 만 막고 API 200 · 97,800,000 — 최상위 carryoverTaxation 은 첫 지분 것뿐이라 둘째 지분 이월과세가 조용히 사라졌다(계획서 gb-bg-carryover-share-bundled §1.3)
+  ["지분 분할 · 둘째 지분만 이월과세", () => formOf([gbAsset({ ...half, acquisitionCause: "gift" }), second(gbAsset(half))], { assetSplitMode: "fractional" }), "generalBuildingShares.1.burdenedGiftInfo.carryoverDonorBasis"],
   ["부담부증여 묶음 · 일반건물 첫 자산 · K-5", () => formOf([gbAsset(), landBg(2)], BUNDLE), "carryoverTaxation"],
   ["부담부증여 묶음 · 일반건물 첫 자산 · K-7", () => formOf([gbAsset(K7), landBg(2)], BUNDLE), "carryoverTaxation"],
   ["부담부증여 묶음 · 일반건물 둘째 자산 · K-5", () => formOf([landBg(1), second(gbAsset())], BUNDLE), "companionAssets.0.carryoverTaxation"],
