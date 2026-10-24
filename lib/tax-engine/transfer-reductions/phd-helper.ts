@@ -18,7 +18,7 @@
  *
  * 본 헬퍼는 기존 `transfer-tax-pre-housing-disclosure.ts`의 풀 PHD 엔진을 단순화한 wrapper.
  * 풀 엔진은 양도가액 안분·개산공제 등 종합 산출이 필요한 반면, 감면 조문용은
- * "취득시 추정 공동주택가격" (P_A_est)만 필요.
+ * "§164⑦ 산식으로 계산한 취득 당시 공동주택가격" (P_A_est)만 필요.
  *
  * 산식 (§164⑦ 본문):
  *   P_A_est = floor(P_F × Sum_A / Sum_F)
@@ -62,7 +62,7 @@ export interface ReductionPhdInput {
  * PHD 환산 결과 (감면 조문용 단순화)
  */
 export interface ReductionPhdResult {
-  /** 취득시 추정 공동주택가격 = P_A_est (원, 정수) */
+  /** §164⑦ 산식으로 계산한 취득 당시 공동주택가격 = P_A_est (원, 정수) */
   estimatedAcquisitionStdPrice: number;
   /** 취득시 토지 기준시가 합계 (원) */
   sumAtAcquisition: number;
@@ -75,7 +75,7 @@ export interface ReductionPhdResult {
 }
 
 /**
- * 감면 조문용 PHD 환산 — 취득시 추정 공동주택가격 산출.
+ * 감면 조문용 PHD 환산 — §164⑦ 산식으로 계산한 취득 당시 공동주택가격 산출.
  *
  * @example
  * const r = calcReductionAcquisitionStdPrice({
@@ -154,7 +154,7 @@ export function calcReductionAcquisitionStdPrice(
       formula: `${sumAtAcquisition.toLocaleString()} / ${sumAtFirstDisclosure.toLocaleString()} = ${(ratio * 100).toFixed(4)}%`,
     },
     {
-      label: "취득시 추정 공동주택가격 (P_A_est)",
+      label: "취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식)",
       value: estimatedAcquisitionStdPrice,
       formula: `최초공시 ${firstDisclosurePrice.toLocaleString()} × ${(ratio * 100).toFixed(4)}% = ${estimatedAcquisitionStdPrice.toLocaleString()}`,
     },

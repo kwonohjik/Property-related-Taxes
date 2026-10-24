@@ -168,7 +168,7 @@ export function toEngineReductions(
         hasOccupancyAtContract: r.hasOccupancyAtContract ?? false,
         isResident993: r.isResident993,
         isHousingConstructionBusiness993: r.isHousingConstructionBusiness993,
-        // Round 10 (2026-05-06): PHD 환산 입력 (취득시 추정 공동주택가격 자동 산출)
+        // Round 10 (2026-05-06): PHD 환산 입력 (§164⑦ 산식으로 계산한 취득 당시 공동주택가격 자동 산출)
         phdMode993: r.phdMode993 ?? false,
         phdFirstDisclosureDate993: r.phdFirstDisclosureDate993 || undefined,
         phdFirstDisclosurePrice993: r.phdFirstDisclosurePrice993

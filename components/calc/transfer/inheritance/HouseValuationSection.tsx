@@ -472,8 +472,8 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           label={`${labels.first.replace("최초공시", "최초 공시된")} ${labels.price}`}
           hint={
             isApart && asset.inhApartFirstPriceAgency === "nts"
-              ? "국세청장이 이 공동주택에 처음 고시한 기준시가(토지·건물 일괄). 영 §164⑥ 추정 공식의 분자 승수."
-              : `홈택스/부동산공시가격알리미 — 최초 공시 시점 ${labels.price}. ${clauseLabel} 추정 공식의 분자 승수.`
+              ? "국세청장이 이 공동주택에 처음 고시한 기준시가(토지·건물 일괄). 영 §164⑥ 산식의 분자 승수."
+              : `홈택스/부동산공시가격알리미 — 최초 공시 시점 ${labels.price}. ${clauseLabel} 산식의 분자 승수.`
           }
         />
         <FieldCard label="최초 공시 당시 건물기준시가" unit="원" hint="국세청 기준시가 — 취득시 개별주택가격 역산 시 최초공시 합계(토지기준시가 + 이 값)의 건물 부분. 개별주택가격과 별개입니다." className="grid sm:grid-cols-[200px_1fr]">
@@ -568,9 +568,9 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         </FieldCard>
       </div>
 
-      {/* ⑤ 자동 추정 결과 + override 토글 */}
+      {/* ⑤ 산식 계산 결과 + override 토글 */}
       <div className="space-y-2 rounded-md border border-border bg-background p-2.5">
-        {/* 자동 추정 결과 미리보기 */}
+        {/* 산식 계산 결과 미리보기 */}
         {!asset.inhHouseValUseHousePriceOverride && (() => {
           const area = parseFloat(asset.inhHouseValLandArea) || 0;
           // 1990이전: useMemo로 동기 계산한 total 사용 (등급가액 환산 결과)

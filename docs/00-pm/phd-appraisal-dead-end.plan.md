@@ -338,6 +338,33 @@ harness: `collectStepIssues(0~5)`(⑧) → `callTransferTaxAPI` 가로채기(④
 
 **확인 필요**(이 PR 이 다루지 않거나 실측하지 못한 것): ① 별개 취득(토지·건물 취득일 다름) 비환산 — 자산 전체 취득시 기준시가 칸이 없고 파트 카드(`PartAcqStdPrice`)가 받으므로 버튼을 두지 않았다(파트별 §164⑦ 환산 개별주택가격 개념이 맞는지 판단 필요) · ② 공동주택 중 취득일 ≥ 2005-04-29 이지만 단지별 최초 고시일이 그 이후인 경우 — 자동 ON 과 같은 기준이라 버튼이 안 보인다(필요하면 취득일 상한을 풀거나 수동 펼침 경로 추가 — 결정 필요) · ③ 실거래가 비분리 단건은 취득시 기준시가 칸 자체가 없어 버튼도 없다(개산공제 base 가 아니다) · ④ 감면 «자산 카드 PHD 가져오기» 소스 노출(위 판단 지점) · ⑤ 브라우저 사람 눈 확인은 Playwright E2E·스크린샷 1장으로 갈음 · ⑥ 결과 카드의 «추정» 용어 잔여(PR-1 §9.1 확인 필요 그대로).
 
+### 9.3 PR-2 후속 — «취득시 기준시가» 칸 중복 렌더 제거 · «추정» 표기 정리 (2026-10-24, 커밋까지 · push·PR 전)
+
+**수정 1 — `[data-field="standardPriceAtAcq"]` 2개 → 1개**
+
+- 원인: 감정·매매사례 + 「토지·건물 분리」(같은 취득일 → `isSeparateAcq` 거짓, `isSplit` 참)에서 `CompanionAcqAmountSection`(감정 칸) / `SalesCaseSection`(매매사례 칸) 과 `CompanionAcqStdPriceSection`(분리 입력 블록)이 함께 같은 폼 필드 `standardPriceAtAcq`를 그렸다. 실측(하네스 36셀): 중복은 **housing·building × (감정·매매사례) × 같은 날** 4셀뿐, 나머지 32셀 불변.
+- 조사(두 칸이 받는 값): 둘 다 `asset.standardPriceAtAcq` 한 필드다. ④ 는 그 한 필드만 `standardPriceAtAcquisition` 으로 보낸다(`transfer-tax-api.ts:382-404`). **분리 블록 쪽에만 있는 입력**: ① 주택·건물 공통 — 공시가격 조회(연도 select + 버튼) ② 비주거 건물 — ㎡당 단가·면적(`standardPricePerSqmAtAcq`·`acquisitionArea`/`transferArea` — ④ `buildLandStdAtAcquisitionPayload` 가 엔진에 보내고 ⑧ `transfer-tax-validate-split.ts:404-410·461·556` 이 요구) ③ 소유자 분리 주택 — 취득시 토지 공시지가·건물 기준시가(나목). 감정 쪽에만 있는 것은 라벨 «— 개산공제 기준액»과 hint 뿐. 엔진 split-gain 은 같은 취득일이어도 `hasSeperateLandAcquisitionDate` 면 분리 경로를 탄다(`isSplitPayloadActive`).
+- 결정: **분리 블록 쪽 칸을 남긴다**(입력 정보 손실 0). 반대안(감정 쪽 남김)은 ㎡당 단가·면적·조회·소유자 분리 칸을 잃어 ⑧ 이 요구하는 입력의 경로가 사라진다 → 기각. 남는 칸 hint 에 개산공제 기준액 문장(`LUMP_SUM_DEDUCTION_BASE_HINT`)을 앞에 합쳤다(+ 기존 안분 문장 + `PRE_DISCLOSURE_STD_PRICE_HINT`). 보조 카드(`PhdConvertedPriceFill`)는 남는 칸 바로 곁 1개.
+- 구현: 신규 `acq-std-price-branch.ts` — 분리 블록의 5갈래 분기(`acqStdPriceBranch`)와 «칸을 그리는가»(`acqStdFieldInStdSection` = 분기 standard ∧ `acqStdPriceRequired` ∧ ¬`isSeparateAcq`)를 **한 함수**로. 분리 블록은 자기 JSX 분기를 이 함수로 구동하고, 부모(`CompanionAcqPurchaseBlock`)가 같은 함수 결과를 `CompanionAcqAmountSection` 에 prop 으로 주입 → 감정 칸·`SalesCaseSection.hideStdPriceField` 가 접는다. 부모가 분기 조건을 다시 쓰지 않는다(재파생 금지). **④⑧⑫⑬⑭·① ② ③ ⑥ ⑦ 변경 0**, 750줄 근처 5파일 변경 0.
+- 격자 전후(`acq-std-field-single.anchor.test.tsx` G1 골든 36셀 + G2 불변식 5종×4방식×3분리×2소유×2플래그=240셀): 중복 4셀 2→1, 나머지 불변. **④ 본문·⑧ 이슈 해시 격자 240셀**(종류 5 × 방식 4 × 분리 3 × 소유 2 × PHD 플래그 2 — 입력 시료는 기준시가·단가·면적·감정가액 채움) 수정 전후 **바이트 동일**(`cmp`). G1b: 분리 블록 칸이 닫힌 경우(양 파트 실거래가 + 두 파트 취득가액 입력)에는 자산 전체 칸이 종전대로 남는다(0개 방지).
+- 부수 변화(의도): 분리 블록 칸이 열려 있는데 자산 전체 칸이 없는 경로(`hideAssetAcqAxis` 등)에서 감정·매매사례 방식이면 보조 카드가 이제 그 칸 곁에도 뜬다(종전: 실거래가에서만). 칸이 하나일 때는 항상 보조 카드도 ≤ 1.
+
+**수정 4 — «추정» 표기 정리** (법령 §164⑦ 본문 DRF 직접 · MST 290841 · 시행 2026-10-01: «개별주택가격 및 공동주택가격 … 공시되기 전에 취득한 주택의 취득당시의 기준시가는 다음 산식에 의하여 계산한 가액» — 이름이 없다. §164⑥ 도 «공동주택의 취득당시의 기준시가는 다음 산식에 따라 계산한 가액»)
+
+| 위치 | 무슨 값 | 근거 | 바꾼 문구 |
+|---|---|---|---|
+| `PreHousingDisclosureDetailSection.tsx` 5곳(헤더 주석 포함) — «추정 취득시 주택가격» | 양도세 PHD 경로의 §164⑦ 산식 결과 `estimatedHousingPriceAtAcquisition` | 소령 §164⑦ | «환산 개별주택가격» (행 라벨 «취득시 환산 주택공시가격»도 같은 값이라 «환산 개별주택가격 (취득시)»로 통일 — 두 이름이 한 카드에 섞이지 않게) · 소제목 «취득시 추정 기준시가 비율 적용» → «취득시 토지·건물 기준시가 비율 적용» |
+| `ReductionPhdInput.tsx:359` — «취득시 추정 공동주택가격» | 감면(조특법 §99·§99의3 등) 위젯의 §164⑦ 산식 결과(공동주택) | 소령 §164⑦ (위젯 입력도 «최초공시 공동주택가격») | «취득 당시 공동주택가격 (소득세법 시행령 §164⑦ 산식)» · 엔진 산식 6단계 마지막 라벨(`phd-helper.ts`)도 같은 문구(« (P_A_est)» 변수 약어 제거) |
+| `HouseValuationSection.tsx:475-476` — «추정 공식» | 상속 주택 3시점 칸의 hint — §164⑥/⑦ 산식을 가리키는 말 | 소령 §164⑥(국세청 첫 고시 공동주택) · §164⑦(개별·공동) | «… 산식의 분자 승수» (조문 산식으로 부름) · 주석 «자동 추정 결과» → «산식 계산 결과» |
+| `InheritedHouseValuationDetailCard.tsx:90·124` — «{price} 추정» | 상속주택 환산취득가액 카드의 §164⑦(개별·공동 국토부)/§164⑥(공동 국세청) 산식 결과 | 소령 §164⑦·⑥ | 개별 «환산 개별주택가격» · 공동(국토부) «§164⑦ 산식으로 계산한 취득 당시 공동주택가격» · 공동(국세청) «§164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가»(영 §164⑥ 본문의 «취득당시의 기준시가»). 소제목은 «이름 (소득세법 시행령 §164⑦ 산식) · 합계기준시가 = 토지 + 건물». 이름은 신규 `convertedHousePriceNames`(`inheritance-house-valuation.ts`) 한 곳 |
+| `inheritance-house-valuation.ts` 산식 문자열 «취득당시 {price} 추정 (…)» (동반 — 위 카드에 그대로 표시됨) | 같은 값 | 같음 | 위 `label` 한 줄 |
+
+`grep -rn "추정" components/calc lib/calc app` 전수 분류: ① **같은 뜻이라 고침** — 위 표 + `transfer-tax-api-reductions.ts:171` 주석 + `HouseValuationSection` 주석 2 + `inheritance-house-valuation.ts` 주석 3 ② **법령이 «추정»을 쓰는 곳(고치지 않음)** — 추정이익(상증령 §56② 본문 «1주당 추정이익의 평균가액», DRF 직접 확인) · 추정상속재산(상증법 §15① «상속받은 것으로 추정하여») · 증여추정(상증법 §45①②) ③ **다른 뜻(고치지 않음)** — `SameAdjustmentPeriodSection` «공시일이 추정값»(API 가 `stdrYear+0429` 로 공시일을 실제로 **추정**한 날짜) · 기납부세액 «참고 추정값»(`MultiTransferHistoryLoadModal`·`HistoryAggregateSelectModal`) · `ComprehensiveTaxResultView` «추정값입니다» · 주식 `MajorThresholdTimeline` «추정값»(법제처 연혁 미확인) · `RedevelopmentBlockCards` «자동 추정 안내»(승계조합원 권장 힌트) · «자동 추정 금지» 류 정책 주석. 테스트: 문자열 단언 갱신 4파일(`inherited-house-valuation-card`·`formula-fraction-render-path`·`transfer.route.apart-nts-price`·`reduction-phd-helper` — 단언 삭제 0, «추정» 불포함 단언 추가) + 신규 `converted-price-terms.anchor.test.tsx` 11건.
+
+**뮤테이션(cp 백업 · md5 복원 확인)**: 수정 1 — A1~A10 10건 중 초기 SURVIVED 2: A2(감정 보조 카드 가드 제거 — 칸을 그리는 두 자리가 이미 접어 **동치** → 중복 가드를 코드에서 제거) · A7(필수 술어 제외 → G1b 신규 추가 후 KILLED). 재측정 A1·A3~A10 **9건 전건 KILLED**. 수정 4 — B1~B8 **8건 전건 KILLED**.
+
+**확인 필요**: ① 양도세 PHD 상세 섹션(`PreHousingDisclosureDetailSection`)은 입력 위젯의 «단독·다가구 / 공동주택» 라디오(로컬 state — 저장·전송 안 됨)를 결과가 알 수 없어 «환산 개별주택가격»으로 통일했다 — 공동주택의 PHD 결과도 같은 이름으로 보인다(조문에 공동주택가격 산식 결과의 이름이 없다). 결과에 주택 종류가 echo 되면 공동주택은 서술형으로 갈릴 수 있다. ② `lib/tax-engine/**` 안 나머지 주석의 «추정»(`transfer-tax-pre-housing-disclosure.ts`·`types/*.ts`·`legal-codes/*.ts`·`inheritance-house-valuation.ts:28-29` 의 구 산식 설명 등)은 grep 범위 밖이라 두었다(사용자 노출 아님). ③ 브라우저 사람 눈 확인 미수행(jsdom 렌더 anchor 로 갈음).
+
 ---
 
 ## 10. 자가 점검 (3대 정책)

@@ -16,7 +16,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { RtmsSimilarSalesModal } from "@/components/calc/inheritance/estate-card/variants/RtmsSimilarSalesModal";
 import { Button } from "@/components/ui/button";
-import { PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
+import { LUMP_SUM_DEDUCTION_BASE_HINT, PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
 
 export interface SalesCaseSectionProps {
   /** 매매사례가액 (원 문자열) */
@@ -42,6 +42,8 @@ export interface SalesCaseSectionProps {
   isHousing?: boolean;
   /** «취득시 기준시가» 칸 바로 아래 계산 보조(환산 개별주택가격 계산해 채우기) — 보이는 조건은 그 컴포넌트가 판정한다 */
   stdPriceFillAssist?: ReactNode;
+  /** true면 「취득시 기준시가」 칸·보조 카드를 그리지 않는다 — 같은 `standardPriceAtAcq` 칸을 `CompanionAcqStdPriceSection`이 그린다(토지·건물 분리, 같은 취득일). */
+  hideStdPriceField?: boolean;
 }
 
 export function SalesCaseSection({
@@ -59,6 +61,7 @@ export function SalesCaseSection({
   onStandardPriceAtAcqChange,
   isHousing,
   stdPriceFillAssist,
+  hideStdPriceField,
 }: SalesCaseSectionProps) {
   const [rtmsOpen, setRtmsOpen] = useState(false);
 
@@ -133,15 +136,19 @@ export function SalesCaseSection({
              미입력을 0으로 두면 납세자에게 불리한 방향으로 과대과세된다. ⑧이 같은 범위로 막는다
              (`transfer-tax-validate-acquisition.ts` `lumpSumBaseRequired`).
           ⚠️ hint에 「이 금액의 3%」를 단정하지 않는다 — 미등기 0.3%·§163⑥4호 1%에서 거짓이 된다. */}
-      <CurrencyInput
-        label="취득시 기준시가 (원) — 개산공제 기준액"
-        required
-        data-field="standardPriceAtAcq"
-        value={standardPriceAtAcq}
-        onChange={onStandardPriceAtAcqChange}
-        hint={`필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%.${isHousing ? ` ${PRE_DISCLOSURE_STD_PRICE_HINT}` : ""}`}
-      />
-      {stdPriceFillAssist}
+      {!hideStdPriceField && (
+        <>
+          <CurrencyInput
+            label="취득시 기준시가 (원) — 개산공제 기준액"
+            required
+            data-field="standardPriceAtAcq"
+            value={standardPriceAtAcq}
+            onChange={onStandardPriceAtAcqChange}
+            hint={`${LUMP_SUM_DEDUCTION_BASE_HINT}${isHousing ? ` ${PRE_DISCLOSURE_STD_PRICE_HINT}` : ""}`}
+          />
+          {stdPriceFillAssist}
+        </>
+      )}
 
       {/* RTMS 자동조회 모달 */}
       {!rtmsDisabled && (
