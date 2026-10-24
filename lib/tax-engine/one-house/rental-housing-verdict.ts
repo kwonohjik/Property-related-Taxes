@@ -92,11 +92,11 @@ export function buildRentalHousingVerdict(
  *    그대로 두면 계산기는 과세인데 판정 메뉴만 비과세라고 답한다 — 계산기의 STEP 0.96
  *    (`restoreRentalUnitsToHouseCount` — 판정 전에 임대 호수를 되돌림)이 막고 있는 것과 **같은 over-exemption**이다.
  *
- * 🔑 **예외 — 호별·거주 요건 불성립인데 명부에 「장기임대」 행이 있으면 거두지 않는다**(F-1 Q-3 ·
- *    `docs/00-pm/rental-155-20-unmet-blocks-155-1.plan.md` D-4). 그 행은 판정 엔진의 주택 수에 이미 들어 있어, 엔진이 낸
- *    비과세는 임대주택을 센 결과다 — 임대주택이 일시적 2주택(영 §155①)의 신규 주택이면 정당하다(영 §155⑳은 불성립이면
- *    「…보아」가 없을 뿐 다른 특례를 배제하지 않는다). 계산기 STEP 0.96과 같은 술어(`rosterCountsRentalUnits`)다.
- *    세대 구성 불성립(D12 — 3중첩 등)은 계산기도 그대로 거두므로 예외가 아니다.
+ * 🔑 **예외 — 명부에 「장기임대」 행이 있으면 불성립이어도 거두지 않는다**(F-1 Q-3 · `rental-155-20-unmet-blocks-155-1.plan.md` D-4).
+ *    그 행은 판정 엔진의 주택 수에 이미 들어 있어, 엔진이 낸 비과세는 임대주택을 센 결과다 — 임대주택이 일시적 2주택(영 §155①)의
+ *    신규 주택이면 정당하다(영 §155⑳은 불성립이면 「…보아」가 없을 뿐 다른 특례를 배제하지 않는다). 계산기 STEP 0.96과 같은 술어
+ *    (`rosterCountsRentalUnits`)다. **세대 구성 불성립(3중첩 등)도 같다**(`rental-155-20-composition-revoke.plan.md` Q-2 (a)) —
+ *    계산기도 그 회수(종전 D12)를 없앴다. 0584형 4주택처럼 3중첩이 결론을 가르는 구성은 판정 엔진이 임대주택을 센 채 과세로 낸다.
  *
  * 🔑 **충족이면 손대지 않는다.** §155⑳은 거주주택을 1주택으로 «보아» §154①을 적용하라는
  *    조문이고, 그 §154① 판정은 이미 `checkExemption`이 했다. 여기서 비과세를 «주면»
@@ -105,6 +105,25 @@ export function buildRentalHousingVerdict(
  * 🔑 새 객체를 돌려준다 — 입력 judgment를 제자리에서 고치면 호출부가 원본을 로그에 남겼을 때
  *    이미 바뀐 값이 찍힌다.
  */
+/**
+ * 불성립인데 판정이 다른 특례로 비과세·부분 비과세를 낸 경우의 verdict 정리 — 계산기와 같은 규칙(composition-revoke D-2 · Q-3 (a)).
+ *  · ㉑ 통과 호(`periodPendingUnitIndexes`)를 비운다 — ⑳을 적용하지 않았으므로 ㉒ 사후 추징 안내가 사실이 아니다.
+ *  · 세대 구성 「확인 필요」(⑳ 겹침 해석 미확보)를 뺀다 — 다른 특례로 비과세가 서서 결론을 가르지 않는다.
+ * 판정 보류·확인 필요 고지(`eligibility.notices`)는 남긴다(F-1 정정 — 「모름」이 불성립 원인일 수 있다).
+ */
+export function settleRentalVerdictForOtherExemption(
+  verdict: OneHouseRentalHousingVerdict | null,
+  judgment: Pick<OneHouseJudgment, "isExempt" | "isPartialExempt">,
+  compositionConfirmNotice: string | undefined,
+): OneHouseRentalHousingVerdict | null {
+  if (!verdict || verdict.passed || (!judgment.isExempt && !judgment.isPartialExempt)) return verdict;
+  return {
+    ...verdict,
+    periodPendingUnitIndexes: [],
+    notices: compositionConfirmNotice ? verdict.notices.filter((n) => n !== compositionConfirmNotice) : verdict.notices,
+  };
+}
+
 export function applyRentalHousingVerdict(
   judgment: OneHouseJudgment,
   verdict: OneHouseRentalHousingVerdict | null,
@@ -112,6 +131,6 @@ export function applyRentalHousingVerdict(
   rosterCountsRental = false,
 ): OneHouseJudgment {
   if (!verdict || verdict.passed) return judgment;
-  if (rosterCountsRental && !verdict.compositionFailReason) return judgment;
+  if (rosterCountsRental) return judgment;
   return revokeOneHouseExemption(judgment);
 }

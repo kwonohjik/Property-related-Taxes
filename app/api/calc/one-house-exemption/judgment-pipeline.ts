@@ -16,6 +16,7 @@ import { POP_DECLINE_71_2_UNCONFIRMED_ID } from "@/lib/tax-engine/transfer-reduc
 import { resolveRentalResidenceComposition } from "@/lib/tax-engine/transfer-tax-rental-residence-composition";
 import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judge";
 import { buildRentalHousingVerdict, applyRentalHousingVerdict } from "@/lib/tax-engine/one-house/rental-housing-verdict";
+import { settleRentalVerdictForOtherExemption } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import { rosterCountsRentalUnits } from "@/lib/tax-engine/transfer-tax-rental-housing-judge";
 import { buildOneRightVerdict, applyOneRightVerdict } from "@/lib/tax-engine/one-house/one-right-verdict";
 import { applyNonResidentVerdict } from "@/lib/tax-engine/one-house/non-resident";
@@ -56,14 +57,18 @@ export function runOneHouseJudgmentPipeline(
    * 「1주택 → 비과세」가 나온다(over-exemption).
    */
   // D12 — 세대 구성(3중첩 불가 등)도 계산기 STEP 2.5와 같은 판정을 거친다. 주택 수 제외 기준일은 위 단계 6과 같다.
-  const rentalVerdict = buildRentalHousingVerdict(
-    engineInput,
-    engineInput.rentalHousingException?.applyException
-      ? resolveRentalResidenceComposition(engineInput, parsedRates, generalHouseAcquisitionDate)
-      : undefined,
+  const rentalComposition = engineInput.rentalHousingException?.applyException
+    ? resolveRentalResidenceComposition(engineInput, parsedRates, generalHouseAcquisitionDate)
+    : undefined;
+  const builtRentalVerdict = buildRentalHousingVerdict(engineInput, rentalComposition);
+  // F-1 Q-3 · composition-revoke Q-2 — 불성립이어도 명부에 「장기임대」 행이 있으면 엔진이 임대주택을 센 판정을 유지한다(계산기 STEP 0.96과 같은 술어).
+  const afterRental = applyRentalHousingVerdict(coreJudgment, builtRentalVerdict, rosterCountsRentalUnits(engineInput));
+  // 그 비과세가 서면 ㉒ 안내·세대 구성 「확인 필요」는 사실이 아니거나 결론을 가르지 않는다 — 계산기와 같다(composition-revoke D-2 · Q-3).
+  const rentalVerdict = settleRentalVerdictForOtherExemption(
+    builtRentalVerdict,
+    afterRental,
+    rentalComposition?.status === "exceeded" ? rentalComposition.confirmNotice : undefined,
   );
-  // F-1 Q-3 — 불성립이어도 명부에 「장기임대」 행이 있으면 엔진이 임대주택을 센 판정을 유지한다(계산기 STEP 0.96과 같은 술어).
-  const afterRental = applyRentalHousingVerdict(coreJudgment, rentalVerdict, rosterCountsRentalUnits(engineInput));
 
   /**
    * 단계 6.6: §89①4호 1세대1입주권 (P4-3b).
