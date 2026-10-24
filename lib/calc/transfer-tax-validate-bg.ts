@@ -30,6 +30,7 @@ import { gbPartReportedField } from "./gb-pre-deemed";
 import { bgPreDeemedError } from "./transfer-tax-validate-bg-pre-deemed";
 import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { bgMixedUseBlock, isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
+import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
 import { mixedBgCompanionBlockMessage } from "./burdened-gift-mixed-use-preview";
 import {
   deriveMemberRightsValue,
@@ -122,7 +123,7 @@ export function validateBurdenedGiftAsset(
    *
    * 여기서는 **BG 공통 검증보다 앞**에서 막아야 하는 것만 본다 — 그 뒤 검증은 이 조합에서 채울 수 없는 칸을 요구하기 때문이다:
    *  · 함께 양도·지분 분할 묶음(엔진 MB-6 — 문구는 엔진 leaf의 것)
-   *  · UI P1 좁힘: 취득원인 상속·증여·이월과세·신축, 남아 있는 신축·증축 값(`bgMixedUseBlock`)
+   *  · UI P1 좁힘: 취득원인 이월과세·신축, 남아 있는 신축·증축 값(`bgMixedUseBlock`) — 상속·증여는 PR-7b-7a부터 연다
    * 엔진 차단(MB-1~18)·필수 입력·귀속(MB-13)·구분 감정평가(MB-17)·초과부담부는 `validateMixedUseBurdenedGift`(취득 검증의 겸용 분기)가
    * 엔진 leaf(`analyzeMixedBurdenedGift`)로 판정한다 — 규칙 복제 없음.
    */
@@ -241,9 +242,10 @@ export function validateBurdenedGiftAsset(
     const collateralForced = bgCollateralForcesStdAcq(asset);
     // 일반건물 — 의제취득일 전 상속·증여 파트만 3자 max(Q-28 · PR-7b-6). 두 파트 다면 산정방식이 없고, 한 파트면 다른 파트의 금액만 요구한다.
     const gbParts = gbBgThreeWayParts(asset);
-    if (isBgPreDeemedAsset(asset) || gbParts.all) {
+    if (isBgPreDeemedAsset(asset) || gbParts.all || isMixedBgDeemedPath(asset)) {
       // 의제취득일 전 상속·증여 토지·주택·상가·건물 — 산정방식 대신 엔진이 ①②③ 중 큰 금액(담보 승이면 의제취득일 기준시가)을 쓴다.
       //   ⑤가 라디오를 숨기고 ⑫도 요구하지 않는다. ①②③ 입력은 아래 `bgPreDeemedError`·E-1·PD-1이 본다(계획서 §18).
+      // 겸용 상속·증여 취득 — 주택분·상가분 평가액이 취득가액이다(소령 §163⑨ · PR-7b-7a). 평가액은 겸용 검증(엔진 MB-11)이 요구한다.
     } else if (collateralForced) {
       // 재개발 완공 아파트 × 매매사례가액·감정가액 — 엔진이 담보 승 여부보다 먼저 막는다(`transfer-tax-burdened-gift-step.ts`).
       //   ⑤는 두 옵션을 비활성화하므로 자산 종류를 바꿔 값이 남은 경우다. 상속 사유는 담보 승에서 엔진이 방식을 읽지 않아 막지 않는다.

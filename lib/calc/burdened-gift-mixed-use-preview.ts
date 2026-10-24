@@ -21,6 +21,7 @@ import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
+import { parseAmount } from "./number-parse";
 
 /** 폼-전역 값이 없는(단위 테스트·부분 입력) 호출을 위한 최소 폼 — `buildMixedUsePayload`가 읽는 필드만 안전한 기본값으로 둔다. */
 function minimalForm(transferDate: string): TransferFormData {
@@ -103,6 +104,17 @@ export function mixedBgIssueField(issue: MixedBgIssue): string {
     case "burdenedGiftInfo.debtAttribution": return "bgDepositAttribution";
     default: return "transferType";
   }
+}
+
+/**
+ * 증여자 상속·증여 취득의 ① 평가액 누락(엔진 MB-11 `mixedUse.housingInheritedValue`) → 비어 있는 칸. 엔진 경로는 두 칸을 한 경로로 알리고
+ * 폼 칸은 취득원인(상속/증여)마다 다르다 — 주택분이 차 있으면 상가분 칸으로 보낸다(PR-7b-7a).
+ */
+export function mixedBgReportedField(asset: AssetForm): string {
+  const gift = asset.acquisitionCause === "gift";
+  const housing = parseAmount(gift ? asset.mixedHousingGiftValueOverride : asset.mixedHousingInheritedValueOverride);
+  if (!(housing > 0)) return gift ? "mixedHousingGiftValueOverride" : "mixedHousingInheritedValueOverride";
+  return gift ? "mixedCommercialGiftValueOverride" : "mixedCommercialInheritedValueOverride";
 }
 
 /**

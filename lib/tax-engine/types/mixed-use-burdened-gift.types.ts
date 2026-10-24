@@ -81,4 +81,9 @@ export type MixedUseBurdenedGiftBreakdown = Omit<
     basis: "whole_building_C" | "housing_part_C";
   };
   debtAttribution: MixedUseDebtAttributionEcho;
+  /**
+   * 증여자가 상속·증여로 취득해 상속개시일·증여일 현재 상증법 평가액(주택분·상가분)이 취득 당시 실지거래가액인 경로(소령 §163⑨ — 시가 평가만).
+   * `acquisitionMethodUsed`는 "actual"(실지거래가액 경로)이고, 결과뷰는 이 값으로 「실지취득가액」 대신 평가액이라고 적는다. 그 밖에는 없다.
+   */
+  deemedCause?: "inheritance" | "gift";
 };

@@ -70,9 +70,10 @@ export const MIXED_FIELD_JUMP_CASES: FieldJumpCase[] = [
     form: mixed({ ...BG_MIXED }),
   },
   {
-    name: "mixed: 겸용 × 부담부증여 — 상속 취득은 계산하지 않는다(P1 범위)", field: "acquisitionCause", step: 0, assetIndex: A,
-    message: /^자산: 증여자가 상속 또는 증여로 취득한 겸용주택의 부담부증여는 현재 계산하지 않습니다/,
-    form: mixed({ ...BG_MIXED, bgMortgageAttribution: "unallocated", acquisitionCause: "inheritance" }),
+    // PR-7b-7a — 상속 취득도 계산한다(소령 §163⑨ 평가액 = 취득가액). 종전 「취득원인 칸 차단」 대신 비어 있는 평가액 칸으로 보낸다.
+    name: "mixed: 겸용 × 부담부증여 — 상속 취득은 상속개시일 주택분 평가액 칸", field: "mixedHousingInheritedValueOverride", step: 0, assetIndex: A,
+    message: /^자산: 겸용주택 부담부증여: 증여자가 상속·증여받은 때의 주택분·상가분 상증법 평가액/,
+    form: mixed({ ...BG_MIXED, bgMortgageAttribution: "unallocated", acquisitionCause: "inheritance", decedentAcquisitionDate: "2000-01-01" }),
   },
   {
     name: "mixed: 겸용 × 부담부증여 — 개별주택가격 미공시 환산과 함께 계산 불가", field: "usePreHousingDisclosure", step: 0, assetIndex: A,

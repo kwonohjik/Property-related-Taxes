@@ -266,11 +266,12 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   }
   if (isMarket) {
     need(pos(info.marketValueAtTransfer), "양도시(증여일) 시가 평가액", ["burdenedGiftInfo", "marketValueAtTransfer"]);
-    if (!method) {
-      add("MB-11", "겸용주택 부담부증여 시가 모드: 취득가액 산정방식(실지취득가액·매매사례가액·감정가액·환산취득가액)을 선택하세요.", ["burdenedGiftInfo", "acquisitionMethod"]);
-    } else if (deemedPath) {
-      // 상속·증여 취득은 K-4 고정(§163⑨) — reported 평가액을 보충적평가로 대신하지 않는다(자동 fallback 금지)
+    if (deemedPath) {
+      // 상속·증여 취득은 K-4 고정(§163⑨) — 산정방식을 고르지 않는다(화면에 라디오가 없다 · PR-7b-7a). 고른 값이 실지가 아니면 위 MB-8이 막는다.
+      // reported 평가액을 보충적평가로 대신하지 않는다(자동 fallback 금지)
       need(pos(src.housingInheritedValue) && pos(src.commercialInheritedValue), "증여자가 상속·증여받은 때의 주택분·상가분 상증법 평가액", ["mixedUse", "housingInheritedValue"]);
+    } else if (!method) {
+      add("MB-11", "겸용주택 부담부증여 시가 모드: 취득가액 산정방식(실지취득가액·매매사례가액·감정가액·환산취득가액)을 선택하세요.", ["burdenedGiftInfo", "acquisitionMethod"]);
     } else if (method === "actual") {
       need(pos(info.actualAcquisitionTotal), "증여자의 실지취득가액 총액", ["burdenedGiftInfo", "actualAcquisitionTotal"]);
     } else if (method === "salesCase" || method === "appraisal") {
