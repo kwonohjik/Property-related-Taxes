@@ -87,10 +87,16 @@ export function buildRentalHousingVerdict(
 /**
  * 판정에 §155⑳ 결론을 **반영**한다.
  *
- * 🔴 **미충족이면 비과세를 끈다.** 판정 메뉴에서 임대주택은 명부에 넣지 않는 것이 전제라
+ * 🔴 **미충족이면 비과세를 끈다** — 단 아래 예외. 판정 메뉴에서 임대주택은 명부에 넣지 않는 것이 전제라
  *    (특례가 주택 수에서 빼 주므로) 요건을 못 갖추면 그 주택들이 **다시 주택 수에 들어온다**.
  *    그대로 두면 계산기는 과세인데 판정 메뉴만 비과세라고 답한다 — 계산기의 STEP 0.96
  *    (`restoreRentalUnitsToHouseCount` — 판정 전에 임대 호수를 되돌림)이 막고 있는 것과 **같은 over-exemption**이다.
+ *
+ * 🔑 **예외 — 호별·거주 요건 불성립인데 명부에 「장기임대」 행이 있으면 거두지 않는다**(F-1 Q-3 ·
+ *    `docs/00-pm/rental-155-20-unmet-blocks-155-1.plan.md` D-4). 그 행은 판정 엔진의 주택 수에 이미 들어 있어, 엔진이 낸
+ *    비과세는 임대주택을 센 결과다 — 임대주택이 일시적 2주택(영 §155①)의 신규 주택이면 정당하다(영 §155⑳은 불성립이면
+ *    「…보아」가 없을 뿐 다른 특례를 배제하지 않는다). 계산기 STEP 0.96과 같은 술어(`rosterCountsRentalUnits`)다.
+ *    세대 구성 불성립(D12 — 3중첩 등)은 계산기도 그대로 거두므로 예외가 아니다.
  *
  * 🔑 **충족이면 손대지 않는다.** §155⑳은 거주주택을 1주택으로 «보아» §154①을 적용하라는
  *    조문이고, 그 §154① 판정은 이미 `checkExemption`이 했다. 여기서 비과세를 «주면»
@@ -102,7 +108,10 @@ export function buildRentalHousingVerdict(
 export function applyRentalHousingVerdict(
   judgment: OneHouseJudgment,
   verdict: OneHouseRentalHousingVerdict | null,
+  /** 명부에 「장기임대」 행이 있는가(`rosterCountsRentalUnits`) */
+  rosterCountsRental = false,
 ): OneHouseJudgment {
   if (!verdict || verdict.passed) return judgment;
+  if (rosterCountsRental && !verdict.compositionFailReason) return judgment;
   return revokeOneHouseExemption(judgment);
 }
