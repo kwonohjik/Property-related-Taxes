@@ -130,7 +130,11 @@ export function TransferTaxResultView({
         taxTypeLabel: "양도소득세",
         resultData: result as unknown as Record<string, unknown>,
         // 건물 기준시가 계산서(building-std-report) PDF는 inputData.buildingStdSnapshots에서 재유도.
-        inputData: { buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: formData?.assets }) },
+        inputData: {
+          buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: formData?.assets }),
+          // PHD(§164⑦) 결과 이름 — 화면과 같은 단일 정의(`isPhdApartment`). 표시 전용, 엔진·API 무관
+          phdApartment: isPhdApartment(resolvedAsset),
+        },
         filenamePrefix: "양도소득세_계산결과",
       },
       pdfSections,

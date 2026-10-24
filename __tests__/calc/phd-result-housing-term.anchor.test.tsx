@@ -36,6 +36,9 @@ import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResu
 import { BundledAllocationCard } from "@/components/calc/results/BundledAllocationCard";
 import { PropertyBreakdownAccordion } from "@/components/calc/results/MultiTransferPropertyBreakdown";
 import { isPhdApartment, phdConvertedPriceName } from "@/components/calc/results/transfer/phd-housing-term";
+import { TransferSection } from "@/lib/pdf/ResultPdfTransferSections";
+import { ResultPdfDocument } from "@/lib/pdf/ResultPdfDocument";
+import type { ReactElement } from "react";
 import { calcPreHousingDisclosureGain } from "@/lib/tax-engine/transfer-tax-pre-housing-disclosure";
 import { convertedHousePriceNames } from "@/lib/tax-engine/inheritance-house-valuation";
 import type { InheritanceHouseValuationResult } from "@/lib/tax-engine/types/inheritance-house-valuation.types";
@@ -216,5 +219,53 @@ describe("P6 상속주택 환산 상세 카드 3경로", () => {
     expect(t).toContain("§164⑥ 산식으로 계산한 취득 당시 공동주택 기준시가");
     expect(t).toContain("취득 당시 공동주택 기준시가 (소득세법 시행령 §164⑥ 산식) · 합계기준시가 = 토지 + 건물");
     expect(t).not.toContain(APARTMENT);
+  });
+});
+
+/** react-pdf 노드 트리의 텍스트 수집(함수 컴포넌트는 직접 호출) */
+function collectPdf(node: unknown, out: string[] = []): string[] {
+  if (node === null || node === undefined || typeof node === "boolean") return out;
+  if (typeof node === "string" || typeof node === "number") { out.push(String(node)); return out; }
+  if (Array.isArray(node)) { for (const c of node) collectPdf(c, out); return out; }
+  const el = node as ReactElement<{ children?: unknown }> & { type?: unknown };
+  if (typeof el.type === "function") { collectPdf((el.type as (p: unknown) => unknown)(el.props), out); return out; }
+  collectPdf((el.props ?? {}).children, out);
+  return out;
+}
+
+describe("P7 PDF 출력물 — 같은 이름 규칙 · «추정»·변수 약어 없음", () => {
+  async function pdfText(phdApartment: boolean | undefined) {
+    const row = await runPhdCell("single", "pdf", phdForm({ ...HOST, phdHousingType: phdApartment ? "apartment" : "individual" }));
+    expect(row.status, row.fieldErrors).toBe(200);
+    const r = (row.json as { data: { result: Record<string, unknown> } }).data.result;
+    expect(r.preHousingDisclosureDetail, "전제: PHD 상세").toBeTruthy();
+    expect(r.splitDetail, "전제: 분리 내역(PDF PHD 표가 그 안에 있다)").toBeTruthy();
+    return collectPdf(TransferSection({ r, phdApartment })).join("");
+  }
+  it("공동주택 → «환산 공동주택가격 (취득시)»", async () => {
+    const t = await pdfText(true);
+    expect(t).toContain(`${APARTMENT} (취득시)`);
+    expect(t).not.toContain(INDIVIDUAL);
+  });
+  it("단독·다가구 / 옛 이력(prop 없음) → «환산 개별주택가격 (취득시)»", async () => {
+    for (const a of [false, undefined]) {
+      const t = await pdfText(a);
+      expect(t).toContain(`${INDIVIDUAL} (취득시)`);
+      expect(t).not.toContain(APARTMENT);
+    }
+  });
+  it("문서 경로 — ResultPdfDocument 가 inputData.phdApartment 를 양도 섹션에 넘긴다(옛 이력 inputData 없음 → 개별)", async () => {
+    const row = await runPhdCell("single", "doc", phdForm({ ...HOST, phdHousingType: "apartment" }));
+    const r = (row.json as { data: { result: Record<string, unknown> } }).data.result;
+    const doc = (inputData?: Record<string, unknown>) =>
+      collectPdf(ResultPdfDocument({ taxType: "transfer", taxTypeLabel: "양도소득세", createdAt: "2026-10-24", resultData: r, inputData })).join("");
+    expect(doc({ phdApartment: true })).toContain(`${APARTMENT} (취득시)`);
+    expect(doc(undefined)).toContain(`${INDIVIDUAL} (취득시)`);
+  });
+  it("«추정»·P_A_est·Sum_A·Sum_F 가 없다", async () => {
+    const t = await pdfText(true);
+    for (const bad of ["추정", "P_A_est", "Sum_A", "Sum_F"]) expect(t).not.toContain(bad);
+    expect(t).toContain("취득시 토지+건물 기준시가 합계");
+    expect(t).toContain("최초공시일 토지+건물 기준시가 합계");
   });
 });
