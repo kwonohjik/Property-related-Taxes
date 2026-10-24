@@ -16,6 +16,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { RtmsSimilarSalesModal } from "@/components/calc/inheritance/estate-card/variants/RtmsSimilarSalesModal";
 import { Button } from "@/components/ui/button";
+import { PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
 
 export interface SalesCaseSectionProps {
   /** 매매사례가액 (원 문자열) */
@@ -37,6 +38,8 @@ export interface SalesCaseSectionProps {
   /** 취득시 기준시가 (원) — 개산공제 3% base */
   standardPriceAtAcq: string;
   onStandardPriceAtAcqChange: (v: string) => void;
+  /** 주택 — 개별주택가격 최초 공시일 전 취득 시 §164⑦ 환산 개별주택가격 입력 안내를 hint 에 붙인다 */
+  isHousing?: boolean;
 }
 
 export function SalesCaseSection({
@@ -52,6 +55,7 @@ export function SalesCaseSection({
   buildingName,
   standardPriceAtAcq,
   onStandardPriceAtAcqChange,
+  isHousing,
 }: SalesCaseSectionProps) {
   const [rtmsOpen, setRtmsOpen] = useState(false);
 
@@ -132,7 +136,7 @@ export function SalesCaseSection({
         data-field="standardPriceAtAcq"
         value={standardPriceAtAcq}
         onChange={onStandardPriceAtAcqChange}
-        hint="필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%."
+        hint={`필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%.${isHousing ? ` ${PRE_DISCLOSURE_STD_PRICE_HINT}` : ""}`}
       />
 
       {/* RTMS 자동조회 모달 */}

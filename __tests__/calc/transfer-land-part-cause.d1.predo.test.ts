@@ -558,7 +558,9 @@ describe("C. D1-2 매매 호스트 개방 (설계 §2·§3·§4·§6.3 · 계획
     expect(phdPayloadActive(a)).toBe(false);
     expect(usesPhdGate(a, false)).toBe(false);
     // 원인을 끄면 종전대로 PHD가 살아난다(긍정 짝)
-    expect(usesPhdGate({ ...a, landCauseHost: "" }, false)).toBe(true);
+    // (갱신: PHD 는 환산에서만 성립 — 전: 방식 무관 true / 후: 파트 환산 명시 true · 두 파트 실가 false)
+    expect(usesPhdGate({ ...a, landCauseHost: "", landAcqMode: "estimated", buildingAcqMode: "estimated" }, false)).toBe(true);
+    expect(usesPhdGate({ ...a, landCauseHost: "" }, false)).toBe(false);
     expect(v8(a).result).toBeNull();
     const r = await run(a);
     expect(r.body.preHousingDisclosure).toBeUndefined();

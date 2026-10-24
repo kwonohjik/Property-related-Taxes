@@ -100,9 +100,13 @@ describe("#1 PHD 잔재 — 토글이 없는 취득원인(상속·증여·신축
       expect(phdFlagEffective(a), c).toBe(false);
       expect(phdPayloadActive(a), c).toBe(false);
     }
-    const purchase = host("gift", { acquisitionCause: "purchase", usePreHousingDisclosure: true });
+    // (갱신: PHD 는 환산에서만 성립 — 전: 방식 무관 true / 후: 환산 명시 true · 비환산 false. 근거 docs/00-pm/phd-appraisal-dead-end.plan.md)
+    const purchase = host("gift", { acquisitionCause: "purchase", usePreHousingDisclosure: true, useEstimatedAcquisition: true });
     expect(phdFlagEffective(purchase)).toBe(true);
     expect(phdPayloadActive(purchase)).toBe(true);
+    const purchaseActual = host("gift", { acquisitionCause: "purchase", usePreHousingDisclosure: true, useEstimatedAcquisition: false });
+    expect(phdFlagEffective(purchaseActual)).toBe(false);
+    expect(phdPayloadActive(purchaseActual)).toBe(false);
     // 값은 지우지 않는다 — 매매로 돌아오면 복귀
     expect(host("gift", { usePreHousingDisclosure: true }).usePreHousingDisclosure).toBe(true);
   });

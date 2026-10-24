@@ -72,7 +72,7 @@ const single = (over: Record<string, unknown> = {}) =>
 const warningsOf = (r: Awaited<ReturnType<typeof runCalc>>): string[] =>
   (r.result?.warnings ?? r.json?.data?.aggregated?.warnings ?? []) as string[];
 
-describe("#17 보정 1 · #17-5 ① — 1990-08-30 전 취득은 분리 경로 밖 (막지 않고 비과세 + 고지) · 그 이후 2005-04-30 전 취득은 영 §164⑦ 추정값으로 5칸 경로", () => {
+describe("#17 보정 1 · #17-5 ① — 1990-08-30 전 취득은 분리 경로 밖 (막지 않고 비과세 + 고지) · 그 이후 2005-04-30 전 취득은 영 §164⑦ 환산 개별주택가격으로 5칸 경로", () => {
   it("경계 — 개별공시지가 최초 고시일(1990-08-30) 전이면 true, 당일·이후·미입력은 false", () => {
     expect(isBeforeLandPriceFirstDisclosure("1990-08-29")).toBe(true);
     expect(isBeforeLandPriceFirstDisclosure("1990-08-30")).toBe(false);
@@ -82,7 +82,7 @@ describe("#17 보정 1 · #17-5 ① — 1990-08-30 전 취득은 분리 경로 �
     expect(isBeforeLandPriceFirstDisclosure(new Date("1990-08-30T00:00:00.000Z"))).toBe(false);
   });
 
-  it("경계 — 개별주택가격 최초 공시일(2005-04-30)은 화면 힌트(§164⑦ 추정값) 분기에만 쓴다", () => {
+  it("경계 — 개별주택가격 최초 공시일(2005-04-30)은 화면 힌트(§164⑦ 환산 개별주택가격) 분기에만 쓴다", () => {
     expect(isBeforeHousePriceFirstDisclosure("2005-04-29")).toBe(true);
     expect(isBeforeHousePriceFirstDisclosure("2005-04-30")).toBe(false);
     expect(isBeforeHousePriceFirstDisclosure("2012-01-02")).toBe(false);

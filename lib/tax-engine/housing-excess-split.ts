@@ -85,7 +85,7 @@ export interface HousingExcessSplitFacts {
    * 취득일이 개별공시지가 최초 고시일(1990-08-30) 전 — 취득 당시 ㎡당 개별공시지가가 없어(§164④ 등급가액 환산 대상) 기준시가 안분 입력(취득시 ㎡당 공시지가)을
    * 줄 수 없다. §164⑦ 3시점 환산(`usesPhd`)은 그 환산을 자체 파생해 분리 경로를 타지만(#17-5 ①), 쓰지 않으면 막지 않고 비과세를 유지하며
    * «초과분 미분리 — 확인 필요» 고지로 남긴다(#17 조건). 취득일 미입력은 false(취득일 필수는 다른 ⑧이 막는다).
-   * (2005-04-30 전 취득은 «취득 당시 개별주택가격»이 없어도 영 §164⑦ 추정값을 그 칸에 입력하면 5칸 경로를 탄다 — 서면인터넷방문상담4팀-685.)
+   * (2005-04-30 전 취득은 «취득 당시 개별주택가격»이 없어도 영 §164⑦ 환산 개별주택가격을 그 칸에 입력하면 5칸 경로를 탄다 — 서면인터넷방문상담4팀-685.)
    */
   acquiredBeforeLandFirstDisclosure: boolean;
   /**
@@ -111,7 +111,7 @@ export function isBeforeLandPriceFirstDisclosure(acquisitionDate: string | Date 
   return acquisitionDate.slice(0, 10) < SEC_163_9_LAND_FIRST_DISCLOSURE;
 }
 
-/** 취득일(ISO `YYYY-MM-DD…`)이 개별주택가격 최초 공시일(2005-04-30) 전인가 — 화면 힌트(취득시 개별주택가격 = 영 §164⑦ 추정값)가 쓴다. */
+/** 취득일(ISO `YYYY-MM-DD…`)이 개별주택가격 최초 공시일(2005-04-30) 전인가 — 화면 힌트(취득시 개별주택가격 = 영 §164⑦ 환산 개별주택가격)가 쓴다. */
 export function isBeforeHousePriceFirstDisclosure(acquisitionDate: string | Date | undefined): boolean {
   if (!acquisitionDate) return false;
   if (acquisitionDate instanceof Date) {

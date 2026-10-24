@@ -15,6 +15,7 @@
 import { useState, useEffect } from "react";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
+import { phdAcqMethodEstimated } from "@/lib/calc/phd-toggle-scope";
 import { SelfBuiltSection } from "./SelfBuiltSection";
 import { SelfBuiltHousingShareBlock } from "./SelfBuiltHousingShareBlock";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
@@ -268,6 +269,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   // D2 건물 원인 모드는 건물 방식이 실가 고정이다 — ④·⑧·⑥이 `withBuildingActualWhenMix`로 같은 값을 읽는다(3중 패턴).
   const buildingCause = props.buildingCause || undefined;
   const effBuildingAcqMode = buildingCause ? "actual" : (gbEffModes?.building ?? effectivePartAcqMode(props.asset?.buildingAcqMode, props));
+  // §164⑦ PHD 토글·첫 자산 아님 안내의 방식 조건 — ④ `phdFlagEffective`·⑧ `usesPhdGate` 와 **같은 leaf**(`phdAcqMethodEstimated`).
+  // `props.asset` 이 없으면(토글이 렌더되지 않는 경로) 종전 판정을 그대로 쓴다.
+  const phdMethodEstimated = props.asset
+    ? phdAcqMethodEstimated(props.asset)
+    : props.useEstimatedAcquisition || (isSeparateAcq && (effLandAcqMode === "estimated" || effBuildingAcqMode === "estimated"));
 
   /**
    * 취득시 기준시가가 **실제로 필요한가** — 엔진·validate와 **같은 술어**를 쓴다.
@@ -431,8 +437,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       {/* 🔴 첫 자산이 아니면 PHD는 **엔진에 도달하지 않는다** — 토글 대신 안내만 띄운다.
           근거·실측은 `CompanionAcqPurchaseBlock.types.ts`의 `isNonPrimaryAsset` 주석. */}
       {!isMixedUse && !buildingCause && (props.assetKind === "housing" || isSplit)
-        && (props.useEstimatedAcquisition
-            || (isSeparateAcq && (effLandAcqMode === "estimated" || effBuildingAcqMode === "estimated")))
+        && phdMethodEstimated
         && props.isNonPrimaryAsset && (
         <p className="rounded-md border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40">
           이 자산은 <strong>취득 당시 기준시가를 직접 입력</strong>합니다. 개별주택가격 미공시 취득
@@ -441,8 +446,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       )}
 
       {!isMixedUse && (props.assetKind === "housing" || isSplit)
-        && (props.useEstimatedAcquisition
-            || (isSeparateAcq && (effLandAcqMode === "estimated" || effBuildingAcqMode === "estimated")))
+        && phdMethodEstimated
         && !props.isNonPrimaryAsset
         // D1 T-3 — 토지를 상속·증여로 취득하면 토지는 실거래가 고정이라 PHD(양쪽 환산)는 성립하지 않는다.
         //    ④ `phdPayloadActive`·⑧ `usesPhdGate`도 같은 조건으로 무시한다(자동 ON 잔재는 끌 칸이 없어도 무해).

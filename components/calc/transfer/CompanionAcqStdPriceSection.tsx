@@ -23,6 +23,7 @@ import { usesTransferAreaForAcqStdPrice } from "@/lib/calc/transfer-tax-api-help
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 import { phdFlagEffective } from "@/lib/calc/phd-toggle-scope";
+import { PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
 
 interface Props {
   block: BlockProps;
@@ -177,9 +178,9 @@ export function CompanionAcqStdPriceSection({
                 props.useEstimatedAcquisition
                   ? "환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"
                   : propertyKind === "house_individual"
-                    ? showAcqBuildingStd
-                      ? "개별주택가격(부수토지 포함)을 아래 토지·건물 기준시가 비율로 토지분·건물분에 나눕니다 (§166⑥). 토지 기준시가 = ㎡당 공시지가 × 면적"
-                      : "토지·건물 안분 비율 산정 기준 (§166⑥)"
+                    ? (showAcqBuildingStd
+                        ? "개별주택가격(부수토지 포함)을 아래 토지·건물 기준시가 비율로 토지분·건물분에 나눕니다 (§166⑥). 토지 기준시가 = ㎡당 공시지가 × 면적"
+                        : "토지·건물 안분 비율 산정 기준 (§166⑥)") + ` ${PRE_DISCLOSURE_STD_PRICE_HINT}`
                     : "토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분"
               }
               forceYear={pre1990ForceYear}

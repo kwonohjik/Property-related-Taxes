@@ -159,8 +159,10 @@ describe("H3 — 이월과세 3-시점 환산이 ④ payload에 실린다", () =
       usePreHousingDisclosure: true,
     } as AssetForm;
     expect(phdPayloadActive(land)).toBe(false);
-    const housing = { ...land, assetKind: "housing" } as AssetForm;
+    // (갱신: PHD 는 환산에서만 성립 — 전: 방식 무관 true / 후: 환산 명시 true · 실거래가 false)
+    const housing = { ...land, assetKind: "housing", useEstimatedAcquisition: true } as AssetForm;
     expect(phdPayloadActive(housing)).toBe(true);
+    expect(phdPayloadActive({ ...housing, useEstimatedAcquisition: false } as AssetForm)).toBe(false);
   });
 });
 

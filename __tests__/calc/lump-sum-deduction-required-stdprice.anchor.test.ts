@@ -107,15 +107,28 @@ describe("A-10~A-13 — ⑧ 취득시 기준시가 필수", () => {
     expect(err === null || !err.includes(STD_MSG), `err=${err}`).toBe(true);
   });
 
-  it("A-12: PHD(§164⑤) 경로는 타지 않는다 — ④가 기준시가를 undefined로 보내는 경로다", () => {
+  it("A-12: 🔄 PHD(§164⑦) 면제는 **환산에서만** 성립한다 — 감정·매매사례의 PHD 플래그 잔재는 면제하지 않고 취득시 기준시가를 요구한다", () => {
+    // 갱신 이력(docs/00-pm/phd-appraisal-dead-end.plan.md): 종전 A-12 는 「감정 + 2003 + PHD 플래그 → 요구하지 않는다」를 못박았다
+    // (PHD 가 개산공제 base 를 대신 도출한다는 가정). 그러나 엔진의 감정·매매사례 분기는 PHD 에서 base 를 도출하지 않고 ④ 도 그 값을 지워
+    // 개산공제가 0 이 됐다(증상 B). 면제 전제가 구현된 적이 없어 뒤집는다 — 전: 통과(null) → 후: 칸을 지목해 차단.
+    for (const mode of [APPRAISAL, SALES_CASE]) {
+      const asset = singleForm({ ...mode, standardPriceAtAcq: "", acquisitionDate: "2003-05-01", usePreHousingDisclosure: true }).assets[0];
+      const err = validateAssetAcquisition(asset, "자산1", "2026-02-16");
+      expect(err, JSON.stringify(mode)).toContain(STD_MSG);
+    }
+  });
+
+  it("A-12b: 환산 + PHD 는 취득시 기준시가를 요구하지 않는다 — 11칸이 대신한다(PHD 11칸 요구는 별도 오류)", () => {
     const asset = singleForm({
-      ...APPRAISAL,
+      useEstimatedAcquisition: true,
       standardPriceAtAcq: "",
+      standardPriceAtTransfer: "",
       acquisitionDate: "2003-05-01",
       usePreHousingDisclosure: true,
     }).assets[0];
     const err = validateAssetAcquisition(asset, "자산1", "2026-02-16");
-    expect(err === null || !err.includes(STD_MSG), `err=${err}`).toBe(true);
+    expect(err ?? "").not.toContain(STD_MSG);
+    expect(err).toContain("최초 고시일");
   });
 
   it("A-13: 일반건물·재개발·입주권·겸용주택은 영향 없음 (early return 경계 트립와이어)", () => {
