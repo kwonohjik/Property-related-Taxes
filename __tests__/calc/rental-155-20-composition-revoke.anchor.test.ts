@@ -6,18 +6,23 @@
  * 근거: 영 §155⑳은 불성립이면 「…보아」가 없을 뿐 · 0584·0029(4주택 → 비과세 아님)는 임대주택을 센 판정과 결론이 같다(CR-5).
  *
  * 시료: 거주주택 2008-01-01 취득 · 거주 2019-06~2024-06 · 2024-06-01 양도 · 비조정. 보유 주택 목록:
- *   임대 행 2023-01-01(일시적 2주택 신규 주택 · 「장기임대」 표시) + 조특법 §98 감면주택 행(⑳과 겹친 해석 미확보 → 세대 구성 불성립).
+ *   임대 행 2023-01-01(일시적 2주택 신규 주택 · 「장기임대」 표시) + 조특법 §98 감면주택 행.
  *
- * | # | 입력 | 종전 | 지금 |
- * |---|---|---|---|
- * | CR-1 | A 호별 불성립 | 124,366,000 | 0 (= 미선언 짝) |
- * | CR-2 | A 호별 성립 · 세대 구성 불성립 | 124,366,000 | 0 · 구성 불성립 고지 · ㉒·「확인 필요」 없음 |
- * | CR-3 | B 성립 · 세대 구성 불성립 | 60,621,000(사유 「일시적 2주택」 자기모순) | 50,171,000 — 영 §154⑩ 안분(b-154-10 Q-1 (a) · 종전 D12 결과 0 정정) |
- * | CR-4 | CR-2 · 15억 | 282,711,000 | 14,124,000 (= 미선언 짝) · 「확인 필요」 없음 |
- * | CR-5 | 0584형(임대 + 공동상속 소수지분 + 일반 신규) | 124,366,000 | 불변 — 판정 엔진이 과세 |
- * | CR-6 | ⑦1호 상속 농어촌주택 행(⑳ 겹침 해석 미확보) | 124,366,000 | 0 (= 미선언 짝) |
- * | CR-9 | 완공APT(같은 leaf) | 124,366,000 | 미선언 짝과 같음 |
- * | CR-10 | 다른 특례가 없으면(임대 행 2007 취득) | 과세 | 과세 불변 · 구성 「확인 필요」 유지(결론을 가른다) |
+ * 🔑 2026-10-24 Q-4 (c)(`rental-155-20-b-154-10-and-q4.plan.md` PR-2): §98·§155⑦1·2호도 ⑳ 세대 구성에서 뺀다 — 이 시료는 이제
+ *    **세대 구성 성립**이다. 「구성 불성립 + 다른 특례 비과세」를 화면에서 만들 시료는 남지 않았다(V-4 — 공동상속 소수지분 + ⑦1호는 판정
+ *    엔진도 과세 · 행에 연결되지 않은 조특법 선언(API 직접)도 판정 엔진이 과세). 세대 구성 회수를 하지 않는 규칙은 판정 메뉴 단위 anchor
+ *    UO-8e(`rental-155-20-unmet-menu.anchor.test.tsx`)가 지킨다.
+ *
+ * | # | 입력 | D12 전 | D12(#2519) | 지금(Q-4 (c)) |
+ * |---|---|---|---|---|
+ * | CR-1 | A 호별 불성립 | 124,366,000 | 0 | 0 (= 미선언 짝) |
+ * | CR-2 | A 호별 성립 | 124,366,000 | 0 · 구성 불성립 고지 | 0 · ⑳ 성립(구성 불성립 고지 없음) |
+ * | CR-3 | B 성립 | 60,621,000 | 0 → §154⑩ 안분 50,171,000(PR-1) | 50,171,000 — ⑳ 성립 B(§161) |
+ * | CR-4 | CR-2 · 15억 | 282,711,000 | 14,124,000 | 14,124,000 (= 미선언 짝) |
+ * | CR-5 | 0584형(임대 + 공동상속 소수지분 + 일반 신규) | 124,366,000 | 불변 | 불변 — 판정 엔진이 과세 |
+ * | CR-6 | ⑦1호 상속 농어촌주택 행 | 124,366,000 | 0 | 0 (= 미선언 짝 · ⑳ 성립) |
+ * | CR-9 | 완공APT(같은 leaf) | 124,366,000 | 미선언 짝 | 미선언 짝 |
+ * | CR-10 | 임대 행 2007 취득(일시적 2주택 아님) | 과세 | 과세 · 「확인 필요」 | **0** — ⑳ A 성립(미선언 짝 124,366,000) |
  *
  * 부담부증여(증여세 계산기) 경로는 이 결함에 닿지 않는다 — 보유 주택 목록이 없고(`houseRosterInputUnavailable`) 조특법 제외를
  * 항상 비워 보낸다(`gift-burdened-transfer-api.ts` `specialHouseExclusions: []`). 계획서 V-4.
@@ -126,42 +131,33 @@ describe("§155⑳ 세대 구성 불성립 × 임대주택을 센 다른 특례 
     expect((await undeclared(houses)).result.totalTax).toBe(0);
   });
 
-  it("CR-2 ★ A 호별 성립 · 세대 구성 불성립 → 비과세 0 · 구성 불성립 고지 · ㉒·「확인 필요」 없음 (종전 124,366,000)", async () => {
+  it("CR-2 ★ A 호별 성립 + §98 행 → 비과세 0 · 세대 구성 성립(Q-4 (c) — 종전 구성 불성립 고지)", async () => {
     const r = await calc([rental(), SP98], A());
     expect(r.issues).toEqual([]);
     expect(r.result.isExempt).toBe(true);
-    expect(r.result.exemptReason).toBe("일시적 2주택 비과세");
     expect(r.result.totalTax).toBe(0);
-    const n = w(r).filter((x) => x.startsWith(COMPOSITION_HEAD));
-    expect(n).toHaveLength(1);
-    expect(n[0]).toContain("조특령 §98②·⑥");
-    expect(n[0]).toMatch(/적용한 비과세는 「일시적 2주택 비과세」입니다\.$/);
-    expect(w(r).some((x) => x.includes("§155㉒"))).toBe(false);
-    expect(w(r).some((x) => x.includes("세대 구성 요건을 충족하지 못해 임대주택을 주택 수에서 뺀 전제"))).toBe(false);
+    expect(w(r).filter((x) => x.startsWith(COMPOSITION_HEAD))).toEqual([]);
+    expect(steps(r).some((s) => s.startsWith("장기임대주택 거주주택 비과세 특례 — 적용 불가"))).toBe(false);
   });
 
-  // B는 ⑳ 세대 구성이 서지 않아도 일시적 2주택으로 1세대1주택이면 영 §154⑩ 안분 대상이다(`rental-155-20-b-154-10-and-q4.plan.md` Q-1 (a)).
-  it("CR-3 ★ B 성립 · 세대 구성 불성립 → 영 §154⑩ 안분 50,171,000 (종전 60,621,000 → D12 0 → 정정)", async () => {
+  // Q-4 (c) 뒤 세대 구성이 성립해 ⑳ B(§161)로 안분한다 — PR-1의 §154⑩ 대체 경로와 같은 값(`rental-155-20-b-154-10-and-q4.plan.md` M4).
+  it("CR-3 ★ B 성립 + §98 행 → ⑳ B §161 안분 50,171,000 = PR-1 §154⑩ 값 (종전 60,621,000 → D12 0 → 정정)", async () => {
     const r = await calc([rental(), SP98], B());
     expect(r.issues).toEqual([]);
     expect(r.result.isExempt).toBe(false);
     expect(r.result.totalTax).toBe(50_171_000);
-    expect(steps(r).some((s) => s.startsWith("직전거주주택보유주택 — 영 §154⑩ 안분 :: "))).toBe(true);
-    const n = w(r).filter((x) => x.includes("§154⑩에 따라 직전거주주택 양도일 후 기간분만 비과세로 계산했습니다"));
-    expect(n).toHaveLength(1);
-    expect(n[0]).toContain("조특령 §98②·⑥");
-    expect(n[0]).toContain("다른 특례(「일시적 2주택 비과세」)에 따라 1세대1주택이 되지만");
+    expect(steps(r).some((s) => s.startsWith("장기임대주택 보유자 거주주택 비과세 특례 :: §155⑳ + §161"))).toBe(true);
+    expect(steps(r).some((s) => s.startsWith("직전거주주택보유주택 — 영 §154⑩ 안분"))).toBe(false);
     expect(w(r).some((x) => x.includes("재확인하세요"))).toBe(false);
   });
 
-  it("CR-4 ★ 15억 → 14,124,000 = 미선언 짝 (종전 282,711,000) · 세대 구성 「확인 필요」 없음(결론을 가르지 않는다 — Q-3)", async () => {
+  it("CR-4 ★ 15억 → 14,124,000 = 미선언 짝 (D12 전 282,711,000) · 세대 구성 성립(Q-4 (c))", async () => {
     const houses = [rental(), SP98];
     const r = await calc(houses, A(), "1500000000");
-    expect(r.result.isPartialExempt).toBe(true);
     expect(r.result.totalTax).toBe(14_124_000);
     expect((await undeclared(houses, "1500000000")).result.totalTax).toBe(14_124_000);
     expect(steps(r).some((s) => s.startsWith("장기임대주택 거주주택 비과세 특례 — 확인 필요"))).toBe(false);
-    expect(w(r).filter((x) => x.startsWith(COMPOSITION_HEAD))).toHaveLength(1);
+    expect(w(r).filter((x) => x.startsWith(COMPOSITION_HEAD))).toEqual([]);
   });
 
   it("CR-5 0584형(임대 2016 + 공동상속 소수지분 + 일반 2023 신규) → 과세 124,366,000 불변 — 3중첩 불허 결론은 판정 엔진이 낸다", async () => {
@@ -173,7 +169,7 @@ describe("§155⑳ 세대 구성 불성립 × 임대주택을 센 다른 특례 
     expect((await undeclared(houses)).result.totalTax).toBe(124_366_000);
   });
 
-  it("CR-6 ⑦1호 상속 농어촌주택 행(⑳ 겹침 해석 미확보) → 미선언 짝과 같은 비과세", async () => {
+  it("CR-6 ⑦1호 상속 농어촌주택 행(Q-4 (c) — ⑳ 세대 구성 성립) → 미선언 짝과 같은 비과세", async () => {
     const houses = [rental(), RURAL_1];
     const r = await calc(houses, A());
     expect(r.issues).toEqual([]);
@@ -184,15 +180,26 @@ describe("§155⑳ 세대 구성 불성립 × 임대주택을 센 다른 특례 
     expect(r.result.totalTax).toBe(none.result.totalTax);
   });
 
-  it("CR-10 다른 특례가 없으면(임대 행 2007 취득 — 일시적 2주택 아님) 과세 불변 · 세대 구성 「확인 필요」는 결론을 가르므로 유지", async () => {
-    const r = await calc([rental(true, "2007-01-01"), SP98], A());
+  // Q-4 (c)의 의도한 효과 — §98 주택을 빼고 ⑳ A가 선다(조특령 §98② · 사용자 결정 2026-10-24).
+  it("CR-10 ★ 임대 행 2007 취득(일시적 2주택 아님) + §98 행 → ⑳ A 비과세 0 (종전 과세 124,366,000 + 「확인 필요」) · 미선언 짝은 과세", async () => {
+    const houses = [rental(true, "2007-01-01"), SP98];
+    const r = await calc(houses, A());
     expect(r.issues).toEqual([]);
-    expect(r.result.isExempt).toBe(false);
-    expect(steps(r).some((s) => s.startsWith("장기임대주택 거주주택 비과세 특례 — 확인 필요"))).toBe(true);
-    expect(w(r).filter((x) => x.startsWith(COMPOSITION_HEAD))).toEqual([]);
+    expect(r.result.isExempt).toBe(true);
+    expect(r.result.totalTax).toBe(0);
+    expect(steps(r).some((s) => s.startsWith("장기임대주택 거주주택 비과세 특례 — 확인 필요"))).toBe(false);
+    expect((await undeclared(houses)).result.totalTax).toBe(124_366_000);
   });
 
-  it("CR-9 완공APT(같은 leaf) → 미선언 짝과 같은 비과세 · 구성 불성립 고지", async () => {
+  it("CR-10b ⑦1호 상속 농어촌주택 행 · 임대 행 2007 취득 → ⑳ A 비과세 0 (Q-4 (c) · 종전 과세)", async () => {
+    const houses = [rental(true, "2007-01-01"), RURAL_1];
+    const r = await calc(houses, A());
+    expect(r.issues).toEqual([]);
+    expect(r.result.isExempt).toBe(true);
+    expect(r.result.totalTax).toBe(0);
+  });
+
+  it("CR-9 완공APT(같은 leaf) → 미선언 짝과 같은 비과세 · 세대 구성 성립(Q-4 (c))", async () => {
     const houses = [rental(), SP98];
     const r = await calc(houses, A(), "1000000000", "redevelopment_apt");
     expect(r.issues).toEqual([]);
@@ -200,6 +207,6 @@ describe("§155⑳ 세대 구성 불성립 × 임대주택을 센 다른 특례 
     expect(none.result.isExempt).toBe(true);
     expect(r.result.isExempt).toBe(true);
     expect(r.result.totalTax).toBe(none.result.totalTax);
-    expect(w(r).filter((x) => x.startsWith(COMPOSITION_HEAD))).toHaveLength(1);
+    expect(w(r).filter((x) => x.startsWith(COMPOSITION_HEAD))).toEqual([]);
   });
 });

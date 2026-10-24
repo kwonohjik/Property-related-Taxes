@@ -159,13 +159,14 @@ describe("E-14h resolveRentalResidenceComposition", () => {
       },
     ] as TransferTaxInput["specialHouseExclusions"];
 
-  it("L-7 조특법 §98 제외(시행령 위임 — 확인 목록 밖)로만 그 밖의 주택이 없으면 → exceeded + 확인 필요", () => {
+  // 조특령 §98② 「…해당 미분양주택 외의 다른 주택만을 기준으로 하여 「소득세법」제89조제1항제3호를 적용한다」 — §99의2·§99의4와 효과가 같아
+  // 확인 목록에 넣었다(사용자 결정 Q-4 (c) 2026-10-24 · 종전 exceeded + 확인 필요).
+  it("L-7 조특법 §98 제외로만 그 밖의 주택이 없으면 → met(sole) (Q-4 (c) · 종전 exceeded + 확인 필요)", () => {
     const r = resolveRentalResidenceComposition(
       input([SELLING, RENTAL, OTHER], { specialHouseExclusions: special("unsold_98", "1996-06-01") }),
       parsed,
     );
-    expect(r).toMatchObject({ status: "exceeded", otherHouseCount: 1 });
-    expect(r.status === "exceeded" && r.confirmNotice).toContain("조특령 §98②·⑥");
+    expect(r).toEqual({ status: "met", via: "sole" });
   });
 
   it("L-7b 조특법 §98의8(§99의2와 같은 문형 — Q2)로만 그 밖의 주택이 없으면 → met(sole)", () => {
@@ -198,17 +199,13 @@ describe("E-14h resolveRentalResidenceComposition", () => {
     expect(r.status === "exceeded" && r.confirmNotice).toContain("행에 연결");
   });
 
-  it("L-10 명부 없음 · §99의2 제외 후 그 밖의 주택 0 → 판정 보류(no_roster) · §98이면 exceeded + 확인 필요", () => {
+  it("L-10 명부 없음 · §99의2·§98 제외 후 그 밖의 주택 0 → 판정 보류(no_roster) (§98은 Q-4 (c) · 종전 exceeded + 확인 필요)", () => {
     const base = { householdHousingCount: 3, rentalHousingException: { rentalUnits: [{}] } } as Partial<TransferTaxInput>;
-    expect(
-      resolveRentalResidenceComposition(input([], { ...base, specialHouseExclusions: special("unsold_99_2", "2013-06-01") }), parsed),
-    ).toEqual({ status: "undetermined", reason: "no_roster" });
-    const r = resolveRentalResidenceComposition(
-      input([], { ...base, specialHouseExclusions: special("unsold_98", "1996-06-01") }),
-      parsed,
-    );
-    expect(r).toMatchObject({ status: "exceeded" });
-    expect(r.status === "exceeded" && r.confirmNotice).toContain("조특령 §98②·⑥");
+    for (const [article, acq] of [["unsold_99_2", "2013-06-01"], ["unsold_98", "1996-06-01"]] as const) {
+      expect(
+        resolveRentalResidenceComposition(input([], { ...base, specialHouseExclusions: special(article, acq) }), parsed),
+      ).toEqual({ status: "undetermined", reason: "no_roster" });
+    }
   });
 
   it("L-11 §155④ 동거봉양 합가 → met(부동산거래관리과-44)", () => {

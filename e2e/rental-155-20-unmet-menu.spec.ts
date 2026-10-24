@@ -71,10 +71,11 @@ test("[UOE-2] 불성립 + 명부에 임대주택 → 판정 메뉴 비과세(일
 });
 
 /**
- * CRE-2 — 세대 구성 불성립(조특법 §98 감면주택 행 — ⑳ 겹침 해석 미확보)도 같다(계획서 `rental-155-20-composition-revoke.plan.md` D-3 · Q-2 (a)).
- * 호별 요건은 성립(임대개시 기준시가 3억)이고 세대 구성만 서지 않는다. 종전 메뉴는 과세였다.
+ * CRE-2 — 조특법 §98 감면주택 행 + 명부에 임대주택 · 호별 요건 성립(임대개시 기준시가 3억). 조특령 §98②가 §99의2와 효과가 같아
+ * ⑳ 세대 구성에서 뺀다(`rental-155-20-b-154-10-and-q4.plan.md` Q-4 (c)) — ⑳이 서므로 「요건 충족」이다.
+ * 종전(D12 #2522)은 세대 구성 불성립 + 일시적 2주택 비과세 + 구성 사유 표시였다.
  */
-test("[CRE-2] 세대 구성 불성립 + 명부에 임대주택 → 판정 메뉴 비과세(일시적 2주택) · 구성 사유 표시", async ({ page }) => {
+test("[CRE-2] §98 행 + 명부에 임대주택 · 호별 성립 → 판정 메뉴 ⑳ 요건 충족 · 비과세 · 구성 사유·「확인 필요」 없음", async ({ page }) => {
   const unit = {
     unitId: "b",
     businessRegistrationDate: "2023-02-01",
@@ -127,11 +128,8 @@ test("[CRE-2] 세대 구성 불성립 + 명부에 임대주택 → 판정 메뉴
   const res = await response;
   expect(res.ok(), `판정 API가 ${res.status()}로 응답했다`).toBe(true);
   await expect(page.getByTestId("one-house-verdict")).toHaveText("비과세");
-  await expect(page.getByTestId("one-house-rental-composition")).toContainText("조특령 §98②·⑥");
-  await expect(page.getByTestId("one-house-rental-other-exemption")).toHaveText(
-    "임대주택을 세대 주택 수에 넣어 판정했고, 적용한 비과세는 「일시적 2주택 비과세」입니다.",
-  );
-  // ⑳을 적용하지 않았으므로 ㉒ 안내·구성 「확인 필요」는 싣지 않는다(계산기와 같다)
-  await expect(page.getByTestId("one-house-rental-period-pending")).toHaveCount(0);
+  await expect(page.getByTestId("one-house-rental-verdict")).toHaveText("요건 충족");
+  await expect(page.getByTestId("one-house-rental-composition")).toHaveCount(0);
+  await expect(page.getByTestId("one-house-rental-other-exemption")).toHaveCount(0);
   await expect(page.getByText(/겹쳐 적용하는지는 해석이 확인되지 않았습니다/)).toHaveCount(0);
 });

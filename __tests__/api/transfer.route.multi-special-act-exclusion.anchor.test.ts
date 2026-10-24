@@ -18,7 +18,8 @@
  * | MS-4 | §97 임대 2채(13호) | 204,355,800 | 1,327,903,500 | 204,355,800 |
  * | MS-5 | §99의2 명부 행 단독(E-14a · §89①3호 의제 + 15호) | 204,355,800 | 1,141,178,500 | 204,355,800 |
  * | MS-6 | §155③ 공동상속 소수지분(#1949 — 회귀) | 102,086,600 | 102,086,600 | 102,086,600 |
- * | MS-7 | §98 명부 행(불성립 + 확인 필요) | 1,327,903,500 + 고지 | 1,327,903,500 · 고지 없음 | 1,327,903,500 + 고지 |
+ * | MS-7 | §98 명부 행(Q-4 (c) — §99의2와 효과 같음 · 종전 불성립 + 확인 필요) | 102,086,600 | — | 102,086,600 |
+ * | MS-7b | 명부 없음 · 세대 3채(그 밖의 주택 1채 특례 여부 모름 — 불성립 + 확인 필요) | 고지 | — | 같은 고지가 다건 자산 단계에도 |
  * | MS-8 | 조특법 제외 없는 일반 행(회귀) | 1,327,903,500 | 같음 | 같음 |
  * | MS-9 | 다건에 토지가 섞임 — 토지 자산은 불변 · 주택 자산만 제외 반영 | — | — | — |
  * | MS-10 | §99의4 명부 행(reduction 종류 — 종전부터 건별 전송, 회귀) | 단건 = 다건 | 같음 | 같음 |
@@ -47,7 +48,7 @@ import { callMultiTransferTaxAPI } from "@/lib/calc/multi-transfer-tax-api";
 import { validateMultiSupportedMode } from "@/lib/calc/multi-transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
-import { rentalResidenceSpecialActConfirmNotice } from "@/lib/tax-engine/transfer-tax-rental-residence-composition";
+import { RENTAL_RESIDENCE_NO_ROSTER_CONFIRM_NOTICE } from "@/lib/tax-engine/transfer-tax-rental-residence-composition";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
 import type { HouseEntry, RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
@@ -294,12 +295,22 @@ describe("MS 단건 = 다건 — 조특법 소유주택 제외(명부 행 ⑥ sp
     expect((await multi(f)).totalTax).toBe(s.totalTax);
   });
 
-  it("MS-7 §98 명부 행 → 불성립 1,327,903,500 + 확인 필요 고지가 다건 자산 단계에도 실린다", async () => {
+  // 조특령 §98② — §99의2와 효과가 같아 ⑳ 세대 구성에서 뺀다(사용자 결정 Q-4 (c) 2026-10-24 · 종전 불성립 1,327,903,500 + 확인 필요).
+  it("MS-7 §98 명부 행 + 거주주택 특례 → 102,086,600 = MS-1 짝 · 단건 = 다건 (Q-4 (c))", async () => {
     const f = withRental(form([SPECIAL_ROW("unsold_98", "1996-06-01"), RENTAL_ROW]));
     const s = await single(f);
     const m = await multi(f);
-    expect(s.totalTax).toBe(FULLY_TAXED);
-    expect(s.confirm).toBe(rentalResidenceSpecialActConfirmNotice("조특령 §98②·⑥"));
+    expect(s.totalTax).toBe(102_086_600);
+    expect(s.confirm).toBeUndefined();
+    expect(m.totalTax).toBe(s.totalTax);
+  });
+
+  // 세대 구성 「확인 필요」가 다건 자산 단계에도 실리는지 — 종전 MS-7(§98)이 지키던 전달 경로를 명부 없는 시료로 옮겼다.
+  it("MS-7b 명부 없음 · 세대 3채 → 불성립 + 확인 필요 고지가 다건 자산 단계에도 실린다", async () => {
+    const f = withRental(form([], { householdHousingCount: "3" }));
+    const s = await single(f);
+    const m = await multi(f);
+    expect(s.confirm).toBe(RENTAL_RESIDENCE_NO_ROSTER_CONFIRM_NOTICE);
     expect(m.totalTax).toBe(s.totalTax);
     expect(m.props[0].confirm).toBe(s.confirm);
   });

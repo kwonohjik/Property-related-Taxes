@@ -13,7 +13,8 @@
  * | UO-8d | ⑧ 경고 | 「장기임대 등록주택」으로 표시하라는 처방 | — |
  * | UO-8e | 세대 구성 불성립(3중첩 등) + 명부에 임대 행 | 유지 — 계산기도 구성 회수(종전 D12)를 없앴다(composition-revoke Q-2 (a) · 2026-10-24 반전) | 명부 없으면 원인 무관 거둔다(짝) |
  * | UO-8f | B 불성립 · 명부에 임대 행 | 「비과세」 → **「기간분 비과세」**(영 §154⑩ · b-154-10 Q-1 (a)) | §154⑩ 안분(UO-3) |
- * | CR-7 | 메뉴 · 임대 행 + 조특법 §98 행(⑳ 겹침 해석 미확보 → 세대 구성 불성립) | 종전 과세 → 비과세(호별 성립·불성립 모두) · 핸드오프 계산기도 비과세 | 임대 행 없는 메뉴 전제는 과세 불변 |
+ * | CR-7 | 메뉴 · 임대 행 + 조특법 §98 행 · 호별 불성립 | 종전 과세 → 비과세(일시적 2주택) · 핸드오프 계산기도 비과세 | — |
+ * | CR-7b | 메뉴 · §98 행 · 호별 성립(임대 행 있음·없음) | Q-4 (c) — 세대 구성 성립 → ⑳ 비과세(종전 구성 불성립 · 메뉴 전제는 과세) | 핸드오프 계산기도 비과세 |
  */
 import { describe, it, expect } from "vitest";
 import { buildCaseForm, type RulingCase } from "./one-house-rulings/harness";
@@ -159,7 +160,7 @@ describe("판정 메뉴 × §155⑳ 불성립 — 명부의 임대주택을 센 
     expect(applyRentalHousingVerdict(exempt, composition, false).isExempt).toBe(false);
   });
 
-  describe("CR-7 세대 구성 불성립(조특법 §98 행 — ⑳ 겹침 해석 미확보) + 명부에 임대 행", () => {
+  describe("CR-7 조특법 §98 행 + 명부에 임대 행 — Q-4 (c) 뒤로 세대 구성 성립", () => {
     const sp98 = {
       id: "h3",
       region: "non_capital",
@@ -178,11 +179,8 @@ describe("판정 메뉴 × §155⑳ 불성립 — 명부의 임대주택을 센 
       const rhe = asset.rentalHousingException;
       return { ...c, form: { ...c.form!, asset: { ...asset, rentalHousingException: { ...rhe, rentalUnits: [{ ...rhe.rentalUnits[0], standardPriceAtRentalStart: price, acquisitionOfficialPrice: price }] } } } } as RulingCase;
     };
-    it.each([
-      ["호별 성립(3억)", "300000000"],
-      ["호별 불성립(7억)", "700000000"],
-    ])("CR-7 ★ %s · 구성 불성립 → 메뉴 비과세(일시적 2주택) · 핸드오프 계산기 비과세 (종전 메뉴 과세)", async (_l, price) => {
-      const c = withUnit(mk([row(), sp98]), price);
+    it("CR-7 ★ 호별 불성립(7억) → 메뉴 비과세(일시적 2주택) · 핸드오프 계산기 비과세 (종전 메뉴 과세)", async () => {
+      const c = withUnit(mk([row(), sp98]), "700000000");
       const v = await judgeAndRender(c);
       expect(v.issues.filter((x: string) => x.startsWith("error"))).toEqual([]);
       expect(v.data.rentalHousingException.passed).toBe(false);
@@ -199,16 +197,21 @@ describe("판정 메뉴 × §155⑳ 불성립 — 명부의 임대주택을 센 
         expect(r.isExempt).toBe(true);
       });
     });
-    it("CR-7 짝 — 메뉴 전제(임대 행 없음 · §98 행만) · 호별 성립 · 구성 불성립 → 메뉴·핸드오프 계산기 모두 과세", async () => {
-      const c = withUnit(mk([sp98]), "300000000");
+    // 조특령 §98② — §99의2와 효과가 같아 ⑳ 세대 구성에서 뺀다(사용자 결정 Q-4 (c) 2026-10-24). 종전에는 구성 불성립 + 확인 필요였다.
+    it.each([
+      ["명부에 임대 행", true],
+      ["메뉴 전제(임대 행 없음 · §98 행만)", false],
+    ])("CR-7b ★ %s · 호별 성립(3억) → ⑳ 성립 비과세 · 핸드오프 계산기 비과세 (Q-4 (c) · 메뉴 전제는 종전 과세)", async (_l, withRow) => {
+      const c = withUnit(mk(withRow ? [row(), sp98] : [sp98]), "300000000");
       const v = await judgeAndRender(c);
-      expect(v.data.rentalHousingException.passed).toBe(false);
-      expect(v.isExempt).toBe(false);
-      // 과세면 구성 「확인 필요」가 결론을 가르므로 남는다
-      expect(v.text).toContain("겹쳐 적용하는지는 해석이 확인되지 않았습니다");
+      expect(v.issues.filter((x: string) => x.startsWith("error"))).toEqual([]);
+      expect(v.data.rentalHousingException.passed).toBe(true);
+      expect(v.isExempt).toBe(true);
+      expect(v.text).not.toContain("겹쳐 적용하는지는 해석이 확인되지 않았습니다");
       await withToday(c.today, async () => {
         const r = await runCalc(handoff(buildCaseForm(c)));
-        expect(r.isExempt).toBe(false);
+        expect(r.issues).toEqual([]);
+        expect(r.isExempt).toBe(true);
       });
     });
   });
