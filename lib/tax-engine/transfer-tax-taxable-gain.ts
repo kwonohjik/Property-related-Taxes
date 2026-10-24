@@ -72,8 +72,8 @@ export function resolveTaxableGain(args: {
   if (isExempt && hasHousingLandExemptExclusion(effectiveInput)) {
     // G-3 때문에 전액 비과세 조기 반환을 건너뛰었는데 분리 결과가 없다 — 비과세를 유지한다
     // (조용한 전액 과세 금지).
-    // ⚠️ `isExempt`만으로 판정하면 안 된다 — §155⑳ 시나리오 B·A 미충족은 `isExempt=true`인 채로
-    //    **과세돼야** 하는 별개의 조기반환 억제 경로다(`canEarlyReturnPrhp`).
+    // ⚠️ `isExempt`만으로 판정하면 안 된다 — §155⑳ 시나리오 B 성립은 `isExempt=true`인 채로
+    //    STEP 2.5 §161 안분을 거쳐야 하는 별개의 조기반환 억제 경로다(`canEarlyReturnPrhp`).
     return 0;
   }
   if (!isPartialExempt) return transferGain;
