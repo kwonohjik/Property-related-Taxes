@@ -18,6 +18,7 @@ import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judg
 import { buildRentalHousingVerdict, applyRentalHousingVerdict } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import { settleRentalVerdictForOtherExemption } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import { rosterCountsRentalUnits } from "@/lib/tax-engine/transfer-tax-rental-housing-judge";
+import { deriveHouseholdHousingCount } from "@/lib/tax-engine/one-house/house-count";
 import { buildOneRightVerdict, applyOneRightVerdict } from "@/lib/tax-engine/one-house/one-right-verdict";
 import { applyNonResidentVerdict } from "@/lib/tax-engine/one-house/non-resident";
 import { applyDemolishedBeforeBalanceVerdict } from "@/lib/tax-engine/one-house/demolished-before-balance";
@@ -39,15 +40,19 @@ export function runOneHouseJudgmentPipeline(
    * 증여일로 폴백해, 같은 세대로 증여받은 주택(세대 보유 통산 시작일)에서 농어촌주택 제외가 빠지고 계산기와 결론이 갈렸다
    * (`docs/00-pm/multi-house-surcharge-menu-residuals.plan.md` §1).
    */
-  const steps: CalculationStep[] = [];
+  const judgeRoster = (input: TransferTaxInput) => {
+    const steps: CalculationStep[] = [];
+    const exclusion = runHouseCountExclusionStep(input, steps, resolveHceGeneralHouseAcquisitionDate(input));
+    const judgment = judgeOneHouseExemptionFromInput(
+      exclusion.exemptionJudgeInput,
+      parsedRates.oneHouseSpecialRules,
+      presaleRightStartDate(parsedRates),
+      { judgmentBaseDate },
+    );
+    return { exclusion, judgment };
+  };
   const generalHouseAcquisitionDate = resolveHceGeneralHouseAcquisitionDate(engineInput);
-  const exclusion = runHouseCountExclusionStep(engineInput, steps, generalHouseAcquisitionDate);
-  const coreJudgment = judgeOneHouseExemptionFromInput(
-    exclusion.exemptionJudgeInput,
-    parsedRates.oneHouseSpecialRules,
-    presaleRightStartDate(parsedRates),
-    { judgmentBaseDate },
-  );
+  const roster = judgeRoster(engineInput);
 
   /**
    * 단계 6.5: §155⑳ 장기임대주택 특례 (P4-3a).
@@ -61,6 +66,20 @@ export function runOneHouseJudgmentPipeline(
     ? resolveRentalResidenceComposition(engineInput, parsedRates, generalHouseAcquisitionDate)
     : undefined;
   const builtRentalVerdict = buildRentalHousingVerdict(engineInput, rentalComposition);
+  /**
+   * 단계 6.55: ⑳ 충족인데 명부에 「장기임대」 행이 있으면 판정 엔진은 그 행을 센 채 판정했다(`menu-roster-rental-155-20-met.plan.md`).
+   * 비과세·부분 비과세가 서지 않았으면 그 행을 빼고 다시 판정한다 — 영 §155⑳ 「국내에 1개의 주택을 소유하고 있는 것으로 보아
+   * 제154조제1항을 적용한다」이고, 메뉴 전제(임대주택은 명부 밖)와 같은 입력이다. 보유·거주 요건은 다시 판정 엔진이 본다.
+   * 다른 특례로 이미 비과세가 서면(임대주택이 일시적 2주택 신규 주택 등) 그 판정을 둔다 — 계산기 STEP 1a 조기 반환과 같다.
+   */
+  const rentalRowIds =
+    builtRentalVerdict?.passed && !roster.judgment.isExempt && !roster.judgment.isPartialExempt
+      ? (engineInput.houses ?? []).filter((h) => h.isLongTermRental === true).map((h) => h.id)
+      : [];
+  const { exclusion, judgment: coreJudgment } =
+    rentalRowIds.length > 0
+      ? judgeRoster(withoutRosterRows(engineInput, rentalRowIds, isRightSale))
+      : roster;
   // F-1 Q-3 · composition-revoke Q-2 — 불성립이어도 명부에 「장기임대」 행이 있으면 엔진이 임대주택을 센 판정을 유지한다(계산기 STEP 0.96과 같은 술어).
   const afterRental = applyRentalHousingVerdict(coreJudgment, builtRentalVerdict, rosterCountsRentalUnits(engineInput));
   // 그 비과세가 서면 ㉒ 안내·세대 구성 「확인 필요」는 사실이 아니거나 결론을 가르지 않는다 — 계산기와 같다(composition-revoke D-2 · Q-3).
@@ -108,5 +127,11 @@ export function runOneHouseJudgmentPipeline(
    */
   const judgment = applyDemolishedBeforeBalanceVerdict(afterNonResident, engineInput, isRightSale);
 
-  return { exclusion, rentalVerdict, oneRightVerdict, judgment };
+  return { exclusion, rentalVerdict, oneRightVerdict, judgment, rentalDeemedHouseIds: rentalRowIds };
+}
+
+/** 명부에서 행을 빼고 세대 주택 수를 다시 도출한다 — route의 도출(`deriveHouseholdHousingCount`)과 같은 식. */
+function withoutRosterRows(input: TransferTaxInput, ids: string[], isRightSale: boolean): TransferTaxInput {
+  const houses = (input.houses ?? []).filter((h) => !ids.includes(h.id));
+  return { ...input, houses, householdHousingCount: deriveHouseholdHousingCount(houses, !isRightSale) };
 }

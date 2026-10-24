@@ -199,7 +199,7 @@ export function buildOneHouseExemptionPayload(
   isRightSale: boolean,
 ): OneHouseExemptionResponse {
   // 단계 6~6.7: 주택 수 제외 → 판정 → §155⑳ → §89①4호 → 비거주자(`judgment-pipeline.ts`)
-  const { exclusion, rentalVerdict, oneRightVerdict, judgment } = runOneHouseJudgmentPipeline(
+  const { exclusion, rentalVerdict, oneRightVerdict, judgment, rentalDeemedHouseIds } = runOneHouseJudgmentPipeline(
     engineInput,
     parsedRates,
     judgmentBaseDate,
@@ -231,6 +231,7 @@ export function buildOneHouseExemptionPayload(
     // 입주권 양도 판정은 §155②③ 상속주택을 「다른 주택」에서 빼지 않는다 — 명세도 같은 입장이어야 한다(S03-6).
     inheritedExclusionApplies: !isRightSale,
     houses: engineInput.houses,
+    rentalDeemedHouseIds,
   });
 
   const judgeInput = exclusion.exemptionJudgeInput;

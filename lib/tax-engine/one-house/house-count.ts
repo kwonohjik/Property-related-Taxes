@@ -27,7 +27,7 @@
  * **화면이 읽을 형태로 옮기기만** 한다 — 제외 규칙을 두 벌 만들면 계산기와 판정 메뉴의
  * 주택 수가 조용히 갈린다.
  */
-import { INHERITED_HOUSE } from "../legal-codes";
+import { INHERITED_HOUSE, TRANSFER_RENTAL_HOUSING } from "../legal-codes";
 import type { HouseInfo } from "../types/multi-house-surcharge.types";
 import type { InheritedHouseExclusionResult } from "../transfer-inheritance-exclusion";
 import type { SpecialHouseExclusionResolution } from "../transfer-reductions/unsold-hybrid-p5";
@@ -158,6 +158,11 @@ export function buildOneHouseCountBreakdown(p: {
    * 🔑 결과에 실어 두면 화면이 폼을 몰라도(이력 상세) 어느 주택인지 보인다.
    */
   houses?: HouseInfo[];
+  /**
+   * 영 §155⑳ 충족으로 판정에서 뺀 명부의 「장기임대」 행(`runOneHouseJudgmentPipeline`의 `rentalDeemedHouseIds`).
+   * 판정은 그 행을 빼고 했으므로 명세도 같은 주택 수를 보인다 — 빠뜨리면 「2채 중 2채」 옆에 비과세가 뜬다.
+   */
+  rentalDeemedHouseIds?: string[];
 }): OneHouseCountBreakdown {
   const others = (p.houses ?? []).filter((h) => h.id !== SELLING_HOUSE_ID);
   const locate = <T extends { houseId?: string }>(item: T): T => {
@@ -205,6 +210,14 @@ export function buildOneHouseCountBreakdown(p: {
         h.basis === "sole"
           ? INHERITED_HOUSE.EXEMPTION_SOLE_BASIS
           : INHERITED_HOUSE.EXEMPTION_CO_INHERITED_BASIS,
+    });
+  }
+
+  for (const houseId of p.rentalDeemedHouseIds ?? []) {
+    excluded.push({
+      houseId,
+      label: "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
     });
   }
 
