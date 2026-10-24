@@ -402,6 +402,12 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   const building1CardMode: NonNullable<GeneralBuildingInput["buildingAcqMode"]> = buildingPartApplied
     ? (input.buildingAcqMode ?? "estimated")
     : building1UsedEstimated ? "estimated" : "actual";
+  // 실가 파트 값이 그대로 취득가액이면 출처 echo(표시 전용 · 2-way와 같은 키 · §163⑨ 파트는 근거 ①/②도). 없으면 결과 산식이
+  // 「일괄 × 기준시가 비율」로 떨어져 적힌 식이 적힌 값을 못 만든다(실측 600,000,000 × 205/355 ≠ 400,000,000).
+  const partSourceEcho = (applied: boolean, mode: string, basis: GeneralBuildingInput["landSec1639Basis"]) =>
+    applied && mode === "actual" ? { actualSource: "part_input" as const, ...(basis ? { sec1639Basis: basis } : {}) } : {};
+  const landSourceEcho = partSourceEcho(landPartApplied, landCardMode, input.landSec1639Basis);
+  const building1SourceEcho = partSourceEcho(buildingPartApplied, building1CardMode, input.buildingSec1639Basis);
 
   // ── Step 3: 건물2 취득가·필요경비 결정 (건물2 모드 분기) ─────────────
   //
@@ -501,6 +507,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       expenses: landBusinessExp,
       usedEstimatedAcquisition: landUsedEstimated,
       acquisitionMode: landCardMode,
+      ...landSourceEcho,
       estimatedBase: landUsedEstimated ? landBusinessAcq : 0,
       estimatedDeduction: landUsedEstimated ? landBusinessExp : 0,
       acquisitionDate: landAcqDate,
@@ -520,6 +527,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       expenses: landExp - landBusinessExp,
       usedEstimatedAcquisition: landUsedEstimated,
       acquisitionMode: landCardMode,
+      ...landSourceEcho,
       estimatedBase: landUsedEstimated ? landAcq - landBusinessAcq : 0,
       estimatedDeduction: landUsedEstimated ? landExp - landBusinessExp : 0,
       acquisitionDate: landAcqDate,
@@ -541,6 +549,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       expenses: landExp,
       usedEstimatedAcquisition: landUsedEstimated,
       acquisitionMode: landCardMode,
+      ...landSourceEcho,
       estimatedBase: landUsedEstimated ? landAcq : 0,
       estimatedDeduction: landUsedEstimated ? landExp : 0,
       acquisitionDate: landAcqDate,
@@ -568,6 +577,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     expenses: building1Exp,
     usedEstimatedAcquisition: building1UsedEstimated,
     acquisitionMode: building1CardMode,
+    ...building1SourceEcho,
     estimatedBase: building1UsedEstimated ? building1Acq : 0,
     estimatedDeduction: building1UsedEstimated ? building1Exp : 0,
     acquisitionDate: building1AcqDate,

@@ -365,7 +365,9 @@ function buildGbAcquisitionFormulaCore(
   }
 
   // ── 사례 33 일괄+증축 (원건물 실가) ──────────────────────────
-  if (isExtensionCase(gb) && isBundledActualCase(asset)) {
+  // 원건물 실가 중 환산 파트(토지 상속 + 건물 매매 환산 등)는 일괄 안분값이 아니다 — 아래 일괄 안분식 대신 환산식으로 간다.
+  const extensionEstimatedPart = gbModeCard?.acquisitionMode === "estimated" && !isBuilding2Prop(p.propertyId);
+  if (isExtensionCase(gb) && isBundledActualCase(asset) && !extensionEstimatedPart) {
     const acqLandStd = gb.acqLandStdTotal;
     const acqB1Std = gb.acqBuilding1StdTotal;
     if (!acqLandStd || !acqB1Std) return undefined;
