@@ -301,7 +301,7 @@ harness: `collectStepIssues(0~5)`(⑧) → `callTransferTaxAPI` 가로채기(④
 
 **변경 파일**
 - 신규 `lib/calc/phd-converted-housing-price.ts`(126줄) — `phdFillAssistVisible`(보이는 조건)·`computeConvertedHousingPrice`(산식). 산식은 **엔진 `calcPreHousingDisclosureGain` 의 `estimatedHousingPriceAtAcquisition` 를 그대로 재사용**(양도시 인자 0 — 이 값에 쓰이지 않는다). 면적 곱셈 부동소수·`floor` 위치가 환산 경로와 같아 «버튼 결과 = 엔진 환산값». 입력 매핑은 ④(`buildPreHousingDisclosurePayload`)와 같다(면적 `acquisitionArea` · 1990.8.30. 이전은 §164④ 등급가액 fallback). `Math.round` 없음.
-- 신규 `components/calc/transfer/PhdConvertedPriceFill.tsx`(102줄) — `ToneCard tone="amber"` + `ExpandToggleButton` + 보조 카드 + 산식 미리보기(파생 표시 — store 에 쓰지 않음) + 버튼(`Button variant="outline"`).
+- 신규 `components/calc/transfer/PhdConvertedPriceFill.tsx`(102줄) — `ToneCard tone="amber"` + `ExpandToggleButton` + 보조 카드 + 산식 미리보기(파생 표시 — store 에 쓰지 않음, 분수는 `<Frac>` — 리터럴 `÷` 금지 가드 `literal-division-render` 준수) + 버튼(`Button variant="outline"`).
 - `PreHousingDisclosureSection.tsx`(281→295줄) — `mode` prop: 보조 모드는 양도시 개별주택가격·③ 양도시 기준시가 입력을 숨기고(환산 개별주택가격에 쓰이지 않음) 3시점 일괄 계산 모달(양도시 점 포함)을 끄며 헤더·경고 문구를 분기.
 - 배선 3곳 — `CompanionAcqAmountSection.tsx`(감정가액 칸 아래) · `SalesCaseSection.tsx`(`stdPriceFillAssist` slot, 매매사례 칸 아래) · `CompanionAcqStdPriceSection.tsx`(실거래가 + 토지·건물 안분 칸 — hint 가 붙는 칸과 같은 조건).
 - **④·⑧·⑫·⑬·⑭·① ② ③ ⑥ ⑦ 변경 0**(750줄 근처 5파일 변경 0). 새 상태 필드 0.

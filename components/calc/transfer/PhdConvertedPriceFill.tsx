@@ -17,6 +17,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { formatWithCommas } from "@/components/calc/inputs/CurrencyInput";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
 import {
@@ -66,9 +67,12 @@ export function PhdConvertedPriceFill({ asset, onAssetChange, transferDate, onFi
             />
             {calc.ok ? (
               <p className="text-xs" data-testid="phd-fill-formula">
-                환산 개별주택가격 = 최초 고시 주택가격 {fmt(calc.firstDisclosureHousingPrice)} × 취득 당시 토지+건물 기준시가{" "}
-                {fmt(calc.sumAtAcquisition)} ÷ 최초 고시 당시 토지+건물 기준시가 {fmt(calc.sumAtFirstDisclosure)} ={" "}
-                <strong data-testid="phd-fill-value">{fmt(calc.value)}</strong>
+                환산 개별주택가격 = 최초 고시 주택가격 {fmt(calc.firstDisclosureHousingPrice)} ×{" "}
+                <Frac
+                  top={<>취득 당시 토지+건물 기준시가 {fmt(calc.sumAtAcquisition)}</>}
+                  bottom={<>최초 고시 당시 토지+건물 기준시가 {fmt(calc.sumAtFirstDisclosure)}</>}
+                />{" "}
+                = <strong data-testid="phd-fill-value">{fmt(calc.value)}</strong>
               </p>
             ) : (
               <p className="text-caption text-muted-foreground" data-testid="phd-fill-reason">
