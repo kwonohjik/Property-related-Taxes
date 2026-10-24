@@ -35,13 +35,18 @@ interface Props {
 
 export function PreDeemedConversionFields({ asset, onChange, transferDate, baseDate, showHouseValuation, between, hideFields, hideTransferField }: Props) {
   const isLand = asset.assetKind === "land";
+  // 상가는 §164⑥ 섹션(`CommercialInheritanceStdPriceSection`)이 이 칸보다 아래에 그려진다(`AssetSectionAcquisition` — 계획서
+  // commercial-pre-deemed-converted-numerator.plan.md §3). 그 값이 ③의 분자로 자동으로 쓰인다(사용자 결정 A안).
+  const isCommercial = asset.assetKind === "commercial_building";
   // hint 텍스트: 자산 종류에 따라 다르게 표시
   // 토지 등급 입력이 두 칸 사이(`between` — 상속)에 있으면 「아래」, 없으면(증여 — 위 §164④ 섹션) 「위」다.
   const stdPriceHint = isLand
     ? between
       ? "1985.1.1. 개별공시지가 × 면적. 아래 토지등급가액 환산을 사용하면 자동 입력됩니다."
       : "1985.1.1. 개별공시지가 × 면적. 위 §164④ 토지등급을 모두 입력하면 그 환산값이 자동으로 쓰입니다."
-    : "국세청 기준시가 직접 입력.";
+    : isCommercial
+      ? "국세청 기준시가 직접 입력. 아래 §164⑥ 취득당시 기준시가 8개 항목을 모두 입력하면 그 값이 자동으로 쓰입니다."
+      : "국세청 기준시가 직접 입력.";
 
   // 자동값 — ④ 전송 판단과 같은 단일 소스(`lib/calc/pre-deemed-auto-std-price.ts`).
   const auto = useMemo(
@@ -63,7 +68,7 @@ export function PreDeemedConversionFields({ asset, onChange, transferDate, baseD
         label={showHouseValuation ? "의제취득일(1985.1.1.) 시점 합계 기준시가" : "의제취득일(1985.1.1.) 시점 기준시가"}
         hint={
           stdPriceAtAcqAutoActive
-            ? `자동 계산값: ${autoStdPriceAtAcq!.toLocaleString()} (위 환산 결과 사용 중). 직접 입력하려면 아래 직접 입력 토글을 켜세요.`
+            ? `자동 계산값: ${autoStdPriceAtAcq!.toLocaleString()} (${isCommercial ? "아래 §164⑥ 취득당시 기준시가" : "위 환산 결과"} 사용 중). 직접 입력하려면 아래 직접 입력 토글을 켜세요.`
             : showHouseValuation
               ? "위 3-시점 환산 결과(토지+주택 합계)가 있으면 자동 계산됩니다. 또는 직접 입력."
               : stdPriceHint

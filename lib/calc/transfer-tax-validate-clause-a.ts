@@ -252,6 +252,15 @@ export function preDeemedConversionInputError(
   // 상가·오피스텔 상속은 ⑫(`refinePreDeemedAcquisitionSource`)가 검사한다 — 상속이면 `commercialBuildingValuation`을
   // 만들지 않아 ⑫의 제외 조건에 안 걸린다. 종전에는 여기서 제외해 「선언 + ③ 칸 비움」이 ⑧ 통과 ↔ ⑫ 400이었다(2026-10-22).
   if (!isNonPrimaryAsset && (asset.isAppraisalAcquisition === true || asset.isSalesCaseAcquisition === true)) return null;
+  // 상가 §164⑥은 ②이자 ③의 분자다(사용자 결정 A안 · 계획서 commercial-pre-deemed-converted-numerator.plan.md) — 양도시 기준시가가 없으면
+  // ③이 조용히 0이 된다. ①② 원천이 있어도 막는다(아래 ① 반환 전). 기준시가로 평가한 부담부증여는 ③이 없다(Q-25). ⑫ 같은 판정.
+  if (
+    !(asset.transferType === "burdened_gift" && asset.bgValuationMode === "sangjeungbeop_standard") &&
+    "commercialInheritanceValuation" in buildCommercialInheritanceValuationPayload(asset) &&
+    (buildInheritedAcquisitionPayload(asset, 1, false).inheritedAcquisition as { mode?: string } | undefined)?.mode === "pre-deemed" &&
+    !(parseAmount(asset.standardPriceAtTransfer ?? "") > 0)
+  )
+    return fieldError("standardPriceAtTransfer", `${label}: 의제취득일(1985.1.1.) 전 상속·증여 상가는 §164⑥ 취득당시 기준시가로 환산취득가액도 비교합니다 — 양도시 기준시가를 입력하세요 (소득세법 시행령 §176의2④·§164⑥).`);
   // ③ 칸이 있는 증여는 ①(증여 신고가액)이 필수라(Q-14) ①·②가 모두 없으면 그 검사가 막는다 — 여기서 ③ 칸을 먼저 요구하면 엉뚱한 칸을 가리킨다.
   if (isGiftPreDeemedConversionAsset(asset)) return null;
   const ia = buildInheritedAcquisitionPayload(asset, 1, false).inheritedAcquisition as

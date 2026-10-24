@@ -40,6 +40,7 @@ import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
 import { bgPreDeemedUsesThreeWay } from "@/lib/calc/bg-pre-deemed-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
+import { DEEMED_ACQUISITION_DATE } from "@/lib/calc/transfer-163-9-base-date";
 
 interface Props {
   asset: AssetForm;
@@ -86,8 +87,8 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
         <p data-testid="cb164-6-bg-note" className="text-xs text-amber-700 dark:text-amber-300">
           {bgPreDeemedUsesThreeWay(asset) ? (
             <>
-              부담부증여를 시가로 평가하면 이 값이 <b>② 후보</b>입니다 — ① {dateLabel} 상증법 평가액·② 이 값·③ 환산취득가액 중 큰
-              금액에 채무비율을 곱합니다.
+              부담부증여를 시가로 평가하면 이 값이 <b>② 후보</b>이자 <b>③ 환산취득가액의 의제취득일 기준시가</b>입니다 — ① {dateLabel}
+              상증법 평가액·② 이 값·③ 환산취득가액 중 큰 금액에 채무비율을 곱합니다.
             </>
           ) : (
             <>
@@ -95,6 +96,14 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
               취득가액입니다. 전부 비워두면 위 의제취득일 기준시가 칸 값을 씁니다.
             </>
           )}{" "}
+          <b>{sec164Status ? `${sec164Status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한 경우에만 쓰고,{" "}
+          <b>일부만 입력하면 계산할 때 오류로 안내</b>합니다.
+        </p>
+      ) : inheritanceDate && inheritanceDate < DEEMED_ACQUISITION_DATE ? (
+        // 의제취득일 전 — ③ 분자도 이 값이다(사용자 결정 A안 · 계획서 commercial-pre-deemed-converted-numerator.plan.md)
+        <p data-testid="cb164-6-pre-deemed-note" className="text-xs text-amber-700 dark:text-amber-300">
+          의제취득일(1985.1.1.) 전 {causeLabel}받은 상가는 <b>① {dateLabel} 상증법 평가액·② 이 값·③ 환산취득가액 중 큰 금액</b>을
+          취득가액으로 봅니다. 이 값은 ②이자 ③ 환산취득가액의 의제취득일 기준시가입니다.{" "}
           <b>{sec164Status ? `${sec164Status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한 경우에만 쓰고,{" "}
           <b>일부만 입력하면 계산할 때 오류로 안내</b>합니다.
         </p>

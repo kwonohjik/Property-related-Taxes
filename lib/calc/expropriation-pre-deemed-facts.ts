@@ -11,6 +11,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isPreDeemedConversionCandidate } from "./expropriation-required-gate";
 import { buildInheritedAcquisitionPayload, buildInheritedHouseValuationPayload } from "./transfer-tax-api-inheritance";
+import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-inheritance";
 import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
 import { buildCommercialBuildingValuation } from "./transfer-tax-api-commercial";
 import { primaryAcquisitionModeFlags } from "./transfer-tax-api-primary-context";
@@ -51,6 +52,7 @@ function preDeemedConversionFromForm(asset: AssetForm, td: string): boolean {
       | undefined,
     pre1990Land: hasPre1990 || hasPre1990ForSec164 ? buildPre1990LandPayload(asset, td).pre1990Land : undefined,
     inheritedHouseValuation: buildInheritedHouseValuationPayload(asset, td).inheritedHouseValuation,
+    commercialInheritanceValuation: buildCommercialInheritanceValuationPayload(asset).commercialInheritanceValuation,
     commercialBuildingValuation:
       asset.assetKind === "commercial_building" && asset.useEstimatedAcquisition && asset.acquisitionCause !== "inheritance"
         ? buildCommercialBuildingValuation(asset, td)

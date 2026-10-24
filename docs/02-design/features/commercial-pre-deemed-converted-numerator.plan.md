@@ -140,6 +140,32 @@ P-0: 엔진에서 상가 §164⑥ 값을 ③ 분자로 강제 주입(A안의 엔
 
 verdict: **clean** — Critical/High 3건은 계획서에 반영했고, 남은 V-2는 설계에 영향이 없다.
 
+## 6.5 Do 결과 — PR-B (2026-10-24)
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| 엔진 | `inheritance-acquisition-helpers.ts` | `shouldInjectCommercialDeemed`(상가 §164⑥ payload · 의제취득일 전 · 보낸 분자 없음) → ③ 분자 = §164⑥. 토지 등급 주입과 배타. 부담부증여 `bgStdAtDeemed`는 3자 max일 때 ③ 분자와 같은 값(리뷰 R-1) |
+| ④⑤ leaf | `pre-deemed-auto-std-price.ts` | 상가 자동값 = `buildCommercialInheritanceValuationPayload` → `computeCommercial164_6StdPrice`(④·엔진과 같은 판정·산식) |
+| ⑧⑫ | `transfer-tax-validate-clause-a.ts` · `transfer-tax-schema-required-refines-2a.ts` | V-1 가드 — 상가 §164⑥ payload가 있으면 양도시 기준시가 필수(①② 원천 있어도 · 기준시가 평가 부담부증여 제외). ⑫는 컴패니언에도 같은 함수 |
+| ⑧⑫ 공익수용 | `expropriation-required-gate.ts` · `expropriation-pre-deemed-facts.ts` | ③ 후보에 `commercialInheritanceValuation` 추가. 실측: 게이트를 고치지 않으면 ④가 칸 값을 빼는 순간 상가의 ③ 후보가 `false`로 닫혔다 |
+| ⑤ | `PreDeemedConversionFields` · `CommercialInheritanceStdPriceSection` | 상가 칸 안내 「아래 §164⑥ …」 · 의제취득일 전 문구(②이자 ③의 분자) |
+| 증여세 계산기 | `gift-burdened-pre-deemed.ts` ④ · `gift-tax-form-validate.ts` ⑧ · `BurdenedGiftTransferSection`·`BurdenedGiftCommercial164Fields` ⑤ | §164⑥이 서면 칸 값 미전송 · 시가 평가도 칸 필수 해제 · 문구 |
+
+실측(종전 → 이후, mock 세율): 일반 양도 양도시 6억 88,411,818 → 14,492,364 · 칸 비움 ③ 0 → 1,170,909,090 · 부담부증여 시가 34,021,364 → 4,881,363 · 증여세 계산기 시가(양도시 6억) 34,021,364 → 4,881,363(master 실측) · 함께 양도 ③ 722,909,090(직접 입력 284,000,000) · 양도시 기준시가 비움 → ⑧·⑫ 400(종전 통과 · ③ 0).
+
+검증:
+- route anchor 21건(신설) · 화면 RTL 9건(신설) · 기존 정정 3건(부담부증여 M-3 · 증여세 계산기 M-3 + M-3b 신설 · X-12b + X-12d 신설).
+- ⑧↔⑫ 격자 384조합(⑧ 통과 172) 불일치 0 · 500 없음.
+- 뮤테이션: 남은 15종 중 14 KILLED, 1 동치(엔진 `isPreDeemed` — 의제취득일 이후 경로 `calcPostDeemed`는 분자를 읽지 않는다). 자동값 leaf의 의제취득일 가드(동치)는 형제 분기와 맞춰 지웠다. 증여세 계산기 유효 기준시가 변경은 ⑧과 서로 덮는 중복이라 되돌렸다(⑧ 한 곳이 판정 — 재측정 KILLED). R-1 수정은 B-4 하나만 잡는다.
+- tsc 0 · lint 변경 파일 경고 0(전체 373 경고는 master도 같음 — 기준선 변화) · E2E 관련 56 spec 917건 중 895 통과 · 21 skip · 1 flaky(비사업용 토지 수도권 칸 이동 — 무관, 재시도 통과).
+
+리뷰 게이트(acquisition-cost-review — FAIL 0 · 법령 C-1~C-4 PASS · MST 290841 직접 조회):
+- (권고 → 반영) R-1 부담부증여 시가 평가 + 직접 입력 토글 ON이면 ③은 칸 값인데 echo `stdAtDeemed`·개산공제 base가 §164⑥이었다 → 3자 max일 때 ③ 분자와 같은 값(B-4: echo 200,000,000).
+- (권고 → 반영) R-3 공유지분 anchor(W-1) · 토글 ON anchor(B-4).
+- (권고 · 미반영) R-2 §164⑩ 지정 지역을 묻지 않는 기존 한계가 ③에도 번진다 — 8칸은 선택 입력이고 기존 한계(§7). R-4 담보 승(시가 평가인데 §159①1호 괄호) 상가에서 양도시 기준시가 가드 문구가 「환산취득가액도 비교」라 부정확하다(③은 쓰이지 않음) — 막는 것 자체는 아래 별건 결함을 막아 무해. 증여세 계산기는 새 가드가 필요 없다 — 이미 3자 max(`gift-burdened-pre-deemed.ts:223` 「③ 환산취득가액의 분모」)와 기준시가 평가·담보 승(`gift-tax-form-validate.ts:248-251`)에서 양도시 기준시가를 요구한다.
+- 확인 필요: 저장된 입력을 다시 계산하면(칸 값 + 8칸 · 토글 OFF) A안대로 분자가 §164⑥으로 바뀌어 저장 결과와 달라진다(의도된 효과).
+- **별건 결함(리뷰 #3 · 직접 재현)**: 부담부증여 **기준시가 평가**에서 양도시 기준시가를 비우면 ⑧·⑫를 통과하고 취득가액이 채무비율 없이 의제취득일 기준시가 전액이 되어 세액 0이다(상가 8칸 509,090,909 · 8칸 없이 칸 200,000,000 모두 — 이번 변경과 무관한 기존 동작).
+
 ## 7. 범위 밖 · 확인 필요
 
 - §176조의2②2호 후단이 상가를 명시하지 않는 이유(§1 확인 필요) — 해석례 0건.

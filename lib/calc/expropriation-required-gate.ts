@@ -59,6 +59,7 @@ export interface PreDeemedConversionPayload {
   inheritedAcquisition?: { mode?: string; standardPriceAtDeemedDate?: number } | null;
   pre1990Land?: unknown;
   inheritedHouseValuation?: unknown;
+  commercialInheritanceValuation?: unknown;
   generalBuildingValuation?: unknown;
   redevelopment?: unknown;
   mixedUse?: unknown;
@@ -68,7 +69,7 @@ export interface PreDeemedConversionPayload {
 
 /**
  * 의제취득일 전 ③이 실제로 계산되는가 — 엔진 `calcPreDeemed`가 ③을 만드는 조건(분자 = 의제취득일 기준시가: 직접 입력 ·
- * §164④ 토지등급(`pre1990Land`) · §164⑦ 주택(`inheritedHouseValuation`) 자동 주입)과 같다. ③이 없으면 분모 특례도 계산에 쓰이지 않는다.
+ * §164④ 토지등급(`pre1990Land`) · §164⑦ 주택(`inheritedHouseValuation`) · §164⑥ 상가(`commercialInheritanceValuation` — 사용자 결정 A안) 자동 주입)과 같다. ③이 없으면 분모 특례도 계산에 쓰이지 않는다.
  * 자기 서브객체로 취득가액을 만드는 자산(일반건물·재개발·겸용·매매 상가)과 감정·매매사례는 `refinePreDeemedAcquisitionSource`처럼 제외한다 —
  * 재개발은 ③이 영 §166③이고 §164⑨ 대상이 아니다.
  */
@@ -76,7 +77,12 @@ export function isPreDeemedConversionCandidate(p: PreDeemedConversionPayload): b
   if (p.inheritedAcquisition?.mode !== "pre-deemed") return false;
   if (p.generalBuildingValuation || p.redevelopment || p.mixedUse || p.commercialBuildingValuation) return false;
   if (p.acquisitionMethod === "appraisal" || p.acquisitionMethod === "salesCase") return false;
-  return (p.inheritedAcquisition.standardPriceAtDeemedDate ?? 0) > 0 || !!p.pre1990Land || !!p.inheritedHouseValuation;
+  return (
+    (p.inheritedAcquisition.standardPriceAtDeemedDate ?? 0) > 0 ||
+    !!p.pre1990Land ||
+    !!p.inheritedHouseValuation ||
+    !!p.commercialInheritanceValuation
+  );
 }
 
 /** 자산 단위 특례 트랙이 환산으로 열리는가 — 환산 토글 또는 의제취득일 전 ③ 후보 */
