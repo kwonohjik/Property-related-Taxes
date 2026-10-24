@@ -149,3 +149,13 @@ F27이 싣는 `aggregated.burdenedGiftCarryoverDetail`(채택 시나리오·A/B 
 - route F27 — 적용 echo `burdenedGift.method`와 게이트 판정이 `"estimated"` 고정이었다 → 방식에 따라 `appraisal`.
 - 실측(같은 시료): 신축 A 채택 → 기준액 100,000,000 · 가산세 5,000,000 / 증축 90㎡ · 증축 감정가액 6천만 → 30,000,000 · 1,500,000 / B 채택 → 0 + scenario_b / 5년 밖 → 0 + outside_penalty_window. 결과 카드 「증여자 신축 건물 감정가액 가산세 (소득세법 §114조의2)」·「가산세 5,000,000 = 100,000,000 × 5%」(스크린샷 확인).
 - 검증: route anchor `transfer.route.gb-bg-carryover-k7-donor-built.anchor.test.ts` 8건(수정 前 6 red · 대조 2 green) · leaf anchor +4(K-7 신축·증축·감정 시행일·방어선) · PR-5c 단언 3곳 반전(K-7 거부 → 수용, stale 행은 K-6 으로 교체) · 뮤테이션 10/10 KILLED · E2E GBBD-E7(K-7 신축 결과·라벨)·E8(K-7 증축 UI 경로 — 기준시가 칸 없음·감정가액 칸 입력) · 회귀 E2E 50 passed.
+
+## 10. PR-3 구현 기록 (2026-10-24) — 지분 분할·부담부증여 묶음 × 일반건물 이월과세 차단 (Q-3 a)
+
+body 실측(수정 前): 지분 분할은 최상위 일반건물 객체에 `carryoverTaxation`이 실리고 지분 카드(`generalBuildingShares`)에는 없다 · 부담부증여 묶음은 일반건물이 첫 자산이면 최상위, 둘째 이후면 `companionAssets[i]`에 실린다. 다섯 시료 모두 ⑧ 통과 · route 200(K-5, B 값)·400(K-7).
+
+- ⑧ `validateBurdenedGiftAsset` (1-a′) — 일반건물 + `carryover_gift` + (축 B `isFractionalSplitAxis` 또는 함께 부담부증여 `contractAssumedDebtTotal`)이면 다른 필수 칸보다 **앞**에서 `acquisitionCause` 칸으로 막는다(「이 일반건물만 따로(단건으로) 계산하세요」). 겸용 묶음 차단(1-a)과 같은 자리·같은 술어.
+- ⑫ `refineGbBgCarryoverBundled`(`transfer-tax-schema-donor-built.ts`) — 최상위(지분·컴패니언이 있을 때)와 `companionAssets[i]` 각각 「일반건물 + 부담부증여 + `carryoverTaxation`」이면 거부. 문구 상수를 ⑧과 공유.
+- 기존 테스트 갱신: PR-5c route anchor DB-4(지분 donorBuilt) · pipeline PL-5 2건 — 「donorBuilt만 끄면 계산된다」 대조가 이제 묶음 차단에 걸려 400(`carryoverTaxation`)이다. donorBuilt 거부가 **별도 필드로 함께** 나옴을 고정하도록 바꿨다. E2E GBBD-E6도 「토글을 끄면 계산」 → 「⑧이 이월과세 자체를 막고 그 칸으로 이동」으로 바꿨다.
+- 검증: anchor `transfer.route.gb-bg-carryover-bundled-block.anchor.test.ts` 12건 — 차단 7(지분 K-5 · 미선언 축 B · K-7 · 첫 지분만 · 묶음 첫 자산 K-5·K-7 · 묶음 둘째 자산) 수정 前 전부 red · 대조 5(단건 109,326,000 · 지분 증여 · 지분 일반 양도 × 이월과세 200 · 묶음 토지 쪽 이월과세 · 묶음 이월과세 아님) green. 뮤테이션 9/9 KILLED(처음 「⑧ 일반건물 조건」이 살아 토지 쪽 이월과세 대조를 추가). E2E 회귀 44 passed.
+- 남은 것: 지분·묶음에서 §97의2 비교 **배선**(비교 단위 설계 — 별도 계획서) · PR-4(결과 화면 A/B 비교).

@@ -50,6 +50,7 @@ import {
 } from "./burdened-gift-presumed-acquisition";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { validateDonorBuiltBg } from "./transfer-tax-validate-donor-built-bg";
+import { GB_BG_CARRYOVER_BUNDLED_MESSAGE } from "@/lib/api/transfer-tax-schema-donor-built";
 import { bgCollateralForcesStdAcq, bgWholeGiftValuation } from "./burdened-gift-collateral-win";
 
 /**
@@ -133,6 +134,19 @@ export function validateBurdenedGiftAsset(
     }
     const uiBlock = bgMixedUseBlock(asset);
     if (uiBlock) return fieldError(uiBlock.field, `${label}: ${uiBlock.long}`);
+  }
+
+  /**
+   * (1-a′) 일반건물 × 이월과세 × 지분 분할 취득(축 B)·함께 부담부증여 묶음 — §97의2 비교(F27)는 단건만 탄다. 묶음은 이월과세를 반영하지 않고
+   * 양도인 기준(B) 값만 냈다(K-5 · Δ 0) · K-6/K-7 은 400 — 침묵 소실 대신 막는다(⑫ `refineGbBgCarryoverBundled`와 같은 사실·문구).
+   * 다른 필수 칸보다 **앞**이다 — 채운 뒤에야 막히면 헛입력이 된다. 계획서 `gb-bg-carryover-presumed-scenario-b.plan.md` PR-3.
+   */
+  if (
+    asset.assetKind === "general_building" &&
+    asset.acquisitionCause === "carryover_gift" &&
+    (contractAssumedDebtTotal !== undefined || isFractionalSplitAxis === true)
+  ) {
+    return fieldError("acquisitionCause", `${label}: ${GB_BG_CARRYOVER_BUNDLED_MESSAGE}.`);
   }
 
   /**

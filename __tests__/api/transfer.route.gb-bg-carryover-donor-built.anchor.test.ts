@@ -265,8 +265,12 @@ describe("DB-4 ⑫ 거부 — 400 (조용히 무시하지 않는다)", () => {
         { shareId: "s2", shareLabel: "지분 2", ownershipRatio: 0.4, burdenedGiftInfo: INFO(), valuation: { ...GB, actualPriceMode: true, buildingAcquisitionCause: "purchase" }, acquisitionDate: "2024-05-01" },
       ],
     });
-    const control = await post(share(false)); // donorBuilt 만 빼면 같은 payload 가 통과한다 — 아래 400 의 원인이 donorBuilt 뿐임을 고정
-    expect(control.status, control.errText).toBe(200);
+    // F27 B PR-3(`gb-bg-carryover-presumed-scenario-b.plan.md`)부터 묶음의 일반건물 부담부증여 × 이월과세는 그 자체로 거부된다(`carryoverTaxation`).
+    // donorBuilt 만 빼면 그 거부만 남는다 — donorBuilt 거부가 별도 필드로 함께 나옴을 고정한다.
+    const control = await post(share(false));
+    expect(control.status).toBe(400);
+    expect(fields(control)).toContain("carryoverTaxation");
+    expect(fields(control)).not.toContain("generalBuildingShares.0.burdenedGiftInfo.carryoverDonorBasis.donorBuilt");
     const r = await post(share(true));
     expect(r.status).toBe(400);
     expect(fields(r)).toContain("generalBuildingShares.0.burdenedGiftInfo.carryoverDonorBasis.donorBuilt");

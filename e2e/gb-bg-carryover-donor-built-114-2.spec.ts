@@ -189,7 +189,9 @@ test.describe("일반건물 부담부증여 × 이월과세 × 증여자 신축�
     expect(body.burdenedGiftInfo).toBeDefined();
   });
 
-  test("GBBD-E6 지분 분할 취득(축 B): 새로 보이지 않고 켜 둔 값만 끌 수 있다 — «끄세요» 안내, 끄면 계산된다", async ({ page }) => {
+  test("GBBD-E6 지분 분할 취득(축 B): 일반건물 부담부증여 × 이월과세 자체를 ⑧ 이 막고 그 칸으로 이동한다 — «단건으로 계산하세요» (F27 B PR-3)", async ({ page }) => {
+    // 종전(PR-5c): 증여자 신축 토글만 «끄세요» 로 끄면 계산됐다 — 그 계산은 이월과세를 반영하지 않은 양도인 기준(B) 값이었다(Δ 0).
+    // PR-3(`docs/00-pm/gb-bg-carryover-presumed-scenario-b.plan.md`)부터 묶음에서는 이월과세 자체를 막는다.
     test.setTimeout(180_000);
     const share2 = {
       ...makeDefaultAsset(2),
@@ -203,16 +205,14 @@ test.describe("일반건물 부담부증여 × 이월과세 × 증여자 신축�
       gbAcqLandPricePerSqm: "1000000",
       gbAcqBuildingValue: "100000000",
     };
-    await seedWizard(page, seed([gbBgAsset(DONOR_BUILT_NEW, { ownershipNumerator: "60", ownershipDenominator: "100" }), share2], { assetSplitMode: "fractional" }));
-    await expandAssetSection(page, 2); // 부담부증여 블록(§159 자동산정)은 ② 양도정보 안에 있다
-    const toggle = page.getByTestId("donor-built-toggle");
-    await expect(toggle).toHaveCount(1);
-    await expect(toggle).toContainText("지분 분할 취득·함께 부담부증여 묶음에서는");
-    await toggle.getByRole("switch").first().click(); // 끈다
-    expect((await readCarryoverStore(page)) as Over).toMatchObject({ donorBuilt: false });
-    const body = (await calculate(page)) as { generalBuildingShares?: Array<{ burdenedGiftInfo?: Wire["burdenedGiftInfo"] }> };
-    expect(body.generalBuildingShares?.[0]?.burdenedGiftInfo?.carryoverDonorBasis?.donorBuilt).toBeUndefined();
+    await seedWizard(page, seed([gbBgAsset({}, { ownershipNumerator: "60", ownershipDenominator: "100" }), share2], { assetSplitMode: "fractional" }));
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await expect(page.getByText(/지분 분할 취득·함께 부담부증여 묶음에서 아직 계산하지 못합니다/).first()).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => !!(document.activeElement as HTMLElement | null)?.closest('[data-field="acquisitionCause"]')))
+      .toBe(true);
   });
+
   // ── PR-2(`docs/00-pm/gb-bg-carryover-presumed-scenario-b.plan.md`) — 감정가액(K-7) × 당초 증여자 신축·증축 ──
   const K7 = {
     bgAcquisitionMethod: "appraisal", bgCoDonorPresumedAcquisitionLand: "100000000", bgCoDonorPresumedAcquisitionBuilding: "200000000",
