@@ -454,7 +454,7 @@ harness: `collectStepIssues(0~5)`(⑧) → `callTransferTaxAPI` 가로채기(④
 1. `phdHousingType === "apartment"` — 기본값이 아닌 값은 사용자가 라디오에서 골랐을 때뿐(사용자 지시: 명시한 값 우선).
 2. `inheritanceAssetKind` — `house_apart`→공동 / `house_individual`→개별(기본값 "land"는 신호 아님. ④가 엔진에 싣는 값과 같은 필드).
 3. 동·호 둘 다 채워짐 → 공동. **둘 다**여야 하는 이유: `deriveInheritanceHouseKind`(상속 경로 주택 구분 파생)가 같은 조건이라 한 화면의 두 곳이 어긋나지 않는다. 호만 있는 다세대는 «모름»으로 떨어진다(안전측 — 틀린 이름을 단정하지 않는다).
-4. 그 밖 → **«unknown»** — 이름을 추정하지 않고 두 이름을 함께 적는다: «환산 개별주택가격(공동주택은 환산 공동주택가격)» · «개별주택가격(공동주택은 공동주택가격)» · 날짜 «(개별주택은 2005-04-30)» (`PRE_DISCLOSURE_STD_PRICE_HINT`와 같은 방식).
+4. 그 밖 → **«unknown»** — 이름을 추정하지 않고 두 이름을 함께 적는다: «환산 개별주택가격(공동주택은 환산 공동주택가격)» · «개별주택가격(공동주택은 공동주택가격)» · 날짜 «(개별주택은 2005-04-30)» (`PRE_DISCLOSURE_STD_PRICE_HINT`와 같은 방식). — **2026-10-24 사용자 결정: 모를 때 두 이름 함께 표시(이 안 확정).**
 PHD 라디오 «individual»은 **신호로 읽지 않는다**(기본값과 구분 불가).
 
 **일부러 PHD 환산 안내 분기는 바꾸지 않음**: 카드의 PHD 분기(`housingExcessUsesPhdSplit`)는 PHD 패널이 같은 화면에 있어 이름이 그 패널 라디오를 따라야 패널·결과 화면과 어긋나지 않는다 → 종전 `isPhdApartment`. ⑧ 메시지는 그 분기에 닿지 않는다(`housingExcessNeedsStdInputs`가 `!usesPhd`).
