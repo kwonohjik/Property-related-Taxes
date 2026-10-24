@@ -9,7 +9,7 @@ import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-sp
 import type { CarryoverTaxationInput, DonorBuiltInput } from "@/lib/tax-engine/types/transfer-carryover.types";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import type { AssetCardForAggregate } from "@/lib/tax-engine/general-building-valuation";
-import type { GbPreDeemedClauseA } from "@/lib/tax-engine/types/general-building.types";
+import type { GbPreDeemedClauseA, GbSec1639Basis } from "@/lib/tax-engine/types/general-building.types";
 
 /** 실거래가/감정가 모드 NBL 전용 payload. */
 export interface GeneralBuildingActualPricePayload {
@@ -70,6 +70,9 @@ export interface GeneralBuildingActualPricePayload {
   inheritedLandValue?: number;
   /** 상속개시일 건물 평가액 (원). */
   inheritedBuildingValue?: number;
+  /** §163⑨ 상속·증여 파트 취득가액의 근거 — 표시 전용 echo(실가 파트 카드의 `sec1639Basis`). */
+  landSec1639Basis?: GbSec1639Basis;
+  buildingSec1639Basis?: GbSec1639Basis;
   // ── §95④ 단기보유 기산점 — actual 분기 기존 결측(회귀 동반 수정) ──
   /** 토지 취득원인 — 단기보유 기산점 분기(법 §104②). */
   landAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";

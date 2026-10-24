@@ -82,3 +82,28 @@ anchor `__tests__/api/transfer.route.gb-bundled-result-formulas.anchor.test.ts` 
   - `transfer.route.bundled-swallows-special.test.ts` — 「일반건물 분리 안분이 함께양도에서 소실」(응답에 `generalBuilding` 문자열 없음) 단언을 뒤집었다. 함께양도에 `generalBuildingDetailsByAsset`이 실리고 단건 슬롯은 없다.
   - `transfer.route.gb-extension-capex-residuals.anchor.test.ts` — 🔴 **master에서 실패 중이었다**(#2459 부담부증여 stale 라우팅 수정과 #2460의 의미 충돌 — 두 PR이 각자 CI 녹색으로 머지됐다). #2459 이후 부담부증여는 증축 토글이 숨어 실가 경로로 가므로 `extensionInfo`가 없다 → ⑫ 「증축 전」 필수 규칙 대상이 아니다. 「④ 자본적지출 미전송」 단언을 「증축으로 싣지 않는다」로 바꿨다(⑧ 통과 = 200 · 결과 = 빈 칸 동일 · 결정세액 6,101,787은 그대로).
 - 회귀: `__tests__/{api,tax-engine,calc,lib,components}` 39,378건 실패 0(위 2건 갱신 후). 첫 실행의 실패 141건은 워크트리 `node_modules` 심링크 탓이었다(「environment 정리 뒤 모듈 로드」 — `cp -cR` 복제본으로 재실행 시 0). E2E `general-building-*`·`gb-*`·함께 양도 41 스펙 128 passed.
+
+## 9. 별건 — §163⑨ 상속·증여 파트 근거 표기 (2026-10-24)
+
+Q-2에서 뺀 「C2·1985 전 상속 파트 근거 표기」의 후속이다. 사용자 결정: **§163⑨ 파트 전부**(부분 상속·증여·단서 ② 채택) · 채택 정보는 **엔진 echo**.
+
+실측(변경 전 · 단건 일반건물 결과 화면 「자산별 취득가액」 산식):
+
+| 시료 | 값 | 종전 문구 | 바뀐 문구 |
+|---|---|---|---|
+| 토지 상속 + 건물 매매(실가·환산·함께 양도·지분 분할) | 상속 토지 평가액 | 실거래가 — 소득세법 §97①1호 가목 | 상속개시일 평가액 — 소득세법 시행령 §163⑨ |
+| 건물만 상속(1988) · 평가액 1억 < 영 §164⑤ 1.5억 | 150,000,000 | 실거래가 — §97①1호 가목 | 상속개시일 평가액보다 많은 소득세법 시행령 §164⑤ 가액 — 같은 영 §163⑨ 단서 2호 |
+| 🔴 C1 1988 상속 · 건물 ① 1억 < ② 1.5억 | 150,000,000 | 상속개시일 평가액 — §163⑨ (이름 ≠ 값) | 단서 2호 문구 |
+| 🔴 1980 상속 · ② 채택 | 토지 205,000,000 · 건물 150,000,000 | 상속개시일 평가액 — §163⑨ (이름 ≠ 값) | 단서 1호(토지 §164④)·2호(건물 §164⑤) |
+| 증여 파트(전부·토지만) | 증여 신고가액 | 실거래가 — §97①1호 가목 | 증여일 평가액 — 소득세법 시행령 §163⑨ |
+
+근거 본문: 「소득세법 시행령」 §163⑨ 본문·단서 1호·2호(로컬 법령 캐시 `law_units_ef_003956` 2026-09-20 실독 — 이 날 법제처 API는 연결 시간 초과라 현행 재조회 못 함).
+
+구현:
+- ④ `gbSec1639Acquisition`이 파트 슬롯 값의 근거 `{ cause: "inheritance" | "gift", adopted: "reported" | "sec164" }`를 정한다(동점 ① · 단서 구간 밖은 비교 안 함 · 부담부증여는 §159 산식 분기가 먼저라 이 문구에 닿지 않는다) → 파트 값을 실을 때만 `land/buildingSec1639Basis`로 함께 싣는다.
+- ⑫ `generalBuildingValuationSchema` 두 필드 · ⑭ 두 경로 모두 payload 스프레드라 매핑 불요 → 실가 경로(`general-building-route-actual.ts` — 파트 값이 그대로 취득가액인 `inherited`·`part_input` 분기만)·환산 경로(`general-building-valuation.ts` — 실가 파트 카드)가 카드 `sec1639Basis`로 되돌린다.
+- ⑦ `DetailedStatementGbFormulas.ts` — 실가 카드에 `sec1639Basis`가 있으면 그 문구. 없는 구 이력은 종전 문구.
+- 세액 불변(표시 echo만). 증축 경로 카드는 이 echo를 싣지 않는다(종전 표시 유지 — 범위 밖).
+- 검증: anchor `__tests__/api/transfer.route.gb-sec163-9-basis-label.anchor.test.ts` 15건(변경 전 코드에서 12건 red · green 3건은 대조 2건과 동점 — 동점은 종전 C1 문구와 같다) · 뮤테이션 14/14 KILLED(단서 구간 게이트 · 동점 · 증여 분기 2 · ④ 전송 2 · 실가 경로 echo·파트 뒤바꿈·일괄 안분 분기 제외 · 환산 경로 echo 2 · 표시 분기·토지/건물·증여 문구). 「일괄 안분 분기 제외」는 증여 분리 OFF에 숨은 토지 칸 값만 남은 시료로 잡았다.
+- 기존 anchor 1건 갱신: `transfer.route.gb-bundled-result-formulas.anchor.test.ts` Q-2 — 1988 상속 건물 150,000,000은 평가액(1억)이 아니라 영 §164⑤ 가액이라 단서 2호 문구로(의도된 정정 · 결정세액 301,110,000 불변).
+- E2E: `transfer-split-acq-result-display.spec.ts` G4(토지 상속 + 건물 매매 — 결과 화면 명세서 문구 · 변경 전 코드에서 red 확인) · 회귀 `general-building-*`·`gb-*` 28 스펙 112 passed · 같은 spec 18 passed. vitest 전건 41,050 중 실패 3은 위 Q-2 갱신 2건 + 엔진 파일 701줄(T-1 ≤700 가드 — 줄 수 정리 후 699) → 해소.

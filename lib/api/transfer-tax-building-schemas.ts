@@ -124,6 +124,12 @@ const gbPreDeemedClauseASchema = z.object({
   sec164: z.number().int().nonnegative(),
 });
 
+/** §163⑨ 상속·증여 파트 취득가액의 근거 — 표시 전용 echo(`GbSec1639Basis`). */
+const gbSec1639BasisSchema = z.object({
+  cause: z.enum(["inheritance", "gift"]),
+  adopted: z.enum(["reported", "sec164"]),
+});
+
 export const generalBuildingValuationSchema = z.object({
   /** 토지 부수면적 (㎡). 양도시 기준시가와 함께 안분 분모 계산. */
   landArea: z.number().positive(),
@@ -432,6 +438,9 @@ export const generalBuildingValuationSchema = z.object({
   /** 의제취득일(1985.1.1.) 전 상속·증여 파트의 ① 평가액·② 영 §164 가액 — 엔진이 ③과 비교한다(PR-4). 침묵 strip 방지. */
   landPreDeemedClauseA: gbPreDeemedClauseASchema.optional(),
   buildingPreDeemedClauseA: gbPreDeemedClauseASchema.optional(),
+  /** §163⑨ 상속·증여 파트 취득가액의 근거(본문 평가액 / 단서 영 §164 가액) — 결과 산식 문구 전용 echo. 침묵 strip 방지. */
+  landSec1639Basis: gbSec1639BasisSchema.optional(),
+  buildingSec1639Basis: gbSec1639BasisSchema.optional(),
   /**
    * ⑫ 사례 35: 주택→상가 용도변경 토글.
    * true 시 conversionDate·wasMultiHouseAtConversion 의미 있음. superRefine에서 필수 강제.
