@@ -13,6 +13,7 @@
 
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
+import type { GbSec1639Basis } from "@/lib/tax-engine/types/general-building.types";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
@@ -48,6 +49,18 @@ function isBuilding1Prop(propertyId: string): boolean {
 }
 
 /** 사례 33 증축분 건물 카드인지 (`building2`). */
+/**
+ * §163⑨ 상속·증여 파트 취득가액의 근거 문구. 본문 — 상속개시일·증여일 평가액을 실지거래가액으로 본다.
+ * 단서 1호(토지 — 영 §164④ 가액)·2호(건물 — 영 §164⑤ 가액) — 평가액과 그 가액 중 많은 금액.
+ */
+function sec1639BasisText(basis: GbSec1639Basis, isLand: boolean): string {
+  const valued = basis.cause === "inheritance" ? "상속개시일 평가액" : "증여일 평가액";
+  if (basis.adopted === "reported") return `${valued} — 소득세법 시행령 §163⑨`;
+  return isLand
+    ? `${valued}보다 많은 소득세법 시행령 §164④ 가액 — 같은 영 §163⑨ 단서 1호`
+    : `${valued}보다 많은 소득세법 시행령 §164⑤ 가액 — 같은 영 §163⑨ 단서 2호`;
+}
+
 function isBuilding2Prop(propertyId: string): boolean {
   return baseCardId(propertyId) === "building2";
 }
@@ -291,11 +304,20 @@ function buildGbAcquisitionFormulaCore(
   // 실가 파트(혼합 환산의 기존 거짓 등식)는 Phase C 범위다(Q-F).
   const gbModeCard = gb.assetCards.find(
     (c) => baseCardId(c.propertyId) === baseCardId(p.propertyId) && isSameShare(c.propertyId, p.propertyId),
-  ) as { acquisitionMode?: string; actualSource?: "part_input" | "bundled_apportion" | "inherited" } | undefined;
+  ) as
+    | { acquisitionMode?: string; actualSource?: "part_input" | "bundled_apportion" | "inherited"; sec1639Basis?: GbSec1639Basis }
+    | undefined;
   if (gbModeCard?.acquisitionMode === "appraisal" || gbModeCard?.acquisitionMode === "salesCase") {
     return gbModeCard.acquisitionMode === "appraisal"
       ? `자산별 취득가액 = ${fmt(displayValue)} (감정가액 — 소득세법 §97①1호 나목 · 같은 법 시행령 §176의2③2호)`
       : `자산별 취득가액 = ${fmt(displayValue)} (매매사례가액 — 소득세법 §97①1호 나목 · 같은 법 시행령 §176의2③1호)`;
+  }
+
+  // ── §163⑨ 상속·증여 파트 ──
+  // 부분 상속·증여 파트는 값이 파트 슬롯으로 와 아래 「실거래가」 분기에 떨어졌고, C1 상속 분기는 단서 ②(영 §164 가액)가 채택돼도
+  // 「상속개시일 평가액」이라 적었다(적힌 이름 ≠ 적힌 값). 엔진 echo `sec1639Basis`가 정본이다 — 없는 구 이력은 아래 종전 문구.
+  if (gbModeCard?.acquisitionMode === "actual" && gbModeCard.sec1639Basis) {
+    return `자산별 취득가액 = ${fmt(displayValue)} (${sec1639BasisText(gbModeCard.sec1639Basis, isLandProp(p.propertyId))})`;
   }
 
   // ── 실거래가 파트 직접 입력 (Q-F) ──

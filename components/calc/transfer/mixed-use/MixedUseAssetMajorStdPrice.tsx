@@ -20,6 +20,7 @@ import { MixedUseHousingBuildingStdField } from "./MixedUseHousingBuildingStdFie
 import { isMixedAcqDatesSeparate } from "@/lib/calc/mixed-use-acq-date-split";
 import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { isMixedBgDeemedPath } from "@/lib/calc/burdened-gift-mixed-use-scope";
+import { mixedBgReportedOptional } from "@/lib/calc/mixed-use-sec163-9";
 import {
   isMixedUsePerPartAcq,
   mixedAnyPartActual,
@@ -86,9 +87,6 @@ export function MixedUseAssetMajorStdPrice({
    */
   const bgDeemed = isMixedBgDeemedPath(asset);
   const showReported = !bgMixed || bgDeemed;
-  const bgReportedHint = bgDeemed
-    ? `${isGift ? "증여세" : "상속세"} 신고가액(상증법 §60~66 평가액 — 세무서장등이 결정·경정한 가액이 있으면 그 가액). 부담부증여에서는 주택분·상가분 두 칸을 모두 입력하세요 — 이 평가액이 취득가액이고 주택·상가별 채무비율을 곱합니다(소득세법 시행령 §163⑨·§159①1호).`
-    : null;
   const isPurchaseActual = bgMixed
     ? false
     : isPerPart
@@ -117,6 +115,16 @@ export function MixedUseAssetMajorStdPrice({
   // §163⑨ 단서 자산 합계 비교 구간(PR-6) — ①·경비 칸 안내(없으면 종전 문구)
   const reportedHint = mixedSec163_9ReportedHint(asset);
   const expenseHint = mixedSec163_9ExpenseHint(asset);
+  // 단서 구간(자산 합계 비교)·PHD(§164⑦ 가액)면 평가액이 선택이다 — 두 칸 모두 입력하거나 모두 비운다(PR-7b-7a-2 · 엔진 MB-11과 같은 조건)
+  const bgReportedOptional = mixedBgReportedOptional(asset);
+  const bgReportedRequired = bgDeemed && !bgReportedOptional;
+  const bgReportedHint = bgReportedRequired
+    ? `${isGift ? "증여세" : "상속세"} 신고가액(상증법 §60~66 평가액 — 세무서장등이 결정·경정한 가액이 있으면 그 가액). 부담부증여에서는 주택분·상가분 두 칸을 모두 입력하세요 — 이 평가액이 취득가액이고 주택·상가별 채무비율을 곱합니다(소득세법 시행령 §163⑨·§159①1호).`
+    : bgDeemed && reportedHint
+      ? `${reportedHint} 부담부증여는 그 금액에 주택·상가별 채무비율을 곱합니다(같은 영 §159①1호).`
+      : bgDeemed
+        ? `${isGift ? "증여세" : "상속세"} 신고가액 — 주택분·상가분을 모두 입력하거나 모두 비워 두세요. 주택분은 평가액과 아래 §164⑦ 환산가액 중 큰 금액을, 상가분은 평가액(비우면 상가건물 기준시가 + 개별공시지가 합계)을 취득가액으로 쓰고 주택·상가별 채무비율을 곱합니다(소득세법 시행령 §163⑨ 단서 2호·§159①1호).`
+        : null;
 
   // 부수토지 안분 — leaf 헬퍼 단일 소스 + override 반영 (three-state: 빈값→자동, "0"→적법한 0).
   // 면적 입력·수정은 섹션 ①(MixedUseAreaInputs) 단일 소스 — 여기서는 **조회만** 한다.
@@ -207,7 +215,7 @@ export function MixedUseAssetMajorStdPrice({
           {isInheritance && showReported && (
             <ToneCard
               tone="violet"
-              title={bgDeemed ? "상속개시일 신고가액 직접 입력 (필수)" : "상속개시일 신고가액 직접 입력 (선택)"}
+              title={bgReportedRequired ? "상속개시일 신고가액 직접 입력 (필수)" : "상속개시일 신고가액 직접 입력 (선택)"}
               titleExtra={<LawArticleModal legalBasis="상속세및증여세법 §60" label="상증법 §60" />}
             >
               <CurrencyInput
@@ -232,7 +240,7 @@ export function MixedUseAssetMajorStdPrice({
           {isGift && showReported && (
             <ToneCard
               tone="violet"
-              title={bgDeemed ? "증여일 신고가액 직접 입력 (필수)" : "증여일 신고가액 직접 입력 (선택)"}
+              title={bgReportedRequired ? "증여일 신고가액 직접 입력 (필수)" : "증여일 신고가액 직접 입력 (선택)"}
               titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑨" label="소령 §163⑨" />}
             >
               <CurrencyInput
@@ -279,11 +287,14 @@ export function MixedUseAssetMajorStdPrice({
             size="sm"
             data-field="usePreHousingDisclosure"
             // 겸용 × 부담부증여는 PHD와 함께 계산하지 않는다(엔진 MB-2). **켜는 쪽만** 막는다 — 이미 켜져 있으면 사용자가 끌 수 있어야 한다(막다른 길 방지).
-            disabled={bgMixed && !asset.usePreHousingDisclosure}
+            //   상속·증여 취득(시가)은 예외 — §163⑨ 단서 2호의 §164⑦ 가액을 만드는 입력이다(PR-7b-7a-2 · 사용자 결정 M-1 (a)).
+            disabled={bgMixed && !bgDeemed && !asset.usePreHousingDisclosure}
             disabledReason="겸용주택 부담부증여는 개별주택가격 미공시 환산(§164⑦)과 함께 계산할 수 없습니다"
             title={`${isDeemed163_9 ? acqLabel : "취득 당시"} 개별주택가격 미공시 (§164⑦ 3-시점 환산)`}
             description={
-              isPerPart
+              bgDeemed
+                ? "상속개시일·증여일 당시 이 주택의 개별주택가격이 아직 공시되지 않았으면 켜고 최초 고시일을 입력하세요 — §164⑦ 환산가액을 평가액과 비교해 큰 금액을 씁니다(소득세법 시행령 §163⑨ 단서 2호)"
+                : isPerPart
                 ? "환산취득가로 계산하는 파트에 §164⑦ 3-시점 환산을 적용합니다 (개별주택가격 최초 공시 이전 취득 시 활성화)"
                 : useEstimatedAcquisition
                   ? "개별주택가격 최초 공시 이전 취득 시 활성화"
@@ -293,8 +304,9 @@ export function MixedUseAssetMajorStdPrice({
             onCheckedChange={(checked) => {
               // 파트 모델은 `usePreHousingDisclosure` **한 키만** 쓴다 — 레거시 `useEstimatedAcquisition`을 켜면
               // 토글 OFF(총액 모델) 복귀 후 상단 라디오가 조용히 「환산」으로 바뀐다(왕복 무변화 위반).
+              // 부담부증여는 취득 경로를 부담부증여 블록이 정한다 — 레거시 환산 플래그를 켜지 않는다(숨은 값으로 남지 않게).
               onChange(
-                isPerPart
+                isPerPart || bgDeemed
                   ? { usePreHousingDisclosure: checked }
                   : {
                       usePreHousingDisclosure: checked,
@@ -387,7 +399,7 @@ export function MixedUseAssetMajorStdPrice({
         {isInheritance && showReported && (
           <ToneCard
             tone="violet"
-            title={bgDeemed ? "상속개시일 신고가액 직접 입력 (필수, 상가 전체)" : "상속개시일 신고가액 직접 입력 (선택, 상가 전체)"}
+            title={bgReportedRequired ? "상속개시일 신고가액 직접 입력 (필수, 상가 전체)" : "상속개시일 신고가액 직접 입력 (선택, 상가 전체)"}
             titleExtra={<LawArticleModal legalBasis="상속세및증여세법 §60" label="상증법 §60" />}
           >
             <CurrencyInput
@@ -413,7 +425,7 @@ export function MixedUseAssetMajorStdPrice({
         {isGift && showReported && (
           <ToneCard
             tone="violet"
-            title={bgDeemed ? "증여일 신고가액 직접 입력 (필수, 상가 전체)" : "증여일 신고가액 직접 입력 (선택, 상가 전체)"}
+            title={bgReportedRequired ? "증여일 신고가액 직접 입력 (필수, 상가 전체)" : "증여일 신고가액 직접 입력 (선택, 상가 전체)"}
             titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑨" label="소령 §163⑨" />}
           >
             <CurrencyInput

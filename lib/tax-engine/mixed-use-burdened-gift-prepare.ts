@@ -79,6 +79,12 @@ export interface MixedBgSource {
     landPricePerSqmAtBuildingAcq?: number;
   };
   usePreHousingDisclosure?: boolean;
+  /** PHD(§164⑦) 입력 — ④는 필수 값이 다 찼을 때만 싣는다. 양도시 주택건물 기준시가(나목)를 여기서 읽는다(부담부증여 × 상속·증여 취득만 PHD 허용 · PR-7b-7a-2) */
+  preHousingDisclosure?: { buildingStdPriceAtTransfer?: number } | null;
+  /** §163⑨ 단서 자산 합계 비교 구간(④ 파생 · PR-6) — 부담부증여는 상속·증여 취득 × 시가 × 단서 구간(clause)만 계산한다(PR-7b-7a-2) */
+  sec163_9Compare?: { era?: string } | null;
+  /** 엔진 내부 — 비교 후보 하나로 다시 계산 중이다(`calcMixedSec163_9Compare`). ⑫ 스키마에 없다 */
+  inheritedValuesAsIs?: boolean;
   separateAcquisition?: unknown;
   partialUsageChange?: unknown;
   transferCause?: string;
@@ -165,7 +171,16 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   if (td !== undefined && td < MIXED_BG_EFFECTIVE_TIME) {
     add("MB-1", "겸용주택 부담부증여는 2022.1.1. 이후 증여(양도)분만 계산합니다 — 「소득세법 시행령」 제160조 제1항 괄호(주택 외의 부분은 주택으로 보지 않는다)가 2022.1.1. 이후 양도분부터 적용됩니다.", ["transferDate"]);
   }
-  if (src.usePreHousingDisclosure === true) {
+  const cause = src.acquisitionCause;
+  const method = info.acquisitionMethod;
+  const isMarket = info.valuationMode === "sangjeungbeop_market";
+  const byInheritOrGift = cause === "inheritance" || cause === "gift";
+  // 상속·증여 취득 경로(K-4 고정)는 시가 모드에서만 의미가 있다 — 기준시가 모드는 괄호가 취득시 기준시가를 강제한다.
+  const deemedPath = isMarket && byInheritOrGift;
+  // PHD(§164⑦) — 상속·증여 취득(시가)은 §163⑨ 단서 2호의 §164⑦ 가액(②)을 만드는 입력이라 허용한다(PR-7b-7a-2 · 사용자 결정 M-1 (a)).
+  //   매매·기준시가 평가는 종전대로 막는다(그 경로의 취득시 기준시가를 §164⑦로 바꾸는 계산은 아직 없다 — 의제취득일 전은 7b Q-37).
+  const phd = src.usePreHousingDisclosure === true;
+  if (phd && !deemedPath) {
     add("MB-2", "겸용주택 부담부증여는 개별주택가격 미공시 환산(「소득세법 시행령」 제164조 제7항)과 함께 계산할 수 없습니다.", ["mixedUse", "usePreHousingDisclosure"]);
   }
   if (src.separateAcquisition !== undefined && src.separateAcquisition !== null) {
@@ -180,12 +195,6 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   if ((src.ownershipRatio !== undefined && src.ownershipRatio < 1) || src.isCompanion === true) {
     add("MB-6", "겸용주택 부담부증여는 공유지분·함께 양도(여러 물건)·지분 분할 취득과 함께 계산할 수 없습니다 — 단독 소유 단건만 지원합니다.", ["ownershipRatio"]);
   }
-  const cause = src.acquisitionCause;
-  const method = info.acquisitionMethod;
-  const isMarket = info.valuationMode === "sangjeungbeop_market";
-  const byInheritOrGift = cause === "inheritance" || cause === "gift";
-  // 상속·증여 취득 경로(K-4 고정)는 시가 모드에서만 의미가 있다 — 기준시가 모드는 괄호가 취득시 기준시가를 강제한다.
-  const deemedPath = isMarket && byInheritOrGift;
   if (deemedPath && (method === "converted" || method === "salesCase" || method === "appraisal")) {
     add("MB-8", "증여자가 상속·증여로 취득한 자산은 상속개시일(증여일) 현재 상증법 평가액이 취득 당시 실지거래가액입니다(「소득세법 시행령」 제163조 제9항) — 환산취득가액·매매사례가액·감정가액을 쓸 수 없습니다. 취득가액 산정방식을 「실지취득가액」으로 선택하세요.", ["burdenedGiftInfo", "acquisitionMethod"]);
   }
@@ -200,10 +209,13 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   if ((landT !== undefined && landT < DEEMED_ACQUISITION_TIME) || (bldT !== undefined && bldT < DEEMED_ACQUISITION_TIME)) {
     add("MB-16", "증여자의 토지 또는 건물 취득일이 1985.1.1. 전이면 의제취득일(1985.1.1.) 규정(「소득세법」 제97조 제2항 제1호나목, 같은 법 시행령 제176조의2 제4항)이 적용되는데 겸용주택 계산은 이를 반영하지 않아 계산하지 않습니다.", ["mixedUse", "landAcquisitionDate"]);
   }
-  // MB-18 — §163⑨ 단서 1·2호: 개별공시지가(1990.8.30.)·건물 기준시가 고시 전에 상속·증여받은 토지·건물은 평가액과 §164④·⑤~⑦ 가액 중 큰 금액이다. 겸용 deemed 경로는 이를 구현하지 않는다.
+  // MB-18 — §163⑨ 단서 1·2호: 개별공시지가(1990.8.30.)·건물 기준시가 고시 전에 상속·증여받은 토지·건물은 평가액과 §164④·⑤~⑦ 가액 중 큰 금액이다.
+  // 그 구간은 ④가 `sec163_9Compare`(era clause)를 실을 때 자산 합계 비교(`calcMixedSec163_9Compare` — PR-6 leaf)로 계산한다(PR-7b-7a-2).
+  // 비교 구간 표시 없이 오면(API 직접 호출) 평가액만으로 계산해 단서의 큰 금액을 놓치므로 계속 막는다(fail closed). 비교 후보 재계산은 통과한다.
   // 1985.1.1. 전은 MB-16이 이미 막는다(중복 메시지 방지). 기준시가 모드(K-1~3)는 §163⑨를 쓰지 않으므로 deemed 경로(시가 모드 × 상속·증여 취득)만 대상이다.
   const preDisclosure = (t: number | undefined) => t !== undefined && t >= DEEMED_ACQUISITION_TIME && t < SEC_163_9_PRE_DISCLOSURE_TIME;
-  if (deemedPath && (preDisclosure(landT) || preDisclosure(bldT))) {
+  const clauseCompare = src.sec163_9Compare?.era === "clause" || src.inheritedValuesAsIs === true;
+  if (deemedPath && (preDisclosure(landT) || preDisclosure(bldT)) && !clauseCompare) {
     add("MB-18", "증여자가 상속·증여로 취득한 토지 또는 건물의 취득일이 2005.4.30. 전이면 「소득세법 시행령」 제163조 제9항 단서 제1호·제2호(개별공시지가·건물 기준시가 고시 전 취득은 상속개시일·증여일 현재 평가액과 같은 영 제164조 제4항 또는 제5항부터 제7항까지의 가액 중 큰 금액)가 적용될 수 있는데 겸용주택 계산은 이를 반영하지 않아 계산하지 않습니다.", ["mixedUse", "landAcquisitionDate"]);
   }
 
@@ -246,19 +258,28 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   need(!!ts && pos(ts.housingPrice) && isHousingPriceAtTransferRequired({ usePhd: false }), "양도시 개별주택가격", ["mixedUse", "transferStandardPrice", "housingPrice"]);
   need(!!ts && pos(ts.landPricePerSqm), "양도시 개별공시지가", ["mixedUse", "transferStandardPrice", "landPricePerSqm"]);
   need(!!ts && pos(ts.commercialBuildingPrice), "양도시 상가건물 기준시가", ["mixedUse", "transferStandardPrice", "commercialBuildingPrice"]);
-  need(!!ts && (!isHousingBuildingStdAtTransferRequired({ usePhd: false }) || pos(ts.housingBuildingPrice)), "양도시 주택건물 기준시가(나목)", ["mixedUse", "transferStandardPrice", "housingBuildingPrice"]);
+  need(!!ts && (!isHousingBuildingStdAtTransferRequired({ usePhd: phd }) || pos(ts.housingBuildingPrice)), "양도시 주택건물 기준시가(나목)", ["mixedUse", "transferStandardPrice", "housingBuildingPrice"]);
+  // PHD — ④는 필수 값(최초 고시일·최초 고시 주택가격·시점별 공시지가)이 다 찼을 때만 PHD 입력을 싣는다. 없으면 §164⑦ 가액(②)을 만들 수 없다.
+  //   양도시 주택건물 기준시가(나목)는 PHD 패널 값이고 겸용 일반 양도처럼 선택이다(아래 분할은 표시용 토지:건물 몫에만 쓰인다 — 합계 불변).
+  const phdBuildingAtTransfer = src.preHousingDisclosure?.buildingStdPriceAtTransfer ?? 0;
+  if (phd) need(!!src.preHousingDisclosure, "개별주택가격 미공시 환산(§164⑦) 입력 — 최초 고시일·최초 고시 주택가격·최초 고시일과 취득시 토지 공시지가", ["mixedUse", "usePreHousingDisclosure"]);
   need(!!as && pos(as.landPricePerSqm), "취득시 개별공시지가(양도가액·취득가액의 4부분 안분 비율·개산공제 기준)", ["mixedUse", "acquisitionStandardPrice", "landPricePerSqm"]);
   need(!!as && pos(as.commercialBuildingPrice), "취득시 상가건물 기준시가", ["mixedUse", "acquisitionStandardPrice", "commercialBuildingPrice"]);
-  need(!!as && (!isHousingBuildingStdAtAcqRequired({ usePhd: false }) || pos(as.housingBuildingPrice)), "취득시 주택건물 기준시가(나목)", ["mixedUse", "acquisitionStandardPrice", "housingBuildingPrice"]);
+  need(!!as && (!isHousingBuildingStdAtAcqRequired({ usePhd: phd }) || pos(as.housingBuildingPrice)), "취득시 주택건물 기준시가(나목)", ["mixedUse", "acquisitionStandardPrice", "housingBuildingPrice"]);
   const acqHousing = as?.housingPrice;
-  if (isHousingPriceAtAcqRequired({ usePhd: false, byInheritanceOrGift: deemedPath })) {
+  if (isHousingPriceAtAcqRequired({ usePhd: phd, byInheritanceOrGift: deemedPath })) {
     need(pos(acqHousing), "취득시 개별주택가격", ["mixedUse", "acquisitionStandardPrice", "housingPrice"]);
+  }
+  // 단서 구간 비교(PHD 없음) — ② 후보의 주택분은 취득시 개별주택가격이다. 평가액(①)이 있어도 ② 후보 계산에 필요하다(없으면 비교가 멈춘다 · 리뷰 권고 PR-7b-7a-2).
+  //   2005.4.30. 전에는 개별주택가격이 공시되지 않았으므로 §164⑦ 환산(PHD)을 켜는 것이 정본 경로다 — 문구가 그쪽을 먼저 안내한다.
+  if (deemedPath && clauseCompare && src.inheritedValuesAsIs !== true && !phd && !pos(acqHousing)) {
+    add("MB-11", "겸용주택 부담부증여: 개별주택가격 공시 전에 상속·증여받은 주택분은 상속개시일·증여일 평가액과 §164 가액 중 큰 금액을 씁니다(소득세법 시행령 §163⑨ 단서 제2호) — 「주택 기준시가」의 개별주택가격 미공시(§164⑦) 토글을 켜고 환산 입력을 채우거나, 취득시 개별주택가격을 입력하세요.", ["mixedUse", "acquisitionStandardPrice", "housingPrice"]);
   }
   if (
     as && isBuildingDayLandPriceRequired({
       landDate: src.landAcquisitionDate as Date | string | undefined,
       buildingDate: src.buildingAcquisitionDate as Date | string | undefined,
-      usePhd: false,
+      usePhd: phd,
       housingPrice: acqHousing,
     })
   ) {
@@ -268,8 +289,17 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
     need(pos(info.marketValueAtTransfer), "양도시(증여일) 시가 평가액", ["burdenedGiftInfo", "marketValueAtTransfer"]);
     if (deemedPath) {
       // 상속·증여 취득은 K-4 고정(§163⑨) — 산정방식을 고르지 않는다(화면에 라디오가 없다 · PR-7b-7a). 고른 값이 실지가 아니면 위 MB-8이 막는다.
-      // reported 평가액을 보충적평가로 대신하지 않는다(자동 fallback 금지)
-      need(pos(src.housingInheritedValue) && pos(src.commercialInheritedValue), "증여자가 상속·증여받은 때의 주택분·상가분 상증법 평가액", ["mixedUse", "housingInheritedValue"]);
+      // 단서 구간·PHD는 ②(§164 가액)가 있어 평가액이 선택이다 — 두 칸 모두 입력하거나 모두 비운다(PR-6 Q-19 · PR-7b-7a-2). 비교 후보 재계산은 보지 않는다.
+      // 그 밖(본문)은 평가액이 유일한 취득가액이라 두 칸 필수 — reported 평가액을 보충적평가로 대신하지 않는다(자동 fallback 금지)
+      const h = pos(src.housingInheritedValue);
+      const c = pos(src.commercialInheritedValue);
+      if (src.inheritedValuesAsIs === true) {
+        // 비교 후보 — 후보별로 평가액을 비워 다시 계산한다
+      } else if (phd || clauseCompare) {
+        if (h !== c) add("MB-11", "겸용주택 부담부증여: 증여자가 상속·증여받은 때의 주택분·상가분 상증법 평가액은 두 칸 모두 입력하거나 모두 비워야 합니다(소득세법 시행령 §163⑨).", ["mixedUse", "housingInheritedValue"]);
+      } else {
+        need(h && c, "증여자가 상속·증여받은 때의 주택분·상가분 상증법 평가액", ["mixedUse", "housingInheritedValue"]);
+      }
     } else if (!method) {
       add("MB-11", "겸용주택 부담부증여 시가 모드: 취득가액 산정방식(실지취득가액·매매사례가액·감정가액·환산취득가액)을 선택하세요.", ["burdenedGiftInfo", "acquisitionMethod"]);
     } else if (method === "actual") {
@@ -282,7 +312,7 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
 
   // 기하·평가 계산에 필요한 값이 없으면 여기서 멈춘다(위 이슈만 보고)
   const geometryReady =
-    !!ts && pos(ts.housingPrice) && pos(ts.landPricePerSqm) && pos(ts.commercialBuildingPrice) && pos(ts.housingBuildingPrice) &&
+    !!ts && pos(ts.housingPrice) && pos(ts.landPricePerSqm) && pos(ts.commercialBuildingPrice) && (phd ? !!src.preHousingDisclosure : pos(ts.housingBuildingPrice)) &&
     (!isMarket || pos(info.marketValueAtTransfer)) && B > 0;
   if (!geometryReady) return { issues };
 
@@ -291,7 +321,7 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   const tSplit = splitMixedUseHousingStd({
     housingTotal: ts!.housingPrice,
     landStd: multiplyByArea(ts!.landPricePerSqm, derived.residentialLandArea),
-    buildingStd: ts!.housingBuildingPrice as number,
+    buildingStd: phd ? phdBuildingAtTransfer : (ts!.housingBuildingPrice as number),
   });
   const transferStd = {
     hl: tSplit.landBasis,

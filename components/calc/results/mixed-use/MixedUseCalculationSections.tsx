@@ -217,7 +217,7 @@ export function MixedUseCalculationSections({
       {breakdown.expropriationDetail && (
         <MixedUseExpropriationValuationCard detail={breakdown.expropriationDetail} />
       )}
-      {sec163_9 && <MixedSec163_9ComparisonCard cmp={sec163_9} />}
+      {sec163_9 && <MixedSec163_9ComparisonCard cmp={sec163_9} burdenedGift={!!bg} />}
       {/* 경고 — 🔴 종전에는 겸용만 자체 마크업이라 공용 카드의 「확인이 필요한 사항」 제목과
              다크모드 색이 없었다. 나머지 세 결과뷰는 모두 이 leaf를 쓴다 (#086). */}
       <CalculationWarningsCard warnings={breakdown.warnings} />

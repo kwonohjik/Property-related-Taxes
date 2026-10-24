@@ -33,6 +33,11 @@ export interface MixedUseBurdenedGiftPart {
   /** 단서(나목) 채택 전 환산취득가액 — 표시용 */
   acquisitionBeforeSwap?: number;
   /**
+   * 채무비율(`B_side'/C_side`)을 곱하기 전 취득가액 — 증여자 상속·증여 취득(소령 §163⑨ 평가액·§164 가액)에서만 있다.
+   * §163⑨ 단서 자산 합계 비교(`calcMixedSec163_9Compare`)가 이 값의 합계로 후보를 비교한다(사용자 결정 Q-36 · PR-7b-7a-2).
+   */
+  acquisitionBeforeRatio?: number;
+  /**
    * 이 부분이 속한 쪽(주택/상가)이 양도로 보는 채무액을 가졌는가(`B_side' > 0`). false면 위 금액은 전부 0이다.
    * 세법상 분류(비과세/과세)가 아니라 «양도 여부»다 — 비과세여도 양도했으면 true.
    */
@@ -86,4 +91,9 @@ export type MixedUseBurdenedGiftBreakdown = Omit<
    * `acquisitionMethodUsed`는 "actual"(실지거래가액 경로)이고, 결과뷰는 이 값으로 「실지취득가액」 대신 평가액이라고 적는다. 그 밖에는 없다.
    */
   deemedCause?: "inheritance" | "gift";
+  /**
+   * `deemedCause`가 있을 때 주택분·상가분 취득가액(채무비율 전)이 무엇으로 정해졌는가 — 결과 라벨용(PR-7b-7a-2).
+   * reported = 상속개시일·증여일 평가액(①) · standard = §164 가액(②: 주택분은 PHD면 §164⑦ 환산가액, 아니면 취득시 개별주택가격 · 상가분은 취득시 토지 + 건물 기준시가).
+   */
+  deemedBasis?: { housing: "reported" | "standard"; commercial: "reported" | "standard"; housingPhd: boolean };
 };

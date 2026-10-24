@@ -310,3 +310,4 @@ export function canEarlyReturnPrhp(effectiveInput: TransferTaxInput): boolean {
 - **별건(착수 안 함):** 계산기 D12(`revokeExemptionOnRentalCompositionExceeded`)는 A의 세대 구성 불성립이면 §155⑳ 호별 요건 성립 여부와 무관하게 비과세를 거둔다.
   - 호별 불성립이면 임대주택은 일반 주택이므로, 판정 엔진이 그 주택을 센 비과세(예: §155② + ① 중첩)까지 거두는 것이 맞는지는 별도 확인이 필요하다.
   - 이번 변경은 계산기와 같은 규칙(구성 불성립 → 거둠)을 유지했다.
+  - → 2026-10-24 검토 결과 과다 회수로 확인(⑳ 성립 + 구성 불성립 포함 · 15억 14,124,000 → 282,711,000). 수정 계획서 `rental-155-20-composition-revoke.plan.md`.

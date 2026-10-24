@@ -214,17 +214,20 @@ describe("함께 양도 일반건물 — 산식이 단건과 같다", () => {
 
 describe("Q-2 상속(§163⑨) 파트 취득가액 산식 — 거짓 등식 해소", () => {
   const LABEL = (v: string) => `자산별 취득가액 = ${v} (상속개시일 평가액 — 소득세법 시행령 §163⑨)`;
+  // 1988 상속 건물 — 평가액 1억 < 영 §164⑤ 가액 1.5억이라 §163⑨ 단서 2호의 가액이다(2026-10-24 근거 표기 정정 · `gb-sec163-9-basis-label` anchor).
+  const BLD_SEC164 = (v: string) =>
+    `자산별 취득가액 = ${v} (상속개시일 평가액보다 많은 소득세법 시행령 §164⑤ 가액 — 같은 영 §163⑨ 단서 2호)`;
   it("🔴 단건 · 분리 OFF 전부 상속 → 평가액 그대로(종전 「0 × 1,130,370,000 / (…) = 300,000,000」)", async () => {
     const r = await run(form(T, [asset(1, INH)]));
     expect(r.tax).toBe(301_110_000);
     expect(r.formulas.land.acq).toBe(LABEL("300,000,000"));
-    expect(r.formulas.building.acq).toBe(LABEL("150,000,000"));
+    expect(r.formulas.building.acq).toBe(BLD_SEC164("150,000,000"));
   });
 
   it("단건 · 분리 ON 전부 상속도 같다", async () => {
     const r = await run(form(T, [asset(1, INH, { hasSeperateLandAcquisitionDate: true })]));
     expect(r.formulas.land.acq).toBe(LABEL("300,000,000"));
-    expect(r.formulas.building.acq).toBe(LABEL("150,000,000"));
+    expect(r.formulas.building.acq).toBe(BLD_SEC164("150,000,000"));
   });
 
   it("함께 양도 상속 일반건물 + 토지 → 같은 문구 · 결정세액 366,630,000 불변", async () => {

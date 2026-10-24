@@ -449,4 +449,20 @@ test.describe("일반건물 — 실가 파트 거짓 등식 제거 · 일괄 실
     expect(acqText).not.toContain("잔액 보정");
     expect(await stmtValue(page, "취득가액")).toBe(700_000_000);
   });
+
+  test("G4: 토지 상속 + 건물 매매(실가) — 상속 토지는 「상속개시일 평가액 — §163⑨」(종전 「실거래가 — §97①1호 가목」)", async ({ page }) => {
+    test.setTimeout(150_000);
+    await seedWizard(
+      page,
+      gbSeed({
+        acquisitionCause: "inheritance", decedentAcquisitionDate: "1990-01-01", publishedValueAtInheritance: "300000000",
+        landAcqMode: "actual", buildingAcqMode: "actual", buildingAcquisitionPrice: "400000000",
+      }),
+    );
+    await calculate(page);
+    const acqText = await stmtText(page, "취득가액");
+    expect(acqText).toContain("자산별 취득가액 = 300,000,000 (상속개시일 평가액 — 소득세법 시행령 §163⑨)");
+    expect(acqText).toContain("자산별 취득가액 = 400,000,000 (실거래가 — 소득세법 §97①1호 가목)");
+    expect(acqText).not.toContain("300,000,000 (실거래가");
+  });
 });

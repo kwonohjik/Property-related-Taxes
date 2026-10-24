@@ -81,6 +81,8 @@ export function applyMixedBurdenedGift(args: {
   est: { housing: HousingGainSplit; commercial: CommercialGainSplit };
   /** 공통 경비 split(`swapToDirect=true`) — K-5 + 실비 선언일 때만 호출된다 */
   expThunk: () => { housing: HousingGainSplit; commercial: CommercialGainSplit };
+  /** 주택분 상속·증여 취득가액이 평가액(reported)·§164 가액(standard_price) 중 무엇인가 — 결과 라벨 echo(`deemedBasis`)용 */
+  housingDeemedSelected?: "reported" | "standard_price";
 }): MixedBgApplied {
   const { asset, bg, transferDate, est } = args;
   const sideOf = (k: MixedUsePartKey) => (k.startsWith("housing") ? "housing" : "commercial") as "housing" | "commercial";
@@ -208,6 +210,7 @@ export function applyMixedBurdenedGift(args: {
       ...(lumpRate !== undefined ? { estimatedDeductionRate: lumpRate } : {}),
       acquisitionMethod: method,
       ...(beforeSwap[k] !== undefined ? { acquisitionBeforeSwap: beforeSwap[k] } : {}),
+      ...(bg.acqPath === "deemed" ? { acquisitionBeforeRatio: g(k).acq } : {}),
       transferred: num[s] > 0,
     };
   }
@@ -229,7 +232,16 @@ export function applyMixedBurdenedGift(args: {
     gratuitousPortion,
     taxpayer: "donor",
     acquisitionMethodUsed: method,
-    ...(bg.acqPath === "deemed" ? { deemedCause: bg.assetOverrides.acquisitionByGift ? ("gift" as const) : ("inheritance" as const) } : {}),
+    ...(bg.acqPath === "deemed"
+      ? {
+          deemedCause: bg.assetOverrides.acquisitionByGift ? ("gift" as const) : ("inheritance" as const),
+          deemedBasis: {
+            housing: args.housingDeemedSelected === "standard_price" ? ("standard" as const) : ("reported" as const),
+            commercial: est.commercial.inheritedAcquisitionDetail?.selected === "standard_price" ? ("standard" as const) : ("reported" as const),
+            housingPhd: asset.usePreHousingDisclosure === true,
+          },
+        }
+      : {}),
     ...(proviso ? { necessaryExpenseSwap: proviso } : {}),
     giftTax,
     perPart,

@@ -28,7 +28,8 @@ export function mixedSec163_9PartFormula(cmp: MixedSec163_9Comparison, side: "ho
   return `자산 합계 비교에서 ${mixedSec163_9CandidateLabel(cmp, cmp.selected)} 채택 — ${part} ${formatKRW(value)} (소득세법 시행령 §163⑨)`;
 }
 
-export function MixedSec163_9ComparisonCard({ cmp }: { cmp: MixedSec163_9Comparison }) {
+/** `burdenedGift` — 겸용 부담부증여(소령 §159): 후보 금액은 채무비율을 곱하기 전이다(사용자 결정 Q-36 · PR-7b-7a-2). */
+export function MixedSec163_9ComparisonCard({ cmp, burdenedGift }: { cmp: MixedSec163_9Comparison; burdenedGift?: boolean }) {
   const rows: { key: Key; v: MixedSec163_9Comparison["reported"] }[] = [
     { key: "reported", v: cmp.reported },
     { key: "standard", v: cmp.standard },
@@ -81,6 +82,11 @@ export function MixedSec163_9ComparisonCard({ cmp }: { cmp: MixedSec163_9Compari
           「③ + 개산공제」보다 크면 그 금액을 씁니다(소득세법 §97②2호 단서).
           {cmp.commercialOutsideClause && " 상가분은 건물 기준시가 고시(2001.1.1.) 뒤 취득이라 §163⑨ 단서 밖이어서 ①·② 후보 모두 신고가액(없으면 보충적 평가)을 씁니다."}
         </p>
+        {burdenedGift && (
+          <p className="text-xs text-violet-800 dark:text-violet-200" data-testid="mixed-sec163-9-bg-note">
+            부담부증여 — 위 금액은 채무비율을 곱하기 전 취득가액입니다. 채택된 후보의 주택분·상가분에 각각 그 쪽 채무비율을 곱합니다(소득세법 시행령 §159①1호).
+          </p>
+        )}
         {cmp.uncomparedReason && (
           <p className="text-xs text-violet-800 dark:text-violet-200">{cmp.uncomparedReason}</p>
         )}

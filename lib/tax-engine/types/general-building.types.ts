@@ -410,6 +410,9 @@ export type GeneralBuildingInput = {
    */
   acquisitionByInheritance?: boolean;
   buildingAcquisitionByInheritance?: boolean;
+  /** §163⑨ 상속·증여 파트 취득가액의 근거 — 표시 전용 echo(④가 정하고 실가 파트 카드로 되돌린다 · 세액 무관). */
+  landSec1639Basis?: GbSec1639Basis;
+  buildingSec1639Basis?: GbSec1639Basis;
 };
 
 /** 양도가 안분 결과 */
@@ -565,6 +568,12 @@ export type AssetCardForAggregate = {
    * `bundledActualAcquisitionPrice > 0`으로 가르면 숨은 자산 단위 총액이 폼에 남아 있을 때(실거래가/실거래가 + stale) 틀린다.
    */
   actualSource?: "part_input" | "bundled_apportion" | "inherited";
+  /**
+   * 실가 파트가 §163⑨ 상속·증여 파트면 그 취득가액의 근거(표시 전용 — 산식·값 불변). `actualSource`만으로는 부분 상속·증여 파트가
+   * `part_input`(「실거래가」)으로 적히고, C1 `inherited`는 단서 ②(영 §164 가액)가 채택돼도 「상속개시일 평가액」으로 적혔다.
+   * 구 `resultData`는 없다 — 소비처는 `undefined`면 `actualSource` 표시를 유지한다.
+   */
+  sec1639Basis?: GbSec1639Basis;
   /**
    * 건물 카드에만 set. 토지 카드는 undefined.
    * `propertyType === "general_building_unit"` 카드에만 의미 있음.
@@ -754,6 +763,15 @@ export interface GbPreDeemedClauseA {
   reported: number;
   /** ② 영 §164④(토지)·⑤(건물) 가액 */
   sec164: number;
+}
+
+/**
+ * §163⑨ 상속·증여 파트 취득가액의 근거 — 「소득세법 시행령」 §163⑨ 본문(상속개시일·증여일 평가액을 실지거래가액으로 본다)인가,
+ * 단서 1호(토지 — 영 §164④ 가액)·2호(건물 — 영 §164⑤ 가액)로 그 가액이 더 많아 그것을 썼는가. 동점은 본문(①)이다.
+ */
+export interface GbSec1639Basis {
+  cause: "inheritance" | "gift";
+  adopted: "reported" | "sec164";
 }
 
 /** 파트별 세 후보와 채택 — 동점은 ①② 쪽(Q-5). */

@@ -202,11 +202,12 @@ describe("PR-7b-7a-1 · 겸용 부담부증여 × 증여자 상속·증여 취�
     expect(p.tax).toBe(60_939_200);
   });
 
-  it("[S-7] 1995 상속 · 시가 — §163⑨ 단서 구간은 계속 막는다(MB-18 · PR-7b-7a-2) · ⑧ 취득일 칸 · API 400", async () => {
+  it("[S-7] 1995 상속 · 시가 — 종전 MB-18 차단 → PR-7b-7a-2부터 §163⑨ 단서 자산 합계 비교(① 7억 > ② 6억 → ①) · 64,230,000", async () => {
     const r = await run(form({ ...INH, ...Y1995 }));
-    expect(r.issues[0]?.field).toBe("acquisitionDate");
-    expect(r.issues[0]?.message).toMatch(/제163조 제9항 단서/);
-    expect(r.status).toBe(400);
+    expect(r.issues).toEqual([]);
+    expect(r.status).toBe(200);
+    expect(r.body.mixedUse.sec163_9Compare).toEqual({ era: "clause", cause: "inheritance" });
+    expect(r.tax).toBe(64_230_000);
   });
 
   it("[S-8] 1995 상속 · 기준시가 — 단서와 무관(§159①1호 괄호) → 200 · 56,516,000", async () => {
