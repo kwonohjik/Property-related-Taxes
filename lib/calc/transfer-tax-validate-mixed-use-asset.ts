@@ -200,40 +200,8 @@ export function validateMixedUseAsset(
   // PHD 전용 검증 (취득시 면적 자동 계산 — acquisitionArea 불필요)
   // B1 — 파트 모델은 **실효 PHD**(환산 파트가 있을 때만)로 판정한다. 환산 파트가 없으면 ④가 PHD를 보내지 않으므로 요구하지 않는다.
   if (mixedUsePhdEffective(asset)) {
-    if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일을 입력하세요.`);
-    // §164⑦ 게이트 — 취득일(의제취득일 1985-01-01 반영) ≥ 최초고시일이면 취득당시 고시분 존재 → 3-시점 환산 대상 아님
-    if (!isPhdEligible(asset.acquisitionDate, asset.phdFirstDisclosureDate))
-      return fieldError("phdFirstDisclosureDate", `${label}: 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 3-시점 환산을 끄고 취득시 기준시가를 직접 입력하세요.`);
-    if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
-      return fieldError("phdFirstDisclosureHousingPrice", `${label}: 최초 고시 개별주택가격을 입력하세요.`);
-    // ④(`transfer-tax-api-mixed-use.ts`)는 아래 두 값이 없으면 PHD 객체를 빼고 보낸다 — 그러면 주택분
-    // 취득가액이 조용히 0이 되면서 결과는 PHD 경로로 표시됐다(2026-09-30).
-    if (parseAmount(asset.phdLandPricePerSqmAtFirst) <= 0)
-      return fieldError("phdLandPricePerSqmAtFirst", `${label}: 최초공시일 토지 단위 공시지가를 입력하세요.`);
-    if (mixedAcqLandPricePerSqm(asset, formTransferDate ?? "") <= 0)
-      return fieldError("phdLandPricePerSqmAtAcq", `${label}: 취득시 토지 단위 공시지가를 입력하세요. (1990.8.30. 이전 취득이면 토지등급가액 환산을 켜고 등급을 입력하세요 — 소득세법 시행령 §164④)`);
-    // ⑧ Validation fallback — API는 phdTransferHousingPrice || mixedTransferHousingPrice 로 fallback.
-    // 메인 양도시 섹션에서 입력한 값(mixedTransferHousingPrice)도 인정.
-    const transferHousingValue =
-      parseAmount(asset.phdTransferHousingPrice) ||
-      parseAmount(asset.mixedTransferHousingPrice);
-    if (transferHousingValue <= 0)
-      return fieldError("mixedTransferHousingPrice", `${label}: 양도시 개별주택가격을 입력하세요. (양도시 기준시가 섹션)`);
-    // Case A 4부분 안분 — house_to_commercial + 최초공시일 < 용도변경일 시 상가건물 기준시가 별도 입력 필수
-    // 판정은 정본 헬퍼 하나뿐이다 — 종전에는 ⑤ Legacy·⑧·④가 각자 표현식을 갖고 있었다.
-    if (isMixedUseCaseA(asset)) {
-      // ⑧ Validation fallback — API는 phdCommercialBuildingStdPriceAtAcq || mixedAcqCommercialBuildingPrice fallback.
-      // 메인 취득시 상가건물 기준시가도 인정 (UI 통합으로 단일 필드 공유).
-      const acqCommercialBuildingValue =
-        parseAmount(asset.phdCommercialBuildingStdPriceAtAcq) ||
-        parseAmount(asset.mixedAcqCommercialBuildingPrice);
-      if (acqCommercialBuildingValue <= 0) {
-        return fieldError("mixedAcqCommercialBuildingPrice", `${label}: Case A 4부분 안분 — 취득시 상가건물 기준시가를 입력하세요. (홈택스 조회)`);
-      }
-      if (!asset.phdCommercialBuildingStdPriceAtFirst || parseAmount(asset.phdCommercialBuildingStdPriceAtFirst) <= 0) {
-        return fieldError("phdCommercialBuildingStdPriceAtFirst", `${label}: Case A 4부분 안분 — 최초고시 상가건물 기준시가를 입력하세요. (홈택스 조회)`);
-      }
-    }
+    const phdErr = mixedUsePhdFieldError(asset, label, formTransferDate);
+    if (phdErr) return phdErr;
   }
   // 보유 중 일부 용도변경 검증 (시행령 §166⑥ + 집행기준 99-164-10)
   if (asset.hasPartialUsageChange) {
@@ -288,6 +256,48 @@ export function validateMixedUseAsset(
       }
     }
     // PHD 강제 변경 금지 (이슈 5) — 사용자 직전 상태 보존, 경고만 결과 카드에 표시
+  }
+  return null;
+}
+
+/**
+ * PHD(§164⑦ 3-시점 환산) 입력 칸 검증 — 겸용 일반 양도와 겸용 부담부증여(상속·증여 취득 · PR-7b-7a-2)가 같이 쓴다.
+ * ④(`buildMixedUsePayload`)는 필수 값이 다 찼을 때만 PHD 입력을 싣는다 — 빠지면 주택분 §164⑦ 가액을 만들 수 없다.
+ */
+export function mixedUsePhdFieldError(asset: AssetForm, label: string, formTransferDate: string | undefined): string | null {
+  if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일을 입력하세요.`);
+  // §164⑦ 게이트 — 취득일(의제취득일 1985-01-01 반영) ≥ 최초고시일이면 취득당시 고시분 존재 → 3-시점 환산 대상 아님
+  if (!isPhdEligible(asset.acquisitionDate, asset.phdFirstDisclosureDate))
+    return fieldError("phdFirstDisclosureDate", `${label}: 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 3-시점 환산을 끄고 취득시 기준시가를 직접 입력하세요.`);
+  if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
+    return fieldError("phdFirstDisclosureHousingPrice", `${label}: 최초 고시 개별주택가격을 입력하세요.`);
+  // ④(`transfer-tax-api-mixed-use.ts`)는 아래 두 값이 없으면 PHD 객체를 빼고 보낸다 — 그러면 주택분
+  // 취득가액이 조용히 0이 되면서 결과는 PHD 경로로 표시됐다(2026-09-30).
+  if (parseAmount(asset.phdLandPricePerSqmAtFirst) <= 0)
+    return fieldError("phdLandPricePerSqmAtFirst", `${label}: 최초공시일 토지 단위 공시지가를 입력하세요.`);
+  if (mixedAcqLandPricePerSqm(asset, formTransferDate ?? "") <= 0)
+    return fieldError("phdLandPricePerSqmAtAcq", `${label}: 취득시 토지 단위 공시지가를 입력하세요. (1990.8.30. 이전 취득이면 토지등급가액 환산을 켜고 등급을 입력하세요 — 소득세법 시행령 §164④)`);
+  // ⑧ Validation fallback — API는 phdTransferHousingPrice || mixedTransferHousingPrice 로 fallback.
+  // 메인 양도시 섹션에서 입력한 값(mixedTransferHousingPrice)도 인정.
+  const transferHousingValue =
+    parseAmount(asset.phdTransferHousingPrice) ||
+    parseAmount(asset.mixedTransferHousingPrice);
+  if (transferHousingValue <= 0)
+    return fieldError("mixedTransferHousingPrice", `${label}: 양도시 개별주택가격을 입력하세요. (양도시 기준시가 섹션)`);
+  // Case A 4부분 안분 — house_to_commercial + 최초공시일 < 용도변경일 시 상가건물 기준시가 별도 입력 필수
+  // 판정은 정본 헬퍼 하나뿐이다 — 종전에는 ⑤ Legacy·⑧·④가 각자 표현식을 갖고 있었다.
+  if (isMixedUseCaseA(asset)) {
+    // ⑧ Validation fallback — API는 phdCommercialBuildingStdPriceAtAcq || mixedAcqCommercialBuildingPrice fallback.
+    // 메인 취득시 상가건물 기준시가도 인정 (UI 통합으로 단일 필드 공유).
+    const acqCommercialBuildingValue =
+      parseAmount(asset.phdCommercialBuildingStdPriceAtAcq) ||
+      parseAmount(asset.mixedAcqCommercialBuildingPrice);
+    if (acqCommercialBuildingValue <= 0) {
+      return fieldError("mixedAcqCommercialBuildingPrice", `${label}: Case A 4부분 안분 — 취득시 상가건물 기준시가를 입력하세요. (홈택스 조회)`);
+    }
+    if (!asset.phdCommercialBuildingStdPriceAtFirst || parseAmount(asset.phdCommercialBuildingStdPriceAtFirst) <= 0) {
+      return fieldError("phdCommercialBuildingStdPriceAtFirst", `${label}: Case A 4부분 안분 — 최초고시 상가건물 기준시가를 입력하세요. (홈택스 조회)`);
+    }
   }
   return null;
 }

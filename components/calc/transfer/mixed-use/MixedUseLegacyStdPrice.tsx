@@ -20,6 +20,7 @@ import { MixedUseAcqHousingLandPriceField } from "./MixedUseAcqHousingLandPriceF
 import { MixedUseHousingBuildingStdField } from "./MixedUseHousingBuildingStdField";
 import { isMixedAcqDatesSeparate } from "@/lib/calc/mixed-use-acq-date-split";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { isMixedBgDeemedPath } from "@/lib/calc/burdened-gift-mixed-use-scope";
 
 interface Props {
   asset: AssetForm;
@@ -143,7 +144,7 @@ export function MixedUseLegacyStdPrice({
           size="sm"
           data-field="usePreHousingDisclosure"
           // 겸용 × 부담부증여는 PHD와 함께 계산하지 않는다(엔진 MB-2) — 켜는 쪽만 막고 이미 켜져 있으면 끌 수 있다.
-          disabled={isMixedBurdenedGift(asset) && !asset.usePreHousingDisclosure}
+          disabled={isMixedBurdenedGift(asset) && !isMixedBgDeemedPath(asset) && !asset.usePreHousingDisclosure}
           disabledReason="겸용주택 부담부증여는 개별주택가격 미공시 환산(§164⑦)과 함께 계산할 수 없습니다"
           title="취득 당시 개별주택가격 미공시 (§164⑦ 3-시점 환산)"
           description={

@@ -85,8 +85,14 @@ export function calcMixedUseTransferTax(
   amendment?: AmendmentInput,
 ): MixedUseGainBreakdown {
   const core = (a: MixedUseAssetInput) => calcMixedUseCore(transferPriceInput, transferDate, a, rates, amendment);
-  // §163⑨ 단서 자산 합계 비교(PR-6) — 후보마다 아래 본문을 다시 부른다. 부담부증여(§159)·2022 전 양도(거부)는 비교하지 않는다.
-  if (assetInput.sec163_9Compare && !assetInput.burdenedGift && isMixedUseSplitTransfer(transferDate)) {
+  // §163⑨ 단서 자산 합계 비교(PR-6) — 후보마다 아래 본문을 다시 부른다. 2022 전 양도(거부)는 비교하지 않는다.
+  // 부담부증여(§159)는 단서 구간(clause)만 — 후보를 채무비율 곱하기 전 금액으로 비교하고 이긴 후보의 결과(부분별 채무비율 적용)를 쓴다(PR-7b-7a-2 · Q-36).
+  //   의제취득일 전(pre_deemed)은 prepare의 MB-16이 막는다(PR-7b-7b).
+  if (
+    assetInput.sec163_9Compare &&
+    (!assetInput.burdenedGift || assetInput.sec163_9Compare.era === "clause") &&
+    isMixedUseSplitTransfer(transferDate)
+  ) {
     return calcMixedSec163_9Compare(assetInput, core);
   }
   return core(assetInput);
@@ -424,6 +430,7 @@ function calcMixedUseCore(
         housing: calcHousingGainSplit(apportionment.housingTransferPrice, housingAcqResult, asset, derived, transferDate, acqDerived, true),
         commercial: calcCommercialGainSplit(apportionment.commercialTransferPrice, asset, derived, transferDate, acqDerived, housingAcqResult, undefined, true),
       }),
+      housingDeemedSelected: housingAcqResult.inheritedAcquisitionDetail?.selected,
     });
     housingGainSplit = bgApplied.housing;
     commercialGainSplit = bgApplied.commercial;

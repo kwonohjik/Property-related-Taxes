@@ -41,6 +41,7 @@ export function FilingFormTable({
       transferBurdenedGiftBreakdown?: {
         acquisitionMethodUsed?: TransferBurdenedGiftAcquisitionMethodUsed;
         deemedCause?: "inheritance" | "gift";
+        deemedBasis?: { housing: "reported" | "standard"; commercial: "reported" | "standard" };
         preDeemed?: { basis: "deemed_std" | "three_way" | "three_way_parts" };
         cards?: unknown[];
       };
@@ -63,7 +64,9 @@ export function FilingFormTable({
       : preDeemedBasis === "deemed_std"
         ? "의제취득일(1985.1.1.) 기준시가 × 채무비율"
         : burdenedGiftBreakdown?.deemedCause
-          ? `${burdenedGiftBreakdown.deemedCause === "gift" ? "증여일" : "상속개시일"} 평가액(주택분·상가분) × 주택·상가별 채무비율`
+          ? burdenedGiftBreakdown.deemedBasis && (burdenedGiftBreakdown.deemedBasis.housing === "standard" || burdenedGiftBreakdown.deemedBasis.commercial === "standard")
+            ? "주택분·상가분 취득가액(소득세법 시행령 §163⑨ — 평가액 또는 §164 기준시가) × 주택·상가별 채무비율 — 부담부증여 명세 참조"
+            : `${burdenedGiftBreakdown.deemedCause === "gift" ? "증여일" : "상속개시일"} 평가액(주택분·상가분) × 주택·상가별 채무비율`
         : burdenedGiftBreakdown?.acquisitionMethodUsed === "actual"
       ? "실지취득가액 × 채무비율"
       : burdenedGiftBreakdown?.acquisitionMethodUsed === "converted"
