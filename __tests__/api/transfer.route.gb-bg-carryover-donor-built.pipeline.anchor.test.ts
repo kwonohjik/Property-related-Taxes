@@ -131,7 +131,7 @@ describe("PL-1 폼 → body → route", () => {
 describe("PL-2 범위 밖 stale 토글 — 보내지도 요구하지도 않는다", () => {
   it("술어: K-5 만 · 건물 본인 신축 아님 · 이월과세 · 부담부증여", () => {
     expect(donorBuiltBgApplicable(gbAsset())).toBe(true);
-    expect(donorBuiltBgApplicable(gbAsset({ bgAcquisitionMethod: "appraisal" }))).toBe(false); // K-7 은 아직 열지 않는다(F27 시나리오 B 별건)
+    expect(donorBuiltBgApplicable(gbAsset({ bgAcquisitionMethod: "appraisal" }))).toBe(false); // K-7 은 아직 열지 않는다(PR-2 — `gb-bg-carryover-presumed-scenario-b.plan.md`)
     expect(donorBuiltBgApplicable(gbAsset({ bgAcquisitionMethod: "salesCase" }))).toBe(false);
     expect(donorBuiltBgApplicable(gbAsset({ bgAcquisitionMethod: "actual" }))).toBe(false);
     expect(donorBuiltBgApplicable(gbAsset({ gbBuildingAcquisitionCause: "newConstruction" }))).toBe(false);

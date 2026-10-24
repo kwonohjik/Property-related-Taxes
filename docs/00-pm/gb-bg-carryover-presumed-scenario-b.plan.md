@@ -126,3 +126,13 @@ F27이 싣는 `aggregated.burdenedGiftCarryoverDetail`(채택 시나리오·A/B 
 - 법령 근거는 새로 세우지 않는다 — B의 K-6/K-7 처리(소령 §163⑨ 증여일 평가액 = 실지거래가액)와 A의 §97의2①1호 치환은 단건 엔진에 이미 있는 판단을 일반건물에 맞추는 것이다(`transfer-tax-carryover-burdened-gift.ts:240-258` · `general-building-route-carryover.ts` 헤더 주석의 조문 검토).
 - PR-5c 기록의 「576셀 전부 400」은 PR-5c 격자 수치다 — 이번에 다시 세지 않았다(대표 시료 S1·S2·S3·S5·S7로 재현).
 - 실측 probe는 scratchpad의 일회성 테스트였다(저장소에 남기지 않음).
+
+## 8. PR-1 구현 기록 (2026-10-24)
+
+브랜치 `fix/gb-bg-carryover-presumed-scenario-b`(계획서 브랜치 2f60386f7에서 분기).
+
+- route `general-building-route-carryover.ts` — B 호출에 `toTransferorBasisInfo(info)`(단건 `buildInputB`와 같은 leaf). §3.1 그대로.
+- 낡은 주석 4곳 정정(「시나리오 B 가 아직 400」): `donor-built-bg-scope.ts` · `transfer-tax-schema-donor-built.ts` · PR-5c anchor 2파일 — K-7 증여자 신축 개방은 여전히 PR-2.
+- anchor `__tests__/api/transfer.route.gb-bg-carryover-presumed-scenario-b.anchor.test.ts` 10건(폼 → ④ → ⑧ → ⑫ → route): K-7 · K-6 · 증여세 B 채택 · 구별력 2(A=당초 증여자 값 · B=증여일 평가액 — 토지 2억이면 B 99,000,000) · 대조 등식 2 · K-5 불변 · ⑧↔⑫ 미입력 2. 수정 前 7 red · 3 green(K-5 회귀·⑧↔⑫ 대조).
+- 뮤테이션 3/3 KILLED: B leaf 제거 · A에도 leaf 적용 · 채택 부등호 반전.
+- E2E `e2e/gb-bg-carryover-presumed-scenario-b.spec.ts` GBPB-E1(감정가액)·E2(매매사례가액) — 화면에 「당초 증여자의 … 입력」 카드·토지·건물 칸이 있고, 계산하면 신고서에 82,627,700. 수정 前 코드에서 결과 화면이 뜨지 않음(60초 타임아웃) 확인. 회귀: 일반건물 부담부증여·이월과세 E2E 45 passed.
