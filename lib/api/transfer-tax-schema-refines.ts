@@ -11,6 +11,7 @@ import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
 import { refineMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refines";
+import { refineMixedUseInheritedSplitDate } from "./transfer-tax-schema-mixed-bg-refines";
 import { refineDonorBuiltOuter, type DonorBuiltWire } from "./transfer-tax-schema-donor-built";
 import { refineSelfBuiltHousing, isSeparatedLike } from "./transfer-tax-schema-self-built-housing";
 /**
@@ -316,6 +317,8 @@ export function addPropertyRefines(
   }
   // 겸용주택 × 부담부증여 (소령 §159) — 판정은 엔진 leaf 하나(MB-1~MB-18). ⑧·엔진 throw와 같은 함수다.
   refineMixedUseBurdenedGift(data, ctx);
+  // 겸용 상속·증여 × 토지·건물 취득일 중 한쪽만 1985.1.1. 전 — 일반 양도(부담부증여는 위 collector)
+  refineMixedUseInheritedSplitDate(data, ctx);
   // 이월과세 × 증여자 신축·증축(§114조의2) — 자산 종류·취득원인 의존 규칙(서브객체 수준 규칙은 shape 가 한다)
   refineDonorBuiltOuter(data, ctx);
   // 일체 주택 본인 신축 × 건물분 가산세 입력(Q-12) — 단건·다건 공용(컴패니언은 `transfer-tax-schema.ts` 루프)

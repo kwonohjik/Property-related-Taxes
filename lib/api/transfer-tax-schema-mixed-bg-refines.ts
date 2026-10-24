@@ -7,6 +7,8 @@
 import { z } from "zod";
 import { collectMixedBurdenedGiftIssues, type MixedBgSource } from "@/lib/tax-engine/mixed-use-burdened-gift-prepare";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import { isMixedInheritedSplitDateStraddle } from "@/lib/tax-engine/mixed-use-inherited-split-date";
+import { MIXED_INHERITED_SPLIT_DATE_MESSAGE } from "@/lib/tax-engine/mixed-use-inherited-split-date";
 
 export function refineMixedUseBurdenedGift(
   data: {
@@ -84,5 +86,28 @@ export function refineCompanionMixedUseBurdenedGift(
       path: ["companionAssets", i, "transferType"],
       message: "겸용주택 부담부증여는 공유지분·함께 양도(여러 물건)·지분 분할 취득과 함께 계산할 수 없습니다 — 단독 소유 단건만 지원합니다.",
     });
+  });
+}
+
+/**
+ * ⑫ 겸용주택 상속·증여 × 토지·건물 취득일 중 한쪽만 1985.1.1. 전 — 일반 양도도 막는다(사용자 결정 2026-10-24). 부담부증여는 위 collector(MB-16)가 막는다.
+ * 판정은 엔진 leaf(`isMixedInheritedSplitDateStraddle`) — ⑧·엔진 가드와 같은 함수다.
+ */
+export function refineMixedUseInheritedSplitDate(
+  data: { propertyType?: string; transferType?: string; acquisitionCause?: string; mixedUse?: unknown; companionAssets?: ReadonlyArray<unknown> },
+  ctx: z.RefinementCtx,
+): void {
+  type Dates = { landAcquisitionDate?: string; buildingAcquisitionDate?: string } | undefined;
+  const straddles = (cause: string | undefined, m: Dates) =>
+    !!m && isMixedInheritedSplitDateStraddle(cause, m.landAcquisitionDate, m.buildingAcquisitionDate);
+  if (data.propertyType === "mixed-use-house" && data.transferType !== "burdened_gift" && straddles(data.acquisitionCause, data.mixedUse as Dates)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["mixedUse", "landAcquisitionDate"], message: MIXED_INHERITED_SPLIT_DATE_MESSAGE });
+  }
+  // 함께 양도하는 겸용(컴패니언)도 같다 — 컴패니언 겸용의 엔진 입력에는 취득원인이 실리지 않아(`mixed-use-part-cards.ts`) 엔진 가드가 닿지 않는다. 방어선은 이 refine이다.
+  (data.companionAssets ?? []).forEach((raw, i) => {
+    const c = raw as { assetKind?: string; acquisitionCause?: string; mixedUse?: unknown };
+    if (c.assetKind === "mixed_use_house" && straddles(c.acquisitionCause, c.mixedUse as Dates)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "mixedUse", "landAcquisitionDate"], message: MIXED_INHERITED_SPLIT_DATE_MESSAGE });
+    }
   });
 }

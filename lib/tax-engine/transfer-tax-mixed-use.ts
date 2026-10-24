@@ -61,6 +61,7 @@ import {
 } from "./transfer-tax-mixed-use-helpers";
 import { isMixedUseSplitTransfer } from "./data/mixed-use-split-era";
 import { calcMixedSec163_9Compare } from "./mixed-use-sec163-9-compare";
+import { assertMixedInheritedSplitDateSupported } from "./mixed-use-inherited-split-date";
 import { buildingDirectShare, hasMixedBuildingExtras, isConversionAcq, prepareMixedSaleSplit, salePartsFor } from "./mixed-use-sale-split";
 
 // ──────────────────────────────────────────
@@ -109,6 +110,8 @@ function calcMixedUseCore(
     : undefined;
   const transferPrice = bg ? bg.debt.total : transferPriceInput;
   const asset = bg ? applyBurdenedGiftAssetOverrides(assetInput, bg) : assetInput;
+  // 상속·증여 × 토지·건물 취득일 중 한쪽만 1985.1.1. 전 — 계산하지 않는다(⑫가 먼저 막는다 · 부담부증여는 위 prepare MB-16)
+  assertMixedInheritedSplitDateSupported(assetInput);
 
   // STEP 1: 2022.1.1 이전 양도일 거부 — ⑧(`validateMixedUseAsset`)과 같은 leaf
   if (!isMixedUseSplitTransfer(transferDate)) {

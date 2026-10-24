@@ -590,6 +590,12 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.hasSeperateLandAcquisitionDate) {
     a.landAcquisitionDate = (a.acquisitionDate as string) ?? "";
   }
+  // 겸용 × 상속·증여 — 토지 취득일 칸이 없다(매매에서만 그린다). 값을 복사해 두면 상속개시일·증여일을 고칠 때 다시 어긋나므로 비워서
+  // 소비처(`landAcquisitionDate || acquisitionDate`)가 건물 날짜를 따르게 한다(원인 전환 `CompanionAcquisitionCauseSection`과 같은 규칙 · 2026-10-24).
+  if (a.isMixedUseHouse === true && (a.acquisitionCause === "inheritance" || a.acquisitionCause === "gift")) {
+    a.landAcquisitionDate = "";
+    a.hasSeperateLandAcquisitionDate = false;
+  }
   /**
    * G3(2026-09-30) — 일반건물 분리 OFF 상속·증여에 남은 추계 플래그. 그 카드에는 끌 라디오가 없어
    * 복원된 폼이 영구 차단된다. 화면 전환과 **같은 patch**로 비운다. ⚠️ 위 `gbUseEstimatedAcquisition`
