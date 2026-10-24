@@ -22,8 +22,9 @@ import type {
 } from "./types/transfer.types";
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
 import { runRentalHousingExceptionStep, canEarlyReturnPrhp } from "./transfer-tax-rental-housing-step";
-import { restoreRentalUnitsToHouseCount, prhpUnappliedExemptionNotice, revokeExemptionOnRentalCompositionExceeded } from "./transfer-tax-rental-housing-judge";
-import { prhpUnmetOtherExemptionNotice } from "./transfer-tax-rental-housing-judge";
+import { restoreRentalUnitsToHouseCount, prhpUnappliedExemptionNotice, revokeExemptionOnStandardPathUnmet } from "./transfer-tax-rental-housing-judge";
+import { prhpUnmetOtherExemptionNotice, resolvePrhpUnmet } from "./transfer-tax-rental-housing-judge";
+import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 import { rentalNoticesForEarlyReturn } from "./transfer-tax-rental-housing-step";
 import type { New993Result } from "./transfer-reductions/new-99-3";
 import {
@@ -254,16 +255,19 @@ export function calculateTransferTax(
    * `OneHouseFacts`로 분해했다가 다시 조립한다 — 「사실만으로 같은 판정이 나오는가」를 매
    * 테스트마다 증명시키기 위해서다(`one-house/judge.ts` 머리 주석).
    */
-  // D12 — §155⑳ A 세대 구성 불성립(3중첩 등)이면 「임대주택 제외」 전제의 비과세를 거둔다(판정 메뉴와 같은 불변식).
-  const rentalComposition = revokeExemptionOnRentalCompositionExceeded(
+  // §154⑩ 표준 경로(B · 0호) 불성립이면 비과세를 거둔다. 세대 구성 불성립은 거두지 않는다 — 판정이 임대주택을 센 결론이 정본(composition-revoke Q-1).
+  const rentalComposition = revokeExemptionOnStandardPathUnmet(
     judgeOneHouseExemptionFromInput(exemptionJudgeInput, parsedRates.oneHouseSpecialRules, presaleRightStartDate(parsedRates)),
     effectiveInput,
-    parsedRates,
-    hceGeneralHouseAcquisitionDate,
   );
   const exemptionResult = rentalComposition.judgment;
+  // §155⑳ 불성립 원인(호별·거주 · 세대 구성) — 조기 반환·㉒ 안내·불성립 고지가 한 판정을 본다(composition-revoke D-2).
+  const prhpUnmet =
+    effectiveInput.rentalHousingException?.applyException === true
+      ? resolvePrhpUnmet(effectiveInput, resolveRentalResidenceComposition(effectiveInput, parsedRates, hceGeneralHouseAcquisitionDate))
+      : undefined;
   // F-1 D-3 — STEP 0.96 고지는 판정 뒤에 확정한다: 임대주택을 센 판정이 다른 특례로 비과세를 내면 「…적용하지 않습니다」 대신 불성립 고지.
-  const rentalUnmetOther = prhpUnmetOtherExemptionNotice(effectiveInput, exemptionResult);
+  const rentalUnmetOther = prhpUnmetOtherExemptionNotice(effectiveInput, exemptionResult, prhpUnmet);
   if (rentalUnmetOther) warnings.push(rentalUnmetOther);
   else if (rentalPremise.notice) warnings.push(rentalPremise.notice);
   if (rentalComposition.notice) warnings.push(rentalComposition.notice);
@@ -281,7 +285,7 @@ export function calculateTransferTax(
   // STEP 1a: 전액 비과세 조기 반환. §155⑳ B 성립(→STEP 2.5 §161 안분)만 억제 — 불성립이면 임대주택을 센 판정이 정본이다(F-1).
   // G-2·G-3: 부수토지 중 배율 초과분(비사업용 토지)·보유 2년 미만분은 비과세 대상이 아니다 —
   //      조기 반환하면 과세할 토지분이 사라지므로 정상 경로로 흘려 STEP 3에서 분리한다(§5.2·§5.4).
-  if (exemptionResult.isExempt && canEarlyReturnPrhp(effectiveInput) && !hasHousingLandExemptExclusion(effectiveInput)) {
+  if (exemptionResult.isExempt && canEarlyReturnPrhp(effectiveInput, prhpUnmet) && !hasHousingLandExemptExclusion(effectiveInput)) {
     steps.push({
       label: "1세대1주택 비과세",
       formula: exemptionResult.exemptReason ?? "비과세",
@@ -289,7 +293,7 @@ export function calculateTransferTax(
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
     warnings.push(
-      ...rentalNoticesForEarlyReturn(effectiveInput),
+      ...rentalNoticesForEarlyReturn(effectiveInput, prhpUnmet),
       ...expropriationLaterLandNotices(effectiveInput),
       ...[housingExcessUnseparatedNotice(effectiveInput, undefined, true)].filter((n): n is string => !!n),
     ); // §155㉑·㉒ + OH-40 판정 보류 · 5A 고지 · #17 초과분 미분리 고지
@@ -493,11 +497,13 @@ export function calculateTransferTax(
       new994Detail,
       unsold989Detail,
       houseCountExclusionDetails,
+      // 다른 특례 비과세가 서면 세대 구성 「확인 필요」(⑳ 겹침 해석 미확보)는 결론을 가르지 않는다(composition-revoke Q-3).
+      otherExemptionStands: exemptionResult.isExempt || exemptionResult.isPartialExempt,
     });
     // 특례 경로의 배율 초과 파트도 8호 유예 «지정지역 확인 필요» 고지를 일반 경로와 같이 받는다(F-2). 미등기 고지는 이 경로에 없다(위 주석 — 미등기면 특례 부적용).
     if (rheResult) return withUnregisteredNotice(rheResult, nblNoticeInputOf(effectiveInput, rheResult.splitDetail));
     // B + applied=false: 특례 부존재면 임대주택 주택수 산입으로 "1채" 전제 무효 가능 — 침묵 비과세 소급 금지.
-    const prhpNotice = prhpUnappliedExemptionNotice(effectiveInput, exemptionResult);
+    const prhpNotice = prhpUnappliedExemptionNotice(effectiveInput, exemptionResult, prhpUnmet);
     if (prhpNotice) warnings.push(prhpNotice);
   }
 

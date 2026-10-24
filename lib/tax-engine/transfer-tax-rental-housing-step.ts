@@ -95,6 +95,8 @@ export interface RentalHousingStepArgs {
   };
   /** §99의4·§98의9 「취득 전 보유 주택」 판정 기준일 — STEP 0.9와 같은 값(세대 구성 판정의 조특법 제외용) */
   generalHouseAcquisitionDate?: Date;
+  /** 판정 엔진이 다른 특례로 비과세·부분 비과세를 냈는가 — 그러면 세대 구성 「확인 필요」를 싣지 않는다(결론을 가르지 않는다 · composition-revoke Q-3) */
+  otherExemptionStands?: boolean;
   /**
    * [echo] STEP 0.9 보유 감면주택 주택수 제외(§89①3호 의제) 판정 — `SpecialHouseExclusionDetailCard`가 읽는다.
    * 이 step은 조기반환이라 넘겨받지 않으면 단건·다건 결과 화면에서 카드가 사라진다(`inheritedAcquisitionStep`과
@@ -244,7 +246,7 @@ export function runRentalHousingExceptionStep(
       amount: 0,
       legalBasis: rheBasis,
     });
-    if (composition.confirmNotice && rhe.applied) {
+    if (composition.confirmNotice && rhe.applied && !args.otherExemptionStands) {
       steps.push({
         label: "장기임대주택 거주주택 비과세 특례 — 확인 필요",
         formula: composition.confirmNotice,
