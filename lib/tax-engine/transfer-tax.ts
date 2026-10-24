@@ -23,6 +23,7 @@ import type {
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
 import { runRentalHousingExceptionStep, canEarlyReturnPrhp } from "./transfer-tax-rental-housing-step";
 import { restoreRentalUnitsToHouseCount, prhpUnappliedExemptionNotice, revokeExemptionOnRentalCompositionExceeded } from "./transfer-tax-rental-housing-judge";
+import { prhpUnmetOtherExemptionNotice } from "./transfer-tax-rental-housing-judge";
 import { rentalNoticesForEarlyReturn } from "./transfer-tax-rental-housing-step";
 import type { New993Result } from "./transfer-reductions/new-99-3";
 import {
@@ -245,7 +246,6 @@ export function calculateTransferTax(
     ...rentalPremise.input,
     noMergeRosterInputPath: hasNoMergeRosterInputPath(effectiveInput),
   };
-  if (rentalPremise.notice) warnings.push(rentalPremise.notice);
 
   /**
    * STEP 1: 1세대1주택 비과세 판정 — **공유 판정 엔진**을 거친다(P2 · D-1).
@@ -262,6 +262,10 @@ export function calculateTransferTax(
     hceGeneralHouseAcquisitionDate,
   );
   const exemptionResult = rentalComposition.judgment;
+  // F-1 D-3 — STEP 0.96 고지는 판정 뒤에 확정한다: 임대주택을 센 판정이 다른 특례로 비과세를 내면 「…적용하지 않습니다」 대신 불성립 고지.
+  const rentalUnmetOther = prhpUnmetOtherExemptionNotice(effectiveInput, exemptionResult);
+  if (rentalUnmetOther) warnings.push(rentalUnmetOther);
+  else if (rentalPremise.notice) warnings.push(rentalPremise.notice);
   if (rentalComposition.notice) warnings.push(rentalComposition.notice);
 
   // §89② 고지 · 판정 보류 · 지구 미선언 · 재기산 · 미충족 특례 · 합가 「모름」 · 귀농 사후관리 · 중첩 의제 — 완공APT 경로와 공용 leaf.
@@ -274,7 +278,7 @@ export function calculateTransferTax(
     }),
   );
 
-  // STEP 1a: 전액 비과세 조기 반환. §155⑳ B(→STEP 2.5 §161 안분)·A eligibility 미충족(→STEP 2.5 정상과세)은 억제.
+  // STEP 1a: 전액 비과세 조기 반환. §155⑳ B 성립(→STEP 2.5 §161 안분)만 억제 — 불성립이면 임대주택을 센 판정이 정본이다(F-1).
   // G-2·G-3: 부수토지 중 배율 초과분(비사업용 토지)·보유 2년 미만분은 비과세 대상이 아니다 —
   //      조기 반환하면 과세할 토지분이 사라지므로 정상 경로로 흘려 STEP 3에서 분리한다(§5.2·§5.4).
   if (exemptionResult.isExempt && canEarlyReturnPrhp(effectiveInput) && !hasHousingLandExemptExclusion(effectiveInput)) {

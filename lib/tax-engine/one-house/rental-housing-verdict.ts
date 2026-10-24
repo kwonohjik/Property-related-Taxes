@@ -89,8 +89,8 @@ export function buildRentalHousingVerdict(
  *
  * 🔴 **미충족이면 비과세를 끈다.** 판정 메뉴에서 임대주택은 명부에 넣지 않는 것이 전제라
  *    (특례가 주택 수에서 빼 주므로) 요건을 못 갖추면 그 주택들이 **다시 주택 수에 들어온다**.
- *    그대로 두면 계산기는 과세인데 판정 메뉴만 비과세라고 답한다 — 계산기의 STEP 1a
- *    조기반환 억제(`isPrhpScenarioAIneligible`)가 막고 있는 것과 **같은 over-exemption**이다.
+ *    그대로 두면 계산기는 과세인데 판정 메뉴만 비과세라고 답한다 — 계산기의 STEP 0.96
+ *    (`restoreRentalUnitsToHouseCount` — 판정 전에 임대 호수를 되돌림)이 막고 있는 것과 **같은 over-exemption**이다.
  *
  * 🔑 **충족이면 손대지 않는다.** §155⑳은 거주주택을 1주택으로 «보아» §154①을 적용하라는
  *    조문이고, 그 §154① 판정은 이미 `checkExemption`이 했다. 여기서 비과세를 «주면»

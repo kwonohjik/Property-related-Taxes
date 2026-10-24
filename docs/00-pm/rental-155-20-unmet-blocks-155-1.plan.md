@@ -170,6 +170,8 @@ export function canEarlyReturnPrhp(effectiveInput: TransferTaxInput): boolean {
 | **Q-3** | 판정 메뉴도 같은 규칙으로 고치는가 | (a) 고친다(D-4, PR-2) — M3에서 메뉴·계산기가 같은 답 / (b) 계산기만 고치고 메뉴는 현행 | **(a)** — 엔진은 하나(D-1). (b)면 M3에서 메뉴 과세 ↔ 계산기 비과세로 갈린다(V-4 판정 메뉴 결함과 같은 유형) |
 | **Q-4** | STEP 0.96 고지를 판정 결과에 맞추고 처방을 「명부에 넣기」로 바꾸는가 | (a) 바꾼다(D-3) / (b) 문장 유지 | **(a)** — 현행 처방은 따라도 판정되지 않는다(P7) |
 
+**결정 (2026-10-24 사용자): Q-1~Q-4 모두 (a).**
+
 ## 6. 미검증 레지스터
 
 | ID | 항목 | 검증 방법 | 상태 |
@@ -236,4 +238,36 @@ export function canEarlyReturnPrhp(effectiveInput: TransferTaxInput): boolean {
 
 ## 10. verdict
 
-`needs-fix` — 설계를 바꾸는 미검증 항목은 없다(V-1은 설계 비영향, V-4는 구현 시 확인). Q-1~Q-4 사용자 결정을 받은 뒤 `clean`이 된다.
+`clean` — Q-1~Q-4 (a) 확정(2026-10-24). V-1은 설계 비영향 미확인으로 남는다. V-4는 PR-1에서 UO-9로 확인했다.
+
+## 11. PR-1 구현 (2026-10-24)
+
+- **D-1** `canEarlyReturnPrhp`: §155⑳ 불성립(A·B)이면 조기 반환을 허용하고, B 성립만 막는다. `isPrhpScenarioAIneligible`는 지웠다. 그 이름을 인용한 주석 3곳(`rental-housing-verdict.ts` · `transfer-tax-taxable-gain.ts` · `one-house-exemption-rental-housing.route.anchor.test.ts`)도 고쳤다.
+- **D-2** `prhpUnmetOtherExemptionNotice`(신규):
+  - 불성립 + 비과세·부분 비과세일 때 사유와 적용한 비과세를 단다.
+  - 사유 문장은 STEP 2.5 「적용 불가」와 같은 `rentalUnmetReasonText`다.
+  - `rentalNoticesForEarlyReturn`은 불성립이면 성립 전제 문장을 싣지 않는다.
+  - B 미적용 고지(`prhpUnappliedExemptionNotice`)는 불성립이면 이 고지에 자리를 넘긴다.
+  - 문형은 「적용한 비과세는 「…」입니다」다. 특례 이름의 받침에 따라 「을/를」이 갈리므로 조사를 붙이지 않는다.
+- **D-3** STEP 0.96 고지는 판정 뒤에 확정한다(`transfer-tax.ts`). 불성립 고지가 서면 그것을, 아니면 종전 되돌림 고지를 싣는다. 처방은 「「보유 주택 목록」에 임대주택을 취득일과 함께 넣어야 판정합니다」로 바꿨다.
+- **기존 테스트 정정 2건** — 둘 다 의도된 변경이다.
+  - `rh-b-unmet-restore-x1-1` B-3: 처방 문구.
+  - `transfer.route.rental-155-20-unmet-restore-x1-1-g8-1` RS-6:
+    - 세액 102,086,600은 그대로다.
+    - 되돌림 고지 판별을 「세대 주택 수에 넣어(」로 좁혔다. 새 고지 문장과 갈라야 하기 때문이다.
+    - 불성립 + 일시적 2주택 고가주택 고지 단언을 추가했다.
+- **신규 anchor** `__tests__/calc/rental-155-20-unmet-other-exemption.anchor.test.ts`: UO-1~7 · UO-9, 8건 통과.
+- **E2E** `e2e/rental-155-20-unmet-other-exemption.spec.ts`: UOE-1 통과. 결과 화면을 라이트·다크·375에서 확인했다. 가로 스크롤 0, 확인 필요 카드에 불성립 고지가 표시된다.
+
+### mutation probe (구현 후)
+
+| P-n | 무력화 | 실패한 anchor |
+|---|---|---|
+| P-1 | D-1 불성립 분기를 `false`로(종전 게이트) | UO-1 · UO-3 · UO-9 · UOE-1(E2E) |
+| P-2 | B 성립도 조기 반환 | 기존 B 안분 anchor 6파일(`prhp-numerator-ne*` · `rh-b1-early-exemp*` 등) |
+| P-3 | 불성립 고지 끔 | UO-2 · UO-3 · UO-6 · UO-9 · RS-6 |
+| P-3b | 조기 반환 안내의 불성립 게이트 제거 | UO-6 |
+| P-4 | 처방 문구 복원 | UO-7 · B-3 |
+| P-6 | STEP 0.96 되돌림 제거 | UO-4 · UO-7 + 기존 되돌림 anchor |
+
+- P-5(판정 메뉴)는 PR-2에서 한다.

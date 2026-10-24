@@ -188,7 +188,8 @@ function failRental(f: Form): Form {
   f.assets[0].rentalHousingException.rentalUnits[0].standardPriceAtRentalStart = RENTAL_UNIT_CAP_FAIL;
   return f;
 }
-const hasRestoreNotice = (w: string[]) => w.find((x) => x.includes("세대 주택 수에 넣어")) ?? "";
+// 되돌림 고지는 「세대 주택 수에 넣어(n주택)」 — 불성립 + 다른 특례 고지(F-1 「…세대 주택 수에 넣어 판정했고」)와 가른다.
+const hasRestoreNotice = (w: string[]) => w.find((x) => x.includes("세대 주택 수에 넣어(")) ?? "";
 const mh = (s: Single) =>
   s.raw.multiHouseSurchargeEvaluation as { surchargeType: string; effectiveHouseCount: number; exclusionReasons: { type: string }[] };
 
@@ -258,6 +259,8 @@ describe("RS 짝 — 되돌리지 않는 경우", () => {
     const s = await single(f);
     expect(s.totalTax).toBe(102_086_600);
     expect(hasRestoreNotice(s.warnings)).toBe("");
+    // F-1 D-2 — 일시적 2주택 고가주택(부분 비과세)이 섰으므로 불성립 사실과 적용한 특례를 함께 단다
+    expect(s.warnings.find((x) => x.includes("요건을 충족하지 못해 적용하지 않았습니다"))).toMatch(/적용한 비과세는 「일시적 2주택 고가주택」입니다\.$/);
   });
   it("RS-7 ★ 명부 없음 · 주택 수 1 → 더한다 — 임대 호가 2호가 아니라 거주주택이 10호를 못 받고 중과 2주택 (391,743,000 → 783,678,500)", async () => {
     const f = failRental(withRental(form([], { householdHousingCount: "1", contractTotalPrice: "1,500,000,000" })));
