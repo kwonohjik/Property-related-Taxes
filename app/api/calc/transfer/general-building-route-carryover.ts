@@ -10,6 +10,7 @@ import { judgeCarryoverEligibility } from "@/lib/tax-engine/transfer-tax-carryov
 import {
   assertCarryoverDonorBasis,
   applyCarryoverDonorBasis,
+  toTransferorBasisInfo,
 } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 import { donorBuiltNotAppliedEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-penalty";
 import { donorBuiltPenaltyNotice } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
@@ -147,7 +148,9 @@ export function calculateGeneralBuildingActualTransfer(
   assertCarryoverDonorBasis(info, ct);
   if (donorBuilt) assertGbBgDonorBuiltInput(info, ct, donorBuilt, payload.buildingAcquisitionCause === "newConstruction");
 
-  const resultB = run(payload);
+  // B = 양도인(증여받은 사람) 기준 — K-6/K-7은 증여일 평가액(`actual*`)을 실지거래가액으로 읽는다(소령 §163⑨). 단건 `buildInputB`와 같은 leaf.
+  // 종전에는 `info`를 그대로 넘겨 당초 증여자 방식(감정·매매사례)의 양도인 칸을 찾다가 400이었다(계획서 `gb-bg-carryover-presumed-scenario-b.plan.md`).
+  const resultB = run({ ...payload, burdenedGiftInfo: toTransferorBasisInfo(info) });
   const resultA = run({
     ...payload,
     // 당초 증여자 신축·증축 신호는 **A 호출에만** 싣는다(R2) — B 는 수증자 기준(증여 당시 평가액)이라 가산세 대상이 아니다. 카드 조립이 이 필드만 읽는다.
