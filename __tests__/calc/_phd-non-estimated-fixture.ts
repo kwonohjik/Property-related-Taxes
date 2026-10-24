@@ -124,7 +124,7 @@ export function allPhdIssues(form: TransferFormData) {
   return out;
 }
 
-async function captureSingleBody(form: TransferFormData): Promise<Record<string, unknown>> {
+export async function captureSingleBody(form: TransferFormData): Promise<Record<string, unknown>> {
   const cap: { body?: Record<string, unknown> } = {};
   vi.stubGlobal(
     "fetch",

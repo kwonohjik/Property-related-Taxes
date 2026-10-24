@@ -24,6 +24,7 @@ import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 import { phdFlagEffective } from "@/lib/calc/phd-toggle-scope";
 import { PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
+import { PhdConvertedPriceFill } from "./PhdConvertedPriceFill";
 
 interface Props {
   block: BlockProps;
@@ -187,6 +188,16 @@ export function CompanionAcqStdPriceSection({
               enableLookup={!(isLand && acqDatePre1990)}
               pricePerSqmDisabled={isLand && acqDatePre1990}
             />
+            {/* 실거래가 + 토지·건물 안분 — 주택 취득시 기준시가 칸(개별주택가격 안분 base) 곁 «환산 개별주택가격 계산해 채우기».
+                hint(`PRE_DISCLOSURE_STD_PRICE_HINT`)가 붙는 칸과 같은 조건이다. 보이는 조건은 컴포넌트 내부 게이트(`phdFillAssistVisible`). */}
+            {!props.useEstimatedAcquisition && propertyKind === "house_individual" && props.asset && props.onAssetChange && (
+              <PhdConvertedPriceFill
+                asset={props.asset}
+                onAssetChange={props.onAssetChange}
+                transferDate={props.transferDate ?? ""}
+                onFill={props.onStandardPriceAtAcqChange}
+              />
+            )}
             {/* 소유자 분리 — ⑧ V8의 ㎡당 개별공시지가(별건 B2). 주택은 위 위젯이 총액만 렌더하고, 면적은 ① 기본정보가 받는다. */}
             {props.asset && (effectiveSelfOwns(props.asset) ?? "both") !== "both" && propertyKind === "house_individual" && (
               <LandPriceLookupField

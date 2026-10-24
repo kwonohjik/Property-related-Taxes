@@ -17,6 +17,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { PartialAcqApportionSection } from "./PartialAcqApportionSection";
 import { SalesCaseSection } from "./SalesCaseSection";
 import { PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
+import { PhdConvertedPriceFill } from "./PhdConvertedPriceFill";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 
 interface Props {
@@ -37,6 +38,17 @@ export function CompanionAcqAmountSection({
   isGeneralBuilding,
 }: Props) {
   if (props.useEstimatedAcquisition || isSeparateAcq || props.hideAssetAcqAxis) return null;
+
+  /* «환산 개별주택가격 계산해 채우기» — 취득시 기준시가 칸(감정가액·매매사례가액) 곁 계산 보조. 보이는 조건은 `phdFillAssistVisible`(컴포넌트 내부 게이트). */
+  const phdFillAssist =
+    props.asset && props.onAssetChange && props.assetKind === "housing" ? (
+      <PhdConvertedPriceFill
+        asset={props.asset}
+        onAssetChange={props.onAssetChange}
+        transferDate={props.transferDate ?? ""}
+        onFill={props.onStandardPriceAtAcqChange}
+      />
+    ) : null;
 
   /* 매매사례가액 추계(§176의2③1호) 모드 */
   // 일반건물(토지+건물 일괄)은 `SalesCaseSection`을 쓰지 않는다 — RTMS 아파트 자동조회·취득 당시 면적·**단일** 취득시 기준시가 칸은
@@ -71,6 +83,7 @@ export function CompanionAcqAmountSection({
         standardPriceAtAcq={props.standardPriceAtAcq}
         onStandardPriceAtAcqChange={props.onStandardPriceAtAcqChange}
         isHousing={props.assetKind === "housing"}
+        stdPriceFillAssist={phdFillAssist}
       />
     );
   }
@@ -183,14 +196,17 @@ export function CompanionAcqAmountSection({
       {/* 감정가액도 §97②2호 본문의 「나목 + 개산공제」다 — 매매사례(`SalesCaseSection`)와 같은 규칙.
           필수·hint 근거는 그쪽 주석 참조. */}
       {props.isAppraisalAcquisition && !isGeneralBuilding && (
-        <CurrencyInput
-          label="취득시 기준시가 (원) — 개산공제 기준액"
-          required
-          data-field="standardPriceAtAcq"
-          value={props.standardPriceAtAcq}
-          onChange={props.onStandardPriceAtAcqChange}
-          hint={`필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%.${props.assetKind === "housing" ? ` ${PRE_DISCLOSURE_STD_PRICE_HINT}` : ""}`}
-        />
+        <>
+          <CurrencyInput
+            label="취득시 기준시가 (원) — 개산공제 기준액"
+            required
+            data-field="standardPriceAtAcq"
+            value={props.standardPriceAtAcq}
+            onChange={props.onStandardPriceAtAcqChange}
+            hint={`필요경비 개산공제(「소득세법 시행령」 제163조 제6항)의 기준 금액입니다. 토지·건물 3%, 미등기양도자산 0.3%, 조합원입주권·분양권 1%.${props.assetKind === "housing" ? ` ${PRE_DISCLOSURE_STD_PRICE_HINT}` : ""}`}
+          />
+          {phdFillAssist}
+        </>
       )}
     </>
   );
