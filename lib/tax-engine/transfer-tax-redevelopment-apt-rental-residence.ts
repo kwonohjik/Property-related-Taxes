@@ -9,9 +9,9 @@
  * 🔑 요건 판정은 **판정 메뉴·계산기와 같은 leaf**다(`buildRentalHousingVerdict` → `judgeRentalHousingEligibility` · 세대 구성). 일반 경로 STEP 2.5는 §166 3분할 양도차익을 모르는 자체 세액
  * 산식이라 쓰지 않는다. 대신 §155⑳이 「국내에 1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용」하라는 조문이므로
  *   · 요건이 서면 — 임대주택을 세대 주택 수에서 뺀 입력으로 정본 판정을 한다(다른 특례와 겹친 구성은 그 특례 판정이 그대로 돈다).
- *   · 서지 않으면 — 계산기 일반 경로와 같이 임대주택을 주택 수에 되돌려(STEP 0.96과 같은 leaf) 판정하고, 세대 구성 불성립만
- *     판정 뒤 거둔다(`revokeExemptionOnRentalCompositionExceeded` — D12). 판정 메뉴(`applyRentalHousingVerdict`)처럼 무조건 거두면
- *     되돌린 주택 수에서 서는 다른 특례(일시적 2주택 등)까지 지운다.
+ *   · 서지 않으면 — 계산기 일반 경로와 같이 임대주택을 주택 수에 되돌려(STEP 0.96과 같은 leaf) 판정하고 그 결론을 그대로 쓴다.
+ *     세대 구성 불성립도 거두지 않는다 — 판정이 임대주택을 센 결론이다(`rental-155-20-composition-revoke.plan.md` Q-1 (a) · 일반 경로와 같다).
+ *     비과세가 서면 불성립 고지(`prhpUnmetOtherExemptionNotice`), 서지 않으면 STEP 0.96 고지를 판정 뒤에 고른다(F-1 D-3과 같다).
  * 12억 초과 안분·표2는 `calculateRedevelopmentTax`의 기존 경로가 판정 결과로 처리한다.
  *
  * ⚠️ 입력은 판정 번역본(`translateRedevAptForHousingJudgment`)이어야 한다 — 거주주택 취득일(승계조합원 = 사용승인일)·
@@ -23,7 +23,7 @@ import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
 import { buildRentalHousingVerdict } from "./one-house/rental-housing-verdict";
 import { revokeOneHouseExemption } from "./one-house/revoke-exemption";
 import type { OneHouseJudgment } from "./one-house/types";
-import { restoreRentalUnitsToHouseCount, revokeExemptionOnRentalCompositionExceeded } from "./transfer-tax-rental-housing-judge";
+import { restoreRentalUnitsToHouseCount, prhpUnmetOtherExemptionNotice, resolvePrhpUnmet } from "./transfer-tax-rental-housing-judge";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
@@ -95,11 +95,11 @@ export function prepareRedevAptRentalResidence(
     };
   }
 
-  // 불성립 — 계산기 일반 경로와 같다: 임대주택을 주택 수에 되돌려(STEP 0.96) 판정하고, 세대 구성 불성립(3중첩 등)만 판정 뒤 거둔다(D12).
-  //   판정 메뉴처럼 무조건 거두지 않는다 — 되돌린 주택 수에서 다른 특례(임대주택이 일시적 2주택의 신규 주택 등)가 서면 그 비과세가 맞다
-  //   (STEP 0.96 고지 「임대주택이 다른 특례(일시적 2주택 등)에 해당하면 … 판정합니다」와 같은 전제).
+  // 불성립 — 계산기 일반 경로와 같다: 임대주택을 주택 수에 되돌려(STEP 0.96) 판정하고 그 결론을 쓴다(호별·거주 · 세대 구성 모두).
+  //   되돌린 주택 수에서 다른 특례(임대주택이 일시적 2주택의 신규 주택 등)가 서면 그 비과세가 맞다.
   const restored = restoreRentalUnitsToHouseCount(translated, translated, parsedRates, generalHouseAcquisitionDate);
-  const warnings = [...(restored.notice ? [restored.notice] : []), ...verdict.notices];
+  const unmet = resolvePrhpUnmet(translated, composition);
+  const warnings = [...verdict.notices];
   const reasons = [
     ...(verdict.compositionFailReason ? [verdict.compositionFailReason] : []),
     ...verdict.residenceFailReasons,
@@ -108,9 +108,10 @@ export function prepareRedevAptRentalResidence(
   return {
     judgeInput: restored.input,
     finalize: (j) => {
-      const revoked = revokeExemptionOnRentalCompositionExceeded(j, translated, parsedRates, generalHouseAcquisitionDate);
-      if (revoked.notice) warnings.push(revoked.notice);
-      return revoked.judgment;
+      const other = prhpUnmetOtherExemptionNotice(translated, j, unmet);
+      if (other) warnings.unshift(other);
+      else if (restored.notice) warnings.unshift(restored.notice);
+      return j;
     },
     steps: [
       {
@@ -120,7 +121,7 @@ export function prepareRedevAptRentalResidence(
         legalBasis: verdict.legalBasis,
       },
     ],
-    // `finalize`가 구성 불성립 고지를 더한다 — 호출부는 판정 뒤에 읽는다.
+    // `finalize`가 불성립 고지(또는 STEP 0.96 고지)를 앞에 더한다 — 호출부는 판정 뒤에 읽는다.
     warnings,
   };
 }
