@@ -161,8 +161,8 @@ if (deemedApartFromTemp === "marriage_merge" || deemedApartFromTemp === "parenta
 | V | 항목 | 설계 영향 | 검증 방법 | 상태 |
 |---|---|---|---|---|
 | V-1 | `vi.mock` 부분 대체가 route 경로에서 STEP 1 판정 직후 구성 판정에 닿는가(같은 모듈 내부 호출은 mock이 못 가로챈다) | 못 닿으면 Q-1 (a) → (c) 또는 주입 지점 변경 | PR-1 — §3.2 정정 후보를 넣고 P-1을 걸었을 때 RG-1~3만 실패하는지 | ✅ PR-1(§7): 정정 후보 단독 4/4 통과 · 정정 후보 + P-1 → RG-1~3 실패 · RG-4 통과 = 주입이 계산 경로에 닿는다 |
-| V-2 | 다주택 중과 판정 메뉴·13호·15호 ① 요소 영향 — 측정 격자는 2024 양도(중과 유예)라 `중과=none` | 중과가 실제로 갈리면 세액 변경 → 사용자 결정 추가 | PR-2 착수 전 — 유예 종료 후 양도일 시료로 계산기·중과 판정 메뉴 재측정 | ⏳ PR-2 착수 조건 |
-| V-3 | ⑦ 분기를 `deemedApartFromTemp`로 읽을지 | 없음(구현 세부) | PR-2 mutation | ⏳ |
+| V-2 | 다주택 중과 판정 메뉴·13호·15호 ① 요소 영향 — 측정 격자는 2024 양도(중과 유예)라 `중과=none` | 중과가 실제로 갈리면 세액 변경 → 사용자 결정 추가 | PR-2 착수 전 — 유예 종료 후 양도일 시료로 계산기·중과 판정 메뉴 재측정 | ✅ 2026-09-18 양도 · 강남 조정 · 상대 주택 공시 5억 · 15억·25억 × M1·M2·M4·미선언: 계산기 세액 수정 전후 동일(14,124,000 · 153,406,000) · 중과 `none` · 배제 사유 `marriage_merge`(M1·M2) 그대로 · 중과 판정 메뉴 headline(주택 수 2 · 중과 없음 · `marriage_merge`) 불변. 바뀐 것은 계산기 M1·M2의 구성 불성립 고지와 결과 근거(⑳ 경로)뿐 |
+| V-3 | ⑦ 분기를 `deemedApartFromTemp`로 읽을지 | 없음(구현 세부) | 코드 실독 | ✅ 읽지 않는다 — `resolveDeemedOneHouseBy155`가 ⑦을 ①보다 먼저 판정해(`merge-deeming.ts:173`) `deemed`가 `temporary_two_house`이면 ⑦은 이미 불성립이다. ⑦ 분기는 `deemed` 그대로 둔다 |
 
 ## 5. 범위 밖 · 별건
 
@@ -174,7 +174,7 @@ if (deemedApartFromTemp === "marriage_merge" || deemedApartFromTemp === "parenta
 
 ## 6. verdict
 
-PR-1 `clean`(Q-1~Q-3 결정 · V-1 해소). PR-2는 V-2 측정 후 착수.
+PR-1 `clean`(Q-1~Q-3 결정 · V-1 해소) · PR-2 `clean`(V-2·V-3 해소). 두 PR로 계획 전건 완료.
 
 ## 7. PR-1 결과 — 계산기 쪽 회수 금지 안전망
 
@@ -188,3 +188,17 @@ PR-1 `clean`(Q-1~Q-3 결정 · V-1 해소). PR-2는 V-2 측정 후 착수.
 | 정정 후보 + P-1 | × | × | × | ✓ ← PR-2 뒤에는 주입만이 규칙을 건드린다 |
 
 뮤테이션은 `bash` 스크립트로 돌렸고 파일 복사로 되돌렸다. 첫 실행은 P-1을 되돌리지 않은 채 다음 단계를 돌려 무효였고, 다시 실행한 결과가 위 표다.
+
+## 8. PR-2 결과 — 구성 판정 정정
+
+- `transfer-tax-rental-residence-composition.ts` `judgeOtherHouse`: `deemed`가 `temporary_two_house`이면 `temporaryTwoHouse` 없이 `resolveDeemedOneHouseBy155`를 다시 불러 §155④⑤(`mergeDeemed`)를 본다. 머리 표에 「합가 후 임대 취득」 행(상속증여세과-20 · 244)을 더했다.
+- 신규 `__tests__/calc/rental-155-20-merge-temp-composition.anchor.test.tsx` MT-1~MT-9(10건) · E2E `e2e/rental-155-20-merge-temp-composition.spec.ts` MTE-1.
+- `rental-155-20-composition-revoke.anchor.test.ts` 머리 주석: 계산기 쪽 안전망 = RG-1~4(§1.3 정정 반영).
+
+| mutation | 실패 | 통과 |
+|---|---|---|
+| P-2 정정 되돌림 | MT-1 · MT-2 · MT-3 ×2 · MT-4 · MT-5 · MT-9 (7건) · E2E MTE-1 | MT-6 · MT-7 · MT-8(짝) |
+| P-3 재판정에서 ④만 제외 | MT-5 | 나머지 9건 |
+
+- PR-1 RG-1~4는 정정 뒤에도 통과(주입으로만 구성 불성립).
+- 검증: tsc 0 · lint 오류 0 · vitest 전체 41,783건 통과 · E2E MTE-1·UOE-1·UOE-3 통과 · 결과 화면 라이트·다크·375px 확인(가로 스크롤 0).
