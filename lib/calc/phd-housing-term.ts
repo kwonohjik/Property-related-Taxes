@@ -33,3 +33,51 @@ export function phdConvertedPriceName(apartment: boolean | undefined): string {
 export function phdDisclosedPriceName(apartment: boolean | undefined): string {
   return apartment ? "공동주택가격" : "개별주택가격";
 }
+
+/**
+ * 배율 초과 분리 카드·⑧ 메시지가 쓰는 **주택 종류** — 단독·다가구 / 공동주택 / 모름. (단일 정의 — 카드와 ⑧이 같은 함수를 읽는다)
+ *
+ * `phdHousingType`만 읽으면 안 된다 — 그 필드는 PHD 입력 패널 라디오의 값이고 기본값이 «individual»이라(`createInitialAssetForm`·migrate),
+ * 패널을 연 적 없는 공동주택(예: 비환산 방식)도 «individual»로 보여 «개별주택가격»이 표시된다. 그래서 **사용자가 직접 정한 값·세대 식별 사실**만 신호로 읽고,
+ * 어느 신호도 없으면 «모름»으로 두어 두 이름을 함께 적는다(추정 금지 — `PRE_DISCLOSURE_STD_PRICE_HINT`와 같은 방식).
+ *
+ * 우선순위(위가 이긴다):
+ *   1. `phdHousingType === "apartment"` — 기본값이 아닌 값은 PHD 라디오에서 사용자가 골랐을 때뿐이다. 사용자가 명시한 값이 우선.
+ *   2. `inheritanceAssetKind` — 기본값 «land»가 아닌 값은 주택 구분 픽커에서 사용자가 골랐을 때뿐(④가 엔진에 싣는 값과 같은 필드).
+ *   3. 동·호가 **둘 다** 채워짐 — 공동주택 세대 목록에서 골랐다는 사실(개별주택 공시는 동·호가 빈 행으로 온다). 상속 경로의 주택 구분 파생
+ *      (`deriveInheritanceHouseKind`)이 쓰는 것과 같은 조건이라 한 화면의 두 곳이 어긋나지 않는다.
+ * «individual»(PHD 라디오 기본값)은 신호로 읽지 않는다 — 기본값과 사용자가 고른 값을 구분할 수 없다.
+ * 위 어느 것도 아니면 «unknown». 결과 화면·PDF(`isPhdApartment`)는 PHD 패널을 반드시 거치므로 이 함수를 쓰지 않는다.
+ */
+export type HousingKind = "individual" | "apartment" | "unknown";
+
+export function resolveHousingKind(
+  asset: Pick<AssetForm, "phdHousingType" | "inheritanceAssetKind" | "addressDong" | "addressHo"> | undefined,
+): HousingKind {
+  if (!asset) return "unknown";
+  if (asset.phdHousingType === "apartment") return "apartment";
+  if (asset.inheritanceAssetKind === "house_apart") return "apartment";
+  if (asset.inheritanceAssetKind === "house_individual") return "individual";
+  if (asset.addressDong?.trim() && asset.addressHo?.trim()) return "apartment";
+  return "unknown";
+}
+
+/** `resolveHousingKind` 결과에 따른 §164⑥·⑦ 산식 결과 이름 — 모름이면 두 이름을 함께 적는다. */
+export function housingConvertedPriceName(kind: HousingKind): string {
+  return kind === "unknown"
+    ? `${phdConvertedPriceName(false)}(공동주택은 ${phdConvertedPriceName(true)})`
+    : phdConvertedPriceName(kind === "apartment");
+}
+
+/** `resolveHousingKind` 결과에 따른 고시 가격 자체의 이름 — 모름이면 두 이름을 함께 적는다. */
+export function housingDisclosedPriceName(kind: HousingKind): string {
+  return kind === "unknown"
+    ? `${phdDisclosedPriceName(false)}(공동주택은 ${phdDisclosedPriceName(true)})`
+    : phdDisclosedPriceName(kind === "apartment");
+}
+
+/** «…가격 최초 공시일» 뒤에 붙이는 날짜 — 2005-04-30은 개별주택가격의 최초 공시일이다(공동주택의 최초 공시일은 자산마다 다르다). */
+export function housingFirstDisclosureDateNote(kind: HousingKind): string {
+  if (kind === "apartment") return "";
+  return kind === "unknown" ? "(개별주택은 2005-04-30)" : "(2005-04-30)";
+}

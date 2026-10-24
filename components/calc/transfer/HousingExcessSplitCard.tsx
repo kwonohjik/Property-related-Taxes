@@ -41,7 +41,14 @@ import {
   housingExcessNeedsAcqContract,
 } from "@/lib/calc/housing-excess-acq-contract";
 import { deriveLegacyPartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
-import { isPhdApartment, phdConvertedPriceName, phdDisclosedPriceName } from "@/lib/calc/phd-housing-term";
+import {
+  housingConvertedPriceName,
+  housingDisclosedPriceName,
+  housingFirstDisclosureDateNote,
+  isPhdApartment,
+  phdDisclosedPriceName,
+  resolveHousingKind,
+} from "@/lib/calc/phd-housing-term";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -55,12 +62,10 @@ interface Props {
 const COUNT_WORD: Record<number, string> = { 4: "네", 5: "다섯", 6: "여섯" };
 
 export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPrimary = false }: Props) {
-  // 가격 이름 — 주택 종류(`asset.phdHousingType`)를 따른다. 결과 이름은 «환산 개별주택가격»·«환산 공동주택가격» 둘뿐(단일 정의 `phd-housing-term`).
-  const apartment = isPhdApartment(asset);
-  const disclosedName = phdDisclosedPriceName(apartment);
-  const convertedName = phdConvertedPriceName(apartment);
   // §164⑦ 개별주택가격 미공시 3시점 환산 — 분리 경로는 타지만 받을 칸이 없다(환산 칸의 토지 값·건물 값으로 나눈다). 안내만 한다(#17-5).
+  // 이 경로는 PHD 입력 패널이 같은 화면에 있어 이름도 그 패널의 주택유형 라디오(`phdHousingType`)를 따른다 — 패널·결과 화면과 같은 단일 정의.
   if (housingExcessUsesPhdSplit(asset, transferDate, isNonPrimary)) {
+    const disclosedName = phdDisclosedPriceName(isPhdApartment(asset));
     return (
       <ToneCard tone="amber" title={`배율 초과 부수토지 분리 — ${disclosedName} 미공시 환산 값으로 분리`} bodyClassName="space-y-2">
         <p className="text-caption text-amber-900 leading-relaxed dark:text-amber-200" data-testid="housing-excess-phd-card">
@@ -73,6 +78,11 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
     );
   }
   if (!housingExcessNeedsLandSplit(asset, transferDate, isNonPrimary)) return null;
+  // 5칸 경로의 이름 — 주택 종류 신호(`resolveHousingKind`)를 따른다. ⑧ 메시지(`validateHousingExcessSplitInputs`)와 같은 함수·같은 이름.
+  // 신호가 없으면(PHD 라디오 기본값만 있는 공동주택일 수 있음) 두 이름을 함께 적는다.
+  const kind = resolveHousingKind(asset);
+  const disclosedName = housingDisclosedPriceName(kind);
+  const convertedName = housingConvertedPriceName(kind);
   const excess = housingExcessAreaOfAsset(asset, transferDate);
   const landArea = parseDecimal(asset.transferArea) || parseDecimal(asset.acquisitionArea) || undefined;
   // 환산·감정·매매사례면 취득시 개별주택가격은 취득가액 칸의 «취득시 기준시가»가 받는다 — 여기서 다시 그리지 않는다.
@@ -103,7 +113,7 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
             <p className="text-caption text-amber-900 dark:text-amber-200" data-testid="housing-excess-acq-total-elsewhere">
               {inheritedTotal
                 ? "취득시 개별주택가격(부수토지 포함)은 위에서 입력한 상속·증여 평가액(개별주택가격)을 그대로 씁니다."
-                : "취득시 개별주택가격(부수토지 포함)은 취득가액 산정 방식에서 입력한 「취득시 기준시가」를 그대로 씁니다."}
+                : `취득시 ${disclosedName}(부수토지 포함)은 취득가액 산정 방식에서 입력한 「취득시 기준시가」를 그대로 씁니다.`}
             </p>
           ) : (
             <FieldCard
@@ -113,7 +123,7 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
               unit="원"
               hint={
                 preDisclosure
-                  ? `취득일이 ${disclosedName} 최초 공시일${apartment ? "" : "(2005-04-30)"} 전이라 취득 당시 공시가격이 없습니다 — 영 §164⑦ 산식으로 계산한 ${convertedName}(최초 공시 ${disclosedName}에, 취득 당시 토지+건물 기준시가 합계를 최초 공시 당시 토지+건물 기준시가 합계로 나눈 비율을 곱한 값)을 입력하세요. 토지분 : 건물분은 아래 ㎡당 공시지가 : 건물 기준시가 비율로 나눕니다.`
+                  ? `취득일이 ${disclosedName} 최초 공시일${housingFirstDisclosureDateNote(kind)} 전이라 취득 당시 공시가격이 없습니다 — 영 §164⑦ 산식으로 계산한 ${convertedName}(최초 공시 ${disclosedName}에, 취득 당시 토지+건물 기준시가 합계를 최초 공시 당시 토지+건물 기준시가 합계로 나눈 비율을 곱한 값)을 입력하세요. 토지분 : 건물분은 아래 ㎡당 공시지가 : 건물 기준시가 비율로 나눕니다.`
                   : `취득일 직전 고시된 ${disclosedName}(토지 포함 결합 공시)입니다. 토지분 : 건물분 기준시가 비율로 취득가액을 나눕니다.`
               }
             >
@@ -136,7 +146,7 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
             jibun={asset.addressJibun}
             hint="취득일 직전 고시 개별공시지가 (원/㎡) — 토지 기준시가 = ㎡당 공시지가 × ①의 토지 면적 (§99①1호 가목)"
           />
-          <AcqBuildingStdField asset={asset} onChange={onChange} transferDate={transferDate} variant="proportional" />
+          <AcqBuildingStdField asset={asset} onChange={onChange} transferDate={transferDate} variant="proportional" priceName={disclosedName} />
 
           {contractOpen && (
             <div className="space-y-2" data-testid="housing-excess-acq-contract">

@@ -31,9 +31,11 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
   variant: "proportional" | "separate";
+  /** `proportional` hint의 «…주택가격» 이름 — 기본 «개별주택가격». 배율 초과 분리 카드가 주택 종류에 맞춰 넘긴다(호출부 대부분은 개별주택 전제). */
+  priceName?: string;
 }
 
-export function AcqBuildingStdField({ asset, onChange, transferDate, variant }: Props) {
+export function AcqBuildingStdField({ asset, onChange, transferDate, variant, priceName = "개별주택가격" }: Props) {
   const proportional = variant === "proportional";
   return (
     <>
@@ -45,7 +47,7 @@ export function AcqBuildingStdField({ asset, onChange, transferDate, variant }: 
           unit="원"
           hint={
             proportional
-              ? "국세청 건물 기준시가 산정 방법(건축물대장 연면적 기준)으로 구한 취득일 직전 고시분입니다. 개별주택가격(부수토지 포함)을 토지 기준시가 : 건물 기준시가 비율로 나누는 데 씁니다."
+              ? `국세청 건물 기준시가 산정 방법(건축물대장 연면적 기준)으로 구한 취득일 직전 고시분입니다. ${priceName}(부수토지 포함)을 토지 기준시가 : 건물 기준시가 비율로 나누는 데 씁니다.`
               : "건물 취득일 직전 고시분 (§164③). 취득시기가 다르므로 결합 공시액을 나눠 쓰면 건물분에 토지 취득시점이 섞인다."
           }
         >

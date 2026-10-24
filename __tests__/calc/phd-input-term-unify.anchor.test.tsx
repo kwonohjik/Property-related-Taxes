@@ -124,7 +124,16 @@ describe("I4 배율 초과 분리 카드 + ⑧ 메시지", () => {
   const post = (kind: Partial<AssetForm>) => housing({ ...BASE, acquisitionDate: "2012-01-02", ...kind });
   const TD = "2023-02-16";
 
-  it.each(KINDS)("%s — 2005-04-30 전 취득 5칸 카드: 라벨·hint가 같은 이름", (_n, kind, want, other) => {
+  // 5칸 경로의 주택 종류는 `resolveHousingKind` 신호로 정한다(PHD 라디오 기본값 «individual»은 신호가 아니다).
+  //   개별 = 주택 구분 픽커의 명시 선택 / 공동 = PHD 라디오 apartment / 신호 없음 = 두 이름을 함께 적는다.
+  const SIG = [
+    ["개별(주택 구분 명시)", { inheritanceAssetKind: "house_individual" }, IND, APT],
+    ["공동(PHD 라디오)", { phdHousingType: "apartment" }, APT, IND],
+  ] as const;
+  const BOTH_CONVERTED = `${IND}(공동주택은 ${APT})`;
+  const BOTH_DISCLOSED = "개별주택가격(공동주택은 공동주택가격)";
+
+  it.each(SIG)("%s — 2005-04-30 전 취득 5칸 카드: 라벨·hint가 같은 이름", (_n, kind, want, other) => {
     render(<HousingExcessSplitCard asset={pre(kind)} onChange={noop} transferDate={TD} />);
     expect(screen.getByTestId("housing-excess-split-card")).toBeTruthy();
     expect(text()).toContain(`영 §164⑦ ${want} · 부수토지 포함`);
@@ -132,24 +141,93 @@ describe("I4 배율 초과 분리 카드 + ⑧ 메시지", () => {
     expect(text()).not.toContain(other);
     expect(text()).not.toContain("추정");
   });
-  it.each(KINDS)("%s — ⑧ 메시지도 카드와 같은 이름", (_n, kind, want, other) => {
+  it.each(SIG)("%s — ⑧ 메시지도 카드와 같은 이름", (_n, kind, want, other) => {
     const msg = validateHousingExcessSplitInputs(pre(kind), "자산", TD) ?? "";
     expect(msg).toContain(`영 §164⑦ 산식으로 계산한 ${want}(부수토지 포함 총액)을 입력하세요`);
     expect(msg).not.toContain(other);
     expect(msg).not.toContain("추정");
   });
+  it("신호 없음(PHD 라디오 기본값 «individual»·필드 없음·옛 이력) — 카드·⑧ 모두 두 이름을 함께 적는다", () => {
+    for (const kind of [{ phdHousingType: "individual" }, { phdHousingType: undefined }] as const) {
+      cleanup();
+      render(<HousingExcessSplitCard asset={pre(kind)} onChange={noop} transferDate={TD} />);
+      expect(text()).toContain(`영 §164⑦ ${BOTH_CONVERTED} · 부수토지 포함`);
+      expect(text()).toContain(`취득시 ${BOTH_DISCLOSED} (영 §164⑦`);
+      const msg = validateHousingExcessSplitInputs(pre(kind), "자산", TD) ?? "";
+      expect(msg).toContain(`취득일이 ${BOTH_DISCLOSED} 최초 공시일(개별주택은 2005-04-30) 전이라`);
+      expect(msg).toContain(`영 §164⑦ 산식으로 계산한 ${BOTH_CONVERTED}(부수토지 포함 총액)을 입력하세요`);
+      expect(msg).not.toContain("추정");
+    }
+  });
   it("공동주택은 개별주택 전용 날짜(2005-04-30)를 붙이지 않는다 · 개별은 그대로", () => {
     const apt = validateHousingExcessSplitInputs(pre({ phdHousingType: "apartment" }), "자산", TD) ?? "";
     expect(apt).toContain("취득일이 공동주택가격 최초 공시일 전이라");
     expect(apt).not.toContain("2005-04-30");
-    const ind = validateHousingExcessSplitInputs(pre({ phdHousingType: "individual" }), "자산", TD) ?? "";
+    const ind = validateHousingExcessSplitInputs(pre({ inheritanceAssetKind: "house_individual" }), "자산", TD) ?? "";
     expect(ind).toContain("취득일이 개별주택가격 최초 공시일(2005-04-30) 전이라");
   });
-  it.each(KINDS)("%s — 2005-04-30 이후 취득 일반 문구: 라벨의 고시 가격 이름만 종류를 따른다(환산 이름 없음)", (_n, kind, want) => {
+  it.each(SIG)("%s — 2005-04-30 이후 취득 일반 문구: 라벨의 고시 가격 이름만 종류를 따른다(환산 이름 없음)", (_n, kind, want) => {
     render(<HousingExcessSplitCard asset={post(kind)} onChange={noop} transferDate={TD} />);
     expect(text()).toContain(`취득시 ${want === APT ? "공동주택가격" : "개별주택가격"} (부수토지 포함)`);
     expect(text()).not.toContain(IND);
     expect(text()).not.toContain(APT);
+  });
+  it("신호 없음 — 2005-04-30 이후 취득 일반 문구도 고시 가격 이름 두 개를 함께 적는다", () => {
+    render(<HousingExcessSplitCard asset={post({})} onChange={noop} transferDate={TD} />);
+    expect(text()).toContain(`취득시 ${BOTH_DISCLOSED} (부수토지 포함)`);
+    expect(text()).not.toContain(IND);
+  });
+
+  // ── 격자: (PHD 라디오 apartment / individual / 없음) × (다른 공동주택 신호 있음 / 없음) — 카드·⑧이 같은 판정을 따른다 ──
+  //   «다른 공동주택 신호» = 동·호를 둘 다 고른 세대(공동주택 세대 목록에서 선택). 우선순위: PHD 라디오 apartment > 주택 구분 명시 > 동·호.
+  type Expect = "apt" | "both";
+  const RADIOS = [
+    ["라디오 apartment", { phdHousingType: "apartment" }],
+    ["라디오 individual(기본값)", { phdHousingType: "individual" }],
+    ["라디오 없음(옛 이력)", { phdHousingType: undefined }],
+  ] as const;
+  const OTHERS = [
+    ["공동주택 신호 있음(동·호)", { addressDong: "101동", addressHo: "1204호" }],
+    ["공동주택 신호 없음", {}],
+  ] as const;
+  const expectOf = (radio: string, other: string): Expect => (radio === "라디오 apartment" || other.includes("있음") ? "apt" : "both");
+  describe.each(RADIOS)("%s", (radioName, radio) => {
+    it.each(OTHERS)("× %s — 카드(전 취득)·카드(후 취득)·⑧이 한 판정", (otherName, other) => {
+      const want = expectOf(radioName, otherName);
+      const conv = want === "apt" ? APT : BOTH_CONVERTED;
+      const disc = want === "apt" ? "공동주택가격" : BOTH_DISCLOSED;
+      const asset = { ...radio, ...other };
+      render(<HousingExcessSplitCard asset={pre(asset)} onChange={noop} transferDate={TD} />);
+      expect(text()).toContain(`영 §164⑦ ${conv} · 부수토지 포함`);
+      cleanup();
+      render(<HousingExcessSplitCard asset={post(asset)} onChange={noop} transferDate={TD} />);
+      expect(text()).toContain(`취득시 ${disc} (부수토지 포함)`);
+      const msg = validateHousingExcessSplitInputs(pre(asset), "자산", TD) ?? "";
+      expect(msg).toContain(`영 §164⑦ 산식으로 계산한 ${conv}(부수토지 포함 총액)을 입력하세요`);
+      const msgPost = validateHousingExcessSplitInputs(post(asset), "자산", TD) ?? "";
+      expect(msgPost).toContain(`취득 당시 ${disc}(부수토지 포함 총액)을 입력하세요`);
+      if (want === "apt") expect(text() + msg).not.toContain("개별주택가격");
+    });
+  });
+  it("우선순위 — 주택 구분 «단독·다가구» 명시는 동·호보다 앞, PHD 라디오 apartment는 둘보다 앞", () => {
+    const dongHo = { addressDong: "101동", addressHo: "1204호" };
+    const msgInd = validateHousingExcessSplitInputs(pre({ ...dongHo, inheritanceAssetKind: "house_individual" }), "자산", TD) ?? "";
+    expect(msgInd).toContain("취득일이 개별주택가격 최초 공시일(2005-04-30) 전이라");
+    const msgApt = validateHousingExcessSplitInputs(
+      pre({ ...dongHo, inheritanceAssetKind: "house_individual", phdHousingType: "apartment" }),
+      "자산",
+      TD,
+    ) ?? "";
+    expect(msgApt).toContain("취득일이 공동주택가격 최초 공시일 전이라");
+  });
+  it("동 또는 호 한쪽만 채워진 경우는 신호가 아니다(상속 경로의 주택 구분 파생과 같은 조건 — 둘 다 있어야 공동주택)", () => {
+    const msg = validateHousingExcessSplitInputs(pre({ addressHo: "1204호" }), "자산", TD) ?? "";
+    expect(msg).toContain(BOTH_DISCLOSED);
+  });
+  it("배율 초과 카드 5칸의 취득시 건물 기준시가 hint도 같은 이름을 따른다", () => {
+    render(<HousingExcessSplitCard asset={post({ phdHousingType: "apartment" })} onChange={noop} transferDate={TD} />);
+    expect(text()).toContain("공동주택가격(부수토지 포함)을 토지 기준시가 : 건물 기준시가 비율로 나누는 데 씁니다");
+    expect(text()).not.toContain("개별주택가격");
   });
   it.each(KINDS)("%s — PHD 환산 안내 카드(입력칸 없음)의 제목·본문", (_n, kind, want) => {
     const disclosed = want === APT ? "공동주택가격" : "개별주택가격";
