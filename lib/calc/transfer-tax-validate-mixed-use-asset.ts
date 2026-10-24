@@ -5,6 +5,7 @@
  */
 import { parseAmount } from "@/lib/calc/number-parse";
 import { isPhdEligible } from "./phd-eligibility";
+import { mixedSec163_9CompareOf } from "./mixed-use-sec163-9";
 import { isMixedUseCaseA } from "./mixed-use-case";
 import { validateMixedUseAreas } from "./transfer-tax-validate-mixed-area";
 import { validateMixedUseExprAsset } from "./transfer-tax-validate-expropriation";
@@ -99,7 +100,7 @@ export function validateMixedUseAsset(
   const mixedExprErr = validateMixedUseExprAsset(asset, label, formTransferDate);
   if (mixedExprErr) return mixedExprErr;
   // ⑧ 상속 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (엔진 정합). 분리 파일 참조(800줄 정책).
-  const mixedInheritanceErr = validateMixedUseInheritanceAsset(asset, label);
+  const mixedInheritanceErr = validateMixedUseInheritanceAsset(asset, label, formTransferDate);
   if (mixedInheritanceErr) return mixedInheritanceErr;
   // ⑧ 겸용 취득가액 총액 안분 (법 §100²) — 매매 + (실거래가 §97①1호가목 / 감정·매매사례 §176의2②③).
   // 셋 다 취득시 기준시가 비율 안분(감정·매매사례는 개산공제 유지). 환산 모드는 아래 별도.
@@ -267,6 +268,9 @@ export function validateMixedUseAsset(
 export function mixedUsePhdFieldError(asset: AssetForm, label: string, formTransferDate: string | undefined): string | null {
   if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일을 입력하세요.`);
   // §164⑦ 게이트 — 취득일(의제취득일 1985-01-01 반영) ≥ 최초고시일이면 취득당시 고시분 존재 → 3-시점 환산 대상 아님
+  // 단서 구간(2005.4.30. 전 상속·증여)은 토글이 필수라 「끄고 직접 입력」 안내가 순환한다(사용자 결정 R-1) — 고시일을 고치게 한다.
+  if (!isPhdEligible(asset.acquisitionDate, asset.phdFirstDisclosureDate) && mixedSec163_9CompareOf(asset)?.era === "clause")
+    return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일이 상속개시일·증여일보다 앞섭니다. 개별주택가격은 2005.4.30.에 처음 공시되었으므로 이 주택의 최초 고시일(2005.4.30. 이후)을 확인해 입력하세요 (소득세법 시행령 §164⑦).`);
   if (!isPhdEligible(asset.acquisitionDate, asset.phdFirstDisclosureDate))
     return fieldError("phdFirstDisclosureDate", `${label}: 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 3-시점 환산을 끄고 취득시 기준시가를 직접 입력하세요.`);
   if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)

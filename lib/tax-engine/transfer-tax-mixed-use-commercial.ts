@@ -279,8 +279,9 @@ export function calcCommercialGainSplit(
   //    주택분 분자가 0이 되어 **상가분이 나목 전액을 흡수**한다(F18). PHD가 역산한 취득시
   //    개별주택가격(P_A_est)을 주입해 축을 복원한다. 주택분(`applyHousingProviso`)과 같은 축이라
   //    두 파트의 합이 나목과 정확히 일치한다(잔액 흡수).
+  //    상속·증여 + PHD도 같다 — 주택분 PHD 상속 분기가 같은 축으로 공통 자본적지출 몫을 가져간다(2026-10-24 · 숨은 직접 칸의 남은 값이 축을 흔들던 것도 막는다).
   const phdAcqStdOverride =
-    swapToDirect && housingAcqResult?.phdResult
+    (swapToDirect || asset.acquisitionByInheritance || asset.acquisitionByGift) && housingAcqResult?.phdResult
       ? { housingStd: housingAcqResult.phdResult.estimatedHousingPriceAtAcquisition }
       : undefined;
   // C8 — 상속·증여 + 취득시 개별주택가격 없음이면 신고가액 비율(주택분과 같은 축 — `inheritedCapexStdOverride`).

@@ -11,6 +11,7 @@ vi.mock("@/components/calc/building-std-price/BuildingStdPriceModalButton", () =
 }));
 
 import { BurdenedGiftBlock } from "@/components/calc/transfer/BurdenedGiftBlock";
+import { GiftHouseStdPriceSection } from "@/components/calc/transfer/GiftHouseStdPriceSection";
 import { MixedUseAssetMajorStdPrice } from "@/components/calc/transfer/mixed-use/MixedUseAssetMajorStdPrice";
 import { MixedSec163_9ComparisonCard } from "@/components/calc/results/mixed-use/MixedSec163_9ComparisonCard";
 import { MixedUseBgAcqRows } from "@/components/calc/results/mixed-use/MixedUseBurdenedGiftSection";
@@ -98,6 +99,39 @@ describe("U-2 · 신고가액 칸 — 단서 구간·PHD면 「(선택)」 + 짝
   it("🔴 짝: 2010 상속 · PHD 없음은 「(필수)」", () => {
     const { getByText } = major(seed());
     expect(getByText("상속개시일 신고가액 직접 입력 (필수)")).toBeTruthy();
+  });
+});
+
+describe("U-4 · 단서 구간은 §164⑦ 토글 필수 — 직접 입력 칸을 숨긴다(사용자 결정 R-1, 2026-10-24)", () => {
+  const directField = (c: HTMLElement) => c.querySelector('[data-field="mixedAcqHousingPrice"]');
+  it("1995 상속 · 부담부증여(시가): 직접 칸 없음 · 토글 설명이 「켜야 계산됩니다」", () => {
+    const { container } = major(seed(Y95));
+    expect(directField(container)).toBeNull();
+    expect(container.textContent).toContain("개별주택가격 최초 공시(2005.4.30.) 전이라 켜야 계산됩니다");
+  });
+
+  it("1995 상속 · 일반 양도: 같은 규칙", () => {
+    const { container } = major(seed({ ...Y95, transferType: "regular" }));
+    expect(directField(container)).toBeNull();
+    expect(container.textContent).toContain("켜야 계산됩니다");
+  });
+
+  it("🔴 짝: 2010 상속(단서 구간 밖)은 직접 칸이 그대로 있고 「켜야 계산됩니다」 문구가 없다", () => {
+    const { container } = major(seed({ transferType: "regular" }));
+    expect(directField(container)).not.toBeNull();
+    expect(container.textContent).not.toContain("켜야 계산됩니다");
+  });
+});
+
+describe("U-5 · 겸용 증여에는 일반 주택 §164⑤~⑦ 8칸 카드를 그리지 않는다(PHD 패널이 받는다 · 리뷰 게이트 2026-10-24)", () => {
+  const G95: Partial<AssetForm> = { ...Y95, acquisitionCause: "gift", donorAcquisitionDate: "1980-01-01", transferType: "regular" };
+  it("겸용 1995 증여: 카드 없음", () => {
+    const { container } = render(<GiftHouseStdPriceSection asset={seed(G95)} onChange={() => {}} transferDate="2024-03-01" />);
+    expect(container.querySelector('[data-field="inhHouseValLandArea"]')).toBeNull();
+  });
+  it("🔴 짝: 같은 시료를 겸용이 아닌 주택으로 바꾸면 카드가 있다", () => {
+    const { container } = render(<GiftHouseStdPriceSection asset={seed({ ...G95, isMixedUseHouse: false })} onChange={() => {}} transferDate="2024-03-01" />);
+    expect(container.querySelector('[data-field="inhHouseValLandArea"]')).not.toBeNull();
   });
 });
 

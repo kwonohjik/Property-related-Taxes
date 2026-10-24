@@ -184,23 +184,46 @@ test.describe("겸용주택 × 부담부증여", () => {
     await expect(page.getByTestId("bg-result-acq-housing")).toContainText("상속개시일 평가액 안분 (소득세법 시행령 §163⑨)");
   });
 
-  test("BGMU-8 1995 상속(§163⑨ 단서 구간) — ① 2억 < ② 6억 합계 비교 카드에 ② 채택 · 「채무비율 곱하기 전」 설명 · 취득가액 행은 §164 기준시가", async ({ page }) => {
+  /** 1995 상속 · PHD(§164⑦) — 단서 구간은 토글 필수(사용자 결정 R-1, 2026-10-24) · 최초 고시일 2005-04-30 */
+  const Y95_PHD = {
+    ...INHERITED,
+    acquisitionDate: "1995-03-15",
+    inheritanceStartDate: "1995-03-15",
+    decedentAcquisitionDate: "1980-01-01",
+    mixedAcqHousingPrice: "",
+    mixedAcqLandPricePerSqm: "800000",
+    mixedAcqCommercialBuildingPrice: "30000000",
+    usePreHousingDisclosure: true,
+    phdFirstDisclosureDate: "2005-04-30",
+    phdFirstDisclosureHousingPrice: "250000000",
+    phdLandPricePerSqmAtFirst: "1600000",
+    phdLandPricePerSqmAtAcq: "800000",
+    phdBuildingStdPriceAtAcq: "25000000",
+    phdBuildingStdPriceAtFirst: "45000000",
+    phdBuildingStdPriceAtTransfer: "100000000",
+    mixedHousingInheritedValueOverride: "100000000",
+    mixedCommercialInheritedValueOverride: "100000000",
+  };
+
+  test("BGMU-8 1995 상속(§163⑨ 단서 구간) · §164⑦ — ① 2억 < ② 합계 비교 카드에 ② 채택 · 「채무비율 곱하기 전」 설명 · 취득가액 행은 §164⑦ 환산가액", async ({ page }) => {
     test.setTimeout(90_000);
-    await seedAndOpen(page, {
-      ...INHERITED,
-      acquisitionDate: "1995-03-15",
-      inheritanceStartDate: "1995-03-15",
-      decedentAcquisitionDate: "1980-01-01",
-      mixedHousingInheritedValueOverride: "100000000",
-      mixedCommercialInheritedValueOverride: "100000000",
-    });
+    await seedAndOpen(page, Y95_PHD);
     await expandAssetSection(page, 3);
     await expect(page.getByText("상속개시일 신고가액 직접 입력 (선택)")).toBeVisible();
+    await expect(page.locator('[data-field="mixedAcqHousingPrice"]')).toHaveCount(0);
     await calc(page);
     const card = page.getByTestId("mixed-sec163-9-comparison");
     await expect(card.locator('tr[data-candidate="standard"]')).toContainText("← 채택");
     await expect(page.getByTestId("mixed-sec163-9-bg-note")).toContainText("채무비율을 곱하기 전 취득가액");
-    await expect(page.getByTestId("bg-result-acq-housing")).toContainText("§164 기준시가(개별주택가격) 안분");
+    await expect(page.getByTestId("bg-result-acq-housing")).toContainText("§164⑦ 환산가액 안분");
+  });
+
+  test("BGMU-9 1995 상속 · §164⑦ 토글을 끄면 «다음»이 막히고 토글로 이동한다(사용자 결정 R-1 — 개별주택가격 공시 전 직접 입력 불허)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seedAndOpen(page, { ...Y95_PHD, usePreHousingDisclosure: false, mixedAcqHousingPrice: "300000000" });
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await expect(page.getByTestId("validation-issues")).toContainText("§164⑦ 환산가액");
+    await expect(page.locator('[data-field="usePreHousingDisclosure"]')).toBeInViewport();
   });
 
   test("BGMU-7 증여자 상속 취득에서 평가액을 비우면 «다음»이 막히고 상속개시일 주택분 신고가액 칸으로 이동한다", async ({ page }) => {

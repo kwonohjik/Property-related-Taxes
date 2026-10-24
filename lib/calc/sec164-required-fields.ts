@@ -111,6 +111,9 @@ function merge(clause: string, ...parts: ReturnType<typeof tally>[]): Sec164Fiel
 export function sec164HouseStatus(asset: AssetForm): Sec164FieldStatus | null {
   const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
   if (!isHouse || !isSec163_9Cause(asset.acquisitionCause)) return null;
+  // 겸용주택은 이 8칸(`HouseValuationSection`)을 그리지 않는다 — 주택분 §164⑦은 개별주택가격 미공시(PHD) 패널이 받는다.
+  //   빼지 않으면 그 패널과 함께 쓰는 토지등급 칸 4개를 「8칸 중 4칸」으로 읽어 숨은 칸으로 막았다(1985.1.1.~1990.8.29. 상속 겸용 막다른 길).
+  if (asset.isMixedUseHouse === true) return null;
   const baseDate = deriveSec163_9BaseDate(asset);
   if (isApartSec163_9Asset(asset)) {
     // 공동주택 — 「상속·증여 당시 국세청 고시 가액 없었음」일 때만 단서 2호 구간이다(`apart-nts-price.ts` — 엔진·⑫와 같은 판정).

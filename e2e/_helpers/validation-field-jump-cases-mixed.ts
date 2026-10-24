@@ -226,6 +226,14 @@ export const MIXED_FIELD_JUMP_CASES: FieldJumpCase[] = [
 
   // ── 상속·증여 취득 겸용 ──
   {
+    name: "mixed: 단서 구간(2005.4.30. 전) 상속 — §164⑦ 토글 필수(R-1)", field: "usePreHousingDisclosure", step: 0, assetIndex: A,
+    message: /^자산: 개별주택가격 공시\(2005\.4\.30\.\) 전에 상속받은 주택분의 취득당시 기준시가는 §164⑦ 환산가액/,
+    form: mixed({
+      acquisitionCause: "inheritance", acquisitionDate: "1995-03-15", inheritanceStartDate: "1995-03-15", decedentAcquisitionDate: "1980-01-01",
+      mixedHousingInheritedValueOverride: "100000000", mixedCommercialInheritedValueOverride: "100000000",
+    }),
+  },
+  {
     name: "mixed: mixedHousingInheritedValueOverride (상속 주택분)", field: "mixedHousingInheritedValueOverride", step: 0, assetIndex: A, message: /^자산: 상속개시일 주택분 평가액/,
     form: mixed({ acquisitionCause: "inheritance", decedentAcquisitionDate: "2000-01-01", publishedValueAtInheritance: "700000000", mixedAcqHousingPrice: "" }),
   },

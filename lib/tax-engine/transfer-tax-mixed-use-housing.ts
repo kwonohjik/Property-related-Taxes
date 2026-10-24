@@ -16,7 +16,7 @@ import { estimatedDeductionRate } from "./legal-codes";
 import { calculateHoldingPeriod, computeEstimatedDeduction } from "./tax-utils";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { buildHousingGainSplitFromFourPart } from "./transfer-tax-mixed-use-fourpart";
-import { splitDeemedExpense, resolvePartNecessaryExpense } from "./transfer-tax-mixed-use-inheritance";
+import { resolvePartNecessaryExpense } from "./transfer-tax-mixed-use-inheritance";
 import { inheritedCapexStdOverride } from "./transfer-tax-mixed-use-inheritance";
 import { apportionAcquisitionPrice, apportionTransferPrice } from "./transfer-tax-mixed-use-helpers";
 import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
@@ -177,11 +177,24 @@ export function calcHousingGainSplit(
     ) {
       const landAcqPrice = housingAcqResult.inheritedLandAcqPrice;
       const buildingAcqPrice = housingAcqResult.inheritedBuildingAcqPrice ?? 0;
-      const { landAppraisalDed, buildingAppraisalDed } = splitDeemedExpense(
-        asset.housingInheritedExpense ?? 0,
-        phd.landHousingAtAcquisition,
-        phd.buildingHousingAtAcquisition,
-      );
+      // 자산 단위 공통 자본적지출·양도비의 주택분 몫도 더한다(「소득세법」 §100② 후문 — 비-PHD 분기와 같은 규칙).
+      //   종전에는 파트 직접 입력만 읽어 공통 경비의 주택분 몫이 사라졌다(공통 양도비 2천만 중 1천만 소실 · 리뷰 게이트 2026-10-24).
+      //   자본적지출 축의 주택분은 §164⑦ 환산 취득시 개별주택가격(P_A_est) — 상가분(`transfer-tax-mixed-use-commercial.ts`)과 같은 축이라 합이 맞는다(F18).
+      const { landAppraisalDed, buildingAppraisalDed } = resolvePartNecessaryExpense({
+        partDirect: asset.housingInheritedExpense,
+        commonCapitalExpenditure: apportionAcquisitionPrice(
+          asset.capitalExpenditure ?? 0, asset, effectiveAcqDerived,
+          { housingStd: phd.estimatedHousingPriceAtAcquisition },
+        ).housingAcqPrice,
+        commonTransferExpense: salePart
+          ? salePart.transferExpense
+          : apportionTransferPrice(asset.transferExpense ?? 0, asset, derived).housingTransferPrice,
+        acqLandStd: phd.landHousingAtAcquisition,
+        acqBuildingStd: phd.buildingHousingAtAcquisition,
+        transferLandStd: phd.landHousingAtTransfer,
+        transferBuildingStd: phd.buildingHousingAtTransfer,
+        buildingOnlyTransferExpense: buildingDirectShare(asset, derived, "housing"),
+      });
       const landGain = phd.landTransferPrice - landAcqPrice - landAppraisalDed;
       const buildingGain = phd.buildingTransferPrice - buildingAcqPrice - buildingAppraisalDed;
       const totalGain = landGain + buildingGain;
