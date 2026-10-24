@@ -19,6 +19,7 @@ import { assertGbBgDonorBuiltInput } from "@/lib/tax-engine/general-building-bg-
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import type { DonorBuiltInput, DonorBuiltPenaltyEcho } from "@/lib/tax-engine/types/transfer-carryover.types";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
+import type { GbBgCarryoverScenarioSummary } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import {
   runActualGeneralBuildingOnce,
   type GeneralBuildingActualPricePayload,
@@ -29,6 +30,13 @@ import type {
 } from "./general-building-route-cards";
 
 const ymd = (d: Date): string => d.toISOString().slice(0, 10);
+
+/** 한 시나리오의 카드 요약(PR-4) — 결과 화면 [A]/[B] 비교 카드가 읽는다. 기산일은 그 호출에 넘긴 카드 취득일 그대로다(`landCardDate`·`buildingCardDate`). */
+const scenarioSummary = (r: GeneralBuildingRouteResult, landStart: Date, buildingStart: Date): GbBgCarryoverScenarioSummary => ({
+  parts: r.aggregated.properties.map((p) => ({ propertyLabel: p.propertyLabel, acquisitionPrice: p.acquisitionPrice, transferGain: p.transferGain })),
+  landHoldingStartDate: ymd(landStart),
+  buildingHoldingStartDate: ymd(buildingStart),
+});
 
 /**
  * 당초 증여자 신축·증축 §114조의2 가산세의 **결과 echo + 고지**를 채택 결과에 싣는다(PR-5c). 가산세 금액은 A 호출의 건물 카드가 이미 냈다 — 여기서는 새로 계산하지 않고 읽기만 한다.
@@ -180,6 +188,12 @@ export function calculateGeneralBuildingActualTransfer(
     determinedTaxB: resultB.aggregated.determinedTax,
     donorAcquisitionDate: ct.donorAcquisitionDate,
     giftTaxAmount: ct.giftTaxAmount,
+    scenarioA: scenarioSummary(resultA, ct.donorAcquisitionDate, ct.donorAcquisitionDate),
+    scenarioB: scenarioSummary(
+      resultB,
+      payload.landAcquisitionDate ?? payload.acquisitionDate,
+      payload.buildingAcquisitionDate ?? payload.acquisitionDate,
+    ),
   };
   if (donorBuilt)
     attachDonorBuiltEcho(chosen, adopted === "B" ? donorBuiltNotAppliedEcho(donorBuilt, "scenario_b") : donorBuiltAppliedEcho(donorBuilt, resultA, payload.transferDate, info.acquisitionMethod === "appraisal" ? "appraisal" : "estimated"));
