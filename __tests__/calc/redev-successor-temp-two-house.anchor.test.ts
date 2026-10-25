@@ -12,7 +12,7 @@
  * | SC-3 | 사용승인 후 1년 뒤(2022-03-01) — 비과세 유지(음성 짝) |
  * | SC-4 | API 직접 호출이 입주권 승계일을 보내도 엔진이 준공일로 판정 — SC-2와 같은 결론 |
  * | SC-5 | 대전 유성(사용승인일에 조정대상지역) — 거주 0은 과세, 거주 2년이면 비과세(거주요건 축 불변) |
- * | SC-6 | 토지 출자 원조합원은 그대로(V-1 해석례 대기 — Q-1 (c) 범위 밖) |
+ * | SC-6 | (이관) 토지 출자 원조합원은 F-1 Q-3 결정(2026-10-25)으로 같은 정정을 받는다 — `redev-land-contributed-temp-two-house.anchor.test.ts` |
  * | SC-7 | 엔진 번역 — 합가 D8 상대 쪽 짝(`previousHouseIsRosterRow`)은 명부 행 취득일을 그대로 둔다 |
  * | SC-8 | 화면 leaf — 승계조합원 완공APT만 준공일, 준공일이 비면·입주권 양도·원조합원은 대체 없음 |
  */
@@ -54,7 +54,6 @@ const SUCCESSOR = {
   residenceInputMode: "direct",
   residencePeriods: [],
 };
-const LAND = { ...SUCCESSOR, acquisitionDate: "2005-01-01", redevIsSuccessorMember: "no", redevOriginalAssetType: "land", redevSettlementAmount: "100000000" };
 
 function form(opts: { other: string; transfer: string; region?: string; member?: Record<string, unknown>; asset?: Record<string, unknown> }) {
   const houses = [
@@ -129,13 +128,6 @@ describe("승계조합원 완공APT × §155① 종전주택 취득일 = 준공�
     );
     expect(lived.result.isExempt).toBe(true);
     expect(lived.result.totalTax).toBe(0);
-  });
-
-  it("SC-6 토지 출자 원조합원은 그대로 — 종전주택 취득일 = 토지 취득일(V-1 해석례 대기)", async () => {
-    const r = await runCalc(form({ other: "2021-08-01", transfer: "2023-04-01", member: LAND }));
-    expect(r.status).toBe(200);
-    expect(tth(r.body)).toMatchObject({ previousAcquisitionDate: "2005-01-01" });
-    expect(r.result.isExempt).toBe(true);
   });
 });
 
