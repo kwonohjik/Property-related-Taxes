@@ -12,6 +12,10 @@
  *
  * 값은 모두 **물건 전체** 기준이다(엔진 `scaleBurdenedGiftInfo`가 지분율을 곱한다 — 자산 1과 같은 규칙).
  * 게이트는 ⑧과 같은 병합 자산으로 판정한다(`mergePrimaryBasic` → `needsBgAcqStdPriceInput`·`isBgPresumedMethod`).
+ *
+ * 이월과세(§97의2) 지분 — 「당초 증여자」 취득 당시 값도 지분마다 다르다(지분마다 증여 사건이 따로다). ②의 이월과세 박스를 이 카드에서 같은 leaf로 연다
+ * (`bgCoDonorNeedsStdPrice` · ⑧ `missingCoDonorBasisLabel`이 같은 병합 자산으로 요구한다 — 종전에는 칸이 없어 막다른 길이었다 · PR-2).
+ * 이월과세 지분의 양도인 쪽 매매사례가액·감정가액은 쓰지 않는다(시나리오 B는 증여일 평가액 — 소령 §163⑨) — 그 칸은 열지 않는다(②와 같다).
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -22,6 +26,8 @@ import { mergePrimaryBasic } from "@/lib/calc/transfer-tax-api-helpers";
 import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
 import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisition";
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
+import { bgCoDonorNeedsStdPrice } from "@/lib/calc/burdened-gift-acq-std-price";
+import { BurdenedGiftCarryoverBlock } from "./BurdenedGiftCarryoverBlock";
 
 interface Props {
   asset: AssetForm;
@@ -33,12 +39,13 @@ export function BurdenedGiftTrancheBasisBlock({ asset, primaryAsset, onChange }:
   if (!primaryAsset || primaryAsset.transferType !== "burdened_gift") return null;
   const merged = mergePrimaryBasic(asset, primaryAsset);
   // 의제취득일 전 상속·증여 지분은 산정방식을 쓰지 않는다(3자 max · ④도 싣지 않는다 — PR-7b-5 D-3). 취득시 기준시가 칸은 `needsBgAcqStdPriceInput`이 같은 술어로 닫는다
+  const isCarryover = merged.acquisitionCause === "carryover_gift";
   const presumedMethod =
-    !isBgPreDeemedAsset(merged) && merged.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(merged.bgAcquisitionMethod)
+    !isBgPreDeemedAsset(merged) && !isCarryover && merged.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(merged.bgAcquisitionMethod)
       ? merged.bgAcquisitionMethod
       : undefined;
   const needsStd = needsBgAcqStdPriceInput(merged);
-  if (!presumedMethod && !needsStd) return null;
+  if (!presumedMethod && !needsStd && !isCarryover) return null;
 
   return (
     <div className="space-y-2" data-testid="bg-tranche-basis">
@@ -75,6 +82,9 @@ export function BurdenedGiftTrancheBasisBlock({ asset, primaryAsset, onChange }:
             hint="개산공제(§163⑥)·기준시가 안분·환산취득가액의 분자로 쓰입니다"
           />
         </ToneCard>
+      )}
+      {isCarryover && (
+        <BurdenedGiftCarryoverBlock asset={merged} onChange={onChange} coDonorNeedsStdPrice={bgCoDonorNeedsStdPrice(merged)} bundled />
       )}
     </div>
   );

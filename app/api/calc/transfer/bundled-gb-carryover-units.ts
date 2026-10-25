@@ -1,5 +1,5 @@
 /**
- * 함께 부담부증여 묶음 × 일반건물 × 배우자등 이월과세 — §97의2②3호 **외부 비교 단위** 등록·결과 echo (PR-1)
+ * 부담부증여 × 일반건물 × 배우자등 이월과세 — §97의2②3호 **외부 비교 단위** 등록·결과 echo (묶음 PR-1 · 지분 분할 PR-2)
  *
  * 계획서: `docs/00-pm/gb-bg-carryover-share-bundled.plan.md` §4.2·§4.5·§4.6
  *
@@ -64,7 +64,8 @@ export function attachGbCarryoverUnits(
   aggregated: AggregateTransferResult,
   drafts: readonly GbBgCarryoverUnitDraft[],
   units: readonly ExternalCarryoverUnit[],
-  detailsByAsset: Record<string, GbBundledAssetDetail>,
+  /** 함께 양도 묶음 — A 채택 자산의 결과 상세를 A 카드 것으로 바꾼다. 지분 분할은 넘기지 않는다(물건 상세를 route가 다시 조립한다). */
+  detailsByAsset?: Record<string, GbBundledAssetDetail>,
 ): void {
   if (drafts.length === 0) return;
   const out: Record<string, GbBgCarryoverUnitDetail> = {};
@@ -86,7 +87,7 @@ export function attachGbCarryoverUnits(
       scenarioA: summaryOf(runA, unit, d.donorAcquisitionDate, d.donorAcquisitionDate),
       scenarioB: summaryOf(runB, unit, d.holdingStartB.land, d.holdingStartB.building),
     };
-    if (adoptedA) detailsByAsset[d.assetId] = d.detailA;
+    if (adoptedA && detailsByAsset && d.detailA) detailsByAsset[d.assetId] = d.detailA;
   });
   aggregated.burdenedGiftCarryoverUnits = out;
 }

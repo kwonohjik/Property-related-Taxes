@@ -24,6 +24,7 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { formatOwnershipPercent } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { needsBgAcqStdPriceInput, resolveBgAcqStdPrice } from "./burdened-gift-acq-std-price";
+import { bgCoDonorNeedsStdPrice } from "./burdened-gift-acq-std-price";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { gbBgThreeWayParts } from "./bg-pre-deemed-mode";
 import { gbPartReportedField } from "./gb-pre-deemed";
@@ -50,7 +51,6 @@ import {
 } from "./burdened-gift-presumed-acquisition";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { validateDonorBuiltBg } from "./transfer-tax-validate-donor-built-bg";
-import { GB_BG_CARRYOVER_BUNDLED_MESSAGE } from "@/lib/api/transfer-tax-schema-donor-built";
 import { bgCollateralForcesStdAcq, bgWholeGiftValuation } from "./burdened-gift-collateral-win";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
@@ -136,20 +136,6 @@ export function validateBurdenedGiftAsset(
     }
     const uiBlock = bgMixedUseBlock(asset);
     if (uiBlock) return fieldError(uiBlock.field, `${label}: ${uiBlock.long}`);
-  }
-
-  /**
-   * (1-a′) 일반건물 × 이월과세 × 지분 분할 취득(축 B) — 지분 카드는 이월과세를 반영하지 않고 양도인 기준(B) 값만 낸다(K-5 · Δ 0)
-   * — 침묵 소실 대신 막는다(⑫ `refineGbBgCarryoverBundled`와 같은 사실·문구 · 해제는 지분 PR-2).
-   * 다른 필수 칸보다 **앞**이다 — 채운 뒤에야 막히면 헛입력이 된다. 계획서 `gb-bg-carryover-presumed-scenario-b.plan.md` PR-3.
-   * 함께 부담부증여 묶음은 PR-1부터 계산한다(`gb-bg-carryover-share-bundled.plan.md` §4.5).
-   */
-  if (
-    asset.assetKind === "general_building" &&
-    asset.acquisitionCause === "carryover_gift" &&
-    isFractionalSplitAxis === true
-  ) {
-    return fieldError("acquisitionCause", `${label}: ${GB_BG_CARRYOVER_BUNDLED_MESSAGE}.`);
   }
 
   /**
@@ -600,10 +586,7 @@ function missingCoDonorBasisLabel(asset: AssetForm): { label: string; field: Iss
   // K-6/K-7 — 개산공제 base로 같은 두 칸이 필요하다(필요경비는 개산공제만).
   const isPresumed =
     asset.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(asset.bgAcquisitionMethod);
-  const needsStdPrice =
-    asset.bgValuationMode === "sangjeungbeop_standard" ||
-    asset.bgAcquisitionMethod === "converted" ||
-    isPresumed;
+  const needsStdPrice = bgCoDonorNeedsStdPrice(asset);
   if (isPresumed) {
     const methodLabel = BG_PRESUMED_LABEL[asset.bgAcquisitionMethod as "salesCase" | "appraisal"];
     const kind = bgPresumedInputKind(asset.assetKind);

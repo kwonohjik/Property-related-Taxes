@@ -1,7 +1,7 @@
 # 일반건물 부담부증여 × 이월과세 — 지분 분할 취득(축 B)·부담부증여 묶음에 §97의2②3호 비교 배선 (F27 후속) 계획서
 
 > 작성 2026-10-24 · master 629b0a867 · 선행: `docs/00-pm/gb-bg-carryover-presumed-scenario-b.plan.md` §3.3·§10(PR-3 #2531이 이 두 경로를 ⑧+⑫로 차단하고 배선을 별도 계획으로 넘겼다)
-> 상태: **계획 확정** — Q-1~Q-4 전부 권장안 a(2026-10-25 사용자 결정) · ✅ PR-0 #2545 · ✅ PR-1(묶음) 구현 — §10 · 다음 PR-2(지분)
+> 상태: **계획 확정** — Q-1~Q-4 전부 권장안 a(2026-10-25 사용자 결정) · ✅ PR-0 #2545 · ✅ PR-1(묶음) #2550 — §10 · ✅ PR-2(지분) 구현 — §11
 
 ## 1. 현상 — 실측 (2026-10-24 · 폼 → ④ → route POST · mock 세율)
 
@@ -180,3 +180,18 @@
 - V-3 ✅ 묶음 × 이월과세 환산 토글은 ⑧이 단건과 같은 문구로 먼저 막는다. V-5 ✅ 묶음에서 `isNonPrimaryAsset`이 바꾸는 분기(C 토글·환산 패널·증여자 신축 토글)는 부담부증여에서 이미 꺼지거나 ⑧·`BurdenedGiftBlock`이 맡는다(코드 확인 + E2E). V-4 🟡 비-일반건물(토지) 부담부증여 × 이월과세만 있는 묶음은 명세가 여전히 물건 전체 재계산(첫 자산 방식) 값이다 — 이번 트리거는 일반건물 단위의 A 채택이다. 확인 필요(별건).
 - 별건(확인 필요): 묶음의 토지 부담부증여 × 이월과세가 B로 채택되면 결과의 그 카드 `acquisitionPrice` 표시가 이월과세 「증여일 평가액」 입력값이다(300,000,000 · 1,000,000,000으로 바꾸면 그대로 따라온다). 결정세액은 두 값에서 같았다(137,800,000) — 세액 축이 아니라 표시 echo로 보인다. 일반건물 경로와 무관(이번 변경 전에도 같은 경로).
 
+## 11. PR-2 구현 기록 (2026-10-25) — 지분 분할 취득(축 B)
+
+- **V-1 ✅ (결정)**: A 시나리오의 물건 사건 前/後 판정(`gateShareEvents`)도 당초 증여자 취득일로 한다. 보유기간이 그날부터라(§95④ 단서) 그 뒤 사건은 보유 중 사건이다. 실측(첫 지분 2019 증여 · 둘째 지분 2024 증여 · 당초 증여자 2015 취득 · 2020-06-01 주택→상가 용도변경): 용도변경이 둘째 지분 A에만 걸려 A 84,196,150 → 96,135,000(지분 날짜로 판정하면 용도변경이 빠진다 — 뮤테이션 M1 KILLED). 🟡 확인 필요: 「용도변경 당시 다주택」(`gbWasMultiHouseAtConversion`)은 물건 단위 입력 하나다 — A에서는 용도변경 당시 소유자가 당초 증여자라 그 세대의 사실이어야 하는지 근거(해석례) 미확보.
+- **V-2 ✅ (실측)**: 같은 증여로 받은 두 지분에 같은 증여세를 두 번 넣는 것을 ⑧이 막지 않는다(가드 없음 — `transfer-tax-validate-carryover-asset.ts`는 음수만 본다). Q-2 a대로 지분마다 자기 입력값을 쓴다(P4: 지분별 1,500만 = 단건 3천만). 안내 문구는 달지 않았다 — 아래 별건 때문에 일반건물 부담부증여 화면에서는 이 값이 엔진에 닿지 않는다.
+- 🔴 **별건(확인 필요 · 이번 범위 밖)**: 일반건물 부담부증여 × 이월과세에서 화면은 증여세를 「증여세 산출세액·과세가액」(`CarryoverGiftBlock`의 일반건물 분기)으로만 받는데, 부담부증여 경로(④ `buildCarryoverPayload` → §159)는 `giftTaxAmount`(증여세 상당액)만 읽는다. 단건 실측: 산출세액 3천만·과세가액 10억을 넣어도 `carryoverTaxation.giftTaxAmount = 0` · 결정세액 109,326,000(증여세 0과 같다) — `giftTaxAmount` 3천만이면 104,646,000. 단건 F27·묶음 PR-1·지분 PR-2 모두 같은 경로다. 산출세액·과세가액을 §159 경로의 증여세 상당액으로 바꾸는 규칙(영 §163의2② 안분 분자)이 필요하다 — 별도 계획.
+- ④ `buildGeneralBuildingShares`: 부담부증여 지분마다 `carryoverTaxation`(최상위와 같은 leaf `buildCarryoverPayload` · 금액 3칸 × 지분율 · 증여세 미스케일). 최상위 `carryoverTaxation`은 부담부증여 지분 모드에서 보내지 않는다(`transfer-tax-api.ts`).
+- ⑫ 지분 스키마 `carryoverTaxation`(엔진 shape · donorBuilt 거부) + 짝 강제(이월과세 ⇔ `burdenedGiftInfo.carryoverDonorBasis` · 부담부증여 아닌 지분의 이월과세 거부). `refineGbBgCarryoverBundled`는 지분 차단을 풀고 「지분 배열 + 최상위 이월과세」·`fractionalSplitBundle` 컴패니언 일반건물만 막는다. ⑭ 날짜는 PR-0 leaf(`toEngineCarryoverTaxation`)를 세 번째로 쓴다.
+- route `general-building-fractional.ts`: 요건 충족 지분은 B(`toTransferorBasisInfo`)·A(`applyCarryoverDonorBasis` + 토지·건물 기산일·사건 판정일 = 당초 증여자 취득일) 카드 세트를 만들어 외부 단위(키 = 지분 index = 카드 접미사)로 등록하고 `calculateTransferTaxAggregateWithUnits` 1회로 푼다. 안분 표·산식 재료(`assetCards`)·swap 표시는 채택된 시나리오 카드로 다시 모은다. echo `burdenedGiftCarryoverUnits`(PR-1 helper 재사용 — 결과 카드·신고서 취득일은 코드 변경 없이 지분 키를 읽는다). 첫 지분이 단위면 물건 전체 info를 양도인 기준으로 읽는다(묶음 PR-1과 같다).
+- Q-4 a: 단위가 하나라도 있으면 전 지분 카드에 지분 §159 명세(`gbAssetBurdenedGift`)를 싣는다 — A가 채택되면 명세 취득 열 = 지분별 합(P1 토지 12,500,000 · 건물 50,000,000 = 단건 명세).
+- ⑤ 둘째 지분부터 `BurdenedGiftTrancheBasisBlock`이 이월과세 지분이면 `BurdenedGiftCarryoverBlock`(당초 증여자 값)을 연다 · 그 지분의 양도인 매매사례가액·감정가액 칸은 열지 않는다(B는 증여일 평가액). 표시 조건은 leaf `bgCoDonorNeedsStdPrice`(`burdened-gift-acq-std-price.ts`)로 ② 박스·⑧ `missingCoDonorBasisLabel`과 공유.
+- ⑧ 1-a′(축 B 일반건물 이월과세 차단) 삭제 — 일반건물이 첫 자산인 축 B는 항상 지분 배열로 간다(`buildGeneralBuildingShares`와 같은 술어).
+- 실측(anchor `transfer.route.gb-bg-carryover-share.anchor.test.ts` 14건 — §1.1과 1원까지 같다): P1 AA 109,326,000(AB·BA 93,186,350) = 단건 A · BB 97,800,000 = 단건 B · P3 102,338,000(첫 지분만 B 86,547,750) · P4 104,646,000 · P2 B 유지 97,800,000(단위는 둘째 지분 하나 · A 93,186,350) · K-7 82,627,700 = 단건 K-7(B 71,232,625) · ②3호 B 채택(당초 증여자 기준시가 = 양도인) A 56,286,880 < B 97,800,000.
+- 🟡 기존 한계(확인 필요 · 변경 없음): 축 B는 K-6/K-7의 양도인 쪽 증여일 평가액(`bgActual*`)을 첫 지분 값으로 병합한다(`mergePrimaryBasic`). 지분마다 증여일이 다르면 증여일 평가액도 다를 수 있다.
+- 테스트 반전: PR-3 차단 anchor 5건 → 「⑧ 통과 · 200 · 지분마다 이월과세」 + ⑫ 남은 거부 1건 · PL-5 지분 케이스(토글 ON만 ⑧ · 지분 info·지분 이월과세 두 경로의 donorBuilt를 ⑫가 거부) · E2E GBBD-E6(토글만 막고 끄면 계산 · 카드 1장).
+- 뮤테이션 15/15 KILLED(엔진·⑫·④·⑧ leaf 14 + 화면 박스 미렌더 1 — E2E). E2E `gb-bg-carryover-share.spec.ts` 2건(둘째 지분 당초 증여자 칸 화면 입력 → 카드 2장·109,326,000·신고서 2015-01-01 · 375px 입력 화면·결과 화면 가로 스크롤 0) + 관련 기존 E2E 35건(반전한 GBBD-E6 포함) 통과 · 관련 vitest(`__tests__/api·calc·components·tax-engine·lib`) 40,848건 통과.

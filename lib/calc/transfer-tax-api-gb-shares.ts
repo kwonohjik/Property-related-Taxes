@@ -15,6 +15,8 @@ import { fixedAcquisitionPriceRaw } from "./transfer-tax-api-companion-payload";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { toEngineReductions } from "./transfer-tax-api-reductions";
 import { buildBurdenedGiftInfo, type BurdenedGiftInfoPayload } from "./transfer-tax-api-burdened-gift";
+import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { partCarryover } from "./transfer-land-part-cause";
 
 /**
  * 물건-수준 GB 폼 필드 — primary에서 복사한다.
@@ -213,6 +215,19 @@ export interface GeneralBuildingSharePayloadOut {
    * (`mergePrimaryBasic`이 `bgPresumedAcquisition*`·`gbAcq*`를 병합하지 않는다). 계획서 `docs/00-pm/gb-burdened-gift-silent-drop.plan.md` PR-3.
    */
   burdenedGiftInfo?: BurdenedGiftInfoPayload;
+  /**
+   * 그 지분의 배우자 등 이월과세(§97의2) — **부담부증여 이월과세 지분만**(PR-2 · 계획서 `gb-bg-carryover-share-bundled.plan.md` §4.3).
+   * 지분마다 자기 증여 사건이라 지분마다 싣는다(최상위 `carryoverTaxation`은 지분 모드에서 보내지 않는다 — 종전 첫 지분만 실려 둘째 지분 이월과세가 사라졌다).
+   * 일반 양도 지분의 이월과세는 `valuation`의 파트 서브객체가 싣는다(`buildGbCarryoverPayload`) — 부담부증여는 그쪽이 `{}`라 겹치지 않는다.
+   */
+  carryoverTaxation?: object;
+}
+
+/** 부담부증여 지분의 이월과세 — 최상위(`transfer-tax-api.ts`)와 같은 조건·같은 leaf. 건물만 이월과세(파트 이월과세)는 사건 1벌이 따로 간다. */
+function shareCarryover(asset: AssetForm, transferDate: string, ratio: number): { carryoverTaxation?: object } {
+  if (asset.acquisitionCause !== "carryover_gift" || !asset.carryover || partCarryover(asset).building) return {};
+  const payload = buildCarryoverPayload(asset, transferDate, ratio);
+  return payload ? { carryoverTaxation: payload.carryoverTaxation } : {};
 }
 
 /**
@@ -263,6 +278,8 @@ export function buildGeneralBuildingShares(
       ...(i > 0 ? { reductions: toEngineReductions(asset.reductions ?? [], merged, asset.expropriationNoticeDate) } : {}),
       // 🔴 지분마다 싣는다 — 빠지면 route 5-0이 그 지분을 일반 양도로 계산한다(채무 전액이 양도차익, 취득가액 0). ⑫가 누락을 400으로 막는다.
       ...(isBurdenedGift ? { burdenedGiftInfo: buildBurdenedGiftInfo(merged, ratio, transferDate) } : {}),
+      // 증여세 상당액은 지분마다 자기 입력값 그대로(Q-2 a) · 금액 3칸은 100% 기준 입력 × 지분율(최상위와 같은 leaf).
+      ...(isBurdenedGift ? shareCarryover(merged, transferDate, ratio) : {}),
     });
   }
   return out;

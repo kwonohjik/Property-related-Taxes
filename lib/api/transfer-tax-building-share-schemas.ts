@@ -5,7 +5,7 @@
  * 정의·주석은 그대로다. 소비처는 이 경로에서 직접 import한다(원 파일 재export는 순환 import라 두지 않는다).
  */
 import { z } from "zod";
-import { generalBuildingValuationSchema } from "./transfer-tax-building-schemas";
+import { generalBuildingValuationSchema, carryoverTaxationEngineShape } from "./transfer-tax-building-schemas";
 import { reductionSchema } from "./transfer-tax-schema-reductions";
 import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 
@@ -87,6 +87,8 @@ export const GB_SHARE_ESTIMATED_PATH_ONLY: ReadonlySet<string> = new Set([
   "firstDisclosureBuildingStdPrice",
 ] satisfies (typeof GB_SHARE_PROPERTY_LEVEL_PATHS)[number][]);
 
+const GB_SHARE_DONOR_BUILT_MESSAGE = "지분 분할 취득의 부담부증여는 당초 증여자 신축·증축 가산세(소득세법 §114조의2)를 아직 지원하지 않습니다";
+
 /** 지분 1건. `valuation`은 물건-수준 병합이 끝난 **완결** payload다. */
 export const generalBuildingShareSchema = z.object({
   shareId: z.string().min(1),
@@ -123,9 +125,31 @@ export const generalBuildingShareSchema = z.object({
     .superRefine((info, ctx) => {
       // 당초 증여자 신축·증축 §114조의2(PR-5c)는 단건 일반건물(F27)만 받는다 — 지분 카드는 이월과세 §97의2 를 타지 않아 받아 놓고 무시하게 되므로 거부
       if (info.carryoverDonorBasis?.donorBuilt !== undefined)
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["carryoverDonorBasis", "donorBuilt"], message: "지분 분할 취득의 부담부증여는 당초 증여자 신축·증축 가산세(소득세법 §114조의2)를 아직 지원하지 않습니다" });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["carryoverDonorBasis", "donorBuilt"], message: GB_SHARE_DONOR_BUILT_MESSAGE });
     })
     .optional(),
+  /**
+   * ⑫ 그 지분의 배우자 등 이월과세(§97의2) — **부담부증여 지분만**(PR-2 · 계획서 `gb-bg-carryover-share-bundled.plan.md` §4.3).
+   * route가 지분마다 A(당초 증여자 기준)·B(양도인 기준) 카드를 만들어 신고 단위 결정세액으로 비교한다. 정의가 없으면 침묵 stripping으로 B만 나간다.
+   * 일반 양도 지분의 이월과세는 `valuation`의 파트 서브객체(`landCarryoverTaxation` 등)가 싣는다 — 여기로 보내면 받아 놓고 무시하게 되므로 아래에서 거부한다.
+   */
+  carryoverTaxation: carryoverTaxationEngineShape
+    .superRefine((ct, ctx) => {
+      if (ct.donorBuilt !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["donorBuilt"], message: GB_SHARE_DONOR_BUILT_MESSAGE });
+    })
+    .optional(),
+}).superRefine((share, ctx) => {
+  // 「이월과세 지분 ⇔ 그 지분 §159 정보의 당초 증여자 값」 — 한쪽만 있으면 A 시나리오를 만들 수 없거나(값 없음) 이월과세가 조용히 사라진다(사건 없음).
+  const hasCt = share.carryoverTaxation !== undefined;
+  const hasBasis = share.burdenedGiftInfo?.carryoverDonorBasis != null;
+  if (hasCt && !share.burdenedGiftInfo)
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["carryoverTaxation"], message: "지분의 이월과세(carryoverTaxation)는 부담부증여 지분에서만 받습니다 — 일반 양도 지분의 이월과세는 valuation의 파트 이월과세로 보냅니다" });
+  else if (hasCt !== hasBasis)
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: hasCt ? ["burdenedGiftInfo", "carryoverDonorBasis"] : ["carryoverTaxation"],
+      message: "부담부증여 지분의 이월과세는 이월과세 정보(carryoverTaxation)와 당초 증여자 취득 당시 값(burdenedGiftInfo.carryoverDonorBasis)을 함께 보내야 합니다",
+    });
 });
 
 /** 점 표기 경로로 중첩 값을 꺼낸다. */
