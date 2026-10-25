@@ -4,6 +4,7 @@
  * §97의2 시나리오 비교(F27)는 단건만 탄다. 수정 前 실측: 묶음에서 K-5 는 이월과세를 읽지 않고 양도인 기준(B) 값만 냈다 — 지분 50/50 결정세액 97,800,000 ·
  * 묶음(일반건물 + 토지 부담부증여) 110,760,000, 당초 증여자 기준시가를 1원·1원으로 바꿔도 같았다(Δ 0) · K-7 은 400. ⑧ 은 아무 말이 없었다.
  * ⇒ ⑧(`validateBurdenedGiftAsset` 1-a′)과 ⑫(`refineGbBgCarryoverBundled`)가 같은 문구로 막는다. 단건·이월과세 아님·일반 양도는 그대로.
+ * 함께 부담부증여 묶음은 PR-1(`gb-bg-carryover-share-bundled.plan.md`)부터 계산한다 — `transfer.route.gb-bg-carryover-bundled.anchor.test.ts`. 여기는 지분 분할 차단만 남는다.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -88,7 +89,7 @@ const run = async (f: TransferFormData): Promise<Run> => post(await bodyOf(f));
 const issues = (f: TransferFormData) => [0, 1, 2, 3, 4].flatMap((s) => collectStepIssues(s, f));
 
 // ─────────────────────────────────────────────────────────────────────
-const BUNDLED = "지분 분할 취득·함께 부담부증여 묶음에서 아직 계산하지 못합니다";
+const BUNDLED = "지분 분할 취득에서 아직 계산하지 못합니다";
 const half = { ownershipNumerator: "50", ownershipDenominator: "100" } as Partial<AssetForm>;
 const K7 = {
   bgAcquisitionMethod: "appraisal", bgCoDonorPresumedAcquisitionLand: "100,000,000", bgCoDonorPresumedAcquisitionBuilding: "200,000,000",
@@ -110,12 +111,9 @@ const blocked: Array<[string, () => TransferFormData, string]> = [
   ["지분 분할 · 첫 지분만 이월과세", () => formOf([gbAsset(half), second(gbAsset({ ...half, acquisitionCause: "gift" }))], { assetSplitMode: "fractional" }), "carryoverTaxation"],
   // 🔴 수정 前 ⑧ 만 막고 API 200 · 97,800,000 — 최상위 carryoverTaxation 은 첫 지분 것뿐이라 둘째 지분 이월과세가 조용히 사라졌다(계획서 gb-bg-carryover-share-bundled §1.3)
   ["지분 분할 · 둘째 지분만 이월과세", () => formOf([gbAsset({ ...half, acquisitionCause: "gift" }), second(gbAsset(half))], { assetSplitMode: "fractional" }), "generalBuildingShares.1.burdenedGiftInfo.carryoverDonorBasis"],
-  ["부담부증여 묶음 · 일반건물 첫 자산 · K-5", () => formOf([gbAsset(), landBg(2)], BUNDLE), "carryoverTaxation"],
-  ["부담부증여 묶음 · 일반건물 첫 자산 · K-7", () => formOf([gbAsset(K7), landBg(2)], BUNDLE), "carryoverTaxation"],
-  ["부담부증여 묶음 · 일반건물 둘째 자산 · K-5", () => formOf([landBg(1), second(gbAsset())], BUNDLE), "companionAssets.0.carryoverTaxation"],
 ];
 
-describe("🔴 ⑧ ↔ ⑫ — 묶음의 일반건물 부담부증여 × 이월과세는 둘 다 같은 문구로 막는다(수정 前: ⑧ 통과 · K-5 200 B 값 / K-7 400)", () => {
+describe("🔴 ⑧ ↔ ⑫ — 지분 분할 취득의 일반건물 부담부증여 × 이월과세는 둘 다 같은 문구로 막는다(수정 前: ⑧ 통과 · K-5 200 B 값 / K-7 400)", () => {
   it.each(blocked)("%s", async (_n, make, field) => {
     const f = make();
     expect(issues(f).map((i) => i.message).join("\n")).toContain(BUNDLED);
@@ -152,6 +150,15 @@ describe("대조 — 그대로 계산된다", () => {
     const landCo = { ...landBg(2), acquisitionCause: "carryover_gift", carryover: gbAsset().carryover } as AssetForm;
     const f = formOf([gbAsset({ acquisitionCause: "gift" }), landCo], BUNDLE);
     expect(issues(f).map((i) => i.message).join("\n")).not.toContain(BUNDLED);
+  });
+  it.each<[string, () => TransferFormData]>([
+    ["일반건물 첫 자산 · K-5", () => formOf([gbAsset(), landBg(2)], BUNDLE)],
+    ["일반건물 첫 자산 · K-7", () => formOf([gbAsset(K7), landBg(2)], BUNDLE)],
+    ["일반건물 둘째 자산 · K-5", () => formOf([landBg(1), second(gbAsset())], BUNDLE)],
+  ])("부담부증여 묶음 × 일반건물 이월과세 · %s → 막지 않는다(PR-1 — 값은 묶음 anchor가 고정)", async (_n, make) => {
+    const f = make();
+    expect(issues(f)).toEqual([]);
+    expect((await run(f)).status).toBe(200);
   });
   it("부담부증여 묶음 · 일반건물이 이월과세 아님 → 막지 않는다", async () => {
     const f = formOf([gbAsset({ acquisitionCause: "gift" }), landBg(2)], BUNDLE);

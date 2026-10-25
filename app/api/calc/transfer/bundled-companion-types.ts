@@ -188,6 +188,8 @@ export interface CompanionBuildContext {
   mixedUseCtx: MixedUseCompanionContext | null;
   /** 일반건물 컴패니언 결과 상세(산식 재료) 수집 — `buildGbCompanionItems` 참조. */
   onGbDetail?: Parameters<typeof buildGbCompanionItems>[3];
+  /** 일반건물 부담부증여 × 이월과세 비교 단위 수집 — `buildGbCompanionItems` 참조(PR-1). */
+  onGbCarryoverUnit?: Parameters<typeof buildGbCompanionItems>[4];
 }
 
 /**

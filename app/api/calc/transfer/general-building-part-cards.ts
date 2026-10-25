@@ -35,8 +35,14 @@ import { buildProperties } from "./general-building-route-cards";
 import { resolveGbPreDeemedRoute } from "@/lib/tax-engine/general-building-pre-deemed";
 import { scaleDeclaredSaleSplitToShare } from "@/lib/tax-engine/general-building-entry";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
-import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import type { BurdenedGiftInfo, TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
+import { judgeCarryoverEligibility } from "@/lib/tax-engine/transfer-tax-carryover-eligibility";
+import {
+  assertCarryoverDonorBasis,
+  applyCarryoverDonorBasis,
+  toTransferorBasisInfo,
+} from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 
 export interface GbPartCards {
   cards: AssetCardForAggregate[];
@@ -69,6 +75,8 @@ export interface GbPartCards {
    * (`gb-bundled-result-blocks.plan.md` Q-3 a).
    */
   actualBlockEcho?: Partial<GeneralBuildingOutput>;
+  /** 부담부증여(실가 분기) — 이 자산(지분)의 §159 명세. 함께 부담부증여 묶음 명세의 자산별 취득가액이 쓴다. */
+  burdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
 }
 
 /**
@@ -176,6 +184,7 @@ export function buildGbPartCards(
       legalBasis: "소득세법 시행령 §166⑥ · §104의3",
       actualExpenseEcho: actualExpenseEcho(built),
       actualBlockEcho: actualBlockEcho(built),
+      burdenedGiftBreakdown: built.transferBurdenedGiftBreakdown,
     };
   }
 
@@ -268,7 +277,7 @@ export function buildGbCompanionItems(
   /** 컴패니언 엔진 입력 — 5-a 안분 결과·Date 변환·감면 매핑이 끝난 값. */
   engine: Pick<
     TransferTaxItemInput,
-    "transferPrice" | "transferDate" | "acquisitionDate" | "acquisitionPrice" | "expenses" | "reductions" | "burdenedGiftInfo" | "transferType"
+    "transferPrice" | "transferDate" | "acquisitionDate" | "acquisitionPrice" | "expenses" | "reductions" | "burdenedGiftInfo" | "transferType" | "carryoverTaxation"
   >,
   src: { ownershipRatio?: number; assetId: string; assetLabel: string; totalPropertyTransferPrice?: number },
   /**
@@ -276,61 +285,135 @@ export function buildGbCompanionItems(
    * 단건 슬롯(`generalBuildingValuationDetail`)에 넣지 않는다 — 수정신고 판별자다(`gb-bundled-result-formulas.plan.md` C-1).
    */
   onDetail?: (assetId: string, detail: GbBundledAssetDetail) => void,
+  /** 부담부증여 × 이월과세 비교 단위를 받는 곳 — 이월과세가 실려 오면 **반드시** 있어야 한다(없으면 던진다 · 침묵 B 금지). */
+  onCarryoverUnit?: (unit: GbBgCarryoverUnitDraft) => void,
 ): TransferTaxItemInput[] {
   const gbv = coerceGeneralBuildingPayload(generalBuildingValuation);
   const bldAcqDate = (gbv.buildingAcquisitionDate as Date | undefined) ?? engine.acquisitionDate;
   const landAcqDate = (gbv.landAcquisitionDate as Date | undefined) ?? engine.acquisitionDate;
-  const built = buildGbPartCards(
-    gbv,
-    engine.transferPrice,
-    engine.transferDate,
-    bldAcqDate,
-    landAcqDate,
-    src.ownershipRatio,
-    /*
-     * 자산 단위 실지 취득가액·필요경비 — 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축이다:
-     * 증축 일괄값(`bundledAcquisitionPrice`·`bundledExpenses`)이 있으면 그것, 없으면 그 자산의 엔진 입력값
-     * (5-a가 정한 취득가액 · 직접 경비 + 공통 양도비 몫 — 다른 컴패니언과 같은 소스).
-     */
-    (gbv.bundledAcquisitionPrice as number | undefined) ?? engine.acquisitionPrice ?? 0,
-    (gbv.bundledExpenses as number | undefined) ?? engine.expenses ?? 0,
-    // ⑭ 부담부증여(§159) — 컴패니언 엔진 입력의 `burdenedGiftInfo`(⑫→`bundled-split-helpers.ts:547`·주 자산은 `engineInput`)를 카드 빌더까지 운반한다.
-    //    `transferType` 표지와 함께 있을 때만(단건 `route.ts`가 읽는 조건과 같다). 신고 단위 채무 재배분(`assumedDebtOverride`)은 info 안에 있다.
-    engine.transferType === "burdened_gift" ? engine.burdenedGiftInfo : undefined,
-    undefined,
-    // 공유지분 — 그 물건 전체(100%) 양도가액. 모르면(안분 모드) 한쪽 기재 계약서만 종전 지분 판정으로 남는다.
-    src.totalPropertyTransferPrice,
-  );
-  const tagged = tagGbCards(built.cards, src.assetId, src.assetLabel);
-  const swap = built.swap ? remapGbSwap(built.swap, src.assetId) : undefined;
-  const swapComparison = built.swap ? gbSwapComparison(built.swap) : undefined;
-  // 결과 상세 — 축 B(`general-building-fractional.ts`)와 같은 조립. 카드 id·echo 키는 접미사가 붙은 값이어야 산식이 카드를 찾는다(C-2).
-  onDetail?.(src.assetId, {
-    ...built.detailBase,
-    assetCards: tagged,
-    landStdTotal: built.landStdAtTransfer,
-    buildingStdTotal: built.buildingStdAtTransfer,
-    ...(swap && swap.addition.size > 0
-      ? {
-          partDirectAddition: Object.fromEntries(swap.addition),
-          ...(swap.beforeExtensionAddition ? { partBeforeExtensionCapex: Object.fromEntries(swap.beforeExtensionAddition) } : {}),
-        }
-      : {}),
-    ...built.actualExpenseEcho,
-    ...built.actualBlockEcho,
-    // §97②2호 단서 발동 비교 — 단건은 `aggregated.swapComparison`(물건 하나 = 집계 단위)이다.
-    ...(swapComparison ? { swapComparison } : {}),
-  } as GbBundledAssetDetail);
-  return buildProperties(
-    tagged,
-    built.nonBusinessRatio,
-    swap,
-    // §104③ 미등기 — 축 B와 **같은 축**을 싣는다. 빠뜨리면 컴패니언에서만 조용히 무시된다.
-    {
-      land: gbv.unregisteredLand as boolean | undefined,
-      building: gbv.unregisteredBuilding as boolean | undefined,
-    },
-    engine.reductions,
-    gbv.nonHeirBequest as boolean | undefined,
-  );
+  // ⑭ 부담부증여(§159) — 컴패니언 엔진 입력의 `burdenedGiftInfo`(⑫→`bundled-split-helpers.ts:547`·주 자산은 `engineInput`)를 카드 빌더까지 운반한다.
+  //    `transferType` 표지와 함께 있을 때만(단건 `route.ts`가 읽는 조건과 같다). 신고 단위 채무 재배분(`assumedDebtOverride`)은 info 안에 있다.
+  const info = engine.transferType === "burdened_gift" ? engine.burdenedGiftInfo : undefined;
+
+  /** `carryoverApplied` — 이월과세 비교 단위의 카드 세트만 자산 명세를 싣는다(묶음 명세 Q-4 a). 그 밖의 묶음은 종전 그대로. */
+  const scenario = (bgInfo: BurdenedGiftInfo | undefined, bldDate: Date, landDate: Date, carryoverApplied?: boolean) => {
+    const built = buildGbPartCards(
+      gbv,
+      engine.transferPrice,
+      engine.transferDate,
+      bldDate,
+      landDate,
+      src.ownershipRatio,
+      /*
+       * 자산 단위 실지 취득가액·필요경비 — 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축이다:
+       * 증축 일괄값(`bundledAcquisitionPrice`·`bundledExpenses`)이 있으면 그것, 없으면 그 자산의 엔진 입력값
+       * (5-a가 정한 취득가액 · 직접 경비 + 공통 양도비 몫 — 다른 컴패니언과 같은 소스).
+       */
+      (gbv.bundledAcquisitionPrice as number | undefined) ?? engine.acquisitionPrice ?? 0,
+      (gbv.bundledExpenses as number | undefined) ?? engine.expenses ?? 0,
+      bgInfo,
+      undefined,
+      // 공유지분 — 그 물건 전체(100%) 양도가액. 모르면(안분 모드) 한쪽 기재 계약서만 종전 지분 판정으로 남는다.
+      src.totalPropertyTransferPrice,
+    );
+    const tagged = tagGbCards(built.cards, src.assetId, src.assetLabel);
+    const swap = built.swap ? remapGbSwap(built.swap, src.assetId) : undefined;
+    const swapComparison = built.swap ? gbSwapComparison(built.swap) : undefined;
+    // 결과 상세 — 축 B(`general-building-fractional.ts`)와 같은 조립. 카드 id·echo 키는 접미사가 붙은 값이어야 산식이 카드를 찾는다(C-2).
+    const detail = {
+      ...built.detailBase,
+      assetCards: tagged,
+      landStdTotal: built.landStdAtTransfer,
+      buildingStdTotal: built.buildingStdAtTransfer,
+      ...(swap && swap.addition.size > 0
+        ? {
+            partDirectAddition: Object.fromEntries(swap.addition),
+            ...(swap.beforeExtensionAddition ? { partBeforeExtensionCapex: Object.fromEntries(swap.beforeExtensionAddition) } : {}),
+          }
+        : {}),
+      ...built.actualExpenseEcho,
+      ...built.actualBlockEcho,
+      // §97②2호 단서 발동 비교 — 단건은 `aggregated.swapComparison`(물건 하나 = 집계 단위)이다.
+      ...(swapComparison ? { swapComparison } : {}),
+    } as GbBundledAssetDetail;
+    const items = buildProperties(
+      tagged,
+      built.nonBusinessRatio,
+      swap,
+      // §104③ 미등기 — 축 B와 **같은 축**을 싣는다. 빠뜨리면 컴패니언에서만 조용히 무시된다.
+      {
+        land: gbv.unregisteredLand as boolean | undefined,
+        building: gbv.unregisteredBuilding as boolean | undefined,
+      },
+      engine.reductions,
+      gbv.nonHeirBequest as boolean | undefined,
+    );
+    const bd = built.burdenedGiftBreakdown;
+    if (carryoverApplied === undefined || !bd) return { items, detail };
+    const gbAssetBurdenedGift = {
+      assetId: src.assetId,
+      label: carryoverApplied ? `${src.assetLabel} · 이월과세 적용(당초 증여자 기준)` : src.assetLabel,
+      breakdown: bd,
+      carryoverApplied,
+    };
+    return { items: items.map((it) => ({ ...it, gbAssetBurdenedGift })), detail };
+  };
+
+  const ct = info ? engine.carryoverTaxation : undefined;
+  // 부담부증여 × 이월과세가 아니거나 이월과세가 배제(§97의2①괄호·②1·2호·③)되면 종전 그대로 — 단건 F27의 배제 경로와 같다.
+  const eligibility = ct ? judgeCarryoverEligibility(ct, engine.transferDate) : undefined;
+  if (!ct || !info || !eligibility?.isEligible) {
+    const b = scenario(info, bldAcqDate, landAcqDate);
+    onDetail?.(src.assetId, b.detail);
+    return b.items;
+  }
+
+  // 단건 F27(`general-building-route-carryover.ts`)과 같은 leaf·같은 치환 — 복사 금지.
+  if (!onCarryoverUnit)
+    throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, "일반건물 부담부증여 × 이월과세 비교 단위를 받을 곳이 없습니다.");
+  if (info.carryoverDonorBasis?.donorBuilt)
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "당초 증여자 신축·증축 가산세(소득세법 §114조의2)는 함께 부담부증여 묶음에서 계산하지 않습니다.",
+      { field: "burdenedGiftInfo.carryoverDonorBasis.donorBuilt" },
+    );
+  assertCarryoverDonorBasis(info, ct);
+  // B = 양도인(증여받은 사람) 기준 — K-6/K-7은 증여일 평가액(`actual*`)을 실지거래가액으로 읽는다(소령 §163⑨).
+  const b = scenario(toTransferorBasisInfo(info), bldAcqDate, landAcqDate, false);
+  // A = ①1호 취득가액 치환 + ①3호 증여세 상당액(§159 안분 단계가 소비) · §95④ 단서 — 토지·건물 카드 보유기간을 당초 증여자 취득일부터.
+  const a = scenario(applyCarryoverDonorBasis(info, ct.giftTaxAmount), ct.donorAcquisitionDate, ct.donorAcquisitionDate, true);
+  onDetail?.(src.assetId, b.detail);
+  onCarryoverUnit({
+    assetId: src.assetId,
+    assetLabel: src.assetLabel,
+    cardsB: b.items,
+    cardsA: a.items,
+    detailA: a.detail,
+    applicablePeriodYears: eligibility.applicablePeriodYears,
+    donorAcquisitionDate: ct.donorAcquisitionDate,
+    giftTaxAmount: ct.giftTaxAmount,
+    holdingStartB: { land: landAcqDate, building: bldAcqDate },
+  });
+  return b.items;
+}
+
+/**
+ * 함께 부담부증여 묶음의 일반건물 × 이월과세 — §97의2②3호 **외부 비교 단위 재료** (PR-1 · `gb-bg-carryover-share-bundled.plan.md` §4.5).
+ *
+ * 부담부증여는 A/B가 §159 안분 단계(카드 조립 전)에서 갈려 카드에 `carryoverTaxation`이 없다 ⇒ 집계 드라이버가 볼 수 없다.
+ * 그래서 두 카드 세트를 미리 만들어 집계에 외부 단위로 등록한다(`calculateTransferTaxAggregateWithUnits`).
+ * 반환 카드(= `cardsB`)가 신고 카드 목록에 들어가고, A가 채택되면 집계가 그 구간을 `cardsA`로 갈아 끼운다.
+ */
+export interface GbBgCarryoverUnitDraft {
+  assetId: string;
+  assetLabel: string;
+  cardsB: TransferTaxItemInput[];
+  cardsA: TransferTaxItemInput[];
+  /** A 채택 시 그 자산의 결과 상세(산식 재료) — B 상세는 `onDetail`이 이미 받았다. */
+  detailA: GbBundledAssetDetail;
+  applicablePeriodYears: 5 | 10;
+  donorAcquisitionDate: Date;
+  giftTaxAmount: number;
+  /** B 카드의 보유기간 기산일 — 증여받은 날(토지·건물 각각). */
+  holdingStartB: { land: Date; building: Date };
 }

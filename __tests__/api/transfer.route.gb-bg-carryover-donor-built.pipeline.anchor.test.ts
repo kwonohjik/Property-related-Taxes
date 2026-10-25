@@ -190,9 +190,10 @@ describe("PL-5 지분 분할 취득(축 B)·함께 부담부증여(컴패니언)
     ownershipNumerator: "40", ownershipDenominator: "100", gbBuildingAcquisitionCause: "purchase", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
   } as AssetForm;
 
-  // F27 B PR-3(`gb-bg-carryover-presumed-scenario-b.plan.md`)부터 묶음의 일반건물 부담부증여 × 이월과세는 토글과 무관하게 ⑧·⑫ 가 막는다
+  // F27 B PR-3(`gb-bg-carryover-presumed-scenario-b.plan.md`)부터 지분 분할의 일반건물 부담부증여 × 이월과세는 토글과 무관하게 ⑧·⑫ 가 막는다
   // («단건으로 계산하세요» · `carryoverTaxation`). 아래는 그 위에 donorBuilt 거부가 별도 필드로 함께 나옴을 고정한다.
-  const BUNDLED = "지분 분할 취득·함께 부담부증여 묶음에서 아직 계산하지 못합니다";
+  // 함께 부담부증여 묶음은 PR-1(`gb-bg-carryover-share-bundled.plan.md`)부터 계산한다 — donorBuilt 거부(PR-5c)만 남는다.
+  const BUNDLED = "지분 분할 취득에서 아직 계산하지 못합니다";
   it("지분 분할 취득: ⑧ 이 이월과세 자체를 막는다(토글을 꺼도) · ⑫ 도 같다 · 켜진 donorBuilt 는 별도 필드로 거부", async () => {
     const f = formOf([gbAsset({ ownershipNumerator: "60", ownershipDenominator: "100" }), share2], { assetSplitMode: "fractional" });
     expect(msgs(f)).toContain(BUNDLED);
@@ -210,21 +211,20 @@ describe("PL-5 지분 분할 취득(축 B)·함께 부담부증여(컴패니언)
     expect(r.fieldErrors).toContain("generalBuildingShares.0.burdenedGiftInfo.carryoverDonorBasis.donorBuilt");
   });
 
-  it("함께 부담부증여(컴패니언): ⑧ 이 이월과세 자체를 막는다 · ⑫ 도 같다 · 켜진 donorBuilt 는 별도 필드로 거부", async () => {
+  it("함께 부담부증여(컴패니언): 이월과세는 계산된다(PR-1) · 켜진 donorBuilt 만 ⑧ «토글을 끄세요» · ⑫ 별도 필드로 거부", async () => {
     const companion = {
       ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 2-2", assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-03-01",
       transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_standard", bgDonorRelation: "lineal_descendant",
       bgLendingDepositTotal: "100,000,000", bgMortgageDebtAmount: "100,000,000", standardPriceAtTransfer: "1,000,000,000", standardPriceAtAcq: "500,000,000",
     } as AssetForm;
     const on = formOf([gbAsset(), companion], { assetSplitMode: "companion", contractTotalPrice: "" });
-    expect(msgs(on)).toContain(BUNDLED);
+    expect(msgs(on)).toContain("당초 증여자 신축·증축 가산세(소득세법 §114조의2)를 아직 지원하지 않습니다");
     const off = formOf([gbAsset({}, { donorBuilt: false }), companion], { assetSplitMode: "companion", contractTotalPrice: "" });
-    expect(msgs(off)).toContain(BUNDLED);
+    expect(msgs(off)).not.toContain(BUNDLED);
     const body = await bodyOf(off);
     expect(body.companionAssets?.length).toBe(1);
     const control = await post(body);
-    expect(control.status).toBe(400);
-    expect(control.fieldErrors).toContain("carryoverTaxation");
+    expect(control.status, JSON.stringify(control.fieldErrors)).toBe(200);
     const forced = JSON.parse(JSON.stringify(body));
     forced.burdenedGiftInfo.carryoverDonorBasis = { ...forced.burdenedGiftInfo.carryoverDonorBasis, donorBuilt: { buildingType: "new", constructionDate: "2022-01-10" } };
     const r = await post(forced);

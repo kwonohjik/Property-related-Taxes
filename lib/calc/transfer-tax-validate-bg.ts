@@ -137,14 +137,15 @@ export function validateBurdenedGiftAsset(
   }
 
   /**
-   * (1-a′) 일반건물 × 이월과세 × 지분 분할 취득(축 B)·함께 부담부증여 묶음 — §97의2 비교(F27)는 단건만 탄다. 묶음은 이월과세를 반영하지 않고
-   * 양도인 기준(B) 값만 냈다(K-5 · Δ 0) · K-6/K-7 은 400 — 침묵 소실 대신 막는다(⑫ `refineGbBgCarryoverBundled`와 같은 사실·문구).
+   * (1-a′) 일반건물 × 이월과세 × 지분 분할 취득(축 B) — 지분 카드는 이월과세를 반영하지 않고 양도인 기준(B) 값만 낸다(K-5 · Δ 0)
+   * — 침묵 소실 대신 막는다(⑫ `refineGbBgCarryoverBundled`와 같은 사실·문구 · 해제는 지분 PR-2).
    * 다른 필수 칸보다 **앞**이다 — 채운 뒤에야 막히면 헛입력이 된다. 계획서 `gb-bg-carryover-presumed-scenario-b.plan.md` PR-3.
+   * 함께 부담부증여 묶음은 PR-1부터 계산한다(`gb-bg-carryover-share-bundled.plan.md` §4.5).
    */
   if (
     asset.assetKind === "general_building" &&
     asset.acquisitionCause === "carryover_gift" &&
-    (contractAssumedDebtTotal !== undefined || isFractionalSplitAxis === true)
+    isFractionalSplitAxis === true
   ) {
     return fieldError("acquisitionCause", `${label}: ${GB_BG_CARRYOVER_BUNDLED_MESSAGE}.`);
   }

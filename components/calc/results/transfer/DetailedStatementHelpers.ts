@@ -149,7 +149,7 @@ export function buildStatementItems(
     aggregate?.propertyFormMap?.get(pid)?.transferDate ?? transferDate;
   // 일반건물 부담부증여 × 이월과세 A 채택 — 당초 증여자 취득일(신고서 표와 같은 leaf).
   const acqDateOf = (pid: string) =>
-    gbCarryoverAcqDateOverride(aggregate?.aggregated.burdenedGiftCarryoverDetail, pid) ?? getAcqDateForCard(assetOf(pid), pid);
+    gbCarryoverAcqDateOverride(aggregate?.aggregated, pid) ?? getAcqDateForCard(assetOf(pid), pid);
   // 일반건물 일괄 모드(사례 31·33) — 자산별 산식 빌더에 전달할 분모/분자 변수.
   // 비-일반건물 모드에서는 undefined → formulaBuilder가 undefined 반환 → 산식 미표시.
   const gbDetail = result.generalBuildingValuationDetail;

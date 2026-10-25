@@ -159,6 +159,7 @@ body 실측(수정 前): 지분 분할은 최상위 일반건물 객체에 `carr
 - 기존 테스트 갱신: PR-5c route anchor DB-4(지분 donorBuilt) · pipeline PL-5 2건 — 「donorBuilt만 끄면 계산된다」 대조가 이제 묶음 차단에 걸려 400(`carryoverTaxation`)이다. donorBuilt 거부가 **별도 필드로 함께** 나옴을 고정하도록 바꿨다. E2E GBBD-E6도 「토글을 끄면 계산」 → 「⑧이 이월과세 자체를 막고 그 칸으로 이동」으로 바꿨다.
 - 검증: anchor `transfer.route.gb-bg-carryover-bundled-block.anchor.test.ts` 12건 — 차단 7(지분 K-5 · 미선언 축 B · K-7 · 첫 지분만 · 묶음 첫 자산 K-5·K-7 · 묶음 둘째 자산) 수정 前 전부 red · 대조 5(단건 109,326,000 · 지분 증여 · 지분 일반 양도 × 이월과세 200 · 묶음 토지 쪽 이월과세 · 묶음 이월과세 아님) green. 뮤테이션 9/9 KILLED(처음 「⑧ 일반건물 조건」이 살아 토지 쪽 이월과세 대조를 추가). E2E 회귀 44 passed.
 - 남은 것: 지분·묶음에서 §97의2 비교 **배선**(비교 단위 설계 — 별도 계획서) · PR-4(결과 화면 A/B 비교).
+- **해제 기록**: 함께 부담부증여 묶음 차단은 `gb-bg-carryover-share-bundled.plan.md` PR-1(2026-10-25)에서 풀었다 — ⑧은 축 B(`isFractionalSplitAxis`)만, ⑫는 지분(`generalBuildingShares`)과 `fractionalSplitBundle` 묶음만 막는다. 문구는 「지분 분할 취득에서 아직 계산하지 못합니다」로 바꿨다. 지분 차단은 같은 계획서 PR-2에서 푼다.
 
 ## 11. PR-4 구현 기록 (2026-10-24) — 결과 화면 [A]/[B] 비교 (Q-4 b)
 

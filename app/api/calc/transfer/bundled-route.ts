@@ -11,14 +11,16 @@ import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import type { PropertySchemaInput } from "@/lib/api/transfer-tax-schema";
 import {
-  calculateTransferTaxAggregate,
+  calculateTransferTaxAggregateWithUnits,
   type AggregateTransferInput,
   type TransferTaxItemInput,
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
 import type { MixedUseCompanionContext } from "./bundled-companion-types";
-import { buildGbCompanionItems } from "./general-building-part-cards";
+import { buildGbCompanionItems, type GbBgCarryoverUnitDraft } from "./general-building-part-cards";
+import { attachGbCarryoverUnits, toGbCarryoverUnits } from "./bundled-gb-carryover-units";
+import { toTransferorBasisInfo } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 import {
   resolveHousingContextFromCompanion,
   buildCompanionEngineInputs,
@@ -28,7 +30,7 @@ import { burdenedGiftBundleKind } from "@/lib/calc/burdened-gift-transfer-price-
 import { shareWholePropertyPrice } from "./bundled-apportionment";
 import { appurtenantLimitShareOf } from "./bundled-companion-split";
 import { asReverseUnitHouse, resolveReverseAppurtenantUnit, reverseUnitHouseFacts, splitReversePrimaryLand } from "./bundled-reverse-appurtenant";
-import { aggregateWithSameDayRightWarning } from "@/lib/tax-engine/one-house/same-day-right";
+import { aggregateWithSameDayRightWarning, withSameDayRightsHeldOnItems } from "@/lib/tax-engine/one-house/same-day-right";
 import type { GbBundledAssetDetail } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
 
@@ -184,6 +186,11 @@ export function calculateBundledTransfer(
   const onGbDetail = (assetId: string, detail: GbBundledAssetDetail) => {
     gbDetailsByAsset[assetId] = detail;
   };
+  // 일반건물 부담부증여 × 이월과세 — §97의2②3호 외부 비교 단위(PR-1). 카드 목록이 정해진 뒤 B 구간 위치로 등록한다.
+  const gbCarryoverDrafts: GbBgCarryoverUnitDraft[] = [];
+  const onGbCarryoverUnit = (draft: GbBgCarryoverUnitDraft) => {
+    gbCarryoverDrafts.push(draft);
+  };
 
   const itemsRaw: TransferTaxItemInput[] = apportionment.apportioned.flatMap((a, idx) => {
     if (a.assetId === "primary") {
@@ -254,7 +261,7 @@ export function calculateBundledTransfer(
       if (data.propertyType === "general_building" && data.generalBuildingValuation) {
         return buildGbCompanionItems(data.generalBuildingValuation as Record<string, unknown>, primaryItem, {
           ownershipRatio: data.ownershipRatio, assetId: "primary", assetLabel: a.assetLabel ?? "", totalPropertyTransferPrice: data.totalPropertyTransferPrice,
-        }, onGbDetail);
+        }, onGbDetail, onGbCarryoverUnit);
       }
       return reverseUnit ? splitReversePrimaryLand(primaryItem, reverseUnit, transferDate) : [primaryItem];
     }
@@ -318,6 +325,7 @@ export function calculateBundledTransfer(
        */
       mixedUseCtx,
       onGbDetail,
+      onGbCarryoverUnit,
     });
     return reverseUnit && c.assetId === reverseUnit.houseAssetId
       ? built.map((it) => asReverseUnitHouse(it, reverseUnit, engineInput))
@@ -325,9 +333,10 @@ export function calculateBundledTransfer(
   });
 
   // 축 B(같은 물건 지분 분할 — 한 사람이 나눠 취득해 전부 양도)는 서버가 다자산 구성에서 도출해 표시한다(#11 — 공유와 구별).
-  const items: TransferTaxItemInput[] = isFullFractionalBundle
-    ? itemsRaw.map((it) => ({ ...it, soleSplitAcquisition: true }))
-    : itemsRaw;
+  const markSole = (it: TransferTaxItemInput): TransferTaxItemInput =>
+    isFullFractionalBundle ? { ...it, soleSplitAcquisition: true } : it;
+  const items: TransferTaxItemInput[] = itemsRaw.map(markSole);
+  const gbCarryoverUnits = toGbCarryoverUnits(gbCarryoverDrafts, items, markSole);
 
   // (6) 다건 엔진 호출
   const aggregateInput: AggregateTransferInput = {
@@ -351,7 +360,12 @@ export function calculateBundledTransfer(
        * ⑭ 축 B × 부담부증여 — 물건 전체 §159를 **1회** 계산해 표시용으로 담는다.
        * 카드별 breakdown을 합치면 증여세가 쪼개진다(집계 M-0.5 주석의 표 참조).
        */
-      burdenedGiftWholeInfo: data.burdenedGiftWholeInfo,
+      // 물건 전체 info는 첫 자산의 산정 방식을 쓴다 — 첫 자산이 일반건물 부담부증여 × 이월과세 K-6/K-7이면 그 방식은 당초 증여자 쪽이라
+      // 양도인 기준(B)으로 읽어야 계산된다(단건 F27 B와 같은 leaf). A가 채택되면 명세 취득 열은 자산별 합으로 바뀐다(`withCardAcquisitions`).
+      burdenedGiftWholeInfo:
+        data.burdenedGiftWholeInfo && gbCarryoverDrafts.some((d) => d.assetId === "primary")
+          ? toTransferorBasisInfo(data.burdenedGiftWholeInfo)
+          : data.burdenedGiftWholeInfo,
       burdenedGiftDate: data.burdenedGiftWholeInfo ? transferDate : undefined,
       /**
        * 일괄양도는 모든 자산의 양도일이 같다 — 어느 자산에 기본공제해도 세액이 같으면 한계세율 높은 자산 → 자산 번호
@@ -361,11 +375,19 @@ export function calculateBundledTransfer(
       sameDayEqualTaxOrder: "marginalRateThenAssetNumber",
   };
   // 양도일과 같은 날 취득한 권리를 보유로 세면 어느 자산의 결론이 달라질 때만 확인 필요를 싣는다(코드 리뷰 결정 #1) — 단건과 같은 고지.
+  const calc = calculateTransferTaxAggregateWithUnits(aggregateInput, rates, undefined, gbCarryoverUnits);
   const aggregated = aggregateWithSameDayRightWarning(
     engineInput,
-    calculateTransferTaxAggregate(aggregateInput, rates),
+    calc.result,
     items,
-    (heldItems) => calculateTransferTaxAggregate({ ...aggregateInput, properties: heldItems }, rates),
+    // A 카드도 같은 변환을 받아야 같은 사실로 비교된다.
+    (heldItems) =>
+      calculateTransferTaxAggregateWithUnits(
+        { ...aggregateInput, properties: heldItems },
+        rates,
+        undefined,
+        gbCarryoverUnits.map((u) => ({ ...u, cardsA: withSameDayRightsHeldOnItems(engineInput, u.cardsA) })),
+      ).result,
   );
 
   // 일반건물 부담부증여 × 본인 신축 §114조의2 가산세가 붙었으면 고지(Q-14) — 단건(`runActualGeneralBuildingOnce`)과 같은 문구·같은 조건.
@@ -373,6 +395,7 @@ export function calculateBundledTransfer(
   if (isAllBurdenedGift && items.some((it) => it.penaltyAxis) && !aggregated.warnings.includes(GB_BG_SELF_BUILT_NOTICE)) {
     aggregated.warnings.push(GB_BG_SELF_BUILT_NOTICE);
   }
+  attachGbCarryoverUnits(calc, aggregated, gbCarryoverDrafts, gbCarryoverUnits, gbDetailsByAsset);
   if (Object.keys(gbDetailsByAsset).length > 0) aggregated.generalBuildingDetailsByAsset = gbDetailsByAsset;
 
   return {
