@@ -221,6 +221,8 @@ export function CarryoverEstimationSection({
               usePreHousingDisclosure: true,
             }}
             transferDate={transferDate}
+            // APD는 방식이 공동주택이다 — 라디오 없이 공동주택으로 그린다(`isPhdApartment`)
+            housingTypeFixed
             onChange={(patch) => {
               const { usePreHousingDisclosure: _, ...rest } = patch;
               onAssetChange(rest);

@@ -17,8 +17,9 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
-import { phdAcqDisclosedPriceName, phdClause, phdConvertedPriceName } from "@/lib/calc/phd-housing-term";
+import { isPhdApartment, phdAcqDisclosedPriceName, phdClause, phdConvertedPriceName } from "@/lib/calc/phd-housing-term";
 import { phdAssistNeeds164_5 } from "@/lib/calc/phd-converted-housing-price";
+import { phdAssist164_5EditPatch } from "@/lib/calc/phd-converted-housing-price";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -38,6 +39,11 @@ interface Props {
    * (`phdFlagEffective` 가 방식 축으로 false). 같은 `phd*` 칸을 쓰므로 환산으로 돌아오면 같은 사실(최초 고시·취득 당시·최초 고시 당시 값)이 그대로 복귀한다.
    */
   mode?: "phd" | "assist";
+  /**
+   * 주택 종류가 호출부에서 이미 정해졌다 — 라디오를 그리지 않는다. 이월과세 «공동주택 최초고시 전 취득»(APD)이 쓴다
+   * (종류는 `isPhdApartment`가 방식에서 읽는다). 계획서: docs/00-pm/phd-residual-limits-fix.plan.md §3.3 (Q-3 (b))
+   */
+  housingTypeFixed?: boolean;
 }
 
 // ─── 법령 배지 ─────────────────────────────────────────────────────
@@ -70,12 +76,12 @@ const PRICE_LABEL: Record<HousingType, { first: string; transfer: string }> = {
 
 // ─── 메인 패널 ────────────────────────────────────────────────
 
-export function PreHousingDisclosureSection({ asset, transferDate, onChange, mode = "phd" }: Props) {
+export function PreHousingDisclosureSection({ asset, transferDate, onChange, mode = "phd", housingTypeFixed = false }: Props) {
   const assist = mode === "assist";
   // 🔴 폼-지속 상태다 — 로컬 `useState`면 단계 이동·새로고침에 「단독·다가구」로 되돌아가
   //    **저장된 공동주택가격에 개별주택가격 라벨**이 붙는다(R12). API 페이로드에는 싣지
-  //    않는다(표시 축).
-  const housingType: HousingType = asset.phdHousingType ?? "individual";
+  //    않는다(표시 축). 이월과세 APD는 방식이 공동주택이다 — 결과 화면·⑧과 같은 단일 정의(`isPhdApartment`).
+  const housingType: HousingType = isPhdApartment(asset) ? "apartment" : "individual";
   const setHousingType = (v: HousingType) => onChange({ phdHousingType: v });
 
   const priceLabel = PRICE_LABEL[housingType];
@@ -84,6 +90,8 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
   const convertedName = phdConvertedPriceName(apartment);
   const clause = phdClause(apartment);
   const acqDisclosedName = phdAcqDisclosedPriceName(apartment);
+  // §164⑤ 준용 확인(보조 모드 전용)이 가리키는 칸을 고치면 같은 patch에서 확인을 푼다 — 환산 모드 patch는 종전 그대로
+  const assistEdit = (patch: Partial<AssetForm>) => (assist ? phdAssist164_5EditPatch(patch, asset) : patch);
   // §164⑦ 게이트 비교일 — 이월과세(§97의2)는 증여자 취득가액 기준이므로 증여자 취득일
   const phdCompareDate =
     asset.acquisitionCause === "carryover_gift"
@@ -128,14 +136,16 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
       </div>
 
       {/* 주택유형 선택 */}
-      <RadioCardGroup
-        name={`housingType-${asset.assetId ?? "primary"}`}
-        value={housingType}
-        onChange={setHousingType}
-        options={HOUSING_TYPE_OPTIONS}
-        layout="inline"
-        tone="amber"
-      />
+      {!housingTypeFixed && (
+        <RadioCardGroup
+          name={`housingType-${asset.assetId ?? "primary"}`}
+          value={housingType}
+          onChange={setHousingType}
+          options={HOUSING_TYPE_OPTIONS}
+          layout="inline"
+          tone="amber"
+        />
+      )}
 
       {/* ① 최초 고시일 (토지 면적은 ① 기본정보로 이전 — 아래 주석)
 
@@ -159,7 +169,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
         <FieldCard label="최초 고시일" field="phdFirstDisclosureDate" required stacked>
           <DateInput
             value={asset.phdFirstDisclosureDate}
-            onChange={(v) => onChange({ phdFirstDisclosureDate: v })}
+            onChange={(v) => onChange(assistEdit({ phdFirstDisclosureDate: v }))}
           />
           {housingType === "apartment" && (
             <p className="mt-1 text-caption text-amber-700 dark:text-amber-300">
@@ -272,7 +282,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
                 checked={!!asset.phdAssistBuildingStdBy164_5}
                 onCheckedChange={(v) => onChange({ phdAssistBuildingStdBy164_5: v })}
                 title="§164⑤ 준용으로 산정한 금액입니다"
-                description="확인해야 계산해 채우기 버튼이 켜집니다"
+                description="확인해야 계산해 채우기 버튼이 켜집니다 · 건물 기준시가나 최초 고시일을 바꾸면 다시 확인합니다"
               />
             </ToneCard>
           </div>
@@ -304,7 +314,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
           landPricePerSqmAtAcq={asset.phdLandPricePerSqmAtAcq || pre1990DerivedPerSqm}
           onLandPricePerSqmAtAcqChange={(v) => onChange({ phdLandPricePerSqmAtAcq: v })}
           buildingStdPriceAtAcq={asset.phdBuildingStdPriceAtAcq}
-          onBuildingStdPriceAtAcqChange={(v) => onChange({ phdBuildingStdPriceAtAcq: v })}
+          onBuildingStdPriceAtAcqChange={(v) => onChange(assistEdit({ phdBuildingStdPriceAtAcq: v }))}
           // 최초공시일
           firstDisclosureDate={asset.phdFirstDisclosureDate}
           landPriceYearAtFirst={asset.phdLandPriceYearAtFirst}
@@ -315,7 +325,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
           landPricePerSqmAtFirst={asset.phdLandPricePerSqmAtFirst}
           onLandPricePerSqmAtFirstChange={(v) => onChange({ phdLandPricePerSqmAtFirst: v })}
           buildingStdPriceAtFirst={asset.phdBuildingStdPriceAtFirst}
-          onBuildingStdPriceAtFirstChange={(v) => onChange({ phdBuildingStdPriceAtFirst: v })}
+          onBuildingStdPriceAtFirstChange={(v) => onChange(assistEdit({ phdBuildingStdPriceAtFirst: v }))}
           // 양도시
           transferDate={transferDate}
           landPriceYearAtTransfer={asset.phdLandPriceYearAtTransfer}

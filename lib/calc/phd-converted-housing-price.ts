@@ -71,6 +71,18 @@ export function phdAssistNeeds164_5(asset: Pick<AssetForm, "acquisitionDate" | "
   return isBeforeBuildingStdPriceNotice(asset.acquisitionDate) || isBeforeBuildingStdPriceNotice(asset.phdFirstDisclosureDate);
 }
 
+/**
+ * 보조 카드에서 확인 대상 칸(취득·최초 고시 시점 건물 기준시가 · 최초 고시일)을 고칠 때의 patch — 확인한 값이 아니게 되므로
+ * §164⑤ 준용 확인을 **같은 patch에서** 푼다(상가 `buildAcqBuildingStdEditPatch`와 같은 꼴 · useEffect 미러링 아님).
+ * 계획서: docs/00-pm/phd-residual-limits-fix.plan.md §3.1 (Q-1 (a))
+ */
+export function phdAssist164_5EditPatch(
+  patch: Partial<AssetForm>,
+  asset: Pick<AssetForm, "phdAssistBuildingStdBy164_5">,
+): Partial<AssetForm> {
+  return asset.phdAssistBuildingStdBy164_5 ? { ...patch, phdAssistBuildingStdBy164_5: false } : patch;
+}
+
 /** 입력 칸(`phd*` + 토지 면적)으로 §164⑦ 환산 개별주택가격을 계산한다. 값이 모자라거나 적용할 수 없으면 `ok:false` — **0 으로 대입하지 않는다**(자동 안분·침묵 fallback 금지). */
 export function computeConvertedHousingPrice(asset: AssetForm, transferDate: string): ConvertedHousingPriceResult {
   const missing: string[] = [];

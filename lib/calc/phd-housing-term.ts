@@ -16,8 +16,23 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
-/** 이 자산의 PHD 주택 종류가 공동주택인가 — 호출부가 결과 카드에 넘기는 불리언의 단일 정의. */
-export function isPhdApartment(asset: Pick<AssetForm, "phdHousingType"> | undefined): boolean {
+/**
+ * 이 자산의 PHD 주택 종류가 공동주택인가 — 호출부가 결과 카드에 넘기는 불리언의 단일 정의.
+ *
+ * 이월과세 환산 방식 «공동주택 최초고시 전 취득»(`estimationMode === "apd"`)은 방식 자체가 공동주택이라 라디오 값과 무관하게 공동주택이다
+ * (⑧ APD 문장과 같은 사실 — 패널은 이때 라디오를 그리지 않는다). 그 밖은 PHD 패널 라디오(`phdHousingType`)를 따른다.
+ * 저장값 `phdHousingType`은 바꾸지 않는다 — 방식을 다시 PHD로 바꾸면 종전 라디오 값이 돌아온다(store 미러링 없음).
+ * 계획서: docs/00-pm/phd-residual-limits-fix.plan.md §3.3 (Q-3 (b))
+ */
+export function isPhdApartment(
+  asset: (Pick<AssetForm, "phdHousingType"> & Partial<Pick<AssetForm, "acquisitionCause" | "carryover">>) | undefined,
+): boolean {
+  if (
+    asset?.acquisitionCause === "carryover_gift" &&
+    asset.carryover?.useEstimatedAcquisition &&
+    asset.carryover.estimationMode === "apd"
+  )
+    return true;
   return asset?.phdHousingType === "apartment";
 }
 
