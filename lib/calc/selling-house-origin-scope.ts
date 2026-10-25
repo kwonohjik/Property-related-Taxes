@@ -11,6 +11,8 @@
  * - 이 날짜는 §155① 종전주택 취득일에만 쓴다. 비과세 보유기간(§154①)·장기보유특별공제 기산은 그대로 양도 주택 「취득일」을 쓴다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { householdBuildingCarryoverApplied } from "@/lib/calc/redev-field-scope";
+import { landContributedOriginalApt } from "@/lib/calc/redev-field-scope";
 
 type SellingAsset = Partial<AssetForm>;
 
@@ -30,6 +32,9 @@ export function sellingHouseOriginQuestionVisible(
  * (승계 입주권으로 취득한 주택의 취득시기 = 사용승인서 교부일). 엔진 판정 번역(`translateRedevAptForHousingJudgment`)과 같은 날짜다.
  * 본문 `acquisitionDate`(입주권 승계일)는 §166 산식·명부 양도 행에 그대로 쓴다. 준공일이 비면 대체하지 않는다(⑧이 먼저 막는다).
  * 사용승인 전에 취득한 명부 주택은 이 날짜보다 먼저라 신규 주택 후보에서 빠진다 — 양도 주택이 나중에 취득한 주택이기 때문이다.
+ *
+ * 토지만 출자한 원조합원 완공APT도 준공일이다(F-1 Q-3 사용자 결정 2026-10-25 — 영 §162①4호 문언). 본문 `acquisitionDate`
+ * (토지 취득일)는 그대로다. 세대원 건물 출자 통산(#12)을 적용 중이면 대체하지 않는다 — 엔진 번역과 같은 조건이다.
  */
 export function sellingHousePreviousDateOverride(primary: SellingAsset | undefined, houseCount: number | undefined): string | undefined {
   if (
@@ -38,6 +43,12 @@ export function sellingHousePreviousDateOverride(primary: SellingAsset | undefin
     (primary.redevSubject || "apt") === "apt"
   ) {
     return primary.redevCompletionDate || undefined;
+  }
+  if (primary?.assetKind === "redevelopment_apt") {
+    const asset = primary as AssetForm;
+    if (landContributedOriginalApt(asset) && !(householdBuildingCarryoverApplied(asset) && asset.redevHouseholdBuildingAcquisitionDate)) {
+      return asset.redevCompletionDate || undefined;
+    }
   }
   if (!primary || !sellingHouseOriginQuestionVisible(primary, houseCount)) return undefined;
   if (!primary.sellingHouseRebuildKind || !primary.sellingHouseExistingAcquisitionDate) return undefined;

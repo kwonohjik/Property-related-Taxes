@@ -14,10 +14,11 @@
  *      …사용승인서 교부일」(+ 사전-2019-법령해석재산-0649). 원조합원은 종전주택 취득일이 그대로다(§154⑧1호 통산).
  *   ③ 거주월수 = `resolveAptResidenceMonths`(분리 입력 · 승계는 신축 거주만 — 단 증여자와 계속 같은 세대인 증여 승계는 종전주택 거주를 더한다, 사전-2020-법령해석재산-0691) — 표2와 같은 값
  *   ④ 토지만 출자한 원조합원이면 보유 기산일(`exemptionHoldingStartDate`) = 사용승인일(G3-4) — 취득일은 그대로
- *   ⑤ 승계조합원이면 §155① 종전주택 취득일(`temporaryTwoHouse.previousAcquisitionDate`)도 ②와 같은 준공일 —
- *      서면-2022-부동산-0565(승계 입주권으로 취득한 주택의 취득시기 = 사용승인서 교부일). 계산기 ④는 같은 날짜를
- *      `sellingHousePreviousDateOverride`로 싣는다. API를 직접 불러 입주권 승계일을 보내도 같은 결론이 나게 여기서도 맞춘다
- *      (F-1 Q-1 (c) — 토지 출자 원조합원은 V-1 해석례 대기로 아직 그대로다).
+ *   ⑤ 승계조합원·토지만 출자한 원조합원이면 §155① 종전주택 취득일(`temporaryTwoHouse.previousAcquisitionDate`)도 ②와 같은
+ *      준공일 — 서면-2022-부동산-0565(승계 입주권으로 취득한 주택의 취득시기 = 사용승인서 교부일) · 토지 출자는 영 §162①4호
+ *      문언(사용자 결정 2026-10-25 F-1 Q-3 — 정면 해석례 없이 진행). 계산기 ④는 같은 날짜를 `sellingHousePreviousDateOverride`로
+ *      싣는다. API를 직접 불러 입주권 승계일·토지 취득일을 보내도 같은 결론이 나게 여기서도 맞춘다. 세대원 건물 출자 통산(#12)을
+ *      선언한 토지 출자는 세대가 건물을 이어 보유한 축이라 맞추지 않는다(확인 필요 — 계획서 §11).
  *
  * 🔴 종전에는 이 번역이 비과세 판정(`judgeRedevAptOneHouseExemption`)에만 있었다. 중과 STEP 0.5의 ① 요소
  * (§155 의제·§156의2·§156의3 예외)와 ② 요소(§154① 충족)는 번역하지 않은 입력을 읽어, 같은 계산 안에서
@@ -109,7 +110,10 @@ export function translateRedevAptForHousingJudgment<T extends TransferTaxInput>(
     propertyType: "housing",
     acquisitionDate: redevAptJudgmentAcquisitionDate(input),
     // ⑤ — 종전 주택이 양도 주택일 때만(합가 D8 상대 쪽 짝이면 `previousHouseIsRosterRow` — 명부 행의 취득일이라 그대로 둔다).
-    ...(redev.isSuccessorMember === true && redev.completionDate && input.temporaryTwoHouse && input.temporaryTwoHouse.previousHouseIsRosterRow !== true
+    ...((redev.isSuccessorMember === true || (landContributed && !redev.householdBuilding)) &&
+    redev.completionDate &&
+    input.temporaryTwoHouse &&
+    input.temporaryTwoHouse.previousHouseIsRosterRow !== true
       ? { temporaryTwoHouse: { ...input.temporaryTwoHouse, previousAcquisitionDate: redev.completionDate } }
       : {}),
     // §156의2⑥ 신축주택 갈래 — 이 신축주택이 된 입주권의 취득일(승계조합원 = 입주권 승계일 · 토지 출자 = 인가일).

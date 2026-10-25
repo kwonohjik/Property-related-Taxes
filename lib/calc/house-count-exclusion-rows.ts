@@ -35,6 +35,7 @@ import { REDUCTION_TYPE_LABELS } from "@/lib/tax-engine/transfer-reduction-type-
 import { resolveHouseCountExclusionDate } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { calcGiftHouseholdBasis } from "./effective-regulated-at-acquisition";
 import { GIFT_HOUSEHOLD_SCOPE_PRIMARY } from "./effective-regulated-at-acquisition";
+import { landContributedOriginalApt } from "./redev-field-scope";
 
 /** 명부 행 ⑥이 받는 §99의4·§98의9 유형 — 계산기 ③ 감면 패널에서는 뺀다(Q-3). */
 export const ROW_COUNT_EXCLUSION_TYPES: ReadonlySet<string> = new Set([
@@ -173,11 +174,12 @@ function linkedDeclarations(form: FormLike) {
  * 종전에는 취득일(증여일)만 봐서, 같은 세대로 증여받은 주택에서 엔진은 빼는 농어촌주택을 화면이 남겼다
  * (`docs/00-pm/multi-house-surcharge-menu-residuals.plan.md` §1.3).
  *
- * ⚠️ 엔진의 토지만 출자한 원조합원 완공APT 갈래(사용승인일 — 영 §162①4호)는 **아직 따르지 않는다**(같은 계획서 Q-3 결정).
- *    그 갈래를 따르면 계산기 일시적 2주택 도출이 「종전주택 취득일 = 토지 출자일」로 비과세를 내는 기존 경로에 합류하는데,
- *    그 도출 자체가 별건으로 남은 확인 대상이다(§1.6).
+ * 토지만 출자한 원조합원 완공APT는 엔진과 같이 사용승인일(영 §162①4호)이다 — 엔진은 그 갈래를 `isLandContributedOriginalApt`로 가르고,
+ * ④는 준공일을 `redevCompletionDateInScope`일 때만 싣는다. 계산기 일시적 2주택 도출도 같은 날짜를 쓰게 된 뒤(F-1 PR-1
+ * `land-contributed-apt-temp-two-house.plan.md` §11) 이 갈래를 따른다(같은 계획서 Q-3 해소).
  */
 function houseCountExclusionGeneralDate(primary: AssetForm | undefined): Date | undefined {
+  if (primary && landContributedOriginalApt(primary) && primary.redevCompletionDate) return toOptionalDate(primary.redevCompletionDate);
   const acquisition = toOptionalDate(primary?.acquisitionDate);
   if (!primary || !acquisition) return undefined;
   return resolveHouseCountExclusionDate(
