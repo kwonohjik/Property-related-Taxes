@@ -41,7 +41,7 @@ const DISPLAY_FILES = [
   // 결과탭이 그대로 인쇄하는 엔진 formula 생산지
   "lib/tax-engine/transfer-tax-taxable-gain.ts",
   "lib/tax-engine/transfer-tax-lthd-steps.ts",
-  "lib/tax-engine/transfer-tax-aggregate.ts",
+  "lib/tax-engine/transfer-tax-aggregate-once.ts", // 2026-10-25 집계 1회 계산 분리 — formula 생산지가 옮겨 갔다
   "lib/tax-engine/transfer-tax-aggregate-reduction-step.ts",
 ];
 

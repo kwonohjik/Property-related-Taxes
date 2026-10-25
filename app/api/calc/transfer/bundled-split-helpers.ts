@@ -50,7 +50,7 @@ import {
 import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritance-acquisition-price";
 import type { InheritanceAssetKind } from "@/lib/tax-engine/inheritance-acquisition-price";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
-import { toEngineDonorBuilt } from "@/lib/api/donor-built-engine-input";
+import { toEngineCarryoverTaxation } from "@/lib/api/carryover-engine-input";
 import { toEngineSec163_9Inputs } from "./route-inherited-acquisition";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 
@@ -404,33 +404,8 @@ export function buildCompanionEngineInputs(
      * ⚠️ pre-deemed ③(환산)의 분자는 **이 자산의 §166⑥ 안분 양도가액**이다(계약 총액이 아니다).
      */
     ...toEngineSec163_9Inputs(c, ctx.transferDate, a.allocatedSalePrice),
-    /**
-     * ⑭ 배우자등 이월과세 §97의2 — **키를 열거하지 않는다**(spread + 일자만 덮어쓰기).
-     *
-     * 단건 `engine-input.ts`가 F15에서 같은 형태로 고쳐졌다 — 열거형은 ⑫·④가 실제로
-     * 보내던 `donorRelation`·`donorDeceased`를 빠뜨려 침묵 strip했다. spread는 **키를 세지
-     * 않으므로 누락이 구조적으로 불가능**하다(⑫에 필드가 늘면 여기 수정 없이 따라간다).
-     *
-     * ⚠️ 일자 2개는 `toDate` 필수 — JSON 경유 string이 그대로 도달하면
-     *    `Date < string` 비교가 **침묵 false**가 된다(`lib/api/date-coerce.ts`).
-     * ⚠️ 게이트(`acquisitionCause === "carryover_gift"`)는 엔진이 판정한다
-     *    (`transfer-tax.ts` STEP 0.475) — 여기선 원값만 전달한다.
-     */
-    carryoverTaxation: c.carryoverTaxation
-      ? {
-          ...c.carryoverTaxation,
-          giftRegistryDate: toDate(
-            c.carryoverTaxation.giftRegistryDate,
-            "companionAssets[].carryoverTaxation.giftRegistryDate",
-          ),
-          donorAcquisitionDate: toDate(
-            c.carryoverTaxation.donorAcquisitionDate,
-            "companionAssets[].carryoverTaxation.donorAcquisitionDate",
-          ),
-          donorHouseholdHoldingStartDate: toOptionalDate(c.carryoverTaxation.donorHouseholdHoldingStartDate),
-          donorBuilt: toEngineDonorBuilt(c.carryoverTaxation.donorBuilt, "companionAssets[].carryoverTaxation"),
-        }
-      : undefined,
+    // ⑭ 배우자등 이월과세 §97의2 — 단건과 같은 변환(`lib/api/carryover-engine-input.ts`).
+    carryoverTaxation: toEngineCarryoverTaxation(c.carryoverTaxation, "companionAssets[].carryoverTaxation"),
     // ⑭ 감면 일자 변환은 **단건과 같은 정본 매퍼**를 쓴다(`route-reductions-mapper.ts`).
     //    전용 매퍼를 두면 variant가 늘 때마다 한쪽만 갱신되어 「같은 감면인데 자산1과 자산2의
     //    세액이 다르다」가 된다(F14 실측: §77의3 감면율 40%↔25%, §97 임대 전액 소실,

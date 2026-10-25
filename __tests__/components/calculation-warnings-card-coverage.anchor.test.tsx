@@ -102,8 +102,9 @@ describe("엔진 쪽 안전망", () => {
      *    자산별 `result.warnings` 수집은 `-asset-records.ts` 로 옮겼고(M-1+M-2),
      *    신고 단위 `warnings.push` 는 오케스트레이터에 남았다.
      *    한 파일만 보면 **코드를 옮겼을 때 조용히 통과**한다 — 둘 다 본다.
+     *    🔄 2026-10-25 — 오케스트레이터 본문이 `-once.ts`로 나갔다(진입점 파일엔 집계 1회 계산이 없다).
      */
-    const agg = readFileSync("lib/tax-engine/transfer-tax-aggregate.ts", "utf8");
+    const agg = readFileSync("lib/tax-engine/transfer-tax-aggregate-once.ts", "utf8");
     const records = readFileSync(
       "lib/tax-engine/transfer-tax-aggregate-asset-records.ts",
       "utf8",

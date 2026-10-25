@@ -16,7 +16,7 @@ import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce"
 import type { z } from "zod";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
-import { toEngineDonorBuilt } from "@/lib/api/donor-built-engine-input";
+import { toEngineCarryoverTaxation } from "@/lib/api/carryover-engine-input";
 import { toEngineLandRebuild } from "@/lib/api/transfer-tax-schema-land-rebuild";
 import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route-map";
 import { mapGiftHouseholdBasis } from "@/lib/api/gift-household-basis-route-map";
@@ -125,32 +125,8 @@ export function buildTransferEngineInput(
       giftDonorDeceased: data.giftDonorDeceased,
       giftRejoinedAfterDivorce: data.giftRejoinedAfterDivorce,
     }),
-    // ⑭ 이월과세 §97의2 — **키를 열거하지 않는다**(spread + 일자만 덮어쓰기).
-    //    종전 열거형은 ⑫·④가 실제로 보내던 `donorRelation`·`donorDeceased`(① 관계요건
-    //    배제 판정축)를 빠뜨려 침묵 strip했다 — 단건 경로에서만 배제가 죽었다
-    //    (일반건물 경로 `general-building-route-cards.ts`는 객체를 통째로 넘겨 정상이었다).
-    //    spread는 **키를 세지 않으므로 누락이 구조적으로 불가능**하다 — ⑫에 필드가 늘면
-    //    ⑭ 수정 없이 따라간다. Date 2개만 명시 변환한다(date-coerce 정책).
-    //    ⚠️ 반대 방향은 tsc가 잡지 못한다(probe 실측: ⑫에만 있는 잉여 필드를 넣어도
-    //       `npx tsc --noEmit` 0건 — spread에는 excess property check가 걸리지 않는다).
-    //       ⑫에 엔진 미수용 필드를 추가할 때는 여기서 걸러낼 것.
-    carryoverTaxation: data.carryoverTaxation
-      ? {
-          ...data.carryoverTaxation,
-          giftRegistryDate: toDate(
-            data.carryoverTaxation.giftRegistryDate,
-            "carryoverTaxation.giftRegistryDate",
-          ),
-          donorAcquisitionDate: toDate(
-            data.carryoverTaxation.donorAcquisitionDate,
-            "carryoverTaxation.donorAcquisitionDate",
-          ),
-          // 결정 #33·#34 — 세대 보유 시작일도 일자라 spread의 string을 덮어쓴다(전송하지 않았으면 undefined).
-          donorHouseholdHoldingStartDate: toOptionalDate(data.carryoverTaxation.donorHouseholdHoldingStartDate),
-          // §114조의2 증여자 신축·증축 — 신축·증축일(Date). spread의 string 을 덮어쓴다(Zod 출력은 일자가 string).
-          donorBuilt: toEngineDonorBuilt(data.carryoverTaxation.donorBuilt, "carryoverTaxation"),
-        }
-      : undefined,
+    // ⑭ 이월과세 §97의2 — spread + 일자만 덮어쓰기(근거·주의는 `lib/api/carryover-engine-input.ts` 머리주석).
+    carryoverTaxation: toEngineCarryoverTaxation(data.carryoverTaxation, "carryoverTaxation"),
     isOneHousehold: data.isOneHousehold,
     temporaryTwoHouse: data.temporaryTwoHouse
       ? {
