@@ -712,7 +712,8 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     ...(mixedUsePayload ? { mixedUse: mixedUsePayload } : {}),
     // 배우자등 이월과세 (§97조의2)
     // P2 C·P4 B(파트 이월과세)는 자산 단위 서브객체와 상호배제다(R-1) — 사건 1벌 + 파트(`buildLandPartCausePayload`)가 대신한다.
-    ...(primary.acquisitionCause === "carryover_gift" && primary.carryover && !partCarryover(primary).building
+    // 부담부증여 지분 분할(축 B)은 지분마다 싣는다(`generalBuildingShares[].carryoverTaxation`) — 최상위는 보내지 않는다(⑫가 거부).
+    ...(primary.acquisitionCause === "carryover_gift" && primary.carryover && !partCarryover(primary).building && !(gbShares !== undefined && isBurdenedGift)
       ? (() => {
           const payload = buildCarryoverPayload(primary, form.transferDate, primaryRatio);
           return payload

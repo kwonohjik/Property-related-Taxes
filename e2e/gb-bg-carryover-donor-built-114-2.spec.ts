@@ -189,9 +189,9 @@ test.describe("일반건물 부담부증여 × 이월과세 × 증여자 신축�
     expect(body.burdenedGiftInfo).toBeDefined();
   });
 
-  test("GBBD-E6 지분 분할 취득(축 B): 일반건물 부담부증여 × 이월과세 자체를 ⑧ 이 막고 그 칸으로 이동한다 — «단건으로 계산하세요» (F27 B PR-3)", async ({ page }) => {
-    // 종전(PR-5c): 증여자 신축 토글만 «끄세요» 로 끄면 계산됐다 — 그 계산은 이월과세를 반영하지 않은 양도인 기준(B) 값이었다(Δ 0).
-    // PR-3(`docs/00-pm/gb-bg-carryover-presumed-scenario-b.plan.md`)부터 묶음에서는 이월과세 자체를 막는다.
+  test("GBBD-E6 지분 분할 취득(축 B): 이월과세는 계산되고(PR-2) 켜 둔 증여자 신축 토글만 ⑧ 이 «끄세요» 로 막아 그 칸으로 이동한다", async ({ page }) => {
+    // 종전(PR-5c): 토글을 끄면 계산됐지만 이월과세를 반영하지 않은 양도인 기준(B) 값이었다(Δ 0). F27 B PR-3 은 이월과세 자체를 막았다.
+    // 지분 PR-2(`docs/00-pm/gb-bg-carryover-share-bundled.plan.md`)부터 지분마다 A/B를 비교한다 — 증여자 신축 §114조의2 묶음 차단(PR-5c)만 남는다.
     test.setTimeout(180_000);
     const share2 = {
       ...makeDefaultAsset(2),
@@ -205,12 +205,19 @@ test.describe("일반건물 부담부증여 × 이월과세 × 증여자 신축�
       gbAcqLandPricePerSqm: "1000000",
       gbAcqBuildingValue: "100000000",
     };
-    await seedWizard(page, seed([gbBgAsset({}, { ownershipNumerator: "60", ownershipDenominator: "100" }), share2], { assetSplitMode: "fractional" }));
+    const share1 = (co: Over) => gbBgAsset(co, { ownershipNumerator: "60", ownershipDenominator: "100" });
+    await seedWizard(page, seed([share1(DONOR_BUILT_NEW), share2], { assetSplitMode: "fractional" }));
     await page.getByRole("button", { name: "다음", exact: true }).click();
-    await expect(page.getByText(/지분 분할 취득에서 아직 계산하지 못합니다/).first()).toBeVisible();
+    await expect(page.getByText(/당초 증여자 신축·증축 가산세\(소득세법 §114조의2\)를 아직 지원하지 않습니다 — 토글을 끄세요/).first()).toBeVisible();
+    await expect(page.getByText(/지분 분할 취득에서 아직 계산하지 못합니다/)).toHaveCount(0);
     await expect
-      .poll(() => page.evaluate(() => !!(document.activeElement as HTMLElement | null)?.closest('[data-field="acquisitionCause"]')))
+      .poll(() => page.evaluate(() => !!(document.activeElement as HTMLElement | null)?.closest('[data-field="carryover.donorBuilt"]')))
       .toBe(true);
+
+    await seedWizard(page, seed([share1({}), share2], { assetSplitMode: "fractional" }));
+    const body = (await calculate(page)) as Wire & { generalBuildingShares?: Array<{ carryoverTaxation?: unknown }> };
+    expect(body.generalBuildingShares?.map((x) => x.carryoverTaxation !== undefined)).toEqual([true, false]);
+    await expect(page.getByTestId("gb-bg-carryover-card")).toHaveCount(1);
   });
 
   // ── PR-2(`docs/00-pm/gb-bg-carryover-presumed-scenario-b.plan.md`) — 감정가액(K-7) × 당초 증여자 신축·증축 ──

@@ -43,6 +43,7 @@ import { bgGiftStdPriceLauncherSpec } from "@/lib/calc/burdened-gift-std-price-l
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisition";
+import { bgCoDonorNeedsStdPrice } from "@/lib/calc/burdened-gift-acq-std-price";
 import {
   BurdenedGiftAcquisitionMethodField,
   BurdenedGiftPresumedAcquisitionSection,
@@ -191,12 +192,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         : gbHideScope.building
           ? ("building" as const)
           : undefined;
-  /** K-1~K-3(기준시가) · K-5(환산) 모두 **취득시 기준시가**를 쓴다 — 환산은 이 값을 분자로 자동 추종. */
-  const coDonorNeedsStdPrice =
-    asset.bgValuationMode === "sangjeungbeop_standard" ||
-    asset.bgAcquisitionMethod === "converted" ||
-    // K-6/K-7 — 필요경비가 개산공제라 당초 증여자 취득 당시 기준시가가 base다
-    isBgPresumedMethod(asset.bgAcquisitionMethod);
+  /** K-1~K-3(기준시가) · K-5(환산 분자) · K-6/K-7(개산공제 base) — ⑧·둘째 지분 박스와 같은 leaf. */
+  const coDonorNeedsStdPrice = bgCoDonorNeedsStdPrice(asset);
   /** 이월과세 × K-6/K-7 — 당초 증여자 값은 이월과세 박스, 양도인 값은 실지취득가액 블록(증여일 상증법 평가액)에서 받는다. */
   const isCarryoverPresumed = isCarryover && isBgPresumedMethod(asset.bgAcquisitionMethod);
   const fmt = (n: number) => n.toLocaleString("ko-KR");

@@ -25,7 +25,7 @@
  * §104⑤ 비교과세도 전 자산을 함께 봐야 성립한다.
  */
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
-import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
+import { calculateTransferTaxAggregateWithUnits } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { AssetCardForAggregate } from "@/lib/tax-engine/general-building-valuation";
 import type { GeneralBuildingSwapDecision } from "@/lib/tax-engine/general-building-swap";
@@ -45,7 +45,17 @@ import type { TransferReduction } from "@/lib/tax-engine/transfer-tax";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
 import { buildGbPartCards, tagGbCards, remapGbSwap } from "./general-building-part-cards";
-import type { GbPartCards } from "./general-building-part-cards";
+import type { GbBgCarryoverUnitDraft } from "./general-building-part-cards";
+import { attachGbCarryoverUnits, toGbCarryoverUnits } from "./bundled-gb-carryover-units";
+import { toEngineCarryoverTaxation } from "@/lib/api/carryover-engine-input";
+import type { carryoverTaxationEngineShape } from "@/lib/api/transfer-tax-building-schemas";
+import type { z } from "zod";
+import { judgeCarryoverEligibility } from "@/lib/tax-engine/transfer-tax-carryover-eligibility";
+import {
+  assertCarryoverDonorBasis,
+  applyCarryoverDonorBasis,
+  toTransferorBasisInfo,
+} from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import type { GbShareBlockEcho } from "@/lib/tax-engine/types/transfer-aggregate.types";
 
@@ -92,6 +102,12 @@ export interface GeneralBuildingSharePayload {
   reductions?: Parameters<typeof mapReductionsToEngine>[0];
   /** 그 지분의 부담부증여(소령 §159) 정보 — 부담부증여일 때 전 지분(⑫ `refineGbBurdenedGiftActualPath`가 누락을 400). 채무는 지분율 안분 완료, 평가액은 엔진이 지분 축소. */
   burdenedGiftInfo?: BurdenedGiftInfo;
+  /**
+   * 그 지분의 배우자 등 이월과세(§97의2) — **부담부증여 지분만**(⑫ 짝 강제: 이 값 ⇔ `burdenedGiftInfo.carryoverDonorBasis`).
+   * 부담부증여는 A/B가 §159 안분 단계(카드 조립 전)에서 갈려 지분마다 A·B 카드를 만들고 신고 단위로 비교한다(PR-2).
+   * 일반 양도 지분의 이월과세는 종전대로 `valuation`의 파트 서브객체가 싣는다.
+   */
+  carryoverTaxation?: z.infer<typeof carryoverTaxationEngineShape>;
 }
 
 /** 그 지분의 **건물** 취득일 — 물건 사건 前/後 판정의 기준일. */
@@ -175,6 +191,111 @@ export function calculateGeneralBuildingFractional(
   // 결과 카드 블록 재료 — 지분마다 취득원인·평가액이 달라 지분 인덱스로 싣는다(`gb-fractional-result-blocks.plan.md` D-1).
   const shareBlockEcho: Record<string, GbShareBlockEcho> = {};
 
+  /**
+   * 부담부증여 × 이월과세(§97의2) 지분 — 요건(①괄호·②1·2호·③)을 충족하면 그 지분이 **비교 단위 하나**다(Q-1 a).
+   * 판정·fail-fast는 단건 F27·묶음(`buildGbCompanionItems`)과 같은 leaf다. ⑭ 날짜는 단건·컴패니언과 같은 변환 leaf.
+   */
+  const carryoverOf = shares.map((share, idx) => {
+    const ct = burdened && share.burdenedGiftInfo
+      ? toEngineCarryoverTaxation(share.carryoverTaxation, `generalBuildingShares[${idx}].carryoverTaxation`)
+      : undefined;
+    const eligibility = ct ? judgeCarryoverEligibility(ct, transferDate) : undefined;
+    if (!ct || !eligibility?.isEligible) return undefined;
+    assertCarryoverDonorBasis(share.burdenedGiftInfo!, ct);
+    return { ct, applicablePeriodYears: eligibility.applicablePeriodYears };
+  });
+  /** 비교 단위가 하나라도 있으면 전 지분 카드에 지분 §159 명세를 싣는다 — A가 채택되면 명세 취득 열을 지분별 합으로 바꾼다(Q-4 a). */
+  const withShareBreakdown = carryoverOf.some(Boolean);
+
+  /** 지분 하나의 한 시나리오 — 카드·표시 재료. `carryoverApplied`가 정해지면 카드에 지분 §159 명세를 싣는다. */
+  const buildPiece = (
+    share: GeneralBuildingSharePayload,
+    idx: number,
+    sharePrice: number,
+    coerced: Record<string, unknown>,
+    info: BurdenedGiftInfo | undefined,
+    dates: { building: Date; land?: Date } | undefined,
+    carryoverApplied: boolean | undefined,
+  ) => {
+    // (2-b) 물건 사건 게이팅 — 증축·용도변경 前/後 판정 (D4). A는 당초 증여자 취득일 기준이다(V-1 — 보유기간이 그날부터라 사건 前/後도 그날로 가른다).
+    const buildingAcqDate = dates?.building ?? buildingAcqDateOf({ ...share, valuation: coerced });
+    const gated = gateShareEvents(
+      coerced as never,
+      buildingAcqDate,
+    ) as unknown as Record<string, unknown>;
+
+    // (3) 카드 조립 — swap도 이 안에서 결정된다 ⇒ 판정 단위 = 지분 × 파트
+    const landAcqDate =
+      dates?.land ??
+      toOptionalDate(gated.landAcquisitionDate) ??
+      toDate(share.acquisitionDate, "generalBuildingShares[].acquisitionDate");
+    const built = buildGbPartCards(
+      gated,
+      sharePrice,
+      transferDate,
+      buildingAcqDate,
+      landAcqDate,
+      share.ownershipRatio,
+      // 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축 — 증축 일괄값이 있으면 그것, 없으면 지분 값.
+      (gated.bundledAcquisitionPrice as number | undefined) ?? share.acquisitionPrice ?? 0,
+      (gated.bundledExpenses as number | undefined) ?? share.expenses ?? 0,
+      // 부담부증여 — 그 지분의 §159 정보 + 지분율(A·C 지분 축소). 비부담부증여면 둘 다 undefined(종전 경로 그대로).
+      info,
+      burdened ? share.ownershipRatio : undefined,
+      // 계약 총액(100%) — 전 지분이 같은 계약서로 §100③을 판정한다(지분끼리 결론이 갈리지 않는다).
+      totalTransferPrice,
+    );
+
+    // (4) 접미사 — 카드와 swap Map을 **같은 시점에** 태깅한다
+    // 접미사는 문자열이다 — 컴패니언 축이 `assetId`를 쓰므로 leaf가 일반화됐다.
+    const tagged = tagGbCards(built.cards, String(idx), share.shareLabel);
+    const swap = built.swap ? remapGbSwap(built.swap, String(idx)) : undefined;
+
+    // §104③ 미등기 — 지분 경로도 토지·건물 축을 싣는다. 여기서 빠뜨리면 **지분 모드에서만**
+    // 미등기가 조용히 무시된다(단독 모드는 정상이라 발견이 늦다).
+    const items = buildProperties(tagged, built.nonBusinessRatio, swap, {
+      land: gated.unregisteredLand as boolean | undefined,
+      building: gated.unregisteredBuilding as boolean | undefined,
+    }, idx === 0 ? primaryReductions : mapReductionsToEngine(share.reductions ?? []), gated.nonHeirBequest as boolean | undefined);
+    const bd = built.burdenedGiftBreakdown;
+    const gbAssetBurdenedGift =
+      carryoverApplied !== undefined && bd
+        ? {
+            assetId: String(idx),
+            label: carryoverApplied ? `${share.shareLabel} · 이월과세 적용(당초 증여자 기준)` : share.shareLabel,
+            breakdown: bd,
+            carryoverApplied,
+          }
+        : undefined;
+    const ap = buildApportionment(
+      tagged,
+      built.totalStd,
+      built.nonBusinessRatio,
+      built.landStdAtTransfer,
+      built.landStdAtAcq,
+      built.buildingStdAtTransfer,
+      built.buildingStdAtAcq,
+      built.usedEstimated,
+      built.legalBasis,
+      swap,
+      built.extensionStdAtTransfer,
+      built.extensionStdAtAcq,
+    );
+    return {
+      built,
+      tagged,
+      swap,
+      ap,
+      items: gbAssetBurdenedGift ? items.map((it) => ({ ...it, gbAssetBurdenedGift })) : items,
+      holdingStart: { land: landAcqDate, building: buildingAcqDate },
+    };
+  };
+  type SharePiece = ReturnType<typeof buildPiece>;
+
+  const piecesB: SharePiece[] = [];
+  const piecesA: Array<SharePiece | undefined> = [];
+  const drafts: GbBgCarryoverUnitDraft[] = [];
+
   shares.forEach((share, idx) => {
     /**
      * (1) 지분 양도가액 — **마지막 지분이 잔액을 흡수**해 `Σ = 총양도가` 불변식을 지킨다
@@ -197,39 +318,65 @@ export function calculateGeneralBuildingFractional(
      *    변환 목록을 여기서 다시 나열하지 말 것 — `coerceGeneralBuildingPayload`가 단일 소스다.
      */
     const coerced = coerceGeneralBuildingPayload(share.valuation);
+    const info = burdened ? share.burdenedGiftInfo : undefined;
+    const co = carryoverOf[idx];
+    if (!co || !info) {
+      piecesB.push(buildPiece(share, idx, sharePrice, coerced, info, undefined, withShareBreakdown && info ? false : undefined));
+      piecesA.push(undefined);
+      return;
+    }
+    // B = 양도인(증여받은 사람) 기준 — K-6/K-7은 증여일 평가액(`actual*`)을 실지거래가액으로 읽는다(소령 §163⑨).
+    const b = buildPiece(share, idx, sharePrice, coerced, toTransferorBasisInfo(info), undefined, false);
+    // A = ①1호 취득가액 치환 + ①3호 증여세 상당액(§159 안분 단계가 소비) · §95④ 단서 — 토지·건물 기산일을 당초 증여자 취득일부터.
+    const donor = co.ct.donorAcquisitionDate;
+    const a = buildPiece(share, idx, sharePrice, coerced, applyCarryoverDonorBasis(info, co.ct.giftTaxAmount), { building: donor, land: donor }, true);
+    piecesB.push(b);
+    piecesA.push(a);
+    drafts.push({
+      assetId: String(idx),
+      assetLabel: share.shareLabel,
+      cardsB: b.items,
+      cardsA: a.items,
+      applicablePeriodYears: co.applicablePeriodYears,
+      donorAcquisitionDate: donor,
+      giftTaxAmount: co.ct.giftTaxAmount,
+      holdingStartB: b.holdingStart,
+    });
+  });
 
-    // (2-b) 물건 사건 게이팅 — 증축·용도변경 前/後 판정 (D4)
-    const buildingAcqDate = buildingAcqDateOf({ ...share, valuation: coerced });
-    const gated = gateShareEvents(
-      coerced as never,
-      buildingAcqDate,
-    ) as unknown as Record<string, unknown>;
+  // (5) aggregate는 **1회만** — 기본공제 250만원(법 §103①)·§104⑤ 비교과세가 전 지분에 1번 적용된다.
+  //     이월과세 지분은 외부 비교 단위다 — 집계가 신고 단위 결정세액으로 A/B를 고르고 그 구간 카드를 갈아 끼운다(순차 고정점 · 카드 순 = 지분 순).
+  allProperties.push(...piecesB.flatMap((p) => p.items));
+  const units = toGbCarryoverUnits(drafts, allProperties, (c) => c);
+  // 물건 전체 §159 명세(증여세·표시) — 첫 지분이 이월과세 단위면 양도인 기준으로 읽는다(K-6/K-7 첫 지분의 info로는 명세를 만들 수 없다 · 묶음 PR-1과 같다).
+  const wholeInfo = burdened?.wholeInfo && carryoverOf[0] ? toTransferorBasisInfo(burdened.wholeInfo) : burdened?.wholeInfo;
+  const calc = calculateTransferTaxAggregateWithUnits(
+    {
+      taxYear,
+      properties: allProperties,
+      annualBasicDeductionUsed: annualBasicDeductionUsed ?? 0,
+      // 카드는 **한 물건의 파트**(토지/건물)라 양도일이 같다 — §103②의 자산 순서가
+      // 성립하지 않아 한계세율 축을 쓴다(종전 `"MAX_BENEFIT"`과 **같은 거동**).
+      basicDeductionAllocation: "PARTS_HIGHEST_RATE",
+      priorReductionUsage: (priorReductionUsage ?? []) as never,
+      // 신고서 단위 정정 — aggregate가 1회만 소비한다(자산별 누수는 `:163`이 strip).
+      amendment,
+      // 🔴 G-13: 신고서 단위 가산세도 같은 층위에서 1회만 소비한다.
+      filingPenaltyDetails,
+      delayedPaymentDetails,
+      // 부담부증여 — 물건 단위 §159·증여세(1회). 카드별 합이 아니다(집계 M-0.5).
+      ...(wholeInfo && burdened ? { burdenedGiftWholeInfo: wholeInfo, burdenedGiftDate: burdened.date } : {}),
+    },
+    rates,
+    undefined,
+    units,
+  );
+  const aggregated = calc.result;
 
-    // (3) 카드 조립 — swap도 이 안에서 결정된다 ⇒ 판정 단위 = 지분 × 파트
-    const landAcqDate =
-      toOptionalDate(gated.landAcquisitionDate) ??
-      toDate(share.acquisitionDate, "generalBuildingShares[].acquisitionDate");
-    const built = buildGbPartCards(
-      gated,
-      sharePrice,
-      transferDate,
-      buildingAcqDate,
-      landAcqDate,
-      share.ownershipRatio,
-      // 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축 — 증축 일괄값이 있으면 그것, 없으면 지분 값.
-      (gated.bundledAcquisitionPrice as number | undefined) ?? share.acquisitionPrice ?? 0,
-      (gated.bundledExpenses as number | undefined) ?? share.expenses ?? 0,
-      // 부담부증여 — 그 지분의 §159 정보 + 지분율(A·C 지분 축소). 비부담부증여면 둘 다 undefined(종전 경로 그대로).
-      burdened ? share.burdenedGiftInfo : undefined,
-      burdened ? share.ownershipRatio : undefined,
-      // 계약 총액(100%) — 전 지분이 같은 계약서로 §100③을 판정한다(지분끼리 결론이 갈리지 않는다).
-      totalTransferPrice,
-    );
-
-    // (4) 접미사 — 카드와 swap Map을 **같은 시점에** 태깅한다
-    // 접미사는 문자열이다 — 컴패니언 축이 `assetId`를 쓰므로 leaf가 일반화됐다.
-    const tagged = tagGbCards(built.cards, String(idx), share.shareLabel);
-    const swap = built.swap ? remapGbSwap(built.swap, String(idx)) : undefined;
+  // 결과 표시 재료는 **채택된 시나리오**의 카드로 모은다 — 결정세액(A)과 산식·안분 표가 갈리지 않게 한다.
+  shares.forEach((share, idx) => {
+    const adoptedA = piecesA[idx] && calc.units[String(idx)]?.adoptedScenario === "A";
+    const { built, tagged, swap, ap } = adoptedA ? piecesA[idx]! : piecesB[idx];
     if (swap) {
       Object.assign(partDirectAddition, Object.fromEntries(swap.addition));
       Object.assign(partBeforeExtensionCapex, Object.fromEntries(swap.beforeExtensionAddition ?? []));
@@ -245,29 +392,6 @@ export function calculateGeneralBuildingFractional(
       ...(blockSrc.buildingAcquisitionByInheritance ? { buildingAcquisitionByInheritance: true } : {}),
       ...(blockSrc.preDeemedAcquisition ? { preDeemedAcquisition: blockSrc.preDeemedAcquisition } : {}),
     };
-
-    // §104③ 미등기 — 지분 경로도 토지·건물 축을 싣는다. 여기서 빠뜨리면 **지분 모드에서만**
-    // 미등기가 조용히 무시된다(단독 모드는 정상이라 발견이 늦다).
-    allProperties.push(
-      ...buildProperties(tagged, built.nonBusinessRatio, swap, {
-        land: gated.unregisteredLand as boolean | undefined,
-        building: gated.unregisteredBuilding as boolean | undefined,
-      }, idx === 0 ? primaryReductions : mapReductionsToEngine(share.reductions ?? []), gated.nonHeirBequest as boolean | undefined),
-    );
-    const ap = buildApportionment(
-      tagged,
-      built.totalStd,
-      built.nonBusinessRatio,
-      built.landStdAtTransfer,
-      built.landStdAtAcq,
-      built.buildingStdAtTransfer,
-      built.buildingStdAtAcq,
-      built.usedEstimated,
-      built.legalBasis,
-      swap,
-      built.extensionStdAtTransfer,
-      built.extensionStdAtAcq,
-    );
     allApportioned.push(...ap.apportioned);
     totalStandardAtTransfer += ap.totalStandardAtTransfer;
     residualAbsorbedBy = ap.residualAbsorbedBy ?? residualAbsorbedBy;
@@ -290,27 +414,8 @@ export function calculateGeneralBuildingFractional(
     lastLandStdTotal = built.landStdAtTransfer;
     lastBuildingStdTotal = built.buildingStdAtTransfer;
   });
-
-  // (5) aggregate는 **1회만** — 기본공제 250만원(법 §103①)·§104⑤ 비교과세가 전 지분에 1번 적용된다
-  const aggregated = calculateTransferTaxAggregate(
-    {
-      taxYear,
-      properties: allProperties,
-      annualBasicDeductionUsed: annualBasicDeductionUsed ?? 0,
-      // 카드는 **한 물건의 파트**(토지/건물)라 양도일이 같다 — §103②의 자산 순서가
-      // 성립하지 않아 한계세율 축을 쓴다(종전 `"MAX_BENEFIT"`과 **같은 거동**).
-      basicDeductionAllocation: "PARTS_HIGHEST_RATE",
-      priorReductionUsage: (priorReductionUsage ?? []) as never,
-      // 신고서 단위 정정 — aggregate가 1회만 소비한다(자산별 누수는 `:163`이 strip).
-      amendment,
-      // 🔴 G-13: 신고서 단위 가산세도 같은 층위에서 1회만 소비한다.
-      filingPenaltyDetails,
-      delayedPaymentDetails,
-      // 부담부증여 — 물건 단위 §159·증여세(1회). 카드별 합이 아니다(집계 M-0.5).
-      ...(burdened?.wholeInfo ? { burdenedGiftWholeInfo: burdened.wholeInfo, burdenedGiftDate: burdened.date } : {}),
-    },
-    rates,
-  );
+  // 지분별 [A]/[B] 비교 echo(키 = 카드 접미사) — 결과 카드·신고서 취득일이 읽는다.
+  attachGbCarryoverUnits(calc, aggregated, drafts, units);
   // 본인 신축 §114조의2 가산세(K-5/K-7)가 붙었으면 «확인 필요» 고지 — 단건·컴패니언과 같은 문구·같은 조건.
   if (burdened && allCards.some((c) => c.penaltyAxis) && !aggregated.warnings.includes(GB_BG_SELF_BUILT_NOTICE)) {
     aggregated.warnings.push(GB_BG_SELF_BUILT_NOTICE);

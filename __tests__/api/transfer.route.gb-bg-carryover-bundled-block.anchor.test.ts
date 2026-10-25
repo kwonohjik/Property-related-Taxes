@@ -3,8 +3,9 @@
  *
  * §97의2 시나리오 비교(F27)는 단건만 탄다. 수정 前 실측: 묶음에서 K-5 는 이월과세를 읽지 않고 양도인 기준(B) 값만 냈다 — 지분 50/50 결정세액 97,800,000 ·
  * 묶음(일반건물 + 토지 부담부증여) 110,760,000, 당초 증여자 기준시가를 1원·1원으로 바꿔도 같았다(Δ 0) · K-7 은 400. ⑧ 은 아무 말이 없었다.
- * ⇒ ⑧(`validateBurdenedGiftAsset` 1-a′)과 ⑫(`refineGbBgCarryoverBundled`)가 같은 문구로 막는다. 단건·이월과세 아님·일반 양도는 그대로.
- * 함께 부담부증여 묶음은 PR-1(`gb-bg-carryover-share-bundled.plan.md`)부터 계산한다 — `transfer.route.gb-bg-carryover-bundled.anchor.test.ts`. 여기는 지분 분할 차단만 남는다.
+ * ⇒ ⑧(`validateBurdenedGiftAsset` 1-a′)과 ⑫(`refineGbBgCarryoverBundled`)가 같은 문구로 막았다. 단건·이월과세 아님·일반 양도는 그대로.
+ * 함께 부담부증여 묶음은 PR-1, 지분 분할 취득은 PR-2(`gb-bg-carryover-share-bundled.plan.md`)부터 계산한다 — 값은 각 anchor(`…-bundled.anchor` · `…-share.anchor`)가 고정한다.
+ * 여기는 차단이 풀렸음(⑧ 통과 · 200)과 ⑫ 에 남은 거부만 고정한다.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -104,23 +105,30 @@ const landBg = (n: number) => ({
 const second = (a: AssetForm, n = 2) => ({ ...a, assetId: `a${n}` }) as AssetForm;
 const BUNDLE = { assetSplitMode: "companion", bundledSaleMode: "actual", contractTotalPrice: "1,300,000,000" };
 
-const blocked: Array<[string, () => TransferFormData, string]> = [
-  ["지분 분할 50/50 · K-5", () => formOf([gbAsset(half), second(gbAsset(half))], { assetSplitMode: "fractional" }), "carryoverTaxation"],
-  ["지분 분할 50/50 · K-5 · 분할 방식 미선언(전 자산 지분 → 축 B)", () => formOf([gbAsset(half), second(gbAsset(half))]), "carryoverTaxation"],
-  ["지분 분할 50/50 · K-7", () => formOf([gbAsset({ ...K7, ...half }), second(gbAsset({ ...K7, ...half }))], { assetSplitMode: "fractional" }), "carryoverTaxation"],
-  ["지분 분할 · 첫 지분만 이월과세", () => formOf([gbAsset(half), second(gbAsset({ ...half, acquisitionCause: "gift" }))], { assetSplitMode: "fractional" }), "carryoverTaxation"],
-  // 🔴 수정 前 ⑧ 만 막고 API 200 · 97,800,000 — 최상위 carryoverTaxation 은 첫 지분 것뿐이라 둘째 지분 이월과세가 조용히 사라졌다(계획서 gb-bg-carryover-share-bundled §1.3)
-  ["지분 분할 · 둘째 지분만 이월과세", () => formOf([gbAsset({ ...half, acquisitionCause: "gift" }), second(gbAsset(half))], { assetSplitMode: "fractional" }), "generalBuildingShares.1.burdenedGiftInfo.carryoverDonorBasis"],
+const shareCases: Array<[string, () => TransferFormData]> = [
+  ["지분 분할 50/50 · K-5", () => formOf([gbAsset(half), second(gbAsset(half))], { assetSplitMode: "fractional" })],
+  ["지분 분할 50/50 · K-5 · 분할 방식 미선언(전 자산 지분 → 축 B)", () => formOf([gbAsset(half), second(gbAsset(half))])],
+  ["지분 분할 50/50 · K-7", () => formOf([gbAsset({ ...K7, ...half }), second(gbAsset({ ...K7, ...half }))], { assetSplitMode: "fractional" })],
+  ["지분 분할 · 첫 지분만 이월과세", () => formOf([gbAsset(half), second(gbAsset({ ...half, acquisitionCause: "gift" }))], { assetSplitMode: "fractional" })],
+  ["지분 분할 · 둘째 지분만 이월과세", () => formOf([gbAsset({ ...half, acquisitionCause: "gift" }), second(gbAsset(half))], { assetSplitMode: "fractional" })],
 ];
 
-describe("🔴 ⑧ ↔ ⑫ — 지분 분할 취득의 일반건물 부담부증여 × 이월과세는 둘 다 같은 문구로 막는다(수정 前: ⑧ 통과 · K-5 200 B 값 / K-7 400)", () => {
-  it.each(blocked)("%s", async (_n, make, field) => {
+describe("지분 분할 취득의 일반건물 부담부증여 × 이월과세 — PR-2부터 계산한다(종전 ⑧·⑫ 「단건으로 계산하세요」 · 값은 `transfer.route.gb-bg-carryover-share.anchor.test.ts`)", () => {
+  it.each(shareCases)("%s → ⑧ 통과 · 200 · 지분마다 이월과세가 실린다(최상위 없음)", async (_n, make) => {
     const f = make();
-    expect(issues(f).map((i) => i.message).join("\n")).toContain(BUNDLED);
-    const r = await run(f);
+    expect(issues(f)).toEqual([]);
+    const body = await bodyOf(f);
+    expect(body.carryoverTaxation).toBeUndefined();
+    const r = await post(body);
+    expect(r.status, r.message).toBe(200);
+  });
+  it("⑫ 남은 거부 — 지분 배열과 함께 온 최상위 carryoverTaxation(지분 route는 읽지 않는다)", async () => {
+    const f = shareCases[0][1]();
+    const body = await bodyOf(f);
+    const r = await post({ ...body, carryoverTaxation: body.generalBuildingShares[0].carryoverTaxation });
     expect(r.status).toBe(400);
-    expect(r.fieldErrors).toContain(field);
-    expect(r.message ?? "").not.toContain("[burdened_gift]"); // 엔진 throw 가 아니라 ⑫ 에서 막힌다
+    expect(r.fieldErrors).toContain("carryoverTaxation");
+    expect(r.message ?? "").not.toContain("[burdened_gift]");
   });
 });
 

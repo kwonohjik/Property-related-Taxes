@@ -414,7 +414,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
 
       {/* 일반건물 부담부증여 × 이월과세 [A]/[B] 비교(F27 PR-4) — echo 가 없으면 렌더하지 않는다. */}
       <GbBurdenedGiftCarryoverCard detail={aggregated.burdenedGiftCarryoverDetail} />
-      {/* 함께 부담부증여 묶음 — 일반건물 자산(비교 단위)마다 한 장(PR-1). */}
+      {/* 함께 부담부증여 묶음은 일반건물 자산마다(PR-1), 지분 분할 취득은 지분마다(PR-2) 한 장 — 비교 단위 하나 = 카드 하나. */}
       {Object.entries(aggregated.burdenedGiftCarryoverUnits ?? {}).map(([key, unit]) => (
         <GbBurdenedGiftCarryoverCard key={key} detail={unit} assetLabel={unit.assetLabel} />
       ))}

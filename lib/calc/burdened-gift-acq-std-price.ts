@@ -79,6 +79,19 @@ export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
 }
 
 /**
+ * 이월과세(§97의2) 부담부증여 — 「당초 증여자 취득 당시 토지·건물 기준시가」를 받아야 하는가 (⑤ 이월과세 박스 · ⑧ `missingCoDonorBasisLabel` 공용).
+ * K-1~K-3(기준시가 모드) · K-5(환산 분자) · K-6/K-7(개산공제 base) — 엔진 `describeRequiredDonorFields`와 같은 분기다.
+ * 둘째 지분부터는 ②가 숨겨져 `BurdenedGiftTrancheBasisBlock`이 같은 박스를 연다 — 두 화면이 각자 판정하면 칸과 검증이 갈린다(PR-2).
+ */
+export function bgCoDonorNeedsStdPrice(asset: Pick<AssetForm, "bgValuationMode" | "bgAcquisitionMethod">): boolean {
+  return (
+    asset.bgValuationMode === "sangjeungbeop_standard" ||
+    asset.bgAcquisitionMethod === "converted" ||
+    (asset.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(asset.bgAcquisitionMethod))
+  );
+}
+
+/**
  * 엔진에 실릴 취득시 기준시가(원) — **API 변환과 같은 fallback**을 쓴다.
  *
  * ⚠️ `land`는 총액이 없으면 `㎡당 공시지가 × 취득면적`으로 도출된다

@@ -6,7 +6,7 @@
  *  · PL-2 범위 밖(K-6 매매사례·건물 본인 신축·토글 OFF)에서 켜 둔 stale 토글은 보내지도 요구하지도 않는다 (K-7 감정은 PR-2 에서 범위 안)
  *  · PL-3 ⑧ 차단 사유(구분·신축일·범위·증축 칸)와 필드 앵커
  *  · PL-4 ⑧ ↔ ⑫ 격자 전수 — ⑧ 이 통과시킨 입력은 route(⑫·엔진)도 200
- *  · PL-5 지분 분할 취득(축 B)·함께 부담부증여(컴패니언) — ⑧ 이 토글을 끄라고 알리고, 켜진 채 body 에 실리면 ⑫ 가 거부한다
+ *  · PL-5 지분 분할 취득(축 B)·함께 부담부증여(컴패니언) — 이월과세는 계산하고(묶음 PR-1 · 지분 PR-2), 증여자 신축 토글만 ⑧ 이 끄라고 알리고 켜진 채 body 에 실리면 ⑫ 가 거부한다
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -190,25 +190,29 @@ describe("PL-5 지분 분할 취득(축 B)·함께 부담부증여(컴패니언)
     ownershipNumerator: "40", ownershipDenominator: "100", gbBuildingAcquisitionCause: "purchase", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
   } as AssetForm;
 
-  // F27 B PR-3(`gb-bg-carryover-presumed-scenario-b.plan.md`)부터 지분 분할의 일반건물 부담부증여 × 이월과세는 토글과 무관하게 ⑧·⑫ 가 막는다
-  // («단건으로 계산하세요» · `carryoverTaxation`). 아래는 그 위에 donorBuilt 거부가 별도 필드로 함께 나옴을 고정한다.
-  // 함께 부담부증여 묶음은 PR-1(`gb-bg-carryover-share-bundled.plan.md`)부터 계산한다 — donorBuilt 거부(PR-5c)만 남는다.
+  // 지분 분할 취득은 PR-2(`gb-bg-carryover-share-bundled.plan.md`)부터, 함께 부담부증여 묶음은 PR-1부터 이월과세를 계산한다 — donorBuilt 거부(PR-5c)만 남는다.
   const BUNDLED = "지분 분할 취득에서 아직 계산하지 못합니다";
-  it("지분 분할 취득: ⑧ 이 이월과세 자체를 막는다(토글을 꺼도) · ⑫ 도 같다 · 켜진 donorBuilt 는 별도 필드로 거부", async () => {
+  const DONOR_BUILT = "당초 증여자 신축·증축 가산세(소득세법 §114조의2)를 아직 지원하지 않습니다";
+  it("지분 분할 취득: 이월과세는 계산된다(PR-2) · 켜진 donorBuilt 만 ⑧ «토글을 끄세요» · ⑫ 지분 §159 정보·지분 이월과세 두 경로 모두 별도 필드로 거부", async () => {
     const f = formOf([gbAsset({ ownershipNumerator: "60", ownershipDenominator: "100" }), share2], { assetSplitMode: "fractional" });
-    expect(msgs(f)).toContain(BUNDLED);
+    expect(msgs(f)).toContain(DONOR_BUILT);
     const off = formOf([gbAsset({ ownershipNumerator: "60", ownershipDenominator: "100" }, { donorBuilt: false }), share2], { assetSplitMode: "fractional" });
-    expect(msgs(off)).toContain(BUNDLED);
+    expect(msgs(off)).not.toContain(BUNDLED);
+    expect(issues(off)).toEqual([]);
     const body = await bodyOf(off);
     expect(body.generalBuildingShares?.length).toBeGreaterThan(1);
     const control = await post(body);
-    expect(control.status).toBe(400);
-    expect(control.fieldErrors).toContain("carryoverTaxation");
+    expect(control.status, JSON.stringify(control.fieldErrors)).toBe(200);
     const forced = JSON.parse(JSON.stringify(body));
     forced.generalBuildingShares[0].burdenedGiftInfo.carryoverDonorBasis = { ...(forced.generalBuildingShares[0].burdenedGiftInfo.carryoverDonorBasis ?? {}), donorBuilt: { buildingType: "new", constructionDate: "2022-01-10" } };
     const r = await post(forced);
     expect(r.status).toBe(400);
     expect(r.fieldErrors).toContain("generalBuildingShares.0.burdenedGiftInfo.carryoverDonorBasis.donorBuilt");
+    const viaCt = JSON.parse(JSON.stringify(body));
+    viaCt.generalBuildingShares[0].carryoverTaxation.donorBuilt = { buildingType: "new", constructionDate: "2022-01-10" };
+    const r2 = await post(viaCt);
+    expect(r2.status).toBe(400);
+    expect(r2.fieldErrors).toContain("generalBuildingShares.0.carryoverTaxation.donorBuilt");
   });
 
   it("함께 부담부증여(컴패니언): 이월과세는 계산된다(PR-1) · 켜진 donorBuilt 만 ⑧ «토글을 끄세요» · ⑫ 별도 필드로 거부", async () => {

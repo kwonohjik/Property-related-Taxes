@@ -274,24 +274,27 @@ export function refineDonorBuiltOuter(data: OuterLike, ctx: z.RefinementCtx): vo
   }
 }
 
-/** ⑧ `validateBurdenedGiftAsset`(1-a′)와 같은 문구 — 두 층이 같은 사실을 막는다. */
+/** 축 B 컴패니언 묶음(`fractionalSplitBundle`)의 일반건물 부담부증여 × 이월과세 거부 문구 — 화면은 이 조합을 만들지 않는다(지분 분할 일반건물은 `generalBuildingShares`로 간다). */
 export const GB_BG_CARRYOVER_BUNDLED_MESSAGE =
-  "일반건물 부담부증여의 배우자 등 이월과세(소득세법 §97의2)는 지분 분할 취득에서 아직 계산하지 못합니다 — 이 일반건물만 따로(단건으로) 계산하세요";
+  "일반건물 부담부증여의 배우자 등 이월과세(소득세법 §97의2)는 지분 분할 취득을 함께 양도 묶음으로 보내면 계산하지 못합니다 — 지분 분할 일반건물은 지분 배열(generalBuildingShares)로 보내세요";
+
+/** 지분 분할 취득(축 B)은 지분마다 이월과세를 싣는다 — 최상위 `carryoverTaxation`은 route가 읽지 않는다. */
+export const GB_BG_CARRYOVER_SHARE_TOP_LEVEL_MESSAGE =
+  "일반건물 지분 분할 취득의 부담부증여 × 이월과세는 지분마다 보냅니다(generalBuildingShares[].carryoverTaxation) — 최상위 carryoverTaxation은 받지 않습니다";
 
 /**
- * 일반건물 부담부증여 × 이월과세 × 지분 분할 취득(축 B) 거부 (⑫ · 계획서 `gb-bg-carryover-presumed-scenario-b.plan.md` PR-3).
- * 지분 카드는 이월과세 입력을 읽지 않고 양도인 기준(B) 값만 낸다(K-5 · Δ 0) — 받아 놓고 무시하지 않도록 막는다(해제는 지분 PR-2).
- * 지분은 최상위에 **첫 지분 것만** 실려, 둘째 지분만 이월과세면 그 지분 `burdenedGiftInfo.carryoverDonorBasis`가 유일한 흔적이다
- * (수정 前 200 · 이월과세 소실 — 계획서 `gb-bg-carryover-share-bundled.plan.md` §1.3).
- * 함께 부담부증여 묶음(컴패니언)은 PR-1부터 계산한다 — `buildGbCompanionItems`가 A/B 카드 세트를 외부 비교 단위로 등록한다. 묶음이 축 B(지분 분할)로
- * 선언되면(`fractionalSplitBundle`) ⑧(`isFractionalSplitAxis`)과 같이 계속 막는다.
+ * 일반건물 부담부증여 × 이월과세 × 묶음 경로 거부 (⑫ · 계획서 `gb-bg-carryover-presumed-scenario-b.plan.md` PR-3 → `gb-bg-carryover-share-bundled.plan.md`).
+ * 함께 부담부증여 묶음(컴패니언)은 PR-1부터, 지분 분할 취득(`generalBuildingShares`)은 PR-2부터 계산한다 — 지분마다 A/B 카드 세트를
+ * 외부 비교 단위로 등록한다(`general-building-fractional.ts`). 남는 거부는 둘이다:
+ *  · 지분 배열과 함께 온 최상위 `carryoverTaxation` — 지분 route는 지분 것만 읽어 받아 놓고 무시하게 된다.
+ *  · 축 B로 선언된 컴패니언 묶음(`fractionalSplitBundle`)의 일반건물 — 그 경로의 카드 빌더는 지분 축 §159 축소를 하지 않는다.
  */
 export function refineGbBgCarryoverBundled(
   data: {
     propertyType?: string;
     transferType?: string;
     carryoverTaxation?: unknown;
-    generalBuildingShares?: ReadonlyArray<{ burdenedGiftInfo?: { carryoverDonorBasis?: unknown } }>;
+    generalBuildingShares?: ReadonlyArray<unknown>;
     companionAssets?: ReadonlyArray<{ assetKind?: string; transferType?: string; carryoverTaxation?: unknown }>;
     fractionalSplitBundle?: boolean;
   },
@@ -300,15 +303,13 @@ export function refineGbBgCarryoverBundled(
   const companions = data.companionAssets ?? [];
   const isGbBgCarryover = (a: { kind?: string; transferType?: string; carryoverTaxation?: unknown }) =>
     a.kind === "general_building" && a.transferType === "burdened_gift" && a.carryoverTaxation != null;
-  const bundled = (data.generalBuildingShares?.length ?? 0) > 0 || (companions.length > 0 && data.fractionalSplitBundle === true);
-  if (bundled && isGbBgCarryover({ kind: data.propertyType, ...data }))
+  if ((data.generalBuildingShares?.length ?? 0) > 0 && isGbBgCarryover({ kind: data.propertyType, ...data }))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["carryoverTaxation"], message: GB_BG_CARRYOVER_SHARE_TOP_LEVEL_MESSAGE });
+  if (companions.length === 0 || data.fractionalSplitBundle !== true) return;
+  if (isGbBgCarryover({ kind: data.propertyType, ...data }))
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["carryoverTaxation"], message: GB_BG_CARRYOVER_BUNDLED_MESSAGE });
-  data.generalBuildingShares?.forEach((sh, i) => {
-    if (sh.burdenedGiftInfo?.carryoverDonorBasis != null)
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["generalBuildingShares", i, "burdenedGiftInfo", "carryoverDonorBasis"], message: GB_BG_CARRYOVER_BUNDLED_MESSAGE });
-  });
   companions.forEach((c, i) => {
-    if (bundled && isGbBgCarryover({ kind: c.assetKind, ...c }))
+    if (isGbBgCarryover({ kind: c.assetKind, ...c }))
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "carryoverTaxation"], message: GB_BG_CARRYOVER_BUNDLED_MESSAGE });
   });
 }

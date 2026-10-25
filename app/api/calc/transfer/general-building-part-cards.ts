@@ -409,8 +409,8 @@ export interface GbBgCarryoverUnitDraft {
   assetLabel: string;
   cardsB: TransferTaxItemInput[];
   cardsA: TransferTaxItemInput[];
-  /** A 채택 시 그 자산의 결과 상세(산식 재료) — B 상세는 `onDetail`이 이미 받았다. */
-  detailA: GbBundledAssetDetail;
+  /** A 채택 시 그 자산의 결과 상세(산식 재료) — B 상세는 `onDetail`이 이미 받았다. 지분 분할(축 B)은 물건 상세를 route가 채택 카드로 다시 조립해 싣지 않는다. */
+  detailA?: GbBundledAssetDetail;
   applicablePeriodYears: 5 | 10;
   donorAcquisitionDate: Date;
   giftTaxAmount: number;
