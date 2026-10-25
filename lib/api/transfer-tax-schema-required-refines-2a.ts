@@ -43,6 +43,8 @@ import {
 } from "@/lib/tax-engine/apart-nts-price";
 import { refineSplitCarryoverValues } from "./transfer-tax-schema-split-carryover";
 import { refineLandRebuild } from "./transfer-tax-schema-land-rebuild";
+import { computeSangjeungbeopValuation } from "@/lib/tax-engine/burdened-gift-valuation";
+import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx): Issue => (path, message) =>
@@ -596,7 +598,22 @@ type PreDeemedLike = Pick<
   Partial<Pick<Required2aLike, "acquisitionCause" | "transferType" | "useEstimatedAcquisition">> & {
     isSuccessorRightToMoveIn?: boolean;
     burdenedGiftInfo?: { valuationMode?: string } | null;
+    burdenedGiftWholeInfo?: unknown;
+    ownershipRatio?: number;
+    companionAssets?: ReadonlyArray<unknown>;
   };
+
+/**
+ * 시가 평가 부담부증여에서 담보평가(상증법 §66)가 이겨 취득가액이 기준시가로 강제되는가 — ⑧ `bgCollateralForcesStdAcq`와 같은 범위
+ * (단독 소유 단건 주 자산만). 승자는 엔진 함수로 판정한다 — 지분·묶음이 없으면 엔진의 지분 축소가 일어나지 않아 같은 값이다.
+ */
+function bgCollateralWinsSingle(d: PreDeemedLike, prefix: (string | number)[]): boolean {
+  if (prefix.length > 0 || d.transferType !== "burdened_gift" || d.burdenedGiftWholeInfo) return false;
+  if ((d.ownershipRatio ?? 1) < 1 || (d.companionAssets?.length ?? 0) > 0) return false;
+  const info = d.burdenedGiftInfo as BurdenedGiftInfo | null | undefined;
+  if (info?.valuationMode !== "sangjeungbeop_market") return false;
+  return computeSangjeungbeopValuation(info.landStdPriceAtTransfer, info.buildingStdPriceAtTransfer, info).selectedMode === "mortgage";
+}
 
 export function refinePreDeemedAcquisitionSource(
   d: PreDeemedLike,
@@ -637,6 +654,8 @@ export function refinePreDeemedAcquisitionSource(
   if (
     d.commercialInheritanceValuation &&
     !(d.transferType === "burdened_gift" && d.burdenedGiftInfo?.valuationMode === "sangjeungbeop_standard") &&
+    // 담보 승이면 ③을 비교하지 않는다(Q-2 a · 계획서 bg-std-mode-transfer-std-required.plan.md §3.3). ⑧ 같은 범위.
+    !bgCollateralWinsSingle(d, prefix) &&
     !positive(ia.standardPriceAtTransfer) &&
     !positive(d.standardPriceAtTransfer)
   ) {

@@ -54,6 +54,7 @@ import {
 } from "./transfer-tax-api-inheritance";
 import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
 import { fieldError } from "./transfer-tax-validate-field";
+import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
 
 /**
  * ②(§164④~⑦)가 **가목으로 성립**하는가 — 3경로 중 하나라도 완전 충족.
@@ -254,8 +255,11 @@ export function preDeemedConversionInputError(
   if (!isNonPrimaryAsset && (asset.isAppraisalAcquisition === true || asset.isSalesCaseAcquisition === true)) return null;
   // 상가 §164⑥은 ②이자 ③의 분자다(사용자 결정 A안 · 계획서 commercial-pre-deemed-converted-numerator.plan.md) — 양도시 기준시가가 없으면
   // ③이 조용히 0이 된다. ①② 원천이 있어도 막는다(아래 ① 반환 전). 기준시가로 평가한 부담부증여는 ③이 없다(Q-25). ⑫ 같은 판정.
+  // 시가로 평가했어도 담보평가가 이기면 취득가액이 의제취득일 기준시가 × 채무비율이라 ③을 비교하지 않는다 — 단독 소유 단건만(Q-2 a ·
+  // 계획서 bg-std-mode-transfer-std-required.plan.md §3.3 · 양도시 기준시가 4억·6억 세액 동일 실측).
   if (
     !(asset.transferType === "burdened_gift" && asset.bgValuationMode === "sangjeungbeop_standard") &&
+    !(!isNonPrimaryAsset && bgCollateralForcesStdAcq(asset)) &&
     "commercialInheritanceValuation" in buildCommercialInheritanceValuationPayload(asset) &&
     (buildInheritedAcquisitionPayload(asset, 1, false).inheritedAcquisition as { mode?: string } | undefined)?.mode === "pre-deemed" &&
     !(parseAmount(asset.standardPriceAtTransfer ?? "") > 0)
