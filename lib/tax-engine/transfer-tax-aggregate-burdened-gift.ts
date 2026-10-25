@@ -34,25 +34,38 @@ export function buildBundleBurdenedGiftWhole(input: AggregateTransferInput): Tra
 
 /**
  * 의제취득일 전 카드가 있으면 취득가액·개산공제를 카드별 결과 합으로 바꾸고 카드별 명세(`cards`)를 싣는다. 없으면 그대로.
+ * 일반건물 부담부증여 × 이월과세에서 A(당초 증여자 기준)가 채택된 자산이 있어도 같이 바꾼다 — 물건 전체 재계산은 양도인 기준(B) 값이라
+ * 결정세액(A)과 명세가 어긋난다(PR-1 · `gb-bg-carryover-share-bundled.plan.md` Q-4 a). 일반건물 파트 카드는 자산 명세(`gbAssetBurdenedGift`)를 자산당 1회 센다.
  * 카드 명세가 세액에 쓰인 값을 다 담을 때만 바꾼다 — 그렇지 않으면 「합 = 세액에 쓰인 값」이 거짓이 되므로 종전 그대로 둔다(기존 한계):
- *  · 명세가 없는 카드(일반건물 파트 카드 — 상세 산식 `DetailedStatementGbFormulas`도 물건 전체 명세의 슬롯을 읽는다)
+ *  · 명세가 없는 카드(자산 명세가 붙지 않은 일반건물 파트 카드 — 상세 산식 `DetailedStatementGbFormulas`도 물건 전체 명세의 슬롯을 읽는다)
  *  · 재개발·재건축 카드(§166 경로가 인가 후 분·청산금·§166③을 따로 계산해 §159 슬롯과 세액 취득가액이 다르다)
  */
 export function withCardAcquisitions(
   whole: TransferBurdenedGiftBreakdown | undefined,
   records: ReadonlyArray<{
-    item: Pick<TransferTaxItemInput, "propertyId" | "propertyLabel">;
+    item: Pick<TransferTaxItemInput, "propertyId" | "propertyLabel" | "gbAssetBurdenedGift">;
     result: Pick<TransferTaxResult, "transferBurdenedGiftBreakdown" | "redevelopmentDetail">;
   }>,
 ): TransferBurdenedGiftBreakdown | undefined {
   if (!whole) return whole;
-  const cards = records.flatMap((r) =>
-    r.result.transferBurdenedGiftBreakdown
+  const counted = new Set<string>();
+  const cards = records.flatMap((r) => {
+    const gb = r.item.gbAssetBurdenedGift;
+    if (gb) {
+      if (counted.has(gb.assetId)) return [];
+      counted.add(gb.assetId);
+      return [{ propertyId: gb.assetId, label: gb.label, breakdown: gb.breakdown }];
+    }
+    return r.result.transferBurdenedGiftBreakdown
       ? [{ propertyId: r.item.propertyId, label: r.item.propertyLabel, breakdown: r.result.transferBurdenedGiftBreakdown }]
-      : [],
-  );
-  if (!cards.some((c) => c.breakdown.preDeemed)) return whole;
-  if (cards.length !== records.length || records.some((r) => r.result.redevelopmentDetail !== undefined)) return whole;
+      : [];
+  });
+  if (!cards.some((c) => c.breakdown.preDeemed) && !records.some((r) => r.item.gbAssetBurdenedGift?.carryoverApplied)) return whole;
+  if (
+    records.some((r) => !r.item.gbAssetBurdenedGift && !r.result.transferBurdenedGiftBreakdown) ||
+    records.some((r) => r.result.redevelopmentDetail !== undefined)
+  )
+    return whole;
   const sum = (pick: (b: TransferBurdenedGiftBreakdown) => number) => cards.reduce((s, c) => s + pick(c.breakdown), 0);
   return {
     ...whole,

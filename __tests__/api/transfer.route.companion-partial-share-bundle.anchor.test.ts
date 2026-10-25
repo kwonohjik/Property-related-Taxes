@@ -29,6 +29,11 @@ vi.mock("@/lib/tax-engine/transfer-tax-aggregate", async (importOriginal) => {
       aggCalls.push(input as never);
       return (actual.calculateTransferTaxAggregate as (...a: unknown[]) => unknown)(input, ...rest);
     },
+    // 함께 양도 route는 외부 비교 단위 진입점을 부른다(PR-1 — 단위가 없으면 종전 진입점과 같은 계산).
+    calculateTransferTaxAggregateWithUnits: (input: Parameters<typeof actual.calculateTransferTaxAggregate>[0], ...rest: unknown[]) => {
+      aggCalls.push(input as never);
+      return (actual.calculateTransferTaxAggregateWithUnits as (...a: unknown[]) => unknown)(input, ...rest);
+    },
   };
 });
 

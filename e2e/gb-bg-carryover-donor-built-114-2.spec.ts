@@ -207,7 +207,7 @@ test.describe("일반건물 부담부증여 × 이월과세 × 증여자 신축�
     };
     await seedWizard(page, seed([gbBgAsset({}, { ownershipNumerator: "60", ownershipDenominator: "100" }), share2], { assetSplitMode: "fractional" }));
     await page.getByRole("button", { name: "다음", exact: true }).click();
-    await expect(page.getByText(/지분 분할 취득·함께 부담부증여 묶음에서 아직 계산하지 못합니다/).first()).toBeVisible();
+    await expect(page.getByText(/지분 분할 취득에서 아직 계산하지 못합니다/).first()).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => !!(document.activeElement as HTMLElement | null)?.closest('[data-field="acquisitionCause"]')))
       .toBe(true);

@@ -486,6 +486,7 @@ export function buildCompanionEngineInputs(
       companionEngine,
       { ownershipRatio: c.ownershipRatio, assetId: c.assetId, assetLabel: c.assetLabel ?? "", totalPropertyTransferPrice: c.totalPropertyTransferPrice },
       ctx.onGbDetail,
+      ctx.onGbCarryoverUnit,
     );
   }
 

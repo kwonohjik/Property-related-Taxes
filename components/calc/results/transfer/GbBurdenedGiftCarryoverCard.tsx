@@ -7,6 +7,9 @@
  * 값은 전부 route echo(`aggregated.burdenedGiftCarryoverDetail`)이고 이 카드는 계산하지 않는다.
  * 일반건물은 카드 여러 장이 하나의 신고를 이루므로 A·B 결정세액이 곧 **신고 전체** 결정세액이다(②3호 비교의 두 항 그대로).
  * 열 구성은 단건 `CarryoverComparisonCard`의 `ScenarioCol`·`InfoRow`를 쓴다.
+ *
+ * 함께 부담부증여 묶음(`assetLabel` 지정 · PR-1)은 자산마다 한 장이다. A·B는 **그 자산에만** 적용 / 미적용했을 때의 신고 전체 결정세액이고
+ * 다른 자산의 채택이 함께 정해지므로, 「신고세액 = 큰 금액」 문구를 쓰지 않는다(다건 카드 `filingUnitComparison`과 같은 문구 · 계획서 §4.6).
  */
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { InfoRow, ScenarioCol } from "./CarryoverComparisonCard";
@@ -36,14 +39,15 @@ function SummaryRows({ s, acqTag, startTag }: { s: GbBgCarryoverScenarioSummary 
   );
 }
 
-export function GbBurdenedGiftCarryoverCard({ detail }: { detail: Detail | undefined }) {
+export function GbBurdenedGiftCarryoverCard({ detail, assetLabel }: { detail: Detail | undefined; assetLabel?: string }) {
   if (!detail) return null;
   const adoptedA = detail.adoptedScenario === "A";
   const adoptedTax = adoptedA ? detail.determinedTaxA : detail.determinedTaxB;
+  const perAsset = assetLabel !== undefined;
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-4" data-testid="gb-bg-carryover-card">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">이월과세 비교과세 결과</p>
+        <p className="text-sm font-semibold">이월과세 비교과세 결과{perAsset ? ` — ${assetLabel}` : ""}</p>
         <span className="text-caption text-muted-foreground">소득세법 §97조의2</span>
       </div>
 
@@ -53,14 +57,14 @@ export function GbBurdenedGiftCarryoverCard({ detail }: { detail: Detail | undef
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <ScenarioCol label="[A] 이월과세 적용" adopted={adoptedA} determinedTax={detail.determinedTaxA} filingUnit={false} compared>
+        <ScenarioCol label="[A] 이월과세 적용" adopted={adoptedA} determinedTax={detail.determinedTaxA} filingUnit={perAsset} compared>
           <SummaryRows s={detail.scenarioA} acqTag="당초 증여자 기준" startTag="당초 증여자 취득일" />
         </ScenarioCol>
         <ScenarioCol
           label={`[B] 미적용 (비교과세)${adoptedA ? "" : " ← 비교과세 세액 역전"}`}
           adopted={!adoptedA}
           determinedTax={detail.determinedTaxB}
-          filingUnit={false}
+          filingUnit={perAsset}
           compared
         >
           <SummaryRows s={detail.scenarioB} acqTag="수증자 기준" startTag="수증자 취득일" />
@@ -70,10 +74,23 @@ export function GbBurdenedGiftCarryoverCard({ detail }: { detail: Detail | undef
       <div className="rounded-md border-t pt-3 space-y-1 text-xs text-muted-foreground">
         <div className="flex flex-wrap justify-between gap-2 font-semibold text-foreground text-sm">
           <span>채택 시나리오: {detail.adoptedScenario} ({adoptedA ? "이월과세 적용" : "비교과세 미적용"})</span>
-          <span data-testid="gb-bg-carryover-filing-tax">신고세액 = 시나리오 A·B 중 큰 금액 = {formatKRW(adoptedTax)}</span>
+          {!perAsset && (
+            <span data-testid="gb-bg-carryover-filing-tax">신고세액 = 시나리오 A·B 중 큰 금액 = {formatKRW(adoptedTax)}</span>
+          )}
         </div>
-        <p>A·B 결정세액은 토지·건물 카드를 합친 신고 전체 금액입니다 (§97조의2 ② 3호는 양도소득 결정세액을 비교).</p>
-        {!adoptedA && <p className="text-rose-700 dark:text-rose-400">※ §97조의2 ② 3호 비교과세 — 시나리오 B 채택 (세액 역전)</p>}
+        {perAsset ? (
+          <p>
+            A·B 결정세액은 이 자산에만 이월과세를 적용 / 적용하지 않았을 때의 신고 전체 금액입니다 (§97조의2 ② 3호 · §92③2호). 함께
+            양도한 다른 자산의 채택이 같이 정해지므로 최종 결정세액과 다를 수 있습니다.
+          </p>
+        ) : (
+          <p>A·B 결정세액은 토지·건물 카드를 합친 신고 전체 금액입니다 (§97조의2 ② 3호는 양도소득 결정세액을 비교).</p>
+        )}
+        {!adoptedA && (
+          <p className="text-rose-700 dark:text-rose-400">
+            ※ §97조의2 ② 3호 비교과세 — 시나리오 B 채택 (세액 역전{perAsset ? " · 신고 전체 결정세액 기준" : ""})
+          </p>
+        )}
       </div>
     </div>
   );

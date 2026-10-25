@@ -202,7 +202,7 @@ export function buildAggregateRows(
     // GB 카드별 정확한 취득일(원건물=건물취득일·증축건물=증축일·토지=토지취득일).
     // 일반 자산은 asset.acquisitionDate 그대로.
     // 부담부증여 × 이월과세 A 채택이면 당초 증여자 취득일(엔진 보유기간 축) — 각주로 밝힌다.
-    const carryoverAcqDate = gbCarryoverAcqDateOverride(aggregated.burdenedGiftCarryoverDetail, col);
+    const carryoverAcqDate = gbCarryoverAcqDateOverride(aggregated, col);
     if (carryoverAcqDate) acqDateNotes[col] = "당초 증여자 취득일 — 이월과세 적용(시나리오 A) · 소득세법 §95④ 단서";
     const acqDate = carryoverAcqDate ?? getAcqDateForCard(a, col);
 

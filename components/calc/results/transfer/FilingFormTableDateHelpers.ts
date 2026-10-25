@@ -6,6 +6,7 @@
  */
 import { partAcquisitionDates } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
+import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { table2ResidencePct } from "@/lib/tax-engine/data/lthd-table2-era";
 import type { AggregateTransferResult } from "@/lib/tax-engine/types/transfer-aggregate.types";
@@ -100,9 +101,14 @@ export function getAcqDateForCard(asset: import("@/lib/stores/calc-wizard-asset"
  * 「보유 1년 10월 · 장특공제율 22%」 자기모순이 된다(PR-4 실측). B 채택·echo 없음(옛 결과)·토지·원건물 카드가 아니면 `undefined`.
  */
 export function gbCarryoverAcqDateOverride(
-  detail: AggregateTransferResult["burdenedGiftCarryoverDetail"],
+  aggregated: Pick<AggregateTransferResult, "burdenedGiftCarryoverDetail" | "burdenedGiftCarryoverUnits"> | undefined,
   pid: string,
 ): string | undefined {
+  // 함께 부담부증여 묶음은 자산(카드 접미사)마다 채택이 다르다(PR-1) — 단건 명세는 접미사 없는 카드에만 쓴다.
+  const suffix = cardSuffixOf(pid);
+  const detail = suffix !== undefined && aggregated?.burdenedGiftCarryoverUnits
+    ? aggregated.burdenedGiftCarryoverUnits[suffix]
+    : aggregated?.burdenedGiftCarryoverDetail;
   const a = detail?.adoptedScenario === "A" ? detail.scenarioA : undefined;
   if (!a) return undefined;
   const base = baseCardId(pid);
