@@ -49,6 +49,11 @@ import { resolveSplitAwareTax, buildCalculatedTaxStep } from "./transfer-tax-spl
 import { applyRentalHousingReductions } from "./transfer-tax-rental-housing-reductions";
 import { buildRentalLthdParts, applyRentalLthdPartsToSplit } from "./transfer-tax-rental-housing-lthd-parts";
 import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
+import {
+  rentalResidenceProvisoLabel,
+  rentalResidenceProvisoNotice,
+  rentalResidenceRequirementHoldYears,
+} from "./one-house/rental-residence-holding-proviso";
 import { landRebuildNoticeOf } from "./transfer-tax-rebuild-notice";
 
 // 요건 판정·조기반환 게이트는 800줄 정책으로 분리 — 기존 import 경로 호환 재export.
@@ -194,7 +199,10 @@ export function runRentalHousingExceptionStep(
   const composition = resolveRentalResidenceComposition(effectiveInput, parsedRates, generalHouseAcquisitionDate);
 
   const holdPeriod = calculateHoldingPeriod(effectiveInput.acquisitionDate, effectiveInput.transferDate);
+  // 장기보유특별공제 보유 연수 — 본인 보유(취득일부터). 아래 요건 보유 연수(단서 반영)와 섞지 않는다.
   const holdYears = holdPeriod.years;
+  // §155⑳ 요건 판정의 거주주택 보유 연수 — §154① 단서 1호·2호가목·3호가 보유 2년을 풀면 2년(판정 함수와 같은 leaf).
+  const requirementHoldYears = rentalResidenceRequirementHoldYears(effectiveInput);
   // 표2 공제율의 거주분 — 본인 거주(상속개시일·증여일부터). 아래 요건 판정 개월과 섞지 않는다.
   const liveYears = Math.floor(effectiveInput.residencePeriodMonths / 12);
   // §155⑳1호 「거주기간 2년」 요건 — 증여·상속 전 동일세대로 거주한 기간을 통산한다(별건 ⑥ · `judgeRentalHousingEligibility`와 같은 leaf).
@@ -226,7 +234,7 @@ export function runRentalHousingExceptionStep(
     resolveHighValueDenominator(effectiveInput),
     holdYears,
     liveYears,
-    holdYears,    // 거주주택 보유연수 (B 시나리오 시 PHRP 보유연수와 동일)
+    requirementHoldYears,    // 거주주택 보유연수 — 요건 판정용(단서 반영). 4번째 인자(장특)는 본인 보유
     Math.floor(requirementResidenceMonths / 12),    // 거주주택 거주연수 — 요건 판정용 통산값 (B의 1호 거주요건은 context의 등록 이후 거주기간 — OH-15)
     // OH-13 — 고가주택 기준은 양도일 기준(2021-12-07 이전 9억). 12억 고정 금지.
     resolveHighValueHouseThreshold(effectiveInput.transferDate),
@@ -323,6 +331,10 @@ export function runRentalHousingExceptionStep(
     steps.push({ label: "직전거주주택보유주택 — 영 §154⑩ 안분", formula: phrp154_10Notice, amount: 0, legalBasis: rheBasis });
   }
 
+  // §154① 단서가 보유 2년을 풀어 ⑳이 선 경우 — 근거 표기 + 확인 필요 고지(Q-R2 (a)). ⑳ 불성립 → §154⑩ 안분 경로는 ⑳을 적용하지 않았다.
+  const provisoLabel = phrpUnmetReason ? undefined : rentalResidenceProvisoLabel(effectiveInput);
+  const provisoNotice = phrpUnmetReason ? undefined : rentalResidenceProvisoNotice(effectiveInput);
+
   // ── 특례 적용: taxableGain을 특례 결과로 대체하고 최종 결과 반환 ──
   // 파트별 장특을 결과 카드(splitDetail 파트)에 채우고, 기본통칙 95-0…1로 토지분 공제율이 달라졌으면 고지한다.
   const appurtenantLthdNotice = applyRentalLthdPartsToSplit(splitDetail, rhe, effectiveInput.transferDate);
@@ -388,7 +400,7 @@ export function runRentalHousingExceptionStep(
   steps.push({
     label: "장기임대주택 보유자 거주주택 비과세 특례",
     // §161은 B(직전거주주택보유주택)만 거친다 — A(RH-A1·A2)는 §155⑳ 전단 → §154①이다(S06-8).
-    formula: `${rheBasisShort}${isPhrpScenarioId(rhe.scenarioId) ? " + §161" : ""} — ${rhe.scenarioId} 시나리오 적용`,
+    formula: `${rheBasisShort}${isPhrpScenarioId(rhe.scenarioId) ? " + §161" : ""} — ${rhe.scenarioId} 시나리오 적용${provisoLabel ? ` · ${provisoLabel}` : ""}`,
     amount: rhe.taxableGain,
     legalBasis: rheBasis,
   });
@@ -567,10 +579,11 @@ export function runRentalHousingExceptionStep(
     ...(unsold989Detail ? { unsold989Detail } : {}),
     ...(houseCountExclusionDetails ? { houseCountExclusionDetails } : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
-    ...(phrp154_10Notice || reductionNotice || lthdNotice || rebuildNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || laterLandNotice || laterLandPhrpNotice || rhe.eligibility.notices?.length
+    ...(phrp154_10Notice || provisoNotice || reductionNotice || lthdNotice || rebuildNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || laterLandNotice || laterLandPhrpNotice || rhe.eligibility.notices?.length
       ? {
           warnings: [
             phrp154_10Notice,
+            provisoNotice,
             reductionNotice,
             lthdNotice,
             appurtenantLthdNotice,
@@ -590,7 +603,7 @@ export function runRentalHousingExceptionStep(
     isExempt: totalTaxableIncome === 0,
     exemptReason:
       totalTaxableIncome === 0
-        ? phrp154_10Notice ? args.otherExemptReason : "장기임대주택 보유자 거주주택 비과세 (§155⑳)"
+        ? phrp154_10Notice ? args.otherExemptReason : `장기임대주택 보유자 거주주택 비과세 (§155⑳${provisoLabel ? ` · ${provisoLabel}` : ""})`
         : undefined,
     transferGain,
     taxableGain: totalTaxableIncome,

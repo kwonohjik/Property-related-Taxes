@@ -155,24 +155,31 @@
 
 ## 6. 결정 요청
 
-- **Q-R1. 진행 여부와 범위**
+- **Q-R1. 진행 여부와 범위** — ✅ **(a)** (사용자 결정 2026-10-26 「권고 안으로 진행해」)
   - 권장 **(a) A·B 시나리오 모두, 사유 1·2가·3호.**
     - ⑳ 본문이 §154①을 적용하므로 단서가 따라온다고 본다(인접 근거 서면-2015-부동산-22330).
     - 거주는 부동산납세과-67로, 2나·다는 2370·2151로 막는다.
   - (b) A만.
   - (c) 진행하지 않는다 — 정면 해석례가 없다. 현행대로 과세하고 결론을 가를 때 「확인 필요」 고지만 단다.
-- **Q-R2. 결과 표시**
+- **Q-R2. 결과 표시** — ✅ **(a)** (같은 결정)
   - 권장 **(a) 단서가 결론을 가를 때만 근거에 「§154① 단서 N호」를 붙이고, 정면 해석례가 없다는 「확인 필요」 고지를 함께 단다.**
   - (b) 근거 표기만 붙이고 고지는 달지 않는다(#2575와 같은 수준 — 그쪽은 인접 해석례 22330이 있었다).
 
-## 7. 미검증 (착수 전 실측)
+## 7. 미검증 (착수 전 실측) — 구현 중 해소
 
 - **V-R1** B 시나리오(직전거주주택보유주택)에서 같은 시료의 현행·변형 세액. 6번째 인자가 B 판정에도 들어가는 것은 코드 판독(`eligibility.ts:318`이 비단독 B를 포함)으로만 확인했다.
+  - ✅ **해소(실측 RP-12)**: 단서가 B의 보유도 2년으로 풀지만(`rentalResidenceRequirementHoldYears` = 2), B의 ⑳1호 거주는 「등록 이후 거주기간」(통산 없음 — #2261 범위 밖)이라 보유 2년 미만이면 그 거주도 2년을 채울 수 없다.
+  - 화면에서는 ⑧이 「등록 이후 거주 ≤ 전체 거주」를 막는다(`transfer-tax-validate-rental-exception.ts` B 분기). ⇒ **B에서는 결론이 바뀌는 입력이 사실상 없다**. 구현은 A·B를 같은 leaf로 다루고(Q-R1 (a)), 결론 변화는 A에서만 실측된다.
 - **V-R2** 1주택 판정 메뉴의 ⑧ 경로. `one-house-exemption-validate.ts:689`가 `validateRentalHousingException`을 부른다. 종전 계획서(`rental-residence-gift-inheritance-residence-consolidation.plan.md` §3)는 「`mode === "facts"`에서 거주 검증 전에 반환」이라고 적었으나, 현행 줄 번호와 보유 검증(`:433`) 도달 여부를 다시 확인해야 한다.
+  - ✅ **해소(코드 판독)**: `transfer-tax-validate-rental-exception.ts:398` `if (mode === "facts") return null;`이 보유 검증보다 앞이다 — 판정 메뉴 ⑧은 보유 2년을 막지 않는다. 판정 메뉴 결론은 엔진 verdict가 정한다(RP-10).
 - **V-R3** §154⑩ 단독 경로에 같은 문제가 있는지 — 이 계획서 범위 밖이다. 있으면 별건으로 기록한다.
+  - 범위 밖 유지. 엔진 leaf·게이트 선언 leaf·⑧이 모두 B · 임대주택 0호를 뺀다(RP-11 · RG-4). 같은 문제의 존재 여부는 측정하지 않았다(별건 후보).
 - **V-R4** 완공APT ⑳ 경로의 보유 판정 위치와 단서 영향.
+  - 코드 판독: 완공APT ⑳(`transfer-tax-redevelopment-apt-rental-residence.ts:71`)은 `buildRentalHousingVerdict` → `judgeRentalHousingEligibility`를 부른다 — **같은 leaf**로 단서를 받는다. 완공APT 시료 실측은 하지 않았다.
 - **V-R5** ⑳ + 합가가 겹친 세대에서 게이트 우선순위(D-6)가 사유 집합을 의도대로 고르는지. 의제 모드는 5호를 받지만 ⑳ 판정은 D-1에서 5호를 거른다.
+  - ✅ **해소(RG-2 · RP-7)**: 우선순위는 1주택 → 일시적 2주택 → 의제 → ⑳이다. 의제 모드에서 5호가 실려 와도 ⑳ 보유는 엔진 leaf 집합(1·2가·3호)이 거른다.
 - **V-R6** 부담부증여 1주택 판정(`gift-burdened-rental-exception.ts:92`)의 ⑧ 호출에 단서 사유가 닿는 경로.
+  - ✅ **해소(RV-2 · RG-5)**: 이 경로 ⑧에 `effectiveProvisoReason(giftBurdenedProvisoMode(bgt), bgt.provisoReason)`를 넘긴다. 게이트는 세대 2주택 + ⑳ 선언이면 `rental_residence`다.
 
 ## 8. 검증 계획
 
@@ -191,3 +198,40 @@
    - D-9 차단 원복.
 5. E2E 1건: 증여 주택(같은 세대 · 증여 전 거주 36개월) + ⑳ A + 3호 → 카드 보임 → 계산 통과 → 비과세.
 6. `npm run check:pre-pr` + 관련 E2E 회귀(§155⑳·단서 카드 spec).
+
+## 9. 구현 결과 (PR-1)
+
+| # | 결과 |
+|---|---|
+| D-1 | leaf `lib/tax-engine/one-house/rental-residence-holding-proviso.ts` 신설. `rentalResidenceDecisiveProviso`는 다음을 모두 만족할 때만 사유를 돌려준다: ⑳ 선언 · §154⑩ 단독 아님 · 사유 ∈ `RENTAL_RESIDENCE_PROVISO_REASONS`(1·2가·3호, `legal-codes/transfer.ts`) · 본인 보유 < 2년 · `resolveExemptionProviso === "both"`. 이 leaf에서 `rentalResidenceRequirementHoldYears` · 근거 표기 · 고지를 만든다 |
+| D-2 | `judgeRentalHousingEligibility` 보유 연수 = leaf. 단서로 성립하면 `notices`에 확인 필요 고지를 붙인다(판정 메뉴 verdict · 조기반환 안내가 싣는다) |
+| D-3 | `runRentalHousingExceptionStep` 6번째 인자 = `requirementHoldYears`(leaf). 4번째(장특)는 본인 보유 그대로 |
+| D-5 | STEP 2.5 근거 「장기임대주택 보유자 거주주택 비과세 (§155⑳ · §154① 단서 3호 부득이)」 · 단계 산식 끝 「· §154① 단서 N호」 · `warnings` 고지(§154⑩ 안분 경로는 ⑳을 적용하지 않아 제외) |
+| D-6 | `ProvisoMode`에 `rental_residence` 추가. `provisoGate`에 필수 인자 `rentalResidenceDeclared`를 두고 우선순위는 1주택 → 일시적 2주택 → 의제 → ⑳(2주택 이상). 선언 leaf `rentalResidenceContextDeclared`(`deemed-one-house-context.ts` — B · 0호 제외). 호출부 7곳 + 부담부증여 |
+| D-7 | `effectiveProvisoReason` — `rental_residence`는 1·2가·3호만 남긴다 |
+| D-8 | `ExemptionProvisoSection` 옵션 필터 · 안내문. 계산기 Step4 섹션②와 판정 메뉴 `TemporaryTwoHouseSection`이 `rental_residence`에서도 카드를 그린다. ⑧ Step1 단서 필수 입력도 이 맥락에서 본다 |
+| D-9 | `validateRentalHousingException` 마지막 인자 `provisoReason` — 1·2가·3호면 보유 2년을 막지 않는다(성립은 엔진). 계산기 호출부는 `calcProvisoMode(form)`(`transfer-tax-api-residence.ts`로 게이트 호출을 뽑아 Step4 거주 안내와 공유)로 정규화한 첫 자산 사유를, 부담부증여는 `giftBurdenedProvisoMode`로 정규화한 사유를 넘긴다 |
+
+**계획과 다른 점 · 새로 안 것**
+- **계산기의 흔한 입력(임대주택을 주택 수에서 뺀 1주택)은 게이트가 `one_house`다.**
+  - 그래서 그 경로의 카드는 이미 보였고, 막고 있던 것은 ⑧ 보유 차단(D-9)과 엔진(D-2·D-3)이었다.
+  - 이 입력에서 ⑳이 서면 STEP 1a 조기반환(판정 엔진 §154①)으로 끝나, 근거는 「1세대1주택 비과세 (§154① 단서 3호 부득이)」이고 ⑳ 고지는 조기반환 안내로 실린다(RC-1).
+  - 명부에 장기임대 행을 넣은 2주택 입력은 `rental_residence` 맥락이고, STEP 2.5 근거에 단서가 붙는다(RC-5 · RHE-1).
+  - `one_house` 맥락 카드는 5호 등도 보이지만, ⑳ 보유에는 엔진 leaf가 1·2가·3호만 쓴다(RP-7).
+- 장특 인자 역방향 뮤테이션(D-3 역)은 **등가 변이**다. 장특 표1·표2 모두 보유 3년 미만은 0%이고, 면제값은 `max(본인, 2)`라 3년 미만에서만 달라진다 ⇒ 세액이 바뀌지 않는다. 테스트로 고정하지 않았다.
+
+**실측(mock 세율)**
+
+| 시료 | 종전 | 이후 |
+|---|---|---|
+| 증여 통산 + 3호 | 결정세액 118,500,000 | 0 |
+| 증여 통산 + 2호가목 | 118,500,000 | 0 |
+| 동일세대 상속 + 3호 | 55,110,000 | 0 |
+| 단서 없음 · 통산 없음 + 단서 · 5호/나·다목/삭제 전 4호 · 단서 불성립 | — | 불변(과세) |
+
+**검증**
+- anchor: 엔진 `rental-residence-holding-proviso.anchor.test.ts` 12건(RP-1~12), 계산기 `rental-residence-holding-proviso.anchor.test.tsx` 14건(RC·RG·RV·RU).
+- 기존 테스트: 게이트 픽스처 3파일에 새 인자를 넣었고, legal-codes export 가드(`legal-codes-namespace-export.test.ts`)에 새 상수를 등록했다.
+- 뮤테이션 22종 + E2E 2종 전부 KILLED.
+  - M20(Step1 ⑧ 게이트 미선언)은 처음 생존 → RC-6(2주택 ⑳ 맥락 2호가목 수용일 필수) 추가 후 KILLED.
+- E2E `e2e/rental-residence-holding-proviso.spec.ts` 2건(RHE-1·2).

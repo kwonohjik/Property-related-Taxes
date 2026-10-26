@@ -11,6 +11,7 @@
  *
  * mode: 일시적 2주택(temporary_two_house)이면 §155① 준용으로 1호·2호가목·3호 + 5호만 노출(나·다목·삭제 전 4호 제외 · F-2).
  *       §155 의제 2주택 이상(deemed_one_house — 합가·⑥⑦⑧)도 같은 사유만 노출한다(V-F4 Q-M2).
+ *       §155⑳ 거주주택(rental_residence)은 보유 2년만 푸는 1호·2호가목·3호만 노출한다(`rental-residence-holding-proviso.plan.md`).
  *   선택값은 effectiveProvisoReason로 정규화 — 1주택서 나·다목·4호 선택 후 전환 시 stale 무효값 표시 방지.
  */
 
@@ -22,6 +23,7 @@ import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/R
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { effectiveProvisoReason, type ProvisoMode } from "@/lib/calc/transfer-tax-api-helpers";
 import { TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
+import { RENTAL_RESIDENCE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
 import type { Rental4hoFormSlice } from "@/lib/calc/rental-4ho-proviso";
 import { Rental4hoProvisoFields } from "./Rental4hoProvisoFields";
 
@@ -132,12 +134,11 @@ export function ExemptionProvisoSection({
   const reason: ReasonOrNone = effReason === "" ? "none" : (effReason as ProvisoReason);
   const isOverseas = effReason === "overseas_migration" || effReason === "overseas_residence";
   // temp-two-house·§155 의제(합가·⑥⑦⑧)면 해당없음 + 1·2가·3호 + 5호만 노출(입력오류 예방 — 나·다목·삭제 전 4호는 받지 않는다 · F-2 Q-F1·Q-F2 · V-F4 Q-M2)
-  const visibleOptions = OPTIONS.filter(
-    (o) =>
-      (mode !== "temporary_two_house" && mode !== "deemed_one_house") ||
-      o.value === "none" ||
-      TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS.has(o.value),
-  );
+  const visibleOptions = OPTIONS.filter((o) => {
+    if (o.value === "none") return true;
+    if (mode === "rental_residence") return RENTAL_RESIDENCE_PROVISO_REASONS.has(o.value);
+    return (mode !== "temporary_two_house" && mode !== "deemed_one_house") || TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS.has(o.value);
+  });
 
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2 dark:bg-violet-950/40">
@@ -161,6 +162,11 @@ export function ExemptionProvisoSection({
       {mode === "deemed_one_house" && (
         <p className="text-caption text-violet-700 dark:text-violet-300">
           합가·문화유산·농어촌·수도권 밖 부득이 주택 특례로 1세대1주택으로 보는 주택은 1호·2호가목·3호와 5호(거주요건만 면제) 사유를 적용합니다.
+        </p>
+      )}
+      {mode === "rental_residence" && (
+        <p className="text-caption text-violet-700 dark:text-violet-300">
+          장기임대주택 보유자의 거주주택은 1호·2호가목·3호 사유로 보유기간 2년만 면제됩니다. 거주기간 2년(§155⑳1호)은 면제되지 않습니다.
         </p>
       )}
       <RadioCardGroup<ReasonOrNone>

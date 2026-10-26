@@ -21,6 +21,7 @@
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import { provisoGate, type ProvisoMode } from "@/lib/calc/transfer-tax-api-helpers";
+import { rentalResidenceContextDeclared } from "@/lib/calc/deemed-one-house-context";
 import { giftBurdenedPreviousAcquisitionDate } from "@/lib/calc/gift-burdened-temp-two-house";
 import type { ExemptionProvisoFormSlice } from "@/lib/calc/exemption-proviso-payload";
 import { finalHouseRestartInScope, type FinalHouseRestartFormSlice } from "@/lib/calc/final-house-restart";
@@ -165,6 +166,8 @@ export function giftBurdenedProvisoMode(bgt: BurdenedGiftTransferTaxInput): Prov
       count === 2 && !!tt && !!giftBurdenedPreviousAcquisitionDate(bgt) && !!ymd(tt.newAcquisitionDate),
     // V-F4 — 이 경로는 명부가 없어 §155 의제 중 합가(④⑤)만 입력된다. 합가 칸은 세대 2주택 이상에서만 보인다(`giftBurdenedMergeInScope`).
     deemedOneHouseContextDeclared: !!(bgt.marriageDate || bgt.parentalCareMergeDate),
+    // §155⑳ 거주주택 특례 선언(이 경로의 카드 — `gift-burdened-rental-exception.ts`)이면 2주택 이상에서도 1호·2호가목·3호를 받는다
+    rentalResidenceDeclared: rentalResidenceContextDeclared(bgt.rentalHousingException),
   }).mode;
 }
 

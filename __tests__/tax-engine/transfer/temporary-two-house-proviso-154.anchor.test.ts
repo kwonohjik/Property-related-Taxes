@@ -121,6 +121,7 @@ describe("provisoGate·effectiveProvisoReason — UI 파생 (앵커)", () => {
     householdHousingCount: 1,
     temporaryTwoHouseApplies: false,
     deemedOneHouseContextDeclared: false, // §155 의제 맥락(V-F4)은 `deemed-two-house-proviso.anchor.test.tsx` DP-7
+    rentalResidenceDeclared: false, // §155⑳ 맥락은 `rental-residence-holding-proviso` anchor
   };
   it("1주택 → visible·one_house", () => {
     expect(provisoGate(base)).toEqual({ visible: true, mode: "one_house" });

@@ -35,6 +35,7 @@ import { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
 import { landContributedOriginalApt } from "./redev-field-scope";
 import { resolveAptResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
+import { RENTAL_RESIDENCE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
 import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "@/lib/tax-engine/one-house/threshold";
 import { consolidateResidenceMonths } from "@/lib/tax-engine/one-house/residence-months";
 import { giftHouseholdPriorResidenceMonths } from "@/lib/tax-engine/one-house/gift-household-basis";
@@ -84,6 +85,12 @@ export function validateRentalHousingException(
    * (직전 양도 당시 < 취득 당시)을 12억 이하에서만 열기 위한 것이다 — 모르면(미전달) 열지 않는다(결정 #22 하위 다).
    */
   highValuePrice?: { burdenedGiftDenominator?: number; totalPropertyTransferPrice?: number; transferPrice: number },
+  /**
+   * ④가 실어 보내는 §154① 단서 사유(게이트·정규화를 거친 값 — `effectiveProvisoReason`). 1호·2호가목·3호면 거주주택 보유 2년을
+   * 막지 않는다 — 단서 성립(수용일 기한·거주 1년 등)은 엔진이 판정한다(`rentalResidenceDecisiveProviso`). 계획서
+   * `rental-residence-holding-proviso.plan.md` D-9. §154⑩ 단독 경로(B · 0호)는 엔진과 같이 범위 밖이다.
+   */
+  provisoReason?: string,
 ): string | null {
   if (!rh?.applyException) return null;
   /**
@@ -434,7 +441,8 @@ export function validateRentalHousingException(
   // `eligibility.ts` 상단 주석 · 서면법규재산-2020-1309 질의5 · 기준-2020-법령해석재산-0143).
   // 엔진(`judgeRentalHousingEligibility`)과 **같은 함수**(`calculateHoldingPeriod` — 소령 §154⑤ → 법 §95④
   // 초일 산입)다. 일수(730일)로 세면 응당일 전날 양도에서 엔진은 충족인데 여기서만 차단됐다.
-  if (formTransferDate && asset.acquisitionDate) {
+  const holdingWaivedByProviso = !isStandalone154_10 && !!provisoReason && RENTAL_RESIDENCE_PROVISO_REASONS.has(provisoReason);
+  if (formTransferDate && asset.acquisitionDate && !holdingWaivedByProviso) {
     const acq = new Date(asset.acquisitionDate);
     const trn = new Date(formTransferDate);
     if (Number.isFinite(acq.getTime()) && Number.isFinite(trn.getTime())) {

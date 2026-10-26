@@ -6,13 +6,14 @@
  * 단서를 읽는데, 게이트가 `null`로 떨어뜨려 화면·④·⑧이 사유를 버렸다(계산기 과세 163,966,000 vs 엔진 비과세 0 — 계획서 §1).
  *
  * 🔑 성립(합가 10년·각 항 요건)은 보지 않는다 — 엔진이 판정한다. 게이트가 성립을 다시 판정하면 엔진과 두 벌이 된다.
- * 🔑 §155⑳ 거주주택 특례는 넣지 않는다 — 그 판정(`judgeRentalHousingEligibility`)은 보유·거주 연수를 직접 세고 단서를 읽지 않아
- *    카드가 결론을 바꾸지 못한다(계획서 §10).
+ * 🔑 §155⑳ 거주주택 특례는 여기 넣지 않는다 — 받는 사유가 다르다(1호·2호가목·3호 — 보유 2년만 면제). 별도 leaf
+ *    `rentalResidenceContextDeclared`(아래)가 `rental_residence` 맥락을 연다(계획서 `rental-residence-holding-proviso.plan.md` D-6).
  *
  * 양도세 계산기 ④(단건·다건)·⑤ Step4·⑧·거주 안내와 1주택 판정 메뉴(`judgmentProvisoMode`)가 이 leaf 하나를 쓴다.
  * 증여세 부담부증여 경로는 명부가 없어 합가일만 본다(`giftBurdenedProvisoMode`).
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { housesOwnedAtTransfer } from "./household-house-count";
 import { findRuralHouseRow, findUnavoidableOutsideCapitalRow, hasCulturalHeritageRow } from "./one-house-row-facts";
 
@@ -34,4 +35,13 @@ export function deemedOneHouseContextDeclared(form: DeemedContextForm): boolean 
   if (form.culturalHeritageHouseSpecial || form.ruralHouseSpecial || form.unavoidableOutsideCapitalSpecial) return true;
   const owned = housesOwnedAtTransfer(form.houses, form.transferDate, form.assets?.[0]?.assetKind);
   return hasCulturalHeritageRow(owned) || !!findRuralHouseRow(owned) || !!findUnavoidableOutsideCapitalRow(owned);
+}
+
+/**
+ * §154① 단서 게이트의 「§155⑳ 거주주택」 맥락 — 첫 자산에 장기임대주택 보유자 거주주택 특례를 **선언했는가**(D-6).
+ * 성립(호별·거주 요건)은 엔진이 본다. §154⑩ 단독 경로(B · 임대주택 0호)는 별도 제도라 열지 않는다 — 엔진 leaf
+ * `rentalResidenceDecisiveProviso`와 같은 범위.
+ */
+export function rentalResidenceContextDeclared(rh: AssetForm["rentalHousingException"] | undefined): boolean {
+  return rh?.applyException === true && !(rh.scenario === "B" && (rh.rentalUnits?.length ?? 0) === 0);
 }
