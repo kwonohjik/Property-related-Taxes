@@ -377,8 +377,9 @@ function TempTwoHouseOtherSpecials({
           ⚠️ `form.ruralHouse*`는 **레거시 폴백**으로 살아 있다(옛 record 세액 보존 — OH-21).
         */}
 
-        {/* §154① 단서 — 일시적 2주택(temporary_two_house) 맥락: 종전주택 §155①→§154① 준용 — 1·2가·3호 + 5호(F-2) (판정 카드 아래 배치) */}
-        {proviso.visible && proviso.mode === "temporary_two_house" && (
+        {/* §154① 단서 — 일시적 2주택(temporary_two_house) 맥락: 종전주택 §155①→§154① 준용 — 1·2가·3호 + 5호(F-2) (판정 카드 아래 배치).
+            §155 의제 2주택 이상(deemed_one_house — 합가·⑥⑦⑧, V-F4)도 이 섹션이 소유한다(판정 메뉴는 2주택 이상이면 이 섹션이 보인다). */}
+        {proviso.visible && (proviso.mode === "temporary_two_house" || proviso.mode === "deemed_one_house") && (
           <ExemptionProvisoSection
             provisoReason={form.provisoReason}
             provisoDepartureDate={form.provisoDepartureDate}

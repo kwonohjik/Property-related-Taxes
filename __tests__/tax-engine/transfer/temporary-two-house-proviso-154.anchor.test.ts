@@ -120,6 +120,7 @@ describe("provisoGate·effectiveProvisoReason — UI 파생 (앵커)", () => {
     isHousing: true,
     householdHousingCount: 1,
     temporaryTwoHouseApplies: false,
+    deemedOneHouseContextDeclared: false, // §155 의제 맥락(V-F4)은 `deemed-two-house-proviso.anchor.test.tsx` DP-7
   };
   it("1주택 → visible·one_house", () => {
     expect(provisoGate(base)).toEqual({ visible: true, mode: "one_house" });
@@ -129,10 +130,10 @@ describe("provisoGate·effectiveProvisoReason — UI 파생 (앵커)", () => {
       provisoGate({ ...base, householdHousingCount: 2, temporaryTwoHouseApplies: true }),
     ).toEqual({ visible: true, mode: "temporary_two_house" });
   });
-  it("2주택 특례 OFF → 숨김", () => {
+  it("2주택 특례 OFF · 의제 선언 없음 → 숨김", () => {
     expect(provisoGate({ ...base, householdHousingCount: 2 })).toEqual({ visible: false, mode: null });
   });
-  it("3주택 → 숨김", () => {
+  it("3주택 · 의제 선언 없음 → 숨김", () => {
     expect(provisoGate({ ...base, householdHousingCount: 3 })).toEqual({ visible: false, mode: null });
   });
   it("비1세대·비주택 → 숨김", () => {

@@ -130,7 +130,8 @@ describe("F09 — E-3 사전게이트의 기산일·삼킴", () => {
     const r = calculateTransferTax(input, rates);
     // 수정 전: E-3의 `return`이 E-3.7을 삼켜 isExempt=false.
     expect(r.isExempt).toBe(true);
-    expect(r.exemptReason).toBe("수도권 밖 부득이한 사유 주택 비과세 (§155⑧ 근무상 형편)");
+    // V-F4 D-3(2026-10-26) — 이 비과세는 단서(나목)가 보유 요건을 면제해서 선 것이라 근거에 그 호를 함께 적는다.
+    expect(r.exemptReason).toBe("수도권 밖 부득이한 사유 주택 비과세 (§155⑧ 근무상 형편 · §154① 단서 2호나 해외이주)");
     expect(r.totalTax).toBe(0);
   });
 });

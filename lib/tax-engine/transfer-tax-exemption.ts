@@ -44,6 +44,7 @@ import {
   undeclaredMergeCompositionUndetermined,
 } from "./one-house/pending";
 import { describeFinalOneHouseRestart } from "./one-house/final-house-restart";
+import { decisiveProvisoException } from "./one-house/decisive-proviso";
 import { deriveLegalBasis } from "./one-house/legal-basis";
 import { collectLapsedDeadlineUnmet } from "./one-house/unmet-deadline-reasons";
 import { buildRequirementReview, isDeadlineStillReachable } from "./one-house/requirement-review";
@@ -510,7 +511,8 @@ function checkExemptionCore(
     const u = input.unavoidableOutsideCapitalHouse!;
     if (meetsOneHouseHoldingResidence(input, rule)) {
       const label = `수도권 밖 부득이한 사유 주택`;
-      const basis = ` (${shortArticle(TRANSFER.UNAVOIDABLE_OUTSIDE_CAPITAL)} ${UNAVOIDABLE_REASON_LABEL[u.reason]})`;
+      const proviso = decisiveProvisoException(input, rule); // V-F4 D-3 — 단서가 결론을 바꿨을 때만
+      const basis = ` (${shortArticle(TRANSFER.UNAVOIDABLE_OUTSIDE_CAPITAL)} ${UNAVOIDABLE_REASON_LABEL[u.reason]}${proviso ? ` · ${proviso.label}` : ""})`;
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
       const exceptions: OneHouseAppliedException[] = [
@@ -519,6 +521,7 @@ function checkExemptionCore(
           label: `수도권 밖 부득이한 사유 주택 (${UNAVOIDABLE_REASON_LABEL[u.reason]})`,
           legalBasis: TRANSFER.UNAVOIDABLE_OUTSIDE_CAPITAL,
         },
+        ...(proviso ? [proviso] : []),
       ];
       if (priceCheck <= highValueThreshold) {
         return { isExempt: true, isPartialExempt: false, exemptReason: `${label} 비과세${basis}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
@@ -540,7 +543,8 @@ function checkExemptionCore(
    * ⇒ ① 2주택일 것 ② 문화유산 주택 선언 ③ §154① 요건 충족(「§154①을 적용」이므로).
    */
   if (qualifiesCulturalHeritageHouse(input) && meetsOneHouseHoldingResidence(input, rule)) {
-    const basis = ` (${shortArticle(TRANSFER.CULTURAL_HERITAGE_HOUSE)})`;
+    const proviso = decisiveProvisoException(input, rule); // V-F4 D-3
+    const basis = ` (${shortArticle(TRANSFER.CULTURAL_HERITAGE_HOUSE)}${proviso ? ` · ${proviso.label}` : ""})`;
     const priceCheck =
       input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
     const exceptions: OneHouseAppliedException[] = [
@@ -549,6 +553,7 @@ function checkExemptionCore(
         label: "문화유산 주택",
         legalBasis: TRANSFER.CULTURAL_HERITAGE_HOUSE,
       },
+      ...(proviso ? [proviso] : []),
     ];
     if (priceCheck <= highValueThreshold) {
       return { isExempt: true, isPartialExempt: false, exemptReason: `문화유산 주택 비과세${basis}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
@@ -558,7 +563,8 @@ function checkExemptionCore(
 
   // E-3.8: §155⑦ 농어촌주택 + 일반주택 → **일반주택 양도**를 1주택 의제.
   if (qualifiesRuralHouse(input) && meetsOneHouseHoldingResidence(input, rule)) {
-    const basis = ` (§155⑦${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]})`;
+    const proviso = decisiveProvisoException(input, rule); // V-F4 D-3
+    const basis = ` (§155⑦${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]}${proviso ? ` · ${proviso.label}` : ""})`;
     const priceCheck =
       input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
     const exceptions: OneHouseAppliedException[] = [
@@ -567,6 +573,7 @@ function checkExemptionCore(
         label: `농어촌주택 (${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]})`,
         legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦`,
       },
+      ...(proviso ? [proviso] : []),
     ];
     if (priceCheck <= highValueThreshold) {
       return { isExempt: true, isPartialExempt: false, exemptReason: `농어촌주택 비과세${basis}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
@@ -625,10 +632,14 @@ function checkExemptionCore(
               legalBasis: isMarriage ? TRANSFER.MARRIAGE_MERGE_EXEMPT : TRANSFER.PARENTAL_CARE_MERGE_EXEMPT,
             },
           ];
+      // V-F4 D-3 — §154① 단서가 결론을 바꿨으면 근거로 남긴다(서면-2015-부동산-22330: 합가 × 3호에 「§155④ 및 §154① 단서 적용」)
+      const proviso = decisiveProvisoException(input, rule);
+      if (proviso) exceptions.push(proviso);
+      const provisoLabel = proviso ? ` (${proviso.label})` : "";
       if (priceCheck <= highValueThreshold) {
-        return { isExempt: true, isPartialExempt: false, exemptReason: `${mergeLabel} 1세대1주택 비과세`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
+        return { isExempt: true, isPartialExempt: false, exemptReason: `${mergeLabel} 1세대1주택 비과세${provisoLabel}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
       }
-      return { isExempt: false, isPartialExempt: true, exemptReason: `${mergeLabel} 고가주택`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
+      return { isExempt: false, isPartialExempt: true, exemptReason: `${mergeLabel} 고가주택${provisoLabel}`, deemedOneHouseBy155: true, appliedExceptions: exceptions };
     }
   }
 

@@ -152,7 +152,7 @@ export function giftBurdenedEffectiveIsRegulatedArea(
 
 /**
  * §154① 단서 카드 맥락 — 양도세 계산기와 같은 `provisoGate`. 이 경로의 주택 수는 선언 스칼라(④와 같은 `?? 1`),
- * 일시적 2주택 성립은 ④가 `temporaryTwoHouse`를 싣는 조건(세대 2주택 + 두 날짜)이다.
+ * 일시적 2주택 성립은 ④가 `temporaryTwoHouse`를 싣는 조건(세대 2주택 + 두 날짜)이고, §155 의제 맥락은 합가일 입력이다(V-F4).
  */
 export function giftBurdenedProvisoMode(bgt: BurdenedGiftTransferTaxInput): ProvisoMode {
   const count = bgt.householdHousingCount ?? 1;
@@ -163,6 +163,8 @@ export function giftBurdenedProvisoMode(bgt: BurdenedGiftTransferTaxInput): Prov
     householdHousingCount: count,
     temporaryTwoHouseApplies:
       count === 2 && !!tt && !!giftBurdenedPreviousAcquisitionDate(bgt) && !!ymd(tt.newAcquisitionDate),
+    // V-F4 — 이 경로는 명부가 없어 §155 의제 중 합가(④⑤)만 입력된다. 합가 칸은 세대 2주택 이상에서만 보인다(`giftBurdenedMergeInScope`).
+    deemedOneHouseContextDeclared: !!(bgt.marriageDate || bgt.parentalCareMergeDate),
   }).mode;
 }
 
