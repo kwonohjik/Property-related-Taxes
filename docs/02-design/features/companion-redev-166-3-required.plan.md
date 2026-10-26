@@ -109,6 +109,8 @@ P_A > 0 ⇔ acquisitionHousingPrice > 0
 | **Q-2** | 부담부증여 산정방식 「환산」을 환산 신호로 보는가 | (a) 본다(3.2) · (b) `useEstimatedAcquisition`만 | **(a)** — 엔진이 그 신호로 §166③을 쓴다(M3 — `useEstimatedAcquisition: false`여도 13,023,566). (b)면 컴패니언 부담부증여 K-5(C1)는 막지만 본문 `useEstimatedAcquisition`이 false인 요청은 계속 500·오답(M1·M2)이다 |
 | **Q-3** | 엔진 §166③ 입력 결함 오류의 응답 코드 | (a) `INVALID_INPUT`(400) · (b) 종전 `TaxRateNotFoundError`(500) 유지 | **(a)** — `tax-error-response.ts` 정책이 「호출자 입력의 결함 = 400」이다. 세율 누락이 아닌데 `TAX_RATE_NOT_FOUND`로 응답하던 것도 바로잡힌다. 대가: E1-07 anchor 3건의 단언 `toThrow(TaxRateNotFoundError)`를 `TaxCalculationError` + 코드 `INVALID_INPUT`로 바꾼다(같은 「던진다」를 더 좁게 단언) |
 
+**결정(2026-10-26, 사용자)**: Q-1 = **(a)** · Q-2 = **(a)** · Q-3 = **(a)** — 모두 권장안.
+
 ## 5. PR
 
 한 PR: ⑫(3.1~3.3) + 엔진(3.4) + anchor. 취득가액 로직이라 커밋 전 `acquisition-cost-review` 게이트.
