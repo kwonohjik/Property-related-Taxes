@@ -56,7 +56,7 @@ function redevAsset(cause: "inheritance" | "gift", reported: boolean, estimated:
           inheritanceAssetKind: "house_individual",
           publishedValueAtInheritance: reported ? "100,000,000" : "",
         }
-      : { donorAcquisitionDate: "1970-01-01", inheritanceAssetKind: "house_individual", fixedAcquisitionPrice: reported ? "100,000,000" : "" }),
+      : { donorAcquisitionDate: "1970-01-01", giftDonorRelation: "spouse", giftSameHousehold: "no", inheritanceAssetKind: "house_individual", fixedAcquisitionPrice: reported ? "100,000,000" : "" }),
     preDeemedClauseAUnconfirmed: !reported,
     ...REDEV_166_3,
     useEstimatedAcquisition: estimated,

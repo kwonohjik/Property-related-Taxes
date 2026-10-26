@@ -76,6 +76,9 @@ export function buildEraNoticeRelevance(ctx: {
         // 일반 증여 화면(세대 사실·증여자 취득일 미입력) — 통산 성립 가정으로 다시 판정할 사실이 없다. 증여로 취득한 주택이
         // 비과세가 아닐 때만 알린다(비과세면 통산이 결론을 바꾸지 못한다 — 통산은 혜택을 늘리는 방향으로만 작용한다).
         if (input.acquisitionCause !== "gift") return false;
+        // 토지만 출자한 원조합원 완공APT — 보유 기산일이 사용승인일로 정해져(`exemptionHoldingStartDate` · G3-4) 증여받은 토지에는
+        //   통산할 세대의 주택 보유가 없다. 세대 사실이 결론을 가르지 않으므로 알리지 않는다(계획서 redev-apt-gift-household-fact Q-4 a).
+        if (input.exemptionHoldingStartDate) return false;
         return !settled;
       }
       return giftHouseholdFactDecides(g, `${verdict.isExempt}|${verdict.isPartialExempt}`, verdictOf);

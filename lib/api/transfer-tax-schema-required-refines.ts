@@ -7,6 +7,7 @@
  * 모순이 된다(14지점 ⑧·⑩).
  */
 import { householdBuildingResidenceOverflow, redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
+import { redevGiftPriorResidenceBeforeGift } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { z } from "zod";
 import { computeSangjeungbeopValuation } from "@/lib/tax-engine/burdened-gift-valuation";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
@@ -254,6 +255,7 @@ type PrimaryLike = {
     approvalDate?: string;
     householdBuilding?: { acquisitionDate: string; residenceMonths?: number };
     newHouseResidenceMonths?: number;
+    priorResidenceStartDate?: string;
     originalAssetType?: string;
     receiveOnlyMode?: boolean;
   } | null;
@@ -386,6 +388,23 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
         issue(["redevelopment", "householdBuilding", "residenceMonths"], `세대원 건물 거주 ${rd.householdBuilding.residenceMonths}개월이 건물 취득일부터 인가일까지의 ${max}개월을 넘습니다`);
       }
     }
+  }
+  // 증여받은 종전주택으로 원조합원이 된 완공APT — 종전주택 입주일 ≥ 증여일(⑧ `validateRedevelopmentAsset` 같은 leaf · 계획서 Q-3 a).
+  if (
+    redevGiftPriorResidenceBeforeGift({
+      acquisitionCause: data.acquisitionCause,
+      acquisitionDate: data.acquisitionDate,
+      subject: rd?.subject,
+      isSuccessorMember: rd?.isSuccessorMember,
+      originalAssetType: rd?.originalAssetType,
+      receiveOnlyMode: rd?.receiveOnlyMode,
+      priorResidenceStartDate: rd?.priorResidenceStartDate,
+    })
+  ) {
+    issue(
+      ["redevelopment", "priorResidenceStartDate"],
+      "증여받은 종전주택의 거주는 증여일 이후만 종전주택 거주로 셉니다 — 증여 전 동일세대 거주는 giftPriorHouseholdResidenceMonths로 보내세요 (소득세법 시행령 §154① · §162①5호)",
+    );
   }
   if (rd && rd.subject === "apt" && (rd.isSuccessorMember === true || landContributedApt) && rd.completionDate) {
     const max = successorAptMaxResidenceMonths(toDate(rd.completionDate, "completionDate"), toDate(data.transferDate, "transferDate"));

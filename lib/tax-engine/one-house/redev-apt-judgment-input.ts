@@ -178,6 +178,36 @@ export function householdBuildingResidenceOverflow(acquisitionDate: Date, approv
 }
 
 /**
+ * **증여받은 종전주택으로 원조합원이 된 완공APT** — 종전주택 입주일이 증여일보다 앞서는가(계획서 `redev-apt-gift-household-fact.plan.md` Q-3 a).
+ *
+ * 수증자의 보유기간은 증여를 받은 날부터다(영 §162①5호) — 그 전 거주는 §154① 「그 보유기간 중 거주기간」이 아니어서 종전주택 거주로 셀 수 없다.
+ * 증여자와 계속 같은 세대였으면 「증여 전 동일세대 거주기간」(`giftHouseholdBasis.priorHouseholdResidenceMonths`)으로 따로 받는다 — 두 칸에 같은
+ * 기간을 넣으면 두 번 센다. 관리처분계획 인가 뒤 철거 전까지의 종전주택 거주는 막지 않는다.
+ * 승계조합원(증여 승계의 종전주택 거주는 세대 거주다 — 사전-2020-법령해석재산-0691)·토지 출자·청산금 수령 단독신고는 대상이 아니다.
+ * ⑧(`validateRedevelopmentAsset`)·⑫(`refinePrimaryAcquisitionInputs`)가 같은 leaf를 쓴다. 날짜는 YYYY-MM-DD라 문자열 비교가 날짜 순서다.
+ */
+export function redevGiftPriorResidenceBeforeGift(f: {
+  acquisitionCause?: string;
+  acquisitionDate?: string;
+  subject?: string;
+  isSuccessorMember?: boolean;
+  originalAssetType?: string;
+  receiveOnlyMode?: boolean;
+  priorResidenceStartDate?: string;
+}): boolean {
+  return (
+    f.acquisitionCause === "gift" &&
+    f.subject === "apt" &&
+    f.isSuccessorMember !== true &&
+    f.originalAssetType !== "land" &&
+    f.receiveOnlyMode !== true &&
+    !!f.priorResidenceStartDate &&
+    !!f.acquisitionDate &&
+    f.priorResidenceStartDate < f.acquisitionDate
+  );
+}
+
+/**
  * 재개발 신축주택이 된 **조합원입주권의 취득일** — 취득일이 준공일로 바뀌는 두 축에서만 값이 있다(#12).
  *   · 승계조합원 — 입주권 승계 취득일(`acquisitionDate` 원값)
  *   · 토지만 출자한 원조합원 — 관리처분계획 인가일(그 전에는 토지만 보유했다)

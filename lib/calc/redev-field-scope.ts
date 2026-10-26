@@ -357,6 +357,27 @@ export function landContributedOriginalApt(
 }
 
 /**
+ * **주택을 출자한 원조합원**의 완공APT인가 — 종전주택이 그대로 연장된 축(§154⑧1호 통산 · 엔진은 승계·토지 출자가 아닌 완공APT를
+ * 종전주택 취득일 기준으로 번역한다 — `redev-apt-judgment-input.ts`).
+ *
+ * 증여받은 종전주택으로 원조합원이 된 경우 일반 주택과 같은 「증여자와 계속 같은 세대」 사실을 묻는 축이다
+ * (`giftHouseholdFactVisible` — 계획서 `redev-apt-gift-household-fact.plan.md` Q-1 a · 서면인터넷방문상담4팀-2069).
+ * 청산금 수령 단독신고는 신축주택을 양도하지 않아 제외한다.
+ */
+export function houseContributedOriginalApt(
+  asset: Pick<AssetForm, "assetKind"> &
+    Partial<Pick<AssetForm, "redevSubject" | "redevIsSuccessorMember" | "redevOriginalAssetType" | "redevReceiveOnlyMode">>,
+): boolean {
+  return (
+    asset.assetKind === "redevelopment_apt" &&
+    resolveRedevSubject({ assetKind: asset.assetKind, redevSubject: asset.redevSubject ?? "" }) === "apt" &&
+    asset.redevIsSuccessorMember !== "yes" &&
+    asset.redevOriginalAssetType !== "land" &&
+    asset.redevReceiveOnlyMode !== "yes"
+  );
+}
+
+/**
  * 완공APT **준공일(사용승인서 교부일)** 입력(`redevCompletionDate`)이 의미를 갖는 축인가 — ⑤ · ④ · ⑧ 공용 (G3-4).
  *
  *  · 승계조합원 — 취득시기·보유기간·세율 기산일(영 §162①4호 · 사전-2019-법령해석재산-0649)

@@ -1,6 +1,6 @@
 # 증여받은 종전주택으로 원조합원이 된 완공APT — 증여자와의 세대 사실 칸이 없다 — 계획서
 
-- 작성: 2026-10-26 · 상태: **계획 — 사용자 결정 대기(§5 Q-1~Q-4)**
+- 작성: 2026-10-26 · 상태: **구현 완료 — 사용자 결정 Q-1 (a) · Q-2 (a) · Q-3 (a, 구현 형태 정정 — §9) · Q-4 (a) (2026-10-26) · §9**
 - 출처: V-R4 실측 별건(`docs/00-pm/rental-residence-holding-proviso.plan.md` §7 V-R4 · #2591) — `project_deemed_two_house_proviso` 메모리.
 - 범위: 양도세 계산기(단건·다건)의 재개발 완공 신축주택(`redevelopment_apt` · `redevSubject = "apt"`). 1세대1주택 판정 메뉴는 양도 자산 종류가 주택·입주권 둘뿐이라(`app/calc/one-house-exemption/steps/Step3.tsx:182·187`) 대상이 아니다.
 
@@ -155,3 +155,28 @@ D1′처럼 증여일~인가일보다 긴 종전주택 거주가 지금은 본�
 5. **뮤테이션**: 술어의 각 조건(주택 출자·원조합원·subject apt) 제거 · D-3 상한 제거 · D-6 거름 제거.
 6. E2E 1건: 원조합원 완공APT 증여 → 세대 관계 카드 보임 → 「예」+ 시작일 → 계산 → 비과세. 기존 완공APT 증여 spec 회귀(V-3).
 7. `npm run check:pre-pr` · 라이트·다크·375px 스크린샷.
+
+## 9. 구현 결과
+
+| # | 결과 |
+|---|---|
+| D-1 | `houseContributedOriginalApt`(`lib/calc/redev-field-scope.ts`) — 완공APT · 승계 아님 · 토지 출자 아님(미선택은 엔진과 같이 주택 출자) · 청산금 수령 단독신고 아님. `giftHouseholdFactVisible`이 「`housing` ∨ 이 술어」, `giftPriorResidenceAsked`가 증여 분기에서 같은 술어를 쓴다 |
+| D-2 | 기존 「증여자와의 세대 관계」 카드가 그대로 열린다(새 위젯 없음). 재개발 카드 종전주택 거주기간 안내가 이 축에서 「증여받은 날~관리처분(또는 그 이후 철거)… 증여 전 같은 세대 거주는 세대 관계 카드에 — 두 칸에 같은 기간을 넣으면 두 번 셉니다」로 바뀐다(`RedevelopmentResidenceSplitSection.tsx`) |
+| D-3·D-5 | **정정** — 계획서의 「종전주택 거주 ≤ 증여일~**인가일**」은 근거가 없었다. 종전주택 거주는 관리처분계획 인가 뒤 **철거 전까지**도 거주이고(같은 카드 안내문 「종전주택 취득일~관리처분(또는 그 이후 철거)」), 인가일 상한은 그 정당한 거주를 막는다. 그래서 같은 근거(§154① 「그 보유기간 중」 · §162①5호 「증여를 받은 날」)를 **입주일 ≥ 증여일**로 걸었다 — 증여 전 거주만 정확히 막는다. 공용 leaf `redevGiftPriorResidenceBeforeGift`(`redev-apt-judgment-input.ts`)를 ⑧(`validateRedevelopmentAsset` · 칸 `redevPriorResidenceStartDate`)·⑫(`refinePrimaryAcquisitionInputs` · `redevelopment.priorResidenceStartDate`)가 쓴다. 범위는 Q-3 (a) 그대로 증여 축(승계·토지 출자·단독신고·매매 제외). 날짜 없이 개월만 있는 저장값은 검사할 수 없다(화면은 날짜로만 받는다) |
+| D-4 | ④ 단건(`buildCalcGiftHouseholdPayload`)·화면 「취득 당시」(`calcGiftHouseholdBasis`)는 같은 술어로 자동 확대 — 코드 변경 없음 |
+| D-6 | `era-notice-relevance.ts` 무사실 분기 — `exemptionHoldingStartDate`(토지 출자 · G3-4 엔진 값)가 있으면 「세대 관계 미입력」을 내지 않는다. `GIFT_HOUSEHOLD_NOT_REFLECTED_ID` 문구에 「종전주택을 증여받은 재개발 원조합원 완공 신축주택 포함」·「재개발 승계조합원(입주권을 증여받은 경우) 완공 신축주택에서는 입력받지 않습니다」 |
+| D-7 | 기존 저장 완공APT 증여 이력은 필수 질문이 생겨 ⑧이 막는다(의도). 기존 vitest 시료 2파일(`redev-pre-deemed-166-3-fe8-12-parity` · `bg-pre-deemed-redev.routes`)에 「배우자 · 아니오」를 넣었다 — 세액 단언값 불변 |
+
+### 9.1 미검증 해소
+
+- **V-2** ✅ 화면 「취득 당시 조정대상지역」(`calcEffectiveWasRegulatedAtAcquisition`)이 같은 basis로 「아님」 — 「아니오」면 「해당」(ui anchor).
+- **V-3** ✅ 막힌 기존 시료는 vitest 2파일 4건뿐(전체 실행). E2E 회귀는 §9.2.
+- **V-6** ✅ 다건 계산은 재개발 자산을 받지 않는다(400 「단건 계산기에서만 지원됩니다」 — RG-6). 이 사실의 다건 경로는 없다.
+- **V-1 · V-4 · V-5** 미해소(범위 밖 유지). V-1은 엔진의 통산 적용 고지(「정면 해석을 확인하지 못해 확인이 필요합니다」)가 그대로 난다.
+
+### 9.2 검증
+
+- anchor `__tests__/calc/redev-apt-gift-household-fact.anchor.test.ts` RG-1~15 · `__tests__/components/redev-apt-gift-household-fact.ui.test.tsx` 9건.
+  - RG-1 T2 0(종전 149,060,000) · RG-2 「아니오」 149,060,000 · RG-4 T3 증여 전 24개월 0 / 없으면 157,060,000 · RG-5 T1 0 · RG-7 토지 출자 미전송·고지 없음 · RG-8 승계 298,500,000 + 새 문구 · RG-9~15 입주일 규칙 경계.
+- 뮤테이션 16종 전부 KILLED(술어 조건 4 · prior asked · ⑧ · ⑫ · leaf 비교·조건 5 · 고지 거름 · 문구 · 안내 분기).
+- E2E `e2e/redev-apt-gift-household-fact.spec.ts` RGE-1(카드 → 「예」 → 본문 → 비과세 0) · RGE-2(증여 전 입주일 차단).
