@@ -22,6 +22,14 @@ import {
 } from "./sec164-required-fields";
 
 /**
+ * 의제취득일 전 ③ 칸(의제취득일 기준시가·양도시 기준시가)이 화면에 있는가 — 상속 · 증여 ③ 범위(`isGiftPreDeemedConversionAsset` · PR-5) ·
+ * 부담부증여 의제 전(`isBgPreDeemedAsset`). ④ 전송과 ⑧ `preDeemedConversionInputError`가 같은 술어를 쓴다.
+ */
+export function preDeemedConversionInputShown(asset: AssetForm): boolean {
+  return asset.acquisitionCause !== "gift" || isGiftPreDeemedConversionAsset(asset) || isBgPreDeemedAsset(asset);
+}
+
+/**
  * 상속·**증여** 취득가액 의제 페이로드 빌드 (소령 §163⑨).
  * - case A (취득일 < 1985-01-01): pre-deemed — 3자 max(① 상증법 평가액, ② §164④~⑦, ③ 환산)
  *   (엔진 `calcPreDeemed`, 2026-10-22 「가목 우선」에서 변경). ※ 물가상승률(§176조의2④2호)은 무상취득에 부적용
@@ -70,8 +78,7 @@ export function buildInheritedAcquisitionPayload(
     //   매매에서 남은 값이 보이지 않는 채 실리면 ③이 세액을 바꾼다(계획서 §16).
     //   칸이 자동값(토지 등급·주택 3시점)을 보여 주는 동안은 store 값을 싣지 않는다 — 엔진이 같은 자동값을 주입한다
     //   (`preDeemedSentStdPrices`). 종전에는 보이지 않는 남은 값이 자동값을 이겼다(엔진은 보낸 분자를 우선한다).
-    const conversionInputShown = !isGift || isGiftPreDeemedConversionAsset(primary) || isBgPreDeemedAsset(primary);
-    const sent = conversionInputShown
+    const sent = preDeemedConversionInputShown(primary)
       ? preDeemedSentStdPrices(primary, inheritanceStartDate)
       : { atDeemed: 0, atTransfer: 0 };
     const stdAtDeemed = sent.atDeemed;

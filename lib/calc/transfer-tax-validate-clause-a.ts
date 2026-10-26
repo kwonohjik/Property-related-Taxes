@@ -51,7 +51,12 @@ import {
   buildInheritedAcquisitionPayload,
   buildInheritedHouseValuationPayload,
   buildCommercialInheritanceValuationPayload,
+  preDeemedConversionInputShown,
 } from "./transfer-tax-api-inheritance";
+import { preDeemedAutoStdPrices } from "./pre-deemed-auto-std-price";
+import { preDeemedSentStdPrices } from "./pre-deemed-auto-std-price";
+import { preDeemedShowsHouseValuation } from "./pre-deemed-auto-std-price";
+import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
 import { fieldError } from "./transfer-tax-validate-field";
 import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
@@ -265,17 +270,40 @@ export function preDeemedConversionInputError(
     !(parseAmount(asset.standardPriceAtTransfer ?? "") > 0)
   )
     return fieldError("standardPriceAtTransfer", `${label}: 의제취득일(1985.1.1.) 전 상속·증여 상가는 §164⑥ 취득당시 기준시가로 환산취득가액도 비교합니다 — 양도시 기준시가를 입력하세요 (소득세법 시행령 §176의2④·§164⑥).`);
-  // ③ 칸이 있는 증여는 ①(증여 신고가액)이 필수라(Q-14) ①·②가 모두 없으면 그 검사가 막는다 — 여기서 ③ 칸을 먼저 요구하면 엉뚱한 칸을 가리킨다.
-  if (isGiftPreDeemedConversionAsset(asset)) return null;
   const ia = buildInheritedAcquisitionPayload(asset, 1, false).inheritedAcquisition as
     | { mode?: string; reportedValue?: number }
     | undefined;
-  if (ia?.mode !== "pre-deemed" || (ia.reportedValue ?? 0) > 0) return null;
+  if (ia?.mode !== "pre-deemed") return null;
   const td = formTransferDate ?? "";
   const clauseB =
     "inheritedHouseValuation" in buildInheritedHouseValuationPayload(asset, td) ||
     "commercialInheritanceValuation" in buildCommercialInheritanceValuationPayload(asset) ||
     (asset.assetKind === "land" && isSec163_9Cause(asset.acquisitionCause) && "pre1990Land" in buildPre1990LandPayload(asset, td));
+  const giftConversion = isGiftPreDeemedConversionAsset(asset);
+  // ①·②가 있어도 ③의 분자만 있고 분모가 없으면 ③이 조용히 비교에서 빠진다(계획서 pre-deemed-converted-half-input.plan.md F4 · ⑫ 같은 판정).
+  //   분자·분모는 엔진이 쓰는 값 그대로다 — 직접 입력(④ 전송값)이거나 화면 자동값(토지 등급 · 주택 3시점 · Q-3). 직접 입력 토글을 켜고
+  //   칸을 비우면 ④는 값을 싣지 않고 엔진이 자동값으로 돌아가므로 그때도 자동값을 「있음」으로 본다(⑫와 같다 — 취득가액 리뷰 게이트 D-2).
+  //   분자 없이 분모만 있는 것은 막지 않는다 — 양도시 기준시가 칸은 §167의3 판정·공익수용 블록과 함께 쓴다(Q-2).
+  //   ①② 없음은 아래 검사가 같은 칸을 요구한다(문구 보존). 래치 켠 상속 토지 등급 경로는 환산 검증(`transfer-tax-validate-acquisition.ts`)이
+  //   같은 칸을 먼저 요구한다. 기준시가 평가 부담부증여·담보 승은 ③을 비교하지 않는다(상가 규칙과 같은 제외).
+  if (
+    ((ia.reportedValue ?? 0) > 0 || giftConversion || clauseB) &&
+    preDeemedConversionInputShown(asset) &&
+    !hasPre1990LandEstimation(asset) &&
+    !(asset.transferType === "burdened_gift" && asset.bgValuationMode === "sangjeungbeop_standard") &&
+    !(!isNonPrimaryAsset && bgCollateralForcesStdAcq(asset))
+  ) {
+    const baseDate = deriveSec163_9BaseDate(asset) ?? "";
+    const auto = preDeemedAutoStdPrices(asset, baseDate, preDeemedShowsHouseValuation(asset), formTransferDate);
+    const sent = preDeemedSentStdPrices(asset, baseDate, formTransferDate);
+    const hasDeemed = sent.atDeemed > 0 || auto.atDeemed !== null;
+    const hasTransfer = sent.atTransfer > 0 || auto.atTransfer !== null;
+    if (hasDeemed && !hasTransfer)
+      return fieldError("standardPriceAtTransfer", `${label}: 의제취득일(1985.1.1.) 전 상속·증여 자산은 상증법 평가액·§164④~⑦ 기준시가와 함께 환산취득가액도 비교합니다 — 의제취득일 기준시가가 있으면 양도시 기준시가도 입력하세요 (소득세법 시행령 §176의2④).`);
+  }
+  // ③ 칸이 있는 증여는 ①(증여 신고가액)이 필수라(Q-14) ①·②가 모두 없으면 그 검사가 막는다 — 여기서 ③ 칸을 먼저 요구하면 엉뚱한 칸을 가리킨다.
+  if (giftConversion) return null;
+  if ((ia.reportedValue ?? 0) > 0) return null;
   if (clauseB) return null;
   if (!(parseAmount(asset.standardPriceAtAcq ?? "") > 0))
     return fieldError("standardPriceAtAcq", `${label}: 의제취득일(1985.1.1.) 전 상속·증여 자산을 환산하려면 의제취득일 현재 기준시가를 입력하세요 (소득세법 시행령 §176의2④).`);

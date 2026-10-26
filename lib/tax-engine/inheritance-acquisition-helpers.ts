@@ -371,7 +371,16 @@ function resolveInheritedAcquisitionInput(
     base.inheritanceDate.getTime() < LAND_FIRST_DISCLOSURE_DATE.getTime();
 
   let standardPriceAtDeemedDate = base.standardPriceAtDeemedDate;
-  let standardPriceAtTransfer = base.standardPriceAtTransfer ?? currentInput.standardPriceAtTransfer;
+  // 분모 — 직접 보낸 양도시 기준시가가 있으면 그것(④는 「양도시 기준시가 직접 입력」 토글이 켜졌을 때만 싣는다 ·
+  // `preDeemedSentStdPrices`). 주택 §164⑦ 미공시 구간이면 그다음은 양도 당시 공시 개별주택가격(PR-5 — 종전에는 직접 입력을 덮었다).
+  // 이 분모는 분자를 자동으로 넣든 직접 보냈든 같다 — ⑤가 분모 칸에 자동값을 보이는 조건이 분자 토글과 무관하다(`preDeemedAutoStdPrices`).
+  // 종전에는 아래 분자 자동 주입 블록 안에만 있어, 분자를 직접 넣으면 분모가 사라져 ③이 0이 됐다(계획서
+  // pre-deemed-converted-half-input.plan.md F3 — 20억 시료 181,792,099 vs 두 칸 직접 입력 84,871,600). 0은 없음으로 본다(④가 빈 칸을 0으로 싣는다).
+  const houseDenominator =
+    houseValuationResult && isPreDeemed && isHousePreDisclosure
+      ? rawInput.inheritedHouseValuation?.housePriceAtTransfer || undefined
+      : undefined;
+  const standardPriceAtTransfer = base.standardPriceAtTransfer ?? houseDenominator ?? currentInput.standardPriceAtTransfer;
 
   if (shouldInjectHouseValuation) {
     // 주택 §176조의2④ 환산취득가는 개별주택가격 단일값을 분자/분모로 사용
@@ -391,12 +400,6 @@ function resolveInheritedAcquisitionInput(
     //    계획서: docs/02-design/features/inheritance-pre-deemed-converted-numerator-timing.plan.md
     //           docs/02-design/features/sec164-clause-a-deemed-date-timing-b1.plan.md
     standardPriceAtDeemedDate = houseValuationResult.housePriceAtInheritanceUsed;
-    // 분모 — 직접 보낸 양도시 기준시가가 있으면 그것(④는 「양도시 기준시가 직접 입력」 토글이 켜졌을 때만 싣는다 ·
-    // `preDeemedSentStdPrices`), 없으면 양도 당시 공시 개별주택가격(PR-5 — 종전에는 직접 입력을 덮었다).
-    standardPriceAtTransfer =
-      base.standardPriceAtTransfer ??
-      rawInput.inheritedHouseValuation?.housePriceAtTransfer ??
-      standardPriceAtTransfer;
   } else if (shouldInjectCommercialDeemed) {
     standardPriceAtDeemedDate = computeCommercial164_6StdPrice(rawInput.commercialInheritanceValuation!);
   } else if (shouldInjectPre1990) {
