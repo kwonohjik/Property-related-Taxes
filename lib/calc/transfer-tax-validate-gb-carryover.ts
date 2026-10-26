@@ -12,6 +12,7 @@ import { fieldError } from "./transfer-tax-validate-field";
 import { gbCarryoverEventSource } from "./transfer-tax-api-gb-carryover";
 import { carryoverEstimationModeSupported } from "./phd-toggle-scope";
 import { validateDonorBuiltGb } from "./transfer-tax-validate-donor-built-gb";
+import { gbBgGiftTaxNumerator, gbBgGiftTaxReturn } from "./gb-bg-gift-tax-return";
 
 /**
  * ⑧ 이월과세(§97의2) 입력 검증 — 일반건물 전용.
@@ -61,8 +62,10 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
    * (E2E `transfer-burdened-gift-carryover-block.spec.ts` CB-2로 실측).
    *
    * ⇒ 이 아래는 **일반 양도의 GB 이월과세**만 본다. 부담부증여는 그쪽 경로에 맡긴다.
+   *    예외는 증여세 칸 하나다 — 화면이 일반건물이면 부담부증여여도 산출세액·과세가액을 받고, ④가 그 짝으로 상당액을 만든다.
+   *    빈 값은 막지 않으므로(증여세 없음) 「당초 증여자」 요구를 가로채지 않는다(`gb-bg-carryover-gift-tax-input.plan.md` §4.2).
    */
-  if (asset.transferType === "burdened_gift") return null;
+  if (asset.transferType === "burdened_gift") return landIsCarryover ? validateGbBgGiftTax(asset, label) : null;
 
   if (!c?.giftRegistryDate)
     return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일을 입력하세요 (「소득세법」 제97조의2 제3항 — 적용기간 기산일).`);
@@ -110,5 +113,27 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
     if (sum > giftTaxBase)
       return `${label}: 파트별 증여 당시 평가액 합계(${sum.toLocaleString()}원)가 증여세 과세가액(${giftTaxBase.toLocaleString()}원)을 초과합니다.`;
   }
+  return null;
+}
+
+/**
+ * 부담부증여 일반건물의 증여세 칸 — ④ `buildCarryoverPayload`가 짝(`gbBgGiftTaxReturn`)으로 영 §163의2② 상당액을 만든다.
+ * 짝이 반만 차면 ④는 종전 상당액 칸(화면에 없다 → 0)으로 내려가 **입력이 조용히 사라진다** ⇒ 여기서 막는다.
+ * 분자(2호 자산가액 = 증여 당시 평가액 × 지분율)가 없으면 상당액이 0이고, 과세가액을 넘으면 산출세액 전액을 넘보는 입력이다.
+ */
+function validateGbBgGiftTax(asset: AssetForm, label: string): string | null {
+  const c = asset.carryover;
+  const calculated = parseAmount(c?.giftTaxCalculated ?? "");
+  const base = parseAmount(c?.giftTaxBase ?? "");
+  if (calculated > 0 && !(base > 0))
+    return fieldError("carryover.giftTaxBase", `${label}: 증여세 과세가액을 입력하세요 — 산출세액과 함께 있어야 증여세 상당액을 계산합니다 (「소득세법 시행령」 제163조의2 제2항 제3호).`);
+  if (base > 0 && !(calculated > 0))
+    return fieldError("carryover.giftTaxCalculated", `${label}: 증여세 산출세액을 입력하세요 — 과세가액과 함께 있어야 증여세 상당액을 계산합니다 (「소득세법 시행령」 제163조의2 제2항 제1호). 증여세가 없었다면 과세가액을 비우세요.`);
+  if (!gbBgGiftTaxReturn(asset)) return null;
+  const numerator = gbBgGiftTaxNumerator(asset);
+  if (!(numerator > 0))
+    return fieldError("carryover.giftDateValuation", `${label}: 증여 당시 평가액을 입력하세요 — 증여세 상당액 안분의 분자입니다 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
+  if (numerator > base)
+    return fieldError("carryover.giftDateValuation", `${label}: 증여 당시 평가액(지분 몫 ${numerator.toLocaleString()}원)이 증여세 과세가액(${base.toLocaleString()}원)을 초과합니다.`);
   return null;
 }

@@ -1,7 +1,7 @@
 # 일반건물 부담부증여 × 이월과세 — 화면의 증여세 입력(산출세액·과세가액)이 계산에 닿지 않는 결함 수정 계획서
 
 > 작성 2026-10-26 · master eb6c6dd53 · 발견: `docs/00-pm/gb-bg-carryover-share-bundled.plan.md` PR-2 작업 중(2026-10-25)
-> 상태: **계획 — Q-1~Q-3 사용자 결정 대기**
+> 상태: **구현 완료** — Q-1~Q-3 전부 권장안 a(2026-10-26 사용자 결정) · 구현 기록 §9
 
 ## 1. 현상 — 실측 (2026-10-26 · 브라우저 Playwright probe · mock 세율)
 
@@ -148,3 +148,30 @@ PR 1건이다(④·⑧·⑤·⑦ + 테스트). 엔진과 서버는 바꾸지 않
 - 결과 화면에 채무 비율 안분 → 한도 → 적용액(`breakdown.carryoverGiftTax`) 단계 표시. 부담부증여 이월과세 전 자산 종류에 공통이다.
 - V-1의 분자(채무 차감) 해석.
 - 부담부증여 일반건물에서 「증여 당시 평가액」 칸의 본래 용도(B 시나리오) 정리. V-2 결과에 따라 따로 정한다.
+
+## 9. 구현 기록 (2026-10-26) — Q-1 a · Q-2 a · Q-3 a
+
+**변경**
+- ④ `lib/calc/transfer-tax-api-carryover.ts` `buildCarryoverPayload` — 부담부증여 일반건물이고 산출세액·과세가액 짝이 다 차면 `giftTaxAmount = apportionGiftTax(짝, 증여 당시 평가액 × 지분율)`. 짝이 반만 차거나 비면 종전 상당액 칸 값.
+- 공용 술어 leaf `lib/calc/gb-bg-gift-tax-return.ts` — `isGbBurdenedGift`·`gbBgGiftTaxReturn`(짝)·`gbBgGiftTaxNumerator`(분자 × 지분율). ④와 ⑧이 같은 함수를 쓴다.
+- ⑧ `lib/calc/transfer-tax-validate-gb-carryover.ts` — 부담부증여 조기 반환 자리에서 `validateGbBgGiftTax`로 위임(토지 이월과세일 때만). 규칙 3개: 짝(앵커 `carryover.giftTaxBase` / `carryover.giftTaxCalculated`) · 분자 필수 · 분자 ≤ 과세가액(앵커 `carryover.giftDateValuation`). 빈 값은 막지 않는다.
+- ⑤ `CarryoverGiftBlock.tsx` — 산출세액·과세가액 칸에 `field` 앵커 추가(종전에는 없어 오류 이동 대상이 없었다). 부담부증여면 산출세액 hint와 「증여 당시 평가액」 hint를 §163의2②2호 분자 문구로 바꾼다.
+- ⑦ `GbBurdenedGiftCarryoverCard.tsx` — [A] 열에 「증여세 상당액 (채무 비율 안분 전)」 한 줄(`data-testid="gb-bg-carryover-gift-tax"`). 0도 보인다.
+- 서버(⑨~⑭)·엔진 변경 없음.
+
+**실측** (anchor `__tests__/api/transfer.route.gb-bg-carryover-gift-tax-input.anchor.test.ts` 12건 — 수정 전 11건 실패 확인)
+
+| # | 입력 | 전송 상당액 | 결정세액 |
+|---|---|---|---|
+| G1 | 단건 산출 3천만 · 과세가액 10억 · 평가액 10억 | 30,000,000 | 104,646,000 (= 상당액 직접 입력) |
+| G2 | 평가액 5억 | 15,000,000 | 상당액 1,500만 직접 입력과 같음 |
+| G3 | 지분 50/50, 두 지분에 같은 신고서 금액 | 지분마다 15,000,000 | 104,646,000 (= PR-2 P4) |
+| G4 | 묶음(일반건물 + 토지) | 30,000,000 | 135,846,000 (= 묶음 Q3) |
+| G5 | 짝 미충족 → 상당액 칸 / 짝 충족 시 상당액 칸 7백만 무시 | 30,000,000 | — |
+| G6 | 일반 양도 일반건물 — 최상위 상당액 0 · 산출세액은 파트 사건 1벌 | 0 | 종전 그대로 |
+
+- ⑧: 산출세액만·과세가액만·평가액 비움·평가액 > 과세가액 → 각 칸에서 차단. 지분 50%는 평가액 10억 × 0.5 = 5억 ≤ 과세가액 6억이면 통과. 둘째 지분 오류는 「자산 2」로 말한다.
+- 뮤테이션 9/9 KILLED: 엔진·⑧ 7건(vitest) — 분자 지분 스케일 제거·상당액 칸만 읽기·부담부증여 조건 제거·짝 검사·분자 초과 검사·⑧ 위임 제거·⑧ 분자 스케일 제거. 화면 2건(E2E) — ④ 되돌림(GBGT-E1)·과세가액 칸 앵커 제거(GBGT-E3).
+- E2E `e2e/gb-bg-carryover-gift-tax-input.spec.ts` 4건(단건 입력→전송·결과·카드 한 줄 / 지분 50/50 / ⑧ 과세가액 칸 이동 / 375px) + 관련 이월과세 spec 회귀 48건 통과.
+
+**남은 것**: §7 V-1·V-2·V-4·V-5 그대로. 별건 — 일반 양도 일반건물도 산출세액·과세가액 중 하나만 넣으면 짝 미충족으로 종전 상당액 칸(화면에 없음 → 0)으로 내려간다. ⑧은 합계 초과만 본다(`transfer-tax-validate-gb-carryover.ts` Σ 검증). 같은 형태의 조용한 소실이다. 측정은 하지 않았다(확인 필요).

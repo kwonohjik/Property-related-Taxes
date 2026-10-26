@@ -119,6 +119,8 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
    * 증여세 상당액을 엔진이 영 §163의2②로 안분하므로 입력 칸이 달라진다.
    */
   const isGeneralBuilding = asset.assetKind === "general_building";
+  /** 부담부증여 일반건물 — 증여세 칸은 같지만 상당액은 ④가 자산 전체로 계산하고 §159가 채무 비율로 나눈다(`gb-bg-gift-tax-return.ts`). */
+  const isBurdenedGift = asset.transferType === "burdened_gift";
 
   /**
    * 지분(공유) 모드 여부 — 판정 술어는 `OwnershipRatioInput`이 쓰는 것과 **같은 소스**다
@@ -307,8 +309,11 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           <>
             <FieldCard
               label="증여세 산출세액"
+              field={isBuildingPart ? "buildingCarryover.giftTaxCalculated" : "carryover.giftTaxCalculated"}
               hint={
-                "「소득세법 시행령」 제163조의2 제2항 제1호 — 증여받은 자산 전체에 대한 증여세 산출세액. 토지·건물 몫은 아래 과세가액으로 자동 안분됩니다." +
+                (isBurdenedGift
+                  ? "「소득세법 시행령」 제163조의2 제2항 제1호 — 증여받은 자산 전체에 대한 증여세 산출세액. 아래 증여 당시 평가액이 과세가액에서 차지하는 비율로 증여세 상당액을 계산하고, 채무 비율로 양도로 보는 부분의 몫을 나눕니다."
+                  : "「소득세법 시행령」 제163조의2 제2항 제1호 — 증여받은 자산 전체에 대한 증여세 산출세액. 토지·건물 몫은 아래 과세가액으로 자동 안분됩니다.") +
                 giftTaxShareHint
               }
               trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
@@ -323,6 +328,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
 
             <FieldCard
               label="증여세 과세가액"
+              field={isBuildingPart ? "buildingCarryover.giftTaxBase" : "carryover.giftTaxBase"}
               hint={
                 "「상속세 및 증여세법」 제47조 과세가액 — 안분 분모입니다. 증여받은 재산 전체 기준." +
                 giftTaxShareHint
@@ -384,7 +390,11 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
         <FieldCard
           label="증여 당시 평가액"
           field={isBuildingPart ? "buildingCarryover.giftDateValuation" : "carryover.giftDateValuation"}
-          hint="이월과세 미적용 시나리오(B)에서 수증자의 취득가액으로 사용. 보충적평가액·시가·감정가 중 해당 금액."
+          hint={
+            isGeneralBuilding && isBurdenedGift
+              ? "증여세 상당액 안분의 분자(「소득세법 시행령」 제163조의2 제2항 제2호 — 양도한 해당 자산가액)로 사용. 보충적평가액·시가·감정가 중 해당 금액."
+              : "이월과세 미적용 시나리오(B)에서 수증자의 취득가액으로 사용. 보충적평가액·시가·감정가 중 해당 금액."
+          }
         >
           <CurrencyInput
             label=""
