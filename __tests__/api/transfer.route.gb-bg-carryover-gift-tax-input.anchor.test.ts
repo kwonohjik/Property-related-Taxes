@@ -170,7 +170,8 @@ describe("⑧ 부담부증여 일반건물 증여세 칸 — 짝·분자 필수�
     const msgs = issues(shares(gbAsset({}, RETURN), gbAsset({}, { giftTaxCalculated: "30,000,000" }))).map((i) => JSON.stringify(i));
     expect(msgs.some((m) => m.includes("자산 2") && m.includes("과세가액"))).toBe(true);
   });
-  it("빈 값(종전 시드 · 증여세 없음)은 막지 않는다", () => {
+  it("빈 값(종전 시드 · 증여세 없음)과 산출세액 0 + 과세가액(증여재산공제로 세액 0)은 막지 않는다", () => {
     expect(issues(formOf([gbAsset()]))).toEqual([]);
+    expect(issues(formOf([gbAsset({}, { giftTaxCalculated: "0", giftTaxBase: "1,000,000,000" })]))).toEqual([]);
   });
 });

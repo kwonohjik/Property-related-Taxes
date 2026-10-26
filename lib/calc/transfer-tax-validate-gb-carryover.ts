@@ -102,6 +102,11 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
     }
   }
 
+  // 짝 반쪽 — ④ `gbCarryoverUsesPartShape`는 둘 다 > 0일 때만 신고서 금액을 보내고, 아니면 화면에 없는 상당액 칸(0)으로 내려간다.
+  //   사건 출처가 건물 서브폼(건물만 이월과세)이면 앵커도 그쪽이다(화면 건물 블록 `field` 접두어).
+  const pairIssue = giftTaxPairIssue(c, label, !landIsCarryover);
+  if (pairIssue) return pairIssue;
+
   /**
    * 🔑 **Σ 검증** — 영 §163의2②의 안분 분모가 사용자 입력이라, 파트 합이 분모를 넘으면
    *    증여세 상당액 합계가 산출세액을 초과한다. 엔진은 파트별로만 보므로 여기서 잡는다.
@@ -122,18 +127,31 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
  * 분자(2호 자산가액 = 증여 당시 평가액 × 지분율)가 없으면 상당액이 0이고, 과세가액을 넘으면 산출세액 전액을 넘보는 입력이다.
  */
 function validateGbBgGiftTax(asset: AssetForm, label: string): string | null {
-  const c = asset.carryover;
-  const calculated = parseAmount(c?.giftTaxCalculated ?? "");
-  const base = parseAmount(c?.giftTaxBase ?? "");
-  if (calculated > 0 && !(base > 0))
-    return fieldError("carryover.giftTaxBase", `${label}: 증여세 과세가액을 입력하세요 — 산출세액과 함께 있어야 증여세 상당액을 계산합니다 (「소득세법 시행령」 제163조의2 제2항 제3호).`);
-  if (base > 0 && !(calculated > 0))
-    return fieldError("carryover.giftTaxCalculated", `${label}: 증여세 산출세액을 입력하세요 — 과세가액과 함께 있어야 증여세 상당액을 계산합니다 (「소득세법 시행령」 제163조의2 제2항 제1호). 증여세가 없었다면 과세가액을 비우세요.`);
+  const pairIssue = giftTaxPairIssue(asset.carryover, label, false);
+  if (pairIssue) return pairIssue;
   if (!gbBgGiftTaxReturn(asset)) return null;
+  const base = parseAmount(asset.carryover?.giftTaxBase ?? "");
   const numerator = gbBgGiftTaxNumerator(asset);
   if (!(numerator > 0))
     return fieldError("carryover.giftDateValuation", `${label}: 증여 당시 평가액을 입력하세요 — 증여세 상당액 안분의 분자입니다 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
   if (numerator > base)
     return fieldError("carryover.giftDateValuation", `${label}: 증여 당시 평가액(지분 몫 ${numerator.toLocaleString()}원)이 증여세 과세가액(${base.toLocaleString()}원)을 초과합니다.`);
+  return null;
+}
+
+/**
+ * 증여세 산출세액·과세가액 **짝 반쪽** — 일반 양도(④ `gbCarryoverUsesPartShape`)·부담부증여(④ `gbBgGiftTaxReturn`) 모두
+ * 둘 다 > 0일 때만 신고서 금액으로 상당액을 만들고, 아니면 화면에 없는 상당액 칸(→ 0)으로 내려가 **입력이 조용히 사라진다**
+ * (실측 2026-10-26: 산출세액만 → 163,932,000 = 증여세 없음, 짝 → 160,572,000). 빈 칸 쪽으로 이동시킨다.
+ */
+/** `onBuilding` — 사건 출처가 건물 서브폼(건물만 이월과세)이면 앵커도 `buildingCarryover.*`다. 앵커는 리터럴 삼항으로 쓴다(앵커 커버리지 게이트가 정적으로 읽는다). */
+function giftTaxPairIssue(c: CarryoverTaxationForm | undefined, label: string, onBuilding: boolean): string | null {
+  const calculated = parseAmount(c?.giftTaxCalculated ?? "");
+  const base = parseAmount(c?.giftTaxBase ?? "");
+  if (calculated > 0 && !(base > 0))
+    return fieldError(onBuilding ? "buildingCarryover.giftTaxBase" : "carryover.giftTaxBase", `${label}: 증여세 과세가액을 입력하세요 — 산출세액과 함께 있어야 증여세 상당액을 계산합니다 (「소득세법 시행령」 제163조의2 제2항 제3호).`);
+  // 산출세액 「0」은 입력이다(증여재산공제로 세액 0 — 칸 안내도 「없으면 0」). 상당액도 0이 맞으므로 **빈 칸**만 막는다.
+  if (base > 0 && (c?.giftTaxCalculated ?? "").trim() === "")
+    return fieldError(onBuilding ? "buildingCarryover.giftTaxCalculated" : "carryover.giftTaxCalculated", `${label}: 증여세 산출세액을 입력하세요 — 과세가액과 함께 있어야 증여세 상당액을 계산합니다 (「소득세법 시행령」 제163조의2 제2항 제1호). 증여세가 없었다면 0을 입력하세요.`);
   return null;
 }
