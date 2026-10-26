@@ -106,23 +106,50 @@ export function gbUnifiedSec1639ClearPatch(cause: string | undefined): {
 }
 
 /**
- * 표준·상가 자산의 취득원인이 **증여**가 될 때 추계 플래그를 비우는 patch (2026-10-02 B1 — G3의 형제).
+ * 표준·상가 자산의 취득원인이 **증여·상속**이 될 때 추계 플래그를 비우는 patch (2026-10-02 B1 — G3의 형제 · 상속 2026-10-26).
  *
  * 증여 카드(`CompanionAcqGiftBlock`)에는 「취득가액 산정 방식」 라디오가 없다. 매매에서 환산·감정가액·매매사례가액을
  * 고른 뒤 원인을 바꾸면 플래그가 남아 §163⑨ 오류(`giftEstimatedModeError`)가 뜨는데 끌 칸이 없었다.
  * 검증을 좁히면 안 된다 — ④(`transfer-tax-api.ts`)가 같은 플래그로 환산 계산을 하므로 침묵 오계산이 된다.
  * 비우는 것은 증여에서 **사용자가 설정할 수 없는 값뿐**이다(증여 카드에 그 라디오가 없다).
  *
+ * 상속도 같다 — 매매 블록(라디오)은 매매·D2에서만 그리고 상가 환산 토글도 상속이면 숨는다. 남은 감정은 ④가 `appraisal`로
+ * 실어 ⑧ 통과 ↔ 서버 400(`appraisalValue`), 환산·매매사례는 ⑧이 화면에 없는 칸(취득 당시 기준시가·매매사례가액)을 요구했다.
+ * 상속 취득가액은 §163⑨ 평가액(가목 실지거래가액 의제)이라 이 플래그를 쓸 자리가 없다. 남은 플래그는 직접 필요경비를 0으로 보내거나
+ * 소유자 분리 파트를 추계로 계산해 세액을 틀리게 만들기도 했다 — 비우면 바로잡힌다(계획서 inherit-stale-acq-mode-flags.plan.md §2).
+ *
+ * 상속은 **파트 방식**(`landAcqMode`·`buildingAcqMode`)도 비운다. 매매에서 「토지·건물 취득일 다름」을 켜면 자산 단위 플래그가 파트
+ * 방식으로 승격 기록되는데, 상속 소유자 분리 화면에는 그 라디오가 없어 남은 값이 상속 파트를 추계로 계산했다(화면 실측 129,132,960 ↔
+ * 대조 154,500,000). 일반건물 `gbUnifiedSec1639ClearPatch`와 같은 범위다. 증여는 측정하지 않아 종전대로 둔다.
+ * 같은 이유로 **파트 취득가 4필드**(토지·건물 취득가액·매매사례가액)도 비운다 — 상속 소유자 분리 화면에는 그 칸이 없는데 남은 값이
+ * 상속 파트 취득가액으로 쓰였다(화면 실측 181,746,000 ↔ 대조 154,500,000). 양도가액 구분·파트 자본적지출은 그 화면에 칸이 있어 남긴다.
+ * ⚠️ **D2 토지 매매 흔적**(`landAcquisitionCause === "purchase"` — 켜짐이든 원인 전환으로 꺼진 잔재든)이 있으면 **토지** 파트 값은 남긴다.
+ *    D2 토글을 다시 켜면 그 값을 복원하는 설계다(`BuildingCauseMixBlock` · `transfer-land-part-cause.d2.predo.render` C10). 건물 파트 값은
+ *    D2가 켤 때 실거래가로 다시 쓰므로 비운다.
+ *
  * 쓰는 곳 — 화면 전환(`CompanionAcquisitionCauseSection`)과 저장값 복원(`calc-wizard-asset-migrate.ts`,
- * 복원은 `giftEstimatedModeBlocked`가 참일 때만). 일반건물은 `gbUnifiedSec1639ClearPatch`가 따로 맡는다.
+ * 증여 복원은 `giftEstimatedModeBlocked`가 참일 때만 · 상속 복원은 D2 제외). 일반건물은 `gbUnifiedSec1639ClearPatch`가 따로 맡는다.
  */
-export function giftEstimationClearPatch(cause: string | undefined): {
+export function giftEstimationClearPatch(
+  cause: string | undefined,
+  asset?: { landAcquisitionCause?: string },
+): {
   useEstimatedAcquisition?: false;
   isAppraisalAcquisition?: false;
   isSalesCaseAcquisition?: false;
+  landAcqMode?: "";
+  buildingAcqMode?: "";
+  landAcquisitionPrice?: "";
+  buildingAcquisitionPrice?: "";
+  landSalesCaseValue?: "";
+  buildingSalesCaseValue?: "";
 } {
-  if (cause !== "gift") return {};
-  return { useEstimatedAcquisition: false, isAppraisalAcquisition: false, isSalesCaseAcquisition: false };
+  if (cause !== "gift" && cause !== "inheritance") return {};
+  const flags = { useEstimatedAcquisition: false, isAppraisalAcquisition: false, isSalesCaseAcquisition: false } as const;
+  if (cause !== "inheritance") return flags;
+  const building = { buildingAcqMode: "", buildingAcquisitionPrice: "", buildingSalesCaseValue: "" } as const;
+  if (asset?.landAcquisitionCause === "purchase") return { ...flags, ...building };
+  return { ...flags, ...building, landAcqMode: "", landAcquisitionPrice: "", landSalesCaseValue: "" };
 }
 
 /** `explicit`(land/buildingAcqMode, "" 허용)이 있으면 그대로, 없으면 레거시 파생값. */

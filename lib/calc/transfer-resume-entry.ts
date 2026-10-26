@@ -120,9 +120,10 @@ export async function resumeTransferRecord(
     return null;
   }
 
-  const [{ useCalcWizardStore }, { migrateAsset }] = await Promise.all([
+  const [{ useCalcWizardStore }, { migrateAsset }, { clearInheritedStaleAcqInputs }] = await Promise.all([
     import("@/lib/stores/calc-wizard-store"),
     import("@/lib/stores/calc-wizard-asset"),
+    import("@/lib/stores/calc-wizard-asset-migrate"),
   ]);
   const { updateFormData, setStep, reset } = useCalcWizardStore.getState();
   /**
@@ -133,7 +134,7 @@ export async function resumeTransferRecord(
    */
   const form = input as Parameters<typeof updateFormData>[0];
   const migratedAssets = Array.isArray(form?.assets)
-    ? { ...form, assets: form.assets.map((a) => migrateAsset({ ...a })) }
+    ? clearInheritedStaleAcqInputs({ ...form, assets: form.assets.map((a) => migrateAsset({ ...a })) })
     : form;
   // 조특법 주택 수 제외 — 행 id와 함께 저장소에 남은 선언을 그 행 ⑥으로(계획서 Q-5, sessionStorage 복원과 같다)
   const migrated =

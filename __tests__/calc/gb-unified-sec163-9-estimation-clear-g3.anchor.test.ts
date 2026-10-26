@@ -73,7 +73,9 @@ describe("복원 마이그레이션 — migrateAsset", () => {
   });
 
   it("일반건물이 아니면 건드리지 않는다", () => {
-    const a = migrateAsset(gbRaw({ assetKind: "land" }));
+    // 표준·상가 상속은 별도 규칙(`giftEstimationClearPatch` 상속 확장 · inherit-stale-acq-mode-flags)이 비우므로
+    // 이 patch의 범위만 보려면 그 규칙 밖(재개발 — §166③ 환산 플래그)을 쓴다. 종전 시료는 토지였다.
+    const a = migrateAsset(gbRaw({ assetKind: "redevelopment_apt" }));
     expect(a.useEstimatedAcquisition).toBe(true);
   });
 });
