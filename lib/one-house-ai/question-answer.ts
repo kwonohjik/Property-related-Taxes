@@ -14,6 +14,9 @@
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import type { FieldSpec } from "./field-catalog.types";
 import { catalogKeyOf, parsePath, ROW_ID_FIELD, type Segment } from "./apply-extraction";
+import { phrp154_10AnswerOf, withPhrp154_10Answer } from "@/lib/calc/phrp-154-10-fact-question";
+
+const PHRP_154_10_ANSWER_PATH = "asset.rentalHousingException.phrp154_10Answer";
 
 /** 질문에 붙여 보내는 칸 정보 — 필드 사전 한 줄에서 화면에 필요한 것만 */
 export type AnswerField = Pick<FieldSpec, "path" | "kind" | "label" | "values">;
@@ -64,6 +67,11 @@ export function answerTargetOf(
 }
 
 export function readAnswer(form: OneHouseJudgmentFormData, target: AnswerTarget): unknown {
+  // §154⑩ 사실은 선언 상태에서 도출한다(화면 질문과 같은 값 — `phrp154_10AnswerOf`)
+  if (target.spec.path === PHRP_154_10_ANSWER_PATH) {
+    const rh = form.assets[0]?.rentalHousingException;
+    return rh ? (phrp154_10AnswerOf(rh) ?? "") : "";
+  }
   return locate(form, target.segs, false)?.parent?.[target.segs[target.segs.length - 1].name];
 }
 
@@ -73,6 +81,12 @@ export function writeAnswer(
   target: AnswerTarget,
   value: unknown,
 ): OneHouseJudgmentFormData {
+  // §154⑩ 「예」는 칸 하나가 아니라 선언(B · 임대주택 0호)이다 — 화면 질문과 같은 쓰기(`applyPhrp154_10Answer`)를 거친다.
+  if (target.spec.path === PHRP_154_10_ANSWER_PATH && form.assets[0]) {
+    const next = structuredClone(form);
+    next.assets[0] = withPhrp154_10Answer(next.assets[0], value);
+    return next;
+  }
   const next = structuredClone(form);
   const loc = locate(next, target.segs, true);
   if (!loc?.parent) return form;

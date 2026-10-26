@@ -75,6 +75,13 @@ export function RentalHousingCalcSummary({
             </p>
           </>
         )}
+        {/* §154⑩(계획서 `phrp-154-10-undeclared-one-house.plan.md` Q-2 (a)) — ⑳을 혜택으로만 설명하면 「특례 없음」이 곧 전액 비과세라는 점이 가려진다. */}
+        <p className="mt-1 text-caption text-muted-foreground" data-testid="rental-housing-154-10-calc-notice">
+          이 주택을 임대주택으로 등록(어린이집 운영)했고 보유 중 다른 거주주택을 양도했다면, 직전거주주택 양도일 후 기간분만
+          비과세됩니다(
+          <LawArticleModal legalBasis="소득세법 시행령 §154" label="소령 §154⑩" />) — 판정 메뉴에서 선언하지 않으면{" "}
+          <strong>기간 안분 없이</strong> 계산됩니다(1세대1주택 비과세 요건을 갖추면 전액 비과세).
+        </p>
       </div>
     );
   }

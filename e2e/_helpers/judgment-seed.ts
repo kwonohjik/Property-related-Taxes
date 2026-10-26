@@ -64,8 +64,23 @@ export async function gotoJudgmentHoldingsStep(
   await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click(); // ① → ②
   await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+  await answerPhrp154_10NoIfUnanswered(page);
   await page.getByRole("button", { name: "다음" }).click(); // ② → ③
   await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
+}
+
+/**
+ * ② 화면의 §154⑩ 사실 질문(필수 — `Phrp154_10FactQuestion`)이 떠 있고 아직 답하지 않았으면 「아니오」를 누른다.
+ *
+ * 질문 신설(2026-10-26) 전의 시드는 「임대 등록 이력이 없는 평범한 주택」을 전제했다 — 그 전제를 화면에서 답한다.
+ * 시드가 §154⑩을 선언했으면 「예」가 이미 선택돼 있어 건드리지 않는다. 질문 자체는 `one-house-judgment-phrp-154-10-question.spec.ts`가 본다.
+ */
+export async function answerPhrp154_10NoIfUnanswered(page: Page): Promise<void> {
+  const no = page.getByTestId("phrp-154-10-answer-no");
+  // 「다음」 직후에는 아직 그려지기 전일 수 있다 — 짧게 기다리고, 질문이 없는 화면(입주권 양도·⑳ 1호 이상 선언)이면 그냥 지나간다.
+  if (!(await no.waitFor({ state: "visible", timeout: 3_000 }).then(() => true, () => false))) return;
+  if ((await no.isChecked()) || (await page.getByTestId("phrp-154-10-answer-yes").isChecked())) return;
+  await no.check();
 }
 
 /**

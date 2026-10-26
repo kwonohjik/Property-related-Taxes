@@ -27,6 +27,8 @@ export const RENTAL_HOUSING_EXCEPTION_DEFAULTS: AssetForm["rentalHousingExceptio
   residenceTransitionBasis: "",
   // §154⑩ 표준 경로(I-5) — rentalUnits 0호일 때만 UI가 노출
   wasRegisteredRentalOrChildcare: false,
+  // §154⑩ 사실 질문(판정 메뉴·부담부증여) — 미응답
+  phrp154_10Answer: "",
 };
 
 /**

@@ -55,6 +55,7 @@ import { INITIAL_FORM, type FormState } from "@/components/calc/gift-tax-form-sh
 import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { runCalc, postTransfer, redevAptForm, houseRow } from "./_helpers/redev-one-house-route";
+import { RH_ANSWERED_NO } from "./_helpers/phrp-154-10-answer";
 
 beforeEach(() => {
   judged.length = 0;
@@ -186,6 +187,7 @@ describe("화면 경로", () => {
         acquisitionDate: new Date(o.acq),
         standardPriceAtAcquisition: 400_000_000,
         isOneHousehold: true,
+        rentalHousingException: RH_ANSWERED_NO,
         householdHousingCount: 2,
         isRegulatedArea: false,
         wasRegulatedAtAcquisition: false,

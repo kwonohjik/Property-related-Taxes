@@ -28,6 +28,7 @@ import { buildCalcGiftHouseholdPayload } from "@/lib/calc/gift-household-payload
 import { buildCarryoverPayload } from "@/lib/calc/transfer-tax-api-carryover";
 import { runJudgment, handoff } from "./_one-house-pr6a-routes";
 import { runCalc } from "./_one-house-pr3a-calc-route";
+import { RH_ANSWERED_NO } from "./_helpers/phrp-154-10-answer";
 
 const REJOINED = "gift-household-rejoined-unverified";
 const DECEASED = "gift-household-donor-deceased-unverified";
@@ -37,6 +38,7 @@ const DETAIL = "gift-household-consolidation-detail-unverified";
 const asset = (over: Partial<AssetForm> = {}): AssetForm =>
   ({
     ...makeDefaultAsset(1),
+    rentalHousingException: RH_ANSWERED_NO,
     residenceInputMode: "direct",
     residencePeriods: [],
     assetKind: "housing",

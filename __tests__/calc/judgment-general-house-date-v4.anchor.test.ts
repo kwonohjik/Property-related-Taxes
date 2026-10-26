@@ -30,6 +30,7 @@ import { handoff, runJudgment, withToday } from "./_one-house-pr6a-routes";
 import { buildCaseForm, type RulingCase } from "./one-house-rulings/harness";
 import cases from "./one-house-rulings/cases/E177.json";
 import { runCalc } from "./_one-house-pr3a-calc-route";
+import { RH_ANSWERED_NO } from "./_helpers/phrp-154-10-answer";
 
 const RURAL = {
   type: "new_99_4_rural",
@@ -57,6 +58,7 @@ const ruralRow = {
 function form(sameHousehold: "yes" | "no"): OneHouseJudgmentFormData {
   const asset = {
     ...makeDefaultAsset(1),
+    rentalHousingException: RH_ANSWERED_NO,
     residenceInputMode: "direct",
     residencePeriods: [],
     assetKind: "housing",

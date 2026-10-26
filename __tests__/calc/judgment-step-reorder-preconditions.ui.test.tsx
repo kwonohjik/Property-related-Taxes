@@ -30,6 +30,7 @@ import {
 } from "@/lib/stores/one-house-judgment-form.types";
 import { getStepErrorCount } from "@/lib/calc/one-house-exemption-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import { RH_ANSWERED_NO } from "./_helpers/phrp-154-10-answer";
 
 vi.mock("@/components/ui/address-search", () => ({
   AddressSearch: () => null,
@@ -64,6 +65,7 @@ function form(acquisitionDate: string): OneHouseJudgmentFormData {
     assets: [
       {
         ...makeDefaultAsset(1),
+        rentalHousingException: RH_ANSWERED_NO,
         residenceInputMode: "direct",
         residencePeriods: [],
         assetKind: "housing",

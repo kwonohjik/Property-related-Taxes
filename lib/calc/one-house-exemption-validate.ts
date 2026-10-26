@@ -76,6 +76,8 @@ import { houseSpecialUseIssue } from "./house-row-required-issues";
 import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
 import { duplicateOwnedUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
 import { duplicateUnavoidableOutsideCapitalMessage } from "./house-row-required-issues";
+import { phrp154_10AnswerError } from "./phrp-154-10-fact-question";
+import { PHRP_154_10_QUESTION_FIELD } from "./phrp-154-10-fact-question";
 
 export interface OneHouseJudgmentValidationError {
   field: string;
@@ -701,6 +703,9 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
       calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, undefined, GIFT_HOUSEHOLD_SCOPE_PRIMARY),
     );
     if (rentalError) errors.push(err("rentalHousingException", rentalError));
+    // §154⑩ 사실 질문(Q-1 (a)) — ⑤ `Phrp154_10FactQuestion`과 같은 게이트·도출(`phrp-154-10-fact-question.ts`).
+    const phrpAnswerError = phrp154_10AnswerError(primary.rentalHousingException, form.transferDate);
+    if (phrpAnswerError) errors.push(err(PHRP_154_10_QUESTION_FIELD, phrpAnswerError));
   }
 
   return errors;

@@ -217,6 +217,9 @@ export async function fillApartmentTransferInfo(
   await residenceInput.fill("120");
   await expect(residenceInput).toHaveValue("120");
 
+  // §154⑩ 사실 질문(1세대 ON이면 필수 — 2026-10-26) — 이 시료는 임대 등록 이력이 없는 주택이다.
+  await dialog.getByTestId("phrp-154-10-answer-no").check();
+
   // 증여재산을 시가로 평가했으므로(`addApartmentWithDebt` — 시가 8억) 양도소득세도 시가 평가(K-4/K-5)다. 평가방식·양도 시 시가는
   // 증여세 평가에서 파생하고(1h-G1-2) 산정방식(실지·환산)은 선택이 필수다 — 기본은 실지(K-4) + 실지취득가액 합계. 산정방식 UI 자체를
   // 보려는 spec은 `{ acquisitionMethod: "none" }`로 선택 전 상태를 둔다. 기준시가 평가(시가 미입력) 흐름에는 산정방식 라디오가 없다.

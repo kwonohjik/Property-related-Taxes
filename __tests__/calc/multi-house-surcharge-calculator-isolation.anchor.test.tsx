@@ -21,6 +21,7 @@ import {
   createInitialOneHouseJudgmentForm,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
+import { answeredNo } from "./_helpers/phrp-154-10-answer";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -75,7 +76,7 @@ function form0(): OneHouseJudgmentFormData {
   const f = createInitialOneHouseJudgmentForm();
   return {
     ...f, isOneHousehold: true, transferDate: "2021-06-01", contractTotalPrice: "1000000000",
-    assets: [{ ...f.assets[0], residenceInputMode: "direct", residencePeriods: [], assetKind: "housing", acquisitionDate: "2015-03-10", regionCode: GANGNAM }],
+    assets: [{ ...f.assets[0], rentalHousingException: answeredNo(f.assets[0].rentalHousingException), residenceInputMode: "direct", residencePeriods: [], assetKind: "housing", acquisitionDate: "2015-03-10", regionCode: GANGNAM }],
     houses: [HOUSE as never],
   } as OneHouseJudgmentFormData;
 }

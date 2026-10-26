@@ -14,11 +14,12 @@ import { POST as JPOST } from "@/app/api/calc/one-house-exemption/route";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { validateAllSteps } from "@/lib/calc/one-house-exemption-validate";
 import { hrow } from "./_owned-at-transfer-pr1a-helpers";
+import { RH_ANSWERED_NO } from "./_helpers/phrp-154-10-answer";
 
 async function judge(kind: string, houses: HouseEntry[]) {
   const f = createInitialOneHouseJudgmentForm();
   f.isOneHousehold = true; f.transferDate = "2024-06-01"; f.contractTotalPrice = "900000000";
-  Object.assign(f.assets[0], { assetKind: kind, acquisitionCause: "purchase", acquisitionDate: "2010-04-09", redevExemptionEligibleAtApproval: "yes", residenceInputMode: "direct", residencePeriods: [] });
+  Object.assign(f.assets[0], { assetKind: kind, acquisitionCause: "purchase", acquisitionDate: "2010-04-09", redevExemptionEligibleAtApproval: "yes", residenceInputMode: "direct", residencePeriods: [], rentalHousingException: RH_ANSWERED_NO });
   f.houses = houses;
   expect(validateAllSteps(f).filter((e) => e.severity === "error")).toEqual([]);
   const res = await JPOST(new NextRequest("http://localhost/api/calc/one-house-exemption", { method: "POST", headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" }, body: JSON.stringify(buildOneHouseExemptionApiBody(f)) }));

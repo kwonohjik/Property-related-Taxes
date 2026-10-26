@@ -11,6 +11,7 @@ import { ONE_HOUSE_FIELD_CATALOG } from "@/lib/one-house-ai/field-catalog";
 import { mergeExtractedForm } from "@/lib/one-house-ai/merge-form";
 import { collectValidationQuestions } from "@/lib/one-house-ai/validation-questions";
 import type { ExtractedForm } from "@/lib/one-house-ai/apply-extraction";
+import { RH_ANSWERED_NO } from "../../calc/_helpers/phrp-154-10-answer";
 
 type Case = { id: string; basis: string; bucket: string; today: string; form?: ExtractedForm; expected?: object };
 const DIR = path.join(__dirname, "../../calc/one-house-rulings/cases");
@@ -38,7 +39,8 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
  */
 const asAuthored = (form: ExtractedForm): ExtractedForm => ({
   ...form,
-  asset: { residenceInputMode: "direct", residencePeriods: [], ...(form.asset ?? {}) },
+  // §154⑩ 사실 질문(2026-10-26 신설)은 손 매핑에 없다 — 사례가 그 사실을 적지 않았으면 「아니오」다(하네스와 같다).
+  asset: { residenceInputMode: "direct", residencePeriods: [], rentalHousingException: RH_ANSWERED_NO, ...(form.asset ?? {}) },
 });
 
 describe("검증 질문", () => {

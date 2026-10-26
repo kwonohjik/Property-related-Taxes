@@ -24,6 +24,8 @@ import { RentalUnitCard } from "./RentalUnitCard";
 import { RentalHousing154_10Block } from "./RentalHousing154_10Block";
 import { RentalLifetimeLimitBlock } from "./RentalLifetimeLimitBlock";
 import { RentalHousingCalcSummary } from "./RentalHousingCalcSummary";
+import { Phrp154_10FactQuestion } from "./Phrp154_10FactQuestion";
+import { phrp154_10QuestionInScope } from "@/lib/calc/phrp-154-10-fact-question";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
@@ -674,20 +676,26 @@ export function RentalHousingExceptionSection({
   }
 
   return (
-    <ToggleCard
-      checked={rh.applyException}
-      onCheckedChange={handleToggle}
-      title="장기임대주택 보유자 거주주택 비과세 특례 적용"
-      description="임대주택을 주택수에서 제외하고 1세대1주택으로 봄 (소령 §155⑳)"
-      tone="violet"
-      trailing={
-        <LawArticleModal
-          legalBasis="소득세법 시행령 §155"
-          label="§155⑳"
-        />
-      }
-    >
-      {body}
-    </ToggleCard>
+    <>
+      {/* §154⑩ 사실 질문(Q-1 (a)) — 강행규정이라 혜택 토글 안쪽이 아니라 바깥에서 묻는다. 게이트는 ⑧과 같은 정본. */}
+      {phrp154_10QuestionInScope(rh, transferDate) && (
+        <Phrp154_10FactQuestion rh={rh} assetId={asset.assetId} onChange={onChange} />
+      )}
+      <ToggleCard
+        checked={rh.applyException}
+        onCheckedChange={handleToggle}
+        title="장기임대주택 보유자 거주주택 비과세 특례 적용"
+        description="임대주택을 주택수에서 제외하고 1세대1주택으로 봄 (소령 §155⑳)"
+        tone="violet"
+        trailing={
+          <LawArticleModal
+            legalBasis="소득세법 시행령 §155"
+            label="§155⑳"
+          />
+        }
+      >
+        {body}
+      </ToggleCard>
+    </>
   );
 }

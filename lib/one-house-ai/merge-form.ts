@@ -8,6 +8,7 @@ import { createInitialOneHouseJudgmentForm, type OneHouseJudgmentFormData } from
 import { migrateAsset } from "@/lib/stores/calc-wizard-asset-migrate";
 import { createHouseEntry } from "@/lib/stores/house-entry-factory";
 import type { ExtractedForm } from "./apply-extraction";
+import { withPhrp154_10Answer } from "@/lib/calc/phrp-154-10-fact-question";
 
 export function mergeExtractedForm(fragment: ExtractedForm): OneHouseJudgmentFormData {
   const base = createInitialOneHouseJudgmentForm();
@@ -16,16 +17,16 @@ export function mergeExtractedForm(fragment: ExtractedForm): OneHouseJudgmentFor
   // 거주를 총 개월로만 받았으면 직접 입력 모드 — 구간 입력(기본값)에서는 개월 칸이 읽히지 않는다.
   const monthsOnly =
     extractedAsset.residencePeriodMonthsAsset !== undefined && !Array.isArray(extractedAsset.residencePeriods);
+  const merged = migrateAsset({
+    ...base.assets[0],
+    ...(monthsOnly ? { residenceInputMode: "direct", residencePeriods: [] } : {}),
+    ...extractedAsset,
+  });
   return {
     ...base,
     ...top,
-    assets: [
-      migrateAsset({
-        ...base.assets[0],
-        ...(monthsOnly ? { residenceInputMode: "direct", residencePeriods: [] } : {}),
-        ...extractedAsset,
-      }),
-    ],
+    // §154⑩ 사실 「예」는 칸 하나가 아니라 선언(B · 임대주택 0호)이다 — 화면 질문과 같은 쓰기를 거친다.
+    assets: [withPhrp154_10Answer(merged, merged.rentalHousingException.phrp154_10Answer)],
     houses: (houses ?? []).map((h, i) => ({ ...createHouseEntry(h.id ?? `house_ai_${i + 1}`), ...h })),
   } as OneHouseJudgmentFormData;
 }

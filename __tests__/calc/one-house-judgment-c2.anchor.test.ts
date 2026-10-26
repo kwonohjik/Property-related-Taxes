@@ -36,10 +36,12 @@ import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-ass
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { POST } from "@/app/api/calc/one-house-exemption/route";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
+import { RH_ANSWERED_NO } from "./_helpers/phrp-154-10-answer";
 
 const asset = (over: Partial<AssetForm> = {}): AssetForm =>
   ({
     ...makeDefaultAsset(1),
+    rentalHousingException: RH_ANSWERED_NO,
     residenceInputMode: "direct",
     residencePeriods: [],
     assetKind: "housing",

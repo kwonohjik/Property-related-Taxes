@@ -41,6 +41,7 @@ import { effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
 import { unconfirmedTempTwoHouseProviso5 } from "@/lib/calc/exemption-proviso-payload";
 import { TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS, TEMP_TWO_HOUSE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
+import { RH_ANSWERED_NO } from "./_helpers/phrp-154-10-answer";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -149,6 +150,7 @@ function jForm(o: { proviso?: boolean; noHouse?: boolean; otherDate?: string }) 
     assets: [
       {
         ...makeDefaultAsset(1),
+        rentalHousingException: RH_ANSWERED_NO,
         assetKind: "housing",
         acquisitionCause: "purchase",
         acquisitionDate: "2020-08-01",

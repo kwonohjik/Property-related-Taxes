@@ -17,6 +17,7 @@ import {
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 import { migrateAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import { withPhrpAnsweredNo } from "../_helpers/phrp-154-10-answer";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { OneHouseJudgment } from "@/lib/tax-engine/one-house/types";
 import { validateAllSteps } from "@/lib/calc/one-house-exemption-validate";
@@ -111,14 +112,15 @@ export function buildCaseForm(
 ): OneHouseJudgmentFormData {
   const base = createInitialOneHouseJudgmentForm();
   const { asset, houses, ...top } = c[which] ?? {};
-  return {
+  // 사례가 §154⑩ 사실을 적지 않았으면 「아니오」다(질문 신설 전 사례 — `_helpers/phrp-154-10-answer.ts`).
+  return withPhrpAnsweredNo({
     ...base,
     ...top,
     // 사례는 거주 기본값이 직접 입력(개월 수)이던 때 작성됐다 — 그 축을 명시해 사례가 보던 것을 그대로 본다.
     //   구간을 쓰는 사례는 JSON이 `residenceInputMode`·`residencePeriods`를 직접 싣는다(뒤가 우선).
     assets: [migrateAsset({ ...base.assets[0], residenceInputMode: "direct", residencePeriods: [], ...(asset ?? {}) })],
     houses: (houses ?? []).map((h, i) => makeHouse(h.id ?? `h${i + 1}`, h)),
-  } as OneHouseJudgmentFormData;
+  } as OneHouseJudgmentFormData);
 }
 
 export type RulingObservation = {

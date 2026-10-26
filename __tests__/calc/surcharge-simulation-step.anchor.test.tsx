@@ -23,6 +23,7 @@ import {
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 import type { SurchargeSimulationSide } from "@/app/api/calc/multi-house-surcharge-judgment/surcharge-simulation";
+import { answeredNo } from "./_helpers/phrp-154-10-answer";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -67,7 +68,7 @@ function form0(asset: Record<string, unknown> = {}): OneHouseJudgmentFormData {
   const f = createInitialOneHouseJudgmentForm();
   return {
     ...f, isOneHousehold: true, transferDate: "2021-06-01", contractTotalPrice: "1000000000",
-    assets: [{ ...f.assets[0], residenceInputMode: "direct", residencePeriods: [], assetKind: "housing", acquisitionDate: "2015-03-10", regionCode: GANGNAM, ...asset }],
+    assets: [{ ...f.assets[0], rentalHousingException: answeredNo(f.assets[0].rentalHousingException), residenceInputMode: "direct", residencePeriods: [], assetKind: "housing", acquisitionDate: "2015-03-10", regionCode: GANGNAM, ...asset }],
     houses: [HOUSE as never],
   } as OneHouseJudgmentFormData;
 }

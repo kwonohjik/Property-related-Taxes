@@ -16,6 +16,7 @@
 import { test, expect } from "@playwright/test";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
 import { gotoJudgmentHoldingsStep } from "./_helpers/judgment-seed";
+import { answerPhrp154_10NoIfUnanswered } from "./_helpers/judgment-seed";
 
 test.describe("검증 경고 표시", () => {
   /**
@@ -85,6 +86,7 @@ test.describe("검증 경고 표시", () => {
 
     await page.getByRole("button", { name: "다음" }).click();
     await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+    await answerPhrp154_10NoIfUnanswered(page);
     await fillDateAndVerify(page, { year: "2015", month: "03", day: "10" }, {
       scope: page.getByTestId("one-house-acq-date"),
     });
@@ -93,6 +95,7 @@ test.describe("검증 경고 표시", () => {
     });
     await page.getByTestId("one-house-sale-price").fill("900000000");
 
+    await answerPhrp154_10NoIfUnanswered(page);
     await page.getByRole("button", { name: "다음" }).click();
     await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
     await page.getByTestId("one-house-judge-cta").click();
@@ -137,6 +140,7 @@ test.describe("사이드바 심각도 표식", () => {
     await page.getByTestId("one-house-household").getByRole("switch").click();
     await page.getByRole("button", { name: "다음" }).click();
     await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+    await answerPhrp154_10NoIfUnanswered(page);
 
     /*
       🔑 여기가 F-5의 본체다. 사용자는 지금 ②에 있고 배너는 ②의 경고만 띄운다 —

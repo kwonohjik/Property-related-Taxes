@@ -135,5 +135,11 @@ export interface RentalHousingExceptionFormSlice {
      * 취득) 또는 일반 거주기간(그 전 취득)을 재사용한다.
      */
     wasRegisteredRentalOrChildcare?: boolean;
+    /**
+     * §154⑩ 사실 질문 응답(계획서 `phrp-154-10-undeclared-one-house.plan.md` Q-1 (a)) — 판정 메뉴·부담부증여 화면 전용,
+     * 엔진·④ 미전송. 화면 값은 `phrp154_10AnswerOf`가 도출한다: §154⑩ 선언(B · 0호)이면 「예」, 그 밖에는 저장된 「아니오」만
+     * 인정한다. "" · undefined(구 기록) = 미응답(⑧이 막는다).
+     */
+    phrp154_10Answer?: "" | "yes" | "no";
   };
 }

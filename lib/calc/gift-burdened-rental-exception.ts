@@ -29,6 +29,7 @@ import {
   giftBurdenedProvisoMode,
 } from "@/lib/calc/gift-burdened-one-house";
 import { effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
+import { phrp154_10AnswerError } from "@/lib/calc/phrp-154-10-fact-question";
 
 /** Date(메모리) 또는 YYYY-MM-DD(복원 직후) → YYYY-MM-DD. 무효면 "". */
 function ymd(v: Date | string | undefined): string {
@@ -91,6 +92,9 @@ export function giftBurdenedRentalExceptionError(
 ): string | null {
   if (!giftBurdenedRentalExceptionInScope(bgt)) return null;
   const asset = giftBurdenedRentalAsset(item, bgt);
+  // §154⑩ 사실 질문(Q-3 (a)) — ⑤ 카드(`mode="full"`)가 띄우는 것과 같은 게이트·도출. 증여일이 양도일이다.
+  const phrpAnswerError = phrp154_10AnswerError(asset.rentalHousingException, giftDate);
+  if (phrpAnswerError) return `${label}: ${phrpAnswerError}`;
   return validateRentalHousingException(
     asset.rentalHousingException,
     asset,

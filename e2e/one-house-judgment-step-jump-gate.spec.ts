@@ -18,6 +18,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
 import { selectDirectResidenceInput } from "./_helpers/residence-direct";
+import { answerPhrp154_10NoIfUnanswered } from "./_helpers/judgment-seed";
 
 const HOUSE = {
   id: "h1",
@@ -58,6 +59,7 @@ async function seedRoster(page: Page, acquisitionDate: string) {
 async function fillSaleStep(page: Page) {
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+  await answerPhrp154_10NoIfUnanswered(page);
   await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
   await fillDateAndVerify(page, { year: "2015", month: "03", day: "10" }, {
     scope: page.getByTestId("one-house-acq-date"),
@@ -103,6 +105,7 @@ test.describe("판정 마법사 — 단계 점프 관문", () => {
   test("[SJ-3] ③에 오류가 있어도 ①로 되돌아갈 수 있다", async ({ page }) => {
     await seedRoster(page, "");
     await fillSaleStep(page);
+    await answerPhrp154_10NoIfUnanswered(page);
     await page.getByRole("button", { name: "다음" }).click();
     await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
 

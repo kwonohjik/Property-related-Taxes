@@ -40,6 +40,7 @@ import {
 } from "@/lib/stores/one-house-judgment-form.types";
 import { validateStep2 } from "@/lib/calc/one-house-exemption-validate";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
+import { answeredNo } from "./_helpers/phrp-154-10-answer";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -90,7 +91,7 @@ function formWithBrokenRoster(acquisitionDate = ""): OneHouseJudgmentFormData {
     isOneHousehold: true,
     transferDate: "2026-06-01",
     contractTotalPrice: "1000000000",
-    assets: [{ ...f.assets[0], residenceInputMode: "direct", residencePeriods: [], assetKind: "housing", acquisitionDate: "2015-03-10" }],
+    assets: [{ ...f.assets[0], rentalHousingException: answeredNo(f.assets[0].rentalHousingException), residenceInputMode: "direct", residencePeriods: [], assetKind: "housing", acquisitionDate: "2015-03-10" }],
     houses: [house(acquisitionDate)],
   } as OneHouseJudgmentFormData;
 }

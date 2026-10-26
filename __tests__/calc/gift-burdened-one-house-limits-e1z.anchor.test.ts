@@ -20,6 +20,7 @@ import {
 import { INITIAL_FORM, type FormState } from "@/components/calc/gift-tax-form-shared";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
+import { RH_ANSWERED_NO } from "./_helpers/phrp-154-10-answer";
 
 function landItem(over: Partial<BurdenedGiftTransferTaxInput> = {}, base: Partial<EstateItem> = {}): EstateItem {
   return {
@@ -85,6 +86,7 @@ function aptItem(over: Partial<BurdenedGiftTransferTaxInput> = {}): EstateItem {
       acquisitionDate: new Date("2016-01-10"),
       standardPriceAtAcquisition: 150_000_000,
       isOneHousehold: true,
+      rentalHousingException: RH_ANSWERED_NO,
       householdHousingCount: 1,
       residencePeriodMonths: 0,
       ...over,
