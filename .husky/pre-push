@@ -3,8 +3,8 @@ echo "▶ pre-push gate: 폰트 크기 + 동적 톤 정본 + 다크 짝 + 워크
 scripts/check-font-sizes.sh || exit 1
 scripts/check-tone-classes.sh || exit 1
 node scripts/check-dark-pairs.mjs || exit 1
-# GitHub 호스팅 러너 차단 — self-hosted가 기본이다(schedule 워크플로만 예외).
-# `ubuntu-latest`로 워크플로를 추가하면 그 순간 Actions 분 과금이 재개된다.
+# self-hosted 러너 차단 — `ubuntu-latest`(GitHub 호스팅)가 기본이다(2026-08-04 public 전환으로 방향 반전).
+# public 저장소에서 self-hosted는 fork PR이 개발자 Mac에서 임의 코드를 실행할 수 있다. 근거: 스크립트 상단 주석.
 scripts/check-workflow-runner.sh || exit 1
 npm run typecheck || exit 1
 
@@ -16,7 +16,7 @@ npm run typecheck || exit 1
 #
 # 이걸 여기로 옮기면 CI는 pre-push가 이미 통과시킨 것의 재확인만 남는다 →
 # CI 실패가 드물어지고, CI를 PR 전용으로 줄여도 안전하다(.github/workflows/ci.yml).
-# 경고(warning)는 통과시킨다 — 현행 278건은 사전 존재분이고 errors만 차단한다.
+# 경고(warning)는 통과시킨다 — 현행 경고는 사전 존재분이고 errors만 차단한다.
 npm run lint || exit 1
 
 # 테스트 범위 — 변경 경로 기반 선택 실행 (scripts/select-test-scope.sh).
