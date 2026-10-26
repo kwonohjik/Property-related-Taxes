@@ -24,6 +24,9 @@ import { gbUnifiedSec1639ClearPatch, giftEstimationClearPatch } from "@/lib/calc
 import { gbSeparateOnRestorePatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
 import { gbUnifiedCarryoverClearPatch } from "@/lib/calc/transfer-tax-gb-toggle-patches";
 import { giftEstimatedModeBlocked } from "@/lib/calc/transfer-tax-validate-gift-163-9";
+import { giftEstimationGenericScope } from "@/lib/calc/transfer-tax-validate-gift-163-9";
+import { effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
+import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 import { deriveLandCauseHost } from "./calc-wizard-asset-migrate-land-cause";
 
@@ -690,4 +693,25 @@ function fillMissingFromFactory(a: Record<string, unknown>): void {
     if (FACTORY_FILL_EXCLUDE.has(key)) continue;
     if (a[key] === undefined) a[key] = defaults[key];
   }
+}
+
+/**
+ * 상속(2026-10-26) — 매매에서 남은 산정 방식 플래그·파트 방식·파트 취득가를 복원 때 비운다(화면 전환과 같은 patch `giftEstimationClearPatch`).
+ * 상속 카드에는 그 칸이 없어 감정은 서버 400, 환산·매매사례는 화면에 없는 칸 요구로 막히고, 직접 필요경비·소유자 분리 상속에서는 세액을
+ * 틀리게 만들었다 — 복원 후 세액이 바로잡힌다(계획서 inherit-stale-acq-mode-flags.plan.md §2).
+ *
+ * **폼 단위**다 — 축 B(같은 물건 지분 분할) 둘째 이후 지분 카드는 저장된 `assetKind`가 기본값 «주택»이라(① 기본정보 숨김) 자산 하나만 보면
+ * 일반건물·재개발 지분의 정당한 파트 입력을 지운다(취득가액 리뷰 게이트 재현). 그 카드는 건너뛴다 — 화면 전환 patch는 병합값으로 범위를 본다.
+ * D2(건물 상속 + 토지 매매)도 제외 — 토지 파트 방식·금액이 정당한 입력이다.
+ */
+export function clearInheritedStaleAcqInputs<T extends { assets: AssetForm[]; assetSplitMode?: "companion" | "fractional" }>(form: T): T {
+  const fractional = isFullFractionalBundle(form.assets, form.assetSplitMode);
+  return {
+    ...form,
+    assets: form.assets.map((a, i) => {
+      if (fractional && i > 0) return a;
+      if (a.acquisitionCause !== "inheritance" || !giftEstimationGenericScope(a) || effectiveBuildingCauseMix(a)) return a;
+      return { ...a, ...giftEstimationClearPatch("inheritance", a) };
+    }),
+  };
 }

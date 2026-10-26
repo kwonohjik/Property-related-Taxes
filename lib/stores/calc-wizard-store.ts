@@ -53,6 +53,7 @@ export type { TransferFormData } from "./calc-wizard-form.types";
 import type { TransferFormData } from "./calc-wizard-form.types";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { moveLinkedCountExclusionsToRows } from "@/lib/calc/house-count-exclusion-rows";
+import { clearInheritedStaleAcqInputs } from "./calc-wizard-asset-migrate";
 
 const defaultFormData: TransferFormData = {
   assets: [makeDefaultAsset(1)],
@@ -301,6 +302,9 @@ export function migratePersistedTransferForm(raw: unknown): TransferFormData {
 
   // gracePeriod 구 필드(isLandPermitArea) → 신규 isLandPermitTarget 의미 승계 이전
   formData = { ...formData, gracePeriod: migrateGracePeriod(formData.gracePeriod) };
+
+  // 상속 자산에 매매에서 남은 산정 방식·파트 입력 — 폼 단위(축 B 지분 카드 판정이 폼을 본다)
+  formData = clearInheritedStaleAcqInputs(formData);
 
   // 조특법 주택 수 제외 — 행 id와 함께 저장소에 남은 선언을 그 행 ⑥으로(계획서 Q-5)
   return moveLinkedCountExclusionsToRows(formData);

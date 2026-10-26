@@ -21,7 +21,30 @@ describe("giftEstimationClearPatch", () => {
       isSalesCaseAcquisition: false,
     });
   });
-  it.each(["purchase", "inheritance", "carryover_gift", "newConstruction", undefined])(
+  it("상속도 비운다 (2026-10-26) — 상속 카드에도 그 라디오가 없다. 파트 방식·파트 취득가까지. 상속 쪽 계약은 `transfer.route.inherit-stale-acq-mode-flags`", () => {
+    expect(giftEstimationClearPatch("inheritance")).toEqual({
+      useEstimatedAcquisition: false,
+      isAppraisalAcquisition: false,
+      isSalesCaseAcquisition: false,
+      landAcqMode: "",
+      buildingAcqMode: "",
+      landAcquisitionPrice: "",
+      buildingAcquisitionPrice: "",
+      landSalesCaseValue: "",
+      buildingSalesCaseValue: "",
+    });
+  });
+  it("상속 + D2 토지 매매 흔적 — 토지 파트 값은 남긴다(D2 재활성 시 복원 설계)", () => {
+    expect(giftEstimationClearPatch("inheritance", { landAcquisitionCause: "purchase" })).toEqual({
+      useEstimatedAcquisition: false,
+      isAppraisalAcquisition: false,
+      isSalesCaseAcquisition: false,
+      buildingAcqMode: "",
+      buildingAcquisitionPrice: "",
+      buildingSalesCaseValue: "",
+    });
+  });
+  it.each(["purchase", "carryover_gift", "newConstruction", undefined])(
     "%s — 건드리지 않는다 (추계가 허용되거나 다른 축)",
     (cause) => {
       expect(giftEstimationClearPatch(cause)).toEqual({});
