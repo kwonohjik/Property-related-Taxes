@@ -191,7 +191,7 @@
 - **D-1 엔진**: `translateRedevAptForHousingJudgment`가 토지 출자면 `temporaryTwoHouse.previousAcquisitionDate`를 준공일로 맞춘다(승계조합원 조건에 토지 출자를 더함). 합가 D8 상대 쪽 짝은 그대로다.
 - **D-3**: `houseCountExclusionGeneralDate`(`lib/calc/house-count-exclusion-rows.ts`)가 토지 출자면 준공일 — 엔진 `resolveHceGeneralHouseAcquisitionDate`(`transfer-tax-precalc.ts:287-297`)와 같은 날짜다. 다주택 중과 메뉴 잔여 계획서 Q-3(a)의 보류 갈래가 이로써 맞춰진다.
 - **E-3 선후 확인은 더하지 않았다** — #2491(`acquiredInOrder`, 타이밍 leaf)이 1년 요건 면제 여부와 무관하게 역순을 막는다. API 직접 호출 역순(LC-4)이 과세로 나오는 것으로 확인했다.
-- **범위 밖 — 세대원 건물 출자 통산(#12)을 선언한 토지 출자**: 세대가 그 건물을 이어 보유한 축이라 「토지만 출자」가 아니다. 화면 leaf·엔진 번역 모두 맞추지 않는다(종전 동작 = 본문 취득일). §155① 종전주택 취득일을 건물 취득일로 볼지는 확인 필요(별건).
+- **범위 밖 — 세대원 건물 출자 통산(#12)을 선언한 토지 출자**: 세대가 그 건물을 이어 보유한 축이라 「토지만 출자」가 아니다. 화면 leaf·엔진 번역 모두 맞추지 않는다(종전 동작 = 본문 취득일). §155① 종전주택 취득일을 건물 취득일로 볼지는 확인 필요(별건). → 계획서 `household-building-carryover-temp-two-house.plan.md`(2026-10-26 · 권고 = 세대원 건물 취득일 · Q-B1 사용자 결정 대기).
 - **주택 출자 원조합원(Q-2)**: 그대로(V-2 대기).
 
 ### 11.2 실측 (V-4 — master ece1fe6ff 대비, 비조정 4682025021)
