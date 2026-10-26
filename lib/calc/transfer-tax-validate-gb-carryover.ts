@@ -66,9 +66,9 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
    *    빈 값은 막지 않으므로(증여세 없음) 「당초 증여자」 요구를 가로채지 않는다(`gb-bg-carryover-gift-tax-input.plan.md` §4.2).
    */
   /**
-   * 🔴 부담부증여 경로는 이월과세를 **토지 취득원인 하나**로 판정한다(④ `buildCarryoverPayload` · `burdenedGiftInfo.carryoverDonorBasis` · route 시나리오 A).
-   *    분리 ON에서 한쪽만 이월과세면 건물만 → 이월과세 통째 소실, 토지만 → 건물까지 당초 증여자 값·기산일로 계산된다(실측 66,675,500 · 125,113,200).
-   *    파트별 계산이 생기기 전까지 막는다 — 분리 OFF는 원인이 하나라 대상이 아니다(`gb-bg-part-carryover-mismatch.plan.md` §4.2, ⑫ 짝 `refineGbBgBuildingOnlyCarryover`).
+   * 🔴 ④는 부담부증여 이월과세를 아직 **토지 취득원인 하나**로 싣는다(`buildCarryoverPayload` · `burdenedGiftInfo.carryoverDonorBasis` — `parts` 미전송).
+   *    서버는 `carryoverDonorBasis.parts`가 오면 증여받은 파트만 계산한다(`gb-bg-part-carryover-calc.plan.md` PR-1, ⑫ `refineGbBgCarryoverParts`).
+   *    ④가 `parts`를 싣기 전(PR-2)까지는 화면에서 막는다 — 분리 OFF는 원인이 하나라 대상이 아니다(`gb-bg-part-carryover-mismatch.plan.md` §4.2).
    */
   if (asset.transferType === "burdened_gift" && asset.hasSeperateLandAcquisitionDate && landIsCarryover !== buildingIsCarryover)
     return fieldError("gbBuildingAcquisitionCause", `${label}: 부담부증여에서 토지와 건물 중 한쪽만 이월과세(증여)인 경우는 아직 계산하지 못합니다 — 「소득세법」 제97조의2 제1항은 증여받은 자산(토지 또는 건물)마다 적용되는데, 부담부증여 계산은 토지·건물을 함께 이월과세로 봅니다. 토지와 건물을 모두 배우자·직계존비속에게서 증여받았다면 둘 다 "이월과세(증여)"로 선택하세요.`);

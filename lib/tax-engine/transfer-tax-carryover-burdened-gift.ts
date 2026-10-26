@@ -38,29 +38,33 @@ function describeRequiredDonorFields(info: BurdenedGiftInfo): {
   satisfied: (d: NonNullable<BurdenedGiftInfo["carryoverDonorBasis"]>) => boolean;
   hint: string;
 } {
+  // 한 파트만 증여받았으면 그 파트의 칸만 요구한다(§97의2① 「해당 자산」) — 총액 칸은 위 게이트가 이미 막았다.
+  const parts = carryoverPartsOf(info);
+  const partLabel = parts.land && parts.building ? "토지·건물" : parts.land ? "토지" : "건물";
+  const both = (land: number | undefined, building: number | undefined) =>
+    (!parts.land || land !== undefined) && (!parts.building || building !== undefined);
   if (info.valuationMode === "sangjeungbeop_standard") {
     return {
       mode: "기준시가(K-1~K-3)",
-      satisfied: (d) =>
-        d.landStdPriceAtAcquisition !== undefined && d.buildingStdPriceAtAcquisition !== undefined,
-      hint: "당초 증여자 취득 당시의 토지·건물 기준시가",
+      satisfied: (d) => both(d.landStdPriceAtAcquisition, d.buildingStdPriceAtAcquisition),
+      hint: `당초 증여자 취득 당시의 ${partLabel} 기준시가`,
     };
   }
   if (info.acquisitionMethod === "actual") {
     return {
       mode: "실지취득가액(K-4)",
       satisfied: (d) =>
-        (d.actualLandAcquisitionPrice !== undefined && d.actualBuildingAcquisitionPrice !== undefined) ||
-        d.actualAcquisitionTotal !== undefined,
-      hint: "당초 증여자의 실지취득가액(토지·건물 분리 또는 단일 총액)",
+        both(d.actualLandAcquisitionPrice, d.actualBuildingAcquisitionPrice) || d.actualAcquisitionTotal !== undefined,
+      hint: isPartialCarryover(info)
+        ? `당초 증여자의 ${partLabel} 실지취득가액`
+        : "당초 증여자의 실지취득가액(토지·건물 분리 또는 단일 총액)",
     };
   }
   if (info.acquisitionMethod === "converted") {
     return {
       mode: "환산취득가액(K-5)",
-      satisfied: (d) =>
-        d.landStdPriceAtAcquisition !== undefined && d.buildingStdPriceAtAcquisition !== undefined,
-      hint: "당초 증여자 취득 당시의 토지·건물 기준시가 (환산 분자로 자동 사용)",
+      satisfied: (d) => both(d.landStdPriceAtAcquisition, d.buildingStdPriceAtAcquisition),
+      hint: `당초 증여자 취득 당시의 ${partLabel} 기준시가 (환산 분자로 자동 사용)`,
     };
   }
   return {
@@ -107,6 +111,8 @@ export function assertCarryoverDonorBasis(
         "증여재산 평가 모드를 시가 + 취득가액 산정방식 「환산」(K-5)으로 선택하세요.",
     );
   }
+
+  if (isPartialCarryover(info)) assertPartialCarryoverSupported(info);
 
   /**
    * 매매사례가액·감정가액(K-6/K-7) × 이월과세 — 소법 §97의2①1호가 당초 증여자 **취득 당시**의 §97①1호 금액(나목 포함)을 쓰게 한다.
@@ -197,6 +203,27 @@ export function applyCarryoverDonorBasis(
   giftTaxAmount: number,
 ): BurdenedGiftInfo {
   const d = info.carryoverDonorBasis ?? {};
+  if (isPartialCarryover(info)) {
+    /**
+     * 한 파트만 증여받았다 — 그 파트 칸만 당초 증여자 값으로 바꾸고 다른 파트는 양도인 값 그대로 둔다(§97의2①1호 「해당 자산」).
+     * 총액 칸·K-6/K-7은 `assertPartialCarryoverSupported`가 먼저 막는다 — 여기 닿는 것은 기준시가·실지 분리 칸뿐이다.
+     */
+    const land = carryoverPartsOf(info).land;
+    return {
+      ...info,
+      ...(land
+        ? {
+            landStdPriceAtAcquisition: d.landStdPriceAtAcquisition ?? info.landStdPriceAtAcquisition,
+            actualLandAcquisitionPrice: d.actualLandAcquisitionPrice ?? info.actualLandAcquisitionPrice,
+          }
+        : {
+            buildingStdPriceAtAcquisition: d.buildingStdPriceAtAcquisition ?? info.buildingStdPriceAtAcquisition,
+            actualBuildingAcquisitionPrice: d.actualBuildingAcquisitionPrice ?? info.actualBuildingAcquisitionPrice,
+          }),
+      carryoverGiftTaxAmount: giftTaxAmount > 0 ? giftTaxAmount : undefined,
+      carryoverGiftTaxPart: land ? "land" : "building",
+    };
+  }
   return {
     ...info,
     landStdPriceAtAcquisition: d.landStdPriceAtAcquisition ?? info.landStdPriceAtAcquisition,
@@ -254,4 +281,50 @@ export function toTransferorBasisInfo(info: BurdenedGiftInfo): BurdenedGiftInfo 
     presumedBuildingAcquisitionPrice: undefined,
     presumedAcquisitionTotal: undefined,
   };
+}
+
+/** 증여받은 파트 — `carryoverDonorBasis.parts` 미지정이면 토지·건물 **둘 다**(종전 본문·분리 OFF · 계획서 `gb-bg-part-carryover-calc.plan.md` Q-1 a). */
+export function carryoverPartsOf(info: BurdenedGiftInfo | undefined): { land: boolean; building: boolean } {
+  return info?.carryoverDonorBasis?.parts ?? { land: true, building: true };
+}
+
+/** 토지·건물 중 **한 파트만** 증여받았는가. */
+export function isPartialCarryover(info: BurdenedGiftInfo | undefined): boolean {
+  const p = carryoverPartsOf(info);
+  return p.land !== p.building;
+}
+
+/**
+ * 한 파트만 이월과세일 때 계산할 수 없는 입력 — fail-fast(계획서 Q-3 a · Q-4 a).
+ * · 총액 칸(양도인·당초 증여자 실지 총액 · 매매사례·감정 총액 · 시가): 취득시 기준시가로 나누면 증여받지 않은 파트에 당초 증여자 금액이 섞인다.
+ * · K-6/K-7: `acquisitionMethod`가 당초 증여자 쪽 방식이라, 증여받지 않은 파트는 양도인 자기 방식이어야 한다 — 한 신고 안에서 파트마다 방식이 갈린다.
+ */
+function assertPartialCarryoverSupported(info: BurdenedGiftInfo): void {
+  const fail = (why: string) => {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      `[burdened_gift] 토지·건물 중 한 파트만 이월과세(소득세법 제97조의2 제1항)인 일반건물은 ${why}`,
+    );
+  };
+  if (isPresumedCarryover(info))
+    fail("취득가액 산정방식이 매매사례가액·감정가액이면 아직 계산하지 못합니다 — 증여받은 파트는 당초 증여자의 방식, 다른 파트는 양도인의 방식이라 한 신고 안에서 산정방식이 갈립니다.");
+  const d = info.carryoverDonorBasis ?? {};
+  if (
+    d.actualAcquisitionTotal !== undefined || d.presumedAcquisitionTotal !== undefined || d.marketValueAtAcquisition !== undefined ||
+    (info.acquisitionMethod === "actual" && info.actualAcquisitionTotal !== undefined)
+  )
+    fail("실지취득가액을 토지·건물로 나누어 입력해야 합니다 — 총액은 증여받은 파트와 다른 파트를 가를 수 없습니다.");
+}
+
+/**
+ * 시나리오 A의 파트별 보유기간 기산일 — 「소득세법」 제95조 제4항 단서(「증여한 배우자 또는 직계존비속이 **해당 자산을** 취득한 날부터」).
+ * 증여받은 파트만 당초 증여자 취득일로 옮기고, 다른 파트는 시나리오 B와 같은 날이다. 단건·지분·묶음 세 경로가 이 함수 하나를 쓴다.
+ */
+export function carryoverHoldingStartsA(
+  info: BurdenedGiftInfo | undefined,
+  donorAcquisitionDate: Date,
+  own: { land: Date; building: Date },
+): { land: Date; building: Date } {
+  const p = carryoverPartsOf(info);
+  return { land: p.land ? donorAcquisitionDate : own.land, building: p.building ? donorAcquisitionDate : own.building };
 }

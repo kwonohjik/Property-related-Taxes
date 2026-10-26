@@ -14,7 +14,7 @@ import { successorAptMaxResidenceMonths } from "@/lib/tax-engine/redevelopment-l
 import { toDate } from "./date-coerce";
 import { refineBgDonorBuilt } from "./transfer-tax-schema-donor-built";
 import { refineGbBgCarryoverBundled } from "./transfer-tax-schema-donor-built";
-import { refineGbBgBuildingOnlyCarryover } from "./transfer-tax-schema-donor-built";
+import { refineGbBgCarryoverParts } from "./transfer-tax-schema-donor-built";
 import { refineCarryoverTaxation } from "./transfer-tax-schema-companion-refines";
 import { refineMixedUsePresence } from "./transfer-tax-schema-mixed-use";
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
@@ -416,7 +416,7 @@ export function refinePropertyRequiredInputs(
   refineBurdenedGiftInputs(data, ctx);
   refineBgDonorBuilt(data as Parameters<typeof refineBgDonorBuilt>[0], ctx); // 부담부증여 × 증여자 신축·증축 (PR-4)
   refineGbBgCarryoverBundled(data as Parameters<typeof refineGbBgCarryoverBundled>[0], ctx); // 일반건물 부담부증여 × 이월과세 × 묶음 (F27 B PR-3)
-  refineGbBgBuildingOnlyCarryover(data as Parameters<typeof refineGbBgBuildingOnlyCarryover>[0], ctx); // 일반건물 부담부증여 × 건물만 이월과세 (gb-bg-part-carryover-mismatch)
+  refineGbBgCarryoverParts(data as Parameters<typeof refineGbBgCarryoverParts>[0], ctx); // 일반건물 부담부증여 × 이월과세 파트 정합 (gb-bg-part-carryover-calc)
   refinePrimaryAcquisitionInputs(data, ctx);
   refineMixedUsePresence(data, ctx); // MU-7 (2차 점검)
   refineHouseholdRequiredInputs(data, ctx); // O3·O4·H-3·유예 나목·M2 (2차 점검)

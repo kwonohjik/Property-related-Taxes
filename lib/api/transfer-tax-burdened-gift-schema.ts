@@ -79,6 +79,8 @@ export const burdenedGiftInfoSchema = z.object({
       presumedAcquisitionTotal: z.number().int().nonnegative().optional(),
       /** 당초 증여자가 신축·증축한 건물(§114조의2 가산세, PR-4) — K-5·K-7 + 이월과세 A 채택일 때만 가산세. 양도인 본인 신축(`isSelfBuilt`)과 다른 축이다 */
       donorBuilt: bgDonorBuiltShape.optional(),
+      /** 일반건물 — 증여받은 파트(§97의2① 「해당 자산」). 미지정 = 둘 다. 원인 칸과의 정합은 `refineGbBgCarryoverParts` */
+      parts: z.object({ land: z.boolean(), building: z.boolean() }).strict().optional(),
     })
     .optional(),
   /**

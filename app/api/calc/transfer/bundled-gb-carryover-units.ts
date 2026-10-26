@@ -84,7 +84,7 @@ export function attachGbCarryoverUnits(
       determinedTaxB: o.filingUnitComparison.determinedTaxWithout,
       donorAcquisitionDate: d.donorAcquisitionDate,
       giftTaxAmount: d.giftTaxAmount,
-      scenarioA: summaryOf(runA, unit, d.donorAcquisitionDate, d.donorAcquisitionDate),
+      scenarioA: summaryOf(runA, unit, d.holdingStartA.land, d.holdingStartA.building),
       scenarioB: summaryOf(runB, unit, d.holdingStartB.land, d.holdingStartB.building),
     };
     if (adoptedA && detailsByAsset && d.detailA) detailsByAsset[d.assetId] = d.detailA;

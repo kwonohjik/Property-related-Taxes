@@ -142,4 +142,4 @@ if (asset.transferType === "burdened_gift" && asset.hasSeperateLandAcquisitionDa
   - 뮤테이션 10/10 KILLED — ⑧ 세 항·앵커 4 · ⑫ 단건·지분·묶음·부담부증여 항·토지 원인 비교 5 · E2E ⑧ 제거 1. 토지 원인 비교(M9)는 「분리 ON 둘 다 이월과세는 거부하지 않는다」 단언을 더해 잡았다.
   - `npm run test:transfer` 1,470파일 통과 · `tsc` 0건.
 - **CI 후속(같은 PR)**: 첫 CI에서 E2E CB-2가 실패했다. 로컬에서 관련 spec 8개를 돌리니 20건이 실패했다. 원인은 모두 같다 — 기존 일반건물 부담부증여 E2E 시드가 「분리 OFF + 토지 이월과세 + 건물 `purchase`(CB는 `gift`)」였고, 복원 M-2b가 분리를 켜 「토지만 이월과세」가 됐다(V-6). 화면은 분리 OFF에서 건물 원인을 토지 원인에 맞추므로(`GeneralBuildingAcquisitionCards.tsx:259`) 시드를 `carryover_gift`로 고쳤다(6파일). 세액 단언은 그대로 통과한다(부담부증여는 건물 원인을 읽지 않는다). GBBD-E5(토지 이월과세 + 건물 본인 신축을 계산시키던 시나리오)는 이 결함 상태 자체라 「건물 취득원인에서 막히고 stale 토글은 요구하지 않는다」로 바꿨다. 정정 후 관련 E2E 74건 통과. vitest 픽스처는 복원을 거치지 않아(분리 OFF 그대로) 영향이 없다.
-- **남은 것**: §4.3 파트별 계산(후속 계획서) · V-1·V-3·V-5.
+- **남은 것**: §4.3 파트별 계산 → 후속 계획서 [`gb-bg-part-carryover-calc.plan.md`](gb-bg-part-carryover-calc.plan.md)(2026-10-26 — 시제품 실측 · V-5는 그쪽 §1·§8로 이관) · V-1·V-3.

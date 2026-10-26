@@ -10,6 +10,8 @@ import { judgeCarryoverEligibility } from "@/lib/tax-engine/transfer-tax-carryov
 import {
   assertCarryoverDonorBasis,
   applyCarryoverDonorBasis,
+  carryoverHoldingStartsA,
+  carryoverPartsOf,
   toTransferorBasisInfo,
 } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 import { donorBuiltNotAppliedEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-penalty";
@@ -154,11 +156,20 @@ export function calculateGeneralBuildingActualTransfer(
    * (⑧이 앞에서 알려주므로 정상 경로에서는 여기 닿지 않는다.)
    */
   assertCarryoverDonorBasis(info, ct);
+  // 당초 증여자 신축·증축은 건물을 증여받았을 때만 성립한다 — 토지만 증여받았으면 건물은 양도인 것이다(⑫ `refineBgDonorBuilt`의 직접 호출 방어선).
+  if (donorBuilt && !carryoverPartsOf(info).building)
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "당초 증여자 신축·증축 가산세(소득세법 §114조의2)는 건물을 증여받았을 때만 보낼 수 있습니다 — 토지만 이월과세입니다.",
+      { field: "burdenedGiftInfo.carryoverDonorBasis.donorBuilt" },
+    );
   if (donorBuilt) assertGbBgDonorBuiltInput(info, ct, donorBuilt, payload.buildingAcquisitionCause === "newConstruction", payload.transferDate);
 
   // B = 양도인(증여받은 사람) 기준 — K-6/K-7은 증여일 평가액(`actual*`)을 실지거래가액으로 읽는다(소령 §163⑨). 단건 `buildInputB`와 같은 leaf.
   // 종전에는 `info`를 그대로 넘겨 당초 증여자 방식(감정·매매사례)의 양도인 칸을 찾다가 400이었다(계획서 `gb-bg-carryover-presumed-scenario-b.plan.md`).
   const resultB = run({ ...payload, burdenedGiftInfo: toTransferorBasisInfo(info) });
+  const startB = { land: payload.landAcquisitionDate ?? payload.acquisitionDate, building: payload.buildingAcquisitionDate ?? payload.acquisitionDate };
+  const startA = carryoverHoldingStartsA(info, ct.donorAcquisitionDate, startB);
   const resultA = run({
     ...payload,
     // 당초 증여자 신축·증축 신호는 **A 호출에만** 싣는다(R2) — B 는 수증자 기준(증여 당시 평가액)이라 가산세 대상이 아니다. 카드 조립이 이 필드만 읽는다.
@@ -166,13 +177,13 @@ export function calculateGeneralBuildingActualTransfer(
     // ①1호 취득가액 치환 + ①3호 증여세 상당액 — §159 안분 단계가 소비한다.
     burdenedGiftInfo: applyCarryoverDonorBasis(info, ct.giftTaxAmount),
     /**
-     * §95④ 단서 — 보유기간을 **당초 증여자가 취득한 날**부터 기산한다.
-     * 세 축을 모두 옮겨야 한다: 자산 단위(`acquisitionDate`)와 파트별 두 축이 각각
-     * 카드의 보유기간·LTHD·§104② 단기 판정을 만든다.
+     * §95④ 단서 — 보유기간을 **당초 증여자가 해당 자산을 취득한 날**부터 기산한다.
+     * 증여받은 파트 축만 옮긴다(`carryoverHoldingStartsA`). 자산 단위 `acquisitionDate`는 M-1a 이후 건물 축이라 건물 기산일을 따른다 —
+     * 세 축이 각각 카드의 보유기간·LTHD·§104② 단기 판정을 만든다.
      */
-    acquisitionDate: ct.donorAcquisitionDate,
-    landAcquisitionDate: ct.donorAcquisitionDate,
-    buildingAcquisitionDate: ct.donorAcquisitionDate,
+    acquisitionDate: startA.building,
+    landAcquisitionDate: startA.land,
+    buildingAcquisitionDate: startA.building,
   });
 
   // §97의2②3호 — A가 B보다 **적으면** ①을 적용하지 않는다.
@@ -188,12 +199,8 @@ export function calculateGeneralBuildingActualTransfer(
     determinedTaxB: resultB.aggregated.determinedTax,
     donorAcquisitionDate: ct.donorAcquisitionDate,
     giftTaxAmount: ct.giftTaxAmount,
-    scenarioA: scenarioSummary(resultA, ct.donorAcquisitionDate, ct.donorAcquisitionDate),
-    scenarioB: scenarioSummary(
-      resultB,
-      payload.landAcquisitionDate ?? payload.acquisitionDate,
-      payload.buildingAcquisitionDate ?? payload.acquisitionDate,
-    ),
+    scenarioA: scenarioSummary(resultA, startA.land, startA.building),
+    scenarioB: scenarioSummary(resultB, startB.land, startB.building),
   };
   if (donorBuilt)
     attachDonorBuiltEcho(chosen, adopted === "B" ? donorBuiltNotAppliedEcho(donorBuilt, "scenario_b") : donorBuiltAppliedEcho(donorBuilt, resultA, payload.transferDate, info.acquisitionMethod === "appraisal" ? "appraisal" : "estimated"));

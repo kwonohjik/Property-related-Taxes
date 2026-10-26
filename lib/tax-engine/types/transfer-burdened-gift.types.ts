@@ -291,6 +291,11 @@ export interface BurdenedGiftInfo {
    *    도달하지 않고(계획서 §5.7.4), ②§97②2호 단서(swap)의 나목에 섞여 판정을 오염시킨다.
    */
   carryoverGiftTaxAmount?: number;
+  /**
+   * ⚠️ 엔진 내부 전달용 — `carryoverGiftTaxAmount`가 **한 파트에만** 대응할 때 그 파트(`applyCarryoverDonorBasis`가 싣는다).
+   * 영 §163의2②는 상당액과 한도를 「해당 자산」 단위로 정한다 — 미지정이면 종전대로 두 파트 합계 한도·양도가액 비율 배분.
+   */
+  carryoverGiftTaxPart?: "land" | "building";
 
   /**
    * 이 입력을 보내는 화면에 **세대 보유 주택 목록 입력 칸이 없다**는 표식 (1h-G1-12 · 결정 #27).
@@ -363,6 +368,11 @@ export interface BurdenedGiftCarryoverDonorBasis {
    * 이월과세 A 채택일 때만 가산세가 붙고(R2), base 는 채무비율 안분 후 건물분이다(기존 본인 신축 K-5/K-7 과 같은 규칙).
    */
   donorBuilt?: import("./transfer-carryover.types").DonorBuiltInput;
+  /**
+   * 일반건물 — **어느 파트를 증여받았는가**(소득세법 §97의2① 「해당 자산」 · 계획서 `gb-bg-part-carryover-calc.plan.md` Q-1 a).
+   * 미지정이면 토지·건물 **둘 다**다(종전 본문·분리 OFF). 한 파트만이면 시나리오 A가 그 파트의 취득가액·기산일·증여세 상당액만 당초 증여자 기준으로 바꾼다.
+   */
+  parts?: { land: boolean; building: boolean };
 }
 
 /**

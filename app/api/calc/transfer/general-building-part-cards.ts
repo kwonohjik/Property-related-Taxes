@@ -41,6 +41,7 @@ import { judgeCarryoverEligibility } from "@/lib/tax-engine/transfer-tax-carryov
 import {
   assertCarryoverDonorBasis,
   applyCarryoverDonorBasis,
+  carryoverHoldingStartsA,
   toTransferorBasisInfo,
 } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 
@@ -381,7 +382,8 @@ export function buildGbCompanionItems(
   // B = 양도인(증여받은 사람) 기준 — K-6/K-7은 증여일 평가액(`actual*`)을 실지거래가액으로 읽는다(소령 §163⑨).
   const b = scenario(toTransferorBasisInfo(info), bldAcqDate, landAcqDate, false);
   // A = ①1호 취득가액 치환 + ①3호 증여세 상당액(§159 안분 단계가 소비) · §95④ 단서 — 토지·건물 카드 보유기간을 당초 증여자 취득일부터.
-  const a = scenario(applyCarryoverDonorBasis(info, ct.giftTaxAmount), ct.donorAcquisitionDate, ct.donorAcquisitionDate, true);
+  const startA = carryoverHoldingStartsA(info, ct.donorAcquisitionDate, { land: landAcqDate, building: bldAcqDate });
+  const a = scenario(applyCarryoverDonorBasis(info, ct.giftTaxAmount), startA.building, startA.land, true);
   onDetail?.(src.assetId, b.detail);
   onCarryoverUnit({
     assetId: src.assetId,
@@ -392,6 +394,7 @@ export function buildGbCompanionItems(
     applicablePeriodYears: eligibility.applicablePeriodYears,
     donorAcquisitionDate: ct.donorAcquisitionDate,
     giftTaxAmount: ct.giftTaxAmount,
+    holdingStartA: startA,
     holdingStartB: { land: landAcqDate, building: bldAcqDate },
   });
   return b.items;
@@ -414,6 +417,8 @@ export interface GbBgCarryoverUnitDraft {
   applicablePeriodYears: 5 | 10;
   donorAcquisitionDate: Date;
   giftTaxAmount: number;
+  /** A 카드의 보유기간 기산일 — 증여받은 파트만 당초 증여자 취득일(§95④ 단서 · `carryoverHoldingStartsA`). */
+  holdingStartA: { land: Date; building: Date };
   /** B 카드의 보유기간 기산일 — 증여받은 날(토지·건물 각각). */
   holdingStartB: { land: Date; building: Date };
 }
