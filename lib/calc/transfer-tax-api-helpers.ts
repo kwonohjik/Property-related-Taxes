@@ -18,7 +18,7 @@ import { soleSplitRightJudgmentFacts } from "./sole-split-right-judgment-facts";
 import { meetsSurchargeSuspensionHolding } from "@/lib/tax-engine/tax-utils";
 import {
   isWithinSurchargeSuspensionWindow,
-  TEMP_TWO_HOUSE_PROVISO_REASONS,
+  TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS,
 } from "@/lib/tax-engine/legal-codes/transfer";
 
 /**
@@ -75,14 +75,14 @@ export function provisoGate(args: {
 }
 
 /**
- * §154① 단서 reason 정규화 — temporary_two_house 모드에서 화이트리스트(1·2가·3호) 밖 reason은 "" 로 취급.
+ * §154① 단서 reason 정규화 — temporary_two_house 모드에서 받는 사유(1·2가·3호 + 5호 — `TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS`) 밖 reason은 "" 로 취급.
  * UI 선택표시·API 조립·validation 3곳이 단일 소비 → 옵션 필터로 숨긴 stale 무효 reason이 엔진/검증에 도달하지 않음.
- * (1주택 모드서 나·다목·5호 선택 후 일시적 2주택 전환 시 데드락 방지 — 파생이라 clear-onChange 불필요.)
+ * (1주택 모드서 나·다목·삭제 전 4호 선택 후 일시적 2주택 전환 시 데드락 방지 — 파생이라 clear-onChange 불필요.)
  */
 export function effectiveProvisoReason(mode: ProvisoMode, reason: string | undefined | null): string {
   if (!reason) return "";
   if (mode === null) return ""; // 카드 숨김(순수 다주택·3주택+·비주택·비1세대) — stale reason 미전송·검증 skip(데드락 방지)
-  if (mode === "temporary_two_house" && !TEMP_TWO_HOUSE_PROVISO_REASONS.has(reason)) return "";
+  if (mode === "temporary_two_house" && !TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS.has(reason)) return "";
   return reason;
 }
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존

@@ -15,6 +15,7 @@ import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./f
 import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
 import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption";
 import { provisoGate, effectiveProvisoReason, buildSameHouseholdInheritancePayload } from "./transfer-tax-api-helpers";
+import { unconfirmedTempTwoHouseProviso5 } from "./exemption-proviso-payload";
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
@@ -56,27 +57,29 @@ export function buildResidenceReqInput(
    *     실제 계산은 그 사유를 **버린 채** 거주 2년을 요구한다. 사용자는 경고 없이 계산 후
    *     비과세 탈락 결과를 본다.
    */
-  const effectiveReason = effectiveProvisoReason(
-    provisoGate({
-      isOneHousehold: form.isOneHousehold,
-      // OH-20 — 재개발 완공APT도 §154① 단서 대상(⑤ Step4 · ⑧과 같은 술어).
-        isHousing: isOneHouseExemptionAsset(primary?.assetKind),
-      // §154① 단서는 제외 **후** 주택 수로 본다 — ④·⑤·⑧과 같은 leaf(S03-4).
-      householdHousingCount: resolveExemptionHousingCount(form),
-      temporaryTwoHouseApplies: temporaryTwoHouseApplies({
-        primaryKind: form.assets?.[0]?.assetKind,
-        primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
-        houses: form.houses,
-        transferDate: form.transferDate,
-        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
-        declaredSpecial: form.temporaryTwoHouseSpecial === true,
-        declaredNewHouseDate: form.newHouseAcquisitionDate,
-        mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
-        excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
-        rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
-      }),
-    }).mode,
-    form.provisoReason,
+  const provisoMode = provisoGate({
+    isOneHousehold: form.isOneHousehold,
+    // OH-20 — 재개발 완공APT도 §154① 단서 대상(⑤ Step4 · ⑧과 같은 술어).
+      isHousing: isOneHouseExemptionAsset(primary?.assetKind),
+    // §154① 단서는 제외 **후** 주택 수로 본다 — ④·⑤·⑧과 같은 leaf(S03-4).
+    householdHousingCount: resolveExemptionHousingCount(form),
+    temporaryTwoHouseApplies: temporaryTwoHouseApplies({
+      primaryKind: form.assets?.[0]?.assetKind,
+      primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
+      houses: form.houses,
+      transferDate: form.transferDate,
+      legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
+      declaredSpecial: form.temporaryTwoHouseSpecial === true,
+      declaredNewHouseDate: form.newHouseAcquisitionDate,
+      mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
+      excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
+      rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
+    }),
+  }).mode;
+  const provisoCandidate = effectiveProvisoReason(provisoMode, form.provisoReason);
+  // F-2 — ④가 버리는 무주택 미확인 5호(일시적 2주택 맥락)는 여기서도 버린다 — 안내와 계산이 같은 사유를 본다.
+  const effectiveReason = (
+    unconfirmedTempTwoHouseProviso5(provisoMode, provisoCandidate, form.provisoPreContractNoHouse) ? "" : provisoCandidate
   ) as NonNullable<ResidenceReqInput["oneHouseExemptionProviso"]>["reason"] | "";
   // §154⑧3호 동일세대 상속 사실 — ④(`transfer-tax-api.ts`)·판정 메뉴 ④와 **같은 leaf**다(OH-18).
   // 보유 개시일(`decedentCohabitationHoldingStartDate`)까지 같이 싣는다 — 빠지면 거주요건의 「취득 당시」·보유 기산일이
