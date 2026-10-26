@@ -36,6 +36,7 @@ import { resolveHouseCountExclusionDate } from "@/lib/tax-engine/one-house/gift-
 import { calcGiftHouseholdBasis } from "./effective-regulated-at-acquisition";
 import { GIFT_HOUSEHOLD_SCOPE_PRIMARY } from "./effective-regulated-at-acquisition";
 import { landContributedOriginalApt } from "./redev-field-scope";
+import { householdBuildingCarryoverApplied } from "./redev-field-scope";
 
 /** 명부 행 ⑥이 받는 §99의4·§98의9 유형 — 계산기 ③ 감면 패널에서는 뺀다(Q-3). */
 export const ROW_COUNT_EXCLUSION_TYPES: ReadonlySet<string> = new Set([
@@ -179,7 +180,13 @@ function linkedDeclarations(form: FormLike) {
  * `land-contributed-apt-temp-two-house.plan.md` §11) 이 갈래를 따른다(같은 계획서 Q-3 해소).
  */
 function houseCountExclusionGeneralDate(primary: AssetForm | undefined): Date | undefined {
-  if (primary && landContributedOriginalApt(primary) && primary.redevCompletionDate) return toOptionalDate(primary.redevCompletionDate);
+  if (primary && landContributedOriginalApt(primary) && primary.redevCompletionDate) {
+    // 세대원 건물 출자 통산이면 그 건물 취득일 — 엔진과 같은 날짜(Q-B2 · `household-building-carryover-temp-two-house.plan.md`).
+    if (householdBuildingCarryoverApplied(primary) && primary.redevHouseholdBuildingAcquisitionDate) {
+      return toOptionalDate(primary.redevHouseholdBuildingAcquisitionDate);
+    }
+    return toOptionalDate(primary.redevCompletionDate);
+  }
   const acquisition = toOptionalDate(primary?.acquisitionDate);
   if (!primary || !acquisition) return undefined;
   return resolveHouseCountExclusionDate(

@@ -19,7 +19,8 @@
  *      준공일 — 서면-2022-부동산-0565(승계 입주권으로 취득한 주택의 취득시기 = 사용승인서 교부일) · 토지 출자는 영 §162①4호
  *      문언(사용자 결정 2026-10-25 F-1 Q-3 — 정면 해석례 없이 진행). 계산기 ④는 같은 날짜를 `sellingHousePreviousDateOverride`로
  *      싣는다. API를 직접 불러 입주권 승계일·토지 취득일을 보내도 같은 결론이 나게 여기서도 맞춘다. 세대원 건물 출자 통산(#12)을
- *      선언한 토지 출자는 세대가 건물을 이어 보유한 축이라 맞추지 않는다(확인 필요 — 계획서 §11). 주택을 출자한 원조합원도
+ *      선언한 토지 출자는 **세대원 건물 취득일** — 세대가 그 주택을 가진 날이고 #12 보유 기산일과 같다(사용자 결정 2026-10-26
+ *      Q-B1 — `household-building-carryover-temp-two-house.plan.md` · 정면 해석례 없음, 확인 필요). 주택을 출자한 원조합원도
  *      맞추지 않는다 — 재건축주택은 기존주택의 연장이라 멸실 전 주택 취득일이 종전주택 취득일이다(부동산납세과-777 · F-1 Q-2).
  *
  * 🔴 종전에는 이 번역이 비과세 판정(`judgeRedevAptOneHouseExemption`)에만 있었다. 중과 STEP 0.5의 ① 요소
@@ -108,16 +109,25 @@ export function translateRedevAptForHousingJudgment<T extends TransferTaxInput>(
   const redev = input.redevelopment!;
   const landContributed = isLandContributedOriginalApt(input);
   const carryover = landContributed ? householdBuildingCarryover(redev) : undefined;
+  // ⑤ §155① 종전주택 취득일 — 승계조합원·토지 출자 = 준공일, 세대원 건물 통산(#12) = 그 건물 취득일. 통산을 선언했는데
+  //   helper가 값을 주지 않으면(건물 취득일 > 인가일 · 준공일 없음) 대체하지 않는다.
+  const previousHouseDate =
+    redev.isSuccessorMember === true
+      ? redev.completionDate
+      : landContributed
+        ? carryover
+          ? carryover.holdingStart
+          : redev.householdBuilding
+            ? undefined
+            : redev.completionDate
+        : undefined;
   return {
     ...input,
     propertyType: "housing",
     acquisitionDate: redevAptJudgmentAcquisitionDate(input),
     // ⑤ — 종전 주택이 양도 주택일 때만(합가 D8 상대 쪽 짝이면 `previousHouseIsRosterRow` — 명부 행의 취득일이라 그대로 둔다).
-    ...((redev.isSuccessorMember === true || (landContributed && !redev.householdBuilding)) &&
-    redev.completionDate &&
-    input.temporaryTwoHouse &&
-    input.temporaryTwoHouse.previousHouseIsRosterRow !== true
-      ? { temporaryTwoHouse: { ...input.temporaryTwoHouse, previousAcquisitionDate: redev.completionDate } }
+    ...(previousHouseDate && input.temporaryTwoHouse && input.temporaryTwoHouse.previousHouseIsRosterRow !== true
+      ? { temporaryTwoHouse: { ...input.temporaryTwoHouse, previousAcquisitionDate: previousHouseDate } }
       : {}),
     // §156의2⑥ 신축주택 갈래 — 이 신축주택이 된 입주권의 취득일(승계조합원 = 입주권 승계일 · 토지 출자 = 인가일).
     ...(redevNewBuildRightAcquisitionDate(input) ? { newBuildRightAcquisitionDate: redevNewBuildRightAcquisitionDate(input) } : {}),

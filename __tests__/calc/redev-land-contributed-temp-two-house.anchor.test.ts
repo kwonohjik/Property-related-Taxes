@@ -12,7 +12,7 @@
  * | LC-3 | 사용승인 후 1년 뒤(2022-03-01) — 비과세 유지(음성 짝) · 유성(사용승인일에 조정)도 거주요건은 인가일 기준이라 같다 |
  * | LC-4 | API 직접 호출이 토지 취득일을 보내도 엔진이 사용승인일로 판정 — 1년 안·역순 모두 과세 |
  * | LC-5 | 이관 — 주택 출자 원조합원은 `redev-house-contributed-temp-two-house.anchor.test.ts` HC-1~6(F-1 Q-2 (a) 2026-10-26) |
- * | LC-6 | 세대원 건물 출자 통산(#12)을 선언하면 그대로 — 세대가 건물을 이어 보유한 축(확인 필요) |
+ * | LC-6 | 이관 — 세대원 건물 출자 통산(#12)은 `redev-household-building-carryover-temp-two-house.anchor.test.ts` HB-1~8(Q-B1 (b) 2026-10-26) |
  * | LC-7 | 주택 수 제외 화면 leaf(`eligibleCountExcludedHouseIds`) — 일반주택 취득일이 엔진과 같은 사용승인일 · 세액은 일시적 2주택 경로로 바뀌지 않는다 |
  * | LC-8 | 화면 leaf `sellingHousePreviousDateOverride` · 엔진 번역 `translateRedevAptForHousingJudgment`의 갈래 |
  */
@@ -134,20 +134,6 @@ describe("토지 출자 원조합원 완공APT × §155① 종전주택 취득�
     expect(reversed.result.totalTax).toBe(TAXED);
   });
 
-  it("LC-6 세대원 건물 출자 통산을 선언하면 그대로 — 종전주택 취득일 = 본문 취득일", async () => {
-    const member = {
-      ...LAND,
-      redevHouseholdBuildingCarryover: "yes",
-      redevHouseholdBuildingAcquisitionDate: "2010-01-01",
-      redevHouseholdBuildingResidenceMonths: "0",
-    };
-    const r = await runCalc(form({ other: "2021-08-01", transfer: "2023-04-01", member }));
-    expect(r.status).toBe(200);
-    expect(r.issues).toEqual([]);
-    expect(tth(r.body)).toMatchObject({ previousAcquisitionDate: LAND_DATE });
-    expect(r.result.isExempt).toBe(true);
-  });
-
   it("LC-7 주택 수 제외 화면 leaf — 사용승인 전 취득 농어촌주택은 빼지 않는다(엔진과 같은 날짜) · 세액은 그대로", async () => {
     const row = { countExclusion: { kind: "reduction", reduction: RURAL } };
     const before = form({ other: "2020-06-01", transfer: "2023-04-01", row });
@@ -180,20 +166,14 @@ describe("LC-8 갈래 — 화면 leaf와 엔진 번역이 같은 조건으로 �
     expect(sellingHousePreviousDateOverride(asset({}), 0)).toBe(COMPLETION);
     expect(sellingHousePreviousDateOverride(asset({}), 1)).toBe(COMPLETION);
   });
-  it("화면 leaf — 대체하지 않는 경우: 준공일 빔 · 청산금 수령 단독신고 · 세대원 건물 통산 적용 (주택 출자는 HC-6)", () => {
+  it("화면 leaf — 대체하지 않는 경우: 준공일 빔 · 청산금 수령 단독신고 (주택 출자는 HC-6 · 세대원 건물 통산은 HB-6)", () => {
     expect(sellingHousePreviousDateOverride(asset({ redevCompletionDate: "" }), 1)).toBeUndefined();
     expect(sellingHousePreviousDateOverride(asset({ redevReceiveOnlyMode: "yes" } as never), 1)).toBeUndefined();
-    expect(
-      sellingHousePreviousDateOverride(
-        asset({ redevHouseholdBuildingCarryover: "yes", redevHouseholdBuildingAcquisitionDate: "2010-01-01" }),
-        1,
-      ),
-    ).toBeUndefined();
     // 통산 「예」인데 건물 취득일이 비면 ④가 통산을 싣지 않는다 — 엔진과 같이 사용승인일
     expect(sellingHousePreviousDateOverride(asset({ redevHouseholdBuildingCarryover: "yes", redevHouseholdBuildingAcquisitionDate: "" }), 1)).toBe(COMPLETION);
   });
 
-  const input = (over: { rosterRow?: boolean; householdBuilding?: boolean } = {}) =>
+  const input = (over: { rosterRow?: boolean } = {}) =>
     ({
       propertyType: "redevelopment_apt",
       acquisitionDate: new Date(LAND_DATE),
@@ -203,7 +183,6 @@ describe("LC-8 갈래 — 화면 leaf와 엔진 번역이 같은 조건으로 �
         originalAssetType: "land",
         completionDate: new Date(COMPLETION),
         approvalDate: new Date("2019-03-15"),
-        ...(over.householdBuilding ? { householdBuilding: { acquisitionDate: new Date("2010-01-01"), residenceMonths: 0 } } : {}),
       },
       temporaryTwoHouse: {
         previousAcquisitionDate: new Date(LAND_DATE),
@@ -216,8 +195,7 @@ describe("LC-8 갈래 — 화면 leaf와 엔진 번역이 같은 조건으로 �
   it("엔진 번역 — 토지 출자 · 양도 주택이 종전 주택이면 사용승인일", () => {
     expect(prev(input())).toEqual(new Date(COMPLETION));
   });
-  it("엔진 번역 — 그대로: 합가 D8 상대 쪽 짝 · 세대원 건물 통산 (주택 출자는 HC-5)", () => {
+  it("엔진 번역 — 그대로: 합가 D8 상대 쪽 짝 (주택 출자는 HC-5 · 세대원 건물 통산은 HB-6)", () => {
     expect(prev(input({ rosterRow: true }))).toEqual(new Date(LAND_DATE));
-    expect(prev(input({ householdBuilding: true }))).toEqual(new Date(LAND_DATE));
   });
 });

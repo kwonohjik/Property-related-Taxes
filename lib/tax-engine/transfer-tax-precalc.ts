@@ -55,6 +55,7 @@ import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { TRANSFER } from "./legal-codes";
 import { carryoverExclusionReasonLabel } from "./transfer-carryover-exclusion-labels";
 import { isLandContributedOriginalApt } from "./one-house/redev-apt-judgment-input";
+import { householdBuildingCarryover } from "./one-house/redev-apt-judgment-input";
 import { assertSelfBuiltHousingInput } from "./transfer-tax-self-built-housing-penalty";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
@@ -288,8 +289,9 @@ export function resolveHceGeneralHouseAcquisitionDate(input: TransferTaxInput): 
   return (
     input.houseCountExclusionAcquisitionDate ??
     // #12 — 토지만 출자한 원조합원 신축주택의 취득시기는 사용승인서 교부일이다(영 §162①4호). 비과세 판정 번역과 같은 날짜로 맞춘다.
+    //   세대원 건물 출자 통산이면 그 건물 취득일 — §155① 종전주택 취득일과 같은 날짜(Q-B2 사용자 결정 2026-10-26).
     (isLandContributedOriginalApt(input)
-      ? input.redevelopment!.completionDate!
+      ? (householdBuildingCarryover(input.redevelopment!)?.holdingStart ?? input.redevelopment!.completionDate!)
       : input.carryoverTaxation
         ? resolveHouseCountExclusionAcqDate(input, input.carryoverTaxation)
         : resolveHouseCountExclusionDate(input.acquisitionDate, input.giftHouseholdBasis))

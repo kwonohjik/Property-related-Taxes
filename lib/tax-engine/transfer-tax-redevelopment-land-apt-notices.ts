@@ -94,7 +94,12 @@ export function redevLandAptResidenceNotices(
     if (verdictOf(withoutCarry) !== current()) {
       notices.push(
         `세대원 건물 출자 통산을 적용했습니다 — 비과세 보유기간을 사용승인일 대신 세대원 건물 취득일(${format(carry.holdingStart, "yyyy-MM-dd")})부터 세고, ` +
-          `건물 거주 ${carry.residenceMonths}개월을 거주기간에 더했습니다. 토지만 출자한 사람의 세대원 건물 보유·거주 통산을 정면으로 다룬 해석례는 확인하지 못했고 ` +
+          `건물 거주 ${carry.residenceMonths}개월을 거주기간에 더했습니다. ` +
+          // §155① 종전주택 취득일도 같은 날짜다(Q-B1 사용자 결정 2026-10-26) — 일시적 2주택을 판정할 때만 덧붙인다.
+          (translated.temporaryTwoHouse && translated.temporaryTwoHouse.previousHouseIsRosterRow !== true
+            ? "일시적 2주택(「소득세법 시행령」 §155①)의 종전주택 취득일도 토지 취득일이 아니라 세대원 건물 취득일로 보았습니다. "
+            : "") +
+          "토지만 출자한 사람의 세대원 건물 보유·거주 통산을 정면으로 다룬 해석례는 확인하지 못했고 " +
           "같은 세대의 보유를 통산한 해석례·판결을 유추한 것입니다(부동산거래관리과-1041·-113 · 대법원 94누15530) — 확인 필요. " +
           "「취득 당시」 조정대상지역 판정일(사용승인일)과 장기보유특별공제 공제율은 통산하지 않았습니다.",
       );
