@@ -102,6 +102,7 @@ const fullProps = (f: TransferFormData) => ({
     householdHousingCount: 2,
     temporaryTwoHouseApplies: f.temporaryTwoHouseSpecial,
     deemedOneHouseContextDeclared: false,
+    rentalResidenceDeclared: false,
   }),
   primaryAcquisitionDate: "2019-03-01",
   // §155① 신규주택은 이제 명부 파생값이다 — 이 시료는 폼 필드를 그대로 흘려보낸다.

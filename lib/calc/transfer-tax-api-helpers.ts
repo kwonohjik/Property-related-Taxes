@@ -19,6 +19,7 @@ import { meetsSurchargeSuspensionHolding } from "@/lib/tax-engine/tax-utils";
 import {
   isWithinSurchargeSuspensionWindow,
   TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS,
+  RENTAL_RESIDENCE_PROVISO_REASONS,
 } from "@/lib/tax-engine/legal-codes/transfer";
 
 /**
@@ -39,14 +40,15 @@ export function isMultiHouseSurchargeSuppressed(
   return t !== undefined && a !== undefined && meetsSurchargeSuspensionHolding(a, t);
 }
 
-/** §154① 단서 카드 노출 맥락 — 1주택 / 일시적 2주택 / §155 의제 2주택 이상(합가·⑥⑦⑧ — V-F4) / 미노출. */
-export type ProvisoMode = "one_house" | "temporary_two_house" | "deemed_one_house" | null;
+/** §154① 단서 카드 노출 맥락 — 1주택 / 일시적 2주택 / §155 의제 2주택 이상(합가·⑥⑦⑧ — V-F4) / §155⑳ 거주주택 / 미노출. */
+export type ProvisoMode = "one_house" | "temporary_two_house" | "deemed_one_house" | "rental_residence" | null;
 
 /**
  * §154① 단서 카드 노출 여부 + 맥락(mode) 단일 파생.
  * 1주택 → one_house. 2주택+일시적특례 → temporary_two_house(§155① 준용). 2주택 이상 + §155 의제 선언 → deemed_one_house
  * (§155④⑤⑥⑦⑧도 「1세대1주택으로 보아」·「1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용」 — V-F4 Q-M1 (a)).
- * 그 외(순수 다주택·대체주택) → 숨김.
+ * 2주택 이상 + §155⑳ 거주주택 특례 선언 → rental_residence(⑳ 본문도 「1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용」 —
+ * 단서가 보유 2년만 푼다, `rental-residence-holding-proviso.plan.md` D-6). 그 외(순수 다주택·대체주택) → 숨김.
  * UI(Step4 렌더·배치)·API 조립·validation이 이 단일 함수를 공유(mirror-pattern).
  */
 export function provisoGate(args: {
@@ -73,12 +75,18 @@ export function provisoGate(args: {
    * 성립(합가 10년·각 항 요건)은 엔진이 본다 — 게이트가 다시 판정하면 엔진과 두 벌이 된다.
    */
   deemedOneHouseContextDeclared: boolean;
+  /**
+   * §155⑳ 거주주택 특례를 **선언했는가** — `rentalResidenceContextDeclared`. 의제 맥락보다 뒤에 본다(겹치면 의제 모드가 1·2가·3호를
+   * 이미 받는다 — ⑳ 판정은 엔진 leaf가 5호를 거른다).
+   */
+  rentalResidenceDeclared: boolean;
 }): { visible: boolean; mode: ProvisoMode } {
   if (!args.isOneHousehold || !args.isHousing) return { visible: false, mode: null };
   const n = args.householdHousingCount;
   if (n === 1) return { visible: true, mode: "one_house" };
   if (n === 2 && args.temporaryTwoHouseApplies) return { visible: true, mode: "temporary_two_house" };
   if (n >= 2 && args.deemedOneHouseContextDeclared) return { visible: true, mode: "deemed_one_house" };
+  if (n >= 2 && args.rentalResidenceDeclared) return { visible: true, mode: "rental_residence" };
   return { visible: false, mode: null };
 }
 
@@ -92,6 +100,8 @@ export function effectiveProvisoReason(mode: ProvisoMode, reason: string | undef
   if (!reason) return "";
   if (mode === null) return ""; // 카드 숨김(순수 다주택·3주택+·비주택·비1세대) — stale reason 미전송·검증 skip(데드락 방지)
   if ((mode === "temporary_two_house" || mode === "deemed_one_house") && !TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS.has(reason)) return "";
+  // §155⑳ 거주주택 — 보유 2년을 푸는 1호·2호가목·3호만(나·다목은 법령해석과-2370·2151, 5호는 거주만 면제라 실익 없음)
+  if (mode === "rental_residence" && !RENTAL_RESIDENCE_PROVISO_REASONS.has(reason)) return "";
   return reason;
 }
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존

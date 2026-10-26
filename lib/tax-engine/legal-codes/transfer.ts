@@ -670,6 +670,13 @@ export const TEMP_TWO_HOUSE_PROVISO_REASONS: ReadonlySet<string> = new Set(["ren
 export const TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS: ReadonlySet<string> = new Set([...TEMP_TWO_HOUSE_PROVISO_REASONS, "pre_designation_contract"]);
 
 /**
+ * §155⑳ 거주주택에서 **받는** §154① 단서 사유 — 1호·2호가목·3호. 면제하는 것은 §154① 본문의 **보유 2년**뿐이다
+ * (⑳1호 거주 2년은 ⑳ 자체 요건이라 단서로 풀리지 않는다 — 부동산납세과-67). 나·다목은 법령해석과-2370·2151로,
+ * 5호·삭제 전 4호는 거주만 면제해 실익이 없어 받지 않는다. 계획서 `docs/00-pm/rental-residence-holding-proviso.plan.md`.
+ */
+export const RENTAL_RESIDENCE_PROVISO_REASONS: ReadonlySet<string> = new Set(["rental_5yr_residence", "expropriation", "unavoidable"]);
+
+/**
  * 대통령령 제28293호(2017.9.19.) 부칙 제2조 — §154①·② 거주요건 도입의 적용례·경과조치 (DRF 부칙 원문 2026-10-11 실독 — MST 197529).
  * ①은 「이 영 시행 이후 양도하는 분부터」, ②는 아래 주택에 「종전의 규정」을 적용한다.
  */

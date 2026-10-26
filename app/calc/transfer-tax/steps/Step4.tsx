@@ -56,7 +56,7 @@ import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { countExclusionRowApplies, countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { spouseHoldingQuestionApplies } from "@/lib/calc/spouse-holding-scope";
-import { deemedOneHouseContextDeclared } from "@/lib/calc/deemed-one-house-context";
+import { deemedOneHouseContextDeclared, rentalResidenceContextDeclared } from "@/lib/calc/deemed-one-house-context";
 
 /**
  * 미등기 양도(「소득세법」 제104조 제3항) 토글을 **띄우지 않는** 자산 종류.
@@ -189,6 +189,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         temporaryTwoHouseApplies: tempTwoHouseDates !== undefined,
         // V-F4 — §155 의제(합가·⑥⑦⑧) 입력이면 2주택 이상에서도 단서 카드를 연다(④·⑧과 같은 leaf)
         deemedOneHouseContextDeclared: deemedOneHouseContextDeclared(form),
+        // §155⑳ 거주주택 특례 선언이면 2주택 이상에서도 단서 카드(1호·2호가목·3호)를 연다(④·⑧과 같은 leaf)
+        rentalResidenceDeclared: rentalResidenceContextDeclared(form.assets?.[0]?.rentalHousingException),
       }),
     /**
      * ⚠️ `form.houses`가 빠지면 명부를 고쳐도 이 카드가 갱신되지 않는다.
@@ -590,9 +592,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               </div>
             )}
 
-            {/* §154① 단서 — 1주택(one_house)·§155 의제 2주택 이상(deemed_one_house — 합가·⑥⑦⑧, V-F4) 맥락은 섹션②.
+            {/* §154① 단서 — 1주택(one_house)·§155 의제 2주택 이상(deemed_one_house — 합가·⑥⑦⑧, V-F4)·§155⑳ 거주주택(rental_residence) 맥락은 섹션②.
                 일시적 2주택 맥락 카드는 판정 메뉴에 있다(P6-b). */}
-            {proviso.visible && (proviso.mode === "one_house" || proviso.mode === "deemed_one_house") && (
+            {proviso.visible && (proviso.mode === "one_house" || proviso.mode === "deemed_one_house" || proviso.mode === "rental_residence") && (
               <ExemptionProvisoSection
                 provisoReason={form.provisoReason}
                 provisoDepartureDate={form.provisoDepartureDate}

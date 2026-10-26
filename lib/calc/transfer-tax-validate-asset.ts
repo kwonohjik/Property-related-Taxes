@@ -41,6 +41,8 @@ import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
+import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
+import { calcProvisoMode } from "./transfer-tax-api-residence";
 import { reverseAppurtenantHouseAssetId } from "./reverse-appurtenant-house";
 import {
   ownershipRatioError,
@@ -418,6 +420,8 @@ export function validateAssetEntry(
     form.assets.length === 1 && a.transferType !== "burdened_gift" && parseAmount(form.contractTotalPrice) > 0
       ? { transferPrice: parseAmount(form.contractTotalPrice) }
       : undefined,
+    // §154① 단서 1호·2호가목·3호면 거주주택 보유 2년을 막지 않는다 — ④가 첫 자산에 싣는 것과 같은 게이트·정규화 값(D-9).
+    index === 0 ? effectiveProvisoReason(calcProvisoMode(form), form.provisoReason) : undefined,
   );
   if (rhError) return rhError;
 

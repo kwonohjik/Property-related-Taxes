@@ -190,7 +190,7 @@ describe("계산기 — §155 의제 2주택 이상 × §154① 단서", () => {
 });
 
 describe("DP-7 게이트·정규화", () => {
-  const base = { isOneHousehold: true, isHousing: true, householdHousingCount: 2, temporaryTwoHouseApplies: false, deemedOneHouseContextDeclared: true };
+  const base = { isOneHousehold: true, isHousing: true, householdHousingCount: 2, temporaryTwoHouseApplies: false, deemedOneHouseContextDeclared: true, rentalResidenceDeclared: false };
   it("2주택 이상 + 의제 선언 → deemed_one_house · 일시적 2주택이 먼저", () => {
     expect(provisoGate(base)).toEqual({ visible: true, mode: "deemed_one_house" });
     expect(provisoGate({ ...base, householdHousingCount: 4 })).toEqual({ visible: true, mode: "deemed_one_house" });

@@ -26,7 +26,9 @@ import {
   giftBurdenedEffectiveWasRegulatedAtAcquisition,
   giftBurdenedRegionCode,
   giftBurdenedWinWinResidenceExempt,
+  giftBurdenedProvisoMode,
 } from "@/lib/calc/gift-burdened-one-house";
+import { effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
 
 /** Date(메모리) 또는 YYYY-MM-DD(복원 직후) → YYYY-MM-DD. 무효면 "". */
 function ymd(v: Date | string | undefined): string {
@@ -102,5 +104,8 @@ export function giftBurdenedRentalExceptionError(
     giftBurdenedEffectiveWasRegulatedAtAcquisition(bgt, giftBurdenedRegionCode(item)),
     // OH-40 이력 칸은 이 경로 카드(`mode="full"`)에 보인다(`RentalLifetimeLimitBlock` — 계산기 `calc`만 감춘다) — ⑧도 요구한다.
     true,
+    undefined,
+    // §154① 단서 1호·2호가목·3호면 거주주택 보유 2년을 막지 않는다 — 이 경로 ④와 같은 게이트·정규화 값(D-9).
+    effectiveProvisoReason(giftBurdenedProvisoMode(bgt), bgt.provisoReason),
   );
 }

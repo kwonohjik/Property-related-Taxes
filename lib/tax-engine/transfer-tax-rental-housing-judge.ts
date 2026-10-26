@@ -5,7 +5,10 @@
  * 옮긴 것은 위치뿐이다 — step 파일이 같은 이름으로 재export한다(기존 import 경로 무변경).
  */
 
-import { calculateHoldingPeriod } from "./tax-utils";
+import {
+  rentalResidenceProvisoNotice,
+  rentalResidenceRequirementHoldYears,
+} from "./one-house/rental-residence-holding-proviso";
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
 import { MULTI_HOUSE } from "./legal-codes/transfer-house";
 import { rentalUnitLowPriceFacts } from "./rental-card-surcharge-rows";
@@ -83,21 +86,22 @@ export function judgeRentalHousingEligibility(
 ): EligibilityResult | null {
   const rhe = effectiveInput.rentalHousingException;
   if (rhe?.applyException !== true) return null;
-  const holdYears = calculateHoldingPeriod(
-    effectiveInput.acquisitionDate,
-    effectiveInput.transferDate,
-  ).years;
+  // 보유 2년(§154① 본문)은 단서 1호·2호가목·3호가 풀 수 있다 — 세액 경로와 같은 leaf(계획서 rental-residence-holding-proviso D-2).
+  const holdYears = rentalResidenceRequirementHoldYears(effectiveInput);
   // §155⑳1호 「거주기간 2년」 — 증여·상속 전 동일세대로 거주한 기간을 통산한다(별건 ⑥ · 서면-2022-부동산-2643 · 서면-2016-부동산-3992).
   // §154① 거주요건·표2 대상 판정과 같은 leaf다. 보유기간은 통산하지 않는다(사용자 결정 2026-10-19 — 거주만).
   const liveYears = Math.floor(resolveExemptionRequirementResidenceMonths(effectiveInput) / 12);
   // 거주주택 보유·거주 연수 = holdYears·liveYears (runRentalHousingExceptionStep의 요건 인자와 같은 값)
-  return checkEligibility(
+  const eligibility = checkEligibility(
     rhe.rentalUnits,
     holdYears,
     liveYears,
     qualifiesWinWinRental(effectiveInput),
     buildEligibilityContext(effectiveInput),
   );
+  // Q-R2 (a) — 단서로 특례가 섰으면 확인 필요 고지(판정 메뉴 verdict·조기반환 안내가 이 notices를 싣는다).
+  const provisoNotice = eligibility.passed ? rentalResidenceProvisoNotice(effectiveInput) : undefined;
+  return provisoNotice ? { ...eligibility, notices: [...(eligibility.notices ?? []), provisoNotice] } : eligibility;
 }
 
 /**
