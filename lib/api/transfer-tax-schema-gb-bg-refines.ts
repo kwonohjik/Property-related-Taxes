@@ -10,6 +10,10 @@
  *
  * 대상: 주 자산(`generalBuildingValuation`) · 지분(`generalBuildingShares[].valuation`) · 컴패니언(`companionAssets[]`).
  * `actualPriceMode: true` + `extensionInfo` 는 거부하지 않는다 — 실가 경로가 증축을 쓰지 않을 뿐 §159 는 반영된다.
+ *
+ * 같은 세 곳의 `burdenedGiftInfo` 기준시가 4칸도 여기서 요구한다(계획서 `bg-gb-std-sides-and-pre-deemed-msg.plan.md` §3.1).
+ * §159 안분은 두 계산 경로 모두 `info` 값을 읽는데, ④는 양도시 칸이 비면 `generalBuildingValuation`을 빼고 보내
+ * 일반 자산 경로로 가므로 엔진 한 곳으로는 막을 수 없다. ⑧(`transfer-tax-validate-gb.ts` 부담부증여 분기)과 같은 범위 — 평가 방식 무관.
  */
 import { z } from "zod";
 
@@ -31,9 +35,30 @@ interface Subject {
 export const GB_BG_SHARE_INFO_REQUIRED_MESSAGE =
   "일반건물 지분 분할 취득의 부담부증여(소령 §159)는 지분마다 부담부증여 정보(burdenedGiftInfo)가 필요합니다 — 빠진 지분은 일반 양도로 계산되어 취득가액이 0이 됩니다.";
 
+export const GB_BG_TRANSFER_STD_REQUIRED_MESSAGE =
+  "일반건물 부담부증여 — 양도시 토지·건물 기준시가가 모두 필요합니다. 기준시가 평가면 증여가액과 양도가액이 이 값으로 정해지고 " +
+  "(소득세법 시행령 제159조 제1항 제2호), 시가 평가면 계산기가 양도가액을 이 값의 비율로 토지·건물에 나눕니다.";
+export const GB_BG_ACQ_STD_REQUIRED_MESSAGE =
+  "일반건물 부담부증여 — 취득시 토지·건물 기준시가가 모두 필요합니다. 양도가액을 기준시가로 산정하면 취득가액도 이 값으로 산정합니다 " +
+  "(소득세법 시행령 제159조 제1항 제1호 괄호).";
+
+const GB_BG_STD_KEYS = [
+  ["landStdPriceAtTransfer", GB_BG_TRANSFER_STD_REQUIRED_MESSAGE],
+  ["buildingStdPriceAtTransfer", GB_BG_TRANSFER_STD_REQUIRED_MESSAGE],
+  ["landStdPriceAtAcquisition", GB_BG_ACQ_STD_REQUIRED_MESSAGE],
+  ["buildingStdPriceAtAcquisition", GB_BG_ACQ_STD_REQUIRED_MESSAGE],
+] as const;
+
 export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementCtx): void {
   const issue = (path: (string | number)[]) =>
     ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: GB_BG_ACTUAL_PATH_REQUIRED_MESSAGE });
+  const requireStd = (info: unknown, path: (string | number)[]) => {
+    if (!info) return;
+    for (const [key, message] of GB_BG_STD_KEYS) {
+      const v = (info as Record<string, unknown>)[key];
+      if (!(typeof v === "number" && v > 0)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, "burdenedGiftInfo", key], message });
+    }
+  };
 
   // 주 자산·지분 — route 가 읽는 조건(`transferType === "burdened_gift" && burdenedGiftInfo`)과 같다.
   if (data.propertyType === "general_building" && data.transferType === "burdened_gift" && data.burdenedGiftInfo) {
@@ -45,15 +70,18 @@ export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementC
   }
   // 지분(축 B) — 부담부증여면 **모든 지분**이 info 를 가져야 한다. 누락 지분은 일반 양도로 계산된다(침묵 무시 금지).
   if (data.propertyType === "general_building" && data.transferType === "burdened_gift") {
+    requireStd(data.burdenedGiftInfo, []);
     (data.generalBuildingShares ?? []).forEach((s, i) => {
       if (!s.burdenedGiftInfo) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["generalBuildingShares", i, "burdenedGiftInfo"], message: GB_BG_SHARE_INFO_REQUIRED_MESSAGE });
       }
+      requireStd(s.burdenedGiftInfo, ["generalBuildingShares", i]);
     });
   }
   // 컴패니언 — `burdenedGiftInfo` 존재가 부담부증여 표지다(`bundled-route.ts` · `transfer-tax-schema-companion-refines.ts`와 같은 규율).
   (data.companionAssets ?? []).forEach((c, i) => {
     if (c.assetKind !== "general_building" || !c.burdenedGiftInfo) return;
+    requireStd(c.burdenedGiftInfo, ["companionAssets", i]);
     if (c.generalBuildingValuation && c.generalBuildingValuation.actualPriceMode !== true) {
       issue(["companionAssets", i, "generalBuildingValuation", "actualPriceMode"]);
     }

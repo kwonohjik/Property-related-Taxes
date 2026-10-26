@@ -135,8 +135,10 @@ describe("S-8 — 축 B 둘째 지분만 비움", () => {
   });
 });
 
-describe("S-9·S-10 — ⑧이 다른 규칙으로 막는 경로도 API 직접 호출은 엔진이 막는다", () => {
-  it("S-9 일반건물 양도시 토지·건물 다 비움 → 400 (종전 200 · 세액 0)", async () => {
+describe("S-9·S-10 — ⑧이 다른 규칙으로 막는 경로도 API 직접 호출은 막힌다(S-9 ⑫ · S-10 엔진)", () => {
+  // 2026-10-26 — 이 요청은 이제 엔진보다 ⑫(`refineGbBurdenedGiftActualPath` 기준시가 4칸)가 먼저 막는다(계획서 bg-gb-std-sides-and-pre-deemed-msg.plan.md §6 P-0).
+  // 엔진 차단은 S-1~S-5가 지킨다.
+  it("S-9 일반건물 양도시 토지·건물 다 비움 → 400 · ⑫ (종전 200 · 세액 0)", async () => {
     const GB: A = {
       ...BG, ...BUY, ...MORT, assetKind: "general_building", useEstimatedAcquisition: false, landAcqMode: "actual", buildingAcqMode: "actual",
       gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000", gbZoneType: "general_residential",
@@ -145,7 +147,8 @@ describe("S-9·S-10 — ⑧이 다른 규칙으로 막는 경로도 API 직접 �
     expect((await route(form([GB]))).tax).toBe(11_332_800);
     const r = await route(form([{ ...GB, gbTransferLandPricePerSqm: "", gbTransferBuildingValue: "" }]));
     expect(r.status).toBe(400);
-    expect(r.text).toMatch(ENGINE);
+    expect(r.text).toContain("burdenedGiftInfo.landStdPriceAtTransfer");
+    expect(r.text).toContain("burdenedGiftInfo.buildingStdPriceAtTransfer");
   });
 
   it("S-10 함께 양도 두 자산 다 비움 → 400 (종전 200 · 세액 0)", async () => {

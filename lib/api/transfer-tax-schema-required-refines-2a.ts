@@ -673,7 +673,12 @@ export function refinePreDeemedAcquisitionSource(
     );
     return;
   }
-  if (!positive(ia.standardPriceAtTransfer) && !positive(d.standardPriceAtTransfer))
+  // 기준시가로 평가한 부담부증여는 ③이 없다(Q-25) — 엔진 fail-fast가 §159①2호 이유로 막는다(계획서 bg-gb-std-sides-and-pre-deemed-msg.plan.md §3.2).
+  if (
+    !positive(ia.standardPriceAtTransfer) &&
+    !positive(d.standardPriceAtTransfer) &&
+    !(d.transferType === "burdened_gift" && d.burdenedGiftInfo?.valuationMode === "sangjeungbeop_standard")
+  )
     issue(["inheritedAcquisition", "standardPriceAtTransfer"], "의제취득일 전 상속·증여 자산의 환산취득가액은 양도시 기준시가가 필요합니다 (소득세법 시행령 §176의2④)");
 }
 
