@@ -23,8 +23,9 @@ export const GIFT_HOUSEHOLD_CONSOLIDATION_DETAIL_ID = "gift-household-consolidat
 /**
  * 증여자와의 세대 사실이 엔진에 오지 않아 통산을 반영하지 못했다 — 통산하면 결론이 달라질 수 있다. 판정 메뉴와 계산기 단건 첫 자산은 그 칸을
  * 필수로 받고 다건 계산도 건마다 첫 자산에서 받으므로(결정 #38-1·#38-3) 이 고지는 세대 사실을 받지 않는 경로에서 난다 — 건물만 증여받은
- * 주택(D2) · 함께 양도하는 두 번째 이후 자산 · 재개발 승계조합원 완공 신축주택(입주권 상태 증여 — 계획서 redev-apt-gift-household-fact §7 별건) ·
- * 사실 없이 부른 API. 주택을 출자한 원조합원 완공APT는 첫 자산에서 받는다(같은 계획서 Q-1 a). 문구는 그 경로들을 그대로 적는다(「이 화면은 입력받지 않아」·「판정 메뉴에서 입력」은
+ * 주택(D2) · 함께 양도하는 두 번째 이후 자산 · 사실 없이 부른 API. 주택을 출자한 원조합원 완공APT는 첫 자산에서 받는다(계획서
+ * redev-apt-gift-household-fact Q-1 a). 재개발 승계조합원 완공 신축주택(입주권 상태 증여)은 재개발 카드에서 받고, 문구는 보유 기산일(준공일)과
+ * 입력 위치가 달라 따로 쓴다(계획서 redev-successor-gift-holding D-6). 문구는 그 경로들을 그대로 적는다(「이 화면은 입력받지 않아」·「판정 메뉴에서 입력」은
  * D2처럼 판정 메뉴에도 칸이 없는 경로에서 틀린다).
  */
 export const GIFT_HOUSEHOLD_NOT_REFLECTED_ID = "gift-household-not-reflected-unverified";
@@ -44,6 +45,20 @@ const PRIOR_RESIDENCE_BASIS =
   "비과세 여부를 판정한다고 답했으나, 배우자 지분 증여를 다룬 2005년 사안이라 주택 전부 증여나 현재의 조정대상지역 거주요건을 정면으로 다룬 " +
   "해석은 확인하지 못했습니다.";
 
+/** 승계조합원 증여 승계 — 세대 사실이 오지 않았다(계획서 redev-successor-gift-holding D-6). 「아니오」로 답한 경우는 게이트가 거른다(`era-notice-relevance`). */
+const SUCCESSOR_NOT_REFLECTED_REASON =
+  "증여받은 입주권으로 취득한 신축주택은 증여자가 관리처분계획 인가 전부터 종전주택을 보유한 원조합원이고 증여일부터 양도일까지 계속 같은 세대였다면 " +
+  "증여자 세대의 보유기간(종전주택·공사기간·신축주택)을 통산하지만(부동산거래관리과-1503 · 서면인터넷방문상담4팀-2069), 이 계산에는 그 사실이 입력되지 않아 " +
+  "준공일(사용승인일)부터 보유기간을 세어 판정했습니다 — 그런 경우라면 결론이 달라질 수 있으니 확인이 필요합니다. 그 사실은 양도세 계산기 재개발 카드의 " +
+  "증여 승계 항목에서 입력받습니다.";
+
+/** 승계조합원 증여 승계 — 증여자 세대의 보유기간을 통산했다. 현행 법문 아래 정면 해석은 확인하지 못했다(계획서 V-1). */
+const SUCCESSOR_CONSOLIDATION_REASON =
+  "증여자가 관리처분계획 인가 전부터 종전주택을 보유한 원조합원이고 계속 같은 세대였다는 입력에 따라, 세대가 종전주택 보유를 시작한 날부터 " +
+  "보유기간(종전주택·공사기간·신축주택)을 통산하고 그 날을 「취득 당시」로 보았습니다. 입주권 상태에서 동일세대원 간에 증여한 경우 증여자와 수증자의 " +
+  "보유기간을 통산한다는 회신(부동산거래관리과-1503 · 서면인터넷방문상담4팀-2069)은 2005~2010년 법문 아래의 것이고, 현재의 조정대상지역 거주요건 아래에서 " +
+  "정면으로 다룬 해석은 확인하지 못해 확인이 필요합니다. 통산은 비과세 판정에만 쓰고 장기보유특별공제와 세율의 보유기간은 준공일(사용승인일) 기준으로 계산했습니다.";
+
 /**
  * 세대 사실 상태에 맞는 확인 필요 고지. 결론을 가르는지는 호출부가 `giftHouseholdFactDecides`로 따로 본다.
  * 사실이 없으면(`gift` 미전달) 증여 취득일 때만 「반영하지 못했다」를 낸다. 별도세대로 확인되면 고지가 없다.
@@ -51,7 +66,13 @@ const PRIOR_RESIDENCE_BASIS =
 export function giftHouseholdNotice(
   gift: GiftHouseholdBasis | undefined,
   acquisitionCause: TransferTaxInput["acquisitionCause"],
+  /** 재개발 승계조합원 완공 신축주택(입주권 상태 증여) — 보유 기산일이 준공일이고 통산 근거·입력 위치가 다르다. */
+  opts: { successorApt?: boolean } = {},
 ): { id: string; reason: string } | undefined {
+  if (opts.successorApt && acquisitionCause === "gift") {
+    if (!gift) return { id: GIFT_HOUSEHOLD_NOT_REFLECTED_ID, reason: SUCCESSOR_NOT_REFLECTED_REASON };
+    if (giftHouseholdConsolidationStart(gift)) return { id: GIFT_HOUSEHOLD_CONSOLIDATION_DETAIL_ID, reason: SUCCESSOR_CONSOLIDATION_REASON };
+  }
   return !gift
     ? acquisitionCause === "gift"
       ? {
@@ -60,8 +81,8 @@ export function giftHouseholdNotice(
             "증여받은 주택은 증여자와 증여일부터 양도일까지 계속 같은 세대였다면 증여자 세대의 보유기간을 통산하고 「취득 당시」도 세대가 보유를 " +
             "시작한 날로 보지만(조심 2022서7583), 이 계산에는 증여자와의 세대 관계가 입력되지 않아 증여일부터 보유기간을 세어 판정했습니다 — " +
             "같은 세대였다면 결론이 달라질 수 있으니 확인이 필요합니다. 세대 관계는 1세대1주택 판정 메뉴와 양도세 계산기(단건·다건)의 첫 번째 자산" +
-            "(주택을 증여받은 경우 — 종전주택을 증여받은 재개발 원조합원 완공 신축주택 포함)에서 입력받으며, 건물만 증여받은 주택·함께 양도하는 두 번째 이후 자산·" +
-            "재개발 승계조합원(입주권을 증여받은 경우) 완공 신축주택에서는 입력받지 않습니다.",
+            "(주택을 증여받은 경우 — 종전주택을 증여받은 재개발 원조합원 완공 신축주택 포함)에서 입력받으며, 건물만 증여받은 주택·함께 양도하는 두 번째 이후 자산" +
+            "에서는 입력받지 않습니다.",
         }
       : undefined
     : gift.donorDeceased === true

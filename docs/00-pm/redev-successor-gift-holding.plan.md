@@ -1,6 +1,6 @@
 # 원조합원에게 입주권을 증여받은 승계조합원 완공APT — 증여자 세대의 보유기간을 통산하지 않는다 — 수정 계획서
 
-- 상태: 계획(사용자 결정 대기 — §5 Q-1~Q-4)
+- 상태: **구현**(사용자 결정 2026-10-27 — Q-1~Q-4 모두 (a)) — §9
 - 작성: 2026-10-27 · master 654c30f49 · 워크트리 `../prt-sgh`
 - 출처: `redev-apt-gift-household-fact.plan.md` §7 별건 「승계조합원(입주권 상태) 동일세대 증여의 보유기간 통산」 · 사용자 확인(2026-10-27): 「증여자가 승계조합원이면 통산할 보유·거주기간이 없고, 증여자가 주택을 출자한 원조합원이고 동일세대에게 증여했으면 수증자는 증여자의 보유·거주기간을 통산한다」.
 
@@ -148,3 +148,22 @@
 2. ⑧ ↔ ⑫ 같은 leaf 격자 대조 · ⑤ 렌더(칸 노출 축별 · `radioValues`).
 3. 뮤테이션 probe(술어 조건 · 인가일 상한 · 거주 개월 미전송 · 엔진 게이트 · 고지 게이트).
 4. 전체 vitest · E2E 1건(승계 증여 → 예 → 원조합원 예 → 시작일 → 비과세) + 승계 증여 기존 spec 회귀 · 375px·다크.
+
+## 9. 구현 결과 (2026-10-27 — Q-1~Q-4 (a))
+
+| # | 결과 |
+|---|---|
+| D-1 | `AssetForm.redevSuccessorGiftDonorHouseMember`·`redevSuccessorGiftHouseholdStartDate`(기본값·마이그레이션 `""`). 술어 `successorGiftHoldingConsolidationApplies`(`redev-field-scope.ts`) · 범위 밖 정리 patch에 두 칸 추가 |
+| D-2 | 증여 승계 블록을 `RedevSuccessorGiftHouseholdSection.tsx`로 분리(파일 크기 — `RedevelopmentBlockCards.tsx` 709→661줄)하고 「증여자가 관리처분계획 인가 전부터 종전주택을 보유한 조합원이었습니까?」(예/아니오 · 부동산거래관리과-1503 인용) → 「예」면 「세대가 종전주택 보유를 시작한 날」. 같은 세대 「아니오」는 두 칸도 비우고, 증여자 유형 「아니오」는 시작일을 비운다 |
+| D-3·D-5 | ⑧·⑫ 공용 leaf `successorGiftHouseholdStartIssue`(`redev-apt-judgment-input.ts` — 시작일 · 증여자 취득일 · 증여자 취득일 ≤ 시작일 ≤ 인가일 · 시작일 < 증여일). ⑫: 승계 완공APT 증여에 `giftPriorHouseholdResidenceMonths` 거절 · 세대 통산 사실은 `successorGiftHouseholdConsolidates`(같은 세대 ∧ 증여자 유형 true)일 때만 · 시작일 > 인가일 거절 · 두 같은 세대 선언 모순 거절 · 증여자 유형 선언은 같은 세대 증여 승계에서만. 나머지 범위(시작일 필수·증여자 취득일 이후·증여일 이전)는 기존 일반 refine이 본다 |
+| D-4 | ④ `buildSuccessorGiftHouseholdPayload`(`gift-household-payload.ts`) — 통산이 적용되고 leaf를 통과할 때만 `giftSameHouseholdContinuous: true`·`giftHouseholdHoldingStartDate`(증여자 취득일·취득원인은 기존 키). `redevelopment.successorGiftDonorHouseMember`는 같은 세대 = 「예」일 때만. **계획과 다름**: 「같은 세대 = 아니오」에 `giftSameHouseholdContinuous: false`를 싣지 않았다 — 엔진 번역(아래)이 승계조합원의 비통산 세대 사실을 버리므로 효과가 없고, 고지는 내부 값 `redevSuccessorGift`가 거른다 |
+| 엔진 | `translateRedevAptForHousingJudgment` ⑥: 승계조합원이면 세대 사실은 `successorGiftHouseholdConsolidates`일 때만 남기고 증여 전 거주 개월은 지운다(⑫를 거치지 않는 입력 대비). 내부 값 `redevSuccessorGift: { declinedConsolidation }`을 싣는다(`OneHouseJudgeInput`·`OneHouseFacts`·`judge.ts` 키 가드 등록) |
+| D-6 | 고지: 승계 증여에서 세대 사실 미전송 → 「…준공일(사용승인일)부터 보유기간을 세어 판정했습니다 … 재개발 카드의 증여 승계 항목에서 입력받습니다」 · 통산 적용 → 1503·2069 인용 + 「현재의 조정대상지역 거주요건 아래에서 정면으로 다룬 해석은 확인하지 못해」(V-1) + 장특·세율은 준공일 기준. 「아니오」(같은 세대·증여자 유형)는 고지 없음. 증여 전 거주 미입력 고지는 이 축에서 내지 않는다. 일반 고지 문구에서 「승계조합원 … 입력받지 않습니다」를 지웠다 |
+| D-7 | 「취득 당시」는 일반 leaf 그대로 — 엔진 변경 없음 |
+
+### 9.1 검증
+
+- anchor `__tests__/calc/redev-successor-gift-holding.anchor.test.ts` SG-1~20: SG-1 0(종전 298,500,000) · SG-2 비조정 0 · SG-3 15억 118,500,000(장특 0) · SG-4 종전주택 거주 18 → 0 / 12 → 298,500,000(이중 계상 없음) · SG-5·6 「아니오」 298,500,000 고지 없음 · SG-7 미전송 고지 문구 · SG-8~13 ⑧·leaf 격자 · SG-14~17 ⑫ 400 · SG-18·19 엔진 번역 · SG-20 정리 patch. ⑤ `__tests__/components/redev-successor-gift-household.ui.test.tsx` 5건(`radioValues`·`checkedRadioValue`).
+- 기존 시료 갱신: 0691 anchor 픽스처에 증여자 유형 「아니오」(세액 단언 불변) · 0691 ⑤ patch 단언에 두 칸 · ⑫ plumbing 픽스처 키 · 판정 입력 키 가드 · RG-8 고지 문구.
+- 뮤테이션 22종 전부 KILLED(엔진 번역 3 · leaf 2 · ⑫ 4 · ⑧ 2 · ④ 2 · 고지 게이트 3 · 문구 분기 1 · 정리 patch 1 · ⑤ 2 · Zod 1 · 내부 값 1).
+- E2E `e2e/redev-successor-gift-holding.spec.ts` SGE-1(재개발 카드 → 「예」 → 시작일 → 본문 → 비과세 0) · SGE-2(인가 뒤 시작일 차단).

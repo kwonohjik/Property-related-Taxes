@@ -61,6 +61,15 @@ export interface RedevelopmentInfo {
   successorGiftSameHousehold?: boolean;
 
   /**
+   * 증여 승계에서 **증여자가 관리처분계획 인가 전부터 종전주택(건물)을 보유한 원조합원**이었는가 — 사용자 선언
+   * (계획서 `redev-successor-gift-holding.plan.md` Q-3 a).
+   * `true`이고 증여자와 계속 같은 세대(`successorGiftSameHousehold`)이면 세대 사실(`giftHouseholdBasis`)로 §154① 비과세 보유기간을
+   * 세대 보유 시작일부터 통산한다(부동산거래관리과-1503 · 서면인터넷방문상담4팀-2069). 그 밖에는 `giftHouseholdBasis`를 쓰지 않는다 —
+   * 증여자가 입주권을 사서 승계했거나 토지만 출자했으면 증여자에게도 준공 전 주택 보유가 없다(영 §162①4호).
+   */
+  successorGiftDonorHouseMember?: boolean;
+
+  /**
    * 사례 48 — 신축APT 사용검사필증 교부일(준공일).
    * isSuccessorMember === true 시 LTHD/세율 보유기간 기산일.
    *

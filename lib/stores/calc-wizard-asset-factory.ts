@@ -602,6 +602,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // 사례 48 — 승계조합원 신축APT 양도
     redevIsSuccessorMember: "",
     redevSuccessorGiftSameHousehold: "",
+    redevSuccessorGiftDonorHouseMember: "",
+    redevSuccessorGiftHouseholdStartDate: "",
     redevCompletionDate: "",
     redevHouseholdBuildingCarryover: "",
     redevHouseholdBuildingAcquisitionDate: "",

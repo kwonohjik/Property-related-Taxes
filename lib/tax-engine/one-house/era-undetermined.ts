@@ -213,7 +213,9 @@ export function collectEraUndetermined(
    * 결정 #33·#34·#38 — 증여받은 주택의 「증여자와 계속 같은 세대」 사실. 세 고지는 모두 그 사실을 바꾼 판정이 현재 판정과 다를 때만 낸다
    * (결론을 가르지 않으면 말하지 않는다). 모르면 증여일 기준(보수)으로 판정했다 — 어느 방향으로도 유리하게 읽지 않는다.
    */
-  const giftNotice = giftHouseholdNotice(input.giftHouseholdBasis, input.acquisitionCause);
+  const giftNotice = giftHouseholdNotice(input.giftHouseholdBasis, input.acquisitionCause, {
+    successorApt: !!input.redevSuccessorGift,
+  });
   if (giftNotice && (relevance?.giftHouseholdDecides() ?? true)) out.push(giftNotice);
   // 결정 #38-7 — 증여 전 동일세대 거주 개월. 통산을 적용했거나(입력 > 0) 입력이 없어 통산하지 못했는데 거주했다면 결론이 달라지는 경우만 낸다.
   //   게이트가 없는 호출(`relevance` 생략)은 결론을 가르는지 알 수 없으므로 말하지 않는다.

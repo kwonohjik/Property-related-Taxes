@@ -82,6 +82,7 @@ import { primaryEnginePropertyType } from "./transfer-tax-api-helpers";
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
 import { calcReplacementHouseApplies } from "./replacement-house-scope";
 import { buildCalcGiftHouseholdPayload } from "./gift-household-payload";
+import { buildSuccessorGiftHouseholdPayload } from "./gift-household-payload";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
@@ -556,6 +557,8 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
         : undefined,
     // ④⑬ 결정 #38 — 「증여자와 계속 같은 세대」 사실(화면 입력 또는 판정 메뉴에서 넘어온 값 · 이월과세 밖 증여 · D2 제외). 위 `donorAcquisitionDate`와 같은 값.
     ...buildCalcGiftHouseholdPayload(primary),
+    // 재개발 승계조합원 증여 승계 — 증여자가 주택을 출자한 원조합원이고 같은 세대면 세대 보유 시작일(계획서 redev-successor-gift-holding Q-1 a).
+    ...buildSuccessorGiftHouseholdPayload(primary),
     isOneHousehold: form.isOneHousehold,
     reductions,
     annualBasicDeductionUsed: parseAmount(form.annualBasicDeductionUsed),

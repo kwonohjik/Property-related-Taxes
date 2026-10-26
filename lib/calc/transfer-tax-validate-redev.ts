@@ -16,6 +16,8 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
 import { householdBuildingCarryoverApplied, landContributedOriginalApt, postApprovalHousingUseInScope, successorGiftHouseholdApplies } from "@/lib/calc/redev-field-scope";
+import { successorGiftHoldingConsolidationApplies } from "@/lib/calc/redev-field-scope";
+import { successorGiftHouseholdStartIssue } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { householdBuildingResidenceOverflow, redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { redevGiftPriorResidenceBeforeGift } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { parseDecimal } from "@/lib/calc/number-parse";
@@ -525,6 +527,43 @@ export function validateRedevelopmentAsset(
     const v = parseInt(newRaw.replace(/,/g, ""), 10);
     if (!isFinite(v) || v < 0) {
       return fieldError("redevNewHouseResidenceMonths", `${label}: 신축주택 거주개월수는 0 이상의 정수여야 합니다.`);
+    }
+  }
+
+  // 증여 승계 — 증여자가 관리처분계획 인가 전부터 종전주택을 보유한 원조합원인가(계획서 redev-successor-gift-holding Q-1 a). 같은 세대 = 「예」이면 묻는다.
+  //   「예」면 세대 보유 시작일 — ⑫(`refinePrimaryAcquisitionInputs`)와 같은 leaf(`successorGiftHouseholdStartIssue`).
+  if (successorGiftHouseholdApplies(asset)) {
+    if (!asset.redevSuccessorGiftDonorHouseMember) {
+      return fieldError(
+        "redevSuccessorGiftDonorHouseMember",
+        `${label}: 증여자가 관리처분계획 인가 전부터 종전주택을 보유한 조합원이었는지 선택하세요 — 그렇다면 증여자 세대의 보유기간을 통산합니다. (부동산거래관리과-1503)`,
+      );
+    }
+    if (successorGiftHoldingConsolidationApplies(asset)) {
+      const startIssue = successorGiftHouseholdStartIssue({
+        householdStartDate: asset.redevSuccessorGiftHouseholdStartDate,
+        donorAcquisitionDate: asset.donorAcquisitionDate,
+        approvalDate: asset.redevApprovalDate,
+        giftDate: asset.acquisitionDate,
+      });
+      if (startIssue === "missing_start") {
+        return fieldError("redevSuccessorGiftHouseholdStartDate", `${label}: 세대가 종전주택 보유를 시작한 날을 입력하세요.`);
+      }
+      if (startIssue === "missing_donor_acquisition") {
+        return fieldError("donorAcquisitionDate", `${label}: 증여자 취득일을 입력하세요 — 증여자 세대의 보유기간을 통산하려면 필요합니다.`);
+      }
+      if (startIssue === "before_donor_acquisition") {
+        return fieldError("redevSuccessorGiftHouseholdStartDate", `${label}: 세대가 종전주택 보유를 시작한 날은 증여자 취득일 이후여야 합니다.`);
+      }
+      if (startIssue === "after_approval") {
+        return fieldError(
+          "redevSuccessorGiftHouseholdStartDate",
+          `${label}: 세대가 종전주택 보유를 시작한 날은 관리처분계획 인가일 이전이어야 합니다 — 인가 뒤에 입주권을 취득했다면 「아니오」를 고르세요.`,
+        );
+      }
+      if (startIssue === "not_before_gift") {
+        return fieldError("redevSuccessorGiftHouseholdStartDate", `${label}: 세대가 종전주택 보유를 시작한 날은 증여일 이전이어야 합니다.`);
+      }
     }
   }
 

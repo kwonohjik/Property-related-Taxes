@@ -76,6 +76,8 @@ describe("⑤ 선택 patch", () => {
       redevPriorHouseResidenceMonths: "",
       redevPriorResidenceStartDate: "",
       redevPriorResidenceEndDate: "",
+      redevSuccessorGiftDonorHouseMember: "",
+      redevSuccessorGiftHouseholdStartDate: "",
     });
   });
 });

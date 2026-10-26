@@ -116,7 +116,7 @@ describe("RG — 칸을 열지 않는 축 (Q-1 a 범위 밖)", () => {
     expect(warnings(r).some((w) => w.includes(NOT_REFLECTED))).toBe(false);
   });
 
-  it("RG-8 승계조합원(입주권 상태 증여) — 싣지 않고 세액 그대로 · 고지는 승계조합원이 입력받지 않는 경로라고 적는다", async () => {
+  it("RG-8 승계조합원(입주권 상태 증여) — 일반 세대 관계 칸은 싣지 않는다 · 증여자 유형 미답이면 준공일 기산 고지 (redev-successor-gift-holding에서 재개발 카드로 받는다)", async () => {
     const r = await runCalc(
       giftAptForm({
         acquisitionDate: "2020-01-01",
@@ -129,8 +129,10 @@ describe("RG — 칸을 열지 않는 축 (Q-1 a 범위 밖)", () => {
     );
     expect(sentFacts(r.body)).toEqual([]);
     expect(r.result.determinedTax).toBe(298_500_000);
-    const notice = warnings(r).find((w) => w.includes(NOT_REFLECTED));
-    expect(notice).toContain("재개발 승계조합원(입주권을 증여받은 경우) 완공 신축주택에서는 입력받지 않습니다");
+    expect(warnings(r).some((w) => w.includes(NOT_REFLECTED))).toBe(false);
+    const notice = warnings(r).find((w) => w.includes("준공일(사용승인일)부터 보유기간을 세어"));
+    expect(notice).toContain("그 사실이 입력되지 않아");
+    expect(notice).toContain("재개발 카드");
   });
 });
 

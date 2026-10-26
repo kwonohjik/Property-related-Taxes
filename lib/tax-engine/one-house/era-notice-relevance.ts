@@ -79,6 +79,9 @@ export function buildEraNoticeRelevance(ctx: {
         // 토지만 출자한 원조합원 완공APT — 보유 기산일이 사용승인일로 정해져(`exemptionHoldingStartDate` · G3-4) 증여받은 토지에는
         //   통산할 세대의 주택 보유가 없다. 세대 사실이 결론을 가르지 않으므로 알리지 않는다(계획서 redev-apt-gift-household-fact Q-4 a).
         if (input.exemptionHoldingStartDate) return false;
+        // 재개발 승계조합원 증여 승계 — 증여자와 같은 세대가 아니거나 증여자가 주택을 출자한 원조합원이 아니라고 답했으면 통산할 세대의
+        //   주택 보유가 없다(계획서 redev-successor-gift-holding D-6).
+        if (input.redevSuccessorGift?.declinedConsolidation) return false;
         return !settled;
       }
       return giftHouseholdFactDecides(g, `${verdict.isExempt}|${verdict.isPartialExempt}`, verdictOf);
@@ -87,6 +90,8 @@ export function buildEraNoticeRelevance(ctx: {
     giftPriorResidenceDecides: () => {
       const g = input.giftHouseholdBasis;
       if (!g || article89Excluded) return false;
+      // 재개발 승계조합원 — 증여 전 거주는 종전주택 거주 칸(사전-2020-법령해석재산-0691)이 받는다(계획서 redev-successor-gift-holding Q-2 a).
+      if (input.redevSuccessorGift) return false;
       return giftPriorResidenceDecides(g, `${verdict.isExempt}|${verdict.isPartialExempt}`, (basis) => {
         const r = check({ ...input, giftHouseholdBasis: basis });
         return `${r.isExempt}|${r.isPartialExempt}`;
