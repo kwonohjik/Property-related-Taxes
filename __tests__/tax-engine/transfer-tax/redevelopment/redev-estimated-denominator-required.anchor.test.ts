@@ -9,7 +9,7 @@
  * 「validation에서 차단되어야 함」이라 적었지만 그 차단은 ⑧(클라이언트)에만 있었고
  * ⑫ Zod에는 대응 refine이 없었다 — 클라이언트를 거치지 않은 요청은 오류 없이 통과했다.
  *
- * 같은 상황에서 sibling 환산 서브엔진 둘은 이미 `TaxRateNotFoundError`를 던진다
+ * 같은 상황에서 sibling 환산 서브엔진 둘은 이미 `TaxRateNotFoundError`를 던진다(2026-10-26부터 셋 다 `INVALID_INPUT`)
  * (`redevelopment-land-contribution.ts` 「§166③ 분모」 · `redevelopment-housing-contribution.ts`).
  * 본류만 침묵해 **세 번째 진실**(0으로 성공)이 있었다.
  *
@@ -24,7 +24,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { runRedevelopment } from "@/lib/tax-engine/redevelopment";
-import { TaxRateNotFoundError } from "@/lib/tax-engine/tax-errors";
+import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
+import { TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { addPropertyRefines } from "@/lib/api/transfer-tax-schema-refines";
 import { case44Input, case44RedevelopmentInfo } from "./_helpers";
 
@@ -32,14 +33,29 @@ import { case44Input, case44RedevelopmentInfo } from "./_helpers";
 // 엔진 — 분모 미입력이면 던진다
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe("E1-07 엔진 · 환산 모드 분모 미입력 → TaxRateNotFoundError", () => {
+/**
+ * 호출자 입력의 결함 — `INVALID_INPUT`(route 400 · `lib/api/tax-error-response.ts`). 종전 `TaxRateNotFoundError`(500)는
+ * ⑫가 없던 컴패니언에서 서버 결함처럼 응답했다(계획서 companion-redev-166-3-required.plan.md Q-3).
+ */
+function expectInvalidInput(fn: () => unknown) {
+  let err: unknown;
+  try {
+    fn();
+  } catch (e) {
+    err = e;
+  }
+  expect(err).toBeInstanceOf(TaxCalculationError);
+  expect((err as TaxCalculationError).code).toBe(TaxErrorCode.INVALID_INPUT);
+}
+
+describe("E1-07 엔진 · 환산 모드 분모 미입력 → INVALID_INPUT", () => {
   it("주택 출자 + 환산 + D(관리처분 라목값) 미입력 → throw", () => {
     const input = case44Input();
     input.redevelopment = {
       ...case44RedevelopmentInfo(),
       managementDisposalHousingPrice: undefined,
     };
-    expect(() => runRedevelopment(input)).toThrow(TaxRateNotFoundError);
+    expectInvalidInput(() => runRedevelopment(input));
   });
 
   it("주택 출자 + 환산 + D=0 → throw (0은 분모가 될 수 없다)", () => {
@@ -48,7 +64,7 @@ describe("E1-07 엔진 · 환산 모드 분모 미입력 → TaxRateNotFoundErro
       ...case44RedevelopmentInfo(),
       managementDisposalHousingPrice: 0,
     };
-    expect(() => runRedevelopment(input)).toThrow(TaxRateNotFoundError);
+    expectInvalidInput(() => runRedevelopment(input));
   });
 
   it("토지 출자 + 완공APT(subject=apt) + 환산 + 공시지가 미입력 → throw", () => {
@@ -61,7 +77,13 @@ describe("E1-07 엔진 · 환산 모드 분모 미입력 → TaxRateNotFoundErro
       landStdPriceAtAcq: 100_000_000,
       landStdPriceAtApproval: undefined,
     };
-    expect(() => runRedevelopment(input)).toThrow(TaxRateNotFoundError);
+    expectInvalidInput(() => runRedevelopment(input));
+  });
+
+  it("주택 출자 + 환산 + 분자(취득당시 개별주택가격) 미입력 → throw (종전 취득가액 0으로 성공 — 사례 44 94,081,180)", () => {
+    const input = case44Input();
+    input.redevelopment = { ...case44RedevelopmentInfo(), acquisitionHousingPrice: undefined };
+    expectInvalidInput(() => runRedevelopment(input));
   });
 
   it("분모가 있으면 종전대로 계산된다 (과잉 차단 방지 — 사례 44 회귀)", () => {

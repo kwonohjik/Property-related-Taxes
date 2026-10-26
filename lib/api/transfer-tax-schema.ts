@@ -25,6 +25,7 @@ import { addCompanionAcquisitionCauseRefines } from "./transfer-tax-schema-compa
 import { refineSelfBuiltHousing, isSeparatedLike } from "./transfer-tax-schema-self-built-housing";
 import { refineUnregisteredSelfFarming } from "./transfer-tax-schema-refines";
 import { refineCompanionGbUnregisteredAxis } from "./transfer-tax-schema-refines";
+import { refineRedevelopment166_3Inputs } from "./transfer-tax-schema-redev-166-3-refines";
 import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
 import { refinePropertyRequiredInputs, refineAmendmentInputs } from "./transfer-tax-schema-required-refines";
 import { refineCompanionPreDeemedAcquisitionSource } from "./transfer-tax-schema-required-refines-2a";
@@ -167,6 +168,8 @@ export const propertySchema = z
       refineCompanionGbUnregisteredAxis(c, ctx, ["companionAssets", i, "isUnregistered"]);
       // PD-1 — 의제 전 상속·증여 취득가액 원천(주 자산과 같은 규칙 · CP-3로 열린 운반 경로)
       refineCompanionPreDeemedAcquisitionSource(c, ctx, ["companionAssets", i]);
+      // 재개발·재건축 §166③ 환산 입력 — 주 자산과 같은 규칙(종전에는 컴패니언에 없어 분모 비움이 엔진 throw 500)
+      refineRedevelopment166_3Inputs(c, ctx, ["companionAssets", i]);
       // D0 — 토지 파트 취득원인(이월과세 미지원·상속·증여 추계 불가·피상속인 취득일) — 주 자산과 같은 leaf
       refineSplitPartCause(c, c.assetKind === "housing" || c.assetKind === "building", c.assetKind === "housing", ctx, ["companionAssets", i], {
         supported: false, // 컴패니언은 파트 이월과세를 받지 않는다(leaf S0) — 키는 받아서 명시 거부한다

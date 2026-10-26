@@ -29,6 +29,7 @@ import {
   successorGiftHouseholdInScope,
 } from "./redev-field-scope";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { isRedevPhdTriggered } from "./redev-phd-trigger";
 
 /**
  * AssetForm redev* 필드 → RedevelopmentInfo 서브객체 변환.
@@ -87,6 +88,8 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
    * 게이트가 없으면 stale 저장값이 그대로 흘러 양도가액·LTHD를 조용히 바꾼다.
    */
   const isApt = subject === "apt";
+  /** §164⑦ 본문 발동 — ⑧·⑤와 같은 술어(`isRedevPhdTriggered`). */
+  const phdTriggered = isRedevPhdTriggered(asset);
   const rightsValueRaw =
     asset.redevIsSuccessorMember === "yes"
       ? parseAmount(asset.fixedAcquisitionPrice)
@@ -145,15 +148,22 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
     landPricePerSqmAtAcq: asset.redevLandPricePerSqmAtAcq
       ? parseAmount(asset.redevLandPricePerSqmAtAcq)
       : undefined,
+    // 건물 기준시가는 §164⑦ 본문이 발동한 동안 빈 칸을 0으로 싣는다 — ⑧(`transfer-tax-validate-redev.ts` `< 0`만 막음)과 화면 미리보기
+    // (`RedevelopmentValuationSection`)가 빈 칸을 0으로 보는데 여기만 미전송해, 엔진 본문이 발동하지 않고 숨은 분자 칸(0)으로
+    // 취득가액 0을 계산했다(계획서 companion-redev-166-3-required.plan.md · 리뷰 게이트 D-2). 3중 패턴(UI/API/validate).
     buildingStdPriceAtAcq: asset.redevBuildingStdPriceAtAcq
       ? parseAmount(asset.redevBuildingStdPriceAtAcq)
-      : undefined,
+      : phdTriggered
+        ? 0
+        : undefined,
     landPricePerSqmAtFirst: asset.redevLandPricePerSqmAtFirst
       ? parseAmount(asset.redevLandPricePerSqmAtFirst)
       : undefined,
     buildingStdPriceAtFirst: asset.redevBuildingStdPriceAtFirst
       ? parseAmount(asset.redevBuildingStdPriceAtFirst)
-      : undefined,
+      : phdTriggered
+        ? 0
+        : undefined,
     // 단일 라목값
     managementDisposalHousingPrice: asset.redevManagementDisposalHousingPrice
       ? parseAmount(asset.redevManagementDisposalHousingPrice)
