@@ -12,6 +12,8 @@ import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { parsePriorResidenceMonths } from "@/lib/calc/gift-household-payload";
 import { partCarryover } from "./transfer-land-part-cause";
+import { apportionGiftTax } from "@/lib/tax-engine/carryover-gift-tax-apportion";
+import { gbBgGiftTaxReturn } from "./gb-bg-gift-tax-return";
 
 /**
  * buildCarryoverPayload 반환 타입.
@@ -110,7 +112,13 @@ export function buildCarryoverPayload(
       !c.useEstimatedAcquisition && donorAcqPrice > 0 ? donorAcqPrice : undefined,
     useEstimatedAcquisition: c.useEstimatedAcquisition,
     // ⚠️ 지분 미스케일 — 위 JSDoc의 미결 사항.
-    giftTaxAmount: parseAmount(c.giftTaxAmount),
+    // 일반건물 부담부증여는 화면이 신고서 금액(산출세액·과세가액)을 받는다 — 영 §163의2②로 상당액을 만든다(엔진 leaf).
+    //   분자(2호 자산가액)만 지분 몫(× r)이고 산출세액·과세가액은 신고서 금액 그대로다(`transfer-tax-api-gb-carryover.ts` `GIFT_EVENT_SCALE`와 같다).
+    //   짝이 다 차지 않으면 종전 상당액 칸 값을 쓴다(저장 이력 호환). 계획서 `gb-bg-carryover-gift-tax-input.plan.md` §4.1.
+    giftTaxAmount: (() => {
+      const ret = gbBgGiftTaxReturn(asset);
+      return ret ? apportionGiftTax(ret, scale(parseAmount(c.giftDateValuation))) : parseAmount(c.giftTaxAmount);
+    })(),
     donorCapitalExpenditure: capex > 0 ? capex : undefined,
     giftDateValuation: scale(parseAmount(c.giftDateValuation)),
     // §97의2① 관계요건 — 미선택("")·미사망(false)은 전송하지 않는다(엔진 기본값과 동치).

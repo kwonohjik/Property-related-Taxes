@@ -10,6 +10,7 @@
  *
  * 함께 부담부증여 묶음(`assetLabel` 지정 · PR-1)은 자산마다 한 장이다. A·B는 **그 자산에만** 적용 / 미적용했을 때의 신고 전체 결정세액이고
  * 다른 자산의 채택이 함께 정해지므로, 「신고세액 = 큰 금액」 문구를 쓰지 않는다(다건 카드 `filingUnitComparison`과 같은 문구 · 계획서 §4.6).
+ * [A] 열의 증여세 상당액은 ④가 신고서 금액으로 만든 값(`gb-bg-carryover-gift-tax-input.plan.md` §4.4)이다.
  */
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { InfoRow, ScenarioCol } from "./CarryoverComparisonCard";
@@ -59,6 +60,10 @@ export function GbBurdenedGiftCarryoverCard({ detail, assetLabel }: { detail: De
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <ScenarioCol label="[A] 이월과세 적용" adopted={adoptedA} determinedTax={detail.determinedTaxA} filingUnit={perAsset} compared>
           <SummaryRows s={detail.scenarioA} acqTag="당초 증여자 기준" startTag="당초 증여자 취득일" />
+          {/* §97의2①3호 — A에만 산입된다. 채무 비율 안분·한도 전 금액이다(그 뒤 단계는 §159 명세). 0도 보인다 — 입력이 닿지 않은 것을 화면이 말하게(gb-bg-carryover-gift-tax-input.plan.md §4.4). */}
+          <div data-testid="gb-bg-carryover-gift-tax">
+            <InfoRow label="증여세 상당액 (채무 비율 안분 전)" value={formatKRW(detail.giftTaxAmount)} />
+          </div>
         </ScenarioCol>
         <ScenarioCol
           label={`[B] 미적용 (비교과세)${adoptedA ? "" : " ← 비교과세 세액 역전"}`}
