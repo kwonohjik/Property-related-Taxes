@@ -92,6 +92,7 @@ import { redevActualAcquisitionPriceRaw } from "./redev-acquisition-price-source
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
+import { deemedOneHouseContextDeclared } from "./deemed-one-house-context";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -605,6 +606,8 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
         isHousing: isOneHouseExemptionAsset(primary.assetKind),
         // §154① 단서는 §155②③·조특법 제외 **후** 주택 수로 본다 — 엔진과 같은 leaf(⑤·⑧·Step4 안내와 공용, S03-4).
         householdHousingCount: resolveExemptionHousingCount(form),
+        // V-F4 — §155 의제(합가·⑥⑦⑧) 입력이면 2주택 이상에서도 단서 카드를 연다(⑤·④·⑧ 같은 leaf)
+        deemedOneHouseContextDeclared: deemedOneHouseContextDeclared(form),
         temporaryTwoHouseApplies: temporaryTwoHouseApplies({
         primaryKind: form.assets?.[0]?.assetKind,
         primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),

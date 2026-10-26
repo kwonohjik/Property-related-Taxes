@@ -66,6 +66,7 @@ import { unconfirmedTempTwoHouseProviso5 } from "@/lib/calc/exemption-proviso-pa
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
+import { deemedOneHouseContextDeclared } from "./deemed-one-house-context";
 
 /**
  * TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용)
@@ -194,6 +195,8 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     isHousing: isOneHouseExemptionAsset(primaryKind),
     // §154① 단서는 제외 **후** 주택 수로 본다 — 단건 ④와 같은 leaf(S03-4).
     householdHousingCount: resolveExemptionHousingCount(form),
+    // V-F4 — §155 의제(합가·⑥⑦⑧) 입력이면 2주택 이상에서도 단서 카드를 연다(⑤·④·⑧ 같은 leaf)
+    deemedOneHouseContextDeclared: deemedOneHouseContextDeclared(form),
     temporaryTwoHouseApplies: temporaryTwoHouseApplies({
       primaryKind: form.assets?.[0]?.assetKind,
       primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? form.assets?.[0]?.acquisitionDate,

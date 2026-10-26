@@ -39,12 +39,14 @@ export function isMultiHouseSurchargeSuppressed(
   return t !== undefined && a !== undefined && meetsSurchargeSuspensionHolding(a, t);
 }
 
-/** §154① 단서 카드 노출 맥락 — 1주택 / 일시적 2주택 / 미노출. */
-export type ProvisoMode = "one_house" | "temporary_two_house" | null;
+/** §154① 단서 카드 노출 맥락 — 1주택 / 일시적 2주택 / §155 의제 2주택 이상(합가·⑥⑦⑧ — V-F4) / 미노출. */
+export type ProvisoMode = "one_house" | "temporary_two_house" | "deemed_one_house" | null;
 
 /**
  * §154① 단서 카드 노출 여부 + 맥락(mode) 단일 파생.
- * 1주택 → one_house. 2주택+일시적특례 → temporary_two_house(§155① 준용). 그 외(순수 2주택·대체주택·3주택+) → 숨김.
+ * 1주택 → one_house. 2주택+일시적특례 → temporary_two_house(§155① 준용). 2주택 이상 + §155 의제 선언 → deemed_one_house
+ * (§155④⑤⑥⑦⑧도 「1세대1주택으로 보아」·「1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용」 — V-F4 Q-M1 (a)).
+ * 그 외(순수 다주택·대체주택) → 숨김.
  * UI(Step4 렌더·배치)·API 조립·validation이 이 단일 함수를 공유(mirror-pattern).
  */
 export function provisoGate(args: {
@@ -66,23 +68,30 @@ export function provisoGate(args: {
    *    도출한다 — 호출부는 `resolveTemporaryTwoHouse(...) !== undefined`를 넘긴다.
    */
   temporaryTwoHouseApplies: boolean;
+  /**
+   * §155 의제 특례(합가 ④⑤ · ⑥ 문화유산 · ⑦ 농어촌 · ⑧ 수도권 밖 부득이)를 **입력했는가** — `deemedOneHouseContextDeclared`.
+   * 성립(합가 10년·각 항 요건)은 엔진이 본다 — 게이트가 다시 판정하면 엔진과 두 벌이 된다.
+   */
+  deemedOneHouseContextDeclared: boolean;
 }): { visible: boolean; mode: ProvisoMode } {
   if (!args.isOneHousehold || !args.isHousing) return { visible: false, mode: null };
   const n = args.householdHousingCount;
   if (n === 1) return { visible: true, mode: "one_house" };
   if (n === 2 && args.temporaryTwoHouseApplies) return { visible: true, mode: "temporary_two_house" };
+  if (n >= 2 && args.deemedOneHouseContextDeclared) return { visible: true, mode: "deemed_one_house" };
   return { visible: false, mode: null };
 }
 
 /**
- * §154① 단서 reason 정규화 — temporary_two_house 모드에서 받는 사유(1·2가·3호 + 5호 — `TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS`) 밖 reason은 "" 로 취급.
+ * §154① 단서 reason 정규화 — temporary_two_house·deemed_one_house 모드에서 받는 사유(1·2가·3호 + 5호 — `TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS`) 밖 reason은 "" 로 취급.
+ * deemed_one_house도 같은 집합이다(V-F4 Q-M2 (a)) — 나·다목은 「출국일 현재 1주택」이 2주택 세대와 맞지 않고, 삭제 전 4호는 F-2와 같이 뺀다.
  * UI 선택표시·API 조립·validation 3곳이 단일 소비 → 옵션 필터로 숨긴 stale 무효 reason이 엔진/검증에 도달하지 않음.
  * (1주택 모드서 나·다목·삭제 전 4호 선택 후 일시적 2주택 전환 시 데드락 방지 — 파생이라 clear-onChange 불필요.)
  */
 export function effectiveProvisoReason(mode: ProvisoMode, reason: string | undefined | null): string {
   if (!reason) return "";
   if (mode === null) return ""; // 카드 숨김(순수 다주택·3주택+·비주택·비1세대) — stale reason 미전송·검증 skip(데드락 방지)
-  if (mode === "temporary_two_house" && !TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS.has(reason)) return "";
+  if ((mode === "temporary_two_house" || mode === "deemed_one_house") && !TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS.has(reason)) return "";
   return reason;
 }
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존

@@ -43,6 +43,7 @@ import { duplicateOwnedUnavoidableOutsideCapitalRows } from "./house-row-require
 import { houseRowSurchargeAxisIssue } from "./transfer-tax-validate-surcharge-axis";
 import { collectSellingHouseSurchargeIssues } from "./transfer-tax-validate-surcharge-axis";
 import { collectGracePeriodIssues } from "./transfer-tax-validate-surcharge-axis";
+import { deemedOneHouseContextDeclared } from "./deemed-one-house-context";
 
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const step = 1;
@@ -276,6 +277,8 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     isHousing: isOneHouseExemptionAsset(form.assets?.[0]?.assetKind),
     // §154① 단서는 제외 **후** 주택 수로 본다 — ④·⑤·Step4 안내와 같은 leaf(S03-4).
     householdHousingCount: resolveExemptionHousingCount(form),
+    // V-F4 — §155 의제(합가·⑥⑦⑧) 입력이면 2주택 이상에서도 단서 카드를 연다(⑤·④·⑧ 같은 leaf)
+    deemedOneHouseContextDeclared: deemedOneHouseContextDeclared(form),
     temporaryTwoHouseApplies: temporaryTwoHouseApplies({
       primaryKind: form.assets?.[0]?.assetKind,
       primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
@@ -303,15 +306,15 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   /**
    * 🔑 §154① 단서 사유별 필수 입력 — 판정 메뉴와 **같은 leaf**(`exemption-proviso-validate.ts`).
    *
-   * 🔴 **`one_house` 맥락에서만 본다.** 이 화면(Step4)이 단서 카드를 그리는 것은
-   *    `one_house`뿐이다 — `temporary_two_house` 맥락 카드는 판정 메뉴로 갔다(P6-b).
+   * 🔴 **`one_house`·`deemed_one_house` 맥락에서만 본다.** 이 화면(Step4)이 단서 카드를 그리는 것은
+   *    그 둘뿐이다(§155 의제 2주택 이상 — V-F4) — `temporary_two_house` 맥락 카드는 판정 메뉴로 갔다(P6-b).
    *    종전에는 게이트가 없어도 무효과였다(그 맥락의 화이트리스트 1호·2호가목·3호 밖 사유만
    *    검사했으므로 — TM-7). 2호가목 **수용일**이 필수가 되면서(OH-33) 수용은 화이트리스트
    *    **안**이라, 게이트 없이는 채울 칸이 없는 이 화면에서 영구 차단이 된다.
    */
   const provisoReasonEff = effectiveProvisoReason(provisoMode, form.provisoReason);
   for (const message of collectExemptionProvisoErrors({
-    reason: provisoMode === "one_house" ? provisoReasonEff : "",
+    reason: provisoMode === "one_house" || provisoMode === "deemed_one_house" ? provisoReasonEff : "",
     departureDate: form.provisoDepartureDate,
     departureOnlyHouse: form.provisoDepartureOnlyHouse,
     transferDate: form.transferDate,

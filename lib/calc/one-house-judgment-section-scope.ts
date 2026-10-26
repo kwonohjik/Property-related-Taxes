@@ -30,6 +30,7 @@ import {
 } from "./temp-two-house-candidate-exclusion";
 import type { HouseEntry, RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
+import { deemedOneHouseContextDeclared } from "./deemed-one-house-context";
 
 /**
  * §155①⑥⑦⑧⑯⑱ 섹션 — 2주택 이상일 때만 의미가 있다.
@@ -132,6 +133,8 @@ export function judgmentProvisoMode(form: OneHouseJudgmentFormData): ProvisoMode
     isOneHousehold: form.isOneHousehold,
     isHousing: primary?.assetKind === "housing",
     householdHousingCount: judgmentExemptionHouseCount(form), // 명부 파생값(D-3) − 주택 수 제외 행(S03-4)
+    // V-F4 — §155 의제(합가·⑥⑦⑧) 입력이면 2주택 이상에서도 단서 카드를 연다(⑤·④·⑧ 같은 leaf)
+    deemedOneHouseContextDeclared: deemedOneHouseContextDeclared(form),
     temporaryTwoHouseApplies: temporaryTwoHouseApplies({
       primaryKind: primary?.assetKind,
       primaryAcquisitionDate: sellingHousePreviousDateOverride(primary, form.houses?.length) ?? primary?.acquisitionDate,

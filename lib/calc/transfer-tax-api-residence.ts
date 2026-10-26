@@ -26,6 +26,7 @@ import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exc
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { departureOnlyHousePayload, rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
+import { deemedOneHouseContextDeclared } from "./deemed-one-house-context";
 
 export function buildResidenceReqInput(
   form: TransferFormData,
@@ -63,6 +64,8 @@ export function buildResidenceReqInput(
       isHousing: isOneHouseExemptionAsset(primary?.assetKind),
     // §154① 단서는 제외 **후** 주택 수로 본다 — ④·⑤·⑧과 같은 leaf(S03-4).
     householdHousingCount: resolveExemptionHousingCount(form),
+    // V-F4 — §155 의제(합가·⑥⑦⑧) 입력이면 2주택 이상에서도 단서 카드를 연다(⑤·④·⑧ 같은 leaf)
+    deemedOneHouseContextDeclared: deemedOneHouseContextDeclared(form),
     temporaryTwoHouseApplies: temporaryTwoHouseApplies({
       primaryKind: form.assets?.[0]?.assetKind,
       primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
