@@ -8,6 +8,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
+import { RH_ANSWERED_NO } from "../calc/_helpers/phrp-154-10-answer";
 
 export type Obj = Record<string, unknown>;
 
@@ -32,6 +33,7 @@ export function giftItem(
     burdenedGiftTransferTax: {
       standardPriceAtAcquisition: 150_000_000,
       isOneHousehold: true,
+      rentalHousingException: RH_ANSWERED_NO,
       householdHousingCount: 1,
       isRegulatedArea: false,
       wasRegulatedAtAcquisition: false,

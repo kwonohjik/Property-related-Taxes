@@ -10,6 +10,7 @@
  * 실행: E2E_PORT=3231 npx playwright test e2e/one-house-judgment-gift-prior-residence-38-7.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
+import { answerPhrp154_10NoIfUnanswered } from "./_helpers/judgment-seed";
 
 const FIELD = "one-house-gift-prior-residence";
 
@@ -49,6 +50,7 @@ async function seedGift(page: Page, assetOver: Record<string, unknown> = {}) {
   await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click(); // ① → ②
   await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+  await answerPhrp154_10NoIfUnanswered(page);
 }
 
 async function judge(page: Page) {

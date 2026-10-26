@@ -6,12 +6,14 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
+import { answerPhrp154_10NoIfUnanswered } from "./_helpers/judgment-seed";
 
 async function gotoSaleStep(page: Page) {
   await page.goto("/calc/one-house-exemption?new=1");
   await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+  await answerPhrp154_10NoIfUnanswered(page);
   await fillDateAndVerify(page, { year: "2023", month: "06", day: "01" }, {
     scope: page.getByTestId("one-house-acq-date"),
   });
@@ -42,6 +44,7 @@ test.describe("판정 메뉴 ② 거주기간 입력", () => {
     await expect(page.getByText("③ 보유 주택·권리")).toHaveCount(0);
 
     await months.fill("12");
+    await answerPhrp154_10NoIfUnanswered(page);
     await page.getByRole("button", { name: "다음" }).click();
     await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
   });

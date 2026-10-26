@@ -31,6 +31,7 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { giftForm, post, run, type Obj } from "./_gift-burdened-pr7-harness";
+import { RH_ANSWERED_NO } from "../calc/_helpers/phrp-154-10-answer";
 
 beforeEach(() => vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates()));
 afterEach(() => vi.unstubAllGlobals());
@@ -52,6 +53,7 @@ function apt(over: Partial<EstateItem> = {}, bgt: Partial<BurdenedGiftTransferTa
       acquisitionDate: new Date("2016-01-10"),
       standardPriceAtAcquisition: 500_000_000,
       isOneHousehold: true,
+      rentalHousingException: RH_ANSWERED_NO,
       householdHousingCount: 1,
       isRegulatedArea: false,
       wasRegulatedAtAcquisition: false,

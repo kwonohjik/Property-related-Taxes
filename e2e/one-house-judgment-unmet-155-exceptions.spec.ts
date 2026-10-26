@@ -21,6 +21,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
+import { answerPhrp154_10NoIfUnanswered } from "./_helpers/judgment-seed";
 
 const house = (
   id: string,
@@ -84,6 +85,7 @@ async function gotoResult(page: Page, over: Record<string, unknown> = {}) {
   // ① 세대 → ② 양도 대상 주택 → ③ 보유 주택·권리 (2026-09-23 재배치 — 클릭 수는 그대로다)
   // 🔑 시드가 취득일·양도예정일·양도가액을 이미 갖고 있어 ②의 ⑧이 막지 않는다.
   await page.getByRole("button", { name: "다음" }).click();
+  await answerPhrp154_10NoIfUnanswered(page);
   await page.getByRole("button", { name: "다음" }).click();
   await page.getByRole("button", { name: "판정 결과 보기" }).click();
   await expect(page.getByTestId("one-house-judgment-result")).toBeVisible();

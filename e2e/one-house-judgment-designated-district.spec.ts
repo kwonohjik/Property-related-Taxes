@@ -8,6 +8,7 @@
  * 🔑 소재지는 시드한다 — 주소 검색(Vworld)은 별개 축이다(`one-house-judgment-step-jump-gate.spec.ts`와 같은 판단).
  */
 import { test, expect, type Page } from "@playwright/test";
+import { answerPhrp154_10NoIfUnanswered } from "./_helpers/judgment-seed";
 
 async function seedDaehwa(page: Page) {
   await page.goto("/calc/one-house-exemption");
@@ -41,6 +42,7 @@ async function seedDaehwa(page: Page) {
   await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+  await answerPhrp154_10NoIfUnanswered(page);
 }
 
 function sidebarStep(page: Page, name: string) {

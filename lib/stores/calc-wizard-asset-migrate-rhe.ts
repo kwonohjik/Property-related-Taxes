@@ -98,6 +98,8 @@ export function migrateRentalHousingException(a: Record<string, unknown>): void 
     }
     // §154⑩ 표준 경로(I-5) 신규 필드 — 구 세션엔 없다 → 미입력(엔진이 「판정 불가」로 다룬다)
     if (typeof rhe.wasRegisteredRentalOrChildcare !== "boolean") rhe.wasRegisteredRentalOrChildcare = false;
+    // §154⑩ 사실 질문 — 구 기록엔 없다 → 미응답(판정 메뉴 ⑧이 묻는다). §154⑩ 선언 기록은 응답 없이도 「예」로 도출된다.
+    if (rhe.phrp154_10Answer !== "yes" && rhe.phrp154_10Answer !== "no") rhe.phrp154_10Answer = "";
     // 구 브랜치(PR #1903 초판)의 residenceMonthsAfterPriorResidenceTransfer 필드는 폐기 —
     // 거주기간은 postRegistrationResidenceMonths(위 backfill)를 재사용한다. 남아 있어도 무해(미소비)하므로
     // 굳이 delete하지 않는다.

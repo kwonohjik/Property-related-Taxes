@@ -34,6 +34,7 @@ import {
   validateStep2,
 } from "@/lib/calc/one-house-exemption-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import { RH_ANSWERED_NO } from "./_helpers/phrp-154-10-answer";
 
 /* 브라우저 전용 의존만 잘라낸다 — 검증·렌더 경로는 **진짜**를 쓴다. */
 vi.mock("next/navigation", () => ({
@@ -211,7 +212,7 @@ describe("AW-5 — ④ 결과 화면이 전 단계 경고를 모은다", () => {
       ...f,
       transferDate: "2026-06-01",
       contractTotalPrice: "900000000",
-      assets: [{ ...f.assets[0], assetKind: "housing", acquisitionDate: "2015-03-10" }],
+      assets: [{ ...f.assets[0], rentalHousingException: RH_ANSWERED_NO, assetKind: "housing", acquisitionDate: "2015-03-10" }],
     } as OneHouseJudgmentFormData;
   }
 

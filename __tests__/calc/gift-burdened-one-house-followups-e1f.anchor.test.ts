@@ -17,6 +17,7 @@ import {
 } from "@/lib/calc/gift-burdened-one-house";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
+import { RH_ANSWERED_NO } from "./_helpers/phrp-154-10-answer";
 
 function item(over: Partial<BurdenedGiftTransferTaxInput> = {}): EstateItem {
   return {
@@ -32,6 +33,7 @@ function item(over: Partial<BurdenedGiftTransferTaxInput> = {}): EstateItem {
       acquisitionDate: new Date("2018-03-01"),
       standardPriceAtAcquisition: 150_000_000,
       isOneHousehold: true,
+      rentalHousingException: RH_ANSWERED_NO,
       householdHousingCount: 1,
       residencePeriodMonths: 0,
       ...over,

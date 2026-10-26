@@ -403,4 +403,15 @@ export const ONE_HOUSE_FIELD_CATALOG_ASSET = [
     hint: "이 주택을 민특법 §5에 따라 임대주택으로 등록했거나 영유아보육법에 따라 어린이집으로 운영한 사실이 있는가.",
     when: "asset.rentalHousingException.scenario = B + rentalUnits 0호",
   },
+  {
+    path: "asset.rentalHousingException.phrp154_10Answer",
+    kind: "enum",
+    values: [
+      { value: "yes", label: "예" },
+      { value: "no", label: "아니오" },
+    ],
+    label: "임대 등록·어린이집 운영 + 보유 중 다른 거주주택 양도 (소령 §154⑩)",
+    hint: "이 주택을 민간임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 이 주택을 보유하는 동안 다른 거주주택을 양도한 적이 있는가. yes면 직전거주주택 양도일 후 기간분만 비과세(§154⑩ — 시나리오 B · 임대주택 0호로 선언된다). 원문에 사실이 없으면 비움.",
+    when: "주택 양도 + 2011.10.14 이후 양도 + 임대주택 1호 이상으로 ⑳을 선언하지 않음",
+  },
 ] as const satisfies readonly FieldSpec[];

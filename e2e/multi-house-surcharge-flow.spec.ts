@@ -9,6 +9,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { DIRECT_RESIDENCE, selectDirectResidenceInput } from "./_helpers/residence-direct";
+import { answerPhrp154_10NoIfUnanswered } from "./_helpers/judgment-seed";
 
 const GANGNAM = "1168010100";
 const house = (id: string) => ({
@@ -61,6 +62,7 @@ async function gotoResult(page: Page, over: Record<string, unknown> = {}) {
   await page.reload();
   await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click();
+  await answerPhrp154_10NoIfUnanswered(page);
   await page.getByRole("button", { name: "다음" }).click();
   await page.getByTestId("surcharge-judge-cta").click();
   await expect(page.getByTestId("surcharge-result")).toBeVisible();
@@ -136,6 +138,7 @@ test.describe("다주택 중과 판정 — 흐름", () => {
     // 새 양도 주택의 양도 사실 — 양도가액과 거주기간(전환은 거주를 비워 ⑧이 다시 묻게 한다)
     await page.getByTestId("one-house-sale-price").fill("900000000");
     await selectDirectResidenceInput(page);
+    await answerPhrp154_10NoIfUnanswered(page);
     await page.getByRole("button", { name: "다음" }).click();
     await page.getByTestId("surcharge-judge-cta").click();
     await expect(page.getByTestId("surcharge-conclusion-label")).toHaveText("3주택 이상 중과");

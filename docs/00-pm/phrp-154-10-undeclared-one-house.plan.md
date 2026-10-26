@@ -1,6 +1,6 @@
 # §154⑩ 직전거주주택보유주택을 평범한 1주택으로 입력하면 전액 비과세 — 계획서
 
-- 작성: 2026-10-26 · 상태: **결정 대기(Q-1·Q-2·Q-3)**
+- 작성: 2026-10-26 · 상태: **구현 완료 — 사용자 결정 Q-1 (a) · Q-2 (a) · Q-3 (a) (2026-10-26) · §8**
 - 출처: #2583(§154⑩ 단독 경로 × §154① 단서) 세션 점검 별건 ② — `project_deemed_two_house_proviso` 메모리.
 - 범위: 양도세 1세대1주택 판정 메뉴 · 양도세 계산기 · 증여세 부담부증여(양도분) 1주택 판정. 엔진 산식은 바꾸지 않는다(§3 — 선언되면 이미 맞다).
 
@@ -79,3 +79,38 @@
 2. ⑤(질문 위젯 · `radioValues`로 값 단언) · ⑧(미응답 차단 · 입주권·⑳ 선언 시 미노출) · ③ 마이그레이션 · 계산기 안내 문구.
 3. 뮤테이션(질문 게이트 · 「예」 → 선언 쓰기 · ⑧ 차단) + E2E(판정 메뉴 → 계산기 핸드오프).
 4. 전체 vitest · 관련 E2E 회귀(`one-house-judgment-rental-*` · `rental-*` · `phrp-154-10-proviso`) · 라이트·다크·375px.
+
+## 8. 구현 (2026-10-26 — 사용자 결정 Q-1 (a) · Q-2 (a) · Q-3 (a))
+
+### 8.1 구조 — 엔진·④·Zod·route 무변경
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| ① 폼 | `lib/stores/calc-wizard-asset-rental-exception.ts` | `rentalHousingException.phrp154_10Answer?: "" \| "yes" \| "no"` — 화면 전용(④ 명시 매핑이라 미전송) |
+| ②③ | `calc-wizard-asset-factory.ts` · `calc-wizard-asset-migrate-rhe.ts` | 기본값 `""`(미응답) · 구 기록 backfill `""` |
+| 정본 | `lib/calc/phrp-154-10-fact-question.ts` | 게이트 `phrp154_10QuestionInScope` · 도출 `phrp154_10AnswerOf` · 쓰기 `applyPhrp154_10Answer` · ⑧ `phrp154_10AnswerError` |
+| ⑤ | `components/calc/transfer/Phrp154_10FactQuestion.tsx` → `RentalHousingExceptionSection`(`facts`·`full`) | ⑳ 토글 **바깥**, 예/아니오 필수(「모름」 없음) |
+| ⑧ | `one-house-exemption-validate.ts`(판정 메뉴·중과 판정 메뉴) · `gift-burdened-rental-exception.ts`(부담부증여) | 같은 정본 |
+| Q-2 | `RentalHousingCalcSummary.tsx` | 계산기 미선언 안내에 §154⑩ 한 줄(`rental-housing-154-10-calc-notice`) — 계산기는 묻지 않는다 |
+| AI | `one-house-ai/field-catalog-asset.ts` · `merge-form.ts` · `question-answer.ts` | 필드 사전 등록(미등록이면 AI 사실 추출의 검증 질문이 답할 수 없는 막다른 길) · 「예」는 같은 쓰기로 선언 |
+
+### 8.2 V 해소
+
+- **V-2 (해소)** — §154⑩ `<신설 2011.10.14>`(현행 MST 290841 조문 연혁) · 대통령령 제23218호(MST 117942) 부칙 제2조 「이 영은 이 영 시행 후 최초로 양도하는 주택부터 적용한다」 — ⑳(당시 ⑲) 신설과 같은 개정령·같은 날이라 엔진 술어 `isRentalResidenceExceptionEnacted`를 그대로 쓴다. 2011.10.13. 이전 양도에는 묻지 않는다. 양도일을 모르면 묻는다.
+- **V-3 (해소)** — 부담부증여 ⑧이 같은 정본으로 막고(미응답 · 옛 기록의 특례 입력 없음 포함), 「예」면 계산기와 같은 leaf가 §161① 입력을 요구한다(anchor PG-1·PG-2).
+- **V-4 (해소)** — 구 기록은 미응답(`""`)으로 복원된다. 불러오기는 막지 않고 **다시 판정할 때** ② 화면에서 답을 요구한다. ⑳ 토글로 §154⑩을 선언했던 구 기록은 응답 없이도 「예」로 도출된다(PQ-6).
+- **V-5 (해소)** — 응답을 저장값이 아니라 **선언 상태에서 도출**한다: §154⑩ 선언(B · 임대주택 0호)이면 「예」, 아니면 저장된 「아니오」만 인정. 「예」 뒤 ⑳ 토글을 끄면 미응답으로 돌아가 다시 묻는다. 임대주택 1호 이상으로 ⑳을 선언하면 질문이 사라진다(그 주택은 마지막 1채가 아니다).
+- **V-1 (미해소 · 범위 밖)** — 질문 문구는 문언(「다른 거주주택」)을 따르고 판정 범위는 바꾸지 않았다.
+
+### 8.3 노출 범위
+
+- 판정 메뉴 · **중과 판정 메뉴**(같은 Step3·같은 ⑧을 쓴다 — 비과세 판정이 같은 폼으로 먼저 돈다) · 증여세 부담부증여(1세대 ON).
+- 묻지 않는 곳: 계산기(Q-2 (a)) · 입주권 양도(⑳ 칸 자체가 없다) · ⑳ 임대주택 1호 이상 선언 · 2011.10.13. 이전 양도.
+
+### 8.4 검증
+
+- anchor `__tests__/calc/phrp-154-10-fact-question.anchor.test.tsx` 10건 — 미응답 ⑧ 차단 · 「아니오」 비과세·계산기 0 · 「예」 → 「기간분 비과세」 · 계산기 §161 안분 **19,225,000**(#2583 PC-1 대조값과 같다) · 게이트 · V-4·V-5 · 부담부증여 · AI 쓰기/합치기.
+- ⑤ `__tests__/components/phrp-154-10-fact-question.ui.test.tsx` 6건 · E2E `e2e/one-house-judgment-phrp-154-10-question.spec.ts` 3건.
+- 뮤테이션 13종 전부 KILLED(게이트·도출·쓰기·⑧ 2곳·계산기 안내·섹션 렌더·AI 2곳·마이그레이션·「아니오」 선언 거두기·잔존 호 비우기 — 마지막은 처음 SURVIVED라 「⑳ 토글을 켰다 끈 뒤 「예」」 단언을 보탰다).
+- 전체 vitest 42,177 passed · 관련 E2E 75 spec(판정·중과 판정 메뉴·부담부증여) 회귀 — 질문 신설로 막힌 13 spec 32건은 ② 화면에서 「아니오」를 답하게 고쳐 44/44 통과(공용 `answerPhrp154_10NoIfUnanswered`) · 라이트·다크·375px 가로 넘침 0.
+- 기존 시료 영향: 판정 메뉴·부담부증여 시료 51파일이 미응답으로 막혔다 — 「임대 등록 이력 없는 평범한 주택」 전제를 응답 「아니오」로 명시했다(`__tests__/calc/_helpers/phrp-154-10-answer.ts` · 해석례 하네스 `buildCaseForm`은 사례가 §154⑩ 사실을 적지 않았으면 「아니오」). 초기 폼 ② 오류 수 4 → 5(SB-0).

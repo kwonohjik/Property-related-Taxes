@@ -33,6 +33,7 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { judgmentDerivedNewHouse, judgmentTempTwoHouseVerdict } from "@/lib/calc/one-house-judgment-temp-two-house";
+import { answeredNo } from "./_helpers/phrp-154-10-answer";
 
 /**
  * 판정 기준일(오늘)을 고정한다 — route가 이미 지난 「이 날까지 양도」 기한을 빼므로(2026-09-29),
@@ -58,7 +59,7 @@ function baseForm(over: Partial<OneHouseJudgmentFormData> = {}): OneHouseJudgmen
     transferDate: "2024-06-01",
     contractTotalPrice: "1000000000",
     residencePeriodMonths: "60",
-    assets: [{ ...f.assets[0], residenceInputMode: "direct", residencePeriods: [], assetKind: "housing", acquisitionDate: "2019-06-01" }],
+    assets: [{ ...f.assets[0], rentalHousingException: answeredNo(f.assets[0].rentalHousingException), residenceInputMode: "direct", residencePeriods: [], assetKind: "housing", acquisitionDate: "2019-06-01" }],
     ...over,
   };
 }

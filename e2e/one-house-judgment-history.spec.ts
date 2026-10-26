@@ -18,6 +18,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
 import { putCalculationRecord, waitForCalculationSaved } from "./_helpers/history-seed";
 import { selectDirectResidenceInput } from "./_helpers/residence-direct";
+import { answerPhrp154_10NoIfUnanswered } from "./_helpers/judgment-seed";
 
 const ADDRESS = "서울 강남구 판정로 1";
 
@@ -41,6 +42,7 @@ async function fillToStep3(page: Page): Promise<void> {
 
   // ③ 보유 주택·권리 — 1주택 세대(명부 0행)가 가장 흔한 입력이라 그대로 지나간다.
   // 「판정 결과 보기」 CTA는 이 마지막 입력 단계에만 있다.
+  await answerPhrp154_10NoIfUnanswered(page);
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
 }
@@ -92,6 +94,7 @@ test.describe("1세대1주택 판정 — 마법사·이력", () => {
     // (2026-09-23 재배치로 양도 대상이 2번째가 되어 「다음」 1회면 닿는다.)
     await page.getByRole("button", { name: "다음" }).click();
     await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+    await answerPhrp154_10NoIfUnanswered(page);
     await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
     await expect(
       page.getByTestId("one-house-sale-date").getByLabel("연도").first(),

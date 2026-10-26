@@ -10,6 +10,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
 import { selectDirectResidenceInput } from "./_helpers/residence-direct";
+import { answerPhrp154_10NoIfUnanswered } from "./_helpers/judgment-seed";
 
 async function seedRight(page: Page) {
   await page.goto("/calc/one-house-exemption");
@@ -39,6 +40,7 @@ async function seedRight(page: Page) {
 async function fillSaleStep(page: Page) {
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+  await answerPhrp154_10NoIfUnanswered(page);
   await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
   await fillDateAndVerify(page, { year: "2018", month: "01", day: "01" }, {
     scope: page.getByTestId("one-house-acq-date"),
@@ -74,6 +76,7 @@ test.describe("판정 메뉴 — 조합원입주권 취득 경위", () => {
   test("[OM-2] 승계취득을 고르면 날짜 칸 라벨은 그대로 「취득일」이고 판정까지 간다", async ({ page }) => {
     await seedRight(page);
     await fillSaleStep(page);
+    await answerPhrp154_10NoIfUnanswered(page);
     await page.getByRole("button", { name: "다음" }).click();
     await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
 

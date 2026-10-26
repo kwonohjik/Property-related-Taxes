@@ -34,6 +34,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import { handoff, runJudgment } from "./_one-house-pr6a-routes";
 import { runCalc } from "./_one-house-pr3a-calc-route";
+import { RH_ANSWERED_NO } from "./_helpers/phrp-154-10-answer";
 
 const PRIOR = "gift-household-prior-residence-unverified";
 const DETAIL = "gift-household-consolidation-detail-unverified";
@@ -45,6 +46,7 @@ const DETAIL = "gift-household-consolidation-detail-unverified";
 const asset = (over: Partial<AssetForm> = {}): AssetForm =>
   ({
     ...makeDefaultAsset(1),
+    rentalHousingException: RH_ANSWERED_NO,
     residenceInputMode: "direct",
     residencePeriods: [],
     assetKind: "housing",

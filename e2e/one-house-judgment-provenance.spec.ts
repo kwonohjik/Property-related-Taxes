@@ -18,6 +18,7 @@ import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { confirmNoOtherHouses } from "./_helpers/confirm-no-other-houses";
 import { confirmNoPresaleRights } from "./_helpers/confirm-no-presale-rights";
 import { selectDirectResidenceInput } from "./_helpers/residence-direct";
+import { answerPhrp154_10NoIfUnanswered } from "./_helpers/judgment-seed";
 
 const JIBUN = "서울 강남구 대치동 316";
 
@@ -37,6 +38,7 @@ async function judge(page: Page) {
   // ② 양도 대상 주택 (2026-09-23 재배치 — 종전에는 3번째 화면이었다)
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("② 양도 대상 주택")).toBeVisible();
+  await answerPhrp154_10NoIfUnanswered(page);
   await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
   await fillDateAndVerify(page, { year: "2019", month: "03", day: "10" }, {
     scope: page.getByTestId("one-house-acq-date"),
@@ -46,6 +48,7 @@ async function judge(page: Page) {
   });
   await page.getByTestId("one-house-sale-price").fill("900000000");
   // ③ 보유 주택·권리 — 명부는 비운 채 지나간다. CTA는 이 마지막 입력 단계에만 있다.
+  await answerPhrp154_10NoIfUnanswered(page);
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("③ 보유 주택·권리")).toBeVisible();
   await page.getByTestId("one-house-judge-cta").click();
