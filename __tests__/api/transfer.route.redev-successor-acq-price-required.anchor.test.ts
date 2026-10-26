@@ -92,10 +92,11 @@ describe("S-1 주 자산 매매 승계 — 종전 500(TAX_RATE_NOT_FOUND) → 40
     expect(r.code).toBe("INVALID_INPUT");
     expect(r.fieldErrors).toEqual(["acquisitionPrice"]);
   });
-  it("S-1c API 취득가액 0 · 평가액 450,000,000 → 막지 않는다(엔진이 §166④1호 평가액을 쓴다 — E2-01 A-2와 같은 값)", async () => {
+  it("S-1c API 취득가액 0 · 평가액 450,000,000 → 400 acquisitionPrice(평가액으로 대신하지 않는다)", async () => {
+    // 🔄 2026-10-26 반전(계획서 redev-successor-bg-acq-method Q-2 a — 엔진 rightsValue 대체 제거). 종전: 200 · 327,250,000.
     const r = await run(single(), (b) => { b.acquisitionPrice = 0; b.redevelopment.rightsValue = 450_000_000; });
-    expect(r.status).toBe(200);
-    expect(r.tax).toBe(327_250_000);
+    expect(r.status).toBe(400);
+    expect(r.fieldErrors).toEqual(["acquisitionPrice"]);
   });
   it("S-1d API 취득가액 0 · 평가액 0이어도 `inheritedAcquisition`이 있으면 막지 않는다(STEP 0.45가 취득가액을 만든다 — 리뷰 게이트 과차단 지적)", async () => {
     const IA = { mode: "post-deemed", inheritanceStartDate: "2020-04-15", assetKind: "house_apart", reportedValue: 450_000_000, reportedMethod: "supplementary" };

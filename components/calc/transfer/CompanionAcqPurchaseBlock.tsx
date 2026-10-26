@@ -22,6 +22,7 @@ import { SelfBuiltHousingShareBlock } from "./SelfBuiltHousingShareBlock";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
 import { CompanionAcqDateSection } from "./CompanionAcqDateSection";
 import { CompanionAcqAmountSection } from "./CompanionAcqAmountSection";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CompanionAcqSpecialAssetNotices } from "./CompanionAcqSpecialAssetNotices";
 import { CompanionAcqStdPriceSection } from "./CompanionAcqStdPriceSection";
 import { acqStdFieldInStdSection } from "./acq-std-price-branch";
@@ -396,7 +397,13 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           ⚠️ 종전의 안내 카드(`split-acq-total-note` — "총 취득가액이 존재하지 않습니다")는
              **삭제**했다(2026-07-30 사용자 확정 — 화면 밀도 우선). 바로 아래 「취득가액 산정 방식
              — 토지·건물 독립 선택」 헤더가 맥락을 대신한다. */}
-      {!isSeparateAcq && !props.hideAssetAcqAxis && !buildingCause && !isMixedPerPart && (
+      {props.acqBasisActualOnly && (
+        <p className="text-caption text-muted-foreground" data-testid="successor-apt-actual-only-note">
+          승계조합원 완공 아파트는 입주권을 승계취득한 실지거래가액을 취득가액으로 계산합니다.{" "}
+          <LawArticleModal legalBasis="소득세법 §97 ① 1호" label="§97①1호 가목" />
+        </p>
+      )}
+      {!isSeparateAcq && !props.hideAssetAcqAxis && !props.acqBasisActualOnly && !buildingCause && !isMixedPerPart && (
       <div className="space-y-2">
         {/* 증축이 있으면 이 라디오가 고르는 것은 **원취득분(토지·원건물)**의 방식뿐이다 —
             증축분은 증축 카드의 「증축분 취득 방식」이 따로 정한다(별개 축).

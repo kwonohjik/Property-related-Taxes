@@ -30,6 +30,15 @@ export function isRedevelopmentSec166Asset(
 }
 
 /**
+ * 승계조합원 완공 APT — 취득가액은 **실거래가(승계취득가액) 전용**이다(계획서 `redev-successor-bg-acq-method.plan.md` Q-2 a).
+ * 엔진 승계 산식(`redevelopment-successor.ts`)은 산정 방식을 읽지 않고 취득가액 하나만 쓴다 — 감정·매매사례·환산 플래그가
+ * 남아 있으면 ④가 취득가액을 0으로 실었다. ⑤ 산정 방식 라디오 숨김 · ④ 추계 플래그 무시 · ⑧ 추계 차단 무시의 단일 술어.
+ */
+export function isRedevSuccessorAptActualOnly(asset: Pick<AssetForm, "assetKind" | "redevIsSuccessorMember">): boolean {
+  return asset.assetKind === "redevelopment_apt" && asset.redevIsSuccessorMember === "yes";
+}
+
+/**
  * §166 자산의 실가 모드 취득가액(100% 기준 · 지분 스케일 전).
  *  · 승계조합원 완공APT(사례 48) — 자산 카드 `fixedAcquisitionPrice`
  *  · 그 밖(사례 45/46 원조합원) — §166 섹션 `redevActualAcquisitionPrice`

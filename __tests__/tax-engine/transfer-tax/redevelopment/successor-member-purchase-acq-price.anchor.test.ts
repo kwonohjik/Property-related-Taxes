@@ -141,13 +141,12 @@ describe("E2-01 · A 엔진 층 — 승계조합원 완공APT 취득가액 0", (
     expect(r.totalTax).toBe(EXPECTED_TOTAL_TAX);
   });
 
-  it("A-2 🔴 `??` 는 nullish라 0에서 fallback이 걸리지 않는다 — rightsValue 450,000,000 이 있어도 취득가액 0", () => {
-    // 엔진 주석(`redevelopment-successor.ts:58`)이 스스로 「fallback: redevelopment.rightsValue」
-    // 라고 적어 둔 경로다. `??` 대신 0 을 「미입력」으로 보는 연산자였다면 §166④1호
-    // 「관리처분계획등에 따라 정하여진 가격」이 취득가액으로 쓰여 양도차익 470,000,000 이 된다.
-    const r = runSuccessorApt(0, SUCCESSOR_ACQ_PRICE);
-    expect(r.transferGain).toBe(EXPECTED_GAIN);
-    expect(r.calculatedTax).toBe(EXPECTED_CALCULATED_TAX);
+  it("A-2 취득가액 0 · rightsValue 450,000,000 — §166④1호 평가액으로 대신하지 않고 계산을 중단한다", () => {
+    // 🔄 2026-10-26 반전(계획서 redev-successor-bg-acq-method Q-2 a). 종전 단언은 「0이면 rightsValue로 대신해 양도차익
+    // 470,000,000」이었다. 그 값은 원조합원 종전자산의 관리처분 가격이지 승계인의 취득가액(§97①1호 가목 · 시행령 §163⑨)이
+    // 아니고, 대체가 있던 동안 감정·매매사례 플래그가 취득가액을 0으로 만든 화면 경로가 숨은 칸 값으로 계산됐다.
+    // 「0을 0으로 계산하지 않는다」는 형제 단언(A-3)은 그대로다.
+    expect(() => runSuccessorApt(0, SUCCESSOR_ACQ_PRICE)).toThrow(expect.objectContaining({ code: "INVALID_INPUT" }));
   });
 
   it("A-3 🔴 두 소스 모두 0(화면 실제 경로) — 양도가액 전액이 양도차익이 될 수 없다 (§97①1호 단서)", () => {

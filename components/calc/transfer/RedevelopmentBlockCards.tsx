@@ -695,10 +695,11 @@ export function SuccessorMemberSection({
           </div>
 
           <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-caption text-amber-900 dark:text-amber-200">
-            <div className="font-semibold">현재 지원하지 않는 분기 (자동 차단)</div>
+            <div className="font-semibold">현재 지원하지 않는 분기</div>
             <ul className="list-disc pl-4 space-y-0.5 mt-1">
-              <li>승계조합원 + 청산금 분기 (납부·수령)</li>
-              <li>승계조합원 + 환산취득가 모드 (상속·증여 평가액을 직접 입력하세요)</li>
+              <li>승계조합원 + 청산금 분기 (납부·수령) — 자동 차단</li>
+              {/* 추계는 선택지 자체가 없다 — ⑤ 산정 방식 라디오를 숨기고 ④⑧이 남은 플래그를 무시한다(`isRedevSuccessorAptActualOnly`). */}
+              <li>승계조합원 + 환산·감정가액·매매사례가액 — 실지거래가액(증여는 증여 신고가액)으로만 계산합니다</li>
             </ul>
           </div>
         </div>

@@ -28,6 +28,7 @@ import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { apportionCompanionBurdenedGiftDebt } from "./transfer-tax-api-burdened-gift";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { isRedevelopmentSec166Asset } from "./redev-acquisition-price-source";
+import { isRedevSuccessorAptActualOnly } from "./redev-acquisition-price-source";
 
 /**
  * 주 자산 **취득 모드 플래그** — `form`을 보지 않고 `primary`만으로 정해진다.
@@ -61,7 +62,9 @@ export function primaryAcquisitionModeFlags(primary: AssetForm) {
    * **원래부터 통과해야 한다**. 이것을 `blocksEstimation` 하나로 묶으면 §166③ 환산이 꺼진다
    * (P-9 ⑦ 실측에서 `useEst=false`로 잡혔다).
    */
-  const blocksAppraisalSalesCase = isRightToMoveIn && !isSuccessorRight;
+  // 승계조합원 완공 APT도 막는다 — 실거래가 전용(`isRedevSuccessorAptActualOnly` · ⑤ 라디오 없음). 남은 플래그로 취득가액을 0으로 싣지 않는다.
+  const successorAptActualOnly = isRedevSuccessorAptActualOnly(primary);
+  const blocksAppraisalSalesCase = (isRightToMoveIn && !isSuccessorRight) || successorAptActualOnly;
   // D2(건물 상속·증여 + 토지 매매) — 자산 단위 추계 플래그(stale 포함)는 무시한다: 건물은 평가액(실가) 고정, 토지 방식은 파트 모드가 정한다.
   // ⑧ D2 분기·다건 ④와 같은 술어 — 남은 환산 플래그가 ⑫에 「환산 기준시가 필수」를 일으키는 칸 없는 400을 막는다.
   //   P2 C(파트 이월과세)도 같다: 두 파트가 실가(증여자 취득가액·증여 신고가액) 고정이라 자산 단위 추계 플래그 잔재를 읽지 않는다(`normalizeBuildingCauseInputs`의 파트 방식 고정과 짝).
@@ -71,7 +74,7 @@ export function primaryAcquisitionModeFlags(primary: AssetForm) {
   const isAppraisal =
     !d2Mix && !blocksAppraisalSalesCase && !isSalesCase && primary.isAppraisalAcquisition === true;
   // 승계 입주권 환산은 §176의2②2호(입주권 자체) · 원조합원 환산은 §166③(종전 부동산) — 둘 다 통과.
-  const isEstimated = !d2Mix && !isSalesCase && !isAppraisal && primary.useEstimatedAcquisition;
+  const isEstimated = !d2Mix && !successorAptActualOnly && !isSalesCase && !isAppraisal && primary.useEstimatedAcquisition;
   // pre1990 토지등급 환산은 §176의2④ 의제취득(pre-1985) 영역. post-1985 증여는 §163⑨ 신고가액이
   // 취득당시 실지거래가액으로 확인 가능 → 토지등급 환산 배제. pre1990Enabled은 환산 클릭 시 set되는
   // uncleaable 래치(CompanionAcqPurchaseBlock:92)라 gift 실거래가 전환 후 stale true로 남을 수 있으므로
