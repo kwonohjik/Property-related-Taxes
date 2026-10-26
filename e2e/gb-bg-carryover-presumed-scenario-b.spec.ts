@@ -21,7 +21,8 @@ const gbBgPresumedAsset = (method: "appraisal" | "salesCase", giftTaxAmount = "0
   addressJibun: "서울 강남구 테스트동 1-1",
   assetKind: "general_building",
   acquisitionCause: "carryover_gift",
-  gbBuildingAcquisitionCause: "purchase",
+  // 분리 OFF는 원인이 하나다 — 화면은 건물 원인을 토지 원인에 맞춘다(`GeneralBuildingAcquisitionCards.tsx:259`). 다르게 시드하면 복원(M-2b)이 분리를 켜 「토지만 이월과세」로 막힌다(gb-bg-part-carryover-mismatch).
+  gbBuildingAcquisitionCause: "carryover_gift",
   acquisitionDate: "2024-05-01",
   gbLandArea: "100",
   gbBuildingArea: "200",

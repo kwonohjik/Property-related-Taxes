@@ -44,7 +44,8 @@ function seedForm(over: Record<string, unknown> = {}) {
             bgMortgageDebtAmount: "200000000",
             bgDonorRelation: "lineal_descendant",
             acquisitionCause: "carryover_gift",
-            gbBuildingAcquisitionCause: "gift",
+            // 분리 OFF는 원인이 하나다 — 건물만 「증여」로 시드하면 복원(M-2b)이 분리를 켜 「토지만 이월과세」로 막힌다(gb-bg-part-carryover-mismatch).
+            gbBuildingAcquisitionCause: "carryover_gift",
             acquisitionDate: "2023-06-01",
             landAcquisitionDate: "2023-06-01",
             carryover: {

@@ -28,7 +28,8 @@ const gbBgAsset = (co: Over = {}, over: Over = {}): Over => ({
   addressJibun: "서울 강남구 테스트동 1-1",
   assetKind: "general_building",
   acquisitionCause: "carryover_gift",
-  gbBuildingAcquisitionCause: "purchase",
+  // 분리 OFF는 원인이 하나다 — 화면은 건물 원인을 토지 원인에 맞춘다(`GeneralBuildingAcquisitionCards.tsx:259`). 다르게 시드하면 복원(M-2b)이 분리를 켜 「토지만 이월과세」로 막힌다(gb-bg-part-carryover-mismatch).
+  gbBuildingAcquisitionCause: "carryover_gift",
   acquisitionDate: "2024-05-01",
   gbLandArea: "100",
   gbBuildingArea: "200",
@@ -175,18 +176,21 @@ test.describe("일반건물 부담부증여 × 이월과세 × 증여자 신축�
     expect(errors, errors.join("\n")).toEqual([]);
   });
 
-  test("GBBD-E5 범위 밖은 칸이 없고 stale 토글은 보내지도 요구하지도 않는다 — 건물 취득원인이 양도인 본인 신축", async ({ page }) => {
+  test("GBBD-E5 범위 밖은 칸이 없고 stale 토글은 요구하지 않는다 — 건물 취득원인이 양도인 본인 신축(토지만 이월과세 → 그 조합 차단으로 막힌다)", async ({ page }) => {
     test.setTimeout(180_000);
-    // 건물이 양도인 본인 신축 + 토글만 켜 둔 stale(구분·신축일 비어 있음)
+    // 건물이 양도인 본인 신축 + 토글만 켜 둔 stale(구분·신축일 비어 있음).
+    // 토지만 이월과세라 종전에는 건물까지 당초 증여자 값으로 계산됐다 — 지금은 건물 취득원인에서 막는다(`gb-bg-part-carryover-mismatch.plan.md`).
     await seedWizard(
       page,
       seed([gbBgAsset({ donorBuilt: true, donorBuiltType: "", donorBuiltDate: "" }, { gbBuildingAcquisitionCause: "newConstruction", hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2015-01-01", acquisitionDate: "2022-01-10" })]),
     );
     await expandAssetSection(page, 2); // 부담부증여 블록(§159 자동산정)은 ② 양도정보 안에 있다
     await expect(page.getByTestId("donor-built-toggle")).toHaveCount(0);
-    const body = (await calculate(page)) as Wire;
-    expect(donorBuiltOf(body)).toBeUndefined(); // ④ 미전송 · ⑧ 미요구(계산이 막히지 않는다)
-    expect(body.burdenedGiftInfo).toBeDefined();
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await expect
+      .poll(() => page.evaluate(() => !!(document.activeElement as HTMLElement | null)?.closest('[data-field="gbBuildingAcquisitionCause"]')))
+      .toBe(true);
+    await expect(page.getByText(/토글을 끄세요/)).toHaveCount(0); // stale 토글은 요구하지 않는다
   });
 
   test("GBBD-E6 지분 분할 취득(축 B): 이월과세는 계산되고(PR-2) 켜 둔 증여자 신축 토글만 ⑧ 이 «끄세요» 로 막아 그 칸으로 이동한다", async ({ page }) => {
