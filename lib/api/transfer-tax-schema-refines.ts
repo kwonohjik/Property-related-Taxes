@@ -8,7 +8,7 @@ import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 import { toDate } from "@/lib/api/date-coerce";
 import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 
-import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
+import { refineRedevelopment166_3Inputs } from "./transfer-tax-schema-redev-166-3-refines";
 import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
 import { refineMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refines";
 import { refineMixedUseInheritedSplitDate } from "./transfer-tax-schema-mixed-bg-refines";
@@ -437,76 +437,6 @@ export function addPropertyRefines(
     // 추가 교차 검증: 현재는 base 스키마 충분. 향후 교차 검증 필요 시 여기에 추가.
     void gbv; // 타입 참조 유지
   }
-  // ⑩ 사례 39 — 단독주택 출자 §166③ 2-point 환산취득가 필수 검증
-  // 분기 활성 조건: originalAssetType="housing" + subject="right" + useEstimated=true
-  // 3중 패턴(UI/API/validate) 동기화 — UI 통과 ↔ validate 차단 모순 방지
-  if (data.redevelopment) {
-    const rd = data.redevelopment as Record<string, unknown>;
-    // 🔴 2026-08-25 정정(E1-04): 종전에는 여기서 축을 직접 나열하면서 **청산금 방향을 빠뜨려**
-    //    납부 조합이 400으로 막혔다(입력 UI도 없어 dead-end). 네 지점이 같은 leaf를 본다.
-    const isHousingEstimated = isHousingContribEstimatedAxes({
-      originalAssetType: rd.originalAssetType as string | undefined,
-      subject: rd.subject as string | undefined,
-      settlementDirection: rd.settlementDirection as string | undefined,
-      useEstimatedAcquisition: (data as Record<string, unknown>)
-        .useEstimatedAcquisition as boolean | undefined,
-    });
-    if (isHousingEstimated) {
-      if (!rd.housingStdPriceAtAcq || (rd.housingStdPriceAtAcq as number) <= 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["redevelopment", "housingStdPriceAtAcq"],
-          message: "단독주택 출자 환산취득가 — 취득당시 개별주택가격(§166③ 분자) 필수",
-        });
-      }
-      if (!rd.housingStdPriceAtApproval || (rd.housingStdPriceAtApproval as number) <= 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["redevelopment", "housingStdPriceAtApproval"],
-          message: "단독주택 출자 환산취득가 — 인가당시 개별주택가격(§166③ 분모) 필수",
-        });
-      }
-    }
-
-    /**
-     * ⑩ §166③ 일반 환산 — **분모 필수** (2026-08-26 신설, E1-07).
-     *
-     * 종전에는 이 요구가 ⑧ 클라이언트에만 있었다. 분모가 없으면 엔진
-     * (`redevelopment-split.ts` Step A)이 취득가액을 0으로 두고 **오류 없이** 계산해
-     * 인가전 양도차익이 권리가액 전액이 됐다(사례 44 기준 산출세액 +38,244,566원 과대).
-     * 엔진은 이제 던지지만, 500이 아니라 **여기서 400**으로 막는 것이 정본이다.
-     *
-     * ⚠️ ⑧보다 **넓게 막지 않는다** — 승계조합원은 `runSuccessorMember`가 §166 안분 자체를
-     *    건너뛰므로 분모를 쓰지 않는다. 요구하면 화면에 없는 칸을 채우라는 dead-end가 된다.
-     * ⚠️ 위 §166③ 2-point 분기(`isHousingEstimated`)는 D가 아니라 전용 2필드를 쓴다 — 배제.
-     */
-    const useEstimated = (data as Record<string, unknown>).useEstimatedAcquisition === true;
-    if (useEstimated && !isHousingEstimated && rd.isSuccessorMember !== true) {
-      if (rd.originalAssetType === "land") {
-        if (!rd.landStdPriceAtAcq || (rd.landStdPriceAtAcq as number) <= 0) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["redevelopment", "landStdPriceAtAcq"],
-            message: "토지 출자 환산취득가 — 취득당시 개별공시지가(§166③ 분자) 필수",
-          });
-        }
-        if (!rd.landStdPriceAtApproval || (rd.landStdPriceAtApproval as number) <= 0) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["redevelopment", "landStdPriceAtApproval"],
-            message: "토지 출자 환산취득가 — 인가당시 개별공시지가(§166③ 분모) 필수",
-          });
-        }
-      } else if (
-        !rd.managementDisposalHousingPrice ||
-        (rd.managementDisposalHousingPrice as number) <= 0
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["redevelopment", "managementDisposalHousingPrice"],
-          message: "환산 모드 — D(관리처분 인가일 개별주택공시가격, §166③ 분모) 필수",
-        });
-      }
-    }
-  }
+  // ⑩ 재개발·재건축 §166③ 환산 입력(분자·분모) — 컴패니언과 같은 규칙(계획서 companion-redev-166-3-required.plan.md)
+  refineRedevelopment166_3Inputs(data, ctx);
 }

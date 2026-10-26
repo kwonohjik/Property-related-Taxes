@@ -24,7 +24,7 @@
  */
 
 import { estimatedDeductionRate } from "./legal-codes";
-import { TaxRateNotFoundError } from "./tax-errors";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { computeRedevelopmentValuation } from "./redevelopment-valuation";
 import {
@@ -213,14 +213,19 @@ export function computeRedevelopmentSplit(
        *    같은 상황에서 sibling 환산 서브엔진 둘은 이미 던진다
        *    (`redevelopment-land-contribution.ts` §166③ 분모 · `redevelopment-housing-contribution.ts`).
        *    본류만 침묵해 「0으로 성공」이라는 세 번째 진실이 있었다 — 그것을 없앤다.
-       *    ⑫ refine(`transfer-tax-schema-refines.ts`)이 그보다 먼저 400으로 막는다.
+       *    ⑫ refine(`transfer-tax-schema-redev-166-3-refines.ts` — 주 자산·컴패니언 공용)이 그보다 먼저 400으로 막는다.
+       *    호출자 입력의 결함이라 `INVALID_INPUT`(400)으로 던진다 — 종전 `TaxRateNotFoundError`는 500이라, ⑫가 없던
+       *    컴패니언에서 서버 결함처럼 응답했다(`lib/api/tax-error-response.ts` · 계획서 companion-redev-166-3-required.plan.md).
        */
-      throw new TaxRateNotFoundError(
+      throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT,
         redevelopment.originalAssetType === "land"
           ? "redev-split: landStdPriceAtAcq·landStdPriceAtApproval must be > 0 (§166③ 토지 출자 환산 분자·분모)"
           : "redev-split: managementDisposalHousingPrice(D) must be > 0 (§166③ 분모)",
       );
     }
+    // 분자(취득당시 개별주택가격 P_A)가 0이면 취득가액 0을 오류 없이 계산했다 — 분모와 같이 던진다(⑫가 먼저 400으로 막는다).
+    if ((valuationResult.meta.numerator ?? 0) <= 0)
+      throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, "redev-split: acquisitionHousingPrice(P_A) must be > 0 (§166③ 분자)");
     oldAcquisitionPrice = valuationResult.acquisitionPrice;
     valuationMeta = valuationResult.meta;
   } else {

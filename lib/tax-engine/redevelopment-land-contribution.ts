@@ -14,7 +14,7 @@
 import { estimatedDeductionRate } from "./legal-codes";
 import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
 import { computeRightLthd, applyLthdToGain } from "./redevelopment-lthd";
-import { TaxRateNotFoundError } from "./tax-errors";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { REDEVELOPMENT } from "./legal-codes/transfer";
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ export function calcRedevLandContribEstimated(
 ): RedevLandContribResult {
   // ── Step 0: 분모 0 방어 ──────────────────────────────────────────────────
   if (input.landStdPriceAtApproval <= 0) {
-    throw new TaxRateNotFoundError(
+    throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT,
       "redev-land-contrib: landStdPriceAtApproval must be > 0 (§166③ 분모)",
     );
   }
