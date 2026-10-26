@@ -20,6 +20,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { useMemo } from "react";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { landContributedOriginalApt } from "@/lib/calc/redev-field-scope";
+import { houseContributedOriginalApt } from "@/lib/calc/redev-field-scope";
 
 interface Props {
   asset: AssetForm;
@@ -34,6 +35,8 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
   const shouldHide = isOneHouseSingle === false;
   /** #12 — 토지만 출자한 원조합원은 멸실된 주택이 없어 통산할 종전주택 거주가 없다(엔진·④가 신축 거주만 읽는다). */
   const landContributed = landContributedOriginalApt(asset);
+  /** 증여받은 종전주택으로 원조합원이 된 경우 — 증여 전 거주는 이 칸이 아니라 「증여자와의 세대 관계」 카드에서 받는다(⑧·⑫가 입주일 < 증여일을 막는다). */
+  const giftedPriorHouse = asset.acquisitionCause === "gift" && houseContributedOriginalApt(asset);
 
   const guidance = useMemo(() => {
     const tp = parseAmount(asset.actualSalePrice || "");
@@ -108,7 +111,11 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
       {!landContributed && (
       <ResidencePeriodGroup
         label="종전주택 거주기간"
-        hint="종전주택 취득일~관리처분(또는 그 이후 철거) 사이의 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (§154⑧ 통산 산식의 종전주택 분)."
+        hint={
+          giftedPriorHouse
+            ? "증여받은 날~관리처분(또는 그 이후 철거) 사이의 실거주 입주일·퇴거일을 입력합니다. 증여받기 전 증여자와 같은 세대로 거주한 기간은 「증여자와의 세대 관계」 카드의 증여 전 동일세대 거주기간에 입력합니다 — 두 칸에 같은 기간을 넣으면 두 번 셉니다."
+            : "종전주택 취득일~관리처분(또는 그 이후 철거) 사이의 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (§154⑧ 통산 산식의 종전주택 분)."
+        }
         startValue={asset.redevPriorResidenceStartDate}
         endValue={asset.redevPriorResidenceEndDate}
         monthsValue={asset.redevPriorHouseResidenceMonths}

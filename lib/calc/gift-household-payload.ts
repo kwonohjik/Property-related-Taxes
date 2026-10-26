@@ -7,23 +7,29 @@
  * `calcGiftHouseholdFactAsked`). 다건 계산도 건마다 주 자산에서 같은 사실을 받는다(결정 #38-3 — ④⑫⑭ 같은 빌더·같은 함수).
  * 함께 양도하는 자산·건물만 증여받은 주택(D2)에는 칸이 없다 — 엔진이 확인 필요를 고지한다.
  * 겸용주택(주 자산)은 묻는다 — 겸용 엔진의 §154① 판정이 같은 leaf로 이 사실을 읽는다(결정 #38 후속).
+ * 주택을 출자한 원조합원 완공APT(증여받은 종전주택으로 원조합원이 된 경우)도 묻는다 — 엔진이 1세대1주택 판정에서 주택으로 번역해
+ * 같은 leaf로 읽는다(계획서 `redev-apt-gift-household-fact.plan.md` Q-1 a).
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
+import { houseContributedOriginalApt } from "./redev-field-scope";
 
-type GiftFactFields = Pick<
-  AssetForm,
-  | "acquisitionCause"
-  | "assetKind"
-  | "donorAcquisitionDate"
-  | "giftDonorRelation"
-  | "giftSameHousehold"
-  | "giftHouseholdHoldingStartDate"
-  | "giftPriorHouseholdResidenceMonths"
-  | "giftDonorDeceased"
->;
+/** 세대 사실을 묻는 자산인가를 가르는 키 — 재개발 축 키는 판정 메뉴 자산에 없을 수 있어 선택이다. */
+type GiftFactAssetKind = Pick<AssetForm, "acquisitionCause" | "assetKind"> &
+  Partial<Pick<AssetForm, "redevSubject" | "redevIsSuccessorMember" | "redevOriginalAssetType" | "redevReceiveOnlyMode">>;
+
+type GiftFactFields = GiftFactAssetKind &
+  Pick<
+    AssetForm,
+    | "donorAcquisitionDate"
+    | "giftDonorRelation"
+    | "giftSameHousehold"
+    | "giftHouseholdHoldingStartDate"
+    | "giftPriorHouseholdResidenceMonths"
+    | "giftDonorDeceased"
+  >;
 
 /**
  * 증여 전 동일세대 거주 개월 입력(문자열)을 읽는다 — 비었으면 미답(undefined), 0 이상 정수가 아니면 NaN(⑧이 막는다).
@@ -41,11 +47,13 @@ export function parsePriorResidenceMonths(raw: string | undefined): number | und
  */
 export function giftPriorResidenceAsked(
   asset:
-    | Pick<AssetForm, "acquisitionCause" | "assetKind" | "giftSameHousehold" | "giftDonorDeceased" | "carryover">
+    | (GiftFactAssetKind & Pick<AssetForm, "giftSameHousehold" | "giftDonorDeceased" | "carryover">)
     | undefined,
 ): boolean {
-  if (!asset || asset.assetKind !== "housing") return false;
-  if (asset.acquisitionCause === "gift") return asset.giftSameHousehold === "yes" && !asset.giftDonorDeceased;
+  if (!asset) return false;
+  if (asset.acquisitionCause === "gift")
+    return giftHouseholdFactVisible(asset) && asset.giftSameHousehold === "yes" && !asset.giftDonorDeceased;
+  if (asset.assetKind !== "housing") return false;
   // 파트 이월과세(C·B)도 P5부터 세대 사실을 묻는다(건물 파트 사건 서브폼 = `carryover`) — ⑤·⑧·④와 같은 술어.
   if (asset.acquisitionCause === "carryover_gift")
     return asset.carryover?.donorSameHousehold === "yes" && !asset.carryover.donorDeceased;
@@ -77,9 +85,13 @@ export function priorResidenceMonthsError(raw: string | undefined, householdStar
   return n > max ? `증여 전 동일세대 거주기간은 세대 보유 시작일부터 증여일까지(${max}개월)를 넘을 수 없습니다.` : null;
 }
 
-/** 증여받은 주택의 세대 사실을 **묻는가** — 증여로 취득한 주택(`housing`) 한정. 입주권·분양권·토지는 이 사실이 결론을 가르지 않는다. */
-export function giftHouseholdFactVisible(asset: Pick<AssetForm, "acquisitionCause" | "assetKind"> | undefined): boolean {
-  return !!asset && asset.acquisitionCause === "gift" && asset.assetKind === "housing";
+/**
+ * 증여받은 주택의 세대 사실을 **묻는가** — 증여로 취득한 주택(`housing`)과 주택을 출자한 원조합원 완공APT(`houseContributedOriginalApt`).
+ * 입주권·분양권·토지는 이 사실이 결론을 가르지 않는다. 토지만 출자한 원조합원은 보유기간을 사용승인일부터 세어 통산할 주택 보유가 없고,
+ * 승계조합원(입주권 상태 증여)의 보유기간 통산은 이 묶음에서 정하지 않았다(계획서 §7 별건).
+ */
+export function giftHouseholdFactVisible(asset: GiftFactAssetKind | undefined): boolean {
+  return !!asset && asset.acquisitionCause === "gift" && (asset.assetKind === "housing" || houseContributedOriginalApt(asset));
 }
 
 /**

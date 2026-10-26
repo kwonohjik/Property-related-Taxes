@@ -17,6 +17,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
 import { householdBuildingCarryoverApplied, landContributedOriginalApt, postApprovalHousingUseInScope, successorGiftHouseholdApplies } from "@/lib/calc/redev-field-scope";
 import { householdBuildingResidenceOverflow, redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
+import { redevGiftPriorResidenceBeforeGift } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
@@ -561,6 +562,25 @@ export function validateRedevelopmentAsset(
         return fieldError(startField, `${label}: ${name} 입주일이 퇴거일보다 이후일 수 없습니다.`);
       }
     }
+  }
+
+  // 증여받은 종전주택으로 원조합원이 된 완공APT — 증여일 전 거주는 본인 보유기간 중 거주가 아니다(⑫ 같은 leaf · 계획서 Q-3 a).
+  if (
+    redevGiftPriorResidenceBeforeGift({
+      acquisitionCause: asset.acquisitionCause,
+      acquisitionDate: asset.acquisitionDate,
+      subject,
+      isSuccessorMember: asset.redevIsSuccessorMember === "yes",
+      originalAssetType,
+      receiveOnlyMode: asset.redevReceiveOnlyMode === "yes",
+      priorResidenceStartDate: asset.redevPriorResidenceStartDate,
+    })
+  ) {
+    return fieldError(
+      "redevPriorResidenceStartDate",
+      `${label}: 종전주택 입주일이 증여일보다 앞섭니다 — 증여받기 전 거주는 본인 보유기간 중 거주가 아니어서 종전주택 거주로 셀 수 없습니다(소득세법 시행령 §154① · §162①5호). ` +
+        "증여일 이후 거주만 입력하고, 증여자와 계속 같은 세대로 거주했다면 그 기간은 「증여자와의 세대 관계」 카드의 증여 전 동일세대 거주기간에 입력하세요.",
+    );
   }
 
   return null;

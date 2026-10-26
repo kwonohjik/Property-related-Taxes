@@ -157,7 +157,7 @@ describe("PR-7b-4 재개발 완공 아파트 × 의제취득일 전 × 부담부
   });
 
   it("G-1 증여 · ① 없음 → ⑧ 증여 신고가액 요구(Q-14) / G-2 ① 2억 → 9,245,083", async () => {
-    const gift = { acquisitionCause: "gift", donorAcquisitionDate: "1970-01-01", inheritanceStartDate: "" };
+    const gift = { acquisitionCause: "gift", donorAcquisitionDate: "1970-01-01", giftDonorRelation: "spouse", giftSameHousehold: "no", inheritanceStartDate: "" };
     const none = await run({ ...MARKET, ...gift });
     expect(none.fields).toContain("fixedAcquisitionPrice");
     const rep = await run({ ...MARKET, ...gift, fixedAcquisitionPrice: "200,000,000" });
@@ -301,7 +301,7 @@ describe("PR-7b-4 · 리뷰 게이트 반영 (F-1 컴패니언 · F-2 입주권 
   });
 
   it("G-3 증여 · ① 1억 < ③ → ③(§166③) 채택 13,023,566", async () => {
-    const r = await run({ ...MARKET, acquisitionCause: "gift", donorAcquisitionDate: "1970-01-01", inheritanceStartDate: "", fixedAcquisitionPrice: "100,000,000" });
+    const r = await run({ ...MARKET, acquisitionCause: "gift", donorAcquisitionDate: "1970-01-01", giftDonorRelation: "spouse", giftSameHousehold: "no", inheritanceStartDate: "", fixedAcquisitionPrice: "100,000,000" });
     expect(r.issues).toEqual([]);
     expect(r.bg.preDeemed.selected).toBe("converted");
     expect(r.tax).toBe(13_023_566);
