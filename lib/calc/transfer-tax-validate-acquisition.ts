@@ -108,6 +108,16 @@ function validateParcelMode(primary: AssetForm, formTransferDate?: string): stri
 }
 
 
+/**
+ * 재개발·입주권 상속 — 피상속인 취득일(⑫ `transfer-tax-schema-refines.ts` · 컴패니언 arm 필수 · 소득세법 §104②1호 단기보유 통산 기산일).
+ * 일반 자산은 아래 상속 분기가 요구하지만 재개발·승계 입주권 분기는 그보다 먼저 끝나 ⑧을 통과하고 서버가 400을 냈다
+ * (계획서 redev-successor-inherit-valuation-required.plan.md).
+ */
+function redevInheritedDecedentDateError(asset: AssetForm, label: string): string | null {
+  if (asset.acquisitionCause !== "inheritance" || asset.decedentAcquisitionDate) return null;
+  return fieldError("decedentAcquisitionDate", `${label}: 피상속인 취득일을 입력하세요.`);
+}
+
 /** 자산 카드 1건의 취득 정보 검증 (취득가·환산·1990·신축) */
 export function validateAssetAcquisition(
   asset: AssetForm,
@@ -255,14 +265,14 @@ export function validateAssetAcquisition(
   if (isSuccessorRightTransfer(asset)) {
     const successorError = validateSuccessorRightAsset(asset, label, typeToggleSection);
     if (successorError) return successorError;
-    return null;
+    return redevInheritedDecedentDateError(asset, label);
   }
 
   // ── 재개발/재건축 (시행령 §166) — assetKind="redevelopment_apt" 또는 "right_to_move_in" 시 ──
   // redevSubject="" 미입력 시에도 redev 검증 진입 (3중 패턴 — API/validate 동기화):
   // buildRedevelopmentPayload와 동일 fallback (right_to_move_in → "right", 그 외 → "apt")
   if (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") {
-    const redevError = validateRedevelopmentAsset(asset, label, isOneHousehold, typeToggleSection);
+    const redevError = validateRedevelopmentAsset(asset, label, isOneHousehold, typeToggleSection, isNonPrimaryAsset);
     if (redevError) return redevError;
     // I-8 — 승계조합원 신축주택 거주 개월 수는 준공일~양도일 개월 수를 넘을 수 없다(⑫ 같은 leaf).
     const newMonthsRaw = (asset.redevNewHouseResidenceMonths || "").trim();
@@ -277,7 +287,7 @@ export function validateAssetAcquisition(
     }
     // redevelopment 검증 통과 후 일반 취득 검증 스킵 (별도 분기 — 양도가액·취득가액은 redev 분기에서 처리)
     if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
-    return null;
+    return redevInheritedDecedentDateError(asset, label);
   }
 
   /**
