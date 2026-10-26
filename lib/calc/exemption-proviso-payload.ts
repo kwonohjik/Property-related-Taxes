@@ -56,12 +56,22 @@ export function rentalLeaseResidencePayload(
   return months !== undefined ? { rentalLeaseResidenceMonths: months } : {};
 }
 
+/**
+ * F-2 — 일시적 2주택 맥락의 5호인데 「계약금 지급일 현재 무주택」을 확인하지 않았으면 싣지 않는다(모름 = 혜택 불성립).
+ * 계산기 Step4는 이 맥락의 단서 카드를 그리지 않아(판정 메뉴 전용 — P6-b) ⑧로 막으면 고칠 칸이 없고, 실으면 ⑫가 400으로 막는다.
+ * 1주택 맥락은 ⑧이 먼저 막으므로 여기 닿지 않는다. 판정 메뉴는 이 맥락도 ⑧로 막는다.
+ */
+export function unconfirmedTempTwoHouseProviso5(mode: ProvisoMode, reason: string, preContractNoHouse: boolean | undefined): boolean {
+  return mode === "temporary_two_house" && reason === "pre_designation_contract" && preContractNoHouse !== true;
+}
+
 export function buildExemptionProvisoPayload(
   form: ExemptionProvisoFormSlice,
   mode: ProvisoMode,
 ): { oneHouseExemptionProviso: Record<string, unknown> } | Record<string, never> {
   const reason = effectiveProvisoReason(mode, form.provisoReason);
   if (!reason) return {};
+  if (unconfirmedTempTwoHouseProviso5(mode, reason, form.provisoPreContractNoHouse)) return {};
   return {
     oneHouseExemptionProviso: {
       reason,

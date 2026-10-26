@@ -457,7 +457,10 @@ function checkExemptionCore(
           legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦`,
         });
       }
-      if (provisoRelaxesHolding) {
+      // F-2 — 5호(공고 전 계약)는 1년 요건이 아니라 거주요건만 면제한다. 실제로 성립했을 때만 근거로 남긴다(E-4와 같은 축).
+      const provisoWaivesResidenceOnly =
+        !provisoRelaxesHolding && provisoReason === "pre_designation_contract" && resolveExemptionProviso(input) === "residence_only";
+      if (provisoRelaxesHolding || provisoWaivesResidenceOnly) {
         basisParts.push(`§154① 단서 ${PROVISO_LABEL[provisoReason!]}`);
         exceptions.push({
           id: `154-1-proviso:${provisoReason!}`,

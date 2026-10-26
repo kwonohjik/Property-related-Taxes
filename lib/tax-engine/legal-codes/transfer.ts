@@ -658,8 +658,16 @@ export const ONE_HOUSE_PROVISO_2006_ADDENDA = {
   OVERSEAS_TRANSITION: "대통령령 제19327호 부칙 제30조 ②",
 } as const;
 
-/** 일시적 2주택 종전주택 §154① 단서 보유면제 사유 — §155① 2문 §154①1호(rental)·2호가(expropriation)·3호(unavoidable) 명시 인용(나·다목=출국일 1주택·5호=무주택 양립불가 제외). 엔진·api-helpers 공유 단일소스. */
+/** 일시적 2주택 종전주택 §154① 단서 보유면제·1년 요건 면제 사유 — §155① 2문 §154①1호(rental)·2호가(expropriation)·3호(unavoidable) 명시 인용(나·다목=출국일 1주택 제외 · 5호는 거주요건만 면제라 여기 없음 — 받는 사유는 아래 `TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS`). 엔진·api-helpers 공유 단일소스. */
 export const TEMP_TWO_HOUSE_PROVISO_REASONS: ReadonlySet<string> = new Set(["rental_5yr_residence", "expropriation", "unavoidable"]);
+
+/**
+ * 일시적 2주택 종전주택에서 **받는** §154① 단서 사유 — 위 1년 요건 면제 사유 + 5호(공고 전 계약, 거주요건만 면제).
+ * §155① 1문 「1세대1주택으로 보아 제154조제1항을 적용한다」 — 5호의 무주택은 계약금 지급일 현재라 그 뒤 일시적 2주택과 양립한다.
+ * 5호는 §155① 2문 인용 밖이라 1년 요건은 면제하지 않는다(위 집합에 넣지 않는다). 사용자 결정 2026-10-26 F-2 Q-F1
+ * (`docs/00-pm/temp-two-house-proviso-5.plan.md` · 2026-07-19 배제 결정 재검토). 나·다목·삭제 전 4호는 받지 않는다(Q-F2).
+ */
+export const TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS: ReadonlySet<string> = new Set([...TEMP_TWO_HOUSE_PROVISO_REASONS, "pre_designation_contract"]);
 
 /**
  * 대통령령 제28293호(2017.9.19.) 부칙 제2조 — §154①·② 거주요건 도입의 적용례·경과조치 (DRF 부칙 원문 2026-10-11 실독 — MST 197529).

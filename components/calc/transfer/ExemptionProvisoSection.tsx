@@ -9,8 +9,8 @@
  * 거주 충족(3호 1년)은 거주기간 입력(residencePeriodMonths) 재사용. 1호 5년은 「임차일부터」 기산이라 취득 전 임차
  * 거주를 포함한다 — 전용 칸(provisoRentalLeaseResidenceMonths)을 두고, 비우면 거주기간 입력으로 판정한다.
  *
- * mode: 일시적 2주택(temporary_two_house)이면 §155① 준용으로 1호·2호가목·3호만 노출(나·다목·5호 제외).
- *   선택값은 effectiveProvisoReason로 정규화 — 1주택서 나·다목·5호 선택 후 전환 시 stale 무효값 표시 방지.
+ * mode: 일시적 2주택(temporary_two_house)이면 §155① 준용으로 1호·2호가목·3호 + 5호만 노출(나·다목·삭제 전 4호 제외 · F-2).
+ *   선택값은 effectiveProvisoReason로 정규화 — 1주택서 나·다목·4호 선택 후 전환 시 stale 무효값 표시 방지.
  */
 
 import { DateInput } from "@/components/ui/date-input";
@@ -20,7 +20,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { effectiveProvisoReason, type ProvisoMode } from "@/lib/calc/transfer-tax-api-helpers";
-import { TEMP_TWO_HOUSE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
+import { TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
 import type { Rental4hoFormSlice } from "@/lib/calc/rental-4ho-proviso";
 import { Rental4hoProvisoFields } from "./Rental4hoProvisoFields";
 
@@ -126,16 +126,16 @@ export function ExemptionProvisoSection({
   mode,
   onChange,
 }: Props) {
-  // temp-two-house 모드에서 화이트리스트(1·2가·3호) 밖 stale reason은 "" 로 정규화 — 표시·조건 분기 모두 이 값 기준
+  // temp-two-house 모드에서 받는 사유(1·2가·3호 + 5호) 밖 stale reason은 "" 로 정규화 — 표시·조건 분기 모두 이 값 기준
   const effReason = effectiveProvisoReason(mode, provisoReason);
   const reason: ReasonOrNone = effReason === "" ? "none" : (effReason as ProvisoReason);
   const isOverseas = effReason === "overseas_migration" || effReason === "overseas_residence";
-  // temp-two-house면 해당없음 + 1·2가·3호만 노출(입력오류 예방 — 나·다목·5호는 §155①에서 양립 불가)
+  // temp-two-house면 해당없음 + 1·2가·3호 + 5호만 노출(입력오류 예방 — 나·다목·삭제 전 4호는 받지 않는다 · F-2 Q-F1·Q-F2)
   const visibleOptions = OPTIONS.filter(
     (o) =>
       mode !== "temporary_two_house" ||
       o.value === "none" ||
-      TEMP_TWO_HOUSE_PROVISO_REASONS.has(o.value),
+      TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS.has(o.value),
   );
 
   return (
@@ -154,7 +154,7 @@ export function ExemptionProvisoSection({
       </p>
       {mode === "temporary_two_house" && (
         <p className="text-caption text-violet-700 dark:text-violet-300">
-          일시적 2주택 종전주택은 §155① 준용으로 1호·2호가목·3호 사유만 적용됩니다.
+          일시적 2주택 종전주택은 1호·2호가목·3호(1년 요건도 면제)와 5호(거주요건만 면제) 사유를 적용합니다.
         </p>
       )}
       <RadioCardGroup<ReasonOrNone>

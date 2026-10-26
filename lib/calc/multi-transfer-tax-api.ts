@@ -62,6 +62,7 @@ import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
 import { departureOnlyHousePayload } from "@/lib/calc/exemption-proviso-payload";
+import { unconfirmedTempTwoHouseProviso5 } from "@/lib/calc/exemption-proviso-payload";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
@@ -187,28 +188,30 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
   const rhPayload = primary ? toRentalHousingExceptionApi(primary) : undefined;
 
   // ⑬ §154① 단서 사유 — 단건 ④와 **같은 두 leaf**로 정규화한다(아래 spread에서 소비).
-  const effectiveProviso = effectiveProvisoReason(
-    provisoGate({
-      isOneHousehold: form.isOneHousehold,
-      // OH-20 — 재개발 완공APT도 §154① 단서 대상. 단건 ④(`transfer-tax-api.ts`)와 같은 술어.
-      isHousing: isOneHouseExemptionAsset(primaryKind),
-      // §154① 단서는 제외 **후** 주택 수로 본다 — 단건 ④와 같은 leaf(S03-4).
-      householdHousingCount: resolveExemptionHousingCount(form),
-      temporaryTwoHouseApplies: temporaryTwoHouseApplies({
-        primaryKind: form.assets?.[0]?.assetKind,
-        primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? form.assets?.[0]?.acquisitionDate,
-        houses: form.houses,
-        transferDate: form.transferDate,
-        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
-        declaredSpecial: form.temporaryTwoHouseSpecial === true,
-        declaredNewHouseDate: form.newHouseAcquisitionDate,
-        mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
-        excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
-        rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
-      }),
-    }).mode,
-    form.provisoReason,
-  );
+  const provisoMode = provisoGate({
+    isOneHousehold: form.isOneHousehold,
+    // OH-20 — 재개발 완공APT도 §154① 단서 대상. 단건 ④(`transfer-tax-api.ts`)와 같은 술어.
+    isHousing: isOneHouseExemptionAsset(primaryKind),
+    // §154① 단서는 제외 **후** 주택 수로 본다 — 단건 ④와 같은 leaf(S03-4).
+    householdHousingCount: resolveExemptionHousingCount(form),
+    temporaryTwoHouseApplies: temporaryTwoHouseApplies({
+      primaryKind: form.assets?.[0]?.assetKind,
+      primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? form.assets?.[0]?.acquisitionDate,
+      houses: form.houses,
+      transferDate: form.transferDate,
+      legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
+      declaredSpecial: form.temporaryTwoHouseSpecial === true,
+      declaredNewHouseDate: form.newHouseAcquisitionDate,
+      mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
+      excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
+      rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
+    }),
+  }).mode;
+  const provisoCandidate = effectiveProvisoReason(provisoMode, form.provisoReason);
+  // F-2 — 일시적 2주택 맥락의 무주택 미확인 5호는 싣지 않는다(단건 ④와 같은 leaf).
+  const effectiveProviso = unconfirmedTempTwoHouseProviso5(provisoMode, provisoCandidate, form.provisoPreContractNoHouse)
+    ? ""
+    : provisoCandidate;
 
   // 주의: 부담부증여·재개발(§166)·겸용주택·이월과세(§97의2)·일반건물/상업용 환산·PHD(영 §164⑦)·
   // 다필지·가업상속(§97의2④)·건별 다자산(companion)은 다건 합산 route(⑭)가 매핑하지 않으므로 여기서
@@ -442,7 +445,7 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     ...buildParentalCareMergeFact(form.parentalCareMergeDate, form.parentalCareParentAge),
     // 🔴 §154① 단서 reason 정규화 — 단건 ④(`transfer-tax-api.ts:521`)와 **같은 두 leaf**를 쓴다.
     //    종전 다건은 `form.provisoReason`을 게이트 없이 그대로 실어, 카드가 숨겨진 상태(mode=null)나
-    //    일시적 2주택에서 무효인 사유(나·다목·5호)까지 엔진에 도달했다 — 화면에 없는 선언이 계산을 바꿨다.
+    //    일시적 2주택에서 무효인 사유(나·다목·삭제 전 4호)까지 엔진에 도달했다 — 화면에 없는 선언이 계산을 바꿨다.
     ...(effectiveProviso
       ? {
           oneHouseExemptionProviso: {

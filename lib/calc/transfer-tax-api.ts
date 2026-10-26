@@ -598,7 +598,7 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
       ? { inheritedRightChoiceWhenBothHeld: form.inheritedRightChoiceWhenBothHeld }
       : {}),
     ...(() => {
-      // §154① 단서 reason 정규화 — 카드 숨김(mode=null)·temp-two-house 무효 reason(나·다목·5호)은 미전송 (Part D 게이트, mirror)
+      // §154① 단서 reason 정규화 — 카드 숨김(mode=null)·temp-two-house 무효 reason(나·다목·삭제 전 4호)은 미전송 (Part D 게이트, mirror)
       const provisoMode = provisoGate({
         isOneHousehold: form.isOneHousehold,
         // OH-20 — 재개발 완공APT도 §154① 단서 대상(⑤ Step4 · ⑧과 같은 술어).

@@ -250,6 +250,9 @@ describe("TM-7 §154① 단서 — **옮길 것이 없다**(무효과 확인)", 
    * `TEMP_TWO_HOUSE_PROVISO_REASONS` = §154①**1호·2호가목·3호**(§155① 본문이 인용하는 세 호).
    * 단서 검증 2건이 요구하는 사유는 2호나·다목(`overseas_*`)과 5호(`pre_designation_contract`)로
    * **전부 그 밖**이라, `temporary_two_house` 맥락에서는 정규화가 ""로 만들어 한 건도 안 뜬다.
+   * ⚠️ 2026-10-26 F-2부터 5호는 정규화를 통과한다(받는 집합 `TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS`). 판정 메뉴 ⑧이
+   * 그 맥락의 5호 무주택 확인을 막고, 계산기 ④는 미확인 5호를 싣지 않는다(`temp-two-house-proviso-5.anchor.test.tsx` T5-4).
+   * 아래 TM-7a는 1년 요건 면제 집합에 대한 단언이라 그대로 참이다.
    */
   it("[TM-7a] 화이트리스트가 단서 검증 2건의 사유를 **전부 배제**한다", () => {
     for (const r of ["overseas_migration", "overseas_residence", "pre_designation_contract"]) {
