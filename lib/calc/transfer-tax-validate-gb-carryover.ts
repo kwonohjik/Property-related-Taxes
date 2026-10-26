@@ -153,9 +153,10 @@ function validateGbBgGiftTax(asset: AssetForm, label: string, onBuilding: boolea
     if (!(byPart.land > 0))
       return fieldError("carryover.giftDateValuation", `${label}: 토지분 증여 당시 평가액을 입력하세요 — 증여세 상당액 안분의 분자입니다 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
     if (!(byPart.building > 0))
-      return fieldError("buildingCarryover.giftDateValuation", `${label}: 건물분 증여 당시 평가액을 입력하세요 — 토지·건물을 함께 증여받았으면 증여세 상당액을 토지분·건물분 평가액 비율로 나눕니다 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
+      return fieldError("buildingCarryover.giftDateValuation", `${label}: 건물분 증여 당시 평가액을 입력하세요 — 토지·건물을 함께 증여받았으면 증여세 상당액을 토지분·건물분 평가액 비율로 나눕니다. 토지분 칸에 자산 전체 평가액이 들어 있으면 토지 평가액으로 고친 뒤 입력하세요 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
+    // 토지분 칸 자산 전체 — PR-2(#2592) 전 화면은 이 칸을 자산 전체로 받았다. 저장 시점으로 골라낼 수 없어 문구로만 알린다(계획서 V-5 · a).
     if (numerator > base)
-      return fieldError("buildingCarryover.giftDateValuation", `${label}: 토지분·건물분 증여 당시 평가액 합계(지분 몫 ${numerator.toLocaleString()}원)가 증여세 과세가액(${base.toLocaleString()}원)을 초과합니다.`);
+      return fieldError("buildingCarryover.giftDateValuation", `${label}: 토지분·건물분 증여 당시 평가액 합계(지분 몫 ${numerator.toLocaleString()}원)가 증여세 과세가액(${base.toLocaleString()}원)을 초과합니다 — 토지분 칸에 자산 전체 평가액을 넣었는지 확인하세요.`);
     return null;
   }
   if (!(numerator > 0))
