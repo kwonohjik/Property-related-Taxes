@@ -99,10 +99,8 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
     approvalLawBasis: (asset.redevApprovalLawBasis || "urban_renovation_art_74") as "urban_renovation_art_74" | "small_housing_art_29",
     approvalDate: asset.redevApprovalDate,
     // 사례 48 — 승계조합원 모드: redev 권리가액 필드 숨김 → 자산 카드 fixedAcquisitionPrice 자동 미러 (UI 무결성용).
-    // 엔진 runSuccessorMember는 input.actualAcquisitionPrice 우선 사용하므로 본 값은 fallback.
-    // 스케일 O — §166④1호 평가액(관리처분계획상 물건 단위 가격).
-    // 승계조합원 갈래도 함께 감싼다: 엔진은 `input.actualAcquisitionPrice`(상위에서 이미 지분
-    // 스케일됨)를 우선하고 이 값은 fallback이라, 스케일하지 않으면 fallback만 100%로 남는다.
+    // 엔진 승계 산식은 이 값을 취득가액으로 쓰지 않는다(2026-10-26 rightsValue 대체 제거 — 계획서 redev-successor-bg-acq-method Q-2 a).
+    // 스케일 O — §166④1호 평가액(관리처분계획상 물건 단위 가격). 승계 갈래도 같이 감싸 지분 축이 한 규칙을 따른다.
     rightsValue: share(rightsValueRaw),
     // 공유지분이면 **물건 전체 권리가액**도 싣는다 — 청산금 수령분의 고가(12억) 비교·안분은 물건 전체 기준이다(#11 · 영 §156①·§160①).
     //   단독 소유는 싣지 않는다(rightsValue가 곧 물건 전체). 엔진·⑫가 같은 의미로 읽는다.

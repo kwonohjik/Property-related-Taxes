@@ -5,7 +5,7 @@
  * §166 인가전·인가후 안분 산식을 우회하고 단순 차감 산식을 적용한다.
  *
  * 산식:
- *   양도차익 = transferPrice − rightsValue − postApprovalExpenses
+ *   양도차익 = transferPrice − 승계취득가액(actualAcquisitionPrice) − postApprovalExpenses
  *   보유기간 = completionDate ~ transferDate  (사용검사필증 교부일 기산)
  *   LTHD    = 표1 (3년 미만 0, 3년차 6%, 매년 +2%, 15년+ 30% 캡)
  *
@@ -46,8 +46,8 @@ export function runSuccessorMember(
   const completionDate = redevelopment.completionDate ?? input.acquisitionDate;
 
   // 사례 48 — 승계조합원 취득가액은 자산 카드의 통합 acquisitionPrice(=actualAcquisitionPrice) 우선 사용.
-  // 상속·증여·매매 어느 취득원인이든 자산 카드의 검증된 acquisitionPrice 도출 경로를 활용.
-  // fallback: redevelopment.rightsValue (legacy test 직접 호출 경로 호환).
+  // 상속·증여·매매 어느 취득원인이든 자산 카드의 검증된 acquisitionPrice 도출 경로를 활용(상속은 STEP 0.45 `inheritedAcquisition`).
+  // §166④1호 평가액(`redevelopment.rightsValue`)으로 대신하지 않는다 — 아래 2026-10-26 주석.
   // ★ 모순 해소 — "권리가액(§166④, 인가일 평가액)" 슬롯에 "취득시점 평가액"을 강제 매핑하던 이중 입력 제거.
   /**
    * 🔴 **`??` → `> 0` 판정으로 교체 (2026-08-25 — E2-01).**
@@ -72,19 +72,22 @@ export function runSuccessorMember(
    * 호출자 입력의 결함이라 `INVALID_INPUT`(400)으로 던진다 — 종전 `TaxRateNotFoundError`는 500이라, 주 자산 ⑫에
    * 이 검사가 없던 동안 API 직접 호출·증여 승계(⑧도 통과)가 서버 결함처럼 응답했다(계획서 redev-successor-acq-price-required.plan.md).
    */
+  /**
+   * §166④1호 평가액(`rightsValue`)으로 대신하지 않는다(2026-10-26 — 계획서 redev-successor-bg-acq-method Q-2 a).
+   * 그 값은 원조합원 종전자산의 관리처분 가격이지 승계인의 취득가액(§97①1호 가목 · 시행령 §163⑨)이 아니다. 대체가 있던 동안
+   * 감정·매매사례 플래그가 취득가액을 0으로 만든 화면 경로가 숨은 칸 값으로 조용히 계산됐고, API로 임의 평가액을 보내면 세액이 0이 됐다.
+   */
   const successorAcquisitionPrice =
     (input.actualAcquisitionPrice ?? 0) > 0
       ? input.actualAcquisitionPrice!
-      : redevelopment.rightsValue > 0
-        ? redevelopment.rightsValue
-        : (() => {
-            throw new TaxCalculationError(
-              TaxErrorCode.INVALID_INPUT,
-              "승계조합원 신축주택 취득가액을 확인할 수 없습니다 — " +
-                "자산 카드의 취득가액(실지거래가액) 또는 §166④1호 평가액 중 하나가 필요합니다. " +
-                "(소득세법 §97①1호 · 시행령 §162①4호)",
-            );
-          })();
+      : (() => {
+          throw new TaxCalculationError(
+            TaxErrorCode.INVALID_INPUT,
+            "승계조합원 신축주택 취득가액을 확인할 수 없습니다 — " +
+              "취득가액(매매는 실지거래가액 · 증여는 증여 신고가액 · 상속은 상속개시일 평가액)이 필요합니다. " +
+              "(소득세법 §97①1호 · 시행령 §163⑨)",
+          );
+        })();
   const postApprovalExpenses = redevelopment.postApprovalExpenses ?? 0;
 
   // ─ Step 1: 단순 차감 양도차익 ─

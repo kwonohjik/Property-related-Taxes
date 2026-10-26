@@ -44,8 +44,11 @@ describe("⑤ 일반 기준시가 칸 — ④⑧과 같은 술어", () => {
 
   it.each([
     ["일반 주택", { assetKind: "housing" }],
-    ["승계조합원 완공APT — 상단 칸이 유일한 입력 경로", { assetKind: "redevelopment_apt", redevIsSuccessorMember: "yes" }],
   ] as const)("%s: 칸이 있다(대조군)", (_l, over) => {
     expect(count(over as Partial<AssetForm>)).toEqual({ acq: 1, tr: 1 });
+  });
+
+  it("승계조합원 완공APT — 실거래가 전용이라 남은 환산 플래그로 기준시가 칸이 열리지 않는다(계획서 redev-successor-bg-acq-method Q-2 a · ④ 미전송과 같은 술어)", () => {
+    expect(count({ assetKind: "redevelopment_apt", redevIsSuccessorMember: "yes" })).toEqual({ acq: 0, tr: 0 });
   });
 });

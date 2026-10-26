@@ -303,9 +303,8 @@ export function validateRedevelopmentAsset(
     if (asset.redevReceiveOnlyMode === "yes") {
       return `${label}: 승계조합원 모드에서 청산금 수령 단독 신고는 본 PR에서 미지원입니다. (후속 PR)`;
     }
-    if (asset.useEstimatedAcquisition) {
-      return `${label}: 승계조합원 모드에서 환산취득가 모드는 본 PR에서 미지원입니다. 상속·증여 평가액 또는 매매가를 직접 입력하세요. (후속 PR)`;
-    }
+    // 환산 플래그는 차단하지 않는다 — 승계조합원 완공 APT는 실거래가 전용이라 ⑤에 산정 방식 라디오가 없고 ④가 남은 추계 플래그를
+    //   무시한다(`isRedevSuccessorAptActualOnly`). 종전 「환산 미지원」 차단은 라디오가 보일 때의 안내였다(칸 지정 없음).
     // P9 — 승계조합원은 정의상 상속·증여·매매 중 하나. 신축자가건축 등 비현실적 조합 차단.
     const validCauses = ["purchase", "gift", "inheritance"];
     if (asset.acquisitionCause && !validCauses.includes(asset.acquisitionCause)) {
@@ -336,6 +335,9 @@ export function validateRedevelopmentAsset(
   if (
     isSuccessor &&
     asset.acquisitionCause === "purchase" &&
+    // 부담부증여는 §159가 취득가액(`bgActualAcquisitionTotal` 등)을 정하고 상단 취득가액 칸을 렌더하지 않는다
+    //   (`CompanionAcqPurchaseBlock.tsx` 부담부증여 게이트) — 요구하면 막다른 길이었다(계획서 redev-successor-bg-acq-method Q-1 a).
+    asset.transferType !== "burdened_gift" &&
     parseAmount(asset.fixedAcquisitionPrice) <= 0
   ) {
     return fieldError("fixedAcquisitionPrice", `${label}: 승계조합원 — 입주권을 매매로 승계취득한 취득가액(실지거래가액)을 입력하세요. (소득세법 §97①1호 가목)`);

@@ -33,6 +33,7 @@ import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { splitHasNonActualOwnedPart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isReceiveOnlyFiling } from "@/lib/calc/redev-field-scope";
 import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { isRedevSuccessorAptActualOnly } from "@/lib/calc/redev-acquisition-price-source";
 import { withInScopeTransferExpenses } from "@/lib/calc/transfer-expense-in-scope";
 import { redevFilingTotals } from "@/components/calc/results/transfer/redev-acquisition-inverse";
 import type { BundledAssetInput, BundledAssetKind } from "@/lib/tax-engine/types/bundled-sale.types";
@@ -116,6 +117,8 @@ function toBundledKind(kind: AssetForm["assetKind"]): BundledAssetKind {
  * 제1항제1호 **나목** 셋을 한 묶음으로 다룬다). ④의 `acquisitionMethod` 분기와 같은 세 플래그다.
  */
 function isLumpSumMode(a: AssetForm): boolean {
+  // 승계조합원 완공 APT는 실거래가 전용 — 남은 추계 플래그를 읽지 않는다(④⑤⑧과 같은 술어 · 계획서 redev-successor-bg-acq-method Q-2 a).
+  if (isRedevSuccessorAptActualOnly(a)) return false;
   return a.useEstimatedAcquisition || a.isAppraisalAcquisition || a.isSalesCaseAcquisition;
 }
 

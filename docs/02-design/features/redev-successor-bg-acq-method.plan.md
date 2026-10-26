@@ -107,3 +107,25 @@
 
 - 원조합원 부담부증여 K-5 등 §166 경로 — 변경 없음.
 - 승계 **입주권**(`right_to_move_in`) — §165① 기준시가로 추계 3종을 이미 지원한다(`primaryAcquisitionModeFlags` R-12) — 변경 없음.
+
+## 9. 구현 결과 (2026-10-26)
+
+- 결정대로 구현. 공용 술어 `isRedevSuccessorAptActualOnly`(`redev-acquisition-price-source.ts`)를 ⑤④⑧이 함께 쓴다.
+  - A: ⑧ E2-01 매매 분기에 부담부증여 제외.
+  - B ⑤: `CompanionAcquisitionCauseSection`이 추계 플래그를 false로 넘기고 `acqBasisActualOnly`로 라디오를 숨긴다(안내 한 줄 + §97①1호 링크). 승계 카드 「지원하지 않는 분기」 목록을 「청산금 분기 — 자동 차단」 · 「추계 3종 — 실지거래가액으로만 계산」으로 고쳤다(G3-11 짝 anchor 갱신).
+  - B ④: 주 자산 `primaryAcquisitionModeFlags`(감정·매매사례·환산 무시) · 컴패니언 payload(`acquisitionMethod`·`useEstimatedAcquisition`·`standardPriceAtAcquisition`·`fixedAcquisitionPriceRaw`) · `companionGeneralStdAtTransferShown`.
+  - B ⑧: `redevPreApprovalAcqMode`가 승계 APT를 `actual`로(남은 환산 플래그로 §166③ 칸을 요구하던 것 — 구현 중 probe R1·CS4에서 발견) · 승계 「환산 미지원」 차단 제거 · 컴패니언 매매사례 첫 자산 규칙 예외.
+  - 엔진: `rightsValue` 대체 제거(INVALID_INPUT) · ⑫: `rightsValue` 대체 제거.
+- **초판 정정**: 2.2는 ④·⑤·⑧ 세 곳만 적었다. **불완전했다** — ⑧이 쓰는 leaf `redevPreApprovalAcqMode`와 컴패니언 「칸이 화면에 있는가」 판정(`engine-std-price-at-transfer.ts`)도 같은 플래그를 읽었다. 2.2-1의 칸 고정은 기준시가 칸에도 미쳐, 남은 환산 플래그로 열리던 기준시가 칸이 이제 열리지 않는다(실거래가 주택과 같다 · anchor `redev-hidden-general-std-price-render` 대조군에서 분리).
+- 수정 후 probe: A B0~B4 200(값 불변) · E-2/R2·S1·S3 → 본문 취득가액 450,000,000 · actual · 327,250,000 · S2 → 보이는 칸 요구 · R1·CS4 → ⑧ 0건 · R7 → 400 `acquisitionPrice`.
+- anchor: 신규 `transfer.route.redev-successor-bg-acq-method.anchor.test.ts` 12건(A-1~3 · B-1~9) · `redev-successor-apt-actual-only-render.anchor.test.tsx` 5건. 반전: E2-01 A-2 · #2577 S-1c(형제 A-3·S-1b 유지). 갱신: G3-11 G-1·G-2 · `redev-hidden-general-std-price-render`.
+- 구현 후 mutation P-1~P-14 — 각 변형이 의도한 anchor만 실패(P-4·P-14는 ⑧ 환산 경로라 B-4·B-6·B-7·G-2가 함께).
+- E2E: 신규 `e2e/redev-successor-bg-acq-method.spec.ts` 3건(RS-1 부담부증여 매매 계산 · RS-2 남은 감정가액 · RS-3 남은 매매사례가액) · 기존 승계 관련 11 spec 79건 통과.
+- 전체 vitest 42,415건 실패 0(리뷰 반영 전) · tsc 0 · lint 오류 0(변경 파일 경고 2건은 기존 코드).
+
+### 리뷰 게이트(acquisition-cost-review) 반영
+
+- FAIL 없음. KoreanLaw MCP 정상 응답 — 소득세법 §97①1호 가목·나목 · 시행령 §163⑨ · §166①·④1호 원문 대조로 「§166④1호 평가액은 승계인의 취득가액이 아니다」 판단 PASS.
+- 반영: ① 오래된 주석 2곳(엔진 「fallback: rightsValue」 · ④ 미러 주석) ② ⑥ 사이드바 `isLumpSumMode`가 남은 추계 플래그로 필요경비를 「계산 후 표시」로 미루던 것 — 같은 술어로 막음(B-9 · 변형으로 확인) ③ 엔진 오류 문구에 상속(상속개시일 평가액) 추가 · B-8 증여 승계 + 남은 감정가액 플래그 실측(327,250,000).
+- 확인 필요로 남긴 것(이 PR의 퇴행 아님): 상속 승계에서 상속 평가액 원천을 비우면 ⑧은 통과하고 엔진이 400으로 중단한다(종전부터 같은 갭) · 지분 승계 × 남은 추계 플래그 조합 실측 · 추계(나목)를 닫는 안내 문구(「지원하지 않는 분기」)가 충분한지 사람 확인.
+

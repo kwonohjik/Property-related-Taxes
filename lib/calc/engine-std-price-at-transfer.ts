@@ -17,6 +17,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { primaryAcquisitionModeFlags } from "./transfer-tax-api-primary-context";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
+import { isRedevSuccessorAptActualOnly } from "./redev-acquisition-price-source";
 import {
   isSuccessorRightTransfer,
   successorRightEstimationMode,
@@ -85,7 +86,8 @@ function companionGeneralStdAtTransferShown(
   if (asset.transferType === "burdened_gift") return axisB || !stdPriceAtTransferComesFromElsewhere(asset);
   return (
     (!axisB && bundledSaleMode === "apportioned") ||
-    asset.useEstimatedAcquisition ||
+    // 승계조합원 완공 APT는 실거래가 전용 — 남은 환산 플래그로는 칸이 렌더되지 않는다(`isRedevSuccessorAptActualOnly`).
+    (asset.useEstimatedAcquisition && !isRedevSuccessorAptActualOnly(asset)) ||
     isSplitPayloadActive(asset, false, { transferDate, isNonPrimary: true }) ||
     hasPre1990LandEstimation(asset)
   );

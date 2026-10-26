@@ -60,6 +60,7 @@ import {
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 import { isRedevelopmentSec166Asset, redevActualAcquisitionPriceRaw } from "./redev-acquisition-price-source";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
+import { isRedevSuccessorAptActualOnly } from "./redev-acquisition-price-source";
 import { assetStdPriceAtTransferInput } from "./engine-std-price-at-transfer";
 import { companionEngineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import {
@@ -90,7 +91,12 @@ export function fixedAcquisitionPriceRaw(asset: AssetForm): number | undefined {
    * 옛 값이 남았으면 엔진(`bundled-apportionment.ts`)이 그 값을 취득가액으로 쓴다. 주 자산 ④와 **같은 leaf**
    * (승계 완공APT는 leaf 안에서 `fixedAcquisitionPrice` — 종전과 같다).
    */
-  if (isRedevelopmentSec166Asset(asset) && asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition) {
+  // 승계조합원 완공 APT는 실거래가 전용이라 남은 환산 플래그와 무관하다(`isRedevSuccessorAptActualOnly`).
+  if (
+    isRedevelopmentSec166Asset(asset) &&
+    asset.acquisitionCause === "purchase" &&
+    (!asset.useEstimatedAcquisition || isRedevSuccessorAptActualOnly(asset))
+  ) {
     return redevActualAcquisitionPriceRaw(asset) || undefined;
   }
   return (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition && asset.fixedAcquisitionPrice) ||
@@ -244,7 +250,10 @@ export function buildAssetPayload(
    * pre1990 토지등급 환산 · 겸용 · 분리 축 · D2(건물 상속·증여 + 토지 매매). 부담부증여는 `bgAcquisitionMethod`가 따로 정한다.
    * 매매사례는 ⑧이 컴패니언에서 차단하므로(F41) 싣지 않는다.
    */
+  // 승계조합원 완공 APT는 실거래가 전용 — 남은 감정·환산 플래그를 싣지 않는다(주 자산 `primaryAcquisitionModeFlags`와 같은 술어).
+  const successorAptActualOnly = isRedevSuccessorAptActualOnly(asset);
   const isAppraisalCompanion =
+    !successorAptActualOnly &&
     asset.acquisitionCause === "purchase" &&
     asset.isAppraisalAcquisition === true &&
     asset.isSalesCaseAcquisition !== true &&
@@ -401,7 +410,7 @@ export function buildAssetPayload(
         successorMode === "estimated" || successorMode === "appraisal"
         ? successorRightStdPriceAtAcq(asset) || undefined
         : undefined
-      : ((asset.acquisitionCause === "purchase" &&
+      : ((asset.acquisitionCause === "purchase" && !successorAptActualOnly &&
           (asset.useEstimatedAcquisition || asset.isAppraisalAcquisition)) ||
           (splitActive && !isSeparateAcquisition(asset))) &&
         asset.standardPriceAtAcq &&
@@ -602,7 +611,7 @@ export function buildAssetPayload(
     // §166③을 ③으로 쓴다(`resolvePreDeemedRedevelopment166_3Price`) — 주 자산 ④(`transfer-tax-api.ts`)와 같은 판정(PR-7b-4)
     useEstimatedAcquisition:
       asset.acquisitionCause === "purchase"
-        ? asset.useEstimatedAcquisition
+        ? asset.useEstimatedAcquisition && !successorAptActualOnly
         : isBgPreDeemedAsset(asset) && asset.assetKind === "redevelopment_apt" && redevPreApprovalAcqMode(asset) === "estimated"
           ? true
           : undefined,

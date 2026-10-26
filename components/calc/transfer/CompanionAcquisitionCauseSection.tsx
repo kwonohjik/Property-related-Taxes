@@ -16,6 +16,7 @@ import { BuildingCauseMixBlock } from "./BuildingCauseMixBlock";
 import { computeEarliestDate } from "./NewConstructionDateBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
+import { isRedevSuccessorAptActualOnly } from "@/lib/calc/redev-acquisition-price-source";
 import { GiftHouseStdPriceSection } from "./GiftHouseStdPriceSection";
 import { GiftLandStdPriceSection } from "./GiftLandStdPriceSection";
 import { GiftPreDeemedConversionSection } from "./GiftPreDeemedConversionSection";
@@ -88,6 +89,8 @@ export function CompanionAcquisitionCauseSection({
   // D2(건물 상속·증여 + 토지 매매) 유효 여부 — **1회 계산해 아래 마운트 조건·매매 블록에 주입**한다(재파생 금지, `landCause` 주입과 같은 규약).
   const buildingCauseMix = effectiveBuildingCauseMix(asset);
   const d2On = !!buildingCauseMix;
+  /** 승계조합원 완공 APT — 실거래가 전용(⑤ 라디오 없음 · 남은 추계 플래그는 칸 렌더에도 쓰지 않는다 · ④⑧ 같은 술어). */
+  const successorAptActualOnly = isRedevSuccessorAptActualOnly(asset);
   // P4 B(건물만 이월과세 + 토지 매매) — 매매 블록을 건물 원인 「이월과세(증여)」 모드로 열고 자산 전체 이월과세 블록을 대신한다(같은 1회 계산 주입 규약).
   const buildingCarryoverOn = effectiveBuildingCarryoverMix(asset);
   // 결정 #38-1·#38-3 — 첫 자산의 증여 주택(D2 제외 · 겸용 포함)에서 세대 사실을 묻는다(단건·다건 모두 — 다건 ④도 같은 빌더로 싣는다).
@@ -215,16 +218,17 @@ export function CompanionAcquisitionCauseSection({
           acquisitionDate={asset.acquisitionDate}
           // D2 상속 호스트는 상속개시일 3키를 한 patch로 쓴다(상속 블록과 같은 leaf) — 한쪽만 쓰면 다른 키가 stale로 남는다.
           onAcquisitionDateChange={(v) => onChange(d2On ? buildingDatePatch(asset.acquisitionCause, v) : { acquisitionDate: v })}
-          isSalesCaseAcquisition={asset.isSalesCaseAcquisition}
+          isSalesCaseAcquisition={successorAptActualOnly ? false : asset.isSalesCaseAcquisition}
           onIsSalesCaseAcquisitionChange={(v) => onChange({ isSalesCaseAcquisition: v })}
           similarSalesValue={asset.similarSalesValue}
           onSimilarSalesValueChange={(v) => onChange({ similarSalesValue: v })}
           similarSalesSource={asset.similarSalesSource}
           onSimilarSalesSourceChange={(v) => onChange({ similarSalesSource: v })}
           acquisitionSigunguCode={asset.acquisitionSigunguCode}
-          useEstimatedAcquisition={asset.useEstimatedAcquisition}
+          useEstimatedAcquisition={successorAptActualOnly ? false : asset.useEstimatedAcquisition}
           onUseEstimatedChange={(v) => onChange({ useEstimatedAcquisition: v })}
-          isAppraisalAcquisition={asset.isAppraisalAcquisition}
+          isAppraisalAcquisition={successorAptActualOnly ? false : asset.isAppraisalAcquisition}
+          acqBasisActualOnly={successorAptActualOnly}
           onIsAppraisalAcquisitionChange={(v) => onChange({ isAppraisalAcquisition: v })}
           fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
           onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}

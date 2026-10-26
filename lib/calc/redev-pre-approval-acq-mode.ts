@@ -50,6 +50,9 @@ export function redevPreApprovalAcqMode(asset: RedevPreApprovalAcqModeFields): R
       ? "estimated"
       : "burdened_gift";
   }
+  // 승계조합원 완공 APT는 실거래가 전용 — 남은 환산 플래그를 §166③ 환산으로 읽지 않는다(`isRedevSuccessorAptActualOnly`와 같은 조건 ·
+  //   저장값(`unknown`)에도 쓰여 리터럴로 비교한다). 읽으면 ⑧이 원조합원용 §166③ 칸(D 등)을 요구했다.
+  if (asset.assetKind === "redevelopment_apt" && asset.redevIsSuccessorMember === "yes") return "actual";
   return asset.useEstimatedAcquisition === true ? "estimated" : "actual";
 }
 

@@ -70,6 +70,11 @@ export interface BlockProps {
    * 일반건물의 자체 토글·건물 카드 날짜와 **중복**된다.
    */
   hideAssetAcqAxis?: boolean;
+  /**
+   * 「취득가액 산정 방식」 라디오만 숨기고 실거래가 취득가액 칸을 둔다 — 승계조합원 완공 APT(`isRedevSuccessorAptActualOnly`).
+   * 호출부는 추계 플래그도 false로 넘겨 칸이 감정가액·매매사례가액 칸으로 바뀌지 않게 한다(④·⑧과 같은 술어).
+   */
+  acqBasisActualOnly?: boolean;
   /** 취득 당시 면적 (㎡) — 취득시 기준시가 자동계산, Pre1990 환산용 */
   acquisitionArea?: string;
   onAcquisitionAreaChange?: (v: string) => void;
