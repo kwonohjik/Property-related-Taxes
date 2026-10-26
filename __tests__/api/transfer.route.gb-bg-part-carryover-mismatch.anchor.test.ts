@@ -180,9 +180,11 @@ describe("⑫ 부담부증여 일반건물의 건물만 이월과세 → 400 (�
     expect((await zodPaths(bundle(bOnly(), landBg(2)))).paths).toContain("generalBuildingValuation.buildingAcquisitionCause");
     expect((await zodPaths(bundle(landBg(1), bOnly()))).paths).toContain("companionAssets.0.generalBuildingValuation.buildingAcquisitionCause");
   });
-  it("거부하지 않는다 — 일반 양도 건물만 이월과세 · 부담부증여 토지만(본문이 종전 기준과 같은 모양 — ⑧만 막는다)", async () => {
+  it("거부하지 않는다 — 일반 양도 건물만 이월과세 · 분리 ON 둘 다 이월과세(109,326,000) · 부담부증여 토지만(본문이 종전 기준과 같은 모양 — ⑧만 막는다)", async () => {
     const regular = await run(formOf([bOnly({}, { transferType: "regular" })]));
     expect(regular.fieldErrors).not.toContain("generalBuildingValuation.buildingAcquisitionCause");
     expect((await run(formOf([lOnly("purchase")]))).status).toBe(200);
+    const both = await run(formOf([gbAsset({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2024-05-01", gbBuildingAcquisitionCause: "carryover_gift", buildingCarryover: { ...CO } as never } as Partial<AssetForm>, { giftTaxAmount: "" })]));
+    expect([both.status, both.det]).toEqual([200, 109_326_000]);
   });
 });

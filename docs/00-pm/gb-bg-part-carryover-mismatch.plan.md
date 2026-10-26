@@ -104,7 +104,7 @@ if (asset.transferType === "burdened_gift" && asset.hasSeperateLandAcquisitionDa
 - K-4 단일 총액·K-6/K-7 총액은 파트로 나눠 받아야 한다.
 - 지분·묶음 경로(`general-building-fractional.ts`·`bundled-gb-carryover-units.ts`)도 같은 판정을 쓰는지 먼저 실측한다(V-2).
 
-## 5. 결정 요청
+## 5. 결정 요청 — ✅ 2026-10-26 권장안 확정(Q-1 b · Q-2 a · Q-3 a · Q-4 a)
 
 | # | 질문 | 선택지 | 권장 |
 |---|---|---|---|
@@ -120,7 +120,7 @@ if (asset.transferType === "burdened_gift" && asset.hasSeperateLandAcquisitionDa
 
 ## 7. 확인 필요
 - **V-1 (법령 · 해석례)**: 부담부증여에서 토지·건물 중 한쪽만 배우자·직계존비속에게 증여받은 경우 §97의2를 그 파트에만 적용한다는 해석례·판례는 찾지 않았다. 문언(§3)과 일반 양도 구현을 근거로 삼았다.
-- **V-2 (지분·묶음)**: 지분 분할(`generalBuildingShares`)과 함께 부담부증여 묶음에서 같은 결함이 나는지 실측하지 않았다. 두 경로 모두 `buildCarryoverPayload`(토지 원인 판정)를 쓴다(`transfer-tax-api-gb-shares.ts:229` · `transfer-tax-api-companion-payload.ts:644`). 그래서 같을 가능성이 높지만 단정하지 않는다. PR-1 첫 단계에서 실측하고, 같으면 ⑧ 술어가 지분 카드에도 닿는지 확인한다.
+- ✅ **V-2 (지분·묶음) — 해소(2026-10-26 실측)**: 같은 결함이다. 지분 50/50 둘 다 건물만 → 66,675,500(= 이월과세 없음) · 둘 다 토지만+신축+0 → 125,113,200. 묶음(일반건물 + 토지): 건물만 94,705,400(= 이월과세 없음 94,705,400) · 토지만+신축+0 156,313,200(이월과세 없음 86,653,800). 일반건물이 묶음 둘째 자산이어도 건물만이면 94,705,400. ⑧은 자산 카드마다 돌아 지분·묶음 카드에도 닿는다. ⑫ 신호는 지분 `generalBuildingShares[i].valuation`·묶음 `companionAssets[i].generalBuildingValuation`에 실린다.
 - **V-3 (「건물이 없으면 0」)**: 분리 OFF(토지·건물 모두 이월과세)에서 당초 증여자 건물 기준시가 0이 맞는 사례가 있는지 확인하지 않았다. 예를 들어 당초 증여자가 땅을 산 뒤 건물을 지은 경우다(§114조의2 증여자 신축 경로와의 관계 포함). L4z는 분리 ON만 쟀다.
 - **V-4 (차단이 깨는 기존 테스트)**: 분리 ON + 부담부증여 + 한쪽만 이월과세인 기존 anchor·E2E 픽스처가 있는지 전수하지 않았다. 후보 파일은 grep으로 20개 넘게 걸리지만 대부분 일반 양도다. PR-1에서 전체 테스트로 실측한다.
 - **V-5 (정답 세액)**: §1 표의 올바른 결정세액은 파트별 계산 없이는 구할 수 없다. 후속 계획서의 Pre-Do anchor 대상이다.
@@ -130,3 +130,15 @@ if (asset.transferType === "burdened_gift" && asset.hasSeperateLandAcquisitionDa
 - 주택·토지 등 일반건물이 아닌 자산. 파트 개념이 없다.
 - 일반 양도(부담부증여 아님) 일반건물. 파트별 이월과세를 이미 지원한다.
 - 토지·건물을 서로 다른 증여(증여자·증여일이 다름)로 받은 경우. 일반 양도도 증여 사건을 한 벌만 받는다(`gbCarryoverEventSource`).
+
+## 9. 구현 기록 (2026-10-26) — Q-1 b · Q-2 a · Q-3 a · Q-4 a
+
+- **⑧** `lib/calc/transfer-tax-validate-gb-carryover.ts` — 부담부증여 분기 앞에 `transferType === "burdened_gift" && hasSeperateLandAcquisitionDate && landIsCarryover !== buildingIsCarryover` → `gbBuildingAcquisitionCause` 앵커. 문구는 사유(§97의2① 자산마다 · 부담부증여 계산은 함께 본다)와 할 일(둘 다 증여받았다면 둘 다 「이월과세(증여)」)을 함께 말한다.
+- **⑫** `lib/api/transfer-tax-schema-donor-built.ts` `refineGbBgBuildingOnlyCarryover` — 부담부증여 일반건물에서 건물 원인만 `carryover_gift`면 400. 단건 `generalBuildingValuation` · 지분 `generalBuildingShares[i].valuation` · 묶음 `companionAssets[i]`. 호출은 `refinePropertyRequiredInputs`(단건·다건 공용). 토지만은 막지 않는다(§2.1).
+- ⑤·④·엔진 변경 없음.
+- **검증**
+  - anchor `__tests__/api/transfer.route.gb-bg-part-carryover-mismatch.anchor.test.ts` 14건 — 수정 前 11건 빨간불(⑧ 0건 · 200). 분리 OFF 109,326,000 · 104,646,000과 분리 ON 둘 다 이월과세 109,326,000은 그대로다.
+  - E2E `e2e/gb-bg-part-carryover-mismatch.spec.ts` 3건 — 건물만·토지만(본인 신축)에서 «다음»이 건물 취득원인으로 이동하고, 「매매」로 바꾸면 계산된다(66,675,500).
+  - 뮤테이션 10/10 KILLED — ⑧ 세 항·앵커 4 · ⑫ 단건·지분·묶음·부담부증여 항·토지 원인 비교 5 · E2E ⑧ 제거 1. 토지 원인 비교(M9)는 「분리 ON 둘 다 이월과세는 거부하지 않는다」 단언을 더해 잡았다.
+  - `npm run test:transfer` 1,470파일 통과 · `tsc` 0건.
+- **남은 것**: §4.3 파트별 계산(후속 계획서) · V-1·V-3·V-5·V-6.
