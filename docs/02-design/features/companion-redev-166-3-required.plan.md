@@ -164,7 +164,7 @@ P_A > 0 ⇔ acquisitionHousingPrice > 0
 | V-1 | 단독주택 출자 2-point(입주권 양도 · 청산금 수령) 컴패니언도 같은 공백인가 | API로 컴패니언 재개발 아파트 본문을 `subject: right`로 바꿔 봤다(A2·A2b·A2c) — 칸 유무와 관계없이 세액이 같아(176,160,000) 엔진이 그 분기를 타지 않았다. 실제 모양(입주권 컴패니언)은 시료를 만들지 않았다 | ⏳ 설계 영향 없음 — 3.1이 주 자산과 같은 검사를 그대로 부른다. 구현 때 입주권 컴패니언 시료로 확정 |
 | V-2 | 다건 route에도 같은 공백이 있는가 | 다건은 컴패니언을 거부한다(`transfer-tax-schema-multi-refines.ts:87`) · 주 자산은 `addPropertyRefines`가 다건에서도 돈다(`transfer-tax-schema.ts:383`) | ✅ 해당 없음 |
 | V-3 | ⑫ 분자 검사가 ⑧보다 넓어지는 조합이 있는가 | ⑧은 같은 갈래에서 분자 칸 또는 §164⑦ 본문 7칸을 요구한다(`transfer-tax-validate-redev.ts:410-439`). ⑫는 엔진 P_A > 0만 본다 — ⑧ 통과 입력은 P_A > 0이다. P-0 전체 실패 0(E1-07 제외) | ✅ |
-| V-4 | 승계조합원 엔진 throw(`redevelopment-successor.ts:79` — 같은 `TaxRateNotFoundError`)도 입력 결함인가 | 메시지가 「취득가액을 확인할 수 없습니다」(입력 결함)다. ⑫·⑧이 먼저 막는다고 주석에 있다 | ⏳ 범위 밖(§8) — 같은 정책을 적용할지는 별건 |
+| V-4 | 승계조합원 엔진 throw(`redevelopment-successor.ts:79` — 같은 `TaxRateNotFoundError`)도 입력 결함인가 | 메시지가 「취득가액을 확인할 수 없습니다」(입력 결함)다. ⑫·⑧이 먼저 막는다고 주석에 있다 | ✅ 별건 `redev-successor-acq-price-required.plan.md` — 주석과 달리 주 자산 ⑫ 검사가 없어 API·증여 승계(⑧도 통과)가 500이었다. ⑫·⑧·엔진 INVALID_INPUT |
 
 ### 검토 표
 
@@ -183,7 +183,7 @@ P_A > 0 ⇔ acquisitionHousingPrice > 0
 
 ## 8. 범위 밖
 
-- 승계조합원 엔진 throw의 오류 코드(V-4).
+- 승계조합원 엔진 throw의 오류 코드(V-4). → `redev-successor-acq-price-required.plan.md`
 - 일반 양도 의제취득일 전 상속 재개발 컴패니언에서 ⑧은 D를 요구하는데 엔진은 환산 모드가 아니면 §166③을 쓰지 않아 200(probe S3 — 「⑧ 막는데 200」 방향 · 세액 오류 없음).
 - 컴패니언 부담부증여 K-5 본문의 `useEstimatedAcquisition`이 주 자산(true)과 다르게 false로 실리는 ④ 차이 — 엔진은 산정방식으로 판정해 세액 영향 없음. 3.2가 ⑫에서 흡수한다.
 
@@ -201,6 +201,7 @@ P_A > 0 ⇔ acquisitionHousingPrice > 0
 - **D-2(⑧ 통과 ↔ ⑫ 400)**: §164⑦ 본문 발동 중 건물 기준시가 칸을 비우면 ⑧(`< 0`만 막음)·화면 미리보기는 0으로 보는데 ④가 `undefined`로 보내 엔진 본문이 발동하지 않았다 — 종전에는 숨은 분자 칸(0)으로 **200 · 취득가액 0**, 이번 ⑫ 초안에서는 화면에 없는 분자 칸 400. ⇒ ④가 본문 발동 중(`isRedevPhdTriggered` — ⑧·⑤와 같은 술어) 빈 건물 칸을 0으로 싣는다(3중 패턴). 본문이 발동하지 않으면 종전대로 미전송. R-8 · P-9. **화면 경로 세액이 바뀐다** — 종전 오답(취득가액 0)이 미리보기에 보이던 값으로 맞춰진다.
 - 법령: §166③ 원문(시행령 MST 290841)과 산식 일치 · 의제 ③ 3자 max 경로 불변 · 날짜 비교는 엔진과 같다(⑧은 의제취득일 보정으로 더 엄격 — 과차단 아님) · 이동 블록은 의도한 2건 외 동일(PASS).
 - 확인 필요로 남긴 것: 완공 아파트 카드에 `redevSubject: right`가 남은 상태(D′)는 화면 도달 여부 미확인 — ⑫는 `subject !== "right"`로 제외해 막지 않는다.
+  - ✅ **해소(2026-10-26 — 화면 도달 없음)**: 양도세 화면에서 `assetKind`를 쓰는 곳은 ① 자산 종류 버튼(`AssetSectionBasic.tsx:159`) 하나이고 같은 patch에 `redevSubjectPatchForAssetKind`를 싣는다(재개발 APT → `"apt"`). 승계 토글(`RedevelopmentBlockCards.tsx:516`)은 기존 값을 유지할 뿐 `"right"`를 만들지 않는다. 저장값 재수화 3경로(세션 `mergePersistedWizard` · 이력 재개 `transfer-resume-entry.ts:136` · 1주택 판정 이력 `normalizeOneHouseJudgmentForm`)는 모두 `migrateAsset`을 거쳐 옛 「APT + 입주권」을 입주권 자산으로 승격한다(`calc-wizard-asset-migrate.ts:366` · anchor `right-to-move-in-apt-only-normalize` N-2). 1주택 판정 화면은 재개발 APT를 만들지 않는다. 남는 것은 마이그레이션을 거치지 않은 API 직접 호출뿐이고, 그것은 ④ `primaryEnginePropertyType`·⑫ 제외와 같은 축이다.
 
 ### 초판 판정 정정
 

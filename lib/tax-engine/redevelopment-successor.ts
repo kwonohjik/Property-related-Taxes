@@ -26,7 +26,7 @@
 import { calculateHoldingPeriod } from "./tax-utils";
 import { applyLthdToGain, computeLthdRateSplit } from "./redevelopment-lthd";
 import { resolveAptResidenceMonths, resolveSuccessorOwnResidenceMonths } from "./redevelopment-lthd";
-import { TaxRateNotFoundError } from "./tax-errors";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type {
   RedevelopmentBranchDetail,
   RedevelopmentResult,
@@ -69,6 +69,8 @@ export function runSuccessorMember(
    * 정상 경로에서는 도달하지 않는 상태다 — ⑧ `validateRedevelopmentAsset`과 ⑫ Zod refine이
    * 먼저 막는다(같은 배치에서 함께 추가). 이 throw는 그 두 관문이 뚫렸을 때 울리는 **트립와이어**이며,
    * 형제 엔진 `redevelopment-land-contribution.ts`가 §166③ 분모 부재에 대해 이미 쓰는 방식과 같다.
+   * 호출자 입력의 결함이라 `INVALID_INPUT`(400)으로 던진다 — 종전 `TaxRateNotFoundError`는 500이라, 주 자산 ⑫에
+   * 이 검사가 없던 동안 API 직접 호출·증여 승계(⑧도 통과)가 서버 결함처럼 응답했다(계획서 redev-successor-acq-price-required.plan.md).
    */
   const successorAcquisitionPrice =
     (input.actualAcquisitionPrice ?? 0) > 0
@@ -76,7 +78,8 @@ export function runSuccessorMember(
       : redevelopment.rightsValue > 0
         ? redevelopment.rightsValue
         : (() => {
-            throw new TaxRateNotFoundError(
+            throw new TaxCalculationError(
+              TaxErrorCode.INVALID_INPUT,
               "승계조합원 신축주택 취득가액을 확인할 수 없습니다 — " +
                 "자산 카드의 취득가액(실지거래가액) 또는 §166④1호 평가액 중 하나가 필요합니다. " +
                 "(소득세법 §97①1호 · 시행령 §162①4호)",
