@@ -13,6 +13,7 @@ import { gbCarryoverEventSource } from "./transfer-tax-api-gb-carryover";
 import { carryoverEstimationModeSupported } from "./phd-toggle-scope";
 import { validateDonorBuiltGb } from "./transfer-tax-validate-donor-built-gb";
 import { gbBgGiftTaxNumerator, gbBgGiftTaxReturn } from "./gb-bg-gift-tax-return";
+import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
 import { bgCarryoverForm, bgPartialCarryover } from "./bg-carryover-parts";
 import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 
@@ -143,6 +144,20 @@ function validateGbBgGiftTax(asset: AssetForm, label: string, onBuilding: boolea
   if (!gbBgGiftTaxReturn(asset)) return null;
   const base = parseAmount(c?.giftTaxBase ?? "");
   const numerator = gbBgGiftTaxNumerator(asset);
+  /**
+   * 토지·건물 둘 다 이월과세 — 분자는 **토지분 + 건물분** 증여 당시 평가액이다(④·엔진 배분과 같은 술어 · 계획서 `gb-bg-carryover-gift-tax-part-limit.plan.md` Q-2 a · Q-3 b).
+   * 한쪽이 비면 상당액도 배분도 틀어진다 — 종전에는 건물분이 계산에 닿지 않아 비어도 통과했다.
+   */
+  const byPart = gbBgGiftValuationByPart(asset);
+  if (byPart) {
+    if (!(byPart.land > 0))
+      return fieldError("carryover.giftDateValuation", `${label}: 토지분 증여 당시 평가액을 입력하세요 — 증여세 상당액 안분의 분자입니다 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
+    if (!(byPart.building > 0))
+      return fieldError("buildingCarryover.giftDateValuation", `${label}: 건물분 증여 당시 평가액을 입력하세요 — 토지·건물을 함께 증여받았으면 증여세 상당액을 토지분·건물분 평가액 비율로 나눕니다 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
+    if (numerator > base)
+      return fieldError("buildingCarryover.giftDateValuation", `${label}: 토지분·건물분 증여 당시 평가액 합계(지분 몫 ${numerator.toLocaleString()}원)가 증여세 과세가액(${base.toLocaleString()}원)을 초과합니다.`);
+    return null;
+  }
   if (!(numerator > 0))
     return fieldError(onBuilding ? "buildingCarryover.giftDateValuation" : "carryover.giftDateValuation", `${label}: 증여 당시 평가액을 입력하세요 — 증여세 상당액 안분의 분자입니다 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
   if (numerator > base)

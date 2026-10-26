@@ -81,6 +81,8 @@ export const burdenedGiftInfoSchema = z.object({
       donorBuilt: bgDonorBuiltShape.optional(),
       /** 일반건물 — 증여받은 파트(§97의2① 「해당 자산」). 미지정 = 둘 다. 원인 칸과의 정합은 `refineGbBgCarryoverParts` */
       parts: z.object({ land: z.boolean(), building: z.boolean() }).strict().optional(),
+      /** 일반건물 · 둘 다 이월과세 — 증여 당시 토지분·건물분 평가액(영 §163의2②2호). 증여세 상당액 배분 비율. 한 파트만·일반건물 밖이면 `refineGbBgCarryoverParts`가 거부 */
+      giftValuationByPart: z.object({ land: z.number().int().positive(), building: z.number().int().positive() }).strict().optional(),
     })
     .optional(),
   /**

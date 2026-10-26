@@ -202,7 +202,8 @@ describe("지분·묶음 — 화면 경로도 단건과 같다", () => {
 describe("회귀 0", () => {
   it("분리 OFF(L0·L1) 109,326,000 · 104,646,000 — parts 미전송", async () => {
     expect(await det(formOf([gbAsset({}, { giftTaxAmount: "" })]))).toBe(109_326_000);
-    expect(await det(formOf([gbAsset({}, RETURN)]))).toBe(104_646_000);
+    // 둘 다 이월과세 — 평가액은 토지분·건물분으로 받는다(`gb-bg-carryover-gift-tax-part-limit.plan.md` Q-3 b). 5억:5억 = 양도가액 비율이라 종전 값 그대로.
+    expect(await det(formOf([gbAsset({ buildingCarryover: { ...CARRYOVER_DEFAULTS, giftDateValuation: "500,000,000" } } as Partial<AssetForm>, { ...RETURN, giftDateValuation: "500,000,000" })]))).toBe(104_646_000);
     expect(partsOf(await bodyOf(formOf([gbAsset()])))).toBeUndefined();
   });
   it("분리 ON 둘 다 이월과세(L3) 109,326,000", async () => {
