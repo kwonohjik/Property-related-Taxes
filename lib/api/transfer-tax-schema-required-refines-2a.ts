@@ -595,8 +595,10 @@ type PreDeemedLike = Pick<
   | "pre1990Land"
   | "standardPriceAtTransfer"
 > &
-  Partial<Pick<Required2aLike, "acquisitionCause" | "transferType" | "useEstimatedAcquisition">> & {
+  Partial<Pick<Required2aLike, "propertyType" | "acquisitionCause" | "transferType" | "useEstimatedAcquisition">> & {
     isSuccessorRightToMoveIn?: boolean;
+    /** 컴패니언은 `assetKind`로 온다 */
+    assetKind?: string;
     burdenedGiftInfo?: { valuationMode?: string } | null;
     burdenedGiftWholeInfo?: unknown;
     ownershipRatio?: number;
@@ -614,6 +616,12 @@ function bgCollateralWinsSingle(d: PreDeemedLike, prefix: (string | number)[]): 
   if (info?.valuationMode !== "sangjeungbeop_market") return false;
   return computeSangjeungbeopValuation(info.landStdPriceAtTransfer, info.buildingStdPriceAtTransfer, info).selectedMode === "mortgage";
 }
+
+/** 기준시가로 평가한 부담부증여 — ③이 없고(Q-25) 의제취득일 기준시가·양도시 기준시가 누락은 엔진 fail-fast가 §159① 이유로 막는다. */
+const isBgStandardValuation = (d: PreDeemedLike) =>
+  d.transferType === "burdened_gift" && d.burdenedGiftInfo?.valuationMode === "sangjeungbeop_standard";
+/** 입주권 × 부담부증여 × 1985 전은 범위 밖 · 차단 유지(Q-30) — 엔진 `bgBasis`가 입주권을 빼 의제취득일 기준시가 fail-fast가 걸리지 않는다. */
+const isRightToMoveIn = (d: PreDeemedLike) => d.propertyType === "right_to_move_in" || d.assetKind === "right_to_move_in";
 
 export function refinePreDeemedAcquisitionSource(
   d: PreDeemedLike,
@@ -653,7 +661,7 @@ export function refinePreDeemedAcquisitionSource(
   // 없으면 ③이 조용히 0이 된다. ①② 원천이 있어도 막는다(아래 clauseA 반환 전). 기준시가로 평가한 부담부증여는 ③이 없다(Q-25). ⑧ 같은 판정.
   if (
     d.commercialInheritanceValuation &&
-    !(d.transferType === "burdened_gift" && d.burdenedGiftInfo?.valuationMode === "sangjeungbeop_standard") &&
+    !isBgStandardValuation(d) &&
     // 담보 승이면 ③을 비교하지 않는다(Q-2 a · 계획서 bg-std-mode-transfer-std-required.plan.md §3.3). ⑧ 같은 범위.
     !bgCollateralWinsSingle(d, prefix) &&
     !positive(ia.standardPriceAtTransfer) &&
@@ -666,7 +674,7 @@ export function refinePreDeemedAcquisitionSource(
     return;
   }
   if (clauseA) return;
-  if (!positive(ia.standardPriceAtDeemedDate)) {
+  if (!positive(ia.standardPriceAtDeemedDate) && !(isBgStandardValuation(d) && !isRightToMoveIn(d))) {
     issue(
       ["inheritedAcquisition", "reportedValue"],
       "의제취득일(1985.1.1.) 전 상속·증여 자산은 취득가액 원천이 필요합니다 — 상증법 평가액, §164④~⑦ 기준시가, 또는 환산(의제취득일 기준시가) 중 하나를 보내세요 (소득세법 §97①1호·시행령 §163⑨·§176의2④)",
@@ -677,7 +685,7 @@ export function refinePreDeemedAcquisitionSource(
   if (
     !positive(ia.standardPriceAtTransfer) &&
     !positive(d.standardPriceAtTransfer) &&
-    !(d.transferType === "burdened_gift" && d.burdenedGiftInfo?.valuationMode === "sangjeungbeop_standard")
+    !isBgStandardValuation(d)
   )
     issue(["inheritedAcquisition", "standardPriceAtTransfer"], "의제취득일 전 상속·증여 자산의 환산취득가액은 양도시 기준시가가 필요합니다 (소득세법 시행령 §176의2④)");
 }

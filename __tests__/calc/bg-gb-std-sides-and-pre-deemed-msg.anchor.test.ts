@@ -4,7 +4,7 @@
  *
  * - G-1~G-4 단독 × 기준시가·시가 × 토지만·건물만 0 — 모양 A(양식 비움 · ⑧ 우회 → `generalBuildingValuation` 없음)·B(`info`만 0) → 400.
  * - G-5 축 B 지분 `info` · G-6 함께 양도 일반건물 `info` · G-7 취득시 `info`(Q-1 b).
- * - G-8 정상 입력 세액 불변(바닥면적 비움 · 축 B 둘째 지분 양식 비움 포함).
+ * - G-8 정상 입력 세액 불변(축 B 둘째 지분 양식 비움 포함). 바닥면적 비움은 2026-10-26부터 ⑧이 막는다(`bg-gb-residuals.anchor.test.ts` D-1).
  * - M-1 기준시가 평가 1983 상속 · ① 없음 · 비움 → 엔진 문구(③ 이유 문구 아님) · M-2 시가 평가는 종전 ③ 문구 · M-3 채움 세액 불변.
  */
 import { describe, it, expect, vi } from "vitest";
@@ -131,8 +131,6 @@ describe("G-8 — 정상 입력은 세액 그대로", () => {
   const cases: [string, () => TransferFormData, number][] = [
     ["단독 · 기준시가", () => form([GB]), 11_332_800],
     ["단독 · 시가", () => form([{ ...GB, ...MKT }]), 15_605_000],
-    ["단독 · 기준시가 · 바닥면적 비움(일반 자산 경로)", () => form([{ ...GB, gbBuildingFootprintArea: "" }]), 11_332_800],
-    ["단독 · 시가 · 바닥면적 비움(일반 자산 경로)", () => form([{ ...GB, ...MKT, gbBuildingFootprintArea: "" }]), 15_605_000],
     ["축 B · 기준시가", () => form([{ ...GB, ...HALF }, { ...GB, ...HALF, acquisitionDate: "2012-03-15" }], FRACTIONAL), 11_798_400],
     ["축 B · 시가", () => form([{ ...GB, ...MKT, ...HALF }, { ...GB, ...MKT, ...HALF, acquisitionDate: "2012-03-15" }], FRACTIONAL), 16_445_000],
     ["축 B · 기준시가 · 둘째 지분 양식 칸 비움", () => form([{ ...GB, ...HALF }, { ...GB, ...HALF, acquisitionDate: "2012-03-15", gbTransferLandPricePerSqm: "", gbTransferBuildingValue: "" }], FRACTIONAL), 11_798_400],

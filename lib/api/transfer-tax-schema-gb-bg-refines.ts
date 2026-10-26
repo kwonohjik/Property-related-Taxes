@@ -14,6 +14,9 @@
  * 같은 세 곳의 `burdenedGiftInfo` 기준시가 4칸도 여기서 요구한다(계획서 `bg-gb-std-sides-and-pre-deemed-msg.plan.md` §3.1).
  * §159 안분은 두 계산 경로 모두 `info` 값을 읽는데, ④는 양도시 칸이 비면 `generalBuildingValuation`을 빼고 보내
  * 일반 자산 경로로 가므로 엔진 한 곳으로는 막을 수 없다. ⑧(`transfer-tax-validate-gb.ts` 부담부증여 분기)과 같은 범위 — 평가 방식 무관.
+ *
+ * 주 자산·컴패니언에 `generalBuildingValuation` 자체가 없으면 400(계획서 `bg-gb-residuals.plan.md` §3.1). 일반 자산 경로는 토지 별도 취득일을
+ * 모른다 — 바닥면적만 비운 정상 입력이 토지 2021 취득에서 22,669,000 → 11,332,800으로 계산됐다. 축 B 첫 지분이 비면 본문이 컴패니언 모양이 되므로 지분은 따로 보지 않는다.
  */
 import { z } from "zod";
 
@@ -42,6 +45,10 @@ export const GB_BG_ACQ_STD_REQUIRED_MESSAGE =
   "일반건물 부담부증여 — 취득시 토지·건물 기준시가가 모두 필요합니다. 양도가액을 기준시가로 산정하면 취득가액도 이 값으로 산정합니다 " +
   "(소득세법 시행령 제159조 제1항 제1호 괄호).";
 
+export const GB_BG_VALUATION_REQUIRED_MESSAGE =
+  "일반건물 부담부증여는 일반건물 값(generalBuildingValuation — 면적·기준시가·파트별 취득일)이 필요합니다. " +
+  "없으면 토지·건물 취득일을 나눠 보는 일반건물 계산이 빠집니다.";
+
 const GB_BG_STD_KEYS = [
   ["landStdPriceAtTransfer", GB_BG_TRANSFER_STD_REQUIRED_MESSAGE],
   ["buildingStdPriceAtTransfer", GB_BG_TRANSFER_STD_REQUIRED_MESSAGE],
@@ -63,6 +70,10 @@ export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementC
   // 주 자산·지분 — route 가 읽는 조건(`transferType === "burdened_gift" && burdenedGiftInfo`)과 같다.
   if (data.propertyType === "general_building" && data.transferType === "burdened_gift" && data.burdenedGiftInfo) {
     const gbv = data.generalBuildingValuation;
+    // 축 B(지분 2개 이상)는 route가 지분 배열만 읽고 최상위 값 묶음을 쓰지 않는다(`route.ts` 5-0) — 지분마다 `valuation`이 있다
+    if (!gbv && (data.generalBuildingShares?.length ?? 0) < 2) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["generalBuildingValuation"], message: GB_BG_VALUATION_REQUIRED_MESSAGE });
+    }
     if (gbv && gbv.actualPriceMode !== true) issue(["generalBuildingValuation", "actualPriceMode"]);
     (data.generalBuildingShares ?? []).forEach((s, i) => {
       if (s.valuation && s.valuation.actualPriceMode !== true) issue(["generalBuildingShares", i, "valuation", "actualPriceMode"]);
@@ -82,6 +93,9 @@ export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementC
   (data.companionAssets ?? []).forEach((c, i) => {
     if (c.assetKind !== "general_building" || !c.burdenedGiftInfo) return;
     requireStd(c.burdenedGiftInfo, ["companionAssets", i]);
+    if (!c.generalBuildingValuation) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "generalBuildingValuation"], message: GB_BG_VALUATION_REQUIRED_MESSAGE });
+    }
     if (c.generalBuildingValuation && c.generalBuildingValuation.actualPriceMode !== true) {
       issue(["companionAssets", i, "generalBuildingValuation", "actualPriceMode"]);
     }

@@ -85,6 +85,9 @@ export function validateGeneralBuildingAsset(
     }
     if (!parseDecimal(asset.gbLandArea))
       return fieldError("gbLandArea", `${label}: 토지면적을 입력하세요.`);
+    // 바닥면적이 비면 ④가 일반건물 값 묶음을 빼 일반 자산 경로로 계산된다 — 토지 별도 취득일이 빠진다(계획서 bg-gb-residuals.plan.md §2.1)
+    if (!parseDecimal(asset.gbBuildingFootprintArea))
+      return fieldError("gbBuildingFootprintArea", `${label}: 건축물 바닥면적(각 층 중 최대, 지하 포함)을 입력하세요.`);
     if (!parseAmount(asset.gbTransferLandPricePerSqm))
       return fieldError("gbTransferLandPricePerSqm", `${label}: 양도시 토지 공시지가를 입력하세요.`);
     // 1990.8.30. 전 상속·증여 토지는 등급 환산값 — ④(`buildBurdenedGiftInfo`)·⑤ display fallback과 같은 leaf(PR-7b-2 G-3)
