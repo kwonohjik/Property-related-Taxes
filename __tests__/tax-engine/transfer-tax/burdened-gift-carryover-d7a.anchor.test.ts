@@ -191,20 +191,29 @@ describe("D7a — 부담부증여 × 이월과세 세 축 배선", () => {
 
   it("A7-4b 순서 검증 — **안분 → 한도**여야 한다 (뒤집으면 한도가 과소 적용된다)", () => {
     /**
-     * 한도 바로 아래 구간을 쓴다. 「한도 → 안분」 순서였다면 여기서 산입액이
-     * `cap × 0.625`로 **더 깎여** 세액이 달라진다.
+     * 한도는 **파트마다** 그 파트의 잔액이다(계획서 `gb-bg-carryover-gift-tax-part-limit.plan.md` Q-1 a).
+     * 손계산(기준시가 모드 · 채무비율 0.625 · 양도가액 토지 375,000,000 · 건물 125,000,000):
+     *   건물 잔액 = 125,000,000 − 5천만 × 0.625 − 개산공제 937,500 = 92,812,500.
+     *   건물 몫 = 안분액 × 2억/8억 ⇒ 안분액 371,250,000(= 증여세 594,000,000 × 0.625)에서 건물 몫이 **정확히** 잔액이다.
+     *   토지 몫 278,437,500은 토지 잔액 310,625,000 안이다.
+     * 동률에서는 한도가 발동하지 않고 안분액 전액이 들어간다. 「한도 → 안분」이었다면 0.625배로 더 줄었을 것이다.
      */
-    const cap = runBG(makeInfo(), makeCarryover({ giftTaxAmount: 0 }))
-      .carryoverTaxationDetail!.scenarioA.transferGain;
-    // 안분 후가 정확히 한도가 되는 증여세 = cap ÷ 0.625
-    const giftTaxAmount = Math.floor(cap / 0.625);
-    const r = runBG(makeInfo(), makeCarryover({ giftTaxAmount }));
-    const a = r.carryoverTaxationDetail!.scenarioA;
+    const at = runBG(makeInfo(), makeCarryover({ giftTaxAmount: 594_000_000 })).carryoverTaxationDetail!.scenarioA;
+    expect(at.giftTaxLimitApplied).toBe(false);
+    expect(at.giftTaxAddedToExpense).toBe(371_250_000);
+    expect(at.giftTaxLimitCap).toBe(310_625_000 + 92_812_500);
+    // 1원 단위를 넘기면 건물에서만 잘린다 — 넘친 몫은 토지로 옮기지 않는다.
+    const over = runBG(makeInfo(), makeCarryover({ giftTaxAmount: 600_000_000 })).carryoverTaxationDetail!.scenarioA;
+    expect(over.giftTaxLimitApplied).toBe(true);
+    // 안분 375,000,000 → 토지 281,250,000(한도 안) + 건물 93,750,000 → 92,812,500으로 잘림
+    expect(over.giftTaxAddedToExpense).toBe(281_250_000 + 92_812_500);
+  });
 
-    // 안분 결과가 한도와 같아지므로 한도는 **발동하지 않는다**(동률은 min에서 그대로).
-    expect(a.giftTaxLimitApplied).toBe(false);
-    // 산입액이 한도 전액이다 — 「한도 → 안분」이었다면 여기서 0.625배로 줄었을 것이다.
-    expect(a.giftTaxAddedToExpense).toBe(a.giftTaxLimitCap);
+  it("A7-4c 한 파트만 이월과세(건물) — 한도 echo는 그 파트 잔액뿐이다(토지 잔액을 더하지 않는다)", () => {
+    const info = makeInfo({ carryoverDonorBasis: { ...DONOR_BASIS, parts: { land: false, building: true } } });
+    const a = runBG(info, makeCarryover({ giftTaxAmount: 600_000_000 })).carryoverTaxationDetail!.scenarioA;
+    // 건물 잔액 92,812,500(A7-4b 손계산) · 안분 375,000,000 전액이 건물 몫이라 잘린다
+    expect([a.giftTaxLimitCap, a.giftTaxAddedToExpense, a.giftTaxLimitApplied]).toEqual([92_812_500, 92_812_500, true]);
   });
 
   it("A7-5 ⛔ 당초 증여자 기준 값 미입력은 **차단**된다 (fallback 금지)", () => {

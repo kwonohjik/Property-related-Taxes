@@ -642,11 +642,11 @@ export interface TransferBurdenedGiftBreakdown {
     raw: number;
     /** 채무비율 안분 후 = raw × B ÷ C (시행령 §163의2②2호). */
     apportioned: number;
-    /** 한도 = 「양도로 보는 부분」의 양도차익 (같은 항 후단). */
+    /** 한도 = 「양도로 보는 부분」의 양도차익 (같은 항 후단) — 증여받은 파트마다 그 파트 잔액을 구해 더한 값(파트별 한도). */
     cap: number;
-    /** 실제 필요경비 산입액 = min(apportioned, cap). */
+    /** 실제 필요경비 산입액 = Σ min(파트 몫, 파트 한도) — 넘친 몫은 다른 파트로 옮기지 않는다. */
     applied: number;
-    /** 한도가 실제로 깎았는가. */
+    /** 한도가 한 파트라도 깎았는가. */
     limitApplied: boolean;
   };
 

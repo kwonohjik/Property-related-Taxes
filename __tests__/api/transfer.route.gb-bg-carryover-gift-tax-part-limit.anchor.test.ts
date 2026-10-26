@@ -85,42 +85,16 @@ async function post(body: Record<string, any>): Promise<Run> { // eslint-disable
 }
 
 
-const half = { ownershipNumerator: "50", ownershipDenominator: "100" } as Partial<AssetForm>;
-const landBg = (n: number) => ({
-  ...makeDefaultAsset(n), assetKind: "land", addressJibun: "강원 홍천군 테스트리 1", acquisitionArea: "300", transferArea: "300", acquisitionCause: "purchase",
-  acquisitionDate: "2015-01-01", transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "300,000,000",
-  bgMortgageDebtAmount: "150,000,000", bgMortgageSetAmount: "150,000,000", bgLendingDepositTotal: "0", bgDonorRelation: "lineal_descendant",
-  bgAcquisitionMethod: "actual", bgActualAcquisitionLand: "100,000,000", standardPriceAtTransfer: "150000000", standardPriceAtAcq: "80000000",
-}) as unknown as AssetForm;
 /** 화면 입력 — 증여세 신고서의 산출세액·과세가액. 상당액 칸은 화면에 없으므로 비운다. */
 const RETURN = { giftTaxAmount: "", giftTaxCalculated: "30,000,000", giftTaxBase: "1,000,000,000" };
-const shares = (a: AssetForm, b: AssetForm): TransferFormData =>
-  formOf([{ ...a, ...half, assetLabel: "자산 1" }, { ...b, ...half, assetId: "a2", assetLabel: "자산 2" } as AssetForm], { assetSplitMode: "fractional" });
 const CO = { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2024-05-01", donorAcquisitionDate: "2015-01-01", donorAcquisitionPrice: "100,000,000", giftDateValuation: "1,000,000,000", giftTaxAmount: "", donorRelation: "lineal", donorSameHousehold: "no" };
 /** 분리 ON · 토지는 양도인 매매(2015) · 건물만 직계존속에게서 증여(2024-05-01). */
 const bOnly = (bc: Record<string, unknown> = {}, over: Partial<AssetForm> = {}) => gbAsset({
   acquisitionCause: "purchase", gbBuildingAcquisitionCause: "carryover_gift", hasSeperateLandAcquisitionDate: true,
   landAcquisitionDate: "2015-01-01", acquisitionDate: "2024-05-01", carryover: undefined, buildingCarryover: { ...CO, ...bc } as never, ...over,
 } as Partial<AssetForm>);
-/** 분리 ON · 토지만 이월과세(2024-05-01 증여) · 건물은 양도인이 2020년에 `cause`로 취득. */
-const lOnly = (cause: AssetForm["gbBuildingAcquisitionCause"], over: Partial<AssetForm> = {}) =>
-  gbAsset({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2024-05-01", acquisitionDate: "2020-01-01", gbBuildingAcquisitionCause: cause, ...over } as Partial<AssetForm>, { giftTaxAmount: "" });
-const bundle = (first: AssetForm, second: AssetForm) =>
-  formOf([first, { ...second, assetId: "a2", assetLabel: "자산 2" } as AssetForm], { assetSplitMode: "companion", bundledSaleMode: "actual", contractTotalPrice: "1,300,000,000" });
 type Body = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
-const LAND = { land: true, building: false };
 const BLDG = { land: false, building: true };
-const withParts = (b: Body, parts: unknown): Body => ({
-  ...b,
-  burdenedGiftInfo: { ...b.burdenedGiftInfo, carryoverDonorBasis: { ...b.burdenedGiftInfo.carryoverDonorBasis, parts } },
-});
-const patchInfo = (b: Body, info: Body, donor: Body = {}): Body => ({
-  ...b,
-  burdenedGiftInfo: { ...b.burdenedGiftInfo, ...info, carryoverDonorBasis: { ...b.burdenedGiftInfo.carryoverDonorBasis, ...donor } },
-});
-/** 토지만 — ④가 만든 본문(토지 원인 이월과세) + `parts`. */
-const landOnlyBody = async (cause: AssetForm["gbBuildingAcquisitionCause"], over: Partial<AssetForm> = {}) =>
-  withParts(await bodyOf(formOf([lOnly(cause, over)])), LAND);
 /** 건물만 — PR-2부터 ④가 건물 블록(사건)·건물 당초 증여자 값·`parts`를 직접 싣는다(종전에는 토지만 본문에서 빌려 조립했다). */
 const buildingOnlyBody = async (co: Record<string, unknown> = {}, over: Partial<AssetForm> = {}) => {
   const b = await bodyOf(formOf([bOnly(co, over)]));
@@ -133,7 +107,6 @@ const bothBody = async (over: Partial<AssetForm> = {}) =>
   bodyOf(formOf([gbAsset({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2024-05-01", acquisitionDate: "2024-05-01", gbBuildingAcquisitionCause: "carryover_gift", buildingCarryover: { ...CO } as never, ...over } as Partial<AssetForm>, { giftTaxAmount: "" })]));
 const detail = (r: Run) => r.a?.burdenedGiftCarryoverDetail as { determinedTaxA: number; determinedTaxB: number; adoptedScenario: string; scenarioA: Body; scenarioB: Body };
 const card = (s: Body, label: "토지" | "건물") => (s.parts as Body[]).find((p) => String(p.propertyLabel).startsWith(label))!;
-const prop = (r: Run, label: "토지" | "건물") => (r.a!.properties as Body[]).find((p) => String(p.propertyLabel).startsWith(label))!;
 const ok200 = async (b: Body) => {
   const r = await post(b);
   expect(r.status, r.message).toBe(200);

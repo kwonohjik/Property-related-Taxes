@@ -338,11 +338,16 @@ export function buildBurdenedGiftBreakdown(params: {
    *    「증여세 산입」이 뜨는데 **세액은 그대로**였다(계획서 §5.7.4 실측 D3-3 · 침묵 오답보다 나쁘다).
    *    ⇒ 모드 분기 **바깥**의 필요경비 슬롯에 직접 얹는다.
    *
-   * ## 순서: 안분 → 한도 (뒤집으면 한도가 과소 적용된다 — 타입 주석 참조)
+   * ## 순서: 안분 → 파트 배분 → 파트별 한도 (뒤집으면 한도가 과소 적용된다 — 타입 주석 참조)
    *
    * 토지·건물 배분은 **자산별 양도가액 비율**이다. 증여세 상당액은 「**양도한** 몫」에 대응하는
    * 것이고(2호), §159가 채무를 나눈 축이 바로 그 양도가액이므로 같은 축을 쓴다.
    * 잔액은 건물이 흡수한다(메모리 `feedback_floor_residual_absorption`).
+   *
+   * 한도는 **파트마다** 그 파트의 잔액이다 — 토지·건물은 「소득세법」 제94조 제1항 제1호상 각각의 자산이고,
+   * 후단 한도는 「해당 자산에 대한 양도차익」이다(국세청 사전-2025-법규재산-0366 · 일반 양도 `transfer-tax-split-carryover.ts`와 같다).
+   * 한 파트에서 넘친 몫은 다른 파트로 옮기지 않는다. 종전에는 두 파트 합계를 한도로 걸어 한 파트의 양도차익이
+   * 음수가 되어 다른 파트를 깎았다(계획서 `gb-bg-carryover-gift-tax-part-limit.plan.md` §1.1 — 36,284,050 → 42,050,540).
    */
   let carryoverGiftTax: TransferBurdenedGiftBreakdown["carryoverGiftTax"];
   const carryoverGiftTaxRaw = info.carryoverGiftTaxAmount ?? 0;
@@ -350,39 +355,30 @@ export function buildBurdenedGiftBreakdown(params: {
     const apportioned = apportionAcquisitionPrice(
       carryoverGiftTaxRaw, assumedDebtAmount, giftValuation.max,
     );
-    // 한도 = 「양도로 보는 부분」의 양도차익 = 양도가액 − (취득가액 + 그 밖의 필요경비).
-    //   시행령 §163의2② 후단의 「양도가액에서 법 §97① 및 ②의 금액을 공제한 잔액」.
-    //   한 파트만 증여받았으면 그 파트가 「해당 자산」이다 — 한도도 그 파트의 잔액이다(계획서 `gb-bg-part-carryover-calc.plan.md` Q-2 a).
+    // 파트 배분 — 한 파트만 증여받았으면 그 파트에 전액(다른 파트는 증여받지 않았다 · 계획서 `gb-bg-part-carryover-calc.plan.md` Q-2 a).
     const part = info.carryoverGiftTaxPart;
-    const gainBeforeGiftTax =
-      part === "land"
-        ? landTransferPrice - landAcquisitionPrice - landEstimatedDeduction
-        : part === "building"
-          ? buildingTransferPrice - buildingAcquisitionPrice - buildingEstimatedDeduction
-          : (landTransferPrice + buildingTransferPrice) -
-            (landAcquisitionPrice + buildingAcquisitionPrice) -
-            (landEstimatedDeduction + buildingEstimatedDeduction);
-    const cap = Math.max(0, gainBeforeGiftTax);
-    const applied = Math.min(apportioned, cap);
+    const totalTransfer = landTransferPrice + buildingTransferPrice;
+    const landShare =
+      part === "land" ? apportioned
+      : part === "building" ? 0
+      : totalTransfer === 0
+        ? 0
+        : safeMultiplyThenDivide(apportioned, landTransferPrice, totalTransfer);
+    const buildingShare = apportioned - landShare;
+    // 한도 = 그 파트의 양도차익 = 양도가액 − (취득가액 + 그 밖의 필요경비) — 시행령 §163의2② 후단의 「양도가액에서 법 §97① 및 ②의 금액을 공제한 잔액」.
+    const landCap = Math.max(0, landTransferPrice - landAcquisitionPrice - landEstimatedDeduction);
+    const buildingCap = Math.max(0, buildingTransferPrice - buildingAcquisitionPrice - buildingEstimatedDeduction);
+    const landApplied = Math.min(landShare, landCap);
+    const buildingApplied = Math.min(buildingShare, buildingCap);
     carryoverGiftTax = {
       raw: carryoverGiftTaxRaw,
       apportioned,
-      cap,
-      applied,
-      limitApplied: apportioned > cap,
+      cap: (part === "building" ? 0 : landCap) + (part === "land" ? 0 : buildingCap),
+      applied: landApplied + buildingApplied,
+      limitApplied: landShare > landCap || buildingShare > buildingCap,
     };
-    if (applied > 0) {
-      const totalTransfer = landTransferPrice + buildingTransferPrice;
-      // 한 파트만이면 그 파트에 전액 — 다른 파트는 증여받지 않았다.
-      const landShare =
-        part === "land" ? applied
-        : part === "building" ? 0
-        : totalTransfer === 0
-          ? 0
-          : safeMultiplyThenDivide(applied, landTransferPrice, totalTransfer);
-      landEstimatedDeduction += landShare;
-      buildingEstimatedDeduction += applied - landShare;
-    }
+    landEstimatedDeduction += landApplied;
+    buildingEstimatedDeduction += buildingApplied;
   }
 
   // STEP 6: 무상이전분 — 증여재산 평가액(giftValuation.max) − 채무액 (상증법 §47① — 증여재산가액에서 수증자가 인수한 채무를 뺀다)
