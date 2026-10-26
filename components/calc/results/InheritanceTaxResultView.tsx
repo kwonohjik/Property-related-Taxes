@@ -708,7 +708,7 @@ export function InheritanceTaxResultView({
         />
         <div className="flex items-center gap-2">
           <CtaButton tone="outline" onClick={onGoToFirst ?? onBack}>다시 계산</CtaButton>
-          {/* 전체 폐기는 «확인 Dialog를 거치는 공용 버튼»에만 단다 — components/calc/CLAUDE.md:14.
+          {/* 전체 폐기는 «확인 Dialog를 거치는 공용 버튼»에만 단다 — components/calc/CLAUDE.md 「네비게이션 규칙」.
               onReset은 sessionStorage까지 갱신해 되돌릴 수 없는데 종전엔 확인이 없었다.
               양도세 결과뷰 3곳은 2026-09-05에 이미 이 버튼으로 옮겼다. (IG-075) */}
           <RestartFromScratchButton onReset={onReset} />

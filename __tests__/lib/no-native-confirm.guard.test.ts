@@ -3,7 +3,7 @@
  *
  * ## 왜 스캔 가드인가
  *
- * 규약(`components/calc/CLAUDE.md:14`)과 메모리 `feedback_dialog_data_discard_confirm` 은
+ * 규약(`components/calc/CLAUDE.md 「네비게이션 규칙」`)과 메모리 `feedback_dialog_data_discard_confirm` 은
  * **데이터 손실 위험 액션**에 native `confirm()` 을 금지한다. 문언은 전역인데 **가드가
  * 없었다** — 그래서 2026-09-05 에 결과 화면 축만 고쳐지고 `ResetButton`(호출부 8곳)·
  * `HomeButton`(11곳)·주식 Step1(1곳)은 그대로 남았다. 가드가 좁은 것은 **없는 것과 증상이

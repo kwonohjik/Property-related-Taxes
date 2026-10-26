@@ -3,7 +3,7 @@
  * 헤더 아래 breadcrumb 바 + 최대 폭 컨테이너 제공
  *
  * 홈 이동은 `HomeButton` pill이다 — 규칙이 `pill` variant를 「헤더·**breadcrumb**」용으로
- * 명시한다(`components/calc/CLAUDE.md:87`). 종전에는 native `<Link href="/">`였다(RU-3).
+ * 명시한다(`components/calc/CLAUDE.md 「홈으로 버튼 규칙」`). 종전에는 native `<Link href="/">`였다(RU-3).
  */
 
 import { HomeButton } from "@/components/calc/shared/HomeButton";

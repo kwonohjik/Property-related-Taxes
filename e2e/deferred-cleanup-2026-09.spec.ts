@@ -8,7 +8,7 @@
  *     `handleCalculate`가 실제로 **부르는지**는 leaf 호출로 증명되지 않는다
  *     ([[feedback_leaf_anchor_skips_zod_layer]]).
  *
- *  2. 재산세 결과 화면 「다시 계산」 — 규약(components/calc/CLAUDE.md:13)대로
+ *  2. 재산세 결과 화면 「다시 계산」 — 규약(components/calc/CLAUDE.md 「네비게이션 규칙」)대로
  *     **값을 유지한 채** 입력 단계로 돌아가고, 전체 폐기는 확인 Dialog 를 거치는
  *     별도 버튼에만 달린다. 종전엔 「다시 계산하기」가 확인 없이 전부 지웠다.
  *
