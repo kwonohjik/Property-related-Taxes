@@ -109,17 +109,26 @@ function validateParcelMode(primary: AssetForm, formTransferDate?: string): stri
 
 
 /**
- * 재개발·입주권 상속 — 피상속인 취득일(⑫ `transfer-tax-schema-refines.ts` · 컴패니언 arm 필수 · 소득세법 §104②1호 단기보유 통산 기산일).
- * 일반 자산은 아래 상속 분기가 요구하지만 재개발·승계 입주권 분기는 그보다 먼저 끝나 ⑧을 통과하고 서버가 400을 냈다
- * (계획서 redev-successor-inherit-valuation-required.plan.md).
+ * 상속 — 피상속인 취득일. ⑫는 상속 자산이면 조건 없이 요구한다(`transfer-tax-schema-refines.ts` · 컴패니언 arm).
+ * ④는 화면의 취득원인을 그대로 싣는다(`transfer-tax-api.ts` · 컴패니언 · 겸용 payload).
+ *
+ * 🔴 분기마다 붙이지 않고 `validateAssetAcquisition`의 **마지막 관문**으로 둔다. 일반 상속 분기(아래 5번)보다 먼저
+ *    끝나는 분기가 많아(재개발·승계 입주권·겸용·다필지·매매사례·1990 전 토지·부담부증여·남은 추계 플래그) 각각 ⑧을
+ *    통과하고 서버가 400을 냈다 — 계획서 redev-successor-inherit-valuation-required.plan.md · inherit-decedent-date-early-return.plan.md.
+ *    각 분기의 고유 검사(전용 문구 포함 — 일반건물 토지 상속 §95④ 등)가 먼저다.
  */
-function redevInheritedDecedentDateError(asset: AssetForm, label: string): string | null {
+function inheritedDecedentDateError(asset: AssetForm, label: string): string | null {
   if (asset.acquisitionCause !== "inheritance" || asset.decedentAcquisitionDate) return null;
   return fieldError("decedentAcquisitionDate", `${label}: 피상속인 취득일을 입력하세요.`);
 }
 
-/** 자산 카드 1건의 취득 정보 검증 (취득가·환산·1990·신축) */
-export function validateAssetAcquisition(
+/** 자산 카드 1건의 취득 정보 검증 (취득가·환산·1990·신축) — 분기별 검사 후 상속 피상속인 취득일 관문. */
+export function validateAssetAcquisition(...args: Parameters<typeof validateAssetAcquisitionBranches>): string | null {
+  const [asset, label] = args;
+  return validateAssetAcquisitionBranches(...args) ?? inheritedDecedentDateError(asset, label);
+}
+
+function validateAssetAcquisitionBranches(
   asset: AssetForm,
   label: string,
   formTransferDate?: string,
@@ -263,9 +272,7 @@ export function validateAssetAcquisition(
    * 술어는 `transfer-successor-right.ts` 단일 소스(UI·API·사이드바 공용).
    */
   if (isSuccessorRightTransfer(asset)) {
-    const successorError = validateSuccessorRightAsset(asset, label, typeToggleSection);
-    if (successorError) return successorError;
-    return redevInheritedDecedentDateError(asset, label);
+    return validateSuccessorRightAsset(asset, label, typeToggleSection);
   }
 
   // ── 재개발/재건축 (시행령 §166) — assetKind="redevelopment_apt" 또는 "right_to_move_in" 시 ──
@@ -287,7 +294,7 @@ export function validateAssetAcquisition(
     }
     // redevelopment 검증 통과 후 일반 취득 검증 스킵 (별도 분기 — 양도가액·취득가액은 redev 분기에서 처리)
     if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
-    return redevInheritedDecedentDateError(asset, label);
+    return null;
   }
 
   /**

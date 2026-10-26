@@ -22,7 +22,7 @@
 ## 2. 변경
 
 1. ⑧ `transfer-tax-validate-redev.ts` — 승계 ∧ 상속 ∧ 부담부증여 아님 ∧ ① ≤ 0 ∧ (함께 양도하는 둘째 이후 자산 ∨ `!isSec164ClauseAFilled`) → `publishedValueAtInheritance` 칸. 주 자산의 술어는 ④의 `sec164Ready`와 같은 3경로(주택·상가·토지 §164 완전 충족)다. 컴패니언은 ④가 ①(`inheritanceValuation`)만 싣고 ②는 싣지 않으므로(`transfer-tax-api-companion-payload.ts` `ownsAcquisitionSubobject`) ①을 요구한다 — ②만 채운 경우 안내 한 줄을 붙인다. 부담부증여는 §159가 취득가액을 정한다(④도 싣지 않는다).
-2. ⑧ `transfer-tax-validate-acquisition.ts` — `redevInheritedDecedentDateError`를 재개발 분기·승계 입주권 분기 끝에 붙인다. 각 분기의 고유 검사가 먼저다.
+2. ⑧ `transfer-tax-validate-acquisition.ts` — `redevInheritedDecedentDateError`를 재개발 분기·승계 입주권 분기 끝에 붙인다. 각 분기의 고유 검사가 먼저다. (이후 정정: 분기별 두 줄은 V-2 수정의 마지막 관문 `inheritedDecedentDateError`로 대체됐다.)
 3. 시료 정정 `successor-unsupported-notice-g3-11` G-4 — 상속 승계 시료가 매매 기본값의 `fixedAcquisitionPrice`로 계산되고 있었다(I2와 같은 상태). 평가액 칸으로 바꿨고 결과(비과세 판정)는 같다.
 
 질문 Q-n 없음 — 일반 자산과 같은 규칙을 재개발 승계에 맞추는 것이다(⑧↔④↔⑫ 정합).
@@ -35,7 +35,7 @@
 | V-3 | 컴패니언 승계 상속에서 ①·② 모두 있을 때 — 주 자산은 max(①,②)인데 컴패니언은 ①만 쓴다(실측 CB: ① 200,000,000 · ② 250,000,000 → 취득가액 200,000,000) | ⏳ 종전부터 있던 ④ 차이 · 이 PR은 고치지 않는다. V-1이 풀려야 방향(컴패니언에도 ②를 싣는가, 주 자산에서도 빼는가)이 정해진다 |
 | V-4 | 승계 입주권(`right_to_move_in` + 승계) 상속은 ⑧이 「승계취득가액」(`successorRightAcqPrice`)을 요구한다 — 상속이면 §163⑨ 평가액이어야 하는지 | ⏳ 기존 설계 · 이 PR 밖(리뷰 게이트 확인 필요 2) |
 | V-5 | API 직접 호출 — ⑫에 이 규칙의 거울이 없다. ①② 모두 비면 엔진 400(칸 경로 없음), `acquisitionPrice`를 보내면 그 값으로 계산 | ⏳ 범위 밖 — 화면 경로는 ⑧이 막는다. `acquisitionPrice` 직접 지정은 API 계약으로 둔다 |
-| V-2 | 그 밖의 `validateAssetAcquisition` 조기 종료 분기(겸용·부담부증여·추계·매매사례·필지·분리 입력 등)도 피상속인 취득일을 빠뜨리는가 | ⏳ 실측 안 함. 이 PR은 재개발 계열만 측정·수정했다 |
+| V-2 | 그 밖의 `validateAssetAcquisition` 조기 종료 분기(겸용·부담부증여·추계·매매사례·필지·분리 입력 등)도 피상속인 취득일을 빠뜨리는가 | ✅ 실측 — 겸용·다필지·매매사례·1990 전 토지·부담부증여·남은 추계 플래그(주·컴패니언) 모두 같은 갭이었다. ⑧ 마지막 관문으로 일괄 수정 → [inherit-decedent-date-early-return.plan.md](inherit-decedent-date-early-return.plan.md) |
 
 ## 4. 테스트 · 결과
 
