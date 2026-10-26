@@ -196,6 +196,9 @@ export function addPropertyRefines(
   const phdFirstDate =
     data.preHousingDisclosure?.firstDisclosureDate ??
     data.mixedUse?.preHousingDisclosure?.firstDisclosureDate;
+  // 주택 종류는 전송되지 않는다(표시 축). 겸용주택에는 공동주택이 없어 개별주택가격·§164⑦, 일반 경로는 두 가격·두 조문을 함께 적는다
+  // (화면에서는 ⑧이 같은 게이트로 먼저 막고 주택 종류별 문장을 보인다 — 계획서 docs/00-pm/phd-residual-limits-fix.plan.md Q-2 (a))
+  const phdIsMixedUse = !data.preHousingDisclosure?.firstDisclosureDate;
   if (phdFirstDate) {
     const phdCompareDate =
       data.acquisitionCause === "carryover_gift"
@@ -205,8 +208,9 @@ export function addPropertyRefines(
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["preHousingDisclosure", "firstDisclosureDate"],
-        message:
-          "취득일(이월과세는 증여자 취득일, 의제취득일 1985-01-01 반영)이 최초 고시일 이후 — 취득당시 주택공시가격이 고시되어 있어 3-시점 환산(§164⑦) 대상이 아닙니다",
+        message: phdIsMixedUse
+          ? "취득일(이월과세는 증여자 취득일, 의제취득일 1985-01-01 반영)이 최초 고시일 이후 — 취득당시 개별주택가격이 고시되어 있어 3-시점 환산(§164⑦) 대상이 아닙니다"
+          : "취득일(이월과세는 증여자 취득일, 의제취득일 1985-01-01 반영)이 최초 고시일 이후 — 취득당시 개별주택가격 또는 공동주택가격(국세청장이 고시한 기준시가 포함)이 고시되어 있어 3-시점 환산(단독·다가구 §164⑦ · 공동주택 §164⑥·⑦) 대상이 아닙니다",
       });
     }
   }

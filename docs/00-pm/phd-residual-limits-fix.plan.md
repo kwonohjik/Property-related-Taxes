@@ -1,7 +1,7 @@
 # PHD 남은 한계 3건 수정 계획서 — §164⑤ 확인란 · 서버 메시지 · 이월과세 APD 주택 종류
 
 > 상위 계획서: `docs/00-pm/phd-fill-164-6-apartment.plan.md` §9.3 「바뀌지 않는 것」 · PR #2541 후속
-> 작성 2026-10-26 · 기준 master `b476b8c42` · **상태: 계획 — 사용자 결정(Q-1~Q-3) 대기**
+> 작성 2026-10-26 · 기준 master `b476b8c42` · **상태: 구현 완료(§7) — 사용자 결정 Q-1 (a) · Q-2 (a) · Q-3 (b) (2026-10-26)**
 > 용어: §164⑥·⑦ 산식 결과는 단독·다가구 «환산 개별주택가격», 공동주택 «환산 공동주택가격»이다. 겸용주택에는 공동주택이 없다(상위 계획서 §9.5-1, 재제안 금지).
 
 ---
@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | L-1 | 보조 카드의 «§164⑤ 준용으로 산정한 금액입니다» 확인란이 건물 기준시가 칸을 고쳐도 풀리지 않는다 | 확인 뒤 다른 값으로 고쳐도 «계산해 채우기» 버튼이 켜진 채 남는다 | **Q-1 (a)** 칸을 고치면 같은 patch에서 확인을 푼다(상가 선례) | ⑤ 1파일 |
 | L-2 | 서버 Zod 메시지가 공동주택도 «주택공시가격 … §164⑦»로 적는다 | 화면에는 안 보인다(⑧이 같은 게이트로 먼저 막는다). API를 직접 부를 때만 보인다 | **Q-2 (a)** 경로로 가른다 — 겸용은 단독 문장, 일반은 두 종류를 함께 적는 문장 | ⑫ 1파일 |
-| L-3 | 이월과세 «공동주택 최초고시 전 취득»(APD)을 골라도 패널 라디오는 «단독·다가구», 배지 «§164 ⑦», 결과 이름 «환산 개별주택가격» | 화면·결과·PDF가 ⑧ 메시지(공동주택·§164⑥·⑦)와 어긋난다. 계산값은 같다 | **Q-3 (b)** APD면 공동주택으로 본다(단일 정의 `isPhdApartment`) + 패널 라디오 숨김 | lib/calc 1 · ⑤ 2 · ⑧ 1 |
+| L-3 | 이월과세 «공동주택 최초고시 전 취득»(APD)을 골라도 패널 라디오는 «단독·다가구», 배지 «§164 ⑦», 라벨 «최초 고시 개별주택가격» | 입력 패널이 ⑧ 메시지(공동주택·§164⑥·⑦)와 어긋난다. 계산값은 같다. ~~결과·PDF 이름~~ — 이월과세 결과에는 PHD 상세가 없어 이름이 나오지 않는다(§7 정정) | **Q-3 (b)** APD면 공동주택으로 본다(단일 정의 `isPhdApartment`) + 패널 라디오 숨김 | lib/calc 1 · ⑤ 2 · ⑧ 1 |
 
 엔진·④·⑬·⑭·계산값은 세 건 모두 바뀌지 않는다.
 
@@ -51,7 +51,7 @@ throwaway probe(`__tests__/zz-*.test.tsx`, 실행 후 삭제 · `git status` 깨
 | 패널 | 두 모드 모두 같은 `PreHousingDisclosureSection`을 그린다(`CarryoverEstimationSection.tsx:185-208`·`:211-230`). 패널 주택 종류 = `asset.phdHousingType ?? "individual"`(`PreHousingDisclosureSection.tsx:78`), 기본값 `"individual"`(`calc-wizard-asset-factory.ts:232`) | 코드 |
 | APD 화면 | — | **probe**: 이월과세 · `estimationMode: "apd"` · `phdHousingType` 기본값 → 체크된 라디오 `carryoverEstimationMode=apd` · `housingType=individual` · 배지 «소득세법 시행령 §164 ⑦» · 라벨 «최초 고시 개별주택가격» |
 | ⑧ | APD는 항상 공동주택 문장(`transfer-tax-validate-carryover-asset.ts:115` `phdAcqDisclosedPriceName(true)`·`phdClause(true)`) · 필수 칸 문장도 «최초공시 공동주택가격»·«양도시 공동주택가격»(`:117`·`:120`). PHD는 적용 불가 문장만 라디오를 따르고(`:103`) 필수 칸 문장은 «개별주택가격» 고정(`:105`·`:108`) | 코드 · 기존 anchor `phd-fill-164-6-apartment.anchor.test.ts:132` |
-| 결과·PDF | `isPhdApartment(asset)` = `phdHousingType === "apartment"`(`phd-housing-term.ts:20-22`) → `TransferTaxResultView.tsx:136·524`(PDF `inputData.phdApartment`도 여기서) | **probe**: 위 APD 자산 `isPhdApartment` → `false` ⇒ 결과 이름 «환산 개별주택가격» |
+| 결과·PDF | `isPhdApartment(asset)` = `phdHousingType === "apartment"`(`phd-housing-term.ts:20-22`) → `TransferTaxResultView.tsx:136·524`(PDF `inputData.phdApartment`도 여기서) | **probe**: 위 APD 자산 `isPhdApartment` → `false`. ~~⇒ 결과 이름 «환산 개별주택가격»~~ — **정정(Do 실측)**: 이월과세 결과는 `carryoverTaxationDetail`만 있고 `preHousingDisclosureDetail`이 없어(④는 `preHousingDisclosure`를 싣는다) 결과 화면·PDF에 PHD 머리글·«환산 …가격» 이름이 나오지 않는다. 결과 층의 어긋남은 없었다 |
 
 ---
 
@@ -109,7 +109,7 @@ throwaway probe(`__tests__/zz-*.test.tsx`, 실행 후 삭제 · `git status` 깨
 | ⑤ 패널 | `PreHousingDisclosureSection.tsx:78` | `housingType`을 `isPhdApartment(asset) ? "apartment" : "individual"`로 읽는다. 새 prop `housingTypeFixed?: boolean` — true면 라디오(`:131-138`)를 그리지 않는다. 다른 호출부(일반 PHD·보조 카드·이월과세 PHD)는 prop을 넘기지 않아 바이트 동일 |
 | ⑤ 호출부 | `CarryoverEstimationSection.tsx:217` (APD) | `housingTypeFixed` 전달. PHD 블록(`:192`)은 그대로 |
 | ⑧ | `transfer-tax-validate-carryover-asset.ts:105·108` (PHD 필수 칸) | «최초 고시 개별주택가격»·«양도시 개별주택가격» → 라디오를 따른다(`phdDisclosedPriceName(isPhdApartment(asset))`). APD 문장(`:115·117·120`)은 그대로 |
-| ⑦ 결과·PDF | 변경 없음 | `isPhdApartment`를 이미 읽으므로 자동으로 «환산 공동주택가격»·«§164⑥·⑦» 머리글이 된다 |
+| ⑦ 결과·PDF | 변경 없음 | 이월과세는 PHD 상세가 없어 이름이 갈릴 곳이 없다(§7 정정). 엔진이 나중에 내면 `isPhdApartment`를 이미 읽으므로 APD는 «환산 공동주택가격»이 된다 — anchor가 «PHD 상세 없음»을 고정해 그때 알린다 |
 
 store에는 쓰지 않는다 — APD 선택 시 `phdHousingType`을 바꿔 쓰는 onChange 동기화 대신 **읽는 쪽 단일 정의**로 처리한다(useEffect 미러링 없음 · 3중 패턴: ⑤ 패널·⑧·⑦이 같은 함수). 저장값 `phdHousingType`은 그대로 남아, 사용자가 방식을 PHD로 바꾸면 종전 라디오 값이 돌아온다.
 
@@ -131,12 +131,12 @@ store에는 쓰지 않는다 — APD 선택 시 `phdHousingType`을 바꿔 쓰�
 
 | # | 내용 | 상태 |
 |---|---|---|
-| V-1 | 칸 포커스 이동·콤마 포맷만으로 `onBuildingStdPriceAtAcqChange`가 불리는가(불리면 확인 직후 풀릴 수 있다) | 확인 필요 — Do 첫 anchor에서 실측 |
-| V-2 | `isPhdApartment` 인자 확장 시 모든 호출부 타입 통과 · 결과 화면이 넘기는 `resolvedAsset`에 `carryover`가 있는가 | 확인 필요 — `tsc` · 결과 anchor |
-| V-3 | PHD 필수 칸 문장(«최초 고시 개별주택가격을 입력하세요» 등)을 단언하는 기존 테스트 목록 | 확인 필요 — grep |
-| Q-1 | 확인란 해제 범위 | 사용자 결정 대기 (★a) |
-| Q-2 | 서버 메시지 | 사용자 결정 대기 (★a) |
-| Q-3 | 이월과세 PHD·APD 주택 종류 | 사용자 결정 대기 (★b) |
+| V-1 | 칸 포커스 이동·콤마 포맷만으로 `onBuildingStdPriceAtAcqChange`가 불리는가(불리면 확인 직후 풀릴 수 있다) | ✅ 불리지 않는다 — 마운트·focus·blur에서 patch 0건(anchor L-1 첫 케이스) |
+| V-2 | `isPhdApartment` 인자 확장 시 모든 호출부 타입 통과 · 결과 화면이 넘기는 `resolvedAsset`에 `carryover`가 있는가 | ✅ `acquisitionCause`·`carryover`를 optional Pick으로 넓혀 `tsc` 0건. 결과 화면은 이월과세에 PHD 상세가 없어 무관(§7) |
+| V-3 | PHD 필수 칸 문장(«최초 고시 개별주택가격을 입력하세요» 등)을 단언하는 기존 테스트 목록 | ✅ 0건(`__tests__`·`e2e` grep) — 단독 문장은 바이트 그대로라 바뀌는 단언도 없다 |
+| Q-1 | 확인란 해제 범위 | ✅ (a) 사용자 결정 2026-10-26 |
+| Q-2 | 서버 메시지 | ✅ (a) 사용자 결정 2026-10-26 |
+| Q-3 | 이월과세 PHD·APD 주택 종류 | ✅ (b) 사용자 결정 2026-10-26 |
 
 ## 6. 범위 밖
 
@@ -145,3 +145,34 @@ store에는 쓰지 않는다 — APD 선택 시 `phdHousingType`을 바꿔 쓰�
 - 일반 PHD 토글(취득원인 매매)의 라디오·문구 — 상위 계획서 §9.2 그대로.
 - 남은 한계 4번(브라우저 수동 확인 미수행)은 이 계획의 검증 5단계에서 함께 수행한다.
 
+
+---
+
+## 7. 구현 결과 (2026-10-26)
+
+사용자 결정: **Q-1 (a) · Q-2 (a) · Q-3 (b)** (권장안 전부).
+
+### 7.1 바뀐 것
+
+| 결정 | 파일 | 내용 |
+|---|---|---|
+| Q-1 (a) | `lib/calc/phd-converted-housing-price.ts` | `phdAssist164_5EditPatch(patch, asset)` — 확인이 켜져 있으면 같은 patch에 `phdAssistBuildingStdBy164_5: false` (상가 `buildAcqBuildingStdEditPatch`와 같은 꼴) |
+| Q-1 (a) | `PreHousingDisclosureSection.tsx` | 최초 고시일 · 취득시 건물 기준시가 · 최초 고시 시점 건물 기준시가 onChange가 **보조 모드에서만** 위 helper를 거친다(환산 모드 patch 불변). 칩 설명 «… · 건물 기준시가나 최초 고시일을 바꾸면 다시 확인합니다» |
+| Q-2 (a) | `lib/api/transfer-tax-schema-refines.ts` | 겸용(`mixedUse.preHousingDisclosure`) «취득당시 개별주택가격이 고시되어 있어 3-시점 환산(§164⑦) 대상이 아닙니다» · 일반 «취득당시 개별주택가격 또는 공동주택가격(국세청장이 고시한 기준시가 포함)이 고시되어 있어 3-시점 환산(단독·다가구 §164⑦ · 공동주택 §164⑥·⑦) 대상이 아닙니다». 판정·path 불변 |
+| Q-3 (b) | `lib/calc/phd-housing-term.ts` | `isPhdApartment` — 이월과세 && 환산 사용 && `estimationMode === "apd"`면 `true`. 인자 타입은 `acquisitionCause`·`carryover`를 optional로 넓혔다(기존 호출부 그대로) |
+| Q-3 (b) | `PreHousingDisclosureSection.tsx` | 주택 종류를 `isPhdApartment`로 읽는다 · 새 prop `housingTypeFixed`(true면 라디오를 그리지 않는다) |
+| Q-3 (b) | `CarryoverEstimationSection.tsx` | APD 패널에 `housingTypeFixed` 전달. PHD 패널은 그대로 |
+| Q-3 (b) ⑧ | `transfer-tax-validate-carryover-asset.ts:105·108` | PHD 필수 칸 문장이 라디오를 따른다 — «최초 고시 공동주택가격»·«양도시 공동주택가격» / 단독은 종전 바이트 그대로 |
+
+엔진·④·⑬·⑭·계산값·저장값(`phdHousingType`) 변경 없음.
+
+### 7.2 정정 — 결과 층에는 어긋남이 없었다
+
+계획 §1 L-3의 «결과 이름 «환산 개별주택가격»»은 `isPhdApartment` probe에서 **추론**한 것이었다. Do에서 폼 → ④ → route → 엔진 → `TransferTaxResultView`를 실측하니 이월과세 결과는 `carryoverTaxationDetail`만 있고 `preHousingDisclosureDetail`이 없다(④는 `preHousingDisclosure`를 싣는다) — 결과 화면·PDF에 PHD 머리글·«환산 …가격» 이름이 나오지 않는다. 그래서 L-3의 실제 어긋남은 **입력 패널 ↔ ⑧** 둘뿐이었다. anchor가 «이월과세 결과에 PHD 상세 없음»을 고정해, 엔진이 나중에 그것을 내면 깨져 알린다.
+
+### 7.3 검증
+
+- anchor 신규 `__tests__/calc/phd-residual-limits.anchor.test.tsx` 18건 — Pre-Do에서 9건 실패 확인 후 구현 → 18/18 통과. L-1 6(V-1 포함) · L-2 2(route POST) · L-3 8 · 결과 2.
+- 뮤테이션 16/16 KILLED (cp 백업 · md5 복원 확인): helper 해제 · 보조 모드 조건 · 세 칸 각각 · 칩 문구 · 서버 겸용 판정 true/false · `isPhdApartment` APD·환산 사용·이월과세 조건 · `housingTypeFixed` 무시 · APD prop 누락 · 패널 종류 원복 · ⑧ 두 문장.
+- 범위 테스트 `__tests__/calc __tests__/components __tests__/api` 1678파일 · 19806 passed · `npx tsc --noEmit` 0건.
+- **브라우저(Playwright)** `e2e/phd-residual-limits.spec.ts` 2건 통과 — RL-1 1995 취득 보조 카드: 확인 상태 버튼 켜짐 → 취득시 건물 기준시가 수정 → 버튼 꺼짐·저장값 false → 다시 확인 → 켜짐. RL-2 이월과세 APD: 라디오 0개 · 배지 §164⑥·⑦ · 라벨 공동주택 → PHD로 바꾸면 라디오 2개(단독 선택) · 배지 §164 ⑦ · 저장값 `individual` 유지. 수정 전 코드로 되돌려 돌리면 두 건 모두 실패함을 확인했다(md5 원복).
