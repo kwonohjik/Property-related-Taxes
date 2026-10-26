@@ -54,6 +54,7 @@ import { validateDonorBuiltBg } from "./transfer-tax-validate-donor-built-bg";
 import { bgCollateralForcesStdAcq, bgWholeGiftValuation } from "./burdened-gift-collateral-win";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
+import { bgAnyCarryover, bgCarryoverForm, bgCarryoverParts } from "./bg-carryover-parts";
 
 /**
  * 부담부증여 지원 자산 종류 — **⑧ validate 층 게이트**(3층 중 하나).
@@ -166,7 +167,8 @@ export function validateBurdenedGiftAsset(
    *
    * 설계: `docs/02-design/features/burdened-gift-carryover-159-97-2.plan.md` §5.6·§8
    */
-  if (asset.acquisitionCause === "carryover_gift") {
+  // 일반건물은 토지·건물 중 한 파트라도 이월과세면 연다 — 증여받은 파트의 칸만 요구한다(`gb-bg-part-carryover-calc.plan.md` §4.5).
+  if (bgAnyCarryover(asset)) {
     const missing = missingCoDonorBasisLabel(asset);
     if (missing) {
       return fieldError(missing.field, `${label}: 이월과세가 적용되므로 「당초 증여자」(= 양도인에게 이 자산을 증여한 사람)의 ${missing.label}을(를) 입력하세요. 소득세법 제97조의2 제1항 제1호가 취득가액을 당초 증여자의 취득 당시 금액으로 정하는데, 부담부증여의 취득가액은 같은 법 시행령 제159조 제1항 제1호가 양도인 기준으로 따로 산정하므로 두 값이 모두 필요합니다(같은 조 제2항 제3호의 세액 비교).`);
@@ -189,7 +191,7 @@ export function validateBurdenedGiftAsset(
      *    조합(환산 OFF)에서 「당초 증여자 입력 요구」를 가로챈다
      *    (`transfer-tax-validate-gb-carryover.ts:60`에 같은 유형의 정정 이력이 남아 있다).
      */
-    if (asset.carryover?.useEstimatedAcquisition) {
+    if (bgCarryoverForm(asset)?.useEstimatedAcquisition) {
       return `${label}: 부담부증여에서는 이월과세 취득가액을 환산으로 구할 수 없습니다. 취득가액은 소득세법 시행령 제159조 제1항 제1호가 정하므로, 「환산취득가 사용」을 끄고 당초 증여자의 취득 당시 실지거래가액을 입력하거나, 환산이 필요하면 부담부증여 평가 유형을 「시가」 + 취득가액 산정방식 「환산취득가액」으로 선택하세요.`;
     }
   }
@@ -233,7 +235,7 @@ export function validateBurdenedGiftAsset(
      */
     const wholeValuation =
       contractAssumedDebtTotal === undefined && isFractionalSplitAxis !== true ? bgWholeGiftValuation(asset) : undefined;
-    if (wholeValuation?.selectedMode === "mortgage" && (asset.acquisitionCause === "carryover_gift" || asset.assetKind === "right_to_move_in")) {
+    if (wholeValuation?.selectedMode === "mortgage" && (bgAnyCarryover(asset) || asset.assetKind === "right_to_move_in")) {
       const what = asset.assetKind === "right_to_move_in" ? "조합원입주권" : "이월과세(「소득세법」 제97조의2) 자산";
       return fieldError(
         "bgMortgageDebtAmount",
@@ -604,12 +606,15 @@ function missingCoDonorBasisLabel(asset: AssetForm): { label: string; field: Iss
       };
     }
   }
+  // 증여받은 파트의 칸만 요구한다 — 한 파트만이면 다른 파트 칸은 화면에 없다(⑤ · 엔진 `describeRequiredDonorFields`와 같은 조건).
+  const parts = bgCarryoverParts(asset);
   if (needsStdPrice) {
-    if (!filled(asset.bgCoDonorLandStdPriceAtAcq) || !filled(asset.bgCoDonorBuildingStdPriceAtAcq)) {
+    const landEmpty = parts.land && !filled(asset.bgCoDonorLandStdPriceAtAcq);
+    const buildingEmpty = parts.building && !filled(asset.bgCoDonorBuildingStdPriceAtAcq);
+    if (landEmpty || buildingEmpty) {
       // 입력칸 이동 — 빈 쪽(토지 먼저)
-      const landEmpty = !filled(asset.bgCoDonorLandStdPriceAtAcq);
       return {
-        label: "취득 당시 토지·건물 기준시가",
+        label: parts.land && parts.building ? "취득 당시 토지·건물 기준시가" : parts.land ? "취득 당시 토지 기준시가" : "취득 당시 건물 기준시가",
         field: landEmpty ? "bgCoDonorLandStdPriceAtAcq" : "bgCoDonorBuildingStdPriceAtAcq",
       };
     }
@@ -625,13 +630,14 @@ function missingCoDonorBasisLabel(asset: AssetForm): { label: string; field: Iss
      *    양도인 K-4(위 `validateBurdenedGiftAsset`)도 토지는 토지 칸만 요구한다.
      */
     const hasSplit =
-      filled(asset.bgCoDonorActualAcquisitionLand) &&
-      (asset.assetKind === "land" || filled(asset.bgCoDonorActualAcquisitionBuilding));
-    const hasTotal = filled(asset.bgCoDonorActualAcquisitionTotal);
+      (!parts.land || filled(asset.bgCoDonorActualAcquisitionLand)) &&
+      (asset.assetKind === "land" || !parts.building || filled(asset.bgCoDonorActualAcquisitionBuilding));
+    // 한 파트만이면 총액은 파트를 가를 수 없다(엔진이 거부 · Q-4) — 일반건물 화면에는 총액 칸이 없다.
+    const hasTotal = parts.land === parts.building && filled(asset.bgCoDonorActualAcquisitionTotal);
     if (!hasSplit && !hasTotal) {
       // 입력칸 이동 — 화면은 자산 종류로 칸을 가른다(일반건물·토지 = 토지·건물 분리, 그 외 = 총액)
       const splitUi = asset.assetKind === "general_building" || asset.assetKind === "land";
-      const landEmpty = !filled(asset.bgCoDonorActualAcquisitionLand);
+      const landEmpty = parts.land && !filled(asset.bgCoDonorActualAcquisitionLand);
       return {
         label: "실지취득가액(토지·건물 분리 또는 단일 총액)",
         // 건물 칸은 일반건물에만 렌더된다 — 토지는 토지 칸

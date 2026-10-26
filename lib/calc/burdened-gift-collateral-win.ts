@@ -20,6 +20,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { buildBurdenedGiftInfo, companionBurdenedGiftValuations, type CompanionBurdenedGiftValuation } from "./transfer-tax-api-burdened-gift";
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
+import { bgAnyCarryover } from "./bg-carryover-parts";
 import { BG_PAREN_MORTGAGE_66_FROM } from "@/lib/tax-engine/burdened-gift-valuation";
 
 /** 단독 소유 단건의 증여가액 C(엔진 `giftValuation.max`)와 승자. 지분이 있으면 `undefined`(위 범위). */
@@ -39,7 +40,8 @@ export function bgWholeGiftValuation(asset: AssetForm): CompanionBurdenedGiftVal
  */
 export function bgCollateralForcesStdAcq(asset: AssetForm): boolean {
   if (asset.transferType !== "burdened_gift" || asset.bgValuationMode !== "sangjeungbeop_market") return false;
-  if (asset.assetKind === "right_to_move_in" || asset.acquisitionCause === "carryover_gift") return false;
+  // 이월과세 — 일반건물은 토지·건물 중 한 파트라도(`bgAnyCarryover` · ⑧ 담보 승 차단과 같은 술어).
+  if (asset.assetKind === "right_to_move_in" || bgAnyCarryover(asset)) return false;
   if (isMixedBurdenedGift(asset)) return false;
   return bgWholeGiftValuation(asset)?.selectedMode === "mortgage";
 }

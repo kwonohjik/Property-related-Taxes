@@ -16,6 +16,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { toEngineReductions } from "./transfer-tax-api-reductions";
 import { buildBurdenedGiftInfo, type BurdenedGiftInfoPayload } from "./transfer-tax-api-burdened-gift";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { carryoverEventForm } from "./transfer-tax-api-carryover";
 import { partCarryover } from "./transfer-land-part-cause";
 
 /**
@@ -225,7 +226,7 @@ export interface GeneralBuildingSharePayloadOut {
 
 /** 부담부증여 지분의 이월과세 — 최상위(`transfer-tax-api.ts`)와 같은 조건·같은 leaf. 건물만 이월과세(파트 이월과세)는 사건 1벌이 따로 간다. */
 function shareCarryover(asset: AssetForm, transferDate: string, ratio: number): { carryoverTaxation?: object } {
-  if (asset.acquisitionCause !== "carryover_gift" || !asset.carryover || partCarryover(asset).building) return {};
+  if (!carryoverEventForm(asset) || partCarryover(asset).building) return {};
   const payload = buildCarryoverPayload(asset, transferDate, ratio);
   return payload ? { carryoverTaxation: payload.carryoverTaxation } : {};
 }

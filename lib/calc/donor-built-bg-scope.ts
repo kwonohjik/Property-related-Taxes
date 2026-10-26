@@ -11,10 +11,15 @@
  * 이 파일은 **leaf**다 — 자산 전체·분리 이월과세 술어(`donor-built-scope.ts`·`donor-built-part-scope.ts`)와 상호배타다(저쪽은 부담부증여를 거절한다).
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { bgCarryoverForm, bgCarryoverParts } from "./bg-carryover-parts";
 
-/** 이 자산에서 «당초 증여자가 신축·증축한 건물인가» 질문을 묻는가 — ⑤ 노출 · ④ 전송 · ⑧ 요구가 이 하나를 읽는다. */
+/**
+ * 이 자산에서 «당초 증여자가 신축·증축한 건물인가» 질문을 묻는가 — ⑤ 노출 · ④ 전송 · ⑧ 요구가 이 하나를 읽는다.
+ * **건물을 증여받았을 때만** 묻는다 — 일반건물 분리 ON에서 토지만 이월과세면 건물은 양도인이 취득했다(⑫·엔진이 거부 · `gb-bg-part-carryover-calc.plan.md` §4.3).
+ * 값은 증여 사건 서브폼(`bgCarryoverForm` — 건물만이면 건물 블록)에 있다.
+ */
 export function donorBuiltBgApplicable(asset: AssetForm | undefined): boolean {
-  if (!asset?.carryover || asset.acquisitionCause !== "carryover_gift" || asset.transferType !== "burdened_gift") return false;
+  if (!asset || asset.transferType !== "burdened_gift" || !bgCarryoverParts(asset).building || !bgCarryoverForm(asset)) return false;
   if (asset.assetKind !== "housing" && asset.assetKind !== "building" && asset.assetKind !== "general_building") return false;
   if (asset.assetKind === "housing" && asset.isMixedUseHouse === true) return false;
   if (asset.assetKind === "general_building" && asset.gbBuildingAcquisitionCause === "newConstruction") return false;
@@ -24,5 +29,5 @@ export function donorBuiltBgApplicable(asset: AssetForm | undefined): boolean {
 
 /** 토글이 켜져 **계산에 실리는가** = 적용 범위 안 + 토글 ON. stale(범위 밖에서 켜 둔 값)은 false. */
 export function donorBuiltBgActive(asset: AssetForm | undefined): boolean {
-  return donorBuiltBgApplicable(asset) && asset?.carryover?.donorBuilt === true;
+  return donorBuiltBgApplicable(asset) && bgCarryoverForm(asset!)?.donorBuilt === true;
 }

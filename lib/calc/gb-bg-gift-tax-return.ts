@@ -12,6 +12,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
+import { bgCarryoverForm } from "./bg-carryover-parts";
 
 export interface GbBgGiftTaxReturn {
   /** 영 §163의2②1호 — 증여세 산출세액(신고서 금액, 지분 스케일 금지). */
@@ -27,11 +28,13 @@ export const isGbBurdenedGift = (asset: AssetForm): boolean =>
 /**
  * 짝이 **다** 찼을 때만 돌려준다. 하나라도 비면 `undefined` — 그러면 ④는 종전 상당액(`giftTaxAmount`)을 쓴다
  * (저장 이력·시드 호환, 일반 양도 일반건물의 `gbCarryoverUsesPartShape`와 같은 규칙).
+ * 읽는 서브폼은 증여 사건 출처다 — 건물만 이월과세면 건물 블록(`bgCarryoverForm`, 계획서 `gb-bg-part-carryover-calc.plan.md` §4.4).
  */
 export function gbBgGiftTaxReturn(asset: AssetForm): GbBgGiftTaxReturn | undefined {
   if (!isGbBurdenedGift(asset)) return undefined;
-  const giftTaxCalculated = parseAmount(asset.carryover?.giftTaxCalculated ?? "");
-  const giftTaxBase = parseAmount(asset.carryover?.giftTaxBase ?? "");
+  const c = bgCarryoverForm(asset);
+  const giftTaxCalculated = parseAmount(c?.giftTaxCalculated ?? "");
+  const giftTaxBase = parseAmount(c?.giftTaxBase ?? "");
   return giftTaxCalculated > 0 && giftTaxBase > 0 ? { giftTaxCalculated, giftTaxBase } : undefined;
 }
 
@@ -40,7 +43,7 @@ export function gbBgGiftTaxReturn(asset: AssetForm): GbBgGiftTaxReturn | undefin
  * `getOwnershipRatio`를 넘기므로 ⑧은 여기서 같은 값을 다시 만든다(`buildCarryoverPayload`의 `scale`과 같은 식).
  */
 export function gbBgGiftTaxNumerator(asset: AssetForm): number {
-  const v = parseAmount(asset.carryover?.giftDateValuation ?? "");
+  const v = parseAmount(bgCarryoverForm(asset)?.giftDateValuation ?? "");
   const r = getOwnershipRatio(asset);
   return r < 1 ? applyRatio(v, r) : v;
 }

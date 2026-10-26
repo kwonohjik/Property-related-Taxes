@@ -1,11 +1,11 @@
 /**
- * E2E — 일반건물 부담부증여 × 이월과세 — 「토지·건물 취득일 다름」에서 한쪽만 이월과세면 «다음»이 막히고 건물 취득원인으로 이동한다
+ * E2E — 일반건물 부담부증여 × 이월과세 — 「토지·건물 취득일 다름」에서 **증여받은 파트에만** §97의2를 적용해 계산한다 (PR-2 화면)
  *
- * 계획서: docs/00-pm/gb-bg-part-carryover-mismatch.plan.md §1·§4.2
- * 수정 前(브라우저 실측 2026-10-26): 건물만 이월과세 → 요청에 이월과세 없음 · 66,675,500(= 이월과세 없음).
- * vitest anchor: `__tests__/api/transfer.route.gb-bg-part-carryover-mismatch.anchor.test.ts`
+ * 계획서: docs/00-pm/gb-bg-part-carryover-calc.plan.md §4.4~§4.6 · §7
+ * 종전(#2571, 계획서 gb-bg-part-carryover-mismatch.plan.md): 한쪽만 이월과세면 «다음»을 막았다. 그 전에는 건물만 → 이월과세 소실(66,675,500).
+ * vitest anchor: `__tests__/api/transfer.route.gb-bg-part-carryover-ui.anchor.test.ts`
  *
- * 실행(워크트리): E2E_PORT=3298 npx playwright test e2e/gb-bg-part-carryover-mismatch.spec.ts
+ * 실행(워크트리): E2E_PORT=3298 npx playwright test e2e/gb-bg-part-carryover-calc.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
@@ -87,28 +87,44 @@ const landOnlySelfBuilt = asset(1, {
   gbBuildingAcquisitionCause: "newConstruction", bgCoDonorBuildingStdPriceAtAcq: "0",
 });
 
-const focusedIn = (page: Page, field: string) =>
-  page.evaluate((f) => !!(document.activeElement as HTMLElement | null)?.closest(`[data-field="${f}"]`), field);
+const card = (page: Page) => page.getByTestId("gb-bg-carryover-card").first();
+/** [A] 열 — 증여세 상당액 행과 같은 부모(`ScenarioCol` 본문). [B] 열도 「수증자」 꼬리표를 쓰므로 범위를 좁힌다. */
+const colA = (page: Page) => card(page).getByTestId("gb-bg-carryover-gift-tax").locator("xpath=..");
+const donorParts = (body: Record<string, unknown>) =>
+  (body.burdenedGiftInfo as { carryoverDonorBasis?: { parts?: unknown } } | undefined)?.carryoverDonorBasis?.parts;
 
 test.describe("일반건물 부담부증여 × 이월과세 — 토지·건물 한쪽만", () => {
-  test("GBPC-E1 건물만 이월과세 → «다음»이 막히고 건물 취득원인으로 이동 · 사유 문구", async ({ page }) => {
+  test("GBPC-E1 건물만 이월과세 → 당초 증여자 건물 칸만 · 계산된다(70,371,560) · [A] 토지는 수증자 기준", async ({ page }) => {
     test.setTimeout(180_000);
     await seedWizard(page, seedOf([buildingOnly]));
-    await expandAssetSection(page, 3, 0);
-    await page.getByRole("button", { name: "다음", exact: true }).click();
-    await expect.poll(() => focusedIn(page, "gbBuildingAcquisitionCause")).toBe(true);
-    await expect(page.getByText("한쪽만 이월과세(증여)인 경우는 아직 계산하지 못합니다").first()).toBeVisible();
+    await expandAssetSection(page, 2); // 부담부증여 블록(「당초 증여자」 포함)은 ② 양도정보 안에 있다
+    await expect(page.getByTestId("bg-codonor-building-std")).toBeVisible();
+    await expect(page.getByTestId("bg-codonor-land-std")).toHaveCount(0);
+    await expect(page.getByTestId("bg-codonor-part-note")).toContainText("건물");
+    const body = await calculate(page);
+    expect(donorParts(body)).toEqual({ land: false, building: true });
+    expect((body.carryoverTaxation as { giftRegistryDate?: string } | undefined)?.giftRegistryDate).toBe("2024-05-01");
+    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("70,371,560");
+    await expect(colA(page)).toContainText(/토지[^\n]*취득가액 \[수증자 기준\]/);
+    await expect(colA(page)).toContainText(/건물[^\n]*취득가액 \[당초 증여자 기준\]/);
+    await expect(colA(page)).toContainText("토지 보유기간 기산일 [수증자 취득일]");
+    await expect(colA(page)).toContainText("건물 보유기간 기산일 [당초 증여자 취득일]");
   });
 
-  test("GBPC-E2 토지만 이월과세 + 건물 본인 신축 → 같은 자리에서 막힌다", async ({ page }) => {
+  test("GBPC-E2 토지만 이월과세 + 건물 본인 신축 → 당초 증여자 토지 칸만 · 90,758,940(종전 125,113,200)", async ({ page }) => {
     test.setTimeout(180_000);
     await seedWizard(page, seedOf([landOnlySelfBuilt]));
-    await expandAssetSection(page, 3, 0);
-    await page.getByRole("button", { name: "다음", exact: true }).click();
-    await expect.poll(() => focusedIn(page, "gbBuildingAcquisitionCause")).toBe(true);
+    await expandAssetSection(page, 2);
+    await expect(page.getByTestId("bg-codonor-land-std")).toBeVisible();
+    await expect(page.getByTestId("bg-codonor-building-std")).toHaveCount(0);
+    const body = await calculate(page);
+    expect(donorParts(body)).toEqual({ land: true, building: false });
+    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("90,758,940");
+    await expect(colA(page)).toContainText("건물 보유기간 기산일 [수증자 취득일]");
+    await expect(colA(page)).toContainText("토지 보유기간 기산일 [당초 증여자 취득일]");
   });
 
-  test("GBPC-E3 건물 취득원인을 «매매»로 바꾸면 차단이 풀려 계산된다(이월과세 없음 66,675,500)", async ({ page }) => {
+  test("GBPC-E3 건물 취득원인을 «매매»로 바꾸면 이월과세 없이 계산된다(66,675,500)", async ({ page }) => {
     test.setTimeout(180_000);
     await seedWizard(page, seedOf([buildingOnly]));
     await expandAssetSection(page, 3, 0);

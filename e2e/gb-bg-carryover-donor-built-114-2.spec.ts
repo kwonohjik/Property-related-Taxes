@@ -176,20 +176,20 @@ test.describe("일반건물 부담부증여 × 이월과세 × 증여자 신축�
     expect(errors, errors.join("\n")).toEqual([]);
   });
 
-  test("GBBD-E5 범위 밖은 칸이 없고 stale 토글은 요구하지 않는다 — 건물 취득원인이 양도인 본인 신축(토지만 이월과세 → 그 조합 차단으로 막힌다)", async ({ page }) => {
+  test("GBBD-E5 범위 밖은 칸이 없고 stale 토글은 요구하지 않는다 — 건물 취득원인이 양도인 본인 신축(토지만 이월과세 → 토지만 당초 증여자 기준으로 계산)", async ({ page }) => {
     test.setTimeout(180_000);
     // 건물이 양도인 본인 신축 + 토글만 켜 둔 stale(구분·신축일 비어 있음).
-    // 토지만 이월과세라 종전에는 건물까지 당초 증여자 값으로 계산됐다 — 지금은 건물 취득원인에서 막는다(`gb-bg-part-carryover-mismatch.plan.md`).
+    // 토지만 이월과세 — 종전에는 건물까지 당초 증여자 값으로 계산됐고(#2571 전), #2571은 건물 취득원인에서 막았다.
+    // PR-2(`gb-bg-part-carryover-calc.plan.md`)부터 토지만 당초 증여자 기준으로 계산한다 — 건물을 증여받지 않았으니 증여자 신축 질문은 없다.
     await seedWizard(
       page,
       seed([gbBgAsset({ donorBuilt: true, donorBuiltType: "", donorBuiltDate: "" }, { gbBuildingAcquisitionCause: "newConstruction", hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2015-01-01", acquisitionDate: "2022-01-10" })]),
     );
     await expandAssetSection(page, 2); // 부담부증여 블록(§159 자동산정)은 ② 양도정보 안에 있다
     await expect(page.getByTestId("donor-built-toggle")).toHaveCount(0);
-    await page.getByRole("button", { name: "다음", exact: true }).click();
-    await expect
-      .poll(() => page.evaluate(() => !!(document.activeElement as HTMLElement | null)?.closest('[data-field="gbBuildingAcquisitionCause"]')))
-      .toBe(true);
+    const body = (await calculate(page)) as { burdenedGiftInfo?: { carryoverDonorBasis?: { parts?: unknown; donorBuilt?: unknown } } };
+    expect(body.burdenedGiftInfo?.carryoverDonorBasis?.parts).toEqual({ land: true, building: false });
+    expect(body.burdenedGiftInfo?.carryoverDonorBasis?.donorBuilt).toBeUndefined(); // stale 토글은 싣지 않는다
     await expect(page.getByText(/토글을 끄세요/)).toHaveCount(0); // stale 토글은 요구하지 않는다
   });
 

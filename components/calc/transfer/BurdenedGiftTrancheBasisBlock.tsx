@@ -28,6 +28,7 @@ import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisitio
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
 import { bgCoDonorNeedsStdPrice } from "@/lib/calc/burdened-gift-acq-std-price";
 import { BurdenedGiftCarryoverBlock } from "./BurdenedGiftCarryoverBlock";
+import { bgAnyCarryover } from "@/lib/calc/bg-carryover-parts";
 
 interface Props {
   asset: AssetForm;
@@ -39,7 +40,7 @@ export function BurdenedGiftTrancheBasisBlock({ asset, primaryAsset, onChange }:
   if (!primaryAsset || primaryAsset.transferType !== "burdened_gift") return null;
   const merged = mergePrimaryBasic(asset, primaryAsset);
   // 의제취득일 전 상속·증여 지분은 산정방식을 쓰지 않는다(3자 max · ④도 싣지 않는다 — PR-7b-5 D-3). 취득시 기준시가 칸은 `needsBgAcqStdPriceInput`이 같은 술어로 닫는다
-  const isCarryover = merged.acquisitionCause === "carryover_gift";
+  const isCarryover = bgAnyCarryover(merged);
   const presumedMethod =
     !isBgPreDeemedAsset(merged) && !isCarryover && merged.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(merged.bgAcquisitionMethod)
       ? merged.bgAcquisitionMethod

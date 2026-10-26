@@ -35,7 +35,7 @@ const ymd = (d: Date): string => d.toISOString().slice(0, 10);
 
 /** 한 시나리오의 카드 요약(PR-4) — 결과 화면 [A]/[B] 비교 카드가 읽는다. 기산일은 그 호출에 넘긴 카드 취득일 그대로다(`landCardDate`·`buildingCardDate`). */
 const scenarioSummary = (r: GeneralBuildingRouteResult, landStart: Date, buildingStart: Date): GbBgCarryoverScenarioSummary => ({
-  parts: r.aggregated.properties.map((p) => ({ propertyLabel: p.propertyLabel, acquisitionPrice: p.acquisitionPrice, transferGain: p.transferGain })),
+  parts: r.aggregated.properties.map((p) => ({ propertyId: p.propertyId, propertyLabel: p.propertyLabel, acquisitionPrice: p.acquisitionPrice, transferGain: p.transferGain })),
   landHoldingStartDate: ymd(landStart),
   buildingHoldingStartDate: ymd(buildingStart),
 });
@@ -201,6 +201,7 @@ export function calculateGeneralBuildingActualTransfer(
     giftTaxAmount: ct.giftTaxAmount,
     scenarioA: scenarioSummary(resultA, startA.land, startA.building),
     scenarioB: scenarioSummary(resultB, startB.land, startB.building),
+    carryoverParts: carryoverPartsOf(info),
   };
   if (donorBuilt)
     attachDonorBuiltEcho(chosen, adopted === "B" ? donorBuiltNotAppliedEcho(donorBuilt, "scenario_b") : donorBuiltAppliedEcho(donorBuilt, resultA, payload.transferDate, info.acquisitionMethod === "appraisal" ? "appraisal" : "estimated"));

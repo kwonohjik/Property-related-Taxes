@@ -9,6 +9,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { calculateBuildingPenalty } from "@/lib/tax-engine/transfer-tax-building-penalty";
 import { parseAmount, parseDecimal } from "@/lib/calc/number-parse";
 import { donorBuiltBgActive } from "./donor-built-bg-scope";
+import { bgCarryoverForm } from "./bg-carryover-parts";
 import { bgPresumedInputKind } from "./burdened-gift-presumed-acquisition";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
@@ -22,7 +23,8 @@ export function validateDonorBuiltBg(
   bundled = false,
 ): string | null {
   if (!donorBuiltBgActive(asset)) return null;
-  const c = asset.carryover!;
+  // 증여 사건 서브폼 — 건물만 이월과세면 건물 블록이다. 앵커는 그대로 `carryover.*`(⑤ 「당초 증여자」 블록의 칸이 그 이름이다).
+  const c = bgCarryoverForm(asset)!;
   if (bundled)
     return fieldError(
       "carryover.donorBuilt",

@@ -55,6 +55,7 @@ import {
   assertCarryoverDonorBasis,
   applyCarryoverDonorBasis,
   carryoverHoldingStartsA,
+  carryoverPartsOf,
   toTransferorBasisInfo,
 } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
@@ -344,6 +345,7 @@ export function calculateGeneralBuildingFractional(
       giftTaxAmount: co.ct.giftTaxAmount,
       holdingStartA: startA,
       holdingStartB: b.holdingStart,
+      carryoverParts: carryoverPartsOf(info),
     });
   });
 

@@ -58,6 +58,7 @@ import { anyPartCarryover } from "./transfer-land-part-cause";
 import { legacyExpenseMovesToParts } from "./split-legacy-expense";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { carryoverEventForm } from "./transfer-tax-api-carryover";
 import { withDonorBuilt } from "./transfer-tax-api-donor-built";
 import { carryoverAcquisitionDateFallback, primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
@@ -718,7 +719,8 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     // 배우자등 이월과세 (§97조의2)
     // P2 C·P4 B(파트 이월과세)는 자산 단위 서브객체와 상호배제다(R-1) — 사건 1벌 + 파트(`buildLandPartCausePayload`)가 대신한다.
     // 부담부증여 지분 분할(축 B)은 지분마다 싣는다(`generalBuildingShares[].carryoverTaxation`) — 최상위는 보내지 않는다(⑫가 거부).
-    ...(primary.acquisitionCause === "carryover_gift" && primary.carryover && !partCarryover(primary).building && !(gbShares !== undefined && isBurdenedGift)
+    // 부담부증여 일반건물은 건물만 이월과세여도 싣는다(사건 = 건물 블록 · `carryoverEventForm`).
+    ...(carryoverEventForm(primary) && !partCarryover(primary).building && !(gbShares !== undefined && isBurdenedGift)
       ? (() => {
           const payload = buildCarryoverPayload(primary, form.transferDate, primaryRatio);
           return payload

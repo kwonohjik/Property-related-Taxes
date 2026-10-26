@@ -126,27 +126,25 @@ const zodPaths = async (f: TransferFormData) => {
   return { status: r.status, paths: r.fieldErrors };
 };
 
-describe("⑧ 분리 ON에서 토지·건물 중 한쪽만 이월과세 → 건물 취득원인 칸에서 막는다 (수정 前: 0건)", () => {
+/**
+ * PR-2 화면(`gb-bg-part-carryover-calc.plan.md` §4.5)이 이 차단을 풀었다 — 서버가 증여받은 파트만 계산하고 ④가 `parts`를 싣는다.
+ * 계산 값은 `transfer.route.gb-bg-part-carryover-ui.anchor.test.ts`가 고정한다. 여기서는 차단 문구가 다시 나오지 않는 것만 본다.
+ */
+describe("⑧ 분리 ON에서 토지·건물 중 한쪽만 이월과세 — PR-2 이후 막지 않는다 (#2571 차단 해제)", () => {
   it.each([
     ["건물만 · 증여세 없음(B0)", bOnly()],
     ["건물만 · 산출 3천만 + 과세가액 10억(B1)", bOnly(RETURN)],
-    ["건물만 · 증여 등기접수일 비움(B4)", bOnly({ giftRegistryDate: "" })],
     ["토지만 · 건물 양도인 매매(L2)", lOnly("purchase")],
     ["토지만 · 건물 본인 신축(L4)", lOnly("newConstruction")],
     ["토지만 · 건물 본인 신축 · 당초 증여자 건물 기준시가 0(L4z)", lOnly("newConstruction", { bgCoDonorBuildingStdPriceAtAcq: "0" } as Partial<AssetForm>)],
   ])("%s", (_n, a) => {
-    expect(mismatch(formOf([a])).map((i) => i.field)).toEqual(["gbBuildingAcquisitionCause"]);
+    expect(mismatch(formOf([a]))).toEqual([]);
   });
 
-  it("지분 50/50 — 두 지분 카드 모두 막는다(「자산 2」로 말한다)", () => {
-    const m = mismatch(shares(bOnly(), bOnly()));
-    expect(m).toHaveLength(2);
-    expect(m[1].message).toContain("자산 2");
-  });
-
-  it("함께 부담부증여 묶음 — 일반건물이 첫 자산이든 둘째 자산이든 막는다", () => {
-    expect(mismatch(bundle(bOnly(), landBg(2)))).toHaveLength(1);
-    expect(mismatch(bundle(landBg(1), bOnly()))).toHaveLength(1);
+  it("지분 50/50 · 묶음도 막지 않는다", () => {
+    expect(mismatch(shares(bOnly(), bOnly()))).toEqual([]);
+    expect(mismatch(bundle(bOnly(), landBg(2)))).toEqual([]);
+    expect(mismatch(bundle(landBg(1), bOnly()))).toEqual([]);
   });
 
   it("막지 않는다 — 분리 OFF(종전 기준 L0·L1) · 분리 ON 둘 다 이월과세(L3) · 이월과세 없음(P0) · 일반 양도 건물만·토지만", () => {
@@ -167,18 +165,14 @@ describe("⑧ 분리 ON에서 토지·건물 중 한쪽만 이월과세 → 건�
   });
 });
 
-describe("⑫ 부담부증여 일반건물의 건물만 이월과세 → 400 (수정 前: 200 · 66,675,500)", () => {
-  it("단건 — generalBuildingValuation.buildingAcquisitionCause", async () => {
-    expect(await zodPaths(formOf([bOnly()]))).toEqual({ status: 400, paths: ["generalBuildingValuation.buildingAcquisitionCause"] });
-  });
-  it("지분 — 지분마다 valuation.buildingAcquisitionCause", async () => {
-    const { status, paths } = await zodPaths(shares(bOnly(), bOnly()));
-    expect(status).toBe(400);
-    expect(paths).toEqual(expect.arrayContaining(["generalBuildingShares.0.valuation.buildingAcquisitionCause", "generalBuildingShares.1.valuation.buildingAcquisitionCause"]));
-  });
-  it("묶음 — 첫 자산은 최상위, 둘째 자산은 companionAssets[i]", async () => {
-    expect((await zodPaths(bundle(bOnly(), landBg(2)))).paths).toContain("generalBuildingValuation.buildingAcquisitionCause");
-    expect((await zodPaths(bundle(landBg(1), bOnly()))).paths).toContain("companionAssets.0.generalBuildingValuation.buildingAcquisitionCause");
+/** ⑫ 규칙(`parts` ↔ 취득원인 정합)은 PR-1 anchor가 본문으로 고정한다. 화면 경로는 PR-2부터 ④가 `parts`를 실어 통과한다. */
+describe("⑫ 부담부증여 일반건물의 건물만 이월과세 — 화면 경로는 parts를 실어 통과한다 (PR-2 · 종전 400)", () => {
+  it("단건 · 지분 · 묶음 — buildingAcquisitionCause 경로 거부가 없다", async () => {
+    for (const f of [formOf([bOnly()]), shares(bOnly(), bOnly()), bundle(bOnly(), landBg(2)), bundle(landBg(1), bOnly())]) {
+      const { status, paths } = await zodPaths(f);
+      expect(paths.filter((p) => p.endsWith("buildingAcquisitionCause"))).toEqual([]);
+      expect(status).toBe(200);
+    }
   });
   it("거부하지 않는다 — 일반 양도 건물만 이월과세 · 분리 ON 둘 다 이월과세(109,326,000) · 부담부증여 토지만(본문이 종전 기준과 같은 모양 — ⑧만 막는다)", async () => {
     const regular = await run(formOf([bOnly({}, { transferType: "regular" })]));

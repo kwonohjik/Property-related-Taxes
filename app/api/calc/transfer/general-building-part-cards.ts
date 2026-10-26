@@ -42,6 +42,7 @@ import {
   assertCarryoverDonorBasis,
   applyCarryoverDonorBasis,
   carryoverHoldingStartsA,
+  carryoverPartsOf,
   toTransferorBasisInfo,
 } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 
@@ -396,6 +397,7 @@ export function buildGbCompanionItems(
     giftTaxAmount: ct.giftTaxAmount,
     holdingStartA: startA,
     holdingStartB: { land: landAcqDate, building: bldAcqDate },
+    carryoverParts: carryoverPartsOf(info),
   });
   return b.items;
 }
@@ -421,4 +423,6 @@ export interface GbBgCarryoverUnitDraft {
   holdingStartA: { land: Date; building: Date };
   /** B 카드의 보유기간 기산일 — 증여받은 날(토지·건물 각각). */
   holdingStartB: { land: Date; building: Date };
+  /** 증여받은 파트(`carryoverPartsOf`) — 결과 카드 [A] 열의 파트별 꼬리표(표시 전용). */
+  carryoverParts: { land: boolean; building: boolean };
 }

@@ -14,25 +14,37 @@
  */
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { InfoRow, ScenarioCol } from "./CarryoverComparisonCard";
+import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import type { AggregateTransferResult, GbBgCarryoverScenarioSummary } from "@/lib/tax-engine/types/transfer-aggregate.types";
 
 type Detail = NonNullable<AggregateTransferResult["burdenedGiftCarryoverDetail"]>;
 
-function SummaryRows({ s, acqTag, startTag }: { s: GbBgCarryoverScenarioSummary | undefined; acqTag: string; startTag: string }) {
+type Part = "land" | "building";
+interface Tag { acq: string; start: string }
+const DONOR_TAG: Tag = { acq: "당초 증여자 기준", start: "당초 증여자 취득일" };
+const DONEE_TAG: Tag = { acq: "수증자 기준", start: "수증자 취득일" };
+
+/** 카드가 토지·건물 중 어느 파트인가 — 카드 id가 없는 옛 결과는 건물로 읽지 않고 `undefined`(꼬리표를 파트로 가르지 않는다). */
+const partOfCard = (propertyId: string | undefined): Part | undefined =>
+  propertyId === undefined ? undefined : baseCardId(propertyId).startsWith("land") ? "land" : "building";
+
+function SummaryRows({ s, tagOf }: { s: GbBgCarryoverScenarioSummary | undefined; tagOf: (part: Part | undefined) => Tag }) {
   // 이 필드가 생기기 전에 저장된 결과 — 결정세액만 보인다.
   if (!s) return null;
   const gain = s.parts.reduce((t, p) => t + p.transferGain, 0);
+  const landTag = tagOf("land");
+  const buildingTag = tagOf("building");
   return (
     <div className="space-y-1">
       {s.parts.map((p) => (
-        <InfoRow key={p.propertyLabel} label={`${p.propertyLabel} 취득가액 [${acqTag}]`} value={formatKRW(p.acquisitionPrice)} />
+        <InfoRow key={p.propertyLabel} label={`${p.propertyLabel} 취득가액 [${tagOf(partOfCard(p.propertyId)).acq}]`} value={formatKRW(p.acquisitionPrice)} />
       ))}
-      {s.landHoldingStartDate === s.buildingHoldingStartDate ? (
-        <InfoRow label={`보유기간 기산일 [${startTag}]`} value={s.landHoldingStartDate} />
+      {s.landHoldingStartDate === s.buildingHoldingStartDate && landTag.start === buildingTag.start ? (
+        <InfoRow label={`보유기간 기산일 [${landTag.start}]`} value={s.landHoldingStartDate} />
       ) : (
         <>
-          <InfoRow label={`토지 보유기간 기산일 [${startTag}]`} value={s.landHoldingStartDate} />
-          <InfoRow label={`건물 보유기간 기산일 [${startTag}]`} value={s.buildingHoldingStartDate} />
+          <InfoRow label={`토지 보유기간 기산일 [${landTag.start}]`} value={s.landHoldingStartDate} />
+          <InfoRow label={`건물 보유기간 기산일 [${buildingTag.start}]`} value={s.buildingHoldingStartDate} />
         </>
       )}
       <InfoRow label="양도차익 (합계)" value={formatKRW(gain)} />
@@ -59,7 +71,8 @@ export function GbBurdenedGiftCarryoverCard({ detail, assetLabel }: { detail: De
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <ScenarioCol label="[A] 이월과세 적용" adopted={adoptedA} determinedTax={detail.determinedTaxA} filingUnit={perAsset} compared>
-          <SummaryRows s={detail.scenarioA} acqTag="당초 증여자 기준" startTag="당초 증여자 취득일" />
+          {/* 증여받은 파트만 당초 증여자 기준이다(§97의2①1호 「해당 자산」 · `carryoverParts` — 없으면 둘 다). */}
+          <SummaryRows s={detail.scenarioA} tagOf={(part) => (part && detail.carryoverParts && !detail.carryoverParts[part] ? DONEE_TAG : DONOR_TAG)} />
           {/* §97의2①3호 — A에만 산입된다. 채무 비율 안분·한도 전 금액이다(그 뒤 단계는 §159 명세). 0도 보인다 — 입력이 닿지 않은 것을 화면이 말하게(gb-bg-carryover-gift-tax-input.plan.md §4.4). */}
           <div data-testid="gb-bg-carryover-gift-tax">
             <InfoRow label="증여세 상당액 (채무 비율 안분 전)" value={formatKRW(detail.giftTaxAmount)} />
@@ -72,7 +85,7 @@ export function GbBurdenedGiftCarryoverCard({ detail, assetLabel }: { detail: De
           filingUnit={perAsset}
           compared
         >
-          <SummaryRows s={detail.scenarioB} acqTag="수증자 기준" startTag="수증자 취득일" />
+          <SummaryRows s={detail.scenarioB} tagOf={() => DONEE_TAG} />
         </ScenarioCol>
       </div>
 
