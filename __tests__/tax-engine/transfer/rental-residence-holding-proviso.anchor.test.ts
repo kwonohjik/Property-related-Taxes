@@ -155,7 +155,7 @@ describe("§155⑳ 거주주택 보유 2년 × §154① 단서 — 엔진", () =
     expect(off?.residenceFailReasons).toEqual(["거주주택 보유기간 2년 미충족 (현재: 1년)"]);
   });
 
-  it("RP-11 §154⑩ 단독 경로(B · 임대주택 0호)는 범위 밖 — 단서로 보유를 풀지 않는다", () => {
+  it("RP-11 §154⑩ 단독 경로(B · 임대주택 0호)는 ⑳ leaf가 다루지 않는다 — 단서는 §154⑩ 판정 맥락이 따로 본다(V-R3 (a))", () => {
     const standalone = input({
       oneHouseExemptionProviso: UNAVOIDABLE,
       rentalHousingException: {
@@ -169,7 +169,10 @@ describe("§155⑳ 거주주택 보유 2년 × §154① 단서 — 엔진", () =
     });
     expect(rentalResidenceDecisiveProviso(standalone)).toBeUndefined();
     expect(rentalResidenceRequirementHoldYears(standalone)).toBe(1);
-    expect(judgeRentalHousingEligibility(standalone)?.residenceFailReasons.join(" ")).toContain("보유기간 2년 미충족");
+    // §154⑩ 경로는 3호가 보유를 풀고(`phrp-154-10-proviso.anchor.test.ts`), 신규정 등록 이후 거주 2년(⑳1호 괄호 준용)만 남는다
+    expect(judgeRentalHousingEligibility(standalone)?.residenceFailReasons).toEqual([
+      "거주주택 거주기간(등록일 이후) 2년 미충족 (현재: 1년 6개월, 소령 §155⑳1호 괄호 준용)",
+    ]);
   });
 
   it("RP-12 V-R1 — B(직전거주주택보유주택)는 보유를 풀어도 등록 이후 거주 2년(⑳1호 괄호 · 통산 없음)이 남는다", () => {

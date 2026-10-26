@@ -36,6 +36,8 @@ import { landContributedOriginalApt } from "./redev-field-scope";
 import { resolveAptResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { RENTAL_RESIDENCE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
+import { PHRP_154_10_HOLDING_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
+import { PHRP_154_10_RESIDENCE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
 import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "@/lib/tax-engine/one-house/threshold";
 import { consolidateResidenceMonths } from "@/lib/tax-engine/one-house/residence-months";
 import { giftHouseholdPriorResidenceMonths } from "@/lib/tax-engine/one-house/gift-household-basis";
@@ -419,9 +421,12 @@ export function validateRentalHousingException(
   const requirementMonths = (liveMonthsVal || 0) + priorMonths;
   const requirementText = priorMonths > 0 ? `${requirementMonths}개월 — 같은 세대 거주 통산 ${priorMonths}개월 포함` : `${requirementMonths}개월`;
 
+  // §154⑩ 단독 경로 — §154⑩이 「제1항을 적용」하므로 §154① 단서 사유가 종전규정 거주(1호~5호)·보유(1호~3호)를 푼다(V-R3 (a)).
+  // 단서가 실제로 성립하는지는 엔진(`resolveExemptionProviso`)이 판정한다 — ⑳ 경로와 같은 분담.
+  const residenceWaivedByProviso = isStandalone154_10 && !!provisoReason && PHRP_154_10_RESIDENCE_PROVISO_REASONS.has(provisoReason);
   if (isStandalone154_10 && preRegime154_10) {
     // 「종전규정」 — §154① 원칙: 취득 당시 조정대상지역인 경우에만 거주 2년(일반 거주기간)
-    if (wasRegulatedAtAcquisition && requirementMonths < 24 && !winWinResidenceExempt) {
+    if (wasRegulatedAtAcquisition && requirementMonths < 24 && !winWinResidenceExempt && !residenceWaivedByProviso) {
       return fieldError("residencePeriods", `${label}: 장기임대주택 특례(§154⑩) — 2019.2.12 전 취득으로 소령 §154① 원칙이 적용됩니다. 조정대상지역 취득 주택은 거주기간 2년(24개월) 이상이 필요합니다. (현재: ${requirementText})`);
     }
   } else if (rh.scenario === "B") {
@@ -441,7 +446,8 @@ export function validateRentalHousingException(
   // `eligibility.ts` 상단 주석 · 서면법규재산-2020-1309 질의5 · 기준-2020-법령해석재산-0143).
   // 엔진(`judgeRentalHousingEligibility`)과 **같은 함수**(`calculateHoldingPeriod` — 소령 §154⑤ → 법 §95④
   // 초일 산입)다. 일수(730일)로 세면 응당일 전날 양도에서 엔진은 충족인데 여기서만 차단됐다.
-  const holdingWaivedByProviso = !isStandalone154_10 && !!provisoReason && RENTAL_RESIDENCE_PROVISO_REASONS.has(provisoReason);
+  const holdingWaivedByProviso =
+    !!provisoReason && (isStandalone154_10 ? PHRP_154_10_HOLDING_PROVISO_REASONS : RENTAL_RESIDENCE_PROVISO_REASONS).has(provisoReason);
   if (formTransferDate && asset.acquisitionDate && !holdingWaivedByProviso) {
     const acq = new Date(asset.acquisitionDate);
     const trn = new Date(formTransferDate);
