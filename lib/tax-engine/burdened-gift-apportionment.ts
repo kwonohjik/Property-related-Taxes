@@ -352,10 +352,16 @@ export function buildBurdenedGiftBreakdown(params: {
     );
     // 한도 = 「양도로 보는 부분」의 양도차익 = 양도가액 − (취득가액 + 그 밖의 필요경비).
     //   시행령 §163의2② 후단의 「양도가액에서 법 §97① 및 ②의 금액을 공제한 잔액」.
+    //   한 파트만 증여받았으면 그 파트가 「해당 자산」이다 — 한도도 그 파트의 잔액이다(계획서 `gb-bg-part-carryover-calc.plan.md` Q-2 a).
+    const part = info.carryoverGiftTaxPart;
     const gainBeforeGiftTax =
-      (landTransferPrice + buildingTransferPrice) -
-      (landAcquisitionPrice + buildingAcquisitionPrice) -
-      (landEstimatedDeduction + buildingEstimatedDeduction);
+      part === "land"
+        ? landTransferPrice - landAcquisitionPrice - landEstimatedDeduction
+        : part === "building"
+          ? buildingTransferPrice - buildingAcquisitionPrice - buildingEstimatedDeduction
+          : (landTransferPrice + buildingTransferPrice) -
+            (landAcquisitionPrice + buildingAcquisitionPrice) -
+            (landEstimatedDeduction + buildingEstimatedDeduction);
     const cap = Math.max(0, gainBeforeGiftTax);
     const applied = Math.min(apportioned, cap);
     carryoverGiftTax = {
@@ -367,8 +373,11 @@ export function buildBurdenedGiftBreakdown(params: {
     };
     if (applied > 0) {
       const totalTransfer = landTransferPrice + buildingTransferPrice;
+      // 한 파트만이면 그 파트에 전액 — 다른 파트는 증여받지 않았다.
       const landShare =
-        totalTransfer === 0
+        part === "land" ? applied
+        : part === "building" ? 0
+        : totalTransfer === 0
           ? 0
           : safeMultiplyThenDivide(applied, landTransferPrice, totalTransfer);
       landEstimatedDeduction += landShare;

@@ -54,6 +54,7 @@ import { judgeCarryoverEligibility } from "@/lib/tax-engine/transfer-tax-carryov
 import {
   assertCarryoverDonorBasis,
   applyCarryoverDonorBasis,
+  carryoverHoldingStartsA,
   toTransferorBasisInfo,
 } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
@@ -327,9 +328,10 @@ export function calculateGeneralBuildingFractional(
     }
     // B = 양도인(증여받은 사람) 기준 — K-6/K-7은 증여일 평가액(`actual*`)을 실지거래가액으로 읽는다(소령 §163⑨).
     const b = buildPiece(share, idx, sharePrice, coerced, toTransferorBasisInfo(info), undefined, false);
-    // A = ①1호 취득가액 치환 + ①3호 증여세 상당액(§159 안분 단계가 소비) · §95④ 단서 — 토지·건물 기산일을 당초 증여자 취득일부터.
+    // A = ①1호 취득가액 치환 + ①3호 증여세 상당액(§159 안분 단계가 소비) · §95④ 단서 — 증여받은 파트의 기산일만 당초 증여자 취득일부터.
     const donor = co.ct.donorAcquisitionDate;
-    const a = buildPiece(share, idx, sharePrice, coerced, applyCarryoverDonorBasis(info, co.ct.giftTaxAmount), { building: donor, land: donor }, true);
+    const startA = carryoverHoldingStartsA(info, donor, b.holdingStart);
+    const a = buildPiece(share, idx, sharePrice, coerced, applyCarryoverDonorBasis(info, co.ct.giftTaxAmount), startA, true);
     piecesB.push(b);
     piecesA.push(a);
     drafts.push({
@@ -340,6 +342,7 @@ export function calculateGeneralBuildingFractional(
       applicablePeriodYears: co.applicablePeriodYears,
       donorAcquisitionDate: donor,
       giftTaxAmount: co.ct.giftTaxAmount,
+      holdingStartA: startA,
       holdingStartB: b.holdingStart,
     });
   });
