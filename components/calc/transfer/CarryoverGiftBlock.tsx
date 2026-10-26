@@ -25,6 +25,7 @@ import { CarryoverEstimationSection } from "./CarryoverEstimationSection";
 import { CarryoverDonorBuiltSection } from "./CarryoverDonorBuiltSection";
 import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
 import { carryoverHouseholdFactVisible } from "@/lib/calc/transfer-tax-api-carryover";
+import { gbBgSplitsGiftValuation } from "@/lib/calc/gb-bg-gift-tax-return";
 import { effectiveCarryoverDonorSplit } from "@/lib/calc/transfer-land-part-cause";
 import { CarryoverDonorSplitToggle } from "./CarryoverDonorSplitToggle";
 import { SplitCarryoverParts } from "./SplitCarryoverParts";
@@ -121,6 +122,8 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
   const isGeneralBuilding = asset.assetKind === "general_building";
   /** 부담부증여 일반건물 — 증여세 칸은 같지만 상당액은 ④가 자산 전체로 계산하고 §159가 채무 비율로 나눈다(`gb-bg-gift-tax-return.ts`). */
   const isBurdenedGift = asset.transferType === "burdened_gift";
+  /** 토지·건물 둘 다 이월과세인 부담부증여 일반건물 — 평가액을 토지분·건물분으로 받는다(④·⑧과 같은 술어 · `gb-bg-carryover-gift-tax-part-limit.plan.md` Q-2 a · Q-3 b). */
+  const splitsGiftValuation = gbBgSplitsGiftValuation(asset);
 
   /**
    * 지분(공유) 모드 여부 — 판정 술어는 `OwnershipRatioInput`이 쓰는 것과 **같은 소스**다
@@ -388,12 +391,14 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
         </div>
 
         <FieldCard
-          label="증여 당시 평가액"
+          label={splitsGiftValuation ? `${isBuildingPart ? "건물분" : "토지분"} 증여 당시 평가액` : "증여 당시 평가액"}
           field={isBuildingPart ? "buildingCarryover.giftDateValuation" : "carryover.giftDateValuation"}
           hint={
-            isGeneralBuilding && isBurdenedGift
-              ? "증여세 상당액 안분의 분자(「소득세법 시행령」 제163조의2 제2항 제2호 — 양도한 해당 자산가액)로 사용. 보충적평가액·시가·감정가 중 해당 금액."
-              : "이월과세 미적용 시나리오(B)에서 수증자의 취득가액으로 사용. 보충적평가액·시가·감정가 중 해당 금액."
+            splitsGiftValuation
+              ? `토지·건물을 함께 증여받았으면 증여세 신고서의 ${isBuildingPart ? "건물" : "토지"} 평가액만 입력합니다 — 증여세 상당액을 토지분·건물분 평가액 비율로 나눕니다(「소득세법 시행령」 제163조의2 제2항 제2호 — 양도한 해당 자산가액).`
+              : isGeneralBuilding && isBurdenedGift
+                ? "증여세 상당액 안분의 분자(「소득세법 시행령」 제163조의2 제2항 제2호 — 양도한 해당 자산가액)로 사용. 보충적평가액·시가·감정가 중 해당 금액."
+                : "이월과세 미적용 시나리오(B)에서 수증자의 취득가액으로 사용. 보충적평가액·시가·감정가 중 해당 금액."
           }
         >
           <CurrencyInput
@@ -403,6 +408,22 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
             placeholder="증여 당시 보충적평가액 또는 시가"
           />
         </FieldCard>
+        {/* 분리 OFF는 건물 블록이 없다(부담부증여는 §159 경로라 건물 이월과세 카드를 숨긴다) — 건물분 평가액만 이 블록에서 받는다(Q-3 b). 분리 ON은 건물 블록이 받는다. */}
+        {splitsGiftValuation && !isBuildingPart && !asset.hasSeperateLandAcquisitionDate && (
+          <FieldCard
+            label="건물분 증여 당시 평가액"
+            field="buildingCarryover.giftDateValuation"
+            hint="증여세 신고서의 건물 평가액 — 증여세 상당액을 위 토지분과 이 건물분 평가액 비율로 나눕니다(「소득세법 시행령」 제163조의2 제2항 제2호)."
+          >
+            <CurrencyInput
+              label=""
+              value={asset.buildingCarryover?.giftDateValuation ?? ""}
+              onChange={(v) => onChange({ buildingCarryover: patchCarryover(asset.buildingCarryover, { giftDateValuation: v }) })}
+              placeholder="증여 당시 보충적평가액 또는 시가"
+              data-testid="bg-building-gift-valuation"
+            />
+          </FieldCard>
+        )}
       </div>
 
       </>)}

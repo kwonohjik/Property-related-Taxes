@@ -25,7 +25,9 @@ import { POST } from "@/app/api/calc/transfer/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
-import { donorBuiltBgApplicable } from "@/lib/calc/donor-built-bg-scope";
+import { gbBgSplitsGiftValuation } from "@/lib/calc/gb-bg-gift-tax-return";
+import { refineGbBgCarryoverParts } from "@/lib/api/transfer-tax-schema-donor-built";
+import { z } from "zod";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -154,6 +156,28 @@ describe("배분 축이 한도와 만나면 세액이 갈린다 — 건물 잔�
   });
 });
 
+describe("지분 · 묶음 — 같은 builder로 실려 엔진까지 닿는다 (V-6)", () => {
+  const nineOne = (n: number, extra: Partial<AssetForm> = {}) => {
+    const gt = { giftRegistryDate: "2021-05-01" };
+    return { ...both(true, "900,000,000", "100,000,000", {
+      landAcquisitionDate: "2021-05-01", acquisitionDate: "2021-05-01", bgCoDonorBuildingStdPriceAtAcq: "190,000,000",
+      gbAcqLandPricePerSqm: "1,800,000", gbAcqBuildingValue: "180,000,000",
+      carryover: { ...CO, ...RET, ...gt, giftDateValuation: "900,000,000" } as never,
+      buildingCarryover: { ...CO, ...RET, ...gt, giftDateValuation: "100,000,000" } as never,
+      ...extra,
+    } as Partial<AssetForm>).assets[0], assetId: `a${n}`, assetLabel: `자산 ${n}` } as AssetForm;
+  };
+  it("지분 50/50 — 두 지분 모두 토지분 9억·건물분 1억 → 단건과 같은 37,500,800 (양도가액 비율이면 42,050,540)", async () => {
+    const half = { ownershipNumerator: "50", ownershipDenominator: "100" } as Partial<AssetForm>;
+    const f = formOf([nineOne(1, half), nineOne(2, half)], { assetSplitMode: "fractional" });
+    const b = await bodyOf(f);
+    expect(b.generalBuildingShares.map((x: Body) => x.burdenedGiftInfo?.carryoverDonorBasis?.giftValuationByPart)).toEqual([
+      { land: 900_000_000, building: 100_000_000 }, { land: 900_000_000, building: 100_000_000 },
+    ]);
+    expect((await ok(f)).det).toBe(37_500_800);
+  });
+});
+
 describe("⑧ 둘 다 이월과세 · 증여세 신고서 금액이 찼으면 건물분 평가액 필수 · 합 ≤ 과세가액", () => {
   it.each([["분리 ON", true], ["분리 OFF", false]] as const)("%s — 건물분 비움 → buildingCarryover.giftDateValuation", (_n, separate) => {
     expect(fields(both(separate, "600,000,000", ""))).toContain("buildingCarryover.giftDateValuation");
@@ -176,6 +200,31 @@ describe("⑫ giftValuationByPart 정합", () => {
     expect(b.burdenedGiftInfo.carryoverDonorBasis.parts).toEqual({ land: true, building: false });
     const bad = { ...b, burdenedGiftInfo: { ...b.burdenedGiftInfo, carryoverDonorBasis: { ...b.burdenedGiftInfo.carryoverDonorBasis, giftValuationByPart: { land: 6, building: 4 } } } };
     expect((await post(bad)).status).toBe(400);
+  });
+});
+
+describe("⑫ giftValuationByPart — 일반건물 부담부증여 밖이면 거부", () => {
+  const refine = (data: Parameters<typeof refineGbBgCarryoverParts>[0]) =>
+    z.object({}).superRefine((_v, ctx) => refineGbBgCarryoverParts(data, ctx)).safeParse({});
+  const byPartInfo = { carryoverDonorBasis: { giftValuationByPart: { land: 6, building: 4 } } };
+  it("토지 부담부증여(주 자산) → 거부 · 일반건물 둘 다 이월과세 → 통과", () => {
+    const land = refine({ propertyType: "land", transferType: "burdened_gift", acquisitionCause: "carryover_gift", burdenedGiftInfo: byPartInfo as never });
+    expect(land.success).toBe(false);
+    expect(land.error?.issues[0].path).toEqual(["burdenedGiftInfo", "carryoverDonorBasis", "giftValuationByPart"]);
+    const gb = refine({ propertyType: "general_building", transferType: "burdened_gift", acquisitionCause: "carryover_gift", burdenedGiftInfo: byPartInfo as never, generalBuildingValuation: { buildingAcquisitionCause: "carryover_gift" } });
+    expect(gb.success).toBe(true);
+  });
+  it("함께 양도하는 토지 자산(컴패니언)에 실으면 거부", () => {
+    const r = refine({ propertyType: "general_building", transferType: "regular", companionAssets: [{ assetKind: "land", transferType: "burdened_gift", acquisitionCause: "carryover_gift", burdenedGiftInfo: byPartInfo as never }] });
+    expect(r.error?.issues.map((i) => i.path.join("."))).toEqual(["companionAssets.0.burdenedGiftInfo.carryoverDonorBasis.giftValuationByPart"]);
+  });
+});
+
+describe("⑧·⑤ 한 파트만 이월과세는 평가액을 나누지 않는다", () => {
+  it("토지만 이월과세 + 증여세 신고서 금액 → 건물분 평가액을 요구하지 않는다(토지 블록 평가액 하나)", () => {
+    const f = formOf([gbAsset({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2024-05-01", acquisitionDate: "2020-01-01" } as Partial<AssetForm>, { ...RET, giftDateValuation: "1,000,000,000" })]);
+    expect(gbBgSplitsGiftValuation(f.assets[0])).toBe(false);
+    expect(fields(f)).not.toContain("buildingCarryover.giftDateValuation");
   });
 });
 

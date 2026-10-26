@@ -161,7 +161,8 @@ describe("⑧ 분리 ON에서 토지·건물 중 한쪽만 이월과세 — PR-2
 
   it("분리 OFF 종전 세액 고정 — 109,326,000 · 104,646,000 (회귀 0)", async () => {
     expect((await ok(formOf([gbAsset({}, { giftTaxAmount: "" })]))).determinedTax).toBe(109_326_000);
-    expect((await ok(formOf([gbAsset({}, RETURN)]))).determinedTax).toBe(104_646_000);
+    // 둘 다 이월과세 — 평가액은 토지분·건물분으로 받는다(`gb-bg-carryover-gift-tax-part-limit.plan.md` Q-3 b). 5억:5억 = 양도가액 비율이라 종전 값 그대로.
+    expect((await ok(formOf([gbAsset({ buildingCarryover: { ...CARRYOVER_DEFAULTS, giftDateValuation: "500,000,000" } } as Partial<AssetForm>, { ...RETURN, giftDateValuation: "500,000,000" })]))).determinedTax).toBe(104_646_000);
   });
 });
 

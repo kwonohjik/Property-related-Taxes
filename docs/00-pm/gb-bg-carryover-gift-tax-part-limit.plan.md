@@ -199,7 +199,7 @@ STEP 5.7(`burdened-gift-apportionment.ts:348`–`:385`)에서 둘 다 이월과�
 - **V-4 (채택 뒤집힘)**: Q-1만으로 B → A가 뒤집히는 사례는 이번 실측에서 못 찾았다. 뒤집힐 수 있는 방향(A 세액 증가)이라 PR-1에서 격자로 찾는다.
 - **V-5 (저장 이력)**: 분리 ON 부담부증여 둘 다 이월과세로 저장된 이력에서 건물 블록 평가액이 비었는지·자산 전체가 들어 있는지는 로컬 IndexedDB라 셀 수 없다. ⑧이 막아 다시 입력하게 하는 것이 대책이다.
   - 다만 「토지 = 자산 전체 10억 · 건물 = 0원 초과 아무 값 · 합 ≤ 과세가액」은 ⑧을 통과해 상당액이 달라진다. PR-2에서 문구로 알릴지 정한다.
-- **V-6 (지분·묶음 ④)**: §4.4 — 세 호출이 같은 builder인지 Do에서 확인.
+- ✅ **V-6 (지분·묶음 ④) — 해소(PR-2)**: 지분은 `buildBurdenedGiftInfo(merged, …)`(`transfer-tax-api-gb-shares.ts:281`)가 같은 `buildCarryoverDonorBasis`를 거쳐 지분마다 `giftValuationByPart`를 싣는다. 지분 50/50 · 9억:1억 실측 37,500,800(단건과 같다 — 양도가액 비율이면 42,050,540). ⑫는 본문·지분·묶음이 모두 같은 `burdenedGiftInfoSchema`다(`transfer-tax-schema-base-shape.ts:634` · `transfer-tax-building-share-schemas.ts:124` · `transfer-tax-schema-companion.ts:231`).
 
 ## 9. 범위 밖
 - 한 파트만 이월과세(#2581에서 이미 파트별).
@@ -214,4 +214,35 @@ STEP 5.7(`burdened-gift-apportionment.ts:348`–`:385`)에서 둘 다 이월과�
   - 엔진 직접 호출 anchor: A7-4b 재작성(§8 V-3) · A7-4c 추가(한 파트만이면 한도 echo가 그 파트 잔액뿐).
 - 검증: 뮤테이션 7/7 KILLED(건물 한도 제거 · 토지 한도 제거 · 넘친 몫 토지 이동 · 합계 한도 복원 · limitApplied 한쪽만 · cap 파트 무시 · 한 파트 배분 무시). M6(cap 파트 무시)은 처음에 살아남아 A7-4c를 추가했다. `tsc` 0 · 양도세 엔진 + 부담부증여 API 353파일 4,344건 통과.
 - 남은 것: PR-2(Q-2 a · Q-3 b — `giftTaxByPart` ④⑤⑧⑫, 분리 OFF 건물분 칸, E2E).
+
+## 11. 구현 기록 — PR-2 안분 축 (2026-10-26 · Q-2 a · Q-3 b)
+- 와이어 이름을 확정했다. §4.2 초안 `giftTaxByPart`(파트별 상당액) 대신 **`carryoverDonorBasis.giftValuationByPart`**(증여 당시 토지분·건물분 평가액)를 싣는다.
+  - 엔진은 상당액 합계(`carryoverTaxation.giftTaxAmount`)를 이 비율로 나눈다. 합계와 파트 값을 서로 맞추는 형제 객체 간 검사가 필요 없다.
+  - 비율에만 쓰므로 지분 축소 전 값이다.
+- 커밋 (1) Pre-Do anchor `__tests__/api/transfer.route.gb-bg-gift-valuation-by-part.anchor.test.ts`: 11건 중 7건 빨간불 확인.
+- 커밋 (2) 구현.
+  - 술어 leaf `gbBgSplitsGiftValuation` · `gbBgGiftValuationByPart`(`lib/calc/gb-bg-gift-tax-return.ts`): 일반건물 부담부증여 × 토지·건물 둘 다 이월과세면 분리 ON · OFF 모두 참이다.
+  - ④ 분자: 토지분 × r + 건물분 × r(`transfer-tax-api-carryover.ts`). `giftValuationByPart`는 둘 다 양수일 때만 싣는다(`transfer-tax-api-burdened-gift.ts`).
+  - ⑫:
+    - `giftValuationByPart` 양의 정수 2칸(`transfer-tax-burdened-gift-schema.ts`).
+    - `refineGbBgCarryoverParts`가 한 파트만 이월과세이거나 일반건물 부담부증여 밖(주 자산·컴패니언)이면 거부한다.
+  - 엔진 STEP 5.7: `giftValuationByPart`가 있으면 그 비율로 나누고, 없으면 양도가액 비율(종전 본문·직접 호출 호환)이다.
+  - ⑧: 짝(산출세액·과세가액)이 찼으면 토지분·건물분 필수, 합(지분 몫) ≤ 과세가액. 건물분·합 오류는 `buildingCarryover.giftDateValuation`에서 말한다.
+  - ⑤ `CarryoverGiftBlock`: 「토지분/건물분 증여 당시 평가액」 라벨·안내. 분리 OFF는 같은 블록에 「건물분」 칸을 둔다(`buildingCarryover.giftDateValuation`).
+- 결과:
+  - 토지분 6억 · 건물분 4억 → 상당액 1억 · A 93,742,700 · B 채택 97,800,000(분리 ON · OFF 같음 · 종전 분리 ON은 A 99,966,000 채택).
+  - 9억:1억 · 한도가 걸리는 사례 → 37,500,800(양도가액 비율이면 42,050,540 · 손계산 일치).
+- 기존 테스트 갱신(분리 OFF + 신고서 금액 픽스처가 이제 건물분을 요구한다).
+  - 자산 전체 10억을 토지분 5억 + 건물분 5억으로 나눠 넣었다. 평가액 비율 = 양도가액 비율이라 **기대 세액은 그대로**다(104,646,000 · 135,846,000 · 지분 15,000,000).
+    - `transfer.route.gb-bg-carryover-gift-tax-input.anchor.test.ts` G1~G5 · ⑧(「평가액 합 > 과세가액」은 건물분 칸에서 말한다).
+    - `transfer.route.gb-bg-part-carryover-mismatch.anchor.test.ts` · `transfer.route.gb-bg-part-carryover-ui.anchor.test.ts`의 L1.
+  - E2E `gb-bg-carryover-gift-tax-input.spec.ts`:
+    - E1·E2·E4는 토지분·건물분을 넣는다. E1은 분리 OFF 두 칸이 보이는지도 확인한다.
+    - E5 추가: 건물분을 비우면 «다음»이 막히고 그 칸으로 이동한다.
+    - E6 추가: 분리 ON 두 블록 6억·4억 → 97,800,000.
+    - 미리 채운 금액 칸에 `fill`하면 값이 이어 붙는 일이 있었다(지분 카드 · 반복 실행). 시드의 토지분을 비워 두고, E2는 평가액을 시드로 넣었다. 재시도 없이 3회 반복 18/18.
+- 검증:
+  - 뮤테이션 10/10 KILLED. M8(일반건물 밖 허용)·M9(술어 토지만)은 처음에 살아남아 ⑫ 단위 테스트와 「토지만이면 건물분을 요구하지 않는다」를 추가했다.
+  - 화면 뮤테이션: 분리 OFF 건물분 칸을 숨기면 E1·E5가 실패한다.
+  - 관련 E2E 13스펙 61건 통과 · `tsc` 0.
 

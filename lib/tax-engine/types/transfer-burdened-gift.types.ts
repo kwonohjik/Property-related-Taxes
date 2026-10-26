@@ -373,6 +373,12 @@ export interface BurdenedGiftCarryoverDonorBasis {
    * 미지정이면 토지·건물 **둘 다**다(종전 본문·분리 OFF). 한 파트만이면 시나리오 A가 그 파트의 취득가액·기산일·증여세 상당액만 당초 증여자 기준으로 바꾼다.
    */
   parts?: { land: boolean; building: boolean };
+  /**
+   * 일반건물 · 토지·건물 **둘 다** 이월과세 — 증여 당시 **토지분·건물분** 평가액(「소득세법 시행령」 제163조의2 제2항 제2호 「양도한 해당 자산가액」).
+   * STEP 5.7이 증여세 상당액을 이 비율로 두 파트에 나눈다(계획서 `gb-bg-carryover-gift-tax-part-limit.plan.md` Q-2 a · Q-3 b). 비율에만 쓰므로 지분 축소 전 값이어도 같다.
+   * 없으면(종전 본문·직접 호출) 양도가액 비율이다. 한 파트만 이월과세(`parts`)와 함께 보내면 ⑫가 거부한다.
+   */
+  giftValuationByPart?: { land: number; building: number };
 }
 
 /**

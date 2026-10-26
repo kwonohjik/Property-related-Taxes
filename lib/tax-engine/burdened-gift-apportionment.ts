@@ -340,8 +340,9 @@ export function buildBurdenedGiftBreakdown(params: {
    *
    * ## 순서: 안분 → 파트 배분 → 파트별 한도 (뒤집으면 한도가 과소 적용된다 — 타입 주석 참조)
    *
-   * 토지·건물 배분은 **자산별 양도가액 비율**이다. 증여세 상당액은 「**양도한** 몫」에 대응하는
-   * 것이고(2호), §159가 채무를 나눈 축이 바로 그 양도가액이므로 같은 축을 쓴다.
+   * 토지·건물 배분은 **증여 당시 토지분·건물분 평가액 비율**이다 — 2호 「양도한 해당 자산가액」이 파트마다의 증여세 과세가액이기 때문이다
+   * (`carryoverDonorBasis.giftValuationByPart` · 계획서 `gb-bg-carryover-gift-tax-part-limit.plan.md` Q-2 a · Q-3 b).
+   * 그 값이 없는 종전 본문·직접 호출만 **자산별 양도가액 비율**(§159가 채무를 나눈 축)로 나눈다.
    * 잔액은 건물이 흡수한다(메모리 `feedback_floor_residual_absorption`).
    *
    * 한도는 **파트마다** 그 파트의 잔액이다 — 토지·건물은 「소득세법」 제94조 제1항 제1호상 각각의 자산이고,
@@ -358,12 +359,16 @@ export function buildBurdenedGiftBreakdown(params: {
     // 파트 배분 — 한 파트만 증여받았으면 그 파트에 전액(다른 파트는 증여받지 않았다 · 계획서 `gb-bg-part-carryover-calc.plan.md` Q-2 a).
     const part = info.carryoverGiftTaxPart;
     const totalTransfer = landTransferPrice + buildingTransferPrice;
+    const byPart = info.carryoverDonorBasis?.giftValuationByPart;
+    const byPartTotal = byPart ? byPart.land + byPart.building : 0;
     const landShare =
       part === "land" ? apportioned
       : part === "building" ? 0
-      : totalTransfer === 0
-        ? 0
-        : safeMultiplyThenDivide(apportioned, landTransferPrice, totalTransfer);
+      : byPart && byPartTotal > 0
+        ? safeMultiplyThenDivide(apportioned, byPart.land, byPartTotal)
+        : totalTransfer === 0
+          ? 0
+          : safeMultiplyThenDivide(apportioned, landTransferPrice, totalTransfer);
     const buildingShare = apportioned - landShare;
     // 한도 = 그 파트의 양도차익 = 양도가액 − (취득가액 + 그 밖의 필요경비) — 시행령 §163의2② 후단의 「양도가액에서 법 §97① 및 ②의 금액을 공제한 잔액」.
     const landCap = Math.max(0, landTransferPrice - landAcquisitionPrice - landEstimatedDeduction);
