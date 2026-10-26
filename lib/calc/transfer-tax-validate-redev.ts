@@ -340,6 +340,17 @@ export function validateRedevelopmentAsset(
   ) {
     return fieldError("fixedAcquisitionPrice", `${label}: 승계조합원 — 입주권을 매매로 승계취득한 취득가액(실지거래가액)을 입력하세요. (소득세법 §97①1호 가목)`);
   }
+  // 증여도 같다 — 증여 신고가액(`CompanionAcqGiftBlock` 「증여 신고가액」 칸 = `fixedAcquisitionPrice`)이 취득가액이다(§163⑨).
+  //   비우면 ⑧을 통과해 엔진이 계산을 중단했다(화면 경로 500). 부담부증여는 §159가 취득가액을 정하고 그 칸을 렌더하지 않는다 — 제외.
+  //   ⑫ 거울: `refinePrimaryAcquisitionInputs` 승계조합원 취득가액 · 컴패니언 arm 「증여 자산은 신고가액(취득가액) 필수」.
+  if (
+    isSuccessor &&
+    asset.acquisitionCause === "gift" &&
+    asset.transferType !== "burdened_gift" &&
+    parseAmount(asset.fixedAcquisitionPrice) <= 0
+  ) {
+    return fieldError("fixedAcquisitionPrice", `${label}: 승계조합원 — 입주권을 증여로 취득한 증여 신고가액(취득가액)을 입력하세요. (소득세법 §97①1호 · 시행령 §163⑨)`);
+  }
 
   // ── 금액 ──
   // 사례 48 — 승계조합원 모드 시 권리가액 필드 자체가 UI에서 숨겨지므로 검증 제외.

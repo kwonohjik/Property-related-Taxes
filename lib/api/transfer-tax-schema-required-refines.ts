@@ -237,6 +237,8 @@ type PrimaryLike = {
   transferType?: string;
   acquisitionDate: string;
   transferDate: string;
+  acquisitionPrice?: number;
+  inheritedAcquisition?: unknown;
   useEstimatedAcquisition: boolean;
   acquisitionMethod?: string;
   standardPriceAtAcquisition?: number;
@@ -245,6 +247,7 @@ type PrimaryLike = {
   generalBuildingValuation?: unknown;
   redevelopment?: {
     subject?: string;
+    rightsValue?: number;
     isSuccessorMember?: boolean;
     successorGiftSameHousehold?: boolean;
     completionDate?: string;
@@ -309,6 +312,27 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
   // 승계조합원 — 준공일(사용검사필증 교부일)이 취득시기다(소령 §162①4호). 비우면 취득일로 읽었다.
   if (data.redevelopment?.isSuccessorMember === true && !data.redevelopment.completionDate) {
     issue(["redevelopment", "completionDate"], "승계조합원은 준공일(사용검사필증 교부일)이 필요합니다 (소득세법 시행령 §162①4호)");
+  }
+
+  // 승계조합원 — 취득가액은 승계취득가액(매매 실지거래가액 · 증여 신고가액)이고, 엔진은 그것이 없으면 §166④1호 평가액(rightsValue)을 쓴다
+  //   (`redevelopment-successor.ts`). 둘 다 0이면 엔진이 계산을 중단한다 — 컴패니언 arm은 `fixedAcquisitionPrice`로 이미 막는데 주 자산은
+  //   검사가 없어 500이었다. ⑧ `validateRedevelopmentAsset` 승계 취득가액 분기와 같은 축(매매·증여 · 부담부증여 제외 — §159가 취득가액을 정한다).
+  //   `inheritedAcquisition`이 있으면 STEP 0.45가 취득가액을 만든다 — 상속은 물론 매매·증여 본문도 엔진은 그 값으로 계산한다
+  //   (리뷰 게이트 실측 · anchor S-1d). 원천 검사는 그 채널의 refine이 맡는다.
+  if (
+    data.redevelopment?.isSuccessorMember === true &&
+    (data.acquisitionCause === "purchase" || data.acquisitionCause === "gift") &&
+    data.transferType !== "burdened_gift" &&
+    !data.inheritedAcquisition &&
+    !positive(data.acquisitionPrice) &&
+    !positive(data.redevelopment.rightsValue)
+  ) {
+    issue(
+      ["acquisitionPrice"],
+      data.acquisitionCause === "gift"
+        ? "승계조합원 입주권을 증여로 취득했다면 증여 신고가액(취득가액)이 필요합니다 (소득세법 §97①1호 · 시행령 §163⑨)"
+        : "승계조합원 입주권을 매매로 취득했다면 취득가액(실지거래가액)이 필요합니다 (소득세법 §97①1호 가목)",
+    );
   }
 
   // 증여 승계의 「증여자와 계속 같은 세대」 선언(사전-2020-법령해석재산-0691) — 승계조합원이 증여로 취득한 경우에만 의미가 있다.

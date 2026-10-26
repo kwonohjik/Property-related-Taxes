@@ -162,6 +162,8 @@ describe("E2-01 · A 엔진 층 — 승계조합원 완공APT 취득가액 0", (
     //    이 상태는 정상 경로에서 도달하지 않는다 — ⑧ validate(B-1·B-2)가 먼저 막고
     //    ⑤ UI 는 취득가액 칸을 렌더한다. 이 throw 는 그 관문이 뚫렸을 때 울리는 트립와이어다.
     expect(() => runSuccessorApt(0, 0)).toThrow(/취득가액을 확인할 수 없습니다/);
+    // 입력 결함이라 400(INVALID_INPUT)이다 — 종전 `TaxRateNotFoundError`는 500(redev-successor-acq-price-required.plan.md).
+    expect(() => runSuccessorApt(0, 0)).toThrow(expect.objectContaining({ code: "INVALID_INPUT" }));
   });
 });
 
