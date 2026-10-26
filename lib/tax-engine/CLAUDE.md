@@ -26,7 +26,7 @@ lib/tax-engine/
 │   ├── index.ts               # 공용 배럴 + 평가기 re-export (진입점은 효과 유형별 4계열 — 헤더 참조)
 │   ├── metadata.ts            # REDUCTION_METADATA (24개 조문 UI라벨·효과·isFullyImplemented)
 │   ├── period-check.ts        # checkReductionPeriod(id, ctx) — 일몰 시한 검증 (매매계약일 우선)
-│   ├── phd-helper.ts          # §164⑤ 환산 보조 — 신축주택 감면 조문의 "취득시 기준시가" 자동 도출
+│   ├── phd-helper.ts          # §164⑦ 환산 보조 — 신축주택 감면 조문의 "취득시 기준시가" 자동 도출
 │   ├── new-99-3.ts            # §99의3 신축주택 과세특례 (완전구현 조문 예시)
 │   └── types.ts               # TransferReductionId · ReductionCategory 공개 타입
 └── schemas/rate-table.schema.ts  # DB jsonb 스키마 (parseProgressiveRate 등)
@@ -119,25 +119,23 @@ const reductionAmount = Math.min(best.amount, calculatedTax);
 - `comprehensive-tax.ts` → `property-tax.ts` (재산세 결과를 종부세 재산세 비율 안분 공제에 사용). **역방향 금지**.
 - `transfer-tax-aggregate.ts` → `transfer-tax.ts` (다건 양도 오케스트레이션은 단건 엔진을 반복 호출).
 - `transfer-tax.ts` → `multi-house-surcharge.ts` / `non-business-land/engine.ts` / `rental-housing-reduction.ts` / `new-housing-reduction.ts` / `public-expropriation-reduction.ts` / `transfer-tax-penalty.ts` / `pre-1990-land-valuation.ts` / `multi-parcel-transfer.ts` (서브엔진 fan-out).
-- `transfer-reductions/index.ts` — 독립 라우터. 각 조문별 모듈(`new-99-3.ts` 등)이 switch 분기로 통합됨. `transfer-tax.ts` STEP 4.6~7.5에서 직접 호출. 신규 조문 추가 시 `calcReductions()` 후보 배열에 push.
+- `transfer-reductions/` — **진입점은 하나가 아니다**. 효과 유형별 4계열: 세액감면형 `calcReductions`(`transfer-tax-reductions-calc.ts`) · 소득차감형 `resolveIncomeDeduction` · 장특공 대체형 `evaluateRental97Lthd` · 주택수 제외형 `resolveHouseCountExclusion`. `index.ts`는 공용 메타·시한·게이트 배럴이다(헤더 참조). 신규 세액감면 조문은 `calcReductions()` 후보 배열에 push.
 - `transfer-tax-mixed-use.ts` → `transfer-tax-mixed-use-helpers.ts` → `transfer-tax-mixed-use-fourpart.ts` (Case A 4부분 안분 어댑터) / `transfer-tax-mixed-use-totals.ts` (조립 헬퍼) / `transfer-tax-pre-housing-disclosure.ts` (PHD §164⑦ — 건물분은 §164⑤ 준용).
 
 서브엔진은 상위 엔진 import 금지 (순환 금지).
 
 ## 겸용주택 PHD 4부분 안분 (Case A)
 
-`partialUsageChange.direction === "house_to_commercial"` AND `firstDisclosureDate < usageChangeDate` 조합에서만 활성화. 취득시·최초공시 시점에 건물 전체가 주택이었던 케이스.
+`usePreHousingDisclosure` AND `partialUsageChange.direction === "house_to_commercial"` AND `firstDisclosureDate < usageChangeDate` 조합에서만 활성화(`transfer-tax-mixed-use-fourpart.ts` 헤더). 취득시·최초공시 시점에 건물 전체가 주택이었던 케이스.
 
 - **활성 조건**: PHD 입력에 `commercialBuildingStdPriceAtAcq/AtFirstDisclosure` + `housingLandArea` + `commercialLandArea` + `totalTransferPriceForFourPart` 모두 충족.
 - **결과**: `PreHousingDisclosureResult.fourPartApportionment` 에 4부분(주택분토지·주택건물·상가분토지·상가건물) 시점별 기준시가·양도가액·환산취득가·개산공제·양도차익 분리값. 미활성 시 undefined.
 - **mixed-use 어댑터**: `buildHousingGainSplitFromFourPart` / `buildCommercialGainSplitFromFourPart` 가 4부분 결과를 HousingGainSplit/CommercialGainSplit 으로 변환. `housingPart.estimatedAcquisitionPrice`는 `fp.housingAcqPriceSum`(D11+E11) 사용 — 전체 환산취득가(C11) 아님.
-- **period-split 자동 비활성화**: 4부분 활성 시 `applyUsagePeriodSplit` 건너뜀 (엑셀 단일 LTHD 적용).
 
-## 양도세 자산-수준 통합 (2026-04-25)
+## 양도세 취득가액 입력 (엔진 측)
 
-취득 정보 13필드가 모두 `AssetForm` 자산-수준에 있음. 폼-전역 `acquisitionMethod`·`appraisalValue`·`isSelfBuilt` deprecated.
+자산-수준 필드(`AssetForm`)·`acquisitionMethod` 도출은 UI·API 쪽 — [components/calc/transfer/CLAUDE.md](../../components/calc/transfer/CLAUDE.md).
 
-- **acquisitionMethod 도출**: `isAppraisalAcquisition` / `useEstimatedAcquisition` 플래그에서 API 변환 시 파생 (`lib/calc/transfer-tax-api.ts`).
 - **감정가액 + 개산공제 자동 (§163⑥)**: `acquisitionMethod === "appraisal"` 시 `취득시 기준시가 × 3%` 자동 적용 (`calcTransferGain`).
 - **토지/건물 분리 양도차익 (§166⑥)**: `hasSeperateLandAcquisitionDate === true` 시 `transfer-tax-split-gain.ts` 활성. PHD 취득시 참조일은 **`landAcquisitionDate`** (건물 취득일 아님).
 
