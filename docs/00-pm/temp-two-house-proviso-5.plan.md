@@ -101,7 +101,7 @@
 | V-F1 | 중과 배제(§167의10①15호) ② 요소 `sellingHouseMeetsOneHouseRequirements`가 temp + 5호에서 같은 결론을 내는가 | ✅ 2026-10-26 실측(master 55979738f · throwaway probe) — **같은 결론**. ② 요소는 비과세와 같은 정본 `meetsOneHouseHoldingResidence`(`transfer-tax-judgment-steps.ts:507`)라 5호를 함께 본다. 시료: 서울 강남(2017.8.3.~ 조정) 2017-10-01 취득 · 거주 0 · 양도 15억 · 다른 주택(비조정 · 공시 4억) · 양도일 2026-06-01(유예 기간 밖). temp+5호 → 중과 배제(15호) · 고가 부분과세 47,245,000 / 단서 없음 → 2주택 중과 640,761,000 / 대조 거주 27개월 → 중과 배제 28,253,500(차이는 장특 거주분). 2023.2.28. 전 양도(2021-06-01)는 구 8호 슬롯(`oldClause8TemporaryTwoHouse`)이 ②를 보지 않아 세 경우 모두 배제 — 5호와 무관 |
 | V-F2 | 4호를 temp 맥락에서 받았을 때 결과 | ⏳ Q-F2 (a)일 때만 |
 | V-F3 | 일시적 2주택 종전주택 × 5호 정면 해석례 | ➖ 찾지 못함 — Q-F1 결정으로 대체 |
-| V-F4 | 합가·혼인(§155④⑤) 2주택 — `provisoGate`가 temp가 아니면 `mode: null`이라 단서 자체를 버린다(`transfer-tax-api-helpers.ts:70-74`) | ➖ 범위 밖 — 이 계획서에서 재지 않았다. 별건 후보 |
+| V-F4 | 합가·혼인(§155④⑤) 2주택 — `provisoGate`가 temp가 아니면 `mode: null`이라 단서 자체를 버린다(`transfer-tax-api-helpers.ts:70-74`) | 🔴 2026-10-26 실측 — 합가뿐 아니라 §155⑥·⑧·3주택 중첩도 단서를 버린다(계산기 과세 163,966,000 vs 엔진 비과세 0). → 계획서 `deemed-two-house-proviso.plan.md` |
 
 ## 7. 테스트 계획
 
