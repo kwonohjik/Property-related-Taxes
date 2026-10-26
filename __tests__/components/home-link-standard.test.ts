@@ -1,7 +1,7 @@
 /**
  * 정적 가드 — **홈 이동은 `HomeButton`만 쓴다** (RU-3).
  *
- * `components/calc/CLAUDE.md:87·346`이 정한 규칙:
+ * `components/calc/CLAUDE.md 「홈으로 버튼 규칙」`이 정한 규칙:
  *
  * > 집 아이콘(`Home`) + `rounded-full` 테두리 pill 단일 표준.
  * > **신규 작성 금지**: native `<Link href="/">`, `<button onClick={()=>router.push("/")}>`,
@@ -105,7 +105,7 @@ for (const dir of SCAN_DIRS) {
 }
 
 describe('홈 이동 단일 표준 — native <Link href="/"> · router.push("/") 금지', () => {
-  it("🔴 표준 밖 홈 이동이 0건이다 (components/calc/CLAUDE.md:346)", () => {
+  it("🔴 표준 밖 홈 이동이 0건이다 (components/calc/CLAUDE.md 「홈으로 버튼 규칙」)", () => {
     const msg = violations.map((v) => `  ${v.file}:${v.line}\n    ${v.text}`).join("\n");
     expect(
       violations,

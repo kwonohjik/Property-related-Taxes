@@ -1,7 +1,7 @@
 /**
  * 정적 가드 — **면적 반올림은 `round2()`다**. 인라인 `parseFloat(x.toFixed(2))` 금지 (RU-2).
  *
- * `components/calc/CLAUDE.md:177`이 이미 「인라인 `parseFloat(x.toFixed(2))` 신규 작성 금지」로
+ * `components/calc/CLAUDE.md 「면적 안분」`이 이미 「인라인 `parseFloat(x.toFixed(2))` 신규 작성 금지」로
  * 못박았지만 **강제하는 것이 없었다**. 실측하니 4곳이 남아 있었고, 그중 하나는
  * `transfer-tax-expropriation-valuation.ts`의 **환산 분모**였다.
  *
@@ -80,7 +80,7 @@ for (const dir of SCAN_DIRS) {
 }
 
 describe("면적 반올림 정책 — round2()만 쓴다", () => {
-  it("🔴 인라인 parseFloat(x.toFixed(2))가 0건이다 (components/calc/CLAUDE.md:177)", () => {
+  it("🔴 인라인 parseFloat(x.toFixed(2))가 0건이다 (components/calc/CLAUDE.md 「면적 안분」)", () => {
     const msg = violations.map((v) => `  ${v.file}:${v.line}\n    ${v.text}`).join("\n");
     expect(violations, `인라인 면적 반올림 ${violations.length}건:\n${msg}`).toHaveLength(0);
   });

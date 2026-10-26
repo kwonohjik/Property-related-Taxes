@@ -3,7 +3,7 @@
  *
  * 🔴 결함 (critic:rules, 2026-09-10):
  *   `transfer-tax-expropriation-valuation.ts:124`가 「면적 반올림 UI 일치」 주석을 달고
- *   정작 **규칙이 금지한 인라인 형태**를 썼다(`components/calc/CLAUDE.md:177` —
+ *   정작 **규칙이 금지한 인라인 형태**를 썼다(`components/calc/CLAUDE.md 「면적 안분」` —
  *   「인라인 `parseFloat(x.toFixed(2))` 신규 작성 금지」).
  *
  * ## 두 형태는 실제로 다르다 — 스타일 문제가 아니다

@@ -121,7 +121,7 @@ describe("R05 · FieldCard unit이 trailing에 먹히지 않는다", () => {
 
 /* ══ R08 — 금액 셀 4클래스 ═══════════════════════════════════════════════════ */
 describe("R08 · 신고서 양식 금액 셀이 규약 4클래스를 갖춘다", () => {
-  it("🔴 tabular-nums가 있다 (components/calc/CLAUDE.md:176)", () => {
+  it("🔴 tabular-nums가 있다 (components/calc/CLAUDE.md 「금액 칸 정렬」)", () => {
     const s = src("components/calc/results/transfer/FilingFormTable.tsx");
     const cell = s.split("px-3 py-1.5 text-right")[1] ?? "";
     for (const cls of ["font-mono", "tabular-nums", "whitespace-nowrap"]) {

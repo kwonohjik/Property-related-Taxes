@@ -183,7 +183,7 @@ export function PropertyTaxForm() {
         <PropertyTaxResultView result={result} savedId={autoSave.savedId ?? undefined} />
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           <NavButton direction="prev" label="뒤로 가기" onClick={handleBackToInput} />
-          {/* 규약(components/calc/CLAUDE.md:13) — 「다시 계산」은 **값을 유지한 채** 입력
+          {/* 규약(components/calc/CLAUDE.md 「네비게이션 규칙」) — 「다시 계산」은 **값을 유지한 채** 입력
               단계로 돌아가는 것이고, 전체 폐기는 확인 Dialog 를 거치는 공용 버튼 전용이다.
               종전엔 「다시 계산하기」에 handleReset 이 달려 있어, 되돌릴 뜻으로 누른 사용자의
               입력이 **확인 한 번 없이** 통째로 사라졌다(양도·상속·증여 결과뷰는 2026-09-05

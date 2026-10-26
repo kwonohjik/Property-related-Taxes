@@ -14,7 +14,7 @@
  *   - lib/tax-engine/CLAUDE.md (디렉터리 트리)
  *   - lib/tax-engine/transfer-reductions/{types,metadata,period-check,index}.ts 헤더
  *   - lib/api/transfer-tax-schema-{sub,reductions,rental}.ts 헤더
- *   - components/calc/transfer/UnifiedReductionPanel.tsx 헤더 · components/calc/CLAUDE.md
+ *   - components/calc/transfer/UnifiedReductionPanel.tsx 헤더
  *   - app/calc/transfer-tax/steps/Step5.tsx 안내 배너 (사용자 노출)
  *
  * ⚠ 날짜가 박힌 이력 표현(「Phase 1 (2026-05-06): 23개 조문 인벤토리」 등)은 그 시점의

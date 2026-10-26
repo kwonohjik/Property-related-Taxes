@@ -124,7 +124,7 @@ describe("OH-28 ⑤ — ③ 명부 행 편집의 주택 수 제외(조특법)", 
     let f = form({ houses: [ROW] }, { reductions: [other] } as unknown as Partial<AssetForm>);
     render(<Step2 form={f} onChange={(p) => (f = apply(f, p))} />);
     openRow();
-    // 선택지의 **값**을 본다(`components/calc/CLAUDE.md` 「선택지 anchor는 value를 본다」)
+    // 선택지의 **값**을 본다(`__tests__/components/CLAUDE.md` 「선택지 anchor는 value를 본다」)
     expect(radioValues(document.body, "house-row-count-exclusion-h1")).toEqual([
       "none",
       "new_99_4_rural",

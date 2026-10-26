@@ -1,7 +1,7 @@
 /**
  * 정적 가드 — **금액 셀에는 `tabular-nums`가 있어야 한다** (RU-1).
  *
- * `components/calc/CLAUDE.md:176`이 정한 규칙은 「모든 표·신고서·보고서 **공통**」이다:
+ * `components/calc/CLAUDE.md 「금액 칸 정렬」`이 정한 규칙은 「모든 표·신고서·보고서 **공통**」이다:
  * 금액(원) 셀은 `text-right font-mono tabular-nums whitespace-nowrap`.
  * `font-mono`만으로는 부족하다 — 비례폭 숫자는 자릿수가 세로로 어긋나 천·백만·십억
  * 콤마가 어긋난 채 쌓인다.
@@ -85,7 +85,7 @@ for (const dir of SCAN_DIRS) {
 }
 
 describe("금액 셀 자릿수 정렬 — font-mono에는 tabular-nums가 따라온다", () => {
-  it("🔴 tabular-nums 없는 금액 셀이 0건이다 (components/calc/CLAUDE.md:176)", () => {
+  it("🔴 tabular-nums 없는 금액 셀이 0건이다 (components/calc/CLAUDE.md 「금액 칸 정렬」)", () => {
     const msg = violations.map((v) => `  ${v.file}:${v.line}\n    ${v.text}`).join("\n");
     expect(
       violations,

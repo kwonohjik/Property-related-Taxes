@@ -7,7 +7,7 @@
  *
  * ## `window.confirm` 을 쓰지 않는다 (2026-09-11)
  *
- * 규약(`components/calc/CLAUDE.md:14`)과 메모리 `feedback_dialog_data_discard_confirm` 은
+ * 규약(`components/calc/CLAUDE.md 「네비게이션 규칙」`)과 메모리 `feedback_dialog_data_discard_confirm` 은
  * **데이터 손실 위험 액션**에 native `confirm()` 을 금지한다 — Tailwind 토큰·다크모드·
  * focus-trap·키보드 Tab 순환을 전부 지원하지 않고, RTL·Playwright 에서도 별도 핸들러 없이는
  * 잡히지 않는다. 이 버튼은 **입력 전체를 지우므로** 정확히 그 범위에 있었는데,
