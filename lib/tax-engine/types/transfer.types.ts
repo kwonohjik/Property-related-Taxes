@@ -768,6 +768,12 @@ export interface TransferTaxInput {
    */
   newBuildRightAcquisitionDate?: Date;
   /**
+   * 재개발 **승계조합원 완공 신축주택을 증여 승계**한 경우의 세대 사실 상태 — 확인 필요 고지(문구·게이트)용. `declinedConsolidation` = 증여자와 같은 세대가
+   * 아니거나 증여자가 주택을 출자한 원조합원이 아니라고 답했다(통산할 세대의 주택 보유가 없다). 판정 입력 번역(`translateRedevAptForHousingJudgment`)이
+   * 싣는 **엔진 내부** 값이다 — 폼·Zod 입력이 아니다(계획서 redev-successor-gift-holding D-6).
+   */
+  redevSuccessorGift?: { declinedConsolidation: boolean };
+  /**
    * §99의4①·§98의9①의 「그 주택 취득 **전에 보유하던** 다른 주택」 판정용 일반주택 취득일 (D4-05).
    *
    * 두 조문의 보유 주체는 **1세대**다. 이월과세(§97의2①)는 취득가액만 의제하고 취득시기를

@@ -15,6 +15,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { houseContributedOriginalApt } from "./redev-field-scope";
+import { successorGiftHoldingConsolidationApplies } from "./redev-field-scope";
+import { successorGiftHouseholdStartIssue } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 
 /** 세대 사실을 묻는 자산인가를 가르는 키 — 재개발 축 키는 판정 메뉴 자산에 없을 수 있어 선택이다. */
 type GiftFactAssetKind = Pick<AssetForm, "acquisitionCause" | "assetKind"> &
@@ -88,7 +90,7 @@ export function priorResidenceMonthsError(raw: string | undefined, householdStar
 /**
  * 증여받은 주택의 세대 사실을 **묻는가** — 증여로 취득한 주택(`housing`)과 주택을 출자한 원조합원 완공APT(`houseContributedOriginalApt`).
  * 입주권·분양권·토지는 이 사실이 결론을 가르지 않는다. 토지만 출자한 원조합원은 보유기간을 사용승인일부터 세어 통산할 주택 보유가 없고,
- * 승계조합원(입주권 상태 증여)의 보유기간 통산은 이 묶음에서 정하지 않았다(계획서 §7 별건).
+ * 승계조합원(입주권 상태 증여)은 이 묶음이 아니라 재개발 카드에서 받는다(`buildSuccessorGiftHouseholdPayload` · 계획서 redev-successor-gift-holding).
  */
 export function giftHouseholdFactVisible(asset: GiftFactAssetKind | undefined): boolean {
   return !!asset && asset.acquisitionCause === "gift" && (asset.assetKind === "housing" || houseContributedOriginalApt(asset));
@@ -188,6 +190,40 @@ export function buildCalcGiftHouseholdPayload(
   if (!primary || (!primary.giftSameHousehold && !primary.giftDonorDeceased) || !calcGiftHouseholdFactVisible(primary)) return {};
   if (giftHouseholdFactErrors(primary).length > 0) return {};
   return buildGiftHouseholdPayload(primary);
+}
+
+/**
+ * ④ 재개발 **승계조합원 증여 승계**의 세대 사실 — 증여자가 관리처분계획 인가 전부터 종전주택을 보유한 원조합원이고 계속 같은 세대일 때만
+ * 세대 보유 시작일을 싣는다(계획서 `redev-successor-gift-holding.plan.md` Q-1 a). 증여자 취득일·취득원인은 위 일반 키로 이미 간다.
+ * 증여 전 거주 개월은 싣지 않는다 — 종전주택 거주 칸(`redevelopment.priorHouseResidenceMonths` · 사전-2020-법령해석재산-0691)이 같은 사실을 받는다(Q-2 a).
+ * ⑧과 같은 leaf(`successorGiftHouseholdStartIssue`)를 통과하지 못한 사실은 보내지 않는다(⑧을 거치지 않는 ④ 호출이 ⑫ 400을 받지 않게).
+ */
+export function buildSuccessorGiftHouseholdPayload(
+  primary:
+    | Pick<
+        AssetForm,
+        | "assetKind"
+        | "redevSubject"
+        | "redevIsSuccessorMember"
+        | "acquisitionCause"
+        | "acquisitionDate"
+        | "donorAcquisitionDate"
+        | "redevApprovalDate"
+        | "redevSuccessorGiftSameHousehold"
+        | "redevSuccessorGiftDonorHouseMember"
+        | "redevSuccessorGiftHouseholdStartDate"
+      >
+    | undefined,
+): { giftSameHouseholdContinuous?: true; giftHouseholdHoldingStartDate?: string } {
+  if (!primary || !successorGiftHoldingConsolidationApplies(primary)) return {};
+  const issue = successorGiftHouseholdStartIssue({
+    householdStartDate: primary.redevSuccessorGiftHouseholdStartDate,
+    donorAcquisitionDate: primary.donorAcquisitionDate,
+    approvalDate: primary.redevApprovalDate,
+    giftDate: primary.acquisitionDate,
+  });
+  if (issue !== null) return {};
+  return { giftSameHouseholdContinuous: true, giftHouseholdHoldingStartDate: primary.redevSuccessorGiftHouseholdStartDate };
 }
 
 /** 배우자는 혼인 유지, 그 밖의 친족은 같은 주소·생계 계속 — 질문 문구가 관계별로 다르다(결정 #38 조건). */

@@ -15,6 +15,9 @@
  *      §154⑧1호 통산, §155① 「취득한 날」은 기존주택의 연장(부동산납세과-777 · 대법원 2008두16261 심리불속행).
  *   ③ 거주월수 = `resolveAptResidenceMonths`(분리 입력 · 승계는 신축 거주만 — 단 증여자와 계속 같은 세대인 증여 승계는 종전주택 거주를 더한다, 사전-2020-법령해석재산-0691) — 표2와 같은 값
  *   ④ 토지만 출자한 원조합원이면 보유 기산일(`exemptionHoldingStartDate`) = 사용승인일(G3-4) — 취득일은 그대로
+ *   ⑥ 승계조합원이면 세대 사실(`giftHouseholdBasis`)은 증여자가 주택을 출자한 원조합원이고 계속 같은 세대일 때만 남긴다
+ *      (`successorGiftHouseholdConsolidates` — 부동산거래관리과-1503 · 서면인터넷방문상담4팀-2069). 증여 전 거주 개월은 지운다 — 같은 사실을
+ *      종전주택 거주 칸(`priorHouseResidenceMonths` · 사전-2020-법령해석재산-0691)이 받아 ③에 이미 더해진다.
  *   ⑤ 승계조합원·토지만 출자한 원조합원이면 §155① 종전주택 취득일(`temporaryTwoHouse.previousAcquisitionDate`)도 ②와 같은
  *      준공일 — 서면-2022-부동산-0565(승계 입주권으로 취득한 주택의 취득시기 = 사용승인서 교부일) · 토지 출자는 영 §162①4호
  *      문언(사용자 결정 2026-10-25 F-1 Q-3 — 정면 해석례 없이 진행). 계산기 ④는 같은 날짜를 `sellingHousePreviousDateOverride`로
@@ -125,6 +128,22 @@ export function translateRedevAptForHousingJudgment<T extends TransferTaxInput>(
     ...input,
     propertyType: "housing",
     acquisitionDate: redevAptJudgmentAcquisitionDate(input),
+    // ⑥ 승계조합원의 세대 사실 — 통산이 성립하는 증여 승계만 남기고, 증여 전 거주 개월은 지운다(③의 종전주택 거주와 같은 사실).
+    ...(redev.isSuccessorMember === true && input.giftHouseholdBasis
+      ? {
+          giftHouseholdBasis: successorGiftHouseholdConsolidates(redev)
+            ? { ...input.giftHouseholdBasis, priorHouseholdResidenceMonths: undefined }
+            : undefined,
+        }
+      : {}),
+    // D-6 — 증여 승계의 세대 사실 상태(확인 필요 고지의 문구·게이트). 증여 승계가 아니면 싣지 않는다.
+    ...(redev.isSuccessorMember === true && input.acquisitionCause === "gift"
+      ? {
+          redevSuccessorGift: {
+            declinedConsolidation: redev.successorGiftSameHousehold === false || redev.successorGiftDonorHouseMember === false,
+          },
+        }
+      : {}),
     // ⑤ — 종전 주택이 양도 주택일 때만(합가 D8 상대 쪽 짝이면 `previousHouseIsRosterRow` — 명부 행의 취득일이라 그대로 둔다).
     ...(previousHouseDate && input.temporaryTwoHouse && input.temporaryTwoHouse.previousHouseIsRosterRow !== true
       ? { temporaryTwoHouse: { ...input.temporaryTwoHouse, previousAcquisitionDate: previousHouseDate } }
@@ -205,6 +224,38 @@ export function redevGiftPriorResidenceBeforeGift(f: {
     !!f.acquisitionDate &&
     f.priorResidenceStartDate < f.acquisitionDate
   );
+}
+
+/**
+ * **승계조합원 증여 승계에서 증여자 세대의 보유기간을 통산할 수 있는가** — 증여자가 관리처분계획 인가 전부터 종전주택을 보유한
+ * 원조합원이고(`successorGiftDonorHouseMember`) 증여일부터 양도일까지 계속 같은 세대(`successorGiftSameHousehold`)인 경우
+ * (부동산거래관리과-1503 · 서면인터넷방문상담4팀-2069 — 「입주권 상태에서 동일세대원 간의 증여가 이루어진 경우에는 증여자 및 수증자의
+ * 보유기간을 통산」). 증여자가 입주권을 사서 승계했거나 토지만 출자했으면 증여자에게도 준공 전 주택 보유가 없어 통산할 기간이 없다.
+ * 엔진 번역(⑥)·⑫(`refinePrimaryAcquisitionInputs`)가 같은 술어를 쓴다.
+ */
+export function successorGiftHouseholdConsolidates(
+  redev: Pick<NonNullable<TransferTaxInput["redevelopment"]>, "successorGiftSameHousehold" | "successorGiftDonorHouseMember">,
+): boolean {
+  return redev.successorGiftSameHousehold === true && redev.successorGiftDonorHouseMember === true;
+}
+
+/**
+ * 승계조합원 증여 승계의 **세대 보유 시작일** 검사 — ⑧(`validateRedevelopmentAsset`)·⑫(`refinePrimaryAcquisitionInputs`) 공용 leaf.
+ * 세대는 관리처분계획 인가 전부터 종전주택을 보유했어야 한다(인가 뒤에는 종전주택이 입주권으로 바뀐다). 증여자 취득일보다 앞설 수 없고,
+ * 증여일보다 앞서야 한다(`giftHouseholdConsolidationStart`와 같은 범위). 날짜는 YYYY-MM-DD라 문자열 비교가 날짜 순서다.
+ */
+export function successorGiftHouseholdStartIssue(f: {
+  householdStartDate?: string;
+  donorAcquisitionDate?: string;
+  approvalDate?: string;
+  giftDate?: string;
+}): "missing_start" | "missing_donor_acquisition" | "before_donor_acquisition" | "after_approval" | "not_before_gift" | null {
+  if (!f.householdStartDate) return "missing_start";
+  if (!f.donorAcquisitionDate) return "missing_donor_acquisition";
+  if (f.householdStartDate < f.donorAcquisitionDate) return "before_donor_acquisition";
+  if (f.approvalDate && f.householdStartDate > f.approvalDate) return "after_approval";
+  if (f.giftDate && f.householdStartDate >= f.giftDate) return "not_before_gift";
+  return null;
 }
 
 /**

@@ -287,6 +287,14 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
         : asset.redevSuccessorGiftSameHousehold === "no"
           ? false
           : undefined,
+    // 증여 승계 — 증여자가 인가 전부터 종전주택을 보유한 원조합원인가(계획서 redev-successor-gift-holding Q-3 a). 같은 세대 = 「예」일 때만 보낸다(stale 가드).
+    successorGiftDonorHouseMember: !successorGiftHouseholdApplies(asset)
+      ? undefined
+      : asset.redevSuccessorGiftDonorHouseMember === "yes"
+        ? true
+        : asset.redevSuccessorGiftDonorHouseMember === "no"
+          ? false
+          : undefined,
     // 준공일 — 승계조합원(취득시기 · 영 §162①4호) 또는 토지만 출자한 원조합원(§154① 보유 기산일 — G3-4)에서만 의미가 있다.
     // 범위 밖이면 보내지 않는다(카드가 사라진 뒤 남은 값이 엔진 판정을 바꾸지 않게 — U1-01 규약).
     completionDate: redevCompletionDateInScope(asset) ? asset.redevCompletionDate || undefined : undefined,

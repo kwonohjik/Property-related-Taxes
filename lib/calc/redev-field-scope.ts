@@ -176,6 +176,17 @@ export function successorGiftHouseholdApplies(
 }
 
 /**
+ * 증여 승계의 **세대 보유 통산이 적용되는가** — 같은 세대 = 「예」이고 증여자가 인가 전부터 종전주택을 보유한 원조합원 = 「예」
+ * (계획서 `redev-successor-gift-holding.plan.md` Q-1 a · 엔진 `successorGiftHouseholdConsolidates`와 같은 축). ⑤ 시작일 칸 · ④ 세대 사실 전송 · ⑧ 공용.
+ * 증여자 유형 질문 자체는 `successorGiftHouseholdApplies`일 때 묻는다.
+ */
+export function successorGiftHoldingConsolidationApplies(
+  asset: Pick<AssetForm, "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "acquisitionCause" | "redevSuccessorGiftSameHousehold" | "redevSuccessorGiftDonorHouseMember">,
+): boolean {
+  return successorGiftHouseholdApplies(asset) && asset.redevSuccessorGiftDonorHouseMember === "yes";
+}
+
+/**
  * 축이 바뀌어 **범위 밖으로 나간 재개발 필드**를 비우는 patch (2026-09-05 · 코드리뷰 Q20).
  *
  * ## 왜 필요한가 — 마이그레이션만으로는 세션 안에서 늦다
@@ -224,6 +235,12 @@ export function clearOutOfScopeRedevPatch(next: AssetForm): Partial<AssetForm> {
       patch.redevPriorResidenceEndDate = "";
     }
     patch.redevSuccessorGiftSameHousehold = "";
+  }
+  // 증여자 유형 · 세대 보유 시작일 — 같은 세대 = 「예」인 증여 승계에서만 묻는다. 남기면 다시 「예」로 돌아왔을 때 옛 값이 조용히 실린다.
+  const giftApplies = successorGiftHouseholdApplies({ ...next, ...patch });
+  if (!giftApplies && next.redevSuccessorGiftDonorHouseMember) patch.redevSuccessorGiftDonorHouseMember = "";
+  if ((!giftApplies || next.redevSuccessorGiftDonorHouseMember !== "yes") && next.redevSuccessorGiftHouseholdStartDate) {
+    patch.redevSuccessorGiftHouseholdStartDate = "";
   }
   return patch;
 }

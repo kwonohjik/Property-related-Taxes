@@ -55,6 +55,9 @@ export const redevelopmentSchema = z
     isSuccessorMember: z.boolean().optional(),
     // 증여 승계의 「증여자와 계속 같은 세대」 선언(사전-2020-법령해석재산-0691). ★★★ 침묵 stripping 차단: 여기 없으면 route가 제거해 통산이 엔진에 닿지 않는다.
     successorGiftSameHousehold: z.boolean().optional(),
+    // 증여 승계 — 증여자가 인가 전부터 종전주택을 보유한 원조합원인가(계획서 redev-successor-gift-holding Q-3 a). ★★★ 침묵 stripping 차단: 여기 없으면
+    // route가 제거해 「예」도 엔진에 닿지 않고 세대 보유 통산이 늘 꺼진다.
+    successorGiftDonorHouseMember: z.boolean().optional(),
     completionDate: z.string().date().optional(),
     // #12 — 세대원 건물 출자 통산(토지 출자 원조합원 완공APT의 §154① 비과세 보유·거주 요건). ★★★ 침묵 stripping 차단.
     householdBuilding: z

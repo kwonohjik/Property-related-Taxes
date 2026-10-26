@@ -352,6 +352,16 @@ export interface RedevelopmentFormSlice {
   redevSuccessorGiftSameHousehold: "" | "yes" | "no";
 
   /**
+   * 증여 승계에서 **증여자가 관리처분계획 인가 전부터 종전주택(건물)을 보유한 원조합원**이었는가(계획서 `redev-successor-gift-holding.plan.md` Q-1 a).
+   * `"yes"`이고 같은 세대(`redevSuccessorGiftSameHousehold === "yes"`)이면 ④가 세대 사실을 실어 §154① 비과세 보유기간을 세대 보유 시작일부터
+   * 통산한다(부동산거래관리과-1503). `"no"` = 입주권을 사서 승계했거나 토지만 출자 — 통산할 주택 보유가 없다. 범위 밖이면 ④가 보내지 않는다.
+   */
+  redevSuccessorGiftDonorHouseMember: "" | "yes" | "no";
+
+  /** 위 「예」일 때 — 세대가 종전주택 보유를 시작한 날(증여자 취득일, 그 뒤 혼인·합가했으면 그 날). 관리처분계획 인가일 이전이어야 한다. */
+  redevSuccessorGiftHouseholdStartDate: string;
+
+  /**
    * 사례 48 — 신축APT 사용검사필증 교부일(준공일).
    * redevIsSuccessorMember === "yes" 시 LTHD/세율 보유기간 기산일.
    * 시행령 §162①4호 "건축법 §22②에 따른 사용승인서 교부일".

@@ -107,6 +107,8 @@ const JUDGE_INPUT_KEYS = [
   "newBuildRightAcquisitionDate",
   // 결정 #33·#34·#38 — 증여받은 주택의 증여자와 같은 세대 사실
   "giftHouseholdBasis",
+  // 재개발 승계조합원 증여 승계의 세대 사실 상태 — 확인 필요 고지용(엔진이 채운다 · 계획서 redev-successor-gift-holding D-6)
+  "redevSuccessorGift",
   // 결정 #42 — 조특법 §71의2 후보 중 사실을 확정하지 못한 건(엔진이 채운다 · 주택 수 제외 스텝의 echo)
   "popDecline71_2Unconfirmed",
 ] as const;

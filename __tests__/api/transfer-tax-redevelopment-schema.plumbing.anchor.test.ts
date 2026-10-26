@@ -61,6 +61,8 @@ const FULL_PAYLOAD = {
   isSuccessorMember: false,
   // 사전-2020-법령해석재산-0691 — 증여 승계의 「증여자와 계속 같은 세대」 선언
   successorGiftSameHousehold: true,
+  // 증여 승계 — 증여자가 인가 전부터 종전주택을 보유한 원조합원인가(계획서 redev-successor-gift-holding Q-3 a)
+  successorGiftDonorHouseMember: true,
   completionDate: "2021-05-01",
   receiveOnlyMode: false,
   exemptionEligibleAtApproval: true,

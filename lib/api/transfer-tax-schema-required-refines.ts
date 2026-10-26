@@ -8,6 +8,8 @@
  */
 import { householdBuildingResidenceOverflow, redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { redevGiftPriorResidenceBeforeGift } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
+import { successorGiftHouseholdConsolidates } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
+import { successorGiftHouseholdStartIssue } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { z } from "zod";
 import { computeSangjeungbeopValuation } from "@/lib/tax-engine/burdened-gift-valuation";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
@@ -251,6 +253,7 @@ type PrimaryLike = {
     subject?: string;
     isSuccessorMember?: boolean;
     successorGiftSameHousehold?: boolean;
+    successorGiftDonorHouseMember?: boolean;
     completionDate?: string;
     approvalDate?: string;
     householdBuilding?: { acquisitionDate: string; residenceMonths?: number };
@@ -261,6 +264,10 @@ type PrimaryLike = {
   } | null;
   isOneHousehold?: boolean;
   residencePeriodMonths?: number;
+  donorAcquisitionDate?: string;
+  giftSameHouseholdContinuous?: boolean;
+  giftHouseholdHoldingStartDate?: string;
+  giftPriorHouseholdResidenceMonths?: number;
   mixedUse?: unknown;
   commercialBuildingValuation?: unknown;
   carryoverTaxation?: Parameters<typeof refineCarryoverTaxation>[0];
@@ -346,6 +353,51 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
       ["redevelopment", "successorGiftSameHousehold"],
       "「증여자와 계속 같은 세대」 선언은 증여로 승계취득한 승계조합원 입주권에만 보낼 수 있습니다 (사전-2020-법령해석재산-0691)",
     );
+  }
+
+  // 증여 승계 — 증여자가 주택을 출자한 원조합원인가(계획서 redev-successor-gift-holding Q-3 a). 같은 세대 선언과 같은 축에서만 의미가 있다.
+  if (
+    data.redevelopment?.successorGiftDonorHouseMember !== undefined &&
+    !(data.redevelopment.isSuccessorMember === true && data.acquisitionCause === "gift" && data.redevelopment.successorGiftSameHousehold === true)
+  ) {
+    issue(
+      ["redevelopment", "successorGiftDonorHouseMember"],
+      "증여자의 종전주택 보유 선언은 증여자와 계속 같은 세대로 증여 승계한 승계조합원 입주권에만 보낼 수 있습니다 (부동산거래관리과-1503)",
+    );
+  }
+  // 승계조합원 완공APT의 세대 사실 — 증여자가 주택을 출자한 원조합원이고 같은 세대일 때만 통산한다(엔진 `successorGiftHouseholdConsolidates`와 같은 술어).
+  //   그 밖에 세대 통산 사실을 받으면 증여자의 입주권 보유를 주택 보유로 통산했다(계획서 §2.1 S3n). 증여 전 거주는 종전주택 거주 칸이 받는다(Q-2 a).
+  if (data.redevelopment?.subject === "apt" && data.redevelopment.isSuccessorMember === true && data.acquisitionCause === "gift") {
+    const rdg = data.redevelopment;
+    if (data.giftPriorHouseholdResidenceMonths !== undefined) {
+      issue(
+        ["giftPriorHouseholdResidenceMonths"],
+        "승계조합원의 증여 전 동일세대 거주는 redevelopment.priorHouseResidenceMonths(종전주택 거주)로 보내세요 — 두 곳에 보내면 같은 기간을 두 번 셉니다 (사전-2020-법령해석재산-0691)",
+      );
+    }
+    if (data.giftSameHouseholdContinuous === true) {
+      if (!successorGiftHouseholdConsolidates(rdg)) {
+        issue(
+          ["giftSameHouseholdContinuous"],
+          "승계조합원의 세대 보유 통산은 증여자가 관리처분계획 인가 전부터 종전주택을 보유한 원조합원이고(redevelopment.successorGiftDonorHouseMember: true) 계속 같은 세대(redevelopment.successorGiftSameHousehold: true)일 때만 보낼 수 있습니다 (부동산거래관리과-1503)",
+        );
+      } else {
+        const startIssue = successorGiftHouseholdStartIssue({
+          householdStartDate: data.giftHouseholdHoldingStartDate,
+          donorAcquisitionDate: data.donorAcquisitionDate,
+          approvalDate: rdg.approvalDate,
+          giftDate: data.acquisitionDate,
+        });
+        if (startIssue === "after_approval") {
+          issue(
+            ["giftHouseholdHoldingStartDate"],
+            "세대가 종전주택 보유를 시작한 날은 관리처분계획 인가일 이전이어야 합니다 — 인가 뒤에는 종전주택이 입주권으로 바뀌어 통산할 주택 보유가 없습니다",
+          );
+        }
+      }
+    } else if (data.giftSameHouseholdContinuous === false && rdg.successorGiftSameHousehold === true) {
+      issue(["giftSameHouseholdContinuous"], "redevelopment.successorGiftSameHousehold(true)와 giftSameHouseholdContinuous(false)가 다릅니다");
+    }
   }
 
   // G3-4 — 토지만 출자한 원조합원의 완공APT: §154① 비과세 보유기간은 사용승인서 교부일부터 센다(영 §162①4호 ·

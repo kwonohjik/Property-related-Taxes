@@ -50,6 +50,8 @@ const S = (over: Record<string, unknown> = {}) => ({
   redevActualAcquisitionPrice: "600000000",
   fixedAcquisitionPrice: "600000000",
   redevNewHouseResidenceMonths: "0",
+  // 증여자 유형(계획서 redev-successor-gift-holding Q-1 a) — 「같은 세대 = 예」에서 필수. 「아니오」는 보유 통산 없이 종전 결론 그대로다.
+  redevSuccessorGiftDonorHouseMember: "no",
   ...over,
 });
 const form = (assetOver: Record<string, unknown>) =>
