@@ -20,7 +20,7 @@ type ProvisoReason = NonNullable<TransferTaxInput["oneHouseExemptionProviso"]>["
 
 /**
  * 보유 2년 미달을 단서가 메운 경우의 사유 — 아니면 `undefined`.
- * §154⑩ 단독 경로(B · 임대주택 0호)는 별도 제도라 넣지 않는다(계획서 §5 범위 밖).
+ * §154⑩ 단독 경로(B · 임대주택 0호)는 별도 제도라 넣지 않는다 — 그 경로는 `phrp154_10ProvisoWaiver`가 판정 맥락으로 넘긴다.
  */
 export function rentalResidenceDecisiveProviso(input: TransferTaxInput): ProvisoReason | undefined {
   const rhe = input.rentalHousingException;
@@ -53,4 +53,19 @@ export function rentalResidenceProvisoNotice(input: TransferTaxInput): string | 
     `(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20})를 적용했습니다. 이 특례의 거주주택에 §154① 단서를 적용한 정면 해석례가 없어 확인이 필요합니다` +
     "(거주기간 2년은 단서로 면제되지 않습니다 — 부동산납세과-67)."
   );
+}
+
+/**
+ * §154⑩ 단독 경로(B · 임대주택 0호)의 §154① 단서 — 성립하면 근거 표기와 면제 범위(`resolveExemptionProviso`)를 돌려준다.
+ * §154⑩은 「1주택을 보유한 것으로 보아 제1항을 적용」하므로 단서 사유를 ⑳처럼 거르지 않는다(사용자 결정 2026-10-26 V-R3 (a) ·
+ * 계획서 §10). 어느 요건을 실제로 푸는지는 `checkPhrp154_10Eligibility`가 정한다.
+ */
+export function phrp154_10ProvisoWaiver(
+  input: TransferTaxInput,
+): { label: string; kind: "both" | "residence_only" } | undefined {
+  const rhe = input.rentalHousingException;
+  if (rhe?.applyException !== true || rhe.scenario !== "B" || rhe.rentalUnits.length > 0) return undefined;
+  const reason = input.oneHouseExemptionProviso?.reason;
+  const kind = reason ? resolveExemptionProviso(input) : null;
+  return reason && kind ? { label: `§154① 단서 ${PROVISO_LABEL[reason]}`, kind } : undefined;
 }

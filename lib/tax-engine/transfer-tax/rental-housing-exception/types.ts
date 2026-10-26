@@ -278,6 +278,8 @@ export type EligibilityResult = {
    * 기간을 채웠거나 ㉓ 말소 특례로 간주 충족한 호는 들어가지 않는다.
    */
   periodPendingUnitIndexes?: number[];
+  /** §154⑩ 경로에서 §154① 단서가 결론을 가른 경우의 근거 표기(「§154① 단서 3호 부득이」) — 결과 산식에 붙인다. */
+  provisoLabel?: string;
 };
 
 /** §161 안분 산식 추적 데이터 (결과 카드 표기용) */

@@ -677,6 +677,19 @@ export const TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS: ReadonlySet<string> = new 
 export const RENTAL_RESIDENCE_PROVISO_REASONS: ReadonlySet<string> = new Set(["rental_5yr_residence", "expropriation", "unavoidable"]);
 
 /**
+ * §154⑩ 단독 경로(직전거주주택보유주택 · 공동보유 장기임대주택 0호)에서 §154① 단서가 푸는 요건 — §154⑩은 1세대1주택을
+ * 「1주택을 보유한 것으로 보아 제1항을 적용」하므로 §154① 단서가 문언대로 걸린다. 1호~3호는 보유·거주, 5호·삭제 전 4호는 거주만 푼다.
+ * 세대가 이 주택 1채뿐이라 ⑳에서 나·다목을 뺀 사유(출국일 현재 1주택 불성립)가 없다. 사용자 결정 2026-10-26 V-R3 (a)
+ * (`docs/00-pm/rental-residence-holding-proviso.plan.md` §10). 성립 여부는 엔진(`resolveExemptionProviso`)이 판정한다 — ⑧ 전용.
+ */
+export const PHRP_154_10_HOLDING_PROVISO_REASONS: ReadonlySet<string> = new Set([
+  "rental_5yr_residence", "expropriation", "overseas_migration", "overseas_residence", "unavoidable",
+]);
+export const PHRP_154_10_RESIDENCE_PROVISO_REASONS: ReadonlySet<string> = new Set([
+  ...PHRP_154_10_HOLDING_PROVISO_REASONS, "pre_designation_contract", "rental_registration_4ho",
+]);
+
+/**
  * 대통령령 제28293호(2017.9.19.) 부칙 제2조 — §154①·② 거주요건 도입의 적용례·경과조치 (DRF 부칙 원문 2026-10-11 실독 — MST 197529).
  * ①은 「이 영 시행 이후 양도하는 분부터」, ②는 아래 주택에 「종전의 규정」을 적용한다.
  */

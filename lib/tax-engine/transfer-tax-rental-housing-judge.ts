@@ -6,6 +6,7 @@
  */
 
 import {
+  phrp154_10ProvisoWaiver,
   rentalResidenceProvisoNotice,
   rentalResidenceRequirementHoldYears,
 } from "./one-house/rental-residence-holding-proviso";
@@ -63,6 +64,8 @@ export function buildEligibilityContext(effectiveInput: TransferTaxInput): Eligi
     wasRegisteredRentalOrChildcare: rhe.wasRegisteredRentalOrChildcare,
     // 거주주택 §154① 취득 당시 조정대상지역 판정과 같은 단일 소스(일반 1세대1주택 흐름과 동일 술어).
     wasRegulatedAtAcquisition: resolveWasRegulatedAtAcquisition(effectiveInput),
+    // §154⑩ 경로 — 성립한 §154① 단서(V-R3 (a)). 판정 메뉴와 세액 경로가 이 맥락 하나를 쓴다.
+    provisoWaiver: phrp154_10ProvisoWaiver(effectiveInput),
   };
 }
 

@@ -52,7 +52,6 @@ import {
   isMa1IncludedIn15520,
   isLifetimeLimitEra155_20,
   isAddendumTransitionEffective,
-  isPreLifetimeLimitRegime,
   needsPre2019ArticleScopeNotice,
 } from "../../data/rental-155-20-era";
 import { rentalStdPriceCap, rentalRequiredYears, RA_CUT, aptDeadlineConfirmNotice } from "../../rental-article/rules";
@@ -64,6 +63,7 @@ import {
   type NormalizedRentalUnit,
 } from "../../rental-article/check";
 import { buildFailMessage, TERMINATED_DUTY_YEARS } from "./fail-messages";
+import { checkPhrp154_10Eligibility } from "./phrp-154-10";
 import type {
   RentalUnitInput,
   RentalCategory,
@@ -93,6 +93,11 @@ export type EligibilityContext = {
    * (`resolveWasRegulatedAtAcquisition`)를 호출부가 넘긴다.
    */
   wasRegulatedAtAcquisition?: boolean;
+  /**
+   * §154⑩ 경로 — 성립한 §154① 단서(`resolveExemptionProviso`). §154⑩이 「제1항을 적용」하므로 `both`(1호~3호)는 보유·거주,
+   * `residence_only`(5호·삭제 전 4호)는 거주만 푼다(사용자 결정 2026-10-26 V-R3 (a)). 호출부 leaf `phrp154_10ProvisoWaiver`.
+   */
+  provisoWaiver?: { label: string; kind: "both" | "residence_only" };
 } & Pick<
   RentalHousingExceptionInput,
   | "postRegistrationResidenceMonths"
@@ -311,8 +316,9 @@ export function checkEligibility(
   }
 
   // ── 1. 거주주택 요건 ──
+  let provisoLabel: string | undefined;
   if (isStandalone154_10 && ctx) {
-    checkPhrp154_10Eligibility(
+    provisoLabel = checkPhrp154_10Eligibility(
       ctx, residenceHoldYears, residenceLiveYears, winWinResidenceExempt, residenceFailReasons, notices,
     );
   } else if (!isStandalone154_10 && residenceHoldYears < 2) {
@@ -631,98 +637,8 @@ export function checkEligibility(
     periodPendingUnitIndexes,
     ...(cancellationWindow ? { cancellationWindow } : {}),
     ...(notices.length > 0 ? { notices } : {}),
+    ...(provisoLabel ? { provisoLabel } : {}),
   };
-}
-
-/**
- * §154⑩ 표준 경로(I-5) — 공동보유 장기임대주택이 0호인 시나리오 B의 요건 판정.
- *
- * 1호: 「민간임대주택에 관한 특별법」 §5에 따라 임대주택으로 등록하거나 「영유아보육법」 §12·§13에
- *   따른 어린이집으로 설치·운영된 사실이 있을 것 (`wasRegisteredRentalOrChildcare`).
- * 2호: 해당 주택이 §155⑳ 후단의 직전거주주택보유주택일 것 — `priorResidenceTransferDate` 입력으로 확인.
- *
- * **보유기간**: 실제 취득일부터 2년 이상(재기산 없음 — 파일 상단 주석). `residenceHoldYears`는
- * 호출부(`checkEligibility`)가 넘기는 일반 경로와 **같은 값**이다.
- *
- * **거주기간**: 취득 시기로 갈린다(파일 상단 주석 — 서면-2023-법규재산-0426 등).
- *   - 2019-02-12 이후 취득(경과조치 제외): §155⑳1호 괄호 준용 — `postRegistrationResidenceMonths`
- *     (등록일 이후 거주, 지역 불문) 2년 이상.
- *   - 2019-02-12 전 취득(또는 경과조치): §154① 원칙 — `residenceLiveYears`(일반 거주기간)가
- *     취득 당시 조정대상지역인 경우에만 2년 이상.
- *
- * 실패 사유를 `residenceFailReasons`에 직접 push한다(부수효과) — 호출부(`checkEligibility`)의
- * 배열을 그대로 받는다.
- */
-function checkPhrp154_10Eligibility(
-  ctx: EligibilityContext,
-  residenceHoldYears: number,
-  residenceLiveYears: number,
-  winWinResidenceExempt: boolean,
-  residenceFailReasons: string[],
-  notices: string[],
-): void {
-  if (ctx.wasRegisteredRentalOrChildcare !== true) {
-    residenceFailReasons.push(
-      "이 주택이 「민간임대주택에 관한 특별법」 §5에 따라 임대주택으로 등록되거나 「영유아보육법」 §12·§13에 따른 어린이집으로 설치·운영된 사실이 확인되지 않습니다 (소령 §154⑩1호).",
-    );
-  }
-  if (!validDate(ctx.priorResidenceTransferDate)) {
-    residenceFailReasons.push(
-      "직전거주주택 양도일이 입력되지 않아 소령 §154⑩2호(직전거주주택보유주택) 요건을 판정할 수 없습니다.",
-    );
-  }
-
-  // 보유기간 2년 — 실제 취득일부터(소령 §154⑤ → 법 §95④). 재기산하지 않는다(파일 상단 주석).
-  if (residenceHoldYears < 2) {
-    residenceFailReasons.push(
-      `거주주택 보유기간 2년 미충족 (현재: ${residenceHoldYears}년, 소령 §154⑤·법 §95④)`,
-    );
-  }
-
-  // 거주기간 — 취득 시기별 분기
-  // 경과조치는 사유까지 받아야 종전규정이다(결정 #21 S16-5) — §155⑳ A·B와 같은 leaf `isAddendumTransitionEffective`.
-  const transitionClaimed = ctx.residenceTransitionUnderAddendum === true;
-  const preRegime = isPreLifetimeLimitRegime(
-    ctx.residenceAcquisitionDate,
-    transitionClaimed,
-    ctx.residenceTransitionBasis,
-  );
-  if (preRegime) {
-    // 「종전규정」 — §154① 원칙: 취득 당시 조정대상지역인 경우에만 거주 2년(일반 거주기간)
-    if (ctx.wasRegulatedAtAcquisition === true && residenceLiveYears < 2 && !winWinResidenceExempt) {
-      residenceFailReasons.push(
-        `거주주택 거주기간 2년 미충족 (현재: ${residenceLiveYears}년, 소령 §154① — 2019.2.12 전 취득)`,
-      );
-    }
-  } else if (!winWinResidenceExempt) {
-    // §155⑳1호 괄호 준용 — 등록일(또는 어린이집 인가일) 이후 거주기간, 지역 불문
-    const m = ctx.postRegistrationResidenceMonths;
-    if (m == null) {
-      residenceFailReasons.push(
-        "직전거주주택보유주택 — 사업자등록·임대사업자 등록 또는 어린이집 인가일 이후 거주기간을 입력하지 않아 거주요건(2년)을 판정할 수 없습니다 (소령 §155⑳1호 괄호 준용).",
-      );
-    } else if (Math.floor(m / 12) < 2) {
-      residenceFailReasons.push(
-        `거주주택 거주기간(등록일 이후) 2년 미충족 (현재: ${Math.floor(m / 12)}년 ${m % 12}개월, 소령 §155⑳1호 괄호 준용)`,
-      );
-    }
-    /**
-     * 경과조치를 선언했는데 사유가 종전규정을 주지 않아(계약금 지급·그 전 등록 임대주택 없음, 또는 사유 미입력) 신규정 거주요건으로
-     * 판정했고, **그것이 결론을 가를 때만**(다른 불충족 없음 · 종전규정이면 거주요건을 충족) 확인 필요를 고지한다.
-     * 문구는 화면 중립이다(판정 메뉴·부담부증여 모두 같은 사유 칸이 있다). 근거 한계를 함께 적는다 — §154⑩ 직접 해석 없음.
-     */
-    const onlyThisFailure = residenceFailReasons.length === 1;
-    const wouldPassUnderPrior = !(ctx.wasRegulatedAtAcquisition === true && residenceLiveYears < 2);
-    // (이 분기는 `!winWinResidenceExempt`일 때만 도달한다 — 상생임대 면제는 위 else-if가 이미 걸렀다.)
-    if (transitionClaimed && onlyThisFailure && wouldPassUnderPrior) {
-      notices.push(
-        "2019.2.12 부칙 경과조치(대통령령 제29523호 부칙 제7조②)가 종전 규정을 주는 사유(당시 거주 · 그 전 계약금 지급과 2019.2.12 전 등록 임대주택 소유)가 " +
-          "확인되지 않아 종전 규정을 적용하지 않았습니다 — 등록일 이후 거주기간 2년을 요건으로 판정했습니다(소령 §155⑳1호 괄호 준용). " +
-          "이 판단은 §155⑳ 거주주택 양도 사안의 해석(서면-2020-법령해석재산-1464 · 서면-2021-법규재산-4760)을 같은 부칙 문장에 적용한 것이며 " +
-          "§154⑩ 경로를 직접 다룬 해석은 확인되지 않았습니다(확인 필요).",
-      );
-    }
-  }
 }
 
 /**

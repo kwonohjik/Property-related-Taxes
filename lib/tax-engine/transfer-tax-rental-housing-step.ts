@@ -332,7 +332,8 @@ export function runRentalHousingExceptionStep(
   }
 
   // §154① 단서가 보유 2년을 풀어 ⑳이 선 경우 — 근거 표기 + 확인 필요 고지(Q-R2 (a)). ⑳ 불성립 → §154⑩ 안분 경로는 ⑳을 적용하지 않았다.
-  const provisoLabel = phrpUnmetReason ? undefined : rentalResidenceProvisoLabel(effectiveInput);
+  // §154⑩ 단독 경로(V-R3 (a))는 판정이 근거 표기를 돌려주고 고지는 `eligibility.notices`로 싣는다.
+  const provisoLabel = phrpUnmetReason ? undefined : rentalResidenceProvisoLabel(effectiveInput) ?? rhe.eligibility.provisoLabel;
   const provisoNotice = phrpUnmetReason ? undefined : rentalResidenceProvisoNotice(effectiveInput);
 
   // ── 특례 적용: taxableGain을 특례 결과로 대체하고 최종 결과 반환 ──
