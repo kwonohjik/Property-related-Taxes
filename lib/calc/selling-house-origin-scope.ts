@@ -34,7 +34,8 @@ export function sellingHouseOriginQuestionVisible(
  * 사용승인 전에 취득한 명부 주택은 이 날짜보다 먼저라 신규 주택 후보에서 빠진다 — 양도 주택이 나중에 취득한 주택이기 때문이다.
  *
  * 토지만 출자한 원조합원 완공APT도 준공일이다(F-1 Q-3 사용자 결정 2026-10-25 — 영 §162①4호 문언). 본문 `acquisitionDate`
- * (토지 취득일)는 그대로다. 세대원 건물 출자 통산(#12)을 적용 중이면 대체하지 않는다 — 엔진 번역과 같은 조건이다.
+ * (토지 취득일)는 그대로다. 세대원 건물 출자 통산(#12)을 적용 중이면 **세대원 건물 취득일**이다 — 세대가 그 주택을 가진 날
+ * (Q-B1 사용자 결정 2026-10-26). 준공일이 비면 엔진 helper(`householdBuildingCarryover`)가 통산하지 않으므로 대체하지 않는다 — 엔진 번역과 같은 조건이다.
  *
  * 주택을 출자한 원조합원 완공APT는 대체하지 않는다 — 재건축주택은 기존주택의 연장이라 본문 `acquisitionDate`(멸실 전 주택 취득일)가
  * 종전주택 취득일이다(부동산납세과-777 · 대법원 2008두16261 심리불속행 · F-1 Q-2).
@@ -49,7 +50,10 @@ export function sellingHousePreviousDateOverride(primary: SellingAsset | undefin
   }
   if (primary?.assetKind === "redevelopment_apt") {
     const asset = primary as AssetForm;
-    if (landContributedOriginalApt(asset) && !(householdBuildingCarryoverApplied(asset) && asset.redevHouseholdBuildingAcquisitionDate)) {
+    if (landContributedOriginalApt(asset)) {
+      if (householdBuildingCarryoverApplied(asset) && asset.redevHouseholdBuildingAcquisitionDate) {
+        return asset.redevCompletionDate ? asset.redevHouseholdBuildingAcquisitionDate : undefined;
+      }
       return asset.redevCompletionDate || undefined;
     }
   }
