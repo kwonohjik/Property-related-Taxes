@@ -2,7 +2,8 @@
  * anchor — 일반건물 부담부증여 × 이월과세 — **증여받은 파트에만 §97의2를 적용한다** (PR-1 서버)
  *
  * 계획서 `docs/00-pm/gb-bg-part-carryover-calc.plan.md` §1·§4 (Q-1~Q-5 a).
- * 화면(④)은 PR-2까지 `parts`를 싣지 않는다 — 여기서는 요청 본문에 `burdenedGiftInfo.carryoverDonorBasis.parts`를 직접 넣는다.
+ * 요청 본문의 `burdenedGiftInfo.carryoverDonorBasis.parts`를 직접 다룬다(토지만 본문은 직접 넣고, 건물만 본문은 PR-2부터 ④가 싣는다).
+ * 화면 경로 전체는 `transfer.route.gb-bg-part-carryover-ui.anchor.test.ts`가 본다.
  * 기대값은 시제품 실측(§1)이고 카드 값은 손계산(§1.1)으로 맞췄다. 수정 前: 토지만은 건물까지 이월과세(109,326,000·125,113,200), 건물만은 ⑫ 400.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -121,15 +122,13 @@ const patchInfo = (b: Body, info: Body, donor: Body = {}): Body => ({
 /** 토지만 — ④가 만든 본문(토지 원인 이월과세) + `parts`. */
 const landOnlyBody = async (cause: AssetForm["gbBuildingAcquisitionCause"], over: Partial<AssetForm> = {}) =>
   withParts(await bodyOf(formOf([lOnly(cause, over)])), LAND);
-/** 건물만 — 화면은 PR-2까지 이월과세를 싣지 않으므로, 같은 증여 사건(CO)의 이월과세·당초 증여자 값을 본문에 넣는다. */
+/** 건물만 — PR-2부터 ④가 건물 블록(사건)·건물 당초 증여자 값·`parts`를 직접 싣는다(종전에는 토지만 본문에서 빌려 조립했다). */
 const buildingOnlyBody = async (co: Record<string, unknown> = {}, over: Partial<AssetForm> = {}) => {
-  const base = await bodyOf(formOf([bOnly(co, over)]));
-  const donor = await bodyOf(formOf([{ ...lOnly("purchase", over), carryover: { ...CO, ...co } } as AssetForm]));
-  return withParts(
-    { ...base, carryoverTaxation: donor.carryoverTaxation, burdenedGiftInfo: { ...base.burdenedGiftInfo, carryoverDonorBasis: donor.burdenedGiftInfo.carryoverDonorBasis } },
-    BLDG,
-  );
+  const b = await bodyOf(formOf([bOnly(co, over)]));
+  expect(partsOf(b)).toEqual(BLDG);
+  return b;
 };
+const partsOf = (b: Body) => b.burdenedGiftInfo?.carryoverDonorBasis?.parts;
 /** 분리 ON · 둘 다 이월과세(L3). */
 const bothBody = async (over: Partial<AssetForm> = {}) =>
   bodyOf(formOf([gbAsset({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2024-05-01", acquisitionDate: "2024-05-01", gbBuildingAcquisitionCause: "carryover_gift", buildingCarryover: { ...CO } as never, ...over } as Partial<AssetForm>, { giftTaxAmount: "" })]));
@@ -292,12 +291,11 @@ describe("지분·묶음 — 단건과 같은 leaf (V-2 실측 2026-10-26)", () 
     }
   });
   it("지분 50/50 둘 다 건물만 → 74,817,560 (= 단건) · parts 없으면 400", async () => {
-    const sL = await bodyOf(shares(lOnly("purchase"), lOnly("purchase")));
     const sB = await bodyOf(shares(bOnly(), bOnly()));
-    const r = await ok200(shareBody(sB, sL, BLDG));
+    const r = await ok200(shareBody(sB, sB, BLDG));
     expect(r.det).toBe(74_817_560);
     for (const u of units(r)) expect((u.scenarioA.parts as Body[]).map((p) => p.acquisitionPrice)).toEqual([62_500_000, 25_000_000]);
-    expect((await post(shareBody(sB, sL, undefined))).status).toBe(400);
+    expect((await post(shareBody(sB, sB, undefined))).status).toBe(400);
   });
   it.each([["일반건물 첫째", true], ["일반건물 둘째", false]] as const)("묶음(%s) 토지만 121,785,200 · 건물만 105,004,800", async (_n, first) => {
     const mk = (gb: AssetForm) => bodyOf(first ? bundle(gb, landBg(2)) : bundle(landBg(1), gb));
@@ -318,7 +316,7 @@ describe("지분·묶음 — 단건과 같은 leaf (V-2 실측 2026-10-26)", () 
     const rl = await ok200(put(L, L, LAND));
     expect(rl.det).toBe(121_785_200);
     expect(units(rl).map((u) => [u.determinedTaxB, u.scenarioA.buildingHoldingStartDate])).toEqual([[99_398_400, "2020-01-01"]]);
-    const rb = await ok200(put(B, L, BLDG));
+    const rb = await ok200(put(B, B, BLDG));
     expect(rb.det).toBe(105_004_800);
     expect(units(rb).map((u) => (u.scenarioA.parts as Body[]).map((p) => p.acquisitionPrice))).toEqual([[125_000_000, 50_000_000]]);
   });

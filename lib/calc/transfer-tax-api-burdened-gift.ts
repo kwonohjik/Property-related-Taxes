@@ -35,6 +35,7 @@ import {
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { gbBgMarketPreDeemedParts } from "./gb-pre-deemed";
+import { bgAnyCarryover, bgCarryoverPartsPayload } from "./bg-carryover-parts";
 
 export interface BurdenedGiftInfoPayload {
   valuationMode: "sangjeungbeop_standard" | "sangjeungbeop_market";
@@ -125,6 +126,8 @@ export interface BurdenedGiftInfoPayload {
     presumedAcquisitionTotal?: number;
     /** 당초 증여자가 신축·증축한 건물(§114조의2 가산세, PR-4) — 토글 ON + K-5/K-7 일 때만 */
     donorBuilt?: BgDonorBuiltPayload;
+    /** 증여받은 파트 — 일반건물 분리 ON만(미전송 = 둘 다 · `bgCarryoverPartsPayload`). 엔진은 이 파트에만 당초 증여자 값을 쓴다. */
+    parts?: { land: boolean; building: boolean };
   };
 }
 
@@ -139,6 +142,29 @@ export interface BurdenedGiftInfoPayload {
 function buildCarryoverDonorBasis(
   primary: AssetForm,
 ): BurdenedGiftInfoPayload["carryoverDonorBasis"] {
+  const basis = buildBothPartsDonorBasis(primary);
+  const parts = bgCarryoverPartsPayload(primary);
+  if (!parts) return basis;
+  if (parts.land && parts.building) return { ...basis, parts };
+  /**
+   * 한 파트만 증여받았다(계획서 `gb-bg-part-carryover-calc.plan.md` §4.4) — 증여받지 않은 파트의 당초 증여자 칸은 화면에 없다(⑤).
+   * 남은 값을 싣지 않는다. 총액 칸(K-4 총액·legacy 시가·K-6/K-7 총액)도 일반건물 화면에는 없다 — 엔진은 한 파트만이면 총액을 거부한다(Q-4).
+   */
+  return {
+    ...basis,
+    ...(parts.land ? {} : { landStdPriceAtAcquisition: undefined, actualLandAcquisitionPrice: undefined, presumedLandAcquisitionPrice: undefined }),
+    ...(parts.building ? {} : { buildingStdPriceAtAcquisition: undefined, actualBuildingAcquisitionPrice: undefined, presumedBuildingAcquisitionPrice: undefined }),
+    actualAcquisitionTotal: undefined,
+    presumedAcquisitionTotal: undefined,
+    marketValueAtAcquisition: undefined,
+    parts,
+  };
+}
+
+/** 토지·건물 두 파트의 당초 증여자 값 — 증여받은 파트로 거르기 전. */
+function buildBothPartsDonorBasis(
+  primary: AssetForm,
+): NonNullable<BurdenedGiftInfoPayload["carryoverDonorBasis"]> {
   const num = (v: string | undefined) =>
     v !== undefined && v !== "" ? parseAmount(v) : undefined;
   return {
@@ -358,14 +384,11 @@ export function buildBurdenedGiftInfo(
     /**
      * 이월과세(§97의2①1호) — 「당초 증여자」 취득 당시 값 한 벌 (D-7b).
      *
-     * 이월과세 취득원인일 때만 싣는다. ❌ 값이 없다고 **양도인 값으로 대신하지 않는다** —
+     * 이월과세 취득원인일 때만 싣는다 — 일반건물은 토지·건물 중 한 파트라도(`bgAnyCarryover`). ❌ 값이 없다고 **양도인 값으로 대신하지 않는다** —
      * 시나리오 A = B가 되어 §97의2가 조용히 무력화된다(엔진 `assertCarryoverDonorBasis`가
      * fail-fast로 막고, ⑧ validate가 그 앞에서 사용자에게 알린다).
      */
-    carryoverDonorBasis:
-      primary.acquisitionCause === "carryover_gift"
-        ? buildCarryoverDonorBasis(primary)
-        : undefined,
+    carryoverDonorBasis: bgAnyCarryover(primary) ? buildCarryoverDonorBasis(primary) : undefined,
     // Phase 3: 증여세 통합 입력 (빈 문자열·미선택 시 undefined로 → 엔진 default 사용)
     donorRelation: primary.bgDonorRelation ? primary.bgDonorRelation : undefined,
     isMinorDonee: primary.bgIsMinorDonee || undefined,

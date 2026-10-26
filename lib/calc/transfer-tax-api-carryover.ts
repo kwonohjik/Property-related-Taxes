@@ -13,7 +13,9 @@ import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { parsePriorResidenceMonths } from "@/lib/calc/gift-household-payload";
 import { partCarryover } from "./transfer-land-part-cause";
 import { apportionGiftTax } from "@/lib/tax-engine/carryover-gift-tax-apportion";
-import { gbBgGiftTaxReturn } from "./gb-bg-gift-tax-return";
+import { gbBgGiftTaxReturn, isGbBurdenedGift } from "./gb-bg-gift-tax-return";
+import { bgCarryoverForm } from "./bg-carryover-parts";
+import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 
 /**
  * buildCarryoverPayload 반환 타입.
@@ -71,14 +73,24 @@ export interface CarryoverPayloadResult {
  *    필요경비를 반감시키는 방향이라 **근거 없이 불리하게 적용**하는 것이 된다.
  *    ⇒ 현행(미스케일)을 유지한다. 바꾸려면 UI 안내 문구와 함께 결정할 것.
  */
+/**
+ * 이월과세 증여 사건 서브폼 — `buildCarryoverPayload`가 읽는 것. 호출부의 전송 게이트도 이 값으로 판단한다(같은 술어).
+ * 부담부증여 일반건물은 **건물만** 이월과세여도 싣는다 — 사건은 건물 블록이다(`bgCarryoverForm` · 계획서 `gb-bg-part-carryover-calc.plan.md` §4.4).
+ * 증여받은 파트는 `burdenedGiftInfo.carryoverDonorBasis.parts`가 따로 말한다.
+ */
+export function carryoverEventForm(asset: AssetForm): CarryoverTaxationForm | undefined {
+  if (isGbBurdenedGift(asset)) return bgCarryoverForm(asset);
+  return asset.acquisitionCause === "carryover_gift" ? asset.carryover : undefined;
+}
+
 export function buildCarryoverPayload(
   asset: AssetForm,
   transferDate: string,
   /** 공유 지분 비율 (단독 소유는 1.0). 호출부가 `getOwnershipRatio`로 이미 산출해 둔 값. */
   ownershipRatio: number,
 ): CarryoverPayloadResult | undefined {
-  if (asset.acquisitionCause !== "carryover_gift" || !asset.carryover) return undefined;
-  const c = asset.carryover;
+  const c = carryoverEventForm(asset);
+  if (!c) return undefined;
   if (!c.giftRegistryDate || !c.donorAcquisitionDate) return undefined;
 
   /** 100% 기준 입력 → 지분 몫. 단독 소유(ratio ≥ 1)는 **원값 그대로**. */

@@ -50,7 +50,7 @@ const summaryOf = (
 ): GbBgCarryoverScenarioSummary => ({
   parts: r.properties
     .slice(unit.start, unit.start + unit.cardsA.length)
-    .map((p) => ({ propertyLabel: p.propertyLabel, acquisitionPrice: p.acquisitionPrice, transferGain: p.transferGain })),
+    .map((p) => ({ propertyId: p.propertyId, propertyLabel: p.propertyLabel, acquisitionPrice: p.acquisitionPrice, transferGain: p.transferGain })),
   landHoldingStartDate: ymd(land),
   buildingHoldingStartDate: ymd(building),
 });
@@ -86,6 +86,7 @@ export function attachGbCarryoverUnits(
       giftTaxAmount: d.giftTaxAmount,
       scenarioA: summaryOf(runA, unit, d.holdingStartA.land, d.holdingStartA.building),
       scenarioB: summaryOf(runB, unit, d.holdingStartB.land, d.holdingStartB.building),
+      carryoverParts: d.carryoverParts,
     };
     if (adoptedA && detailsByAsset && d.detailA) detailsByAsset[d.assetId] = d.detailA;
   });

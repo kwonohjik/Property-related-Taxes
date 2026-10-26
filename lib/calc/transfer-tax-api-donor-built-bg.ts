@@ -7,6 +7,7 @@
  */
 import { parseAmount, parseDecimal } from "@/lib/calc/number-parse";
 import { donorBuiltBgActive } from "./donor-built-bg-scope";
+import { bgCarryoverForm } from "./bg-carryover-parts";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const pos = (n: number): number | undefined => (n > 0 ? n : undefined);
@@ -21,7 +22,7 @@ export interface BgDonorBuiltPayload {
 /** `donorBuilt` 와이어 객체 — 범위 밖이거나 토글 OFF 면 undefined */
 export function buildDonorBuiltBgPayload(asset: AssetForm): BgDonorBuiltPayload | undefined {
   if (!donorBuiltBgActive(asset)) return undefined;
-  const c = asset.carryover!;
+  const c = bgCarryoverForm(asset)!;
   const isExtension = c.donorBuiltType === "extension";
   return {
     buildingType: c.donorBuiltType as "new" | "extension",
@@ -37,6 +38,6 @@ export function buildDonorBuiltBgPayload(asset: AssetForm): BgDonorBuiltPayload 
 
 /** K-7 × 증여자 증축 — 증축한 부분의 감정가액(물건 전체 기준, 채무 안분 전). 증축이고 감정가액일 때만 싣는다. 빈 문자열은 undefined(0과 미입력은 다르다). */
 export function buildDonorBuiltBgExtensionAppraisal(asset: AssetForm): number | undefined {
-  if (!donorBuiltBgActive(asset) || asset.bgAcquisitionMethod !== "appraisal" || asset.carryover?.donorBuiltType !== "extension") return undefined;
+  if (!donorBuiltBgActive(asset) || asset.bgAcquisitionMethod !== "appraisal" || bgCarryoverForm(asset)?.donorBuiltType !== "extension") return undefined;
   return asset.bgPresumedExtensionAppraisal ? parseAmount(asset.bgPresumedExtensionAppraisal) : undefined;
 }

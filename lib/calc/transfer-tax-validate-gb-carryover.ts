@@ -13,6 +13,8 @@ import { gbCarryoverEventSource } from "./transfer-tax-api-gb-carryover";
 import { carryoverEstimationModeSupported } from "./phd-toggle-scope";
 import { validateDonorBuiltGb } from "./transfer-tax-validate-donor-built-gb";
 import { gbBgGiftTaxNumerator, gbBgGiftTaxReturn } from "./gb-bg-gift-tax-return";
+import { bgCarryoverForm, bgPartialCarryover } from "./bg-carryover-parts";
+import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 
 /**
  * ⑧ 이월과세(§97의2) 입력 검증 — 일반건물 전용.
@@ -66,14 +68,14 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
    *    빈 값은 막지 않으므로(증여세 없음) 「당초 증여자」 요구를 가로채지 않는다(`gb-bg-carryover-gift-tax-input.plan.md` §4.2).
    */
   /**
-   * 🔴 ④는 부담부증여 이월과세를 아직 **토지 취득원인 하나**로 싣는다(`buildCarryoverPayload` · `burdenedGiftInfo.carryoverDonorBasis` — `parts` 미전송).
-   *    서버는 `carryoverDonorBasis.parts`가 오면 증여받은 파트만 계산한다(`gb-bg-part-carryover-calc.plan.md` PR-1, ⑫ `refineGbBgCarryoverParts`).
-   *    ④가 `parts`를 싣기 전(PR-2)까지는 화면에서 막는다 — 분리 OFF는 원인이 하나라 대상이 아니다(`gb-bg-part-carryover-mismatch.plan.md` §4.2).
+   * 부담부증여 × 한 파트만 이월과세 — 서버는 `carryoverDonorBasis.parts`로 증여받은 파트만 계산한다(`gb-bg-part-carryover-calc.plan.md` PR-1·PR-2).
+   * 감정가액·매매사례가액(K-6·K-7)은 당초 증여자 쪽 방식이라 한 신고 안에서 파트마다 방식이 갈린다 — 아직 계산하지 못한다(Q-3 a · 엔진 `assertPartialCarryoverSupported`와 같은 조건).
    */
-  if (asset.transferType === "burdened_gift" && asset.hasSeperateLandAcquisitionDate && landIsCarryover !== buildingIsCarryover)
-    return fieldError("gbBuildingAcquisitionCause", `${label}: 부담부증여에서 토지와 건물 중 한쪽만 이월과세(증여)인 경우는 아직 계산하지 못합니다 — 「소득세법」 제97조의2 제1항은 증여받은 자산(토지 또는 건물)마다 적용되는데, 부담부증여 계산은 토지·건물을 함께 이월과세로 봅니다. 토지와 건물을 모두 배우자·직계존비속에게서 증여받았다면 둘 다 "이월과세(증여)"로 선택하세요.`);
+  if (asset.transferType === "burdened_gift" && bgPartialCarryover(asset) && isBgPresumedMethod(asset.bgAcquisitionMethod))
+    return fieldError("bgAcquisitionMethod", `${label}: 토지·건물 중 한 파트만 이월과세(증여)일 때는 취득가액 산정방식으로 감정가액·매매사례가액을 아직 계산하지 못합니다 — 「소득세법」 제97조의2 제1항은 증여받은 파트에만 당초 증여자의 취득가액을 쓰는데, 감정가액·매매사례가액은 당초 증여자 쪽 방식이라 증여받지 않은 파트의 방식과 갈립니다. 실지취득가액 또는 환산취득가액을 선택하세요.`);
 
-  if (asset.transferType === "burdened_gift") return landIsCarryover ? validateGbBgGiftTax(asset, label) : null;
+  // 증여세 칸 — 사건 출처가 건물 블록(건물만 이월과세)이면 앵커도 그쪽이다.
+  if (asset.transferType === "burdened_gift") return validateGbBgGiftTax(asset, label, !landIsCarryover);
 
   if (!c?.giftRegistryDate)
     return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일을 입력하세요 (「소득세법」 제97조의2 제3항 — 적용기간 기산일).`);
@@ -134,16 +136,17 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
  * 짝이 반만 차면 ④는 종전 상당액 칸(화면에 없다 → 0)으로 내려가 **입력이 조용히 사라진다** ⇒ 여기서 막는다.
  * 분자(2호 자산가액 = 증여 당시 평가액 × 지분율)가 없으면 상당액이 0이고, 과세가액을 넘으면 산출세액 전액을 넘보는 입력이다.
  */
-function validateGbBgGiftTax(asset: AssetForm, label: string): string | null {
-  const pairIssue = giftTaxPairIssue(asset.carryover, label, false);
+function validateGbBgGiftTax(asset: AssetForm, label: string, onBuilding: boolean): string | null {
+  const c = bgCarryoverForm(asset);
+  const pairIssue = giftTaxPairIssue(c, label, onBuilding);
   if (pairIssue) return pairIssue;
   if (!gbBgGiftTaxReturn(asset)) return null;
-  const base = parseAmount(asset.carryover?.giftTaxBase ?? "");
+  const base = parseAmount(c?.giftTaxBase ?? "");
   const numerator = gbBgGiftTaxNumerator(asset);
   if (!(numerator > 0))
-    return fieldError("carryover.giftDateValuation", `${label}: 증여 당시 평가액을 입력하세요 — 증여세 상당액 안분의 분자입니다 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
+    return fieldError(onBuilding ? "buildingCarryover.giftDateValuation" : "carryover.giftDateValuation", `${label}: 증여 당시 평가액을 입력하세요 — 증여세 상당액 안분의 분자입니다 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
   if (numerator > base)
-    return fieldError("carryover.giftDateValuation", `${label}: 증여 당시 평가액(지분 몫 ${numerator.toLocaleString()}원)이 증여세 과세가액(${base.toLocaleString()}원)을 초과합니다.`);
+    return fieldError(onBuilding ? "buildingCarryover.giftDateValuation" : "carryover.giftDateValuation", `${label}: 증여 당시 평가액(지분 몫 ${numerator.toLocaleString()}원)이 증여세 과세가액(${base.toLocaleString()}원)을 초과합니다.`);
   return null;
 }
 

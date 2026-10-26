@@ -68,7 +68,7 @@ const formOf = (assets: AssetForm[], over: Record<string, unknown> = {}): Transf
     contractTotalPrice: "1,000,000,000", totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false, ...over,
   }) as unknown as TransferFormData;
 
-type Part = { propertyLabel: string; acquisitionPrice: number; transferGain: number };
+type Part = { propertyId?: string; propertyLabel: string; acquisitionPrice: number; transferGain: number };
 type Summary = { parts: Part[]; landHoldingStartDate: string; buildingHoldingStartDate: string };
 interface Run { status: number; det?: number; message?: string; fieldErrors: string[]; props?: Part[]; co?: { adoptedScenario: "A" | "B"; determinedTaxA: number; determinedTaxB: number; scenarioA?: Summary; scenarioB?: Summary } }
 async function bodyOf(f: TransferFormData): Promise<Record<string, any>> { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -175,7 +175,8 @@ describe("⑧ ↔ ⑫ — 미입력은 둘 다 막는다(400이 엔진까지 가
 });
 
 describe("PR-4 — 시나리오별 카드 요약 echo (결과 화면 [A]/[B] 비교 카드가 읽는다)", () => {
-  const pick = (ps: Part[] | undefined) => ps?.map(({ propertyLabel, acquisitionPrice, transferGain }) => ({ propertyLabel, acquisitionPrice, transferGain }));
+  // 요약 카드는 카드 id도 싣는다 — 결과 카드가 토지·건물 파트를 갈라 꼬리표를 단다(`gb-bg-part-carryover-calc.plan.md` §4.6).
+  const pick = (ps: Part[] | undefined) => ps?.map(({ propertyId, propertyLabel, acquisitionPrice, transferGain }) => ({ propertyId, propertyLabel, acquisitionPrice, transferGain }));
 
   it("K-7 A 채택: A 요약 = 응답 카드 그대로(토지 5천만·건물 1억 = 당초 증여자 감정가액 × 채무비율) · 기산일 2015-01-01", async () => {
     const { r } = await calc(K7);

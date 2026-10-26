@@ -58,6 +58,7 @@ import { bgCollateralParenEraUncertain } from "@/lib/calc/burdened-gift-collater
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { computeMortgageValuation } from "@/lib/tax-engine/burdened-gift-valuation";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import { bgAnyCarryover } from "@/lib/calc/bg-carryover-parts";
 
 interface Props {
   asset: AssetForm;
@@ -164,7 +165,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
    * 그래서 이 플래그가 켜지면 라벨을 「양도인」으로 못박고 「당초 증여자」 입력 한 벌을 연다.
    * (계획서 `burdened-gift-carryover-159-97-2.plan.md` §5.6)
    */
-  const isCarryover = asset.acquisitionCause === "carryover_gift";
+  // 일반건물은 토지·건물 중 한 파트라도 이월과세면 연다 — 블록은 증여받은 파트의 칸만 보인다(④·⑧과 같은 술어 · `gb-bg-part-carryover-calc.plan.md` §4.6).
+  const isCarryover = bgAnyCarryover(asset);
   /** 의제취득일 전 상속·증여 토지·주택·상가·건물 — 산정방식 대신 ①②③ 중 큰 금액(시가)·의제취득일 기준시가(기준시가)다(계획서 §18). */
   const preDeemed = isBgPreDeemedAsset(asset);
   /**

@@ -11,6 +11,8 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisition";
 import { BurdenedGiftPresumedAcquisitionSection } from "./BurdenedGiftPresumedAcquisitionSection";
 import { CarryoverDonorBuiltSection } from "./CarryoverDonorBuiltSection";
+import { bgCarryoverForm, bgCarryoverFormKey, bgCarryoverParts } from "@/lib/calc/bg-carryover-parts";
+import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 
 interface Props {
   asset: AssetForm;
@@ -22,6 +24,12 @@ interface Props {
 }
 
 export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPrice, bundled }: Props) {
+  // 증여받은 파트의 칸만 보인다(④ 전송·⑧ 필수와 같은 술어 · `gb-bg-part-carryover-calc.plan.md` §4.6). 일반건물 분리 ON에서만 갈린다.
+  const parts = bgCarryoverParts(asset);
+  const partial = parts.land !== parts.building;
+  // 당초 증여자 신축·증축 값은 증여 사건 서브폼에 있다 — 건물만 이월과세면 건물 블록(`buildingCarryover`).
+  const eventForm = bgCarryoverForm(asset);
+  const eventKey = bgCarryoverFormKey(asset);
   return (
     <div
       className="rounded-lg border border-sky-300 bg-sky-50/70 p-3 space-y-2 dark:bg-sky-950/40"
@@ -48,6 +56,12 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
           두 벌을 <b>모두</b> 입력해야 합니다 — §97의2②3호가 「이월과세를 적용한 세액」과
           「적용하지 않은 세액」을 <b>비교</b>하므로 양쪽 기준값이 동시에 필요합니다.
         </p>
+        {partial && (
+          <p data-testid="bg-codonor-part-note">
+            <b>{parts.land ? "토지" : "건물"}</b>만 증여받았으므로 당초 증여자 값은 <b>{parts.land ? "토지" : "건물"}</b> 칸만 받습니다 —
+            {parts.land ? " 건물" : " 토지"}은 위쪽 양도인 취득 입력 그대로 계산합니다(§97의2①1호 「해당 자산」).
+          </p>
+        )}
       </div>
 
       {coDonorNeedsStdPrice ? (
@@ -60,33 +74,37 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
               carryover
             />
           )}
-          <FieldCard
-            label="당초 증여자 취득 당시 토지 기준시가"
-            hint="개별공시지가 × 면적. 토지가 없으면 0을 입력하세요."
-          >
-            <CurrencyInput
-              label=""
-              hideUnit
-              data-testid="bg-codonor-land-std" data-field="bgCoDonorLandStdPriceAtAcq"
-              value={asset.bgCoDonorLandStdPriceAtAcq}
-              onChange={(v) => onChange({ bgCoDonorLandStdPriceAtAcq: v })}
-            />
-          </FieldCard>
-          <FieldCard
-            label="당초 증여자 취득 당시 건물 기준시가"
-            hint="건물이 없으면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
-          >
-            <CurrencyInput
-              label=""
-              hideUnit
-              data-testid="bg-codonor-building-std" data-field="bgCoDonorBuildingStdPriceAtAcq"
-              value={asset.bgCoDonorBuildingStdPriceAtAcq}
-              onChange={(v) => onChange({ bgCoDonorBuildingStdPriceAtAcq: v })}
-            />
-          </FieldCard>
+          {parts.land && (
+            <FieldCard
+              label="당초 증여자 취득 당시 토지 기준시가"
+              hint="개별공시지가 × 면적. 토지가 없으면 0을 입력하세요."
+            >
+              <CurrencyInput
+                label=""
+                hideUnit
+                data-testid="bg-codonor-land-std" data-field="bgCoDonorLandStdPriceAtAcq"
+                value={asset.bgCoDonorLandStdPriceAtAcq}
+                onChange={(v) => onChange({ bgCoDonorLandStdPriceAtAcq: v })}
+              />
+            </FieldCard>
+          )}
+          {parts.building && (
+            <FieldCard
+              label="당초 증여자 취득 당시 건물 기준시가"
+              hint="건물이 없으면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
+            >
+              <CurrencyInput
+                label=""
+                hideUnit
+                data-testid="bg-codonor-building-std" data-field="bgCoDonorBuildingStdPriceAtAcq"
+                value={asset.bgCoDonorBuildingStdPriceAtAcq}
+                onChange={(v) => onChange({ bgCoDonorBuildingStdPriceAtAcq: v })}
+              />
+            </FieldCard>
+          )}
           {asset.bgAcquisitionMethod === "converted" && (
             <div className="rounded border border-sky-200 bg-sky-100/60 p-2 text-caption text-sky-800 dark:text-sky-200 dark:bg-sky-900/40">
-              환산취득가액은 이 두 칸을 <b>분자로 자동 사용</b>합니다 — 환산 전용 입력은 없습니다.
+              환산취득가액은 {partial ? "이 칸을" : "이 두 칸을"} <b>분자로 자동 사용</b>합니다 — 환산 전용 입력은 없습니다.
             </div>
           )}
         </>
@@ -94,16 +112,18 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
         <>
           {asset.assetKind === "general_building" || asset.assetKind === "land" ? (
             <>
-              <FieldCard label="당초 증여자의 토지 실지취득가액">
-                <CurrencyInput
-                  label=""
-                  hideUnit
-                  data-testid="bg-codonor-actual-land" data-field="bgCoDonorActualAcquisitionLand"
-                  value={asset.bgCoDonorActualAcquisitionLand}
-                  onChange={(v) => onChange({ bgCoDonorActualAcquisitionLand: v })}
-                />
-              </FieldCard>
-              {asset.assetKind === "general_building" && (
+              {parts.land && (
+                <FieldCard label="당초 증여자의 토지 실지취득가액">
+                  <CurrencyInput
+                    label=""
+                    hideUnit
+                    data-testid="bg-codonor-actual-land" data-field="bgCoDonorActualAcquisitionLand"
+                    value={asset.bgCoDonorActualAcquisitionLand}
+                    onChange={(v) => onChange({ bgCoDonorActualAcquisitionLand: v })}
+                  />
+                </FieldCard>
+              )}
+              {asset.assetKind === "general_building" && parts.building && (
                 <FieldCard label="당초 증여자의 건물 실지취득가액">
                   <CurrencyInput
                     label=""
@@ -148,10 +168,10 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
       <CarryoverDonorBuiltSection
         mode="bg"
         bgBundled={bundled}
-        asset={asset}
+        asset={{ ...asset, carryover: eventForm }}
         transferDate=""
         onChange={onChange}
-        onCarryoverChange={(patch) => onChange({ carryover: { ...asset.carryover!, ...patch } })}
+        onCarryoverChange={(patch) => onChange({ [eventKey]: { ...(eventForm ?? CARRYOVER_DEFAULTS), ...patch } })}
       />
     </div>
   );

@@ -29,6 +29,11 @@ export interface GbBgCarryoverDetail {
    */
   scenarioA?: GbBgCarryoverScenarioSummary;
   scenarioB?: GbBgCarryoverScenarioSummary;
+  /**
+   * 증여받은 파트 (표시 전용 · `gb-bg-part-carryover-calc.plan.md` §4.6) — 엔진이 당초 증여자 값을 쓴 파트(`carryoverDonorBasis.parts`, 미지정 = 둘 다).
+   * [A] 열의 꼬리표를 파트별로 단다. 이 필드가 생기기 전에 저장된 결과에는 없다(= 둘 다).
+   */
+  carryoverParts?: { land: boolean; building: boolean };
 }
 
 /**
@@ -47,7 +52,8 @@ export interface GbBgCarryoverUnitDetail extends GbBgCarryoverDetail {
 /** 일반건물 부담부증여 × 이월과세(F27) 한 시나리오의 카드 요약 — 결과 화면 [A]/[B] 비교 카드용 */
 export interface GbBgCarryoverScenarioSummary {
   /** 카드별 취득가액·양도차익 (토지 카드 1~3장 + 건물 카드) */
-  parts: { propertyLabel: string; acquisitionPrice: number; transferGain: number }[];
+  /** `propertyId`는 카드가 토지·건물 중 어느 파트인지 가르는 데 쓴다(표시 전용 · 옛 결과에는 없다). */
+  parts: { propertyId?: string; propertyLabel: string; acquisitionPrice: number; transferGain: number }[];
   /** 보유기간 기산일 (YYYY-MM-DD) — 토지 카드·건물 카드 */
   landHoldingStartDate: string;
   buildingHoldingStartDate: string;

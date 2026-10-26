@@ -149,7 +149,7 @@
   - 분리 OFF의 「0」이 맞는 사례(선행 V-3)는 그대로 남는다.
 - **⑦** `components/calc/results/transfer/GbBurdenedGiftCarryoverCard.tsx:30`–`:35`·`:62`: A 요약의 「당초 증여자 기준 / 당초 증여자 취득일」 꼬리표를 파트별로 단다.
   - 기산일이 다르면 이미 두 줄로 나뉜다(:33–:35).
-- **⑥** 사이드바 영향은 확인 필요(V-7).
+- **⑥** 사이드바 영향 없음(V-7 해소 — §8).
 
 ## 5. 결정 요청 — ✅ 2026-10-26 권장안 확정(Q-1~Q-5 모두 a)
 
@@ -191,7 +191,7 @@
 - **V-4 (둘 다 이월과세의 증여세 한도)**: 영 §163의2② 한도는 「해당 자산」 단위로 읽힌다. 토지·건물을 함께 증여받았을 때 지금처럼 합계 한도로 둘지, 파트별 한도로 둘지는 이번 범위 밖이다. 세액이 달라지는 사례가 있는지 실측하지 않았다.
 - **V-5 (정답 세액)**: §1 값은 이 설계를 구현한 시제품의 실측이다. 카드 값은 손계산으로 맞췄지만 실제 세율의 결정세액은 손으로 계산하지 않았다. PR-1 anchor는 카드 값을 1차 근거로 삼는다.
 - **V-6 (양도인 본인 신축 축)**: 현행 A가 건물 기산일을 옮길 때 본인 신축 §114조의2 판정이 어떻게 달라졌는지 따로 재지 않았다. L4는 환산(K-5) · 신축 2020년(5년 경과)이라 가산세가 0이었다.
-- **V-7 (⑥ 사이드바)**: 이월과세 금액을 사이드바가 보여 주는지 확인하지 않았다.
+- ✅ **V-7 (⑥ 사이드바) — 해소(2026-10-26 PR-2)**: 영향 없다. 사이드바의 계산 전 미리보기(`isPlainLumpSumAsset`)는 일반건물·부담부증여·이월과세를 모두 뺀다(`lib/stores/transfer-per-asset-summary.ts:144`·`:152`·`:153`). 계산 후에는 엔진 값을 그대로 보인다.
 - ✅ **V-8 (legacy 모드) — 해소(2026-10-26 실측)**: 일반건물 시가 모드에서 `acquisitionMethod`를 비우면 ⑫가 먼저 400(`burdenedGiftInfo.acquisitionMethod`)을 낸다 — legacy는 일반건물 부담부증여에 도달하지 않는다. 엔진의 총액 차단(`marketValueAtAcquisition`)은 직접 호출 방어선으로만 남는다.
 
 ## 9. 범위 밖
@@ -244,4 +244,30 @@
     - 지분·묶음 V-2 값
   - 뮤테이션 **16/16 KILLED**: 치환 · 기산일 helper · 단건/묶음/지분 기산일 · 단건/묶음 요약 · 증여세 한도/배분 · 미지정 = 둘 다 · ⑫ 불일치/미지정 건물만 · K-6·K-7 · 총액 · 필수 칸 · 증여자 신축.
   - 전체 vitest 3,454파일 통과 · `tsc` 0건 · 변경 파일 lint 신규 경고 0.
-- **남은 것 (PR-2 화면)**: ④ `parts`·사건 출처 · ⑧ #2571 차단 해제(K-6·K-7·총액만 남김) · ⑤ 당초 증여자 블록 파트별 · ⑦ 꼬리표 · E2E. V-1·V-3·V-4·V-5·V-6·V-7은 그대로다.
+- **남은 것 (PR-2 화면)**: ✅ §12에서 구현.
+
+## 12. 구현 기록 — PR-2 화면 (2026-10-26)
+
+#2581(PR-1 서버) 머지 뒤 별도 PR이다. 커밋은 Pre-Do anchor(빨간불 15건 확인) → 구현 순서다. #2571 화면 차단을 풀었다.
+
+- **술어 leaf** `lib/calc/bg-carryover-parts.ts` — ⑤·④·⑧이 같은 함수를 읽는다(3중 패턴).
+  - `bgCarryoverParts`: 일반건물 분리 ON만 건물 취득원인 칸으로 파트가 갈린다. 분리 OFF는 둘 다 토지 원인을 따른다(남은 건물 원인 칸은 읽지 않는다 — L0 픽스처).
+  - `bgAnyCarryover` · `bgPartialCarryover` · `bgCarryoverPartsPayload`(분리 ON만 전송) · `bgCarryoverForm`(사건 서브폼 — 건물만이면 `buildingCarryover`, `gbCarryoverEventSource`와 같다) · `bgCarryoverFormKey`.
+- **④**
+  - `carryoverEventForm`(`transfer-tax-api-carryover.ts`): 부담부증여 일반건물은 건물만 이월과세여도 사건 서브폼을 읽어 `carryoverTaxation`을 싣는다. 단건(`transfer-tax-api.ts`)·지분(`transfer-tax-api-gb-shares.ts`) 호출부 게이트도 이 값이다. 묶음 컴패니언은 원래 게이트 없이 부른다.
+  - `gbBgGiftTaxReturn`·`gbBgGiftTaxNumerator`: 증여세 짝·분자를 사건 서브폼에서 읽는다.
+  - `carryoverDonorBasis`: 어느 파트든 이월과세면 싣고 `parts`를 붙인다. 한 파트만이면 증여받지 않은 파트의 칸과 총액 칸을 비운다(화면에 없는 칸 · Q-4).
+- **⑧**
+  - `validateGbCarryover`: #2571 차단 제거. 한 파트만 × K-6·K-7만 `bgAcquisitionMethod`에서 막는다(Q-3 a · 엔진과 같은 조건). 증여세 칸 검증은 건물만이면 `buildingCarryover.*` 앵커다.
+  - `transfer-tax-validate-bg.ts`: 「당초 증여자」 요구를 어느 파트든 이월과세로 열고, 기준시가·실지 칸은 증여받은 파트만 요구한다. 담보 승 차단도 같은 술어.
+  - `bgCollateralForcesStdAcq`·`bgExpenseUnusedBasis`: 이월과세 판정을 `bgAnyCarryover`로.
+  - 증여자 신축(`donor-built-bg-scope.ts` 등): 건물을 증여받았을 때만 묻고, 값은 사건 서브폼에서 읽는다. 토지만 + 남은 토글은 묻지도 싣지도 않는다(⑫·엔진이 거부하는 조합).
+- **⑤** `BurdenedGiftBlock`·`BurdenedGiftTrancheBasisBlock`: 「당초 증여자」 블록을 어느 파트든 이월과세면 연다. `BurdenedGiftCarryoverBlock`: 증여받은 파트의 기준시가·실지 칸만 보이고 한 파트만이면 안내(`bg-codonor-part-note`)를 띄운다. 증여자 신축 섹션은 사건 서브폼으로 읽고 쓴다.
+- **⑦** 결과 echo에 `carryoverParts`(단건 route · 지분/묶음 초안 → `burdenedGiftCarryoverUnits`)와 요약 카드 `propertyId`를 더했다(표시 전용). `GbBurdenedGiftCarryoverCard` [A] 열은 증여받지 않은 파트를 「수증자 기준 / 수증자 취득일」로 표시한다. 옛 결과(필드 없음)는 종전 표시다.
+- **⑥** 영향 없음(V-7 해소).
+- **검증**
+  - 화면 경로 anchor `__tests__/api/transfer.route.gb-bg-part-carryover-ui.anchor.test.ts` 19건(수정 전 빨간불 15건): 토지만 L2·L4 90,758,940 · 건물만 B0 74,817,560 · B1 70,371,560 · 지분 · 묶음(첫째/둘째) 121,785,200/105,004,800 · ⑧ 파트 칸 · K-6·K-7 차단 · 증여자 신축 · 회귀 0(L0·L1·L3).
+  - 갱신: #2571 anchor(차단 → 미차단 · ⑫ 화면 경로 200) · PR-1 anchor(건물만 본문을 ④가 직접 만든다) · K-7 요약 echo anchor(`propertyId`).
+  - E2E `e2e/gb-bg-part-carryover-calc.spec.ts`(#2571 스펙 개명·재작성) 3건 + `GBBD-E5`(토지만 + 본인 신축 → 계산 · 남은 증여자 신축 토글 미전송). 관련 E2E 10개 스펙 통과.
+  - 뮤테이션 **17/17 KILLED**(vitest) + 화면 2건(⑦ 꼬리표 · ⑤ 칸 숨김) E2E로 KILLED.
+- **남은 것**: V-1(해석례) · V-3(분리 OFF 「0」) · V-4(둘 다일 때 합계 한도) · V-5(정답 세액) · V-6(양도인 본인 신축 축) · K-6·K-7 × 한 파트만(§9).
