@@ -375,3 +375,7 @@ ToggleCard로 표현하기 어려운 특수 케이스에도 동일 원칙 준수
 - **props**: `confirmMessage`(입력 이탈 확인 다이얼로그 — 미제공 시 즉시 이동), `onBeforeNavigate`(zustand step/result stale 정리), `label`(기본 "홈으로").
 - **마법사 하단 네비 좌측**(2026-07-25 통일): 공용 `WizardBackNav`(`components/calc/shared/WizardNav.tsx`) 사용. **step 0 = `HomeButton` pill**(상단 헤더와 동일 — 이미지10 일치), **step 1+ = `NavButton "이전"`**(ChevronLeft). 하단에서 `NavButton label="홈으로"` 신규 작성 금지. `<WizardBackNav isFirstStep={step === 0} onBack={handleBack} />` — step 0 홈 이동은 항상 HomeButton이 "/"로 처리(즉시 이동, confirm 미적용이 기본). 종전 "겸용 네비 현행 유지" 예외는 폐지.
 - 설계: `docs/02-design/features/home-button-unification.plan.md` · `docs/02-design/features/home-button-bottom-nav-unification.plan.md`.
+
+## 양도세 자산 종류 특수 분기 진입점
+
+`components/calc/transfer/CompanionAcqPurchaseBlock.tsx` — 상단 일반 "취득가액 산정 방식·취득가액" 영역을 `assetKind`(redevelopment_apt·general_building·commercial_building 등)/`transferType`(burdened_gift)별로 조건부 숨김. 특수 분기 추가 시 violet/fuchsia 안내 카드 패턴 차용(안내 카드 3종은 `CompanionAcqSpecialAssetNotices.tsx`, 취득시·양도시 기준시가 블록은 `CompanionAcqStdPriceSection.tsx`로 분리 — 2026-10-02, 부모 798→521줄). 자산-수준 입력은 해당 자산 전용 Block(`RedevelopmentBlock`/`GeneralBuildingBlock`/`CommercialBuildingBlock`)에 격리.

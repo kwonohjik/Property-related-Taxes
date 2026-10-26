@@ -42,6 +42,7 @@
 
 - 주소·시가표준액: `building-register-autofill.spec.ts:22` 등 **14 spec**의 `page.route("**/api/address/**")`
 - 법제처: `_helpers/law-api-mock.ts` — fixture 캡처/재생(`LAW_FIXTURE_CAPTURE=1`로 갱신)
+  - ⚠️ **fixture는 실제 응답 원문이어야 한다.** 실응답은 박스표가 개행 없이 한 줄로 붙어서 오고, 그것을 복원하는 `restoreBoxTableLines`를 지키는 것이 HTML-1의 존재 이유다. 손으로 만든 이상적인 JSON을 넣으면 **회귀 테스트가 조용히 무의미해진다**. 갱신은 `LAW_FIXTURE_CAPTURE=1`(한국 IP에서).
 
 > ⚠️ **실호출 감시를 없애는 것이 아니다** — 스케줄 워크플로로 분리한다(`.github/workflows/law-api-health.yml`, `LAW_E2E_LIVE=1`).
 > 🪤 로컬 대조 실험 시 `.legal-cache/`(TTL 30일)가 mock 없이도 통과시켜 **검증을 무효로 만든다**. 반드시 `rm -rf .legal-cache` + dev 서버 재시작 후 확인할 것.
@@ -134,3 +135,12 @@ await page.getByRole("listbox").getByRole("option", { name }).click();
 > 9/9 통과**했고 전건 소요도 17.2분 → 7.7분이 됐다(2026-09-25 실측). CI는 job마다 새 서버라
 > 이 증상이 없다 — 「로컬 전건에서만 깨지는 spec」의 유력한 정체다.
 > ⚠️ 환경이 시간에 따라 나빠지므로 **A/B는 교차 실행**할 것. 몰아서 재면 드리프트가 결과로 둔갑한다.
+
+## 7. CI 게이트에서 도는 spec
+
+E2E는 pre-push가 아니라 CI(PR마다 12샤드)에서만 돈다 — 구성·배경: [docs/00-pm/ci-pipeline.md](../docs/00-pm/ci-pipeline.md).
+
+- **spec은 포트를 하드코딩하지 않는다** — `page.goto("/calc/...")` 상대경로로 `baseURL`을 쓴다(CI 포트 3199). `http://localhost:3000` 고정 spec 1건이 CI 포트에서 전건 실패해 정정했다(`inheritance-cohabit-redev-right`).
+- ⚠️ **호스팅 러너는 Linux**다. Mac에서 통과하던 spec이 렌더 차이로 CI에서만 실패할 수 있다 — 원인을 확인해 고칠 것(known-failures 목록에 추가는 금지).
+- **`e2e/known-failures.ts`는 현재 0건**이다. **목록은 줄이기만 한다** — 새 실패를 추가하는 것은 회귀를 숨기는 것이다.
+- 전건 수 확인: `CI=1 npx playwright test --list | tail -1`.
