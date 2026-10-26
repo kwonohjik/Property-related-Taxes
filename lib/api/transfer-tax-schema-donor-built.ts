@@ -313,3 +313,42 @@ export function refineGbBgCarryoverBundled(
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "carryoverTaxation"], message: GB_BG_CARRYOVER_BUNDLED_MESSAGE });
   });
 }
+
+/** 부담부증여 일반건물의 **건물만** 이월과세 거부 문구 — ⑧ `validateGbCarryover`의 짝(`gb-bg-part-carryover-mismatch.plan.md` §4.2 · Q-2 a). */
+export const GB_BG_BUILDING_ONLY_CARRYOVER_MESSAGE =
+  "부담부증여에서 건물만 배우자 등 이월과세(소득세법 §97의2)인 일반건물은 아직 계산하지 못합니다 — 부담부증여 계산은 이월과세를 토지 취득원인(acquisitionCause)으로 판정해 건물만의 이월과세가 반영되지 않습니다";
+
+/**
+ * 부담부증여 일반건물 × **건물만 이월과세** 거부 (⑫ · 계획서 `gb-bg-part-carryover-mismatch.plan.md` §4.2).
+ *
+ * 부담부증여 경로는 이월과세를 토지 취득원인 하나로 판정한다 — 건물 원인만 `carryover_gift`면 200을 주면서 이월과세를 통째로 뺀다(실측 66,675,500 = 이월과세 없음).
+ * 단건·지분(`generalBuildingShares[].valuation`)·묶음(`companionAssets[]`)이 같은 신호를 싣는다.
+ * ⚠️ **토지만**은 여기서 막지 않는다 — 본문이 분리 OFF 종전 입력(토지 이월과세 + 건물 `purchase`)과 같은 모양이라 구별하지 못한다(Q-2 a). ⑧만 막는다.
+ */
+export function refineGbBgBuildingOnlyCarryover(
+  data: {
+    propertyType?: string;
+    transferType?: string;
+    acquisitionCause?: string;
+    generalBuildingValuation?: { buildingAcquisitionCause?: string };
+    generalBuildingShares?: ReadonlyArray<{ valuation?: { buildingAcquisitionCause?: string; landAcquisitionCause?: string } }>;
+    companionAssets?: ReadonlyArray<{ assetKind?: string; transferType?: string; acquisitionCause?: string; generalBuildingValuation?: { buildingAcquisitionCause?: string } }>;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const buildingOnly = (landCause: string | undefined, buildingCause: string | undefined) =>
+    buildingCause === "carryover_gift" && landCause !== "carryover_gift";
+  const reject = (path: (string | number)[]) => ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: GB_BG_BUILDING_ONLY_CARRYOVER_MESSAGE });
+  if (data.propertyType === "general_building" && data.transferType === "burdened_gift") {
+    if (buildingOnly(data.acquisitionCause, data.generalBuildingValuation?.buildingAcquisitionCause))
+      reject(["generalBuildingValuation", "buildingAcquisitionCause"]);
+    data.generalBuildingShares?.forEach((s, i) => {
+      if (buildingOnly(s.valuation?.landAcquisitionCause, s.valuation?.buildingAcquisitionCause))
+        reject(["generalBuildingShares", i, "valuation", "buildingAcquisitionCause"]);
+    });
+  }
+  data.companionAssets?.forEach((c, i) => {
+    if (c.assetKind === "general_building" && c.transferType === "burdened_gift" && buildingOnly(c.acquisitionCause, c.generalBuildingValuation?.buildingAcquisitionCause))
+      reject(["companionAssets", i, "generalBuildingValuation", "buildingAcquisitionCause"]);
+  });
+}
