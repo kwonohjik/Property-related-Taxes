@@ -25,6 +25,7 @@ import type { IssueField } from "./transfer-tax-validate-field";
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { successorTypeToggleSectionLabel } from "@/lib/calc/transfer-successor-right";
+import { isSec164ClauseAFilled } from "./transfer-tax-validate-clause-a";
 export function validateRedevelopmentAsset(
   asset: AssetForm,
   label: string,
@@ -32,6 +33,8 @@ export function validateRedevelopmentAsset(
   isOneHousehold?: boolean,
   /** 입주권 「조합원 유형」 질문이 있는 섹션 — 축 B 둘째 이후 지분 카드는 ③ 취득정보(`successorTypeToggleSectionLabel`). */
   typeToggleSection: string = successorTypeToggleSectionLabel(false),
+  /** 함께 양도하는 둘째 이후 자산(④ `companionAssets`) — 상속 승계 평가액 규칙이 ②(§164)를 대안으로 보지 않는다. */
+  isNonPrimaryAsset = false,
 ): string | null {
   // ── 분기 결정 필드 ──
   // UI display fallback과 동일(RedevelopmentBlock.tsx) + API 변환(buildRedevelopmentPayload).
@@ -329,6 +332,7 @@ export function validateRedevelopmentAsset(
    *   · **증여(gift)** — `CompanionAcqGiftBlock`이 별도 입력 경로를 갖는다.
    *   · **상속(inheritance)** — STEP 0.45 `inheritedAcquisition` 자동 평가가 취득가액을 만든다.
    * ⇒ 지금 뚫려 있던 것은 **매매**뿐이므로 그 경로만 요구한다(과잉 차단 금지).
+   *   (이후 정정: 증여·상속도 그 칸을 비우면 뚫려 있었다 — 아래 두 규칙.)
    *
    * 근거: 「소득세법」 §97①1호 가목(실지거래가액) · 시행령 §162①4호(승계조합원 신축주택 취득시기).
    */
@@ -352,6 +356,24 @@ export function validateRedevelopmentAsset(
     parseAmount(asset.fixedAcquisitionPrice) <= 0
   ) {
     return fieldError("fixedAcquisitionPrice", `${label}: 승계조합원 — 입주권을 증여로 취득한 증여 신고가액(취득가액)을 입력하세요. (소득세법 §97①1호 · 시행령 §163⑨)`);
+  }
+  // 상속도 같다 — 취득가액은 상속개시일 평가액(① `publishedValueAtInheritance`) 또는 §164④~⑦ 기준시가(②)이고(§163⑨),
+  //   ④는 둘 중 하나가 있을 때만 `inheritedAcquisition`을 싣는다(`buildInheritedAcquisitionPayload` — 같은 술어 `isSec164ClauseAFilled`).
+  //   둘 다 비면 ⑧을 통과해 엔진이 계산을 중단했고(400), 매매에서 넣고 남은 `fixedAcquisitionPrice`(상속 카드엔 그 칸이 없다)가 있으면
+  //   그 숨은 값으로 계산됐다. 일반 자산의 같은 규칙은 `postDeemedClauseARequiredError`다 — 재개발은 거기서 빠진다(원조합원은 종전자산 취득가액을 따로 요구).
+  //   부담부증여는 §159가 취득가액을 정한다 — 제외.
+  //   함께 양도하는 둘째 이후 자산은 ④가 ①(`inheritanceValuation`)만 싣고 ②는 싣지 않는다(`transfer-tax-api-companion-payload.ts`
+  //   `ownsAcquisitionSubobject`) — ②만 채우면 ⑧을 통과해 엔진이 400을 냈다(리뷰 게이트 지적). 그 자산은 ①을 요구한다.
+  const sec164Filled = isSec164ClauseAFilled(asset);
+  if (
+    isSuccessor &&
+    asset.acquisitionCause === "inheritance" &&
+    asset.transferType !== "burdened_gift" &&
+    parseAmount(asset.publishedValueAtInheritance) <= 0 &&
+    (isNonPrimaryAsset || !sec164Filled)
+  ) {
+    const companionNote = isNonPrimaryAsset && sec164Filled ? " 함께 양도하는 자산은 §164 기준시가로 대신 계산하지 않습니다." : "";
+    return fieldError("publishedValueAtInheritance", `${label}: 승계조합원 — 입주권을 상속받은 상속개시일 평가액(상속세 신고가액)을 입력하세요.${companionNote} (소득세법 §97①1호 · 소득세법 시행령 §163⑨)`);
   }
 
   // ── 금액 ──

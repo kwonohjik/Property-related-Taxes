@@ -156,7 +156,12 @@ describe("G3-11 · 목록에서 뺀 분기는 막히지 않고 엔진이 처리�
   });
 
   it("G-4 승계조합원 + 상속 + 동일세대 통산 → 비과세(통산이 없으면 과세) · ⑧ 이슈 0", async () => {
-    const inh = { acquisitionCause: "inheritance", decedentAcquisitionDate: "2005-01-01", redevNewHouseResidenceMonths: "0" } as Partial<AssetForm>;
+    // 상속 승계의 취득가액은 상속개시일 평가액이다 — 매매 기본값의 취득가액(상속 카드엔 그 칸이 없다)으로 계산하던 시료를 바로잡았다
+    //   (계획서 redev-successor-inherit-valuation-required.plan.md — 그 칸만 있으면 ⑧이 이제 막는다).
+    const inh = {
+      acquisitionCause: "inheritance", decedentAcquisitionDate: "2005-01-01", redevNewHouseResidenceMonths: "0",
+      fixedAcquisitionPrice: "", inheritanceValuationMethod: "supplementary", publishedValueAtInheritance: "900,000,000",
+    } as Partial<AssetForm>;
     const reg = { wasRegulatedAtAcquisition: true } as Partial<TransferFormData>;
     const same = await runRoute(
       succ("1000000000", { ...inh, decedentSameHouseholdBeforeInheritance: true, decedentCohabitationHoldingStartDate: "2010-01-01", decedentCohabitationResidenceMonths: "60" } as Partial<AssetForm>, reg),
