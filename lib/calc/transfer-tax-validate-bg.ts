@@ -390,6 +390,7 @@ export function validateBurdenedGiftAsset(
       return fieldError("bgAcquisitionMethod", `${label}: 부담부증여 시가 모드 — 취득가액 산정방식(실지취득가액·매매사례가액·감정가액·환산취득가액)을 선택하세요 (소득세법 §100①).`);
     }
     // 의제취득일 전 파트의 ① 상증법 평가액 — 필수(상속 Q-29 · 증여 Q-14·G-5). ②는 취득시 기준시가 칸이라 늘 있고, 선언으로 ③만 쓰는 길은 두지 않는다.
+    // ⑫는 `reported: 0`을 「① 없음」으로 받는다(PR-7b-6a 계약 R-0·R-2) — 화면만 선언 토글이 없어 요구하는 의도된 비대칭이다(계획서 bg-gb-residuals.plan.md §2.2).
     for (const part of ["land", "building"] as const) {
       const field = gbPartReportedField(asset, part);
       if (gbParts[part] && !parseAmount(asset[field])) {
