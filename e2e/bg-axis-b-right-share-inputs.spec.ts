@@ -66,3 +66,40 @@ test("AB-E1: 축 B 첫 카드(승계)에서 원조합원 지분의 종전 부동
   expect(r.status()).toBe(200);
   expect(json?.data?.aggregated?.totalTax).toBe(146_718_000);
 });
+
+/**
+ * AB-E2 둘째 지분(원조합원) 권리가액 8억 ≠ 첫 카드(원조합원) 권리가액 9억 → 그 칸에 경고(막지 않는다 · 계획서 §9.2).
+ *       권리가액은 §166④1호 「정하여진 가격」(물건 전체)이라 같은 물건이면 같아야 한다. 같은 값(9억)으로 고치면 사라진다.
+ */
+test("AB-E2: 둘째 지분 권리가액이 첫 카드 권리가액과 다르면 경고한다", async ({ page }) => {
+  test.setTimeout(240_000);
+  const ORIG_FIRST = {
+    ...FIRST, isSuccessorRightToMoveIn: false, acquisitionDate: "2009-07-01", successorRightAcqPrice: "", successorRightAddedContribution: "",
+    redevOriginalAssetType: "housing", redevRightsValue: "900000000", redevSettlementDirection: "pay", redevSettlementAmount: "100000000",
+    redevPreApprovalExpenses: "0", bgActualAcquisitionTotal: "300000000",
+  };
+  await page.goto("/calc/transfer-tax");
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
+  await page.evaluate(
+    (x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)),
+    { ...form, state: { ...form.state, formData: { ...form.state.formData, assets: [ORIG_FIRST, { ...SHARE, redevRightsValue: "800000000" }] } } },
+  );
+  await page.reload();
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  await expandAssetSection(page, 3, 1);
+  const second = page.locator('[data-asset-card-index="1"]');
+  const warning = second.getByTestId("redev-rights-value-mismatch-warning");
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText("(900,000,000)");
+  const input = second.locator('[data-field="redevRightsValue"] input');
+  // hydration 전 입력은 React 상태에 닿지 않는다(e2e/CLAUDE.md §6) — 리스너가 붙은 뒤 지우고 친다.
+  await expect.poll(() => input.evaluate((el) => Object.keys(el).some((k) => k.startsWith("__react")))).toBe(true);
+  await input.click();
+  await input.press("ControlOrMeta+a");
+  await input.press("Backspace");
+  await input.pressSequentially("900000000");
+  await expect.poll(() =>
+    page.evaluate(() => JSON.parse(sessionStorage.getItem("transfer-tax-wizard") || "{}").state?.formData?.assets?.[1]?.redevRightsValue),
+  ).toBe("900000000");
+  await expect(warning).toHaveCount(0);
+});

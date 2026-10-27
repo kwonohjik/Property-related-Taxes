@@ -34,6 +34,7 @@ import { AssetSectionAcquisition } from "./asset-sections/AssetSectionAcquisitio
 import type { AssetSplitMode } from "./OwnershipRatioInput";
 import { AssetSectionExpense } from "./asset-sections/AssetSectionExpense";
 import { AssetSectionExtras } from "./asset-sections/AssetSectionExtras";
+import { shareRedevRightsValueMismatch } from "@/lib/calc/axis-b-redev-rights-value";
 
 /** ③ 취득정보를 자동으로 펼치게 하는 assetKind (전용 블록이 ③에 나타나는 종류) */
 const ACQUISITION_AUTO_OPEN_KINDS = new Set<AssetForm["assetKind"]>([
@@ -160,6 +161,9 @@ export function CompanionAssetCard({
    *    계산기에는 편집 위젯이 없고(읽기 전용 요약만), ④가 같은 함수로 첫 카드 값을 보낸다 — 덮지 않으면 이 카드의
    *    요약이 엔진이 쓰지 않는 빈 값을 보여 준다.
    */
+  /** 축 B 둘째 이후 원조합원 지분 — 권리가액(§166④1호 · 물건 전체)이 첫 카드 권리가액과 다르면 그 값(⑤ 경고 전용). */
+  const firstCardRedevRightsValue =
+    hideInheritedSections && primaryAsset ? shareRedevRightsValueMismatch(asset, primaryAsset) : undefined;
   const acquisitionAsset = useMemo(
     () =>
       hideInheritedSections && primaryAsset
@@ -429,6 +433,7 @@ export function CompanionAssetCard({
           isFirst={index === 0}
           hasSiblings={hasSiblings}
           gbFractionalShares={gbFractionalShares}
+          firstCardRedevRightsValue={firstCardRedevRightsValue}
         />
       </AssetSection>
 

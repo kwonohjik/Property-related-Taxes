@@ -65,6 +65,8 @@ interface Props {
   hasSiblings: boolean;
   /** 지분 분할(축 B) 주 자산 카드에만 — 전 지분. 일반건물 최초공시 토글의 노출 축(`GeneralBuildingBlock.fractionalShares`). */
   gbFractionalShares?: readonly AssetForm[];
+  /** 축 B 둘째 이후 원조합원 지분 — 첫 카드 권리가액(이 카드 권리가액과 다를 때만 · `shareRedevRightsValueMismatch`). */
+  firstCardRedevRightsValue?: number;
 }
 
 export function AssetSectionAcquisition({
@@ -80,6 +82,7 @@ export function AssetSectionAcquisition({
   isFirst,
   hasSiblings,
   gbFractionalShares,
+  firstCardRedevRightsValue,
 }: Props) {
   const [pendingFractionalOff, setPendingFractionalOff] = useState(false);
 
@@ -355,6 +358,7 @@ export function AssetSectionAcquisition({
             isOneHouseSingle={isOneHouseSingle}
             judgmentLoaded={judgmentLoaded}
             transferDate={transferDate}
+            firstCardRedevRightsValue={firstCardRedevRightsValue}
           />
         )
       )}
