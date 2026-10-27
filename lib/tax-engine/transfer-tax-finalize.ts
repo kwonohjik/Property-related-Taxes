@@ -561,6 +561,8 @@ export function buildExemptEarlyResult(p: {
   /** 주택 split 파트 이월과세(STEP 0.476) 판정 — 비과세여도 파트별 적용·배제(§97의2②2호·②3호)를 결과에 싣는다 */
   splitCarryover?: SplitCarryoverDetail;
   inheritedAcquisitionStep?: InheritedAcquisitionStepResult;
+  /** STEP 0.48 §159 명세 — 비과세여도 증여세·평가 명세는 그대로 보여야 한다(정상·차손·재개발 경로와 같다) */
+  transferBurdenedGiftBreakdown?: TransferTaxResult["transferBurdenedGiftBreakdown"];
 }): TransferTaxResult {
   // [echo] 표시 전용 gross 양도차익 + 환산 내역 — 세액 로직·transferGain(0) 불변. 순수함수 calcTransferGain 1회 호출.
   // 환산 echo 미노출 시 신고서가 실가 역산 분기로 추락해 취득가액에 개산공제가 합산 표시됨(분리표시 정책 위반).
@@ -622,6 +624,14 @@ export function buildExemptEarlyResult(p: {
     // [echo] §97③ 감가상각비 — 비과세 조기반환도 정상 경로와 같은 축으로 싣는다(표시 전용).
     depreciationAmount: grossForEcho.depreciationAmount,
     taxableGain: 0,
+    /**
+     * [echo] 부담부증여 §159 명세 — 표시 전용, 세액 불변(비과세는 0).
+     *
+     * 🔴 종전에는 싣지 않아 1세대1주택 전액 비과세 부담부증여의 결과 화면에서 「부담부증여 평가 명세」·증여세·증여세 신고서 양식이
+     *   통째로 사라졌고(실측 증여세 77,600,000), 묶음은 카드별 명세가 안 생겨 첫 지분 값이 남았다
+     *   (계획서 `bg-exempt-early-return-statement.plan.md` §1·§2). 재개발 경로가 같은 이유로 고친 선례: `transfer-tax-redevelopment.ts` D-4.
+     */
+    transferBurdenedGiftBreakdown: p.transferBurdenedGiftBreakdown,
     usedEstimatedAcquisition: p.effectiveInput.useEstimatedAcquisition,
     ...(grossForEcho.usedEstimated
       ? { estimatedBase: grossForEcho.estimatedBase, estimatedDeduction: grossForEcho.estimatedDeduction }

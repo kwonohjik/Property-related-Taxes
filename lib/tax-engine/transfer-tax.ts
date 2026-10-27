@@ -321,6 +321,7 @@ export function calculateTransferTax(
       pre1990LandResult,
       carryoverDetail, splitCarryover: pre.splitCarryover,
       inheritedAcquisitionStep,
+      transferBurdenedGiftBreakdown,
     });
   }
 

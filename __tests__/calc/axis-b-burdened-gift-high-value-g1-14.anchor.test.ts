@@ -69,9 +69,10 @@ interface Data {
   mode?: string;
   aggregated?: {
     totalTax?: number;
-    properties?: { transferGain: number; isExempt?: boolean; exemptReason?: string; steps?: { formula: string }[] }[];
+    properties?: { transferGain: number; acquisitionPrice: number; isExempt?: boolean; exemptReason?: string; steps?: { formula: string }[] }[];
   };
   result?: { totalTax?: number; isExempt?: boolean };
+  transferBurdenedGiftBreakdown?: { cards?: unknown[]; perAsset: { land: { acquisitionPrice: number }; building: { acquisitionPrice: number } } };
 }
 async function run(f: TransferFormData) {
   const cap: { body?: Record<string, unknown> } = {};
@@ -127,6 +128,13 @@ describe("축 B 정정 — 담보가 이기는 1세대1주택: 60% + 40% = 단�
     const axisB = await run(form([asset(1, "60", small), asset(2, "40", small)]));
     expect(single.data?.result?.totalTax).toBe(0);
     expect(axisB.data?.aggregated?.totalTax).toBe(0);
+    // 비과세여도 §159 명세가 카드마다 실린다 — 결과 명세 = 지분 카드 합(종전: 카드 없음 · 자산별 취득가액 0 / 0).
+    // 계획서 `bg-exempt-early-return-statement.plan.md` §2.
+    const w = axisB.data?.transferBurdenedGiftBreakdown;
+    expect(w?.cards).toHaveLength(2);
+    const props = axisB.data?.aggregated?.properties ?? [];
+    expect(props.map((p) => p.acquisitionPrice)).toEqual([163_636_363, 109_090_909]);
+    expect((w?.perAsset.land.acquisitionPrice ?? 0) + (w?.perAsset.building.acquisitionPrice ?? 0)).toBe(272_727_272);
   });
 });
 
