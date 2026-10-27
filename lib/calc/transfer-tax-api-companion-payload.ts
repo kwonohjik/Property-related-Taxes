@@ -63,6 +63,7 @@ import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { isRedevSuccessorAptActualOnly } from "./redev-acquisition-price-source";
 import { assetStdPriceAtTransferInput } from "./engine-std-price-at-transfer";
 import { companionEngineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
+import { bgIgnoresAssetAppraisalSalesCase } from "./bg-asset-acq-mode-scope";
 import {
   isSuccessorRightTransfer,
   successorRightAcquisitionTotal,
@@ -258,7 +259,7 @@ export function buildAssetPayload(
     asset.isAppraisalAcquisition === true &&
     asset.isSalesCaseAcquisition !== true &&
     !asset.useEstimatedAcquisition &&
-    asset.transferType !== "burdened_gift" &&
+    !bgIgnoresAssetAppraisalSalesCase(asset) &&
     !(asset.assetKind === "housing" && asset.isMixedUseHouse) &&
     !splitActive &&
     !hasPre1990LandEstimation(asset) &&

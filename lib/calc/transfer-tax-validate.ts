@@ -36,6 +36,7 @@ import { isBlockedMixedBurdenedGiftBundle } from "./burdened-gift-transfer-price
 import { MIXED_BURDENED_GIFT_BUNDLE_MESSAGE } from "./burdened-gift-transfer-price-scope";
 import { sameDayHousingBundleIssue } from "./same-day-housing-bundle";
 import { isRedevSuccessorAptActualOnly } from "./redev-acquisition-price-source";
+import { bgIgnoresAssetAppraisalSalesCase } from "./bg-asset-acq-mode-scope";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -391,7 +392,8 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
       if (!isGbFractional) {
         for (let i = 1; i < form.assets.length; i++) {
           // 승계조합원 완공 APT는 실거래가 전용 — 남은 플래그는 ④가 무시한다(라디오 없음).
-          if (form.assets[i].isSalesCaseAcquisition !== true || isRedevSuccessorAptActualOnly(form.assets[i])) continue;
+          // 부담부증여도 남은 플래그를 ④가 무시한다(`bgIgnoresAssetAppraisalSalesCase` — 그 라디오는 부담부증여 화면에 없다).
+          if (form.assets[i].isSalesCaseAcquisition !== true || isRedevSuccessorAptActualOnly(form.assets[i]) || bgIgnoresAssetAppraisalSalesCase(form.assets[i])) continue;
           issues.push({
             step,
             assetIndex: i,

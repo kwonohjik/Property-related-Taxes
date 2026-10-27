@@ -29,6 +29,7 @@ import { apportionCompanionBurdenedGiftDebt } from "./transfer-tax-api-burdened-
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { isRedevelopmentSec166Asset } from "./redev-acquisition-price-source";
 import { isRedevSuccessorAptActualOnly } from "./redev-acquisition-price-source";
+import { bgIgnoresAssetAppraisalSalesCase } from "./bg-asset-acq-mode-scope";
 
 /**
  * 주 자산 **취득 모드 플래그** — `form`을 보지 않고 `primary`만으로 정해진다.
@@ -70,9 +71,11 @@ export function primaryAcquisitionModeFlags(primary: AssetForm) {
   //   P2 C(파트 이월과세)도 같다: 두 파트가 실가(증여자 취득가액·증여 신고가액) 고정이라 자산 단위 추계 플래그 잔재를 읽지 않는다(`normalizeBuildingCauseInputs`의 파트 방식 고정과 짝).
   //   P4 B(건물만 이월과세 + 토지 매매)도 같다 — 건물은 증여 신고가액 고정, 토지 방식은 파트 모드가 정한다.
   const d2Mix = !!effectiveBuildingCauseMix(primary) || partCarryover(primary).building;
-  const isSalesCase = !d2Mix && !blocksAppraisalSalesCase && primary.isSalesCaseAcquisition === true;
+  // 부담부증여 — 취득가액은 `bgAcquisitionMethod`가 정하고 자산 단위 감정·매매사례 라디오는 화면에 없다. 남은 플래그를 싣지 않는다(컴패니언 ④와 같은 술어).
+  const bgHidesAcqMode = bgIgnoresAssetAppraisalSalesCase(primary);
+  const isSalesCase = !d2Mix && !blocksAppraisalSalesCase && !bgHidesAcqMode && primary.isSalesCaseAcquisition === true;
   const isAppraisal =
-    !d2Mix && !blocksAppraisalSalesCase && !isSalesCase && primary.isAppraisalAcquisition === true;
+    !d2Mix && !blocksAppraisalSalesCase && !bgHidesAcqMode && !isSalesCase && primary.isAppraisalAcquisition === true;
   // 승계 입주권 환산은 §176의2②2호(입주권 자체) · 원조합원 환산은 §166③(종전 부동산) — 둘 다 통과.
   const isEstimated = !d2Mix && !successorAptActualOnly && !isSalesCase && !isAppraisal && primary.useEstimatedAcquisition;
   // pre1990 토지등급 환산은 §176의2④ 의제취득(pre-1985) 영역. post-1985 증여는 §163⑨ 신고가액이
