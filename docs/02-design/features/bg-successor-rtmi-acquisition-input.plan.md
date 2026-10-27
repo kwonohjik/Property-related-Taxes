@@ -2,7 +2,7 @@
 
 - 작성: 2026-10-27
 - 출처: [bg-stale-acq-mode-flags.plan.md](bg-stale-acq-mode-flags.plan.md) §6 V-4 · §8 실측(#2632)
-- 상태: 계획 — 사용자 결정(§5) 대기
+- 상태: ✅ 구현(2026-10-27 · 사용자 결정 Q-1 (a) · Q-2 (a)) — §8
 
 ## 0. 한 줄 요약
 
@@ -110,3 +110,20 @@ Q-1 (a)의 대가: 두 값이 달랐던 저장 폼은 세액이 바뀐다(§4.1 
 | V-3 | 승계 부담부증여 추계(Q-2 b) — 법문상 열려 있다(§3). 엔진·④·⑧ 변경 범위와 §165① 기준시가 연결 | 별도 계획서 |
 | V-4 | 승계 2칸이 비어 있고 카드만 채운 옛 저장 폼 — 후보에서는 ⑧이 승계 칸(화면에 있음)을 요구한다. 막다른 길은 아니다 | 확인 필요(재현 시료) |
 | V-5 | 담보 승(「상속세 및 증여세법」 제66조)이 입주권에서 막히는 기존 검사(`transfer-tax-validate-bg.ts` O-5)와의 순서 | 확인 필요 |
+
+## 8. 구현 결과 (2026-10-27)
+
+- 술어 `isBgSuccessorRight`(`lib/calc/transfer-successor-right.ts`) — 승계 입주권 + 부담부증여. `successorRightEstimationMode`는 부담부증여면 「실거래가」를 돌려준다(⑤ 라디오 값·⑧ 승계 검증·컴패니언 ④·사이드바 direct·`engine-std-price-at-transfer.ts`가 같은 술어).
+- ④ `buildBurdenedGiftInfo` 입주권 분기 — 승계면 `successorRightAcquisitionTotal`. 주 자산·함께 양도·⑧이 같은 함수를 부른다.
+- ④ 주 자산 문맥(`transfer-tax-api-primary-context.ts`) — 부담부증여 승계면 남은 환산 플래그를 싣지 않는다. **Pre-Do 후보에 없던 지점**: 라디오를 숨기자 남은 환산 플래그가 ⑫ 400(「환산취득가 사용 시 취득시 기준시가 필수」)을 내는 막다른 길이 됐다(anchor로 발견). 감정·매매사례는 #2629 술어가 이미 막는다.
+- ⑧ `transfer-tax-validate-bg.ts` — 입주권 블록의 「종전 부동산 실지취득가액」 요구와 시가 모드 실지 검사를 원조합원으로 좁혔다.
+- ⑤ `BurdenedGiftBlock.tsx` — 승계면 카드 칸·§166 안내 대신 「③ 조합원입주권 승계취득 정보의 승계취득가액 + 취득 후 납입 추가분담금」 안내(`bg-successor-right-acq-pointer`)와 박스 제목 「실지취득가액 — ③ 승계취득 정보에서 입력」. `SuccessorRightAcquisitionBlock.tsx` — 부담부증여면 산정 방식 라디오 대신 한 줄 안내(`bg-successor-right-actual-only`).
+- 저장값은 지우지 않는다(카드 값·추계 플래그). 엔진·⑫ 스키마·원조합원 경로·일반 양도 승계 경로는 바꾸지 않았다.
+- 테스트:
+  - route anchor `__tests__/api/transfer.route.bg-successor-rtmi-acquisition-input.anchor.test.ts` 18건 — 단건 기준시가·시가 × 카드 비움·다른 값 · 승계취득가액 변경 · 승계 2칸 비움 · 남은 환산·감정·매매사례(기준시가 칸 유무) · 저장값 보존 · 함께 양도(카드 비움·9억·남은 플래그) · 원조합원 대조 · 일반 양도 승계 대조(④ appraisal).
+  - render anchor `__tests__/components/bg-successor-rtmi-acquisition-input.anchor.test.tsx` 5건 — 기준시가·시가 카드 칸·§166 안내 없음 · 라디오 0개 · 원조합원 카드 칸 · 일반 양도 라디오 4개.
+  - E2E `e2e/bg-successor-rtmi-acquisition-input.spec.ts` SR-E1 — 일반 양도에서 「감정가액」 → 부담부증여: 카드 칸·라디오 0개 · 대조 세액과 같다. 술어를 항상 거짓으로 둔 변형에서 실패했다.
+- mutation 8/8 KILLED: M1 모드 게이트 · M2 ④ 승계 분기 · M3 ⑧ 입주권 블록 · M4 ⑧ 시가 실지 검사 · M5 주 자산 환산 게이트 · M6 카드 칸 숨김 · M7 라디오 숨김 · M8 §166 안내 승계 제외.
+- 전체 vitest 42,646 통과. 스크린샷 라이트·다크·375px 확인.
+- 남은 것: §7 V-1(축 B 지분) · V-2(결과 카드 「건물 취득가」) · V-3(추계 — 별도 계획서) · V-4 · V-5.
+

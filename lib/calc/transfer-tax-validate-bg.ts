@@ -38,6 +38,7 @@ import {
   deriveRightValuationTotal,
 } from "./burdened-gift-right-valuation";
 import { ASSET_KIND_LABELS } from "@/components/calc/transfer/asset-labels";
+import { isBgSuccessorRight } from "./transfer-successor-right";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { deriveSec163_9BaseDate, isPostDeemedInheritance } from "./transfer-163-9-base-date";
 import {
@@ -285,7 +286,8 @@ export function validateBurdenedGiftAsset(
         if (!parseAmount(asset.bgActualAcquisitionLand)) {
           return fieldError("bgActualAcquisitionLand", `${label}: 부담부증여 실지취득가액 안분 — 토지 실지취득가액을 입력하세요.`);
         }
-      } else if (!parseAmount(asset.bgActualAcquisitionTotal)) {
+      } else if (!isBgSuccessorRight(asset) && !parseAmount(asset.bgActualAcquisitionTotal)) {
+        // 승계 입주권은 승계 블록 2칸이 실지취득가액이다 — 승계 검증(`validateSuccessorRightAsset`)이 요구한다.
         return fieldError("bgActualAcquisitionTotal", `${label}: 부담부증여 실지취득가액 안분 — 실지취득가액을 입력하세요.`);
       }
     } else if (isBgPresumedMethod(acqMethod)) {
@@ -522,7 +524,8 @@ export function validateBurdenedGiftAsset(
     if (deriveMemberRightsValue(asset) <= 0) {
       return fieldError("bgRightMemberRightsValue", `${label}: 조합원입주권 증여재산 평가 — 조합원권리가액을 입력하세요 (상속세 및 증여세법 시행규칙 제16조 제3항 — 종전 토지·건축물 가격 × 비례율). 재개발 정보의 권리가액을 입력해 두면 그 값이 파생됩니다.`);
     }
-    if ((parseAmount(asset.bgActualAcquisitionTotal) || 0) <= 0) {
+    // 원조합원만 — 승계조합원의 실지취득가액은 승계 블록 2칸이고 승계 검증이 요구한다(`isBgSuccessorRight`).
+    if (!isBgSuccessorRight(asset) && (parseAmount(asset.bgActualAcquisitionTotal) || 0) <= 0) {
       return fieldError("bgActualAcquisitionTotal", `${label}: 조합원입주권 부담부증여 — 종전 부동산의 실지취득가액을 입력하세요. 증여재산 평가가 「소득세법 시행령」 제159조 제1항 제1호 괄호의 열거(상속세 및 증여세법 제61조 제1항·제2항·제5항 및 제66조)에 없는 같은 법 제61조 제3항이므로, 취득가액은 기준시가가 아니라 실지거래가액입니다 (소득세법 제97조 제1항 제1호 가목 · 시행령 제166조 제1항 제1호).`);
     }
     /**
