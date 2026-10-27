@@ -43,7 +43,7 @@ async function post(b: unknown): Promise<{ status: number; json: any }> {
   return { status: res.status, json: await res.json() };
 }
 
-describe("#3 R-6 긍정 짝 — 부담부증여에 토지 취득일만(분리 필드 없음)은 막지 않는다", () => {
+describe("#3 R-6 긍정 짝 — 부담부증여에 토지 취득일만(분리 필드 없음)은 막지 않는다 · 단 건물과 다른 날이면 막는다(V-4 Q-1 a)", () => {
   const BASE = {
     propertyType: "housing", useEstimatedAcquisition: false, transferPrice: 1_200_000_000, transferDate: "2026-06-30",
     acquisitionDate: "2018-03-02", acquisitionPrice: 0, expenses: 0, isOneHousehold: false, householdHousingCount: 2,
@@ -57,13 +57,18 @@ describe("#3 R-6 긍정 짝 — 부담부증여에 토지 취득일만(분리 �
       landStdPriceAtAcquisition: 300_000_000, buildingStdPriceAtAcquisition: 400_000_000,
     },
   };
-  it("분리 없음 = 토지 취득일만 = 200 · 결정세액 20,435,000", async () => {
+  it("분리 없음 = 200 · 결정세액 20,435,000 · 토지 취득일이 건물과 같은 날이면 그대로", async () => {
     const plain = await post(BASE);
-    const withDate = await post({ ...BASE, landAcquisitionDate: "2008-05-10" });
+    const sameDay = await post({ ...BASE, landAcquisitionDate: "2018-03-02" });
     expect(plain.status).toBe(200);
-    expect(withDate.status).toBe(200);
+    expect(sameDay.status).toBe(200);
     expect(plain.json.data.result.determinedTax).toBe(20_435_000);
-    expect(withDate.json.data.result.determinedTax).toBe(20_435_000);
+    expect(sameDay.json.data.result.determinedTax).toBe(20_435_000);
+  }, 60_000);
+  it("토지 취득일이 건물과 다르면 400 — 종전에는 그 날짜를 버리고 20,435,000으로 계산했다(「소득세법」 제95조 제4항 · 계획서 bg-carryover-non-gb-building-date.plan.md Q-1 a)", async () => {
+    const r = await post({ ...BASE, landAcquisitionDate: "2008-05-10" });
+    expect(r.status).toBe(400);
+    expect(JSON.stringify(r.json)).toContain("토지와 건물의 취득일이 다르면 아직 계산하지 못합니다");
   }, 60_000);
   it("파트 가액 하나만 와도 400(분리 전용 필드)", async () => {
     const r = await post({ ...BASE, landAcquisitionDate: "2008-05-10", landAcquisitionPrice: 300_000_000 });

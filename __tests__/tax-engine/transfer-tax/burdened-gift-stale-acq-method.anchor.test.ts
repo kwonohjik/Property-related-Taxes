@@ -99,20 +99,20 @@ describe("부담부증여 stale 산정방식 — §159 안분 취득가액 보�
     expect(r.transferGain).toBe(EXPECTED_GAIN);
   });
 
-  it("케이스 7: 부담부증여 + 토지·건물 취득일 분리 + stale salesCase → §159 안분값 유지", () => {
-    // split 경로(calcSplitGain)는 calcTransferGain 내부에서 effectiveInput을 받으므로
-    // 스텝의 acquisitionMethod 정규화가 split에도 함께 적용된다.
-    // housing은 land=0/building 통째 구조라 landStdPriceAtAcquisition=0 → calcApportionRatio가
-    // null을 반환해 split 미진입 → 비-split과 동일 결과. 그 동등성을 고정한다.
-    const r = calculateTransferTax(
-      makeInput({
-        landAcquisitionDate: new Date("2005-06-10"),
-        acquisitionMethod: "salesCase",
-        similarSalesValue: 900_000_000,
-      } as Partial<TransferTaxInput>),
-      rates,
-    );
-    expect(r.transferGain, "취득일 분리 여부와 무관하게 §159 안분값이 유지되어야 함").toBe(EXPECTED_GAIN);
+  it("케이스 7: 부담부증여 + 토지·건물 취득일 다름 + stale salesCase → 계산하지 않는다(V-4 Q-1 a)", () => {
+    // 종전에는 split이 미진입해 토지 취득일을 버리고 §159 안분값(비-split과 같은 값)으로 계산했다.
+    // 토지·건물 보유기간은 각각 센다(「소득세법」 제95조 제4항) — 나눠 계산하는 기능이 없어 leaf가 막는다(⑧·⑫와 같은 규칙).
+    // stale 산정방식 정규화 자체는 케이스 1~6이 고정한다.
+    expect(() =>
+      calculateTransferTax(
+        makeInput({
+          landAcquisitionDate: new Date("2005-06-10"),
+          acquisitionMethod: "salesCase",
+          similarSalesValue: 900_000_000,
+        } as Partial<TransferTaxInput>),
+        rates,
+      ),
+    ).toThrow("토지와 건물의 취득일이 다르면 아직 계산하지 못합니다");
   });
 
   it("케이스 8: 과잉 수정 방어 — 일반 양도(비-부담부증여)의 salesCase는 그대로 동작", () => {

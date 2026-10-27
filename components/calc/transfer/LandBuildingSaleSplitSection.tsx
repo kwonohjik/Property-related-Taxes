@@ -70,8 +70,8 @@ export function LandBuildingSaleSplitSection(props: Props) {
     return (
       <div className="space-y-2 rounded-md border border-dashed border-border bg-muted/20 p-3">
         <p className="rounded-md bg-fuchsia-50/60 px-2.5 py-1.5 text-xs text-fuchsia-800 dark:text-fuchsia-200 dark:bg-fuchsia-950/40" data-testid="split-burdened-note">
-          부담부증여는 양도가액·취득가액을 <strong>§159 인수 채무액 기준으로 자동 산정</strong>하므로,
-          토지·건물 각 가액은 직접 입력하지 않고 <strong>기준시가 비율로 안분</strong>됩니다.
+          부담부증여는 양도가액·취득가액을 <strong>§159 인수 채무액 기준으로 자산 전체에 대해 산정</strong>하며, 토지·건물로 나눠 계산하지 않습니다.
+          그래서 토지와 건물의 취득일이 다르면 <strong>아직 계산하지 못합니다</strong>(토지·건물 보유기간을 각각 세야 합니다 — 「소득세법」 제95조 제4항).
         </p>
       </div>
     );

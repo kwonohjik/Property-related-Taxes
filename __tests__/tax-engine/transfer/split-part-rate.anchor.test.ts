@@ -77,13 +77,14 @@ describe("G-1 파트별 세율 — 회귀 가드 (먼저 GREEN이어야 한다)"
 
   // (A-3b「비사업용 토지 자산은 대상 밖」은 **P4에서 폐기** — 아래 P4 describe가 대체한다.)
 
-  it("A-3c: 부담부증여는 §159 안분이 총액을 override — 대상 밖, 현행 불변", () => {
-    const r = run({
-      transferType: "burdened_gift",
-      acquisitionDate: D("2025-06-01"),
-      landAcquisitionDate: D("2010-06-01"),
-    });
-    expect(r.calculatedTax).toBe(159_000_000);
+  it("A-3c: 부담부증여 × 토지·건물 취득일 다름은 파트별 세율 대상이 아니다 — 계산하지 않고 던진다(V-4 Q-1 a · 종전엔 토지 취득일을 버리고 159,000,000)", () => {
+    expect(() =>
+      run({
+        transferType: "burdened_gift",
+        acquisitionDate: D("2025-06-01"),
+        landAcquisitionDate: D("2010-06-01"),
+      }),
+    ).toThrow("토지와 건물의 취득일이 다르면 아직 계산하지 못합니다");
   });
 
   it("A-3d: selfOwns=land_only(본인 토지분만 신고)는 기존 단독 파트 경로 유지", () => {
