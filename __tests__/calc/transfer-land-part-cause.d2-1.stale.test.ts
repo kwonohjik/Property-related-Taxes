@@ -147,21 +147,27 @@ describe("건드리지 않는 경로 — 같은 객체를 돌려준다 (body 바
     expect(hasStaleSplitInput(a)).toBe(false);
     expect(normalizeBuildingCauseInputs(a)).toBe(a);
   };
-  it("D1 호스트(신축·매매) · 소유자 분리 · 부담부증여 · 일반건물 · 겸용 · 분리 OFF · D2 유효", () => {
+  it("D1 호스트(신축·매매) · 부담부증여 · 일반건물 · 겸용 · 분리 OFF · D2 유효", () => {
     same(stale({ acquisitionCause: "purchase", landCauseHost: "purchase" as never }));
     same(stale({ acquisitionCause: "newConstruction", landCauseHost: "newConstruction" as never }));
-    same(stale({ selfOwns: "land_only", landAcquisitionCause: "" }));
-    same(stale({ selfOwns: "building_only" }));
     same(stale({ transferType: "burdened_gift", acquisitionCause: "gift" }));
     same(stale({ assetKind: "general_building" }));
     same(stale({ isMixedUseHouse: true }));
     same(stale({ hasSeperateLandAcquisitionDate: false }));
     same(stale({ landAcquisitionCause: "purchase", landCauseHost: "inheritance" as never, buildingAcqMode: "actual" })); // D2 유효(+ 방식 이미 actual)
   });
-  it("소유자 분리(상속 호스트 · hasSeperate 켜짐)의 ④ 토지 취득일 후퇴 송신은 종전 그대로", async () => {
-    const a = stale({ selfOwns: "land_only", landAcquisitionCause: "" });
-    const b = await bodyOf(a);
-    expect(b.landAcquisitionDate).toBe("2008-05-10"); // hasSeperate && landAcquisitionDate → 입력값 그대로
+  /**
+   * 소유자 분리(상속 호스트)는 stale 술어가 아니라 `nonPurchaseOwnerSplit`이 맡는다 — 종전엔 「같은 객체 · ④가 남은 토지 취득일 그대로」였다.
+   * 그 화면에 토지 취득일·파트 금액 칸이 없고 상속 자산의 취득시기는 상속개시일 하나다(영 §162①5호) → 사본은 분리 꺼짐 · 토지 취득일 = 상속개시일
+   * (계획서 `inherit-gift-owner-split-residue.plan.md` R-3·R-5).
+   */
+  it("소유자 분리(상속 호스트 · hasSeperate 켜짐) — stale 술어 밖이지만 사본은 분리 꺼짐 · ④ 토지 취득일은 상속개시일", async () => {
+    for (const a of [stale({ selfOwns: "land_only", landAcquisitionCause: "" }), stale({ selfOwns: "building_only" })]) {
+      expect(hasStaleSplitInput(a)).toBe(false);
+      expect(normalizeBuildingCauseInputs(a).hasSeperateLandAcquisitionDate).toBe(false);
+    }
+    const b = await bodyOf(stale({ selfOwns: "land_only", landAcquisitionCause: "" }));
+    expect(b.landAcquisitionDate).toBe("2018-03-02");
     expect(b.selfOwns).toBe("land_only");
   });
 });

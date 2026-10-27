@@ -575,7 +575,8 @@ export function acqStdNeedFlagsOfAsset(asset: AssetForm) {
   };
 }
 
-export function ownerSplitHousingNeedsBuildingStd(asset: AssetForm): boolean {
+export function ownerSplitHousingNeedsBuildingStd(rawAsset: AssetForm): boolean {
+  const asset = normalizeBuildingCauseInputs(rawAsset); // ④·⑧과 같은 사본 — 상속·증여 소유자 분리의 남은 파트 방식으로 칸을 여닫지 않는다
   if (asset.assetKind !== "housing" || asset.isMixedUseHouse) return false;
   if (asset.transferType === "burdened_gift" || asset.acquisitionCause === "burdened_gift") return false;
   const landMode = effectivePartAcqMode(asset.landAcqMode, asset);
@@ -602,8 +603,9 @@ export function ownerSplitHousingNeedsBuildingStd(asset: AssetForm): boolean {
  * (양도시 개별주택가격 × 양도시 가목 ÷ (가목 + 나목) — 계획서 §8 D-1 ⓑ). 환산 파트가 없으면 분모가 소비되지 않는다.
  * ④ 전송(`standardPriceAtTransfer`)·⑧ 필수·⑤ 카드 노출이 이 술어를 공유한다.
  */
-export function ownerSplitHousingNeedsTransferTotal(asset: AssetForm): boolean {
-  if (!ownerSplitHousingNeedsBuildingStd(asset)) return false;
+export function ownerSplitHousingNeedsTransferTotal(rawAsset: AssetForm): boolean {
+  if (!ownerSplitHousingNeedsBuildingStd(rawAsset)) return false;
+  const asset = normalizeBuildingCauseInputs(rawAsset);
   const selfOwns = effectiveSelfOwns(asset) ?? "both";
   const landEst = effectivePartAcqMode(asset.landAcqMode, asset) === "estimated" && selfOwns !== "building_only";
   const buildingEst = effectivePartAcqMode(asset.buildingAcqMode, asset) === "estimated" && selfOwns !== "land_only";
