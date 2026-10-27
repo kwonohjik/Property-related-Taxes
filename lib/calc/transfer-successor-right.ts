@@ -33,6 +33,20 @@ export function isSuccessorRightTransfer(asset: Pick<AssetForm, "assetKind" | "i
 }
 
 /**
+ * 승계조합원 입주권을 **부담부증여**하는가 — 취득가액은 승계 블록 2칸(승계취득가액 + 추가분담금)이 정본이다.
+ *
+ * 「소득세법 시행령」 제159조 제1항 제1호의 A는 「법 제97조제1항제1호에 따른 가액」이고, 승계조합원의 가목 금액은
+ * 승계취득가액 + 추가분담금이다(기준-2025-법규재산-0057). 부담부증여 카드의 「종전 부동산 실지취득가액」은
+ * 원조합원(영 §166①1호) 개념이라 승계에는 숨기고 읽지 않는다. 추계(나목)는 아직 받지 않는다 —
+ * 계획서 `docs/02-design/features/bg-successor-rtmi-acquisition-input.plan.md` Q-2 (a).
+ */
+export function isBgSuccessorRight(
+  asset: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "transferType">,
+): boolean {
+  return isSuccessorRightTransfer(asset) && asset.transferType === "burdened_gift";
+}
+
+/**
  * 승계조합원 입주권의 취득가액 — 승계취득가액 + 취득 후 납입 추가분담금.
  *
  * 추가분담금 미입력("")은 0으로 본다 — 승계 직후 양도라 납입분이 없을 수 있다.
@@ -88,8 +102,10 @@ export function successorRightStdPriceAtTransfer(
  * 추계 모드에서는 그 2칸 대신 §165① 기준시가와 추계값이 쓰인다 — **배타**다.
  */
 export function successorRightEstimationMode(
-  asset: Pick<AssetForm, "useEstimatedAcquisition" | "isAppraisalAcquisition" | "isSalesCaseAcquisition">,
+  asset: Pick<AssetForm, "useEstimatedAcquisition" | "isAppraisalAcquisition" | "isSalesCaseAcquisition" | "transferType">,
 ): "actual" | "estimated" | "appraisal" | "salesCase" {
+  // 부담부증여는 실지거래가액만 받는다 — ⑤가 라디오를 숨기므로 남은 추계 플래그는 읽지 않는다(`isBgSuccessorRight`).
+  if (asset.transferType === "burdened_gift") return "actual";
   if (asset.isSalesCaseAcquisition === true) return "salesCase";
   if (asset.isAppraisalAcquisition === true) return "appraisal";
   if (asset.useEstimatedAcquisition === true) return "estimated";

@@ -15,6 +15,7 @@ import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
 import { representativeParcelAcquisitionDate } from "./transfer-tax-api-parcels";
 import { isSuccessorRightTransfer } from "./transfer-successor-right";
+import { isBgSuccessorRight } from "./transfer-successor-right";
 import {
   buildCommercialAppurtenantLand,
   buildCommercialBuildingValuation,
@@ -77,7 +78,9 @@ export function primaryAcquisitionModeFlags(primary: AssetForm) {
   const isAppraisal =
     !d2Mix && !blocksAppraisalSalesCase && !bgHidesAcqMode && !isSalesCase && primary.isAppraisalAcquisition === true;
   // 승계 입주권 환산은 §176의2②2호(입주권 자체) · 원조합원 환산은 §166③(종전 부동산) — 둘 다 통과.
-  const isEstimated = !d2Mix && !successorAptActualOnly && !isSalesCase && !isAppraisal && primary.useEstimatedAcquisition;
+  //   단 부담부증여 승계 입주권은 실지거래가액만 받는다 — ⑤가 라디오를 숨기므로 남은 환산 플래그를 싣지 않는다(`isBgSuccessorRight`).
+  const isEstimated =
+    !d2Mix && !successorAptActualOnly && !isBgSuccessorRight(primary) && !isSalesCase && !isAppraisal && primary.useEstimatedAcquisition;
   // pre1990 토지등급 환산은 §176의2④ 의제취득(pre-1985) 영역. post-1985 증여는 §163⑨ 신고가액이
   // 취득당시 실지거래가액으로 확인 가능 → 토지등급 환산 배제. pre1990Enabled은 환산 클릭 시 set되는
   // uncleaable 래치(CompanionAcqPurchaseBlock:92)라 gift 실거래가 전환 후 stale true로 남을 수 있으므로

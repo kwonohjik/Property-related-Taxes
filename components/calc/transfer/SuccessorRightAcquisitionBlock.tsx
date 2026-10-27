@@ -43,6 +43,7 @@ import { successorRightAcquisitionTotal } from "@/lib/calc/transfer-successor-ri
 import { successorRightStdPriceAtAcq } from "@/lib/calc/transfer-successor-right";
 import { successorRightStdPriceAtTransfer } from "@/lib/calc/transfer-successor-right";
 import { successorRightEstimationMode } from "@/lib/calc/transfer-successor-right";
+import { isBgSuccessorRight } from "@/lib/calc/transfer-successor-right";
 import { SuccessorRightStdPriceSection } from "./SuccessorRightStdPriceSection";
 
 interface Props {
@@ -125,6 +126,13 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
         {/* ⚠️ 라벨에 「승계」를 붙인다 — 상단 축 A(`CompanionAcqPurchaseBlock`의 산정방식 라디오)와
             **다른 축**임이 드러나야 한다. 그쪽은 §166 경로(원조합원)의 축이고 이쪽은 §97①1호
             일반 경로의 축이다. 같은 문구를 쓰면 사용자도 셀렉터도 둘을 구분하지 못한다. */}
+        {/* 부담부증여는 실지거래가액만 받는다 — 라디오를 숨기고 ④·⑧도 같은 술어로 실거래가로 읽는다
+            (`successorRightEstimationMode` · 계획서 `bg-successor-rtmi-acquisition-input.plan.md` Q-2 a). */}
+        {isBgSuccessorRight(asset) ? (
+          <p className="text-xs text-muted-foreground" data-testid="bg-successor-right-actual-only">
+            부담부증여는 아래 승계취득가액 + 추가분담금(실지거래가액)으로 계산합니다. 채무 비율만큼 안분됩니다.
+          </p>
+        ) : (
         <FieldCard
           label="승계취득가액 산정 방식"
           hint="실지거래가액을 확인할 수 없을 때만 추계를 씁니다. 매매사례 → 감정 → 환산 순서로 검토합니다(시행령 §176의2③)."
@@ -136,6 +144,7 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
             options={ACQ_MODE_OPTIONS}
           />
         </FieldCard>
+        )}
 
         {isActual && (
           <>
