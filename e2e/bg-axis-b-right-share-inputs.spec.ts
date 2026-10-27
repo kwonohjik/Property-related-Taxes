@@ -103,3 +103,31 @@ test("AB-E2: 둘째 지분 권리가액이 첫 카드 권리가액과 다르면 
   ).toBe("900000000");
   await expect(warning).toHaveCount(0);
 });
+
+/**
+ * AB-E3 결과 명세 취득가액 = 지분 카드 합(계획서 `bg-axis-b-card-acquisition-sum.plan.md` Q-1 a · Q-2 a · Q-3 a).
+ *       AB-E1과 같은 시료(첫 카드 승계 4억 · 둘째 원조합원 3억 × 50%). 지분 행 80,000,000 + 60,000,000(인가 전 분) = 140,000,000,
+ *       신고서 취득가액 합계 80,000,000 + 100,000,000 = 180,000,000(route anchor와 같다).
+ *       종전: 첫 카드 값 한 줄 「건물 취득가 = 실지취득가 400,000,000 × 채무비율」 160,000,000 · 신고서 합계 줄 없음.
+ */
+test("AB-E3: 결과 명세 취득가액이 지분 카드 합이다", async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.goto("/calc/transfer-tax");
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
+  await page.evaluate(
+    (x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)),
+    { ...form, state: { ...form.state, formData: { ...form.state.formData, assets: [{ ...FIRST, bgActualAcquisitionTotal: "300000000" }, SHARE] } } },
+  );
+  await page.reload();
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+  const res = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", { timeout: 60_000 });
+  for (const step of ["보유 상황", "감면·공제", "가산세"]) await page.getByRole("button", { name: step }).first().click();
+  await page.getByRole("button", { name: /계산하기/ }).last().click();
+  expect((await res).status()).toBe(200);
+
+  await expect(page.getByTestId("bg-bundle-card")).toHaveCount(2);
+  await expect(page.getByTestId("bg-bundle-card-acquisition").nth(1)).toContainText("종전 부동산 취득가(인가 전 분)");
+  await expect(page.getByTestId("bg-bundle-acquisition-total")).toContainText("140,000,000");
+  await expect(page.getByTestId("bg-redev-filing-acquisition")).toContainText("180,000,000");
+});

@@ -43,7 +43,7 @@ export function FilingFormTable({
         deemedCause?: "inheritance" | "gift";
         deemedBasis?: { housing: "reported" | "standard"; commercial: "reported" | "standard" };
         preDeemed?: { basis: "deemed_std" | "three_way" | "three_way_parts" };
-        cards?: unknown[];
+        cards?: Array<{ breakdown: { preDeemed?: unknown } }>;
       };
     }
   ).transferBurdenedGiftBreakdown ?? result.mixedUseDetail?.burdenedGift;
@@ -55,8 +55,11 @@ export function FilingFormTable({
   // 묶음 × 의제취득일 전 카드 — 명세의 방식 값은 물건 전체 재계산의 것이라 카드별 산정 기준을 대신하지 못한다(PR-7b-5 · Q-33)
   const bundleCards = burdenedGiftBreakdown && "cards" in burdenedGiftBreakdown ? burdenedGiftBreakdown.cards : undefined;
   const burdenedGiftAcqFormula =
-    bundleCards
+    // 축 B는 의제 카드 없이도 카드별이다(`bg-axis-b-card-acquisition-sum.plan.md` Q-1 a) — 의제 문구는 의제 카드가 있을 때만 참이다.
+    bundleCards?.some((c) => c.breakdown.preDeemed)
       ? "자산별 §159①1호 취득가액(의제취득일 전 자산은 3자 max·의제취득일 기준시가) × 채무비율 — 부담부증여 명세 참조"
+      : bundleCards
+      ? "자산별 §159①1호 취득가액 × 채무비율 — 부담부증여 명세 참조"
       : preDeemedBasis === "three_way"
       ? "①상증법 평가액·②§164 기준시가·③환산취득가액 중 큰 금액 × 채무비율"
       : preDeemedBasis === "three_way_parts"
