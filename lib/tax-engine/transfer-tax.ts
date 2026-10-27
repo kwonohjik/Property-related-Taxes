@@ -45,7 +45,7 @@ import {
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { oneHouseJudgmentWarnings } from "./transfer-tax-one-house-warnings";
 import { resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
-import { revokeExemptionOnLandOnlyOtherHousehold } from "./land-only-owner-household";
+import { applyLandOnlyHouseholdRule } from "./land-only-owner-household";
 import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
 import { LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE } from "./land-only-owner-household";
 import { nblDeferralAreaNotice } from "./transfer-tax-nbl-deferral-notice";
@@ -53,7 +53,7 @@ import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { publicExpropriationReducedPart } from "./public-expropriation-reduction";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
-import { isLaterAcquiredLandExemptExcluded, laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice, housingExcessAcqContractNotice, housingExcessInheritedNotice } from "./transfer-tax-appurtenant-land";
+import { isLaterAcquiredLandExemptExcluded, landOnlyMergeNoticeSuppressed, laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice, housingExcessAcqContractNotice, housingExcessInheritedNotice } from "./transfer-tax-appurtenant-land";
 import { buildingSec164ApportionNotice, houseLandSec164Notice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
 import { landRebuildNoticeOf } from "./transfer-tax-rebuild-notice";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
@@ -263,8 +263,8 @@ export function calculateTransferTax(
     judgeOneHouseExemptionFromInput(exemptionJudgeInput, parsedRates.oneHouseSpecialRules, presaleRightStartDate(parsedRates)),
     effectiveInput,
   );
-  // V-3′ — 토지만 본인 × 건물(주택) 소유자 다른 세대면 이 세대의 1주택에 딸린 토지가 아니다(`land-only-owner-household.ts`).
-  const landOnlyHousehold = revokeExemptionOnLandOnlyOtherHousehold(rentalComposition.judgment, effectiveInput);
+  // V-3′ — 토지만 본인 × 건물(주택) 소유자 다른 세대면 이 세대의 1주택에 딸린 토지가 아니다 · 같은 세대면 합가일 고지(`land-only-owner-household.ts`).
+  const landOnlyHousehold = applyLandOnlyHouseholdRule(rentalComposition.judgment, effectiveInput, landOnlyMergeNoticeSuppressed(effectiveInput));
   const exemptionResult = landOnlyHousehold.judgment;
   // §155⑳ 불성립 원인(호별·거주 · 세대 구성) — 조기 반환·㉒ 안내·불성립 고지가 한 판정을 본다(composition-revoke D-2).
   const prhpUnmet =

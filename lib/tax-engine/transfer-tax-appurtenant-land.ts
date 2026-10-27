@@ -159,10 +159,20 @@ export function isLaterAcquiredLandExemptExcluded(input: TransferTaxInput): bool
   return laterLandFailsHoldingRequirement(input) && !laterLandCoveredByExpropriationProviso(input);
 }
 
+/**
+ * 토지만 본인 × 같은 세대의 합가일 고지(`applyLandOnlyHouseholdRule`)를 생략하는가 — 나중 취득 토지가 이미 G-3로 비과세에서 빠졌거나,
+ * 보유요건 자체가 면제되는 단서(영 §154① 단서 — `resolveExemptionProviso`가 "both")라 합가일이 판정에 쓰이지 않을 때.
+ */
+export function landOnlyMergeNoticeSuppressed(input: TransferTaxInput): boolean {
+  return isLaterAcquiredLandExemptExcluded(input) || resolveExemptionProviso(input) === "both";
+}
+
 /** G-3 입력 게이트 + 보유요건 미달 — 단서(5A) 반영 전. 비과세 제외와 5A 고지가 같은 게이트를 쓴다. */
 function laterLandFailsHoldingRequirement(input: TransferTaxInput): boolean {
   if (input.propertyType !== "housing") return false;
-  if ((input.selfOwns ?? "both") !== "both") return false;
+  // 토지만 본인도 같다 — 같은 세대원이 각각 소유해도 그 토지를 「주택부수토지로서 보유」한 기간만 보유요건에 든다(재산46014-610).
+  // 건물만 본인은 토지를 양도하지 않는다. 다른 세대 토지는 STEP 1이 비과세를 이미 거뒀다(V-3′).
+  if (input.selfOwns === "building_only") return false;
   // 별개취득 입력이어야 `calcSplitGain`이 반드시 파트를 낸다(총액 경로로 흘러 null이 되지 않음).
   if (input.isSeparateAcquisition !== true) return false;
   const land = input.landAcquisitionDate;

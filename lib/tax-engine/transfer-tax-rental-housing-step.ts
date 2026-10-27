@@ -55,6 +55,7 @@ import {
   rentalResidenceRequirementHoldYears,
 } from "./one-house/rental-residence-holding-proviso";
 import { landRebuildNoticeOf } from "./transfer-tax-rebuild-notice";
+import { landOnlyRateInput } from "./land-only-owner-household";
 
 // 요건 판정·조기반환 게이트는 800줄 정책으로 분리 — 기존 import 경로 호환 재export.
 export {
@@ -451,7 +452,8 @@ export function runRentalHousingExceptionStep(
         basicDeduction: rheBasicDeduction,
         splitDetail: buildRentalPartRateDetail(splitDetail!, { housingIncome: rhe.taxableGain, laterLand, nonBusinessLandPart: nbl ? toNonBusinessLandPart(nbl) : undefined }),
         parsedRates,
-        taxRateInput: effectiveInput,
+        // 토지만 본인은 일반 경로 STEP 7처럼 토지 취득일로 세율을 판정한다 — 파트 시드는 토지만 본인 + 초과분 없음에서 닫혀 자산 단위로 떨어진다.
+        taxRateInput: landOnlyRateInput(effectiveInput),
         multiHouseSurchargeResult,
       })
     : undefined;
