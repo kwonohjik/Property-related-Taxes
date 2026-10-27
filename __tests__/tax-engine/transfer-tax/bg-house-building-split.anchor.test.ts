@@ -154,6 +154,40 @@ describe("S4 — 이월과세 · 당초 증여자 토지 2000 · 건물 2015 →
     expect([split(r)?.land.holdingYears, split(r)?.building.holdingYears]).toEqual([25, 11]);
   });
 
+  it("S4b 증여세 상당액 5천만 → 파트 양도가액 비율로 나눠 실비 칸에 — 67,634,800", () => {
+    /**
+     * 5천만 × 0.4 = 20,000,000 → 토지 240/400 = 12,000,000 · 건물 8,000,000(영 §163의2② — 파트 평가액 칸이 없으면 양도가액 비율).
+     * 토지 220,000,000 − 12,000,000 = 208,000,000 × 30% = 62,400,000 · 건물 120,000,000 − 8,000,000 = 112,000,000 × 22% = 24,640,000.
+     * 320,000,000 − 87,040,000 = 232,960,000 − 2,500,000 = 230,460,000 × 38% − 19,940,000 = 67,634,800.
+     */
+    const base = carry(new Date("2015-01-01")) as unknown as { carryoverTaxation: Record<string, unknown> };
+    const r = run({ ...base, carryoverTaxation: { ...base.carryoverTaxation, giftTaxAmount: 50_000_000 } } as unknown as Partial<TransferTaxInput>);
+    expect([split(r)?.land.directExpenses, split(r)?.building.directExpenses]).toEqual([12_000_000, 8_000_000]);
+    expect(r.determinedTax).toBe(67_634_800);
+  });
+
+  it("S4c 기준시가 평가(개산공제) + 증여세 상당액 — 개산공제와 증여세 상당액을 칸별로 가른다", () => {
+    /**
+     * 기준시가 평가: C = 5억 · B/C = 0.8. 당초 증여자 취득시 기준시가 토지 5천만 · 건물 8천만 → 개산공제 토지 50,000,000 × 0.8 × 3% = 1,200,000 · 건물 1,920,000.
+     * 증여세 상당액 5천만 × 0.8 = 40,000,000 → 토지 240/400 = 24,000,000 · 건물 16,000,000 — 실비 칸(결과 항등식 규약).
+     */
+    const base = carry(new Date("2015-01-01")) as unknown as { carryoverTaxation: Record<string, unknown> };
+    const r = run({
+      ...base,
+      carryoverTaxation: { ...base.carryoverTaxation, giftTaxAmount: 50_000_000 },
+      burdenedGiftInfo: info({
+        valuationMode: "sangjeungbeop_standard", marketValueAtTransfer: undefined, acquisitionMethod: undefined,
+        actualLandAcquisitionPrice: undefined, actualBuildingAcquisitionPrice: undefined,
+        // 양도인(B) 취득시 기준시가 = 증여일 무렵 값(양도시와 비슷) → B 양도차익이 작아 A가 채택된다
+        landStdPriceAtAcquisition: 290_000_000, buildingStdPriceAtAcquisition: 190_000_000,
+        carryoverDonorBasis: { landStdPriceAtAcquisition: 50_000_000, buildingStdPriceAtAcquisition: 80_000_000, buildingDonorAcquisitionDate: new Date("2015-01-01") },
+      }),
+    } as unknown as Partial<TransferTaxInput>);
+    expect(r.carryoverTaxationDetail?.adoptedScenario).toBe("A");
+    const sd = split(r)!;
+    expect([sd.land.directExpenses, sd.land.appraisalDeduction, sd.building.directExpenses, sd.building.appraisalDeduction]).toEqual([24_000_000, 1_200_000, 16_000_000, 1_920_000]);
+  });
+
   it("회귀 — 건물 날짜가 토지와 같으면 분리하지 않는다(종전 69,550,000)", () => {
     const r = run(carry(LAND_2000));
     expect(r.determinedTax).toBe(69_550_000);
@@ -166,10 +200,12 @@ describe("S5 — 1세대1주택 · 고가주택 · 토지 2000 · 건물 2022 �
    * 시가 20억(토지 12억 · 건물 8억) · 채무 8억(B/C 0.4) → 양도가액 토지 480,000,000 · 건물 320,000,000.
    * 실지 토지 2억 · 건물 3억 → 80,000,000 · 120,000,000. 양도차익 토지 400,000,000 · 건물 200,000,000.
    * 고가 안분(분모 C = 20억): 과세 양도차익 = 양도차익 × (20억 − 12억) / 20억 → 토지 160,000,000 · 건물 80,000,000.
-   * 표2: 토지 보유 25년 40% + 거주 4년 16% = 56% → 89,600,000 · 건물 보유 4년 16% + 거주 16% = 32% → 25,600,000.
-   * 240,000,000 − 115,200,000 = 124,800,000 − 2,500,000 = 122,300,000 × 35% − 15,440,000 = 27,365,000.
+   * 장특: 건물 표2 = 보유 4년 16% + 거주 4년 16% = 32% → 25,600,000.
+   *   토지(부수토지)는 기본통칙 95-0…1 — max(표1 토지 자신 25년 30%, 표2 「주택 부수토지로서의 보유기간」 = 주택 4년 16% + 거주 16% = 32%) = 32% → 51,200,000
+   *   (기존 leaf `resolveAppurtenantLandLthdRate` — 일반 양도 분리와 같다).
+   * 240,000,000 − 76,800,000 = 163,200,000 − 2,500,000 = 160,700,000 × 38% − 19,940,000 = 41,126,000.
    */
-  it("27,365,000 · 파트 과세 양도차익·장특", () => {
+  it("41,126,000 · 파트 과세 양도차익·장특", () => {
     const r = run({
       landAcquisitionDate: LAND_2000,
       isOneHousehold: true,
@@ -184,8 +220,8 @@ describe("S5 — 1세대1주택 · 고가주택 · 토지 2000 · 건물 2022 �
     });
     const s = split(r)!;
     expect([s.land.taxableGainAfterProration, s.building.taxableGainAfterProration]).toEqual([160_000_000, 80_000_000]);
-    expect([s.land.longTermRate, s.building.longTermRate]).toEqual([0.56, 0.32]);
-    expect(r.determinedTax).toBe(27_365_000);
+    expect([s.land.longTermRate, s.building.longTermRate]).toEqual([0.32, 0.32]);
+    expect(r.determinedTax).toBe(41_126_000);
   });
 });
 

@@ -99,20 +99,26 @@ describe("부담부증여 stale 산정방식 — §159 안분 취득가액 보�
     expect(r.transferGain).toBe(EXPECTED_GAIN);
   });
 
-  it("케이스 7: 부담부증여 + 토지·건물 취득일 다름 + stale salesCase → 계산하지 않는다(V-4 Q-1 a)", () => {
-    // 종전에는 split이 미진입해 토지 취득일을 버리고 §159 안분값(비-split과 같은 값)으로 계산했다.
-    // 토지·건물 보유기간은 각각 센다(「소득세법」 제95조 제4항) — 나눠 계산하는 기능이 없어 leaf가 막는다(⑧·⑫와 같은 규칙).
-    // stale 산정방식 정규화 자체는 케이스 1~6이 고정한다.
-    expect(() =>
-      calculateTransferTax(
-        makeInput({
-          landAcquisitionDate: new Date("2005-06-10"),
-          acquisitionMethod: "salesCase",
-          similarSalesValue: 900_000_000,
-        } as Partial<TransferTaxInput>),
-        rates,
-      ),
-    ).toThrow("토지와 건물의 취득일이 다르면 아직 계산하지 못합니다");
+  it("케이스 7: 부담부증여 + 토지·건물 취득일 다름 + stale salesCase → 파트 값도 §159 안분값이다(V-4 PR-A — `bg-house-building-split.design.md`)", () => {
+    // 토지·건물 취득일이 다르면 부담부증여 단계가 §159 파트 값을 분리 계산에 그대로 넘긴다 — stale 산정방식이 끼어들 자리가 없다.
+    // 토지·건물 기준시가를 나눈 셀(토지 4억 : 건물 6억)로 계산하고, stale 매매사례가액이 있어도 파트 값·양도차익 합계가 같아야 한다.
+    const split = { landStdPriceAtTransfer: 400_000_000, buildingStdPriceAtTransfer: 600_000_000, landStdPriceAtAcquisition: 200_000_000, buildingStdPriceAtAcquisition: 300_000_000 };
+    const clean = calculateTransferTax(makeInput({ landAcquisitionDate: new Date("2005-06-10"), burdenedGiftInfo: { ...bgInfo, ...split } } as Partial<TransferTaxInput>), rates);
+    const stale = calculateTransferTax(
+      makeInput({
+        landAcquisitionDate: new Date("2005-06-10"),
+        burdenedGiftInfo: { ...bgInfo, ...split },
+        acquisitionMethod: "salesCase",
+        similarSalesValue: 900_000_000,
+      } as Partial<TransferTaxInput>),
+      rates,
+    );
+    expect(clean.splitDetail?.land.acquisitionPrice).toBeGreaterThan(0);
+    expect([stale.transferGain, stale.splitDetail?.land.acquisitionPrice, stale.splitDetail?.building.acquisitionPrice])
+      .toEqual([clean.transferGain, clean.splitDetail?.land.acquisitionPrice, clean.splitDetail?.building.acquisitionPrice]);
+    // 토지분 기준시가 0(주택 기준시가를 건물분에 몰아 둔 입력)이면 나눌 수 없어 막는다 — 차익이 건물 기산일로 계산되지 않게.
+    expect(() => calculateTransferTax(makeInput({ landAcquisitionDate: new Date("2005-06-10") } as Partial<TransferTaxInput>), rates))
+      .toThrow("양도시 토지 기준시가와 건물 기준시가를 따로");
   });
 
   it("케이스 8: 과잉 수정 방어 — 일반 양도(비-부담부증여)의 salesCase는 그대로 동작", () => {
