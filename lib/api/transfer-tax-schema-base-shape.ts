@@ -549,6 +549,11 @@ export const propertyBaseShape = {
     giftTaxAmount: z.number().int().nonnegative(),
     donorCapitalExpenditure: z.number().int().nonnegative().optional(),
     giftDateValuation: z.number().int().nonnegative(),
+    /**
+     * 당초 증여 때 이 자산에 담보된 채무로서 수증자가 인수한 금액 — 시나리오 A 조각 규칙(증여분·매입분)의 입력.
+     * 평가액 이하(`refineCarryoverTaxation`)이고, 조각을 나눌 수 없는 입력과는 함께 못 쓴다. 미전송 = 0(조각 없음). 엔진 shape와 parity.
+     */
+    giftAssumedDebt: z.number().int().nonnegative().optional(),
     /** §97의2① 관계요건 — 증여자 사망 배제 판정축 */
     donorRelation: z.enum(["spouse", "lineal", "other"]).optional(),
     donorDeceased: z.boolean().optional(),

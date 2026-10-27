@@ -17,6 +17,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { isRedevelopmentSec166Asset } from "@/lib/calc/redev-acquisition-price-source";
 import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { gbCapexBeforeExtensionSlots } from "@/lib/calc/gb-extension-capex-timing";
+import { carryoverPurchasedPartScope } from "@/lib/calc/carryover-gift-assumed-debt";
 
 interface Props {
   asset: AssetForm;
@@ -25,6 +26,8 @@ interface Props {
   totalTransferExpense?: string;
   /** 신고서 자산이 1건뿐인가 — 겸용주택 건물 귀속 양도비는 단건만 받는다(`mixedSaleSplitScope`). */
   isSingleAsset?: boolean;
+  /** 함께 양도 둘째 이후 자산인가 — 채무 부분 분할 술어(`carryoverPurchasedPartScope`)가 파트 이월과세 잔재를 꺼진 것으로 읽는 옵션 */
+  isNonPrimaryAsset?: boolean;
 }
 
 /**
@@ -56,10 +59,12 @@ const PARTIAL_CAPEX_NOTE =
 const PARTIAL_TRANSFER_EXPENSE_NOTE =
   "일부 양도 — 양도비는 이번 양도에서 발생한 금액이므로 안분하지 않습니다. 양도분에 대한 금액만 입력하세요.";
 
-export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isSingleAsset }: Props) {
+export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isSingleAsset, isNonPrimaryAsset }: Props) {
   // 겸용주택 건물 귀속 양도비 — ④·⑧과 같은 술어. 범위 밖이면 칸이 없고 ④도 보내지 않는다.
   const showMixedBuildingDirect = mixedSaleSplitScope(asset, { isSingleAsset: isSingleAsset === true }).status === "ok";
   const isPartial = (asset.areaScenario ?? "same") === "partial";
+  // 이월과세 × 당초 증여 채무 부분(매입분) — 본인 자본적지출·양도비는 증여분·채무 인수 부분에 같은 몫으로 나눈다(계획서 Q-2 a). 노출은 ④ 전송·⑧ 차단과 같은 술어 하나.
+  const debtSplitsExpense = asset.carryover?.giftDebtAssumed === true && carryoverPurchasedPartScope(asset, { isNonPrimary: isNonPrimaryAsset }).kind === "apply";
   // 일반건물 · 분리 OFF · 자산 단위 감정·매매사례 — 자본적지출·양도비가 계산에 쓰이지 않는다(§97②2호 본문, A2 §3.7).
   // 분리 ON은 파트 카드가 같은 안내를 띄우고 ⑧ V-8이 자산 단위 칸을 파트 칸으로 안내한다. 모드는 ④·⑧과 같은 leaf.
   const gbModes = asset.assetKind === "general_building" && !asset.hasSeperateLandAcquisitionDate ? gbPartModes(asset) : null;
@@ -172,6 +177,13 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
             />
           );
         })()}
+        {debtSplitsExpense && (
+          <ToneCard tone="amber">
+            <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="carryover-debt-expense-split-notice">
+              당초 증여 때 채무를 인수했으면 이 칸의 금액은 증여분과 채무 인수 부분에 같은 몫(증여 당시 평가액 − 인수한 채무 : 인수한 채무)으로 나누어 적용합니다.
+            </p>
+          </ToneCard>
+        )}
         </>
         )}
         {showMixedBuildingDirect && (

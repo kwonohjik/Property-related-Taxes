@@ -12,6 +12,7 @@ import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import { effectiveBuildingCarryoverMix } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
 import { validateDonorBuilt } from "./transfer-tax-validate-donor-built";
+import { validateCarryoverDebt } from "./transfer-tax-validate-carryover-debt";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 /**
@@ -143,6 +144,10 @@ export function validateCarryoverAsset(
     if (!isSplitValidationActive(asset) && parseAmount(asset.capitalExpenditure) > 0)
       return fieldError("capitalExpenditure", `${label}: 개별주택가격 미공시(공동주택 최초고시 전) 환산으로 증여자 취득가액을 구하는 이월과세에서는 자산 전체 자본적지출을 계산에 반영하지 못합니다 — 3시점 환산은 토지분·건물분으로 나눠 계산하는데 자본적지출은 안분 대상이 아니라(소득세법 §100② 후문) 귀속 파트를 알아야 합니다. 칸을 비우세요 (§97②2호 — 환산취득가액은 자본적지출·양도비와 비교해 큰 쪽을 필요경비로 합니다)`);
   }
+
+  // (f-3) 당초 증여 때 인수한 채무 부분(매입분) — 토글 ON이면 칸 필수·평가액 이하·r = 1 규칙 / 미지원 조합이면 토글을 끄게 막는다(⑫ `refineCarryoverTaxation`과 같은 규칙).
+  const debtErr = validateCarryoverDebt(asset, label, formTransferDate, { isNonPrimary: ctx.isNonPrimaryAsset });
+  if (debtErr) return debtErr;
 
   // (g) 결정 #33·#34·#38-6 — 증여자와 계속 같은 세대인가(필수 사실 질문) — `validateCarryoverHouseholdFact` 참조.
   const householdErr = validateCarryoverHouseholdFact(asset, c, label);

@@ -52,8 +52,8 @@ export function assetOfProperty(
   if (!assets) return undefined;
   const direct = assets.find((a) => a.assetId === propertyId);
   if (direct) return direct;
-  // 첫 자산은 카드 id가 "primary"(한도 초과 분리 시 "primary__appurtenant" / "primary__excess")다.
-  const basePid = propertyId.replace(/__(appurtenant|excess)$/, "");
+  // 첫 자산은 카드 id가 "primary"(한도 초과 분리 시 "primary__appurtenant" / "primary__excess" · 이월과세 채무 부분(매입분) 조각은 "primary__purchased")다.
+  const basePid = propertyId.replace(/__(appurtenant|excess|purchased)$/, "");
   if (basePid === "primary") return assets[0];
   return basePid !== propertyId ? assets.find((a) => a.assetId === basePid) : undefined;
 }

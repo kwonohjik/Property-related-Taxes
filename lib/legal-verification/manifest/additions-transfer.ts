@@ -21,6 +21,13 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** 이월과세 × 당초 증여 채무 부분(매입분) — 「양도로 보는 부분」만 법문이 정한다(KoreanLaw 현행 본문 2026-10-27). */
+    id: "TRANSFER.CARRYOVER_DEBT_PURCHASED_PART",
+    citation: "소득세법 §88",
+    keywords: ["부담부증여 시 수증자가 부담하는 채무액에 해당하는 부분은 양도로 보며"],
+    keywordMode: "ALL",
+  },
+  {
     /** 비거주자 1세대1주택·1입주권 비과세 배제(판정 메뉴 `one-house/non-resident.ts`) — KoreanLaw 현행 본문 실측(2026-10-08). */
     id: "TRANSFER.NON_RESIDENT_EXEMPTION_EXCLUSION",
     citation: "소득세법 §121",

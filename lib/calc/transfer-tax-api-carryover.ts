@@ -13,6 +13,7 @@ import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { parsePriorResidenceMonths } from "@/lib/calc/gift-household-payload";
 import { partCarryover } from "./transfer-land-part-cause";
 import { apportionGiftTax } from "@/lib/tax-engine/carryover-gift-tax-apportion";
+import { carryoverPurchasedPartDebt } from "./carryover-gift-assumed-debt";
 import { gbBgGiftTaxReturn, isGbBurdenedGift } from "./gb-bg-gift-tax-return";
 import { gbBgGiftTaxNumerator } from "./gb-bg-gift-tax-return";
 import { bgCarryoverForm } from "./bg-carryover-parts";
@@ -89,6 +90,8 @@ export function buildCarryoverPayload(
   transferDate: string,
   /** 공유 지분 비율 (단독 소유는 1.0). 호출부가 `getOwnershipRatio`로 이미 산출해 둔 값. */
   ownershipRatio: number,
+  /** 함께 양도 둘째 이후 자산 — 범위 술어(`carryoverPurchasedPartScope`)가 파트 이월과세 잔재를 꺼진 것으로 읽는다. */
+  opts?: { isNonPrimary?: boolean },
 ): CarryoverPayloadResult | undefined {
   const c = carryoverEventForm(asset);
   if (!c) return undefined;
@@ -138,6 +141,12 @@ export function buildCarryoverPayload(
     })(),
     donorCapitalExpenditure: capex > 0 ? capex : undefined,
     giftDateValuation: scale(parseAmount(c.giftDateValuation)),
+    // 당초 증여 때 인수한 채무 부분(매입분) — 시나리오 A 조각 규칙의 입력. 범위 술어가 apply ∧ 토글 ON ∧ 채무 > 0일 때만 싣는다(⑤ 노출 · ⑧ 필수와 같은 술어).
+    //   평가액과 같은 기준(지분 모드는 같은 지분율로 스케일 — r 불변). 일반건물·파트 이월과세·부담부증여의 토글은 이 키를 보내지 않는다(분자에서만 빼거나 ⑧이 막는다).
+    giftAssumedDebt: (() => {
+      const debt = carryoverPurchasedPartDebt(asset, opts);
+      return debt > 0 ? scale(debt) : undefined;
+    })(),
     // §97의2① 관계요건 — 미선택("")·미사망(false)은 전송하지 않는다(엔진 기본값과 동치).
     donorRelation: c.donorRelation || undefined,
     donorDeceased: c.donorDeceased || undefined,

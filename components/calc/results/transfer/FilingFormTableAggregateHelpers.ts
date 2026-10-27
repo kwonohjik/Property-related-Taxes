@@ -27,7 +27,7 @@ import {
   fmtPeriod,
   getAcqDateForCard,
 } from "./FilingFormTableHelpers";
-import { gbCarryoverAcqDateOverride } from "./FilingFormTableDateHelpers";
+import { gbCarryoverAcqDateOverride, purchasedPartAcqDateOverride } from "./FilingFormTableDateHelpers";
 import { fmtRatePct } from "./FilingFormTableRowDefs";
 import { resolveFilingRateCode } from "./filing-rate-code";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
@@ -103,7 +103,7 @@ export function buildAggregateRows(
 
   // propertyId → AssetForm 매핑 (TransferTaxCalculator의 ownershipMap 패턴과 동일):
   //   assets[0] → "primary", assets[i>0] → assetId 그대로
-  //   G-2 한도 초과 split: "{assetId}__appurtenant" / "{assetId}__excess" suffix 제거 후 재조회 (첫 자산 토지는 "primary__…" → assets[0])
+  //   G-2 한도 초과 split: "{assetId}__appurtenant" / "{assetId}__excess" · 이월과세 채무 부분(매입분) 조각 "{assetId}__purchased" suffix 제거 후 재조회 (첫 자산 토지는 "primary__…" → assets[0])
   //   GB(일반건물 토지+건물 일괄): 단일 자산이 엔진 내부에서 "land"/"building"/"building1"/"building2" 카드로 분해됨 → assets[0]로 fallback
   //     - "building" (사례 31 비증축 경로) / "building1" (사례 33 증축 경로 원건물)
   //     - "building2" (사례 33 증축 경로 증축분 — acqDate는 증축일)
@@ -129,7 +129,7 @@ export function buildAggregateRows(
     const direct = formData.assets.find((a) => a.assetId === pid);
     if (direct) return direct;
     // split suffix 제거 fallback — 부수토지 한도 초과 분리 시 원본 assetId로 재조회
-    const basePid = pid.replace(/__(appurtenant|excess)$/, "");
+    const basePid = pid.replace(/__(appurtenant|excess|purchased)$/, "");
     // G1 — 첫 자산 주택부수토지도 같은 규약으로 나뉜다(`primary__appurtenant` / `primary__excess`) — 원본은 assets[0]이다.
     if (basePid === "primary") return formData.assets[0];
     if (basePid !== pid) return formData.assets.find((a) => a.assetId === basePid);
@@ -204,7 +204,10 @@ export function buildAggregateRows(
     // 부담부증여 × 이월과세 A 채택이면 당초 증여자 취득일(엔진 보유기간 축) — 각주로 밝힌다.
     const carryoverAcqDate = gbCarryoverAcqDateOverride(aggregated, col);
     if (carryoverAcqDate) acqDateNotes[col] = "당초 증여자 취득일 — 이월과세 적용(시나리오 A) · 소득세법 §95④ 단서";
-    const acqDate = carryoverAcqDate ?? getAcqDateForCard(a, col);
+    // 이월과세 × 채무 부분(매입분) A 채택 — 증여분 열 = 증여자 취득일 · 매입분 열 = 증여 등기접수일(조각 id가 열 id).
+    const purchasedPartDate = purchasedPartAcqDateOverride(properties, col);
+    if (purchasedPartDate) acqDateNotes[col] = purchasedPartDate.note;
+    const acqDate = purchasedPartDate?.date ?? carryoverAcqDate ?? getAcqDateForCard(a, col);
 
     // 머리 정보
     setStr("transferDate", col, fmtDate(colTransferDate));

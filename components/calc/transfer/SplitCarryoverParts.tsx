@@ -16,6 +16,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SplitPartCarryoverCard } from "./SplitPartCarryoverCard";
+import { DebtNumeratorOnlyNote } from "./CarryoverGiftDebtSection";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
@@ -130,7 +131,12 @@ export function SplitCarryoverGiftTaxCard(props: {
       <ToggleCard
         tone="amber"
         title="당초 증여 때 채무를 인수했다"
-        description={`증여세 신고서에서 증여재산가액에서 뺀 채무(「상속세 및 증여세법」 제47조 제1항)가 있으면 켭니다 — ${partsLabel} 몫의 분자는 증여 신고가액에서 그 채무를 뺀 금액입니다(「소득세법 시행령」 제163조의2 제2항 제2호).`}
+        description={
+          <>
+            {`증여세 신고서에서 증여재산가액에서 뺀 채무(「상속세 및 증여세법」 제47조 제1항)가 있으면 켭니다 — ${partsLabel} 몫의 분자는 증여 신고가액에서 그 채무를 뺀 금액입니다(「소득세법 시행령」 제163조의2 제2항 제2호).`}
+            <DebtNumeratorOnlyNote />
+          </>
+        }
         checked={c.giftDebtAssumed}
         onCheckedChange={(v) => onPatch({ giftDebtAssumed: v })}
         data-testid="split-carryover-gift-debt-assumed"

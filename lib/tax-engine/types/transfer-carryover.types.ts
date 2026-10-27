@@ -110,8 +110,12 @@ export interface CarryoverTaxationInput {
    */
   giftDateValuation: number;
   /**
-   * [echo] 당초 증여 때 인수한 채무 — 합성기(⑭)가 영 §163의2②2호 분자(평가액 − 이 값)로 `giftTaxAmount`를 이미 만들었다. 계산에는 다시 쓰지 않고
-   * 결과 산식 표시에만 쓴다(`carryover-gift-tax-numerator-net.plan.md`). 없으면 0.
+   * 당초 증여 때 그 자산에 담보된 채무로서 수증자가 인수한 금액 — 쓰임이 서브객체마다 다르다(뜻은 같다).
+   * - **자산 전체 서브객체(`TransferTaxInput.carryoverTaxation`)**: 시나리오 A에서 자산을 증여분·매입분으로 나누는 **조각 규칙의 입력**이다
+   *   (`carryover-gift-debt-purchased-part.plan.md`). 집계 엔진(`transfer-tax-aggregate-debt-units.ts`)만 읽고 단건 엔진에는 벗겨서 보낸다 —
+   *   단건 엔진이 이 값을 받으면 `calcCarryoverScenarios`가 던진다(조각 없이 조용히 계산하는 우회 차단 · G1).
+   * - **파트 서브객체(`landCarryoverTaxation`·`buildingCarryoverTaxation`)**: [echo] 합성기(⑭)가 영 §163의2②2호 분자(평가액 − 이 값)로
+   *   `giftTaxAmount`를 이미 만들었다. 계산에는 다시 쓰지 않고 결과 산식 표시에만 쓴다(`carryover-gift-tax-numerator-net.plan.md`). 없으면 0.
    */
   giftAssumedDebt?: number;
   /**
@@ -208,6 +212,44 @@ export interface CarryoverOwnerSplitPart {
   acquisitionPrice: number;
 }
 
+/** 조각 하나의 요약 — `CarryoverPurchasedPartSplit`의 증여분·매입분. 날짜는 `YYYY-MM-DD` 문자열(JSON 경유 Date 함정 회피). */
+export interface CarryoverPieceEcho {
+  /** 조각 카드 id — 증여분 = 원 카드 id · 매입분 = `${id}__purchased`(r = 1이면 원 id) */
+  propertyId: string;
+  transferPrice: number;
+  acquisitionPrice: number;
+  /** 증여분 = 당초 증여자 취득일 · 매입분 = 증여 등기접수일 */
+  acquisitionDate: string;
+  /** 위 취득일 기산 보유연수 */
+  holdingPeriodYears: number;
+  transferGain: number;
+  /** 그 조각 카드 단독 세율(0.42 · 0.7) — 단기 매입분의 근거 표시 */
+  appliedRate: number;
+}
+
+/**
+ * 이월과세 × 당초 증여 채무 부분(매입분) — 시나리오 A′ 조각 요약.
+ * 불변식: `gift.transferPrice + purchased.transferPrice = transferPrice` · `purchased.acquisitionPrice = debtAmount` ·
+ * `purchased.acquisitionDate = 증여 등기접수일` · `gift.acquisitionDate = 증여자 취득일`.
+ */
+export interface CarryoverPurchasedPartSplit {
+  /** 엔진이 쓴 정수(지분 스케일 후) */
+  debtAmount: number;
+  /** 같은 기준의 증여 당시 평가액 */
+  giftValuation: number;
+  /** 조각 전 양도가액 = 증여분 + 매입분 */
+  transferPrice: number;
+  /** 조각 전 당초 증여자 취득가액(환산이면 환산취득가액) */
+  donorAcquisitionPrice: number;
+  /** 채무 = 평가액(r = 1)이면 없다 */
+  gift?: CarryoverPieceEcho;
+  purchased: CarryoverPieceEcho;
+  /** 신고 전체 결정세액 — A′(이 자산에 ①을 적용 · 조각 적용) */
+  determinedTaxA: number;
+  /** 신고 전체 결정세액 — B(미적용) */
+  determinedTaxB: number;
+}
+
 /**
  * Scenario A (이월과세 적용) 상세 결과
  */
@@ -281,6 +323,12 @@ export interface CarryoverScenarioADetail {
   estimatedStdPriceAtTransfer?: number;
   /** 양도차익 (증여세 상당액 차감 후 최종) */
   transferGain: number;
+  /**
+   * [echo] 당초 증여 때 인수한 채무 부분(매입분)을 나눈 시나리오 A′ 요약 — 비교 카드 A 열이 「증여분 · 매입분」 두 블록을 그린다.
+   * 집계가 부모 카드(`properties[i]`)의 detail에 **채택과 무관하게 항상** 싣는다(채택하지 않은 쪽은 반사실 실행에서 만든다).
+   * 있으면 이 카드의 `acquisitionPrice`·`transferGain`은 증여분 카드 값(조각 후)이다 — 조각 전 값은 이 echo가 갖는다. 없으면 조각 없음(현행 표시).
+   */
+  purchasedPartSplit?: CarryoverPurchasedPartSplit;
   /**
    * [echo] 소유자 분리(토지만·건물만)에서 이 시나리오의 **본인 파트** 양도가액·취득가액(차감분) — 비교 카드·서식 부제 표시 전용.
    * 위 `acquisitionPrice`는 자산 전체 값이고 `transferGain`은 본인 파트 값이라 둘을 한 카드에 적으면 「양도가액 − 취득가액 = 양도차익」이 서지 않는다.
