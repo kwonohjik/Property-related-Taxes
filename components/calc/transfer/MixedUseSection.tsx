@@ -12,6 +12,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { isMixedUsePerPartAcq, mixedUsePhdEffective } from "@/lib/calc/mixed-use-part-acq-split";
 import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
+import { genericScopeEntryClearPatch } from "@/lib/calc/transfer-generic-scope-entry";
 import { MixedUseStandardPriceInputs } from "./mixed-use/MixedUseStandardPriceInputs";
 import { PartialUsageChangeInputs } from "./mixed-use/PartialUsageChangeInputs";
 
@@ -52,6 +53,8 @@ export function MixedUseToggleRow({ asset, onChange }: Pick<Props, "asset" | "on
             isMixedUseHouse: checked,
             // 겸용주택 ON: 토지/건물 분리 모드 자동 활성화 (취득시기 분리 일반화)
             ...(checked ? { hasSeperateLandAcquisitionDate: true } : {}),
+            // 겸용 OFF: 상속·증여는 「개별주택가격 미공시」가 켠 환산 플래그를 비운다(복원과 같은 규칙 — #2594 V-1)
+            ...(checked ? {} : genericScopeEntryClearPatch(asset, { ...asset, isMixedUseHouse: false })),
           });
         }}
       />

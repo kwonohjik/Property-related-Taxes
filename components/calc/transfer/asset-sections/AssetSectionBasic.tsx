@@ -35,6 +35,7 @@ import {
 } from "./AssetAreaSection";
 import { redevSubjectPatchForAssetKind } from "./AssetAreaRedevelopment";
 import { housingFlagResetPatchForAssetKind } from "./housing-flag-reset";
+import { genericScopeEntryClearPatch } from "@/lib/calc/transfer-generic-scope-entry";
 import { SuccessorRightTypeToggle } from "../SuccessorRightTypeToggle";
 import { CompanionLandNatureBlock } from "../CompanionLandNatureBlock";
 import { DesignatedDistrictQuestion } from "../DesignatedDistrictQuestion";
@@ -154,8 +155,8 @@ export function AssetSectionBasic({
               )}
               <button
                 type="button"
-                onClick={() =>
-                  onChange({
+                onClick={() => {
+                  const next: Partial<AssetForm> = {
                     assetKind: opt.value,
                     ...areaResetPatchForAssetKind(asset, opt.value),
                     ...redevSubjectPatchForAssetKind(opt.value),
@@ -163,8 +164,10 @@ export function AssetSectionBasic({
                     //    `assetKind === "housing"` 게이트 안에만 있어 전환 즉시 끄는 수단이
                     //    사라지는데, ⑧은 자산 종류를 보지 않아 칸 없는 입력을 요구했다.
                     ...housingFlagResetPatchForAssetKind(opt.value),
-                  })
-                }
+                  };
+                  // 상속·증여가 재개발·입주권·겸용에서 일반 범위로 들어오면 그쪽 라디오가 켠 산정 방식 플래그를 비운다(복원과 같은 규칙 — #2594 V-1).
+                  onChange({ ...next, ...genericScopeEntryClearPatch(asset, { ...asset, ...next }) });
+                }}
                 className={cn(
                   "px-3 py-1.5 rounded-md text-sm border transition-colors",
                   asset.assetKind === opt.value
