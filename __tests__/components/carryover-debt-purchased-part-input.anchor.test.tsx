@@ -7,6 +7,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { CarryoverGiftBlock } from "@/components/calc/transfer/CarryoverGiftBlock";
+import { CarryoverGiftDebtSection } from "@/components/calc/transfer/CarryoverGiftDebtSection";
 import { SplitCarryoverGiftTaxCard } from "@/components/calc/transfer/SplitCarryoverParts";
 import { AssetSectionExpense } from "@/components/calc/transfer/asset-sections/AssetSectionExpense";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
@@ -23,6 +24,8 @@ const asset = (over: Record<string, unknown> = {}, co: Record<string, unknown> =
   ({ ...makeDefaultAsset(1), assetKind: "housing", acquisitionCause: "carryover_gift", carryover: { ...CO, ...co }, ...over }) as unknown as AssetForm;
 const draw = (a: AssetForm, onChange = vi.fn()) => render(<CarryoverGiftBlock asset={a} transferDate="2026-03-01" onChange={onChange} />);
 const toggle = () => screen.queryByTestId("carryover-gift-debt-assumed");
+/** Base UI Switch의 접근 이름은 jsdom에서 aria-labelledby로 풀려 `getByRole(name)`이 못 잡는다 — aria-label(= 토글 제목)로 찾는다. */
+const debtSwitch = () => screen.getAllByRole("switch").find((e) => e.getAttribute("aria-label") === "당초 증여 때 채무를 인수했다") as HTMLElement;
 const debtField = () => document.querySelector("[data-field='carryover.giftAssumedDebt']");
 
 describe("⑤ apply — 주택 이월과세(E1)", () => {
@@ -39,13 +42,13 @@ describe("⑤ apply — 주택 이월과세(E1)", () => {
     expect(debtField()).toBeTruthy();
     expect(screen.getByTestId("carryover-gift-assumed-debt")).toBeTruthy();
     expect(screen.getByText("당초 증여 때 인수한 채무", { selector: "p" })).toBeTruthy();
-    expect(screen.getByRole("switch", { name: "당초 증여 때 채무를 인수했다" }).getAttribute("aria-checked")).toBe("true");
+    expect(debtSwitch().getAttribute("aria-checked")).toBe("true");
   });
 
   it("I-3 토글을 켜면 onChange로 carryover.giftDebtAssumed = true (다른 칸 보존)", () => {
     const onChange = vi.fn();
     draw(asset(), onChange);
-    fireEvent.click(screen.getByRole("switch", { name: "당초 증여 때 채무를 인수했다" }));
+    fireEvent.click(debtSwitch());
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange.mock.calls[0][0].carryover).toMatchObject({ giftDebtAssumed: true, giftDateValuation: "1000000000", donorAcquisitionPrice: "100000000" });
   });
@@ -78,6 +81,14 @@ describe("⑤ apply — 주택 이월과세(E1)", () => {
   });
 });
 
+describe("증여분 안내는 적용(apply) 입력에서만 — 범위 밖에 남은 ON이 안내를 켜지 않는다", () => {
+  it("I-6b 부담부증여 주택 + 남은 ON → 「증여분에만」 안내 없음(실제로 나누지 않는다)", () => {
+    draw(asset({ transferType: "burdened_gift" }, { giftDebtAssumed: true, giftAssumedDebt: "400000000" }));
+    for (const f of ["carryover.giftTaxAmount", "carryover.donorCapitalExpenditure"])
+      expect(document.querySelector(`[data-field='${f}']`)?.textContent ?? "", f).not.toContain("증여분에만");
+  });
+});
+
 describe("⑤ unsupported — 지금 양도도 부담부증여(E4) 주택", () => {
   const bg = (co: Record<string, unknown> = {}) => asset({ transferType: "burdened_gift" }, co);
   it("I-7 OFF → 토글 없음 · 안내(사유 포함)", () => {
@@ -90,7 +101,7 @@ describe("⑤ unsupported — 지금 양도도 부담부증여(E4) 주택", () =
   it("I-8 ★ 남은 ON → 토글이 켜진 채 보인다(끌 수 있다) · 채무 칸은 없다", () => {
     draw(bg({ giftDebtAssumed: true, giftAssumedDebt: "400000000" }));
     expect(toggle()).toBeTruthy();
-    expect(screen.getByRole("switch", { name: "당초 증여 때 채무를 인수했다" }).getAttribute("aria-checked")).toBe("true");
+    expect(debtSwitch().getAttribute("aria-checked")).toBe("true");
     expect(debtField()).toBeNull();
     expect(screen.queryByTestId("carryover-debt-unsupported-note")).toBeNull();
   });
@@ -107,6 +118,18 @@ describe("⑤ numerator_only — 일반건물·파트 이월과세는 기존 위
   it("I-10 주택 분리 계산 증여세 카드 → 분자 전용 안내", () => {
     render(<SplitCarryoverGiftTaxCard sectionNum={4} value={{ ...CO, giftDebtAssumed: false } as never} onPatch={vi.fn()} anchorPrefix="carryover" partsLabel="토지·건물" giftTaxShareHint="" debtParts={[]} />);
     expect(screen.getByTestId("carryover-debt-numerator-only-note").textContent).toContain("분자에서만");
+  });
+});
+
+describe("⑤ 섹션 자체의 술어 가드 — none·numerator_only는 아무것도 그리지 않는다", () => {
+  const section = (a: AssetForm) => render(<CarryoverGiftDebtSection asset={a} shareMode={false} onPatchCarryover={vi.fn()} />);
+  it("I-13 이월과세가 아닌 취득(none) · 토지·건물 파트 이월과세(numerator_only) → null", () => {
+    expect(carryoverPurchasedPartScope(asset({ acquisitionCause: "purchase" })).kind).toBe("none");
+    expect(section(asset({ acquisitionCause: "purchase" }, { giftDebtAssumed: true })).container.innerHTML).toBe("");
+    cleanup();
+    const split = asset({ carryoverDonorSplit: true });
+    expect(carryoverPurchasedPartScope(split).kind).toBe("numerator_only");
+    expect(section(split).container.innerHTML).toBe("");
   });
 });
 

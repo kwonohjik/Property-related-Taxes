@@ -27,7 +27,7 @@ import {
   fmtPeriod,
   getAcqDateForCard,
 } from "./FilingFormTableHelpers";
-import { gbCarryoverAcqDateOverride } from "./FilingFormTableDateHelpers";
+import { gbCarryoverAcqDateOverride, purchasedPartAcqDateOverride } from "./FilingFormTableDateHelpers";
 import { fmtRatePct } from "./FilingFormTableRowDefs";
 import { resolveFilingRateCode } from "./filing-rate-code";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
@@ -204,7 +204,10 @@ export function buildAggregateRows(
     // 부담부증여 × 이월과세 A 채택이면 당초 증여자 취득일(엔진 보유기간 축) — 각주로 밝힌다.
     const carryoverAcqDate = gbCarryoverAcqDateOverride(aggregated, col);
     if (carryoverAcqDate) acqDateNotes[col] = "당초 증여자 취득일 — 이월과세 적용(시나리오 A) · 소득세법 §95④ 단서";
-    const acqDate = carryoverAcqDate ?? getAcqDateForCard(a, col);
+    // 이월과세 × 채무 부분(매입분) A 채택 — 증여분 열 = 증여자 취득일 · 매입분 열 = 증여 등기접수일(조각 id가 열 id).
+    const purchasedPartDate = purchasedPartAcqDateOverride(properties, col);
+    if (purchasedPartDate) acqDateNotes[col] = purchasedPartDate.note;
+    const acqDate = purchasedPartDate?.date ?? carryoverAcqDate ?? getAcqDateForCard(a, col);
 
     // 머리 정보
     setStr("transferDate", col, fmtDate(colTransferDate));

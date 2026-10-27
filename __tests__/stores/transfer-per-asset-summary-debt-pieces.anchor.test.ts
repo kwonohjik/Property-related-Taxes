@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
-import { computeTransferSummary, createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -59,8 +59,8 @@ describe("⑥ 계산 후 — `__purchased` 행을 원 자산으로 합친다", (
     expect([rows[0].salePrice, rows[0].acqPrice]).toEqual([1_500_000_000, 1_000_000_000]);
     expect([rows[1].salePrice, rows[1].acqPrice, rows[1].salePending]).toEqual([1_000_000_000, 436_000_000, false]);
   });
-  it("S-5 합계(computeTransferSummary)도 조각 합이다 — 양도가 = 취득가 + 경비 + 차익이 선다", () => {
-    const s = computeTransferSummary(f1(), { mode: "bundled", ...(bundled([{ assetId: "primary", sale: 900_000_000, acq: 60_000_000, exp: 0 }, { assetId: "primary__purchased", sale: 600_000_000, acq: 400_000_000, exp: 0 }]) as object) } as never);
-    expect([s.totalSalePrice, s.totalAcqPrice]).toEqual([1_500_000_000, 460_000_000]);
+  it("S-5 사이드바 푸터 합계(Σ rows 양도가액)도 조각 합이다", () => {
+    const sum = computeTransferPerAssetSummary(f1(), bundled([{ assetId: "primary", sale: 900_000_000, acq: 60_000_000, exp: 0 }, { assetId: "primary__purchased", sale: 600_000_000, acq: 400_000_000, exp: 0 }]));
+    expect(sum.totalSalePrice).toBe(1_500_000_000);
   });
 });

@@ -9,6 +9,7 @@
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { DEBT_GIFT_PART_ONLY_HINT } from "./CarryoverGiftDebtSection";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
@@ -62,6 +63,8 @@ interface Props {
   part?: "land" | "building";
   /** 함께 양도하는 두 번째 이후 자산 — 환산 방식은 `general`만(PR-0c). `CarryoverGiftBlock`의 같은 prop */
   isNonPrimaryAsset?: boolean;
+  /** 당초 증여 때 채무를 인수해 시나리오 A를 증여분·채무 인수 부분으로 나누는 입력인가 — 환산 기준시가가 증여분에만 적용된다는 안내(`CarryoverGiftBlock`이 같은 술어로 만든다) */
+  debtPiecesOn?: boolean;
 }
 
 export function CarryoverEstimationSection({
@@ -72,6 +75,7 @@ export function CarryoverEstimationSection({
   onAssetChange,
   part = "land",
   isNonPrimaryAsset,
+  debtPiecesOn,
 }: Props) {
   const isBuildingPart = part === "building";
   /**
@@ -140,7 +144,7 @@ export function CarryoverEstimationSection({
           <FieldCard
             field={isBuildingPart ? "buildingCarryover.donorStandardPriceAtAcquisition" : "carryover.donorStandardPriceAtAcquisition"}
             label="취득시 기준시가"
-            hint="증여자 취득일 기준 공동주택가격 또는 개별주택가격 (부동산공시가격알리미 조회)"
+            hint={"증여자 취득일 기준 공동주택가격 또는 개별주택가격 (부동산공시가격알리미 조회)" + (debtPiecesOn ? DEBT_GIFT_PART_ONLY_HINT : "")}
             trailing={<LegalBadge text="시행령 §163⑨" />}
           >
             <CurrencyInput
@@ -153,7 +157,7 @@ export function CarryoverEstimationSection({
           <FieldCard
             field="carryover.donorStandardPriceAtTransfer"
             label="양도시 기준시가"
-            hint="양도일 기준 공동주택가격 또는 개별주택가격 (부동산공시가격알리미 조회)"
+            hint={"양도일 기준 공동주택가격 또는 개별주택가격 (부동산공시가격알리미 조회)" + (debtPiecesOn ? DEBT_GIFT_PART_ONLY_HINT : "")}
           >
             <CurrencyInput
               label=""

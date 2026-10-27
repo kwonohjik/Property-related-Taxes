@@ -54,6 +54,7 @@ import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { depreciationSupport } from "@/lib/calc/depreciation-scope";
 import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
+import { purchasedPartTotals } from "./transfer-per-asset-debt-pieces";
 
 export interface TransferAssetSummaryRow {
   assetId: string;
@@ -353,6 +354,8 @@ export function computeTransferPerAssetSummary(
     const bundledMatch = bundledResult?.apportionment.apportioned.find((p) => p.assetId === bundledAssetId);
     // 엔진이 이 자산에 **실제로 쓴** 취득가액·필요경비(E-U1 이후 분리 자산도 파트 합) — 취득·경비 두 칸이 같은 축을 읽는다.
     const bundledProperty = bundledResult?.aggregated?.properties?.find((p) => p.propertyId === bundledAssetId);
+    // 이월과세 채무 부분(매입분) — `${id}__purchased` 행은 같은 자산의 일부라 양도가액·취득가액·필요경비에 더한다(없으면 null).
+    const purchased = purchasedPartTotals(bundledResult, bundledAssetId);
 
     /**
      * **자산카드 분해 결과의 귀속** — 일반건물(§166⑥·§104의3 비사업용 분할)은 폼 자산 1건이
@@ -418,7 +421,7 @@ export function computeTransferPerAssetSummary(
       else if (isSingle && brkd) salePrice = burdenedGiftTransferPrice(brkd);
       else salePending = true;
     } else if (bundledMatch) {
-      salePrice = bundledMatch.allocatedSalePrice;
+      salePrice = bundledMatch.allocatedSalePrice + (purchased?.sale ?? 0);
       saleIsApportioned = bundledMatch.saleMode === "apportioned";
     } else if (bundledCards && bundledCards.sale > 0) {
       // 자산카드 분해(일반건물) — 카드 양도가액 합 = 그 자산의 양도가액. 카드 간 분할은
@@ -477,7 +480,7 @@ export function computeTransferPerAssetSummary(
       acqPrice = 0;
       acqPending = true;
     } else if (bundledMatch) {
-      acqPrice = bundledMatch.allocatedAcquisitionPrice;
+      acqPrice = bundledMatch.allocatedAcquisitionPrice + (purchased?.acq ?? 0);
       // 엔진이 이 자산의 취득가액을 확정했다 — 입력 단계 pending(환산 파트·필지)을 내린다. 남겨 두면 엔진 값이 0일 때
       // 계산 후에도 「계산 후 표시」에 갇힌다.
       acqPending = false;
@@ -642,7 +645,7 @@ export function computeTransferPerAssetSummary(
     } else if (bundledMatch) {
       // 엔진이 자산별로 **실제 차감한** 필요경비 — 안분 결과(`allocatedExpenses`)는 입력 경비만
       // 담고 개산공제(§163⑥)는 그 뒤 단건 엔진이 더하므로, 추계 자산에서 0으로 보였다(F-14).
-      expense = bundledProperty?.necessaryExpense ?? bundledMatch.allocatedExpenses;
+      expense = (bundledProperty?.necessaryExpense ?? bundledMatch.allocatedExpenses) + (purchased?.exp ?? 0);
     } else if (bundledCards) {
       // 자산카드 분해(일반건물) — 카드별 필요경비 합(개산공제 포함).
       expense = bundledCards.exp;

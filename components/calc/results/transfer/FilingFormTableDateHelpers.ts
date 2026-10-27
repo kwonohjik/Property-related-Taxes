@@ -9,7 +9,7 @@ import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { table2ResidencePct } from "@/lib/tax-engine/data/lthd-table2-era";
-import type { AggregateTransferResult } from "@/lib/tax-engine/types/transfer-aggregate.types";
+import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 
 // ── 날짜·기간 포맷 헬퍼 ────────────────────────────────────────
 
@@ -114,6 +114,26 @@ export function gbCarryoverAcqDateOverride(
   const base = baseCardId(pid);
   if (base === "land" || base === "land_business" || base === "land_nbl") return a.landHoldingStartDate;
   if (base === "building" || base === "building1") return a.buildingHoldingStartDate;
+  return undefined;
+}
+
+/**
+ * 이월과세 × 당초 증여 채무 부분(매입분) **A 채택** — 집계 서식 열의 취득일.
+ * 증여분 열은 당초 증여자 취득일, 매입분 열은 증여 등기접수일이다(엔진 echo `scenarioA.purchasedPartSplit` · 조각 id가 열 id).
+ * 폼 자산에는 취득일 칸이 없어 두 열이 같은 날짜·보유기간으로 찍히던 자리다. B 채택(카드 한 장)이면 그 카드의 취득 사실은 B라 `undefined`.
+ * r = 1이면 매입분 한 장이 원 id를 쓰므로 `purchased.propertyId`가 그 열이다.
+ */
+export function purchasedPartAcqDateOverride(
+  properties: readonly Pick<PerPropertyBreakdown, "propertyId" | "carryoverTaxationDetail">[],
+  pid: string,
+): { date: string; note: string } | undefined {
+  for (const p of properties) {
+    const d = p.carryoverTaxationDetail;
+    const split = d?.scenarioA?.purchasedPartSplit;
+    if (!split || d?.adoptedScenario !== "A") continue;
+    if (split.gift?.propertyId === pid) return { date: split.gift.acquisitionDate, note: "당초 증여자 취득일 — 이월과세 적용(시나리오 A) · 소득세법 §95④ 단서" };
+    if (split.purchased.propertyId === pid) return { date: split.purchased.acquisitionDate, note: "증여 등기접수일 — 당초 증여 때 채무를 인수한 부분(채무 인수 부분 · 매입분)의 취득일" };
+  }
   return undefined;
 }
 

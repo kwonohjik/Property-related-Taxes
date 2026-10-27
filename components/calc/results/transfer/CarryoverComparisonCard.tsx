@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { CarryoverDonorBuiltPenaltyCard } from "./CarryoverDonorBuiltPenaltyCard";
+import { CarryoverPurchasedPartBlocks, CarryoverPurchasedPartNotes } from "./CarryoverPurchasedPartRows";
 import {
   CARRYOVER_EXCLUSION_REASON_LABELS,
   carryoverComparisonPerformed,
@@ -108,29 +109,41 @@ function ScenarioAContent({ a, adopted, filingUnit, compared }: {
    *    사라지는데, 이 컬럼은 채택과 무관하게 항상 그려지기 때문이다(E2E CB-4가 이 갭을 잡았다).
    */
   const ap = a.giftTaxApportionment;
+  /**
+   * 당초 증여 때 인수한 채무 부분(매입분)을 나눈 경우 — 이 카드의 `acquisitionPrice`·`transferGain`·`determinedTax`는 **증여분 카드 값**(조각 후)이다.
+   * 조각 두 블록으로 그리고 결정세액은 신고 전체 값(`determinedTaxA`)을 쓴다(엔진 설계서 §2.6 — 증여분 카드의 단독 값은 합계와 달라 오해를 부른다).
+   */
+  const split = a.purchasedPartSplit;
+  const giftTag = split ? " (증여분)" : "";
   return (
     <ScenarioCol
       label="[A] 이월과세 적용"
       adopted={adopted}
-      determinedTax={a.determinedTax}
+      determinedTax={split?.determinedTaxA ?? a.determinedTax}
       filingUnit={filingUnit}
       compared={compared}
     >
       <div className="space-y-1">
-        {/* 소유자 분리 — 양도차익이 본인 파트 값이므로 취득가액도 본인 파트 값(엔진 echo · 계획서 V-4) */}
-        <InfoRow label={`취득가액 [당초 증여자 취득가${a.ownerSplitPart ? " · 본인 소유 파트" : ""}]`} value={fmt(a.ownerSplitPart?.acquisitionPrice ?? a.acquisitionPrice)} />
-        <InfoRow label="보유기간 [당초 증여자 기산]" value={`${a.holdingPeriodYears}년`} />
-        <InfoRow label="양도차익" value={fmt(a.transferGain)} />
+        {split ? (
+          <CarryoverPurchasedPartBlocks split={split} />
+        ) : (
+          <>
+            {/* 소유자 분리 — 양도차익이 본인 파트 값이므로 취득가액도 본인 파트 값(엔진 echo · 계획서 V-4) */}
+            <InfoRow label={`취득가액 [당초 증여자 취득가${a.ownerSplitPart ? " · 본인 소유 파트" : ""}]`} value={fmt(a.ownerSplitPart?.acquisitionPrice ?? a.acquisitionPrice)} />
+            <InfoRow label="보유기간 [당초 증여자 기산]" value={`${a.holdingPeriodYears}년`} />
+            <InfoRow label="양도차익" value={fmt(a.transferGain)} />
+          </>
+        )}
         {a.giftTaxAddedToExpense > 0 && (
           <InfoRow
-            label={`증여세 상당액 가산 [§163의2]${a.giftTaxLimitApplied ? " (한도 적용)" : ""}`}
+            label={`증여세 상당액 가산 [§163의2]${a.giftTaxLimitApplied ? " (한도 적용)" : ""}${giftTag}`}
             value={`+${fmt(a.giftTaxAddedToExpense)}`}
             sub
           />
         )}
         {a.donorCapexAddedToExpense > 0 && (
           <InfoRow
-            label="당초 증여자 자본적지출 [§97조의2 ① 2호]"
+            label={`당초 증여자 자본적지출 [§97조의2 ① 2호]${giftTag}`}
             value={`+${fmt(a.donorCapexAddedToExpense)}`}
             sub
           />
@@ -162,6 +175,7 @@ function ScenarioAContent({ a, adopted, filingUnit, compared }: {
             {fmt(a.giftTaxLimitCap)}을 넘어 한도까지만 산입 (시행령 §163의2② 후단)
           </p>
         )}
+        {split && <CarryoverPurchasedPartNotes split={split} />}
       </div>
     </ScenarioCol>
   );
@@ -169,8 +183,10 @@ function ScenarioAContent({ a, adopted, filingUnit, compared }: {
 
 // ── Scenario B 상세 ──────────────────────────────────────────────
 
-function ScenarioBContent({ b, adopted, isComparisonExclusion, filingUnit, compared }: {
+function ScenarioBContent({ b, determinedTax, adopted, isComparisonExclusion, filingUnit, compared }: {
   b: CarryoverScenarioBDetail;
+  /** 열 결정세액 — 채무 부분을 나눈 결과면 신고 전체 B(`purchasedPartSplit.determinedTaxB`), 아니면 이 카드의 B */
+  determinedTax: number;
   adopted: boolean;
   isComparisonExclusion: boolean;
   filingUnit: boolean;
@@ -180,7 +196,7 @@ function ScenarioBContent({ b, adopted, isComparisonExclusion, filingUnit, compa
     <ScenarioCol
       label={`[B] 미적용 (비교과세)${isComparisonExclusion ? " ← 비교과세 세액 역전" : ""}`}
       adopted={adopted}
-      determinedTax={b.determinedTax}
+      determinedTax={determinedTax}
       filingUnit={filingUnit}
       compared={compared}
     >
@@ -312,6 +328,7 @@ export function CarryoverComparisonCard({ detail }: Props) {
           <ScenarioAContent a={detail.scenarioA} adopted={adoptedA} filingUnit={filing !== undefined} compared={compared} />
           <ScenarioBContent
             b={detail.scenarioB}
+            determinedTax={detail.scenarioA.purchasedPartSplit?.determinedTaxB ?? detail.scenarioB.determinedTax}
             adopted={!adoptedA}
             isComparisonExclusion={detail.comparisonExclusion}
             filingUnit={filing !== undefined}
@@ -349,8 +366,9 @@ export function CarryoverComparisonCard({ detail }: Props) {
               <span>{fmt(filing.determinedTaxWithout)}</span>
             </div>
             <p className="text-sky-700 dark:text-sky-300">
-              위 A·B 금액은 이 자산만 떼어낸 값입니다. §97조의2 ② 3호는 신고 전체의 결정세액을
-              비교하므로, 두 판정이 갈릴 수 있습니다.
+              {detail.scenarioA.purchasedPartSplit
+                ? "위 A·B 결정세액은 신고 전체의 결정세액입니다. §97조의2 ② 3호는 신고 전체의 결정세액을 비교합니다."
+                : "위 A·B 금액은 이 자산만 떼어낸 값입니다. §97조의2 ② 3호는 신고 전체의 결정세액을 비교하므로, 두 판정이 갈릴 수 있습니다."}
             </p>
           </div>
         )}

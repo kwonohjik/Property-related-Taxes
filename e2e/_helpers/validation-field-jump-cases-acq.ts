@@ -210,6 +210,24 @@ export const ACQ_FIELD_JUMP_CASES: FieldJumpCase[] = [
   },
   { field: "carryover.giftTaxAmount", step: 0, assetIndex: A, message: /^자산: 증여세 상당액은 음수/, form: carry({ giftTaxAmount: "-1" }), unreachableInUi: NEGATIVE },
 
+  // ── 이월과세 × 당초 증여 때 인수한 채무 부분(매입분) — UI 설계서 §5 M1~M3 · r = 1 ──
+  {
+    name: "giftAssumedDebt (이월과세 채무 — 비움)", field: "carryover.giftAssumedDebt", step: 0, assetIndex: A, message: /^자산: 당초 증여 때 인수한 채무를 입력하세요/,
+    form: carry({ giftDebtAssumed: true, giftAssumedDebt: "" }),
+  },
+  {
+    name: "giftAssumedDebt (이월과세 채무 — 평가액 초과)", field: "carryover.giftAssumedDebt", step: 0, assetIndex: A, message: /^자산: 당초 증여 때 인수한 채무가 증여 당시 평가액보다 큽니다/,
+    form: carry({ giftDebtAssumed: true, giftAssumedDebt: "400000000" }),
+  },
+  {
+    name: "giftTaxAmount (채무 = 평가액 — 증여받은 부분 없음)", field: "carryover.giftTaxAmount", step: 0, assetIndex: A, message: /^자산: 당초 증여 때 인수한 채무가 증여 당시 평가액과 같으면 증여받은 부분이 없어 증여세 상당액/,
+    form: carry({ giftDebtAssumed: true, giftAssumedDebt: "300000000", giftTaxAmount: "1000000" }),
+  },
+  {
+    name: "donorCapitalExpenditure (채무 = 평가액 — 증여받은 부분 없음)", field: "carryover.donorCapitalExpenditure", step: 0, assetIndex: A, message: /^자산: 당초 증여 때 인수한 채무가 증여 당시 평가액과 같으면 증여받은 부분이 없어 증여자 자본적지출/,
+    form: carry({ giftDebtAssumed: true, giftAssumedDebt: "300000000", donorCapitalExpenditure: "1000000" }),
+  },
+
   // ── 신축(자가건축) 취득원인 ──
   { field: "occupancyApprovalDate", step: 0, assetIndex: A, message: /^자산: 신축 주택의 사용승인일/, form: () => withPrimary({ acquisitionCause: "newConstruction" }) },
   {
