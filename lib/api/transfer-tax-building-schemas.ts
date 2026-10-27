@@ -59,6 +59,11 @@ export const carryoverTaxationEngineShape = z.object({
   giftTaxAmount: z.number().int().nonnegative(),
   donorCapitalExpenditure: z.number().int().nonnegative().optional(),
   giftDateValuation: z.number().int().nonnegative(),
+  /**
+   * 당초 증여 때 이 자산에 담보된 채무로서 수증자가 인수한 금액 — 컴패니언·단건의 시나리오 A 조각 규칙 입력(단건 인라인 shape과 parity).
+   * 이 shape를 재사용하는 일반건물 파트(`landCarryoverTaxation`·`buildingCarryoverTaxation`)·일반건물 지분은 받지 않는다 — 아래 `rejectDebtPiecesKeyRefine`.
+   */
+  giftAssumedDebt: z.number().int().nonnegative().optional(),
   /** §97의2① 관계요건 — 증여 **사건** 정보라 토지·건물 두 파트에 같은 값이 실린다. */
   donorRelation: z.enum(["spouse", "lineal", "other"]).optional(),
   donorDeceased: z.boolean().optional(),
@@ -87,6 +92,12 @@ export const carryoverTaxationEngineShape = z.object({
   donorBuilt: donorBuiltShape.optional(),
   exclusionDeclared: carryoverExclusionShape.optional(),
 }).superRefine(refineCarryoverHouseholdStart).superRefine(refineDonorBuiltInCarryover);
+
+/** 일반건물 파트·지분은 채무 부분 조각 규칙을 지원하지 않는다 — 받아 놓고 무시하면 침묵 strip이라 거부(분자만 줄이는 파트 입력은 `giftAssumedDebt`를 파트 shape에 따로 받는다). */
+export function rejectDebtPiecesKeyRefine(ct: { giftAssumedDebt?: number }, ctx: z.RefinementCtx): void {
+  if (ct.giftAssumedDebt !== undefined)
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["giftAssumedDebt"], message: "일반건물 이월과세는 당초 증여 때 인수한 채무 부분을 시나리오 A에서 나누어 계산하지 못합니다(분자에서만 빼는 파트 입력은 파트별 giftAssumedDebt를 쓰세요)" });
+}
 
 /**
  * **UI가 만드는 모양**의 파트별 이월과세 입력 (설계 D9-10).
@@ -385,12 +396,12 @@ export const generalBuildingValuationSchema = z.object({
    * (`general-building-case-7b-carryover.test.ts` 16건 · 지분 anchor GBF-27)가 이 모양을 쓴다.
    * 신규 `carryoverGiftEvent` + `*CarryoverPart`는 **추가**이지 대체가 아니다(설계 D9-10).
    */
-  landCarryoverTaxation: carryoverTaxationEngineShape.superRefine(rejectDonorBuiltRefine).optional(),
+  landCarryoverTaxation: carryoverTaxationEngineShape.superRefine(rejectDonorBuiltRefine).superRefine(rejectDebtPiecesKeyRefine).optional(),
   /**
    * ⑫ 건물 파트 이월과세 (§97의2) — `buildingAcquisitionCause === "carryover_gift"` 시.
    * 토지의 `landCarryoverTaxation`과 **같은 모양**이다(엔진이 카드별로 같은 규칙을 쓴다).
    */
-  buildingCarryoverTaxation: carryoverTaxationEngineShape.superRefine(rejectDonorBuiltHousingRefine).optional(),
+  buildingCarryoverTaxation: carryoverTaxationEngineShape.superRefine(rejectDonorBuiltHousingRefine).superRefine(rejectDebtPiecesKeyRefine).optional(),
   /**
    * ⑫ **증여 사건** (파트로 나뉘지 않는 사실) — 영 §163의2②1호·3호.
    *

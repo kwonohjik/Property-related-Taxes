@@ -43,6 +43,10 @@ describe("splitCarryoverDebtPieces", () => {
     expect([gift!.capitalExpenditure, purchased.capitalExpenditure]).toEqual([30_000_000, 20_000_000]);
     expect([gift!.transferExpense, purchased.transferExpense]).toEqual([6_000_000, 4_000_000]);
   });
+  it("곱셈은 증여분 쪽이다 — 100원을 2/3 : 1/3로 나누면 66 : 34 (매입분이 곱셈이면 67 : 33)", () => {
+    const p = splitCarryoverDebtPieces(card({ transferPrice: 100 }), { debt: 1, valuation: 3, keep: 2 });
+    expect([p.gift!.transferPrice, p.purchased.transferPrice]).toEqual([66, 34]);
+  });
   it("1/3 — 1원 단위 합 보존 · BigInt 경로(곱 > 2^53)", () => {
     const s = { debt: 333_333_333, valuation: 1_000_000_000, keep: 666_666_667 };
     const p = splitCarryoverDebtPieces(card({ transferPrice: 1_500_000_001 }), s);
@@ -90,6 +94,8 @@ describe("carryoverDebtPiecesUnsupportedReason — 와이어(⑫)·엔진이 같
   it("지원: 주택·토지·상업용건물 단순 모드", () => {
     for (const propertyType of ["housing", "land", "building"]) expect(carryoverDebtPiecesUnsupportedReason({ ...ok, propertyType })).toBeNull();
     expect(carryoverDebtPiecesUnsupportedReason({ ...ok, isNonBusinessLand: true, isUnregistered: true })).toBeNull();
+    // 함께 양도 컴패니언은 주 자산 컨텍스트를 전부 받는다 — 주택 카드에는 무관
+    expect(carryoverDebtPiecesUnsupportedReason({ ...ok, primaryContextForCompanionRate: {} })).toBeNull();
   });
   it.each([
     ["분양권", { propertyType: "presale_right" }],
@@ -105,7 +111,7 @@ describe("carryoverDebtPiecesUnsupportedReason — 와이어(⑫)·엔진이 같
     ["감면", { reductions: [{ type: "x" }] }],
     ["donorBuilt", { carryoverTaxation: { donorBuilt: {} } }],
     ["주택부수토지(토지 카드)", { landNature: "appurtenant_to_housing" }],
-    ["부수토지 일체과세 컨텍스트", { primaryContextForCompanionRate: {} }],
+    ["부수토지 일체과세 컨텍스트(토지 카드)", { propertyType: "land", primaryContextForCompanionRate: {} }],
     ["NBL 정밀", { nonBusinessLandDetails: {} }],
     ["감가상각", { depreciationAmount: 1 }],
     ["용도변경", { nonHousingToHousingConversion: {} }],

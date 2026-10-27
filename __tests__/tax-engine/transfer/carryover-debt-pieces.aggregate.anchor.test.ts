@@ -28,12 +28,12 @@ const CT = {
 };
 
 /** 화면 경로 본문과 같은 모양을 ⑫로 거른 뒤 ⑭ 변환 — 채무 키는 엔진 입력에 직접 얹는다(⑫ 수락은 route anchor가 본다). */
-function card(over: Record<string, unknown> = {}, ct: Record<string, unknown> = {}, debt: number | undefined = 400_000_000, id = "primary"): TransferTaxItemInput {
+function card(over: Record<string, unknown> = {}, ct: Record<string, unknown> = {}, debt: number | null = 400_000_000, id = "primary"): TransferTaxItemInput {
   const parsed = propertySchema.parse({ ...BASE, ...over, carryoverTaxation: { ...CT, ...ct } });
   const e = buildTransferEngineInput(parsed as never, new Date(parsed.transferDate), new Date(parsed.acquisitionDate), undefined);
   return {
     ...e, propertyId: id, propertyLabel: id, filingPenaltyDetails: undefined, delayedPaymentDetails: undefined,
-    carryoverTaxation: { ...e.carryoverTaxation!, ...(debt === undefined ? {} : { giftAssumedDebt: debt }) },
+    carryoverTaxation: { ...e.carryoverTaxation!, ...(debt === null ? {} : { giftAssumedDebt: debt }) },
   } as TransferTaxItemInput;
 }
 const agg = (props: TransferTaxItemInput[]): AggregateTransferResult => calculateTransferTaxAggregate({ taxYear: 2026, properties: props, annualBasicDeductionUsed: 0 }, rates);
@@ -42,7 +42,7 @@ const split = (r: AggregateTransferResult, id = "primary") => rowOf(r, id).carry
 
 describe("A-0 · 회귀 — 채무 없음", () => {
   it("채무 키 없음 · 0 → 현행 A 374,610,000 · 조각 없음", () => {
-    for (const d of [undefined, 0]) {
+    for (const d of [null, 0]) {
       const r = agg([card({}, {}, d)]);
       expect(r.determinedTax).toBe(374_610_000);
       expect(r.properties).toHaveLength(1);
@@ -73,6 +73,8 @@ describe("A-1 · 기본 — 매입분 장기 보유", () => {
     expect(s.purchased).toMatchObject({ propertyId: "primary__purchased", transferPrice: 600_000_000, acquisitionPrice: 400_000_000, acquisitionDate: "2023-06-01", transferGain: 200_000_000, appliedRate: 0.38 });
     expect(s.gift!.transferPrice + s.purchased.transferPrice).toBe(s.transferPrice);
     expect(s.purchased.holdingPeriodYears).toBe(2);
+    // B 열은 자산 전체 B(증여 당시 평가액 10억 · 차익 5억)다 — 증여분 카드 내부의 조각 크기 B가 아니다
+    expect(rowOf(r, "primary").carryoverTaxationDetail!.scenarioB).toMatchObject({ acquisitionPrice: 1_000_000_000, transferGain: 500_000_000 });
     expect(s.gift!.holdingPeriodYears).toBe(25);
   });
 });
@@ -168,6 +170,12 @@ describe("A-9 · 1세대1주택 15억 — §97의2②2호는 집 전체로 판�
     // 조각마다 따로 비과세 판정하지 않는다 — 두 조각 모두 같은 12억 초과분 안분(물건 전체 15억 분모)을 받는다
     expect([rowOf(r, "primary").isExempt, rowOf(r, "primary__purchased").isExempt]).toEqual([false, false]);
   });
+  it("세대 통산이 매입분에도 이어진다 — 10억 · 증여 9개월 · 계속 같은 세대(2000-06-01 보유 시작) → 두 조각 모두 비과세 · 결정 0 (매입분을 손조립하면 9개월 보유로 과세된다)", () => {
+    const r = agg([card({ ...house, transferPrice: 1_000_000_000, acquisitionDate: "2025-06-01" }, { ...sameHh, giftRegistryDate: "2025-06-01" })]);
+    expect(r.properties.map((p) => [p.propertyId, p.isExempt])).toEqual([["primary", true], ["primary__purchased", true]]);
+    expect(r.determinedTax).toBe(0);
+    expect(rowOf(r, "primary").carryoverTaxationDetail?.adoptedScenario).toBe("A");
+  });
   it("A만 1세대1주택이 되는 조합(증여 9개월 · 세대 통산 아님) → 집 전체 ②2호로 배제 · B 채택 · 조각 없음 · 채무 키가 없는 같은 입력과 같은 세액", () => {
     const over = { ...house, transferPrice: 1_000_000_000, acquisitionDate: "2025-06-01" };
     const ct = { giftRegistryDate: "2025-06-01", donorSameHouseholdContinuous: false };
@@ -178,7 +186,7 @@ describe("A-9 · 1세대1주택 15억 — §97의2②2호는 집 전체로 판�
     expect(d.adoptedScenario).toBe("B");
     expect(r.properties).toHaveLength(1);
     expect(d.scenarioA.purchasedPartSplit).toBeUndefined();
-    expect(r.determinedTax).toBe(agg([card(over, ct, undefined)]).determinedTax);
+    expect(r.determinedTax).toBe(agg([card(over, ct, null)]).determinedTax);
   });
 });
 
@@ -201,11 +209,11 @@ describe("A-10~13 · 자산 종류 · 중과 · 미등기", () => {
 
 describe("A-14·15 · index 대응 — 꼬리 덧붙임", () => {
   const land = (): TransferTaxItemInput => ({
-    ...card({ propertyType: "land" }, {}, undefined, "land"), acquisitionCause: "purchase", carryoverTaxation: undefined,
+    ...card({ propertyType: "land" }, {}, null, "land"), acquisitionCause: "purchase", carryoverTaxation: undefined,
     acquisitionPrice: 300_000_000, acquisitionDate: new Date("2015-01-01"), transferPrice: 800_000_000,
   } as TransferTaxItemInput);
   it("3카드(토지 · 채무 카드 · 채무 없는 이월과세 카드) — 원래 순서 유지 · 매입분은 맨 끝 · 비교값은 원 index", () => {
-    const h2 = card({ transferPrice: 700_000_000 }, { giftDateValuation: 500_000_000, donorAcquisitionPrice: 50_000_000 }, undefined, "h2");
+    const h2 = card({ transferPrice: 700_000_000 }, { giftDateValuation: 500_000_000, donorAcquisitionPrice: 50_000_000 }, null, "h2");
     const r = agg([land(), card({}, {}, 400_000_000, "h1"), h2]);
     expect(r.properties.map((p) => p.propertyId)).toEqual(["land", "h1", "h2", "h1__purchased"]);
     expect(rowOf(r, "h1").carryoverTaxationDetail?.filingUnitComparison).toBeDefined();
@@ -222,7 +230,7 @@ describe("A-14·15 · index 대응 — 꼬리 덧붙임", () => {
 describe("주택부수토지 1세대1주택 단위(집이 두 카드면 단위가 서지 않는다)", () => {
   it("집 카드(oneHouseUnitRole:house)에 채무 + 부수토지 카드가 있으면 던진다 · 부수토지가 없으면 지원(매입분은 역할을 이어받지 않는다)", () => {
     const house = { ...card(), oneHouseUnitRole: "house" } as TransferTaxItemInput;
-    const landCard = { ...card({ propertyType: "land" }, {}, undefined, "land"), oneHouseUnitRole: "appurtenant_land", acquisitionCause: "purchase", carryoverTaxation: undefined, acquisitionPrice: 100_000_000, acquisitionDate: new Date("2015-01-01"), transferPrice: 300_000_000 } as TransferTaxItemInput;
+    const landCard = { ...card({ propertyType: "land" }, {}, null, "land"), oneHouseUnitRole: "appurtenant_land", acquisitionCause: "purchase", carryoverTaxation: undefined, acquisitionPrice: 100_000_000, acquisitionDate: new Date("2015-01-01"), transferPrice: 300_000_000 } as TransferTaxItemInput;
     expect(() => agg([house, landCard])).toThrow(/부수토지|1세대1주택 단위/);
     const r = agg([house]);
     expect(r.determinedTax).toBe(293_970_000);

@@ -651,7 +651,7 @@ export function buildAssetPayload(
     // 이월과세(증여) 전용 서브객체 — carryover_gift 시만 빌드
     // "general" 환산 모드에서 topLevelOverrides.standardPrice* 를 최상위에 주입
     ...(() => {
-      const cp = buildCarryoverPayload(asset, transferDate, ratio);
+      const cp = buildCarryoverPayload(asset, transferDate, ratio, { isNonPrimary: true });
       if (!cp) return {};
       return {
         // 함께 양도 자산(첫 자산이 아님) — 증여자 신축·증축(§114조의2)도 같은 ④ 함수

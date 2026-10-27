@@ -41,7 +41,10 @@ export function classifyAmendableTransfer(
     transferBurdenedGiftBreakdown?: unknown;
     properties?: unknown;
     result?: { splitMode?: string; total?: { transferTax?: number } };
-    aggregated?: { generalBuildingValuationDetail?: unknown };
+    aggregated?: {
+      generalBuildingValuationDetail?: unknown;
+      properties?: { carryoverTaxationDetail?: { scenarioA?: { purchasedPartSplit?: unknown } } }[];
+    };
   } | null;
   if (!rd) return null;
   if (rd.mode === "single") return "single";
@@ -69,6 +72,12 @@ export function classifyAmendableTransfer(
      *    **전용 값은 자동 배제**된다.
      */
     if (rd.aggregated?.generalBuildingValuationDetail) return "general-building";
+    /**
+     * 이월과세 × 당초 증여 채무 부분(매입분) — 단건이 신고 단위 집계로 계산돼 `mode:"bundled"` 자산 1건으로 저장된다(`carryover-debt-route.ts`).
+     * 물건이 1개라 아래 `assets.length>1`에서 배제되던 경로다 — 그 배제는 법적 판단이 아니라 §166⑥ 가드의 부수 효과다(국세기본법 §45①·§45의2①은 자산 종류·계산 경로를 가르지 않는다).
+     * 정정 마법사로는 열고(`"bundled"`), 다건 불러오기 allow-list(`classifyLoadableTransfer`는 single·multi만)에는 새지 않는다(다건은 이월과세를 거부 — F-5).
+     */
+    if (rd.aggregated?.properties?.some((p) => p.carryoverTaxationDetail?.scenarioA?.purchasedPartSplit)) return "bundled";
     const assets = (record.inputData as { assets?: unknown[] } | null)?.assets;
     if ((assets?.length ?? 0) > 1 && !rd.transferBurdenedGiftBreakdown) return "bundled";
     return null;

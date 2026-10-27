@@ -141,12 +141,12 @@ describe("route 가드 — NaN 결과는 200이 아니다", () => {
     expect(r.status).toBe(500);
   });
 
-  it("단건 route의 성공 응답 5곳이 전부 `okJson`을 거친다 (위 행동 테스트는 단건 분기 1곳만 친다)", async () => {
+  it("단건 route의 성공 응답 6곳(5-0·5-a·5-a-2·5-a-3·5-a-4 이월과세 채무 부분·5-b)이 전부 `okJson`을 거친다 (위 행동 테스트는 단건 분기 1곳만 친다)", async () => {
     const { readFileSync } = await import("node:fs");
     const src = readFileSync("app/api/calc/transfer/route.ts", "utf8");
     // 200 리터럴은 `okJson` 본문 1곳뿐이어야 한다 — 새 분기가 NextResponse.json으로 직접 200을
     // 내면 가드를 우회한다.
     expect(src.match(/status:\s*200/g)?.length).toBe(1);
-    expect(src.match(/return okJson\(/g)?.length).toBe(5);
+    expect(src.match(/return okJson\(/g)?.length).toBe(6);
   });
 });

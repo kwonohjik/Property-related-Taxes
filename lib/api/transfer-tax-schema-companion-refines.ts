@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { carryoverDebtPiecesUnsupportedReason, DEBT_PIECES_REASON } from "@/lib/tax-engine/carryover-debt-pieces-scope";
 import type { companionAssetSchema } from "./transfer-tax-schema-sub";
 // 의제취득일(1985.1.1.) — ⑧과 같은 상수(단일 소스)
 import { DEEMED_ACQUISITION_DATE } from "@/lib/calc/transfer-163-9-base-date";
@@ -156,6 +157,10 @@ export function addCompanionAcquisitionCauseRefines(
         });
       } else {
         refineCarryoverTaxation(ct, transferDate, ctx, ["companionAssets", i, "carryoverTaxation"], true, c.transferType === "burdened_gift" && c.burdenedGiftInfo !== undefined);
+        // 채무 부분 조각 규칙을 적용할 수 없는 입력(컴패니언 와이어는 `propertyType` 대신 `assetKind`) — 본문 전체가 필요해 호출부에서 본다.
+        const unsupported = (ct.giftAssumedDebt ?? 0) > 0 ? carryoverDebtPiecesUnsupportedReason({ ...(c as Record<string, unknown>), propertyType: c.assetKind }) : null;
+        if (unsupported)
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "carryoverTaxation", "giftAssumedDebt"], message: `당초 증여 때 인수한 채무 부분을 시나리오 A에서 나누어 계산하지 못하는 입력입니다(${unsupported})` });
       }
     } else if (c.acquisitionCause === "inheritance") {
       // P2c: 상속 취득가액은 inheritanceValuation(신고가액) 경로로 항상 전송 (manual/fixedAcquisitionPrice 폐기).
@@ -328,6 +333,15 @@ export function refineCarryoverTaxation(
       path: [...path, "giftDateValuation"],
       message: "이월과세 자산은 증여 당시 평가액 필수",
     });
+  }
+  // ⑧ (f-3) 당초 증여 때 인수한 채무 부분(매입분) — 시나리오 A 조각 규칙의 입력. ⑧ `validateCarryoverDebt`와 같은 규칙이다(UI 통과 ↔ ⑫ 400 모순 금지).
+  const debt = ct.giftAssumedDebt ?? 0;
+  if (debt > 0) {
+    const debtIssue = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, "giftAssumedDebt"], message });
+    if (donorPriceInCoDonorBasis) debtIssue(`지금 양도하는 자산도 부담부증여이면 당초 증여 때 인수한 채무 부분을 시나리오 A에서 나누어 계산하지 못합니다(${DEBT_PIECES_REASON.burdenedGift})`);
+    if (debt > ct.giftDateValuation) debtIssue("당초 증여 때 인수한 채무가 증여 당시 평가액보다 큽니다");
+    else if (debt === ct.giftDateValuation && ((ct.giftTaxAmount ?? 0) > 0 || (ct.donorCapitalExpenditure ?? 0) > 0))
+      debtIssue("당초 증여 때 인수한 채무가 증여 당시 평가액과 같으면 증여받은 부분이 없어 증여세 상당액·증여자 자본적지출을 적용할 곳이 없습니다 — 두 칸을 비우세요");
   }
   // ⑧ (d) 환산 미사용 시 증여자 취득가액 직접 입력 필수
   if (!donorPriceInCoDonorBasis && !ct.useEstimatedAcquisition && (!ct.donorAcquisitionPrice || ct.donorAcquisitionPrice <= 0)) {

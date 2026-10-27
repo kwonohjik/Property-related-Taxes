@@ -166,12 +166,13 @@ describe("R-9~R-13 · 본문 변형 — 1세대1주택 · 토지 · 건물 · �
   });
 });
 
+const PRIMARY_HOUSING = {
+  propertyType: "land", transferPrice: 1_800_000_000, transferDate: "2024-03-01", acquisitionPrice: 500_000_000, acquisitionDate: "2010-01-01", acquisitionCause: "purchase",
+  expenses: 0, useEstimatedAcquisition: false, householdHousingCount: 1, residencePeriodMonths: 0, isRegulatedArea: false, wasRegulatedAtAcquisition: false,
+  isUnregistered: false, isNonBusinessLand: false, isOneHousehold: false, reductions: [], annualBasicDeductionUsed: 0, totalSalePrice: 1_800_000_000, standardPriceAtTransferForApportion: 1_000_000_000,
+};
 describe("함께 양도 둘째 자산 — 컴패니언 이월과세 + 채무", () => {
-  const PRIMARY = {
-    propertyType: "land", transferPrice: 1_800_000_000, transferDate: "2024-03-01", acquisitionPrice: 500_000_000, acquisitionDate: "2010-01-01", acquisitionCause: "purchase",
-    expenses: 0, useEstimatedAcquisition: false, householdHousingCount: 1, residencePeriodMonths: 0, isRegulatedArea: false, wasRegulatedAtAcquisition: false,
-    isUnregistered: false, isNonBusinessLand: false, isOneHousehold: false, reductions: [], annualBasicDeductionUsed: 0, totalSalePrice: 1_800_000_000, standardPriceAtTransferForApportion: 1_000_000_000,
-  };
+  const PRIMARY = PRIMARY_HOUSING;
   const comp = (debt?: number) => ({
     assetId: "c1", assetLabel: "이월과세 주택", assetKind: "housing", standardPriceAtTransfer: 400_000_000, standardPriceAtTransferForApportion: 400_000_000, directExpenses: 0,
     isOneHousehold: false, reductions: [], acquisitionCause: "carryover_gift", acquisitionDate: "2021-06-01", donorAcquisitionDate: "2005-01-01",
@@ -188,6 +189,19 @@ describe("함께 양도 둘째 자산 — 컴패니언 이월과세 + 채무", (
     expect(g.transferPrice + p.transferPrice).toBe(whole);
     expect(p.acquisitionPrice).toBe(100_000_000);
     expect(debt.det).not.toBe(plain.det);
+  });
+});
+
+describe("함께 양도 컴패니언 — ⑫ 미지원 조합 · 상한", () => {
+  const land = { ...PRIMARY_HOUSING };
+  it("주택부수토지(컴패니언 토지)에 채무 → 400 · 채무 > 평가액 → 400", async () => {
+    const c = { assetId: "c1", assetLabel: "부수토지", assetKind: "land", landNature: "appurtenant_to_housing", standardPriceAtTransfer: 400_000_000, standardPriceAtTransferForApportion: 400_000_000, directExpenses: 0, isOneHousehold: false, reductions: [], acquisitionCause: "carryover_gift", acquisitionDate: "2021-06-01", donorAcquisitionDate: "2005-01-01", carryoverTaxation: { giftRegistryDate: "2021-06-01", donorAcquisitionDate: "2005-01-01", donorAcquisitionPrice: 100_000_000, useEstimatedAcquisition: false, giftTaxAmount: 0, giftDateValuation: 300_000_000, donorRelation: "spouse", exclusionDeclared: {}, giftAssumedDebt: 100_000_000 } };
+    const r = await post({ ...land, companionAssets: [c] });
+    expect(r.status).toBe(400);
+    expect(Object.keys(r.fieldErrors)).toContain("companionAssets.0.carryoverTaxation.giftAssumedDebt");
+    const over = await post({ ...land, companionAssets: [{ ...c, landNature: "non_appurtenant", carryoverTaxation: { ...c.carryoverTaxation, giftAssumedDebt: 300_000_001 } }] });
+    expect(over.status).toBe(400);
+    expect(Object.keys(over.fieldErrors)).toContain("companionAssets.0.carryoverTaxation.giftAssumedDebt");
   });
 });
 

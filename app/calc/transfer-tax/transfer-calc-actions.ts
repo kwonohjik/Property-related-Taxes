@@ -111,6 +111,13 @@ export async function runPenaltyCalc(
   cb: PenaltyCalcCallbacks,
 ): Promise<void> {
   const baseRes = await callTransferTaxAPI({ ...formData, enablePenalty: false });
+  if (baseRes.mode === "bundled" && baseRes.aggregated.properties.some((p) => p.carryoverTaxationDetail?.scenarioA?.purchasedPartSplit)) {
+    // 자산은 1건이지만 이월과세 채무 부분(매입분)을 시나리오 A에서 증여분·매입분 두 자산으로 나눠 신고 단위 집계로 계산한 결과다 — 「다자산」 안내가 아니라 이 사유를 말한다.
+    cb.setError(
+      "당초 증여 때 인수한 채무 부분(매입분)을 나누어 계산한 이월과세 결과에서는 가산세 계산을 아직 지원하지 않습니다. 결정세액이 증여분·매입분 두 자산의 합산으로 정해져 미납세액을 단일 값으로 확정할 수 없습니다.",
+    );
+    return;
+  }
   if (baseRes.mode !== "single") {
     cb.setError(
       "가산세 계산은 자산 1건(단건) 모드에서만 지원됩니다. 다자산 일괄양도·겸용주택은 결정세액이 자산별로 나뉘어 미납세액을 단일 값으로 확정할 수 없습니다.",

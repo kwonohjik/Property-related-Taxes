@@ -20,6 +20,7 @@ import { refineGbBgCarryoverBundled } from "./transfer-tax-schema-donor-built";
 import { refineGbBgCarryoverParts } from "./transfer-tax-schema-donor-built";
 import { refineBgMarketValueByPart } from "./transfer-tax-schema-donor-built";
 import { refineCarryoverTaxation } from "./transfer-tax-schema-companion-refines";
+import { carryoverDebtPiecesUnsupportedReason } from "@/lib/tax-engine/carryover-debt-pieces-scope";
 import { refineMixedUsePresence } from "./transfer-tax-schema-mixed-use";
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
 import { refineHouseholdRequiredInputs, type HouseholdRefineInput } from "./transfer-tax-schema-household-refines";
@@ -301,6 +302,9 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
       issue(["carryoverTaxation"], "이월과세(증여) 자산은 증여 정보(carryoverTaxation)가 필요합니다 (소득세법 §97의2)");
     } else {
       refineCarryoverTaxation(ct, data.transferDate, ctx, ["carryoverTaxation"], false, data.transferType === "burdened_gift" && data.burdenedGiftInfo !== undefined);
+      // 채무 부분 조각 규칙을 적용할 수 없는 입력 — 본문 전체가 필요해 호출부에서 본다(컴패니언 호출부와 같은 규칙 · 같은 leaf).
+      const debtUnsupported = (ct.giftAssumedDebt ?? 0) > 0 ? carryoverDebtPiecesUnsupportedReason(data as unknown as Record<string, unknown>) : null;
+      if (debtUnsupported) issue(["carryoverTaxation", "giftAssumedDebt"], `당초 증여 때 인수한 채무 부분을 시나리오 A에서 나누어 계산하지 못하는 입력입니다(${debtUnsupported})`);
       // 환산 사용 — 엔진은 최상위 기준시가로 환산한다(`transfer-tax-carryover.ts`). 비우면 0으로 읽혔다.
       if (ct.useEstimatedAcquisition && !data.preHousingDisclosure) {
         if (!positive(data.standardPriceAtAcquisition))

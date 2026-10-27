@@ -19,6 +19,7 @@ import { pickArticle89Clause2Facts } from "@/lib/tax-engine/transfer-tax-89-2-co
 import { dispatchGeneralBuilding } from "./general-building-route-helper";
 import { calculateGeneralBuildingFractional } from "./general-building-fractional";
 import { calculateBundledTransfer } from "./bundled-route";
+import { calculateCarryoverDebtTransfer } from "./carryover-debt-route";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { taxCalculationErrorResponse } from "@/lib/api/tax-error-response";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
@@ -389,6 +390,11 @@ export async function POST(request: NextRequest) {
         },
       );
     }
+
+    // ─── 5-a-4. 이월과세 × 당초 증여 때 인수한 채무 부분(매입분) — 단건이 신고 단위 집계로 간다(`carryover-debt-route.ts`) ───
+    //   채무가 없으면 null → 5-b 그대로. 🔴 5-b보다 앞이어야 한다 — 단건 엔진은 채무 키를 받으면 던진다(G1).
+    const debtBundle = calculateCarryoverDebtTransfer(engineInput, rates, transferDate);
+    if (debtBundle) return okJson({ data: debtBundle });
 
     // ─── 5-b. 기존 단건 경로 ───────────────────────────────────
     // 신고불성실가산세의 determinedTax + 지연납부의 unpaidTax는 실제 결정세액으로 주입 필요

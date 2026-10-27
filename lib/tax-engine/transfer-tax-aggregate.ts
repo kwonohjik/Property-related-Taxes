@@ -19,6 +19,7 @@ import {
 } from "./transfer-tax-aggregate-carryover-scope";
 import { classifyRateGroup } from "./transfer-tax-aggregate-helpers";
 import { computeAggregateOnce } from "./transfer-tax-aggregate-once";
+import { applyDebtUnits, attachPurchasedPartSplit, deriveCarryoverDebtUnits, stripDebtKey } from "./transfer-tax-aggregate-debt-units";
 
 export { classifyRateGroup };
 
@@ -128,6 +129,9 @@ export function calculateTransferTaxAggregateWithUnits(
     covered = u.start + u.cardsA.length;
   }
   const externalStarts = new Set(externalUnits.map((u) => u.start));
+  // 이월과세 × 당초 증여 채무 부분(매입분) — 채무 카드는 A 배정일 때만 증여분·매입분으로 펼친다(매입분은 꼬리 카드라 index 불변). 엔진에는 채무 키를 벗긴 카드만 간다.
+  const debtUnits = deriveCarryoverDebtUnits(input.properties, externalStarts);
+  const engineProperties = debtUnits.size === 0 ? input.properties : input.properties.map((p, i) => (debtUnits.has(i) ? stripDebtKey(p) : p));
 
   const memo = new Map<string, AggregateTransferResult>();
   const run = (overrides: CarryoverScenarioOverrides): AggregateTransferResult => {
@@ -139,9 +143,9 @@ export function calculateTransferTaxAggregateWithUnits(
     const key = JSON.stringify([engineOverrides, swapped.map((u) => u.start)]);
     const hit = memo.get(key);
     if (hit) return hit;
-    const properties = [...input.properties];
+    const properties = [...engineProperties];
     for (const u of swapped) properties.splice(u.start, u.cardsA.length, ...u.cardsA);
-    const computed = computeAggregateOnce({ ...input, properties }, rates, engineOverrides, ratesByTransferDate);
+    const computed = computeAggregateOnce({ ...input, properties: applyDebtUnits(properties, debtUnits, overrides) }, rates, engineOverrides, ratesByTransferDate);
     memo.set(key, computed);
     return computed;
   };
@@ -164,7 +168,7 @@ export function calculateTransferTaxAggregateWithUnits(
 
   // 3) 비교 실적을 자산별 detail에 실어 준다 — 결과 화면이 **신고단위 두 값**을 그대로 보여준다.
   //    (단건 세액만 보여주면 「A가 작은데 A를 채택했다」는 자기모순 화면이 된다.)
-  const result: AggregateTransferResult = {
+  let result: AggregateTransferResult = {
     ...final,
     properties: final.properties.map((p, idx) => {
       const cmp = comparisons.get(idx);
@@ -173,6 +177,13 @@ export function calculateTransferTaxAggregateWithUnits(
       return { ...p, carryoverTaxationDetail: { ...detail, filingUnitComparison: cmp } };
     }),
   };
+  // 채무 부분(매입분) 조각 echo — 채택과 무관하게 부모 카드에 싣는다(A′ 쪽은 반사실 실행에서).
+  for (const [idx, unit] of debtUnits) {
+    const cmp = comparisons.get(idx);
+    if (!cmp) continue;
+    const runA = overrides[idx] === "A" ? final : run({ ...overrides, [idx]: "A" });
+    result = attachPurchasedPartSplit(result, idx, unit, runA, baseline.properties[idx]?.carryoverTaxationDetail, cmp);
+  }
   const units: Record<string, ExternalCarryoverUnitOutcome> = {};
   for (const u of externalUnits) {
     const adoptedScenario = overrides[u.start];

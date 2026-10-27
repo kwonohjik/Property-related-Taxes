@@ -19,6 +19,7 @@ import {
   isBurdenedGiftCarryover,
 } from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { judgeCarryoverEligibility } from "./transfer-tax-carryover-eligibility";
 import { buildInputB } from "./transfer-tax-carryover-inputs";
 import { carryoverPhdSplit } from "./transfer-tax-carryover-inputs";
@@ -666,6 +667,10 @@ export { resolveHouseCountExclusionAcqDate } from "./transfer-tax-carryover-inpu
 export function calcCarryoverScenarios(...args: Parameters<typeof calcCarryoverScenariosCore>): CalcCarryoverResult | null {
   const [rawInput] = args;
   const ct = rawInput.carryoverTaxation;
+  // G1 — 당초 증여 때 인수한 채무 부분(매입분)의 조각 규칙은 신고 단위 집계(`transfer-tax-aggregate-debt-units.ts`)만 안다. 집계는 채무 키를 벗겨서 보낸다 —
+  //   키가 여기까지 오면 집계를 우회한 직접 호출이다. 조각 없이 자산 전체를 증여자 기준으로 조용히 계산하지 않고 던진다.
+  if ((ct?.giftAssumedDebt ?? 0) > 0)
+    throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, "당초 증여 때 인수한 채무(carryoverTaxation.giftAssumedDebt)는 신고 단위 집계 경로에서만 계산합니다 — 단건 엔진을 직접 호출하지 마세요.", { path: "carryoverTaxation.giftAssumedDebt" });
   if (ct?.donorBuilt && rawInput.acquisitionCause === "carryover_gift") assertDonorBuiltInput(rawInput, ct);
   const bgDonorBuilt = bgDonorBuiltOf(rawInput);
   if (bgDonorBuilt) assertBgDonorBuiltInput(rawInput, bgDonorBuilt);

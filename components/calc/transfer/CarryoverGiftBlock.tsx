@@ -402,6 +402,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
                 checked={c.giftDebtAssumed}
                 onCheckedChange={(v) => updateCarryover({ giftDebtAssumed: v })}
                 data-testid="carryover-gift-debt-assumed"
+                data-field="carryover.giftDebtAssumed"
               />
             )}
           </>

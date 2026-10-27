@@ -15,6 +15,7 @@ import { validateDonorBuiltGb } from "./transfer-tax-validate-donor-built-gb";
 import { gbBgGiftTaxNumerator, gbBgGiftTaxReturn } from "./gb-bg-gift-tax-return";
 import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
 import { carryoverAssumedDebt } from "./carryover-gift-assumed-debt";
+import { assumedDebtIssue } from "./transfer-tax-validate-carryover-debt";
 import { carryoverGiftTaxedValue } from "./carryover-gift-assumed-debt";
 import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
 import { bgCarryoverForm, bgPartialCarryover } from "./bg-carryover-parts";
@@ -186,19 +187,6 @@ function validateGbBgGiftTax(asset: AssetForm, label: string, onBuilding: boolea
 
 /** 합계 초과 메시지 꼬리 — 토글이 꺼져 있을 때만 붙인다(평가액이 과세가액을 넘는 흔한 원인이 인수채무다). */
 const DEBT_HINT = " — 당초 증여 때 인수한 채무가 있으면 «당초 증여 때 채무를 인수했다»를 켜고 채무를 입력하세요(「상속세 및 증여세법」 제47조 제1항)";
-
-/**
- * 당초 증여 때 인수한 채무 — 사건 토글(`event.giftDebtAssumed`)이 켜졌으면 그 파트 칸이 필수이고 평가액 이하다.
- * 영 §163의2②2호 분자 = 평가액 − 채무(④ `carryoverAssumedDebt`와 같은 술어 · 계획서 `carryover-gift-tax-numerator-net.plan.md` §4.3). 앵커는 리터럴 삼항.
- */
-function assumedDebtIssue(event: CarryoverTaxationForm | undefined, part: CarryoverTaxationForm | undefined, label: string, onBuilding: boolean): string | null {
-  if (!event?.giftDebtAssumed) return null;
-  if ((part?.giftAssumedDebt ?? "").trim() === "")
-    return fieldError(onBuilding ? "buildingCarryover.giftAssumedDebt" : "carryover.giftAssumedDebt", `${label}: 당초 증여 때 인수한 채무를 입력하세요 — 증여세 과세가액에서 빠진 그 자산의 채무입니다. 없으면 0을 입력하세요 (「상속세 및 증여세법」 제47조 제1항).`);
-  if (parseAmount(part?.giftAssumedDebt ?? "") > parseAmount(part?.giftDateValuation ?? ""))
-    return fieldError(onBuilding ? "buildingCarryover.giftAssumedDebt" : "carryover.giftAssumedDebt", `${label}: 당초 증여 때 인수한 채무가 증여 당시 평가액보다 큽니다.`);
-  return null;
-}
 
 /**
  * 증여세 산출세액·과세가액 **짝 반쪽** — 일반 양도(④ `gbCarryoverUsesPartShape`)·부담부증여(④ `gbBgGiftTaxReturn`) 모두

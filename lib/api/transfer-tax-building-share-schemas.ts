@@ -5,7 +5,7 @@
  * 정의·주석은 그대로다. 소비처는 이 경로에서 직접 import한다(원 파일 재export는 순환 import라 두지 않는다).
  */
 import { z } from "zod";
-import { generalBuildingValuationSchema, carryoverTaxationEngineShape } from "./transfer-tax-building-schemas";
+import { generalBuildingValuationSchema, carryoverTaxationEngineShape, rejectDebtPiecesKeyRefine } from "./transfer-tax-building-schemas";
 import { reductionSchema } from "./transfer-tax-schema-reductions";
 import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 
@@ -137,6 +137,7 @@ export const generalBuildingShareSchema = z.object({
     .superRefine((ct, ctx) => {
       if (ct.donorBuilt !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["donorBuilt"], message: GB_SHARE_DONOR_BUILT_MESSAGE });
     })
+    .superRefine(rejectDebtPiecesKeyRefine)
     .optional(),
 }).superRefine((share, ctx) => {
   // 「이월과세 지분 ⇔ 그 지분 §159 정보의 당초 증여자 값」 — 한쪽만 있으면 A 시나리오를 만들 수 없거나(값 없음) 이월과세가 조용히 사라진다(사건 없음).

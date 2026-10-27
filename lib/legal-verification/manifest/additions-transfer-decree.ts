@@ -53,6 +53,13 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** 증여 취득시기 「증여를 받은 날」 — 이월과세 채무 부분(매입분)의 취득일(`CARRYOVER_GIFT_ACQUISITION_DATE`). */
+    id: "TRANSFER_DECREE.GIFT_ACQ_DATE",
+    citation: "소득세법 시행령 §162",
+    keywords: ["증여를 받은 날"],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER_DECREE.GROUNDWATER_RIGHT_PRICE",
     citation: "소득세법 시행령 §162의2",
     keywords: ["지하수개발ㆍ이용권", "토사석의 채취허가", "임목"],
