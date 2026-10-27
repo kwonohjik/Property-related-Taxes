@@ -56,7 +56,12 @@ async function calc(page: Page) {
 }
 async function ownerSplit(page: Page, owns: "building_only" | "land_only") {
   await card(page).getByText("토지·건물 소유자 다름", { exact: true }).first().click();
-  if (owns === "land_only") await card(page).getByRole("button", { name: /토지만/ }).first().click();
+  if (owns === "land_only") {
+    await card(page).getByRole("button", { name: /토지만/ }).first().click();
+    // V-3′ 건물(주택) 소유자 세대(⑧ 필수) — 같은 세대(종전 계산)
+    await card(page).getByTestId("building-owner-same-household-yes").first().check();
+    await expect.poll(async () => (await storedAsset(page))?.buildingOwnerSameHousehold).toBe(true);
+  }
   await expect.poll(async () => (await storedAsset(page))?.selfOwns).toBe(owns);
 }
 

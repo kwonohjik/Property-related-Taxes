@@ -39,6 +39,7 @@ function splitAsset(over: Record<string, unknown> = {}) {
   return {
     ...makeDefaultAsset(1),
     assetKind: "housing" as const,
+    buildingOwnerSameHousehold: true,
     acquisitionCause: "purchase" as const,
     // 취득일 동일 = 비-별개취득. `selfOwns ≠ both`만으로 분리 축이 켜지는 경로다.
     acquisitionDate: "2019-06-01",

@@ -215,7 +215,7 @@ const A3_BODY = (selfOwns?: "building_only" | "land_only") => ({
   acquisitionArea: 100,
   landStandardPriceAtTransfer: T.L,
   buildingStandardPriceAtTransfer: T.N,
-  ...(selfOwns ? { selfOwns } : {}),
+  ...(selfOwns ? { selfOwns, buildingOwnerSameHousehold: true } : {}),
 });
 /** 별개 취득 + 나목 입력 + 환산 양쪽 + 양도시 감정평가가액 양쪽 + 양도시 기준시가(파트) 없음 */
 const A3_REACH_BODY: Record<string, unknown> = (() => {

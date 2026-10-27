@@ -1562,6 +1562,12 @@ export interface TransferTaxInput {
    */
   selfOwns?: "both" | "building_only" | "land_only";
   /**
+   * 토지만 본인(`selfOwns === "land_only"`)인 주택에서 건물(주택) 소유자가 **양도일 현재** 본인과 같은 세대인가.
+   * false면 그 토지는 이 세대의 1세대1주택에 딸린 토지가 아니다 — 비과세·표2 미적용(`land-only-owner-household.ts`).
+   * 미응답은 ⑧·⑫가 막는다(예·아니오 2택). 엔진은 undefined를 종전 동작(같은 세대)으로 읽는다.
+   */
+  buildingOwnerSameHousehold?: boolean;
+  /**
    * 건물 정착면적 (㎡) — 부수토지 한도 산정용.
    * ⚠️ 축별 근거 조문이 다르다(배율 수치 3/5/5/10은 동일) — 세율 축 「소득세법 시행령」 §167의5 /
    *    비사업용 토지 축 같은 영 §168의12 / 비과세 축 같은 영 §154⑦.

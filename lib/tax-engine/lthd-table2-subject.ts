@@ -18,11 +18,14 @@
  *    (memory `feedback_shared_predicate_argument_parity`).
  */
 import type { TransferTaxInput } from "./types/transfer.types";
+import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
 
 /** ① 자산 축 — 표2 「대상 자산」인가 (주택·주택부수토지). */
 export function isLthdTable2SubjectAsset(
-  input: Pick<TransferTaxInput, "propertyType" | "oneHouseUnitRole">,
+  input: Pick<TransferTaxInput, "propertyType" | "oneHouseUnitRole" | "selfOwns" | "buildingOwnerSameHousehold">,
 ): boolean {
+  // V-3′ — 토지만 본인 × 건물(주택) 소유자 다른 세대: 이 세대의 1주택에 딸린 토지가 아니다(`land-only-owner-household.ts`).
+  if (landOnlyBuildingOwnerOtherHousehold(input)) return false;
   switch (input.propertyType) {
     // 토지는 짝 주택과 1세대1주택 단위를 이룬 부수토지(배율 이내 확인)만 — 순수 토지·배율 초과분·판정 불가 카드는 표1.
     case "land":
