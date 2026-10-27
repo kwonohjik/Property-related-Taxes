@@ -16,13 +16,11 @@
 
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { safeMultiplyThenDivide } from "./tax-utils";
+import { purchasedPartIdOf } from "./general-building-share-id";
 import { buildInputB } from "./transfer-tax-carryover-inputs";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
 import type { TransferTaxItemInput } from "./types/transfer-aggregate.types";
-
-/** 매입분 카드 id 접미사 — 한도 초과 분리 카드(`__appurtenant`/`__excess`)와 같은 `__` 규약. */
-export const PURCHASED_PART_ID_SUFFIX = "__purchased";
 
 /** r = debt ÷ valuation. `keep`은 (1 − r)의 분자(valuation − debt). */
 export interface CarryoverDebtShare {
@@ -89,7 +87,7 @@ export function splitCarryoverDebtPieces(card: TransferTaxItemInput, share: Carr
       ct,
     ),
     acquisitionPrice: share.debt,
-    propertyId: share.keep === 0 ? baseId : `${baseId}${PURCHASED_PART_ID_SUFFIX}`,
+    propertyId: share.keep === 0 ? baseId : purchasedPartIdOf(baseId),
     propertyLabel: `${baseLabel}(매입분)`,
     // 1세대1주택 단위(집 카드 1장 전제)는 증여분 카드가 이어받는다 — 매입분은 단위에 끼지 않는다.
     oneHouseUnitRole: undefined,

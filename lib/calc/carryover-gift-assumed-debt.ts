@@ -16,6 +16,7 @@ import { depreciationSupport } from "@/lib/calc/depreciation-scope";
 import { buildSameAdjustmentPeriodInput } from "@/lib/calc/transfer-same-adjustment-period-input";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { isParcelMode } from "@/lib/stores/transfer-per-asset-direct";
+import { donorBuiltGbActive } from "@/lib/calc/donor-built-gb-scope";
 import { DEBT_PIECES_REASON } from "@/lib/tax-engine/carryover-debt-pieces-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
@@ -77,4 +78,17 @@ export function carryoverPurchasedPartScope(asset: AssetForm, opts?: { isNonPrim
 export function carryoverPurchasedPartDebt(asset: AssetForm, opts?: { isNonPrimary?: boolean }): number {
   if (carryoverPurchasedPartScope(asset, opts).kind !== "apply") return 0;
   return carryoverAssumedDebt(asset.carryover, asset.carryover);
+}
+
+/**
+ * 일반건물 파트(E2) — 채무가 있을 때 조각 규칙을 적용할 수 없는 사유(없으면 null). ⑤ 안내와 ⑧ 차단(`validateGbCarryoverDebt`)이 읽는 **하나**다.
+ * 엔진 술어(`carryoverDebtPiecesUnsupportedReason`)가 카드에서 던지는 사유 중 일반건물 폼에서 만들 수 있는 것만이다:
+ * 감면 · 용도변경(`gbHouseToCommercialConversion`) · 건물 파트 채무 + 증여자 신축·증축. 감가상각은 `depreciationSupport`가 일반건물 이월과세에서 칸을 닫아 폼에서 만들 수 없다.
+ * @param debtOnBuilding 채무가 건물 파트에 있는가(증여자 신축·증축은 건물 파트 카드에만 실린다).
+ */
+export function gbCarryoverDebtUnsupportedReason(asset: AssetForm, debtOnBuilding: boolean): string | null {
+  if ((asset.reductions?.length ?? 0) > 0) return DEBT_PIECES_REASON.reductions;
+  if (asset.gbHouseToCommercialConversion) return DEBT_PIECES_REASON.acquisitionFacts;
+  if (debtOnBuilding && donorBuiltGbActive(asset)) return DEBT_PIECES_REASON.donorBuilt;
+  return null;
 }

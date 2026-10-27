@@ -15,7 +15,7 @@ import { validateDonorBuiltGb } from "./transfer-tax-validate-donor-built-gb";
 import { gbBgGiftTaxNumerator, gbBgGiftTaxReturn } from "./gb-bg-gift-tax-return";
 import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
 import { carryoverAssumedDebt } from "./carryover-gift-assumed-debt";
-import { assumedDebtIssue } from "./transfer-tax-validate-carryover-debt";
+import { assumedDebtIssue, validateGbCarryoverDebt } from "./transfer-tax-validate-carryover-debt";
 import { carryoverGiftTaxedValue } from "./carryover-gift-assumed-debt";
 import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
 import { bgCarryoverForm, bgPartialCarryover } from "./bg-carryover-parts";
@@ -32,7 +32,7 @@ import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
  *
  * ⚠️ **UI에 있는 칸만 요구한다.** 건물 파트를 안 골랐으면 건물 칸을 묻지 않는다.
  */
-export function validateGbCarryover(asset: AssetForm, label: string): string | null {
+export function validateGbCarryover(asset: AssetForm, label: string, formTransferDate?: string): string | null {
   const landIsCarryover = asset.acquisitionCause === "carryover_gift";
   const buildingIsCarryover = asset.gbBuildingAcquisitionCause === "carryover_gift";
   if (!landIsCarryover && !buildingIsCarryover) return null;
@@ -125,6 +125,16 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
       return fieldError(isBuildingPart ? "buildingCarryover.donorAcquisitionPrice" : "carryover.donorAcquisitionPrice", `${partLabel}: 증여자의 취득가액을 입력하세요 (「소득세법」 제97조의2 제1항 제1호).`);
     }
   }
+
+  // 당초 증여 때 인수한 채무 부분(매입분) — 조각 규칙을 적용할 수 없는 입력 차단(⑫ `refineGbCarryover` 거울 · 엔진 설계서 PR-2 R5)
+  const debtBlock = validateGbCarryoverDebt(
+    asset,
+    c,
+    parts.map(([p, partLabel]) => ({ form: p, onBuilding: partLabel.endsWith(" 건물") })),
+    label,
+    formTransferDate,
+  );
+  if (debtBlock) return debtBlock;
 
   // 짝 반쪽 — ④ `gbCarryoverUsesPartShape`는 둘 다 > 0일 때만 신고서 금액을 보내고, 아니면 화면에 없는 상당액 칸(0)으로 내려간다.
   //   사건 출처가 건물 서브폼(건물만 이월과세)이면 앵커도 그쪽이다(화면 건물 블록 `field` 접두어).

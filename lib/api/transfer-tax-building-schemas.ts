@@ -93,10 +93,10 @@ export const carryoverTaxationEngineShape = z.object({
   exclusionDeclared: carryoverExclusionShape.optional(),
 }).superRefine(refineCarryoverHouseholdStart).superRefine(refineDonorBuiltInCarryover);
 
-/** 일반건물 파트·지분은 채무 부분 조각 규칙을 지원하지 않는다 — 받아 놓고 무시하면 침묵 strip이라 거부(분자만 줄이는 파트 입력은 `giftAssumedDebt`를 파트 shape에 따로 받는다). */
+/** 일반건물 엔진 모양 서브객체(`landCarryoverTaxation` 등)는 채무 키를 받지 않는다 — 받아 놓고 무시하면 침묵 strip이라 거부. 채무는 파트 shape(`landCarryoverPart`/`buildingCarryoverPart`)의 `giftAssumedDebt`로만 들어오고, 거기서는 시나리오 A 조각(PR-2)으로 계산한다. */
 export function rejectDebtPiecesKeyRefine(ct: { giftAssumedDebt?: number }, ctx: z.RefinementCtx): void {
   if (ct.giftAssumedDebt !== undefined)
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["giftAssumedDebt"], message: "일반건물 이월과세는 당초 증여 때 인수한 채무 부분을 시나리오 A에서 나누어 계산하지 못합니다(분자에서만 빼는 파트 입력은 파트별 giftAssumedDebt를 쓰세요)" });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["giftAssumedDebt"], message: "일반건물 이월과세의 당초 증여 때 인수한 채무는 엔진 모양 서브객체로 받지 않습니다 — 파트 입력(landCarryoverPart/buildingCarryoverPart)의 giftAssumedDebt를 쓰세요" });
 }
 
 /**
