@@ -51,8 +51,8 @@ export interface PrimarySplitContext {
 }
 
 /**
- * #17 후속(K1) — 한도 공유 입력. 주택 카드 토지는 주 자산이 «토지·건물 모두 본인 소유» 주택일 때만 센다(엔진이 그 카드의 배율 초과
- * 면적을 같은 `acquisitionArea`로 재는 범위 — `housingExcessAreaOfInput`). 엔진이 그 초과분을 **분리하는지**(`housingExcessSplitAppliesToInput`)는
+ * #17 후속(K1) — 한도 공유 입력. 주택 카드 토지는 주 자산이 토지를 본인 소유로 든 주택(`building_only`가 아님 — 토지만 본인 포함)일 때 센다
+ * (엔진이 그 카드의 배율 초과 면적을 같은 `acquisitionArea`로 재는 범위 — `housingExcessAreaOfInput` · #2645 D-2 이후 토지만 본인도 초과분을 분리한다). 엔진이 그 초과분을 **분리하는지**(`housingExcessSplitAppliesToInput`)는
  * 보지 않는다 — `resolveCompanionSplit` 주석 «분리 범위 밖» 참조. 화면 배지는 같은 사실을 폼에서 읽는다(`appurtenantLimitShareOfAssets`).
  */
 export function appurtenantLimitShareOf(
@@ -61,7 +61,7 @@ export function appurtenantLimitShareOf(
 ): Pick<PrimarySplitContext, "houseLandAreaM2" | "appurtenantCardsAreaM2"> {
   return {
     houseLandAreaM2:
-      primary.propertyType === "housing" && (primary.selfOwns ?? "both") === "both" ? primary.acquisitionArea : undefined,
+      primary.propertyType === "housing" && primary.selfOwns !== "building_only" ? primary.acquisitionArea : undefined,
     appurtenantCardsAreaM2: companions.reduce(
       (sum, c) =>
         c.assetKind === "land" &&

@@ -225,7 +225,7 @@ export function housingExcessCapexParts(asset: AssetForm): { total: number; land
 
 /**
  * #17 후속(K1) — 배율 한도를 함께 쓰는 면적(화면 일체과세 배지용). route `appurtenantLimitShareOf`(엔진 입력 기준)와 **같은 사실**을 폼에서 읽는다.
- * - 주택 카드 토지: 주 자산이 «토지·건물 모두 본인 소유» 주택(겸용 아님 — ④가 `propertyType: "housing"`으로 싣는 범위)일 때 ④가 싣는 `acquisitionArea`.
+ * - 주택 카드 토지: 주 자산이 토지를 본인 소유로 든 주택(`building_only` 아님 — 토지만 본인 포함 · 겸용 아님 — ④가 `propertyType: "housing"`으로 싣는 범위)일 때 ④가 싣는 `acquisitionArea`.
  * - 부수토지 카드 합계: 분리 진입 조건(토지 · 주택부수토지 · 면적 > 0 — 수동 세율 지정은 조건이 아니다)을 통과한 카드의 ④ `areaM2`(`appurtenantCardAreaM2`).
  */
 export function appurtenantLimitShareOfAssets(
@@ -233,7 +233,7 @@ export function appurtenantLimitShareOfAssets(
   companions: readonly AssetForm[],
 ): { houseLandAreaM2?: number; appurtenantCardsAreaM2: number } {
   const houseCounts =
-    primary.assetKind === "housing" && !primary.isMixedUseHouse && (effectiveSelfOwns(primary) ?? "both") === "both";
+    primary.assetKind === "housing" && !primary.isMixedUseHouse && effectiveSelfOwns(primary) !== "building_only";
   return {
     houseLandAreaM2: houseCounts ? resolveAcqAreaForStdPrice(primary) : undefined,
     appurtenantCardsAreaM2: companions.reduce(
