@@ -21,6 +21,9 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { cn } from "@/lib/utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { selfOwnsSplitApplicable } from "@/lib/calc/self-owns-scope";
+import { asksBuildingOwnerHousehold } from "@/lib/calc/self-owns-scope";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { landCauseMixActive } from "@/lib/calc/transfer-land-part-cause";
 
 // 게이트 술어는 ④·⑧·⑥과 공용 leaf다(M2 — `lib/calc/self-owns-scope.ts`). 종전 import 경로 유지용 재export.
@@ -91,6 +94,28 @@ export function AssetOwnershipSplitSection(props: {
             </button>
           ))}
         </div>
+      )}
+      {/* V-3′ — 다른 세대면 이 토지는 본인 세대의 1주택에 딸린 토지가 아니다(엔진 `land-only-owner-household.ts` · ⑧·⑫ 필수 · 예·아니오 2택). */}
+      {asksBuildingOwnerHousehold(asset) && (
+        <ToneCard tone="amber" title="건물(주택) 소유자와 같은 세대 여부 (§154①)">
+          <p className="text-caption text-muted-foreground">
+            양도일 현재 건물(주택) 소유자가 본인과 <strong>같은 세대</strong>입니까? 다른 세대라면 이 토지는 본인 세대가 보유한 주택에
+            딸린 토지가 아니어서 1세대1주택 비과세와 장기보유특별공제 표2를 적용하지 않습니다(조심 2008중3554).
+          </p>
+          <RadioCardGroup
+            name={`building-owner-same-household-${asset.assetId}`}
+            data-testid="building-owner-same-household"
+            data-field="buildingOwnerSameHousehold"
+            tone="amber"
+            layout="inline"
+            options={[
+              { value: "yes", label: "예 — 같은 세대", testId: "building-owner-same-household-yes" },
+              { value: "no", label: "아니오 — 다른 세대", testId: "building-owner-same-household-no" },
+            ]}
+            value={asset.buildingOwnerSameHousehold === undefined ? "" : asset.buildingOwnerSameHousehold ? "yes" : "no"}
+            onChange={(v) => onChange({ buildingOwnerSameHousehold: v === "yes" })}
+          />
+        </ToneCard>
       )}
     </div>
   );

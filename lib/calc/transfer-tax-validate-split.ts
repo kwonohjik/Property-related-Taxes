@@ -32,6 +32,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import { isLandBuildingSplitable } from "./self-owns-scope";
+import { buildingOwnerHouseholdError } from "./self-owns-scope";
 import { engineLandOverlay } from "./transfer-land-part-cause";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import { anyPartCarryover } from "./transfer-land-part-cause";
@@ -373,6 +374,9 @@ export function validateSplitDirectInputs(
   // 신축 · 토지만 본인 — 신축은 건물의 취득원인이다(⑫ `refineHouseholdRequiredInputs`와 같은 결론 · C-2). 칸은 소유자 분리 토글이다.
   if (newConstructionLandOnly(asset))
     return fieldError("selfOwns", `${label}: 신축(자가건축)은 건물의 취득원인입니다 — 토지만 본인 소유라면 토지의 취득원인(매매·상속·증여 등)으로 계산하세요 (소득세법 시행령 §162①4호).`);
+  // V-3′ 토지만 본인 주택 — 건물(주택) 소유자 세대 예·아니오 필수(⑫ `landOnlyHouseholdIssue`와 같은 술어 · Q-2 a).
+  const householdErr = buildingOwnerHouseholdError(asset, label);
+  if (householdErr) return householdErr;
   const acqAppraisalErr = validateAcqAppraisalPair(rawAsset, label); // V-7 — 취득 당시 감정평가가액 쌍(⑫ 같은 술어)
   if (acqAppraisalErr) return acqAppraisalErr;
 

@@ -45,6 +45,8 @@ import {
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { oneHouseJudgmentWarnings } from "./transfer-tax-one-house-warnings";
 import { resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
+import { revokeExemptionOnLandOnlyOtherHousehold } from "./land-only-owner-household";
+import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
 import { nblDeferralAreaNotice } from "./transfer-tax-nbl-deferral-notice";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
@@ -260,7 +262,9 @@ export function calculateTransferTax(
     judgeOneHouseExemptionFromInput(exemptionJudgeInput, parsedRates.oneHouseSpecialRules, presaleRightStartDate(parsedRates)),
     effectiveInput,
   );
-  const exemptionResult = rentalComposition.judgment;
+  // V-3′ — 토지만 본인 × 건물(주택) 소유자 다른 세대면 이 세대의 1주택에 딸린 토지가 아니다(`land-only-owner-household.ts`).
+  const landOnlyHousehold = revokeExemptionOnLandOnlyOtherHousehold(rentalComposition.judgment, effectiveInput);
+  const exemptionResult = landOnlyHousehold.judgment;
   // §155⑳ 불성립 원인(호별·거주 · 세대 구성) — 조기 반환·㉒ 안내·불성립 고지가 한 판정을 본다(composition-revoke D-2).
   const prhpUnmet =
     effectiveInput.rentalHousingException?.applyException === true
@@ -271,6 +275,7 @@ export function calculateTransferTax(
   if (rentalUnmetOther) warnings.push(rentalUnmetOther);
   else if (rentalPremise.notice) warnings.push(rentalPremise.notice);
   if (rentalComposition.notice) warnings.push(rentalComposition.notice);
+  if (landOnlyHousehold.notice) warnings.push(landOnlyHousehold.notice);
 
   // §89② 고지 · 판정 보류 · 지구 미선언 · 재기산 · 미충족 특례 · 합가 「모름」 · 귀농 사후관리 · 중첩 의제 — 완공APT 경로와 공용 leaf.
   warnings.push(
@@ -477,7 +482,8 @@ export function calculateTransferTax(
   // STEP 2.5: 장기임대주택 보유자 거주주택 비과세 특례 (소령 §155⑳ + §161)
   // gain 계산 완료 후 실행. applied=true 시 특례 결과로 즉시 반환(STEP 3 이후 생략),
   // false 시 미적용 사유만 steps에 기록하고 일반 경로 계속. (구현: transfer-tax-rental-housing-step.ts)
-  if (effectiveInput.rentalHousingException?.applyException) {
+  // V-3′ — 다른 세대 주택의 부수토지는 이 세대의 거주주택이 아니다(§155⑳ 「1세대가」) — 특례 없이 일반 경로(STEP 1이 비과세를 거뒀다).
+  if (effectiveInput.rentalHousingException?.applyException && !landOnlyBuildingOwnerOtherHousehold(effectiveInput)) {
     const rheResult = runRentalHousingExceptionStep({
       effectiveInput,
       input,

@@ -53,6 +53,7 @@ import { validateLandPartCause } from "./transfer-tax-validate-split";
 import { validateBuildingCauseSplit } from "./transfer-tax-validate-building-cause";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
+import { buildingOwnerHouseholdError } from "./self-owns-scope";
 import { HOUSE_FIRST_DISCLOSURE_KIND_REQUIRED_MESSAGE, houseFirstDisclosureIssue } from "./house-first-disclosure";
 import { apartNtsPriceIssue, isApartSec163_9Asset } from "./apart-nts-price";
 import { HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
@@ -392,7 +393,8 @@ function validateAssetAcquisitionBranches(
     // 개산공제 base(§163⑥) 필수 — 근거·경계는 `lumpSumBaseRequired` JSDoc.
     if (lumpSumBaseRequired(asset, isNonPrimaryAsset) && !(parseAmount(asset.standardPriceAtAcq ?? "") > 0))
       return fieldError("standardPriceAtAcq", `${label}: 취득 당시 기준시가를 입력하세요.`);
-    return null;
+    // V-3′ — 이 분기는 분리 검증(아래 `validateSplitDirectInputs`) 전에 반환한다. ⑫는 막으므로 여기서도 건다.
+    return buildingOwnerHouseholdError(asset, label);
   }
 
   // 1) 다필지 모드는 별도 검증

@@ -13,6 +13,11 @@ export interface SplitAcquisitionFormSlice {
    * "land_only": 토지만 본인.
    */
   selfOwns: "both" | "building_only" | "land_only";
+  /**
+   * V-3′ 토지만 본인(`land_only`) 주택 — 건물(주택) 소유자가 양도일 현재 본인과 같은 세대인가(예·아니오 2택, 미응답은 ⑧ 차단).
+   * 노출·전송·검증 술어는 `asksBuildingOwnerHousehold`(`lib/calc/self-owns-scope.ts`).
+   */
+  buildingOwnerSameHousehold?: boolean;
   /** 토지와 건물의 취득일이 다른지 여부 (원시취득·신축 등) */
   hasSeperateLandAcquisitionDate: boolean;
   /** 토지 취득일 (YYYY-MM-DD) — hasSeperateLandAcquisitionDate === true 시 필수 */

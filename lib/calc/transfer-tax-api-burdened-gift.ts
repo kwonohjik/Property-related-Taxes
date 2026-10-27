@@ -40,6 +40,8 @@ import { bgAnyCarryover, bgCarryoverPartsPayload } from "./bg-carryover-parts";
 import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
 import { gbBgGiftTaxedValueByPart } from "./gb-bg-gift-tax-return";
 import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
+import { isBgSuccessorRight } from "./transfer-successor-right";
+import { successorRightAcquisitionTotal } from "./transfer-successor-right";
 
 export interface BurdenedGiftInfoPayload {
   valuationMode: "sangjeungbeop_standard" | "sangjeungbeop_market";
@@ -540,7 +542,10 @@ export function buildBurdenedGiftInfo(
       buildingStdPriceAtAcquisition: 0,
       // D-2: K-4 고정. 시가 모드에서 사용자가 「환산」을 골라 뒀어도 입주권에는 그 경로가 없다.
       acquisitionMethod: "actual" as const,
-      actualAcquisitionTotal: parseAmount(primary.bgActualAcquisitionTotal) || 0,
+      // 승계조합원은 승계 블록 2칸(승계취득가액 + 추가분담금)이 실지취득가액이다 — 「종전 부동산」 칸은 원조합원 전용(`isBgSuccessorRight`).
+      actualAcquisitionTotal: isBgSuccessorRight(primary)
+        ? successorRightAcquisitionTotal(primary)
+        : parseAmount(primary.bgActualAcquisitionTotal) || 0,
       rightValuation: {
         memberRightsValue: deriveMemberRightsValue(primary),
         paidInstallments: parseAmount(primary.bgRightPaidInstallments) || 0,

@@ -599,6 +599,8 @@ export const propertyBaseShape = {
    * "building_only"/"land_only" 사용 시 landAcquisitionDate 필수.
    */
   selfOwns: z.enum(["both", "building_only", "land_only"]).optional(),
+  /** V-3′ 토지만 본인 주택 — 건물(주택) 소유자가 양도일 현재 본인과 같은 세대인가(예·아니오). 필수 여부는 `landOnlyHouseholdIssue` */
+  buildingOwnerSameHousehold: z.boolean().optional(),
   // buildingFootprintArea / isUrbanArea 는 위 사례 28 블록(신축주택·부수토지)에 선언됨 — 중복 금지
   /** ⑫ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 미정의 시 침묵 stripping 방지 */
   rentalHousingException: rentalHousingExceptionSchema.optional(),

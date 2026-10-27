@@ -311,6 +311,7 @@ describe("V1·V2 — 별개 취득 파트별 취득가액 필수", () => {
     const err = validateSplitDirectInputs(
       sepAsset({
         selfOwns: "land_only",
+        buildingOwnerSameHousehold: true,
         landAcqMode: "actual",
         buildingAcqMode: "actual",
         landAcquisitionPrice: "300,000,000",

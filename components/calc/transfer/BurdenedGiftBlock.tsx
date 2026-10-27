@@ -61,6 +61,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { computeMortgageValuation } from "@/lib/tax-engine/burdened-gift-valuation";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { bgAnyCarryover } from "@/lib/calc/bg-carryover-parts";
+import { isBgSuccessorRight } from "@/lib/calc/transfer-successor-right";
 
 interface Props {
   asset: AssetForm;
@@ -158,6 +159,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
    * ⇒ 취득가액이 실지거래가액(K-4)으로 고정되고, 취득시·양도시 기준시가 칸을 쓰지 않는다.
    */
   const isRightToMoveIn = asset.assetKind === "right_to_move_in";
+  /** 승계조합원 입주권 — 실지취득가액은 ③ 승계 블록 2칸이 정본이라 「종전 부동산」 칸·§166 안내를 보이지 않는다(④·⑧과 같은 술어). */
+  const isSuccessorRight = isBgSuccessorRight(asset);
   /**
    * 이월과세(「소득세법」 §97의2) 조합인가 — **화면의 「증여자」가 두 사람이 되는 순간**이다.
    *
@@ -448,7 +451,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2 dark:bg-amber-900/40">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-                {isCarryoverPresumed ? "양도인이 증여받은 때의 상증법 평가액 입력" : "실지취득가액 입력"}
+                {isCarryoverPresumed ? "양도인이 증여받은 때의 상증법 평가액 입력" : isSuccessorRight ? "실지취득가액 — ③ 승계취득 정보에서 입력" : "실지취득가액 입력"}
               </span>
               <LawArticleModal legalBasis="소득세법 §97" label="§97①1호가목" />
             </div>
@@ -463,7 +466,13 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                 금액은 아래 「④ 자본적 지출, 필요경비」에 입력하세요.
               </div>
             )}
-            {isRightToMoveIn && (
+            {isSuccessorRight && (
+              <div className="rounded border border-fuchsia-200 dark:border-fuchsia-800 bg-fuchsia-50 dark:bg-fuchsia-950/30 p-2 text-caption text-fuchsia-800 dark:text-fuchsia-200" data-testid="bg-successor-right-acq-pointer">
+                승계조합원의 취득가액은 <b>③ 「조합원입주권 승계취득 정보」의 승계취득가액 + 취득 후 납입 추가분담금</b>입니다
+                (소득세법 §97①1호가목 · 시행령 §159①1호). 인수 채무 비율만큼 안분됩니다. 부담부증여에서는 실지거래가액으로만 계산합니다.
+              </div>
+            )}
+            {isRightToMoveIn && !isSuccessorRight && (
               <div className="rounded border border-fuchsia-200 dark:border-fuchsia-800 bg-fuchsia-50 dark:bg-fuchsia-950/30 p-2 text-caption text-fuchsia-800 dark:text-fuchsia-200">
                 조합원입주권의 취득가액은 <b>종전 부동산의 실지취득가액</b>입니다 (소득세법 시행령
                 §166①1호 「기존건물과 그 부수토지의 취득가액」 · §97①1호가목). 인수 채무 비율만큼
@@ -494,7 +503,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                   value={asset.bgActualAcquisitionLand} data-field="bgActualAcquisitionLand"
                   onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
               </FieldCard>
-            ) : (
+            ) : isSuccessorRight ? null : (
               <FieldCard
                 label={isRightToMoveIn ? "종전 부동산 실지취득가액" : isMixed ? "실지취득가액 — 주택·상가 전체 (토지 포함)" : "실지취득가액 (주택·건물 전체)"}
               >
