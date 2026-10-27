@@ -276,10 +276,11 @@ describe("PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 �
     const twelve = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "12" }));
     expect(twelve.r.longTermHoldingRate).toBe(0.12); // 표1(6%)이 아니라 표2 보유분
     expect(twelve.r.longTermHoldingDeduction).toBe(48_000_000); // 과세 양도차익 4억 × 12%
-    // 통산이 표2를 열었으므로 조심 2025서3843(통산 부인 심판례) 확인 필요를 고지한다(2026-10-27 — 계획서 table2-pre-acquisition-residence-conflict §10)
+    // 통산이 표2를 열었으므로 조심 2025서3843(양도일 현재 별도세대 → 통산·표2 배제) 확인 필요를 고지한다(2026-10-27 — 계획서 table2-pre-acquisition-residence-conflict §10)
     const t2 = (twelve.warnings ?? []).find((x: string) => x.includes(TABLE2_NOTICE)) as string;
     expect(t2).toContain("증여 전 동일세대로 거주한 12개월");
     expect(t2).toContain("조심 2025서3843");
+    expect(t2).toContain("양도일 현재 증여인과 동일세대가 아니어서 증여인 거주기간을 통산하지 않아 표2 적용을 배제");
     expect(t2).toContain("확인이 필요합니다");
     expect(t2).not.toContain("2025두34935"); // 공제율 사건 — 대상 판정 근거로 인용하지 않는다
     // 경계 −1 — 통산 23개월이면 표1이고 심판례 고지도 없다(통산이 결론을 가르지 않는다)
