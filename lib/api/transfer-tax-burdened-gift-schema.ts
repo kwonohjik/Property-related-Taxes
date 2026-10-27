@@ -82,8 +82,15 @@ export const burdenedGiftInfoSchema = z.object({
       donorBuilt: bgDonorBuiltShape.optional(),
       /** 일반건물 — 증여받은 파트(§97의2① 「해당 자산」). 미지정 = 둘 다. 원인 칸과의 정합은 `refineGbBgCarryoverParts` */
       parts: z.object({ land: z.boolean(), building: z.boolean() }).strict().optional(),
-      /** 일반건물 · 둘 다 이월과세 — 증여 당시 토지분·건물분 평가액(영 §163의2②2호). 증여세 상당액 배분 비율. 한 파트만·일반건물 밖이면 `refineGbBgCarryoverParts`가 거부 */
-      giftValuationByPart: z.object({ land: z.number().int().positive(), building: z.number().int().positive() }).strict().optional(),
+      /**
+       * 일반건물 · 둘 다 이월과세 — 토지분·건물분 증여세 과세가액(영 §163의2②2호 · 평가액 − 당초 증여 때 인수한 채무). 증여세 상당액 배분 비율.
+       * 인수채무로 한 파트가 0일 수 있어 0 이상이다(합은 양수 — 엔진은 합 0이면 양도가액 비율). 한 파트만·일반건물 밖이면 `refineGbBgCarryoverParts`가 거부
+       */
+      giftValuationByPart: z
+        .object({ land: z.number().int().nonnegative(), building: z.number().int().nonnegative() })
+        .strict()
+        .refine((v) => v.land + v.building > 0, { message: "토지분·건물분 증여세 과세가액 합계는 0보다 커야 합니다" })
+        .optional(),
       /** 일반건물 · 둘 다 이월과세 — 당초 증여자의 건물 취득일(§95④ 단서 · 신축이면 사용승인일). 시나리오 A 건물 기산일. ⑭ Date 변환은 여기서 한다(`donorBuilt.constructionDate`와 같은 방식) */
       buildingDonorAcquisitionDate: z.string().date().transform((v) => toDate(v, "burdenedGiftInfo.carryoverDonorBasis.buildingDonorAcquisitionDate")).optional(),
     })

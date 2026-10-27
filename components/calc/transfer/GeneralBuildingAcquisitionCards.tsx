@@ -131,6 +131,7 @@ import {
   GbBuildingCarryoverCard,
   GbBgPreDeemedReportedCard,
 } from "./GeneralBuildingAcquisitionCardsParts";
+import { gbCarryoverEventSource } from "@/lib/calc/transfer-tax-api-gb-carryover";
 
 export function GeneralBuildingAcquisitionCards({
   asset,
@@ -693,6 +694,7 @@ export function GeneralBuildingAcquisitionCards({
             <CarryoverGiftBlock
               part="building"
               asset={{ ...asset, carryover: asset.buildingCarryover ?? asset.carryover }}
+              eventGiftDebtAssumed={gbCarryoverEventSource(asset)?.giftDebtAssumed}
               transferDate={transferDate ?? ""}
               onChange={(patch) => {
                 // 🔑 건물 블록의 편집은 `buildingCarryover`로 간다 — 토지 값을 덮어쓰지 않는다.

@@ -98,6 +98,13 @@ export interface CarryoverTaxationForm {
   /** 증여 당시 평가액 — 비교과세 시나리오 B 취득가액 */
   giftDateValuation: string;
   /**
+   * 당초 증여 때 수증자가 인수한 채무가 증여세 과세가액에서 빠졌는가(「상속세 및 증여세법」 제47조 제1항 · 제3항 단서) — **증여 사건** 서브폼의 값만 읽는다.
+   * 켜면 영 §163의2②2호 분자 「해당 자산가액(증여세가 과세된 증여세 과세가액)」이 평가액 − 인수채무가 된다(계획서 `carryover-gift-tax-numerator-net.plan.md` Q-2 a).
+   */
+  giftDebtAssumed: boolean;
+  /** 이 서브폼 파트(자산 전체·토지·건물)에 담보된 채무로서 당초 증여 때 인수한 금액 — `giftDebtAssumed`가 켜졌을 때만 읽는다. 파트마다 받는다(자동 안분 금지 · Q-3 a). */
+  giftAssumedDebt: string;
+  /**
    * §97조의2 ① 증여자와의 관계. "" = 미선택(⑧에서 차단).
    * 배제 문언·시행시기 게이트가 이 축으로 갈린다.
    */
@@ -163,6 +170,8 @@ export const CARRYOVER_DEFAULTS: CarryoverTaxationForm = {
   giftTaxBase: "",
   donorCapitalExpenditure: "",
   giftDateValuation: "",
+  giftDebtAssumed: false,
+  giftAssumedDebt: "",
   donorRelation: "",
   donorDeceased: false,
   spouseGiftOneHouseAtGiftDate: false,
@@ -223,6 +232,9 @@ export function normalizeCarryoverForm(rawInput: unknown): CarryoverTaxationForm
       typeof raw.donorCapitalExpenditure === "string" ? raw.donorCapitalExpenditure : "",
     giftDateValuation:
       typeof raw.giftDateValuation === "string" ? raw.giftDateValuation : "",
+    // ③ normalize — 인수채무 2필드. 구형 sessionStorage에는 없다 → OFF(채무 0 = 종전 세액).
+    giftDebtAssumed: raw.giftDebtAssumed === true,
+    giftAssumedDebt: typeof raw.giftAssumedDebt === "string" ? raw.giftAssumedDebt : "",
     // ③ normalize — §97의2① 관계요건 2필드. 구형 sessionStorage에는 없다.
     // ⚠️ donorDeceased 기본값이 true로 새면 **기존 이월과세가 전부 배제**된다.
     donorRelation:

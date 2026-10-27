@@ -101,6 +101,11 @@ export function LandCarryoverCard(props: {
         anchorPrefix={isBuilding ? "carryover" : "landCarryover"}
         partsLabel={name}
         giftTaxShareHint={giftTaxShareHint}
+        debtParts={[
+          isBuilding
+            ? { name: "건물", value: c.giftAssumedDebt, onChange: (v) => patch({ giftAssumedDebt: v }) }
+            : { name: "토지", value: c.giftAssumedDebt, onChange: (v) => patch({ giftAssumedDebt: v }) },
+        ]}
       />
 
       <div className="rounded-md border border-rose-200/70 bg-rose-50/40 p-3 dark:bg-rose-950/40">

@@ -16,6 +16,7 @@ import { toDate } from "@/lib/api/date-coerce";
 import { toEngineDonorBuilt } from "@/lib/api/donor-built-engine-input";
 import type { DonorBuiltWire } from "@/lib/api/transfer-tax-schema-donor-built";
 import { apportionGiftTax } from "./carryover-gift-tax-apportion";
+import { giftTaxedValue } from "./carryover-gift-tax-apportion";
 import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
 import type { TransferTaxInput } from "./types/transfer.types";
 
@@ -44,6 +45,8 @@ interface SplitCarryoverWirePart {
   /** 환산 분자 — 증여자 취득 당시 그 파트 기준시가 총액(지분 스케일 없음) */
   donorStandardPriceAtAcquisition?: number;
   donorCapitalExpenditure?: number;
+  /** 당초 증여 때 이 파트에 담보된 채무로서 인수한 금액 — 영 §163의2②2호 분자에서만 뺀다(B 취득가액은 파트 평가액 그대로 · `carryover-gift-tax-numerator-net.plan.md`) */
+  giftAssumedDebt?: number;
   /**
    * PR-3 — 증여자가 신축·증축한 건물(§114조의2 가산세). 건물 파트만 받는다 — 토지 파트에 오면 엔진이 거부한다(⑫도 막는다).
    * 일체 주택 안분(`housing`)은 split 파트에 필요 없다(파트별 기준시가가 이미 나뉘어 있다).
@@ -85,11 +88,12 @@ export function composeSplitCarryover(d: SplitCarryoverWire): ComposedSplitCarry
       donorAcquisitionPrice: estimated ? undefined : part.donorAcquisitionPrice,
       useEstimatedAcquisition: estimated,
       ...(estimated ? { donorStandardPriceAtAcquisition: part.donorStandardPriceAtAcquisition } : {}),
-      // 영 §163의2② 전단 — 한도 前 값. 한도는 해결자가 그 파트 양도차익으로 건다.
-      giftTaxAmount: apportionGiftTax({ giftTaxCalculated: ev.giftTaxCalculated, giftTaxBase: ev.giftTaxBase }, valuation),
+      // 영 §163의2② 전단 — 한도 前 값. 한도는 해결자가 그 파트 양도차익으로 건다. 분자(2호)는 평가액 − 당초 증여 때 인수한 채무다.
+      giftTaxAmount: apportionGiftTax({ giftTaxCalculated: ev.giftTaxCalculated, giftTaxBase: ev.giftTaxBase }, giftTaxedValue(valuation, part.giftAssumedDebt)),
       donorCapitalExpenditure: part.donorCapitalExpenditure,
       ...(part.donorBuilt ? { donorBuilt: toEngineDonorBuilt(part.donorBuilt, `${path}`) } : {}),
       giftDateValuation: valuation,
+      ...(part.giftAssumedDebt ? { giftAssumedDebt: part.giftAssumedDebt } : {}),
       // §97의2① 관계요건 — 증여 사건의 사실이라 두 파트에 같은 값이 실린다.
       donorRelation: ev.donorRelation,
       donorDeceased: ev.donorDeceased,

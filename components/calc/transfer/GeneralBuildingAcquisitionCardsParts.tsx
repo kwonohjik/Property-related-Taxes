@@ -26,6 +26,7 @@ import { capexHint } from "./capexHint";
 import { GbDeductionOnlyNotice } from "./GbDeductionOnlyNotice";
 import { gbCapexBeforeExtensionSlots } from "@/lib/calc/gb-extension-capex-timing";
 import { gbPartReportedField } from "@/lib/calc/gb-pre-deemed";
+import { gbCarryoverEventSource } from "@/lib/calc/transfer-tax-api-gb-carryover";
 
 export function toBuildingCause(
   cause: AssetForm["acquisitionCause"] | undefined,
@@ -375,6 +376,7 @@ export function GbBuildingCarryoverCard({
       <CarryoverGiftBlock
         part="building"
         asset={{ ...asset, carryover: asset.buildingCarryover ?? asset.carryover }}
+        eventGiftDebtAssumed={gbCarryoverEventSource(asset)?.giftDebtAssumed}
         transferDate={transferDate ?? ""}
         onChange={(patch) => {
           // 🔑 건물 카드의 편집은 `buildingCarryover`로 간다 — 토지 값을 덮어쓰지 않는다.

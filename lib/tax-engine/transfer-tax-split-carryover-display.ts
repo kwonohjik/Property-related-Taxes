@@ -49,8 +49,10 @@ export interface SplitCarryoverPartView {
   lumpDeductionRate?: number;
   donorCapexAdded: number;
   donorCapexGuardApplied: boolean;
-  /** 증여 당시 평가액(증여 신고가액) = 안분 분자 = 미적용 시 취득가액 */
+  /** 증여 당시 평가액(증여 신고가액) = 미적용 시 취득가액 */
   giftDateValuation: number;
+  /** 당초 증여 때 인수한 채무 — 안분 분자 = 증여 신고가액 − 이 값(0이면 증여 신고가액 그대로) */
+  giftAssumedDebt: number;
   giftTaxApportioned: number;
   giftTaxLimitCap: number;
   giftTaxLimitApplied: boolean;
@@ -121,6 +123,7 @@ function partView(
     donorCapexAdded: e.donorCapexAdded,
     donorCapexGuardApplied: e.donorCapexGuardApplied,
     giftDateValuation: e.giftDateValuation,
+    giftAssumedDebt: e.giftAssumedDebt ?? 0,
     giftTaxApportioned: e.giftTaxApportioned,
     giftTaxLimitCap: e.giftTaxLimitCap,
     giftTaxLimitApplied: e.giftTaxLimitApplied,
@@ -160,9 +163,16 @@ export function splitCarryoverView(sd: SplitGainResult | undefined): SplitCarryo
 
 const won = (n: number) => n.toLocaleString();
 
+/** 영 §163의2②2호 분자 문구 — 인수채무가 있으면 「증여 신고가액 − 당초 증여 때 인수한 채무」(그 자산의 증여세 과세가액). 카드·상세명세서 공용. */
+export function splitCarryoverNumeratorText(p: Pick<SplitCarryoverPartView, "label" | "giftDateValuation" | "giftAssumedDebt">): string {
+  return p.giftAssumedDebt > 0
+    ? `${p.label} 증여 신고가액 ${won(p.giftDateValuation)} − 당초 증여 때 인수한 채무 ${won(p.giftAssumedDebt)}`
+    : `${p.label} 증여 신고가액 ${won(p.giftDateValuation)}`;
+}
+
 /** 증여세 상당액 안분 산식(영 §163의2②) — 숫자 옆에 변수명. 상세명세서·PDF 한 줄 문구. 나눗셈 피연산자는 괄호로 감싼다(`renderFormula`가 분수로 바꾸는 규약). */
 export function splitCarryoverApportionText(v: SplitCarryoverView, p: SplitCarryoverPartView): string {
-  const base = `증여세 산출세액 ${won(v.giftTaxCalculated)} × (${p.label} 증여 신고가액 ${won(p.giftDateValuation)}) ÷ (증여세 과세가액 ${won(v.giftTaxBase)}) = ${won(p.giftTaxApportioned)}`;
+  const base = `증여세 산출세액 ${won(v.giftTaxCalculated)} × (${splitCarryoverNumeratorText(p)}) ÷ (증여세 과세가액 ${won(v.giftTaxBase)}) = ${won(p.giftTaxApportioned)}`;
   if (!p.applied) return `${base} (이월과세를 적용하지 않아 필요경비에 가산하지 않음)`;
   return p.giftTaxLimitApplied
     ? `${base} → 한도 ${won(p.giftTaxLimitCap)}(${p.label} 양도차익) 적용으로 필요경비 가산 ${won(p.giftTaxAdded)}`

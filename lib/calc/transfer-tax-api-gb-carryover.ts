@@ -22,6 +22,7 @@ import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carry
 import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildDonorBuiltGbPayload, type GbDonorBuiltPayload } from "./transfer-tax-api-donor-built-gb";
+import { carryoverAssumedDebt } from "./carryover-gift-assumed-debt";
 
 /** 빈 문자열·0을 `undefined`로 — payload에 0을 실으면 「입력했다」와 구별되지 않는다. */
 const amountOrUndefined = (s: string | undefined): number | undefined => {
@@ -35,6 +36,8 @@ export interface GbCarryoverPartPayload {
   donorAcquisitionPrice: number | undefined;
   donorCapitalExpenditure: number | undefined;
   giftDateAssetValue: number;
+  /** 당초 증여 때 이 파트에 담보된 채무로서 인수한 금액 — 영 §163의2②2호 분자에서만 뺀다(B 취득가액은 평가액 그대로). 사건 토글이 꺼져 있거나 0이면 싣지 않는다. */
+  giftAssumedDebt?: number;
   useEstimatedAcquisition: boolean;
   donorStandardPriceAtAcquisition: number | undefined;
   /** 증여자 신축·증축(§114조의2, PR-5a) — **건물 파트에만** 싣는다(토지 파트는 대상이 아니다, D4). */
@@ -72,16 +75,23 @@ export interface GbCarryoverGiftEventPayload {
   exclusionDeclared?: GbCarryoverEngineShapedPayload["exclusionDeclared"];
 }
 
-function buildPart(c: CarryoverTaxationForm | undefined, donorBuilt?: GbDonorBuiltPayload): GbCarryoverPartPayload | undefined {
+function buildPart(
+  c: CarryoverTaxationForm | undefined,
+  /** 증여 사건 서브폼 — 인수채무 토글(`giftDebtAssumed`)을 읽는다(`carryoverAssumedDebt`). */
+  event: CarryoverTaxationForm | undefined,
+  donorBuilt?: GbDonorBuiltPayload,
+): GbCarryoverPartPayload | undefined {
   if (!c?.donorAcquisitionDate) return undefined;
+  const debt = carryoverAssumedDebt(event, c);
   return {
     donorAcquisitionDate: c.donorAcquisitionDate,
     donorAcquisitionPrice: c.useEstimatedAcquisition
       ? undefined
       : amountOrUndefined(c.donorAcquisitionPrice),
     donorCapitalExpenditure: amountOrUndefined(c.donorCapitalExpenditure),
-    /** 영 §163의2②2호 안분 분자 + 비교과세 시나리오 B 취득가액 (같은 값을 겸한다). */
+    /** 비교과세 시나리오 B 취득가액 — 영 §163의2②2호 분자는 여기서 아래 인수채무를 뺀 값이다(⑭). */
     giftDateAssetValue: parseAmount(c.giftDateValuation),
+    ...(debt > 0 ? { giftAssumedDebt: debt } : {}),
     useEstimatedAcquisition: c.useEstimatedAcquisition,
     /** 환산 모드 분자 — 증여자 취득 당시 그 파트의 기준시가 (설계 D9-8). */
     donorStandardPriceAtAcquisition: c.useEstimatedAcquisition
@@ -188,6 +198,8 @@ const PART_SCALE: Record<keyof GbCarryoverPartPayload, boolean> = {
    * ② 비교과세 시나리오 B 취득가액 — 같은 카드의 `transferPrice`가 이미 × r 이다.
    */
   giftDateAssetValue: true,
+  /** 인수채무 — 100% 기준 입력 금액이라 평가액과 같이 × r 한다(분자 = 평가액 몫 − 채무 몫). */
+  giftAssumedDebt: true,
   useEstimatedAcquisition: false,
   donorStandardPriceAtAcquisition: false, // 🔴 기준시가 — 위 2번
   donorBuilt: false, // 신축·증축 구분·일자·바닥면적 — 금액이 아니다. 증축 부분 기준시가도 환산 분자라 위 2번 규율(물건 전체 기준, 이중 축소 금지)
@@ -380,10 +392,10 @@ export function buildGbCarryoverPayload(asset: AssetForm): GbCarryoverPayload {
           }
         : {}),
     },
-    ...(landIsCarryover ? { landCarryoverPart: buildPart(c) } : {}),
+    ...(landIsCarryover ? { landCarryoverPart: buildPart(c, c) } : {}),
     // 건물은 자기 파트 입력을 쓰고, 없으면 토지 것과 같은 증여라 보고 토지 파트를 재사용한다.
     ...(buildingIsCarryover
-      ? { buildingCarryoverPart: buildPart(asset.buildingCarryover ?? c, donorBuilt) }
+      ? { buildingCarryoverPart: buildPart(asset.buildingCarryover ?? c, c, donorBuilt) }
       : {}),
   };
 }

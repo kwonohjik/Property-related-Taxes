@@ -23,6 +23,7 @@ import { saleSplitContractOf } from "@/lib/tax-engine/sale-split-contract-judgme
 import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { apportionGiftTax } from "@/lib/tax-engine/carryover-gift-tax-apportion";
+import { giftTaxedValue } from "@/lib/tax-engine/carryover-gift-tax-apportion";
 import { buildGeneralBuildingAssetCards } from "@/lib/tax-engine/general-building-valuation";
 import { resolveGeneralBuildingSwap } from "@/lib/tax-engine/general-building-swap";
 import { attachBuildingDepreciation } from "@/lib/tax-engine/general-building-depreciation";
@@ -68,6 +69,8 @@ function composeGbCarryover(gbRaw: Record<string, unknown>): {
     if (!event || !partRaw) return undefined;
     const part = partRaw as Record<string, unknown>;
     const assetValue = (part.giftDateAssetValue as number) ?? 0;
+    // 영 §163의2②2호 분자 「해당 자산가액(증여세가 과세된 증여세 과세가액)」 = 평가액 − 당초 증여 때 인수한 채무. B 취득가액은 평가액 그대로다.
+    const taxedValue = giftTaxedValue(assetValue, part.giftAssumedDebt as number | undefined);
     const donorBuilt = coerceDonorBuilt(part.donorBuilt, "buildingCarryoverPart");
     return {
       giftRegistryDate: toOptionalDate(event.giftRegistryDate),
@@ -80,10 +83,10 @@ function composeGbCarryover(gbRaw: Record<string, unknown>): {
           giftTaxCalculated: (event.giftTaxCalculated as number) ?? 0,
           giftTaxBase: (event.giftTaxBase as number) ?? 0,
         },
-        assetValue,
+        taxedValue,
       ),
       donorCapitalExpenditure: part.donorCapitalExpenditure,
-      // 영 §163의2②2호 분자 = 비교과세 시나리오 B 취득가액 (같은 값을 겸한다)
+      // 비교과세 시나리오 B 취득가액 — 평가액(채무를 빼지 않는다)
       giftDateValuation: assetValue,
       // §97의2① 관계요건 — 증여 **사건**의 사실이라 토지·건물 두 파트에 같은 값이 실린다.
       donorRelation: event.donorRelation,

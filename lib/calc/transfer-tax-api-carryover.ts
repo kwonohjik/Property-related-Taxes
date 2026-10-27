@@ -14,7 +14,7 @@ import { parsePriorResidenceMonths } from "@/lib/calc/gift-household-payload";
 import { partCarryover } from "./transfer-land-part-cause";
 import { apportionGiftTax } from "@/lib/tax-engine/carryover-gift-tax-apportion";
 import { gbBgGiftTaxReturn, isGbBurdenedGift } from "./gb-bg-gift-tax-return";
-import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
+import { gbBgGiftTaxNumerator } from "./gb-bg-gift-tax-return";
 import { bgCarryoverForm } from "./bg-carryover-parts";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 
@@ -133,8 +133,8 @@ export function buildCarryoverPayload(
     giftTaxAmount: (() => {
       const ret = gbBgGiftTaxReturn(asset);
       if (!ret) return parseAmount(c.giftTaxAmount);
-      const byPart = gbBgGiftValuationByPart(asset);
-      return apportionGiftTax(ret, byPart ? scale(byPart.land) + scale(byPart.building) : scale(parseAmount(c.giftDateValuation)));
+      // 분자 = 「증여세가 과세된 증여세 과세가액」 = 평가액 − 당초 증여 때 인수한 채무 × r(`gbBgGiftTaxNumerator` — ⑧과 같은 leaf · `carryover-gift-tax-numerator-net.plan.md`).
+      return apportionGiftTax(ret, gbBgGiftTaxNumerator(asset));
     })(),
     donorCapitalExpenditure: capex > 0 ? capex : undefined,
     giftDateValuation: scale(parseAmount(c.giftDateValuation)),

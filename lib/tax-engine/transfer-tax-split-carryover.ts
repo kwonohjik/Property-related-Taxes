@@ -336,6 +336,7 @@ export function calcSplitCarryoverScenarios(
       donorCapexAdded: applied ? plan.donorCapex : 0,
       donorCapexGuardApplied: plan.donorCapexGuardApplied,
       giftDateValuation: plan.ct.giftDateValuation,
+      ...(plan.ct.giftAssumedDebt ? { giftAssumedDebt: plan.ct.giftAssumedDebt } : {}),
       giftTaxApportioned: plan.ct.giftTaxAmount,
       giftTaxLimitCap: plan.giftTaxCap,
       giftTaxAddedToExpense: applied ? plan.giftTaxAdded : 0,

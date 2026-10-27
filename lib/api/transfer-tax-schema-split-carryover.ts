@@ -74,6 +74,11 @@ export const splitCarryoverPartShape = z.object({
   donorStandardPriceAtAcquisition: z.number().int().positive().optional(),
   /** 증여자가 보유 중 지출한 자본적지출 (§97의2①2호 — 양도일 2024.1.1. 전은 엔진이 0 처리) */
   donorCapitalExpenditure: z.number().int().nonnegative().optional(),
+  /**
+   * 당초 증여 때 이 파트에 담보된 채무로서 인수한 금액(「상속세 및 증여세법」 제47조 제1항) — 영 §163의2②2호 분자(파트 평가액 − 이 값)에서만 뺀다.
+   * B 취득가액은 파트 평가액 그대로다. 파트 평가액 이하(`refineSplitCarryoverValues`). 미전송 = 0. 계획서 `carryover-gift-tax-numerator-net.plan.md` §4.2.
+   */
+  giftAssumedDebt: z.number().int().nonnegative().optional(),
   /** 증여자 신축·증축 가산세(§114조의2)는 **건물 파트만** 받는다(`splitCarryoverBuildingPartShape`) — 토지 파트에는 침묵 무시 대신 거부 */
   donorBuilt: donorBuiltRejectedKey,
 });
@@ -209,11 +214,19 @@ export function refineSplitCarryoverValues(
     );
   if (ev.spouseGiftOneHouseAtGiftDate !== undefined && !(d.landCarryoverPart && d.buildingCarryoverPart))
     issue(at("carryoverGiftEvent").concat("spouseGiftOneHouseAtGiftDate"), SPLIT_CARRYOVER_SPOUSE_EXCEPTION_PART_MESSAGE);
-  if (ev.donorRelation === "other") return;
+  // 영 §163의2②2호 분자 = 파트 평가액 − 당초 증여 때 인수한 채무(채무가 평가액을 넘을 수 없다).
+  const taxed = (key: "landCarryoverPart" | "buildingCarryoverPart", part: { giftAssumedDebt?: number } | undefined, value: number | undefined, noun: string): number => {
+    if (!part) return 0;
+    const debt = part.giftAssumedDebt ?? 0;
+    if (debt > (value ?? 0))
+      issue([...at(key), "giftAssumedDebt"], `${noun} 파트의 당초 증여 때 인수한 채무가 증여 당시 평가액보다 큽니다 (상속세 및 증여세법 §47①)`);
+    return Math.max(0, (value ?? 0) - debt);
+  };
   const sum =
-    (d.landCarryoverPart ? (d.landAcquisitionPrice ?? 0) : 0) + (d.buildingCarryoverPart ? (d.buildingAcquisitionPrice ?? 0) : 0);
+    taxed("landCarryoverPart", d.landCarryoverPart, d.landAcquisitionPrice, "토지") + taxed("buildingCarryoverPart", d.buildingCarryoverPart, d.buildingAcquisitionPrice, "건물");
+  if (ev.donorRelation === "other") return;
   if (sum > ev.giftTaxBase)
-    issue(at("carryoverGiftEvent").concat("giftTaxBase"), "파트별 증여 당시 평가액 합계가 증여세 과세가액을 초과합니다 (소득세법 시행령 §163의2②)");
+    issue(at("carryoverGiftEvent").concat("giftTaxBase"), "파트별 증여세 과세가액(증여 당시 평가액 − 당초 증여 때 인수한 채무) 합계가 증여세 과세가액을 초과합니다 (소득세법 시행령 §163의2②)");
 }
 
 /**
