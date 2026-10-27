@@ -29,6 +29,7 @@ import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
 import { bgFractionalHasOutOfScopeShare } from "@/lib/calc/bg-pre-deemed-shares";
 import { gbBgFractionalHasPartialShare } from "@/lib/calc/bg-pre-deemed-shares";
 import { gbBgFractionalPreDeemedPartsAll } from "@/lib/calc/bg-pre-deemed-shares";
+import { bgFractionalHasOriginalRightShare } from "@/lib/calc/bg-pre-deemed-shares";
 import { gbBgThreeWayParts } from "@/lib/calc/bg-pre-deemed-mode";
 import { GbBgPreDeemedMethodNotice } from "./GbBgPreDeemedMethodNotice";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -161,6 +162,12 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   const isRightToMoveIn = asset.assetKind === "right_to_move_in";
   /** 승계조합원 입주권 — 실지취득가액은 ③ 승계 블록 2칸이 정본이라 「종전 부동산」 칸·§166 안내를 보이지 않는다(④·⑧과 같은 술어). */
   const isSuccessorRight = isBgSuccessorRight(asset);
+  /**
+   * 축 B 첫 카드(승계) — 둘째 이후 원조합원 지분이 있으면 그 지분이 병합해 쓰는 「종전 부동산 실지취득가액」을 이 카드가 받는다
+   * (`methodForOtherShares`와 같은 규칙 · 계획서 `bg-axis-b-right-share-inputs.plan.md`). 이 카드 자신의 계산에는 쓰이지 않는다.
+   */
+  const originalShareAcqOnSuccessor =
+    isSuccessorRight && isFractionalSplit === true && bgFractionalHasOriginalRightShare(fractionalShares);
   /**
    * 이월과세(「소득세법」 §97의2) 조합인가 — **화면의 「증여자」가 두 사람이 되는 순간**이다.
    *
@@ -503,9 +510,10 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                   value={asset.bgActualAcquisitionLand} data-field="bgActualAcquisitionLand"
                   onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
               </FieldCard>
-            ) : isSuccessorRight ? null : (
+            ) : isSuccessorRight && !originalShareAcqOnSuccessor ? null : (
               <FieldCard
-                label={isRightToMoveIn ? "종전 부동산 실지취득가액" : isMixed ? "실지취득가액 — 주택·상가 전체 (토지 포함)" : "실지취득가액 (주택·건물 전체)"}
+                hint={originalShareAcqOnSuccessor ? "둘째 이후 원조합원 지분의 계산에 쓰입니다 — 물건 전체 기준으로 입력하면 지분율로 안분됩니다. 이 카드(승계)의 취득가액은 ③ 승계취득 정보의 값입니다." : undefined}
+                label={originalShareAcqOnSuccessor ? "원조합원 지분의 종전 부동산 실지취득가액" : isRightToMoveIn ? "종전 부동산 실지취득가액" : isMixed ? "실지취득가액 — 주택·상가 전체 (토지 포함)" : "실지취득가액 (주택·건물 전체)"}
               >
                 <CurrencyInput label="" hideUnit
                   value={asset.bgActualAcquisitionTotal} data-field="bgActualAcquisitionTotal"

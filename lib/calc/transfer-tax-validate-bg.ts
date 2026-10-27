@@ -114,11 +114,21 @@ export function validateBurdenedGiftAsset(
    * 채무·시가를 **물건 전체**로 입력하고 ④가 지분율로 안분한다(`debtScaleRatio`). 그래서 축 B에서는 시가를 줄이지 않고 비교한다.
    */
   isFractionalSplitAxis?: boolean,
+  /** 축 B 둘째 이후 지분 카드인가 — 그 카드에는 ② 양도정보가 없어 물건 단위 칸은 첫 카드를 가리켜야 한다. */
+  isNonPrimaryShare?: boolean,
 ): string | null {
   const isBurdenedGift =
     asset.transferType === "burdened_gift" ||
     asset.acquisitionCause === "burdened_gift";
   if (!isBurdenedGift) return null;
+  /**
+   * 축 B 둘째 이후 원조합원 입주권 지분 — 「종전 부동산 실지취득가액」은 첫 카드에서 받아 병합한다(`mergePrimaryBasic`).
+   * 이 카드에는 칸이 없으므로 첫 카드 칸을 가리킨다(계획서 `bg-axis-b-right-share-inputs.plan.md` Q-2 a).
+   */
+  const rightShareAcqPointer =
+    asset.assetKind === "right_to_move_in" && isFractionalSplitAxis === true && isNonPrimaryShare === true
+      ? `${label}: 원조합원 지분의 종전 부동산 실지취득가액을 첫 번째 지분 카드 「② 양도정보」에 물건 전체 기준으로 입력하세요(첫 카드가 승계조합원이면 「원조합원 지분의 종전 부동산 실지취득가액」, 원조합원이면 「종전 부동산 실지취득가액」 칸). 지분율로 안분됩니다.`
+      : undefined;
 
   // (1) F-3 (2026-05-12): commercial_building 확장
   if (!SUPPORTED_KINDS.includes(asset.assetKind)) {
@@ -296,7 +306,7 @@ export function validateBurdenedGiftAsset(
         }
       } else if (!houseSplit && !isBgSuccessorRight(asset) && !parseAmount(asset.bgActualAcquisitionTotal)) {
         // 승계 입주권은 승계 블록 2칸이 실지취득가액이다 — 승계 검증(`validateSuccessorRightAsset`)이 요구한다.
-        return fieldError("bgActualAcquisitionTotal", `${label}: 부담부증여 실지취득가액 안분 — 실지취득가액을 입력하세요.`);
+        return fieldError("bgActualAcquisitionTotal", rightShareAcqPointer ?? `${label}: 부담부증여 실지취득가액 안분 — 실지취득가액을 입력하세요.`);
       }
     } else if (isBgPresumedMethod(acqMethod)) {
       /**
@@ -534,6 +544,7 @@ export function validateBurdenedGiftAsset(
     }
     // 원조합원만 — 승계조합원의 실지취득가액은 승계 블록 2칸이고 승계 검증이 요구한다(`isBgSuccessorRight`).
     if (!isBgSuccessorRight(asset) && (parseAmount(asset.bgActualAcquisitionTotal) || 0) <= 0) {
+      if (rightShareAcqPointer) return fieldError("bgActualAcquisitionTotal", rightShareAcqPointer);
       return fieldError("bgActualAcquisitionTotal", `${label}: 조합원입주권 부담부증여 — 종전 부동산의 실지취득가액을 입력하세요. 증여재산 평가가 「소득세법 시행령」 제159조 제1항 제1호 괄호의 열거(상속세 및 증여세법 제61조 제1항·제2항·제5항 및 제66조)에 없는 같은 법 제61조 제3항이므로, 취득가액은 기준시가가 아니라 실지거래가액입니다 (소득세법 제97조 제1항 제1호 가목 · 시행령 제166조 제1항 제1호).`);
     }
     /**

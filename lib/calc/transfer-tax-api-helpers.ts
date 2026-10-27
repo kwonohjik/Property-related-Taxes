@@ -15,6 +15,7 @@ import {
 } from "@/lib/tax-engine/expropriation-scope";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { soleSplitRightJudgmentFacts } from "./sole-split-right-judgment-facts";
+import { deriveMemberRightsValue } from "./burdened-gift-right-valuation";
 import { meetsSurchargeSuspensionHolding } from "@/lib/tax-engine/tax-utils";
 import {
   isWithinSurchargeSuspensionWindow,
@@ -226,6 +227,15 @@ export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
     bgActualAcquisitionLand: primary.bgActualAcquisitionLand,
     bgActualAcquisitionBuilding: primary.bgActualAcquisitionBuilding,
     bgActualAcquisitionTotal: primary.bgActualAcquisitionTotal,
+    /**
+     * 조합원입주권 증여재산 평가 3항(「상속세 및 증여세법」 제61조 제3항) — **물건 단위 값**이다. 지분 카드에는 칸이 없다(② 숨김).
+     * 병합하지 않으면 원조합원 지분은 자기 재개발 권리가액만으로 평가돼 세액이 적게 나오고(시료 94,952,732 ↔ 129,470,000),
+     * 승계 지분은 ⑧·400으로 막혔다. 권리가액은 **첫 카드에 보이는 값**(명시 입력, 없으면 첫 카드 재개발 권리가액 파생)을 싣는다 —
+     * 계획서 `bg-axis-b-right-share-inputs.plan.md` Q-1 (a). 지분 안분은 엔진(`scaleRightValuation`)이 한 번만 한다.
+     */
+    bgRightMemberRightsValue: deriveMemberRightsValue(primary) > 0 ? String(deriveMemberRightsValue(primary)) : primary.bgRightMemberRightsValue,
+    bgRightPaidInstallments: primary.bgRightPaidInstallments,
+    bgRightPremium: primary.bgRightPremium,
     // 🔴 `bgPresumedAcquisition*`(K-6/K-7 매매사례가액·감정가액)는 **일부러 병합하지 않는다.**
     //    값이 「취득일 전후 각 3개월 이내」 가액이라 지분마다 취득일이 다르면 달라진다. 지분 카드마다 **자기 취득일 기준의 물건 전체 값**을
     //    입력(`BurdenedGiftTrancheBasisBlock`)하고 엔진이 지분율을 곱해 합산한다. 여기에 넣으면 지분마다 취득일이 다른데
