@@ -24,6 +24,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
+import { CARRYOVER_DEFAULTS } from "../lib/stores/calc-wizard-asset-carryover";
 
 /** ⑧ validate가 「당초 증여자」 값을 요구하는 문구. 종전의 「아직 지원하지 않습니다」를 대체한다. */
 const NEED_CODONOR_MSG = /「당초 증여자」.*입력하세요/;
@@ -113,6 +114,8 @@ test.describe("부담부증여 × 이월과세(증여) — 지원 개시", () =>
     await seedAndCalc(page, {
       bgCoDonorLandStdPriceAtAcq: "1500000000",
       bgCoDonorBuildingStdPriceAtAcq: "200000000",
+      // 당초 증여자의 건물 취득일 — 토지와 같은 날(계획서 `gb-bg-donor-building-acquisition-date.plan.md` Q-1 a · 둘 다 이월과세면 필수)
+      buildingCarryover: { ...CARRYOVER_DEFAULTS, donorAcquisitionDate: "2012-01-01" },
     });
 
     await expect(page.getByText(NEED_CODONOR_MSG)).toHaveCount(0);

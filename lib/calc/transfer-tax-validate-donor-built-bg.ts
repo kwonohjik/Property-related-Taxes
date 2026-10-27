@@ -10,6 +10,7 @@ import { calculateBuildingPenalty } from "@/lib/tax-engine/transfer-tax-building
 import { parseAmount, parseDecimal } from "@/lib/calc/number-parse";
 import { donorBuiltBgActive } from "./donor-built-bg-scope";
 import { bgCarryoverForm } from "./bg-carryover-parts";
+import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
 import { bgPresumedInputKind } from "./burdened-gift-presumed-acquisition";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
@@ -42,6 +43,16 @@ export function validateDonorBuiltBg(
     return fieldError("carryover.donorBuiltDate", `${label}: 신축·증축일은 당초 증여자 취득일(${c.donorAcquisitionDate}) 이후여야 합니다.`);
   if (c.donorBuiltDate > c.giftRegistryDate)
     return fieldError("carryover.donorBuiltDate", `${label}: 신축·증축일은 증여 등기접수일(${c.giftRegistryDate}) 이전이어야 합니다 — 당초 증여자가 신축·증축한 건물이어야 합니다.`);
+
+  /**
+   * 일반건물 신축 — 신축 취득일이 곧 당초 증여자의 **건물** 취득일이다(「소득세법 시행령」 제162조 제1항 제4호 · `gb-bg-donor-building-acquisition-date.plan.md` Q-3 a).
+   * 건물 취득일은 둘 다 이월과세면 건물 블록·건물분 칸, 건물만이면 사건 서브폼(= 건물 블록)의 증여자 취득일이다. 증축은 날짜가 다른 것이 정상이라 보지 않는다.
+   */
+  if (asset.assetKind === "general_building" && c.donorBuiltType === "new") {
+    const buildingDate = gbBgSplitsGiftValuation(asset) ? asset.buildingCarryover?.donorAcquisitionDate : c.donorAcquisitionDate;
+    if (buildingDate && c.donorBuiltDate !== buildingDate)
+      return fieldError("carryover.donorBuiltDate", `${label}: 당초 증여자가 신축한 건물이면 신축 취득일(${c.donorBuiltDate})이 당초 증여자의 건물 취득일(${buildingDate})과 같아야 합니다 — 직접 신축한 건물의 취득일은 사용승인서 교부일 등입니다(「소득세법 시행령」 제162조 제1항 제4호).`);
+  }
 
   if (c.donorBuiltType !== "extension") return null;
   if (!(parseDecimal(c.donorBuiltExtensionArea) > 0))

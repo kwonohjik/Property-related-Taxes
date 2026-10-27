@@ -173,6 +173,12 @@ export function validateBurdenedGiftAsset(
     if (missing) {
       return fieldError(missing.field, `${label}: 이월과세가 적용되므로 「당초 증여자」(= 양도인에게 이 자산을 증여한 사람)의 ${missing.label}을(를) 입력하세요. 소득세법 제97조의2 제1항 제1호가 취득가액을 당초 증여자의 취득 당시 금액으로 정하는데, 부담부증여의 취득가액은 같은 법 시행령 제159조 제1항 제1호가 양도인 기준으로 따로 산정하므로 두 값이 모두 필요합니다(같은 조 제2항 제3호의 세액 비교).`);
     }
+    // 일반건물은 양도 당시 건물이 있다 — 당초 증여자 건물 기준시가 0을 거부한다(⑫ `GB_BG_BUILDING_STD_ZERO_MESSAGE`와 같은 조건 · `gb-bg-donor-building-acquisition-date.plan.md` Q-2 a). 토지 자산의 0은 그대로다.
+    if (
+      asset.assetKind === "general_building" && bgCarryoverParts(asset).building && bgCoDonorNeedsStdPrice(asset) &&
+      (asset.bgCoDonorBuildingStdPriceAtAcq ?? "").trim() !== "" && parseAmount(asset.bgCoDonorBuildingStdPriceAtAcq) === 0
+    )
+      return fieldError("bgCoDonorBuildingStdPriceAtAcq", `${label}: 일반건물의 당초 증여자 취득 당시 건물 기준시가는 0일 수 없습니다 — 당초 증여자가 건물을 신축했으면 사용승인일 당시(「소득세법 시행령」 제162조 제1항 제4호) 건물 기준시가를 입력하세요.`);
 
     /**
      * ⚠️ 엔진 `assertCarryoverDonorBasis`의 throw는 **둘**이다. 위 「당초 증여자 필드 미입력」

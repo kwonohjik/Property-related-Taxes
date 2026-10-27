@@ -27,6 +27,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { sameDayBuildingDonorDate } from "./_helpers/gb-bg-building-donor-date";
 
 beforeEach(() => { vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never); });
 afterEach(() => vi.unstubAllGlobals());
@@ -36,7 +37,7 @@ const half = { ownershipNumerator: "50", ownershipDenominator: "100" } as Partia
 
 /** 일반건물 · 부담부증여 K-5 · 이월과세(당초 증여자 취득 시 기준시가 토지 1천만·건물 4천만 → A 채택) · 지분 50%. `co`/`over` 로 한 칸씩 바꾼다. */
 function gbShare(over: Partial<AssetForm> = {}, co: Record<string, unknown> = {}): AssetForm {
-  return {
+  return sameDayBuildingDonorDate({
     ...makeDefaultAsset(1),
     addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "general_building",
@@ -58,7 +59,7 @@ function gbShare(over: Partial<AssetForm> = {}, co: Record<string, unknown> = {}
       ...co,
     },
     ...over,
-  } as AssetForm;
+  } as AssetForm);
 }
 /** 둘째 지분 — 카드 id·라벨만 다르다(화면은 자산마다 「자산 n」). */
 const second = (a: AssetForm) => ({ ...a, assetId: "a2", assetLabel: "자산 2" }) as AssetForm;

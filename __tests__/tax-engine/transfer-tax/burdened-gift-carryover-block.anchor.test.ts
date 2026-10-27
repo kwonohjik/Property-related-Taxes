@@ -214,6 +214,9 @@ describe("CO-3 ✅ ⑧ validate — 차단 대신 **「두 벌 모두 입력」*
     const v = validateBurdenedGiftAsset(
       {
         ...base,
+        assetKind: "land", // 일반건물은 0을 받지 않는다(계획서 `gb-bg-donor-building-acquisition-date.plan.md` Q-2 a) — 토지 자산에서 확인한다
+        standardPriceAtTransfer: "500000000",
+        standardPriceAtAcq: "300000000",
         acquisitionCause: "carryover_gift",
         bgCoDonorLandStdPriceAtAcq: "150000000",
         bgCoDonorBuildingStdPriceAtAcq: "0",

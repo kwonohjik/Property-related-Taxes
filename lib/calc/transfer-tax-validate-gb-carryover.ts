@@ -14,6 +14,7 @@ import { carryoverEstimationModeSupported } from "./phd-toggle-scope";
 import { validateDonorBuiltGb } from "./transfer-tax-validate-donor-built-gb";
 import { gbBgGiftTaxNumerator, gbBgGiftTaxReturn } from "./gb-bg-gift-tax-return";
 import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
+import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
 import { bgCarryoverForm, bgPartialCarryover } from "./bg-carryover-parts";
 import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 
@@ -74,6 +75,13 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
    */
   if (asset.transferType === "burdened_gift" && bgPartialCarryover(asset) && isBgPresumedMethod(asset.bgAcquisitionMethod))
     return fieldError("bgAcquisitionMethod", `${label}: 토지·건물 중 한 파트만 이월과세(증여)일 때는 취득가액 산정방식으로 감정가액·매매사례가액을 아직 계산하지 못합니다 — 「소득세법」 제97조의2 제1항은 증여받은 파트에만 당초 증여자의 취득가액을 쓰는데, 감정가액·매매사례가액은 당초 증여자 쪽 방식이라 증여받지 않은 파트의 방식과 갈립니다. 실지취득가액 또는 환산취득가액을 선택하세요.`);
+
+  /**
+   * 부담부증여 × 둘 다 이월과세 — 당초 증여자의 **건물** 취득일(시나리오 A 건물 기산일 · 「소득세법」 제95조 제4항 단서 「해당 자산을 취득한 날」).
+   * 분리 ON 건물 블록 · 분리 OFF 건물분 칸이 같은 키다. 토지 날짜로 채우지 않는다(④ 전송 조건과 같다 · `gb-bg-donor-building-acquisition-date.plan.md` Q-1 a).
+   */
+  if (asset.transferType === "burdened_gift" && gbBgSplitsGiftValuation(asset) && !asset.buildingCarryover?.donorAcquisitionDate)
+    return fieldError("buildingCarryover.donorAcquisitionDate", `${label}: 당초 증여자가 건물을 취득한 날을 입력하세요 — 건물 보유기간은 증여자가 그 건물을 취득한 날부터 셉니다(「소득세법」 제95조 제4항). 직접 신축했으면 사용승인서 교부일 등입니다(「소득세법 시행령」 제162조 제1항 제4호).`);
 
   // 증여세 칸 — 사건 출처가 건물 블록(건물만 이월과세)이면 앵커도 그쪽이다.
   if (asset.transferType === "burdened_gift") return validateGbBgGiftTax(asset, label, !landIsCarryover);

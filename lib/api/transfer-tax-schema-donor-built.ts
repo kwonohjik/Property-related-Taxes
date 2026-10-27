@@ -328,8 +328,31 @@ export const GB_BG_CARRYOVER_PARTS_MESSAGE =
 export const GB_BG_GIFT_VALUATION_BY_PART_MESSAGE =
   "증여 당시 토지분·건물분 평가액(burdenedGiftInfo.carryoverDonorBasis.giftValuationByPart)은 일반건물 부담부증여에서 토지·건물을 둘 다 이월과세(증여)로 취득했을 때만 보낼 수 있습니다 — 한 파트만이면 그 파트에 증여세 상당액 전액이 들어갑니다(「소득세법 시행령」 제163조의2 제2항)";
 
+/** 당초 증여자의 건물 취득일(`buildingDonorAcquisitionDate`)도 둘 다 이월과세일 때만 — 한 파트만이면 증여 사건의 증여자 취득일이 곧 그 파트 날짜다(`gb-bg-donor-building-acquisition-date.plan.md` Q-1 a). */
+export const GB_BG_BUILDING_DONOR_DATE_MESSAGE =
+  "당초 증여자의 건물 취득일(burdenedGiftInfo.carryoverDonorBasis.buildingDonorAcquisitionDate)은 일반건물 부담부증여에서 토지·건물을 둘 다 이월과세(증여)로 취득했을 때만 보낼 수 있습니다 — 한 파트만이면 증여자 취득일이 그 파트의 기산일입니다(「소득세법」 제95조 제4항)";
+/** 일반건물은 양도 당시 건물이 있으므로 당초 증여자 취득(신축이면 사용승인) 당시 건물 기준시가가 0일 수 없다(`gb-bg-donor-building-acquisition-date.plan.md` Q-2 a). */
+export const GB_BG_BUILDING_STD_ZERO_MESSAGE =
+  "일반건물의 당초 증여자 취득 당시 건물 기준시가(burdenedGiftInfo.carryoverDonorBasis.buildingStdPriceAtAcquisition)는 0일 수 없습니다 — 당초 증여자가 건물을 신축했으면 사용승인일 당시(「소득세법 시행령」 제162조 제1항 제4호) 건물 기준시가입니다";
+
 type PartsLike = { land: boolean; building: boolean } | undefined;
-type BgInfoPartsLike = { carryoverDonorBasis?: { parts?: PartsLike; giftValuationByPart?: unknown } } | undefined;
+type BgInfoPartsLike =
+  | {
+      valuationMode?: string;
+      acquisitionMethod?: string;
+      carryoverDonorBasis?: { parts?: PartsLike; giftValuationByPart?: unknown; buildingDonorAcquisitionDate?: unknown; buildingStdPriceAtAcquisition?: number };
+    }
+  | undefined;
+/** 둘 다 이월과세일 때만 받는 값 — 한 파트만이거나 일반건물 부담부증여 밖이면 거부한다. */
+const BOTH_PARTS_ONLY = [
+  ["giftValuationByPart", GB_BG_GIFT_VALUATION_BY_PART_MESSAGE],
+  ["buildingDonorAcquisitionDate", GB_BG_BUILDING_DONOR_DATE_MESSAGE],
+] as const;
+/** 당초 증여자 취득 당시 기준시가가 계산에 쓰이는 방식 — ⑧ `bgCoDonorNeedsStdPrice`와 같은 조건을 와이어 값으로 읽는다(의제취득 경로는 방식이 비어 검사하지 않는다 — ⑧보다 넓어지지 않는다). */
+const needsDonorStdPrice = (info: BgInfoPartsLike): boolean =>
+  info?.valuationMode === "sangjeungbeop_standard" ||
+  info?.acquisitionMethod === "converted" ||
+  (info?.valuationMode === "sangjeungbeop_market" && (info.acquisitionMethod === "appraisal" || info.acquisitionMethod === "salesCase"));
 
 /**
  * 부담부증여 일반건물 × 이월과세 **파트 정합** (⑫ · 계획서 `gb-bg-part-carryover-calc.plan.md` §4.1).
@@ -339,7 +362,9 @@ type BgInfoPartsLike = { carryoverDonorBasis?: { parts?: PartsLike; giftValuatio
  *  · `parts`가 있으면 각 파트 = 그 파트 원인이 `carryover_gift`인가(둘 다 false는 원인도 둘 다 이월과세가 아닐 때만 통과 — 이월과세 없음과 같다).
  *  · `parts`가 없는데 **건물 원인만** 이월과세면 거부 — 미지정(= 둘 다)으로 읽으면 토지에 당초 증여자 값이 들어간다(#2571이 막던 상태).
  * 단건(`burdenedGiftInfo`+`generalBuildingValuation`) · 지분(`generalBuildingShares[i]`) · 묶음(`companionAssets[i]`)이 같은 규칙이다.
- * 토지분·건물분 평가액(`giftValuationByPart`)은 둘 다 이월과세일 때만 받는다 — 한 파트만이거나 일반건물 부담부증여 밖이면 거부(`gb-bg-carryover-gift-tax-part-limit.plan.md` Q-2 a · Q-3 b).
+ * 토지분·건물분 평가액(`giftValuationByPart`)·당초 증여자의 건물 취득일(`buildingDonorAcquisitionDate`)은 둘 다 이월과세일 때만 받는다 — 한 파트만이거나
+ * 일반건물 부담부증여 밖이면 거부(`gb-bg-carryover-gift-tax-part-limit.plan.md` Q-2 a · Q-3 b · `gb-bg-donor-building-acquisition-date.plan.md` Q-1 a).
+ * 건물을 증여받았으면 당초 증여자 건물 기준시가 0을 거부한다(같은 계획서 Q-2 a).
  */
 export function refineGbBgCarryoverParts(
   data: {
@@ -359,22 +384,25 @@ export function refineGbBgCarryoverParts(
     const building = buildingCause === "carryover_gift";
     const bad = parts ? parts.land !== land || parts.building !== building : building && !land;
     if (bad) ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: GB_BG_CARRYOVER_PARTS_MESSAGE });
-    // 토지분·건물분 평가액은 둘 다 이월과세일 때만 — `parts` 미지정 = 둘 다(분리 OFF는 건물이 토지 원인을 따른다 · 화면 `bgCarryoverParts`)
-    if (info?.carryoverDonorBasis?.giftValuationByPart !== undefined && !(parts ? parts.land && parts.building : land)) byPartIssue(infoPath);
+    // 둘 다 이월과세일 때만 받는 값 — `parts` 미지정 = 둘 다(분리 OFF는 건물이 토지 원인을 따른다 · 화면 `bgCarryoverParts`)
+    if (!(parts ? parts.land && parts.building : land)) bothPartsOnlyIssues(info, infoPath);
+    if ((parts ? parts.building : land) && needsDonorStdPrice(info) && info?.carryoverDonorBasis?.buildingStdPriceAtAcquisition === 0)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...infoPath, "carryoverDonorBasis", "buildingStdPriceAtAcquisition"], message: GB_BG_BUILDING_STD_ZERO_MESSAGE });
   };
-  const byPartIssue = (infoPath: (string | number)[]) =>
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...infoPath, "carryoverDonorBasis", "giftValuationByPart"], message: GB_BG_GIFT_VALUATION_BY_PART_MESSAGE });
-  const hasByPart = (info: BgInfoPartsLike) => info?.carryoverDonorBasis?.giftValuationByPart !== undefined;
+  const bothPartsOnlyIssues = (info: BgInfoPartsLike, infoPath: (string | number)[]) => {
+    for (const [key, message] of BOTH_PARTS_ONLY)
+      if (info?.carryoverDonorBasis?.[key] !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...infoPath, "carryoverDonorBasis", key], message });
+  };
   const isGbBg = data.propertyType === "general_building" && data.transferType === "burdened_gift";
   if (isGbBg) {
     check(data.burdenedGiftInfo, data.acquisitionCause, data.generalBuildingValuation?.buildingAcquisitionCause, ["generalBuildingValuation", "buildingAcquisitionCause"], ["burdenedGiftInfo"]);
     data.generalBuildingShares?.forEach((s, i) =>
       check(s.burdenedGiftInfo, s.valuation?.landAcquisitionCause, s.valuation?.buildingAcquisitionCause, ["generalBuildingShares", i, "valuation", "buildingAcquisitionCause"], ["generalBuildingShares", i, "burdenedGiftInfo"]),
     );
-  } else if (hasByPart(data.burdenedGiftInfo)) byPartIssue(["burdenedGiftInfo"]);
+  } else bothPartsOnlyIssues(data.burdenedGiftInfo, ["burdenedGiftInfo"]);
   data.companionAssets?.forEach((c, i) => {
     if (c.assetKind === "general_building" && c.transferType === "burdened_gift")
       check(c.burdenedGiftInfo, c.acquisitionCause, c.generalBuildingValuation?.buildingAcquisitionCause, ["companionAssets", i, "generalBuildingValuation", "buildingAcquisitionCause"], ["companionAssets", i, "burdenedGiftInfo"]);
-    else if (hasByPart(c.burdenedGiftInfo)) byPartIssue(["companionAssets", i, "burdenedGiftInfo"]);
+    else bothPartsOnlyIssues(c.burdenedGiftInfo, ["companionAssets", i, "burdenedGiftInfo"]);
   });
 }
