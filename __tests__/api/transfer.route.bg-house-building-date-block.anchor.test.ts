@@ -37,7 +37,9 @@ async function post(body: Body): Promise<{ status: number; det?: number; message
     body: JSON.stringify({ isRegulatedArea: false, wasRegulatedAtAcquisition: false, isUnregistered: false, isNonBusinessLand: false, annualBasicDeductionUsed: 0, ...body, isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0 }),
   }));
   const json = (await res.json()) as { data?: { result?: { determinedTax?: number }; aggregated?: { determinedTax?: number } }; error?: { message?: string; fieldErrors?: Record<string, string[]> } };
-  return { status: res.status, det: json.data?.result?.determinedTax ?? json.data?.aggregated?.determinedTax, message: json.error?.message, fields: Object.keys(json.error?.fieldErrors ?? {}) };
+  // ⑫ 위반 문구는 필드 오류 안에 있다 — 머리 문구(「입력값이 올바르지 않습니다」)와 함께 읽는다.
+  const message = [json.error?.message, ...Object.values(json.error?.fieldErrors ?? {}).flat()].filter(Boolean).join(" | ");
+  return { status: res.status, det: json.data?.result?.determinedTax ?? json.data?.aggregated?.determinedTax, message, fields: Object.keys(json.error?.fieldErrors ?? {}) };
 }
 /** 가구 확인 칸 2개는 이 시드에 없는 별개 질문이라 거른다. */
 const issues = (f: TransferFormData) =>
@@ -73,6 +75,11 @@ describe("본인 취득 · 「토지·건물 취득일 다름」(날짜 다름) 
     expect(issues(f)[0]?.message).toContain(GB_HINT);
     expect((await run(f)).message).toContain(GB_HINT);
   });
+  it("회귀 — 부담부증여가 아니면(일반 양도) 이 규칙으로 막지 않는다 · 소유자 분리(한 파트만 양도)도 아니다", () => {
+    const hit = (f: TransferFormData) => issues(f).some((i) => i.message?.includes(PART_DATES));
+    expect(hit(bgForm(split("2000-06-01", { transferType: "regular" } as Partial<AssetForm>)))).toBe(false);
+    expect(hit(bgForm(split("2000-06-01", { selfOwns: "building_only" } as Partial<AssetForm>)))).toBe(false);
+  });
   it("회귀 — 같은 날이면 통과 · 토글 OFF O1 63,888,000", async () => {
     expect(issues(bgForm(split("2022-01-10")))).toEqual([]);
     const r = await run(bgForm(own()));
@@ -102,9 +109,31 @@ describe("이월과세 · 토글 C(당초 증여자가 토지·건물을 다른 
     });
     expect(r.status).toBe(400);
   });
+  it("회귀 — 일반 양도의 토글 C는 이 규칙으로 막지 않는다(파트 이월과세로 계산)", () => {
+    expect(issues(bgForm(carry({ transferType: "regular", carryoverDonorSplit: true } as Partial<AssetForm>))).some((i) => i.field === "carryoverDonorSplit")).toBe(false);
+  });
   it("회귀 — 토글 OFF H1 86,424,375", async () => {
     expect(issues(bgForm(carry()))).toEqual([]);
     const r = await run(bgForm(carry()));
     expect([r.status, r.det]).toEqual([200, 86_424_375]);
+  });
+});
+
+describe("지분·묶음 — 같은 leaf라 ⑧·⑫가 함께 막는다(계획서 §8 V-3)", () => {
+  const nth = (a: AssetForm, n: number) => ({ ...a, assetId: `a${n}`, assetLabel: `자산 ${n}`, addressJibun: `서울 강남구 테스트동 ${n}-1` }) as AssetForm;
+  const land = own({ assetKind: "land", acquisitionDate: "2015-01-01", landNature: "standalone" } as Partial<AssetForm>);
+  const formOf = (assets: AssetForm[], over: Record<string, unknown>) => Object.assign(bgForm(assets[0]), { assets, ...over }) as TransferFormData;
+  const BUNDLE = { assetSplitMode: "companion", bundledSaleMode: "actual", contractTotalPrice: "1,100,000,000" };
+  const half = { ownershipNumerator: "50", ownershipDenominator: "100" } as Partial<AssetForm>;
+
+  it("묶음 둘째 자산(본인 취득 · 날짜 다름) → ⑧ 그 자산 토지 취득일 · ⑫ 400", async () => {
+    const f = formOf([nth(land, 1), nth(split("2000-06-01"), 2)], BUNDLE);
+    expect(issues(f).map((i) => [i.field, i.message?.startsWith("자산 2:")])).toEqual([["landAcquisitionDate", true]]);
+    expect((await run(f)).message).toContain(PART_DATES);
+  });
+  it("지분 50/50(본인 취득 · 날짜 다름) → ⑧ 두 지분 모두 · ⑫ 400", async () => {
+    const f = formOf([nth(split("2000-06-01", half), 1), nth(split("2000-06-01", half), 2)], { assetSplitMode: "fractional" });
+    expect(issues(f).map((i) => i.field)).toEqual(["landAcquisitionDate", "landAcquisitionDate"]);
+    expect((await run(f)).status).toBe(400);
   });
 });

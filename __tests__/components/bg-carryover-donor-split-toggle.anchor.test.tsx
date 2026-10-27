@@ -37,7 +37,7 @@ describe("토글 C — 부담부증여", () => {
 
 describe("부담부증여 분리 안내", () => {
   it("「기준시가 비율로 안분됩니다」(실제로는 나눠 계산하지 않는다) 대신 취득일이 다르면 계산하지 못한다고 알린다", () => {
-    render(<LandBuildingSaleSplitSection {...({ isBurdenedGift: true } as never)} />);
+    render(<LandBuildingSaleSplitSection {...({ isBurdenedGift: true } as unknown as Parameters<typeof LandBuildingSaleSplitSection>[0])} />);
     const note = screen.getByTestId("split-burdened-note").textContent ?? "";
     expect(note).not.toContain("기준시가 비율로 안분");
     expect(note).toContain("아직 계산하지 못합니다");

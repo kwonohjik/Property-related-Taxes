@@ -79,7 +79,7 @@
 - 주택은 1세대 1주택·고가주택(제95조 제3항)·주택 세율 기산(`max(토지, 주택)`) 축이 겹친다. 규모가 커서 별도 설계서로 한다.
 - 채무액 B를 토지·건물에 어떻게 나눌지(Q-3)는 그 설계서에서 정한다.
 
-## 5. 결정 요청
+## 5. 결정 요청 — ✅ 2026-10-27 확정: Q-1 a · Q-2 a · Q-3 설계서에서 · Q-4 a(권장안)
 
 | # | 질문 | 선택지 | 권장 |
 |---|---|---|---|
@@ -105,12 +105,27 @@
 - E2E: 부담부증여 주택에서 토글 C 켜기 → «다음» 차단.
 
 ## 8. 확인 필요
-- **V-1 (칸 없는 차단 화면 실측)**: O2에서 「토지 취득가액」 칸이 화면에 정말 없는지 RTL로 재지 않았다(코드 `LandBuildingSplitSection.tsx:338`과 ⑧ probe만).
-- **V-2 (겸용주택)**: 겸용주택 부담부증여는 별도 경로(`bg-mixed-use`)다. 이월과세 기산일이 어떻게 되는지 재지 않았다.
-- **V-3 (지분·묶음)**: 주택·건물 지분 부담부증여·함께 부담부증여에서 같은 결과인지 재지 않았다(단건만 실측).
+- ✅ **V-1 (칸 없는 차단) — 확인(2026-10-27 RTL)**: 실제 자산 카드(`CompanionAssetCard`)를 그리면 O2에서 `[data-field="landAcquisitionPrice"]`가 0개, ⑧ 첫 오류는 그 칸이다 — 막다른 길이 실재했다. 같은 날이면 ⑧ 통과. PR-1이 차단 메시지(토지 취득일 칸)로 바꿔 해소.
+- ✅ **V-2 (겸용주택) — 차단 불필요**: 겸용 부담부증여는 자체 경로가 토지·건물 취득일을 따로 받는다(`mixedUse.landAcquisitionDate`·`buildingAcquisitionDate`). 날짜가 다르면 건물 취득일 기준 주택부수토지 공시지가를 추가로 요구한다(`lib/tax-engine/mixed-use-burdened-gift-prepare.ts:316` · ⑫ `transfer-tax-schema-mixed-use.ts:241`). 실측: 같은 날 69,094,001 · 날짜 다름 → 그 칸 요구(⑧·⑫). ⑫ leaf는 겸용을 분리 대상(`isSplitable`)으로 보지 않아 이 규칙이 닿지 않는다.
+- ✅ **V-3 (지분·묶음) — 같은 차단**: 본인 취득 「취득일 다름」은 지분 50/50(두 지분 모두)·묶음 첫째·둘째 자산 모두 ⑧·⑫가 같은 leaf로 막는다(anchor). 토글 C는 원래 첫 자산에서만 쓰는 장치라(둘째 이후 자산은 안내 한 줄 · 저장값 무시 — 부담부증여와 무관한 기존 규칙) 첫 자산만 막는다.
 
 ## 9. 범위 밖
 - 상업용건물·오피스텔(`commercial_building`): 일반 양도에도 토지·건물 분리 장치가 없다(`isLandBuildingSplitable`, `lib/calc/self-owns-scope.ts:21-23`). 부담부증여 고유 문제가 아니라 그 자산 종류 전체의 모델 한계다.
 - 토지·입주권·분양권: 토지·건물 두 자산 구조가 아니다.
 - 재개발/재건축 APT: 별도 3분할 경로.
 - 일반건물: #2604로 처리됨.
+
+## 10. 구현 기록 — PR-1 (2026-10-27 · Q-1 a)
+- leaf `collectSplitPartCauseIssues`(`lib/tax-engine/transfer-split-part-cause.ts`) BG-D 규칙: 부담부증여 ∧ 토지 원인을 따로 두지 않음(원인이 있으면 D1·D2 Y1이 이미 막는다) ∧ 소유자 분리 아님 ∧ 토지·건물 취득일 다름 → `landAcquisitionDate` 「…취득일이 다르면 아직 계산하지 못합니다(「소득세법」 제95조 제4항 · 「소득세법 시행령」 제159조)」. 건물(토지 제외)은 「일반건물(토지+건물 일괄)」로 입력하라는 안내를 붙인다. ⑧(`validateLandPartCause`)·⑫(`refineSplitPartCause` — 주 자산·컴패니언)·엔진이 같은 leaf다.
+  - ⑧은 이 leaf를 파트 취득가액 요구(`validateSeparateAcqParts`)보다 먼저 부른다 → 칸 없는 「토지 취득가액」 차단이 사라진다.
+- 토글 C: 술어 `burdenedGiftCarryoverDonorSplitRequested`(토글 ∧ C의 다른 조건 ∧ 부담부증여)로 ⑧ `validateCarryoverAsset`이 맨 앞에서 `carryoverDonorSplit`을 막는다(「당초 증여자가 … 다른 날 취득했으면 아직 계산하지 못합니다(「소득세법」 제95조 제4항 단서)」). ④는 종전대로 C 와이어를 싣지 않는다 — 직접 보낸 C 와이어는 ⑫ 기존 규칙(`LAND_CAUSE_BURDENED_GIFT_MESSAGE`)이 400(anchor로 고정).
+- ⑤: 토글 C를 부담부증여에서도 켤 수 있게 열고(소유자 분리 잠금은 유지), 켜져 있으면 rose 안내(`carryover-donor-split-bg-blocked`) — 종전 「자산 전체를 하나의 증여자 취득으로 계산합니다」(조용한 무시) 문구는 부담부증여에서 내리지 않는다. 분리 안내(`split-burdened-note`)의 「기준시가 비율로 안분됩니다」를 실제 동작(나눠 계산하지 않음 · 취득일 다르면 계산 못 함)으로 고쳤다.
+- 계산 변경 0: H1 86,424,375 · O1 63,888,000 그대로(anchor).
+- 엔진 직접 호출도 같은 leaf로 던진다(`calcSplitGain` 입구) — 종전 「부담부증여는 토지 취득일을 버리고 계산」을 고정하던 테스트를 결정(Q-1 a)대로 바꿨다:
+  - `separate-land-date-required.g2` — 빈칸·같은 날은 종전 값 62,167,600 그대로, 더 이른/늦은 날은 ⑧ 차단.
+  - `server-validation-gaps` #3 — 같은 날 200·20,435,000 그대로, 다른 날 400.
+  - `split-part-rate` A-3c · `burdened-gift-stale-acq-method` 케이스 7 — 날짜 다름은 던진다(종전 159,000,000 · §159 안분값).
+  - `split-part-cause.d2` Y8 긍정 짝 — 부담부증여는 Y8 비해당 그대로, 날짜가 다르면 BG-D.
+  - `split-carryover-p2c.section.ui` — 부담부증여 저장값 ON은 「적용되지 않음」 대신 차단 안내.
+- 검증: anchor API 12 · RTL 4(커밋 1에서 빨간불 8/12) · E2E 2(BGD-E1 저장된 토글 C · BGD-E2 본인 취득) · 뮤테이션 13/13 · vitest 3,397파일 통과.
+

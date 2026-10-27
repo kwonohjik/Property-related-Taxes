@@ -400,6 +400,15 @@ export function effectiveCarryoverDonorSplit(asset: CarryoverDonorSplitScope, op
 }
 
 /**
+ * 부담부증여라서만 C가 성립하지 않는가 — 토글 ∧ 그 밖의 C 조건은 모두 충족 ∧ 부담부증여.
+ * 부담부증여 주택·건물은 토지·건물을 나눠 계산하지 않는다. 조용히 한 날짜로 계산하지 않도록 ⑤가 토글을 열어 두고 ⑧이 막는다
+ * (⑫는 C 와이어가 오면 `LAND_CAUSE_BURDENED_GIFT_MESSAGE`로 막는다 · 계획서 `bg-carryover-non-gb-building-date.plan.md` Q-1 a).
+ */
+export function burdenedGiftCarryoverDonorSplitRequested(asset: CarryoverDonorSplitScope, opts?: { isNonPrimary?: boolean }): boolean {
+  return asset.transferType === "burdened_gift" && effectiveCarryoverDonorSplit({ ...asset, transferType: undefined }, opts);
+}
+
+/**
  * 함께 양도하는 두 번째 이후 자산(`isNonPrimary`)은 C 토글을 «꺼진 것»으로 읽는다 — 값은 지우지 않는다(D0 G-6).
  *
  * 토글은 첫 자산에서만 켤 수 있지만 값은 자산에 남는다. 켠 뒤 종류를 토지로 바꾸고 «주택 먼저로 교환»(`reverse-appurtenant-swap`)으로 그 자산이 두 번째로 내려간 다음

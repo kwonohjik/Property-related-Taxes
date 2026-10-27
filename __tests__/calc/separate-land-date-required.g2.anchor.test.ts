@@ -257,13 +257,20 @@ describe("부담부증여 양도 — 토지 취득일은 계산에 쓰이지 않
         acquisitionDate: "2009-03-01", ownershipNumerator: "100", ownershipDenominator: "100", ...BG, ...over }],
     }) as never;
 
-  it("🔑 토글 ON + 토지 취득일 {빈칸·같은 날·더 이른 날·더 늦은 날} → 세액·양도차익이 토글 OFF와 모두 같다(62,167,600 · 291,000,000)", async () => {
+  it("🔑 토글 ON + 토지 취득일 {빈칸·같은 날} → 세액·양도차익이 토글 OFF와 같다(62,167,600 · 291,000,000)", async () => {
     const off = await runCalc(bgForm({}));
     expect(off.result.totalTax).toBe(62_167_600);
-    for (const d of ["", "2009-03-01", "2001-03-01", "2020-03-01"]) {
+    for (const d of ["", "2009-03-01"]) {
       const r = await runCalc(bgForm({ ...ON, landAcquisitionDate: d }));
       expect(r.result.totalTax, `landAcquisitionDate=${d || "빈칸"}`).toBe(off.result.totalTax);
       expect(r.result.transferGain, `landAcquisitionDate=${d || "빈칸"}`).toBe(off.result.transferGain);
+    }
+  });
+
+  it("🔑 토글 ON + 토지 취득일이 다르면(더 이른 날·더 늦은 날) ⑧이 막는다 — 종전에는 그 날짜를 버리고 토글 OFF와 같은 값으로 계산했다(계획서 bg-carryover-non-gb-building-date.plan.md Q-1 a · 「소득세법」 제95조 제4항)", () => {
+    for (const d of ["2001-03-01", "2020-03-01"]) {
+      const msgs = [0, 1, 2, 3, 4].flatMap((s) => collectStepIssues(s, bgForm({ ...ON, landAcquisitionDate: d }))).map((i) => `${i.field}|${i.message}`);
+      expect(msgs.some((m) => m.startsWith("landAcquisitionDate|") && m.includes("토지와 건물의 취득일이 다르면 아직 계산하지 못합니다")), d).toBe(true);
     }
   });
 
