@@ -21,6 +21,8 @@ import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { ownerSplitHousingNeedsBuildingStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { usesTransferAreaForAcqStdPrice } from "@/lib/calc/transfer-tax-api-helpers";
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
+import { AcqAppraisalFields } from "./AcqAppraisalFields";
+import { acqAppraisalApportionApplies } from "@/lib/calc/transfer-acq-appraisal";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 import { acqStdPriceBranch } from "./acq-std-price-branch";
 import { LUMP_SUM_DEDUCTION_BASE_HINT, PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
@@ -278,6 +280,10 @@ export function CompanionAcqStdPriceSection({
           )}
         </>
         )
+      )}
+      {/* 취득 당시 감정평가가액 — 같은 날 취득한 토지·건물의 취득가액 총액을 이 비율로 나눈다(부가령 §64①1호 단서 · V-7). 노출 ⇔ ④ 전송 ⇔ ⑧·⑫ 쌍 검증. */}
+      {props.asset && props.onAssetChange && acqAppraisalApportionApplies(props.asset) && (
+        <AcqAppraisalFields asset={props.asset} onChange={props.onAssetChange} />
       )}
     </>
   );

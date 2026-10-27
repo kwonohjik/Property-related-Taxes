@@ -137,6 +137,8 @@ export type Required2aLike = {
   buildingStandardPriceAtTransfer?: number;
   landAppraisalAtTransfer?: number;
   buildingAppraisalAtTransfer?: number;
+  landAppraisalAtAcquisition?: number;
+  buildingAppraisalAtAcquisition?: number;
   buildingStandardPriceAtAcquisition?: number;
   standardPricePerSqmAtAcquisition?: number;
   acquisitionArea?: number;
@@ -423,6 +425,14 @@ export function refineSplitAcquisitionInputs(
   // V8 — 감정평가가액은 양쪽 모두여야 안분 basis가 된다. 한쪽만 오면 엔진은 그 값을 쓰지 않고(`incomplete`) 기준시가로 후퇴하는데, 일괄양도에서는
   // 결과에 흔적도 없어 입력이 폐기된 사실을 알 수 없다 — 자동 fallback 금지라 ⑧ V8과 같은 술어(`partialAppraisal`)로 서버도 막는다(겸용 ⑫ `appraisalOne`과 같은 방향).
   // V8-b — 「감정평가」 모드를 골랐는데 두 금액이 모두 비면 같은 후퇴가 조용히 일어난다(⑧ V8-b의 거울, 모드는 ④가 split 본문에 싣는다).
+  // 취득 당시 감정평가가액도 같은 쌍 규칙 — 한쪽만이면 비율이 없어 엔진이 기준시가 비율로 둔다(입력 폐기 · ⑧ `validateAcqAppraisalPair`와 같은 술어).
+  const appraisalAtAcq = { land: d.landAppraisalAtAcquisition ?? 0, building: d.buildingAppraisalAtAcquisition ?? 0 };
+  if (partialAppraisal(appraisalAtAcq)) {
+    issue(
+      [appraisalAtAcq.land > 0 ? "buildingAppraisalAtAcquisition" : "landAppraisalAtAcquisition"],
+      "취득 당시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만으로는 취득가액을 나눌 비율이 없습니다 (소득세법 §100②·부가가치세법 시행령 §64①1호 단서).",
+    );
+  }
   const appraisalAtTransfer = { land: d.landAppraisalAtTransfer ?? 0, building: d.buildingAppraisalAtTransfer ?? 0 };
   if (partialAppraisal(appraisalAtTransfer)) {
     issue(

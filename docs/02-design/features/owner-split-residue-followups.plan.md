@@ -128,8 +128,8 @@
 | M10 | V-7 ⑧ 쌍 검증 제거 | 한쪽만 |
 | M11 | V-7 ⑫ 쌍 검증 제거 | 한쪽만 |
 
-- 회귀: `__tests__/calc`·`api`·`components`·`lib`·`stores`·`tax-engine` 41,754건 실패 0(반전 3건 반영 후 — 반영 전 4건 실패: 위 3건 + 앵커 커버리지 `selfOwns`). tsc 0 · 변경 파일 lint 오류 0.
-- 신규: anchor 43건(`transfer.route.owner-split-residue-followups.anchor.test.ts`) · 컴포넌트 4건(`acq-appraisal-fields.test.tsx`) · E2E 2건(`owner-split-residue-followups.spec.ts` FU-E1 V-7 · FU-E2 C-2 — headless, 대조 세액 > 0) + 종전 OS-E1~3 함께 5건 통과. 사람이 직접 한 브라우저 확인은 아니다.
+- 회귀: `__tests__/calc`·`api`·`components`·`lib`·`stores`·`tax-engine` 41,754건 실패 0(master rebase · 리뷰 후속 뒤 41,778건 실패 0)(반전 3건 반영 후 — 반영 전 4건 실패: 위 3건 + 앵커 커버리지 `selfOwns`). tsc 0 · 변경 파일 lint 오류 0.
+- 신규: anchor 48건(`transfer.route.owner-split-residue-followups.anchor.test.ts` — 리뷰 게이트 후속 5건 포함) · 컴포넌트 4건(`acq-appraisal-fields.test.tsx`) · E2E 2건(`owner-split-residue-followups.spec.ts` FU-E1 V-7 · FU-E2 C-2 — headless, 대조 세액 > 0) + 종전 OS-E1~3 함께 5건 통과. 사람이 직접 한 브라우저 확인은 아니다.
 
 ### 5.1 취득가액 리뷰 게이트 후속 (FAIL 2 → 해소)
 

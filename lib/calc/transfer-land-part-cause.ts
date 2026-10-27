@@ -159,25 +159,31 @@ export function hasStaleSplitInput(
   return (effectiveSelfOwns(asset as Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns">) ?? "both") === "both";
 }
 
+/** 소유자 분리가 `NonPurchaseSplitInputsBlock`을 쓰는 취득원인 — 매매는 `CompanionAcqPurchaseBlock`이 파트 칸을 모두 갖췄다. */
+const NON_PURCHASE_OWNER_SPLIT_CAUSES = new Set(["inheritance", "gift", "newConstruction", "carryover_gift"]);
+
 /**
- * 상속·증여 호스트(주택·건물, 겸용 아님)의 **소유자 분리**인가 — D2 유효·부담부증여는 제외.
+ * 매매 외 취득원인(상속·증여·신축·이월과세 — 주택·건물, 겸용 아님)의 **소유자 분리**인가 — 토지·건물 원인 혼합(D1·P3 A·D2·P4 B)·부담부증여는 제외.
  *
- * 이 화면(`NonPurchaseSplitInputsBlock`)에는 파트 취득가액·매매사례가액·산정 방식·토지 취득일 칸이 없다. 상속·증여 자산의 취득시기는
- * 상속개시일·증여일 하나다(「소득세법 시행령」 제162조 제1항 제5호). 그런데 D2를 끈 뒤의 토지 금액, 매매·D2에서 남은 파트 값, 상속개시일을
- * 고친 뒤의 옛 토지 취득일, 겸용을 켰다 끈 분리 플래그가 남아 ④가 그대로 읽었다 — 토지만 본인 100,740,000 ↔ 94,022,000 등 조용한 오계산과
- * ⑧ 「파트 취득가액」 막다른 길(계획서 `inherit-gift-owner-split-residue.plan.md` R-1~R-5). 저장값은 지우지 않는다(D2 다시 켜면 복원 — C10).
+ * 이 화면(`NonPurchaseSplitInputsBlock`)에는 파트 취득가액·매매사례가액·산정 방식·토지 취득일 칸이 없다. 취득시기는 하나다 — 상속개시일·증여일
+ * (「소득세법 시행령」 제162조 제1항 제5호)·신축 사용승인일 등(제4호)·이월과세 증여 등기일(보유기간은 엔진이 증여자 취득일로 바꾼다). 그런데 D2를
+ * 끈 뒤의 토지 금액, 매매·D2에서 남은 파트 값, 취득일을 고친 뒤의 옛 토지 취득일, 겸용을 켰다 끈 분리 플래그가 남아 ④가 그대로 읽었다 —
+ * 토지만 본인 100,740,000 ↔ 94,022,000 등 조용한 오계산과 ⑧ 「파트 취득가액」 막다른 길(계획서 `inherit-gift-owner-split-residue.plan.md` R-1~R-5,
+ * 신축·이월과세는 `owner-split-residue-followups.plan.md` §1.4). 저장값은 지우지 않는다(D2 다시 켜면 복원 — C10).
+ * 원인 혼합은 소유자 분리와 상호 잠금이고 잠금이 풀린 조합은 leaf(S4)가 ⑧·⑫에서 막는다 — 여기서 「분리 없음」으로 읽으면 그 차단이 사라진다.
  */
 export function nonPurchaseOwnerSplit(
   asset: BuildingCauseMixScope & { selfOwns?: "both" | "building_only" | "land_only" },
 ): boolean {
-  if (!buildingCauseMixApplicable(asset) || effectiveBuildingCauseMix(asset)) return false;
-  if (asset.transferType === "burdened_gift") return false;
+  if (!NON_PURCHASE_OWNER_SPLIT_CAUSES.has(asset.acquisitionCause ?? "")) return false;
+  if (!isLandBuildingSplitable(asset.assetKind) || asset.isMixedUseHouse) return false;
+  if (landCauseMixActive(asset) || asset.transferType === "burdened_gift") return false;
   return (effectiveSelfOwns(asset as Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns">) ?? "both") !== "both";
 }
 
 /**
- * ④·⑧·⑥이 자산을 읽기 전에 통과시키는 **D2 정규화 사본** — (1) stale 분리 입력을 「분리 없음」으로, (2) 상속·증여 소유자 분리는
- * 화면에 없는 분리 입력을 읽지 않고 토지 취득일을 상속개시일·증여일로, (3) D2 유효 시 건물 방식을 `actual`로. 해당 없으면 같은 객체를 돌려준다.
+ * ④·⑧·⑥이 자산을 읽기 전에 통과시키는 **D2 정규화 사본** — (1) stale 분리 입력을 「분리 없음」으로, (2) 매매 외 소유자 분리는
+ * 화면에 없는 분리 입력을 읽지 않고 토지 취득일을 취득일로, (3) D2 유효 시 건물 방식을 `actual`로. 해당 없으면 같은 객체를 돌려준다.
  */
 export function normalizeBuildingCauseInputs<
   T extends BuildingCauseMixScope & {
@@ -193,19 +199,23 @@ export function normalizeBuildingCauseInputs<
     buildingAcquisitionPrice?: string;
     landSalesCaseValue?: string;
     buildingSalesCaseValue?: string;
+    fixedAcquisitionPrice?: string;
   },
 >(asset: T): T {
   if (hasStaleSplitInput(asset)) return { ...asset, hasSeperateLandAcquisitionDate: false };
-  // 상속·증여 소유자 분리 — 두 파트 모두 §163⑨ 평가액(실지거래가액)을 기준시가 비율로 안분한다. 소유자 분리 진입에 토지 취득일은 필요하다(④ `calcSplitGain`).
+  // 매매 외 소유자 분리 — 실지거래가액(§163⑨ 평가액·증여자 취득가액)을 기준시가 비율로 안분한다(신축비용은 건물 몫 전액 — 아래 C-2).
+  // 소유자 분리 진입에 토지 취득일은 필요하다(④ `calcSplitGain`). 이월과세는 본문 취득일과 같은 값(④ `carryoverAcquisitionDateFallback`) — 별개 취득이 아니다.
   if (nonPurchaseOwnerSplit(asset)) {
     return {
       ...asset,
       hasSeperateLandAcquisitionDate: false,
-      landAcquisitionDate: asset.acquisitionDate ?? "",
+      landAcquisitionDate: asset.acquisitionDate || (asset.acquisitionCause === "carryover_gift" ? asset.carryover?.giftRegistryDate : "") || "",
       landAcqMode: "actual",
       buildingAcqMode: "actual",
       landAcquisitionPrice: "",
-      buildingAcquisitionPrice: "",
+      // 신축비용은 건물의 취득가액이다(영 §163① — 칸 안내 「토지 취득가액은 별도 자산으로 입력」) — 기준시가 비율로 토지에 나누지 않는다
+      // (계획서 `owner-split-residue-followups.plan.md` C-2 · Q-2 a). 토지만 본인은 ⑧·⑫가 막는다(`newConstructionLandOnly`).
+      buildingAcquisitionPrice: asset.acquisitionCause === "newConstruction" && asset.selfOwns === "building_only" ? (asset.fixedAcquisitionPrice ?? "") : "",
       landSalesCaseValue: "",
       buildingSalesCaseValue: "",
     };
@@ -350,6 +360,16 @@ export function splitBuildingAcqPriceInput(
   return asset.acquisitionCause === "newConstruction" && landCauseDisplay(asset)
     ? asset.fixedAcquisitionPrice
     : asset.buildingAcquisitionPrice;
+}
+
+/**
+ * 신축 소유자 분리 · 토지만 본인 — 신축(자가건축)은 건물의 취득원인이라(「소득세법 시행령」 제162조 제1항 제4호 「자기가 건설한 건축물」)
+ * 토지만 소유한 자산의 취득원인이 될 수 없다. ⑧(`transfer-tax-validate-split.ts`)·⑫(`newConstructionLandOnlyIssue`)가 같은 결론으로 막는다(C-2 · Q-2 a).
+ * 양도 형태(부담부증여)와 무관하다 — ④는 유효 소유 축(`effectiveSelfOwns`)을 그대로 보내고 ⑫는 그 값만 본다(리뷰 게이트 F-3).
+ */
+export function newConstructionLandOnly(asset: Parameters<typeof nonPurchaseOwnerSplit>[0]): boolean {
+  return asset.acquisitionCause === "newConstruction"
+    && effectiveSelfOwns(asset as Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns">) === "land_only";
 }
 
 // ─── P2 C — 통째 이월과세인데 증여자가 토지·건물을 다른 날 취득 (docs/02-design/features/transfer-split-part-carryover.ui.design.md §2.2·§3) ───

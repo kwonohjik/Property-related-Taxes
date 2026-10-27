@@ -32,6 +32,8 @@ import { normalizeBuildingCauseInputs } from "@/lib/calc/transfer-land-part-caus
 import { ownerSplitHousingNeedsBuildingStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { SplitPartCapexFields } from "./SplitPartCapexFields";
+import { AcqAppraisalFields } from "./AcqAppraisalFields";
+import { acqAppraisalApportionApplies } from "@/lib/calc/transfer-acq-appraisal";
 import { toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 import { isLandBuildingSplitable } from "./AssetOwnershipSplitSection";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -148,6 +150,9 @@ export function NonPurchaseSplitInputsBlock(props: {
             </div>
           )}
       </div>
+
+      {/* 취득 당시 감정평가가액 — 있으면 취득가액을 이 비율로 나눈다(부가령 §64①1호 단서). 노출 ⇔ ④ 전송 ⇔ ⑧·⑫ 쌍 검증(V-7). */}
+      {acqAppraisalApportionApplies(asset) && <AcqAppraisalFields asset={asset} onChange={onChange} />}
 
       {/* 소유 파트 자본적지출 — 분리 계산은 파트 칸만 읽는다(⑧이 이 칸으로 안내 — D1-1 Check F2). */}
       <SplitPartCapexFields

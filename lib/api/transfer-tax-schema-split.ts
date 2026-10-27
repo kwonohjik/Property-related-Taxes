@@ -94,6 +94,9 @@ export const splitAcquisitionShape = {
   landAppraisalAtTransfer: z.number().int().nonnegative().optional(),
   buildingAppraisalAtTransfer: z.number().int().nonnegative().optional(),
   appraisalDateAtTransfer: z.string().optional(),
+  /** 취득 당시 감정평가가액(토지·건물) — 비-별개 취득의 취득가액 총액 안분 basis(소득세법 §100② → 소령 §166⑥ → 부가령 §64①1호 단서). 쌍 규칙은 ⑫ refine. */
+  landAppraisalAtAcquisition: z.number().int().nonnegative().optional(),
+  buildingAppraisalAtAcquisition: z.number().int().nonnegative().optional(),
   /** 「소득세법 시행령」 §166⑧ 예외 — 선택 시 §100③ 30% 의제가 발동하지 않는다. */
   saleSplitExemption: z.enum(["other_law", "demolished_land_only"]).optional(),
 

@@ -19,6 +19,7 @@ import {
   isBurdenedGiftCarryover,
 } from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
+import { dayKey } from "./transfer-split-part-cause-input";
 import { judgeCarryoverEligibility } from "./transfer-tax-carryover-eligibility";
 import { assertBgDonorBuiltInput, assertDonorBuiltInput, bgDonorBuiltOf, withDonorBuiltPenalty } from "./transfer-tax-carryover-donor-penalty";
 import { carryoverGiftHouseholdBasis, resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
@@ -228,6 +229,9 @@ function calcCarryoverScenariosCore(
       rawInput.useEstimatedAcquisition ||
       (rawInput.usedEstimatedAcquisition !== undefined && ct.useEstimatedAcquisition),
     acquisitionDate: ct.donorAcquisitionDate,   // §95 ④ 단서 보유기간 기산
+    // 소유자 분리 — ④가 분리 계산 진입용으로 본문 취득일(증여 등기일)과 같은 토지 취득일을 싣는다. 바꾸지 않으면 토지 파트만 증여 등기일부터
+    //   기산된다(§95④ 단서 위반 — 토지만 본인 117,060,000 ↔ 88,550,000, 계획서 `owner-split-residue-followups.plan.md` C-1). 다른 날짜는 별개 취득이라 두지 않는다.
+    ...(ownerSplitSameDayLand(rawInput) ? { landAcquisitionDate: ct.donorAcquisitionDate } : {}),
     /**
      * 🔑 **부담부증여의 취득가액 축은 여기서만 움직인다**(D-7a).
      *
@@ -619,6 +623,13 @@ export function calcCarryoverScenarios(...args: Parameters<typeof calcCarryoverS
 // ============================================================
 // 내부 유틸
 // ============================================================
+
+/** 소유자 분리이고 토지 취득일이 본문 취득일과 같은 날인가 — 시나리오 A에서 두 날짜를 함께 증여자 취득일로 옮긴다(C-1). */
+function ownerSplitSameDayLand(rawInput: TransferTaxInput): boolean {
+  if (!rawInput.selfOwns || rawInput.selfOwns === "both") return false;
+  const land = dayKey(rawInput.landAcquisitionDate);
+  return !!land && land === dayKey(rawInput.acquisitionDate);
+}
 
 /**
  * Scenario B 입력 구성 — 수증자 기준 (증여 당시 평가액, 등기접수일 기산)

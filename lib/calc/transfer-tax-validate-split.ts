@@ -42,6 +42,8 @@ import { landPartCauseSameDay } from "./transfer-land-part-cause";
 import { LAND_CAUSE_SAME_DAY_MESSAGE } from "./transfer-land-part-cause";
 import { buildingHouseKindSent } from "./transfer-building-sec164-bridge";
 import { buildingBundledStdPriceSent } from "./transfer-land-part-cause";
+import { newConstructionLandOnly } from "./transfer-land-part-cause";
+import { validateAcqAppraisalPair } from "./transfer-acq-appraisal";
 import { deriveBuildingSec164Total } from "./transfer-building-sec164-bridge";
 import { buildingSec164Applies } from "./transfer-building-sec164-bridge";
 import { phdPayloadActive } from "./phd-toggle-scope";
@@ -363,6 +365,11 @@ export function validateSplitDirectInputs(
 
   const causeErr = carryoverSplit ? null : validateLandPartCause(asset, label, { ...opts, formTransferDate });
   if (causeErr) return causeErr;
+  // 신축 · 토지만 본인 — 신축은 건물의 취득원인이다(⑫ `refineHouseholdRequiredInputs`와 같은 결론 · C-2). 칸은 소유자 분리 토글이다.
+  if (newConstructionLandOnly(asset))
+    return fieldError("selfOwns", `${label}: 신축(자가건축)은 건물의 취득원인입니다 — 토지만 본인 소유라면 토지의 취득원인(매매·상속·증여 등)으로 계산하세요 (소득세법 시행령 §162①4호).`);
+  const acqAppraisalErr = validateAcqAppraisalPair(rawAsset, label); // V-7 — 취득 당시 감정평가가액 쌍(⑫ 같은 술어)
+  if (acqAppraisalErr) return acqAppraisalErr;
 
   // ── V9. 주택 부수토지 배율 판정 필수 입력 (「소득세법 시행령」 제168조의12) ──────────
   // 토지 면적이 정착면적의 **3배**(최소 배율)를 넘으면 어느 용도지역이든 한도 초과 가능성이

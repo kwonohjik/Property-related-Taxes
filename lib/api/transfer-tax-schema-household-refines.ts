@@ -29,6 +29,7 @@ type RentalRow = {
 
 export type HouseholdRefineInput = {
   propertyType?: string;
+  acquisitionCause?: string;
   selfOwns?: string;
   sellingHouseId?: string;
   houses?: ReadonlyArray<RentalRow>;
@@ -139,4 +140,18 @@ export function refineHouseholdRequiredInputs(data: HouseholdRefineInput, ctx: z
   ) {
     issue(["selfOwns"], "소유자 분리는 주택(housing) 또는 건물(building) 자산에만 적용됩니다");
   }
+
+  /**
+   * 신축 · 토지만 본인 — 신축(자가건축)은 건물의 취득원인이다(소령 §162①4호). ⑧ `newConstructionLandOnly`와 같은 결론
+   * (계획서 `owner-split-residue-followups.plan.md` C-2 · Q-2 a). 받으면 신축비용 일부가 토지 취득가액으로 안분됐다.
+   */
+  const ncMsg = newConstructionLandOnlyIssue(data);
+  if (ncMsg) issue(["selfOwns"], ncMsg);
+}
+
+/** 신축 · 토지만 본인 — 주 자산(위)·함께 양도 자산(`transfer-tax-schema.ts` 컴패니언 refine)이 같은 규칙을 쓴다(⑧ `newConstructionLandOnly` · 리뷰 게이트 F-2). */
+export function newConstructionLandOnlyIssue(d: { acquisitionCause?: string; selfOwns?: string }): string | null {
+  return d.acquisitionCause === "newConstruction" && d.selfOwns === "land_only"
+    ? "신축(자가건축)은 건물의 취득원인입니다 — 토지만 본인 소유라면 토지의 취득원인(매매·상속·증여 등)으로 계산하세요 (소득세법 시행령 §162①4호)"
+    : null;
 }

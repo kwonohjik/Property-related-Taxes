@@ -477,6 +477,8 @@ export function calcSplitAcquisitionPrice(
   landStdAtTransfer: number;
   /** 1985.1.1. 전 토지 파트에서 ③이 채택됐을 때 — 그 분자(의제취득일 현재 기준시가 = ② 지분 반영 전). 개산공제 base·표시용 */
   landStdAtAcqOverride?: number;
+  /** 총액 안분에 취득 당시 감정평가가액 비율을 썼다 — 표시 전용 echo */
+  acqApportionBasisKind?: "appraisal";
 } {
   const landMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);
   const buildingMode: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input);
@@ -578,9 +580,11 @@ export function calcSplitAcquisitionPrice(
   // ③(1985.1.1. 전 토지 파트) 분모 — 양도시 토지 기준시가(별개 취득은 원값)에 §164⑨1호 공익수용 min[]을 적용한 값(Q-10 A).
   const landPartAcq = resolveLandPartAcquisition(input, { partTransferPrice: landTransferPrice, stdAtTransfer: landStdAtTransferExpr });
   const buildingPartAcq = resolveBuildingPartAcquisition(input);
+  // 비-별개 취득의 총액 안분 basis — 취득 당시 감정평가가액이 토지·건물 모두 있으면 그 비율(부가령 §64①1호 단서), 아니면 취득시 기준시가 비율.
+  const acqAppraisal = acqAppraisalApportion(input, isSeparate);
   const partCtx: PartAcqPriceContext = {
     isSeparate,
-    landApportion,
+    landApportion: acqAppraisal ?? landApportion,
     landAcquisitionPrice: landPartAcq.price,
     buildingAcquisitionPrice: buildingPartAcq.price,
     landSalesCaseValue: input.landSalesCaseValue,
@@ -626,5 +630,27 @@ export function calcSplitAcquisitionPrice(
     splitLandExpropriationValuationDetail,
     ...(landPartAcq.basis ? { landAcquisitionBasis: landPartAcq.basis } : {}),
     ...(buildingPartAcq.basis ? { buildingAcquisitionBasis: buildingPartAcq.basis } : {}),
+    ...(acqAppraisal && apportionsTotal(landMode, buildingMode, partCtx) ? { acqApportionBasisKind: "appraisal" as const } : {}),
   };
+}
+
+/**
+ * 취득 당시 감정평가가액 안분 basis — 별개 취득이 아니고 토지·건물 감정평가가액이 **모두 양수**일 때만. 한쪽만이면 비율이 없다
+ * (⑧·⑫가 먼저 막는다 — 엔진은 기준시가 비율로 둔다). 「감정평가법인등이 평가한 가액」이라 0은 평가하지 않은 파트다(양도 쪽 `usableAppraisal`과 같다).
+ */
+function acqAppraisalApportion(input: TransferTaxInput, isSeparate: boolean): LandApportion | null {
+  if (isSeparate) return null;
+  const land = input.landAppraisalAtAcquisition ?? 0;
+  const building = input.buildingAppraisalAtAcquisition ?? 0;
+  if (!(land > 0) || !(building > 0)) return null;
+  return { landStd: land, totalStd: land + building };
+}
+
+/** 총액 안분이 실제로 일어났는가 — `calcPartAcquisitionPrice`가 `splitPair` 비율 분기에 닿는 파트가 있다(매매사례는 그 파트 값이 없을 때, 실가·감정은 두 파트 모두 없을 때). */
+function apportionsTotal(landMode: PartAcqMode, buildingMode: PartAcqMode, ctx: PartAcqPriceContext): boolean {
+  const viaRatio = (mode: PartAcqMode, ownSales: number | undefined) =>
+    mode === "salesCase"
+      ? ownSales == null
+      : mode !== "estimated" && ctx.landAcquisitionPrice == null && ctx.buildingAcquisitionPrice == null;
+  return viaRatio(landMode, ctx.landSalesCaseValue) || viaRatio(buildingMode, ctx.buildingSalesCaseValue);
 }

@@ -41,7 +41,8 @@ export function AssetOwnershipSplitSection(props: {
   const landCauseOn = landCauseMixActive(asset); // D1(토지 상속·증여) 또는 D2(건물 상속·증여 + 토지 매매)
 
   return (
-    <div className="space-y-1.5" data-testid="asset-ownership-split">
+    // data-field — ⑧ 「신축 · 토지만 본인」 차단(`newConstructionLandOnly`)이 이 칸으로 이동한다.
+    <div className="space-y-1.5" data-testid="asset-ownership-split" data-field="selfOwns">
       <ToggleCard
         variant="chip"
         tone="amber"

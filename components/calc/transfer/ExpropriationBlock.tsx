@@ -3,7 +3,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { hasStaleSplitInput } from "@/lib/calc/transfer-land-part-cause";
+import { normalizeBuildingCauseInputs } from "@/lib/calc/transfer-land-part-cause";
 import { preDeemedExprFacts } from "@/lib/calc/expropriation-pre-deemed-facts";
 import { isPreDeemedPerSqmStdInputActive } from "@/lib/calc/transfer-tax-validate-expropriation";
 import { companionSplitLandRemedy } from "@/lib/calc/transfer-tax-validate-expropriation";
@@ -65,8 +65,8 @@ export function ExpropriationBlock({
 }) {
   // 공통 게이트: 환산모드 + 양도 ≥ 2009.02.04 (단건 — 다필지는 필지 카드 전용).
   // 의제취득일 전 상속·증여 ③도 환산이라 §164⑨이 분모에 걸린다(Q-10 A) — 환산 토글이 없는 상속 자산도 칸을 연다.
-  //   ⑧ 어댑터(`exprFactsFromAsset`)와 같은 함수 · 같은 `splitActive`.
-  const splitActive = !!asset.hasSeperateLandAcquisitionDate && !hasStaleSplitInput(asset);
+  //   ⑧ 어댑터(`exprFactsFromAsset`)와 같은 함수 · 같은 `splitActive`(정규화 사본 — 화면에 없는 분리 플래그는 「분리 없음」).
+  const splitActive = !!normalizeBuildingCauseInputs(asset).hasSeperateLandAcquisitionDate;
   const preDeemed = preDeemedExprFacts(asset, transferDate, splitActive);
   const dateOk = !asset.parcelMode && !!transferDate && transferDate >= EXPR_VALUATION_MIN_DATE;
   const exprDateOk = dateOk && (asset.useEstimatedAcquisition || preDeemed.preDeemedConversion);
@@ -75,7 +75,7 @@ export function ExpropriationBlock({
   const splitLandDateOk = dateOk && (asset.useEstimatedAcquisition || preDeemed.preDeemedSplitLand);
   // 건물 split(토지·건물 취득일 분리) — `calcSplitGain` 경로라 단건 per-sqm 특례가 우회된다.
   // 이 경우 per-sqm 칸을 노출하면 입력해도 엔진이 안 읽는 **침묵 무시** → 토지분 총액 블록으로 전환(P6/D6).
-  // stale 분리 입력은 「분리 없음」(④·⑧과 같은 술어 `hasStaleSplitInput`) — 아니면 칸이 숨어 ⑫가 요구하는 원/㎡를 못 넣는다.
+  // stale 분리 입력은 「분리 없음」(④·⑧과 같은 정규화 사본 `normalizeBuildingCauseInputs`) — 아니면 칸이 숨어 ⑫가 요구하는 원/㎡를 못 넣는다.
   const isSplitBuilding =
     isSplitLandExprEligibleAssetKind(asset.assetKind) && splitActive;
   // 주택 **regular** split(비-PHD)만 총액 트랙에서 제외 — Q6 미지원(validate 차단). 노출 시 침묵 무시.

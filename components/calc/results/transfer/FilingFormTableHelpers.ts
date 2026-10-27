@@ -367,7 +367,7 @@ export function buildRows(
     // 토지·건물 취득일은 상이할 수 있다(별개취득) — 열별 자기 취득일 표시 (:477 4열 모드와 동일 규약).
     // 토지·건물 취득원인이 다르면(D1-3) 토지 열은 엔진 echo(엔진이 실제로 쓴 토지 상속개시일·증여일)를 쓴다.
     // 원인이 같으면 종전대로 폼 — 이월과세 증여자 취득일 override(`acquisitionDate`)가 토지 열에도 그대로 이어지게 한다.
-    // 상속·증여 소유자 분리는 토지 취득일 칸이 없고 취득시기가 상속개시일·증여일 하나다 — 남은 폼 값 대신 그 날짜(④가 보내는 값).
+    // 매매 외 소유자 분리(상속·증여·신축·이월과세)는 토지 취득일 칸이 없고 취득시기가 하나다 — 남은 폼 값 대신 그 날짜(④가 보내는 값 · 이월과세는 위 증여자 취득일 override).
     const spLandAcqDate =
       (summarizeSplitGain(sp).mixedCause ? sp.land.acquisitionDate : undefined) ??
       ((primary && !nonPurchaseOwnerSplit(primary) ? primary.landAcquisitionDate : "") || acquisitionDate);
