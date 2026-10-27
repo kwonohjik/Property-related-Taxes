@@ -26,6 +26,7 @@ import {
   aggregateAcqHeading,
   aggregateExpenseHeading,
   formatLumpRate,
+  isOwnerSplitCarryoverA,
   splitAcqFormulaText,
   splitExpenseText,
 } from "./split-acq-text";
@@ -486,6 +487,14 @@ export function buildAcquisitionPriceFormula(
   // 환산+증여세 경로에서는 엔진이 실가로 전환하므로 result.usedEstimatedAcquisition만으로는
   // 환산 여부를 알 수 없어 scenarioA echo를 사용한다.
   const coA = result.carryoverTaxationDetail;
+  // 소유자 분리 — 본인 파트 분리 산식에 승계 근거를 덧붙인다(행 값이 분리 합이다 · V-4).
+  if (coA && isOwnerSplitCarryoverA(result)) {
+    const splitText = splitAcqFormulaText(result.splitDetail);
+    if (splitText) {
+      const basis = coA.scenarioA.acquisitionWasEstimated ? "증여자 취득 당시 기준시가로 본인 파트 환산(시행령 §163⑨)" : "증여자 취득가액 승계";
+      return `${splitText} ※ 이월과세 §97의2① — ${basis}`;
+    }
+  }
   if (coA?.adoptedScenario === "A") {
     const a = coA.scenarioA;
     const donorCapexNote =
@@ -613,6 +622,17 @@ export function buildNecessaryExpenseFormula(
   // 배우자등 이월과세 Scenario A 채택 — 필요경비 = 양도비 등 + 증여세 상당액(§163의2).
   // singleExp = result.expenses − capEx = (양도비 등) + 증여세 상당액 (실가 전환 후 directSide 반영).
   const coA = result.carryoverTaxationDetail;
+  // 소유자 분리 — 증여세 상당액은 본인 파트 필요경비에 전액 들어 있다(영 §163의2② 「양도한 해당 자산가액」 · V-5).
+  if (coA && isOwnerSplitCarryoverA(result)) {
+    const a = coA.scenarioA;
+    const splitText = splitExpenseText(result.splitDetail, lumpRate, a.giftTaxAddedToExpense);
+    if (splitText) {
+      const limitNote = a.giftTaxLimitApplied ? ` (증여세 상당액 한도 ${a.giftTaxLimitCap.toLocaleString()} = 증여세 가산 전 본인 파트 양도차익 적용)` : "";
+      const giftNote = a.giftTaxAddedToExpense > 0 ? ` ※ 증여세 상당액 — 이월과세 §97의2①3호·시행령 §163의2②${limitNote}` : "";
+      const guardNote = a.donorCapexGuardApplied ? " ※ 양도일 2024-01-01 전 — 증여자 자본적지출 불산입(§97의2①2호 시행일)" : "";
+      return splitText + giftNote + guardNote;
+    }
+  }
   if (coA?.adoptedScenario === "A") {
     const a = coA.scenarioA;
     const gift = a.giftTaxAddedToExpense;

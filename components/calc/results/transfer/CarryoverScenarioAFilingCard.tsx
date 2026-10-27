@@ -47,14 +47,17 @@ export function CarryoverScenarioAFilingCard({
   donorAcquisitionDate,
   onPrint,
 }: Props) {
+  // 소유자 분리 — 양도차익이 본인 파트 값이므로 양도가액·취득가액도 본인 파트 값을 적는다(엔진 echo · 계획서 V-4·V-1).
+  const own = scenarioA.ownerSplitPart;
+  const shownTransferPrice = own?.transferPrice ?? transferPrice;
   const rows: SummaryRow[] = [
     { label: "양도일자", value: fmtScenarioDate(transferDate) },
     { label: "취득일자 (증여자 취득일)", value: fmtScenarioDate(donorAcquisitionDate) },
     { label: "보유기간 (증여자 기산)", value: `${scenarioA.holdingPeriodYears}년` },
-    ...(transferPrice && transferPrice > 0
-      ? [{ label: "양도가액", value: formatKRW(transferPrice) }]
+    ...(shownTransferPrice && shownTransferPrice > 0
+      ? [{ label: `양도가액${own ? " (본인 소유 파트)" : ""}`, value: formatKRW(shownTransferPrice) }]
       : []),
-    { label: "취득가액 (증여자 취득 당시)", value: formatKRW(scenarioA.acquisitionPrice) },
+    { label: `취득가액 (증여자 취득 당시${own ? " · 본인 소유 파트" : ""})`, value: formatKRW(own?.acquisitionPrice ?? scenarioA.acquisitionPrice) },
     { label: "양도차익", value: formatKRW(scenarioA.transferGain) },
     ...(scenarioA.longTermHoldingDeduction != null
       ? [{
