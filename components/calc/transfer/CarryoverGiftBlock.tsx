@@ -408,7 +408,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           field={isBuildingPart ? "buildingCarryover.giftDateValuation" : "carryover.giftDateValuation"}
           hint={
             splitsGiftValuation
-              ? `토지·건물을 함께 증여받았으면 증여세 신고서의 ${isBuildingPart ? "건물" : "토지"} 평가액만 입력합니다 — 증여세 상당액을 토지분·건물분 평가액 비율로 나눕니다(「소득세법 시행령」 제163조의2 제2항 제2호 — 양도한 해당 자산가액).`
+              ? `토지·건물을 함께 증여받았으면 증여세 신고서의 ${isBuildingPart ? "건물" : "토지"} 평가액만 입력합니다${isBuildingPart ? "" : ". 자산 전체 평가액이 들어 있으면(이전에 저장한 계산 포함) 토지 평가액으로 고쳐 주세요"} — 증여세 상당액을 토지분·건물분 평가액 비율로 나눕니다(「소득세법 시행령」 제163조의2 제2항 제2호 — 양도한 해당 자산가액).`
               : isGeneralBuilding && isBurdenedGift
                 ? "증여세 상당액 안분의 분자(「소득세법 시행령」 제163조의2 제2항 제2호 — 양도한 해당 자산가액)로 사용. 보충적평가액·시가·감정가 중 해당 금액."
                 : "이월과세 미적용 시나리오(B)에서 수증자의 취득가액으로 사용. 보충적평가액·시가·감정가 중 해당 금액."
