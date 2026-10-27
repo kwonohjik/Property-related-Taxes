@@ -121,8 +121,9 @@ export function buildCarryoverPayload(
   const carryoverTaxation = {
     giftRegistryDate: c.giftRegistryDate,
     donorAcquisitionDate: c.donorAcquisitionDate,
+    // 부담부증여 일반건물은 당초 증여자 취득가액을 「당초 증여자」 블록(`carryoverDonorBasis`)으로 받는다 — 이 칸은 ⑤가 숨기고 엔진도 쓰지 않으니 남은 값을 싣지 않는다(Q-2 a).
     donorAcquisitionPrice:
-      !c.useEstimatedAcquisition && donorAcqPrice > 0 ? donorAcqPrice : undefined,
+      !c.useEstimatedAcquisition && donorAcqPrice > 0 && !isGbBurdenedGift(asset) ? donorAcqPrice : undefined,
     useEstimatedAcquisition: c.useEstimatedAcquisition,
     // ⚠️ 지분 미스케일 — 위 JSDoc의 미결 사항.
     // 일반건물 부담부증여는 화면이 신고서 금액(산출세액·과세가액)을 받는다 — 영 §163의2②로 상당액을 만든다(엔진 leaf).

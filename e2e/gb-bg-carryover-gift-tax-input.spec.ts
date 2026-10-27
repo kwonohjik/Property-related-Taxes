@@ -219,4 +219,24 @@ test.describe("일반건물 부담부증여 × 이월과세 — 화면 증여세
     await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("75,440,000");
     await expect(page.getByTestId("gb-bg-carryover-donor-capex")).toContainText("100,000,000");
   });
+
+  /**
+   * V-3 Q-1 a · Q-2 a — 계산에 닿지 않던 칸을 숨긴다. 증여 사건(등기접수일·산출세액·과세가액·적용배제)은 토지 블록 한 벌,
+   * 당초 증여자 취득가액은 「당초 증여자」 블록이 정본이다. 숨긴 칸 없이 계산까지 간다(⑧·⑫ 막힘 없음).
+   */
+  test("GBGT-E9 분리 ON 둘 다: 건물 블록엔 사건 칸이 없고, 두 블록 모두 증여자 취득가액·취득원인 칸이 없다 → 그대로 97,800,000", async ({ page }) => {
+    test.setTimeout(180_000);
+    const co = { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2024-05-01", donorAcquisitionDate: "2015-01-01", giftDateValuation: "", giftTaxAmount: "", donorRelation: "lineal", donorSameHousehold: "no" };
+    await seedWizard(page, seedOf([asset(1, { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2024-05-01", buildingCarryover: co, carryover: { ...co } })]));
+    await fillGiftTax(page, 0, "100000000", "1000000000", { land: "600000000", building: "400000000" });
+    const card = page.locator('[data-asset-card-index="0"]');
+    await expect(card.locator('[data-field="carryover.giftRegistryDate"]')).toHaveCount(1);
+    await expect(card.locator('[data-field="buildingCarryover.giftTaxCalculated"]')).toHaveCount(0);
+    await expect(card.locator('[data-field$=".donorAcquisitionPrice"]')).toHaveCount(0);
+    await expect(card.getByText("증여자 취득원인", { exact: true })).toHaveCount(0);
+    await expect(card.getByTestId("gb-bg-donor-basis-elsewhere")).toHaveCount(2);
+    const body = (await calculate(page)) as Wire & { carryoverTaxation?: { donorAcquisitionPrice?: number } };
+    expect(body.carryoverTaxation?.donorAcquisitionPrice).toBeUndefined();
+    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("97,800,000");
+  });
 });
