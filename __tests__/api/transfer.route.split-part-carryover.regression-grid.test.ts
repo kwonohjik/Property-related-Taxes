@@ -140,6 +140,24 @@ async function run(c: Case): Promise<Row> {
 
 const FIXTURE = "__tests__/api/fixtures/split-part-carryover-prep1-grid.json";
 
+/**
+ * P1 밖의 **의도된 세액 변경** — 기준값(P1 이전 master)은 그대로 두고 여기서 새 값을 고정한다.
+ * 이월과세 환산(증여자 취득가액 모름) × 소유자 분리: 시나리오 A가 본인 파트를 환산한다(소득세법 §114⑦ · 계획서
+ * `docs/02-design/features/carryover-estimated-owner-split.plan.md` Q-1 ①). 종전 값은 요청에 실린 파트 취득가액(실가)을 그대로 썼다 —
+ * 화면 경로(④)는 그 칸을 보내지 않아 0을 안분했다. `phd` 컴패니언 행은 컴패니언 스키마가 PHD 입력을 받지 않아 일반 환산과 같다.
+ */
+const INTENDED: Record<string, Row> = {
+  "G1|est|building_only|same|-|primary": [200, 49_733_000],
+  "G1|est|building_only|same|-|companion": [200, 117_400_000],
+  "G1|est|building_only|diff|-|primary": [200, 84_712_000],
+  "G1|est|building_only|diff|-|companion": [200, 154_220_000],
+  "G1|est|land_only|diff|-|primary": [200, 140_220_000],
+  "G1|est|land_only|diff|-|companion": [200, 212_028_000],
+  "G1|phd|building_only|same|-|companion": [200, 131_400_000],
+  "G1|phd|building_only|diff|-|companion": [200, 154_220_000],
+  "G1|phd|land_only|diff|-|companion": [200, 212_028_000],
+};
+
 describe("파트 서브객체 없는 기존 입력 회귀 격자 (P1 전 master 대조)", () => {
   it("격자 규모", () => {
     expect(buildGrid().length).toBe(216 + 4 * 5 * 3 * 2 * 2 * 2 * 2);
@@ -156,7 +174,7 @@ describe("파트 서브객체 없는 기존 입력 회귀 격자 (P1 전 master 
     const base = JSON.parse(readFileSync(FIXTURE, "utf8")) as Record<string, Row>;
     const diffs: string[] = [];
     for (const c of grid) {
-      const [bs, bt] = base[c.id];
+      const [bs, bt] = INTENDED[c.id] ?? base[c.id];
       const [ps, pt] = got[c.id];
       if (bs === 200 ? !(ps === 200 && pt === bt) : ps !== bs) diffs.push(`${c.id}: 종전 ${bs}/${bt} → P1 ${ps}/${pt}`);
     }

@@ -357,8 +357,12 @@ export function refineSplitAcquisitionInputs(
   if (!d.landAcquisitionDate && !selfOwnsSplit) return;
   const separate = d.isSeparateAcquisition === true;
 
-  const landMode = partMode(d.landAcqMode, d);
-  const buildingMode = partMode(d.buildingAcqMode, d);
+  // 이월과세 소유자 분리 + 증여자 취득가액 모름 — 엔진 시나리오 A가 두 파트를 환산으로 바꾼다(`ownerSplitDonorConversion`). ④는 수증자 쪽
+  //   방식(실가)을 싣으므로 그대로 읽으면 환산 분모(양도시 파트 기준시가) 요구가 빠져 엔진이 칸 없는 400을 낸다(⑧ `ownerSplitDonorEstimated`와 같은 조건).
+  const donorConversion =
+    selfOwnsSplit && (d.carryoverTaxation as { useEstimatedAcquisition?: boolean } | undefined)?.useEstimatedAcquisition === true && !d.preHousingDisclosure;
+  const landMode = donorConversion ? "estimated" : partMode(d.landAcqMode, d);
+  const buildingMode = donorConversion ? "estimated" : partMode(d.buildingAcqMode, d);
 
   // V8 — 소유자 분리 + 동시 취득: 취득가액을 나누는 근거가 §166⑥ 기준시가 비율뿐일 때.
   // ⚠️ ⑧ V8은 비율이 쓰이는지 보지 않고 요구하지만, ⑫는 **엔진이 비율을 실제로 쓰는 조건**

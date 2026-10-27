@@ -447,6 +447,34 @@ export function partDonorEstimated(
   };
 }
 
+/**
+ * 이월과세(자산 전체) 소유자 분리 + **증여자 취득가액 모름(일반 환산)** — 엔진 시나리오 A가 본인 파트를 환산한다(파트 양도가액 × 파트 취득시 기준시가
+ * ÷ 파트 양도시 기준시가 · 파트별 개산공제). 반환은 **본인 소유 파트**만 참이다(비소유 파트는 계산에서 버려진다).
+ * 엔진 `ownerSplitDonorConversion`(transfer-tax-carryover.ts)·⑫ refine 2a와 같은 조건 — PHD·APD 환산은 3시점 경로라 제외한다.
+ * 계획서 `docs/02-design/features/carryover-estimated-owner-split.plan.md`(Q-1 ① 파트별 환산).
+ */
+export function ownerSplitDonorEstimated(
+  asset: Parameters<typeof nonPurchaseOwnerSplit>[0] & {
+    carryover?: { useEstimatedAcquisition?: boolean; estimationMode?: string | null };
+  },
+): { land: boolean; building: boolean } {
+  const c = asset.carryover;
+  const on =
+    asset.acquisitionCause === "carryover_gift" && nonPurchaseOwnerSplit(asset) && c?.useEstimatedAcquisition === true
+    && c.estimationMode !== "phd" && c.estimationMode !== "apd";
+  return { land: on && asset.selfOwns === "land_only", building: on && asset.selfOwns === "building_only" };
+}
+
+/**
+ * 소유자 분리 화면의 개별주택가격 총액 칸을 닫는가 — 이월과세 환산 소유자 분리 **주택**은 그 총액을 이월과세 블록의 「증여자 취득 당시 기준시가」
+ * (`carryover.donorStandardPriceAtAcquisition`)로 받는다(④ `topLevelOverrides`가 본문 총액을 그 값으로 덮는다). 같은 의미의 칸이 두 곳이면 한쪽이
+ * 조용히 버려진다(리뷰 게이트 D-2). ⑤ 칸 노출·⑧ V8 총액 필수가 이 술어를 같이 읽는다. 비주택 건물은 단가 × 면적 칸이 토지 기준시가 입력이라 그대로 둔다.
+ */
+export function ownerSplitDonorTotalFromCarryover(asset: Parameters<typeof ownerSplitDonorEstimated>[0]): boolean {
+  const e = ownerSplitDonorEstimated(asset);
+  return (e.land || e.building) && asset.assetKind === "housing";
+}
+
 // ─── 비주택 건물 2001.1.1.~2005.4.29. 상속·증여 — 일괄 고시 오피스텔·상업용 건물인가 (계획서 §13.5) ───────────────
 
 /**

@@ -29,6 +29,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { saleStdPlacement, effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { normalizeBuildingCauseInputs } from "@/lib/calc/transfer-land-part-cause";
+import { ownerSplitDonorTotalFromCarryover } from "@/lib/calc/transfer-land-part-cause";
 import { ownerSplitHousingNeedsBuildingStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { SplitPartCapexFields } from "./SplitPartCapexFields";
@@ -59,6 +60,12 @@ export function NonPurchaseSplitInputsBlock(props: {
   const ownedLabel = asset.selfOwns === "building_only" ? "건물" : "토지";
   // 주택 소유자 분리 — 개별주택가격 비례 안분의 분모(나목). 매매 경로(`CompanionAcqStdPriceSection`)와 같은 술어를 쓴다.
   const showAcqBuildingStd = ownerSplitHousingNeedsBuildingStd(asset);
+  // 이월과세는 취득가액이 증여자 취득 당시 금액이라(소득세법 §97의2①1호) 이 칸도 증여자 취득 당시 기준시가다 — 시나리오 A의 파트 환산 분자·안분 비율
+  //   (계획서 `carryover-estimated-owner-split.plan.md` Q-2). 미적용(B)의 증여일 평가액 안분도 같은 비율을 쓴다(기존 한계 — 계획서 V-1).
+  const donorBasis = asset.acquisitionCause === "carryover_gift";
+  const acqStdRefDate = donorBasis ? (asset.carryover?.donorAcquisitionDate ?? "") : asset.acquisitionDate;
+  // 증여자 취득가액을 모르는(환산) 주택은 총액을 이월과세 블록에서 받는다 — 같은 칸을 두 번 받지 않는다(⑧ V8과 같은 술어).
+  const donorTotalFromCarryover = ownerSplitDonorTotalFromCarryover(asset);
 
   return (
     <div className="space-y-3" data-testid="non-purchase-split-inputs">
@@ -77,29 +84,35 @@ export function NonPurchaseSplitInputsBlock(props: {
              (components/calc/CLAUDE.md "같은 의미 폼 필드의 양방향 read/write" 규약). */}
       <div className="space-y-1.5">
         <label className="block text-sm font-medium">
-          취득시 기준시가 (원) <span className="text-destructive">*</span>
+          {donorBasis ? "증여자 취득 당시 기준시가 (원)" : "취득시 기준시가 (원)"} <span className="text-destructive">*</span>
         </label>
-        <StandardPriceInput
-          propertyKind={toPropertyKind(asset.assetKind)}
-          totalPrice={asset.standardPriceAtAcq ?? ""}
-          data-field="standardPriceAtAcq"
-          fieldArea="acquisitionArea"
-          fieldPricePerSqm="standardPricePerSqmAtAcq"
-          onTotalPriceChange={(v) => onChange({ standardPriceAtAcq: v })}
-          pricePerSqm={asset.standardPricePerSqmAtAcq ?? ""}
-          onPricePerSqmChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
-          area={asset.acquisitionArea ?? ""}
-          onAreaChange={(v) => onChange({ acquisitionArea: v })}
-          jibun={asset.addressJibun}
-          dong={asset.addressDong}
-          ho={asset.addressHo}
-          referenceDate={asset.acquisitionDate}
-          hint={
-            showAcqBuildingStd
-              ? "개별주택가격(부수토지 포함)을 아래 토지·건물 기준시가 비율로 토지분·건물분에 나눕니다 (§166⑥). 토지 기준시가 = ㎡당 공시지가 × 면적"
-              : "토지·건물 안분 비율 산정 기준 (§166⑥)"
-          }
-        />
+        {donorTotalFromCarryover ? (
+          <p className="text-caption leading-snug text-muted-foreground" data-testid="owner-split-donor-total-note">
+            개별주택가격 총액은 위 이월과세 정보의 「증여자 취득 당시 기준시가」를 씁니다 — 아래 토지·건물 기준시가 비율로 토지분·건물분에 나눕니다 (§166⑥).
+          </p>
+        ) : (
+          <StandardPriceInput
+            propertyKind={toPropertyKind(asset.assetKind)}
+            totalPrice={asset.standardPriceAtAcq ?? ""}
+            data-field="standardPriceAtAcq"
+            fieldArea="acquisitionArea"
+            fieldPricePerSqm="standardPricePerSqmAtAcq"
+            onTotalPriceChange={(v) => onChange({ standardPriceAtAcq: v })}
+            pricePerSqm={asset.standardPricePerSqmAtAcq ?? ""}
+            onPricePerSqmChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
+            area={asset.acquisitionArea ?? ""}
+            onAreaChange={(v) => onChange({ acquisitionArea: v })}
+            jibun={asset.addressJibun}
+            dong={asset.addressDong}
+            ho={asset.addressHo}
+            referenceDate={acqStdRefDate}
+            hint={
+              showAcqBuildingStd
+                ? "개별주택가격(부수토지 포함)을 아래 토지·건물 기준시가 비율로 토지분·건물분에 나눕니다 (§166⑥). 토지 기준시가 = ㎡당 공시지가 × 면적"
+                : "토지·건물 안분 비율 산정 기준 (§166⑥)"
+            }
+          />
+        )}
         {/*
           🔴 **주택은 여기서 막다른 길이었다** (2026-09-05 · 코드리뷰 Q14).
 
@@ -123,12 +136,12 @@ export function NonPurchaseSplitInputsBlock(props: {
           toPropertyKind(asset.assetKind) !== "building_non_residential" && (
             <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-2 dark:bg-amber-950/40">
               <LandPriceLookupField
-                label="취득시 토지 공시지가"
+                label={donorBasis ? "증여자 취득 당시 토지 공시지가" : "취득시 토지 공시지가"}
                 data-field="standardPricePerSqmAtAcq"
                 pricePerSqm={asset.standardPricePerSqmAtAcq ?? ""}
                 onPricePerSqmChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
                 area={parseDecimal(asset.acquisitionArea) || undefined}
-                referenceDate={asset.acquisitionDate}
+                referenceDate={acqStdRefDate}
                 jibun={asset.addressJibun}
                 hint="취득일 직전 고시 개별공시지가 (원/㎡) — 토지 기준시가(개별주택가격을 나누는 비율의 토지 몫) 산정 근거 (§99①1호 가목)"
               />

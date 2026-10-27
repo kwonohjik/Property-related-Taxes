@@ -232,6 +232,9 @@ function calcCarryoverScenariosCore(
     // 소유자 분리 — ④가 분리 계산 진입용으로 본문 취득일(증여 등기일)과 같은 토지 취득일을 싣는다. 바꾸지 않으면 토지 파트만 증여 등기일부터
     //   기산된다(§95④ 단서 위반 — 토지만 본인 117,060,000 ↔ 88,550,000, 계획서 `owner-split-residue-followups.plan.md` C-1). 다른 날짜는 별개 취득이라 두지 않는다.
     ...(ownerSplitSameDayLand(rawInput) ? { landAcquisitionDate: ct.donorAcquisitionDate } : {}),
+    // 소유자 분리 + 증여자 취득가액 모름 — 위 `acquisitionPrice: 0`은 재환산 전제인데, 소유자 분리는 파트 방식(실가)으로 그 0을 안분했다(파트 취득가액 0 ·
+    //   건물만 204,930,000). 양도한 파트 자체를 환산한다(파트별 개산공제 · 매매 소유자 분리와 같은 모델 — 계획서 `carryover-estimated-owner-split.plan.md`).
+    ...(ownerSplitDonorConversion(rawInput, ct) ? { landAcqMode: "estimated" as const, buildingAcqMode: "estimated" as const } : {}),
     /**
      * 🔑 **부담부증여의 취득가액 축은 여기서만 움직인다**(D-7a).
      *
@@ -623,6 +626,16 @@ export function calcCarryoverScenarios(...args: Parameters<typeof calcCarryoverS
 // ============================================================
 // 내부 유틸
 // ============================================================
+
+/** 소유자 분리 + 증여자 취득가액 모름(일반 환산) — ⑧ `ownerSplitDonorEstimated`·⑫ refine 2a와 같은 조건. PHD·APD는 3시점 경로, 부담부증여는 §159 경로라 제외. */
+function ownerSplitDonorConversion(
+  rawInput: TransferTaxInput,
+  ct: NonNullable<TransferTaxInput["carryoverTaxation"]>,
+): boolean {
+  // 부담부증여는 §159 경로라 제외 — ⑧ `ownerSplitDonorEstimated`(`nonPurchaseOwnerSplit`)도 제외한다(리뷰 게이트 D-2).
+  return !!rawInput.selfOwns && rawInput.selfOwns !== "both" && ct.useEstimatedAcquisition === true && !rawInput.preHousingDisclosure
+    && !isBurdenedGiftCarryover(rawInput);
+}
 
 /** 소유자 분리이고 토지 취득일이 본문 취득일과 같은 날인가 — 시나리오 A에서 두 날짜를 함께 증여자 취득일로 옮긴다(C-1). */
 function ownerSplitSameDayLand(rawInput: TransferTaxInput): boolean {

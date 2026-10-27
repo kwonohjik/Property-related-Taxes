@@ -43,6 +43,7 @@ import { LAND_CAUSE_SAME_DAY_MESSAGE } from "./transfer-land-part-cause";
 import { buildingHouseKindSent } from "./transfer-building-sec164-bridge";
 import { buildingBundledStdPriceSent } from "./transfer-land-part-cause";
 import { newConstructionLandOnly } from "./transfer-land-part-cause";
+import { ownerSplitDonorTotalFromCarryover } from "./transfer-land-part-cause";
 import { validateAcqAppraisalPair } from "./transfer-acq-appraisal";
 import { deriveBuildingSec164Total } from "./transfer-building-sec164-bridge";
 import { buildingSec164Applies } from "./transfer-building-sec164-bridge";
@@ -410,7 +411,9 @@ export function validateSplitDirectInputs(
   ) {
     const hasPerSqm = opt(asset.standardPricePerSqmAtAcq) != null;
     const hasArea = parseDecimal(asset.acquisitionArea) > 0;
-    const hasTotal = opt(asset.standardPriceAtAcq) != null;
+    // 이월과세 환산 소유자 분리 주택 — 총액은 이월과세 블록의 증여자 취득 당시 기준시가가 정본이다(④ `topLevelOverrides`가 이 칸을 덮는다 · ⑤도 칸을 닫는다).
+    const donorTotal = ownerSplitDonorTotalFromCarryover(asset);
+    const hasTotal = donorTotal || opt(asset.standardPriceAtAcq) != null;
     if (!hasPerSqm || !hasArea || !hasTotal) {
       const ownerMsg = `${label}: 토지·건물 소유자가 다르면 본인 소유분만 과세하므로 취득가액을 토지·건물로 나눠야 합니다 — 취득 당시 ㎡당 개별공시지가·면적·기준시가 총액을 입력하세요 (소득세법 §99①1호·시행령 §166⑥).`;
       // 비어 있는 칸으로 — 메시지 순서(㎡당 개별공시지가 → 면적 → 기준시가 총액)대로 첫 빈 칸
