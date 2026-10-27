@@ -15,6 +15,7 @@
  * 재현하면 dual-truth가 되므로, **총액이 자산 필드와 1:1인 단순 경로에서만** 검증한다.
  * 그 외 경로는 미검증(엔진이 음수를 그대로 노출 — 눈에 띄는 이상값).
  */
+import { bgHouseSplitActive } from "./bg-house-split";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import { isSplitPairOverflow } from "@/lib/tax-engine/transfer-tax-split-gain";
@@ -363,6 +364,9 @@ export function validateSplitDirectInputs(
   //   (`validateSplitCarryoverInputs`)가 C 사실로 이미 걸었으므로 여기서는 양도가액 구분·양도시 기준시가·파트 자본적지출만 본다.
   const carryoverSplit = effectiveCarryoverDonorSplit(asset);
   if (!isSplitValidationActive(rawAsset)) return null;
+  // 주택·건물 부담부증여 × 토지·건물 취득일 다름 — 파트 값은 부담부증여 블록이 받고(§159 · `validateBgHouseSplit`) 일반 분리 칸(취득가액·방식·양도가액 구분)은
+  //   화면에 없다(`LandBuildingSplitSection`은 부담부증여면 그리지 않는다). 여기서 요구하면 칸 없는 차단이다(계획서 `bg-carryover-non-gb-building-date.plan.md` §8 V-1).
+  if (bgHouseSplitActive(rawAsset)) return null;
 
   const causeErr = carryoverSplit ? null : validateLandPartCause(asset, label, { ...opts, formTransferDate });
   if (causeErr) return causeErr;

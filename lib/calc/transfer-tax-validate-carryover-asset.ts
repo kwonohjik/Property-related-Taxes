@@ -10,8 +10,6 @@ import { validateSplitCarryoverParts } from "./transfer-tax-validate-split-carry
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import { effectiveBuildingCarryoverMix } from "./transfer-land-part-cause";
-import { burdenedGiftCarryoverDonorSplitRequested } from "./transfer-land-part-cause";
-import { BURDENED_GIFT_DONOR_PART_DATES_MESSAGE, BURDENED_GIFT_GENERAL_BUILDING_HINT } from "@/lib/tax-engine/transfer-split-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
 import { validateDonorBuilt } from "./transfer-tax-validate-donor-built";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -31,9 +29,6 @@ export function validateCarryoverAsset(
   formTransferDate: string | undefined,
   ctx: { isNonPrimaryAsset: boolean; form?: TransferFormData },
 ): string | null {
-  // 부담부증여 × 토글 C — 토지·건물을 나눠 계산하지 못한다. 다른 칸보다 먼저(어느 값을 넣어도 계산할 수 없다).
-  if (burdenedGiftCarryoverDonorSplitRequested(asset, { isNonPrimary: ctx.isNonPrimaryAsset }))
-    return fieldError("carryoverDonorSplit", `${label}: ${BURDENED_GIFT_DONOR_PART_DATES_MESSAGE}${asset.assetKind === "building" ? BURDENED_GIFT_GENERAL_BUILDING_HINT : ""}.`);
   if (effectiveCarryoverDonorSplit(asset, { isNonPrimary: ctx.isNonPrimaryAsset })) {
     // 파트 입력(화면 위→아래) → 양도가액 구분·양도시 기준시가·파트 자본적지출(축 A).
     return (

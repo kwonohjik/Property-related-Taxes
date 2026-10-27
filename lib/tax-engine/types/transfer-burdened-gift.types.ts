@@ -104,6 +104,11 @@ export interface BurdenedGiftInfo {
   // === 시가 모드 직접 입력 (valuationMode === "sangjeungbeop_market" 시 필수) ===
   /** 양도시 시가 평가액(총액). 시가 모드에서 필수. */
   marketValueAtTransfer?: number;
+  /**
+   * 시가 모드 양도시 평가액의 토지분·건물분(합계 = `marketValueAtTransfer`) — 주택·건물 토지·건물 취득일이 다를 때 화면이 받는다.
+   * 있으면 §159①의 파트 A로 그대로 쓴다. 없으면 양도시 기준시가 비율로 나눈다(「소득세법 시행령」 제166조 제6항 — 종전 그대로).
+   */
+  marketValueByPart?: { land: number; building: number };
   /** 취득시 시가 평가액(총액). 시가 모드에서 필수. */
   marketValueAtAcquisition?: number;
 

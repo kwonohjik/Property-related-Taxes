@@ -9,6 +9,7 @@
  * 계획서: docs/00-pm/burdened-gift-appraisal-sales-case-acquisition.plan.md §4·§5.3~5.4
  */
 
+import { bgHouseSplitActive } from "./bg-house-split";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { toOptionalDate } from "@/lib/api/date-coerce";
@@ -77,7 +78,13 @@ export function bgPresumedBlock(
 /** K-6/K-7 금액 입력 형태 — K-4 실지취득가액 블록과 같은 3분기(자산 종류별). */
 export type BgPresumedInputKind = "split" | "land" | "total";
 
-export function bgPresumedInputKind(assetKind: AssetForm["assetKind"]): BgPresumedInputKind {
+/**
+ * 자산을 넘기면 주택·건물 부담부증여 × 토지·건물 취득일 다름(`bgHouseSplitActive`)도 토지·건물 두 칸이다 — 다른 날 따로 취득해 총액을 나눌 근거가 없다
+ * (설계서 `bg-house-building-split.design.md` Q-2 a). 자산 종류만 넘기면 종전 3분기다.
+ */
+export function bgPresumedInputKind(assetOrKind: AssetForm["assetKind"] | Partial<AssetForm>): BgPresumedInputKind {
+  const assetKind = typeof assetOrKind === "string" ? assetOrKind : assetOrKind.assetKind;
+  if (typeof assetOrKind !== "string" && bgHouseSplitActive(assetOrKind as AssetForm)) return "split";
   if (assetKind === "general_building") return "split";
   if (assetKind === "land") return "land";
   return "total";
@@ -96,7 +103,7 @@ type AmountAsset = Pick<
  * (Zod refine `presumed*` 중 하나가 양수여야 통과 · 엔진 STEP 4 분기와 같은 축).
  */
 export function hasBgPresumedAmount(asset: AmountAsset): boolean {
-  switch (bgPresumedInputKind(asset.assetKind)) {
+  switch (bgPresumedInputKind(asset)) {
     case "split":
       return (
         (parseAmount(asset.bgPresumedAcquisitionLand) || 0) > 0 ||
@@ -113,7 +120,7 @@ export function hasBgPresumedAmount(asset: AmountAsset): boolean {
 export function firstEmptyBgPresumedField(
   asset: Pick<AssetForm, "assetKind">,
 ): "bgPresumedAcquisitionLand" | "bgPresumedAcquisitionTotal" {
-  return bgPresumedInputKind(asset.assetKind) === "total"
+  return bgPresumedInputKind(asset) === "total"
     ? "bgPresumedAcquisitionTotal"
     : "bgPresumedAcquisitionLand";
 }

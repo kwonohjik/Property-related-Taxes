@@ -10,6 +10,7 @@
 
 // ⚠️ `transfer-tax-api-helpers`가 이 파일을 import하므로 **원 위치에서 직접** 가져온다
 //    (helpers 경유 re-export를 쓰면 순환 import가 된다).
+import { bgHouseSplitInfoPatch, bgHouseSplitMode } from "./bg-house-split";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 import { scaleBurdenedGiftInfo } from "@/lib/tax-engine/burdened-gift-valuation";
@@ -52,6 +53,8 @@ export interface BurdenedGiftInfoPayload {
   annualRentTotal: number;
   mortgageSetAmount?: number;
   marketValueAtTransfer?: number;
+  /** 시가 평가의 토지분·건물분 평가액 — 주택·건물 토지·건물 취득일 다름에서만(`bgHouseSplitActive`). */
+  marketValueByPart?: { land: number; building: number };
   marketValueAtAcquisition?: number;
   /** [신설] 취득가액 산정방식 (K-4 실지·K-5 환산·K-6 매매사례가액·K-7 감정가액, 시가 모드). */
   acquisitionMethod?: "actual" | "converted" | "salesCase" | "appraisal";
@@ -154,12 +157,19 @@ function buildCarryoverDonorBasis(
   const byPart = raw && raw.land > 0 && raw.building > 0 ? gbBgGiftTaxedValueByPart(primary) : undefined;
   // 비율에만 쓰므로 지분 축소 전 값 그대로다. 평가액 한쪽이라도 비면 싣지 않는다 — ⑧이 막고, 직접 호출은 엔진이 양도가액 비율로 나눈다.
   // 당초 증여자의 건물 취득일 — 둘 다 이월과세일 때만. 비면 싣지 않는다(⑧이 막는다 · 토지 날짜로 채우지 않는다).
-  const buildingDonorDate = gbBgSplitsGiftValuation(primary) ? primary.buildingCarryover?.donorAcquisitionDate : undefined;
+  // 주택·건물 이월과세 토글 C(당초 증여자가 토지·건물을 다른 날 취득)도 같은 키다(설계서 `bg-house-building-split.design.md` §5.2).
+  const houseSplitC = bgHouseSplitMode(primary) === "carryover";
+  const buildingDonorDate = gbBgSplitsGiftValuation(primary) || houseSplitC ? primary.buildingCarryover?.donorAcquisitionDate : undefined;
   const basis = {
     ...buildBothPartsDonorBasis(primary),
     ...(byPart && byPart.land + byPart.building > 0 ? { giftValuationByPart: byPart } : {}),
     ...(buildingDonorDate ? { buildingDonorAcquisitionDate: buildingDonorDate } : {}),
   };
+  // 주택·건물 토글 C — 당초 증여자 실지취득가액도 토지·건물 두 칸이 정본이다(총액 칸 미전송). 토글이 꺼져 있으면 파트 칸의 남은 값을 싣지 않는다.
+  if (primary.assetKind === "housing" || primary.assetKind === "building")
+    return houseSplitC
+      ? { ...basis, actualAcquisitionTotal: undefined }
+      : { ...basis, actualLandAcquisitionPrice: undefined, actualBuildingAcquisitionPrice: undefined };
   const parts = bgCarryoverPartsPayload(primary);
   if (!parts) return basis;
   if (parts.land && parts.building) return { ...basis, parts };
@@ -224,7 +234,7 @@ function buildCoDonorPresumed(
   if (!isBgPresumedMethod(primary.bgAcquisitionMethod)) return {};
   const num = (v: string | undefined) =>
     v !== undefined && v !== "" ? parseAmount(v) : undefined;
-  switch (bgPresumedInputKind(primary.assetKind)) {
+  switch (bgPresumedInputKind(primary)) {
     case "split":
       return {
         presumedLandAcquisitionPrice: num(primary.bgCoDonorPresumedAcquisitionLand),
@@ -287,7 +297,7 @@ function buildPresumedAcquisition(
   if (!isBgPresumedMethod(primary.bgAcquisitionMethod) || primary.acquisitionCause === "carryover_gift") return {};
   const num = (v: string | undefined) =>
     v !== undefined && v !== "" ? parseAmount(v) : undefined;
-  switch (bgPresumedInputKind(primary.assetKind)) {
+  switch (bgPresumedInputKind(primary)) {
     case "split":
       return {
         presumedLandAcquisitionPrice: num(primary.bgPresumedAcquisitionLand),
@@ -544,13 +554,15 @@ export function buildBurdenedGiftInfo(
   // F-3 (2026-05-12): commercial_building도 단일 기준시가 fallback 패턴 적용.
   //   cb*·호별고시가는 환산취득가(useEstimatedAcquisition) 전용 — 부담부증여 모드에서는 사용자가
   //   standardPriceAtTransfer / standardPriceAtAcq에 상증법 §61 평가액 직접 입력.
-  return {
+  const single = {
     ...common,
     landStdPriceAtTransfer: 0,
     buildingStdPriceAtTransfer: parseAmount(primary.standardPriceAtTransfer) || 0,
     landStdPriceAtAcquisition: 0,
     buildingStdPriceAtAcquisition: parseAmount(primary.standardPriceAtAcq) || 0,
   };
+  // 주택·건물 × 토지·건물 취득일 다름 — 파트 값으로 덮는다(같은 날이면 파트 칸의 남은 값을 비운다 · `bgHouseSplitInfoPatch`).
+  return { ...single, ...bgHouseSplitInfoPatch(primary) };
 }
 
 // ============================================================

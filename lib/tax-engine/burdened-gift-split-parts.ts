@@ -84,7 +84,9 @@ export function bgSplitPartsOf(b: TransferBurdenedGiftBreakdown): { land: Burden
  *    총액을 기준시가로 나누면 근거 없는 자동 안분이다(설계서 Q-2 a). 이월과세 시나리오 A는 당초 증여자 값(`carryoverDonorBasis`)이 이미 치환된 info다.
  */
 export function assertBgSplitInputs(info: NonNullable<TransferTaxInput["burdenedGiftInfo"]>): void {
-  if (!(info.landStdPriceAtTransfer > 0) || !(info.buildingStdPriceAtTransfer > 0))
+  // 시가 평가에 토지분·건물분 평가액이 있으면 그것이 파트 A다 — 기준시가 비율을 쓰지 않는다.
+  const marketByPart = info.valuationMode === "sangjeungbeop_market" && info.marketValueByPart !== undefined;
+  if (!marketByPart && (!(info.landStdPriceAtTransfer > 0) || !(info.buildingStdPriceAtTransfer > 0)))
     throw new TaxCalculationError(
       TaxErrorCode.INVALID_INPUT,
       "[burdened_gift] 토지와 건물의 취득일이 다르면 양도시 토지 기준시가와 건물 기준시가를 따로 입력해야 합니다 — 토지·건물 파트의 평가액을 그 값으로 나눕니다(「소득세법 시행령」 제166조 제6항). 주택이면 개별주택가격을 토지분(개별공시지가 × 면적)과 건물분(국세청 기준시가) 비율로 나눈 값입니다.",

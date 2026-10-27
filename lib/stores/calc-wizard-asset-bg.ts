@@ -28,6 +28,12 @@ export interface BurdenedGiftFormSlice {
   bgMortgageSetAmount: string;
   /** 시가 모드 양도시 평가액 (총액). sangjeungbeop_market 시 필수. */
   bgMarketValueAtTransfer: string;
+  /**
+   * 시가 모드 양도시 평가액의 토지분·건물분 — 주택·건물 부담부증여에서 토지·건물 취득일이 다를 때만 받는다(`bgHouseSplitActive`).
+   * 합계 = `bgMarketValueAtTransfer`. 「소득세법 시행령」 제159조 제1항의 파트 A다(설계서 `bg-house-building-split.design.md` Q-3 a).
+   */
+  bgMarketValueLand: string;
+  bgMarketValueBuilding: string;
   /** 시가 모드 취득시 평가액 (총액). sangjeungbeop_market 시 필수. */
   bgMarketValueAtAcquisition: string;
   /**

@@ -18,6 +18,7 @@ import { toDate } from "./date-coerce";
 import { refineBgDonorBuilt } from "./transfer-tax-schema-donor-built";
 import { refineGbBgCarryoverBundled } from "./transfer-tax-schema-donor-built";
 import { refineGbBgCarryoverParts } from "./transfer-tax-schema-donor-built";
+import { refineBgMarketValueByPart } from "./transfer-tax-schema-donor-built";
 import { refineCarryoverTaxation } from "./transfer-tax-schema-companion-refines";
 import { refineMixedUsePresence } from "./transfer-tax-schema-mixed-use";
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
@@ -501,6 +502,7 @@ export function refinePropertyRequiredInputs(
   refineBgDonorBuilt(data as Parameters<typeof refineBgDonorBuilt>[0], ctx); // 부담부증여 × 증여자 신축·증축 (PR-4)
   refineGbBgCarryoverBundled(data as Parameters<typeof refineGbBgCarryoverBundled>[0], ctx); // 일반건물 부담부증여 × 이월과세 × 묶음 (F27 B PR-3)
   refineGbBgCarryoverParts(data as Parameters<typeof refineGbBgCarryoverParts>[0], ctx); // 일반건물 부담부증여 × 이월과세 파트 정합 (gb-bg-part-carryover-calc)
+  refineBgMarketValueByPart(data as Parameters<typeof refineBgMarketValueByPart>[0], ctx); // 주택·건물 부담부증여 토지·건물 취득일 다름 — 시가 파트 평가액 (bg-house-building-split Q-3 a)
   refinePrimaryAcquisitionInputs(data, ctx);
   refineMixedUsePresence(data, ctx); // MU-7 (2차 점검)
   refineHouseholdRequiredInputs(data, ctx); // O3·O4·H-3·유예 나목·M2 (2차 점검)

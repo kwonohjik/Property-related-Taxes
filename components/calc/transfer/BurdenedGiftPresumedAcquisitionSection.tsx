@@ -184,7 +184,7 @@ interface SectionProps {
  */
 export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method, carryover, fractionalSplit, basisNote, transferDate, hidePart }: SectionProps) {
   const label = BG_PRESUMED_LABEL[method];
-  const kind = bgPresumedInputKind(asset.assetKind);
+  const kind = bgPresumedInputKind(asset);
   // 이월과세면 당초 증여자 칸을 읽고 쓴다 — 칸 이름만 다르고 입력 형태·검증 규칙은 같다.
   const prefix = carryover ? "당초 증여자의 " : "";
   // 증축 5년 이내 × 감정가액 — §114조의2 가산세 base인 「증축한 부분의 감정가액」을 받는다(엔진·⑧과 같은 술어). 이월과세·축 B는 받지 않는다.
@@ -229,7 +229,7 @@ export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method
       {kind === "split" ? (
         <>
           {hidePart !== "land" && (
-          <FieldCard label={`${prefix}토지 ${label}`} hint={PRESUMED_HINT[method]}>
+          <FieldCard label={`${prefix}토지 ${label}`} hint={PRESUMED_HINT[method]} field={carryover ? "bgCoDonorPresumedAcquisitionLand" : "bgPresumedAcquisitionLand"}>
             <CurrencyInput
               label=""
               hideUnit
@@ -240,7 +240,7 @@ export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method
           </FieldCard>
           )}
           {hidePart !== "building" && (
-          <FieldCard label={`${prefix}건물 ${label}`}>
+          <FieldCard label={`${prefix}건물 ${label}`} field={carryover ? "bgCoDonorPresumedAcquisitionBuilding" : "bgPresumedAcquisitionBuilding"}>
             <CurrencyInput
               label=""
               hideUnit

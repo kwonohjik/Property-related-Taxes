@@ -90,7 +90,7 @@ export function validateDonorBuiltBg(
       `${label}: 당초 증여자가 증축한 건물을 증축일부터 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 증축한 부분의 감정가액에 5% 가산세가 붙습니다 — 증축한 부분의 감정가액을 입력하세요(건물 전체로 대신할 수 없습니다).`,
     );
   // 부분이 전체를 넘을 수 없다 — 엔진과 같은 상한(당초 증여자 값: 분리 입력이면 건물, 총액 입력이면 총액)
-  const kind = bgPresumedInputKind(asset.assetKind);
+  const kind = bgPresumedInputKind(asset);
   const cap = kind === "split" ? parseAmount(asset.bgCoDonorPresumedAcquisitionBuilding) : parseAmount(asset.bgCoDonorPresumedAcquisitionTotal);
   if (cap > 0 && extensionAppraisal > cap)
     return fieldError(

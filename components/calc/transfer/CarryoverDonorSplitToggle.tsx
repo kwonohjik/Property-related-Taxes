@@ -16,7 +16,6 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { isLandBuildingSplitable } from "@/lib/calc/self-owns-scope";
 import { effectiveCarryoverDonorSplit } from "@/lib/calc/transfer-land-part-cause";
 import { burdenedGiftCarryoverDonorSplitRequested } from "@/lib/calc/transfer-land-part-cause";
-import { BURDENED_GIFT_DONOR_PART_DATES_MESSAGE, BURDENED_GIFT_GENERAL_BUILDING_HINT } from "@/lib/tax-engine/transfer-split-part-cause";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 토글이 놓일 수 있는 자산 — 주택·건물(겸용 아님). ⑤ 표시 게이트이자 안내 노출 게이트(술어 `effectiveCarryoverDonorSplit`의 자산 종류 축과 같다). */
@@ -48,11 +47,12 @@ export function CarryoverDonorSplitToggle({
 
   const checked = asset.carryoverDonorSplit === true;
   const ownerSplit = (asset.selfOwns ?? "both") !== "both";
-  // 부담부증여 — 켜면 계산하지 못한다(⑧이 같은 술어로 막는다). 「이월과세로 계산합니다」 무시 안내 대신 차단 사실을 알린다.
-  const bgBlocked = burdenedGiftCarryoverDonorSplitRequested(asset);
+  // 부담부증여 — 일반 양도의 파트 서브폼 대신 이월과세 블록의 「건물분 증여자 취득일」과 「당초 증여자」 블록의 토지·건물 값으로 계산한다
+  //   (설계서 `bg-house-building-split.design.md` §5.2). ④·⑧은 `bgHouseSplitMode`로 같은 조건을 읽는다.
+  const bgSplit = burdenedGiftCarryoverDonorSplitRequested(asset);
   // 저장값 ON인데 술어가 거짓 — ④·⑧은 이 토글을 무시한다(일반 이월과세로 계산). 화면이 ON만 보이면 적용되는 것으로 읽힌다.
   const inactiveReason =
-    checked && !bgBlocked && !effectiveCarryoverDonorSplit(asset)
+    checked && !bgSplit && !effectiveCarryoverDonorSplit(asset)
       ? ownerSplit
         ? "토지·건물 소유자가 다른 자산"
         : "취득 원인이 이월과세(증여)가 아님"
@@ -70,11 +70,11 @@ export function CarryoverDonorSplitToggle({
         data-testid="carryover-donor-split-toggle"
         data-field="carryoverDonorSplit"
       />
-      {bgBlocked && (
-        <ToneCard tone="rose">
-          <p className="text-caption text-rose-800 dark:text-rose-200" data-testid="carryover-donor-split-bg-blocked">
-            {BURDENED_GIFT_DONOR_PART_DATES_MESSAGE}
-            {asset.assetKind === "building" ? BURDENED_GIFT_GENERAL_BUILDING_HINT : ""}.
+      {bgSplit && (
+        <ToneCard tone="amber">
+          <p className="text-caption text-amber-900 dark:text-amber-200" data-testid="carryover-donor-split-bg-note">
+            부담부증여 — 토지·건물을 각각 당초 증여자가 그 자산을 취득한 날부터 셉니다(「소득세법」 제95조 제4항 단서). 아래 이월과세 블록에 「건물분 증여자 취득일」을,
+            「당초 증여자」 블록에 토지·건물 값을 따로 입력하세요. 이월과세 적용 여부는 자산 전체 결정세액으로 비교합니다(같은 법 제97조의2 제2항 제3호).
           </p>
         </ToneCard>
       )}

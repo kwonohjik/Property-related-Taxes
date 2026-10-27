@@ -52,7 +52,7 @@ describe("⑤ C 화면", () => {
     expect(off.container.textContent).toContain("증여일 현재 배우자(증여자) 세대가 이 주택 1채만 보유");
   });
 
-  it("저장 토글 ON인데 술어가 거짓(소유자 분리)이면 «지금 조건에서는 적용되지 않음» 한 줄 · 부담부증여는 «아직 계산하지 못합니다»(⑧이 막는다 · V-4 Q-1 a) — 정상 ON·OFF에는 없다", () => {
+  it("저장 토글 ON인데 술어가 거짓(소유자 분리)이면 «지금 조건에서는 적용되지 않음» 한 줄 · 부담부증여는 나눠 계산 안내(V-4 PR-B) — 정상 ON·OFF에는 없다", () => {
     mount(cAsset());
     expect(screen.queryByTestId("carryover-donor-split-inactive")).toBeNull();
     cleanup();
@@ -61,7 +61,7 @@ describe("⑤ C 화면", () => {
     cleanup();
     mount(cAsset({ transferType: "burdened_gift" }));
     expect(screen.queryByTestId("carryover-donor-split-inactive")).toBeNull();
-    expect(screen.getByTestId("carryover-donor-split-bg-blocked").textContent).toContain("아직 계산하지 못합니다");
+    expect(screen.getByTestId("carryover-donor-split-bg-note").textContent).toContain("건물분 증여자 취득일");
     cleanup();
     mount(cAsset({ carryoverDonorSplit: false, selfOwns: "building_only" }));
     expect(screen.queryByTestId("carryover-donor-split-inactive")).toBeNull();
