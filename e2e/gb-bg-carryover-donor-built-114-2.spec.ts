@@ -60,6 +60,8 @@ const gbBgAsset = (co: Over = {}, over: Over = {}): Over => ({
     donorSameHousehold: "no",
     ...co,
   },
+  // 당초 증여자의 건물 취득일 — 신축이면 신축 취득일, 아니면 토지와 같은 날(계획서 `gb-bg-donor-building-acquisition-date.plan.md` Q-1·Q-3 a)
+  buildingCarryover: { ...CARRYOVER_DEFAULTS, donorAcquisitionDate: co.donorBuiltType === "new" && co.donorBuiltDate ? String(co.donorBuiltDate) : "2015-01-01" },
   ...over,
 });
 
@@ -85,7 +87,7 @@ const seed = (assets: Over[], formOver: Over = {}) => ({
 });
 
 type Wire = {
-  burdenedGiftInfo?: { carryoverDonorBasis?: { donorBuilt?: Record<string, unknown> } };
+  burdenedGiftInfo?: { carryoverDonorBasis?: { donorBuilt?: Record<string, unknown>; buildingDonorAcquisitionDate?: string } };
   carryoverTaxation?: { donorBuilt?: unknown };
 };
 const donorBuiltOf = (b: Wire) => b.burdenedGiftInfo?.carryoverDonorBasis?.donorBuilt;
@@ -152,8 +154,17 @@ test.describe("일반건물 부담부증여 × 이월과세 × 증여자 신축�
     await dateScope.locator('input[type="text"][aria-label="월"]').first().fill(m);
     await dateScope.locator('input[type="text"][aria-label="일"]').first().fill(d);
     expect(await readCarryoverStore(page)).toMatchObject({ donorBuilt: true, donorBuiltType: "new", donorBuiltDate: "2022-01-10" });
+    // 신축 건물의 취득일 = 신축 취득일 — ③ 취득 카드의 「건물분 증여자 취득일」(분리 OFF)에도 같은 날을 넣는다(계획서 `gb-bg-donor-building-acquisition-date.plan.md` Q-1·Q-3 a)
+    await expandAssetSection(page, 3);
+    const bDate = page.locator('[data-field="buildingCarryover.donorAcquisitionDate"]');
+    await expect(bDate).toHaveCount(1);
+    await expect(bDate).toContainText("건물분 증여자 취득일");
+    await bDate.locator('input[type="text"][aria-label="연도"]').first().fill(y);
+    await bDate.locator('input[type="text"][aria-label="월"]').first().fill(m);
+    await bDate.locator('input[type="text"][aria-label="일"]').first().fill(d);
     const body = (await calculate(page)) as Wire;
     expect(donorBuiltOf(body)).toEqual({ buildingType: "new", constructionDate: "2022-01-10" });
+    expect(body.burdenedGiftInfo?.carryoverDonorBasis?.buildingDonorAcquisitionDate).toBe("2022-01-10");
     await expect(page.getByTestId("donor-built-penalty-line").first()).toHaveText("가산세 2,500,000 = 50,000,000 × 5%");
   });
 

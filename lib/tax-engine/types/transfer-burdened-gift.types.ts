@@ -379,6 +379,12 @@ export interface BurdenedGiftCarryoverDonorBasis {
    * 없으면(종전 본문·직접 호출) 양도가액 비율이다. 한 파트만 이월과세(`parts`)와 함께 보내면 ⑫가 거부한다.
    */
   giftValuationByPart?: { land: number; building: number };
+  /**
+   * 일반건물 · 토지·건물 **둘 다** 이월과세 — 당초 증여자가 **건물을** 취득한 날(「소득세법」 제95조 제4항 단서 「해당 자산을 취득한 날」 ·
+   * 신축이면 사용승인서 교부일 등 — 「소득세법 시행령」 제162조 제1항 제4호). 시나리오 A 건물 기산일이다(계획서 `gb-bg-donor-building-acquisition-date.plan.md` Q-1 a).
+   * 없으면(종전 본문·직접 호출) 증여 사건의 증여자 취득일 하나로 기산한다. 한 파트만 이월과세·일반건물 밖이면 ⑫가 거부한다.
+   */
+  buildingDonorAcquisitionDate?: Date;
 }
 
 /**

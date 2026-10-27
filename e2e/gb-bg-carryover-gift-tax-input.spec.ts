@@ -55,6 +55,8 @@ const asset = (n: number, over: Record<string, unknown> = {}) => ({
     donorRelation: "lineal",
     donorSameHousehold: "no",
   },
+  // 당초 증여자의 건물 취득일 — 토지와 같은 날(계획서 `gb-bg-donor-building-acquisition-date.plan.md` Q-1 a · 둘 다 이월과세면 필수)
+  buildingCarryover: { ...CARRYOVER_DEFAULTS, donorAcquisitionDate: "2015-01-01" },
   ...over,
 });
 
@@ -171,6 +173,17 @@ test.describe("일반건물 부담부증여 × 이월과세 — 화면 증여세
     await page.getByRole("button", { name: "다음", exact: true }).click();
     await expect
       .poll(() => page.evaluate(() => !!(document.activeElement as HTMLElement | null)?.closest('[data-field="buildingCarryover.giftDateValuation"]')))
+      .toBe(true);
+  });
+
+  test("GBGT-E7 ⑧ 둘 다 이월과세 · 분리 OFF: 「건물분 증여자 취득일」을 비우면 «다음»이 막히고 그 칸으로 이동한다", async ({ page }) => {
+    test.setTimeout(180_000);
+    await seedWizard(page, seedOf([asset(1, { buildingCarryover: { ...CARRYOVER_DEFAULTS } })]));
+    await expandAssetSection(page, 3);
+    await expect(page.locator('[data-field="buildingCarryover.donorAcquisitionDate"]')).toContainText("건물분 증여자 취득일");
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await expect
+      .poll(() => page.evaluate(() => !!(document.activeElement as HTMLElement | null)?.closest('[data-field="buildingCarryover.donorAcquisitionDate"]')))
       .toBe(true);
   });
 

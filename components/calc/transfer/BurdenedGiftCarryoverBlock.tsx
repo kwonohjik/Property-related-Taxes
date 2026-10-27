@@ -91,7 +91,11 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
           {parts.building && (
             <FieldCard
               label="당초 증여자 취득 당시 건물 기준시가"
-              hint="건물이 없으면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
+              hint={
+                asset.assetKind === "general_building"
+                  ? "당초 증여자가 건물을 취득할 당시의 건물 기준시가 — 직접 신축했으면 사용승인일 당시(「소득세법 시행령」 제162조 제1항 제4호). 일반건물은 0일 수 없습니다."
+                  : "건물이 없으면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
+              }
             >
               <CurrencyInput
                 label=""

@@ -28,6 +28,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { sameDayBuildingDonorDate } from "./_helpers/gb-bg-building-donor-date";
 
 beforeEach(() => { vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never); });
 afterEach(() => vi.unstubAllGlobals());
@@ -36,7 +37,7 @@ const TRANSFER_DATE = "2026-03-01";
 
 /** 일반건물 · 부담부증여 K-5 · 이월과세(당초 증여자 취득 시 기준시가 토지 1천만·건물 4천만 → A 채택) · 증여자 신축 ON. `co`/`over` 로 한 칸씩 바꾼다. */
 function gbAsset(over: Partial<AssetForm> = {}, co: Record<string, unknown> = {}): AssetForm {
-  return {
+  return sameDayBuildingDonorDate({
     ...makeDefaultAsset(1),
     addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "general_building",
@@ -58,7 +59,7 @@ function gbAsset(over: Partial<AssetForm> = {}, co: Record<string, unknown> = {}
       ...co,
     },
     ...over,
-  } as AssetForm;
+  } as AssetForm);
 }
 const formOf = (assets: AssetForm[], over: Record<string, unknown> = {}): TransferFormData =>
   ({
@@ -111,8 +112,12 @@ describe("K-7 × 증여자 신축 — 가산세가 붙는다", () => {
     expect(r.echo).toMatchObject({ applied: true, burdenedGift: { method: "appraisal" } });
   });
 
-  it("②3호 B 채택(증여세 3천만) → 가산세 0 + 중립 echo(scenario_b)", async () => {
-    const r = await run(formOf([gbAsset(K7, { giftTaxAmount: "30,000,000" })]));
+  /**
+   * 신축 건물은 신축 취득일(2022)부터 기산한다(계획서 `gb-bg-donor-building-acquisition-date.plan.md` Q-1·Q-3 a) — 종전 증여세 3천만 사례는 A 85,730,780 > B로 뒤집혔다.
+   * 상당액 8천만이면 A 77,655,780 < B 79,000,000 → B 채택(실측).
+   */
+  it("②3호 B 채택(증여세 8천만) → 가산세 0 + 중립 echo(scenario_b)", async () => {
+    const r = await run(formOf([gbAsset(K7, { giftTaxAmount: "80,000,000" })]));
     expect(r.status).toBe(200);
     expect(r.co?.adoptedScenario).toBe("B");
     expect(r.pen).toBe(0);

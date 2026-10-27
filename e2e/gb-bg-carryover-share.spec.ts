@@ -54,6 +54,8 @@ const share = (n: number, over: Record<string, unknown> = {}) => ({
     donorRelation: "lineal",
     donorSameHousehold: "no",
   },
+  // 당초 증여자의 건물 취득일 — 토지와 같은 날(계획서 `gb-bg-donor-building-acquisition-date.plan.md` Q-1 a · 둘 다 이월과세면 필수)
+  buildingCarryover: { ...CARRYOVER_DEFAULTS, donorAcquisitionDate: "2015-01-01" },
   ...over,
 });
 

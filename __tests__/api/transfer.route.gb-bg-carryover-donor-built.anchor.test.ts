@@ -33,7 +33,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 
 import { POST } from "@/app/api/calc/transfer/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
-import { DONOR_BUILT_APPLIED_NOTICE, DONOR_BUILT_NOT_APPLIED_CARRYOVER_NOTICE, DONOR_BUILT_OUTSIDE_WINDOW_NOTICE, DONOR_BUILT_ZERO_BASE_NOTICE } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
+import { DONOR_BUILT_APPLIED_NOTICE, DONOR_BUILT_NOT_APPLIED_CARRYOVER_NOTICE, DONOR_BUILT_OUTSIDE_WINDOW_NOTICE } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
 import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
 
 const GB = {
@@ -183,13 +183,14 @@ describe("DB-3 B 채택 · 이월과세 배제 — 가산세 0 + 중립 안내 (
     expect(r.echo).toMatchObject({ applied: false, notAppliedReason: "carryover_excluded" });
     expect(r.warnings).toContain(DONOR_BUILT_NOT_APPLIED_CARRYOVER_NOTICE);
   });
-  it("A 채택인데 기준액이 0(당초 증여자 건물 기준시가 0) → 0 · zero_base · 기준액 0 안내 (게이트는 열려 있다)", async () => {
+  /**
+   * 일반건물은 당초 증여자 건물 기준시가 0을 받지 않는다(⑫ — 계획서 `gb-bg-donor-building-acquisition-date.plan.md` Q-2 a). 종전에는 이 입력으로
+   * 기준액 0(`zero_base`) 안내를 확인했다. 그 안내는 일반건물 밖 자산의 엔진 anchor(`carryover-donor-built-bg.anchor.test.ts`)가 지킨다.
+   */
+  it("일반건물 당초 증여자 건물 기준시가 0 → ⑫ 400 (Q-2 a)", async () => {
     const r = await post(body(withDb(DB_NEW, { buildingStdPriceAtAcquisition: 0 })));
-    expect(r.status, r.errText).toBe(200);
-    expect(r.adopted).toBe("A");
-    expect(r.pen).toBe(0);
-    expect(r.echo).toMatchObject({ applied: false, notAppliedReason: "zero_base" });
-    expect(r.warnings).toContain(DONOR_BUILT_ZERO_BASE_NOTICE);
+    expect(r.status).toBe(400);
+    expect(r.errText).toContain("burdenedGiftInfo.carryoverDonorBasis.buildingStdPriceAtAcquisition");
   });
   it("③ 적용기간 초과(증여 후 10년 경과)로 배제 → 0 · carryover_excluded", async () => {
     const r = await post(body(withDb(DB_NEW), { transferDate: "2034-06-01", carryoverTaxation: CT({ giftRegistryDate: "2024-05-01" }) }));

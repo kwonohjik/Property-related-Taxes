@@ -105,6 +105,10 @@ function patchExclusion(
 }
 
 // ── 메인 컴포넌트 ────────────────────────────────────────────────
+/** 당초 증여자의 건물 취득일 안내 — 둘 다 이월과세(부담부증여 일반건물)의 건물분 칸(분리 OFF)·건물 블록(분리 ON). */
+const BUILDING_DONOR_DATE_HINT =
+  "당초 증여자가 건물을 취득한 날 — 직접 신축했으면 사용승인서 교부일 등(「소득세법 시행령」 제162조 제1항 제4호). 건물 보유기간·장기보유특별공제 기산일 (소득세법 §95 ④)";
+
 export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land", isNonPrimaryAsset, hasCompanions }: Props) {
   const isBuildingPart = part === "building";
   const c = asset.carryover ?? CARRYOVER_DEFAULTS;
@@ -192,15 +196,24 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
 
         {!splitMode && (<>
         <FieldCard
-          label="증여자 취득일"
+          label={splitsGiftValuation ? `${isBuildingPart ? "건물분" : "토지분"} 증여자 취득일` : "증여자 취득일"}
           field={isBuildingPart ? "buildingCarryover.donorAcquisitionDate" : "carryover.donorAcquisitionDate"}
-          hint="보유기간·장기보유특별공제 기산일 (소득세법 §95 ④)"
+          hint={splitsGiftValuation && isBuildingPart ? BUILDING_DONOR_DATE_HINT : "보유기간·장기보유특별공제 기산일 (소득세법 §95 ④)"}
         >
           <DateInput
             value={c.donorAcquisitionDate}
             onChange={(v) => updateCarryover({ donorAcquisitionDate: v })}
           />
         </FieldCard>
+        {/* 분리 OFF 둘 다 이월과세(부담부증여) — 건물분 증여자 취득일도 이 블록에서 받는다. 분리 ON은 건물 블록이 같은 키로 받는다(`gb-bg-donor-building-acquisition-date.plan.md` Q-1 a). */}
+        {splitsGiftValuation && !isBuildingPart && !asset.hasSeperateLandAcquisitionDate && (
+          <FieldCard label="건물분 증여자 취득일" field="buildingCarryover.donorAcquisitionDate" hint={BUILDING_DONOR_DATE_HINT}>
+            <DateInput
+              value={asset.buildingCarryover?.donorAcquisitionDate ?? ""}
+              onChange={(v) => onChange({ buildingCarryover: patchCarryover(asset.buildingCarryover, { donorAcquisitionDate: v }) })}
+            />
+          </FieldCard>
+        )}
 
         <div className="space-y-1.5">
           <p className="text-sm font-medium">증여자 취득원인</p>

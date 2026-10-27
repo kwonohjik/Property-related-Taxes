@@ -37,6 +37,7 @@ import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { gbBgMarketPreDeemedParts } from "./gb-pre-deemed";
 import { bgAnyCarryover, bgCarryoverPartsPayload } from "./bg-carryover-parts";
 import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
+import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
 
 export interface BurdenedGiftInfoPayload {
   valuationMode: "sangjeungbeop_standard" | "sangjeungbeop_market";
@@ -131,6 +132,8 @@ export interface BurdenedGiftInfoPayload {
     parts?: { land: boolean; building: boolean };
     /** 둘 다 이월과세 — 증여 당시 토지분·건물분 평가액(증여세 상당액 배분 비율 · `gbBgGiftValuationByPart`). 둘 다 양수일 때만 싣는다. */
     giftValuationByPart?: { land: number; building: number };
+    /** 둘 다 이월과세 — 당초 증여자의 건물 취득일(시나리오 A 건물 기산일 · 계획서 `gb-bg-donor-building-acquisition-date.plan.md` Q-1 a). 분리 ON 건물 블록 · 분리 OFF 건물분 칸이 같은 키다. */
+    buildingDonorAcquisitionDate?: string;
   };
 }
 
@@ -147,7 +150,13 @@ function buildCarryoverDonorBasis(
 ): BurdenedGiftInfoPayload["carryoverDonorBasis"] {
   const byPart = gbBgGiftValuationByPart(primary);
   // 비율에만 쓰므로 지분 축소 전 값 그대로다. 한쪽이라도 비면 싣지 않는다 — ⑧이 막고, 직접 호출은 엔진이 양도가액 비율로 나눈다.
-  const basis = { ...buildBothPartsDonorBasis(primary), ...(byPart && byPart.land > 0 && byPart.building > 0 ? { giftValuationByPart: byPart } : {}) };
+  // 당초 증여자의 건물 취득일 — 둘 다 이월과세일 때만. 비면 싣지 않는다(⑧이 막는다 · 토지 날짜로 채우지 않는다).
+  const buildingDonorDate = gbBgSplitsGiftValuation(primary) ? primary.buildingCarryover?.donorAcquisitionDate : undefined;
+  const basis = {
+    ...buildBothPartsDonorBasis(primary),
+    ...(byPart && byPart.land > 0 && byPart.building > 0 ? { giftValuationByPart: byPart } : {}),
+    ...(buildingDonorDate ? { buildingDonorAcquisitionDate: buildingDonorDate } : {}),
+  };
   const parts = bgCarryoverPartsPayload(primary);
   if (!parts) return basis;
   if (parts.land && parts.building) return { ...basis, parts };

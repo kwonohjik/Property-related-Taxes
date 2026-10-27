@@ -24,6 +24,8 @@ import { POST } from "@/app/api/calc/transfer/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
+import { refineGbBgCarryoverParts } from "@/lib/api/transfer-tax-schema-donor-built";
+import { z } from "zod";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -90,7 +92,6 @@ const issues = (f: TransferFormData) => [0, 1, 2, 3, 4].flatMap((s) => collectSt
 const fields = (f: TransferFormData) => issues(f).map((i) => (i as { field?: string }).field);
 type Body = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 const detail = (r: Run) => r.a?.burdenedGiftCarryoverDetail as { determinedTaxA: number; determinedTaxB: number; adoptedScenario: string; scenarioA: Body };
-const card = (s: Body, label: "토지" | "건물") => (s.parts as Body[]).find((p) => String(p.propertyLabel).startsWith(label))!;
 const ok = async (f: TransferFormData) => {
   expect(issues(f)).toEqual([]);
   const r = await run(f);
@@ -154,6 +155,15 @@ describe("Q-2 일반건물 당초 증여자 건물 기준시가 0 거부", () =>
     const bad = { ...b, burdenedGiftInfo: { ...b.burdenedGiftInfo, carryoverDonorBasis: { ...b.burdenedGiftInfo.carryoverDonorBasis, buildingStdPriceAtAcquisition: 0 } } };
     expect((await post(bad)).status).toBe(400);
   });
+  it("⑫ 기준시가를 쓰지 않는 방식(실지 K-4)에 남은 0은 거부하지 않는다 — ⑧(화면에 칸이 없다)보다 넓어지지 않는다", () => {
+    const refine = (acquisitionMethod: string) =>
+      z.object({}).superRefine((_v, ctx) => refineGbBgCarryoverParts({
+        propertyType: "general_building", transferType: "burdened_gift", acquisitionCause: "carryover_gift",
+        burdenedGiftInfo: { valuationMode: "sangjeungbeop_market", acquisitionMethod, carryoverDonorBasis: { buildingStdPriceAtAcquisition: 0 } },
+        generalBuildingValuation: { buildingAcquisitionCause: "purchase" },
+      }, ctx)).safeParse({}).success;
+    expect([refine("actual"), refine("converted")]).toEqual([true, false]);
+  });
   it("토지 자산은 0을 그대로 받는다(건물이 없다 — 회귀 0)", () => {
     const land = { ...gbAsset({}, {}), assetKind: "land", bgCoDonorBuildingStdPriceAtAcq: "0" } as unknown as AssetForm;
     expect(fields(formOf([land]))).not.toContain("bgCoDonorBuildingStdPriceAtAcq");
@@ -174,5 +184,30 @@ describe("Q-3 신축이면 신축 취득일 = 건물 취득일", () => {
       buildingCarryover: { ...CO, giftDateValuation: "400,000,000", ...NEW_2020 } as never,
     } as Partial<AssetForm>)]);
     expect(fields(f)).toContain("carryover.donorBuiltDate");
+  });
+});
+
+describe("V-2 세율 보유기간도 건물 취득일을 따른다 (「소득세법」 제104조 제2항 제2호 · 제5항)", () => {
+  /**
+   * 토지 185,133,000(장특 22%) · 건물 199,400,000(3년 미만 장특 없음) · 기본공제 2,500,000은 건물에서.
+   *   제5항 1호(합계 기본세율): 382,033,000 × 40% − 25,940,000 = 126,873,200
+   *   제5항 2호(자산별): 토지 185,133,000 × 38% − 19,940,000 = 50,410,540 + 건물 196,900,000 × 세율
+   *     · 1년 미만 50% → 98,450,000 → 148,860,540 · 1년 이상 2년 미만 40% → 78,760,000 → 129,170,540 — 둘 다 2호가 크다.
+   */
+  it.each([["2025-06-01 (1년 미만 50%)", "2025-06-01", 148_860_540], ["2024-09-01 (1~2년 40%)", "2024-09-01", 129_170_540]] as const)("%s", async (_n, d, det) => {
+    const r = await ok(both(false, d));
+    expect(starts(r)).toEqual(["2015-01-01", d]);
+    expect([detail(r).adoptedScenario, r.det]).toEqual(["A", det]);
+  });
+});
+
+describe("지분 — 같은 builder로 지분마다 실린다", () => {
+  it("지분 50/50 · 두 지분 모두 건물 2020-06-01 → 지분마다 건물 날짜 · 합계 = 단건 118,897,200", async () => {
+    const half = { ownershipNumerator: "50", ownershipDenominator: "100" } as Partial<AssetForm>;
+    const share = (n: number) => ({ ...both(false, "2020-06-01", half).assets[0], assetId: `a${n}`, assetLabel: `자산 ${n}` }) as AssetForm;
+    const f = formOf([share(1), share(2)], { assetSplitMode: "fractional" });
+    const b = await bodyOf(f);
+    expect(b.generalBuildingShares.map((x: Body) => x.burdenedGiftInfo?.carryoverDonorBasis?.buildingDonorAcquisitionDate)).toEqual(["2020-06-01", "2020-06-01"]);
+    expect((await ok(f)).det).toBe(118_897_200);
   });
 });

@@ -319,6 +319,7 @@ function assertPartialCarryoverSupported(info: BurdenedGiftInfo): void {
 /**
  * 시나리오 A의 파트별 보유기간 기산일 — 「소득세법」 제95조 제4항 단서(「증여한 배우자 또는 직계존비속이 **해당 자산을** 취득한 날부터」).
  * 증여받은 파트만 당초 증여자 취득일로 옮기고, 다른 파트는 시나리오 B와 같은 날이다. 단건·지분·묶음 세 경로가 이 함수 하나를 쓴다.
+ * 둘 다 이월과세면 건물은 당초 증여자의 **건물** 취득일(`buildingDonorAcquisitionDate` — 신축이면 사용승인일)이다. 없으면 사건 날짜 하나다(종전 본문 호환).
  */
 export function carryoverHoldingStartsA(
   info: BurdenedGiftInfo | undefined,
@@ -326,5 +327,6 @@ export function carryoverHoldingStartsA(
   own: { land: Date; building: Date },
 ): { land: Date; building: Date } {
   const p = carryoverPartsOf(info);
-  return { land: p.land ? donorAcquisitionDate : own.land, building: p.building ? donorAcquisitionDate : own.building };
+  const buildingDonorDate = info?.carryoverDonorBasis?.buildingDonorAcquisitionDate ?? donorAcquisitionDate;
+  return { land: p.land ? donorAcquisitionDate : own.land, building: p.building ? buildingDonorDate : own.building };
 }
