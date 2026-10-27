@@ -40,7 +40,7 @@ describe("부담부증여 — 증여자 취득가액 칸 대신 안내", () => {
 
 describe("회귀 — 일반 양도는 종전대로", () => {
   it("주택 이월과세 — 증여자 취득가액 칸 · 취득원인 · 환산 토글", () => {
-    draw(asset({ transferType: "normal" } as Partial<AssetForm>));
+    draw(asset({ transferType: "regular" } as Partial<AssetForm>));
     expect(fields()).toContain("carryover.donorAcquisitionPrice");
     expect(screen.queryByTestId("gb-bg-donor-basis-elsewhere")).toBeNull();
     expect(screen.getByText("증여자 취득원인")).toBeTruthy();

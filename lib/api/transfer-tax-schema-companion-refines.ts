@@ -155,7 +155,7 @@ export function addCompanionAcquisitionCauseRefines(
           message: "이월과세(증여) 자산은 증여 정보(carryoverTaxation) 필수",
         });
       } else {
-        refineCarryoverTaxation(ct, transferDate, ctx, ["companionAssets", i, "carryoverTaxation"], true, c.burdenedGiftInfo !== undefined && c.generalBuildingValuation !== undefined);
+        refineCarryoverTaxation(ct, transferDate, ctx, ["companionAssets", i, "carryoverTaxation"], true, c.transferType === "burdened_gift" && c.burdenedGiftInfo !== undefined);
       }
     } else if (c.acquisitionCause === "inheritance") {
       // P2c: 상속 취득가액은 inheritanceValuation(신고가액) 경로로 항상 전송 (manual/fixedAcquisitionPrice 폐기).
@@ -274,8 +274,8 @@ export function refineCarryoverTaxation(
    */
   rejectOtherRelation = true,
   /**
-   * 부담부증여 일반건물 — 당초 증여자 취득가액은 `burdenedGiftInfo.carryoverDonorBasis`가 정본이다(⑤가 이 칸을 숨기고 ④도 싣지 않는다 ·
-   * `gb-bg-on-building-block-fields.plan.md` Q-2 a). ⑧도 요구하지 않는다 — 여기서 요구하면 「⑧ 통과 ↔ ⑩ 400」이다.
+   * 부담부증여(엔진 `isBurdenedGiftCarryover`와 같은 조건) — 당초 증여자 취득가액은 `burdenedGiftInfo.carryoverDonorBasis`가 정본이다(⑤가 이 칸을 숨기고 ④도 싣지 않는다 ·
+   * `gb-bg-on-building-block-fields.plan.md` Q-2 a · 일반건물 밖도 같다). ⑧도 요구하지 않는다 — 여기서 요구하면 「⑧ 통과 ↔ ⑫·⑩ 400」이다.
    */
   donorPriceInCoDonorBasis = false,
 ): void {

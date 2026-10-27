@@ -99,7 +99,7 @@ describe("함께 양도 둘째 자산 — ⑧·⑩도 같은 규칙", () => {
 });
 
 describe("회귀 — 일반 양도 이월과세는 종전대로 증여자 취득가액이 필수다", () => {
-  const plain = (price: string) => carry(price, { transferType: "normal", actualSalePrice: "1,000,000,000" } as Partial<AssetForm>);
+  const plain = (price: string) => carry(price, { transferType: "regular", actualSalePrice: "1,000,000,000" } as Partial<AssetForm>);
   it("⑧ 그 칸 · ⑫ 400", async () => {
     expect(issues(bgForm(plain("")))[0]?.field).toBe("carryover.donorAcquisitionPrice");
     const body = (await bodyOf(bgForm(plain("150,000,000")))) as Body;

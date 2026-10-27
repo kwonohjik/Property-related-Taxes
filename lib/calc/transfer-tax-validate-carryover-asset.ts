@@ -75,8 +75,8 @@ export function validateCarryoverAsset(
   if (parseAmount(c.giftDateValuation) <= 0)
     return fieldError("carryover.giftDateValuation", `${label}: 증여 당시 평가액을 입력하세요.`);
 
-  // (d) 취득가액 — 환산 미사용 시 직접 입력 필수
-  if (!c.useEstimatedAcquisition && parseAmount(c.donorAcquisitionPrice) <= 0) {
+  // (d) 취득가액 — 환산 미사용 시 직접 입력 필수. 부담부증여는 「당초 증여자」 블록이 받는다(⑤ 칸 없음 · ④ 미전송 · ⑫ 면제 — `validateBurdenedGiftAsset`이 요구).
+  if (asset.transferType !== "burdened_gift" && !c.useEstimatedAcquisition && parseAmount(c.donorAcquisitionPrice) <= 0) {
     return fieldError("carryover.donorAcquisitionPrice", `${label}: 증여자 취득가액을 입력하세요. (환산취득가 사용 시 토글 켜기)`);
   }
 

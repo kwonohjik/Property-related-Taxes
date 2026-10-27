@@ -144,8 +144,11 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
   const gbBothCarryover = isGeneralBuilding && asset.acquisitionCause === "carryover_gift" && asset.gbBuildingAcquisitionCause === "carryover_gift";
   /** 부담부증여 일반건물 건물 블록인데 토지도 이월과세 — 증여 사건은 토지 블록이 정본이라(`gbCarryoverEventSource`) 이 블록의 사건 칸은 ④가 읽지 않는다. */
   const eventOnLandBlock = isGeneralBuilding && isBurdenedGift && isBuildingPart && asset.acquisitionCause === "carryover_gift";
-  /** 부담부증여 일반건물 — 당초 증여자 취득가액은 「당초 증여자」 블록(`bgCoDonor*`)이 정본이다(영 §159와 함께 쓴다). 이 블록의 취득가액·취득원인·환산 칸은 ④·엔진이 쓰지 않는다(`gb-bg-on-building-block-fields.plan.md` Q-2 a). */
-  const donorBasisInCoDonorBlock = isGeneralBuilding && isBurdenedGift;
+  /**
+   * 부담부증여 — 당초 증여자 취득가액은 「당초 증여자」 블록(`bgCoDonor*`)이 정본이다(영 §159와 함께 쓴다). 이 블록의 취득가액·취득원인·환산 칸은 ④·엔진이 쓰지 않는다.
+   * 일반건물에서 먼저 정리했고(`gb-bg-on-building-block-fields.plan.md` Q-2 a) 엔진 부담부증여 분기는 자산 종류와 무관하다 — 주택·건물·토지·상업용건물도 같다(2026-10-27 실측: 1원·9.99억 같은 세액).
+   */
+  const donorBasisInCoDonorBlock = isBurdenedGift;
 
   /**
    * 지분(공유) 모드 여부 — 판정 술어는 `OwnershipRatioInput`이 쓰는 것과 **같은 소스**다
