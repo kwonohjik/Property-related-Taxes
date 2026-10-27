@@ -128,6 +128,8 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
   const isBurdenedGift = asset.transferType === "burdened_gift";
   /** 토지·건물 둘 다 이월과세인 부담부증여 일반건물 — 평가액을 토지분·건물분으로 받는다(④·⑧과 같은 술어 · `gb-bg-carryover-gift-tax-part-limit.plan.md` Q-2 a · Q-3 b). */
   const splitsGiftValuation = gbBgSplitsGiftValuation(asset);
+  /** 부담부증여 일반건물 건물 블록인데 토지도 이월과세 — 증여 사건은 토지 블록이 정본이라(`gbCarryoverEventSource`) 이 블록의 사건 칸은 ④가 읽지 않는다. */
+  const eventOnLandBlock = isGeneralBuilding && isBurdenedGift && isBuildingPart && asset.acquisitionCause === "carryover_gift";
 
   /**
    * 지분(공유) 모드 여부 — 판정 술어는 `OwnershipRatioInput`이 쓰는 것과 **같은 소스**다
@@ -376,24 +378,29 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           </FieldCard>
         )}
 
-        <FieldCard
-          label="증여자 자본적지출"
-          field="carryover.donorCapitalExpenditure"
-          hint={
-            isAfter2024
-              ? "증여자가 보유기간 중 지출한 자본적 지출액 (소득세법 §97조의2 ① 2호)"
-              : "2024.1.1. 이후 양도분부터 적용 (2023.12.31. 신설)"
-          }
-          trailing={<LawArticleModal legalBasis="소득세법 §97의2 ① 2호" label="§97의2①2호" />}
-        >
-          <CurrencyInput
-            label=""
-            value={c.donorCapitalExpenditure}
-            onChange={(v) => updateCarryover({ donorCapitalExpenditure: v })}
-            placeholder={isAfter2024 ? "없으면 비워두세요" : "해당 없음"}
-            disabled={!isAfter2024}
-          />
-        </FieldCard>
+        {/* 부담부증여 일반건물 · 토지도 이월과세 — 건물 블록 칸은 ④가 읽지 않는다. 토지 블록 한 칸이 자산 전체 합계다(`gb-bg-on-building-block-fields.plan.md` Q-3 a). */}
+        {!eventOnLandBlock && (
+          <FieldCard
+            label={splitsGiftValuation && !isBuildingPart ? "증여자 자본적지출(토지·건물 합계)" : "증여자 자본적지출"}
+            field={isBuildingPart ? "buildingCarryover.donorCapitalExpenditure" : "carryover.donorCapitalExpenditure"}
+            hint={
+              !isAfter2024
+                ? "2024.1.1. 이후 양도분부터 적용 (2023.12.31. 신설)"
+                : splitsGiftValuation && !isBuildingPart
+                  ? "당초 증여자가 토지·건물에 지출한 자본적 지출액을 합쳐 한 번만 입력합니다 — 취득 당시 기준시가 비율로 나눕니다 (소득세법 §97조의2 ① 2호)"
+                  : "증여자가 보유기간 중 지출한 자본적 지출액 (소득세법 §97조의2 ① 2호)"
+            }
+            trailing={<LawArticleModal legalBasis="소득세법 §97의2 ① 2호" label="§97의2①2호" />}
+          >
+            <CurrencyInput
+              label=""
+              value={c.donorCapitalExpenditure}
+              onChange={(v) => updateCarryover({ donorCapitalExpenditure: v })}
+              placeholder={isAfter2024 ? "없으면 비워두세요" : "해당 없음"}
+              disabled={!isAfter2024}
+            />
+          </FieldCard>
+        )}
       </div>
 
       {/* ④ 비교과세 기준 — Scenario B 취득가 */}

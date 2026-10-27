@@ -77,6 +77,12 @@ export function GbBurdenedGiftCarryoverCard({ detail, assetLabel }: { detail: De
           <div data-testid="gb-bg-carryover-gift-tax">
             <InfoRow label="증여세 상당액 (채무 비율 안분 전)" value={formatKRW(detail.giftTaxAmount)} />
           </div>
+          {/* §97의2①2호 — 당초 증여자 자본적지출도 A 필요경비에만 더한다. 채무 비율 안분 전 금액이다. */}
+          {(detail.donorCapexAddedToExpense ?? 0) > 0 && (
+            <div data-testid="gb-bg-carryover-donor-capex">
+              <InfoRow label="증여자 자본적지출 (채무 비율 안분 전)" value={formatKRW(detail.donorCapexAddedToExpense ?? 0)} />
+            </div>
+          )}
         </ScenarioCol>
         <ScenarioCol
           label={`[B] 미적용 (비교과세)${adoptedA ? "" : " ← 비교과세 세액 역전"}`}

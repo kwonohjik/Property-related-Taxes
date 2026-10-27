@@ -57,7 +57,9 @@ import {
   carryoverHoldingStartsA,
   carryoverPartsOf,
   toTransferorBasisInfo,
+  withCarryoverDonorCapex,
 } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
+import { carryoverDonorCapex } from "@/lib/tax-engine/transfer-tax-carryover";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import type { GbShareBlockEcho } from "@/lib/tax-engine/types/transfer-aggregate.types";
 
@@ -218,6 +220,8 @@ export function calculateGeneralBuildingFractional(
     info: BurdenedGiftInfo | undefined,
     dates: { building: Date; land?: Date } | undefined,
     carryoverApplied: boolean | undefined,
+    /** 시나리오 A만 — 당초 증여자 자본적지출(§97의2①2호 · `carryoverDonorCapex`). */
+    donorCapex = 0,
   ) => {
     // (2-b) 물건 사건 게이팅 — 증축·용도변경 前/後 판정 (D4). A는 당초 증여자 취득일 기준이다(V-1 — 보유기간이 그날부터라 사건 前/後도 그날로 가른다).
     const buildingAcqDate = dates?.building ?? buildingAcqDateOf({ ...share, valuation: coerced });
@@ -231,16 +235,17 @@ export function calculateGeneralBuildingFractional(
       dates?.land ??
       toOptionalDate(gated.landAcquisitionDate) ??
       toDate(share.acquisitionDate, "generalBuildingShares[].acquisitionDate");
+    // 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축 — 증축 일괄값이 있으면 그것, 없으면 지분 값.
+    const capex = withCarryoverDonorCapex(gated, (gated.bundledExpenses as number | undefined) ?? share.expenses ?? 0, donorCapex);
     const built = buildGbPartCards(
-      gated,
+      capex.gbv,
       sharePrice,
       transferDate,
       buildingAcqDate,
       landAcqDate,
       share.ownershipRatio,
-      // 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축 — 증축 일괄값이 있으면 그것, 없으면 지분 값.
       (gated.bundledAcquisitionPrice as number | undefined) ?? share.acquisitionPrice ?? 0,
-      (gated.bundledExpenses as number | undefined) ?? share.expenses ?? 0,
+      capex.legacyExpenses,
       // 부담부증여 — 그 지분의 §159 정보 + 지분율(A·C 지분 축소). 비부담부증여면 둘 다 undefined(종전 경로 그대로).
       info,
       burdened ? share.ownershipRatio : undefined,
@@ -332,7 +337,8 @@ export function calculateGeneralBuildingFractional(
     // A = ①1호 취득가액 치환 + ①3호 증여세 상당액(§159 안분 단계가 소비) · §95④ 단서 — 증여받은 파트의 기산일만 당초 증여자 취득일부터.
     const donor = co.ct.donorAcquisitionDate;
     const startA = carryoverHoldingStartsA(info, donor, b.holdingStart);
-    const a = buildPiece(share, idx, sharePrice, coerced, applyCarryoverDonorBasis(info, co.ct.giftTaxAmount), startA, true);
+    const donorCapex = carryoverDonorCapex(co.ct, transferDate);
+    const a = buildPiece(share, idx, sharePrice, coerced, applyCarryoverDonorBasis(info, co.ct.giftTaxAmount, donorCapex), startA, true, donorCapex);
     piecesB.push(b);
     piecesA.push(a);
     drafts.push({
@@ -346,6 +352,7 @@ export function calculateGeneralBuildingFractional(
       holdingStartA: startA,
       holdingStartB: b.holdingStart,
       carryoverParts: carryoverPartsOf(info),
+      donorCapex,
     });
   });
 

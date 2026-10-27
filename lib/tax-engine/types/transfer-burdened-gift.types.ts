@@ -296,6 +296,11 @@ export interface BurdenedGiftInfo {
    * 영 §163의2②는 상당액과 한도를 「해당 자산」 단위로 정한다 — 미지정이면 종전대로 두 파트 합계 한도·양도가액 비율 배분.
    */
   carryoverGiftTaxPart?: "land" | "building";
+  /**
+   * ⚠️ 엔진 내부 전달용 — 한 파트만 이월과세일 때 `capitalExpenditure`에 들어 있는 당초 증여자 자본적지출(「소득세법」 제97조의2 제1항 제2호 · `applyCarryoverDonorBasis`가 싣는다).
+   * 그 지출은 증여받은 파트(`carryoverGiftTaxPart`)에 대한 것이라 취득시 기준시가로 나누지 않고 그 파트에 귀속한다(`splitBgRealExpenseByNature`).
+   */
+  carryoverDonorCapexDirect?: number;
 
   /**
    * 이 입력을 보내는 화면에 **세대 보유 주택 목록 입력 칸이 없다**는 표식 (1h-G1-12 · 결정 #27).

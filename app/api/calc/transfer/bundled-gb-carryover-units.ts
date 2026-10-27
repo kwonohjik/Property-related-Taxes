@@ -87,6 +87,7 @@ export function attachGbCarryoverUnits(
       scenarioA: summaryOf(runA, unit, d.holdingStartA.land, d.holdingStartA.building),
       scenarioB: summaryOf(runB, unit, d.holdingStartB.land, d.holdingStartB.building),
       carryoverParts: d.carryoverParts,
+      ...(d.donorCapex > 0 ? { donorCapexAddedToExpense: d.donorCapex } : {}),
     };
     if (adoptedA && detailsByAsset && d.detailA) detailsByAsset[d.assetId] = d.detailA;
   });

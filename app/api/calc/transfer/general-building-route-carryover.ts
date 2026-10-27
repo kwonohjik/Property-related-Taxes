@@ -13,7 +13,9 @@ import {
   carryoverHoldingStartsA,
   carryoverPartsOf,
   toTransferorBasisInfo,
+  withCarryoverDonorCapex,
 } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
+import { carryoverDonorCapex } from "@/lib/tax-engine/transfer-tax-carryover";
 import { donorBuiltNotAppliedEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-penalty";
 import { donorBuiltPenaltyNotice } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
 import { calculateBuildingPenalty } from "@/lib/tax-engine/transfer-tax-building-penalty";
@@ -170,12 +172,16 @@ export function calculateGeneralBuildingActualTransfer(
   const resultB = run({ ...payload, burdenedGiftInfo: toTransferorBasisInfo(info) });
   const startB = { land: payload.landAcquisitionDate ?? payload.acquisitionDate, building: payload.buildingAcquisitionDate ?? payload.acquisitionDate };
   const startA = carryoverHoldingStartsA(info, ct.donorAcquisitionDate, startB);
+  // §97의2①2호 — 당초 증여자 자본적지출은 A 필요경비에만 더한다(단건 엔진 Step 3과 같은 leaf · 2024.1.1. 전 양도 0).
+  const donorCapex = carryoverDonorCapex(ct, payload.transferDate);
+  const capexA = withCarryoverDonorCapex(payload, payload.actualExpenses, donorCapex);
   const resultA = run({
-    ...payload,
+    ...capexA.gbv,
+    actualExpenses: capexA.legacyExpenses,
     // 당초 증여자 신축·증축 신호는 **A 호출에만** 싣는다(R2) — B 는 수증자 기준(증여 당시 평가액)이라 가산세 대상이 아니다. 카드 조립이 이 필드만 읽는다.
     ...(donorBuilt ? { donorBuiltPenalty: donorBuilt } : {}),
     // ①1호 취득가액 치환 + ①3호 증여세 상당액 — §159 안분 단계가 소비한다.
-    burdenedGiftInfo: applyCarryoverDonorBasis(info, ct.giftTaxAmount),
+    burdenedGiftInfo: applyCarryoverDonorBasis(info, ct.giftTaxAmount, donorCapex),
     /**
      * §95④ 단서 — 보유기간을 **당초 증여자가 해당 자산을 취득한 날**부터 기산한다.
      * 증여받은 파트 축만 옮긴다(`carryoverHoldingStartsA`). 자산 단위 `acquisitionDate`는 M-1a 이후 건물 축이라 건물 기산일을 따른다 —
@@ -202,6 +208,7 @@ export function calculateGeneralBuildingActualTransfer(
     scenarioA: scenarioSummary(resultA, startA.land, startA.building),
     scenarioB: scenarioSummary(resultB, startB.land, startB.building),
     carryoverParts: carryoverPartsOf(info),
+    ...(donorCapex > 0 ? { donorCapexAddedToExpense: donorCapex } : {}),
   };
   if (donorBuilt)
     attachDonorBuiltEcho(chosen, adopted === "B" ? donorBuiltNotAppliedEcho(donorBuilt, "scenario_b") : donorBuiltAppliedEcho(donorBuilt, resultA, payload.transferDate, info.acquisitionMethod === "appraisal" ? "appraisal" : "estimated"));

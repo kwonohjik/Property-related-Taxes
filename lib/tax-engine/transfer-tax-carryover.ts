@@ -57,6 +57,17 @@ export interface CalcCarryoverResult {
  */
 export const DONOR_CAPEX_EFFECTIVE_DATE = new Date("2024-01-01");
 
+/**
+ * §97조의2 ① 2호 — 시나리오 A 필요경비에 더할 당초 증여자 자본적지출. 시행일 전 양도는 0.
+ * 단건 엔진(Step 3)과 일반건물 부담부증여 route(단건·지분·묶음)가 이 함수 하나를 쓴다.
+ */
+export function carryoverDonorCapex(
+  ct: Pick<NonNullable<TransferTaxInput["carryoverTaxation"]>, "donorCapitalExpenditure">,
+  transferDate: Date,
+): number {
+  return transferDate < DONOR_CAPEX_EFFECTIVE_DATE ? 0 : (ct.donorCapitalExpenditure ?? 0);
+}
+
 // 「10년 룰」 경계 상수(부칙 제19196호 §18)는 판정 leaf
 // `transfer-tax-carryover-eligibility.ts`가 정본이다 — 여기서 따로 두면 두 벌이 된다.
 
@@ -164,9 +175,7 @@ function calcCarryoverScenariosCore(
   // Step 3: 시행시기 가드 (donorCapex, §97조의2 ① 2호)
   // ─────────────────────────────────────────────────────────
   const donorCapexGuardApplied = rawInput.transferDate < DONOR_CAPEX_EFFECTIVE_DATE;
-  const effectiveDonorCapex = donorCapexGuardApplied
-    ? 0
-    : (ct.donorCapitalExpenditure ?? 0);
+  const effectiveDonorCapex = carryoverDonorCapex(ct, rawInput.transferDate);
 
   // ─────────────────────────────────────────────────────────
   // Step 4: Scenario A — 이월과세 적용 시나리오
