@@ -93,6 +93,11 @@ interface Props {
   judgmentLoaded?: boolean;
   /** 양도일 — 거주월수 분리 카드의 고가주택 기준금액 안내용 (OH-65) */
   transferDate?: string;
+  /**
+   * 축 B 둘째 이후 원조합원 지분 — 첫 카드의 권리가액(§166④1호 · 물건 전체). 이 카드 권리가액과 다를 때만 온다
+   * (`shareRedevRightsValueMismatch`). 경고만 하고 막지 않는다 — 계획서 `bg-axis-b-right-share-inputs.plan.md` §9.2.
+   */
+  firstCardRedevRightsValue?: number;
   /*
    * 🔄 `wasRegulatedAtAcquisition`은 **지웠다** (P6-c-1). C-1 (a) 거주요건 경고를 그리던
    *    `RedevelopmentRightExemptionSection`이 판정 메뉴 전용이 되면서 이 블록에서 소비처가
@@ -102,7 +107,7 @@ interface Props {
    */
 }
 
-export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgmentLoaded, transferDate }: Props) {
+export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgmentLoaded, transferDate, firstCardRedevRightsValue }: Props) {
   /**
    * 공유지분 모드 여부 — ④ API 변환(`buildRedevelopmentPayload`)과 **같은 술어**를 쓴다.
    * 갈라지면 화면이 「지분 해당분」이라 하는데 엔진은 100%로 취급하는 사고가 난다.
@@ -345,6 +350,14 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
               label="권리가액"
               field="redevRightsValue"
               hint={isRedevFractional ? "물건 전체(100%) 기준으로 입력하세요 — 시스템이 지분율을 적용합니다." : undefined}
+              warning={
+                firstCardRedevRightsValue !== undefined ? (
+                  <span data-testid="redev-rights-value-mismatch-warning">
+                    첫 번째 지분 카드의 권리가액({firstCardRedevRightsValue.toLocaleString("ko-KR")})과 다릅니다. 권리가액은 관리처분계획에 따라 정하여진
+                    물건 전체 가격(시행령 §166④1호)이라 같은 물건의 지분이면 같은 값이어야 합니다 — 물건 전체 기준으로 입력했는지 확인하세요.
+                  </span>
+                ) : undefined
+              }
             >
               <CurrencyInput label=""
                 value={asset.redevRightsValue}
