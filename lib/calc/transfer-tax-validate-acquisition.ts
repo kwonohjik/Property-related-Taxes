@@ -164,7 +164,7 @@ function validateAssetAcquisitionBranches(
   if (conversionError) return conversionError;
 
   // ── 부담부증여 (소령 §159 + 증여세 통합 §53·§47②) — 별도 모듈로 분리 (800줄 정책, 2026-05-12) ──
-  const bgError = validateBurdenedGiftAsset(asset, label, contractAssumedDebtTotal, formTransferDate, isFractionalSplitAxis);
+  const bgError = validateBurdenedGiftAsset(asset, label, contractAssumedDebtTotal, formTransferDate, isFractionalSplitAxis, isNonPrimaryAsset);
   if (bgError) return bgError;
 
   // ── 주택별 개별주택가격 최초공시일(영 §163⑨ 단서 2호 구간의 끝) — 세 경로(자산 단위·D2-4·D1-H) 공용이라 경로 분기보다 앞 ──

@@ -19,6 +19,23 @@ export function bgFractionalHasOutOfScopeShare(shares: readonly AssetForm[] | un
 }
 
 /**
+ * 축 B × 입주권 — 둘째 이후 지분 중 **원조합원** 지분이 있는가(계획서 `bg-axis-b-right-share-inputs.plan.md`).
+ *
+ * 원조합원 지분의 「종전 부동산 실지취득가액」(`bgActualAcquisitionTotal`)은 물건 단위 값이라 첫 카드에서 받아 병합한다(`mergePrimaryBasic`).
+ * 첫 카드가 승계면 그 칸을 숨기는데(`isBgSuccessorRight`), 그러면 원조합원 지분은 넣을 곳이 없다 — 이 술어가 참이면 첫 카드가 다시 받는다.
+ * 조합원 유형(`isSuccessorRightToMoveIn`)은 지분별이고 자산 종류는 첫 카드에서 병합된다(`axisBEffectiveAsset`).
+ */
+export function bgFractionalHasOriginalRightShare(shares: readonly AssetForm[] | undefined): boolean {
+  if (!shares) return false;
+  const form = { assets: [...shares], assetSplitMode: "fractional" as const };
+  return shares.some((_, i) => {
+    if (i === 0) return false;
+    const share = axisBEffectiveAsset(form, i);
+    return share.assetKind === "right_to_move_in" && share.isSuccessorRightToMoveIn !== true;
+  });
+}
+
+/**
  * 축 B × 일반건물 — 토지·건물이 모두 의제취득일 전(3자 max)이 아닌 지분이 있는가(PR-7b-6b · Q-34와 같은 규칙). 있으면 첫 카드가 두 파트 다
  * 의제취득일 전이어도 산정방식 라디오를 남겨 그 지분이 쓸 방식을 받는다 — ④⑧은 지분마다 `gbBgThreeWayParts`로 판정한다.
  */
