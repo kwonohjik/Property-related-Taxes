@@ -1,9 +1,9 @@
 # 상속·증여 — 자산 종류·겸용 전환으로 일반 범위에 들어올 때 남는 취득가액 산정 방식 플래그
 
 > **출처**: `inherit-stale-acq-mode-flags.plan.md`(#2594) §4 V-1 — 「상속인 채로 자산 종류를 바꿔 다른 경로가 켠 플래그가 남는 경우」. 후속 계획서 `inherit-gift-owner-split-residue.plan.md` Q-3 (b)에서 별건으로 남겼고, `owner-split-residue-followups.plan.md` V-4(「증여 + 남은 환산 플래그 → 400 — #2594 V-1 축」)도 범위 밖으로 넘겼다.
-> **검증 깊이**: **L2** — 측정한 시료에서는 세액이 바뀌지 않는다. 계산이 막히는 막다른 길(화면에 없는 칸 요구 · ⑧ 통과 후 서버 400)을 화면 세션 안에서 없앤다. 다만 세액이 바뀌는 조합(소유자 분리 · 옛 형식 직접 필요경비)은 측정하지 않았다(V-4).
-> **상태**: 계획 · 착수 전 route 실측 완료(§1) · 후보 patch 임시 적용 실측 완료(§3.3).
-> **결정**: Q-1~Q-3 사용자 결정 대기(§4).
+> **검증 깊이**: ~~L2~~ → **L3** (Pre-Do 정정 · V-4) — 막다른 길(화면에 없는 칸 요구 · ⑧ 통과 후 서버 400)을 화면 세션 안에서 없앤다. 옛 형식 직접 필요경비(`directExpenses`)가 있는 상속에서는 남은 플래그가 경비를 0으로 실어 **세액이 조용히 틀렸다**(280,530,000 ↔ 대조 277,002,000) — 이 변경으로 바로잡힌다.
+> **상태**: **구현 완료**(2026-10-27) — §7.
+> **결정**(사용자 2026-10-27 「권장 사항으로 진행」): **Q-1 = (a)** 일반 범위 진입 전환 patch · **Q-2 = (a)** 상속·증여 둘 다 · **Q-3 = (a)** 되돌아가는 전환의 라디오 값 소실은 받아들인다.
 
 ## 0. 한 줄 요약
 
@@ -129,9 +129,21 @@ export function genericScopeEntryClearPatch(prev: AssetForm, merged: AssetForm):
 
 | ID | 항목 | 상태 |
 |---|---|---|
-| V-1 | 증여에서 재개발 §166③ 라디오 · 겸용 「개별주택가격 미공시」 토글이 화면에 보이는가(플래그를 켤 수 있는가) | ⏳ 확인 필요 — Pre-Do에서 화면 실측. 보이지 않으면 증여 범위는 복원 경로(저장 폼)만 남고, Q-2는 「같은 규칙 유지」 근거로만 남는다 |
-| V-2 | 승계조합원 입주권 산정 방식(세 플래그)이 상속·증여에서 보이는가 — `SuccessorRightTypeToggle`(`AssetSectionBasic.tsx:389`)의 렌더 조건 | ⏳ 확인 필요. 보이면 감정·매매사례 행(§1.2)이 화면 도달 경로가 된다. 지금 감정·매매사례 행의 화면 도달은 확인되지 않았다 |
-| V-3 | 부담부증여 × 일반 범위 진입 — 남은 플래그가 계산에 쓰이는가 | ⏳ 범위 밖 · 측정 못 함(§3.3). 부담부증여는 `giftEstimatedModeBlocked`가 거짓이라 복원도 비우지 않는다. 이 변경은 복원과 같게 건드리지 않는다 |
-| V-4 | 세액이 바뀌는 조합 — 상속 소유자 분리 · 옛 형식 `directExpenses`에서 남은 플래그가 세액을 바꾸는가(#2594 TX-1·TX-2와 같은 축). #2607의 읽는 쪽 정규화 뒤 상태 | ⏳ 확인 필요 — Pre-Do anchor에서 잰다. 바뀌면 깊이를 L3로 올리고 「바로잡힘」 행을 추가한다 |
+| V-1 | 증여에서 재개발 §166③ 라디오 · 겸용 「개별주택가격 미공시」 토글이 화면에 보이는가 | ✅ 2026-10-27 화면 실측(headless Playwright 프로브) — 상속·증여 모두 보인다(재개발 라디오 · 겸용 PHD 토글). 증여도 화면 도달 경로다 |
+| V-2 | 승계조합원 입주권 산정 방식(세 플래그)이 상속·증여에서 보이는가 | ✅ 2026-10-27 화면 실측 — 입주권이면 `SuccessorRightTypeToggle`이 원인과 무관하게 보이고(`AssetSectionBasic.tsx` `assetKind === "right_to_move_in"`), 승계를 고르면 산정 방식 4종(실지거래가액·매매사례가액·감정가액·환산취득가액)이 상속·증여에서도 보인다. ⇒ §1.2 감정·매매사례 행도 화면 도달 경로다 |
+| V-3 | 부담부증여 × 일반 범위 진입 — 남은 플래그가 계산에 쓰이는가 | ⏳ 범위 밖 · 측정 못 함(§3.3). 부담부증여는 `giftEstimatedModeBlocked`가 거짓이라 복원도 비우지 않는다. 이 변경도 같게 건드리지 않는다(render·route anchor로 고정) |
+| V-4 | 세액이 바뀌는 조합 | ✅ 2026-10-27 route 실측 — 상속 소유자 분리(건물만 154,500,000 · 토지만 94,022,000)와 현행 자본적지출 칸(277,002,000)은 남은 플래그 3종 모두 세액이 같다(#2607 정규화). **옛 형식 `directExpenses` 1천만만** 남은 환산·감정·매매사례가 경비를 0으로 실어 280,530,000(대조 277,002,000) — #2594 TX-1과 같은 축. 증여는 모두 ⑧ 차단. ⇒ 깊이 L3 |
 | V-5 | 증여 ⑧ 메시지(`giftEstimatedModeError`)는 필드 키가 없다(프로브 `field: undefined`) — 오류를 눌러도 이동할 칸이 없다 | ⏳ 별건 관찰. 이 변경 뒤에는 화면 세션에서 이 메시지가 날 경로가 줄어든다 |
-| V-6 | 다른 범위 경계 전환 — 입주권 승계 토글(재개발 ↔ 승계)은 둘 다 범위 밖이라 해당 없음. 그 밖에 `assetKind`·`isMixedUseHouse`를 쓰는 곳 | ⏳ 착수 때 `assetKind:`·`isMixedUseHouse:` 쓰기 지점을 전수 grep해 2곳(§3.2) 밖이 없는지 확인한다(지금 grep: `MixedUseSection.tsx:52` · `housing-flag-reset.ts:77` · 기본값·변환 상수만) |
+| V-6 | 다른 범위 경계 전환 | ✅ 2026-10-27 grep — `assetKind` 쓰기: 자산 종류 버튼(§3.2) 외에는 새 자산 생성(`CompanionAssetCardReplot` 증환지 증가분 · `swap-selling-house` 명부 행 → 판정 기본 자산에서 시작)과 판정 메뉴(`one-house-exemption/Step3`)뿐이다. `isMixedUseHouse` 쓰기: 겸용 토글 · `housingFlagResetPatchForAssetKind`(자산 종류 버튼 안) · 기본값 상수뿐이다 |
+
+
+## 7. 구현 결과 (2026-10-27)
+
+- 신규 `lib/calc/transfer-generic-scope-entry.ts` `genericScopeEntryClearPatch(prev, merged)`. `lib/calc/transfer-tax-split-acq-mode.ts`는 778줄이라 800줄 트리거를 피해 별도 파일로 뒀다. 기존 술어·patch만 조합한다.
+- 호출: `AssetSectionBasic.tsx` 자산 종류 버튼(기존 patch 3종 합성 → `merged`)과 `MixedUseSection.tsx` 겸용 토글 OFF. 둘 다 같은 `onChange` 한 번에 싣는다.
+- 테스트:
+  - render anchor `__tests__/components/inherit-gift-scope-entry-stale-acq-flags.anchor.test.tsx` 14건 — 버튼·토글이 싣는다 / 매매·범위 밖 유지·범위 안 이동·부담부증여는 싣지 않는다.
+  - route anchor `__tests__/api/transfer.route.inherit-gift-scope-entry-stale-acq-flags.anchor.test.ts` 18건 — 수정 전 막다른 길 계약 · 상속·증여 × 재개발·입주권 × 3플래그 × 주택·토지 × 기준시가 칸 채움·비움 = 대조 280,530,000 · 겸용 OFF·겸용 → 토지 · 수정 후 = 복원 후 · 옛 `directExpenses` 280,530,000 → 277,002,000 · 범위(매매·부담부증여·재개발 → 입주권·D2).
+  - E2E `e2e/inherit-gift-scope-entry-stale-acq-flags.spec.ts` SE-E1(재개발 환산 → 주택) · SE-E2(겸용 PHD → 겸용 OFF), 대조 세액과 같음.
+- mutation 7/7 KILLED: M1 경계 조건 제거 · M2 증여 분기 제거 · M3 자산 종류 버튼 호출 제거 · M4 겸용 OFF 호출 제거 · M5 D2 제외 제거 · M6 증여 술어 무조건 · M7 상속을 증여 patch로. 호출 2곳을 함께 뺀 E2E 변형에서도 2건 모두 실패했다.
+- 화면 모양은 바뀌지 않는다(새 칸·문구 없음) — 스크린샷 점검은 하지 않았다.
