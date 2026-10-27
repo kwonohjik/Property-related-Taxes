@@ -248,6 +248,10 @@ type PrimaryLike = {
   standardPriceAtAcquisition?: number;
   standardPriceAtTransfer?: number;
   preHousingDisclosure?: unknown;
+  /** PHD 이월과세 자본적지출 규칙(F1) — 분리 계산 여부와 자산 단위 자본적지출 */
+  capitalExpenditure?: number;
+  selfOwns?: string;
+  isSeparateAcquisition?: boolean;
   generalBuildingValuation?: unknown;
   redevelopment?: {
     subject?: string;
@@ -300,6 +304,15 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
           issue(["standardPriceAtAcquisition"], "이월과세 환산취득가액은 취득시 기준시가가 필요합니다");
         if (!positive(data.standardPriceAtTransfer))
           issue(["standardPriceAtTransfer"], "이월과세 환산취득가액은 양도시 기준시가가 필요합니다");
+      }
+      // §164⑦ PHD·APD 환산 donor × 자본적지출 — 엔진의 3시점 분리 경로는 파트 칸만 읽는다(⑧ `validateCarryoverAsset` (f-2)와 같은 조건 · 계획서
+      //   `carryover-phd-owner-split-residuals.plan.md` F1). 증여자 자본적지출은 2024-01-01 이후 양도만 산입된다(엔진 `DONOR_CAPEX_EFFECTIVE_DATE`).
+      if (ct.useEstimatedAcquisition && data.preHousingDisclosure && data.transferType !== "burdened_gift") {
+        if (data.transferDate >= "2024-01-01" && positive(ct.donorCapitalExpenditure))
+          issue(["carryoverTaxation", "donorCapitalExpenditure"], "PHD·APD 환산 이월과세는 증여자 자본적지출을 반영하지 못합니다 — 토지분·건물분 귀속을 받는 칸이 없습니다 (소득세법 §100② 후문 · §97②2호)");
+        const splitActive = (!!data.selfOwns && data.selfOwns !== "both") || data.isSeparateAcquisition === true;
+        if (!splitActive && positive(data.capitalExpenditure))
+          issue(["capitalExpenditure"], "PHD·APD 환산 이월과세는 자산 전체 자본적지출을 반영하지 못합니다 — 3시점 환산은 토지분·건물분 칸(landDirectExpenses·buildingDirectExpenses)만 읽습니다 (소득세법 §100② 후문 · §97②2호)");
       }
     }
   }

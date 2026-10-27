@@ -117,7 +117,13 @@ export function resolveDisplayAcquisitionAndExpense(r: {
    *
    *    ⚠️ **표시 전용 echo다** — 세액은 `r.result`·`taxBaseShare` 축이 낸다(불변).
    */
-  const adoptedCarryover = adoptedCarryoverAcquisitionPrice(r.result.carryoverTaxationDetail);
+  /**
+   * 소유자 분리(토지만·건물만)는 이월과세 채택이 있어도 분리 합(본인 파트)이 정본이다 — 채택 시나리오의 결과가 곧 `r.result`라 분리 상세도
+   * 채택 쪽(A·B)이다. 채택값(자산 전체 취득가액)을 쓰면 양도가액 일괄 총액·필요경비 역산과 섞여 본인 파트 양도차익과 어긋났다
+   * (건물만 850,000,000 · 300,000,000 · 220,000,000 · B 채택 필요경비 −20,000,000 — 계획서 `carryover-phd-owner-split-residuals.plan.md` V-2).
+   */
+  const ownerSplit = (r.result.splitDetail?.selfOwns ?? "both") !== "both";
+  const adoptedCarryover = ownerSplit ? undefined : adoptedCarryoverAcquisitionPrice(r.result.carryoverTaxationDetail);
   /**
    * 🔴 **재개발·재건축(§166) 자산은 단건 신고서와 같은 역산 leaf**(`redevFilingTotals`)를 쓴다 (2026-10-21).
    *
