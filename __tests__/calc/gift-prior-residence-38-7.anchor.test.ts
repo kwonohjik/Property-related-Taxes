@@ -276,10 +276,16 @@ describe("PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 �
     const twelve = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "12" }));
     expect(twelve.r.longTermHoldingRate).toBe(0.12); // 표1(6%)이 아니라 표2 보유분
     expect(twelve.r.longTermHoldingDeduction).toBe(48_000_000); // 과세 양도차익 4억 × 12%
-    expect(has(twelve.warnings, TABLE2_NOTICE)).toBe(false); // 통산을 적용했으므로 해석이 갈린다는 고지는 없다
-    // 경계 −1 — 통산 23개월이면 표1
+    // 통산이 표2를 열었으므로 조심 2025서3843(통산 부인 심판례) 확인 필요를 고지한다(2026-10-27 — 계획서 table2-pre-acquisition-residence-conflict §10)
+    const t2 = (twelve.warnings ?? []).find((x: string) => x.includes(TABLE2_NOTICE)) as string;
+    expect(t2).toContain("증여 전 동일세대로 거주한 12개월");
+    expect(t2).toContain("조심 2025서3843");
+    expect(t2).toContain("확인이 필요합니다");
+    expect(t2).not.toContain("2025두34935"); // 공제율 사건 — 대상 판정 근거로 인용하지 않는다
+    // 경계 −1 — 통산 23개월이면 표1이고 심판례 고지도 없다(통산이 결론을 가르지 않는다)
     const eleven = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "11" }));
     expect(eleven.r.longTermHoldingRate).toBe(0.06);
+    expect(has(eleven.warnings, TABLE2_NOTICE)).toBe(false);
     // 증여 후 실거주 24개월을 직접 입력한 같은 사실은 거주분(8%)이 더해진 20% — 통산한 증여 전 거주는 거주분 공제율이 되지 않는다
     const direct = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "", residencePeriodMonthsAsset: "24" }));
     expect(direct.r.longTermHoldingRate).toBe(0.2);

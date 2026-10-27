@@ -3,9 +3,14 @@
  * (결정 #38-8 → #38-9로 범위 축소)
  *
  * 증여 전 동일세대 거주 개월(`GiftHouseholdBasis.priorHouseholdResidenceMonths`, 결정 #38-7)은 비과세 거주요건과 표2(1세대1주택) 대상 판정
- * 「보유기간 중 거주기간 2년 이상」(「소득세법 시행령」 §159의4)에 **통산한다**(결정 #38-9 — 사전-2025-법규재산-0506 질의1). 그래서 개월이 입력돼 있으면
- * 통산해 계산하고 고지하지 않는다(해석이 갈리지 않는다). 이 고지는 **미답(「모름」)** 일 때만 낸다 — 모름 = 혜택 불성립 + 결론을 가를 때만 확인 필요(2026-10-04 원칙).
- * 세액은 통산하지 않은 값(표1)이다. 표2 **공제율**의 보유·거주기간은 본인 기간(증여일 기산)이라 통산 대상이 아니다.
+ * 「보유기간 중 거주기간 2년 이상」(「소득세법 시행령」 §159의4)에 **통산한다**(결정 #38-9 — 사전-2025-법규재산-0506 질의1). 미답(「모름」)이면 통산하지 않고
+ * 계산하며, 결론을 가를 때만 아래 1~6 조건으로 확인 필요를 고지한다(2026-10-04 원칙 — 세액은 통산하지 않은 값(표1)).
+ * 표2 **공제율**의 보유·거주기간은 본인 기간(증여일 기산)이라 통산 대상이 아니다.
+ *
+ * **통산해 표2가 된 경우**에도 확인 필요를 고지한다(사용자 결정 2026-10-27 — 계획서 `table2-pre-acquisition-residence-conflict.plan.md` §10):
+ * 조심 2025서3843(2025.12.16.)이 부→자 증여 사안에서 증여 전 동일세대 거주를 표2 적용 여부 판단에 통산하지 않았다(처분청은 양도일 별도세대를 주장).
+ * 상속(§154⑧3호 통산분)은 기획재정부 재산세제과-720(2021.8.10.)이 대상 판정 통산을 정면으로 답해 고지하지 않는다.
+ * ⚠️ 대법원 2026.1.15. 2025두34935는 표2 **거주기간별 공제율** 사건이다(처분청이 대상 판정 통산·보유분 표2를 인정한 사안) — 대상 판정 근거로 인용하지 않는다.
  *
  * 발동 조건(전부):
  *  1. 동일세대 통산이 성립(`giftHouseholdConsolidationStart`)하고 증여 전 거주 개월이 **미답**이다(0 = 거주한 적 없음은 고지 없음) —
@@ -25,6 +30,7 @@ import {
   giftHouseholdConsolidationStart,
   giftHouseholdMaxPriorResidenceMonths,
 } from "./gift-household-basis";
+import { giftHouseholdPriorResidenceMonths } from "./gift-household-basis";
 
 export interface GiftTable2NoticeArgs {
   /** 표2 대상 판정 입력(유효 주택수 반영) — 장기보유특별공제 계산 축과 같은 입력이다. */
@@ -41,8 +47,21 @@ export function giftTable2PriorResidenceNotice(a: GiftTable2NoticeArgs): string 
   const basis = input.giftHouseholdBasis;
   if (!a.isHighValuePartial || !a.lthdApplies || !giftHouseholdConsolidationStart(basis)) return undefined;
   if (!resolveLthdTable2OneHouseAxis(input, a.deemedOneHouseBy155) || !isLthdTable2SubjectAsset(input)) return undefined;
-  // 입력이 있으면(0 포함) 통산을 적용했거나 거주한 적이 없다는 명시 답이다 — 고지하지 않는다.
-  if (basis?.priorHouseholdResidenceMonths !== undefined) return undefined;
+  // 입력이 있으면(0 포함) 통산을 적용했거나 거주한 적이 없다는 명시 답이다 — 통산이 표2를 연 경우에만 심판례 확인 필요를 고지한다.
+  if (basis?.priorHouseholdResidenceMonths !== undefined) {
+    const applied = giftHouseholdPriorResidenceMonths(basis);
+    const withPrior = resolveExemptionRequirementResidenceMonths(input);
+    if (applied <= 0 || !meetsTable2ResidenceRequirement(input, Math.floor(withPrior / 12))) return undefined;
+    if (meetsTable2ResidenceRequirement(input, Math.floor((withPrior - applied) / 12))) return undefined;
+    return (
+      `증여 전 동일세대로 거주한 ${applied}개월을 장기보유특별공제 표2(1세대1주택) 대상 판정(${TRANSFER.LONG_TERM_DEDUCTION_TABLE2_DECREE} — 보유기간 중 거주기간 2년 이상)에 ` +
+      "통산해 표2를 적용했습니다(사전-2025-법규재산-0506). 다만 조세심판원은 조심 2025서3843(2025.12.16.)에서 증여 전 증여자와 동일세대원으로 거주한 기간을 " +
+      "표2 적용 여부 판단에 통산할 수 없다고 보았습니다(양도일에 별도 세대였다는 처분청 주장이 있던 부→자 증여 사안) — 확인이 필요합니다. " +
+      (basis.holdingAlreadyAtDonor === true
+        ? "(표2 공제율의 거주기간은 증여일 이후 본인 거주만 반영했습니다.)"
+        : "(표2 공제율의 보유·거주기간은 증여일부터 센 본인의 기간이라 통산하지 않습니다.)")
+    );
+  }
   const maxPrior = giftHouseholdMaxPriorResidenceMonths(basis);
   if (maxPrior <= 0) return undefined;
   const baseMonths = resolveExemptionRequirementResidenceMonths(input);
