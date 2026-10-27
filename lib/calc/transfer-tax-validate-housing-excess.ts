@@ -14,6 +14,8 @@ import { housingExcessPartModeMismatch } from "./housing-excess-split";
 import { housingExcessAcqContractParts, housingExcessNeedsAcqContract } from "./housing-excess-acq-contract";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import { fieldError } from "./transfer-tax-validate-field";
+import { parseDecimal } from "@/lib/calc/number-parse";
+import { effectiveSelfOwns } from "./self-owns-scope";
 import { isBeforeHousePriceFirstDisclosure } from "@/lib/tax-engine/housing-excess-split";
 import {
   APARTMENT_ACQ_PRICE_SENTENCE,
@@ -117,4 +119,29 @@ export function validateHousingExcessSplitInputs(
     if (building === null) return fieldError("housingExcessLandCapex", `${capexHead} 토지분은 0 이상 ${total.toLocaleString()} 이하여야 합니다.`);
   }
   return null;
+}
+
+/**
+ * V9 — 주택 부수토지 배율 판정 필수 입력(「소득세법 시행령」 제168조의12).
+ * 토지 면적이 정착면적의 **3배**(최소 배율)를 넘으면 어느 용도지역이든 한도 초과 가능성이 있으므로 소재지 구분이 필수다. 미입력 시 엔진은
+ * 배율 판정 자체를 하지 않고(R-7 — 미입력 fallback 3배는 초과면적을 과다 산출해 납세자에게 불리) 초과분이 조용히 누락된다.
+ * 3배 이하이면 어느 배율을 써도 초과가 없으므로 요구하지 않는다(차단 범위 최소화).
+ * 토지만 본인도 요구한다 — 엔진이 그 토지의 초과분을 비사업용으로 나눈다(`resolveAppurtenantZoneInputs`). 건물만 본인은 초과 토지를 갖지 않는다.
+ * 매매사례가액 분기(`validateAssetAcquisition`)는 분리 검증 전에 반환하므로 거기서도 이 함수를 부른다.
+ */
+export function appurtenantZoneRequiredError(
+  asset: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns" | "appurtenantLandZone" | "buildingFootprintArea" | "acquisitionArea">,
+  label: string,
+): string | null {
+  if (
+    asset.assetKind !== "housing" ||
+    asset.isMixedUseHouse ||
+    (effectiveSelfOwns(asset) ?? "both") === "building_only" ||
+    asset.appurtenantLandZone !== undefined
+  )
+    return null;
+  const footprint = parseDecimal(asset.buildingFootprintArea);
+  const landArea = parseDecimal(asset.acquisitionArea);
+  if (!(footprint > 0 && landArea > footprint * 3)) return null;
+  return fieldError("appurtenantLandZone", `${label}: 토지 면적(${landArea}㎡)이 건물 정착면적의 3배를 초과합니다 — 부수토지 인정 한도 배율을 정하려면 「부수토지 소재지 구분」을 선택하세요. 한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지로 과세됩니다 (소득세법 §104의3①5호·시행령 §168의12).`);
 }

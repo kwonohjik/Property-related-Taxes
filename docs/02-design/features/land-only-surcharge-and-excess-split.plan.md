@@ -2,7 +2,7 @@
 
 > **출처**: `carryover-phd-owner-split-residuals.plan.md` §8.5.1(#2641) — V-3′(#2636) 후속으로 조회한 결함 2건.
 > **검증 깊이**: **L3** — 두 결함 모두 세액이 바뀐다(①은 과다과세 해소 · ②는 과소과세 해소).
-> **상태**: 계획 — Q-1·Q-2·Q-3 결정 대기. 코드 변경 없음.
+> **상태**: Q-1·Q-2·Q-3 모두 (a) 결정(2026-10-27 — 권장안). 구현 §7.
 > **기준 코드**: master `67401a2a7`(#2641 머지 후). 실측은 throwaway probe(삭제) · mock 세율(`makeMockRates`) · 엔진 직접 호출.
 
 ## 0. 요약
@@ -156,3 +156,51 @@ E3 독립 산식: 토지 양도소득금액 = 이내분 4,500만 × 70% = 31,500
 3. ⑧ V9 → A-9 · route anchor · V-5 다건·컴패니언 → `__tests__/api` `__tests__/calc`
 4. V-6 표시 실측·필요 시 수정 → 구현 후 mutation P1~P6
 5. 취득가액 리뷰 게이트(acquisition-cost-review)는 해당 없음(취득가액 로직 무변경) — 세율·비과세 축이라 `transfer-tax-qa` 검토로 대신한다
+
+## 7. 구현 결과 (2026-10-27)
+
+### 7.1 변경
+
+| 지점 | 내용 |
+|---|---|
+| 엔진 `transfer-tax-surcharge-predicate.ts` | 입력에 `selfOwns`·`buildingOwnerSameHousehold` · 최상단 게이트 `forceNoMultiHouseSurcharge \|\| landOnlyBuildingOwnerOtherHousehold` — 세율 축(`rate-calc`)·장특 축·재개발(입력 전체를 넘긴다)이 함께 닫힌다 |
+| 엔진 `transfer-tax.ts` | 장특 축 리터럴(`surchargeArgs`)에 두 필드 · 그 조건을 뺀 반사실 판정이 중과일 때만 `LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE` |
+| 엔진 `transfer-tax-appurtenant-land.ts` | ⓐ `resolveAppurtenantZoneInputs` 건물만만 제외 · 토지만 본인은 별개취득 게이트를 거치지 않는다 · ⓑ `applyHousingLandExclusions` 토지만 본인 건물분 0 |
+| 엔진 `transfer-tax-split-part-seeds.ts` | ⓒ 토지만 본인 + 초과분 파트 → 시드 [이내 토지, 초과분] |
+| 엔진 `transfer-tax-rental-housing-nbl-split.ts` | **V-4 실측 중 발견** — §155⑳ 고가주택(A2) 재산세제과-915 경로(`buildRentalHighValueExcessRuling`)가 토지만 본인에게 건물분 안분값을 더했다(20억 시료 109,612,000 = 소유자 같음 값) → 건물분 0 · 96,940,000 |
+| ⑧ `transfer-tax-validate-housing-excess.ts` `appurtenantZoneRequiredError` | V9를 함수로 뽑아(종전 `transfer-tax-validate-split.ts` 인라인) 건물만만 제외 · 분리 검증과 **매매사례가액 분기**(`validateAssetAcquisition` — 분리 검증 전에 반환한다 · V-3′ F-2와 같은 구조)가 함께 부른다. 소유자 같음은 그 분기에서 #17 검사가 받는다 |
+
+14 동기화 지점 필드 변경 없음(입력은 V-3′ `buildingOwnerSameHousehold` · 기존 소재지·정착면적). 800줄: `transfer-tax.ts` 765 · `validate-split` 747 → 734.
+
+### 7.2 V-n 해소
+
+| ID | 판정 |
+|---|---|
+| V-3 | ✅ 겸용주택은 소유자 분리 축 밖(`selfOwnsSplitApplicable`) · 겸용 엔진 입력에 `selfOwns` 없음. 재개발은 술어에 입력 전체를 넘겨 자동으로 따라온다 |
+| V-4 | ✅ A1(10억) 38,785,000 = 소유자 같음(건물분 어차피 비과세) · A2(20억) 결함 발견·수정 96,940,000(§7.1) |
+| V-5 | ✅ 다건 산출세액 84,700,000(초과분 315,000,000 · 독립 산식 일치) · 컴패니언 초과분 파트(한도 60㎡·초과 40㎡ · 토지 양도차익의 40%) |
+| V-6 | ✅ 결과 카드는 소유자 분리와 무관하게 초과분 블록(`SplitGainDetailSection.tsx:352`) · 신고서 2열 토지 열(전체 3.6억 − 비과세 2.16억 = 과세 1.44억 · 장특 2,304만 · 소득금액 1.2096억)이 산출세액과 이어진다. 비소유 건물 열에 값이 보이는 것은 종전 소유자 분리 표시(이번 변경 밖) |
+| V-7 | ✅ 79,660,000(이내 토지분 안분값 2.4억 − 초과분 3억 < 0 → 0) |
+| V-8 | ✅ 2022.1.1. 전 양도는 수도권 도시지역 5배 → 초과분 50,000,000 · 134,850,000(이내분 중과 + 초과분 비사업용 2호 우세) |
+
+엔진 직접 호출에서 토지 취득일이 없는 같은 날 취득 토지만 본인(화면 경로는 소유자 분리면 취득일로 채워 보낸다 — `transfer-tax-api-split.ts:247`)은 분리 계산이 없어 「초과분 미분리」 고지로 끝난다(세액 0 — 종전과 같고 비과세 플래그만 거짓). 소유자 같음의 같은 상태와 같은 동작이다.
+
+### 7.3 테스트
+
+- 엔진 anchor 14건(`land-only-surcharge-excess-split.anchor.test.ts`) · route anchor 10건(`transfer.route.land-only-surcharge-excess-split.anchor.test.ts` — 단건 D-2 3 · ⑧ 3 · D-1 2 · 다건 · 컴패니언). route의 2021년 양도분은 그 시기 누진구간(3억 초과 40% · 누진공제 2,540만)이라 엔진 직접 anchor(모의 세율표 2024 구간)와 금액이 다르다.
+- 회귀: 전체 vitest 42,715건 실패 0(V9 이동 전) · 이동 후 `__tests__/calc`·`api`·`components` 20,553건 + calc·route 10,551건 실패 0. tsc 0 · 변경 파일 lint 오류 0(경고 1건은 종전 `PRHP_PART_RATE_GROUP` 미사용).
+- 구현 후 mutation 9건 전부 KILLED(V9 이동 전 — 함수 본문 동일):
+
+| P | 무력화 | 실패 anchor |
+|---|---|---|
+| P1 | 술어 최상단 토지만 다른 세대 조건 | A-1·A-2·route D-1 다른 세대 |
+| P2 | 장특 축 리터럴 두 필드 | 같은 3건 |
+| P3 | ⓐ 게이트 원복 | D-2·V-4·V-7·V-8·다건·컴패니언 13건 |
+| P4 | ⓑ 건물분 0 원복 | A-5·A-6·A-7·V-7·V-8·route 다른 세대 6건 |
+| P5 | ⓒ 시드 원복 | A-4·A-4b·A-5·A-6·V-7·V-8·route·다건 8건 |
+| P6 | ⑧ V9 토지만 본인 | route ⑧ 2건 |
+| P7 | ⑳ 915 건물분 0 원복 | V-4 A2 |
+| P8 | 매매사례 분기 V9 호출 | route 매매사례 |
+| P9 | 중과 배제 고지 | A-1·route D-1 다른 세대 |
+
+- 브라우저 수동 확인 안 함. E2E는 추가하지 않았다(⑧ 칸은 기존 소재지 라디오 — 새 위젯 없음).
