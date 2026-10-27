@@ -414,6 +414,7 @@ export function burdenedGiftCarryoverDonorSplitRequested(asset: CarryoverDonorSp
  * 토글은 첫 자산에서만 켤 수 있지만 값은 자산에 남는다. 켠 뒤 종류를 토지로 바꾸고 «주택 먼저로 교환»(`reverse-appurtenant-swap`)으로 그 자산이 두 번째로 내려간 다음
  * 다시 주택으로 바꾸면 컴패니언에 ON 잔재가 선다. 그대로 두면 `isSeparateAcquisition`·⑥이 컴패니언을 C로 읽어 ④ 본문(`companionAssets[].isSeparateAcquisition`)과
  * ⑥(취득가액 «계산 후 표시»)이 OFF 읽기와 갈린다(실측). 컴패니언을 읽는 두 지점(④ 본문 조립·⑥ 행 합계)이 이 한 함수로 같은 사실을 본다. ⑧은 `isNonPrimaryAsset` 옵션으로 이미 갈려 있어 같은 입력을 OFF와 같게 읽는다(뮤테이션으로 확인 — 별도 중화 불필요).
+ * 부담부증여 주택·건물(`bgHouseSplitMode`)은 옵션 없이 읽으므로 ⑧ 부담부증여 검증 입구와 ⑤ `TransferModeBlock`·`CarryoverGiftBlock`도 이 함수(또는 같은 옵션)를 쓴다.
  */
 export function neutralizeCarryoverDonorSplitForCompanion<T extends { carryoverDonorSplit?: boolean }>(asset: T, isNonPrimary: boolean): T {
   return isNonPrimary && asset.carryoverDonorSplit ? { ...asset, carryoverDonorSplit: false } : asset;

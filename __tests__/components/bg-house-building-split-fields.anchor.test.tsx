@@ -10,6 +10,7 @@ import { BurdenedGiftBlock } from "@/components/calc/transfer/BurdenedGiftBlock"
 import { CarryoverGiftBlock } from "@/components/calc/transfer/CarryoverGiftBlock";
 import { CarryoverDonorSplitToggle } from "@/components/calc/transfer/CarryoverDonorSplitToggle";
 import { TransferModeBlock } from "@/components/calc/transfer/TransferModeBlock";
+import { AssetSectionTransfer } from "@/components/calc/transfer/asset-sections/AssetSectionTransfer";
 import { bgAsset } from "@/__tests__/calc/_helpers/carryover-donor-built-bg-form";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -75,5 +76,14 @@ describe("이월과세 · 토글 C", () => {
     render(<TransferModeBlock asset={carry()} onChange={vi.fn()} transferDate="2026-02-16" isCompanionBundle isNonPrimaryAsset />);
     expect(fields()).toEqual(expect.arrayContaining(["bgActualAcquisitionTotal", "bgCoDonorActualAcquisitionTotal"]));
     expect(fields()).not.toContain("bgCoDonorActualAcquisitionLand");
+    cleanup();
+    // 자산 카드 — 첫 자산 여부(`isPrimary`)를 부담부증여 블록까지 내려보낸다.
+    const card = (isPrimary: boolean) =>
+      render(<AssetSectionTransfer asset={carry()} onChange={vi.fn()} bundledSaleMode="actual" transferDate="2026-02-16" isCompanionBundle isPrimary={isPrimary} />);
+    card(false);
+    expect(fields()).toContain("bgCoDonorActualAcquisitionTotal");
+    cleanup();
+    card(true);
+    expect(fields()).not.toContain("bgCoDonorActualAcquisitionTotal");
   });
 });

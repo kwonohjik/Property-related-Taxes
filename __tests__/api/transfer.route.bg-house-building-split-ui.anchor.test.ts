@@ -170,7 +170,9 @@ describe("토글 C 저장값이 남은 경우 — ⑤·⑧이 ④와 같이 읽�
   };
 
   it("둘째 자산 — ⑧이 토글 C를 꺼진 것으로 읽어 총액 칸을 요구한다(수정 前: 통과 → 서버 400 · 화면에 총액 칸이 없어 막다른 길)", async () => {
-    expect(issues(bundle(carryC()))[0]?.field).toBe("bgActualAcquisitionTotal");
+    // 꺼진 화면의 칸 — 당초 증여자 총액 → (채우면) 양도인 총액 순.
+    expect(issues(bundle(carryC()))[0]?.field).toBe("bgCoDonorActualAcquisitionTotal");
+    expect(issues(bundle(carryC({ bgCoDonorActualAcquisitionTotal: "150,000,000" })))[0]?.field).toBe("bgActualAcquisitionTotal");
     const off = await ok(bundle(carryC({ carryoverDonorSplit: false, ...TOTALS })));
     const stale = await ok(bundle(carryC(TOTALS)));
     expect([stale.det, off.det]).toEqual([100_152_308, 100_152_308]);

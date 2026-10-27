@@ -646,12 +646,14 @@ function missingCoDonorBasisLabel(asset: AssetForm): { label: string; field: Iss
      *    종전에는 「분리 2칸 또는 총액」을 요구해 채울 칸 없는 영구 차단이었다.
      *    양도인 K-4(위 `validateBurdenedGiftAsset`)도 토지는 토지 칸만 요구한다.
      */
-    const hasSplit =
+    // 주택·건물은 토글 C가 켜져 있을 때만 토지·건물 칸이 있고 ④가 싣는다 — 켰다 끈 뒤 남은 값으로 통과시키지 않는다(2026-10-27 실측: 통과 → 서버 400).
+    const houseSplit = bgHouseSplitActive(asset);
+    const partsOnScreen = (asset.assetKind !== "housing" && asset.assetKind !== "building") || houseSplit;
+    const hasSplit = partsOnScreen &&
       (!parts.land || filled(asset.bgCoDonorActualAcquisitionLand)) &&
       (asset.assetKind === "land" || !parts.building || filled(asset.bgCoDonorActualAcquisitionBuilding));
     // 한 파트만이면 총액은 파트를 가를 수 없다(엔진이 거부 · Q-4) — 일반건물 화면에는 총액 칸이 없다.
     //   주택·건물 토지·건물 취득일 다름(토글 C)도 총액 칸이 없다(`validateBgHouseSplit`이 두 칸을 요구한다).
-    const houseSplit = bgHouseSplitActive(asset);
     const hasTotal = parts.land === parts.building && !houseSplit && filled(asset.bgCoDonorActualAcquisitionTotal);
     if (!hasSplit && !hasTotal) {
       // 입력칸 이동 — 화면은 자산 종류로 칸을 가른다(일반건물·토지·토지·건물 분리 주택 = 토지·건물 분리, 그 외 = 총액)

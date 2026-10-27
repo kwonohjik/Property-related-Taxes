@@ -52,6 +52,7 @@ import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
 import { validateLandPartCause } from "./transfer-tax-validate-split";
 import { validateBuildingCauseSplit } from "./transfer-tax-validate-building-cause";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
+import { neutralizeCarryoverDonorSplitForCompanion } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
 import { buildingOwnerHouseholdError } from "./self-owns-scope";
 import { HOUSE_FIRST_DISCLOSURE_KIND_REQUIRED_MESSAGE, houseFirstDisclosureIssue } from "./house-first-disclosure";
@@ -164,7 +165,8 @@ function validateAssetAcquisitionBranches(
   if (conversionError) return conversionError;
 
   // ── 부담부증여 (소령 §159 + 증여세 통합 §53·§47②) — 별도 모듈로 분리 (800줄 정책, 2026-05-12) ──
-  const bgError = validateBurdenedGiftAsset(asset, label, contractAssumedDebtTotal, formTransferDate, isFractionalSplitAxis);
+  // 함께 양도 자산은 토글 C(주택·건물 토지·건물 취득일 다름)를 꺼진 것으로 읽는다 — ④·⑤와 같은 함수(2026-10-27 실측: 켜진 것으로 읽어 통과 → 서버 400).
+  const bgError = validateBurdenedGiftAsset(neutralizeCarryoverDonorSplitForCompanion(asset, isNonPrimaryAsset), label, contractAssumedDebtTotal, formTransferDate, isFractionalSplitAxis);
   if (bgError) return bgError;
 
   // ── 주택별 개별주택가격 최초공시일(영 §163⑨ 단서 2호 구간의 끝) — 세 경로(자산 단위·D2-4·D1-H) 공용이라 경로 분기보다 앞 ──

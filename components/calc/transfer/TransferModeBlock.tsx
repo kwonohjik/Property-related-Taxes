@@ -24,6 +24,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ASSET_KIND_LABELS } from "./asset-labels";
 import { BurdenedGiftBlock } from "./BurdenedGiftBlock";
+import { neutralizeCarryoverDonorSplitForCompanion } from "@/lib/calc/transfer-land-part-cause";
 import { ExpropriationBlock } from "./ExpropriationBlock";
 import { AuctionBlock } from "./AuctionBlock";
 import { getStandaloneDefault } from "./UnifiedReductionPanel-defaults";
@@ -49,6 +50,8 @@ interface Props {
   isCompanionBundle?: boolean;
   /** 축 B 첫 카드 — 지분 전체(`BurdenedGiftBlock` 산정방식 노출 판정 · PR-7b-5) */
   fractionalShares?: readonly AssetForm[];
+  /** 함께 양도하는 두 번째 이후 자산 — 토글 C(주택·건물 토지·건물 취득일 다름)를 꺼진 것으로 그린다(④·⑧과 같은 `neutralizeCarryoverDonorSplitForCompanion`). */
+  isNonPrimaryAsset?: boolean;
 }
 
 // 설명은 상단 안내 문단이 이미 3지선다 전체를 서술하므로 옵션별 description을 두지 않는다
@@ -98,7 +101,7 @@ const UNSUPPORTED_LABELS = (Object.keys(ASSET_KIND_LABELS) as AssetForm["assetKi
   .map((k) => ASSET_KIND_LABELS[k])
   .join(", ");
 
-export function TransferModeBlock({ asset, onChange, transferDate, isFractionalSplit, isCompanionBundle, fractionalShares }: Props) {
+export function TransferModeBlock({ asset, onChange, transferDate, isFractionalSplit, isCompanionBundle, fractionalShares, isNonPrimaryAsset }: Props) {
   // transferCause=공익수용이면 그것을 우선 표시, 아니면 transferType(일반/부담부증여)
   const currentMode =
     asset.transferCause === "public_expropriation"
@@ -222,7 +225,7 @@ export function TransferModeBlock({ asset, onChange, transferDate, isFractionalS
       {/* 부담부증여 펼침 — BurdenedGiftBlock 재사용 */}
       {isBurdenedGift && isSupported && (
         <BurdenedGiftBlock
-          asset={asset}
+          asset={neutralizeCarryoverDonorSplitForCompanion(asset, !!isNonPrimaryAsset)}
           onChange={onChange}
           transferDate={transferDate}
           isFractionalSplit={isFractionalSplit}

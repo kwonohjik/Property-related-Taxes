@@ -135,7 +135,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
   /** 토지·건물 둘 다 이월과세인 부담부증여 일반건물 — 평가액을 토지분·건물분으로 받는다(④·⑧과 같은 술어 · `gb-bg-carryover-gift-tax-part-limit.plan.md` Q-2 a · Q-3 b). */
   const splitsGiftValuation = gbBgSplitsGiftValuation(asset);
   /** 주택·건물 부담부증여 토글 C — 당초 증여자가 토지·건물을 다른 날 취득했다. 건물분 증여자 취득일을 일반건물과 같은 키로 받는다(④·⑧ `bgHouseSplitMode`). */
-  const houseSplitC = bgHouseSplitMode(asset) === "carryover";
+  const houseSplitC = bgHouseSplitMode(asset, { isNonPrimary: isNonPrimaryAsset }) === "carryover";
   /** 증여 사건 블록인가 — 일반건물 건물 블록은 토지도 이월과세면 사건 블록이 아니다(`gbCarryoverEventSource`). 인수채무 토글은 사건 블록에만 둔다. */
   const isEventBlock = !(isGeneralBuilding && isBuildingPart && asset.acquisitionCause === "carryover_gift");
   /** 당초 증여 때 채무를 인수했는가(사건 값) — 켜지면 일반건물은 파트마다 인수채무 칸을 받는다(`carryover-gift-tax-numerator-net.plan.md` Q-2 a · Q-3 a). */
