@@ -1,7 +1,7 @@
 # 토지만 본인 주택 — 장기보유특별공제 보유기간 · 세율 기산 (계획서)
 
 > 작성 2026-10-28 · 깊이 **L3**(세액이 바뀐다) · 선행: `land-only-later-land-holding.plan.md` §6.1·§6.2(#2650·#2652)
-> 상태: **결정 대기(Q-1~Q-3)** — 코드 변경 없음. 실측은 throwaway probe(`__tests__/zz/`, 미커밋)로 했고 기대값은 독립 정수 산식이다.
+> 상태: **결정 완료 · 구현 완료**(Q-1 a · Q-2 a · Q-3 a — Q-2는 사용자 결정 2026-10-28, Q-1·Q-3은 권고안). 실측은 throwaway probe(`__tests__/zz/`, 미커밋)로 했고 기대값은 독립 정수 산식이다. 결과는 §9.
 
 ## 0. 요약
 
@@ -82,6 +82,8 @@ C2·C3은 현행이 **일반토지 세율보다 높다**(2021.6.1. 이후 표). 
 | **Q-2** §6.2-a 같은 세대 세율 기산 | **a** `max(토지, 주택)`(단건을 다건·소유자 같음에 맞춤 — C1 단건 67,309,000 → 총 164,395,000) · **b** 토지 취득일(다건을 단건에 맞춤 — C1 다건 164,395,000 → 67,309,000) | 아래 단락 |
 | **Q-3** §6.2-b 다른 세대 세율 종류 | **a** 일반 토지 세율(서면법규과-944 · D-3 — C2 229,075,000 → 163,625,000) · **b** 종전 주택 세율 유지 | **a** — 정면 회신. 단 2014 시행분 사건이고 현행 표 이전이 추론이라는 점(V-4)을 결과 고지에 밝힌다 |
 
+**결정(2026-10-28)**: Q-1 a · **Q-2 a(사용자)** · Q-3 a(권고안). 아래는 결정 시점의 쟁점이다.
+
 **Q-2의 성격**: 근거가 유추뿐이다(V-3). a는 단건의 세액을 **올리고**(소유자 같음과 일치) b는 다건의 세액을 **내린다**. 「법 근거 없이 불리 적용 금지」 원칙(`feedback_no_unfavorable_application_without_legal_basis`)으로 보면 정면 해석이 없는 a는 단독 결정이 어렵다. 반면 b는 같은 사실에서 소유자 같음(`max`)과 소유자 분리(토지 취득일)가 갈리는 상태를 굳힌다. 영 §167의5가 가리키는 「주택부수토지」가 1세대 단위(통칙 89-6 · 부동산거래관리과-515)라는 점은 a 쪽이다. **권고: a** — 단 사용자가 「유추로는 불리 적용 안 함」을 택하면 b로 간다. 결정이 필요하다.
 
 ## 5. 안전망 실측 (착수 전 mutation — 바꿀 동작을 먼저 바꾸고 기존 테스트를 돌렸다)
@@ -89,7 +91,7 @@ C2·C3은 현행이 **일반토지 세율보다 높다**(2021.6.1. 이후 표). 
 | 변형 | 범위 | 실패한 기존 테스트 |
 |---|---|---|
 | D-1 두 지점 | tax-engine·api·calc 33,131건 | **3건** — `appurtenant-lthd-owner-split-limit.anchor.test.ts` 한 파일: 「소유자 분리는 통칙 미적용」을 **의도적 한계로 고정**한 anchor(헤더: 「통일은 별도 결정 대상이다」). 이번 결정이 그 결정이다 — 반전 대상 |
-| D-2·D-3 `landOnlyRateInput` | 같은 범위 | **2건** — `land-only-later-land-holding` A-10(다른 세대 종전 값 208,250,000 — 내가 #2652에서 「종전 값」으로 고정) · `split-part-rate` A-3d(`land_only` 토지 먼저 38% 113,060,000 — G-1이 파트 경로로 안 들어가는 것을 지키는 가드지만 세율 값도 고정) |
+| D-2·D-3 `landOnlyRateInput` | 같은 범위 | **2건** — `land-only-later-land-holding` A-10(다른 세대 종전 값 208,250,000 — 내가 #2652에서 「종전 값」으로 고정) · `split-part-rate` A-3d(`land_only` 토지 먼저 38% 113,060,000). **A-3d는 반전 대상이 아니었다**(§9.2 — 초판 정정) |
 
 공유 단언 반전은 형제 안전망을 지우므로(`feedback_shared_assertion_reversal_erases_sibling_net`) **반전하는 단언은 그 단언만**이다. 나머지 33,000여 건은 변하지 않았다.
 
@@ -109,7 +111,7 @@ C2·C3은 현행이 **일반토지 세율보다 높다**(2021.6.1. 이후 표). 
 - **A-6 세율 단건**(D-2·D-3): C1 149,450,000 · C2 148,750,000 · C3 119,000,000 · C4 61,190,000 · C5 208,250,000.
 - **A-7 다건 = 단건**(1건 격자 — #2652와 같은 방식, 불일치 0).
 - **A-8 route** 1건(다른 세대 9개월 단기 — `nonHousingForRate`가 Zod·Route를 건드리지 않는 내부 필드임을 확인).
-- **반전하는 기존 단언**: owner-split-limit 3건 · A-10 · A-3d — 새 기대값으로 고친다.
+- **반전하는 기존 단언**: owner-split-limit 3건 · A-10 — 새 기대값으로 고친다(A-3d는 아님 — §9.2).
 - **구현 후 mutation**: P-1 D-1 일반 게이트 · P-2 D-1 ⑳ 게이트 · P-3 D-2 `max` · P-4 D-3 `nonHousingForRate` · P-5 D-3 다건 시드 기산 — 각 정확히 대응 anchor만 실패해야 한다.
 
 ## 8. 구현 순서 (결정 후)
@@ -118,3 +120,32 @@ C2·C3은 현행이 **일반토지 세율보다 높다**(2021.6.1. 이후 표). 
 2. D-2·D-3 → A-6~8 · A-10·A-3d 반전.
 3. 14지점: 새 입력·결과 필드 없음(엔진 내부) — `nonHousingForRate`는 이미 내부 필드. 결과 고지(V-4 한계)가 새 문구면 ⑦ 한 곳.
 4. mutation P-1~5 · tax-engine·api·calc 전체 · tsc · lint.
+
+## 9. 구현 결과 (2026-10-28)
+
+### 9.1 변경
+
+| 결함 | 파일 | 내용 |
+|---|---|---|
+| D-1 일반 | `transfer-tax-lthd.ts` | 통칙 게이트 `ownsBuilding` → `(ownsBuilding \|\| selfOwns === "land_only")` |
+| D-1 ⑳ | `transfer-tax-rental-housing-lthd-parts.ts` | `buildRentalLthdParts`가 건물만 본인만 거절하고 토지만 본인은 토지 파트(건물 파트 양도차익 0)를 만든다 |
+| D-2·D-3 | `land-only-owner-household.ts` | `landOnlyRateInput`: 다른 세대 = 토지 취득일 + `nonHousingForRate` · 같은 세대 주택 = `max(토지, 주택)` · 비주택 = 토지 취득일(종전) |
+| | `transfer-tax.ts` | STEP 7·손실 표시 경로의 인라인 치환 둘을 `landOnlyRateInput`으로 통일 · 고지 1줄 |
+| | `transfer-tax-aggregate-asset-records.ts` | 다건 교정이 같은 `landOnlyRateInput`을 따른다(날짜 + `nonHousingForRate`) |
+| | `transfer-tax-appurtenant-land.ts` | `resolveAppurtenantLandRateBasisDate` — 다른 세대 토지만 본인은 `max` 없이 토지 취득일(결과 표시 `appliedRateBasisDate`) |
+| 고지 | `land-only-owner-household.ts` | `LAND_ONLY_OTHER_HOUSEHOLD_RATE_NOTICE`(2년 미만 보유 · V-4 한계 병기) |
+
+새 입력·결과 필드 없음(14지점 불필요). `nonHousingForRate`는 기존 엔진 내부 필드다.
+
+### 9.2 초판 정정
+
+- **계획 §3 D-3은 파트 시드(`transfer-tax-split-part-seeds.ts`)도 고친다고 했다. 불필요했다** — 시드를 부르는 입력이 이미 `landOnlyRateInput`을 거친 값이라 `nonHousingForRate`가 실려 있다. 같은 변형(P7)이 모든 테스트를 통과해 중복 수정으로 판정하고 되돌렸다. 기산일 함수(P6)는 시드가 아니라 **결과 표시**가 쓰는 것이라 남겼다.
+- **§5 안전망 표의 A-3d는 반전 대상이 아니라 실제 버그를 잡은 가드였다.** 첫 구현이 비주택(상가·토지) 자산에도 `max`를 적용해 이 anchor(`land_only` 비주택 토지 먼저 38%)가 깨졌다. `max`는 주택부수토지 규칙이라 `propertyType === "housing"`에만 건다 — A-3d는 원래 값으로 통과한다. 반전한 기존 단언은 4건(owner-split-limit 3 · A-10)이다.
+
+### 9.3 anchor와 mutation
+
+- 신규 `land-only-lthd-rate-basis.anchor.test.ts` 18건: 장특 격자(일반·⑳ × 3 토지 시기 = 6 + 고지 + 다른 세대 불변 6칸) · 세율 C1~C7 · 고지 · 다건=단건 5시료 + **80칸 격자 불일치 0** · 표시 기산일. route 2건 추가(다른 세대 8개월 단건·다건 178,750,000 · 총 196,625,000).
+- 반전: `appurtenant-lthd-owner-split-limit.anchor.test.ts`(파일 헤더를 「건물만 본인」 한계로 고쳤다) · `land-only-later-land-holding` A-10.
+- 구현 후 mutation(P-n → 정확히 대응 anchor만 실패): P1 일반 게이트 · P2 ⑳ 게이트 · P3 같은 세대 `max` · P4 다른 세대 `nonHousingForRate` · P5 다건 `nonHousingForRate` · P6 표시 기산일 · P8 ⑳ 건물분 0 · P9 고지 조건 — **8/8 KILLED**.
+- 회귀: tax-engine·api·calc·lib 36,104건 통과 · 0 실패(구현 전 같은 범위 33,145건 + 신규·추가) · tsc 0 · lint 0.
+- 실제 브라우저 확인은 하지 않았다(결과 고지 문구가 화면에 나오는지는 미확인 — 엔진 `warnings`로만 확인).

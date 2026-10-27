@@ -419,7 +419,7 @@ export function calcLongTermHoldingDeduction(
     let landAppurtenantLthd: SplitPartResult["appurtenantLthd"];
     if (
       ownsLand &&
-      ownsBuilding &&
+      (ownsBuilding || selfOwns === "land_only") &&
       useTable2 &&
       splitDetail.land.holdingYears > splitDetail.building.holdingYears
     ) {

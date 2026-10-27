@@ -95,9 +95,9 @@ describe("D-1 토지만 본인 × 같은 세대 × 나중 취득 토지 — 보�
     expect(calc({ ...LO, ...expropriation("2023-06-01") }).calculatedTax).toBe(208_250_000);
   });
 
-  it("A-10 다른 세대 · 건물만 본인 — 종전 값(208,250,000 · 0)", () => {
+  it("A-10 다른 세대 · 건물만 본인 — 일반 토지 1년 미만 50%: 297,500,000 × 50% = 148,750,000(주택 70% 아님 — `land-only-lthd-rate-basis` Q-3 a) · 건물만 본인 0", () => {
     const other = calc({ selfOwns: "land_only", buildingOwnerSameHousehold: false });
-    expect(other.calculatedTax).toBe(208_250_000);
+    expect(other.calculatedTax).toBe(148_750_000);
     expect(other.warnings).toContain(LAND_ONLY_OTHER_HOUSEHOLD_NOTICE);
     expect(calc({ selfOwns: "building_only" }).calculatedTax).toBe(0);
   });
