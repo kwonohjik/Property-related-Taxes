@@ -5,11 +5,11 @@
  * `calcLongTermHoldingDeduction`의 결과(공제액·율)를 받아 §98의2 특칙으로 덮어쓸 수 있는 값을 돌려준다.
  */
 import { applyRate } from "./tax-utils";
-import { resolveTable2SubjectResidenceMonths } from "./one-house/residence-months";
+import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
-import { table2PreAcquisitionResidenceNotice } from "./one-house/table2-pre-acquisition-residence-notice";
+import { giftTable2PriorResidenceNotice } from "./one-house/gift-table2-notice";
 import { appurtenantLandLthdNoticeText } from "./appurtenant-land-lthd-rate";
 import { pushLongTermHoldingSteps } from "./transfer-tax-lthd-steps";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
@@ -27,7 +27,7 @@ export interface Lthd982StepArgs {
   /** `surchargeExclusionByReduction.appliedId` — "unsold_98_2"일 때만 특칙을 건다. */
   surchargeExclusionAppliedId: string | undefined;
   deemedOneHouseBy155: boolean;
-  /** 12억 초과 고가주택 부분과세인가(`exemptionResult.isPartialExempt`) — 취득 전 동일세대 거주 표2 고지의 게이트(`table2-pre-acquisition-residence-notice.ts`). */
+  /** 12억 초과 고가주택 부분과세인가(`exemptionResult.isPartialExempt`) — 증여 전 동일세대 거주 표2 확인 필요 고지의 게이트(결정 #38-8). */
   isHighValuePartial: boolean;
   holdingPeriod: { years: number; months: number };
   longTermHoldingDeduction: number;
@@ -46,7 +46,7 @@ export function applyLthd982AndPushSteps(
 ): { longTermHoldingDeduction: number; longTermHoldingRate: number } {
   const { exemptionJudgeInput, taxableGain, deemedOneHouseBy155, holdingPeriod } = a;
   let { longTermHoldingDeduction, longTermHoldingRate } = a;
-  const table2ResidenceYearsForStep = Math.floor(resolveTable2SubjectResidenceMonths(exemptionJudgeInput) / 12);
+  const table2ResidenceYearsForStep = Math.floor(resolveExemptionRequirementResidenceMonths(exemptionJudgeInput) / 12);
   // STEP 4.05: §98의2 특칙 — 장특 = 양도차익 × §95② 표2 보유기간별 공제율 강제 (법 ①1호, P4).
   // 적격 선판정은 STEP 0.45 (중과 배제 5호 열거 — 동일 신호). 1세대1주택 표2(보유+거주)는
   // ①의 "각 표 외의 부분 본문 불구" 범위 밖 — 특례 적용 시 유지 (항상 ≥ 표2 보유 단독).
@@ -113,14 +113,14 @@ export function applyLthd982AndPushSteps(
   // OH-31 — 2009-01-01 전 양도분의 표2 연혁은 미지원이다(현행 식으로 계산) — 숨기지 않는다.
   if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155) && isLthdTable2SubjectAsset(exemptionJudgeInput)) a.warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);
 
-  // 취득 전 동일세대 거주가 표1/표2를 가를 때만 — 판례(대법원 2025두34935)로 통산하지 않았다는 고지 · 이월과세 A 통산의 확인 필요(사용자 결정 2026-10-27 Q-3).
-  const table2PreNotice = table2PreAcquisitionResidenceNotice({
+  // 결정 #38-8 — 증여 전 동일세대 거주를 표2 대상 판정에 통산하면 결론이 갈릴 때만 확인 필요(세액은 통산하지 않은 값 — 별건 #38-9 결정 대기).
+  const giftTable2Notice = giftTable2PriorResidenceNotice({
     input: exemptionJudgeInput,
     deemedOneHouseBy155,
     isHighValuePartial: a.isHighValuePartial,
     lthdApplies: taxableGain > 0 && holdingPeriod.years >= 3 && a.lthdExclusionReason === undefined && !a.usageConversionDetail && !a.splitDetail,
   });
-  if (table2PreNotice) a.warnings.push(table2PreNotice);
+  if (giftTable2Notice) a.warnings.push(giftTable2Notice);
 
   return { longTermHoldingDeduction, longTermHoldingRate };
 }

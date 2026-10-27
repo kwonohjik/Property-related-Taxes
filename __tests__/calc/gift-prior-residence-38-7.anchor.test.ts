@@ -2,9 +2,8 @@
  * anchor(④·⑧·⑫·route) — 증여 전 동일세대 거주기간(개월)의 §154① 비과세 거주요건 통산 (결정 #38-7) + 표2 대상 판정 통산·미답 확인 필요 고지 (결정 #38-8·#38-9)
  *
  * 결정: 증여자와 증여일부터 양도일까지 계속 같은 세대였다면(동일세대 증여), 증여 전 같은 세대로 그 주택에 거주한 기간을 개월로 받아
- * **소득세법 시행령 §154① 비과세 거주요건**에 통산한다. 장기보유특별공제 표2(대상 판정·공제율)에는 통산하지 않는다 — 2026-10-27 변경
- * (대법원 2026.1.15. 선고 2025두34935: 표2 거주기간은 양도자가 취득일부터 보유하는 동안 거주한 기간 · 종전 근거 사전-2025-법규재산-0506 질의1과 다르다).
- * 통산했다면 표2였을 때 판례 고지를 낸다. 미답의 표2 확인 필요 고지는 없앴다(통산하지 않으므로 결론을 가르지 않는다).
+ * **소득세법 시행령 §154① 비과세 거주요건과 표2 대상 판정(거주 2년)**에 통산한다. 장기보유특별공제 **공제율**의 보유·거주기간은 본인 기간(증여일 기산)이라
+ * 통산하지 않는다(결정 #38-9 — 사전-2025-법규재산-0506). 미답이면 통산하지 않고, 거주했다면 표2 대상이 되어 결론이 갈릴 때만 확인 필요를 고지한다(반사실 판정).
  * 비과세 쪽 근거 서면인터넷방문상담4팀-912는 2005년 배우자 지분 증여 사안이라 주택 전부 증여·현행 조정대상지역 거주요건의 정면 해석은 확인하지 못했다 — 고지에 그대로 적는다.
  *
  * | # | 층 | 주장 |
@@ -12,7 +11,7 @@
  * | PR-1 | ④ | 「예」일 때만 싣는다 · 비면 미답(미전송) · 0은 명시 답(전송) · 비정수는 싣지 않는다 · 아니오·사망의 남은 값은 싣지 않는다 |
  * | PR-2 | ⑧·⑫ | 상한은 세대 보유 시작일~증여일 개월 수(±1) · 판정 메뉴·계산기·이월과세 폼·API가 같은 상한 |
  * | PR-3 | route(판정 메뉴) | 거주 24개월 경계 · 입력 없음은 통산하지 않고 거주했다면 결론이 갈릴 때만 확인 필요 · 입력 0은 고지 없음 |
- * | PR-4 | route(계산기) | 과세 → 부분 비과세(고가주택) 세액 · 표2에는 통산하지 않음(표1 6%) · 판례 고지의 발동·불발동 |
+ * | PR-4 | route(계산기) | 과세 → 부분 비과세(고가주택) 세액 · 표2 대상 판정에 통산(공제율 12%) · 공제율에는 통산하지 않음 · 미답 확인 필요 고지의 발동·불발동 |
  * | PR-5 | 거주 구간 오류 | 증여 전 거주 칸이 있으면 오류 문구가 그 칸을 안내한다 |
  *
  * 부정형 단언에는 긍정 짝을 둔다.
@@ -207,7 +206,8 @@ describe("PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음�
     expect(reason).toContain("증여 전 동일세대 거주기간 24개월");
     expect(reason).toContain("서면인터넷방문상담4팀-912");
     expect(reason).toContain("정면으로 다룬 해석은 확인하지 못했습니다");
-    expect(reason).toContain("장기보유특별공제 표2(대상 판정·공제율)에는 쓰지 않았습니다(대법원 2025두34935)");
+    expect(reason).toContain("표2 대상 판정(거주 2년)");
+    expect(reason).toContain("공제율의 보유·거주기간에는 쓰지 않았습니다");
     // 비과세 쪽은 단정하지 않는다 — 확보하지 못한 인용을 쓰지 않는다
     expect(reason).not.toMatch(/서울고법|조심 2025서|인정한다|부정한다/);
   });
@@ -258,8 +258,8 @@ function calcForm(assetOver: Partial<AssetForm> = {}, over: Record<string, unkno
 const has = (warnings: string[] | undefined, needle: string) => (warnings ?? []).some((w) => w.includes(needle));
 const TABLE2_NOTICE = "표2(1세대1주택) 대상 판정";
 
-describe("PR-4 route(계산기) — 고가주택 세액 방향 · 표2에는 통산하지 않음(대법원 2025두34935) · 판례 고지", () => {
-  it("[PR-4a] 증여 전 12개월을 통산하면 거주 24개월 → 과세에서 고가주택 부분 비과세로 바뀐다 (484,588,500 → 135,806,000 — 표2에는 통산하지 않아 표1 6%)", async () => {
+describe("PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 판정 통산(#38-9) · 미답 확인 필요 고지(#38-8)", () => {
+  it("[PR-4a] 증여 전 12개월을 통산하면 거주 24개월 → 과세에서 고가주택 부분 비과세로 바뀐다 (484,588,500 → 125,246,000 — 표2 대상이라 공제율 12%)", async () => {
     const none = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "" }));
     expect(none.status, none.err).toBe(200);
     expect(none.issues).toEqual([]);
@@ -270,29 +270,25 @@ describe("PR-4 route(계산기) — 고가주택 세액 방향 · 표2에는 통
     const twelve = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "12" }));
     expect(twelve.status, twelve.err).toBe(200);
     expect(twelve.r.isPartialExempt).toBe(true);
-    expect(twelve.totalTax).toBe(135_806_000); // 종전(표2 대상 통산) 125,246,000
+    expect(twelve.totalTax).toBe(125_246_000);
   });
-  it("[PR-4b] 표2 대상 판정에 통산하지 않는다 — 증여 전 12개월 + 증여 후 12개월이어도 본인 거주 1년 → 표1 6% · 통산했다면 표2였으니 판례 고지", async () => {
+  it("[PR-4b] 표2 대상 판정에 통산한다 — 증여 전 12개월 + 증여 후 12개월 = 거주 2년 → 표2 · 공제율은 보유 3년 × 4% = 12%만이다(본인 거주 12개월은 거주분 0)", async () => {
     const twelve = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "12" }));
-    expect(twelve.r.longTermHoldingRate).toBe(0.06); // 표1 보유 3년 × 2%
-    expect(twelve.r.longTermHoldingDeduction).toBe(24_000_000); // 과세 양도차익 4억 × 6%
-    const notice = (twelve.warnings ?? []).find((x: string) => x.includes(TABLE2_NOTICE)) as string;
-    expect(notice).toContain("증여 전 동일세대로 거주한 12개월");
-    expect(notice).toContain("대법원 2026.1.15. 선고 2025두34935");
-    expect(notice).toContain("사전-2025-법규재산-0506");
-    // 경계 −1 — 통산 23개월이면 통산해도 표2가 아니어서 판례 고지가 없다
+    expect(twelve.r.longTermHoldingRate).toBe(0.12); // 표1(6%)이 아니라 표2 보유분
+    expect(twelve.r.longTermHoldingDeduction).toBe(48_000_000); // 과세 양도차익 4억 × 12%
+    expect(has(twelve.warnings, TABLE2_NOTICE)).toBe(false); // 통산을 적용했으므로 해석이 갈린다는 고지는 없다
+    // 경계 −1 — 통산 23개월이면 표1
     const eleven = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "11" }));
     expect(eleven.r.longTermHoldingRate).toBe(0.06);
-    expect(has(eleven.warnings, TABLE2_NOTICE)).toBe(false);
     // 증여 후 실거주 24개월을 직접 입력한 같은 사실은 거주분(8%)이 더해진 20% — 통산한 증여 전 거주는 거주분 공제율이 되지 않는다
     const direct = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "", residencePeriodMonthsAsset: "24" }));
     expect(direct.r.longTermHoldingRate).toBe(0.2);
     expect(has(direct.warnings, TABLE2_NOTICE)).toBe(false);
   });
-  it("[PR-4e] 장기보유특별공제에 통산하지 않는다 — 증여 전 거주를 상한 가까이(36개월) 넣어도 공제율은 표1 6%로 같다", async () => {
+  it("[PR-4e] 공제율에는 통산하지 않는다 — 증여 전 거주를 상한 가까이(36개월) 넣어도 공제율은 12%로 같다(거주분은 본인 거주 12개월 기준 0)", async () => {
     const t36 = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "36" }));
     expect(t36.status, t36.err).toBe(200);
-    expect(t36.r.longTermHoldingRate).toBe(0.06);
+    expect(t36.r.longTermHoldingRate).toBe(0.12);
     const t12 = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "12" }));
     expect(t36.totalTax).toBe(t12.totalTax); // 통산 개월이 늘어도 공제율·세액이 같다
   });
@@ -310,14 +306,19 @@ describe("PR-4 route(계산기) — 고가주택 세액 방향 · 표2에는 통
     const already = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "12", residencePeriodMonthsAsset: "24" }));
     expect(has(already.warnings, TABLE2_NOTICE)).toBe(false);
   });
-  it("[PR-4d] 입력이 없으면 비과세 거주요건 고지만 난다 — 표2 고지는 어느 경우에도 나지 않는다(표2에는 통산하지 않으므로 미답이 결론을 가르지 않는다)", async () => {
+  it("[PR-4d] 입력이 없으면 비과세 거주요건 고지만 난다 — 요건 미충족(과세)이면 표2 고지는 나지 않는다 · 비조정지역에서는 입력이 없어도 표2 고지가 난다(상한 가정)", async () => {
     const none = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "" }));
     expect(has(none.warnings, "입력되지 않아")).toBe(true);
     expect(has(none.warnings, TABLE2_NOTICE)).toBe(false);
     // 비조정지역 — 거주요건이 없어 고가주택 부분 비과세이고, 표2 대상 판정의 거주 2년은 별개다
     const nonReg = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "" }, { wasRegulatedAtAcquisition: false }));
     expect(nonReg.r.isPartialExempt).toBe(true);
-    expect(has(nonReg.warnings, TABLE2_NOTICE)).toBe(false); // 종전 미답 확인 필요 고지(0506 통산 전제)는 없앴다
+    expect(has(nonReg.warnings, TABLE2_NOTICE)).toBe(true);
+    const t2 = (nonReg.warnings ?? []).find((x: string) => x.includes(TABLE2_NOTICE)) as string;
+    expect(t2).toContain("입력되지 않았기에 통산하지 못했고"); // 비과세 쪽 고지(「입력되지 않아」)와 문구가 겹치지 않는다
+    expect(t2).toContain("사전-2025-법규재산-0506"); // 표2 대상 판정의 통산은 정면 해석이 있다 — 「해석이 갈린다」고 쓰지 않는다
+    expect(t2).not.toContain("해석이 갈립니다");
+    expect(t2).toContain("공제율의 보유·거주기간은 증여일부터 센 본인의 기간");
     expect(has(nonReg.warnings, "입력되지 않아")).toBe(false); // 비과세 결론은 가르지 않는다
     expect(nonReg.r.longTermHoldingRate).toBe(0.06);
     // 입력 0이면 고지 없음(긍정 짝)

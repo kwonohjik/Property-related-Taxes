@@ -24,7 +24,6 @@ import {
   resolveWasRegulatedAtAcquisition,
 } from "./transfer-tax-exemption-requirements";
 import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
-import { resolveTable2SubjectResidenceMonths } from "./one-house/residence-months";
 import { resolveLthdTable2Era } from "./data/lthd-table2-era";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -93,7 +92,7 @@ export function judgeRentalHousingEligibility(
   // 보유 2년(§154① 본문)은 단서 1호·2호가목·3호가 풀 수 있다 — 세액 경로와 같은 leaf(계획서 rental-residence-holding-proviso D-2).
   const holdYears = rentalResidenceRequirementHoldYears(effectiveInput);
   // §155⑳1호 「거주기간 2년」 — 증여·상속 전 동일세대로 거주한 기간을 통산한다(별건 ⑥ · 서면-2022-부동산-2643 · 서면-2016-부동산-3992).
-  // §154① 거주요건과 같은 leaf다(표2 대상 판정은 본인 거주 — `resolveTable2SubjectResidenceMonths`). 보유기간은 통산하지 않는다(사용자 결정 2026-10-19 — 거주만).
+  // §154① 거주요건·표2 대상 판정과 같은 leaf다. 보유기간은 통산하지 않는다(사용자 결정 2026-10-19 — 거주만).
   const liveYears = Math.floor(resolveExemptionRequirementResidenceMonths(effectiveInput) / 12);
   // 거주주택 보유·거주 연수 = holdYears·liveYears (runRentalHousingExceptionStep의 요건 인자와 같은 값)
   const eligibility = checkEligibility(
@@ -143,7 +142,7 @@ export function buildPrhpTable2ReadingNotice(
   if (scenarioId !== "RH-B2" || !part2 || part2 <= 0 || holdYears < 3) return undefined;
   const era = resolveLthdTable2Era(effectiveInput.transferDate);
   if (era !== "holding_8pct_residence_2y" && era !== "holding_residence_split") return undefined;
-  const table2ResidenceYears = Math.floor(resolveTable2SubjectResidenceMonths(effectiveInput) / 12);
+  const table2ResidenceYears = Math.floor(resolveExemptionRequirementResidenceMonths(effectiveInput) / 12);
   if (meetsTable2ResidenceRequirement(effectiveInput, table2ResidenceYears)) return undefined;
   return (
     "직전거주주택보유주택 양도의 §161②2호 부분은 소득세법 시행령 §161④ 문언대로 장기보유특별공제 표2(보유기간분)를 " +

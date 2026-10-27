@@ -148,8 +148,7 @@ export function isLandContributedNewBuild(
  *   「보유기간은 해당 주택의 취득일(준공인가증 교부일)부터 계산하는 것으로 **멸실 전 거주기간을
  *   통산하지 아니함**」. `prior`는 승계 전 거주라 읽지 않는다.
  *   **예외 — 증여 승계**(`successorGiftSameHousehold`): 증여자와 계속 같은 세대로 입주권을 보유한 경우 그 세대가 종전주택에서
- *   거주한 기간을 `prior`로 더한다 — **§154① 비과세 거주요건 전용**이다. 표2(대상 판정·공제율)는 승계조합원 본인의 신축 거주
- *   (`resolveSuccessorOwnResidenceMonths`)만 읽는다(대법원 2026.1.15. 2025두34935 — 사전-2020-법령해석재산-0691의 표2 통산과 다르다).
+ *   거주한 기간은 「1세대로서 거주한 기간」이라 `prior`를 더한다(사전-2020-법령해석재산-0691 — 매매 승계 사안인 4508과 사실이 다르다).
  *
  * ⚠️ 분리 입력이 **없을 때**의 Step4 값은 ⑧(`transfer-tax-validate.ts`)이 「입주일 ≥ 보유 기산일」을
  *    막아 둔 값이다(승계조합원은 준공일 기준 — OH-50). 월수 직접 입력은 날짜가 없어 준공 전 거주를 가려낼 수
@@ -157,7 +156,7 @@ export function isLandContributedNewBuild(
  */
 export function resolveAptResidenceMonths(input: {
   isSuccessorMember?: boolean;
-  /** 증여받은 승계조합원이 증여자와 계속 같은 세대였다고 선언했는가 — 참이면 승계에도 `prior`를 더한다(§154① 비과세 거주요건 전용 — 위 「증여 승계」). */
+  /** 증여받은 승계조합원이 증여자와 계속 같은 세대였다고 선언했는가 — 참이면 승계에도 `prior`를 더한다(아래 「증여 승계」). */
   successorGiftSameHousehold?: boolean;
   priorHouseResidenceMonths?: number;
   newHouseResidenceMonths?: number;
@@ -178,8 +177,8 @@ export function resolveAptResidenceMonths(input: {
 }
 
 /**
- * 승계조합원 **본인의** 신축주택 거주월수 — 표2 대상 판정과 공제율의 거주분에 쓴다(대법원 2025두34935: 표2 거주기간은 양도자 본인이 보유기간 중 거주한 기간).
- * 증여자와 같은 세대로서 한 종전주택 거주(`successorGiftSameHousehold`)는 포함하지 않는다 — 그것은 비과세 거주요건에만 더한다.
+ * 승계조합원 **본인의** 신축주택 거주월수 — 표2 공제율의 거주분에 쓴다(결정 #38-9: 공제율의 보유·거주기간은 양도자 본인 기간).
+ * 증여자와 같은 세대로서 한 종전주택 거주(`successorGiftSameHousehold`)는 포함하지 않는다 — 그것은 대상 판정·비과세 거주요건에만 더한다.
  */
 export function resolveSuccessorOwnResidenceMonths(input: {
   newHouseResidenceMonths?: number;
@@ -681,6 +680,7 @@ export function redevUsesTable2(input: {
   redevelopment: {
     subject: "apt" | "right";
     isSuccessorMember?: boolean;
+    successorGiftSameHousehold?: boolean;
     exemptionEligibleAtApproval?: boolean;
     priorHouseResidenceMonths?: number;
     newHouseResidenceMonths?: number;
@@ -713,8 +713,7 @@ export function redevUsesTable2(input: {
   if (r.isSuccessorMember === true) {
     return usesTable2(
       input.isOneHouseSingle,
-      // 표2 대상 판정은 본인의 신축주택 거주만이다 — 증여 승계의 종전주택 거주는 더하지 않는다(대법원 2025두34935 · `redevelopment-successor.ts`와 같은 값).
-      Math.floor(resolveSuccessorOwnResidenceMonths(months) / 12),
+      Math.floor(resolveAptResidenceMonths({ ...months, isSuccessorMember: true, successorGiftSameHousehold: r.successorGiftSameHousehold }) / 12),
       input.transferDate,
     );
   }

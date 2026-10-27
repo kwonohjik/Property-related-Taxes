@@ -36,7 +36,7 @@ export interface LthdStepArgs {
   longTermHoldingDeduction: number;
   /** 실거주 연수 — 공제율 표시용(대상 판정용 통산 연수와 분리) */
   residenceYearsForStep: number;
-  /** 표2 **대상 판정**용 거주연수 — 본인 거주(이월과세 A만 증여 전 거주 포함 · `resolveTable2SubjectResidenceMonths`) */
+  /** §154⑧3호 통산 거주연수 — 표2 **대상 판정**용 */
   table2ResidenceYearsForStep: number;
   /**
    * §159의4 표2의 **거주 2년 요건** 충족 여부 — 계산 축(`transfer-tax.ts`)이 쓴 것과 **같은 술어**의

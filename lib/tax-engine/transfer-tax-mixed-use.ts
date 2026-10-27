@@ -9,8 +9,7 @@
  * 설계 문서: docs/02-design/features/transfer-tax-mixed-use-house.engine.design.md
  */
 
-import { table2SubjectResidenceMonths } from "./one-house/residence-months";
-import { mixedUseTable2PrecedentNotice } from "./one-house/table2-pre-acquisition-residence-notice";
+import { giftHouseholdPriorResidenceMonths } from "./one-house/gift-household-basis";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap, presaleRightStartDate } from "./transfer-tax-helpers";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
@@ -476,9 +475,12 @@ function calcMixedUseCore(
     necessaryExpenseProviso = standard.proviso;
   }
 
-  // 표2 '대상 판정' 거주 연수 — 양도자 본인 거주(`asset.residencePeriodYears`)다. 상속 전 동거 통산값(`table2ResidencePeriodYears`)과
-  // 증여 전 동일세대 거주는 비과세 거주요건(`transfer-tax-mixed-use-exemption.ts`)에만 쓴다(대법원 2025두34935 — 단건과 같은 leaf).
-  const table2ResidenceYears = Math.floor(table2SubjectResidenceMonths(asset.residencePeriodYears * 12, asset.giftHouseholdBasis) / 12);
+  // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 — 미제공 시 실거주로 fallback(비상속·별도세대 = 실거주).
+  // 결정 #38-9: 증여 전 동일세대 거주 개월을 더한다 — 비과세 거주요건(`transfer-tax-mixed-use-exemption.ts`)과 같은 leaf·같은 값이다.
+  // 공제율의 거주분은 `asset.residencePeriodYears`(본인 거주) 그대로다(사전-2025-법규재산-0506).
+  const table2ResidenceYears = Math.floor(
+    ((asset.table2ResidencePeriodYears ?? asset.residencePeriodYears) * 12 + giftHouseholdPriorResidenceMonths(asset.giftHouseholdBasis)) / 12,
+  );
 
   // ─── 🔴 2026-08-10 — 용도변경일 기반 LTHD **시간 비례 분할을 폐지**했다 ───
   //
@@ -528,9 +530,6 @@ function calcMixedUseCore(
     asset.buildingAcquisitionDate,
     laterLandExemptExcluded,
   );
-  // 비과세 거주요건에만 통산한 취득 전 동일세대 거주가 표1/표2를 갈랐을 때 — 단건과 같은 판례 고지(사용자 결정 2026-10-27 Q-3).
-  const mixedTable2PreNotice = mixedUseTable2PrecedentNotice(asset, housingPart, isOneHouseExempt && !housingPart.isExempt, transferDate);
-  if (mixedTable2PreNotice) warnings.push(mixedTable2PreNotice);
   // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
   //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.
   const splitCommercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
