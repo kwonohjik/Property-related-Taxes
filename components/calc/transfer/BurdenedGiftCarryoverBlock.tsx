@@ -13,6 +13,7 @@ import { BurdenedGiftPresumedAcquisitionSection } from "./BurdenedGiftPresumedAc
 import { CarryoverDonorBuiltSection } from "./CarryoverDonorBuiltSection";
 import { bgCarryoverForm, bgCarryoverFormKey, bgCarryoverParts } from "@/lib/calc/bg-carryover-parts";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
+import { bgHouseSplitActive } from "@/lib/calc/bg-house-split";
 
 interface Props {
   asset: AssetForm;
@@ -30,6 +31,8 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
   // 당초 증여자 신축·증축 값은 증여 사건 서브폼에 있다 — 건물만 이월과세면 건물 블록(`buildingCarryover`).
   const eventForm = bgCarryoverForm(asset);
   const eventKey = bgCarryoverFormKey(asset);
+  /** 주택·건물 토글 C — 당초 증여자 값도 토지·건물 두 칸(④·⑧과 같은 술어 · 설계서 `bg-house-building-split.design.md` §5.2). */
+  const houseSplit = bgHouseSplitActive(asset);
   return (
     <div
       className="rounded-lg border border-sky-300 bg-sky-50/70 p-3 space-y-2 dark:bg-sky-950/40"
@@ -92,8 +95,8 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
             <FieldCard
               label="당초 증여자 취득 당시 건물 기준시가"
               hint={
-                asset.assetKind === "general_building"
-                  ? "당초 증여자가 건물을 취득할 당시의 건물 기준시가 — 직접 신축했으면 사용승인일 당시(「소득세법 시행령」 제162조 제1항 제4호). 일반건물은 0일 수 없습니다."
+                asset.assetKind === "general_building" || houseSplit
+                  ? "당초 증여자가 건물을 취득할 당시의 건물 기준시가 — 직접 신축했으면 사용승인일 당시(「소득세법 시행령」 제162조 제1항 제4호). 0일 수 없습니다."
                   : "건물이 없으면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
               }
             >
@@ -114,7 +117,7 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
         </>
       ) : asset.bgAcquisitionMethod === "actual" ? (
         <>
-          {asset.assetKind === "general_building" || asset.assetKind === "land" ? (
+          {asset.assetKind === "general_building" || asset.assetKind === "land" || houseSplit ? (
             <>
               {parts.land && (
                 <FieldCard label="당초 증여자의 토지 실지취득가액">
@@ -127,7 +130,7 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
                   />
                 </FieldCard>
               )}
-              {asset.assetKind === "general_building" && parts.building && (
+              {(asset.assetKind === "general_building" || houseSplit) && parts.building && (
                 <FieldCard label="당초 증여자의 건물 실지취득가액">
                   <CurrencyInput
                     label=""

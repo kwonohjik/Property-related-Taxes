@@ -196,11 +196,13 @@ export function buildBurdenedGiftBreakdown(params: {
       buildingTransferPrice = assumedDebtAmount - landTransferPrice;
     }
   } else {
-    // 시가 모드: 자산별 시가 분리 입력은 v2. Phase 1은 기준시가 비율로 시가 안분.
+    // 시가 모드: 토지분·건물분 평가액(`marketValueByPart`)이 있으면 그것이 파트 A다 — 주택·건물 토지·건물 취득일이 다를 때 화면이 받는다
+    //   (설계서 `bg-house-building-split.design.md` Q-3 a · ⑫가 합계 = 시가를 확인). 없으면 기준시가 비율로 시가 안분(「소득세법 시행령」 제166조 제6항).
     const totalStd = landStdPriceAtTransfer + buildingStdPriceAtTransfer;
     const marketTotal = info.marketValueAtTransfer ?? 0;
+    const byPart = info.marketValueByPart;
     landSangjeungbeopValue =
-      totalStd === 0 ? 0 : safeMultiplyThenDivide(marketTotal, landStdPriceAtTransfer, totalStd);
+      byPart ? byPart.land : totalStd === 0 ? 0 : safeMultiplyThenDivide(marketTotal, landStdPriceAtTransfer, totalStd);
     buildingSangjeungbeopValue = marketTotal - landSangjeungbeopValue;
     // 시가 모드: 분모는 marketTotal (= 자산 평가가액 합). 합 = B 보장.
     if (marketTotal === 0 || assumedDebtAmount === 0) {

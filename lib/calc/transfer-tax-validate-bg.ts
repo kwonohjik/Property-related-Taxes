@@ -56,6 +56,8 @@ import { bgCollateralForcesStdAcq, bgWholeGiftValuation } from "./burdened-gift-
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
 import { bgAnyCarryover, bgCarryoverForm, bgCarryoverParts } from "./bg-carryover-parts";
+import { bgHouseSplitActive } from "./bg-house-split";
+import { validateBgHouseSplit } from "./transfer-tax-validate-bg-house-split";
 
 /**
  * 부담부증여 지원 자산 종류 — **⑧ validate 층 게이트**(3층 중 하나).
@@ -235,6 +237,12 @@ export function validateBurdenedGiftAsset(
     if (!parseAmount(asset.bgMarketValueAtTransfer)) {
       return fieldError("bgMarketValueAtTransfer", `${label}: 부담부증여 시가 모드 — 양도시 시가 평가액을 입력하세요.`);
     }
+  }
+  // (4-0) 주택·건물 × 토지·건물 취득일 다름 — 파트 칸(설계서 `bg-house-building-split.design.md` Q-2 a · Q-3 a). 아래 총액 칸 요구보다 먼저다.
+  const houseSplit = bgHouseSplitActive(asset);
+  const houseSplitIssue = validateBgHouseSplit(asset, label);
+  if (houseSplitIssue) return houseSplitIssue;
+  if (asset.bgValuationMode === "sangjeungbeop_market") {
     /**
      * 취득가액 산정방식별 필수 입력 (H-5: bgMarketValueAtAcquisition 무조건 차단 제거)
      *
@@ -296,7 +304,7 @@ export function validateBurdenedGiftAsset(
         if (!parseAmount(asset.bgActualAcquisitionLand)) {
           return fieldError("bgActualAcquisitionLand", `${label}: 부담부증여 실지취득가액 안분 — 토지 실지취득가액을 입력하세요.`);
         }
-      } else if (!isBgSuccessorRight(asset) && !parseAmount(asset.bgActualAcquisitionTotal)) {
+      } else if (!houseSplit && !isBgSuccessorRight(asset) && !parseAmount(asset.bgActualAcquisitionTotal)) {
         // 승계 입주권은 승계 블록 2칸이 실지취득가액이다 — 승계 검증(`validateSuccessorRightAsset`)이 요구한다.
         return fieldError("bgActualAcquisitionTotal", rightShareAcqPointer ?? `${label}: 부담부증여 실지취득가액 안분 — 실지취득가액을 입력하세요.`);
       }
@@ -324,7 +332,7 @@ export function validateBurdenedGiftAsset(
           if (!parseAmount(asset.bgActualAcquisitionLand)) {
             return fieldError("bgActualAcquisitionLand", `${label}: 이월과세 — 양도인(증여받은 사람)이 증여받은 때의 상증법 평가액(토지)을 입력하세요 (소령 §163⑨ · 시나리오 B).`);
           }
-        } else if (!parseAmount(asset.bgActualAcquisitionTotal)) {
+        } else if (!houseSplit && !parseAmount(asset.bgActualAcquisitionTotal)) {
           return fieldError("bgActualAcquisitionTotal", `${label}: 이월과세 — 양도인(증여받은 사람)이 증여받은 때의 상증법 평가액을 입력하세요 (소령 §163⑨ · 시나리오 B).`);
         }
         // 신축·증축 × 이월과세는 화면에서 도달하지 않는다 — 신축 입력은 매매 취득에서만 열린다(`selfBuiltActive`).
@@ -335,7 +343,7 @@ export function validateBurdenedGiftAsset(
           return fieldError(field, `${label}: 부담부증여 ${methodLabel} — 의제취득일(1985.1.1.) 전 파트가 아닌 ${gbParts.land ? "건물" : "토지"}의 취득 당시 ${methodLabel}을 입력하세요 (소득세법 시행령 §176의2③${acqMethod === "appraisal" ? "2" : "1"}호).`);
         }
       } else if (!hasBgPresumedAmount(asset)) {
-        const kind = bgPresumedInputKind(asset.assetKind);
+        const kind = bgPresumedInputKind(asset);
         const target = kind === "split" ? "토지 또는 건물의 " : kind === "land" ? "토지 " : "";
         return fieldError(
           firstEmptyBgPresumedField(asset),
@@ -360,7 +368,7 @@ export function validateBurdenedGiftAsset(
           );
         }
         // 부분이 전체를 넘을 수 없다 — 엔진과 같은 상한(분리 입력이면 건물, 총액 입력이면 총액).
-        const kind = bgPresumedInputKind(asset.assetKind);
+        const kind = bgPresumedInputKind(asset);
         const cap = kind === "split" ? parseAmount(asset.bgPresumedAcquisitionBuilding) : parseAmount(asset.bgPresumedAcquisitionTotal);
         if (cap > 0 && extensionAppraisal > cap) {
           return fieldError(
@@ -612,7 +620,7 @@ function missingCoDonorBasisLabel(asset: AssetForm): { label: string; field: Iss
   const needsStdPrice = bgCoDonorNeedsStdPrice(asset);
   if (isPresumed) {
     const methodLabel = BG_PRESUMED_LABEL[asset.bgAcquisitionMethod as "salesCase" | "appraisal"];
-    const kind = bgPresumedInputKind(asset.assetKind);
+    const kind = bgPresumedInputKind(asset);
     const has =
       kind === "split"
         ? filled(asset.bgCoDonorPresumedAcquisitionLand) || filled(asset.bgCoDonorPresumedAcquisitionBuilding)
@@ -649,14 +657,18 @@ function missingCoDonorBasisLabel(asset: AssetForm): { label: string; field: Iss
      *    종전에는 「분리 2칸 또는 총액」을 요구해 채울 칸 없는 영구 차단이었다.
      *    양도인 K-4(위 `validateBurdenedGiftAsset`)도 토지는 토지 칸만 요구한다.
      */
-    const hasSplit =
+    // 주택·건물은 토글 C가 켜져 있을 때만 토지·건물 칸이 있고 ④가 싣는다 — 켰다 끈 뒤 남은 값으로 통과시키지 않는다(2026-10-27 실측: 통과 → 서버 400).
+    const houseSplit = bgHouseSplitActive(asset);
+    const partsOnScreen = (asset.assetKind !== "housing" && asset.assetKind !== "building") || houseSplit;
+    const hasSplit = partsOnScreen &&
       (!parts.land || filled(asset.bgCoDonorActualAcquisitionLand)) &&
       (asset.assetKind === "land" || !parts.building || filled(asset.bgCoDonorActualAcquisitionBuilding));
     // 한 파트만이면 총액은 파트를 가를 수 없다(엔진이 거부 · Q-4) — 일반건물 화면에는 총액 칸이 없다.
-    const hasTotal = parts.land === parts.building && filled(asset.bgCoDonorActualAcquisitionTotal);
+    //   주택·건물 토지·건물 취득일 다름(토글 C)도 총액 칸이 없다(`validateBgHouseSplit`이 두 칸을 요구한다).
+    const hasTotal = parts.land === parts.building && !houseSplit && filled(asset.bgCoDonorActualAcquisitionTotal);
     if (!hasSplit && !hasTotal) {
-      // 입력칸 이동 — 화면은 자산 종류로 칸을 가른다(일반건물·토지 = 토지·건물 분리, 그 외 = 총액)
-      const splitUi = asset.assetKind === "general_building" || asset.assetKind === "land";
+      // 입력칸 이동 — 화면은 자산 종류로 칸을 가른다(일반건물·토지·토지·건물 분리 주택 = 토지·건물 분리, 그 외 = 총액)
+      const splitUi = asset.assetKind === "general_building" || asset.assetKind === "land" || houseSplit;
       const landEmpty = parts.land && !filled(asset.bgCoDonorActualAcquisitionLand);
       return {
         label: "실지취득가액(토지·건물 분리 또는 단일 총액)",

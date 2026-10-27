@@ -15,6 +15,8 @@
  *  - useEffect 미러링 금지 (useMemo 순수 계산만)
  */
 
+import { BurdenedGiftHouseSplitCard } from "./BurdenedGiftHouseSplitCard";
+import { bgHouseSplitActive } from "@/lib/calc/bg-house-split";
 import { useMemo } from "react";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
@@ -208,6 +210,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   const coDonorNeedsStdPrice = bgCoDonorNeedsStdPrice(asset);
   /** 이월과세 × K-6/K-7 — 당초 증여자 값은 이월과세 박스, 양도인 값은 실지취득가액 블록(증여일 상증법 평가액)에서 받는다. */
   const isCarryoverPresumed = isCarryover && isBgPresumedMethod(asset.bgAcquisitionMethod);
+  /** 주택·건물 × 토지·건물 취득일 다름 — 실지취득가액도 토지·건물 두 칸(총액 칸 없음 · ④·⑧과 같은 술어). */
+  const houseSplit = bgHouseSplitActive(asset);
   const fmt = (n: number) => n.toLocaleString("ko-KR");
 
   return (
@@ -446,6 +450,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
       {/* 의제취득일 전 상속·증여 토지·주택·상가·건물 — 시가·기준시가 모두 이 안내가 산정 기준을 알린다 */}
       <BgPreDeemedNotice asset={asset} />
 
+      {/* 주택·건물 × 토지·건물 취득일 다름 — 파트 평가액·기준시가(설계서 `bg-house-building-split.design.md` §5.2) */}
+      <BurdenedGiftHouseSplitCard asset={asset} onChange={onChange} transferDate={transferDate} />
+
       {/* 의제 첫 지분이라도 범위 밖 지분이 있으면 그 지분의 실지취득가액을 여기서 받는다(위 라디오와 같은 판정 · ⑧이 요구 — PR-7b-5) */}
       {((isMarketMode && !collateralForced && (!preDeemed || methodForOtherShares) && !noMethod && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
           <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2 dark:bg-amber-900/40">
@@ -480,7 +487,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                 기준시가 환산식으로 직접 정하고, §166④2호의 매매사례가액·감정가액은 취득가액이 아니라 「기존건물과 그 부수토지의 평가액」 산정에 쓰입니다.
               </div>
             )}
-            {asset.assetKind === "general_building" ? (
+            {asset.assetKind === "general_building" || houseSplit ? (
               <>
                 {gbHidePart !== "land" && (
                 <FieldCard label="토지 실지취득가액">

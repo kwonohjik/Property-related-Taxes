@@ -211,22 +211,6 @@ export const LAND_PRE_DEEMED_STD_AT_TRANSFER_REQUIRED_MESSAGE =
 /** 「소득세법 시행령」 §163⑨ 단서 1호 — 「1990년 8월 30일 개별공시지가가 고시되기 전에 상속 또는 증여받은 토지」. */
 export const SEC_163_9_LAND_FIRST_DISCLOSURE = "1990-08-30";
 
-/**
- * 주택·건물 부담부증여 × 토지·건물 취득일 다름 — 토지·건물을 나눠 계산하지 않아 한 날짜로 세면 한 파트를 법문과 다른 날로 센다
- * (계획서 `docs/00-pm/bg-carryover-non-gb-building-date.plan.md` Q-1 a). 본인 취득은 이 leaf가, 이월과세 토글 C는 ⑧(`burdenedGiftCarryoverDonorSplitRequested`)이 같은 문구로 막는다.
- */
-export const BURDENED_GIFT_PART_DATES_MESSAGE =
-  "부담부증여로 양도하는 주택·건물은 토지와 건물의 취득일이 다르면 아직 계산하지 못합니다 — 토지와 건물의 보유기간은 각각 그 자산의 취득일부터 세는데"
-  + "(「소득세법」 제95조 제4항), 채무 인수분 안분(「소득세법 시행령」 제159조)을 토지·건물로 나눠 계산하는 기능이 아직 없습니다";
-
-export const BURDENED_GIFT_DONOR_PART_DATES_MESSAGE =
-  "부담부증여로 양도하는 주택·건물은 당초 증여자가 토지와 건물을 다른 날 취득했으면 아직 계산하지 못합니다 — 토지와 건물의 보유기간은 각각 증여자가 그 자산을 취득한 날부터 세는데"
-  + "(「소득세법」 제95조 제4항 단서), 채무 인수분 안분(「소득세법 시행령」 제159조)을 토지·건물로 나눠 계산하는 기능이 아직 없습니다";
-
-/** 건물(토지 제외)만 — 일반건물 부담부증여는 토지·건물 파트를 따로 계산한다. 주택에는 대신 쓸 자산 종류가 없다. */
-export const BURDENED_GIFT_GENERAL_BUILDING_HINT =
-  ". 토지와 건물을 함께 양도한다면 자산 종류를 「일반건물(토지+건물 일괄)」로 입력하세요 — 일반건물 부담부증여는 토지·건물을 나눠 계산합니다";
-
 export const LAND_CAUSE_BURDENED_GIFT_MESSAGE =
   "부담부증여로 양도하는 자산에는 토지 취득원인을 따로 지정할 수 없습니다 — 채무 인수분을 양도로 보는 안분"
   + "(소득세법 시행령 §159)이 토지·건물 취득가액 구분과 함께 계산되지 않습니다";
@@ -562,11 +546,6 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
     // G-12 — 토지 취득일이 없으면 분리 계산이 성립하지 않아 토지 파트가 통째로 빠진다(⑫ 200 · splitDetail 없음).
     if (!f.hasLandAcquisitionDate) issues.push({ field: "landAcquisitionDate", message: LAND_CAUSE_DATE_REQUIRED_MESSAGE });
   }
-
-  // BG-D — 부담부증여 × 토지·건물 취득일 다름(토지 원인을 따로 두지 않은 본인 취득). 토지 원인이 있으면 D1(상속·증여·이월과세)·D2 Y1(매매 overlay)이
-  //   부담부증여를 이미 막는다. 소유자 분리는 한 파트만 양도하므로 해당하지 않는다.
-  if (f.isBurdenedGift && !cause && (f.selfOwns ?? "both") === "both" && f.landAcquisitionDate && f.buildingAcquisitionDate && f.landAcquisitionDate !== f.buildingAcquisitionDate)
-    issues.push({ field: "landAcquisitionDate", message: BURDENED_GIFT_PART_DATES_MESSAGE + (f.isHousing ? "" : BURDENED_GIFT_GENERAL_BUILDING_HINT) });
 
   // D2 — 건물 상속·증여·이월과세 + 토지 매매(overlay `purchase`). 구조 → 토지 취득일 → (이하 토지 취득일 있을 때) 경계일 → 방식 → 자산 단위 평가.
   const buildingInherited = buildingCause === "inheritance" || buildingCause === "gift";

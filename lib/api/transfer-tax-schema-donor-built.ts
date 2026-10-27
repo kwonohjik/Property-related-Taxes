@@ -389,9 +389,11 @@ export function refineGbBgCarryoverParts(
     if ((parts ? parts.building : land) && needsDonorStdPrice(info) && info?.carryoverDonorBasis?.buildingStdPriceAtAcquisition === 0)
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...infoPath, "carryoverDonorBasis", "buildingStdPriceAtAcquisition"], message: GB_BG_BUILDING_STD_ZERO_MESSAGE });
   };
-  const bothPartsOnlyIssues = (info: BgInfoPartsLike, infoPath: (string | number)[]) => {
+  const bothPartsOnlyIssues = (info: BgInfoPartsLike, infoPath: (string | number)[], houseSplitCarryover = false) => {
     for (const [key, message] of BOTH_PARTS_ONLY)
-      if (info?.carryoverDonorBasis?.[key] !== undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...infoPath, "carryoverDonorBasis", key], message });
+      // 주택·건물 이월과세 토글 C — 당초 증여자 건물 취득일을 같은 키로 받는다(설계서 `bg-house-building-split.design.md` §5.2).
+      if (info?.carryoverDonorBasis?.[key] !== undefined && !(houseSplitCarryover && key === "buildingDonorAcquisitionDate"))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...infoPath, "carryoverDonorBasis", key], message });
   };
   const isGbBg = data.propertyType === "general_building" && data.transferType === "burdened_gift";
   if (isGbBg) {
@@ -399,10 +401,64 @@ export function refineGbBgCarryoverParts(
     data.generalBuildingShares?.forEach((s, i) =>
       check(s.burdenedGiftInfo, s.valuation?.landAcquisitionCause, s.valuation?.buildingAcquisitionCause, ["generalBuildingShares", i, "valuation", "buildingAcquisitionCause"], ["generalBuildingShares", i, "burdenedGiftInfo"]),
     );
-  } else bothPartsOnlyIssues(data.burdenedGiftInfo, ["burdenedGiftInfo"]);
+  } else
+    bothPartsOnlyIssues(
+      data.burdenedGiftInfo,
+      ["burdenedGiftInfo"],
+      data.transferType === "burdened_gift" && data.acquisitionCause === "carryover_gift" && (data.propertyType === "housing" || data.propertyType === "building"),
+    );
   data.companionAssets?.forEach((c, i) => {
     if (c.assetKind === "general_building" && c.transferType === "burdened_gift")
       check(c.burdenedGiftInfo, c.acquisitionCause, c.generalBuildingValuation?.buildingAcquisitionCause, ["companionAssets", i, "generalBuildingValuation", "buildingAcquisitionCause"], ["companionAssets", i, "burdenedGiftInfo"]);
     else bothPartsOnlyIssues(c.burdenedGiftInfo, ["companionAssets", i, "burdenedGiftInfo"]);
   });
+}
+
+/** 시가 평가의 토지분·건물분 평가액(`marketValueByPart`) — 합계가 시가(`marketValueAtTransfer`)와 같아야 한다(설계서 `bg-house-building-split.design.md` Q-3 a). */
+export const BG_MARKET_VALUE_BY_PART_SUM_MESSAGE =
+  "부담부증여 시가 평가의 토지분·건물분 평가액(burdenedGiftInfo.marketValueByPart) 합계가 시가(marketValueAtTransfer)와 다릅니다 — 「소득세법 시행령」 제159조 제1항의 파트 평가액은 그 시가를 토지·건물로 나눈 값입니다";
+export const BG_MARKET_VALUE_BY_PART_REQUIRED_MESSAGE =
+  "부담부증여 시가 평가에서 주택·건물의 토지·건물 취득일이 다르면 토지분·건물분 평가액(burdenedGiftInfo.marketValueByPart)을 보내야 합니다 — 토지·건물 파트로 나눠 계산합니다(「소득세법」 제95조 제4항 · 「소득세법 시행령」 제159조 제1항)";
+export const BG_MARKET_VALUE_BY_PART_SCOPE_MESSAGE =
+  "부담부증여 시가 평가의 토지분·건물분 평가액(burdenedGiftInfo.marketValueByPart)은 시가 평가인 주택·건물에서 토지·건물 취득일이 다를 때만 보낼 수 있습니다";
+
+type MarketByPartInfo =
+  | { valuationMode?: string; marketValueAtTransfer?: number; marketValueByPart?: { land: number; building: number }; carryoverDonorBasis?: { buildingDonorAcquisitionDate?: unknown } }
+  | undefined;
+
+/**
+ * 시가 평가 토지분·건물분 평가액 (⑫ · 설계서 `bg-house-building-split.design.md` Q-3 a) — 엔진은 있으면 그 값을 §159 파트 A로 그대로 쓴다.
+ * 시가 평가 주택·건물이고 토지·건물 취득일이 다를 때만 받고(그 밖은 화면이 묻지 않는다), 합계는 시가와 같아야 한다. 단건·묶음이 같은 규칙이다.
+ */
+export function refineBgMarketValueByPart(
+  data: {
+    propertyType?: string;
+    transferType?: string;
+    acquisitionDate?: unknown;
+    landAcquisitionDate?: unknown;
+    acquisitionCause?: string;
+    carryoverTaxation?: { donorAcquisitionDate?: unknown };
+    burdenedGiftInfo?: MarketByPartInfo;
+    companionAssets?: ReadonlyArray<{ assetKind?: string; burdenedGiftInfo?: MarketByPartInfo; acquisitionDate?: unknown; landAcquisitionDate?: unknown }>;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const day = (d: unknown) => (d instanceof Date ? d.toISOString().slice(0, 10) : typeof d === "string" ? d.slice(0, 10) : undefined);
+  const check = (kind: string | undefined, info: MarketByPartInfo, landDate: unknown, date: unknown, path: (string | number)[], donorDate?: unknown) => {
+    const byPart = info?.marketValueByPart;
+    // 본인 취득 = 토지 취득일 ≠ 건물(자산) 취득일 · 이월과세 토글 C = 당초 증여자의 건물 취득일 ≠ 증여 사건의 증여자 취득일
+    const buildingDonorDate = info?.carryoverDonorBasis?.buildingDonorAcquisitionDate;
+    const datesDiffer = (!!day(landDate) && day(landDate) !== day(date)) || (!!day(buildingDonorDate) && !!day(donorDate) && day(buildingDonorDate) !== day(donorDate));
+    const inScope = (kind === "housing" || kind === "building") && info?.valuationMode === "sangjeungbeop_market" && datesDiffer;
+    // 화면(⑧ `validateBgHouseSplit`)이 요구하는 칸 — 비우고 보내면 엔진이 기준시가 비율로 시가를 나누게 된다(자동 안분 금지 · Q-3 a).
+    if (!byPart) {
+      if (inScope) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, "marketValueByPart"], message: BG_MARKET_VALUE_BY_PART_REQUIRED_MESSAGE });
+      return;
+    }
+    if (!inScope) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, "marketValueByPart"], message: BG_MARKET_VALUE_BY_PART_SCOPE_MESSAGE });
+    else if (byPart.land + byPart.building !== (info?.marketValueAtTransfer ?? 0))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, "marketValueByPart"], message: BG_MARKET_VALUE_BY_PART_SUM_MESSAGE });
+  };
+  check(data.propertyType, data.burdenedGiftInfo, data.landAcquisitionDate, data.acquisitionDate, ["burdenedGiftInfo"], data.acquisitionCause === "carryover_gift" ? data.carryoverTaxation?.donorAcquisitionDate : undefined);
+  data.companionAssets?.forEach((c, i) => check(c.assetKind, c.burdenedGiftInfo, c.landAcquisitionDate, c.acquisitionDate, ["companionAssets", i, "burdenedGiftInfo"]));
 }

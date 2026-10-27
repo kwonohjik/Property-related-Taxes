@@ -43,7 +43,7 @@ async function post(b: unknown): Promise<{ status: number; json: any }> {
   return { status: res.status, json: await res.json() };
 }
 
-describe("#3 R-6 긍정 짝 — 부담부증여에 토지 취득일만(분리 필드 없음)은 막지 않는다 · 단 건물과 다른 날이면 막는다(V-4 Q-1 a)", () => {
+describe("#3 R-6 긍정 짝 — 부담부증여에 토지 취득일만(분리 필드 없음)은 막지 않는다 · 건물과 다른 날이면 토지·건물 파트로 나눠 계산한다(V-4)", () => {
   const BASE = {
     propertyType: "housing", useEstimatedAcquisition: false, transferPrice: 1_200_000_000, transferDate: "2026-06-30",
     acquisitionDate: "2018-03-02", acquisitionPrice: 0, expenses: 0, isOneHousehold: false, householdHousingCount: 2,
@@ -65,10 +65,19 @@ describe("#3 R-6 긍정 짝 — 부담부증여에 토지 취득일만(분리 �
     expect(plain.json.data.result.determinedTax).toBe(20_435_000);
     expect(sameDay.json.data.result.determinedTax).toBe(20_435_000);
   }, 60_000);
-  it("토지 취득일이 건물과 다르면 400 — 종전에는 그 날짜를 버리고 20,435,000으로 계산했다(「소득세법」 제95조 제4항 · 계획서 bg-carryover-non-gb-building-date.plan.md Q-1 a)", async () => {
-    const r = await post({ ...BASE, landAcquisitionDate: "2008-05-10" });
-    expect(r.status).toBe(400);
-    expect(JSON.stringify(r.json)).toContain("토지와 건물의 취득일이 다르면 아직 계산하지 못합니다");
+  it("토지 취득일이 건물과 다르면(시가 평가) 토지분·건물분 평가액이 없으면 400 · 보내면 파트로 계산 15,535,000(설계서 bg-house-building-split.design.md Q-3 a)", async () => {
+    // PR-1(#2628)은 이 입력을 「아직 계산하지 못합니다」로 막았다. V-4 PR-B부터 계산한다 — 다만 시가를 나눌 파트 평가액은 받아야 한다(자동 안분 금지).
+    const missing = await post({ ...BASE, landAcquisitionDate: "2008-05-10" });
+    expect(missing.status).toBe(400);
+    expect(JSON.stringify(missing.json)).toContain("토지분·건물분 평가액");
+    /**
+     * B/C = 3억 / 12억 = 0.25 → 양도가액 토지 7억 × 0.25 = 175,000,000 · 건물 125,000,000 · 취득가액 75,000,000 · 100,000,000.
+     * 토지 100,000,000 × 30%(2008 → 18년) · 건물 25,000,000 × 16%(2018 → 8년) → 125,000,000 − 34,000,000 − 2,500,000 = 88,500,000 × 35% − 15,440,000 = 15,535,000.
+     * (한 날짜 2018로 세면 20,435,000 — 토지 보유기간을 버린 값.)
+     */
+    const r = await post({ ...BASE, landAcquisitionDate: "2008-05-10", burdenedGiftInfo: { ...BASE.burdenedGiftInfo, marketValueByPart: { land: 700_000_000, building: 500_000_000 } } });
+    expect(r.status).toBe(200);
+    expect(r.json.data.result.determinedTax).toBe(15_535_000);
   }, 60_000);
   it("파트 가액 하나만 와도 400(분리 전용 필드)", async () => {
     const r = await post({ ...BASE, landAcquisitionDate: "2008-05-10", landAcquisitionPrice: 300_000_000 });

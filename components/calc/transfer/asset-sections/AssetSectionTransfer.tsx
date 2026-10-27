@@ -109,6 +109,7 @@ export function AssetSectionTransfer({
         isFractionalSplit={isFractionalSplit}
         isCompanionBundle={isCompanionBundle}
         fractionalShares={fractionalShares}
+        isNonPrimaryAsset={isPrimary === false}
       />
 
       {/* 양도가액 — 부담부증여 시 엔진 자동 도출 (소령 §159) 안내 + 기준시가는 별도 유지 */}

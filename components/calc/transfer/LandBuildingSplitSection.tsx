@@ -127,7 +127,7 @@ interface Props {
  * 신축·취득했다면 **토지 취득 당시엔 주택이 없어** 라목 결합 공시가 애초에 존재하지 않는다.
  * 그 경우 §163⑥1호(토지)·2호(건물)가 각각 적용되므로 파트별 독립이 정본이다.
  */
-function PartAcqStdPrice(props: {
+export function PartAcqStdPrice(props: {
   part: "land" | "building";
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;

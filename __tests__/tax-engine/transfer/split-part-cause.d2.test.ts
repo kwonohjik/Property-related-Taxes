@@ -175,9 +175,9 @@ describe("leaf — D2 규칙별 발동·긍정 짝", () => {
     expect(msgs({ ...absent, hasLandAcquisitionDate: false })).toEqual([]);
     expect(msgs({ ...absent, buildingAcquisitionDate: undefined })).toEqual([]);
     expect(msgs({ ...absent, buildingAcquisitionCause: "purchase" })).toEqual([]);
-    // 부담부증여(transferType 또는 원인)는 파트 원인을 읽지 않는 기존 경로 — Y8 비해당. 다만 토지·건물 취득일이 다르면 BG-D가 막는다
-    //   (V-4 Q-1 a — 종전엔 통과하고 토지 취득일을 버렸다 · burdened-gift-stale-acq-method 케이스 7).
-    expect(msgs({ ...absent, isBurdenedGift: true }).map((m) => m.includes("토지와 건물의 취득일이 다르면 아직 계산하지 못합니다"))).toEqual([true]);
+    // 부담부증여(transferType 또는 원인)는 파트 원인을 읽지 않는 기존 경로 — Y8 비해당. 토지·건물 취득일이 다르면 §159 파트 값으로 나눠 계산한다
+    //   (V-4 PR-B — PR-1의 BG-D 차단을 풀었다 · burdened-gift-stale-acq-method 케이스 7 · `bg-house-building-split.anchor.test.ts`).
+    expect(msgs({ ...absent, isBurdenedGift: true })).toEqual([]);
   });
 
   it("분리 대상이 아니면(isSplitable false) 아무것도 보지 않는다", () => {

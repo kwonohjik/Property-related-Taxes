@@ -267,10 +267,10 @@ describe("부담부증여 양도 — 토지 취득일은 계산에 쓰이지 않
     }
   });
 
-  it("🔑 토글 ON + 토지 취득일이 다르면(더 이른 날·더 늦은 날) ⑧이 막는다 — 종전에는 그 날짜를 버리고 토글 OFF와 같은 값으로 계산했다(계획서 bg-carryover-non-gb-building-date.plan.md Q-1 a · 「소득세법」 제95조 제4항)", () => {
+  it("🔑 토글 ON + 토지 취득일이 다르면(더 이른 날·더 늦은 날) 토지·건물로 나눠 계산하므로 ⑧이 파트 기준시가를 요구한다 — 종전에는 그 날짜를 버리고 토글 OFF와 같은 값으로 계산했다(설계서 bg-house-building-split.design.md · 「소득세법」 제95조 제4항)", () => {
     for (const d of ["2001-03-01", "2020-03-01"]) {
       const msgs = [0, 1, 2, 3, 4].flatMap((s) => collectStepIssues(s, bgForm({ ...ON, landAcquisitionDate: d }))).map((i) => `${i.field}|${i.message}`);
-      expect(msgs.some((m) => m.startsWith("landAcquisitionDate|") && m.includes("토지와 건물의 취득일이 다르면 아직 계산하지 못합니다")), d).toBe(true);
+      expect(msgs.some((m) => m.startsWith("standardPricePerSqmAtTransfer|") && m.includes("양도시 토지 기준시가")), d).toBe(true);
     }
   });
 
