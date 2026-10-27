@@ -18,6 +18,7 @@ import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { purchasedPartIdOf } from "./general-building-share-id";
 import { buildInputB } from "./transfer-tax-carryover-inputs";
+import { carryoverDonorCapex } from "./transfer-tax-carryover";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
 import type { TransferTaxItemInput } from "./types/transfer-aggregate.types";
@@ -67,6 +68,10 @@ export function splitCarryoverDebtPieces(card: TransferTaxItemInput, share: Carr
   const cutOpt = (x: number | undefined): number | undefined => (x === undefined ? undefined : cut(x));
   /** 매입분 몫 = 전체 − 증여분 (undefined는 undefined 유지 — §97②2호 단서 swap 활성 조건이 `capitalExpenditure !== undefined`) */
   const rest = (x: number | undefined): number | undefined => (x === undefined ? undefined : x - cut(x));
+
+  // r = 1이면 증여분이 없어 증여자 자본적지출(§97의2①2호)을 실을 카드가 없다 — ⑧·⑫가 먼저 막지만 그 그물 밖(지분·컴패니언 와이어)도 조용히 버리지 않는다.
+  if (share.keep === 0 && carryoverDonorCapex(ct, card.transferDate) > 0)
+    invalid("당초 증여 때 인수한 채무가 증여 당시 평가액과 같으면 증여받은 부분이 없어 증여자 자본적지출을 적용할 수 없습니다.");
 
   const giftPrice = cut(card.transferPrice);
   const purchasedPrice = card.transferPrice - giftPrice;
