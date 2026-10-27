@@ -130,7 +130,7 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
   /** U-2 — 파트 모델은 실거래가 파트가 있을 때만 실비 카드를 싣는다(카드 노출 술어와 같다). */
   const perPartActualExpense = (v: string | undefined): number => (mixedAnyPartActual(primary) ? parseAmount(v ?? "") : 0);
 
-  // 거주 개월 단일 소스 — 실거주(공제율)와 §154⑧3호 통산(표2 대상 판정) 둘 다 여기서 도출.
+  // 거주 개월 단일 소스 — 실거주(표2)와 §154⑧3호 통산(비과세 거주요건) 둘 다 여기서 도출.
   const resMonths = deriveResidencePeriodMonths(
     primary,
     form.transferDate,
@@ -269,8 +269,8 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
     })(),
     // 거주기간 단일 소스 — 보유상황(입주일·퇴거일/개월) 거주에서 도출.
     // 메인 엔진과 동일 whole-year 산식(Math.floor(months/12), transfer-tax-helpers.ts:466·505)로 정합.
-    residencePeriodYears: Math.floor(resMonths / 12),  // 실거주 (표2 거주분 공제율)
-    // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 — 동일세대 상속이면 실거주 + 상속개시 전 통산 거주.
+    residencePeriodYears: Math.floor(resMonths / 12),  // 실거주 (표2 대상 판정·거주분 공제율)
+    // §154⑧3호 통산 거주 연수(§154① 비과세 거주요건 전용) — 동일세대 상속이면 실거주 + 상속개시 전 통산 거주.
     // 규칙은 엔진 `consolidateResidenceMonths` 재사용(단일 소스). 비상속·별도세대면 실거주로 identity.
     table2ResidencePeriodYears: Math.floor(
       consolidateResidenceMonths(resMonths, {

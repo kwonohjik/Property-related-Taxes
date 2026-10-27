@@ -260,7 +260,7 @@ export function buildHousingPart(
   gainSplit: HousingGainSplit,
   excessResult: ExcessLandResult,
   residenceYears: number,
-  // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 (게이트 전용). 거주분 공제율은 residenceYears(실거주) 유지.
+  // 표2 '대상 판정'용 거주 연수(게이트 전용 — 본인 거주 · `table2SubjectResidenceMonths`). 거주분 공제율은 residenceYears(실거주).
   table2ResidenceYears: number,
   isOneHouseExempt: boolean = true,  // 미주입 시 true (기존 겸용주택 사례14 등 backward compat)
   /** §95② 미등기양도자산 장기보유특별공제 배제 (자산 전체). */
@@ -389,7 +389,7 @@ export function buildHousingPart(
 
   // ── ③ 장기보유특별공제 (안분 후 과세대상 양도차익에 표율 적용) ──
   // 🚨 Critical: 다주택자는 거주 2년+ 이어도 표1 적용 (1세대1주택 거주공제 미적용)
-  // 표2 게이트는 통산(table2ResidenceYears), 거주분 공제율은 실거주(residenceYears) — §154⑧3호 / 2021-202.
+  // 표2 게이트(table2ResidenceYears)와 거주분 공제율(residenceYears) 모두 본인 거주다(대법원 2025두34935 — 게이트만 이월과세 A 예외).
   /**
    * ✅ **§155의3(상생임대) 거주요건 면제 — P5-c에서 닫았다.**
    *

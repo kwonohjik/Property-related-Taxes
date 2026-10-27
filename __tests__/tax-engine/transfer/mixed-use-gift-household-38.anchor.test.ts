@@ -268,16 +268,20 @@ describe("MG-7 증여 전 동일세대 거주 개월은 표2 대상 판정(거�
       } as MixedUseAssetInput,
       rates,
     );
-  it("[MG-7a] 24개월 통산 → 표2 · 보유 3년 × 4% = 12%만(거주분은 본인 거주 0이라 0) — 23개월은 표1(경계)", () => {
+  const precedent = (r: ReturnType<typeof hi>) => (r.warnings ?? []).filter((w) => w.includes("2025두34935"));
+  it("[MG-7a] 증여 전 24개월은 표2 대상 판정에 통산하지 않는다 → 표1(대법원 2025두34935) · 통산했다면 표2였으니 판례 고지 · 23개월·미답·0은 고지 없음", () => {
     const at24 = hi(24);
-    expect(at24.housingPart.longTermDeductionTable).toBe(2);
+    expect(at24.housingPart.longTermDeductionTable).toBe(1);
     expect(at24.housingPart.holdingYears).toBe(3);
-    expect(hi(23).housingPart.longTermDeductionTable).toBe(1);
-    expect(hi(undefined).housingPart.longTermDeductionTable).toBe(1); // 미답은 통산하지 않는다
-    expect(hi(0).housingPart.longTermDeductionTable).toBe(1);
+    expect(precedent(at24)).toHaveLength(1);
+    expect(precedent(at24)[0]).toContain("증여 전 동일세대로 거주한 기간은");
+    for (const m of [23, undefined, 0]) {
+      expect(hi(m).housingPart.longTermDeductionTable, String(m)).toBe(1);
+      expect(precedent(hi(m)), String(m)).toHaveLength(0); // 통산해도 표2가 아니거나 통산할 값이 없다
+    }
   });
-  it("[MG-7b] 공제율에 통산하지 않는다 — 증여 전 거주를 더 넣어도(36개월) 공제액은 같다(거주분 늘지 않음)", () => {
+  it("[MG-7b] 장기보유특별공제에 통산하지 않는다 — 증여 전 거주가 36·24·23개월 어느 것이어도 공제액이 같다", () => {
     expect(hi(36).housingPart.longTermDeductionAmount).toBe(hi(24).housingPart.longTermDeductionAmount);
-    expect(hi(24).housingPart.longTermDeductionAmount).toBeGreaterThan(hi(23).housingPart.longTermDeductionAmount); // 표2 보유 4% > 표1 2%
+    expect(hi(24).housingPart.longTermDeductionAmount).toBe(hi(23).housingPart.longTermDeductionAmount);
   });
 });

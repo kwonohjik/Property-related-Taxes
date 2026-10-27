@@ -50,7 +50,7 @@
  *
  * ⚠️ 통산은 §154① 비과세 판정에만 쓴다. 장기보유특별공제와 §104② 세율 보유기간은 증여일 기준을 유지한다
  *    (결정 #38 조건). §155② 상속주택 특례로는 넓히지 않는다. 증여 전 동일세대 **거주 개월**(`priorHouseholdResidenceMonths`)도
- *    비과세 거주요건과 표2 대상 판정(거주 2년)에 더한다 — 표2 공제율의 보유·거주기간에는 더하지 않는다(결정 #38-9 · 사전-2025-법규재산-0506).
+ *    비과세 거주요건에 더한다 — 표2(대상 판정·공제율)에는 더하지 않는다(대법원 2025두34935). 이월과세 시나리오 A만 표2 대상 판정에도 더한다(`table2SubjectResidenceMonths`).
  */
 
 import { differenceInMonths } from "date-fns";
@@ -73,7 +73,7 @@ export interface GiftHouseholdBasis {
   /**
    * 증여 전, 증여자와 **같은 세대로 이 주택에 거주한 기간(개월)** — 증여일 이전분이다. 증여일부터 양도일까지의 본인 거주는
    * `residencePeriodMonths`에 따로 있고 두 기간은 겹치지 않아 더한다(상속 `decedentCohabitationResidenceMonths`와 같은 모양).
-   * **§154① 비과세 거주요건과 표2 대상 판정(거주 2년)**에 통산한다(`resolveExemptionRequirementResidenceMonths`) — 표2 공제율의 보유·거주기간에는 쓰지 않는다(본인 기간, 증여일 기산).
+   * **§154① 비과세 거주요건**에 통산한다(`resolveExemptionRequirementResidenceMonths`) — 표2(대상 판정·공제율)에는 쓰지 않는다(대법원 2025두34935). 이월과세 시나리오 A만 표2 대상 판정에도 더한다(`table2SubjectResidenceMonths`).
    * 통산이 성립한 경우(`giftHouseholdConsolidationStart`)에만 의미가 있다.
    * **undefined = 미답**: 통산하지 않고(0) 판정하며, 거주 기간을 채우면 결론이 달라질 때만 확인 필요를 고지한다. 0은 「거주한 적 없음」이라는 답이다.
    */
@@ -131,7 +131,7 @@ export function maxPriorResidenceMonthsBetween(householdStart: Date, giftDate: D
 
 /**
  * §154① 거주요건에 **더하는** 증여 전 동일세대 거주 개월. 통산이 성립하고 답이 있을 때만 양수다 — 미답(undefined)·0·통산 불성립은 0.
- * 비과세 거주요건과 표2 **대상 판정**(거주 2년)에 더한다(결정 #38-7 · #38-9). 표2 공제율의 보유·거주기간에는 더하지 않는다.
+ * 비과세 거주요건에 더한다(결정 #38-7). 표2에는 이월과세 시나리오 A의 대상 판정에만 더한다(`table2SubjectResidenceMonths` — 대법원 2025두34935).
  */
 export function giftHouseholdPriorResidenceMonths(b: GiftHouseholdBasis | undefined): number {
   const m = b?.priorHouseholdResidenceMonths;

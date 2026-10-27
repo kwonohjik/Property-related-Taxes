@@ -112,10 +112,10 @@ describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
 
   it("B-A5: 거주요건은 **§154⑧3호 통산값**(table2ResidencePeriodYears)으로 판정한다", () => {
     // 실거주 0년이지만 동일세대 상속 통산 2년 → 요건 충족. 실거주만 봤다면 배제됐을 것이다.
-    // (표2 '거주분 공제율'은 실거주 0년이라 붙지 않는다 — 대상판정/공제율 분리, 사전법령해석재산 2021-202)
+    // 표2는 실거주 0년이라 열리지 않는다(통산값은 비과세 거주요건 전용 — 대법원 2025두34935). 종전 표2 303,730,378.
     const consolidated = run({ wasRegulatedAtAcquisition: true, table2ResidencePeriodYears: 2 });
-    expect(consolidated.housingPart.longTermDeductionTable).toBe(2);
-    expect(consolidated.total.transferTax).toBe(303_730_378);
+    expect(consolidated.housingPart.longTermDeductionTable).toBe(1);
+    expect(consolidated.total.transferTax).toBe(EXEMPT_TAX); // 비과세 요건 충족(고가주택 부분과세) · 표1 — 실거주 0년의 비조정 취득과 같은 세액
 
     // 통산이 1년이면 여전히 미충족 — **이중 통산이 없음**을 반증한다
     // (한 번 더 더해졌다면 2년이 되어 충족했을 것이다).

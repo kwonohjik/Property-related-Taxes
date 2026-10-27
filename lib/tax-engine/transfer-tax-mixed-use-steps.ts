@@ -41,7 +41,7 @@ export function buildCalculationRoute(
   housingPart: ReturnType<typeof buildHousingPart>,
   excessResult: ReturnType<typeof calcExcessLandRatio>,
   commercialPart: ReturnType<typeof buildCommercialPart>,
-  // 표2 게이트에 실제로 쓴 통산 거주 연수 — 재계산 없이 주입받아 표시-계산 drift 차단.
+  // 표2 게이트에 실제로 쓴 거주 연수(본인 거주) — 재계산 없이 주입받아 표시-계산 drift 차단.
   table2ResidenceYears: number,
   /** §154① 보유요건까지 반영한 최종 비과세 적용 여부 — 오케스트레이터 1회 판정값. */
   isOneHouseExempt: boolean,
@@ -73,7 +73,7 @@ export function buildCalculationRoute(
           : ("section97_direct" as const);
 
   /**
-   * 표2 게이트는 통산 거주(§154⑧3호) — 사유 서술도 게이트 값으로(통산 케이스에서 "실거주 0년 ≥2년" 모순 방지).
+   * 표2 게이트는 본인 거주(대법원 2025두34935) — 사유 서술도 게이트 값으로 쓴다.
    *
    * 🔴 **상생임대는 연수로 설명할 수 없다** (P5-c). §155의3①이 거주기간 제한 자체를 면제하므로
    *    거주 0년에도 표2가 열린다 — 그때 「거주(통산) 0년 ≥ 2년」이라고 적으면 화면이 **거짓말**을
@@ -86,8 +86,8 @@ export function buildCalculationRoute(
     housingPart.longTermDeductionTable === 2
       ? table2ByWinWinRental
         ? `상생임대주택 — 거주기간 제한 면제(${TRANSFER.WIN_WIN_RENTAL_EXEMPT}) → 표2 (보유×4% + 거주×4%, 최대 80%)`
-        : `거주(통산) ${table2ResidenceYears}년 ≥ 2년 → 표2 (보유×4% + 거주×4%, 최대 80%)`
-      : `거주(통산) ${table2ResidenceYears}년 < 2년 → 표1 (보유×2%, 최대 30%)`;
+        : `거주 ${table2ResidenceYears}년 ≥ 2년 → 표2 (보유×4% + 거주×4%, 최대 80%)`
+      : `거주 ${table2ResidenceYears}년 < 2년 → 표1 (보유×2%, 최대 30%)`;
 
   const zoneLabel = asset.zoneType ?? "residential";
   const metroLabel = asset.isMetropolitanArea === false ? "수도권 외" : "수도권";

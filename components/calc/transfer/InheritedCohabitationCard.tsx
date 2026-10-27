@@ -31,7 +31,7 @@ export function InheritedCohabitationCard(props: {
         });
       }}
       title="상속개시 당시 피상속인과 동일세대"
-      description="동일세대로 함께 거주·보유하던 상속주택을 양도하는 경우, 상속개시 전 동일세대 보유·거주기간을 1세대1주택 비과세·표2 장특공제 판정에 통산합니다 (소령 §154⑧3호)"
+      description="동일세대로 함께 거주·보유하던 상속주택을 양도하는 경우, 상속개시 전 동일세대 보유·거주기간을 1세대1주택 비과세 판정에 통산합니다 (소령 §154⑧3호). 장기보유특별공제 표2에는 통산하지 않습니다 (대법원 2025두34935)"
     >
       <div className="space-y-2 pt-1">
         <div className="space-y-1">
@@ -58,8 +58,8 @@ export function InheritedCohabitationCard(props: {
             />
           </div>
           <p className="text-caption text-muted-foreground">
-            상속개시 전 피상속인과 동일세대로서 이 주택에 실제 거주한 기간(개월). 비과세 거주요건·표2
-            장특공제 대상 판정에 통산됩니다. 상속개시일 이후 상속인 본인 실거주는 &lsquo;거주기간&rsquo;에 별도 입력.
+            상속개시 전 피상속인과 동일세대로서 이 주택에 실제 거주한 기간(개월). 비과세 거주요건에
+            통산됩니다(장기보유특별공제 표2에는 통산하지 않음). 상속개시일 이후 상속인 본인 실거주는 &lsquo;거주기간&rsquo;에 별도 입력.
           </p>
         </div>
         {props.children}

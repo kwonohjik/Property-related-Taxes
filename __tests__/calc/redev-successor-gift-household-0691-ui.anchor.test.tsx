@@ -107,11 +107,12 @@ describe("Step4 안내 — 증여 승계는 통산한다고 말한다", () => {
   it("대체 안내: giftCarry면 통산 문구 · 아니면 신축 거주만이라는 종전 문구", () => {
     const a = render(<RedevSplitResidenceNotice isSuccessor giftCarry />);
     expect(a.container.textContent).toContain("증여자와 같은 세대로서 한 종전주택 거주기간");
-    expect(a.container.textContent).toContain("사전-2020-법령해석재산-0691");
+    expect(a.container.textContent).toContain("1세대1주택 비과세 거주요건에 쓰입니다");
+    expect(a.container.textContent).toContain("장기보유특별공제 표2(대상 판정·공제율)는 본인의 신축주택 거주만 반영합니다 (대법원 2025두34935)");
     a.unmount();
     const b = render(<RedevSplitResidenceNotice isSuccessor />);
     expect(b.container.textContent).toContain("신축주택 거주기간만");
-    expect(b.container.textContent).not.toContain("사전-2020-법령해석재산-0691");
+    expect(b.container.textContent).not.toContain("종전주택 거주기간과");
   });
   it("직접 입력 안내: giftCarry면 종전 거주는 ① 카드에 따로 입력한다 · 아니면 통산하지 않는다는 종전 문구", () => {
     const a = render(<SuccessorResidenceDirectHint completionDate="2020-01-01" giftCarry />);

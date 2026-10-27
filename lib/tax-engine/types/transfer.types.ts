@@ -733,11 +733,11 @@ export interface TransferTaxInput {
   };
   /**
    * §154⑧3호 — 상속주택 자체 양도 시 상속개시 당시 상속인·피상속인 동일세대 여부.
-   * true 시 상속개시 전 동일세대 기간을 §154① 비과세·§95② 표2 "대상 판정"에 통산:
+   * true 시 상속개시 전 동일세대 기간을 §154① 비과세 판정에 통산:
    *  - 보유: decedentCohabitationHoldingStartDate로 기산일 backdate (resolveExemptionHoldingStartDate).
    *  - 거주: decedentCohabitationResidenceMonths를 통산 (resolveExemptionResidenceMonths).
-   * ⚠️ LTHD 보유분·단기세율(decedentAcquisitionDate) 및 표2 "거주분 공제율"에는 통산 미적용
-   *    (모두 상속개시일 기산 유지 — 사전법령해석재산 2021-202: 통산은 표2 대상 판정 한정).
+   * ⚠️ LTHD(표2 대상 판정·공제율)·단기세율(decedentAcquisitionDate)에는 통산 미적용 — 상속개시일 기산 유지
+   *    (대법원 2026.1.15. 2025두34935: 표2 거주기간은 상속인이 상속개시일부터 보유하는 동안 거주한 기간).
    */
   decedentSameHouseholdBeforeInheritance?: boolean;
   /** §154⑧3호 — 상속개시 전 상속인·피상속인이 동일세대로서 거주·보유를 시작한 날 (비과세 보유기간 기산 backdate). */
