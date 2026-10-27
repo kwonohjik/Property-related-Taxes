@@ -83,7 +83,7 @@ const seedOf = (assets: unknown[], over: Record<string, unknown> = {}) => ({
 });
 const half = { ownershipNumerator: "50", ownershipDenominator: "100" };
 
-type Ct = { giftTaxAmount?: number };
+type Ct = { giftTaxAmount?: number; donorCapitalExpenditure?: number };
 type Wire = {
   carryoverTaxation?: Ct;
   generalBuildingShares?: { carryoverTaxation?: Ct }[];
@@ -196,5 +196,27 @@ test.describe("일반건물 부담부증여 × 이월과세 — 화면 증여세
     expect(body.carryoverTaxation?.giftTaxAmount).toBe(100_000_000);
     expect(body.burdenedGiftInfo?.carryoverDonorBasis?.giftValuationByPart).toEqual({ land: 600_000_000, building: 400_000_000 });
     await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("97,800,000");
+  });
+
+  /**
+   * V-3 Q-3 a(`docs/00-pm/gb-bg-on-building-block-fields.plan.md`) — 당초 증여자 자본적지출(§97의2①2호)은 토지 블록 한 칸(토지·건물 합계)이고 A 필요경비에 더해진다.
+   * K-4 실지 · 양도인 6억·4억 · 당초 증여자 5천만·1억 · 신고서 1억/10억 → 자본적지출 없음 90,260,000 · 1억 → 75,440,000(vitest anchor와 같은 값).
+   */
+  test("GBGT-E8 분리 ON 둘 다 · K-4: 건물 블록엔 자본적지출 칸이 없고, 토지 블록 1억 → 75,440,000 · [A] 열에 증여자 자본적지출", async ({ page }) => {
+    test.setTimeout(180_000);
+    const co = { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2024-05-01", donorAcquisitionDate: "2015-01-01", donorAcquisitionPrice: "100000000", giftDateValuation: "", giftTaxAmount: "", donorRelation: "lineal", donorSameHousehold: "no" };
+    await seedWizard(page, seedOf([asset(1, {
+      hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2024-05-01", buildingCarryover: co,
+      bgAcquisitionMethod: "actual", bgActualAcquisitionLand: "600000000", bgActualAcquisitionBuilding: "400000000",
+      bgCoDonorActualAcquisitionLand: "50000000", bgCoDonorActualAcquisitionBuilding: "100000000",
+    })]));
+    await fillGiftTax(page, 0, "100000000", "1000000000", { land: "600000000", building: "400000000" });
+    await expect(page.locator('[data-field="buildingCarryover.donorCapitalExpenditure"]')).toHaveCount(0);
+    await expect(page.locator('[data-field="carryover.donorCapitalExpenditure"]')).toContainText("증여자 자본적지출(토지·건물 합계)");
+    await inputOf(page, 0, "carryover.donorCapitalExpenditure").fill("100000000");
+    const body = (await calculate(page)) as Wire;
+    expect(body.carryoverTaxation?.donorCapitalExpenditure).toBe(100_000_000);
+    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("75,440,000");
+    await expect(page.getByTestId("gb-bg-carryover-donor-capex")).toContainText("100,000,000");
   });
 });

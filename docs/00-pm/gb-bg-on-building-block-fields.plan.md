@@ -148,7 +148,7 @@ route:
   - 양도인 칸처럼 `bgExpenseInputsUnused`면 두 블록 모두 숨기고, ④도 싣지 않는다.
 - 세액이 **내려가는** 방향이다(§1.3: 90,260,000 → 75,440,000).
 
-## 5. 결정 요청
+## 5. 결정 요청 — ✅ 2026-10-27 확정: Q-1 a · Q-2 a · Q-3 a · Q-4 a(권장안) + Q-3 보충(한 파트만 이월과세 = 증여받은 파트에만 귀속)
 
 | # | 질문 | 선택지 | 권장 |
 |---|---|---|---|
@@ -182,11 +182,33 @@ route:
 ## 8. 확인 필요
 - **V-1 (일반 양도 일반건물)**: 일반 양도에서 분리 ON 둘 다 이월과세의 건물 블록 사건 칸이 계산에 닿는지는 재지 않았다. legacy 엔진 모양 `buildEngineShaped(asset.buildingCarryover ?? c, c, …)`(`transfer-tax-api-gb-carryover.ts:358`)이 건물 서브폼의 등기접수일을 읽을 수 있다. 그래서 Q-1은 부담부증여로 한정했다.
 - **V-2 (단건 부담부증여)**: 주택·토지 등 단건 부담부증여 × 이월과세의 증여자 자본적지출은 코드상 A에 가산된다(`transfer-tax-carryover.ts:203` · `:253`). 실측은 하지 않았다.
-- **V-3 (§159 K-4 자본적지출 파트 배분)**: 부담부증여 K-4가 자산 단위 자본적지출을 토지·건물로 어떻게 나누는지(`resolveWholeBgAcquisition`)는 읽지 않았다. Q-3 a는 양도인 자본적지출과 같은 배분을 따른다. 그 배분이 무엇인지는 PR-1 anchor로 확정한다.
+- ✅ **V-3 (§159 K-4 자본적지출 파트 배분) — 해소(PR-1)**: 취득시 기준시가 비율(`splitBgRealExpenseByNature`)이다. 한 파트만 이월과세면 당초 증여자 몫은 증여받은 파트에 귀속한다(§5 Q-3 보충 · §10).
 - **V-4 (비일반건물의 취득가액 칸)**: 주택·토지 부담부증여 × 이월과세에서도 `CarryoverGiftBlock`의 증여자 취득가액 칸이 보이는지, 세액에 닿지 않는지는 재지 않았다. 엔진 타입 주석상 부담부증여는 그 값을 쓰지 않는다.
+
+### Q-3 보충 (2026-10-27 구현 중 발견 · 사용자 결정)
+- 부담부증여 안분은 자본적지출을 한 덩어리로 받아 취득시 기준시가 비율로 토지·건물에 나눈다(`lib/tax-engine/burdened-gift-acquisition.ts` `splitBgRealExpenseByNature`).
+- 둘 다 이월과세면 A의 취득시 기준시가가 두 파트 모두 당초 증여자 값이라 그 비율로 나누면 된다.
+- 한 파트만 이월과세면 당초 증여자 자본적지출(「해당 자산에 대하여 지출한」)이 양도인 본인 파트로 샌다. → **증여받은 파트에만 귀속**한다(채무 비율로 줄인 뒤 전액). 나머지 자본적지출만 기준시가로 나눈다.
 
 ## 9. 범위 밖
 - 토지와 건물을 **서로 다른 증여**(다른 날 · 다른 신고서)로 받은 경우.
   - 현행 화면 모델은 사건 한 벌이다(안내문 「하나의 증여이기 때문입니다」).
   - 「소득세법」 제97조의2 제3항 연수는 등기부 소유기간이므로 파트마다 다를 수 있다. 사건 2벌 모델이 필요하다면 별건이다.
 - 일반 양도 일반건물(V-1)과 비일반건물(V-4)의 같은 종류 칸.
+
+## 10. 구현 기록 — PR-1 (Q-3 · 2026-10-27)
+- 엔진:
+  - `carryoverDonorCapex(ct, transferDate)`(`lib/tax-engine/transfer-tax-carryover.ts`) — §97의2①2호 금액 · 2024.1.1. 전 양도 0. 단건 엔진 Step 3도 이 함수를 쓴다.
+  - `withCarryoverDonorCapex`(`lib/tax-engine/transfer-tax-carryover-burdened-gift.ts`) — A payload의 자본적지출 칸에 더한다. 칸·양도비가 비고 legacy 경비 한 덩어리만 있으면 거기에 더한다(택일로 버려지지 않게).
+  - `applyCarryoverDonorBasis(info, giftTax, donorCapex)` — 한 파트만이면 `carryoverDonorCapexDirect`를 싣고, `splitBgRealExpenseByNature`가 그 몫을 증여받은 파트에 귀속한다.
+- route: 단건(`general-building-route-carryover.ts`) · 묶음(`general-building-part-cards.ts`) · 지분(`general-building-fractional.ts`) 세 곳이 같은 두 leaf를 쓴다.
+- ⑦: `GbBgCarryoverDetail.donorCapexAddedToExpense`(채무 비율 안분 전 · 0이면 미기재) → `GbBurdenedGiftCarryoverCard` [A] 열 「증여자 자본적지출 (채무 비율 안분 전)」.
+- ⑤: 토지도 이월과세인 부담부증여 건물 블록에서 칸 숨김 · 둘 다 이월과세면 토지 블록 라벨 「증여자 자본적지출(토지·건물 합계)」 · 건물 블록 칸 키를 `buildingCarryover.donorCapitalExpenditure`로(건물만 이월과세일 때 유일한 입력처).
+- ④·⑧·⑫: 변경 없음. ④는 이미 사건 서브폼의 값을 지분 몫·2024 가드로 싣고 있었다(`transfer-tax-api-carryover.ts`).
+- 실측(anchor `__tests__/api/transfer.route.gb-bg-donor-capex.anchor.test.ts`):
+  - 단건 K-4 토지 블록 1억 → 90,260,000 → **75,440,000**(§1.3 손계산과 같다) · 지분 50/50 합계 같음.
+  - 묶음(일반건물 K-4 + 토지) 121,260,000 → **105,660,000** — 5천만을 A 기준시가(1천만 : 4천만)로 토지 −1천만 · 건물 −4천만 · 과세표준 −3,900만 × 40%.
+  - 건물만 이월과세 64,382,000 → **49,562,000** — 건물 양도차익만 −5천만 · 토지 불변 · −3,900만 × 38%.
+  - 2024.1.1. 전 양도는 변화 없음.
+- §8 V-3(K-4 자본적지출 파트 배분) 해소: 둘 다 이월과세는 A 취득시 기준시가 비율, 한 파트만은 그 파트 귀속(위 Q-3 보충).
+

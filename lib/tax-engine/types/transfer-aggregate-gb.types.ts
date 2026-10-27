@@ -34,6 +34,8 @@ export interface GbBgCarryoverDetail {
    * [A] 열의 꼬리표를 파트별로 단다. 이 필드가 생기기 전에 저장된 결과에는 없다(= 둘 다).
    */
   carryoverParts?: { land: boolean; building: boolean };
+  /** §97의2①2호 — A 필요경비에 더한 당초 증여자 자본적지출(채무 비율 안분 전 · 표시 전용). 0이면 싣지 않는다. */
+  donorCapexAddedToExpense?: number;
 }
 
 /**

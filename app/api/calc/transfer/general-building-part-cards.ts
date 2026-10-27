@@ -44,7 +44,9 @@ import {
   carryoverHoldingStartsA,
   carryoverPartsOf,
   toTransferorBasisInfo,
+  withCarryoverDonorCapex,
 } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
+import { carryoverDonorCapex } from "@/lib/tax-engine/transfer-tax-carryover";
 
 export interface GbPartCards {
   cards: AssetCardForAggregate[];
@@ -298,21 +300,23 @@ export function buildGbCompanionItems(
   const info = engine.transferType === "burdened_gift" ? engine.burdenedGiftInfo : undefined;
 
   /** `carryoverApplied` — 이월과세 비교 단위의 카드 세트만 자산 명세를 싣는다(묶음 명세 Q-4 a). 그 밖의 묶음은 종전 그대로. */
-  const scenario = (bgInfo: BurdenedGiftInfo | undefined, bldDate: Date, landDate: Date, carryoverApplied?: boolean) => {
+  const scenario = (bgInfo: BurdenedGiftInfo | undefined, bldDate: Date, landDate: Date, carryoverApplied?: boolean, donorCapex = 0) => {
+    /*
+     * 자산 단위 실지 취득가액·필요경비 — 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축이다:
+     * 증축 일괄값(`bundledAcquisitionPrice`·`bundledExpenses`)이 있으면 그것, 없으면 그 자산의 엔진 입력값
+     * (5-a가 정한 취득가액 · 직접 경비 + 공통 양도비 몫 — 다른 컴패니언과 같은 소스).
+     * 시나리오 A는 당초 증여자 자본적지출(§97의2①2호)을 더한다 — 단건·지분과 같은 leaf.
+     */
+    const capex = withCarryoverDonorCapex(gbv, (gbv.bundledExpenses as number | undefined) ?? engine.expenses ?? 0, donorCapex);
     const built = buildGbPartCards(
-      gbv,
+      capex.gbv,
       engine.transferPrice,
       engine.transferDate,
       bldDate,
       landDate,
       src.ownershipRatio,
-      /*
-       * 자산 단위 실지 취득가액·필요경비 — 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축이다:
-       * 증축 일괄값(`bundledAcquisitionPrice`·`bundledExpenses`)이 있으면 그것, 없으면 그 자산의 엔진 입력값
-       * (5-a가 정한 취득가액 · 직접 경비 + 공통 양도비 몫 — 다른 컴패니언과 같은 소스).
-       */
       (gbv.bundledAcquisitionPrice as number | undefined) ?? engine.acquisitionPrice ?? 0,
-      (gbv.bundledExpenses as number | undefined) ?? engine.expenses ?? 0,
+      capex.legacyExpenses,
       bgInfo,
       undefined,
       // 공유지분 — 그 물건 전체(100%) 양도가액. 모르면(안분 모드) 한쪽 기재 계약서만 종전 지분 판정으로 남는다.
@@ -384,7 +388,8 @@ export function buildGbCompanionItems(
   const b = scenario(toTransferorBasisInfo(info), bldAcqDate, landAcqDate, false);
   // A = ①1호 취득가액 치환 + ①3호 증여세 상당액(§159 안분 단계가 소비) · §95④ 단서 — 토지·건물 카드 보유기간을 당초 증여자 취득일부터.
   const startA = carryoverHoldingStartsA(info, ct.donorAcquisitionDate, { land: landAcqDate, building: bldAcqDate });
-  const a = scenario(applyCarryoverDonorBasis(info, ct.giftTaxAmount), startA.building, startA.land, true);
+  const donorCapex = carryoverDonorCapex(ct, engine.transferDate);
+  const a = scenario(applyCarryoverDonorBasis(info, ct.giftTaxAmount, donorCapex), startA.building, startA.land, true, donorCapex);
   onDetail?.(src.assetId, b.detail);
   onCarryoverUnit({
     assetId: src.assetId,
@@ -398,6 +403,7 @@ export function buildGbCompanionItems(
     holdingStartA: startA,
     holdingStartB: { land: landAcqDate, building: bldAcqDate },
     carryoverParts: carryoverPartsOf(info),
+    donorCapex,
   });
   return b.items;
 }
@@ -425,4 +431,6 @@ export interface GbBgCarryoverUnitDraft {
   holdingStartB: { land: Date; building: Date };
   /** 증여받은 파트(`carryoverPartsOf`) — 결과 카드 [A] 열의 파트별 꼬리표(표시 전용). */
   carryoverParts: { land: boolean; building: boolean };
+  /** §97의2①2호 — A 필요경비에 더한 당초 증여자 자본적지출(`carryoverDonorCapex` · 표시 전용). */
+  donorCapex: number;
 }

@@ -201,6 +201,8 @@ export function assertCarryoverDonorBasis(
 export function applyCarryoverDonorBasis(
   info: BurdenedGiftInfo,
   giftTaxAmount: number,
+  /** 시나리오 A의 `capitalExpenditure`에 더한 당초 증여자 자본적지출(`withCarryoverDonorCapex`) — 한 파트만이면 그 파트에 귀속한다. */
+  donorCapex = 0,
 ): BurdenedGiftInfo {
   const d = info.carryoverDonorBasis ?? {};
   if (isPartialCarryover(info)) {
@@ -222,6 +224,7 @@ export function applyCarryoverDonorBasis(
           }),
       carryoverGiftTaxAmount: giftTaxAmount > 0 ? giftTaxAmount : undefined,
       carryoverGiftTaxPart: land ? "land" : "building",
+      ...(donorCapex > 0 ? { carryoverDonorCapexDirect: donorCapex } : {}),
     };
   }
   return {
@@ -329,4 +332,20 @@ export function carryoverHoldingStartsA(
   const p = carryoverPartsOf(info);
   const buildingDonorDate = info?.carryoverDonorBasis?.buildingDonorAcquisitionDate ?? donorAcquisitionDate;
   return { land: p.land ? donorAcquisitionDate : own.land, building: p.building ? buildingDonorDate : own.building };
+}
+
+/**
+ * 시나리오 A의 일반건물 실지 payload에 당초 증여자 자본적지출(「소득세법」 제97조의2 제1항 제2호 · `carryoverDonorCapex`)을 더한다. B는 양도인 값 그대로다.
+ * 양도인 자본적지출 칸에 얹어 같은 안분(취득시 기준시가)을 따른다. 그 칸과 양도비가 비고 legacy 경비 한 덩어리만 있으면 거기에 더한다 —
+ * 칸에 얹으면 legacy가 택일(`general-building-route-actual.ts` `declaredExpenses`)로 버려진다. 단건·지분·묶음 세 경로가 이 함수 하나를 쓴다.
+ */
+export function withCarryoverDonorCapex<T extends object>(
+  gbv: T,
+  legacyExpenses: number,
+  donorCapex: number,
+): { gbv: T; legacyExpenses: number } {
+  if (donorCapex <= 0) return { gbv, legacyExpenses };
+  const { capitalExpenditure, transferExpense } = gbv as { capitalExpenditure?: number; transferExpense?: number };
+  if (!capitalExpenditure && !transferExpense && legacyExpenses > 0) return { gbv, legacyExpenses: legacyExpenses + donorCapex };
+  return { gbv: { ...gbv, capitalExpenditure: (capitalExpenditure ?? 0) + donorCapex }, legacyExpenses };
 }

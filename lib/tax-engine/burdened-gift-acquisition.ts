@@ -73,7 +73,7 @@ export function splitBgRealExpenseByNature(
   std: Pick<
     BgAcquisitionContext,
     "landStdPriceAtAcquisition" | "buildingStdPriceAtAcquisition" | "landStdPriceAtTransfer" | "buildingStdPriceAtTransfer"
-  >,
+  > & { info?: BurdenedGiftInfo },
 ): { land: number; building: number } {
   const capexDebt =
     realExpenseTotal === 0
@@ -82,8 +82,14 @@ export function splitBgRealExpenseByNature(
   const transferExpDebt = debtApportionedTotal - capexDebt;
   const totalAcqStd = std.landStdPriceAtAcquisition + std.buildingStdPriceAtAcquisition;
   const totalTransferStd = std.landStdPriceAtTransfer + std.buildingStdPriceAtTransfer;
+  // 한 파트만 이월과세 — 당초 증여자 자본적지출(§97의2①2호 「해당 자산에 대하여 지출한」)은 증여받은 파트에 귀속하고, 나머지 자본적지출만 취득시 기준시가로 나눈다.
+  const directPart = std.info?.carryoverGiftTaxPart;
+  const directCapex = directPart ? Math.min(std.info?.carryoverDonorCapexDirect ?? 0, capitalExpenditureRaw) : 0;
+  const directDebt = directCapex > 0 ? safeMultiplyThenDivide(capexDebt, directCapex, capitalExpenditureRaw) : 0;
+  const pooledCapexDebt = capexDebt - directDebt;
   const capexLand =
-    totalAcqStd === 0 ? 0 : safeMultiplyThenDivide(capexDebt, std.landStdPriceAtAcquisition, totalAcqStd);
+    (totalAcqStd === 0 ? 0 : safeMultiplyThenDivide(pooledCapexDebt, std.landStdPriceAtAcquisition, totalAcqStd)) +
+    (directPart === "land" ? directDebt : 0);
   const transferExpLand =
     totalTransferStd === 0 ? 0 : safeMultiplyThenDivide(transferExpDebt, std.landStdPriceAtTransfer, totalTransferStd);
   const land = capexLand + transferExpLand;
