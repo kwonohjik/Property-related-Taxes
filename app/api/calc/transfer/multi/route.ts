@@ -212,6 +212,7 @@ export async function POST(request: NextRequest) {
       splitLandCompensationBasisTotal: p.splitLandCompensationBasisTotal,
       // 토지·건물 분리(소령 §166⑥·§168②) — 날짜 4개는 JSON 경유 string이라 Date 변환 필수
       selfOwns: p.selfOwns,
+      buildingOwnerSameHousehold: p.buildingOwnerSameHousehold,
       landAcquisitionDate: toOptionalDate(p.landAcquisitionDate),
       landAcquisitionCause: p.landAcquisitionCause,
       landDecedentAcquisitionDate: toOptionalDate(p.landDecedentAcquisitionDate),

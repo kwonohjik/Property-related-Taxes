@@ -16,6 +16,7 @@
  *    범위 밖이면 저장값과 무관하게 「소유자 같음」(`both`)으로 읽는다 — 값은 지우지 않는다(종류를 되돌리면 복원).
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { fieldError } from "./transfer-tax-validate-field";
 
 /** 토지·건물 분리 계산이 가능한 자산 종류 — 엔진 `calcSplitGain`의 propertyType 게이트와 동일. */
 export function isLandBuildingSplitable(assetKind: string | undefined): boolean {
@@ -35,4 +36,27 @@ export function effectiveSelfOwns(
   asset: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns">,
 ): AssetForm["selfOwns"] | undefined {
   return selfOwnsSplitApplicable(asset) ? asset.selfOwns : "both";
+}
+
+/**
+ * V-3′ — 「건물(주택) 소유자가 양도일 현재 본인과 같은 세대인가」를 묻는가. 토지만 본인인 **주택**만이다(건물 자산은 1세대1주택
+ * 비과세 대상이 아니다). ⑤ 노출·④ 전송·⑧ 필수가 같은 술어를 쓴다 — ⑫ `landOnlyHouseholdIssue`와 같은 범위.
+ */
+export function asksBuildingOwnerHousehold(
+  asset: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns">,
+): boolean {
+  return asset.assetKind === "housing" && effectiveSelfOwns(asset) === "land_only";
+}
+
+/**
+ * ⑧ V-3′ 미응답 오류(⑫ `landOnlyHouseholdIssue`와 같은 술어 · Q-2 a). 분리 검증(`validateSplitDirectInputs`)과
+ * 그 검증 앞에서 반환하는 매매사례가액 분기(`validateAssetAcquisition`)가 함께 부른다 — 한쪽만 걸면 ⑧ 통과 ↔ ⑫ 400.
+ */
+export function buildingOwnerHouseholdError(
+  asset: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns" | "buildingOwnerSameHousehold">,
+  label: string,
+): string | null {
+  return asksBuildingOwnerHousehold(asset) && asset.buildingOwnerSameHousehold === undefined
+    ? fieldError("buildingOwnerSameHousehold", `${label}: 건물(주택) 소유자가 양도일 현재 본인과 같은 세대인지 선택하세요 (소득세법 시행령 §154①).`)
+    : null;
 }

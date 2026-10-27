@@ -18,6 +18,7 @@ import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "./housing
 import { housingExcessAcqContractPayload } from "./housing-excess-acq-contract";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
+import { asksBuildingOwnerHousehold } from "./self-owns-scope";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
 import { engineLandOverlay } from "./transfer-land-part-cause";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
@@ -231,6 +232,8 @@ export function buildSplitPayload(
   return {
     // 토지/건물 취득일 분리 + 소유자 분리 (소령 §166⑥, §168②)
     selfOwns: selfOwnsEff !== "both" ? selfOwnsEff : undefined,
+    // V-3′ 토지만 본인 주택의 건물(주택) 소유자 세대 — ⑤ 노출·⑧ 필수와 같은 술어. 범위 밖 잔재(건물만·소유자 같음)는 싣지 않는다.
+    ...(asksBuildingOwnerHousehold(primary) ? { buildingOwnerSameHousehold: primary.buildingOwnerSameHousehold } : {}),
     // ⚠️ `selfOwns !== "both"` fallback(2026-07-30) — 소유자 분리를 **비-매매 취득원인**으로
     //    확대하면서 추가. 상속·증여는 취득일이 하나(상속개시일·증여일)라 토지 취득일을 따로
     //    입력받지 않는데, 이 값이 없으면 `calcSplitGain`이 early-return하고(split-gain.ts:356)

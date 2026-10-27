@@ -27,6 +27,8 @@ export function housing(over: Over = {}) {
     addressJibun: "강원특별자치도 춘천시 테스트동 1",
     regionCode: "5111010100",
     assetKind: "housing",
+    // V-3′ 토지만 본인일 때 묻는 건물(주택) 소유자 세대(⑧ 필수) — 같은 세대(종전 계산)로 둔다. 토지만 본인일 때만 전송된다.
+    buildingOwnerSameHousehold: true,
     acquisitionCause: "purchase",
     acquisitionDate: "2018-06-01",
     landAcquisitionDate: "2010-03-15",

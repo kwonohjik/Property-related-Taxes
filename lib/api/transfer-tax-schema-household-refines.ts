@@ -31,6 +31,7 @@ export type HouseholdRefineInput = {
   propertyType?: string;
   acquisitionCause?: string;
   selfOwns?: string;
+  buildingOwnerSameHousehold?: boolean;
   sellingHouseId?: string;
   houses?: ReadonlyArray<RentalRow>;
   generalHouseGiftedFromDecedentWithin2yr?: boolean;
@@ -147,6 +148,24 @@ export function refineHouseholdRequiredInputs(data: HouseholdRefineInput, ctx: z
    */
   const ncMsg = newConstructionLandOnlyIssue(data);
   if (ncMsg) issue(["selfOwns"], ncMsg);
+
+  const lohMsg = landOnlyHouseholdIssue(data);
+  if (lohMsg) issue(["buildingOwnerSameHousehold"], lohMsg);
+}
+
+/**
+ * V-3′ 토지만 본인 주택 — 건물(주택) 소유자 세대(예·아니오)는 필수다(계획서 `carryover-phd-owner-split-residuals.plan.md` Q-2 a).
+ * 다른 세대면 그 토지에 1세대1주택 비과세·표2를 적용하지 않는다(엔진 `land-only-owner-household.ts`). 주 자산(위)·함께 양도
+ * 자산(`transfer-tax-schema.ts` 컴패니언 refine)이 같은 규칙을 쓴다 — ⑧ `asksBuildingOwnerHousehold`와 같은 술어.
+ */
+export function landOnlyHouseholdIssue(d: {
+  propertyType?: string;
+  selfOwns?: string;
+  buildingOwnerSameHousehold?: boolean;
+}): string | null {
+  return d.propertyType === "housing" && d.selfOwns === "land_only" && d.buildingOwnerSameHousehold === undefined
+    ? "토지만 본인 소유인 주택은 건물(주택) 소유자가 양도일 현재 본인과 같은 세대인지 선택해야 합니다 (소득세법 시행령 §154①)"
+    : null;
 }
 
 /** 신축 · 토지만 본인 — 주 자산(위)·함께 양도 자산(`transfer-tax-schema.ts` 컴패니언 refine)이 같은 규칙을 쓴다(⑧ `newConstructionLandOnly` · 리뷰 게이트 F-2). */

@@ -49,19 +49,19 @@ const HH = {
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
 };
 const INH: Loose = {
-  addressJibun: "서울 강남구 테스트동 1-1", assetKind: "housing", acquisitionCause: "inheritance", acquisitionDate: "2015-01-01",
+  addressJibun: "서울 강남구 테스트동 1-1", assetKind: "housing", buildingOwnerSameHousehold: true, acquisitionCause: "inheritance", acquisitionDate: "2015-01-01",
   decedentAcquisitionDate: "2005-01-01", actualSalePrice: "1,200,000,000", publishedValueAtInheritance: "300,000,000",
   inheritanceValuationMethod: "supplementary", fixedAcquisitionPrice: "", ...STD,
 };
 const NEWC: Loose = {
-  addressJibun: "서울 강남구 테스트동 1-1", assetKind: "housing", acquisitionCause: "newConstruction", occupancyApprovalDate: "2015-01-01",
+  addressJibun: "서울 강남구 테스트동 1-1", assetKind: "housing", buildingOwnerSameHousehold: true, acquisitionCause: "newConstruction", occupancyApprovalDate: "2015-01-01",
   acquisitionDate: "2015-01-01", actualSalePrice: "1,200,000,000", fixedAcquisitionPrice: "300,000,000", ...STD,
 };
 /** 이월과세 — 증여자 2015-06-01 취득 3억 · 증여 등기 2023-03-01 · 양도 2025-06-30(파트 이월과세 C는 끈다) */
 const c0 = cAsset() as unknown as Loose;
 const CARRY: Loose = {
   ...c0, ...STD, carryoverDonorSplit: false, landAcquisitionPrice: "", buildingAcquisitionPrice: "", saleSplitMode: "apportioned",
-  landTransferPrice: "", buildingTransferPrice: "", landStandardPriceAtTransfer: "", acquisitionDate: "2023-03-01",
+  landTransferPrice: "", buildingTransferPrice: "", landStandardPriceAtTransfer: "", acquisitionDate: "2023-03-01", buildingOwnerSameHousehold: true,
   carryover: { ...c0.carryover, donorAcquisitionPrice: "300,000,000", giftDateValuation: "900,000,000" },
 };
 const CARRY_HH = { transferDate: "2025-06-30", filingDate: "2025-08-31" };

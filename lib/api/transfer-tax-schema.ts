@@ -10,6 +10,7 @@
 import { refineMixedSaleSplitSingleOnly } from "./transfer-tax-schema-mixed-use";
 import { z } from "zod";
 import { newConstructionLandOnlyIssue } from "./transfer-tax-schema-household-refines";
+import { landOnlyHouseholdIssue } from "./transfer-tax-schema-household-refines";
 import {
   filingPenaltyDetailsSchema,
   delayedPaymentDetailsSchema,
@@ -193,6 +194,8 @@ export const propertySchema = z
       // 신축 · 토지만 본인 — 주 자산(`refineHouseholdRequiredInputs`)과 같은 규칙(⑧은 컴패니언도 막는다 — ⑧≡⑫)
       const ncMsg = newConstructionLandOnlyIssue(c);
       if (ncMsg) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "selfOwns"], message: ncMsg });
+      const lohMsg = landOnlyHouseholdIssue({ ...c, propertyType: c.assetKind });
+      if (lohMsg) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "buildingOwnerSameHousehold"], message: lohMsg });
     });
     if (companions.length > 0) {
       // 총 양도가액 필수

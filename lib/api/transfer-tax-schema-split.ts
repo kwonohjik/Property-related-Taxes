@@ -61,6 +61,8 @@ export const splitAcquisitionShape = {
   ...landRebuildShape,
   /** 토지·건물 소유자 분리 (§166⑥) */
   selfOwns: z.enum(["both", "building_only", "land_only"]).optional(),
+  /** V-3′ 토지만 본인 주택 — 건물(주택) 소유자가 양도일 현재 본인과 같은 세대인가(예·아니오). 필수 여부는 `landOnlyHouseholdIssue` */
+  buildingOwnerSameHousehold: z.boolean().optional(),
 
   // ─── 파트별 취득 방식 (4-way 독립) ────────────────────────────────
   landAcqMode: z.enum(["actual", "estimated", "appraisal", "salesCase"]).optional(),
