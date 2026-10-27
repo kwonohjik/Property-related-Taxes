@@ -96,7 +96,7 @@ export const propertyBaseShape = {
   giftSameHouseholdContinuous: z.boolean().optional(),
   giftHouseholdHoldingStartDate: z.string().date().optional(),
   /**
-   * 증여 전 증여자와 같은 세대로 이 주택에 거주한 기간(개월) — §154① 비과세 거주요건에 통산한다(결정 #38-7 · 표2에는 통산하지 않는다 — 대법원 2025두34935). 미전송 = 미답.
+   * 증여 전 증여자와 같은 세대로 이 주택에 거주한 기간(개월) — §154① 비과세 거주요건과 표2 대상 판정(거주 2년)에 통산한다(결정 #38-7·#38-9). 미전송 = 미답.
    * `giftSameHouseholdContinuous === true`일 때만 보낸다(refine) — 세대 보유 시작일부터 증여일까지의 개월 수를 넘을 수 없다.
    */
   giftPriorHouseholdResidenceMonths: z.number().int().nonnegative().optional(),
@@ -554,7 +554,7 @@ export const propertyBaseShape = {
     /** 결정 #33·#34 — 증여일부터 양도일까지 증여자와 계속 같은 세대(미전송 = 미확인) */
     donorSameHouseholdContinuous: z.boolean().optional(),
     donorHouseholdHoldingStartDate: z.string().date().optional(),
-    /** 결정 #38-7 — 증여 전 동일세대 거주 개월(§154① 비과세 거주요건에 통산 · 이월과세 시나리오 A면 표2 대상 판정에도). 미전송 = 미답, 0 = 거주한 적 없음 */
+    /** 결정 #38-7 — 증여 전 동일세대 거주 개월(§154① 비과세 거주요건·표2 대상 판정에 통산). 미전송 = 미답, 0 = 거주한 적 없음 */
     donorPriorHouseholdResidenceMonths: z.number().int().nonnegative().optional(),
     /** 결정 #38-6 — 증여 뒤 이혼했다가 같은 배우자와 재결합(배우자 증여만). 「아니오」로 계산하고 확인 필요를 고지한다 */
     donorRejoinedAfterDivorce: z.boolean().optional(),

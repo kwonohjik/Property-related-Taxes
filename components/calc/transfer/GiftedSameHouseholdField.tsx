@@ -14,7 +14,7 @@
  * 🔑 계산기 단건(일반 증여·부담부증여 양도)은 같은 칸을 `GiftHouseholdFactInputs`로 재사용한다(결정 #38-1) — 증여자 취득일은 증여 블록이
  *    이미 받으므로 빼고, 게이트는 `calcGiftHouseholdFactVisible`이다.
  *
- * 통산은 비과세 판정(보유기간·「취득 당시」·증여 전 거주)에 쓴다. 장기보유특별공제(표2 대상 판정 포함)의 보유·거주기간과 세율 보유기간은 증여일 기준이다(대법원 2025두34935).
+ * 통산은 비과세 판정(보유기간·「취득 당시」·증여 전 거주)과 표2 대상 판정(증여 전 거주)에 쓴다. 장기보유특별공제율의 보유·거주기간과 세율 보유기간은 증여일 기준이다.
  */
 import type { ReactNode } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";

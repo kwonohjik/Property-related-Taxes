@@ -2,9 +2,8 @@
  * Pre-Do 앵커 — 동일세대 상속주택 자체 양도: §154⑧3호 거주기간 통산 (표2·비과세)
  *
  * 세법(소득세법 시행령 §154⑧3호): 상속개시 당시 동일세대이면 상속개시 전 동일세대 거주·보유기간을
- *   §154① 비과세 보유·거주기간에 통산. §95② 표2는 대상 판정·공제율 모두 통산하지 않는다 — 2026-10-27 변경:
- *   대법원 2026.1.15. 선고 2025두34935(표2 거주기간 = 상속인이 상속개시일부터 보유하는 동안 거주한 기간)를 따른다
- *   (종전 근거 사전-2021-법령해석재산-202·사전-2025-법규재산-0506 질의1의 대상 판정 통산과 다르다 — 고지로 알린다).
+ *   §154① 비과세 보유·거주기간에 통산. §95② 표2 대상 판정도 통산(사전법령해석재산 2021-202).
+ *   단 표2 공제율(보유분·거주분)은 상속개시일부터 기산.
  * 갭: 현행은 보유만 통산·거주 미통산 → (Bug A) 조정지역+실거주0 시 거주요건 미충족으로 고가주택 부분과세조차 실패,
  *   (Bug B) 표2 게이트가 실거주 2년이라 표1(16%).
  * 설계: 신규 decedentCohabitationResidenceMonths(통산 거주 개월) — 대상 판정 통산 / 공제율은 실거주.
@@ -41,31 +40,26 @@ function imageCase(over: Partial<TransferTaxInput> = {}): TransferTaxInput {
 }
 
 describe("§154⑧3호 동일세대 상속 거주 통산 — 표2·비과세 (이미지2/4 앵커)", () => {
-  it("★ 통산 거주2년 → 고가주택 부분과세(비과세 통산 유지) + 표1 16%(표2 대상 판정에는 통산하지 않음 — 대법원 2025두34935)", () => {
+  it("★ 통산 거주2년 → 고가주택 부분과세 + 표2 32%(보유8×4·거주0) (RED→GREEN)", () => {
     const r = calculateTransferTax(imageCase(), mockRates);
-    // 비과세: 12억 초과분만 과세 (고가주택 부분과세) — §154⑧3호 통산으로 거주요건 충족
+    // 비과세: 12억 초과분만 과세 (고가주택 부분과세)
     expect(r.taxableGain).toBe(69_230_769);
-    // 표1: 보유 8년×2% = 16% (종전 표2 32% · 장특 22,153,846 · 산출세액 5,426,538)
-    expect(r.longTermHoldingRate).toBeCloseTo(0.16, 5);
-    expect(r.longTermHoldingDeduction).toBe(11_076_923);
-    // 산출세액: 과표 55,653,846 → floor(×24%) − 5,760,000
-    expect(r.calculatedTax).toBe(7_596_923);
-    // 통산했다면 표2였다 — 판례를 따랐고 국세청 해석과 다르다는 고지
-    const notice = (r.warnings ?? []).find((w) => w.includes("대법원 2026.1.15. 선고 2025두34935"));
-    expect(notice).toContain("상속개시 전 동일세대로 거주한 24개월");
-    expect(notice).toContain("사전-2025-법규재산-0506");
+    // 표2: 보유 8년×4% + 거주 0년×4% = 32% (실거주 0 → 거주분 0)
+    expect(r.longTermHoldingRate).toBeCloseTo(0.32, 5);
+    expect(r.longTermHoldingDeduction).toBe(22_153_846);
+    // 산출세액: 과표 44,576,923 → floor(×15%) − 1,260,000
+    expect(r.calculatedTax).toBe(5_426_538);
   });
 
-  it("실거주 12개월(통산 24↑) → 표1 16% · [짝] 실거주 24개월이면 표2 40%(보유 32 + 거주 8)이고 고지 없음", () => {
+  it("실거주 12개월(통산 24↑) → 표2 대상은 통산으로 열리되 거주분은 0 (보유32+거주0=32%)", () => {
     const r = calculateTransferTax(
       imageCase({ residencePeriodMonths: 12, decedentCohabitationResidenceMonths: 24 }),
       mockRates,
     );
     expect(r.taxableGain).toBe(69_230_769);
-    expect(r.longTermHoldingRate).toBeCloseTo(0.16, 5);
-    const own = calculateTransferTax(imageCase({ residencePeriodMonths: 24, decedentCohabitationResidenceMonths: 24 }), mockRates);
-    expect(own.longTermHoldingRate).toBeCloseTo(0.40, 5);
-    expect((own.warnings ?? []).some((w) => w.includes("2025두34935"))).toBe(false);
+    // 보유 8×4=32% + 거주 0 = 32% — 「소득세법」 §95② 표2 거주기간 열은 2년 이상부터라 1년 칸이 없다
+    // (2021.1.1. 시행본 MST 224837·현행 MST 280405 원문). 종전 0.36은 거주 1년에 4%를 준 과다공제였다(S08-2).
+    expect(r.longTermHoldingRate).toBeCloseTo(0.32, 5);
   });
 
   it("통산 거주 12개월(<2년) → 거주요건 미충족 → 표1·전액과세 (경계)", () => {

@@ -171,7 +171,7 @@ describe("P5-c ③ 회귀·경계", () => {
   it("[MX-8] 거주 연수로 표2가 열리면 문구는 종전 그대로다", () => {
     const reason = run({ wasRegulatedAtAcquisition: false, residencePeriodYears: 3 })
       .calculationRoute.housingDeductionTableReason;
-    expect(reason).toContain("거주 3년 ≥ 2년");
+    expect(reason).toContain("거주(통산) 3년 ≥ 2년");
     expect(reason).not.toContain("상생임대");
   });
 });

@@ -3,8 +3,7 @@
  * 시작하고 2년 미만 칸이 없다(2021.1.1. 시행본 MST 224837 · 현행 MST 280405 원문 확인). 실거주 12~23개월의 거주분 공제율은 0이다.
  * 종전 정본 `calcLongTermRate`는 거주 1년에 4%를 줬다(동일세대 상속 통산 0.36·상생임대 0.44 — 과다공제).
  *
- * (A) 동일세대 상속 통산(§154⑧3호) 엔진 — 2026-10-27부터 표2 대상 판정에 통산하지 않는다(대법원 2025두34935)라 본인 거주 2년 미만이면 표1이다
- *     · (B) 상생임대(§155의3) ④→⑫→⑭ route — 표2가 거주 없이 열리는 경로라 「2년 미만 거주분 0」의 정본 시료다 · (C) 정본 leaf · (D) §95⑤ 용도변경.
+ * (A) 동일세대 상속 통산(§154⑧3호) 엔진 · (B) 상생임대(§155의3) ④→⑫→⑭ route · (C) 정본 leaf · (D) §95⑤ 용도변경.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -108,14 +107,17 @@ function winWinForm(months: string, withFacts = true): Form {
 
 
 describe("S08-2 anchor — 표2 거주분은 2년 미만이면 0", () => {
-  it("(A) 동일세대 상속 통산 · 실거주 12개월 → 상속 전 동거는 표2 대상 판정에 통산하지 않아 표1 16%(보유 8×2)", () => {
+  it("(A) 동일세대 상속 통산 · 실거주 12개월 → 표2 32%(보유 8×4, 거주 0)", () => {
     const r = calculateTransferTax(imageCase({ residencePeriodMonths: 12 }), mockRates);
-    expect(r.longTermHoldingRate).toBeCloseTo(0.16, 5);
-    expect(r.longTermHoldingDeduction).toBe(11_076_923);
+    expect(r.longTermHoldingRate).toBeCloseTo(0.32, 5);
+    expect(r.longTermHoldingDeduction).toBe(22_153_846);
+    // 산식 문구도 합과 맞아야 한다 — 「거주 1년×4%=4%」로 쓰지 않는다.
+    const s = r.steps.find((x) => x.label === "장기보유특별공제");
+    expect(s?.formula).toContain("보유 8년×4%=32% + 거주 1년(2년 미만 — 거주기간 공제 없음)=0% = 32%");
   });
-  it("(A) 실거주 23개월 → 표1 16%(경계 −1)", () => {
+  it("(A) 실거주 23개월 → 32%", () => {
     const r = calculateTransferTax(imageCase({ residencePeriodMonths: 23 }), mockRates);
-    expect(r.longTermHoldingRate).toBeCloseTo(0.16, 5);
+    expect(r.longTermHoldingRate).toBeCloseTo(0.32, 5);
   });
   it("(A 긍정 짝) 실거주 24개월 → 40%(거주 2년 8%) — 표2 첫 칸은 유지", () => {
     const r = calculateTransferTax(imageCase({ residencePeriodMonths: 24 }), mockRates);

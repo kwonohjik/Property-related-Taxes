@@ -6,9 +6,8 @@
  * 을이 신축주택을 거주 없이 양도한 사안(양도 2020.9.2.)이다.
  *
  * 종전에는 승계조합원의 거주를 신축주택 거주만 읽었다(`resolveAptResidenceMonths` — 서면-2019-부동산-4508, 매매 승계 사안).
- * 증여자와 계속 같은 세대였다고 선언하면(`successorGiftSameHousehold`) 종전주택 거주(`priorHouseResidenceMonths`)를 비과세 거주요건(영 §154①)에 더한다.
- * 2026-10-27부터 표2(대상 판정·공제율)에는 더하지 않는다 — 대법원 2026.1.15. 선고 2025두34935(표2 거주기간 = 양도자가 취득일부터 보유하는 동안 거주한 기간)를
- * 따르고, 0691과 해석이 다르다는 것을 고지에 적는다.
+ * 증여자와 계속 같은 세대였다고 선언하면(`successorGiftSameHousehold`) 종전주택 거주(`priorHouseResidenceMonths`)를 **같은 leaf가**
+ *   ① 표2 대상 판정(영 §159의3) ② 비과세 거주요건(영 §154①)에 함께 더한다. 표2 공제율의 거주분은 본인의 신축 거주만이다(결정 #38-9).
  *
  * 시료 S1(0691 사실): 증여 승계 · 준공 2016.8.30. · 양도 2020.9.2.(2020년은 표2 거주 2년 요건이 있는 해) · 신축 거주 0 · 종전 거주 240개월.
  * 시료 S2(비과세 거주요건): 준공 2020.1.1.(강남구 — 취득 당시 조정대상지역) · 양도 2023.6.1. · 양도가 10억.
@@ -72,15 +71,12 @@ const run = (i: TransferTaxInput) => calculateTransferTax(i, rates);
 const rateOf = (r: ReturnType<typeof run>) => r.redevelopmentDetail?.postApprovalExistingHouse.lthdRate;
 const notice = (r: ReturnType<typeof run>) => (r.warnings ?? []).filter((w) => w.includes("사전-2020-법령해석재산-0691"));
 
-describe("S1 — 0691 사실관계: 표2 대상 판정에 종전주택 거주를 통산하지 않는다 (대법원 2025두34935)", () => {
-  it("🔑 같은 세대 선언 + 종전 240개월이어도 본인 신축 거주 0 → 표1(4년 × 2% = 8%) · 장특 66,000,000 · 총세액 309,969,000 · 0691과 다르다는 고지", () => {
+describe("S1 — 0691 사실관계: 표2 대상 판정에 종전주택 거주 통산 (거주 없이 양도)", () => {
+  it("🔑 같은 세대 선언 + 종전 240개월 → 표2(보유 연 8% × 4년 = 32%) · 장특 264,000,000 · 총세액 218,493,000", () => {
     const r = run(s1({ flag: true, prior: 240, newM: 0 }));
-    expect(rateOf(r)).toBe(0.08); // 종전 표2 32% · 장특 264,000,000 · 총세액 218,493,000
-    expect(r.longTermHoldingDeduction).toBe(66_000_000);
-    expect(r.totalTax).toBe(309_969_000);
-    expect(notice(r)).toHaveLength(1);
-    expect(notice(r)[0]).toContain("대법원 2026.1.15. 선고 2025두34935");
-    expect(notice(r)[0]).toContain("해석이 다릅니다");
+    expect(rateOf(r)).toBe(0.32);
+    expect(r.longTermHoldingDeduction).toBe(264_000_000);
+    expect(r.totalTax).toBe(218_493_000);
   });
   it("대조 — 「아니오」 선언이면 종전 거주를 세지 않아 표1(4년 × 2% = 8%) · 장특 66,000,000 · 총세액 309,969,000", () => {
     const r = run(s1({ flag: false, prior: 240, newM: 0 }));
@@ -127,13 +123,13 @@ describe("S2 — 비과세 거주요건(영 §154①)에도 같은 값이 쓰인
   });
 });
 
-describe("S3 — 표2는 양도자 본인의 신축 거주만 (대법원 2025두34935)", () => {
-  it("🔑 통산은 비과세 거주요건만 채운다(부분 비과세) — 표2에는 들어가지 않아 표1 3년 × 2% = 6%", () => {
+describe("S3 — 표2 공제율의 거주분은 양도자 본인의 신축 거주만 (결정 #38-9)", () => {
+  it("🔑 통산으로 표2에 들어와도 거주분은 0 — 보유 3년 × 4% = 12% (종전 240개월이 거주분 40%로 새지 않는다)", () => {
     const r = run(s2(1_800_000_000, { flag: true, prior: 240, newM: 0 }));
-    expect(rateOf(r)).toBe(0.06); // 종전 표2 12% · 총세액 125,246,000
-    expect(r.longTermHoldingDeduction).toBe(24_000_000);
+    expect(rateOf(r)).toBe(0.12);
+    expect(r.longTermHoldingDeduction).toBe(48_000_000);
     expect(r.isPartialExempt).toBe(true);
-    expect(r.totalTax).toBe(135_806_000);
+    expect(r.totalTax).toBe(125_246_000);
   });
   it("대조 — 통산 없음(아니오 · 신축 거주 0): 12억 초과분 과세에 표1 6% · 총세액 484,588,500", () => {
     const r = run(s2(1_800_000_000, { flag: false, prior: 240, newM: 0 }));
@@ -175,7 +171,7 @@ describe("범위 밖 — 증여 승계가 아니면 선언·종전 거주가 영
   });
 });
 
-describe("조특법 §97의4① 단서 판정(`redevUsesTable2`)도 같은 leaf를 읽는다 — 표2 대상 판정과 한 값(본인 신축 거주)", () => {
+describe("조특법 §97의4① 단서 판정(`redevUsesTable2`)도 같은 leaf를 읽는다 — 표2 대상 판정과 한 값", () => {
   const base = { isOneHouseSingle: true, transferDate: D("2023-06-01"), residencePeriodMonths: 0 };
   const redev = (flag?: boolean) => ({
     subject: "apt" as const,
@@ -184,9 +180,8 @@ describe("조특법 §97의4① 단서 판정(`redevUsesTable2`)도 같은 leaf�
     priorHouseResidenceMonths: 240,
     newHouseResidenceMonths: 0,
   });
-  it("통산 선언과 무관하게 본인 신축 거주 0이면 표1 · [짝] 신축 거주 24개월이면 표2", () => {
-    expect(redevUsesTable2({ ...base, redevelopment: redev(true) })).toBe(false);
-    expect(redevUsesTable2({ ...base, redevelopment: { ...redev(true), newHouseResidenceMonths: 24 } })).toBe(true);
+  it("통산 선언 「예」면 표2, 「아니오」·미선언이면 표1", () => {
+    expect(redevUsesTable2({ ...base, redevelopment: redev(true) })).toBe(true);
     expect(redevUsesTable2({ ...base, redevelopment: redev(false) })).toBe(false);
     expect(redevUsesTable2({ ...base, redevelopment: redev(undefined) })).toBe(false);
   });
