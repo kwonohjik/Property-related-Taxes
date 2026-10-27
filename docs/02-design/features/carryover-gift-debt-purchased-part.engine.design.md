@@ -341,7 +341,7 @@ if (debtBundle) return okJson({ data: debtBundle });
 
 **회귀**: 토글 OFF · 채무 0 = 모든 기존 이월과세 anchor 세액 불변. `carryover-gift-tax-numerator-net` anchor 19건은 변경 없이 통과해야 한다(이 worktree에서 현재 통과).
 
-## 9. 미해결 · 결정 요청
+## 9. 미해결 · 결정 요청 — ✅ 2026-10-27 Q-5~Q-8 권장안 확정
 
 | # | 항목 | 권장 / 상태 |
 |---|---|---|
@@ -379,3 +379,6 @@ if (debtBundle) return okJson({ data: debtBundle });
 - probe 4: 폼 → ⑧ → ④ → route — E1·E4 주택에서 `giftDebtAssumed:true`가 본문·세액에 무효과임을 확인(§5.1).
 - probe 5: 1세대1주택 격자 180셋 — baseline `isEligible` 대 증여분 카드 `isEligible` 0건 불일치 · 손조립 매입분 24건 비과세 갈림 → `buildInputB` 재사용 0건.
 - 기존 안전망: `transfer.route.carryover-gift-tax-numerator-net.anchor.test.ts` · `carryover-gift-assumed-debt-fields.anchor.test.tsx` 19건 통과(이 worktree 현재).
+
+## 11. 메인 세션 검토 메모 (2026-10-27)
+- **A-9 §97의2②2호**: 「제1항을 적용할 경우 1세대1주택(고가주택 포함) 양도에 해당하면 제1항을 적용하지 않는다」 — 이 배제는 **집 전체** 기준으로 판정해야 한다(조각별 판정 금지). 구현 anchor에서 A-9의 채택 시나리오와 배제 사유를 단언한다.
