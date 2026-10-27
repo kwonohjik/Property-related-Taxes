@@ -235,12 +235,21 @@ export function buildAssetRecords(
      * ⚠️ 사실을 그대로 덮어쓸 뿐 「어느 세율군인가」를 넘기지 않는다(엔진 헬퍼는 사실만 받는다).
      */
     const rateBasisOverride = result.carryoverTaxationDetail?.adoptedRateBasis;
-    const hasOverride = nblOverride !== undefined || rateBasisOverride !== undefined;
+    /**
+     * 토지만 본인 — 단건 STEP 7은 세율 판정 취득일을 토지 취득일로 바꾼다. 다건은 토지를 주택보다 **나중에** 취득한 경우만 따른다
+     * (그때는 주택부수토지 `max` 규칙과 같은 날이다). 토지를 먼저 산 경우의 기산은 단건과 갈린 채 남긴다 — 계획서
+     * `land-only-later-land-holding.plan.md` Q-2 a · §6.2. 이월과세 채택 시나리오 교정이 뒤에서 덮는다(A면 증여자 취득일).
+     */
+    const landOnlyLater =
+      singleInput.selfOwns === "land_only" && singleInput.landAcquisitionDate !== undefined &&
+      singleInput.landAcquisitionDate.getTime() > singleInput.acquisitionDate.getTime();
+    const landOnlyOverride = landOnlyLater ? { acquisitionDate: singleInput.landAcquisitionDate! } : undefined;
+    const hasOverride = nblOverride !== undefined || rateBasisOverride !== undefined || landOnlyOverride !== undefined;
     const correctedItem: TransferTaxItemInput = hasOverride
-      ? { ...item, ...nblOverride, ...rateBasisOverride }
+      ? { ...item, ...landOnlyOverride, ...nblOverride, ...rateBasisOverride }
       : item;
     const correctedSingleInput: TransferTaxInput = hasOverride
-      ? { ...singleInput, ...nblOverride, ...rateBasisOverride }
+      ? { ...singleInput, ...landOnlyOverride, ...nblOverride, ...rateBasisOverride }
       : singleInput;
     return { item, correctedItem, correctedSingleInput, singleInput, result, rates: itemRates };
   };

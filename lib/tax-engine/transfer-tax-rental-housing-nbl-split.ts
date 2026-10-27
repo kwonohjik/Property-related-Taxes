@@ -138,8 +138,10 @@ export function splitLaterAcquiredLand(
   const holdingYears = splitDetail.land.holdingYears;
   const longTermRate = calcTable1Rate(holdingYears);
   const longTermDeduction = applyRate(gain, longTermRate);
+  // 토지만 본인은 건물분이 본인 자산이 아니다 — 특례 대상 주택분이 남지 않는다(일반 경로 `applyHousingLandExclusions`와 같다).
   const housingGain =
-    input.rentalHousingException?.scenario === "B" ? Math.max(0, splitDetail.building.gain) : splitDetail.building.gain;
+    input.selfOwns === "land_only" ? 0
+    : input.rentalHousingException?.scenario === "B" ? Math.max(0, splitDetail.building.gain) : splitDetail.building.gain;
   return {
     gain,
     longTermRate,

@@ -2,7 +2,7 @@
 
 > **출처**: `land-only-surcharge-and-excess-split.plan.md` §2.4 「범위 밖(별건)」(#2642·#2645) — 소유자 분리에서 G-3가 꺼져 있다는 기록을 실측했다.
 > **검증 깊이**: **L3** — 세액이 바뀐다(과소과세 해소).
-> **상태**: Q-1~Q-3 결정 대기.
+> **상태**: Q-1·Q-2·Q-3 모두 (a) 결정(2026-10-27 — 권장안). 구현 §8.
 > **기준 코드**: master `3db8185e9`. 실측은 throwaway probe(커밋하지 않음) · mock 세율(`makeMockRates`) · 엔진 직접 호출과 route(폼 → ④ → route).
 
 ## 0. 요약
@@ -100,9 +100,9 @@
 | ID | 항목 | 검증 방법 | 상태 |
 |---|---|---|---|
 | V-1 | 재산46014-610이 「토지를 나중에 취득」한 방향에도 그대로 읽히는가 | 회신 본문 | ✅ 「주택부수토지로서 보유한 기간」이 기준이라 나중에 취득한 토지는 그 취득일부터다(회신 사안은 합가 방향이지만 판단 기준은 같은 문장). 설계 영향 없음 |
-| V-2 | 함께 양도 1세대1주택 단위(`transfer-tax-one-house-unit.ts:199`)에 토지만 본인 주택 카드가 들어올 때 | 구현 시 다건 anchor(주택 카드 토지만 본인 + 부수토지 카드) | ⏳ 같은 술어를 그대로 쓰므로 설계는 바뀌지 않는다 — 값 고정용 |
-| V-3 | D-2 화면 경로(다건 양도 route) | `__tests__/api/transfer.route.multi-*.anchor.test.ts` 헬퍼로 route anchor 1건 | ⏳ 설계 영향 없음 |
-| V-4 | 결과 카드·신고서 표시 — 토지만 본인에서 「부수토지 비과세 제외」 단계·`laterLandPart` echo가 소유자 같음과 같이 그려지는가 | route anchor + Playwright | ⏳ 설계 영향 없음 |
+| V-2 | 함께 양도 1세대1주택 단위(`transfer-tax-one-house-unit.ts:199`)에 토지만 본인 주택 카드가 들어올 때 | route anchor(주택 카드 토지만 본인 + 부수토지 카드 · 20억) | ✅ 주택 카드 토지분 4억이 안분·장특 없이 전액 과세(P1이 잡는다). 측정 중 별건 발견 → §6.3 |
+| V-3 | D-2 화면 경로(다건 양도 route) | 다건 양도 폼 → `callMultiTransferTaxAPI` → multi route | ✅ 1건 총세액 275,275,000 = 단건(P4가 잡는다) |
+| V-4 | 결과 카드·신고서 표시 — 토지만 본인에서 「부수토지 비과세 제외」 단계·`laterLandPart` echo가 소유자 같음과 같이 그려지는가 | route 결과로 `TransferTaxResultView` jsdom 렌더(throwaway) | ✅ 제외 사유 문구·산출세액·합가일 고지가 소유자 같음과 같은 형태로 그려진다. **실제 브라우저 수동 확인은 하지 않았다** |
 | V-5 | §155⑳ **B** 성립 칸의 토지만 본인 G-3 | §2.1 격자는 B 120칸이 모두 성립했고 다건 = 단건(D-1+D-2). B on = off는 소유자 같음 격자도 단언하지 않는다(§161 안분이라 off와 다르다) | ✅ B는 다건 = 단건만 고정 |
 
 ## 4. 결정 게이트 Q-n
@@ -184,6 +184,14 @@ route(§1.1 route 시료): 토지만 본인 같은 세대 8개월 **250,250,000*
 
 소유자 같음은 「주택부수토지로서의 보유기간」으로 토지분도 단기 세율이다(`resolveAppurtenantLandRateBasisDate` — 직접 근거로 사전-2025-법규재산-0289 · 조심 2024인3140을 든다, `transfer-tax-appurtenant-land.ts:46-48` 주석). 토지만 본인 단건 STEP 7(`transfer-tax.ts:680`)은 토지 취득일을 그대로 쓴다. 같은 세대면 재산46014-610 쪽으로 읽을 여지가 크지만, 다른 세대(주택부수토지로서 보유가 성립하지 않는 쪽)의 기산은 정하지 못했다. 단건을 고치면 다건(Q-2 a)이 그대로 따라온다.
 
+### 6.3 함께 양도 묶음 — 토지만 본인 주택 카드의 토지 면적이 배율 한도 공유에서 빠진다 (V-2 측정 중 발견)
+
+`appurtenantLimitShareOf`(`app/api/calc/transfer/bundled-companion-split.ts:64`)는 주 자산 주택 카드가 들고 있는 토지 면적을 **소유자 같음일 때만** 한도 공유에 센다
+(주석: 「엔진이 그 카드의 배율 초과 면적을 같은 `acquisitionArea`로 재는 범위」). #2645 D-2 이후 엔진은 토지만 본인의 배율 초과분도 나누므로 이 조건은 그 범위와 어긋난다.
+
+- 실측(V-2 시료 · 주택 카드 자기 토지 200㎡ + 부수토지 카드 200㎡ · 한도 300㎡): 소유자 같음은 부수토지 카드가 `c1__appurtenant` · `c1__excess`(초과분 1억)로 나뉜다. 토지만 본인은 `c1` 한 장으로 남아 초과분 비사업용 분리가 없다(카드 소득 32,000,000 · 장특 48,000,000).
+- G-3와 무관하다(토지를 2014에 산 같은 시료도 같다). 화면 배지(`appurtenantLimitShareOfAssets`)도 같은 조건이라 함께 고쳐야 한다 — 따로 계획한다.
+
 ## 7. 구현 순서 (결정 후)
 
 1. 엔진 — `transfer-tax-appurtenant-land.ts:165` 게이트(건물만 본인만 제외) · 문서 주석의 「소유자 분리 제외」 정정.
@@ -192,3 +200,37 @@ route(§1.1 route 시료): 토지만 본인 같은 세대 8개월 **250,250,000*
 4. Q-3 (a) — `revokeExemptionOnLandOnlyOtherHousehold`(STEP 1 · `transfer-tax.ts:267` — 조기 반환 전이라 전액 비과세에도 실린다)를 같은 세대 고지까지 내는 이름으로 바꾼다(`transfer-tax.ts`는 import·호출 2줄 이름만 — 순증 0). 고지 상수는 `land-only-owner-household.ts`.
 5. anchor §5.2 → mutation §5.3 → 14 동기화 지점: **신규 입력 필드 없음**(Q-3 a 기준) · ⑧ 변경 없음 · 결과 카드는 기존 단계·고지 표시(V-4).
 6. 파일 크기: `transfer-tax-appurtenant-land.ts` 726 · `transfer-tax-rental-housing-step.ts` 686 · `transfer-tax-rental-housing-nbl-split.ts` 431 · `transfer-tax-aggregate-asset-records.ts` 386 — 모두 +5줄 안쪽. `transfer-tax.ts` 765는 이름 변경만(순증 0).
+
+## 8. 구현 결과 (2026-10-27)
+
+### 8.1 변경
+
+| 파일 | 변경 |
+|---|---|
+| `lib/tax-engine/transfer-tax-appurtenant-land.ts` | G-3 게이트 — 건물만 본인만 제외(`:175` · 근거 주석) · `landOnlyMergeNoticeSuppressed`(G-3 제외 또는 보유요건 면제 단서) |
+| `lib/tax-engine/transfer-tax-rental-housing-nbl-split.ts` | `splitLaterAcquiredLand` 건물분 — 토지만 본인 0 |
+| `lib/tax-engine/transfer-tax-rental-housing-step.ts` | G-3 세율 판정 입력 `landOnlyRateInput(effectiveInput)` |
+| `lib/tax-engine/land-only-owner-household.ts` | `revokeExemptionOnLandOnlyOtherHousehold` → `applyLandOnlyHouseholdRule`(같은 세대 합가일 고지 `LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE`) · `landOnlyRateInput` |
+| `lib/tax-engine/transfer-tax-aggregate-asset-records.ts` | 다건 세율 교정 — 토지만 본인 × 토지가 나중이면 토지 취득일(이월과세 채택 교정보다 앞) |
+| `lib/tax-engine/transfer-tax.ts` | import·호출 이름만(순증 0 · 765줄 유지) |
+
+- 고지 생략 조건을 `land-only-owner-household.ts` 안에서 판정하지 않는다 — `transfer-tax-exemption-holding.ts`의 의존이 460개 모듈에 닿고 그 안에 이 파일이 있어 순환이 된다(실측). 호출부(STEP 1)가 `landOnlyMergeNoticeSuppressed`를 넘긴다.
+- 합가일 고지는 보유요건이 면제되는 단서(`resolveExemptionProviso` = "both" — 수용 등)에서도 뺐다. 계획서 Q-3 문안 조건에 없던 것이다 — 보유요건이 없으면 「합가 후 2년 미만이면 비과세 아님」이 틀린 말이 된다.
+- 14 동기화 지점: 신규 입력 필드 없음 · ⑧ 변경 없음.
+
+### 8.2 테스트
+
+- anchor: `__tests__/tax-engine/transfer/land-only-later-land-holding.anchor.test.ts` 15건(A-1~A-14 · ⑳ 선언 고지) · `__tests__/api/transfer.route.land-only-later-land-holding.anchor.test.ts` 5건(route D-1 3 · 다건 route 1 · V-2 1).
+- 구현 후 mutation 7/7 KILLED — 각각 대응 anchor만 실패:
+
+| P-n | 무력화 | 실패한 anchor |
+|---|---|---|
+| P1 | 게이트 원복 | A-1·A-2·A-4~A-9·A-11·A-12·A-14 · route D-1·다건·V-2 (14) |
+| P2 | ⑳ 건물분 0 원복 | A-8·A-11 |
+| P3 | ⑳ 세율 입력 원복 | A-7·A-8·A-11 |
+| P4 | 다건 치환 제거 | A-11·A-12 · route 다건 |
+| P5 | 다건 치환을 Q-2 (b)로 | A-13 |
+| P6 | 합가일 고지 제거 | A-14 · ⑳ 선언 고지 · route 2년 이상 |
+| P7 | 고지 생략 조건 무시 | A-14 · route 8개월 |
+
+- 회귀: `__tests__/tax-engine/` · `api/` · `calc/` · `components/` · `lib/` — 구현만 적용한 상태에서 41,738건 통과(실패 0).
