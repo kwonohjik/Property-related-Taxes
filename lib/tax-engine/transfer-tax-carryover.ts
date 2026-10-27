@@ -15,6 +15,7 @@ import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclos
 import {
   assertCarryoverDonorBasis,
   applyCarryoverDonorBasis,
+  bgCarryoverPartDates,
   isBurdenedGiftCarryover,
 } from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
@@ -248,6 +249,9 @@ function calcCarryoverScenariosCore(
       rawInput.useEstimatedAcquisition ||
       (rawInput.usedEstimatedAcquisition !== undefined && ct.useEstimatedAcquisition),
     acquisitionDate: ct.donorAcquisitionDate,   // §95 ④ 단서 보유기간 기산
+    // 부담부증여 주택·건물 — 당초 증여자가 건물을 토지와 다른 날 취득했으면(`buildingDonorAcquisitionDate`) 건물은 그날, 토지는 증여자 취득일부터 센다.
+    //   일반건물 route와 같은 leaf(`carryoverHoldingStartsA`)다. 날짜가 달라지면 부담부증여 단계가 토지·건물 파트로 나눠 계산한다(설계서 `bg-house-building-split.design.md` §5.1).
+    ...(isBurdenedGift ? bgCarryoverPartDates(rawInput, ct.donorAcquisitionDate) : {}),
     // 소유자 분리 — ④가 분리 계산 진입용으로 본문 취득일(증여 등기일)과 같은 토지 취득일을 싣는다. 바꾸지 않으면 토지 파트만 증여 등기일부터
     //   기산된다(§95④ 단서 위반 — 토지만 본인 117,060,000 ↔ 88,550,000, 계획서 `owner-split-residue-followups.plan.md` C-1). 다른 날짜는 별개 취득이라 두지 않는다.
     ...(ownerSplitSameDayLand(rawInput) ? { landAcquisitionDate: ct.donorAcquisitionDate } : {}),

@@ -93,7 +93,7 @@
 
 세액 영향 예시: 선행 계획서 §1.1의 반반 가정 103,773,750은 배분 기준(§3.2)이 정해지지 않은 예시였다. 기준이 법문으로 정해졌으므로(파트 A × 같은 채무 비율) 실제 값은 S2·S4 Pre-Do anchor로 확정한다 — 확인 필요.
 
-## 6. 결정 요청
+## 6. 결정 요청 — ✅ 2026-10-27 확정: Q-1 a · Q-2 a · Q-3 a · Q-4 a(권장안)
 
 | # | 질문 | 선택지 | 권장 |
 |---|---|---|---|
@@ -119,3 +119,29 @@
 ## 9. 범위 밖
 - 겸용주택(자체 경로) · 일반건물(구현됨) · 상업용건물·오피스텔(일반 양도에도 분리 장치 없음).
 - 함께 양도 둘째 이후 자산의 토글 C(부담부증여와 무관한 기존 규칙).
+
+## 10. 구현 기록 — PR-A 엔진 (2026-10-27 · 차단 유지)
+- leaf `lib/tax-engine/burdened-gift-split-parts.ts`:
+  - `bgPartDatesDiffer` — 주택·건물 부담부증여 · 토지 원인 없음 · 소유자 분리 아님 · 토지·건물 취득일 다름(⑧·⑫ BG-D와 같은 조건).
+  - `bgSplitPartsOf` — §159 명세 파트 값을 분리 계산 입력으로. 필요경비는 성질별(개산공제율이 있으면 개산공제, 없으면 실비), 증여세 상당액(STEP 5.7 파트 산입액 `carryoverGiftTax.landApplied`·`buildingApplied` — 이번에 echo 추가)은 실비 칸.
+  - `assertBgSplitInputs` — 양도시 토지·건물 기준시가가 둘 다 있어야 하고(한쪽 0이면 차익이 다른 파트 기산일로 계산된다), K-4는 파트 실지취득가액 필수(총액 자동 안분 금지 · Q-2 a).
+  - `bgSplitGainResult` — 파트 값 그대로 + 파트 보유연수(토지 = `landAcquisitionDate` · 건물 = `acquisitionDate`).
+- 부담부증여 단계(`transfer-tax-burdened-gift-step.ts`)가 채택 시나리오 입력(`workingInput`)의 날짜로 판정해 `burdenedGiftSplitParts`를 싣고, `calcSplitGain`이 BG-D보다 앞에서 그 값으로 반환한다. 장특(표1·표2)·12억 안분·세율 기산은 기존 분리 하류 그대로.
+- 이월과세 A(`transfer-tax-carryover.ts`): `bgCarryoverPartDates` — `carryoverHoldingStartsA`(일반건물과 같은 leaf)로 토지 = 당초 증여자 취득일 · 건물 = `carryoverDonorBasis.buildingDonorAcquisitionDate`. 같은 날이면 토지 취득일을 싣지 않는다(회귀 0).
+- 실측(anchor `__tests__/tax-engine/transfer-tax/bg-house-building-split.anchor.test.ts` · 손계산 = 엔진):
+
+| # | 사례 | 결정세액 |
+|---|---|---|
+| S1 | 같은 날(2022) | 83,990,000(종전 그대로) |
+| S2 | 본인 취득 토지 2000 · 건물 2022 · K-4 | 67,270,000 |
+| S3 | 건물(토지 제외) | 67,270,000 |
+| — | 기준시가 평가(K-1~K-3) | 34,017,800 |
+| S4 | 이월과세 토지 2000 · 건물 2015 | A 73,198,000 채택(B 0) |
+| S4b | S4 + 증여세 상당액 5천만 | 67,634,800 |
+| S5 | 1세대1주택 · 고가 20억 | 41,126,000 |
+| S6 | 지분 50/50(축 B 2장) | 67,270,000 = S2 |
+
+- 🔴 Pre-Do 환류(S5): 부수토지 표2 기간을 토지 자신 25년(56%)으로 손계산했으나, 기존 leaf `resolveAppurtenantLandLthdRate`(소득세법 기본통칙 95-0…1)가 max(표1 토지 보유 30%, 표2 주택 보유 4년 + 거주 = 32%) = 32%다 — 일반 양도 분리와 같은 규칙이라 손계산을 고쳤다(27,365,000 → 41,126,000).
+- 기존 테스트: `burdened-gift-stale-acq-method` 케이스 7(PR-1이 「막는다」로 바꾼 단언)을 「파트 값도 §159 안분값 · 토지분 기준시가 0이면 막는다」로 교체.
+- 뮤테이션 13/13.
+- S7(묶음 둘째 자산)은 ⑫가 막아 엔진에 닿지 않는다 — PR-B에서 차단을 풀 때 실측한다.

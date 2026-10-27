@@ -25,6 +25,7 @@
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { calculateBuildingPenalty } from "./transfer-tax-building-penalty";
 import type { BurdenedGiftInfo } from "./types/transfer-burdened-gift.types";
+import type { TransferTaxInput } from "./types/transfer.types";
 
 /**
  * 모드별로 어떤 「당초 증여자 기준」 칸이 필수인지 판정한다.
@@ -348,4 +349,16 @@ export function withCarryoverDonorCapex<T extends object>(
   const { capitalExpenditure, transferExpense } = gbv as { capitalExpenditure?: number; transferExpense?: number };
   if (!capitalExpenditure && !transferExpense && legacyExpenses > 0) return { gbv, legacyExpenses: legacyExpenses + donorCapex };
   return { gbv: { ...gbv, capitalExpenditure: (capitalExpenditure ?? 0) + donorCapex }, legacyExpenses };
+}
+
+/**
+ * 단건 부담부증여(주택·건물)의 시나리오 A 기산일 — `carryoverHoldingStartsA`를 단건 입력 축(건물 = `acquisitionDate` · 토지 = `landAcquisitionDate`)으로 옮긴다.
+ * 당초 증여자가 토지·건물을 같은 날 취득했으면 토지 취득일을 싣지 않는다(종전 경로 그대로). 다르면 부담부증여 단계가 파트로 나눠 계산한다(`bgPartDatesDiffer`).
+ */
+export function bgCarryoverPartDates(
+  raw: Pick<TransferTaxInput, "burdenedGiftInfo" | "acquisitionDate" | "landAcquisitionDate">,
+  donorAcquisitionDate: Date,
+): Pick<TransferTaxInput, "acquisitionDate"> & Partial<Pick<TransferTaxInput, "landAcquisitionDate">> {
+  const s = carryoverHoldingStartsA(raw.burdenedGiftInfo, donorAcquisitionDate, { land: raw.landAcquisitionDate ?? raw.acquisitionDate, building: raw.acquisitionDate });
+  return s.land.getTime() === s.building.getTime() ? { acquisitionDate: s.building } : { acquisitionDate: s.building, landAcquisitionDate: s.land };
 }

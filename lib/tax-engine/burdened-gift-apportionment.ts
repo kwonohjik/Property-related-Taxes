@@ -383,6 +383,8 @@ export function buildBurdenedGiftBreakdown(params: {
       cap: (part === "building" ? 0 : landCap) + (part === "land" ? 0 : buildingCap),
       applied: landApplied + buildingApplied,
       limitApplied: landShare > landCap || buildingShare > buildingCap,
+      landApplied,
+      buildingApplied,
     };
     landEstimatedDeduction += landApplied;
     buildingEstimatedDeduction += buildingApplied;

@@ -665,6 +665,9 @@ export interface TransferBurdenedGiftBreakdown {
     applied: number;
     /** 한도가 한 파트라도 깎았는가. */
     limitApplied: boolean;
+    /** 파트별 산입액 — `perAsset.*.estimatedDeduction`에 더해진 몫(토지·건물 분리 계산이 필요경비 칸을 성질별로 가를 때 읽는다). */
+    landApplied?: number;
+    buildingApplied?: number;
   };
 
   /**

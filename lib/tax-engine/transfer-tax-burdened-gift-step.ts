@@ -20,6 +20,7 @@ import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { InheritedAcquisitionStepResult } from "./inheritance-acquisition-helpers";
+import { assertBgSplitInputs, bgPartDatesDiffer, bgSplitPartsOf } from "./burdened-gift-split-parts";
 
 /** STEP 0.45가 부담부증여 × 의제취득일 전으로 판정한 결과(`bgPreDeemed`)만 §159에 넘긴다 — 그 밖은 빈 객체(종전 그대로). */
 function preDeemedParamOf(inheritedStep: InheritedAcquisitionStepResult | undefined) {
@@ -75,6 +76,9 @@ export function runBurdenedGiftStep(
       );
     }
     const preDeemedParam = preDeemedParamOf(inheritedStep);
+    // 토지·건물 취득일이 다르면 파트별로 계산한다(설계서 `bg-house-building-split.design.md` §5.1) — 날짜는 채택 시나리오의 것(`workingInput`)이다.
+    const partDatesDiffer = bgPartDatesDiffer(workingInput);
+    if (partDatesDiffer) assertBgSplitInputs(rawInput.burdenedGiftInfo);
     assertBgMarketAcquisitionSource(rawInput.burdenedGiftInfo, ownershipRatio, "preDeemed" in preDeemedParam);
     transferBurdenedGiftBreakdown = buildBurdenedGiftBreakdown({
       landStdPriceAtTransfer: rawInput.burdenedGiftInfo.landStdPriceAtTransfer,
@@ -191,6 +195,8 @@ export function runBurdenedGiftStep(
       transferExpense: undefined,
       // §97③ 감가상각비는 부담부증여에서 미지원(Phase C) — §159 안분 취득가액에서 또 빼지 않는다. ⑧ validate가 먼저 막는다.
       depreciationAmount: undefined,
+      // 토지·건물 취득일 다름 — 분리 계산이 이 파트 값을 그대로 쓴다(합계 칸은 다른 단계의 표시·판정용으로 남는다).
+      ...(partDatesDiffer ? { burdenedGiftSplitParts: bgSplitPartsOf(transferBurdenedGiftBreakdown) } : {}),
       // 재개발 완공 아파트 × K-5만 §166③ 환산 분기를 켠다(위 `redevSec166Conversion`). 그 밖은 §159 안분값을 그대로 쓴다.
       useEstimatedAcquisition: redevSec166Conversion,
       // §159 안분 취득가액을 **그대로** 쓴다는 신호. 부담부증여 UI는 일반 산정방식(환산·감정·매매사례)을
