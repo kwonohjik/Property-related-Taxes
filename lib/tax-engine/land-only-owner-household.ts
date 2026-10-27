@@ -19,6 +19,11 @@ export const LAND_ONLY_OTHER_HOUSEHOLD_NOTICE =
   "토지만 본인 소유이고 건물(주택) 소유자가 양도일 현재 본인과 다른 세대라, 이 토지에는 1세대1주택 비과세와 " +
   "장기보유특별공제 표2(장기임대주택 거주주택 특례 포함)를 적용하지 않았습니다(「소득세법 시행령」 §154① · 조심 2008중3554).";
 
+/** 중과가 원래 걸렸을 조합에만 단다(`transfer-tax.ts` — 다른 세대 조건을 뺀 반사실 판정). */
+export const LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE =
+  "토지만 본인 소유이고 건물(주택) 소유자가 양도일 현재 본인과 다른 세대라, 주택 수는 건물 소유자를 기준으로 보아 이 토지에는 " +
+  "다주택 중과세율과 그에 따른 장기보유특별공제 배제를 적용하지 않았습니다(재산세과-3172 · 서면인터넷방문상담5팀-695).";
+
 export function landOnlyBuildingOwnerOtherHousehold(
   input: Pick<TransferTaxInput, "selfOwns" | "buildingOwnerSameHousehold">,
 ): boolean {

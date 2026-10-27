@@ -49,6 +49,7 @@ import { validateSuccessorRightAsset } from "./transfer-tax-validate-successor-r
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
+import { appurtenantZoneRequiredError } from "./transfer-tax-validate-housing-excess";
 import { validateLandPartCause } from "./transfer-tax-validate-split";
 import { validateBuildingCauseSplit } from "./transfer-tax-validate-building-cause";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
@@ -396,7 +397,8 @@ function validateAssetAcquisitionBranches(
     if (lumpSumBaseRequired(asset, isNonPrimaryAsset) && !(parseAmount(asset.standardPriceAtAcq ?? "") > 0))
       return fieldError("standardPriceAtAcq", `${label}: 취득 당시 기준시가를 입력하세요.`);
     // V-3′ — 이 분기는 분리 검증(아래 `validateSplitDirectInputs`) 전에 반환한다. ⑫는 막으므로 여기서도 건다.
-    return buildingOwnerHouseholdError(asset, label);
+    //   배율 판정 소재지 구분(V9)도 같다 — 토지만 본인은 #17 검사(소유자 같음 전용)가 받지 않는다.
+    return buildingOwnerHouseholdError(asset, label) ?? appurtenantZoneRequiredError(asset, label);
   }
 
   // 1) 다필지 모드는 별도 검증

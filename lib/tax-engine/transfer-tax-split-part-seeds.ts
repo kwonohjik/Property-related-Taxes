@@ -49,7 +49,10 @@ export function buildSplitPartSeeds(
   const landBasisDate = resolveAppurtenantLandRateBasisDate(input);
   if (!landBasisDate) return null;
   // 2. 소유자 분리 자산은 이미 단독 파트만 신고한다(`transfer-tax.ts` selfOwns 분기).
-  if ((input.selfOwns ?? "both") !== "both") return null;
+  //    단 토지만 본인에 배율 초과분이 있으면 그 토지가 이내분 + 비사업용 토지로 갈린다 — 건물 파트 없이 두 파트로 낸다
+  //    (§104⑤ 후단 「한 필지의 토지가 … 비사업용 토지와 그 외의 토지로 구분되는 경우에는 각각을 별개의 자산으로」).
+  const landOnly = input.selfOwns === "land_only";
+  if ((input.selfOwns ?? "both") !== "both" && !(landOnly && splitDetail.nonBusinessLandPart)) return null;
   // 3. 세율 강제 특칙 — 조특법 §98①1호 20% 단일 / P3 특칙(단기세율 배제)은 파트 무관.
   if (input.forceFlatRate20 || input.suppressShortTermRate) return null;
   // 4. 부담부증여는 §159 안분이 총액을 override한다(`transfer-tax-api-split.ts`와 동일 사유).
@@ -92,6 +95,7 @@ export function buildSplitPartSeeds(
       },
     },
   ];
+  if (landOnly) seeds.splice(1, 1); // 건물은 본인 소유가 아니다
   if (nbPart && nbBasisDate) {
     seeds.push({
       kind: "non_business_land",
