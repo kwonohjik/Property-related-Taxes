@@ -195,6 +195,14 @@ export interface CarryoverTaxationInput {
 // 결과 타입
 // ============================================================
 
+/** 소유자 분리 본인 파트 합(엔진 leaf `summarizeSplitGain`) — 시나리오 카드 표시 전용 echo. */
+export interface CarryoverOwnerSplitPart {
+  /** 본인 파트 양도가액 */
+  transferPrice: number;
+  /** 본인 파트 취득가액 — 실제로 차감된 값(§97②2호 단서 swap 파트는 0) */
+  acquisitionPrice: number;
+}
+
 /**
  * Scenario A (이월과세 적용) 상세 결과
  */
@@ -269,6 +277,13 @@ export interface CarryoverScenarioADetail {
   /** 양도차익 (증여세 상당액 차감 후 최종) */
   transferGain: number;
   /**
+   * [echo] 소유자 분리(토지만·건물만)에서 이 시나리오의 **본인 파트** 양도가액·취득가액(차감분) — 비교 카드·서식 부제 표시 전용.
+   * 위 `acquisitionPrice`는 자산 전체 값이고 `transferGain`은 본인 파트 값이라 둘을 한 카드에 적으면 「양도가액 − 취득가액 = 양도차익」이 서지 않는다.
+   * 채택되지 않은 시나리오는 결과에 분리 상세가 없어 표시층이 이 값을 만들 수 없다. 소유자 같음·분리 계산 없음이면 undefined.
+   * 계획서 `carryover-owner-split-display-gift-tax.plan.md` V-4·V-1.
+   */
+  ownerSplitPart?: CarryoverOwnerSplitPart;
+  /**
    * 장기보유특별공제액 (증여자 취득일 기산 보유기간 적용).
    * 결과 카드·신고서 양식 표시용. UI 신고서 양식 표에서 main LTHD 대신 이 값을 사용.
    */
@@ -302,6 +317,8 @@ export interface CarryoverScenarioBDetail {
   holdingPeriodYears: number;
   /** 양도차익 */
   transferGain: number;
+  /** [echo] 소유자 분리 본인 파트 양도가액·취득가액 — `CarryoverScenarioADetail.ownerSplitPart`와 같은 정의. */
+  ownerSplitPart?: CarryoverOwnerSplitPart;
   /** 장기보유특별공제액 */
   longTermHoldingDeduction?: number;
   /** 장기보유특별공제율 */

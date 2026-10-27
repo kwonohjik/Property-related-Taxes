@@ -86,7 +86,7 @@ describe("이월과세 환산 × 소유자 분리 — 시나리오 A가 본인 �
   });
 
   it("증여세 상당액 2천만 — 본인 파트 양도차익에서 차감된다(건물만 145,960,571)", async () => {
-    // ⚠️ 이 경로는 엔진이 A를 실가로 바꿔 다시 계산하며 기준시가를 비워 분리 상세(splitDetail)가 빠진다 — 필요경비를 앞 계산에서 역산해 세액은 맞다(계획서 V-5).
+    // 분리 계산을 유지하고 본인 파트 필요경비에 더한다 — 분리 상세 단언은 `transfer.route.carryover-owner-split-gift-tax.anchor.test.ts`(계획서 `carryover-owner-split-display-gift-tax.plan.md` V-5a).
     const r = await run({ ...CARRY, selfOwns: "building_only", carryover: { ...CARRY.carryover, giftTaxCalculated: "20,000,000", giftTaxAmount: "20,000,000" } });
     expect([r.fields, r.status, r.tax]).toEqual([[], 200, 145_960_571]);
   });

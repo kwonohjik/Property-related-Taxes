@@ -117,7 +117,8 @@ function ScenarioAContent({ a, adopted, filingUnit, compared }: {
       compared={compared}
     >
       <div className="space-y-1">
-        <InfoRow label="취득가액 [당초 증여자 취득가]" value={fmt(a.acquisitionPrice)} />
+        {/* 소유자 분리 — 양도차익이 본인 파트 값이므로 취득가액도 본인 파트 값(엔진 echo · 계획서 V-4) */}
+        <InfoRow label={`취득가액 [당초 증여자 취득가${a.ownerSplitPart ? " · 본인 소유 파트" : ""}]`} value={fmt(a.ownerSplitPart?.acquisitionPrice ?? a.acquisitionPrice)} />
         <InfoRow label="보유기간 [당초 증여자 기산]" value={`${a.holdingPeriodYears}년`} />
         <InfoRow label="양도차익" value={fmt(a.transferGain)} />
         {a.giftTaxAddedToExpense > 0 && (
@@ -184,7 +185,7 @@ function ScenarioBContent({ b, adopted, isComparisonExclusion, filingUnit, compa
       compared={compared}
     >
       <div className="space-y-1">
-        <InfoRow label="취득가액 [증여 당시 평가액]" value={fmt(b.acquisitionPrice)} />
+        <InfoRow label={`취득가액 [증여 당시 평가액${b.ownerSplitPart ? " · 본인 소유 파트" : ""}]`} value={fmt(b.ownerSplitPart?.acquisitionPrice ?? b.acquisitionPrice)} />
         <InfoRow label="보유기간 [수증자 기산]" value={`${b.holdingPeriodYears}년`} />
         <InfoRow label="양도차익" value={fmt(b.transferGain)} />
       </div>

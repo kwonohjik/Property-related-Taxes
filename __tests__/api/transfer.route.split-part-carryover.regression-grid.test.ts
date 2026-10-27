@@ -145,17 +145,20 @@ const FIXTURE = "__tests__/api/fixtures/split-part-carryover-prep1-grid.json";
  * 이월과세 환산(증여자 취득가액 모름) × 소유자 분리: 시나리오 A가 본인 파트를 환산한다(소득세법 §114⑦ · 계획서
  * `docs/02-design/features/carryover-estimated-owner-split.plan.md` Q-1 ①). 종전 값은 요청에 실린 파트 취득가액(실가)을 그대로 썼다 —
  * 화면 경로(④)는 그 칸을 보내지 않아 0을 안분했다. `phd` 컴패니언 행은 컴패니언 스키마가 PHD 입력을 받지 않아 일반 환산과 같다.
+ * `diff` 6행은 한 번 더 내려갔다 — 증여세 상당액 3천만(소득세법 §97의2①3호)이 본인 파트 필요경비에 전액 들어간다(영 §163의2② 「양도한 해당 자산가액」 ·
+ * `docs/02-design/features/carryover-owner-split-display-gift-tax.plan.md` Q-2 (a)). 종전 실가 전환 갈래는 토지 취득일이 다른(별개 취득) 분리에서 일부만 공제했다
+ * (건물만 A 양도차익 397,000,000 − 3천만 = 367,000,000 · 토지만 597,000,000 → 567,000,000 실측). `same` 행·`actual` 행(B 채택)은 세액 불변.
  */
 const INTENDED: Record<string, Row> = {
   "G1|est|building_only|same|-|primary": [200, 49_733_000],
   "G1|est|building_only|same|-|companion": [200, 117_400_000],
-  "G1|est|building_only|diff|-|primary": [200, 84_712_000],
-  "G1|est|building_only|diff|-|companion": [200, 154_220_000],
-  "G1|est|land_only|diff|-|primary": [200, 140_220_000],
-  "G1|est|land_only|diff|-|companion": [200, 212_028_000],
+  "G1|est|building_only|diff|-|primary": [200, 76_732_000],
+  "G1|est|building_only|diff|-|companion": [200, 145_820_000],
+  "G1|est|land_only|diff|-|primary": [200, 131_820_000],
+  "G1|est|land_only|diff|-|companion": [200, 203_208_000],
   "G1|phd|building_only|same|-|companion": [200, 131_400_000],
-  "G1|phd|building_only|diff|-|companion": [200, 154_220_000],
-  "G1|phd|land_only|diff|-|companion": [200, 212_028_000],
+  "G1|phd|building_only|diff|-|companion": [200, 145_820_000],
+  "G1|phd|land_only|diff|-|companion": [200, 203_208_000],
 };
 
 describe("파트 서브객체 없는 기존 입력 회귀 격자 (P1 전 master 대조)", () => {

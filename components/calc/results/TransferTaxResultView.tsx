@@ -61,6 +61,13 @@ import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-di
 import { FalseContractPriceNotice } from "@/components/calc/results/shared/FalseContractPriceNotice";
 
 // ── 중과 유예 근거(basis) 표시용 기한 포맷 — API JSON 왕복 후 string 도달 가능(Date 직렬화) ──
+/** 이월과세 서식 부제의 취득가액 — 소유자 분리면 본인 파트 값(엔진 echo `ownerSplitPart` · 계획서 V-4). 자산 전체 값은 본문 서식과 어긋난다. */
+export function scenarioAcqLabel(s: { acquisitionPrice: number; ownerSplitPart?: { acquisitionPrice: number } }): string {
+  return s.ownerSplitPart
+    ? `취득가액 ${formatKRW(s.ownerSplitPart.acquisitionPrice)} (본인 소유 파트)`
+    : `취득가액 ${formatKRW(s.acquisitionPrice)}`;
+}
+
 function fmtDeadline(d: Date | string | undefined): string {
   if (!d) return "";
   const s = typeof d === "string" ? d : d.toISOString();
@@ -205,7 +212,7 @@ export function TransferTaxResultView({
                 acquisitionDateLabel="(증여자 취득일)"
                 acquisitionDateOverride={resolvedAsset?.carryover?.donorAcquisitionDate ?? ""}
                 title="[A] 이월과세 적용"
-                subtitle={`보유기간 ${carryoverDetail.scenarioA.holdingPeriodYears}년 (증여자 취득일 기산) · 취득가액 ${formatKRW(carryoverDetail.scenarioA.acquisitionPrice)}`}
+                subtitle={`보유기간 ${carryoverDetail.scenarioA.holdingPeriodYears}년 (증여자 취득일 기산) · ${scenarioAcqLabel(carryoverDetail.scenarioA)}`}
                 adopted={adoptedA}
                 redevSubject={
                   result.redevelopmentDetail
@@ -244,7 +251,7 @@ export function TransferTaxResultView({
                 acquisitionDateLabel="(증여 등기접수일)"
                 acquisitionDateOverride={resolvedAsset?.carryover?.giftRegistryDate ?? ""}
                 title="[B] 이월과세 미적용"
-                subtitle={`보유기간 ${carryoverDetail.scenarioB.holdingPeriodYears}년 (증여 등기접수일 기산) · 취득가액 ${formatKRW(carryoverDetail.scenarioB.acquisitionPrice)}`}
+                subtitle={`보유기간 ${carryoverDetail.scenarioB.holdingPeriodYears}년 (증여 등기접수일 기산) · ${scenarioAcqLabel(carryoverDetail.scenarioB)}`}
                 adopted
                 redevSubject={
                   result.redevelopmentDetail

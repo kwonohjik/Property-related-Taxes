@@ -20,12 +20,15 @@ import {
 } from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
 import { dayKey } from "./transfer-split-part-cause-input";
+import { summarizeSplitGain } from "./transfer-tax-split-display";
+import { phdSplitPathTaken } from "./housing-excess-split";
 import { judgeCarryoverEligibility } from "./transfer-tax-carryover-eligibility";
 import { assertBgDonorBuiltInput, assertDonorBuiltInput, bgDonorBuiltOf, withDonorBuiltPenalty } from "./transfer-tax-carryover-donor-penalty";
 import { carryoverGiftHouseholdBasis, resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxInput } from "./types/transfer.types";
+import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type {
   CarryoverTaxationDetail,
   CarryoverScenarioADetail,
@@ -99,6 +102,8 @@ function calcCarryoverScenariosCore(
     /** §114조의2 가산세 base·세액 — 부담부증여 × 증여자 신축·증축(PR-4)의 echo 가 채택 입력의 실제 값을 읽는다. */
     penaltyBase?: number;
     penaltyTax?: number;
+    /** 분리 계산 상세 — 소유자 분리 증여세 상당액의 본인 파트 산입 판정·시나리오 본인 파트 echo(`ownerSplitPart`). */
+    splitDetail?: SplitGainResult;
   },
   /**
    * §97의2②3호 **세액 비교 결과 강제** — 다건 엔진이 「신고단위 결정세액」으로 비교할 때만 쓴다.
@@ -348,8 +353,16 @@ function calcCarryoverScenariosCore(
     0,
     rawInput.transferPrice - donorAcqPrice - gainBeforeGiftTax,
   );
+  // 소유자 분리 — 영 §163의2②의 「양도한 해당 자산가액」은 본인 파트뿐이라 증여세 상당액 전액이 그 파트의 필요경비다. 아래 두 갈래는 자산 전체 전제다
+  //   (실가 갈래는 양도비처럼 양도가액 비율로 나눠 비소유 파트 몫을 버리고 — 2천만 중 1,200만 · 환산 갈래는 기준시가를 비워 분리 상세가 사라진다).
+  //   파트 이월과세(P6)와 같은 장치로 §97② 단서 비교 밖에서 본인 파트에 더한다 — 계획서 `carryover-owner-split-display-gift-tax.plan.md` Q-2 (a).
+  //   `stdAtAcq`는 싣지 않는다(실으면 `calcApportionRatio`가 비율을 만들지 않는다).
+  //   §164⑦ PHD 3시점 분리 경로(`calcSplitGainPreDisclosure`)는 `giftTaxExpense`를 읽지 않는다 — 실으면 증여세 상당액이 조용히 빠진다(리뷰 게이트 FAIL 1). 종전 갈래로 둔다.
+  const ownedPart = phdSplitPathTaken(inputABase) ? null : ownerSplitPartOf(rawInput, resultABeforeGiftTax.splitDetail);
   let inputAFinal: TransferTaxInput;
-  if (ct.useEstimatedAcquisition && giftTaxAddedToExpense > 0) {
+  if (ownedPart && giftTaxAddedToExpense > 0) {
+    inputAFinal = { ...inputABase, splitCarryoverBasis: { [ownedPart]: { giftTaxExpense: giftTaxAddedToExpense } } };
+  } else if (ct.useEstimatedAcquisition && giftTaxAddedToExpense > 0) {
     // 환산 모드 + 증여세 차감 필요: 실가 전환 후 expenses = swap-aware 필요경비 + 증여세 상당액
     inputAFinal = {
       ...inputABase,
@@ -422,6 +435,7 @@ function finishScenarios(args: {
     calculatedTax: number;
     isExempt?: boolean;
     isPartialExempt?: boolean;
+    splitDetail?: SplitGainResult;
   };
   /** §97의2②3호 비교 결과 강제(다건 신고단위 비교 전용). undefined면 자체 비교. */
   scenarioOverride?: "A" | "B";
@@ -431,7 +445,7 @@ function finishScenarios(args: {
   giftTaxApportionment?: CarryoverScenarioADetail["giftTaxApportionment"];
   applicablePeriodYears: 5 | 10;
   inputAFinal: TransferTaxInput;
-  resultA: { determinedTax: number; transferGain: number };
+  resultA: { determinedTax: number; transferGain: number; splitDetail?: SplitGainResult };
   donorAcqPrice: number;
   giftTaxAddedToExpense: number;
   giftTaxLimitApplied: boolean;
@@ -472,6 +486,7 @@ function finishScenarios(args: {
     estimatedStdPriceAtAcquisition: echoStdAtAcq,
     estimatedStdPriceAtTransfer: echoStdAtTransfer,
     transferGain: resultA.transferGain,
+    ...ownerSplitPartEcho(rawInput, resultA.splitDetail),
     determinedTax: determinedTaxA,
   };
 
@@ -488,6 +503,7 @@ function finishScenarios(args: {
     acquisitionPrice: ct.giftDateValuation,
     holdingPeriodYears: holdingB.years,
     transferGain: resultB.transferGain,
+    ...ownerSplitPartEcho(rawInput, resultB.splitDetail),
     longTermHoldingDeduction: resultB.longTermHoldingDeduction,
     longTermHoldingRate: resultB.longTermHoldingRate,
     taxBase: resultB.taxBase,
@@ -635,6 +651,19 @@ function ownerSplitDonorConversion(
   // 부담부증여는 §159 경로라 제외 — ⑧ `ownerSplitDonorEstimated`(`nonPurchaseOwnerSplit`)도 제외한다(리뷰 게이트 D-2).
   return !!rawInput.selfOwns && rawInput.selfOwns !== "both" && ct.useEstimatedAcquisition === true && !rawInput.preHousingDisclosure
     && !isBurdenedGiftCarryover(rawInput);
+}
+
+/** 소유자 분리이고 엔진이 실제로 분리 계산했으면 본인 파트 — 분리 계산이 없으면(환산 입력 부족 등) 종전 자산 단위 갈래로 둔다. */
+function ownerSplitPartOf(rawInput: TransferTaxInput, splitDetail: SplitGainResult | undefined): "land" | "building" | null {
+  if (!splitDetail || !rawInput.selfOwns || rawInput.selfOwns === "both") return null;
+  return rawInput.selfOwns === "building_only" ? "building" : "land";
+}
+
+/** 시나리오의 본인 파트 양도가액·취득가액 echo — 위 `acquisitionPrice`(자산 전체)와 본인 파트 `transferGain`이 한 카드에서 등식을 이루게 한다(V-4·V-1). */
+function ownerSplitPartEcho(rawInput: TransferTaxInput, splitDetail: SplitGainResult | undefined) {
+  if (!ownerSplitPartOf(rawInput, splitDetail)) return {};
+  const s = summarizeSplitGain(splitDetail!);
+  return { ownerSplitPart: { transferPrice: s.transferPrice, acquisitionPrice: s.acquisitionDeducted } };
 }
 
 /** 소유자 분리이고 토지 취득일이 본문 취득일과 같은 날인가 — 시나리오 A에서 두 날짜를 함께 증여자 취득일로 옮긴다(C-1). */

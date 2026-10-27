@@ -32,8 +32,18 @@ import {
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/types/general-building.types";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
+import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 
 const fmt = (n: number) => n.toLocaleString();
+
+/**
+ * 자산 단위 이월과세 A 채택 × 소유자 분리(토지만·건물만) — 상세명세서가 이월과세 A 분기 대신 분리 합·분리 산식을 쓰는 조건.
+ * 양도한 것은 본인 파트뿐이라 A의 자산 전체 값이 아니라 본인 파트 값이 신고 단위다(계획서 `carryover-owner-split-display-gift-tax.plan.md` V-4 · Q-1 (a)).
+ */
+export function isOwnerSplitCarryoverA(result: TransferTaxResult): boolean {
+  const sd = result.splitDetail;
+  return result.carryoverTaxationDetail?.adoptedScenario === "A" && !!sd && !result.mixedUseDetail && !!sd.selfOwns && sd.selfOwns !== "both";
+}
 
 /**
  * 개산공제율 표기 — `0.03 → "3%"` · `0.003 → "0.3%"` · `0.01 → "1%"`.
@@ -152,17 +162,26 @@ export function splitCarryoverRateDateText(sd: SplitGainResult | undefined): str
  * base·율은 엔진 echo(`lumpDeductionBase`·`lumpDeductionRate`)를 읽는다. 율 echo가 없는 구 이력은 호출부가 폼에서
  * 산출한 `fallbackRate`(엔진 leaf `estimatedDeductionRate`)를 쓴다.
  */
-export function splitExpenseText(sd: SplitGainResult | undefined, fallbackRate?: number): string | undefined {
+export function splitExpenseText(
+  sd: SplitGainResult | undefined,
+  fallbackRate?: number,
+  /**
+   * 자산 단위 이월과세 A × 소유자 분리 — 본인 파트 직접경비에 든 증여세 상당액(엔진 `scenarioA.giftTaxAddedToExpense`). 주면 그 몫을 자본적지출·양도비와
+   * 나눠 적고 개산공제 base를 「증여자 취득 당시」로 적는다(소유 파트가 하나라 몫이 그 파트에 있다).
+   */
+  ownerCarryoverGift?: number,
+): string | undefined {
   if (!sd) return undefined;
   const s = summarizeSplitGain(sd);
   const carryover = splitCarryoverView(sd);
-  if (!carryover && !s.parts.some((p) => p.appraisalDeduction > 0 || p.swapApplied)) return undefined;
+  const ownerCarryover = ownerCarryoverGift !== undefined;
+  if (!carryover && !ownerCarryover && !s.parts.some((p) => p.appraisalDeduction > 0 || p.swapApplied)) return undefined;
   const items: string[] = [];
   for (const p of s.parts) {
     const raw = sd[p.key];
     // P6 — 증여자 취득가액을 몰라 환산한 이월과세 적용 파트: 직접경비 안의 증여세 상당액(§97의2①3호 별도 산입)은 자본적지출·양도비가 아니다.
     const donorEst = carryover?.parts.find((c) => c.key === p.key && c.applied && c.estimated);
-    const gift = donorEst?.giftTaxAdded ?? 0;
+    const gift = donorEst?.giftTaxAdded ?? ownerCarryoverGift ?? 0;
     if (p.directExpenses - gift > 0) {
       items.push(
         `${p.label} 자본적지출·양도비 ${fmt(p.directExpenses - gift)}${p.swapApplied ? " (§97②2호 단서 — 취득가액·개산공제 대신 적용)" : ""}`,
@@ -174,7 +193,7 @@ export function splitExpenseText(sd: SplitGainResult | undefined, fallbackRate?:
       const rate = raw.lumpDeductionRate ?? fallbackRate;
       items.push(
         base != null
-          ? `${p.label} 개산공제 ${fmt(p.appraisalDeduction)} (${donorEst ? "증여자 취득 당시" : "취득시"} 기준시가 ${fmt(base)} × ${formatLumpRate(rate)})`
+          ? `${p.label} 개산공제 ${fmt(p.appraisalDeduction)} (${donorEst || ownerCarryover ? "증여자 취득 당시" : "취득시"} 기준시가 ${fmt(base)} × ${formatLumpRate(rate)})`
           : `${p.label} 개산공제 ${fmt(p.appraisalDeduction)}`,
       );
     }

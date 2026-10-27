@@ -70,6 +70,7 @@ import {
   buildBgMixedExpenseFormula,
 } from "./DetailedStatementBgMixedFormulas";
 import { aggregateAcqModes } from "./split-acq-text";
+import { isOwnerSplitCarryoverA } from "./split-acq-text";
 import { collectSaleSplitUnenteredNotices } from "./sale-split-unentered-notice";
 
 // ── 헬퍼 ─────────────────────────────────────────────────────────
@@ -209,12 +210,14 @@ export function buildStatementItems(
    *   개산공제가 **취득가액 칸으로** 들어가고 필요경비는 0이 됐다(6조합 중 5조합 — 실측 2026-10-07). 분기 신호는
    *   `usedEstimatedAcquisition`(항상 false)이 아니라 응답에 실재하는 `splitDetail`이다.
    * 위계: 겸용(B1 echo — 별도 산식)·이월과세 시나리오 A(증여자 취득가액 승계)가 우선한다 — 산식 빌더와 같은 순서.
+   * 단 소유자 분리(토지만·건물만)는 이월과세 A여도 분리 합을 쓴다 — 양도한 것이 본인 파트뿐이라 자산 전체 A 값(양도가액 12억 · 역산 취득가액
+   * 660,000,000)은 신고서 분리 2열(7.2억 · 1.8억)과 어긋난다(계획서 `carryover-owner-split-display-gift-tax.plan.md` V-4 · Q-1 (a)).
    */
   const splitSummary =
     !isAggregate &&
     result.splitDetail &&
     !result.mixedUseDetail &&
-    result.carryoverTaxationDetail?.adoptedScenario !== "A"
+    (result.carryoverTaxationDetail?.adoptedScenario !== "A" || isOwnerSplitCarryoverA(result))
       ? summarizeSplitGain(result.splitDetail)
       : undefined;
   /**
