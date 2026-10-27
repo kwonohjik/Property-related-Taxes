@@ -262,6 +262,12 @@ export function SplitGainDetailSection({
                 </FLine>
               </div>
             )}
+            {/* V-7 — 취득가액 총액을 취득 당시 감정평가가액 비율로 나눈 경우(엔진 echo). 기준시가 비율이면 줄을 내지 않는다. */}
+            {splitDetail.acqApportionBasisKind === "appraisal" && (
+              <span className="col-span-3 text-caption text-muted-foreground leading-snug" data-testid="split-acq-apportion-appraisal">
+                취득가액은 취득 당시 토지·건물 감정평가가액 비율로 나눴습니다 (소득세법 §100②·부가가치세법 시행령 §64①1호 단서).
+              </span>
+            )}
             {!splitDetail.stdSplit && splitDetail.building.stdPriceDerivedFromTotal && (
               <span className="col-span-3 text-caption text-muted-foreground leading-snug">
                 {/* 결함 표식이 아니다 — 의미가 propertyType별로 정반대다.

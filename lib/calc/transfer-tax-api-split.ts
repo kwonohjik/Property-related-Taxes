@@ -44,6 +44,7 @@ import {
   landSec164Applies,
 } from "./transfer-pre1990-housing-land-bridge";
 import { saleSplitProvisoApplies } from "./sale-split-100-3-era";
+import { acqAppraisalApportionApplies } from "./transfer-acq-appraisal";
 import { isPreDeemedLandPart } from "@/lib/tax-engine/transfer-split-part-cause";
 
 /**
@@ -298,6 +299,13 @@ export function buildSplitPayload(
           landAppraisalAtTransfer: parseAmount(primary.landAppraisalAtTransfer) || undefined,
           buildingAppraisalAtTransfer: parseAmount(primary.buildingAppraisalAtTransfer) || undefined,
           appraisalDateAtTransfer: primary.appraisalDateAtTransfer || undefined,
+        }
+      : {}),
+    // 취득 당시 감정평가가액 — 비-별개 취득의 취득가액 총액 안분 basis(부가령 §64①1호 단서). ⑤ 칸 노출·⑧ 쌍 검증과 같은 술어(V-7).
+    ...(acqAppraisalApportionApplies(rawPrimary)
+      ? {
+          landAppraisalAtAcquisition: parseAmount(primary.landAppraisalAtAcquisition ?? "") || undefined,
+          buildingAppraisalAtAcquisition: parseAmount(primary.buildingAppraisalAtAcquisition ?? "") || undefined,
         }
       : {}),
     // §166⑧ 예외 — 30% 판정 자체가 구분 기재가 있을 때만 돌므로 양도가액 2필드와 **같은 게이트**다.

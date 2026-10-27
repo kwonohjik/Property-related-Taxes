@@ -402,6 +402,9 @@ export const propertyBaseShape = {
   buildingAppraisalAtTransfer: z.number().int().nonnegative().optional(),
   /** 감정일자 — 유효 창 [(양도연도−1)-01-01, 양도연도-12-31] 판정에 필수 */
   appraisalDateAtTransfer: z.string().optional(),
+  /** 취득 당시 감정평가가액(토지·건물) — 비-별개 취득의 취득가액 총액 안분 basis(소득세법 §100② → 소령 §166⑥ → 부가령 §64①1호 단서). 쌍 규칙은 ⑫ refine. */
+  landAppraisalAtAcquisition: z.number().int().nonnegative().optional(),
+  buildingAppraisalAtAcquisition: z.number().int().nonnegative().optional(),
   /**
    * 「소득세법 시행령」 제166조 제8항 예외 — 선택 시 §100③ 30% 의제가 발동하지 않는다.
    * 근거 텍스트(`saleSplitExemptionNote`)는 계산에 쓰이지 않아 **전송하지 않는다**(UI 전용).

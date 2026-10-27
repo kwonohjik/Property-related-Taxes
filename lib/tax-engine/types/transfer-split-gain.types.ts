@@ -430,6 +430,8 @@ export interface SplitGainResult {
    * 세액·양도가액에는 영향이 없다.
    */
   saleApportionBasisKind?: ApportionBasisKind;
+  /** 취득가액 총액을 취득 당시 **감정평가가액** 비율로 안분했을 때만 `"appraisal"` — 표시 전용 echo(없으면 기준시가 비율 또는 안분 없음) */
+  acqApportionBasisKind?: "appraisal";
   /** 취득 당시 계약서 구분금액 §100③ 판정 — 계약서 구분금액을 입력한 같은 날 취득 주택(배율 초과분 분리)에서만 (#17-6) */
   acqSplitJudgment?: AcqSplitJudgmentDetail;
   /** 파트 이월과세의 증여 사건 echo — 파트 이월과세 입력이 있을 때만 */

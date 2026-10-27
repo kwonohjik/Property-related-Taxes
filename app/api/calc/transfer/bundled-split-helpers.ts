@@ -240,6 +240,8 @@ export function buildCompanionEngineInputs(
     // 🔴 엔진은 **Date**를 요구한다 — string 그대로 두면 감정 유효창
     //    [(양도연도−1)-01-01, 양도연도-12-31] 비교가 침묵 false가 된다.
     appraisalDateAtTransfer: toOptionalDate(c.appraisalDateAtTransfer),
+    landAppraisalAtAcquisition: c.landAppraisalAtAcquisition,
+    buildingAppraisalAtAcquisition: c.buildingAppraisalAtAcquisition,
     saleSplitExemption: c.saleSplitExemption,
     landStandardPriceAtTransfer: c.landStandardPriceAtTransfer,
     buildingStandardPriceAtTransfer: c.buildingStandardPriceAtTransfer,

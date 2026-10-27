@@ -244,6 +244,8 @@ export async function POST(request: NextRequest) {
       landAppraisalAtTransfer: p.landAppraisalAtTransfer,
       buildingAppraisalAtTransfer: p.buildingAppraisalAtTransfer,
       appraisalDateAtTransfer: toOptionalDate(p.appraisalDateAtTransfer),
+      landAppraisalAtAcquisition: p.landAppraisalAtAcquisition,
+      buildingAppraisalAtAcquisition: p.buildingAppraisalAtAcquisition,
       saleSplitExemption: p.saleSplitExemption,
       landAcquisitionPrice: p.landAcquisitionPrice,
       buildingAcquisitionPrice: p.buildingAcquisitionPrice,

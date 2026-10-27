@@ -288,7 +288,9 @@ describe("B. D1-1 전환 — 신축 분기 ⑧이 분리 검증·원인 규칙�
     expect((await run(base({ landDirectExpenses: "5,000,000" }))).tax).toBe(144_650_000);
   });
 
-  it("B4 G-11 신축 + 소유자 분리(원인 없음) + 취득시 기준시가 없음 → ⑧ 차단(취득시 기준시가 칸) · ⑫ 400", async () => {
+  // 계획서 `owner-split-residue-followups.plan.md` C-2(Q-2 a) 이후 — 신축 건물만은 신축비용 전액이 건물 취득가액이라 기준시가 비율 안분이 없다
+  //   (종전 pin: 취득시 기준시가 칸 차단 · 400). 신축 분기가 분리 검증에 닿는다는 G-11의 과녁은 토지만 본인 차단 짝이 지킨다.
+  it("B4 G-11 신축 + 소유자 분리(원인 없음) + 취득시 기준시가 없음 → 건물만: 비율을 쓰지 않아 ⑧ 통과 · ⑫ 200 · 건물 취득가액 = 신축비용 / 토지만: ⑧ 차단(소유자 분리 칸) · ⑫ 400", async () => {
     const a = base({
       landAcquisitionCause: "",
       hasSeperateLandAcquisitionDate: false,
@@ -299,8 +301,13 @@ describe("B. D1-1 전환 — 신축 분기 ⑧이 분리 검증·원인 규칙�
       selfOwns: "building_only",
       saleSplitMode: "apportioned",
     });
-    expect(blockedAt(a)).toBe("standardPricePerSqmAtAcq");
-    expect((await run(a)).status).toBe(400);
+    expect(blockedAt(a)).toBeNull();
+    const r = await run(a);
+    expect(r.status).toBe(200);
+    expect((r.split as { building?: { acquisitionPrice?: number } } | undefined)?.building?.acquisitionPrice).toBe(400_000_000);
+    const landOnly = { ...a, selfOwns: "land_only" as const };
+    expect(blockedAt(landOnly)).toBe("selfOwns");
+    expect((await run(landOnly)).status).toBe(400);
   });
 
   it("B5 G-12 토지 상속개시일 비움 → ⑧ 차단(토지 취득일 칸) · ⑫ 400 — 종전 ⑧ 통과·⑫ 200·토지 파트 침묵 탈락(284,559,000)", async () => {
@@ -374,7 +381,8 @@ describe("B′. D1-1 Check 후속 — 신축 호스트의 화면에 없는 플�
     const r = v8(a);
     // 건물만 소유 → 건물 자본적지출 칸(소유하지 않는 토지 칸은 렌더하지 않는다)
     expect(r.result ? r.fieldOf(r.result) : null).toBe("buildingDirectExpenses");
-    expect(v8({ ...a, selfOwns: "land_only" }).fieldOf(v8({ ...a, selfOwns: "land_only" }).result!)).toBe("landDirectExpenses");
+    // 토지만 본인은 C-2(신축은 건물의 취득원인)가 먼저 막는다 — 토지 자본적지출 칸 안내까지 가지 않는다
+    expect(v8({ ...a, selfOwns: "land_only" }).fieldOf(v8({ ...a, selfOwns: "land_only" }).result!)).toBe("selfOwns");
     // 칸에 넣으면 통과(긍정 짝)
     expect(v8({ ...a, buildingDirectExpenses: "10,000,000" }).result).toBeNull();
   });

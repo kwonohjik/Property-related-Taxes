@@ -1421,6 +1421,14 @@ export interface TransferTaxInput {
    * 창을 벗어난 감정은 basis로 쓰지 않고 **기준시가로 후퇴**한다(사유는 `appraisalRejected`에 남는다).
    */
   appraisalDateAtTransfer?: Date;
+  /**
+   * 취득 당시 **감정평가가액** (토지분) — 비-별개 취득의 취득가액 총액 안분 basis(「소득세법」 제100조 제2항 「취득가액 … 함께 취득」 →
+   * 영 §166⑥ → 「부가가치세법 시행령」 제64조 제1항 제1호 단서). 토지·건물 **양쪽 모두 양수**일 때만 기준시가 비율 대신 쓴다.
+   * 시기 요건은 판정하지 않는다(양도 쪽 Q-9와 같다). 환산 분자·개산공제는 기준시가 그대로다(계획서 `owner-split-residue-followups.plan.md` §2.5).
+   */
+  landAppraisalAtAcquisition?: number;
+  /** 취득 당시 감정평가가액 (건물분) — 위와 동일한 규칙. */
+  buildingAppraisalAtAcquisition?: number;
   /** 토지 파트 매매사례가액 (landAcqMode === "salesCase" 시 직접 입력, §176의2③1호) */
   landSalesCaseValue?: number;
   /** 건물 파트 매매사례가액 (buildingAcqMode === "salesCase" 시 직접 입력) */

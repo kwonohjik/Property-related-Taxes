@@ -121,6 +121,13 @@ export interface SplitAcquisitionFormSlice {
    */
   appraisalDateAtTransfer: string;
   /**
+   * 취득 당시 감정평가가액 (토지분·건물분) — 비-별개 취득의 취득가액 총액 안분 basis(소득세법 §100② → 영 §166⑥ → 부가령 §64①1호 단서).
+   * 양쪽 모두 있어야 기준시가 비율 대신 쓴다. 칸 노출·전송·검증은 `acqAppraisalApportionApplies`(lib/calc/transfer-acq-appraisal.ts).
+   * 선택 필드라 옛 저장분은 `undefined` — 읽는 곳이 모두 `?? ""`로 받는다.
+   */
+  landAppraisalAtAcquisition?: string;
+  buildingAppraisalAtAcquisition?: string;
+  /**
    * 「소득세법 시행령」 제166조 제8항 **예외** — 선택하면 §100③ 30% 의제가 발동하지 않는다.
    * 3-state(`partialAcqDistinct` 선례): ""(미선택) 기본.
    */

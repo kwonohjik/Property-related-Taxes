@@ -226,6 +226,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     landAppraisalAtTransfer: "",
     buildingAppraisalAtTransfer: "",
     appraisalDateAtTransfer: "",
+    landAppraisalAtAcquisition: "",
+    buildingAppraisalAtAcquisition: "",
     saleSplitExemption: "",
     saleSplitExemptionNote: "",
     landSalesCaseValue: "",

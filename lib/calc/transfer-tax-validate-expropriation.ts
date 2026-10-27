@@ -30,7 +30,7 @@ import {
 } from "./expropriation-required-gate";
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-asset";
 import { fieldError } from "./transfer-tax-validate-field";
-import { hasStaleSplitInput } from "./transfer-land-part-cause";
+import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { preDeemedExprFacts } from "./expropriation-pre-deemed-facts";
 
 /**
@@ -38,7 +38,8 @@ import { preDeemedExprFacts } from "./expropriation-pre-deemed-facts";
  * (⑫ `lib/api/transfer-tax-schema-required-refines-2a.ts`와 **같은 술어** — 2026-09-30 EX-1~3).
  */
 function exprFactsFromAsset(asset: AssetForm, formTransferDate: string | undefined): ExprGateFacts {
-  const splitActive = !!asset.hasSeperateLandAcquisitionDate && !hasStaleSplitInput(asset);
+  // 화면에 없는 분리 플래그(상속·증여 호스트의 stale · 매매 외 소유자 분리)는 「분리 없음」 — ④·⑧ 분리 축과 같은 정규화 사본.
+  const splitActive = !!normalizeBuildingCauseInputs(asset).hasSeperateLandAcquisitionDate;
   return {
     // 의제취득일 전 ③ 후보(Q-10 A) — ⑤ `ExpropriationBlock`도 같은 함수로 칸을 연다.
     ...preDeemedExprFacts(asset, formTransferDate, splitActive),
