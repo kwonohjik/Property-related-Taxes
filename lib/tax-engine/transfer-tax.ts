@@ -47,6 +47,7 @@ import { oneHouseJudgmentWarnings } from "./transfer-tax-one-house-warnings";
 import { resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { revokeExemptionOnLandOnlyOtherHousehold } from "./land-only-owner-household";
 import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
+import { LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE } from "./land-only-owner-household";
 import { nblDeferralAreaNotice } from "./transfer-tax-nbl-deferral-notice";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
@@ -541,18 +542,19 @@ export function calculateTransferTax(
   // 술어는 `transfer-tax-surcharge-predicate.ts` **단일 소스**다 — 종전에는 이 자리와
   // `calcTax`(rate-calc)에 같은 판정이 복제돼 있었고, 두 복제본 모두 `redevelopment_apt`를
   // 빠뜨려 재개발 신축주택에 중과가 통째로 미적용됐다(§104⑦·영 §167의3①12의2).
-  const { isSurchargeCase, isSuspended: suspendedResult } = resolveSurchargeApplication(
-    {
-      propertyType: effectiveInput.propertyType,
-      isRegulatedArea: effectiveInput.isRegulatedArea,
-      householdHousingCount: effectiveInput.householdHousingCount,
-      transferDate: input.transferDate,
-      // 리터럴이라 반사실 플래그를 명시 전달한다 — 빠지면 장특 축만 중과로 남는다(MH-P9).
-      forceNoMultiHouseSurcharge: effectiveInput.forceNoMultiHouseSurcharge,
-    },
-    multiHouseSurchargeResult,
-    parsedRates.surchargeSpecialRules,
-  );
+  const surchargeArgs = {
+    propertyType: effectiveInput.propertyType,
+    isRegulatedArea: effectiveInput.isRegulatedArea,
+    householdHousingCount: effectiveInput.householdHousingCount,
+    transferDate: input.transferDate,
+    // 리터럴이라 반사실 플래그·소유 사실을 명시 전달한다 — 빠지면 장특 축만 중과로 남는다(MH-P9).
+    forceNoMultiHouseSurcharge: effectiveInput.forceNoMultiHouseSurcharge,
+    selfOwns: effectiveInput.selfOwns,
+    buildingOwnerSameHousehold: effectiveInput.buildingOwnerSameHousehold,
+  };
+  const { isSurchargeCase, isSuspended: suspendedResult } = resolveSurchargeApplication(surchargeArgs, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules);
+  // 토지만 본인 × 다른 세대 — 그 조건을 뺀 판정이 중과였을 때만 배제 사실을 고지한다.
+  if (landOnlyBuildingOwnerOtherHousehold(effectiveInput) && resolveSurchargeApplication({ ...surchargeArgs, selfOwns: undefined }, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules).isSurchargeApplied) warnings.push(LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE);
   // 명부 없이 원시 플래그로 중과를 건 경우 — 다른 주택이 각 호에 해당하면 결론이 바뀔 수 있다(확인 필요).
   const surchargeFallbackNotice = noRosterSurchargeFallbackNotice({
     houses: effectiveInput.houses, rosterInputUnavailable: hasNoMergeRosterInputPath(effectiveInput),

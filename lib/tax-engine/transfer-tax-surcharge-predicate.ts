@@ -49,6 +49,8 @@
 import { isSurchargeSuspended } from "./tax-utils";
 import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
 import { MULTI_HOUSE } from "./legal-codes";
+import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
+import type { TransferTaxInput } from "./types/transfer.types";
 
 /**
  * `tax-utils.ts`의 `SurchargeSpecialRules`는 **미export**다 — 새 export를 만들어
@@ -96,6 +98,9 @@ export interface SurchargeApplicationInput {
   transferDate: Date;
   /** 반사실 시뮬레이션 — 참이면 정밀·fallback과 무관하게 중과를 닫는다(`TransferTaxInput.forceNoMultiHouseSurcharge`) */
   forceNoMultiHouseSurcharge?: boolean;
+  /** 토지만 본인 × 건물(주택) 소유자 다른 세대(V-3′) — 아래 최상단 게이트가 읽는다 */
+  selfOwns?: TransferTaxInput["selfOwns"];
+  buildingOwnerSameHousehold?: boolean;
 }
 
 export interface SurchargeApplication {
@@ -150,7 +155,12 @@ export function resolveSurchargeApplication(
    *    `isRegulatedArea && householdHousingCount >= 2`)으로 떨어져 다시 중과가 된다. 장특 축(`isSurchargeCase`)과 세율 축
    *    (`isRateSurchargeApplied`)을 함께 닫는다.
    */
-  if (input.forceNoMultiHouseSurcharge) {
+  /**
+   * 토지만 본인이고 건물(주택) 소유자가 다른 세대면 이 토지는 양도자 세대의 주택이 아니다 — 주택 수는 건물 소유자 기준이다
+   * (재산세과-3172 「주택부수토지만을 소유한 부모세대가 당해 토지를 양도할 경우 1세대 2주택 중과 대상에 해당하지 아니」 ·
+   * 서면5팀-695). 반사실 플래그와 같은 이유로 최상단에서 세율 축·장특 축을 함께 닫는다. 같은 세대는 종전대로 중과한다.
+   */
+  if (input.forceNoMultiHouseSurcharge || landOnlyBuildingOwnerOtherHousehold(input)) {
     const effectiveHouseCount = multiHouseSurchargeResult?.effectiveHouseCount ?? input.householdHousingCount;
     return {
       isSurchargeCase: false,

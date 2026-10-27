@@ -506,16 +506,21 @@ export function isLaterAcquiredLandHeldTooShort(
 }
 
 /**
- * 배율 한도 판정(G-2)이 도는 입력 게이트 — 주택 · 토지·건물 모두 본인 소유 · 별개취득 · 용도지역 선택 · 정착면적·토지면적 양수.
+ * 배율 한도 판정(G-2)이 도는 입력 게이트 — 주택 · 토지를 본인이 소유(소유자 같음 또는 토지만) · 별개취득 · 용도지역 선택 · 정착면적·토지면적 양수.
  * `resolveAppurtenantLandExcess`와 수용 기준일 고지(`expropriationZoneNoticeFor`)가 **같은 게이트**를 쓴다.
+ *
+ * 토지만 본인도 판정한다 — 「소득세법」 §104의3①5호(「주택부속토지 중 … 배율을 곱하여 산정한 면적을 초과하는 토지」)에 소유자 조건이 없고,
+ * 소유자가 다른 주택의 부수토지도 초과분은 비사업용 토지다(서면인터넷방문상담4팀-2511 · 같은 5팀-2469). 건물만 본인은 초과 토지를 갖지 않는다.
+ * 소유자 분리는 이미 기준시가 비율로 토지·건물 파트를 만들므로(`calcSplitGain` `isOwnerSplit`) 같은 날 취득이어도 아래 별개취득 게이트를 거치지 않는다.
  */
 function resolveAppurtenantZoneInputs(
   input: TransferTaxInput,
 ): { zone: NonNullable<TransferTaxInput["appurtenantLandZone"]>; footprint: number; landArea: number } | null {
   if (input.propertyType !== "housing") return null;
-  if ((input.selfOwns ?? "both") !== "both") return null;
+  const selfOwns = input.selfOwns ?? "both";
+  if (selfOwns === "building_only") return null;
   // 별개취득이 아니면 «같은 날 취득 주택의 초과분 분리 경로»(`housing-excess-split.ts` — 기준시가 안분 입력이 있는 매매 주택)만 연다(#17).
-  if (input.isSeparateAcquisition !== true && !housingExcessSplitAppliesToInput(input)) return null;
+  if (selfOwns === "both" && input.isSeparateAcquisition !== true && !housingExcessSplitAppliesToInput(input)) return null;
   // 주 자산은 입력 키를, 함께 양도 주택 카드는 `companionHousingLand` 사실을 같은 지점에서 읽는다(#17-1).
   const facts = appurtenantLandFactsOfInput(input);
   if (facts.zone === undefined) return null;
@@ -661,7 +666,8 @@ export function applyHousingLandExclusions(args: {
     : rulingApplies
       ? highValueExcessLandTaxableGain({ landGain: wholeLandGain, excessGain: excessForRuling, prorate })
       : applyExempt(housingLandGain);
-  const buildingTaxableGain = !exemptApplies ? buildingGain : applyExempt(buildingGain);
+  //   토지만 본인은 건물을 갖지 않는다 — 건물분은 본인 신고분이 아니다(`transfer-tax.ts` 소유자 분리 · 소령 §166⑥).
+  const buildingTaxableGain = input.selfOwns === "land_only" ? 0 : !exemptApplies ? buildingGain : applyExempt(buildingGain);
 
   splitDetail.land.taxableGainAfterProration = landTaxableGain;
   splitDetail.building.taxableGainAfterProration = buildingTaxableGain;

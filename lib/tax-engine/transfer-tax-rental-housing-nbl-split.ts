@@ -416,7 +416,8 @@ export function buildRentalHighValueExcessRuling(
   const prorate = (gain: number) =>
     calcOneHouseProration(input.transferDate, gain, input.transferPrice, input.totalPropertyTransferPrice, input.burdenedGiftDenominator);
   const wholeLandGain = splitDetail.land.gain;
-  const buildingGain = splitDetail.building.gain;
+  // 토지만 본인은 건물을 갖지 않는다 — 일반 경로(`applyHousingLandExclusions`)와 같이 건물분은 본인 신고분이 아니다.
+  const buildingGain = splitDetail.selfOwns === "land_only" ? 0 : splitDetail.building.gain;
   const landTaxableGain = highValueExcessLandTaxableGain({ landGain: wholeLandGain, excessGain: nbl.gain, prorate });
   const buildingTaxableGain = prorate(buildingGain);
   return {
