@@ -84,6 +84,7 @@ const seedOf = (assets: unknown[], over: Record<string, unknown> = {}) => ({
 const half = { ownershipNumerator: "50", ownershipDenominator: "100" };
 
 type Ct = { giftTaxAmount?: number; donorCapitalExpenditure?: number };
+type Basis = { giftValuationByPart?: { land: number; building: number } };
 type Wire = {
   carryoverTaxation?: Ct;
   generalBuildingShares?: { carryoverTaxation?: Ct }[];
@@ -238,5 +239,25 @@ test.describe("일반건물 부담부증여 × 이월과세 — 화면 증여세
     const body = (await calculate(page)) as Wire & { carryoverTaxation?: { donorAcquisitionPrice?: number } };
     expect(body.carryoverTaxation?.donorAcquisitionPrice).toBeUndefined();
     await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("97,800,000");
+  });
+  /**
+   * V-7(`docs/00-pm/carryover-gift-tax-numerator-net.plan.md` Q-2 a · Q-3 a) — 영 §163의2②2호 분자는 증여세 과세가액(평가액 − 당초 증여 때 인수한 채무)이다.
+   * 당초 증여: 토지 5억 · 건물 5억 · 과세가액 11억 · 산출세액 2,200만. 토글 ON + 토지 2억 · 건물 2억 → 상당액 12,000,000 · 107,454,000(vitest anchor와 같은 값).
+   */
+  test("GBGT-E10 분리 ON 둘 다: 「당초 증여 때 채무를 인수했다」 → 파트별 채무 칸 → 상당액 12,000,000 · 107,454,000", async ({ page }) => {
+    test.setTimeout(180_000);
+    const co = { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2024-05-01", donorAcquisitionDate: "2015-01-01", donorAcquisitionPrice: "100000000", giftDateValuation: "", giftTaxAmount: "", donorRelation: "lineal", donorSameHousehold: "no" };
+    await seedWizard(page, seedOf([asset(1, { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2024-05-01", buildingCarryover: co })]));
+    await fillGiftTax(page, 0, "22000000", "1100000000", { land: "500000000", building: "500000000" });
+    const card = page.locator('[data-asset-card-index="0"]');
+    await expect(card.locator('[data-field$=".giftAssumedDebt"]')).toHaveCount(0);
+    await card.getByRole("switch", { name: "당초 증여 때 채무를 인수했다" }).click();
+    await expect(card.locator('[data-field$=".giftAssumedDebt"]')).toHaveCount(2);
+    await inputOf(page, 0, "carryover.giftAssumedDebt").fill("200000000");
+    await inputOf(page, 0, "buildingCarryover.giftAssumedDebt").fill("200000000");
+    const body = (await calculate(page)) as Wire & { burdenedGiftInfo?: { carryoverDonorBasis?: Basis } };
+    expect(body.carryoverTaxation?.giftTaxAmount).toBe(12_000_000);
+    expect(body.burdenedGiftInfo?.carryoverDonorBasis?.giftValuationByPart).toEqual({ land: 300_000_000, building: 300_000_000 });
+    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("107,454,000");
   });
 });

@@ -96,8 +96,13 @@ const carryoverPartShape = z.object({
   donorAcquisitionDate: z.string().date(),
   donorAcquisitionPrice: z.number().int().nonnegative().optional(),
   donorCapitalExpenditure: z.number().int().nonnegative().optional(),
-  /** 영 §163의2②2호 안분 분자 + 비교과세 시나리오 B 취득가액 (같은 값을 겸한다). */
+  /** 증여 당시 평가액 — 비교과세 시나리오 B 취득가액. 영 §163의2②2호 분자는 여기서 `giftAssumedDebt`를 뺀 값이다. */
   giftDateAssetValue: z.number().int().nonnegative(),
+  /**
+   * 당초 증여 때 이 파트에 담보된 채무로서 인수한 금액(「상속세 및 증여세법」 제47조 제1항) — 분자만 줄이고 B 취득가액은 그대로다.
+   * 평가액 이하(`refineGbCarryover…`). 미전송 = 0(옛 본문 호환). 계획서 `carryover-gift-tax-numerator-net.plan.md` §4.2.
+   */
+  giftAssumedDebt: z.number().int().nonnegative().optional(),
   useEstimatedAcquisition: z.boolean(),
   /**
    * 환산 모드 분자 — **증여자 취득 당시** 그 파트의 기준시가 (설계 D9-8).

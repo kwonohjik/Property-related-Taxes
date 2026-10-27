@@ -32,6 +32,7 @@ type PartMode = "actual" | "estimated" | "appraisal" | "salesCase";
 
 type CarryoverPartLike = {
   giftDateAssetValue: number;
+  giftAssumedDebt?: number;
   useEstimatedAcquisition: boolean;
   donorAcquisitionPrice?: number;
   donorStandardPriceAtAcquisition?: number;
@@ -285,7 +286,10 @@ function refineGbCarryover(v: GbValuationLike, issue: Issue) {
         issue(["carryoverGiftEvent"], `${noun} 파트 이월과세 입력(${part}CarryoverPart)은 증여 사건(carryoverGiftEvent)과 함께 보내야 합니다 (소득세법 시행령 §163의2②)`);
         continue;
       }
-      partValueSum += p.giftDateAssetValue;
+      // 영 §163의2②2호 분자 = 평가액 − 당초 증여 때 인수한 채무. 채무가 평가액을 넘을 수는 없다.
+      if ((p.giftAssumedDebt ?? 0) > p.giftDateAssetValue)
+        issue([`${part}CarryoverPart`, "giftAssumedDebt"], `${noun} 파트의 당초 증여 때 인수한 채무가 증여 당시 평가액보다 큽니다 (상속세 및 증여세법 §47①)`);
+      partValueSum += Math.max(0, p.giftDateAssetValue - (p.giftAssumedDebt ?? 0));
       checkDonorValues(p.giftDateAssetValue, p, [`${part}CarryoverPart`], noun, "giftDateAssetValue", issue);
     } else if (legacy) {
       checkDonorValues(legacy.giftDateValuation, legacy, [`${part}CarryoverTaxation`], noun, "giftDateValuation", issue);
@@ -295,7 +299,7 @@ function refineGbCarryover(v: GbValuationLike, issue: Issue) {
   }
   // Σ — 파트 평가액 합이 증여세 과세가액을 넘으면 증여세 상당액 합이 산출세액을 초과한다(⑧ 같은 검사).
   if (ev && ev.giftTaxBase > 0 && partValueSum > ev.giftTaxBase)
-    issue(["carryoverGiftEvent", "giftTaxBase"], "파트별 증여 당시 평가액 합계가 증여세 과세가액을 초과합니다 (소득세법 시행령 §163의2②)");
+    issue(["carryoverGiftEvent", "giftTaxBase"], "파트별 증여세 과세가액(증여 당시 평가액 − 당초 증여 때 인수한 채무) 합계가 증여세 과세가액을 초과합니다 (소득세법 시행령 §163의2②)");
 }
 
 function checkDonorValues(

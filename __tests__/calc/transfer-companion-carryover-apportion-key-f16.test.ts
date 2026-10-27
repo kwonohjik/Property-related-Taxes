@@ -50,6 +50,8 @@ const CARRYOVER_FULL: CarryoverTaxationForm = {
   giftTaxBase: "",
   donorCapitalExpenditure: "",
   giftDateValuation: "300,000,000",
+  giftDebtAssumed: false,
+  giftAssumedDebt: "",
   donorRelation: "spouse" as const,
   donorDeceased: false,
   spouseGiftOneHouseAtGiftDate: false,

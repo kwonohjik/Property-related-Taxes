@@ -12,6 +12,7 @@
  */
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SplitPartCarryoverCard } from "./SplitPartCarryoverCard";
@@ -65,6 +66,10 @@ export function SplitCarryoverParts({ asset, onChange, isAfter2024, giftTaxShare
         anchorPrefix="carryover"
         partsLabel="토지·건물"
         giftTaxShareHint={giftTaxShareHint}
+        debtParts={[
+          { name: "토지", value: land.giftAssumedDebt, onChange: (v) => patchLand({ giftAssumedDebt: v }) },
+          { name: "건물", value: building.giftAssumedDebt, onChange: (v) => patchBuilding({ giftAssumedDebt: v }) },
+        ]}
       />
     </>
   );
@@ -82,6 +87,11 @@ export function SplitCarryoverGiftTaxCard(props: {
   /** 안분 대상 파트 이름 — C 「토지·건물」, A 「토지」, B 「건물」 */
   partsLabel: "토지·건물" | "토지" | "건물";
   giftTaxShareHint: string;
+  /**
+   * 「당초 증여 때 채무를 인수했다」를 켜면 받을 파트별 인수채무 칸(파트 서브폼 · 자동 안분 금지 — `carryover-gift-tax-numerator-net.plan.md` Q-3 a).
+   * 토글 바로 아래에 둔다(모드 토글은 영향 필드 직전).
+   */
+  debtParts: { name: "토지" | "건물"; value: string; onChange: (v: string) => void }[];
 }) {
   const { value: c, onPatch, anchorPrefix, partsLabel, giftTaxShareHint } = props;
   const sumNote = partsLabel === "토지·건물" ? "토지·건물 증여 신고가액의 합은 이 금액을 넘을 수 없습니다." : `${partsLabel} 증여 신고가액은 이 금액을 넘을 수 없습니다.`;
@@ -116,6 +126,26 @@ export function SplitCarryoverGiftTaxCard(props: {
           data-testid="split-carryover-gift-tax-base"
         />
       </FieldCard>
+      {/* 영 §163의2②2호 분자 「해당 자산가액(증여세가 과세된 증여세 과세가액)」 — 당초 증여 때 인수한 채무를 뺀다. 금액은 파트 카드마다 받는다. */}
+      <ToggleCard
+        tone="amber"
+        title="당초 증여 때 채무를 인수했다"
+        description={`증여세 신고서에서 증여재산가액에서 뺀 채무(「상속세 및 증여세법」 제47조 제1항)가 있으면 켭니다 — ${partsLabel} 몫의 분자는 증여 신고가액에서 그 채무를 뺀 금액입니다(「소득세법 시행령」 제163조의2 제2항 제2호).`}
+        checked={c.giftDebtAssumed}
+        onCheckedChange={(v) => onPatch({ giftDebtAssumed: v })}
+        data-testid="split-carryover-gift-debt-assumed"
+      />
+      {c.giftDebtAssumed &&
+        props.debtParts.map((p) => (
+          <FieldCard
+            key={p.name}
+            label={`${p.name} 당초 증여 때 인수한 채무`}
+            field={p.name === "토지" ? "landCarryover.giftAssumedDebt" : "carryover.giftAssumedDebt"}
+            hint={`${p.name}에 담보된 채무로서 당초 증여 때 인수해 증여세 과세가액에서 빠진 금액 — 분자(${p.name} 증여 신고가액 − 이 금액)에서만 뺍니다. 증여 신고가액(미적용 시 취득가액)은 그대로입니다. 없으면 0 (「상속세 및 증여세법」 제47조 제1항)`}
+          >
+            <CurrencyInput label="" value={p.value} onChange={p.onChange} placeholder="없으면 0" data-testid={`split-carryover-${p.name === "토지" ? "land" : "building"}-gift-assumed-debt`} />
+          </FieldCard>
+        ))}
     </ToneCard>
   );
 }

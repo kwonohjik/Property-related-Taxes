@@ -14,6 +14,8 @@ import { carryoverEstimationModeSupported } from "./phd-toggle-scope";
 import { validateDonorBuiltGb } from "./transfer-tax-validate-donor-built-gb";
 import { gbBgGiftTaxNumerator, gbBgGiftTaxReturn } from "./gb-bg-gift-tax-return";
 import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
+import { carryoverAssumedDebt } from "./carryover-gift-assumed-debt";
+import { carryoverGiftTaxedValue } from "./carryover-gift-assumed-debt";
 import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
 import { bgCarryoverForm, bgPartialCarryover } from "./bg-carryover-parts";
 import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
@@ -99,6 +101,8 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
       return fieldError(isBuildingPart ? "buildingCarryover.donorAcquisitionDate" : "carryover.donorAcquisitionDate", `${partLabel}: 증여자의 취득일을 입력하세요 (「소득세법」 제95조 제4항 — 보유기간 기산일).`);
     if (!parseAmount(p.giftDateValuation))
       return fieldError(isBuildingPart ? "buildingCarryover.giftDateValuation" : "carryover.giftDateValuation", `${partLabel}: 증여 당시 평가액을 입력하세요 (비교과세 시나리오 B 취득가액).`);
+    const debtIssue = assumedDebtIssue(c, p, partLabel, isBuildingPart);
+    if (debtIssue) return debtIssue;
     if (p.useEstimatedAcquisition) {
       if (!p.estimationMode)
         return fieldError(isBuildingPart ? "buildingCarryover.estimationMode" : "carryover.estimationMode", `${partLabel}: 증여자 취득가액의 환산 방식을 선택하세요.`);
@@ -133,9 +137,10 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
    */
   const giftTaxBase = parseAmount(c.giftTaxBase);
   if (giftTaxBase > 0) {
-    const sum = parts.reduce((s, [p]) => s + parseAmount(p?.giftDateValuation), 0);
+    // 영 §163의2②2호 분자 = 평가액 − 당초 증여 때 인수한 채무(「상속세 및 증여세법」 제47조 제1항).
+    const sum = parts.reduce((s, [p]) => s + carryoverGiftTaxedValue(parseAmount(p?.giftDateValuation), carryoverAssumedDebt(c, p)), 0);
     if (sum > giftTaxBase)
-      return `${label}: 파트별 증여 당시 평가액 합계(${sum.toLocaleString()}원)가 증여세 과세가액(${giftTaxBase.toLocaleString()}원)을 초과합니다.`;
+      return `${label}: 파트별 증여세 과세가액(증여 당시 평가액 − 당초 증여 때 인수한 채무) 합계(${sum.toLocaleString()}원)가 증여세 과세가액(${giftTaxBase.toLocaleString()}원)을 초과합니다${c.giftDebtAssumed ? "" : DEBT_HINT}.`;
   }
   return null;
 }
@@ -157,20 +162,41 @@ function validateGbBgGiftTax(asset: AssetForm, label: string, onBuilding: boolea
    * 한쪽이 비면 상당액도 배분도 틀어진다 — 종전에는 건물분이 계산에 닿지 않아 비어도 통과했다.
    */
   const byPart = gbBgGiftValuationByPart(asset);
+  const debtHint = c?.giftDebtAssumed ? "" : DEBT_HINT;
   if (byPart) {
     if (!(byPart.land > 0))
       return fieldError("carryover.giftDateValuation", `${label}: 토지분 증여 당시 평가액을 입력하세요 — 증여세 상당액 안분의 분자입니다 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
     if (!(byPart.building > 0))
       return fieldError("buildingCarryover.giftDateValuation", `${label}: 건물분 증여 당시 평가액을 입력하세요 — 토지·건물을 함께 증여받았으면 증여세 상당액을 토지분·건물분 평가액 비율로 나눕니다. 토지분 칸에 자산 전체 평가액이 들어 있으면 토지 평가액으로 고친 뒤 입력하세요 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
+    const debtIssue = assumedDebtIssue(c, asset.carryover, `${label} 토지분`, false) ?? assumedDebtIssue(c, asset.buildingCarryover, `${label} 건물분`, true);
+    if (debtIssue) return debtIssue;
     // 토지분 칸 자산 전체 — PR-2(#2592) 전 화면은 이 칸을 자산 전체로 받았다. 저장 시점으로 골라낼 수 없어 문구로만 알린다(계획서 V-5 · a).
     if (numerator > base)
-      return fieldError("buildingCarryover.giftDateValuation", `${label}: 토지분·건물분 증여 당시 평가액 합계(지분 몫 ${numerator.toLocaleString()}원)가 증여세 과세가액(${base.toLocaleString()}원)을 초과합니다 — 토지분 칸에 자산 전체 평가액을 넣었는지 확인하세요.`);
+      return fieldError("buildingCarryover.giftDateValuation", `${label}: 토지분·건물분 증여세 과세가액(증여 당시 평가액 − 당초 증여 때 인수한 채무) 합계(지분 몫 ${numerator.toLocaleString()}원)가 증여세 과세가액(${base.toLocaleString()}원)을 초과합니다 — 토지분 칸에 자산 전체 평가액을 넣었는지 확인하세요${debtHint}.`);
     return null;
   }
+  const debtIssue = assumedDebtIssue(c, c, label, onBuilding);
+  if (debtIssue) return debtIssue;
   if (!(numerator > 0))
     return fieldError(onBuilding ? "buildingCarryover.giftDateValuation" : "carryover.giftDateValuation", `${label}: 증여 당시 평가액을 입력하세요 — 증여세 상당액 안분의 분자입니다 (「소득세법 시행령」 제163조의2 제2항 제2호).`);
   if (numerator > base)
-    return fieldError(onBuilding ? "buildingCarryover.giftDateValuation" : "carryover.giftDateValuation", `${label}: 증여 당시 평가액(지분 몫 ${numerator.toLocaleString()}원)이 증여세 과세가액(${base.toLocaleString()}원)을 초과합니다.`);
+    return fieldError(onBuilding ? "buildingCarryover.giftDateValuation" : "carryover.giftDateValuation", `${label}: 증여세 과세가액(증여 당시 평가액 − 당초 증여 때 인수한 채무, 지분 몫 ${numerator.toLocaleString()}원)이 신고서의 증여세 과세가액(${base.toLocaleString()}원)을 초과합니다${debtHint}.`);
+  return null;
+}
+
+/** 합계 초과 메시지 꼬리 — 토글이 꺼져 있을 때만 붙인다(평가액이 과세가액을 넘는 흔한 원인이 인수채무다). */
+const DEBT_HINT = " — 당초 증여 때 인수한 채무가 있으면 «당초 증여 때 채무를 인수했다»를 켜고 채무를 입력하세요(「상속세 및 증여세법」 제47조 제1항)";
+
+/**
+ * 당초 증여 때 인수한 채무 — 사건 토글(`event.giftDebtAssumed`)이 켜졌으면 그 파트 칸이 필수이고 평가액 이하다.
+ * 영 §163의2②2호 분자 = 평가액 − 채무(④ `carryoverAssumedDebt`와 같은 술어 · 계획서 `carryover-gift-tax-numerator-net.plan.md` §4.3). 앵커는 리터럴 삼항.
+ */
+function assumedDebtIssue(event: CarryoverTaxationForm | undefined, part: CarryoverTaxationForm | undefined, label: string, onBuilding: boolean): string | null {
+  if (!event?.giftDebtAssumed) return null;
+  if ((part?.giftAssumedDebt ?? "").trim() === "")
+    return fieldError(onBuilding ? "buildingCarryover.giftAssumedDebt" : "carryover.giftAssumedDebt", `${label}: 당초 증여 때 인수한 채무를 입력하세요 — 증여세 과세가액에서 빠진 그 자산의 채무입니다. 없으면 0을 입력하세요 (「상속세 및 증여세법」 제47조 제1항).`);
+  if (parseAmount(part?.giftAssumedDebt ?? "") > parseAmount(part?.giftDateValuation ?? ""))
+    return fieldError(onBuilding ? "buildingCarryover.giftAssumedDebt" : "carryover.giftAssumedDebt", `${label}: 당초 증여 때 인수한 채무가 증여 당시 평가액보다 큽니다.`);
   return null;
 }
 

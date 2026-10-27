@@ -85,6 +85,11 @@ interface Props {
   isNonPrimaryAsset?: boolean;
   /** 함께 양도하는 다른 자산이 있다(assets.length>1) — C를 켜 둔 첫 자산에 안내한다(엔진 S2′ 400과 같은 사실). */
   hasCompanions?: boolean;
+  /**
+   * 일반건물 건물 블록 — 증여 사건 서브폼(`gbCarryoverEventSource`)의 「당초 증여 때 채무를 인수했다」 값. 건물 블록은 `carryover` 자리에 건물 서브폼을 받으므로
+   * 사건 값을 부모가 따로 넘긴다. 생략하면 이 블록 서브폼의 값이다(사건 블록).
+   */
+  eventGiftDebtAssumed?: boolean;
 }
 
 /** carryover 서브객체 패치 헬퍼 */
@@ -109,7 +114,7 @@ function patchExclusion(
 const BUILDING_DONOR_DATE_HINT =
   "당초 증여자가 건물을 취득한 날 — 직접 신축했으면 사용승인서 교부일 등(「소득세법 시행령」 제162조 제1항 제4호). 건물 보유기간·장기보유특별공제 기산일 (소득세법 §95 ④)";
 
-export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land", isNonPrimaryAsset, hasCompanions }: Props) {
+export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land", isNonPrimaryAsset, hasCompanions, eventGiftDebtAssumed }: Props) {
   const isBuildingPart = part === "building";
   const c = asset.carryover ?? CARRYOVER_DEFAULTS;
   // P2 C — 증여자가 토지·건물을 다른 날 취득(파트 이월과세). 이 값 하나로 카드 구성·⑥·④·⑧이 갈린다(`effectiveCarryoverDonorSplit`).
@@ -128,6 +133,12 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
   const isBurdenedGift = asset.transferType === "burdened_gift";
   /** 토지·건물 둘 다 이월과세인 부담부증여 일반건물 — 평가액을 토지분·건물분으로 받는다(④·⑧과 같은 술어 · `gb-bg-carryover-gift-tax-part-limit.plan.md` Q-2 a · Q-3 b). */
   const splitsGiftValuation = gbBgSplitsGiftValuation(asset);
+  /** 증여 사건 블록인가 — 일반건물 건물 블록은 토지도 이월과세면 사건 블록이 아니다(`gbCarryoverEventSource`). 인수채무 토글은 사건 블록에만 둔다. */
+  const isEventBlock = !(isGeneralBuilding && isBuildingPart && asset.acquisitionCause === "carryover_gift");
+  /** 당초 증여 때 채무를 인수했는가(사건 값) — 켜지면 일반건물은 파트마다 인수채무 칸을 받는다(`carryover-gift-tax-numerator-net.plan.md` Q-2 a · Q-3 a). */
+  const debtAssumed = eventGiftDebtAssumed ?? c.giftDebtAssumed;
+  /** 일반건물 토지·건물 둘 다 이월과세 — 칸 이름에 토지분·건물분을 붙인다(인수채무는 파트마다 받는다). */
+  const gbBothCarryover = isGeneralBuilding && asset.acquisitionCause === "carryover_gift" && asset.gbBuildingAcquisitionCause === "carryover_gift";
   /** 부담부증여 일반건물 건물 블록인데 토지도 이월과세 — 증여 사건은 토지 블록이 정본이라(`gbCarryoverEventSource`) 이 블록의 사건 칸은 ④가 읽지 않는다. */
   const eventOnLandBlock = isGeneralBuilding && isBurdenedGift && isBuildingPart && asset.acquisitionCause === "carryover_gift";
   /** 부담부증여 일반건물 — 당초 증여자 취득가액은 「당초 증여자」 블록(`bgCoDonor*`)이 정본이다(영 §159와 함께 쓴다). 이 블록의 취득가액·취득원인·환산 칸은 ④·엔진이 쓰지 않는다(`gb-bg-on-building-block-fields.plan.md` Q-2 a). */
@@ -375,13 +386,25 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
                 onChange={(v) => updateCarryover({ giftTaxBase: v })}
               />
             </FieldCard>
+
+            {/* 영 §163의2②2호 분자 「해당 자산가액(증여세가 과세된 증여세 과세가액)」 — 당초 증여 때 인수한 채무를 뺀다. 사건 사실이라 사건 블록에만 둔다. */}
+            {isEventBlock && (
+              <ToggleCard
+                tone="amber"
+                title="당초 증여 때 채무를 인수했다"
+                description="증여세 신고서에서 증여재산가액에서 뺀 채무가 있으면 켭니다 — 안분의 분자는 그 자산의 증여세 과세가액(평가액 − 인수채무)입니다(「상속세 및 증여세법」 제47조 제1항 · 「소득세법 시행령」 제163조의2 제2항 제2호)."
+                checked={c.giftDebtAssumed}
+                onCheckedChange={(v) => updateCarryover({ giftDebtAssumed: v })}
+                data-testid="carryover-gift-debt-assumed"
+              />
+            )}
           </>
         ) : (
           <FieldCard
             label="증여세 상당액"
             field="carryover.giftTaxAmount"
             hint={
-              "소득세법 시행령 §163의2②: 증여세 산출세액 × 「양도한 해당 자산가액을 증여세 과세가액으로 나눈 비율」. 미신고 시 0 입력." +
+              "소득세법 시행령 §163의2②: 증여세 산출세액 × 「양도한 해당 자산의 증여세 과세가액(당초 증여 때 인수한 채무를 뺀 금액)을 증여세 과세가액으로 나눈 비율」. 미신고 시 0 입력." +
               giftTaxShareHint
             }
             trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
@@ -444,6 +467,21 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
             placeholder="증여 당시 보충적평가액 또는 시가"
           />
         </FieldCard>
+        {/* 인수채무 — 평가액(B 취득가액)은 그대로 두고 증여세 상당액 분자에서만 뺀다(④ `carryoverAssumedDebt` · ⑧ 필수·평가액 이하). */}
+        {isGeneralBuilding && debtAssumed && (
+          <FieldCard
+            label={gbBothCarryover ? `${isBuildingPart ? "건물분" : "토지분"} 당초 증여 때 인수한 채무` : "당초 증여 때 인수한 채무"}
+            field={isBuildingPart ? "buildingCarryover.giftAssumedDebt" : "carryover.giftAssumedDebt"}
+            hint={`${gbBothCarryover ? (isBuildingPart ? "건물" : "토지") + "에" : "이 자산에"} 담보된 채무로서 당초 증여 때 인수해 증여세 과세가액에서 빠진 금액 — 증여세 상당액 안분의 분자에서 뺍니다. 위 평가액(미적용 시 취득가액)은 그대로입니다 (「상속세 및 증여세법」 제47조 제1항 · 「소득세법 시행령」 제163조의2 제2항 제2호).`}
+          >
+            <CurrencyInput
+              label=""
+              value={c.giftAssumedDebt}
+              onChange={(v) => updateCarryover({ giftAssumedDebt: v })}
+              placeholder="없으면 0"
+            />
+          </FieldCard>
+        )}
         {/* 분리 OFF는 건물 블록이 없다(부담부증여는 §159 경로라 건물 이월과세 카드를 숨긴다) — 건물분 평가액만 이 블록에서 받는다(Q-3 b). 분리 ON은 건물 블록이 받는다. */}
         {splitsGiftValuation && !isBuildingPart && !asset.hasSeperateLandAcquisitionDate && (
           <FieldCard
@@ -457,6 +495,20 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
               onChange={(v) => onChange({ buildingCarryover: patchCarryover(asset.buildingCarryover, { giftDateValuation: v }) })}
               placeholder="증여 당시 보충적평가액 또는 시가"
               data-testid="bg-building-gift-valuation"
+            />
+          </FieldCard>
+        )}
+        {splitsGiftValuation && !isBuildingPart && !asset.hasSeperateLandAcquisitionDate && debtAssumed && (
+          <FieldCard
+            label="건물분 당초 증여 때 인수한 채무"
+            field="buildingCarryover.giftAssumedDebt"
+            hint="건물에 담보된 채무로서 당초 증여 때 인수해 증여세 과세가액에서 빠진 금액 — 증여세 상당액 안분의 분자에서 뺍니다 (「상속세 및 증여세법」 제47조 제1항 · 「소득세법 시행령」 제163조의2 제2항 제2호)."
+          >
+            <CurrencyInput
+              label=""
+              value={asset.buildingCarryover?.giftAssumedDebt ?? ""}
+              onChange={(v) => onChange({ buildingCarryover: patchCarryover(asset.buildingCarryover, { giftAssumedDebt: v }) })}
+              placeholder="없으면 0"
             />
           </FieldCard>
         )}

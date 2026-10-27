@@ -14,6 +14,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
 import { bgCarryoverForm } from "./bg-carryover-parts";
 import { bgCarryoverParts } from "./bg-carryover-parts";
+import { carryoverAssumedDebt } from "./carryover-gift-assumed-debt";
+import { carryoverGiftTaxedValue } from "./carryover-gift-assumed-debt";
 
 export interface GbBgGiftTaxReturn {
   /** 영 §163의2②1호 — 증여세 산출세액(신고서 금액, 지분 스케일 금지). */
@@ -57,13 +59,29 @@ export function gbBgGiftValuationByPart(asset: AssetForm): { land: number; build
 }
 
 /**
- * 영 §163의2②2호 분자 — 「증여 당시 평가액」(100% 기준 입력) × 지분율. 둘 다 이월과세면 토지분 + 건물분이다(각각 지분율을 곱해 더한다).
+ * 둘 다 이월과세면 토지분·건물분 「해당 자산가액(증여세가 과세된 증여세 과세가액)」(100% 기준) — 평가액 − 당초 증여 때 인수한 그 파트 채무.
+ * 영 §163의2②2호 분자이자 토지·건물 배분 비율이다(④ `giftValuationByPart` · 계획서 `carryover-gift-tax-numerator-net.plan.md` §4.2).
+ */
+export function gbBgGiftTaxedValueByPart(asset: AssetForm): { land: number; building: number } | undefined {
+  const byPart = gbBgGiftValuationByPart(asset);
+  if (!byPart) return undefined;
+  const event = bgCarryoverForm(asset);
+  return {
+    land: carryoverGiftTaxedValue(byPart.land, carryoverAssumedDebt(event, asset.carryover)),
+    building: carryoverGiftTaxedValue(byPart.building, carryoverAssumedDebt(event, asset.buildingCarryover)),
+  };
+}
+
+/**
+ * 영 §163의2②2호 분자 — 「해당 자산가액(증여세가 과세된 증여세 과세가액)」(100% 기준 입력 = 평가액 − 인수채무) × 지분율.
+ * 둘 다 이월과세면 토지분 + 건물분이다(각각 지분율을 곱해 더한다).
  * ④ 호출부 3곳(단건·묶음·지분)이 모두 `getOwnershipRatio`를 넘기므로 ⑧은 여기서 같은 값을 다시 만든다(`buildCarryoverPayload`도 이 함수를 쓴다).
  */
 export function gbBgGiftTaxNumerator(asset: AssetForm): number {
   const r = getOwnershipRatio(asset);
   const scale = (v: number) => (r < 1 ? applyRatio(v, r) : v);
-  const byPart = gbBgGiftValuationByPart(asset);
+  const byPart = gbBgGiftTaxedValueByPart(asset);
   if (byPart) return scale(byPart.land) + scale(byPart.building);
-  return scale(parseAmount(bgCarryoverForm(asset)?.giftDateValuation ?? ""));
+  const event = bgCarryoverForm(asset);
+  return scale(carryoverGiftTaxedValue(parseAmount(event?.giftDateValuation ?? ""), carryoverAssumedDebt(event, event)));
 }

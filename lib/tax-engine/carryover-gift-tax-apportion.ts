@@ -31,6 +31,14 @@ function floorMulDiv(a: number, b: number, c: number): number {
   return Number((BigInt(Math.trunc(a)) * BigInt(Math.trunc(b))) / BigInt(Math.trunc(c)));
 }
 
+/**
+ * 영 §163의2②2호 분자 「양도한 해당 자산가액(증여세가 과세된 증여세 과세가액)」 — 평가액 − 당초 증여 때 그 자산에 담보된 채무로서 인수한 금액
+ * (「상속세 및 증여세법」 제47조 제1항). 채무가 없거나(미전송) 평가액을 넘으면(⑫가 먼저 막는다) 평가액·0으로 둔다.
+ */
+export function giftTaxedValue(assetValue: number, assumedDebt: number | undefined): number {
+  return Math.max(0, assetValue - (assumedDebt ?? 0));
+}
+
 export interface CarryoverGiftEvent {
   /** 영 §163의2②1호 — 증여받은 자산에 대한 증여세 **산출세액**. */
   giftTaxCalculated: number;

@@ -20,6 +20,7 @@ import {
   type SplitCarryoverPartView,
   type SplitCarryoverView,
 } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
+import { splitCarryoverNumeratorText } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
 
 const fmt = (n: number) => n.toLocaleString();
@@ -96,7 +97,7 @@ function PartBlock({ v, p }: { v: SplitCarryoverView; p: SplitCarryoverPartView 
         <span className="block font-medium text-foreground/80">증여세 상당액 안분 (시행령 §163의2②)</span>
         <FLine>
           증여세 상당액 = 증여세 산출세액 {fmt(v.giftTaxCalculated)} ×{" "}
-          <Frac top={`${p.label} 증여 신고가액 ${fmt(p.giftDateValuation)}`} bottom={`증여세 과세가액 ${fmt(v.giftTaxBase)}`} /> ={" "}
+          <Frac top={splitCarryoverNumeratorText(p)} bottom={`증여세 과세가액 ${fmt(v.giftTaxBase)}`} /> ={" "}
           <span className="font-mono tabular-nums" data-testid={`${tid}-apportioned`}>{fmt(p.giftTaxApportioned)}</span>
         </FLine>
         {p.applied && p.giftTaxLimitApplied && (

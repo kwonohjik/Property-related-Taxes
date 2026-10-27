@@ -36,6 +36,8 @@ import { fieldError } from "./transfer-tax-validate-field";
 import { splitCarryoverEventSource } from "./transfer-tax-api-split-carryover";
 import { validateCarryoverHouseholdFact } from "./transfer-tax-validate-carryover-household";
 import { validateDonorBuiltPart } from "./transfer-tax-validate-donor-built-part";
+import { carryoverAssumedDebt } from "./carryover-gift-assumed-debt";
+import { carryoverGiftTaxedValue } from "./carryover-gift-assumed-debt";
 
 /** 호출 맥락 — 폼 전역 사실. 생략 = 그 결합이 아니다(단위 테스트·자산 단독 호출). */
 export interface SplitCarryoverCtx {
@@ -246,6 +248,14 @@ export function validateSplitCarryoverParts(
       return fieldError(`${p.keyPrefix}.donorCapitalExpenditure`, `${label}: ${p.name} 증여자 자본적지출은 음수일 수 없습니다.`);
     if (!(parseAmount(p.valuation) > 0))
       return fieldError(p.valuationField, `${label}: ${p.name} 증여 신고가액(증여 당시 평가액)을 입력하세요 — 증여세 상당액 안분의 분자이자 이월과세를 적용하지 않을 때의 취득가액입니다 ${MSG_TAIL_DONOR}.`);
+    // 당초 증여 때 인수한 채무 — 사건 토글이 켜졌으면 파트마다 필수 · 평가액 이하(영 §163의2②2호 분자 = 평가액 − 채무 · 「상속세 및 증여세법」 제47조 제1항).
+    if (c.giftDebtAssumed) {
+      const onLand = p.keyPrefix === "landCarryover";
+      if ((f.giftAssumedDebt ?? "").trim() === "")
+        return fieldError(onLand ? "landCarryover.giftAssumedDebt" : "carryover.giftAssumedDebt", `${label}: ${p.name}에 담보된 채무로서 당초 증여 때 인수한 금액을 입력하세요 — 증여세 과세가액에서 빠진 채무입니다. 그 파트에 인수한 채무가 없으면 0을 입력하세요 (「상속세 및 증여세법」 제47조 제1항).`);
+      if (parseAmount(f.giftAssumedDebt) > parseAmount(p.valuation))
+        return fieldError(onLand ? "landCarryover.giftAssumedDebt" : "carryover.giftAssumedDebt", `${label}: ${p.name}의 당초 증여 때 인수한 채무가 증여 신고가액(증여 당시 평가액)보다 큽니다.`);
+    }
   }
 
   // 6) 증여세 — 산출세액은 0 허용(비어 있으면 0), 과세가액은 안분 분모라 필수, 파트 평가액 합은 과세가액을 넘을 수 없다.
@@ -253,12 +263,14 @@ export function validateSplitCarryoverParts(
     return fieldError(hostEvent ? "carryover.giftTaxBase" : "landCarryover.giftTaxBase", `${label}: 증여세 과세가액을 입력하세요 — 영 §163의2② 안분의 분모입니다 ${MSG_TAIL_DONOR}.`);
   if (parseAmount(c.giftTaxCalculated) < 0)
     return fieldError(hostEvent ? "carryover.giftTaxCalculated" : "landCarryover.giftTaxCalculated", `${label}: 증여세 산출세액은 음수일 수 없습니다.`);
-  // 이월과세 파트 평가액의 합 ≤ 과세가액(⑫ refine 거울) — A는 토지·B는 건물 한 파트(나머지 파트는 매매·신축이라 증여 재산이 아니다).
-  const valuationSum = (kind !== "B" ? parseAmount(asset.landAcquisitionPrice) : 0) + (kind !== "A" ? parseAmount(asset.buildingAcquisitionPrice) : 0);
+  // 이월과세 파트 증여세 과세가액(평가액 − 인수채무)의 합 ≤ 과세가액(⑫ refine 거울) — A는 토지·B는 건물 한 파트(나머지 파트는 매매·신축이라 증여 재산이 아니다).
+  const valuationSum =
+    (kind !== "B" ? carryoverGiftTaxedValue(parseAmount(asset.landAcquisitionPrice), carryoverAssumedDebt(c, land)) : 0) +
+    (kind !== "A" ? carryoverGiftTaxedValue(parseAmount(asset.buildingAcquisitionPrice), carryoverAssumedDebt(c, c)) : 0);
   if (valuationSum > parseAmount(c.giftTaxBase))
     return fieldError(
       hostEvent ? "carryover.giftTaxBase" : "landCarryover.giftTaxBase",
-      `${label}: ${kind === "C" ? "토지·건물 증여 신고가액의 합이" : kind === "A" ? "토지 증여 신고가액이" : "건물 증여 신고가액이"} 증여세 과세가액을 초과합니다 ${MSG_TAIL_DONOR}.`,
+      `${label}: ${kind === "C" ? "토지·건물 증여 신고가액의 합이" : kind === "A" ? "토지 증여 신고가액이" : "건물 증여 신고가액이"} 증여세 과세가액을 초과합니다${c.giftDebtAssumed ? "(당초 증여 때 인수한 채무를 뺀 금액 기준)" : " — 당초 증여 때 인수한 채무가 있으면 «당초 증여 때 채무를 인수했다»를 켜고 채무를 입력하세요"} ${MSG_TAIL_DONOR}.`,
     );
 
   // 6a) P5 §97의2②2호 — 증여자와 계속 같은 세대(필수 사실 질문). C·B는 건물(주택)을 증여받아 1세대1주택 보유 통산·「취득 당시」 기준일이 이 사실을 읽는다.

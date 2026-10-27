@@ -106,8 +106,10 @@ export interface SplitPartCarryoverEcho {
   donorCapexAdded: number;
   /** 양도일이 2024.1.1. 전이라 증여자 자본적지출을 0으로 처리했는가 */
   donorCapexGuardApplied: boolean;
-  /** 증여 당시 평가액 = 증여세 상당액 안분 분자 = 미적용(B) 시 취득가액 */
+  /** 증여 당시 평가액 = 미적용(B) 시 취득가액. 증여세 상당액 안분 분자는 여기서 `giftAssumedDebt`를 뺀 값이다 */
   giftDateValuation: number;
+  /** 당초 증여 때 인수한 채무(영 §163의2②2호 분자에서 뺀 값) — 없으면 키가 없다 */
+  giftAssumedDebt?: number;
   /** 영 §163의2② 안분 증여세 상당액 — **한도 전** */
   giftTaxApportioned: number;
   /** 한도 = 이 파트의 양도차익(영 §163의2② 후단) — 적격이 아니면 0 */
