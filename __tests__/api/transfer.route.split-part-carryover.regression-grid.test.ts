@@ -148,6 +148,10 @@ const FIXTURE = "__tests__/api/fixtures/split-part-carryover-prep1-grid.json";
  * `diff` 6행은 한 번 더 내려갔다 — 증여세 상당액 3천만(소득세법 §97의2①3호)이 본인 파트 필요경비에 전액 들어간다(영 §163의2② 「양도한 해당 자산가액」 ·
  * `docs/02-design/features/carryover-owner-split-display-gift-tax.plan.md` Q-2 (a)). 종전 실가 전환 갈래는 토지 취득일이 다른(별개 취득) 분리에서 일부만 공제했다
  * (건물만 A 양도차익 397,000,000 − 3천만 = 367,000,000 · 토지만 597,000,000 → 567,000,000 실측). `same` 행·`actual` 행(B 채택)은 세액 불변.
+ * `phd` 주 자산 7행 — 이월과세 PHD donor의 시나리오 A가 §164⑦ 3시점 환산 경로를 탄다(`docs/02-design/features/carryover-phd-owner-split-residuals.plan.md` PHD-1).
+ * 종전에는 PHD 경로 진입 조건(토지 취득일 · 두 파트 환산)이 없어 A가 PHD를 쓰지 않았다(취득가액 0 또는 요청의 파트 실가 잔재). 새 A 양도차익은 매매 PHD 같은 날짜
+ * 대조값 − 증여세 상당액 3천만과 같다(소유자 같음 725,797,104 → 695,797,104 · 건물만 277,184,267 → 247,184,267 실측). `same`(종전 400 — 같은 날 토지 취득일에서 A가
+ * 건물 취득일만 옮겨 S-규칙 throw)은 200 · B 채택이다 — B가 요청의 파트 실가 잔재를 읽는 것은 이 변경 밖(B 양도차익 500,000,000 vs `none` 300,000,000).
  */
 const INTENDED: Record<string, Row> = {
   "G1|est|building_only|same|-|primary": [200, 49_733_000],
@@ -156,6 +160,13 @@ const INTENDED: Record<string, Row> = {
   "G1|est|building_only|diff|-|companion": [200, 145_820_000],
   "G1|est|land_only|diff|-|primary": [200, 131_820_000],
   "G1|est|land_only|diff|-|companion": [200, 203_208_000],
+  "G1|phd|-|none|-|primary": [200, 167_883_189],
+  "G1|phd|-|none|carryover_gift|primary": [200, 167_883_189],
+  "G1|phd|-|same|-|primary": [200, 173_060_000],
+  "G1|phd|both|none|-|primary": [200, 167_883_189],
+  "G1|phd|both|none|carryover_gift|primary": [200, 167_883_189],
+  "G1|phd|both|same|-|primary": [200, 173_060_000],
+  "G1|phd|building_only|same|-|primary": [200, 44_861_015],
   "G1|phd|building_only|same|-|companion": [200, 131_400_000],
   "G1|phd|building_only|diff|-|companion": [200, 145_820_000],
   "G1|phd|land_only|diff|-|companion": [200, 203_208_000],

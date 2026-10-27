@@ -15,11 +15,12 @@
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { PHD_INPUT, PHD_TRANSFER_PRICE } from "../transfer-tax/_helpers/pre-housing-disclosure-fixture";
 
 const rates = makeMockRates();
 const D = (s: string) => new Date(s);
 
-function run(opts: { raw: boolean; kind: "actual" | "est" | "phd"; gift?: number; capex?: number; pt?: "housing" | "building"; card?: boolean; noStd?: boolean }) {
+function run(opts: { raw: boolean; kind: "actual" | "est"; gift?: number; capex?: number; pt?: "housing" | "building"; card?: boolean; noStd?: boolean }) {
   const ct = {
     giftRegistryDate: D("2024-05-01"), donorAcquisitionDate: D("2015-01-01"),
     useEstimatedAcquisition: opts.kind !== "actual", giftTaxAmount: opts.gift ?? 0, giftDateValuation: 800_000_000,
@@ -34,12 +35,6 @@ function run(opts: { raw: boolean; kind: "actual" | "est" | "phd"; gift?: number
     ...(opts.card ? { usedEstimatedAcquisition: true } : {}),
     capitalExpenditure: opts.capex, acquisitionCause: "carryover_gift", carryoverTaxation: ct,
   };
-  if (opts.kind === "phd")
-    over.preHousingDisclosure = {
-      firstDisclosureDate: D("2005-04-30"), firstDisclosureHousingPrice: 100_000_000, transferHousingPrice: 400_000_000,
-      landAreaM2: 100, totalAreaM2: 100, priceAtAcquisitionLand: 1, priceAtAcquisitionBuilding: 1,
-      priceAtFirstDisclosureLand: 1, priceAtFirstDisclosureBuilding: 1,
-    };
   return calculateTransferTax(baseTransferInput(over as never), rates);
 }
 
@@ -82,10 +77,25 @@ describe("PR-0b 환산 donor 시나리오 A — 재환산 전제", () => {
     }
   });
 
-  it("R6 PHD 환산은 자체 환산이라 건드리지 않는다 (불변)", () => {
-    const r = run({ raw: true, kind: "phd" });
-    expect(r.carryoverTaxationDetail?.scenarioA.transferGain).toBe(494_000_000);
-    expect(r.determinedTax).toBe(127_188_000);
+  /**
+   * R6 정정(계획서 `carryover-phd-owner-split-residuals.plan.md` PHD-1) — 종전 R6 「PHD 환산은 자체 환산이라 건드리지 않는다 · 494,000,000」은
+   * 토지 취득일이 없어 PHD 경로(`phdSplitPathTaken`)를 타지 않고 **함께 넣은 일반 기준시가**로 환산한 값을 고정했다(픽스처 PHD 칸도 형식 값 1). 실제 PHD donor는
+   * 취득가액 0(양도차익 = 양도가액)이었다. 이제 시나리오 A가 매매 PHD와 같은 3시점 환산 경로를 탄다 — 실제 PHD 픽스처로 매매 대조값과 같은지 본다.
+   */
+  it("R6 PHD 환산 donor — 시나리오 A = 매매 PHD 같은 날짜 대조값(147,580,813)", () => {
+    const common = {
+      propertyType: "housing", transferPrice: PHD_TRANSFER_PRICE, transferDate: D("2023-02-16"), acquisitionPrice: 0, expenses: 0,
+      isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0, landSplitMode: "apportioned", preHousingDisclosure: PHD_INPUT,
+    };
+    const purchase = calculateTransferTax(baseTransferInput({
+      ...common, acquisitionCause: "purchase", acquisitionDate: D("2014-09-14"), landAcquisitionDate: D("2014-09-14"), useEstimatedAcquisition: true,
+    } as never), rates);
+    const carry = calculateTransferTax(baseTransferInput({
+      ...common, acquisitionCause: "carryover_gift", acquisitionDate: D("2020-01-01"), useEstimatedAcquisition: false,
+      carryoverTaxation: { giftRegistryDate: D("2020-01-01"), donorAcquisitionDate: D("2014-09-14"), useEstimatedAcquisition: true, giftTaxAmount: 0, giftDateValuation: 600_000_000 },
+    } as never), rates);
+    expect(purchase.transferGain).toBe(147_580_813);
+    expect(carry.carryoverTaxationDetail?.scenarioA.transferGain).toBe(147_580_813);
   });
 
   it("R7 환산 입력(증여자 취득시 기준시가)이 없으면 켜지 않는다 — 입력을 지어내지 않는다", () => {

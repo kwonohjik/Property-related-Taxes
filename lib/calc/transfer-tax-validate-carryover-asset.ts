@@ -3,7 +3,9 @@ import { validateCarryoverHouseholdFact } from "./transfer-tax-validate-carryove
 import { isPhdEligible } from "./phd-eligibility";
 import { isPhdApartment, phdAcqDisclosedPriceName, phdClause, phdDisclosedPriceName } from "./phd-housing-term";
 import { carryoverEstimationModeSupported } from "./phd-toggle-scope";
+import { carryoverPhdMode } from "./phd-toggle-scope";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
+import { isSplitValidationActive } from "./transfer-tax-validate-split";
 import { validateSplitCarryoverParts } from "./transfer-tax-validate-split-carryover";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
@@ -130,6 +132,17 @@ export function validateCarryoverAsset(
     return fieldError("carryover.donorCapitalExpenditure", `${label}: 증여자 자본적지출은 음수일 수 없습니다.`);
   if (parseAmount(c.giftTaxAmount) < 0)
     return fieldError("carryover.giftTaxAmount", `${label}: 증여세 상당액은 음수일 수 없습니다.`);
+
+  // (f-2) §164⑦ PHD·APD 환산 donor × 자본적지출 — 엔진은 시나리오 A를 3시점 분리 경로로 계산하는데, 그 경로는 파트 칸(`landDirectExpenses`·
+  //   `buildingDirectExpenses`)만 읽고 자산 단위 자본적지출·증여자 자본적지출은 읽지 않는다(계획서 `carryover-phd-owner-split-residuals.plan.md` F1 — 사용자 결정
+  //   「차단·안내」). 자동 안분은 하지 않는다. 증여자 자본적지출은 ④가 2024-01-01 전 양도면 보내지 않으므로(`transfer-tax-api-carryover.ts`) 같은 기준으로만 막는다.
+  //   ⑫ `refinePrimaryAcquisitionInputs`와 같은 조건. 분리 검증이 도는 자산(소유자 분리 등)의 수증자 자본적지출은 아래 (h)가 파트 칸으로 보낸다(PHD 경로가 읽는다).
+  if (carryoverPhdMode(asset) && asset.transferType !== "burdened_gift") {
+    if ((formTransferDate ?? "") >= "2024-01-01" && parseAmount(c.donorCapitalExpenditure) > 0)
+      return fieldError("carryover.donorCapitalExpenditure", `${label}: 개별주택가격 미공시(공동주택 최초고시 전) 환산으로 증여자 취득가액을 구하는 이월과세에서는 증여자 자본적지출을 계산에 반영하지 못합니다 — 3시점 환산은 토지분·건물분으로 나눠 계산하는데 자본적지출은 안분 대상이 아니라(소득세법 §100② 후문) 귀속 파트를 알아야 하고, 증여자 자본적지출은 파트로 나눠 받는 칸이 없습니다. 칸을 비우세요 (§97②2호 — 환산취득가액은 자본적지출·양도비와 비교해 큰 쪽을 필요경비로 합니다)`);
+    if (!isSplitValidationActive(asset) && parseAmount(asset.capitalExpenditure) > 0)
+      return fieldError("capitalExpenditure", `${label}: 개별주택가격 미공시(공동주택 최초고시 전) 환산으로 증여자 취득가액을 구하는 이월과세에서는 자산 전체 자본적지출을 계산에 반영하지 못합니다 — 3시점 환산은 토지분·건물분으로 나눠 계산하는데 자본적지출은 안분 대상이 아니라(소득세법 §100② 후문) 귀속 파트를 알아야 합니다. 칸을 비우세요 (§97②2호 — 환산취득가액은 자본적지출·양도비와 비교해 큰 쪽을 필요경비로 합니다)`);
+  }
 
   // (g) 결정 #33·#34·#38-6 — 증여자와 계속 같은 세대인가(필수 사실 질문) — `validateCarryoverHouseholdFact` 참조.
   const householdErr = validateCarryoverHouseholdFact(asset, c, label);

@@ -1,9 +1,9 @@
 /**
  * 이월과세 × 소유자 분리 × §164⑦ PHD 3시점 분리 — 증여세 상당액이 빠지지 않는다(계획서 `carryover-owner-split-display-gift-tax.plan.md` §6 · 리뷰 게이트 FAIL 1).
  *
- * PHD 분리 경로(`calcSplitGainPreDisclosure`)는 본인 파트 증여세 장치(`splitCarryoverBasis.giftTaxExpense`)를 읽지 않는다 — 그 장치로 보내면 증여세 상당액이 조용히 사라졌다
- * (표시 `giftTaxAddedToExpense` 20,000,000 · 양도차익 불변). 이 경로는 종전 갈래(환산 → 실가 전환 · 필요경비 가산)로 둔다. 엔진 직접 호출 — 폼 경로는 PHD × 소유자 분리에서
- * 분리 계산에 닿지 않는다(리뷰 게이트 실측).
+ * PHD 분리 경로(`calcSplitGainPreDisclosure`)는 처음에 본인 파트 증여세 장치(`splitCarryoverBasis.giftTaxExpense`)를 읽지 않아 증여세 상당액이 조용히 사라졌다
+ * (표시 `giftTaxAddedToExpense` 20,000,000 · 양도차익 불변). #2620은 종전 갈래(실가 전환)로 돌렸고, 이제 PHD 경로도 그 장치를 읽는다(계획서
+ * `carryover-phd-owner-split-residuals.plan.md` V-3) — 같은 값이 분리 상세와 함께 나온다. 화면 경로는 `transfer.route.carryover-phd-scenario-a.anchor.test.ts`.
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";

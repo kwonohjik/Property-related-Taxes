@@ -505,15 +505,19 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     true,
     true,
   );
+  // §97의2①3호 증여세 상당액(이월과세 × 소유자 분리 — 본인 파트) — 비-PHD 경로(`landDirectFinal`)와 같이 §97②2호 단서 비교 **밖**에서 더한다.
+  //   읽지 않으면 그 금액이 조용히 빠진다(계획서 `carryover-phd-owner-split-residuals.plan.md` V-3 · #2620 리뷰 FAIL 1).
+  const landDirectFinal = phdLandSwap.effectiveDirect + (input.splitCarryoverBasis?.land?.giftTaxExpense ?? 0);
+  const buildingDirectFinal = phdBuildingSwap.effectiveDirect + (input.splitCarryoverBasis?.building?.giftTaxExpense ?? 0);
   const landGain =
     phd.landTransferPrice -
     (phdLandSwap.swapApplied ? 0 : phd.landAcquisitionPrice) -
-    phdLandSwap.effectiveDirect -
+    landDirectFinal -
     phdLandSwap.effectiveAppraisalDed;
   const buildingGain =
     phd.buildingTransferPrice -
     (phdBuildingSwap.swapApplied ? 0 : phd.buildingAcquisitionPrice) -
-    phdBuildingSwap.effectiveDirect -
+    buildingDirectFinal -
     phdBuildingSwap.effectiveAppraisalDed;
 
   const { years: landHoldingYears } = calculateHoldingPeriod(
@@ -528,7 +532,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   const landPart: SplitPartResult = {
     transferPrice: phd.landTransferPrice,
     acquisitionPrice: phd.landAcquisitionPrice,
-    directExpenses: phdLandSwap.effectiveDirect,
+    directExpenses: landDirectFinal,
     appraisalDeduction: phdLandSwap.effectiveAppraisalDed,
     stdPriceAtAcq: phd.landHousingAtAcquisition,
     lumpDeductionRate: phd.estimatedDeductionRate,
@@ -543,7 +547,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   const buildingPart: SplitPartResult = {
     transferPrice: phd.buildingTransferPrice,
     acquisitionPrice: phd.buildingAcquisitionPrice,
-    directExpenses: phdBuildingSwap.effectiveDirect,
+    directExpenses: buildingDirectFinal,
     appraisalDeduction: phdBuildingSwap.effectiveAppraisalDed,
     stdPriceAtAcq: phd.buildingHousingAtAcquisition,
     lumpDeductionRate: phd.estimatedDeductionRate,
