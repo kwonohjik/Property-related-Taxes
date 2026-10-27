@@ -56,6 +56,7 @@ import { fieldError } from "./transfer-tax-validate-field";
 import { HOUSE_FIRST_DISCLOSURE_KIND_REQUIRED_MESSAGE, houseFirstDisclosureIssue } from "./house-first-disclosure";
 import { apartNtsPriceIssue, isApartSec163_9Asset } from "./apart-nts-price";
 import { HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
+import { bgIgnoresAssetAppraisalSalesCase } from "./bg-asset-acq-mode-scope";
 
 /** 다필지 자산 검증 — 다필지 모드일 때(A12: 컴패니언은 호출부에서 먼저 차단된다). */
 function validateParcelMode(primary: AssetForm, formTransferDate?: string): string | null {
@@ -371,8 +372,10 @@ function validateAssetAcquisitionBranches(
   const landCauseErr = validateLandPartCause(asset, label, { isNonPrimary: isNonPrimaryAsset, formTransferDate, hasCompanions });
   if (landCauseErr) return landCauseErr;
 
-  const isSalesCase = asset.isSalesCaseAcquisition === true;
-  const isAppraisal = !isSalesCase && asset.isAppraisalAcquisition === true;
+  // 부담부증여는 자산 단위 감정·매매사례 플래그를 읽지 않는다 — ④와 같은 술어(3중 패턴 · 그 라디오·칸은 부담부증여 화면에 없다)
+  const bgHidesAcqMode = bgIgnoresAssetAppraisalSalesCase(asset);
+  const isSalesCase = !bgHidesAcqMode && asset.isSalesCaseAcquisition === true;
+  const isAppraisal = !bgHidesAcqMode && !isSalesCase && asset.isAppraisalAcquisition === true;
   const isEstimated = !isSalesCase && !isAppraisal && asset.useEstimatedAcquisition === true;
   // hasPre1990: ④ `transfer-tax-api.ts`와 **같은 술어**(3중 패턴) — `transfer-pre1990-land-gate.ts` 단일 소스.
   const hasPre1990 = hasPre1990LandEstimation(asset);

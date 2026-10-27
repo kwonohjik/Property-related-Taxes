@@ -9,6 +9,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ASSET_KIND_LABELS, ACQUISITION_CAUSE_LABELS, TRANSFER_TYPE_LABELS } from "./asset-labels";
 import { bgExpenseInputsUnused } from "@/lib/calc/burdened-gift-expense-scope";
+import { bgIgnoresAssetAppraisalSalesCase } from "@/lib/calc/bg-asset-acq-mode-scope";
 
 export type AssetSectionKey = "basic" | "transfer" | "acquisition" | "expense" | "extras";
 
@@ -38,8 +39,10 @@ function amount(s: string | undefined | null): number {
 }
 
 function acquisitionMethodLabel(asset: AssetForm): string {
-  if (asset.isSalesCaseAcquisition) return "매매사례가액";
-  if (asset.isAppraisalAcquisition) return "감정가액";
+  // 부담부증여 — 남은 감정·매매사례 플래그는 계산에 쓰이지 않는다(④·⑧과 같은 술어)
+  const bgHides = bgIgnoresAssetAppraisalSalesCase(asset);
+  if (!bgHides && asset.isSalesCaseAcquisition) return "매매사례가액";
+  if (!bgHides && asset.isAppraisalAcquisition) return "감정가액";
   if (asset.useEstimatedAcquisition) return "환산취득가";
   return "실거래가";
 }
