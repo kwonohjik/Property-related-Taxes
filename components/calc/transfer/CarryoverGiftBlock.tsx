@@ -130,6 +130,8 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
   const splitsGiftValuation = gbBgSplitsGiftValuation(asset);
   /** 부담부증여 일반건물 건물 블록인데 토지도 이월과세 — 증여 사건은 토지 블록이 정본이라(`gbCarryoverEventSource`) 이 블록의 사건 칸은 ④가 읽지 않는다. */
   const eventOnLandBlock = isGeneralBuilding && isBurdenedGift && isBuildingPart && asset.acquisitionCause === "carryover_gift";
+  /** 부담부증여 일반건물 — 당초 증여자 취득가액은 「당초 증여자」 블록(`bgCoDonor*`)이 정본이다(영 §159와 함께 쓴다). 이 블록의 취득가액·취득원인·환산 칸은 ④·엔진이 쓰지 않는다(`gb-bg-on-building-block-fields.plan.md` Q-2 a). */
+  const donorBasisInCoDonorBlock = isGeneralBuilding && isBurdenedGift;
 
   /**
    * 지분(공유) 모드 여부 — 판정 술어는 `OwnershipRatioInput`이 쓰는 것과 **같은 소스**다
@@ -181,17 +183,20 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">증여 기본 정보</p>
         </div>
 
-        <FieldCard
-          label="증여 등기접수일"
-          field="carryover.giftRegistryDate"
-          hint="소득세법 §97조의2 ③ — 이월과세 적용기간 기산일 (등기부 기재일)"
-          trailing={<LawArticleModal legalBasis="소득세법 §97의2 ③" label="§97의2③" />}
-        >
-          <DateInput
-            value={c.giftRegistryDate}
-            onChange={(v) => updateCarryover({ giftRegistryDate: v })}
-          />
-        </FieldCard>
+        {/* Q-1 a — 증여 사건 칸은 토지 블록 한 벌이다(위 안내문). */}
+        {!eventOnLandBlock && (
+          <FieldCard
+            label="증여 등기접수일"
+            field="carryover.giftRegistryDate"
+            hint="소득세법 §97조의2 ③ — 이월과세 적용기간 기산일 (등기부 기재일)"
+            trailing={<LawArticleModal legalBasis="소득세법 §97의2 ③" label="§97의2③" />}
+          >
+            <DateInput
+              value={c.giftRegistryDate}
+              onChange={(v) => updateCarryover({ giftRegistryDate: v })}
+            />
+          </FieldCard>
+        )}
 
         {/* 모드 토글은 영향받는 필드(증여자 취득일) 직전 — 켜면 아래 입력이 토지·건물 파트 카드로 바뀐다. 일반건물 파트 블록에는 두지 않는다. */}
         <CarryoverDonorSplitToggle asset={asset} onChange={onChange} isNonPrimaryAsset={isNonPrimaryAsset} />
@@ -217,6 +222,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           </FieldCard>
         )}
 
+        {!donorBasisInCoDonorBlock && (
         <div className="space-y-1.5">
           <p className="text-sm font-medium">증여자 취득원인</p>
           <RadioCardGroup
@@ -235,6 +241,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
               : "상속·증여로 취득한 경우 증여자의 취득가액은 상속개시일·증여일 현재 「상속세 및 증여세법」 평가액입니다 (소득세법 시행령 §163⑨). 그 금액을 아래 ②에 입력하세요."}
           </p>
         </div>
+        )}
         </>)}
       </div>
 
@@ -248,6 +255,14 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">증여자 취득가액</p>
         </div>
 
+        {donorBasisInCoDonorBlock && (
+          <p className="text-caption text-muted-foreground" data-testid="gb-bg-donor-basis-elsewhere">
+            부담부증여에서는 당초 증여자의 취득 당시 값을 「이월과세 — 「당초 증여자」 취득 당시 값」에서 입력합니다(「소득세법」 제97조의2 제1항 제1호 · 「소득세법 시행령」 제159조 제1항).
+          </p>
+        )}
+
+        {/* 부담부증여 일반건물은 켜져 있을 때만 보인다 — 남은 값을 끌 유일한 경로다(⑧이 막는다 · `transfer-tax-validate-bg.ts`). */}
+        {(!donorBasisInCoDonorBlock || c.useEstimatedAcquisition) && (
         <ToggleCard
           tone="amber"
           title="환산취득가 사용"
@@ -261,9 +276,10 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
             })
           }
         />
+        )}
 
         {/* 환산 OFF: 증여자 실거래가 직접 입력 */}
-        {!c.useEstimatedAcquisition && (
+        {!c.useEstimatedAcquisition && !donorBasisInCoDonorBlock && (
           <FieldCard
             label="증여자 취득가액"
             field={isBuildingPart ? "buildingCarryover.donorAcquisitionPrice" : "carryover.donorAcquisitionPrice"}
@@ -278,7 +294,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
         )}
 
         {/* 환산 ON: 환산 방식 선택 + 방식별 입력 패널 */}
-        {c.useEstimatedAcquisition && (
+        {c.useEstimatedAcquisition && !donorBasisInCoDonorBlock && (
           <CarryoverEstimationSection
             asset={asset}
             carryover={c}
@@ -310,7 +326,8 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
         )}
       </div>
 
-      {/* ③ 필요경비 가산 */}
+      {/* ③ 필요경비 가산 — 토지도 이월과세인 부담부증여 건물 블록에서는 칸이 모두 사건 칸이라 섹션째 숨긴다(Q-1 a · Q-3 a). */}
+      {!eventOnLandBlock && (
       <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3 dark:bg-amber-950/40">
         <div className="flex items-center gap-1.5">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">3</span>
@@ -378,30 +395,29 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           </FieldCard>
         )}
 
-        {/* 부담부증여 일반건물 · 토지도 이월과세 — 건물 블록 칸은 ④가 읽지 않는다. 토지 블록 한 칸이 자산 전체 합계다(`gb-bg-on-building-block-fields.plan.md` Q-3 a). */}
-        {!eventOnLandBlock && (
-          <FieldCard
-            label={splitsGiftValuation && !isBuildingPart ? "증여자 자본적지출(토지·건물 합계)" : "증여자 자본적지출"}
-            field={isBuildingPart ? "buildingCarryover.donorCapitalExpenditure" : "carryover.donorCapitalExpenditure"}
-            hint={
-              !isAfter2024
-                ? "2024.1.1. 이후 양도분부터 적용 (2023.12.31. 신설)"
-                : splitsGiftValuation && !isBuildingPart
-                  ? "당초 증여자가 토지·건물에 지출한 자본적 지출액을 합쳐 한 번만 입력합니다 — 취득 당시 기준시가 비율로 나눕니다 (소득세법 §97조의2 ① 2호)"
-                  : "증여자가 보유기간 중 지출한 자본적 지출액 (소득세법 §97조의2 ① 2호)"
-            }
-            trailing={<LawArticleModal legalBasis="소득세법 §97의2 ① 2호" label="§97의2①2호" />}
-          >
-            <CurrencyInput
-              label=""
-              value={c.donorCapitalExpenditure}
-              onChange={(v) => updateCarryover({ donorCapitalExpenditure: v })}
-              placeholder={isAfter2024 ? "없으면 비워두세요" : "해당 없음"}
-              disabled={!isAfter2024}
-            />
-          </FieldCard>
-        )}
+        {/* 부담부증여 일반건물 · 둘 다 이월과세 — 토지 블록 한 칸이 자산 전체 합계다(건물 블록은 ③ 섹션째 숨긴다 · `gb-bg-on-building-block-fields.plan.md` Q-3 a). */}
+        <FieldCard
+          label={splitsGiftValuation && !isBuildingPart ? "증여자 자본적지출(토지·건물 합계)" : "증여자 자본적지출"}
+          field={isBuildingPart ? "buildingCarryover.donorCapitalExpenditure" : "carryover.donorCapitalExpenditure"}
+          hint={
+            !isAfter2024
+              ? "2024.1.1. 이후 양도분부터 적용 (2023.12.31. 신설)"
+              : splitsGiftValuation && !isBuildingPart
+                ? "당초 증여자가 토지·건물에 지출한 자본적 지출액을 합쳐 한 번만 입력합니다 — 취득 당시 기준시가 비율로 나눕니다 (소득세법 §97조의2 ① 2호)"
+                : "증여자가 보유기간 중 지출한 자본적 지출액 (소득세법 §97조의2 ① 2호)"
+          }
+          trailing={<LawArticleModal legalBasis="소득세법 §97의2 ① 2호" label="§97의2①2호" />}
+        >
+          <CurrencyInput
+            label=""
+            value={c.donorCapitalExpenditure}
+            onChange={(v) => updateCarryover({ donorCapitalExpenditure: v })}
+            placeholder={isAfter2024 ? "없으면 비워두세요" : "해당 없음"}
+            disabled={!isAfter2024}
+          />
+        </FieldCard>
       </div>
+      )}
 
       {/* ④ 비교과세 기준 — Scenario B 취득가 */}
       <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3 dark:bg-amber-950/40">
@@ -448,7 +464,8 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
 
       </>)}
 
-      {/* ⑤ 적용배제 선언 */}
+      {/* ⑤ 적용배제 선언 — 관계·사망·적용배제도 증여 사건 칸이다(Q-1 a). */}
+      {!eventOnLandBlock && (
       <div className="rounded-md border border-rose-200/70 bg-rose-50/40 p-3 dark:bg-rose-950/40">
         <CarryoverGiftExclusionSection
           exclusionDeclared={c.exclusionDeclared}
@@ -470,6 +487,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           onRelationChange={updateCarryover}
         />
       </div>
+      )}
 
     </div>
   );
