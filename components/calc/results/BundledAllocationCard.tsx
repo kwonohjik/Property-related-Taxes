@@ -223,8 +223,18 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           /**
            * 이 명세는 주 자산의 것이다. 주 자산이 §166 자산(원조합원 입주권 등)이면 인가 전 분과 합산 신고서의 취득가액
            * (엔진 표시 echo — §166 역산 정본)을 잇는다.
+           * 축 B 카드별 명세에 §166 지분이 있으면 지분 전부의 합이다 — §166 지분은 신고서 취득가액, 그 밖은 §159 칸
+           * (계획서 `bg-axis-b-card-acquisition-sum.plan.md` Q-2 a · 종전에는 첫 지분 값만 「합계」로 적었다).
            */
           redevFilingAcquisition={(() => {
+            const cards = transferBurdenedGiftBreakdown.cards;
+            if (cards?.some((c) => c.redevFilingAcquisition !== undefined)) {
+              return cards.reduce(
+                (s, c) =>
+                  s + (c.redevFilingAcquisition ?? c.breakdown.perAsset.land.acquisitionPrice + c.breakdown.perAsset.building.acquisitionPrice),
+                0,
+              );
+            }
             const primary = aggregated.properties.find((p) => p.propertyId === "primary");
             return primary?.redevelopmentDetail ? primary.acquisitionPrice : undefined;
           })()}

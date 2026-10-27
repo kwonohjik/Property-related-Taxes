@@ -1,6 +1,6 @@
 # 축 B × 부담부증여 — 결과 명세 취득가액을 지분 합으로 (계획서)
 
-- 작성: 2026-10-27 · 상태: 계획 (사용자 결정 대기 Q-1~Q-3)
+- 작성: 2026-10-27 · 상태: ✅ 구현(§8) — 사용자 결정 2026-10-27 「권고대로」 Q-1 a · Q-2 a · Q-3 a
 - 출발점: `bg-axis-b-right-share-inputs.plan.md` §9.1 🟠 별건 「결과 카드 건물 취득가 행 첫 카드 값만」 — 사용자 결정(2026-10-27) 「고치기로 하고 계획서 작성」
 - 세액 변경 없음(표시 전용). 엔진 표시 echo·결과 카드·신고서 표 배지 문구만 바뀐다.
 
@@ -128,8 +128,25 @@ route(⑫⑭) → 엔진 경로에서 `withCardAcquisitions`에 들어오는 카
 |---|---|---|
 | V-1 | 일반건물 지분 경로(`general-building-fractional.ts`)도 지분별 취득 값이 다를 때 같은 어긋남이 있는가 | 확인 필요 — 이 계획의 술어는 닿지 않는다(별건) |
 | V-2 | 함께 양도(다른 물건) 부담부증여 묶음의 명세 취득가액 | 확인 필요 — 물건 전체 info가 전 자산 합(`buildCompanionBurdenedGiftWholeInfo`)이라 다른 구조. 범위 밖 |
-| V-3 | 축 B 카드 `propertyLabel` 실값(지분 제목 문구) | Do에서 실측 |
+| V-3 | 축 B 카드 `propertyLabel` 실값(지분 제목 문구) | ✅ 실측 「주 자산」·「자산 2」 → 제목 「자산 N (지분 50%)」로 정함(일반건물 지분 결과 블록과 같은 꼴 · §8) |
 
 ## 7. 선행 문서 정정
 
 - `bg-axis-b-right-share-inputs.plan.md` §9.1 「지분 결과(`aggregated.properties[]`)에는 `transferBurdenedGiftBreakdown`이 없다」 → 화면용 요약에 echo가 없을 뿐 엔진 카드별 결과에는 있다(§2.1). 같은 PR에서 한 줄 고친다.
+
+## 8. 구현 결과 (2026-10-27)
+
+- 엔진 `withCardAcquisitions`: 축 B(`soleSplitAcquisition`)면 항상 카드별 합 · 재개발 지분 포함 · 카드에 `redevFilingAcquisition`(`bgRedevFilingAcquisition`). 타입 `cards` 주석·필드.
+- `BundledAllocationCard`: 카드에 §166 지분이 있으면 「신고서 취득가액 합계」 = 지분별 신고서 취득가액(그 밖은 §159 칸)의 합.
+- `BgBundleCardAcqRows`:
+  - 지분 카드 제목 「자산 N (지분 50%)」(`ownershipRatio`가 있을 때 — 없으면 종전 라벨).
+  - 일반 방식 행 「근거 값(지분분) × 채무비율」(실지·감정·매매사례·기준시가 — 환산·의제는 종전).
+  - §166 행 이름 「종전 부동산 취득가(인가 전 분)」 + 그 카드 신고서 취득가액 줄 · 개산공제 행 · 합계 문구 분기.
+- `FilingFormTable` 배지: 의제 카드가 있을 때만 의제 문구, 그 밖의 카드별 명세는 「자산별 §159①1호 취득가액 × 채무비율 — 부담부증여 명세 참조」.
+- 검증:
+  - route anchor `__tests__/api/transfer.route.bg-axis-b-card-acquisition-sum.anchor.test.ts` 9건 — §2.2 표의 지분 합·카드별 신고서 값 · 세액 불변(수정 전 측정값).
+  - render anchor `__tests__/components/bg-axis-b-card-acquisition-sum.anchor.test.tsx` 5건 — 행 문구·개산공제·합계 문구·신고서 합계 180,000,000 / 200,000,000 · 배지.
+  - D1-e 갱신(축 B 매매 + 매매 → 카드 2 · 74,962,962 = 카드 합) · D1-f 신규(함께 양도·의제 없음은 cards 없음 — 대조).
+  - E2E AB-E3(`e2e/bg-axis-b-right-share-inputs.spec.ts`) — 합계 140,000,000 · 신고서 합계 180,000,000. 스펙 전체 재시도 없이 3회 연속 통과 · 축 B 술어를 끈 변형에서 실패.
+  - mutation 11/11 KILLED · tsc 0 · lint 0 · 전체 vitest 42,746 통과 · 스크린샷 라이트·다크·375px.
+- 남은 것: §6 V-1(일반건물 지분 경로) · V-2(함께 양도 묶음) — 확인 필요, 범위 밖.

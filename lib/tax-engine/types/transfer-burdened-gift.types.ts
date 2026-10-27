@@ -550,9 +550,11 @@ export interface TransferBurdenedGiftBreakdown {
    */
   /**
    * 묶음(함께 양도·축 B) 결과 — 카드별 §159 결과(세액에 쓰인 값). 엔진 M-0.5(`transfer-tax-aggregate-burdened-gift.ts`)가 의제취득일 전
-   * 카드가 있을 때만 싣는다(사용자 결정 Q-33 · PR-7b-5). 이때 `perAsset` 취득가액·개산공제는 이 카드들의 합이다(물건 전체 재계산값이 아니다).
+   * 카드·이월과세 A 카드가 있을 때(사용자 결정 Q-33 · PR-7b-5)와 축 B일 때(`bg-axis-b-card-acquisition-sum.plan.md` Q-1 a) 싣는다.
+   * 이때 `perAsset` 취득가액·개산공제는 이 카드들의 합이다(물건 전체 재계산값이 아니다).
+   * `redevFilingAcquisition` — §166 자산(원조합원 입주권 등) 카드의 신고서 취득가액. 그 카드의 §159 슬롯은 인가 전 분뿐이다.
    */
-  cards?: Array<{ propertyId: string; label?: string; breakdown: TransferBurdenedGiftBreakdown }>;
+  cards?: Array<{ propertyId: string; label?: string; breakdown: TransferBurdenedGiftBreakdown; redevFilingAcquisition?: number }>;
 
   preDeemed?: {
     /** `three_way_parts` — 일반건물 파트별 3자 max(사용자 결정 Q-28 · PR-7b-6). 값은 `parts`에 있고 `stdAtDeemed`는 그 파트들의 합이다. */

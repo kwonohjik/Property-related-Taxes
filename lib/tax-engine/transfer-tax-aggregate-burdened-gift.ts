@@ -17,6 +17,7 @@ import type { AggregateTransferInput } from "./types/transfer-aggregate.types";
 import type { TransferTaxItemInput } from "./types/transfer-aggregate.types";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxResult } from "./types/transfer.types";
+import { bgRedevFilingAcquisition } from "./burdened-gift-totals";
 
 export function buildBundleBurdenedGiftWhole(input: AggregateTransferInput): TransferBurdenedGiftBreakdown | undefined {
   const info = input.burdenedGiftWholeInfo;
@@ -39,11 +40,16 @@ export function buildBundleBurdenedGiftWhole(input: AggregateTransferInput): Tra
  * 카드 명세가 세액에 쓰인 값을 다 담을 때만 바꾼다 — 그렇지 않으면 「합 = 세액에 쓰인 값」이 거짓이 되므로 종전 그대로 둔다(기존 한계):
  *  · 명세가 없는 카드(자산 명세가 붙지 않은 일반건물 파트 카드 — 상세 산식 `DetailedStatementGbFormulas`도 물건 전체 명세의 슬롯을 읽는다)
  *  · 재개발·재건축 카드(§166 경로가 인가 후 분·청산금·§166③을 따로 계산해 §159 슬롯과 세액 취득가액이 다르다)
+ *
+ * 축 B(같은 물건 지분 분할 — `soleSplitAcquisition`)는 **항상** 바꾼다. 물건 전체 재계산은 첫 지분 카드의 취득 값(승계취득가액·감정가액·
+ * 매매사례가액·취득시 기준시가)만 알아, 지분마다 그 값이 다르면 표시가 세액과 갈린다(실측 승계 4억 + 6억 160,000,000 vs 200,000,000 ·
+ * 계획서 `bg-axis-b-card-acquisition-sum.plan.md` Q-1 a). 재개발 지분도 넣는다(Q-2 a) — 그 카드의 §159 슬롯은 인가 전 분이라
+ * 신고서 취득가액(`redevFilingAcquisition`)을 함께 싣고, 명세 카드가 둘을 구분해 그린다.
  */
 export function withCardAcquisitions(
   whole: TransferBurdenedGiftBreakdown | undefined,
   records: ReadonlyArray<{
-    item: Pick<TransferTaxItemInput, "propertyId" | "propertyLabel" | "gbAssetBurdenedGift">;
+    item: Pick<TransferTaxItemInput, "propertyId" | "propertyLabel" | "gbAssetBurdenedGift" | "soleSplitAcquisition">;
     result: Pick<TransferTaxResult, "transferBurdenedGiftBreakdown" | "redevelopmentDetail">;
   }>,
 ): TransferBurdenedGiftBreakdown | undefined {
@@ -56,14 +62,21 @@ export function withCardAcquisitions(
       counted.add(gb.assetId);
       return [{ propertyId: gb.assetId, label: gb.label, breakdown: gb.breakdown }];
     }
+    const filing = bgRedevFilingAcquisition(r.result);
     return r.result.transferBurdenedGiftBreakdown
-      ? [{ propertyId: r.item.propertyId, label: r.item.propertyLabel, breakdown: r.result.transferBurdenedGiftBreakdown }]
+      ? [{
+          propertyId: r.item.propertyId,
+          label: r.item.propertyLabel,
+          breakdown: r.result.transferBurdenedGiftBreakdown,
+          ...(filing !== undefined ? { redevFilingAcquisition: filing } : {}),
+        }]
       : [];
   });
-  if (!cards.some((c) => c.breakdown.preDeemed) && !records.some((r) => r.item.gbAssetBurdenedGift?.carryoverApplied)) return whole;
+  const isAxisB = records.some((r) => r.item.soleSplitAcquisition === true);
+  if (!isAxisB && !cards.some((c) => c.breakdown.preDeemed) && !records.some((r) => r.item.gbAssetBurdenedGift?.carryoverApplied)) return whole;
   if (
     records.some((r) => !r.item.gbAssetBurdenedGift && !r.result.transferBurdenedGiftBreakdown) ||
-    records.some((r) => r.result.redevelopmentDetail !== undefined)
+    (!isAxisB && records.some((r) => r.result.redevelopmentDetail !== undefined))
   )
     return whole;
   const sum = (pick: (b: TransferBurdenedGiftBreakdown) => number) => cards.reduce((s, c) => s + pick(c.breakdown), 0);

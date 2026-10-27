@@ -123,11 +123,21 @@ describe("D-1 묶음 §159 명세 — 의제 카드가 있으면 카드별 결�
     expect(r.tax).toBe(86_921_080);
   });
 
-  it("D1-e 대조 — 의제 카드가 없는 묶음(매매 + 매매)은 종전 그대로(물건 전체 재계산 · cards 없음)", async () => {
+  it("D1-e 축 B(매매 + 매매)는 의제 카드가 없어도 카드별 — 지분 값이 같아 합은 종전 물건 전체 값과 같다(74,962,962)", async () => {
+    // 종전에는 「cards 없음」을 고정했다 — 축 B는 늘 카드별로 바뀌었다(`bg-axis-b-card-acquisition-sum.plan.md` Q-1 a).
     const r = await run(form([{ ...STD, ...HALF, ...PURCHASE }, { ...STD, ...HALF, ...PURCHASE }], "920000000"));
     expect(r.fields).toEqual([]);
-    expect(r.bg?.cards).toBeUndefined();
+    expect(r.bg?.cards?.map((c) => c.breakdown.acquisitionMethodUsed)).toEqual(["standard_price", "standard_price"]);
     expect(r.shown).toBe(74_962_962);
+    expect(r.shown).toBe(r.cardSum);
+  });
+
+  it("D1-f 대조 — 함께 양도(다른 물건) · 의제 카드 없음은 종전 그대로(cards 없음)", async () => {
+    const r = await run(companion({ ...STD, ...PURCHASE }));
+    expect(r.fields).toEqual([]);
+    expect(r.status).toBe(200);
+    expect(r.bg).toBeDefined();
+    expect(r.bg?.cards).toBeUndefined();
   });
 });
 
