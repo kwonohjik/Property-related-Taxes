@@ -25,6 +25,7 @@ import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { bgAsset, bgForm, bodyOf } from "@/__tests__/calc/_helpers/carryover-donor-built-bg-form";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
+import { makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
@@ -139,6 +140,46 @@ describe("이월과세 · 토글 C(당초 증여자가 토지·건물을 다른 
 
   it("⑧ — 건물분 증여자 취득일을 비우면 그 칸으로", () => {
     expect(issues(bgForm(carry("")))[0]?.field).toBe("buildingCarryover.donorAcquisitionDate");
+  });
+});
+
+describe("토글 C 저장값이 남은 경우 — ⑤·⑧이 ④와 같이 읽는다(2026-10-27 실측 회귀)", () => {
+  const carryC = (over: Partial<AssetForm> = {}) =>
+    bgAsset("converted", { donorBuilt: false }, {
+      carryoverDonorSplit: true,
+      ...SPLIT_MARKET,
+      bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "", bgActualAcquisitionLand: "600,000,000", bgActualAcquisitionBuilding: "400,000,000",
+      bgCoDonorActualAcquisitionLand: "50,000,000", bgCoDonorActualAcquisitionBuilding: "100,000,000", bgCoDonorActualAcquisitionTotal: "",
+      carryover: { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2023-06-01", donorAcquisitionDate: "2000-06-01", donorAcquisitionPrice: "150,000,000", giftDateValuation: "1,000,000,000", giftTaxAmount: "0", donorRelation: "lineal", donorSameHousehold: "no" },
+      buildingCarryover: { ...CARRYOVER_DEFAULTS, donorAcquisitionDate: "2015-01-01" },
+      ...over,
+    } as Partial<AssetForm>);
+  const TOTALS = { bgActualAcquisitionTotal: "1,000,000,000", bgCoDonorActualAcquisitionTotal: "150,000,000" } as Partial<AssetForm>;
+
+  /** 함께 양도 — 첫 자산 토지 부담부증여(독립 나대지) · 둘째 자산 주택 이월과세에 토글 C 저장값이 남았다. 토글 C는 첫 자산에서만 계산한다(④ `neutralizeCarryoverDonorSplitForCompanion`). */
+  const landBg = () => ({
+    ...makeDefaultAsset(1), assetId: "a1", assetKind: "land", landNature: "standalone", addressJibun: "강원 홍천군 테스트리 1", acquisitionArea: "300", transferArea: "300", acquisitionCause: "purchase",
+    acquisitionDate: "2015-01-01", transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "300,000,000",
+    bgMortgageDebtAmount: "150,000,000", bgMortgageSetAmount: "150,000,000", bgLendingDepositTotal: "0", bgDonorRelation: "lineal_descendant",
+    bgAcquisitionMethod: "actual", bgActualAcquisitionLand: "100,000,000", standardPriceAtTransfer: "150000000", standardPriceAtAcq: "80000000",
+  }) as unknown as AssetForm;
+  const bundle = (second: AssetForm) => {
+    const f = bgForm(landBg());
+    f.assets = [landBg(), { ...second, assetId: "a2", assetLabel: "자산 2", addressJibun: "서울 종로구 테스트동 2" } as AssetForm];
+    return Object.assign(f, { assetSplitMode: "companion", bundledSaleMode: "actual", contractTotalPrice: "1,300,000,000" }) as TransferFormData;
+  };
+
+  it("둘째 자산 — ⑧이 토글 C를 꺼진 것으로 읽어 총액 칸을 요구한다(수정 前: 통과 → 서버 400 · 화면에 총액 칸이 없어 막다른 길)", async () => {
+    expect(issues(bundle(carryC()))[0]?.field).toBe("bgActualAcquisitionTotal");
+    const off = await ok(bundle(carryC({ carryoverDonorSplit: false, ...TOTALS })));
+    const stale = await ok(bundle(carryC(TOTALS)));
+    expect([stale.det, off.det]).toEqual([100_152_308, 100_152_308]);
+  });
+
+  it("단일 자산 — 토글 C를 켰다 끄면 남은 당초 증여자 파트 값으로 통과시키지 않는다(수정 前: 통과 → 서버 400)", async () => {
+    const f = bgForm(carryC({ carryoverDonorSplit: false, bgActualAcquisitionTotal: "1,000,000,000" }));
+    expect(issues(f)[0]?.field).toBe("bgCoDonorActualAcquisitionTotal");
+    expect((await ok(bgForm(carryC({ carryoverDonorSplit: false, ...TOTALS })))).det).toBe(69_550_000);
   });
 });
 

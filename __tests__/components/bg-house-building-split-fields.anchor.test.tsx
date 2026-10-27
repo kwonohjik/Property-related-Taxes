@@ -9,6 +9,7 @@ import { render, cleanup, screen } from "@testing-library/react";
 import { BurdenedGiftBlock } from "@/components/calc/transfer/BurdenedGiftBlock";
 import { CarryoverGiftBlock } from "@/components/calc/transfer/CarryoverGiftBlock";
 import { CarryoverDonorSplitToggle } from "@/components/calc/transfer/CarryoverDonorSplitToggle";
+import { TransferModeBlock } from "@/components/calc/transfer/TransferModeBlock";
 import { bgAsset } from "@/__tests__/calc/_helpers/carryover-donor-built-bg-form";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -65,5 +66,14 @@ describe("이월과세 · 토글 C", () => {
     drawBg(carry());
     expect(fields()).toEqual(expect.arrayContaining(["bgCoDonorActualAcquisitionLand", "bgCoDonorActualAcquisitionBuilding", "bgActualAcquisitionLand", "bgActualAcquisitionBuilding"]));
     expect(fields()).not.toContain("bgCoDonorActualAcquisitionTotal");
+  });
+
+  it("함께 양도 둘째 자산 — 토글 C 저장값이 남아도 꺼진 것으로 그린다(④와 같다 · 2026-10-27 실측 회귀)", () => {
+    render(<CarryoverGiftBlock asset={carry()} transferDate="2026-02-16" onChange={vi.fn()} isNonPrimaryAsset hasCompanions />);
+    expect(fields()).not.toContain("buildingCarryover.donorAcquisitionDate");
+    cleanup();
+    render(<TransferModeBlock asset={carry()} onChange={vi.fn()} transferDate="2026-02-16" isCompanionBundle isNonPrimaryAsset />);
+    expect(fields()).toEqual(expect.arrayContaining(["bgActualAcquisitionTotal", "bgCoDonorActualAcquisitionTotal"]));
+    expect(fields()).not.toContain("bgCoDonorActualAcquisitionLand");
   });
 });
