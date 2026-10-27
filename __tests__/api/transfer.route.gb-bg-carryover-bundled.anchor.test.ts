@@ -156,7 +156,9 @@ describe("일반건물 부담부증여 × 이월과세 — 묶음에서 신고�
     expect(acqOf(a.burdenedGiftCarryoverUnits.primary.scenarioB)).toEqual([125_000_000, 125_000_000]);
     expect(a.properties.slice(0, 2).map((p: { acquisitionPrice: number }) => p.acquisitionPrice)).toEqual([125_000_000, 125_000_000]);
     expect(a.generalBuildingDetailsByAsset.primary.assetCards.map((c: { acquisitionPrice: number }) => c.acquisitionPrice)).toEqual([125_000_000, 125_000_000]);
-    expect(a.burdenedGift.cards).toBeUndefined();
+    // 명세도 카드 합 — 일반건물(자산당 1장 · 이월과세 표지 없음) + 토지 1장이고 명세 취득가액 = 자산별 취득가액 합(125 + 125 + 50)
+    expect(a.burdenedGift.cards).toHaveLength(2);
+    expect(a.burdenedGift.perAsset.land.acquisitionPrice + a.burdenedGift.perAsset.building.acquisitionPrice).toBe(300_000_000);
   });
 
   it("혼재 단위 — 토지 이월과세(단건 엔진 단위)와 일반건물 이월과세(외부 단위)를 한 번의 순차 고정점으로 푼다", async () => {
@@ -184,12 +186,12 @@ describe("Q-4 a — 「부담부증여 평가 명세」 취득 열 = 채택 시�
 });
 
 describe("회귀 0 · 차단 유지", () => {
-  it("일반건물이 이월과세가 아니면 종전 그대로 — 110,760,000 · 단위 없음 · 명세는 물건 전체 재계산", async () => {
+  it("일반건물이 이월과세가 아니어도 명세는 카드 합 — 110,760,000 · 단위 없음 · 175,000,000 / 125,000,000(종전 물건 전체 212,727,272 / 118,181,818)", async () => {
     const a = await ok(formOf([gbAsset({ acquisitionCause: "gift" }), landBg(2)], BUNDLE));
     expect(a.determinedTax).toBe(110_760_000);
     expect(a.burdenedGiftCarryoverUnits).toBeUndefined();
-    expect([a.burdenedGift.perAsset.land.acquisitionPrice, a.burdenedGift.perAsset.building.acquisitionPrice]).toEqual([212_727_272, 118_181_818]);
-    expect(a.burdenedGift.cards).toBeUndefined();
+    expect([a.burdenedGift.perAsset.land.acquisitionPrice, a.burdenedGift.perAsset.building.acquisitionPrice]).toEqual([175_000_000, 125_000_000]);
+    expect(a.burdenedGift.cards).toHaveLength(2);
   });
   it("V-3 이월과세 환산 토글 → ⑧ 이 단건과 같은 문구로 먼저 막는다(엔진 throw 전)", async () => {
     const f = formOf([gbAsset({}, { useEstimatedAcquisition: true, estimationMode: "general" }), landBg(2)], BUNDLE);

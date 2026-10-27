@@ -34,22 +34,23 @@ export function buildBundleBurdenedGiftWhole(input: AggregateTransferInput): Tra
 }
 
 /**
- * 의제취득일 전 카드가 있으면 취득가액·개산공제를 카드별 결과 합으로 바꾸고 카드별 명세(`cards`)를 싣는다. 없으면 그대로.
- * 일반건물 부담부증여 × 이월과세에서 A(당초 증여자 기준)가 채택된 자산이 있어도 같이 바꾼다 — 물건 전체 재계산은 양도인 기준(B) 값이라
- * 결정세액(A)과 명세가 어긋난다(PR-1 · `gb-bg-carryover-share-bundled.plan.md` Q-4 a). 일반건물 파트 카드는 자산 명세(`gbAssetBurdenedGift`)를 자산당 1회 센다.
- * 카드 명세가 세액에 쓰인 값을 다 담을 때만 바꾼다 — 그렇지 않으면 「합 = 세액에 쓰인 값」이 거짓이 되므로 종전 그대로 둔다(기존 한계):
- *  · 명세가 없는 카드(자산 명세가 붙지 않은 일반건물 파트 카드 — 상세 산식 `DetailedStatementGbFormulas`도 물건 전체 명세의 슬롯을 읽는다)
- *  · 재개발·재건축 카드(§166 경로가 인가 후 분·청산금·§166③을 따로 계산해 §159 슬롯과 세액 취득가액이 다르다)
+ * 취득가액·개산공제를 카드별 결과 합으로 바꾸고 카드별 명세(`cards`)를 싣는다 — 부담부증여 묶음이면 언제나.
+ * 물건 전체 재계산은 첫 지분·첫 물건의 취득 값(승계취득가액·실지·감정가액·매매사례가액·취득시 기준시가)만 알아, 지분이나 물건마다 그 값이
+ * 다르면 표시가 세액과 갈린다(실측 승계 4억 + 6억 160,000,000 vs 200,000,000 · 일반건물 지분 감정가액 250,000,000 vs 290,000,000 ·
+ * 함께 양도 시가 평가 125,000,000 vs 200,000,000). 의제취득일 전 상속·증여 자산의 §159①1호 A(3자 max · 의제취득일 기준시가)와 이월과세 A 채택도
+ * 물건 전체 재계산이 모르는 값이다(계획서 `bg-bundle-card-acquisition-all.plan.md` Q-1 a · `bg-axis-b-card-acquisition-sum.plan.md` Q-1 a).
+ * 일반건물 부담부증여 파트 카드는 자산 명세(`gbAssetBurdenedGift`)를 자산당 1회 센다.
  *
- * 축 B(같은 물건 지분 분할 — `soleSplitAcquisition`)는 **항상** 바꾼다. 물건 전체 재계산은 첫 지분 카드의 취득 값(승계취득가액·감정가액·
- * 매매사례가액·취득시 기준시가)만 알아, 지분마다 그 값이 다르면 표시가 세액과 갈린다(실측 승계 4억 + 6억 160,000,000 vs 200,000,000 ·
- * 계획서 `bg-axis-b-card-acquisition-sum.plan.md` Q-1 a). 재개발 지분도 넣는다(Q-2 a) — 그 카드의 §159 슬롯은 인가 전 분이라
- * 신고서 취득가액(`redevFilingAcquisition`)을 함께 싣고, 명세 카드가 둘을 구분해 그린다.
+ * 재개발·재건축 지분·자산도 넣는다(Q-2 a) — 그 카드의 §159 슬롯은 인가 전 분이라 신고서 취득가액(`redevFilingAcquisition`)을 함께 싣고,
+ * 명세 카드가 둘을 구분해 그린다.
+ *
+ * 명세가 없는 카드가 하나라도 있으면 종전 그대로 둔다 — 그 카드의 값을 모르면 「합 = 세액에 쓰인 값」이 거짓이 되므로(예: 지분 결과 하나에
+ * 명세가 없는 고가 지분 묶음).
  */
 export function withCardAcquisitions(
   whole: TransferBurdenedGiftBreakdown | undefined,
   records: ReadonlyArray<{
-    item: Pick<TransferTaxItemInput, "propertyId" | "propertyLabel" | "gbAssetBurdenedGift" | "soleSplitAcquisition">;
+    item: Pick<TransferTaxItemInput, "propertyId" | "propertyLabel" | "gbAssetBurdenedGift">;
     result: Pick<TransferTaxResult, "transferBurdenedGiftBreakdown" | "redevelopmentDetail">;
   }>,
 ): TransferBurdenedGiftBreakdown | undefined {
@@ -72,13 +73,7 @@ export function withCardAcquisitions(
         }]
       : [];
   });
-  const isAxisB = records.some((r) => r.item.soleSplitAcquisition === true);
-  if (!isAxisB && !cards.some((c) => c.breakdown.preDeemed) && !records.some((r) => r.item.gbAssetBurdenedGift?.carryoverApplied)) return whole;
-  if (
-    records.some((r) => !r.item.gbAssetBurdenedGift && !r.result.transferBurdenedGiftBreakdown) ||
-    (!isAxisB && records.some((r) => r.result.redevelopmentDetail !== undefined))
-  )
-    return whole;
+  if (records.some((r) => !r.item.gbAssetBurdenedGift && !r.result.transferBurdenedGiftBreakdown)) return whole;
   const sum = (pick: (b: TransferBurdenedGiftBreakdown) => number) => cards.reduce((s, c) => s + pick(c.breakdown), 0);
   return {
     ...whole,

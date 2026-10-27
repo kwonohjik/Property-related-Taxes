@@ -208,8 +208,6 @@ export function calculateGeneralBuildingFractional(
     assertCarryoverDonorBasis(share.burdenedGiftInfo!, ct);
     return { ct, applicablePeriodYears: eligibility.applicablePeriodYears };
   });
-  /** 비교 단위가 하나라도 있으면 전 지분 카드에 지분 §159 명세를 싣는다 — A가 채택되면 명세 취득 열을 지분별 합으로 바꾼다(Q-4 a). */
-  const withShareBreakdown = carryoverOf.some(Boolean);
 
   /** 지분 하나의 한 시나리오 — 카드·표시 재료. `carryoverApplied`가 정해지면 카드에 지분 §159 명세를 싣는다. */
   const buildPiece = (
@@ -328,7 +326,7 @@ export function calculateGeneralBuildingFractional(
     const info = burdened ? share.burdenedGiftInfo : undefined;
     const co = carryoverOf[idx];
     if (!co || !info) {
-      piecesB.push(buildPiece(share, idx, sharePrice, coerced, info, undefined, withShareBreakdown && info ? false : undefined));
+      piecesB.push(buildPiece(share, idx, sharePrice, coerced, info, undefined, info ? false : undefined));
       piecesA.push(undefined);
       return;
     }

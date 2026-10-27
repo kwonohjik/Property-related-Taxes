@@ -265,16 +265,18 @@ describe("BXN-5 묶음 결과 — 주 자산이 입주권이면 합산 신고서
     ).container;
   }
 
-  it("입주권 + 주택: 카드에 한 줄 + 200,000,000", async () => {
+  it("입주권 + 주택: 카드에 한 줄 + 전 자산 합 400,000,000(입주권 신고서 값 200,000,000 + 주택 §159 칸 200,000,000)", async () => {
     const c = await bundleView(bundle([right({ assetId: "r1" }), bgHouse({ assetId: "h1" })]));
     const line = c.querySelector('[data-testid="bg-redev-filing-acquisition"]')?.textContent ?? "";
     expect(line).toContain(NOTE);
-    expect(line).toContain("200,000,000");
+    expect(line).toContain("400,000,000");
     expect(c.textContent).toContain("종전 부동산 취득가(인가 전 분)");
   });
 
-  it("대조 — 주택 + 입주권(주 자산이 주택): 한 줄 없음", async () => {
+  it("주택 + 입주권(주 자산이 주택)도 같은 합 400,000,000 — 종전에는 첫 자산 기준이라 한 줄이 없었다", async () => {
     const c = await bundleView(bundle([bgHouse(), right()]));
-    expect(c.querySelector('[data-testid="bg-redev-filing-acquisition"]')).toBeNull();
+    const line = c.querySelector('[data-testid="bg-redev-filing-acquisition"]')?.textContent ?? "";
+    expect(line).toContain(NOTE);
+    expect(line).toContain("400,000,000");
   });
 });

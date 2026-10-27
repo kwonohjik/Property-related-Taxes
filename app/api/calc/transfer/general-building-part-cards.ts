@@ -369,7 +369,7 @@ export function buildGbCompanionItems(
   // 부담부증여 × 이월과세가 아니거나 이월과세가 배제(§97의2①괄호·②1·2호·③)되면 종전 그대로 — 단건 F27의 배제 경로와 같다.
   const eligibility = ct ? judgeCarryoverEligibility(ct, engine.transferDate) : undefined;
   if (!ct || !info || !eligibility?.isEligible) {
-    const b = scenario(info, bldAcqDate, landAcqDate);
+    const b = scenario(info, bldAcqDate, landAcqDate, info ? false : undefined);
     onDetail?.(src.assetId, b.detail);
     return b.items;
   }

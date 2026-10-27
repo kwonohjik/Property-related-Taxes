@@ -26,6 +26,17 @@ import { buildBgAcquisitionFormula, buildBgExpenseFormula } from "./DetailedStat
 import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
 
 /**
+ * 묶음 카드별 명세(`cards`)가 있으면 이 파트 카드가 속한 지분·자산의 명세를 읽는다 — 카드 id 접미사(`land#0` → `0`)가 `cards[].propertyId`와 같다
+ * (`tagGbCards`). 접미사가 없는 단건·`cards`가 없는 물건 전체 명세는 그대로.
+ */
+function cardBg(bg: TransferBurdenedGiftBreakdown | undefined, propertyId: string): TransferBurdenedGiftBreakdown | undefined {
+  const i = propertyId.indexOf("#");
+  if (!bg?.cards || i < 0) return bg;
+  const key = propertyId.slice(i + 1);
+  return bg.cards.find((c) => c.propertyId === key)?.breakdown ?? bg;
+}
+
+/**
  * propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산.
  *
  * 🔴 **`baseCardId`를 반드시 통과시킨다.** 지분(%) 분할 카드는 `land#0` 꼴이라 정확 비교로는
@@ -149,6 +160,7 @@ export function buildGbTransferFormula(
   burdenedGift?: TransferBurdenedGiftBreakdown,
 ): string | undefined {
   // 부담부증여 §159①2호 분기 (우선 적용) — 자산별 양도가액 = 자산기준시가 × 채무액 / 양도시 보충적평가
+  burdenedGift = cardBg(burdenedGift, p.propertyId);
   if (burdenedGift) {
     const asset = isLandProp(p.propertyId)
       ? burdenedGift.perAsset.land
@@ -234,6 +246,7 @@ function buildGbAcquisitionFormulaCore(
   burdenedGift?: TransferBurdenedGiftBreakdown,
 ): string | undefined {
   // 부담부증여 §159①1호 분기 (우선 적용) — 자산별 취득가액 = 취득시 자산기준시가 × 채무액 / 증여재산 평가액
+  burdenedGift = cardBg(burdenedGift, p.propertyId);
   if (burdenedGift) {
     const bgAsset = isLandProp(p.propertyId)
       ? burdenedGift.perAsset.land
@@ -553,6 +566,7 @@ export function buildGbExpenseFormula(
   const shareEcho = gbIn?.shareActualExpenseEcho?.[String(shareIndexOf(p.propertyId))];
   const gb = gbIn && shareEcho ? { ...gbIn, ...shareEcho } : gbIn;
   // 부담부증여 §163⑥ 분기 — 자산별 개산공제 = 안분 취득가액 × 개산공제율
+  burdenedGift = cardBg(burdenedGift, p.propertyId);
   if (burdenedGift) {
     const bgAsset = isLandProp(p.propertyId)
       ? burdenedGift.perAsset.land

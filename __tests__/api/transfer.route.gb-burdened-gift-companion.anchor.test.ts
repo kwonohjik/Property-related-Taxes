@@ -267,7 +267,10 @@ describe("GC-6 카드 빌더 직접 — 부담부증여 + 비-실가 payload 는
     const base = buildGbCompanionItems({ ...gbvActual }, eng, src);
     // ③(환산)이 이기게 만드는 ①②(신고가·§164)가 있어도 — 재선택하면 환산 payload 가 되어 가드가 던진다
     const withClause = buildGbCompanionItems({ ...gbvActual, landPreDeemedClauseA: { reported: 1, sec164: 1 } }, eng, src);
-    expect(withClause).toEqual(base);
+    // 카드 항목(세액 입력)은 같다. 카드에 붙는 자산 명세(`gbAssetBurdenedGift` — 표시 전용, 부담부증여 묶음은 언제나 싣는다)는 §159 의제 규칙(PR-7a)을 따로 읽으므로 비교에서 뺀다.
+    const taxItems = (items: typeof base) => items.map(({ gbAssetBurdenedGift: _g, ...rest }) => rest);
+    expect(base.every((it) => it.gbAssetBurdenedGift !== undefined)).toBe(true);
+    expect(taxItems(withClause)).toEqual(taxItems(base));
   });
 });
 
