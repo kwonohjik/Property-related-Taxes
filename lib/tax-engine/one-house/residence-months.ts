@@ -2,8 +2,9 @@
  * §154① 거주요건에 쓰는 **거주 개월** — 통산 규칙 모음 (`transfer-tax-exemption-holding.ts`에서 800줄 정책으로 분리, 이음매는 「거주 개월을 만드는 함수」).
  *
  * - `consolidateResidenceMonths` · `resolveExemptionResidenceMonths` — §154⑧3호 동일세대 상속 통산(증여 전 거주는 포함하지 않는다).
- * - `resolveExemptionRequirementResidenceMonths` — 위 값 + 증여 전 동일세대 거주 개월(결정 #38-7). **비과세 거주요건과 표2 대상 판정(거주 2년)이 읽는 값**이다(결정 #38-9).
- *   표2 **공제율**의 보유·거주기간은 이 값이 아니라 본인의 기간(상속개시일·증여일부터)이다.
+ * - `resolveExemptionRequirementResidenceMonths` — 위 값 + 증여 전 동일세대 거주 개월(결정 #38-7). **비과세 거주요건이 읽는 값**이다.
+ * - `resolveTable2SubjectResidenceMonths` — 표2 **대상 판정**(거주 2년)이 읽는 값. 양도자 본인의 거주(대법원 2025두34935)이고,
+ *   이월과세 시나리오 A만 증여 전 동일세대 거주를 더한다(사용자 결정 2026-10-27 Q-2).
  *
  * 하위 호환: `transfer-tax-exemption-holding.ts`가 앞의 두 함수를 재수출해 기존 import 경로(`transfer-tax-exemption`·`-requirements`·`-helpers`)는 무변경이다.
  * 이 파일은 그 파일의 **타입만** 가져온다(런타임 의존은 단방향).
@@ -11,6 +12,7 @@
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { ResidenceReqInput } from "../transfer-tax-exemption-holding";
 import { giftHouseholdPriorResidenceMonths } from "./gift-household-basis";
+import type { GiftHouseholdBasis } from "./gift-household-basis";
 
 /**
  * §154⑧3호 통산 거주 개월 규칙 코어 — 최소입력 pure 헬퍼 (client·engine 공용 단일 소스).
@@ -72,22 +74,39 @@ export function resolveExemptionResidenceMonths(input: ResidenceReqInput): numbe
 }
 
 /**
- * §154① **비과세 거주요건**과 §95② **표2 대상 판정**(시행령 §159의4 — 보유기간 중 거주기간 2년 이상)에 쓰는 거주 개월
- * = §154⑧3호 통산값(`resolveExemptionResidenceMonths`) + 증여 전 동일세대 거주 개월 (결정 #38-7 · #38-9).
+ * §154① **비과세 거주요건**에 쓰는 거주 개월
+ * = §154⑧3호 통산값(`resolveExemptionResidenceMonths`) + 증여 전 동일세대 거주 개월 (결정 #38-7).
  *
  * 증여받은 주택을 증여자와 계속 같은 세대로 보유한 것으로 확인된 경우(`giftHouseholdConsolidationStart`)에만 증여 전 거주 개월을 더한다 —
  * 보유기간 통산(`giftHouseholdHoldingStart`)과 같은 성립 조건이다. 두 기간은 증여일을 경계로 겹치지 않아 단순 합산이 정확하다.
  * 동일세대원으로서 **함께 거주한 기간만** 통산한다 — 증여자의 거주기간이 무조건 통산되는 것이 아니다.
  *
- * 🔴 **표2 공제율(보유기간별·거주기간별 공제율) 계산에는 이 함수를 쓰지 않는다** — 그쪽은 본인의 보유·거주기간이고 기산일은
- *    상속개시일·증여일이다(`residencePeriodMonths`·취득일). 대상 판정과 공제율을 같은 값으로 읽으면 공제율이 늘어난다.
+ * 🔴 **장기보유특별공제 표2에는 이 함수를 쓰지 않는다** — 대상 판정은 `resolveTable2SubjectResidenceMonths`, 공제율은 본인 거주(`residencePeriodMonths`)다.
  *
- * 근거(표2): 사전-2025-법규재산-0506(2025.6.25.) — 질의1: 표2 적용 여부 판단 시 동일세대원으로서 보유·거주한 기간 통산 /
- *   질의2: 공제율 계산 시 피상속인·증여자의 기간 통산 안 함(상속개시일·증여받은 날부터 실제 거주한 기간). 상속은 사전-2021-법령해석재산-202도 같다.
  * 근거(비과세): 서면인터넷방문상담4팀-912(2005.6.10.) — 동일세대원에게 증여한 뒤 수증자가 양도하면 증여자의 보유기간 및 거주기간을 통산해 비과세 여부를 판정.
  * ⚠️ 비과세 쪽 회신은 배우자 지분 증여를 다룬 2005년 사안이라 주택 전부 증여·현행 조정대상지역 거주요건의 정면 해석은 확인하지 못했다.
  */
 export function resolveExemptionRequirementResidenceMonths(input: ResidenceReqInput): number {
   return resolveExemptionResidenceMonths(input) + giftHouseholdPriorResidenceMonths(input.giftHouseholdBasis);
+}
+
+/**
+ * §95② **표2 대상 판정**(「소득세법 시행령」 §159의4 — 보유기간 중 거주기간 2년 이상)의 거주 개월 — 최소입력 코어(겸용주택 경로도 이 함수를 쓴다).
+ *
+ * 대법원 2026.1.15. 선고 2025두34935: 표2의 「거주기간」은 양도자가 양도자산인 주택의 취득일부터 양도일까지의 보유기간 중 해당 주택에서
+ * 거주한 기간이고, 상속으로 취득한 경우도 같다(§154⑧3호 통산을 유추적용하지 않는다). 조심 2025서3843은 증여에 같은 법리를 적용했다.
+ * 그래서 상속 전 동거 거주·증여 전 동일세대 거주를 더하지 않는다 — 국세청 사전-2025-법규재산-0506 질의1(통산)과 다르다.
+ *
+ * 예외 — **이월과세 시나리오 A**(`holdingAlreadyAtDonor`): 「소득세법」 §95④ 단서로 보유기간이 증여자 취득일부터라, 증여 전 양도자 본인이 같은 세대로
+ * 거주한 기간도 그 보유기간 안이다. 판결이 다룬 질문이 아니어서 통산을 유지하고 확인 필요를 고지한다(사용자 결정 2026-10-27 Q-2 —
+ * `table2-pre-acquisition-residence-notice.ts`).
+ */
+export function table2SubjectResidenceMonths(ownResidenceMonths: number, basis: GiftHouseholdBasis | undefined): number {
+  return ownResidenceMonths + (basis?.holdingAlreadyAtDonor === true ? giftHouseholdPriorResidenceMonths(basis) : 0);
+}
+
+/** `table2SubjectResidenceMonths`의 엔진 입력판 — 표2 대상 판정 호출부는 모두 이 함수를 쓴다(`table2-residence-leaf-parity.test.ts`). */
+export function resolveTable2SubjectResidenceMonths(input: ResidenceReqInput): number {
+  return table2SubjectResidenceMonths(input.residencePeriodMonths, input.giftHouseholdBasis);
 }
 

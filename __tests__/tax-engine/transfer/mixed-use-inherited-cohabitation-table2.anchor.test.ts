@@ -1,8 +1,9 @@
 /**
  * 겸용주택 동일세대 상속 §154⑧3호 거주 통산 표2 앵커 (계획서 §7)
  *
- * 검증: 표2 대상 판정은 통산 거주(table2ResidencePeriodYears), 거주분 공제율은 실거주(residencePeriodYears).
- * 사전법령해석재산 2021-202 — 대상 판정=통산, 공제율=상속개시일 기산.
+ * 검증(2026-10-27 변경): 표2 대상 판정·거주분 공제율 모두 실거주(residencePeriodYears)다 — 대법원 2026.1.15. 선고 2025두34935
+ * (표2 거주기간 = 상속인이 상속개시일부터 보유하는 동안 거주한 기간). 통산 거주(table2ResidencePeriodYears)는 §154① 비과세 거주요건에만 쓴다.
+ * 종전 근거(사전-2021-법령해석재산-202 — 대상 판정=통산)와 달라 통산했다면 표2였을 때 판례 고지를 낸다.
  *
  * 기준 케이스: 40억 겸용(주택분 12억 초과), 1세대1주택, 보유 land 1992~2022(30y)·building 1997~2022(25y).
  * 현행(버그): 표2 게이트가 실거주만 봄 → 동일세대 상속 실거주0은 통산 표현 경로 없어 표1 강제.
@@ -46,14 +47,19 @@ const run = (asset: MixedUseAssetInput) =>
   calcMixedUseTransferTax(TRANSFER_PRICE, TRANSFER_DATE, asset, RATES);
 
 describe("겸용주택 동일세대 상속 §154⑧3호 거주 통산 표2", () => {
-  it("앵커1: 실거주0 + 통산 2년 → 표2 개방, 보유40%+거주0%=40% (원단위 golden)", () => {
+  it("앵커1: 실거주0 + 통산 2년 → 표2 미개방(표1 30%) · 판례 고지 (원단위 golden — 종전 표2 40%: 510,017,988 · 총부담 561,019,786)", () => {
     const r = run(base40({ residencePeriodYears: 0, table2ResidencePeriodYears: 2 }));
-    expect(r.housingPart.longTermDeductionTable).toBe(2);
-    expect(r.housingPart.longTermDeductionRate).toBeCloseTo(0.40, 5);
-    // golden — 현행 버그(표1 0.30: transferTax 572,150,806·총부담 629,365,886) 대비 공제↑ → 세액↓
-    expect(r.housingPart.incomeAmount).toBe(828_437_579);
-    expect(r.total.transferTax).toBe(510_017_988);
-    expect(r.total.transferTax + r.total.localTax).toBe(561_019_786);
+    expect(r.housingPart.longTermDeductionTable).toBe(1);
+    expect(r.housingPart.longTermDeductionRate).toBeCloseTo(0.30, 5);
+    expect(r.total.transferTax).toBe(572_150_806);
+    expect(r.total.transferTax + r.total.localTax).toBe(629_365_886);
+    const notice = (r.warnings ?? []).filter((w) => w.includes("2025두34935"));
+    expect(notice).toHaveLength(1);
+    expect(notice[0]).toContain("상속개시 전 동일세대로 거주한 기간은");
+    // 짝 — 실거주 2년이면 표2이고 고지가 없다
+    const own = run(base40({ residencePeriodYears: 2, table2ResidencePeriodYears: 2 }));
+    expect(own.housingPart.longTermDeductionTable).toBe(2);
+    expect((own.warnings ?? []).some((w) => w.includes("2025두34935"))).toBe(false);
   });
 
   it("앵커3 (가드): 통산 1년(<2) + 실거주0 → 표2 미개방(표1)", () => {
@@ -62,22 +68,20 @@ describe("겸용주택 동일세대 상속 §154⑧3호 거주 통산 표2", () 
     expect(r.housingPart.longTermDeductionRate).toBeLessThanOrEqual(0.30);
   });
 
-  it("앵커5: 실거주1년 + 통산 2년 → 표2(대상 통산), 거주분=실거주 1년은 표2 거주기간 열 해당 없음 0 → 40%", () => {
+  it("앵커5: 실거주1년 + 통산 2년 → 표1(실거주 1년 < 2년 — 통산분은 표2 대상 판정에 넣지 않는다)", () => {
     const r = run(base40({ residencePeriodYears: 1, table2ResidencePeriodYears: 2 }));
-    expect(r.housingPart.longTermDeductionTable).toBe(2);
-    // 보유40% + 거주(실거주1년) 0 = 40% (통산분이 거주분 공제율에 침범하지 않고, 표2 거주기간 열은 2년 이상부터 —
-    // 「소득세법」 §95② 표2, 2021.1.1. 시행본 MST 224837·현행 MST 280405 원문. 종전 0.44는 S08-2 과다공제)
-    expect(r.housingPart.longTermDeductionRate).toBeCloseTo(0.40, 5);
+    expect(r.housingPart.longTermDeductionTable).toBe(1);
+    expect(r.housingPart.longTermDeductionRate).toBeCloseTo(0.30, 5);
   });
 
-  it("앵커6: 용도변경 겸용 + 실거주0 통산2년 → 표2 개방 (period-split 폐지 후에도 불변)", () => {
+  it("앵커6: 용도변경 겸용 + 실거주0 통산2년 → 표1 (period-split 폐지 후에도 용도변경 없는 경우와 같은 공제율)", () => {
     /**
      * 🔴 2026-08-10 — 종전 제목은 「applyUsagePeriodSplit 표2 개방」이었고 `usagePeriodSplit`가
      *    생성되는지를 함께 단언했다. 시간비례 분할은 폐지됐다(근거 「집행기준 89-154-24」가
      *    **존재하지 않는 문서**였고 §95④·사전-2021-법령해석재산-0333·사전-2022-법규재산-0427이
      *    「보유기간 = 취득일~양도일」을 명시한다).
      *
-     *    이 테스트가 지키던 **실질**은 §154⑧3호 통산 거주로 표2가 열리는가이고 그것은 그대로다.
+     *    이 테스트가 지키던 실질은 「용도변경일이 있어도 공제율이 없는 경우와 같다」이다. 2026-10-27부터 통산 거주로는 표2가 열리지 않는다(대법원 2025두34935).
      */
     const r = run(
       base40({
@@ -89,7 +93,7 @@ describe("겸용주택 동일세대 상속 §154⑧3호 거주 통산 표2", () 
         },
       }),
     );
-    expect(r.housingPart.longTermDeductionTable).toBe(2);
+    expect(r.housingPart.longTermDeductionTable).toBe(1);
     // 용도변경일이 있어도 LTHD 보유기간은 전체(취득일~양도일)다 — 용도변경일 없는 경우와 동일.
     const noChange = run(base40({ residencePeriodYears: 0, table2ResidencePeriodYears: 2 }));
     expect(r.housingPart.longTermDeductionRate).toBe(

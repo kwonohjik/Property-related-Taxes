@@ -346,7 +346,7 @@ export interface RedevelopmentFormSlice {
   /**
    * 증여받은 입주권(승계조합원 + 취득원인 증여)을 **증여자와 증여일부터 양도일까지 계속 같은 세대**로 보유했는가
    * (사전-2020-법령해석재산-0691). `"yes"` = 증여자와 같은 세대로서 종전주택에서 거주한 기간(`redevPriorHouseResidenceMonths`)을
-   * 표2 대상 판정(영 §159의3)과 비과세 거주요건에 통산한다. `"no"`·`""` = 통산하지 않는다(미답은 확인 필요 고지).
+   * 비과세 거주요건에 통산한다(표2에는 통산하지 않는다 — 대법원 2025두34935). `"no"`·`""` = 통산하지 않는다(미답은 확인 필요 고지).
    * 범위 밖이면 ④가 보내지 않는다(`successorGiftHouseholdInScope`).
    */
   redevSuccessorGiftSameHousehold: "" | "yes" | "no";

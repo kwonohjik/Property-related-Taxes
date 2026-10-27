@@ -77,7 +77,7 @@ export const mixedUseAssetSchema = z.object({
   /** PHD 3-시점 환산 입력 (겸용주택 모드 전용). landArea는 엔진이 주택부수토지로 자동 주입. */
   preHousingDisclosure: phdForMixedUseSchema.optional(),
   residencePeriodYears: z.number().nonnegative(),
-  // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 (client-derived). 미제공 시 엔진이 residencePeriodYears fallback.
+  // §154⑧3호 통산 거주 연수 (client-derived) — §154① 비과세 거주요건 전용(표2는 residencePeriodYears). 미제공 시 엔진이 residencePeriodYears fallback.
   table2ResidencePeriodYears: z.number().int().nonnegative().optional(),
   isMetropolitanArea: z.boolean().optional(),
   zoneType: z.enum([

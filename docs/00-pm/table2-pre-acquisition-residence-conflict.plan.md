@@ -1,6 +1,6 @@
 # 장기보유특별공제 표2 대상 판정 — 증여·상속 전 동일세대 거주를 통산하지 않는다(대법원 2025두34935) — 수정 계획서
 
-- 상태: **결정 대기**(Q-1~Q-4) — 세액이 오르는 변경이라 사용자 결정 없이 착수하지 않는다
+- 상태: **구현**(사용자 결정 2026-10-27 — Q-1~Q-4 모두 권장안 (a)) — §9
 - 작성: 2026-10-27 · master 657a56184 · 워크트리 `../prt-table2-plan`
 - 출처: `redev-successor-gift-holding.plan.md` V-1 조사 중 발견. 메모리 `project_table2_pre_gift_residence_authority_conflict`
 
@@ -115,3 +115,52 @@
 3. 부수토지 카드·§98의2 특칙·직전거주주택 고지에 증여·상속 전 거주가 있는 anchor를 추가한다(현재 0건).
 4. 뮤테이션: 다섯 지점 각각을 통산으로 되돌리면 anchor가 KILLED되는지 확인한다.
 5. 전체 vitest · tsc · lint · 관련 E2E · 화면 문구 3테마 스크린샷.
+
+## 9. 구현 결과 (2026-10-27 — Q-1~Q-4 (a))
+
+### 9.1 엔진
+- leaf 신설 `lib/tax-engine/one-house/residence-months.ts`:
+  - `table2SubjectResidenceMonths(own, basis)` = 본인 거주 + (이월과세 시나리오 A(`holdingAlreadyAtDonor`)일 때만 증여 전 동일세대 거주)
+  - `resolveTable2SubjectResidenceMonths(input)`
+  - 비과세 leaf `resolveExemptionRequirementResidenceMonths`는 그대로다(§154①만 읽는다).
+- 표2 대상 판정 지점 교체:
+  - §3의 ①②③(`transfer-tax-lthd.ts:237·301` · `-982-step.ts:49` · `rental-housing-judge.ts:145`)
+  - ⑤ 겸용(`transfer-tax-mixed-use.ts` — `table2ResidencePeriodYears`는 비과세 전용이 됐다 · 필드명 유지 Q-4 a)
+  - ④ 승계(`redevelopment-successor.ts` — 대상 판정·공제율 모두 본인 신축 거주)
+- **계획서 §3에서 빠졌던 지점**: `redevelopment-lthd.ts` `redevUsesTable2`(조특법 §97의4① 단서가 쓰는 표2 판정)도 0691 종전주택 거주를 더하고 있었다. 같은 본인 신축 거주로 바꿨다. §2 B 변형은 이 지점을 놓쳤다.
+- 고지(Q-3 a): `gift-table2-notice.ts` → `table2-pre-acquisition-residence-notice.ts`.
+  - 판례 고지: 취득 전 거주를 비과세에는 통산했고, 통산했다면 표2였을 때. 0506과 다르다고 적는다.
+  - 이월과세 A 통산 확인 필요 고지.
+  - 이월과세 A 미답 고지.
+  - 겸용 `mixedUseTable2PrecedentNotice`.
+  - 승계 0691 고지 문구 교체(비과세 통산 확인 필요 + 표2 판례).
+  - `gift-household-notice.ts` 통산 범위 문구(이월과세 A 분기).
+- 일반 증여의 미답 표2 고지(종전 #38-8)는 없앴다 — 통산하지 않으므로 결론을 가르지 않는다.
+
+### 9.2 화면·주석 (Q-4 a — 칸은 유지, 문구만)
+- `InheritedCohabitationCard` · `PriorHouseholdResidenceField`(hint 139자) · `RedevSuccessorGiftHouseholdSection` · `RedevAptResidenceNotices` · `residence-interval-validate`
+- 겸용 산식 문구 「거주(통산) N년」 → 「거주 N년」
+- 타입·스키마·store 주석
+
+### 9.3 이월과세 시나리오 A 실측 (V-3)
+시료: 증여자 2012-01-10 취득 · 2021-03-02 증여 · 직계 계속 같은 세대 · 20억 · 2025-06-15 양도.
+
+| 입력 | 결과 |
+|---|---|
+| 증여 전 24개월 · 본인 0 | A 채택 · 표2 40% · 136,260,000 (유지) · 확인 필요 고지 |
+| 미답 | 표1 26% · 174,354,000 · 미답 고지 |
+| 시나리오 B | 증여 전 거주를 더하지 않게 됐다(24개월 = 0개월과 같은 B 세액) |
+
+### 9.4 검증
+- tsc 0
+- 관련 vitest 38,363건 중 기대값 갱신 27건. 모두 §2 실측값과 일치한다:
+  - H1 장특 11,076,923
+  - G1 135,806,000
+  - S1 309,969,000
+  - M1 572,150,806
+- 새 anchor `table2-pre-acquisition-residence-precedent.anchor.test.ts` 7건(L·H2 207,682,200·CA).
+- 정적 가드 `table2-residence-leaf-parity.test.ts`:
+  - 지점 5곳 + 재개발 승계 2곳을 고정한다.
+  - 비과세 leaf와 `table2ResidencePeriodYears`를 읽으면 실패한다.
+- 뮤테이션 17/17 KILLED.
+  - 부수토지 카드(①-237)와 직전거주주택 고지(③)는 정적 가드로만 잡힌다. 두 경로의 행동 anchor는 추가하지 못했다(§7-3 미완 — 픽스처 구성 비용).
