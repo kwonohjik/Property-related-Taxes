@@ -132,12 +132,13 @@ describe("D-1 묶음 §159 명세 — 의제 카드가 있으면 카드별 결�
     expect(r.shown).toBe(r.cardSum);
   });
 
-  it("D1-f 대조 — 함께 양도(다른 물건) · 의제 카드 없음은 종전 그대로(cards 없음)", async () => {
+  it("D1-f 함께 양도(다른 물건) · 의제 카드 없음도 카드별 — 두 물건 값이 같아 합은 물건 전체 값과 같다", async () => {
+    // 종전에는 「cards 없음」을 고정했다 — 부담부증여 묶음은 언제나 카드별이다(`bg-bundle-card-acquisition-all.plan.md` Q-1 a).
     const r = await run(companion({ ...STD, ...PURCHASE }));
     expect(r.fields).toEqual([]);
     expect(r.status).toBe(200);
-    expect(r.bg).toBeDefined();
-    expect(r.bg?.cards).toBeUndefined();
+    expect(r.bg?.cards).toHaveLength(2);
+    expect(r.shown).toBe(r.cardSum);
   });
 });
 
@@ -168,7 +169,7 @@ describe("B-3/D-2 축 B · 의제 지분 + 범위 밖 지분 — 첫 카드에�
 });
 
 describe("엔진 합산 — `withCardAcquisitions` (토지·건물 · 개산공제)", () => {
-  it("E-1 의제 카드가 있으면 토지·건물 취득가액·개산공제가 카드 합이고 cards를 싣는다 · 나머지(증여세 등)는 물건 전체 값 그대로", async () => {
+  it("E-1 토지·건물 취득가액·개산공제가 카드 합이고 cards를 싣는다(의제 카드 여부와 무관) · 나머지(증여세 등)는 물건 전체 값 그대로", async () => {
     const { withCardAcquisitions } = await import("@/lib/tax-engine/transfer-tax-aggregate-burdened-gift");
     const part = (acq: number, ded: number) => ({ acquisitionPrice: acq, estimatedDeduction: ded });
     const whole = { perAsset: { land: { ...part(1, 1), transferPrice: 9 }, building: { ...part(2, 2), transferPrice: 8 } }, gratuitousPortion: 777 } as unknown as TransferBurdenedGiftBreakdown;
@@ -180,13 +181,19 @@ describe("엔진 합산 — `withCardAcquisitions` (토지·건물 · 개산공�
     expect(out?.perAsset.building).toMatchObject({ acquisitionPrice: 220, estimatedDeduction: 16, transferPrice: 8 });
     expect(out?.gratuitousPortion).toBe(777);
     expect(out?.cards?.map((c) => c.propertyId)).toEqual(["a", "b"]);
-    // 의제 카드가 없으면 그대로(같은 객체)
-    expect(withCardAcquisitions(whole, [rec("b", card(100, 200, 5, false))])).toBe(whole);
+    // 의제 카드가 없어도 카드 합이다 — 종전에는 이 경우 물건 전체 그대로(같은 객체)였다
+    const plain = withCardAcquisitions(whole, [rec("b", card(100, 200, 5, false))]);
+    expect(plain?.perAsset.land).toMatchObject({ acquisitionPrice: 100, estimatedDeduction: 5, transferPrice: 9 });
+    expect(plain?.perAsset.building).toMatchObject({ acquisitionPrice: 200, estimatedDeduction: 10, transferPrice: 8 });
+    expect(plain?.cards?.map((c) => c.propertyId)).toEqual(["b"]);
+    // 명세 없는 카드가 있으면 그대로(같은 객체) — 남은 가드
+    const noStatement = { item: { propertyId: "c", propertyLabel: "c" }, result: {} };
+    expect(withCardAcquisitions(whole, [rec("b", card(100, 200, 5, false)), noStatement])).toBe(whole);
   });
 });
 
-describe("경계 — 카드 명세가 세액 값을 다 담지 못하는 묶음은 종전 표시 그대로(리뷰 게이트 반영)", () => {
-  it("G-1 함께 양도 [의제 토지 기준시가 + 일반건물] — 일반건물 파트 카드엔 §159 명세가 없다 → cards 없음 · 종전 값 97,999,816 · 세액 67,976,514", async () => {
+describe("함께 양도 × 일반건물·재개발 — 리뷰 게이트 해제(Q-2 a): 카드별 명세가 세액 값을 담는다", () => {
+  it("G-1 함께 양도 [의제 토지 기준시가 + 일반건물] — 일반건물 파트 카드에도 자산 명세가 붙는다 → cards 실림 · 명세 = 자산별 취득가액 합 · 세액 67,976,514 그대로", async () => {
     const BG_STD = { transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_standard", bgDonorRelation: "lineal_descendant", bgLendingDepositTotal: "0", bgMortgageDebtAmount: "200,000,000" };
     const gb = {
       ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 2-2", assetKind: "general_building", acquisitionCause: "purchase", acquisitionDate: "2015-03-01",
@@ -201,12 +208,12 @@ describe("경계 — 카드 명세가 세액 값을 다 담지 못하는 묶음�
     }) as TransferFormData;
     const r = await run(f);
     expect(r.status).toBe(200);
-    expect(r.bg?.cards).toBeUndefined();
-    expect(r.shown).toBe(97_999_816);
+    expect(r.bg?.cards).toBeDefined();
+    expect(r.shown).toBe(r.cardSum);
     expect(r.tax).toBe(67_976_514);
   });
 
-  it("G-2 함께 양도 [매매 주택 + 재개발 의제(① 1억 → ③ §166③)] — §166 경로 취득가액이 §159 슬롯과 다르다 → cards 없음 · 세액 31,552,700", async () => {
+  it("G-2 함께 양도 [매매 주택 + 재개발 의제(① 1억 → ③ §166③)] — §166 카드는 인가 전 분 + 신고서 취득가액을 따로 싣는다 → cards 실림 · 세액 31,552,700 그대로", async () => {
     const REDEV = {
       addressJibun: "서울 B 2", assetKind: "redevelopment_apt", actualSalePrice: "525,000,000", redevSubject: "apt", redevApprovalLawBasis: "urban_renovation_art_74",
       redevApprovalDate: "2009-10-23", redevRightsValue: "219,218,500", redevSettlementDirection: "pay", redevSettlementAmount: "92,781,500", redevCompletionDate: "2012-09-01",
@@ -227,7 +234,12 @@ describe("경계 — 카드 명세가 세액 값을 다 담지 못하는 묶음�
     }) as TransferFormData;
     const r = await run(f);
     expect(r.status).toBe(200);
-    expect(r.bg?.cards).toBeUndefined();
+    expect(r.bg?.cards).toHaveLength(2);
+    const redev = r.bg?.cards?.find((c) => c.redevFilingAcquisition !== undefined);
+    expect(redev).toBeDefined();
+    // 카드별 신고서 취득가액(§166 카드는 redevFilingAcquisition, 그 밖은 §159 칸) 합 = 자산별 취득가액 합
+    const filing = (r.bg?.cards ?? []).reduce((a, c) => a + (c.redevFilingAcquisition ?? c.breakdown.perAsset.land.acquisitionPrice + c.breakdown.perAsset.building.acquisitionPrice), 0);
+    expect(filing).toBe(r.cardSum);
     expect(r.tax).toBe(31_552_700);
   });
 });

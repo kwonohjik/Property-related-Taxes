@@ -178,7 +178,9 @@ describe("지분 분할 50/50 × 이월과세 — 지분마다 A/B를 신고 단
     // 미채택 [A] 요약은 반사실 실행(이 단위만 A)에서 — 최종(B) 카드를 다시 쓰면 두 열이 같아진다
     expect(acqOf(a.burdenedGiftCarryoverUnits["0"].scenarioA)).toEqual([112_500_000, 62_500_000]);
     expect(a.generalBuildingValuationDetail.assetCards.map((c: { acquisitionPrice: number }) => c.acquisitionPrice)).toEqual([62_500_000, 62_500_000, 62_500_000, 62_500_000]);
-    expect(a.burdenedGift.cards).toBeUndefined();
+    // 명세도 카드 합 — B 채택은 지분 명세 카드 2장(이월과세 표지 없음)이고 명세 취득가액 = 자산별 취득가액 합
+    expect(a.burdenedGift.cards).toHaveLength(2);
+    expect(a.burdenedGift.perAsset.land.acquisitionPrice + a.burdenedGift.perAsset.building.acquisitionPrice).toBe(250_000_000);
   });
 
   it("V-1 — A의 물건 사건 前/後 판정은 당초 증여자 취득일로: 첫 지분(2019 증여) 뒤·둘째 지분(2024 증여) 전 용도변경이 둘째 지분 A에만 걸린다", async () => {
@@ -205,10 +207,10 @@ describe("Q-4 a — 「부담부증여 평가 명세」 취득 열 = 채택 시�
     expect(a.burdenedGiftCarryoverUnits["1"].adoptedScenario).toBe("A");
     expect(a.burdenedGift.cards.map((c: { label: string }) => c.label)).toEqual(["자산 1", "자산 2 · 이월과세 적용(당초 증여자 기준)"]);
   });
-  it("이월과세 아님 — 명세는 물건 전체 재계산 그대로(125,000,000 · 125,000,000) · 카드 없음 · 단위 없음", async () => {
+  it("이월과세 아님 — 명세는 지분별 카드 합 · 단위 없음 (종전 물건 전체 재계산 125,000,000 · 125,000,000, 카드 없음)", async () => {
     const a = await ok(shares(gbShare(gift), gbShare(gift)));
-    expect([a.burdenedGift.perAsset.land.acquisitionPrice, a.burdenedGift.perAsset.building.acquisitionPrice]).toEqual([125_000_000, 125_000_000]);
-    expect(a.burdenedGift.cards).toBeUndefined();
+    expect(a.burdenedGift.cards).toHaveLength(2);
+    expect(a.burdenedGift.perAsset.land.acquisitionPrice + a.burdenedGift.perAsset.building.acquisitionPrice).toBe(propsAcq(a).reduce((s: number, v: number) => s + v, 0));
     expect(a.burdenedGiftCarryoverUnits).toBeUndefined();
   });
 });
