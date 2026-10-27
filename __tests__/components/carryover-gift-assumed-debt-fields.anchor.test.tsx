@@ -71,12 +71,22 @@ describe("주택 분리 계산 — 증여세 카드의 토글 바로 아래에 �
   });
 });
 
-describe("그 밖의 자산(상당액 직접 입력) — 토글 없이 안내만(Q-4 a)", () => {
-  it("주택 이월과세 → 토글 없음 · 상당액 안내에 「인수한 채무를 뺀」", () => {
+describe("E1 주택 이월과세(상당액 직접 입력) — 토글·채무 칸이 있다(매입분 PR-1 · 계획서 `carryover-gift-debt-purchased-part.plan.md` §4.4)", () => {
+  // 종전 단언 「주택 이월과세 → 토글 없음」은 PR-1에서 반전했다. 같은 describe 안의 아래 범위 밖 단언이 형제 안전망이다.
+  it("주택 이월과세 → 토글 있음 · ON이면 채무 칸 1개 · 상당액 안내에 「인수한 채무를 뺀」은 그대로", () => {
     const a = { ...makeDefaultAsset(1), assetKind: "housing", acquisitionCause: "carryover_gift", carryover: { ...CO, giftDebtAssumed: true } } as unknown as AssetForm;
+    render(<CarryoverGiftBlock asset={a} transferDate="2026-03-01" onChange={vi.fn()} />);
+    expect(screen.getAllByTestId("carryover-gift-debt-assumed")).toHaveLength(1);
+    expect(debtFields()).toEqual(["carryover.giftAssumedDebt"]);
+    expect(document.querySelector("[data-field='carryover.giftTaxAmount']")?.textContent).toContain("당초 증여 때 인수한 채무를 뺀 금액");
+  });
+
+  it("범위 밖 — 지금 양도도 부담부증여 주택(E4) OFF → 토글 없음 · 칸 없음 · 안내(막다른 길이 아니다)", () => {
+    const a = { ...makeDefaultAsset(1), assetKind: "housing", acquisitionCause: "carryover_gift", transferType: "burdened_gift", carryover: { ...CO, giftDebtAssumed: false } } as unknown as AssetForm;
     render(<CarryoverGiftBlock asset={a} transferDate="2026-03-01" onChange={vi.fn()} />);
     expect(screen.queryByTestId("carryover-gift-debt-assumed")).toBeNull();
     expect(debtFields()).toEqual([]);
+    expect(screen.getByTestId("carryover-debt-unsupported-note")).toBeTruthy();
     expect(document.querySelector("[data-field='carryover.giftTaxAmount']")?.textContent).toContain("당초 증여 때 인수한 채무를 뺀 금액");
   });
 });
