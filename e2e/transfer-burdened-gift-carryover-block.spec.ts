@@ -17,6 +17,7 @@
  *         §97의2가 조용히 무력화된다)
  *   CB-2. 넣으면 **계산까지 간다**
  *   CB-3. 일반 양도 + 이월과세는 막지 않는다 (회귀 0 · CB-1의 양성 대조군)
+ *   CB-5. 이월과세 블록의 「증여자 취득가액」은 묻지 않는다 — 당초 증여자 값은 「당초 증여자」 블록이 받는다
  *
  * ⚠️ 금액 anchor는 vitest가 담당한다
  *    (`__tests__/tax-engine/transfer-tax/burdened-gift-carryover-{block,d7a}.anchor.test.ts`).
@@ -169,6 +170,27 @@ test.describe("부담부증여 × 이월과세(증여) — 지원 개시", () =>
     // 안분 결과 금액과 조문 근거가 함께 보인다.
     await expect(page.getByText(/5,826,941/).first()).toBeVisible();
     await expect(page.getByText(/시행령 §163의2② 2호/).first()).toBeVisible();
+  });
+
+  test("CB-5: 주택 — 이월과세 블록의 「증여자 취득가액」을 비워도 계산까지 가고, 본문에 싣지 않는다 (계산에 쓰이지 않는다 · 2026-10-27)", async ({ page }) => {
+    test.setTimeout(120_000);
+    const req = page.waitForRequest((r) => r.url().includes("/api/calc/transfer") && r.method() === "POST");
+    await seedAndCalc(page, {
+      assetKind: "housing",
+      standardPriceAtTransfer: "8580831500",
+      standardPriceAtAcq: "3148142064",
+      bgCoDonorLandStdPriceAtAcq: "0",
+      bgCoDonorBuildingStdPriceAtAcq: "1200000000",
+      carryover: {
+        giftRegistryDate: "2023-06-01", donorAcquisitionDate: "2012-01-01", donorAcquisitionCause: "purchase",
+        donorAcquisitionPrice: "", useEstimatedAcquisition: false, estimationMode: "", giftTaxAmount: "0",
+        donorCapitalExpenditure: "0", giftDateValuation: "600000000", exclusionDeclared: {}, donorSameHousehold: "no",
+      },
+    });
+    const body = (await req).postDataJSON() as { carryoverTaxation?: { donorAcquisitionPrice?: number } };
+    expect(body.carryoverTaxation).toBeDefined();
+    expect(body.carryoverTaxation?.donorAcquisitionPrice).toBeUndefined();
+    await expect(page.getByText(/양도소득세 계산 결과|산출세액/).first()).toBeVisible({ timeout: 30_000 });
   });
 
   test("CB-3: 일반 양도 + 이월과세는 막지 않는다 (회귀 0 · CB-1의 양성 대조군)", async ({

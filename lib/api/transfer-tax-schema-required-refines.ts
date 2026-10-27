@@ -276,6 +276,8 @@ type PrimaryLike = {
   mixedUse?: unknown;
   commercialBuildingValuation?: unknown;
   carryoverTaxation?: Parameters<typeof refineCarryoverTaxation>[0];
+  /** 부담부증여 — 있으면(엔진 `isBurdenedGiftCarryover`와 같은 조건) 이월과세 증여자 취득가액은 `carryoverDonorBasis`가 받는다 */
+  burdenedGiftInfo?: unknown;
   // 주택 split 파트 이월과세 — 있으면 B·C 호스트(`acquisitionCause: carryover_gift`)가 자산 단위 `carryoverTaxation` 없이 통과한다
   landCarryoverPart?: unknown;
   buildingCarryoverPart?: unknown;
@@ -298,7 +300,7 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
     if (!ct) {
       issue(["carryoverTaxation"], "이월과세(증여) 자산은 증여 정보(carryoverTaxation)가 필요합니다 (소득세법 §97의2)");
     } else {
-      refineCarryoverTaxation(ct, data.transferDate, ctx, ["carryoverTaxation"], false);
+      refineCarryoverTaxation(ct, data.transferDate, ctx, ["carryoverTaxation"], false, data.transferType === "burdened_gift" && data.burdenedGiftInfo !== undefined);
       // 환산 사용 — 엔진은 최상위 기준시가로 환산한다(`transfer-tax-carryover.ts`). 비우면 0으로 읽혔다.
       if (ct.useEstimatedAcquisition && !data.preHousingDisclosure) {
         if (!positive(data.standardPriceAtAcquisition))
