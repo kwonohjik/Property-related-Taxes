@@ -142,7 +142,7 @@ export function landCauseMixActive(asset: Parameters<typeof effectiveLandAcquisi
  * 켠 뒤 자산 종류를 주택·건물로 바꾸거나(`hasSeperate…`를 끄지 않는 전환 patch), 2026-07-30 이전 저장분이 이 상태를 만든다.
  * 화면은 자산 단위 상속 계산을 보여주는데 ④·⑧이 토지 취득일 분리를 읽으면 입력 칸 없는 요구(D2 Y8)나 토지를 상속으로 읽는
  * 침묵 계산이 된다 → 읽는 쪽이 「분리 없음」으로 읽는다(D0 G-6 방식 — 저장값은 지우지 않는다).
- * ⚠️ 소유자 분리(`selfOwns≠both`)는 건드리지 않는다(그 경로의 `landAcquisitionDate` 후퇴 송신은 종전 그대로).
+ * ⚠️ 소유자 분리(`selfOwns≠both`)는 여기서 다루지 않는다 — 분리 플래그 말고도 파트 금액·토지 취득일이 함께 남으므로 `nonPurchaseOwnerSplit`이 맡는다.
  */
 export function hasStaleSplitInput(
   asset: BuildingCauseMixScope & { selfOwns?: "both" | "building_only" | "land_only" },
@@ -160,8 +160,24 @@ export function hasStaleSplitInput(
 }
 
 /**
- * ④·⑧·⑥이 자산을 읽기 전에 통과시키는 **D2 정규화 사본** — (1) stale 분리 입력을 「분리 없음」으로, (2) D2 유효 시 건물 방식을
- * `actual`로. 둘 다 해당 없으면 같은 객체를 돌려준다.
+ * 상속·증여 호스트(주택·건물, 겸용 아님)의 **소유자 분리**인가 — D2 유효·부담부증여는 제외.
+ *
+ * 이 화면(`NonPurchaseSplitInputsBlock`)에는 파트 취득가액·매매사례가액·산정 방식·토지 취득일 칸이 없다. 상속·증여 자산의 취득시기는
+ * 상속개시일·증여일 하나다(「소득세법 시행령」 제162조 제1항 제5호). 그런데 D2를 끈 뒤의 토지 금액, 매매·D2에서 남은 파트 값, 상속개시일을
+ * 고친 뒤의 옛 토지 취득일, 겸용을 켰다 끈 분리 플래그가 남아 ④가 그대로 읽었다 — 토지만 본인 100,740,000 ↔ 94,022,000 등 조용한 오계산과
+ * ⑧ 「파트 취득가액」 막다른 길(계획서 `inherit-gift-owner-split-residue.plan.md` R-1~R-5). 저장값은 지우지 않는다(D2 다시 켜면 복원 — C10).
+ */
+export function nonPurchaseOwnerSplit(
+  asset: BuildingCauseMixScope & { selfOwns?: "both" | "building_only" | "land_only" },
+): boolean {
+  if (!buildingCauseMixApplicable(asset) || effectiveBuildingCauseMix(asset)) return false;
+  if (asset.transferType === "burdened_gift") return false;
+  return (effectiveSelfOwns(asset as Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns">) ?? "both") !== "both";
+}
+
+/**
+ * ④·⑧·⑥이 자산을 읽기 전에 통과시키는 **D2 정규화 사본** — (1) stale 분리 입력을 「분리 없음」으로, (2) 상속·증여 소유자 분리는
+ * 화면에 없는 분리 입력을 읽지 않고 토지 취득일을 상속개시일·증여일로, (3) D2 유효 시 건물 방식을 `actual`로. 해당 없으면 같은 객체를 돌려준다.
  */
 export function normalizeBuildingCauseInputs<
   T extends BuildingCauseMixScope & {
@@ -173,9 +189,27 @@ export function normalizeBuildingCauseInputs<
     landCarryover?: { giftRegistryDate?: string };
     acquisitionDate?: string;
     carryover?: { giftRegistryDate?: string };
+    landAcquisitionPrice?: string;
+    buildingAcquisitionPrice?: string;
+    landSalesCaseValue?: string;
+    buildingSalesCaseValue?: string;
   },
 >(asset: T): T {
   if (hasStaleSplitInput(asset)) return { ...asset, hasSeperateLandAcquisitionDate: false };
+  // 상속·증여 소유자 분리 — 두 파트 모두 §163⑨ 평가액(실지거래가액)을 기준시가 비율로 안분한다. 소유자 분리 진입에 토지 취득일은 필요하다(④ `calcSplitGain`).
+  if (nonPurchaseOwnerSplit(asset)) {
+    return {
+      ...asset,
+      hasSeperateLandAcquisitionDate: false,
+      landAcquisitionDate: asset.acquisitionDate ?? "",
+      landAcqMode: "actual",
+      buildingAcqMode: "actual",
+      landAcquisitionPrice: "",
+      buildingAcquisitionPrice: "",
+      landSalesCaseValue: "",
+      buildingSalesCaseValue: "",
+    };
+  }
   // P2 C — 파트 이월과세는 두 파트 모두 실가(증여자 취득가액·증여 당시 평가액)다. 숨은 환산·감정 플래그(stale)가 ⑧ 요구·⑥ 합계·④ 전송 모드를 바꾸지 않게 한다.
   if (effectiveCarryoverDonorSplit(asset) && (asset.landAcqMode !== "actual" || asset.buildingAcqMode !== "actual"))
     return { ...asset, landAcqMode: "actual", buildingAcqMode: "actual" };

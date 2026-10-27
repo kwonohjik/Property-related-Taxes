@@ -236,7 +236,19 @@ describe("양도시 개별주택가격 칸 (D-1 ⓑ) — 축 A 카드", () => {
     expect(housingTotalCard()).toHaveLength(0);
   });
 
-  it("비-매매(상속)에는 그 칸이 없으므로 환산 토글이 켜져 있어도 축 A가 연다", () => {
+  // 시료는 신축 — 상속·증여 소유자 분리는 두 파트가 §163⑨ 평가액(실거래가)으로 읽혀 환산 파트가 없다(`nonPurchaseOwnerSplit` · 아래 짝).
+  it("비-매매(신축)에는 그 칸이 없으므로 환산 토글이 켜져 있어도 축 A가 연다", () => {
+    render(
+      <TransferStdPriceCard
+        asset={ownerEst({ acquisitionCause: "newConstruction", useEstimatedAcquisition: true })}
+        onChange={() => {}}
+        transferDate="2026-06-30"
+      />,
+    );
+    expect(housingTotalCard()).toHaveLength(1);
+  });
+
+  it("상속 소유자 분리에 남은 건물 환산 방식은 읽지 않는다 — 환산 파트가 없어 닫힌다(④·⑧과 같은 사본)", () => {
     render(
       <TransferStdPriceCard
         asset={ownerEst({ acquisitionCause: "inheritance", useEstimatedAcquisition: true })}
@@ -244,7 +256,7 @@ describe("양도시 개별주택가격 칸 (D-1 ⓑ) — 축 A 카드", () => {
         transferDate="2026-06-30"
       />,
     );
-    expect(housingTotalCard()).toHaveLength(1);
+    expect(housingTotalCard()).toHaveLength(0);
   });
 });
 

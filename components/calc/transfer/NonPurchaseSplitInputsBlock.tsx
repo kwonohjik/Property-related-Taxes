@@ -28,6 +28,7 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { saleStdPlacement, effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { normalizeBuildingCauseInputs } from "@/lib/calc/transfer-land-part-cause";
 import { ownerSplitHousingNeedsBuildingStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { SplitPartCapexFields } from "./SplitPartCapexFields";
@@ -154,8 +155,9 @@ export function NonPurchaseSplitInputsBlock(props: {
         onChange={onChange}
         landOwned={asset.selfOwns === "land_only"}
         buildingOwned={asset.selfOwns === "building_only"}
-        landMode={effectivePartAcqMode(asset.landAcqMode, asset)}
-        buildingMode={effectivePartAcqMode(asset.buildingAcqMode, asset)}
+        // ④·⑧과 같은 사본의 방식(상속·증여는 실거래가) — 매매에서 남은 파트 방식으로 안내를 바꾸지 않는다
+        landMode={effectivePartAcqMode(normalizeBuildingCauseInputs(asset).landAcqMode, asset)}
+        buildingMode={effectivePartAcqMode(normalizeBuildingCauseInputs(asset).buildingAcqMode, asset)}
       />
 
       {/* ② 축 A — 양도가액 구분/일괄 + 양도시 기준시가 */}

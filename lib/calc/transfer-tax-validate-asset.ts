@@ -19,7 +19,7 @@
  */
 
 import { validateMixedSaleSplit } from "./transfer-tax-validate-mixed-use-sale-split";
-import { hasStaleSplitInput } from "./transfer-land-part-cause";
+import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
 import { sellingStdPriceIssue } from "./selling-std-price-scope";
 import { parseAmount } from "@/lib/calc/number-parse";
@@ -183,8 +183,10 @@ export function validateAssetEntry(
   if (a.acquisitionDate && form.transferDate && a.acquisitionDate > form.transferDate) {
     return fieldError("acquisitionDate", `${label}: 양도일(${form.transferDate})이 취득일(${a.acquisitionDate})보다 빠릅니다. 취득 후에만 양도할 수 있습니다.`);
   }
+  // 토지 취득일 칸이 화면에 있는 분리만 본다 — ④·⑧ 분리 검증과 같은 사본(stale 분리 입력·상속·증여 소유자 분리는 분리 없음).
+  const sepEffective = normalizeBuildingCauseInputs(a).hasSeperateLandAcquisitionDate;
   if (
-    a.hasSeperateLandAcquisitionDate && !hasStaleSplitInput(a) && a.landAcquisitionDate && form.transferDate &&
+    sepEffective && a.landAcquisitionDate && form.transferDate &&
     a.landAcquisitionDate > form.transferDate
   ) {
     return fieldError("landAcquisitionDate", `${label}: 양도일(${form.transferDate})이 토지 취득일(${a.landAcquisitionDate})보다 빠릅니다.`);
@@ -193,7 +195,7 @@ export function validateAssetEntry(
   if (a.acquisitionDate && a.acquisitionDate > today) {
     return fieldError("acquisitionDate", `${label}: 취득일(${a.acquisitionDate})이 오늘 이후입니다. 미래 날짜는 입력할 수 없습니다.`);
   }
-  if (a.hasSeperateLandAcquisitionDate && !hasStaleSplitInput(a) && a.landAcquisitionDate && a.landAcquisitionDate > today) {
+  if (sepEffective && a.landAcquisitionDate && a.landAcquisitionDate > today) {
     return fieldError("landAcquisitionDate", `${label}: 토지 취득일(${a.landAcquisitionDate})이 오늘 이후입니다.`);
   }
 

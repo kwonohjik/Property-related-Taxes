@@ -5,6 +5,7 @@
  * 감정은 ④가 `appraisal`로 실어 ⑧ 통과 ↔ 서버 400(`appraisalValue`), 환산·매매사례는 ⑧이 화면에 없는 칸을 요구했다.
  * 수정: 원인 전환(화면)과 복원(폼 단위 `clearInheritedStaleAcqInputs` — 축 B 지분 카드 제외)에서 비운다(`giftEstimationClearPatch` — 증여와 같은 patch). 「복원 후」 세액은 플래그 없는
  * 대조와 같다. 직접 필요경비·소유자 분리에서는 남은 플래그가 세액을 틀리게 만들고 있었다(TX-1·TX-2 — 이 변경이 세액을 바로잡는다). 세율 mock.
+ * TX-2~4의 「잔재 상태」 세액은 후속 소유자 분리 정규화(`inherit-gift-owner-split-residue.plan.md`)로 복원 전부터 대조와 같다 — 표의 셋째 값은 #2594 당시 실측(문서용).
  */
 import { describe, expect, it, vi } from "vitest";
 
@@ -142,12 +143,12 @@ describe("IS — 상속 + 남은 산정 방식 플래그", () => {
       ["건물만 본인 · 감정 2억", { ...APPR, fixedAcquisitionPrice: "200,000,000" }, 171_756_960, 154_500_000],
       ["건물만 본인 · 환산", EST, 129_132_960, 154_500_000],
       ["토지만 본인 · 감정 2억", { selfOwns: "land_only", ...APPR, fixedAcquisitionPrice: "200,000,000" }, 105_524_640, 94_022_000],
-    ] as const)("TX-2 소유자 분리 %s: ⑧ 통과인 채 다른 세액 → 복원 후 대조와 같음", async (_n, flag, staleTax, controlTax) => {
+    ] as const)("TX-2 소유자 분리 %s: #2594 당시 ⑧ 통과인 채 다른 세액 → 지금은 잔재 상태도 대조와 같음(소유자 분리 정규화) · 복원 후도 같음", async (_n, flag, _preFixTax, controlTax) => {
       const control = await run({ ...OWN, ...("selfOwns" in flag ? { selfOwns: flag.selfOwns } : {}) });
       const before = await run({ ...OWN, ...flag });
       const after = await run(restored({ ...OWN, ...flag }));
       expect([control.fields, control.status, control.tax]).toEqual([[], 200, controlTax]);
-      expect([before.fields, before.status, before.tax]).toEqual([[], 200, staleTax]);
+      expect([before.fields, before.status, before.tax]).toEqual([[], 200, controlTax]);
       expect([after.fields, after.status, after.tax]).toEqual([[], 200, controlTax]);
     });
     /** TX-3 명시 파트 방식 — 매매 「취득일 다름」에서 승격 기록된 값. 상속 소유자 분리는 `hasSeperateLandAcquisitionDate`를 켜지 않는다(화면과 같은 상태). */
@@ -155,7 +156,7 @@ describe("IS — 상속 + 남은 산정 방식 플래그", () => {
       ["건물만 본인 · 건물 파트 환산", { buildingAcqMode: "estimated" }, 129_132_960, 154_500_000],
       ["건물만 본인 · 건물 파트 감정 1억", { buildingAcqMode: "appraisal", buildingAcquisitionPrice: "100,000,000" }, 178_697_808, 154_500_000],
       ["토지만 본인 · 토지 파트 환산", { selfOwns: "land_only", landAcqMode: "estimated" }, 77_956_208, 94_022_000],
-    ] as const)("TX-3 소유자 분리 %s: ⑧ 통과인 채 다른 세액 → 복원 후 대조와 같음", async (_n, mode, staleTax, controlTax) => {
+    ] as const)("TX-3 소유자 분리 %s: #2594 당시 다른 세액 → 지금은 잔재 상태도 대조와 같음 · 복원하면 방식이 빈다", async (_n, mode, _preFixTax, controlTax) => {
       const own = { ...OWN, hasSeperateLandAcquisitionDate: false, ...("selfOwns" in mode ? { selfOwns: mode.selfOwns } : {}) };
       const control = await run(own);
       const before = await run({ ...own, ...mode });
@@ -163,14 +164,14 @@ describe("IS — 상속 + 남은 산정 방식 플래그", () => {
       const after = await run(restoredAsset);
       expect([restoredAsset.landAcqMode, restoredAsset.buildingAcqMode]).toEqual(["", ""]);
       expect([control.fields, control.status, control.tax]).toEqual([[], 200, controlTax]);
-      expect([before.fields, before.status, before.tax]).toEqual([[], 200, staleTax]);
+      expect([before.fields, before.status, before.tax]).toEqual([[], 200, controlTax]);
       expect([after.fields, after.status, after.tax]).toEqual([[], 200, controlTax]);
     });
     /** TX-4 남은 파트 취득가 — 방식이 실거래가(기본)여도 화면에 칸 없는 금액이 상속 파트 취득가액으로 쓰였다. */
     it.each([
       ["건물만 본인 · 건물 파트 취득가액 1억", { buildingAcquisitionPrice: "100,000,000" }, 181_746_000, 154_500_000],
       ["토지만 본인 · 토지 파트 취득가액 1억", { selfOwns: "land_only", landAcquisitionPrice: "100,000,000" }, 100_740_000, 94_022_000],
-    ] as const)("TX-4 소유자 분리 %s: ⑧ 통과인 채 다른 세액 → 복원 후 대조와 같음", async (_n, price, staleTax, controlTax) => {
+    ] as const)("TX-4 소유자 분리 %s: #2594 당시 다른 세액 → 지금은 잔재 상태도 대조와 같음 · 복원하면 금액이 빈다", async (_n, price, _preFixTax, controlTax) => {
       const own = { ...OWN, hasSeperateLandAcquisitionDate: false, ...("selfOwns" in price ? { selfOwns: price.selfOwns } : {}) };
       const control = await run(own);
       const before = await run({ ...own, ...price });
@@ -178,7 +179,7 @@ describe("IS — 상속 + 남은 산정 방식 플래그", () => {
       const after = await run(restoredAsset);
       expect([restoredAsset.landAcquisitionPrice, restoredAsset.buildingAcquisitionPrice]).toEqual(["", ""]);
       expect([control.fields, control.status, control.tax]).toEqual([[], 200, controlTax]);
-      expect([before.fields, before.status, before.tax]).toEqual([[], 200, staleTax]);
+      expect([before.fields, before.status, before.tax]).toEqual([[], 200, controlTax]);
       expect([after.fields, after.status, after.tax]).toEqual([[], 200, controlTax]);
     });
     it("TX-2 소유자 분리 · 남은 매매사례(값 없음): ⑧이 화면에 없는 칸을 요구 → 복원 후 대조와 같음", async () => {
