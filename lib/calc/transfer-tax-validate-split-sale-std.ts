@@ -8,6 +8,7 @@ import { saleStdPriceWaivedByEra } from "./sale-split-100-3-era";
 import { needsSaleStdPart, ownerSplitHousingNeedsTransferTotal, resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
 import { partDonorEstimated } from "./transfer-land-part-cause";
+import { ownerSplitDonorEstimated } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { partialAppraisal, usableAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
@@ -46,7 +47,10 @@ export function validateSaleStdAndAppraisal(
   // 양도일 2016.1.1. 전 + 구분 기재 + 환산 파트 없음이면 이 값은 어디에도 쓰이지 않아 필수를 풀어 준다(계획서 Q-2 · `saleStdPriceWaivedByEra`).
   // P6 — 증여자 취득가액을 모르는 파트 이월과세 파트는 «환산 파트»로 센다: 분모(양도시 기준시가)가 계산에 쓰이고 ⑫도 연혁 면제 없이 요구한다(⑧↔⑫ 정합).
   //   `landMode`/`buildingMode`는 수증자 쪽 방식이라(이월과세에서는 정규화 사본이 `actual` 고정) 증여자 환산을 세지 못한다 → 같은 술어(`partDonorEstimated`)로 보정한다.
-  const donorEst = partDonorEstimated(asset, opts);
+  // 이월과세 소유자 분리 + 증여자 취득가액 모름도 본인 파트를 환산한다(엔진 시나리오 A · `ownerSplitDonorEstimated`) — 같은 보정.
+  const partEst = partDonorEstimated(asset, opts);
+  const ownerEst = ownerSplitDonorEstimated(asset);
+  const donorEst = { land: partEst.land || ownerEst.land, building: partEst.building || ownerEst.building };
   const stdWaived = saleStdPriceWaivedByEra({
     transferDate: formTransferDate,
     saleSplitMode: asset.saleSplitMode,
@@ -62,7 +66,8 @@ export function validateSaleStdAndAppraisal(
   let needBuildingStd = !stdWaived;
   if (appraisalBasis) {
     const selfOwns = effectiveSelfOwns(asset) ?? "both";
-    const proportional = ownerSplitHousingNeedsTransferTotal(asset);
+    // 이월과세 소유자 분리 환산 주택도 개별주택가격 비례 안분이라 분모가 가목:나목 양쪽이다(총액은 증여자 양도시 기준시가 칸 — 이월과세 블록).
+    const proportional = ownerSplitHousingNeedsTransferTotal(asset) || ((ownerEst.land || ownerEst.building) && asset.assetKind === "housing");
     needLandStd = proportional || donorEst.land || (landMode === "estimated" && selfOwns !== "building_only");
     needBuildingStd = proportional || donorEst.building || (buildingMode === "estimated" && selfOwns !== "land_only");
   }
