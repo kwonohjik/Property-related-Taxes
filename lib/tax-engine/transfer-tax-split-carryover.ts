@@ -26,7 +26,9 @@
  *
  * ## 증여세 상당액 (영 §163의2②)
  * 안분은 ⑭ 합성기(`composeSplitCarryover`)가 이미 했다(`ct.giftTaxAmount`, 한도 前). 한도는 「양도가액에서 §97①·②의 금액을 공제한 잔액」이고,
- * 사전-2025-법규재산-0366의 「해당 자산」에 따라 **그 파트의 양도차익**이다(자산 단위가 아니다 — 실측으로 echo가 갈린다, anchor SPCO-T4).
+ * 양도가액·취득가액이 파트마다 따로라 **그 파트의 양도차익**이다(자산 단위가 아니다 — 실측으로 echo가 갈린다, anchor SPCO-T4). 토지와 건물의 양도차익은
+ * 각각 계산한다(양도소득세 집행기준 97-163-42). 사전-2025-법규재산-0366의 「해당 자산에 대한 양도차익」은 토지·건물을 나눈 사례가 아니다 — 정면 해석례 없음
+ * (`docs/00-pm/gb-bg-carryover-gift-tax-part-limit.plan.md` §8 V-1).
  */
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { applyRate } from "./tax-utils";
