@@ -155,7 +155,7 @@ route(⑧ → ④ → ⑫ → 엔진)로 쟀고 측정 코드는 커밋하지 �
 
 같은 시료(§1)를 route에 넣고 응답의 `transferBurdenedGiftBreakdown`을 `BurdenedGiftDetailCard`로 렌더했다. 측정 코드는 커밋하지 않았다.
 
-- 축 B 응답은 지분별 명세를 싣지 않는다. 지분 결과(`aggregated.properties[]`)에는 `transferBurdenedGiftBreakdown`이 없다. 카드는 물건 전체 명세 하나다(`bundled-route.ts` · `aggregated.burdenedGift` ← `burdenedGiftWholeInfo` = 첫 카드 `buildBurdenedGiftInfo(primary)`).
+- 축 B 응답은 지분별 명세를 싣지 않는다. 지분 결과(`aggregated.properties[]`)에는 `transferBurdenedGiftBreakdown`이 없다(정정 2026-10-27: 화면용 요약에 echo가 없을 뿐, 엔진 안의 카드별 결과에는 있다 — `bg-axis-b-card-acquisition-sum.plan.md` §2.1). 카드는 물건 전체 명세 하나다(`bundled-route.ts` · `aggregated.burdenedGift` ← `burdenedGiftWholeInfo` = 첫 카드 `buildBurdenedGiftInfo(primary)`).
 - 그 명세의 평가 3항·채무·채무비율은 물건 전체 값이다. 평가 3항 12억·2억·1억(= 15억), 채무 6억, 40%로 승계 + 승계·원 + 원 모두 같다. 지분율(50%)을 곱한 값이 아니다. 지분 계산은 엔진이 지분마다 `scaleRightValuation`으로 줄여 쓰므로, 지분 합 = 물건 전체라 이 표시는 맞다. 「공유지분 … % 적용」 줄은 뜨지 않는다(`ownershipRatio` 없음).
 - 🟠 **별건 — 취득가 행**: 「건물 취득가 = 실지취득가 × 채무비율」은 첫 카드 값만 보인다.
 
@@ -167,7 +167,7 @@ route(⑧ → ④ → ⑫ → 엔진)로 쟀고 측정 코드는 커밋하지 �
 
   - `withCardAcquisitions`(`transfer-tax-aggregate-burdened-gift.ts`)는 의제취득일 전·일반건물 이월과세 카드에서만 지분 합으로 바꾼다. 재개발 카드는 「§159 슬롯과 세액 취득가액이 다르다」는 이유로 제외한다(기존 한계 주석).
   - 세액은 지분별로 맞다(route anchor 대조). 표시만 갈린다. 「양도가액 안분」 표의 지분별 취득가액은 엔진 값이다.
-  - 수정 여부는 사용자 결정이 필요하다.
+  - 수정 여부는 사용자 결정이 필요하다. → 사용자 결정(2026-10-27) 「고친다」 — 계획서 `bg-axis-b-card-acquisition-sum.plan.md`(실측상 입주권 밖 주택 감정가액·매매사례가액·기준시가에도 같은 어긋남).
 
 ### 9.2 V-2 구현 — 권리가액 불일치 경고
 
