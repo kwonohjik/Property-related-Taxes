@@ -42,6 +42,7 @@ import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
+import { landOnlyAppurtenantHouseYears } from "./land-only-owner-household";
 import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
 import { getLongTermDeductionOverride } from "./rental-housing-reduction";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
@@ -417,22 +418,24 @@ export function calcLongTermHoldingDeduction(
     const landOwnYearsRate = ownsLand ? rateForYears(splitDetail.land.holdingYears) : 0;
     let landRate = landOwnYearsRate;
     let landAppurtenantLthd: SplitPartResult["appurtenantLthd"];
+    // 표2 후보 연수 — 주택(건물) 보유연수. 토지만 본인이 합가일을 넣었으면 합가일이 더 늦을 때 합가일부터의 연수다(「주택 부수토지로서의 보유기간」).
+    const houseYearsForLand = landOnlyAppurtenantHouseYears(input, splitDetail.building.holdingYears);
     if (
       ownsLand &&
       (ownsBuilding || selfOwns === "land_only") &&
       useTable2 &&
-      splitDetail.land.holdingYears > splitDetail.building.holdingYears
+      splitDetail.land.holdingYears > houseYearsForLand
     ) {
       const appurtenant = resolveAppurtenantLandLthdRate({
         landHoldingYears: splitDetail.land.holdingYears,
-        houseHoldingYears: splitDetail.building.holdingYears,
+        houseHoldingYears: houseYearsForLand,
         residenceYears,
         useTable2,
         transferDate: input.transferDate,
       });
       landRate = appurtenant.rate;
       landAppurtenantLthd = {
-        houseHoldingYears: splitDetail.building.holdingYears,
+        houseHoldingYears: houseYearsForLand,
         table1Rate: appurtenant.table1Rate,
         table2Rate: appurtenant.table2Rate,
         table1Applied: appurtenant.table1Applied,

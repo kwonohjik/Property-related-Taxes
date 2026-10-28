@@ -265,7 +265,7 @@ const SALE = { standardPricePerSqmAtTransfer: "1000000", transferArea: "100", bu
 const spl = (patch: Record<string, unknown> = {}) => () => withPrimary({ ...SPL, ...patch });
 /** 토지만 본인 소유(`selfOwns`) — 화면의 소유자 토글이 분리를 강제로 켠다(`CompanionAcquisitionCauseSection` onSelfOwnsChange). 취득일은 같다 */
 const owner = (patch: Record<string, unknown>) => () =>
-  withPrimary({ assetKind: "housing", selfOwns: "land_only", buildingOwnerSameHousehold: true, hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2015-03-01", ...patch });
+  withPrimary({ assetKind: "housing", selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false, hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2015-03-01", ...patch });
 const splSale = (patch: Record<string, unknown> = {}) => () => withPrimary({ ...SPL, ...SALE, ...patch });
 
 const SPLIT_CASES: FieldJumpCase[] = [

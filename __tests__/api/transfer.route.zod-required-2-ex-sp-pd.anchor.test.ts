@@ -231,7 +231,7 @@ describe("EX §164⑨ — 비우면 400 (종전 200 + 특례가 조용히 빠진
     const bare = without(SPLIT_BLDG, "splitLandCompensationTotal", "splitLandCompensationBasisTotal");
     for (const body of [
       { ...bare, landAcquisitionDate: "2015-06-01" },
-      { ...bare, selfOwns: "land_only", buildingOwnerSameHousehold: true },
+      { ...bare, selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false },
     ]) {
       const r = await single(body);
       expect(Object.keys(r.json.error?.fieldErrors ?? {})).not.toContain("splitLandCompensationTotal");
@@ -347,7 +347,7 @@ describe("SP 분리취득 — 비우면 400 + 경로 (종전 경로 없는 400·
   });
 
   it("SP-1 비소유 파트는 요구하지 않는다 (selfOwns=land_only → 건물 취득가액 불요)", async () => {
-    const r = await single({ ...without(SP, "buildingAcquisitionPrice"), selfOwns: "land_only", buildingOwnerSameHousehold: true });
+    const r = await single({ ...without(SP, "buildingAcquisitionPrice"), selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false });
     expect(Object.keys(r.json.error?.fieldErrors ?? {})).not.toContain("buildingAcquisitionPrice");
   });
 
@@ -403,7 +403,7 @@ describe("SP 분리취득 — 비우면 400 + 경로 (종전 경로 없는 400·
   const SO = {
     ...without(SP, "isSeparateAcquisition", "landAcqMode", "buildingAcqMode", "landAcquisitionPrice", "buildingAcquisitionPrice"),
     landAcquisitionDate: "2015-06-01",
-    selfOwns: "land_only", buildingOwnerSameHousehold: true,
+    selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false,
     acquisitionPrice: 250_000_000,
     standardPricePerSqmAtAcquisition: 500_000,
     acquisitionArea: 200,
@@ -450,7 +450,7 @@ describe("SP 분리취득 — 비우면 400 + 경로 (종전 경로 없는 400·
         addressJibun: "서울 강남구 테스트동 1-1",
         acquisitionDate: "2010-01-01",
         fixedAcquisitionPrice: "300,000,000",
-        selfOwns: "land_only", buildingOwnerSameHousehold: true,
+        selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false,
         landAcquisitionPrice: "200,000,000",
         standardPricePerSqmAtTransfer: "300,000",
         transferArea: "1000",

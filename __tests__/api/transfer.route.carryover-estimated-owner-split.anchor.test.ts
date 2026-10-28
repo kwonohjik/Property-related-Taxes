@@ -39,7 +39,7 @@ const c0 = cAsset() as unknown as Loose;
 /** 증여자 2015-06-01 취득 · 취득가액 모름(일반 환산 — 증여자 취득 당시 3억 · 양도시 14억) · 증여 등기 2023-03-01 · 평가액 9억 */
 const CARRY: Loose = {
   ...c0, ...STD, carryoverDonorSplit: false, landAcquisitionPrice: "", buildingAcquisitionPrice: "", saleSplitMode: "apportioned",
-  landTransferPrice: "", buildingTransferPrice: "", landStandardPriceAtTransfer: "", acquisitionDate: "2023-03-01", buildingOwnerSameHousehold: true,
+  landTransferPrice: "", buildingTransferPrice: "", landStandardPriceAtTransfer: "", acquisitionDate: "2023-03-01", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false,
   carryover: {
     ...c0.carryover, donorAcquisitionPrice: "", useEstimatedAcquisition: true, estimationMode: "general",
     donorStandardPriceAtAcquisition: "300,000,000", donorStandardPriceAtTransfer: "1,400,000,000", giftDateValuation: "900,000,000",

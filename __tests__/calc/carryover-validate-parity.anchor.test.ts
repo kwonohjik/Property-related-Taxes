@@ -92,7 +92,7 @@ function carryoverHostForm(
     actualSalePrice: "1000000000",
     addressJibun: "서울특별시 테스트구 1",
     selfOwns,
-    buildingOwnerSameHousehold: true,
+    buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false,
     residenceInputMode: "direct",
     residencePeriods: [],
     carryover: {

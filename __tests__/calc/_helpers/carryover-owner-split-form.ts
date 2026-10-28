@@ -24,7 +24,7 @@ export const ESTIMATED: Loose = {
   ...c0, ...STD, carryoverDonorSplit: false, landAcquisitionPrice: "", buildingAcquisitionPrice: "", saleSplitMode: "apportioned",
   landTransferPrice: "", buildingTransferPrice: "", landStandardPriceAtTransfer: "", acquisitionDate: "2023-03-01",
   // V-3′ 토지만 본인 주택의 건물 소유자 세대(⑧·⑫ 필수) — 이 시료는 1세대1주택이 아니라 세액과 무관하다. 토지만 본인일 때만 전송된다.
-  buildingOwnerSameHousehold: true,
+  buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false,
   carryover: {
     ...c0.carryover, donorAcquisitionPrice: "", useEstimatedAcquisition: true, estimationMode: "general",
     donorStandardPriceAtAcquisition: "300,000,000", donorStandardPriceAtTransfer: "1,400,000,000", giftDateValuation: "900,000,000",

@@ -40,6 +40,32 @@ export const LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE =
   "다만 건물 소유자와 세대를 합치기 전의 기간은 이 토지를 주택부수토지로서 보유한 기간에 들어가지 않습니다(재산46014-610). " +
   "세대를 합친 날부터 양도일까지가 「소득세법 시행령」 §154①의 보유요건에 못 미치면 비과세 대상이 아닙니다 — 세대를 합친 날은 입력받지 않았으므로 확인이 필요합니다.";
 
+/**
+ * 합가일 — 토지만 본인 × 같은 세대 × 「합가함」으로 답하고 날짜를 넣은 경우만. 그 밖에는 `undefined`(처음부터 같은 세대로 본다).
+ * 계획서 `land-only-household-merge-date.plan.md`.
+ */
+export function landOnlyHouseholdMergeDate(
+  input: Pick<TransferTaxInput, "selfOwns" | "buildingOwnerSameHousehold" | "buildingOwnerHouseholdMerged" | "buildingOwnerHouseholdMergeDate">,
+): Date | undefined {
+  return input.selfOwns === "land_only" && input.buildingOwnerSameHousehold !== false && input.buildingOwnerHouseholdMerged === true
+    ? input.buildingOwnerHouseholdMergeDate
+    : undefined;
+}
+
+/** 합가일이 주어진 날짜보다 늦으면 합가일, 아니면 그 날짜 — 「주택부수토지로서 보유」 시작일의 `max`. */
+export function laterOfMergeDate(date: Date, mergeDate: Date | undefined): Date {
+  return mergeDate !== undefined && mergeDate.getTime() > date.getTime() ? mergeDate : date;
+}
+
+/**
+ * 장특 표2 후보 연수 = 「주택 부수토지로서의 보유기간」 — 합가일이 주택 취득일보다 늦으면 합가일부터의 연수, 아니면 주택 보유연수(`defaultYears`).
+ */
+export function landOnlyAppurtenantHouseYears(input: TransferTaxInput, defaultYears: number): number {
+  const merge = landOnlyHouseholdMergeDate(input);
+  if (merge === undefined || merge.getTime() <= input.acquisitionDate.getTime()) return defaultYears;
+  return calculateHoldingPeriod(merge, input.transferDate).years;
+}
+
 export function landOnlyBuildingOwnerOtherHousehold(
   input: Pick<TransferTaxInput, "selfOwns" | "buildingOwnerSameHousehold">,
 ): boolean {
@@ -56,7 +82,7 @@ export function landOnlyBuildingOwnerOtherHousehold(
  */
 export function applyLandOnlyHouseholdRule(
   judgment: OneHouseJudgment,
-  input: Pick<TransferTaxInput, "selfOwns" | "buildingOwnerSameHousehold" | "rentalHousingException">,
+  input: Pick<TransferTaxInput, "selfOwns" | "buildingOwnerSameHousehold" | "buildingOwnerHouseholdMerged" | "rentalHousingException">,
   mergeNoticeSuppressed: boolean,
 ): { judgment: OneHouseJudgment; notice?: string } {
   if (input.selfOwns !== "land_only") return { judgment };
@@ -65,7 +91,8 @@ export function applyLandOnlyHouseholdRule(
   if (landOnlyBuildingOwnerOtherHousehold(input)) {
     return { judgment: settled ? revokeOneHouseExemption(judgment) : judgment, notice: LAND_ONLY_OTHER_HOUSEHOLD_NOTICE };
   }
-  return mergeNoticeSuppressed ? { judgment } : { judgment, notice: LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE };
+  // 합가 여부를 답했으면(처음부터 같은 세대 · 합가일 입력) 합가일을 확인하라는 고지는 필요 없다.
+  return mergeNoticeSuppressed || input.buildingOwnerHouseholdMerged !== undefined ? { judgment } : { judgment, notice: LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE };
 }
 
 /**
@@ -79,11 +106,27 @@ export function landOnlyRateInput(input: TransferTaxInput): TransferTaxInput {
   // 비주택(상가·토지 등)은 주택부수토지가 아니라 토지 취득일 그대로다.
   if (input.propertyType !== "housing") return { ...input, acquisitionDate: input.landAcquisitionDate };
   // 같은 세대 — 주택부수토지로서의 보유기간 = `max(토지, 주택)`(소유자 같음과 같은 규칙 · `resolveAppurtenantLandRateBasisDate`).
-  return input.landAcquisitionDate.getTime() > input.acquisitionDate.getTime() ? { ...input, acquisitionDate: input.landAcquisitionDate } : input;
+  const start = laterOfMergeDate(input.landAcquisitionDate, landOnlyHouseholdMergeDate(input));
+  return start.getTime() > input.acquisitionDate.getTime() ? { ...input, acquisitionDate: start } : input;
 }
 
 /** 다른 세대 토지만 본인 주택의 토지 보유가 2년 미만이면 일반 토지 단기세율 고지(그 밖에는 세율 종류가 값에 닿지 않아 말하지 않는다). */
 export function landOnlyOtherHouseholdRateNotice(input: TransferTaxInput): string | undefined {
   if (!landOnlyBuildingOwnerOtherHousehold(input) || input.propertyType !== "housing" || !input.landAcquisitionDate) return undefined;
   return calculateHoldingPeriod(input.landAcquisitionDate, input.transferDate).years < 2 ? LAND_ONLY_OTHER_HOUSEHOLD_RATE_NOTICE : undefined;
+}
+
+/**
+ * 합가일을 반영했다는 고지 — 합가일이 토지·주택 취득일보다 늦어 계산이 달라졌을 때만(그 밖에는 값에 닿지 않아 말하지 않는다).
+ * 세율 기산에 합가일을 반영한 것은 정면 해석이 없는 유추다(계획서 Q-2 a) — 확인 필요를 병기한다.
+ */
+export function landOnlyMergeDateAppliedNotice(input: TransferTaxInput): string | undefined {
+  const merge = landOnlyHouseholdMergeDate(input);
+  if (merge === undefined || !input.landAcquisitionDate) return undefined;
+  if (merge.getTime() <= Math.max(input.landAcquisitionDate.getTime(), input.acquisitionDate.getTime())) return undefined;
+  return (
+    `토지만 본인 소유이고 건물(주택) 소유자와 같은 세대라, 입력하신 세대 합가일(${merge.toISOString().slice(0, 10)})부터를 이 토지의 주택부수토지 보유기간으로 보아 ` +
+    "1세대1주택 비과세 보유요건·장기보유특별공제 표2 보유연수·단기세율 보유기간을 판정했습니다(재산46014-610 · 부동산거래관리과-515). " +
+    "단기세율 보유기간에 합가일을 반영한 것은 정면 해석이 없는 유추라 확인이 필요합니다."
+  );
 }

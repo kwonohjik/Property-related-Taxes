@@ -57,7 +57,7 @@ async function cards(over: Loose): Promise<Card[]> {
 }
 const ids = (cs: Card[]) => cs.map((c) => c.propertyId);
 const byId = (cs: Card[], id: string) => cs.find((c) => c.propertyId === id)!;
-const SAME = { selfOwns: "land_only", buildingOwnerSameHousehold: true };
+const SAME = { selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false };
 const OTHER = { selfOwns: "land_only", buildingOwnerSameHousehold: false };
 
 describe("§6.3 route — 토지만 본인 주택 카드의 토지 200㎡가 한도 300㎡를 부수토지 카드와 나눠 쓴다", () => {

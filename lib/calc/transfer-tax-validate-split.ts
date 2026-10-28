@@ -33,6 +33,7 @@ import { effectiveSelfOwns } from "./self-owns-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import { isLandBuildingSplitable } from "./self-owns-scope";
 import { buildingOwnerHouseholdError } from "./self-owns-scope";
+import { buildingOwnerMergeError } from "./self-owns-scope";
 import { appurtenantZoneRequiredError } from "./transfer-tax-validate-housing-excess";
 import { engineLandOverlay } from "./transfer-land-part-cause";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
@@ -378,6 +379,8 @@ export function validateSplitDirectInputs(
   // V-3′ 토지만 본인 주택 — 건물(주택) 소유자 세대 예·아니오 필수(⑫ `landOnlyHouseholdIssue`와 같은 술어 · Q-2 a).
   const householdErr = buildingOwnerHouseholdError(asset, label);
   if (householdErr) return householdErr;
+  const mergeErr = buildingOwnerMergeError(asset, label, formTransferDate);
+  if (mergeErr) return mergeErr;
   const acqAppraisalErr = validateAcqAppraisalPair(rawAsset, label); // V-7 — 취득 당시 감정평가가액 쌍(⑫ 같은 술어)
   if (acqAppraisalErr) return acqAppraisalErr;
 

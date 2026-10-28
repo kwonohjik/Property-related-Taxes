@@ -1,0 +1,112 @@
+# 토지만 본인 × 같은 세대 — 세대합가일 입력 (계획서)
+
+> 작성 2026-10-28 · 깊이 **L3**(세액이 바뀌고 새 입력 필드 — 14동기화 지점) · 선행: #2652 Q-3 a(합가일 고지) · #2657 Q-2 a
+> 상태: **결정 완료(사용자 2026-10-28) — Q-1 b(필수 2택) · Q-2 a(세 곳 모두)**. 결과는 §6.
+
+## 0. 요약
+
+토지만 본인이고 건물(주택) 소유자가 **같은 세대**일 때, 그 토지를 「주택부수토지로서 보유」한 기간은 두 사람이 **세대를 합친 날부터**다(재산46014-610 · 부동산거래관리과-515·764 「같은 세대로서 보유한 기간만 통산」 · -622 「1세대가 주택의 부수토지로서 보유하는 기간」).
+합가일 입력이 없어 엔진은 처음부터 같은 세대였던 것으로 계산하고 고지(`LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE`)만 단다. 합가가 양도에 가까운 사실이면 **과소 계산**이다.
+
+현행(측정, 합가일 입력 없음 · 10억 · 주택 2014-09-01 · 토지 2008-07-01 · 2024-06-01 양도 · 거주 120개월): `isExempt = true · 산출세액 0`. 합가일이 2023-12-01(양도 6개월 전)이면 근거가 가리키는 값은 토지분 비과세 제외다(재산46014-610 — 사실관계 합가 후 1년 미만에 비과세 부정).
+
+## 1. 설계 — 유효 기산일 하나로 세 곳을 잇는다
+
+토지만 본인 × 같은 세대(주택)에서 합가일이 입력되면 **`토지 부수토지 기산일 = max(토지 취득일, 합가일)`**, 주택 쪽은 **`max(주택 취득일, 합가일)`**로 본다. 합가일이 두 취득일보다 이르면 영향이 없다.
+
+| 곳 | 현행 입력 | 합가일 반영 |
+|---|---|---|
+| ① 비과세 보유요건(G-3) `laterLandFailsHoldingRequirement`(`transfer-tax-appurtenant-land.ts:175`) → `isLaterAcquiredLandHeldTooShort(land, house, transfer)` | 토지 취득일 vs 주택 취득일 — **토지가 나중일 때만** 성립 | `land' = max(토지, 합가일)`을 넘긴다 → 토지가 먼저여도 합가가 늦으면 같은 제외가 걸린다(기계는 #2652가 이미 있다) |
+| ② 장특 표2 보유연수(통칙 95-0…1 leaf — `transfer-tax-lthd.ts` split · `buildRentalLthdParts`) | 표2 후보 = 건물 보유연수, 표1 후보 = 토지 자기 연수 | 표2 후보 = `max(주택, 합가일)` 연수. 표1 후보(토지 전체 보유기간 — 재산세제과-1183)는 그대로 |
+| ③ 세율 기산(`landOnlyRateInput`) | `max(토지, 주택)` | `max(토지, 주택, 합가일)` — **유추 근거**(#2657 Q-2 a의 연장) |
+| ④ 고지 | `LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE` | 합가일을 입력하면 달지 않고 반영한 사실(어느 날짜가 기산일인지)을 고지 |
+
+거주 요건·표2 거주분(기준-2025-법규재산-0040 — 동일세대원으로서 함께 거주한 기간만 통산)은 **범위 밖**이다 — 엔진의 거주 개월은 하나라 별건.
+
+### 14동기화 지점 (새 필드 `buildingOwnerHouseholdMergeDate`)
+
+| # | 지점 | 파일 |
+|---|---|---|
+| ①②③ | 폼 상태·초기값·정규화(날짜 문자열) | `lib/stores/calc-wizard-asset-split-acq.ts`(+ 팩토리·정규화) — 같은 세대 답이 「예」가 아니거나 `land_only`가 아니면 지운다(stale 방지) |
+| ④ | API 변환 | `lib/calc/transfer-tax-api-split.ts:236` (`asksBuildingOwnerHousehold` 게이트) |
+| ⑤ | UI | `components/calc/transfer/AssetOwnershipSplitSection.tsx:100` 라디오 아래 — 「예」일 때만 `DateInput`(필드 `data-field`) |
+| ⑥ | 사이드바 | 해당 없음(금액 필드 아님) |
+| ⑦ | 결과 카드 | 엔진 `warnings`(고지) — 별도 카드 없음 |
+| ⑧ | validation | `lib/calc/self-owns-scope.ts:56` 근처 — 양도일 이후면 오류. 미입력은 통과(Q-1) |
+| ⑨⑩ | Zod enum | 해당 없음(날짜) · 컴패니언은 ⑫와 같은 형태 |
+| ⑫ | Zod 입력 객체 | `lib/api/transfer-tax-schema-base-shape.ts:608` · `transfer-tax-schema-split.ts:65`(컴패니언) — `z.string()` 날짜 · `household-refines`에 양도일 이후 refine |
+| ⑬ | body spread | ④가 payload를 짜므로 확인 필요(`callTransferTaxAPI`) |
+| ⑭ | Route 엔진 입력 | `app/api/calc/transfer/engine-input.ts:406` · `bundled-split-helpers.ts:224` · `multi/route.ts:215` — `toOptionalDate` 필수(Date 직렬화 함정) |
+| 엔진 | 입력 타입 | `lib/tax-engine/types/transfer.types.ts:1577` 옆 `buildingOwnerHouseholdMergeDate?: Date` |
+
+## 2. 미검증 레지스터 V-n
+
+| ID | 항목 | 검증 | 상태 |
+|---|---|---|---|
+| V-1 | 합가일 이후만 부수토지 보유기간 | 재산46014-610 · 부동산거래관리과-515·764 본문 확인(#2652·#2657 조사) | ✅ 직접 근거(비과세 보유요건·장특 표2 연수) |
+| V-2 | 세율 기산에 합가일 | 정면 해석 없음 — 세율 기산 `max`의 같은 세대 확장도 유추였다(#2657 Q-2 a) | ⏳ 유추 — Q-2 |
+| V-3 | G-3 기계가 「토지가 먼저 · 합가가 늦음」에서도 도는지 | `isLaterAcquiredLandHeldTooShort`는 `land ≤ house`면 false — `land' = max(토지, 합가일)`을 넘기면 도는 것으로 **읽었다**. 구현 전 실측 필요 | ⏳ 구현 첫 단계(pre-do anchor) |
+| V-4 | 제외된 토지분의 장특 | G-3 제외 토지(나중 취득)는 장특 0(보유 3년 미만)이라 값이 안 드러난다. **토지가 오래됐고 합가만 늦은** 시료에서 표1(토지 15년 30%)인지 표2인지는 미측정 | ⏳ 구현 때 측정 — 값이 갈리면 Q 추가 |
+| V-5 | 합가일 입력의 의미 | 두 사람이 세대를 합친 날(건물 소유자가 처음부터 같은 세대면 미입력). 합가 후 분가 등 반복은 **마지막 합가일**로 본다는 해석례는 미확인 | ⏳ 입력 안내문에 「양도일 현재 같은 세대가 된 날」로 한정 |
+
+## 3. 결정 게이트 Q-n
+
+| Q | 선택지 | 권고 |
+|---|---|---|
+| **Q-1** 입력 방식 | **a** 선택 입력 — 미입력 = 종전 계산(처음부터 같은 세대) + 고지 유지, 기존 저장본·테스트 불변 · **b** 필수 2택(「처음부터 같은 세대」/「합가함 — 합가일」) — 미응답은 ⑧이 막는다. 기존 `land_only` 같은 세대 시료·저장본 전부가 새 답을 요구한다(`buildingOwnerSameHousehold`를 쓰는 테스트 파일 29개 — 전부가 같은 세대 `land_only`는 아니다) | **a** — 필수로 만들면 결과가 달라지는 사실(합가)이 아닌 대다수 사용자(처음부터 같은 세대)에게 마찰만 준다. 미입력 고지가 이미 한계를 말한다 |
+| **Q-2** 효과 범위 | **a** ①②③ 모두(세율 기산 포함) · **b** ①②만(직접 근거가 있는 비과세 보유요건·장특 표2 연수만, 세율 기산은 유추라 제외 — 세율은 `max(토지, 주택)` 그대로) | **a** — #2657 Q-2 a(같은 세대 세율 기산 = 주택부수토지로서의 보유기간)와 같은 해석이라 합가일만 b로 빼면 같은 입력에서 세 축이 어긋난다. 단 유추 근거(V-2)라 「법 근거 없이 불리 적용 금지」와 부딪힌다 — 결정 필요 |
+
+**결정(2026-10-28)**: **Q-1 b** — 권고(a)와 다르다. 같은 세대 토지만 본인은 「처음부터 같은 세대 / 합가함 — 합가일」을 반드시 답해야 하고 미응답은 ⑧·⑫가 막는다.
+엔진 직접 호출(`buildingOwnerHouseholdMerged === undefined`)은 종전 계산 + 합가일 고지를 유지한다(필수는 입력 경로 규칙이다 — #2645 V-3′의 같은 세대 답과 같은 구조). **Q-2 a**(권고).
+
+### 필드 (Q-1 b)
+
+- `buildingOwnerHouseholdMerged?: boolean` — `true` 합가함 · `false` 처음부터 같은 세대 · `undefined` 미응답
+- `buildingOwnerHouseholdMergeDate?: string | Date` — `Merged === true`일 때만 필수, 양도일 이후면 오류. `Merged !== true`면 지운다
+
+## 4. 테스트 계획 (결정 후)
+
+기대값은 독립 정수 산식(모의 세율표 2024 누진 8구간 · 기본공제 2,500,000).
+
+- **pre-do**: V-3 — 합가일을 흉내 낸 입력으로 G-3 기계가 「토지 먼저 · 합가 늦음」에서 돈다(구현 첫 anchor).
+- **A-1~**: 합가일 × {토지 먼저·같은 날·나중} × {합가가 둘 다보다 이름·사이·늦음}: ① 비과세 제외 여부(2년 판정 경계 — 합가 후 23개월 vs 24개월) · ② 장특 연수 · ③ 세율.
+- **다건 = 단건** 격자(합가일 포함) · 고지 생략 조건 · route(Zod·Date 직렬화 — ⑫⑬⑭ 침묵 strip 방어) · 미입력 시 종전 동일(회귀 가드).
+- **mutation**: 세 곳 각각 되돌려 정확히 대응 anchor만 실패.
+
+## 5. 범위 밖
+
+거주 요건·표2 거주분의 동일세대 통산(기준-2025-법규재산-0040) · 합가 후 분가 반복 · 다른 세대 묶음 부수토지 카드의 표2(별건).
+
+## 6. 구현 결과 (2026-10-28)
+
+### 6.1 변경 (14동기화 지점)
+
+| # | 지점 | 파일 | 내용 |
+|---|---|---|---|
+| 엔진 | 입력 타입 | `types/transfer.types.ts` | `buildingOwnerHouseholdMerged?: boolean` · `buildingOwnerHouseholdMergeDate?: Date` |
+| 엔진 | 헬퍼 | `land-only-owner-household.ts` | `landOnlyHouseholdMergeDate`(같은 세대 · 합가함일 때만) · `laterOfMergeDate` · `landOnlyAppurtenantHouseYears` · `landOnlyMergeDateAppliedNotice` |
+| ① 비과세 | G-3 | `transfer-tax-appurtenant-land.ts` | `laterLandFailsHoldingRequirement` — 토지 취득일 대신 `max(토지, 합가일)`을 기존 `isLaterAcquiredLandHeldTooShort`에 넘긴다(기계 재사용 — V-3 해소) |
+| ② 장특 | 일반 | `transfer-tax-lthd.ts` | 통칙 leaf의 표2 후보 연수 = `landOnlyAppurtenantHouseYears` |
+| ② 장특 | ⑳ | `transfer-tax-rental-housing-lthd-parts.ts` · `-step.ts` | `houseYearsOverride` |
+| ③ 세율 | 기산 | `land-only-owner-household.ts` `landOnlyRateInput` · `transfer-tax-appurtenant-land.ts` `resolveAppurtenantLandRateBasisDate`(표시·시드) | `max(토지, 주택, 합가일)` |
+| ④ | 변환 | `lib/calc/transfer-tax-api-split.ts` | 같은 세대 「예」일 때만 실음(합가함일 때만 날짜) |
+| ①②③ | 폼 상태 | `lib/stores/calc-wizard-asset-split-acq.ts` | 두 필드(선택 필드 — 팩토리·정규화 변경 없음) |
+| ⑤ | UI | `AssetOwnershipSplitSection.tsx` | 같은 세대 「예」 아래 합가 여부 `RadioCardGroup` + 합가함이면 `DateInput`. 같은 세대 「아니오」·합가 「처음부터」로 바꾸면 하위 답을 한 번에 지운다 |
+| ⑥⑦ | 사이드바 · 결과 | — | 해당 없음 · 엔진 `warnings`(합가일 반영 고지) |
+| ⑧ | validation | `lib/calc/self-owns-scope.ts` `buildingOwnerMergeError` | 분리 검증 · 매매사례 분기 둘 다 · `transfer-tax-error-format.ts` 라벨 |
+| ⑫ | Zod | `transfer-tax-schema-base-shape.ts` · `-split.ts` · `-household-refines.ts` `landOnlyHouseholdMergeIssue` · `transfer-tax-schema.ts`(컴패니언) | 필수 2택 · 합가일 필수 · 양도일 이후 오류 |
+| ⑭ | Route | `engine-input.ts` · `bundled-split-helpers.ts` · `multi/route.ts` | `toOptionalDate` 변환 |
+| ⑬ | body spread | 변경 없음 | ④가 payload를 짠다 — route anchor로 body 확인 |
+
+### 6.2 결정 반영 · 정정
+
+- **Q-1 b(필수 2택)** 때문에 필수 입력 경로의 같은 세대 토지만 본인 시료 전부가 새 답을 요구했다. 착수 전 측정으로 **89건**이 깨졌고(테스트 파일 26개), 픽스처에 「처음부터 같은 세대」(`buildingOwnerHouseholdMerged: false`)를 추가해 해소했다 — 값이 바뀐 단언은 `land-only-later-land-holding` route의 합가일 확인 고지 1건뿐이다(답을 했으니 고지가 없다). 직접 엔진 호출(미응답)은 종전 계산 + 고지를 유지한다. E2E 헬퍼·스펙 5개도 같다.
+- **정정**: 계획 §1 표의 「④ 고지」는 「합가일을 입력하면 달지 않는다」고 썼다. 실제 규칙은 **합가 여부를 답하면(처음부터 · 합가함 모두)** 합가일 확인 고지를 달지 않는 것이다. 합가일이 취득일보다 늦어 계산이 달라졌을 때만 「합가일 반영」 고지를 단다.
+- V-3(G-3 기계가 「토지 먼저 · 합가 늦음」에서 도는지)은 `max(토지, 합가일)`을 넘기는 한 줄로 확인했다(anchor M1·M3·M5·M6). V-4(제외 토지분의 장특)는 **표1 토지 15년 30%**로 측정했다(표2 후보 = 합가 후 연수라 3년 미만이면 0 → 통칙 max가 표1). 값이 갈리지 않아 Q를 더하지 않았다.
+
+### 6.3 anchor · mutation · 회귀
+
+- 신규 `land-only-household-merge-date.anchor.test.ts` 12건(비과세 경계 24·23개월 · 장특 표2 일반·⑳ · 표시 기산일 · 고지 · 다건=단건 72칸) · route 13건(화면→④→⑫→route · 필수 2택 4 · 컴패니언 · 다건 · 묻지 않는 경우 3) · E2E 4건(HM-E1~E4 — 합가함 시 화면에서 184,730,000).
+- 구현 후 mutation 14/14 KILLED(P1 G-3 · P2 장특 일반 · P3 장특 ⑳ · P4 세율 입력 · P5 세율 표시 · P6 ⑫ · P7·P8 ⑧ 두 분기 · P9 ④ · P10~P12 ⑭ 단건·다건·컴패니언 · P13 고지 · P14 스키마 strip). P5는 처음 살아남아 표시 기산일 anchor를 더했다.
+- 회귀: tax-engine·api·calc·lib·components 41,987건 통과 · 0 실패 · tsc 0 · lint 오류 0(경고 6건은 `bundled-split-helpers.ts`의 기존 미사용 import). E2E(headless Playwright, 워크트리 포트): 신규 4 + 수정 스펙 5 + `transfer-dead-end-defects` · `transfer-validation-field-jump` 전수 726 통과. 사람이 브라우저로 직접 한 확인은 아니다.
+- 한계: 합가 후 분가 반복 · 거주기간 통산(기준-2025-법규재산-0040)은 범위 밖. 세율 기산에 합가일을 반영한 것은 유추 근거다(결과 고지에 확인 필요 병기).

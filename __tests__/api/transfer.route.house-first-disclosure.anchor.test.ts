@@ -74,7 +74,7 @@ function wholeGift(over: Partial<AssetForm> = {}): AssetForm {
 }
 /** P4 — 소유자 분리 land_only(해석례 364와 같은 소유 형태: 주택은 다른 사람, 부수토지만 수증) */
 const OWNER_SPLIT: Partial<AssetForm> = {
-  selfOwns: "land_only", buildingOwnerSameHousehold: true, hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2005-05-12",
+  selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false, hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2005-05-12",
   standardPricePerSqmAtAcq: "500000", standardPriceAtAcq: "150,000,000", buildingStandardPriceAtAcq: "50,000,000",
   landStandardPriceAtTransfer: "600,000,000", buildingStandardPriceAtTransfer: "100,000,000",
 } as Partial<AssetForm>;

@@ -613,6 +613,7 @@ test.describe("별건 B2 — 소유자 분리 + 매매 + 실거래가: 취득시
       acquisitionCause: "purchase",
       selfOwns: "land_only",
       buildingOwnerSameHousehold: true,
+      buildingOwnerHouseholdMerged: false,
       hasSeperateLandAcquisitionDate: true,
       // 토지 취득일은 필수다(G2 후속) — 비우면 이 spec이 보려는 오류보다 먼저 그 칸으로 막힌다. 건물 취득일과 같은 날로 둔다.
       landAcquisitionDate: "2015-03-01",

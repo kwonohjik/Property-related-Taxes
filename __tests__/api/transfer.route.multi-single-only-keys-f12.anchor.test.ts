@@ -141,7 +141,7 @@ describe("F-12 화면 경로(⑬→⑫→⑭) — 단건과 같은 세액", () =
     const f = form(
       {
         assetKind: "housing",
-        selfOwns: "land_only", buildingOwnerSameHousehold: true,
+        selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false,
         landAcquisitionPrice: "200,000,000",
         buildingAcquisitionPrice: "100,000,000",
         standardPricePerSqmAtTransfer: "300,000",
@@ -210,7 +210,7 @@ describe("F-12 본문 동치(⑬ ↔ ④)", () => {
 
   const SPLIT_ACTUAL: Partial<Asset> = {
     assetKind: "housing",
-    selfOwns: "land_only", buildingOwnerSameHousehold: true,
+    selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false,
     landAcquisitionPrice: "200,000,000",
     buildingAcquisitionPrice: "100,000,000",
     standardPriceAtAcq: "130,000,000",

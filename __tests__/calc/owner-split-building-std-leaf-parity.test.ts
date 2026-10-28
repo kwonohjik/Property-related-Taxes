@@ -66,7 +66,7 @@ function assetOf(c: Combo, over: Partial<AssetForm> = {}): AssetForm {
     isMixedUseHouse: c.mixed,
     usePreHousingDisclosure: c.phd,
     selfOwns: c.selfOwns,
-    buildingOwnerSameHousehold: true,
+    buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false,
     acquisitionDate: "2018-03-02",
     // 별개 취득 = 매매 + 「취득일 다름」 토글 + 날짜 상이. 그 밖은 같은 날짜(소유자 분리 토글은 매매에서만 날짜 토글을 같이 켠다).
     hasSeperateLandAcquisitionDate: c.separate,

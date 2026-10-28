@@ -49,7 +49,7 @@ const HH = {
 };
 /** 2015 상속 주택 · 평가액 3억 · 양도 12억 · 소유자 분리 — 기준시가 칸은 그 화면에 있다 */
 const INH: Loose = {
-  addressJibun: "서울 강남구 테스트동 1-1", assetKind: "housing", buildingOwnerSameHousehold: true, acquisitionCause: "inheritance", acquisitionDate: "2015-01-01",
+  addressJibun: "서울 강남구 테스트동 1-1", assetKind: "housing", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false, acquisitionCause: "inheritance", acquisitionDate: "2015-01-01",
   decedentAcquisitionDate: "2005-01-01", actualSalePrice: "1,200,000,000", publishedValueAtInheritance: "300,000,000",
   inheritanceValuationMethod: "supplementary", fixedAcquisitionPrice: "", acquisitionArea: "100", transferArea: "100",
   standardPricePerSqmAtTransfer: "5600000", buildingStandardPriceAtTransfer: "840000000", standardPricePerSqmAtAcq: "2400000",

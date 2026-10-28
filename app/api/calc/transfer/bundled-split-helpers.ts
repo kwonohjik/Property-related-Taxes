@@ -222,6 +222,8 @@ export function buildCompanionEngineInputs(
     landDonorAcquisitionDate: toOptionalDate(c.landDonorAcquisitionDate),
     selfOwns: c.selfOwns,
     buildingOwnerSameHousehold: c.buildingOwnerSameHousehold,
+    buildingOwnerHouseholdMerged: c.buildingOwnerHouseholdMerged,
+    buildingOwnerHouseholdMergeDate: toOptionalDate(c.buildingOwnerHouseholdMergeDate),
     landAcqMode: c.landAcqMode,
     buildingAcqMode: c.buildingAcqMode,
     isSeparateAcquisition: c.isSeparateAcquisition,
