@@ -2,6 +2,7 @@
 
 - 작성: 2026-10-29 · 브랜치 `docs/gb-total-transfer-expense-loss-plan`(origin `docs/gb-notice-v2-total-expense-path`(#2700) 기반 — §11 실측을 인용하려고 쌓았다) · 제품 코드 무변경(계획서만 · throwaway probe 는 제거함)
 - 출처: `gb-deduction-only-notice-mixed-asset-transfer-expense.plan.md` §11 (V-2 실측) — 그곳에서 별건 결함 2건으로 분리했다. 이월과세 계열은 `gb-estimated-carryover-scenario-a-capex.plan.md` §2.6·Q-5(「선언 채널 컴패니언 공통 양도비 소실」 — 그때는 분리)의 비-이월과세 확장이다.
+- 결정: ✅ 2026-10-29 확정 — Q-1 두 PR(A 먼저) · Q-2 (a) · Q-3 Pre-Do 뒤 확정 · Q-4 그대로 (사용자 「권고안으로」). **A 구현 완료(§10)**, B 는 후속 PR.
 - 판정: **세액 결함(필요경비 과소 → 세액 과대)**. 법문이 명확하다(§4) — 질의·해석례 불요.
 - 검증 방식: 모든 수치는 mock 세율(`makeMockRates()`)로 폼 → ④ → `POST /api/calc/transfer` 를 태운 probe 실측. 「오라클」 = 같은 금액을 **이미 동작하는 채널(자산·카드 칸 양도비)** 로 넣은 값 — 총 양도비 경로가 고쳐지면 그 값과 같아야 한다. 인용 file:line 은 이 워크트리 실파일. 법문은 KoreanLaw MCP 현행 본문(소득세법 MST 280405, 시행 2026-01-01)을 읽어 verbatim 인용했다.
 
@@ -121,7 +122,7 @@ Pre-Do (수정 전, 현행 값 고정 + 오라클 확인):
 
 | # | 항목 | 상태 |
 |---|---|---|
-| V-1 | 축 B 호출부가 `appliedFormTotalTransferExpense`(칸이 화면에 있을 때만)와 같은 값을 쓰는지 — 자산 2건 미만에서 stale 총 양도비가 새지 않는지 | 🟠 **확인 필요** — `withInScopeTransferExpenses` 는 단건에서 총 양도비를 비우지만 축 B 빌더의 입력 경로는 미확인. |
+| V-1 | 축 B 호출부가 `appliedFormTotalTransferExpense`(칸이 화면에 있을 때만)와 같은 값을 쓰는지 | ✅ **해소(§10-2)** — ④ 진입부 `callTransferTaxAPI` 가 폼을 먼저 `withInScopeTransferExpenses` 로 정규화(`transfer-tax-api.ts:115`)하고 그 폼을 `buildPrimaryContext` 가 받으므로 이미 정규화된 값이다. |
 | V-2 | 부담부증여(§159) 일반건물 컴패니언·축 B 에서 공통 몫이 `actualExpenses` 로 §159 안분에 들어가는 방식 | 🟠 **확인 필요(미측정)** — §2 는 일반 양도만. 부담부증여는 환산 payload 를 읽지 않아 던진다(`general-building-part-cards.ts:141-146`)는 점만 확인. |
 | V-3 | 이월과세 A·B 컴패니언 일반건물에서 공통 몫(Q-5) 현행 소실 범위와 수정 후 A 카드 표시 영향 | 🟠 **확인 필요(미측정)** — 이전 계획서 §2.6 은 이월과세 A 의 소실만 측정. |
 | V-4 | 분리 OFF 일반건물 실가 일괄의 legacy `directExpenses` × 선언 채널 × 공통 몫 3중 조합에서 직접분이 후퇴하는지 | 🟠 **확인 필요** — Pre-Do 격자 2×2×2. |
@@ -136,3 +137,17 @@ Pre-Do (수정 전, 현행 값 고정 + 오라클 확인):
 - 최상위 `transferExpense` 정리(Q-4) · 안내문(`GbDeductionOnlyNotice`)은 자산 칸 채널 기준으로 이미 맞다(#2697).
 - 토지·주택·겸용주택의 총 양도비는 정상(§2.2 대조·이전 계획서 `gb-transfer-expense-apportion-basis.plan.md` §2.2 표) — 손대지 않는다.
 - 선언 채널 컴패니언의 `allocatedExpenses` 소실 중 **이월과세 A 의 본인 직접귀속 표시**는 #2676·#2683 으로 처리된 범위와 겹치는 부분만 V-3 에서 확인한다.
+
+---
+
+## 10. Do 환류 — PR A (결함 A · 축 B 지분)
+
+구현: `buildGeneralBuildingShares` 에 4번째 인자 `formTotalTransferExpense`(기본 0)를 더하고, 자산 칸 `transferExpense` 가 비면 `merged = { ...merged, transferExpense: String(총 양도비) }`(100% 기준)로 만들어 기존 `applyShareScale` 이 × 지분율 하게 했다(`transfer-tax-api-gb-shares.ts`). 호출부 `transfer-tax-api-primary-context.ts` 가 `parseAmount(form.totalTransferExpense || "0")` 를 넘긴다. 엔진·⑫ Zod·⑧ 무변경(14 지점 중 ④ 한 곳).
+
+1. **오라클 일치**: Pre-Do 에서 현행 6건 적색(회귀 대조군 2건 녹색)을 확인한 뒤 구현 → 8건 전부 녹색. 실가+실가 `[2,440,626 · 559,374 · 1,627,084 · 372,916]`(Σ 5,000,000) · 세액 255,540,000 · 혼합 `[2,440,626 · 2,700,000 · 1,627,084 · 1,800,000]` · 254,491,093 · 환산+환산 1.5B `[519,718,309 · 380,281,691 · 346,478,871 · 253,521,129]` · 0 — §2.2 와 ±0 일치. 총 양도비 ≡ 카드 입력(AB-4 live 대조) 3조합.
+2. **V-1 해소**: 정규화된 폼 값이라 자산 1건에서 stale 총 양도비가 새지 않는다 — AB-6(자산 1건 + 총 양도비 5,000,000 → 255,687,000 불변)으로 고정.
+3. **자산 칸 우선**: 빌더 단위 anchor S-2 — 카드1 자산 칸 1,000,000 × 0.6 = 600,000, 카드2 는 총 5,000,000 × 0.4 = 2,000,000. (폼 규칙은 총 양도비가 있으면 자산 칸을 비우므로 실제 폼에서는 겹치지 않는다 — 빌더가 방어선.)
+4. **뮤테이션 6종**: M1 호출부가 총 양도비를 안 넘김(6건 적색) · M2 자산 칸 우선순위 반전(1) · M3 지분율 이중 곱(8) · M4 첫 카드에만 주입(8) · M5 총 양도비 +2(7건 적색) — **+1 은 생존**: 100% 기준 입력의 +1 은 `applyRatio` 의 floor 가 지분율(0.6·0.4)에서 흡수해 카드 값(3,000,000·2,000,000)이 변하지 않는다. 구멍이 아니라 floor 의 성질이다(+2 로 적색 확인).
+5. **회귀**: `__tests__/components` · `calc` · `api` · `lib` · `tax-engine/transfer` 2,793 파일 / 33,680 테스트 통과(3 skipped · 309 todo). 새 anchor: 라우트 8건 + 빌더 단위 3건. E2E `gb-axis-b-total-transfer-expense` 1건 통과(요청 본문 `valuation.transferExpense` `[3,000,000, 2,000,000]` · 총 양도비 ≡ 카드 입력 · 총 양도비 없을 때보다 세액이 작다).
+6. **미측정(남은 V)**: 부담부증여 축 B 일반건물 + 총 양도비(V-2) · 지분 3카드 이상의 1원 합 보존 · 증축(V-8). 부담부증여는 `bgExpenseInputsUnused` 게이트가 `merged` 위에서 그대로 작동하므로(판정은 자산 플래그) 이번 변경이 그 게이트를 우회하지는 않는다 — 값 검증은 후속.
+7. **브라우저**: E2E 가 실제 렌더 화면을 거쳐 계산하지만 줄바꿈·표시 육안 확인은 하지 않았다 — **미수행**. 결함 B(함께 양도)는 이 PR 범위 밖이다.

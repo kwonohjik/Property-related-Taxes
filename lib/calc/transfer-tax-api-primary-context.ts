@@ -24,6 +24,7 @@ import {
   getOwnershipRatio,
 } from "./transfer-tax-api-helpers";
 import { buildGeneralBuildingShares } from "./transfer-tax-api-gb-shares";
+import { parseAmount } from "./number-parse";
 import { applyShareScale } from "./transfer-tax-api-gb-shares";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { apportionCompanionBurdenedGiftDebt } from "./transfer-tax-api-burdened-gift";
@@ -189,7 +190,7 @@ export function buildPrimaryContext(
    * 보내면 route의 `bundledOk`가 참이 되어 5-a(일괄)가 먼저 잡는다.
    */
   const gbShares = isGeneralBuilding
-    ? buildGeneralBuildingShares(form.assets, form.transferDate, form.assetSplitMode)
+    ? buildGeneralBuildingShares(form.assets, form.transferDate, form.assetSplitMode, parseAmount(form.totalTransferExpense || "0"))
     : undefined;
 
   // ⑬ 재개발/재건축 (시행령 §166) — assetKind "redevelopment_apt" 또는 "right_to_move_in" 시 빌드.
