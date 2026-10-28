@@ -18,6 +18,13 @@ export interface SplitAcquisitionFormSlice {
    * 노출·전송·검증 술어는 `asksBuildingOwnerHousehold`(`lib/calc/self-owns-scope.ts`).
    */
   buildingOwnerSameHousehold?: boolean;
+  /**
+   * 토지만 본인 × **같은 세대**일 때 — 건물(주택) 소유자와 중간에 세대를 합쳤는가(`true` 합가함 · `false` 처음부터 같은 세대 · 미응답은 ⑧ 차단).
+   * 합가일 이후만 그 토지를 주택부수토지로서 보유한 기간으로 본다(재산46014-610). 노출·전송·검증 술어는 `asksBuildingOwnerHousehold` + 같은 세대 「예」.
+   */
+  buildingOwnerHouseholdMerged?: boolean;
+  /** 세대를 합친 날(YYYY-MM-DD) — `buildingOwnerHouseholdMerged === true`일 때 필수 */
+  buildingOwnerHouseholdMergeDate?: string;
   /** 토지와 건물의 취득일이 다른지 여부 (원시취득·신축 등) */
   hasSeperateLandAcquisitionDate: boolean;
   /** 토지 취득일 (YYYY-MM-DD) — hasSeperateLandAcquisitionDate === true 시 필수 */

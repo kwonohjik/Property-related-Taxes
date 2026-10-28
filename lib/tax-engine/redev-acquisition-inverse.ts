@@ -81,20 +81,46 @@ export function redevMaskedExemptGain(b: RedevBranch): number {
   return redevBranchGrossGain(b) - (b.gainBeforeAllocation ?? b.gain);
 }
 
+/**
+ * 신고서 필요경비의 분기별 구성 — `redevBranchTotals().expenses`는 이 세 값의 합이다(승계조합원은 인가 후 분만).
+ *
+ * `preApprovalKind`: 인가 전 분은 개산공제(「소득세법 시행령」 제163조 제6항)와 실제 필요경비의 **택일**이다
+ * (`preApprovalNecessaryExpense` — 개산공제가 0보다 크면 개산공제). 값이 개산공제와 같고 0보다 크면 `estimated`.
+ */
+export interface RedevExpenseParts {
+  preApproval: number;
+  preApprovalKind: "estimated" | "actual";
+  postApproval: number;
+  settlement: number;
+}
+
+export function redevBranchExpenseParts(detail: RedevDetail): RedevExpenseParts {
+  if (detail.successorMemberApplied === true) {
+    return { preApproval: 0, preApprovalKind: "actual", postApproval: detail.postApprovalExistingHouse.expenses ?? 0, settlement: 0 };
+  }
+  const preApproval = detail.preApproval.expenses ?? 0;
+  const lump = detail.estimatedLumpDeduction ?? 0;
+  return {
+    preApproval,
+    preApprovalKind: lump > 0 && preApproval === lump ? "estimated" : "actual",
+    postApproval: detail.postApprovalExistingHouse.expenses ?? 0,
+    settlement: detail.settlement.expenses ?? 0,
+  };
+}
+
 export function redevBranchTotals(detail: RedevDetail): RedevBranchTotals {
   const grossOf = redevBranchGrossGain;
+  const parts = redevBranchExpenseParts(detail);
+  const expenses = parts.preApproval + parts.postApproval + parts.settlement;
 
   if (detail.successorMemberApplied === true) {
     return {
-      expenses: detail.postApprovalExistingHouse.expenses ?? 0,
+      expenses,
       gain: grossOf(detail.postApprovalExistingHouse),
     };
   }
   return {
-    expenses:
-      (detail.preApproval.expenses ?? 0) +
-      (detail.postApprovalExistingHouse.expenses ?? 0) +
-      (detail.settlement.expenses ?? 0),
+    expenses,
     gain:
       grossOf(detail.preApproval) +
       grossOf(detail.postApprovalExistingHouse) +

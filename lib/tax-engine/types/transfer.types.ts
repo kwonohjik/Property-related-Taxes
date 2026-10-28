@@ -1576,6 +1576,14 @@ export interface TransferTaxInput {
    */
   buildingOwnerSameHousehold?: boolean;
   /**
+   * 토지만 본인 × 같은 세대 — 건물(주택) 소유자와 **중간에 세대를 합쳤는가**(`true` 합가함 · `false` 처음부터 같은 세대 · 미응답).
+   * 합가일 이후만 토지를 「주택부수토지로서 보유」한 기간으로 본다(재산46014-610 · 부동산거래관리과-515·764·622) — 비과세 보유요건·장특 표2 보유연수·
+   * 세율 기산에 반영한다(`land-only-owner-household.ts` `landOnlyHouseholdMergeDate`). 입력 경로는 미응답을 ⑧·⑫가 막고, 엔진은 undefined를 처음부터 같은 세대(종전)로 읽는다.
+   */
+  buildingOwnerHouseholdMerged?: boolean;
+  /** 세대를 합친 날 — `buildingOwnerHouseholdMerged === true`일 때만 쓴다(그 밖에는 무시). */
+  buildingOwnerHouseholdMergeDate?: Date;
+  /**
    * 건물 정착면적 (㎡) — 부수토지 한도 산정용.
    * ⚠️ 축별 근거 조문이 다르다(배율 수치 3/5/5/10은 동일) — 세율 축 「소득세법 시행령」 §167의5 /
    *    비사업용 토지 축 같은 영 §168의12 / 비과세 축 같은 영 §154⑦.

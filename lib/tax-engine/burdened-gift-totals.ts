@@ -7,7 +7,7 @@
  */
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxResult } from "./types/transfer.types";
-import { redevFilingTotals } from "./redev-acquisition-inverse";
+import { redevBranchExpenseParts, redevFilingTotals, type RedevExpenseParts } from "./redev-acquisition-inverse";
 
 export function burdenedGiftPerAssetTotals(brkd: Pick<TransferBurdenedGiftBreakdown, "perAsset">): {
   transferPrice: number;
@@ -35,12 +35,22 @@ export function redevInverseTransferPrice(
 }
 
 /**
- * 부담부증여 §166 자산(원조합원 입주권·재개발 완공 아파트)의 신고서 취득가액 합계 — 신고서 표(`FilingFormTableHelpers`)와 같은 역산.
+ * 부담부증여 §166 자산(원조합원 입주권·재개발 완공 아파트)의 신고서 취득가액 합계·필요경비 분기별 구성 — 신고서 표(`FilingFormTableHelpers`)와 같은 역산.
  * 명세 카드가 인가 전 분(`perAsset`)과 이 합계를 잇는 데 쓴다. §166 자산이 아니거나 부담부증여가 아니면 undefined.
+ * 취득가액과 필요경비를 한 호출에서 같은 인자로 구해 두 값이 갈리지 않게 한다.
  */
+export function bgRedevFiling(
+  result: Pick<TransferTaxResult, "redevelopmentDetail" | "transferBurdenedGiftBreakdown">,
+): { acquisition: number; expenses: RedevExpenseParts } | undefined {
+  if (!result.redevelopmentDetail || !result.transferBurdenedGiftBreakdown) return undefined;
+  return {
+    acquisition: redevFilingTotals(result.redevelopmentDetail, redevInverseTransferPrice(result, 0)).acquisition,
+    expenses: redevBranchExpenseParts(result.redevelopmentDetail),
+  };
+}
+
 export function bgRedevFilingAcquisition(
   result: Pick<TransferTaxResult, "redevelopmentDetail" | "transferBurdenedGiftBreakdown">,
 ): number | undefined {
-  if (!result.redevelopmentDetail || !result.transferBurdenedGiftBreakdown) return undefined;
-  return redevFilingTotals(result.redevelopmentDetail, redevInverseTransferPrice(result, 0)).acquisition;
+  return bgRedevFiling(result)?.acquisition;
 }

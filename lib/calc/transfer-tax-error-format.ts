@@ -61,6 +61,8 @@ const FIELD_LABEL: Record<string, string> = {
   houseFirstDisclosureDate: "개별주택가격 최초 공시일",
   selfOwns: "본인 소유 부분",
   buildingOwnerSameHousehold: "건물(주택) 소유자와 같은 세대 여부",
+  buildingOwnerHouseholdMerged: "건물(주택) 소유자와 세대 합가 여부",
+  buildingOwnerHouseholdMergeDate: "세대 합가일",
   landSplitMode: "토지/건물 분리 방식", // @deprecated — saleSplitMode로 대체, 하위호환 라벨만 유지
   landAcqMode: "토지 취득가액 방식",
   buildingAcqMode: "건물 취득가액 방식",

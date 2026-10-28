@@ -310,7 +310,7 @@ describe("D1-6 결합 제외 — 현행 실측 (설계 §3 표)", () => {
 
   it("D1-6e [전환 D1-1 · R-X4] 소유자 분리(land_only·building_only) + 토지 상속 → 400 — 종전 200·238,500,000(원인 침묵 무시, 통산돼야 133,060,000)", async () => {
     for (const selfOwns of ["land_only", "building_only"]) {
-      const base = { selfOwns, buildingOwnerSameHousehold: true, acquisitionCause: "purchase", landAcquisitionDate: "2025-02-01" };
+      const base = { selfOwns, buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false, acquisitionCause: "purchase", landAcquisitionDate: "2025-02-01" };
       const a = await post({ ...base, ...CAUSE });
       expect(a.status).toBe(400);
       expect(messages(a.body)).toContain("한쪽만 소유한 자산에는 토지 취득원인을 따로 지정할 수 없습니다");

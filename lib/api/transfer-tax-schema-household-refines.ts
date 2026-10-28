@@ -32,6 +32,9 @@ export type HouseholdRefineInput = {
   acquisitionCause?: string;
   selfOwns?: string;
   buildingOwnerSameHousehold?: boolean;
+  buildingOwnerHouseholdMerged?: boolean;
+  buildingOwnerHouseholdMergeDate?: string;
+  transferDate?: string;
   sellingHouseId?: string;
   houses?: ReadonlyArray<RentalRow>;
   generalHouseGiftedFromDecedentWithin2yr?: boolean;
@@ -151,6 +154,8 @@ export function refineHouseholdRequiredInputs(data: HouseholdRefineInput, ctx: z
 
   const lohMsg = landOnlyHouseholdIssue(data);
   if (lohMsg) issue(["buildingOwnerSameHousehold"], lohMsg);
+  const mergeIssue = landOnlyHouseholdMergeIssue(data);
+  if (mergeIssue) issue([mergeIssue.field], mergeIssue.message);
 }
 
 /**
@@ -166,6 +171,32 @@ export function landOnlyHouseholdIssue(d: {
   return d.propertyType === "housing" && d.selfOwns === "land_only" && d.buildingOwnerSameHousehold === undefined
     ? "토지만 본인 소유인 주택은 건물(주택) 소유자가 양도일 현재 본인과 같은 세대인지 선택해야 합니다 (소득세법 시행령 §154①)"
     : null;
+}
+
+/**
+ * 토지만 본인 × **같은 세대** 주택 — 세대 합가 여부(처음부터 / 합가함)와 합가일은 필수다(계획서 `land-only-household-merge-date.plan.md` Q-1 b).
+ * 합가일 이후만 그 토지를 주택부수토지로서 보유한 기간으로 본다(재산46014-610). 합가일은 양도일 이후일 수 없다. 주 자산·컴패니언이 같은 규칙을 쓴다 — ⑧ `buildingOwnerMergeError`와 같은 술어.
+ */
+export function landOnlyHouseholdMergeIssue(d: {
+  propertyType?: string;
+  selfOwns?: string;
+  buildingOwnerSameHousehold?: boolean;
+  buildingOwnerHouseholdMerged?: boolean;
+  buildingOwnerHouseholdMergeDate?: string;
+  transferDate?: string;
+}): { field: "buildingOwnerHouseholdMerged" | "buildingOwnerHouseholdMergeDate"; message: string } | null {
+  if (d.propertyType !== "housing" || d.selfOwns !== "land_only" || d.buildingOwnerSameHousehold !== true) return null;
+  if (d.buildingOwnerHouseholdMerged === undefined) {
+    return { field: "buildingOwnerHouseholdMerged", message: "같은 세대인 건물(주택) 소유자와 처음부터 같은 세대였는지, 중간에 합쳤는지 선택해야 합니다 (재산46014-610)" };
+  }
+  if (d.buildingOwnerHouseholdMerged !== true) return null;
+  if (!d.buildingOwnerHouseholdMergeDate) {
+    return { field: "buildingOwnerHouseholdMergeDate", message: "세대를 합친 날을 입력해야 합니다 (재산46014-610 — 합가 이후 기간만 주택부수토지로서 보유한 기간)" };
+  }
+  if (d.transferDate && d.buildingOwnerHouseholdMergeDate > d.transferDate) {
+    return { field: "buildingOwnerHouseholdMergeDate", message: "세대를 합친 날은 양도일 이후일 수 없습니다" };
+  }
+  return null;
 }
 
 /** 신축 · 토지만 본인 — 주 자산(위)·함께 양도 자산(`transfer-tax-schema.ts` 컴패니언 refine)이 같은 규칙을 쓴다(⑧ `newConstructionLandOnly` · 리뷰 게이트 F-2). */

@@ -24,6 +24,7 @@ import { selfOwnsSplitApplicable } from "@/lib/calc/self-owns-scope";
 import { asksBuildingOwnerHousehold } from "@/lib/calc/self-owns-scope";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { DateInput } from "@/components/ui/date-input";
 import { landCauseMixActive } from "@/lib/calc/transfer-land-part-cause";
 
 // 게이트 술어는 ④·⑧·⑥과 공용 leaf다(M2 — `lib/calc/self-owns-scope.ts`). 종전 import 경로 유지용 재export.
@@ -113,8 +114,51 @@ export function AssetOwnershipSplitSection(props: {
               { value: "no", label: "아니오 — 다른 세대", testId: "building-owner-same-household-no" },
             ]}
             value={asset.buildingOwnerSameHousehold === undefined ? "" : asset.buildingOwnerSameHousehold ? "yes" : "no"}
-            onChange={(v) => onChange({ buildingOwnerSameHousehold: v === "yes" })}
+            // 같은 세대가 아니게 되면 합가 답은 의미가 없다 — 한 번에 지운다(stale 방지 · 다중 키 단일 배치 patch).
+            onChange={(v) =>
+              onChange({
+                buildingOwnerSameHousehold: v === "yes",
+                ...(v === "yes" ? {} : { buildingOwnerHouseholdMerged: undefined, buildingOwnerHouseholdMergeDate: undefined }),
+              })
+            }
           />
+        </ToneCard>
+      )}
+      {/* 같은 세대 — 합가일 이후만 이 토지를 주택부수토지로서 보유한 기간으로 본다(재산46014-610 · 계획서 land-only-household-merge-date Q-1 b · ⑧·⑫ 필수). */}
+      {asksBuildingOwnerHousehold(asset) && asset.buildingOwnerSameHousehold === true && (
+        <ToneCard tone="amber" title="건물(주택) 소유자와 세대를 합친 적이 있는지">
+          <p className="text-caption text-muted-foreground">
+            건물(주택) 소유자와 <strong>처음부터 같은 세대</strong>였는지, 중간에 세대를 <strong>합쳤는지</strong> 선택하세요. 합친 경우 합친 날 이후의 기간만 이 토지를
+            주택부수토지로서 보유한 기간으로 봅니다(재산46014-610 — 1세대1주택 비과세 보유요건·장기보유특별공제 표2 보유연수·단기세율 보유기간).
+          </p>
+          <RadioCardGroup
+            name={`building-owner-household-merged-${asset.assetId}`}
+            data-testid="building-owner-household-merged"
+            data-field="buildingOwnerHouseholdMerged"
+            tone="amber"
+            layout="inline"
+            options={[
+              { value: "no", label: "처음부터 같은 세대", testId: "building-owner-household-merged-no" },
+              { value: "yes", label: "중간에 합침 — 합가일 입력", testId: "building-owner-household-merged-yes" },
+            ]}
+            value={asset.buildingOwnerHouseholdMerged === undefined ? "" : asset.buildingOwnerHouseholdMerged ? "yes" : "no"}
+            onChange={(v) =>
+              onChange({
+                buildingOwnerHouseholdMerged: v === "yes",
+                ...(v === "yes" ? {} : { buildingOwnerHouseholdMergeDate: undefined }),
+              })
+            }
+          />
+          {asset.buildingOwnerHouseholdMerged === true && (
+            <div className="space-y-1" data-field="buildingOwnerHouseholdMergeDate">
+              <label className="block text-caption text-muted-foreground font-medium">세대를 합친 날</label>
+              <DateInput
+                data-testid="building-owner-household-merge-date"
+                value={asset.buildingOwnerHouseholdMergeDate ?? ""}
+                onChange={(s) => onChange({ buildingOwnerHouseholdMergeDate: s || undefined })}
+              />
+            </div>
+          )}
         </ToneCard>
       )}
     </div>

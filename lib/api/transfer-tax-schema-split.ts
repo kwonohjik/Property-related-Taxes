@@ -63,6 +63,10 @@ export const splitAcquisitionShape = {
   selfOwns: z.enum(["both", "building_only", "land_only"]).optional(),
   /** V-3′ 토지만 본인 주택 — 건물(주택) 소유자가 양도일 현재 본인과 같은 세대인가(예·아니오). 필수 여부는 `landOnlyHouseholdIssue` */
   buildingOwnerSameHousehold: z.boolean().optional(),
+  /** 토지만 본인 × 같은 세대 — 중간에 세대를 합쳤는가(`true` 합가함 · `false` 처음부터). 필수 여부는 `landOnlyHouseholdMergeIssue` */
+  buildingOwnerHouseholdMerged: z.boolean().optional(),
+  /** 세대를 합친 날 — `buildingOwnerHouseholdMerged === true`일 때 필수 */
+  buildingOwnerHouseholdMergeDate: z.string().date().optional(),
 
   // ─── 파트별 취득 방식 (4-way 독립) ────────────────────────────────
   landAcqMode: z.enum(["actual", "estimated", "appraisal", "salesCase"]).optional(),

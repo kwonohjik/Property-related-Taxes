@@ -50,6 +50,7 @@ import { landOnlyRateInput } from "./land-only-owner-household";
 import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
 import { LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE } from "./land-only-owner-household";
 import { landOnlyOtherHouseholdRateNotice } from "./land-only-owner-household";
+import { landOnlyMergeDateAppliedNotice } from "./land-only-owner-household";
 import { nblDeferralAreaNotice } from "./transfer-tax-nbl-deferral-notice";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
@@ -554,8 +555,7 @@ export function calculateTransferTax(
   const { isSurchargeCase, isSuspended: suspendedResult } = resolveSurchargeApplication(surchargeArgs, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules);
   // 토지만 본인 × 다른 세대 — 그 조건을 뺀 판정이 중과였을 때만 배제 사실을 고지한다.
   if (landOnlyBuildingOwnerOtherHousehold(effectiveInput) && resolveSurchargeApplication({ ...surchargeArgs, selfOwns: undefined }, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules).isSurchargeApplied) warnings.push(LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE);
-  const landOnlyRateNotice = landOnlyOtherHouseholdRateNotice(effectiveInput);
-  if (landOnlyRateNotice) warnings.push(landOnlyRateNotice);
+  for (const n of [landOnlyOtherHouseholdRateNotice(effectiveInput), landOnlyMergeDateAppliedNotice(effectiveInput)]) if (n) warnings.push(n);
   // 명부 없이 원시 플래그로 중과를 건 경우 — 다른 주택이 각 호에 해당하면 결론이 바뀔 수 있다(확인 필요).
   const surchargeFallbackNotice = noRosterSurchargeFallbackNotice({
     houses: effectiveInput.houses, rosterInputUnavailable: hasNoMergeRosterInputPath(effectiveInput),

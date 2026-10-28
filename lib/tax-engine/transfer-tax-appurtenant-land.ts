@@ -12,6 +12,8 @@
  */
 import { calculateHoldingPeriod } from "./tax-utils";
 import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
+import { landOnlyHouseholdMergeDate } from "./land-only-owner-household";
+import { laterOfMergeDate } from "./land-only-owner-household";
 import { round2 } from "./area-utils";
 import { appurtenantLandMultiplier, expropriationZoneBaseDateNotice } from "./appurtenant-land-rate";
 import { resolveOneHouseMinHoldingYears } from "./data/one-house-holding-residence-era";
@@ -59,7 +61,9 @@ export function resolveAppurtenantLandRateBasisDate(input: TransferTaxInput): Da
   if (input.propertyType !== "housing" || landOnlyBuildingOwnerOtherHousehold(input)) return effective;
   const rebuilt = resolveLandRebuildAggregation(input);
   if (rebuilt) return rebuilt.equivalentBasisDate;
-  return effective.getTime() >= input.acquisitionDate.getTime() ? effective : input.acquisitionDate;
+  // 같은 세대 토지만 본인은 합가일도 `max`에 든다(`landOnlyRateInput`과 같은 규칙).
+  const start = laterOfMergeDate(effective, landOnlyHouseholdMergeDate(input));
+  return start.getTime() >= input.acquisitionDate.getTime() ? start : input.acquisitionDate;
 }
 
 /**
@@ -178,7 +182,8 @@ function laterLandFailsHoldingRequirement(input: TransferTaxInput): boolean {
   if (input.isSeparateAcquisition !== true) return false;
   const land = input.landAcquisitionDate;
   if (!land) return false;
-  if (!isLaterAcquiredLandHeldTooShort(land, input.acquisitionDate, input.transferDate)) return false;
+  // 합가일이 토지 취득일보다 늦으면 그 날부터가 「주택부수토지로서 보유」한 기간이다(재산46014-610) — 토지가 먼저여도 합가가 늦으면 같은 제외가 걸린다.
+  if (!isLaterAcquiredLandHeldTooShort(laterOfMergeDate(land, landOnlyHouseholdMergeDate(input)), input.acquisitionDate, input.transferDate)) return false;
   // 부담부증여(§159)는 12억 안분 분모가 자산 단위와 달라 파트별 안분 기준이 확정돼 있지 않다 — 대상에서 제외한다(계획서 §5.4 선결 과제).
   //
   // 지분 양도는 **제외하지 않는다**(S08-8). 종전에는 `totalPropertyTransferPrice !== undefined`(= 물건 전체 양도가액을 12억 분모로 싣는
