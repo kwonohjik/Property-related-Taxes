@@ -58,11 +58,27 @@ export function buildBgAcquisitionFormula(
   }
 }
 
-/** 자산별 필요경비 산식 — 개산공제(base = 취득시 기준시가 × 채무비율) 또는 실비 안분. */
+/**
+ * 자산별 필요경비 산식 — 개산공제(base = 취득시 기준시가 × 채무비율) 또는 실비 안분.
+ *
+ * 파트 슬롯(`estimatedDeduction`)은 이월과세 증여세 상당액 산입분(`carryoverGiftTax.landApplied`·`buildingApplied`, 법 §97의2①3호)을 포함한다.
+ * 산식은 그 산입분을 뗀 순액으로 적고, 뒤에 「+ 증여세 상당액 … = 슬롯」을 이어 적는다 — 적힌 산식이 적힌 값을 만든다
+ * (계획서 `bg-gb-carryover-statement-expense-formula.plan.md` Q-1 a · Q-2 a). 산입분이 없으면 종전 문구 그대로다.
+ */
 export function buildBgExpenseFormula(
   bg: TransferBurdenedGiftBreakdown,
   a: BgAssetBreakdown,
 ): string {
+  const cgt = bg.carryoverGiftTax;
+  // 어느 파트인지는 객체 동일성으로 안다 — 호출처(`cardBg`가 고른 breakdown의 `perAsset.land`/`building`)가 그대로 넘긴다.
+  const part = cgt ? (a === bg.perAsset.land ? cgt.landApplied ?? 0 : a === bg.perAsset.building ? cgt.buildingApplied ?? 0 : 0) : 0;
+  if (part <= 0) return expenseFormulaOf(bg, a, a.estimatedDeduction, "");
+  const addition = `\n        + 증여세 상당액 ${fmt(part)} — 이월과세 §97의2①3호·시행령 §163의2②\n        = ${fmt(a.estimatedDeduction)}`;
+  return expenseFormulaOf(bg, a, a.estimatedDeduction - part, addition);
+}
+
+/** `amount`는 산식이 만드는 값(산입분을 뗀 순액), `addition`은 값 줄 바로 뒤에 붙는 산입 줄. */
+function expenseFormulaOf(bg: TransferBurdenedGiftBreakdown, a: BgAssetBreakdown, amount: number, addition: string): string {
   /**
    * 율 echo가 없으면 **개산공제 경로가 아니다** — K-4(실지취득가)는 실비(자본적지출·양도비)를 채무비율로 안분한 값이
    * 이 슬롯에 들어간다(F-19). §97②2호 단서(swap)가 발동한 환산(K-5)도 같다 — 엔진이 율 echo를 남겨 두므로
@@ -70,19 +86,19 @@ export function buildBgExpenseFormula(
    */
   const swapDirect = a.acquisitionMethod === "converted" && bg.necessaryExpenseSwap?.chosen === "direct";
   if (a.estimatedDeductionRate === undefined || swapDirect) {
-    return `필요경비 = 채무비율 안분 실비 (자본적지출·양도비)\n        = ${fmt(a.estimatedDeduction)}\n        ※ ${swapDirect ? "소득세법 §97②2호 단서 — 환산취득가액과 개산공제의 합계보다 실비가 커서 실비를 필요경비로 정했습니다." : "실지취득가액 경로라 §163⑥ 개산공제를 적용하지 않습니다."}`;
+    return `필요경비 = 채무비율 안분 실비 (자본적지출·양도비)\n        = ${fmt(amount)}${addition}\n        ※ ${swapDirect ? "소득세법 §97②2호 단서 — 환산취득가액과 개산공제의 합계보다 실비가 커서 실비를 필요경비로 정했습니다." : "실지취득가액 경로라 §163⑥ 개산공제를 적용하지 않습니다."}`;
   }
   const rate = pct(a.estimatedDeductionRate);
   // 기준시가 모드(K-1~K-3)는 취득가액이 곧 취득시 기준시가 × 채무비율이라 종전 표기를 유지한다.
   if (a.acquisitionMethod === undefined || a.acquisitionMethod === "standard_price") {
-    return `필요경비 = 안분 취득가액 × ${rate} (개산공제, 소령 §163⑥)\n        = ${fmt(a.acquisitionPrice)} × ${a.estimatedDeductionRate}\n        = ${fmt(a.estimatedDeduction)}`;
+    return `필요경비 = 안분 취득가액 × ${rate} (개산공제, 소령 §163⑥)\n        = ${fmt(a.acquisitionPrice)} × ${a.estimatedDeductionRate}\n        = ${fmt(amount)}${addition}`;
   }
   // 환산·매매사례·감정 — 취득가액이 기준시가 기반이 아니므로 base를 따로 적는다(취득시 기준시가 × 채무비율).
   const presumedNote =
     a.acquisitionMethod === "salesCase" || a.acquisitionMethod === "appraisal"
       ? `\n        ※ ${PRESUMED_TEXT[a.acquisitionMethod].label} 경로 — 필요경비는 개산공제만 인정하며 자본적지출·양도비는 공제하지 않습니다 (소득세법 §97②2호).`
       : "";
-  return `필요경비 = 취득시 기준시가 × 채무액 / 증여재산 평가액 × ${rate} (개산공제, 소령 §163⑥)\n        = ${fmt(a.stdPriceAtAcquisition)} × ${fmt(bg.assumedDebtAmount)} / ${fmt(bg.giftValuation.max)} × ${a.estimatedDeductionRate}\n        = ${fmt(a.estimatedDeduction)}${presumedNote}`;
+  return `필요경비 = 취득시 기준시가 × 채무액 / 증여재산 평가액 × ${rate} (개산공제, 소령 §163⑥)\n        = ${fmt(a.stdPriceAtAcquisition)} × ${fmt(bg.assumedDebtAmount)} / ${fmt(bg.giftValuation.max)} × ${a.estimatedDeductionRate}\n        = ${fmt(amount)}${addition}${presumedNote}`;
 }
 
 // ── 단건(비집계) 결과 — 명세서·신고서 양식 공용 ─────────────────────────────────
