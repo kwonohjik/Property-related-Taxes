@@ -42,6 +42,7 @@ import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
+import { appurtenantCardHouseHoldingMonths } from "./land-only-owner-household";
 import { landOnlyAppurtenantHouseYears } from "./land-only-owner-household";
 import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
 import { getLongTermDeductionOverride } from "./rental-housing-reduction";
@@ -187,7 +188,9 @@ export function calcLongTermHoldingDeduction(
     input.primaryContextForCompanionRate
   ) {
     const ctx = input.primaryContextForCompanionRate;
-    const primaryHoldingYears = Math.floor(ctx.holdingMonths / 12);
+    // 「주택부수토지로서」의 보유 — 짝 주택 합가일이 주택 취득일보다 늦으면 합가일부터(`appurtenantCardHouseHoldingMonths`).
+    const primaryHoldingMonths = appurtenantCardHouseHoldingMonths(input.appurtenantHouseVerdict, input.transferDate, ctx.holdingMonths);
+    const primaryHoldingYears = Math.floor(primaryHoldingMonths / 12);
     /**
      * 2026-08-13 정정 (F11 — **세액 변경**): 표1 공제율과 3년 진입요건이 primary **주택**의
      * 보유개월을 보고 있었다. 「소득세법」 §95④ 본문은 「제2항에서 규정하는 자산의 보유기간은
@@ -258,7 +261,7 @@ export function calcLongTermHoldingDeduction(
     // 동률이면 표1(토지 축)로 표시한다 — 그쪽이 「그 자산의 보유기간」(§95④)이라 오해가 적다.
     const displayHolding = useTable1Axis
       ? { years: landHolding.years, months: landHolding.months }
-      : { years: primaryHoldingYears, months: ctx.holdingMonths % 12 };
+      : { years: primaryHoldingYears, months: primaryHoldingMonths % 12 };
     return {
       deduction,
       rate: companionRate,

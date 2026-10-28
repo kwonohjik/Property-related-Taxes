@@ -16,6 +16,7 @@ import {
   isLaterAcquiredLandExemptExcluded,
 } from "./transfer-tax-appurtenant-land";
 import { isLthdTable2SubjectAsset } from "./lthd-table2-subject";
+import { landOnlyHouseholdMergeDate } from "./land-only-owner-household";
 import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 import type { TransferTaxItemInput } from "./types/transfer-aggregate.types";
 
@@ -130,6 +131,7 @@ export function toHouseVerdict(
     carryoverOneHouseExcluded: result.carryoverTaxationDetail?.exclusionReason === "one_house_exemption",
     oneHouseForTable2: result.lthdTable2OneHouseAxis === true,
     houseTable2Subject: isLthdTable2SubjectAsset(house),
+    houseMergeDate: landOnlyHouseholdMergeDate(house),
     expropriationLandCutoff: expropriationProvisoLandCutoff(house),
   };
 }

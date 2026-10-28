@@ -66,6 +66,21 @@ export function landOnlyAppurtenantHouseYears(input: TransferTaxInput, defaultYe
   return calculateHoldingPeriod(merge, input.transferDate).years;
 }
 
+/**
+ * 부수토지 카드 — 「주택부수토지로서」 짝 주택 보유개월. 짝 주택의 합가일이 주택 취득일보다 늦으면 합가일부터(재산46014-610), 아니면 `defaultMonths`(주택 취득일부터).
+ * 표2 보유연수·세율 기산이 같은 값을 쓴다(주 카드의 `landOnlyAppurtenantHouseYears`·`landOnlyRateInput`과 같은 규칙).
+ */
+export function appurtenantCardHouseHoldingMonths(
+  v: TransferTaxInput["appurtenantHouseVerdict"],
+  transferDate: Date,
+  defaultMonths: number,
+): number {
+  const merge = v?.houseMergeDate;
+  if (!v || merge === undefined || merge.getTime() <= v.houseAcquisitionDate.getTime()) return defaultMonths;
+  const h = calculateHoldingPeriod(merge, transferDate);
+  return h.years * 12 + h.months;
+}
+
 export function landOnlyBuildingOwnerOtherHousehold(
   input: Pick<TransferTaxInput, "selfOwns" | "buildingOwnerSameHousehold">,
 ): boolean {

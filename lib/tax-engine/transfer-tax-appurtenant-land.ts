@@ -233,7 +233,7 @@ export function appurtenantCardCoveredByExpropriationProviso(
 ): boolean {
   const v = input.appurtenantHouseVerdict;
   if (input.oneHouseUnitRole !== "appurtenant_land" || !v) return false;
-  if (!isLaterAcquiredLandHeldTooShort(input.acquisitionDate, v.houseAcquisitionDate, input.transferDate)) return false;
+  if (!appurtenantCardHeldTooShort(input)) return false;
   return landCoveredByExpropriationProviso(input.acquisitionDate, v.expropriationLandCutoff);
 }
 
@@ -519,6 +519,18 @@ export function isLaterAcquiredLandHeldTooShort(
   if (landAcquisitionDate.getTime() <= houseAcquisitionDate.getTime()) return false;
   const held = calculateHoldingPeriod(landAcquisitionDate, transferDate);
   return held.years * 12 + held.months < resolveOneHouseMinHoldingYears(transferDate, ONE_HOUSE_HOLDING_YEARS) * 12;
+}
+
+/**
+ * 부수토지 카드(F-13)의 보유요건 — 짝 주택 verdict의 취득일에 **합가일**을 더한다(합가 이전은 주택부수토지로서의 보유가 아니다 — 재산46014-610).
+ * `checkExemption`의 부수토지 분기와 수용 단서 판정(`appurtenantCardCoveredByExpropriationProviso`)이 **이 한 함수**를 쓴다.
+ */
+export function appurtenantCardHeldTooShort(
+  input: Pick<TransferTaxInput, "appurtenantHouseVerdict" | "acquisitionDate" | "transferDate">,
+): boolean {
+  const v = input.appurtenantHouseVerdict;
+  if (!v) return false;
+  return isLaterAcquiredLandHeldTooShort(laterOfMergeDate(input.acquisitionDate, v.houseMergeDate), v.houseAcquisitionDate, input.transferDate);
 }
 
 /**

@@ -22,6 +22,7 @@ import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate"
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { resolveCompanionLandRate } from "./appurtenant-land-rate";
+import { appurtenantCardHouseHoldingMonths } from "./land-only-owner-household";
 import { getEffectiveAcquisitionDate } from "./transfer-tax-lthd-start";
 import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
@@ -254,7 +255,7 @@ export function calcTax(
       ctx
         ? {
             propertyType: ctx.propertyType,
-            holdingMonths: ctx.holdingMonths,
+            holdingMonths: appurtenantCardHouseHoldingMonths(input.appurtenantHouseVerdict, input.transferDate, ctx.holdingMonths),
             buildingFootprintArea: ctx.buildingFootprintArea,
             isUrbanArea: ctx.isUrbanArea,
             appurtenantLandZone: ctx.appurtenantLandZone,
