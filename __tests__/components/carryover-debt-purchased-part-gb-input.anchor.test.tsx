@@ -107,7 +107,10 @@ describe("GB-3 unsupported — 감면·용도변경 (Q-UI-2 b)", () => {
   });
   it("토글 OFF + 감면 → 같은 사유 설명이 토글 아래에 보인다(켜기 전에 안다)", () => {
     drawLand(landC({ giftDebtAssumed: false }, { reductions: [EXPR] }));
-    expect(screen.getByTestId("carryover-debt-unsupported-toggle-note").textContent).toContain("감면");
+    const note = screen.getByTestId("carryover-debt-unsupported-toggle-note").textContent ?? "";
+    expect(note).toContain("감면");
+    // 꺼진 토글에 «끄세요»는 모순이다 — E1(`CarryoverGiftDebtSection`)도 OFF에서는 사유만 안내한다
+    expect(note).not.toContain("끄세요");
   });
 });
 

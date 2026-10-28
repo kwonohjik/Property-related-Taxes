@@ -430,7 +430,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
                     GB_DEBT_APPLY_DESCRIPTION
                   ) : debtScope.kind === "unsupported" ? (
                     <span data-testid="carryover-debt-unsupported-toggle-note">
-                      이 자산에서는 채무 인수 부분을 시나리오 A에서 나누어 계산하지 못합니다({debtScope.reason}) — 이 토글을 끄세요.
+                      이 자산에서는 채무 인수 부분을 시나리오 A에서 나누어 계산하지 못합니다({debtScope.reason}){c.giftDebtAssumed ? " — 이 토글을 끄세요." : "."}
                     </span>
                   ) : (
                     <>
