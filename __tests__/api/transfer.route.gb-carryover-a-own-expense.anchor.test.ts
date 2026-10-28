@@ -262,3 +262,76 @@ describe("GBCO-6 신고서 항등식 (계획서 V-4) — 취득가액 칸 + 필�
     expect(await identityHolds(body)).not.toContain(false);
   });
 });
+
+describe("GBCO-7 이월과세 × 당초 증여 채무 매입분 × 양도자 본인 지출 (#2664 조각 규칙 합류 후 새 동작)", () => {
+  /**
+   * PR-2 가 이월과세 카드의 본인 직접귀속 나목 몫 S 를 `capitalExpenditure`로 싣고, #2664 의 `splitCarryoverDebtPieces`가 그 몫을 나눈다:
+   * 증여분 = cut(S) = floor(S × 증여분 몫 ÷ 평가액) (곱은 증여분) · 매입분 = S − cut(S) (나머지) — 합이 원값. 매입분의 취득가액은 채무(실지거래가액)라
+   * 「소득세법」 제97조제2항제1호 — 필요경비는 본인 자본적지출·양도비 몫뿐이다(개산공제 없음).
+   *
+   * 픽스처(손계산 기준): 양도 2026-03-01 · 양도가액 1,000,000,000(토지 500,000,000 : 건물 500,000,000) · 양도시 기준시가 토지 200,000,000 · 건물 200,000,000.
+   * 취득시 기준시가 토지 10,000,000 · 건물 10,000,000 → 환산취득가 각 25,000,000 + 개산공제 각 300,000 = 가목 합 50,600,000.
+   * 토지만 이월과세: 증여 2021-03-01 · 증여자 2005-06-15 취득 150,000,000 · 증여 당시 평가액 400,000,000 · 인수 채무 160,000,000(r = 0.4, 증여분 0.6) ·
+   * 산출세액 30,000,000 · 과세가액 1,000,000,000 → 상당액 30,000,000 × (400,000,000 − 160,000,000) ÷ 1,000,000,000 = 7,200,000(증여분 전액).
+   * 증여분: 양도가액 300,000,000 · 취득 150,000,000 × 0.6 = 90,000,000 · 장특 30%(증여자 취득 20년). 매입분: 양도가액 200,000,000 · 취득 160,000,000 · 장특 10%(5년).
+   * 건물(이월과세 아님): 장특 10%(5년). 합산 후 기본공제 2,500,000 → 5억~10억 구간 42% − 35,940,000.
+   */
+  const gbvWire = (extra: object) => ({
+    landArea: 100, buildingArea: 200, buildingFootprintArea: 50, transferLandPricePerSqm: 2_000_000, transferBuildingStdPrice: 200_000_000,
+    zoneType: "general_residential", acquisitionLandPricePerSqm: 100_000, acquisitionBuildingStdPrice: 10_000_000,
+    buildingAcquisitionCause: "purchase", buildingAcquisitionDate: "2021-03-01", landAcquisitionDate: "2021-03-01", landAcquisitionCause: "carryover_gift",
+    carryoverGiftEvent: { giftRegistryDate: "2021-03-01", giftTaxCalculated: 30_000_000, giftTaxBase: 1_000_000_000, donorRelation: "lineal", exclusionDeclared: {} },
+    landCarryoverPart: { donorAcquisitionDate: "2005-06-15", donorAcquisitionPrice: 150_000_000, giftDateAssetValue: 400_000_000, giftAssumedDebt: 160_000_000, useEstimatedAcquisition: false },
+    ...extra,
+  });
+  const body = (gbv: object, over: object = {}) => ({
+    ...COMMON, transferDate: "2026-03-01", transferPrice: 1_000_000_000, totalPropertyTransferPrice: 1_000_000_000, acquisitionDate: "2021-03-01", generalBuildingValuation: gbv, ...over,
+  });
+  const GIFT_TAX = 7_200_000;
+  const piece = (r: { cards: Card[] }, id: string) => r.cards.find((c) => c.id === id)!;
+
+  it("(a) 환산 경로 · 단서 발동(본인 지출 60,000,000 > 가목 50,600,000): 토지 몫 30,000,000 → 증여분 18,000,000 + 매입분 12,000,000 · 결정세액 205,585,200", async () => {
+    const r = await post(body(gbvWire({ capitalExpenditure: 58_000_000, transferExpense: 2_000_000 })));
+    // 본인 지출 60,000,000 은 (환산취득가 + 개산공제) 25,300,000 : 25,300,000 로 토지·건물 30,000,000 씩.
+    // 증여분 cut = floor(30,000,000 × 240,000,000 / 400,000,000) = 18,000,000 · 매입분 12,000,000.
+    expect(piece(r, "land").ne).toBe(18_000_000 + GIFT_TAX);
+    expect(piece(r, "land__purchased").ne).toBe(12_000_000);
+    expect(piece(r, "land").ne - GIFT_TAX + piece(r, "land__purchased").ne).toBe(30_000_000); // 합 = 카드 몫
+    // 양도차익: 증여분 300,000,000 − 90,000,000 − 18,000,000 − 7,200,000 = 184,800,000 · 매입분 200,000,000 − 160,000,000 − 12,000,000 = 28,000,000 · 건물(단서 발동 — 취득가액 미차감) 500,000,000 − 30,000,000 = 470,000,000
+    expect([piece(r, "land").gain, piece(r, "land__purchased").gain, piece(r, "building").gain]).toEqual([184_800_000, 28_000_000, 470_000_000]);
+    // 소득: 184,800,000 × 70% = 129,360,000 + 28,000,000 × 90% = 25,200,000 + 470,000,000 × 90% = 423,000,000 = 577,560,000 − 2,500,000 = 575,060,000 × 42% − 35,940,000
+    expect(r.tax).toBe(205_585_200);
+  });
+
+  it("(b) 환산 경로 · 단서 불발(본인 지출 8,000,003 < 가목) · 홀수 금액 1원 정합: 토지 몫 4,000,001 → 증여분 2,400,000 + 매입분 1,600,001 · 결정세액 215,879,400", async () => {
+    const r = await post(body(gbvWire({ capitalExpenditure: 3_000_003, transferExpense: 5_000_000 })));
+    // 8,000,003 을 25,300,000 : 25,300,000 로 나눈 토지 몫 floor(4,000,001.5) = 4,000,001 (건물이 잔액 4,000,002).
+    // 증여분 cut = floor(4,000,001 × 240,000,000 / 400,000,000) = floor(2,400,000.6) = 2,400,000 (곱은 증여분) · 매입분 = 4,000,001 − 2,400,000 = 1,600,001 (나머지).
+    expect(piece(r, "land").ne).toBe(2_400_000 + GIFT_TAX);
+    expect(piece(r, "land__purchased").ne).toBe(1_600_001);
+    expect(piece(r, "land").ne - GIFT_TAX + piece(r, "land__purchased").ne).toBe(4_000_001);
+    // 증여분 300,000,000 − 90,000,000 − 2,400,000 − 7,200,000 = 200,400,000 · 매입분 200,000,000 − 160,000,000 − 1,600,001 = 38,399,999
+    // 건물(본문 — 환산취득가 25,000,000 + 개산공제 300,000) 500,000,000 − 25,300,000 = 474,700,000
+    expect([piece(r, "land").gain, piece(r, "land__purchased").gain, piece(r, "building").gain]).toEqual([200_400_000, 38_399_999, 474_700_000]);
+    // 소득: 200,400,000 × 70% = 140,280,000 + (38,399,999 − floor(3,839,999.9) = 3,839,999 → 34,560,000) + 474,700,000 × 90% = 427,230,000 = 602,070,000 − 2,500,000 = 599,570,000 × 42% − 35,940,000
+    expect(r.tax).toBe(215_879_400);
+  });
+
+  it("(c) 실가 경로(자본적지출은 취득시 기준시가, 양도비는 양도가액 비례): 토지 몫 13,000,000 → 증여분 7,800,000 + 매입분 5,200,000 · 결정세액 198,680,400", async () => {
+    const actual = (extra: object) => body(
+      { ...gbvWire(extra), actualPriceMode: true, landAcqMode: "actual", buildingAcqMode: "actual", isSelfBuilt: false },
+      { acquisitionPrice: 100_000_000, useEstimatedAcquisition: false },
+    );
+    const r = await post(actual({ capitalExpenditure: 20_000_000, transferExpense: 6_000_000 }));
+    // 자본적지출 20,000,000 × 10,000,000 / 20,000,000 = 10,000,000 + 양도비 6,000,000 × 500,000,000 / 1,000,000,000 = 3,000,000 → 토지 몫 13,000,000 · 건물 13,000,000
+    // 증여분 cut = floor(13,000,000 × 0.6) = 7,800,000 · 매입분 5,200,000
+    expect(piece(r, "land").ne).toBe(7_800_000 + GIFT_TAX);
+    expect(piece(r, "land__purchased").ne).toBe(5_200_000);
+    expect(piece(r, "land").ne - GIFT_TAX + piece(r, "land__purchased").ne).toBe(13_000_000);
+    // 증여분 300,000,000 − 90,000,000 − 7,800,000 − 7,200,000 = 195,000,000 · 매입분 200,000,000 − 160,000,000 − 5,200,000 = 34,800,000
+    // 건물(실가): 취득가액 100,000,000 × 10,000,000 / 20,000,000 = 50,000,000 · 필요경비 13,000,000 → 437,000,000
+    expect([piece(r, "land").gain, piece(r, "land__purchased").gain, piece(r, "building").gain]).toEqual([195_000_000, 34_800_000, 437_000_000]);
+    // 소득: 195,000,000 × 70% = 136,500,000 + 34,800,000 × 90% = 31,320,000 + 437,000,000 × 90% = 393,300,000 = 561,120,000 − 2,500,000 = 558,620,000 × 42% − 35,940,000
+    expect(r.tax).toBe(198_680_400);
+  });
+});
