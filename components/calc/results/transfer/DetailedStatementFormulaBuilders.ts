@@ -497,10 +497,7 @@ export function buildAcquisitionPriceFormula(
   }
   if (coA?.adoptedScenario === "A") {
     const a = coA.scenarioA;
-    const donorCapexNote =
-      a.donorCapexAddedToExpense > 0
-        ? ` (증여자 자본적지출 ${a.donorCapexAddedToExpense.toLocaleString()} 포함 §97의2①2호)`
-        : "";
+    // 증여자 자본적지출(§97의2①2호)은 취득가액 칸이 아니라 **필요경비** 칸에 있다(필요경비 산식이 따로 밝힌다) — 여기서 「포함」이라 적으면 값(취득가액 칸)과 어긋난다.
     if (a.acquisitionWasEstimated) {
       const stdAcq = a.estimatedStdPriceAtAcquisition;
       const stdTransfer = a.estimatedStdPriceAtTransfer;
@@ -509,11 +506,11 @@ export function buildAcquisitionPriceFormula(
             `증여자 취득 당시 환산취득가 ${fmt(a.acquisitionPrice)} = 양도가액 ${totalTransferPrice.toLocaleString()} × `,
             stdAcq,
             stdTransfer,
-            `${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계·시행령 §163⑨)`,
+            `${capExStr} — 이월과세 §97의2① (증여자 취득가액 승계·시행령 §163⑨)`,
           )
-        : `증여자 취득 당시 환산취득가 ${fmt(a.acquisitionPrice)}${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계·환산)`;
+        : `증여자 취득 당시 환산취득가 ${fmt(a.acquisitionPrice)}${capExStr} — 이월과세 §97의2① (증여자 취득가액 승계·환산)`;
     }
-    return `증여자 취득 당시 취득가액 ${fmt(a.acquisitionPrice)}${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계)`;
+    return `증여자 취득 당시 취득가액 ${fmt(a.acquisitionPrice)}${capExStr} — 이월과세 §97의2① (증여자 취득가액 승계)`;
   }
   // 토지·건물 별개 취득(split) — 파트별 산정방식·취득가액을 엔진 `splitDetail` echo로 그린다(H-1).
   // 겸용(B1)은 위에서 `mixedUseDetail` echo로 이미 처리됐고, 겸용 echo가 없는 구 이력은 여기로 오지 않게 막는다.
@@ -636,7 +633,13 @@ export function buildNecessaryExpenseFormula(
   if (coA?.adoptedScenario === "A") {
     const a = coA.scenarioA;
     const gift = a.giftTaxAddedToExpense;
-    const baseExp = Math.max(0, singleExp - gift);
+    const totalBaseExp = Math.max(0, singleExp - gift);
+    // 증여자 자본적지출(§97의2①2호) — **증여자 취득이 실가일 때만** 필요경비 칸에서 따로 가른다. 실가 donor 는 칸이 (양도비 + 증여자 자본적지출 + 증여세)로 정확히 분해된다.
+    //   환산 donor 는 본문(= 개산공제)이면 자본적지출이 필요경비에 들어가지 않고, 단서(나목)이면 칸이 「취득가액 = 환산취득가 · 필요경비 = 역산 나머지」라 자본적지출이 두 칸에 걸쳐
+    //   분해되지 않는다(실측: 증여자 자본적지출 500,000,000 → 필요경비 칸 250,000,000) — 그 구간은 종전 문구를 둔다(별건).
+    //   양도일 2024-01-01 전이면 에코가 0 이다(`carryoverDonorCapex`). 「양도비 등」에 섞어 적으면 중개수수료 같은 양도비로 읽힌다.
+    const donorCapex = a.acquisitionWasEstimated === true ? 0 : Math.min(a.donorCapexAddedToExpense, totalBaseExp);
+    const baseExp = totalBaseExp - donorCapex;
     // 증여자 취득이 환산(estimated) 모드면 본문 필요경비는 실제 양도비가 아니라
     // 개산공제(취득시 기준시가 × 3%, 시행령 §163⑥)다.
     //
@@ -651,7 +654,11 @@ export function buildNecessaryExpenseFormula(
     const baseLabel = isLumpDeduction
       ? `개산공제 ${baseExp.toLocaleString()} = 취득시 기준시가 ${lumpBase!.toLocaleString()} × ${formatLumpRate(lumpRate)} — 시행령 §163⑥`
       : `양도비 등 ${baseExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`;
-    const parts: string[] = [baseLabel];
+    // 증여자 자본적지출만 있고 양도비 등이 0 이면 「양도비 등 0」 항을 적지 않는다.
+    const parts: string[] = donorCapex > 0 && baseExp === 0 ? [] : [baseLabel];
+    if (donorCapex > 0) {
+      parts.push(`증여자 자본적지출 ${donorCapex.toLocaleString()} — 이월과세 §97의2①2호`);
+    }
     if (gift > 0) {
       const limitNote = a.giftTaxLimitApplied
         ? ` (한도 ${a.giftTaxLimitCap.toLocaleString()} = 증여세 가산 전 양도차익 적용)`
