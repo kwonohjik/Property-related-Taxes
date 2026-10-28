@@ -76,7 +76,7 @@
 
 ## 4. 영향 범위 · 기존 테스트
 
-- 기존 테스트가 고정한 줄 문구(「개산공제 = 취득시 기준시가 …」 · `bg-bundle-card-estimated-deduction` · 「경로 — 필요경비는 개산공제…」)를 쓰는 파일이 10여 개다(`bg-axis-b-card-acquisition-sum` · `bg-bundle-card-acquisition-all` · `bg-presumed-acquisition-ui` · `gb-estimated-deduction-rate-label` 등). 구현 Pre-Do에서 전부 돌려 몇 건이 바뀌는지 센다 — D-4가 testid를 옮기면 그 단언이 영향을 받으므로, **기존 testid를 유지**하고 새 줄만 더하는 쪽을 우선한다(확인 필요).
+- 기존 테스트가 고정한 줄 문구(「개산공제 = 취득시 기준시가 …」 · `bg-bundle-card-estimated-deduction` · 「경로 — 필요경비는 개산공제…」)를 쓰는 파일이 10개 이상이다(검색을 10건에서 끊어 전수는 아니다 — `bg-axis-b-card-acquisition-sum` · `bg-bundle-card-acquisition-all` · `bg-presumed-acquisition-ui` · `gb-estimated-deduction-rate-label` 등). 구현 Pre-Do에서 전부 돌려 몇 건이 바뀌는지 센다 — D-4가 testid를 옮기면 그 단언이 영향을 받으므로, **기존 testid를 유지**하고 새 줄만 더하는 쪽을 우선한다(확인 필요).
 - 세액 불변: 위 표 시료의 세액(실지 6,676,800 · 환산 4,539,000 · 기준시가 4,476,000 · 의제 ① 60,772,000 · 의제 ③ 80,721,398 · 의제 기준시가 평가 92,910,511 등)이 변경 전과 같아야 한다.
 
 ## 5. 검증 계획
