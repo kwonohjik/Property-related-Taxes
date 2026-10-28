@@ -560,9 +560,16 @@ describe("GB × 지분 분할 — 케이스 인벤토리 잔여분", () => {
     describe("5년 초과 증여(2015) — 배제", () => {
       /**
        * 배제되면 **통상 취득가액**(증여 당시 평가액 = `giftDateValuation`)으로 돌아간다.
-       *   200,000,000 − 160,000,000 − 개산공제 1,800,000 = 38,200,000
+       *   200,000,000 − 160,000,000 = 40,000,000
        * ⇒ 「배제」가 「이월과세 입력 자체를 무시」가 아니라는 점이 관측 지표다
        *   (무시했다면 환산 150,000,000이 남아 48,200,000이 나온다).
+       *
+       * 🔴 **2026-10-28 반전 38,200,000 → 40,000,000** (계획서 `docs/00-pm/gb-estimated-carryover-scenario-a-capex.plan.md` §3.4·Q-3, 사용자 승인).
+       * 종전 산식은 여기서 환산 파트의 **본인 개산공제 1,800,000**을 끌어와 뺐다. 증여 당시 평가액은 **실지거래가액으로 의제**되는 취득가액이므로
+       * (「소득세법 시행령」 제163조 제9항) 필요경비는 「소득세법」 제97조제2항**제1호**(제1항제2호·제3호의 금액 — 본인 자본적지출·양도비뿐)이고,
+       * 개산공제는 같은 항 제2호(환산 등) 몫이라 법 근거가 없다. 이 anchor 가 종전 주석에 적었던 「− 개산공제 1,800,000」은 의도 산식이 아니라
+       * 이월과세 카드의 `expenses` 스칼라(= 본인 환산 개산공제)가 B 로 새던 결함의 결과였다.
+       * 수정: 이월과세 카드가 본인 직접귀속 나목을 `capitalExpenditure`로 명시한다(0이어도 0) — `buildProperties`.
        */
       it("적용배제 사유가 period_exceeded로 기록된다", async () => {
         const on = await call(fractionalBody([SHARE_A, shareB("2015-03-01", true)]));
@@ -570,11 +577,11 @@ describe("GB × 지분 분할 — 케이스 인벤토리 잔여분", () => {
         expect(prop(on, "land#1")?.carryoverTaxationDetail?.exclusionReason).toBe("period_exceeded");
       });
 
-      it("취득가액이 증여 당시 평가액 160,000,000으로 돌아간다 — 양도차익 38,200,000", async () => {
+      it("취득가액이 증여 당시 평가액 160,000,000으로 돌아간다 — 양도차익 40,000,000 (개산공제 없음)", async () => {
         const off = await call(fractionalBody([SHARE_A, shareB("2015-03-01", false)]));
         const on = await call(fractionalBody([SHARE_A, shareB("2015-03-01", true)]));
         expect(prop(off, "land#1")?.transferGain).toBe(48_200_000);
-        expect(prop(on, "land#1")?.transferGain).toBe(38_200_000);
+        expect(prop(on, "land#1")?.transferGain).toBe(40_000_000);
       });
     });
   });

@@ -181,7 +181,7 @@ export function buildProperties(
      * 「해당 실지거래가액 + 제1항제2호·제3호의 금액」이다(O-1). 환산 파트는 여기 오지 않는다.
      */
     const directAddition = swap?.addition.get(card.propertyId) ?? 0;
-    return {
+    const item = {
       propertyId: card.propertyId,
       propertyLabel: card.propertyLabel,
       propertyType: card.propertyType,
@@ -306,6 +306,24 @@ export function buildProperties(
           }
         : {}),
     } as unknown as TransferTaxItemInput;
+    /**
+     * 🔴 **이월과세(§97의2) 카드는 양도자 본인의 직접귀속 나목을 `capitalExpenditure`로 명시한다** (몫이 0이어도 0을 싣는다).
+     *
+     * 카드의 `expenses` 스칼라는 환산 파트에서 본인 환산의 **개산공제**(단서 발동 시 `swapNabok`)이고, 이월과세 엔진은 시나리오 A 입력에
+     * `capitalExpenditure`를 항상 선언해 그 스칼라를 읽지 않는다 — 그래서 본인 자본적지출·양도비가 A 필요경비에서 통째로 사라졌고(시나리오 A 만),
+     * B(비교과세)는 증여 당시 평가액(= 실지거래가액 의제, 영 §163⑨)을 취득가액으로 쓰면서 본인 개산공제를 필요경비로 끌어와 법 근거 없는
+     * 공제가 섞였다(제97조제2항제1호는 개산공제를 두지 않는다). 명시하면 A·B 모두 제97조제2항 체계로 본인 지출만 쓴다
+     * (계획서 `docs/00-pm/gb-estimated-carryover-scenario-a-capex.plan.md` §3·§6.3, 결정 Q-3·Q-4 합산).
+     *
+     * · 환산 경로(`swap` 있음): `swap.ownDirect` — 단서 발동 여부와 무관한 카드별 몫. 이월과세 아닌 카드는 변경 없다.
+     * · 실가 경로(`swap` 없음): 카드 `expenses`가 곧 본인 자본적지출 + 양도비 몫이다(개산공제 없음 — `general-building-route-actual.ts`).
+     *
+     * 판정은 **엔진 input 에 실제로 실리는 `carryoverTaxation`** 기준이다 — 토지는 `landAcquisitionCause`가 있어야 실린다(위 spread).
+     */
+    if ((item as { carryoverTaxation?: unknown }).carryoverTaxation !== undefined) {
+      return { ...item, capitalExpenditure: swap ? (swap.ownDirect.get(card.propertyId) ?? 0) : card.expenses } as TransferTaxItemInput;
+    }
+    return item;
   });
 }
 

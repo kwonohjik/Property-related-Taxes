@@ -243,6 +243,8 @@ export function remapGbSwap(
     ...swap,
     allocation: remap(swap.allocation),
     addition: remap(swap.addition),
+    // 이월과세 카드가 읽는 본인 직접귀속 몫 — 위 두 맵과 같은 키 축이어야 접미사 카드가 조용히 미스하지 않는다.
+    ownDirect: remap(swap.ownDirect),
     // 결과 산식 echo(증축 전 자본적지출) — `addition`과 같은 키 축이어야 산식이 접미사 카드를 찾는다.
     ...(swap.beforeExtensionAddition ? { beforeExtensionAddition: remap(swap.beforeExtensionAddition) } : {}),
   };
