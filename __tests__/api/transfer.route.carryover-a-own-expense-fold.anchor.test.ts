@@ -38,6 +38,9 @@ vi.mock("@/lib/api/rate-limit", () => ({
 
 import { POST } from "@/app/api/calc/transfer/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
+import { bgAsset, bgForm, bodyOf } from "@/__tests__/calc/_helpers/carryover-donor-built-bg-form";
+import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const PRIMARY_LAND = {
   propertyType: "land",
@@ -232,3 +235,40 @@ describe("이월과세 A — 본인 필요경비 접기 (PR-1, 함께양도·leg
     expect(pOf(withCommon.json).transferGain).toBe(1_155_714_286 - 14_285_714);
   });
 });
+
+/**
+ * FOLD-8 부담부증여 × 이월과세 — 접기 가드 `!isBurdenedGift` 를 지킨다 (PR-1 뮤테이션 M4 생존 해소).
+ *
+ * 부담부증여 A 입력의 `capitalExpenditure`는 §159 안분(채무비율)의 입력이다. 본인 `expenses` 스칼라를 거기 접으면 안분 대상이 바뀐다 — 그 경로의
+ * 본인 지출 반영은 계획서 V-2(미실측)라 이번 수정 범위 밖이고 **종전 결과 그대로**여야 한다.
+ * 픽스처는 `transfer.route.bg-carryover-donor-price-unused.anchor.test.ts` 와 같다(시가 10억 · 채무 4억 · 당초 증여자 실지 1.5억 · 증여 2023-06-01).
+ * 종전 값은 코드 변경 없이 실측했다 — `expenses` 0 이든 50,000,000 이든 결정세액 69,550,000.
+ */
+describe("FOLD-8 부담부증여 — expenses 스칼라는 접히지 않는다", () => {
+  const carry = () =>
+    bgAsset("converted", { donorBuilt: false }, {
+      bgMarketValueAtTransfer: "1,000,000,000", bgLendingDepositTotal: "0", bgMortgageDebtAmount: "400,000,000",
+      bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "1,000,000,000", bgCoDonorActualAcquisitionTotal: "150,000,000",
+      carryover: { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2023-06-01", donorAcquisitionDate: "2000-06-01", donorAcquisitionPrice: "150,000,000", giftDateValuation: "1,000,000,000", giftTaxAmount: "0", donorRelation: "lineal", donorSameHousehold: "no" },
+    } as Partial<AssetForm>);
+  type Body = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const detOf = async (expenses: number): Promise<number> => {
+    const body = (await bodyOf(bgForm(carry()))) as Body;
+    // 본인 선언 채널을 비운다 — legacy `expenses` 만 남는 입력(옛 이력·API 직접 호출).
+    delete body.capitalExpenditure;
+    delete body.transferExpense;
+    const res = await POST(new NextRequest("http://localhost/api/calc/transfer", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isRegulatedArea: false, wasRegulatedAtAcquisition: false, isUnregistered: false, isNonBusinessLand: false, annualBasicDeductionUsed: 0, ...body, expenses, isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0 }),
+    }));
+    const json = await res.json();
+    expect(res.status, JSON.stringify(json.error)).toBe(200);
+    return (json.data.result ?? json.data.aggregated).determinedTax;
+  };
+
+  it("expenses 0 → 50,000,000 도 결정세액 69,550,000 으로 같다 (종전 거동)", async () => {
+    expect(await detOf(0)).toBe(69_550_000);
+    expect(await detOf(50_000_000)).toBe(69_550_000);
+  });
+});
+
