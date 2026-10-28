@@ -499,6 +499,12 @@ export type AssetCardForAggregate = {
   /** 개산공제 (원) */
   expenses: number;
   /**
+   * `expenses` 중 양도자 본인 **자본적지출**(§97①2호) 몫 — 실가 경로(환산 `swap` 없음)의 이월과세 카드만 읽는다.
+   * 없으면 분리할 수 없는 한 덩어리(legacy `directExpenses`·§159 개산공제)로 보아 전액을 양도비 쪽에 싣는다 —
+   * 신고서 「취득가액」 칸으로 옮겨 얹는 몫이 자본적지출뿐이기 때문이다(계획서 `carryover-a-gb-card-filing-acq-cell-label.plan.md` §5.1).
+   */
+  expensesCapex?: number;
+  /**
    * 환산취득가 사용 여부.
    * - 토지·건물1(실가 안분): false
    * - 건물2(환산취득가): true

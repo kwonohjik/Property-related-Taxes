@@ -186,7 +186,9 @@ export function buildActualGeneralBuildingCards(
    * 모두 `apportionByStdPrice`(정수 곱셈 먼저·잔액 흡수)다 — 비율 변수로 `Math.floor(x * ratio)` 하면 1원 과소가 난다.
    * 잔액 흡수로 `land + building = 총액` 불변식을 지킨다(메모리 `feedback_floor_residual_absorption`).
    */
-  function apportionExpenses(saleBasis: { land: number; building: number }): { land: number; building: number } {
+  /** `capexLand`·`capexBuilding` — 그 합계 중 본인 자본적지출 몫(이월과세 카드가 `capitalExpenditure`로 싣는다). 분리할 수 없는 legacy 덩어리는 0. */
+  type PartExpenses = { land: number; building: number; capexLand: number; capexBuilding: number };
+  function apportionExpenses(saleBasis: { land: number; building: number }): PartExpenses {
     if (declaredExpenses > 0) {
       if (capitalExpenditure) requireAcqStd("자본적지출");
       const capexLand = capitalExpenditure
@@ -196,14 +198,14 @@ export function buildActualGeneralBuildingCards(
         ? apportionByStdPrice(transferExpense, saleBasis.land, saleBasis.building).land
         : 0;
       const land = capexLand + transferLand;
-      return { land, building: declaredExpenses - land };
+      return { land, building: declaredExpenses - land, capexLand, capexBuilding: (capitalExpenditure ?? 0) - capexLand };
     }
     const land = apportionByStdPrice(
       actualExpenses,
       multiplyByArea(transferLandPricePerSqm, landArea),
       transferBuildingStdPrice,
     ).land;
-    return { land, building: actualExpenses - land };
+    return { land, building: actualExpenses - land, capexLand: 0, capexBuilding: 0 };
   }
 
   /**
@@ -215,7 +217,7 @@ export function buildActualGeneralBuildingCards(
    * legacy(`declaredExpenses` 0 — 두 성질이 섞인 한 덩어리)는 종전 그대로 파트 칸이 안분분을 대체한다.
    */
   const hasPartCapex = landDirectExpenses !== undefined || buildingDirectExpenses !== undefined;
-  function resolvePartExpenses(saleBasis: { land: number; building: number }): { land: number; building: number } {
+  function resolvePartExpenses(saleBasis: { land: number; building: number }): PartExpenses {
     if (!hasPartCapex) return apportionExpenses(saleBasis);
     const bothDirect = landDirectExpenses !== undefined && buildingDirectExpenses !== undefined;
     if (declaredExpenses > 0) {
@@ -227,14 +229,19 @@ export function buildActualGeneralBuildingCards(
         capex = { land, building: capitalExpenditure - land };
       }
       const txLand = transferExpense ? apportionByStdPrice(transferExpense, saleBasis.land, saleBasis.building).land : 0;
+      const capexLand = landDirectExpenses ?? capex.land;
+      const capexBuilding = buildingDirectExpenses ?? capex.building;
       return {
-        land: (landDirectExpenses ?? capex.land) + txLand,
-        building: (buildingDirectExpenses ?? capex.building) + ((transferExpense ?? 0) - txLand),
+        land: capexLand + txLand,
+        building: capexBuilding + ((transferExpense ?? 0) - txLand),
+        capexLand,
+        capexBuilding,
       };
     }
-    if (bothDirect) return { land: landDirectExpenses, building: buildingDirectExpenses };
+    // legacy(`declaredExpenses` 0) — 파트 칸이 필요경비 전체를 대체하는 한 덩어리라 자본적지출 몫을 나눌 근거가 없다.
+    if (bothDirect) return { land: landDirectExpenses, building: buildingDirectExpenses, capexLand: 0, capexBuilding: 0 };
     const apportioned = apportionExpenses(saleBasis);
-    return { land: landDirectExpenses ?? apportioned.land, building: buildingDirectExpenses ?? apportioned.building };
+    return { land: landDirectExpenses ?? apportioned.land, building: buildingDirectExpenses ?? apportioned.building, capexLand: 0, capexBuilding: 0 };
   }
 
   // 부담부증여 §159①1호 분기 — 사용자 입력 actualAcquisitionPrice 무시,
@@ -249,6 +256,9 @@ export function buildActualGeneralBuildingCards(
   let actualSource: "part_input" | "bundled_apportion" | "inherited" | undefined;
   let landExp: number;
   let buildingExp: number;
+  /** `landExp`·`buildingExp` 중 본인 자본적지출 몫 — 이월과세 카드가 신고서 취득가액 칸으로 옮길 몫만 가른다(§159 개산공제 분기는 0). */
+  let landCapexExp = 0;
+  let buildingCapexExp = 0;
   let transferBurdenedGiftBreakdown:
     | import("@/lib/tax-engine/types/transfer-burdened-gift.types").TransferBurdenedGiftBreakdown
     | undefined;
@@ -320,7 +330,7 @@ export function buildActualGeneralBuildingCards(
     actualSource = "inherited";
     // 필요경비는 성질별 기준으로 안분하고 파트 자본적지출 칸을 직접 귀속한다(P-2·P5 — 매매 분기와 같은 규칙). 개산공제 아님 —
     // actual 모드는 이미 전 카드 estimatedDeduction:0(§163⑥ 미적용, §163⑨ 정합).
-    ({ land: landExp, building: buildingExp } = resolvePartExpenses(saleAlloc.proportionBasis));
+    ({ land: landExp, building: buildingExp, capexLand: landCapexExp, capexBuilding: buildingCapexExp } = resolvePartExpenses(saleAlloc.proportionBasis));
   } else {
     const saleAlloc = resolveSaleAllocation();
     landTransfer = saleAlloc.allocation.land;
@@ -373,7 +383,7 @@ export function buildActualGeneralBuildingCards(
      * 한쪽만 입력되면 그 파트만 직접 귀속하고 나머지는 총액 안분분을 그대로 둔다
      * (잔액 도출로 상대 파트를 깎지 않는다 — 총액은 두 파트의 합이 아니라 자산 전체 입력값이다).
      */
-    ({ land: landExp, building: buildingExp } = resolvePartExpenses(saleAlloc.proportionBasis));
+    ({ land: landExp, building: buildingExp, capexLand: landCapexExp, capexBuilding: buildingCapexExp } = resolvePartExpenses(saleAlloc.proportionBasis));
   }
 
   // NBL 판정 — 본체는 공용 헬퍼(`appurtenant-land-excess.ts`). 환산·증축 경로와 공유.
@@ -399,6 +409,7 @@ export function buildActualGeneralBuildingCards(
     const landBizTransfer = apportionLandByBusinessArea(landTransfer, businessArea, landArea);
     const landBizAcq = apportionLandByBusinessArea(landAcq, businessArea, landArea);
     const landBizExp = apportionLandByBusinessArea(landExp, businessArea, landArea);
+    const landBizCapex = apportionLandByBusinessArea(landCapexExp, businessArea, landArea);
     /**
      * 🔴 이월과세 입력도 **함께 갈라야 한다** — 환산 경로와 **같은 헬퍼·같은 인자**다
      *    (`general-building-valuation.ts:460`). 두 카드에 통째로 복사하면 증여자 취득가액·
@@ -414,7 +425,7 @@ export function buildActualGeneralBuildingCards(
     const splitCt = splitLandCarryover(landCarryoverTaxation, businessArea, landArea);
     cards.push({
       propertyId: "land_business", propertyLabel: "토지-사업용(1001)", propertyType: "land",
-      transferPrice: landBizTransfer, acquisitionPrice: landBizAcq, expenses: landBizExp,
+      transferPrice: landBizTransfer, acquisitionPrice: landBizAcq, expenses: landBizExp, expensesCapex: landBizCapex,
       usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
       acquisitionDate: landCardDate, transferDate, isNonBusinessLand: false,
       carryoverTaxation: splitCt.business,
@@ -424,6 +435,7 @@ export function buildActualGeneralBuildingCards(
       transferPrice: landTransfer - landBizTransfer,
       acquisitionPrice: landAcq - landBizAcq,
       expenses: landExp - landBizExp,
+      expensesCapex: landCapexExp - landBizCapex,
       usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
       acquisitionDate: landCardDate, transferDate, isNonBusinessLand: true,
       ...(isDesignatedArea !== undefined ? { isDesignatedArea } : {}),
@@ -432,7 +444,7 @@ export function buildActualGeneralBuildingCards(
   } else {
     cards.push({
       propertyId: "land", propertyLabel: "토지(1001)", propertyType: "land",
-      transferPrice: landTransfer, acquisitionPrice: landAcq, expenses: landExp,
+      transferPrice: landTransfer, acquisitionPrice: landAcq, expenses: landExp, expensesCapex: landCapexExp,
       usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
       acquisitionDate: landCardDate, transferDate, isNonBusinessLand: false,
       carryoverTaxation: landCarryoverTaxation,
@@ -456,7 +468,7 @@ export function buildActualGeneralBuildingCards(
       : undefined;
   cards.push({
     propertyId: "building", propertyLabel: "건물(3001)", propertyType: "general_building_unit",
-    transferPrice: buildingTransfer, acquisitionPrice: buildingAcq, expenses: buildingExp,
+    transferPrice: buildingTransfer, acquisitionPrice: buildingAcq, expenses: buildingExp, expensesCapex: buildingCapexExp,
     usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
     acquisitionDate: buildingCardDate, transferDate, isNonBusinessLand: false,
     ...(bgPenaltyAxis ? { isSelfBuilt: true, buildingAcquisitionDate: buildingCardDate, penaltyAxis: bgPenaltyAxis } : {}),

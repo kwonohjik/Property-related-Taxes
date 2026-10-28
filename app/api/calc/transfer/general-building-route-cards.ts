@@ -318,10 +318,16 @@ export function buildProperties(
      * · 환산 경로(`swap` 있음): `swap.ownDirect` — 단서 발동 여부와 무관한 카드별 몫. 이월과세 아닌 카드는 변경 없다.
      * · 실가 경로(`swap` 없음): 카드 `expenses`가 곧 본인 자본적지출 + 양도비 몫이다(개산공제 없음 — `general-building-route-actual.ts`).
      *
+     * 자본적지출 몫(`swap.ownCapex` · 카드 `expensesCapex`)은 `capitalExpenditure`로, 나머지는 양도비로 `transferExpense`에 **나눠** 싣는다 —
+     * 필요경비 합계(`calcNecessaryExpense` 선언 채널: 자본적지출 + 양도비)는 같고, 신고서·명세서가 취득가액 칸으로 옮기는 몫(자본적지출)만 달라진다
+     * (계획서 `docs/00-pm/carryover-a-gb-card-filing-acq-cell-label.plan.md` §5.1). 분리할 수 없는 덩어리(legacy `directExpenses`)는 전액 양도비 쪽이다.
+     *
      * 판정은 **엔진 input 에 실제로 실리는 `carryoverTaxation`** 기준이다 — 토지는 `landAcquisitionCause`가 있어야 실린다(위 spread).
      */
     if ((item as { carryoverTaxation?: unknown }).carryoverTaxation !== undefined) {
-      return { ...item, capitalExpenditure: swap ? (swap.ownDirect.get(card.propertyId) ?? 0) : card.expenses } as TransferTaxItemInput;
+      const own = swap ? (swap.ownDirect.get(card.propertyId) ?? 0) : card.expenses;
+      const ownCapex = swap ? (swap.ownCapex.get(card.propertyId) ?? 0) : Math.min(card.expensesCapex ?? 0, card.expenses);
+      return { ...item, capitalExpenditure: ownCapex, transferExpense: own - ownCapex } as TransferTaxItemInput;
     }
     return item;
   });

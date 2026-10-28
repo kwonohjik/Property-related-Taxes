@@ -157,6 +157,16 @@ export interface GeneralBuildingSwapDecision {
    * 단서 비교(`swapApplied`)에는 쓰이지 않는다.
    */
   ownDirect: Map<string, number>;
+  /**
+   * `ownDirect` 중 **자본적지출**(§97①2호) 몫 — 나머지(`ownDirect − ownCapex`)가 양도비(§97①3호) 몫이다.
+   *
+   * 신고서·명세서는 이월과세 A 에서 본인 **자본적지출만** 「취득가액」 칸으로 옮기고 양도비는 필요경비 칸에 둔다(단건 경로 관행 — `capex-actual-mode-display.anchor.test.ts` A0-5).
+   * 카드가 합산값 하나만 싣던 때는 양도비 몫까지 취득가액 칸에 얹혔다(계획서 `docs/00-pm/carryover-a-gb-card-filing-acq-cell-label.plan.md`).
+   *
+   * 자본적지출만으로 같은 배분을 한 번 더 돌려 얻는다(규칙 복제 금지). 카드별 `floor` 가 합산 실행과 1원 어긋날 수 있어 몫을 `ownDirect` 이하로 자르고,
+   * 그 1원은 양도비 쪽이 흡수한다 — `ownCapex + 양도비 = ownDirect` 가 항상 성립해 필요경비 합계는 불변이다.
+   */
+  ownCapex: Map<string, number>;
 }
 
 /** 카드가 토지 파트인가 — 건물 카드는 `general_building_unit`. */
@@ -210,7 +220,16 @@ export function resolveGeneralBuildingSwap(
   const ownDirect = new Map<string, number>();
   for (const [id, v] of own.allocation) addTo(ownDirect, id, v);
   for (const [id, v] of own.addition) addTo(ownDirect, id, v);
-  return { ...decision, ownDirect };
+  // 자본적지출 몫 — 양도비(자산 단위 `transferExpense` · 파트 축의 `partAxis.transferExpense`)를 뺀 같은 배분.
+  const capexOnly = decideSwap(
+    cards, capitalExpenditure, undefined, partAxis && { ...partAxis, transferExpense: undefined }, extension, true,
+  );
+  const capexRaw = new Map<string, number>();
+  for (const [id, v] of capexOnly.allocation) addTo(capexRaw, id, v);
+  for (const [id, v] of capexOnly.addition) addTo(capexRaw, id, v);
+  const ownCapex = new Map<string, number>();
+  for (const [id, v] of ownDirect) ownCapex.set(id, Math.min(capexRaw.get(id) ?? 0, v));
+  return { ...decision, ownDirect, ownCapex };
 }
 
 /**
@@ -224,7 +243,7 @@ function decideSwap(
   partAxis: PartAxisInput | undefined,
   extension: ExtensionCapexInput | undefined,
   forceOwn: boolean,
-): Omit<GeneralBuildingSwapDecision, "ownDirect"> {
+): Omit<GeneralBuildingSwapDecision, "ownDirect" | "ownCapex"> {
   const allocation = new Map<string, number>();
   const addition = new Map<string, number>();
 
@@ -306,7 +325,7 @@ function resolvePerPart(
   allocation: Map<string, number>,
   addition: Map<string, number>,
   forceOwn: boolean,
-): Omit<GeneralBuildingSwapDecision, "ownDirect"> {
+): Omit<GeneralBuildingSwapDecision, "ownDirect" | "ownCapex"> {
   const perPart: NonNullable<GeneralBuildingSwapDecision["perPart"]> = {};
   const beforeExtensionAddition = new Map<string, number>();
   let estimatedSideTotal = 0;
