@@ -1707,6 +1707,12 @@ export interface TransferTaxInput {
      */
     oneHouseForTable2?: boolean;
     /**
+     * 짝 주택이 표2 「대상 **자산**」인가(`isLthdTable2SubjectAsset(house)`) — 토지만 본인 × 건물(주택) 소유자 다른 세대(V-3′)면 false.
+     * 부수토지 카드는 짝 주택을 따른다(F-13): false면 그 토지도 이 세대 1주택에 딸린 토지가 아니라 표1이다. `undefined`(verdict 미주입 직접 호출)는 종전대로 대상.
+     * 계획서 `bundled-other-household-appurtenant-table2.plan.md`.
+     */
+    houseTable2Subject?: boolean;
+    /**
      * 5A — 짝 주택에 수용 단서(「소득세법 시행령」 제154조 제1항 단서 제2호 가목)가 성립할 때 그 단서가 덮는 토지 취득 기한
      * (`expropriationProvisoLandCutoff`). `undefined` 단서 불성립 · `null` 괄호 없는 연혁 · `Date` 사업인정 고시일 전 취득분만.
      */
