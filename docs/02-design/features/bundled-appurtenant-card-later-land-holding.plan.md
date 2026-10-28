@@ -1,6 +1,6 @@
 # 함께 양도 × 부수토지 카드가 짝 주택보다 늦게 취득된 경우 — 표2 보유연수·세율 기산이 짝 주택 것으로 남는 결함 (구현 계획서)
 
-> 작성 2026-10-28 · 깊이 **L3**(세액이 바뀐다 · 기존 안전망 4건이 이 결함의 값을 고정하고 있다) · 이 PR은 **계획만**(코드 변경 없음) · 선행: `bundled-other-household-appurtenant-table2.plan.md` §7 **O-4** · `bundled-merge-date-appurtenant-card.plan.md`(#2672 — 합가일이 같은 두 지점) · `bundled-appurtenant-card-multi-house-surcharge.plan.md`(#2684)
+> 작성 2026-10-28 · 깊이 **L3**(세액이 바뀐다 · 기존 안전망 4건이 이 결함의 값을 고정하고 있다) · **Q-1~Q-3 a 결정(사용자 「권장 안으로」) → 같은 PR에 구현**(§9) · 선행: `bundled-other-household-appurtenant-table2.plan.md` §7 **O-4** · `bundled-merge-date-appurtenant-card.plan.md`(#2672 — 합가일이 같은 두 지점) · `bundled-appurtenant-card-multi-house-surcharge.plan.md`(#2684)
 > 사용자 지시 「O-4(후행 취득 토지 표2 보유연수)」. 측정은 master(`72757dbd0`) 기준이며 probe는 #2668 시료(R)를 쓴 throwaway(커밋 안 함 · 원복 확인)이고 사본·결과 JSON은 scratchpad(`o4-zz-keep/`·`o4-*.json`)에 있다.
 
 ## 0. 요약
@@ -52,7 +52,7 @@ D-4 **고지(Q-3 a)**: 카드가 짝 주택·합가일보다 늦게 취득돼 «
 
 ⚠️ **파일 크기**: `land-only-owner-household.ts` · `transfer-tax-lthd.ts` · `transfer-tax-rate-calc.ts`(689) · `appurtenant-card-surcharge.ts` 모두 줄 수 변화 ≤ +10.
 
-## 4. 결정 게이트 (Q-n) — 결정 대기
+## 4. 결정 게이트 (Q-n) — ✅ Q-1 a · Q-2 a · Q-3 a 결정
 
 | ID | 질문 | 선택지 | 권고 |
 |---|---|---|---|
@@ -109,3 +109,32 @@ D-4 **고지(Q-3 a)**: 카드가 짝 주택·합가일보다 늦게 취득돼 «
 1. 워크트리 `-o4`에서 신규 anchor + V-7 갱신을 먼저(수정 전 새 값으로 실패 확인) → D-1~D-4 → 전부 통과.
 2. 구현 후 mutation P-1~P-5 · 전량 회귀 · tsc · lint.
 3. 계획서 §9에 결과 기록 → 같은 PR 구현 커밋 → CI 확인 → 사용자 「머지해」 뒤 머지.
+
+## 9. 구현 결과 (Q-1 a · Q-2 a · Q-3 a)
+
+| 항목 | 내용 |
+|---|---|
+| D-1 | 신규 leaf `lib/tax-engine/appurtenant-card-holding-start.ts` — `appurtenantCardHoldingStart(v, 카드 취득일)` = `max(카드 취득일, 짝 주택 취득일, 합가일)`. `appurtenantCardHouseHoldingMonths`(`land-only-owner-household.ts`)에 4번째 인자 `cardAcquisitionDate?` — 시작이 짝 주택 취득일 이하면 종전 `defaultMonths` 그대로 |
+| D-2 | L-1b(`transfer-tax-lthd.ts`)·T-1.5(`transfer-tax-rate-calc.ts`)가 `input.acquisitionDate`를 넘긴다 |
+| D-3 | `appurtenantCardSurchargeRateInput`(`appurtenant-card-surcharge.ts`)이 같은 시작일을 쓴다 — 기존 인라인 `max(합가일, 주택)` 제거 |
+| D-4 | `appurtenantCardLaterLandNotice` — 카드가 짝 주택 쪽 시작일(합가일 포함)보다 늦고 다른 세대가 아닐 때만. 「확인이 필요합니다」 병기. `transfer-tax.ts` 고지 배열에 한 항 추가(778 → 779줄) |
+| 입력·Zod·API·UI | 변경 없음(14 동기화 지점 해당 없음) |
+
+**독립 산식으로 갱신한 기존 안전망(V-7 4건 + 역방향 1건)**: 5A 대조 8,844,000 → 97,350,000 · 113,575,000 / #2678 A5 → 460,075,000 · 474,859,000 / #2678 A4 역방향 79,761,000 → **142,747,000**(= (68,250,000 + 50,000,000 + 11,520,000) × 1.1 — 70% 몫 (100,000,000 − 2,500,000) × 70%, 50% 몫 100,000,000 × 50%, 누진 몫 72,000,000 × 24% − 5,760,000) · 소유자 같음 101,915,000 → 162,371,000(순·역 등가).
+⚠️ 계획 시점에는 «A4 역방향 2건을 순·역 등가로»라 했으나, 같은 세대 역방향은 카드별 소득으로 위 독립 산식을 세울 수 있어 등가 대신 산식으로 고정했다.
+
+**신규 테스트**: `__tests__/api/transfer.route.bundled-appurtenant-card-later-land.anchor.test.ts`(16 — B1~B8, 수정 전 코드에서 불변 고정 6건(B6c · B7a×3 · B7b · 고지 부정)은 통과, 나머지 10건 실패 확인) · `__tests__/tax-engine/transfer/appurtenant-card-holding-start.anchor.test.ts`(9 — 시작일·개월·중과 기산·고지, KST·UTC 모두 통과).
+
+**mutation(구현 후)** — 각 변형이 해당 anchor만 실패시켰다:
+
+| P | 무력화 | 실패한 anchor |
+|---|---|---|
+| P-1 | L-1b 카드 취득일 전달 제거 | B1·B2·B3·B4×3·B5 + 갱신 4건 |
+| P-2 | T-1.5 전달 제거 | B1·B4(2025-06)·B5 + 갱신 3건(**B2·B3은 통과** — 장특 축은 L-1b) |
+| P-3 | leaf의 카드 항 제거 | B1~B6 · 단위 · 갱신 전부 |
+| P-4 | 중과 기산의 카드 항 제거 | **B6a·B6b + 단위 1건만** |
+| P-5 | 고지 술어 제거 | **B8 + 단위 1건만** |
+
+수정 전 코드에서의 신규 B1~B6·B8은 위 §1 V-2·V-5와 같은 «수정 전» 값(320,859,000 · 351,021,000 · 36,261,500 · 69,315,400 · 26,405,500 · 58,614,600 · 368,016,000 · 700,161,000 · 역방향 60,000,000/15%)으로 실패했다.
+
+**검증**: `npx tsc --noEmit` 0 · eslint 변경 10파일 0건 · 전량 회귀(`__tests__/api` · `calc` · `tax-engine/transfer` · `tax-engine/transfer-tax`) **1,852 파일 · 24,330건 통과 · 실패 0**(3 skipped · 309 todo는 기존). 브라우저 수동 확인은 화면 변경이 없어 하지 않았다.
