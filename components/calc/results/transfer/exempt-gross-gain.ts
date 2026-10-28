@@ -72,8 +72,10 @@ export function inverseAcquisitionForDisplay(a: {
  * · **§97②2호 단서(swap)** — 엔진이 취득가액을 차감하지 않고(0) 필요경비 전체를 나목으로 삼는 축이라
  *   PR #1636이 「취득가액 칸 = 나목」으로 고정했다(사용자 확인 화면). 전용 anchor
  *   `swap-97-2-display-identity.anchor.test.ts`가 지킨다.
- * · **이월과세 시나리오 A** — 취득가액 칸에 증여자 취득가액·증여자 자본적지출 승계를 함께 적는
- *   별도 산식(`carryover-statement-formula.anchor.test.ts`)이라 이번 전환 범위 밖이다.
+ * · **이월과세 시나리오 A** — 취득가액 칸에는 **수증자(본인)의 선언 자본적지출만** 증여자 취득가액에 얹는다(`capex-actual-mode-display.anchor.test.ts` A0-5).
+ *   증여자 자본적지출(§97의2①2호)·본인 양도비·증여세 상당액은 **필요경비 칸**에 머문다 — 비교과세 카드의 「당초 증여자 자본적지출」 행과 같은 분류이고,
+ *   명세서 필요경비 산식이 「증여자 자본적지출 N」을 따로 적는다(`carryover-a-donor-capex-display.anchor.test.ts`). 종전 주석은 증여자 자본적지출도
+ *   취득가액 칸에 적는다고 했으나 구현된 적이 없다(`capitalExpenditureForDisplay`는 본인 입력 `capitalExpenditure`뿐). 이번 전환 범위 밖이라 종전 표시를 유지한다.
  *
  * ⚠️ 판정은 **이 함수 하나**에서 한다 — 신고서(단건·다건)·명세서 합계·자산별·산식이 각자 판정하면
  *   칸마다 갈라져 항등식(양도가액 − 취득가액 − 필요경비 = 양도차익)이 깨진다.
