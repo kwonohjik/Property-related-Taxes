@@ -9,6 +9,7 @@
  */
 
 import type { GiftHouseholdBasis } from "../one-house/gift-household-basis";
+import type { SurchargeApplication } from "../transfer-tax-surcharge-predicate";
 import type {
   HouseInfo,
   PresaleRight,
@@ -1712,6 +1713,12 @@ export interface TransferTaxInput {
      * 계획서 `bundled-other-household-appurtenant-table2.plan.md`.
      */
     houseTable2Subject?: boolean;
+    /**
+     * 짝 주택이 푼 다주택 중과 판정(`result.surchargeEcho`) — 부수토지 카드는 「주택(이에 딸린 토지를 포함한다)」(§104⑦)이라 그대로 따른다.
+     * 다른 세대 토지만 본인은 짝 주택이 이미 «중과 없음»이라 자동으로 빠진다. `undefined`(verdict 미주입 직접 호출) = 종전.
+     * 계획서 `bundled-appurtenant-card-multi-house-surcharge.plan.md`.
+     */
+    houseSurcharge?: SurchargeApplication;
     /**
      * 짝 주택이 토지만 본인 × 건물(주택) 소유자 다른 세대인가(`landOnlyBuildingOwnerOtherHousehold(house)`) — 참이면 그 부수토지는 이 세대 주택에 딸린 토지가 아니라
      * 일반 토지다(서면법규과-944): 단기세율을 짝 주택 일체과세가 아니라 일반 토지 세율로 정한다. `houseTable2Subject === false`와 같지 않다(다른 사유로도 false).

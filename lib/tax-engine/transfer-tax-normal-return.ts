@@ -11,6 +11,7 @@
 import { finalizeTransferTax, buildTransferResultDetails } from "./transfer-tax-finalize";
 import { publicExpropriationPartWiseNotice } from "./public-expropriation-reduction";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
+import type { SurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 
 type FinalizeArgs = Parameters<typeof finalizeTransferTax>[0];
@@ -41,6 +42,7 @@ export interface NormalReturnArgs extends FinalizeArgs {
   usageConversionDetail: TransferTaxResult["usageConversionDetail"];
   lthdExclusionReason: TransferTaxResult["lthdExclusionReason"];
   lthdTable2OneHouseAxis: boolean;
+  surchargeEcho: SurchargeApplication;
   new994Detail: TransferTaxResult["new994Detail"];
   unsold989Detail: TransferTaxResult["unsold989Detail"];
   houseCountExclusionDetails: TransferTaxResult["houseCountExclusionDetails"];
@@ -85,6 +87,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     usageConversionDetail,
     lthdExclusionReason,
     lthdTable2OneHouseAxis,
+    surchargeEcho,
     new994Detail,
     unsold989Detail,
     houseCountExclusionDetails,
@@ -217,6 +220,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     usageConversionDetail,
     lthdExclusionReason,
     lthdTable2OneHouseAxis,
+    surchargeEcho,
     rental97TaxDetail,
     new994Detail,
     unsold989Detail,

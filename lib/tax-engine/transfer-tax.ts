@@ -9,6 +9,10 @@
 import { TRANSFER } from "./legal-codes";
 import { buildLossTransferTaxResult } from "./transfer-tax-loss-return";
 import { buildNormalTransferTaxResult } from "./transfer-tax-normal-return";
+import {
+  appurtenantCardHouseSurcharge,
+  appurtenantCardSurchargeNotice,
+} from "./appurtenant-card-surcharge";
 import { resolveSurchargeApplication, noRosterSurchargeFallbackNotice } from "./transfer-tax-surcharge-predicate";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { runPreCalculationSteps, runSurchargeAndLandSteps } from "./transfer-tax-precalc";
@@ -556,17 +560,21 @@ export function calculateTransferTax(
     forceNoMultiHouseSurcharge: effectiveInput.forceNoMultiHouseSurcharge,
     selfOwns: effectiveInput.selfOwns,
     buildingOwnerSameHousehold: effectiveInput.buildingOwnerSameHousehold,
+    oneHouseUnitRole: effectiveInput.oneHouseUnitRole,
+    appurtenantHouseVerdict: effectiveInput.appurtenantHouseVerdict,
   };
-  const { isSurchargeCase, isSuspended: suspendedResult } = resolveSurchargeApplication(surchargeArgs, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules);
+  const surchargeApplication = resolveSurchargeApplication(surchargeArgs, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules);
+  const { isSurchargeCase, isSuspended: suspendedResult } = surchargeApplication;
   // 토지만 본인 × 다른 세대 — 그 조건을 뺀 판정이 중과였을 때만 배제 사실을 고지한다.
   if (landOnlyBuildingOwnerOtherHousehold(effectiveInput) && resolveSurchargeApplication({ ...surchargeArgs, selfOwns: undefined }, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules).isSurchargeApplied) warnings.push(LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE);
-  for (const n of [landOnlyOtherHouseholdRateNotice(effectiveInput), landOnlyMergeDateAppliedNotice(effectiveInput), landOnlyOtherHouseholdAppurtenantCardNotice(effectiveInput), landOnlyMergeDateAppurtenantCardNotice(effectiveInput), landOnlyOtherHouseholdAppurtenantCardRateNotice(effectiveInput)]) if (n) warnings.push(n);
+  for (const n of [landOnlyOtherHouseholdRateNotice(effectiveInput), landOnlyMergeDateAppliedNotice(effectiveInput), landOnlyOtherHouseholdAppurtenantCardNotice(effectiveInput), landOnlyMergeDateAppurtenantCardNotice(effectiveInput), landOnlyOtherHouseholdAppurtenantCardRateNotice(effectiveInput), appurtenantCardSurchargeNotice(effectiveInput)]) if (n) warnings.push(n);
   // 명부 없이 원시 플래그로 중과를 건 경우 — 다른 주택이 각 호에 해당하면 결론이 바뀔 수 있다(확인 필요).
   const surchargeFallbackNotice = noRosterSurchargeFallbackNotice({
     houses: effectiveInput.houses, rosterInputUnavailable: hasNoMergeRosterInputPath(effectiveInput),
     householdHousingCount: effectiveInput.householdHousingCount,
     multiHouseSurchargeResult,
-    isSurchargeApplied: isSurchargeCase && !suspendedResult,
+    // 부수토지 카드는 짝 주택의 판정을 따른 것이라 «목록 없이 원시 플래그로 걸었다»는 고지는 주 카드 몫이다(같은 문안 중복 방지).
+    isSurchargeApplied: isSurchargeCase && !suspendedResult && !appurtenantCardHouseSurcharge(effectiveInput),
   });
   if (surchargeFallbackNotice) warnings.push(surchargeFallbackNotice);
   // 부담부증여 × 다주택 중과 — 한시 배제가 실제로 적용된 결과에서만 고지한다(1h-G1-11)
@@ -760,6 +768,7 @@ export function calculateTransferTax(
     lthdExclusionReason,
     // 짝 부수토지 카드가 받는 표2 「1주택」 축 echo(S08-5 — `toHouseVerdict`) — L-3 게이트와 같은 술어.
     lthdTable2OneHouseAxis: resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155),
+    surchargeEcho: surchargeApplication,
     new994Detail,
     unsold989Detail,
     houseCountExclusionDetails,

@@ -1,6 +1,6 @@
 # 함께 양도 × 부수토지 카드 — 다주택 중과(§104⑦)·장특 배제(§95②)가 카드에 닿지 않는 결함 (구현 계획서)
 
-> 작성 2026-10-28 · 깊이 **L3**(세액이 바뀐다 · 법령 판정이 갈린다) · 이 PR은 **계획만**(코드 변경 없음) · 선행: `bundled-other-household-appurtenant-table2.plan.md` §7 **O-2**(「의도인지 결함인지 확인하지 않았다」) · `bundled-other-household-appurtenant-short-rate.plan.md`(#2678)
+> 작성 2026-10-28 · 깊이 **L3**(세액이 바뀐다 · 법령 판정이 갈린다) · 계획 + 구현(§9) 한 PR(사용자 「권고 안으로」 — Q-1 a · Q-2 a · Q-3 a) · 선행: `bundled-other-household-appurtenant-table2.plan.md` §7 **O-2**(「의도인지 결함인지 확인하지 않았다」) · `bundled-other-household-appurtenant-short-rate.plan.md`(#2678)
 > 사용자 지시 「O-2(부수토지 카드 다주택 중과 미적용, 의도 여부 미확인)」. 측정은 master(`88543f604`) 기준이며 probe는 #2668 시료(R·S)를 쓴 throwaway(커밋 안 함 · 원복 확인)이고 사본·결과 JSON은 scratchpad(`sc2-zz-keep/`·`sc2-*.json`)에 있다.
 
 ## 0. 요약
@@ -54,7 +54,7 @@ D-5 **고지**(Q-3 a): 카드에 중과가 걸리면 카드 경고 1건 — «�
 
 ⚠️ **파일 크기**: `transfer-tax.ts` 769(+≈3) · `transfer-tax-rate-calc.ts` 681(+≈5) · `transfer-tax-surcharge-predicate.ts` · `transfer-tax-normal-return.ts` · 타입 파일 2종(타입 전용 예외).
 
-## 4. 결정 게이트 (Q-n) — 결정 대기
+## 4. 결정 게이트 (Q-n) — 2026-10-28 사용자 「권고 안으로」: **Q-1 a · Q-2 a · Q-3 a 확정**
 
 | ID | 질문 | 선택지 | 권고 |
 |---|---|---|---|
@@ -73,7 +73,7 @@ D-5 **고지**(Q-3 a): 카드에 중과가 걸리면 카드 경고 1건 — «�
 | A5 | 주택 2025-01-01 · 카드 2014(옛 토지) · 2주택 / 3주택 | 692,670,000 → **724,350,000** / 771,606,000 → **832,903,500** | 장특 48,000,000 → 0 · 짝 주택 보유기간 기준 | anchor(V-7 ②) |
 | A6 | 불변 — 주택·카드 모두 2025-01-01 2주택(단기 60% 우세) · 다른 세대 · 주택 1채 | 724,350,000 · 171,006,000 · 262,900,000 · 50,589,000 **불변** | — | anchor(불변) |
 | A7 | 역방향 — 같은 사실 순·역 | 540,177,000 → **594,649,000** (순 = 역) | `primary__appurtenant` 24%/24,000,000 → 55%/0 | anchor(등가) |
-| A8 | 한시 배제 양도일(2026-02-16) · 비부수토지 컴패니언 | 구현 때 측정 | 불변 | 측정 후 anchor |
+| A8 | 한시 배제 양도일(2026-02-16) · 비부수토지 컴패니언 · 수동 70% | 한시 배제 345,543,000 · 비부수토지 614,163,000 **불변** · 수동 지정 70%·장특 0 | `c1` 38%/48,000,000 그대로 · 수동 지정 존중 | 구현 때 측정 → anchor |
 | A9 | 고지 | — | 중과 카드에만 1건 | anchor |
 
 ## 6. 구현 계획과 테스트 (Do — Q 결정 뒤)
@@ -90,7 +90,8 @@ D-5 **고지**(Q-3 a): 카드에 중과가 걸리면 카드 경고 1건 — «�
 | P-2 | `toHouseVerdict`의 `houseSurcharge`를 `undefined` 고정 | A1~A5 · A7 · A9 |
 | P-3 | T-1.5 건너뛰기 제거(카드가 일체과세 누진으로 조기 반환) | A1 · A3 · A4(세율), 장특은 유지 |
 | P-4 | §104⑦ 후단 비교의 취득일 치환(짝 주택 취득일) 제거 | A5만 |
-| P-5 | 카드 분기에서 `oneHouseUnitRole` 조건 제거(모든 토지 카드가 따름) | A8(비부수토지) |
+| P-5 | 카드 분기에서 `oneHouseUnitRole` 조건 제거(모든 토지 카드가 따름) | 단위 AN-2·AN-3(route에서는 역할 없는 토지가 verdict를 받지 않아 안 닿는다) |
+| P-6 | `noRosterSurchargeFallbackNotice`의 카드 억제 제거 | 중복 고지 anchor |
 
 ### 6.3 검증
 - `npx vitest run __tests__/api __tests__/calc __tests__/tax-engine/transfer __tests__/tax-engine/transfer-tax` 전량(현재 24,231건 통과 기준) + 변경 경로가 `lib/tax-engine/**`라 pre-push 전체 · `npx tsc --noEmit` 0 · lint 신규 0.
@@ -110,3 +111,13 @@ D-5 **고지**(Q-3 a): 카드에 중과가 걸리면 카드 경고 1건 — «�
 1. 워크트리 `-sc2`에서 신규 anchor 먼저(수정 전 A1~A5·A7·A9 실패 확인) → D-1~D-5 → anchor 통과.
 2. 구현 후 mutation P-1~P-5 · 전량 회귀 · tsc · lint.
 3. 계획서 §9에 결과 기록 → 같은 PR 구현 커밋 → CI 확인 → 사용자 「머지해」 뒤 머지.
+
+## 9. 구현 결과 (2026-10-28)
+
+- **변경**: 새 leaf `appurtenant-card-surcharge.ts`(카드 판정·세율 입력 치환·고지) · `transfer-tax-surcharge-predicate.ts`(카드면 짝 주택 판정 그대로 반환) · `transfer-tax.ts`(echo + 고지 + 목록 없는 중과 고지의 카드 억제) · `transfer-tax-normal-return.ts`·`types/transfer-result.types.ts`(echo `surchargeEcho`) · `types/transfer.types.ts`·`transfer-tax-one-house-unit.ts`(verdict `houseSurcharge`) · `transfer-tax-rate-calc.ts`(`calcTax`가 중과 카드의 일체과세 분기를 끄고 §104⑦ 후단 비교 보유기간을 짝 주택 취득일로 — 수동 지정은 유지). 입력·Zod·API·UI 변경 없음. 파일 크기: `transfer-tax.ts` 769 → 778 · `transfer-tax-rate-calc.ts` 681 → 689.
+- **새 실측(구현 중)**: 한시 배제 양도일 2026-02-16 — 짝 주택이 중과를 안 받으니 카드도 안 받음(c1 장특 48,000,000 · 38% · 합계 345,543,000 = (833,500,000 × 42% − 35,940,000 = 314,130,000) × 1.1 ✓ · 고지 없음). 부수토지가 아닌 토지 컴패니언 — 수정 전후 614,163,000 불변. 수동 70%는 중과 카드에서도 70% · 장특 0. **중과 카드가 «다른 보유 주택 목록이 입력되지 않아…» 고지를 주 카드와 중복**하는 것을 발견 → 카드에서 억제(P-6).
+- **anchor**: `__tests__/api/transfer.route.bundled-appurtenant-card-multi-house-surcharge.anchor.test.ts` 13건 + `__tests__/tax-engine/transfer/appurtenant-card-surcharge.anchor.test.ts` 9건. 수정 전 A1~A5·A7·A9 **먼저 실패**(7건 — 계획대로), A6은 수정 전후 통과(불변 고정).
+- **mutation 6/6 KILLED**(P-1~P-6, 위 표 — P-3은 6건·P-5는 단위 2건으로 잡힘).
+- **회귀**: 전체 vitest **43,408건 통과**(3,557 파일) · `npx tsc --noEmit` 0 · eslint 오류 0(신규 경고 0 — `transfer-tax-normal-return.ts:56` 경고는 기존).
+- **미수행**: 브라우저 수동 확인(화면 변경 없음).
+- 남은 별건: O-4 · O-7 · O-8 · O-10(§7).

@@ -9,6 +9,7 @@ import type { CalculationStep } from "./transfer.types";
 import type { DonorBuiltEchoEntry } from "../gb-result-donor-built-echoes";
 import type { PurchasedPartEchoEntry } from "../result-purchased-part-echoes";
 import type { RateClause } from "../transfer-tax-rate-clause";
+import type { SurchargeApplication } from "../transfer-tax-surcharge-predicate";
 import type { ExcludedHouse, ExclusionReason, MultiHouseSurchargeResult } from "../multi-house-surcharge";
 import type { NonBusinessLandJudgment } from "../non-business-land";
 import type { RentalReductionResult } from "../rental-housing-reduction";
@@ -193,6 +194,11 @@ export interface TransferTaxResult {
    * (`appurtenantHouseVerdict.oneHouseForTable2`) 자기 원시 주택 수 대신 쓴다(S08-5). 세액 무영향 — 합산 엔진 전달용.
    */
   lthdTable2OneHouseAxis?: boolean;
+  /**
+   * 이 자산에 푼 다주택 중과 판정(`resolveSurchargeApplication`) echo — 짝 부수토지 카드가 그대로 따른다(`toHouseVerdict` · `appurtenant-card-surcharge.ts`).
+   * 재판정하지 않고 싣는다(이중 진실 금지).
+   */
+  surchargeEcho?: SurchargeApplication;
   /**
    * 장기보유특별공제 보유기간 실제 기산일 (사례 35).
    * - 기본값: acquisitionDate (용도변경 미적용 시)
