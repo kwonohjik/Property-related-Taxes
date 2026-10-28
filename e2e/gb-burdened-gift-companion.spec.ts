@@ -72,3 +72,32 @@ test.describe("컴패니언 일반건물 × 부담부증여", () => {
     await expect(text).toContainText("일반건물 부담부증여에서 양도인 본인이 신축한 건물");
   });
 });
+
+/**
+ * GC-E3 함께 양도(다른 물건) 시가 평가 부담부증여 — 결과 명세 취득가액이 물건 카드 합이다
+ * (계획서 `bg-bundle-card-acquisition-all.plan.md` Q-1 a · Q-2 a).
+ *       일반건물 2건 · 실지 5억 / 3억 · 평가 10억 / 6억 · 채무 4억 + 1억 → 채무비율 5/16 = 31.25%: 카드 156,250,000 + 93,750,000 = 250,000,000.
+ *       종전: 물건 전체 info가 첫 물건 값만 읽어 합계가 156,250,000이었다.
+ */
+test("GC-E3 함께 양도 시가 평가 · 실지 5억 / 3억: 결과 명세 취득가액 합계 250,000,000(종전 첫 물건 156,250,000)", async ({ page }) => {
+  test.setTimeout(180_000);
+  const K4 = { bgAcquisitionMethod: "actual" };
+  await seedWizard(page, seed([
+    gb(1, { ...K4, bgMortgageDebtAmount: "400000000", bgMortgageSetAmount: "400000000", bgActualAcquisitionLand: "250000000", bgActualAcquisitionBuilding: "250000000" }),
+    gb(2, { ...K4, bgMarketValueAtTransfer: "600000000", bgMortgageDebtAmount: "100000000", bgMortgageSetAmount: "100000000", bgActualAcquisitionLand: "150000000", bgActualAcquisitionBuilding: "150000000" }),
+  ]));
+  await calc(page);
+  await expect(page.getByTestId("bg-bundle-card")).toHaveCount(2);
+  await expect(page.getByTestId("bg-bundle-acquisition-total")).toContainText("250,000,000");
+  const dir = process.env.E2E_SHOT_DIR;
+  if (dir) {
+    const card = page.getByTestId("bg-bundle-card").first();
+    await card.scrollIntoViewIfNeeded();
+    for (const [name, scheme, width] of [["light", "light", 1280], ["dark", "dark", 1280], ["m375", "light", 375]] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ width, height: 900 });
+      await page.getByTestId("bg-bundle-acquisition-total").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${dir}/bgall-${name}.png` });
+    }
+  }
+});

@@ -11,6 +11,7 @@
  * 순환이 없다.
  */
 import { calculateHoldingPeriod } from "./tax-utils";
+import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
 import { round2 } from "./area-utils";
 import { appurtenantLandMultiplier, expropriationZoneBaseDateNotice } from "./appurtenant-land-rate";
 import { resolveOneHouseMinHoldingYears } from "./data/one-house-holding-residence-era";
@@ -54,8 +55,8 @@ const ONE_HOUSE_HOLDING_YEARS = 2;
 export function resolveAppurtenantLandRateBasisDate(input: TransferTaxInput): Date | undefined {
   const effective = resolveLandStatutoryAcquisitionDate(input);
   if (!effective) return undefined;
-  // ② 주택은 "주택부수토지로서의" 보유기간 → `max`
-  if (input.propertyType !== "housing") return effective;
+  // ② 주택은 "주택부수토지로서의" 보유기간 → `max` — 단 다른 세대 토지만 본인은 이 세대 주택의 부수토지가 아니라 일반 토지다(서면법규과-944).
+  if (input.propertyType !== "housing" || landOnlyBuildingOwnerOtherHousehold(input)) return effective;
   const rebuilt = resolveLandRebuildAggregation(input);
   if (rebuilt) return rebuilt.equivalentBasisDate;
   return effective.getTime() >= input.acquisitionDate.getTime() ? effective : input.acquisitionDate;

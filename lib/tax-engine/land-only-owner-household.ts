@@ -17,6 +17,7 @@
  */
 import { revokeOneHouseExemption } from "./one-house/revoke-exemption";
 import type { OneHouseJudgment } from "./one-house/types";
+import { calculateHoldingPeriod } from "./tax-utils";
 import type { TransferTaxInput } from "./types/transfer.types";
 
 export const LAND_ONLY_OTHER_HOUSEHOLD_NOTICE =
@@ -27,6 +28,12 @@ export const LAND_ONLY_OTHER_HOUSEHOLD_NOTICE =
 export const LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE =
   "토지만 본인 소유이고 건물(주택) 소유자가 양도일 현재 본인과 다른 세대라, 주택 수는 건물 소유자를 기준으로 보아 이 토지에는 " +
   "다주택 중과세율과 그에 따른 장기보유특별공제 배제를 적용하지 않았습니다(재산세과-3172 · 서면인터넷방문상담5팀-695).";
+
+/** 다른 세대 토지의 단기세율(2년 미만 보유)이 주택이 아닌 일반 토지 기준으로 판정됐을 때 단다 — `landOnlyOtherHouseholdRateNotice`. */
+export const LAND_ONLY_OTHER_HOUSEHOLD_RATE_NOTICE =
+  "토지만 본인 소유이고 건물(주택) 소유자가 양도일 현재 본인과 다른 세대라, 이 토지의 단기 양도세율(보유 2년 미만)은 「주택, 조합원입주권」이 아닌 " +
+  "일반 토지 기준으로 판정했습니다(서면법규과-944 · 「소득세법 시행령」 §167의5). 이 회신은 2014.1.1. 시행 세율 사건이고, 현행 세율표에 옮긴 적용은 " +
+  "같은 문언 구조에 따른 해석이라 확인이 필요합니다.";
 
 export const LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE =
   "토지만 본인 소유이고 건물(주택) 소유자가 같은 세대라 이 토지를 그 주택의 부수토지로 보아 1세대1주택 비과세를 판정했습니다. " +
@@ -66,5 +73,17 @@ export function applyLandOnlyHouseholdRule(
  * §155⑳ 특례의 G-3 세율 판정이 쓴다 — 특례 on/off가 같은 사실에서 같은 세율이어야 한다(계획서 `land-only-later-land-holding.plan.md` Q-1 a).
  */
 export function landOnlyRateInput(input: TransferTaxInput): TransferTaxInput {
-  return input.selfOwns === "land_only" && input.landAcquisitionDate ? { ...input, acquisitionDate: input.landAcquisitionDate } : input;
+  if (input.selfOwns !== "land_only" || !input.landAcquisitionDate) return input;
+  // 다른 세대 — 그 토지는 이 세대 주택의 부수토지가 아니라 일반 토지다(서면법규과-944 · 영 §167의5): 토지 취득일 · 비주택 세율.
+  if (landOnlyBuildingOwnerOtherHousehold(input)) return { ...input, acquisitionDate: input.landAcquisitionDate, nonHousingForRate: true };
+  // 비주택(상가·토지 등)은 주택부수토지가 아니라 토지 취득일 그대로다.
+  if (input.propertyType !== "housing") return { ...input, acquisitionDate: input.landAcquisitionDate };
+  // 같은 세대 — 주택부수토지로서의 보유기간 = `max(토지, 주택)`(소유자 같음과 같은 규칙 · `resolveAppurtenantLandRateBasisDate`).
+  return input.landAcquisitionDate.getTime() > input.acquisitionDate.getTime() ? { ...input, acquisitionDate: input.landAcquisitionDate } : input;
+}
+
+/** 다른 세대 토지만 본인 주택의 토지 보유가 2년 미만이면 일반 토지 단기세율 고지(그 밖에는 세율 종류가 값에 닿지 않아 말하지 않는다). */
+export function landOnlyOtherHouseholdRateNotice(input: TransferTaxInput): string | undefined {
+  if (!landOnlyBuildingOwnerOtherHousehold(input) || input.propertyType !== "housing" || !input.landAcquisitionDate) return undefined;
+  return calculateHoldingPeriod(input.landAcquisitionDate, input.transferDate).years < 2 ? LAND_ONLY_OTHER_HOUSEHOLD_RATE_NOTICE : undefined;
 }

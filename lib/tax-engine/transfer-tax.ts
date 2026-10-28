@@ -46,8 +46,10 @@ import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { oneHouseJudgmentWarnings } from "./transfer-tax-one-house-warnings";
 import { resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { applyLandOnlyHouseholdRule } from "./land-only-owner-household";
+import { landOnlyRateInput } from "./land-only-owner-household";
 import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
 import { LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE } from "./land-only-owner-household";
+import { landOnlyOtherHouseholdRateNotice } from "./land-only-owner-household";
 import { nblDeferralAreaNotice } from "./transfer-tax-nbl-deferral-notice";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
@@ -319,6 +321,7 @@ export function calculateTransferTax(
       pre1990LandResult,
       carryoverDetail, splitCarryover: pre.splitCarryover,
       inheritedAcquisitionStep,
+      transferBurdenedGiftBreakdown,
     });
   }
 
@@ -470,11 +473,7 @@ export function calculateTransferTax(
        *    감면**이 전제라 양도소득금액이 0 이하인 이 경로에서는 성립하지 않는다.)
        */
       rateEcho: (() => {
-        const lossRateInput =
-          selfOwns === "land_only" && effectiveInput.landAcquisitionDate
-            ? { ...effectiveInput, acquisitionDate: effectiveInput.landAcquisitionDate }
-            : effectiveInput;
-        const tr = calcTax(0, parsedRates, lossRateInput, multiHouseSurchargeResult);
+        const tr = calcTax(0, parsedRates, landOnlyRateInput(effectiveInput), multiHouseSurchargeResult);
         return { appliedRate: tr.appliedRate, rateClause: tr.rateClause };
       })(),
     });
@@ -555,6 +554,8 @@ export function calculateTransferTax(
   const { isSurchargeCase, isSuspended: suspendedResult } = resolveSurchargeApplication(surchargeArgs, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules);
   // 토지만 본인 × 다른 세대 — 그 조건을 뺀 판정이 중과였을 때만 배제 사실을 고지한다.
   if (landOnlyBuildingOwnerOtherHousehold(effectiveInput) && resolveSurchargeApplication({ ...surchargeArgs, selfOwns: undefined }, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules).isSurchargeApplied) warnings.push(LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE);
+  const landOnlyRateNotice = landOnlyOtherHouseholdRateNotice(effectiveInput);
+  if (landOnlyRateNotice) warnings.push(landOnlyRateNotice);
   // 명부 없이 원시 플래그로 중과를 건 경우 — 다른 주택이 각 호에 해당하면 결론이 바뀔 수 있다(확인 필요).
   const surchargeFallbackNotice = noRosterSurchargeFallbackNotice({
     houses: effectiveInput.houses, rosterInputUnavailable: hasNoMergeRosterInputPath(effectiveInput),
@@ -677,9 +678,7 @@ export function calculateTransferTax(
   const rateSpecialActive =
     incomeDeduction.eligibleId !== undefined &&
     RATE_SPECIAL_REDUCTION_IDS.includes(incomeDeduction.eligibleId);
-  const taxRateInputBase = selfOwns === "land_only" && effectiveInput.landAcquisitionDate
-    ? { ...effectiveInput, acquisitionDate: effectiveInput.landAcquisitionDate }
-    : effectiveInput;
+  const taxRateInputBase = landOnlyRateInput(effectiveInput);
   // P5: §98①1호 — 세율 20% 단일 강제 (§104① 불구)
   const flatRate20Active = incomeDeduction.eligibleId === "unsold_98";
   const taxRateInput = flatRate20Active

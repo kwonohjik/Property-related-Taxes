@@ -63,6 +63,7 @@ export { classifyRateGroup };
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { ratesForTransferDate, type RatesByTransferDate } from "./transfer-tax-item-rates";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
+import { landOnlyRateInput } from "./land-only-owner-household";
 // transfer-tax-penalty 직접 호출 없음 — 자산별 가산세는 단건 엔진이 처리, aggregate는 합산만 수행.
 
 // ============================================================
@@ -236,14 +237,14 @@ export function buildAssetRecords(
      */
     const rateBasisOverride = result.carryoverTaxationDetail?.adoptedRateBasis;
     /**
-     * 토지만 본인 — 단건 STEP 7은 세율 판정 취득일을 토지 취득일로 바꾼다. 다건은 토지를 주택보다 **나중에** 취득한 경우만 따른다
-     * (그때는 주택부수토지 `max` 규칙과 같은 날이다). 토지를 먼저 산 경우의 기산은 단건과 갈린 채 남긴다 — 계획서
-     * `land-only-later-land-holding.plan.md` Q-2 a · §6.2. 이월과세 채택 시나리오 교정이 뒤에서 덮는다(A면 증여자 취득일).
+     * 토지만 본인 — 단건 STEP 7과 같은 세율 판정 입력(`landOnlyRateInput`)을 따른다: 같은 세대는 `max(토지, 주택)`(토지가 나중일 때만 토지 취득일 —
+     * 계획서 `land-only-lthd-rate-basis.plan.md` Q-2 a), 다른 세대는 토지 취득일 + 비주택 세율(Q-3 a · 서면법규과-944).
+     * 이월과세 채택 시나리오 교정이 뒤에서 덮는다(A면 증여자 취득일).
      */
-    const landOnlyLater =
-      singleInput.selfOwns === "land_only" && singleInput.landAcquisitionDate !== undefined &&
-      singleInput.landAcquisitionDate.getTime() > singleInput.acquisitionDate.getTime();
-    const landOnlyOverride = landOnlyLater ? { acquisitionDate: singleInput.landAcquisitionDate! } : undefined;
+    const landOnlyRate = landOnlyRateInput(singleInput);
+    const landOnlyOverride = landOnlyRate === singleInput
+      ? undefined
+      : { acquisitionDate: landOnlyRate.acquisitionDate, ...(landOnlyRate.nonHousingForRate ? { nonHousingForRate: true } : {}) };
     const hasOverride = nblOverride !== undefined || rateBasisOverride !== undefined || landOnlyOverride !== undefined;
     const correctedItem: TransferTaxItemInput = hasOverride
       ? { ...item, ...landOnlyOverride, ...nblOverride, ...rateBasisOverride }

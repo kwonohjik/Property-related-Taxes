@@ -33,9 +33,11 @@ export function buildRentalLthdParts(args: {
 }): RentalLthdParts | undefined {
   const { splitDetail, nonBusinessGain, laterLandExcluded, housingGain } = args;
   if (!splitDetail) return undefined;
-  if ((splitDetail.selfOwns ?? "both") !== "both") return undefined;
+  const selfOwns = splitDetail.selfOwns ?? "both";
+  if (selfOwns === "building_only") return undefined;
   const landGain = laterLandExcluded ? 0 : splitDetail.land.gain - nonBusinessGain;
-  const buildingGain = splitDetail.building.gain;
+  // 토지만 본인 — 건물은 본인 소유가 아니라 건물 파트 양도차익은 0이다(토지 파트만 통칙·파트별 보유연수를 탄다).
+  const buildingGain = selfOwns === "land_only" ? 0 : splitDetail.building.gain;
   if (landGain + buildingGain !== housingGain) return undefined;
   const landYears = splitDetail.land.holdingYears;
   const buildingYears = splitDetail.building.holdingYears;

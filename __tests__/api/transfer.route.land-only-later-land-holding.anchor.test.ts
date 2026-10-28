@@ -152,3 +152,18 @@ describe("V-2 함께 양도 1세대1주택 단위 — 토지만 본인 주택 �
     expect([p.transferGain, p.income, p.longTermHoldingDeduction]).toEqual([400_000_000, 400_000_000, 0]);
   });
 });
+
+describe("D-3 화면 경로 — 토지만 본인 × 다른 세대 × 토지 8개월은 일반 토지 세율 (`land-only-lthd-rate-basis` Q-3 a · 서면법규과-944)", () => {
+  // 같은 시료: 토지 양도차익 360,000,000 → 기본공제 2,500,000 → 357,500,000. 일반 토지 1년 미만 50% = 178,750,000(주택 70% 250,250,000 아님) · 지방소득세 포함 196,625,000
+  const LAND_ONLY_OTHER = { selfOwns: "land_only", buildingOwnerSameHousehold: false };
+
+  it("단건 — 산출세액 178,750,000 · 총세액 196,625,000", async () => {
+    const r = await run({ ...PUR, ...LAND_ONLY_OTHER });
+    expect(r.status).toBe(200);
+    expect([r.isExempt, r.tax, r.totalTax]).toEqual([false, 178_750_000, 196_625_000]);
+  });
+
+  it("다건 1건 = 단건 — 총세액 196,625,000", async () => {
+    expect(await runMulti({ ...PUR, ...LAND_ONLY_OTHER })).toBe(196_625_000);
+  });
+});

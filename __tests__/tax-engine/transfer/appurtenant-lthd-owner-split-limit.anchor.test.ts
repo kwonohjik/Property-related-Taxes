@@ -1,9 +1,9 @@
 /**
- * anchor: 기본통칙 95-0…1 — **소유자 분리(`selfOwns` ≠ both)와 파트 합 불일치는 통칙·파트별 산식 밖**이다(현재 한계를 고정한다).
+ * anchor: 기본통칙 95-0…1 — **건물만 본인(`building_only`)과 파트 합 불일치는 통칙·파트별 산식 밖**이다(현재 한계를 고정한다).
  *
- * 본인이 토지 또는 건물 한쪽만 소유하면 «주택(건물)보다 보유기간이 오래된 부수토지»의 비교 대상(주택 보유연수)이 본인 파트가 아니고,
- * §155⑳ 경로와 일반 경로 중 어느 쪽 값이 정본인지 근거가 부족하다 — 통칙은 적용하지 않고 종전 값을 그대로 둔다(결과 고지도 내지 않는다).
- * 이 anchor는 그 «적용하지 않음»을 고정한다. 통일은 별도 결정 대상이다.
+ * 본인이 건물만 소유하면 토지 파트가 없어 통칙 비교 대상이 없다. 합 일치 방어도 그대로다.
+ * **토지만 본인(`land_only`)은 이 한계에서 빠졌다** — 같은 세대면 소유자 같음과 같은 통칙·파트별 산식을 탄다
+ * (부동산거래관리과-622 · 재산세제과-1183, 계획서 `land-only-lthd-rate-basis.plan.md` Q-1 a). 종전에는 이 파일이 그 «적용하지 않음»을 고정했다.
  *
  * 기대값은 독립 정수 산식이다(엔진 출력 복사 아님).
  */
@@ -49,18 +49,18 @@ function house(over: Partial<TransferTaxInput> & { buildingGainZero?: boolean })
   } as Partial<TransferTaxInput>);
 }
 
-describe("일반 split 경로 — 소유자 분리는 통칙 미적용 (종전 값: 토지 자신의 보유연수 표2)", () => {
-  it("land_only — 토지분 = 토지 15년 표2(보유 40% + 거주 20% = 60%), 통칙 echo·고지 없음 (통칙 적용 시 56%)", () => {
+describe("일반 split 경로 — 건물만 본인은 통칙 밖 · 토지만 본인은 통칙 적용", () => {
+  it("land_only(같은 세대) — 통칙 적용: max(표1 토지 15년 30%, 표2 주택 9년 보유 36% + 거주 20% = 56%) = 56%, 통칙 echo·고지 있음 (종전 토지 15년 표2 60%)", () => {
     const r = calculateTransferTax(house({ selfOwns: "land_only" }), rates);
     const sd = r.splitDetail!;
     expect(sd.selfOwns).toBe("land_only");
     expect(r.isExempt).toBe(false);
-    expect(sd.land.longTermRate).toBeCloseTo(0.6, 12);
-    expect(sd.land.appurtenantLthd).toBeUndefined();
-    expect(hasNotice(r)).toBe(false);
+    expect(sd.land.longTermRate).toBeCloseTo(0.56, 12);
+    expect(sd.land.appurtenantLthd?.table1Applied).toBe(false);
+    expect(hasNotice(r)).toBe(true);
     // 소유하지 않은 건물 파트는 공제 0
     expect(sd.building.longTermDeduction).toBe(0);
-    expect(sd.land.longTermDeduction).toBe(mulDiv(sd.land.taxableGainAfterProration ?? sd.land.gain, 60, 100));
+    expect(sd.land.longTermDeduction).toBe(mulDiv(sd.land.taxableGainAfterProration ?? sd.land.gain, 56, 100));
   });
 
   it("building_only — 건물분 = 건물 9년 표2 56%, 소유하지 않은 토지 파트는 공제율·공제액 0 (토지 echo·통칙 없음)", () => {
@@ -76,15 +76,18 @@ describe("일반 split 경로 — 소유자 분리는 통칙 미적용 (종전 �
   });
 });
 
-describe("§155⑳ 경로 — 소유자 분리는 종전 단일 보유연수(건물 취득일), 파트 echo 없음", () => {
-  it("land_only(건물 양도차익 0 — 파트 합이 맞아 합 일치 방어를 우회하는 시료) — partsLthd 없음 · 종전 단일 56%", () => {
+describe("§155⑳ 경로 — 건물만 본인은 종전 단일 보유연수(건물 취득일) · 토지만 본인은 토지 파트 통칙", () => {
+  it("land_only(건물 양도차익 0) — 토지 파트만 파트별 산식: 표1 토지 15년 30% · 표2 주택 9년 보유 36% + 거주 20% = 56% → 통칙 56%, 건물 파트 0", () => {
     const r = calculateTransferTax(house({ selfOwns: "land_only", buildingGainZero: true, rentalHousingException: rentalA }), rates);
     const t = r.rentalHousingExceptionDetail!;
     expect(t.applied).toBe(true);
-    expect(t.formulaTrace.partsLthd).toBeUndefined();
-    // 종전: 주택분 전체에 건물 취득일 기준 9년 56% 하나 — 토지 양도차익 1,400,000,000
+    const parts = t.formulaTrace.partsLthd!;
+    // 토지 양도차익 1,400,000,000(양도가 16억 − 취득가 2억)
+    expect([parts.land.gain, parts.land.holdYears, parts.land.rateTable1, parts.land.rateTable2]).toEqual([1_400_000_000, 15, 0.3, 0.56]);
+    expect(parts.land.appurtenant?.table1Applied).toBe(false);
+    expect(parts.building.gain).toBe(0);
     expect(t.formulaTrace.gain95Table2).toBe(1_400_000_000 - mulDiv(1_400_000_000, 56, 100));
-    expect(hasNotice(r)).toBe(false);
+    expect(hasNotice(r)).toBe(true);
   });
 
   it("building_only(토지 양도차익 0) — partsLthd 없음 · 종전 단일 56%", () => {
@@ -96,7 +99,7 @@ describe("§155⑳ 경로 — 소유자 분리는 종전 단일 보유연수(건
   });
 });
 
-describe("buildRentalLthdParts — 두 방어를 각각 단독으로 가른다 (합 일치 · 소유자 분리)", () => {
+describe("buildRentalLthdParts — 두 방어를 각각 단독으로 가른다 (합 일치 · 건물만 본인)", () => {
   const sd = (selfOwns: SplitGainResult["selfOwns"], landGain: number, buildingGain: number): SplitGainResult =>
     ({
       land: { gain: landGain, holdingYears: 15 }, building: { gain: buildingGain, holdingYears: 9 },
@@ -108,9 +111,16 @@ describe("buildRentalLthdParts — 두 방어를 각각 단독으로 가른다 (
     expect(p).toEqual({ land: { gain: 900, holdYears: 15, houseHoldYears: 9 }, building: { gain: 500, holdYears: 9 } });
   });
 
-  it("소유자 분리 방어 — 합이 맞아도(건물 양도차익 0) 한쪽만 소유하면 만들지 않는다", () => {
-    expect(buildRentalLthdParts({ splitDetail: sd("land_only", 1000, 0), nonBusinessGain: 0, housingGain: 1000 })).toBeUndefined();
+  it("건물만 본인 방어 — 합이 맞아도 만들지 않는다(통칙의 비교 대상 토지 파트가 본인 것이 아니다)", () => {
     expect(buildRentalLthdParts({ splitDetail: sd("building_only", 0, 500), nonBusinessGain: 0, housingGain: 500 })).toBeUndefined();
+  });
+
+  it("토지만 본인 — 토지 파트만 만든다(건물 파트 양도차익 0 · 토지가 오래돼 통칙 연수 포함), 합 일치 방어는 그대로", () => {
+    expect(buildRentalLthdParts({ splitDetail: sd("land_only", 1000, 0), nonBusinessGain: 0, housingGain: 1000 }))
+      .toEqual({ land: { gain: 1000, holdYears: 15, houseHoldYears: 9 }, building: { gain: 0, holdYears: 9 } });
+    // 건물 양도차익이 남아 있어도 본인 소유가 아니라 0으로 본다 — 합 일치는 land + 0 = housingGain
+    expect(buildRentalLthdParts({ splitDetail: sd("land_only", 1000, 500), nonBusinessGain: 0, housingGain: 1000 })).toBeDefined();
+    expect(buildRentalLthdParts({ splitDetail: sd("land_only", 1000, 0), nonBusinessGain: 0, housingGain: 1001 })).toBeUndefined();
   });
 
   it("합 일치 방어 — 두 파트를 소유해도 파트 합 ≠ 주택분 양도차익이면 종전 단일 산식으로 후퇴한다(1원 어긋나도)", () => {
