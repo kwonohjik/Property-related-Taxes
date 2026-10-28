@@ -39,7 +39,7 @@ const HH = {
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
 };
 const H: Loose = {
-  addressJibun: "서울 강남구 테스트동 1-1", assetKind: "housing", buildingOwnerSameHousehold: true, acquisitionCause: "inheritance", acquisitionDate: "2015-01-01",
+  addressJibun: "서울 강남구 테스트동 1-1", assetKind: "housing", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false, acquisitionCause: "inheritance", acquisitionDate: "2015-01-01",
   decedentAcquisitionDate: "2005-01-01", actualSalePrice: "500,000,000", publishedValueAtInheritance: "300,000,000",
   inheritanceValuationMethod: "supplementary", standardPriceAtTransfer: "400,000,000", fixedAcquisitionPrice: "",
 };

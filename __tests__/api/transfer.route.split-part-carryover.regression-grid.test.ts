@@ -92,7 +92,7 @@ function buildGrid(): Case[] {
           for (const hostKind of ["primary", "companion"] as const) {
             const fields: Record<string, unknown> = {
               acquisitionCause: "carryover_gift", acquisitionDate: GIFT, acquisitionPrice: 900_000_000, ...v,
-              ...(selfOwns ? { selfOwns, buildingOwnerSameHousehold: true } : {}),
+              ...(selfOwns ? { selfOwns, buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false } : {}),
               ...(landDate === "same" ? { landAcquisitionDate: GIFT } : landDate === "diff" ? { landAcquisitionDate: "1995-03-01" } : {}),
               ...(landCause ? { landAcquisitionCause: landCause } : {}),
             };

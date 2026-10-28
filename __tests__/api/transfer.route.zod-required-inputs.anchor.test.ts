@@ -450,7 +450,7 @@ describe("다건 — 단건과 같은 규칙", () => {
   const item = { ...BASE, propertyId: "p1", propertyLabel: "p1" };
   it("M1 소유자 분리 + 토지 취득일 없음 🔴 400 (종전 분리 없이 계산)", async () => {
     await expectRejected(
-      { taxYear: 2024, properties: [{ ...item, selfOwns: "land_only", buildingOwnerSameHousehold: true }], annualBasicDeductionUsed: 0 },
+      { taxYear: 2024, properties: [{ ...item, selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false }], annualBasicDeductionUsed: 0 },
       "properties.0.landAcquisitionDate",
       multi,
     );
@@ -461,7 +461,7 @@ describe("다건 — 단건과 같은 규칙", () => {
       properties: [
         {
           ...item,
-          selfOwns: "land_only", buildingOwnerSameHousehold: true,
+          selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false,
           landAcquisitionDate: "2003-01-15",
           standardPricePerSqmAtAcquisition: 100_000,
           acquisitionArea: 1000,

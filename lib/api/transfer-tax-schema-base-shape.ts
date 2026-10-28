@@ -606,6 +606,10 @@ export const propertyBaseShape = {
   selfOwns: z.enum(["both", "building_only", "land_only"]).optional(),
   /** V-3′ 토지만 본인 주택 — 건물(주택) 소유자가 양도일 현재 본인과 같은 세대인가(예·아니오). 필수 여부는 `landOnlyHouseholdIssue` */
   buildingOwnerSameHousehold: z.boolean().optional(),
+  /** 토지만 본인 × 같은 세대 — 중간에 세대를 합쳤는가(`true` 합가함 · `false` 처음부터). 필수 여부는 `landOnlyHouseholdMergeIssue` */
+  buildingOwnerHouseholdMerged: z.boolean().optional(),
+  /** 세대를 합친 날 — `buildingOwnerHouseholdMerged === true`일 때 필수 */
+  buildingOwnerHouseholdMergeDate: z.string().date().optional(),
   // buildingFootprintArea / isUrbanArea 는 위 사례 28 블록(신축주택·부수토지)에 선언됨 — 중복 금지
   /** ⑫ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 미정의 시 침묵 stripping 방지 */
   rentalHousingException: rentalHousingExceptionSchema.optional(),

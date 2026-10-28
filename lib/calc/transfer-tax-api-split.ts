@@ -234,6 +234,13 @@ export function buildSplitPayload(
     selfOwns: selfOwnsEff !== "both" ? selfOwnsEff : undefined,
     // V-3′ 토지만 본인 주택의 건물(주택) 소유자 세대 — ⑤ 노출·⑧ 필수와 같은 술어. 범위 밖 잔재(건물만·소유자 같음)는 싣지 않는다.
     ...(asksBuildingOwnerHousehold(primary) ? { buildingOwnerSameHousehold: primary.buildingOwnerSameHousehold } : {}),
+    // 토지만 본인 × 같은 세대 — 합가 여부·합가일(합가함일 때만 날짜). 다른 세대·범위 밖 잔재는 싣지 않는다.
+    ...(asksBuildingOwnerHousehold(primary) && primary.buildingOwnerSameHousehold === true
+      ? {
+          buildingOwnerHouseholdMerged: primary.buildingOwnerHouseholdMerged,
+          ...(primary.buildingOwnerHouseholdMerged === true ? { buildingOwnerHouseholdMergeDate: primary.buildingOwnerHouseholdMergeDate } : {}),
+        }
+      : {}),
     // ⚠️ `selfOwns !== "both"` fallback(2026-07-30) — 소유자 분리를 **비-매매 취득원인**으로
     //    확대하면서 추가. 상속·증여는 취득일이 하나(상속개시일·증여일)라 토지 취득일을 따로
     //    입력받지 않는데, 이 값이 없으면 `calcSplitGain`이 early-return하고(split-gain.ts:356)

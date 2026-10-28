@@ -70,7 +70,7 @@ async function run(a: Loose, hh: Loose = ONE_HOUSE) {
 
 describe("D-2 화면 경로 — 토지만 본인 배율 초과분", () => {
   it("같은 세대 · 1세대1주택 — 이내분 비과세 · 초과분 144,000,000 비사업용(수정 전: 전액 비과세 0)", async () => {
-    const r = await run({ ...PUR, ...EXCESS, selfOwns: "land_only", buildingOwnerSameHousehold: true });
+    const r = await run({ ...PUR, ...EXCESS, selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false });
     expect([r.fields, r.status, r.excessGain, r.tax]).toEqual([[], 200, 144_000_000, 37_867_000]);
     expect([r.body.appurtenantLandZone, r.body.buildingFootprintArea]).toEqual(["metropolitan_residential", 20]);
   });
@@ -89,7 +89,7 @@ describe("D-2 화면 경로 — 토지만 본인 배율 초과분", () => {
 describe("⑧ V9 — 토지 면적이 정착면적 3배 초과면 소재지 구분을 요구한다", () => {
   const noZone = { buildingFootprintArea: "20" };
   it("토지만 본인 — 소재지 미선택이면 그 칸으로(수정 전: 통과해 초과분이 조용히 비과세)", async () => {
-    const r = await run({ ...PUR, ...noZone, selfOwns: "land_only", buildingOwnerSameHousehold: true });
+    const r = await run({ ...PUR, ...noZone, selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false });
     expect(r.fields).toEqual(["appurtenantLandZone"]);
   });
   it("소유자 같음은 종전대로 요구 · 건물만 본인은 요구하지 않는다", async () => {
@@ -99,7 +99,7 @@ describe("⑧ V9 — 토지 면적이 정착면적 3배 초과면 소재지 구�
     expect(bldg.fields).not.toContain("appurtenantLandZone");
   });
   it("매매사례가액 취득도 — 그 분기는 분리 검증 전에 반환한다(소유자 같음은 #17 검사가 받고, 토지만 본인은 수정 전 통과)", async () => {
-    const sc = { ...PUR, ...noZone, isSalesCaseAcquisition: true, similarSalesValue: "300,000,000", selfOwns: "land_only", buildingOwnerSameHousehold: true };
+    const sc = { ...PUR, ...noZone, isSalesCaseAcquisition: true, similarSalesValue: "300,000,000", selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false };
     const r = await run(sc);
     expect(r.fields).toEqual(["appurtenantLandZone"]);
     const answered = await run({ ...sc, appurtenantLandZone: "metropolitan_residential" });
@@ -120,7 +120,7 @@ describe("D-1 화면 경로 — 다른 세대 토지 중과 배제", () => {
     expect([r.status, r.tax, r.warnings.includes(LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE)]).toEqual([200, 100_320_000, true]);
   });
   it("같은 세대 — 종전대로 중과(+20%p · 장특 0)", async () => {
-    const r = await run({ ...PUR, selfOwns: "land_only", buildingOwnerSameHousehold: true }, TWO);
+    const r = await run({ ...PUR, selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false }, TWO);
     // 357,500,000 × (40% + 20%) − 25,400,000 = 189,100,000
     expect([r.status, r.tax, r.warnings.includes(LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE)]).toEqual([200, 189_100_000, false]);
   });
@@ -137,7 +137,7 @@ describe("V-5 다건(⑭ multi route)·함께 양도 자산(컴패니언)도 초
         acquisitionPrice: 300_000_000, acquisitionDate: "2003-01-15", expenses: 0, useEstimatedAcquisition: false,
         householdHousingCount: 1, isRegulatedArea: false, wasRegulatedAtAcquisition: false, isUnregistered: false,
         isNonBusinessLand: false, isOneHousehold: true, residencePeriodMonths: 0, annualBasicDeductionUsed: 0,
-        selfOwns: "land_only", buildingOwnerSameHousehold: true, landAcquisitionDate: "2003-01-15",
+        selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false, landAcquisitionDate: "2003-01-15",
         standardPricePerSqmAtAcquisition: 100_000, acquisitionArea: 1000, standardPriceAtAcquisition: 200_000_000,
         buildingStandardPriceAtAcquisition: 100_000_000, landStandardPriceAtTransfer: 300_000_000, buildingStandardPriceAtTransfer: 100_000_000,
         buildingFootprintArea: 100, appurtenantLandZone: "metropolitan_residential",
@@ -164,7 +164,7 @@ describe("V-5 다건(⑭ multi route)·함께 양도 자산(컴패니언)도 초
       ...ONE_HOUSE, contractTotalPrice: "1700000000",
       assets: [
         { ...makeDefaultAsset(1), ...PUR, assetKind: "land", actualSalePrice: "500,000,000", acquisitionArea: "", transferArea: "" } as AssetForm,
-        { ...makeDefaultAsset(2), ...PUR, ...EXCESS, selfOwns: "land_only", buildingOwnerSameHousehold: true } as AssetForm,
+        { ...makeDefaultAsset(2), ...PUR, ...EXCESS, selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false } as AssetForm,
       ],
     }) as TransferFormData;
     const r = await postTransfer((await captureBody(f)) as Loose);

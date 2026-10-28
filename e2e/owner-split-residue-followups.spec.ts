@@ -61,6 +61,9 @@ async function ownerSplit(page: Page, owns: "building_only" | "land_only") {
     // V-3′ 건물(주택) 소유자 세대(⑧ 필수) — 같은 세대(종전 계산)
     await card(page).getByTestId("building-owner-same-household-yes").first().check();
     await expect.poll(async () => (await storedAsset(page))?.buildingOwnerSameHousehold).toBe(true);
+    // 같은 세대면 합가 여부도 답해야 한다(필수 2택 — land-only-household-merge-date Q-1 b)
+    await card(page).getByTestId("building-owner-household-merged-no").first().check();
+    await expect.poll(async () => (await storedAsset(page))?.buildingOwnerHouseholdMerged).toBe(false);
   }
   await expect.poll(async () => (await storedAsset(page))?.selfOwns).toBe(owns);
 }

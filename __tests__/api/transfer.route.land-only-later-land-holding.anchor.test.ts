@@ -52,7 +52,7 @@ const PUR: Loose = {
   landAcquisitionPrice: "120,000,000", buildingAcquisitionPrice: "180,000,000", saleSplitMode: "actual",
   landTransferPrice: "480,000,000", buildingTransferPrice: "720,000,000",
 };
-const LAND_ONLY_SAME = { selfOwns: "land_only", buildingOwnerSameHousehold: true };
+const LAND_ONLY_SAME = { selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false };
 
 const form = (a: Loose): TransferFormData =>
   Object.assign(createDefaultTransferFormData(), {
@@ -102,10 +102,10 @@ describe("D-1 화면 경로 — 토지만 본인 × 같은 세대 × 나중 취�
     expect(r.warnings).not.toContain(LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE);
   });
 
-  it("토지 보유 2년 이상(2020-06-01)이면 비과세 그대로 — 합가일 고지(Q-3 a)", async () => {
+  it("토지 보유 2년 이상(2020-06-01)이면 비과세 그대로 — 합가 여부를 답했으니 합가일 확인 고지는 없다(`land-only-household-merge-date` Q-1 b — 그 고지는 엔진 직접 호출 미응답에만)", async () => {
     const r = await run({ ...PUR, ...LAND_ONLY_SAME, landAcquisitionDate: "2020-06-01" });
     expect([r.fields, r.status, r.isExempt, r.tax]).toEqual([[], 200, true, 0]);
-    expect(r.warnings).toContain(LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE);
+    expect(r.warnings).not.toContain(LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE);
   });
 
   it("소유자 같음 대조 — 같은 250,250,000 · 합가일 고지 없음", async () => {

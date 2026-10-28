@@ -78,7 +78,7 @@ async function run(a: Loose, hh: Loose = ONE_HOUSE) {
 
 describe("토지만 본인 × 1세대1주택 — 건물(주택) 소유자 세대", () => {
   it("예(같은 세대) → 종전과 같다: 12억 이하 1세대1주택 비과세 · 고지 없음", async () => {
-    const r = await run({ ...PUR, selfOwns: "land_only", buildingOwnerSameHousehold: true });
+    const r = await run({ ...PUR, selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false });
     expect([r.fields, r.status, r.isExempt, r.tax, r.notice]).toEqual([[], 200, true, 0, false]);
     expect(r.body.buildingOwnerSameHousehold).toBe(true);
   });
@@ -101,7 +101,7 @@ describe("토지만 본인 × 1세대1주택 — 건물(주택) 소유자 세대
     const r = await run(sc);
     expect(r.fields).toContain("buildingOwnerSameHousehold");
     expect(r.zod).toContain("buildingOwnerSameHousehold");
-    const answered = await run({ ...sc, buildingOwnerSameHousehold: true });
+    const answered = await run({ ...sc, buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false });
     expect(answered.fields).not.toContain("buildingOwnerSameHousehold");
   });
 });
@@ -166,7 +166,7 @@ describe("다건(⑭ multi route)·함께 양도 자산(⑭ 컴패니언 매핑)
         acquisitionPrice: 300_000_000, acquisitionDate: "2003-01-15", expenses: 0, useEstimatedAcquisition: false,
         householdHousingCount: 1, isRegulatedArea: false, wasRegulatedAtAcquisition: false, isUnregistered: false,
         isNonBusinessLand: false, isOneHousehold: true, residencePeriodMonths: 0, annualBasicDeductionUsed: 0,
-        selfOwns: "land_only", buildingOwnerSameHousehold: same, landAcquisitionDate: "2003-01-15",
+        selfOwns: "land_only", buildingOwnerSameHousehold: same, ...(same ? { buildingOwnerHouseholdMerged: false } : {}), landAcquisitionDate: "2003-01-15",
         standardPricePerSqmAtAcquisition: 100_000, acquisitionArea: 1000, standardPriceAtAcquisition: 200_000_000,
         buildingStandardPriceAtAcquisition: 100_000_000, landStandardPriceAtTransfer: 300_000_000, buildingStandardPriceAtTransfer: 100_000_000,
       },
@@ -194,7 +194,7 @@ describe("다건(⑭ multi route)·함께 양도 자산(⑭ 컴패니언 매핑)
         ...ONE_HOUSE, contractTotalPrice: "1700000000",
         assets: [
           { ...makeDefaultAsset(1), ...PUR, assetKind: "land", actualSalePrice: "500,000,000", acquisitionArea: "", transferArea: "" } as AssetForm,
-          { ...makeDefaultAsset(2), ...PUR, selfOwns: "land_only", buildingOwnerSameHousehold: same } as AssetForm,
+          { ...makeDefaultAsset(2), ...PUR, selfOwns: "land_only", buildingOwnerSameHousehold: same, ...(same ? { buildingOwnerHouseholdMerged: false } : {}) } as AssetForm,
         ],
       }) as TransferFormData;
     const same = await postTransfer((await captureBody(f(true))) as Loose);

@@ -11,6 +11,7 @@ import { refineMixedSaleSplitSingleOnly } from "./transfer-tax-schema-mixed-use"
 import { z } from "zod";
 import { newConstructionLandOnlyIssue } from "./transfer-tax-schema-household-refines";
 import { landOnlyHouseholdIssue } from "./transfer-tax-schema-household-refines";
+import { landOnlyHouseholdMergeIssue } from "./transfer-tax-schema-household-refines";
 import {
   filingPenaltyDetailsSchema,
   delayedPaymentDetailsSchema,
@@ -196,6 +197,8 @@ export const propertySchema = z
       if (ncMsg) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "selfOwns"], message: ncMsg });
       const lohMsg = landOnlyHouseholdIssue({ ...c, propertyType: c.assetKind });
       if (lohMsg) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "buildingOwnerSameHousehold"], message: lohMsg });
+      const mergeIssue = landOnlyHouseholdMergeIssue({ ...c, propertyType: c.assetKind, transferDate: data.transferDate });
+      if (mergeIssue) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, mergeIssue.field], message: mergeIssue.message });
     });
     if (companions.length > 0) {
       // 총 양도가액 필수

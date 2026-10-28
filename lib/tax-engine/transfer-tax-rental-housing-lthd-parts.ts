@@ -30,8 +30,10 @@ export function buildRentalLthdParts(args: {
   laterLandExcluded?: boolean;
   /** 호출부가 특례 계산에 쓰는 주택분 양도차익(= 양도차익 − 배율 초과분) */
   housingGain: number;
+  /** 표2 후보 연수(「주택 부수토지로서의 보유기간」) — 토지만 본인이 합가일을 넣어 건물 보유연수와 달라진 경우만. 없으면 건물 보유연수 */
+  houseYearsOverride?: number;
 }): RentalLthdParts | undefined {
-  const { splitDetail, nonBusinessGain, laterLandExcluded, housingGain } = args;
+  const { splitDetail, nonBusinessGain, laterLandExcluded, housingGain, houseYearsOverride } = args;
   if (!splitDetail) return undefined;
   const selfOwns = splitDetail.selfOwns ?? "both";
   if (selfOwns === "building_only") return undefined;
@@ -41,12 +43,13 @@ export function buildRentalLthdParts(args: {
   if (landGain + buildingGain !== housingGain) return undefined;
   const landYears = splitDetail.land.holdingYears;
   const buildingYears = splitDetail.building.holdingYears;
+  const houseYears = houseYearsOverride ?? buildingYears;
   return {
     land: {
       gain: landGain,
       holdYears: landYears,
-      // 기본통칙 95-0…1 — 토지가 주택보다 보유기간이 오래된 경우에만 「주택 부수토지로서의 보유기간」(= 건물 보유연수)이 쓰인다.
-      ...(landYears > buildingYears ? { houseHoldYears: buildingYears } : {}),
+      // 기본통칙 95-0…1 — 토지가 주택보다 보유기간이 오래된 경우에만 「주택 부수토지로서의 보유기간」(= 건물 보유연수 · 합가일 반영)이 쓰인다.
+      ...(landYears > houseYears ? { houseHoldYears: houseYears } : {}),
     },
     building: { gain: buildingGain, holdYears: buildingYears },
   };

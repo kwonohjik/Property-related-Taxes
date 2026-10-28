@@ -56,6 +56,7 @@ import {
 } from "./one-house/rental-residence-holding-proviso";
 import { landRebuildNoticeOf } from "./transfer-tax-rebuild-notice";
 import { landOnlyRateInput } from "./land-only-owner-household";
+import { landOnlyAppurtenantHouseYears } from "./land-only-owner-household";
 
 // 요건 판정·조기반환 게이트는 800줄 정책으로 분리 — 기존 import 경로 호환 재export.
 export {
@@ -228,7 +229,10 @@ export function runRentalHousingExceptionStep(
     resolveHighValueDenominator(effectiveInput) > resolveHighValueHouseThreshold(effectiveInput.transferDate);
   const rulingFacts = rulingGateOpen ? buildRentalHighValueExcessRuling(effectiveInput, splitDetail!, nbl!) : undefined;
   // 장기보유특별공제는 토지·건물 **파트별 보유연수**로 구한다(§95④ — 일반 경로 split 분기와 같은 규칙). 분리 취득이 아니면 종전 단일 보유연수.
-  const lthdParts = buildRentalLthdParts({ splitDetail, nonBusinessGain: nbl?.gain ?? 0, laterLandExcluded: !!laterLand, housingGain });
+  const lthdParts = buildRentalLthdParts({
+    splitDetail, nonBusinessGain: nbl?.gain ?? 0, laterLandExcluded: !!laterLand, housingGain,
+    houseYearsOverride: splitDetail ? landOnlyAppurtenantHouseYears(effectiveInput, splitDetail.building.holdingYears) : undefined,
+  });
   const calcRhe = (rhInput: RentalHousingExceptionInput, eligibilityOverride?: EligibilityResult) => calculateRentalHousingException(
     rhInput,
     housingGain,

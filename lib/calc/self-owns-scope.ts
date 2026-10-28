@@ -60,3 +60,23 @@ export function buildingOwnerHouseholdError(
     ? fieldError("buildingOwnerSameHousehold", `${label}: 건물(주택) 소유자가 양도일 현재 본인과 같은 세대인지 선택하세요 (소득세법 시행령 §154①).`)
     : null;
 }
+
+/**
+ * ⑧ 토지만 본인 × 같은 세대 — 세대 합가 여부(처음부터 / 합가함)와 합가일 필수(⑫ `landOnlyHouseholdMergeIssue`와 같은 술어 · 계획서
+ * `land-only-household-merge-date.plan.md` Q-1 b). 합가일은 양도일 이후일 수 없다. 분리 검증과 매매사례가액 분기가 함께 부른다(⑧ 통과 ↔ ⑫ 400 방지).
+ */
+export function buildingOwnerMergeError(
+  asset: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns" | "buildingOwnerSameHousehold" | "buildingOwnerHouseholdMerged" | "buildingOwnerHouseholdMergeDate">,
+  label: string,
+  formTransferDate?: string,
+): string | null {
+  if (!asksBuildingOwnerHousehold(asset) || asset.buildingOwnerSameHousehold !== true) return null;
+  if (asset.buildingOwnerHouseholdMerged === undefined) {
+    return fieldError("buildingOwnerHouseholdMerged", `${label}: 같은 세대인 건물(주택) 소유자와 처음부터 같은 세대였는지, 중간에 합쳤는지 선택하세요 (재산46014-610).`);
+  }
+  if (asset.buildingOwnerHouseholdMerged !== true) return null;
+  const date = asset.buildingOwnerHouseholdMergeDate;
+  if (!date) return fieldError("buildingOwnerHouseholdMergeDate", `${label}: 세대를 합친 날을 입력하세요 (합가 이후 기간만 주택부수토지로서 보유한 기간입니다 — 재산46014-610).`);
+  if (formTransferDate && date > formTransferDate) return fieldError("buildingOwnerHouseholdMergeDate", `${label}: 세대를 합친 날은 양도일 이후일 수 없습니다.`);
+  return null;
+}

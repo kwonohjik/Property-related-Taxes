@@ -25,7 +25,7 @@ const asset = (over: Record<string, unknown> = {}) =>
     hasSeperateLandAcquisitionDate: true, // 소유자 분리 토글이 강제로 켠다(`CompanionAcquisitionCauseSection` onSelfOwnsChange)
     landAcquisitionDate: "",
     selfOwns: "land_only",
-    buildingOwnerSameHousehold: true,
+    buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false,
     useEstimatedAcquisition: false,
     saleSplitMode: "apportioned",
     ...over,
