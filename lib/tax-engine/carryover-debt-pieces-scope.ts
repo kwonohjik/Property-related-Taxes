@@ -11,7 +11,9 @@
 
 /** 사용자에게 보이는 사유 — ⑤ 안내·⑧ 메시지·⑫ 메시지가 같은 문자열을 쓴다. */
 export const DEBT_PIECES_REASON = {
-  propertyType: "분양권·입주권·재개발·겸용·일반건물은 지원하지 않습니다",
+  propertyType: "분양권·입주권·재개발·겸용은 지원하지 않습니다",
+  /** 일반건물은 카드(`general_building_unit`)로 풀려 지원하지만, 와이어 최상위·엔진 모양 서브객체로는 채무를 받지 않는다 — 파트(`landCarryoverPart`/`buildingCarryoverPart`)로만 들어온다. */
+  generalBuildingShape: "일반건물은 파트별 이월과세 입력(토지·건물)으로만 채무를 받습니다",
   burdenedGift: "지금 양도하는 자산도 부담부증여입니다",
   ownerSplit: "토지·건물 소유자 분리 또는 별개 취득(파트별 계산)입니다",
   donorEstimation: "증여자 취득가액을 개별주택가격 미공시(공동주택 최초고시 전) 환산 또는 1990.8.30. 전 토지·다필지·상속 평가로 정합니다",
@@ -23,15 +25,17 @@ export const DEBT_PIECES_REASON = {
   depreciation: "감가상각비(소득세법 제97조 제3항)가 있습니다",
 } as const;
 
-const SUPPORTED_PROPERTY_TYPES = new Set(["housing", "land", "building"]);
+/** `general_building_unit` = 일반건물 카드(토지·건물 파트가 카드로 풀린 뒤의 엔진 입력 — `general-building-route-cards.ts`). 와이어 `general_building`은 아니다. */
+const SUPPORTED_PROPERTY_TYPES = new Set(["housing", "land", "building", "general_building_unit"]);
 
 const present = (v: unknown): boolean => v !== undefined && v !== null;
 const nonEmptyArray = (v: unknown): boolean => Array.isArray(v) && v.length > 0;
 
 /** 지원하지 않는 입력이면 사유, 지원하면 `null`. `input`은 와이어 본문이든 엔진 입력이든 키 이름이 같으면 된다. */
 export function carryoverDebtPiecesUnsupportedReason(input: Record<string, unknown>): string | null {
+  if (input.propertyType === "general_building" || present(input.generalBuildingValuation)) return DEBT_PIECES_REASON.generalBuildingShape;
   if (present(input.propertyType) && !SUPPORTED_PROPERTY_TYPES.has(input.propertyType as string)) return DEBT_PIECES_REASON.propertyType;
-  if (present(input.mixedUse) || present(input.generalBuildingValuation) || present(input.redevelopment)) return DEBT_PIECES_REASON.propertyType;
+  if (present(input.mixedUse) || present(input.redevelopment)) return DEBT_PIECES_REASON.propertyType;
   if (input.transferType === "burdened_gift" || present(input.burdenedGiftInfo)) return DEBT_PIECES_REASON.burdenedGift;
   if (
     (present(input.selfOwns) && input.selfOwns !== "both") ||

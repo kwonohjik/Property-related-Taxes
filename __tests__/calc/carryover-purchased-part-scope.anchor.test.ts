@@ -23,9 +23,24 @@ describe("범위 술어 — kind 격자", () => {
   it("이월과세가 아니면 none", () => {
     expect(kind(asset({ acquisitionCause: "purchase" }))).toBe("none");
   });
-  it("일반건물 · 파트 이월과세(C) → numerator_only (자기 위치의 토글 · V-7 분자 전용)", () => {
-    expect(kind(asset({ assetKind: "general_building" }))).toBe("numerator_only");
+  it("주택 분리 계산 · 파트 이월과세(C) → numerator_only (자기 위치의 토글 · V-7 분자 전용 — 비지원 + 결과 고지 T2)", () => {
     expect(kind(asset({ carryoverDonorSplit: true } as Partial<AssetForm>))).toBe("numerator_only");
+  });
+  it("일반건물 일반 양도(E2) → apply · 부담부증여 일반건물(E4) → numerator_only · 이월과세가 아니면 none (PR-2 승격)", () => {
+    expect(kind(asset({ assetKind: "general_building" }))).toBe("apply");
+    expect(kind(asset({ assetKind: "general_building", transferType: "burdened_gift" } as Partial<AssetForm>))).toBe("numerator_only");
+    expect(kind(asset({ assetKind: "general_building", acquisitionCause: "purchase" }))).toBe("none");
+  });
+  it("일반건물 건물만 이월과세 — acquisitionCause가 이월과세가 아니어도 apply (gbBuildingAcquisitionCause가 정본)", () => {
+    expect(kind(asset({ assetKind: "general_building", acquisitionCause: "purchase", gbBuildingAcquisitionCause: "carryover_gift" }))).toBe("apply");
+  });
+  it.each<[string, Partial<AssetForm>, string]>([
+    ["감면 선택", { reductions: [{ type: "self_farming" } as never] } as Partial<AssetForm>, "감면"],
+    ["주택→상가 용도변경", { gbHouseToCommercialConversion: true } as Partial<AssetForm>, "취득 시점"],
+  ])("일반건물 %s → unsupported (사유는 ⑧·⑫와 같은 상수)", (_n, over, hint) => {
+    const s = carryoverPurchasedPartScope(asset({ assetKind: "general_building", ...over }));
+    expect(s.kind).toBe("unsupported");
+    expect(s.kind === "unsupported" && s.reason.includes(hint)).toBe(true);
   });
   it("함께 양도 둘째 자산의 C 잔재는 꺼진 것으로 읽는다 → apply", () => {
     expect(kind(asset({ carryoverDonorSplit: true } as Partial<AssetForm>), { isNonPrimary: true })).toBe("apply");
@@ -57,7 +72,7 @@ describe("carryoverPurchasedPartDebt — ④가 보내는 값(apply ∧ 토글 O
     expect(carryoverPurchasedPartDebt(asset({}, { giftAssumedDebt: "0" }))).toBe(0);
     expect(carryoverPurchasedPartDebt(asset({}, { giftAssumedDebt: "" }))).toBe(0);
   });
-  it("numerator_only(일반건물·파트) · unsupported(부담부증여) → 0 — 남은 ON 값이 새 키로 새지 않는다", () => {
+  it("일반건물(파트마다 ④가 따로 싣는다) · unsupported(부담부증여) → 0 — 남은 ON 값이 새 키로 새지 않는다", () => {
     expect(carryoverPurchasedPartDebt(asset({ assetKind: "general_building" }))).toBe(0);
     expect(carryoverPurchasedPartDebt(asset({ transferType: "burdened_gift" } as Partial<AssetForm>))).toBe(0);
   });

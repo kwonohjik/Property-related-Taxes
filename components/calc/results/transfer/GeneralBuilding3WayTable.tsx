@@ -4,7 +4,21 @@ import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
+import { foldPurchasedPieces } from "@/lib/tax-engine/general-building-purchased-pieces";
 import { gbViewProperties, type GbBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
+
+/** 꼬리 카드(매입분)를 부모에 합칠 때 더하는 수치 — 이 표가 읽는 행들이다(세율·공제율 같은 비율은 더하지 않는다). */
+const THREE_WAY_SUM_KEYS = [
+  "transferPrice",
+  "acquisitionPrice",
+  "necessaryExpense",
+  "transferGain",
+  "longTermHoldingDeduction",
+  "income",
+  "lossOffsetFromSameGroup",
+  "lossOffsetFromOtherGroup",
+  "incomeAfterOffset",
+] as const;
 
 /**
  * 일반건물 증축 케이스(사례 33) 전용 — 토지(1001)·건물1(3001)·건물2(3002) 3열 요약 표.
@@ -17,7 +31,8 @@ import { gbViewProperties, type GbBlockView } from "@/components/calc/results/tr
  */
 export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: AggregateTransferResult; view?: GbBlockView }) {
   // 3-way 유효성 확인: 정확히 3개 카드이고, 마지막 카드가 "증축건물(3002)"일 때만 렌더
-  const props = view ? gbViewProperties(aggregated, view) : aggregated.properties;
+  // 당초 증여 때 인수한 채무 부분(매입분) 꼬리 카드는 부모(증여분) 카드에 합쳐 세 열로 그린다 — 합치지 않으면 카드가 4장이 되어 이 표가 통째로 사라진다.
+  const props = foldPurchasedPieces(view ? gbViewProperties(aggregated, view) : aggregated.properties, THREE_WAY_SUM_KEYS);
   if (props.length !== 3) return null;
   const hasExtension = props.some((p) => p.propertyLabel.includes("3002"));
   if (!hasExtension) return null;

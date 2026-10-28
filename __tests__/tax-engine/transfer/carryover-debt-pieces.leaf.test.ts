@@ -80,9 +80,14 @@ describe("splitCarryoverDebtPieces", () => {
     expect(p.purchased.ownershipRatio).toBe(0.5);
   });
   it("r = 1 — 증여분 없음 · 매입분이 원 id · 양도가액·필요경비 전액", () => {
-    const p = splitCarryoverDebtPieces(card(), { debt: 1_000_000_000, valuation: 1_000_000_000, keep: 0 });
+    const p = splitCarryoverDebtPieces(card({}, { donorCapitalExpenditure: undefined }), { debt: 1_000_000_000, valuation: 1_000_000_000, keep: 0 });
     expect(p.gift).toBeUndefined();
     expect(p.purchased).toMatchObject({ propertyId: "primary", transferPrice: 1_500_000_000, acquisitionPrice: 1_000_000_000, capitalExpenditure: 50_000_000 });
+  });
+  it("r = 1 + 증여자 자본적지출(2024.1.1. 이후 양도) → 던진다 · 그 전 양도는 0으로 읽혀 통과", () => {
+    const r1 = { debt: 1_000_000_000, valuation: 1_000_000_000, keep: 0 };
+    expect(() => splitCarryoverDebtPieces(card(), r1)).toThrow(/증여자 자본적지출/);
+    expect(splitCarryoverDebtPieces(card({ transferDate: D("2023-12-31") }), r1).gift).toBeUndefined();
   });
   it("조각 양도가액이 0원으로 떨어지면 던진다", () => {
     expect(() => splitCarryoverDebtPieces(card({ transferPrice: 1 }), { debt: 1, valuation: 1_000_000_000, keep: 999_999_999 })).toThrow();

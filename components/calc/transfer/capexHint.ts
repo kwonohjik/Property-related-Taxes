@@ -10,7 +10,14 @@
  */
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 
-export function capexHint(label: string, mode: PartAcqMode, withExtension = false): string {
+/** 이월과세 × 당초 증여 채무 부분(매입분)을 나누는 파트의 실가 자본적지출 — 증여분과 채무 인수 부분이 같은 몫으로 나눠 쓴다(계획서 Q-2 a). 환산 파트는 문구를 정하지 않는다(엔진 설계서 §3.5 · V-1 · V-2). */
+export const CAPEX_DEBT_SPLIT_SENTENCE =
+  " 당초 증여 때 채무를 인수했으면 증여분과 채무 인수 부분에 같은 몫(증여 당시 평가액 − 인수한 채무 : 인수한 채무)으로 나누어 적용합니다.";
+
+/**
+ * @param debtSplits 이 파트에 채무 부분(매입분) 조각 규칙이 적용된다 — 실가 모드에서만 «같은 몫» 문장을 덧붙인다.
+ */
+export function capexHint(label: string, mode: PartAcqMode, withExtension = false, debtSplits = false): string {
   if (mode === "estimated") {
     return `${label}이 환산취득가여서 「환산취득가 + 개산공제」와 「자본적지출」 중 큰 쪽만 필요경비가 됩니다 (소득세법 §97②2호). 없으면 비워두세요`;
   }
@@ -21,5 +28,5 @@ export function capexHint(label: string, mode: PartAcqMode, withExtension = fals
   if (mode === "appraisal" || mode === "salesCase") {
     return `${label}은 추계 취득가액이라 개산공제(§163⑥)가 적용되고 자본적지출은 차감되지 않습니다. 없으면 비워두세요`;
   }
-  return `${label}에 귀속되는 자본적지출만 입력, 없으면 비워두세요`;
+  return `${label}에 귀속되는 자본적지출만 입력, 없으면 비워두세요${debtSplits ? "." + CAPEX_DEBT_SPLIT_SENTENCE : ""}`;
 }

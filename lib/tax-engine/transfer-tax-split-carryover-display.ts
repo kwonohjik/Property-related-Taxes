@@ -10,6 +10,7 @@
 import { TRANSFER } from "./legal-codes";
 import { DONOR_BUILT_SPLIT_UNDECLARED_NOTICE } from "./transfer-tax-carryover-donor-display";
 import { CARRYOVER_EXCLUSION_REASON_LABELS } from "./transfer-carryover-exclusion-labels";
+import { carryoverNumeratorOnlyLine } from "./transfer-tax-carryover-purchased-part-display";
 import { splitRateBasisDateText, splitRateBasisNote } from "./transfer-tax-split-display";
 import type { SplitGainResult, SplitPartCarryoverEcho, SplitPartResult } from "./types/transfer-split-gain.types";
 
@@ -271,11 +272,21 @@ export function splitCarryoverVerdictText(p: SplitCarryoverPartView): string {
 }
 
 /**
+ * 당초 증여 때 인수한 채무(T2) — 주택 분리 계산은 채무 인수 부분을 증여분과 나누지 않는다(비지원 · UI 설계서 Q-UI-1 b). 증여세 상당액 안분의 분자에서만 뺐다는 **사실**을 파트별로 알린다.
+ * 「확인 필요」 목록(`splitCarryoverNotices`)에 섞지 않는다 — 그쪽은 해석례를 확인하지 못한 판정을 밝히는 자리이고 이 문장은 계산한 사실이다.
+ * 카드·상세명세서·PDF(인쇄)가 같은 문장을 쓴다. 채무가 없으면 빈 배열(T0).
+ */
+export function splitCarryoverDebtNotices(v: SplitCarryoverView): string[] {
+  return v.parts.filter((p) => p.giftAssumedDebt > 0).map((p) => carryoverNumeratorOnlyLine(p.giftAssumedDebt, p.label));
+}
+
+/**
  * 「확인 필요」 고지 — 비교 단위(파트별)는 정면 해석례를 확인하지 못했고, 안정 구성이 둘이면 판정 순서가 결과를 가른다.
  * P5 §97의2②2호 — 판정 단위(주택 일체)·상태(건물·토지 각각)·배우자 예외 범위(통째 증여만)도 파트 이월과세를 정면으로 다룬 해석례가 없다.
  */
 export function splitCarryoverNotices(v: SplitCarryoverView): string[] {
   const out: string[] = [];
+
   // ②2호가 걸리면 ②3호 비교는 하지 않았다 — 비교 단위 고지는 비교를 했을 때만
   if (!v.oneHouseExclusion)
     out.push(

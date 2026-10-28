@@ -11,6 +11,7 @@ import {
   type TransferTaxResult,
 } from "./transfer-tax";
 import { calculateProgressiveTax } from "./tax-utils";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
 import { offsetLossesCore } from "./loss-offset-core";
 import { crossLossOffsetRateKey } from "./cross-loss-offset-rate-key";
@@ -33,7 +34,8 @@ export function validateInput(input: AggregateTransferInput): void {
     throw new Error("다건 양도 입력: properties는 1건 이상이어야 합니다.");
   }
   if (input.properties.length > 20) {
-    throw new Error("다건 양도 입력: properties는 최대 20건까지 지원합니다.");
+    // 일반 Error는 route에서 500이 된다 — 지분 N × 카드 + 이월과세 채무 부분(매입분) 꼬리가 20을 넘을 수 있어(PR-2 V-7) 입력 오류(400)로 돌려준다.
+    throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, "다건 양도 입력: properties는 최대 20건까지 지원합니다(이월과세 채무 부분(매입분)을 나눈 카드도 셉니다).");
   }
   const ids = new Set<string>();
   for (const p of input.properties) {

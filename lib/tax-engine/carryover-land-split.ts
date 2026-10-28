@@ -48,6 +48,8 @@ export function splitLandCarryover(
   const bizValuation = cut(ct.giftDateValuation);
   const bizGiftTax = cut(ct.giftTaxAmount);
   const bizCapex = cut(ct.donorCapitalExpenditure ?? 0);
+  // 당초 증여 때 인수한 채무(매입분, PR-2 R2) — 평가액과 같은 비율로 자른다. 카드별 r = 카드 채무 ÷ 카드 평가액이 파트 r과 같아진다.
+  const bizDebt = cut(ct.giftAssumedDebt ?? 0);
 
   // ⚠️ `undefined`는 「입력 없음」이라 0과 의미가 다르다(환산 경로 분기) — 그대로 남긴다.
   return {
@@ -57,6 +59,7 @@ export function splitLandCarryover(
       ...(ct.donorCapitalExpenditure === undefined ? {} : { donorCapitalExpenditure: bizCapex }),
       giftDateValuation: bizValuation,
       giftTaxAmount: bizGiftTax,
+      ...(ct.giftAssumedDebt === undefined ? {} : { giftAssumedDebt: bizDebt }),
     },
     nbl: {
       ...ct,
@@ -68,6 +71,7 @@ export function splitLandCarryover(
         : { donorCapitalExpenditure: ct.donorCapitalExpenditure - bizCapex }),
       giftDateValuation: ct.giftDateValuation - bizValuation,
       giftTaxAmount: ct.giftTaxAmount - bizGiftTax,
+      ...(ct.giftAssumedDebt === undefined ? {} : { giftAssumedDebt: ct.giftAssumedDebt - bizDebt }),
     },
   };
 }

@@ -17,6 +17,7 @@ import { usesBundledPartAcquisition } from "@/lib/tax-engine/general-building-pa
 import { partialAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
 import { GB_PRE_DEEMED_NUMERATOR_MESSAGE } from "@/lib/tax-engine/general-building-pre-deemed";
 import { LAND_INHERITED_ESTIMATION_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
+import { DEBT_PIECES_REASON } from "@/lib/tax-engine/carryover-debt-pieces-scope";
 
 /** 주택 분할 경로의 토지 문구(`LAND_INHERITED_ESTIMATION_MESSAGE`)와 짝 — 일반건물은 건물 파트도 상속·증여일 수 있다. */
 export const GB_BUILDING_INHERITED_ESTIMATION_MESSAGE =
@@ -33,6 +34,8 @@ type PartMode = "actual" | "estimated" | "appraisal" | "salesCase";
 type CarryoverPartLike = {
   giftDateAssetValue: number;
   giftAssumedDebt?: number;
+  donorCapitalExpenditure?: number;
+  donorBuilt?: object;
   useEstimatedAcquisition: boolean;
   donorAcquisitionPrice?: number;
   donorStandardPriceAtAcquisition?: number;
@@ -79,7 +82,12 @@ export type GbValuationLike = {
   buildingCarryoverTaxation?: CarryoverLegacyLike;
   landAppraisalAtTransfer?: number;
   buildingAppraisalAtTransfer?: number;
+  houseToCommercialConversion?: boolean;
+  depreciationAmount?: number;
 };
+
+/** 파트 조각 규칙(채무 부분 — PR-2 R5) 차단 문구. 사유 상수는 엔진 술어 `carryoverDebtPiecesUnsupportedReason`·⑧과 같은 것을 쓴다. */
+const debtPiecesBlocked = (reason: string) => `당초 증여 때 인수한 채무 부분을 시나리오 A에서 나누어 계산하지 못하는 입력입니다(${reason})`;
 
 /**
  * 서브객체만으로 판정되는 규칙.
@@ -174,6 +182,19 @@ export function refineGbValuationRequired(v: GbValuationLike, ctx: z.RefinementC
     if (landBlocked || buildingBlocked)
       issue([landBlocked ? "landAcqMode" : "buildingAcqMode"], GB_EXTENSION_UNIFIED_ESTIMATE_MESSAGE);
   }
+
+  // 이월과세 × 당초 증여 때 인수한 채무 부분(매입분, PR-2 R5) — 서브객체만으로 판정되는 차단. 엔진 술어(`carryoverDebtPiecesUnsupportedReason`)가 카드에서 같은 사유로 던진다
+  //   (400이지만 필드 오류가 아니다 — 여기서 먼저 필드 위치로 막는다). 단건·지분·컴패니언 모든 valuation에 걸린다.
+  const debtPart = (cause: string | undefined, p: CarryoverPartLike | undefined) => (cause === "carryover_gift" && p && (p.giftAssumedDebt ?? 0) > 0 ? p : undefined);
+  const landDebt = debtPart(v.landAcquisitionCause, v.landCarryoverPart);
+  const buildingDebt = debtPart(v.buildingAcquisitionCause, v.buildingCarryoverPart);
+  const debtPath = (landDebt ? "landCarryoverPart" : "buildingCarryoverPart") as "landCarryoverPart" | "buildingCarryoverPart";
+  if ((landDebt || buildingDebt) && v.houseToCommercialConversion)
+    issue([debtPath, "giftAssumedDebt"], debtPiecesBlocked(DEBT_PIECES_REASON.acquisitionFacts));
+  if (buildingDebt && positive(v.depreciationAmount))
+    issue(["buildingCarryoverPart", "giftAssumedDebt"], debtPiecesBlocked(DEBT_PIECES_REASON.depreciation));
+  if (buildingDebt?.donorBuilt)
+    issue(["buildingCarryoverPart", "giftAssumedDebt"], debtPiecesBlocked(DEBT_PIECES_REASON.donorBuilt));
 }
 
 /** Q-A3 차단 문구 — ⑧ R9(A2)와 **같은 문자열**을 쓴다(UI 통과 ↔ 서버 400 문구 불일치 방지). */
@@ -182,6 +203,8 @@ export const GB_EXTENSION_UNIFIED_ESTIMATE_MESSAGE =
 
 type GbPropertyLike = {
   transferType?: string;
+  transferDate?: string;
+  reductions?: unknown[];
   acquisitionPrice?: number;
   useEstimatedAcquisition: boolean;
   generalBuildingValuation?: unknown;
@@ -254,14 +277,14 @@ export function refineGbPropertyRequired(data: GbPropertyLike, ctx: z.Refinement
       issue(["bundledAcquisitionPrice"], "증축이 있는 일반건물 — 토지·건물1 일괄 취득가액이 필요합니다 (사례 33 · 소득세법 §97①1호)");
   }
 
-  refineGbCarryover(v, issue);
+  refineGbCarryover(v, issue, data);
 }
 
 /**
  * C1~C4 — 이월과세(§97의2) 파트 입력. ⑧ `transfer-tax-validate-gb-carryover.ts`의 거울.
  * 비우면 `composeGbCarryover`가 그 파트의 이월과세를 **조용히 빼고**(일반 증여로 계산) 증여자 가액은 0으로 읽었다.
  */
-function refineGbCarryover(v: GbValuationLike, issue: Issue) {
+function refineGbCarryover(v: GbValuationLike, issue: Issue, data: Pick<GbPropertyLike, "transferDate" | "reductions">) {
   const landC = v.landAcquisitionCause === "carryover_gift";
   const buildingC = v.buildingAcquisitionCause === "carryover_gift";
   if (!landC && !buildingC) return;
@@ -289,6 +312,12 @@ function refineGbCarryover(v: GbValuationLike, issue: Issue) {
       // 영 §163의2②2호 분자 = 평가액 − 당초 증여 때 인수한 채무. 채무가 평가액을 넘을 수는 없다.
       if ((p.giftAssumedDebt ?? 0) > p.giftDateAssetValue)
         issue([`${part}CarryoverPart`, "giftAssumedDebt"], `${noun} 파트의 당초 증여 때 인수한 채무가 증여 당시 평가액보다 큽니다 (상속세 및 증여세법 §47①)`);
+      // 채무 부분(매입분, PR-2 R5) — 최상위 감면은 모든 카드가 받는다. 채무 = 평가액(r = 1)이면 증여받은 부분이 없어 증여자 자본적지출을 적용할 곳이 없다(2024.1.1. 이후 양도분만 — ⑧ `validateGbCarryoverDebt`와 같은 기준).
+      if ((p.giftAssumedDebt ?? 0) > 0) {
+        if ((data.reductions?.length ?? 0) > 0) issue([`${part}CarryoverPart`, "giftAssumedDebt"], debtPiecesBlocked(DEBT_PIECES_REASON.reductions));
+        if (p.giftAssumedDebt === p.giftDateAssetValue && (data.transferDate ?? "") >= "2024-01-01" && positive(p.donorCapitalExpenditure))
+          issue([`${part}CarryoverPart`, "donorCapitalExpenditure"], "당초 증여 때 인수한 채무가 증여 당시 평가액과 같으면 증여받은 부분이 없어 증여자 자본적지출을 적용할 곳이 없습니다 — 이 칸을 비우세요");
+      }
       partValueSum += Math.max(0, p.giftDateAssetValue - (p.giftAssumedDebt ?? 0));
       checkDonorValues(p.giftDateAssetValue, p, [`${part}CarryoverPart`], noun, "giftDateAssetValue", issue);
     } else if (legacy) {

@@ -304,6 +304,13 @@ describe("[집계 소제목] 일반건물 카드 echo — acquisitionMode(구 �
     const gb = gbOf([{ propertyId: "land#0", acquisitionMode: "estimated" }]);
     expect([...aggregateAcqModes([pr("land#0")], gb)]).toEqual(["estimated"]);
   });
+
+  it("이월과세 채무 매입분 꼬리 카드(land__purchased · land__purchased#0)는 건너뛴다 — 꼬리가 «실거래가»를 보태 환산 소제목을 바꾸지 않는다", () => {
+    const gb = gbOf([{ propertyId: "land", acquisitionMode: "estimated" }]);
+    expect([...aggregateAcqModes([pr("land"), pr("land__purchased")], gb)]).toEqual(["estimated"]);
+    const gbShare = gbOf([{ propertyId: "land#0", acquisitionMode: "estimated" }]);
+    expect([...aggregateAcqModes([pr("land#0"), pr("land__purchased#0")], gbShare)]).toEqual(["estimated"]);
+  });
 });
 
 describe("[비과세] 전액 비과세 split도 파트 정본(splitDetail)을 싣는다 — 엔진 보고 #1 (표시 전용, 세액 불변)", () => {
