@@ -1,7 +1,7 @@
 # 함께 양도 × 토지만 본인 · 다른 세대 — 부수토지 카드가 표2 장특을 받는 결함 (계획서)
 
-> 작성 2026-10-28 · 깊이 **L3**(세액이 바뀐다) · 코드 변경 없음(계획서만) · 선행: `bundled-land-only-limit-share.plan.md` §5(#2659 — 「원인 미확인 별건」으로 남긴 것) · `land-only-lthd-rate-basis.plan.md`(#2657) · `land-only-household-merge-date.plan.md`(#2662)
-> 사용자 지시 「다른 세대 묶음 부수토지 카드의 표2 장특 버그 수정 계획서 작성해」. 측정 probe 사본은 scratchpad `bt2-probes/`(커밋 안 함).
+> 작성 2026-10-28 · 깊이 **L3**(세액이 바뀐다) · 계획 + 구현(§9) 한 PR · 선행: `bundled-land-only-limit-share.plan.md` §5(#2659 — 「원인 미확인 별건」으로 남긴 것) · `land-only-lthd-rate-basis.plan.md`(#2657) · `land-only-household-merge-date.plan.md`(#2662)
+> 사용자 지시 「다른 세대 묶음 부수토지 카드의 표2 장특 버그 수정 계획서 작성해」 → 「권고 안으로」(**Q-1 b · Q-2 a · Q-3 a**, §4). 측정 probe 사본은 scratchpad `bt2-probes/`(커밋 안 함).
 
 ## 0. 요약
 
@@ -32,7 +32,7 @@
 | V-8 | 합계 **독립 산식 대조**(§6 anchor 값의 근거) | 순방향: (304,000,000 + 76,000,000 + 76,000,000 − 2,500,000) = 453,500,000 × 40% − 25,940,000 = 155,460,000 → ×1.1 = **171,006,000** ✓(수정 전 (304+40+76−2.5)M → 141,060,000 → 155,166,000 ✓). 역방향: 605,500,000 × 42% − 35,940,000 = 218,370,000 → ×1.1 = **240,207,000** ✓(수정 전 569,500,000 → 203,250,000 → 223,575,000 ✓). 2카드: 504,166,668 × 42% = 211,750,000(절사) − 35,940,000 = 175,810,000 → ×1.1 = 193,391,000 ✓ | ✅ |
 | V-9 | **안전망 — 수정 후**(M2를 넣은 채) `__tests__/api` · `__tests__/calc` · `__tests__/tax-engine/transfer` **23,967건 전부 통과 — 안전망 0건**(현행 결함을 지키는 테스트도, 올바른 동작을 지키는 테스트도 없다) | 신규 anchor 필수 | ✅ |
 | V-10 | **안전망 — 유지 대상**: 부수토지 카드의 표2를 통째로 끄는 mutation(`isLthdTable2SubjectAsset`의 `appurtenant_land` → `false`) | **24건 실패**(10파일: `appurtenant-land-lthd-table1-floor` 5 · `lthd-table2-subject-asset-s08-6-s08-5` 5 · `manual-land-rate-override-order-symmetry` 4 · `dec17-2b-high-value-excess-915-paths` 3 · `expropriation-later-land-f13-5a` 2 · 그 밖 5파일 1씩) — 같은 세대·소유자 같음의 부수토지 표2는 지켜진다. **다른 세대만 무방비** | ✅ |
-| V-11 | `isLthdTable2SubjectAsset` 호출처 6곳(`transfer-tax-lthd.ts:242·387` · `transfer-tax-lthd-982-step.ts:59·81·114` · `one-house/gift-table2-notice.ts:50`)이 verdict를 가진 입력을 넘기는가 | 장특 본계산 2곳(`lthd.ts:242·387`)은 M2에서 값이 실제로 바뀌어 확인. 입력은 `exemptionJudgeInput = {...rentalPremise.input, …}`(`transfer-tax.ts:252`)로 `effectiveInput` 스프레드라 verdict가 실린다(코드 읽기). **982-step·증여 고지 3곳은 M2 시나리오로 실행되지 않았다** — 같은 변수라 같을 것이나 **구현 시 확인 필요**(설계 영향 없음) | ⏳ 설계 무영향 |
+| V-11 | `isLthdTable2SubjectAsset` 호출처 6곳(`transfer-tax-lthd.ts:242·387` · `transfer-tax-lthd-982-step.ts:59·81·114` · `one-house/gift-table2-notice.ts:50`)이 verdict를 가진 입력을 넘기는가 | 장특 본계산 2곳(`lthd.ts:242·387`)은 M2에서 값이 실제로 바뀌어 확인. 입력은 `exemptionJudgeInput = {...rentalPremise.input, …}`(`transfer-tax.ts:252`)로 `effectiveInput` 스프레드라 verdict가 실린다(코드 읽기). **982-step·증여 고지 3곳은 M2 시나리오로 실행되지 않았다** — 같은 변수라 같을 것이나 구현 시 코드로 확인(아래) | ✅ 해소(구현 시) — `Lthd982StepArgs.exemptionJudgeInput`도 `transfer-tax.ts`의 같은 변수를 그대로 받는다(`transfer-tax.ts:598`) → 6곳이 한 객체라 호출부 보강 불요 · AN-8 종결 |
 | V-12 | `appurtenantHouseVerdict`가 엔진 밖(lib/api · lib/calc · components · Zod)에 닿는가 | `lib/tax-engine/**` 11개 파일에서만 쓰인다(grep) — 엔진 내부 주입값(합산 엔진이 주택 카드를 먼저 계산해 싣는다 `transfer-tax-aggregate-asset-records.ts:271·285`). 14지점 해당 없음 | ✅ |
 
 ⚠️ 독립 산식 한계: 같은 세대·소유자 같음 `c1__appurtenant` 장특 16,800,000 · 소득 11,200,000(= 고가주택 915 방식 안분 28,000,000 기준)은 F-13 단위 규칙이 만드는 값이라 독립 재도출하지 못했다.
@@ -63,7 +63,7 @@
 **미주입 정책**: `houseTable2Subject === undefined` → **종전과 같이 true**(부수토지 카드는 표2 대상). 「모름 = 혜택 불성립」과 충돌해 보이나, 이 필드는 verdict를 합산 엔진이 항상 싣는 경로에서만 `undefined`가 아니고(`toHouseVerdict`가 매번 계산),
 `undefined`는 verdict 없는 직접 엔진 호출(단위 anchor)뿐이다 — 그 호출은 `oneHouseForTable2`도 `undefined`로 종전 거동을 전제한 기존 anchor 24건(V-10)이 지키고 있어 뒤집지 않는다. 구현 mutation P3가 이 선택을 고정한다.
 
-## 4. 결정 게이트 (Q-n)
+## 4. 결정 게이트 (Q-n) — 2026-10-28 사용자 「권고 안으로」: **Q-1 b · Q-2 a · Q-3 a 확정**
 
 - **Q-1 설계안** — 권고 **b (안 B)**. 근거: 순·역방향을 한 번에 덮고(V-4·V-5) land 카드에 `selfOwns`를 새로 얹지 않으며(안 A의 부작용 3종 회피) F-13의 기존 채널을 완성한다. a를 택하면 위 5곳 + 부작용 3종 확인이 작업에 추가된다.
 - **Q-2 고지** — 권고 **a (부수토지 카드에 한 줄 고지)**. 지금은 `[주 자산(주택)] …이 토지에는 비과세와 표2를 적용하지 않았습니다` 한 줄만 있어(합산 경고 접두 라벨이 주 자산) 부수토지 카드가 왜 표1인지 카드에서 안 보인다.
@@ -109,7 +109,7 @@
 | AN-5 | route 역방향 | 다른 세대: `primary__appurtenant` 장특 **24,000,000** · 소득 76,000,000 · 합계 **240,207,000**(수정 전 60,000,000 · 223,575,000) / `h1` 장특 144,000,000 불변 / 판정 없음·같은 세대 합계 **62,293,000 · 45,573,000** 불변 |
 | AN-6 | 부정 짝 | 다른 세대 · **2주택**: 부수토지 카드는 수정 전후 같은 표1(S 시나리오 `c1` 장특 48,000,000 · 소득 152,000,000) — 수정이 표2 아닌 곳을 건드리지 않는다 |
 | AN-7 | (Q-2 a) 고지 | 다른 세대 · 표2가 걸렸을 조합: 부수토지 카드 경고에 문구 포함 · 같은 세대·2주택·초과분 카드: 없음 |
-| AN-8 | V-11 잔여 | `transfer-tax-lthd-982-step.ts` 경로·증여 고지 호출이 verdict를 가진 입력으로 불리는지 직접 고정 — 안 되면 해당 호출부 수정이 계획에 추가된다(⏳ → 구현 첫 단계에서 확정) |
+| AN-8 | V-11 잔여 | **종결** — §9 참조(호출 입력이 한 객체) |
 
 ### 6.3 착수 전 mutation (실측 완료 — V-9·V-10)와 구현 후 mutation (계획)
 
@@ -149,4 +149,25 @@
 
 ## 9. 구현 결과
 
-(구현 후 기록)
+구현 완료(2026-10-28 · 계획 대비 변경 없음 — Q-1 b · Q-2 a · Q-3 a).
+
+**수정**: `types/transfer.types.ts`(verdict에 `houseTable2Subject?`) · `transfer-tax-one-house-unit.ts`(`toHouseVerdict`가 `isLthdTable2SubjectAsset(house)`를 싣는다) · `lthd-table2-subject.ts`(부수토지 분기 `&& verdict?.houseTable2Subject !== false`) ·
+**고지**(Q-2 a): 신규 `land-only-appurtenant-card-notice.ts`(조건 — 부수토지 카드 · 짝 주택 `houseTable2Subject === false` · 짝 주택 1주택 축 `oneHouseForTable2 === true` · 거주 2년 요건 충족) + `transfer-tax.ts`는 import 1줄·기존 고지 배열에 항목 1개(764 → 765줄).
+입력·Zod·API·폼 변경 없음.
+
+**anchor**: 신규 route 10건(`transfer.route.bundled-other-household-appurtenant-table2.anchor.test.ts` — 순방향 6 · 역방향 2 · 고지 2) + `lthd-table2-subject-asset-s08-6-s08-5.anchor.test.ts`에 3건(AN-1 ×2 · AN-2). 수정 전 코드에서 신규 route 6건 실패(재현) · 불변 4건 통과 → 수정 후 전부 통과.
+값은 독립 정수 산식: 순방향 171,006,000 · 한 장 171,006,000 · 두 장 193,391,000 · 역방향 240,207,000 · 불변 65,637,000 / 32,873,500 / 50,589,000 / 19,013,500 / 23,120,166 / 62,293,000 / 45,573,000.
+
+**구현 후 mutation 6/6 KILLED**(표2 대상 테스트 6파일 101건 범위):
+| P | 무력화 | 실패 |
+|---|---|---|
+| P1 | `houseTable2Subject` 줄 제거 | 6건 — route 순·역 4 + 고지 1 + AN-2 |
+| P2 | 술어 `!== false` 제거 | 5건 — route 4 + AN-1 |
+| P3 | `!== false` → `=== true` | 7건 — AN-1 + **기존 안전망**(`appurtenant-land-lthd-table1-floor` 5 · S08-6 leaf) — 「미주입 = 종전」 정책이 기존 계약임을 확인 |
+| P4 | 항상 false | 17건 — route(다른 세대 외 불변 anchor) + 기존 4파일 |
+| P5 | 카드 사실 무시(`selfOwns`·`buildingOwnerSameHousehold` 제거)로 오기 | 6건 — route 4 + 고지 1 + AN-2 |
+| P6 | 고지에서 1주택 축 조건 제거 | 1건 — 고지 부정 짝(2주택에도 고지) |
+
+**회귀**: 전체 vitest **43,052건 통과 · 0 실패**(3,537파일) · tsc 0 · eslint 변경 파일 0.
+실제 브라우저 확인은 하지 않았다(화면 변경 없음 — 결과 카드 장특 문구는 엔진 값 그대로).
+남은 별건: O-1~O-4(§7) — 이 PR에서 고치지 않았다.
