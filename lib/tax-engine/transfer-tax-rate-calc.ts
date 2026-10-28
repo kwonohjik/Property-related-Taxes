@@ -250,7 +250,8 @@ export function calcTax(
         assetKind: "land",
         area: companionArea,
         manualHoldingPeriodOverride: input.manualHoldingPeriodOverride,
-        landNature: input.landNature,
+        // 다른 세대 토지만 본인 주택의 부수토지 카드는 일반 토지다 — 자동 일체과세만 끈다(수동 오버라이드는 위 입력이라 그대로 먼저 처리된다).
+        landNature: input.appurtenantHouseVerdict?.houseLandOnlyOtherHousehold === true ? undefined : input.landNature,
       },
       ctx
         ? {
