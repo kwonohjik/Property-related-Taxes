@@ -1,6 +1,6 @@
 # 토지만 본인 × 같은 세대 합가 — 거주기간은 합가일 이후만 통산된다 (구현 계획서)
 
-> 작성 2026-10-28 · 깊이 **L3**(세액·비과세 판정이 바뀐다) · 이 PR은 **계획만**(코드 변경 없음) · 선행: `land-only-household-merge-date.plan.md`(#2662 — 합가일 입력) · `land-only-lthd-rate-basis.plan.md` §6 V-6 · `bundled-merge-date-appurtenant-card.plan.md`(#2672) §7 **O-7**
+> 작성 2026-10-28 · 깊이 **L3**(세액·비과세 판정이 바뀐다) · **Q-1~Q-3 a 결정(사용자 「권고 안으로」) → 같은 PR에 구현**(§9) · 선행: `land-only-household-merge-date.plan.md`(#2662 — 합가일 입력) · `land-only-lthd-rate-basis.plan.md` §6 V-6 · `bundled-merge-date-appurtenant-card.plan.md`(#2672) §7 **O-7**
 > 사용자 지시 「거주기간 동일세대 통산(기준-2025-법규재산-0040)」. 측정은 master(`f3a3a2b66`) 기준이며 probe는 throwaway(커밋 안 함 · 삭제 확인)이고 사본은 scratchpad(`o7-zz-keep/`)에 있다.
 
 ## 0. 요약
@@ -43,7 +43,7 @@ D-4 **입력 안내(Q-3 a)** — Step4 거주 구간 칸(`ResidencePeriodSection
 
 ⚠️ **파일 크기**: `transfer-tax-validate-step1.ts` · `residence-interval-validate.ts` · `self-owns-scope.ts` · `ResidencePeriodSection.tsx` — 줄 수 변화 각 ≤ +15(구현 시 `wc -l` 확인, 800줄 정책).
 
-## 4. 결정 게이트 (Q-n) — 결정 대기
+## 4. 결정 게이트 (Q-n) — ✅ Q-1 a · Q-2 a · Q-3 a 결정
 
 | ID | 질문 | 선택지 | 권고 |
 |---|---|---|---|
@@ -99,3 +99,35 @@ D-4 **입력 안내(Q-3 a)** — Step4 거주 구간 칸(`ResidencePeriodSection
 1. 워크트리 `-o7`에서 신규 anchor 먼저(수정 전 실패 확인) → D-1~D-4 → 전부 통과.
 2. mutation P-1~P-5 · 회귀 · tsc · lint · Playwright 확인.
 3. 계획서 §9에 결과 기록 → 같은 PR 구현 커밋 → CI 확인 → 사용자 「머지해」 뒤 머지.
+
+## 9. 구현 결과 (Q-1 a · Q-2 a · Q-3 a)
+
+| 항목 | 내용 |
+|---|---|
+| D-1 | `self-owns-scope.ts` `landOnlyMergeResidenceStart(asset)`(엔진 `landOnlyHouseholdMergeDate`와 같은 조건) · `residenceStartWithMerge(baseStart, asset)` — 합가일이 취득일보다 늦으면 `{ start: 합가일, kind: "merge" }` |
+| D-2 | `residence-interval-validate.ts` 두 leaf에 `startKind` 인자 — `"merge"`면 «입주일이 세대 합가일(…)보다 빠릅니다 …(기준-2025-법규재산-0040 · 재산46014-610)» / «거주기간: N개월이 세대 합가일(…)부터 양도일까지의 M개월을 넘습니다 …». `transfer-tax-validate-step1.ts`가 구간·직접 입력 두 호출에 같은 기준일을 넘긴다 |
+| D-3 | `land-only-owner-household.ts` `landOnlyMergeResidenceNotice` — 합가일 > 주택 취득일 ∧ 거주 > 0개월일 때만. **비과세로 끝나는 경로에서도 실려야 해서** `transfer-tax.ts`의 합가 판정 고지(`landOnlyHousehold.notice`)와 같은 자리에서 단다(처음 고지 배열에 넣었더니 비과세 결과에는 안 실려 측정으로 발견해 옮김) |
+| D-4 | `ResidencePeriodSection`에 `mergeStartDate?` — `ToneCard`(amber) 힌트(`data-testid="residence-merge-hint"`) · `Step4.tsx`가 `landOnlyMergeResidenceStart(primary)`를 넘긴다 |
+| 변경 없음 | 엔진 계산식 · 입력 필드 · Zod · API · ④ 개월 수 변환 · 판정 메뉴 (14 동기화 지점: ⑧만, ⑫⑬⑭ 해당 없음) |
+
+줄 수: `transfer-tax.ts` 779 → 781 · `Step4.tsx` 756 → 758(하나의 prop 줄 + import) · 그 밖은 800 미만.
+
+**신규 테스트(수정 전 코드에서 변경 대상 7건 실패 · 불변 10건 통과 확인 후 구현)**
+- `__tests__/calc/land-only-merge-residence-period.anchor.test.ts`(14 — C1~C8 · D-1 술어 · 문구 종류 · 합가일 stale 시료)
+- `__tests__/tax-engine/transfer/land-only-merge-residence-notice.anchor.test.ts`(3 — 비과세 결과에도 고지 실림 확인)
+- `__tests__/components/residence-period-merge-hint.anchor.test.tsx`(2) · `__tests__/calc/land-only-merge-residence-step4.ui.test.tsx`(2 — Step4 배선)
+
+**mutation** — 각 변형이 해당 anchor만 실패시켰다:
+
+| P | 무력화 | 실패한 anchor |
+|---|---|---|
+| P-1 | D-1 술어 항상 `undefined` | C1 · C3 · C4 · 두 구간 · D-1 (+ Step4 힌트) |
+| P-2 | 구간 검증 기준일을 취득일로 | C1 · C3 · 두 구간만(C4 통과) |
+| P-3 | 직접 입력 기준일을 취득일로 | C4만 |
+| P-4 | 술어에서 `merged === true` 제거 | C5(합가일 stale) · D-1 · Step4 힌트 부정 |
+| P-5 | 고지 술어 무력화 | B8만 |
+| P-6 | `merge > baseStart` 제거 | C7만 |
+| P-7 | Step4 `mergeStartDate` 연결 제거 | Step4 힌트 1건만 (처음에는 생존 — Step4 렌더 테스트 추가로 해소) |
+
+**검증**: `npx tsc --noEmit` 0 · eslint 변경 파일 0건 · 전량 회귀(`__tests__/api` · `calc` · `components` · `tax-engine/transfer` · `tax-engine/transfer-tax`) **2,529 파일 · 30,326건 통과 · 실패 0**(3 skipped · 309 todo는 기존).
+⚠️ **브라우저 수동 확인(Playwright)은 하지 않았다** — 합가 토지만 본인 주택으로 다단계 마법사를 채우는 경로가 길어 jsdom Step4 렌더 anchor(`land-only-merge-residence-step4.ui.test.tsx`)로 갈음했다. 실제 화면 확인은 머지 전 사용자 확인 대상.

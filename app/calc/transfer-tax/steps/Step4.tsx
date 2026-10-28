@@ -18,6 +18,7 @@ import { useRegulatedAreaAutoTip } from "./step4-sections/useRegulatedAreaAutoTi
 import { RegulatedAreaField } from "@/components/calc/transfer/RegulatedAreaField";
 import { useAcquisitionRegulatedContext } from "./step4-sections/useAcquisitionRegulatedContext";
 import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeriodSection";
+import { landOnlyMergeResidenceStart } from "@/lib/calc/self-owns-scope";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
 import { calcFinalHouseRestartInScope } from "@/lib/calc/final-house-restart";
@@ -543,6 +544,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 residencePeriods={primary.residencePeriods}
                 residencePeriodMonthsAsset={primary.residencePeriodMonthsAsset}
                 transferDate={form.transferDate}
+                mergeStartDate={landOnlyMergeResidenceStart(primary)}
                 onChange={(patch) =>
                   onChange({
                     assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)),
