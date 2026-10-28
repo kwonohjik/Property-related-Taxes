@@ -3,7 +3,7 @@
 - 작성: 2026-10-28 · 상태: 📝 계획(사용자 결정 대기 — §2)
 - 출발점: `bg-single-presumed-card-expense-row.plan.md` §6 V-1 · §7.1 — 이월과세 단건은 상세 명세서가 자체 문구로 맞지만 **일반건물 파트 경로**(`DetailedStatementGbFormulas.ts:577`)는 미측정이었다. 사용자 요청(2026-10-28) 「1」(= 남은 별건 1번).
 - 세액 변경 없음(표시 전용). 명세서의 필요경비 **합계 값**은 이미 맞고, 틀린 것은 파트별 **산식 문구**다.
-- 측정 도구: route 직접 호출 + `buildStatementItems` 프로브(임시 — 제거함, 원본은 세션 스크래치패드). 실제 화면(`BundledAllocationCard`)과 같은 방식으로 `aggregateToFilingResult(aggregated)`에 route의 `transferBurdenedGiftBreakdown`을 덧붙여 넘겼다. 세율은 mock. 측정은 현재 master(`c89a09f22` 이후 — 계획서 작성 시점에 워크트리가 master와 같음).
+- 측정 도구: route 직접 호출 + `buildStatementItems` 프로브(임시 — 제거함, 원본은 세션 스크래치패드). 실제 화면(`BundledAllocationCard`)과 같은 방식으로 `aggregateToFilingResult(aggregated)`에 route의 `transferBurdenedGiftBreakdown`을 덧붙여 넘겼다. 세율은 mock. 측정은 master `f29e24a08`(#2676 머지 직후 · #2679 포함) 기준이다.
 
 ## 1. 현상 (실측)
 
