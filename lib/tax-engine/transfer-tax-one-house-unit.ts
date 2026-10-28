@@ -134,6 +134,7 @@ export function toHouseVerdict(
     carryoverOneHouseExcluded: result.carryoverTaxationDetail?.exclusionReason === "one_house_exemption",
     oneHouseForTable2: result.lthdTable2OneHouseAxis === true,
     houseTable2Subject: isLthdTable2SubjectAsset(house),
+    houseSurcharge: result.surchargeEcho,
     houseLandOnlyOtherHousehold: landOnlyBuildingOwnerOtherHousehold(house),
     houseMergeDate: landOnlyHouseholdMergeDate(house),
     expropriationLandCutoff: expropriationProvisoLandCutoff(house),

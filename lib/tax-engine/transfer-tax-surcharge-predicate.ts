@@ -49,6 +49,7 @@
 import { isSurchargeSuspended } from "./tax-utils";
 import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
 import { MULTI_HOUSE } from "./legal-codes";
+import { appurtenantCardHouseSurcharge } from "./appurtenant-card-surcharge";
 import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
 import type { TransferTaxInput } from "./types/transfer.types";
 
@@ -101,6 +102,9 @@ export interface SurchargeApplicationInput {
   /** 토지만 본인 × 건물(주택) 소유자 다른 세대(V-3′) — 아래 최상단 게이트가 읽는다 */
   selfOwns?: TransferTaxInput["selfOwns"];
   buildingOwnerSameHousehold?: boolean;
+  /** 부수토지 카드 — 짝 주택이 푼 중과 판정을 그대로 따른다(`appurtenant-card-surcharge.ts`) */
+  oneHouseUnitRole?: TransferTaxInput["oneHouseUnitRole"];
+  appurtenantHouseVerdict?: TransferTaxInput["appurtenantHouseVerdict"];
 }
 
 export interface SurchargeApplication {
@@ -148,6 +152,12 @@ export function resolveSurchargeApplication(
    * 아래 네 값이 **함께** 닫혀야 한다. 지점마다 `&&`를 붙이는 방식은 이 파일이 고치고 있는
    * 결함의 발생 기전 그 자체다.
    */
+  /**
+   * 부수토지 카드(`land`)는 «주택(이에 딸린 토지를 포함한다)»(§104⑦)이라 짝 주택의 판정을 **그대로** 따른다 — 아래 자산 게이트·다른 세대 게이트는 짝 주택이 이미 지났다
+   * (재판정하면 이중 진실이다 · 다른 세대 토지만 본인은 짝 주택이 «중과 없음»이라 자동으로 빠진다).
+   */
+  const cardOfHouse = appurtenantCardHouseSurcharge(input);
+  if (cardOfHouse) return cardOfHouse;
   const isSubjectAsset = SURCHARGE_SUBJECT_PROPERTY_TYPES.has(input.propertyType);
 
   /**

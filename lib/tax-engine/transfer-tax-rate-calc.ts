@@ -18,6 +18,10 @@ import {
   calculateProgressiveTax,
   calculateHoldingPeriod,
 } from "./tax-utils";
+import {
+  appurtenantCardFollowsSurchargeRate,
+  appurtenantCardSurchargeRateInput,
+} from "./appurtenant-card-surcharge";
 import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -201,9 +205,11 @@ function withClause1Candidate(
 export function calcTax(
   taxBase: number,
   parsedRates: ParsedRates,
-  input: TransferTaxInput,
+  rawInput: TransferTaxInput,
   multiHouseSurchargeResult?: MultiHouseSurchargeResult,
 ): CalcTaxResult {
+  // 중과 대상 짝 주택의 부수토지 카드는 §104⑦ 후단 비교의 보유기간을 짝 주택 취득일로 본다(`appurtenant-card-surcharge.ts`).
+  const input = appurtenantCardSurchargeRateInput(rawInput);
   const { brackets, surchargeRates, surchargeSpecialRules } = parsedRates;
 
   // T-1: 미등기 70% 단일세율 (§104①10호)
@@ -251,7 +257,8 @@ export function calcTax(
         area: companionArea,
         manualHoldingPeriodOverride: input.manualHoldingPeriodOverride,
         // 다른 세대 토지만 본인 주택의 부수토지 카드는 일반 토지다 — 자동 일체과세만 끈다(수동 오버라이드는 위 입력이라 그대로 먼저 처리된다).
-        landNature: input.appurtenantHouseVerdict?.houseLandOnlyOtherHousehold === true ? undefined : input.landNature,
+        // 중과 대상 짝 주택의 카드도 일체과세 분기(주택 단기 70/60·누진 조기 반환)를 끈다 — §104⑦ 경로가 큰 세액을 정한다. 수동 지정은 그대로 먼저 처리된다.
+        landNature: input.appurtenantHouseVerdict?.houseLandOnlyOtherHousehold === true || appurtenantCardFollowsSurchargeRate(input) ? undefined : input.landNature,
       },
       ctx
         ? {
