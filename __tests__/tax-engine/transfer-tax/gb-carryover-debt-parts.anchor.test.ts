@@ -5,6 +5,14 @@
  * 엔진 모양 `landCarryoverTaxation`/`buildingCarryoverTaxation`에 `giftAssumedDebt`를 직접 얹어 카드 조립 이후(R2·R3·R4)를 본다.
  * 와이어(⑫ → R1 합성기)는 `__tests__/api/transfer.route.carryover-debt-parts.anchor.test.ts`가 본다.
  * 세액은 `makeMockRates()` 기준이다. 「손계산」 값은 엔진과 따로 계산해 일치를 확인한 것이다.
+ *
+ * 🔴 **2026-10-28 갱신 — 매입분 필요경비에서 환산 개산공제가 빠졌다** (계획서 `docs/00-pm/gb-estimated-carryover-scenario-a-capex.plan.md` §11, PR-2).
+ * 매입분은 `buildInputB`로 만든다(`carryover-debt-pieces.ts`). 종전에는 일반건물 카드가 이월과세여도 `capitalExpenditure`를 싣지 않아 매입분 필요경비가
+ * 카드 스칼라 `expenses`의 몫 = 본인 환산의 **개산공제**(설계서 V-2 「환산 개산공제를 실가 취득가액에 붙임」)였다. 매입분의 취득가액은 채무(실지거래가액)라
+ * 「소득세법」 제97조제2항**제1호**(제1항제2호·제3호 = 본인 자본적지출·양도비뿐)이고 개산공제는 같은 항 제2호(환산 등) 몫이라 근거가 없다.
+ * PR-2가 이월과세 카드에 본인 직접귀속 나목을 `capitalExpenditure`로 명시(0도 0)해 싣자 매입분이 그 규칙을 따른다 — 본인 지출 0 이면 매입분 필요경비 0.
+ * 아래 갱신값은 전부 같은 원인(매입분 개산공제 제거)이며, 증여분 카드의 양도차익·필요경비는 불변이다(카드별 덤프로 확인).
+ * 건별 검증: 세액 증가 = (제거된 매입분 개산공제) × (그 소득이 속한 한계세율 또는 장특 후 비율).
  */
 import { describe, it, expect } from "vitest";
 import { calculateGeneralBuildingTransfer } from "@/app/api/calc/transfer/general-building-route-helper";
@@ -46,10 +54,13 @@ function run(over: Record<string, unknown>, base: Record<string, unknown> = BASE
 }
 
 describe("E2-1 · 2-way 환산 · 토지 파트 · 증여자 실가", () => {
-  it("채무 OFF 35,488,448 (회귀) → 채무 8천만 25,428,373 · 증여분 + 매입분 꼬리 [손계산 ✓ 설계서 P1]", () => {
+  it("채무 OFF 35,488,448 (회귀) → 채무 8천만 25,763,533 · 증여분 + 매입분 꼬리 [손계산 ✓ 설계서 P1 + 매입분 개산공제 제거 957,600 × 35%]", () => {
     expect(run({ ...LAND_ONLY, landCarryoverTaxation: withDebt(undefined) }).det).toBe(35_488_448);
     const r = run({ ...LAND_ONLY, landCarryoverTaxation: withDebt(80_000_000) });
-    expect(r.det).toBe(25_428_373);
+    // 종전 25,428,373 = 매입분 필요경비가 개산공제 957,600(= 토지 개산공제 2,394,000 − 증여분 몫 60% 1,436,400)였다. 지금은 0 → 매입분 양도차익 +957,600 · 보유 2년 6개월 장특 0 ·
+    // 35% 구간(88M~150M) → +957,600 × 35% = +335,160 → 25,763,533.
+    expect(r.det).toBe(25_763_533);
+    expect(r.card("land__purchased")!.necessaryExpense).toBe(0);
     expect(r.ids).toEqual(["land", "building", "land__purchased"]);
     const s = r.card("land")!.carryoverTaxationDetail!.scenarioA.purchasedPartSplit!;
     expect(s).toMatchObject({ debtAmount: 80_000_000, giftValuation: 200_000_000 });
@@ -57,20 +68,23 @@ describe("E2-1 · 2-way 환산 · 토지 파트 · 증여자 실가", () => {
     expect(s.purchased).toMatchObject({ propertyId: "land__purchased", acquisitionPrice: 80_000_000, acquisitionDate: "2020-03-17" });
   });
 
-  it("증여자 환산취득가액(분자 3천만) OFF 40,928,847 → 채무 8천만 28,509,351 [손계산 ✓ 설계서 P2]", () => {
+  it("증여자 환산취득가액(분자 3천만) OFF 40,928,847 → 채무 8천만 28,844,511 [손계산 ✓ 설계서 P2 + 매입분 개산공제 제거 +335,160]", () => {
     const est = (debt?: number) => run({ ...LAND_ONLY, landCarryoverTaxation: withDebt(debt, { useEstimatedAcquisition: true, donorAcquisitionPrice: undefined, donorStandardPriceAtAcquisition: 30_000_000 }) });
     expect(est(undefined).det).toBe(40_928_847);
-    expect(est(80_000_000).det).toBe(28_509_351);
+    expect(est(80_000_000).det).toBe(28_844_511); // 종전 28,509,351 + 957,600 × 35%
   });
 });
 
 describe("E2-2 · 토지 사업용·비사업용 분할 — 채무도 면적 비율로(R2)", () => {
   const SPLIT = { ...LAND_ONLY, landArea: 570 };
-  it("채무 OFF 39,606,565 (회귀 · 손계산 ✓) → 채무 8천만 26,763,852 (§104⑤ 1호/2호 max 손계산 ✓)", () => {
+  it("채무 OFF 39,606,565 (회귀 · 손계산 ✓) → 채무 8천만 30,115,452 (§104⑤ 1호/2호 max 손계산 ✓ · 매입분 개산공제 제거)", () => {
     expect(run({ ...SPLIT, landCarryoverTaxation: withDebt(undefined) }).det).toBe(39_606_565);
     const r = run({ ...SPLIT, landCarryoverTaxation: withDebt(80_000_000) });
     // 채무를 면적으로 안 자르면 두 카드가 8천만을 각각 받아 20,051,350(오답)이 된다
-    expect(r.det).toBe(26_763_852);
+    // 종전 26,763,852. 매입분 2장의 필요경비 개산공제 3,830,400(사업용) + 5,745,600(비사업용) = 9,576,000 이 0 이 되어 매입분 양도차익이 그만큼 늘고(장특 0),
+    // 35% 구간 → +9,576,000 × 35% = +3,351,600 → 30,115,452. 증여분 카드(사업용 46,913,896 · 비사업용 70,370,845)는 불변.
+    expect(r.det).toBe(30_115_452);
+    expect(r.card("land_business__purchased")!.necessaryExpense + r.card("land_nbl__purchased")!.necessaryExpense).toBe(0);
   });
 
   it("카드별 채무 = 사업용 3,200만 / 비사업용 4,800만(잔액 흡수) · 꼬리 2장 · 합 = 입력 채무", () => {
@@ -105,11 +119,13 @@ describe("E2-3 · 건물 파트 이월과세(R3) — 현실 비율 손계산", (
    *   토지(이월과세 아님): 1.65억 − 취득 0.825억 − 개산공제 3% × 1억 = 300만 → 차익 79,500,000 · 보유 2년 6개월 장특 0
    *   건물 증여분 = 양도가 1.65억 × 6/10 = 99,000,000 · 취득가액 2천만 × 6/10 = 12,000,000 · 상당액 5,000,000(전액)
    *       차익 82,000,000 − 장특 30%(증여자 취득 27년 → 15년 상한 30%) 24,600,000 = 57,400,000
-   *   건물 매입분 = 양도가 66,000,000 · 취득가액 = 채무 40,000,000 · 필요경비 = 개산공제 3,000,000 − 증여분 몫 floor(3,000,000 × 6/10) = 1,200,000
-   *       차익 24,800,000 · 보유 2년 6개월 장특 0
-   *   합 79,500,000 + 57,400,000 + 24,800,000 = 161,700,000 − 기본공제 2,500,000 = 159,200,000
-   *   × 38% − 누진공제 19,940,000 = 40,556,000
-   *   (비교) 미적용(B): 79.5M + (165M − 100M − 3M = 62M) − 250만 = 139,000,000 × 35% − 15,440,000 = 33,210,000 ≤ 40,556,000 → 적용(A) 채택
+   *   건물 매입분 = 양도가 66,000,000 · 취득가액 = 채무 40,000,000 · 필요경비 = **0** (본인 자본적지출·양도비 없음 — 취득가액이 채무(실지거래가액)라 §97② 제1호, 개산공제 없음.
+   *       종전에는 개산공제 3,000,000 − 증여분 몫 floor(3,000,000 × 6/10) = 1,200,000 이 들어 있었다 → 2026-10-28 PR-2에서 제거)
+   *       차익 26,000,000 · 보유 2년 6개월 장특 0
+   *   합 79,500,000 + 57,400,000 + 26,000,000 = 162,900,000 − 기본공제 2,500,000 = 160,400,000
+   *   × 38% − 누진공제 19,940,000 = 41,012,000  (종전 40,556,000 + 1,200,000 × 38% = 456,000)
+   *   (비교) 미적용(B): 취득가액 = 증여 당시 평가액 1억(실지거래가액 의제) · 필요경비 0(개산공제 없음 — 종전엔 3,000,000 이 들어 있었다, 같은 제거)
+   *        79.5M + (165M − 100M = 65M) = 144.5M − 250만 = 142,000,000 × 35% − 15,440,000 = 34,260,000 (종전 33,210,000) ≤ 41,012,000 → 적용(A) 채택
    */
   const BASE_B = {
     totalTransferPrice: 330_000_000, transferDate: new Date("2022-10-11"),
@@ -132,15 +148,15 @@ describe("E2-3 · 건물 파트 이월과세(R3) — 현실 비율 손계산", (
     expect(r.card("building")!.carryoverTaxationDetail!.adoptedScenario).toBe("A");
   });
 
-  it("건물 파트 채무 4천만 → 40,556,000 [손계산 ✓] · 건물(증여분) + 건물 매입분 꼬리", () => {
+  it("건물 파트 채무 4천만 → 41,012,000 [손계산 ✓ · 매입분 개산공제 제거] · 건물(증여분) + 건물 매입분 꼬리", () => {
     const r = run({ buildingCarryoverTaxation: BCT(40_000_000) }, BASE_B);
-    expect(r.det).toBe(40_556_000);
+    expect(r.det).toBe(41_012_000);
     expect(r.ids).toEqual(["land", "building", "building__purchased"]);
     const g = r.card("building")!, p = r.card("building__purchased")!;
     expect([g.transferPrice, g.acquisitionPrice, g.transferGain]).toEqual([99_000_000, 12_000_000, 82_000_000]);
-    expect([p.transferPrice, p.acquisitionPrice, p.necessaryExpense, p.transferGain]).toEqual([66_000_000, 40_000_000, 1_200_000, 24_800_000]);
+    expect([p.transferPrice, p.acquisitionPrice, p.necessaryExpense, p.transferGain]).toEqual([66_000_000, 40_000_000, 0, 26_000_000]);
     const s = g.carryoverTaxationDetail!.scenarioA.purchasedPartSplit!;
-    expect(s).toMatchObject({ debtAmount: 40_000_000, giftValuation: 100_000_000, transferPrice: 165_000_000, donorAcquisitionPrice: 20_000_000, determinedTaxA: 40_556_000, determinedTaxB: 33_210_000 });
+    expect(s).toMatchObject({ debtAmount: 40_000_000, giftValuation: 100_000_000, transferPrice: 165_000_000, donorAcquisitionPrice: 20_000_000, determinedTaxA: 41_012_000, determinedTaxB: 34_260_000 });
     // 토지 카드는 이월과세가 아니라 echo가 없다
     expect(r.card("land")!.carryoverTaxationDetail).toBeUndefined();
   });
@@ -152,14 +168,15 @@ describe("E2-3 · 건물 파트 이월과세(R3) — 현실 비율 손계산", (
 });
 
 describe("E2-4 · 증축 3-way · 토지 파트 채무 (probe 고정 — 손계산 아님)", () => {
+  // 갱신 2026-10-28: 토지 매입분의 필요경비 개산공제 2,638,093 이 0 이 되어 24% 구간(50M~88M)에서 +2,638,093 × 24% = +633,142 (9,957,002 → 10,590,144). 증여분은 불변.
   const EXTENSION = {
     extensionDate: new Date("2007-07-24"), extensionArea: 83.72, transferExtensionBuildingStdPrice: 54_501_720, acquisitionExtensionBuildingStdPrice: 40_604_200,
     extensionAcquisitionCause: "purchase" as const, actualBundledAcquisitionPrice: 200_000_000, actualBundledExpenses: 8_000_000,
   };
-  it("채무 OFF 19,923,021 → 채무 8천만 9,957,002 · 꼬리 land__purchased", () => {
+  it("채무 OFF 19,923,021 → 채무 8천만 10,590,144 · 꼬리 land__purchased", () => {
     expect(run({ ...LAND_ONLY, extensionInfo: EXTENSION, landCarryoverTaxation: withDebt(undefined) }).det).toBe(19_923_021);
     const r = run({ ...LAND_ONLY, extensionInfo: EXTENSION, landCarryoverTaxation: withDebt(80_000_000) });
-    expect(r.det).toBe(9_957_002);
+    expect(r.det).toBe(10_590_144); // 종전 9,957,002 + 2,638,093 × 24%
     expect(r.ids).toContain("land__purchased");
   });
 });

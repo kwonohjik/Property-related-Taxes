@@ -4,9 +4,13 @@
  * UI 설계서 docs/02-design/features/carryover-gift-debt-purchased-part-parts.ui.design.md §6.2 (CDPP-11~13) · CDPP-14(지분 40%, anchor CDP-2) · CDPP-15(함께 양도, anchor CDP-3) · CDPP-16(이력 복원 후 다시 계산, V-10)
  * 사례(vitest anchor `transfer.route.carryover-debt-parts*.anchor.test.ts`와 같은 값): 일반건물 환산 · 토지 100㎡ × 2,000,000 + 건물 2억 · 양도 2026-03-01 10억 ·
  *   토지만 이월과세(증여 2021-03-01 · 증여자 2005-06-15 취득 1.5억 · 평가액 4억 · 산출세액 3천만 · 과세가액 10억) · 채무 1억 →
- *   시나리오 A 채택 141,690,000 · 채무 OFF 156,620,000. E3(주택 분리 · 토지만 이월과세 · 채무 1억) 175,110,000.
+ *   시나리오 A 채택 141,960,000 · 채무 OFF 156,620,000. E3(주택 분리 · 토지만 이월과세 · 채무 1억) 175,110,000.
  *
  * 실행(워크트리): E2E_PORT=3154 npx playwright test e2e/carryover-gift-debt-purchased-part-parts.spec.ts
+ *
+ * 🔴 2026-10-28 갱신(PR-2 본인 지출 소실 수정): 매입분은 환산 개산공제 없이 본인 자본적지출+양도비만 필요경비다 — 취득가액이 채무(실지거래가액)라 「소득세법」 제97조제2항제1호.
+ *    값 변화: 141,690,000 → 141,960,000 · 사이드바 필요경비 12,750,000 → 12,000,000 · 96,460,000 → 96,580,000 · 181,431,000 → 181,746,000 · 매입분 열 필요경비 개산공제 → 0.
+ *    손계산은 `__tests__/api/transfer.route.carryover-debt-parts.anchor.test.ts`·`carryover-gift-tax-numerator-net.anchor.test.ts` 주석.
  */
 import { test, expect, type Page } from "@playwright/test";
 import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
@@ -96,7 +100,7 @@ const openAcquisition = (page: Page) => expandAssetSection(page, 3, 0);
 type Wire = { generalBuildingValuation?: { landCarryoverPart?: { giftAssumedDebt?: number }; carryoverGiftEvent?: { giftTaxCalculated?: number; giftTaxBase?: number } } };
 
 test.describe("CDPP-11 E2 일반건물 기본 — 토글·채무 → 요청 body · 결과 조각 · 사이드바", () => {
-  test("토글 ON → 채무 칸(분자 전용 노트 없음 · 증여분 안내) → 요청 body · 결과 141,690,000 · OFF 156,620,000 · 사이드바 = 엔진 차감", async ({ page }) => {
+  test("토글 ON → 채무 칸(분자 전용 노트 없음 · 증여분 안내) → 요청 body · 결과 141,960,000 · OFF 156,620,000 · 사이드바 = 엔진 차감", async ({ page }) => {
     test.setTimeout(240_000);
     await seedAndOpen(page, gbAsset({ giftDebtAssumed: false }));
     await openAcquisition(page);
@@ -117,18 +121,18 @@ test.describe("CDPP-11 E2 일반건물 기본 — 토글·채무 → 요청 body
     await expect(page.getByTestId("carryover-piece-gift").first()).toBeVisible();
     await expect(page.getByTestId("carryover-piece-purchased").first()).toBeVisible();
     await expect(page.getByTestId("carryover-piece-method-notice").first()).toContainText("확인 필요");
-    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("141,690,000");
+    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("141,960,000");
     // 상세명세서 한 줄 고지(T1)
     await expect(page.locator('[data-statement-row="취득가액"]').first()).toContainText("양도로 보는 부분(매입분)으로 나누어 계산했습니다");
 
-    // ⑥ 사이드바 — 취득가액 462,500,000 · 필요경비 12,750,000 (엔진 차감 합)
+    // ⑥ 사이드바 — 취득가액 462,500,000 · 필요경비 12,000,000 (엔진 차감 합)
     await page.getByRole("button", { name: "이전 화면" }).click();
     await page.locator("aside").getByRole("button", { name: /자산 목록/ }).click();
     await page.getByRole("heading", { name: "자산 목록·취득 정보 입력" }).waitFor();
     const side = page.locator("aside").first();
     await expect(side).toContainText("1,000,000,000");
     await expect(side).toContainText("462,500,000");
-    await expect(side).toContainText("12,750,000");
+    await expect(side).toContainText("12,000,000");
 
     // OFF — 156,620,000 · 조각 없음 · 사이드바도 엔진 차감(4억 · 1,500만)
     await seedAndOpen(page, gbAsset({ giftDebtAssumed: false, giftAssumedDebt: "" }));
@@ -268,7 +272,7 @@ const shareB = (debtOn: boolean) =>
 type ShareWire = { generalBuildingShares?: Array<{ valuation?: { landCarryoverPart?: Record<string, number>; carryoverGiftEvent?: Record<string, number> } }> };
 
 test.describe("CDPP-14 E2 지분(공유) 40% — 요청 body 스케일 · 꼬리 카드가 표·신고서를 깨지 않는다", () => {
-  test("지분 B 토지만 이월과세 · 채무 → 화면은 100% 기준 입력 · body는 ×0.4 · 결과 96,460,000 · 증여분·매입분 열 · 인쇄 · OFF 105,060,000", async ({ page }) => {
+  test("지분 B 토지만 이월과세 · 채무 → 화면은 100% 기준 입력 · body는 ×0.4 · 결과 96,580,000 · 증여분·매입분 열 · 인쇄 · OFF 105,060,000", async ({ page }) => {
     test.setTimeout(240_000);
     await seedAndOpen(page, [shareOf("share-a", "60"), shareB(false)], { assetSplitMode: "fractional" });
     // 입력 화면 — 지분 카드(B)에도 토글·채무 칸이 있고, 값은 100% 기준 그대로 넣는다(④가 ×0.4)
@@ -290,7 +294,7 @@ test.describe("CDPP-14 E2 지분(공유) 40% — 요청 body 스케일 · 꼬리
     await expect(page.getByTestId("carryover-piece-gift").first()).toBeVisible();
     await expect(page.getByTestId("carryover-piece-purchased").first()).toBeVisible();
     await expect(page.getByTestId("carryover-piece-method-notice").first()).toContainText("확인 필요");
-    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("96,460,000");
+    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("96,580,000");
     // 꼬리 카드(land__purchased#1)가 있어도 신고서 표는 지분별 열 + 매입분 열로 그대로 있다
     const head = await formRow(page, "항목");
     expect(head.slice(1)).toEqual(["합계", "share-a 토지(1001)", "share-a 건물(3001)", "share-b 토지(1001)(증여분)", "share-b 건물(3001)", "share-b 토지(1001)(매입분)"]);
@@ -298,7 +302,7 @@ test.describe("CDPP-14 E2 지분(공유) 40% — 요청 body 스케일 · 꼬리
     expect(await formRow(page, "보유기간")).toEqual(["보유기간", "-", "17년 0월", "17년 0월", "20년 9월", "5년 0월", "5년 0월"]);
     expect(await formRow(page, "양도가액")).toEqual(["양도가액", "1,000,000,000", "300,000,000", "300,000,000", "150,000,000", "200,000,000", "50,000,000"]);
     expect(await formRow(page, "취득가액")).toEqual(["취득가액", "550,000,000", "150,000,000", "150,000,000", "90,000,000", "100,000,000", "60,000,000"]);
-    expect(await formRow(page, "필요경비")).toEqual(["필요경비", "33,100,000", "1,800,000", "1,800,000", "28,000,000", "1,200,000", "300,000"]);
+    expect(await formRow(page, "필요경비")).toEqual(["필요경비", "32,800,000", "1,800,000", "1,800,000", "28,000,000", "1,200,000", "0"]);
     // 양도가액 안분 표는 지분 4행 그대로(꼬리 카드는 안분 행을 만들지 않는다)
     await expect(page.getByText("share-b 토지(1001)(매입분)").first()).toBeVisible();
     await expect(stmtRow(page, "취득가액")).toContainText("양도로 보는 부분(매입분)으로 나누어 계산했습니다");
@@ -362,13 +366,13 @@ test.describe("CDPP-15 E2 함께 양도(컴패니언) 일반건물 — 꼬리 id
     await expect(page.getByTestId("carryover-piece-purchased").first()).toBeVisible();
     await expect(page.getByTestId("carryover-piece-method-notice").first()).toContainText("확인 필요");
     const form = page.locator('[data-print-id="form-table"]').first();
-    await expect(form).toContainText("181,431,000");
+    await expect(form).toContainText("181,746,000");
     // 꼬리 카드(land__purchased#gb2)가 있어도 신고서 표는 주 자산 + 컴패니언 열 + 매입분 열
     expect((await formRow(page, "항목")).slice(1)).toEqual(["합계", "주 자산(주택)", "자산 2 토지(1001)(증여분)", "자산 2 건물(3001)", "자산 2 토지(1001)(매입분)"]);
     expect(await formRow(page, "보유기간")).toEqual(["보유기간", "-", "11년 0월", "20년 9월", "-", "5년 0월"]);
     expect(await formRow(page, "양도가액")).toEqual(["양도가액", "1,600,000,000", "800,000,000", "300,000,000", "400,000,000", "100,000,000"]);
     expect(await formRow(page, "취득가액")).toEqual(["취득가액", "875,000,000", "300,000,000", "225,000,000", "200,000,000", "150,000,000"]);
-    expect(await formRow(page, "필요경비")).toEqual(["필요경비", "73,750,000", "0", "70,000,000", "3,000,000", "750,000"]);
+    expect(await formRow(page, "필요경비")).toEqual(["필요경비", "73,000,000", "0", "70,000,000", "3,000,000", "0"]);
     await expect(stmtRow(page, "취득가액")).toContainText("양도로 보는 부분(매입분)으로 나누어 계산했습니다");
 
     // 인쇄 — 전체 선택 뒤 print 미디어
@@ -390,7 +394,7 @@ test.describe("CDPP-15 E2 함께 양도(컴패니언) 일반건물 — 꼬리 id
 // ─────────────────────────────────────────────────────────────────────────────
 // CDPP-16 — 이력 복원 → 「다시 계산」(설계서 V-10 · Q-UI-3 a). V-7 시절(분자 전용)에 토글 ON으로 저장한 일반건물 이월과세 이력.
 //   경로: IndexedDB 이력 → 카드 「편집」(`resumeTransferRecord` → `migrateAsset` → reset + updateFormData) → 마법사 폼 → 계산.
-//   저장된 `resultData`(옛 세액 157,460,000)는 그대로 두고, 다시 계산할 때만 새 의미(141,690,000)가 적용된다.
+//   저장된 `resultData`(옛 세액 157,460,000)는 그대로 두고, 다시 계산할 때만 새 의미(141,960,000)가 적용된다.
 // ─────────────────────────────────────────────────────────────────────────────
 const OLD_DETERMINED_TAX = 157_460_000; // 엔진 설계서 P9 — 분자 전용 의미로 저장됐던 세액(옛 resultData)
 
@@ -420,7 +424,7 @@ test.describe("CDPP-16 이력 복원 후 다시 계산 — 새 의미 적용 · 
     await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
   }
 
-  test("(a) 증여세 두 칸이 채워진 옛 이력 → 값 그대로 복원 → 다시 계산 141,690,000 · 조각 표시 · 옛 세액은 화면에 없다", async ({ page }) => {
+  test("(a) 증여세 두 칸이 채워진 옛 이력 → 값 그대로 복원 → 다시 계산 141,960,000 · 조각 표시 · 옛 세액은 화면에 없다", async ({ page }) => {
     test.setTimeout(240_000);
     await openFromHistory(page, historyRecord("e2e-cdpp16-filled", gbAsset({ giftDebtAssumed: true, giftAssumedDebt: "100000000" })));
     await openAcquisition(page);
@@ -435,7 +439,7 @@ test.describe("CDPP-16 이력 복원 후 다시 계산 — 새 의미 적용 · 
     expect(body.generalBuildingValuation?.landCarryoverPart?.giftAssumedDebt).toBe(100_000_000);
     expect(body.generalBuildingValuation?.carryoverGiftEvent).toMatchObject({ giftTaxCalculated: 30_000_000, giftTaxBase: 1_000_000_000 });
     const form = page.locator('[data-print-id="form-table"]').first();
-    await expect(form).toContainText("141,690,000");
+    await expect(form).toContainText("141,960,000");
     await expect(page.getByTestId("carryover-piece-gift").first()).toBeVisible();
     await expect(page.getByTestId("carryover-piece-purchased").first()).toBeVisible();
     await expect(page.getByTestId("carryover-piece-method-notice").first()).toContainText("확인 필요");
@@ -443,7 +447,7 @@ test.describe("CDPP-16 이력 복원 후 다시 계산 — 새 의미 적용 · 
     await expect(page.locator("body")).not.toContainText("157,460,000");
   });
 
-  test("(b) 증여세 두 칸이 비어 있던 옛 이력 → 다음에서 막히되 증여세 칸으로 이동 → 채우면 통과 · 141,690,000", async ({ page }) => {
+  test("(b) 증여세 두 칸이 비어 있던 옛 이력 → 다음에서 막히되 증여세 칸으로 이동 → 채우면 통과 · 141,960,000", async ({ page }) => {
     test.setTimeout(240_000);
     await openFromHistory(page, historyRecord("e2e-cdpp16-empty", gbAsset({ giftDebtAssumed: true, giftAssumedDebt: "100000000", giftTaxCalculated: "", giftTaxBase: "" })));
     await openAcquisition(page);
@@ -463,7 +467,7 @@ test.describe("CDPP-16 이력 복원 후 다시 계산 — 새 의미 적용 · 
     await expect(page.getByTestId("validation-issues")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "보유 상황" })).toBeVisible();
     await calculate(page);
-    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("141,690,000");
+    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("141,960,000");
     await expect(page.getByTestId("carryover-piece-purchased").first()).toBeVisible();
   });
 });

@@ -87,11 +87,13 @@ const buildingOnly = (o: Record<string, unknown> = {}, a: Partial<AssetForm> = {
   gbBase({ gbBuildingAcquisitionCause: "carryover_gift", carryover: { ...CARRYOVER_DEFAULTS }, buildingCarryover: co(o), ...a });
 
 describe("UI-1 ★ K-2 격자 — 증여세 칸 3상태 × 토글 (⑧ 통과 ⇒ 채무가 와이어·엔진에 닿는다)", () => {
-  it("산출세액 3천만 · 과세가액 10억 + 토글 ON → 141,690,000 · 꼬리 land__purchased (엔진 anchor와 같은 값)", async () => {
+  it("산출세액 3천만 · 과세가액 10억 + 토글 ON → 141,960,000 · 꼬리 land__purchased (엔진 anchor와 같은 값)", async () => {
     const f = formOf([landOnly()]);
     const r = await run(f);
     expect(r.issues).toEqual([]);
-    expect([r.status, r.det]).toEqual([200, 141_690_000]);
+    // 2026-10-28 갱신 141,690,000 → 141,960,000 — PR-2(본인 지출 소실 수정) 이후 매입분은 환산 개산공제 없이 본인 자본적지출+양도비만 필요경비(취득가액이 채무(실지거래가액)라
+    // §97② 제1호). 매입분 개산공제 750,000 제거 → 매입분 소득 +675,000(장특 10%) × 40% = +270,000. 손계산은 `transfer.route.carryover-gift-tax-numerator-net` 경로 2.
+    expect([r.status, r.det]).toEqual([200, 141_960_000]);
     expect(ids(r)).toEqual(["land", "building", "land__purchased"]);
   });
 
@@ -197,12 +199,12 @@ describe("UI-2 ⑥ 사이드바 — 계산 후 취득가액·필요경비 = 엔�
   const sum = (r: { data?: unknown }, k: "acquisitionPrice" | "necessaryExpense") => props(r).reduce((s, p) => s + p[k], 0);
   const sidebar = (f: TransferFormData, r: { data?: unknown }) => computeTransferPerAssetSummary(f, r.data as TransferAPIResult).rows[0];
 
-  it("★ 토지만 이월과세 · 토글 ON → 취득가액 462,500,000 · 필요경비 12,750,000 (엔진 차감 합 · 꼬리 포함)", async () => {
+  it("★ 토지만 이월과세 · 토글 ON → 취득가액 462,500,000 · 필요경비 12,000,000 (엔진 차감 합 · 꼬리 포함 · 매입분 개산공제 750,000 제거)", async () => {
     const f = formOf([landOnly()]);
     const r = await run(f);
-    expect([sum(r, "acquisitionPrice"), sum(r, "necessaryExpense")]).toEqual([462_500_000, 12_750_000]);
+    expect([sum(r, "acquisitionPrice"), sum(r, "necessaryExpense")]).toEqual([462_500_000, 12_000_000]);
     const row = sidebar(f, r);
-    expect([row.salePrice, row.acqPrice, row.expense, row.acqPending, row.expensePending]).toEqual([1_000_000_000, 462_500_000, 12_750_000, false, false]);
+    expect([row.salePrice, row.acqPrice, row.expense, row.acqPending, row.expensePending]).toEqual([1_000_000_000, 462_500_000, 12_000_000, false, false]);
   });
 
   it("★ 토글 OFF인 이월과세 일반건물도 엔진 차감과 같다 — 종전: 취득가액 5억 · 필요경비 600만 (Q-UI-8)", async () => {
