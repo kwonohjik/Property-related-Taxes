@@ -223,6 +223,24 @@ function calcCarryoverScenariosCore(
   }
 
   // 4b: 필요경비 합산 (swap 통합 — directSide에 증여자 capex 포함)
+  //
+  // 🔴 양도자 **본인**의 필요경비(`expenses` 스칼라)를 버리지 않는다 — 아래 A 입력은 `capitalExpenditure`를 항상 숫자로 선언하므로
+  //    `calcNecessaryExpense`가 legacy `expenses`를 읽지 않는다(`swapEligible` → `directSide`). 함께양도 자산(자산별 `directExpenses` + 공통 양도비 몫)과
+  //    legacy 단건 `directExpenses`는 본인 필요경비를 `expenses`로만 싣는 채널이라 시나리오 A 에서만 통째로 소실됐다(B 는 반영).
+  //    소득세법 §97의2①본문 「필요경비는 제97조제2항에 따르되」·2호 「증여자가 지출한 금액을 포함한다」(= 더하는 문언) → 본인 지출은 A 에도 들어간다.
+  //    본인이 `capitalExpenditure`/`transferExpense`를 **선언하지 않았을 때만** 접는다(선언 채널 우선 — 이중 계상 방지). calcNecessaryExpense 의
+  //    legacy 규칙(`swapEligible ? directSide : expenses`)과 같은 선택을 경계에서 수행하는 것이다.
+  //    일반건물 카드(`usedEstimatedAcquisition`이 항상 boolean 인 표지)는 제외 — 카드의 `expenses`는 환산 개산공제·swap 나목이 섞인 스칼라라
+  //    본인 지출로 접으면 개산공제가 오접힌다(계획서 §6.1 가드 실측). 카드는 `buildProperties`가 본인 나목을 `capitalExpenditure`로 명시해 싣는다(PR-2).
+  //    부담부증여는 제외 — A 입력의 `capitalExpenditure`가 §159 안분(채무비율)의 입력이라 `expenses`를 접으면 안분 대상이 바뀐다. 미실측(계획서 V-2)이라 이번 범위 밖.
+  const ownDirect =
+    rawInput.capitalExpenditure === undefined &&
+    rawInput.transferExpense === undefined &&
+    rawInput.usedEstimatedAcquisition === undefined &&
+    !isBurdenedGift
+      ? (rawInput.expenses ?? 0)
+      : 0;
+  //    `effectiveCapex`(결과 echo — 「수증자 자본적지출 + 증여자 자본적지출」)는 종전 의미를 지키고, 접힌 본인 지출은 A 입력에만 더한다.
   const effectiveCapex = (rawInput.capitalExpenditure ?? 0) + effectiveDonorCapex;
 
   // 4c: Scenario A용 입력 구성
@@ -295,7 +313,7 @@ function calcCarryoverScenariosCore(
     giftHouseholdBasis: carryoverGiftHouseholdBasis(ct, true),
     // §99의4·§98의9 취득순서 판정도 같은 이유로 세대 기준 보유 개시일을 따로 싣는다 (D4-05)
     houseCountExclusionAcquisitionDate: resolveHouseCountExclusionAcqDate(rawInput, ct),
-    capitalExpenditure: effectiveCapex,           // 합산된 capex (directSide swap용)
+    capitalExpenditure: effectiveCapex + ownDirect, // 합산된 capex (directSide swap용) + 접힌 본인 `expenses`
     carryoverTaxation: undefined,                // 재귀 방지
     acquisitionCause: "gift",                    // 하위 호환 (단순 증여)
   };
