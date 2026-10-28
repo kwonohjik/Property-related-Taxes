@@ -118,8 +118,8 @@ export interface BgSingleDisplay {
 /**
  * 단건 부담부증여 결과의 표시값. 해당하지 않으면 undefined — 호출부는 종전 경로를 그대로 탄다.
  *
- * 제외(종전 경로 유지): 이월과세(필요경비 줄만 `resolveBgCarryoverSingleDisplay`) · 재개발 · 겸용 · 토지·건물 별개 취득. 이 조합들은 취득가액·필요경비가 §159 슬롯과 다른 축으로
- * 정해지므로 슬롯 합을 그대로 표시하면 항등식이 깨질 수 있다(미검증 — 별건). 집계(일반건물·다건)는 호출부가 aggregate로 이미 가른다.
+ * 제외(종전 경로 유지): 이월과세(`resolveBgCarryoverSingleDisplay`가 같은 슬롯을 읽는다) · 재개발 · 겸용 · 토지·건물 별개 취득. 이 조합들은 취득가액·필요경비가 §159 슬롯과 다른 축으로
+ * 정해지므로 슬롯 합을 그대로 표시하면 항등식이 깨질 수 있다(재개발·겸용·별개 취득은 미검증 — 별건. 이월과세 단건은 계획서 `bg-single-carryover-statement-price-rows.plan.md` §1.1에서 항등식 성립을 확인했다). 집계(일반건물·다건)는 호출부가 aggregate로 이미 가른다.
  */
 export function resolveBgSingleDisplay(result: TransferTaxResult): BgSingleDisplay | undefined {
   if (result.carryoverTaxationDetail) return undefined;
@@ -127,9 +127,9 @@ export function resolveBgSingleDisplay(result: TransferTaxResult): BgSingleDispl
 }
 
 /**
- * 이월과세 단건 부담부증여의 표시값 — 필요경비 줄 전용(계획서 `bg-single-carryover-statement-expense-label.plan.md`).
- * 이월과세가 아닌 단건과 같은 슬롯 echo를 읽는다. 채택 시나리오(A·B)의 `transferBurdenedGiftBreakdown`이 결과에 실려 있다.
- * 양도가액·취득가액 줄은 이 함수를 쓰지 않는다(별건) — 이월과세 전용 문구가 따로 있다.
+ * 이월과세 단건 부담부증여의 표시값 — 필요경비(계획서 `bg-single-carryover-statement-expense-label.plan.md`)와
+ * 양도가액·취득가액(`bg-single-carryover-statement-price-rows.plan.md`) 줄 공용. 이월과세가 아닌 단건과 같은 슬롯 echo를 읽는다.
+ * 채택 시나리오(A·B)의 `transferBurdenedGiftBreakdown`이 결과에 실려 있다. 7개 시료에서 양도 − 취득 − 경비 = 양도차익이 선다(계획서 §1.1).
  */
 export function resolveBgCarryoverSingleDisplay(result: TransferTaxResult): BgSingleDisplay | undefined {
   if (!result.carryoverTaxationDetail) return undefined;
