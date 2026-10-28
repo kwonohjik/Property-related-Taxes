@@ -2,6 +2,7 @@
 
 - 작성: 2026-10-28 · 브랜치 `docs/carryover-a-filing-acq-label-plan`(origin/master f29e24a08 기반) · 제품 코드 무변경(계획서만 · throwaway probe는 제거함)
 - 출처: `gb-estimated-carryover-scenario-a-capex.plan.md` §11-5 「Q-4 합산의 부작용(별건 후보)」 — 그때는 「라벨만 정밀하지 않고 세액·항등식은 정확」으로 범위 밖 처리했다. 이번에 실측하니 **라벨 외에 명세서 산식 문구와 값이 어긋나는 것도 같은 원인**이다(§2.3).
+- 결정: ✅ 2026-10-28 확정 — Q-1 O1(본인 자본적지출만 이동) · Q-2 산식 문구 포함 (사용자 「권고안으로 진행해」).
 - 판정: **표시 결함(세액 무관)**. 법문 해석 문제가 아니다(§4) — 질의·해석례 불요.
 - 검증 방식: 모든 수치는 mock 세율(`makeMockRates()`) 로 `POST /api/calc/transfer` 와 표시 leaf(`capExInAcquisitionColumnOfProperty`)·산식 빌더(`buildGbAcquisitionFormula`)를 직접 호출한 probe 실측. 인용 file:line은 이 워크트리 실파일.
 
@@ -133,3 +134,20 @@
 - 증여자 자본적지출이 취득가액 칸이 아니라 필요경비 칸에 머무는 것(§2.2 마지막 행): `exempt-gross-gain.ts:70-76` 주석은 「증여자 자본적지출 승계를 취득가액 칸에 적는다」고 하나 실측은 필요경비 칸이다. 세액·항등식은 맞다. 주석과 실측이 어긋나므로 정리는 별건 후보다 — 이번 수정에서는 건드리지 않는다.
 - 감정가액·매매사례 파트 카드의 화면 `capexHint`(「자본적지출·양도비는 반영되지 않는다」)가 이월과세 카드에서는 A·B 모두 본인 지출을 쓰는 지금 사실과 다를 수 있다(§97②2호 본문 안내) — 이전 계획서 §11-7 의 미점검 항목 그대로다.
 - Q-5(선언 채널 컴패니언 공통 양도비 소실)·GB 부담부증여 본인 지출(V-2)은 이전 계획서의 별건이다.
+
+---
+
+## 10. Do 환류 (2026-10-28 구현 결과 — 계획서와 달라진 점)
+
+구현: 브랜치 `fix/gb-carryover-a-card-capex-split`. Pre-Do anchor(양도비만 입력 이동분 0 · 산식 문구) 6건이 현행에서 적색임을 먼저 확인했다.
+
+1. **「가산적」은 ±1원이다 (§2.2·§5.1-1 정정)** — 3,000,000/5,000,000 은 2,473,212 + 4,122,020 = 6,595,232 로 정확히 맞았지만, 150,000,000/5,000,000 은 자본적지출 123,660,614(손계산 floor) + 양도비 4,122,020 = 127,782,634 로 합산 몫 127,782,635 와 **1원** 어긋난다(`floor(a)+floor(b) ≤ floor(a+b)`). 계획서 §5.1-1 의 「양도비 몫 = ownDirect − ownCapex」(잔액 흡수) 정의 덕에 합은 그대로이고 그 1원은 양도비가 흡수한다(필요경비 칸 +1원). 세액·필요경비 합계 불변.
+2. **구현 모양** — 환산: `GeneralBuildingSwapDecision.ownCapex`(`general-building-swap.ts`, 자본적지출만으로 `decideSwap` 한 번 더 · `partAxis.transferExpense`는 제외, 몫은 `ownDirect` 이하로 자름). 실가: `AssetCardForAggregate.expensesCapex`(신규 optional) — `general-building-route-actual.ts`의 `apportionExpenses`·`resolvePartExpenses`가 이미 따로 구하던 자본적지출 몫(파트 직접귀속 포함)을 내고, 사업용·비사업용 분할 카드에도 같은 규칙. `buildProperties`는 `capitalExpenditure`(자본적지출 몫) + `transferExpense`(나머지)로 나눠 싣는다. 명세서 `buildGbAcquisitionFormula` 이월과세 A 분기에 「+ 자본적지출 N」(단건 `capExStr` 와 같은 형태).
+3. **V-1 해소** — `transferExpense`가 카드 item 에 실려도 관련 회귀 전수(`__tests__/tax-engine/transfer`·`api`·`components`·`calc` **2,512 파일 · 30,175 테스트**)에서 반전 0건. 세액은 새 anchor 에서 현행 값(0/5M 34,478,553 — 수정 前 실측 · 나머지는 GBCO-1 값)과 같다.
+4. **V-3 결정** — legacy `directExpenses` 덩어리는 `expensesCapex`가 없어 자본적지출 몫 0 · 전액 `transferExpense`(= 필요경비 칸). anchor CS-3 이 고정한다.
+5. **V-4 부분 해소** — 환산 2-way(CS-1)·지분(CS-4: 자본적지출 10,000,000 → 이동분 5,000,000)·채무 매입분 증여분 조각(CS-5: 이동분 900,000 · 조각 규칙 `carryover-debt-pieces.ts:89·109`이 두 필드를 따로 자른다)·실가(CS-3: 16,488,081 + 4,825,066 = 21,313,147 — 손계산이 수정 前 합과 일치)를 실측. **증축(3-way)·파트 축(감정·매매사례) 전용 anchor 는 만들지 않았다** — 같은 `decideSwap` 경로를 타고 기존 GBCO·증축 anchor 가 세액 불변을 지키지만 이동분 값 자체는 미고정. `Math.min(capexRaw, ownDirect)` 방어는 합산 실행보다 큰 자본적지출 몫이 생기는 경우(마지막 카드 잔액 흡수의 ±n원)용인데 그런 입력을 못 만들어 뮤테이션으로 고정하지 못했다.
+6. **V-2 미해소(표시 문구)** — 일반건물 A 카드의 필요경비 칸 산식(`buildGbExpenseFormula` gb 분기)은 이월과세 A 분기가 없다. 값(필요경비 칸 = 필요경비 − 이동분)은 맞고 이 PR 에서 문구는 바꾸지 않았다.
+7. **BG(부담부증여) 일반건물 카드의 부수 변화** — 이 경로는 카드 `expenses`가 §159 개산공제(`landExp = estimatedDeduction`, `general-building-route-actual.ts:315`)라 `expensesCapex`가 없다 → 이월과세 A 에서 이동분 0(전액 필요경비 칸). 종전에는 개산공제가 「자본적지출」로 취득가액 칸에 얹혔다. 회귀 전수에서 반전 0건이라 기존 anchor 가 이 표시를 고정하지 않았음을 확인했다. 세액 불변.
+8. **뮤테이션 5종 전부 적색** — M1 합산값을 `capitalExpenditure` 로(10건) · M2 산식 문구 제거(2건) · M3 legacy 덩어리를 자본적지출로(3건) · M4 `ownCapex` 미분리(7건) · M5 실가 자본적지출 몫 0(1건).
+9. **E2E** — `e2e/gb-carryover-a-own-expense.spec.ts` GBCO-E3 추가(신고서 토지 취득가액 = 150,000,000 + 10,000,000 = 160,000,000 · 165,000,000 부재 — 수정 前 값은 계획서 §11-5 기존 실측). 3 건 통과.
+10. **파일 크기** — `lib/tax-engine/types/general-building.types.ts` 787 → 793줄(타입 전용 파일 — 분리 대상 아님으로 판단 · 800 미만).

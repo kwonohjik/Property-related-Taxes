@@ -69,4 +69,19 @@ test.describe("일반건물 환산 × 토지 이월과세 × 본인 지출", () 
     await expect(table).toContainText("156,372,000");
     await expect(table).not.toContainText("160,572,000");
   });
+
+  /**
+   * 신고서 A 열 「취득가액」 칸 — 이월과세 A 는 본인 **자본적지출 몫만** 증여자 취득가액에 얹는다(양도비는 필요경비 칸).
+   * 토지 몫은 환산 카드 (환산취득가 + 개산공제) 비례 50%: 자본적지출 20,000,000 → 10,000,000 · 양도비 10,000,000 → 5,000,000.
+   * 수정 前에는 합산 15,000,000 이 취득가액 칸에 얹혀 165,000,000 이었다(계획서 carryover-a-gb-card-filing-acq-cell-label §2).
+   */
+  test("GBCO-E3 신고서 토지 취득가액 칸 = 증여자 150,000,000 + 자본적지출 몫 10,000,000 (양도비 몫 5,000,000 은 필요경비 칸)", async ({ page }) => {
+    test.setTimeout(180_000);
+    await prepare(page, { capitalExpenditure: "20000000", transferExpense: "10000000" });
+    await calculate(page);
+    const table = page.locator('[data-print-id="form-table"]').first();
+    await expect(table).toContainText("156,372,000");
+    await expect(table).toContainText("160,000,000");
+    await expect(table).not.toContainText("165,000,000");
+  });
 });

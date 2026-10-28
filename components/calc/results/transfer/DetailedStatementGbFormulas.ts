@@ -282,7 +282,10 @@ function buildGbAcquisitionFormulaCore(
     const head = a.acquisitionWasEstimated
       ? "증여자 취득 당시 환산취득가"
       : "증여자 취득 당시 취득가액";
-    return `${head} ${fmt(a.acquisitionPrice)}${capexNote} — 이월과세 §97의2① (증여자 취득가액 승계)`;
+    // 취득가액 칸으로 옮겨 얹은 본인 자본적지출 — 값(`p.acquisitionPrice + 이동분`)과 산식이 같은 수를 적게 한다(단건 경로 `capExStr` 와 같은 형태).
+    const shiftedCapex = capExInAcquisitionColumnOfProperty(p);
+    const capExStr = shiftedCapex > 0 ? ` + 자본적지출 ${fmt(shiftedCapex)}` : "";
+    return `${head} ${fmt(a.acquisitionPrice)}${capExStr}${capexNote} — 이월과세 §97의2① (증여자 취득가액 승계)`;
   }
 
   /**
