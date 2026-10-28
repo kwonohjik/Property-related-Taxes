@@ -23,6 +23,7 @@ import { capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
 import { splitAcqFormulaText, splitExpenseText } from "./split-acq-text";
 import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
 import { buildBgAcquisitionFormula, buildBgExpenseFormula } from "./DetailedStatementBgFormulas";
+import { buildGbCarryoverExpenseFormula } from "./DetailedStatementGbCarryoverFormulas";
 import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
 
 /**
@@ -580,6 +581,13 @@ export function buildGbExpenseFormula(
   // 토지·건물 별개 취득(split) 분리 자산 — 파트별 자본적지출·양도비 + 개산공제(echo). 개산공제 파트가 없으면 종전 문구.
   const splitExpText = splitExpenseText(p.splitDetail);
   if (splitExpText) return splitExpText;
+
+  // 이월과세(§97의2) 카드 — 개산공제 분기로 떨어지면 「× 3% = 칸 값」이 거짓 등식이 된다(A: 본인 양도비·증여자 자본적지출·증여세 상당액 · B: 본인 지출뿐).
+  const carryoverText = buildGbCarryoverExpenseFormula(
+    p,
+    dedRatePct(isBuildingProp(p.propertyId) ? gb?.estimatedDeduction?.buildingRate : gb?.estimatedDeduction?.landRate),
+  );
+  if (carryoverText !== undefined) return carryoverText;
 
   const capExShift = capExInAcquisitionColumnOfProperty(p);
   const displayExp = Math.max(0, p.necessaryExpense - capExShift);
