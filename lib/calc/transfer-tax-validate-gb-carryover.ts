@@ -16,6 +16,7 @@ import { gbBgGiftTaxNumerator, gbBgGiftTaxReturn } from "./gb-bg-gift-tax-return
 import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
 import { carryoverAssumedDebt } from "./carryover-gift-assumed-debt";
 import { assumedDebtIssue, validateGbCarryoverDebt } from "./transfer-tax-validate-carryover-debt";
+import { validateGbCarryoverDebtScope } from "./transfer-tax-validate-carryover-debt";
 import { carryoverGiftTaxedValue } from "./carryover-gift-assumed-debt";
 import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
 import { bgCarryoverForm, bgPartialCarryover } from "./bg-carryover-parts";
@@ -92,6 +93,10 @@ export function validateGbCarryover(asset: AssetForm, label: string, formTransfe
   if (!c?.giftRegistryDate)
     return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일을 입력하세요 (「소득세법」 제97조의2 제3항 — 적용기간 기산일).`);
 
+  // 당초 증여 때 인수한 채무 — 조각 규칙을 적용할 수 없는 자산(감면·용도변경)에서 토글이 켜져 있으면 끄게 막는다(채무 칸 필수 검사보다 앞 — 이 상태의 UI는 채무 칸을 숨긴다).
+  const debtScopeBlock = validateGbCarryoverDebtScope(asset, c, label);
+  if (debtScopeBlock) return debtScopeBlock;
+
   const parts: Array<[CarryoverTaxationForm | undefined, string]> = [];
   if (landIsCarryover) parts.push([c, `${label} 토지`]);
   if (buildingIsCarryover) parts.push([asset.buildingCarryover ?? c, `${label} 건물`]);
@@ -138,7 +143,7 @@ export function validateGbCarryover(asset: AssetForm, label: string, formTransfe
 
   // 짝 반쪽 — ④ `gbCarryoverUsesPartShape`는 둘 다 > 0일 때만 신고서 금액을 보내고, 아니면 화면에 없는 상당액 칸(0)으로 내려간다.
   //   사건 출처가 건물 서브폼(건물만 이월과세)이면 앵커도 그쪽이다(화면 건물 블록 `field` 접두어).
-  const pairIssue = giftTaxPairIssue(c, label, !landIsCarryover);
+  const pairIssue = giftTaxPairIssue(c, label, !landIsCarryover, c?.giftDebtAssumed === true);
   if (pairIssue) return pairIssue;
 
   /**
@@ -204,9 +209,14 @@ const DEBT_HINT = " — 당초 증여 때 인수한 채무가 있으면 «당초
  * (실측 2026-10-26: 산출세액만 → 163,932,000 = 증여세 없음, 짝 → 160,572,000). 빈 칸 쪽으로 이동시킨다.
  */
 /** `onBuilding` — 사건 출처가 건물 서브폼(건물만 이월과세)이면 앵커도 `buildingCarryover.*`다. 앵커는 리터럴 삼항으로 쓴다(앵커 커버리지 게이트가 정적으로 읽는다). */
-function giftTaxPairIssue(c: CarryoverTaxationForm | undefined, label: string, onBuilding: boolean): string | null {
+function giftTaxPairIssue(c: CarryoverTaxationForm | undefined, label: string, onBuilding: boolean, debtAssumed = false): string | null {
   const calculated = parseAmount(c?.giftTaxCalculated ?? "");
   const base = parseAmount(c?.giftTaxBase ?? "");
+  // 당초 증여 때 채무를 인수했으면(일반 양도 일반건물) 두 칸이 **모두** 있어야 한다 — ④ `gbCarryoverUsesPartShape`가 이 짝일 때만 인수채무를 와이어에 싣는다(K-2). 산출세액 0은 입력이다.
+  if (debtAssumed && !(base > 0))
+    return fieldError(onBuilding ? "buildingCarryover.giftTaxBase" : "carryover.giftTaxBase", `${label}: 당초 증여 때 채무를 인수했으면 증여세 신고서의 과세가액을 입력하세요 — 인수한 채무를 시나리오 A에서 나누어 계산하는 데 산출세액·과세가액이 함께 필요합니다 (「소득세법 시행령」 제163조의2 제2항 제3호).`);
+  if (debtAssumed && (c?.giftTaxCalculated ?? "").trim() === "")
+    return fieldError(onBuilding ? "buildingCarryover.giftTaxCalculated" : "carryover.giftTaxCalculated", `${label}: 당초 증여 때 채무를 인수했으면 증여세 산출세액을 입력하세요 — 증여세가 없었다면 0을 입력합니다 (「소득세법 시행령」 제163조의2 제2항 제1호).`);
   if (calculated > 0 && !(base > 0))
     return fieldError(onBuilding ? "buildingCarryover.giftTaxBase" : "carryover.giftTaxBase", `${label}: 증여세 과세가액을 입력하세요 — 산출세액과 함께 있어야 증여세 상당액을 계산합니다 (「소득세법 시행령」 제163조의2 제2항 제3호).`);
   // 산출세액 「0」은 입력이다(증여재산공제로 세액 0 — 칸 안내도 「없으면 0」). 상당액도 0이 맞으므로 **빈 칸**만 막는다.

@@ -21,6 +21,7 @@ import { partDonorEstimated } from "./transfer-land-part-cause";
 import { carryoverHouseholdPayload } from "./transfer-tax-api-carryover";
 import { buildDonorBuiltPartPayload, type SplitDonorBuiltPayload } from "./transfer-tax-api-donor-built-part";
 import { carryoverAssumedDebt } from "./carryover-gift-assumed-debt";
+import { splitCarryoverEventSource } from "./carryover-gift-event-source";
 
 /** ⑫ `carryoverGiftEvent` — 증여 그 자체의 사실. */
 export interface SplitCarryoverEventPayload {
@@ -70,18 +71,8 @@ export interface SplitCarryoverPayload {
   buildingCarryoverPart?: SplitCarryoverPartPayload;
 }
 
-/**
- * 증여 **사건** 출처 서브폼 — 등기접수일·산출세액·과세가액·관계·사망·적용배제가 이 한 벌이다(UI 설계 §2.1 Q-2).
- *   · 호스트 「이월과세(증여)」(C) — `carryover`. 건물 파트의 증여자 입력도 같은 서브폼이 받는다(토글 전 입력이 건물 값으로 재해석된다 — §3.3).
- *     P4 B(건물만 이월과세 + 토지 매매)도 호스트가 「이월과세(증여)」라 `carryover`다 — 건물 파트 입력과 같은 서브폼.
- *   · 그 밖(P3 A — 건물 매매·신축 + 토지 이월과세) — `landCarryover`. 토지 파트 입력도 같은 서브폼이다.
- * ⑤(카드 바인딩)·④·⑧이 이 함수 하나로 같은 서브폼을 읽는다.
- */
-export function splitCarryoverEventSource(
-  asset: Pick<AssetForm, "carryover" | "landCarryover" | "acquisitionCause">,
-): CarryoverTaxationForm | undefined {
-  return asset.acquisitionCause === "carryover_gift" ? asset.carryover : asset.landCarryover;
-}
+/** 증여 사건 서브폼 출처 — ⑤·④·⑧ 공용(`carryover-gift-event-source.ts`가 정본). */
+export { splitCarryoverEventSource } from "./carryover-gift-event-source";
 
 /**
  * 파트 서브폼 → 파트 payload. 금액 칸은 비었거나 0이면 `undefined`(빈 값을 「입력했다」로 오인하지 않는다 — ⑫ 필수 위반이 필드 오류로 드러난다).

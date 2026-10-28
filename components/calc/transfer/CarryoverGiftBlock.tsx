@@ -12,6 +12,7 @@
  *  ③ 필요경비 가산 (증여세 상당액·증여자 자본적지출)
  *  ④ 비교과세 기준 — Scenario B 취득가 (증여 당시 평가액)
  *  ⑤ 당초 증여 때 인수한 채무 (CarryoverGiftDebtSection — 주택·토지·상업용건물 E1 · 채무 부분(매입분) 시나리오 A 분할)
+ *     일반건물(E2)은 토글을 ③ 필요경비 가산 안에, 파트 채무 칸을 ④ 평가액 아래에 둔다(앵커·E2E 보존 — 설계서 Q-UI-5 a)
  *  ⑥ 적용배제 선언 (CarryoverGiftExclusionSection)
  */
 
@@ -30,8 +31,13 @@ import {
   DEBT_DONOR_CAPEX_PART_ONLY_HINT,
   DEBT_GIFT_PART_ONLY_HINT,
   DEBT_GIFT_TAX_PART_ONLY_HINT,
+  DEBT_GIFT_TAX_CALCULATED_PART_ONLY_HINT,
+  GB_DEBT_APPLY_DESCRIPTION,
+  gbDebtFieldHint,
 } from "./CarryoverGiftDebtSection";
 import { carryoverPurchasedPartScope } from "@/lib/calc/carryover-gift-assumed-debt";
+import { carryoverGiftEventForm } from "@/lib/calc/carryover-gift-assumed-debt";
+import { gbCarryoverDebtUnsupportedReason } from "@/lib/calc/carryover-gift-assumed-debt";
 import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
 import { carryoverHouseholdFactVisible } from "@/lib/calc/transfer-tax-api-carryover";
 import { gbBgSplitsGiftValuation } from "@/lib/calc/gb-bg-gift-tax-return";
@@ -148,7 +154,9 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
   /** 증여 사건 블록인가 — 일반건물 건물 블록은 토지도 이월과세면 사건 블록이 아니다(`gbCarryoverEventSource`). 인수채무 토글은 사건 블록에만 둔다. */
   const isEventBlock = !(isGeneralBuilding && isBuildingPart && asset.acquisitionCause === "carryover_gift");
   /** 당초 증여 때 채무를 인수했는가(사건 값) — 켜지면 일반건물은 파트마다 인수채무 칸을 받는다(`carryover-gift-tax-numerator-net.plan.md` Q-2 a · Q-3 a). */
-  const debtAssumed = eventGiftDebtAssumed ?? c.giftDebtAssumed;
+  const debtAssumed = eventGiftDebtAssumed ?? carryoverGiftEventForm(asset, { isNonPrimary: isNonPrimaryAsset })?.giftDebtAssumed ?? false;
+  /** 범위 술어 — ④ 전송·⑧ 필수·차단과 같은 하나. 건물 블록이 받는 합성 asset(`carryover` 자리에 건물 서브폼)에서도 같은 값이다(`carryover`를 읽지 않는다). */
+  const debtScope = carryoverPurchasedPartScope(asset, { isNonPrimary: isNonPrimaryAsset });
   /** 일반건물 토지·건물 둘 다 이월과세 — 칸 이름에 토지분·건물분을 붙인다(인수채무는 파트마다 받는다). */
   const gbBothCarryover = isGeneralBuilding && asset.acquisitionCause === "carryover_gift" && asset.gbBuildingAcquisitionCause === "carryover_gift";
   /** 부담부증여 일반건물 건물 블록인데 토지도 이월과세 — 증여 사건은 토지 블록이 정본이라(`gbCarryoverEventSource`) 이 블록의 사건 칸은 ④가 읽지 않는다. */
@@ -167,10 +175,13 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
   const shareMode = isFractionalOwnership(asset);
   const giftTaxShareHint = shareMode ? SHARE_MODE_GIFT_TAX_HINT : "";
   /**
-   * 채무 부분(매입분) 분할이 **적용되는** 입력(E1)이고 토글이 켜졌는가 — 증여자 쪽 값(취득가액·환산 기준시가·증여세 상당액·자본적지출)이 증여분에만 쓰인다는 안내를 붙인다.
-   * 술어는 ④ 전송·⑧ 차단과 같은 `carryoverPurchasedPartScope` 하나다. 표시 전용 파생이며 store에 쓰지 않는다.
+   * 채무 부분(매입분) 분할이 **적용되는** 입력(E1·E2)이고 사건 토글이 켜졌는가 — 증여자 쪽 값(취득가액·환산 기준시가·증여세 상당액·자본적지출)이 증여분에만 쓰인다는 안내를 붙인다.
+   * 술어는 ④ 전송·⑧ 차단과 같은 `carryoverPurchasedPartScope`, 토글 값은 같은 출처(`carryoverGiftEventForm`) 하나다 — 건물 블록에서는 `c`가 건물 서브폼이라 `c.giftDebtAssumed`를 읽으면 거짓이 된다.
+   * 표시 전용 파생이며 store에 쓰지 않는다.
    */
-  const debtPiecesOn = !isGeneralBuilding && c.giftDebtAssumed && carryoverPurchasedPartScope(asset, { isNonPrimary: isNonPrimaryAsset }).kind === "apply";
+  const debtPiecesOn = debtAssumed && debtScope.kind === "apply";
+  /** 일반건물 건물 파트에 채무가 있고 증여자가 신축·증축한 건물이면 조각 규칙을 적용할 수 없다(⑧ `validateGbCarryoverDebt`·⑫와 같은 사유). 건물 채무 칸의 경고 — 칸을 숨기지 않는다(입력 중에 사라지면 막다른 길). */
+  const buildingDonorBuiltReason = isGeneralBuilding && isBuildingPart && debtPiecesOn ? gbCarryoverDebtUnsupportedReason(asset, true) : null;
 
   function updateCarryover(patch: Partial<CarryoverTaxationForm>) {
     onChange({ carryover: patchCarryover(asset.carryover, patch) });
@@ -381,7 +392,8 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
                 (isBurdenedGift
                   ? "「소득세법 시행령」 제163조의2 제2항 제1호 — 증여받은 자산 전체에 대한 증여세 산출세액. 아래 증여 당시 평가액이 과세가액에서 차지하는 비율로 증여세 상당액을 계산하고, 채무 비율로 양도로 보는 부분의 몫을 나눕니다."
                   : "「소득세법 시행령」 제163조의2 제2항 제1호 — 증여받은 자산 전체에 대한 증여세 산출세액. 토지·건물 몫은 아래 과세가액으로 자동 안분됩니다.") +
-                giftTaxShareHint
+                giftTaxShareHint +
+                (debtPiecesOn ? DEBT_GIFT_TAX_CALCULATED_PART_ONLY_HINT : "")
               }
               trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
             >
@@ -414,10 +426,18 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
                 tone="amber"
                 title="당초 증여 때 채무를 인수했다"
                 description={
-                  <>
-                    증여세 신고서에서 증여재산가액에서 뺀 채무가 있으면 켭니다 — 안분의 분자는 그 자산의 증여세 과세가액(평가액 − 인수채무)입니다(「상속세 및 증여세법」 제47조 제1항 · 「소득세법 시행령」 제163조의2 제2항 제2호).
-                    <DebtNumeratorOnlyNote />
-                  </>
+                  debtScope.kind === "apply" ? (
+                    GB_DEBT_APPLY_DESCRIPTION
+                  ) : debtScope.kind === "unsupported" ? (
+                    <span data-testid="carryover-debt-unsupported-toggle-note">
+                      이 자산에서는 채무 인수 부분을 시나리오 A에서 나누어 계산하지 못합니다({debtScope.reason}) — 이 토글을 끄세요.
+                    </span>
+                  ) : (
+                    <>
+                      증여세 신고서에서 증여재산가액에서 뺀 채무가 있으면 켭니다 — 안분의 분자는 그 자산의 증여세 과세가액(평가액 − 인수채무)입니다(「상속세 및 증여세법」 제47조 제1항 · 「소득세법 시행령」 제163조의2 제2항 제2호).
+                      <DebtNumeratorOnlyNote />
+                    </>
+                  )
                 }
                 checked={c.giftDebtAssumed}
                 onCheckedChange={(v) => updateCarryover({ giftDebtAssumed: v })}
@@ -496,11 +516,22 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           />
         </FieldCard>
         {/* 인수채무 — 평가액(B 취득가액)은 그대로 두고 증여세 상당액 분자에서만 뺀다(④ `carryoverAssumedDebt` · ⑧ 필수·평가액 이하). */}
-        {isGeneralBuilding && debtAssumed && (
+        {isGeneralBuilding && debtAssumed && debtScope.kind !== "unsupported" && (
           <FieldCard
             label={gbBothCarryover ? `${isBuildingPart ? "건물분" : "토지분"} 당초 증여 때 인수한 채무` : "당초 증여 때 인수한 채무"}
             field={isBuildingPart ? "buildingCarryover.giftAssumedDebt" : "carryover.giftAssumedDebt"}
-            hint={`${gbBothCarryover ? (isBuildingPart ? "건물" : "토지") + "에" : "이 자산에"} 담보된 채무로서 당초 증여 때 인수해 증여세 과세가액에서 빠진 금액 — 증여세 상당액 안분의 분자에서 뺍니다. 위 평가액(미적용 시 취득가액)은 그대로입니다 (「상속세 및 증여세법」 제47조 제1항 · 「소득세법 시행령」 제163조의2 제2항 제2호).`}
+            hint={
+              debtScope.kind === "apply"
+                ? gbDebtFieldHint(gbBothCarryover ? (isBuildingPart ? "건물" : "토지") : null)
+                : `${gbBothCarryover ? (isBuildingPart ? "건물" : "토지") + "에" : "이 자산에"} 담보된 채무로서 당초 증여 때 인수해 증여세 과세가액에서 빠진 금액 — 증여세 상당액 안분의 분자에서 뺍니다. 위 평가액(미적용 시 취득가액)은 그대로입니다 (「상속세 및 증여세법」 제47조 제1항 · 「소득세법 시행령」 제163조의2 제2항 제2호).`
+            }
+            warning={
+              buildingDonorBuiltReason ? (
+                <span data-testid="carryover-debt-building-donor-built-warning">
+                  건물 파트에 채무를 입력하면 이 방법으로 계산하지 못합니다({buildingDonorBuiltReason}) — 채무를 0으로 하거나 «당초 증여 때 채무를 인수했다»를 끄세요.
+                </span>
+              ) : undefined
+            }
           >
             <CurrencyInput
               label=""

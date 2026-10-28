@@ -134,6 +134,7 @@ describe("⑤ 섹션 자체의 술어 가드 — none·numerator_only는 아무�
 });
 
 describe("⑤↔④↔⑧ 같은 술어 격자 (3중 패턴)", () => {
+  // 일반건물(E2)은 ④가 파트마다 따로 싣는 별개 와이어라 이 격자(E1 `carryoverTaxation.giftAssumedDebt`)에 두지 않는다 — `carryover-debt-purchased-part-gb-input.anchor.test.tsx`.
   const CASES: [string, Record<string, unknown>, "apply" | "unsupported" | "numerator_only"][] = [
     ["주택", {}, "apply"],
     ["토지", { assetKind: "land" }, "apply"],
@@ -141,7 +142,6 @@ describe("⑤↔④↔⑧ 같은 술어 격자 (3중 패턴)", () => {
     ["겸용주택", { isMixedUseHouse: true }, "unsupported"],
     ["분양권", { assetKind: "presale_right" }, "unsupported"],
     ["주택 부담부증여", { transferType: "burdened_gift" }, "unsupported"],
-    ["일반건물", { assetKind: "general_building" }, "numerator_only"],
   ];
   it.each(CASES)("I-11 %s → scope=%s · ⑤ 노출 = ④ 전송 = ⑧ 차단이 같은 kind를 읽는다", (_n, over, kind) => {
     const a = asset(over, { giftDebtAssumed: true, giftAssumedDebt: "400000000" });

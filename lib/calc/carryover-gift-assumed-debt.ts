@@ -17,6 +17,7 @@ import { buildSameAdjustmentPeriodInput } from "@/lib/calc/transfer-same-adjustm
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { isParcelMode } from "@/lib/stores/transfer-per-asset-direct";
 import { donorBuiltGbActive } from "@/lib/calc/donor-built-gb-scope";
+import { gbCarryoverEventSource, splitCarryoverEventSource } from "@/lib/calc/carryover-gift-event-source";
 import { DEBT_PIECES_REASON } from "@/lib/tax-engine/carryover-debt-pieces-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
@@ -37,8 +38,8 @@ export function carryoverGiftTaxedValue(valuation: number, debt: number): number
 
 /**
  * - `none`: 이월과세 취득이 아니다(해당 없음).
- * - `apply`: 시나리오 A에서 증여분·매입분으로 나눈다(E1).
- * - `numerator_only`: 일반건물·파트 이월과세 — 자기 위치의 토글을 쓰고 증여세 상당액 안분의 분자에서만 뺀다(V-7). 새 와이어 키는 가지 않는다.
+ * - `apply`: 시나리오 A에서 증여분·매입분으로 나눈다(E1 주택·토지·상업용건물 · E2 일반건물 일반 양도).
+ * - `numerator_only`: 주택 분리 파트 이월과세(E3 C·A·B)·부담부증여 일반건물(E4) — 자기 위치의 토글을 쓰고 증여세 상당액 안분의 분자에서만 뺀다(V-7). 새 와이어 키는 가지 않는다.
  * - `unsupported`: 조각 규칙을 적용할 수 없는 입력 — `reason`은 ⑤ 안내·⑧ 메시지가 같이 쓴다(와이어 술어 `carryoverDebtPiecesUnsupportedReason`과 같은 문자열 상수).
  */
 export type PurchasedPartScope =
@@ -55,8 +56,9 @@ const APPLY_KINDS = new Set<AssetForm["assetKind"]>(["housing", "land", "buildin
  * `opts.isNonPrimary`: 함께 양도 둘째 이후 자산 — 파트 이월과세(C) 잔재를 꺼진 것으로 읽는다(`anyPartCarryover` 옵션).
  */
 export function carryoverPurchasedPartScope(asset: AssetForm, opts?: { isNonPrimary?: boolean }): PurchasedPartScope {
+  // 일반건물은 토지·건물 중 한쪽만 이월과세여도 해당한다(건물만 이월과세면 `acquisitionCause`는 이월과세가 아니다) — 맨 앞에서 가른다.
+  if (asset.assetKind === "general_building") return gbCarryoverPurchasedPartScope(asset);
   if (asset.acquisitionCause !== "carryover_gift") return { kind: "none" };
-  if (asset.assetKind === "general_building") return { kind: "numerator_only" };
   if (anyPartCarryover(asset, opts)) return { kind: "numerator_only" };
   const no = (reason: string): PurchasedPartScope => ({ kind: "unsupported", reason });
   if (asset.transferType === "burdened_gift") return no(DEBT_PIECES_REASON.burdenedGift);
@@ -74,8 +76,36 @@ export function carryoverPurchasedPartScope(asset: AssetForm, opts?: { isNonPrim
   return { kind: "apply" };
 }
 
-/** ④가 보내는 값 — scope = apply ∧ 토글 ON ∧ 채무 > 0일 때만 > 0. 그 밖(OFF·공백·0·numerator_only·unsupported)은 0 = 조각 없음. */
+/**
+ * 일반건물(E2·E4) 판정 — 이 함수는 **자산 단위**라 «건물 파트 채무 + 증여자 신축·증축»(파트 채무가 있어야 걸리는 조합)은 보지 않는다
+ * (`gbCarryoverDebtUnsupportedReason(asset, false)`) — 그 한 건은 ⑧ `validateGbCarryoverDebt`와 건물 채무 칸의 안내가 실제 채무로 가른다.
+ * `asset.carryover`를 읽지 않는다: 건물 블록(`CarryoverGiftBlock part="building"`)은 `carryover` 자리에 건물 서브폼을 끼운 사본을 받는다.
+ */
+function gbCarryoverPurchasedPartScope(asset: AssetForm): PurchasedPartScope {
+  if (asset.acquisitionCause !== "carryover_gift" && asset.gbBuildingAcquisitionCause !== "carryover_gift") return { kind: "none" };
+  // 지금 양도하는 자산도 부담부증여(E4) — 와이어에 채무 키가 없어 분자 전용을 유지한다(계획서 Q-3 b).
+  if (asset.transferType === "burdened_gift") return { kind: "numerator_only" };
+  const reason = gbCarryoverDebtUnsupportedReason(asset, false);
+  return reason ? { kind: "unsupported", reason } : { kind: "apply" };
+}
+
+/**
+ * 증여 **사건** 서브폼 — 「당초 증여 때 채무를 인수했다」 토글의 값이 사는 곳. ⑤ 노출의 **모든 지점**(토글·파트 칸 hint·본인 필요경비 안내)이 이 함수로 읽는다.
+ * 출처가 경로마다 다르다: E1 `asset.carryover` · E2 `gbCarryoverEventSource`(토지가 이월과세면 `carryover`, 건물만이면 `buildingCarryover`) ·
+ * E3 `splitCarryoverEventSource`(호스트가 이월과세면 `carryover`, 아니면 `landCarryover`). `asset.carryover`를 직접 읽으면 E2 건물만·E3 A에서 거짓이 된다.
+ */
+export function carryoverGiftEventForm(asset: AssetForm, opts?: { isNonPrimary?: boolean }): CarryoverTaxationForm | undefined {
+  if (asset.assetKind === "general_building") return gbCarryoverEventSource(asset);
+  if (anyPartCarryover(asset, opts)) return splitCarryoverEventSource(asset);
+  return asset.carryover;
+}
+
+/**
+ * E1(단일 서브폼 `asset.carryover`)이 ④로 보내는 값 — scope = apply ∧ 토글 ON ∧ 채무 > 0일 때만 > 0. 그 밖(OFF·공백·0·numerator_only·unsupported)은 0 = 조각 없음.
+ * 일반건물(E2)은 파트마다 채무를 받아 `transfer-tax-api-gb-carryover.ts`가 파트별로 싣는다 — 이 함수는 부르지 않는다(0).
+ */
 export function carryoverPurchasedPartDebt(asset: AssetForm, opts?: { isNonPrimary?: boolean }): number {
+  if (asset.assetKind === "general_building") return 0;
   if (carryoverPurchasedPartScope(asset, opts).kind !== "apply") return 0;
   return carryoverAssumedDebt(asset.carryover, asset.carryover);
 }
@@ -91,4 +121,14 @@ export function gbCarryoverDebtUnsupportedReason(asset: AssetForm, debtOnBuildin
   if (asset.gbHouseToCommercialConversion) return DEBT_PIECES_REASON.acquisitionFacts;
   if (debtOnBuilding && donorBuiltGbActive(asset)) return DEBT_PIECES_REASON.donorBuilt;
   return null;
+}
+
+/**
+ * 일반건물 건물 파트에 실제로 담긴 채무 — «건물 파트 채무 + 증여자 신축·증축» 차단을 가르는 값이다. ⑧(`validateGbCarryover`의 파트 목록)과 같은 모양:
+ * 건물이 이월과세일 때만 보고, 건물 서브폼이 없으면 사건 서브폼(`buildingCarryover ?? c`)을 쓴다. 토글이 꺼져 있으면 0.
+ */
+export function gbCarryoverBuildingDebt(asset: AssetForm): number {
+  if (asset.gbBuildingAcquisitionCause !== "carryover_gift") return 0;
+  const event = gbCarryoverEventSource(asset);
+  return carryoverAssumedDebt(event, asset.buildingCarryover ?? event);
 }
