@@ -48,6 +48,7 @@
 
 import { safeMultiplyThenDivide } from "./tax-utils";
 import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
+import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 
 /**
  * 부담부증여 채무비율 `B/C`의 원값 — 소령 §159①의 B(인수 채무액)와 C(증여가액).
@@ -143,4 +144,35 @@ export function detectRedevelopmentBurdenedGiftNotice(args: {
     "본 계산은 제166조 산식의 평가액·청산금·필요경비를 「양도로 보는 부분」 기준으로 안분하여 " +
     "산식의 스케일을 맞췄습니다. 신고 전 세무 대리인 확인을 권합니다."
   );
+}
+
+/**
+ * §159 명세의 이월과세 증여세 상당액 산입(`carryoverGiftTax`)을 §166 경로가 실제로 산입한 값으로 바로잡는다.
+ *
+ * §159 STEP 5.7의 한도는 토지·건물 슬롯 기준인데 §166 자산은 슬롯이 인가 전 분만 담아(취득가액은 토지 슬롯 · 양도가액은 건물 슬롯) 그 한도가 실제와 다르다.
+ * 실제 산입은 `computeRedevelopmentSplit`이 인가 전 분 양도차익을 한도로 정한다(`carryoverGiftTaxApplied`) — 결과의 echo(비교 카드 「증여세 산입」 · 신고서)가
+ * 양도차익에 들어간 값과 갈리지 않게 그 값으로 덮는다. 토지·건물 몫은 종전 비율로 다시 나누고 잔액은 건물이 흡수한다.
+ * 이월과세 증여세가 없으면 원본을 그대로 돌려준다.
+ */
+export function settleCarryoverGiftTaxForRedevelopment(
+  breakdown: TransferBurdenedGiftBreakdown,
+  applied: number,
+  cap: number | undefined,
+): TransferBurdenedGiftBreakdown {
+  const cg = breakdown.carryoverGiftTax;
+  if (!cg) return breakdown;
+  const landApplied =
+    cg.applied > 0 ? safeMultiplyThenDivide(cg.landApplied ?? 0, applied, cg.applied) : 0;
+  return {
+    ...breakdown,
+    carryoverGiftTax: {
+      ...cg,
+      applied,
+      cap: cap ?? cg.cap,
+      // 한도에 걸렸는가 — 청산금 수령 안분으로 산입액이 줄어든 것은 한도가 아니다.
+      limitApplied: cap !== undefined ? cg.apportioned > cap : cg.limitApplied,
+      landApplied,
+      buildingApplied: applied - landApplied,
+    },
+  };
 }

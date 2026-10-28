@@ -14,12 +14,15 @@ const ACTUAL_BASIS = "자본적지출·양도비 — 「소득세법」 제97조
 export function BgRedevFilingExpenseRows({ parts }: { parts: RedevExpenseParts }) {
   const total = parts.preApproval + parts.postApproval + parts.settlement;
   if (total <= 0) return null;
+  // 인가 전 분 합에 이월과세 증여세 상당액이 들어 있으면 택일 몫(개산공제 또는 실비)과 따로 보인다.
+  const giftTax = parts.preApprovalGiftTax ?? 0;
   const rows: Array<{ id: string; label: string; amount: number }> = [
     {
       id: "pre",
       label: parts.preApprovalKind === "estimated" ? "인가 전 분 — 개산공제 (「소득세법 시행령」 제163조 제6항)" : `인가 전 분 — ${ACTUAL_BASIS}`,
-      amount: parts.preApproval,
+      amount: parts.preApproval - giftTax,
     },
+    { id: "gift", label: "인가 전 분 — 이월과세 증여세 상당액 (「소득세법」 제97조의2 제1항 제3호)", amount: giftTax },
     { id: "post", label: `인가 후 분 — ${ACTUAL_BASIS}`, amount: parts.postApproval },
     { id: "settlement", label: `청산금 분 — ${ACTUAL_BASIS}`, amount: parts.settlement },
   ];

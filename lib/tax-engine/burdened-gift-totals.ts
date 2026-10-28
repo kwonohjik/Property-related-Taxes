@@ -49,6 +49,17 @@ export function bgRedevFiling(
   };
 }
 
+/**
+ * 부담부증여 §166 자산의 신고서 양도가액 — 이월과세 미채택 요약 카드가 「양도가액 − 취득가액 = 양도차익」을 보이는 데 쓴다(청산금 수령 동시신고분 포함).
+ * §166 자산이 아니거나 부담부증여가 아니면 undefined.
+ */
+export function bgRedevFilingTransferPrice(
+  result: Pick<TransferTaxResult, "redevelopmentDetail" | "transferBurdenedGiftBreakdown">,
+): number | undefined {
+  if (!result.redevelopmentDetail || !result.transferBurdenedGiftBreakdown) return undefined;
+  return redevFilingTotals(result.redevelopmentDetail, redevInverseTransferPrice(result, 0)).transferPrice;
+}
+
 export function bgRedevFilingAcquisition(
   result: Pick<TransferTaxResult, "redevelopmentDetail" | "transferBurdenedGiftBreakdown">,
 ): number | undefined {

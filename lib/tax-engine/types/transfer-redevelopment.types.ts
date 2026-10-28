@@ -571,6 +571,12 @@ export interface RedevelopmentBranchDetail {
   expenses?: number;
 
   /**
+   * 인가 전 분 필요경비 `expenses` 중 **이월과세 증여세 상당액**(「소득세법」 §97의2①3호 — 한도 적용 후, 수령 분기는 `expenses`와 같은 비율로 안분)의 몫.
+   * 부담부증여 × 이월과세 A에서만 0보다 크다. `expenses`는 이 값을 **포함**한다(개산공제 또는 실비 + 이 값).
+   */
+  carryoverGiftTaxExpense?: number;
+
+  /**
    * 분기별 거주기간 시작일 (YYYY-MM-DD, 신고서 양식 입주일 행 표시용).
    * - preApproval: 종전주택 입주일
    * - postApprovalExistingHouse / settlement: 신축주택 입주일
@@ -730,6 +736,11 @@ export interface RedevelopmentResult {
    * 인가전 양도차익에서 차감됨. 실가 모드 시 0 또는 undefined.
    */
   estimatedLumpDeduction?: number;
+
+  /** 부담부증여 × 이월과세 A — 증여세 상당액 중 인가 전 분 양도차익 한도를 적용해 필요경비에 산입한 금액(「소득세법」 §97의2①3호). 입력이 없으면 undefined. */
+  carryoverGiftTaxApplied?: number;
+  /** 위 한도 — 인가 전 분 양도차익(증여세 산입 전, 0 하한). */
+  carryoverGiftTaxCap?: number;
 
   /**
    * §95③·시행령 §160 12억 초과 안분 결과.

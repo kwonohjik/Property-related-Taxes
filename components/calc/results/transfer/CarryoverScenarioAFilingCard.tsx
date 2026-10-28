@@ -57,7 +57,7 @@ export function CarryoverScenarioAFilingCard({
     ...(shownTransferPrice && shownTransferPrice > 0
       ? [{ label: `양도가액${own ? " (본인 소유 파트)" : ""}`, value: formatKRW(shownTransferPrice) }]
       : []),
-    { label: `취득가액 (증여자 취득 당시${own ? " · 본인 소유 파트" : ""})`, value: formatKRW(own?.acquisitionPrice ?? scenarioA.acquisitionPrice) },
+    { label: `취득가액 (${scenarioA.acquisitionIsRedevelopmentFiling ? "신고서 취득가액 · 인가 전·후 분 합 · 소령 §166①1호" : "증여자 취득 당시"}${own ? " · 본인 소유 파트" : ""})`, value: formatKRW(own?.acquisitionPrice ?? scenarioA.acquisitionPrice) },
     { label: "양도차익", value: formatKRW(scenarioA.transferGain) },
     ...(scenarioA.longTermHoldingDeduction != null
       ? [{
@@ -80,7 +80,7 @@ export function CarryoverScenarioAFilingCard({
   return (
     <CarryoverScenarioSummaryCard
       title="[A] 이월과세 적용 (비교용)"
-      subtitle="증여자 기산 보유기간 · 취득가액 = 증여자 취득 당시 가액"
+      subtitle={`증여자 기산 보유기간 · 취득가액 = ${scenarioA.acquisitionIsRedevelopmentFiling ? "신고서 취득가액(인가 전·후 분 합 · 소령 §166①1호)" : "증여자 취득 당시 가액"}`}
       footnote="※ 시나리오 A는 이월과세 적용 시 결과. 비교과세(§97조의2 ② 3호) 판정용."
       rows={rows}
       adopted={adopted}

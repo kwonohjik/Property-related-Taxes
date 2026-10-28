@@ -256,6 +256,8 @@ export interface CarryoverPurchasedPartSplit {
 export interface CarryoverScenarioADetail {
   /** 증여자 취득가액 (직접 입력 또는 PHD/APD 환산) */
   acquisitionPrice: number;
+  /** `acquisitionPrice`가 부담부증여 × 재개발(§166)의 **신고서 취득가액**(인가 전·후·청산금 분 합 역산)인가 — 카드 라벨 분기 전용. */
+  acquisitionIsRedevelopmentFiling?: boolean;
   /** 증여자 취득일 기산 보유연수 (§95 ④) */
   holdingPeriodYears: number;
   /**
@@ -371,6 +373,8 @@ export interface CarryoverScenarioBDetail {
   acquisitionPrice: number;
   /** `acquisitionPrice`가 부담부증여 §159①1호 안분값인가 — 카드 라벨 분기 전용(UI가 부담부증여 여부를 다른 필드로 역추론하지 않는다). */
   acquisitionIsBurdenedGiftShare?: boolean;
+  /** `acquisitionPrice`가 부담부증여 × 재개발(§166)의 **신고서 취득가액**(인가 전·후·청산금 분 합 역산)인가 — 카드 라벨 분기 전용(`acquisitionIsBurdenedGiftShare`와 배타). */
+  acquisitionIsRedevelopmentFiling?: boolean;
   /** 수증자 증여 등기접수일 기산 보유연수 */
   holdingPeriodYears: number;
   /** 양도차익 */

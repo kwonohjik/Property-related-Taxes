@@ -32,12 +32,8 @@ import {
   splitAptPay,
   splitReceive,
 } from "./redevelopment-settlement";
-import type { BurdenedGiftDebtFraction } from "./redevelopment-burdened-gift";
-import type {
-  RedevelopmentInfo,
-  RedevelopmentBranchDetail,
-  RedevelopmentValuationMeta,
-} from "./types/transfer-redevelopment.types";
+import type { RedevelopmentSplitInput, RedevelopmentSplitResult } from "./types/redevelopment-split.types";
+import type { RedevelopmentInfo, RedevelopmentValuationMeta } from "./types/transfer-redevelopment.types";
 
 
 /**
@@ -60,126 +56,19 @@ import type {
  *    (`redevelopment.ts`는 이미 이 모듈을 import하므로 방향이 맞다 — 역방향이면 순환이다).
  *
  * 대비: 같은 호 **가목**(인가후)은 §163⑥ 병기가 없어 실제 필요경비만 차감한다 — 무변경.
+ *
+ * `carryoverGiftTax` — 이월과세 증여세 상당액(「소득세법」 §97의2①3호 · 시행령 §163의2②)은 택일 **밖의 독립 산입항**이라 택일 결과에 **더한다**
+ * (§159 STEP 5.7이 개산공제·실비 모두 위에 얹는 것과 같다). 값은 `computeRedevelopmentSplit`이 한도를 적용한 `carryoverGiftTaxApplied`다.
  */
 export function preApprovalNecessaryExpense(
   estimatedDeduction: number,
   preApprovalExpenses: number,
+  carryoverGiftTax = 0,
 ): number {
-  return estimatedDeduction > 0 ? estimatedDeduction : preApprovalExpenses;
+  return (estimatedDeduction > 0 ? estimatedDeduction : preApprovalExpenses) + carryoverGiftTax;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// 입력·결과
-// ──────────────────────────────────────────────────────────────────────────────
-
-/** 3분할 양도차익 산정 입력 */
-export interface RedevelopmentSplitInput {
-  /** RedevelopmentInfo */
-  redevelopment: RedevelopmentInfo;
-  /**
-   * 부담부증여 채무비율 `B/C`의 원값 (소령 §159①) — **β 스케일**. 소수 비율이 아니라 분자·분모 정수를 싣는다.
-   *
-   * 미전달·`B === C`(r = 1)면 아무 것도 바뀌지 않는다(일반 양도). 값이 오면 §166 산식의 절대 금액항
-   * (평가액·청산금·인가전후 필요경비)을 `B/C`배로 줄여 §159가 이미 안분한 취득가액·양도가액과
-   * **스케일을 맞춘다**. 근거·적용 범위는 `redevelopment-burdened-gift.ts` 헤더.
-   *
-   * ⚠️ `ownershipRatio`(공유지분)와 **독립**이다 — `scaleBurdenedGiftInfo`가 평가액·채무액을
-   *    먼저 지분분으로 줄이므로 `B/C`는 지분 중립이고, 두 비율은 서로 다른 축이다.
-   *
-   * Step B 개산공제(§163⑥)도 §166①1호의 필요경비항이라 같은 비율로 줄인다(2026-10-16 — 부담부증여 × 완공 아파트 × §166③).
-   * 순서는 «지분 기준시가를 먼저 확정 → × B/C»(순차 floor)다 — 소수 비율 두 개의 곱(`지분 × B/C`)은 반올림을 한 번 더 한다.
-   */
-  debtFraction?: BurdenedGiftDebtFraction;
-  /**
-   * @param acquisitionDate 자산 취득일 (§164⑦ 단서 트리거 + LTHD 기산일).
-   *   의제 양도가액(권리가액)과 별도로 LTHD 종료일은 실제 양도일을 사용.
-   */
-  acquisitionDate: Date;
-
-  /** 자산 양도일 (완공 APT 양도일 또는 입주권 양도일) */
-  transferDate: Date;
-
-  /**
-   * 양도가액 (완공 APT 실거래가, subject="apt") 또는 입주권 양도가액 (subject="right").
-   * subject="right" 의 경우 통상 권리가액과 동일하거나 권리가액 × (1 ± α) (수령 시).
-   */
-  transferPrice: number;
-
-  /**
-   * 실가 모드 시 종전 취득가액 (실가).
-   * useEstimatedAcquisition === true 인 경우 무시되고 redevelopment-valuation 으로 환산.
-   */
-  actualAcquisitionPrice?: number;
-
-  /** 환산 모드 여부 (true 시 redevelopment-valuation 호출) */
-  useEstimatedAcquisition: boolean;
-  /**
-   * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소 전용**.
-   *
-   * 기준시가·면적은 물건 전체(100%) 값을 유지한다 — 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
-   * §166⑥ 안분 비율도 100% 스케일을 전제하기 때문이다. 호출부가 `TransferTaxInput.ownershipRatio`를
-   * 그대로 내려준다(서브엔진 재판정 금지).
-   *
-   * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
-   */
-  ownershipRatio?: number;
-  /**
-   * 미등기양도자산 여부(소득세법 §104③) — §163⑥ 개산공제율 3/100 → **3/1000** 전환.
-   * 호출부가 `TransferTaxInput.isUnregistered`를 그대로 내려준다(서브엔진 재판정 금지).
-   * 율 산출은 `estimatedDeductionRate()` 단일 경유.
-   */
-  isUnregistered?: boolean;
-  /**
-   * 부담부증여 × 기준시가 모드(「소득세법 시행령」 §159①1호 괄호) — 인가 전 분 개산공제 base = 취득시 기준시가 × 채무비율
-   * (§159 명세의 안분 취득가액 — 지분 축소까지 반영된 값이라 여기서 다시 줄이지 않는다).
-   *
-   * 취득가액이 기준시가라 실지거래가액이 아니므로 「소득세법」 §97②**2호**(그 밖의 경우)이고, §166①1호 인가 전 분 필요경비의
-   * 「§97①2·3호 **또는** §163⑥」 중 §163⑥(개산공제)이다 — 일반 부담부증여 기준시가 경로·완공 아파트 K-5와 같다.
-   * 있으면 Step B가 이 base로 개산공제를 내고, Step C 택일(`preApprovalNecessaryExpense`)이 인가 전 실비 대신 그것을 쓴다.
-   * 계획서 `docs/00-pm/bg-redev-apt-pre-approval-lump-deduction.plan.md`.
-   */
-  burdenedGiftStdLumpBase?: number;
-}
-
-/** 3분할 양도차익 결과 (LTHD 미적용 — lthd.ts 에서 별도 적용) */
-export interface RedevelopmentSplitResult {
-  /** 인가전 분 (subject="apt" + "right" 공통) */
-  preApproval: Pick<
-    RedevelopmentBranchDetail,
-    "apportionedTransfer" | "apportionedAcquisition" | "gain"
-  >;
-
-  /**
-   * 인가후 기존주택분 (subject="apt" 만 산출. "right" 시 gain=0 — §166⑤1호).
-   * subject="apt" 시 §166②1호 안분 결과.
-   */
-  postApprovalExistingHouse: Pick<
-    RedevelopmentBranchDetail,
-    "apportionedTransfer" | "apportionedAcquisition" | "gain"
-  >;
-
-  /** 청산금 분 */
-  settlement: Pick<
-    RedevelopmentBranchDetail,
-    "apportionedTransfer" | "apportionedAcquisition" | "gain"
-  >;
-
-  /** 분양가 (subject="apt" 만 의미) */
-  salePriceTotal: number;
-
-  /** 환산 케이스 메타 (환산 모드 시만) */
-  valuationMeta?: RedevelopmentValuationMeta;
-
-  /**
-   * §163⑥ 개산공제 — 환산 모드 시 P_A × 3% (원, 정수). 인가전 양도차익에서 이미 차감됨.
-   * UI 결과 카드 표시용.
-   */
-  estimatedLumpDeduction?: number;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 본문 함수
-// ──────────────────────────────────────────────────────────────────────────────
+export type { RedevelopmentSplitInput, RedevelopmentSplitResult } from "./types/redevelopment-split.types";
 
 /**
  * 3분할 양도차익 산정.
@@ -277,10 +166,15 @@ export function computeRedevelopmentSplit(
   // 양도가액(의제) = 권리가액
   // 양도차익 = 권리가액 − 취득가액 − **필요경비(택일)**
   //   택일: 환산이면 §163⑥ 개산공제 / 실가면 §97①2·3호 실제 필요경비 (위 헬퍼 doc 참조)
-  const preApprovalGainBeforeAdjust =
+  // 이월과세 증여세 상당액은 택일 밖의 독립 산입항이다 — 인가 전 분 양도차익(택일 필요경비까지 뺀 값)을 한도로 얹고, 넘친 몫은 버린다.
+  const preApprovalGainBeforeGift =
     redevelopment.rightsValue -
     oldAcquisitionPrice -
     preApprovalNecessaryExpense(estimatedLumpDeduction, redevelopment.preApprovalExpenses);
+  const carryoverGiftTaxCap = Math.max(0, preApprovalGainBeforeGift);
+  const carryoverGiftTaxApplied =
+    input.carryoverGiftTaxExpense === undefined ? undefined : Math.min(input.carryoverGiftTaxExpense, carryoverGiftTaxCap);
+  const preApprovalGainBeforeAdjust = preApprovalGainBeforeGift - (carryoverGiftTaxApplied ?? 0);
 
   // ─ Step C: 분기별 분할 ─
   const isPay = redevelopment.settlementDirection === "pay";
@@ -294,6 +188,8 @@ export function computeRedevelopmentSplit(
       redevelopment,
       valuationMeta,
       estimatedLumpDeduction,
+      carryoverGiftTaxApplied,
+      carryoverGiftTaxCap,
     });
   }
 
@@ -305,6 +201,8 @@ export function computeRedevelopmentSplit(
       redevelopment,
       valuationMeta,
       estimatedLumpDeduction,
+      carryoverGiftTaxApplied,
+      carryoverGiftTaxCap,
     });
   }
 
@@ -316,6 +214,8 @@ export function computeRedevelopmentSplit(
       redevelopment,
       valuationMeta,
       estimatedLumpDeduction,
+      carryoverGiftTaxApplied,
+      carryoverGiftTaxCap,
     });
   }
 
@@ -327,6 +227,8 @@ export function computeRedevelopmentSplit(
     redevelopment,
     valuationMeta,
     estimatedLumpDeduction,
+    carryoverGiftTaxApplied,
+    carryoverGiftTaxCap,
   });
 }
 
@@ -342,6 +244,17 @@ interface BranchArgs {
   valuationMeta?: RedevelopmentValuationMeta;
   /** §163⑥ 개산공제 — 환산 모드 시 P_A × 3%. 인가전 양도차익에 이미 차감됨. */
   estimatedLumpDeduction?: number;
+  /** 이월과세 증여세 상당액 중 한도 적용 후 산입액 — 인가전 양도차익(`preApprovalGain`)에 이미 차감됨. 입력이 없으면 undefined. */
+  carryoverGiftTaxApplied?: number;
+  /** 같은 한도(인가전 양도차익, 증여세 산입 전·0 하한). */
+  carryoverGiftTaxCap?: number;
+}
+
+/** 결과에 `carryoverGiftTaxApplied`·한도를 싣는다 — 입력이 없으면 키 자체를 만들지 않는다(일반 양도 결과 불변). */
+function carryoverGiftEcho(args: BranchArgs): { carryoverGiftTaxApplied?: number; carryoverGiftTaxCap?: number } {
+  return args.carryoverGiftTaxApplied === undefined
+    ? {}
+    : { carryoverGiftTaxApplied: args.carryoverGiftTaxApplied, carryoverGiftTaxCap: args.carryoverGiftTaxCap };
 }
 
 /** APT + 청산금 납부 (§166②1호) — 사례 44 핵심 */
@@ -398,6 +311,7 @@ function computeAptPay(args: BranchArgs): RedevelopmentSplitResult {
     salePriceTotal,
     valuationMeta,
     estimatedLumpDeduction: args.estimatedLumpDeduction,
+    ...carryoverGiftEcho(args),
   };
 }
 
@@ -546,6 +460,7 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
   const preExpenseTotal = preApprovalNecessaryExpense(
     args.estimatedLumpDeduction ?? 0,
     redevelopment.preApprovalExpenses,
+    args.carryoverGiftTaxApplied ?? 0,
   );
   const preExpenseNamokShare = safeMultiplyThenDivide(
     preExpenseTotal,
@@ -581,6 +496,7 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
     salePriceTotal,
     valuationMeta,
     estimatedLumpDeduction: args.estimatedLumpDeduction,
+    ...carryoverGiftEcho(args),
   };
 }
 
@@ -615,6 +531,7 @@ function computeRightPay(args: BranchArgs): RedevelopmentSplitResult {
     salePriceTotal,
     valuationMeta,
     estimatedLumpDeduction: args.estimatedLumpDeduction,
+    ...carryoverGiftEcho(args),
   };
 }
 
@@ -663,6 +580,7 @@ function computeRightReceive(
     salePriceTotal,
     valuationMeta,
     estimatedLumpDeduction: args.estimatedLumpDeduction,
+    ...carryoverGiftEcho(args),
   };
 }
 
