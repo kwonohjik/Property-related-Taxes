@@ -88,6 +88,9 @@ function composeGbCarryover(gbRaw: Record<string, unknown>): {
       donorCapitalExpenditure: part.donorCapitalExpenditure,
       // 비교과세 시나리오 B 취득가액 — 평가액(채무를 빼지 않는다)
       giftDateValuation: assetValue,
+      // ⑭ 당초 증여 때 인수한 채무 부분(매입분) — 위 필드를 하나씩 옮기는 갈래라 여기서 빠지면 침묵 strip 이다(PR-2 R1).
+      //    집계 파생 단위(`transfer-tax-aggregate-debt-units.ts`)가 카드의 `carryoverTaxation.giftAssumedDebt`를 읽어 시나리오 A를 증여분·매입분으로 나눈다.
+      ...(typeof part.giftAssumedDebt === "number" && part.giftAssumedDebt > 0 ? { giftAssumedDebt: part.giftAssumedDebt } : {}),
       // §97의2① 관계요건 — 증여 **사건**의 사실이라 토지·건물 두 파트에 같은 값이 실린다.
       donorRelation: event.donorRelation,
       donorDeceased: event.donorDeceased,

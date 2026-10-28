@@ -12,7 +12,7 @@
  *   E-1: 전액 비과세 (양도가 12억 이하) / E-2: 고가주택 부분과세
  */
 
-import { isLaterAcquiredLandHeldTooShort } from "./transfer-tax-appurtenant-land";
+import { appurtenantCardHeldTooShort } from "./transfer-tax-appurtenant-land";
 import { appurtenantCardCoveredByExpropriationProviso } from "./transfer-tax-appurtenant-land";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { article89Clause2PostManagementNotice } from "./transfer-tax-89-2-consequences";
@@ -329,7 +329,7 @@ function checkExemptionCore(
     if (!v || !(v.isExempt || v.isPartialExempt)) return { isExempt: false, isPartialExempt: false };
     // 5A — 짝 주택이 수용 단서(영 §154① 단서 2호 가목)로 비과세됐고 이 토지도 사업인정 고시일 전 취득이면 보유요건을 걸지 않는다.
     if (
-      isLaterAcquiredLandHeldTooShort(input.acquisitionDate, v.houseAcquisitionDate, input.transferDate) &&
+      appurtenantCardHeldTooShort(input) &&
       !appurtenantCardCoveredByExpropriationProviso(input)
     ) {
       return { isExempt: false, isPartialExempt: false };

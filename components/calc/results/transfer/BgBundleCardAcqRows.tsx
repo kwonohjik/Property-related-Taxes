@@ -13,6 +13,7 @@
  */
 import { Fragment } from "react";
 import { BgPreDeemedThreeWayRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
+import { BgNecessaryExpenseRow, BUNDLE_CARD_EXPENSE_IDS } from "@/components/calc/results/transfer/BgNecessaryExpenseRow";
 import { BgRedevFilingExpenseRows } from "@/components/calc/results/transfer/BgRedevFilingExpenseRows";
 import { BgPreDeemedPartsRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
 import type {
@@ -61,8 +62,6 @@ export function BgBundleCardAcqRows({
           b.ownershipRatio !== undefined ? `자산 ${i + 1} (지분 ${pct(b.ownershipRatio)})` : `자산 ${i + 1}${c.label ? ` (${c.label})` : ""}`;
         const basis = b.preDeemed ? undefined : basisOf(b);
         const acqName = c.redevFilingAcquisition !== undefined ? "종전 부동산 취득가(인가 전 분)" : "취득가액";
-        const est = b.perAsset.land.estimatedDeduction + b.perAsset.building.estimatedDeduction;
-        const estRate = b.perAsset.building.estimatedDeductionRate ?? b.perAsset.land.estimatedDeductionRate;
         return (
           <Fragment key={c.propertyId}>
             <tr data-testid="bg-bundle-card" data-basis={b.preDeemed?.basis ?? b.acquisitionMethodUsed}>
@@ -94,14 +93,9 @@ export function BgBundleCardAcqRows({
                 <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(acqOf(b))}</td>
               </tr>
             )}
-            {!b.preDeemed && estRate !== undefined && est > 0 && (
-              <tr data-testid="bg-bundle-card-estimated-deduction">
-                <td className="py-1 pr-2 pl-3">
-                  개산공제 = 취득시 기준시가{share} {fmt(b.perAsset.land.stdPriceAtAcquisition + b.perAsset.building.stdPriceAtAcquisition)} × 채무비율{" "}
-                  {rate} × 개산공제율 {(estRate * 100).toFixed(1).replace(/\.0$/, "")}%
-                </td>
-                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(est)}</td>
-              </tr>
+            {/* 필요경비 — 실비·개산공제·환산 단서 나목 모두(재개발 카드는 아래 신고서 필요경비 줄이 맡고, 파트별 3자 max는 파트 줄이 이미 있다) */}
+            {c.redevFilingExpenses === undefined && b.preDeemed?.basis !== "three_way_parts" && (
+              <BgNecessaryExpenseRow bg={b} ids={BUNDLE_CARD_EXPENSE_IDS} />
             )}
             {c.redevFilingAcquisition !== undefined && (
               <tr data-testid="bg-bundle-card-redev-filing">

@@ -7,7 +7,7 @@
  */
 import { parseAmount } from "@/lib/calc/number-parse";
 import { fieldError } from "./transfer-tax-validate-field";
-import { carryoverPurchasedPartScope } from "./carryover-gift-assumed-debt";
+import { carryoverAssumedDebt, carryoverPurchasedPartScope, gbCarryoverDebtUnsupportedReason } from "./carryover-gift-assumed-debt";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 
@@ -24,6 +24,15 @@ export function assumedDebtIssue(event: CarryoverTaxationForm | undefined, part:
   return null;
 }
 
+/**
+ * 토글을 끄게 하는 차단 문구 — E1·E2 공용(⑫ 사유 상수와 같은 `reason`).
+ * «증여세 상당액» 입력 안내는 그 칸이 있는 E1에만 붙인다 — 일반건물(E2)은 산출세액·과세가액을 받아 엔진이 안분하므로 그 칸이 없다.
+ */
+function unsupportedToggleMessage(label: string, reason: string, hasGiftTaxAmountField: boolean): string {
+  const head = `${label}: 이 자산(${reason})에서는 당초 증여 때 인수한 채무 부분을 시나리오 A에서 나누어 계산하지 못합니다 — «당초 증여 때 채무를 인수했다»를 끄세요.`;
+  return hasGiftTaxAmountField ? `${head} 채무를 뺀 과세가액 기준으로 계산한 금액은 «증여세 상당액»에 입력합니다.` : head;
+}
+
 /** E1 — scope=apply ∧ 토글 ON이면 채무 칸 필수·상한·r = 1 규칙. scope=unsupported ∧ 토글 ON이면 토글을 끄게 막는다. 그 밖은 null. */
 export function validateCarryoverDebt(
   asset: AssetForm,
@@ -35,7 +44,7 @@ export function validateCarryoverDebt(
   if (!c?.giftDebtAssumed) return null;
   const scope = carryoverPurchasedPartScope(asset, opts);
   if (scope.kind === "unsupported")
-    return fieldError("carryover.giftDebtAssumed", `${label}: 이 자산(${scope.reason})에서는 당초 증여 때 인수한 채무 부분을 시나리오 A에서 나누어 계산하지 못합니다 — «당초 증여 때 채무를 인수했다»를 끄세요. 채무를 뺀 과세가액 기준으로 계산한 금액은 «증여세 상당액»에 입력합니다.`);
+    return fieldError("carryover.giftDebtAssumed", unsupportedToggleMessage(label, scope.reason, true));
   if (scope.kind !== "apply") return null;
   const base = assumedDebtIssue(c, c, label, false);
   if (base) return base;
@@ -47,6 +56,46 @@ export function validateCarryoverDebt(
     // 증여자 자본적지출은 ④가 2024.1.1. 이후 양도분만 싣는다(같은 기준으로만 막는다).
     if ((formTransferDate ?? "") >= "2024-01-01" && parseAmount(c.donorCapitalExpenditure) > 0)
       return fieldError("carryover.donorCapitalExpenditure", `${label}: 당초 증여 때 인수한 채무가 증여 당시 평가액과 같으면 증여받은 부분이 없어 증여자 자본적지출을 적용할 곳이 없습니다(「소득세법」 제97조의2 제1항 제2호) — 이 칸을 비우세요.`);
+  }
+  return null;
+}
+
+/**
+ * E2(일반건물) — 범위 술어가 `unsupported`(감면·용도변경)인데 사건 토글이 켜져 있으면 토글을 끄게 막는다. E1 `validateCarryoverDebt`와 같은 규칙이다.
+ * 파트 채무 칸 검사(`assumedDebtIssue`)보다 **앞**에서 부른다 — 이 상태의 UI는 채무 칸을 숨기므로 칸 필수 오류로 이동시키면 막다른 길이다.
+ * 앵커 `carryover.giftDebtAssumed`는 사건 블록의 토글이다(건물만 이월과세여도 건물 블록이 사건 블록이고 같은 `data-field`를 쓴다).
+ */
+export function validateGbCarryoverDebtScope(asset: AssetForm, event: CarryoverTaxationForm | undefined, label: string): string | null {
+  if (!event?.giftDebtAssumed) return null;
+  const scope = carryoverPurchasedPartScope(asset);
+  if (scope.kind !== "unsupported") return null;
+  return fieldError("carryover.giftDebtAssumed", unsupportedToggleMessage(label, scope.reason, false));
+}
+
+/**
+ * E2(일반건물 파트) — 토글 ON ∧ 어느 한 파트의 채무 > 0이면 조각 규칙을 적용할 수 없는 입력을 막는다. ⑫ `refineGbCarryover`·`refineGbValuationRequired`의 거울이다
+ * (엔진 설계서 PR-2 §3.6 R5). 앵커 칸은 사건 블록의 토글 `carryover.giftDebtAssumed` — 건물만 이월과세여도 건물 블록이 사건 블록이고 같은 `data-field` 리터럴을 쓴다(`CarryoverGiftBlock`).
+ *
+ * 감가상각 × 건물 파트 채무는 여기서 보지 않는다: `depreciationSupport`가 일반건물 이월과세에서 감가상각 칸 자체를 닫고(④가 싣지 않는다) 이 조합은 화면에서 만들 수 없다 —
+ * API 직접 호출만 ⑫가 막는다.
+ */
+export function validateGbCarryoverDebt(
+  asset: AssetForm,
+  event: CarryoverTaxationForm | undefined,
+  parts: ReadonlyArray<{ form: CarryoverTaxationForm | undefined; onBuilding: boolean }>,
+  label: string,
+  formTransferDate: string | undefined,
+): string | null {
+  const withDebt = parts.filter((p) => carryoverAssumedDebt(event, p.form) > 0);
+  if (withDebt.length === 0) return null;
+  const reason = gbCarryoverDebtUnsupportedReason(asset, withDebt.some((p) => p.onBuilding));
+  if (reason)
+    return fieldError("carryover.giftDebtAssumed", unsupportedToggleMessage(label, reason, false));
+  // 채무 = 평가액(r = 1)이면 증여받은 부분이 없다 — 증여자 자본적지출을 적용할 곳이 없어 조용히 버리지 않고 막는다(E1 `validateCarryoverDebt`와 같은 규칙 · 2024.1.1. 이후 양도분만).
+  for (const p of withDebt) {
+    if (parseAmount(p.form?.giftAssumedDebt ?? "") !== parseAmount(p.form?.giftDateValuation ?? "")) continue;
+    if ((formTransferDate ?? "") >= "2024-01-01" && parseAmount(p.form?.donorCapitalExpenditure ?? "") > 0)
+      return fieldError(p.onBuilding ? "buildingCarryover.donorCapitalExpenditure" : "carryover.donorCapitalExpenditure", `${label}${p.onBuilding ? " 건물" : " 토지"}: 당초 증여 때 인수한 채무가 증여 당시 평가액과 같으면 증여받은 부분이 없어 증여자 자본적지출을 적용할 곳이 없습니다(「소득세법」 제97조의2 제1항 제2호) — 이 칸을 비우세요.`);
   }
   return null;
 }

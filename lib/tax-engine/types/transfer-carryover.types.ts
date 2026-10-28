@@ -214,7 +214,7 @@ export interface CarryoverOwnerSplitPart {
 
 /** 조각 하나의 요약 — `CarryoverPurchasedPartSplit`의 증여분·매입분. 날짜는 `YYYY-MM-DD` 문자열(JSON 경유 Date 함정 회피). */
 export interface CarryoverPieceEcho {
-  /** 조각 카드 id — 증여분 = 원 카드 id · 매입분 = `${id}__purchased`(r = 1이면 원 id) */
+  /** 조각 카드 id — 증여분 = 원 카드 id · 매입분 = `purchasedPartIdOf(id)`(`primary__purchased` · 일반건물 지분 `land__purchased#0`; r = 1이면 원 id) */
   propertyId: string;
   transferPrice: number;
   acquisitionPrice: number;

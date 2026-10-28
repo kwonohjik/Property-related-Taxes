@@ -16,13 +16,12 @@
 
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { safeMultiplyThenDivide } from "./tax-utils";
+import { purchasedPartIdOf } from "./general-building-share-id";
 import { buildInputB } from "./transfer-tax-carryover-inputs";
+import { carryoverDonorCapex } from "./transfer-tax-carryover";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
 import type { TransferTaxItemInput } from "./types/transfer-aggregate.types";
-
-/** 매입분 카드 id 접미사 — 한도 초과 분리 카드(`__appurtenant`/`__excess`)와 같은 `__` 규약. */
-export const PURCHASED_PART_ID_SUFFIX = "__purchased";
 
 /** r = debt ÷ valuation. `keep`은 (1 − r)의 분자(valuation − debt). */
 export interface CarryoverDebtShare {
@@ -70,6 +69,10 @@ export function splitCarryoverDebtPieces(card: TransferTaxItemInput, share: Carr
   /** 매입분 몫 = 전체 − 증여분 (undefined는 undefined 유지 — §97②2호 단서 swap 활성 조건이 `capitalExpenditure !== undefined`) */
   const rest = (x: number | undefined): number | undefined => (x === undefined ? undefined : x - cut(x));
 
+  // r = 1이면 증여분이 없어 증여자 자본적지출(§97의2①2호)을 실을 카드가 없다 — ⑧·⑫가 먼저 막지만 그 그물 밖(지분·컴패니언 와이어)도 조용히 버리지 않는다.
+  if (share.keep === 0 && carryoverDonorCapex(ct, card.transferDate) > 0)
+    invalid("당초 증여 때 인수한 채무가 증여 당시 평가액과 같으면 증여받은 부분이 없어 증여자 자본적지출을 적용할 수 없습니다.");
+
   const giftPrice = cut(card.transferPrice);
   const purchasedPrice = card.transferPrice - giftPrice;
   if (purchasedPrice <= 0 || (share.keep > 0 && giftPrice <= 0)) invalid("조각의 양도가액이 0원 이하입니다 — 양도가액과 채무 비율을 확인하세요.");
@@ -89,7 +92,7 @@ export function splitCarryoverDebtPieces(card: TransferTaxItemInput, share: Carr
       ct,
     ),
     acquisitionPrice: share.debt,
-    propertyId: share.keep === 0 ? baseId : `${baseId}${PURCHASED_PART_ID_SUFFIX}`,
+    propertyId: share.keep === 0 ? baseId : purchasedPartIdOf(baseId),
     propertyLabel: `${baseLabel}(매입분)`,
     // 1세대1주택 단위(집 카드 1장 전제)는 증여분 카드가 이어받는다 — 매입분은 단위에 끼지 않는다.
     oneHouseUnitRole: undefined,

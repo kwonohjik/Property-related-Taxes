@@ -216,21 +216,35 @@ describe("경로 2 — 일반 양도 일반건물 파트(분자와 B 취득가�
   /**
    * 토지만 이월과세 · 평가액 4억 · 신고서 산출세액 3천만 · 과세가액 10억 · 토지에 담보된 채무 1억 인수.
    *   토글 OFF: 상당액 3천만 × 4억 ÷ 10억 = 12,000,000 → 156,620,000.
-   *   토글 ON: 3천만 × 3억 ÷ 10억 = 9,000,000 → 157,460,000 — 필요경비 −3,000,000 × (1 − 장특 30%) = 과세표준 +2,100,000 × 40% = +840,000.
+   *   토글 ON : 상당액 3천만 × 3억 ÷ 10억 = 9,000,000 + 채무 부분(r = 1억 ÷ 4억 = 0.25)을 증여분·매입분으로 나눠 계산 → 141,690,000.
+   *     (PR-2 이전에는 분자만 순액으로 하고 자산 전체를 증여자 기준으로 계산해 157,460,000이었다 — 반전 2026-10-28,
+   *      설계서 `carryover-gift-debt-purchased-part-parts.engine.design.md` §6. 당초 증여 때 인수한 채무 부분은 증여가 아니라 양도이므로 따로 나눈다 —
+   *      「소득세법」 제88조 제1호 후단.)
+   *   손계산: 증여분 = 양도가 ×0.75 = 375,000,000 · 취득가액 150,000,000×0.75 = 112,500,000 · 상당액 9,000,000(전액) · 차익 253,500,000 · 장특(증여자 취득 20년) 30% → 소득 177,450,000
+   *           매입분 = 양도가 125,000,000 · 취득가액 = 채무 100,000,000 · 필요경비 750,000 → 24,250,000 · 보유 5년 장특 10% → 21,825,000
+   *           건물 = 247,000,000 − 장특 10% 24,700,000 = 222,300,000 (불변)
+   *           합 421,575,000 − 2,500,000 = 419,075,000 × 40% − 25,940,000 = 141,690,000.
    *   B(미적용) 취득가액은 평가액 4억 그대로 — 파트 와이어 `giftDateAssetValue` 4억 · `giftAssumedDebt` 1억.
    */
-  it("156,620,000 → 157,460,000 · 와이어는 평가액 4억 + 인수채무 1억", async () => {
+  it("156,620,000 → 141,690,000 · 와이어는 평가액 4억 + 인수채무 1억 · 토지 증여분 + 매입분 꼬리", async () => {
     const off = await ok(formOf([p2Asset()]));
     expect(off.det).toBe(156_620_000);
-    const landOf = (r: Run) => (r.a?.properties as Body[]).find((p) => String(p.propertyLabel).startsWith("토지"))!;
+    const rowOf = (r: Run, label: string) => (r.a?.properties as Body[]).find((p) => String(p.propertyLabel).startsWith(label))!;
+    const landOf = (r: Run) => rowOf(r, "토지");
     const f = formOf([p2Asset({ giftDebtAssumed: true, giftAssumedDebt: "100,000,000" })]);
     const b = await bodyOf(f);
     expect(b.generalBuildingValuation.landCarryoverPart).toMatchObject({ giftDateAssetValue: 400_000_000, giftAssumedDebt: 100_000_000 });
     const r = await ok(f);
-    expect(r.det).toBe(157_460_000);
+    expect(r.det).toBe(141_690_000);
     expect(landOf(r).carryoverTaxationDetail.scenarioA.giftTaxAddedToExpense).toBe(9_000_000);
     // B(미적용)는 평가액 4억을 취득가액으로 그대로 쓴다 — 채무를 빼지 않는다
     expect(landOf(r).carryoverTaxationDetail.scenarioB).toEqual(landOf(off).carryoverTaxationDetail.scenarioB);
+    // 조각 — 부모 카드(증여분)에 echo, 꼬리 카드 `land__purchased`
+    const split = landOf(r).carryoverTaxationDetail.scenarioA.purchasedPartSplit;
+    expect(split).toMatchObject({ debtAmount: 100_000_000, giftValuation: 400_000_000 });
+    expect(split.purchased).toMatchObject({ propertyId: "land__purchased", transferPrice: 125_000_000, acquisitionPrice: 100_000_000, acquisitionDate: "2021-03-01" });
+    expect(split.gift).toMatchObject({ propertyId: "land", transferPrice: 375_000_000, acquisitionPrice: 112_500_000 });
+    expect((r.a?.properties as Body[]).map((p) => p.propertyId)).toEqual(["land", "building", "land__purchased"]);
   });
 
   it("⑧ 토글 ON · 채무 비움 → carryover.giftAssumedDebt · ⑫ 채무 > 평가액 → 400", async () => {

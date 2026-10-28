@@ -19,6 +19,9 @@ import { NextRequest } from "next/server";
 import { loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "@/lib/tax-engine/lthd-table2-subject";
+import { toHouseVerdict } from "@/lib/tax-engine/transfer-tax-one-house-unit";
+import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
+import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer-result.types";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 
 vi.mock("@/lib/db/tax-rates", async (importOriginal) => {
@@ -116,6 +119,33 @@ describe("S08-6 — 표2 대상 자산 축 leaf", () => {
     expect(resolveLthdTable2OneHouseAxis({ isOneHousehold: true, householdHousingCount: 2 }, undefined)).toBe(false);
     expect(resolveLthdTable2OneHouseAxis({ isOneHousehold: true, householdHousingCount: 2 }, true)).toBe(true);
     expect(resolveLthdTable2OneHouseAxis({ isOneHousehold: false, householdHousingCount: 1 }, true)).toBe(false);
+  });
+});
+
+describe("V-3′ — 부수토지 카드는 짝 주택이 표2 대상 자산인지(verdict)를 따른다(계획서 bundled-other-household-appurtenant-table2.plan.md)", () => {
+  const verdict = (houseTable2Subject?: boolean) =>
+    ({ isExempt: false, isPartialExempt: false, houseAcquisitionDate: new Date(2014, 0, 1), carryoverOneHouseExcluded: false, houseTable2Subject });
+  const card = (houseTable2Subject?: boolean) => ({ propertyType: "land" as const, oneHouseUnitRole: "appurtenant_land" as const, appurtenantHouseVerdict: verdict(houseTable2Subject) });
+
+  it("AN-1 부수토지 카드: 짝 주택 false면 표1 · true·미주입(undefined)이면 표2 그대로", () => {
+    expect(isLthdTable2SubjectAsset(card(false))).toBe(false);
+    expect(isLthdTable2SubjectAsset(card(true))).toBe(true);
+    expect(isLthdTable2SubjectAsset(card(undefined))).toBe(true);
+    expect(isLthdTable2SubjectAsset({ propertyType: "land", oneHouseUnitRole: "appurtenant_land" })).toBe(true); // verdict 자체가 없는 직접 호출
+  });
+  it("AN-1 verdict는 부수토지 카드의 자산 축에만 쓴다 — 초과분·순수 토지는 true여도 표1 · 주택은 false여도 자기 판정", () => {
+    expect(isLthdTable2SubjectAsset({ ...card(true), oneHouseUnitRole: "appurtenant_excess" })).toBe(false);
+    expect(isLthdTable2SubjectAsset({ propertyType: "land", appurtenantHouseVerdict: verdict(true) })).toBe(false);
+    expect(isLthdTable2SubjectAsset({ propertyType: "housing", appurtenantHouseVerdict: verdict(false) })).toBe(true);
+  });
+  it("AN-2 toHouseVerdict: 짝 주택이 토지만 본인 · 다른 세대면 false · 같은 세대·소유자 같음·건물만 본인·미지정이면 true", () => {
+    const result = { isExempt: false, isPartialExempt: false } as TransferTaxResult;
+    const house = (own: Record<string, unknown>) => ({ propertyType: "housing", acquisitionDate: new Date(2014, 0, 1), ...own }) as unknown as TransferTaxItemInput;
+    expect(toHouseVerdict(house({ selfOwns: "land_only", buildingOwnerSameHousehold: false }), result).houseTable2Subject).toBe(false);
+    expect(toHouseVerdict(house({ selfOwns: "land_only", buildingOwnerSameHousehold: true }), result).houseTable2Subject).toBe(true);
+    expect(toHouseVerdict(house({ selfOwns: "both" }), result).houseTable2Subject).toBe(true);
+    expect(toHouseVerdict(house({ selfOwns: "building_only" }), result).houseTable2Subject).toBe(true);
+    expect(toHouseVerdict(house({}), result).houseTable2Subject).toBe(true);
   });
 });
 

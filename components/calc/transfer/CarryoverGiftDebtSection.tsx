@@ -9,7 +9,9 @@
  * 노출은 `carryoverPurchasedPartScope` **하나**가 정한다 — ④ 전송(`carryoverPurchasedPartDebt`)·⑧ 차단(`validateCarryoverDebt`)과 같은 술어(3중 패턴).
  *  - apply: 토글 + 켜면 채무 칸.
  *  - unsupported: OFF면 안내만. 남은 ON이면 토글을 켜진 채 보여 끌 수 있게 한다(⑧ M3이 막는 막다른 길 방지 — `CarryoverGiftBlock`의 환산 토글과 같은 패턴).
- *  - none·numerator_only: 이 섹션을 그리지 않는다(일반건물·파트 이월과세는 자기 위치의 토글을 쓴다).
+ *  - none·numerator_only: 이 섹션을 그리지 않는다(일반건물(E2)·주택 분리 파트(E3)는 자기 위치의 토글을 쓴다 — `CarryoverGiftBlock` ③·`SplitCarryoverParts`).
+ *
+ * 이 파일의 상수는 E2 일반건물 토글·파트 채무 칸도 같이 쓴다(문장이 두 벌이면 한쪽만 고쳐진다).
  * disabled ToggleCard는 쓰지 않는다 — 회색 톤이라 「OFF도 tone 유지」 규칙과 어긋난다(`components/calc/CLAUDE.md`).
  *
  * 설계서: docs/02-design/features/carryover-gift-debt-purchased-part.ui.design.md §2
@@ -35,9 +37,13 @@ export const DEBT_GIFT_TAX_PART_ONLY_HINT =
 export const DEBT_DONOR_CAPEX_PART_ONLY_HINT =
   " ※ 당초 증여 때 채무를 인수했으면 증여분에만 산입합니다(「소득세법」 제97조의2 제1항 제2호).";
 
+/** 증여세 산출세액 칸(일반건물 E2 — 증여세 상당액을 엔진이 안분한다) — 「소득세법」 제97조의2 제1항 제3호 */
+export const DEBT_GIFT_TAX_CALCULATED_PART_ONLY_HINT =
+  " ※ 당초 증여 때 채무를 인수했으면 증여세 상당액은 증여분에만 산입합니다 — 채무 인수 부분은 「소득세법」 제97조의2 제1항 제3호(증여세 상당액)의 대상이 아닙니다.";
+
 /**
- * 일반건물·주택 분리 계산(E2·E3·일반건물 E4)의 토글 설명 꼬리 — 이 입력에서는 증여세 상당액 안분의 분자에서만 뺀다(V-7).
- * 시나리오 A의 증여분·채무 인수 부분 분할은 PR-2·3에서 같은 술어(`numerator_only → apply`) 승격으로 붙는다(Q-UI-3 a — 막지 않고 안내만).
+ * 주택 분리 계산(E3 C·A·B)·부담부증여 일반건물(E4)의 토글 설명 꼬리 — 이 입력에서는 증여세 상당액 안분의 분자에서만 뺀다(V-7).
+ * 일반 양도 일반건물(E2)은 PR-2에서 `apply`로 승격돼 이 노트를 쓰지 않는다. E3는 비지원이라 노트를 유지하고 결과에서 T2 고지로 알린다(Q-UI-1 b).
  */
 export function DebtNumeratorOnlyNote() {
   return (
@@ -111,4 +117,15 @@ export function CarryoverGiftDebtSection({ asset, isNonPrimaryAsset, shareMode, 
       </ToggleCard>
     </ToneCard>
   );
+}
+
+/** 일반건물(E2) 사건 토글 설명 — `scope.kind === "apply"` (③ 필요경비 가산 안, `CarryoverGiftBlock`). 안분 분모·분자 문장은 토글 아래 칸들이 이어 말한다. */
+export const GB_DEBT_APPLY_DESCRIPTION =
+  "증여세 신고서에서 증여재산가액에서 뺀 채무가 있으면 켭니다. 부담부증여에서 수증자가 부담하는 채무액에 해당하는 부분은 양도로 보는 부분이라(「소득세법」 제88조 제1호 후단) 증여받은 자산에서 떼어, 시나리오 A에서 증여분과 채무 인수 부분으로 나누어 따로 계산합니다. 이 경우 증여세 산출세액과 과세가액을 모두 입력해야 합니다(증여세가 없었으면 산출세액 0). 증여세 상당액 안분의 분자는 그 자산의 증여세 과세가액(평가액 − 인수채무)입니다(「상속세 및 증여세법」 제47조 제1항 · 「소득세법 시행령」 제163조의2 제2항 제2호).";
+
+/** 일반건물(E2) 파트 채무 칸 hint — 분자에서 빼고(기존) 시나리오 A에서 증여분과 채무 인수 부분으로 나눈다. `part`: 칸이 붙는 파트(둘 다 이월과세일 때만 이름을 붙인다). */
+export function gbDebtFieldHint(part: "토지" | "건물" | null): string {
+  const where = part ? `${part}에` : "이 자산에";
+  const share = part ? `${part}분의` : "이 자산의";
+  return `${where} 담보된 채무로서 당초 증여 때 인수해 증여세 과세가액에서 빠진 금액입니다(「상속세 및 증여세법」 제47조 제1항). 위 증여 당시 평가액에서 이 금액이 차지하는 만큼이 ${share} 채무 인수 부분입니다 — 증여 등기접수일을 취득일로, 이 금액을 취득가액으로 계산합니다(법령에 나누는 방법이 정해져 있지 않아 이 계산기가 정한 방법입니다). 증여세 상당액 안분의 분자에서도 이 금액을 뺍니다. 비교과세 시나리오 B의 취득가액은 평가액 그대로입니다. 없으면 0`;
 }

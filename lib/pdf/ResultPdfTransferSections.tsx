@@ -7,6 +7,8 @@
 import { Fragment } from "react";
 import { type R, C, s, fmt, fmtRate, num, str, bool } from "./ResultPdfPrimitives";
 import { donorBuiltPenaltyView, resultDonorBuiltEchoes } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
+import { carryoverPurchasedPartLine } from "@/lib/tax-engine/transfer-tax-carryover-purchased-part-display";
+import type { PurchasedPartEchoEntry } from "@/lib/tax-engine/result-purchased-part-echoes";
 import { resultSelfBuiltEchoes, selfBuiltPenaltyView, selfBuiltResultEchoes } from "@/lib/tax-engine/transfer-tax-self-built-display";
 import {
   View,
@@ -34,6 +36,7 @@ import {
   splitCarryoverApportionText,
   splitCarryoverEstimatedExpenseText,
   splitCarryoverNotices,
+  splitCarryoverDebtNotices,
   splitCarryoverVerdictText,
   splitCarryoverView,
 } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
@@ -91,6 +94,8 @@ export function TransferSection({ r, selectedSectionIds, phdApartment }: { r: R;
     const v = donorBuiltPenaltyView(echo);
     return v ? [{ label, view: v }] : [];
   });
+  // 이월과세 × 당초 증여 채무 부분(매입분) — 시나리오 A로 나누어 계산했으면 한 줄(화면 상세명세서와 같은 문장 정본). 서버 PDF에는 비교 카드가 들어가지 않아 이 줄이 유일한 표지다.
+  const purchasedPartLines = ((r.purchasedPartEchoes as PurchasedPartEchoEntry[] | undefined) ?? []).map(({ label, split }) => ({ label, line: carryoverPurchasedPartLine(split) }));
   // 일체 주택 본인 신축 §114조의2(건물분) — 화면과 같은 문장 정본. 단건은 echo 하나, 집계 어댑터는 카드별 목록.
   const selfViews = resultSelfBuiltEchoes(r as Parameters<typeof resultSelfBuiltEchoes>[0]).flatMap(({ label, echo }) => {
     const v = selfBuiltPenaltyView(echo);
@@ -124,6 +129,7 @@ export function TransferSection({ r, selectedSectionIds, phdApartment }: { r: R;
             <View style={s.row}><Text style={s.lblSub}>{label ? `[${label}] ${view.notice}` : view.notice}</Text></View>
           </Fragment>
         ))}
+        {purchasedPartLines.map(({ label, line }, k) => (<View key={`pp${k}`} style={s.row}><Text style={s.lblSub}>{purchasedPartLines.length > 1 ? `[${label}] ${line}` : line}</Text></View>))}
         {selfViews.map(({ label, view }, k) => (
           <Fragment key={`sbv${k}`}>
             {view.formulaLines.map((line, i) => (<View key={`sb${k}-${i}`} style={s.row}><Text style={s.lblSub}>{label ? `[${label}] ${line}` : line}</Text></View>))}
@@ -274,6 +280,12 @@ export function TransferSplitSection({ r, phdApartment }: { r: R; phdApartment?:
                 <Text style={{ ...s.lblSub, flex: 1 }}>
                   {`${splitCarryoverVerdictText(p)} — ${splitCarryoverAcquisitionText(p)}${splitCarryoverEstimatedExpenseText(p) ? ` — ${splitCarryoverEstimatedExpenseText(p)}` : ""} — ${splitCarryoverApportionText(carryover, p)}`}
                 </Text>
+              </View>
+            ))}
+            {/* 당초 증여 때 인수한 채무(T2) — 분자에서만 뺀 사실 고지(「확인 필요」 접두 없음). */}
+            {carryover && splitCarryoverDebtNotices(carryover).map((n, i) => (
+              <View key={`co-debt-${i}`} style={s.row}>
+                <Text style={{ ...s.lblSub, flex: 1 }}>{n}</Text>
               </View>
             ))}
             {carryover && splitCarryoverNotices(carryover).map((n, i) => (

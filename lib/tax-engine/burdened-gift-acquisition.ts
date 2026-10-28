@@ -59,6 +59,7 @@ export interface BgAcquisitionSlots {
   landEstimatedDeductionRate?: number;
   buildingEstimatedDeductionRate?: number;
   necessaryExpenseSwap?: TransferBurdenedGiftBreakdown["necessaryExpenseSwap"];
+  necessaryExpenseInput?: TransferBurdenedGiftBreakdown["necessaryExpenseInput"];
   convertedAcquisitionBeforeSwap?: TransferBurdenedGiftBreakdown["convertedAcquisitionBeforeSwap"];
 }
 
@@ -393,6 +394,10 @@ export function resolveWholeBgAcquisition(ctx: BgAcquisitionContext): BgAcquisit
     landEstimatedDeductionRate: appliedEstimatedDeductionRate,
     buildingEstimatedDeductionRate: appliedEstimatedDeductionRate,
     necessaryExpenseSwap,
+    // 실비를 명시 입력했으면 카드가 「(자본적지출 + 양도비) × 채무비율」을 적을 수 있게 입력값과 안분액을 싣는다(표시 전용 echo).
+    ...(realExpenseDeclared
+      ? { necessaryExpenseInput: { capitalExpenditure: capitalExpenditureRaw, transferExpense: transferExpenseRaw, debtApportioned: necessaryExpenseDebtTotal } }
+      : {}),
     convertedAcquisitionBeforeSwap,
   };
 }

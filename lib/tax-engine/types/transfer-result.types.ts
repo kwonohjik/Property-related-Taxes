@@ -7,6 +7,7 @@
 
 import type { CalculationStep } from "./transfer.types";
 import type { DonorBuiltEchoEntry } from "../gb-result-donor-built-echoes";
+import type { PurchasedPartEchoEntry } from "../result-purchased-part-echoes";
 import type { RateClause } from "../transfer-tax-rate-clause";
 import type { ExcludedHouse, ExclusionReason, MultiHouseSurchargeResult } from "../multi-house-surcharge";
 import type { NonBusinessLandJudgment } from "../non-business-land";
@@ -314,6 +315,8 @@ export interface TransferTaxResult {
   selfBuiltPenaltyEchoes?: SelfBuiltEchoEntry[];
   /** [echo, 어댑터 전용] 집계에 든 카드별 증여자 신축·증축 §114조의2 가산세 echo — 어댑터가 `properties[].carryoverTaxationDetail.donorBuiltPenalty` 를 모아 싣는다(PR-5a). 단건 result 는 `carryoverTaxationDetail`/`splitDetail` 로 읽는다. */
   donorBuiltPenaltyEchoes?: DonorBuiltEchoEntry[];
+  /** [echo, 어댑터 전용] 집계에 든 카드 중 **시나리오 A로 채무 부분(매입분)을 나누어 계산한** 카드의 echo — 어댑터가 `properties[].carryoverTaxationDetail.scenarioA.purchasedPartSplit`(A 채택)을 모아 싣는다. PDF·상세명세서의 한 줄 고지가 읽는다(UI 설계서 `carryover-gift-debt-purchased-part-parts` §5). */
+  purchasedPartEchoes?: PurchasedPartEchoEntry[];
   /**
    * [echo] 지방소득세 과세표준에 산입되는 가산세 = **§114조의2분만**.
    *

@@ -319,7 +319,7 @@ export function buildBurdenedGiftBreakdown(params: {
       ? resolvePartwiseBgAcquisition(acqCtx, params.preDeemedParts)
       : undefined;
   const acq = partwise ? partwise.slots : resolveWholeBgAcquisition(acqCtx);
-  const { acquisitionMethodUsed, necessaryExpenseSwap, convertedAcquisitionBeforeSwap } = acq;
+  const { acquisitionMethodUsed, necessaryExpenseSwap, necessaryExpenseInput, convertedAcquisitionBeforeSwap } = acq;
   const { landActualAcquisition, buildingActualAcquisition, landPresumedAcquisition, buildingPresumedAcquisition } = acq;
   const { landAcquisitionPrice, buildingAcquisitionPrice } = acq;
   let { landEstimatedDeduction, buildingEstimatedDeduction } = acq;
@@ -470,6 +470,7 @@ export function buildBurdenedGiftBreakdown(params: {
           }
         : {}),
     ...(necessaryExpenseSwap ? { necessaryExpenseSwap } : {}),
+    ...(necessaryExpenseInput ? { necessaryExpenseInput } : {}),
     ...(convertedAcquisitionBeforeSwap ? { convertedAcquisitionBeforeSwap } : {}),
     ...(carryoverGiftTax ? { carryoverGiftTax } : {}),
     giftTax: giftTaxSummary,

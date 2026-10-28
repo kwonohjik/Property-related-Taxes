@@ -101,6 +101,10 @@ export function residenceMonthsOfAsset(
 // 800줄 분리 — 양쪽이 함께 쓰는 두 헬퍼는 `DetailedStatementLeaf.ts`(순환 차단 leaf)로 이동.
 import { findStepByLabel, buildPerAssetWithFormula } from "./DetailedStatementLeaf";
 import { gbFormulaInputsOf } from "./DetailedStatementGbAsset";
+import { purchasedPartPieceFormula } from "@/lib/tax-engine/transfer-tax-carryover-purchased-part-display";
+import { carryoverPurchasedPartLine } from "@/lib/tax-engine/transfer-tax-carryover-purchased-part-display";
+import { splitCarryoverDebtNotices } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
+import { splitCarryoverView } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 export { findStepByLabel, buildPerAssetWithFormula };
 
@@ -257,7 +261,8 @@ export function buildStatementItems(
           (p) => p.transferPrice,
           (p) => {
             const g = gbOf(p, totalTransferPrice || sumPropTransfer);
-            return buildGbTransferFormula(p, g.gb, g.totalTransferPrice, burdenedGift);
+            // 채무 부분(매입분) 조각 카드(증여분·매입분)는 조각 전 카드의 안분 산식으로는 등식이 서지 않는다 — echo 산식을 쓴다.
+            return purchasedPartPieceFormula(properties, p.propertyId, "transfer") ?? buildGbTransferFormula(p, g.gb, g.totalTransferPrice, burdenedGift);
           },
         )
       : undefined,
@@ -335,8 +340,16 @@ export function buildStatementItems(
         aggModes,
       );
 
+  // 이월과세 × 당초 증여 채무 부분(매입분) — 시나리오 A로 나누어 계산했으면 한 줄 고지(PDF와 같은 문장 정본). 어댑터 echo가 없으면(옛 결과·E3) 비어 있다.
+  // 주택 분리 계산(E3)은 나누지 않고 분자에서만 뺀 사실(T2)을 알린다 — 단건 `splitDetail`의 파트 echo가 근거다.
+  const splitView = !isAggregate ? splitCarryoverView(result.splitDetail) : undefined;
+  const purchasedPartNote = [
+    ...(result.purchasedPartEchoes ?? []).map(({ label, split }) => ((result.purchasedPartEchoes?.length ?? 0) > 1 ? `[${label}] ` : "") + carryoverPurchasedPartLine(split)),
+    ...(splitView ? splitCarryoverDebtNotices(splitView) : []),
+  ].join(" / ");
   items.set("acquisitionPrice", {
     label: "취득가액",
+    ...(purchasedPartNote ? { note: purchasedPartNote } : {}),
     value: isAggregate ? sumAcq : singleAcq,
     formula: acqFormula,
     legalBasis: "소득세법 §97 / 시행령 §163·§176의2",
@@ -346,7 +359,7 @@ export function buildStatementItems(
           (p) => p.acquisitionPrice + capExInAcquisitionColumnOfProperty(p),
           (p) => {
             const g = gbOf(p);
-            return buildGbAcquisitionFormula(p, g.gb, g.asset, burdenedGift);
+            return purchasedPartPieceFormula(properties, p.propertyId, "acquisition") ?? buildGbAcquisitionFormula(p, g.gb, g.asset, burdenedGift);
           },
         )
       : undefined,

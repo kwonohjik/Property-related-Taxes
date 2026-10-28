@@ -21,6 +21,8 @@ const ROOT = process.cwd();
 
 export const GUARDED_FILES = [
   "lib/stores/transfer-per-asset-summary.ts",
+  // 800줄 분리(2026-10-28)로 안분 프리뷰 helper(`computeApportionedSaleMap` 등)가 이 파일로 옮겨졌다 — 거울 호출 2곳이 여기 있다.
+  "lib/stores/transfer-per-asset-summary-helpers.ts",
   "lib/stores/calc-wizard-store.ts",
   "components/calc/results/transfer/FilingFormTableHelpers.ts",
   "components/calc/transfer/CompanionSaleModeBlock.tsx",
@@ -101,7 +103,9 @@ describe("지분 비율 적용 — 거울 9곳 + 입력 카드 2곳은 applyRati
 
   it("거울 9곳 + 입력 카드 2곳이 applyRatio를 실제로 호출한다 (가드가 «아무것도 안 보는» 상태로 통과하지 않는다)", () => {
     const count = (file: string) => (readFileSync(join(ROOT, file), "utf8").match(/\bapplyRatio\(/g) ?? []).length;
-    expect(count("lib/stores/transfer-per-asset-summary.ts")).toBeGreaterThanOrEqual(7); // 기존 2 + 거울 5
+    // 기존 2 + 거울 5 — 분리 후 요약 5 + helper 2
+    expect(count("lib/stores/transfer-per-asset-summary.ts") + count("lib/stores/transfer-per-asset-summary-helpers.ts")).toBeGreaterThanOrEqual(7);
+    expect(count("lib/stores/transfer-per-asset-summary-helpers.ts")).toBeGreaterThanOrEqual(2);
     expect(count("lib/stores/calc-wizard-store.ts")).toBeGreaterThanOrEqual(1);
     expect(count("components/calc/results/transfer/FilingFormTableHelpers.ts")).toBeGreaterThanOrEqual(3);
     expect(count("components/calc/transfer/CompanionSaleModeBlock.tsx")).toBeGreaterThanOrEqual(1);
