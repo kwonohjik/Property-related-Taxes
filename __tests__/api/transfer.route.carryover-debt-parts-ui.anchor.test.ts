@@ -135,6 +135,64 @@ describe("UI-1 ★ K-2 격자 — 증여세 칸 3상태 × 토글 (⑧ 통과 �
   });
 });
 
+describe("UI-1b ⑧↔⑫ 격자 전수 — 증여세 칸 3상태 × 토글 × 파트 × 분리 OFF/ON × 차단 조합 (같은 입력으로 ⑧ 이슈 · 와이어 · route 수락 · 엔진 도달을 대조)", () => {
+  const EXPR_FORM = { type: "public_expropriation", expropriationCash: "600000000", expropriationBond: "0", expropriationBondHoldingYears: "none", expropriationApprovalDate: "2023-01-01" };
+  type Part = "land" | "building";
+  const make = (part: Part, sep: boolean, calc: string, base: string, on: boolean, extra: Partial<AssetForm> = {}) => {
+    const o = { giftTaxCalculated: calc, giftTaxBase: base, giftDebtAssumed: on };
+    const sepOver = sep ? { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2021-03-01" } : {};
+    return part === "land" ? landOnly(o, { ...sepOver, ...extra } as never) : buildingOnly(o, { ...sepOver, ...extra } as never);
+  };
+  const STATES: Array<[string, string, string]> = [["산출세액 3천만·과세가액 10억", "30,000,000", "1,000,000,000"], ["산출세액 0·과세가액 10억", "0", "1,000,000,000"], ["산출세액 빈칸·과세가액 10억", "", "1,000,000,000"], ["산출세액 0·과세가액 빈칸", "0", ""], ["둘 다 빈칸", "", ""]];
+  const cells: Array<{ name: string; asset: AssetForm; expectBlock8: boolean; debtReaches: boolean }> = [];
+  for (const part of ["land", "building"] as const)
+    for (const sep of [false, true])
+      for (const on of [true, false])
+        for (const [label, calc, base] of STATES) {
+          const bothFilled = calc.trim() !== "" && base.trim() !== "";
+          const pairHalf = (calc !== "" && calc !== "0" && base === "") || (base !== "" && calc === ""); // 종전부터 막던 반쪽
+          const k2Block = on && !bothFilled; // K-2: 토글 ON이면 두 칸 필수
+          cells.push({
+            name: `${part} · 분리 ${sep ? "ON" : "OFF"} · 토글 ${on ? "ON" : "OFF"} · ${label}`,
+            asset: make(part, sep, calc, base, on),
+            expectBlock8: k2Block || pairHalf,
+            // 엔진에 도달하려면: 토글 ON ∧ 두 칸이 모두 차 있어 part 모양 (산출세액 0 허용)
+            debtReaches: on && bothFilled,
+          });
+        }
+  // 차단 조합(토글 ON): 감면 · 용도변경 — 두 칸이 차 있어도 ⑧이 토글 앵커로 막는다
+  for (const part of ["land", "building"] as const) {
+    cells.push({ name: `${part} · 감면 + 토글 ON`, asset: make(part, false, "30,000,000", "1,000,000,000", true, { reductions: [EXPR_FORM] as never }), expectBlock8: true, debtReaches: false });
+    cells.push({ name: `${part} · 용도변경 + 토글 ON`, asset: make(part, false, "30,000,000", "1,000,000,000", true, { gbHouseToCommercialConversion: true, gbConversionDate: "2023-01-01", gbWasMultiHouseAtConversion: false } as never), expectBlock8: true, debtReaches: false });
+  }
+
+  it.each(cells)("$name", async (c) => {
+    const f = formOf([c.asset]);
+    const r = await run(f);
+    const blocked8 = r.issues.length > 0;
+    // 분리 ON 입력은 ⑧이 분리 전용 필수 칸을 따로 요구할 수 있다 — 이 격자의 대상은 «채무·증여세 칸 규칙»이므로 그 칸들의 이슈만 본다.
+    const debtFields = ["carryover.giftTaxCalculated", "carryover.giftTaxBase", "buildingCarryover.giftTaxCalculated", "buildingCarryover.giftTaxBase", "carryover.giftDebtAssumed"];
+    const debtIssue8 = r.issues.some((i) => debtFields.includes(i));
+    if (c.expectBlock8) expect(debtIssue8, `⑧ 이슈: ${r.issues.join(",")}`).toBe(true);
+    else expect(debtIssue8, `⑧ 이슈: ${r.issues.join(",")}`).toBe(false);
+    if (!blocked8) {
+      // ⑧ 통과 ⇒ 서버 수락 (UI 통과 ↔ 서버 거부 모순 없음)
+      expect(r.status, r.message).toBe(200);
+      // ⑧ 통과 ∧ 토글 ON ∧ 채무 > 0 ⇒ 채무가 엔진에 닿아 꼬리 카드가 생긴다 (침묵 누락 없음)
+      const tail = ids(r).some((id) => id.includes("__purchased"));
+      expect(tail).toBe(c.debtReaches);
+    }
+  });
+
+  it("차단 비대칭 문서화 — 감면 + 토글 ON + 채무 0: ⑧은 끄게 막지만(E1 규칙과 같은 — 토글 자체가 조건) 서버(⑫)는 채무 > 0일 때만 막는다 → 본문은 200", async () => {
+    const a = landOnly({ giftAssumedDebt: "0" }, { reductions: [EXPR_FORM] as never });
+    const f = formOf([a]);
+    expect((await run(f)).issues).toContain("carryover.giftDebtAssumed");
+    const body = await bodyOf(f);
+    expect((await post(body)).status).toBe(200);
+  });
+});
+
 describe("UI-2 ⑥ 사이드바 — 계산 후 취득가액·필요경비 = 엔진이 차감한 값", () => {
   const sum = (r: { data?: unknown }, k: "acquisitionPrice" | "necessaryExpense") => props(r).reduce((s, p) => s + p[k], 0);
   const sidebar = (f: TransferFormData, r: { data?: unknown }) => computeTransferPerAssetSummary(f, r.data as TransferAPIResult).rows[0];
