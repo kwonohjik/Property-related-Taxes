@@ -5,7 +5,7 @@
  * `PrintSection id="detail-cards"` 래퍼와 렌더 게이트(`hasSingleDetailCards`)는 뷰에 남는다 — 인쇄 leaf id 가 뷰에 보여야 한다.
  */
 import { redevSec166DisplayOf } from "@/lib/calc/redev-pre-approval-acq-mode";
-import { bgRedevFilingAcquisition } from "@/lib/tax-engine/burdened-gift-totals";
+import { bgRedevFiling } from "@/lib/tax-engine/burdened-gift-totals";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { CrossEngine1045Notice } from "@/components/calc/shared/CrossEngine1045Notice";
@@ -100,7 +100,8 @@ export function SingleDetailCards({
           // 재개발 완공 아파트 × K-5 — 엔진이 §166③으로 계산한 값(명세의 일반 환산값 대신 표시)
           redevSec166={redevSec166DisplayOf(result)}
           // 원조합원 입주권·완공 아파트 — 인가 전 분과 신고서 합계(§166①1호)를 잇는다
-          redevFilingAcquisition={bgRedevFilingAcquisition(result)}
+          redevFilingAcquisition={bgRedevFiling(result)?.acquisition}
+          redevFilingExpenses={bgRedevFiling(result)?.expenses}
         />
       )}
 

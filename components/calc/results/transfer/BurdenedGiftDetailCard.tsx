@@ -16,6 +16,8 @@ import type {
 } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { BgPreDeemedThreeWayRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
+import { BgRedevFilingExpenseRows } from "@/components/calc/results/transfer/BgRedevFilingExpenseRows";
+import type { RedevExpenseParts } from "@/lib/tax-engine/redev-acquisition-inverse";
 import { BgPreDeemedStdCaption } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
 import { BgPreDeemedPartsRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
 import { BgBundleCardAcqRows } from "@/components/calc/results/transfer/BgBundleCardAcqRows";
@@ -56,6 +58,8 @@ interface Props {
    * 인가 후 분·청산금 납부분과의 관계를 한 줄로 잇는다(「소득세법 시행령」 제166조 제1항 제1호). 카드가 다시 계산하지 않는다.
    */
   redevFilingAcquisition?: number;
+  /** §166 자산의 신고서 필요경비 분기별 구성(인가 전 · 인가 후 · 청산금 분) — 신고서 취득가액 줄 아래에 잇는다. */
+  redevFilingExpenses?: RedevExpenseParts;
 }
 
 const PROPERTY_TYPE_LABEL: Record<string, string> = {
@@ -70,7 +74,7 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   right_to_move_in: "입주권",
 };
 
-export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166, redevFilingAcquisition }: Props) {
+export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166, redevFilingAcquisition, redevFilingExpenses }: Props) {
   const fmt = (n: number) => n.toLocaleString("ko-KR");
   const buildingAcqLabel = redevFilingAcquisition !== undefined ? "종전 부동산 취득가(인가 전 분)" : "건물 취득가";
   const rowSelected = (mode: string) =>
@@ -358,6 +362,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
               <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(redevFilingAcquisition)}</td>
             </tr>
           )}
+          {redevFilingExpenses !== undefined && <BgRedevFilingExpenseRows parts={redevFilingExpenses} />}
           <tr>
             <td className="py-1 pr-2 text-fuchsia-700 dark:text-fuchsia-300">무상이전분 (증여세 과세 가액)</td>
             <td className="text-right font-mono tabular-nums whitespace-nowrap text-fuchsia-700 dark:text-fuchsia-300">{fmt(bg.gratuitousPortion)}</td>

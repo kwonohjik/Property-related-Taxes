@@ -8,6 +8,7 @@
  */
 
 import type { FilingFormRow } from "./inheritance-gift-form-detail.types";
+import type { RedevExpenseParts } from "../redev-acquisition-inverse";
 
 /**
  * 상증법 §60~§66 증여재산 평가 모드.
@@ -553,8 +554,17 @@ export interface TransferBurdenedGiftBreakdown {
    * 카드·이월과세 A 카드가 있을 때(사용자 결정 Q-33 · PR-7b-5)와 축 B일 때(`bg-axis-b-card-acquisition-sum.plan.md` Q-1 a) 싣는다.
    * 이때 `perAsset` 취득가액·개산공제는 이 카드들의 합이다(물건 전체 재계산값이 아니다).
    * `redevFilingAcquisition` — §166 자산(원조합원 입주권 등) 카드의 신고서 취득가액. 그 카드의 §159 슬롯은 인가 전 분뿐이다.
+   * `redevFilingExpenses` — 같은 카드의 신고서 필요경비 분기별 구성(인가 전 · 인가 후 · 청산금 분 — 합이 신고서 필요경비).
+   * `redevSec166` — 완공 아파트 × ③ 환산(K-5)에서 재개발 경로가 §166③으로 계산한 값(단건 `redevSec166DisplayOf`와 같다).
    */
-  cards?: Array<{ propertyId: string; label?: string; breakdown: TransferBurdenedGiftBreakdown; redevFilingAcquisition?: number }>;
+  cards?: Array<{
+    propertyId: string;
+    label?: string;
+    breakdown: TransferBurdenedGiftBreakdown;
+    redevFilingAcquisition?: number;
+    redevFilingExpenses?: RedevExpenseParts;
+    redevSec166?: { acquisition: number; lumpDeduction: number };
+  }>;
 
   preDeemed?: {
     /** `three_way_parts` — 일반건물 파트별 3자 max(사용자 결정 Q-28 · PR-7b-6). 값은 `parts`에 있고 `stdAtDeemed`는 그 파트들의 합이다. */

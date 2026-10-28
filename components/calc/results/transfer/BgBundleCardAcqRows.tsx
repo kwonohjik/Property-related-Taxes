@@ -9,9 +9,11 @@
  *  · 일반 방식 카드는 근거 값 × 채무비율로 적는다. 카드 echo는 지분율을 곱한 값이라 지분 카드면 「(지분분)」을 붙인다.
  *  · 개산공제가 있으면 그 카드 아래 한 줄 — 물건 전체 한 줄 산식이 보이던 개산공제가 카드별 행으로 바뀌며 사라지지 않게 한다.
  *  · §166 카드(원조합원 입주권 등)의 §159 칸은 인가 전 분뿐이다 — 행 이름을 그렇게 부르고 신고서 취득가액을 따로 적는다(Q-2 a).
+ *    신고서 필요경비도 분기별로 따로 적는다(`bg-redev-card-filing-expense.plan.md` Q-2 b) — 3자 max 줄은 재개발 문구(§166③)로 그린다(Q-3).
  */
 import { Fragment } from "react";
 import { BgPreDeemedThreeWayRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
+import { BgRedevFilingExpenseRows } from "@/components/calc/results/transfer/BgRedevFilingExpenseRows";
 import { BgPreDeemedPartsRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
 import type {
   TransferBurdenedGiftAcquisitionMethodUsed,
@@ -76,7 +78,7 @@ export function BgBundleCardAcqRows({
               </td>
             </tr>
             {b.preDeemed?.basis === "three_way" ? (
-              <BgPreDeemedThreeWayRows bg={b} />
+              <BgPreDeemedThreeWayRows bg={b} isRedev={c.redevFilingAcquisition !== undefined} redevSec166={c.redevSec166} />
             ) : b.preDeemed?.basis === "three_way_parts" ? (
               <BgPreDeemedPartsRows bg={b} methodLabels={methodLabels} />
             ) : (
@@ -109,6 +111,7 @@ export function BgBundleCardAcqRows({
                 <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(c.redevFilingAcquisition)}</td>
               </tr>
             )}
+            {c.redevFilingExpenses !== undefined && <BgRedevFilingExpenseRows parts={c.redevFilingExpenses} />}
           </Fragment>
         );
       })}
