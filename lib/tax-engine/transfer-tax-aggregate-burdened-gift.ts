@@ -17,7 +17,8 @@ import type { AggregateTransferInput } from "./types/transfer-aggregate.types";
 import type { TransferTaxItemInput } from "./types/transfer-aggregate.types";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxResult } from "./types/transfer.types";
-import { bgRedevFilingAcquisition } from "./burdened-gift-totals";
+import { redevSec166DisplayOf } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { bgRedevFiling } from "./burdened-gift-totals";
 
 export function buildBundleBurdenedGiftWhole(input: AggregateTransferInput): TransferBurdenedGiftBreakdown | undefined {
   const info = input.burdenedGiftWholeInfo;
@@ -41,8 +42,8 @@ export function buildBundleBurdenedGiftWhole(input: AggregateTransferInput): Tra
  * 물건 전체 재계산이 모르는 값이다(계획서 `bg-bundle-card-acquisition-all.plan.md` Q-1 a · `bg-axis-b-card-acquisition-sum.plan.md` Q-1 a).
  * 일반건물 부담부증여 파트 카드는 자산 명세(`gbAssetBurdenedGift`)를 자산당 1회 센다.
  *
- * 재개발·재건축 지분·자산도 넣는다(Q-2 a) — 그 카드의 §159 슬롯은 인가 전 분이라 신고서 취득가액(`redevFilingAcquisition`)을 함께 싣고,
- * 명세 카드가 둘을 구분해 그린다.
+ * 재개발·재건축 지분·자산도 넣는다(Q-2 a) — 그 카드의 §159 슬롯은 인가 전 분이라 신고서 취득가액(`redevFilingAcquisition`)과
+ * 신고서 필요경비의 분기별 구성(`redevFilingExpenses`)을 함께 싣고, 명세 카드가 둘을 구분해 그린다.
  *
  * 명세가 없는 카드가 하나라도 있으면 종전 그대로 둔다 — 그 카드의 값을 모르면 「합 = 세액에 쓰인 값」이 거짓이 되므로(예: 지분 결과 하나에
  * 명세가 없는 고가 지분 묶음).
@@ -63,13 +64,15 @@ export function withCardAcquisitions(
       counted.add(gb.assetId);
       return [{ propertyId: gb.assetId, label: gb.label, breakdown: gb.breakdown }];
     }
-    const filing = bgRedevFilingAcquisition(r.result);
+    const filing = bgRedevFiling(r.result);
+    const sec166 = redevSec166DisplayOf(r.result);
     return r.result.transferBurdenedGiftBreakdown
       ? [{
           propertyId: r.item.propertyId,
           label: r.item.propertyLabel,
           breakdown: r.result.transferBurdenedGiftBreakdown,
-          ...(filing !== undefined ? { redevFilingAcquisition: filing } : {}),
+          ...(filing !== undefined ? { redevFilingAcquisition: filing.acquisition, redevFilingExpenses: filing.expenses } : {}),
+          ...(sec166 !== undefined ? { redevSec166: sec166 } : {}),
         }]
       : [];
   });
