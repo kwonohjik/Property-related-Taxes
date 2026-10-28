@@ -178,7 +178,7 @@ import {
   resolveRuralSurtax,
 } from "./reduction-eligible-income";
 import { resolveReceiveOnlyDisplay } from "./receive-only-display";
-import { resolveBgSingleDisplay, bgSwapAcquisitionNote } from "./DetailedStatementBgFormulas";
+import { resolveBgSingleDisplay, resolveBgCarryoverSingleDisplay, bgSwapAcquisitionNote } from "./DetailedStatementBgFormulas";
 import { mixedBgFilingNotes } from "./DetailedStatementBgMixedFormulas";
 import { redevFilingTotals } from "./redev-acquisition-inverse";
 import { redevInverseTransferPrice } from "@/lib/tax-engine/burdened-gift-totals";
@@ -245,8 +245,8 @@ export function buildRows(
   // 배율 초과 부수토지(비사업용 토지) 파트 — 있으면 split-2col 열이 균일 비율이 아니라 엔진 echo를 읽는다(초과분은 토지 열에 합산).
   // §155⑳ 특례(`isRH`)는 합계 행의 의미(과세대상 양도차익 = 전체 양도차익)가 달라 이 경로 밖이다 — 종전 표시 그대로.
   const spNb = mode === "split-2col" && !isRH ? sp?.nonBusinessLandPart : undefined;
-  // 단건 부담부증여: 양도가액·취득가액·필요경비는 §159 슬롯 echo다(`contractTotalPrice`는 빈 칸이 정상 — 역산하면 「-」·음수).
-  const bgSingle = resolveBgSingleDisplay(result);
+  // 단건 부담부증여(이월과세 단건 포함): 양도가액·취득가액·필요경비는 §159 슬롯 echo다(`contractTotalPrice`는 빈 칸이 정상 — 역산하면 「-」·음수).
+  const bgSingle = resolveBgSingleDisplay(result) ?? resolveBgCarryoverSingleDisplay(result);
 
   // 입주일 없는 구간(신규 자산 기본값의 빈 구간)은 거주 사실이 없다 — 퇴거일 칸에 양도일을 찍지 않는다.
   const periods = primary?.residenceInputMode === "interval" ? (primary.residencePeriods ?? []).filter((p) => p.moveInDate) : [];

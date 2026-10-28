@@ -173,6 +173,9 @@ export function buildStatementItems(
 
   // 단건 부담부증여: §159 슬롯 echo에서 읽는다(`contractTotalPrice`가 빈 칸이라 역산하면 음수).
   const bgSingle = isAggregate ? undefined : resolveBgSingleDisplay(result);
+  // 이월과세 단건 부담부증여: 양도가액·취득가액·필요경비 줄도 §159 슬롯 echo에서 읽는다 — 폼 계약금액이 빈 칸이라 역산하면 양도가액 0 · 취득가액 음수였다
+  // (계획서 `bg-single-carryover-statement-price-rows.plan.md` Q-1 a).
+  const bgCarryoverSingle = isAggregate ? undefined : resolveBgCarryoverSingleDisplay(result);
   // 겸용 × 부담부증여 — 4부분 슬롯 합(단건 빌더는 겸용을 제외한다). 폼 `contractTotalPrice`는 빈 칸이라 역산하면 음수다.
   const bgMixed = isAggregate ? undefined : resolveBgMixedDisplay(result);
   // 양도가액 우선순위: 부담부증여 슬롯 > receiveOnly 보정 > override > result.steps의 amount > 0
@@ -180,6 +183,8 @@ export function buildStatementItems(
   // 폼 계약금액은 빈 칸이라 §166 역산 합계 취득가액이 −400,000,000이 됐다(신고서 표와 같은 leaf · 계획서 D3).
   const totalTransferPrice = bgSingle
     ? bgSingle.transferPrice
+    : bgCarryoverSingle
+    ? bgCarryoverSingle.transferPrice
     : bgMixed
     ? bgMixed.transferPrice
     : redevInverseTransferPrice(result, receiveOnly.transferPrice);
@@ -297,6 +302,8 @@ export function buildStatementItems(
   const depreciation = result.swapApplied ? 0 : (result.depreciationAmount ?? 0);
   const singleAcq = bgSingle
     ? bgSingle.acquisition
+    : bgCarryoverSingle
+    ? bgCarryoverSingle.acquisition
     : bgMixed
     ? bgMixed.acquisition
     : splitSummary
@@ -327,8 +334,11 @@ export function buildStatementItems(
   // 단건: 실제 변수값을 풀어쓴 산식 (양도차익 항목과 동일 표기). 다건은 자산별 perAsset이 담당.
   // 집계 소제목은 어댑터 상수 플래그가 아니라 자산별 echo(`splitDetail`·GB 카드 `acquisitionMode`·`filingDisplay`)에서 파생한다(G-4).
   const aggModes = isAggregate ? aggregateAcqModes(properties, gbDetail) : undefined;
+  // 이월과세 A는 「증여자 취득가액 승계」 문구(`buildAcquisitionPriceFormula`)가 이미 맞다 — 값만 슬롯으로 바뀐다. B는 이월과세가 아닌 단건과 같은 슬롯 산식을 쓴다(Q-2 a).
   const acqFormula = bgSingle
     ? buildBgSingleAcquisitionFormula(bgSingle)
+    : bgCarryoverSingle && result.carryoverTaxationDetail?.adoptedScenario === "B"
+    ? buildBgSingleAcquisitionFormula(bgCarryoverSingle)
     : bgMixed
     ? buildBgMixedAcquisitionFormula(bgMixed)
     : buildAcquisitionPriceFormula(
@@ -336,7 +346,8 @@ export function buildStatementItems(
         isAggregate,
         totalTransferPrice,
         singleAcq,
-        capEx,
+        // 이월과세 단건 부담부증여는 자본적지출이 취득가액이 아니라 §159 필요경비 슬롯(안분 실비)에 들어 있다 — 「+ 자본적지출」을 적으면 값(슬롯)과 어긋난다.
+        bgCarryoverSingle ? 0 : capEx,
         depreciation,
         aggModes,
       );
@@ -378,8 +389,12 @@ export function buildStatementItems(
   // 🔴 그런데도 종전에는 거기서 `capEx`를 **또** 뺐다. 개산공제가 자본적지출보다 작으면 필요경비가
   //   0으로 눌려(실측 3,000,000 − 20,000,000 → 0) 「양도 − 취득 − 경비 = 차익」이 깨졌다.
   //   환산 본문은 자본적지출이 애초에 들어 있지 않으므로 뺄 것이 없다(결과탭 코드리뷰 #069).
+  // 이월과세 단건 부담부증여는 슬롯 값을 쓴다 — 이월과세 A의 수증자 자본적지출 가산(`capEx`)을 아래 일반 경로처럼 빼면 필요경비가 0으로 눌린다
+  // (실측: 자본적지출 5,000,000 입력 시 슬롯 1,300,000인데 줄 값 0 — 계획서 `bg-single-carryover-statement-price-rows.plan.md` §8).
   const singleExp = bgSingle
     ? bgSingle.expenses
+    : bgCarryoverSingle
+    ? bgCarryoverSingle.expenses
     : bgMixed
     ? bgMixed.expenses
     : splitSummary
@@ -391,8 +406,7 @@ export function buildStatementItems(
   // `assetKind`는 ④가 엔진 `propertyType`으로 그대로 보내는 값이라 같은 인자다
   // (`transfer-tax-api.ts:251`) — 사이드바 합계(`calc-wizard-store.ts`)와도 같은 호출이다.
   const lumpRate = estimatedDeductionRate(formData?.isUnregistered, primary?.assetKind);
-  // 이월과세 단건 부담부증여: 필요경비 줄도 §159 슬롯 echo에서 읽는다(엔진 `necessaryExpenseIsLumpDeduction`은 이 경로에서 false라 개산공제를 「양도비 등」으로 적었다).
-  const bgCarryoverSingle = isAggregate ? undefined : resolveBgCarryoverSingleDisplay(result);
+  // 필요경비 줄은 `bgCarryoverSingle`의 슬롯 산식을 쓴다(엔진 `necessaryExpenseIsLumpDeduction`은 이 경로에서 false라 개산공제를 「양도비 등」으로 적었다).
   const carryoverGuardNote =
     bgCarryoverSingle && result.carryoverTaxationDetail?.adoptedScenario === "A" && result.carryoverTaxationDetail.scenarioA.donorCapexGuardApplied
       ? " ※ 양도일 2024-01-01 전 — 증여자 자본적지출 불산입(§97의2①2호 시행일)"
