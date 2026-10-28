@@ -1,7 +1,7 @@
 /**
  * E2E — 이월과세 × 당초 증여 때 인수한 채무 부분(매입분) PR-2: 일반건물(E2) 파트 · 주택 분리 파트(E3) 안내 · 지분(공유)·함께 양도 일반건물
  *
- * UI 설계서 docs/02-design/features/carryover-gift-debt-purchased-part-parts.ui.design.md §6.2 (CDPP-11~13) · CDPP-14(지분 40%, anchor CDP-2) · CDPP-15(함께 양도, anchor CDP-3)
+ * UI 설계서 docs/02-design/features/carryover-gift-debt-purchased-part-parts.ui.design.md §6.2 (CDPP-11~13) · CDPP-14(지분 40%, anchor CDP-2) · CDPP-15(함께 양도, anchor CDP-3) · CDPP-16(이력 복원 후 다시 계산, V-10)
  * 사례(vitest anchor `transfer.route.carryover-debt-parts*.anchor.test.ts`와 같은 값): 일반건물 환산 · 토지 100㎡ × 2,000,000 + 건물 2억 · 양도 2026-03-01 10억 ·
  *   토지만 이월과세(증여 2021-03-01 · 증여자 2005-06-15 취득 1.5억 · 평가액 4억 · 산출세액 3천만 · 과세가액 10억) · 채무 1억 →
  *   시나리오 A 채택 141,690,000 · 채무 OFF 156,620,000. E3(주택 분리 · 토지만 이월과세 · 채무 1억) 175,110,000.
@@ -16,6 +16,7 @@ import { calculate } from "./_helpers/split-acq-display";
 import { formRow } from "./_helpers/split-acq-display";
 import { stmtRow } from "./_helpers/split-acq-display";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { putCalculationRecord } from "./_helpers/history-seed";
 
 const TOGGLE = "당초 증여 때 채무를 인수했다";
 const DEBT = '[data-field="carryover.giftAssumedDebt"]';
@@ -60,25 +61,28 @@ const gbAsset = (co: Record<string, unknown>, over: Record<string, unknown> = {}
   ...over,
 });
 
+/** 마법사 폼 한 벌 — sessionStorage 시드와 이력 record의 `inputData`가 같은 모양이다. */
+const formDataOf = (asset: Record<string, unknown> | Record<string, unknown>[], formOver: Record<string, unknown> = {}) => ({
+  ...createDefaultTransferFormData(),
+  assets: Array.isArray(asset) ? asset : [asset],
+  transferDate: "2026-03-01",
+  filingDate: "2026-05-31",
+  contractTotalPrice: "1000000000",
+  totalTransferExpense: "0",
+  householdHousingCount: "2",
+  householdNoOtherHousesConfirmed: true,
+  householdNoPresaleRightsConfirmed: true,
+  isOneHousehold: false,
+  isRegulatedArea: false,
+  wasRegulatedAtAcquisition: false,
+  isUnregistered: false,
+  ...formOver,
+});
+
 async function seedAndOpen(page: Page, asset: Record<string, unknown> | Record<string, unknown>[], formOver: Record<string, unknown> = {}) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
-  const formData = {
-    ...createDefaultTransferFormData(),
-    assets: Array.isArray(asset) ? asset : [asset],
-    transferDate: "2026-03-01",
-    filingDate: "2026-05-31",
-    contractTotalPrice: "1000000000",
-    totalTransferExpense: "0",
-    householdHousingCount: "2",
-    householdNoOtherHousesConfirmed: true,
-    householdNoPresaleRightsConfirmed: true,
-    isOneHousehold: false,
-    isRegulatedArea: false,
-    wasRegulatedAtAcquisition: false,
-    isUnregistered: false,
-    ...formOver,
-  };
+  const formData = formDataOf(asset, formOver);
   await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), { state: { formData, currentStep: 0, pendingMigration: false }, version: 0 });
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -380,5 +384,86 @@ test.describe("CDPP-15 E2 함께 양도(컴패니언) 일반건물 — 꼬리 id
     await expect(page.getByTestId("carryover-piece-gift")).toHaveCount(0);
     await expect(form).not.toContainText("(매입분)");
     await expect(form).toContainText("207,156,000"); // OFF 회귀값(probe 고정 — 증여분 조각 없이 토지 전체가 증여자 취득가 3억)
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CDPP-16 — 이력 복원 → 「다시 계산」(설계서 V-10 · Q-UI-3 a). V-7 시절(분자 전용)에 토글 ON으로 저장한 일반건물 이월과세 이력.
+//   경로: IndexedDB 이력 → 카드 「편집」(`resumeTransferRecord` → `migrateAsset` → reset + updateFormData) → 마법사 폼 → 계산.
+//   저장된 `resultData`(옛 세액 157,460,000)는 그대로 두고, 다시 계산할 때만 새 의미(141,690,000)가 적용된다.
+// ─────────────────────────────────────────────────────────────────────────────
+const OLD_DETERMINED_TAX = 157_460_000; // 엔진 설계서 P9 — 분자 전용 의미로 저장됐던 세액(옛 resultData)
+
+const historyRecord = (id: string, asset: Record<string, unknown>) => ({
+  id,
+  userId: "local-user",
+  taxType: "transfer",
+  title: `일반건물 이월과세 채무 옛 이력 ${id}`,
+  inputData: formDataOf(asset),
+  resultData: { mode: "single", result: { determinedTax: OLD_DETERMINED_TAX, localIncomeTax: 15_746_000 } },
+  taxLawVersion: "2026-03-01",
+  linkedCalculationId: null,
+  clientId: null,
+  createdAt: "2026-10-01T09:00:00.000Z",
+  updatedAt: "2026-10-01T09:00:00.000Z",
+});
+
+test.describe("CDPP-16 이력 복원 후 다시 계산 — 새 의미 적용 · 입력 보존 · 막다른 길 없음", () => {
+  async function openFromHistory(page: Page, rec: ReturnType<typeof historyRecord>) {
+    await page.goto("/history");
+    await putCalculationRecord(page, rec);
+    await page.reload();
+    await expect(page.getByTestId(`resume-${rec.id}`)).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId(`resume-${rec.id}`).click();
+    await expect(page).toHaveURL(/\/calc\/transfer-tax$/, { timeout: 30_000 });
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+  }
+
+  test("(a) 증여세 두 칸이 채워진 옛 이력 → 값 그대로 복원 → 다시 계산 141,690,000 · 조각 표시 · 옛 세액은 화면에 없다", async ({ page }) => {
+    test.setTimeout(240_000);
+    await openFromHistory(page, historyRecord("e2e-cdpp16-filled", gbAsset({ giftDebtAssumed: true, giftAssumedDebt: "100000000" })));
+    await openAcquisition(page);
+    // 복원 정규화가 토글·채무·증여세 두 칸을 지우거나 바꾸지 않았다
+    await expect(toggle(page)).toBeChecked();
+    await expect(debtInput(page)).toHaveValue("100,000,000");
+    await expect(page.locator('[data-field="carryover.giftTaxCalculated"] input').first()).toHaveValue("30,000,000");
+    await expect(page.locator('[data-field="carryover.giftTaxBase"] input').first()).toHaveValue("1,000,000,000");
+    await expect(page.getByTestId("carryover-debt-numerator-only-note")).toHaveCount(0);
+
+    const body = (await calculate(page)) as Wire;
+    expect(body.generalBuildingValuation?.landCarryoverPart?.giftAssumedDebt).toBe(100_000_000);
+    expect(body.generalBuildingValuation?.carryoverGiftEvent).toMatchObject({ giftTaxCalculated: 30_000_000, giftTaxBase: 1_000_000_000 });
+    const form = page.locator('[data-print-id="form-table"]').first();
+    await expect(form).toContainText("141,690,000");
+    await expect(page.getByTestId("carryover-piece-gift").first()).toBeVisible();
+    await expect(page.getByTestId("carryover-piece-purchased").first()).toBeVisible();
+    await expect(page.getByTestId("carryover-piece-method-notice").first()).toContainText("확인 필요");
+    // 저장돼 있던 옛 세액은 되살아나지 않는다 — 결과는 지금 다시 계산한 값뿐
+    await expect(page.locator("body")).not.toContainText("157,460,000");
+  });
+
+  test("(b) 증여세 두 칸이 비어 있던 옛 이력 → 다음에서 막히되 증여세 칸으로 이동 → 채우면 통과 · 141,690,000", async ({ page }) => {
+    test.setTimeout(240_000);
+    await openFromHistory(page, historyRecord("e2e-cdpp16-empty", gbAsset({ giftDebtAssumed: true, giftAssumedDebt: "100000000", giftTaxCalculated: "", giftTaxBase: "" })));
+    await openAcquisition(page);
+    await expect(toggle(page)).toBeChecked();
+    await expect(debtInput(page)).toHaveValue("100,000,000");
+    await expect(page.locator('[data-field="carryover.giftTaxBase"] input').first()).toHaveValue("");
+
+    const next = page.getByRole("button", { name: "다음", exact: true });
+    await next.click();
+    await expect(page.getByTestId("validation-issues")).toContainText("증여세 신고서의 과세가액");
+    await expect(page.locator('[data-field="carryover.giftTaxBase"] input').first()).toBeFocused();
+
+    // 막다른 길이 아니다 — 이동한 칸부터 채우면 통과한다
+    await page.locator('[data-field="carryover.giftTaxBase"] input').first().fill("1000000000");
+    await page.locator('[data-field="carryover.giftTaxCalculated"] input').first().fill("30000000");
+    await next.click();
+    await expect(page.getByTestId("validation-issues")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "보유 상황" })).toBeVisible();
+    await calculate(page);
+    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("141,690,000");
+    await expect(page.getByTestId("carryover-piece-purchased").first()).toBeVisible();
   });
 });

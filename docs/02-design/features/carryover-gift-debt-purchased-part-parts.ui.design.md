@@ -334,7 +334,7 @@ Q-UI-4: a 카드 + 상세명세서 + 인쇄 + PDF 한 줄 / b 카드·상세명�
 | V-7 | PR-1의 상세명세서(S3)·PDF(S5) 미구현이 의도인지 누락인지 | 확인 필요 — PR #2653 설명 열람 필요 |
 | V-8 | E2 지분(공유) 모드에서 r이 스케일 floor로 흔들리는 폭 | 확인 필요(엔진 V-3) |
 | V-9 | r = 1일 때 증여자 취득가액 필수 유지 | 의도 — 완화 가능 |
-| V-10 | 이력 복원 → 「다시 계산」 시 새 의미 적용(Q-UI-3 a) | 확인 필요(`lib/storage` 복원 경로 미열람) |
+| V-10 | 이력 복원 → 「다시 계산」 시 새 의미 적용(Q-UI-3 a) | **해소(2026-10-28 실측)** — 경로는 `/history` 카드 「편집」(`resume-{id}`) → `resumeTransferRecord`(`lib/calc/transfer-resume-entry.ts`: assets를 `migrateAsset`·`clearInheritedStaleAcqInputs`에 통과 → `reset()` + `updateFormData`) → 마법사 → 계산. 증여세 두 칸이 채워진 옛 입력은 값이 그대로 복원돼 141,690,000(저장된 옛 세액 157,460,000은 화면에 없다), 두 칸이 비어 있던 옛 입력은 「다음」에서 막히되 `carryover.giftTaxBase` 칸으로 이동하고 채우면 통과한다. e2e CDPP-16 · vitest `__tests__/calc/carryover-debt-parts-history-restore.anchor.test.ts`(토지만/건물만/분리 OFF × 이력 편집·세션 복원) |
 | V-11 | `DetailedStatementGbFormulas.ts` 10개 지점이 꼬리 카드를 만났을 때 구체 동작 | 확인 필요 — 정확 비교임만 코드로 확인 |
 | V-12 | 브라우저 수동 확인 | **미수행**(설계서 단계) |
 | V-13 | §3.5 소스 전환의 회귀 격자(이월과세 아닌 일반건물: 환산 swap · 감가상각 · 증축 · 지분에서 `Σ aggregated.properties` = `Σ apportioned`) | 확인 필요 |
