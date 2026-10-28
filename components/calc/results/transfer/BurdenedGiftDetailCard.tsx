@@ -16,7 +16,8 @@ import type {
 } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { BgPreDeemedThreeWayRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
-import { BgNecessaryExpenseRow } from "@/components/calc/results/transfer/BgNecessaryExpenseRow";
+import { BgCarryoverGiftTaxRow, BgNecessaryExpenseRow } from "@/components/calc/results/transfer/BgNecessaryExpenseRow";
+import { bgPartExpenseNet } from "@/lib/tax-engine/burdened-gift-totals";
 import { BgRedevFilingExpenseRows } from "@/components/calc/results/transfer/BgRedevFilingExpenseRows";
 import type { RedevExpenseParts } from "@/lib/tax-engine/redev-acquisition-inverse";
 import { BgPreDeemedStdCaption } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
@@ -307,27 +308,29 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
                 </tr>
               )}
               {/* 필요경비는 개산공제뿐이다 — 적힌 산식이 적힌 값을 만들도록 엔진 echo(율·취득시 기준시가)로 적는다 */}
-              {bg.perAsset.land.estimatedDeductionRate !== undefined && bg.perAsset.land.estimatedDeduction > 0 && (
+              {bg.perAsset.land.estimatedDeductionRate !== undefined && bgPartExpenseNet(bg).land > 0 && (
                 <tr>
                   <td className="py-1 pr-2 pl-3">
                     토지 개산공제 = 취득시 기준시가 {fmt(bg.perAsset.land.stdPriceAtAcquisition)} × 채무비율{" "}
                     {(bg.debtRatio * 100).toFixed(4)}% × 개산공제율 {(bg.perAsset.land.estimatedDeductionRate * 100).toFixed(1).replace(/\.0$/, "")}%
                   </td>
-                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.land.estimatedDeduction)}</td>
+                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bgPartExpenseNet(bg).land)}</td>
                 </tr>
               )}
-              {bg.perAsset.building.estimatedDeductionRate !== undefined && bg.perAsset.building.estimatedDeduction > 0 && (
+              {bg.perAsset.building.estimatedDeductionRate !== undefined && bgPartExpenseNet(bg).building > 0 && (
                 <tr>
                   <td className="py-1 pr-2 pl-3">
                     건물 개산공제 = 취득시 기준시가 {fmt(bg.perAsset.building.stdPriceAtAcquisition)} × 채무비율{" "}
                     {(bg.debtRatio * 100).toFixed(4)}% × 개산공제율 {(bg.perAsset.building.estimatedDeductionRate * 100).toFixed(1).replace(/\.0$/, "")}%
                   </td>
-                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.building.estimatedDeduction)}</td>
+                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bgPartExpenseNet(bg).building)}</td>
                 </tr>
               )}
+              <BgCarryoverGiftTaxRow amount={bgPartExpenseNet(bg).carryoverGiftTax} />
               <tr>
                 <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-700 dark:text-fuchsia-400">
                   ※ {PRESUMED_LABEL[bg.acquisitionMethodUsed]} 경로 — 필요경비는 개산공제(소령 §163⑥)만 인정하며 자본적지출·양도비는 공제하지 않습니다
+                  {bgPartExpenseNet(bg).carryoverGiftTax > 0 && " (이월과세 증여세 상당액 산입은 별도 — 소득세법 제97조의2 제1항 제3호)"}
                 </td>
               </tr>
             </>

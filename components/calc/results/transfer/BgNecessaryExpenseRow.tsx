@@ -25,6 +25,17 @@ export const BUNDLE_CARD_EXPENSE_IDS = {
   carryover: "bg-bundle-card-carryover-gift-tax",
 } as const;
 
+/** 이월과세 증여세 상당액 산입 줄(법 §97의2①3호) — 필요경비 줄과 감정가액·매매사례가액 단건 분기가 공용한다. 0이면 그리지 않는다. */
+export function BgCarryoverGiftTaxRow({ amount, id = SINGLE_IDS.carryover, indent = "pl-3" }: { amount: number; id?: string; indent?: string }) {
+  if (amount <= 0) return null;
+  return (
+    <tr data-testid={id}>
+      <td className={`py-1 pr-2 ${indent}`}>이월과세 증여세 상당액 산입 (소득세법 제97조의2 제1항 제3호)</td>
+      <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(amount)}</td>
+    </tr>
+  );
+}
+
 export function BgNecessaryExpenseRow({
   bg,
   ids = SINGLE_IDS,
@@ -57,12 +68,7 @@ export function BgNecessaryExpenseRow({
           <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(v.amount)}</td>
         </tr>
       )}
-      {v.carryoverGiftTax > 0 && (
-        <tr data-testid={ids.carryover}>
-          <td className={`py-1 pr-2 ${indent}`}>이월과세 증여세 상당액 산입 (소득세법 제97조의2 제1항 제3호)</td>
-          <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(v.carryoverGiftTax)}</td>
-        </tr>
-      )}
+      <BgCarryoverGiftTaxRow amount={v.carryoverGiftTax} id={ids.carryover} indent={indent} />
     </>
   );
 }

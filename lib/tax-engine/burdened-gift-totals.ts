@@ -75,6 +75,20 @@ export type BgNecessaryExpenseView =
     }
   | { kind: "estimated"; amount: number; stdBase: number; rate: number; carryoverGiftTax: number };
 
+/**
+ * 감정가액·매매사례가액 단건 카드의 **파트별 개산공제 순액**(계획서 `bg-single-presumed-card-expense-row.plan.md` Q-1 a).
+ * 파트 슬롯(`perAsset.*.estimatedDeduction`)은 개산공제 + 그 파트의 이월과세 증여세 상당액 산입분이므로, 파트별 산입분(`landApplied`·`buildingApplied`)을 떼어
+ * 적힌 산식(취득시 기준시가 × 채무비율 × 개산공제율)이 적힌 값을 만들게 한다. 엔진 echo의 뺄셈뿐이다 — 산입분이 없으면 슬롯 그대로다.
+ */
+export function bgPartExpenseNet(bg: TransferBurdenedGiftBreakdown): { land: number; building: number; carryoverGiftTax: number } {
+  const cgt = bg.carryoverGiftTax;
+  return {
+    land: bg.perAsset.land.estimatedDeduction - (cgt?.landApplied ?? 0),
+    building: bg.perAsset.building.estimatedDeduction - (cgt?.buildingApplied ?? 0),
+    carryoverGiftTax: cgt?.applied ?? 0,
+  };
+}
+
 export function bgNecessaryExpenseOf(bg: TransferBurdenedGiftBreakdown): BgNecessaryExpenseView | undefined {
   const { land, building } = bg.perAsset;
   const slot = (land?.estimatedDeduction ?? 0) + (building?.estimatedDeduction ?? 0);
