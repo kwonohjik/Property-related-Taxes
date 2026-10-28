@@ -145,6 +145,18 @@ export interface GeneralBuildingSwapDecision {
   perPart?: { land?: PartSwapDetail; building?: PartSwapDetail };
   /** `addition` 중 증축 전 자본적지출 몫(원건물 카드) — 표시용 echo. 증축 전 지출이 가산된 경우에만 키가 있다. */
   beforeExtensionAddition?: Map<string, number>;
+  /**
+   * propertyId → **양도자 본인** 직접귀속 나목(자본적지출 + 양도비)의 카드별 몫 — 단서 발동·불발과 **무관**하게 채워진다.
+   *
+   * `allocation`·`addition`은 §97②2호 단서 **택일**을 위한 값이라 불발 카드엔 키가 없고(본문 = 개산공제), 카드의 `expenses` 스칼라는
+   * 그 경우 본인 환산의 **개산공제**다. 이월과세(§97의2) 시나리오 A·B 는 취득가액이 증여자 취득가액·증여 당시 평가액(= 실지거래가액)이라
+   * 제97조제2항 **제1호**(제1항제2호·제3호 전부 가산) 또는 증여자 환산 단서의 나목으로 본인 지출을 요구한다 — 스칼라로는 줄 수 없다
+   * (계획서 `docs/00-pm/gb-estimated-carryover-scenario-a-capex.plan.md` §6.3). 이월과세 카드의 `capitalExpenditure`로 `buildProperties`가 싣는다.
+   *
+   * 배분 규칙은 위 택일 발동 시와 **같다**(Q-2) — 같은 입력에서 이월과세 아닌 카드(OFF)와 이월과세 카드의 몫이 같다.
+   * 단서 비교(`swapApplied`)에는 쓰이지 않는다.
+   */
+  ownDirect: Map<string, number>;
 }
 
 /** 카드가 토지 파트인가 — 건물 카드는 `general_building_unit`. */
@@ -192,6 +204,27 @@ export function resolveGeneralBuildingSwap(
   partAxis?: PartAxisInput,
   extension?: ExtensionCapexInput,
 ): GeneralBuildingSwapDecision {
+  const decision = decideSwap(cards, capitalExpenditure, transferExpense, partAxis, extension, false);
+  // 본인 직접귀속 나목 — 같은 배분 규칙을 「단서가 발동했다고 가정」하고 한 번 더 돌려 얻는다(규칙 복제 금지 · 계획서 Q-2).
+  const own = decideSwap(cards, capitalExpenditure, transferExpense, partAxis, extension, true);
+  const ownDirect = new Map<string, number>();
+  for (const [id, v] of own.allocation) addTo(ownDirect, id, v);
+  for (const [id, v] of own.addition) addTo(ownDirect, id, v);
+  return { ...decision, ownDirect };
+}
+
+/**
+ * @param forceOwn true 면 모든 단서 비교를 「나목 채택」으로 강제해 **본인 직접귀속 몫**만 얻는다(`ownDirect` 전용 — 반환의
+ *                 `swapApplied`·`perPart`·`estimatedSideTotal`은 쓰지 않는다). false 가 종전 판정이다.
+ */
+function decideSwap(
+  cards: AssetCardForAggregate[],
+  capitalExpenditure: number | undefined,
+  transferExpense: number | undefined,
+  partAxis: PartAxisInput | undefined,
+  extension: ExtensionCapexInput | undefined,
+  forceOwn: boolean,
+): Omit<GeneralBuildingSwapDecision, "ownDirect"> {
   const allocation = new Map<string, number>();
   const addition = new Map<string, number>();
 
@@ -200,7 +233,7 @@ export function resolveGeneralBuildingSwap(
     (partAxis.land !== undefined || partAxis.building !== undefined);
 
   if (usePartAxis) {
-    return resolvePerPart(cards, partAxis, allocation, addition);
+    return resolvePerPart(cards, partAxis, allocation, addition, forceOwn);
   }
 
   // ── 자산총액 판정 (종전 안 A — 회귀 0) ──────────────────────────────
@@ -227,21 +260,26 @@ export function resolveGeneralBuildingSwap(
   // §97③ — 가목은 감가상각비 공제 **전** 값으로 비교한다(`calcNecessaryExpense`와 같은 비교식 · 사용자 결정 2026-10-20).
   const estimatedSideTotal = estimatedCards.reduce((s, c) => s + c.acquisitionPrice + c.expenses, 0);
   // 동률(==)은 본문(단서 "적은 경우").
-  const swapApplied =
-    swapEligible && estimatedCards.length > 0 && directSide > estimatedSideTotal;
+  // 본인 몫 산정(forceOwn)에서 환산 카드가 없으면(두 파트 감정·매매사례 등) 증축 실가분을 뺀 전 카드가 받는다 — 단서 비교 대상이 아니라 본인 지출의 귀속처다.
+  const ownCards = forceOwn && estimatedCards.length === 0
+    ? cards.filter((c) => !(extCard && c.propertyId === extCard.propertyId && !extCard.usedEstimatedAcquisition))
+    : estimatedCards;
+  const swapApplied = forceOwn
+    ? ownCards.length > 0
+    : swapEligible && estimatedCards.length > 0 && directSide > estimatedSideTotal;
 
   if (swapApplied) {
     // 증축 전 지출은 증축분 카드에 가지 않는다(D-2) — 나머지만 종전처럼 환산 카드 전부에 (취득가액+개산공제) 비례.
     const before = extension && extCard?.usedEstimatedAcquisition ? Math.min(extension.capexBeforeExtension, directSide) : 0;
-    const originCards = estimatedCards.filter((c) => c.propertyId !== EXTENSION_CARD_ID);
+    const originCards = ownCards.filter((c) => c.propertyId !== EXTENSION_CARD_ID);
     const sideOf = (c: AssetCardForAggregate) => c.acquisitionPrice + c.expenses;
     if (before > 0 && originCards.length > 0) {
       // 택일은 자산 전체가 나목을 고른 것이다 — 몫이 0인 환산 카드도 키를 둬 개산공제가 남지 않게 한다.
-      for (const c of estimatedCards) allocation.set(c.propertyId, 0);
+      for (const c of ownCards) allocation.set(c.propertyId, 0);
       allocateAdd(allocation, originCards, before, sideOf);
-      allocateAdd(allocation, estimatedCards, directSide - before, sideOf);
+      allocateAdd(allocation, ownCards, directSide - before, sideOf);
     } else {
-      allocateWithinGroup(allocation, estimatedCards, directSide, sideOf);
+      allocateWithinGroup(allocation, ownCards, directSide, sideOf);
     }
   }
 
@@ -267,7 +305,8 @@ function resolvePerPart(
   partAxis: PartAxisInput,
   allocation: Map<string, number>,
   addition: Map<string, number>,
-): GeneralBuildingSwapDecision {
+  forceOwn: boolean,
+): Omit<GeneralBuildingSwapDecision, "ownDirect"> {
   const perPart: NonNullable<GeneralBuildingSwapDecision["perPart"]> = {};
   const beforeExtensionAddition = new Map<string, number>();
   let estimatedSideTotal = 0;
@@ -314,20 +353,25 @@ function resolvePerPart(
     // 원건물이 감정·매매사례여도 증축분은 자기 취득방식대로 받는다(같은 계획서 §10) — 아래 갈래 4보다 먼저 가른다.
     const extCard = part === "building" ? partCards.find((c) => c.propertyId === EXTENSION_CARD_ID) : undefined;
 
+    // 나목 = 자본적지출(직접 귀속) + 양도비(가액 비례 안분) — §97②2호 나목·1호 공통 정의.
+    const partDirectSide = (input?.direct ?? 0) + partTransferExpense[part];
+
     if ((mode === "appraisal" || mode === "salesCase") && !extCard) {
       perPart[part] = { estimatedSide: 0, directSide: 0, swapApplied: false };
+      // 본인 몫 산정 전용 — 단서는 불발이지만 본인 지출은 이 파트 카드의 귀속분이다(이월과세 A·B 가 읽는다).
+      if (forceOwn && partDirectSide > 0) {
+        allocateWithinGroup(allocation, partCards, partDirectSide, (c) => c.acquisitionPrice + c.expenses);
+      }
       continue;
     }
 
-    // 나목 = 자본적지출(직접 귀속) + 양도비(가액 비례 안분) — §97②2호 나목·1호 공통 정의.
-    const partDirectSide = (input?.direct ?? 0) + partTransferExpense[part];
     if (partDirectSide <= 0) continue;
     directSide += partDirectSide;
 
     if (extCard && mode !== undefined) {
       const detail = resolveExtensionBuildingPart(
         partCards, extCard, mode, input?.direct ?? 0, input?.directBeforeExtension ?? 0, partTransferExpense.building,
-        allocation, addition, beforeExtensionAddition,
+        allocation, addition, beforeExtensionAddition, forceOwn,
       );
       perPart[part] = detail;
       estimatedSideTotal += detail.estimatedSide;
@@ -353,7 +397,7 @@ function resolvePerPart(
     const estimatedSide = estimatedCards.reduce((s, c) => s + c.acquisitionPrice + c.expenses, 0);
     estimatedSideTotal += estimatedSide;
     // 동률(==)은 본문 — 단서는 「적은 경우」다.
-    const swapApplied = partDirectSide > estimatedSide;
+    const swapApplied = forceOwn || partDirectSide > estimatedSide;
     perPart[part] = { estimatedSide, directSide: partDirectSide, swapApplied };
 
     if (swapApplied) {
@@ -398,6 +442,7 @@ function resolveExtensionBuildingPart(
   allocation: Map<string, number>,
   addition: Map<string, number>,
   beforeExtensionAddition: Map<string, number>,
+  forceOwn: boolean,
 ): PartSwapDetail {
   const before = Math.min(Math.max(directBeforeExtension, 0), direct);
   const after = direct - before;
@@ -413,13 +458,15 @@ function resolveExtensionBuildingPart(
     // 원건물 = 갈래 4(§97②2호 본문 — 개산공제만): 증축 전 지출·원건물 몫은 반영되지 않는다. 증축분은 자기 몫(증축 후 자본적지출 +
     // 양도비)을 실가면 §97②1호로 가산하고, 환산이면 그 몫을 나목으로 단서 비교한다(나목 = 그 자산의 자본적지출 + 양도비 — §97②2호 나목).
     const extShare = extCapex + extTransfer;
+    // 본인 몫 산정 전용 — 원건물(갈래 4)도 본인 지출의 귀속처다(증축분 몫을 뺀 나머지).
+    if (forceOwn) allocateAdd(allocation, originCards, partDirectSide - extShare, sideOf);
     if (extShare <= 0) return { estimatedSide: 0, directSide: 0, swapApplied: false };
     if (extIsActual) {
       addTo(addition, extCard.propertyId, extShare);
       return { estimatedSide: 0, directSide: extShare, swapApplied: false };
     }
     const extSide = sideOf(extCard);
-    const swapApplied = extShare > extSide;
+    const swapApplied = forceOwn || extShare > extSide;
     if (swapApplied) allocation.set(extCard.propertyId, extShare);
     return { estimatedSide: extSide, directSide: extShare, swapApplied };
   }
@@ -438,7 +485,7 @@ function resolveExtensionBuildingPart(
     if (extCapex <= 0) return { estimatedSide: 0, directSide: partDirectSide, swapApplied: false };
     const extSide = sideOf(extCard);
     // 동률(==)은 본문 — 단서는 「적은 경우」다.
-    const swapApplied = extCapex > extSide;
+    const swapApplied = forceOwn || extCapex > extSide;
     if (swapApplied) allocation.set(extCard.propertyId, extCapex);
     return { estimatedSide: extSide, directSide: extCapex, swapApplied };
   }
@@ -454,7 +501,7 @@ function resolveExtensionBuildingPart(
     return { estimatedSide: 0, directSide: nabok, swapApplied: false };
   }
   const estimatedSide = estimatedCards.reduce((s, c) => s + sideOf(c), 0);
-  const swapApplied = nabok > estimatedSide;
+  const swapApplied = forceOwn || nabok > estimatedSide;
   if (swapApplied) {
     for (const c of estimatedCards) allocation.set(c.propertyId, 0);
     const originEstimated = estimatedCards.filter((c) => c.propertyId !== EXTENSION_CARD_ID);

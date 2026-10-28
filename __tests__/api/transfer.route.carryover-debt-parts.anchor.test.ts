@@ -93,10 +93,12 @@ describe("CDP-1 건물만 이월과세(R1·R3) — 토지 파트와 대칭", () 
   /**
    * 건물 평가액 4억 · 채무 1억(r = 0.25) · 상당액 3천만 × (4억 − 1억) ÷ 10억 = 9,000,000. 토지는 이월과세가 아니다(양도가 5억 − 취득 2.5억 − 개산공제 300만 = 2.47억 · 5년 10%).
    *   건물 증여분 = 양도가 5억 × 0.75 = 375,000,000 · 취득 1.5억 × 0.75 = 112,500,000 · 상당액 9,000,000 → 차익 253,500,000 · 장특(증여자 취득 20년) 30% → 177,450,000
-   *   건물 매입분 = 125,000,000 − 채무 100,000,000 − (개산공제 3,000,000 − floor(3,000,000 × 0.75) = 750,000) = 24,250,000 · 장특(5년) 10% → 21,825,000
-   *   토지 247,000,000 × 90% = 222,300,000 → 합 421,575,000 − 2,500,000 = 419,075,000 × 40% − 25,940,000 = 141,690,000 (B 미적용은 이보다 작아 A 채택)
+   *   건물 매입분 = 125,000,000 − 채무 100,000,000 − 필요경비 0 = 25,000,000 · 장특(5년) 10% → 22,500,000
+   *     🔴 2026-10-28 갱신 141,690,000 → 141,960,000: PR-2(본인 지출 소실 수정) 이후 매입분은 환산 개산공제 없이 본인 자본적지출+양도비만 필요경비 —
+   *     취득가액이 채무(실지거래가액)라 「소득세법」 제97조제2항제1호. 종전 필요경비는 개산공제 3,000,000 − floor(3,000,000 × 0.75) = 750,000 이었다(매입분 소득 +675,000 × 40% = +270,000).
+   *   토지 247,000,000 × 90% = 222,300,000 → 합 177,450,000 + 22,500,000 + 222,300,000 = 422,250,000 − 2,500,000 = 419,750,000 × 40% − 25,940,000 = 141,960,000 (B 미적용은 이보다 작아 A 채택)
    */
-  it("OFF 156,620,000 → 채무 1억 141,690,000 · 건물 증여분 + 매입분 꼬리 · 와이어는 건물 파트의 채무", async () => {
+  it("OFF 156,620,000 → 채무 1억 141,960,000 · 건물 증여분 + 매입분 꼬리 · 와이어는 건물 파트의 채무", async () => {
     const off = await run(formOf([buildingOnly({ giftDebtAssumed: false })]));
     expect([off.status, off.det]).toEqual([200, 156_620_000]);
     expect(off.props.map((p) => p.propertyId)).toEqual(["land", "building"]);
@@ -105,10 +107,10 @@ describe("CDP-1 건물만 이월과세(R1·R3) — 토지 파트와 대칭", () 
     const r = await run(f);
     expect(r.body.generalBuildingValuation.buildingCarryoverPart).toMatchObject({ giftDateAssetValue: 400_000_000, giftAssumedDebt: 100_000_000 });
     expect(r.body.generalBuildingValuation.landCarryoverPart).toBeUndefined();
-    expect([r.status, r.det]).toEqual([200, 141_690_000]);
+    expect([r.status, r.det]).toEqual([200, 141_960_000]);
     expect(r.props.map((p) => p.propertyId)).toEqual(["land", "building", "building__purchased"]);
     expect([row(r, "building").transferPrice, row(r, "building").acquisitionPrice]).toEqual([375_000_000, 112_500_000]);
-    expect([row(r, "building__purchased").transferPrice, row(r, "building__purchased").acquisitionPrice, row(r, "building__purchased").necessaryExpense]).toEqual([125_000_000, 100_000_000, 750_000]);
+    expect([row(r, "building__purchased").transferPrice, row(r, "building__purchased").acquisitionPrice, row(r, "building__purchased").necessaryExpense]).toEqual([125_000_000, 100_000_000, 0]);
     // 토지 카드는 이월과세가 아니라 echo가 없고, 건물(증여분) 부모 카드에 붙는다
     expect(row(r, "land").carryoverTaxationDetail).toBeUndefined();
     const s = splitOf(r, "building");
@@ -136,24 +138,27 @@ describe("CDP-2 지분 40% × 채무 — 꼬리 id 규약(R4)", () => {
    * 지분 B 토지 양도가 5억 × 40% = 2억 → 증여분 150,000,000 / 매입분 50,000,000. 증여분 취득 1.2억 × 0.75 = 90,000,000 · 필요경비 = 자본적지출 16,000,000(전액) + 상당액 12,000,000 = 28,000,000.
    * 손계산(카드 수준 입력 → 신고 단위): 지분 A 토지·건물 각 148,200,000 × 70% = 103,740,000 · 지분 B 토지 증여분 32,000,000 × 70% = 22,400,000 · 매입분 −10,300,000 · 지분 B 건물 88,920,000
    *   합 306,000,000 − 2,500,000 아닌 합계에 기본공제: 103,740,000 × 2 + 22,400,000 + 88,920,000 − 10,300,000 = 308,500,000 − 2,500,000 = 306,000,000 × 40% − 25,940,000 = 96,460,000.
+   *   🔴 2026-10-28 갱신 96,460,000 → 96,580,000: PR-2(본인 지출 소실 수정) 이후 매입분은 환산 개산공제 없이 본인 자본적지출+양도비만 필요경비 — 취득가액이 채무(실지거래가액)라
+   *   「소득세법」 제97조제2항제1호. 종전 매입분 필요경비 300,000(개산공제 몫)이 0 이 되어 매입분 차손 −10,300,000 → −10,000,000:
+   *   103,740,000 × 2 + 22,400,000 + 88,920,000 − 10,000,000 = 308,800,000 − 2,500,000 = 306,300,000 × 40% − 25,940,000 = 96,580,000.
    */
   const share = (id: string, num: string, over: Partial<AssetForm> = {}) => gbBase({ assetId: id, ownershipNumerator: num, ownershipDenominator: "100", acquisitionDate: "2009-03-01", ...over });
   const shareB = (o: Record<string, unknown> = {}, a: Partial<AssetForm> = {}) =>
     share("share-b", "40", { acquisitionDate: "2021-03-01", acquisitionCause: "carryover_gift",
       carryover: co({ donorAcquisitionPrice: "300,000,000", donorCapitalExpenditure: "40,000,000", giftDateValuation: "600,000,000", giftTaxCalculated: "80,000,000", giftTaxBase: "1,200,000,000", giftAssumedDebt: "150,000,000", ...o }), ...a });
 
-  it("OFF 105,060,000 → 채무 96,460,000 · ④ 스케일 · 꼬리 land__purchased#1 · 지분 짝 찾기", async () => {
+  it("OFF 105,060,000 → 채무 96,580,000 · ④ 스케일 · 꼬리 land__purchased#1 · 지분 짝 찾기", async () => {
     const off = await run(formOf([share("share-a", "60"), shareB({ giftDebtAssumed: false })]));
     expect([off.status, off.det]).toEqual([200, 105_060_000]);
     const f = formOf([share("share-a", "60"), shareB()]);
     expect(issuesOf(f)).toEqual([]);
     const r = await run(f);
     expect(r.body.generalBuildingShares[1].valuation.landCarryoverPart).toMatchObject({ donorAcquisitionPrice: 120_000_000, donorCapitalExpenditure: 16_000_000, giftDateAssetValue: 240_000_000, giftAssumedDebt: 60_000_000 });
-    expect([r.status, r.det]).toEqual([200, 96_460_000]);
+    expect([r.status, r.det]).toEqual([200, 96_580_000]);
     expect(r.props.map((p) => p.propertyId)).toEqual(["land#0", "building#0", "land#1", "building#1", "land__purchased#1"]);
     const g = row(r, "land#1"), p = row(r, "land__purchased#1");
     expect([g.transferPrice, g.acquisitionPrice, g.necessaryExpense, g.transferGain]).toEqual([150_000_000, 90_000_000, 28_000_000, 32_000_000]);
-    expect([p.transferPrice, p.acquisitionPrice, p.necessaryExpense, p.transferGain]).toEqual([50_000_000, 60_000_000, 300_000, -10_300_000]);
+    expect([p.transferPrice, p.acquisitionPrice, p.necessaryExpense, p.transferGain]).toEqual([50_000_000, 60_000_000, 0, -10_000_000]);
     const s = splitOf(r, "land#1");
     expect(s).toMatchObject({ debtAmount: 60_000_000, giftValuation: 240_000_000 });
     expect(s.purchased.propertyId).toBe("land__purchased#1");
@@ -184,8 +189,11 @@ describe("CDP-3 함께 양도(컴패니언) 일반건물 — 꼬리 id `land__pu
     expect(cardSuffixOf("land__purchased#gb2")).toBe("gb2");
     expect(isSameShare("land#gb2", "land__purchased#gb2")).toBe(true);
     expect(splitOf(r, "land#gb2")).toMatchObject({ debtAmount: 150_000_000, giftValuation: 600_000_000 });
-    // probe 고정(손계산 아님) — 카드 수준 불변식은 위, 세액은 회귀용
-    expect(r.det).toBe(181_431_000);
+    // probe 고정(손계산 아님) — 카드 수준 불변식은 위, 세액은 회귀용.
+    // 🔴 2026-10-28 갱신 181,431,000 → 181,746,000: PR-2(본인 지출 소실 수정) 이후 매입분은 환산 개산공제 없이 본인 자본적지출+양도비만 필요경비(취득가액이 채무(실지거래가액)라 §97② 제1호).
+    // 컴패니언 토지 매입분 필요경비 750,000 → 0 → 차손 −50,750,000 → −50,000,000 이라 통산 소득 +750,000 × 42%(5억~10억 구간) = +315,000.
+    expect(r.det).toBe(181_746_000);
+    expect(row(r, "land__purchased#gb2").necessaryExpense).toBe(0);
   });
 });
 

@@ -514,7 +514,9 @@ export function computeAggregateOnce(
       acquisitionPrice: effectiveAcquisitionPrice,
       necessaryExpense: effectiveNecessaryExpense,
       // 신고서 양식: 실가 모드는 자본적지출이 필요경비 칸에 머문다(예외 swap·이월과세 A는 표시 leaf `capExInAcquisitionColumn`)
-      capitalExpenditureForDisplay: r.singleInput.capitalExpenditure ?? 0,
+      // 🔴 필요경비를 넘지 못한다 — 이월과세 A(환산 donor)는 본인 자본적지출 몫이 입력에 실려도 단서가 불발이면(본문 = 개산공제) 필요경비에 들어가지 않는다.
+      //    그 값을 그대로 취득가액 칸으로 옮기면 「취득가액 + 필요경비 ≠ 양도가액 − 양도차익」이 된다(일반건물 카드가 본인 몫을 싣기 시작하며 드러났다 — 계획서 V-4).
+      capitalExpenditureForDisplay: Math.min(r.singleInput.capitalExpenditure ?? 0, effectiveNecessaryExpense),
       depreciationAmount: r.result.depreciationAmount,
       determinedTax: r.result.determinedTax,
       transferGain: r.result.transferGain,
