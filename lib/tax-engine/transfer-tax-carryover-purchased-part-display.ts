@@ -125,19 +125,45 @@ export function carryoverPurchasedPartView(s: CarryoverPurchasedPartSplit): Purc
 }
 
 /**
- * 상세명세서 «자산별» 산식 — 조각 카드(증여분·매입분)의 양도가액·취득가액. 카드 값이 조각 후 값이라 조각 전 카드(환산·안분 산식)의 산식을 그대로 붙이면 등식이 거짓이 된다
+ * 매입분 카드의 필요경비 — 취득가액이 인수한 채무(실지거래가액)라 「소득세법」 제97조제2항제1호: 필요경비는 본인 자본적지출(제97조제1항제2호) + 양도비(제3호)뿐이고 개산공제는 없다.
+ * 카드 값 그대로 가른다 — 자본적지출 몫은 `capitalExpenditureForDisplay`(카드가 싣는 `capitalExpenditure`), 나머지가 양도비다.
+ */
+function purchasedPartExpenseFormula(necessaryExpense: number, capitalExpenditure: number): string {
+  const capEx = Math.min(capitalExpenditure, necessaryExpense);
+  const transfer = necessaryExpense - capEx;
+  const note = "※ 매입분은 취득가액이 인수한 채무(실지거래가액)라 개산공제를 적용하지 않습니다 (§97② 1호)";
+  if (capEx > 0 && transfer > 0) return `자본적지출 ${won(capEx)} + 양도비 ${won(transfer)} = ${won(necessaryExpense)} (§97① 2호·3호)\n        ${note}`;
+  if (capEx > 0) return `자본적지출 ${won(capEx)} = ${won(necessaryExpense)} (§97① 2호)\n        ${note}`;
+  if (transfer > 0) return `양도비 ${won(transfer)} = ${won(necessaryExpense)} (§97① 3호)\n        ${note}`;
+  return `필요경비 없음 — 본인 자본적지출·양도비가 없습니다\n        ${note}`;
+}
+
+/**
+ * 상세명세서 «자산별» 산식 — 조각 카드(증여분·매입분)의 양도가액·취득가액(·매입분 필요경비). 카드 값이 조각 후 값이라 조각 전 카드(환산·안분 산식)의 산식을 그대로 붙이면 등식이 거짓이 된다
  * (실측: 증여분 양도가액 375,000,000 옆에 「1,000,000,000 × 200,000,000 / 400,000,000」). 값·산식은 전부 echo(`purchasedPartSplit`)에서 읽고 새로 계산하지 않는다.
  * 나눗셈 피연산자는 괄호로 감싼다(`renderFormula`가 분수로 바꾸는 규약).
  */
 export function purchasedPartPieceFormula(
-  properties: ReadonlyArray<{ propertyId: string; carryoverTaxationDetail?: { adoptedScenario?: "A" | "B"; scenarioA?: { purchasedPartSplit?: CarryoverPurchasedPartSplit } } }>,
+  properties: ReadonlyArray<{
+    propertyId: string;
+    /** `kind: "expense"` 전용 — 매입분 카드의 필요경비와 그 중 본인 자본적지출 몫(카드 값 그대로). */
+    necessaryExpense?: number;
+    capitalExpenditureForDisplay?: number;
+    carryoverTaxationDetail?: { adoptedScenario?: "A" | "B"; scenarioA?: { purchasedPartSplit?: CarryoverPurchasedPartSplit } };
+  }>,
   propertyId: string,
-  kind: "transfer" | "acquisition",
+  kind: "transfer" | "acquisition" | "expense",
 ): string | undefined {
   for (const p of properties) {
     const d = p.carryoverTaxationDetail;
     const s = d?.scenarioA?.purchasedPartSplit;
     if (!s || d?.adoptedScenario !== "A") continue;
+    // 필요경비는 매입분 **카드**에만 적는다 — 증여분 카드는 이월과세 A 산식(`buildGbCarryoverExpenseFormula`)이, 증여분이 없는(r = 1) 매입분은 부모 카드(= 이월과세 A 카드)가 그린다.
+    if (kind === "expense") {
+      if (!s.gift || s.purchased.propertyId !== propertyId) continue;
+      const card = properties.find((q) => q.propertyId === propertyId);
+      return card ? purchasedPartExpenseFormula(card.necessaryExpense ?? 0, card.capitalExpenditureForDisplay ?? 0) : undefined;
+    }
     const share = `(증여 당시 평가액 ${won(s.giftValuation)} − 인수한 채무 ${won(s.debtAmount)}) ÷ (증여 당시 평가액 ${won(s.giftValuation)})`;
     if (s.gift && s.gift.propertyId === propertyId)
       return kind === "transfer"

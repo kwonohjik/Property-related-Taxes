@@ -414,7 +414,8 @@ export function buildStatementItems(
       ? buildPerAssetWithFormula(
           properties,
           (p) => Math.max(0, p.necessaryExpense - capExInAcquisitionColumnOfProperty(p)),
-          (p) => buildGbExpenseFormula(p, gbOf(p).gb, burdenedGift),
+          // 채무 부분 매입분 카드는 이월과세 상세가 없어 산식이 비었다 — 증여분 카드의 echo 로 찾는다(양도가액·취득가액과 같은 경로).
+          (p) => purchasedPartPieceFormula(properties, p.propertyId, "expense") ?? buildGbExpenseFormula(p, gbOf(p).gb, burdenedGift),
         )
       : undefined,
   });
