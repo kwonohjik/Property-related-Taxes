@@ -260,6 +260,88 @@ describe("단건 카드 — 신고서 필요경비 줄 (Q-1 a · Q-2 b)", () => 
   });
 });
 
+/**
+ * 입력 경로 — 원조합원의 인가 후 분 경비는 일반 자본적지출·양도비 칸으로 들어간다(`transfer-tax-api-redev.ts` `postApprovalExpenses` =
+ * 승계조합원 전용 `redevPostApprovalExpenses` + 자본적지출 + 양도비, 채무비율 안분). 종전 계획서 §6 V-1은 승계조합원 전용 칸으로 잘못 재현했다.
+ * 기존 부담부증여 묶음 응답 계측 247건에는 자본적지출 입력 시료가 0건이라, 「카드별 필요경비 합 = 자산별 필요경비 합」을 이 시료들로 다시 고정한다.
+ * 값은 route 실측(자본적지출 5,000,000 + 양도비 1,000,000 → 채무비율 40% = 2,400,000).
+ */
+const CAP: A = { capitalExpenditure: "5,000,000", transferExpense: "1,000,000" };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const cardExpenseSum = (d: any) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (d.transferBurdenedGiftBreakdown.cards as any[]).reduce(
+    (s, c) => s + (c.redevFilingExpenses ? c.redevFilingExpenses.preApproval + c.redevFilingExpenses.postApproval + c.redevFilingExpenses.settlement : c.breakdown.perAsset.land.estimatedDeduction + c.breakdown.perAsset.building.estimatedDeduction),
+    0,
+  );
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const propertyExpenseSum = (d: any) => (d.aggregated.properties as any[]).reduce((s, p) => s + p.necessaryExpense, 0);
+
+describe("입력 경로 — 자본적지출·양도비(인가 후 분 · 청산금 분)", () => {
+  it("묶음 · 완공 APT ③ + 자본적지출·양도비 — 인가 전 개산공제 1,020,419 + 인가 후 1,686,296 + 청산금 713,704 = 3,420,419 = 자산별 필요경비", async () => {
+    const v = await bundleView(mk([HOUSING, { ...REDEV, ...CAP }], "825000000"));
+    expect(v.total[0]).toContain("3,420,419");
+    expect(v.pre[0]).toContain("1,020,419");
+    expect(v.post[0]).toContain("1,686,296");
+    expect(v.settlement[0]).toContain("713,704");
+    expect(v.necessary).toEqual([3_420_419]);
+    expect(cardExpenseSum(v.d)).toBe(propertyExpenseSum(v.d));
+    expect(v.tax).toBe(34_061_170);
+  });
+
+  it("묶음 · 완공 APT ① 실비 + 자본적지출·양도비 — 합 3,600,000 = 인가 전 실비 1,200,000 + 인가 후 + 청산금", async () => {
+    const v = await bundleView(mk([HOUSING, { ...REDEV_ACTUAL, ...CAP }], "825000000"));
+    expect(v.total[0]).toContain("3,600,000");
+    expect(v.pre[0]).toContain("1,200,000");
+    expect(v.post[0]).toContain("1,686,296");
+    expect(v.settlement[0]).toContain("713,704");
+    expect(cardExpenseSum(v.d)).toBe(propertyExpenseSum(v.d));
+    expect(v.tax).toBe(14_242_113);
+  });
+
+  it("묶음 · 비재개발 주택(실지)에 자본적지출·양도비 + 재개발 카드 — 카드별 합(주택 §159 칸 2,400,000 + 재개발 1,020,419) = 자산별 필요경비 합", async () => {
+    const v = await bundleView(mk([{ ...HOUSING, ...CAP }, REDEV], "825000000"));
+    expect(v.total).toHaveLength(1);
+    expect(v.post).toHaveLength(0);
+    expect(cardExpenseSum(v.d)).toBe(3_420_419);
+    expect(cardExpenseSum(v.d)).toBe(propertyExpenseSum(v.d));
+  });
+
+  it("묶음 · 입주권 축 B 원+원 실비 + 자본적지출·양도비(첫 카드) — 카드마다 분기 구성 · 합 = 자산별 필요경비", async () => {
+    const withExp = { redevPreApprovalExpenses: "3,000,000" };
+    const v = await bundleView(rights(first({ ...ORIG, ...withExp, bgActualAcquisitionTotal: "300,000,000", ...CAP }), share({ ...ORIG, ...withExp })));
+    expect(v.total).toHaveLength(2);
+    expect(v.settlement).toHaveLength(1);
+    expect(v.necessary).toEqual([1_800_000, 600_000]);
+    expect(cardExpenseSum(v.d)).toBe(propertyExpenseSum(v.d));
+    expect(v.tax).toBe(128_498_480);
+  });
+
+  it("단건 · 완공 APT ③ + 자본적지출·양도비 — 합 3,420,419 · 인가 후·청산금 분 줄", async () => {
+    const v = await singleView(mk([{ ...REDEV, ...CAP }], "", { householdHousingCount: "0" }));
+    expect(v.total[0]).toContain("3,420,419");
+    expect(v.post[0]).toContain("1,686,296");
+    expect(v.settlement[0]).toContain("713,704");
+    expect(redevBranchTotals(v.res.redevelopmentDetail).expenses).toBe(3_420_419);
+  });
+
+  it("단건 · 입주권(원조합원) — 인가 전 실비 3,000,000 × 채무비율 = 1,200,000 · 자본적지출·양도비까지 3,600,000 (인가 후 분이 없는 입주권은 청산금 분에 들어간다)", async () => {
+    const RT = first({ ...ORIG, ownershipNumerator: "", ownershipDenominator: "", redevPreApprovalExpenses: "3,000,000", bgActualAcquisitionTotal: "300,000,000" });
+    const single = (a: AssetForm) => Object.assign(createDefaultTransferFormData(), BASE, { householdHousingCount: "0", contractTotalPrice: "1500000000", assets: [a] }) as TransferFormData;
+    const base = await singleView(single(RT));
+    expect(base.total[0]).toContain("1,200,000");
+    expect(base.pre[0]).toContain("자본적지출·양도비");
+    expect(base.post).toHaveLength(0);
+    expect(base.settlement).toHaveLength(0);
+    cleanup();
+    const withCap = await singleView(single({ ...RT, ...CAP } as AssetForm));
+    expect(withCap.total[0]).toContain("3,600,000");
+    expect(withCap.pre[0]).toContain("1,200,000");
+    expect(withCap.settlement[0]).toContain("2,400,000");
+    expect(redevBranchTotals(withCap.res.redevelopmentDetail).expenses).toBe(3_600_000);
+  });
+});
+
 describe("분기별 구성 leaf · 렌더", () => {
   const branch = (expenses: number, gain = 0) => ({ expenses, gain, apportionedTransfer: 0, apportionedAcquisition: 0 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
