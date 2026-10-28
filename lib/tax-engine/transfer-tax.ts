@@ -61,6 +61,7 @@ import {
 import { LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE } from "./land-only-owner-household";
 import { landOnlyOtherHouseholdRateNotice } from "./land-only-owner-household";
 import { landOnlyMergeDateAppliedNotice } from "./land-only-owner-household";
+import { landOnlyMergeResidenceNotice } from "./land-only-owner-household";
 import { nblDeferralAreaNotice } from "./transfer-tax-nbl-deferral-notice";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
@@ -289,7 +290,8 @@ export function calculateTransferTax(
   if (rentalUnmetOther) warnings.push(rentalUnmetOther);
   else if (rentalPremise.notice) warnings.push(rentalPremise.notice);
   if (rentalComposition.notice) warnings.push(rentalComposition.notice);
-  if (landOnlyHousehold.notice) warnings.push(landOnlyHousehold.notice);
+  // 거주기간 합가일 이후 통산 고지 — 비과세로 끝나는 경로에서도 실려야 하므로 합가 판정 고지와 같은 자리에서 단다.
+  for (const n of [landOnlyHousehold.notice, landOnlyMergeResidenceNotice(effectiveInput)]) if (n) warnings.push(n);
 
   // §89② 고지 · 판정 보류 · 지구 미선언 · 재기산 · 미충족 특례 · 합가 「모름」 · 귀농 사후관리 · 중첩 의제 — 완공APT 경로와 공용 leaf.
   warnings.push(

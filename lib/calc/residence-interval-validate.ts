@@ -29,10 +29,18 @@ export type ResidenceIntervalLike = { moveInDate: string; moveOutDate: string };
 const GIFT_PRIOR_HINT =
   " 증여 전 증여자와 같은 세대로 거주한 기간은 「증여 전 동일세대 거주기간」 칸에 개월 수로 입력하세요(비과세 거주요건과 표2 대상 판정에 통산됩니다).";
 
+/**
+ * 기준일이 합가일일 때(`startKind: "merge"`)의 문구 — 토지만 본인 × 같은 세대 합가의 거주기간은 동일세대원으로서 건물 소유자와 함께 거주한 기간만 통산한다
+ * (기준-2025-법규재산-0040 · 재산46014-610). 취득일 문구(「취득 전 임차 거주」)는 이 경우 맞지 않는다.
+ */
+const MERGE_BASIS = "토지만 본인 주택의 거주기간은 동일세대원으로서 건물 소유자와 함께 거주한 기간만 통산됩니다 (기준-2025-법규재산-0040 · 재산46014-610). 합가 전 거주는 제외하고 입력하세요.";
+
 export function collectResidenceIntervalErrors(args: {
   periods: ResidenceIntervalLike[];
-  /** 거주 산입 시작 기준일(통상 취득일). 없으면 그 검사를 건너뛴다. */
+  /** 거주 산입 시작 기준일(통상 취득일, 토지만 본인 합가는 합가일). 없으면 그 검사를 건너뛴다. */
   acquisitionDate?: string;
+  /** `"merge"`면 기준일을 세대 합가일로 읽어 문구를 바꾼다(기본: 취득일). */
+  startKind?: "acquisition" | "merge";
   transferDate?: string;
   /** 증여 전 동일세대 거주 칸이 있는 입력이면 true — 취득 전 입주 오류에 그 칸을 안내한다. */
   giftPriorHint?: boolean;
@@ -47,6 +55,8 @@ export function collectResidenceIntervalErrors(args: {
       if (!p.moveOutDate)
         return fieldError(`residencePeriods.${i}.moveOutDate`, `${label}: 퇴거일을 입력하세요. (양도일까지 거주한 경우 양도일을 퇴거일로 입력)`);
       if (p.moveOutDate < p.moveInDate) return fieldError(`residencePeriods.${i}.moveOutDate`, `${label}: 퇴거일은 입주일보다 이후여야 합니다.`);
+      if (acquisitionDate && p.moveInDate < acquisitionDate && args.startKind === "merge")
+        return fieldError(`residencePeriods.${i}.moveInDate`, `${label}: 입주일이 세대 합가일(${acquisitionDate})보다 빠릅니다. ${MERGE_BASIS}`);
       if (acquisitionDate && p.moveInDate < acquisitionDate)
         return fieldError(`residencePeriods.${i}.moveInDate`, `${label}: 입주일이 취득일(${acquisitionDate})보다 빠릅니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.${args.giftPriorHint ? GIFT_PRIOR_HINT : ""}`);
       if (transferDate && p.moveInDate > transferDate)
@@ -107,6 +117,8 @@ export function collectResidenceIntervalErrors(args: {
 export function directResidenceMonthsOverflowError(args: {
   months: number;
   acquisitionDate?: string;
+  /** `"merge"`면 기준일을 세대 합가일로 읽어 문구를 바꾼다(기본: 취득일). */
+  startKind?: "acquisition" | "merge";
   transferDate?: string;
   field: IssueField;
   /** 증여 전 동일세대 거주 칸이 있는 입력이면 true — 상한 초과 오류에 그 칸을 안내한다. */
@@ -116,6 +128,8 @@ export function directResidenceMonthsOverflowError(args: {
   if (!acquisitionDate || !transferDate || transferDate < acquisitionDate) return null;
   const max = residenceIntervalMonths(acquisitionDate, transferDate);
   if (months <= max) return null;
+  if (args.startKind === "merge")
+    return fieldError(field, `거주기간: ${months}개월이 세대 합가일(${acquisitionDate})부터 양도일까지의 ${max}개월을 넘습니다. ${MERGE_BASIS}`);
   return fieldError(
     field,
     `거주기간: ${months}개월이 취득일(${acquisitionDate})부터 양도일까지의 ${max}개월을 넘습니다. ` +

@@ -12,6 +12,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { Plus, Trash2 } from "lucide-react";
 import {
@@ -26,6 +27,8 @@ interface Props {
   residencePeriodMonthsAsset: string;
   /** 양도일 (open-ended 구간 합산용 + 양도일 이후 거부 검증) */
   transferDate: string;
+  /** 토지만 본인 × 같은 세대 합가 — 거주를 산입하기 시작하는 합가일(`landOnlyMergeResidenceStart`). 있으면 힌트를 띄운다. */
+  mergeStartDate?: string;
   onChange: (
     patch: Partial<{
       residenceInputMode: "interval" | "direct";
@@ -47,6 +50,7 @@ export function ResidencePeriodSection({
   residencePeriods,
   residencePeriodMonthsAsset,
   transferDate,
+  mergeStartDate,
   onChange,
 }: Props) {
   const isInterval = residenceInputMode === "interval";
@@ -75,6 +79,14 @@ export function ResidencePeriodSection({
         <LawArticleModal legalBasis="소득세법 §89①3호" label="§89①3호 비과세" />
         <LawArticleModal legalBasis="소득세법 §95②" label="§95② 표2 장특공제" />
       </div>
+      {mergeStartDate && (
+        <ToneCard tone="amber">
+          <p data-testid="residence-merge-hint" className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+            건물(주택) 소유자와 세대를 합친 날({mergeStartDate}) 이후, 소유자와 함께 거주한 기간만 입력하세요.
+            합가 전 거주는 통산되지 않습니다(기준-2025-법규재산-0040).
+          </p>
+        </ToneCard>
+      )}
       <ToggleCard
         variant="card"
         tone="violet"

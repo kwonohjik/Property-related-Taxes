@@ -23,6 +23,7 @@ import { isOneHouseExemptionAsset, usesHouseCountRoster, requiresPresaleRightsCo
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
+import { residenceStartWithMerge } from "./self-owns-scope";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
@@ -339,12 +340,15 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   // 🔴 OH-50 — 승계조합원의 기산일은 준공일이다(시행령 §162①4호). 입주권 취득일과 비교하면
   //    멸실 전 종전주택 거주가 통과한다(서면-2019-부동산-4508 「멸실 전 거주기간을 통산하지 아니함」).
   const primary = form.assets?.[0];
-  if (form.isOneHousehold && primary && isOneHouseExemptionAsset(primary.assetKind)
+  // 토지만 본인 × 같은 세대 합가는 합가일 이후 거주만 통산(기준-2025-법규재산-0040) — 거주 산입 기준일이 합가일로 늦춰진다. 그 밖은 취득일 그대로.
+  const residenceStart = primary ? residenceStartWithMerge(redevAptHoldingStartDate(primary), primary) : undefined;
+  if (form.isOneHousehold && primary && residenceStart && isOneHouseExemptionAsset(primary.assetKind)
       && !redevSplitResidenceSupersedesStep4(primary)
       && primary.residenceInputMode === "interval") {
     for (const message of collectResidenceIntervalErrors({
       periods: primary.residencePeriods ?? [],
-      acquisitionDate: redevAptHoldingStartDate(primary),
+      acquisitionDate: residenceStart.start,
+      startKind: residenceStart.kind,
       transferDate: form.transferDate,
       giftPriorHint: calcGiftPriorResidenceAsked(primary),
     }))
@@ -352,7 +356,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   }
   // I-8 — 개월 수 직접 입력은 날짜가 없어 준공 전 거주를 가려낼 수 없다. 준공일~양도일보다 긴 값만
   //       막는다(⑤가 이 입력을 보이는 조건과 같다 · ⑫ `refinePrimaryAcquisitionInputs` 같은 leaf).
-  if (form.isOneHousehold && primary && isOneHouseExemptionAsset(primary.assetKind)
+  if (form.isOneHousehold && primary && residenceStart && isOneHouseExemptionAsset(primary.assetKind)
       && !redevSplitResidenceSupersedesStep4(primary)
       && primary.residenceInputMode === "direct") {
     const months = deriveResidencePeriodMonths(primary, form.transferDate, form.residencePeriodMonths);
@@ -366,7 +370,8 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     else {
       const overflow = directResidenceMonthsOverflowError({
         months,
-        acquisitionDate: redevAptHoldingStartDate(primary),
+        acquisitionDate: residenceStart.start,
+        startKind: residenceStart.kind,
         transferDate: form.transferDate,
         field: "residencePeriodMonthsAsset",
         giftPriorHint: calcGiftPriorResidenceAsked(primary),

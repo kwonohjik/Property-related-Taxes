@@ -80,3 +80,25 @@ export function buildingOwnerMergeError(
   if (formTransferDate && date > formTransferDate) return fieldError("buildingOwnerHouseholdMergeDate", `${label}: 세대를 합친 날은 양도일 이후일 수 없습니다.`);
   return null;
 }
+
+/**
+ * 토지만 본인 × 같은 세대 × 합가함 — 거주기간 산입의 시작일(합가일). 합가 이전의 거주는 «동일세대원으로서 주택의 소유자와 함께 거주한 기간»이 아니라 통산하지 않는다
+ * (기준-2025-법규재산-0040 · 보유기간이 합가일부터인 것과 같은 축 — 재산46014-610). 엔진 `landOnlyHouseholdMergeDate`와 같은 조건이며, 그 밖은 `undefined`(취득일 기준 그대로).
+ * ⑧ 거주 구간·직접 입력 상한과 Step4 입력 힌트가 같은 술어를 쓴다(계획서 `land-only-merge-residence-period.plan.md`).
+ */
+export function landOnlyMergeResidenceStart(
+  asset: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns" | "buildingOwnerSameHousehold" | "buildingOwnerHouseholdMerged" | "buildingOwnerHouseholdMergeDate">,
+): string | undefined {
+  return asksBuildingOwnerHousehold(asset) && asset.buildingOwnerSameHousehold === true && asset.buildingOwnerHouseholdMerged === true && asset.buildingOwnerHouseholdMergeDate
+    ? asset.buildingOwnerHouseholdMergeDate
+    : undefined;
+}
+
+/** 거주 산입 기준일 — 합가일이 `baseStart`(통상 취득일)보다 늦으면 합가일(+ `kind: "merge"`), 아니면 `baseStart` 그대로. ISO 날짜 문자열 비교. */
+export function residenceStartWithMerge(
+  baseStart: string,
+  asset: Parameters<typeof landOnlyMergeResidenceStart>[0],
+): { start: string; kind: "acquisition" | "merge" } {
+  const merge = landOnlyMergeResidenceStart(asset);
+  return merge !== undefined && merge > baseStart ? { start: merge, kind: "merge" } : { start: baseStart, kind: "acquisition" };
+}
