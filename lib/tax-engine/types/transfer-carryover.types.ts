@@ -364,8 +364,13 @@ export interface CarryoverScenarioADetail {
  * Scenario B (이월과세 미적용) 상세 결과
  */
 export interface CarryoverScenarioBDetail {
-  /** 증여 당시 평가액 (giftDateValuation) */
+  /**
+   * 취득가액 — 일반 양도는 증여 당시 평가액(giftDateValuation). **부담부증여(§159)는 §159①1호 안분값**(양도인 취득가액 × 채무액 / 증여가액 — 결과의
+   * §159 명세 슬롯 합)이다(`acquisitionIsBurdenedGiftShare`). 종전에는 부담부증여에서도 증여 당시 평가액을 실어 카드·묶음 합산 신고서가 B의 실제 값과 어긋났다.
+   */
   acquisitionPrice: number;
+  /** `acquisitionPrice`가 부담부증여 §159①1호 안분값인가 — 카드 라벨 분기 전용(UI가 부담부증여 여부를 다른 필드로 역추론하지 않는다). */
+  acquisitionIsBurdenedGiftShare?: boolean;
   /** 수증자 증여 등기접수일 기산 보유연수 */
   holdingPeriodYears: number;
   /** 양도차익 */
