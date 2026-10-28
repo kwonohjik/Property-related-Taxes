@@ -16,6 +16,7 @@ import { CarryoverDonorBuiltPenaltyCard } from "./CarryoverDonorBuiltPenaltyCard
 import {
   splitCarryoverEstimatedExpenseLines,
   splitCarryoverNotices,
+  splitCarryoverDebtNotices,
   splitCarryoverView,
   type SplitCarryoverPartView,
   type SplitCarryoverView,
@@ -127,6 +128,7 @@ export function SplitCarryoverComparisonCard({ splitDetail }: { splitDetail: Spl
   const v = splitCarryoverView(splitDetail);
   if (!v) return null;
   const notices = splitCarryoverNotices(v);
+  const debtNotices = splitCarryoverDebtNotices(v);
   return (
     <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/30 p-4 dark:border-amber-800 dark:bg-amber-900/10" data-testid="split-carryover-card">
       <div className="flex flex-wrap items-center gap-2">
@@ -143,6 +145,16 @@ export function SplitCarryoverComparisonCard({ splitDetail }: { splitDetail: Spl
       </div>
       {/* 증여자 신축·증축 §114조의2 가산세(건물 파트) — donorBuilt 입력이 있을 때만(적용 근거 또는 붙지 않은 이유) */}
       <CarryoverDonorBuiltPenaltyCard echo={v.parts.find((p) => p.key === "building")?.donorBuiltPenalty} />
+      {/* 당초 증여 때 인수한 채무(T2) — 분자에서만 뺀 사실 고지. 「확인 필요」(해석례 미확인) 목록과 섞지 않는다. */}
+      {debtNotices.length > 0 && (
+        <ToneCard tone="amber" bodyClassName="space-y-1">
+          {debtNotices.map((n, i) => (
+            <p key={i} className="text-caption text-amber-900 dark:text-amber-200" data-testid={`split-carryover-debt-notice-${i}`}>
+              {n}
+            </p>
+          ))}
+        </ToneCard>
+      )}
       <ToneCard tone="amber" bodyClassName="space-y-1">
         <p className="text-caption font-semibold text-amber-900 dark:text-amber-200">확인 필요</p>
         {notices.map((n, i) => (

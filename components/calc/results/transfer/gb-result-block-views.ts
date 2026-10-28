@@ -18,6 +18,7 @@ import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-a
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
+import { cardAcquisitionPriceWithPieces } from "@/lib/tax-engine/general-building-purchased-pieces";
 
 export interface GbBlockView {
   /** 함께 양도 자산 id(카드 id 접미사). 단건은 `undefined`. */
@@ -76,7 +77,8 @@ export function gbBlockViewsOf(
                     key,
                     partAcquisitionPrice: (kind) => {
                       const card = partCard(kind);
-                      return card ? aggregated.properties.find((p) => p.propertyId === card.propertyId)?.acquisitionPrice : undefined;
+                      // 채무 부분(매입분) 꼬리가 있으면 증여분 + 매입분 — 꼬리를 합치지 않으면 파트 취득가액이 증여분뿐이다.
+                      return card ? cardAcquisitionPriceWithPieces(aggregated.properties, card.propertyId) : undefined;
                     },
                     partConverted: (kind) => !!partCard(kind)?.usedEstimatedAcquisition,
                   } satisfies GbShareBlockView;
@@ -93,7 +95,7 @@ export function gbBlockViewsOf(
     .map((assetId) => {
       const detail = byAsset[assetId];
       const cards = aggregated.properties.filter((p) => cardSuffixOf(p.propertyId) === assetId);
-      const acqOf = (id: string): number | undefined => cards.find((p) => p.propertyId === id)?.acquisitionPrice;
+      const acqOf = (id: string): number | undefined => cardAcquisitionPriceWithPieces(cards, id);
       return {
         assetId,
         label: apportionment.apportioned.find((a) => a.assetId === assetId)?.assetLabel ?? assetId,

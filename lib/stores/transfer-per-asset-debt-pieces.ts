@@ -27,3 +27,25 @@ export function purchasedPartTotals(
   const prop = bundled?.aggregated?.properties?.find((p) => p.propertyId === id);
   return { sale: row.allocatedSalePrice, acq: row.allocatedAcquisitionPrice, exp: prop?.necessaryExpense ?? row.allocatedExpenses };
 }
+
+export interface CarryoverCardTotals {
+  acq: number;
+  exp: number;
+}
+
+/**
+ * 이월과세 일반건물 단건 — 카드(토지·건물·증여분·매입분 꼬리) 전체의 **엔진이 실제로 차감한** 취득가액·필요경비 합.
+ *
+ * 일반건물 단건의 사이드바는 안분 행(`apportionment.apportioned`) 합을 읽는데, 이 행은 집계 **이전** 카드로 만들어져(`buildApportionment`)
+ * 이월과세 시나리오 A 채택 시 증여자 기준 취득가액·필요경비가 반영되지 않고 수증자 환산 카드 값이 남는다 — 채무 조각과 무관하게 이미 엔진 차감과 어긋난 상태였다
+ * (실측: 토지 A 채택 취득가액 1.5억 + 건물 2.5억 = 엔진 4억 ↔ 사이드바 5억 · 필요경비 1,500만 ↔ 600만).
+ * 조각이 생기면 꼬리 카드(`land__purchased`)는 `aggregated.properties`에만 있어 더 벌어진다(엔진 설계서 §3.4) → 같은 파일 `computeTransferPerAssetSummary`의
+ * 원칙(「엔진이 이 자산에 **실제로 쓴** 취득가액·필요경비」)대로 집계 값을 읽는다.
+ *
+ * 이월과세 카드(`carryoverTaxationDetail`)가 하나도 없으면 `null` — 이월과세가 아닌 일반건물은 종전 소스 그대로다(회귀 0).
+ */
+export function carryoverCardTotals(bundled: Extract<TransferAPIResult, { mode: "bundled" }> | null): CarryoverCardTotals | null {
+  const props = bundled?.aggregated?.properties;
+  if (!props || !props.some((p) => p.carryoverTaxationDetail)) return null;
+  return props.reduce((acc, p) => ({ acq: acc.acq + p.acquisitionPrice, exp: acc.exp + p.necessaryExpense }), { acq: 0, exp: 0 });
+}
