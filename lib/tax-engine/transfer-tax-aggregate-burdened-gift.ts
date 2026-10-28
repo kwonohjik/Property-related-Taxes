@@ -19,10 +19,18 @@ import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gi
 import type { TransferTaxResult } from "./types/transfer.types";
 import { redevSec166DisplayOf } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { bgRedevFiling } from "./burdened-gift-totals";
+import { toTransferorBasisInfo } from "./transfer-tax-carryover-burdened-gift";
 
 export function buildBundleBurdenedGiftWhole(input: AggregateTransferInput): TransferBurdenedGiftBreakdown | undefined {
-  const info = input.burdenedGiftWholeInfo;
-  if (!info) return undefined;
+  const given = input.burdenedGiftWholeInfo;
+  if (!given) return undefined;
+  /**
+   * 이월과세 × 감정가액·매매사례가액: 당초 증여자 값은 `carryoverDonorBasis`에 있고 `presumed*`는 비어 있어 그대로 계산하면
+   * 「감정가액을 입력해야 합니다」로 던진다(자산별 계산은 시나리오 A·B 치환을 거치지만 이 전체 재계산은 거치지 않는다).
+   * 증여세 1회 계산이 목적이고 취득가액·필요경비는 `withCardAcquisitions`가 카드 합으로 덮으므로 양도인 기준(실지)으로 읽는다
+   * (계획서 `bg-carryover-presumed-bundle-whole-400.plan.md` Q-1 a). 게이트 필수 — `toTransferorBasisInfo`는 이월과세 여부를 보지 않는다.
+   */
+  const info = given.carryoverDonorBasis ? toTransferorBasisInfo(given) : given;
   return buildBurdenedGiftBreakdown({
     landStdPriceAtTransfer: info.landStdPriceAtTransfer,
     buildingStdPriceAtTransfer: info.buildingStdPriceAtTransfer,
