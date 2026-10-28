@@ -27,6 +27,7 @@ import { GbDeductionOnlyNotice } from "./GbDeductionOnlyNotice";
 import { gbCapexBeforeExtensionSlots } from "@/lib/calc/gb-extension-capex-timing";
 import { gbPartReportedField } from "@/lib/calc/gb-pre-deemed";
 import { gbCarryoverEventSource } from "@/lib/calc/transfer-tax-api-gb-carryover";
+import { carryoverPurchasedPartScope } from "@/lib/calc/carryover-gift-assumed-debt";
 
 export function toBuildingCause(
   cause: AssetForm["acquisitionCause"] | undefined,
@@ -126,6 +127,11 @@ export function PartAcqModeField({
     testId: `gb-${part}-acq-mode-${PART_MODE_TESTID[m]}`,
   }));
   const partKey = isLand ? "land" : "building";
+  // 이월과세 × 당초 증여 채무 부분(매입분) — 이 파트가 이월과세이고 사건 토글이 켜졌으며 범위 술어가 apply이면 본인 자본적지출을 같은 몫으로 나눈다는 안내를 붙인다(③ 사건 토글 출처 = `gbCarryoverEventSource`).
+  const debtSplits =
+    partCause === "carryover_gift" &&
+    gbCarryoverEventSource(asset)?.giftDebtAssumed === true &&
+    carryoverPurchasedPartScope(asset).kind === "apply";
   /**
    * §163⑨ 상속 파트는 **평가액이 취득가액이다** — 파트 취득가액 칸을 노출하지 않는다.
    *
@@ -246,7 +252,7 @@ export function PartAcqModeField({
       )}
       {/* 자본적지출 — 직접 귀속분은 안분하지 않는다(「소득세법」 제100조 제2항 후문의 유추). */}
       {showCapex && (
-        <FieldCard label={`${label} 자본적지출`} unit="원" hint={capexHint(label, mode, !isLand && asset.gbHasExtension)}>
+        <FieldCard label={`${label} 자본적지출`} unit="원" hint={capexHint(label, mode, !isLand && asset.gbHasExtension, debtSplits)}>
           <CurrencyInput
             label={`${label} 자본적지출`}
             hideUnit

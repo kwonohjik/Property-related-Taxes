@@ -69,3 +69,31 @@ export function cardSuffixOf(propertyId: string): string | undefined {
   const i = propertyId.indexOf(SHARE_ID_SEPARATOR);
   return i < 0 ? undefined : propertyId.slice(i + SHARE_ID_SEPARATOR.length);
 }
+
+/** 매입분 카드 id 접미사 — 한도 초과 분리 카드(`__appurtenant`/`__excess`)와 같은 `__` 규약. */
+export const PURCHASED_PART_ID_SUFFIX = "__purchased";
+
+/**
+ * 이월과세 × 당초 증여 채무 부분(매입분) 꼬리 카드 id. 지분 접미사(`#`) **앞**에 둔다 —
+ * `land#0` → `land__purchased#0` · `land#asset-1` → `land__purchased#asset-1` · `primary` → `primary__purchased`.
+ *
+ * 🔴 `#` 뒤에 두면(`land#0__purchased`) `shareIndexOf`가 숫자만 인정해 `undefined`를 돌려주고 `cardSuffixOf`는 `0__purchased`가 되어
+ *    지분 짝 찾기(`isSameShare`)·함께 양도 상세 키·`endsWith('#0')` 지분 행 선택이 어긋난다(엔진 설계서 PR-2 §3.4 · Q-6 a).
+ */
+export function purchasedPartIdOf(propertyId: string): string {
+  const i = propertyId.indexOf(SHARE_ID_SEPARATOR);
+  return i < 0 ? `${propertyId}${PURCHASED_PART_ID_SUFFIX}` : `${propertyId.slice(0, i)}${PURCHASED_PART_ID_SUFFIX}${propertyId.slice(i)}`;
+}
+
+/** 매입분 꼬리 카드 id인가 — `purchasedPartIdOf`가 만든 모양(`__purchased`가 `#` 앞 마지막 조각)만 true다. 원 카드 id(r = 1이면 매입분이 원 id를 쓴다)는 false. */
+export function isPurchasedPieceId(propertyId: string): boolean {
+  return baseCardId(propertyId).endsWith(PURCHASED_PART_ID_SUFFIX);
+}
+
+/** 꼬리 카드 id → 증여분(부모) 카드 id. `land__purchased#0` → `land#0`. 꼬리가 아니면 그대로 돌려준다. */
+export function purchasedPartParentIdOf(propertyId: string): string {
+  if (!isPurchasedPieceId(propertyId)) return propertyId;
+  const i = propertyId.indexOf(SHARE_ID_SEPARATOR);
+  const base = i < 0 ? propertyId : propertyId.slice(0, i);
+  return `${base.slice(0, -PURCHASED_PART_ID_SUFFIX.length)}${i < 0 ? "" : propertyId.slice(i)}`;
+}

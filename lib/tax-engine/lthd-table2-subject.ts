@@ -22,14 +22,15 @@ import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household
 
 /** ① 자산 축 — 표2 「대상 자산」인가 (주택·주택부수토지). */
 export function isLthdTable2SubjectAsset(
-  input: Pick<TransferTaxInput, "propertyType" | "oneHouseUnitRole" | "selfOwns" | "buildingOwnerSameHousehold">,
+  input: Pick<TransferTaxInput, "propertyType" | "oneHouseUnitRole" | "selfOwns" | "buildingOwnerSameHousehold" | "appurtenantHouseVerdict">,
 ): boolean {
   // V-3′ — 토지만 본인 × 건물(주택) 소유자 다른 세대: 이 세대의 1주택에 딸린 토지가 아니다(`land-only-owner-household.ts`).
   if (landOnlyBuildingOwnerOtherHousehold(input)) return false;
   switch (input.propertyType) {
     // 토지는 짝 주택과 1세대1주택 단위를 이룬 부수토지(배율 이내 확인)만 — 순수 토지·배율 초과분·판정 불가 카드는 표1.
+    // 짝 주택이 표2 대상 자산이 아니면(토지만 본인 × 다른 세대) 그 부수토지도 아니다 — 부수토지 카드는 V-3′ 사실을 자기 입력으로 갖지 못해 verdict로 받는다.
     case "land":
-      return input.oneHouseUnitRole === "appurtenant_land";
+      return input.oneHouseUnitRole === "appurtenant_land" && input.appurtenantHouseVerdict?.houseTable2Subject !== false;
     // 주택이 아닌 건물·상가는 이에 딸린 토지도 없는 자산이다.
     case "building":
     case "commercial_building":

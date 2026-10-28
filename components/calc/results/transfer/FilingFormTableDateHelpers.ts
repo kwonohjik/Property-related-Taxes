@@ -7,6 +7,7 @@
 import { partAcquisitionDates } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
+import { purchasedPartParentIdOf } from "@/lib/tax-engine/general-building-share-id";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { table2ResidencePct } from "@/lib/tax-engine/data/lthd-table2-era";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
@@ -75,7 +76,8 @@ export function getAcqDateForCard(asset: import("@/lib/stores/calc-wizard-asset"
   if (asset.assetKind !== "general_building") return asset.acquisitionDate || "";
   // 🔴 지분(%) 분할 카드는 `building2#0` 꼴이라 접미사를 벗기고 봐야 한다 —
   //    안 벗기면 증축분 카드가 default로 떨어져 **증축일 대신 원건물 취득일**을 표시한다.
-  const base = baseCardId(pid);
+  // 채무 부분(매입분) 꼬리 카드는 부모 카드와 같은 파트다(열별 취득일은 `purchasedPartAcqDateOverride`가 먼저 정하고, 여기는 그 echo가 없을 때의 폴백).
+  const base = baseCardId(purchasedPartParentIdOf(pid));
   if (base === "building" || base === "building1") {
     return asset.acquisitionDate || "";
   }

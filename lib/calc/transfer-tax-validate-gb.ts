@@ -49,7 +49,7 @@ export function validateGeneralBuildingAsset(
   formTransferDate?: string,
   fdApplicable: boolean = isGbFirstDisclosureApplicable(asset),
 ): string | null {
-  const carryoverIssue = validateGbCarryover(asset, label);
+  const carryoverIssue = validateGbCarryover(asset, label, formTransferDate);
   if (carryoverIssue) return carryoverIssue;
 
   // ⑧ 부담부증여 (소령 §159) — Phase 2 (2026-05-12): transferType === "burdened_gift" 분기.

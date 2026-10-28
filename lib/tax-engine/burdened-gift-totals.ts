@@ -54,3 +54,44 @@ export function bgRedevFilingAcquisition(
 ): number | undefined {
   return bgRedevFiling(result)?.acquisition;
 }
+
+/**
+ * 부담부증여 §159 명세 카드의 **필요경비 줄 판별**(계획서 `bg-card-necessary-expense-row.plan.md` Q-1~Q-4) — 단건·묶음 카드가 같은 값을 읽는다.
+ *
+ * `perAsset.*.estimatedDeduction` 슬롯은 개산공제만이 아니라 카드의 필요경비 전부다:
+ *  · `swap`: 환산(K-5)에서 자본적지출·양도비가 환산취득가액 + 개산공제보다 커 §97②2호 단서 나목을 채택한 경우 — 슬롯 = (자본적지출 + 양도비) × 채무비율.
+ *  · `actual`: 개산공제율 echo가 없는 경로(실지 K-4 · 의제취득일 전 ①② 실지거래가액 의제) — 슬롯 = (자본적지출 + 양도비) × 채무비율.
+ *  · `estimated`: 개산공제 — 슬롯 = 취득시(의제 카드는 의제취득일) 기준시가 × 채무비율 × 개산공제율.
+ * 이월과세 증여세 상당액(`carryoverGiftTax.applied`, 법 §97의2①3호)은 슬롯에 더해져 있으므로 떼어 별도로 돌려준다.
+ * 판별 순서가 곧 우선순위다 — 환산 단서 나목 채택은 율 echo가 남아 있어 먼저 가른다.
+ */
+export type BgNecessaryExpenseView =
+  | {
+      kind: "actual" | "swap";
+      amount: number;
+      /** 실비 입력 echo — 없으면(파트별 계산 등) 문구가 입력값 없이 「자본적지출·양도비 × 채무비율」만 적는다. */
+      input?: { capitalExpenditure: number; transferExpense: number };
+      carryoverGiftTax: number;
+    }
+  | { kind: "estimated"; amount: number; stdBase: number; rate: number; carryoverGiftTax: number };
+
+export function bgNecessaryExpenseOf(bg: TransferBurdenedGiftBreakdown): BgNecessaryExpenseView | undefined {
+  const { land, building } = bg.perAsset;
+  const slot = (land?.estimatedDeduction ?? 0) + (building?.estimatedDeduction ?? 0);
+  const carryoverGiftTax = bg.carryoverGiftTax?.applied ?? 0;
+  const amount = slot - carryoverGiftTax;
+  if (amount <= 0 && carryoverGiftTax <= 0) return undefined;
+  const input = bg.necessaryExpenseInput
+    ? { capitalExpenditure: bg.necessaryExpenseInput.capitalExpenditure, transferExpense: bg.necessaryExpenseInput.transferExpense }
+    : undefined;
+  if (bg.necessaryExpenseSwap?.chosen === "direct") return { kind: "swap", amount, input, carryoverGiftTax };
+  const rate = building?.estimatedDeductionRate ?? land?.estimatedDeductionRate;
+  if (rate === undefined) return { kind: "actual", amount, input, carryoverGiftTax };
+  return {
+    kind: "estimated",
+    amount,
+    stdBase: (land?.stdPriceAtAcquisition ?? 0) + (building?.stdPriceAtAcquisition ?? 0),
+    rate,
+    carryoverGiftTax,
+  };
+}

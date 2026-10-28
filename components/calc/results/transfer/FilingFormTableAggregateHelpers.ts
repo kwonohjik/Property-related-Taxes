@@ -33,6 +33,7 @@ import { resolveFilingRateCode } from "./filing-rate-code";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
 import { selectPriorFiledIndices } from "@/lib/calc/multi-prior-filed";
 import { baseCardId, shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
+import { purchasedPartParentIdOf } from "@/lib/tax-engine/general-building-share-id";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
 import { splitAcqBasisFormula } from "@/lib/tax-engine/transfer-tax-split-display";
@@ -122,7 +123,8 @@ export function buildAggregateRows(
     //    순회해 태깅한다). 지분마다 취득일이 다른 것이 이 기능의 존재 이유이므로,
     //    전부 `assets[0]`로 보내면 **신고서 취득일이 전 행 동일하게 틀린다**.
     //    종전에는 정확 비교라 `land#1`이 여기서 아예 안 걸려 메타가 **누락**됐다.
-    if (formData.assets[0]?.assetKind === "general_building" && GB_CARD_BASE_IDS.has(baseCardId(pid))) {
+    // 채무 부분(매입분) 꼬리 카드(`land__purchased#1`)는 증여분 카드(`land#1`)와 같은 폼 자산·같은 지분의 계산 파트다 — 부모 id로 푼다.
+    if (formData.assets[0]?.assetKind === "general_building" && GB_CARD_BASE_IDS.has(baseCardId(purchasedPartParentIdOf(pid)))) {
       const shareIdx = shareIndexOf(pid);
       return shareIdx !== undefined ? formData.assets[shareIdx] : formData.assets[0];
     }
@@ -198,7 +200,7 @@ export function buildAggregateRows(
      */
     const isGbPartColumn =
       formData?.assets[0]?.assetKind === "general_building" &&
-      GB_CARD_BASE_IDS.has(baseCardId(col));
+      GB_CARD_BASE_IDS.has(baseCardId(purchasedPartParentIdOf(col)));
     // GB 카드별 정확한 취득일(원건물=건물취득일·증축건물=증축일·토지=토지취득일).
     // 일반 자산은 asset.acquisitionDate 그대로.
     // 부담부증여 × 이월과세 A 채택이면 당초 증여자 취득일(엔진 보유기간 축) — 각주로 밝힌다.

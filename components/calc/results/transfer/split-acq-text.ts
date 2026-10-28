@@ -9,6 +9,7 @@
  * 설계: docs/02-design/features/transfer-split-acq-result-display.ui.design.md §3
  */
 import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
+import { isPurchasedPieceId } from "@/lib/tax-engine/general-building-share-id";
 import {
   splitAcqModeLabel,
   splitAcqBasisFormula,
@@ -237,6 +238,8 @@ export function aggregateAcqModes(
 ): Set<SplitAcqMode> {
   const modes = new Set<SplitAcqMode>();
   for (const p of properties) {
+    // 이월과세 × 채무 부분(매입분) 꼬리 카드 — 취득가액이 채무 금액이라 «취득가액 산정 방식»이 따로 없다. 증여분(부모) 카드가 자산의 방식을 말한다(UI 설계서 PR-2 §3.6.2).
+    if (isPurchasedPieceId(p.propertyId)) continue;
     if (p.splitDetail) {
       for (const part of summarizeSplitGain(p.splitDetail).parts) modes.add(part.mode ?? "actual");
       continue;

@@ -18,6 +18,7 @@ import { isRedevelopmentSec166Asset } from "@/lib/calc/redev-acquisition-price-s
 import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { gbCapexBeforeExtensionSlots } from "@/lib/calc/gb-extension-capex-timing";
 import { carryoverPurchasedPartScope } from "@/lib/calc/carryover-gift-assumed-debt";
+import { carryoverGiftEventForm } from "@/lib/calc/carryover-gift-assumed-debt";
 
 interface Props {
   asset: AssetForm;
@@ -64,7 +65,13 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
   const showMixedBuildingDirect = mixedSaleSplitScope(asset, { isSingleAsset: isSingleAsset === true }).status === "ok";
   const isPartial = (asset.areaScenario ?? "same") === "partial";
   // 이월과세 × 당초 증여 채무 부분(매입분) — 본인 자본적지출·양도비는 증여분·채무 인수 부분에 같은 몫으로 나눈다(계획서 Q-2 a). 노출은 ④ 전송·⑧ 차단과 같은 술어 하나.
-  const debtSplitsExpense = asset.carryover?.giftDebtAssumed === true && carryoverPurchasedPartScope(asset, { isNonPrimary: isNonPrimaryAsset }).kind === "apply";
+  // 토글 값은 증여 사건 서브폼에서 읽는다(`carryoverGiftEventForm`) — 일반건물이 건물만 이월과세면 `asset.carryover`가 아니라 `buildingCarryover`다.
+  // 일반건물은 환산 모드에서 이 칸이 개산공제·§97②2호 swap으로 갈려 «같은 몫»이 확정되지 않는다(엔진 설계서 §3.5 · V-1 · V-2) — 실가 모드·분리 OFF에서만 안내한다(분리 ON은 파트 카드가 안내).
+  const gbEstimatedExpense = asset.assetKind === "general_building" && (asset.hasSeperateLandAcquisitionDate || gbPartModes(asset).land !== "actual");
+  const debtSplitsExpense =
+    carryoverGiftEventForm(asset, { isNonPrimary: isNonPrimaryAsset })?.giftDebtAssumed === true &&
+    carryoverPurchasedPartScope(asset, { isNonPrimary: isNonPrimaryAsset }).kind === "apply" &&
+    !gbEstimatedExpense;
   // 일반건물 · 분리 OFF · 자산 단위 감정·매매사례 — 자본적지출·양도비가 계산에 쓰이지 않는다(§97②2호 본문, A2 §3.7).
   // 분리 ON은 파트 카드가 같은 안내를 띄우고 ⑧ V-8이 자산 단위 칸을 파트 칸으로 안내한다. 모드는 ④·⑧과 같은 leaf.
   const gbModes = asset.assetKind === "general_building" && !asset.hasSeperateLandAcquisitionDate ? gbPartModes(asset) : null;

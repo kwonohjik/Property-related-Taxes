@@ -23,6 +23,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildDonorBuiltGbPayload, type GbDonorBuiltPayload } from "./transfer-tax-api-donor-built-gb";
 import { carryoverAssumedDebt } from "./carryover-gift-assumed-debt";
+import { gbCarryoverEventSource } from "./carryover-gift-event-source";
 
 /** 빈 문자열·0을 `undefined`로 — payload에 0을 실으면 「입력했다」와 구별되지 않는다. */
 const amountOrUndefined = (s: string | undefined): number | undefined => {
@@ -294,31 +295,20 @@ export function applyGbCarryoverShareScale(
   return out;
 }
 
-/**
- * 증여 **사건** 정보(등기접수일·산출세액·과세가액·관계·적용배제)를 읽을 서브객체 — ④·⑧ 공용.
- *
- * 사건 정보는 한 벌이다. 평소에는 토지 블록(`carryover`)이 정본이고 건물 블록의 같은 칸은
- * 쓰이지 않는다. 그런데 **건물만** 이월과세면 화면에 토지 블록이 없다 — 사용자가 사건 정보를
- * 넣을 수 있는 곳은 건물 블록 하나뿐이고, 그 편집은 `buildingCarryover`로 간다
- * (`GbBuildingCarryoverCard`·`GeneralBuildingAcquisitionCards` 건물 카드). 토지 쪽만 읽으면
- * ⑧은 「등기접수일을 입력하세요」로 영구 차단하고 ④는 조용히 미발동한다(2026-09-30 G1).
- *
- * ⚠️ 토지가 이월과세가 아니면 세션 복원(`migrateCarryoverFields`)이 `carryover`를 기본값으로
- *    되돌린다 — 그쪽에 옮겨 쓰는 방식으로는 고칠 수 없다.
- */
-export function gbCarryoverEventSource(
-  asset: Pick<AssetForm, "acquisitionCause" | "carryover" | "buildingCarryover">,
-): CarryoverTaxationForm | undefined {
-  if (asset.acquisitionCause === "carryover_gift") return asset.carryover;
-  return asset.buildingCarryover ?? asset.carryover;
-}
+/** 증여 사건 서브폼 출처 — ④·⑤·⑧ 공용(`carryover-gift-event-source.ts`가 정본). */
+export { gbCarryoverEventSource } from "./carryover-gift-event-source";
 
 /**
- * ④가 «신규 파트 모양(사건 1벌 + 파트)»으로 보내는가 — 증여세 **산출세액·과세가액 두 칸이 모두 차 있을 때만**이다(하나만 있으면 분모가 없어 legacy 엔진 모양).
+ * ④가 «신규 파트 모양(사건 1벌 + 파트)»으로 보내는가 — 증여세 **산출세액·과세가액 두 칸이 모두 차 있을 때**다(하나만 있으면 분모가 없어 legacy 엔진 모양).
+ * **예외 — 「당초 증여 때 채무를 인수했다」가 켜졌으면** 과세가액이 차 있고 산출세액이 입력되어 있으면(0 포함 — 증여재산공제로 세액이 없는 증여) 파트 모양이다.
+ * 엔진 모양 서브객체에는 인수채무 키가 없어(`rejectDebtPiecesKeyRefine`) 산출세액 0·빈칸이면 채무가 와이어에서 조용히 사라진다(설계서 §1.3 · Q-UI-6 a K-2).
+ * ⑧(`giftTaxPairIssue` 토글 ON 규칙)이 같은 조건을 요구한다 — 토글 ON이면 두 칸이 비면 막는다.
  * ⑧ `validateDonorBuiltGb`가 증여 등기접수일의 출처(사건 출처 vs 건물 서브폼)를 가를 때 같은 함수를 쓴다.
  */
 export function gbCarryoverUsesPartShape(eventSource: CarryoverTaxationForm | undefined): boolean {
-  return parseAmount(eventSource?.giftTaxCalculated ?? "") > 0 && parseAmount(eventSource?.giftTaxBase ?? "") > 0;
+  const base = parseAmount(eventSource?.giftTaxBase ?? "");
+  if (parseAmount(eventSource?.giftTaxCalculated ?? "") > 0 && base > 0) return true;
+  return eventSource?.giftDebtAssumed === true && base > 0 && (eventSource.giftTaxCalculated ?? "").trim() !== "";
 }
 
 /**
