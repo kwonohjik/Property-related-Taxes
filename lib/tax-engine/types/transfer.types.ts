@@ -1713,6 +1713,12 @@ export interface TransferTaxInput {
      */
     houseTable2Subject?: boolean;
     /**
+     * 짝 주택이 토지만 본인 × 건물(주택) 소유자 다른 세대인가(`landOnlyBuildingOwnerOtherHousehold(house)`) — 참이면 그 부수토지는 이 세대 주택에 딸린 토지가 아니라
+     * 일반 토지다(서면법규과-944): 단기세율을 짝 주택 일체과세가 아니라 일반 토지 세율로 정한다. `houseTable2Subject === false`와 같지 않다(다른 사유로도 false).
+     * 계획서 `bundled-other-household-appurtenant-short-rate.plan.md`.
+     */
+    houseLandOnlyOtherHousehold?: boolean;
+    /**
      * 짝 주택이 토지만 본인 × 같은 세대 × 「합가함」으로 판정된 세대합가일(`landOnlyHouseholdMergeDate(house)`) — `undefined` = 합가 아님·미입력 = 종전.
      * 합가 이전 기간은 주택부수토지로서의 보유가 아니라(재산46014-610 · 부동산거래관리과-515) 부수토지 카드의 보유요건·표2 보유연수·세율 기산이 이 날을 따른다.
      * 계획서 `bundled-merge-date-appurtenant-card.plan.md`.

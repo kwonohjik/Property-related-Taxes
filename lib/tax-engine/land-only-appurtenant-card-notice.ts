@@ -4,6 +4,8 @@
  * 주 카드의 고지(`LAND_ONLY_OTHER_HOUSEHOLD_NOTICE`)는 합산 경고에서 `[주 자산(주택)]` 라벨로만 나와, 같은 묶음 부수토지 카드가
  * 왜 표2가 아닌지 카드에서 보이지 않는다. 값은 바꾸지 않는 고지다(계획서 `bundled-other-household-appurtenant-table2.plan.md` Q-2 a).
  */
+import { calculateHoldingPeriod } from "./tax-utils";
+import { LAND_ONLY_OTHER_HOUSEHOLD_RATE_NOTICE } from "./land-only-owner-household";
 import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption-residence-waivers";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -34,4 +36,13 @@ export function landOnlyMergeDateAppurtenantCardNotice(input: TransferTaxInput):
     "보유기간으로 보아 1세대1주택 비과세 보유요건·장기보유특별공제 표2 보유연수·단기세율 보유기간을 판정했습니다(재산46014-610 · 부동산거래관리과-515). " +
     "단기세율 보유기간에 합가일을 반영한 것은 정면 해석이 없는 유추라 확인이 필요합니다."
   );
+}
+
+/**
+ * 다른 세대 토지만 본인 주택의 부수토지 카드 — 단기세율(보유 2년 미만)이 일반 토지 기준으로 판정됐다는 고지. 주 카드 고지(`landOnlyOtherHouseholdRateNotice`)와 같은 문안·같은 규칙:
+ * 2년 이상이면 세율 종류가 값에 닿지 않아 말하지 않는다(계획서 `bundled-other-household-appurtenant-short-rate.plan.md` Q-3 a).
+ */
+export function landOnlyOtherHouseholdAppurtenantCardRateNotice(input: TransferTaxInput): string | undefined {
+  if (input.oneHouseUnitRole !== "appurtenant_land" || input.appurtenantHouseVerdict?.houseLandOnlyOtherHousehold !== true) return undefined;
+  return calculateHoldingPeriod(input.acquisitionDate, input.transferDate).years < 2 ? LAND_ONLY_OTHER_HOUSEHOLD_RATE_NOTICE : undefined;
 }

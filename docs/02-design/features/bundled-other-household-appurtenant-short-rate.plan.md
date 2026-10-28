@@ -1,6 +1,6 @@
 # 함께 양도 × 토지만 본인 · 다른 세대 — 부수토지 카드가 주택 단기세율(일체과세)을 따르는 결함 (구현 계획서)
 
-> 작성 2026-10-28 · 깊이 **L3**(세액이 바뀐다 · 법령 판정이 갈린다) · 이 PR은 **계획만**(코드 변경 없음) · 선행: `bundled-other-household-appurtenant-table2.plan.md`(#2668 §7 **O-1** — 같은 verdict 채널) · `land-only-lthd-rate-basis.plan.md`(#2657 — 주 카드의 다른 세대 일반 토지 세율)
+> 작성 2026-10-28 · 깊이 **L3**(세액이 바뀐다 · 법령 판정이 갈린다) · 계획 + 구현(§9) 한 PR(사용자 「권고안으로」 — Q-1 a · Q-2 a · Q-3 a) · 선행: `bundled-other-household-appurtenant-table2.plan.md`(#2668 §7 **O-1** — 같은 verdict 채널) · `land-only-lthd-rate-basis.plan.md`(#2657 — 주 카드의 다른 세대 일반 토지 세율)
 > 사용자 지시 「다른 세대 부수토지 카드의 단기세율-구현 계획서 작성해」. 측정은 master(`ed4659921`) 기준이며 probe는 #2668의 `bt2-probes` 시료(R·S·역방향)를 그대로 쓴 throwaway(커밋 안 함 · 원복 확인)이고 측정 결과 JSON은 scratchpad `bt2-probes/sr-*.json`이다.
 
 ## 0. 요약
@@ -49,9 +49,9 @@ D-3 **고지**(Q-3 a): 다른 세대 부수토지 카드가 자기 취득일 기
 
 **하지 않는 것**: 같은 세대·소유자 같음(의도된 일체과세 — V-2) · 부수토지 카드의 다주택 중과(O-2) · 후행 취득 토지 표2 연수(O-4) · 입력 필드·Zod·API · UI(V-8). 14 동기화 지점: 신규 입력 필드가 없고 verdict는 **엔진 내부 값**이라 ⑫⑬⑭ 해당 없음.
 
-⚠️ **파일 크기**: `transfer-tax-rate-calc.ts` 681 · `transfer-tax-one-house-unit.ts` 227 · `land-only-appurtenant-card-notice.ts` 37 · `transfer-tax.ts` 765(줄 수 불변) · `transfer.types.ts` 1,889(타입 전용 파일 — 정책 예외, +1줄 필드).
+⚠️ **파일 크기**: `transfer-tax-rate-calc.ts` 681 · `transfer-tax-one-house-unit.ts` 227 · `land-only-appurtenant-card-notice.ts` 37 · `transfer-tax.ts` 765 → 769(import를 한 줄에 한 이름으로 풀어 +4) · `transfer.types.ts` 1,889(타입 전용 파일 — 정책 예외, +1줄 필드).
 
-## 4. 결정 게이트 (Q-n) — 결정 대기
+## 4. 결정 게이트 (Q-n) — 2026-10-28 사용자 「권고안으로」: **Q-1 a · Q-2 a · Q-3 a 확정**
 
 | ID | 질문 | 선택지 | 권고 |
 |---|---|---|---|
@@ -70,7 +70,7 @@ D-3 **고지**(Q-3 a): 다른 세대 부수토지 카드가 자기 취득일 기
 | A5 | 같은 세대 · 소유자 같음 | 8개월 | 순방향 | 24% → 24% | 320,859,000 · 351,021,000 **불변** | anchor(불변) |
 | A6 | 다른 세대 + 수동 70% / 60% / 누진 | 8개월 | 순방향 | 70% · 60% · 38% **불변** | 372,075,000 · 350,350,000 · 280,291,000 **불변** | anchor(Q-2 a) |
 | A7 | 다른 세대 | 8개월 | 순방향 | 고지 · 2014는 고지 없음 | — | anchor(Q-3 a) |
-| A8 | 다른 세대 · 카드가 짝 주택보다 **이른 토지**(보유 ≥ 2년) · 주 카드는 단기 | — | — | 누진 그대로 | 구현 때 **측정**(미측정 — 계획 단계에서 단정하지 않는다) | 측정 후 anchor |
+| A8 | 다른 세대 · 카드가 짝 주택보다 **이른 토지**(보유 ≥ 2년) · 주 카드는 단기 | — | — | 누진 38%(주 카드 50%) | 260,227,000(구현 후 측정 · 독립 산식 일치 · 수정 전 값은 미측정) | anchor |
 
 ## 6. 구현 계획과 테스트 (Do — Q 결정 뒤)
 
@@ -107,3 +107,12 @@ D-3 **고지**(Q-3 a): 다른 세대 부수토지 카드가 자기 취득일 기
 1. 워크트리 `-sr`에서 신규 anchor 먼저(수정 전 A1·A2·A3·A7 실패 확인) → D-1·D-2·D-3 → anchor 통과.
 2. 구현 후 mutation P-1~P-5 · 전량 회귀 · tsc · lint.
 3. 계획서 §9에 결과 기록 → 같은 PR 구현 커밋 → CI 18건 확인 → 사용자 「머지해」 뒤 머지.
+
+## 9. 구현 결과 (2026-10-28)
+
+- **변경**: `types/transfer.types.ts`(verdict `houseLandOnlyOtherHousehold`) · `transfer-tax-one-house-unit.ts`(`toHouseVerdict` 주입) · `transfer-tax-rate-calc.ts`(T-1.5 `landNature` 비우기) · `land-only-appurtenant-card-notice.ts`(`landOnlyOtherHouseholdAppurtenantCardRateNotice`) · `transfer-tax.ts`(고지 배열 항목 1개). 입력·Zod·API·UI 변경 없음.
+- **anchor**: `__tests__/api/transfer.route.bundled-other-household-appurtenant-short-rate.anchor.test.ts` 10건 + `__tests__/tax-engine/transfer/appurtenant-card-other-household-rate.anchor.test.ts` 5건. 수정 전 A1·A2·A3·A7 **먼저 실패**(4건 — 계획대로), A4·A5·A6은 수정 전후 통과(불변 고정). A8 측정: `c1` 장특 48,000,000 · 소득 152,000,000 · 38% · 합계 **260,227,000** = (400,000,000 − 2,500,000) × 50% + (152,000,000 × 38% − 19,940,000) → ×1.1 ✓.
+- **mutation 5/5 KILLED**: P-1(`landNature` 비우기 제거 → A1·A2·A3) · P-2(필드 false 고정 → A1·A2·A3·A7·AN-1) · P-3(세대 구분 제거 → A5·A4 불변·고지 부정·AN-1) · P-4(수동 오버라이드까지 비움 → A6만) · P-5(고지의 2년 판정 제거 → 경계·부정 고지).
+- **회귀**: 변경 경로 4개 디렉터리 24,165건(1,839 파일) · 전체 vitest **43,307건 통과**(3,550 파일) · `npx tsc --noEmit` 0 · eslint 0.
+- **미수행**: 브라우저 수동 확인(화면 변경 없음 · V-8 배지 도달 불가).
+- 남은 별건: O-2 · O-4 · O-7 · O-8(§7).
