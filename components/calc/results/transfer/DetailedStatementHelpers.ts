@@ -60,6 +60,7 @@ import type { PerAssetValue, StatementItem } from "./DetailedStatementConfig";
 import { resolveReceiveOnlyDisplay } from "./receive-only-display";
 import {
   resolveBgSingleDisplay,
+  resolveBgCarryoverSingleDisplay,
   buildBgSingleAcquisitionFormula,
   buildBgSingleExpenseFormula,
 } from "./DetailedStatementBgFormulas";
@@ -390,10 +391,18 @@ export function buildStatementItems(
   // `assetKind`는 ④가 엔진 `propertyType`으로 그대로 보내는 값이라 같은 인자다
   // (`transfer-tax-api.ts:251`) — 사이드바 합계(`calc-wizard-store.ts`)와도 같은 호출이다.
   const lumpRate = estimatedDeductionRate(formData?.isUnregistered, primary?.assetKind);
+  // 이월과세 단건 부담부증여: 필요경비 줄도 §159 슬롯 echo에서 읽는다(엔진 `necessaryExpenseIsLumpDeduction`은 이 경로에서 false라 개산공제를 「양도비 등」으로 적었다).
+  const bgCarryoverSingle = isAggregate ? undefined : resolveBgCarryoverSingleDisplay(result);
+  const carryoverGuardNote =
+    bgCarryoverSingle && result.carryoverTaxationDetail?.adoptedScenario === "A" && result.carryoverTaxationDetail.scenarioA.donorCapexGuardApplied
+      ? " ※ 양도일 2024-01-01 전 — 증여자 자본적지출 불산입(§97의2①2호 시행일)"
+      : "";
   const expFormula = bgSingle
     ? buildBgSingleExpenseFormula(bgSingle)
     : bgMixed
     ? buildBgMixedExpenseFormula(bgMixed)
+    : bgCarryoverSingle
+    ? buildBgSingleExpenseFormula(bgCarryoverSingle) + carryoverGuardNote
     : buildNecessaryExpenseFormula(result, isAggregate, singleExp, lumpRate, aggModes);
 
   items.set("expenses", {
