@@ -478,6 +478,13 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // GbDeductionOnlyNotice — 공통 양도비용은 토지·건물 가액 비례로 안분 (KoreanLaw 실측, 소득세법 MST 280405 시행 2026-01-01 본문)
+    id: "TRANSFER.COMMON_EXPENSE_APPORTION",
+    citation: "소득세법 §100",
+    keywords: ["공통되는 취득가액과 양도비용은 해당 자산의 가액에 비례하여 안분계산한다"],
+    keywordMode: "ALL",
+  },
+  {
     // transfer.ts SPLIT_DEEMED_UNCLEAR — 토지·건물 구분 기장 가액 30% 이상 차이 → 불분명 의제 (KoreanLaw 실측, 소득세법 시행 2026-01-01 본문)
     id: "TRANSFER.SPLIT_DEEMED_UNCLEAR",
     citation: "소득세법 §100",

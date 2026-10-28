@@ -24,6 +24,7 @@ import { gbPartAllowedModes } from "@/lib/calc/transfer-tax-gb-toggle-patches";
 import { buildingPenaltyMethodApplies } from "@/lib/tax-engine/transfer-tax-building-penalty";
 import { capexHint } from "./capexHint";
 import { GbDeductionOnlyNotice } from "./GbDeductionOnlyNotice";
+import { gbOtherCardsReceiveTransferExpense } from "@/lib/calc/gb-part-transfer-expense-reach";
 import { gbCapexBeforeExtensionSlots } from "@/lib/calc/gb-extension-capex-timing";
 import { gbPartReportedField } from "@/lib/calc/gb-pre-deemed";
 import { gbCarryoverEventSource } from "@/lib/calc/transfer-tax-api-gb-carryover";
@@ -248,7 +249,7 @@ export function PartAcqModeField({
       )}
       {/* 감정·매매사례는 개산공제만 인정 — 자본적지출 칸 위에 알린다(허용 원인 파트에서만; stale 값에는 ⑧이 오류를 낸다). */}
       {(mode === "appraisal" || mode === "salesCase") && gbPartAllowedModes(partCause).includes(mode) && (
-        <GbDeductionOnlyNotice extension={!isLand && asset.gbHasExtension} />
+        <GbDeductionOnlyNotice shareToOtherCards={gbOtherCardsReceiveTransferExpense(asset, part)} extension={!isLand && asset.gbHasExtension} />
       )}
       {/* 자본적지출 — 직접 귀속분은 안분하지 않는다(「소득세법」 제100조 제2항 후문의 유추). */}
       {showCapex && (

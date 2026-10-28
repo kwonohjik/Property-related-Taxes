@@ -143,6 +143,8 @@ test.describe("일반건물 — 감정가액·매매사례가액 (A2)", () => {
     await expect(page.getByTestId("gb-building-apr-price")).toBeVisible();
     await expect(page.getByTestId("gb-building-act-price")).toHaveCount(0);
     await expect(page.getByTestId("gb-deduction-only-notice")).toBeVisible();
+    // 토지 실가 + 건물 감정 = 혼합 자산 — 양도비는 다른 카드로 나뉘어 반영되므로 「양도비도 세액 불변」이라 쓰지 않는다(계획서 gb-deduction-only-notice-mixed-asset).
+    await expect(page.getByTestId("gb-deduction-only-notice")).toContainText("다른 파트·증축분이 받는 몫");
     await expect(page.locator('[data-gb-stdprice="acq"]').first()).toBeVisible();
 
     await page.getByTestId("gb-building-acq-mode-salescase").click({ force: true });

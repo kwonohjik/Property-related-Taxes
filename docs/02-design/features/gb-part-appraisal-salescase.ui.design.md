@@ -252,9 +252,10 @@ export function gbPartCauseModePatch(part: "land"|"building", cause: string|unde
 - **신규 컴포넌트 `components/calc/transfer/GbDeductionOnlyNotice.tsx`**(≈25줄, 단일 문구 소스) — 두 곳이 같은 문구를 쓴다.
   - `<ToneCard tone="amber" noDark>`(tone 매핑: amber = 취득·분리계산)
   - 문구: `감정가액·매매사례가액은 추계 취득가액이라 필요경비는 개산공제(취득시 기준시가 × 율 — 3%, 미등기양도자산 0.3%; 「소득세법 시행령」 §163⑥)만 인정됩니다. 자본적지출·양도비는 필요경비에 산입되지 않으므로 입력해도 세액이 바뀌지 않습니다 (「소득세법」 §97②2호 본문).`
+  - ⚠️ **2026-10-28 정정**: 이 문장은 **두 파트 모두 감정·매매사례(증축 없음)** 일 때만 참이다. 자산 단위 양도비는 가액 비례로 카드에 나뉘어(「소득세법」 §100② 후문) 감정·매매사례 카드 몫만 버려지므로, 다른 파트·증축분이 있으면 「이 파트 몫의 자본적지출·양도비는 산입되지 않습니다 … 다른 파트·증축분이 받는 몫은 그 취득방식대로 반영됩니다」로 가른다(`gbOtherCardsReceiveTransferExpense` · 계획서 `gb-deduction-only-notice-mixed-asset-transfer-expense.plan.md`).
   - testid `gb-deduction-only-notice`.
 - **노출 위치 ①** `PartAcqModeField`: 그 파트 모드가 `appraisal | salesCase`이고 상속·증여·이월과세 파트가 아닐 때, 파트 금액칸 **바로 아래**(자본적지출 칸 위).
-- **노출 위치 ②** `AssetSectionExpense.tsx`: `assetKind === "general_building"` ∧ 분리 OFF ∧ `deriveLegacyPartAcqMode(asset) ∈ {appraisal, salesCase}`일 때 자본적지출·양도비 칸 **위**. (분리 ON의 자산 단위 칸은 ⑧ V-8이 이미 파트 칸으로 안내·차단 — `validate-gb.ts:376-378`.)
+- **노출 위치 ②** `AssetSectionExpense.tsx`: `assetKind === "general_building"` ∧ 분리 OFF ∧ `deriveLegacyPartAcqMode(asset) ∈ {appraisal, salesCase}`일 때 자본적지출·양도비 칸 **위**. (분리 ON의 자산 단위 칸 중 **자본적지출**만 ⑧ V-8이 파트 칸으로 안내·차단한다 — `transfer-tax-validate-gb.ts:395-396`. **양도비 칸은 막히지 않고** 엔진에 도달해 카드별로 나뉜다 — 2026-10-28 실측·정정.)
 - 「납세자 유리·불리·절감」 표현을 쓰지 않는다(법령 정확성 원칙).
 
 ### 3.8 증축 × 자산 단위 감정·매매사례 — 차단 (엔진 F-6·Q-A3)
