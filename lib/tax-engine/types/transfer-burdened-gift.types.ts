@@ -603,6 +603,18 @@ export interface TransferBurdenedGiftBreakdown {
   };
 
   /**
+   * 실비(자본적지출·양도비) 입력 echo — 표시 전용(계획서 `bg-card-necessary-expense-row.plan.md` Q-4 b). 실비를 명시 입력한 경우에만 채운다.
+   * 값은 엔진이 쓴 그대로다: `capitalExpenditure`·`transferExpense`는 이 계산에 들어온 입력(지분·스케일은 호출자가 정한 값),
+   * `debtApportioned` = (자본적지출 + 양도비) × 채무비율 — 실지 경로 필요경비 슬롯과 환산 단서 나목(`necessaryExpenseSwap.directSide`)의 값이다.
+   * 이월과세 증여세 상당액(`carryoverGiftTax`) 산입분은 포함하지 않는다.
+   */
+  necessaryExpenseInput?: {
+    capitalExpenditure: number;
+    transferExpense: number;
+    debtApportioned: number;
+  };
+
+  /**
    * 단서(나목) 채택으로 `acquisitionPrice`를 0으로 만들기 **직전**의 환산취득가액(채무비율 안분 후).
    * 미발동 시 undefined. §114조의2 가산세 base처럼 「환산을 썼다는 사실」에 붙는 계산이 읽는다.
    */

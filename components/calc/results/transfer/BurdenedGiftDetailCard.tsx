@@ -16,6 +16,7 @@ import type {
 } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { BgPreDeemedThreeWayRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
+import { BgNecessaryExpenseRow } from "@/components/calc/results/transfer/BgNecessaryExpenseRow";
 import { BgRedevFilingExpenseRows } from "@/components/calc/results/transfer/BgRedevFilingExpenseRows";
 import type { RedevExpenseParts } from "@/lib/tax-engine/redev-acquisition-inverse";
 import { BgPreDeemedStdCaption } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
@@ -353,6 +354,15 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
             </>
           )}
           <BgPreDeemedStdCaption bg={bg} />
+          {/*
+            필요경비 — 실지·환산·기준시가·의제취득일 전 카드는 줄이 없었다(계획서 `bg-card-necessary-expense-row.plan.md`). 감정가액·매매사례가액은 위에 개산공제 줄이 이미 있고,
+            파트별 3자 max는 파트 줄이, 재개발(§166) 자산은 신고서 필요경비 줄이 맡는다. 묶음은 카드별 행(`BgBundleCardAcqRows`)이 그린다.
+          */}
+          {!bg.cards &&
+            bg.acquisitionMethodUsed !== "salesCase" &&
+            bg.acquisitionMethodUsed !== "appraisal" &&
+            bg.preDeemed?.basis !== "three_way_parts" &&
+            redevFilingExpenses === undefined && <BgNecessaryExpenseRow bg={bg} />}
           {redevFilingAcquisition !== undefined && (
             <tr data-testid="bg-redev-filing-acquisition">
               <td className="py-1 pr-2 pl-3 text-caption text-fuchsia-700 dark:text-fuchsia-400">
