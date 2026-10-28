@@ -263,7 +263,7 @@ export function calcTax(
       ctx
         ? {
             propertyType: ctx.propertyType,
-            holdingMonths: appurtenantCardHouseHoldingMonths(input.appurtenantHouseVerdict, input.transferDate, ctx.holdingMonths),
+            holdingMonths: appurtenantCardHouseHoldingMonths(input.appurtenantHouseVerdict, input.transferDate, ctx.holdingMonths, input.acquisitionDate),
             buildingFootprintArea: ctx.buildingFootprintArea,
             isUrbanArea: ctx.isUrbanArea,
             appurtenantLandZone: ctx.appurtenantLandZone,

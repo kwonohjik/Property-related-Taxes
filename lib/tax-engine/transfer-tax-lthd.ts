@@ -188,8 +188,8 @@ export function calcLongTermHoldingDeduction(
     input.primaryContextForCompanionRate
   ) {
     const ctx = input.primaryContextForCompanionRate;
-    // 「주택부수토지로서」의 보유 — 짝 주택 합가일이 주택 취득일보다 늦으면 합가일부터(`appurtenantCardHouseHoldingMonths`).
-    const primaryHoldingMonths = appurtenantCardHouseHoldingMonths(input.appurtenantHouseVerdict, input.transferDate, ctx.holdingMonths);
+    // 「주택부수토지로서」의 보유 — `max(카드 취득일, 짝 주택 취득일, 합가일)`부터(`appurtenantCardHouseHoldingMonths`). 카드가 짝 주택보다 늦게 취득됐으면 카드 취득일부터다.
+    const primaryHoldingMonths = appurtenantCardHouseHoldingMonths(input.appurtenantHouseVerdict, input.transferDate, ctx.holdingMonths, input.acquisitionDate);
     const primaryHoldingYears = Math.floor(primaryHoldingMonths / 12);
     /**
      * 2026-08-13 정정 (F11 — **세액 변경**): 표1 공제율과 3년 진입요건이 primary **주택**의

@@ -7,6 +7,7 @@
  * P0-2 원칙: 세율 × 금액 곱셈은 반드시 applyRate() 사용.
  */
 import { TRANSFER } from "./legal-codes";
+import { appurtenantCardLaterLandNotice } from "./appurtenant-card-holding-start";
 import { buildLossTransferTaxResult } from "./transfer-tax-loss-return";
 import { buildNormalTransferTaxResult } from "./transfer-tax-normal-return";
 import {
@@ -567,7 +568,7 @@ export function calculateTransferTax(
   const { isSurchargeCase, isSuspended: suspendedResult } = surchargeApplication;
   // 토지만 본인 × 다른 세대 — 그 조건을 뺀 판정이 중과였을 때만 배제 사실을 고지한다.
   if (landOnlyBuildingOwnerOtherHousehold(effectiveInput) && resolveSurchargeApplication({ ...surchargeArgs, selfOwns: undefined }, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules).isSurchargeApplied) warnings.push(LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE);
-  for (const n of [landOnlyOtherHouseholdRateNotice(effectiveInput), landOnlyMergeDateAppliedNotice(effectiveInput), landOnlyOtherHouseholdAppurtenantCardNotice(effectiveInput), landOnlyMergeDateAppurtenantCardNotice(effectiveInput), landOnlyOtherHouseholdAppurtenantCardRateNotice(effectiveInput), appurtenantCardSurchargeNotice(effectiveInput)]) if (n) warnings.push(n);
+  for (const n of [landOnlyOtherHouseholdRateNotice(effectiveInput), landOnlyMergeDateAppliedNotice(effectiveInput), landOnlyOtherHouseholdAppurtenantCardNotice(effectiveInput), landOnlyMergeDateAppurtenantCardNotice(effectiveInput), landOnlyOtherHouseholdAppurtenantCardRateNotice(effectiveInput), appurtenantCardSurchargeNotice(effectiveInput), appurtenantCardLaterLandNotice(effectiveInput)]) if (n) warnings.push(n);
   // 명부 없이 원시 플래그로 중과를 건 경우 — 다른 주택이 각 호에 해당하면 결론이 바뀔 수 있다(확인 필요).
   const surchargeFallbackNotice = noRosterSurchargeFallbackNotice({
     houses: effectiveInput.houses, rosterInputUnavailable: hasNoMergeRosterInputPath(effectiveInput),

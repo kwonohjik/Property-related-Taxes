@@ -65,18 +65,20 @@ describe("5A × F-13 — 따로 입력한 부수토지 카드 × 짝 주택의 �
     expect(hasNotice(a)).toBe(true);
   }, 60_000);
 
-  it("대조: 단서 없음 → 카드 보유요건 미달로 과세(종전 값), 고지 없음", async () => {
+  it("대조: 단서 없음 → 카드 보유요건 미달로 과세, 고지 없음", async () => {
     const a = await post({ ...primary(), companionAssets: [land()] });
     expect(card(a).isExempt).toBe(false);
     expect(card(a).transferGain).toBe(150_000_000);
-    expect(a.totalTax).toBe(8_844_000);
+    // 카드는 1년 2개월 보유 — 카드 취득일부터 보아(O-4) 1~2년 단기 60%: (150,000,000 − 2,500,000) × 60% = 88,500,000 → ×1.1 (종전 짝 주택 보유연수의 누진 8,844,000)
+    expect(a.totalTax).toBe(97_350_000);
     expect(hasNotice(a)).toBe(false);
   }, 60_000);
 
   it("토지 카드를 고시일 이후에 취득 → 괄호 밖이라 과세, 고지 없음", async () => {
     const a = await post({ ...primary(proviso), companionAssets: [land({ acquisitionDate: "2025-05-01" })] });
     expect(card(a).isExempt).toBe(false);
-    expect(a.totalTax).toBe(8_844_000);
+    // 카드는 9.5개월 보유 — 1년 미만 단기 70%: (150,000,000 − 2,500,000) × 70% = 103,250,000 → ×1.1 (종전 누진 8,844,000)
+    expect(a.totalTax).toBe(113_575_000);
     expect(hasNotice(a)).toBe(false);
   }, 60_000);
 });

@@ -122,13 +122,15 @@ describe("순방향 — 다른 세대 부수토지 카드는 일반 토지 단�
     expect(a.totalTax).toBe(260_227_000);
   });
 
-  it("A5 불변 — 같은 세대·소유자 같음은 짝 주택 일체과세 그대로(c1 24% · 합계 320,859,000 · 351,021,000)", async () => {
+  it("A5 같은 세대·소유자 같음은 일체과세 — 카드를 8개월 보유했으니 짝 주택 12년이 아니라 카드 취득일부터(c1 70% · 합계 460,075,000 · 474,859,000)", async () => {
+    // O-4(계획서 bundled-appurtenant-card-later-land-holding.plan.md)로 갱신 — 종전 24% · 320,859,000 · 351,021,000은 짝 주택 보유연수를 쓴 값이다.
     const same = await agg(forward({ ...SAME, ...R }));
-    expect(c2(same, "c1").appliedRate).toBe(0.24);
-    expect(same.totalTax).toBe(320_859_000);
+    expect(c2(same, "c1").appliedRate).toBe(0.7);
+    // (주 카드 400,000,000 + 카드 200,000,000 − 2,500,000) × 70% = 418,250,000 → ×1.1
+    expect(same.totalTax).toBe(460_075_000);
     const both = await agg(forward({ ...R }));
-    expect(c2(both, "c1").appliedRate).toBe(0.24);
-    expect(both.totalTax).toBe(351_021_000);
+    expect(c2(both, "c1").appliedRate).toBe(0.7);
+    expect(both.totalTax).toBe(474_859_000);
   });
 });
 
@@ -157,12 +159,15 @@ describe("역방향 — 첫 자산이 부수토지, 짝 주택이 토지만 본�
     expect(a.totalTax).toBe(280_731_000);
   });
 
-  it("A4 불변 — 12년(2014)은 24% · 합계 240,207,000 / 같은 세대·소유자 같음은 79,761,000 · 101,915,000 그대로", async () => {
+  it("A4 12년(2014)은 24% · 합계 240,207,000 불변 / 같은 세대·소유자 같음 8개월은 카드 취득일부터라 142,747,000 · 162,371,000", async () => {
     const old = await agg(reverse({ ...OTHER, ...REVERSE_LAND_ONLY }));
     expect(c2(old, "primary__appurtenant").appliedRate).toBe(0.24);
     expect(old.totalTax).toBe(240_207_000);
-    expect((await agg(reverseShort({ ...SAME, ...REVERSE_LAND_ONLY }))).totalTax).toBe(79_761_000);
-    expect((await agg(reverseShort({}))).totalTax).toBe(101_915_000);
+    // O-4(계획서 bundled-appurtenant-card-later-land-holding.plan.md)로 갱신 — 종전 79,761,000 · 101,915,000은 짝 주택 보유연수를 쓴 값이다.
+    // 같은 세대: 이내분 70% (100,000,000 − 2,500,000) × 70% = 68,250,000 + 초과분 100,000,000 × 50% = 50,000,000 + 주택 소득 72,000,000 × 24% − 5,760,000 = 11,520,000 → 129,770,000 × 1.1
+    expect((await agg(reverseShort({ ...SAME, ...REVERSE_LAND_ONLY }))).totalTax).toBe(142_747_000);
+    // 소유자 같음은 순·역 등가로 고정한다 — `transfer.route.bundled-appurtenant-card-later-land.anchor.test.ts` B5
+    expect((await agg(reverseShort({}))).totalTax).toBe(162_371_000);
   });
 });
 

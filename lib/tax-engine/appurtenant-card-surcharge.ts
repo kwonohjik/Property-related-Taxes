@@ -6,6 +6,7 @@
  * 카드는 짝 주택이 푼 판정(`SurchargeApplication`)을 verdict로 받아 **그대로** 따른다(재판정 금지 — 이중 진실). 다른 세대 토지만 본인은 짝 주택의 판정이 이미 «중과 없음»이다.
  * 계획서 `docs/02-design/features/bundled-appurtenant-card-multi-house-surcharge.plan.md`.
  */
+import { appurtenantCardHoldingStart } from "./appurtenant-card-holding-start";
 import type { SurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import type { TransferTaxInput } from "./types/transfer.types";
 
@@ -26,14 +27,14 @@ export function appurtenantCardFollowsSurchargeRate(input: CardArg): boolean {
 }
 
 /**
- * §104⑦ 후단(보유기간 2년 미만이면 중과 세율과 §104①2·3호 세율 중 큰 세액)의 보유기간은 **주택**의 것이다 — 카드 자기 취득일이 아니라
- * 짝 주택 취득일(합가일이 늦으면 합가일)부터. 일체과세 분기(T-1.5)가 쓰던 주택 보유개월과 같은 규칙이다.
+ * §104⑦ 후단(보유기간 2년 미만이면 중과 세율과 §104①2·3호 세율 중 큰 세액)의 보유기간은 «주택부수토지로서»의 보유다 — `max(카드 취득일, 짝 주택 취득일, 합가일)`부터
+ * (`appurtenantCardHoldingStart`). 카드가 짝 주택·합가일보다 이르거나 같으면 짝 주택 취득일(합가일이 늦으면 합가일)이고, 늦게 취득된 카드는 카드 취득일이다
+ * — 일체과세 분기(T-1.5)·장특 표2와 같은 시작일이다(계획서 `bundled-appurtenant-card-later-land-holding.plan.md` Q-2 a).
  */
 export function appurtenantCardSurchargeRateInput(input: TransferTaxInput): TransferTaxInput {
   const v = input.appurtenantHouseVerdict;
   if (!v || !appurtenantCardFollowsSurchargeRate(input)) return input;
-  const start = v.houseMergeDate !== undefined && v.houseMergeDate.getTime() > v.houseAcquisitionDate.getTime() ? v.houseMergeDate : v.houseAcquisitionDate;
-  return { ...input, acquisitionDate: start };
+  return { ...input, acquisitionDate: appurtenantCardHoldingStart(v, input.acquisitionDate) };
 }
 
 /** 중과가 실제로 걸리는 짝 주택의 부수토지 카드(한시 배제 중이 아닌)에만 — 값이 바뀌는 조합에서만 말한다. */

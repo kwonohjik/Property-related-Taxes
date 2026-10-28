@@ -15,6 +15,7 @@
  * 소유하고 있는 것으로 보아」), 같은 회신은 「세대합가 이전기간」을 주택부수토지로서의 보유에서 뺀다. 나중에 취득한 토지의 보유요건은
  * G-3(`isLaterAcquiredLandExemptExcluded`)가 판정하고, 합가일은 입력받지 않아 고지만 단다(계획서 `land-only-later-land-holding.plan.md` Q-3 a).
  */
+import { appurtenantCardHoldingStart } from "./appurtenant-card-holding-start";
 import { revokeOneHouseExemption } from "./one-house/revoke-exemption";
 import type { OneHouseJudgment } from "./one-house/types";
 import { calculateHoldingPeriod } from "./tax-utils";
@@ -67,17 +68,19 @@ export function landOnlyAppurtenantHouseYears(input: TransferTaxInput, defaultYe
 }
 
 /**
- * 부수토지 카드 — 「주택부수토지로서」 짝 주택 보유개월. 짝 주택의 합가일이 주택 취득일보다 늦으면 합가일부터(재산46014-610), 아니면 `defaultMonths`(주택 취득일부터).
- * 표2 보유연수·세율 기산이 같은 값을 쓴다(주 카드의 `landOnlyAppurtenantHouseYears`·`landOnlyRateInput`과 같은 규칙).
+ * 부수토지 카드 — 「주택부수토지로서」 보유개월. 시작일은 `max(카드 취득일, 짝 주택 취득일, 합가일)`(`appurtenantCardHoldingStart` — 재산46014-610 · §95④).
+ * 짝 주택 취득일보다 늦지 않으면 `defaultMonths`(주택 취득일부터) 그대로다. 표2 보유연수·세율 기산이 같은 값을 쓴다(주 카드의 `landOnlyAppurtenantHouseYears`·`landOnlyRateInput`과 같은 규칙).
  */
 export function appurtenantCardHouseHoldingMonths(
   v: TransferTaxInput["appurtenantHouseVerdict"],
   transferDate: Date,
   defaultMonths: number,
+  cardAcquisitionDate?: Date,
 ): number {
-  const merge = v?.houseMergeDate;
-  if (!v || merge === undefined || merge.getTime() <= v.houseAcquisitionDate.getTime()) return defaultMonths;
-  const h = calculateHoldingPeriod(merge, transferDate);
+  if (!v) return defaultMonths;
+  const start = appurtenantCardHoldingStart(v, cardAcquisitionDate);
+  if (start.getTime() <= v.houseAcquisitionDate.getTime()) return defaultMonths;
+  const h = calculateHoldingPeriod(start, transferDate);
   return h.years * 12 + h.months;
 }
 
