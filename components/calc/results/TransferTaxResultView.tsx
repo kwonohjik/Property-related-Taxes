@@ -20,6 +20,7 @@ import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResu
 import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
+import { resolveBgCarryoverSingleDisplay } from "@/components/calc/results/transfer/DetailedStatementBgFormulas";
 import { formatRate, downloadSelectedPdf } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
 import { SelfBuiltPenaltyCard } from "@/components/calc/results/transfer/SelfBuiltPenaltyCard";
 import { ParcelDisclosure } from "@/components/calc/results/transfer/ParcelDisclosure";
@@ -118,6 +119,11 @@ export function TransferTaxResultView({
     transferPriceOverride ?? parseAmount(formData?.contractTotalPrice),
     formData?.transferDate ?? "",
   );
+
+  // 이월과세 단건 부담부증여 — 미채택 시나리오 요약 카드의 양도가액은 §159 슬롯(= 채무 인수액)이다. 폼 계약금액은 빈 칸이라 행이 그려지지 않았다
+  // (양도가액은 A·B가 같다 — 계획서 `bg-carryover-scenario-b-acquisition-echo.plan.md` Q-3 a).
+  const carryoverCardTransferPrice =
+    resolveBgCarryoverSingleDisplay(result)?.transferPrice ?? receiveOnlyDisplay.transferPrice;
 
   // 이월과세(§97조의2) 모드 판정
   const carryoverDetail = result.carryoverTaxationDetail;
@@ -229,7 +235,7 @@ export function TransferTaxResultView({
               <CarryoverScenarioAFilingCard
                 scenarioA={carryoverDetail.scenarioA}
                 adopted={false}
-                transferPrice={receiveOnlyDisplay.transferPrice}
+                transferPrice={carryoverCardTransferPrice}
                 transferDate={receiveOnlyDisplay.transferDate}
                 donorAcquisitionDate={resolvedAsset?.carryover?.donorAcquisitionDate}
               />
@@ -238,7 +244,7 @@ export function TransferTaxResultView({
               <CarryoverScenarioBFilingCard
                 scenarioB={carryoverDetail.scenarioB}
                 adopted={false}
-                transferPrice={receiveOnlyDisplay.transferPrice}
+                transferPrice={carryoverCardTransferPrice}
                 transferDate={receiveOnlyDisplay.transferDate}
                 giftRegistryDate={resolvedAsset?.carryover?.giftRegistryDate}
               />

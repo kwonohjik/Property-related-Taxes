@@ -32,6 +32,7 @@ import { ownerSplitSameDayLand } from "./transfer-tax-carryover-inputs";
 import { resolveHouseCountExclusionAcqDate } from "./transfer-tax-carryover-inputs";
 import { assertBgDonorBuiltInput, assertDonorBuiltInput, bgDonorBuiltOf, withDonorBuiltPenalty } from "./transfer-tax-carryover-donor-penalty";
 import { carryoverGiftHouseholdBasis } from "./one-house/gift-household-basis";
+import { burdenedGiftPerAssetTotals } from "./burdened-gift-totals";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -487,6 +488,10 @@ function finishScenarios(args: {
     isExempt?: boolean;
     isPartialExempt?: boolean;
     splitDetail?: SplitGainResult;
+    /** 부담부증여 §159 안분 명세 — 시나리오 B의 취득가액 echo(부담부증여는 §159①1호 안분값)를 여기서 읽는다. */
+    transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
+    /** 재개발·재건축(§166) 결과 — 이 경우 §159 명세는 인가 전 분만 담아 B 취득가액 합으로 쓰지 않는다. */
+    redevelopmentDetail?: unknown;
   };
   /** §97의2②3호 비교 결과 강제(다건 신고단위 비교 전용). undefined면 자체 비교. */
   scenarioOverride?: "A" | "B";
@@ -550,8 +555,12 @@ function finishScenarios(args: {
 
   const holdingB = calculateHoldingPeriod(ct.giftRegistryDate, rawInput.transferDate);
 
+  // 부담부증여(§159): B의 취득가액은 증여 당시 평가액이 아니라 엔진이 STEP 0.48에서 덮어쓴 §159①1호 안분값(양도인 취득가액 × 채무액 / 증여가액)이다 —
+  // 결과의 §159 명세 슬롯이 정본이다(A의 `bgAcqPrice`와 같은 방식). 재개발(§166)은 명세가 인가 전 분만 담아 제외한다.
+  const bgB = resultB.redevelopmentDetail ? undefined : resultB.transferBurdenedGiftBreakdown;
   const scenarioB: CarryoverScenarioBDetail = {
-    acquisitionPrice: ct.giftDateValuation,
+    acquisitionPrice: bgB ? burdenedGiftPerAssetTotals(bgB).acquisitionPrice : ct.giftDateValuation,
+    ...(bgB ? { acquisitionIsBurdenedGiftShare: true } : {}),
     holdingPeriodYears: holdingB.years,
     transferGain: resultB.transferGain,
     ...ownerSplitPartEcho(rawInput, resultB.splitDetail),

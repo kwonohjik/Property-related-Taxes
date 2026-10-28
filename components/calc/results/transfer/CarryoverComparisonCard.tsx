@@ -201,7 +201,7 @@ function ScenarioBContent({ b, determinedTax, adopted, isComparisonExclusion, fi
       compared={compared}
     >
       <div className="space-y-1">
-        <InfoRow label={`취득가액 [증여 당시 평가액${b.ownerSplitPart ? " · 본인 소유 파트" : ""}]`} value={fmt(b.ownerSplitPart?.acquisitionPrice ?? b.acquisitionPrice)} />
+        <InfoRow label={`취득가액 [${b.acquisitionIsBurdenedGiftShare ? "수증자 취득가 × 채무비율 · 소령 §159①1호" : "증여 당시 평가액"}${b.ownerSplitPart ? " · 본인 소유 파트" : ""}]`} value={fmt(b.ownerSplitPart?.acquisitionPrice ?? b.acquisitionPrice)} />
         <InfoRow label="보유기간 [수증자 기산]" value={`${b.holdingPeriodYears}년`} />
         <InfoRow label="양도차익" value={fmt(b.transferGain)} />
       </div>

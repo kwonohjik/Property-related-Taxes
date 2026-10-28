@@ -37,7 +37,7 @@ import { safeMultiplyThenDivide } from "./tax-utils";
  * 「A면 증여자 취득가액, B면 증여 당시 평가액」을 여기서 다시 유도하면 시나리오 입력 구성이
  * 바뀔 때 한쪽만 따라가는 dual-truth가 된다. 두 값은 **단건이 실제로 쓴 취득가액**이다 —
  * A는 `inputAFinal.acquisitionPrice`(환산 모드면 §97①1호나목 환산액), B는
- * `buildInputB`의 `acquisitionPrice`(= `giftDateValuation`)이고, 적용배제 조기반환
+ * `buildInputB`의 `acquisitionPrice`(= `giftDateValuation`, 부담부증여는 §159 안분값 — 아래 `bgCarryoverAcquisition`)이고, 적용배제 조기반환
  * (관계·기간·수용·1세대1주택·가업상속) 역시 전부 `adoptedScenario: "B"` +
  * `makeEmptyScenarioB(giftDateValuation)`이라 같은 값으로 수렴한다
  * (`transfer-tax-carryover.ts`).
@@ -152,11 +152,19 @@ export function resolveDisplayAcquisitionAndExpense(r: {
    *    §166 자산(입주권)은 위 §166 역산이 먼저다 — §159 명세의 `perAsset`은 인가 전 분만 담는다(120,000,000 vs §166 합계 200,000,000).
    *    일반건물은 route가 카드마다 §159 값을 입력으로 넣고 카드 결과에 명세가 없어 여기 오지 않는다.
    */
-  // 위계는 아래 삼항의 순서가 정한다(이월과세 → §166 → 분리 → §159) — 여기서 같은 조건을 또 걸면 두 층이 서로를 가린다.
+  // 위계는 아래 삼항의 순서가 정한다(§159 명세 있는 이월과세 → 이월과세 → §166 → 분리 → §159) — 여기서 같은 조건을 또 걸면 두 층이 서로를 가린다.
   const bgTotals = r.result.transferBurdenedGiftBreakdown
     ? burdenedGiftPerAssetTotals(r.result.transferBurdenedGiftBreakdown)
     : undefined;
+  /**
+   * 🔴 부담부증여 × 이월과세는 채택 echo(`adoptedCarryover`)보다 §159 명세 슬롯이 먼저다. B 채택이면 echo가 증여 당시 평가액(300,000,000)이라
+   *    자산별 취득가액이 그 값이 되고 필요경비가 「양도가액 − 취득가액 − 양도차익」 역산으로 −240,000,000이 됐다(합산 신고서 합계열 [160M, 600M, 0, 40M]).
+   *    A 채택은 echo = 슬롯이라 값이 같다. §166(입주권)은 명세가 인가 전 분만 담아 제외한다 — 계획서 `bg-carryover-scenario-b-acquisition-echo.plan.md` Q-1 a.
+   */
+  const bgCarryoverAcquisition =
+    adoptedCarryover !== undefined && bgTotals && !r.result.redevelopmentDetail ? bgTotals.acquisitionPrice : undefined;
   const effectiveAcquisitionPrice =
+    bgCarryoverAcquisition ??
     adoptedCarryover ??
     (redevTotals
       ? redevTotals.acquisition
