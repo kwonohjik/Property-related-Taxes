@@ -214,6 +214,30 @@ type GbPropertyLike = {
 };
 
 /**
+ * 일반건물이면 `generalBuildingValuation` 서브객체가 **있어야 한다** (`gb-without-valuation-subobject.plan.md` Q-1 a·Q-2 a).
+ *
+ * 없으면 route 가 일반건물 엔진을 타지 않고(`route.ts` 게이트 `propertyType === "general_building" && generalBuildingValuation`) 일반 경로로 계산해
+ * 이 파일의 다른 규칙이 걸릴 대상도 없다 — 200 + 다른 세액(상속 실가 392,385,000 → 439,635,000)이었다.
+ * ④ 는 비-실가 파트의 취득시 기준시가가 비면 서브객체를 통째로 생략하지만(`transfer-tax-api-gb.ts`) ⑧ 이 같은 입력을 막으므로
+ * **⑧ 을 통과한 일반건물은 항상 서브객체를 보낸다**(1,280셀 격자 실측) — 이 규칙은 ⑧ 통과 입력에 새 400 을 만들지 않는다.
+ * 축 B 지분(`generalBuildingShares` 2건 이상)은 지분별 입력으로 계산하므로 최상위 서브객체가 없다 — 면제.
+ */
+export function refineGbValuationPresent(
+  data: { propertyType?: string; generalBuildingValuation?: unknown; generalBuildingShares?: readonly unknown[] },
+  ctx: z.RefinementCtx,
+  /** 이슈 경로 접두 — 주 자산은 비어 있고, 컴패니언은 `["companionAssets", i]`. */
+  basePath: (string | number)[] = [],
+) {
+  if (data.propertyType !== "general_building" || data.generalBuildingValuation) return;
+  if ((data.generalBuildingShares?.length ?? 0) > 1) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: [...basePath, "generalBuildingValuation"],
+    message: "일반건물은 일반건물 평가 정보(generalBuildingValuation)가 필요합니다 — 취득시·양도시 기준시가 등 필수 칸을 채워 다시 계산하세요",
+  });
+}
+
+/**
  * 자산-수준 값이 필요한 규칙. 부담부증여는 §159가 취득가액을 정하고 ⑧도 자체 분기에서 종결하므로
  * (⑧ `transfer-tax-validate-gb.ts` 부담부증여 분기) 여기 규칙을 걸지 않는다.
  */

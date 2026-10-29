@@ -15,6 +15,7 @@ import type { companionAssetSchema } from "./transfer-tax-schema-sub";
 import { DEEMED_ACQUISITION_DATE } from "@/lib/calc/transfer-163-9-base-date";
 import { refineCompanionMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refines";
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
+import { refineGbValuationPresent } from "./transfer-tax-schema-required-refines-gb";
 
 type CompanionAsset = z.infer<typeof companionAssetSchema>;
 
@@ -194,6 +195,7 @@ export function addCompanionAcquisitionCauseRefines(
      * 없으면 ⑧ 이 막는 입력이 200 + 취득가액 0 으로 계산됐다. 부담부증여는 함수가 `transferType` 으로 면제한다(§159 가 취득가액을 정한다).
      * 취득가액 칸은 컴패니언에서 `fixedAcquisitionPrice`(⑧ 이 요구하는 칸 · route `bundled-apportionment.ts` 가 읽는 칸)다.
      */
+    refineGbValuationPresent({ propertyType: c.assetKind, generalBuildingValuation: c.generalBuildingValuation }, ctx, ["companionAssets", i]); // 서브객체 필수 (gb-without-valuation-subobject)
     refineGbPropertyRequired(
       {
         transferType: c.burdenedGiftInfo !== undefined ? "burdened_gift" : c.transferType,
