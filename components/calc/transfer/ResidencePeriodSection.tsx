@@ -82,8 +82,8 @@ export function ResidencePeriodSection({
       {mergeStartDate && (
         <ToneCard tone="amber">
           <p data-testid="residence-merge-hint" className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
-            건물(주택) 소유자와 세대를 합친 날({mergeStartDate}) 이후, 소유자와 함께 거주한 기간만 입력하세요.
-            합가 전 거주는 통산되지 않습니다(기준-2025-법규재산-0040).
+            건물(주택) 소유자와 세대를 합친 날({mergeStartDate}) 이후, 본인이 소유자와 함께 거주한 기간만 입력하세요.
+            합가 전 거주나 소유자만 거주한 기간은 통산되지 않습니다(서면인터넷방문상담4팀-331 · 기준-2025-법규재산-0040).
           </p>
         </ToneCard>
       )}
