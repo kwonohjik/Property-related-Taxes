@@ -3,6 +3,7 @@
 - 작성: 2026-10-29 · 브랜치 `docs/gb-companion-gift-fixed-acq-price-plan`(master 9155439ac 기반) · 제품 코드 무변경(계획서만 · throwaway probe·후보 변형은 제거·원복함)
 - 출처: `gb-legacy-direct-expense-non-purchase-causes.plan.md` §7(별건) — 그곳에서 「화면 도달성 확인 필요」로 남긴 항목이다. 선례: `companion-split-fixed-acq-price.plan.md`(#2373 · 매매 갈래의 같은 결함).
 - 판정: **⑧↔⑫ 불일치(UI 통과 → API 400).** 두 갈래다 — ① **부담부증여**는 화면이 칸을 숨기는데 서버가 요구하는 **막다른 길** ② **분리 ON 일반 증여**는 칸이 보이지만 값이 계산에 쓰이지 않아 ⑧이 요구하지 않는데 서버만 요구한다(세액 불변). 법문 해석은 필요 없다 — 취득가액을 파트(또는 §159)가 정하는 자산에 자산 전체 칸을 요구하는 입력 규칙의 문제다.
+- 결정: ✅ 2026-10-29 — Q-1 a · Q-2 숨김(사용자 「권고 안으로 진행해」). **구현 완료(§9)**.
 - 검증 방식: 폼 → ④ → `POST /api/calc/transfer` probe 실측(mock 세율). 컴포넌트는 실제 `GeneralBuildingAcquisitionCards` 렌더. 인용 file:line 은 이 워크트리 실파일. 미검증은 「확인 필요」.
 
 ---
@@ -120,3 +121,23 @@
 
 ## 8. 범위 밖
 - 주택·토지·상가 컴패니언의 증여 갈래(D2 면제·`isBuildingCauseMixCompanion` 이 처리) · 일반건물 외 부담부증여 컴패니언.
+
+---
+
+## 9. Do 환류
+
+**구현(3곳)**
+- ⑫ `transfer-tax-schema-companion-refines.ts` 증여 갈래: `burdenedGiftInfo !== undefined || generalBuildingValuation.landAcquisitionPrice > 0` 이면 자산 전체 신고가액을 요구하지 않는다(근거 주석 포함). 분리 OFF 일괄 증여는 파트 가액이 없어 종전대로 요구 — ⑧과 짝.
+- ⑤ `CompanionAcqGiftBlock` 에 `hideFixedAcquisitionPrice` prop 신설(부담부증여는 종전 안내 카드가 우선) + `GeneralBuildingAcquisitionCards` 가 `isSeparate` 를 넘긴다(753줄). 날짜 두 칸은 그대로. 주택·토지 컴패니언은 prop 기본값으로 종전 그대로.
+- 엔진·④·⑧·⑬⑭ 무변경, 값 불변.
+
+**anchor**
+- `transfer.route.gb-companion-gift-fixed-acq-price.anchor.test.ts` 28건 — GF-1: 9셀(분리 ON 다른 날 3 · 같은 날 · 건물만 증여 · 부담부증여 2005/1980/파트 가액 없음 · 분리 OFF) × 컴패니언·주 자산 위치, 불변식 「⑧ 통과 ⇒ ⑫ 200, ⑧ 차단 ⇔ ⑫ 400」. GF-2: 신고가액 1,000원·6억·50억이 같은 세액(분리 ON·부담부증여) / 분리 OFF 일괄 534,134,685 → 347,730,000 → 0 / 대표 세액 고정(347,730,000 · 354,424,038 · 178,762,436 · 109,572,047).
+- `gb-companion-gift-price-hidden.anchor.test.tsx` 9건 — 분리 OFF 증여 1칸 · 분리 ON 토지·건물/토지만 0 · 건물만 증여 0 · 부담부증여 0(안내 카드) · 날짜 칸 유지 · 블록 단독 prop 기본값/숨김/부담부증여 우선.
+
+**뮤테이션 7종 모두 적색**: M1 면제 둘 다 제거(15) · M2 부담부증여 면제만 제거(3 — 처음엔 **생존**했다: 부담부증여 셀이 토지 파트 가액을 갖고 있어 일반건물 면제가 대신 막아 줬다. 파트 가액이 없는 부담부증여 셀을 더해 잡았다) · M3 일반건물 면제만 제거(9) · M4 면제를 분리 OFF 까지 넓힘(2) · M5 판정을 `isSeparateAcquisition` 으로(2 — 같은 날 셀) · M6 UI prop 미전달(2) · M7 UI 분리 OFF 도 숨김(1).
+
+**하네스 정정(참고)**: ① 부담부증여 묶음의 「다른 자산」을 기본 날짜로 두면 probe 와 세액이 달랐다(1980 셀 144,055,279 ≠ 109,572,047) — 두 자산을 같은 변형으로 맞췄다. ② 분리 ON 부담부증여는 일반 양도 토지와 한 묶음에 넣을 수 없다(다른 규칙) — 두 자산 모두 부담부증여 일반건물.
+
+**남은 것(§7)**: V-1 일반건물 컴패니언 매매 분리 OFF 일괄의 ⑫ 보호 · V-3 E2E/화면 육안 — 「확인 필요」(미수행).
+
