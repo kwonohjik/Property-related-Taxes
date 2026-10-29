@@ -19,20 +19,28 @@
  * 모른다 — 바닥면적만 비운 정상 입력이 토지 2021 취득에서 22,669,000 → 11,332,800으로 계산됐다. 축 B 첫 지분이 비면 본문이 컴패니언 모양이 되므로 지분은 따로 보지 않는다.
  */
 import { z } from "zod";
+import { isPostDeemedInheritance } from "@/lib/calc/transfer-163-9-base-date";
+import { companionBurdenedGiftValuations } from "@/lib/calc/transfer-tax-api-burdened-gift";
 
 export const GB_BG_ACTUAL_PATH_REQUIRED_MESSAGE =
   "일반건물 부담부증여(소령 §159)는 실지 경로로만 계산됩니다. 환산취득가·증축 입력은 부담부증여에서 쓰이지 않습니다 — " +
   "양도 형태를 «일반 양도»로 바꾸거나, 환산·증축 입력을 빼고 다시 계산하세요.";
+
+export const GB_BG_INHERIT_CONVERTED_MESSAGE =
+  "일반건물 부담부증여 — 상속개시일이 1985.1.1. 이후인 상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액이라 환산취득가액을 쓸 수 없습니다 " +
+  "(소득세법 시행령 §163⑨ · 소득세법 §97①1호 단서). 취득가액 산정방식을 «실지취득가액 안분»으로 하고 상속개시일 평가액을 입력하세요.";
 
 type Gbv = { actualPriceMode?: boolean } | null | undefined;
 
 interface Subject {
   propertyType?: string;
   transferType?: string;
+  acquisitionCause?: string;
+  acquisitionDate?: string;
   burdenedGiftInfo?: unknown;
   generalBuildingValuation?: Gbv;
   generalBuildingShares?: { valuation?: Gbv; burdenedGiftInfo?: unknown }[];
-  companionAssets?: { assetKind?: string; burdenedGiftInfo?: unknown; generalBuildingValuation?: Gbv }[];
+  companionAssets?: { assetKind?: string; acquisitionCause?: string; acquisitionDate?: string; burdenedGiftInfo?: unknown; generalBuildingValuation?: Gbv }[];
 }
 
 export const GB_BG_SHARE_INFO_REQUIRED_MESSAGE =
@@ -56,6 +64,23 @@ const GB_BG_STD_KEYS = [
   ["buildingStdPriceAtAcquisition", GB_BG_ACQ_STD_REQUIRED_MESSAGE],
 ] as const;
 
+/**
+ * 시가 평가 × 상속개시일 1985.1.1. 이후 상속 × 취득방식 「converted」 — ⑧ 이 막는 입력(`transfer-tax-validate-bg.ts` `acqMethod === "converted"` 분기)이다.
+ * 법 §97①1호 단서의 나목(환산)은 영 §163⑨ 평가액이 가목인 상속에는 닿지 않는다. ⑫ 에 이 조건이 없어 200 으로 환산 세액이 나갔다
+ * (계획서 `docs/00-pm/gb-pre-deemed-echo-measure.plan.md` §4 — 올바른 경로와 −12,122,708 ~ +76,712,292).
+ *
+ * ⑧ 의 선행 분기를 같이 거른다 — 담보(§66) 승이면 엔진이 취득가액을 취득시 기준시가로 강제해 방식을 읽지 않으므로 막지 않는다
+ * (`burdened-gift-valuation.ts` `resolveBgAcquisitionBasis` 와 같은 조건: 시가 모드 ∧ 승자 mortgage). 기준시가 평가도 방식을 읽지 않는다.
+ * 양도시·취득시 기준시가 4칸이 비면 승자를 못 정하므로 이 규칙은 보류한다(그 칸은 위 `requireStd` 가 400).
+ */
+function bgInheritConvertedBlocked(cause: string | undefined, date: string | undefined, info: unknown): boolean {
+  if (!isPostDeemedInheritance(cause, date) || !info) return false;
+  const i = info as Record<string, unknown>;
+  if (i.valuationMode !== "sangjeungbeop_market" || i.acquisitionMethod !== "converted") return false;
+  if (!GB_BG_STD_KEYS.every(([key]) => typeof i[key] === "number" && (i[key] as number) > 0)) return false;
+  return companionBurdenedGiftValuations([info as Parameters<typeof companionBurdenedGiftValuations>[0][number]], [1])[0]?.selectedMode !== "mortgage";
+}
+
 export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementCtx): void {
   const issue = (path: (string | number)[]) =>
     ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: GB_BG_ACTUAL_PATH_REQUIRED_MESSAGE });
@@ -78,6 +103,10 @@ export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementC
     (data.generalBuildingShares ?? []).forEach((s, i) => {
       if (s.valuation && s.valuation.actualPriceMode !== true) issue(["generalBuildingShares", i, "valuation", "actualPriceMode"]);
     });
+    // 축 B(지분 2개 이상)는 지분마다 취득원인·취득일이 달라 최상위 값으로 판정할 수 없다 — 이 규칙은 단건·주 자산에만 둔다.
+    if ((data.generalBuildingShares?.length ?? 0) < 2 && bgInheritConvertedBlocked(data.acquisitionCause, data.acquisitionDate, data.burdenedGiftInfo)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["burdenedGiftInfo", "acquisitionMethod"], message: GB_BG_INHERIT_CONVERTED_MESSAGE });
+    }
   }
   // 지분(축 B) — 부담부증여면 **모든 지분**이 info 를 가져야 한다. 누락 지분은 일반 양도로 계산된다(침묵 무시 금지).
   if (data.propertyType === "general_building" && data.transferType === "burdened_gift") {
@@ -98,6 +127,9 @@ export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementC
     }
     if (c.generalBuildingValuation && c.generalBuildingValuation.actualPriceMode !== true) {
       issue(["companionAssets", i, "generalBuildingValuation", "actualPriceMode"]);
+    }
+    if (bgInheritConvertedBlocked(c.acquisitionCause, c.acquisitionDate ?? data.acquisitionDate, c.burdenedGiftInfo)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "burdenedGiftInfo", "acquisitionMethod"], message: GB_BG_INHERIT_CONVERTED_MESSAGE });
     }
   });
 }
