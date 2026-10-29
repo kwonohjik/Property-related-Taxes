@@ -1,7 +1,7 @@
 # 분리 OFF 증여 × 고시 전(단서 구간) — ⑧ 은 막고 ⑫ 는 일괄 신고가액으로 계산한다 (V-5)
 
-- 상태: 실측 완료 · 구현 전 (Q-1·Q-2 결정 대기)
-- 앵커: `__tests__/api/transfer.route.gb-gift-off-sec164-unsplit.anchor.test.ts` (12건, 현행 동작 고정)
+- 상태: 구현 완료 (Q-1 a · Q-2 a — 사용자 「권고안으로 진행해」)
+- 앵커: `__tests__/api/transfer.route.gb-gift-off-sec164-unsplit.anchor.test.ts` (12건 — 수정 후 기대)
 - 선행: `gb-sec164-substitutes-blank-reported.plan.md` §8 (#2725 구현 중 드러난 V-5)
 
 ## 1. 요약
@@ -86,7 +86,7 @@ if (v.buildingAcquisitionCause === "gift" && isBeforeBuildingStdPriceNotice(v.bu
 
 ## 6. 미검증 (V)
 
-- **V-1** 축 B 지분(`generalBuildingShares[].valuation`)은 측정하지 않았다 — 같은 규칙이 지분 카드에도 필요한지(지분별 ⑧ 조건)는 확인 필요. 이 설계는 주 자산·컴패니언 공용 함수에 두므로 지분 카드는 건드리지 않는다.
+- **V-1** 축 B 지분(`generalBuildingShares[].valuation`)은 측정하지 않았다(구현 후에도 그대로) — 같은 규칙이 지분 카드에도 필요한지(지분별 ⑧ 조건)는 확인 필요. 이 설계는 주 자산·컴패니언 공용 함수에 두므로 지분 카드는 건드리지 않는다.
 - **V-2** 이월과세(`carryover_gift`) 파트의 증여 단서는 이 규칙의 `gift` 조건에 해당하지 않는다 — 별도 경로이며 측정하지 않았다.
 - **V-3** 오라클은 「일괄 신고가액을 기준시가 비율로 나눈 값」이다. 사용자가 실제로 입력할 파트별 신고가액은 임의이므로 Δ 는 이 가정 아래의 크기다 — 부호(분리 OFF 쪽이 큼)는 P < S 에서 항상 성립한다.
 - **V-4** 1980(의제취득일 전) 파트의 `landPreDeemedClauseA` echo 가 슬롯 빈 입력에서 어떻게 보이는지는 확인하지 않았다(규칙은 1980 도 400 으로 만든다).
@@ -97,3 +97,11 @@ if (v.buildingAcquisitionCause === "gift" && isBeforeBuildingStdPriceNotice(v.bu
 2. 구현 PR: §4 규칙 → 앵커 VA-1 의 ⑧ 차단·200 18셀을 400 으로, VA-2 를 400 으로 뒤집고 `gb-inherited-estimate-guard` S-2 세 건과 #2725 의 별건 핀을 정정한다.
 3. V-5 격자 + ⑧ 통과 격자 live 대조 · 양도세 회귀 · 변형 검증.
 4. 화면 변화 없음 — ⑧ 이 막는 입력은 화면에서 도달할 수 없다. E2E 추가 없음.
+
+## 8. 구현 결과 (Do)
+
+- `refineGbPropertyRequired` (`lib/api/transfer-tax-schema-required-refines-gb.ts`) — 증여 토지가 1990.8.30. 전이고 토지 가액 슬롯이 비면 `landAcquisitionPrice`, 증여 건물이 기준시가 고시 전이고 건물 가액 슬롯이 비면 `buildingAcquisitionPrice` 에 이슈. 단서 구간 판정은 ⑧ 과 **같은** `LAND_PRICE_NOTICE_START`·`isBeforeBuildingStdPriceNotice` 를 import 한다(단일 소스). `GbValuationLike` 에 `landAcquisitionDate`·`buildingAcquisitionDate` 를 더했다. 메시지는 ⑧ 의 인용(시행령 §163⑨1호·2호)을 따른다 — 새 법령 인용 없음.
+- 주 자산(단건·다건 공용)과 컴패니언이 같은 함수를 부르므로 호출처 변경은 없다. 부담부증여는 함수가 `transferType` 으로 이미 면제한다.
+- 앵커 12건을 수정 후 기대로 뒤집었다(⑧ 차단 60셀 전부 400 · ⑧ 통과 12셀 200 · 오라클 200 · 세액 불변). 수정 전 Δ 는 주석에 남겼다.
+- 기존 앵커 정정 (`gb-inherited-estimate-guard`): 「분리 OFF 증여 + 옛 추계 플래그 → 400」은 400 유지에 이슈 키 목록만 갱신 · 「의제취득일 전 증여 1980」을 「정상 경로」에서 ⑧ 차단 그룹으로 이동 · #2725 가 고정한 「증여(실가) · 분리 OFF · 고시 전 → 200 · 315,810,000 (별건)」을 400 으로.
+- **검증**: ⑧ 통과 436셀(1,992셀 격자)의 (상태, 세액) 변화 **0** · 규칙 제거 변형 시 13건 적색(복원 후 26건 통과) · 양도세 회귀 1,560파일 / 19,857테스트 통과.
