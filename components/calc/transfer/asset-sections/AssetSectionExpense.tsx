@@ -12,6 +12,8 @@ import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { mixedSaleSplitScope } from "@/lib/calc/mixed-use-sale-split-scope";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { legacyExpenseMovesToParts } from "@/lib/calc/split-legacy-expense";
+import { gbLegacyExpenseUnused } from "@/lib/calc/gb-legacy-expense-unused";
+import { GB_LEGACY_EXPENSE_UNUSED_MESSAGE } from "@/lib/calc/gb-legacy-expense-unused";
 import { bgExpenseUnusedBasis } from "@/lib/calc/burdened-gift-expense-scope";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { isRedevelopmentSec166Asset } from "@/lib/calc/redev-acquisition-price-source";
@@ -226,13 +228,22 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
        && (legacyExpenseMovesToParts(asset)
          || (parseInt(asset.capitalExpenditure || "0", 10) === 0
            && (parseAmount(totalTransferExpense || "0") > 0 || parseInt(asset.transferExpense || "0", 10) === 0))) && (
-        <CurrencyInput
-          label="직접 귀속 필요경비 (원) — 이전 입력 형식"
-          data-field="directExpenses"
-          value={asset.directExpenses}
-          onChange={(v) => onChange({ directExpenses: v })}
-          hint={isPartial ? PARTIAL_CAPEX_NOTE : undefined}
-        />
+        <>
+          {gbLegacyExpenseUnused(asset) && (
+            <ToneCard tone="amber">
+              <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="gb-legacy-expense-unused-notice">
+                {GB_LEGACY_EXPENSE_UNUSED_MESSAGE}
+              </p>
+            </ToneCard>
+          )}
+          <CurrencyInput
+            label="직접 귀속 필요경비 (원) — 이전 입력 형식"
+            data-field="directExpenses"
+            value={asset.directExpenses}
+            onChange={(v) => onChange({ directExpenses: v })}
+            hint={isPartial ? PARTIAL_CAPEX_NOTE : undefined}
+          />
+        </>
       )}
     </>
   );
