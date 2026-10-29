@@ -64,12 +64,6 @@ async function run(f: TransferFormData) {
     cards: ps.map((p) => p.necessaryExpense), // 순서: land#0 · building#0 · land#1 · building#1
   };
 }
-/** 총 양도비 한 번 입력 */
-const viaTotal = (mode: Partial<AssetForm>, total: string) =>
-  axisB([share(1, "60", mode), share(2, "40", mode)], { totalTransferExpense: total });
-/** 오라클 — 각 카드 양도비 칸에 같은 금액(100% 기준) */
-const viaCards = (mode: Partial<AssetForm>, each: string) =>
-  axisB([share(1, "60", mode, { transferExpense: each }), share(2, "40", mode, { transferExpense: each })]);
 
 
 const LEGACY = "3000000";
