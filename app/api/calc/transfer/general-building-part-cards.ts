@@ -265,6 +265,33 @@ export function tagGbCards(
 }
 
 /**
+ * 함께 양도 — 신고 단위 공통 양도비의 일반건물 몫을 **선언 채널(`transferExpense`)** 에 합산한다.
+ *
+ * 몫은 `engine.expenses`(= 직접 + 공통, legacy 채널)로도 오지만 일반건물은 그 채널을 실가 경로의 **선언 채널이 비었을 때만** 읽고
+ * (`general-building-route-actual.ts` `effectiveExpenses`) 환산·혼합 경로에서는 읽지 않는다 — 그래서 자산 칸 양도비와 같은 선언 채널로 옮겨야
+ * 모든 모드에서 같은 파트 분배·단서 비교를 탄다(소득세법 §100② 후문 · §97②1호·2호).
+ *
+ * 합산하지 않는 경우(종전 그대로): 몫 0 · 부담부증여(§159는 별도 안분 — 미검증) ·
+ * 증축 일괄 이전 형식 직접분(`bundledExpenses` > 0) — 증축 경로는 그 값을 legacy 로 쓰는데 선언 채널이 생기면 후퇴한다(공통 몫은 종전처럼 소실 — 이전 형식 입력만의 한계) ·
+ * 실가 경로이면서 선언 채널이 비어 있는 경우(legacy 채널이 이미 직접분과 함께 파트에 나눈다 — 옮기면 직접분이 후퇴한다).
+ * 증축 자체는 합산한다 — 새 입력 증축은 선언 채널과 같은 오라클을 따른다(계획서 §10).
+ */
+export function withBundledCommonExpense<T extends object>(
+  gbv: T,
+  commonExpense: number,
+  burdenedGiftInfo: BurdenedGiftInfo | undefined,
+): T {
+  if (commonExpense <= 0 || burdenedGiftInfo) return gbv;
+  const g = gbv as {
+    actualPriceMode?: boolean; capitalExpenditure?: number; transferExpense?: number; extensionInfo?: unknown; bundledExpenses?: number;
+  };
+  if ((g.bundledExpenses ?? 0) > 0) return gbv;
+  const declared = (g.capitalExpenditure ?? 0) + (g.transferExpense ?? 0);
+  if (g.actualPriceMode === true && declared === 0) return gbv;
+  return { ...gbv, transferExpense: (g.transferExpense ?? 0) + commonExpense };
+}
+
+/**
  * ⑭ **일반건물 컴패니언 — 1건이 토지·건물(+증축) 파트 카드로 펼쳐진다** (`bundled-split-helpers.ts`에서 옮김 · 800줄 정책).
  *
  * 🔑 **2단 안분이다.** 자산 간 안분(§166⑥ 키)은 5-a가 이미 끝냈고(`engine.transferPrice` = 그 자산의 몫),
@@ -286,7 +313,11 @@ export function buildGbCompanionItems(
     TransferTaxItemInput,
     "transferPrice" | "transferDate" | "acquisitionDate" | "acquisitionPrice" | "expenses" | "reductions" | "burdenedGiftInfo" | "transferType" | "carryoverTaxation"
   >,
-  src: { ownershipRatio?: number; assetId: string; assetLabel: string; totalPropertyTransferPrice?: number },
+  src: {
+    ownershipRatio?: number; assetId: string; assetLabel: string; totalPropertyTransferPrice?: number;
+    /** 신고 단위 공통 양도비 중 이 자산 몫(`allocatedCommonExpense`) — 선언 채널에 합산한다(`withBundledCommonExpense`). */
+    commonExpense?: number;
+  },
   /**
    * 그 자산의 결과 상세(산식 재료)를 받는 곳 — 함께 양도는 일반건물이 여럿일 수 있어 자산 id별로 모은다(`bundled-route.ts`).
    * 단건 슬롯(`generalBuildingValuationDetail`)에 넣지 않는다 — 수정신고 판별자다(`gb-bundled-result-formulas.plan.md` C-1).
@@ -310,7 +341,12 @@ export function buildGbCompanionItems(
      * (5-a가 정한 취득가액 · 직접 경비 + 공통 양도비 몫 — 다른 컴패니언과 같은 소스).
      * 시나리오 A는 당초 증여자 자본적지출(§97의2①2호)을 더한다 — 단건·지분과 같은 leaf.
      */
-    const capex = withCarryoverDonorCapex(gbv, (gbv.bundledExpenses as number | undefined) ?? engine.expenses ?? 0, donorCapex);
+    // 선언 채널이 생기면 legacy 는 읽히지 않는다(실가 `effectiveExpenses` 택일 · 환산 무시) — 같은 몫을 legacy 에서 빼지 않아도 이중계상이 없다.
+    const capex = withCarryoverDonorCapex(
+      withBundledCommonExpense(gbv, src.commonExpense ?? 0, bgInfo),
+      (gbv.bundledExpenses as number | undefined) ?? engine.expenses ?? 0,
+      donorCapex,
+    );
     const built = buildGbPartCards(
       capex.gbv,
       engine.transferPrice,

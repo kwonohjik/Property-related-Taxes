@@ -261,6 +261,7 @@ export function calculateBundledTransfer(
       if (data.propertyType === "general_building" && data.generalBuildingValuation) {
         return buildGbCompanionItems(data.generalBuildingValuation as Record<string, unknown>, primaryItem, {
           ownershipRatio: data.ownershipRatio, assetId: "primary", assetLabel: a.assetLabel ?? "", totalPropertyTransferPrice: data.totalPropertyTransferPrice,
+          commonExpense: a.allocatedCommonExpense,
         }, onGbDetail, onGbCarryoverUnit);
       }
       return reverseUnit ? splitReversePrimaryLand(primaryItem, reverseUnit, transferDate) : [primaryItem];
