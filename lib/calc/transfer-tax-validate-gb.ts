@@ -28,6 +28,8 @@ import { validateGbExtensionUnifiedEstimate } from "./transfer-tax-validate-gb-r
 import { needsGbSec1639BuildingStdPrice } from "./transfer-tax-validate-gb-required";
 import { fieldError } from "./transfer-tax-validate-field";
 import { gbExtensionLegacyExpenseUnused } from "./gb-extension-legacy-expense";
+import { gbLegacyExpenseUnused } from "./gb-legacy-expense-unused";
+import { GB_LEGACY_EXPENSE_UNUSED_MESSAGE } from "./gb-legacy-expense-unused";
 import { gbCapexBeforeExtensionIssue } from "./gb-extension-capex-timing";
 
 /**
@@ -588,6 +590,9 @@ export function validateGeneralBuildingAsset(
   ) {
     return fieldError("partialAcqDistinct", `${label}: 일부 양도 — 「양도분 취득가액이 구분되는가」를 선택하세요. 전체 취득가액을 그대로 입력하면 양도차익이 과소 계상됩니다. (③ 취득정보)`);
   }
+
+  // 이전 입력 형식 필요경비 × 환산·혼합 — 실가 경로만 읽어 침묵 누락된다(계획서 gb-legacy-direct-expense-estimated-mixed Q-1 a). 증축은 아래 전용 규칙이 맡는다.
+  if (gbLegacyExpenseUnused(asset)) return fieldError("directExpenses", `${label}: ${GB_LEGACY_EXPENSE_UNUSED_MESSAGE}`);
 
   // ⑧ 사례 33: 증축(gbHasExtension=true) 추가 검증
   if (asset.gbHasExtension) {
