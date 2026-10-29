@@ -102,6 +102,8 @@ export function runRedevelopmentGainSteps(
     // 이 분기를 모르므로(인가 전 분 취득가액이 토지 슬롯에 있고 양도가액은 건물 슬롯에 몰려 있다) `applied`가 아니라 안분 값(`apportioned`)을 받는다.
     ...(burdenedGift?.carryoverGiftTax !== undefined
       ? { carryoverGiftTaxExpense: burdenedGift.carryoverGiftTax.apportioned }
+      : input.carryoverGiftTaxExpense !== undefined
+      ? { carryoverGiftTaxExpense: input.carryoverGiftTaxExpense } // 비부담부증여 이월과세 A — 증여세 상당액 그대로(안분이 없다)
       : {}),
   });
 

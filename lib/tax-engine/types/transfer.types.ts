@@ -267,6 +267,12 @@ export interface TransferTaxInput {
   soleSplitAcquisition?: boolean;
   /** 부담부증여 12억 안분 분모 (F-1 해석 B — 증여가액 C). 우선순위 1번 분모 */
   burdenedGiftDenominator?: number;
+  /**
+   * **엔진 내부 전달용** — 재개발(§166) × 이월과세 시나리오 A의 증여세 상당액(「소득세법」 §97의2①3호, 시행령 §163의2② — 한도 적용 전).
+   * `transfer-tax-carryover.ts`가 A 입력에만 싣고 `runRedevelopmentGainSteps`가 인가 전 분 필요경비 독립 산입항(`RedevelopmentSplitInput.carryoverGiftTaxExpense`)으로 넘긴다.
+   * 요청 body·Zod·route 매핑에 없는 필드라 클라이언트가 보낼 수 없다(anchor가 잠근다). 재개발 경로는 `expenses`·`transferExpense`를 읽지 않아 종전에는 증여세가 사라졌다.
+   */
+  carryoverGiftTaxExpense?: number;
   /** 양도일 */
   transferDate: Date;
   /** 취득가액 (0이면 환산취득가 사용) */
