@@ -71,7 +71,13 @@ describe("S-2 — 상속·증여 파트 추계는 ⑫가 막는다", () => {
   it("분리 OFF 증여 + 옛 추계 플래그 → 400", async () => {
     const r = await post(await bodyOf(single(T, GIFT, { useEstimatedAcquisition: true })));
     expect(r.status).toBe(400);
-    expect(Object.keys(r.fieldErrors).sort()).toEqual(["generalBuildingValuation.buildingAcqMode", "generalBuildingValuation.landAcqMode"]);
+    // 추계 금지(파트 모드) 두 키 + 고시 전 증여의 파트 신고가액 두 키(`gb-gift-off-sec164-unsplit.plan.md` — 분리 OFF 증여는 파트 가액 슬롯이 비어 있다)
+    expect(Object.keys(r.fieldErrors).sort()).toEqual([
+      "generalBuildingValuation.buildingAcqMode",
+      "generalBuildingValuation.buildingAcquisitionPrice",
+      "generalBuildingValuation.landAcqMode",
+      "generalBuildingValuation.landAcquisitionPrice",
+    ]);
   });
 
   it("직접 본문 — 파트 모드 없이 환산 경로(actualPriceMode 없음) + 토지 상속 → 엔진 기본값(환산)으로 보고 400", async () => {
@@ -133,7 +139,6 @@ describe("S-2 — 정상 경로는 그대로", () => {
   const cases: Array<[string, TransferFormData, number]> = [
     ["상속 1988(실가)", single(T, INH), 301_110_000],
     ["의제취득일 전 상속 1980(①②③)", single(1_620_000_000, ...GB_SAMPLES.PRE[0]), 314_470_228],
-    ["의제취득일 전 증여 1980", single(1_620_000_000, GIFT, { landAcquisitionDate: "1980-05-01", acquisitionDate: "1980-05-01" }), 314_470_228],
     ["토지 상속 + 건물 매매 환산(C2)", single(T, INH, { hasSeperateLandAcquisitionDate: true, gbBuildingAcquisitionCause: "purchase", buildingAcqMode: "estimated", landAcqMode: "actual", acquisitionDate: "2010-05-01" }), 293_104_038],
   ];
   it.each(cases)("%s → 200 · 결정세액 불변", async (_n, f, tax) => {
@@ -145,25 +150,19 @@ describe("S-2 — 정상 경로는 그대로", () => {
 
 /**
  * 종전에는 위 「정상 경로」 목록에 있었으나 **⑧ 이 막는 입력**이다(「증여일이 기준시가 고시 전이라 토지·건물의 증여 신고가액을 파트별로 나누어 입력하세요」 ·
- * 「건물 증여 신고가액(취득가액)을 입력하세요」). 고정돼 있던 329,040,000 · 318,098,519 는 ④ 가 비어 있는 증여 파트 가액을 §164 가액만으로 메운 값이었다
- * (`gb-sec164-substitutes-blank-reported.plan.md` Q-1 a·Q-2 a — `compareSec164`).
+ * 「건물 증여 신고가액(취득가액)을 입력하세요」). 고정돼 있던 329,040,000 · 318,098,519 는 ④ 가 비어 있는 증여 파트 가액을 §164 가액만으로 메운 값이었고
+ * (`gb-sec164-substitutes-blank-reported.plan.md` — `compareSec164`), 의제취득일 전 증여 1980(314,470,228)은 ③ 환산 경로가 낸 값이다.
+ * 분리 OFF 증여 × 고시 전은 파트별 신고가액이 없어 §163⑨ 단서 비교(파트별 「신고가액과 §164 가액 중 많은 금액」)가 성립하지 않는다 —
+ * ⑫ 도 막는다(`gb-gift-off-sec164-unsplit.plan.md` Q-1 a — `refineGbPropertyRequired`).
  */
-describe("S-2 — ⑧ 이 막는 증여 입력 (종전 「정상 경로」 목록에서 이동)", () => {
-  it("토지 매매 환산 + 건물 증여(건물 증여 가액 비움) → ⑧ 차단 · ⑫ 400 (종전 200 · 318,098,519 — 비운 가액을 §164 가액으로 메움)", async () => {
-    const f = single(T, INH, { hasSeperateLandAcquisitionDate: true, acquisitionCause: "purchase", landAcquisitionDate: "2005-05-01", landAcqMode: "estimated", gbBuildingAcquisitionCause: "gift", buildingAcqMode: "actual", fixedAcquisitionPrice: "100000000" });
-    expect(allIssues(f).length).toBeGreaterThan(0);
+describe("S-2 — ⑧ 이 막는 증여 입력은 ⑫ 도 400 (종전 「정상 경로」 목록에서 이동)", () => {
+  const blocked: Array<[string, TransferFormData, string]> = [
+    ["토지 매매 환산 + 건물 증여(건물 증여 가액 비움) — 종전 200 · 318,098,519", single(T, INH, { hasSeperateLandAcquisitionDate: true, acquisitionCause: "purchase", landAcquisitionDate: "2005-05-01", landAcqMode: "estimated", gbBuildingAcquisitionCause: "gift", buildingAcqMode: "actual", fixedAcquisitionPrice: "100000000" }), "건물 증여 신고가액"],
+    ["증여(실가) · 분리 OFF · 고시 전 — 종전 200 · 329,040,000 → 315,810,000", single(T, GIFT), "파트별로 나누어 입력하세요"],
+    ["의제취득일 전 증여 1980 · 분리 OFF — 종전 200 · 314,470,228", single(1_620_000_000, GIFT, { landAcquisitionDate: "1980-05-01", acquisitionDate: "1980-05-01" }), "파트별로 나누어 입력하세요"],
+  ];
+  it.each(blocked)("%s → ⑧ 차단 · ⑫ 400", async (_n, f, msg8) => {
+    expect(allIssues(f).some((x) => x.includes(msg8))).toBe(true);
     expect((await post(await bodyOf(f))).status).toBe(400);
-  });
-
-  /**
-   * ⚠️ 이 입력은 **막히지 않는다** — 별건(분리 OFF 증여 × 고시 전: ⑧ 은 「파트별로 나누어 입력」을 요구하지만 ⑫ 는 일괄 신고가액으로 계산한다).
-   * 종전에는 ④ 가 파트 슬롯을 §164 가액(토지 205,000,000 · 건물 150,000,000)으로 채워 **사용자가 입력한 일괄 신고가액 400,000,000 을 무시**했다(329,040,000).
-   * 이제 슬롯이 비어 일괄 신고가액이 §166⑥ 으로 안분된다(315,810,000) — 단서 비교(파트별 ①②)는 여전히 하지 못한다. 계획서 V-5.
-   */
-  it("증여(실가) · 분리 OFF · 고시 전 → ⑧ 차단 · ⑫ 200 유지 (별건) — 종전 329,040,000 → 315,810,000", async () => {
-    const f = single(T, GIFT);
-    expect(allIssues(f).some((x) => x.includes("파트별로 나누어 입력하세요"))).toBe(true);
-    const r = await post(await bodyOf(f));
-    expect([r.status, r.tax]).toEqual([200, 315_810_000]);
   });
 });

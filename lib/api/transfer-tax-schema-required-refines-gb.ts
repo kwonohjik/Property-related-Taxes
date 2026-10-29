@@ -21,6 +21,8 @@ import { partialAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
 import { GB_PRE_DEEMED_NUMERATOR_MESSAGE } from "@/lib/tax-engine/general-building-pre-deemed";
 import { LAND_INHERITED_ESTIMATION_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
 import { DEBT_PIECES_REASON } from "@/lib/tax-engine/carryover-debt-pieces-scope";
+import { LAND_PRICE_NOTICE_START } from "@/lib/calc/transfer-pre1990-commercial-bridge";
+import { isBeforeBuildingStdPriceNotice } from "@/lib/calc/commercial-164-6-proviso";
 
 /** 주택 분할 경로의 토지 문구(`LAND_INHERITED_ESTIMATION_MESSAGE`)와 짝 — 일반건물은 건물 파트도 상속·증여일 수 있다. */
 export const GB_BUILDING_INHERITED_ESTIMATION_MESSAGE =
@@ -67,6 +69,8 @@ export type GbValuationLike = {
   acquisitionLandPricePerSqm?: number;
   acquisitionBuildingStdPrice?: number;
   landAcquisitionCause?: string;
+  landAcquisitionDate?: string;
+  buildingAcquisitionDate?: string;
   buildingAcquisitionCause?: string;
   decedentAcquisitionDate?: string;
   buildingDecedentAcquisitionDate?: string;
@@ -257,6 +261,20 @@ export function refineGbPropertyRequired(
   // route와 같은 값 — `route.ts`의 `bundledAcq`(일괄 취득가액 = 서브객체 값 우선, 없으면 자산 취득가액)
   const bundled = v.bundledAcquisitionPrice ?? data.acquisitionPrice ?? 0;
   const bothPartPrices = positive(v.landAcquisitionPrice) && positive(v.buildingAcquisitionPrice);
+
+  /**
+   * 증여 파트의 §163⑨ 단서 — **고시 전 증여 파트는 파트 신고가액이 있어야 한다** (`gb-gift-off-sec164-unsplit.plan.md` Q-1 a·Q-2 a).
+   *
+   * 시행령 §163⑨ 단서 1호·2호는 증여받은 토지(1990.8.30. 개별공시지가 고시 전)·건물(기준시가 고시 전)의 취득가액을 **파트별로**
+   * 「신고가액과 §164 가액 중 많은 금액」으로 정한다. 분리 OFF 의 일괄 신고가액은 파트별 비교가 성립하지 않아 ⑧ 이 막는다(`transfer-tax-validate-gb.ts` 증여 갈래 — 같은 상수·함수).
+   * ⑫ 에 이 조건이 없으면 ④ 가 비워 보낸 파트 슬롯(`compareSec164`) 대신 최상위 일괄 신고가액이 §166⑥ 으로 안분되어 200 이 나왔다 —
+   * 신고가액 합계가 §164 합계보다 작으면 §164 가액이 채택돼야 하는데 신고가액이 쓰여 세액이 과대했다(1988 P=284,000,000 +22,365,000).
+   * 엔진이 일괄값을 나눠 비교하는 대안은 자동 안분 fallback 이라 쓰지 않는다. 분리 ON 은 ⑧ 이 파트 가액을 요구하므로 슬롯이 채워져 걸리지 않는다.
+   */
+  if (v.landAcquisitionCause === "gift" && (v.landAcquisitionDate ?? "9999-12-31") < LAND_PRICE_NOTICE_START && !positive(v.landAcquisitionPrice))
+    issue(["landAcquisitionPrice"], "1990.8.30. 개별공시지가 고시 전 증여 토지는 증여 신고가액을 파트별로 입력해야 합니다 — 증여 신고가액과 §164④ 가액 중 많은 금액이 취득가액입니다 (소득세법 시행령 §163⑨1호)");
+  if (v.buildingAcquisitionCause === "gift" && isBeforeBuildingStdPriceNotice(v.buildingAcquisitionDate) && !positive(v.buildingAcquisitionPrice))
+    issue(["buildingAcquisitionPrice"], "건물 기준시가 고시 전 증여 건물은 증여 신고가액을 파트별로 입력해야 합니다 — 증여 신고가액과 §164⑤ 가액 중 많은 금액이 취득가액입니다 (소득세법 시행령 §163⑨2호)");
 
   if (v.actualPriceMode === true) {
     // I1 — 두 파트 모두 상속: 실가 경로는 상속개시일 평가액을 그대로 취득가액으로 배정한다
