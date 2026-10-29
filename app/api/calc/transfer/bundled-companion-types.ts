@@ -103,6 +103,8 @@ export interface CompanionApportioned {
   allocatedSalePrice: number;
   allocatedAcquisitionPrice: number;
   allocatedExpenses: number;
+  /** `allocatedExpenses` 중 공통경비 몫만 — 일반건물 컴패니언이 선언 채널에 합산한다(`withBundledCommonExpense`). */
+  allocatedCommonExpense?: number;
 }
 
 export interface CompanionBuildContext {

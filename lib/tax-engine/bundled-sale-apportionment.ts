@@ -208,6 +208,7 @@ export function apportionBundledSale(
   // ── Step 5: 공통경비 안분 + 직접경비 합산 ────
   // 공통경비는 결정된 양도가액(allocatedSales) 비율로 안분 — fixed/variable 무관 일관 처리.
   const allocatedExpenses: number[] = [];
+  const allocatedCommon: number[] = [];
   if (commonExpenses > 0 && totalSalePrice > 0) {
     let accExp = 0;
     for (let i = 0; i < assets.length; i++) {
@@ -224,9 +225,13 @@ export function apportionBundledSale(
         accExp += commonShare;
       }
       allocatedExpenses.push(direct + commonShare);
+      allocatedCommon.push(commonShare);
     }
   } else {
-    for (const a of assets) allocatedExpenses.push(a.directExpenses ?? 0);
+    for (const a of assets) {
+      allocatedExpenses.push(a.directExpenses ?? 0);
+      allocatedCommon.push(0);
+    }
   }
 
   // ── Step 6: 결과 조립 ─────────────────────────
@@ -244,6 +249,7 @@ export function apportionBundledSale(
       allocatedSalePrice: allocatedSales[i],
       allocatedAcquisitionPrice: allocatedAcqs[i],
       allocatedExpenses: allocatedExpenses[i],
+      allocatedCommonExpense: allocatedCommon[i],
       displayRatio: Math.round(ratio * 10000) / 10000,
       standardPriceAtTransfer: a.standardPriceAtTransfer,
       standardPriceAtAcquisition: a.standardPriceAtAcquisition,

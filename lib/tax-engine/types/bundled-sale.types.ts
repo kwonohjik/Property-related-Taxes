@@ -96,6 +96,12 @@ export interface BundledApportionedAsset {
   allocatedAcquisitionPrice: number;
   /** 안분된 공통경비 + 직접경비 합계 (원) */
   allocatedExpenses: number;
+  /**
+   * `allocatedExpenses` 중 **공통경비 몫만**(§100② 후문 — 결정된 양도가액 비율 · 마지막 자산 잔액 흡수). 직접경비는 포함하지 않는다.
+   * 일반건물 컴패니언이 이 몫을 선언 채널(`transferExpense`)에 합산한다 — legacy `expenses` 채널은 환산·혼합 경로에서 읽히지 않는다
+   * (계획서 `gb-total-transfer-expense-loss.plan.md` 결함 B).
+   */
+  allocatedCommonExpense?: number;
   /** 표시용 비율 (0~1, 소수 4자리 내외, 계산에는 미사용) */
   displayRatio: number;
   /** 안분에 사용한 양도시점 기준시가 (원) — 결과 참조용 passthrough */
