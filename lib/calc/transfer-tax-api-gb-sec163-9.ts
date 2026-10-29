@@ -90,15 +90,20 @@ export function gbSec1639Acquisition(asset: AssetForm, transferDate: string | un
   /** ② §164⑤ 가액 — 취득시 건물 기준시가. */
   const sec164BuildingValue = parseAmount(asset.gbAcqBuildingValue);
 
+  /**
+   * §163⑨ 단서 비교 — **평가액(①)이 있을 때만** ②(§164 가액)와 겨룬다 (`gb-sec164-substitutes-blank-reported.plan.md` Q-1 a·Q-2 a).
+   *
+   * 단서는 「평가액과 §164 가액 중 **많은 금액**」이라는 **두 값의 비교**다. ①이 비었으면 비교가 성립하지 않는다 —
+   * 종전에는 `Math.max(0, ②)` = ② 로 **한쪽 값만으로 취득가액을 메웠다**(⑧ 이 막는 입력인데 ⑫ I1·I3 이 「입력 있음」으로 본다 → 200 + 다른 세액).
+   * 비운 채 보내면 ⑫ 가 400 으로 막는다. ⑧ 을 통과한 입력은 ①이 양수라 값이 바뀌지 않는다.
+   */
+  const compareSec164 = (reported: number, applies: boolean, sec164: number) =>
+    (reported > 0 && applies ? Math.max(reported, sec164) : reported) || undefined;
+
   const reportedLandValue = parseAmount(asset.publishedValueAtInheritance);
   const reportedBuildingValue = parseAmount(asset.gbBuildingInheritedValue);
-  const inheritedLandValue =
-    (landSec164Applies ? Math.max(reportedLandValue, sec164LandTotal) : reportedLandValue) ||
-    undefined;
-  const inheritedBuildingValue =
-    (buildingSec164Applies
-      ? Math.max(reportedBuildingValue, sec164BuildingValue)
-      : reportedBuildingValue) || undefined;
+  const inheritedLandValue = compareSec164(reportedLandValue, landSec164Applies, sec164LandTotal);
+  const inheritedBuildingValue = compareSec164(reportedBuildingValue, buildingSec164Applies, sec164BuildingValue);
   /**
    * 상속 필드 — **양 경로 모두**에 싣는다.
    *
@@ -138,13 +143,11 @@ export function gbSec1639Acquisition(asset: AssetForm, transferDate: string | un
    *    validate가 차단한다(V-5 — 종전 「이중계상」 서술은 2026-08-08 실측으로 정정했다).
    */
   /**
-   * 증여 파트의 §163⑨ 단서 max — ①은 **파트 칸의 증여 신고가액**이다.
+   * 증여 파트의 §163⑨ 단서 max(`compareSec164`) — ①은 **파트 칸의 증여 신고가액**이다.
    *
-   * 상속처럼 전용 필드가 없으므로 파트 슬롯 자체가 ①이고, 여기서 ②와 겨룬다.
-   * 게이트 밖이면 그대로 통과한다(비교 없음).
+   * 상속처럼 전용 필드가 없으므로 파트 슬롯 자체가 ①이고, 아래 `landPartPrice`·`buildingPartPrice` 에서 ②와 겨룬다.
+   * 게이트 밖이면 그대로 통과하고(비교 없음), ①이 비었으면 비교하지 않는다(위 `compareSec164`).
    */
-  const giftMax = (reported: number, applies: boolean, sec164: number) =>
-    (applies ? Math.max(reported, sec164) : reported) || undefined;
 
   // 의제취득일(1985.1.1.) 전 상속·증여 파트 — ①②를 **따로** 싣는다(PR-4 · `gb-pre-deemed.ts`). 파트 슬롯은 종전처럼 max(①,②).
   const preDeemedFields = gbPreDeemedClauseAFields(
@@ -165,14 +168,14 @@ export function gbSec1639Acquisition(asset: AssetForm, transferDate: string | un
 
   const landPartPrice = acquisitionByInheritance
     ? inheritedLandValue
-    : giftMax(
+    : compareSec164(
         parseAmount(asset.landAcquisitionPrice),
         isLandGift && landSec164Applies,
         sec164LandTotal,
       );
   const buildingPartPrice = buildingAcquisitionByInheritance
     ? inheritedBuildingValue
-    : giftMax(
+    : compareSec164(
         parseAmount(asset.buildingAcquisitionPrice),
         isBuildingGift && buildingSec164Applies,
         sec164BuildingValue,

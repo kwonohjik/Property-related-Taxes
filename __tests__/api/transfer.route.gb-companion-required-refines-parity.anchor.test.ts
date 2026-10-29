@@ -137,7 +137,7 @@ describe("RP-3 이미 대칭인 셀 — 건드릴 필요 없다", () => {
       expect((await run(role, { isAppraisalAcquisition: true, fixedAcquisitionPrice: "" })).status).toBe(400);
     }
   });
-  it("I1 두 파트 상속 · 평가액 비움 — 두 위치 모두 200 (⑧ 은 막는다 · 주 자산 보호도 이 입력에서는 작동하지 않는다: 별건)", async () => {
+  it("I1 두 파트 상속 · 평가액 비움 — 두 위치 모두 400 (⑧ 도 막는다 · 종전 200 · 422,310,000 은 ④ 가 §164 가액으로 메운 것 — `gb-sec164-substitutes-blank-reported.plan.md`)", async () => {
     const INH: Partial<AssetForm> = {
       acquisitionCause: "inheritance", gbBuildingAcquisitionCause: "inheritance", landAcquisitionDate: "1988-05-01", acquisitionDate: "1988-05-01", decedentAcquisitionDate: "1970-01-01",
       landAcqMode: "actual", buildingAcqMode: "actual", publishedValueAtInheritance: "", gbBuildingInheritedValue: "100000000",
@@ -147,7 +147,7 @@ describe("RP-3 이미 대칭인 셀 — 건드릴 필요 없다", () => {
       const r = await run(role, INH);
       out.push([r.status, r.tax, r.blocked8]);
     }
-    expect(out).toEqual([[200, 422_310_000, true], [200, 422_310_000, true]]);
+    expect(out).toEqual([[400, undefined, true], [400, undefined, true]]);
   });
 });
 
