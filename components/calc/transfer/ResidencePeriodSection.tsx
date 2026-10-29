@@ -82,8 +82,9 @@ export function ResidencePeriodSection({
       {mergeStartDate && (
         <ToneCard tone="amber">
           <p data-testid="residence-merge-hint" className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
-            건물(주택) 소유자와 세대를 합친 날({mergeStartDate}) 이후, 본인이 소유자와 함께 거주한 기간만 입력하세요.
-            합가 전 거주나 소유자만 거주한 기간은 통산되지 않습니다(서면인터넷방문상담4팀-331 · 기준-2025-법규재산-0040).
+            건물(주택) 소유자와 세대를 합친 날({mergeStartDate}) 이후 기간만 입력하세요. 합가 전 거주는 통산되지 않습니다(서면인터넷방문상담4팀-331 · 기준-2025-법규재산-0040).
+            본인이 취학·질병의 요양·근무상 또는 사업상의 형편으로 일시 퇴거했더라도 소유자가 계속 거주했다면 세대전원이 거주한 것으로 보는 해석이 있어(재산세과-3173 · 서면-2019-부동산-2077) 그 기간은 포함해 입력할 수 있습니다.
+            다만 일시 퇴거에 해당하는지는 사실판단이고, 토지·건물 소유자가 다른 이 경우를 직접 다룬 해석은 확인하지 못했습니다.
           </p>
         </ToneCard>
       )}
