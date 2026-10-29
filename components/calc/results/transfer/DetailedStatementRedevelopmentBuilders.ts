@@ -352,6 +352,9 @@ export function buildRedevExpenseFormula(
 
   if (branch === "preApproval") {
     const lump = redev.estimatedLumpDeduction ?? 0;
+    // 이월과세 증여세 상당액(「소득세법」 §97의2①3호)은 택일 밖의 독립 항이라 엔진이 인가 전 분 필요경비에 더해 싣는다 — 합계에 든 몫을 밝힌다.
+    const giftTax = redev.preApproval.carryoverGiftTaxExpense ?? 0;
+    const giftNote = giftTax > 0 ? ` (이월과세 증여세 상당액 ${fmt(giftTax)} 포함 — 소득세법 §97의2①3호)` : "";
     const bgStdRate = redev.valuationMeta?.burdenedGiftStdLumpRate;
     if (lump > 0 && bgStdRate !== undefined) {
       // 부담부증여 기준시가 모드 — base·율은 엔진 echo라 적힌 산식이 적힌 값을 만든다.
@@ -360,7 +363,7 @@ export function buildRedevExpenseFormula(
       const lumpFormula = `개산공제 = 취득시 기준시가 × 채무비율 ${fmt(base)} × ${ratePct}% = ${fmt(lump)} (소득세법 시행령 제163조 제6항 — 부담부증여 기준시가 평가라 인가 전 실비 대신 개산공제)`;
       return amount === lump
         ? lumpFormula
-        : `${lumpFormula} → 인가전 분 필요경비 합계 ${fmt(amount)} (청산금 수령 분기는 §166①2호 나목 비율로 안분된 값)`;
+        : `${lumpFormula} → 인가전 분 필요경비 합계 ${fmt(amount)} (청산금 수령 분기는 §166①2호 나목 비율로 안분된 값)${giftNote}`;
     }
     if (lump > 0 && redev.valuationMeta && redev.valuationMeta.numerator !== undefined) {
       // base는 엔진 echo(지분 기준시가) 우선 — numerator는 물건 전체(100%) 값이다.
@@ -369,10 +372,10 @@ export function buildRedevExpenseFormula(
       // 개산공제 외 성분(인가전 필요경비·수령 분기 안분)이 있으면 **합계를 함께** 밝힌다.
       return amount === lump
         ? lumpFormula
-        : `${lumpFormula} → 인가전 분 필요경비 합계 ${fmt(amount)} (인가전 필요경비 포함 · 청산금 수령 분기는 §166①2호 나목 비율로 안분된 값)`;
+        : `${lumpFormula} → 인가전 분 필요경비 합계 ${fmt(amount)} (인가전 필요경비 포함 · 청산금 수령 분기는 §166①2호 나목 비율로 안분된 값)${giftNote}`;
     }
     return amount > 0
-      ? `인가전 분 필요경비 ${fmt(amount)} (실가 모드 — 개산공제 미적용)`
+      ? `인가전 분 필요경비 ${fmt(amount)} (실가 모드 — 개산공제 미적용)${giftNote}`
       : "필요경비 없음 (실가 모드)";
   }
   // 인가후·청산금 분에는 개산공제(§163⑥)가 없다 — 다만 그 분할 몫의 필요경비는 있을 수 있다.
@@ -437,7 +440,9 @@ export function buildRedevGainFormula(
   const value = gross ? (detail.gainBeforeAllocation ?? detail.gain) : detail.gain;
   if (branch === "preApproval") {
     const lump = redev.estimatedLumpDeduction ?? 0;
-    return `${fmt(t)} − ${fmt(a)} − 개산공제 ${fmt(lump)} = ${fmt(value)}${suffix}`;
+    const giftTax = detail.carryoverGiftTaxExpense ?? 0;
+    const giftTerm = giftTax > 0 ? ` − 이월과세 증여세 상당액 ${fmt(giftTax)}` : "";
+    return `${fmt(t)} − ${fmt(a)} − 개산공제 ${fmt(lump)}${giftTerm} = ${fmt(value)}${suffix}`;
   }
   return `${fmt(t)} − ${fmt(a)} = ${fmt(value)}${suffix}`;
 }

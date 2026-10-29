@@ -64,6 +64,8 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
   const isRightSubject = subject === "right";
   // 완공APT 청산금 **수령** — 시행령 §166②2호(제1항제2호 가목·나목) 구조. 납부(§166②1호) 문구·행 이름을 쓰지 않는다 (G3-10).
   const isAptReceive = !isRightSubject && !successorMemberApplied && settlementDirection === "receive";
+  // 이월과세 증여세 상당액(「소득세법」 §97의2①3호) — 엔진이 인가 전 분 필요경비에 택일 밖의 독립 항으로 싣는다(청산금 수령은 나목 안분 후 값).
+  const preApprovalGiftTax = preApproval.carryoverGiftTaxExpense ?? 0;
 
   /**
    * 개산공제(§163⑥) 표시 보조 — **base와 율을 지어내지 않는다** (2026-09-07 대장 재대조 #19·#32).
@@ -476,14 +478,18 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
                 {/* 🔴 base는 **지분 기준시가**(`lumpDeductionBase`)다. 100% 값인
                     `housingStdPriceAtAcq`를 쓰면 공유지분·미등기에서 산식이 자기 값을 만들지
                     못하고 같은 카드의 지분 배지와 모순된다(2026-09-07 대장 재대조 · #19). */}
+                {/* 엔진의 인가 전 필요경비(`preApproval.expenses`)에는 이월과세 증여세 상당액(안분 후)이 함께 실려 있다 — 아래 줄로 떼어 보인다. */}
                 <Row
                   label={`− 필요경비(안분 후) — §163⑥ 개산공제 원액 ${detail.housingContribDetail.estimatedDeduction.toLocaleString("ko-KR")} = 취득시 개별주택가격 ${(valuationMeta?.lumpDeductionBase ?? detail.housingContribDetail.housingStdPriceAtAcq).toLocaleString("ko-KR")} × ${estimatedDeductionRateLabel}`}
-                  value={preApproval.expenses ?? 0}
+                  value={(preApproval.expenses ?? 0) - preApprovalGiftTax}
                 />
               </>
             ) : (
               /* 사례 38 — 실가 취득가액 */
               <Row label="− 취득가액(실가) × 안분비율" value={preApproval.apportionedAcquisition} />
+            )}
+            {preApprovalGiftTax > 0 && (
+              <Row label="− 이월과세 증여세 상당액(안분 후) — 소득세법 §97의2①3호" value={preApprovalGiftTax} />
             )}
             <Row label="인가전 양도차익" value={preApproval.gain} highlight />
             <p className="pt-1 border-t border-violet-100 text-micro text-violet-700 dark:text-violet-400">
@@ -544,6 +550,9 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               (2026-09-07 대장 재대조 · #32). 어느 분기인지는 echo 필드가 말해 준다. */}
           {estimatedLumpDeduction != null && estimatedLumpDeduction > 0 && (
             <Row label={`개산공제 (${lumpDeductionBaseLabel} × ${estimatedDeductionRateLabel}, §163⑥)`} value={estimatedLumpDeduction} />
+          )}
+          {preApprovalGiftTax > 0 && (
+            <Row label={`이월과세 증여세 상당액${isAptReceive ? "(안분 후)" : ""} — 소득세법 §97의2①3호`} value={preApprovalGiftTax} />
           )}
           <Row label="양도차익" value={preApproval.gain} highlight />
           <p className="pt-1 border-t border-violet-100 text-micro text-violet-700 dark:text-violet-400">

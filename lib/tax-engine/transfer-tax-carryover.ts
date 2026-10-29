@@ -33,6 +33,7 @@ import { carryoverGiftHouseholdBasis } from "./one-house/gift-household-basis";
 import { bgRedevFilingAcquisition } from "./burdened-gift-totals";
 import { finishScenarios } from "./transfer-tax-carryover-finish";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
+import { redevelopmentConsumesCarryoverGiftTax } from "./redevelopment-branch-gate";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
@@ -418,8 +419,11 @@ function calcCarryoverScenariosCore(
   let inputAFinal: TransferTaxInput;
   if (ownedPart && giftTaxAddedToExpense > 0) {
     inputAFinal = { ...inputABase, splitCarryoverBasis: { [ownedPart]: { giftTaxExpense: giftTaxAddedToExpense } } };
-  } else if (ct.useEstimatedAcquisition && giftTaxAddedToExpense > 0) {
+  } else if (ct.useEstimatedAcquisition && giftTaxAddedToExpense > 0 && !redevelopmentConsumesCarryoverGiftTax(rawInput.redevelopment)) {
     // 환산 모드 + 증여세 차감 필요: 실가 전환 후 expenses = swap-aware 필요경비 + 증여세 상당액
+    //   재개발(§166)은 제외한다 — 그 경로는 `expenses`를 읽지 않아 증여세가 사라지고, 실가 전환이 종전 부동산 취득가액을
+    //   §166③ 환산에서 일반 환산(`donorAcqPrice` — 양도가액 전체 기준)으로 바꾼다. 재개발은 아래 갈래에서 환산 그대로 증여세를
+    //   `carryoverGiftTaxExpense`로 넘긴다(계획서 `redev-carryover-estimated-donor-gift-tax.plan.md` Q-1 c).
     inputAFinal = {
       ...inputABase,
       useEstimatedAcquisition: false,

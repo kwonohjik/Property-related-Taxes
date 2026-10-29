@@ -108,7 +108,9 @@ export function runLandContribEstimated(
     isOneHouseSingle: resolveRedevEffectiveOneHouseSingle(input),
     residencePeriodMonths: resolveRightResidenceMonths(input),
     transferDate,
+    carryoverGiftTaxExpense: input.carryoverGiftTaxExpense,
   });
+  const landGiftTax = landResult.carryoverGiftTaxApplied ?? 0;
 
   // ─ RedevelopmentBranchDetail 로 변환 ─
   
@@ -127,8 +129,9 @@ export function runLandContribEstimated(
     lthdRate: landResult.lthdRate,
     branchAcqDate: acquisitionDate,
     branchTransferDate: redevelopment.approvalDate,             // §166⑤1호 종기 = 인가일
-    // §166①2호 나목 택일 — 개산공제와 실제 필요경비를 합산하지 않는다.
-    expenses: preApprovalNecessaryExpense(landResult.estimatedDeduction, redevelopment.preApprovalExpenses ?? 0),
+    // §166①2호 나목 택일 — 개산공제와 실제 필요경비를 합산하지 않는다. 이월과세 증여세 상당액은 택일 밖의 독립 항이라 더한다.
+    expenses: preApprovalNecessaryExpense(landResult.estimatedDeduction, redevelopment.preApprovalExpenses ?? 0, landGiftTax),
+    ...(landGiftTax > 0 ? { carryoverGiftTaxExpense: landGiftTax } : {}),
     residenceStartDate: undefined,
     residenceEndDate: undefined,
     // 표2(거주분 > 0)일 때만 — 신고서 거주기간 칸이 「-」인데 거주분 공제가 찍히지 않게(표1이면 거주 개념 없음)
@@ -210,6 +213,9 @@ export function runLandContribEstimated(
       rationale: `§166③ 토지 환산취득가 = 권리가액 ${redevelopment.rightsValue.toLocaleString()} × 취득시공시지가 ${(redevelopment.landStdPriceAtAcq ?? 0).toLocaleString()} / 인가시공시지가 ${(redevelopment.landStdPriceAtApproval ?? 0).toLocaleString()} = ${landResult.convertedAcquisition.toLocaleString()} / 개산공제 §163⑥ = ${computeLumpSumDeductionBase(redevelopment.landStdPriceAtAcq ?? 0, input.ownershipRatio).toLocaleString()} × 3% = ${landResult.estimatedDeduction.toLocaleString()}`,
     },
     estimatedLumpDeduction: landResult.estimatedDeduction,
+    ...(landResult.carryoverGiftTaxApplied !== undefined
+      ? { carryoverGiftTaxApplied: landResult.carryoverGiftTaxApplied, carryoverGiftTaxCap: landResult.carryoverGiftTaxCap }
+      : {}),
     // ── echo 필드 (UI 결과 카드 표시용) ──
     landContribDetail: {
       convertedAcquisition: landResult.convertedAcquisition,
@@ -272,7 +278,14 @@ export function runHousingContribReceiveEstimated(
     transferDate,
     ownershipRatio: input.ownershipRatio,
     isUnregistered: input.isUnregistered,
+    carryoverGiftTaxExpense: input.carryoverGiftTaxExpense,
   });
+  // 증여세 산입액(안분 전)과 나목 비율로 안분한 표시값 — 원조합원 분기(`runOriginalMember`)의 입주권 수령과 같은 규약.
+  const housingGiftTax = housingResult.carryoverGiftTaxApplied ?? 0;
+  const housingDisplayGiftTax =
+    housingGiftTax > 0
+      ? apportionPreApprovalExpenses(housingGiftTax, housingResult.preApprovalApportionedTransfer, redevelopment.rightsValue)
+      : 0;
 
   // ─ RedevelopmentBranchDetail 로 변환 ─
   // preApproval: 인가전 분 (§166①2호 나목, LTHD 적용)
@@ -298,10 +311,12 @@ export function runHousingContribReceiveEstimated(
       preApprovalNecessaryExpense(
         housingResult.estimatedDeduction,
         redevelopment.preApprovalExpenses ?? 0,
+        housingGiftTax,
       ),
       housingResult.preApprovalApportionedTransfer, // = salePriceTotal (평가액 − 수령청산금)
       redevelopment.rightsValue,
     ),
+    ...(housingDisplayGiftTax > 0 ? { carryoverGiftTaxExpense: housingDisplayGiftTax } : {}),
     residenceStartDate: undefined,
     residenceEndDate: undefined,
     residenceMonths: undefined,
@@ -386,6 +401,10 @@ export function runHousingContribReceiveEstimated(
         ` = ${housingResult.estimatedDeduction.toLocaleString()}`,
     },
     estimatedLumpDeduction: housingResult.estimatedDeduction,
+    // 입주권 청산금 수령 — 실제 양도차익에서 빠진 산입액은 나목이 안분한 몫이다(`runOriginalMember` 결과 echo와 같은 규약).
+    ...(housingResult.carryoverGiftTaxApplied !== undefined
+      ? { carryoverGiftTaxApplied: housingDisplayGiftTax, carryoverGiftTaxCap: housingResult.carryoverGiftTaxCap }
+      : {}),
     // ── echo 필드 (UI 결과 카드 표시용) ──
     housingContribDetail: {
       convertedAcquisition: housingResult.convertedAcquisition,

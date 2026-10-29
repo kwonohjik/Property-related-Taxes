@@ -55,6 +55,9 @@ export function applyLandContribOverrides(
 
   const fmt = (n: number) => n.toLocaleString("ko-KR");
   const pre = redev.preApproval;
+  // 이월과세 증여세 상당액(「소득세법」 §97의2①3호) — 개산공제(택일) 밖의 독립 항. 엔진이 인가 전 분 필요경비(`pre.expenses`)에 함께 싣는다.
+  const giftTax = pre.carryoverGiftTaxExpense ?? 0;
+  const giftTerm = giftTax > 0 ? ` − 이월과세 증여세 상당액 ${fmt(giftTax)}` : "";
   /**
    * 🔴 **인가후 분은 `settlement`다** (2026-09-07 UI 리뷰).
    *
@@ -126,8 +129,10 @@ export function applyLandContribOverrides(
     expItem.perAsset = [
       {
         label: "① 인가전 분 (§163⑥)",
-        value: lcd.estimatedDeduction,
-        formula: `${fmt(lcd.landStdPriceAtAcq)} × 3% = ${fmt(lcd.estimatedDeduction)} (1원 미만 절사)`,
+        value: pre.expenses ?? lcd.estimatedDeduction,
+        formula:
+          `${fmt(lcd.landStdPriceAtAcq)} × 3% = ${fmt(lcd.estimatedDeduction)} (1원 미만 절사)` +
+          (giftTax > 0 ? ` + 이월과세 증여세 상당액 ${fmt(giftTax)} (소득세법 §97의2①3호) = ${fmt(pre.expenses ?? 0)}` : ""),
       },
       {
         label: "② 인가후 분",
@@ -146,7 +151,7 @@ export function applyLandContribOverrides(
       {
         label: "① 인가전 분",
         value: pre.gain,
-        formula: `권리가액 ${fmt(pre.apportionedTransfer)} − 환산취득가 ${fmt(lcd.convertedAcquisition)} − 개산공제 ${fmt(lcd.estimatedDeduction)} = ${fmt(pre.gain)}`,
+        formula: `권리가액 ${fmt(pre.apportionedTransfer)} − 환산취득가 ${fmt(lcd.convertedAcquisition)} − 개산공제 ${fmt(lcd.estimatedDeduction)}${giftTerm} = ${fmt(pre.gain)}`,
       },
       {
         label: "② 인가후 분",

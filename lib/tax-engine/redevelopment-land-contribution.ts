@@ -26,8 +26,12 @@ export interface RedevLandContribResult {
   convertedAcquisition: number;
   /** §163⑥ 개산공제 = floor(취득당시공시지가 × 3%) */
   estimatedDeduction: number;
-  /** 인가전 양도차익 = 권리가액 − 환산취득가 − 개산공제 (음수 → 0) */
+  /** 인가전 양도차익 = 권리가액 − 환산취득가 − 개산공제 − 이월과세 증여세 상당액 산입액 (음수 → 0) */
   preApprovalGain: number;
+  /** 이월과세 증여세 상당액 산입액 — 입력이 있을 때만(한도 = 인가 전 분 양도차익). */
+  carryoverGiftTaxApplied?: number;
+  /** 위 한도 = max(0, 권리가액 − 환산취득가 − 개산공제). */
+  carryoverGiftTaxCap?: number;
   /** 인가후 양도차익 = 양도가액 − 권리가액 − 청산금납부 − 인가후필요경비 (음수 → 0) */
   postApprovalGain: number;
   /** 총 양도차익 = 인가전 + 인가후 */
@@ -104,6 +108,11 @@ export interface RedevLandContribInput {
   residencePeriodMonths?: number;
   /** 양도일 — 표2 연혁 축(2009~2020 양도분은 보유 연 8% 단일축). 호출부가 실가 경로와 같은 값을 넘긴다. 미전달 = 현행 식 */
   transferDate?: Date;
+  /**
+   * 이월과세 A의 증여세 상당액(「소득세법」 §97의2①3호) — 인가 전 분 필요경비에 택일(개산공제) 밖의 독립 항으로 더한다.
+   * 한도는 인가 전 분 양도차익이고 넘친 몫은 버린다(`redevelopment-split.ts` Step C와 같은 규약). 미전달 = 산입 없음.
+   */
+  carryoverGiftTaxExpense?: number;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -152,10 +161,14 @@ export function calcRedevLandContribEstimated(
   // ── Step 3: 인가전 양도차익 ─────────────────────────────────────────────
   // 권리가액 − 환산취득가 − 개산공제 (음수 = 손실 → 0)
   // 인가전 필요경비는 본 PR 범위 외 (개산공제에 흡수됨)
-  const preApprovalGain = Math.max(
+  const preApprovalGainBeforeGift = Math.max(
     0,
     input.rightsValue - convertedAcquisition - estimatedDeduction,
   );
+  // 이월과세 증여세 상당액 — 택일 밖의 독립 산입항. LTHD는 산입 뒤 양도차익에 곱한다(Step 6).
+  const carryoverGiftTaxApplied =
+    input.carryoverGiftTaxExpense === undefined ? undefined : Math.min(input.carryoverGiftTaxExpense, preApprovalGainBeforeGift);
+  const preApprovalGain = preApprovalGainBeforeGift - (carryoverGiftTaxApplied ?? 0);
 
   // ── Step 4: 인가후 양도차익 ─────────────────────────────────────────────
   // 양도가액 − 권리가액 − 청산금납부 − 인가후필요경비 (음수 → 0)
@@ -200,6 +213,9 @@ export function calcRedevLandContribEstimated(
     convertedAcquisition,
     estimatedDeduction,
     preApprovalGain,
+    ...(carryoverGiftTaxApplied !== undefined
+      ? { carryoverGiftTaxApplied, carryoverGiftTaxCap: preApprovalGainBeforeGift }
+      : {}),
     postApprovalGain,
     totalGain: preApprovalGain + postApprovalGain,
     preApprovalLTHD,
