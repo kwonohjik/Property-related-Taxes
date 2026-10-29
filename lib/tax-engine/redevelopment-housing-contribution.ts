@@ -80,6 +80,11 @@ export interface RedevHousingContribReceiveEstimatedInput {
    * 율 산출은 `estimatedDeductionRate()` 단일 경유.
    */
   isUnregistered?: boolean;
+  /**
+   * 이월과세 A의 증여세 상당액(「소득세법」 §97의2①3호) — 나목 괄호 안(인가 전 분 필요경비)에 택일(개산공제) 밖의 독립 항으로 더하고
+   * 나목 비율로 함께 안분한다. 한도는 안분 전 인가 전 분 양도차익(`redevelopment-split.ts` Step C와 같은 규약). 미전달 = 산입 없음.
+   */
+  carryoverGiftTaxExpense?: number;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -96,6 +101,10 @@ export interface RedevHousingContribReceiveEstimatedResult {
    * = floor((권리가액 − 환산취득가 − 개산공제 − 인가전필요경비) × (평가액 − 수령청산금) / 평가액)
    */
   preApprovalGain: number;
+  /** 이월과세 증여세 상당액 산입액(안분 전) — 입력이 있을 때만. */
+  carryoverGiftTaxApplied?: number;
+  /** 위 한도 = max(0, 권리가액 − 환산취득가 − 개산공제)(안분 전). */
+  carryoverGiftTaxCap?: number;
   /**
    * 인가후 양도차익 (§166①2호 가목).
    * = 양도가액 − (평가액 − 수령청산금) − 인가후필요경비
@@ -205,10 +214,14 @@ export function calcRedevHousingContribReceiveEstimated(
   // 미구현 잔여: §97②2호 단서의 **가목↔나목 max 전환**(실제 필요경비가 환산취득가+개산공제보다
   // 큰 경우)은 이 경로에 아직 없다. 본 fixture 범위(개산공제 3.6M vs 환산 180M)에서는
   // 가목이 항상 커서 발동하지 않는다. 별도 항목으로 남긴다.
-  const preApprovalGainBase = Math.max(
+  const preApprovalGainBeforeGift = Math.max(
     0,
     input.rightsValue - convertedAcquisition - estimatedDeduction,
   );
+  // 이월과세 증여세 상당액 — 택일 밖의 독립 산입항이라 괄호 안에서 빼고 나목 비율로 함께 안분한다.
+  const carryoverGiftTaxApplied =
+    input.carryoverGiftTaxExpense === undefined ? undefined : Math.min(input.carryoverGiftTaxExpense, preApprovalGainBeforeGift);
+  const preApprovalGainBase = preApprovalGainBeforeGift - (carryoverGiftTaxApplied ?? 0);
   // safeMultiplyThenDivide: 나목 축소 안분 (overflow 방어)
   const preApprovalGain = safeMultiplyThenDivide(
     preApprovalGainBase,
@@ -273,6 +286,9 @@ export function calcRedevHousingContribReceiveEstimated(
     convertedAcquisition,
     estimatedDeduction,
     preApprovalGain,
+    ...(carryoverGiftTaxApplied !== undefined
+      ? { carryoverGiftTaxApplied, carryoverGiftTaxCap: preApprovalGainBeforeGift }
+      : {}),
     postApprovalGain,
     salePriceTotal,
     preApprovalLTHD,

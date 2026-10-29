@@ -55,3 +55,14 @@ export function isHousingContribEstimatedAxes(axes: HousingContribEstimatedAxes)
     axes.useEstimatedAcquisition === true
   );
 }
+
+/**
+ * 이월과세 A의 증여세 상당액(「소득세법」 §97의2①3호)을 재개발(§166) 경로가 인가 전 분 필요경비로 **소비하는가** — `transfer-tax-carryover.ts`의
+ * 환산 증여자 실가 전환 갈래가 재개발을 제외할지 정한다(계획서 `redev-carryover-estimated-donor-gift-tax.plan.md`).
+ *
+ * dispatch(`redevelopment.ts`)의 네 분기 중 원조합원(`runOriginalMember`)·주택 출자 수령 환산(`runHousingContribReceiveEstimated`)·
+ * 토지 출자 입주권 환산(`runLandContribEstimated`)은 `carryoverGiftTaxExpense`를 읽는다. 승계조합원(`runSuccessorMember` — §166 밖)만 읽지 않는다.
+ */
+export function redevelopmentConsumesCarryoverGiftTax(redevelopment: { isSuccessorMember?: boolean } | undefined): boolean {
+  return redevelopment !== undefined && redevelopment.isSuccessorMember !== true;
+}
