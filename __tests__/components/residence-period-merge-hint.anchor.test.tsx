@@ -20,7 +20,9 @@ describe("ResidencePeriodSection 합가 힌트", () => {
     render(<ResidencePeriodSection {...props} mergeStartDate="2022-01-01" />);
     const hint = screen.getByTestId("residence-merge-hint");
     expect(hint.textContent).toContain("2022-01-01");
-    expect(hint.textContent).toContain("함께 거주한 기간만");
+    // O-12 — 누구의 거주인지 명시(입력자 본인) · 소유자만 거주한 기간은 통산되지 않는다
+    expect(hint.textContent).toContain("본인이 소유자와 함께 거주한 기간만");
+    expect(hint.textContent).toContain("소유자만 거주한 기간");
   });
 
   it("mergeStartDate가 없으면 힌트가 없다", () => {

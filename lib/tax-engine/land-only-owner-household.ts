@@ -151,13 +151,16 @@ export function landOnlyMergeDateAppliedNotice(input: TransferTaxInput): string 
 
 /**
  * 거주기간을 합가일 이후만 통산했다는 고지 — 합가일이 주택 취득일보다 늦고 거주기간이 입력돼 계산에 쓰였을 때만(그 밖에는 값에 닿지 않아 말하지 않는다).
- * 기준-2025-법규재산-0040은 §155⑳1호 사건이라, 같은 규칙을 비과세 거주요건·표2 거주분에 적용한 것은 정면 해석이 없는 유추다(계획서 `land-only-merge-residence-period.plan.md` Q-2 a).
+ * 같은 규칙을 1세대1주택 비과세 거주요건은 서면인터넷방문상담4팀-331(2006.2.17.)·-3794(2006.11.17.), §155⑳1호 거주요건은 기준-2025-법규재산-0040이 정면으로 답했다.
+ * 정면 해석이 없는 것은 장기보유특별공제 표2 거주분뿐이라 «확인이 필요합니다»는 거기에만 건다(계획서 `land-only-merge-residence-self-required.plan.md` Q-2 a — #2691 서술 정정).
+ * 2006년 두 해석은 구 시행령 시기라 요건의 문턱이 아니라 기간 계산 방식에 한해 인용한다.
  */
 export function landOnlyMergeResidenceNotice(input: TransferTaxInput): string | undefined {
   const merge = landOnlyHouseholdMergeDate(input);
   if (merge === undefined || merge.getTime() <= input.acquisitionDate.getTime() || !(input.residencePeriodMonths > 0)) return undefined;
   return (
     `토지만 본인 소유이고 건물(주택) 소유자와 같은 세대라, 거주기간은 입력하신 세대 합가일(${merge.toISOString().slice(0, 10)}) 이후 동일세대원으로서 주택 소유자와 함께 거주한 기간만 통산하는 것으로 보았습니다` +
-    "(기준-2025-법규재산-0040). 이 해석례는 「소득세법 시행령」 §155⑳1호 거주요건 사건이라, 같은 규칙을 1세대1주택 비과세 거주요건·장기보유특별공제 표2 거주분에 적용한 것은 정면 해석이 없는 유추로 확인이 필요합니다."
+    "(1세대1주택 비과세 거주요건: 서면인터넷방문상담4팀-331(2006.2.17.)·-3794(2006.11.17.) — 구 시행령 시기의 기간 계산 방식 해석 · 「소득세법 시행령」 §155⑳1호 거주요건: 기준-2025-법규재산-0040). " +
+    "장기보유특별공제 표2 거주분에 같은 규칙을 적용한 것은 정면 해석이 없는 유추로 확인이 필요합니다."
   );
 }
