@@ -167,3 +167,13 @@ describe("BT-2 함께 양도 × 부담부증여 — 총 양도비가 자산 칸 
     expect(b).toEqual(a);
   });
 });
+
+describe("BT-3 축 B × 부담부증여 — 옛 필요경비 칸 + 총 양도비", () => {
+  it("K-4 실지 · 카드1 옛 칸 3,000,000 + 총 5,000,000 → 카드1 칸 8,000,000 · 카드2 칸 5,000,000 과 같다 (세액 90,026,464 · 직접분 소실 시 90,319,900)", async () => {
+    const a = await run(shares(K4, { directExpenses: "3,000,000" }, {}, "5,000,000"));
+    const b = await run(shares(K4, { transferExpense: "8,000,000" }, { transferExpense: "5,000,000" }));
+    expect(a).toEqual(b);
+    expect(a.tax).toBe(90_026_464);
+  });
+});
+

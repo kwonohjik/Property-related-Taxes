@@ -262,9 +262,11 @@ export function buildGeneralBuildingShares(
     const ratio = getOwnershipRatio(asset);
     // 물건-수준 병합 → GB payload 생성 → 지분율 스케일 (순서 고정)
     const mergedBase = mergeGbPropertyLevel(asset, primary);
+    // 총 양도비를 선언 채널(`transferExpense`)로 옮기면 실가 경로가 옛 필요경비 칸(`expenses`)을 읽지 않는다(`effectiveExpenses = 선언 > 0 ? 선언 : legacy`) —
+    // 그 자산의 옛 칸 직접분(저장 데이터 전용)을 같은 채널에 얹어 소실을 막는다. 옛 칸은 `expenses`로도 가지만 선언 채널이 있으면 읽히지 않아 이중계상이 없다.
     const merged =
       formTotalTransferExpense > 0 && !parseAmount(mergedBase.transferExpense)
-        ? { ...mergedBase, transferExpense: String(formTotalTransferExpense) }
+        ? { ...mergedBase, transferExpense: String(formTotalTransferExpense + parseAmount(asset.directExpenses)) }
         : mergedBase;
     const valuation = buildGeneralBuildingValuation(merged, transferDate) as
       | Record<string, unknown>
