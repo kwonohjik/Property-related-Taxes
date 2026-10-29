@@ -540,6 +540,7 @@ export function GeneralBuildingAcquisitionCards({
             }
             isBurdenedGift={asset.transferType === "burdened_gift"}
             bgPartReportedElsewhere={gbBgParts.land}
+            hideFixedAcquisitionPrice={isSeparate}
           />
         )}
 

@@ -117,7 +117,18 @@ export function addCompanionAcquisitionCauseRefines(
       }
     } else if (c.acquisitionCause === "gift") {
       // D2 — 건물 증여 + 토지 매매(overlay `purchase`)는 증여 신고가액을 건물 파트 취득가액으로 받는다(상속 arm의 CP-1 면제와 같은 술어).
-      if (!isBuildingCauseMixCompanion(c) && (!c.fixedAcquisitionPrice || c.fixedAcquisitionPrice <= 0)) {
+      /**
+       * 🔴 **부담부증여 · 일반건물 파트 취득가액 면제** (`docs/00-pm/gb-companion-gift-fixed-acq-price.plan.md` Q-1 a).
+       *
+       *  · 부담부증여 — 취득가액을 「소득세법 시행령」 제159조 제1항 제1호가 정한다(위 `companionAssets` 머리 주석의 「부담부증여 제외」). UI도 자산 전체 칸을 숨긴다
+       *    (`CompanionAcqGiftBlock` `isBurdenedGift`) — 요구하면 입력할 칸 없이 막는 막다른 길이다.
+       *  · 일반건물 분리 ON — 토지 파트 취득가액(`landAcquisitionPrice`)이 있으면 파트 값이 취득가액을 정하고 자산 전체 값은 세액에 쓰이지 않는다(1,000원·6억·50억 모두 같은 세액 — 실측).
+       *    ⑧도 이 칸을 요구하지 않는다(분리 ON 은 파트 칸 V-7). **분리 OFF 일괄 증여는 파트 가액이 없어 면제하지 않는다** — ⑧이 같은 칸을 요구하고 값이 세액에 쓰인다.
+       *    매매 갈래의 별개 취득 면제(`isSeparateAcquisition`)와 달리 같은 날 분리 ON 도 파트 값으로 판정한다.
+       */
+      const gbLandPartPrice = (c.generalBuildingValuation as { landAcquisitionPrice?: number } | undefined)?.landAcquisitionPrice ?? 0;
+      const giftPriceFromOtherSource = c.burdenedGiftInfo !== undefined || gbLandPartPrice > 0;
+      if (!isBuildingCauseMixCompanion(c) && !giftPriceFromOtherSource && (!c.fixedAcquisitionPrice || c.fixedAcquisitionPrice <= 0)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["companionAssets", i, "fixedAcquisitionPrice"],

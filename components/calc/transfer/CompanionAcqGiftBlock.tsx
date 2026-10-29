@@ -40,6 +40,12 @@ interface BlockProps {
    * 「입력란을 표시하지 않습니다」 안내가 그 칸과 모순되므로 이 경우에는 취득가액 자리를 비운다.
    */
   bgPartReportedElsewhere?: boolean;
+  /**
+   * 신고가액 칸을 숨긴다 — 일반건물 분리 ON. 파트 카드(토지·건물)의 취득가액이 취득가액을 정하고 이 자산 전체 값은 세액에 쓰이지 않는다(⑧도 요구하지 않는다).
+   * 필수로 표시된 쓰이지 않는 칸이 사용자를 헷갈리게 했다 — 매매 블록의 `hideAssetAcqAxis` 와 같은 처리다
+   * (`docs/00-pm/gb-companion-gift-fixed-acq-price.plan.md` Q-2 a). 날짜 두 칸은 그대로다.
+   */
+  hideFixedAcquisitionPrice?: boolean;
   /** 증여일 칸의 검증 오류 이동 앵커 키(기본 `acquisitionDate`) — `CompanionAcqPurchaseBlock.types.ts`의 같은 prop */
   fieldAcquisitionDate?: string;
   /**
@@ -80,7 +86,7 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
         </div>
       </div>
 
-      {props.isBurdenedGift && props.bgPartReportedElsewhere ? null : props.isBurdenedGift ? (
+      {(props.isBurdenedGift && props.bgPartReportedElsewhere) || (!props.isBurdenedGift && props.hideFixedAcquisitionPrice) ? null : props.isBurdenedGift ? (
         <ToneCard
           tone="amber"
           title="취득가액 — 부담부증여 §159 자동 산정"
