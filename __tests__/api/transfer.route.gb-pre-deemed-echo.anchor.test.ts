@@ -8,7 +8,7 @@
  * 결과: 어긋남 0.
  * 부수 관찰 — BG(부담부증여) 시가 평가 × 의제취득일 전 × 파트 ① 비움은 ⑧ 차단 · ⑫ 200 이지만 **의도된 비대칭**이다(`docs/02-design/features/bg-gb-residuals.plan.md` §2.2 · Q-2 a —
  * PR-7b-6a 계약 R-0·R-2, 기존 앵커 5건이 지킨다). 그래서 결함으로 세지 않고 여기서 다시 고정하지 않는다.
- * 아래 EC-2 는 그와 달리 근거 문서가 없는 ⑧ 차단 · ⑫ 200 한 건의 **현재 동작 기록**이다(고쳐지면 반전).
+ * 아래 EC-2 는 그와 달리 근거 문서가 없는 ⑧ 차단 · ⑫ 200 한 건의 **현재 동작 기록**이다 — 세액이 올바른 경로와 -12,122,708 ~ +76,712,292 다르다(고쳐지면 반전).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -152,20 +152,36 @@ describe("EC-1 ①② echo · 카드 echo · 세액 오라클 — 상속·증여
   }, 300_000);
 });
 
-describe("EC-2 현재 동작의 기록 — BG(부담부증여) 상속 × 취득방식 「converted」 × 의제취득일 후: ⑧ 차단 · ⑫ 200 (세액 영향 미측정)", () => {
+describe("EC-2 현재 동작의 기록 — BG(부담부증여) 상속 × 취득방식 「converted」 × 의제취득일 후: ⑧ 차단 · ⑫ 200 · 세액이 올바른 경로(실지취득가액 안분 + 평가액)와 다르다", () => {
   /** ⑧ `transfer-tax-validate-bg.ts:380-384` — 상속개시일 1985.1.1. 이후 상속은 §163⑨ 평가액이 실지거래가액이라 환산취득가액 불가(소득세법 §97①1호 단서). ⑫ 에는 같은 조건이 없다. */
   const BGX = { transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
-    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted",
+    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000",
     bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000" } as unknown as Partial<AssetForm>;
-  it("1988·1995·2005 × 분리 OFF·ON × 평가액 5조합 (30셀): 전부 ⑧ 차단 · ⑫ 200 · 평가액을 바꿔도 세액 불변(평가액이 쓰이지 않는다)", async () => {
-    const tally: Record<string, number> = {}; const taxes: Record<string, Set<number | undefined>> = {};
-    for (const d of ["1988-05-01", "1995-05-01", "2005-05-01"]) for (const sep of [false, true]) for (const [lp, bp] of [["100000000", "75000000"], ["400000000", "300000000"], ["", "75000000"], ["100000000", ""], ["", ""]]) {
-      const r = await go("단건", { ...BGX, acquisitionCause: "inheritance", gbBuildingAcquisitionCause: "inheritance", landAcquisitionDate: d, acquisitionDate: d, decedentAcquisitionDate: "1960-01-01", hasSeperateLandAcquisitionDate: sep,
-        ...(sep ? { landAcqMode: "actual", buildingAcqMode: "actual" } : {}), publishedValueAtInheritance: lp, gbBuildingInheritedValue: bp } as Partial<AssetForm>);
-      const k = `${r.blocked8 ? "차단" : "통과"}|${r.status}`; tally[k] = (tally[k] ?? 0) + 1;
-      (taxes[d] ??= new Set()).add(r.tax);
+  const LV: [string, number, number][] = [["lt", 100e6, 75e6], ["mid", 205e6, 150e6], ["gt", 400e6, 300e6], ["xl", 800e6, 600e6]];
+  const inh = (d: string, sep: boolean, lp: number, bp: number): Partial<AssetForm> =>
+    ({ ...BGX, acquisitionCause: "inheritance", gbBuildingAcquisitionCause: "inheritance", landAcquisitionDate: d, acquisitionDate: d, decedentAcquisitionDate: "1960-01-01", hasSeperateLandAcquisitionDate: sep,
+      ...(sep ? { landAcqMode: "actual", buildingAcqMode: "actual" } : {}), publishedValueAtInheritance: String(lp), gbBuildingInheritedValue: String(bp) } as Partial<AssetForm>);
+  const DATES3 = ["1988-05-01", "1995-05-01", "2005-05-01"];
+  it("단건 24셀(일자 3 × 분리 OFF·ON × 평가액 4): converted 는 ⑧ 차단 · ⑫ 200 · 평가액·일자와 무관하게 76,712,292 — 올바른 경로(actual + 평가액 칸)는 ⑧ 통과 · 200 · 평가액에 따라 88,835,000 → 0", async () => {
+    const conv: Record<string, number> = {}; const act: Record<string, number> = {}; const tally: Record<string, number> = {};
+    for (const d of DATES3) for (const sep of [false, true]) for (const [ln, lp, bp] of LV) {
+      const c = await go("단건", { ...inh(d, sep, lp, bp), bgAcquisitionMethod: "converted" } as Partial<AssetForm>);
+      const a = await go("단건", { ...inh(d, sep, lp, bp), bgAcquisitionMethod: "actual", bgActualAcquisitionLand: String(lp), bgActualAcquisitionBuilding: String(bp) } as Partial<AssetForm>);
+      const k = `converted ${c.blocked8 ? "차단" : "통과"}|${c.status} · actual ${a.blocked8 ? "차단" : "통과"}|${a.status}`; tally[k] = (tally[k] ?? 0) + 1;
+      conv[ln] = c.tax as number; act[ln] = a.tax as number;
+      expect(c.tax).toBe(76_712_292);
     }
-    expect(tally).toEqual({ "차단|200": 30 });
-    expect(Object.fromEntries(Object.entries(taxes).map(([d, v]) => [d, [...v]]))).toEqual({ "1988-05-01": [76_712_292], "1995-05-01": [76_712_292], "2005-05-01": [76_712_292] });
+    expect(tally).toEqual({ "converted 차단|200 · actual 통과|200": 24 });
+    expect(act).toEqual({ lt: 88_835_000, mid: 64_895_000, gt: 14_752_481, xl: 0 });
+    // 차(converted − actual): lt −12,122,708 · mid +11,817,292 · gt +61,959,811 · xl +76,712,292
+    expect(Object.fromEntries(LV.map(([ln]) => [ln, conv[ln] - act[ln]]))).toEqual({ lt: -12_122_708, mid: 11_817_292, gt: 61_959_811, xl: 76_712_292 });
+  });
+  it("컴패니언·주 자산 위치는 이미 닫혀 있다 — 일반 양도 자산과 BG 는 함께 양도로 못 묶어 ⑧·⑫ 모두 400 (96셀)", async () => {
+    const tally: Record<string, number> = {};
+    for (const d of DATES3) for (const sep of [false, true]) for (const [, lp, bp] of LV) for (const role of ["컴패니언", "주 자산"] as const) for (const m of ["converted", "actual"] as const) {
+      const r = await go(role, { ...inh(d, sep, lp, bp), bgAcquisitionMethod: m, ...(m === "actual" ? { bgActualAcquisitionLand: String(lp), bgActualAcquisitionBuilding: String(bp) } : {}) } as Partial<AssetForm>);
+      const k = `${r.blocked8 ? "차단" : "통과"}|${r.status}`; tally[k] = (tally[k] ?? 0) + 1;
+    }
+    expect(tally).toEqual({ "차단|400": 96 });
   });
 });
