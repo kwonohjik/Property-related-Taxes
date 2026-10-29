@@ -8,6 +8,7 @@ import { AssetSectionExpense } from "@/components/calc/transfer/asset-sections/A
 import { GB_LEGACY_EXPENSE_UNUSED_MESSAGE, gbLegacyExpenseUnused } from "@/lib/calc/gb-legacy-expense-unused";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 afterEach(cleanup);
@@ -38,7 +39,10 @@ describe("GL-1 ⑤ 안내 ≡ ⑧ 차단 ≡ 술어", () => {
     ["양도비 칸에 값이 있으면(옛 칸 숨김)", { useEstimatedAcquisition: true, transferExpense: "1000000" }, false],
     ["증축은 전용 규칙", { useEstimatedAcquisition: true, gbHasExtension: true }, false],
     ["부담부증여는 별도", { useEstimatedAcquisition: true, transferType: "burdened_gift" }, false],
-    ["이월과세 등 매매 외 취득원인은 미측정", { useEstimatedAcquisition: true, acquisitionCause: "carryover_gift" }, false],
+    ["이월과세 환산 — 취득원인은 보지 않는다(계획서 non-purchase Q-1 a)", { useEstimatedAcquisition: true, acquisitionCause: "carryover_gift", carryover: { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2021-03-01", donorAcquisitionDate: "2005-06-15", donorAcquisitionPrice: "150,000,000", giftTaxAmount: "30,000,000", giftDateValuation: "400,000,000" } }, true],
+    ["증여 토지(실가) + 건물 환산", { hasSeperateLandAcquisitionDate: true, acquisitionCause: "gift", landAcqMode: "actual", buildingAcqMode: "estimated", landAcquisitionPrice: "400000000" }, true],
+    ["건물 신축(실가) + 토지 환산", { hasSeperateLandAcquisitionDate: true, gbBuildingAcquisitionCause: "newConstruction", landAcqMode: "estimated", buildingAcqMode: "actual", buildingAcquisitionPrice: "200000000" }, true],
+    ["상속(둘 다 실가)은 모드가 실가에 고정돼 거짓", { hasSeperateLandAcquisitionDate: true, acquisitionCause: "inheritance", gbBuildingAcquisitionCause: "inheritance", landAcqMode: "actual", buildingAcqMode: "actual", publishedValueAtInheritance: "300000000", gbBuildingInheritedValue: "200000000", decedentAcquisitionDate: "1970-01-01" }, false],
   ])("%s", (_n, over, expected) => {
     const a = gb(over);
     expect(gbLegacyExpenseUnused(a)).toBe(expected);
