@@ -1,5 +1,5 @@
 /**
- * anchor — ④ 가 상속·증여 파트의 평가액이 **비었는데** §164 가액만으로 취득가액을 채운다 (계획서 `docs/00-pm/gb-sec164-substitutes-blank-reported.plan.md`)
+ * anchor — ④ 는 상속·증여 파트의 평가액이 **비면** §164 가액으로 메우지 않고 비운 채 보낸다 → ⑫ 가 400 (`compareSec164` — 계획서 `docs/00-pm/gb-sec164-substitutes-blank-reported.plan.md`)
  *
  * 「주 자산 I1」(상속 두 파트 · 평가액 비움 · 주 자산도 200) 측정의 결론:
  *   · ⑫ I1(`required-refines-gb.ts` — `bothInherited && !positive(inheritedLandValue)`)은 **고장나지 않았다.** `inheritedLandValue` 는 ④ 가 §163⑨ 단서 비교까지 마친 **최종값**이고
@@ -7,7 +7,8 @@
  *   · 우회는 ④ `transfer-tax-api-gb-sec163-9.ts:95-101` 에서 생긴다: 단서 구간(토지 1990.8.30. 전 · 건물 취득연도 2000/2001 전)이면 `Math.max(평가액, §164 가액)` 인데
  *     평가액이 0 이어도 §164 가액이 양수라 **비교가 성립하지 않는 입력을 한쪽 값으로 메운다**(증여 `giftMax` 도 같다). ⑧ 은 이 입력을 막지만(`validate-gb.ts` V3·V4 · 증여 파트 칸) ⑫ 에서는 사라진다.
  *   · 단서 구간 밖(고시 후)은 400 — 상속일에 따라 I1 이 작동한다(SU-1).
- * 현행 고정: 아래 셀은 모두 ⑧ 차단 · ⑫ 200 · 평가액을 입력한 대조 세액과 **다르다**(평가액이 §164 가액보다 크면 과대과세, 작으면 평가액이 무시된다).
+ * 수정 전(PR #2724 시점): 아래 비운 셀은 ⑧ 차단 · ⑫ 200 · 평가액을 입력한 대조 세액과 **달랐다**(상속 72셀 중 200 42·세액 이탈 24 · 증여 36셀 중 200 21·전부 이탈) — 주석의 `수정 전` 값.
+ * 수정 후: 비운 셀은 전부 400, 평가액을 입력한 대조 셀은 ⑧ 통과 · 200 · 세액 불변(⑧ 통과 입력의 값은 바뀌지 않는다).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -87,63 +88,58 @@ const DATES = ["1980-05-01", "1988-05-01", "1995-05-01", "2005-05-01"];
 const INH_BLANKS: [string, Partial<AssetForm>][] = [["토지", { publishedValueAtInheritance: "" }], ["건물", { gbBuildingInheritedValue: "" }], ["둘 다", { publishedValueAtInheritance: "", gbBuildingInheritedValue: "" }]];
 const GIFT_BLANKS: [string, Partial<AssetForm>][] = [["토지", { landAcquisitionPrice: "" }], ["건물", { buildingAcquisitionPrice: "" }], ["둘 다", { landAcquisitionPrice: "", buildingAcquisitionPrice: "" }]];
 
-describe("SU-1 상속 두 파트 · 평가액 비움 — 상속일에 따라 I1 이 작동하거나 §164 가액으로 메워진다 (72셀)", () => {
-  it("⑧ 은 전부 막고, 상태는 200 42셀 · 400 30셀, 200 인 셀 중 24셀은 평가액을 입력한 대조 세액과 다르다", async () => {
-    const tally: Record<string, number> = {}; let diff = 0; let n = 0; let unblocked = 0;
+describe("SU-1 상속 두 파트 · 평가액 비움 — 상속일과 무관하게 전부 400 (72셀)", () => {
+  it("⑧ 은 전부 막고 ⑫ 도 전부 400 (수정 전: 200 42셀 · 세액 이탈 24셀), 대조(평가액 입력)는 ⑧ 통과 · 200", async () => {
+    let n = 0; let unblocked = 0; const not400: string[] = [];
     for (const d of DATES) for (const sep of [false, true]) for (const [bn, bp] of INH_BLANKS) for (const role of ROLES3) {
       const r = await go(role, { ...INH(d, sep), ...bp });
       const c = await go(role, INH(d, sep));
       n++; if (!r.blocked8) unblocked++;
       expect([c.blocked8, c.status]).toEqual([false, 200]); // 대조(평가액 입력)는 ⑧ 통과 · 200
-      tally[`${d}|${bn}|${r.status}`] = (tally[`${d}|${bn}|${r.status}`] ?? 0) + 1;
-      if (r.status === 200 && r.tax !== c.tax) diff++;
+      if (r.status !== 400) not400.push(`${d}|${sep}|${bn}|${role}`);
     }
-    expect([n, unblocked, diff]).toEqual([72, 0, 24]);
-    // 의제취득일 전·두 파트 단서 구간(1980·1988)은 비운 것 모두 200 · 건물만 단서 구간(1995)은 건물만 200 · 고시 후(2005)는 전부 400
-    const status200 = (d: string) => ["토지", "건물", "둘 다"].map((b) => tally[`${d}|${b}|200`] ?? 0);
-    expect([status200("1980-05-01"), status200("1988-05-01"), status200("1995-05-01"), status200("2005-05-01")]).toEqual([[6, 6, 6], [6, 6, 6], [0, 6, 0], [0, 0, 0]]);
+    expect([n, unblocked, not400]).toEqual([72, 0, []]);
   }, 120_000);
   it.each([
     ["1988 토지 비움 · 분리 OFF", INH("1988-05-01", false), { publishedValueAtInheritance: "" }, { 컴패니언: [422_310_000, 392_385_000], "주 자산": [422_310_000, 392_385_000], 단건: [329_040_000, 301_110_000] }],
     ["1980 토지 비움 · 분리 OFF", INH("1980-05-01", false), { publishedValueAtInheritance: "" }, { 컴패니언: [402_009_169, 383_824_038], "주 자산": [402_009_169, 383_824_038], 단건: [310_092_558, 293_104_038] }],
-  ] as [string, Partial<AssetForm>, Partial<AssetForm>, Record<string, [number, number]>][])("대표 세액 — %s [비움 · 입력한 대조]", async (_n, base, blank, want) => {
+  ] as [string, Partial<AssetForm>, Partial<AssetForm>, Record<string, [number, number]>][])("대표 세액 — %s: 비움 400 (수정 전 세액은 want[0]) · 대조 세액 불변", async (_n, base, blank, want) => {
     for (const role of ROLES3) {
       const r = await go(role, { ...base, ...blank });
       const c = await go(role, base);
-      expect([role, r.status, r.tax, c.tax]).toEqual([role, 200, ...want[role]]);
+      expect(want[role][0]).toBeGreaterThan(want[role][1]); // 수정 전 침묵 세액 > 평가액 입력 세액
+      expect([role, r.status, r.tax, c.tax]).toEqual([role, 400, undefined, want[role][1]]);
     }
   });
 });
 
-describe("SU-2 증여 두 파트 · 가액 비움 — 같은 대체 (`giftMax`) (36셀)", () => {
-  it("⑧ 은 전부 막고, 200 21셀 · 400 15셀, 200 인 셀은 전부 대조 세액과 다르다", async () => {
-    const tally: Record<string, number> = {}; let diff = 0; let n = 0; let unblocked = 0;
-    for (const d of DATES) for (const [, bp] of GIFT_BLANKS) for (const role of ROLES3) {
+describe("SU-2 증여 두 파트 · 가액 비움 — 같은 규칙 (`compareSec164`) · 전부 400 (36셀)", () => {
+  it("⑧ 은 전부 막고 ⑫ 도 전부 400 (수정 전: 200 21셀 · 전부 세액 이탈), 대조는 ⑧ 통과 · 200", async () => {
+    let n = 0; let unblocked = 0; const not400: string[] = [];
+    for (const d of DATES) for (const [bn, bp] of GIFT_BLANKS) for (const role of ROLES3) {
       const r = await go(role, { ...GIFT(d), ...bp });
       const c = await go(role, GIFT(d));
       n++; if (!r.blocked8) unblocked++;
       expect([c.blocked8, c.status]).toEqual([false, 200]);
-      tally[`${d}|${r.status}`] = (tally[`${d}|${r.status}`] ?? 0) + 1;
-      if (r.status === 200 && r.tax !== c.tax) diff++;
+      if (r.status !== 400) not400.push(`${d}|${bn}|${role}`);
     }
-    expect([n, unblocked, diff]).toEqual([36, 0, 21]);
-    expect([DATES.map((d) => tally[`${d}|200`] ?? 0), DATES.map((d) => tally[`${d}|400`] ?? 0)]).toEqual([[9, 9, 3, 0], [0, 0, 6, 9]]);
+    expect([n, unblocked, not400]).toEqual([36, 0, []]);
   }, 120_000);
-  it("대표 세액 — 1988 토지 비움 [비움 · 입력한 대조]: 컴패니언·주 자산 406,560,000 · 347,730,000 / 단건 314,340,000 · 257,010,000", async () => {
+  it("대표 세액 — 1988 토지 비움: 비움 400 · 대조 세액 불변 (수정 전 비움 406,560,000 / 단건 314,340,000)", async () => {
     for (const role of ROLES3) {
       const r = await go(role, { ...GIFT("1988-05-01"), landAcquisitionPrice: "" });
       const c = await go(role, GIFT("1988-05-01"));
-      expect([r.status, r.tax, c.tax]).toEqual(role === "단건" ? [200, 314_340_000, 257_010_000] : [200, 406_560_000, 347_730_000]);
+      expect([r.status, r.tax, c.tax]).toEqual([400, undefined, role === "단건" ? 257_010_000 : 347_730_000]);
     }
   });
 });
 
-describe("SU-3 한쪽만 상속(토지 상속 + 건물 매매) · 평가액 비움", () => {
+describe("SU-3 한쪽만 상속(토지 상속 + 건물 매매) · 평가액 비움 — 상속일과 무관하게 400", () => {
   const PART = (d: string): Partial<AssetForm> => ({
     acquisitionCause: "inheritance", gbBuildingAcquisitionCause: "purchase", landAcquisitionDate: d, acquisitionDate: "2010-05-01", decedentAcquisitionDate: "1960-01-01",
     publishedValueAtInheritance: "300000000", hasSeperateLandAcquisitionDate: true, landAcqMode: "actual", buildingAcqMode: "actual", buildingAcquisitionPrice: "200000000",
   } as Partial<AssetForm>);
-  it("1988(토지 단서): 200 + 세액 이탈 · 2005(고시 후): 400", async () => {
+  it("1988(토지 단서) · 2005(고시 후) 모두 400 (수정 전 1988 은 200 + 세액 이탈 406,560,000 vs 377,130,000), 대조 세액 불변", async () => {
     const out: Record<string, unknown> = {};
     for (const d of ["1988-05-01", "2005-05-01"]) for (const role of ROLES3) {
       const r = await go(role, { ...PART(d), publishedValueAtInheritance: "" });
@@ -151,7 +147,7 @@ describe("SU-3 한쪽만 상속(토지 상속 + 건물 매매) · 평가액 비�
       out[`${d}|${role}`] = [r.blocked8, r.status, r.tax, c.tax];
     }
     expect(out).toEqual({
-      "1988-05-01|컴패니언": [true, 200, 406_560_000, 377_130_000], "1988-05-01|주 자산": [true, 200, 406_560_000, 377_130_000], "1988-05-01|단건": [true, 200, 314_340_000, 286_410_000],
+      "1988-05-01|컴패니언": [true, 400, undefined, 377_130_000], "1988-05-01|주 자산": [true, 400, undefined, 377_130_000], "1988-05-01|단건": [true, 400, undefined, 286_410_000],
       "2005-05-01|컴패니언": [true, 400, undefined, 377_130_000], "2005-05-01|주 자산": [true, 400, undefined, 377_130_000], "2005-05-01|단건": [true, 400, undefined, 286_410_000],
     });
   });
