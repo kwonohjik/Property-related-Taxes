@@ -79,6 +79,16 @@
  *   ⇒ 아래 기대값은 「현행 출력을 박아 넣은 것」이 아니라 **엔진이 이미 산출해 세액에 쓴 값**을
  *     결과 객체에도 실으라는 요구다(A-5·B-5가 그 사실을 독립 단언한다).
  *
+
+ * ## ⚠️ 2026-10-29 정정 — 이 anchor가 박아 둔 A 세액·취득가액 echo는 **증여세 산입 누락·취득가액 echo 결함의 값**이었다
+ *
+ *   계획서 `docs/02-design/features/redev-carryover-gift-tax-expense.plan.md`(#2705 · Q-1 a · Q-2 a)로 두 가지를 의도적으로 바꿨다.
+ *   ① 이월과세 A의 증여세 상당액(이 픽스처 50,000,000 — 「소득세법」 §97의2①3호)을 §166 인가 전 분 필요경비에 산입한다 → A 결정세액 292,710,000 → **278,010,000**
+ *      (F2의 A도 16,585,000 → **15,240,000**). 위 「현행 실측값」 표·기대값의 292,710,000·16,584,999는 산입 누락 상태의 값이다.
+ *   ② 카드 취득가액 echo를 신고서 역산(인가 전·후 분 합)으로 바꾼다 → A 300,000,000(증여자 취득만) → **400,000,000**(+ 납부 청산금 100,000,000),
+ *      B 800,000,000(증여 당시 평가액만) → **900,000,000**. B 채택 여부·B 세액은 불변이다.
+ *   단언만 정정했다 — 이 anchor가 지키려는 「detail이 결과에 실린다」는 그대로다.
+ *
  * ## 기대값 (법령상 옳은 값)
  *
  *   F1 재개발: carryoverTaxationDetail 존재 · isEligible **true** · applicablePeriodYears **10**
@@ -188,26 +198,26 @@ describe("E3-06 / F1 — 재개발APT 이월과세 detail 배선 (A 채택)", ()
     expect(redev.carryoverTaxationDetail?.comparisonExclusion).toBe(false);
   });
 
-  it("A-3 🔴 §97의2②3호 A/B 비교 실적이 실린다 — A 292,710,000 vs B 215,010,000 → A 채택", () => {
+  it("A-3 🔴 §97의2②3호 A/B 비교 실적이 실린다 — A 278,010,000(증여세 산입 후 · 종전 292,710,000) vs B 215,010,000 → A 채택", () => {
     const d = redev.carryoverTaxationDetail;
     expect(d?.adoptedScenario).toBe("A");
-    expect(d?.scenarioA.determinedTax).toBe(292_710_000);
+    expect(d?.scenarioA.determinedTax).toBe(278_010_000);
     expect(d?.scenarioB.determinedTax).toBe(215_010_000);
   });
 
-  it("A-4 🔴 §97의2①1호 취득가액이 실린다 — A 300,000,000(증여자) / B 800,000,000(증여평가)", () => {
+  it("A-4 🔴 §97의2①1호 취득가액이 실린다 — 신고서 역산 A 400,000,000(증여자 300,000,000 + 납부 청산금 100,000,000) / B 900,000,000(증여평가 + 청산금)", () => {
     const d = redev.carryoverTaxationDetail;
     // 다건 집계의 `adoptedCarryoverAcquisitionPrice`가 읽는 값이다
     // (`transfer-tax-aggregate.ts:118·508`) — 없으면 수증자 취득가액으로 되돌아간다.
-    expect(d?.scenarioA.acquisitionPrice).toBe(300_000_000);
-    expect(d?.scenarioB.acquisitionPrice).toBe(800_000_000);
+    expect(d?.scenarioA.acquisitionPrice).toBe(400_000_000);
+    expect(d?.scenarioB.acquisitionPrice).toBe(900_000_000);
   });
 
   it("A-5 ✅ (증거) 엔진은 이미 A를 계산해 세액에 썼다 — steps·세액이 일치한다", () => {
     // 이 셋이 통과한다는 것이 「detail만 버려졌다」의 증명이다. 실패하면 픽스처가 깨진 것이다.
     expect(carryoverStepFormula(redev)).toContain("A 채택");
-    expect(carryoverStepFormula(redev)).toContain("292,710,000");
-    expect(redev.determinedTax).toBe(292_710_000);
+    expect(carryoverStepFormula(redev)).toContain("278,010,000");
+    expect(redev.determinedTax).toBe(278_010_000);
   });
 
   it("A-6 ✅ (대조군) 같은 사실관계의 일반주택은 detail을 정상 적재한다 — 판별력", () => {
@@ -246,7 +256,7 @@ describe("E3-06 / F2 — 1세대1주택 고가주택 재개발APT (B 채택 · �
     expect(d?.adoptedScenario).toBe("B");
     expect(d?.comparisonExclusion).toBe(true);
     expect(d?.exclusionReason).toBe("tax_comparison");
-    expect(d?.scenarioA.determinedTax).toBe(16_585_000);
+    expect(d?.scenarioA.determinedTax).toBe(15_240_000);
     expect(d?.scenarioB.determinedTax).toBe(25_685_000);
   });
 
