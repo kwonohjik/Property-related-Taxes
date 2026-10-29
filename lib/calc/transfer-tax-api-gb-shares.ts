@@ -241,6 +241,13 @@ export function buildGeneralBuildingShares(
   transferDate: string,
   /** 폼 `assetSplitMode` — 함께 양도(서로 다른 물건)면 전 자산이 지분이어도 지분 배열을 만들지 않는다. */
   declaredMode?: "companion" | "fractional",
+  /**
+   * 폼 상단 총 양도비(100% 기준) — **화면에 칸이 있는 경우만** 넘긴다(`withInScopeTransferExpenses`가 이미 정규화한 폼의 값).
+   * 카드의 자산 칸 양도비가 비어 있으면 이 값이 그 카드 `transferExpense`가 되고 `applyShareScale`이 × 지분율 한다 —
+   * `effectiveTransferExpenseFor`의 「폼 총액 × ratio」와 같은 값이다. 종전에는 일반건물 지분 카드에 닿지 않아 총 양도비가 소실됐다
+   * (계획서 `gb-total-transfer-expense-loss.plan.md` 결함 A).
+   */
+  formTotalTransferExpense = 0,
 ): GeneralBuildingSharePayloadOut[] | undefined {
   const primary = assets[0];
   if (!primary || assets.length < 2) return undefined;
@@ -254,7 +261,11 @@ export function buildGeneralBuildingShares(
     const asset = assets[i];
     const ratio = getOwnershipRatio(asset);
     // 물건-수준 병합 → GB payload 생성 → 지분율 스케일 (순서 고정)
-    const merged = mergeGbPropertyLevel(asset, primary);
+    const mergedBase = mergeGbPropertyLevel(asset, primary);
+    const merged =
+      formTotalTransferExpense > 0 && !parseAmount(mergedBase.transferExpense)
+        ? { ...mergedBase, transferExpense: String(formTotalTransferExpense) }
+        : mergedBase;
     const valuation = buildGeneralBuildingValuation(merged, transferDate) as
       | Record<string, unknown>
       | undefined;
