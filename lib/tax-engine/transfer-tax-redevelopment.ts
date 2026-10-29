@@ -25,6 +25,7 @@
  */
 
 import { isRedevelopmentActive } from "./redevelopment";
+import { settleCarryoverGiftTaxForRedevelopment } from "./redevelopment-burdened-gift";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import { runRedevelopmentGainSteps } from "./transfer-tax-redevelopment-steps";
 import { resolveRightTable2Clause, rightTable2Notices } from "./redevelopment-right-table2";
@@ -624,7 +625,16 @@ export function calculateRedevelopmentTax(
     // D4-08 — STEP 0.9+0.95 주택수 제외 상세. 이 분기가 조기이탈이라 상류에서 받아 실어야 한다.
     ...(opts?.houseCountExclusion ?? {}),
     // 부담부증여 §159 명세 — 정상 경로는 `transfer-tax-finalize.ts`가 싣는데 이 분기만 버렸다 (D-4).
-    ...(opts?.burdenedGift ? { transferBurdenedGiftBreakdown: opts.burdenedGift } : {}),
+    // 이월과세 증여세 산입은 §166 경로가 정한 값(인가 전 분 한도)으로 덮는다 — 슬롯 한도가 아니라 양도차익에 실제 들어간 값이어야 한다.
+    ...(opts?.burdenedGift
+      ? {
+          transferBurdenedGiftBreakdown: settleCarryoverGiftTaxForRedevelopment(
+            opts.burdenedGift,
+            redevAfterRight.carryoverGiftTaxApplied ?? 0,
+            redevAfterRight.carryoverGiftTaxCap,
+          ),
+        }
+      : {}),
     /** 비차단 안내 — 정상 경로와 동형으로 항상 키를 싣는다(종전에는 키 자체가 없었다). */
     warnings: [
       ...(opts?.warnings ?? []),

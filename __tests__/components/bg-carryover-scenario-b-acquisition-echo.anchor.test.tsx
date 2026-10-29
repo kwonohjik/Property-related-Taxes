@@ -208,32 +208,5 @@ describe("묶음 × B 채택 — 자산별 취득가액·필요경비·합산 �
   });
 });
 
-/**
- * 재개발(§166) 원조합원 입주권 부담부증여 × 이월과세는 이 PR의 범위 밖이다 — §159 명세가 인가 전 분만 담아 B 취득가액 합으로 쓰지 않는다(계획서 V-1).
- * 엔진 echo(300,000,000 · 플래그 없음)와 묶음 표시(변경 전과 같은 값)가 **바뀌지 않음**을 잠근다. ⚠️ 묶음 값(취득 300,000,000 · 필요경비 −273,333,334)은
- * 변경 전에도 그랬던 **별건 결함**이다(입주권 B 채택 합산 표시) — 고치면 이 단언을 정정한다.
- */
-const RIGHT = (g: string): A => ({
-  assetKind: "right_to_move_in", redevSubject: "right", isSuccessorRightToMoveIn: false, redevOriginalAssetType: "housing", redevApprovalLawBasis: "urban_renovation_art_74",
-  redevApprovalDate: "2024-01-10", redevRightsValue: "900000000", redevSettlementDirection: "pay", redevSettlementAmount: "200000000", redevPreApprovalExpenses: "0",
-  bgRightMemberRightsValue: "1200000000", bgRightPaidInstallments: "200000000", bgRightPremium: "100000000", bgValuationMode: "sangjeungbeop_standard",
-  bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "300000000", carryover: { ...CARRYOVER, giftTaxAmount: g },
-});
-describe("재개발(§166) 입주권 — 이 PR이 바꾸지 않는다 (계획서 V-1 · 별건)", () => {
-  it("단건: B 채택 · echo 300,000,000 그대로 · 플래그 없음 · 결정세액 6,440,000", async () => {
-    const r = await post(mk([land(1, RIGHT("2000000"))]));
-    expect(r.status, JSON.stringify(r.error)).toBe(200);
-    const co = r.data.result.carryoverTaxationDetail;
-    expect(r.data.result.redevelopmentDetail).toBeDefined();
-    expect(co.adoptedScenario).toBe("B");
-    expect(co.scenarioB.acquisitionPrice).toBe(300_000_000);
-    expect(co.scenarioB.acquisitionIsBurdenedGiftShare).toBeUndefined();
-    expect(r.data.result.determinedTax).toBe(6_440_000);
-  });
-
-  it("묶음 2건: 자산별 표시가 변경 전과 같다(§159 명세 합으로 바꾸지 않는다) · 결정세액 21,018,333", async () => {
-    const c = await bundle(together(RIGHT("2000000"), RIGHT("2000000")));
-    expect(c.echo).toEqual([[80_000_000, 300_000_000, -273_333_334, 53_333_334], [80_000_000, 300_000_000, -273_333_334, 53_333_334]]);
-    expect(c.agg.determinedTax).toBe(21_018_333);
-  });
-});
+// 재개발(§166) 입주권 부담부증여 × 이월과세는 `bg-redev-carryover-acquisition-echo.anchor.test.tsx`가 다룬다 —
+// 이 파일에서 「바뀌지 않는다」로 잠가 두었던 두 단언(단건 echo 300,000,000 · 묶음 자산별 −273,333,334)은 그 PR(계획서 #2701)에서 의도적으로 정정했다.

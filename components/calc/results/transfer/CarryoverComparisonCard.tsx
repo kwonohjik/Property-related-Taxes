@@ -129,7 +129,7 @@ function ScenarioAContent({ a, adopted, filingUnit, compared }: {
         ) : (
           <>
             {/* 소유자 분리 — 양도차익이 본인 파트 값이므로 취득가액도 본인 파트 값(엔진 echo · 계획서 V-4) */}
-            <InfoRow label={`취득가액 [당초 증여자 취득가${a.ownerSplitPart ? " · 본인 소유 파트" : ""}]`} value={fmt(a.ownerSplitPart?.acquisitionPrice ?? a.acquisitionPrice)} />
+            <InfoRow label={`취득가액 [${a.acquisitionIsRedevelopmentFiling ? "신고서 취득가액 · 인가 전·후 분 합 · 소령 §166①1호" : "당초 증여자 취득가"}${a.ownerSplitPart ? " · 본인 소유 파트" : ""}]`} value={fmt(a.ownerSplitPart?.acquisitionPrice ?? a.acquisitionPrice)} />
             <InfoRow label="보유기간 [당초 증여자 기산]" value={`${a.holdingPeriodYears}년`} />
             <InfoRow label="양도차익" value={fmt(a.transferGain)} />
           </>
@@ -201,7 +201,7 @@ function ScenarioBContent({ b, determinedTax, adopted, isComparisonExclusion, fi
       compared={compared}
     >
       <div className="space-y-1">
-        <InfoRow label={`취득가액 [${b.acquisitionIsBurdenedGiftShare ? "수증자 취득가 × 채무비율 · 소령 §159①1호" : "증여 당시 평가액"}${b.ownerSplitPart ? " · 본인 소유 파트" : ""}]`} value={fmt(b.ownerSplitPart?.acquisitionPrice ?? b.acquisitionPrice)} />
+        <InfoRow label={`취득가액 [${b.acquisitionIsRedevelopmentFiling ? "신고서 취득가액 · 인가 전·후 분 합 · 소령 §166①1호" : b.acquisitionIsBurdenedGiftShare ? "수증자 취득가 × 채무비율 · 소령 §159①1호" : "증여 당시 평가액"}${b.ownerSplitPart ? " · 본인 소유 파트" : ""}]`} value={fmt(b.ownerSplitPart?.acquisitionPrice ?? b.acquisitionPrice)} />
         <InfoRow label="보유기간 [수증자 기산]" value={`${b.holdingPeriodYears}년`} />
         <InfoRow label="양도차익" value={fmt(b.transferGain)} />
       </div>

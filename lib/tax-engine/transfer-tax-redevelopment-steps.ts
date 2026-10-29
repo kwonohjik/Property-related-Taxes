@@ -98,6 +98,11 @@ export function runRedevelopmentGainSteps(
     ...(burdenedGift?.acquisitionMethodUsed === "standard_price"
       ? { burdenedGiftStdLumpBase: burdenedGiftPerAssetTotals(burdenedGift).acquisitionPrice }
       : {}),
+    // 이월과세 A의 증여세 상당액(§97의2①3호) — 채무비율 안분 후·한도 전 값을 인가 전 분 필요경비에 얹는다(한도는 split이 적용). §159 STEP 5.7의 슬롯 한도는
+    // 이 분기를 모르므로(인가 전 분 취득가액이 토지 슬롯에 있고 양도가액은 건물 슬롯에 몰려 있다) `applied`가 아니라 안분 값(`apportioned`)을 받는다.
+    ...(burdenedGift?.carryoverGiftTax !== undefined
+      ? { carryoverGiftTaxExpense: burdenedGift.carryoverGiftTax.apportioned }
+      : {}),
   });
 
   /**

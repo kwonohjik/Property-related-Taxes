@@ -88,7 +88,10 @@ export function redevMaskedExemptGain(b: RedevBranch): number {
  * (`preApprovalNecessaryExpense` — 개산공제가 0보다 크면 개산공제). 값이 개산공제와 같고 0보다 크면 `estimated`.
  */
 export interface RedevExpenseParts {
+  /** 인가 전 분 필요경비 합 — 개산공제 또는 실비에 이월과세 증여세 상당액(`preApprovalGiftTax`)을 **포함**한 값. */
   preApproval: number;
+  /** `preApproval` 중 이월과세 증여세 상당액(「소득세법」 §97의2①3호). 없으면 0 또는 undefined. */
+  preApprovalGiftTax?: number;
   preApprovalKind: "estimated" | "actual";
   postApproval: number;
   settlement: number;
@@ -99,10 +102,13 @@ export function redevBranchExpenseParts(detail: RedevDetail): RedevExpenseParts 
     return { preApproval: 0, preApprovalKind: "actual", postApproval: detail.postApprovalExistingHouse.expenses ?? 0, settlement: 0 };
   }
   const preApproval = detail.preApproval.expenses ?? 0;
+  const preApprovalGiftTax = detail.preApproval.carryoverGiftTaxExpense ?? 0;
   const lump = detail.estimatedLumpDeduction ?? 0;
   return {
     preApproval,
-    preApprovalKind: lump > 0 && preApproval === lump ? "estimated" : "actual",
+    ...(preApprovalGiftTax > 0 ? { preApprovalGiftTax } : {}),
+    // 증여세 산입분을 뺀 몫이 개산공제와 같으면 개산공제 택일이다.
+    preApprovalKind: lump > 0 && preApproval - preApprovalGiftTax === lump ? "estimated" : "actual",
     postApproval: detail.postApprovalExistingHouse.expenses ?? 0,
     settlement: detail.settlement.expenses ?? 0,
   };

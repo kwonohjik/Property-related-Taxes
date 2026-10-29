@@ -634,12 +634,15 @@ export function emitRedevelopmentSteps(
   );
   const preApprovalExpenseLabel =
     preApprovalLumpDeduction > 0 ? "개산공제(시행령 §163⑥)" : "필요경비(법 §97①2·3호)";
+  // 이월과세 증여세 상당액(「소득세법」 §97의2①3호)은 택일 밖의 산입항이라 따로 적는다 — 없으면 종전 산식 그대로.
+  const preApprovalGiftTax = redev.preApproval.carryoverGiftTaxExpense ?? 0;
   steps.push({
     label: "인가전 분 양도차익",
     formula:
       `의제 양도가액 ${redev.preApproval.apportionedTransfer.toLocaleString()}` +
       ` - 취득가 ${redev.preApproval.apportionedAcquisition.toLocaleString()}` +
-      ` - ${preApprovalExpenseLabel} ${preApprovalExpenseChosen.toLocaleString()}`,
+      ` - ${preApprovalExpenseLabel} ${preApprovalExpenseChosen.toLocaleString()}` +
+      (preApprovalGiftTax > 0 ? ` - 이월과세 증여세 상당액 ${preApprovalGiftTax.toLocaleString()}` : ""),
     amount: redev.preApproval.gain,
     legalBasis: redevInfo.subject === "apt" ? REDEVELOPMENT.APT_PAY : REDEVELOPMENT.RIGHT_PAY,
   });

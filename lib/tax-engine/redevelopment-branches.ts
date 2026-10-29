@@ -472,9 +472,12 @@ export function runOriginalMember(
   //    완공APT **수령**에도 §166①2호 나목 안분을 그대로 적용한다(§166②2호 준용) —
   //    양도가액·취득가액·양도차익이 모두 축소되는데 필요경비만 원액으로 남아
   //    인가전 분 열이 어긋났다(실측 Δ5,000,000). 주석 자체가 오판의 근거였다.
+  // 이월과세 증여세 상당액(한도 적용 후)은 택일 밖의 독립 산입항이라 택일 결과에 더한다(`preApprovalNecessaryExpense` 3번째 인자).
+  const preApprovalGiftTax = split.carryoverGiftTaxApplied ?? 0;
   const rawPreApprovalExpenses = preApprovalNecessaryExpense(
     split.estimatedLumpDeduction ?? 0,
     redevelopment.preApprovalExpenses,
+    preApprovalGiftTax,
   );
   const preApprovalDisplayExpenses =
     redevelopment.settlementDirection === "receive"
@@ -484,6 +487,11 @@ export function runOriginalMember(
           redevelopment.rightsValue,
         )
       : rawPreApprovalExpenses;
+  // 신고서 필요경비 줄이 증여세 산입분을 따로 보일 수 있게, 표시 필요경비와 같은 비율로 안분한 값을 분기에 싣는다.
+  const preApprovalDisplayGiftTax =
+    preApprovalGiftTax > 0 && redevelopment.settlementDirection === "receive"
+      ? apportionPreApprovalExpenses(preApprovalGiftTax, split.preApproval.apportionedTransfer, redevelopment.rightsValue)
+      : preApprovalGiftTax;
 
   /**
    * 인가전 필요경비의 **청산금분 몫** (2026-08-27 · 완공APT 수령 전용).
@@ -546,6 +554,7 @@ export function runOriginalMember(
     branchAcqDate: acquisitionDate,
     branchTransferDate: isRight ? redevelopment.approvalDate : transferDate,
     expenses: preApprovalDisplayExpenses,
+    ...(preApprovalDisplayGiftTax > 0 ? { carryoverGiftTaxExpense: preApprovalDisplayGiftTax } : {}),
     residenceStartDate: priorResStart,
     residenceEndDate: priorResEnd,
     residenceMonths: priorMonths,
@@ -657,6 +666,14 @@ export function runOriginalMember(
         : undefined,
     valuationMeta: split.valuationMeta,
     estimatedLumpDeduction: split.estimatedLumpDeduction,
+    // 실제 양도차익에서 빠진 증여세 산입액 — 입주권 청산금 수령은 §166①2호 나목이 인가 전 분만 안분해 차감하고 나머지는 어느 분기에서도 차감하지 않는다
+    // (인가 전 필요경비의 다른 항목과 같은 규약). 완공 아파트 수령은 나머지를 청산금 분할양도 분에서 차감해 전액이다.
+    ...(split.carryoverGiftTaxApplied !== undefined
+      ? {
+          carryoverGiftTaxApplied: isRight && redevelopment.settlementDirection === "receive" ? preApprovalDisplayGiftTax : split.carryoverGiftTaxApplied,
+          carryoverGiftTaxCap: split.carryoverGiftTaxCap,
+        }
+      : {}),
   };
 }
 

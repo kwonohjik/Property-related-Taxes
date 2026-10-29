@@ -32,10 +32,10 @@ import { ownerSplitSameDayLand } from "./transfer-tax-carryover-inputs";
 import { resolveHouseCountExclusionAcqDate } from "./transfer-tax-carryover-inputs";
 import { assertBgDonorBuiltInput, assertDonorBuiltInput, bgDonorBuiltOf, withDonorBuiltPenalty } from "./transfer-tax-carryover-donor-penalty";
 import { carryoverGiftHouseholdBasis } from "./one-house/gift-household-basis";
-import { burdenedGiftPerAssetTotals } from "./burdened-gift-totals";
+import { burdenedGiftPerAssetTotals, bgRedevFilingAcquisition } from "./burdened-gift-totals";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
-import type { TransferTaxInput } from "./types/transfer.types";
+import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type {
   CarryoverTaxationDetail,
@@ -114,6 +114,8 @@ function calcCarryoverScenariosCore(
      * 여기서 회수한다(D-7a). 부담부증여가 아니면 undefined.
      */
     transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
+    /** 재개발(§166) 결과 — §159 명세가 인가 전 분만 담으므로 A·B 취득가액 echo는 신고서와 같은 §166 역산(`bgRedevFilingAcquisition`)을 쓴다. */
+    redevelopmentDetail?: TransferTaxResult["redevelopmentDetail"];
     /** §89①3호 각 목 해당 여부 — ②2호 자동 판정용(D-8). 전액 비과세. */
     isExempt?: boolean;
     /** 동상 — 12억 초과 고가주택(부분 비과세). `isExempt || isPartialExempt`가 ②2호 요건이다. */
@@ -341,7 +343,11 @@ function calcCarryoverScenariosCore(
      * 「취득가액 3억」이라 적는데 실제로는 93,750,000이 쓰인 상태가 된다
      * (메모리 `feedback_engine_result_display_drift`).
      */
-    const bgAcqPrice = bgBreakdown
+    // 재개발(§166) 자산은 §159 슬롯이 인가 전 분만 담는다 — 신고서와 같은 §166 역산(인가 전·후·청산금 분 합)이 정본이다.
+    const redevFilingAcqA = resultABG.redevelopmentDetail ? bgRedevFilingAcquisition(resultABG) : undefined;
+    const bgAcqPrice = redevFilingAcqA !== undefined
+      ? redevFilingAcqA
+      : bgBreakdown
       ? bgBreakdown.perAsset.land.acquisitionPrice + bgBreakdown.perAsset.building.acquisitionPrice
       : donorAcqPrice;
     return finishScenarios({
@@ -361,6 +367,7 @@ function calcCarryoverScenariosCore(
       inputAFinal: inputABase,
       resultA: resultABG,
       donorAcqPrice: bgAcqPrice,
+      ...(redevFilingAcqA !== undefined ? { acquisitionIsRedevelopmentFiling: true } : {}),
       giftTaxAddedToExpense: cg?.applied ?? 0,
       giftTaxLimitApplied: cg?.limitApplied ?? false,
       giftTaxLimitCap: cg?.cap ?? 0,
@@ -491,7 +498,7 @@ function finishScenarios(args: {
     /** 부담부증여 §159 안분 명세 — 시나리오 B의 취득가액 echo(부담부증여는 §159①1호 안분값)를 여기서 읽는다. */
     transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
     /** 재개발·재건축(§166) 결과 — 이 경우 §159 명세는 인가 전 분만 담아 B 취득가액 합으로 쓰지 않는다. */
-    redevelopmentDetail?: unknown;
+    redevelopmentDetail?: TransferTaxResult["redevelopmentDetail"];
   };
   /** §97의2②3호 비교 결과 강제(다건 신고단위 비교 전용). undefined면 자체 비교. */
   scenarioOverride?: "A" | "B";
@@ -503,6 +510,8 @@ function finishScenarios(args: {
   inputAFinal: TransferTaxInput;
   resultA: { determinedTax: number; transferGain: number; splitDetail?: SplitGainResult };
   donorAcqPrice: number;
+  /** `donorAcqPrice`가 §166 신고서 역산 값인가 — 카드 라벨 분기 전용. */
+  acquisitionIsRedevelopmentFiling?: boolean;
   giftTaxAddedToExpense: number;
   giftTaxLimitApplied: boolean;
   giftTaxLimitCap: number;
@@ -524,6 +533,7 @@ function finishScenarios(args: {
 
   const scenarioA: CarryoverScenarioADetail = {
     acquisitionPrice: donorAcqPrice,
+    ...(args.acquisitionIsRedevelopmentFiling ? { acquisitionIsRedevelopmentFiling: true } : {}),
     holdingPeriodYears: holdingA.years,
     giftTaxAddedToExpense: args.giftTaxAddedToExpense,
     giftTaxLimitApplied: args.giftTaxLimitApplied,
@@ -557,10 +567,16 @@ function finishScenarios(args: {
 
   // 부담부증여(§159): B의 취득가액은 증여 당시 평가액이 아니라 엔진이 STEP 0.48에서 덮어쓴 §159①1호 안분값(양도인 취득가액 × 채무액 / 증여가액)이다 —
   // 결과의 §159 명세 슬롯이 정본이다(A의 `bgAcqPrice`와 같은 방식). 재개발(§166)은 명세가 인가 전 분만 담아 제외한다.
+  // 재개발(§166) 자산은 §159 슬롯이 인가 전 분만 담아 신고서와 같은 §166 역산(`bgRedevFilingAcquisition`)을 쓴다 — 슬롯 합을 쓰지 않는다.
+  const redevFilingAcqB = resultB.redevelopmentDetail ? bgRedevFilingAcquisition(resultB) : undefined;
   const bgB = resultB.redevelopmentDetail ? undefined : resultB.transferBurdenedGiftBreakdown;
   const scenarioB: CarryoverScenarioBDetail = {
-    acquisitionPrice: bgB ? burdenedGiftPerAssetTotals(bgB).acquisitionPrice : ct.giftDateValuation,
-    ...(bgB ? { acquisitionIsBurdenedGiftShare: true } : {}),
+    acquisitionPrice: redevFilingAcqB !== undefined
+      ? redevFilingAcqB
+      : bgB
+      ? burdenedGiftPerAssetTotals(bgB).acquisitionPrice
+      : ct.giftDateValuation,
+    ...(redevFilingAcqB !== undefined ? { acquisitionIsRedevelopmentFiling: true } : bgB ? { acquisitionIsBurdenedGiftShare: true } : {}),
     holdingPeriodYears: holdingB.years,
     transferGain: resultB.transferGain,
     ...ownerSplitPartEcho(rawInput, resultB.splitDetail),
