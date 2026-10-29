@@ -3,6 +3,7 @@
 - 작성: 2026-10-29 · 브랜치 `docs/gb-legacy-direct-expense-non-purchase-plan`(master 3a56e7f62 기반) · 제품 코드 무변경(계획서만 · throwaway probe·후보 변형은 제거·원복함)
 - 출처: `gb-legacy-direct-expense-estimated-mixed.plan.md` §9 V-6 · §10 — #2711 이 매매 취득원인만 막고 「이월과세·상속·증여·신축 — 미측정」으로 남긴 항목이다(`lib/calc/gb-legacy-expense-unused.ts` 머리 주석 · `isPurchase` 제외).
 - 판정: **세액 결함(필요경비 누락 → 세액 과대) — #2711 과 같은 부류.** 저장 데이터 전용 입력에서만 생긴다(옛 칸은 `calc-wizard-migration.ts:64` 가 옛 저장 형식에서만 채운다). 법문은 명확하다(§4) — 남은 것은 해석이 아니라 #2711 에서 이미 정한 처리(⑧ 차단 + ⑤ 안내, Q-1 a)를 이 취득원인들에도 적용할지다.
+- 결정: ✅ 2026-10-29 — Q-1 적용(사용자 「권고안으로 진행해」). **구현 완료(§11)**.
 - 검증 방식: 모든 수치는 mock 세율(`makeMockRates()`)로 폼 → ④ → `POST /api/calc/transfer` probe 실측. 「오라클」 = 같은 금액을 **이미 동작하는 채널(자산 칸 양도비)** 로 넣은 값. 「누락」 = 옛 칸 D 의 세액 = 옛 칸 없음의 세액이고 양도비 칸 D 의 세액은 다른 것. 인용 file:line 은 이 워크트리 실파일. 미검증은 「확인 필요」.
 
 ---
@@ -113,3 +114,21 @@
 
 ## 10. 범위 밖
 - 부담부증여(`bgExpenseInputsUnused` 가 따로 처리) · 증축(`gbExtensionLegacyExpenseUnused`) · 토지·주택 등 다른 자산(옛 칸 구조가 다르다).
+
+---
+
+## 11. Do 환류
+
+**구현**: `lib/calc/gb-legacy-expense-unused.ts` 에서 `isPurchase` 상수와 취득원인 제외 한 줄을 걷고 머리 주석을 정리했다(술어는 이제 모드만 본다). ⑧(`transfer-tax-validate-gb.ts`)·⑤(`AssetSectionExpense.tsx`)는 같은 술어를 읽으므로 무변경. 엔진·④·⑫⑬⑭ 무변경, 값 불변.
+
+**anchor**
+- `transfer.route.gb-legacy-direct-expense-non-purchase.anchor.test.ts` 63건 — NP-1 증여·신축·상속 9조합 × 3경로 = 27칸 · NP-2 이월과세 8조합 × 4경로 = 32칸 + 개수 고정 둘 + 회귀 둘. **기대값을 엔진 거동에서 도출**(`dropped` ⇔ 차단). 차단 18 / 비차단 9, 차단 20 / 비차단 12.
+- 컴포넌트 `gb-legacy-expense-unused-notice.anchor.test.tsx`: 종전 행 「이월과세 등 매매 외 취득원인은 미측정 → 거짓」을 「이월과세 환산 → 참」으로 뒤집고 증여 토지 + 건물 환산 · 신축 건물 + 토지 환산(참) · 상속 실가(거짓) 행을 더했다.
+- 새 상속 셀(1985 전 포함)은 술어가 거짓이고 옛 칸이 양도비 칸과 같다 — §5.1 의 「확인 필요」(상속 변형 셀 없음)를 이 anchor 로 해소했다.
+
+**뮤테이션 6종 모두 적색**: M1 `isPurchase` 복구(43건) · M2 이월과세만 제외(22) · M3 증여만 제외(14) · M4 신축만 제외(8) · M5 상속에서 참(8) · M6 ⑧ 호출 제거(45).
+
+**하네스 오류 정정(참고)**: 처음 격자가 전부 적색이었던 것은 `legacyIssues` 헬퍼 누락이었다 — 술어 문제가 아니었다.
+
+**남은 것(§9)**: V-1 컴패니언 × 증여 ⑧↔⑫ 400 화면 도달성 · V-3·V-4 안내 문구·화면 육안 — 모두 「확인 필요」(미수행).
+

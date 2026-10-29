@@ -12,7 +12,10 @@
  *  · 실가 일괄 · 실가+실가 — 실가 경로가 읽는다.
  *  · 모든 파트가 감정·매매사례 — 개산공제뿐이라 옛 칸이 안 쓰이는 것이 법문상 맞다(§97②2호 본문).
  *  · 자본적지출·양도비 칸에 값이 있다 — 옛 칸은 화면에서 숨고(`AssetSectionExpense` 게이트) ④도 선언 채널을 우선한다.
- *  · 증축(전용 술어가 있다) · 부담부증여(`bgExpenseInputsUnused` 가 따로 처리) · 매매 이외 취득원인(이월과세·상속·증여·신축 — 미측정, 계획서 V-6).
+ *  · 증축(전용 술어가 있다) · 부담부증여(`bgExpenseInputsUnused` 가 따로 처리).
+ *
+ * 취득원인은 보지 않는다(`gb-legacy-direct-expense-non-purchase-causes.plan.md` Q-1 a) — 모드만 본다. 한 파트가 증여·신축·이월과세이고 다른 파트가 환산·감정이면
+ * 혼합 경로라 옛 칸이 똑같이 누락된다(증여·신축 21칸 중 18, 이월과세 32칸 중 20 — 실측). 상속은 §163⑨ 로 파트 모드가 실가에 고정돼 술어가 거짓이다.
  *
  * ⚠️ 분리 ON 실가+실가에서 단건·함께 양도 주 자산은 자산 단위 플래그 `useEstimatedAcquisition` 이 남아 있으면 옛 칸이 누락되지만(④가 0 으로 싣는다),
  *    원인이 다른 별건이다(계획서 §13 V-1) — 이 술어는 모드만 본다.
@@ -24,15 +27,12 @@ import { gbPartModes } from "./transfer-tax-split-acq-mode";
 export const GB_LEGACY_EXPENSE_UNUSED_MESSAGE =
   "「직접 귀속 필요경비 — 이전 입력 형식」은 환산취득가액이 있거나 실지거래가액과 감정·매매사례가액이 섞인 일반건물에서는 계산에 쓰이지 않습니다(소득세법 §97②). 금액을 「자본적지출」과 「양도비」 칸에 나눠 입력하고 이 칸은 비우세요.";
 
-const isPurchase = (cause: string | undefined) => !cause || cause === "purchase";
-
 export function gbLegacyExpenseUnused(asset: AssetForm): boolean {
   if (asset.assetKind !== "general_building" || asset.gbHasExtension) return false;
   if (!parseAmount(asset.directExpenses)) return false;
   // 숨은 칸을 지목하지 않는다 — 자본적지출·양도비 칸에 값이 있으면 옛 칸은 화면에서 숨는다.
   if (parseAmount(asset.capitalExpenditure) || parseAmount(asset.transferExpense)) return false;
   if (asset.transferType === "burdened_gift" || asset.acquisitionCause === "burdened_gift") return false;
-  if (!isPurchase(asset.acquisitionCause) || !isPurchase(asset.gbBuildingAcquisitionCause)) return false;
   const { land, building } = gbPartModes(asset);
   if (land === "estimated" || building === "estimated") return true;
   const deductionOnly = (m: string) => m === "appraisal" || m === "salesCase";
