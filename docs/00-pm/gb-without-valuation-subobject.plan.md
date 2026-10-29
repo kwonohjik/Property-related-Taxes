@@ -95,9 +95,14 @@
 
 ## 5. 미검증 (V)
 
-- **V-1** ✅ 단건은 앵커 RS-5 로 확인했다 (서브객체 있음 200 · 제거 400). 다건 항목은 같은 진입점 `refinePropertyRequiredInputs` (`propertySchema`·`propertyItemSchema` 공용)를 거치므로 같은 규칙을 받지만 별도 앵커는 두지 않았다 — 확인 필요(코드 경로 근거만).
-- **V-2** ✅ 면제가 필요하고 충분하다: 면제 한 줄을 빼고 지분 관련 31파일을 돌리면 `bg-gb-residuals.anchor` D-4(축 B 는 최상위 서브객체 없이도 200)가 깨지고, 복원하면 전부 통과한다. 길이 1 지분의 최상위 서브객체 유무는 측정하지 않았다 — 확인 필요(규칙은 2건 이상만 면제하고, 길이 1 이면서 서브객체가 없으면 400).
-- **V-3** ⑧ 통과 ⇒ 서브객체 있음은 **격자 안**에서 확인했다. 이력 복원·자동 채움 등 폼을 거치지 않고 상태를 만드는 경로가 서브객체 없는 요청을 만들 수 있는지는 확인 필요.
+- **V-1** ✅ 단건은 앵커 RS-5, 다건 라우트는 `gb-subobject-nonform-paths` RN-3 으로 확인했다 — 다건 라우트에 서브객체 없는 일반건물 항목을 직접 보내면 수정 전 200(일반 경로 오산) → 지금 400 (`properties.0.generalBuildingValuation`). 화면은 `MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE` 로 일반건물을 아예 차단한다(`multi-transfer-tax-validate.ts`).
+- **V-2** ✅ 면제가 필요하고 충분하다: 면제 한 줄을 빼고 지분 관련 31파일을 돌리면 `bg-gb-residuals.anchor` D-4 가 깨지고 복원하면 통과한다. **길이 1 지분은 도달하지 않는 입력이다** — ④ 는 자산이 2개 미만이면 지분 배열을 만들지 않고(`transfer-tax-api-gb-shares.ts:253`), API 직접 호출도 Zod `.min(2)` 가 수정 전부터 400 이다(`transfer-tax-building-share-schemas.ts:172`; RN-2 — 1건·0건 × 최상위 서브객체 유무 4조합 모두 400). 지분 2건은 ④ 가 최상위 서브객체도 함께 싣고(`gbv=true`), 지워도 200(면제).
+- **V-3** ✅ 「폼을 거치지 않는 경로」를 코드와 격자로 확인했다 (`transfer.route.gb-subobject-nonform-paths.anchor.test.ts`).
+  - 양도세 본문을 POST 하는 클라이언트: `transfer-tax-api-post.ts`(④ 경유) · `gift-burdened-transfer-api.ts`(`resolvePropertyType` 이 land·housing·building 만 — 일반건물 없음) · `multi-transfer-tax-api.ts`(일반건물 차단).
+  - `propertySchema` 를 재사용하는 `one-house-exemption`(Step3 가 housing·right_to_move_in 만 고르게 함)·`multi-house-surcharge-judgment`·`one-house-ai`(프롬프트가 주택·입주권·분양권만)는 일반건물을 만들지 않는다.
+  - 이력 복원(`transfer-resume-entry.ts`)은 저장된 본문을 재전송하지 않고 폼 스토어를 `migrateAsset` 으로 되살린 뒤 ⑧→④ 를 다시 거친다.
+  - **RN-1 격자 3,240셀** (입력 비움 9종 — ④ 가 서브객체를 생략하는 양도시 기준시가·면적·건물면적 축 포함 × 취득원인 5 × 분리 OFF·ON·ON+빈 파트 모드(이력 복원·이전 상태) × 취득방식 4 × 증축 × 위치 3): ⑧ 통과 466셀이 **모두 서브객체 있음**. #2722 의 격자(1,280셀)는 이 축들을 움직이지 않았다 — 이번에 채웠다. 변형 검증: ⑧ 의 바닥면적 요구를 빼면 RN-1 적색.
+  - 한계: 이력에 저장된 **옛 형식** 폼이 `migrateAsset` 을 거쳐도 ⑧ 을 통과하면서 ④ 가 서브객체를 생략하는 상태는 격자의 「ON+빈 파트 모드」 로 대표했을 뿐 옛 레코드 전수를 돌리지는 않았다 — 확인 필요.
 - **V-4** 2.3 의 「세액 다름」은 일반 경로 대비 일반건물 엔진 값의 차이다. 일반 경로가 법령상 어떤 값을 내야 하는지는 이 계획의 쟁점이 아니다(일반건물이 일반 경로로 가는 것 자체가 입력 계약 위반).
 - **V-5** 컴패니언 매매사례의 ⑧ 「첫 번째 자산에서만」 차단은 ⑫ 가 막지 않는다 — 별건 후보 (`gb-companion-required-refines-parity` V-5). 이 앵커 RS-3 의 매매사례 케이스는 그래서 주 자산만 본다.
 
