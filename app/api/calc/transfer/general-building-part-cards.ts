@@ -271,7 +271,7 @@ export function tagGbCards(
  * (`general-building-route-actual.ts` `effectiveExpenses`) 환산·혼합 경로에서는 읽지 않는다 — 그래서 자산 칸 양도비와 같은 선언 채널로 옮겨야
  * 모든 모드에서 같은 파트 분배·단서 비교를 탄다(소득세법 §100② 후문 · §97②1호·2호).
  *
- * 합산하지 않는 경우(종전 그대로): 몫 0 · 부담부증여(§159는 별도 안분 — 미검증) ·
+ * 합산하지 않는 경우(종전 그대로): 몫 0 · 부담부증여(`withBurdenedGiftCommonExpense`가 맡는다 — 옛 덩어리 분류가 달라 같은 합산을 쓰지 못한다) ·
  * 증축 일괄 이전 형식 직접분(`bundledExpenses` > 0) — 증축 경로는 그 값을 legacy 로 쓰는데 선언 채널이 생기면 후퇴한다(공통 몫은 종전처럼 소실 — 이전 형식 입력만의 한계) ·
  * 실가 경로이면서 선언 채널이 비어 있는 경우(legacy 채널이 이미 직접분과 함께 파트에 나눈다 — 옮기면 직접분이 후퇴한다).
  * 증축 자체는 합산한다 — 새 입력 증축은 선언 채널과 같은 오라클을 따른다(계획서 §10).
@@ -289,6 +289,38 @@ export function withBundledCommonExpense<T extends object>(
   const declared = (g.capitalExpenditure ?? 0) + (g.transferExpense ?? 0);
   if (g.actualPriceMode === true && declared === 0) return gbv;
   return { ...gbv, transferExpense: (g.transferExpense ?? 0) + commonExpense };
+}
+
+/**
+ * 함께 양도 × **부담부증여**(소령 §159) — 신고 단위 공통 양도비의 일반건물 몫을 **양도비 칸**으로 옮기고, 옛 덩어리의 직접분은 **자본적지출 칸**으로 옮긴다.
+ *
+ * 몫은 옛 덩어리(`engine.expenses` = 직접 + 공통)로도 오는데, 부담부증여 분기는 옛 덩어리를 **자본적지출 슬롯**으로 읽고(선언 채널이 있으면 버린다 —
+ * `general-building-route-actual.ts` `capitalExpenditure: 선언 > 0 ? 자본적지출 : actualExpenses`), §159 안분은 자본적지출을 취득시 기준시가로 나눈다.
+ * 그래서 폼 「총 양도비」(성질이 양도비로 정해진 칸)가 ① 자산 칸에 자본적지출이 있으면 통째로 소실되고 ② 없어도 취득시 비율로 나뉘었다
+ * (`gb-bg-companion-total-expense-channel.plan.md` §2·§3). 자산 칸 양도비로 입력한 것과 같은 양도시 비율을 타게 한다(소득세법 §97①3호 · §100② 후문).
+ *
+ * 직접분 = 옛 덩어리 − 공통 몫 — **종전에도 자본적지출 슬롯으로 읽히던 분류 그대로**라 값이 움직이지 않는다(계획서 Q-1 a: 성질을 모르는 덩어리를 근거 없이 바꾸지 않는다).
+ * 옮긴 뒤에는 선언 채널이 생기므로 옛 덩어리 인자는 0으로 돌려준다(이중계상 방지).
+ *
+ * 옮기지 않는 경우(종전 그대로): 부담부증여가 아님 · 몫 0 · 증축 이전 형식 직접분(`bundledExpenses` > 0 — 증축 경로는 그 값을 옛 덩어리로 쓴다, 계획서 Q-2 a).
+ */
+export function withBurdenedGiftCommonExpense<T extends object>(
+  gbv: T,
+  commonExpense: number,
+  legacyExpenses: number,
+  burdenedGiftInfo: BurdenedGiftInfo | undefined,
+): { gbv: T; legacyExpenses: number } {
+  if (!burdenedGiftInfo || commonExpense <= 0) return { gbv, legacyExpenses };
+  const g = gbv as { capitalExpenditure?: number; transferExpense?: number; bundledExpenses?: number };
+  if ((g.bundledExpenses ?? 0) > 0) return { gbv, legacyExpenses };
+  return {
+    gbv: {
+      ...gbv,
+      capitalExpenditure: (g.capitalExpenditure ?? 0) + Math.max(legacyExpenses - commonExpense, 0),
+      transferExpense: (g.transferExpense ?? 0) + commonExpense,
+    },
+    legacyExpenses: 0,
+  };
 }
 
 /**
@@ -342,11 +374,15 @@ export function buildGbCompanionItems(
      * 시나리오 A는 당초 증여자 자본적지출(§97의2①2호)을 더한다 — 단건·지분과 같은 leaf.
      */
     // 선언 채널이 생기면 legacy 는 읽히지 않는다(실가 `effectiveExpenses` 택일 · 환산 무시) — 같은 몫을 legacy 에서 빼지 않아도 이중계상이 없다.
-    const capex = withCarryoverDonorCapex(
+    // 부담부증여는 공통 몫을 양도비 칸으로, 옛 덩어리 직접분을 자본적지출 칸으로 옮긴다(`withBurdenedGiftCommonExpense`). 그 밖은 선언 채널에 합산한다.
+    const legacyAll = (gbv.bundledExpenses as number | undefined) ?? engine.expenses ?? 0;
+    const bgMoved = withBurdenedGiftCommonExpense(
       withBundledCommonExpense(gbv, src.commonExpense ?? 0, bgInfo),
-      (gbv.bundledExpenses as number | undefined) ?? engine.expenses ?? 0,
-      donorCapex,
+      src.commonExpense ?? 0,
+      legacyAll,
+      bgInfo,
     );
+    const capex = withCarryoverDonorCapex(bgMoved.gbv, bgMoved.legacyExpenses, donorCapex);
     const built = buildGbPartCards(
       capex.gbv,
       engine.transferPrice,
