@@ -1,7 +1,7 @@
 # 함께 양도 컴패니언 일반건물 — 주 자산 ⑫ 필수 입력 보호(`refineGbPropertyRequired`)가 없다
 
-- 상태: 실측 완료 · 구현 전 (Q-1·Q-2·Q-3 결정 대기)
-- 앵커: `__tests__/api/transfer.route.gb-companion-required-refines-parity.anchor.test.ts` (18건, 현행 동작 고정)
+- 상태: 구현 완료 (Q-1 a · Q-2 a · Q-3 a — 사용자 「권고안으로 진행해」)
+- 앵커: `__tests__/api/transfer.route.gb-companion-required-refines-parity.anchor.test.ts` (20건 — 수정 후 기대 + 격자 320셀)
 - 선행: `gb-companion-gift-fixed-acq-price.plan.md`(#2717·#2718) §9의 남은 확인 「컴패니언 매매 분리 OFF 일괄 실가 ⑫ 보호」
 
 ## 1. 요약
@@ -74,3 +74,24 @@
 2. 구현 PR: §4 의 1·2 → 앵커 `COMPANION_NOW` 를 400 으로 뒤집는다.
 3. §6 격자 대조 · 컴패니언 일반건물 앵커 회귀 · `tsc` · 범위 회귀.
 4. 화면 변화 없음 — ⑧ 이 막는 입력은 화면에서 도달할 수 없다. E2E 는 추가하지 않는다. 다만 §6 격자가 ⑧ 통과 셀의 200 을 지킨다.
+
+## 9. 구현 결과 (Do)
+
+- `refineGbPropertyRequired(data, ctx, basePath = [], acquisitionPricePath = [...basePath, "acquisitionPrice"])` — 이슈 경로 접두와 I3 가리킬 칸을 인자로 받는다 (`required-refines-gb.ts:217-`). 주 자산 호출은 인자 없이 그대로다.
+- `addCompanionAcquisitionCauseRefines` 가 컴패니언마다 같은 함수를 부른다 — `acquisitionPrice ← fixedAcquisitionPrice`, `transferType ← burdenedGiftInfo 가 있으면 "burdened_gift"`, `reductions ← c.reductions`, 경로 `["companionAssets", i]` · I3 는 `fixedAcquisitionPrice` (`companion-refines.ts` 말미).
+- 앵커 뒤집기: 컴패니언 6셀 200 → 400, I3 이슈 칸 `companionAssets.0.fixedAcquisitionPrice`, 대조 셀·부담부증여 묶음 200 유지.
+- 변형 검증: 컴패니언 호출을 되돌리면 7건 빨강(RP-1 6 + 칸 1), 격자 `320셀`도 빨강. 복원하면 20건 통과.
+- **§6 격자 (수정 전후 1,280셀: 컴패니언·주 자산 × 취득원인 5 × 분리 2 × 취득방식 4 × 증축 × 자본적지출 × 가액 × 기준시가)**:
+  상태가 바뀐 셀 **20개**, 전부 「컴패니언 · ⑧ 차단 · 200 → 400」(매매·건물신축 × 실가 × 가액 비움, 분리 ON·OFF). **⑧ 통과 셀의 상태 변화 0건 · 주 자산 위치 변화 0건 · ⑧ 통과인데 200 이 아닌 셀 0건(전·후 모두).** 새 막다른 길 없음.
+
+## 10. 남은 비대칭 (이번 범위 밖)
+
+격자 후에도 컴패니언과 주 자산의 응답이 다른 셀이 70개 남아 있다 — 모두 수정 전부터이고 이번 변경이 만든 것이 아니다(변경 20셀과 겹치지 않음).
+
+| 방향 | 셀 수 | 내용 | 원인 |
+|---|---|---|---|
+| 컴패니언 200 · 주 자산 400 (모두 ⑧ 차단) | 36 | 증여 OFF × 환산·감정·매매사례(기준시가 비움) 12 · 상속 OFF × 감정·매매사례 8 · 상속 OFF × 환산 8 · 상속 ON × 환산 8 | 주 자산의 **일반(비-GB) refine** — 「환산취득가 사용 시 기준시가 필수」·「증여 취득 자산은 환산·감정·매매사례 불가(§163⑨)」·「감정가액 필수」가 주 자산 일반건물에도 걸린다(실측 메시지). 주 자산 위치에서 이 메시지가 나오는 것은 실측했다. 컴패니언에서 걸리지 않는 구조적 이유(상속·증여 arm 의 일반건물 면제 등)는 **확인 필요**. 컴패니언 상속·증여 × 추계는 ⑧ 이 막는데 ⑫ 가 통과시켜 세액이 나온다 — **세액 영향 확인 필요 (V-6)** |
+| 컴패니언 400 · 주 자산 200 | 26 | 증여·신축·매매의 증축/ON 중 기준시가 비움 | 컴패니언에서 400 이 나는 이유는 대표 셀(기준시가 둘 다 비움)에서만 엔진 `TaxCalculationError` 로 확인했고 나머지는 **확인 필요**. ⑧ 은 모두 차단 |
+| 컴패니언 ⑧ 차단 · 주 자산 ⑧ 통과 (둘 다 200) | 8 | 컴패니언 매매사례 (V-5) | ⑧ 「매매사례가액 추정은 첫 번째 자산에서만」 |
+
+별건 후보: V-6(컴패니언 상속·증여 일반건물 × 추계 ⑫ 보호 — 36셀), V-1(주 자산 I1).

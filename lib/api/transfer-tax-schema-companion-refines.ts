@@ -14,6 +14,7 @@ import type { companionAssetSchema } from "./transfer-tax-schema-sub";
 // 의제취득일(1985.1.1.) — ⑧과 같은 상수(단일 소스)
 import { DEEMED_ACQUISITION_DATE } from "@/lib/calc/transfer-163-9-base-date";
 import { refineCompanionMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refines";
+import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
 
 type CompanionAsset = z.infer<typeof companionAssetSchema>;
 
@@ -187,6 +188,25 @@ export function addCompanionAcquisitionCauseRefines(
       refineCompanionNewConstruction(c, i, ctx);
     }
     refineCompanionAcquisitionDate(c, i, ctx);
+    /**
+     * 일반건물 자산-수준 필수 입력(I3·X1·Z4·Z5·C1~C4) — 주 자산과 **같은 함수**를 건다(`gb-companion-required-refines-parity.plan.md` Q-1 a).
+     * 위 매매 arm 은 일반건물을 면제하지만 면제는 「화면에 없는 자산 전체 값을 요구하지 말라」는 뜻이지 일반건물 자신의 필수 항목을 풀어 주는 것이 아니다 —
+     * 없으면 ⑧ 이 막는 입력이 200 + 취득가액 0 으로 계산됐다. 부담부증여는 함수가 `transferType` 으로 면제한다(§159 가 취득가액을 정한다).
+     * 취득가액 칸은 컴패니언에서 `fixedAcquisitionPrice`(⑧ 이 요구하는 칸 · route `bundled-apportionment.ts` 가 읽는 칸)다.
+     */
+    refineGbPropertyRequired(
+      {
+        transferType: c.burdenedGiftInfo !== undefined ? "burdened_gift" : c.transferType,
+        transferDate,
+        reductions: c.reductions,
+        acquisitionPrice: c.fixedAcquisitionPrice,
+        useEstimatedAcquisition: c.useEstimatedAcquisition ?? false,
+        generalBuildingValuation: c.generalBuildingValuation,
+      },
+      ctx,
+      ["companionAssets", i],
+      ["companionAssets", i, "fixedAcquisitionPrice"],
+    );
   }
 }
 

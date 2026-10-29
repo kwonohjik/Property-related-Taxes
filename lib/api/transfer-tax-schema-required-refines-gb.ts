@@ -10,7 +10,10 @@
  *   - `refineGbValuationRequired` — `generalBuildingValuationSchema` superRefine에서 부른다.
  *     서브객체만으로 판정되는 규칙이라 단건·다건·컴패니언·지분 카드 모두에 걸린다.
  *   - `refineGbPropertyRequired` — 자산-수준 값(`transferType`·`acquisitionPrice`·
- *     `useEstimatedAcquisition`)이 필요한 규칙. `refinePropertyRequiredInputs`(단건·다건 주 자산)에서 부른다.
+ *     `useEstimatedAcquisition`)이 필요한 규칙. `refinePropertyRequiredInputs`(단건·다건 주 자산)와
+ *     `addCompanionAcquisitionCauseRefines`(컴패니언 — `fixedAcquisitionPrice` 를 `acquisitionPrice` 자리로)에서 부른다.
+ *     컴패니언 매매 arm 은 일반건물을 통째로 면제하므로(`transfer-tax-schema-companion-refines.ts`) 이 호출이 없으면
+ *     ⑧ 이 막는 입력이 200 + 취득가액 0 으로 계산된다(`gb-companion-required-refines-parity.plan.md`).
  */
 import { z } from "zod";
 import { usesBundledPartAcquisition } from "@/lib/tax-engine/general-building-part-acq";
@@ -214,10 +217,17 @@ type GbPropertyLike = {
  * 자산-수준 값이 필요한 규칙. 부담부증여는 §159가 취득가액을 정하고 ⑧도 자체 분기에서 종결하므로
  * (⑧ `transfer-tax-validate-gb.ts` 부담부증여 분기) 여기 규칙을 걸지 않는다.
  */
-export function refineGbPropertyRequired(data: GbPropertyLike, ctx: z.RefinementCtx) {
+export function refineGbPropertyRequired(
+  data: GbPropertyLike,
+  ctx: z.RefinementCtx,
+  /** 이슈 경로 접두 — 주 자산은 비어 있고, 컴패니언은 `["companionAssets", i]`. */
+  basePath: (string | number)[] = [],
+  /** I3 「일괄 취득가액」 이슈가 가리킬 칸 — 주 자산 `acquisitionPrice`, 컴패니언 `fixedAcquisitionPrice`(⑧ 이 요구하는 칸). */
+  acquisitionPricePath: (string | number)[] = [...basePath, "acquisitionPrice"],
+) {
   const v = data.generalBuildingValuation as GbValuationLike | null | undefined;
   if (!v || data.transferType === "burdened_gift") return;
-  const issue = issuer(ctx, ["generalBuildingValuation"]);
+  const issue = issuer(ctx, [...basePath, "generalBuildingValuation"]);
   const bothInherited = v.acquisitionByInheritance === true && v.buildingAcquisitionByInheritance === true;
   const anyInherited = v.acquisitionByInheritance === true || v.buildingAcquisitionByInheritance === true;
   // route와 같은 값 — `route.ts`의 `bundledAcq`(일괄 취득가액 = 서브객체 값 우선, 없으면 자산 취득가액)
@@ -247,7 +257,7 @@ export function refineGbPropertyRequired(data: GbPropertyLike, ctx: z.Refinement
       else
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ["acquisitionPrice"],
+          path: acquisitionPricePath,
           message: "일반건물 실지거래가액 — 토지·건물 일괄 취득가액 또는 파트별 취득가액 두 칸이 필요합니다 (소득세법 §97①1호)",
         });
     }
