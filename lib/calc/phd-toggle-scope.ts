@@ -133,7 +133,9 @@ export function carryoverEstimationModeSupported(
    * 증여자 취득가액이 0 으로 계산됐다(⑧은 통과 · 200 OK). 일반(general) 환산은 `topLevelOverrides`가 실어 정상이다.
    */
   if (opts.isNonPrimary) return mode === "general";
-  return assetKind === "general_building" ? mode === "general" : true;
+  // 조합원입주권 — 원조합원은 환산 방식 칸이 없고(§166③ · `isRedevCarryoverDonorBasis`), 승계 입주권은 §164⑦ 「공시되기 전에 취득한 주택」 환산의
+  //   대상인지 확인하지 않았다 — general만 연다(계획서 `successor-right-carryover-validation.plan.md` Q-3 a · 종전 phd·apd는 ⑫ 기준시가 2칸 400).
+  return assetKind === "general_building" || assetKind === "right_to_move_in" ? mode === "general" : true;
 }
 
 /**

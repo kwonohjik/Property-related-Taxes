@@ -29,6 +29,8 @@ import { fieldError } from "./transfer-tax-validate-field";
 import { successorRightEstimationMode, successorTypeToggleSectionLabel } from "./transfer-successor-right";
 import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
 import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
+import { isCarryoverSuccessorRight } from "./transfer-successor-right";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 
 /**
  * 승계조합원 입주권 자산 검증.
@@ -44,8 +46,9 @@ export function validateSuccessorRightAsset(
   /** 「조합원 유형」 질문이 있는 섹션 — 축 B 둘째 이후 지분 카드는 ③ 취득정보(`successorTypeToggleSectionLabel`). */
   typeToggleSection: string = successorTypeToggleSectionLabel(false),
 ): string | null {
-  // ── 취득일 ──
-  if (!asset.acquisitionDate) {
+  // ── 취득일 ── 이월과세는 취득일 칸이 화면에 없다 — ④와 같은 leaf(원값 → 증여 등기일)로 읽는다(계획서 `successor-right-carryover-validation.plan.md` Q-1 a).
+  const acqDate = primaryAcquisitionDateOf(asset);
+  if (!acqDate) {
     return fieldError("acquisitionDate", `${label}: 조합원입주권 승계취득일을 입력하세요.`);
   }
 
@@ -56,7 +59,7 @@ export function validateSuccessorRightAsset(
    */
   if (
     asset.redevApprovalDate &&
-    new Date(asset.redevApprovalDate) > new Date(asset.acquisitionDate)
+    new Date(asset.redevApprovalDate) > new Date(acqDate)
   ) {
     return fieldError("isSuccessorRightToMoveIn", `${label}: 관리처분계획 인가일이 취득일보다 나중입니다. 인가 전에 종전 부동산을 보유하셨다면 ${typeToggleSection}의 「조합원 유형」을 "원조합원"으로 바꾸세요. (시행령 §166①)`);
   }
@@ -73,6 +76,9 @@ export function validateSuccessorRightAsset(
    * ⛔ **원조합원에는 열리지 않는다** — §166③ 환산이 전속이다(R-9). 게이트는 ④ 변환의
    *    `blocksEstimation`이 담당하고, 여기는 승계 자산만 들어온다.
    */
+  // 이월과세 — 취득가액은 이월과세 블록이 정한다(호출부가 `validateCarryoverAsset`를 건다 · Q-2 a). 승계 산정 방식·승계취득가액은 보지 않는다(Q-4 a).
+  if (isCarryoverSuccessorRight(asset)) return null;
+
   const mode = successorRightEstimationMode(asset);
 
   if (mode === "actual") {
