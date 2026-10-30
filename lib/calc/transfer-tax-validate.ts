@@ -37,6 +37,7 @@ import { MIXED_BURDENED_GIFT_BUNDLE_MESSAGE } from "./burdened-gift-transfer-pri
 import { sameDayHousingBundleIssue } from "./same-day-housing-bundle";
 import { isRedevSuccessorAptActualOnly } from "./redev-acquisition-price-source";
 import { bgIgnoresAssetAppraisalSalesCase } from "./bg-asset-acq-mode-scope";
+import { withRedevCarryoverAcqMode } from "./redev-carryover-acq-mode";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -62,7 +63,8 @@ export interface ValidationIssue {
  */
 export function collectStepIssues(step: number, form: TransferFormData): ValidationIssue[] {
   // 하위 검증의 `fieldError` 기록을 모아 field 없는 이슈에 붙인다(직접 push는 field를 직접 준다).
-  const { result, fieldOf } = collectWithFields(() => collectStepIssuesRaw(step, form));
+  // 재개발 × 이월과세 — ④와 같은 사본으로 검증한다(⑤ 라디오의 남은 값 대신 이월과세 ② 토글 · `redev-carryover-acq-mode.ts`).
+  const { result, fieldOf } = collectWithFields(() => collectStepIssuesRaw(step, withRedevCarryoverAcqMode(form)));
   return result.map((it) => {
     const field = it.field ?? fieldOf(it.message);
     return field ? { ...it, field } : it;

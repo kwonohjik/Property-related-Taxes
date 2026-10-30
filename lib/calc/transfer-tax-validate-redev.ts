@@ -27,6 +27,7 @@ import type { IssueField } from "./transfer-tax-validate-field";
 
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { isRedevCarryoverDonorBasis } from "@/lib/calc/redev-carryover-acq-mode";
 import { successorTypeToggleSectionLabel } from "@/lib/calc/transfer-successor-right";
 import { isSec164ClauseAFilled } from "./transfer-tax-validate-clause-a";
 export function validateRedevelopmentAsset(
@@ -55,7 +56,10 @@ export function validateRedevelopmentAsset(
   const isEstimatedMode = acqMode === "estimated";
   const isActualMode = acqMode === "actual";
   // 환산 오류가 가리킬 칸 — 부담부증여 K-5는 ⑤ 라디오가 화면에 없고 부담부증여 블록의 산정방식이 정한다.
-  const estimatedModeField = asset.transferType === "burdened_gift" ? "bgAcquisitionMethod" : "useEstimatedAcquisition";
+  // 이월과세(비부담부증여)는 ⑤ 라디오가 없고 이월과세 ② 「환산취득가 사용」이 정한다(`redev-carryover-acq-mode.ts`).
+  const carryoverEstimationToggle = isRedevCarryoverDonorBasis(asset);
+  const estimatedModeField =
+    asset.transferType === "burdened_gift" ? "bgAcquisitionMethod" : carryoverEstimationToggle ? "carryover.useEstimatedAcquisition" : "useEstimatedAcquisition";
 
   // 지원 분기: subject="apt" (사례 44~48) + subject="right" (사례 36). 그 외 차단.
   if (subject !== "apt" && subject !== "right") {
@@ -210,7 +214,12 @@ export function validateRedevelopmentAsset(
     // land + right + 환산 + receive: 후속 PR (runLandContribEstimated가 settlementPaid로 pay만 가정 —
     // §166②2호·§166①2호 수령 산식 미구현). 실가 receive는 아래 #1(A)로 개방.
     if (subject === "right" && settlementDirection !== "pay" && isEstimatedMode) {
-      return fieldError("useEstimatedAcquisition", `${label}: 토지 출자 + 입주권 양도 + 청산금 수령 + 환산취득가 조합은 후속 PR에서 지원됩니다. 취득가액을 확인할 수 있으면 ⑤ 「인가전 분 종전 부동산 취득가액」에서 "실지거래가액"을 선택하세요.`);
+      return fieldError(
+        estimatedModeField,
+        carryoverEstimationToggle
+          ? `${label}: 토지 출자 + 입주권 양도 + 청산금 수령 + 환산취득가 조합은 후속 PR에서 지원됩니다. 당초 증여자의 취득가액을 확인할 수 있으면 이월과세 「환산취득가 사용」을 끄고 「증여자 취득가액」을 입력하세요.`
+          : `${label}: 토지 출자 + 입주권 양도 + 청산금 수령 + 환산취득가 조합은 후속 PR에서 지원됩니다. 취득가액을 확인할 수 있으면 ⑤ 「인가전 분 종전 부동산 취득가액」에서 "실지거래가액"을 선택하세요.`,
+      );
     }
     // land + right + 실가 (pay·receive 모두): #1(A) 지원 — runOriginalMember→computeRightPay(§166①1호, pay)/
     // computeRightReceive(§166①2호, receive)가 종전자산 actualAcquisitionPrice=신고가액 사용(환산 §166③ 아님).

@@ -38,6 +38,7 @@ import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
 import { landContributedOriginalApt } from "@/lib/calc/redev-field-scope";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { isRedevCarryoverDonorBasis } from "@/lib/calc/redev-carryover-acq-mode";
 import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -538,6 +539,21 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
               아래 칸은 ③ §166③ 환산취득가액(평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" />)의 입력입니다 —
               ①·②와 비교해 큰 금액에 채무비율을 곱합니다. ③은 늘 비교 후보라 ①·②가 있어도 필수입니다.
             </p>
+          ) : isRedevCarryoverDonorBasis(asset) ? (
+            // 이월과세 — 당초 증여자 취득가액을 확인할 수 있는가는 이월과세 ② 「환산취득가 사용」이 정한다(⑤ 라디오 없음).
+            <p className="text-xs text-sky-800 dark:text-sky-200" data-testid="redev-carryover-acq-notice">
+              {redevAcqMode === "estimated" ? (
+                <>
+                  이월과세 「환산취득가 사용」을 켰습니다 — 당초 증여자의 취득가액을 확인할 수 없어 종전 부동산의 취득가액을 「소득세법 시행령」 제166조 제3항
+                  (평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" />)으로 환산합니다. 취득일은 당초 증여자의 취득일입니다(「소득세법」 제97조의2 제1항 제1호). 아래 칸을 입력하세요.
+                </>
+              ) : (
+                <>
+                  이월과세 자산은 당초 증여자의 취득가액을 이월과세 「증여자 취득가액」에서 입력합니다(「소득세법」 제97조의2 제1항 제1호). 증여자의 취득가액을 확인할 수 없으면
+                  이월과세 「환산취득가 사용」을 켜세요 — 이 섹션에 「소득세법 시행령」 제166조 제3항 환산 칸이 열립니다.
+                </>
+              )}
+            </p>
           ) : asset.transferType === "burdened_gift" ? (
             <p className="text-xs text-sky-800 dark:text-sky-200" data-testid="redev-bg-sec166-3-notice">
               부담부증여 취득가액 산정방식을 「환산취득가액」으로 골랐습니다 — 종전 부동산의 취득가액을 「소득세법 시행령」 제166조 제3항
@@ -555,7 +571,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
             />
           )}
 
-          {redevAcqMode === "actual" ? (
+          {redevAcqMode === "carryover_donor" ? null : redevAcqMode === "actual" ? (
             <FieldCard
               label="실거래가 취득가액"
               field="redevActualAcquisitionPrice"

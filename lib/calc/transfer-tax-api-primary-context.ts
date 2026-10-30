@@ -32,6 +32,7 @@ import { phdFlagEffective } from "./phd-toggle-scope";
 import { isRedevelopmentSec166Asset } from "./redev-acquisition-price-source";
 import { isRedevSuccessorAptActualOnly } from "./redev-acquisition-price-source";
 import { bgIgnoresAssetAppraisalSalesCase } from "./bg-asset-acq-mode-scope";
+import { isRedevCarryoverDonorBasis } from "./redev-carryover-acq-mode";
 
 /**
  * 주 자산 **취득 모드 플래그** — `form`을 보지 않고 `primary`만으로 정해진다.
@@ -123,7 +124,9 @@ export function primaryAcquisitionModeFlags(primary: AssetForm) {
     primary.acquisitionCause === "carryover_gift" &&
     primary.carryover?.useEstimatedAcquisition === true &&
     primary.carryover?.estimationMode === "general" &&
-    !partCarryover(primary).building; // P4 B도 같다
+    !partCarryover(primary).building && // P4 B도 같다
+    // 재개발 이월과세 환산은 ⑤의 §166③ 칸으로 계산한다 — 증여자 기준시가는 엔진이 쓰지 않는다(계획서 `redev-carryover-estimation-toggle-sync.plan.md` §1.3).
+    !isRedevCarryoverDonorBasis(primary);
   return { isSuccessorRight, isSalesCase, isAppraisal, isEstimated, hasPre1990, hasPre1990ForSec164, usesPhd, isCarryoverGeneral };
 }
 
