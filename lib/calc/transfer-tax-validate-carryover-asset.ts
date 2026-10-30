@@ -41,40 +41,8 @@ export function validateCarryoverAsset(
     return validateSplitDirectInputs(asset, label, formTransferDate, { isNonPrimary: ctx.isNonPrimaryAsset, hasCompanions: (ctx.form?.assets?.length ?? 0) > 1 });
   const c = asset.carryover;
 
-  // (a) 가업상속공제 최우선 차단 (§97조의2 ④)
-  if (c?.exclusionDeclared?.isFamilyBusinessInheritedAsset === true) {
-    return `${label}: 가업상속공제 적용 자산은 현재 버전에서 지원하지 않습니다. 세무사에게 수동 계산을 의뢰하세요 (소득세법 §97조의2 ④).`;
-  }
-
-  if (!c) return fieldError("carryover.giftRegistryDate", `${label}: 이월과세 증여 정보를 입력하세요.`);
-
-  // (b) 필수 날짜 필드
-  if (!c.giftRegistryDate) return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일을 입력하세요.`);
-  if (!c.donorAcquisitionDate) return fieldError("carryover.donorAcquisitionDate", `${label}: 증여자 취득일을 입력하세요.`);
-
-  // (b-2) 날짜 순서 — 증여자 취득 → 증여 등기 → 양도 (gift/inheritance 원인과 동일 수준 차단)
-  if (c.donorAcquisitionDate >= c.giftRegistryDate)
-    return fieldError("carryover.donorAcquisitionDate", `${label}: 증여자 취득일은 증여 등기접수일보다 이전이어야 합니다.`);
-  if (formTransferDate && c.giftRegistryDate >= formTransferDate)
-    return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일은 양도일보다 이전이어야 합니다.`);
-
-  // (b-3a) §97조의2 ① 본문 — 대상은 **배우자·직계존비속뿐**이다.
-  // 그 외 관계는 이월과세 자체가 성립하지 않으므로 취득원인을 바꿔야 한다.
-  if (c.donorRelation === "other")
-    return fieldError("acquisitionCause", `${label}: 이월과세는 배우자 또는 직계존비속으로부터 증여받은 경우에만 적용됩니다 (「소득세법」 제97조의2 제1항). 취득 원인을 "증여"로 변경하세요.`);
-
-  // (b-3) §97조의2 ① 관계요건 — 사망을 선언했으면 관계가 있어야 판정이 갈린다.
-  //
-  // ⚠️ 관계를 **단독으로 필수화하지 않는다**. 구형 sessionStorage에는 이 필드가 없어
-  //    필수화하면 기존 이월과세 입력이 전부 차단된다
-  //    (memory `feedback_blocking_validation_full_e2e_regression`).
-  //    사망 미선언이면 관계는 판정에 영향이 없다(`isCarryoverRelationExcluded`).
-  if (c.donorDeceased && !c.donorRelation)
-    return fieldError("carryover.donorRelation", `${label}: 증여자와의 관계를 선택하세요 (소득세법 §97조의2 ①).`);
-
-  // (c) 비교과세 B 시나리오 취득가
-  if (parseAmount(c.giftDateValuation) <= 0)
-    return fieldError("carryover.giftDateValuation", `${label}: 증여 당시 평가액을 입력하세요.`);
+  const headErr = validateCarryoverEventHead(c, label, formTransferDate);
+  if (headErr || !c) return headErr;
 
   // (d) 취득가액 — 환산 미사용 시 직접 입력 필수. 부담부증여는 「당초 증여자」 블록이 받는다(⑤ 칸 없음 · ④ 미전송 · ⑫ 면제 — `validateBurdenedGiftAsset`이 요구).
   if (asset.transferType !== "burdened_gift" && !c.useEstimatedAcquisition && parseAmount(c.donorAcquisitionPrice) <= 0) {
@@ -128,6 +96,79 @@ export function validateCarryoverAsset(
   const donorBuiltErr = validateDonorBuilt(asset, label, formTransferDate, { isNonPrimaryAsset: ctx.isNonPrimaryAsset });
   if (donorBuiltErr) return donorBuiltErr;
 
+  const tailErr = validateCarryoverEventTail(asset, c, label, formTransferDate, { isNonPrimary: ctx.isNonPrimaryAsset });
+  if (tailErr) return tailErr;
+
+  // (h) 토지·건물 소유자 분리(`selfOwns≠both`) — 신축 분기·일반 취득 꼬리와 같은 분리 검증 전체.
+  //     이월과세는 `NonPurchaseSplitInputsBlock`이 취득시 기준시가·양도시 기준시가를 받는 호스트인데(화면에 칸이 있다),
+  //     종전엔 아래 `return null`이 그 규칙을 통째로 건너뛰어 ⑧ 통과 → ⑫ 400(`standardPricePerSqmAtAcquisition` 등 5필드)이었다.
+  //     게이트는 ④ `isSplitPayloadActive`의 소유 축과 같은 술어(`effectiveSelfOwns`) — 분리가 아니면 `null`(회귀 0).
+  //     첫 줄이 `validateLandPartCause`(엔진·⑫와 같은 leaf)이고 칸 순서는 취득시 → 양도시 → 파트별이다.
+  if ((effectiveSelfOwns(asset) ?? "both") !== "both") {
+    return validateSplitDirectInputs(asset, label, formTransferDate, { isNonPrimary: ctx.isNonPrimaryAsset });
+  }
+
+  // carryover_gift 검증 완료 — 일반 취득 검증 스킵
+  return null;
+}
+
+/**
+ * 이월과세 증여 사건 칸 — (a) 가업상속공제 ~ (c) 증여 당시 평가액. `validateCarryoverAsset`과 재개발 분기(`validateAssetAcquisition` — 자체 평가라 위 함수를 타지 않는다)가 공용한다
+ * (계획서 `redev-carryover-validation-scope.plan.md` Q-2 a). ⑫ `refineCarryoverTaxation`과 같은 규칙이다.
+ */
+export function validateCarryoverEventHead(
+  c: AssetForm["carryover"] | undefined,
+  label: string,
+  formTransferDate: string | undefined,
+): string | null {
+  // (a) 가업상속공제 최우선 차단 (§97조의2 ④)
+  if (c?.exclusionDeclared?.isFamilyBusinessInheritedAsset === true) {
+    return `${label}: 가업상속공제 적용 자산은 현재 버전에서 지원하지 않습니다. 세무사에게 수동 계산을 의뢰하세요 (소득세법 §97조의2 ④).`;
+  }
+
+  if (!c) return fieldError("carryover.giftRegistryDate", `${label}: 이월과세 증여 정보를 입력하세요.`);
+
+  // (b) 필수 날짜 필드
+  if (!c.giftRegistryDate) return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일을 입력하세요.`);
+  if (!c.donorAcquisitionDate) return fieldError("carryover.donorAcquisitionDate", `${label}: 증여자 취득일을 입력하세요.`);
+
+  // (b-2) 날짜 순서 — 증여자 취득 → 증여 등기 → 양도 (gift/inheritance 원인과 동일 수준 차단)
+  if (c.donorAcquisitionDate >= c.giftRegistryDate)
+    return fieldError("carryover.donorAcquisitionDate", `${label}: 증여자 취득일은 증여 등기접수일보다 이전이어야 합니다.`);
+  if (formTransferDate && c.giftRegistryDate >= formTransferDate)
+    return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일은 양도일보다 이전이어야 합니다.`);
+
+  // (b-3a) §97조의2 ① 본문 — 대상은 **배우자·직계존비속뿐**이다.
+  // 그 외 관계는 이월과세 자체가 성립하지 않으므로 취득원인을 바꿔야 한다.
+  if (c.donorRelation === "other")
+    return fieldError("acquisitionCause", `${label}: 이월과세는 배우자 또는 직계존비속으로부터 증여받은 경우에만 적용됩니다 (「소득세법」 제97조의2 제1항). 취득 원인을 "증여"로 변경하세요.`);
+
+  // (b-3) §97조의2 ① 관계요건 — 사망을 선언했으면 관계가 있어야 판정이 갈린다.
+  //
+  // ⚠️ 관계를 **단독으로 필수화하지 않는다**. 구형 sessionStorage에는 이 필드가 없어
+  //    필수화하면 기존 이월과세 입력이 전부 차단된다
+  //    (memory `feedback_blocking_validation_full_e2e_regression`).
+  //    사망 미선언이면 관계는 판정에 영향이 없다(`isCarryoverRelationExcluded`).
+  if (c.donorDeceased && !c.donorRelation)
+    return fieldError("carryover.donorRelation", `${label}: 증여자와의 관계를 선택하세요 (소득세법 §97조의2 ①).`);
+
+  // (c) 비교과세 B 시나리오 취득가
+  if (parseAmount(c.giftDateValuation) <= 0)
+    return fieldError("carryover.giftDateValuation", `${label}: 증여 당시 평가액을 입력하세요.`);
+
+  return null;
+}
+
+/**
+ * 이월과세 증여 사건 칸 — (f) 음수 ~ (g) 같은 세대 질문. 공용 범위는 `validateCarryoverEventHead`와 같다(재개발은 (f-2) PHD 환산·(f-3) 채무 조각 술어가 «해당 없음»·«지원 안 함»으로 갈린다).
+ */
+export function validateCarryoverEventTail(
+  asset: AssetForm,
+  c: NonNullable<AssetForm["carryover"]>,
+  label: string,
+  formTransferDate: string | undefined,
+  opts: { isNonPrimary: boolean },
+): string | null {
   // (f) 음수 차단
   if (parseAmount(c.donorCapitalExpenditure) < 0)
     return fieldError("carryover.donorCapitalExpenditure", `${label}: 증여자 자본적지출은 음수일 수 없습니다.`);
@@ -146,22 +187,12 @@ export function validateCarryoverAsset(
   }
 
   // (f-3) 당초 증여 때 인수한 채무 부분(매입분) — 토글 ON이면 칸 필수·평가액 이하·r = 1 규칙 / 미지원 조합이면 토글을 끄게 막는다(⑫ `refineCarryoverTaxation`과 같은 규칙).
-  const debtErr = validateCarryoverDebt(asset, label, formTransferDate, { isNonPrimary: ctx.isNonPrimaryAsset });
+  const debtErr = validateCarryoverDebt(asset, label, formTransferDate, { isNonPrimary: opts.isNonPrimary });
   if (debtErr) return debtErr;
 
   // (g) 결정 #33·#34·#38-6 — 증여자와 계속 같은 세대인가(필수 사실 질문) — `validateCarryoverHouseholdFact` 참조.
   const householdErr = validateCarryoverHouseholdFact(asset, c, label);
   if (householdErr) return householdErr;
 
-  // (h) 토지·건물 소유자 분리(`selfOwns≠both`) — 신축 분기·일반 취득 꼬리와 같은 분리 검증 전체.
-  //     이월과세는 `NonPurchaseSplitInputsBlock`이 취득시 기준시가·양도시 기준시가를 받는 호스트인데(화면에 칸이 있다),
-  //     종전엔 아래 `return null`이 그 규칙을 통째로 건너뛰어 ⑧ 통과 → ⑫ 400(`standardPricePerSqmAtAcquisition` 등 5필드)이었다.
-  //     게이트는 ④ `isSplitPayloadActive`의 소유 축과 같은 술어(`effectiveSelfOwns`) — 분리가 아니면 `null`(회귀 0).
-  //     첫 줄이 `validateLandPartCause`(엔진·⑫와 같은 leaf)이고 칸 순서는 취득시 → 양도시 → 파트별이다.
-  if ((effectiveSelfOwns(asset) ?? "both") !== "both") {
-    return validateSplitDirectInputs(asset, label, formTransferDate, { isNonPrimary: ctx.isNonPrimaryAsset });
-  }
-
-  // carryover_gift 검증 완료 — 일반 취득 검증 스킵
   return null;
 }
