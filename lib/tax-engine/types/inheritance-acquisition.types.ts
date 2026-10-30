@@ -125,6 +125,13 @@ export interface InheritanceAcquisitionInput {
   reportedMethod?: InheritanceAcquisitionMethod;
 
   /**
+   * 증여받은 자산 — 엔진 내부 주입(STEP 0.45가 `acquisitionCause === "gift"`에서 정한다 · 와이어 필드 아님).
+   * 산식·단계 문구만 바꾼다(「증여세 신고가액」). 증여는 화면이 평가방법을 묻지 않아 ④가 `reportedMethod`를
+   * `supplementary`로 채우므로 그 방법 이름을 문구에 쓰지 않는다. 값 계산은 같다.
+   */
+  isGift?: boolean;
+
+  /**
    * 개별주택가격 미공시 상속주택의 §164⑦ 취득당시 기준시가 (원, 미스케일).
    * post-deemed(의제취득일 이후) 주택 & 상속개시일 < 2005-04-30 시,
    * 취득가액 = max(reportedValue[① 상증법 평가액], 이 값[② §164⑦]). 소령 §163⑨2호.
@@ -240,4 +247,6 @@ export interface InheritanceAcquisitionResult {
   preDeemedBreakdown?: PreDeemedBreakdown;
   /** 경고 메시지 (CPI 범위 외, 입력 누락 fallback 등) */
   warnings?: string[];
+  /** 증여받은 자산(입력 `isGift` echo) — 결과 카드가 평가방법 배지를 숨긴다(증여는 방법을 받지 않는다) */
+  isGift?: boolean;
 }

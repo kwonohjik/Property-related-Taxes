@@ -79,9 +79,12 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
           상속·증여 취득가액 의제 계산
         </p>
         <span className="text-micro text-muted-foreground">{legalBasis}</span>
-        <span className="text-micro rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5">
-          {METHOD_LABELS[method]}
-        </span>
+        {/* 증여는 평가방법을 받지 않는다(④가 `supplementary`로 채운다) — 의제취득일 이후면 방법 배지를 숨긴다 */}
+        {!(detail.isGift && method !== "pre_deemed_max") && (
+          <span className="text-micro rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5">
+            {METHOD_LABELS[method]}
+          </span>
+        )}
       </div>
 
       {/* 경고 */}

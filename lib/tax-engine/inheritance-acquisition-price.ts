@@ -52,8 +52,8 @@ export function calculateInheritanceAcquisitionPrice(
   const isPreDeemed =
     input.inheritanceDate.getTime() < DEEMED_ACQUISITION_DATE.getTime();
 
-  if (isPreDeemed) return calcPreDeemed(input, redevelopment166_3Price);
-  return calcPostDeemed(input);
+  const result = isPreDeemed ? calcPreDeemed(input, redevelopment166_3Price) : calcPostDeemed(input);
+  return input.isGift ? { ...result, isGift: true } : result;
 }
 
 // ─── 입력 검증 ─────────────────────────────────────────────────────────────
@@ -189,18 +189,18 @@ function calcPreDeemed(
     legalBasis: isRedevelopment
       ? `${TRANSFER.INHERITED_BEFORE_DEEMED} · ${REDEVELOPMENT.CONVERTED_ACQ}`
       : `${TRANSFER.INHERITED_BEFORE_DEEMED} · ${TRANSFER.PRE1990_STD_PRICE_CONVERSION}`,
-    formula: buildPreDeemedFormula(breakdown, acquisitionPrice),
+    formula: buildPreDeemedFormula(breakdown, acquisitionPrice, input.isGift === true),
     preDeemedBreakdown: breakdown,
     warnings: warnings.length > 0 ? warnings : undefined,
   };
 }
 
-function buildPreDeemedFormula(b: PreDeemedBreakdown, acquisitionPrice: number): string {
+function buildPreDeemedFormula(b: PreDeemedBreakdown, acquisitionPrice: number, isGift: boolean): string {
   const lines: string[] = [];
   const notSelected = " (미적용 — 더 작은 금액)";
   if (b.reportedAmount !== null) {
     lines.push(
-      `① 상증법 평가액(상속세 신고가액): ${b.reportedAmount.toLocaleString()}` +
+      `① 상증법 평가액(${isGift ? "증여세" : "상속세"} 신고가액): ${b.reportedAmount.toLocaleString()}` +
         (b.selectedMethod === "reported" ? "" : notSelected),
     );
   }
@@ -288,6 +288,15 @@ function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisit
 
   // 상속세 신고가액이 입력된 경우 그대로 취득가액으로 사용
   if (input.reportedValue !== undefined && input.reportedValue >= 0 && input.reportedMethod) {
+    // 증여는 평가방법을 받지 않는다(④가 `supplementary`로 채운다) — 방법 이름·§61을 쓰지 않는다.
+    if (input.isGift) {
+      return {
+        acquisitionPrice: Math.floor(input.reportedValue),
+        method: input.reportedMethod,
+        legalBasis: TRANSFER.INHERITED_AFTER_DEEMED,
+        formula: `증여세 신고가액(증여일 현재 상증법 평가액) ${input.reportedValue.toLocaleString()} 적용`,
+      };
+    }
     return {
       acquisitionPrice: Math.floor(input.reportedValue),
       method: input.reportedMethod,
