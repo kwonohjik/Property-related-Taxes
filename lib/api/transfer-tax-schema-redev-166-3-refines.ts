@@ -21,6 +21,7 @@ type Redev166_3Like = {
   /** 컴패니언은 `assetKind`로 온다 */
   assetKind?: string;
   acquisitionDate?: string | Date;
+  carryoverTaxation?: { donorAcquisitionDate?: string | Date } | null;
 };
 
 const positive = (v: unknown) => typeof v === "number" && v > 0;
@@ -102,7 +103,11 @@ export function refineRedevelopment166_3Inputs(
       // 분자(취득당시 개별주택가격 P_A)도 엔진이 쓰는 그대로 — 최초공시일 전 취득이면 §164⑦ 본문 입력으로 만들고, 아니면 직접 입력.
       // 비면 엔진은 P_A = 0으로 취득가액 0을 오류 없이 계산했다(⑧은 막는다 — 계획서 같은 곳).
       if (rd.originalAssetType !== "land" && !positive(rd.acquisitionHousingPrice)) {
-        const acq = dateKey(data.acquisitionDate);
+        // 이월과세(부담부증여 아님)면 당초 증여자 취득일로 본다 — 엔진 A의 취득일·⑧(`redevPreApprovalAcquisitionDate`)과 같다
+        //   (「소득세법」 제97조의2①1호 · 계획서 `redev-carryover-phd-donor-date.plan.md` D-2). 컴패니언은 `transferType` 대신 `burdenedGiftInfo`로 부담부증여를 안다.
+        const donorDate = data.carryoverTaxation?.donorAcquisitionDate;
+        const burdenedGift = data.burdenedGiftInfo != null || data.transferType === "burdened_gift";
+        const acq = dateKey(donorDate && !burdenedGift ? donorDate : data.acquisitionDate);
         const first = dateKey(rd.firstDisclosureDate);
         const preDisclosureMain =
           !!first && !!acq && acq < first &&

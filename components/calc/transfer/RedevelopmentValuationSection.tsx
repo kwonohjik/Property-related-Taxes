@@ -23,6 +23,8 @@ import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-ad
 import { prefillAcqLandPrice } from "@/lib/calc/phd-acq-land-price-track";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { redevPreApprovalAcquisitionDate } from "@/lib/calc/redev-carryover-acq-mode";
+import { isRedevCarryoverDonorBasis } from "@/lib/calc/redev-carryover-acq-mode";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
@@ -37,6 +39,9 @@ interface Props {
 
 export function RedevelopmentValuationSection({ asset, onChange }: Props) {
   const acqMode = redevPreApprovalAcqMode(asset);
+  // 「취득당시」 기준일 — 이월과세면 당초 증여자 취득일(§164⑦ 판정·조회 기준일 · 계획서 `redev-carryover-phd-donor-date.plan.md` Q-2 a).
+  const acqRefDate = redevPreApprovalAcquisitionDate(asset);
+  const donorNote = donorAcqDateNote(asset, acqRefDate);
   // 환산취득가 미리보기 (useMemo) — PHD 패턴, 엔진 redevelopment-valuation.ts 와 동일 산식.
   const valuationPreview = useMemo(() => {
     // 환산 모드 — 부담부증여 K-5(완공 아파트)도 같다(`redevPreApprovalAcqMode`).
@@ -103,7 +108,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     asset.redevBuildingStdPriceAtAcq,
     asset.redevLandPricePerSqmAtFirst,
     asset.redevBuildingStdPriceAtFirst,
-    asset.acquisitionDate,
+    acqRefDate,
     asset.redevFirstDisclosureDate,
   ]);
 
@@ -235,7 +240,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
         <FieldCard
           label="최초공시일"
           field="redevFirstDisclosureDate"
-          hint="개별주택가격/공동주택가격 최초 공시일 (단독 2005-04-30, 공동 2006-04-28). 취득일이 이보다 이전이면 §164⑦ 본문 산식 발동."
+          hint={`개별주택가격/공동주택가격 최초 공시일 (단독 2005-04-30, 공동 2006-04-28). 취득일이 이보다 이전이면 §164⑦ 본문 산식 발동.${donorNote}`}
         >
           <DateInput
             value={asset.redevFirstDisclosureDate}
@@ -250,9 +255,9 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
             totalPrice={asset.redevAcquisitionHousingPrice}
             onTotalPriceChange={(v) => onChange({ redevAcquisitionHousingPrice: v })}
             jibun={asset.addressJibun || undefined}
-            referenceDate={asset.acquisitionDate}
+            referenceDate={acqRefDate}
             label="취득당시 개별주택공시가격"
-            hint="§166③ 분자 — 취득당시 §99①1호 라목 단일 라목값 (취득일 ≥ 최초공시일)"
+            hint={`§166③ 분자 — 취득당시 §99①1호 라목 단일 라목값 (취득일 ≥ 최초공시일)${donorNote}`}
           />
         )}
 
@@ -285,11 +290,11 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               <LandPriceLookupField
                 label="취득시 개별공시지가 (원/㎡)"
                 data-field="redevLandPricePerSqmAtAcq"
-                hint="Vworld API 조회 — 기준연도 = 취득연도. 취득시 합계 기준시가를 구성합니다"
+                hint={`Vworld API 조회 — 기준연도 = 취득연도. 취득시 합계 기준시가를 구성합니다${donorNote}`}
                 pricePerSqm={asset.redevLandPricePerSqmAtAcq}
                 onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtAcq: v })}
                 area={landAreaNumber}
-                referenceDate={asset.acquisitionDate}
+                referenceDate={acqRefDate}
                 jibun={asset.addressJibun || undefined}
               />
               <LandPriceLookupField
@@ -326,7 +331,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
                   snapshotKey={`bsp-${asset.assetId}-redev-phd`}
                   prefill={{
                     landAreaM2: asset.redevLandArea || undefined,
-                    acquisitionDate: asset.acquisitionDate,
+                    acquisitionDate: acqRefDate,
                     transferDate: asset.redevFirstDisclosureDate,
                     /**
                      * ⚠️ 취득연도 ≤2000이면 `undefined`가 온다 — 그 구간의 위치지수는
@@ -336,7 +341,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
                      * 그때는 모달 안 `LandPriceLookupField`로 사용자가 직접 조회한다(dead-end 아님).
                      */
                     acqLandPricePerSqm: prefillAcqLandPrice(
-                      asset.acquisitionDate,
+                      acqRefDate,
                       asset.redevLandPricePerSqmAtAcq,
                     ),
                     transferLandPricePerSqm: asset.redevLandPricePerSqmAtFirst || undefined,
@@ -465,6 +470,7 @@ interface LandContribProps {
 function LandContribValuationContent({ asset, onChange, preview }: LandContribProps) {
   const fmt = (n: number) => n.toLocaleString("ko-KR");
   const landAreaNumber = parseDecimal(asset.redevLandArea) || undefined;
+  const acqRefDate = redevPreApprovalAcquisitionDate(asset);
 
   return (
     <div className="space-y-2">
@@ -498,11 +504,11 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
       <LandPriceLookupField
         label="취득당시 토지 ㎡당 단가"
         data-field="redevLandPricePerSqmAtAcq"
-        hint="§166③ 분자 — 취득일 기준 개별공시지가 (원/㎡). Vworld 조회 또는 국세청 기준시가 확인."
+        hint={`§166③ 분자 — 취득일 기준 개별공시지가 (원/㎡). Vworld 조회 또는 국세청 기준시가 확인.${donorAcqDateNote(asset, acqRefDate)}`}
         pricePerSqm={asset.redevLandPricePerSqmAtAcq}
         onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtAcq: v })}
         area={landAreaNumber}
-        referenceDate={asset.acquisitionDate}
+        referenceDate={acqRefDate}
         jibun={asset.addressJibun || undefined}
       />
 
@@ -561,4 +567,9 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
       )}
     </div>
   );
+}
+
+/** 이월과세면 「취득당시」가 당초 증여자 취득일임을 칸 hint에 덧붙인다(「소득세법」 제97조의2①1호 — 계획서 `redev-carryover-phd-donor-date.plan.md` D-3). */
+function donorAcqDateNote(asset: AssetForm, acqRefDate: string | undefined): string {
+  return isRedevCarryoverDonorBasis(asset) && acqRefDate ? ` · 이월과세 — 취득일은 당초 증여자 취득일(${acqRefDate})입니다.` : "";
 }
