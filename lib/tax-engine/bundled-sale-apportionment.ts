@@ -220,22 +220,27 @@ export function apportionBundledSale(
   const allocatedExpenses: number[] = [];
   const allocatedCommon: number[] = [];
   if (commonExpenses > 0 && totalSalePrice > 0) {
+    // 흡수자 = 양도가액 > 0 자산 중 (배열 위치 0 = 주 자산을 뺀) assetId 사전순 최대 — Step 3과 같은 규칙(입력 순서와 무관).
+    // 소득세법 §100② 후문은 «가액에 비례하여 안분»만 정하고 원 단위 잔액 귀속은 정하지 않는다.
+    const allIdx = assets.map((_, i) => i);
+    const positive = allIdx.filter((i) => allocatedSales[i] > 0);
+    const companions = positive.filter((i) => i !== 0);
+    const pool = companions.length > 0 ? companions : positive.length > 0 ? positive : allIdx;
+    const commonAbsorber = pool.reduce(
+      (best, i) => (assets[i].assetId > assets[best].assetId ? i : best),
+      pool[0],
+    );
+    const shares: number[] = new Array(assets.length).fill(0);
     let accExp = 0;
-    for (let i = 0; i < assets.length; i++) {
-      const direct = assets[i].directExpenses ?? 0;
-      let commonShare: number;
-      if (i === assets.length - 1) {
-        commonShare = commonExpenses - accExp;
-      } else {
-        commonShare = apportionAmount(
-          commonExpenses,
-          allocatedSales[i],
-          totalSalePrice,
-        );
-        accExp += commonShare;
-      }
-      allocatedExpenses.push(direct + commonShare);
-      allocatedCommon.push(commonShare);
+    for (const i of allIdx) {
+      if (i === commonAbsorber) continue;
+      shares[i] = apportionAmount(commonExpenses, allocatedSales[i], totalSalePrice);
+      accExp += shares[i];
+    }
+    shares[commonAbsorber] = commonExpenses - accExp;
+    for (const i of allIdx) {
+      allocatedExpenses.push((assets[i].directExpenses ?? 0) + shares[i]);
+      allocatedCommon.push(shares[i]);
     }
   } else {
     for (const a of assets) {
