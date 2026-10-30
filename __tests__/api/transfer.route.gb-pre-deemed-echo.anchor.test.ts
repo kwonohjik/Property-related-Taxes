@@ -218,7 +218,7 @@ describe("EC-3 ⑧↔⑫ 정합 격자 — 일자 6(분리 OFF 3 · ON 3) × 토
   it("규칙 대상 셀(시가 평가 · 상속 · 환산·감정·매매사례 · 상속개시일 1985.1.1. 이후 · 담보 승 아님)은 전부 400 · ⑧ 통과 셀 중 ⑫ 400 은 0 (거짓 차단 없음) · 담보 승 통과 셀은 200", async () => {
     cache = await run();
     expect([cache.ruleNot400, cache.falseBlock]).toEqual([[], []]);
-    expect([cache.ruleCells, cache.passCells, cache.collateralWinPass]).toEqual([72, 504, 36]); // 담보 승 통과 36셀 = 제외 조건이 실제로 쓰이는 셀(변형: 제외 조건 제거 시 적색)
+    expect([cache.ruleCells, cache.passCells, cache.collateralWinPass]).toEqual([72, 792, 108]); // 담보 승 통과 108셀 = 단건 36 + 균일 담보 쌍 묶음 2위치 × 36(⑧ 균일 승자 통과 · Q-2) — 제외 조건이 실제로 쓰이는 셀(변형: 제외 조건 제거 시 적색)
   }, 300_000);
   it("EC-4 감정가액·매매사례가액도 같은 규칙 — 시가 평가 × 상속(담보 승 아님)에서 ⑧ 차단 · ⑫ 200 인 셀 0 (수정 전 환산 24 + 감정가액 48 + 매매사례가액 48셀)", async () => {
     cache ??= await run();

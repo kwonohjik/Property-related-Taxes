@@ -258,8 +258,9 @@ export function validateBurdenedGiftAsset(
      * 이월과세·조합원입주권은 담보 승과 취득가액 산정 기준의 결합을 검토하지 않아 막는다(겸용은 MB-7이 같은 이유로 막는다).
      * 계획서 `docs/00-pm/burdened-gift-residuals-o3-o5-o8.plan.md` O-5.
      */
-    const wholeValuation =
-      contractAssumedDebtTotal === undefined && isFractionalSplitAxis !== true ? bgWholeGiftValuation(asset) : undefined;
+    // 함께 부담부증여 묶음의 자산도 같다 — 균일 승자는 ⑧ 승자 게이트(`transfer-tax-validate.ts`)를 통과하고, 그 자산의 증여가액 C는 엔진이 쓰는 값(담보 승이면 담보평가액)이다.
+    // 종전에는 묶음에서 이 판정을 건너뛰어 시가를 분모로 둬, 담보평가액 = 채무인 정당한 자산을 「채무액이 증여가액 초과」로 막았다.
+    const wholeValuation = isFractionalSplitAxis !== true ? bgWholeGiftValuation(asset) : undefined;
     if (wholeValuation?.selectedMode === "mortgage" && (bgAnyCarryover(asset) || asset.assetKind === "right_to_move_in")) {
       const what = asset.assetKind === "right_to_move_in" ? "조합원입주권" : "이월과세(「소득세법」 제97조의2) 자산";
       return fieldError(

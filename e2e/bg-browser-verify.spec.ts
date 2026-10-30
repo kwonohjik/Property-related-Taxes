@@ -4,7 +4,8 @@
  *  · BV-1 지분 컴패니언 카드의 채무 안내 — 「공유지분 … 지분에 대응하는 인수분」과 「여러 물건 … 이 물건에 설정된 금액」 두 문구가 함께 뜬다(현재 동작의 기록 · 표현이 갈려 있다).
  *  · BV-2 ⑤ 상속 라디오 — 상속개시일이 1985.1.1. 이후면 환산취득가액이 비활성이고 안내가 뜬다. 상속개시일 칸에 옛 값(1983)이 남아도 토지 파트 취득일로 판정한다(#2742).
  *  · BV-3 담보 승 자산 — ⑤ 가 실지취득가액 입력을 숨기고 「취득시 기준시가 × 채무비율」 안내를 띄운다(묶음 · 단건 동일). 보충 승 묶음은 입력이 보인다.
- *  · BV-4 사이드바(⑥) — 일반건물 부담부증여 함께 양도 묶음은 계산 후에도 취득가액·필요경비가 「-」다(현재 동작의 기록 = 결함: 같은 응답의 카드 값은 취득가액 150,000,000씩).
+ *  · BV-4 사이드바(⑥) — 일반건물 부담부증여 함께 양도 묶음은 계산 후 취득가액이 카드 값(150,000,000씩)이다(종전에는 「-」였다 — `bg-sidebar-gb-bundle-and-gate.plan.md` Q-1).
+ *  · BV-5 담보 승 묶음(⑧ 균일 승자 과차단 해제 · 같은 계획서 Q-2) — 화면에서 끝까지 계산되고(⑧ 통과) 결과 화면이 응답의 증여가액(합 2,400,000,000)과 같다. 혼합 승자는 막힌다.
  *
  * 실행(워크트리): E2E_PORT=3302 npx playwright test e2e/bg-browser-verify.spec.ts
  */
@@ -87,7 +88,7 @@ test.describe("함께 부담부증여 화면 확인", () => {
     }
   });
 
-  test("BV-4 사이드바(⑥): 일반건물 부담부증여 묶음은 계산 후에도 취득가액·필요경비 「-」 (현재 동작의 기록 = 결함 — 카드 값은 150,000,000씩)", async ({ page }) => {
+  test("BV-4 사이드바(⑥): 일반건물 부담부증여 묶음은 계산 후 취득가액이 카드 값(150,000,000씩)이고 「-」가 아니다", async ({ page }) => {
     test.setTimeout(180_000);
     await ready(page, [gb(1), gb(2)]);
     const respP = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", { timeout: 30_000 });
@@ -104,8 +105,31 @@ test.describe("함께 부담부증여 화면 확인", () => {
     }
     const t = await page.locator("body").innerText();
     const aside = t.slice(t.indexOf("자산 1 — 일반건물"), t.indexOf("합계 양도가액"));
-    expect(aside).toContain("300,000,000"); // 양도가액은 맞다
-    expect((aside.match(/취득가액\n\n-/g) ?? []).length).toBe(2);
-    expect((aside.match(/필요경비\n\n-/g) ?? []).length).toBe(2);
+    expect(aside).toContain("300,000,000"); // 양도가액
+    expect((aside.match(/취득가액\n\n150,000,000/g) ?? []).length).toBe(2); // 종전 「-」
+    expect((aside.match(/취득가액\n\n-/g) ?? []).length).toBe(0);
+  });
+
+  test("BV-5 담보 승 묶음: ⑧ 통과 → 끝까지 계산(증여가액 합 = 2,400,000,000) / 혼합 승자는 계산 단계로 못 간다", async ({ page }) => {
+    test.setTimeout(240_000);
+    await ready(page, [gb(1, MORT), gb(2, MORT)]);
+    const respP = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", { timeout: 30_000 });
+    await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+    await page.getByRole("button", { name: "세금 계산하기" }).click();
+    const resp = await respP;
+    expect(resp.status()).toBe(200);
+    const j = await resp.json();
+    expect(j.data.aggregated.burdenedGift.giftValuation.max).toBe(2_400_000_000);
+    await page.getByText("합산 과세 내역").first().waitFor({ timeout: 30_000 });
+
+    // 혼합 승자(담보 + 보충) — ⑧이 막아 요청이 나가지 않고 안내가 뜬다.
+    await ready(page, [gb(1, MORT), gb(2)]);
+    let posted = false;
+    page.on("request", (r) => { if (r.url().includes("/api/calc/transfer") && r.method() === "POST") posted = true; });
+    await page.getByRole("button", { name: "가산세", exact: true }).first().click().catch(() => undefined);
+    await page.getByRole("button", { name: "세금 계산하기" }).click().catch(() => undefined);
+    await page.waitForTimeout(1500);
+    expect(posted).toBe(false);
+    expect(await fullText(page)).toContain("자산 1 담보평가(상증법 §66) · 자산 2 보충적평가: 증여재산 평가 방식이 달라 함께 양도와 같이 계산할 수 없습니다");
   });
 });

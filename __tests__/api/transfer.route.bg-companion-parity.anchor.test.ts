@@ -91,10 +91,10 @@ describe("PB-1 비일반건물 묶음 — ⑧ 이 막는 혼합 승자는 ⑫ �
     const orc = await cell([house(1, HSUPF), house(2)]);
     expect([orc.gate, orc.status, orc.wholeMax, orc.sumA, orc.giftTax]).toEqual([0, 200, 2_500_000_000, 2_500_000_000, 101_850_000]);
   }, 120_000);
-  it("주택 쌍: 둘 다 담보 승(균일)은 ⑧ 게이트 · ⑫ 200 · 증여가액 = ΣA(3.0B) · 양도차익 = 단건 합 — ⑫ 가 맞다", async () => {
+  it("주택 쌍: 둘 다 담보 승(균일)은 ⑧ 통과 · ⑫ 200 · 증여가액 = ΣA(3.0B) · 양도차익 = 단건 합 — ⑫ 가 맞다", async () => {
     const c = await cell([house(1, HM), house(2, HM)]);
     const sum = (await singleGain(house(1, HM))) + (await singleGain(house(2, HM)));
-    expect([c.gate > 0, c.status, c.wholeMax, c.sumA, c.gain]).toEqual([true, 200, 3_000_000_000, 3_000_000_000, sum]);
+    expect([c.gate > 0, c.status, c.wholeMax, c.sumA, c.gain]).toEqual([false, 200, 3_000_000_000, 3_000_000_000, sum]);
   }, 120_000);
   it("일반건물 + 주택 혼합 종류: 보충+보충은 ⑧ 통과 · 200 / 한쪽만 담보 승이면 ⑧ 게이트 · ⑫ 400 (수정 전 200 · 증여가액 < ΣA) — 주 자산이 주택이든 일반건물이든", async () => {
     const ss = await cell([gb(1), house(2)]);

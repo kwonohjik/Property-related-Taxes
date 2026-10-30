@@ -12,7 +12,8 @@
  *
  * 지분이 있으면 채무 입력 규약이 축마다 반대다(축 A 공유 소유 = 지분 인수분 · 축 B 지분 분할 = 물건 전체 후 ④가 안분). 자산 하나만으로는
  * 축을 가릴 수 없어 승자를 잘못 판정할 수 있으므로 `undefined`/`false`를 돌려 종전 처리(⑧ 시가 분모)를 유지한다. 함께 부담부증여 묶음은
- * 담보 승 자산을 이미 따로 막는다(`transfer-tax-validate.ts` — 합산 증여가액 불일치).
+ * 승자가 **섞이면** 막고(`bgBundleWinnersMixed` — 합산 증여가액 불일치), 지분·이월과세·입주권·겸용 자산의 비보충 승자는 이 범위 밖이라 따로 막는다
+ * (`bgNonSupplementaryWinnerUnsupported`). 균일 승자(100% 소유)는 단건과 같은 판정·같은 분모를 쓴다.
  *
  * 값은 ④가 엔진에 싣는 info(`buildBurdenedGiftInfo`)를 엔진과 같은 경로(`companionBurdenedGiftValuations` — 지분 축소 → Max)로 계산한다.
  */
@@ -44,6 +45,25 @@ export function bgCollateralForcesStdAcq(asset: AssetForm): boolean {
   if (asset.assetKind === "right_to_move_in" || bgAnyCarryover(asset)) return false;
   if (isMixedBurdenedGift(asset)) return false;
   return bgWholeGiftValuation(asset)?.selectedMode === "mortgage";
+}
+
+/**
+ * 함께 부담부증여 묶음에서 **비보충 승자(담보 §66·임대 §61⑤)를 계산하지 않는** 자산인가 — 화면·엔진의 취득가액 처리를 확인하지 못한 범위다.
+ * · 지분 보유: 승자 판정(`bgWholeGiftValuation`)과 ⑤ 칸 노출(`bgCollateralForcesStdAcq`)이 단독 소유만 다룬다.
+ * · 이월과세 · 조합원입주권 · 겸용주택: 위 `bgCollateralForcesStdAcq` 주석과 같다.
+ * 단건 ⑧의 담보 승 차단(`transfer-tax-validate-bg.ts`)보다 좁히지 않는다 — 묶음에서 풀리는 것은 이 범위 밖의 균일 승자뿐이다.
+ */
+export function bgNonSupplementaryWinnerUnsupported(asset: AssetForm): boolean {
+  if (getOwnershipRatio(asset) < 1) return true;
+  return asset.assetKind === "right_to_move_in" || bgAnyCarryover(asset) || isMixedBurdenedGift(asset);
+}
+
+/** `bgNonSupplementaryWinnerUnsupported`가 true인 이유 — ⑧ 안내 문구용. 판정 순서는 위 함수와 같다. */
+export function bgUnsupportedWinnerReason(asset: AssetForm): string {
+  if (getOwnershipRatio(asset) < 1) return "지분 보유";
+  if (asset.assetKind === "right_to_move_in") return "조합원입주권";
+  if (bgAnyCarryover(asset)) return "이월과세";
+  return "겸용주택";
 }
 
 /**

@@ -68,7 +68,7 @@ async function pair(x: Record<string, string>, y: Record<string, string>, ratios
   };
 }
 
-describe("CB-1 승자 조합 13쌍 — ⑧ 게이트(비보충 승자가 있으면 차단) · ⑫ 는 혼합 승자만 400", () => {
+describe("CB-1 승자 조합 13쌍 — ⑧ 게이트(승자가 섞이면 차단 · 균일 승자는 통과) · ⑫ 는 혼합 승자만 400", () => {
   const PAIRS: [string, string][] = [["sup", "sup"], ["mort", "sup"], ["sup", "mort"], ["mort", "mort"], ["ssup", "ssup"], ["smort", "ssup"], ["ssup", "smort"], ["smort", "smort"], ["srent", "ssup"], ["ssup", "srent"], ["srent", "srent"], ["srent", "smort"], ["smort", "srent"]];
   it("균일 승자(5쌍)는 ⑫ 200 · 증여가액 = ΣA (1원 내) / 혼합 승자(8쌍)는 ⑫ 400 (수정 전 200 · 증여가액 < ΣA 200M ~ 487.8M)", async () => {
     const uniform: string[] = []; const mixed: string[] = [];
@@ -77,7 +77,7 @@ describe("CB-1 승자 조합 13쌍 — ⑧ 게이트(비보충 승자가 있으�
       if (x === y) { expect(r.status).toBe(200); expect(Math.abs((r.sumA ?? 0) - (r.wholeMax ?? 0))).toBeLessThanOrEqual(1); uniform.push(`${x}|게이트 ${r.gate}`); }
       else { expect(r.gate).toBeGreaterThan(0); mixed.push(`${x}+${y}|${r.status}`); }
     }
-    expect(uniform).toEqual(["sup|게이트 0", "mort|게이트 2", "ssup|게이트 0", "smort|게이트 2", "srent|게이트 2"]);
+    expect(uniform).toEqual(["sup|게이트 0", "mort|게이트 0", "ssup|게이트 0", "smort|게이트 0", "srent|게이트 0"]);
     expect(mixed).toEqual(["mort+sup|400", "sup+mort|400", "smort+ssup|400", "ssup+smort|400", "srent+ssup|400", "ssup+srent|400", "srent+smort|400", "smort+srent|400"]);
   }, 300_000);
   it("증여세 과소였던 혼합(담보 1.2B + 보충 1.0B)은 ⑫ 400 · 같은 증여가액(2.2B)을 보충 승으로 만든 쌍(오라클)은 ⑧ 통과 · 200 · 증여세 101,850,000 불변", async () => {
@@ -97,7 +97,7 @@ describe("CB-2 거짓 차단 없음 — 지분율 4조합(100/100 · 100/50 · 5
       const res = await pair(MK[x], MK[y], r);
       const k = `${res.gate > 0 ? "⑧게이트" : "⑧통과"}|${res.status}`; t[k] = (t[k] ?? 0) + 1;
     }
-    expect(t).toEqual({ "⑧통과|200": 8, "⑧게이트|400": 32, "⑧게이트|200": 12 }); // ⑧게이트|200 12 = 균일 비보충(담보·임대) 3쌍 × 4 — ⑫ 가 맞게 계산해 막지 않는다
+    expect(t).toEqual({ "⑧통과|200": 11, "⑧게이트|400": 32, "⑧게이트|200": 9 }); // ⑧게이트|200 9 = 균일 비보충(담보·임대) 3쌍 × 지분 있는 3조합 — 100/100 조합 3셀은 ⑧ 통과(Q-2). 지분 보유 자산의 비보충 승자는 계속 ⑧이 막는다(⑫ 는 맞게 계산)
   }, 300_000);
 });
 
