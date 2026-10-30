@@ -1,7 +1,7 @@
 /**
  * E2E — 함께 부담부증여 화면 확인(묶음 C · 계획서 `docs/00-pm/bg-browser-verify.plan.md`): 코드로만 확인했던 화면 동작을 브라우저에서 고정한다.
  *
- *  · BV-1 지분 컴패니언 카드의 채무 안내 — 「공유지분 … 지분에 대응하는 인수분」과 「여러 물건 … 이 물건에 설정된 금액」 두 문구가 함께 뜬다(현재 동작의 기록 · 표현이 갈려 있다).
+ *  · BV-1 지분 컴패니언 카드의 채무 안내 — 「이 물건에 설정된 금액 중 이 지분에 대응하는 인수분」 한 문단이 뜬다(종전에는 「인수분」과 「이 물건에 설정된 금액」 두 문단이 따로 떠 갈려 읽혔다 — `bg-single-fractional-and-debt-excess.plan.md` 3).
  *  · BV-2 ⑤ 상속 라디오 — 상속개시일이 1985.1.1. 이후면 환산취득가액이 비활성이고 안내가 뜬다. 상속개시일 칸에 옛 값(1983)이 남아도 토지 파트 취득일로 판정한다(#2742).
  *  · BV-3 담보 승 자산 — ⑤ 가 실지취득가액 입력을 숨기고 「취득시 기준시가 × 채무비율」 안내를 띄운다(묶음 · 단건 동일). 보충 승 묶음은 입력이 보인다.
  *  · BV-4 사이드바(⑥) — 일반건물 부담부증여 함께 양도 묶음은 계산 후 취득가액이 카드 값(150,000,000씩)이다(종전에는 「-」였다 — `bg-sidebar-gb-bundle-and-gate.plan.md` Q-1).
@@ -33,16 +33,17 @@ async function ready(page: Page, assets: unknown[], companion = true) {
 }
 
 test.describe("함께 부담부증여 화면 확인", () => {
-  test("BV-1 지분 50% 컴패니언 카드: 안내 두 문구 + 「지분 인수분」 라벨 / 지분 100% 카드는 「이 물건에 설정된 금액」만", async ({ page }) => {
+  test("BV-1 지분 50% 컴패니언 카드: 합친 안내 한 문단 + 「지분 인수분」 라벨 / 지분 100% 카드는 「이 물건에 설정된 금액」만", async ({ page }) => {
     test.setTimeout(120_000);
     await ready(page, [gb(1), gb(2, { ownershipNumerator: "50", ownershipDenominator: "100" })]);
     await expandAssetSection(page, 2, 0);
     await expandAssetSection(page, 2, 1);
     const t = await fullText(page);
-    const share = "이 지분에 대응하는 인수분을 입력하세요";
+    const merged = "이 물건에 설정된 금액 중 이 지분에 대응하는 인수분을 입력하세요";
     const whole = "이 물건에 설정된 금액을 입력하세요";
-    expect(t.split(share).length - 1).toBe(1); // 지분 카드(자산 2)에만
-    expect(t.split(whole).length - 1).toBe(2); // 자산 1 · 자산 2 모두
+    expect(t.split(merged).length - 1).toBe(1); // 지분 카드(자산 2)에만 — 두 규약을 한 문단으로 말한다
+    expect(t.split(whole).length - 1).toBe(1); // 자산 1(100%)만 — 지분 카드에는 따로 뜨지 않는다(종전 2건)
+    expect(t).not.toContain("공유지분(50%) 부담부증여 — 아래 채무"); // 옛 축 A 단독 문단
     expect(t).toContain("담보차입금 (지분 인수분)");
     expect(t).toContain("담보차입금 (실제 채무잔액)"); // 자산 1(100%)
   });
