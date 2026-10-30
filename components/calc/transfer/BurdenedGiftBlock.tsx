@@ -264,15 +264,24 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
       {/* ② 인수 채무 입력 (3분리: 보증금·차입금·임대료) */}
       <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-3 space-y-2 dark:bg-rose-950/40">
         <p className="text-xs font-semibold text-rose-800 dark:text-rose-200">인수 채무 + 임대 평가 보조</p>
-        {isFractional && (
+        {isFractional && !isCompanionBundle && (
           <p className="text-caption text-rose-700 dark:text-rose-300">
             공유지분({shareLabel}) 부담부증여 — 아래 채무·보증금·임대료는 <b>이 지분에 대응하는
             인수분</b>을 입력하세요. 기준시가·시가 등 <b>평가액은 물건 전체로 입력</b>하면
             엔진이 지분분으로 환산합니다(소령 §159 — 평가액 A·C만 지분분, 채무 B는 실제 인수액).
           </p>
         )}
+        {/* 컴패니언 × 공유지분 — 두 규약이 겹친다. 문구를 따로 띄우면 「인수분」과 「이 물건에 설정된 금액」이 다른 지시처럼 읽혀 한 문단으로 합친다(계획서 `bg-single-fractional-and-debt-excess.plan.md` 3). */}
+        {isFractional && isCompanionBundle && (
+          <p className="text-caption text-rose-700 dark:text-rose-300">
+            공유지분({shareLabel}) 여러 물건 함께 부담부증여 — 아래 채무·보증금·임대료는 <b>이 물건에 설정된 금액 중
+            이 지분에 대응하는 인수분</b>을 입력하세요. 채무가 없는 물건은 비워 둡니다. 기준시가·시가 등 <b>평가액은
+            물건 전체로 입력</b>하면 엔진이 지분분으로 환산하고, 하나의 증여계약이므로 시스템이 채무 합계를 <b>자산별
+            평가액 비율로 재배분</b>합니다(소령 §159 — 평가액 A·C만 지분분, 채무 B는 실제 인수액, 채무비율 B/C는 증여계약 단위).
+          </p>
+        )}
         {/* 컴패니언 — 축 A·축 B와 또 다른 제3의 규약. 상세는 `isCompanionBundle` 주석. */}
-        {isCompanionBundle && (
+        {isCompanionBundle && !isFractional && (
           <p className="text-caption text-rose-700 dark:text-rose-300">
             여러 물건 함께 부담부증여 — 아래 채무·보증금·임대료는 <b>이 물건에 설정된 금액</b>을
             입력하세요. 채무가 없는 물건은 비워 둡니다. 하나의 증여계약이므로 시스템이 채무
