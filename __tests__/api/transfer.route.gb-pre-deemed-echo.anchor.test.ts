@@ -9,7 +9,8 @@
  * 부수 관찰 — BG(부담부증여) 시가 평가 × 의제취득일 전 × 파트 ① 비움은 ⑧ 차단 · ⑫ 200 이지만 **의도된 비대칭**이다(`docs/02-design/features/bg-gb-residuals.plan.md` §2.2 · Q-2 a —
  * PR-7b-6a 계약 R-0·R-2, 기존 앵커 5건이 지킨다). 그래서 결함으로 세지 않고 여기서 다시 고정하지 않는다.
  * EC-2·EC-3 은 근거 문서가 없던 ⑧ 차단 · ⑫ 200 한 건(BG 상속 × 환산취득가액 × 상속개시일 1985.1.1. 이후)을 ⑫ 도 400 으로 막은 수정 후 기대다(`refineGbBurdenedGiftActualPath`) —
- * 수정 전에는 단건 24셀이 76,712,292 로 고정돼 올바른 경로(실지취득가액 안분 + 평가액)와 −12,122,708 ~ +76,712,292 달랐다. EC-4 는 같은 계열의 미수정 관찰(감정가액)이다.
+ * 수정 전에는 단건 24셀이 76,712,292 로 고정돼 올바른 경로(실지취득가액 안분 + 평가액)와 −12,122,708 ~ +76,712,292 달랐다.
+ * 감정가액·매매사례가액도 같은 계열이다(EC-4·EC-5 — `gb-bg-inherit-presumed.plan.md`): 같은 규칙이 `converted`·`appraisal`·`salesCase` 를 함께 막는다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -186,7 +187,7 @@ describe("EC-2 BG(부담부증여) 상속 × 취득방식 「converted」 × 의
   });
 });
 
-describe("EC-3 ⑧↔⑫ 정합 격자 — 일자 6(분리 OFF 3 · ON 3) × 토지·건물 취득원인 4 × 평가 방식 2 × 취득방식 3 × 담보 승 여부 2 × 위치 3 (864셀)", () => {
+describe("EC-3 ⑧↔⑫ 정합 격자 — 일자 6(분리 OFF 3 · ON 3) × 토지·건물 취득원인 4 × 평가 방식 2 × 취득방식 4 × 담보 승 여부 2 × 위치 3 (1,152셀)", () => {
   const BGX = { transferType: "burdened_gift", transferCause: "general", bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
     bgLendingDepositTotal: "0", bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000" } as unknown as Partial<AssetForm>;
   const DS: [string, string, boolean][] = [["1980-05-01", "1980-05-01", false], ["1988-05-01", "1988-05-01", false], ["2005-05-01", "2005-05-01", false],
@@ -195,9 +196,9 @@ describe("EC-3 ⑧↔⑫ 정합 격자 — 일자 6(분리 OFF 3 · ON 3) × 토
   let cache: Awaited<ReturnType<typeof run>> | undefined;
   async function run() {
     const out = { ruleCells: 0, ruleNot400: [] as string[], falseBlock: [] as string[], passCells: 0, appraisalBlocked200: 0, collateralWinPass: 0 };
-    for (const [ld, bd, sep] of DS) for (const [lc, bc] of CS) for (const mode of ["sangjeungbeop_market", "sangjeungbeop_standard"]) for (const m of ["converted", "actual", "appraisal"]) for (const coll of [false, true]) for (const role of ROLES3) {
+    for (const [ld, bd, sep] of DS) for (const [lc, bc] of CS) for (const mode of ["sangjeungbeop_market", "sangjeungbeop_standard"]) for (const m of ["converted", "actual", "appraisal", "salesCase"]) for (const coll of [false, true]) for (const role of ROLES3) {
       const over = { ...BGX, bgValuationMode: mode, bgMortgageSetAmount: coll ? "1,500,000,000" : "500,000,000", bgMortgageDebtAmount: coll ? "1,500,000,000" : "500,000,000", bgAcquisitionMethod: m,
-        acquisitionCause: lc, gbBuildingAcquisitionCause: bc, landAcquisitionDate: ld, acquisitionDate: sep ? bd : ld, ...(sep ? { buildingAcquisitionDate: bd } : {}), decedentAcquisitionDate: "1960-01-01",
+        acquisitionCause: lc, gbBuildingAcquisitionCause: bc, landAcquisitionDate: ld, acquisitionDate: sep ? bd : ld, inheritanceStartDate: ld, ...(sep ? { buildingAcquisitionDate: bd } : {}), decedentAcquisitionDate: "1960-01-01",
         hasSeperateLandAcquisitionDate: sep, ...(sep ? { landAcqMode: "actual", buildingAcqMode: "actual" } : {}), publishedValueAtInheritance: "205000000", gbBuildingInheritedValue: "150000000",
         landAcquisitionPrice: "205000000", buildingAcquisitionPrice: "150000000", bgActualAcquisitionLand: "205000000", bgActualAcquisitionBuilding: "150000000",
         bgPresumedAcquisitionLand: "205000000", bgPresumedAcquisitionBuilding: "150000000" } as unknown as Partial<AssetForm>;
@@ -206,21 +207,57 @@ describe("EC-3 ⑧↔⑫ 정합 격자 — 일자 6(분리 OFF 3 · ON 3) × 토
       const forces = bgCollateralForcesStdAcq(first);
       const r = await post(await captureBody(f)); const b8 = allIssues(f).length > 0;
       const tag = `${ld}|${bd}|${lc}|${bc}|${mode.slice(14)}|${m}|${coll}|${role}`;
-      const rule = m === "converted" && mode === "sangjeungbeop_market" && lc === "inheritance" && (sep ? bd : ld) >= "1985-01-01" && !forces;
+      const rule = m !== "actual" && mode === "sangjeungbeop_market" && lc === "inheritance" && ld >= "1985-01-01" && !forces;
       if (rule) { out.ruleCells++; if (r.status !== 400) out.ruleNot400.push(tag); }
       if (!b8) { out.passCells++; if (r.status === 400) out.falseBlock.push(tag); }
-      if (!b8 && forces && m === "converted" && lc === "inheritance" && r.status === 200) out.collateralWinPass++;
-      if (b8 && r.status === 200 && m === "appraisal" && mode === "sangjeungbeop_market" && lc === "inheritance") out.appraisalBlocked200++;
+      if (!b8 && forces && m !== "actual" && lc === "inheritance" && r.status === 200) out.collateralWinPass++;
+      if (b8 && r.status === 200 && m !== "actual" && mode === "sangjeungbeop_market" && lc === "inheritance" && !forces) out.appraisalBlocked200++;
     }
     return out;
   }
-  it("규칙 대상 셀(시가 평가 · 상속 · 환산 · 상속개시일 1985.1.1. 이후 · 담보 승 아님)은 전부 400 · ⑧ 통과 셀 중 ⑫ 400 은 0 (거짓 차단 없음) · 담보 승 통과 셀은 200", async () => {
+  it("규칙 대상 셀(시가 평가 · 상속 · 환산·감정·매매사례 · 상속개시일 1985.1.1. 이후 · 담보 승 아님)은 전부 400 · ⑧ 통과 셀 중 ⑫ 400 은 0 (거짓 차단 없음) · 담보 승 통과 셀은 200", async () => {
     cache = await run();
     expect([cache.ruleNot400, cache.falseBlock]).toEqual([[], []]);
-    expect([cache.ruleCells, cache.passCells, cache.collateralWinPass]).toEqual([24, 384, 12]); // 담보 승 통과 12셀 = 제외 조건이 실제로 쓰이는 셀(변형: 제외 조건 제거 시 적색)
+    expect([cache.ruleCells, cache.passCells, cache.collateralWinPass]).toEqual([72, 504, 36]); // 담보 승 통과 36셀 = 제외 조건이 실제로 쓰이는 셀(변형: 제외 조건 제거 시 적색)
   }, 300_000);
-  it("EC-4 같은 계열의 미수정 관찰 — 감정가액 × 시가 평가 × 상속은 ⑧ 차단 · ⑫ 200 (세액 영향은 단건 1셀만 확인: 1988 평가액 205M/150M 에서 63,478,550 vs 올바른 경로 64,895,000)", async () => {
+  it("EC-4 감정가액·매매사례가액도 같은 규칙 — 시가 평가 × 상속(담보 승 아님)에서 ⑧ 차단 · ⑫ 200 인 셀 0 (수정 전 환산 24 + 감정가액 48 + 매매사례가액 48셀)", async () => {
     cache ??= await run();
-    expect(cache.appraisalBlocked200).toBe(48);
+    expect(cache.appraisalBlocked200).toBe(0);
   }, 300_000);
+
+});
+
+describe("EC-5 BG 상속 × 감정가액·매매사례가액 — 상속 평가액(205M/150M)과 다른 값을 넣으면 그 값을 따라 세액이 달랐다 → ⑫ 400 (단건 · 1988 · 분리 OFF)", () => {
+  const BGX = { transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
+    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000" } as unknown as Partial<AssetForm>;
+  const inh = { ...BGX, acquisitionCause: "inheritance", gbBuildingAcquisitionCause: "inheritance", landAcquisitionDate: "1988-05-01", acquisitionDate: "1988-05-01", decedentAcquisitionDate: "1960-01-01",
+    hasSeperateLandAcquisitionDate: false, publishedValueAtInheritance: "205000000", gbBuildingInheritedValue: "150000000" } as Partial<AssetForm>;
+  it("올바른 경로(actual + 평가액) 64,895,000 불변 · 감정/매매사례 4수준 × 2방식은 ⑧ 차단 · ⑫ 400 (수정 전 87,418,550 [+22,523,550] · 63,478,550 [−1,416,450] · 13,695,881 [−51,199,119] · 0 [−64,895,000])", async () => {
+    const ok = await go("단건", { ...inh, bgAcquisitionMethod: "actual", bgActualAcquisitionLand: "205000000", bgActualAcquisitionBuilding: "150000000" } as Partial<AssetForm>);
+    expect([ok.blocked8, ok.status, ok.tax]).toEqual([false, 200, 64_895_000]);
+    const tally: Record<string, number> = {};
+    for (const [pl, pb] of [[100e6, 75e6], [205e6, 150e6], [400e6, 300e6], [800e6, 600e6]]) for (const m of ["appraisal", "salesCase"]) {
+      const r = await go("단건", { ...inh, bgAcquisitionMethod: m, bgPresumedAcquisitionLand: String(pl), bgPresumedAcquisitionBuilding: String(pb) } as unknown as Partial<AssetForm>);
+      const k = `${r.blocked8 ? "차단" : "통과"}|${r.status}`; tally[k] = (tally[k] ?? 0) + 1;
+    }
+    expect(tally).toEqual({ "차단|400": 8 });
+  });
+});
+
+describe("EC-6 토지만 1983 상속 · 건물 1995 취득(분리 ON) — ⑧ 통과이므로 ⑫ 도 200 (#2735 는 이 입력을 거짓으로 막았다: converted 400)", () => {
+  const BGX = { transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
+    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000" } as unknown as Partial<AssetForm>;
+  /** ⑧ 은 상속개시일 칸(`inheritanceStartDate`)으로 판정한다 — 일반건물 payload 에는 그 칸이 없어 ⑫ 는 토지 파트 취득일로 판정한다(`bgInheritNonActualBlocked`). */
+  it("converted·appraisal × 위치 3: 전부 ⑧ 통과 · 200", async () => {
+    const tally: Record<string, number> = {};
+    for (const m of ["converted", "appraisal"]) for (const role of ROLES3) {
+      const o = { ...BGX, acquisitionCause: "inheritance", gbBuildingAcquisitionCause: "purchase", landAcquisitionDate: "1983-07-26", inheritanceStartDate: "1983-07-26", acquisitionDate: "1995-05-01",
+        decedentAcquisitionDate: "1960-01-01", hasSeperateLandAcquisitionDate: true, landAcqMode: "actual", buildingAcqMode: "actual", publishedValueAtInheritance: "300000000", bgAcquisitionMethod: m,
+        bgActualAcquisitionBuilding: "40000000", bgPresumedAcquisitionBuilding: "40000000" } as unknown as Partial<AssetForm>;
+      const f = role === "단건" ? single(o) : form(role, o, true); // 컴패니언·주 자산은 BG 끼리 묶은 쌍(일반 양도 자산과는 수정 전부터 400)
+      const r = await post(await captureBody(f)); const b8 = allIssues(f).length > 0;
+      const k = `${b8 ? "차단" : "통과"}|${r.status}`; tally[k] = (tally[k] ?? 0) + 1;
+    }
+    expect(tally).toEqual({ "통과|200": 6 });
+  });
 });
