@@ -34,7 +34,7 @@ describe("S02-7 — 판정 메뉴: 양도일 지정 상태만으로는 고지하
     expect(out.undetermined).not.toContain(ID);
   });
   it("긍정 짝 — 같은 C4에서 거주 36개월이면 선언이 결론을 가르지 않으므로 고지 없음", async () => {
-    const o = await judge({ regionCode: BANSONG, acq: "2018-01-02", transfer: "2020-05-15", residence: "36" });
+    const o = await judge({ regionCode: BANSONG, acq: "2018-01-02", transfer: "2020-05-15", residence: "28" });
     expect(o.isExempt).toBe(true);
     expect(o.undetermined).not.toContain(ID);
   });

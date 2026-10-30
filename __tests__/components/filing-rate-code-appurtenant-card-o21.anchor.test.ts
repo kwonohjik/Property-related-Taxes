@@ -25,6 +25,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { postTransfer } from "../calc/_helpers/redev-one-house-route";
+import { capResidenceToHolding } from "../calc/_helpers/held-residence";
 import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
 import { buildAggregateRows } from "@/components/calc/results/transfer/FilingFormTableAggregateHelpers";
 import { resolveFilingRateCode } from "@/components/calc/results/transfer/filing-rate-code";
@@ -55,7 +56,7 @@ const NON_SUR = { householdHousingCount: 1, isRegulatedArea: false, wasRegulated
 
 /** 신고서 «세율구분 코드»·«세율» 행의 열별 값 */
 async function filing(body: Loose, cardKind: string, cardNature: string | undefined) {
-  const res = await postTransfer(body);
+  const res = await postTransfer(capResidenceToHolding(body));
   expect(res.status, JSON.stringify((res.json as Loose).error)).toBe(200);
   const a = (res.json as Loose).data.aggregated;
   const f = createDefaultTransferFormData() as Loose;

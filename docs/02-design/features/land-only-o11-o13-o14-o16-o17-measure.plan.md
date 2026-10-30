@@ -2,7 +2,7 @@
 
 > 작성 2026-10-30 · 깊이 **L2~L3**(O-14만 세액이 바뀐다) · 선행: `bundled-appurtenant-card-later-land-holding.plan.md` O-11 · `land-only-merge-residence-period.plan.md` O-13·O-14 · `land-only-merge-residence-temporary-absence.plan.md` O-16·O-17.
 > 사용자 지시 「O-11, O-13, O-14, O-16, O-17. 진행해」. 측정은 master(`b9f9f07a0`) 기준 throwaway probe(커밋 안 함 · 삭제 확인 · 시험 적용은 scratchpad 백업에서 복원 확인).
-> **이 PR은 계획서뿐이다.** 구현은 사용자가 Q-1~Q-5를 정한 뒤 같은 PR에서 한다.
+> **Q-1~Q-5 모두 a 결정(사용자 「권장안으로」) → 같은 PR에 구현 완료(§9).**
 
 ## 0. 요약
 
@@ -97,3 +97,24 @@
 | O-19 | 카드 통산 키(`lossOffsetRateKey`)와 세율군 불일치 |
 | V-19 | Q-3 a 구현 시 ⑧ 적용 조건 격자 · 기존 테스트 영향(⏳ 구현 첫 단계) |
 | 미확인 | 분가 후 재합가·가정불화 일시퇴거·주민등록 이탈 일시퇴거자에 대한 국세청 해석(검색 0건 — 법제처 DRF·국세청 법령해석 검색 범위 내) |
+
+## 9. 구현 결과 (Q-1~Q-5 모두 a)
+
+| 항목 | 결과 |
+|---|---|
+| **Q-1 O-11** | 변경 없음 — 종결 |
+| **Q-4 O-16 · Q-5 O-17** | 변경 없음 — 새 근거가 없다(§4·§5) |
+| **Q-2 O-13** | 합가일 입력 칸(`AssetOwnershipSplitSection`)·합가일 적용 고지(주 카드 `landOnlyMergeDateAppliedNotice` · 부수토지 카드 `landOnlyMergeDateAppurtenantCardNotice`)가 **한 문장 `LAND_ONLY_REPEATED_MERGE_NOTE`**를 읽는다 — «합쳤다가 분가한 뒤 다시 합친 경우에는 양도일 현재까지 계속 같은 세대였던 기간의 시작일(마지막 합가일)을 합가일로 입력해야 하며, 분가했던 기간까지 통산하는지는 해석을 찾지 못해 확인이 필요합니다(재산46014-610은 «세대합가 이전기간» 제외만 답했습니다)». **엔진·입력 필드·Zod·세액 불변** |
+| **Q-3 O-14** | ⑫ `residenceMonthsOverflowIssue`(`transfer-tax-schema-household-refines.ts`) — `refineHouseholdRequiredInputs`에서 호출. UI ⑧과 **같은 leaf**(`directResidenceMonthsOverflowError` · `residenceStartWithMerge`). 계산 leaf는 건드리지 않음 |
+
+### Q-3 구현 중 계획서 설계를 바꾼 부분 (측정으로 확인)
+1. **기준일을 «취득일»이 아니라 «취득일 · 통산 기산 후보 중 가장 이른 날»로 했다.** 처음엔 ⑧과 완전히 같게(취득일만) 구현했더니 기존 테스트 **44건(13개 파일)**이 400이 됐다. 그중 10건(이월과세 A-9 5건 · 이월과세 파트 B/C `split-part-carryover.p5.wire` 5건 — 세대 보유 시작일·증여자 취득일이 증여일보다 앞서는 «계속 같은 세대» 시료)은 **합법적 통산 경로**였다 — 보유가 증여자 취득일·세대 보유 시작일로 거슬러 올라가는데 API는 이를 `residencePeriodMonths` 하나에 합쳐 받는다(UI는 «증여 전 동일세대 거주기간» 별도 칸). 그래서 후보에 `landAcquisitionDate`(분리취득) · `donorAcquisitionDate` · `giftHouseholdHoldingStartDate` · `carryoverTaxation`·`landCarryoverPart`·`buildingCarryoverPart`의 `donorAcquisitionDate`·`donorHouseholdHoldingStartDate`를 넣었다. **⑫가 ⑧보다 느슨하다(⑧ 통과 ⇒ ⑫ 통과 — 막다른 길 없음).** 설명할 기산일이 없는 값(120 > 60 · 999)만 막는다.
+2. **적용 범위는 `propertyType: "housing"`(재개발 서브객체 없음)이다.** ⑧은 겸용주택(assetKind housing + 겸용 플래그)에도 걸지만 API의 겸용은 `propertyType: "mixed-use-house"`라 이번 범위 밖이다 — 겸용 시료의 기존 값(E-7)을 보존하기 위함이며, 방향(⑧ 통과 ⇒ ⑫ 통과)은 유지된다. **남은 갭**: API 겸용주택 직접 호출은 거주 상한이 없다.
+3. 남은 34건(10개 파일)은 거주가 실제 보유기간보다 긴 **비현실 시료**였다(예: 보유 17개월 · 거주 60개월 — 장특 0 구간이라 값에 영향이 없던 입력). 시료 정의는 건드리지 않고 공용 보정 `__tests__/calc/_helpers/held-residence.ts`(`capResidenceToHolding` — 같은 leaf로 상한까지 줄임 · 합가일 반영)를 6개 파일에 적용하고, 5개 파일은 개별 수정했다(판정 메뉴 R-2 `residencePeriodMonths: 12` · E-7 주택 변형 `45` · designated-district `"28"` · new-house-origin C-5 `"52"`). **값이 바뀐 것은 new-house-origin C-5 «일반 취득» 1건뿐**: 31,333,500 → **34,413,500**(거주 5년 → 4년으로 장특 표2 36% → 32%; 독립 산식 — 양도차익 5억 × 40% = 2억 · 장특 32% 6,400만 · 소득 1.36억 − 250만 = 1.335억 × 35% − 15,440,000 = 31,285,000 × 1.1 — 엔진 값과 일치).
+
+### 검증
+- 신규 anchor: `transfer.route.residence-months-cap-o14.anchor.test.ts`(12) · `land-only-repeated-merge-guidance-o13.anchor.test.tsx`(7) — 독립 산식: 보유 5년 · 20억 · 취득 5억 → 장특 표2 40% 240,000,000 · 거주 10년이면 60% 360,000,000(세액 117,060,000 → 70,310,000, −46,750,000 방지) · 합가 2023-12-01 산출 145,250,000 → 총세액 159,775,000.
+- **뮤테이션 16종 전부 killed**(Q-3 11종: 호출 제거 · 1세대1주택/재개발/주택 게이트 · 후보 5종 · 최솟값→최댓값 · 합가일 미반영 · 증여 안내 · 문구 / Q-2 5종: 주 카드·카드 고지·UI 문장 제거 · «확인이 필요합니다»·«마지막 합가일» 제거).
+- 전체 회귀 3,611파일 통과(실패 0) · tsc 0 · eslint 0.
+- **브라우저**(Playwright · 실제 UI 시드: 토지만 본인 × 같은 세대 × «중간에 합침» · 합가 2023-12-01): «세대를 합친 날» 칸 바로 아래에 재합가 안내 문장이 보인다 — 라이트·다크 모두 확인(다크는 `colorScheme` 에뮬레이션). 이 칸은 자산 카드의 접힌 섹션 안에 있어 펼친 뒤 확인했다. **Q-3는 API 한정이라 화면 변화가 없다** — UI ⑧이 같은 상한을 먼저 막는 것은 기존 동작이며 이번에 다시 확인하지 않았다.
+- 브라우저 probe 중 개발 서버가 부하(load average 40+)로 느렸고, 첫 두 번의 타임아웃은 코드가 아니라 probe가 접힌(보이지 않는) 요소의 `screenshot()`을 무한 대기한 것이었다(DOM 평가로 교체).

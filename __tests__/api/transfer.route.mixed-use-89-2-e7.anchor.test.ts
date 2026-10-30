@@ -232,7 +232,8 @@ describe("E-7 겸용 단건 × §89② — 중과 배제 ① 요소(§156의2 �
     const r = await post(over);
     expect(r.multiHouseSurcharge?.surchargeType).toBe("none");
     expect(r.total.determinedTax).toBe(195_217_632);
-    expect((await postHousing({ ...over, mixedUse: undefined })).surchargeType ?? "none").toBe("none");
+    // 주택 변형 — 거주는 보유기간 중만(⑫ 상한): 취득 2018-06-01 · 양도 2022-03-01 = 45개월. 겸용 호출의 값(195,217,632)은 그대로다.
+    expect((await postHousing({ ...over, mixedUse: undefined, residencePeriodMonths: 45 })).surchargeType ?? "none").toBe("none");
   });
 
   /**

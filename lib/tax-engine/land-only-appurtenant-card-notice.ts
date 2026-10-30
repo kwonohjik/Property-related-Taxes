@@ -6,6 +6,7 @@
  */
 import { calculateHoldingPeriod } from "./tax-utils";
 import { LAND_ONLY_OTHER_HOUSEHOLD_RATE_NOTICE } from "./land-only-owner-household";
+import { LAND_ONLY_REPEATED_MERGE_NOTE } from "./land-only-owner-household";
 import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption-residence-waivers";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -34,7 +35,8 @@ export function landOnlyMergeDateAppurtenantCardNotice(input: TransferTaxInput):
   return (
     `함께 양도한 부수토지 카드 — 짝 주택이 토지만 본인 소유이고 건물(주택) 소유자와 같은 세대라, 입력하신 세대 합가일(${merge.toISOString().slice(0, 10)})부터를 이 부수토지의 주택부수토지 ` +
     "보유기간으로 보아 1세대1주택 비과세 보유요건·장기보유특별공제 표2 보유연수·단기세율 보유기간을 판정했습니다(재산46014-610 · 부동산거래관리과-515). " +
-    "단기세율 보유기간에 합가일을 반영한 것은 정면 해석이 없는 유추라 확인이 필요합니다."
+    "단기세율 보유기간에 합가일을 반영한 것은 정면 해석이 없는 유추라 확인이 필요합니다. " +
+    LAND_ONLY_REPEATED_MERGE_NOTE
   );
 }
 

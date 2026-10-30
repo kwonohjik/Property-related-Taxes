@@ -8,6 +8,8 @@
  * `refinePropertyRequiredInputs`(단건·다건 자산 공용 진입점)에서 부른다.
  */
 import { z } from "zod";
+import { directResidenceMonthsOverflowError } from "@/lib/calc/residence-interval-validate";
+import { residenceStartWithMerge } from "@/lib/calc/self-owns-scope";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx): Issue => (path, message) =>
@@ -35,6 +37,18 @@ export type HouseholdRefineInput = {
   buildingOwnerHouseholdMerged?: boolean;
   buildingOwnerHouseholdMergeDate?: string;
   transferDate?: string;
+  /** 거주 개월 일반 상한(`residenceMonthsOverflowIssue`)이 읽는다 */
+  acquisitionDate?: string;
+  isOneHousehold?: boolean;
+  residencePeriodMonths?: number;
+  mixedUse?: unknown;
+  redevelopment?: unknown;
+  landAcquisitionDate?: string;
+  donorAcquisitionDate?: string;
+  giftHouseholdHoldingStartDate?: string;
+  carryoverTaxation?: unknown;
+  landCarryoverPart?: unknown;
+  buildingCarryoverPart?: unknown;
   sellingHouseId?: string;
   houses?: ReadonlyArray<RentalRow>;
   generalHouseGiftedFromDecedentWithin2yr?: boolean;
@@ -156,6 +170,8 @@ export function refineHouseholdRequiredInputs(data: HouseholdRefineInput, ctx: z
   if (lohMsg) issue(["buildingOwnerSameHousehold"], lohMsg);
   const mergeIssue = landOnlyHouseholdMergeIssue(data);
   if (mergeIssue) issue([mergeIssue.field], mergeIssue.message);
+  const residenceMsg = residenceMonthsOverflowIssue(data);
+  if (residenceMsg) issue(["residencePeriodMonths"], residenceMsg);
 }
 
 /**
@@ -204,4 +220,68 @@ export function newConstructionLandOnlyIssue(d: { acquisitionCause?: string; sel
   return d.acquisitionCause === "newConstruction" && d.selfOwns === "land_only"
     ? "신축(자가건축)은 건물의 취득원인입니다 — 토지만 본인 소유라면 토지의 취득원인(매매·상속·증여 등)으로 계산하세요 (소득세법 시행령 §162①4호)"
     : null;
+}
+
+/**
+ * ⑫ 거주 개월 **일반 상한** — 거주 개월이 «가능한 가장 이른 보유 기산일»~양도일을 넘으면 막는다. 종전에는 상한이 없어 API 직접 호출에서 보유 60개월 · 거주 120개월이
+ * 오류 없이 장특 거주분 40%(10년)로 계산됐다(계획서 `land-only-o11-o13-o14-o16-o17-measure.plan.md` O-14 · Q-3 a). 법 근거: 법 §95② 표2 «보유기간 중 거주기간» · 시행령 §154① 괄호 «그 보유기간 중 거주기간».
+ *
+ * **기준일 = 취득일 · 통산 기산 후보 중 가장 이른 날**이다 — UI ⑧(`transfer-tax-validate-step1.ts`)은 취득일만 보고 통산분은 별도 칸(증여 전 동일세대 거주기간)에 받지만, API는 토지 취득일(`landAcquisitionDate` — 분리취득),
+ * 증여자 취득일(`donorAcquisitionDate` · 이월과세 `carryoverTaxation`·`landCarryoverPart`·`buildingCarryoverPart`의 `donorAcquisitionDate`)·세대 보유 시작일(`giftHouseholdHoldingStartDate` · `donorHouseholdHoldingStartDate`)로 보유가 거슬러 올라가는 입력을 받는다.
+ * 그래서 ⑫는 ⑧보다 **느슨**하다(⑧ 통과 ⇒ ⑫ 통과 — «⑧ 통과 ↔ ⑫ 400» 막다른 길 없음). 어떤 기산일로도 설명되지 않는 값(120 > 60 · 999)만 막는다.
+ * 같은 leaf(`directResidenceMonthsOverflowError` · `residenceStartWithMerge`)를 쓰고, 통산 후보가 취득일보다 이르면 그 날짜를 밝히는 문구를 쓴다.
+ *
+ * 조건: 1세대1주택(`isOneHousehold`) · 주택 · 재개발 서브객체 없음(재개발은 자체 상한 — 승계 APT `successorAptMaxResidenceMonths` · 세대원 건물 `householdBuildingResidenceOverflow`).
+ * 토지만 본인 × 같은 세대 × 합가면 합가일이 기준일을 늦춘다. ⚠️ 계산 leaf(`calcLongTermRate`)에서 파트별 보유연수로 자르지 않는다 — 거주는 주택 단위라 겸용·분리취득에서 틀린다(시험 적용 26건 실패).
+ */
+export function residenceMonthsOverflowIssue(d: {
+  propertyType?: string;
+  acquisitionCause?: string;
+  acquisitionDate?: string;
+  transferDate?: string;
+  isOneHousehold?: boolean;
+  residencePeriodMonths?: number;
+  selfOwns?: string;
+  buildingOwnerSameHousehold?: boolean;
+  buildingOwnerHouseholdMerged?: boolean;
+  buildingOwnerHouseholdMergeDate?: string;
+  mixedUse?: unknown;
+  redevelopment?: unknown;
+  landAcquisitionDate?: string;
+  donorAcquisitionDate?: string;
+  giftHouseholdHoldingStartDate?: string;
+  carryoverTaxation?: unknown;
+  landCarryoverPart?: unknown;
+  buildingCarryoverPart?: unknown;
+}): string | null {
+  if (d.propertyType !== "housing" || d.isOneHousehold !== true || d.redevelopment) return null;
+  if (d.residencePeriodMonths === undefined || !d.acquisitionDate) return null;
+  type DonorDates = { donorAcquisitionDate?: string; donorHouseholdHoldingStartDate?: string } | null | undefined;
+  const donorDates = (o: unknown) => [(o as DonorDates)?.donorAcquisitionDate, (o as DonorDates)?.donorHouseholdHoldingStartDate];
+  const earliest = [
+    d.acquisitionDate, d.landAcquisitionDate, d.donorAcquisitionDate, d.giftHouseholdHoldingStartDate,
+    ...donorDates(d.carryoverTaxation), ...donorDates(d.landCarryoverPart), ...donorDates(d.buildingCarryoverPart),
+  ]
+    .filter((x): x is string => typeof x === "string" && x.length > 0)
+    .reduce((a, b) => (b < a ? b : a));
+  const start = residenceStartWithMerge(earliest, {
+    assetKind: "housing",
+    isMixedUseHouse: !!d.mixedUse,
+    selfOwns: (d.selfOwns ?? "both") as "both" | "land_only" | "building_only",
+    buildingOwnerSameHousehold: d.buildingOwnerSameHousehold,
+    buildingOwnerHouseholdMerged: d.buildingOwnerHouseholdMerged,
+    buildingOwnerHouseholdMergeDate: d.buildingOwnerHouseholdMergeDate,
+  });
+  const msg = directResidenceMonthsOverflowError({
+    months: d.residencePeriodMonths,
+    acquisitionDate: start.start,
+    startKind: start.kind,
+    transferDate: d.transferDate,
+    field: "residencePeriodMonthsAsset",
+    giftPriorHint: d.acquisitionCause === "gift",
+  });
+  // 통산 후보가 기준일이 된 경우 — leaf 문구는 «취득일(…)»이라 그 날짜가 무엇인지 밝히도록 바꾼다(값 판정은 같은 leaf).
+  return msg && start.kind === "acquisition" && start.start !== d.acquisitionDate
+    ? msg.replace(`취득일(${start.start})`, `보유 기산 후보 중 가장 이른 날(${start.start} — 증여자 취득일·세대 보유 시작일 포함)`)
+    : msg;
 }

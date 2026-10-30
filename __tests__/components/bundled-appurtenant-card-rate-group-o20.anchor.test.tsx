@@ -31,6 +31,7 @@ vi.mock("next/navigation", () => ({
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { postTransfer } from "../calc/_helpers/redev-one-house-route";
+import { capResidenceToHolding } from "../calc/_helpers/held-residence";
 import { AggregatedTaxSummary } from "@/components/calc/results/BundledAllocationSubCards";
 
 beforeEach(() => {
@@ -57,7 +58,7 @@ const fwd = (houseAcq: string, cardAcq: string, area = 100, over: Loose = {}) =>
 });
 
 async function run(body: Loose) {
-  const res = await postTransfer(body);
+  const res = await postTransfer(capResidenceToHolding(body));
   expect(res.status, JSON.stringify((res.json as Loose).error)).toBe(200);
   const aggregated = (res.json as Loose).data.aggregated;
   const { container } = render(<AggregatedTaxSummary aggregated={aggregated} />);
@@ -129,7 +130,7 @@ describe("불변 — 분류가 바뀌면 안 되는 조합", () => {
     ];
     let checked = 0;
     for (const body of samples) {
-      const res = await postTransfer(body);
+      const res = await postTransfer(capResidenceToHolding(body));
       for (const p of (res.json as Loose).data.aggregated.properties as Loose[]) {
         if (p.rateClause === "104-1-2" || p.rateClause === "104-1-3") {
           checked += 1;

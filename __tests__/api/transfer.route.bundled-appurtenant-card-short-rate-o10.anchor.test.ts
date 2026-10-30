@@ -24,6 +24,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { postTransfer } from "../calc/_helpers/redev-one-house-route";
+import { capResidenceToHolding } from "../calc/_helpers/held-residence";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -53,7 +54,7 @@ const forward = (over: Loose) => ({
 type Card = { propertyId: string; transferGain: number; income: number; longTermHoldingDeduction: number; warnings?: string[] };
 type Agg = { totalTax: number; warnings?: string[]; properties: Card[] };
 async function agg(body: Loose): Promise<Agg> {
-  const res = await postTransfer(body);
+  const res = await postTransfer(capResidenceToHolding(body));
   expect(res.status, JSON.stringify((res.json as Loose).error)).toBe(200);
   return (res.json as Loose).data.aggregated as Agg;
 }
@@ -69,7 +70,7 @@ const MERGED = { acquisitionArea: 200, transferArea: 200, companionAssets: [] as
 /** 주택·주 카드 토지 2025-01-01 취득(양도 시 1년 5개월) · 부수토지 카드 */
 const SHORT_HOUSE = { acquisitionDate: "2025-01-01", landAcquisitionDate: "2025-01-01" };
 async function singleTotal(body: Loose): Promise<number> {
-  const res = await postTransfer(body);
+  const res = await postTransfer(capResidenceToHolding(body));
   expect(res.status, JSON.stringify((res.json as Loose).error)).toBe(200);
   return (res.json as Loose).data.result.totalTax as number;
 }

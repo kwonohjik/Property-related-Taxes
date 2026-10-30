@@ -563,18 +563,18 @@ describe("C 계산기", () => {
     expect(seq.warnings.join(" ")).toContain("옛 중과 배제 조항");
   });
 
-  it("C-5 중과 15호가 같은 정본을 읽는다 — 순차 사례는 비과세뿐 아니라 15호 중과 배제도 불성립 (일반 취득 31,333,500 → 순차 299,816,000 + 다주택 중과)", async () => {
+  it("C-5 중과 15호가 같은 정본을 읽는다 — 순차 사례는 비과세뿐 아니라 15호 중과 배제도 불성립 (일반 취득 34,413,500 → 순차 299,816,000 + 다주택 중과)", async () => {
     const mk = async (origin: Record<string, unknown>) => {
       const f = buildForm(
         [{ id: "n", region: "capital", regionCode: "1168010100", acquisitionDate: "2025-09-15", officialPrice: "900000000", ...origin }],
-        { transferDate: "2026-09-01", contractTotalPrice: "2000000000", residencePeriodMonths: "60" },
+        { transferDate: "2026-09-01", contractTotalPrice: "2000000000", residencePeriodMonths: "52" },
       );
       Object.assign(f.assets[0], {
         acquisitionDate: "2022-05-01",
         actualSalePrice: "2000000000",
         fixedAcquisitionPrice: "1500000000",
         regionCode: "1168010100",
-        residencePeriodMonthsAsset: "60",
+        residencePeriodMonthsAsset: "52",
       });
       const r = await run(f);
       const j = r.result as unknown as {
@@ -585,7 +585,7 @@ describe("C 계산기", () => {
       return j;
     };
     const general = await mk({ acquisitionOrigin: "general" });
-    expect(general).toMatchObject({ totalTax: 31_333_500, isPartialExempt: true });
+    expect(general).toMatchObject({ totalTax: 34_413_500, isPartialExempt: true });
     expect(general.multiHouseSurchargeEvaluation?.surchargeType).toBe("none");
     // 신규 주택 분양권을 종전주택(2022-05-01)보다 앞선 2021-06-01에 취득 — 순차
     const seq = await mk({ acquisitionOrigin: "presale", rightAcquisitionDate: "2021-06-01" });
