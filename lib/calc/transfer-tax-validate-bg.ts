@@ -53,7 +53,9 @@ import {
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { validateDonorBuiltBg } from "./transfer-tax-validate-donor-built-bg";
 import { bgCollateralForcesStdAcq, bgWholeGiftValuation } from "./burdened-gift-collateral-win";
+import { bgFractionalCollateralWin } from "./burdened-gift-collateral-win";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
+import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
 import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
 import { bgAnyCarryover, bgCarryoverForm, bgCarryoverParts } from "./bg-carryover-parts";
 import { bgHouseSplitActive } from "./bg-house-split";
@@ -78,6 +80,11 @@ const SUPPORTED_KINDS: AssetForm["assetKind"][] = [
   "redevelopment_apt",
   "right_to_move_in",
 ];
+
+/** B/C > 1 차단 문구 — 시가 모드·기준시가 모드가 같은 사실을 말한다(엔진 `EXCESS_BURDENED_GIFT` 와 같은 조건). */
+function debtExceedsGiftValueMessage(label: string, assumedDebt: number, giftValuation: number, scaleNote: string): string {
+  return `${label}: 채무액(${assumedDebt.toLocaleString()}원)이 증여가액(${giftValuation.toLocaleString()}원)${scaleNote}을 초과합니다. 채무액÷증여가액이 1을 넘으면 증여가액을 초과하는 부분까지 양도로 보게 되어 계산할 수 없습니다(소득세법 §88 1호 후단, 소령 §159①). 양도 형태를 "일반 양도"로 변경하거나 평가액·채무액을 재확인하세요.`;
+}
 
 /**
  * 안내문의 자산 열거는 **위 배열에서 파생**한다 — 손으로 쓰지 않는다.
@@ -444,6 +451,10 @@ export function validateBurdenedGiftAsset(
     // 축 B는 채무·시가 모두 물건 전체 입력이므로 줄이지 않는다(축 A만 시가를 지분분으로 줄여 지분 인수분 채무와 비교).
     const giftValuationMarket = ratio < 1 && !isFractionalSplitAxis ? applyRatio(marketWhole, ratio) : marketWhole;
     const giftValuation = wholeValuation?.value ?? giftValuationMarket;
+    // 지분 자산(축 A)의 담보 승 — 채무 합계가 시가 해당분보다 커서 아래 「초과」 검사에 걸리지만 그 사유가 아니라 이 범위 밖이라 막는 것이다(`bgFractionalCollateralWin`).
+    if (!isFractionalSplitAxis && bgFractionalCollateralWin(asset)) {
+      return `${label}: 지분 ${formatOwnershipPercent(asset.ownershipNumerator, asset.ownershipDenominator)}를 가진 자산에서 담보평가액(「상속세 및 증여세법」 제66조)이 시가 해당분보다 커서 증여가액이 담보평가액이 됩니다. 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)을 지분 자산에는 확인하지 못해 계산하지 않습니다. 단독 소유라면 지분율을 100%로 입력하고, 시가·채무액·채권최고액을 재확인하세요.`;
+    }
     if (giftValuation > 0 && assumedDebt > giftValuation) {
       const scaleNote =
         ratio < 1 && !isFractionalSplitAxis
@@ -451,10 +462,19 @@ export function validateBurdenedGiftAsset(
           : wholeValuation?.selectedMode === "mortgage"
             ? ` (시가 ${marketWhole.toLocaleString()}원보다 큰 담보평가액 — 「상속세 및 증여세법」 제66조: 임대보증금 + 채권최고액과 담보채무 중 적은 금액)`
             : "";
-      return `${label}: 채무액(${assumedDebt.toLocaleString()}원)이 증여가액(${giftValuation.toLocaleString()}원)${scaleNote}을 초과합니다. 채무액÷증여가액이 1을 넘으면 증여가액을 초과하는 부분까지 양도로 보게 되어 계산할 수 없습니다(소득세법 §88 1호 후단, 소령 §159①). 양도 형태를 "일반 양도"로 변경하거나 평가액·채무액을 재확인하세요.`;
+      return debtExceedsGiftValueMessage(label, assumedDebt, giftValuation, scaleNote);
     }
   }
-  // 기준시가 모드의 B/C > 1 검사는 엔진에서 fail-fast (giftValuation = Max(보충적·담보·임대) 산정 후).
+  // 기준시가 모드 — 증여가액 C = Max(보충적·담보·임대)를 엔진과 같은 경로(`companionBurdenedGiftValuations` — 지분 축소 → Max)로 구해 같은 B/C > 1 검사를 한다.
+  // 엔진은 자산마다 자기 채무와 자기 증여가액을 비교하므로(묶음의 주 자산·컴패니언 모두 실측) 자산별 검사가 같은 기준이다. 종전에는 이 검사가 없어 ⑧ 통과 뒤 엔진이 500 으로 죽었다.
+  // 축 B(지분 분할 취득)는 채무·평가 모두 물건 전체 입력이라 지분을 줄이지 않는다(시가 모드와 같다).
+  if (asset.bgValuationMode !== "sangjeungbeop_market") {
+    const stdRatio = isFractionalSplitAxis === true ? 1 : getOwnershipRatio(asset);
+    const stdValuation = companionBurdenedGiftValuations([buildBurdenedGiftInfo(asset)], [stdRatio])[0];
+    if (stdValuation && stdValuation.value > 0 && assumedDebt > stdValuation.value) {
+      return debtExceedsGiftValueMessage(label, assumedDebt, stdValuation.value, "");
+    }
+  }
 
   // (5) Phase 3 — donorRelation 필수
   if (!asset.bgDonorRelation) {

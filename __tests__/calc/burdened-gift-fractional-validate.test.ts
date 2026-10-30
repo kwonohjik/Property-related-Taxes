@@ -31,6 +31,8 @@ const asset = (over: Record<string, unknown>) =>
     bgMarketValueAtTransfer: "1,200,000,000",
     bgLendingDepositTotal: "0",
     bgMortgageDebtAmount: "700,000,000",
+    // 설정액을 작게 둬 담보평가가 못 이기게 한다 — 설정액이 비면 담보가 이겨(채무 7억 > 보충 6억) 이 시험의 대상(스케일 정합의 진짜 초과)이 아니다.
+    bgMortgageSetAmount: "100,000,000",
     ...over,
   }) as never;
 

@@ -31,6 +31,20 @@ export function bgWholeGiftValuation(asset: AssetForm): CompanionBurdenedGiftVal
 }
 
 /**
+ * 지분을 가진 자산(축 A 공유 소유 — 채무는 본인 인수분)에서 시가 모드 담보평가(§66)가 이기는가. 이기면 그 증여가액 C는 담보평가액이다.
+ * 이 경우는 계산하지 않는다 — ⑤ 칸 노출·⑧ 취득가액 요구가 단독 소유만 다루고(`bgCollateralForcesStdAcq`), 축을 가릴 수 없는 자산 하나만으로는
+ * 승자를 확정할 수 없다(범위 주석). 엔진은 이 입력을 계산하지만(취득가액 = 취득시 기준시가 × 지분 × 채무비율) 화면이 그 취득가액 입력을 다루지 않는다.
+ * 지분 자산의 담보 승은 채무 합계가 항상 시가 해당분보다 커서 ⑧의 「채무액이 증여가액 초과」 검사에 걸리므로, 그 틀린 사유 대신 이 판정으로 정확히 막는다.
+ * 축 B(지분 분할 취득)는 호출자가 거른다 — 물건 전체 입력이라 이 승자 판정이 맞지 않는다.
+ */
+export function bgFractionalCollateralWin(asset: AssetForm): boolean {
+  if (asset.transferType !== "burdened_gift" || asset.bgValuationMode !== "sangjeungbeop_market") return false;
+  const ratio = getOwnershipRatio(asset);
+  if (ratio >= 1) return false;
+  return companionBurdenedGiftValuations([buildBurdenedGiftInfo(asset)], [ratio])[0]?.selectedMode === "mortgage";
+}
+
+/**
  * 시가 모드에서 담보평가(§66)가 이겨 취득가액이 취득시 기준시가로 강제되는가 — 엔진 `resolveBgAcquisitionBasis`의
  * `collateralForcedStdInMarketMode`와 같은 조건이다(입주권 제외).
  *
