@@ -16,6 +16,7 @@ import {
 } from "@/lib/calc/transfer-successor-right";
 import { postApprovalExpensesInScope } from "@/lib/calc/redev-field-scope";
 import { redevActualAcquisitionPriceRaw } from "@/lib/calc/redev-acquisition-price-source";
+import { normalizeRedevCarryoverAcqMode } from "@/lib/calc/redev-carryover-acq-mode";
 import { effectiveCarryoverDonorSplit } from "@/lib/calc/transfer-land-part-cause";
 
 export function parseRaw(v: string | undefined): number {
@@ -102,7 +103,8 @@ export function directAcqRaw(a: AssetForm): { value: number; pending: boolean } 
   // ① 재개발·입주권 — 상단 일반 취득가액 칸이 숨겨지고 §166 섹션 전용 필드를 쓴다.
   //    승계조합원(사례 48)만 자산 카드 `fixedAcquisitionPrice` — 주 자산·컴패니언 ④와 같은 leaf.
   if (isRedevelopmentPath(a)) {
-    return { value: redevActualAcquisitionPriceRaw(a), pending: false };
+    // 이월과세(비부담부증여)는 ⑤ 실거래가를 쓰지 않는다 — ④와 같은 사본(`redev-carryover-acq-mode.ts`)이라 0(계산 후 신고서 역산값으로 바뀐다).
+    return { value: redevActualAcquisitionPriceRaw(normalizeRedevCarryoverAcqMode(a)), pending: false };
   }
   // ② 다필지 — 자산 전체 취득가액이 없고 필지별로 실재한다 (API :277 `parcelModeActive` → 0 송신).
   if (isParcelMode(a)) {

@@ -91,6 +91,7 @@ import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { redevActualAcquisitionPriceRaw } from "./redev-acquisition-price-source";
+import { withRedevCarryoverAcqMode } from "./redev-carryover-acq-mode";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
@@ -112,7 +113,8 @@ export type TransferAPIResult = SingleTransferResult | BundledTransferResult | M
 
 export async function callTransferTaxAPI(formInput: TransferFormData): Promise<TransferAPIResult> {
   // 화면에 보이는 양도비만 싣는다 — 숨은 총 양도비·꺼진 자산 양도비를 비운다(O-9, ⑥과 같은 leaf).
-  const form = withInScopeTransferExpenses(formInput);
+  // 재개발 × 이월과세 — ⑤ 라디오 대신 이월과세 ② 토글이 산정 방식을 정한 사본(⑧·⑤와 같은 leaf · `redev-carryover-acq-mode.ts`).
+  const form = withRedevCarryoverAcqMode(withInScopeTransferExpenses(formInput));
   const primary = form.assets[0];
   if (!primary) throw new Error("자산이 없습니다.");
 

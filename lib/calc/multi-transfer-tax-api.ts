@@ -67,6 +67,7 @@ import { phdFlagEffective } from "./phd-toggle-scope";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 import { deemedOneHouseContextDeclared, rentalResidenceContextDeclared } from "./deemed-one-house-context";
+import { withRedevCarryoverAcqMode } from "./redev-carryover-acq-mode";
 
 /**
  * TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용)
@@ -79,7 +80,7 @@ import { deemedOneHouseContextDeclared, rentalResidenceContextDeclared } from ".
  */
 export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmendment = false) {
   // 화면에 보이는 양도비만 싣는다 — 단건 ④·⑥과 같은 leaf(O-9).
-  const form = withInScopeTransferExpenses(formInput);
+  const form = withRedevCarryoverAcqMode(withInScopeTransferExpenses(formInput)); // 재개발 × 이월과세 산정 방식 — 단건 ④와 같은 사본
   const primary = form.assets?.[0];
   // 명부 행 ⑥의 §99의4·§98의9도 건별로 싣는다(단건과 같은 leaf). 감면주택 행은 아래 `specialHouseExclusions`(Q4).
   const reductions = toEngineReductions(primaryReductionsWithRows(form), primary ?? { acquisitionCause: "purchase" }, primary?.expropriationNoticeDate);

@@ -25,6 +25,7 @@
  * anchor: `__tests__/tax-engine/transfer/area-axis-single-field-invariant.anchor.test.ts`
  */
 
+import { normalizeRedevCarryoverAcqMode } from "@/lib/calc/redev-carryover-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -121,7 +122,8 @@ export function isHousingContribEstimatedBranch(asset: AssetForm): boolean {
     // subject 미입력 fallback — 입주권 자산이면 "right"(④ 변환·⑧ validate와 동일 fallback).
     subject: asset.redevSubject || (asset.assetKind === "right_to_move_in" ? "right" : undefined),
     settlementDirection: asset.redevSettlementDirection,
-    useEstimatedAcquisition: asset.useEstimatedAcquisition,
+    // 재개발 × 이월과세는 ⑤ 라디오가 아니라 이월과세 ② 토글이 정한다(④·⑧과 같은 사본 — `redev-carryover-acq-mode.ts`).
+    useEstimatedAcquisition: normalizeRedevCarryoverAcqMode(asset).useEstimatedAcquisition,
   });
 }
 

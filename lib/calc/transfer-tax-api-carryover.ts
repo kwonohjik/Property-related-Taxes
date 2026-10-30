@@ -18,6 +18,7 @@ import { gbBgGiftTaxReturn, isGbBurdenedGift } from "./gb-bg-gift-tax-return";
 import { gbBgGiftTaxNumerator } from "./gb-bg-gift-tax-return";
 import { bgCarryoverForm } from "./bg-carryover-parts";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
+import { isRedevCarryoverDonorBasis } from "./redev-carryover-acq-mode";
 
 /**
  * buildCarryoverPayload 반환 타입.
@@ -108,7 +109,10 @@ export function buildCarryoverPayload(
   // "general" 환산 모드 — donorStandard* 필드를 최상위 standardPrice* 로 override.
   // 엔진이 useEstimatedAcquisition=true + standardPriceAtAcquisition/Transfer로 환산.
   // 🔴 지분 스케일 금지 (위 JSDoc) — 환산 산식에서 약분되고 개산공제 base와 이중 축소가 난다.
-  const isGeneralEstimation = c.useEstimatedAcquisition && c.estimationMode === "general";
+  //   재개발 이월과세 환산은 ⑤의 §166③ 칸으로 계산한다 — 증여자 기준시가는 엔진이 쓰지 않으니 싣지 않고, 환산 플래그만 켠다(환산 방식 칸은
+  //   재개발에서 숨는다 — `redev-carryover-acq-mode.ts`). 컴패니언은 이월과세 자산의 환산 플래그를 이 덮어쓰기로만 싣는다.
+  const redevSec166 = isRedevCarryoverDonorBasis(asset);
+  const isGeneralEstimation = c.useEstimatedAcquisition && c.estimationMode === "general" && !redevSec166;
   const donorStdAtAcq = parseAmount(c.donorStandardPriceAtAcquisition);
   const donorStdAtTransfer = parseAmount(c.donorStandardPriceAtTransfer);
 
@@ -119,7 +123,9 @@ export function buildCarryoverPayload(
         // useEstimatedAcquisition은 최상위에서 true로 유지 (엔진 환산 트리거)
         useEstimatedAcquisition: true,
       }
-    : {};
+    : redevSec166 && c.useEstimatedAcquisition
+      ? { useEstimatedAcquisition: true }
+      : {};
 
   const carryoverTaxation = {
     giftRegistryDate: c.giftRegistryDate,

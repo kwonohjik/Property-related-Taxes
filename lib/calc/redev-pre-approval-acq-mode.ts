@@ -4,9 +4,11 @@
  * | 반환 | 언제 | 취득가액 |
  * |---|---|---|
  * | `"actual"` | 일반 양도 · 재개발 블록 ⑤ 라디오 = 실가 | `redevActualAcquisitionPrice` |
- * | `"estimated"` | 일반 양도 · ⑤ 라디오 = 환산 **또는** 부담부증여 × 완공 아파트(원조합원) × 시가 모드 × (환산(K-5) 또는 의제취득일 전 상속·증여 — ③ 후보) · 담보 승 아님 | §166③ 환산(평가액 × 취득일 기준시가 ÷ 인가일 기준시가) |
+ * | `"estimated"` | 일반 양도 · ⑤ 라디오 = 환산 **또는** 이월과세(비부담부증여) · 이월과세 ② 「환산취득가 사용」 ON **또는** 부담부증여 × 완공 아파트(원조합원) × 시가 모드 × (환산(K-5) 또는 의제취득일 전 상속·증여 — ③ 후보) · 담보 승 아님 | §166③ 환산(평가액 × 취득일 기준시가 ÷ 인가일 기준시가) |
  * | `"burdened_gift"` | 그 밖의 부담부증여 | 부담부증여 블록이 정한다(§159① — 실지취득가액 K-4 · 기준시가 모드는 기준시가) |
+ * | `"carryover_donor"` | 이월과세(비부담부증여) · 이월과세 ② 「환산취득가 사용」 OFF | 증여자 취득가액(이월과세 ② — ⑤ 실거래가 칸은 쓰지 않는다) |
  *
+ * 이월과세(비부담부증여)도 ⑤ 라디오를 쓰지 않는다 — 이월과세 ② 「환산취득가 사용」이 정한다(ON = §166③ 환산 · `redev-carryover-acq-mode.ts`).
  * 부담부증여에서는 ⑤ 라디오를 쓰지 않는다 — 산정방식은 부담부증여 블록의 K-4/K-5가 정하고, 엔진은 §159 안분값으로 계산한다
  * (`transfer-tax-burdened-gift-step.ts`). 종전에는 부담부증여에서도 ⑤ 라디오와 그 칸이 떠서 ⑧이 엔진이 읽지 않는 값을 요구했고,
  * K-5는 §166③이 아니라 일반 환산식(§176의2②2호)으로 계산됐다(2026-10-16).
@@ -15,8 +17,9 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
+import { isRedevCarryoverDonorBasis } from "./redev-carryover-acq-mode";
 
-export type RedevPreApprovalAcqMode = "actual" | "estimated" | "burdened_gift";
+export type RedevPreApprovalAcqMode = "actual" | "estimated" | "burdened_gift" | "carryover_donor";
 
 /**
  * 저장된 입력(input_data — `Record<string, unknown>`)에도 쓰이도록 전부 선택형 `unknown`이다
@@ -30,6 +33,9 @@ export interface RedevPreApprovalAcqModeFields {
   bgAcquisitionMethod?: unknown;
   redevIsSuccessorMember?: unknown;
   redevSubject?: unknown;
+  acquisitionCause?: unknown;
+  /** 이월과세 ② 「환산취득가 사용」 — 이월과세(비부담부증여)면 ⑤ 라디오 대신 이것이 정한다. */
+  carryover?: { useEstimatedAcquisition?: unknown } | null;
   /** 승계조합원 입주권 — §166 밖(`isRedevelopmentSec166Asset`). `redevPreApprovalExpensesUnused`만 읽는다. */
   isSuccessorRightToMoveIn?: unknown;
 }
@@ -53,6 +59,8 @@ export function redevPreApprovalAcqMode(asset: RedevPreApprovalAcqModeFields): R
   // 승계조합원 완공 APT는 실거래가 전용 — 남은 환산 플래그를 §166③ 환산으로 읽지 않는다(`isRedevSuccessorAptActualOnly`와 같은 조건 ·
   //   저장값(`unknown`)에도 쓰여 리터럴로 비교한다). 읽으면 ⑧이 원조합원용 §166③ 칸(D 등)을 요구했다.
   if (asset.assetKind === "redevelopment_apt" && asset.redevIsSuccessorMember === "yes") return "actual";
+  // 이월과세 — 증여자 취득가액을 확인할 수 있는가는 이월과세 ②가 묻는다(⑤ 라디오의 남은 값은 읽지 않는다).
+  if (isRedevCarryoverDonorBasis(asset)) return asset.carryover?.useEstimatedAcquisition === true ? "estimated" : "carryover_donor";
   return asset.useEstimatedAcquisition === true ? "estimated" : "actual";
 }
 

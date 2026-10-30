@@ -16,6 +16,8 @@
  *  ⑥ 적용배제 선언 (CarryoverGiftExclusionSection)
  */
 
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { isRedevCarryoverDonorBasis } from "@/lib/calc/redev-carryover-acq-mode";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -166,6 +168,8 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
    * 일반건물에서 먼저 정리했고(`gb-bg-on-building-block-fields.plan.md` Q-2 a) 엔진 부담부증여 분기는 자산 종류와 무관하다 — 주택·건물·토지·상업용건물도 같다(2026-10-27 실측: 1원·9.99억 같은 세액).
    */
   const donorBasisInCoDonorBlock = isBurdenedGift;
+  // 재개발 원조합원 × 이월과세(비부담부증여) — 환산은 ⑤의 §166③ 칸이 받는다(`redev-carryover-acq-mode.ts`).
+  const redevSec166Carryover = isRedevCarryoverDonorBasis(asset);
 
   /**
    * 지분(공유) 모드 여부 — 판정 술어는 `OwnershipRatioInput`이 쓰는 것과 **같은 소스**다
@@ -335,8 +339,17 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           </FieldCard>
         )}
 
+        {/* 재개발 원조합원 — 환산은 ⑤ 「인가전 분 종전 부동산 취득가액」의 「소득세법 시행령」 제166조 제3항 칸으로 한다(이 패널의 환산 방식·기준시가는 엔진이 쓰지 않는다 —
+            계획서 `redev-carryover-estimation-toggle-sync.plan.md` §1.3). */}
+        {c.useEstimatedAcquisition && !donorBasisInCoDonorBlock && redevSec166Carryover && (
+          <p className="text-caption text-muted-foreground" data-testid="carryover-redev-sec166-3-notice">
+            재개발·재건축 조합원 자산은 종전 부동산의 취득가액을 「소득세법 시행령」 제166조 제3항(평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" />)으로 환산합니다 —
+            ⑤ 「인가전 분 종전 부동산 취득가액」의 칸에 당초 증여자 취득일 기준 값을 입력하세요.
+          </p>
+        )}
+
         {/* 환산 ON: 환산 방식 선택 + 방식별 입력 패널 */}
-        {c.useEstimatedAcquisition && !donorBasisInCoDonorBlock && (
+        {c.useEstimatedAcquisition && !donorBasisInCoDonorBlock && !redevSec166Carryover && (
           <CarryoverEstimationSection
             asset={asset}
             carryover={c}

@@ -439,10 +439,15 @@ export function buildRedevGainFormula(
         : "";
   const value = gross ? (detail.gainBeforeAllocation ?? detail.gain) : detail.gain;
   if (branch === "preApproval") {
-    const lump = redev.estimatedLumpDeduction ?? 0;
+    // 인가 전 분 필요경비는 택일(개산공제 또는 실비 — `preApprovalNecessaryExpense`)이고 청산금 수령은 나목 비율로 안분된 값이다 — 엔진이 분기에 싣는 값
+    //   (`expenses`)을 적는다. 개산공제 원액을 적으면 실비·수령에서 산식이 값을 만들지 못했다(계획서 `redev-carryover-estimation-toggle-sync.plan.md` §1.6 —
+    //   수령은 칸마다 절사해 1~2원이 남는 것은 신고서 양식 표와 같다). 이월과세 증여세 상당액은 그 안에서 떼어 적는다.
     const giftTax = detail.carryoverGiftTaxExpense ?? 0;
-    const giftTerm = giftTax > 0 ? ` − 이월과세 증여세 상당액 ${fmt(giftTax)}` : "";
-    return `${fmt(t)} − ${fmt(a)} − 개산공제 ${fmt(lump)}${giftTerm} = ${fmt(value)}${suffix}`;
+    const expense = (detail.expenses ?? 0) - giftTax;
+    const expenseLabel = (redev.estimatedLumpDeduction ?? 0) > 0 ? "개산공제" : "필요경비";
+    const apportioned = axis?.settlementDirection === "receive" ? "(안분 후)" : "";
+    const giftTerm = giftTax > 0 ? ` − 이월과세 증여세 상당액${apportioned} ${fmt(giftTax)}` : "";
+    return `${fmt(t)} − ${fmt(a)} − ${expenseLabel}${apportioned} ${fmt(expense)}${giftTerm} = ${fmt(value)}${suffix}`;
   }
   return `${fmt(t)} − ${fmt(a)} = ${fmt(value)}${suffix}`;
 }
@@ -603,7 +608,7 @@ export function buildRedevPerAssetForGrossGain(
   return buildPerAsset(
     redev,
     (b, r) => r[b].gainBeforeAllocation ?? r[b].gain,
-    (b, r) => buildRedevGainFormula(b, r, true),
+    (b, r) => buildRedevGainFormula(b, r, true, { subject, settlementDirection }),
     subject,
     settlementDirection,
   );
