@@ -1,13 +1,12 @@
 /**
- * anchor — 함께 부담부증여 **컴패니언 ⑧↔⑫ 정합**: 비일반건물(주택) 컴패니언 · 일반건물+주택 혼합 종류 · 컴패니언 매매사례가액 (측정, 계획서 `docs/00-pm/bg-companion-parity.plan.md`)
+ * anchor — 함께 부담부증여 **컴패니언 ⑧↔⑫ 정합**: 비일반건물(주택) 컴패니언 · 일반건물+주택 혼합 종류 · 컴패니언 매매사례가액 (계획서 `docs/00-pm/bg-companion-parity.plan.md` Q-1 a)
  *
- * · PB-1 비일반건물 — #2746 의 ⑫ 혼합 승자 규칙(`bgBundleMixedWinner`)은 주 자산이 **일반건물**일 때만 주 자산을 집계에 넣고 기준시가 **4칸**(양도시·취득시 토지·건물)이 모두 > 0 일 때만 판정한다.
- *   주택은 토지 칸이 0 이라(`std4키 0101`) 판정이 보류되어, ⑧ 이 막는 혼합 승자 쌍을 ⑫ 가 200 으로 통과시키고 합산 증여가액이 ΣA 보다 작다 — 같은 ΣA 를 보충 승으로 만든 오라클과 비교해 증여세 과소.
- *   (균일 담보 승은 ⑫ 가 맞다 — 증여가액 = ΣA · 양도차익 = 단건 합.)
+ * · PB-1 비일반건물 — #2746 의 ⑫ 혼합 승자 규칙(`bgBundleMixedWinner`)은 주 자산이 **일반건물**일 때만 주 자산을 집계에 넣고 기준시가 **4칸**이 모두 > 0 일 때만 판정했다.
+ *   주택은 토지 칸이 0 이라(`std4키 0101`) 판정이 보류되어, ⑧ 이 막는 혼합 승자 쌍을 ⑫ 가 200 으로 통과시키고 합산 증여가액이 ΣA 보다 작았다(주택 쌍 증여세 4,850,000 vs 같은 ΣA 오라클 101,850,000 = 97,000,000 과소).
+ *   수정 후: 자산 종류와 무관하게 주 자산도 집계하고, 「판정 가능」 조건을 양도 쪽 입력(시가 모드 시가 / 기준시가 모드 양도시 토지+건물 기준시가)으로 바꿨다 — 혼합 승자는 ⑫ 400.
+ *   (균일 담보 승은 ⑫ 가 맞다 — 증여가액 = ΣA · 양도차익 = 단건 합 — 막지 않는다.)
  * · PB-2 컴패니언 매매사례가액 — ⑧ 은 막고 ⑫ 는 해당 필드를 정의하지 않는다(`transfer-tax-schema-sub.ts` 컴패니언 스키마에 `acquisitionMethod`·`similarSalesValue` 없음). `fixedAcquisitionPrice` 가 있으면 플래그를 버리고 실가로 계산해
- *   플래그 없는 대조군과 같은 값이고, 없으면 400. 결함 아님(API 계약 밖).
- *
- * 이 파일은 **현재 동작의 기록**이다 — PB-1 의 「⑫ 200」이 결함이다(구현 PR 이 400 으로 뒤집는다).
+ *   플래그 없는 대조군과 같은 값이고, 없으면 400. 결함 아님(API 계약 밖) — 수정 대상 아님.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -80,14 +79,15 @@ async function singleGain(a: AssetForm): Promise<number> {
   return (r.j.data.aggregated?.totalTransferGain ?? r.j.data.result.transferGain) as number;
 }
 
-describe("PB-1 비일반건물 묶음 — ⑧ 이 막는 혼합 승자를 ⑫ 가 통과시켜 합산 증여가액이 ΣA 보다 작다 (현재 동작의 기록 = 결함)", () => {
-  it("주택 쌍: 보충+보충은 ⑧ 통과 · 200 / 담보+보충(어느 쪽이든)은 ⑧ 게이트 · ⑫ 200 · 증여가액 2.0B(ΣA 2.5B) · 증여세 4,850,000 vs 같은 ΣA 오라클 101,850,000 = 97,000,000 과소", async () => {
+describe("PB-1 비일반건물 묶음 — ⑧ 이 막는 혼합 승자는 ⑫ 도 400 (수정 전 200 · 합산 증여가액 < ΣA)", () => {
+  it("주택 쌍: 보충+보충은 ⑧ 통과 · 200 / 담보+보충(어느 쪽이든)은 ⑧ 게이트 · ⑫ 400 (수정 전 200 · 증여가액 2.0B vs ΣA 2.5B · 증여세 4,850,000 — 오라클 101,850,000 = 97,000,000 과소)", async () => {
     const supsup = await cell([house(1), house(2)]);
     expect([supsup.gate, supsup.status, supsup.wholeMax, supsup.sumA]).toEqual([0, 200, 2_000_000_000, 2_000_000_000]);
     for (const assets of [[house(1, HM), house(2)], [house(1), house(2, HM)]]) {
       const c = await cell(assets);
-      expect([c.gate > 0, c.status, c.wholeMax, c.sumA, c.giftTax]).toEqual([true, 200, 2_000_000_000, 2_500_000_000, 4_850_000]);
+      expect([c.gate > 0, c.status, c.sumA]).toEqual([true, 400, 2_500_000_000]);
     }
+    // 같은 ΣA 를 보충 승으로 만든 오라클은 막히지 않고 정답 증여세를 낸다 — 수정은 오라클을 건드리지 않는다.
     const orc = await cell([house(1, HSUPF), house(2)]);
     expect([orc.gate, orc.status, orc.wholeMax, orc.sumA, orc.giftTax]).toEqual([0, 200, 2_500_000_000, 2_500_000_000, 101_850_000]);
   }, 120_000);
@@ -96,16 +96,23 @@ describe("PB-1 비일반건물 묶음 — ⑧ 이 막는 혼합 승자를 ⑫ �
     const sum = (await singleGain(house(1, HM))) + (await singleGain(house(2, HM)));
     expect([c.gate > 0, c.status, c.wholeMax, c.sumA, c.gain]).toEqual([true, 200, 3_000_000_000, 3_000_000_000, sum]);
   }, 120_000);
-  it("일반건물 + 주택 혼합 종류 6셀: 보충+보충은 ⑧ 통과 · 200 / 한쪽만 담보 승이면 ⑧ 게이트 · ⑫ 200 · 증여가액 < ΣA (주 자산이 주택이든 일반건물이든)", async () => {
+  it("일반건물 + 주택 혼합 종류: 보충+보충은 ⑧ 통과 · 200 / 한쪽만 담보 승이면 ⑧ 게이트 · ⑫ 400 (수정 전 200 · 증여가액 < ΣA) — 주 자산이 주택이든 일반건물이든", async () => {
     const ss = await cell([gb(1), house(2)]);
     expect([ss.gate, ss.status, ss.wholeMax === ss.sumA]).toEqual([0, 200, true]);
     const rows: [string, AssetForm[]][] = [
       ["GBsup+hmort", [gb(1), house(2, HM)]], ["GBmort+hsup", [gb(1, GM), house(2)]],
       ["hsup+GBmort", [house(1), gb(2, GM)]], ["hmort+GBsup", [house(1, HM), gb(2)]],
     ];
-    const out: Record<string, [boolean, number, boolean]> = {};
-    for (const [name, assets] of rows) { const c = await cell(assets); out[name] = [c.gate > 0, c.status, c.wholeMax! < c.sumA]; }
-    expect(out).toEqual({ "GBsup+hmort": [true, 200, true], "GBmort+hsup": [true, 200, true], "hsup+GBmort": [true, 200, true], "hmort+GBsup": [true, 200, true] });
+    const out: Record<string, [boolean, number]> = {};
+    for (const [name, assets] of rows) { const c = await cell(assets); out[name] = [c.gate > 0, c.status]; }
+    expect(out).toEqual({ "GBsup+hmort": [true, 400], "GBmort+hsup": [true, 400], "hsup+GBmort": [true, 400], "hmort+GBsup": [true, 400] });
+  }, 120_000);
+  it("양도 쪽 입력이 빈 자산이 끼면 판정을 보류한다 — 시가 모드 시가 0 · 기준시가 모드 양도시 기준시가 0 이면 이 규칙은 400 을 내지 않는다(그 입력은 각자의 필수 검증 몫)", async () => {
+    const noStd = await cell([house(1, HM), house(2, x({ standardPriceAtTransfer: "" }))]);
+    expect(noStd.status).toBe(400); // 승자 혼합 메시지가 아니라 양도시 기준시가 필수 입력 오류
+    const r = await post(bundle([house(1, HM), house(2, x({ standardPriceAtTransfer: "" }))]));
+    const msgs = JSON.stringify(r.j.error?.fieldErrors ?? {});
+    expect(msgs.includes("승자(보충적평가")).toBe(false);
   }, 120_000);
 });
 
