@@ -26,6 +26,7 @@ import type { CarryoverEstimationMode } from "@/lib/stores/calc-wizard-asset-car
 import { landCauseMixActive } from "./transfer-land-part-cause";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import { partCarryover } from "./transfer-land-part-cause";
+import { isRedevCarryoverDonorBasis } from "./redev-carryover-acq-mode";
 
 /**
  * 이 자산에서 §164⑦ PHD 토글에 **도달할 수 있는가**.
@@ -90,9 +91,14 @@ export function carryoverPhdMode(
     landAcquisitionCause?: AssetForm["landAcquisitionCause"];
     hasSeperateLandAcquisitionDate?: boolean;
     landCauseHost?: string;
+    redevIsSuccessorMember?: unknown;
+    isSuccessorRightToMoveIn?: unknown;
   },
 ): boolean {
   if (asset.acquisitionCause !== "carryover_gift") return false;
+  // 원조합원 재개발 자산은 「취득가액을 확인할 수 없는」 환산을 ⑤의 §166③ 칸으로 한다 — 환산 방식 칸은 ⑤가 숨기고(#2736) 엔진도 `preHousingDisclosure`를
+  // 쓰지 않는다. 남은 phd/apd 값을 실으면 ⑫ 최초고시일 검증만 400을 낸다(고칠 칸이 없다 · 계획서 `redev-carryover-residue-bundle.plan.md` A-1).
+  if (isRedevCarryoverDonorBasis(asset)) return false;
   // P2 C·P4 B — 파트 이월과세는 PHD/APD 환산을 지원하지 않는다(파트 환산은 P6 `partEstimated`의 기준시가 원값뿐). 건물 파트가 읽는 `carryover.estimationMode`의 phd/apd 잔재로 PHD payload를 싣지 않는다.
   if (partCarryover(asset).building) return false;
   const c = asset.carryover;

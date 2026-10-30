@@ -283,6 +283,8 @@ type PrimaryLike = {
   // 주택 split 파트 이월과세 — 있으면 B·C 호스트(`acquisitionCause: carryover_gift`)가 자산 단위 `carryoverTaxation` 없이 통과한다
   landCarryoverPart?: unknown;
   buildingCarryoverPart?: unknown;
+  /** 승계 입주권 — §166 밖(전용 블록) */
+  isSuccessorRightToMoveIn?: boolean;
 };
 
 /**
@@ -323,6 +325,17 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
           issue(["capitalExpenditure"], "PHD·APD 환산 이월과세는 자산 전체 자본적지출을 반영하지 못합니다 — 3시점 환산은 토지분·건물분 칸(landDirectExpenses·buildingDirectExpenses)만 읽습니다 (소득세법 §100② 후문 · §97②2호)");
       }
     }
+  }
+
+  // 재개발 원조합원 × 이월과세(부담부증여 아님) — 위 블록은 자체 평가(`ownValuation`)라 재개발을 건너뛴다. ⑧ 재개발 분기와 같은 규칙만 본다:
+  //   「환산취득가 사용」을 끄면 증여자 취득가액이 필요하다(`redevPreApprovalAcqMode` = `carryover_donor`). 비우면 A의 인가 전 분 취득가액 0으로 계산됐다
+  //   (「소득세법」 제97조의2①1호 · 계획서 `redev-carryover-residue-bundle.plan.md` A-2).
+  if (data.acquisitionCause === "carryover_gift" && data.redevelopment && !hasSplitPartCarryover) {
+    const ct = data.carryoverTaxation;
+    const burdenedGift = data.transferType === "burdened_gift" || data.burdenedGiftInfo != null;
+    const successor = data.redevelopment.isSuccessorMember === true || data.isSuccessorRightToMoveIn === true;
+    if (ct && !burdenedGift && !successor && !ct.useEstimatedAcquisition && !positive(ct.donorAcquisitionPrice))
+      issue(["carryoverTaxation", "donorAcquisitionPrice"], "재개발 이월과세 — 「환산취득가 사용」을 쓰지 않으면 증여자 취득가액이 필요합니다 (소득세법 §97의2①1호)");
   }
 
   // §163⑨ — 증여 취득(1985.1.1. 이후) 자산은 증여일 평가액이 취득가액이다. 추계 모드를 받으면 계산이 됐다.

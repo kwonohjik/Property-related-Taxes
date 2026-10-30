@@ -136,8 +136,8 @@ const BRANCH_LABEL_APT_RECEIVE: Record<RedevBranch, BranchLabelDef> = {
   settlement: { prefix: "③ 청산금 수령분", legal: "종전주택 일부의 분할양도 · 법규재산2012-358" },
 };
 
-/** 빌더가 받는 축 — 입주권/완공APT · 납부/수령 */
-type RedevAxis = { subject?: "apt" | "right"; settlementDirection?: "pay" | "receive" };
+/** 빌더가 받는 축 — 입주권/완공APT · 납부/수령 · 이월과세 A 채택(인가 전 분 종전 취득가액이 당초 증여자 기준 — 「소득세법」 §97의2①1호) */
+type RedevAxis = { subject?: "apt" | "right"; settlementDirection?: "pay" | "receive"; carryoverDonor?: boolean };
 
 /**
  * 완공APT 청산금 **수령 동시신고**인가 — 산식·라벨이 납부 구조(§166②1호)가 아니라 수령 구조(§166②2호)여야 하는 축.
@@ -312,11 +312,13 @@ export function buildRedevAcquisitionFormula(
       meta.denominator > 0
     ) {
       const rights = redev.preApproval.apportionedTransfer;
-      return `환산취득가 = ${fmt(rights)} × (${fmt(meta.numerator)} ÷ ${fmt(meta.denominator)}) = ${fmt(redev.preApproval.apportionedAcquisition)} (§166③ — 권리가액 × 취득 당시 기준시가 ÷ 관리처분계획 인가일 직전 기준시가, 1원 미만 절사)`;
+      const acqTime = axis?.carryoverDonor ? "증여자 취득 당시" : "취득 당시";
+      return `환산취득가 = ${fmt(rights)} × (${fmt(meta.numerator)} ÷ ${fmt(meta.denominator)}) = ${fmt(redev.preApproval.apportionedAcquisition)} (§166③ — 권리가액 × ${acqTime} 기준시가 ÷ 관리처분계획 인가일 직전 기준시가, 1원 미만 절사)`;
     }
     if (meta?.burdenedGiftStdLumpRate !== undefined) {
       return `취득시 기준시가 × 채무비율 = ${fmt(redev.preApproval.apportionedAcquisition)} (소득세법 시행령 제159조 제1항 제1호 괄호 — 부담부증여 기준시가 평가)`;
     }
+    if (axis?.carryoverDonor) return `증여자 취득가액 = ${fmt(redev.preApproval.apportionedAcquisition)} (이월과세 — 「소득세법」 §97의2①1호)`;
     return `실제 취득가액 = ${fmt(redev.preApproval.apportionedAcquisition)} (실가 모드)`;
   }
   if (branch === "postApprovalExistingHouse") {
@@ -555,11 +557,12 @@ export function buildRedevPerAssetForAcquisition(
   redev: RedevelopmentResult,
   subject?: "apt" | "right",
   settlementDirection?: "pay" | "receive",
+  carryoverDonor?: boolean,
 ): PerAssetValue[] {
   return buildPerAsset(
     redev,
     (b, r) => r[b].apportionedAcquisition,
-    (b, r) => buildRedevAcquisitionFormula(b, r, { subject, settlementDirection }),
+    (b, r) => buildRedevAcquisitionFormula(b, r, { subject, settlementDirection, carryoverDonor }),
     subject,
     settlementDirection,
   );
