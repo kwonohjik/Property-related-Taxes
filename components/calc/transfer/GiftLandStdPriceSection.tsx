@@ -23,7 +23,7 @@
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
-import { deriveSec163_9BaseDate } from "@/lib/calc/transfer-163-9-base-date";
+import { deriveSec163_9BaseDate, isSec163_9LandAsset, sec164LandAreaField } from "@/lib/calc/transfer-163-9-base-date";
 import { sec164LandStatus } from "@/lib/calc/sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -43,7 +43,8 @@ export function GiftLandStdPriceSection({ asset, onChange, transferDate }: Props
   const status = sec164LandStatus(asset);
   if (
     asset.acquisitionCause !== "gift" ||
-    asset.assetKind !== "land" ||
+    // 토지를 출자한 원조합원 포함(계획서 successor-right-carryover-contribution.plan.md §16)
+    !isSec163_9LandAsset(asset) ||
     !giftDate ||
     giftDate >= LAND_FIRST_DISCLOSURE
   ) {
@@ -79,7 +80,7 @@ export function GiftLandStdPriceSection({ asset, onChange, transferDate }: Props
           pre1990GradeMode: asset.pre1990GradeMode,
         }}
         onChange={(patch) => onChange(patch)}
-        acquisitionArea={asset.acquisitionArea}
+        acquisitionArea={asset[sec164LandAreaField(asset)]}
         jibun={asset.addressJibun}
         acquisitionDate={asset.acquisitionDate}
         transferDate={transferDate}

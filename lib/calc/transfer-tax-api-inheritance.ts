@@ -8,7 +8,7 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { applyRatio, deriveEngineInheritanceAssetKind } from "./transfer-tax-api-helpers";
-import { deriveSec163_9BaseDate, isSec163_9Cause } from "./transfer-163-9-base-date";
+import { deriveSec163_9BaseDate, isSec163_9Cause, sec164LandAreaField } from "./transfer-163-9-base-date";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { buildApartNtsPricePayload } from "./apart-nts-price";
 import { isGiftPreDeemedConversionAsset } from "./gift-pre-deemed";
@@ -146,8 +146,9 @@ export function buildInheritedAcquisitionPayload(
       // legacyFallback→computeSupplementary(land)로 빠져 post-deemed 총액을 단가로 오인, × 면적 폭증(C2 면적곱 지뢰).
       reportedMethod: primary.inheritanceValuationMethod || ("supplementary" as const),
       useSupplementaryHelper: true,
-      ...(primary.acquisitionArea && parseFloat(primary.acquisitionArea) > 0 && {
-        landAreaM2: parseFloat(primary.acquisitionArea),
+      // 토지를 출자한 원조합원은 종전 토지 면적(엔진 자산 종류가 토지 — 계획서 §16)
+      ...(parseFloat(primary[sec164LandAreaField(primary)]) > 0 && {
+        landAreaM2: parseFloat(primary[sec164LandAreaField(primary)]),
       }),
       publishedValueAtInheritance: reportedValue,
       // 공동주택 국세청 고시 가액 유무(영 §163⑨ 단서 2호) — 「없었음」일 때만 엔진이 ②(§164⑥·⑦)를 연다

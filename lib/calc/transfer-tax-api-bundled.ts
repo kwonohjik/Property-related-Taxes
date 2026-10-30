@@ -1,4 +1,5 @@
 import { parseAmount } from "@/lib/calc/number-parse";
+import { sec164LandAreaField } from "./transfer-163-9-base-date";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
@@ -58,7 +59,7 @@ export function buildBundledPrimaryPayload(c: {
             // 보충적평가 자산 구분 — 상단 assetKind 기준 파생(land vs 非land; housing은 개별/공동).
             // 상속 자산구분 라디오 폐지 대응(deriveEngineInheritanceAssetKind). 결과는 schema enum 값.
             assetKind: deriveEngineInheritanceAssetKind(primary),
-            landAreaM2: primary.acquisitionArea ? parseFloat(primary.acquisitionArea) : undefined,
+            landAreaM2: primary[sec164LandAreaField(primary)] ? parseFloat(primary[sec164LandAreaField(primary)]) : undefined,
             // 지분 모드: 100% 기준 입력값(공동주택가격 등)에 × ratio 적용
             publishedValueAtInheritance: primaryFractional
               ? applyRatio(parseAmount(primary.publishedValueAtInheritance), primaryRatio)

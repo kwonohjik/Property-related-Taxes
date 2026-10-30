@@ -34,6 +34,7 @@ import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { appurtenantCardAreaM2 } from "./transfer-tax-api-helpers";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
+import { sec164LandAreaField } from "./transfer-163-9-base-date";
 import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { isSplitPayloadActive } from "./transfer-tax-api-split";
@@ -170,8 +171,9 @@ export function buildAssetPayload(
   const cbAppurtenantLand = buildCommercialAppurtenantLand(asset);
   const cbValuation = buildCommercialBuildingValuation(asset, transferDate);
 
-  // 감환지: acquisitionArea에 의제취득면적이 UI에서 이미 계산됨
-  const effectiveLandArea = asset.acquisitionArea ? parseFloat(asset.acquisitionArea) : undefined;
+  // 감환지: acquisitionArea에 의제취득면적이 UI에서 이미 계산됨. 토지를 출자한 원조합원은 엔진 자산 종류가 토지라 종전 토지 면적(계획서 §16).
+  const landAreaRaw = asset[sec164LandAreaField(asset)];
+  const effectiveLandArea = landAreaRaw ? parseFloat(landAreaRaw) : undefined;
 
   // 공유 지분 비율 — 단독 소유는 1.0, 지분 모드는 < 1.0
   const ratio = getOwnershipRatio(asset);

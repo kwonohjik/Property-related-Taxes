@@ -236,3 +236,13 @@
 - V-2 ② 칸의 면적 — 재개발 자산의 종전 토지 면적 필드(`AssetAreaRedevelopment`)를 `pre1990Land.areaSqm`로 쓸지 Do 첫 단계에서 확인.
 - V-3 STEP 0.4 환산 강제가 재개발 경로의 다른 모드(환산·부담부증여·지분)에 주는 영향 — 위 시료(실가 · 1984·1988)에서는 세액 불변. Do에서 anchor로 고정.
 - 컴패니언·다건은 범위 밖(§15와 같다).
+
+## 17. 구현 — Q-1 (a) · Q-2 (a) (§16 · 「권장안으로」)
+
+- **공용 술어**(`lib/calc/transfer-163-9-base-date.ts`): `isOriginalMemberLandAsset`(토지 출자 원조합원 — 입주권·완공 아파트 · 승계 제외) · `isSec163_9LandAsset`(토지 + 그것) · `sec164LandAreaField`(원조합원 = ① 기본정보 「토지 면적」 `redevLandArea` · 토지 = `acquisitionArea` — V-2 해소). `isSec163_9HouseAsset`은 토지 출자 원조합원을 뺀다(Q-2). `sec164LandFieldsAlwaysOpen`은 토지 출자 원조합원이면 의제취득일 전 상속도 연다(그 토글은 토지 자산의 환산 모드만 정한다).
+- **Q-1 교체**: ⑧·⑤ `sec164LandStatus`(면적 칸 분기) · ④ `hasPre1990ForSec164`(원조합원은 1990.8.30. 전 구간만 — 공시 후 상속에 남은 등급 값이 STEP 0.4 환산 강제를 끌고 가지 않게) · `buildPre1990LandPayload` 면적 · 엔진 자산 종류 `deriveEngineInheritanceAssetKind`(→ `land`) · `inheritedAcquisition`·컴패니언 `inheritanceValuation`·묶음 `primaryInheritanceValuation`의 `landAreaM2`(자산 종류가 토지라 ⑫가 면적을 요구 — 빠뜨리면 컴패니언이 400이었다) · ⑤ `PostDeemedInputs`·`PreDeemedInputs`(토글 없이 · 남은 래치여도 ③ 분자를 덮지 않음)·`GiftLandStdPriceSection` · 상속 안내문 「§164④~⑦」. 엔진 변경 없음.
+- **Q-2**: 위 `isSec163_9HouseAsset` 제외로 토지 출자 완공 아파트의 주택 ② 카드·전송·엔진 주택 축이 닫힌다. ⑫ `refineOriginalMemberSec164Channel`(`transfer-tax-schema-original-member-deemed.ts` · 단건) — 토지 출자 + `inheritedHouseValuation` 또는 `inheritedAcquisition.assetKind` 주택 · 주택 출자 + `pre1990Land` 또는 `assetKind: land` → 400. `refineOriginalMemberDeemedPrimary`는 `pre1990Land`도 ②로 인정.
+- **컴패니언(범위 밖이던 ② 채널 — 운반은 여전히 없음)**: ⑧ `originalMemberClauseARequiredError`가 둘째 이후 자산에는 ①만 인정한다(「함께 양도하는 자산은 §164 기준시가로 대신 계산하지 않습니다」 — 승계조합원 규칙과 같다). 종전: ② 칸만 채우면 ⑧ 통과 ↔ ⑫ 400(주택 출자는 #2778부터 · 토지 출자는 이번 변경이 칸을 열어 생길 뻔했다). ①이 있으면 ② 칸 값은 컴패니언 계산에 쓰이지 않는다(주택 출자와 같은 한계).
+- **실측(mock · §16 시료)**: 입주권 1988 상속 315,810,000 → **262,890,000** · 완공 아파트 1988 232,510,000 → **179,590,000** · 입주권 증여 1988·1984 의제 전 상속 → 262,890,000 · ① 빈칸 + ② → 200 262,890,000 · ② 일부 → ⑧ 차단 · 2010 상속 + 남은 등급 값 → 안 실림 334,290,000 · 토지 출자 완공 아파트 2000 + 남은 주택 ② 칸 → 안 실림 **232,510,000**(종전 86,143,333) · 주택 출자 완공 아파트 86,143,333 불변 · ⑫ 채널 불일치 4종 400 · 컴패니언 ①만 264,570,000·283,050,000·205,070,000 = master 불변.
+- 남은 것: V-1(1985 전 토지 출자 환산 §166③ 분자) · 컴패니언·다건 ② 운반.
+- **기존 테스트 갱신(의도된 변경)**: `inheritance-asset-kind-derive` — 종전 토지 입주권 `house_apart` → `land`(완공 아파트 포함 · 승계는 그대로). 컴패니언·묶음 주 자산의 ①만 시료는 세액이 master와 같다(신고가액 경로라 ×면적 없음).

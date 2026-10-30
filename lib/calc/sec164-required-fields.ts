@@ -16,7 +16,7 @@
  */
 
 import { parseAmount } from "@/lib/calc/number-parse";
-import { isSec163_9Cause, deriveSec163_9BaseDate, isSec163_9HouseAsset } from "./transfer-163-9-base-date";
+import { isSec163_9Cause, deriveSec163_9BaseDate, isSec163_9HouseAsset, isSec163_9LandAsset, sec164LandAreaField } from "./transfer-163-9-base-date";
 import { houseDisclosureBoundaryOf } from "./house-first-disclosure";
 import { apartSec164FormOpen, isApartSec163_9Asset } from "./apart-nts-price";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -182,17 +182,19 @@ export function sec164CommercialStatus(asset: AssetForm): Sec164FieldStatus | nu
   );
 }
 
-/** 토지 §164④ (§163⑨1호) — `buildPre1990LandPayload`와 같은 5필드. */
+/** 토지 §164④ (§163⑨1호) — `buildPre1990LandPayload`와 같은 5필드. 토지를 출자한 원조합원 포함(`isSec163_9LandAsset`). */
 export function sec164LandStatus(asset: AssetForm): Sec164FieldStatus | null {
-  if (asset.assetKind !== "land" || !isSec163_9Cause(asset.acquisitionCause)) return null;
+  if (!isSec163_9LandAsset(asset) || !isSec163_9Cause(asset.acquisitionCause)) return null;
   const baseDate = deriveSec163_9BaseDate(asset);
   if (!baseDate || baseDate >= LAND_FIRST_DISCLOSURE) return null;
 
   return merge(
     "§164④",
     tally(asset, [
-      // 면적은 토지 자산의 **일반 필드**다(취득원인 블록 등에서 입력) ⇒ opt-in 신호 아님
-      decimalField("acquisitionArea", "취득 당시 면적", true),
+      // 면적은 **일반 필드**다(토지 = 취득원인 블록 등 · 원조합원 = ① 기본정보 「토지 면적」) ⇒ opt-in 신호 아님
+      sec164LandAreaField(asset) === "redevLandArea"
+        ? decimalField("redevLandArea", "토지 면적", true)
+        : decimalField("acquisitionArea", "취득 당시 면적", true),
       { has: (a) => gradeFilled(a.pre1990Grade_current), label: "1990.8.30. 현재 토지등급", field: "pre1990Grade_current" },
       { has: (a) => gradeFilled(a.pre1990Grade_prev), label: "1990.8.30. 직전 토지등급", field: "pre1990Grade_prev" },
       { has: (a) => gradeFilled(a.pre1990Grade_atAcq), label: "취득시 토지등급", field: "pre1990Grade_atAcq" },
