@@ -171,7 +171,7 @@ export function refineHouseholdRequiredInputs(data: HouseholdRefineInput, ctx: z
   const mergeIssue = landOnlyHouseholdMergeIssue(data);
   if (mergeIssue) issue([mergeIssue.field], mergeIssue.message);
   const residenceMsg = residenceMonthsOverflowIssue(data);
-  if (residenceMsg) issue(["residencePeriodMonths"], residenceMsg);
+  if (residenceMsg) issue(data.propertyType === "mixed-use-house" ? ["mixedUse", "residencePeriodYears"] : ["residencePeriodMonths"], residenceMsg);
 }
 
 /**
@@ -231,7 +231,9 @@ export function newConstructionLandOnlyIssue(d: { acquisitionCause?: string; sel
  * 그래서 ⑫는 ⑧보다 **느슨**하다(⑧ 통과 ⇒ ⑫ 통과 — «⑧ 통과 ↔ ⑫ 400» 막다른 길 없음). 어떤 기산일로도 설명되지 않는 값(120 > 60 · 999)만 막는다.
  * 같은 leaf(`directResidenceMonthsOverflowError` · `residenceStartWithMerge`)를 쓰고, 통산 후보가 취득일보다 이르면 그 날짜를 밝히는 문구를 쓴다.
  *
- * 조건: 1세대1주택(`isOneHousehold`) · 주택 · 재개발 서브객체 없음(재개발은 자체 상한 — 승계 APT `successorAptMaxResidenceMonths` · 세대원 건물 `householdBuildingResidenceOverflow`).
+ * **겸용주택**(`propertyType: "mixed-use-house"`)은 거주를 연수(`mixedUse.residencePeriodYears` = floor(개월 / 12))로 받아 **연수 × 12**(실제 개월의 하한)로 비교한다 — ⑧ 통과 ⇒ ⑫ 통과를 지킨다. 겸용 토지·건물 취득일도 기산 후보다
+ * (계획서 `mixed-use-residence-cap-api.plan.md` Q-1 a — 보유 3년 · 거주 10년이 400 없이 장특 거주분 12% → 40%, −35,797,446). 최상위 `residencePeriodMonths`는 겸용 경로가 읽지 않는다.
+ * 조건: 1세대1주택(`isOneHousehold`) · 주택·겸용 · 재개발 서브객체 없음(재개발은 자체 상한 — 승계 APT `successorAptMaxResidenceMonths` · 세대원 건물 `householdBuildingResidenceOverflow`).
  * 토지만 본인 × 같은 세대 × 합가면 합가일이 기준일을 늦춘다. ⚠️ 계산 leaf(`calcLongTermRate`)에서 파트별 보유연수로 자르지 않는다 — 거주는 주택 단위라 겸용·분리취득에서 틀린다(시험 적용 26건 실패).
  */
 export function residenceMonthsOverflowIssue(d: {
@@ -254,12 +256,18 @@ export function residenceMonthsOverflowIssue(d: {
   landCarryoverPart?: unknown;
   buildingCarryoverPart?: unknown;
 }): string | null {
-  if (d.propertyType !== "housing" || d.isOneHousehold !== true || d.redevelopment) return null;
-  if (d.residencePeriodMonths === undefined || !d.acquisitionDate) return null;
+  const isMixedUse = d.propertyType === "mixed-use-house";
+  if ((d.propertyType !== "housing" && !isMixedUse) || d.isOneHousehold !== true || d.redevelopment) return null;
+  type MixedDates = { residencePeriodYears?: number; landAcquisitionDate?: string; buildingAcquisitionDate?: string } | null | undefined;
+  const mu = d.mixedUse as MixedDates;
+  // 겸용은 거주를 연수로 받는다(`mixedUse.residencePeriodYears` = floor(개월 / 12)) — 실제 개월은 12 × 연수 이상이므로 그 하한이 상한을 넘을 때만 막는다(⑧ 통과 ⇒ ⑫ 통과).
+  const residenceMonths = isMixedUse ? (mu?.residencePeriodYears === undefined ? undefined : mu.residencePeriodYears * 12) : d.residencePeriodMonths;
+  if (residenceMonths === undefined || !d.acquisitionDate) return null;
   type DonorDates = { donorAcquisitionDate?: string; donorHouseholdHoldingStartDate?: string } | null | undefined;
   const donorDates = (o: unknown) => [(o as DonorDates)?.donorAcquisitionDate, (o as DonorDates)?.donorHouseholdHoldingStartDate];
   const earliest = [
     d.acquisitionDate, d.landAcquisitionDate, d.donorAcquisitionDate, d.giftHouseholdHoldingStartDate,
+    ...(isMixedUse ? [mu?.landAcquisitionDate, mu?.buildingAcquisitionDate] : []),
     ...donorDates(d.carryoverTaxation), ...donorDates(d.landCarryoverPart), ...donorDates(d.buildingCarryoverPart),
   ]
     .filter((x): x is string => typeof x === "string" && x.length > 0)
@@ -273,7 +281,7 @@ export function residenceMonthsOverflowIssue(d: {
     buildingOwnerHouseholdMergeDate: d.buildingOwnerHouseholdMergeDate,
   });
   const msg = directResidenceMonthsOverflowError({
-    months: d.residencePeriodMonths,
+    months: residenceMonths,
     acquisitionDate: start.start,
     startKind: start.kind,
     transferDate: d.transferDate,
