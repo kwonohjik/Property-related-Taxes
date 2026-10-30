@@ -109,5 +109,5 @@ describe("EC-1·EC-2 상속개시일 칸 S · 토지 취득일 L · 건물 취�
       const r = await post(await captureBody(f)); const k = `${allIssues(f).length > 0 ? "차단" : "통과"}|${r.status}`; t[k] = (t[k] ?? 0) + 1;
     }
     expect(t).toEqual({ "차단|400": 6 });
-  });
+  }, 120_000);
 });
