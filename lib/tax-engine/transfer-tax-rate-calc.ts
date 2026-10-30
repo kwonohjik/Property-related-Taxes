@@ -516,10 +516,14 @@ export function calcTax(
    *
    * 시행일별 표·근거는 `data/short-term-rate-history.ts` 주석 참조.
    */
+  // 중과 대상 짝 주택의 부수토지 카드는 §104⑦ 후단 비교의 «제104조제1항제2호 또는 제3호» 세율이 **주택**(이에 딸린 토지를 포함한다) 세율이다 —
+  // 토지 40%/50%로 비교하면 카드 줄이 «중과»로 남고, 카드가 대표 단위인 합산 버킷(역방향)은 단기 60%가 중과보다 큰데도 중과로 계산돼 순·역 합계가 갈린다
+  // (계획서 `bundled-appurtenant-card-unit-share-and-rate-display.plan.md` O-10 · Q-2′ a).
+  const cardAsHousingForShortRate = appurtenantCardFollowsSurchargeRate(input);
   const shortTermAssetClass: ShortTermAssetClass =
     input.propertyType === "presale_right"
       ? "presale_right"
-      : isHousingLikeProp
+      : isHousingLikeProp || cardAsHousingForShortRate
         ? "housing_or_right"
         : "other";
   const shortTermOpts = {
