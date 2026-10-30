@@ -1,7 +1,7 @@
 # 상속개시일 칸 ≠ 토지 취득일 — 화면에서 가능하고, 그때 ⑧↔⑫ 가 갈린다 (실측)
 
-- 상태: 측정 완료 — 소스 변경 없음 (앵커 + 이 문서만). 수정 방식은 Q-1 결정 대기
-- 앵커: `__tests__/api/transfer.route.gb-inherit-start-date-stale.anchor.test.ts` (2건)
+- 상태: **구현 완료 — Q-1 a** (사용자 「권고안으로 진행해」). 측정은 §1~§4, 구현은 §6
+- 앵커: `__tests__/api/transfer.route.gb-inherit-start-date-stale.anchor.test.ts` (2건 — 수정 후 기대)
 - 선행: `gb-bg-inherit-presumed.plan.md` §5 (#2737 이 남긴 한계 「상속개시일 칸과 토지 취득일이 다른 입력이 화면에서 가능한지 미확인」)
 
 ## 1. 질문
@@ -40,16 +40,23 @@ BG 상속 × 환산·감정·매매사례가액 규칙(#2735·#2737)의 ⑫ 는 
 어긋남의 원천은 ⑫ 가 아니라 **⑧ 이 읽는 `inheritanceStartDate` 가 분리 토글 뒤 stale** 인 것이다 (`transfer-163-9-base-date.ts` 머리 주석이 이미 경고하는 「stale `inheritanceStartDate`」 계열). payload 는 토지 파트 취득일을 이미 `partAcquisitionDates(asset).land` 로 만들어 보내므로 ④·엔진은 일관된다.
 세액 오류는 아니다 — ⑫ 가 400 으로 막거나(거짓 차단) 막지 않는 쪽이 화면에 보이는 날짜와 같은 방향이다. 문제는 **화면(⑧)이 통과시킨 입력을 서버가 막는 모순**(CLAUDE.md 「UI 통과 ↔ validate 차단 모순 금지」)과 그 반대의 과차단이다.
 
-## 5. 사용자 결정 대기
+## 5. 사용자 결정
 
-- **Q-1** 어떻게 맞출까:
-  - (a) ⑧ 의 BG 일반건물 분기가 ⑫·④ 와 같은 토지 파트 취득일(`partAcquisitionDates(asset).land`)을 읽게 한다 — `bgPresumedBlock`·`converted` 분기의 호출부에서 일반건물만 날짜 인자를 바꾼다. `deriveSec163_9BaseDate` 는 주택·상가·토지가 공유하므로 건드리지 않는다.
-  - (b) 분리 토글(`applySeparateOff` 등)이 `inheritanceStartDate` 도 함께 되맞춘다 — 폼 쪽 stale 제거. 이력 복원 레코드(S 빈 값)와 이미 저장된 stale 상태는 못 고친다.
-  - (c) (a)+(b).
-  - (d) 보류.
-  **권장 (a)** — 읽는 쪽을 단일 소스(④ 와 같은 값)로 맞추면 저장된 stale 상태와 이력 복원까지 한 번에 닫는다. (b)는 쓰는 쪽을 고치는 것이라 옛 데이터가 남는다.
+- **Q-1** ✅ (a) — ⑧ 의 BG 일반건물 분기가 ⑫·④ 와 같은 토지 파트 취득일을 읽게 한다 (사용자 「권고안으로 진행해」). (b) 분리 토글이 `inheritanceStartDate` 도 되맞추기는 이력 복원·저장된 stale 상태를 못 고쳐 기각, (c)는 (b) 가 더해질 뿐이라 이번 범위 밖, (d) 보류는 거짓 차단이 남아 기각.
 
-## 6. 한계
+## 6. 구현 결과 (Q-1 a)
+
+`lib/calc/burdened-gift-presumed-acquisition.ts` — `bgInheritanceBaseDate(asset)`(일반건물은 `partAcquisitionDates(asset).land`, 그 밖은 종전 `deriveSec163_9BaseDate`)와 `isBgPostDeemedInheritance(asset)`를 신설하고, 같은 판정을 하던 **세 곳**이 이것을 쓴다:
+- ⑧ `bgPresumedBlock`(`:61` 상속 사유) — 감정·매매사례가액
+- ⑧ `transfer-tax-validate-bg.ts` 환산 분기(`:383`)
+- ⑤ `BurdenedGiftPresumedAcquisitionSection` 의 환산 라디오 비활성(`inheritedConversionBlocked`)
+`deriveSec163_9BaseDate` 는 주택·상가·토지가 공유하므로 바꾸지 않았다.
+
+검증: 앵커 EC-1 — S = L · S ≠ L · S 빈 값 모두 324셀 ⑧↔⑫ 일치(수정 전 거짓 차단 48 · ⑫ 미차단 36), EC-2 대표 상태는 ⑧ 차단 · ⑫ 400 (환산·감정 × 위치 3, 수정 전 ⑧ 통과). 변형(GB 분기 제거) 적색 2건 후 복원 녹색.
+
+## 7. 한계
 
 - §2 의 도달 경로는 코드 근거이며 **브라우저로 확인하지 않았다** (「확인 필요」). 앵커는 그 경로가 만드는 상태(S ≠ L)를 직접 입력해 ⑧·⑫ 를 잰 것이다.
+- ⑤ 라디오 비활성(`inheritedConversionBlocked`)은 같은 함수로 바꿨으나 **화면에서 눈으로 확인하지 않았다** — 컴포넌트 단위 검증도 하지 않았다 (「확인 필요」).
 - 주택·상가·토지의 `inheritanceStartDate` 사용처는 측정하지 않았다 (이 문서는 BG 일반건물 규칙만).
+- 분리 ON 전환 패치(`gbSeparateOnPatch`)가 `inheritanceStartDate` 를 되맞추는지는 읽지 않았다.

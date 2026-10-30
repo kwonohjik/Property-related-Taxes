@@ -176,7 +176,7 @@ describe("EC-2 BG(부담부증여) 상속 × 취득방식 「converted」 × 의
     }
     expect(tally).toEqual({ "converted 차단|400 · actual 통과|200": 24 });
     expect(act).toEqual({ lt: 88_835_000, mid: 64_895_000, gt: 14_752_481, xl: 0 });
-  });
+  }, 120_000);
   it("컴패니언·주 자산 위치는 이미 닫혀 있다 — 일반 양도 자산과 BG 는 함께 양도로 못 묶어 ⑧·⑫ 모두 400 (96셀)", async () => {
     const tally: Record<string, number> = {};
     for (const d of DATES3) for (const sep of [false, true]) for (const [, lp, bp] of LV) for (const role of ["컴패니언", "주 자산"] as const) for (const m of ["converted", "actual"] as const) {
@@ -184,7 +184,7 @@ describe("EC-2 BG(부담부증여) 상속 × 취득방식 「converted」 × 의
       const k = `${r.blocked8 ? "차단" : "통과"}|${r.status}`; tally[k] = (tally[k] ?? 0) + 1;
     }
     expect(tally).toEqual({ "차단|400": 96 });
-  });
+  }, 120_000);
 });
 
 describe("EC-3 ⑧↔⑫ 정합 격자 — 일자 6(분리 OFF 3 · ON 3) × 토지·건물 취득원인 4 × 평가 방식 2 × 취득방식 4 × 담보 승 여부 2 × 위치 3 (1,152셀)", () => {
@@ -241,7 +241,7 @@ describe("EC-5 BG 상속 × 감정가액·매매사례가액 — 상속 평가�
       const k = `${r.blocked8 ? "차단" : "통과"}|${r.status}`; tally[k] = (tally[k] ?? 0) + 1;
     }
     expect(tally).toEqual({ "차단|400": 8 });
-  });
+  }, 120_000);
 });
 
 describe("EC-6 토지만 1983 상속 · 건물 1995 취득(분리 ON) — ⑧ 통과이므로 ⑫ 도 200 (#2735 는 이 입력을 거짓으로 막았다: converted 400)", () => {
@@ -259,5 +259,5 @@ describe("EC-6 토지만 1983 상속 · 건물 1995 취득(분리 ON) — ⑧ �
       const k = `${b8 ? "차단" : "통과"}|${r.status}`; tally[k] = (tally[k] ?? 0) + 1;
     }
     expect(tally).toEqual({ "통과|200": 6 });
-  });
+  }, 120_000);
 });

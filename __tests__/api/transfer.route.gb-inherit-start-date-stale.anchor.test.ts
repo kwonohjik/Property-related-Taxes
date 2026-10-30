@@ -1,12 +1,13 @@
 /**
- * anchor — BG 상속 × 환산·감정·매매사례 방식 규칙의 기준일: 「상속개시일 칸(`inheritanceStartDate`) ≠ 토지 취득일(`landAcquisitionDate`)」 상태에서 ⑧↔⑫ 가 갈린다
- * (계획서 `docs/00-pm/gb-inherit-start-date-stale.plan.md` — 측정, 소스 변경 없음)
+ * anchor — BG 상속 × 환산·감정·매매사례 방식 규칙의 기준일: 상속개시일 칸(`inheritanceStartDate`) ≠ 토지 취득일(`landAcquisitionDate`) 상태에서도 ⑧↔⑫ 가 같다
+ * (계획서 `docs/00-pm/gb-inherit-start-date-stale.plan.md` — Q-1 a 구현)
  *
- * ⑧(`transfer-tax-validate-bg.ts:383` · `burdened-gift-presumed-acquisition.ts:61`)은 `deriveSec163_9BaseDate` = `inheritanceStartDate || acquisitionDate` 로 판정하고,
- * ⑫(`bgInheritNonActualBlocked`)는 payload 가 가진 토지 파트 취득일(`landAcquisitionDate`)로 판정한다. 두 값이 같으면 어긋남이 없다(EC-1).
- * 화면에서 두 값이 갈리는 길: 일반건물 카드의 분리 OFF 전환(`GeneralBuildingAcquisitionCards.tsx:214` `applySeparateOff`)은 `landAcquisitionDate` 를 건물 취득일로 되맞추지만
- * `inheritanceStartDate` 는 건드리지 않는다(그 칸을 쓰는 곳은 `CompanionAcqInheritanceBlock:75-79` 한 곳) — 분리 ON 에서 토지 상속일을 넣은 뒤 OFF 로 끄면 갈린다.
- * 아래 EC-2 는 **현재 동작의 기록**이다(고쳐지면 반전).
+ * 수정 전: ⑧(`transfer-tax-validate-bg.ts:383` · `burdened-gift-presumed-acquisition.ts:61` · ⑤ `BurdenedGiftPresumedAcquisitionSection`)은 `deriveSec163_9BaseDate` =
+ * `inheritanceStartDate || acquisitionDate` 로, ⑫(`bgInheritNonActualBlocked`)는 토지 파트 취득일로 판정해 두 값이 다르면 갈렸다 —
+ * 거짓 차단(⑧ 통과·⑫ 400) 48 · ⑫ 미차단(⑧ 차단·⑫ 200) 36 (S≠L·S 빈 값의 환산·감정 108셀 중).
+ * 화면에서 갈리는 길: 일반건물 카드의 분리 OFF 전환(`GeneralBuildingAcquisitionCards.tsx:214` `applySeparateOff`)이 `landAcquisitionDate` 만 건물 취득일로 되맞추고
+ * `inheritanceStartDate` 는 건드리지 않는다.
+ * 수정 후: 일반건물은 ⑧·⑤ 도 토지 파트 취득일(`bgInheritanceBaseDate` — ④·⑫ 와 같은 값)을 읽어 324셀 전부 일치한다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -84,7 +85,7 @@ const dateState = (S: string, L: string, B: string, sep: boolean, m: string, bc:
     bgActualAcquisitionLand: "300000000", bgActualAcquisitionBuilding: "100000000", bgPresumedAcquisitionLand: "300000000", bgPresumedAcquisitionBuilding: "100000000" } as unknown as Partial<AssetForm>);
 
 describe("EC-1·EC-2 상속개시일 칸 S · 토지 취득일 L · 건물 취득일 B 조합 × 분리 × 방식 3 × 건물 원인 2 × 위치 3 (324셀)", () => {
-  it("S = L 이면 ⑧↔⑫ 어긋남 0 (108셀) · S ≠ L 이면 어긋난다(현재 동작) — 거짓 차단(⑧ 통과·⑫ 400)·⑫ 미차단(⑧ 차단·⑫ 200)", async () => {
+  it("S = L · S ≠ L · S 빈 값 모두 ⑧↔⑫ 일치 (324셀) — 거짓 차단(⑧ 통과·⑫ 400)·⑫ 미차단(⑧ 차단·⑫ 200) 0", async () => {
     const t: Record<string, number> = {};
     for (const S of ["", D83, D95]) for (const L of [D83, D95]) for (const B of [D83, D95]) for (const sep of [true, false]) for (const m of ["converted", "appraisal", "actual"]) for (const bc of ["inheritance", "purchase"]) for (const role of ROLES3) {
       if (!sep && L !== B) continue;
@@ -97,16 +98,16 @@ describe("EC-1·EC-2 상속개시일 칸 S · 토지 취득일 L · 건물 취�
     }
     expect(t).toEqual({
       "S=L|actual|일치": 36, "S=L|비actual|일치": 72,
-      "S≠L|actual|일치": 36, "S≠L|비actual|거짓차단": 36, "S≠L|비actual|⑫미차단": 24, "S≠L|비actual|일치": 12,
-      "S빈|actual|일치": 36, "S빈|비actual|거짓차단": 12, "S빈|비actual|⑫미차단": 12, "S빈|비actual|일치": 48,
-    });
+      "S≠L|actual|일치": 36, "S≠L|비actual|일치": 72,
+      "S빈|actual|일치": 36, "S빈|비actual|일치": 72,
+    }); // 수정 전: S≠L 환산·감정 거짓차단 36·⑫미차단 24·일치 12 / S빈 거짓차단 12·⑫미차단 12·일치 48
   }, 600_000);
-  it("대표 상태 — 분리 ON 에서 토지 상속일 1983 을 넣고(S=L=1983, B=1995) 분리 OFF 로 끈 직후(L=B=1995, S=1983 그대로): ⑧ 통과 · ⑫ 400 (환산·감정 × 위치 3)", async () => {
+  it("대표 상태 — 분리 ON 에서 토지 상속일 1983 을 넣고(S=L=1983, B=1995) 분리 OFF 로 끈 직후(L=B=1995, S=1983 그대로): 화면에 보이는 1995 로 ⑧ 차단 · ⑫ 400 (환산·감정 × 위치 3 · 수정 전 ⑧ 통과)", async () => {
     const t: Record<string, number> = {};
     for (const m of ["converted", "appraisal"]) for (const role of ROLES3) {
       const f = role === "단건" ? single(dateState(D83, D95, D95, false, m, "inheritance")) : form(role, dateState(D83, D95, D95, false, m, "inheritance"), true);
       const r = await post(await captureBody(f)); const k = `${allIssues(f).length > 0 ? "차단" : "통과"}|${r.status}`; t[k] = (t[k] ?? 0) + 1;
     }
-    expect(t).toEqual({ "통과|400": 6 });
-  });
+    expect(t).toEqual({ "차단|400": 6 });
+  }, 120_000);
 });

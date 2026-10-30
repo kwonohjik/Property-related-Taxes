@@ -21,12 +21,12 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BURDENED_GIFT_TRANSFER } from "@/lib/tax-engine/legal-codes/burdened-gift";
-import { deriveSec163_9BaseDate, isPostDeemedInheritance } from "@/lib/calc/transfer-163-9-base-date";
 import {
   BG_PRESUMED_LABEL,
   bgAppraisalExtensionPenaltyApplies,
   bgPresumedBlock,
   bgPresumedInputKind,
+  isBgPostDeemedInheritance,
   isBgPresumedMethod,
   type BgPresumedMethod,
 } from "@/lib/calc/burdened-gift-presumed-acquisition";
@@ -74,10 +74,7 @@ export function BurdenedGiftAcquisitionMethodField({
   fractionalSplit,
 }: FieldProps) {
   // 상속받은 자산의 환산 차단(E-1 한계 G6) — ⑧ `validateBurdenedGiftAsset`과 같은 술어
-  const inheritedConversionBlocked = isPostDeemedInheritance(
-    asset.acquisitionCause,
-    deriveSec163_9BaseDate(asset),
-  );
+  const inheritedConversionBlocked = isBgPostDeemedInheritance(asset);
   // 매매사례가액·감정가액을 고를 수 없는 자산(상속) — ⑧과 같은 `bgPresumedBlock`
   const presumedBlock = bgPresumedBlock(asset);
   // 증축 5년 이내 × 감정가액(§114조의2) — 엔진·⑧과 같은 단일 소스(`calculateBuildingPenalty`). 신축은 건물 전체 감정가액으로,
