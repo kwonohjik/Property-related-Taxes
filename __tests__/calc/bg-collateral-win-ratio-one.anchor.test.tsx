@@ -158,9 +158,10 @@ describe("CW-2 ⑧ 차단 유지 — 정당하지 않은 경우와 범위 밖", 
     expect(m).toContain("자산 1 담보평가(상증법 §66) · 자산 2 보충적평가: 증여재산 평가 방식이 달라 함께 양도와 같이 계산할 수 없습니다");
   });
 
-  it("지분 1/2 — 종전 처리(시가 분모)를 유지한다", () => {
+  it("지분 1/2 — 담보 승 판정은 단독 소유만 · ⑧은 지분 자산의 담보 승을 정확한 사유로 막는다", () => {
     const m = allIssues(form([house({ ownershipNumerator: "1", ownershipDenominator: "2", ownershipRemainderThirdParty: "yes", bgMarketValueAtTransfer: "1000000000" })])).map((x) => x.message).join("\n");
-    expect(m).toContain("증여가액(500,000,000원) (지분 50% 해당분");
+    expect(m).toContain("지분 50%를 가진 자산에서 담보평가액");
+    expect(m).not.toContain("을 초과합니다");
     expect(bgCollateralForcesStdAcq(house({ ownershipNumerator: "1", ownershipDenominator: "2", bgMarketValueAtTransfer: "1000000000" }))).toBe(false);
   });
 });

@@ -100,7 +100,9 @@ export function assertBurdenedGiftEligible(args: {
   const giftValuation = Math.max(supplementary, mortgageVal, rentalVal);
 
   if (giftValuation > 0 && assumedDebt > giftValuation) {
-    throw new Error(
+    // 호출자 입력의 결함이다 — INVALID_INPUT 으로 던져 route 가 400 으로 응답한다(`lib/api/tax-error-response.ts`). 종전 일반 Error 는 500 INTERNAL_ERROR 였다.
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
       "[EXCESS_BURDENED_GIFT] 채무액(B=" +
         assumedDebt.toLocaleString() +
         "원)이 증여가액(C=" +

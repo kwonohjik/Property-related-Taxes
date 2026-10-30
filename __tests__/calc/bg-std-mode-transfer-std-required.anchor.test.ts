@@ -200,8 +200,9 @@ describe("R-4 — 시가 평가 · 1985 전 상속 상가: 담보 승이면 양�
     // 공유 소유(축 A)는 채무를 지분 인수분으로 넣는다 — 2.3억 + 2.5억 = 4.8억 > 시가 지분 몫 4.6억(담보 승)
     const share: A = { bgLendingDepositTotal: "230000000", bgMortgageDebtAmount: "250000000", bgMortgageSetAmount: "" };
     const f = form([{ ...CB, ...share, ownershipNumerator: "1", ownershipDenominator: "2", ownershipRemainderThirdParty: "yes", standardPriceAtTransfer: "" }]);
-    // ⑧은 지분 보유에서 담보 승을 판정하지 않고(시가 지분 몫 분모) 「채무액이 증여가액 초과」로 먼저 막는다 — 종전 동작.
-    expect(issues(f).some((i) => /채무액\(480,000,000원\)이 증여가액/.test(i.message))).toBe(true);
+    // ⑧은 지분 보유에서 담보 승을 취득가액 처리 범위 밖으로 막는다(`bgFractionalCollateralWin`) — 종전에는 「채무액이 증여가액 초과」라는 틀린 사유였다.
+    expect(issues(f).some((i) => /지분 50%를 가진 자산에서 담보평가액/.test(i.message))).toBe(true);
+    expect(issues(f).some((i) => /채무액\(480,000,000원\)이 증여가액/.test(i.message))).toBe(false);
     // ⑫는 지분이면 담보 승 제외를 하지 않는다(⑧ 범위와 같게) — 상가 ③ 가드가 그대로 막는다.
     const r = await route(f);
     expect(r.status).toBe(400);
