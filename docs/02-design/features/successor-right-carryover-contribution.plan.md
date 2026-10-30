@@ -96,8 +96,8 @@
 ## 7. 확인 필요
 
 - 수증자·상속인이 낸 추가분담금의 이월과세·§163⑨ 처리 — 국세청 해석 미확보(§3).
-- 상속 승계 입주권 화면에 공시가격·승계취득가액·추가분담금 칸이 모두 뜨는지(이번은 ⑧·④·route만 측정).
-- 엔진 `house_apart` 도출이 입주권에 §164 비교를 여는지.
+- ✅ 상속 승계 입주권 화면 칸 — §11에서 실측: `publishedValueAtInheritance`·`successorRightAddedContribution`이 뜨고 승계취득가액은 없다(#2761 이후).
+- ✅ 엔진 `house_apart` 도출이 입주권에 §164 비교를 여는지 — §11: 화면 경로는 안 연다 · 직접 호출은 연다.
 - 실제 세율 미측정(mock).
 
 ## 8. 구현 (Q-1 a · Q-2 a — 「권장안으로」)
@@ -124,3 +124,29 @@
   - ⑫ 다건 route: 조합원입주권 전부를 400으로 거부 — 「조합원입주권(시행령 §166① / 승계취득분 §97①1호)은 단건 계산기에서만 지원됩니다.」(`transfer-tax-schema-multi-refines.ts` · 매매·증여·상속·감정 모드 7셀 모두 400 실측 · 환산 모드는 양도시 기준시가 규칙이 먼저 400).
   - ⑧ 다건 화면: 「세액 계산」 시 `validateMultiSettings` → `validateMultiSupportedMode`(`multi-transfer-tax-validate.ts:137`)가 같은 문구로 막는다 — Playwright로 매매·증여·상속 승계 입주권을 다건 세션에 넣고 계산을 눌러 **POST 없음 · 같은 문구 표시**(3/3)를 확인했다. 자산별 `validateStep`(`notReadyPropertiesMessage`)은 통과하지만 다건 지원 모드 검사가 그 뒤에서 막는다.
 - ⇒ 다건 ④의 0은 죽은 경로다. 고칠 필요 없음(다건이 입주권을 지원하게 되면 ④를 단건 leaf `successorRightActualAcquisition`로 맞춰야 한다).
+
+## 11. 엔진 `house_apart` 도출이 입주권에 §164 비교를 여는가 — 확인 결과 (§7 · 「a」)
+
+**법령**: 「소득세법 시행령」 §163⑨ 단서(현행 MST 290841 · KoreanLaw 조회)는 1호 「1990년 8월 30일 개별공시지가가 고시되기 전에 상속 또는 증여받은 **토지**」 · 2호 「… 건물의 기준시가가 고시되기전에 상속 또는 증여받은 **건물**」만 정한다. 조합원입주권은 부동산을 취득할 수 있는 권리(법 §94①2호가목)라 단서 ②(§164④~⑦ 가액)의 대상이 아니다 — 본문(평가액)만 적용된다.
+
+**구조**: ④ `deriveEngineInheritanceAssetKind`는 `land`·`housing`·`redevelopment_apt`가 아니면 `house_apart`를 보낸다(입주권 포함). 엔진 `resolveApartGate`는 `house_apart`의 ②·③ 주입을 「국세청 고시 가액 없었음」(`apartNtsPriceExisted === false`) + 첫 가격 날짜가 기준일 뒤일 때만 연다. ④는 입주권에 그 답·`inheritedHouseValuation`을 싣지 않는다(`isSec163_9House`가 `housing`·`redevelopment_apt`만 — `apartNtsQuestionRelevant`·`sec164HouseStatus` 모두 null).
+
+**실측(mock · 승계 입주권 · 양도 2026-02-16 · 1,300,000,000 · 평가액 300,000,000)**:
+
+| 시료 | 경로 | ④ `inheritedAcquisition` | 결과 |
+|---|---|---|---|
+| 증여·상속 2023-06-01 | 화면 | `post-deemed` · `house_apart` · 답·② 없음 | 200 · 취득가액 300,000,000 · 383,010,000 |
+| 위 + 주택에서 남은 「없었음」·첫 가격 날짜·주택 환산 8칸·기준시가 | 화면 | 같음(남은 값 안 실림) | 같음 |
+| 상속 2000-03-01 · 증여 2000-03-01 · 상속 2005-05-01 | 화면 | 같음 | 같음(⑫ 공동주택 질문 요구도 없음) |
+| ia에 `houseValuationStdPrice` 9억 · `standardPriceAtDeemedDate` 9억 | 직접 호출 | — | 200 · 엔진이 무시 · 383,010,000 |
+| 2000 상속 + `apartNtsPriceExisted: false`·첫 가격 2006-01-01 + `inheritedHouseValuation` | **직접 호출** | — | **200 · ② §164⑥ 519,230,769 채택 · 290,933,077** |
+| 위에서 `assetKind: "house_individual"` | **직접 호출** | — | **200 · ② §164⑦ 519,230,769 · 290,933,077** |
+| 2000 상속 + `inheritedHouseValuation`만(답 없음) | 직접 호출 | — | 400 「…국세청장이 고시한 공동주택 기준시가가 있었는지 고르세요」(입주권에 공동주택 질문) |
+
+화면 칸(Playwright · 취득 단계 `[data-field]`): 2000·2023 상속 입주권 = `publishedValueAtInheritance`·`successorRightAddedContribution` 등 — 공동주택 질문·② 칸 없음.
+
+정리:
+- **화면 경로: 결함 없음.** `house_apart` 도출은 ②를 열지 않는다(답이 실리지 않아 엔진 게이트가 닫힌다 = 평가액만).
+- 🔴 **직접 호출: ②가 열린다.** 라우트에 `inheritedHouseValuation`(+ 공동주택 「없었음」 또는 `assetKind: house_individual`)을 실으면 입주권에 §164⑥·⑦ 가액이 적용된다 — 취득가액 300,000,000 → 519,230,769 · 결정세액 383,010,000 → 290,933,077(−92,076,923). §163⑨ 단서는 토지·건물만이라 법령과 다르다. ⑫는 오히려 입주권에 공동주택 질문을 요구한다. 화면 밖 경로(#2763과 같은 축) — 컴패니언 입주권은 미측정(확인 필요).
+- **의제취득일 전(1985.1.1. 전) 상속 입주권**: 화면에 ③ 칸(「의제취득일(1985.1.1.) 시점 기준시가」·「양도시 기준시가」)이 뜨고 엔진이 3자 max를 한다. ②는 계산되지 않는다(`sec164Amount: null`). 평가액 50,000,000 · ③ 칸 5천만/5억 → ③ 130,000,000 채택 · 459,210,000(① 단독 495,435,000). 안내 문구는 「② 취득당시 기준시가(§164④~⑦)」를 입주권에도 보여 준다(값 영향 없음). 입주권에 의제취득일·§176조의2④ 환산이 적용되는지는 근거 미확인(확인 필요) — 1984년 이전 관리처분 입주권이 2026년까지 준공 전으로 남는 사례라 실무 도달 가능성은 낮다.
+- 별건(입주권 무관): 엔진 `post-deemed` 산식 문구가 증여에도 「(상속세 신고가액)」이다(`inheritance-acquisition-price.ts:317-321` — 결과 카드 `InheritedAcquisitionDetailCard`가 `formula`를 그대로 보인다). 화면 표시는 미측정(확인 필요).
