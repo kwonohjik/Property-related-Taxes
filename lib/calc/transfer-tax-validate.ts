@@ -39,6 +39,7 @@ import { isRedevSuccessorAptActualOnly } from "./redev-acquisition-price-source"
 import { bgIgnoresAssetAppraisalSalesCase } from "./bg-asset-acq-mode-scope";
 import { withRedevCarryoverAcqMode } from "./redev-carryover-acq-mode";
 import { isCarryoverSuccessorRight } from "./transfer-successor-right";
+import { isDeemedValueSuccessorRight } from "./transfer-successor-right";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -395,8 +396,8 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
       if (!isGbFractional) {
         for (let i = 1; i < form.assets.length; i++) {
           // 승계조합원 완공 APT는 실거래가 전용 — 남은 플래그는 ④가 무시한다(라디오 없음).
-          // 부담부증여도 남은 플래그를 ④가 무시한다(`bgIgnoresAssetAppraisalSalesCase` — 그 라디오는 부담부증여 화면에 없다). 이월과세 승계 입주권도 같다(`withCarryoverSuccessorRightActual`).
-          if (form.assets[i].isSalesCaseAcquisition !== true || isRedevSuccessorAptActualOnly(form.assets[i]) || bgIgnoresAssetAppraisalSalesCase(form.assets[i]) || isCarryoverSuccessorRight(form.assets[i])) continue;
+          // 부담부증여도 남은 플래그를 ④가 무시한다(`bgIgnoresAssetAppraisalSalesCase` — 그 라디오는 부담부증여 화면에 없다). 이월과세·상속·증여 승계 입주권도 같다(`withHiddenSuccessorRightModeActual`).
+          if (form.assets[i].isSalesCaseAcquisition !== true || isRedevSuccessorAptActualOnly(form.assets[i]) || bgIgnoresAssetAppraisalSalesCase(form.assets[i]) || isCarryoverSuccessorRight(form.assets[i]) || isDeemedValueSuccessorRight(form.assets[i])) continue;
           issues.push({
             step,
             assetIndex: i,

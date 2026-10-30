@@ -66,7 +66,7 @@ import { companionEngineStdPriceAtTransfer } from "./engine-std-price-at-transfe
 import { bgIgnoresAssetAppraisalSalesCase } from "./bg-asset-acq-mode-scope";
 import {
   isSuccessorRightTransfer,
-  successorRightAcquisitionTotal,
+  successorRightActualAcquisition,
   successorRightEstimationMode,
   successorRightStdPriceAtAcq,
 } from "./transfer-successor-right";
@@ -80,11 +80,11 @@ import {
 export function fixedAcquisitionPriceRaw(asset: AssetForm): number | undefined {
   /**
    * 승계조합원 입주권 + 실거래가 — 취득가액은 숨은 `fixedAcquisitionPrice`가 아니라 **승계 전용 2칸의 합**(§97①1호 가목,
-   * 기준-2025-법규재산-0057)이다. 주 자산 ④(`transfer-tax-api.ts`)와 **같은 leaf**(`successorRightAcquisitionTotal`).
+   * 기준-2025-법규재산-0057)이다. 주 자산 ④(`transfer-tax-api.ts`)와 **같은 leaf**(`successorRightActualAcquisition` — 상속·증여는 §163⑨ 평가액).
    * 추계 모드(감정·환산)는 아래 일반 갈래가 그대로 처리한다 — 감정가액은 `fixedAcquisitionPrice`, 환산은 취득가액 없음.
    */
   if (isSuccessorRightTransfer(asset) && successorRightEstimationMode(asset) === "actual") {
-    return successorRightAcquisitionTotal(asset) || undefined;
+    return successorRightActualAcquisition(asset) || undefined;
   }
   /**
    * 재개발 §166 자산(원조합원 입주권·완공APT) + 매매·실가 — 상단 「취득가액」 칸이 화면에 없다(`CompanionAcqPurchaseBlock` 게이트).

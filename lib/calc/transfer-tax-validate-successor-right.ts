@@ -30,6 +30,8 @@ import { successorRightEstimationMode, successorTypeToggleSectionLabel } from ".
 import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
 import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 import { isCarryoverSuccessorRight } from "./transfer-successor-right";
+import { isDeemedValueSuccessorRight } from "./transfer-successor-right";
+import { deemedSuccessorRightValueField } from "./transfer-successor-right";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 
 /**
@@ -78,6 +80,25 @@ export function validateSuccessorRightAsset(
    */
   // 이월과세 — 취득가액은 이월과세 블록이 정한다(호출부가 `validateCarryoverAsset`를 건다 · Q-2 a). 승계 산정 방식·승계취득가액은 보지 않는다(Q-4 a).
   if (isCarryoverSuccessorRight(asset)) return null;
+
+  // 상속·증여 — 취득가액은 §163⑨ 평가액이다(④ 페이로드와 같은 칸). 승계 산정 방식·승계취득가액은 보지 않는다(⑤가 숨긴다).
+  //   종전엔 평가액이 비면 승계취득가액이 취득가액이 됐고(상속 100,000,000 → 472,935,000), 추가분담금은 조용히 빠졌다
+  //   (계획서 `successor-right-carryover-contribution.plan.md` F-1·F-3 · Q-2 a — 추가분담금은 근거 확인 전이라 계산을 거절한다).
+  if (isDeemedValueSuccessorRight(asset)) {
+    const valueField = deemedSuccessorRightValueField(asset);
+    if (parseAmount(asset[valueField]) <= 0) {
+      return fieldError(
+        valueField,
+        valueField === "fixedAcquisitionPrice"
+          ? `${label}: 증여 신고가액(증여일 현재 평가액)을 입력하세요. (소득세법 시행령 §163⑨ — 그 평가액을 취득가액으로 봅니다)`
+          : `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요. (소득세법 시행령 §163⑨ — 그 평가액을 취득가액으로 봅니다)`,
+      );
+    }
+    if (parseAmount(asset.successorRightAddedContribution) > 0) {
+      return fieldError("successorRightAddedContribution", `${label}: 상속·증여로 받은 조합원입주권은 취득 후 납입한 추가분담금을 현재 버전에서 계산에 반영하지 못합니다. 칸을 비우거나 세무사에게 수동 계산을 의뢰하세요.`);
+    }
+    return null;
+  }
 
   const mode = successorRightEstimationMode(asset);
 

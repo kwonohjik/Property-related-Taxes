@@ -21,6 +21,7 @@
 
 import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { isSec163_9Cause } from "./transfer-163-9-base-date";
 
 /**
  * 승계조합원 입주권 양도인가 — §166 경로와 §97①1호 경로를 가르는 **단일 술어**.
@@ -55,6 +56,38 @@ export function isCarryoverSuccessorRight(
   asset: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "transferType" | "acquisitionCause">,
 ): boolean {
   return isSuccessorRightTransfer(asset) && asset.acquisitionCause === "carryover_gift" && asset.transferType !== "burdened_gift";
+}
+
+/**
+ * 승계조합원 입주권을 **상속·증여로 받았는가**(부담부증여·이월과세 아님) — 취득가액은 「소득세법 시행령」 §163⑨의
+ * 상속개시일·증여일 현재 평가액(증여 신고가액 · 상속개시일 평가액)이다. ④가 §163⑨ 페이로드로 그 값을 쓰므로
+ * 승계 산정 방식·승계취득가액은 계산에 쓰이지 않는다(실측: 승계취득가액 900,000,000에도 세액 불변) — ⑤가 숨기고 ⑧도 요구하지 않는다.
+ * 계획서 `docs/02-design/features/successor-right-carryover-contribution.plan.md` Q-2 (a).
+ */
+export function isDeemedValueSuccessorRight(
+  asset: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "transferType" | "acquisitionCause">,
+): boolean {
+  return isSuccessorRightTransfer(asset) && isSec163_9Cause(asset.acquisitionCause) && asset.transferType !== "burdened_gift";
+}
+
+/** §163⑨ 평가액 칸 — 증여는 「증여 신고가액」(`fixedAcquisitionPrice`), 상속은 「상속개시일 평가액」(`publishedValueAtInheritance`). ④ §163⑨ 페이로드의 ① 소스와 같다. */
+export function deemedSuccessorRightValueField(
+  asset: Pick<AssetForm, "acquisitionCause">,
+): "fixedAcquisitionPrice" | "publishedValueAtInheritance" {
+  return asset.acquisitionCause === "gift" ? "fixedAcquisitionPrice" : "publishedValueAtInheritance";
+}
+
+/**
+ * 승계 입주권 실지거래가액 모드의 취득가액 — ④ 주 자산·컴패니언·⑥ 사이드바 **단일 leaf**.
+ * 상속·증여는 §163⑨ 평가액이고, 그 밖(매매 등)은 승계취득가액 + 추가분담금이다.
+ * 상속·증여 추가분담금은 ⑧이 거절한다(근거 확인 전 — 계획서 Q-2 a).
+ */
+export function successorRightActualAcquisition(
+  asset: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "transferType" | "acquisitionCause" | "successorRightAcqPrice" | "successorRightAddedContribution" | "fixedAcquisitionPrice" | "publishedValueAtInheritance">,
+): number {
+  return isDeemedValueSuccessorRight(asset)
+    ? parseAmount(asset[deemedSuccessorRightValueField(asset)] ?? "")
+    : successorRightAcquisitionTotal(asset);
 }
 
 /**
@@ -117,7 +150,8 @@ export function successorRightEstimationMode(
 ): "actual" | "estimated" | "appraisal" | "salesCase" {
   // 부담부증여는 실지거래가액만 받는다 — ⑤가 라디오를 숨기므로 남은 추계 플래그는 읽지 않는다(`isBgSuccessorRight`).
   // 이월과세도 라디오를 숨긴다(`isCarryoverSuccessorRight` — 취득가액은 이월과세 블록이 정한다). 남은 플래그로 매매사례·감정·환산 갈래를 타지 않는다.
-  if (asset.transferType === "burdened_gift" || asset.acquisitionCause === "carryover_gift") return "actual";
+  // 상속·증여도 숨긴다(`isDeemedValueSuccessorRight` — 취득가액은 §163⑨ 평가액). 종전 남은 환산 플래그는 ⑧ 통과 → ⑫ 400이었다.
+  if (asset.transferType === "burdened_gift" || asset.acquisitionCause === "carryover_gift" || isSec163_9Cause(asset.acquisitionCause)) return "actual";
   if (asset.isSalesCaseAcquisition === true) return "salesCase";
   if (asset.isAppraisalAcquisition === true) return "appraisal";
   if (asset.useEstimatedAcquisition === true) return "estimated";
@@ -183,13 +217,14 @@ export function successorRightTogglePatch(isSuccessor: boolean): Partial<AssetFo
 }
 
 /**
- * ④ 진입 사본 — 이월과세 승계 입주권에 남은 승계 산정 방식 플래그(감정·매매사례·환산)를 끈다. ⑤가 라디오를 숨기므로(Q-4 a) 남은 값은 고칠 칸이 없는데,
+ * ④ 진입 사본 — 이월과세·상속·증여 승계 입주권에 남은 승계 산정 방식 플래그(감정·매매사례·환산)를 끈다. ⑤가 라디오를 숨기므로(Q-4 a) 남은 값은 고칠 칸이 없는데,
  * 주 자산·컴패니언 ④가 원값을 읽어 이월과세 결과를 바꿨다(실측: 매매사례 잔재 472,935,000 → 299,010,000 · 환산 잔재 ⑫ 400).
+ * 상속·증여도 같다(종전 증여 환산 잔재 ⑧ 통과 → ⑫ 400 — 계획서 `successor-right-carryover-contribution.plan.md` Q-2 a).
  * 계획서 `docs/02-design/features/successor-right-carryover-validation.plan.md` §5.
  */
-export function withCarryoverSuccessorRightActual<F extends { assets: AssetForm[] }>(form: F): F {
+export function withHiddenSuccessorRightModeActual<F extends { assets: AssetForm[] }>(form: F): F {
   const assets = form.assets?.map((a) =>
-    isCarryoverSuccessorRight(a) && (a.useEstimatedAcquisition || a.isAppraisalAcquisition || a.isSalesCaseAcquisition)
+    (isCarryoverSuccessorRight(a) || isDeemedValueSuccessorRight(a)) && (a.useEstimatedAcquisition || a.isAppraisalAcquisition || a.isSalesCaseAcquisition)
       ? { ...a, useEstimatedAcquisition: false, isAppraisalAcquisition: false, isSalesCaseAcquisition: false }
       : a,
   );

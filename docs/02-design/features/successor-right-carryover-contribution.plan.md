@@ -99,3 +99,13 @@
 - 상속 승계 입주권 화면에 공시가격·승계취득가액·추가분담금 칸이 모두 뜨는지(이번은 ⑧·④·route만 측정).
 - 엔진 `house_apart` 도출이 입주권에 §164 비교를 여는지.
 - 실제 세율 미측정(mock).
+
+## 8. 구현 (Q-1 a · Q-2 a — 「권장안으로」)
+
+- **Q-1 (a)** 코드 변경 없음 — 이월과세 승계 입주권 추가분담금 > 0은 #2757 거절 그대로.
+- **술어·leaf** `lib/calc/transfer-successor-right.ts`: `isDeemedValueSuccessorRight`(승계 입주권 × 상속·증여 × 부담부증여 아님) · `deemedSuccessorRightValueField`(증여 `fixedAcquisitionPrice` · 상속 `publishedValueAtInheritance` — ④ §163⑨ 페이로드 ① 소스와 같다) · `successorRightActualAcquisition`(상속·증여면 평가액, 그 밖은 승계취득가액 + 추가분담금 — ④ 주 자산·컴패니언 leaf·⑥ 사이드바 공용). `successorRightEstimationMode`는 상속·증여도 `actual`. ④ 진입 사본 `withCarryoverSuccessorRightActual` → `withHiddenSuccessorRightModeActual`(상속·증여의 남은 매매사례·감정·환산 플래그도 끈다).
+- **⑧** `transfer-tax-validate-successor-right.ts`: 상속·증여면 승계 산정 방식·승계취득가액을 보지 않고 평가액(증여 신고가액 · 상속세 신고가액) 필수 · 추가분담금 > 0 거절(「상속·증여로 받은 조합원입주권은 … 현재 버전에서 계산에 반영하지 못합니다」). 함께 양도 매매사례 「첫 번째 자산에서만」 차단도 이 술어를 건너뛴다.
+- **⑤** `SuccessorRightAcquisitionBlock`: 상속·증여면 산정 방식 라디오·승계취득가액·추계 칸·미리보기를 숨기고 안내(`deemed-successor-right-note` — 「위 「증여 신고가액」/「상속세 신고가액」을 취득가액으로 봅니다(시행령 §163⑨)」)와 추가분담금 칸만 둔다.
+- 종전 남은 플래그 실측(승계 300M): 증여 환산 잔재 ⑧ 통과 → ⑫ 400 · 증여·상속 매매사례·감정 잔재 ⑧ 「취득당시 기준시가」 요구(숨은 칸) — 이제 383,010,000.
+- **검증**: anchor `__tests__/components/gift-inherit-successor-right-acq.anchor.test.tsx` 23건(수정 전 21 실패) · 뮤테이션 13/13 KILLED · vitest 전체 44,302 통과 · E2E `e2e/gift-inherit-successor-right-acq.spec.ts` GI-E1~E3 3회 연속 통과 · 수정 전 코드 3/3 실패 · 관련 E2E 26 스펙 133건 통과 · 라이트·다크·375px 확인(안내 문구의 칸 이름을 화면 라벨 「상속세 신고가액」에 맞춤).
+- **남은 것**: ⑫ — 라우트 직접 호출에서 상속·증여 승계 입주권에 §163⑨ 페이로드 없이 `acquisitionPrice`만 오면 그대로 쓴다(화면 경로 밖 · 미차단) · 부담부증여로 넘기는 상속·증여 취득 승계 입주권의 A(§159)는 승계취득가액 + 추가분담금 그대로(범위 밖) · 상속 평가방법 미선택 + 남은 신고가액 통과(입주권 외 상속과 같은 기존 동작) · §3의 근거 확인.
