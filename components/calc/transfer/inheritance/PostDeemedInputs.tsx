@@ -37,7 +37,7 @@ import { disclosureDateLabel } from "@/lib/tax-engine/transfer-split-part-cause"
 import { HouseFirstDisclosureEntryCard } from "../HouseFirstDisclosureFields";
 import { ApartFirstPriceEntryCard, ApartNtsPriceQuestion } from "./ApartNtsPriceQuestion";
 import { apartNtsQuestionRelevant, apartSec164FormOpen, isApartSec163_9Asset } from "@/lib/calc/apart-nts-price";
-import { isSec163_9HouseAsset } from "@/lib/calc/transfer-163-9-base-date";
+import { isSec163_9HouseAsset, isSec163_9LandAsset, sec164LandAreaField } from "@/lib/calc/transfer-163-9-base-date";
 
 /** 개별공시지가 최초 고시일 (소령 §164④) */
 const LAND_FIRST_DISCLOSURE_DATE = "1990-08-30";
@@ -75,7 +75,8 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   // 취득가액으로 하므로, ②(§164⑦)는 ①의 평가방법과 독립적으로 항상 산정 대상.
   const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
   /** 개별공시지가 최초고시(1990.8.30.) 前 상속·증여 토지 → §164④ 등급환산 대상 (소령 §163⑨1호) */
-  const landPre1990 = asset.assetKind === "land" && !!inheritanceDate && inheritanceDate < "1990-08-30";
+  // 토지를 출자한 원조합원 포함(`isSec163_9LandAsset` — 면적은 ① 기본정보 「토지 면적」).
+  const landPre1990 = isSec163_9LandAsset(asset) && !!inheritanceDate && inheritanceDate < "1990-08-30";
   // 상가건물·오피스텔: 토지/주택 보충적평가 보조계산(개별공시지가×면적 / 주택가격)은 부적합 →
   // 신고가액 직접 입력(상증법 §60~66 평가액). §164⑥ 취득당시 기준시가는 별도 섹션(취득 정보)에서 처리.
   const isCommercial = asset.assetKind === "commercial_building";
@@ -426,7 +427,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
               pre1990GradeMode: asset.pre1990GradeMode,
             }}
             onChange={(patch) => onChange(patch)}
-            acquisitionArea={asset.acquisitionArea || undefined}
+            acquisitionArea={asset[sec164LandAreaField(asset)] || undefined}
             jibun={asset.addressJibun || undefined}
             acquisitionDate={asset.acquisitionDate || undefined}
             transferDate={transferDate}

@@ -294,6 +294,20 @@ export function buildBurdenedGiftBreakdown(params: {
     );
   }
 
+  /**
+   * 기준시가 평가인데 취득시 기준시가 합이 0 — 취득가액이 「취득시 기준시가 × 채무비율」(「소득세법 시행령」 제159조 제1항 제1호 괄호)이라 0이 된다.
+   * 그대로 두면 양도차익이 통째로 부풀지만 막히지 않는 오답이다(실측 194,000,000 → 400,000,000). 위 시가 모드 담보 승 가드와 같은 요구다(자동 fallback 금지).
+   * 의제취득일 전 자산은 의제취득일 기준시가를 요구하는 자기 안내가 따로 있고(`resolveWholeBgAcquisition`), 입주권은 괄호가 발동하지 않는다(`acqStdPriceForced`).
+   * ⑧이 화면에서 먼저 막고, 여기는 API 직접 호출·함께 양도를 한 곳에서 막는다.
+   */
+  if (isStandardMode && acqStdPriceForced && !preDeemed && landStdPriceAtAcquisition + buildingStdPriceAtAcquisition <= 0) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "[burdened_gift] 기준시가로 평가했는데 취득시 기준시가가 없습니다. 취득가액이 취득시 기준시가 × 채무비율로 정해지므로 " +
+        "(「소득세법 시행령」 제159조 제1항 제1호 괄호) 취득시 기준시가를 입력하세요.",
+    );
+  }
+
   // 괄호 발동 판정(`acqStdPriceForced`)은 위 `resolveBgAcquisitionBasis`가 단일 소스 — 겸용 부담부증여도 같은 함수를 부른다.
 
   // STEP 4 ~ 5.5: 자산별 취득가액·필요경비 슬롯 — `burdened-gift-acquisition.ts`(파트별 3자 max는 `burdened-gift-part-pre-deemed.ts`).

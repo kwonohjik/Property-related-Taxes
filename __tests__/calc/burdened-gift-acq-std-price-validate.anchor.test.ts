@@ -113,18 +113,12 @@ describe("N 수치 — 취득시 기준시가가 취득가액을 가른다 (채�
     expect(b.transferPrice).toBe(500_000_000);
   });
 
-  it("N-2 🔴 미입력(0) → 취득가액·개산공제 모두 0 (차단이 없으면 이 값이 그대로 나간다)", () => {
-    const b = breakdown(0).perAsset.building;
-    expect(b.acquisitionPrice).toBe(0);
-    expect(b.estimatedDeduction).toBe(0);
-    expect(b.transferPrice).toBe(500_000_000); // 양도가액은 그대로 → 차익만 부푼다
+  it("N-2 🔴 미입력(0) → 엔진도 400 (종전: 취득가액·개산공제 모두 0 · 양도가액은 그대로라 차익만 부풀었다)", () => {
+    expect(() => breakdown(0)).toThrow(/취득시 기준시가가 없습니다/);
   });
 
-  it("🔑 두 경우의 차이가 곧 과대과세분이다", () => {
+  it("🔑 입력한 값이 곧 과대과세를 막는 분이다 — 취득가액 + 개산공제 = 257,500,000", () => {
     const five = breakdown(500_000_000).perAsset.building;
-    const zero = breakdown(0).perAsset.building;
-    const gap =
-      five.acquisitionPrice + five.estimatedDeduction - (zero.acquisitionPrice + zero.estimatedDeduction);
-    expect(gap).toBe(257_500_000);
+    expect(five.acquisitionPrice + five.estimatedDeduction).toBe(257_500_000);
   });
 });

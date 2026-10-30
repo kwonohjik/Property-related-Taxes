@@ -12,7 +12,8 @@ import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { partCarryover } from "./transfer-land-part-cause";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
-import { isSec163_9Cause } from "./transfer-163-9-base-date";
+import { isSec163_9Cause, isOriginalMemberLandAsset } from "./transfer-163-9-base-date";
+import { sec164LandStatus } from "./sec164-required-fields";
 import { representativeParcelAcquisitionDate } from "./transfer-tax-api-parcels";
 import { isSuccessorRightTransfer } from "./transfer-successor-right";
 import { isBgSuccessorRight } from "./transfer-successor-right";
@@ -111,8 +112,12 @@ export function primaryAcquisitionModeFlags(primary: AssetForm) {
    *    경우에만** payload가 생긴다 — 상가 §164⑥·주택 §164⑤~⑦과 같은 all-or-nothing opt-in이다.
    *    ⇒ PR#731이 막으려던 stale 래치 오염은 재발하지 않는다(이 게이트는 override를 켜지 않는다).
    */
+  // 토지를 출자한 원조합원 포함 — 그쪽은 단서 1호 구간(`sec164LandStatus` — 1990.8.30. 전 상속·증여)에서만 싣는다:
+  // 공시 후 상속에 남은 등급 값이 STEP 0.4 환산 강제를 재개발 경로로 끌고 가지 않게(계획서 successor-right-carryover-contribution.plan.md §16 Q-1).
   const hasPre1990ForSec164 =
-    primary.assetKind === "land" && isSec163_9Cause(primary.acquisitionCause);
+    primary.assetKind === "land"
+      ? isSec163_9Cause(primary.acquisitionCause)
+      : isOriginalMemberLandAsset(primary) && sec164LandStatus(primary) !== null;
   // §164⑦ PHD 모드: standardPriceAt* 는 3-시점 입력으로 자동 도출 → API body에서 제외
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(공동주택 사례 23 등)해도 PHD 경로는 표준시가 직접 입력 불요.
   // D1-2 — 토지 원인 혼합이 유효하면 PHD 무시(⑧ 토지 취득일 후퇴·⑤ 안내와 같은 술어).

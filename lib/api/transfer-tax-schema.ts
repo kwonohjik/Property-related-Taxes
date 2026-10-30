@@ -38,6 +38,7 @@ import { refineDeemedSuccessorRightCompanion } from "./transfer-tax-schema-succe
 import { refineSuccessorRightNoSec164Inputs } from "./transfer-tax-schema-successor-deemed";
 import { refineOriginalMemberDeemedPrimary } from "./transfer-tax-schema-original-member-deemed";
 import { refineOriginalMemberDeemedCompanion } from "./transfer-tax-schema-original-member-deemed";
+import { refineOriginalMemberSec164Channel } from "./transfer-tax-schema-original-member-deemed";
 import { refineHouseFirstDisclosureDate, refineSplitPartCause } from "./transfer-tax-schema-required-refines-2a";
 import { refineApartNtsPrice } from "./transfer-tax-schema-required-refines-2a";
 import { refineLandRebuild } from "./transfer-tax-schema-land-rebuild";
@@ -147,6 +148,7 @@ export const propertySchema = z
     refineSuccessorRightNoSec164Inputs(data, data.propertyType === "right_to_move_in", ctx);
     // 원조합원 종전자산 상속·증여 — §163⑨ 평가액(또는 ②) 필수(「종전 부동산 실거래가」 fallback 차단)
     refineOriginalMemberDeemedPrimary(data, ctx);
+    refineOriginalMemberSec164Channel(data, ctx);
     refineAmendmentInputs(data.amendment, ctx);
     // 일반건물 × 부담부증여 — 환산·증축 payload 가 §159를 침묵 무시하는 것을 400 으로 (PR-1 · 안전망)
     refineGbBurdenedGiftActualPath(data, ctx);
