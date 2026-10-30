@@ -64,19 +64,26 @@ export function bgCollateralForcesStdAcq(asset: AssetForm): boolean {
 /**
  * 함께 부담부증여 묶음에서 **비보충 승자(담보 §66·임대 §61⑤)를 계산하지 않는** 자산인가 — 화면·엔진의 취득가액 처리를 확인하지 못한 범위다.
  * · 지분 보유: 승자 판정(`bgWholeGiftValuation`)과 ⑤ 칸 노출(`bgCollateralForcesStdAcq`)이 단독 소유만 다룬다.
- * · 이월과세 · 조합원입주권 · 겸용주택: 위 `bgCollateralForcesStdAcq` 주석과 같다.
+ * · 조합원입주권 · 겸용주택: 위 `bgCollateralForcesStdAcq` 주석과 같다.
+ * · 이월과세: **시가 모드만** 막는다(`bgCarryoverWinnerUnsupported`). 기준시가 모드는 단건 ⑧이 이미 담보·임대 승을 열고, 취득가액이 두 시나리오 모두 취득시 기준시가 ×
+ *   채무비율이라(A = 당초 증여자 · B = 양도인) 균일 승자 묶음의 ⑫ 값이 단건 합·오라클과 맞는다(`bg-carryover-std-uniform-bundle.plan.md`).
  * 단건 ⑧의 담보 승 차단(`transfer-tax-validate-bg.ts`)보다 좁히지 않는다 — 묶음에서 풀리는 것은 이 범위 밖의 균일 승자뿐이다.
  */
 export function bgNonSupplementaryWinnerUnsupported(asset: AssetForm): boolean {
   if (getOwnershipRatio(asset) < 1) return true;
-  return asset.assetKind === "right_to_move_in" || bgAnyCarryover(asset) || isMixedBurdenedGift(asset);
+  return asset.assetKind === "right_to_move_in" || bgCarryoverWinnerUnsupported(asset) || isMixedBurdenedGift(asset);
+}
+
+/** 이월과세 자산의 비보충 승자를 묶음에서 계산하지 않는가 — 시가 모드만 막는다(담보 승은 취득가액이 당초 증여자 기준시가로 강제되는 화면을 열지 않았다 · 2단계). */
+function bgCarryoverWinnerUnsupported(asset: AssetForm): boolean {
+  return bgAnyCarryover(asset) && asset.bgValuationMode !== "sangjeungbeop_standard";
 }
 
 /** `bgNonSupplementaryWinnerUnsupported`가 true인 이유 — ⑧ 안내 문구용. 판정 순서는 위 함수와 같다. */
 export function bgUnsupportedWinnerReason(asset: AssetForm): string {
   if (getOwnershipRatio(asset) < 1) return "지분 보유";
   if (asset.assetKind === "right_to_move_in") return "조합원입주권";
-  if (bgAnyCarryover(asset)) return "이월과세";
+  if (bgCarryoverWinnerUnsupported(asset)) return "이월과세";
   return "겸용주택";
 }
 
