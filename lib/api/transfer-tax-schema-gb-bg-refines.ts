@@ -31,7 +31,7 @@ export const GB_BG_INHERIT_NON_ACTUAL_MESSAGE =
   "(소득세법 시행령 §163⑨ · 소득세법 §97①1호 단서). 취득가액 산정방식을 «실지취득가액 안분»으로 하고 상속개시일 평가액을 입력하세요.";
 
 export const GB_BG_MIXED_WINNER_MESSAGE =
-  "일반건물 함께 부담부증여 — 증여재산 평가액의 승자(보충적평가·담보평가·임대평가)가 자산마다 달라 합산 증여가액이 자산별 증여가액의 합과 어긋납니다 " +
+  "함께 부담부증여 — 증여재산 평가액의 승자(보충적평가·담보평가·임대평가)가 자산마다 달라 합산 증여가액이 자산별 증여가액의 합과 어긋납니다 " +
   "(증여세가 증여계약 전체로 1회 계산되는데 합산 증여가액이 성분 합의 최댓값이라 자산별 최댓값의 합과 다릅니다 — 「상속세 및 증여세법」 §61·§66). " +
   "함께 양도를 끄고 단건으로 계산하거나, 승자가 같게 입력하세요.";
 
@@ -43,6 +43,7 @@ interface Subject {
   acquisitionCause?: string;
   acquisitionDate?: string;
   ownershipRatio?: number;
+  fractionalSplitBundle?: boolean;
   burdenedGiftInfo?: unknown;
   generalBuildingValuation?: Gbv;
   generalBuildingShares?: { valuation?: Gbv; burdenedGiftInfo?: unknown }[];
@@ -94,24 +95,31 @@ function bgInheritNonActualBlocked(cause: string | undefined, date: string | und
 }
 
 /**
- * 함께 부담부증여(주 자산 + 컴패니언) — 자산별 상증법 평가 승자(보충적·담보·임대)가 **서로 다르면** 막는다.
+ * 양도 쪽 입력이 있어 평가 승자를 정할 수 있는가 — 시가 모드는 시가, 기준시가 모드는 양도시 토지+건물 기준시가(`computeSangjeungbeopValuation` 의 보충적평가 항).
+ * 취득시 기준시가는 승자와 무관하다(일반건물은 `requireStd` 가 따로 400). 주택·상가·토지는 토지 칸이 0 이라 4칸 검사로는 늘 보류됐다.
+ */
+function bgWinnerDeterminable(info: unknown): boolean {
+  const i = info as Record<string, unknown>;
+  const n = (key: string): number => (typeof i[key] === "number" ? (i[key] as number) : 0);
+  return i.valuationMode === "sangjeungbeop_market" ? n("marketValueAtTransfer") > 0 : n("landStdPriceAtTransfer") + n("buildingStdPriceAtTransfer") > 0;
+}
+
+/**
+ * 함께 부담부증여(주 자산 + 컴패니언) — 자산별 상증법 평가 승자(보충적·담보·임대)가 **서로 다르면** 막는다. **자산 종류와 무관하다.**
  * ④ 가 증여세 1회 산정용 합산 info 를 성분 단순 합으로 만들어(`buildCompanionBurdenedGiftWholeInfo`) 합산 증여가액이 성분 합의 max 가 되는데,
- * 자산별 max 의 합(ΣAᵢ)은 승자가 같을 때만 그와 같다(Σmax ≠ max(Σ성분)). 승자가 섞이면 증여세가 틀린다 — 측정: 담보 1.2B + 보충 1.0B 에서 증여세 43,650,000 과소
- * (계획서 `docs/00-pm/bg-collateral-bundle-gift-value.plan.md` §3). **균일 승자는 ⑫ 가 맞게 계산하므로 막지 않는다** — ⑧(`transfer-tax-validate.ts` 승자 게이트)은 비보충
- * 승자를 전부 막는 상위 집합이라 「⑧ 통과 ↔ ⑫ 차단」 모순은 생기지 않는다. 승자는 ⑧ 과 같은 `companionBurdenedGiftValuations`(지분 축소 → Max)로 정한다.
+ * 자산별 max 의 합(ΣAᵢ)은 승자가 같을 때만 그와 같다(Σmax ≠ max(Σ성분)). 승자가 섞이면 증여세가 틀린다 — 측정: 일반건물 담보 1.2B + 보충 1.0B 에서 증여세 43,650,000 과소
+ * (계획서 `docs/00-pm/bg-collateral-bundle-gift-value.plan.md` §3), 주택 담보+보충 쌍에서 97,000,000 과소(`docs/00-pm/bg-companion-parity.plan.md` PB-1). **균일 승자는 ⑫ 가 맞게 계산하므로 막지 않는다** —
+ * ⑧(`transfer-tax-validate.ts` 승자 게이트)은 비보충 승자를 전부 막는 상위 집합이라 「⑧ 통과 ↔ ⑫ 차단」 모순은 생기지 않는다. 승자는 ⑧ 과 같은 `companionBurdenedGiftValuations`(지분 축소 → Max)로 정한다.
  *
- * 축 B(지분 2개 이상)는 물건이 하나라 합산이 없어 대상이 아니다. 기준시가 4칸이 비면 승자를 못 정하므로 보류한다(그 칸은 `requireStd` 가 400).
+ * 같은 물건의 지분 분할(축 B — 일반건물 지분 2개 이상 · `fractionalSplitBundle`)은 대상이 아니다 — 물건이 하나라 합산이 없고 지분마다 값이 비례한다.
+ * 한 자산이라도 양도 쪽 입력이 비어 승자를 못 정하면 보류한다(그 입력은 각자의 필수 검증이 400).
  */
 function bgBundleMixedWinner(data: Subject): boolean {
-  if ((data.generalBuildingShares?.length ?? 0) >= 2) return false;
+  if ((data.generalBuildingShares?.length ?? 0) >= 2 || data.fractionalSplitBundle === true) return false;
   const entries: { info: unknown; ratio: number }[] = [];
-  if (data.propertyType === "general_building" && data.transferType === "burdened_gift" && data.burdenedGiftInfo) {
-    entries.push({ info: data.burdenedGiftInfo, ratio: data.ownershipRatio ?? 1 });
-  }
+  if (data.transferType === "burdened_gift" && data.burdenedGiftInfo) entries.push({ info: data.burdenedGiftInfo, ratio: data.ownershipRatio ?? 1 });
   for (const c of data.companionAssets ?? []) if (c.burdenedGiftInfo) entries.push({ info: c.burdenedGiftInfo, ratio: c.ownershipRatio ?? 1 });
-  if (entries.length < 2) return false;
-  const complete = entries.every(({ info }) => GB_BG_STD_KEYS.every(([key]) => typeof (info as Record<string, unknown>)[key] === "number" && ((info as Record<string, unknown>)[key] as number) > 0));
-  if (!complete) return false;
+  if (entries.length < 2 || !entries.every(({ info }) => bgWinnerDeterminable(info))) return false;
   const modes = companionBurdenedGiftValuations(
     entries.map((e) => e.info as Parameters<typeof companionBurdenedGiftValuations>[0][number]),
     entries.map((e) => e.ratio),
