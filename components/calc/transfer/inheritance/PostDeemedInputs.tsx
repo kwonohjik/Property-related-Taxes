@@ -37,6 +37,7 @@ import { disclosureDateLabel } from "@/lib/tax-engine/transfer-split-part-cause"
 import { HouseFirstDisclosureEntryCard } from "../HouseFirstDisclosureFields";
 import { ApartFirstPriceEntryCard, ApartNtsPriceQuestion } from "./ApartNtsPriceQuestion";
 import { apartNtsQuestionRelevant, apartSec164FormOpen, isApartSec163_9Asset } from "@/lib/calc/apart-nts-price";
+import { isSec163_9HouseAsset } from "@/lib/calc/transfer-163-9-base-date";
 
 /** 개별공시지가 최초 고시일 (소령 §164④) */
 const LAND_FIRST_DISCLOSURE_DATE = "1990-08-30";
@@ -80,7 +81,8 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   const isCommercial = asset.assetKind === "commercial_building";
   // 토지/주택 판정은 상단 assetKind로 파생(상속 자산구분 라디오 폐지 대응).
   const isLand = asset.assetKind === "land";
-  const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
+  // 원조합원 입주권(종전 주택)도 — 인가 전 상속·증여받은 것은 기존건물이다(`isSec163_9HouseAsset`).
+  const isHouse = isSec163_9HouseAsset(asset);
   // 주택 개별/공동 — 미선택 시 동·호 유무로 기본 표시(세액 무관, 조회·라벨용). 파생은 공용 단일 소스.
   const kind = deriveInheritanceHouseKind(asset);
   // 구간 끝 = 이 주택의 개별주택가격 최초 공시일(단독·다가구 명시일 때만, 아니면 2005-04-30 — `houseDisclosureBoundaryOf`).

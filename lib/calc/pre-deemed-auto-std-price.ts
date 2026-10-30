@@ -12,6 +12,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { apartSec164FormOpen, isApartSec163_9Asset } from "./apart-nts-price";
+import { isSec163_9HouseAsset } from "./transfer-163-9-base-date";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-inheritance";
 import { computeCommercial164_6StdPrice } from "@/lib/tax-engine/inheritance-acquisition-helpers";
@@ -24,7 +25,7 @@ const PRE_1990_DATE = "1990-08-30";
 /** 의제취득일 전이면 주택의 §164⑦ 3시점 입력이 열려 있는가 — 공동주택은 국세청 고시 가액 질문이 정한다. */
 export function preDeemedShowsHouseValuation(asset: AssetForm): boolean {
   if (isApartSec163_9Asset(asset)) return apartSec164FormOpen(asset);
-  return asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
+  return isSec163_9HouseAsset(asset);
 }
 
 export interface PreDeemedAutoStdPrices {

@@ -16,6 +16,7 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { isSec163_9HouseAsset } from "./transfer-163-9-base-date";
 
 /**
  * 상속 주택 개별/공동 구분 — **UI·API 공용 단일 소스**.
@@ -47,7 +48,8 @@ export function deriveEngineInheritanceAssetKind(
   asset: AssetForm,
 ): "land" | "house_individual" | "house_apart" {
   if (asset.assetKind === "land") return "land";
-  if (asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt") {
+  // 원조합원 입주권(종전 주택)은 종전 주택의 개별/공동 구분을 쓴다 — §164⑦·공동주택 §164⑥ 질문이 갈린다(`isSec163_9HouseAsset`).
+  if (isSec163_9HouseAsset(asset)) {
     return deriveInheritanceHouseKind(asset);
   }
   return "house_apart";

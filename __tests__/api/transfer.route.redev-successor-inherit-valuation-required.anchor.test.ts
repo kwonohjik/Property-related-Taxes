@@ -179,7 +179,9 @@ describe("H-3 정상 입력 · 제외 축 — 값 불변", () => {
   });
   it("H-3d 원조합원 상속 · 매매 승계 — 이 규칙은 걸리지 않는다", async () => {
     const original = await run(single({ ...INH, publishedValueAtInheritance: "", redevIsSuccessorMember: "", acquisitionDate: "2010-04-15", decedentAcquisitionDate: "2005-01-01" }));
-    expect(original.fields).not.toContain("publishedValueAtInheritance");
+    // ① 빈칸은 이제 원조합원 규칙이 막는다(계획서 successor-right-carryover-contribution §15 Q-2) — 승계 규칙 문구가 아니다
+    expect(original.messages.join(" ")).toContain("종전 부동산 실거래가로는 계산하지 않습니다");
+    expect(original.messages.join(" ")).not.toMatch(/승계/);
     const purchase = await run(single());
     expect(purchase.fields).toEqual([]);
     expect(purchase.tax).toBe(327_250_000);

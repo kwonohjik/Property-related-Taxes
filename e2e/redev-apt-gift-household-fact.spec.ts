@@ -40,7 +40,8 @@ function seedState(assetOver: Record<string, unknown>) {
             donorAcquisitionDate: "2008-01-01",
             giftDonorRelation: "spouse",
             giftSameHousehold: "",
-            fixedAcquisitionPrice: "",
+            // 증여 신고가액(§163⑨) — 원조합원 증여는 필수(계획서 successor-right-carryover-contribution §15 Q-2) · 종전 부동산 실거래가와 같은 값이라 세액 불변
+            fixedAcquisitionPrice: "400000000",
             actualSalePrice: "1000000000",
             redevSubject: "apt",
             redevApprovalDate: "2019-06-01",

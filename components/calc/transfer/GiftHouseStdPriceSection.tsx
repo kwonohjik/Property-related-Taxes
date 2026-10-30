@@ -23,7 +23,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { HouseValuationSection } from "@/components/calc/transfer/inheritance/HouseValuationSection";
 import {
   deriveSec163_9BaseDate,
-  isSec163_9House,
+  isSec163_9HouseAsset,
   HOUSE_FIRST_DISCLOSURE,
 } from "@/lib/calc/transfer-163-9-base-date";
 import { houseDisclosureBoundaryOf } from "@/lib/calc/house-first-disclosure";
@@ -48,7 +48,7 @@ export function GiftHouseStdPriceSection({ asset, onChange, transferDate }: Prop
   const giftDate = deriveSec163_9BaseDate(asset);
   // 필수 항목 개수는 단일 소스에서 받는다 — 문구에 숫자를 하드코딩하면 필드가 늘 때 낡는다.
   const status = sec164HouseStatus(asset);
-  if (asset.acquisitionCause !== "gift" || !isSec163_9House(asset.assetKind) || !giftDate) return null;
+  if (asset.acquisitionCause !== "gift" || !isSec163_9HouseAsset(asset) || !giftDate) return null;
   // 겸용주택은 주택분 §164⑦을 개별주택가격 미공시(PHD) 패널이 받는다 — 이 카드의 8칸은 겸용 계산에 쓰이지 않는다(`sec164HouseStatus`도 겸용은 null).
   if (asset.isMixedUseHouse === true) return null;
   // 공동주택 — 증여일 당시 국세청 고시 가액 유무를 먼저 묻는다(필수·모름 없음). 「없었음」일 때만 아래 비교 입력을 연다(`apart-nts-price.ts`).

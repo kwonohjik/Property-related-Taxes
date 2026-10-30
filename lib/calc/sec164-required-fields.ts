@@ -16,7 +16,7 @@
  */
 
 import { parseAmount } from "@/lib/calc/number-parse";
-import { isSec163_9Cause, deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
+import { isSec163_9Cause, deriveSec163_9BaseDate, isSec163_9HouseAsset } from "./transfer-163-9-base-date";
 import { houseDisclosureBoundaryOf } from "./house-first-disclosure";
 import { apartSec164FormOpen, isApartSec163_9Asset } from "./apart-nts-price";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -109,8 +109,7 @@ function merge(clause: string, ...parts: ReturnType<typeof tally>[]): Sec164Fiel
  * 길이다 — 그 전에는 개별공시지가가 고시된 적이 없다), **後**면 취득당시 단가 필수).
  */
 export function sec164HouseStatus(asset: AssetForm): Sec164FieldStatus | null {
-  const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
-  if (!isHouse || !isSec163_9Cause(asset.acquisitionCause)) return null;
+  if (!isSec163_9HouseAsset(asset) || !isSec163_9Cause(asset.acquisitionCause)) return null;
   // 겸용주택은 이 8칸(`HouseValuationSection`)을 그리지 않는다 — 주택분 §164⑦은 개별주택가격 미공시(PHD) 패널이 받는다.
   //   빼지 않으면 그 패널과 함께 쓰는 토지등급 칸 4개를 「8칸 중 4칸」으로 읽어 숨은 칸으로 막았다(1985.1.1.~1990.8.29. 상속 겸용 막다른 길).
   if (asset.isMixedUseHouse === true) return null;
