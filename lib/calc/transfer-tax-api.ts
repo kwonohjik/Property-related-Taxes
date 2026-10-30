@@ -66,6 +66,8 @@ import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
 import { buildBurdenedGiftInfo, burdenedGiftBundleTotalSalePrice } from "./transfer-tax-api-burdened-gift";
 import { buildCompanionBurdenedGiftWholeInfo } from "./transfer-tax-api-burdened-gift";
+import { burdenedGiftAssumedDebtOf } from "./burdened-gift-assumed-debt";
+import { burdenedGiftAssumedDebtTotal } from "./burdened-gift-assumed-debt";
 import { gbBgInfoTransferDate } from "./transfer-tax-api-burdened-gift";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 import {
@@ -251,11 +253,13 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
           : formTotalTransferExpense; // 단건: form-level이 있으면 사용, 없으면 0
 
   // 부담부증여 (소령 §159) — 양도가액은 엔진 STEP 0.48에서 채무 안분 후 자동 override.
-  // 단, Zod schema는 transferPrice >0 요구이므로 채무 합계를 placeholder로 전달 (엔진에서 다시 계산).
+  // 단, Zod schema는 transferPrice >0 요구이므로 채무 합계를 placeholder로 전달 (엔진에서 다시 계산 — 값은 응답에 영향이 없다: 실측 1·2억·50억 응답 동일).
+  // 함께 부담부증여 묶음(축 B 아님)은 신고 단위 합계다 — 주 자산 자신의 채무는 0 일 수 있다(채무는 설정된 물건에만 입력). 종전에는 주 자산 채무만 실어 0 이면 400 이었다.
   const isBurdenedGiftPrimary = primary.transferType === "burdened_gift";
   const burdenedGiftPlaceholderTransferPrice = isBurdenedGiftPrimary
-    ? (parseAmount(primary.bgLendingDepositTotal) || 0) +
-      (parseAmount(primary.bgMortgageDebtAmount) || 0)
+    ? form.assets.length > 1 && !fractionalBundleMerge
+      ? burdenedGiftAssumedDebtTotal(form.assets)
+      : burdenedGiftAssumedDebtOf(primary)
     : 0;
 
   // 사례 46 — receiveOnly 모드: transferPrice = settlementAmount, transferDate = settlementSaleDate 자동 미러
