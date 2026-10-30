@@ -29,6 +29,7 @@ vi.mock("next/navigation", () => ({
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { postTransfer } from "../calc/_helpers/redev-one-house-route";
+import { capResidenceToHolding } from "../calc/_helpers/held-residence";
 import { AggregatedTaxSummary } from "@/components/calc/results/BundledAllocationSubCards";
 
 beforeEach(() => {
@@ -55,7 +56,7 @@ const fwd = (houseAcq: string, cardAcq: string, area: number) => ({
 });
 
 async function summary(body: Loose) {
-  const res = await postTransfer(body);
+  const res = await postTransfer(capResidenceToHolding(body));
   expect(res.status, JSON.stringify((res.json as Loose).error)).toBe(200);
   const aggregated = (res.json as Loose).data.aggregated;
   const { container } = render(<AggregatedTaxSummary aggregated={aggregated} />);

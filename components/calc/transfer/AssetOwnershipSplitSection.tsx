@@ -26,6 +26,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
 import { landCauseMixActive } from "@/lib/calc/transfer-land-part-cause";
+import { LAND_ONLY_REPEATED_MERGE_NOTE } from "@/lib/tax-engine/land-only-owner-household";
 
 // 게이트 술어는 ④·⑧·⑥과 공용 leaf다(M2 — `lib/calc/self-owns-scope.ts`). 종전 import 경로 유지용 재export.
 export { isLandBuildingSplitable } from "@/lib/calc/self-owns-scope";
@@ -157,6 +158,7 @@ export function AssetOwnershipSplitSection(props: {
                 value={asset.buildingOwnerHouseholdMergeDate ?? ""}
                 onChange={(s) => onChange({ buildingOwnerHouseholdMergeDate: s || undefined })}
               />
+              <p className="text-caption text-muted-foreground">{LAND_ONLY_REPEATED_MERGE_NOTE}</p>
             </div>
           )}
         </ToneCard>

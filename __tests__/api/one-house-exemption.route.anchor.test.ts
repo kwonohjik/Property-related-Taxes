@@ -237,7 +237,8 @@ describe("POST /api/calc/one-house-exemption", () => {
   });
 
   it("[R-2] 보유 2년 미달 → 과세 + 「이 날짜까지 보유」 기한이 응답에 실린다", async () => {
-    const { json } = await post({ acquisitionDate: "2023-06-01" });
+    // 거주는 보유기간 중만 산입한다(⑫ 상한) — 취득 2023-06-01 · 양도 2024-06-01 = 12개월
+    const { json } = await post({ acquisitionDate: "2023-06-01", residencePeriodMonths: 12 });
     expect(json.data.judgment.isExempt).toBe(false);
     expect(json.data.judgment.pending).toHaveLength(1);
     expect(json.data.judgment.pending[0].id).toBe("154-1-holding-years");

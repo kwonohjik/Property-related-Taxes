@@ -25,6 +25,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { postTransfer } from "../calc/_helpers/redev-one-house-route";
+import { capResidenceToHolding } from "../calc/_helpers/held-residence";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -78,7 +79,7 @@ const SAM_REV = (d?: string) => ({ ...MERGE(d), ...REVERSE_LAND_ONLY });
 type Card = { propertyId: string; steps?: { label: string; formula?: string }[]; transferGain: number; income: number; longTermHoldingDeduction: number; isPartialExempt?: boolean; appliedRate?: number; rateClause?: string };
 type Agg = { totalTax: number; warnings?: string[]; properties: Card[] };
 async function agg(body: Loose): Promise<Agg> {
-  const res = await postTransfer(body);
+  const res = await postTransfer(capResidenceToHolding(body));
   expect(res.status, JSON.stringify((res.json as Loose).error)).toBe(200);
   return (res.json as Loose).data.aggregated as Agg;
 }
