@@ -16,6 +16,7 @@ import {
 } from "@/lib/calc/transfer-successor-right";
 import { postApprovalExpensesInScope } from "@/lib/calc/redev-field-scope";
 import { redevActualAcquisitionPriceRaw } from "@/lib/calc/redev-acquisition-price-source";
+import { isCarryoverSuccessorRight } from "@/lib/calc/transfer-successor-right";
 import { normalizeRedevCarryoverAcqMode } from "@/lib/calc/redev-carryover-acq-mode";
 import { effectiveCarryoverDonorSplit } from "@/lib/calc/transfer-land-part-cause";
 
@@ -85,6 +86,8 @@ export function directAcqRaw(a: AssetForm): { value: number; pending: boolean } 
   //    (실측 사이드바 500,000,000 vs 엔진 환산취득가 200,000,000).
   //    ⇒ ④와 **같은 술어**(`successorRightEstimationMode`)로 갈래를 나눈다.
   if (isSuccessorRightTransfer(a)) {
+    // 이월과세 — 취득가액은 이월과세 블록(증여자 취득가액·환산 · A·B 비교)이 정한다. 숨은 승계취득가액을 보이지 않는다(재개발 이월과세와 같이 계산 후 확정).
+    if (isCarryoverSuccessorRight(a)) return { value: 0, pending: false };
     switch (successorRightEstimationMode(a)) {
       case "actual":
         return { value: successorRightAcquisitionTotal(a), pending: false };

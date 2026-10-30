@@ -16,6 +16,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { validateCarryoverAsset } from "./transfer-tax-validate-carryover-asset";
 import { validateCarryoverEventHead } from "./transfer-tax-validate-carryover-asset";
 import { validateCarryoverEventTail } from "./transfer-tax-validate-carryover-asset";
+import { isCarryoverSuccessorRight } from "./transfer-successor-right";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
@@ -279,7 +280,17 @@ function validateAssetAcquisitionBranches(
    * 술어는 `transfer-successor-right.ts` 단일 소스(UI·API·사이드바 공용).
    */
   if (isSuccessorRightTransfer(asset)) {
-    return validateSuccessorRightAsset(asset, label, typeToggleSection);
+    const succErr = validateSuccessorRightAsset(asset, label, typeToggleSection);
+    if (succErr || !isCarryoverSuccessorRight(asset)) return succErr;
+    // 이월과세(비부담부증여) — 비재개발 이월과세와 같은 검증(⑫ `refineCarryoverTaxation`·환산 기준시가 규칙과 같다 · 계획서 `successor-right-carryover-validation.plan.md` Q-2 a).
+    //   종전엔 이월과세 칸을 보지 않아 주 자산은 ⑫ 400, 함께 양도는 환산 기준시가 빈칸이 A 취득가액 0으로 계산됐다(G-3·G-4).
+    //   취득 후 납입 추가분담금은 이월과세 계산(A·B)에 들어가지 않는다 — 법령 확인 전이라 계산을 거절한다(Q-4 a).
+    if (parseAmount(asset.successorRightAddedContribution) > 0)
+      return fieldError(
+        "successorRightAddedContribution",
+        `${label}: 이월과세로 증여받은 조합원입주권은 취득 후 납입한 추가분담금을 현재 버전에서 계산에 반영하지 못합니다. 칸을 비우거나 세무사에게 수동 계산을 의뢰하세요.`,
+      );
+    return validateCarryoverAsset(asset, label, formTransferDate, { isNonPrimaryAsset, form });
   }
 
   // ── 재개발/재건축 (시행령 §166) — assetKind="redevelopment_apt" 또는 "right_to_move_in" 시 ──

@@ -60,6 +60,7 @@ import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { carryoverEventForm } from "./transfer-tax-api-carryover";
 import { withDonorBuilt } from "./transfer-tax-api-donor-built";
+import { withCarryoverSuccessorRightActual } from "./transfer-successor-right";
 import { carryoverAcquisitionDateFallback, primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
@@ -113,8 +114,8 @@ export type TransferAPIResult = SingleTransferResult | BundledTransferResult | M
 
 export async function callTransferTaxAPI(formInput: TransferFormData): Promise<TransferAPIResult> {
   // 화면에 보이는 양도비만 싣는다 — 숨은 총 양도비·꺼진 자산 양도비를 비운다(O-9, ⑥과 같은 leaf).
-  // 재개발 × 이월과세 — ⑤ 라디오 대신 이월과세 ② 토글이 산정 방식을 정한 사본(⑧·⑤와 같은 leaf · `redev-carryover-acq-mode.ts`).
-  const form = withRedevCarryoverAcqMode(withInScopeTransferExpenses(formInput));
+  // 재개발 × 이월과세 — ⑤ 라디오 대신 이월과세 ② 토글이 산정 방식을 정한 사본(⑧·⑤와 같은 leaf · `redev-carryover-acq-mode.ts`) · 이월과세 승계 입주권은 숨은 승계 산정 방식 플래그를 끈다.
+  const form = withCarryoverSuccessorRightActual(withRedevCarryoverAcqMode(withInScopeTransferExpenses(formInput)));
   const primary = form.assets[0];
   if (!primary) throw new Error("자산이 없습니다.");
 

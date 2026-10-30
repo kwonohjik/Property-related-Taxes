@@ -44,6 +44,7 @@ import { successorRightStdPriceAtAcq } from "@/lib/calc/transfer-successor-right
 import { successorRightStdPriceAtTransfer } from "@/lib/calc/transfer-successor-right";
 import { successorRightEstimationMode } from "@/lib/calc/transfer-successor-right";
 import { isBgSuccessorRight } from "@/lib/calc/transfer-successor-right";
+import { isCarryoverSuccessorRight } from "@/lib/calc/transfer-successor-right";
 import { SuccessorRightStdPriceSection } from "./SuccessorRightStdPriceSection";
 
 interface Props {
@@ -93,7 +94,9 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
 
   // 산정 방식 — ④ 변환·⑧ validate와 **같은 술어**(dual-truth 방지)
   const mode = successorRightEstimationMode(asset);
-  const isActual = mode === "actual";
+  // 이월과세 — 취득가액은 이월과세 블록이 정한다. 산정 방식·승계취득가액·추계 칸은 계산에 쓰이지 않아 숨긴다(④·⑧ 같은 술어 · 계획서 `successor-right-carryover-validation.plan.md` Q-4 a).
+  const carryover = isCarryoverSuccessorRight(asset);
+  const isActual = !carryover && mode === "actual";
   // §165① 기준시가 미리보기 — 저장하지 않는다(합산은 ④ 변환과 같은 헬퍼)
   const stdAtAcq = successorRightStdPriceAtAcq(asset);
   const stdAtTransfer = successorRightStdPriceAtTransfer(asset);
@@ -131,6 +134,10 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
         {isBgSuccessorRight(asset) ? (
           <p className="text-xs text-muted-foreground" data-testid="bg-successor-right-actual-only">
             부담부증여는 아래 승계취득가액 + 추가분담금(실지거래가액)으로 계산합니다. 채무 비율만큼 안분됩니다.
+          </p>
+        ) : carryover ? (
+          <p className="text-xs text-muted-foreground" data-testid="carryover-successor-right-note">
+            이월과세는 「이월과세(증여) 정보」의 증여자 취득가액(또는 일반 기준시가 환산)으로 계산합니다. 승계취득가액은 쓰지 않습니다.
           </p>
         ) : (
         <FieldCard
@@ -176,7 +183,22 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
           </>
         )}
 
-        {mode === "salesCase" && (
+        {carryover && (
+          <FieldCard
+            label="취득 후 납입 추가분담금"
+            field="successorRightAddedContribution"
+            hint="증여받은 뒤 조합원 분양계약에 따라 납입한 금액. 현재 버전은 이월과세 계산에 반영하지 못해, 납입한 금액이 있으면 계산하지 않습니다. 없으면 비워두세요."
+          >
+            <CurrencyInput
+              label=""
+              value={asset.successorRightAddedContribution}
+              onChange={(v) => onChange({ successorRightAddedContribution: v })}
+              hideUnit
+            />
+          </FieldCard>
+        )}
+
+        {!carryover && mode === "salesCase" && (
           <FieldCard
             label="매매사례가액"
             field="similarSalesValue"
@@ -190,7 +212,7 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
           </FieldCard>
         )}
 
-        {mode === "appraisal" && (
+        {!carryover && mode === "appraisal" && (
           <FieldCard
             label="감정가액"
             field="fixedAcquisitionPrice"
@@ -205,7 +227,7 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
           </FieldCard>
         )}
 
-        {!isActual && <SuccessorRightStdPriceSection asset={asset} onChange={onChange} mode={mode} stdAtAcq={stdAtAcq} stdAtTransfer={stdAtTransfer} />}
+        {!carryover && mode !== "actual" && <SuccessorRightStdPriceSection asset={asset} onChange={onChange} mode={mode} stdAtAcq={stdAtAcq} stdAtTransfer={stdAtTransfer} />}
 
         {isActual && total > 0 && (
           <div className="rounded-md border border-sky-200 bg-sky-100/60 p-2.5 text-caption text-sky-900 space-y-1 dark:text-sky-200 dark:bg-sky-900/40">

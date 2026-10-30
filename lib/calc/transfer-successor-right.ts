@@ -47,6 +47,17 @@ export function isBgSuccessorRight(
 }
 
 /**
+ * 승계조합원 입주권을 **이월과세(§97의2)로 증여받았는가**(부담부증여 아님) — 취득가액은 이월과세 블록(증여자 취득가액 또는 환산)이 정한다.
+ * 승계 블록의 산정 방식 라디오·승계취득가액은 계산에 쓰이지 않아 ⑤가 숨기고 ⑧도 요구하지 않는다(실측: 승계취득가액 1 · 400,000,000 · 900,000,000 세액 동일).
+ * 계획서 `docs/02-design/features/successor-right-carryover-validation.plan.md` Q-4 (a).
+ */
+export function isCarryoverSuccessorRight(
+  asset: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "transferType" | "acquisitionCause">,
+): boolean {
+  return isSuccessorRightTransfer(asset) && asset.acquisitionCause === "carryover_gift" && asset.transferType !== "burdened_gift";
+}
+
+/**
  * 승계조합원 입주권의 취득가액 — 승계취득가액 + 취득 후 납입 추가분담금.
  *
  * 추가분담금 미입력("")은 0으로 본다 — 승계 직후 양도라 납입분이 없을 수 있다.
@@ -102,10 +113,11 @@ export function successorRightStdPriceAtTransfer(
  * 추계 모드에서는 그 2칸 대신 §165① 기준시가와 추계값이 쓰인다 — **배타**다.
  */
 export function successorRightEstimationMode(
-  asset: Pick<AssetForm, "useEstimatedAcquisition" | "isAppraisalAcquisition" | "isSalesCaseAcquisition" | "transferType">,
+  asset: Pick<AssetForm, "useEstimatedAcquisition" | "isAppraisalAcquisition" | "isSalesCaseAcquisition" | "transferType"> & { acquisitionCause?: AssetForm["acquisitionCause"] },
 ): "actual" | "estimated" | "appraisal" | "salesCase" {
   // 부담부증여는 실지거래가액만 받는다 — ⑤가 라디오를 숨기므로 남은 추계 플래그는 읽지 않는다(`isBgSuccessorRight`).
-  if (asset.transferType === "burdened_gift") return "actual";
+  // 이월과세도 라디오를 숨긴다(`isCarryoverSuccessorRight` — 취득가액은 이월과세 블록이 정한다). 남은 플래그로 매매사례·감정·환산 갈래를 타지 않는다.
+  if (asset.transferType === "burdened_gift" || asset.acquisitionCause === "carryover_gift") return "actual";
   if (asset.isSalesCaseAcquisition === true) return "salesCase";
   if (asset.isAppraisalAcquisition === true) return "appraisal";
   if (asset.useEstimatedAcquisition === true) return "estimated";
@@ -168,4 +180,18 @@ export function successorRightTogglePatch(isSuccessor: boolean): Partial<AssetFo
     isAppraisalAcquisition: false,
     isSalesCaseAcquisition: false,
   };
+}
+
+/**
+ * ④ 진입 사본 — 이월과세 승계 입주권에 남은 승계 산정 방식 플래그(감정·매매사례·환산)를 끈다. ⑤가 라디오를 숨기므로(Q-4 a) 남은 값은 고칠 칸이 없는데,
+ * 주 자산·컴패니언 ④가 원값을 읽어 이월과세 결과를 바꿨다(실측: 매매사례 잔재 472,935,000 → 299,010,000 · 환산 잔재 ⑫ 400).
+ * 계획서 `docs/02-design/features/successor-right-carryover-validation.plan.md` §5.
+ */
+export function withCarryoverSuccessorRightActual<F extends { assets: AssetForm[] }>(form: F): F {
+  const assets = form.assets?.map((a) =>
+    isCarryoverSuccessorRight(a) && (a.useEstimatedAcquisition || a.isAppraisalAcquisition || a.isSalesCaseAcquisition)
+      ? { ...a, useEstimatedAcquisition: false, isAppraisalAcquisition: false, isSalesCaseAcquisition: false }
+      : a,
+  );
+  return assets && assets.some((a, i) => a !== form.assets[i]) ? { ...form, assets } : form;
 }

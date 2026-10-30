@@ -57,6 +57,8 @@ export function validateCarryoverAsset(
     }
 
     // 함께 양도 자산(컴패니언)은 일반 기준시가 환산만 — ⑤ 옵션 노출·술어(`carryoverEstimationModeSupported`)와 같다. ④가 컴패니언에는 PHD 를 싣지 않아 통과시키면 취득가액 0(PR-0c).
+    if (!ctx.isNonPrimaryAsset && !carryoverEstimationModeSupported(asset.assetKind, c.estimationMode))
+      return fieldError("carryover.estimationMode", `${label}: 이 자산의 이월과세는 「일반 기준시가 환산」만 지원합니다 — 환산 방식을 「일반 기준시가 환산」으로 선택하세요.`);
     if (!carryoverEstimationModeSupported(asset.assetKind, c.estimationMode, { isNonPrimary: ctx.isNonPrimaryAsset }))
       return fieldError("carryover.estimationMode", `${label}: 함께 양도 자산의 이월과세는 「일반 기준시가 환산」만 지원합니다 — 환산 방식을 「일반 기준시가 환산」으로 선택하세요 (개별주택가격 미공시·공동주택 최초고시 전 방식은 함께 양도 자산의 계산에 반영되지 않습니다).`);
 
