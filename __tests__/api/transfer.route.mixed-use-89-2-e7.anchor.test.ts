@@ -227,12 +227,16 @@ describe("E-7 겸용 단건 × §89② — 중과 배제 ① 요소(§156의2 �
     expect((await postHousing({ ...over, mixedUse: undefined })).surchargeType ?? "none").toBe("none");
   });
 
-  it("🔴 2022-03-01 양도(한시 유예 전) · 입주권 3년 이내 → 구 §167의11①1호 배제 · 200,233,440 → 195,217,632", async () => {
-    const over = { ...HIGH, transferDate: "2022-03-01", presaleRights: [rightG("2021-06-01")] };
+  it("🔴 2022-03-01 양도(한시 유예 전) · 입주권 3년 이내 → 구 §167의11①1호 배제 · 196,471,584", async () => {
+    // 거주는 보유기간 중만(⑫ 상한 — 겸용도 `mixedUse.residencePeriodYears × 12`): 취득 2018-06-01 · 양도 2022-03-01 = 45개월이라 거주 3년(36개월).
+    //   종전 시료의 거주 5년(60개월)은 보유를 넘는 비현실 값이었다(계획서 `mixed-use-residence-cap-api.plan.md` V-5 · Q-2 a).
+    const over = { ...HIGH, transferDate: "2022-03-01", presaleRights: [rightG("2021-06-01")], mixedUse: { ...HIGH.mixedUse, residencePeriodYears: 3 } };
     const r = await post(over);
     expect(r.multiHouseSurcharge?.surchargeType).toBe("none");
-    expect(r.total.determinedTax).toBe(195_217_632);
-    // 주택 변형 — 거주는 보유기간 중만(⑫ 상한): 취득 2018-06-01 · 양도 2022-03-01 = 45개월. 겸용 호출의 값(195,217,632)은 그대로다.
+    // 독립 도출: 종전(거주 5년 = 표2 거주분 20%) 195,217,632에서 거주분을 12%로 낮춘 값 — 주택분 과세 양도차익 37,320,000 × 8%p = 2,985,600이 장특에서 덜 빠져
+    //   종합소득 +2,985,600 → 42% 구간 +1,253,952 → 195,217,632 + 1,253,952 = 196,471,584.
+    expect(r.total.determinedTax).toBe(196_471_584);
+    // 주택 변형 — 같은 사실(거주 45개월 이내).
     expect((await postHousing({ ...over, mixedUse: undefined, residencePeriodMonths: 45 })).surchargeType ?? "none").toBe("none");
   });
 

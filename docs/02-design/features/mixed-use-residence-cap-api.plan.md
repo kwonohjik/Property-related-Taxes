@@ -40,3 +40,15 @@
 2. 구현 — `residenceMonthsOverflowIssue` 게이트·월 환산·기준일 후보에 겸용을 추가하고 호출부의 필드 경로를 겸용이면 `["mixedUse","residencePeriodYears"]`로. 시험 적용 diff는 스크래치패드 `mx-H.trial`.
 3. 기존 테스트 1건 보정(Q-2 a) + 공용 보정 헬퍼 `capResidenceToHolding`은 주택만 보정하므로 겸용 시료는 개별 확인.
 4. 뮤테이션(겸용 게이트 제거 · 연수 환산 `× 12` 제거 · 후보 날짜 제거 등) → 전체 회귀 → tsc · eslint. 브라우저: 화면 변화 없음(⑧은 이미 막는다) — 해당 없음.
+
+## 4. 구현 결과 (Q-1 a · Q-2 a · Q-3 a)
+
+| 항목 | 결과 |
+|---|---|
+| 코드 | `lib/api/transfer-tax-schema-household-refines.ts` — `residenceMonthsOverflowIssue`가 `mixed-use-house`를 포함: 거주 = `mixedUse.residencePeriodYears × 12`(실제 개월의 하한) · 기산 후보에 `mixedUse.landAcquisitionDate`·`buildingAcquisitionDate` 추가 · 호출부 필드 경로는 겸용이면 `mixedUse.residencePeriodYears`. 엔진·UI·세액 산식 불변 |
+| 신규 anchor | `__tests__/api/transfer.route.mixed-use-residence-cap.anchor.test.ts` — 10건(라우트 C1~C4 · 단위 U1~U6). 경계 8년 통과 · 9년(108 > 96개월) 400 · 연수 하한(⑧ 통과 ⇒ ⑫ 통과) · 겸용 토지 취득일·증여자 취득일 후보 · 1세대1주택 아님/연수 없음/재개발/취득일 없음/토지·일반건물 미판정 |
+| 기존 테스트 1건 | `transfer.route.mixed-use-89-2-e7.anchor.test.ts` — 비현실 시료(보유 45개월 · 거주 60개월)를 거주 3년으로 보정. 기대 결정세액 195,217,632 → **196,471,584**(독립 도출: 종전 거주 5년 표2 거주분 20% → 12%, 주택분 과세 양도차익 37,320,000 × 8%p = 2,985,600이 장특에서 덜 빠져 종합소득 +2,985,600 × 42% = +1,253,952). 시험 적용 때 실측한 거주 3년 값과 일치 |
+| 뮤테이션 | ① 겸용 게이트 제거 → 5건 실패 ② 연수 환산 `× 12` → `× 1` → 5건 ③ 겸용 토지·건물 취득일 후보 제거 → 1건 ④ `(연수 + 1) × 12`(과엄격) → 5건 ⑤ 필드 경로 `residencePeriodMonths`로 되돌림 → 1건 ⑥ 1세대1주택 조건 제거 → 2건. 6/6 killed, 원복 확인 |
+| 전체 회귀 | 3,625개 파일 통과 · 1 skip · 실패 0 (44,380 테스트 통과) · tsc 0 · eslint 0 |
+| 브라우저 | 해당 없음 — 화면은 ⑧이 이미 같은 값을 막는다(V-3). 이 변경은 API 직접 호출만 닿는다 |
+| 남은 별건 | **O-24** 컴패니언 주택 `residencePeriodMonths` 상한 없음(V-6) · 컴패니언 겸용 미측정(확인 필요) |
