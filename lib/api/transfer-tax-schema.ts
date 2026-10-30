@@ -34,6 +34,7 @@ import { refinePropertyRequiredInputs, refineAmendmentInputs } from "./transfer-
 import { refineCompanionPreDeemedAcquisitionSource } from "./transfer-tax-schema-required-refines-2a";
 import { refineDeemedSuccessorRightPrimary } from "./transfer-tax-schema-successor-deemed";
 import { refineDeemedSuccessorRightCompanion } from "./transfer-tax-schema-successor-deemed";
+import { refineSuccessorRightNoSec164Inputs } from "./transfer-tax-schema-successor-deemed";
 import { refineHouseFirstDisclosureDate, refineSplitPartCause } from "./transfer-tax-schema-required-refines-2a";
 import { refineApartNtsPrice } from "./transfer-tax-schema-required-refines-2a";
 import { refineLandRebuild } from "./transfer-tax-schema-land-rebuild";
@@ -139,6 +140,8 @@ export const propertySchema = z
     refinePropertyRequiredInputs(data, ctx);
     // 상속·증여 승계 입주권 — §163⑨ 평가액 채널 필수(단건 전용 · 다건 ④는 acquisitionPrice가 평가액이다)
     refineDeemedSuccessorRightPrimary(data, ctx);
+    // 승계 입주권 — §163⑨ 단서 ②(§164④~⑦) 운반 키 거부(단서는 토지·건물만)
+    refineSuccessorRightNoSec164Inputs(data, data.propertyType === "right_to_move_in", ctx);
     refineAmendmentInputs(data.amendment, ctx);
     // 일반건물 × 부담부증여 — 환산·증축 payload 가 §159를 침묵 무시하는 것을 400 으로 (PR-1 · 안전망)
     refineGbBurdenedGiftActualPath(data, ctx);
@@ -177,6 +180,7 @@ export const propertySchema = z
       refineCompanionPreDeemedAcquisitionSource(c, ctx, ["companionAssets", i]);
       // 상속 승계 입주권 — 상속개시일 평가액 필수(구 계약 fixedAcquisitionPrice는 승계취득가액 축)
       refineDeemedSuccessorRightCompanion(c, ctx, ["companionAssets", i]);
+      refineSuccessorRightNoSec164Inputs(c, c.assetKind === "right_to_move_in", ctx, ["companionAssets", i]);
       // 재개발·재건축 §166③ 환산 입력 — 주 자산과 같은 규칙(종전에는 컴패니언에 없어 분모 비움이 엔진 throw 500)
       refineRedevelopment166_3Inputs(c, ctx, ["companionAssets", i]);
       // D0 — 토지 파트 취득원인(이월과세 미지원·상속·증여 추계 불가·피상속인 취득일) — 주 자산과 같은 leaf

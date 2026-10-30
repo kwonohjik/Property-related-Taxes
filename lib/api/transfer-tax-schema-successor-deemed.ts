@@ -40,6 +40,34 @@ export function refineDeemedSuccessorRightPrimary(
   });
 }
 
+/**
+ * 승계 입주권 — §163⑨ 단서 ②(§164④~⑦ 가액) 운반 키를 받지 않는다.
+ *
+ * 단서는 1호 「… 고시되기 전에 상속 또는 증여받은 토지」 · 2호 「… 건물」만 정한다 — 조합원입주권은 부동산을 취득할 수 있는 권리
+ * (법 §94①2호가목)라 평가액(본문)만이다. ④는 입주권에 이 키를 싣지 않는데(`sec164HouseStatus`·`isSec163_9House`는 주택만), 직접
+ * 호출로 오면 엔진이 ②를 열었다(실측: 단건 주택 환산 383,010,000 → 290,933,077 · 1990 전 토지 환산 274,026,300 · 컴패니언 331,770,000 →
+ * 239,693,077). 원조합원 입주권은 종전자산(토지·건물)을 상속받은 경우가 있어 대상이 아니다.
+ * 계획서 `docs/02-design/features/successor-right-carryover-contribution.plan.md` §11·§12.
+ */
+const SEC164_CHANNEL_KEYS = ["inheritedHouseValuation", "pre1990Land", "commercialInheritanceValuation"] as const;
+
+export function refineSuccessorRightNoSec164Inputs(
+  d: { isSuccessorRightToMoveIn?: boolean } & Partial<Record<(typeof SEC164_CHANNEL_KEYS)[number], unknown>>,
+  isRightToMoveIn: boolean,
+  ctx: z.RefinementCtx,
+  prefix: (string | number)[] = [],
+): void {
+  if (!isRightToMoveIn || d.isSuccessorRightToMoveIn !== true) return;
+  for (const key of SEC164_CHANNEL_KEYS) {
+    if (d[key] == null) continue;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...prefix, key],
+      message: `승계 입주권은 부동산을 취득할 수 있는 권리라 §164④~⑦ 가액과 비교하지 않습니다 — ${key} 키는 보내지 마세요 (소득세법 시행령 §163⑨ 단서는 토지·건물만)`,
+    });
+  }
+}
+
 /** 컴패니언 상속 — 상속개시일 평가액(`inheritanceValuation.publishedValueAtInheritance`)이 있어야 한다(구 계약 `fixedAcquisitionPrice`를 받지 않는다). */
 export function refineDeemedSuccessorRightCompanion(
   c: SuccessorDeemedLike & { inheritanceValuation?: { publishedValueAtInheritance?: number } | null },
