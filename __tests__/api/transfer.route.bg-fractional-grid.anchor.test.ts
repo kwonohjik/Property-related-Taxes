@@ -126,11 +126,11 @@ async function checkInvariants(name: string, assets: AssetForm[], tally: Record<
 const PAIRS: [string, string][] = [["sup", "sup"], ["mort", "sup"], ["sup", "mort"], ["mort", "mort"], ["ssup", "ssup"], ["smort", "ssup"], ["ssup", "smort"], ["smort", "smort"], ["srent", "ssup"], ["ssup", "srent"], ["srent", "srent"], ["srent", "smort"], ["smort", "srent"]];
 
 describe("FG-1 2건 묶음 — 13쌍 × 지분 7조합(91셀): 불변식 (a)~(d)", () => {
-  it("모든 셀이 불변식을 지킨다 · 분류 합계: ⑧통과·200·균일 6 / ⑧게이트·200·균일 29(담보·임대 균일) / ⑧게이트·400·혼합 56", async () => {
+  it("모든 셀이 불변식을 지킨다 · 분류 합계: ⑧통과·200·균일 9 / ⑧게이트·200·균일 26(지분 있는 담보·임대 균일) / ⑧게이트·400·혼합 56", async () => {
     const RS: [string, string][] = [["r1", "r1"], ["r1", "r50"], ["r50", "r1"], ["r1", "r3"], ["r3", "r1"], ["r50", "r3"], ["r25", "r1"]];
     const tally: Record<string, number> = {};
     for (const [a, b] of PAIRS) for (const [ra, rb] of RS) await checkInvariants(`${a}+${b}@${ra}/${rb}`, [asset(1, a, ra), asset(2, b, rb)], tally);
-    expect(tally).toEqual({ "⑧통과|200|균일": 6, "⑧게이트|200|균일": 29, "⑧게이트|400|혼합": 56 });
+    expect(tally).toEqual({ "⑧통과|200|균일": 9, "⑧게이트|200|균일": 26, "⑧게이트|400|혼합": 56 });
   }, 600_000);
 });
 
@@ -154,12 +154,12 @@ describe("FG-2 보충 승 균일 지분 쌍 — 1/3 · 25% 포함 10셀: 환산 
 });
 
 describe("FG-3 3건 묶음 — 승자 10패턴 × 지분 3조합(30셀): 불변식 (a)~(d) · 보충 승 균일은 증여세가 같은 증여가액·채무의 2건과 같다", () => {
-  it("30셀 분류 합계: ⑧통과·200·균일 7 / ⑧게이트·200·균일 9 / ⑧게이트·400·혼합 14", async () => {
+  it("30셀 분류 합계: ⑧통과·200·균일 10 / ⑧게이트·200·균일 6 / ⑧게이트·400·혼합 14", async () => {
     const P3: [string, string, string][] = [["sup", "sup", "sup"], ["sup", "sup", "mort"], ["sup", "mort", "mort"], ["mort", "mort", "mort"], ["ssup", "ssup", "ssup"], ["ssup", "ssup", "smort"], ["smort", "smort", "smort"], ["srent", "srent", "srent"], ["ssup", "srent", "srent"], ["supL", "supL", "supL"]];
     const RS3: [string, string, string][] = [["r1", "r1", "r1"], ["r1", "r50", "r50"], ["r1", "r1", "r3"]];
     const tally: Record<string, number> = {};
     for (const [a, b, c3] of P3) for (const rs of RS3) await checkInvariants(`3자산 ${a}+${b}+${c3}@${rs.join("/")}`, [asset(1, a, rs[0]), asset(2, b, rs[1]), asset(3, c3, rs[2])], tally);
-    expect(tally).toEqual({ "⑧통과|200|균일": 7, "⑧게이트|200|균일": 9, "⑧게이트|400|혼합": 14 });
+    expect(tally).toEqual({ "⑧통과|200|균일": 10, "⑧게이트|200|균일": 6, "⑧게이트|400|혼합": 14 });
   }, 600_000);
   it("supL 3건(지분 100/100/100) = 시가 1.5B · 채무 3억 두 건의 2건 묶음과 증여가액·증여세 같음 (ΣA 3.0B · ΣB 6억)", async () => {
     const three = await cell([asset(1, "supL", "r1"), asset(2, "supL", "r1"), asset(3, "supL", "r1")]);

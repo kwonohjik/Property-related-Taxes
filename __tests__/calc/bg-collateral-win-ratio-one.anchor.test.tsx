@@ -151,11 +151,11 @@ describe("CW-2 ⑧ 차단 유지 — 정당하지 않은 경우와 범위 밖", 
     expect(bgCollateralForcesStdAcq(mixed)).toBe(false);
   });
 
-  it("함께 부담부증여 묶음 — 종전 규칙(합산 증여가액 불일치)이 막는다", () => {
+  it("함께 부담부증여 묶음 — 승자가 섞이면(담보 + 보충) 합산 증여가액 불일치로 막는다", () => {
     const b = house({ assetId: "b", addressJibun: "서울 강남구 테스트동 3-3", bgMortgageDebtAmount: "", bgMortgageSetAmount: "" });
     const m = allIssues(form([house({ assetId: "a" }), b], { assetSplitMode: "companion", bundledSaleMode: "apportioned", contractTotalPrice: "" }))
       .map((x) => x.message).join("\n");
-    expect(m).toContain("담보평가(상증법 §66)으로 결정되는 자산은 함께 양도와 같이 계산할 수 없습니다");
+    expect(m).toContain("자산 1 담보평가(상증법 §66) · 자산 2 보충적평가: 증여재산 평가 방식이 달라 함께 양도와 같이 계산할 수 없습니다");
   });
 
   it("지분 1/2 — 종전 처리(시가 분모)를 유지한다", () => {

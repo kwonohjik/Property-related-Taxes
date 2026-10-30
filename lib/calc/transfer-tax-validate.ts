@@ -32,6 +32,11 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
+import { bgBundleWinnerModes } from "./burdened-gift-bundle-winner";
+import { bgBundleMixedWinnerMessage } from "./burdened-gift-bundle-winner";
+import type { BgWinnerMode } from "./burdened-gift-bundle-winner";
+import { bgNonSupplementaryWinnerUnsupported } from "./burdened-gift-collateral-win";
+import { bgUnsupportedWinnerReason } from "./burdened-gift-collateral-win";
 import { isBlockedMixedBurdenedGiftBundle } from "./burdened-gift-transfer-price-scope";
 import { MIXED_BURDENED_GIFT_BUNDLE_MESSAGE } from "./burdened-gift-transfer-price-scope";
 import { sameDayHousingBundleIssue } from "./same-day-housing-bundle";
@@ -339,32 +344,37 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
        * 차감되고 누진이 갈라진다 — 축 B에서 −19,400,000원 실측). ④는 그것을 자산별 info의
        * **성분 단순 합**(`buildCompanionBurdenedGiftWholeInfo`)으로 만든다.
        *
-       * 🔑 그 합이 ΣAᵢ와 일치하는 것은 **모든 자산의 Max 승자가 보충적평가일 때뿐**이다 —
-       *    Σmax ≠ max(Σ성분)이기 때문이다. 담보평가(상증법 §66)·임대평가(§61⑤)가 max인
-       *    자산이 섞이면 합산 증여가액이 ΣAᵢ와 어긋나 **증여세가 조용히 틀린다**.
+       * 🔑 그 합이 ΣAᵢ와 일치하는 것은 **모든 자산의 Max 승자가 같을 때**다 — Σmax ≠ max(Σ성분)이기 때문이다.
+       *    보충적평가·담보평가(상증법 §66)·임대평가(§61⑤)가 자산마다 갈리면 합산 증여가액이 ΣAᵢ와 어긋나
+       *    **증여세가 조용히 틀린다**. 승자가 모두 같으면 합산 증여가액 = ΣAᵢ라 맞다(100% 소유 자산 쌍 — 측정: 증여가액·증여세·양도차익이
+       *    같은 평가액의 단건 합과 ±0, `docs/00-pm/bg-sidebar-gb-bundle-and-gate.plan.md`). 승자 판정은 ⑫와 같은 leaf(`burdened-gift-bundle-winner.ts`).
        *
-       * ⇒ 「침묵 오산보다 명시 차단」(`multi-transfer-tax-validate.ts:57-71`)과 같은 층위로
-       *   그 조합만 좁게 막는다. 양도세 자체는 카드별 Aᵢ로 정확하므로, 이 게이트를 넓히면
-       *   지원되는 조합까지 막힌다.
+       * ⇒ 「침묵 오산보다 명시 차단」(`multi-transfer-tax-validate.ts:57-71`)과 같은 층위로 틀리는 조합만 좁게 막는다.
+       *    양도세 자체는 카드별 Aᵢ로 정확하므로, 이 게이트를 넓히면 지원되는 조합까지 막힌다.
+       *    지분·이월과세·입주권·겸용 자산의 비보충 승자는 화면·엔진의 취득가액 처리를 확인하지 못한 범위라 그대로 막는다(`bgNonSupplementaryWinnerUnsupported`).
        *
        * 축 B(지분 분할)는 대상이 아니다 — 물건이 하나라 `burdenedGiftWholeInfo`가 primary의
        * 미안분 info 그대로이고 합산이 없다.
        */
       if (!fullFractional && form.assets.some((a) => a.transferType === "burdened_gift")) {
         const ratios = form.assets.map((a) => getOwnershipRatio(a));
-        const valuations = companionBurdenedGiftValuations(
-          form.assets.map((a) => buildBurdenedGiftInfo(a)),
-          ratios,
-        );
+        const infos = form.assets.map((a) => buildBurdenedGiftInfo(a));
+        const valuations = companionBurdenedGiftValuations(infos, ratios);
         valuations.forEach((v, i) => {
-          if (v.selectedMode === "supplementary") return;
+          if (v.selectedMode === "supplementary" || !bgNonSupplementaryWinnerUnsupported(form.assets[i])) return;
           const kind = v.selectedMode === "mortgage" ? "담보평가(상증법 §66)" : "임대평가(상증법 §61⑤)";
           issues.push({
             step,
             assetIndex: i,
-            message: `자산 ${i + 1}: 증여재산 평가액이 ${kind}으로 결정되는 자산은 함께 양도와 같이 계산할 수 없습니다. 여러 물건을 함께 부담부증여하면 증여세를 증여계약 전체로 1회 계산해야 하는데, 이 경우 합산 증여가액이 자산별 평가액 합계와 어긋납니다. 함께 양도 토글을 끄고 단건으로 계산하세요.`,
+            message: `자산 ${i + 1}: 증여재산 평가액이 ${kind}으로 결정되는 ${bgUnsupportedWinnerReason(form.assets[i])} 자산은 함께 양도와 같이 계산하지 않습니다. 이 경우의 취득가액 산정 기준을 확인하지 못했습니다. 함께 양도 토글을 끄고 단건으로 계산하세요.`,
           });
         });
+        // ⑫ 보다 넓게 — 승자를 정할 입력이 비어 있어도 판정한다(⑧ 통과 ↔ ⑫ 차단 모순 금지 · 빈 입력은 자산별 필수 검증이 따로 막는다).
+        const bgIdx = form.assets.flatMap((a, i) => (a.transferType === "burdened_gift" ? [i] : []));
+        const bgModes = bgBundleWinnerModes(bgIdx.map((i) => ({ info: infos[i], ratio: ratios[i] })));
+        if (bgIdx.length >= 2 && new Set(bgModes).size > 1) {
+          issues.push({ step, message: bgBundleMixedWinnerMessage(bgIdx.map((i, k) => [i + 1, bgModes[k]] as [number, BgWinnerMode])) });
+        }
       }
       // 일반 양도 + 부담부증여 혼합 묶음 — 안분·채무 재배분이 설계되지 않아 세액이 틀린다(⑩과 같은 술어 · `burdenedGiftBundleKind` JSDoc).
       if (isBlockedMixedBurdenedGiftBundle(form.assets, form.assetSplitMode)) {

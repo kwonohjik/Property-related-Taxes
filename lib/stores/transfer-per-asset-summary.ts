@@ -31,6 +31,7 @@ import { isBlockedMixedBurdenedGiftBundle } from "@/lib/calc/burdened-gift-trans
 import { usesSelfComputedTransferPrice } from "@/lib/calc/burdened-gift-transfer-price-scope";
 import { burdenedGiftPerAssetTotals } from "@/lib/tax-engine/burdened-gift-totals";
 import { SHARE_ID_SEPARATOR } from "@/lib/tax-engine/general-building-share-id";
+import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
 import { parseRaw } from "./transfer-per-asset-direct";
 import { isParcelMode } from "./transfer-per-asset-direct";
 import { isRedevelopmentPath } from "./transfer-per-asset-direct";
@@ -229,6 +230,16 @@ export function computeTransferPerAssetSummary(
             .reduce((acc, p) => ({ n: acc.n + 1, sale: acc.sale + p.allocatedSalePrice, acq: acc.acq + p.allocatedAcquisitionPrice, exp: acc.exp + p.allocatedExpenses }), { n: 0, sale: 0, acq: 0, exp: 0 })
         : null;
 
+    // 일반건물 × 부담부증여 × 함께 양도(축 A) — 엔진은 자산 하나를 `land#${자산id}`·`building#${자산id}` 카드로 쪼개 돌려준다(이월과세 꼬리 `land__purchased#${자산id}` 포함).
+    // `bundledProperty`(propertyId === 자산id)는 이 모양을 못 잡고, 안분 행 취득가액은 §159 입력 전 값(0)이라 계산 후에도 취득가액·필요경비가 「-」였다.
+    // 그 자산의 카드 합 = 엔진이 §159로 실제 쓴 값이다. 축 B는 위 `gbShareBgCards`가 맡는다.
+    const gbBundledBgCards =
+      !axisBBundle && !isSingle && bundledMatch && a.assetKind === "general_building" && usesSelfComputedTransferPrice(a)
+        ? (bundledResult?.aggregated?.properties ?? [])
+            .filter((p) => cardSuffixOf(p.propertyId) === bundledAssetId)
+            .reduce((acc, p) => ({ n: acc.n + 1, acq: acc.acq + p.acquisitionPrice, exp: acc.exp + p.necessaryExpense }), { n: 0, acq: 0, exp: 0 })
+        : null;
+
     // ── 양도가액 ──
     let salePrice = 0;
     let salePending = false;
@@ -335,6 +346,10 @@ export function computeTransferPerAssetSummary(
       // 부담부증여 — 안분 입력(`allocatedAcquisitionPrice`)은 화면에 없는 자산 일반 칸이다. 엔진 표시 echo가 §159 취득가액이다(#2386).
       if (bundledProperty && usesSelfComputedTransferPrice(a)) {
         acqPrice = bundledProperty.acquisitionPrice;
+        depAlreadyDeducted = true;
+      }
+      if (gbBundledBgCards?.n) {
+        acqPrice = gbBundledBgCards.acq;
         depAlreadyDeducted = true;
       }
     } else if (bundledCards) {
@@ -487,7 +502,7 @@ export function computeTransferPerAssetSummary(
     } else if (bundledMatch) {
       // 엔진이 자산별로 **실제 차감한** 필요경비 — 안분 결과(`allocatedExpenses`)는 입력 경비만
       // 담고 개산공제(§163⑥)는 그 뒤 단건 엔진이 더하므로, 추계 자산에서 0으로 보였다(F-14).
-      expense = (bundledProperty?.necessaryExpense ?? bundledMatch.allocatedExpenses) + (purchased?.exp ?? 0);
+      expense = gbBundledBgCards?.n ? gbBundledBgCards.exp : (bundledProperty?.necessaryExpense ?? bundledMatch.allocatedExpenses) + (purchased?.exp ?? 0);
     } else if (bundledCards) {
       // 자산카드 분해(일반건물) — 카드별 필요경비 합(개산공제 포함).
       expense = bundledCards.exp;
