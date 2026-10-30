@@ -49,6 +49,8 @@ export function applyLandContribOverrides(
   items: Map<string, StatementItem>,
   redev: RedevelopmentResult,
   totalTransferPrice: number,
+  /** 이월과세 A 채택 — 분자가 당초 증여자 취득 당시 기준시가다(「소득세법」 §97의2①1호) */
+  carryoverDonor?: boolean,
 ): void {
   const lcd = redev.landContribDetail;
   if (!lcd) return; // landContribDetail 없으면 하우징 분기로 fall-through
@@ -107,7 +109,7 @@ export function applyLandContribOverrides(
     acqItem.note = undefined;
     acqItem.perAsset = [
       {
-        label: "① 인가전 분 (§166③ — 권리가액 × 취득기준시가 / 관리처분 직전 기준시가)",
+        label: `① 인가전 분 (§166③ — 권리가액 × ${carryoverDonor ? "증여자 취득 당시 " : "취득"}기준시가 / 관리처분 직전 기준시가)`,
         value: pre.apportionedAcquisition,
         formula:
           `환산취득가 = ${fmt(pre.apportionedTransfer)} × (${fmt(lcd.landStdPriceAtAcq)} ÷ ${fmt(lcd.landStdPriceAtApproval)}) = ${fmt(lcd.convertedAcquisition)} (1원 미만 절사)`,
@@ -258,10 +260,12 @@ export function applyRedevelopmentOverrides(
    * 표시돼 **보유기간이 짧아서 0인 것처럼** 읽혔다.
    */
   lthdExclusionReason?: LthdExclusionReason,
+  /** 이월과세 시나리오 A 채택 — 인가 전 분 종전 취득가액이 당초 증여자 기준이다(산식 문구만 바뀐다). */
+  carryoverDonor?: boolean,
 ): void {
   // 사례 37 — 토지 출자 §166③ 분기: landContribDetail 존재 시 2분할 산식으로 오버라이드
   if (redev.landContribDetail) {
-    applyLandContribOverrides(items, redev, totalTransferPrice);
+    applyLandContribOverrides(items, redev, totalTransferPrice, carryoverDonor);
     applyLthdExclusionOverride(items, lthdExclusionReason);
     return;
   }
@@ -310,7 +314,7 @@ export function applyRedevelopmentOverrides(
       acqItem.legalBasis = isRightSubject ? "소득세법 시행령 §166①③ · §163" : "소득세법 시행령 §166③ · §163";
     }
     acqItem.note = undefined;
-    acqItem.perAsset = buildRedevPerAssetForAcquisition(redev, subject, settlementDirection);
+    acqItem.perAsset = buildRedevPerAssetForAcquisition(redev, subject, settlementDirection, carryoverDonor);
   }
 
   // 필요경비 — 개산공제(§163⑥, 인가전만)

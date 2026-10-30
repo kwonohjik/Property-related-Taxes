@@ -274,7 +274,9 @@ export function appendLateStageItems(
       primary?.redevSettlementDirection === "pay" || primary?.redevSettlementDirection === "receive"
         ? primary.redevSettlementDirection
         : undefined;
-    applyRedevelopmentOverrides(items, result.redevelopmentDetail, totalTransferPrice, redevSubject, redevSettlementDir, result.lthdExclusionReason);
+    // 이월과세 A 채택이면 `redevelopmentDetail`이 A의 분할이다 — 인가 전 분 종전 취득가액을 「증여자」로 적는다.
+    const carryoverDonor = result.carryoverTaxationDetail?.adoptedScenario === "A";
+    applyRedevelopmentOverrides(items, result.redevelopmentDetail, totalTransferPrice, redevSubject, redevSettlementDir, result.lthdExclusionReason, carryoverDonor);
   }
 
 }

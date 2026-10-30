@@ -282,6 +282,13 @@ function buildGbAcquisitionFormulaCore(
     // 취득가액 칸으로 옮겨 얹은 본인 자본적지출 — 값(`p.acquisitionPrice + 이동분`)과 산식이 같은 수를 적게 한다(단건 경로 `capExStr` 와 같은 형태).
     const shiftedCapex = capExInAcquisitionColumnOfProperty(p);
     const capExStr = shiftedCapex > 0 ? ` + 자본적지출 ${fmt(shiftedCapex)}` : "";
+    // 재개발(§166)은 A의 취득가액이 단계별 분할의 합이다 — 인가 전 분(§166③ 환산 또는 증여자 취득가액)에 인가 후·청산금 분이 더해져
+    //   「환산취득가」가 아니다(계획서 `redev-carryover-residue-bundle.plan.md` B-2). 이월과세 A 채택이면 `redevelopmentDetail`이 A의 분할이다.
+    const redevPre = p.redevelopmentDetail?.preApproval;
+    if (redevPre) {
+      const preLabel = a.acquisitionWasEstimated ? "§166③ 환산" : "증여자 취득가액";
+      return `증여자 취득 당시 기준 취득가액 ${fmt(a.acquisitionPrice)}${capExStr} — §166 분할 합(인가 전 분 ${preLabel} ${fmt(redevPre.apportionedAcquisition)} 포함) · 이월과세 §97의2① (증여자 취득가액 승계)`;
+    }
     return `${head} ${fmt(a.acquisitionPrice)}${capExStr} — 이월과세 §97의2① (증여자 취득가액 승계)`;
   }
 
