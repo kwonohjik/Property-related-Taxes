@@ -27,7 +27,8 @@ import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 export function getRefDeterminedTax(p: PerPropertyBreakdown): number {
   if (typeof p.refDeterminedTax === "number") return p.refDeterminedTax;
   if (p.isExempt) return 0;
-  const rate = (p.appliedRate ?? 0) + (p.surchargeRate ?? 0);
+  // `appliedRate`는 이미 중과 포함 실효세율이다 — `surchargeRate`를 더하면 이중 계상(형제 `resolveRefCalculatedTax`와 같은 정정, V-9).
+  const rate = p.appliedRate ?? 0;
   const refCalc = Math.max(
     0,
     Math.floor((p.taxBaseShare ?? 0) * rate) - (p.progressiveDeduction ?? 0),

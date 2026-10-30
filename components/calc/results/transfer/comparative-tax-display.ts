@@ -71,6 +71,7 @@ export function groupRateText(
     g.groupTaxBase === 0 ||
     Math.floor(g.groupTaxBase * g.appliedRate) - g.progressiveDeduction === g.groupCalculatedTax;
   if (!reproduces) return "(호별 합계)";
-  const surcharge = g.surchargeRate ? ` +${(g.surchargeRate * 100).toFixed(0)}%p` : "";
+  // `appliedRate`는 이미 중과 포함 실효세율이다 — «+N%p»로 적으면 더하는 것으로 읽힌다(O-22).
+  const surcharge = g.surchargeRate ? `, 중과 ${(g.surchargeRate * 100).toFixed(0)}%p 포함` : "";
   return `(${(g.appliedRate * 100).toFixed(1)}%${surcharge})`;
 }
