@@ -264,7 +264,7 @@ function validateAssetAcquisitionBranches(
       isFractionalSplitAxis && form
         ? !isNonPrimaryAsset && isGbFirstDisclosureApplicableForProperty(asset, form.assets)
         : isGbFirstDisclosureApplicable(asset);
-    return validateGeneralBuildingAsset(asset, label, formTransferDate, fdApplicable);
+    return validateGeneralBuildingAsset(asset, label, formTransferDate, fdApplicable, contractAssumedDebtTotal);
   }
 
   // 입주권 「조합원 유형」 질문의 위치 — 축 B 둘째 이후 지분 카드는 ① 기본정보를 숨겨 ③ 취득정보에 있다(UI와 같은 leaf).
