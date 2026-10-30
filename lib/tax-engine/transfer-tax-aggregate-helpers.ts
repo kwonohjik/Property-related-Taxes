@@ -72,6 +72,10 @@ export function classifyRateGroup(
   if (holdingMonths < 24 && (isHousingLike || holdingMonths < 24)) {
     return "short_term";
   }
+  // 부수토지 카드 일체과세(§104①2호 괄호·영 §167의5): 카드 자기 취득일이 2년 이상이어도 엔진은 짝 주택의 단기 호(§104①2·3호)를 적용한다 — 군 이름도 엔진이 정한 호를 따른다(O-20).
+  if (result.rateClause === "104-1-2" || result.rateClause === "104-1-3") {
+    return "short_term";
+  }
 
   // 분양권은 **보유기간과 무관하게** 단일세율 그룹이다 (§104①1호 괄호:
   //   "제55조제1항에 따른 세율(**분양권의 경우에는 양도소득 과세표준의 100분의 60**)").
