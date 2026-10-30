@@ -105,7 +105,7 @@ describe("CB-3 지분 소유 쌍의 승자는 ⑧(폼 값)과 ⑫(payload 값)�
   /**
    * 시가 1.0B · 채무 0.6B · 지분 50%: ⑧ 은 폼의 채무 0.6B 를 그대로 보고 담보(0.6B)가 시가×50%(0.5B)를 이긴다고 막는다.
    * 그러나 ④ 는 지분 소유 컴패니언의 채무를 지분율로 줄여 보내(payload 0.3B) ⑫ 는 두 자산 모두 보충 승으로 읽어 막지 않는다 — 엔진이 읽는 값과 같은 쪽이다.
-   * 이 쌍에서 집계 증여가액(1.5B)과 카드별 증여가액 합(2.0B)이 다른 것은 지분 소유 카드가 물건 전체 값을 보여 주는 탓일 수 있으나 **분석하지 않았다**(「확인 필요」).
+   * 이 쌍은 `transfer.route.bg-fractional-companion-winner.anchor.test.ts` 에서 분석했다 — 컴패니언 채무만 지분율로 한 번 더 줄어 ⑫ 가 혼합 승자를 놓친다(주 자산이면 막는다). 카드별 증여가액 합(2.0B)은 지분 카드가 물건 전체 값을 보여 주는 표시값이고 증여세는 합산 info(1.5B)로 계산된다.
    */
   const D6 = { bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgMortgageDebtAmount: "600,000,000", bgMortgageSetAmount: "600,000,000" };
   it("100/100 은 둘 다 보충 → ⑧ 통과 · 200 · 100/50 은 ⑧ 게이트(폼 기준 담보 승) · ⑫ 200(payload 기준 둘 다 보충)", async () => {
