@@ -109,3 +109,11 @@
 - 종전 남은 플래그 실측(승계 300M): 증여 환산 잔재 ⑧ 통과 → ⑫ 400 · 증여·상속 매매사례·감정 잔재 ⑧ 「취득당시 기준시가」 요구(숨은 칸) — 이제 383,010,000.
 - **검증**: anchor `__tests__/components/gift-inherit-successor-right-acq.anchor.test.tsx` 23건(수정 전 21 실패) · 뮤테이션 13/13 KILLED · vitest 전체 44,302 통과 · E2E `e2e/gift-inherit-successor-right-acq.spec.ts` GI-E1~E3 3회 연속 통과 · 수정 전 코드 3/3 실패 · 관련 E2E 26 스펙 133건 통과 · 라이트·다크·375px 확인(안내 문구의 칸 이름을 화면 라벨 「상속세 신고가액」에 맞춤).
 - **남은 것**: ⑫ — 라우트 직접 호출에서 상속·증여 승계 입주권에 §163⑨ 페이로드 없이 `acquisitionPrice`만 오면 그대로 쓴다(화면 경로 밖 · 미차단) · 부담부증여로 넘기는 상속·증여 취득 승계 입주권의 A(§159)는 승계취득가액 + 추가분담금 그대로(범위 밖) · 상속 평가방법 미선택 + 남은 신고가액 통과(입주권 외 상속과 같은 기존 동작) · §3의 근거 확인.
+
+## 9. ⑫ 라우트 직접 호출 (#2761 남은 것 — 「API를 직접 호출하면 승계취득가액을 서버가 막지 않는 거 수정해」)
+
+- **실측(수정 전 · mock)**: 단건 주 자산 상속·증여 승계 입주권에서 `inheritedAcquisition`을 지우고 `acquisitionPrice`만 보내면 200 — 9억 133,060,000 · 1억 472,935,000(평가액 3억 383,010,000). 페이로드가 있으면 `acquisitionPrice` 900M에도 383,010,000(평가액이 이긴다). 컴패니언 상속은 `inheritanceValuation`을 지우고 `fixedAcquisitionPrice`만 보내면 그 값으로 계산(1억 418,035,000 ↔ 331,770,000 — 구 계약 `legacyFixed`, 입주권은 `CLAUSE_A_KINDS` 밖). 컴패니언 증여는 `fixedAcquisitionPrice` 자체가 증여 신고가액이다(④가 평가액을 싣고 증여 arm이 요구) — 막을 대상 없음.
+- **다건은 걸지 않는다**: 다건 ④(`multi-transfer-tax-api.ts` `buildPropertyPayload`)는 §163⑨ 페이로드 없이 `acquisitionPrice`에 증여 신고가액·상속 신고가액을 싣는다(실측: 증여·상속 300,000,000). 공용 `refinePropertyRequiredInputs`에 넣으면 다건이 400 막다른 길이 된다.
+- **구현**: `lib/api/transfer-tax-schema-successor-deemed.ts` — `refineDeemedSuccessorRightPrimary`(단건 `propertySchema`만 — 승계 입주권 × 상속·증여 × 부담부증여 아님이면 `inheritedAcquisition.reportedValue > 0` 필수) · `refineDeemedSuccessorRightCompanion`(컴패니언 상속 승계 입주권 — `inheritanceValuation.publishedValueAtInheritance > 0` 필수 · 구 계약 `fixedAcquisitionPrice` 불인정). ⑧ `validateSuccessorRightAsset` 상속·증여 갈래(평가액 필수)의 거울.
+- **검증**: anchor `__tests__/components/successor-right-deemed-zod.anchor.test.tsx` 14건(규칙 없을 때 6 실패) · 뮤테이션 10/10 KILLED · vitest 전체 44,342 통과 · E2E `e2e/successor-right-deemed-zod.spec.ts` SD-E1·E2(화면 요청 본문에서 평가액 채널을 지워 직접 POST) 3회 연속 통과 · 수정 전 2/2 실패(200) · 관련 E2E 136건 통과. 화면 변경 없음(스크린샷 생략).
+- **남은 것(확인 필요)**: 다건 ④는 매매 승계 입주권의 `acquisitionPrice`를 숨은 `fixedAcquisitionPrice`에서 읽어 0을 싣는다(승계취득가액 + 추가분담금을 쓰지 않음 — 실측 0). 다건 화면에서 그 자산에 닿는지·⑧이 막는지는 미측정. 추가분담금은 ④에서 합쳐 오므로 ⑫가 따로 볼 수 없다(⑧이 막는다).
