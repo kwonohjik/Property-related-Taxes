@@ -22,6 +22,11 @@
  * 하나만 고치면 **방향이 틀린다** — 두 축의 부호가 반대이기 때문이다(계획서 §5.1 PD-3).
  */
 
+import {
+  computeSangjeungbeopValuation,
+  resolveBgAcquisitionBasis,
+  scaleBurdenedGiftInfo,
+} from "./burdened-gift-valuation";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { calculateBuildingPenalty } from "./transfer-tax-building-penalty";
 import type { BurdenedGiftInfo } from "./types/transfer-burdened-gift.types";
@@ -185,6 +190,31 @@ export function assertCarryoverDonorBasis(
         "정하는데, 부담부증여의 취득가액은 「소득세법 시행령」 제159조 제1항 제1호가 " +
         "양도인 기준 값으로 따로 산정하므로 두 값이 모두 필요합니다 " +
         "(같은 조 제2항 제3호의 세액 비교가 두 시나리오를 동시에 요구합니다).",
+    );
+  }
+
+  /**
+   * 시가 모드 · 담보(상증법 §66) 승 — 괄호가 발동해 취득가액이 취득시 기준시가 × 채무비율로 강제된다(`resolveBgAcquisitionBasis`).
+   * 시나리오 A는 **당초 증여자의 취득시 기준시가**를 쓴다. 산정방식(실지 등)의 칸만 요구하면 이 칸이 비어도 통과하고,
+   * `applyCarryoverDonorBasis`의 `?? 기존값`이 양도인 값으로 대신해 A = B가 된다 — §97의2②3호 비교가 조용히 무력화된다.
+   */
+  const scaled = scaleBurdenedGiftInfo(info, rawInput?.ownershipRatio);
+  const forcedByCollateral = resolveBgAcquisitionBasis(
+    scaled,
+    computeSangjeungbeopValuation(scaled.landStdPriceAtTransfer, scaled.buildingStdPriceAtTransfer, scaled).selectedMode,
+  ).collateralForcedStdInMarketMode;
+  const parts = carryoverPartsOf(info);
+  if (
+    forcedByCollateral &&
+    ((parts.land && donor.landStdPriceAtAcquisition === undefined) || (parts.building && donor.buildingStdPriceAtAcquisition === undefined))
+  ) {
+    const partLabel = parts.land && parts.building ? "토지·건물" : parts.land ? "토지" : "건물";
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "부담부증여에 이월과세를 적용하려면 「당초 증여자」 취득 당시의 " +
+        `${partLabel} 기준시가가 필요합니다. 시가로 평가했지만 담보채권액 평가(상증법 §66)가 시가보다 커서 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 ` +
+        "취득가액을 취득시 기준시가로 산정하므로, 당초 증여자 기준의 취득가액도 그 기준시가로 구합니다 " +
+        "(건물이 없으면 0을 입력하세요). 비우면 양도인 값과 같아져 「소득세법」 제97조의2 제2항 제3호의 세액 비교가 성립하지 않습니다.",
     );
   }
 }
