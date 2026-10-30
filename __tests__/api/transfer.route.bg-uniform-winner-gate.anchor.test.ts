@@ -6,7 +6,7 @@
  * 담보평가액이 아니라 시가였다(담보 1.2B > 시가 1.0B인 정당한 쌍이 막힘).
  *
  * · UW-1 균일 승자(100% 소유) — ⑧ 통과 ∧ ⑫ 200 ∧ 증여가액 = ΣA ∧ 양도차익 = 단건 합(±0). 일반건물 시가 모드 담보 쌍(두 규칙 모두) · 주택 기준시가 담보 쌍 · 임대 쌍.
- * · UW-2 여전히 막힘 — 혼합 승자(⑧·⑫ 모두) · 지분·이월과세·입주권·겸용 자산의 비보충 승자(⑧; 화면·엔진의 취득가액 처리를 확인하지 못한 범위).
+ * · UW-2 여전히 막힘 — 혼합 승자(⑧·⑫ 모두) · 지분·시가 모드 이월과세·입주권·겸용 자산의 비보충 승자(⑧; 화면·엔진의 취득가액 처리를 확인하지 못한 범위 — 기준시가 모드 이월과세는 풀렸다).
  * · UW-3 분모 — 시가 모드 묶음에서 채무가 그 자산의 증여가액(담보평가액)을 넘으면 여전히 막힌다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -107,7 +107,8 @@ describe("UW-2 여전히 막힘 — 혼합 승자 · 지분·이월과세·입�
 
   it.each([
     ["지분 50% 담보 승", () => [house(1, HM), house(2, HM, x({ ownershipNumerator: "50", ownershipDenominator: "100" }))], "지분 보유"],
-    ["이월과세 담보 승", () => [house(1, HM), house(2, HM, x({ acquisitionCause: "carryover_gift" }))], "이월과세"],
+    // 기준시가 모드 이월과세는 풀렸다(`transfer.route.bg-carryover-std-uniform-bundle.anchor.test.ts` CU-1) — 시가 모드만 막힌다(담보 승이 취득가액을 당초 증여자 기준시가로 강제하는 화면은 2단계).
+    ["시가 모드 이월과세 담보 승", () => [house(1, HM), house(2, HM, x({ acquisitionCause: "carryover_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1000000000", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "300000000" }))], "이월과세"],
     ["조합원입주권 담보 승", () => [house(1, HM), house(2, HM, x({ assetKind: "right_to_move_in" }))], "조합원입주권"],
     ["겸용주택 담보 승", () => [house(1, HM), house(2, HM, x({ isMixedUseHouse: true }))], "겸용주택"],
   ] as const)("%s — 해당 자산만 ⑧이 막는다", async (_l, mk, reason) => {
