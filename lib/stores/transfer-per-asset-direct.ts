@@ -11,7 +11,7 @@ import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-
 import { isMixedUsePerPartAcq, mixedPartAcqSum } from "@/lib/calc/mixed-use-part-acq-split";
 import {
   isSuccessorRightTransfer,
-  successorRightAcquisitionTotal,
+  successorRightActualAcquisition,
   successorRightEstimationMode,
 } from "@/lib/calc/transfer-successor-right";
 import { postApprovalExpensesInScope } from "@/lib/calc/redev-field-scope";
@@ -90,7 +90,8 @@ export function directAcqRaw(a: AssetForm): { value: number; pending: boolean } 
     if (isCarryoverSuccessorRight(a)) return { value: 0, pending: false };
     switch (successorRightEstimationMode(a)) {
       case "actual":
-        return { value: successorRightAcquisitionTotal(a), pending: false };
+        // 상속·증여는 §163⑨ 평가액 — ④와 같은 leaf(숨은 승계취득가액을 보이지 않는다)
+        return { value: successorRightActualAcquisition(a), pending: false };
       // ④ `similarSalesValue`(영 §176의2③1호) — 승계는 §166을 안 타므로 추계 3종이 열린다.
       case "salesCase":
         return { value: parseRaw(a.similarSalesValue), pending: false };
