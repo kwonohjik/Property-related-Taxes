@@ -116,4 +116,11 @@
 - **다건은 걸지 않는다**: 다건 ④(`multi-transfer-tax-api.ts` `buildPropertyPayload`)는 §163⑨ 페이로드 없이 `acquisitionPrice`에 증여 신고가액·상속 신고가액을 싣는다(실측: 증여·상속 300,000,000). 공용 `refinePropertyRequiredInputs`에 넣으면 다건이 400 막다른 길이 된다.
 - **구현**: `lib/api/transfer-tax-schema-successor-deemed.ts` — `refineDeemedSuccessorRightPrimary`(단건 `propertySchema`만 — 승계 입주권 × 상속·증여 × 부담부증여 아님이면 `inheritedAcquisition.reportedValue > 0` 필수) · `refineDeemedSuccessorRightCompanion`(컴패니언 상속 승계 입주권 — `inheritanceValuation.publishedValueAtInheritance > 0` 필수 · 구 계약 `fixedAcquisitionPrice` 불인정). ⑧ `validateSuccessorRightAsset` 상속·증여 갈래(평가액 필수)의 거울.
 - **검증**: anchor `__tests__/components/successor-right-deemed-zod.anchor.test.tsx` 14건(규칙 없을 때 6 실패) · 뮤테이션 10/10 KILLED · vitest 전체 44,342 통과 · E2E `e2e/successor-right-deemed-zod.spec.ts` SD-E1·E2(화면 요청 본문에서 평가액 채널을 지워 직접 POST) 3회 연속 통과 · 수정 전 2/2 실패(200) · 관련 E2E 136건 통과. 화면 변경 없음(스크린샷 생략).
-- **남은 것(확인 필요)**: 다건 ④는 매매 승계 입주권의 `acquisitionPrice`를 숨은 `fixedAcquisitionPrice`에서 읽어 0을 싣는다(승계취득가액 + 추가분담금을 쓰지 않음 — 실측 0). 다건 화면에서 그 자산에 닿는지·⑧이 막는지는 미측정. 추가분담금은 ④에서 합쳐 오므로 ⑫가 따로 볼 수 없다(⑧이 막는다).
+- **남은 것(→ §10에서 확인)**: 다건 ④는 매매 승계 입주권의 `acquisitionPrice`를 숨은 `fixedAcquisitionPrice`에서 읽어 0을 싣는다(승계취득가액 + 추가분담금을 쓰지 않음 — 실측 0). 다건 화면에서 그 자산에 닿는지·⑧이 막는지는 미측정. 추가분담금은 ④에서 합쳐 오므로 ⑫가 따로 볼 수 없다(⑧이 막는다).
+
+## 10. 다건 계산기 승계 입주권 — 확인 결과: 결함 없음 (「확인 필요라고 한 2건 확인해」)
+
+- **다건 ④ 취득가액 0** — 사실이다(매매 승계 300M·추가 50M → `acquisitionPrice` 0 · 숨은 `fixedAcquisitionPrice` 700M이면 700M). 그러나 **계산에 닿지 않는다**:
+  - ⑫ 다건 route: 조합원입주권 전부를 400으로 거부 — 「조합원입주권(시행령 §166① / 승계취득분 §97①1호)은 단건 계산기에서만 지원됩니다.」(`transfer-tax-schema-multi-refines.ts` · 매매·증여·상속·감정 모드 7셀 모두 400 실측 · 환산 모드는 양도시 기준시가 규칙이 먼저 400).
+  - ⑧ 다건 화면: 「세액 계산」 시 `validateMultiSettings` → `validateMultiSupportedMode`(`multi-transfer-tax-validate.ts:137`)가 같은 문구로 막는다 — Playwright로 매매·증여·상속 승계 입주권을 다건 세션에 넣고 계산을 눌러 **POST 없음 · 같은 문구 표시**(3/3)를 확인했다. 자산별 `validateStep`(`notReadyPropertiesMessage`)은 통과하지만 다건 지원 모드 검사가 그 뒤에서 막는다.
+- ⇒ 다건 ④의 0은 죽은 경로다. 고칠 필요 없음(다건이 입주권을 지원하게 되면 ④를 단건 leaf `successorRightActualAcquisition`로 맞춰야 한다).
