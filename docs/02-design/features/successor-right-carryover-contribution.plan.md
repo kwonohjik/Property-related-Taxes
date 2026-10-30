@@ -157,3 +157,13 @@
 - **구현**: `lib/api/transfer-tax-schema-successor-deemed.ts` `refineSuccessorRightNoSec164Inputs` — 승계 입주권(`isSuccessorRightToMoveIn === true` ∧ 단건 `propertyType`·컴패니언 `assetKind` = `right_to_move_in`)에 `inheritedHouseValuation`·`pre1990Land`·`commercialInheritanceValuation`이 오면 400(키마다). 취득원인·양도유형과 무관 — 세 키 모두 토지·건물 ② 전용이다. 단건 `propertySchema`·컴패니언 루프에 배선. 다건은 입주권 자체를 거부한다(§10).
 - **⑧ 변경 없음**: ④는 승계 입주권에 이 키를 싣지 않는다 — 매매·증여·상속(2023·2000·1989)·증여 2000 · 컴패니언 상속 2000에 주택·토지·상가에서 남은 ② 칸을 모두 채워도 ⑧ 통과 · 키 없음 · 200(anchor 가드).
 - **범위 밖**: 원조합원 입주권(종전자산 토지·건물을 상속받은 경우가 있다 — §163⑨ 단서가 종전자산에 걸리는지는 별개 쟁점) · 의제취득일 전 상속 입주권의 ③ 환산 근거(§11 확인 필요).
+
+## 13. 별건 — 증여받은 자산의 §163⑨ 의제 문구 (§11 별건 · 「증여인데도 결과 카드 산식 문구가 「(상속세 신고가액)」」)
+
+**실측(수정 전 · mock · 화면 경로 ④→⑫→엔진)**: 증여 입주권·증여 주택 2015·증여 토지 1984 모두 엔진 산식이 「보충적평가액 300,000,000원 (상속세 신고가액) 적용」·「① 상증법 평가액(상속세 신고가액)」이고 계산 단계 이름이 「상속 취득가액 의제」였다. Playwright: 증여 입주권 결과 카드에 산식 그대로 + 배지 「보충적평가액 (공시가격)」. 증여는 화면이 평가방법을 묻지 않는다(평가방법 선택은 상속 블록 `PostDeemedInputs`에만) — ④가 `reportedMethod: inheritanceValuationMethod || "supplementary"`로 채우므로 「보충적평가액」·상증법 §61도 근거 없는 표시다. 컴패니언 결과에는 이 문구가 없다(상속·증여 컴패니언은 다른 경로).
+
+**구현(문구만 · 세액 불변)**:
+- 엔진 `InheritanceAcquisitionInput.isGift`(내부 주입 — STEP 0.45 `resolveInheritedAcquisitionInput`이 `acquisitionCause === "gift"`에서 정한다 · 와이어 필드 아님 → 14지점 무관) · 결과 `isGift` echo.
+- 의제취득일 이후 증여: 산식 「증여세 신고가액(증여일 현재 상증법 평가액) {금액} 적용」 · 근거 `TRANSFER.INHERITED_AFTER_DEEMED`(§61 없음) — 남은 평가방법(감정 등)이 와도 방법 이름을 쓰지 않는다. 의제취득일 전: ① 「상증법 평가액(증여세 신고가액)」. 단계 이름 「증여 취득가액 의제」.
+- ⑦ `InheritedAcquisitionDetailCard`: 증여 ∧ 의제취득일 이후면 평가방법 배지를 숨긴다(3자 max 배지는 남긴다).
+- 상속은 그대로(가드). 상속 문구의 「원」 접미(「300,000,000원」)는 기존 그대로 둔다(범위 밖).

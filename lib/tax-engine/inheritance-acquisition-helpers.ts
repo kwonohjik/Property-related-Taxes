@@ -93,7 +93,7 @@ export function runInheritedAcquisitionStep(
   const updatedInput = applyResultToInput(currentInput, result, resolvedInput, redevelopment166_3Price !== undefined);
 
   const step: CalculationStep = {
-    label: "상속 취득가액 의제",
+    label: rawInput.acquisitionCause === "gift" ? "증여 취득가액 의제" : "상속 취득가액 의제",
     formula: result.formula,
     amount: result.acquisitionPrice,
     legalBasis: result.legalBasis,
@@ -408,6 +408,8 @@ function resolveInheritedAcquisitionInput(
 
   return {
     ...base,
+    // 산식·단계 문구용(「증여세 신고가액」) — 값 계산은 같다
+    ...(rawInput.acquisitionCause === "gift" && { isGift: true }),
     standardPriceAtDeemedDate,
     standardPriceAtTransfer,
     /**
