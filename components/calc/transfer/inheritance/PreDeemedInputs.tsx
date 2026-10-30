@@ -24,6 +24,7 @@ import { PreDeemedConversionFields } from "./PreDeemedConversionFields";
 import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
 import { ApartNtsPriceQuestion } from "./ApartNtsPriceQuestion";
 import { apartNtsQuestionRelevant, apartSec164FormOpen, isApartSec163_9Asset } from "@/lib/calc/apart-nts-price";
+import { isSec163_9HouseAsset } from "@/lib/calc/transfer-163-9-base-date";
 import { inheritanceReportedValuePartSuffix } from "@/lib/calc/inheritance-reported-value-scope";
 import { isRedev166_3PreDeemedAsset } from "@/lib/calc/transfer-tax-validate-clause-a";
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
@@ -46,7 +47,8 @@ interface Props {
 export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
   const isLand = asset.assetKind === "land";
   // 토지/주택 판정은 상단 assetKind로 파생(상속 자산구분 라디오 폐지 대응).
-  const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
+  // 원조합원 입주권(종전 주택)도 — 인가 전 상속·증여받은 것은 기존건물이다(`isSec163_9HouseAsset`).
+  const isHouse = isSec163_9HouseAsset(asset);
   // 재개발·재건축 종전자산(승계조합원 제외) — ③은 §176조의2④가 아니라 §166③이고 아래 재개발 입력 ⑤ 「환산취득가액」의 칸으로 계산한다
   // (엔진 `resolvePreDeemedRedevelopment166_3Price` — 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §12). 여기 기준시가 2칸은 쓰이지 않는다.
   const isRedev = isRedev166_3PreDeemedAsset(asset);

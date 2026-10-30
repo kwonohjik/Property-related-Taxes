@@ -83,8 +83,9 @@ describe("K-1 — 이 함수가 직접 막는 자산종류", () => {
 describe("K-2 — 제외한 자산종류는 **다른 게이트가** 막는다 (침묵 통과 0건)", () => {
   it.each([
     ["commercial_building", /상속개시일 평가액/],
-    ["redevelopment_apt", /관리처분|인가일/],
-    ["right_to_move_in", /관리처분|인가일/],
+    // 원조합원 상속은 ①(또는 ②)을 원조합원 규칙이 요구한다(`originalMemberClauseARequiredError` · 계획서 successor-right-carryover-contribution §15 Q-2)
+    ["redevelopment_apt", /종전 부동산 실거래가로는 계산하지 않습니다/],
+    ["right_to_move_in", /종전 부동산 실거래가로는 계산하지 않습니다/],
     ["general_building", /토지면적|토지 평가액/],
   ] as const)("%s → 이 함수는 통과시키되 전체 validate는 차단", (kind, pattern) => {
     expect(postDeemedClauseARequiredError(bare(kind), "자산1")).toBeNull();
@@ -96,7 +97,7 @@ describe("K-2 — 제외한 자산종류는 **다른 게이트가** 막는다 (�
   });
 });
 
-describe("R-1 — 입주권 제외의 근거: 종전자산 취득가액이 필수라 0이 되지 않는다", () => {
+describe("R-1 — 입주권은 이 함수 대신 원조합원 규칙(①·② 필수)과 재개발 게이트(종전자산 취득가액 칸)가 막는다", () => {
   /** 재개발 게이트가 요구하는 필드를 채운 입주권 상속(원조합원·실가·pay). */
   const right = (over: Partial<AssetForm> = {}) =>
     bare("right_to_move_in", {
@@ -112,11 +113,16 @@ describe("R-1 — 입주권 제외의 근거: 종전자산 취득가액이 필�
       ...over,
     } as Partial<AssetForm>);
 
-  it("종전자산 취득가액이 비면 차단한다 — ①이 없어도 여기서 걸린다", () => {
-    expect(v(right({ redevActualAcquisitionPrice: "" }))).toMatch(/종전 주택 취득가액/);
+  // 종전 R-1은 「종전자산 취득가액이 있으면 ① 없이 통과」를 단언했다 — 그 경로가 피상속인 쪽 금액으로 계산되는 F-5였다(§14).
+  it("① 빈칸 — 종전자산 취득가액이 있어도 원조합원 규칙이 막는다", () => {
+    expect(v(right({ redevActualAcquisitionPrice: "300000000" }))).toMatch(/종전 부동산 실거래가로는 계산하지 않습니다/);
   });
 
-  it("종전자산 취득가액이 있으면 통과한다 — 취득가액 소스가 실재한다(0 아님)", () => {
-    expect(v(right({ redevActualAcquisitionPrice: "300000000" }))).toBeNull();
+  it("① 있음 · 종전자산 취득가액 빈칸 — 재개발 게이트가 그대로 막는다", () => {
+    expect(v(right({ publishedValueAtInheritance: "300000000", redevActualAcquisitionPrice: "" }))).toMatch(/종전 주택 취득가액/);
+  });
+
+  it("① 있음 · 종전자산 취득가액 있음 → 통과", () => {
+    expect(v(right({ publishedValueAtInheritance: "300000000", redevActualAcquisitionPrice: "300000000" }))).toBeNull();
   });
 });

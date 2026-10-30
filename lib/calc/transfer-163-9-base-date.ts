@@ -149,6 +149,24 @@ export function isSec163_9House(assetKind: AssetForm["assetKind"] | undefined): 
 }
 
 /**
+ * 자산 단위 §163⑨2호 주택 — 위 주택·재개발 아파트, 그리고 **종전 주택을 제공한 원조합원 입주권**.
+ * 원조합원이 인가 전 상속·증여받은 것은 기존건물·부수토지다(영 §166① 「기존건물과 그 부수토지의 취득가액」 → 법 §97①1호가목 →
+ * 영 §163⑨ 단서 2호) — 같은 사실을 완공 아파트로 팔면 ②를 비교받았고 입주권으로 팔면 못 받았다(실측 317,490,000 ↔ ② 165,060,000).
+ * 승계 입주권은 권리라 대상이 아니다(⑫ `refineSuccessorRightNoSec164Inputs`). 계획서 successor-right-carryover-contribution.plan.md §14·§15.
+ */
+export function isSec163_9HouseAsset(
+  asset: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "redevIsSuccessorMember" | "redevOriginalAssetType">,
+): boolean {
+  if (isSec163_9House(asset.assetKind)) return true;
+  return (
+    asset.assetKind === "right_to_move_in" &&
+    asset.isSuccessorRightToMoveIn !== true &&
+    asset.redevIsSuccessorMember !== "yes" &&
+    asset.redevOriginalAssetType === "housing"
+  );
+}
+
+/**
  * §163⑨1호 토지 비교 입력칸(§164④ 등급환산 5칸)이 **토글 없이 항상 열리는** 맥락인가 (별건 B3).
  *
  * 상증법 평가액과 §164④ 가액 중 **큰 금액**을 취득가액으로 하는 것은 법이 정한 계산이라(영 §163⑨ 단서 1호 — 「많은 금액」)

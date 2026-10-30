@@ -109,10 +109,10 @@ describe("post-deemed 예외 — 취득가 소스가 따로 있거나 이미 막
     expect(V(a) ?? "").not.toMatch(CLAUSE_A_REQUIRED);
   });
 
-  it("P-9(회귀): **재개발 APT**는 §166④ 경로가 먼저 막는다", () => {
+  it("P-9(회귀): **재개발 APT**는 이 게이트가 아니라 원조합원 규칙이 막는다(종전 부동산 실거래가로 계산 안 함)", () => {
     const err = V(base({ assetKind: "redevelopment_apt" }));
     expect(err).toBeTruthy();
-    expect(err).not.toMatch(CLAUSE_A_REQUIRED);
+    expect(err).toContain("종전 부동산 실거래가로는 계산하지 않습니다");
   });
 });
 

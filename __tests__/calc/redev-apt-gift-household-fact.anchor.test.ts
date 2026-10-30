@@ -35,6 +35,8 @@ function giftAptForm(assetOver: Over = {}, opts: { price?: string } = {}) {
     assetOver: {
       acquisitionCause: "gift",
       acquisitionDate: "2018-01-01",
+      // 증여 신고가액(§163⑨ 평가액) — 원조합원 증여는 필수다(계획서 successor-right-carryover-contribution §15 Q-2). 종전 부동산 실거래가와 같은 값이라 세액은 종전 그대로다.
+      fixedAcquisitionPrice: "400000000",
       donorAcquisitionDate: "2008-01-01",
       giftDonorRelation: "spouse",
       giftSameHousehold: "yes",

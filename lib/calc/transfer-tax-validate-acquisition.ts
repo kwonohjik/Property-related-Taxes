@@ -25,6 +25,7 @@ import { giftEstimatedModeError } from "./transfer-tax-validate-gift-163-9";
 import { sec164PartialInputError, sameAdjustmentPeriodError } from "./transfer-tax-validate-sec164";
 import { clauseADeclarationError } from "./transfer-tax-validate-clause-a";
 import { postDeemedClauseARequiredError } from "./transfer-tax-validate-clause-a";
+import { originalMemberClauseARequiredError } from "./transfer-tax-validate-clause-a";
 import { preDeemedConversionInputError } from "./transfer-tax-validate-clause-a";
 import { redevPreDeemedEstimatedRequiredError } from "./transfer-tax-validate-clause-a";
 import { validateCommercialInheritanceAsset } from "./transfer-tax-validate-commercial-asset";
@@ -217,6 +218,9 @@ function validateAssetAcquisitionBranches(
   // ⚠️ E-1과 **같은 자리**여야 한다 — 위 조기 return(용도변경·부담부증여)보다 뒤면 dead code다.
   const postDeemedError = postDeemedClauseARequiredError(asset, label);
   if (postDeemedError) return postDeemedError;
+  // 원조합원 종전자산 상속·증여 — 같은 규칙(재개발은 위 함수가 뺀다 · 「종전 부동산 실거래가」 fallback 차단)
+  const originalMemberError = originalMemberClauseARequiredError(asset, label);
+  if (originalMemberError) return originalMemberError;
 
   // ── 상업용건물·오피스텔 전용 검증 — transfer-tax-validate-commercial-asset.ts 위임 ──
   // ⚠️ **순서와 「종료 vs 계속」이 규칙의 일부다**(위임 모듈 헤더 참조):

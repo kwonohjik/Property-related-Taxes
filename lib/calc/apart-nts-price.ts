@@ -10,7 +10,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { deriveInheritanceHouseKind } from "./transfer-tax-api-asset-basics";
-import { deriveSec163_9BaseDate, isSec163_9Cause, isSec163_9House } from "./transfer-163-9-base-date";
+import { deriveSec163_9BaseDate, isSec163_9Cause, isSec163_9HouseAsset } from "./transfer-163-9-base-date";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import {
   apartFirstPriceDateInRange,
@@ -20,10 +20,10 @@ import {
   APART_NTS_PRICE_REQUIRED_MESSAGE,
 } from "@/lib/tax-engine/apart-nts-price";
 
-/** 자산 단위 §163⑨ 공동주택 — 주택(재개발 포함) ∧ 상속·증여 ∧ 공동주택 ∧ D2 아님. */
+/** 자산 단위 §163⑨ 공동주택 — 주택(재개발·원조합원 입주권 포함) ∧ 상속·증여 ∧ 공동주택 ∧ D2 아님. */
 export function isApartSec163_9Asset(asset: AssetForm): boolean {
   return (
-    isSec163_9House(asset.assetKind) &&
+    isSec163_9HouseAsset(asset) &&
     isSec163_9Cause(asset.acquisitionCause) &&
     deriveInheritanceHouseKind(asset) === "house_apart" &&
     !effectiveBuildingCauseMix(asset)

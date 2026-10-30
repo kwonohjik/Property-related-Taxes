@@ -195,3 +195,13 @@
 **사용자 결정**
 - **Q-1 (F-4)** (a) 완공 아파트와 같게 — 원조합원 입주권(인가 전 상속·증여 · 종전 주택)에도 ② 카드(§164⑦·공동주택 §164⑥ 질문)를 열고 ④·⑧을 맞춘다. 엔진 변경 없음 · 종전 단독/공동 구분은 종전자산 기준 · (b) 현행 유지(안내만) · (c) 해석례 확보까지 보류. **권장 (a)** — 문언(§166① 취득가액 → §97①1호가목 → §163⑨ 단서 토지·건물)과 저장소의 완공 아파트 설계가 같은 축이고, 엔진이 이미 받는다. 직접 해석례는 없다.
 - **Q-2 (F-5)** (a) 원조합원 상속·증여(의제취득일 이후)는 ① 평가액(또는 ②)을 ⑧·⑫ 필수로 — 완공 아파트 포함 · (b) 현행 유지. **권장 (a)** — 다른 자산과 같은 규칙이고, 평가액 없이 피상속인 쪽 금액으로 계산되는 조용한 경로를 막는다.
+
+## 15. 구현 — Q-1 (a) · Q-2 (a) (§14 · 「권장안으로」)
+
+- **Q-1 공용 술어** `isSec163_9HouseAsset`(`lib/calc/transfer-163-9-base-date.ts`) — 주택·재개발 아파트 + **종전 주택(`redevOriginalAssetType: housing`)을 제공한 원조합원 입주권**(승계 입주권·`redevIsSuccessorMember: yes` 제외). 교체 7곳: ⑧·④ `sec164HouseStatus` · 공동주택 `isApartSec163_9Asset` · ⑤ `PostDeemedInputs`·`PreDeemedInputs`·`GiftHouseStdPriceSection` · 의제 전 자동 기준시가 `preDeemedShowsHouseValuation` · ④ 엔진 `deriveEngineInheritanceAssetKind`(종전 주택의 단독/공동 구분 — 종전에는 입주권이면 늘 `house_apart`). 엔진 변경 없음.
+  - 실측(mock · 화면 경로): 원조합원 입주권 2000 상속 + ② §164⑦ 720,000,000 → 317,490,000 → **165,060,000** · 공동주택 「없었음」 §164⑥ 같음 · ② 일부 → ⑧ 차단 · 완공 아파트 86,143,333(불변) · 2010 상속·종전 토지·승계 입주권 + 남은 ② 칸 → 싣지 않음(334,290,000 · 317,490,000 · 200).
+  - 공동주택(동·호 주소 등으로 `house_apart`)인 원조합원 입주권의 2005.4.30. 전 상속은 이제 완공 아파트처럼 「국세청 고시 가액 유무」 답을 ⑧이 요구한다.
+- **Q-2** ⑧ `originalMemberClauseARequiredError`(`transfer-tax-validate-clause-a.ts` · 컴패니언 포함) · ⑫ `lib/api/transfer-tax-schema-original-member-deemed.ts` `refineOriginalMemberDeemedPrimary`(`inheritedAcquisition.reportedValue` 또는 `inheritedHouseValuation`) · `refineOriginalMemberDeemedCompanion`(상속 `inheritanceValuation.publishedValueAtInheritance` · 증여 `fixedAcquisitionPrice` 또는 `inheritedHouseValuation`). 대상: 원조합원(입주권·완공 아파트) × 상속·증여 × 의제취득일 이후 × 부담부증여 아님. 실가·환산 모드 구분 없음(의제취득일 이후 상속·증여는 평가액이 늘 있어 §166③이 적용되지 않는다 — 증여 안내문과 같은 논리로 상속 안내문 `RedevelopmentDeemedAcquisitionNotice`도 고쳤다).
+  - 실측: 입주권 상속·완공 아파트 상속·입주권 증여 ① 빈칸 → ⑧ 차단 · ⑫ 400(종전 413,535,000 · 291,310,000 · 413,535,000) · 컴패니언 상속·증여 빈칸 → ⑧·⑫ 400(종전 400,035,000) · ① 빈칸 + ② → 200 165,060,000 · 정상 ① 334,290,000 · 컴패니언 283,050,000 불변 · 1984 상속은 기존 §166③ 규칙.
+- **기존 테스트 갱신(의도된 동작 변경)**: `post-deemed-clause-a-asset-kind-coverage` K-2·R-1(「종전자산 취득가액이 있으면 ① 없이 통과」 → 원조합원 규칙이 막는다 · 재개발 게이트 형제 단언은 ① 있음 시료로 유지) · `post-deemed-clause-a-required` P-9 · `inheritance-asset-kind-derive`(입주권 → 승계·종전 토지만 `house_apart`) · route H-3d(승계 규칙 미적용은 문구로 유지) · RG·RGE 증여 세대 사실 시료(증여 신고가액 빈칸이던 F-5 경로 — 종전 부동산 실거래가와 같은 4억을 넣어 세액·비과세 결론 불변).
+- **범위 밖**: 다건 계산기(완공 아파트 원조합원 상속 — 다건 ④는 §163⑨ 페이로드 없이 `acquisitionPrice`에 평가액, 확인 필요) · 종전 토지 1990.8.30. 전 §164④(완공 아파트에도 없음) · 컴패니언 원조합원 ② 채널(완공 아파트 컴패니언에도 없음 — `ownsAcquisitionSubobject`).
