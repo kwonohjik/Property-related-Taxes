@@ -2,7 +2,7 @@
  * G1 — 사례 28 역방향 「주택을 첫 자산으로 바꾸기」 anchor: 순수 헬퍼(회전·T1·T2·라벨·가드) + **parity**(교환 결과 ≡ 주택 먼저 폼).
  *
  * 정본은 «처음부터 주택을 먼저 넣고 토지를 입력한 순서대로 둔 폼»이다 — 교환 폼은 그 폼과 자산 단위로 깊게 같아야 하고(`toEqual`),
- * 그래서 ⑧ 이슈·④ 본문·route 총세액·properties도 정확히 같다(안분 모드 비정수 시료의 ±1원 포함 — 순서가 같으므로 잔액 흡수 위치가 같다).
+ * 그래서 ⑧ 이슈·④ 본문·route 총세액·properties도 정확히 같다(안분 모드 비정수 시료의 ±1원 포함 — 잔액 흡수자는 입력 순서가 아니라 assetId 순이다, O-23).
  * route 역방향 직접 비교(API 본문)는 `transfer.route.reverse-appurtenant-unit-g1.anchor.test.ts`가 정수 분할 시료에서 한다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -399,13 +399,15 @@ describe("parity — swap(form(LAND…, HOUSE)) ≡ form(HOUSE, LAND…)", () =>
     expect(after.isUrbanArea).toBe(true);
   });
 
-  it("안분 모드 비정수 시료는 실제로 ±1원 경계다 — 단순 교환(순서 뒤집힘)이면 properties가 달라진다(시료가 순서를 가리는지 확인)", async () => {
+  it("안분 모드 비정수 시료는 토지 순서를 뒤집은 폼과도 properties가 같다 — 잔액 흡수자가 입력 순서가 아니라 assetId 순이라서(O-23)", async () => {
     const s = samples[2];
     const rotated = await runCalc(swapped(s.land));
     // 토지 순서를 뒤집은 주택 먼저 폼(= 단순 교환의 결과)
     const flipped = await runCalc(withForm(form(H18(), land18("l2", 90, "222222223"), land18("l1", 120, "333333331")), NONINT));
     const prices = (r: Awaited<ReturnType<typeof runCalc>>) =>
       Object.fromEntries(aggOf(r).properties.map((p) => [p.propertyId, p.transferPrice]));
-    expect(prices(rotated)).not.toEqual(prices(flipped));
+    // 종전에는 입력 순서상 마지막 토지가 안분 잔액 ±1원을 받아 두 폼의 properties가 달랐다(이 시료가 순서를 가리는 ±1원 경계였다).
+    // 이제 잔액은 assetId 사전순 최대 토지가 받으므로 순서만 다른 두 폼은 같다 — 교환 규칙은 «토지 순서 보존»(T1)이 지키되, 세액은 순서와 무관하다.
+    expect(prices(rotated)).toEqual(prices(flipped));
   });
 });

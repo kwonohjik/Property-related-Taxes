@@ -132,31 +132,41 @@ export function apportionBundledSale(
 
   // ── Step 3: 양도가액 결정 ──
   // - fixed 자산: fixedSalePrice 그대로
-  // - variable 자산: residualSale를 기준시가 비율로 안분, 말단 자산이 잔여값 흡수
+  // - variable 자산: residualSale를 기준시가 비율로 안분, 흡수자가 잔여값 흡수
+  //   흡수자 = 기준시가 > 0 자산 중 (배열 위치 0 = 주 자산을 뺀) assetId 사전순 최대 — 입력 순서와 무관(O-23).
+  //   영 §166⑥은 반올림·잔액 귀속을 정하지 않으므로, 감면 안분(propertyId 순)·§102② 차손 안분과 같은 방향으로
+  //   «기준시가가 같은 카드끼리 입력 순서만 바꿔도 1원이 옮겨 가는» 일을 막는다.
+  //   주 자산은 id 문자열(서버 "primary" ↔ 화면 미리보기의 폼 id)이 아니라 위치 0으로 가른다.
   const allocatedSales: number[] = new Array(assets.length).fill(0);
 
   for (const i of fixedIndices) {
     allocatedSales[i] = assets[i].fixedSalePrice!;
   }
 
+  let absorberIndex: number | null = null;
   if (variableIndices.length > 0) {
+    const positive = variableIndices.filter((i) => assets[i].standardPriceAtTransfer > 0);
+    const companions = positive.filter((i) => i !== 0);
+    const pool =
+      companions.length > 0 ? companions : positive.length > 0 ? positive : variableIndices;
+    absorberIndex = pool.reduce(
+      (best, i) => (assets[i].assetId > assets[best].assetId ? i : best),
+      pool[0],
+    );
+
+    // 비흡수자 몫을 먼저 모두 계산한 뒤, 흡수자가 잔여값으로 원 단위 오차를 완벽 흡수
     let accSale = 0;
-    for (let k = 0; k < variableIndices.length; k++) {
-      const i = variableIndices[k];
-      const isLast = k === variableIndices.length - 1;
-      if (isLast) {
-        // 말단: 잔여값으로 원 단위 오차 완벽 흡수
-        allocatedSales[i] = residualSale - accSale;
-      } else {
-        const v = apportionAmount(
-          residualSale,
-          assets[i].standardPriceAtTransfer,
-          totalStandardAtTransfer,
-        );
-        allocatedSales[i] = v;
-        accSale += v;
-      }
+    for (const i of variableIndices) {
+      if (i === absorberIndex) continue;
+      const v = apportionAmount(
+        residualSale,
+        assets[i].standardPriceAtTransfer,
+        totalStandardAtTransfer,
+      );
+      allocatedSales[i] = v;
+      accSale += v;
     }
+    allocatedSales[absorberIndex] = residualSale - accSale;
   }
 
   // ── Step 4: 취득가액 결정 ─────────────────────
@@ -265,11 +275,8 @@ export function apportionBundledSale(
     );
   }
 
-  // residualAbsorbedBy: variable 자산이 있으면 그 말단, 없으면 null (모두 fixed)
-  const residualAbsorbedBy =
-    variableIndices.length > 0
-      ? assets[variableIndices[variableIndices.length - 1]].assetId
-      : null;
+  // residualAbsorbedBy: variable 자산이 있으면 Step 3의 양도가액 흡수자, 없으면 null (모두 fixed)
+  const residualAbsorbedBy = absorberIndex !== null ? assets[absorberIndex].assetId : null;
 
   return {
     apportioned,
