@@ -46,3 +46,18 @@
 1. 코드 변경 없음. 신규 `__tests__/api/transfer.route.bundled-card-loss-offset-key-o19.anchor.test.ts` — 독립 산식 값 사용(V-1 724,350,000 · V-2 460,350,000 · V-4 436,161,000 · V-6 통산표).
 2. 뮤테이션 4종: ① 카드 키 `solo:` ② 키에서 `rate:` 값 제거 ③ `lossOffsetRateKey` 대신 `rateGroup` ④ 차손 카드 `resolveRateFacts` 재계산 제거 — 각각 anchor만 실패해야 한다.
 3. 전체 회귀 · tsc · eslint. 브라우저 확인은 화면 변화가 없어 해당 없음(API·엔진 anchor만).
+
+## 5. 구현 결과 (Q-1 a · Q-2 a)
+
+| 항목 | 결과 |
+|---|---|
+| 코드 | **변경 없음** (엔진·Zod·UI 불변, 세액 불변) |
+| 신규 anchor | `__tests__/api/transfer.route.bundled-card-loss-offset-key-o19.anchor.test.ts` — 9건(K1~K8, K8은 1·2주택 `it.each`). 독립 산식: 724,350,000 · 460,350,000 · 436,161,000(= 697,500,000 × 62% × 1.1) |
+| 뮤테이션 | ① 카드 키 `solo:` → 9건 중 다수 실패 ② 단일세율 키 값 제거(`rate:0`) → K1·K2·K4 실패 ③ `rateGroup`으로 교체 → 다수 실패 ④ 차손 자산 세율 재계산 + 차손 결과 에코 **둘 다** 제거 → 7건 실패 |
+| ④ 단독 | 재계산만 제거해도, 에코만 제거해도 anchor는 통과한다 — **동등 변형**. 차손 결과가 `rateEcho`(`transfer-tax-loss-return.ts:67,189`)로 세율을 이미 싣고, `resolveRateFacts`의 `calcTax(0)` 재계산(`transfer-tax-aggregate-asset-records.ts`)은 중복 안전망이다. 계측(두 값이 다르면 throw)으로 통산 특성화 41건 + 집계 테스트 + 이 anchor를 돌리자 **차이는 비과세 자산 1건(소득 0, 통산 영향 없음)뿐** — 한쪽만 깨져도 다른 쪽이 받친다 |
+| 전체 회귀 | 3,616개 파일 통과 · 1 skip · 실패 0 (44,288 테스트) · tsc 0 · eslint 0 |
+| 브라우저 | 해당 없음 — 화면 변화 없음, API·엔진 anchor만 |
+
+### 발견 (구현 중)
+- 계획서 §1 V-6의 3행 시료 금액은 1주택 106,666,666(또는 …667)·2주택 266,666,666(또는 …667)이다 — 카드 입력 순서에 따라 1원(O-23). anchor는 ±1 범위로 단언하고 통산표 구조(한 줄 · `same_group` · 방향)를 고정한다.
+- K5 2행 시료(주택·카드 2014·2주택)의 차손 금액은 200,000,000이다(3행의 266,666,667은 카드가 둘일 때 단위 몫이 달라진 값).
