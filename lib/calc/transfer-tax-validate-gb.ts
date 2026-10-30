@@ -50,6 +50,8 @@ export function validateGeneralBuildingAsset(
   label: string,
   formTransferDate?: string,
   fdApplicable: boolean = isGbFirstDisclosureApplicable(asset),
+  /** 함께 부담부증여 묶음(축 B 아님)의 신고 단위 인수 채무 합계 — 있으면 「채무 > 0」을 이 합계로 판정한다(채무는 설정된 물건에만 입력하므로 한 자산이 0 이어도 정상). 단건·축 B 는 undefined. */
+  contractAssumedDebtTotal?: number,
 ): string | null {
   const carryoverIssue = validateGbCarryover(asset, label, formTransferDate);
   if (carryoverIssue) return carryoverIssue;
@@ -65,8 +67,10 @@ export function validateGeneralBuildingAsset(
       return fieldError("bgValuationMode", `${label}: 부담부증여 평가 모드를 선택하세요 (상증법 기준시가/시가).`);
     const deposit = parseAmount(asset.bgLendingDepositTotal) || 0;
     const mortgageDebt = parseAmount(asset.bgMortgageDebtAmount) || 0;
-    if (deposit + mortgageDebt <= 0)
-      return fieldError("bgLendingDepositTotal", `${label}: 부담부증여 인수 채무액(임대보증금 + 담보차입금)을 입력하세요.`);
+    // 묶음은 신고 단위 합계로 판정한다(`validateBurdenedGiftAsset` 와 같다) — 합계가 0 이면 어느 자산에도 채무가 없다.
+    const noDebt = contractAssumedDebtTotal !== undefined ? contractAssumedDebtTotal <= 0 : deposit + mortgageDebt <= 0;
+    if (noDebt)
+      return fieldError("bgLendingDepositTotal", `${label}: 부담부증여 인수 채무액(임대보증금 + 담보차입금)을 입력하세요.${contractAssumedDebtTotal !== undefined ? " 여러 물건을 함께 부담부증여하는 경우 채무가 설정된 물건에만 입력하면 됩니다." : ""}`);
     if (asset.bgValuationMode === "sangjeungbeop_market") {
       if (!asset.bgMarketValueAtTransfer || parseAmount(asset.bgMarketValueAtTransfer) <= 0)
         return fieldError("bgMarketValueAtTransfer", `${label}: 시가 모드의 양도시 평가액을 입력하세요.`);

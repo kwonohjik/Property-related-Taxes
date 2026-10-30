@@ -27,6 +27,7 @@ import {
   usesSelfComputedTransferPrice,
 } from "./burdened-gift-transfer-price-scope";
 import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
+import { burdenedGiftAssumedDebtTotal } from "./burdened-gift-assumed-debt";
 import { replotIncrementStdPriceAtTransfer } from "./replot-increment-std-price";
 import { validateExprValuationAsset } from "./transfer-tax-validate-expropriation";
 import { validateAuctionAsset } from "./transfer-tax-validate-expropriation";
@@ -353,13 +354,7 @@ export function validateAssetEntry(
     form.assets.length > 1 &&
     !isFullFractionalBundle(form.assets, form.assetSplitMode) &&
     form.assets.some((x) => x.transferType === "burdened_gift")
-      ? form.assets.reduce(
-          (sum, x) =>
-            sum +
-            (parseAmount(x.bgLendingDepositTotal) || 0) +
-            (parseAmount(x.bgMortgageDebtAmount) || 0),
-          0,
-        )
+      ? burdenedGiftAssumedDebtTotal(form.assets)
       : undefined;
   const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0, contractAssumedDebtTotal, form.isOneHousehold === true, isFullFractionalBundle(form.assets, form.assetSplitMode), form);
   if (acqError) return acqError;

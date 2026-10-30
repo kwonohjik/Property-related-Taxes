@@ -5,6 +5,7 @@
  *  · BV-2 ⑤ 상속 라디오 — 상속개시일이 1985.1.1. 이후면 환산취득가액이 비활성이고 안내가 뜬다. 상속개시일 칸에 옛 값(1983)이 남아도 토지 파트 취득일로 판정한다(#2742).
  *  · BV-3 담보 승 자산 — ⑤ 가 실지취득가액 입력을 숨기고 「취득시 기준시가 × 채무비율」 안내를 띄운다(묶음 · 단건 동일). 보충 승 묶음은 입력이 보인다.
  *  · BV-4 사이드바(⑥) — 일반건물 부담부증여 함께 양도 묶음은 계산 후 취득가액이 카드 값(150,000,000씩)이다(종전에는 「-」였다 — `bg-sidebar-gb-bundle-and-gate.plan.md` Q-1).
+ *  · BV-6 주 자산(첫 자산)에 채무가 없는 묶음 — ⑧ 통과 → 끝까지 계산(종전 ⑫ `transferPrice` 400 · `bg-bundle-primary-zero-debt.plan.md`).
  *  · BV-5 담보 승 묶음(⑧ 균일 승자 과차단 해제 · 같은 계획서 Q-2) — 화면에서 끝까지 계산되고(⑧ 통과) 결과 화면이 응답의 증여가액(합 2,400,000,000)과 같다. 혼합 승자는 막힌다.
  *
  * 실행(워크트리): E2E_PORT=3302 npx playwright test e2e/bg-browser-verify.spec.ts
@@ -132,5 +133,25 @@ test.describe("함께 부담부증여 화면 확인", () => {
     await page.waitForTimeout(1500);
     expect(posted).toBe(false);
     expect(await fullText(page)).toContain("자산 1 담보평가(상증법 §66) · 자산 2 보충적평가: 증여재산 평가 방식이 달라 함께 양도와 같이 계산할 수 없습니다");
+  });
+
+  test("BV-6 주 자산(첫 자산)에 채무가 없는 묶음: ⑧ 통과 → 끝까지 계산되고 채무 위치만 다른 거울 쌍과 양도차익이 같다", async ({ page }) => {
+    test.setTimeout(240_000);
+    const NODEBT = { bgMortgageDebtAmount: "0", bgMortgageSetAmount: "0" };
+    const gainOf = async (assets: unknown[]) => {
+      await ready(page, assets);
+      const respP = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", { timeout: 30_000 });
+      await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+      await page.getByRole("button", { name: "세금 계산하기" }).click();
+      const resp = await respP;
+      expect(resp.status()).toBe(200);
+      const j = await resp.json();
+      await page.getByText("합산 과세 내역").first().waitFor({ timeout: 30_000 });
+      return j.data.aggregated.totalTransferGain as number;
+    };
+    const zeroFirst = await gainOf([gb(1, NODEBT), gb(2)]); // 종전 400 `transferPrice: Too small`
+    const mirror = await gainOf([gb(1), gb(2, NODEBT)]);
+    expect(zeroFirst).toBe(mirror);
+    expect(zeroFirst).toBeGreaterThan(0);
   });
 });
