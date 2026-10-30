@@ -16,6 +16,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { calculateBuildingPenalty } from "@/lib/tax-engine/transfer-tax-building-penalty";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { deriveSec163_9BaseDate, isPostDeemedInheritance } from "./transfer-163-9-base-date";
+import { partAcquisitionDates } from "./transfer-tax-split-acq-mode";
 import { selfBuiltActive } from "./self-built-scope";
 
 export type BgPresumedMethod = "salesCase" | "appraisal";
@@ -42,7 +43,24 @@ export interface BgPresumedBlock {
 }
 
 type BlockAsset = Pick<AssetForm, "acquisitionCause" | "inheritanceStartDate" | "acquisitionDate"> &
-  Partial<Pick<AssetForm, "assetKind" | "redevIsSuccessorMember">>;
+  Partial<Pick<AssetForm, "assetKind" | "redevIsSuccessorMember" | "landAcquisitionDate">>;
+
+/**
+ * BG 상속 판정(「상속개시일 1985.1.1. 이후 상속이면 환산·감정·매매사례가액 불가」)의 기준일.
+ *
+ * 일반건물은 **토지 파트 취득일**(`partAcquisitionDates(asset).land` — ④ 가 payload 에 싣는 값이자 ⑫ `bgInheritNonActualBlocked` 가 읽는 값)이다.
+ * 상속개시일 칸(`inheritanceStartDate`)을 읽으면 분리 ON → OFF 전환 뒤 stale 값(토지 상속일)이 남아 ⑧ 이 화면에 보이는 날짜와 다른 날짜로 판정한다
+ * (계획서 `docs/00-pm/gb-inherit-start-date-stale.plan.md` — 거짓 차단·⑫ 미차단). 그 밖의 자산은 종전 `deriveSec163_9BaseDate` 그대로다.
+ */
+export function bgInheritanceBaseDate(asset: BlockAsset): string {
+  if (asset.assetKind === "general_building") return partAcquisitionDates(asset).land;
+  return deriveSec163_9BaseDate(asset);
+}
+
+/** 상속받은 자산이고 기준일(`bgInheritanceBaseDate`)이 의제취득일 이후인가 — ⑤ 라디오 비활성·⑧ 오류가 같이 쓴다. */
+export function isBgPostDeemedInheritance(asset: BlockAsset): boolean {
+  return isPostDeemedInheritance(asset.acquisitionCause, bgInheritanceBaseDate(asset));
+}
 
 /**
  * 새 두 방식을 **고를 수 없는** 자산인가 — ⑤ 비활성과 ⑧ 오류가 같은 이 함수를 쓴다.
@@ -58,7 +76,7 @@ type BlockAsset = Pick<AssetForm, "acquisitionCause" | "inheritanceStartDate" | 
 export function bgPresumedBlock(
   asset: BlockAsset,
 ): BgPresumedBlock | null {
-  if (isPostDeemedInheritance(asset.acquisitionCause, deriveSec163_9BaseDate(asset))) {
+  if (isBgPostDeemedInheritance(asset)) {
     return {
       reason: "inheritance",
       short: "상속받은 자산은 상증법 평가액이 취득 당시 실지거래가액으로 간주되어 쓸 수 없습니다 (소령 §163⑨)",
