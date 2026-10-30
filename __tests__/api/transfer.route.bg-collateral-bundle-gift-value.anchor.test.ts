@@ -101,17 +101,17 @@ describe("CB-2 거짓 차단 없음 — 지분율 4조합(100/100 · 100/50 · 5
   }, 300_000);
 });
 
-describe("CB-3 지분 소유 쌍의 승자는 ⑧(폼 값)과 ⑫(payload 값)이 다르게 볼 수 있다 — 현재 동작의 기록 (확인 필요)", () => {
+describe("CB-3 지분 소유 쌍 — 수정 전에는 ⑧(폼 값)과 ⑫(payload 값)이 승자를 다르게 읽었다 (컴패니언 채무 안분을 축 B 로 한정해 해소)", () => {
   /**
-   * 시가 1.0B · 채무 0.6B · 지분 50%: ⑧ 은 폼의 채무 0.6B 를 그대로 보고 담보(0.6B)가 시가×50%(0.5B)를 이긴다고 막는다.
-   * 그러나 ④ 는 지분 소유 컴패니언의 채무를 지분율로 줄여 보내(payload 0.3B) ⑫ 는 두 자산 모두 보충 승으로 읽어 막지 않는다 — 엔진이 읽는 값과 같은 쪽이다.
-   * 이 쌍은 `transfer.route.bg-fractional-companion-winner.anchor.test.ts` 에서 분석했다 — 컴패니언 채무만 지분율로 한 번 더 줄어 ⑫ 가 혼합 승자를 놓친다(주 자산이면 막는다). 카드별 증여가액 합(2.0B)은 지분 카드가 물건 전체 값을 보여 주는 표시값이고 증여세는 합산 info(1.5B)로 계산된다.
+   * 시가 1.0B · 채무 0.6B · 지분 50%: 채무 인수분 0.6B 가 지분 시가 0.5B 를 이겨 담보 승 → 보충 승 파트너와 혼합이라 ⑧ 이 막는다.
+   * 수정 전 ④ 는 컴패니언 채무만 지분율로 줄여(payload 0.3B) ⑫ 가 둘 다 보충 승으로 읽어 200 이었다 — 증여세 24,250,000 과소.
+   * 지금은 ⑫ 도 400 이다. 분석·수치: `transfer.route.bg-fractional-companion-winner.anchor.test.ts` · 계획서 `bg-fractional-companion-winner.plan.md`.
    */
   const D6 = { bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgMortgageDebtAmount: "600,000,000", bgMortgageSetAmount: "600,000,000" };
-  it("100/100 은 둘 다 보충 → ⑧ 통과 · 200 · 100/50 은 ⑧ 게이트(폼 기준 담보 승) · ⑫ 200(payload 기준 둘 다 보충)", async () => {
+  it("100/100 은 둘 다 보충 → ⑧ 통과 · 200 · 100/50 은 ⑧ 게이트(담보 승 혼합) · ⑫ 400", async () => {
     const even = await pair(MK.sup, D6, ["100", "100"]);
     const half = await pair(MK.sup, D6, ["100", "50"]);
     expect([even.gate, even.status]).toEqual([0, 200]);
-    expect([half.gate > 0, half.status]).toEqual([true, 200]);
+    expect([half.gate > 0, half.status]).toEqual([true, 400]);
   }, 120_000);
 });

@@ -511,7 +511,9 @@ export function buildAssetPayload(
           // ⑬ 엔진 §159 게이트가 보는 값 — `burdenedGiftInfo`만으로는 발동하지 않는다.
           transferType: "burdened_gift" as const,
           burdenedGiftInfo: {
-            ...buildBurdenedGiftInfo(asset, fractional ? ratio : undefined, gbBgInfoTransferDate(asset, transferDate)),
+            // 채무는 축 B(같은 물건 지분 분할)에서만 지분 안분한다 — 함께 부담부증여의 지분 자산은 주 자산과 같이 지분 인수분을 입력받아 안분하지 않는다
+            // (`transfer-tax-api-primary-context.ts` `bgInfoBase`). 컴패니언만 줄이면 ⑫ 가 ⑧ 과 다른 값으로 승자를 읽는다(계획서 `bg-fractional-companion-winner.plan.md`).
+            ...buildBurdenedGiftInfo(asset, axisB && fractional ? ratio : undefined, gbBgInfoTransferDate(asset, transferDate)),
             // 컴패니언(다른 물건) 축에서만 실린다. 축 B는 undefined라 스프레드가 무해하다.
             ...(burdenedGiftDebtOverride !== undefined
               ? { assumedDebtOverride: burdenedGiftDebtOverride }

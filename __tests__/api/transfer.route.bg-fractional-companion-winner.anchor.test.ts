@@ -1,14 +1,15 @@
 /**
- * anchor — 함께 부담부증여에서 **지분 있는 컴패니언**: ⑧(폼 값)과 ⑫(payload 값)이 승자를 다르게 읽어 혼합 승자가 ⑫ 를 통과한다 (측정, 계획서 `docs/00-pm/bg-fractional-companion-winner.plan.md`)
+ * anchor — 함께 부담부증여에서 **지분 있는 컴패니언**: 컴패니언 채무만 지분율로 한 번 더 줄이던 ④ 를 축 B 로 한정 (계획서 `docs/00-pm/bg-fractional-companion-winner.plan.md` Q-1 a)
  *
- * 오라클 = 이미 맞게 도는 경로. 지분 r 인 자산 F(시가 V · 채무 D = 지분 인수분)는 경제적으로 「지분율 100% · 시가 r×V · 취득가액 ×r · 채무 D」 자산 F' 와 같다.
- *   · 보충 승으로 끝나는 영역(D ≤ r×V)에서 F 와 F' 는 증여가액·증여세·양도차익·총세액이 ±0 으로 같다(FC-1) — 지분 컴패니언 처리 자체는 맞다.
- *   · D > r×V(채무 인수분이 지분 시가보다 큼 = 담보평가 §66 승)이면 F' 는 혼합 승자라 ⑧·⑫ 모두 막는데(#2746), F 가 **컴패니언**이면 ⑫ 만 통과한다(FC-2).
- *     같은 사실의 F 가 **주 자산**이면 ⑫ 도 막는다 — 주 자산과 컴패니언의 비대칭.
- *   · 원인(FC-3): ④ 가 컴패니언 payload 의 채무만 지분율로 한 번 더 줄이고(`transfer-tax-api-companion-payload.ts:514`), 주 자산은 그대로 둔다(`transfer-tax-api-primary-context.ts:226-232`).
- *     ⑫ 의 `bgBundleMixedWinner` 는 payload 를 읽으므로 컴패니언 D=600M 을 300M 으로 보고 보충 승으로 읽는다.
+ * 수정 전 ④ 는 같은 폼 채무를 주 자산에서는 축 B 일 때만 지분 안분하고(`transfer-tax-api-primary-context.ts` `bgInfoBase`) 컴패니언에서는 지분이면 언제나 안분했다
+ * (`transfer-tax-api-companion-payload.ts` `buildBurdenedGiftInfo` 인자). ⑧·합산 info·채무 재배분은 채무를 지분 인수분 그대로 읽으므로 payload 를 읽는 ⑫ 만 승자를 다르게 읽었다:
+ *   · 컴패니언 인수분 채무 > 지분 시가(담보평가 §66 승)인 혼합 승자가 ⑫ 를 통과해 증여가액이 ΣA 보다 작았다(증여세 24,250,000 / 43,650,000 과소).
+ *   · 균일 비보충 승 지분 쌍은 ⑫ 를 통과했지만 양도차익이 21.9M ~ 60.4M 작았다(컴패니언 B/C 가 줄어든 채무로 계산).
+ *   · 둘 다 담보 승인 균일 쌍(50/50 · D=6억)은 컴패니언만 보충 승으로 읽혀 ⑫ 400(거짓 차단).
  *
- * 이 파일은 **현재 동작의 기록**이다 — FC-2 의 기대값이 결함이다(구현 PR 이 400 으로 뒤집는다).
+ * 오라클 두 가지:
+ *   · 보충 승 영역 — 같은 사실을 「지분율 100% · 시가 r×V · 취득가액 ×r」로 옮긴 쌍(FC-1). 담보·임대 승 영역에서는 이 환산이 단건 지분 경로와도 안 맞아 오라클로 쓰지 못한다(단건 50% 834,350,000 vs 환산 1,017,175,000).
+ *   · 균일 비보충 승 영역 — 자산별 **단건 지분 실행의 합**(FC-5). 담보·임대가 이기면 Aᵢ = Bᵢ 라 양도차익이 자산별로 가산된다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -51,8 +52,6 @@ const HALF_ACQ = { bgActualAcquisitionLand: "102500000", bgActualAcquisitionBuil
 const F = (d: string) => x({ ...SUP, bgMortgageDebtAmount: d, bgMortgageSetAmount: d });
 /** F' — 같은 사실을 지분율 100% 로 옮긴 오라클: 시가 r×V · 취득가액 ×r. */
 const Fo = (d: string) => x({ ...SUP, ...HALF_ACQ, bgMarketValueAtTransfer: "500,000,000", bgMortgageDebtAmount: d, bgMortgageSetAmount: d });
-/** 보충 승으로 강제한 오라클 — 평가액 Aᵢ = D 가 되도록 시가를 D 로 두고 담보 설정액을 1,000 으로 눌러 담보평가가 못 이기게 한다(채무 D 는 그대로 인수). */
-const Fs = (d: string) => x({ ...SUP, ...HALF_ACQ, bgMarketValueAtTransfer: d, bgMortgageDebtAmount: d, bgMortgageSetAmount: "1,000" });
 
 const bundle = (assets: AssetForm[]): TransferFormData => {
   const f = newForm() as unknown as Record<string, unknown>;
@@ -91,58 +90,85 @@ describe("FC-1 보충 승 영역(D ≤ 지분 시가 5억) — 지분 컴패니�
   }, 120_000);
 });
 
-describe("FC-2 D > 지분 시가(담보평가 §66 승) — 컴패니언일 때만 ⑫ 가 통과해 증여가액이 ΣA 보다 작다 (현재 동작의 기록 = 결함)", () => {
-  it("D=6억: 주 자산 ⑫ 400 · 컴패니언 ⑫ 200 · 증여가액 1.5B(ΣA 1.6B) · 증여세 77,600,000 vs 같은 ΣA 오라클 101,850,000 = 24,250,000 과소", async () => {
-    const prim = await cell(pairOf("prim", F("600,000,000"), "50"));
-    const comp = await cell(pairOf("comp", F("600,000,000"), "50"));
-    const orc = await cell(pairOf("comp", Fs("600,000,000"), "100"));
-    expect([prim.gate > 0, prim.status]).toEqual([true, 400]);
-    expect([comp.gate > 0, comp.status]).toEqual([true, 200]);
-    expect([comp.gross, comp.giftTax, comp.gain, comp.tax]).toEqual([1_500_000_000, 77_600_000, 645_000_000, 169_026_000]);
-    expect([orc.gate, orc.status, orc.gross, orc.giftTax]).toEqual([0, 200, 1_600_000_000, 101_850_000]);
-    // 양도차익은 오라클의 취득가액이 실가 그대로(담보 승이면 기준시가로 강제되는 값과 다름)라 근사다 — 확인 필요.
-    expect([orc.gain, orc.tax]).toEqual([667_187_500, 175_859_750]);
+const MK: Record<string, Record<string, string>> = {
+  sup: { bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgMortgageDebtAmount: "400,000,000", bgMortgageSetAmount: "400,000,000" },
+  mort: { bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgMortgageDebtAmount: "1,200,000,000", bgMortgageSetAmount: "1,200,000,000" },
+  ssup: { bgValuationMode: "sangjeungbeop_standard", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000" },
+  smort: { bgValuationMode: "sangjeungbeop_standard", bgMortgageDebtAmount: "1,600,000,000", bgMortgageSetAmount: "1,600,000,000" },
+  srent: { bgValuationMode: "sangjeungbeop_standard", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAnnualRentTotal: "200,000,000" },
+};
+/** 자산 하나만 계산한 단건 지분 실행의 양도차익(축 A — 채무는 지분 인수분). */
+async function singleGain(a: AssetForm): Promise<number> {
+  const f = newForm() as unknown as Record<string, unknown>;
+  Object.assign(f, { transferDate: "2026-02-16", filingDate: "2026-05-31", assets: [a] });
+  const body = await captureBody(f as unknown as TransferFormData);
+  const res = await POST(new NextRequest("http://localhost/api/calc/transfer", { method: "POST", headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" }, body: JSON.stringify(body) }));
+  const j = (await res.json()) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  expect(res.status).toBe(200);
+  return j.data.aggregated.totalTransferGain as number;
+}
+
+describe("FC-2 D > 지분 시가(담보평가 §66 승) — 혼합 승자는 컴패니언이든 주 자산이든 ⑧ 게이트 · ⑫ 400", () => {
+  it("D=6억 · 7억 (지분 50%): 컴패니언 ⑫ 400 (수정 전 200 · 증여세 24,250,000 / 43,650,000 과소) · 주 자산 ⑫ 400 (불변)", async () => {
+    for (const d of ["600,000,000", "700,000,000"]) {
+      const comp = await cell(pairOf("comp", F(d), "50"));
+      const prim = await cell(pairOf("prim", F(d), "50"));
+      expect([d, comp.gate > 0, comp.status, prim.gate > 0, prim.status]).toEqual([d, true, 400, true, 400]);
+    }
   }, 120_000);
-  it("D=7억: 컴패니언 ⑫ 200 · 증여가액 1.5B(ΣA 1.7B) · 증여세 58,200,000 vs 오라클 101,850,000 = 43,650,000 과소", async () => {
-    const prim = await cell(pairOf("prim", F("700,000,000"), "50"));
-    const comp = await cell(pairOf("comp", F("700,000,000"), "50"));
-    const orc = await cell(pairOf("comp", Fs("700,000,000"), "100"));
-    expect([prim.gate > 0, prim.status]).toEqual([true, 400]);
-    expect([comp.gate > 0, comp.status]).toEqual([true, 200]);
-    expect([comp.gross, comp.giftTax, comp.gain, comp.tax]).toEqual([1_500_000_000, 58_200_000, 709_500_002, 188_892_001]);
-    expect([orc.gate, orc.status, orc.gross, orc.giftTax, orc.gain, orc.tax]).toEqual([0, 200, 1_700_000_000, 101_850_000, 755_441_179, 203_620_677]);
+  it("지분 25%: 인수분 3억 · 5억 > 지분 시가 2.5억이면 컴패니언 ⑫ 400 (수정 전 200) · 보충+보충이던 쌍도 채무 4억 > 2.5억이면 혼합이라 400", async () => {
+    for (const d of ["300,000,000", "500,000,000"]) {
+      const comp = await cell(pairOf("comp", F(d), "25"));
+      expect([d, comp.gate > 0, comp.status]).toEqual([d, true, 400]);
+    }
+    const supsup = await cell([gbAsset(1, x(MK.sup), own("100")), gbAsset(2, x(MK.sup), own("25"))]);
+    const ssupssup = await cell([gbAsset(1, x(MK.ssup), own("100")), gbAsset(2, x(MK.ssup), own("25"))]);
+    expect([supsup.gate > 0, supsup.status, ssupssup.gate > 0, ssupssup.status]).toEqual([true, 400, true, 400]);
   }, 120_000);
 });
 
-describe("FC-3 원인 — 같은 폼 채무 6억이 컴패니언 payload 에서만 3억으로 줄어 ⑫ 가 보충 승으로 읽는다", () => {
-  it("컴패니언 F: payload 채무 3억(폼 6억 × 0.5) · 주 자산 F: payload 채무 6억 · 합산 info 채무 10억(폼 값 합)·시가 15억(지분 축소 후 합)", async () => {
+describe("FC-3 원인 — 같은 폼 채무 6억이 컴패니언·주 자산 payload 에서 같은 값(지분 인수분)으로 실린다", () => {
+  it("컴패니언 F · 주 자산 F 모두 payload 채무 6억(수정 전 컴패니언 3억) · 합산 info 채무 10억(폼 값 합)·시가 15억(지분 축소 후 합)", async () => {
+    // 주 자산이 F 인 쌍은 ⑫ 400 이라 payload 는 captureBody 로만 읽는다.
     const comp = await cell(pairOf("comp", F("600,000,000"), "50"));
     const prim = await cell(pairOf("prim", F("600,000,000"), "50"));
-    expect(comp.body.companionAssets[0].burdenedGiftInfo.mortgageDebtAmount).toBe(300_000_000);
+    expect(comp.body.companionAssets[0].burdenedGiftInfo.mortgageDebtAmount).toBe(600_000_000);
     expect(prim.body.burdenedGiftInfo.mortgageDebtAmount).toBe(600_000_000);
     for (const c of [comp, prim]) expect([c.body.burdenedGiftWholeInfo.mortgageDebtAmount, c.body.burdenedGiftWholeInfo.marketValueAtTransfer]).toEqual([1_000_000_000, 1_500_000_000]);
   }, 120_000);
 });
 
-describe("FC-4 주 자산·컴패니언이 모두 지분 — 같은 비대칭이 반대 방향(거짓 차단)으로도 나온다 (현재 동작의 기록)", () => {
-  /** 오라클 컴패니언: 지분율 100% · 시가 r×V. 주 자산 오라클은 항상 r=50% → 시가 5억. */
-  const orc = async (d: string, rc: string) =>
-    cell([gbAsset(1, Fo(d), own("100")), gbAsset(2, x({ ...SUP, ...HALF_ACQ, bgMarketValueAtTransfer: rc === "50" ? "500,000,000" : "250,000,000", bgMortgageDebtAmount: d, bgMortgageSetAmount: d }), own("100"))]);
+describe("FC-4 주 자산·컴패니언이 모두 지분 — 혼합은 400 · 균일 담보 승은 ⑫ 200 (수정 전 거짓 차단)", () => {
   const frac = (d: string, rc: string) => cell([gbAsset(1, F(d), own("50")), gbAsset(2, F(d), own(rc))]);
-  it("D=3억 · 50/50: 둘 다 보충 승 → ⑧ 통과 · 200 · 오라클과 ±0", async () => {
-    const a = await frac("300,000,000", "50"); const o = await orc("300,000,000", "50");
+  it("D=3억 · 50/50: 둘 다 보충 승 → ⑧ 통과 · 200 · 증여가액 1.0B · 증여세 58,200,000 (오라클 ±0)", async () => {
+    const a = await frac("300,000,000", "50");
+    const o = await cell([gbAsset(1, Fo("300,000,000"), own("100")), gbAsset(2, Fo("300,000,000"), own("100"))]);
     expect([a.gate, a.status, a.gross, a.giftTax]).toEqual([0, 200, 1_000_000_000, 58_200_000]);
     expect(nums(a)).toEqual(nums(o));
   }, 120_000);
-  it("D=3억 · 50/25: 컴패니언 인수분 3억 > 지분 시가 2.5억(담보 승) → ⑧ 게이트 · ⑫ 200(증여가액 7.5억 · ΣA 8.0억 · 증여세 9,700,000) · 오라클은 혼합이라 ⑫ 400", async () => {
-    const a = await frac("300,000,000", "25"); const o = await orc("300,000,000", "25");
-    expect([a.gate > 0, a.status, a.gross, a.giftTax]).toEqual([true, 200, 750_000_000, 9_700_000]);
-    expect([o.gate > 0, o.status]).toEqual([true, 400]);
+  it("D=3억 · 50/25: 컴패니언 인수분 3억 > 지분 시가 2.5억(담보 승) → 혼합이라 ⑧ 게이트 · ⑫ 400 (수정 전 200 · 증여가액 7.5억 · ΣA 8.0억)", async () => {
+    const a = await frac("300,000,000", "25");
+    expect([a.gate > 0, a.status]).toEqual([true, 400]);
   }, 120_000);
-  it("D=6억 · 50/50, 50/25: 둘 다 담보 승(균일 — 오라클은 ⑫ 200) 인데 컴패니언 채무만 줄어 혼합으로 읽혀 ⑫ 400 (거짓 차단)", async () => {
+  it("D=6억 · 50/50, 50/25: 둘 다 담보 승(균일)이라 ⑧ 게이트 · ⑫ 200 (수정 전 400 거짓 차단)", async () => {
     for (const rc of ["50", "25"]) {
-      const a = await frac("600,000,000", rc); const o = await orc("600,000,000", rc);
-      expect([rc, a.gate > 0, a.status, o.gate > 0, o.status]).toEqual([rc, true, 400, true, 200]);
+      const a = await frac("600,000,000", rc);
+      expect([rc, a.gate > 0, a.status]).toEqual([rc, true, 200]);
     }
   }, 120_000);
+});
+
+describe("FC-5 균일 비보충 승 지분 쌍 — 양도차익이 자산별 단건 지분 실행의 합과 ±0 (수정 전 21.9M ~ 60.4M 작았다)", () => {
+  const CELLS: [string, string, string, string][] = [
+    ["mort", "mort", "100", "50"], ["mort", "mort", "50", "50"], ["mort", "mort", "100", "25"],
+    ["smort", "smort", "100", "50"], ["smort", "smort", "50", "50"], ["srent", "srent", "100", "50"], ["srent", "srent", "50", "50"],
+    ["mort", "sup", "100", "25"], ["smort", "ssup", "100", "25"], // 컴패니언 인수분 4억·5억 > 지분 25% 시가 → 담보 승 → 균일 (수정 전 400)
+  ];
+  it("9셀: ⑫ 200 · 쌍의 양도차익 = 단건 지분 실행의 합", async () => {
+    for (const [a, b, ra, rb] of CELLS) {
+      const pr = await cell([gbAsset(1, x(MK[a]), own(ra)), gbAsset(2, x(MK[b]), own(rb))]);
+      const sum = (await singleGain(gbAsset(1, x(MK[a]), own(ra)))) + (await singleGain(gbAsset(1, x(MK[b]), own(rb))));
+      expect([`${a}+${b}@${ra}/${rb}`, pr.status, pr.gain]).toEqual([`${a}+${b}@${ra}/${rb}`, 200, sum]);
+    }
+  }, 240_000);
 });
