@@ -109,15 +109,9 @@ describe("R-A1 · 취득가액은 «기준시가가 아니라 실지거래가액
     expect(bg.acquisitionMethodUsed).toBe("actual");
   });
 
-  it("🔴 대조군 — 같은 사실관계에서 `rightValuation`만 빼면 A괄호가 발동해 취득가액이 0이 된다", () => {
-    const withoutRv = run({
-      bgOverrides: {
-        rightValuation: undefined,
-        // 이 자산은 취득시 기준시가를 입력받지 않으므로 0 그대로다
-      },
-    }).transferBurdenedGiftBreakdown!;
-    expect(withoutRv.acquisitionMethodUsed).toBe("standard_price");
-    expect(withoutRv.perAsset.building.acquisitionPrice).toBe(0);
+  it("🔴 대조군 — 같은 사실관계에서 `rightValuation`만 빼면 A괄호가 발동해 취득시 기준시가를 요구한다(종전: 조용히 취득가액 0)", () => {
+    // 이 자산은 취득시 기준시가를 입력받지 않으므로 0 그대로다 — 괄호가 발동하면 그 값이 필요하다(`burdened-gift-apportionment.ts` 취득시 기준시가 가드).
+    expect(() => run({ bgOverrides: { rightValuation: undefined } })).toThrow(/취득시 기준시가가 없습니다/);
   });
 
   it("개산공제는 적용되지 않는다 (K-4는 실비로 대체 — §163⑥ 미적용)", () => {
