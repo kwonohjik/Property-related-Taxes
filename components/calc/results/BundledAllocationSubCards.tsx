@@ -210,15 +210,16 @@ export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTran
                 <Row
                   key={g.group}
                   label={`· ${g.group === "progressive" ? "일반 누진" : g.group === "short_term" ? "단기보유" : g.group === "multi_house_surcharge" ? "다주택 중과" : g.group === "non_business_land" ? "비사업용토지" : "미등기"} (과표 ${formatKRW(g.groupTaxBase)})`}
-                  value={`${(g.appliedRate * 100).toFixed(0)}%${g.surchargeRate ? ` +${(g.surchargeRate * 100).toFixed(0)}%p` : ""}`}
+                  value={`${(g.appliedRate * 100).toFixed(0)}%${g.surchargeRate ? ` (중과 ${(g.surchargeRate * 100).toFixed(0)}%p 포함)` : ""}`}
                   sub
                 />
               ))}
             </>
           ) : aggregated.groupTaxes.length === 1 ? (
+            // `appliedRate`는 이미 중과 포함 실효세율이다 — `surchargeRate`를 더하면 이중 계상(상세명세서·신고서와 같은 정정, O-18).
             <Row
-              label={`세율${aggregated.groupTaxes[0].surchargeRate ? ` (기본 ${(aggregated.groupTaxes[0].appliedRate * 100).toFixed(0)}% + 중과 ${(aggregated.groupTaxes[0].surchargeRate * 100).toFixed(0)}%p)` : ""}`}
-              value={`${((aggregated.groupTaxes[0].appliedRate + (aggregated.groupTaxes[0].surchargeRate ?? 0)) * 100).toFixed(0)}%`}
+              label={`세율${aggregated.groupTaxes[0].surchargeRate ? ` (중과 ${(aggregated.groupTaxes[0].surchargeRate * 100).toFixed(0)}%p 포함)` : ""}`}
+              value={`${(aggregated.groupTaxes[0].appliedRate * 100).toFixed(0)}%`}
             />
           ) : null}
 

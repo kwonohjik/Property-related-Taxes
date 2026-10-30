@@ -40,12 +40,30 @@ function isPresaleRight(kind: AssetForm["assetKind"] | undefined): boolean {
   return kind === "presale_right";
 }
 
+/** 정본 표의 «주택 및 조합원입주권» 단기세율 — 1~2년 60% · 1년 미만 70% ('21.6.1. 이후). 이 시기 이전에는 주택·토지가 40%/50%로 같아 세율로 가를 수 없다. */
+const HOUSING_SHORT_RATE = { "104-1-2": 0.6, "104-1-3": 0.7 } as const;
+
+/** 토지 자산이 엔진에서 주택 단기세율을 받았는가 — 부수토지 카드(한도 안) */
+function landTakingHousingShortRate(input: FilingRateCodeInput, after20210601: boolean): boolean {
+  const { rateClause, appliedRate } = input;
+  if (!after20210601 || appliedRate === undefined) return false;
+  if (rateClause !== "104-1-2" && rateClause !== "104-1-3") return false;
+  return Math.abs(appliedRate - HOUSING_SHORT_RATE[rateClause]) < 1e-9;
+}
+
 export interface FilingRateCodeInput {
   /** 엔진이 적용한 §104① 호 */
   rateClause: RateClause | undefined;
   assetKind: AssetForm["assetKind"] | undefined;
   /** 양도일 (YYYY-MM-DD) — 시기 경계 판정 */
   transferDate: string | undefined;
+  /**
+   * 엔진이 그 자산에 적용한 실효세율(`appliedRate`). **주택 세율을 받은 부수토지 카드**를 가르는 데만 쓴다 —
+   * 카드는 `assetKind: "land"`이지만 「소득세법」 §104①2호·3호 «주택(이에 딸린 토지로서 대통령령으로 정하는 토지를 포함한다)»에 따라
+   * 단기세율이 60%/70%라 정본 표의 «주택 및 조합원입주권» 코드(1-39·1-46)에 대응한다. 같은 `104-1-2`가 토지 40%(초과분·독립 나대지)일 수도 있어 호만으로는 알 수 없다.
+   * 미전달이면 종전대로 `assetKind`만 본다.
+   */
+  appliedRate?: number;
   /**
    * 비사업용 +10%p 배제 — 부칙 <제9270호> §14①(’09.3.16.~’12.12.31. 취득) 또는 양도일 유예(§104⑥ · 법률 제12169호 부칙 제20조,
    * ’09.3.16.~’15.12.31. 양도 + 지정지역 아님). 사유와 무관하게 해당 호가 §104①1호라 정본 ⑮가 **일반세율 코드 1-10**으로 분류한다.
@@ -70,6 +88,7 @@ export function resolveFilingRateCode(input: FilingRateCodeInput): string | unde
   if (!rateClause) return undefined;
 
   const after20210601 = !!transferDate && transferDate >= RATE_2021_06_01;
+  const housingLike = isHousingLike(assetKind) || landTakingHousingShortRate(input, after20210601);
 
   switch (rateClause) {
     // ⑧ 미등기 양도 (70%)
@@ -84,11 +103,11 @@ export function resolveFilingRateCode(input: FilingRateCodeInput): string | unde
     // ② ③ ④ ⑤ ⑥ 단기 보유
     case "104-1-3": // 1년 미만
       if (isPresaleRight(assetKind)) return after20210601 ? "1-46" : undefined;
-      if (isHousingLike(assetKind)) return after20210601 ? "1-46" : "1-40";
+      if (housingLike) return after20210601 ? "1-46" : "1-40";
       return "1-20";
     case "104-1-2": // 1년 이상 2년 미만
       if (isPresaleRight(assetKind)) return undefined; // 분양권은 ⑦(1-23)이 1년 이상 전체를 덮는다
-      if (isHousingLike(assetKind)) return after20210601 ? "1-39" : undefined;
+      if (housingLike) return after20210601 ? "1-39" : undefined;
       return "1-15";
 
     // ⑱ 조정대상지역 내 분양권(’18.1.1.~’21.5.31.) — 50%

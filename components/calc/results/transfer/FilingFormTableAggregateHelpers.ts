@@ -344,6 +344,7 @@ export function buildAggregateRows(
     const assetCode = resolveFilingRateCode({
       rateClause: p.rateClause,
       assetKind: a?.assetKind,
+      appliedRate: p.appliedRate,
       transferDate: colTransferDate,
       nblSurchargeExcluded: p.nblSurchargeExcluded,
     });
