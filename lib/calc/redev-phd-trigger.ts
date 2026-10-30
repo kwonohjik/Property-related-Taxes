@@ -35,6 +35,7 @@
  *    그래서 날짜 존재를 **여기서 먼저** 확인한 뒤 위임한다.
  */
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
+import { redevPreApprovalAcquisitionDate } from "@/lib/calc/redev-carryover-acq-mode";
 import { redevPreApprovalAcqMode, type RedevPreApprovalAcqModeFields } from "@/lib/calc/redev-pre-approval-acq-mode";
 
 /** 판정에 필요한 필드만 — 폼 전체(AssetForm)를 요구하지 않아 저장된 input_data에도 쓸 수 있다. */
@@ -42,18 +43,22 @@ export interface RedevPhdTriggerFields extends RedevPreApprovalAcqModeFields {
   /** ⑤ 「종전 부동산 취득가액」 라디오 — 환산 모드에서만 이 축이 열린다(부담부증여는 K-5 — `redevPreApprovalAcqMode`) */
   useEstimatedAcquisition?: boolean;
   acquisitionDate?: string;
+  /** 이월과세 — 원조합원 재개발 자산이면 §164⑦ 판정 취득일이 당초 증여자 취득일이다(`redevPreApprovalAcquisitionDate`). */
+  carryover?: { useEstimatedAcquisition?: unknown; donorAcquisitionDate?: unknown } | null;
   /** 개별주택가격/공동주택가격 최초 공시일 (단독 2005-04-30 · 공동 2006-04-28) */
   redevFirstDisclosureDate?: string;
 }
 
 /**
  * §164⑦ 본문 발동 여부. 환산 모드 + 두 날짜가 모두 있고, 의제취득일을 반영한 유효취득일이
- * 최초공시일보다 이르면 true.
+ * 최초공시일보다 이르면 true. 취득일은 이월과세면 당초 증여자 취득일이다 — 엔진·⑫와 같은 날짜
+ * (계획서 `redev-carryover-phd-donor-date.plan.md` Q-1 a).
  */
 export function isRedevPhdTriggered(a: RedevPhdTriggerFields): boolean {
   if (redevPreApprovalAcqMode(a) !== "estimated") return false;
-  if (!a.acquisitionDate || !a.redevFirstDisclosureDate) return false;
-  return isPhdEligible(a.acquisitionDate, a.redevFirstDisclosureDate);
+  const acquisitionDate = redevPreApprovalAcquisitionDate(a);
+  if (!acquisitionDate || !a.redevFirstDisclosureDate) return false;
+  return isPhdEligible(acquisitionDate, a.redevFirstDisclosureDate);
 }
 
 /**

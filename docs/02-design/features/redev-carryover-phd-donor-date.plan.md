@@ -1,6 +1,6 @@
 # 재개발 원조합원 × 이월과세 — §164⑦(최초 공시 전 취득) 판정을 증여자 취득일로
 
-- 작성: 2026-10-30 · 상태: 📝 계획 — 사용자 결정 Q-1~Q-3 대기
+- 작성: 2026-10-30 · 상태: ✅ 구현(2026-10-30 · 사용자 결정 Q-1 a · Q-2 a · Q-3 a 권장안) — §6
 - 출발점: `redev-carryover-estimation-toggle-sync.plan.md` §7.1(#2738 실측). 사용자 요청(2026-10-30) 「1」(§7.5 첫 항목).
 - 측정 도구: 클라이언트 ⑧(`validateStepDetailed`) → ④(`callTransferTaxAPI`) → route `POST` vitest 프로브. 제안 수정은 백업·복원 방식으로 임시 적용해 효과를 쟀고 원복했다. 세율은 mock(실제 Supabase 세율 미측정 — V-5). 측정 기준은 master `843b5d7ef`(#2736 포함).
 - 범위: `isRedevCarryoverDonorBasis` 범위(원조합원 재개발 자산 — 완공 아파트·입주권 × 이월과세 × 부담부증여 아님 × 승계 아님)와 같다.
@@ -78,3 +78,14 @@
 - **V-5** 실제 Supabase 세율 미측정(mock).
 - **V-6** 저장된 이력 결과 화면의 §164⑦ 계산서 노출(`isRedevPhdSectionActive`)이 바뀌는 범위 — 구현 때 측정한다.
 - **V-7** 부담부증여 × 재개발 × 이월과세(증여자 정보는 「당초 증여자」 블록) · 승계조합원 — 범위 밖. 같은 어긋남이 있는지는 측정하지 않았다.
+
+## 6. 구현 결과 (2026-10-30 · Q-1 a · Q-2 a · Q-3 a)
+
+- **D-1** `redevPreApprovalAcquisitionDate`(`lib/calc/redev-carryover-acq-mode.ts`) — 범위 안이면 `carryover.donorAcquisitionDate`, 아니면 `acquisitionDate`(빈 문자열은 없음으로 본다). `isRedevPhdTriggered`가 이 날짜로 판정해 ⑤ 블록·미리보기 · ⑧ · ④ 건물 0 전송 · 결과 계산서 게이트가 함께 바뀐다. 판정 입력 타입에 `carryover.donorAcquisitionDate`를 더했다.
+- **D-2** ⑫ `refineRedevelopment166_3Inputs` — `carryoverTaxation.donorAcquisitionDate`가 있고 부담부증여가 아니면(주 자산 `transferType` · 컴패니언 `burdenedGiftInfo`) 그 날짜로 §164⑦을 판정한다.
+- **D-3** ⑤ `RedevelopmentValuationSection` — 「취득당시 개별주택공시가격」·§164⑦ 취득시 개별공시지가·§164⑦ 계산서 모달 prefill(취득일·공시지가 트랙)·토지 출자 「취득당시 토지 ㎡당 단가」의 기준일을 D-1 날짜로 바꿨다. 범위 안이면 그 칸들과 최초공시일 칸 hint에 「이월과세 — 취득일은 당초 증여자 취득일(YYYY-MM-DD)입니다」를 붙인다. 미리보기 `useMemo` 의존성도 D-1 날짜다.
+- **D-4** ⑧ `redevAcquisitionHousingPrice` 문구에 「— 이월과세는 당초 증여자 취득일 기준」.
+- **엔진 변경 없음.**
+- **측정(구현 후, mock 세율)** — §1.2 표의 「후」 열과 같다: P2 ⑧ `redevFirstDisclosureHousingPrice` · P3 B 299,010,000(A 313,684,209) · P4 A 취득가액 312,500,000 · P6 B 299,010,000 · P1·P5·P7·P8 불변. ⑫ 직접 호출(「취득당시」 칸 없는 body)은 공시 전 증여자면 200 · 공시 후 증여자면 400. **컴패니언(V-3)**: 토지(주) + 입주권 이월과세(증여자 2000 · 「취득당시」 칸 비움) → ⑧ 통과 · 200 · B 채택 · A 취득가액 313,684,209.
+- **검증**: anchor 20(`__tests__/components/redev-carryover-phd-donor-date.anchor.test.tsx` — 수정 전 소스에서 첫 17건 중 12건 실패, 통과 5건은 불변 가드) · 뮤테이션 16종 전부 KILLED(미리보기 의존성 변이는 리렌더 테스트를 더해 잡았다) · 전체 vitest 44,109 통과 · E2E PD-E1/E2(`e2e/redev-carryover-phd-donor-date.spec.ts`) 3회 연속 통과 · 수정 전 소스에서 둘 다 실패 · 관련 기존 E2E 10스펙 25건 통과 · tsc 0 · eslint 경고 375(기준선 그대로) · 스크린샷 라이트·다크·375px(취득시 공시지가 연도 자동 = 1999년 — 증여자 취득일 2000-03-01 기준).
+- **남은 것**: V-1(조회 API 실제 값) · V-2(토지 출자 1990.8.30. 전 증여자) · V-4(해석례) · V-5(실제 세율) · V-6(저장 이력 계산서 노출 범위 — 게이트가 같은 술어를 쓰므로 공시 전 증여자 이력의 §164⑦ 계산서 노출이 달라질 수 있다 · 확인 필요) · V-7(부담부증여·승계) 그대로.

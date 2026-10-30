@@ -32,6 +32,19 @@ export function isRedevCarryoverDonorBasis(asset: RedevCarryoverScopeFields): bo
 }
 
 /**
+ * 인가 전 분 종전 부동산의 「취득당시」 기준일 — 범위 안이면 당초 증여자 취득일, 아니면 자산 취득일.
+ * 이월과세 A의 취득가액은 증여자가 「취득할 당시」의 금액이라(「소득세법」 제97조의2 제1항 제1호) 「소득세법 시행령」 제164조 제7항
+ * (공시되기 전에 취득한 주택) 판정과 「취득당시」 칸 조회도 그 날짜를 쓴다 — 엔진(`transfer-tax-carryover.ts` A의 `acquisitionDate`)·⑫와 같다.
+ * 계획서 `docs/02-design/features/redev-carryover-phd-donor-date.plan.md`(Q-1 a · Q-2 a).
+ */
+export function redevPreApprovalAcquisitionDate(
+  asset: RedevCarryoverScopeFields & { acquisitionDate?: unknown; carryover?: { donorAcquisitionDate?: unknown } | null },
+): string | undefined {
+  const d = isRedevCarryoverDonorBasis(asset) ? asset.carryover?.donorAcquisitionDate : asset.acquisitionDate;
+  return typeof d === "string" && d ? d : undefined;
+}
+
+/**
  * 범위 안이면 ⑤ 라디오 값(`useEstimatedAcquisition`)을 이월과세 ② 토글 값으로 바꾸고, 이월과세에서 쓰이지 않는 ⑤ 실거래가를 비운 사본.
  * A의 취득가액은 증여자 취득가액(엔진 `donorAcquisitionPrice`), B는 증여 당시 평가액이라 ⑤ 실거래가는 세액에 쓰이지 않는다(계획서 §1.5).
  */

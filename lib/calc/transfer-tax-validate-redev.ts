@@ -481,7 +481,7 @@ export function validateRedevelopmentAsset(
   } else if (isEstimatedMode && !isHousingRightReceiveEstimated) {
     // 본문 미발동 — 취득당시 라목값 단일 필수 (housing+right+receive+estimated 분기 제외)
     if (parseAmount(asset.redevAcquisitionHousingPrice) <= 0) {
-      return fieldError("redevAcquisitionHousingPrice", `${label}: 환산 모드 — 취득당시 개별주택공시가격을 입력하세요. (취득일 ≥ 최초공시일 또는 최초공시일 미입력)`);
+      return fieldError("redevAcquisitionHousingPrice", `${label}: 환산 모드 — 취득당시 개별주택공시가격을 입력하세요. (취득일 ≥ 최초공시일 또는 최초공시일 미입력${carryoverEstimationToggle ? " — 이월과세는 당초 증여자 취득일 기준" : ""})`);
     }
   }
 
