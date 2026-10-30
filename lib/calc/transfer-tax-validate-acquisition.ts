@@ -219,7 +219,7 @@ function validateAssetAcquisitionBranches(
   const postDeemedError = postDeemedClauseARequiredError(asset, label);
   if (postDeemedError) return postDeemedError;
   // 원조합원 종전자산 상속·증여 — 같은 규칙(재개발은 위 함수가 뺀다 · 「종전 부동산 실거래가」 fallback 차단)
-  const originalMemberError = originalMemberClauseARequiredError(asset, label);
+  const originalMemberError = originalMemberClauseARequiredError(asset, label, isNonPrimaryAsset);
   if (originalMemberError) return originalMemberError;
 
   // ── 상업용건물·오피스텔 전용 검증 — transfer-tax-validate-commercial-asset.ts 위임 ──

@@ -24,7 +24,7 @@ import { PreDeemedConversionFields } from "./PreDeemedConversionFields";
 import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
 import { ApartNtsPriceQuestion } from "./ApartNtsPriceQuestion";
 import { apartNtsQuestionRelevant, apartSec164FormOpen, isApartSec163_9Asset } from "@/lib/calc/apart-nts-price";
-import { isSec163_9HouseAsset } from "@/lib/calc/transfer-163-9-base-date";
+import { isSec163_9HouseAsset, isSec163_9LandAsset, sec164LandAreaField, sec164LandFieldsAlwaysOpen } from "@/lib/calc/transfer-163-9-base-date";
 import { inheritanceReportedValuePartSuffix } from "@/lib/calc/inheritance-reported-value-scope";
 import { isRedev166_3PreDeemedAsset } from "@/lib/calc/transfer-tax-validate-clause-a";
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
@@ -68,8 +68,9 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
     : isHouse && !!inheritanceDate && inheritanceDate < HOUSE_FIRST_DISCLOSURE_DATE;
   const showHouseValuation = isApart ? apartSec164FormOpen(asset) : showHouseBlock;
 
-  // 토지인 경우 의제취득일(1985.1.1.) 자체가 1990.8.30. 이전이므로 항상 환산 대상
-  const showPre1990 = isLand;
+  // 토지인 경우 의제취득일(1985.1.1.) 자체가 1990.8.30. 이전이므로 항상 환산 대상.
+  // 토지를 출자한 원조합원은 ②(§164④)로만 쓴다 — ③은 §166③ 칸이 받으므로 칸은 토글 없이 열고 ③ 분자에 쓰지 않는다(계획서 §16).
+  const showPre1990 = isSec163_9LandAsset(asset);
 
   return (
     <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20 py-3 px-2 sm:px-3">
@@ -135,10 +136,11 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
               pre1990GradeMode: asset.pre1990GradeMode,
             }}
             onChange={(patch) => onChange(patch)}
-            acquisitionArea={asset.acquisitionArea || undefined}
+            acquisitionArea={asset[sec164LandAreaField(asset)] || undefined}
             jibun={asset.addressJibun || undefined}
             acquisitionDate={asset.acquisitionDate || undefined}
             transferDate={transferDate}
+            alwaysOpen={sec164LandFieldsAlwaysOpen(asset)}
             /**
              * 🔴 **override가 켜져 있으면 덮지 않는다** (2026-09-07 대장 재대조).
              *
@@ -148,7 +150,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
              * 표시 분기(`PreDeemedConversionFields`의 `stdPriceAtAcqAutoActive`)는 이미 같은 플래그를 본다.
              */
             onCalculatedPrice={(price) => {
-              if (asset.useStandardPriceAtAcqOverride) return;
+              if (asset.useStandardPriceAtAcqOverride || !isLand) return;
               onChange({ standardPriceAtAcq: String(price) });
             }}
           />

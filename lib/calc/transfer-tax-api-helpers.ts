@@ -4,6 +4,7 @@
  */
 
 import { parseAmount } from "@/lib/calc/number-parse";
+import { sec164LandAreaField } from "./transfer-163-9-base-date";
 import { exprCompensationSendGates } from "./transfer-tax-validate-expropriation";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -277,12 +278,15 @@ export function buildPre1990LandPayload(
   // (취득면적/양도면적)배 부풀려져 환산비율이 1.0이 되고 양도차익이 통째로 0이 됐다
   // (실측 154,704,000원 과소 — 전액 소멸).
   // 콤마 제거는 stale 저장소 방어로 유지한다(현행 DecimalInput 저장값에는 콤마가 없다).
+  // 토지를 출자한 원조합원은 종전 토지 면적(① 기본정보 「토지 면적」)이다 — 그 자산에는 취득 당시 면적 칸이 없다(계획서 successor-right-carryover-contribution.plan.md §16 V-2).
   const areaSqm =
-    resolveAcqAreaForStdPrice({
-      areaScenario: primary.areaScenario,
-      acquisitionArea: (primary.acquisitionArea ?? "").replace(/,/g, ""),
-      transferArea: (primary.transferArea ?? "").replace(/,/g, ""),
-    }) ?? 0;
+    sec164LandAreaField(primary) === "redevLandArea"
+      ? parseFloat((primary.redevLandArea ?? "").replace(/,/g, "")) || 0
+      : resolveAcqAreaForStdPrice({
+          areaScenario: primary.areaScenario,
+          acquisitionArea: (primary.acquisitionArea ?? "").replace(/,/g, ""),
+          transferArea: (primary.transferArea ?? "").replace(/,/g, ""),
+        }) ?? 0;
   const p1990 = parseAmount(primary.pre1990PricePerSqm_1990 ?? "");
   if (!gCur || !gPrev || !gAcq || areaSqm <= 0 || p1990 <= 0) return {};
   return {

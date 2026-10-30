@@ -64,12 +64,18 @@ describe("deriveEngineInheritanceAssetKind", () => {
     ).toBe("house_apart");
   });
 
-  it("일반건물·승계 입주권·종전 토지 입주권·상가 → house_apart (신고가액 총액 직수, ×면적 없음)", () => {
+  it("일반건물·승계 입주권·상가 → house_apart (신고가액 총액 직수, ×면적 없음)", () => {
     // 다건 inheritanceValuation 경로에서 land 오분류 시 발생하던 ×면적 잠재오류 방지.
     expect(deriveEngineInheritanceAssetKind(asset({ assetKind: "building" }))).toBe("house_apart");
     expect(deriveEngineInheritanceAssetKind(asset({ assetKind: "right_to_move_in", isSuccessorRightToMoveIn: true }))).toBe("house_apart");
-    expect(deriveEngineInheritanceAssetKind(asset({ assetKind: "right_to_move_in", redevOriginalAssetType: "land" }))).toBe("house_apart");
     expect(deriveEngineInheritanceAssetKind(asset({ assetKind: "commercial_building" }))).toBe("house_apart");
+  });
+
+  it("토지를 출자한 원조합원(입주권·완공 아파트) → land — §164④ ② 축(계획서 successor-right-carryover-contribution §16·§17). 승계는 제외", () => {
+    // ④가 보내는 신고가액 경로(reportedMethod)라 ×면적이 없다 — 컴패니언·묶음 세액 master와 같음(anchor original-member-land-164-4).
+    expect(deriveEngineInheritanceAssetKind(asset({ assetKind: "right_to_move_in", redevOriginalAssetType: "land" }))).toBe("land");
+    expect(deriveEngineInheritanceAssetKind(asset({ assetKind: "redevelopment_apt", redevOriginalAssetType: "land" }))).toBe("land");
+    expect(deriveEngineInheritanceAssetKind(asset({ assetKind: "right_to_move_in", redevOriginalAssetType: "land", isSuccessorRightToMoveIn: true }))).toBe("house_apart");
   });
 
   it("원조합원 입주권(종전 주택) → 종전 주택의 개별/공동 구분(계획서 successor-right-carryover-contribution §15 Q-1)", () => {

@@ -229,7 +229,7 @@ export function postDeemedClauseARequiredError(asset: AssetForm, label: string):
 }
 
 /**
- * 원조합원(재개발·재건축 종전자산) 상속·증여 — 의제취득일 이후면 ①(상속세·증여세 신고가액) 또는 ②(§164⑤~⑦) 필수.
+ * 원조합원(재개발·재건축 종전자산) 상속·증여 — 의제취득일 이후면 ①(상속세·증여세 신고가액) 또는 ②(§164④~⑦) 필수.
  *
  * 종전자산 취득가액은 영 §166① 「기존건물과 그 부수토지의 취득가액」이고, 상속·증여받은 것이면 영 §163⑨가 그 평가액을 실지거래가액으로
  * 본다. ①이 비면 ④가 §163⑨ 페이로드를 싣지 않아 엔진이 「종전 부동산 실거래가」(`redevActualAcquisitionPrice` — 피상속인·증여자 쪽 금액)를
@@ -237,8 +237,10 @@ export function postDeemedClauseARequiredError(asset: AssetForm, label: string):
  * 위 `postDeemedClauseARequiredError`가 재개발을 뺀 것은 그 칸이 필수라 0이 되지 않는다는 이유였다 — 0은 아니지만 축이 틀렸다.
  * 의제취득일 전은 §166③ 3자 max 설계(⑤ 「환산」 · `redevPreDeemedEstimatedRequiredError`)라 대상이 아니다. 부담부증여는 §159가 정한다.
  * 승계조합원(승계 입주권·승계 아파트)은 자기 규칙이 있다(`validateSuccessorRightAsset` 등). 계획서 successor-right-carryover-contribution.plan.md §14·§15.
+ * ②는 토지 출자면 §164④다(`sec164LandStatus` — §16). 함께 양도하는 둘째 이후 자산은 ④가 ②를 싣지 않으므로(`ownsAcquisitionSubobject`)
+ * ①만 인정한다 — ②만 채우면 ⑧ 통과 ↔ ⑫ 400이었다(승계조합원 규칙 `transfer-tax-validate-redev.ts`와 같은 처리).
  */
-export function originalMemberClauseARequiredError(asset: AssetForm, label: string): string | null {
+export function originalMemberClauseARequiredError(asset: AssetForm, label: string, isNonPrimaryAsset = false): string | null {
   if (asset.assetKind !== "redevelopment_apt" && asset.assetKind !== "right_to_move_in") return null;
   if (asset.isSuccessorRightToMoveIn === true || asset.redevIsSuccessorMember === "yes") return null;
   if (asset.acquisitionCause !== "inheritance" && asset.acquisitionCause !== "gift") return null;
@@ -248,12 +250,14 @@ export function originalMemberClauseARequiredError(asset: AssetForm, label: stri
   const isGift = asset.acquisitionCause === "gift";
   const field = isGift ? "fixedAcquisitionPrice" : "publishedValueAtInheritance";
   if (parseAmount(asset[field] ?? "") > 0) return null;
-  if (isSec164ClauseAFilled(asset)) return null;
+  const sec164Filled = isSec164ClauseAFilled(asset);
+  if (sec164Filled && !isNonPrimaryAsset) return null;
+  const companionNote = sec164Filled ? " 함께 양도하는 자산은 §164 기준시가로 대신 계산하지 않습니다." : "";
   return fieldError(
     field,
     isGift
-      ? `${label}: 증여 신고가액(증여일 현재 평가액)을 입력하세요 — 증여받은 종전 부동산의 취득가액은 그 평가액입니다(소득세법 시행령 §163⑨·§166①). 종전 부동산 실거래가로는 계산하지 않습니다.`
-      : `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요 — 상속받은 종전 부동산의 취득가액은 그 평가액입니다(소득세법 시행령 §163⑨·§166①). 종전 부동산 실거래가로는 계산하지 않습니다.`,
+      ? `${label}: 증여 신고가액(증여일 현재 평가액)을 입력하세요 — 증여받은 종전 부동산의 취득가액은 그 평가액입니다(소득세법 시행령 §163⑨·§166①). 종전 부동산 실거래가로는 계산하지 않습니다.${companionNote}`
+      : `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요 — 상속받은 종전 부동산의 취득가액은 그 평가액입니다(소득세법 시행령 §163⑨·§166①). 종전 부동산 실거래가로는 계산하지 않습니다.${companionNote}`,
   );
 }
 
