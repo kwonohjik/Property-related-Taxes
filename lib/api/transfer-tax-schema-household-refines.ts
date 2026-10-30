@@ -233,6 +233,7 @@ export function newConstructionLandOnlyIssue(d: { acquisitionCause?: string; sel
  *
  * **겸용주택**(`propertyType: "mixed-use-house"`)은 거주를 연수(`mixedUse.residencePeriodYears` = floor(개월 / 12))로 받아 **연수 × 12**(실제 개월의 하한)로 비교한다 — ⑧ 통과 ⇒ ⑫ 통과를 지킨다. 겸용 토지·건물 취득일도 기산 후보다
  * (계획서 `mixed-use-residence-cap-api.plan.md` Q-1 a — 보유 3년 · 거주 10년이 400 없이 장특 거주분 12% → 40%, −35,797,446). 최상위 `residencePeriodMonths`는 겸용 경로가 읽지 않는다.
+ * 함께 양도 **컴패니언**도 같은 함수를 쓴다(`transfer-tax-schema.ts` 컴패니언 refine — 계획서 `companion-residence-cap-api.plan.md` O-24 · 화면은 닿지 않고 API 직접 호출만).
  * 조건: 1세대1주택(`isOneHousehold`) · 주택·겸용 · 재개발 서브객체 없음(재개발은 자체 상한 — 승계 APT `successorAptMaxResidenceMonths` · 세대원 건물 `householdBuildingResidenceOverflow`).
  * 토지만 본인 × 같은 세대 × 합가면 합가일이 기준일을 늦춘다. ⚠️ 계산 leaf(`calcLongTermRate`)에서 파트별 보유연수로 자르지 않는다 — 거주는 주택 단위라 겸용·분리취득에서 틀린다(시험 적용 26건 실패).
  */

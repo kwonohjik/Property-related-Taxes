@@ -34,3 +34,14 @@
 1. 테스트 먼저 — 신규 `__tests__/api/transfer.route.companion-residence-cap.anchor.test.ts`: 컴패니언 주택 거주 = 보유 개월 통과 · +1 → 400 `companionAssets.0.residencePeriodMonths`(V-2 시료: 60 통과 / 61 → 보유 60개월이면 400, 지금까지의 200 → 400) · 겸용 컴패니언 연수 하한(36개월 보유: 3년 통과 · 10년 400, 37개월 상당은 통과) · `isOneHousehold` false·미지정 판정 안 함 · 거주 미전송(undefined) 판정 안 함.
 2. 구현 — `lib/api/transfer-tax-schema.ts` 컴패니언 refine에 호출 추가(시험 적용 diff는 스크래치패드 `o24-S.trial`). 함수 JSDoc에 컴패니언 호출 한 줄.
 3. 뮤테이션(호출 제거 · 겸용 필드 경로 되돌림 · `isOneHousehold` 게이트 제거 · 겸용 분기 제거) → 전체 회귀 → tsc · eslint. 브라우저: 화면 변화 없음(UI 도달 없음) — 해당 없음.
+
+## 4. 구현 결과 (Q-1 a · Q-2 a · Q-3 a)
+
+| 항목 | 결과 |
+|---|---|
+| 코드 | `lib/api/transfer-tax-schema.ts` 컴패니언 refine(`landOnlyHouseholdMergeIssue` 바로 뒤)에 `residenceMonthsOverflowIssue` 호출 추가 — 겸용(`mixed_use_house`)은 `propertyType: "mixed-use-house"` + 필드 경로 `companionAssets.i.mixedUse.residencePeriodYears`, 그 밖은 `companionAssets.i.residencePeriodMonths`. 함수 JSDoc에 컴패니언 호출 한 줄. 엔진·UI·세액 산식 불변 |
+| 신규 anchor | `__tests__/api/transfer.route.companion-residence-cap.anchor.test.ts` — 8건. 컴패니언 주택: 36개월 통과(경계) · 37개월 400(필드·취득일·상한 36개월) · 240개월 400 · `isOneHousehold` false 미판정 · 거주 미전송(UI 경로) 미판정. 컴패니언 겸용: 3년 통과 · 4년(48 > 36개월) 400(필드·문구) · 10·20년 400 · `isOneHousehold` false 미판정 |
+| 뮤테이션 | ① 호출 제거 → 4건 실패 ② 겸용 필드 경로 되돌림 → 1건 ③ 겸용 `propertyType` 변환 제거 → 2건 ④ `transferDate` 미전달 → 4건 ⑤ 함수의 1세대1주택 게이트 제거 → 2건. 5/5 killed, 원복 확인 |
+| 전체 회귀 | 3,627개 파일 통과 · 1 skip · 실패 0 (44,396 테스트 통과) · tsc 0 · eslint 0 (미사용 import·헬퍼 정리 후 anchor 재실행 8/8) |
+| 브라우저 | 해당 없음 — 화면은 컴패니언 거주를 받지 않는다(V-1) |
+| 남은 별건 | 컴패니언 겸용의 장특 효과 수치 시료 미관측(Q-2 a — 단건 #2768에서 고정) |

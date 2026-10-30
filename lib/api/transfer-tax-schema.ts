@@ -12,6 +12,7 @@ import { z } from "zod";
 import { newConstructionLandOnlyIssue } from "./transfer-tax-schema-household-refines";
 import { landOnlyHouseholdIssue } from "./transfer-tax-schema-household-refines";
 import { landOnlyHouseholdMergeIssue } from "./transfer-tax-schema-household-refines";
+import { residenceMonthsOverflowIssue } from "./transfer-tax-schema-household-refines";
 import {
   filingPenaltyDetailsSchema,
   delayedPaymentDetailsSchema,
@@ -205,6 +206,17 @@ export const propertySchema = z
       if (lohMsg) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "buildingOwnerSameHousehold"], message: lohMsg });
       const mergeIssue = landOnlyHouseholdMergeIssue({ ...c, propertyType: c.assetKind, transferDate: data.transferDate });
       if (mergeIssue) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, mergeIssue.field], message: mergeIssue.message });
+      // 거주 개월 일반 상한 — 주 자산(`refineHouseholdRequiredInputs`)·단건 겸용과 같은 leaf. 겸용 컴패니언은 연수(× 12)로 받는다.
+      //   화면은 컴패니언 거주를 받지 않아(거주 위젯은 주 자산만 · 변환이 컴패니언 주택의 거주를 싣지 않음) API 직접 호출만 닿는다 — ⑧ 짝 불필요(계획서 `companion-residence-cap-api.plan.md`).
+      const isMixedCompanion = c.assetKind === "mixed_use_house";
+      const residenceMsg = residenceMonthsOverflowIssue({ ...c, propertyType: isMixedCompanion ? "mixed-use-house" : c.assetKind, transferDate: data.transferDate });
+      if (residenceMsg) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["companionAssets", i, ...(isMixedCompanion ? ["mixedUse", "residencePeriodYears"] : ["residencePeriodMonths"])],
+          message: residenceMsg,
+        });
+      }
     });
     if (companions.length > 0) {
       // 총 양도가액 필수
