@@ -327,15 +327,18 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
     }
   }
 
-  // 재개발 원조합원 × 이월과세(부담부증여 아님) — 위 블록은 자체 평가(`ownValuation`)라 재개발을 건너뛴다. ⑧ 재개발 분기와 같은 규칙만 본다:
-  //   「환산취득가 사용」을 끄면 증여자 취득가액이 필요하다(`redevPreApprovalAcqMode` = `carryover_donor`). 비우면 A의 인가 전 분 취득가액 0으로 계산됐다
-  //   (「소득세법」 제97조의2①1호 · 계획서 `redev-carryover-residue-bundle.plan.md` A-2).
+  // 재개발 원조합원 × 이월과세(부담부증여 아님) — 위 블록은 자체 평가(`ownValuation`)라 재개발을 건너뛴다. 같은 증여 사건 규칙을 여기서 건다(비재개발 주 자산과 같은
+  //   `rejectOtherRelation=false` — 관계 「그 외」는 엔진이 미적용으로 판정한다). 비우면 이월과세 없이 · 증여 당시 평가액 0이면 B 취득가액 0으로 계산됐다
+  //   (계획서 `redev-carryover-validation-scope.plan.md` Q-3). 증여자 취득가액 규칙(「환산취득가 사용」 OFF)도 `refineCarryoverTaxation` (d)가 본다(#2747 A-2).
+  //   승계조합원·승계 입주권·부담부증여는 이 블록 밖이다(종전 그대로).
   if (data.acquisitionCause === "carryover_gift" && data.redevelopment && !hasSplitPartCarryover) {
     const ct = data.carryoverTaxation;
     const burdenedGift = data.transferType === "burdened_gift" || data.burdenedGiftInfo != null;
     const successor = data.redevelopment.isSuccessorMember === true || data.isSuccessorRightToMoveIn === true;
-    if (ct && !burdenedGift && !successor && !ct.useEstimatedAcquisition && !positive(ct.donorAcquisitionPrice))
-      issue(["carryoverTaxation", "donorAcquisitionPrice"], "재개발 이월과세 — 「환산취득가 사용」을 쓰지 않으면 증여자 취득가액이 필요합니다 (소득세법 §97의2①1호)");
+    if (!burdenedGift && !successor) {
+      if (!ct) issue(["carryoverTaxation"], "이월과세(증여) 자산은 증여 정보(carryoverTaxation)가 필요합니다 (소득세법 §97의2)");
+      else refineCarryoverTaxation(ct, data.transferDate, ctx, ["carryoverTaxation"], false, false);
+    }
   }
 
   // §163⑨ — 증여 취득(1985.1.1. 이후) 자산은 증여일 평가액이 취득가액이다. 추계 모드를 받으면 계산이 됐다.

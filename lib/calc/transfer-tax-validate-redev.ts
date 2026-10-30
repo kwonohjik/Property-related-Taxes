@@ -27,6 +27,7 @@ import type { IssueField } from "./transfer-tax-validate-field";
 
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { isRedevCarryoverDonorBasis } from "@/lib/calc/redev-carryover-acq-mode";
 import { successorTypeToggleSectionLabel } from "@/lib/calc/transfer-successor-right";
 import { isSec164ClauseAFilled } from "./transfer-tax-validate-clause-a";
@@ -282,7 +283,9 @@ export function validateRedevelopmentAsset(
   }
   // 사례 48 — 승계조합원 모드 분기. 인가일 < 취득일 차단을 명시 토글로 우회.
   const isSuccessor = asset.redevIsSuccessorMember === "yes";
-  if (!isSuccessor && asset.acquisitionDate && new Date(asset.redevApprovalDate) < new Date(asset.acquisitionDate)) {
+  // 이월과세는 취득일 칸이 없다 — ④와 같은 leaf(원값 → 증여 등기일)로 비교한다(계획서 `redev-carryover-validation-scope.plan.md` Q-1 a).
+  const acqDate = primaryAcquisitionDateOf(asset);
+  if (!isSuccessor && acqDate && new Date(asset.redevApprovalDate) < new Date(acqDate)) {
     /**
      * 🔴 2026-08-26 정정(P2-05): 안내 문구가 **자산 종류에 따라 갈린다**.
      *    ②-a 「승계조합원 모드」(`redevIsSuccessorMember`) 카드는 `RedevelopmentBlock`이

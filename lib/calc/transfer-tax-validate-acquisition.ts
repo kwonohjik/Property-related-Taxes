@@ -14,6 +14,9 @@ import { isGbFirstDisclosureApplicable } from "./gb-first-disclosure";
 import { isGbFirstDisclosureApplicableForProperty } from "./gb-first-disclosure";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { validateCarryoverAsset } from "./transfer-tax-validate-carryover-asset";
+import { validateCarryoverEventHead } from "./transfer-tax-validate-carryover-asset";
+import { validateCarryoverEventTail } from "./transfer-tax-validate-carryover-asset";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -285,6 +288,13 @@ function validateAssetAcquisitionBranches(
   if (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") {
     const redevError = validateRedevelopmentAsset(asset, label, isOneHousehold, typeToggleSection, isNonPrimaryAsset);
     if (redevError) return redevError;
+    // 재개발 × 이월과세(비부담부증여) — 이 분기는 `validateCarryoverAsset`를 타지 않으므로 증여 사건 칸(가업상속·날짜·관계·평가액 / 음수·채무·세대)을
+    //   같은 leaf로 본다(⑫ `refineCarryoverTaxation`과 같은 규칙 · 계획서 `redev-carryover-validation-scope.plan.md` Q-2 a). 환산 방식·PHD·증여자 신축 칸은 재개발에 없다.
+    const redevCarryover = asset.acquisitionCause === "carryover_gift" && asset.transferType !== "burdened_gift";
+    if (redevCarryover) {
+      const headErr = validateCarryoverEventHead(asset.carryover, label, formTransferDate);
+      if (headErr) return headErr;
+    }
     // 재개발 × 이월과세(비부담부증여) · 이월과세 ② 「환산취득가 사용」 OFF — 인가 전 분 취득가액은 증여자 취득가액이다(⑤ 실거래가 칸은 쓰지 않는다).
     //   이 분기는 이월과세 검증(`validateCarryoverAsset`)을 타지 않으므로 그 칸을 여기서 요구한다(계획서 `redev-carryover-estimation-toggle-sync.plan.md`).
     if (redevPreApprovalAcqMode(asset) === "carryover_donor" && parseAmount(asset.carryover?.donorAcquisitionPrice) <= 0)
@@ -292,6 +302,10 @@ function validateAssetAcquisitionBranches(
         "carryover.donorAcquisitionPrice",
         `${label}: 증여자 취득가액을 입력하세요. 확인할 수 없으면 「환산취득가 사용」을 켜고 ⑤의 §166③ 칸을 입력하세요 (「소득세법」 제97조의2 제1항 제1호 · 「소득세법 시행령」 제166조 제3항).`,
       );
+    if (redevCarryover && asset.carryover) {
+      const tailErr = validateCarryoverEventTail(asset, asset.carryover, label, formTransferDate, { isNonPrimary: isNonPrimaryAsset });
+      if (tailErr) return tailErr;
+    }
     // I-8 — 승계조합원 신축주택 거주 개월 수는 준공일~양도일 개월 수를 넘을 수 없다(⑫ 같은 leaf).
     const newMonthsRaw = (asset.redevNewHouseResidenceMonths || "").trim();
     if (newMonthsRaw) {
@@ -304,7 +318,8 @@ function validateAssetAcquisitionBranches(
         );
     }
     // redevelopment 검증 통과 후 일반 취득 검증 스킵 (별도 분기 — 양도가액·취득가액은 redev 분기에서 처리)
-    if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
+    // 이월과세는 취득일 칸이 화면에 없다 — ④와 같은 leaf(원값 → 증여 등기일)로 읽는다(계획서 Q-1 a · 종전 원값이라 새 입력은 칸 없는 막다른 길).
+    if (!primaryAcquisitionDateOf(asset)) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
     return null;
   }
 
