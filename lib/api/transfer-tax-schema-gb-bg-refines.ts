@@ -30,6 +30,11 @@ export const GB_BG_INHERIT_NON_ACTUAL_MESSAGE =
   "일반건물 부담부증여 — 상속개시일이 1985.1.1. 이후인 상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액이라 환산취득가액·감정가액·매매사례가액을 쓸 수 없습니다 " +
   "(소득세법 시행령 §163⑨ · 소득세법 §97①1호 단서). 취득가액 산정방식을 «실지취득가액 안분»으로 하고 상속개시일 평가액을 입력하세요.";
 
+export const GB_BG_MIXED_WINNER_MESSAGE =
+  "일반건물 함께 부담부증여 — 증여재산 평가액의 승자(보충적평가·담보평가·임대평가)가 자산마다 달라 합산 증여가액이 자산별 증여가액의 합과 어긋납니다 " +
+  "(증여세가 증여계약 전체로 1회 계산되는데 합산 증여가액이 성분 합의 최댓값이라 자산별 최댓값의 합과 다릅니다 — 「상속세 및 증여세법」 §61·§66). " +
+  "함께 양도를 끄고 단건으로 계산하거나, 승자가 같게 입력하세요.";
+
 type Gbv = { actualPriceMode?: boolean; landAcquisitionDate?: string } | null | undefined;
 
 interface Subject {
@@ -37,10 +42,11 @@ interface Subject {
   transferType?: string;
   acquisitionCause?: string;
   acquisitionDate?: string;
+  ownershipRatio?: number;
   burdenedGiftInfo?: unknown;
   generalBuildingValuation?: Gbv;
   generalBuildingShares?: { valuation?: Gbv; burdenedGiftInfo?: unknown }[];
-  companionAssets?: { assetKind?: string; acquisitionCause?: string; acquisitionDate?: string; burdenedGiftInfo?: unknown; generalBuildingValuation?: Gbv }[];
+  companionAssets?: { assetKind?: string; acquisitionCause?: string; acquisitionDate?: string; ownershipRatio?: number; burdenedGiftInfo?: unknown; generalBuildingValuation?: Gbv }[];
 }
 
 export const GB_BG_SHARE_INFO_REQUIRED_MESSAGE =
@@ -87,6 +93,32 @@ function bgInheritNonActualBlocked(cause: string | undefined, date: string | und
   return companionBurdenedGiftValuations([info as Parameters<typeof companionBurdenedGiftValuations>[0][number]], [1])[0]?.selectedMode !== "mortgage";
 }
 
+/**
+ * 함께 부담부증여(주 자산 + 컴패니언) — 자산별 상증법 평가 승자(보충적·담보·임대)가 **서로 다르면** 막는다.
+ * ④ 가 증여세 1회 산정용 합산 info 를 성분 단순 합으로 만들어(`buildCompanionBurdenedGiftWholeInfo`) 합산 증여가액이 성분 합의 max 가 되는데,
+ * 자산별 max 의 합(ΣAᵢ)은 승자가 같을 때만 그와 같다(Σmax ≠ max(Σ성분)). 승자가 섞이면 증여세가 틀린다 — 측정: 담보 1.2B + 보충 1.0B 에서 증여세 43,650,000 과소
+ * (계획서 `docs/00-pm/bg-collateral-bundle-gift-value.plan.md` §3). **균일 승자는 ⑫ 가 맞게 계산하므로 막지 않는다** — ⑧(`transfer-tax-validate.ts` 승자 게이트)은 비보충
+ * 승자를 전부 막는 상위 집합이라 「⑧ 통과 ↔ ⑫ 차단」 모순은 생기지 않는다. 승자는 ⑧ 과 같은 `companionBurdenedGiftValuations`(지분 축소 → Max)로 정한다.
+ *
+ * 축 B(지분 2개 이상)는 물건이 하나라 합산이 없어 대상이 아니다. 기준시가 4칸이 비면 승자를 못 정하므로 보류한다(그 칸은 `requireStd` 가 400).
+ */
+function bgBundleMixedWinner(data: Subject): boolean {
+  if ((data.generalBuildingShares?.length ?? 0) >= 2) return false;
+  const entries: { info: unknown; ratio: number }[] = [];
+  if (data.propertyType === "general_building" && data.transferType === "burdened_gift" && data.burdenedGiftInfo) {
+    entries.push({ info: data.burdenedGiftInfo, ratio: data.ownershipRatio ?? 1 });
+  }
+  for (const c of data.companionAssets ?? []) if (c.burdenedGiftInfo) entries.push({ info: c.burdenedGiftInfo, ratio: c.ownershipRatio ?? 1 });
+  if (entries.length < 2) return false;
+  const complete = entries.every(({ info }) => GB_BG_STD_KEYS.every(([key]) => typeof (info as Record<string, unknown>)[key] === "number" && ((info as Record<string, unknown>)[key] as number) > 0));
+  if (!complete) return false;
+  const modes = companionBurdenedGiftValuations(
+    entries.map((e) => e.info as Parameters<typeof companionBurdenedGiftValuations>[0][number]),
+    entries.map((e) => e.ratio),
+  ).map((v) => v.selectedMode);
+  return new Set(modes).size > 1;
+}
+
 export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementCtx): void {
   const issue = (path: (string | number)[]) =>
     ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: GB_BG_ACTUAL_PATH_REQUIRED_MESSAGE });
@@ -113,6 +145,9 @@ export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementC
     if ((data.generalBuildingShares?.length ?? 0) < 2 && bgInheritNonActualBlocked(data.acquisitionCause, gbv?.landAcquisitionDate || data.acquisitionDate, data.burdenedGiftInfo)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["burdenedGiftInfo", "acquisitionMethod"], message: GB_BG_INHERIT_NON_ACTUAL_MESSAGE });
     }
+  }
+  if (bgBundleMixedWinner(data)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["burdenedGiftInfo"], message: GB_BG_MIXED_WINNER_MESSAGE });
   }
   // 지분(축 B) — 부담부증여면 **모든 지분**이 info 를 가져야 한다. 누락 지분은 일반 양도로 계산된다(침묵 무시 금지).
   if (data.propertyType === "general_building" && data.transferType === "burdened_gift") {
