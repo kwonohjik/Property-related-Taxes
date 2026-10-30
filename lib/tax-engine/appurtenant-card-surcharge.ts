@@ -12,7 +12,8 @@ import type { TransferTaxInput } from "./types/transfer.types";
 
 export const APPURTENANT_CARD_SURCHARGE_NOTICE =
   "함께 양도한 부수토지 카드 — 짝 주택이 다주택 중과(「소득세법」 §104⑦) 대상이라 「주택(이에 딸린 토지를 포함한다)」인 이 부수토지에도 " +
-  "중과 규정(§104⑦ 세율·보유기간 2년 미만 세율 비교)을 적용하고 장기보유특별공제는 배제했습니다(§95② 본문 「제104조제7항 각 호에 따른 자산」 제외).";
+  "중과 규정(§104⑦ 세율·보유기간 2년 미만 세율 비교)을 적용하고 장기보유특별공제는 배제했습니다(§95② 본문 「제104조제7항 각 호에 따른 자산」 제외). " +
+  "보유기간이 2년 미만이면 비교하는 §104①2·3호 세율은 부수토지도 주택(이에 딸린 토지를 포함한다)이므로 주택 단기세율(1~2년 60% · 1년 미만 70%)입니다.";
 
 type CardArg = Pick<TransferTaxInput, "oneHouseUnitRole" | "appurtenantHouseVerdict">;
 
