@@ -31,6 +31,8 @@ import { useMemo } from "react";
 import { Frac, FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import { computeSalePriceTotal } from "@/lib/tax-engine/redevelopment-settlement";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { effectiveRedevLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-redev-bridge";
+import { RedevLandSec164Input } from "./RedevLandSec164Input";
 
 interface Props {
   asset: AssetForm;
@@ -42,6 +44,8 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
   // 「취득당시」 기준일 — 이월과세면 당초 증여자 취득일(§164⑦ 판정·조회 기준일 · 계획서 `redev-carryover-phd-donor-date.plan.md` Q-2 a).
   const acqRefDate = redevPreApprovalAcquisitionDate(asset);
   const donorNote = donorAcqDateNote(asset, acqRefDate);
+  // 취득당시 토지 ㎡당 단가 — 1990.8.30. 전 취득은 비워 두면 영 §164④ 파생값(④·⑧과 같은 함수 · 계획서 §18).
+  const landAcqEffective = effectiveRedevLandPricePerSqmAtAcq(asset);
   // 환산취득가 미리보기 (useMemo) — PHD 패턴, 엔진 redevelopment-valuation.ts 와 동일 산식.
   const valuationPreview = useMemo(() => {
     // 환산 모드 — 부담부증여 K-5(완공 아파트)도 같다(`redevPreApprovalAcqMode`).
@@ -55,7 +59,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
 
     const A = parseAmount(asset.redevFirstDisclosureHousingPrice);
     const area = parseDecimal(asset.redevLandArea);
-    const landAcq = parseAmount(asset.redevLandPricePerSqmAtAcq);
+    const landAcq = landAcqEffective;
     const bldAcq = parseAmount(asset.redevBuildingStdPriceAtAcq);
     const landFirst = parseAmount(asset.redevLandPricePerSqmAtFirst);
     const bldFirst = parseAmount(asset.redevBuildingStdPriceAtFirst);
@@ -104,7 +108,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     asset.redevAcquisitionHousingPrice,
     asset.redevFirstDisclosureHousingPrice,
     asset.redevLandArea,
-    asset.redevLandPricePerSqmAtAcq,
+    landAcqEffective,
     asset.redevBuildingStdPriceAtAcq,
     asset.redevLandPricePerSqmAtFirst,
     asset.redevBuildingStdPriceAtFirst,
@@ -119,7 +123,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     if (!isLand || acqMode !== "estimated") return null;
     const rights = parseAmount(asset.redevRightsValue);
     const landArea = parseDecimal(asset.redevLandArea) || 0;
-    const pricePerSqmAcq = parseAmount(asset.redevLandPricePerSqmAtAcq) || 0;
+    const pricePerSqmAcq = landAcqEffective;
     const pricePerSqmApproval = parseAmount(asset.redevLandPricePerSqmAtApproval) || 0;
     // 단가×면적 계산 우선, fallback은 legacy 총액
     const acq = (pricePerSqmAcq > 0 && landArea > 0)
@@ -176,7 +180,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     acqMode,
     asset.redevRightsValue,
     asset.redevLandArea,
-    asset.redevLandPricePerSqmAtAcq,
+    landAcqEffective,
     asset.redevLandPricePerSqmAtApproval,
     asset.redevLandStdPriceAtAcq,
     asset.redevLandStdPriceAtApproval,
@@ -291,12 +295,13 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
                 label="취득시 개별공시지가 (원/㎡)"
                 data-field="redevLandPricePerSqmAtAcq"
                 hint={`Vworld API 조회 — 기준연도 = 취득연도. 취득시 합계 기준시가를 구성합니다${donorNote}`}
-                pricePerSqm={asset.redevLandPricePerSqmAtAcq}
+                pricePerSqm={asset.redevLandPricePerSqmAtAcq || (landAcqEffective > 0 ? String(landAcqEffective) : "")}
                 onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtAcq: v })}
                 area={landAreaNumber}
                 referenceDate={acqRefDate}
                 jibun={asset.addressJibun || undefined}
               />
+              <RedevLandSec164Input asset={asset} onChange={onChange} />
               <LandPriceLookupField
                 label="최초공시 당시 개별공시지가 (원/㎡)"
                 data-field="redevLandPricePerSqmAtFirst"
@@ -471,6 +476,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
   const fmt = (n: number) => n.toLocaleString("ko-KR");
   const landAreaNumber = parseDecimal(asset.redevLandArea) || undefined;
   const acqRefDate = redevPreApprovalAcquisitionDate(asset);
+  const landAcqEffective = effectiveRedevLandPricePerSqmAtAcq(asset);
 
   return (
     <div className="space-y-2">
@@ -505,12 +511,13 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
         label="취득당시 토지 ㎡당 단가"
         data-field="redevLandPricePerSqmAtAcq"
         hint={`§166③ 분자 — 취득일 기준 개별공시지가 (원/㎡). Vworld 조회 또는 국세청 기준시가 확인.${donorAcqDateNote(asset, acqRefDate)}`}
-        pricePerSqm={asset.redevLandPricePerSqmAtAcq}
+        pricePerSqm={asset.redevLandPricePerSqmAtAcq || (landAcqEffective > 0 ? String(landAcqEffective) : "")}
         onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtAcq: v })}
         area={landAreaNumber}
         referenceDate={acqRefDate}
         jibun={asset.addressJibun || undefined}
       />
+      <RedevLandSec164Input asset={asset} onChange={onChange} />
 
       {/* 관리처분 직전 토지 ㎡당 단가 — §166③ 분모 */}
       <LandPriceLookupField
@@ -538,7 +545,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
         <div className="mt-2 rounded-md bg-amber-100/60 border border-amber-200 p-2 text-xs space-y-1 dark:bg-amber-900/40">
           <p className="font-semibold text-amber-800 dark:text-amber-200">환산취득가 미리보기 (§166③)</p>
           <p className="text-amber-700 dark:text-amber-300">
-            취득당시 토지기준시가 = {landAreaNumber ? `${fmt(landAreaNumber)} ㎡ × ` : ""}{fmt(parseAmount(asset.redevLandPricePerSqmAtAcq) || 0)} 원/㎡ = {fmt(preview.acq)}
+            취득당시 토지기준시가 = {landAreaNumber ? `${fmt(landAreaNumber)} ㎡ × ` : ""}{fmt(landAcqEffective)} 원/㎡ = {fmt(preview.acq)}
           </p>
           <p className="text-amber-700 dark:text-amber-300">
             관리처분 직전 토지기준시가 = {landAreaNumber ? `${fmt(landAreaNumber)} ㎡ × ` : ""}{fmt(parseAmount(asset.redevLandPricePerSqmAtApproval) || 0)} 원/㎡ = {fmt(preview.approval)}

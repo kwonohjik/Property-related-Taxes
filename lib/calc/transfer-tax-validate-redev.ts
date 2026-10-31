@@ -31,6 +31,8 @@ import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { isRedevCarryoverDonorBasis } from "@/lib/calc/redev-carryover-acq-mode";
 import { successorTypeToggleSectionLabel } from "@/lib/calc/transfer-successor-right";
 import { isSec164ClauseAFilled } from "./transfer-tax-validate-clause-a";
+import { effectiveRedevLandPricePerSqmAtAcq } from "./transfer-pre1990-redev-bridge";
+import { redevLandSec164Applies } from "./transfer-pre1990-redev-bridge";
 export function validateRedevelopmentAsset(
   asset: AssetForm,
   label: string,
@@ -249,14 +251,16 @@ export function validateRedevelopmentAsset(
     if (isEstimatedMode) {
       // §166③ 2필드 필수 — 3중 패턴(UI/API/validate): LandPriceLookupField(단가×면적) 우선 > legacy 총액 fallback.
       const landArea = parseDecimal(asset.redevLandArea) || 0;
-      const pricePerSqmAcq = parseAmount(asset.redevLandPricePerSqmAtAcq) || 0;
+      const pricePerSqmAcq = effectiveRedevLandPricePerSqmAtAcq(asset);
       const pricePerSqmApproval = parseAmount(asset.redevLandPricePerSqmAtApproval) || 0;
       const acqOk = (pricePerSqmAcq > 0 && landArea > 0) || parseAmount(asset.redevLandStdPriceAtAcq) > 0;
       if (!acqOk) {
         if (landArea <= 0) {
           return fieldError("redevLandArea", `${label}: 토지면적(㎡)을 입력하세요. (§166③ 분자 산정 필수)`);
         }
-        return fieldError("redevLandPricePerSqmAtAcq", `${label}: 취득당시 토지 ㎡당 단가를 입력하세요. (§166③ 분자 — Vworld 조회 또는 직접 입력)`);
+        return fieldError("redevLandPricePerSqmAtAcq", redevLandSec164Applies(asset)
+          ? `${label}: 취득당시 토지 ㎡당 단가 — 1990.8.30. 전 취득이라 개별공시지가가 없습니다. §164④ 칸(1990.1.1. 기준 개별공시지가·토지등급 3종)을 채우거나 단가를 직접 입력하세요. (§166③ 분자)`
+          : `${label}: 취득당시 토지 ㎡당 단가를 입력하세요. (§166③ 분자 — Vworld 조회 또는 직접 입력)`);
       }
       const approvalOk = (pricePerSqmApproval > 0 && landArea > 0) || parseAmount(asset.redevLandStdPriceAtApproval) > 0;
       if (!approvalOk) {
@@ -469,8 +473,10 @@ export function validateRedevelopmentAsset(
     if (!isFinite(area) || area <= 0) {
       return fieldError("redevLandArea", `${label}: §164⑦ 본문 — 토지면적(㎡) 입력 필수입니다.`);
     }
-    if (parseAmount(asset.redevLandPricePerSqmAtAcq) <= 0) {
-      return fieldError("redevLandPricePerSqmAtAcq", `${label}: §164⑦ 본문 — 취득시 토지 ㎡당 단가(공시지가 조회) 입력 필수입니다.`);
+    if (effectiveRedevLandPricePerSqmAtAcq(asset) <= 0) {
+      return fieldError("redevLandPricePerSqmAtAcq", redevLandSec164Applies(asset)
+        ? `${label}: §164⑦ 본문 — 취득시 토지 ㎡당 단가 — 1990.8.30. 전 취득이라 개별공시지가가 없습니다. §164④ 칸(1990.1.1. 기준 개별공시지가·토지등급 3종)을 채우거나 단가를 직접 입력하세요.`
+        : `${label}: §164⑦ 본문 — 취득시 토지 ㎡당 단가(공시지가 조회) 입력 필수입니다.`);
     }
     if (parseAmount(asset.redevBuildingStdPriceAtAcq) < 0) {
       return fieldError("redevBuildingStdPriceAtAcq", `${label}: §164⑦ 본문 — 취득시 건물 기준시가 입력 필수입니다.`);
