@@ -132,7 +132,7 @@ describe("CW-2 ⑧ 차단 유지 — 정당하지 않은 경우와 범위 밖", 
     ["조합원입주권", { assetKind: "right_to_move_in", redevSubject: "right", isSuccessorRightToMoveIn: false }],
   ] as const)("%s → 담보 승을 계산하지 않는다고 막는다 · 화면 leaf도 거짓(칸·안내를 바꾸지 않는다)", (_l, o) => {
     const m = allIssues(form([house(o)])).map((x) => x.message).join("\n");
-    expect(m).toContain("취득가액 산정 기준을 확인하지 못해 계산하지 않습니다");
+    expect(m).toContain("조합원입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어 계산하지 않습니다");
     expect(bgCollateralForcesStdAcq(house(o))).toBe(false);
     expect(render(<BurdenedGiftBlock asset={house(o)} onChange={() => {}} />).container.querySelector('[data-testid="bg-collateral-forced-notice"]')).toBeNull();
   });

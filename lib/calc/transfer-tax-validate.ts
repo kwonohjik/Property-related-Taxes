@@ -36,6 +36,7 @@ import { bgBundleWinnerModes } from "./burdened-gift-bundle-winner";
 import { bgBundleMixedWinnerMessage } from "./burdened-gift-bundle-winner";
 import type { BgWinnerMode } from "./burdened-gift-bundle-winner";
 import { bgNonSupplementaryWinnerUnsupported } from "./burdened-gift-collateral-win";
+import { bgUnsupportedWinnerCause } from "./burdened-gift-collateral-win";
 import { bgUnsupportedWinnerReason } from "./burdened-gift-collateral-win";
 import { isBlockedMixedBurdenedGiftBundle } from "./burdened-gift-transfer-price-scope";
 import { MIXED_BURDENED_GIFT_BUNDLE_MESSAGE } from "./burdened-gift-transfer-price-scope";
@@ -367,7 +368,7 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
           issues.push({
             step,
             assetIndex: i,
-            message: `자산 ${i + 1}: 증여재산 평가액이 ${kind}으로 결정되는 ${bgUnsupportedWinnerReason(form.assets[i])} 자산은 함께 양도와 같이 계산하지 않습니다. 이 경우의 취득가액 산정 기준을 확인하지 못했습니다. 함께 양도 토글을 끄고 단건으로 계산하세요.`,
+            message: `자산 ${i + 1}: 증여재산 평가액이 ${kind}으로 결정되는 ${bgUnsupportedWinnerReason(form.assets[i])} 자산은 함께 양도와 같이 계산하지 않습니다. ${bgUnsupportedWinnerCause(form.assets[i])}`,
           });
         });
         // ⑫ 보다 넓게 — 승자를 정할 입력이 비어 있어도 판정한다(⑧ 통과 ↔ ⑫ 차단 모순 금지 · 빈 입력은 자산별 필수 검증이 따로 막는다).

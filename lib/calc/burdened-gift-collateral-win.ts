@@ -82,6 +82,21 @@ export function bgUnsupportedWinnerReason(asset: AssetForm): string {
 }
 
 /**
+ * `bgNonSupplementaryWinnerUnsupported`가 true인 자산을 막는 **실제 사유** — ⑧ 안내 문구용(엔진 중단 사유와 같은 말).
+ * · 조합원입주권: 「소득세법 시행령」 제159조 제1항 제1호 괄호가 취득가액을 기준시가로 정하지만 입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없다
+ *   (엔진 `burdened-gift-apportionment.ts` fail-fast — 기준시가 모드에서 담보·임대 승이면 400).
+ * · 겸용주택: 담보·임대 평가액을 주택과 상가로 나눌 법정 기준이 없어 보충적평가·시가인 단독 소유 단건만 계산한다(엔진 MB-7 · 함께 양도는 MB-6).
+ * · 지분 보유: 종전 문구 그대로(축 정보를 몰라 승자를 확정하지 못하는 범위). 뒤 문장은 사유별 조치 안내다.
+ */
+export function bgUnsupportedWinnerCause(asset: AssetForm): string {
+  if (getOwnershipRatio(asset) < 1) return "이 경우의 취득가액 산정 기준을 확인하지 못했습니다. 함께 양도 토글을 끄고 단건으로 계산하세요.";
+  if (asset.assetKind === "right_to_move_in") {
+    return "「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 이 경우의 취득가액은 기준시가로 산정해야 하는데, 조합원입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
+  }
+  return "겸용주택 부담부증여는 단독 소유 단건만 계산하며, 담보·임대로 평가되는 경우 증여가액을 주택과 상가로 나눌 법정 기준이 없어 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
+}
+
+/**
  * 담보 승 취득가액 문구의 시기 단서 — §159①1호 괄호에 상증법 §66이 열거된 2023.2.28. 전 양도면 `true`.
  * 결과 화면 고지(`bgParenthesisEraNotice`)와 같은 경계다. 담보 승 판정(`bgCollateralForcesStdAcq`)이 이미 승자를 정했으므로
  * 여기서는 양도일만 본다. 양도일 미입력은 `false` — 결과 화면이 판정한다.
