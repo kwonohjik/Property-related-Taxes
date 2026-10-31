@@ -2,12 +2,12 @@
  * anchor — 이월과세(§97의2) × 부담부증여 **기준시가 모드 × 균일 승자(담보 §66 · 임대 §61⑤) 함께 양도 묶음** (⑧ 게이트 해제 · ⑫ 정합).
  *
  * 종전 ⑧ 묶음 게이트(`bgNonSupplementaryWinnerUnsupported`)는 이월과세 자산의 비보충 승자를 모드와 무관하게 막았다. 그런데 기준시가 모드는 단건 ⑧이 이미 열어 두었고,
- * 두 시나리오의 취득가액이 모두 「취득시 기준시가 × 채무비율」(A = 당초 증여자 · B = 양도인)이라 ⑫ 값이 맞다. 시가 모드는 담보 승이 취득가액을 당초 증여자 기준시가로
- * 강제하는 화면을 열지 않았으므로 그대로 막는다(2단계).
+ * 두 시나리오의 취득가액이 모두 「취득시 기준시가 × 채무비율」(A = 당초 증여자 · B = 양도인)이라 ⑫ 값이 맞다. 시가 모드 담보 승은 당시 화면을 열지 않아 막았고
+ * 2단계에서 풀었다(`transfer.route.bg-carryover-mkt-collateral-win.anchor.test.ts`).
  *
  * · CU-1 격자 — 주택·일반건물 × 담보·임대(대칭) × 이월과세 위치(둘 다 · 첫 자산만 · 둘째 자산만): ⑧ 통과 ∧ ⑫ 200 ∧
  *   시나리오 A·B 취득가액 합과 양도차익이 단건 합과 ±0 (대칭 채무라 묶음 채무비율 = 단건 채무비율).
- * · CU-2 여전히 막힘 — 시가 모드 이월과세 담보 승 · 지분 보유 · 입주권 · 겸용(해당 자산만 ⑧이 막는다).
+ * · CU-2 여전히 막힘 — 지분 보유 · 입주권 · 겸용(해당 자산만 ⑧이 막는다). 시가 모드 담보 승은 2단계에서 풀었다(`transfer.route.bg-carryover-mkt-collateral-win.anchor.test.ts`).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -108,10 +108,9 @@ describe("CU-1 기준시가 모드 균일 승자 × 이월과세 — ⑧ 통과 
   });
 });
 
-describe("CU-2 여전히 막힘 — 시가 모드 이월과세 담보 승 · 지분 · 입주권 · 겸용", () => {
+describe("CU-2 여전히 막힘 — 지분 · 입주권 · 겸용", () => {
   const HM = asset("housing", "mortgage", 1, false);
   it.each([
-    ["시가 모드 이월과세 담보 승", () => [HM, asset("housing", "mortgage", 2, true, x({ bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1000000000", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "300000000" }))], "이월과세"],
     ["지분 50% 담보 승", () => [HM, asset("housing", "mortgage", 2, true, x({ ownershipNumerator: "50", ownershipDenominator: "100" }))], "지분 보유"],
     ["조합원입주권 담보 승", () => [HM, asset("housing", "mortgage", 2, false, x({ assetKind: "right_to_move_in" }))], "조합원입주권"],
     ["겸용주택 담보 승", () => [HM, asset("housing", "mortgage", 2, true, x({ isMixedUseHouse: true }))], "겸용주택"],

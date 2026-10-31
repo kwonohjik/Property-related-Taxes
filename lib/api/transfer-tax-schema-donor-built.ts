@@ -12,6 +12,7 @@
  */
 import { z } from "zod";
 import { toDate } from "./date-coerce";
+import { collateralForcesStdAcquisition, type CollateralWinLike } from "./transfer-tax-schema-collateral-win";
 
 const positiveInt = z.number().int().positive();
 
@@ -337,11 +338,10 @@ export const GB_BG_BUILDING_STD_ZERO_MESSAGE =
 
 type PartsLike = { land: boolean; building: boolean } | undefined;
 type BgInfoPartsLike =
-  | {
-      valuationMode?: string;
+  | (CollateralWinLike & {
       acquisitionMethod?: string;
       carryoverDonorBasis?: { parts?: PartsLike; giftValuationByPart?: unknown; buildingDonorAcquisitionDate?: unknown; buildingStdPriceAtAcquisition?: number };
-    }
+    })
   | undefined;
 /** 둘 다 이월과세일 때만 받는 값 — 한 파트만이거나 일반건물 부담부증여 밖이면 거부한다. */
 const BOTH_PARTS_ONLY = [
@@ -351,6 +351,8 @@ const BOTH_PARTS_ONLY = [
 /** 당초 증여자 취득 당시 기준시가가 계산에 쓰이는 방식 — ⑧ `bgCoDonorNeedsStdPrice`와 같은 조건을 와이어 값으로 읽는다(의제취득 경로는 방식이 비어 검사하지 않는다 — ⑧보다 넓어지지 않는다). */
 const needsDonorStdPrice = (info: BgInfoPartsLike): boolean =>
   info?.valuationMode === "sangjeungbeop_standard" ||
+  // 시가 모드 · 담보 승 — 괄호가 발동해 당초 증여자 건물 기준시가가 곧 시나리오 A의 건물 취득가액이다(⑧과 같다).
+  (info !== undefined && collateralForcesStdAcquisition(info)) ||
   info?.acquisitionMethod === "converted" ||
   (info?.valuationMode === "sangjeungbeop_market" && (info.acquisitionMethod === "appraisal" || info.acquisitionMethod === "salesCase"));
 

@@ -12,7 +12,7 @@
  *
  * 지분이 있으면 채무 입력 규약이 축마다 반대다(축 A 공유 소유 = 지분 인수분 · 축 B 지분 분할 = 물건 전체 후 ④가 안분). 자산 하나만으로는
  * 축을 가릴 수 없어 승자를 잘못 판정할 수 있으므로 `undefined`/`false`를 돌려 종전 처리(⑧ 시가 분모)를 유지한다. 함께 부담부증여 묶음은
- * 승자가 **섞이면** 막고(`bgBundleWinnersMixed` — 합산 증여가액 불일치), 지분·이월과세·입주권·겸용 자산의 비보충 승자는 이 범위 밖이라 따로 막는다
+ * 승자가 **섞이면** 막고(`bgBundleWinnersMixed` — 합산 증여가액 불일치), 지분·입주권·겸용 자산의 비보충 승자는 이 범위 밖이라 따로 막는다
  * (`bgNonSupplementaryWinnerUnsupported`). 균일 승자(100% 소유)는 단건과 같은 판정·같은 분모를 쓴다.
  *
  * 값은 ④가 엔진에 싣는 info(`buildBurdenedGiftInfo`)를 엔진과 같은 경로(`companionBurdenedGiftValuations` — 지분 축소 → Max)로 계산한다.
@@ -21,7 +21,6 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { buildBurdenedGiftInfo, companionBurdenedGiftValuations, type CompanionBurdenedGiftValuation } from "./transfer-tax-api-burdened-gift";
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
-import { bgAnyCarryover } from "./bg-carryover-parts";
 import { BG_PAREN_MORTGAGE_66_FROM } from "@/lib/tax-engine/burdened-gift-valuation";
 
 /** 단독 소유 단건의 증여가액 C(엔진 `giftValuation.max`)와 승자. 지분이 있으면 `undefined`(위 범위). */
@@ -48,15 +47,16 @@ export function bgFractionalCollateralWin(asset: AssetForm): boolean {
  * 시가 모드에서 담보평가(§66)가 이겨 취득가액이 취득시 기준시가로 강제되는가 — 엔진 `resolveBgAcquisitionBasis`의
  * `collateralForcedStdInMarketMode`와 같은 조건이다(입주권 제외).
  *
+ * 이월과세(§97의2)도 포함한다 — 두 시나리오 모두 취득시 기준시가 × 채무비율이라(A = 당초 증여자 · B = 양도인) 기준시가 모드와 같은 칸·같은 검증을 쓴다
+ * (`bg-carryover-mkt-collateral-win.plan.md`).
+ *
  * 화면이 이 경우를 다루지 않는 자산은 `false`다 — ⑧이 따로 막는다:
  * - 겸용주택: 엔진 MB-7(담보평가를 주택·상가로 나눌 법정 기준 없음).
- * - 이월과세(§97의2): 취득가액이 당초 증여자의 값이라 담보 승과의 결합을 검토하지 않았다.
  * - 지분 보유: 위 범위.
  */
 export function bgCollateralForcesStdAcq(asset: AssetForm): boolean {
   if (asset.transferType !== "burdened_gift" || asset.bgValuationMode !== "sangjeungbeop_market") return false;
-  // 이월과세 — 일반건물은 토지·건물 중 한 파트라도(`bgAnyCarryover` · ⑧ 담보 승 차단과 같은 술어).
-  if (asset.assetKind === "right_to_move_in" || bgAnyCarryover(asset)) return false;
+  if (asset.assetKind === "right_to_move_in") return false;
   if (isMixedBurdenedGift(asset)) return false;
   return bgWholeGiftValuation(asset)?.selectedMode === "mortgage";
 }
@@ -65,25 +65,19 @@ export function bgCollateralForcesStdAcq(asset: AssetForm): boolean {
  * 함께 부담부증여 묶음에서 **비보충 승자(담보 §66·임대 §61⑤)를 계산하지 않는** 자산인가 — 화면·엔진의 취득가액 처리를 확인하지 못한 범위다.
  * · 지분 보유: 승자 판정(`bgWholeGiftValuation`)과 ⑤ 칸 노출(`bgCollateralForcesStdAcq`)이 단독 소유만 다룬다.
  * · 조합원입주권 · 겸용주택: 위 `bgCollateralForcesStdAcq` 주석과 같다.
- * · 이월과세: **시가 모드만** 막는다(`bgCarryoverWinnerUnsupported`). 기준시가 모드는 단건 ⑧이 이미 담보·임대 승을 열고, 취득가액이 두 시나리오 모두 취득시 기준시가 ×
- *   채무비율이라(A = 당초 증여자 · B = 양도인) 균일 승자 묶음의 ⑫ 값이 단건 합·오라클과 맞는다(`bg-carryover-std-uniform-bundle.plan.md`).
- * 단건 ⑧의 담보 승 차단(`transfer-tax-validate-bg.ts`)보다 좁히지 않는다 — 묶음에서 풀리는 것은 이 범위 밖의 균일 승자뿐이다.
+ * · 이월과세는 막지 않는다 — 기준시가 모드는 임대·담보 승(1단계), 시가 모드는 담보 승(2단계)이 모두 취득가액 = 취득시 기준시가 × 채무비율이라
+ *   (A = 당초 증여자 · B = 양도인) 균일 승자 묶음의 ⑫ 값이 단건 합·오라클과 맞는다(`bg-carryover-std-uniform-bundle.plan.md` · `bg-carryover-mkt-collateral-win.plan.md`).
+ *   시가 모드의 임대 승은 존재하지 않는다(엔진 `computeSangjeungbeopValuation` — 임대 환산은 시가가 없을 때만 비교).
  */
 export function bgNonSupplementaryWinnerUnsupported(asset: AssetForm): boolean {
   if (getOwnershipRatio(asset) < 1) return true;
-  return asset.assetKind === "right_to_move_in" || bgCarryoverWinnerUnsupported(asset) || isMixedBurdenedGift(asset);
-}
-
-/** 이월과세 자산의 비보충 승자를 묶음에서 계산하지 않는가 — 시가 모드만 막는다(담보 승은 취득가액이 당초 증여자 기준시가로 강제되는 화면을 열지 않았다 · 2단계). */
-function bgCarryoverWinnerUnsupported(asset: AssetForm): boolean {
-  return bgAnyCarryover(asset) && asset.bgValuationMode !== "sangjeungbeop_standard";
+  return asset.assetKind === "right_to_move_in" || isMixedBurdenedGift(asset);
 }
 
 /** `bgNonSupplementaryWinnerUnsupported`가 true인 이유 — ⑧ 안내 문구용. 판정 순서는 위 함수와 같다. */
 export function bgUnsupportedWinnerReason(asset: AssetForm): string {
   if (getOwnershipRatio(asset) < 1) return "지분 보유";
   if (asset.assetKind === "right_to_move_in") return "조합원입주권";
-  if (bgCarryoverWinnerUnsupported(asset)) return "이월과세";
   return "겸용주택";
 }
 

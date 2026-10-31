@@ -5,7 +5,7 @@
  * §66은 담보 채권액 기준 평가액과 시가 중 **큰 금액**을 재산가액으로 한다. ⑧은 분모를 시가 입력값으로 둬, 담보평가액 = 인수 채무(채무비율
  * 정확히 1)인 정당한 경우까지 「채무액이 증여가액 초과」로 막았다. 같은 사실을 기준시가 모드로 넣으면 계산됐다(128,124,000).
  * 담보 승이면 §159①1호 괄호로 취득가액이 취득시 기준시가 × 채무비율이라 그 칸(②)을 열고, 쓰이지 않는 방식별 칸·④를 숨긴다.
- * 범위는 단독 소유 단건 — 지분(축 A·B)·묶음·겸용·이월과세·조합원입주권은 종전처럼 막는다.
+ * 범위는 단독 소유 단건 — 지분(축 A·B)·묶음·겸용·조합원입주권은 종전처럼 막는다. 이월과세는 풀렸다(`transfer.route.bg-carryover-mkt-collateral-win.anchor.test.ts`).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
@@ -130,7 +130,6 @@ describe("CW-2 ⑧ 차단 유지 — 정당하지 않은 경우와 범위 밖", 
 
   it.each([
     ["조합원입주권", { assetKind: "right_to_move_in", redevSubject: "right", isSuccessorRightToMoveIn: false }],
-    ["이월과세", { acquisitionCause: "carryover_gift", bgCoDonorActualAcquisitionTotal: "150000000" }],
   ] as const)("%s → 담보 승을 계산하지 않는다고 막는다 · 화면 leaf도 거짓(칸·안내를 바꾸지 않는다)", (_l, o) => {
     const m = allIssues(form([house(o)])).map((x) => x.message).join("\n");
     expect(m).toContain("취득가액 산정 기준을 확인하지 못해 계산하지 않습니다");

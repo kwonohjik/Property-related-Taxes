@@ -407,6 +407,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                 {asset.assetKind === "general_building"
                   ? "취득시 기준시가는 아래 일반건물 취득 정보의 취득시 토지·건물 기준시가를 씁니다."
                   : "취득시 기준시가는 「② 양도정보」에 입력하세요."}
+                {isCarryover && " 이월과세이므로 당초 증여자의 취득 당시 기준시가도 아래 「이월과세」 칸에 입력하세요."}
                 {bgCollateralParenEraUncertain(transferDate) &&
                   " 다만 양도일이 2023.2.28. 전이라 그 당시 괄호에는 담보채권액 평가(「상속세 및 증여세법」 제66조)가 열거되어 있지 않았습니다 — 이 취득가액은 현행 문언대로 계산한 것이라 확인이 필요합니다(결과 화면에서 다시 안내합니다)."}
               </p>
