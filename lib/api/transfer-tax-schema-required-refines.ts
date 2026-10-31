@@ -142,6 +142,8 @@ export function refineBurdenedGiftInputs(
     generalBuildingValuation?: unknown;
     acquisitionCause?: string;
     mixedUse?: unknown;
+    /** 지분율 — 담보 승 판정이 엔진처럼 시가를 지분분으로 줄여 비교한다(`collateralForcesStdAcquisition`). */
+    ownershipRatio?: number;
   },
   ctx: z.RefinementCtx,
 ) {
@@ -180,7 +182,7 @@ export function refineBurdenedGiftInputs(
       // 위 주석 — 3자 max(①②③) · 겸용 상속·증여 평가액
     } else if (!bg.acquisitionMethod) {
       issue(["burdenedGiftInfo", "acquisitionMethod"], "부담부증여 시가 모드는 취득가액 산정방식(actual·salesCase·appraisal·converted)이 필요합니다 (소득세법 §100①)");
-    } else if (collateralForcesStdAcquisition(bg)) {
+    } else if (collateralForcesStdAcquisition(bg, data.ownershipRatio)) {
       // 담보 승 — 엔진이 방식별 금액을 읽지 않는다(아래 함수 주석). ⑤가 그 칸을 숨기고 ⑧도 요구하지 않는다(O-5).
     } else if (
       bg.acquisitionMethod === "actual" &&
@@ -190,7 +192,7 @@ export function refineBurdenedGiftInputs(
     ) {
       issue(["burdenedGiftInfo", "actualAcquisitionTotal"], "부담부증여 실지취득가액 안분은 실지취득가액이 필요합니다");
     }
-    if (!(preDeemed || gbAllPartsPreDeemed || mixedDeemed) && (bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") && !collateralForcesStdAcquisition(bg)) {
+    if (!(preDeemed || gbAllPartsPreDeemed || mixedDeemed) && (bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") && !collateralForcesStdAcquisition(bg, data.ownershipRatio)) {
       const label = bg.acquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
       const donor = bg.carryoverDonorBasis;
       if (donor) {

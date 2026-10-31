@@ -465,6 +465,7 @@ export function CompanionAssetCard({
             onChange={onChange}
             isSingleAsset={!hasSiblings}
             isNonPrimaryAsset={!isPrimary}
+            isFractionalSplit={splitMode === "fractional"}
             totalTransferExpense={totalTransferExpense}
           />
         </AssetSection>
