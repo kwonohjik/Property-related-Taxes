@@ -54,6 +54,7 @@ import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { validateDonorBuiltBg } from "./transfer-tax-validate-donor-built-bg";
 import { bgCollateralForcesStdAcq, bgWholeGiftValuation } from "./burdened-gift-collateral-win";
 import { bgFractionalCollateralWin } from "./burdened-gift-collateral-win";
+import { bgUnsupportedWinnerCause } from "./burdened-gift-collateral-win";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
 import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
@@ -80,6 +81,24 @@ const SUPPORTED_KINDS: AssetForm["assetKind"][] = [
   "redevelopment_apt",
   "right_to_move_in",
 ];
+
+/**
+ * 조합원입주권 단건·묶음 자산의 비보충 승자(담보 §66 · 임대 §61⑤) 차단 — 시가·기준시가 모드 공통.
+ * 기준시가 모드에서도 엔진이 담보·임대 승 입주권을 400으로 중단하므로(`burdened-gift-apportionment.ts` fail-fast) ⑧이 앞서 막는다(⑧ ⊇ ⑫).
+ * 승자를 확정하지 못하는 자산(`wholeValuation` 없음 — 축 B 등)은 건너뛴다.
+ */
+function rtmiNonSupplementaryWinnerIssue(
+  asset: AssetForm,
+  label: string,
+  wholeValuation: ReturnType<typeof bgWholeGiftValuation>,
+): string | undefined {
+  if (!wholeValuation || wholeValuation.selectedMode === "supplementary" || asset.assetKind !== "right_to_move_in") return undefined;
+  const mortgage = wholeValuation.selectedMode === "mortgage";
+  const decided = mortgage
+    ? `담보평가액(${wholeValuation.value.toLocaleString()}원 — 「상속세 및 증여세법」 제66조)${asset.bgValuationMode === "sangjeungbeop_market" ? "이 시가보다 커서 증여가액이 담보평가액이 됩니다" : "으로 증여재산 평가가 결정됩니다"}`
+    : `임대료 환산액(${wholeValuation.value.toLocaleString()}원 — 「상속세 및 증여세법」 제61조 제5항)으로 증여재산 평가가 결정됩니다`;
+  return fieldError(mortgage ? "bgMortgageDebtAmount" : "bgLendingDepositTotal", `${label}: ${decided}. ${bgUnsupportedWinnerCause(asset)}`);
+}
 
 /** B/C > 1 차단 문구 — 시가 모드·기준시가 모드가 같은 사실을 말한다(엔진 `EXCESS_BURDENED_GIFT` 와 같은 조건). */
 function debtExceedsGiftValueMessage(label: string, assumedDebt: number, giftValuation: number, scaleNote: string): string {
@@ -262,19 +281,15 @@ export function validateBurdenedGiftAsset(
       asset.assetKind === "right_to_move_in" ? "actual" : asset.bgAcquisitionMethod || "";
     /**
      * 담보 승(「상속세 및 증여세법」 제66조) — 단독 소유 단건만 엔진과 같은 증여가액 C로 판정한다(`bgWholeGiftValuation` 범위 주석).
-     * 조합원입주권은 담보 승과 취득가액 산정 기준의 결합을 검토하지 않아 막는다(겸용은 MB-7이 같은 이유로 막는다).
+     * 조합원입주권은 담보·임대 승이면 취득가액을 기준시가로 정해야 하는데 입주권 기준시가 입력 경로가 없어 막는다(`bgUnsupportedWinnerCause` — 겸용은 MB-7이 막는다).
      * 이월과세는 막지 않는다 — 두 시나리오 모두 취득시 기준시가 × 채무비율이고 당초 증여자 기준시가는 아래 `missingCoDonorBasisLabel`이 요구한다
      * (`bg-carryover-mkt-collateral-win.plan.md`). 계획서 `docs/00-pm/burdened-gift-residuals-o3-o5-o8.plan.md` O-5.
      */
     // 함께 부담부증여 묶음의 자산도 같다 — 균일 승자는 ⑧ 승자 게이트(`transfer-tax-validate.ts`)를 통과하고, 그 자산의 증여가액 C는 엔진이 쓰는 값(담보 승이면 담보평가액)이다.
     // 종전에는 묶음에서 이 판정을 건너뛰어 시가를 분모로 둬, 담보평가액 = 채무인 정당한 자산을 「채무액이 증여가액 초과」로 막았다.
     const wholeValuation = isFractionalSplitAxis !== true ? bgWholeGiftValuation(asset) : undefined;
-    if (wholeValuation?.selectedMode === "mortgage" && asset.assetKind === "right_to_move_in") {
-      return fieldError(
-        "bgMortgageDebtAmount",
-        `${label}: 담보평가액(${wholeValuation.value.toLocaleString()}원 — 「상속세 및 증여세법」 제66조)이 시가보다 커서 증여가액이 담보평가액이 됩니다. 조합원입주권의 부담부증여에서 이 경우의 취득가액 산정 기준을 확인하지 못해 계산하지 않습니다. 시가·채무액·채권최고액을 재확인하세요.`,
-      );
-    }
+    const rtmiIssue = rtmiNonSupplementaryWinnerIssue(asset, label, wholeValuation);
+    if (rtmiIssue) return rtmiIssue;
     // 담보 승이면 취득가액은 산정방식과 무관하게 취득시 기준시가 × 채무비율이다(엔진 `acqStdPriceForced`) — 방식별 금액 칸은 쓰이지 않아
     // 요구하지 않는다(⑤가 그 칸을 숨긴다). 산정방식 선택 자체는 ⑫가 요구하므로 아래 「미지정」 검사는 남긴다. 취득시 기준시가는 (5-c)가 요구한다.
     const collateralForced = bgCollateralForcesStdAcq(asset);
@@ -583,6 +598,12 @@ export function validateBurdenedGiftAsset(
     if (parts !== deriveRightValuationTotal(asset)) {
       return `${label}: 조합원입주권 증여재산 평가 항목의 합계가 평가액과 일치하지 않습니다. 조합원권리가액·납입금·프리미엄을 재확인하세요.`;
     }
+  }
+
+  // (5-c″) 기준시가 모드 조합원입주권 × 담보·임대 승 — 평가 3항·실지취득가액 필수 검사 **뒤**여야 한다(앞에 두면 그 안내를 가린다). 시가 모드는 위 (4) 안에서 같은 헬퍼가 막는다.
+  if (asset.bgValuationMode === "sangjeungbeop_standard" && isFractionalSplitAxis !== true) {
+    const rtmiIssue = rtmiNonSupplementaryWinnerIssue(asset, label, bgWholeGiftValuation(asset));
+    if (rtmiIssue) return rtmiIssue;
   }
 
   // (5-d) 이월과세 × 당초 증여자 신축·증축 §114조의2 (PR-4) — 환산(K-5)·감정(K-7) 입력 다음 순서. 범위 밖 stale 은 요구하지 않는다.
