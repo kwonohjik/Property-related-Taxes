@@ -21,14 +21,14 @@ import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
 import { bgAnyCarryover } from "./bg-carryover-parts";
 
 /** 취득가액 산정 근거 — 안내 문구가 그 이름으로 말한다. 칸이 쓰이면 null. */
-export function bgExpenseUnusedBasis(asset: AssetForm): "기준시가" | "감정가액" | "매매사례가액" | null {
+export function bgExpenseUnusedBasis(asset: AssetForm, isFractionalSplit = false): "기준시가" | "감정가액" | "매매사례가액" | null {
   if (asset.transferType !== "burdened_gift") return null;
   if (asset.assetKind === "right_to_move_in" || asset.assetKind === "redevelopment_apt") return null;
   if (bgAnyCarryover(asset)) return null;
   if (isSplitValidationActive(asset)) return null;
   // 평가 모드 미선택은 ④가 기준시가 모드로 보낸다(`buildBurdenedGiftInfo` — `bgValuationMode || "sangjeungbeop_standard"`).
   // 시가 모드여도 담보평가(상증법 §66)가 이기면 취득가액이 취득시 기준시가로 강제된다(§159①1호 괄호 · 엔진 `acqStdPriceForced`) — 개산공제뿐(O-5).
-  if (asset.bgValuationMode !== "sangjeungbeop_market" || bgCollateralForcesStdAcq(asset)) return "기준시가";
+  if (asset.bgValuationMode !== "sangjeungbeop_market" || bgCollateralForcesStdAcq(asset, isFractionalSplit)) return "기준시가";
   // 의제취득일 전 상속·증여 토지·주택·상가·건물(시가) — 산정방식 대신 ①②③ 중 큰 금액이다. ①②면 실제 필요경비, ③이면 §97②2호 단서 비교에 쓴다(계획서 §18).
   if (isBgPreDeemedAsset(asset)) return null;
   // 겸용 · 증여자 상속·증여 취득 — 평가액(주택분·상가분)이 취득가액이라 실제 필요경비를 쓴다. 숨은 산정방식 라디오의 남은 값을 읽지 않는다(PR-7b-7a).
@@ -37,6 +37,6 @@ export function bgExpenseUnusedBasis(asset: AssetForm): "기준시가" | "감정
   return asset.bgAcquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
 }
 
-export function bgExpenseInputsUnused(asset: AssetForm): boolean {
-  return bgExpenseUnusedBasis(asset) !== null;
+export function bgExpenseInputsUnused(asset: AssetForm, isFractionalSplit = false): boolean {
+  return bgExpenseUnusedBasis(asset, isFractionalSplit) !== null;
 }

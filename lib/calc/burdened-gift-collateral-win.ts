@@ -21,12 +21,37 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { buildBurdenedGiftInfo, companionBurdenedGiftValuations, type CompanionBurdenedGiftValuation } from "./transfer-tax-api-burdened-gift";
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
+import { isBgPreDeemedAsset } from "./bg-pre-deemed";
+import { bgAnyCarryover } from "./bg-carryover-parts";
 import { BG_PAREN_MORTGAGE_66_FROM } from "@/lib/tax-engine/burdened-gift-valuation";
 
-/** 단독 소유 단건의 증여가액 C(엔진 `giftValuation.max`)와 승자. 지분이 있으면 `undefined`(위 범위). */
-export function bgWholeGiftValuation(asset: AssetForm): CompanionBurdenedGiftValuation | undefined {
-  if (getOwnershipRatio(asset) < 1) return undefined;
+/**
+ * 단독 소유 단건의 증여가액 C(엔진 `giftValuation.max`)와 승자. 지분이 있으면 `undefined`(위 범위).
+ *
+ * `isFractionalSplit`(축 B — 같은 물건을 지분으로 나눠 취득)이면 지분이 있어도 **비율 1로 물건 전체**를 판정한다 — 축 B는 채무·시가를 물건 전체로 입력하고
+ * ④가 채무를 지분율로 줄여 보내며 엔진이 시가를 같은 비율로 줄여 비교하므로(`scaleBurdenedGiftInfo`) 승자는 물건 전체 판정과 같다
+ * (실측: 60/40 카드 모두 엔진 승자와 일치 — `bg-axis-b-mkt-collateral-win.plan.md`). 카드 하나를 지분 비율로 줄여 판정하면 틀린다 — 40% 카드는 채무 6억 > 지분 시가 4억이라
+ * 담보 승으로 읽히지만 엔진은 보충 승이다.
+ */
+export function bgWholeGiftValuation(asset: AssetForm, isFractionalSplit = false): CompanionBurdenedGiftValuation | undefined {
+  if (!isFractionalSplit && getOwnershipRatio(asset) < 1) return undefined;
   return companionBurdenedGiftValuations([buildBurdenedGiftInfo(asset)], [1])[0];
+}
+
+/**
+ * 축 B(지분 분할 취득) 카드에서 시가 모드 담보 승의 취득가액 처리(취득시 기준시가 × 채무비율 — ⑤ 칸·⑧ 요구·⑫ 요구)를 **확인한 범위**.
+ * 주택(`housing`)만이다 — 이월과세·의제취득일 전 상속·증여는 교차를 측정하지 않았고, 토지·일반건물·재개발·입주권·겸용은 종류별 격자를 측정하지 않았다
+ * (계획서 `bg-nonsupp-winner-support.plan.md` V-S1·V-S4). 범위 밖은 ⑧이 `bgSplitAxisCollateralWinUnsupported`로 막는다.
+ */
+function bgSplitAxisCollateralSupported(asset: AssetForm): boolean {
+  return asset.assetKind === "housing" && !isBgPreDeemedAsset(asset) && !bgAnyCarryover(asset) && !isMixedBurdenedGift(asset);
+}
+
+/** 축 B 카드에서 시가 모드 담보평가(§66)가 이기는데 취득가액 처리를 확인하지 못한 종류인가 — ⑧ 차단용(거짓 사유 「채무액 초과」 대체). */
+export function bgSplitAxisCollateralWinUnsupported(asset: AssetForm): boolean {
+  if (asset.transferType !== "burdened_gift" || asset.bgValuationMode !== "sangjeungbeop_market") return false;
+  if (bgSplitAxisCollateralSupported(asset)) return false;
+  return bgWholeGiftValuation(asset, true)?.selectedMode === "mortgage";
 }
 
 /**
@@ -52,13 +77,15 @@ export function bgFractionalCollateralWin(asset: AssetForm): boolean {
  *
  * 화면이 이 경우를 다루지 않는 자산은 `false`다 — ⑧이 따로 막는다:
  * - 겸용주택: 엔진 MB-7(담보평가를 주택·상가로 나눌 법정 기준 없음).
- * - 지분 보유: 위 범위.
+ * - 지분 보유: 위 범위. 단 **축 B 주택**은 `isFractionalSplit`를 넘기면 물건 전체로 판정해 다룬다(`bgSplitAxisCollateralSupported`).
  */
-export function bgCollateralForcesStdAcq(asset: AssetForm): boolean {
+export function bgCollateralForcesStdAcq(asset: AssetForm, isFractionalSplit = false): boolean {
   if (asset.transferType !== "burdened_gift" || asset.bgValuationMode !== "sangjeungbeop_market") return false;
   if (asset.assetKind === "right_to_move_in") return false;
   if (isMixedBurdenedGift(asset)) return false;
-  return bgWholeGiftValuation(asset)?.selectedMode === "mortgage";
+  // 축 B는 확인한 범위(주택)만 — 그 밖은 false로 두고 ⑧이 `bgSplitAxisCollateralWinUnsupported`로 먼저 막는다.
+  if (isFractionalSplit && !bgSplitAxisCollateralSupported(asset)) return false;
+  return bgWholeGiftValuation(asset, isFractionalSplit)?.selectedMode === "mortgage";
 }
 
 /**
@@ -88,11 +115,13 @@ export function bgUnsupportedWinnerReason(asset: AssetForm): string {
  * · 겸용주택: 담보·임대 평가액을 주택과 상가로 나눌 법정 기준이 없어 보충적평가·시가인 단독 소유 단건만 계산한다(엔진 MB-7 · 함께 양도는 MB-6).
  * · 지분 보유: 종전 문구 그대로(축 정보를 몰라 승자를 확정하지 못하는 범위). 뒤 문장은 사유별 조치 안내다.
  */
+/** 조합원입주권 비보충 승 차단 사유 — 지분율과 무관하게 같은 말이다(축 B 카드도 «함께 양도 토글을 끄고 단건으로»가 아니라 이 안내여야 한다). */
+export const BG_RTMI_WINNER_CAUSE =
+  "「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 이 경우의 취득가액은 기준시가로 산정해야 하는데, 조합원입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
+
 export function bgUnsupportedWinnerCause(asset: AssetForm): string {
   if (getOwnershipRatio(asset) < 1) return "이 경우의 취득가액 산정 기준을 확인하지 못했습니다. 함께 양도 토글을 끄고 단건으로 계산하세요.";
-  if (asset.assetKind === "right_to_move_in") {
-    return "「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 이 경우의 취득가액은 기준시가로 산정해야 하는데, 조합원입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
-  }
+  if (asset.assetKind === "right_to_move_in") return BG_RTMI_WINNER_CAUSE;
   return "겸용주택 부담부증여는 단독 소유 단건만 계산하며, 담보·임대로 평가되는 경우 증여가액을 주택과 상가로 나눌 법정 기준이 없어 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
 }
 

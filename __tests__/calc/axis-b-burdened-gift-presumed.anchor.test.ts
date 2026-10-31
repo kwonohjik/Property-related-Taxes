@@ -179,9 +179,14 @@ describe("축 B × 부담부증여 × K-7 감정가액 — 지분별 값 합산"
     // 종전에는 지분 40% 카드에서 물건 전체 채무 6억을 지분분 시가 4억과 비교해 「채무액이 증여가액을 초과」로 막혔다.
     const k4 = bundle().map((a) => ({ ...a, bgAcquisitionMethod: "actual" as const, bgActualAcquisitionTotal: "400000000" }));
     expect(collectStepIssues(0, form(k4) as never).map((i) => i.message)).toEqual([]);
-    // 대조군 — 물건 전체 시가보다 채무가 크면 여전히 막힌다
-    const over = bundle().map((a) => ({ ...a, bgMarketValueAtTransfer: "500000000" }));
+    // 대조군 — 진짜 초과는 여전히 막힌다: 물건 전체 시가(5억)보다 채무(6억)가 크고 **담보평가액도 채무보다 작다**(채권최고액 1억 → 3억 + 1억 = 4억 < 6억).
+    // 종전 대조군은 채권최고액 없이 채무 6억 > 시가 5억만 봤는데, 그 입력은 담보평가(= 채무 6억)가 이기는 **정상 담보 승**(채무비율 1)이라
+    // 이 PR(bg-axis-b-mkt-collateral-win)이 «채무액 초과»라는 거짓 사유 차단을 없앴다 — 대조군의 보호 의도(진짜 초과 차단)는 그대로 둔다.
+    const over = bundle().map((a) => ({ ...a, bgMarketValueAtTransfer: "500000000", bgMortgageSetAmount: "100000000" }));
     expect(collectStepIssues(0, form(over) as never).some((i) => /채무액.*초과/.test(i.message))).toBe(true);
+    // 정상 담보 승(채권최고액 = 채무 → 담보평가 6억 > 시가 5억)은 «채무액 초과»로 막지 않는다 — 취득시 기준시가가 있으면 통과.
+    const win = bundle().map((a) => ({ ...a, bgMarketValueAtTransfer: "500000000", bgMortgageSetAmount: "300000000" }));
+    expect(collectStepIssues(0, form(win) as never).some((i) => /채무액.*초과/.test(i.message))).toBe(false);
   });
 
   it("[B-5] ⑧: 한 지분이라도 감정가액이 비면 그 지분 카드에서 막힌다", () => {

@@ -54,7 +54,8 @@ import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { validateDonorBuiltBg } from "./transfer-tax-validate-donor-built-bg";
 import { bgCollateralForcesStdAcq, bgWholeGiftValuation } from "./burdened-gift-collateral-win";
 import { bgFractionalCollateralWin } from "./burdened-gift-collateral-win";
-import { bgUnsupportedWinnerCause } from "./burdened-gift-collateral-win";
+import { bgSplitAxisCollateralWinUnsupported } from "./burdened-gift-collateral-win";
+import { BG_RTMI_WINNER_CAUSE } from "./burdened-gift-collateral-win";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
 import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
@@ -97,7 +98,7 @@ function rtmiNonSupplementaryWinnerIssue(
   const decided = mortgage
     ? `담보평가액(${wholeValuation.value.toLocaleString()}원 — 「상속세 및 증여세법」 제66조)${asset.bgValuationMode === "sangjeungbeop_market" ? "이 시가보다 커서 증여가액이 담보평가액이 됩니다" : "으로 증여재산 평가가 결정됩니다"}`
     : `임대료 환산액(${wholeValuation.value.toLocaleString()}원 — 「상속세 및 증여세법」 제61조 제5항)으로 증여재산 평가가 결정됩니다`;
-  return fieldError(mortgage ? "bgMortgageDebtAmount" : "bgLendingDepositTotal", `${label}: ${decided}. ${bgUnsupportedWinnerCause(asset)}`);
+  return fieldError(mortgage ? "bgMortgageDebtAmount" : "bgLendingDepositTotal", `${label}: ${decided}. ${BG_RTMI_WINNER_CAUSE}`);
 }
 
 /** B/C > 1 차단 문구 — 시가 모드·기준시가 모드가 같은 사실을 말한다(엔진 `EXCESS_BURDENED_GIFT` 와 같은 조건). */
@@ -281,18 +282,28 @@ export function validateBurdenedGiftAsset(
       asset.assetKind === "right_to_move_in" ? "actual" : asset.bgAcquisitionMethod || "";
     /**
      * 담보 승(「상속세 및 증여세법」 제66조) — 단독 소유 단건만 엔진과 같은 증여가액 C로 판정한다(`bgWholeGiftValuation` 범위 주석).
-     * 조합원입주권은 담보·임대 승이면 취득가액을 기준시가로 정해야 하는데 입주권 기준시가 입력 경로가 없어 막는다(`bgUnsupportedWinnerCause` — 겸용은 MB-7이 막는다).
+     * 조합원입주권은 담보·임대 승이면 취득가액을 기준시가로 정해야 하는데 입주권 기준시가 입력 경로가 없어 막는다(`BG_RTMI_WINNER_CAUSE` — 겸용은 MB-7이 막는다).
      * 이월과세는 막지 않는다 — 두 시나리오 모두 취득시 기준시가 × 채무비율이고 당초 증여자 기준시가는 아래 `missingCoDonorBasisLabel`이 요구한다
      * (`bg-carryover-mkt-collateral-win.plan.md`). 계획서 `docs/00-pm/burdened-gift-residuals-o3-o5-o8.plan.md` O-5.
      */
     // 함께 부담부증여 묶음의 자산도 같다 — 균일 승자는 ⑧ 승자 게이트(`transfer-tax-validate.ts`)를 통과하고, 그 자산의 증여가액 C는 엔진이 쓰는 값(담보 승이면 담보평가액)이다.
     // 종전에는 묶음에서 이 판정을 건너뛰어 시가를 분모로 둬, 담보평가액 = 채무인 정당한 자산을 「채무액이 증여가액 초과」로 막았다.
-    const wholeValuation = isFractionalSplitAxis !== true ? bgWholeGiftValuation(asset) : undefined;
+    // 축 B(지분 분할 취득)는 채무·시가를 물건 전체로 입력하므로 비율 1로 물건 전체를 판정한다(`bgWholeGiftValuation` 주석). 종전에는 축 B를 건너뛰어
+    // 증여가액 C가 시가로 남았고, 시가 모드 담보 승이면 «채무액이 증여가액 초과»라는 틀린 사유로 막았다(⑫는 200 — 계획서 `bg-axis-b-mkt-collateral-win.plan.md`).
+    const splitAxis = isFractionalSplitAxis === true;
+    const wholeValuation = bgWholeGiftValuation(asset, splitAxis);
     const rtmiIssue = rtmiNonSupplementaryWinnerIssue(asset, label, wholeValuation);
     if (rtmiIssue) return rtmiIssue;
+    // 축 B 시가 모드 담보 승 — 취득가액 처리(취득시 기준시가 × 채무비율)를 확인한 범위는 주택뿐이다. 그 밖의 종류는 «채무액 초과»가 아니라 이 사유로 막는다.
+    if (splitAxis && bgSplitAxisCollateralWinUnsupported(asset)) {
+      return fieldError(
+        "bgMortgageDebtAmount",
+        `${label}: 지분 분할 취득(같은 물건)에서 담보평가액(「상속세 및 증여세법」 제66조)이 시가보다 커서 증여가액이 담보평가액이 됩니다. 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 주택(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다. 시가·채무액·채권최고액을 재확인하거나 다른 평가 유형으로 입력하세요.`,
+      );
+    }
     // 담보 승이면 취득가액은 산정방식과 무관하게 취득시 기준시가 × 채무비율이다(엔진 `acqStdPriceForced`) — 방식별 금액 칸은 쓰이지 않아
     // 요구하지 않는다(⑤가 그 칸을 숨긴다). 산정방식 선택 자체는 ⑫가 요구하므로 아래 「미지정」 검사는 남긴다. 취득시 기준시가는 (5-c)가 요구한다.
-    const collateralForced = bgCollateralForcesStdAcq(asset);
+    const collateralForced = bgCollateralForcesStdAcq(asset, splitAxis);
     // 일반건물 — 의제취득일 전 상속·증여 파트만 3자 max(Q-28 · PR-7b-6). 두 파트 다면 산정방식이 없고, 한 파트면 다른 파트의 금액만 요구한다.
     const gbParts = gbBgThreeWayParts(asset);
     if (isBgPreDeemedAsset(asset) || gbParts.all || isMixedBgDeemedPath(asset)) {
@@ -540,9 +551,9 @@ export function validateBurdenedGiftAsset(
   const preDeemedErr = bgPreDeemedError(asset, label, formTransferDate);
   if (preDeemedErr) return preDeemedErr;
 
-  if (needsBgAcqStdPriceInput(asset) && resolveBgAcqStdPrice(asset) <= 0) {
+  if (needsBgAcqStdPriceInput(asset, isFractionalSplitAxis === true) && resolveBgAcqStdPrice(asset) <= 0) {
     // 시가 모드 담보 승 — 엔진이 같은 상태에서 400을 낸다(「취득시 기준시가를 입력하세요」). 칸은 ⑤가 같은 술어로 연다(O-5).
-    if (bgCollateralForcesStdAcq(asset)) {
+    if (bgCollateralForcesStdAcq(asset, isFractionalSplitAxis === true)) {
       const acqStdInput =
         asset.assetKind === "land" ? "취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를" : "「② 양도정보」의 취득시 기준시가를";
       return fieldError("standardPriceAtAcq", `${label}: 부담부증여 — 담보평가액이 시가보다 커서 증여가액이 담보평가액(「상속세 및 증여세법」 제66조)이고, 취득가액은 산정방식과 관계없이 취득시 기준시가 × 채무비율입니다(「소득세법 시행령」 제159조 제1항 제1호 괄호). ${acqStdInput} 입력하세요.`);

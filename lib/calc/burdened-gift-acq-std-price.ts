@@ -59,14 +59,14 @@ type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause" | "redevIsSuccesso
  * 포함(예외의 예외): **시가 모드 · 담보 승**(`bgCollateralForcesStdAcq` — 단독 소유 단건)은 위 시가 모드 제외가 풀린다. 엔진이 §159①1호 괄호로
  * 취득가액을 취득시 기준시가로 강제하고, 이 칸이 비면 400을 낸다(`burdened-gift-residuals-o3-o5-o8.plan.md` O-5).
  */
-export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
+export function needsBgAcqStdPriceInput(asset: AcqStdAsset, isFractionalSplit = false): boolean {
   return (
     asset.transferType === "burdened_gift" &&
     (asset.bgValuationMode !== "sangjeungbeop_market" ||
       asset.bgAcquisitionMethod === "converted" ||
       (isBgPresumedMethod(asset.bgAcquisitionMethod) && asset.acquisitionCause !== "carryover_gift") ||
       // 시가 모드 · 담보 승(상증법 §66) — 산정방식과 무관하게 취득가액이 취득시 기준시가 × 채무비율이다(엔진 `acqStdPriceForced`). 실지(K-4)여도 이 칸을 쓴다.
-      bgCollateralForcesStdAcq(asset as AssetForm)) &&
+      bgCollateralForcesStdAcq(asset as AssetForm, isFractionalSplit)) &&
     asset.assetKind !== "general_building" &&
     asset.assetKind !== "right_to_move_in" &&
     // 겸용주택 — 취득시 기준시가는 4부분 겸용 패널(`mixedAcq*`)이 정본이다. 총액 칸을 띄우면 엔진이 읽지 않는 값을 받는다(설계 UI R2 §4 DUP-2).
@@ -83,11 +83,11 @@ export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
  * K-1~K-3(기준시가 모드) · K-5(환산 분자) · K-6/K-7(개산공제 base) — 엔진 `describeRequiredDonorFields`와 같은 분기다.
  * 둘째 지분부터는 ②가 숨겨져 `BurdenedGiftTrancheBasisBlock`이 같은 박스를 연다 — 두 화면이 각자 판정하면 칸과 검증이 갈린다(PR-2).
  */
-export function bgCoDonorNeedsStdPrice(asset: AssetForm): boolean {
+export function bgCoDonorNeedsStdPrice(asset: AssetForm, isFractionalSplit = false): boolean {
   return (
     asset.bgValuationMode === "sangjeungbeop_standard" ||
     // 시가 모드 · 담보 승 — 괄호가 발동해 두 시나리오 모두 취득시 기준시가를 읽는다(방식별 당초 증여자 값은 읽히지 않는다).
-    bgCollateralForcesStdAcq(asset) ||
+    bgCollateralForcesStdAcq(asset, isFractionalSplit) ||
     asset.bgAcquisitionMethod === "converted" ||
     (asset.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(asset.bgAcquisitionMethod))
   );

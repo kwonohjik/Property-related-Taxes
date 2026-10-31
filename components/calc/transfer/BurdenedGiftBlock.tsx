@@ -149,7 +149,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
    * 시가 모드 · 담보 승(「상속세 및 증여세법」 제66조) — 취득가액이 산정방식과 무관하게 취득시 기준시가 × 채무비율이다(§159①1호 괄호).
    * 방식별 금액 칸(K-4 박스·K-6/K-7·K-5 안내)을 숨기고 한 줄로 알린다. ②의 취득시 기준시가 칸·⑧은 같은 leaf로 연다(O-5).
    */
-  const collateralForced = bgCollateralForcesStdAcq(asset);
+  const collateralForced = bgCollateralForcesStdAcq(asset, isFractionalSplit === true);
   /**
    * 겸용주택 × 부담부증여 — 4부분 기준시가의 정본은 ③ 겸용 패널이다. 이 블록은 요약(읽기 전용)과 채무 귀속·구분 감정평가 선언만 받는다
    * (엔진이 읽지 않는 ④ 「증여일 주택 기준시가」·② 총액 칸은 숨긴다 — 설계 UI R2 §4).
@@ -207,7 +207,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           ? ("building" as const)
           : undefined;
   /** K-1~K-3(기준시가) · K-5(환산 분자) · K-6/K-7(개산공제 base) — ⑧·둘째 지분 박스와 같은 leaf. */
-  const coDonorNeedsStdPrice = bgCoDonorNeedsStdPrice(asset);
+  const coDonorNeedsStdPrice = bgCoDonorNeedsStdPrice(asset, isFractionalSplit === true);
   /** 이월과세 × K-6/K-7 — 당초 증여자 값은 이월과세 박스, 양도인 값은 실지취득가액 블록(증여일 상증법 평가액)에서 받는다. */
   const isCarryoverPresumed = isCarryover && isBgPresumedMethod(asset.bgAcquisitionMethod);
   /** 주택·건물 × 토지·건물 취득일 다름 — 실지취득가액도 토지·건물 두 칸(총액 칸 없음 · ④·⑧과 같은 술어). */
