@@ -150,8 +150,9 @@ export function Pre1990LandValuationInput({
     setLookupLoading(true);
     setLookupMsg(null);
     try {
-      // 개별공시지가 최초 고시일은 1990.8.30.이지만 Vworld 공시지가 API는 1991년분부터 제공한다.
-      // 1990년 조회가 비면 1991년 최초 공시분으로 대체하고 경고 안내를 띄운다.
+      // Vworld의 1990년분(1990.8.30. 고시)은 필지마다 있기도 없기도 하다(실측 — 계획서 successor-right-carryover-contribution.plan.md §18).
+      // 1990년분이 없으면 1991년분은 안내에 참고로만 보이고 칸은 채우지 않는다 — §164④가 정한 값은 1990.1.1. 기준이고,
+      // 다른 연도 값을 넣으면 환산 기준시가가 달라진다(사용자 결정 2026-10-31 a).
       const price1990 = await fetchLandPrice("1990");
       if (price1990 > 0) {
         onChange({ pre1990PricePerSqm_1990: String(price1990) });
@@ -161,11 +162,10 @@ export function Pre1990LandValuationInput({
 
       const price1991 = await fetchLandPrice("1991");
       if (price1991 > 0) {
-        onChange({ pre1990PricePerSqm_1990: String(price1991) });
         setLookupMsg({
           text:
-            `⚠ 1990년 개별공시지가는 자동조회가 제공되지 않아 1991년 최초 공시분(${price1991.toLocaleString()}/㎡)으로 대체했습니다. ` +
-            "정확한 1990.1.1. 기준 개별공시지가(1990.8.30. 고시)는 부동산공시가격 알리미(realtyprice.kr)에서 확인해 직접 수정하세요.",
+            `⚠ 이 필지는 1990년 개별공시지가 자동조회 자료가 없어 칸을 채우지 않았습니다(참고: 1991년 공시분 ${price1991.toLocaleString()}/㎡). ` +
+            "1990.1.1. 기준 개별공시지가(1990.8.30. 고시)를 부동산공시가격 알리미(realtyprice.kr)에서 확인해 직접 입력하세요.",
           kind: "warn",
         });
         return;
