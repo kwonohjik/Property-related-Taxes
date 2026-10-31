@@ -230,7 +230,7 @@ export function AssetSectionTransfer({
 
         설계: docs/02-design/features/burdened-gift-acq-std-price-input-path.plan.md §5 D-1
       */}
-      {needsBgAcqStdPriceInput(asset) && (
+      {needsBgAcqStdPriceInput(asset, isFractionalSplit === true) && (
           <div
             className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2 dark:bg-amber-950/40"
             data-testid="bg-acq-std-price"
@@ -244,7 +244,7 @@ export function AssetSectionTransfer({
             </div>
             {/* 시가 + 환산(K-5)에서도 이 칸이 열린다(B2) — 그때는 채무비율이 아니라 환산 분자다 */}
             <p className="text-caption text-amber-700 dark:text-amber-300">
-              {bgCollateralForcesStdAcq(asset) ? (
+              {bgCollateralForcesStdAcq(asset, isFractionalSplit === true) ? (
                 <>
                   담보평가액이 시가보다 커서 증여가액이 담보평가액(상증법 §66)이므로 취득가액 = <b>취득시 기준시가 × 채무비율</b>(소령 §159①1호 괄호{bgCollateralParenEraUncertain(transferDate) && BG_COLLATERAL_PAREN_ERA_SUFFIX}).
                   위 양도시 기준시가와 같은 기준으로 취득 당시 값을 입력하세요.
@@ -282,7 +282,7 @@ export function AssetSectionTransfer({
               referenceDate={asset.acquisitionDate || undefined}
               label="취득시 기준시가 (원)"
               hint={
-                bgCollateralForcesStdAcq(asset)
+                bgCollateralForcesStdAcq(asset, isFractionalSplit === true)
                   ? "§159①1호 A괄호(담보평가 승) — 채무비율을 곱해 취득가액이 된다"
                   : asset.bgValuationMode === "sangjeungbeop_market"
                   ? "§176의2②2호 — 환산취득가액의 분자"

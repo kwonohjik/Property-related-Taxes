@@ -45,7 +45,7 @@ export function BurdenedGiftTrancheBasisBlock({ asset, primaryAsset, onChange }:
     !isBgPreDeemedAsset(merged) && !isCarryover && merged.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(merged.bgAcquisitionMethod)
       ? merged.bgAcquisitionMethod
       : undefined;
-  const needsStd = needsBgAcqStdPriceInput(merged);
+  const needsStd = needsBgAcqStdPriceInput(merged, true);
   if (!presumedMethod && !needsStd && !isCarryover) return null;
 
   return (
