@@ -9,6 +9,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisition";
+import { bgCollateralForcesStdAcq } from "@/lib/calc/burdened-gift-collateral-win";
 import { BurdenedGiftPresumedAcquisitionSection } from "./BurdenedGiftPresumedAcquisitionSection";
 import { CarryoverDonorBuiltSection } from "./CarryoverDonorBuiltSection";
 import { bgCarryoverForm, bgCarryoverFormKey, bgCarryoverParts } from "@/lib/calc/bg-carryover-parts";
@@ -28,6 +29,8 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
   // 증여받은 파트의 칸만 보인다(④ 전송·⑧ 필수와 같은 술어 · `gb-bg-part-carryover-calc.plan.md` §4.6). 일반건물 분리 ON에서만 갈린다.
   const parts = bgCarryoverParts(asset);
   const partial = parts.land !== parts.building;
+  // 시가 모드 · 담보 승 — 취득가액이 두 시나리오 모두 취득시 기준시가라 방식별 당초 증여자 입력(매매·감정가액)과 환산 안내는 쓰이지 않는다.
+  const collateralForced = bgCollateralForcesStdAcq(asset);
   // 당초 증여자 신축·증축 값은 증여 사건 서브폼에 있다 — 건물만 이월과세면 건물 블록(`buildingCarryover`).
   const eventForm = bgCarryoverForm(asset);
   const eventKey = bgCarryoverFormKey(asset);
@@ -69,7 +72,7 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
 
       {coDonorNeedsStdPrice ? (
         <>
-          {isBgPresumedMethod(asset.bgAcquisitionMethod) && (
+          {isBgPresumedMethod(asset.bgAcquisitionMethod) && !collateralForced && (
             <BurdenedGiftPresumedAcquisitionSection
               asset={asset}
               onChange={onChange}
@@ -109,7 +112,7 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
               />
             </FieldCard>
           )}
-          {asset.bgAcquisitionMethod === "converted" && (
+          {asset.bgAcquisitionMethod === "converted" && !collateralForced && (
             <div className="rounded border border-sky-200 bg-sky-100/60 p-2 text-caption text-sky-800 dark:text-sky-200 dark:bg-sky-900/40">
               환산취득가액은 {partial ? "이 칸을" : "이 두 칸을"} <b>분자로 자동 사용</b>합니다 — 환산 전용 입력은 없습니다.
             </div>

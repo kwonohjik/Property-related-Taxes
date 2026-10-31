@@ -80,6 +80,48 @@ function describeRequiredDonorFields(info: BurdenedGiftInfo): {
   };
 }
 
+/** 담보 승(시가 모드) — 증여받은 파트의 당초 증여자 취득시 기준시가 필수. 미입력은 A = B로 침묵 대체되므로 차단한다. */
+function assertCollateralForcedDonorStd(info: BurdenedGiftInfo): void {
+  const donor = info.carryoverDonorBasis;
+  const parts = carryoverPartsOf(info);
+  if (
+    donor === undefined ||
+    (parts.land && donor.landStdPriceAtAcquisition === undefined) ||
+    (parts.building && donor.buildingStdPriceAtAcquisition === undefined)
+  ) {
+    const partLabel = parts.land && parts.building ? "토지·건물" : parts.land ? "토지" : "건물";
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "부담부증여에 이월과세를 적용하려면 「당초 증여자」 취득 당시의 " +
+        `${partLabel} 기준시가가 필요합니다. 시가로 평가했지만 담보채권액 평가(상증법 §66)가 시가보다 커서 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 ` +
+        "취득가액을 취득시 기준시가로 산정하므로, 당초 증여자 기준의 취득가액도 그 기준시가로 구합니다 " +
+        "(건물이 없으면 0을 입력하세요). 비우면 양도인 값과 같아져 「소득세법」 제97조의2 제2항 제3호의 세액 비교가 성립하지 않습니다.",
+    );
+  }
+}
+
+/** §114조의2 × 이월과세 × 감정가액 — 가산세 기산점·base가 정해져 있지 않아 계산하지 않는다(매매사례가액은 조문에 없다). */
+function assertNoAppraisalPenaltyWithCarryover(
+  info: BurdenedGiftInfo,
+  rawInput: import("./types/transfer.types").TransferTaxInput | undefined,
+): void {
+  // 5년 기산(당초 증여자 취득일 vs 신축일)과 base(A·B 어느 쪽 건물 감정가액)가 정해져 있지 않다.
+  // 통과시키면 가산세가 조용히 빠지거나 틀린 base로 붙는다 — 감정가액만 대상(매매사례가액은 조문에 없다).
+  if (
+    info.acquisitionMethod === "appraisal" &&
+    rawInput !== undefined &&
+    rawInput.isSelfBuilt === true &&
+    calculateBuildingPenalty({ ...rawInput, acquisitionMethod: "appraisal" }, 1) !== null
+  ) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "[burdened_gift] 신축·증축 건물을 5년 이내 양도하면서 이월과세를 적용하고 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따른 " +
+        "가산세가 붙지만, 이월과세와 함께 쓸 때의 기산점과 감정가액 기준이 정해지지 않아 계산할 수 없습니다. " +
+        "취득가액 산정방식을 「실지취득가액」으로 선택하거나 이월과세를 제외하세요.",
+    );
+  }
+}
+
 /**
  * 부담부증여 × 이월과세 진입 게이트 — **fail-fast**.
  *
@@ -119,6 +161,23 @@ export function assertCarryoverDonorBasis(
   }
 
   if (isPartialCarryover(info)) assertPartialCarryoverSupported(info);
+
+  /**
+   * 시가 모드 · 담보(상증법 §66) 승 — 괄호가 발동해 취득가액이 취득시 기준시가 × 채무비율로 강제된다(`resolveBgAcquisitionBasis`).
+   * 두 시나리오 모두 **취득시 기준시가**만 읽는다 — 산정방식(실지·매매사례·감정·환산)별 당초 증여자 값은 읽히지 않으므로(방식을 바꿔도 A·B·세액이 같다 — 계획서
+   * `bg-carryover-mkt-collateral-win.plan.md` §3) 요구하지 않는다. 기준시가 모드(`describeRequiredDonorFields`가 기준시가 칸만 요구)와 같은 규약이다.
+   * 시나리오 A의 당초 증여자 기준시가가 비면 `applyCarryoverDonorBasis`의 `?? 기존값`이 양도인 값으로 대신해 A = B가 된다 — §97의2②3호 비교가 조용히 무력화된다.
+   */
+  const scaled = scaleBurdenedGiftInfo(info, rawInput?.ownershipRatio);
+  const forcedByCollateral = resolveBgAcquisitionBasis(
+    scaled,
+    computeSangjeungbeopValuation(scaled.landStdPriceAtTransfer, scaled.buildingStdPriceAtTransfer, scaled).selectedMode,
+  ).collateralForcedStdInMarketMode;
+  if (forcedByCollateral) {
+    assertCollateralForcedDonorStd(info);
+    assertNoAppraisalPenaltyWithCarryover(info, rawInput);
+    return;
+  }
 
   /**
    * 매매사례가액·감정가액(K-6/K-7) × 이월과세 — 소법 §97의2①1호가 당초 증여자 **취득 당시**의 §97①1호 금액(나목 포함)을 쓰게 한다.
@@ -161,21 +220,7 @@ export function assertCarryoverDonorBasis(
           "같은 법 제97조의2 제2항 제3호의 세액 비교가 양도인 기준과 당초 증여자 기준을 동시에 요구합니다.",
       );
     }
-    // §114조의2 × 이월과세 — 5년 기산(당초 증여자 취득일 vs 신축일)과 base(A·B 어느 쪽 건물 감정가액)가 정해져 있지 않다.
-    // 통과시키면 가산세가 조용히 빠지거나 틀린 base로 붙는다 — 감정가액만 대상(매매사례가액은 조문에 없다).
-    if (
-      info.acquisitionMethod === "appraisal" &&
-      rawInput !== undefined &&
-      rawInput.isSelfBuilt === true &&
-      calculateBuildingPenalty({ ...rawInput, acquisitionMethod: "appraisal" }, 1) !== null
-    ) {
-      throw new TaxCalculationError(
-        TaxErrorCode.INVALID_INPUT,
-        "[burdened_gift] 신축·증축 건물을 5년 이내 양도하면서 이월과세를 적용하고 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따른 " +
-          "가산세가 붙지만, 이월과세와 함께 쓸 때의 기산점과 감정가액 기준이 정해지지 않아 계산할 수 없습니다. " +
-          "취득가액 산정방식을 「실지취득가액」으로 선택하거나 이월과세를 제외하세요.",
-      );
-    }
+    assertNoAppraisalPenaltyWithCarryover(info, rawInput);
     return;
   }
 
@@ -190,31 +235,6 @@ export function assertCarryoverDonorBasis(
         "정하는데, 부담부증여의 취득가액은 「소득세법 시행령」 제159조 제1항 제1호가 " +
         "양도인 기준 값으로 따로 산정하므로 두 값이 모두 필요합니다 " +
         "(같은 조 제2항 제3호의 세액 비교가 두 시나리오를 동시에 요구합니다).",
-    );
-  }
-
-  /**
-   * 시가 모드 · 담보(상증법 §66) 승 — 괄호가 발동해 취득가액이 취득시 기준시가 × 채무비율로 강제된다(`resolveBgAcquisitionBasis`).
-   * 시나리오 A는 **당초 증여자의 취득시 기준시가**를 쓴다. 산정방식(실지 등)의 칸만 요구하면 이 칸이 비어도 통과하고,
-   * `applyCarryoverDonorBasis`의 `?? 기존값`이 양도인 값으로 대신해 A = B가 된다 — §97의2②3호 비교가 조용히 무력화된다.
-   */
-  const scaled = scaleBurdenedGiftInfo(info, rawInput?.ownershipRatio);
-  const forcedByCollateral = resolveBgAcquisitionBasis(
-    scaled,
-    computeSangjeungbeopValuation(scaled.landStdPriceAtTransfer, scaled.buildingStdPriceAtTransfer, scaled).selectedMode,
-  ).collateralForcedStdInMarketMode;
-  const parts = carryoverPartsOf(info);
-  if (
-    forcedByCollateral &&
-    ((parts.land && donor.landStdPriceAtAcquisition === undefined) || (parts.building && donor.buildingStdPriceAtAcquisition === undefined))
-  ) {
-    const partLabel = parts.land && parts.building ? "토지·건물" : parts.land ? "토지" : "건물";
-    throw new TaxCalculationError(
-      TaxErrorCode.INVALID_INPUT,
-      "부담부증여에 이월과세를 적용하려면 「당초 증여자」 취득 당시의 " +
-        `${partLabel} 기준시가가 필요합니다. 시가로 평가했지만 담보채권액 평가(상증법 §66)가 시가보다 커서 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 ` +
-        "취득가액을 취득시 기준시가로 산정하므로, 당초 증여자 기준의 취득가액도 그 기준시가로 구합니다 " +
-        "(건물이 없으면 0을 입력하세요). 비우면 양도인 값과 같아져 「소득세법」 제97조의2 제2항 제3호의 세액 비교가 성립하지 않습니다.",
     );
   }
 }

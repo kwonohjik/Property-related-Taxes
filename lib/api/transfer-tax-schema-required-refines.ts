@@ -11,14 +11,13 @@ import { redevGiftPriorResidenceBeforeGift } from "@/lib/tax-engine/one-house/re
 import { successorGiftHouseholdConsolidates } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { successorGiftHouseholdStartIssue } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { z } from "zod";
-import { computeSangjeungbeopValuation } from "@/lib/tax-engine/burdened-gift-valuation";
-import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { successorAptMaxResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
 import { toDate } from "./date-coerce";
 import { refineBgDonorBuilt } from "./transfer-tax-schema-donor-built";
 import { refineGbBgCarryoverBundled } from "./transfer-tax-schema-donor-built";
 import { refineGbBgCarryoverParts } from "./transfer-tax-schema-donor-built";
 import { refineBgMarketValueByPart } from "./transfer-tax-schema-donor-built";
+import { collateralForcesStdAcquisition } from "./transfer-tax-schema-collateral-win";
 import { refineCarryoverTaxation } from "./transfer-tax-schema-companion-refines";
 import { carryoverDebtPiecesUnsupportedReason } from "@/lib/tax-engine/carryover-debt-pieces-scope";
 import { refineMixedUsePresence } from "./transfer-tax-schema-mixed-use";
@@ -121,27 +120,6 @@ type BurdenedGiftLike = {
   };
   donorRelation?: string;
 };
-
-/**
- * 시가 모드 · 담보 승(「상속세 및 증여세법」 제66조) — 엔진이 산정방식과 무관하게 취득가액을 취득시 기준시가 × 채무비율로 강제하고
- * (「소득세법 시행령」 제159조 제1항 제1호 괄호 · `resolveBgAcquisitionBasis`) 실지취득가액·매매사례가액·감정가액을 읽지 않는다.
- * 엔진과 같은 함수로 판정하되 **지분 축소 전** 시가로 본다 — 축소는 시가만 줄이므로 여기서 담보가 이기면 엔진에서도 이긴다
- * (요구를 잘못 빼는 방향으로는 틀리지 않는다). 조합원입주권(괄호 미발동)·이월과세(당초 증여자 값)는 제외 — ⑧이 담보 승을 막는다.
- * 계획서 `docs/00-pm/burdened-gift-residuals-o3-o5-o8.plan.md` O-5.
- */
-function collateralForcesStdAcquisition(bg: BurdenedGiftLike): boolean {
-  if (bg.valuationMode !== "sangjeungbeop_market" || bg.rightValuation !== undefined || bg.carryoverDonorBasis !== undefined) return false;
-  return (
-    computeSangjeungbeopValuation(0, 0, {
-      valuationMode: "sangjeungbeop_market",
-      marketValueAtTransfer: bg.marketValueAtTransfer ?? 0,
-      lendingDepositTotal: bg.lendingDepositTotal ?? 0,
-      mortgageDebtAmount: bg.mortgageDebtAmount ?? 0,
-      mortgageSetAmount: bg.mortgageSetAmount,
-      annualRentTotal: 0,
-    } as BurdenedGiftInfo).selectedMode === "mortgage"
-  );
-}
 
 /**
  * 단건 STEP 0.45가 의제취득일 전 3자 max를 §159에 넘기는 자산 종류(`inheritance-acquisition-helpers.ts` `bgBasis`) — 아래 면제 범위.

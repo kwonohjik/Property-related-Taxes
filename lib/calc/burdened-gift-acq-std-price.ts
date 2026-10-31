@@ -83,9 +83,11 @@ export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
  * K-1~K-3(기준시가 모드) · K-5(환산 분자) · K-6/K-7(개산공제 base) — 엔진 `describeRequiredDonorFields`와 같은 분기다.
  * 둘째 지분부터는 ②가 숨겨져 `BurdenedGiftTrancheBasisBlock`이 같은 박스를 연다 — 두 화면이 각자 판정하면 칸과 검증이 갈린다(PR-2).
  */
-export function bgCoDonorNeedsStdPrice(asset: Pick<AssetForm, "bgValuationMode" | "bgAcquisitionMethod">): boolean {
+export function bgCoDonorNeedsStdPrice(asset: AssetForm): boolean {
   return (
     asset.bgValuationMode === "sangjeungbeop_standard" ||
+    // 시가 모드 · 담보 승 — 괄호가 발동해 두 시나리오 모두 취득시 기준시가를 읽는다(방식별 당초 증여자 값은 읽히지 않는다).
+    bgCollateralForcesStdAcq(asset) ||
     asset.bgAcquisitionMethod === "converted" ||
     (asset.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(asset.bgAcquisitionMethod))
   );

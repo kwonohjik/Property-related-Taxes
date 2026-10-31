@@ -262,17 +262,17 @@ export function validateBurdenedGiftAsset(
       asset.assetKind === "right_to_move_in" ? "actual" : asset.bgAcquisitionMethod || "";
     /**
      * 담보 승(「상속세 및 증여세법」 제66조) — 단독 소유 단건만 엔진과 같은 증여가액 C로 판정한다(`bgWholeGiftValuation` 범위 주석).
-     * 이월과세·조합원입주권은 담보 승과 취득가액 산정 기준의 결합을 검토하지 않아 막는다(겸용은 MB-7이 같은 이유로 막는다).
-     * 계획서 `docs/00-pm/burdened-gift-residuals-o3-o5-o8.plan.md` O-5.
+     * 조합원입주권은 담보 승과 취득가액 산정 기준의 결합을 검토하지 않아 막는다(겸용은 MB-7이 같은 이유로 막는다).
+     * 이월과세는 막지 않는다 — 두 시나리오 모두 취득시 기준시가 × 채무비율이고 당초 증여자 기준시가는 아래 `missingCoDonorBasisLabel`이 요구한다
+     * (`bg-carryover-mkt-collateral-win.plan.md`). 계획서 `docs/00-pm/burdened-gift-residuals-o3-o5-o8.plan.md` O-5.
      */
     // 함께 부담부증여 묶음의 자산도 같다 — 균일 승자는 ⑧ 승자 게이트(`transfer-tax-validate.ts`)를 통과하고, 그 자산의 증여가액 C는 엔진이 쓰는 값(담보 승이면 담보평가액)이다.
     // 종전에는 묶음에서 이 판정을 건너뛰어 시가를 분모로 둬, 담보평가액 = 채무인 정당한 자산을 「채무액이 증여가액 초과」로 막았다.
     const wholeValuation = isFractionalSplitAxis !== true ? bgWholeGiftValuation(asset) : undefined;
-    if (wholeValuation?.selectedMode === "mortgage" && (bgAnyCarryover(asset) || asset.assetKind === "right_to_move_in")) {
-      const what = asset.assetKind === "right_to_move_in" ? "조합원입주권" : "이월과세(「소득세법」 제97조의2) 자산";
+    if (wholeValuation?.selectedMode === "mortgage" && asset.assetKind === "right_to_move_in") {
       return fieldError(
         "bgMortgageDebtAmount",
-        `${label}: 담보평가액(${wholeValuation.value.toLocaleString()}원 — 「상속세 및 증여세법」 제66조)이 시가보다 커서 증여가액이 담보평가액이 됩니다. ${what}의 부담부증여에서 이 경우의 취득가액 산정 기준을 확인하지 못해 계산하지 않습니다. 시가·채무액·채권최고액을 재확인하세요.`,
+        `${label}: 담보평가액(${wholeValuation.value.toLocaleString()}원 — 「상속세 및 증여세법」 제66조)이 시가보다 커서 증여가액이 담보평가액이 됩니다. 조합원입주권의 부담부증여에서 이 경우의 취득가액 산정 기준을 확인하지 못해 계산하지 않습니다. 시가·채무액·채권최고액을 재확인하세요.`,
       );
     }
     // 담보 승이면 취득가액은 산정방식과 무관하게 취득시 기준시가 × 채무비율이다(엔진 `acqStdPriceForced`) — 방식별 금액 칸은 쓰이지 않아
@@ -636,8 +636,9 @@ function missingCoDonorBasisLabel(asset: AssetForm): { label: string; field: Iss
   // K-1~K-3(기준시가 모드) · K-5(환산) — 둘 다 취득시 기준시가 두 칸을 쓴다.
   //   K-5에 전용 칸을 두지 않는 것은 환산이 **이 칸을 분자로** 자동 추종하기 때문이다(이중 진실 방지).
   // K-6/K-7 — 개산공제 base로 같은 두 칸이 필요하다(필요경비는 개산공제만).
+  // 담보 승 — 두 시나리오 모두 취득시 기준시가를 읽고 당초 증여자의 매매사례가액·감정가액은 읽히지 않는다(⑤가 그 칸을 숨기고 엔진도 요구하지 않는다).
   const isPresumed =
-    asset.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(asset.bgAcquisitionMethod);
+    asset.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(asset.bgAcquisitionMethod) && !bgCollateralForcesStdAcq(asset);
   const needsStdPrice = bgCoDonorNeedsStdPrice(asset);
   if (isPresumed) {
     const methodLabel = BG_PRESUMED_LABEL[asset.bgAcquisitionMethod as "salesCase" | "appraisal"];
