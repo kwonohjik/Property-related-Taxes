@@ -257,6 +257,29 @@ export const propertySchema = z
       const primaryBg = data.transferType === "burdened_gift";
       const companionBg = companions.map((c) => c.burdenedGiftInfo !== undefined);
       const bgKind = burdenedGiftBundleKind([primaryBg, ...companionBg]);
+      // 축 B 가액 합 가드 — 서버 흡수 블록(`bundled-apportionment.ts`)은 마지막 확정 자산에 `총액 − 나머지 합`을 몰아주므로, 그 편차가
+      // ⑧의 지분율 합 허용 대역(±0.5%p) 밖이면 합 90%·210% 같은 입력이 음수 양도가액까지 200으로 통과했다(⑧은 클라이언트 전용).
+      // 서버 축 B는 지분율이 아니라 자산별 확정 양도가액을 쓰므로 기준도 가액이다. 흡수가 일어나지 않는 조건(확정 가액 하나라도 없음 ·
+      // 전 자산 부담부증여 — 양도가액을 §159가 정한다)은 면제. 허용오차의 `+ 컴패니언 수 + 1`은 ⑧ 통과 입력(합 99.5% 등)의 floor 절사 슬랙이다.
+      if (
+        fullFractionalBundle &&
+        bgKind === "none" &&
+        data.totalSalePrice !== undefined &&
+        data.totalSalePrice > 0 &&
+        data.primaryActualSalePrice !== undefined &&
+        companions.every((c) => c.fixedSalePrice !== undefined)
+      ) {
+        const sumShares = data.primaryActualSalePrice + companions.reduce((s, c) => s + (c.fixedSalePrice ?? 0), 0);
+        const tolerance = Math.ceil(data.totalSalePrice * 0.005) + companions.length + 1;
+        if (Math.abs(data.totalSalePrice - sumShares) > tolerance) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["totalSalePrice"],
+            message: `지분 분할 취득: 자산별 양도가액 합(${sumShares.toLocaleString()})이 총 양도가액(${data.totalSalePrice.toLocaleString()})과 허용오차(${tolerance.toLocaleString()}원)를 넘게 다릅니다 — 지분율 합계가 100%가 되어야 합니다`,
+          });
+        }
+      }
+
       if (!fullFractionalBundle && bgKind === "mixed") {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets"], message: MIXED_BURDENED_GIFT_BUNDLE_MESSAGE });
       }
