@@ -1,14 +1,14 @@
 /**
- * anchor — 부담부증여 비보충 승자(담보 §66 · 임대 §61⑤)를 계산하지 않는 자산(조합원입주권 · 겸용주택 · 지분 보유)의 ⑧ 안내 문구 · 입주권 ⑧ ⊇ ⑫.
+ * anchor — 부담부증여 비보충 승자(담보 §66 · 임대 §61⑤)를 계산하지 않는 자산(조합원입주권 · 겸용주택)의 ⑧ 안내 문구 · 입주권 ⑧ ⊇ ⑫.
  *
- * 종전에는 세 종류 모두 「이 경우의 취득가액 산정 기준을 확인하지 못했습니다」였다. 실제 사유는 종류마다 다르다:
+ * 종전에는 세 종류(지분 보유 포함) 모두 「이 경우의 취득가액 산정 기준을 확인하지 못했습니다」였다. 실제 사유는 종류마다 다르다:
  *  · 조합원입주권 — 「소득세법 시행령」 제159조 제1항 제1호 괄호가 취득가액을 기준시가로 정하는데 입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없다
  *    (엔진 `burdened-gift-apportionment.ts` fail-fast).
  *  · 겸용주택 — 담보·임대 평가액을 주택과 상가로 나눌 법정 기준이 없다(엔진 MB-7 · 함께 양도는 MB-6).
- *  · 지분 보유 — 종전 문구 유지(축 정보를 몰라 승자를 확정하지 못하는 범위).
+ *  · 지분 보유 — 주택은 S-2가 열었다(`transfer.route.bg-axis-a-nonsupp-win.anchor.test.ts`). 주택 외 지분의 문구는 그 anchor가 단언한다.
  * 또 하나: 기준시가 모드 입주권 단건의 담보·임대 승은 ⑧이 통과시키고 ⑫가 400으로 막았다(⑧ ⊉ ⑫) — ⑧이 같은 사유로 앞서 막는다.
  *
- * · NR-1 묶음 승자 게이트 문구 — 종류 3 × (기준시가 모드 담보 · 기준시가 모드 임대 · 시가 모드 담보).
+ * · NR-1 묶음 승자 게이트 문구 — 종류 2 × (기준시가 모드 담보 · 기준시가 모드 임대 · 시가 모드 담보).
  * · NR-2 입주권 단건 — 기준시가 모드 담보·임대 승: ⑧ 차단 ∧ ⑫ 400(⑧ ⊇ ⑫) · 시가 모드 담보 승: ⑧ 차단 문구 · 보충적평가 승은 ⑧ 통과 ∧ ⑫ 200(안전망).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -85,18 +85,16 @@ async function post(f: TransferFormData) {
 const SECOND = {
   입주권: (mode: Mode, win: Win) => rtmi(mode, win),
   겸용: (mode: Mode, win: Win) => housing(2, mode, win, x({ isMixedUseHouse: true })),
-  지분: (mode: Mode, win: Win) => housing(2, mode, win, x({ ownershipNumerator: "50", ownershipDenominator: "100" })),
 } as const;
-const CELLS = (["입주권", "겸용", "지분"] as const).flatMap((k) => ([["std", "mortgage"], ["std", "rental"], ["mkt", "mortgage"]] as const).map(([mode, win]) => ({ k, mode, win })));
+const CELLS = (["입주권", "겸용"] as const).flatMap((k) => ([["std", "mortgage"], ["std", "rental"], ["mkt", "mortgage"]] as const).map(([mode, win]) => ({ k, mode, win })));
 
 describe("NR-1 묶음 승자 게이트 — 종류별 실제 사유", () => {
   it.each(CELLS)("$k · $mode · $win", ({ k, mode, win }) => {
     const msgs = full(bundle([housing(1, mode, win), SECOND[k](mode, win)])).filter((m) => m.includes(GATE));
     expect(msgs.length).toBe(1);
-    expect(msgs[0]).toContain(`${k === "입주권" ? "조합원입주권" : k === "겸용" ? "겸용주택" : "지분 보유"} 자산은`);
+    expect(msgs[0]).toContain(`${k === "입주권" ? "조합원입주권" : "겸용주택"} 자산은`);
     if (k === "입주권") { expect(msgs[0]).toContain(RTMI_CAUSE); expect(msgs[0]).not.toContain(OLD); }
     if (k === "겸용") { expect(msgs[0]).toContain(MIXED_CAUSE); expect(msgs[0]).not.toContain(OLD); }
-    if (k === "지분") expect(msgs[0]).toContain(OLD); // 지분 보유는 종전 문구 유지
   });
 });
 

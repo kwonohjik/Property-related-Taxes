@@ -54,6 +54,7 @@ import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { validateDonorBuiltBg } from "./transfer-tax-validate-donor-built-bg";
 import { bgCollateralForcesStdAcq, bgWholeGiftValuation } from "./burdened-gift-collateral-win";
 import { bgFractionalCollateralWin } from "./burdened-gift-collateral-win";
+import { bgFractionalCollateralKindSupported } from "./burdened-gift-collateral-win";
 import { bgSplitAxisCollateralWinUnsupported } from "./burdened-gift-collateral-win";
 import { BG_RTMI_WINNER_CAUSE } from "./burdened-gift-collateral-win";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
@@ -477,9 +478,10 @@ export function validateBurdenedGiftAsset(
     // 축 B는 채무·시가 모두 물건 전체 입력이므로 줄이지 않는다(축 A만 시가를 지분분으로 줄여 지분 인수분 채무와 비교).
     const giftValuationMarket = ratio < 1 && !isFractionalSplitAxis ? applyRatio(marketWhole, ratio) : marketWhole;
     const giftValuation = wholeValuation?.value ?? giftValuationMarket;
-    // 지분 자산(축 A)의 담보 승 — 채무 합계가 시가 해당분보다 커서 아래 「초과」 검사에 걸리지만 그 사유가 아니라 이 범위 밖이라 막는 것이다(`bgFractionalCollateralWin`).
-    if (!isFractionalSplitAxis && bgFractionalCollateralWin(asset)) {
-      return `${label}: 지분 ${formatOwnershipPercent(asset.ownershipNumerator, asset.ownershipDenominator)}를 가진 자산에서 담보평가액(「상속세 및 증여세법」 제66조)이 시가 해당분보다 커서 증여가액이 담보평가액이 됩니다. 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)을 지분 자산에는 확인하지 못해 계산하지 않습니다. 단독 소유라면 지분율을 100%로 입력하고, 시가·채무액·채권최고액을 재확인하세요.`;
+    // 지분 자산(축 A)의 담보 승 — 채무 합계가 시가 해당분보다 커서 아래 「초과」 검사에 걸리지만 그 사유가 아니다. 주택은 계산하고(취득시 기준시가 × 지분 × 채무비율 — ⑤ 칸·(5-c)·⑫),
+    // 취득가액 처리를 확인하지 못한 종류만 이 사유로 막는다(`bgFractionalCollateralWin` · `bgFractionalCollateralKindSupported`).
+    if (!isFractionalSplitAxis && bgFractionalCollateralWin(asset) && !bgFractionalCollateralKindSupported(asset)) {
+      return `${label}: 지분 ${formatOwnershipPercent(asset.ownershipNumerator, asset.ownershipDenominator)}를 가진 자산에서 담보평가액(「상속세 및 증여세법」 제66조)이 시가 해당분보다 커서 증여가액이 담보평가액이 됩니다. 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 주택(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다. 단독 소유라면 지분율을 100%로 입력하고, 시가·채무액·채권최고액을 재확인하세요.`;
     }
     if (giftValuation > 0 && assumedDebt > giftValuation) {
       const scaleNote =

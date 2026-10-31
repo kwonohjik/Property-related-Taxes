@@ -21,7 +21,7 @@ import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
 import { bgAnyCarryover } from "./bg-carryover-parts";
 
 /** 취득가액 산정 근거 — 안내 문구가 그 이름으로 말한다. 칸이 쓰이면 null. */
-export function bgExpenseUnusedBasis(asset: AssetForm, isFractionalSplit = false): "기준시가" | "감정가액" | "매매사례가액" | null {
+export function bgExpenseUnusedBasis(asset: AssetForm, isFractionalSplit?: boolean): "기준시가" | "감정가액" | "매매사례가액" | null {
   if (asset.transferType !== "burdened_gift") return null;
   if (asset.assetKind === "right_to_move_in" || asset.assetKind === "redevelopment_apt") return null;
   if (bgAnyCarryover(asset)) return null;
@@ -37,6 +37,6 @@ export function bgExpenseUnusedBasis(asset: AssetForm, isFractionalSplit = false
   return asset.bgAcquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
 }
 
-export function bgExpenseInputsUnused(asset: AssetForm, isFractionalSplit = false): boolean {
+export function bgExpenseInputsUnused(asset: AssetForm, isFractionalSplit?: boolean): boolean {
   return bgExpenseUnusedBasis(asset, isFractionalSplit) !== null;
 }

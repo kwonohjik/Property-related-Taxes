@@ -59,7 +59,7 @@ type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause" | "redevIsSuccesso
  * 포함(예외의 예외): **시가 모드 · 담보 승**(`bgCollateralForcesStdAcq` — 단독 소유 단건)은 위 시가 모드 제외가 풀린다. 엔진이 §159①1호 괄호로
  * 취득가액을 취득시 기준시가로 강제하고, 이 칸이 비면 400을 낸다(`burdened-gift-residuals-o3-o5-o8.plan.md` O-5).
  */
-export function needsBgAcqStdPriceInput(asset: AcqStdAsset, isFractionalSplit = false): boolean {
+export function needsBgAcqStdPriceInput(asset: AcqStdAsset, isFractionalSplit?: boolean): boolean {
   return (
     asset.transferType === "burdened_gift" &&
     (asset.bgValuationMode !== "sangjeungbeop_market" ||
@@ -83,7 +83,7 @@ export function needsBgAcqStdPriceInput(asset: AcqStdAsset, isFractionalSplit = 
  * K-1~K-3(기준시가 모드) · K-5(환산 분자) · K-6/K-7(개산공제 base) — 엔진 `describeRequiredDonorFields`와 같은 분기다.
  * 둘째 지분부터는 ②가 숨겨져 `BurdenedGiftTrancheBasisBlock`이 같은 박스를 연다 — 두 화면이 각자 판정하면 칸과 검증이 갈린다(PR-2).
  */
-export function bgCoDonorNeedsStdPrice(asset: AssetForm, isFractionalSplit = false): boolean {
+export function bgCoDonorNeedsStdPrice(asset: AssetForm, isFractionalSplit?: boolean): boolean {
   return (
     asset.bgValuationMode === "sangjeungbeop_standard" ||
     // 시가 모드 · 담보 승 — 괄호가 발동해 두 시나리오 모두 취득시 기준시가를 읽는다(방식별 당초 증여자 값은 읽히지 않는다).
