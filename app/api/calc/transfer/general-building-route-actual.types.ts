@@ -4,6 +4,7 @@
  * `general-building-route-actual.ts` 800줄 정책 분리(2026-10-22, 762줄 위험구간). 타입 선언만 있어 로직 이동은 없다 —
  * 기존 import 경로는 원 파일의 재수출(`export type { … }`)이 유지한다.
  */
+import type { PreDeemedPurchaseDetail, PreDeemedPurchaseInput } from "@/lib/tax-engine/types/transfer-pre-deemed-purchase.types";
 import type { SaleSplitExemption } from "@/lib/tax-engine/sale-split-deemed-unclear";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import type { CarryoverTaxationInput, DonorBuiltInput } from "@/lib/tax-engine/types/transfer-carryover.types";
@@ -57,6 +58,8 @@ export interface GeneralBuildingActualPricePayload {
    * `burdenedGiftInfo.carryoverDonorBasis.donorBuilt` 와 같은 값이지만 **이 필드만** 카드 조립이 읽는다 — info 는 B 호출에도 같은 모양으로 흘러 가산세가 새면 안 된다.
    */
   donorBuiltPenalty?: DonorBuiltInput;
+  /** 의제취득일 전 매수 일괄취득 영 §176조의2④(Q-8 a) — 안분 전 총액을 ②로 바꾼다. 파트 실가(`part_input`)·실가 0이면 쓰지 않는다. */
+  preDeemedPurchase?: PreDeemedPurchaseInput;
   // ── 사례 35: 주택→상가 용도변경 (자산 공통 — actual 경로도 동일 분기) ──
   houseToCommercialConversion?: boolean;
   conversionDate?: Date;
@@ -183,6 +186,7 @@ export interface GeneralBuildingActualPricePayload {
  */
 export interface ActualGbCardsResult {
   cards: AssetCardForAggregate[];
+  preDeemedPurchaseDetail?: PreDeemedPurchaseDetail;
   nonBusinessRatio: number;
   /** NBL 판정 명세 — 결과 카드(`GeneralBuildingValuationDetailCard`)가 **가드 없이** 읽는다. */
   nblDetail: {

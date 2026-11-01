@@ -19,8 +19,10 @@ import { SaleSplitJudgmentBlock } from "@/components/calc/results/transfer/SaleS
 import { SaleSplitUnenteredNotice } from "@/components/calc/results/transfer/SaleSplitUnenteredNotice";
 import { isSaleSplitActual, saleSplitUnenteredNotice } from "@/components/calc/results/transfer/sale-split-unentered-notice";
 import { GbPreDeemedAcquisitionBlock } from "@/components/calc/results/transfer/GbPreDeemedAcquisitionBlock";
+import { PreDeemedPurchaseResultCard } from "@/components/calc/results/transfer/PreDeemedPurchaseResultCard";
 import type { GbBlockView, GbShareBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
 import type { GbPreDeemedEcho } from "@/lib/tax-engine/types/general-building.types";
+import type { PreDeemedPurchaseDetail } from "@/lib/tax-engine/types/transfer-pre-deemed-purchase.types";
 
 /** §163⑨ 상속 블록의 파트 라벨 — 의제취득일 전 상속 파트는 엔진이 채택한 후보를 따른다(PR-4). */
 const PRE_DEEMED_ADOPTED_LABEL = {
@@ -40,6 +42,7 @@ interface InheritUnit {
   land?: boolean;
   building?: boolean;
   preDeemed?: GbPreDeemedEcho;
+  purchase?: PreDeemedPurchaseDetail;
   acq: (kind: "land" | "building") => number | undefined;
   converted: (kind: "land" | "building") => boolean;
 }
@@ -61,6 +64,7 @@ export function GbResultBlocks({ view }: { view: GbBlockView }) {
         land: s.acquisitionByInheritance,
         building: s.buildingAcquisitionByInheritance,
         preDeemed: s.preDeemedAcquisition,
+        purchase: s.preDeemedPurchase,
         acq: s.partAcquisitionPrice,
         converted: s.partConverted,
       }))
@@ -69,11 +73,13 @@ export function GbResultBlocks({ view }: { view: GbBlockView }) {
         land: d.acquisitionByInheritance,
         building: d.buildingAcquisitionByInheritance,
         preDeemed: d.preDeemedAcquisition,
+        purchase: d.preDeemedPurchase,
         acq: view.partAcquisitionPrice,
         converted: partConverted,
       }];
   const inheritedUnits = units.filter((u) => u.land || u.building);
   const preDeemedUnits = units.filter((u) => u.preDeemed);
+  const purchaseUnits = units.filter((u) => u.purchase);
   // 지분 판정이 30% 경계에서 갈려 물건 전체 판정을 싣지 못한 경우(엔진 D-2 🔴) — 지분별 판정을 그대로 그린다.
   const shareJudgments = d.saleSplitJudgment ? [] : (view.shares ?? []).filter((s) => s.saleSplitJudgment);
 
@@ -81,7 +87,7 @@ export function GbResultBlocks({ view }: { view: GbBlockView }) {
   const unentered = saleSplitUnenteredNotice(isSaleSplitActual(view.asset), d.saleApportionBasisKind);
   if (
     !unentered && !d.saleSplitJudgment && shareJudgments.length === 0 && inheritedUnits.length === 0 &&
-    preDeemedUnits.length === 0 && !d.convertedHousing && !view.swapComparison
+    preDeemedUnits.length === 0 && purchaseUnits.length === 0 && !d.convertedHousing && !view.swapComparison
   ) return null;
   const exemptionNote = view.asset?.saleSplitExemptionNote ? { exemptionNote: view.asset.saleSplitExemptionNote } : {};
 
@@ -150,6 +156,11 @@ export function GbResultBlocks({ view }: { view: GbBlockView }) {
       {/* 의제취득일 전 상속·증여 파트 — ①②③ 비교(PR-4). 증여 파트는 위 상속 블록이 없으므로 따로 그린다. */}
       {preDeemedUnits.map((u) => (
         <GbPreDeemedAcquisitionBlock key={u.key} echo={u.preDeemed!} {...(u.name ? { share: { key: u.key, name: u.name } } : {})} />
+      ))}
+
+      {/* 의제취득일 전 매수 일괄취득 — 영 §176조의2④ ②(안분 전 총액 · Q-8 a) */}
+      {purchaseUnits.map((u) => (
+        <PreDeemedPurchaseResultCard key={u.key} detail={u.purchase!} />
       ))}
 
       {/* §99-164-10 환산주택가격 — 취득당시 기준시가를 **덮어쓴 근거**. */}

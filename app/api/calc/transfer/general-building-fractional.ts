@@ -401,6 +401,7 @@ export function calculateGeneralBuildingFractional(
       ...(blockSrc.acquisitionByInheritance ? { acquisitionByInheritance: true } : {}),
       ...(blockSrc.buildingAcquisitionByInheritance ? { buildingAcquisitionByInheritance: true } : {}),
       ...(blockSrc.preDeemedAcquisition ? { preDeemedAcquisition: blockSrc.preDeemedAcquisition } : {}),
+      ...(blockSrc.preDeemedPurchase ? { preDeemedPurchase: blockSrc.preDeemedPurchase } : {}),
     };
     allApportioned.push(...ap.apportioned);
     totalStandardAtTransfer += ap.totalStandardAtTransfer;
@@ -453,6 +454,7 @@ export function calculateGeneralBuildingFractional(
     acquisitionByInheritance: undefined,
     buildingAcquisitionByInheritance: undefined,
     preDeemedAcquisition: undefined,
+    preDeemedPurchase: undefined,
     shareBlockEcho,
     // 카드는 **전 지분 concat** — 라벨에 지분 이름이 들어 있다.
     assetCards: allCards,

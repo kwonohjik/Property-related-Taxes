@@ -4,7 +4,8 @@
  *
  * ⑤ 카드(`PreDeemedPurchaseCard`)·④ 단건·컴패니언·⑧·⑥·다건 차단이 모두 `isPreDeemedPurchaseAsset`을 읽는다(3중 패턴).
  * 게이트는 엔진 범위(`preDeemedPurchaseOutOfScopeReason`)와 같은 자산만 연다 — 취득일 칸이 덮어쓰기 결과(1985-01-01)인
- * 매매 토지·주택·건물·상가·재개발 원조합원(완공 APT·입주권) · 겸용·부담부증여·토지·건물 취득일 분리(PHD 같은 날 제외)·다필지 제외.
+ * 매매 토지·주택·건물·상가·재개발 원조합원(완공 APT·입주권)·일반건물 일괄취득 실가 모드(Q-8 a · Q-15 b)
+ * · 겸용·부담부증여·토지·건물 취득일 분리(PHD 같은 날 제외)·다필지 제외.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { parseDecimal } from "@/lib/calc/number-parse";
@@ -13,6 +14,7 @@ import { PRE_DEEMED_PURCHASE_PPI_RATIO_REQUIRED_MESSAGE } from "@/lib/tax-engine
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 import { fieldError } from "./transfer-tax-validate-field";
 import { isRedevelopmentSec166Asset, redevHidesGeneralAcqSection } from "./redev-acquisition-price-source";
+import { gbPartModes } from "./transfer-tax-split-acq-mode";
 
 export const PRE_DEEMED_DATE = "1985-01-01";
 
@@ -32,8 +34,48 @@ type GateFields = Pick<
   | "redevIsSuccessorMember"
 >;
 
+type GbGateFields = Pick<
+  AssetForm,
+  | "acquisitionCause"
+  | "transferType"
+  | "acquisitionDate"
+  | "assetKind"
+  | "hasSeperateLandAcquisitionDate"
+  | "landAcquisitionDate"
+  | "gbBuildingAcquisitionCause"
+  | "gbHasExtension"
+> & Parameters<typeof gbPartModes>[0];
+
+/** 일반건물 일괄취득 매매(분리 OFF · 증축 없음)이고 취득일 칸이 의제취득일인가 — 모드는 따로 본다 */
+function isGbPreDeemedBundledPurchase(a: GbGateFields): boolean {
+  return (
+    a.assetKind === "general_building" &&
+    a.acquisitionCause === "purchase" &&
+    a.transferType !== "burdened_gift" &&
+    a.acquisitionDate === PRE_DEEMED_DATE &&
+    a.landAcquisitionDate === PRE_DEEMED_DATE &&
+    !a.hasSeperateLandAcquisitionDate &&
+    !a.gbHasExtension &&
+    (a.gbBuildingAcquisitionCause || "purchase") === "purchase"
+  );
+}
+
+function isGbActualMode(a: GbGateFields): boolean {
+  const m = gbPartModes(a);
+  return m.land === "actual" && m.building === "actual";
+}
+
+/** ⑤ 안내 — 일반건물 일괄취득 추계 모드는 ②를 비교하지 않는다(Q-15 b · 환산→실가 전환 장치 없음) */
+export function gbPreDeemedPurchaseNotCompared(a: GbGateFields): boolean {
+  return isGbPreDeemedBundledPurchase(a) && !isGbActualMode(a);
+}
+
 /** 카드를 여는 자산인가 — 취득일 칸이 의제취득일(덮어쓰기 결과)인 1차 범위 매매 자산 */
-export function isPreDeemedPurchaseAsset(a: GateFields): boolean {
+export function isPreDeemedPurchaseAsset(a: GateFields & Partial<GbGateFields>): boolean {
+  if (a.assetKind === "general_building") {
+    const g = a as GbGateFields;
+    return isGbPreDeemedBundledPurchase(g) && isGbActualMode(g);
+  }
   if (a.acquisitionCause !== "purchase" || a.transferType === "burdened_gift") return false;
   if (a.acquisitionDate !== PRE_DEEMED_DATE) return false;
   // 재개발은 원조합원만(승계조합원은 취득일이 승계 시점이고 §166③ 대상이 아니다 · Q-4 a)
@@ -64,7 +106,8 @@ export function buildPreDeemedPurchasePayload(
   a: AssetForm,
   ratioed: (v: string | undefined) => number | undefined,
 ): { preDeemedPurchase?: { originalAcquisitionDate: string; actualPrice?: number; ppiRatio?: number } } {
-  if (!preDeemedPurchaseApplies(a)) return {};
+  // 일반건물은 서브객체로 싣는다(`buildGbPreDeemedPurchasePayload` — 단건·함께 양도·지분이 같은 빌더)
+  if (a.assetKind === "general_building" || !preDeemedPurchaseApplies(a)) return {};
   const o = a.preDeemedOriginalAcquisitionDate;
   const actualPrice = preDeemedPurchaseUsesCompareActual(a) ? ratioed(a.preDeemedActualPrice) : undefined;
   const ratio = parseDecimal(a.preDeemedPpiRatio);
@@ -75,6 +118,14 @@ export function buildPreDeemedPurchasePayload(
       ...(isBeforePpiSeries(o) && ratio > 0 ? { ppiRatio: ratio } : {}),
     },
   };
+}
+
+/** ④ 일반건물 `generalBuildingValuation` 실가 payload — 실가 모드라 ②의 기준은 일괄 취득가액이다 */
+export function buildGbPreDeemedPurchasePayload(a: AssetForm): { preDeemedPurchase?: { originalAcquisitionDate: string; ppiRatio?: number } } {
+  if (!preDeemedPurchaseApplies(a)) return {};
+  const o = a.preDeemedOriginalAcquisitionDate;
+  const ratio = parseDecimal(a.preDeemedPpiRatio);
+  return { preDeemedPurchase: { originalAcquisitionDate: o, ...(isBeforePpiSeries(o) && ratio > 0 ? { ppiRatio: ratio } : {}) } };
 }
 
 /** ⑧ — 카드에 칸이 있을 때만 요구한다(막다른 길 금지) */

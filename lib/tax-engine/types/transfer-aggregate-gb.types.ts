@@ -77,7 +77,7 @@ export type GbBundledAssetDetail = import("../general-building-valuation").Gener
  */
 export type GbShareBlockEcho = Pick<
   import("../general-building-valuation").GeneralBuildingOutput,
-  "saleSplitJudgment" | "acquisitionByInheritance" | "buildingAcquisitionByInheritance" | "preDeemedAcquisition"
+  "saleSplitJudgment" | "acquisitionByInheritance" | "buildingAcquisitionByInheritance" | "preDeemedAcquisition" | "preDeemedPurchase"
 > & {
   /** 지분 이름 — 카드 라벨 머리(`tagGbCards`)와 같은 값(「자산 1」). */
   label: string;

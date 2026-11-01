@@ -14,7 +14,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import { isPreDeemedPurchaseAsset, preDeemedPurchaseUsesCompareActual } from "@/lib/calc/transfer-pre-deemed-purchase-form";
+import { gbPreDeemedPurchaseNotCompared, isPreDeemedPurchaseAsset, preDeemedPurchaseUsesCompareActual } from "@/lib/calc/transfer-pre-deemed-purchase-form";
 import { isRedevelopmentSec166Asset } from "@/lib/calc/redev-acquisition-price-source";
 import { isBeforePpiSeries, ppiMonthlyX100 } from "@/lib/tax-engine/producer-price-ratio";
 
@@ -33,6 +33,18 @@ export function PreDeemedPurchaseCard({
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
 }) {
+  if (gbPreDeemedPurchaseNotCompared(asset)) {
+    return (
+      <div data-testid="pre-deemed-purchase-gb-not-compared">
+        <ToneCard tone="amber" title="의제취득일 전 매수 (소득세법 시행령 §176조의2④)" bodyClassName="space-y-2">
+          <p className="text-xs text-amber-800 leading-relaxed dark:text-amber-200">
+            일반건물은 취득가액 산정 방식이 실지거래가액일 때만 ② 취득 당시 실지거래가액 + 생산자물가상승분을 계산합니다. 이 방식의 계산에는 ①·② 비교를 반영하지 않습니다 —
+            취득 당시 실지거래가액을 알면 산정 방식을 실지거래가액으로 바꿔 ②로 계산해 보세요.
+          </p>
+        </ToneCard>
+      </div>
+    );
+  }
   if (!isPreDeemedPurchaseAsset(asset)) return null;
   const original = asset.preDeemedOriginalAcquisitionDate;
   const compare = preDeemedPurchaseUsesCompareActual(asset);

@@ -4,6 +4,7 @@
  * `transfer-tax-api-helpers.ts` 800줄 정책에 따라 GB 전용 변환(buildExtensionInfo·
  * buildGeneralBuildingValuation)을 분리. 함수 로직 변경 없이 순수 추출 + §163⑨ 상속 게이트.
  */
+import { buildGbPreDeemedPurchasePayload } from "./transfer-pre-deemed-purchase-form";
 import { bgExpenseInputsUnused } from "./burdened-gift-expense-scope";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { depreciationSupport } from "./depreciation-scope";
@@ -567,6 +568,7 @@ export function buildGeneralBuildingValuation(
     landArea,
     buildingFootprintArea,
     actualPriceMode: true,
+    ...buildGbPreDeemedPurchasePayload(asset),
     ...saleSplitFields(asset, transferDate),
     ...saleAppraisalFields(asset),
     ...partModePayload,

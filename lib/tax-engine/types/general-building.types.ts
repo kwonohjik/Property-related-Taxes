@@ -18,6 +18,7 @@ import type { PartAcqMode } from "../transfer-tax-split-gain";
 import type { SaleSplitExemption } from "../sale-split-deemed-unclear";
 import type { SaleSplitJudgmentDetail } from "./transfer-split-gain.types";
 import type { ApportionBasisKind } from "../sale-split-apportion-basis";
+import type { PreDeemedPurchaseDetail } from "./transfer-pre-deemed-purchase.types";
 
 // ============================================================
 // ============================================================
@@ -761,6 +762,8 @@ export type GeneralBuildingOutput = {
   buildingAcquisitionByInheritance?: boolean;
   /** 의제취득일(1985.1.1.) 전 상속·증여 파트의 ①②③ 비교 — 결과 카드가 읽는다(`general-building-pre-deemed.ts`). */
   preDeemedAcquisition?: GbPreDeemedEcho;
+  /** 의제취득일 전 «매수» 일괄취득 영 §176조의2④ 비교 내역(실가 모드 · ② · Q-8 a) */
+  preDeemedPurchase?: PreDeemedPurchaseDetail;
 };
 
 /** ④가 싣는 의제취득일 전 상속·증여 파트의 ①② — 그 파트(지분이면 지분 몫)의 금액. */

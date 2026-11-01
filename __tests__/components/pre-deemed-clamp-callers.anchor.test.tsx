@@ -52,7 +52,7 @@ describe("일반건물 매매 — 덮어쓰기가 토지·건물 날짜 키를 �
   it("분리 OFF 1984-06-01 → 토지·건물 둘 다 1985-01-01 (불변식 land = acq)", () => {
     render(<GbHarness initial={{ acquisitionDate: "1984-06-01", landAcquisitionDate: "1984-06-01" }} />);
     fireEvent.blur(screen.getByTestId("acq-date-building"));
-    expect(screen.getByTestId("state").textContent).toMatch(/^1985-01-01\|1985-01-01\|/);
+    expect(screen.getByTestId("state").textContent).toBe("1985-01-01|1985-01-01|1984-06-01");
   });
   it("분리 ON 토지 1984-06-01 · 건물 1995-03-01 → 토지만 1985-01-01 · 건물 1995 유지", () => {
     render(
@@ -61,7 +61,7 @@ describe("일반건물 매매 — 덮어쓰기가 토지·건물 날짜 키를 �
       />,
     );
     fireEvent.blur(screen.getByTestId("acq-date-building"));
-    expect(screen.getByTestId("state").textContent).toMatch(/^1995-03-01\|1985-01-01\|/);
+    expect(screen.getByTestId("state").textContent).toBe("1995-03-01|1985-01-01|");
   });
 });
 
