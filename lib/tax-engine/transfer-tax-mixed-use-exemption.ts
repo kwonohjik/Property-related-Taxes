@@ -14,6 +14,7 @@ import { resolveOneHouseMinHoldingYears } from "./data/one-house-holding-residen
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import { TRANSFER } from "./legal-codes";
+import type { MixedUseRentalResidence } from "./transfer-tax-mixed-use-rental-residence";
 import type { MixedUseAssetInput } from "./types/transfer-mixed-use.types";
 import { calculateHoldingPeriod } from "./tax-utils";
 import {
@@ -97,6 +98,8 @@ export function judgeMixedUseOneHouseExemption(
   warnings: string[],
   /** §88 10호 「분양권」 정의 시행일 — 단건과 같은 값(`presaleRightStartDate(parsedRates)`). §89② 분양권 축 게이트. */
   presaleRightStartDate?: Date,
+  /** §155⑳ 거주주택·§155④⑤ 합가 상대 쪽 임대 판정 — `resolveMixedUseRentalResidence` */
+  rentalResidence?: MixedUseRentalResidence,
 ): {
   /** 영 §154① 보유·거주 충족 — 중과 배제2(§155⑤ 의제) 게이트로도 쓴다. */
   meetsOneHouseRequirements: boolean;
@@ -291,9 +294,12 @@ export function judgeMixedUseOneHouseExemption(
     specialEntries: specialEntriesForMerge,
     inheritedExcludedHouses: inheritedExclusion?.excludedHouses,
   });
+  // ⑳ 불성립이면 카드의 임대 호를 주택 수에 되돌린다 · 합가 상대 쪽 임대 행은 뺀다 — 단건 `restoreRentalUnitsToHouseCount`·`mergeRentalExcluded`와 같은 규칙.
+  const rentalRestoredUnits = rentalResidence?.restoredUnits ?? 0;
+  const mergeRentalExcluded = rentalResidence?.mergeCarved ? (rentalResidence.mergeRentalRowId ? 1 : 0) : 0;
   const effectiveHouseCount =
     asset.householdHousingCountForExclusion !== undefined
-      ? Math.max(asset.householdHousingCountForExclusion - houseCountExclusionApplied - inheritedExcludedCount, 0)
+      ? Math.max(asset.householdHousingCountForExclusion + rentalRestoredUnits - houseCountExclusionApplied - inheritedExcludedCount, 0)
       : undefined;
   /**
    * §155 1세대1주택 의제(① 일시적 2주택 · ④⑤ 합가) — 비과세 주택 수 축과 중과 배제(§167의10①15호
@@ -305,9 +311,9 @@ export function judgeMixedUseOneHouseExemption(
    *    §154①(보유·거주)은 아래 `meetsOneHouseRequirements`가 따로 AND한다(단건 E-3과 같은 분담).
    */
   const surcharge15Count = surcharge15HouseCount(
-    asset.householdHousingCountForExclusion ?? 0,
+    (asset.householdHousingCountForExclusion ?? 0) + rentalRestoredUnits,
     inheritedExcludedCount,
-    houseCountExclusionApplied,
+    houseCountExclusionApplied + mergeRentalExcluded,
     verifiedSpecial.specialActVerified15Count,
   );
   const deemedInput = {
@@ -337,9 +343,11 @@ export function judgeMixedUseOneHouseExemption(
      */
     houses: asset.multiHouse?.houses,
     sellingHouseId: asset.multiHouse?.sellingHouseId,
-    knownHouseExclusionCount: houseCountExclusionApplied + inheritedExcludedCount,
+    knownHouseExclusionCount: houseCountExclusionApplied + inheritedExcludedCount + mergeRentalExcluded,
     inheritedHouseExclusionCount: inheritedExcludedCount,
-    knownHouseExclusionHouseIds,
+    knownHouseExclusionHouseIds: rentalResidence?.mergeRentalRowId
+      ? [...knownHouseExclusionHouseIds, rentalResidence.mergeRentalRowId]
+      : knownHouseExclusionHouseIds,
   };
   const deemedOneHouseBy155 = resolveDeemedOneHouseBy155(deemedInput, oneHouseSpecialRules);
   // 제외 후 1채 이하면 주택 수 축이 충족된다(§89①3호 가목). 제외가 0이면 호출부 판정 그대로.
@@ -377,7 +385,9 @@ export function judgeMixedUseOneHouseExemption(
   const houseCountOkWithoutSpecial155 =
     (effectiveHouseCount !== undefined && houseCountExclusionApplied + inheritedExcludedCount > 0
       ? isOneHouseholdForHouseCount && effectiveHouseCount <= 1
-      : (asset.isOneHouseExempt ?? true)) || deemedOneHouseBy155 !== undefined;
+      : (asset.isOneHouseExempt ?? true) && rentalRestoredUnits === 0) ||
+    deemedOneHouseBy155 !== undefined ||
+    rentalResidence?.deemed === true;
   const houseCountOk = houseCountOkWithoutSpecial155 || special155Basis !== undefined;
   // ⑦ E-14d — 단건 산식 step과 **같은 문구**(`buildInheritedExclusionSteps`)를 경고로 싣는다(제외·불성립 사유).
   if (inheritedExclusion) {
@@ -519,8 +529,7 @@ export function judgeMixedUseOneHouseExemption(
 
   /**
    * 중과 배제 ① 요소 — 단건 `resolveSurchargeDeemedOneHouseDetail`과 같은 순서·같은 술어(E-7): §89② 게이트(15호 주택 수로
-   * 다시 판정 — 단건과 같은 값) → §155①④⑤ → §155②③ → 조특법 감면주택 → §156의2·§156의3. §155⑳ 거주주택 경로는 겸용에
-   * 입력이 없다(종전 동작).
+   * 다시 판정 — 단건과 같은 값) → §155①④⑤ → §155②③ → 조특법 감면주택 → §155⑳ → §156의2·§156의3.
    */
   const clause2ForSurcharge = clause2Facts ? clause2Judge(surcharge15Count) : undefined;
   const surchargeBlocked = clause2ForSurcharge !== undefined && clause2BlocksSurchargeDeeming(clause2ForSurcharge);
@@ -534,7 +543,7 @@ export function judgeMixedUseOneHouseExemption(
   });
   // #16(G8-3) — 상속·조특법 제외로 2주택이 된 세대의 §155⑥·⑧ 의제. 단건과 같은 술어 · 비과세 축(`special155Basis`)과 같은 선언이다.
   const cultural155Deemed =
-    deemedOneHouseBy155 === undefined && inheritedDeemed === undefined && specialDeemed === undefined
+    deemedOneHouseBy155 === undefined && inheritedDeemed === undefined && specialDeemed === undefined && !rentalResidence?.deemed
       ? culturalOrUnavoidableDeemingBasis({
           isOneHousehold: isOneHouseholdForHouseCount,
           houseCount: surcharge15Count,
@@ -547,7 +556,7 @@ export function judgeMixedUseOneHouseExemption(
         })
       : undefined;
   const rightDeemed =
-    deemedOneHouseBy155 === undefined && inheritedDeemed === undefined && specialDeemed === undefined && cultural155Deemed === undefined && clause2ForSurcharge
+    deemedOneHouseBy155 === undefined && inheritedDeemed === undefined && specialDeemed === undefined && !rentalResidence?.deemed && cultural155Deemed === undefined && clause2ForSurcharge
       ? clause2SurchargeDeemed(clause2ForSurcharge)
       : undefined;
 
@@ -577,7 +586,7 @@ export function judgeMixedUseOneHouseExemption(
     //   ⇒ 단건(`resolveSurchargeDeemedOneHouse`)과 같은 술어로 경로를 연다.
     surchargeDeemedOneHouseBy155: surchargeBlocked
       ? undefined
-      : (deemedOneHouseBy155 ?? inheritedDeemed ?? specialDeemed?.basis ?? cultural155Deemed ?? rightDeemed?.basis),
+      : (deemedOneHouseBy155 ?? inheritedDeemed ?? specialDeemed?.basis ?? (rentalResidence?.deemed ? "long_term_rental_residence" : undefined) ?? cultural155Deemed ?? rightDeemed?.basis),
     surchargeDeemedRestsOnInheritedExclusion: !surchargeBlocked && cultural155Deemed !== undefined && inheritedExcludedCount > 0,
     // #16 — 영 §167의10①4호 슬롯의 주택 수는 ① 요소와 같은 제외 후 값이다(route가 원시 수로 만든 boolean을 대체한다).
     surchargeUnavoidableOutsideCapitalSlot:

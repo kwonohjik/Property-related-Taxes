@@ -15,6 +15,7 @@ import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { buildMixedUseAssetInput } from "./mixed-use-asset-input";
+import { MIXED_USE_RENTAL_B_UNSUPPORTED } from "@/lib/tax-engine/transfer-tax-mixed-use-rental-residence-message";
 import { pickArticle89Clause2Facts } from "@/lib/tax-engine/transfer-tax-89-2-consequences";
 import { dispatchGeneralBuilding } from "./general-building-route-helper";
 import { calculateGeneralBuildingFractional } from "./general-building-fractional";
@@ -105,6 +106,14 @@ export async function POST(request: NextRequest) {
           fieldErrors,
         },
       },
+      { status: 400 },
+    );
+  }
+
+  // 단계 2b-0: 겸용주택 × §155⑳ B·§154⑩ — §161 안분을 겸용 4파트에 적용한 근거가 없어 계산하지 않는다(⑧과 같은 규칙).
+  if (parsed.data.propertyType === "mixed-use-house" && parsed.data.rentalHousingException?.applyException && parsed.data.rentalHousingException.scenario === "B") {
+    return NextResponse.json(
+      { error: { code: TaxErrorCode.INVALID_INPUT, message: "입력값이 올바르지 않습니다", fieldErrors: { "rentalHousingException.scenario": [MIXED_USE_RENTAL_B_UNSUPPORTED] } } },
       { status: 400 },
     );
   }
@@ -247,6 +256,8 @@ export async function POST(request: NextRequest) {
           culturalHeritageHouse: engineInput.culturalHeritageHouse,
           unavoidableOutsideCapitalHouse: engineInput.unavoidableOutsideCapitalHouse,
         },
+        // ⑭ §155⑳ 거주주택·§155④⑤ 합가 상대 쪽 임대 — ⚠️ `engineInput`(Date 변환본).
+        rentalResidenceInput: engineInput,
         // ⑭ §89② 세대 사실 (E-7) — ⚠️ `engineInput`(권리 취득일·합가일 등 Date 변환본).
         article89Clause2Facts: pickArticle89Clause2Facts(ei),
         isOneHousehold: data.isOneHousehold,

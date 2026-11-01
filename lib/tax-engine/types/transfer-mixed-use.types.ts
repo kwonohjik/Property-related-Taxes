@@ -296,6 +296,12 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
     [K in "ruralHouse" | "culturalHeritageHouse" | "unavoidableOutsideCapitalHouse"]: TransferTaxInput[K];
   };
   /**
+   * §155⑳ 거주주택·§155④⑤ 합가 상대 쪽 임대 판정용 **단건 입력** — route가 주입한다(`engineInput`, Date 변환본).
+   * 판정은 단건과 같은 함수(`judgeRentalHousingEligibility` 등)가 이 입력으로 한다 — 사실 하나마다 필드를 새로 만들면 경로가 갈린다.
+   * 🔑 미전달(undefined)이면 판정하지 않는다. 컴패니언 겸용은 ⑳을 선언할 수 없어 미전달이다(`canDeclareRentalHousingException`).
+   */
+  rentalResidenceInput?: TransferTaxInput;
+  /**
    * 「소득세법」 §89② 판정용 **세대 사실**(보유 조합원입주권·분양권 · 예외 선언 · 합가 · 명부 등) — route 주입(E-7).
    *
    * 겸용주택의 주택 부분은 「소득세법 시행령」 §154③상 §89①3호를 적용할 때의 「주택」이므로, 주택과 권리를 함께

@@ -81,6 +81,7 @@ export interface MixedUseAssetInputSources {
    * `unavoidableOutsideCapitalHouse`(아래 §104⑦ 중과 입력)와 같은 사실이나 층위가 다르다 — 그쪽은 중과 4호 boolean 파생의 재료다.
    */
   article155SpecialHouses: MixedUseAssetInput["article155SpecialHouses"];
+  rentalResidenceInput: MixedUseAssetInput["rentalResidenceInput"];
   /**
    * 「소득세법」 §89② 세대 사실(E-7) — `pickArticle89Clause2Facts`로 고른다.
    * ⚠️ `engineInput`(날짜 Date 변환본) 또는 파트 카드의 컴패니언 item에서 고를 것 — 카드마다 도는 단건 엔진과
@@ -224,6 +225,7 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     specialHouseExclusions: s.specialHouseExclusions,
     // ⑭ §155⑥1호·⑦·⑧ 특례 주택 선언 (S08-3) — 비과세 주택 수 축.
     article155SpecialHouses: s.article155SpecialHouses,
+    rentalResidenceInput: s.rentalResidenceInput,
     // ⑭ 법 §104⑦ — `rawHouses` 미전송(단독 주택)이면 undefined → 엔진이 중과 판정을 건너뛴다.
     multiHouse: mixedMultiHouse,
     /**
