@@ -41,6 +41,8 @@ import {
 
 export type { GeneralBuildingActualPricePayload, ActualGbCardsResult } from "./general-building-route-actual.types";
 import type { GeneralBuildingActualPricePayload, ActualGbCardsResult } from "./general-building-route-actual.types";
+import { computePreDeemedClause2 } from "@/lib/tax-engine/pre-deemed-purchase-clause2";
+import type { PreDeemedPurchaseDetail } from "@/lib/tax-engine/types/transfer-pre-deemed-purchase.types";
 
 /**
  * 경로 B 카드 조립 — §166⑥ 비율로 실거래가 안분 + NBL 중과.
@@ -77,7 +79,9 @@ export function buildActualGeneralBuildingCards(
     landAppraisalAtTransfer, buildingAppraisalAtTransfer,
     saleSplitExemption, saleSplitContract,
     landCarryoverTaxation, buildingCarryoverTaxation,
+    preDeemedPurchase,
   } = payload;
+  let preDeemedPurchaseDetail: PreDeemedPurchaseDetail | undefined;
 
   /**
    * 필요경비 총액 — 자산 단위 자본적지출 + 양도비(§97①2호·3호). **legacy 후퇴 포함**(P-3).
@@ -366,8 +370,12 @@ export function buildActualGeneralBuildingCards(
       actualSource = "bundled_apportion";
       // 🔴 **취득시** 비율이다(P-2) — §100② 본문 「취득 당시」. 종전 양도시 비율은 정정 대상이었다.
       requireAcqStd("취득가액");
-      landAcq = apportionByStdPrice(actualAcquisitionPrice, acqLandStdTotal, acqBuildingStd).land;
-      buildingAcq = actualAcquisitionPrice - landAcq;
+      // 의제취득일 전 매수 일괄취득 영 §176조의2④ — 취득월이 하나라 안분 전 총액에 배율 1회(Q-8 a). 실가 모드라 ①은 미산정(Q-2 a).
+      const c2 = preDeemedPurchase && computePreDeemedClause2(actualAcquisitionPrice, preDeemedPurchase);
+      if (c2) preDeemedPurchaseDetail = { ...c2, selected: "clause2", expenseBasis: "actual" };
+      const totalAcq = c2 ? c2.clause2Amount : actualAcquisitionPrice;
+      landAcq = apportionByStdPrice(totalAcq, acqLandStdTotal, acqBuildingStd).land;
+      buildingAcq = totalAcq - landAcq;
     } else {
       // 취득가액 0 — 나눌 것이 없으므로 취득시 기준시가를 요구하지 않는다(거짓 차단 금지).
       landAcq = 0;
@@ -543,6 +551,7 @@ export function buildActualGeneralBuildingCards(
   }
 
   return {
+    ...(preDeemedPurchaseDetail ? { preDeemedPurchaseDetail } : {}),
     // §97③ 감가상각비 — 원건물 카드에 싣는다(공제는 카드 → 단건 엔진이 한 번만 한다).
     // 부담부증여(§159)는 카드 취득가액이 채무비율 안분값이라 공제 대상이 아니다 — 싣지 않는다(⑧ validate가 먼저 막는다).
     cards: payload.burdenedGiftInfo ? cards : attachBuildingDepreciation(cards, payload.depreciationAmount),
@@ -563,7 +572,7 @@ export function buildActualGeneralBuildingCards(
       ? multiplyByArea(acquisitionLandPricePerSqm, landArea)
       : undefined,
     acqBuilding1StdTotal: acquisitionBuildingStdPrice ?? undefined,
-    bundledActualAcquisitionPrice: actualAcquisitionPrice ?? undefined,
+    bundledActualAcquisitionPrice: preDeemedPurchaseDetail?.clause2Amount ?? actualAcquisitionPrice ?? undefined,
     bundledActualExpenses: actualExpenses ?? undefined,
     // 신규 두 칸 입력일 때만 — legacy 후퇴(`declaredExpenses === 0`)에서는 안분 echo가 없다(표시 계층이 종전 산식을 쓴다).
     // 파트 자본적지출 칸만 있고 legacy 총액이 없으면 그 값도 싣는다 — 산식이 「직접 입력」 항목으로 적는다(`resolvePartExpenses`와 같은 축).
@@ -692,6 +701,7 @@ export function runActualGeneralBuildingOnce(
     ...actualBlockEcho(built),
     // 구분 기재 없이 안분한 경우 엔진이 쓴 basis 종류(표시 전용 echo — 판정과 배타).
     ...(built.saleApportionBasisKind ? { saleApportionBasisKind: built.saleApportionBasisKind } : {}),
+    ...(built.preDeemedPurchaseDetail ? { preDeemedPurchase: built.preDeemedPurchaseDetail } : {}),
   } as GeneralBuildingOutput;
 
   return {

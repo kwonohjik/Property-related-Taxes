@@ -371,6 +371,13 @@ export function GeneralBuildingAcquisitionCards({
           <CompanionAcqPurchaseBlock
             acquisitionDate={asset.landAcquisitionDate}
             onAcquisitionDateChange={setLandAcqDate}
+            // 분리 OFF 일괄취득만 실제 취득일을 보존한다(영 §176조의2④ · Q-8 a) — 분리 ON은 파트별이라 2차 B에서 받는다.
+            {...(isSeparate
+              ? {}
+              : {
+                  onAcquisitionDateClamp: (v: string, original: string) =>
+                    onChange({ acquisitionDate: v, landAcquisitionDate: v, preDeemedOriginalAcquisitionDate: original }),
+                })}
             fieldAcquisitionDate={isSeparate ? "landAcquisitionDate" : "acquisitionDate"}
             useEstimatedAcquisition={asset.useEstimatedAcquisition}
             onUseEstimatedChange={(v) => onChange({ useEstimatedAcquisition: v })}

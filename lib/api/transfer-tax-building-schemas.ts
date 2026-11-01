@@ -12,6 +12,7 @@ import { z } from "zod";
 import { LOCAL_TAX_ZONE_INPUT_KEYS } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { refineGbValuationRequired } from "./transfer-tax-schema-required-refines-gb";
 import { reductionSchema } from "./transfer-tax-schema-reductions";
+import { preDeemedPurchaseSchema } from "./transfer-tax-schema-pre-deemed-purchase";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { carryoverExclusionShape, carryoverGiftEventShape, carryoverHouseholdStartIssues } from "./transfer-tax-schema-split-carryover";
 import {
@@ -246,6 +247,8 @@ export const generalBuildingValuationSchema = z.object({
    * (= 분리 OFF). ⚠️ 여기 없으면 Zod가 **조용히 strip**해 토지 카드가 건물 날짜로 계산된다.
    */
   landAcquisitionDate: z.string().date().optional(),
+  /** 의제취득일 전 매수 일괄취득 영 §176조의2④ — 실제 취득일·1965.01. 전 배율(실가 모드 · ⑧ `preDeemedPurchaseInputError`와 같은 규칙). 누락 = 침묵 strip */
+  preDeemedPurchase: preDeemedPurchaseSchema.optional(),
   /**
    * 파트별 취득 방식 (2026-08-05 P3). 한 파트라도 `estimated`면 환산 경로로 라우팅되고,
    * 비-환산 파트는 그 파트의 실지거래가액을 쓰며 개산공제(§163⑥)가 배제된다.

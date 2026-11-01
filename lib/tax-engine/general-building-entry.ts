@@ -187,6 +187,14 @@ export function coerceGeneralBuildingPayload(
     ...(coercedLandCt ? { landCarryoverTaxation: coercedLandCt } : {}),
     ...(coercedBuildingCt ? { buildingCarryoverTaxation: coercedBuildingCt } : {}),
     ...(coercedExtInfo ? { extensionInfo: coercedExtInfo } : {}),
+    ...(gbRaw.preDeemedPurchase
+      ? {
+          preDeemedPurchase: {
+            ...(gbRaw.preDeemedPurchase as object),
+            originalAcquisitionDate: toOptionalDate((gbRaw.preDeemedPurchase as { originalAcquisitionDate?: unknown }).originalAcquisitionDate),
+          },
+        }
+      : {}),
     // ⑭ 양도시 감정평가가액의 **감정일자** — JSON 경유 후 문자열로 도착한다. `Date`로 바꾸지
     //    않으면 엔진의 유효 창 비교(`getTime()`)가 런타임에 깨진다(`lib/api/date-coerce.ts`).
     ...(gbRaw.appraisalDateAtTransfer

@@ -13,13 +13,15 @@
  *
  * 범위(계획서 `docs/02-design/features/realestate-pre-deemed-purchase-176-2-4.plan.md` Q-3 a · §12):
  *   토지·주택(토지·건물 같은 날 취득 · PHD 포함)·건물·상가 · 재개발 원조합원(완공 APT·입주권 — ① = 영 §166③ · Q-4 a).
+ *   일반건물은 이 STEP을 타지 않는다 — 실가 경로가 안분 전 총액에 ②를 쓴다(`general-building-route-actual.ts` · Q-8 a · Q-15 b).
  *   그 밖의 입력은 값을 바꾸지 않고 사유를 경고로 남긴다(⑧·⑫가 먼저 막는다).
  */
 
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
 import type { PreDeemedPurchaseDetail } from "./types/transfer-pre-deemed-purchase.types";
 import { DEEMED_ACQUISITION_DATE } from "./types/inheritance-acquisition.types";
-import { monthKey, mulDivFloor, ppiMonthlyX100, ratioToScaled6 } from "./producer-price-ratio";
+import { monthKey } from "./producer-price-ratio";
+import { computePreDeemedClause2 } from "./pre-deemed-purchase-clause2";
 import { calcTransferGain } from "./transfer-tax-helpers";
 import { runCommercialBuildingStep } from "./transfer-tax-commercial-step";
 import { isRedevelopmentActive } from "./redevelopment-dispatch";
@@ -32,9 +34,6 @@ const IN_SCOPE_PROPERTY_TYPES: ReadonlySet<TransferTaxInput["propertyType"]> = n
   "building",
   "commercial_building",
 ]);
-
-/** 의제취득일 직전일이 속하는 달 — 1984.12. */
-const DEEMED_PREV = monthKey(new Date(DEEMED_ACQUISITION_DATE.getTime() - 86_400_000));
 
 const METHOD_LABEL: Record<NonNullable<PreDeemedPurchaseDetail["clause1Method"]>, string> = {
   estimated: "환산취득가액",
@@ -116,39 +115,20 @@ export function runPreDeemedPurchaseStep(
   const actualBase = Math.max(0, Math.floor(isActualMode ? input.acquisitionPrice : (pd.actualPrice ?? 0)));
   if (!(actualBase > 0)) return undefined;
 
-  const acq = monthKey(pd.originalAcquisitionDate);
-  const ppiAcq = ppiMonthlyX100(acq.year, acq.month);
-  const ppiPrev = ppiMonthlyX100(DEEMED_PREV.year, DEEMED_PREV.month);
-  let clause2Amount: number;
-  let ratio: number;
-  let ratioSource: PreDeemedPurchaseDetail["ratioSource"] = "table";
-  if (ppiAcq !== undefined && ppiPrev !== undefined) {
-    clause2Amount = mulDivFloor(actualBase, BigInt(ppiPrev), BigInt(ppiAcq));
-    ratio = ppiPrev / ppiAcq;
-  } else if (pd.ppiRatio !== undefined && pd.ppiRatio > 0) {
-    ratioSource = "override";
-    ratio = pd.ppiRatio;
-    clause2Amount = mulDivFloor(actualBase, ratioToScaled6(ratio), BigInt(1_000_000));
-  } else {
+  const c2 = computePreDeemedClause2(actualBase, pd);
+  if (!c2) {
     // 자동 fallback 금지 — ⑧·⑫가 막는 입력이다. 엔진 직접 호출 방어로 ②를 산정하지 않았음을 남긴다.
     return {
       applied: false,
-      warning: `취득월(${acq.key})이 생산자물가지수 계열(1965.01~) 이전이라 ②(${TRANSFER.PRE_DEEMED_PURCHASE_MAX} 2호)를 산정하지 않았습니다 — 물가상승 배율을 입력하세요.`,
+      warning: `취득월(${monthKey(pd.originalAcquisitionDate).key})이 생산자물가지수 계열(1965.01~) 이전이라 ②(${TRANSFER.PRE_DEEMED_PURCHASE_MAX} 2호)를 산정하지 않았습니다 — 물가상승 배율을 입력하세요.`,
     };
   }
+  const { clause2Amount, ratio, ratioSource, acquisitionMonth, deemedPrevMonth, ppiAtAcquisition, ppiAtDeemedPrev } = c2;
 
   const clause1 = isActualMode ? undefined : clause1Of(input);
   const selected: PreDeemedPurchaseDetail["selected"] = clause1 && clause1.amount > clause2Amount ? "clause1" : "clause2";
   const detail: PreDeemedPurchaseDetail = {
-    originalAcquisitionDate: pd.originalAcquisitionDate.toISOString().slice(0, 10),
-    acquisitionMonth: acq.key,
-    deemedPrevMonth: DEEMED_PREV.key,
-    ...(ppiAcq !== undefined ? { ppiAtAcquisition: ppiAcq / 100 } : {}),
-    ...(ppiPrev !== undefined ? { ppiAtDeemedPrev: ppiPrev / 100 } : {}),
-    ratioSource,
-    ratio,
-    actualBase,
-    clause2Amount,
+    ...c2,
     ...(clause1 ? { clause1Amount: clause1.amount, clause1Method: clause1.method } : {}),
     selected,
     expenseBasis: selected === "clause2" ? "actual" : "estimated",
@@ -156,7 +136,7 @@ export function runPreDeemedPurchaseStep(
 
   const ratioText =
     ratioSource === "table"
-      ? `생산자물가지수 ${DEEMED_PREV.key} ${(ppiPrev! / 100).toFixed(2)} ÷ ${acq.key} ${(ppiAcq! / 100).toFixed(2)}`
+      ? `생산자물가지수 ${deemedPrevMonth} ${ppiAtDeemedPrev!.toFixed(2)} ÷ ${acquisitionMonth} ${ppiAtAcquisition!.toFixed(2)}`
       : `물가상승 배율 ${ratio}(직접 입력)`;
   const step: CalculationStep = {
     label: "의제취득일 전 매수 — 취득가액 비교",
