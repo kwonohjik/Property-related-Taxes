@@ -275,7 +275,9 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
   // 종전에는 여기에만 있어 사이드바가 계약 총액을 신고단위 양도가액으로 표시했다.
   const isReceiveOnly = isReceiveOnlyFiling(primary);
   const receiveOnlySettlementAmount = isReceiveOnly ? parseAmount(primary.redevSettlementAmount) : 0;
-  const receiveOnlyTransferDate = isReceiveOnly && primary.redevSettlementSaleDate
+  // 함께 파는 자산이 있으면 묶음 양도일은 폼 값이다 — 첫 자산의 고시일로 바꾸면 다른 자산의 보유기간까지 끝난다.
+  // 단독 APT는 자기 `settlementSaleDate` 축으로 계산된다(계획서 `bundle-receive-only-order.plan.md` V-1).
+  const receiveOnlyTransferDate = isReceiveOnly && primary.redevSettlementSaleDate && form.assets.every((a) => isReceiveOnlyFiling(a))
     ? primary.redevSettlementSaleDate
     : null;
 

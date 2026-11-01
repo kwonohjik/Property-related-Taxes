@@ -48,6 +48,7 @@ import { refineGbBurdenedGiftActualPath } from "./transfer-tax-schema-gb-bg-refi
 import { burdenedGiftBundleKind } from "@/lib/calc/burdened-gift-transfer-price-scope";
 import { FRACTIONAL_RATIO_SUM_TOLERANCE } from "@/lib/calc/fractional-ratio-sum-tolerance";
 import { receiveOnlyShareIssue } from "@/lib/calc/axis-b-receive-only";
+import { bundleReceiveOnlyIssue } from "@/lib/calc/bundle-receive-only";
 import { MIXED_BURDENED_GIFT_BUNDLE_MESSAGE } from "@/lib/calc/burdened-gift-transfer-price-scope";
 
 // ─── ⑫ 상업용건물·일반건물 환산취득가 Zod 스키마 → sibling 파일 분리 ──────
@@ -291,6 +292,25 @@ export const propertySchema = z
         );
         if (receiveOnlyIssue) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets"], message: receiveOnlyIssue });
+        }
+      }
+
+      if (!fullFractionalBundle && bgKind === "none") {
+        const bundleReceiveOnly = bundleReceiveOnlyIssue({
+          transferDate: data.transferDate,
+          apportioned: data.bundledSaleMode === "apportioned",
+          assets: [
+            { redevelopment: data.redevelopment, salePrice: data.primaryActualSalePrice },
+            ...companions.map((c) => ({ redevelopment: c.redevelopment, salePrice: c.fixedSalePrice })),
+          ].map(({ redevelopment: rd, salePrice }) => ({
+            receiveOnly: rd?.receiveOnlyMode === true,
+            saleDate: rd?.settlementSaleDate,
+            salePrice,
+            settlementAmount: rd?.settlementAmount,
+          })),
+        });
+        if (bundleReceiveOnly) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets"], message: bundleReceiveOnly });
         }
       }
 

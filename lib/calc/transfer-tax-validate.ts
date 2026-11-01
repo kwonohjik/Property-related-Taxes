@@ -21,6 +21,8 @@ import {
 import { parseAmount } from "@/lib/calc/number-parse";
 import { isFractionalRatioSumOutOfTolerance } from "./fractional-ratio-sum-tolerance";
 import { receiveOnlyShareIssue } from "./axis-b-receive-only";
+import { bundleReceiveOnlyIssue } from "./bundle-receive-only";
+import { effectiveBundledSaleMode } from "./bundled-sale-mode";
 import { isReceiveOnlyFiling } from "./redev-field-scope";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
@@ -510,6 +512,20 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
       }, 0);
       if (sumActual !== parseAmount(form.contractTotalPrice))
         issues.push({ step, field: "contractTotalPrice", message: "구분 기재된 양도가액 합이 총 양도가액과 일치하지 않습니다." });
+    }
+
+    // 함께 양도 × 청산금 수령 단독 — 계약서 가액은 ④와 같이 지분율을 곱한 값으로 비교한다.
+    if (form.assets.length > 1 && !fullFractional && !fractionalModeWithoutBundle && !form.assets.some((a) => a.transferType === "burdened_gift")) {
+      const bundleReceiveOnly = bundleReceiveOnlyIssue({
+        transferDate: form.transferDate,
+        apportioned: effectiveBundledSaleMode(form) === "apportioned",
+        assets: form.assets.map((a) => {
+          const r = getOwnershipRatio(a);
+          const v = parseAmount(a.actualSalePrice);
+          return { receiveOnly: isReceiveOnlyFiling(a), saleDate: a.redevSettlementSaleDate, salePrice: r < 1 ? applyRatio(v, r) : v, settlementAmount: parseAmount(a.redevSettlementAmount) };
+        }),
+      });
+      if (bundleReceiveOnly) issues.push({ step, message: bundleReceiveOnly });
     }
   }
 
