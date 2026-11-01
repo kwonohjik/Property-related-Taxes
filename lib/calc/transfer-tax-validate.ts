@@ -19,7 +19,7 @@ import {
   TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE,
 } from "@/lib/tax-engine/data/transfer-supported-period";
 import { parseAmount } from "@/lib/calc/number-parse";
-import { FRACTIONAL_RATIO_SUM_TOLERANCE } from "./fractional-ratio-sum-tolerance";
+import { isFractionalRatioSumOutOfTolerance } from "./fractional-ratio-sum-tolerance";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { evaluateUnconditionalExemption } from "./nbl-unconditional-exemption-status";
@@ -470,14 +470,14 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
     }
 
     // 지분 분할 취득 — 전 지분율 합계 = 100% 검증. 미달/초과 시 양도가액(총양도가×지분율) 합이
-    // 총액과 달라져 과소/과대과세. (허용 폭 = `FRACTIONAL_RATIO_SUM_TOLERANCE` — 33.33×3=99.99 등 2자리 반올림 흡수.)
+    // 총액과 달라져 과소/과대과세. (허용 폭 = `FRACTIONAL_RATIO_SUM_TOLERANCE` + 부동소수 여유 — 33.33×3=99.99 등 2자리 반올림 흡수.)
     if (fullFractional) {
       const sumRatio = form.assets.reduce((s, a) => {
         const n = parseFloat(a.ownershipNumerator);
         const d = parseFloat(a.ownershipDenominator);
         return s + (isFinite(n) && isFinite(d) && d > 0 ? n / d : 0);
       }, 0);
-      if (Math.abs(sumRatio - 1) > FRACTIONAL_RATIO_SUM_TOLERANCE) {
+      if (isFractionalRatioSumOutOfTolerance(sumRatio)) {
         issues.push({
           step,
           message: `지분 분할 취득: 전체 지분율 합계가 100%가 되어야 합니다 (현재 ${(sumRatio * 100).toFixed(2)}%).`,

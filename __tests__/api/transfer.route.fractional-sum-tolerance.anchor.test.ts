@@ -129,3 +129,70 @@ describe("⑫ 일반건물 지분 — ⑧과 같은 허용 폭", () => {
       expect(r.sumBlocked).toBe(true);
     });
 });
+
+describe("허용 경계(합 99.94%·100.06%) — 부동소수로 입력 모양·순서에 따라 갈리지 않는다", () => {
+  const INH = GB_SAMPLES.INH[0][0];
+  // 십진으로 정확히 허용 폭 끝(0.06%p)인 합 — 정확 판정은 통과(`>`이므로 경계 포함). 순서를 바꾼 쌍을 함께 둔다.
+  const EXACT_EDGE: [string, string[]][] = [
+    ["99.94 = 49.97×2", ["49.97", "49.97"]],
+    ["99.94 = 33.31, 33.31, 33.32", ["33.31", "33.31", "33.32"]],
+    ["99.94 = 33.32, 33.31, 33.31", ["33.32", "33.31", "33.31"]],
+    ["99.94 = 90, 5, 4.94", ["90", "5", "4.94"]],
+    ["99.94 = 4.94, 5, 90", ["4.94", "5", "90"]],
+    ["100.06 = 50.03×2", ["50.03", "50.03"]],
+    ["100.06 = 33.35, 33.35, 33.36", ["33.35", "33.35", "33.36"]],
+    ["100.06 = 33.36, 33.35, 33.35", ["33.36", "33.35", "33.35"]],
+    ["100.06 = 90, 5, 5.06", ["90", "5", "5.06"]],
+    ["100.06 = 5.06, 5, 90", ["5.06", "5", "90"]],
+  ];
+  // 경계에서 0.001%p만 벗어난 3자리 입력 + 경계 ±0.01%p — 정확 판정은 차단
+  const JUST_OUTSIDE: [string, string[]][] = [
+    ["99.939(3자리 입력)", ["49.97", "49.969"]],
+    ["100.061(3자리 입력)", ["50.03", "50.031"]],
+    ["99.93", ["50", "30", "19.93"]],
+    ["100.07", ["50", "30", "20.07"]],
+  ];
+
+  async function landStatus(pcts: string[]) {
+    const f = landForm(pcts);
+    const r = await postTransfer((await captureBody(f)) as L);
+    return { v8: sumMsgs(f).length > 0, status: r.status };
+  }
+  async function gbStatus(pcts: string[]) {
+    const f = form(T, pcts.map((p, i) => asset(i + 1, INH, { ownershipNumerator: p, ownershipDenominator: "100" })));
+    const r = await postTransfer(JSON.parse(JSON.stringify(await captureBody(f))) as L);
+    return {
+      v8: sumMsgs(f).length > 0,
+      v12: Object.keys(r.json?.error?.fieldErrors ?? {}).includes("generalBuildingShares"),
+      status: r.status,
+    };
+  }
+
+  for (const [name, pcts] of EXACT_EDGE) {
+    it(`🔑 ${name} — ⑧·⑫ 일반건물·⑫ 가드 모두 통과(경계 포함)`, async () => {
+      const land = await landStatus(pcts);
+      expect(land.v8).toBe(false);
+      expect(land.status).toBe(200);
+      const gb = await gbStatus(pcts);
+      expect(gb.v8).toBe(false);
+      expect(gb.v12).toBe(false);
+    });
+  }
+
+  for (const [name, pcts] of JUST_OUTSIDE) {
+    it(`🔑 ${name} — 경계 밖: ⑧ 차단 · ⑫ 일반건물 합계 거부`, async () => {
+      const gb = await gbStatus(pcts);
+      expect(gb.v8).toBe(true);
+      expect(gb.v12).toBe(true);
+      expect(gb.status).toBe(400);
+      expect(sumMsgs(landForm(pcts))).toHaveLength(1);
+    });
+  }
+
+  it("순서 무관 — 같은 합 100.06%의 [90, 5, 5.06]과 [5.06, 5, 90]이 같은 판정이다", async () => {
+    const a = await gbStatus(["90", "5", "5.06"]);
+    const b = await gbStatus(["5.06", "5", "90"]);
+    expect([a.v8, a.v12]).toEqual([b.v8, b.v12]);
+    expect(a.v8).toBe(false);
+  });
+});
