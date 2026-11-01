@@ -208,8 +208,9 @@ export function CompanionAssetCard({
         totalTransferExpense,
         bundledSaleMode,
         isFractionalSplit: splitMode === "fractional",
+        transferDate,
       }),
-    [acquisitionAsset, totalTransferExpense, bundledSaleMode, splitMode],
+    [acquisitionAsset, totalTransferExpense, bundledSaleMode, splitMode, transferDate],
   );
 
   // 접기 상태 — 첫 자산(양도일·신고일 호스트)은 ① 자동 펼침, 그 외 전부 접힘.
@@ -470,6 +471,7 @@ export function CompanionAssetCard({
             isSingleAsset={!hasSiblings}
             isNonPrimaryAsset={!isPrimary}
             isFractionalSplit={splitMode === "fractional"}
+            transferDate={transferDate}
             totalTransferExpense={totalTransferExpense}
           />
         </AssetSection>

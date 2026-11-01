@@ -50,6 +50,12 @@ export interface RightToMoveInValuation {
   paidInstallments: number;
   /** 평가기준일 현재의 프리미엄 (상증령 §51② 본문). 0 허용. */
   premium: number;
+  /**
+   * 승계조합원(매수·상속·증여로 승계한 입주권)인가. 담보(§66)·임대(§61⑤) 승으로 소령 §159①1호 A 괄호가 발동하는 시기(`rtmiParenEnumerated`)에는
+   * 취득가액을 입주권 기준시가(소령 §165① — 취득일까지 납입한 금액 + 취득일 현재의 프리미엄)로 정하는데, 승계는 그 두 값이 명확하지만
+   * 원조합원은 「취득일」·「납입한 금액」의 범위가 불명확해(질의 H-2 대기) 계산하지 않는다 — 엔진이 이 표지로 가른다. 미전달 = 원조합원.
+   */
+  isSuccessor?: boolean;
 }
 
 export interface BurdenedGiftInfo {

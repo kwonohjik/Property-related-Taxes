@@ -107,6 +107,11 @@ export function sumResidenceMonths(
   }, 0);
 }
 
+/** 거주 구간 중 `start` 이후만 합산한다 — 축 B에서 늦게 취득한 지분의 거주(`lib/calc/axis-b-share-residence.ts`). */
+export function sumResidenceMonthsFrom(periods: ResidencePeriod[], start: string): number {
+  return periods.reduce((sum, p) => sum + residenceIntervalMonths(p.moveInDate < start ? start : p.moveInDate, p.moveOutDate), 0);
+}
+
 /**
  * 거주기간 개월수 도출 — API 변환(transfer-tax-api)·UI 거주요건 안내 메시지(Step4) 공용(단일 진실).
  * interval 모드면 구간 합산(구간이 0개면 0개월), direct 모드면 자산 직접입력 또는 form-global fallback.

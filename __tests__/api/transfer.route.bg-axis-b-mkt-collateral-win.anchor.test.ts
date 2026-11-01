@@ -190,7 +190,7 @@ describe("AB-4 범위 밖 종류는 «채무액 초과»가 아니라 정확한 
       bgRightMemberRightsValue: "700000000", bgRightPaidInstallments: "200000000", bgRightPremium: "100000000", bgMarketValueAtTransfer: "1000000000",
     });
     const m = check(a);
-    expect(m).toContain("조합원입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어");
+    expect(m).toContain("원조합원 입주권의 기준시가"); // 원조합원 — 취득일·납입한 금액의 범위가 불명확해 계산하지 않는다(I-1 이후 문구 · 승계 단건만 계산)
     expect(m).not.toContain("초과합니다");
   });
   it("주택은 막지 않는다(취득시 기준시가가 있으면 null)", () => {

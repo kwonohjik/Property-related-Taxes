@@ -6,6 +6,7 @@
  * 본문은 종전 그대로다 — 바깥 함수의 지역 변수를 `ctx`로 받는다.
  */
 import { REGISTERED_ESTIMATED_DEDUCTION_RATE, UNREGISTERED_ESTIMATED_DEDUCTION_RATE } from "./legal-codes/burdened-gift";
+import { estimatedDeductionRate } from "./legal-codes/transfer-nbl";
 import { safeMultiplyThenDivide, calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { apportionByStdPrice } from "./std-price-apportion";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
@@ -321,14 +322,16 @@ export function resolveWholeBgAcquisition(ctx: BgAcquisitionContext): BgAcquisit
     //   K-5(환산)·legacy(market)만 정정: 종전 환산/market 가액 × 3%였음 (M-4).
     const landStdApportioned = apportionAcquisitionPrice(landStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
     const buildingStdApportioned = apportionAcquisitionPrice(buildingStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
-    landEstimatedDeduction = estimatedDeductionForBurdenedGift(landStdApportioned, isUnregistered);
-    buildingEstimatedDeduction = estimatedDeductionForBurdenedGift(buildingStdApportioned, isUnregistered);
+    landEstimatedDeduction = estimatedDeductionForBurdenedGift(landStdApportioned, isUnregistered, isRightToMoveInValuation);
+    buildingEstimatedDeduction = estimatedDeductionForBurdenedGift(buildingStdApportioned, isUnregistered, isRightToMoveInValuation);
     // 율 echo — 표시 층이 「× 3%」를 다시 적으면 미등기(§163⑥1호 단서 3/1000)에서 적힌 산식이
     // 적힌 값을 만들지 못한다. **개산공제 경로에서만** 채운다 — 위 split 분기는 실비 안분이라
     // 율이라는 개념 자체가 없다.
-    appliedEstimatedDeductionRate = isUnregistered
-      ? UNREGISTERED_ESTIMATED_DEDUCTION_RATE
-      : REGISTERED_ESTIMATED_DEDUCTION_RATE;
+    appliedEstimatedDeductionRate = isRightToMoveInValuation
+      ? estimatedDeductionRate(isUnregistered, "right_to_move_in")
+      : isUnregistered
+        ? UNREGISTERED_ESTIMATED_DEDUCTION_RATE
+        : REGISTERED_ESTIMATED_DEDUCTION_RATE;
   }
 
   /**

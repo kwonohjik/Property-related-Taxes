@@ -8,6 +8,8 @@
  * ⚠️ `engineInput`을 그대로 고친다(주 자산 토지의 `primaryContextForCompanionRate`) — 종전 route 본문과 같은 동작이다.
  */
 import { inheritedShareResidenceMonths } from "@/lib/api/transfer-tax-schema-household-refines";
+import { shareStartsLaterThanPrimary } from "@/lib/api/transfer-tax-schema-household-refines";
+import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import type { PropertySchemaInput } from "@/lib/api/transfer-tax-schema";
@@ -34,6 +36,9 @@ import { asReverseUnitHouse, resolveReverseAppurtenantUnit, reverseUnitHouseFact
 import { aggregateWithSameDayRightWarning, withSameDayRightsHeldOnItems } from "@/lib/tax-engine/one-house/same-day-right";
 import type { GbBundledAssetDetail } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
+
+const AXIS_B_LATER_SHARE_RESIDENCE_NOTICE =
+  "지분별 취득일이 달라 거주기간을 지분별 보유기간 안에서 판정했습니다. 증여·상속 지분의 공제율 기산은 사전-2025-법규재산-0506을 따랐고, 매매로 추가 취득한 지분을 정면으로 다룬 해석은 확인하지 못했습니다 — 확인 필요.";
 
 export function calculateBundledTransfer(
   data: PropertySchemaInput,
@@ -279,7 +284,7 @@ export function calculateBundledTransfer(
       residencePeriodMonths:
         rawC.residencePeriodMonths ??
         (isFullFractionalBundle && rawC.landNature !== "appurtenant_to_housing" && engineInput.residencePeriodMonths !== undefined
-          ? inheritedShareResidenceMonths(engineInput.residencePeriodMonths, rawC, data.transferDate)
+          ? inheritedShareResidenceMonths(engineInput.residencePeriodMonths, rawC, data)
           : undefined),
     };
     const built = buildCompanionEngineInputs(c, a, {
@@ -402,6 +407,16 @@ export function calculateBundledTransfer(
   //   전 자산 부담부증여 묶음에서 카드의 `penaltyAxis`는 GB 부담부증여 카드만 싣는다(일반 양도 GB 카드의 감정 신호는 혼합 묶음이라 ⑧이 막는다).
   if (isAllBurdenedGift && items.some((it) => it.penaltyAxis) && !aggregated.warnings.includes(GB_BG_SELF_BUILT_NOTICE)) {
     aggregated.warnings.push(GB_BG_SELF_BUILT_NOTICE);
+  }
+  // 늦게 취득한 지분 — 거주를 지분별 보유기간으로 판정했다. 매매 추가 취득은 정면 해석을 확인하지 못해 고지한다(`axis-b-share-residence-overcount.plan.md` Q-3 a).
+  if (
+    isFullFractionalBundle &&
+    (isOneHouseExemptionAsset(engineInput.propertyType) || engineInput.propertyType === "mixed-use-house") &&
+    (engineInput.residencePeriodMonths ?? 0) > 0 &&
+    data.isOneHousehold === true &&
+    companions.some((c) => shareStartsLaterThanPrimary(c, data))
+  ) {
+    aggregated.warnings.push(AXIS_B_LATER_SHARE_RESIDENCE_NOTICE);
   }
   attachGbCarryoverUnits(calc, aggregated, gbCarryoverDrafts, gbCarryoverUnits, gbDetailsByAsset);
   if (Object.keys(gbDetailsByAsset).length > 0) aggregated.generalBuildingDetailsByAsset = gbDetailsByAsset;

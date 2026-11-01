@@ -33,6 +33,8 @@ interface Props {
   isNonPrimaryAsset?: boolean;
   /** 지분 분할(축 B) — 시가 모드 담보 승의 취득가액 강제를 물건 전체로 판정한다(`bgCollateralForcesStdAcq`). */
   isFractionalSplit?: boolean;
+  /** 양도일 — 승계 입주권 담보·임대 승의 괄호 열거 시기 판정(`bgSuccessorRightStdForced`). */
+  transferDate?: string;
 }
 
 /**
@@ -64,7 +66,7 @@ const PARTIAL_CAPEX_NOTE =
 const PARTIAL_TRANSFER_EXPENSE_NOTE =
   "일부 양도 — 양도비는 이번 양도에서 발생한 금액이므로 안분하지 않습니다. 양도분에 대한 금액만 입력하세요.";
 
-export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isSingleAsset, isNonPrimaryAsset, isFractionalSplit }: Props) {
+export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isSingleAsset, isNonPrimaryAsset, isFractionalSplit, transferDate }: Props) {
   // 겸용주택 건물 귀속 양도비 — ④·⑧과 같은 술어. 범위 밖이면 칸이 없고 ④도 보내지 않는다.
   const showMixedBuildingDirect = mixedSaleSplitScope(asset, { isSingleAsset: isSingleAsset === true }).status === "ok";
   const isPartial = (asset.areaScenario ?? "same") === "partial";
@@ -82,7 +84,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
   const showGbDeductionOnly = gbModes?.land === "appraisal" || gbModes?.land === "salesCase";
   // 부담부증여 · 취득가액이 기준시가(감정가액·매매사례가액) — 두 칸이 세액에 쓰이지 않아 숨기고 이유를 한 줄로 알린다.
   // 값은 지우지 않는다(산정방식을 되돌리면 다시 쓰인다). 판정은 요약 칩과 같은 leaf.
-  const bgUnusedBasis = bgExpenseUnusedBasis(asset, isFractionalSplit === true);
+  const bgUnusedBasis = bgExpenseUnusedBasis(asset, isFractionalSplit === true, transferDate);
   // 원조합원 재개발 자산(§166) — 두 칸은 인가 후 분 필요경비로만 합산된다(`transfer-tax-api-redev.ts` postApprovalExpenses).
   // 인가 전 분은 재개발 블록 칸이 받고, 그 칸이 쓰이지 않는 모드(개산공제)면 인가 전 지출은 공제되지 않는다 — 같은 leaf로 문구를 가른다.
   const redevPostOnly =

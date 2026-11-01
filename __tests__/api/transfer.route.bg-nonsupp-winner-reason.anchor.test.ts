@@ -39,7 +39,8 @@ const FORM = { transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransf
 const x = (o: Record<string, unknown>) => o as unknown as Partial<AssetForm>;
 const GATE = "함께 양도와 같이 계산하지 않습니다";
 const OLD = "취득가액 산정 기준을 확인하지 못했습니다";
-const RTMI_CAUSE = "조합원입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어 계산하지 않습니다";
+// I-1 이후 원조합원 입주권의 사유 — 기준시가 정의(취득일·납입한 금액의 범위)가 불명확해 계산하지 않는다(질의 H-2 대기). 승계 입주권 단건은 I-1이 계산한다(`transfer.route.bg-successor-rtmi-std-acq.anchor.test.ts`).
+const RTMI_CAUSE = "원조합원 입주권의 기준시가";
 const MIXED_CAUSE = "증여가액을 주택과 상가로 나눌 법정 기준이 없어 계산하지 않습니다";
 /** allIssues는 80자로 자르므로 전체 메시지를 직접 모은다. */
 const full = (f: TransferFormData) => { const out: string[] = []; for (let s = 0; s <= 5; s++) for (const i of collectStepIssues(s, f)) out.push(i.message); return out; };
@@ -106,7 +107,7 @@ describe("NR-2 조합원입주권 단건 — ⑧ ⊇ ⑫", () => {
     expect(msgs[0]).toContain(win === "mortgage" ? "담보평가액" : "임대료 환산액");
     const r = await post(f);
     expect(r.status).toBe(400);
-    expect(JSON.stringify(r.j)).toContain("조합원입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어");
+    expect(JSON.stringify(r.j)).toContain("원조합원 입주권의 기준시가");
   });
   it("시가 모드 담보 승: ⑧ 차단 문구가 실제 사유를 말한다", () => {
     const msgs = full(single(rtmi("mkt", "mortgage"))).filter((m) => m.includes("담보평가액"));

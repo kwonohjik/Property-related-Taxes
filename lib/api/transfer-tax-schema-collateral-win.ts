@@ -2,7 +2,9 @@
  * 부담부증여 ⑫ — 시가 모드 · 담보 승 판정 (필수값 refine · 당초 증여자 건물 기준시가 0 거부 공용).
  * `transfer-tax-schema-required-refines.ts`와 `transfer-tax-schema-donor-built.ts`가 서로 import하지 않도록 리프로 둔다.
  */
-import { computeSangjeungbeopValuation, scaleBurdenedGiftInfo } from "@/lib/tax-engine/burdened-gift-valuation";
+import { BG_PAREN_MORTGAGE_66_FROM } from "@/lib/tax-engine/burdened-gift-valuation";
+import { computeSangjeungbeopValuation } from "@/lib/tax-engine/burdened-gift-valuation";
+import { scaleBurdenedGiftInfo } from "@/lib/tax-engine/burdened-gift-valuation";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
 /** 판정에 쓰는 와이어 값만. `valuationMode`가 없으면(와이어 생략) 담보 승이 아니다. */
@@ -28,6 +30,11 @@ export type CollateralWinLike = {
  */
 export function collateralForcesStdAcquisition(bg: CollateralWinLike, ownershipRatio?: number): boolean {
   if (bg.valuationMode !== "sangjeungbeop_market" || bg.rightValuation !== undefined) return false;
+  return marketCollateralWins(bg, ownershipRatio);
+}
+
+/** 시가 모드에서 담보평가(§66)가 이기는가 — 입주권 제외 여부는 호출자가 정한다. */
+function marketCollateralWins(bg: CollateralWinLike, ownershipRatio?: number): boolean {
   const info = {
     valuationMode: "sangjeungbeop_market",
     marketValueAtTransfer: bg.marketValueAtTransfer ?? 0,
@@ -39,3 +46,15 @@ export function collateralForcesStdAcquisition(bg: CollateralWinLike, ownershipR
   return computeSangjeungbeopValuation(0, 0, scaleBurdenedGiftInfo(info, ownershipRatio)).selectedMode === "mortgage";
 }
 
+/**
+ * 시가 모드 · **승계 조합원입주권** · 담보 승 · 양도일 2023.2.28. 이후 — 엔진이 취득가액을 입주권 기준시가(취득일 2칸 합)로 정하고 실지취득가액을 읽지 않는다(I-1 —
+ * `burdened-gift-apportionment.ts` `rtmiEnumerated`). ⑧이 승계취득가액을 요구하지 않는 술어(`bgSuccessorRightStdForced`)와 같다 — 이 요구를 그대로 두면 ⑧ 통과 ↔ ⑫ 400이다.
+ * 임대 승은 시가 모드에 없다. 양도일은 ISO 문자열(⑫ 입력 원값).
+ */
+export function successorRtmiMarketCollateralForcesStd(bg: CollateralWinLike, transferDate: string | undefined, ownershipRatio?: number): boolean {
+  if (bg.valuationMode !== "sangjeungbeop_market" || !transferDate) return false;
+  const rv = bg.rightValuation as { isSuccessor?: boolean } | undefined;
+  if (rv?.isSuccessor !== true) return false;
+  if (transferDate < BG_PAREN_MORTGAGE_66_FROM.toISOString().slice(0, 10)) return false;
+  return marketCollateralWins(bg, ownershipRatio);
+}

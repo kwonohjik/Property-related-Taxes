@@ -7,6 +7,7 @@
  * 막히기도 하고 실지로 계산되기도 했다(⑧은 #2788부터 두 모드 모두 막는다 — API 직접 호출에서만 드러나는 비대칭).
  * 법문은 명확하다: 소령 §159①1호 A 괄호는 2023.2.28.부터 양도가액을 §66으로 산정한 경우를 열거한다(`BG_PAREN_MORTGAGE_66_FROM`).
  *
+ * ※ I-1(`bg-successor-rtmi-std-acq.plan.md`)이 이 fail-fast를 승계 입주권에서는 «취득시 입주권 기준시가 요구»로 교체했다 — 이 anchor의 400은 원조합원(질의 H-2 대기)과 승계의 기준시가 칸 비움이다.
  * · RT-1 양도일 2023.2.28. 이후 시가 모드 담보 승: ⑫ 400(기준시가 모드와 같은 중단 사유) · 종전 값은 실지(K-4) 양도차익 2,500,000,000(`bg-nonsupp-winner-support.plan.md` §3.2 실측).
  * · RT-2 양도일 2023.2.28. 이전은 종전 그대로 실지(K-4)로 계산한다(열거에 §66 없음) — 경계 하루 전·당일.
  * · RT-3 안전망 — 보충 승(시가 모드)·기준시가 모드 보충 승은 계속 200 · 기준시가 모드 담보 승은 종전부터 400(같은 사유 문구).
@@ -60,17 +61,17 @@ const MORT = "3,000,000,000"; // 담보 30억 > 보충적평가 15억 → 담보
 const SUPP = "600,000,000"; // 채무 6억 < 15억 → 보충 승
 
 describe("RT-1 양도일 2023.2.28. 이후 — 시가 모드 담보 승 입주권은 기준시가 모드와 같이 400", () => {
-  it("시가 모드: ⑫ 400 · 사유 문구가 입주권 기준시가 입력 경로 없음을 말한다", async () => {
+  it("시가 모드(원조합원): ⑫ 400 · 사유 문구가 원조합원 입주권 기준시가의 불명확을 말한다(I-1 이후 — 승계는 계산한다)", async () => {
     const r = await post(form(rtmi("mkt", MORT), "2026-02-16"));
     expect(r.status, JSON.stringify(r.j).slice(0, 300)).toBe(400);
     const m = JSON.stringify(r.j);
-    expect(m).toContain("조합원입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어");
-    expect(m).toContain("시가 평가에서 담보(§66) 평가액이 시가보다 커");
+    expect(m).toContain("원조합원 입주권의 기준시가");
+    expect(m).toContain("담보(§66) 평가로 결정됐습니다");
   });
   it("기준시가 모드 담보 승은 종전부터 400 — 같은 사실이 두 모드에서 같게 막힌다", async () => {
     const r = await post(form(rtmi("std", MORT), "2026-02-16"));
     expect(r.status).toBe(400);
-    expect(JSON.stringify(r.j)).toContain("조합원입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어");
+    expect(JSON.stringify(r.j)).toContain("원조합원 입주권의 기준시가");
   });
   it("경계 당일(2023-02-28)부터 막는다", async () => {
     expect((await post(form(rtmi("mkt", MORT), "2023-02-28"))).status).toBe(400);
