@@ -542,6 +542,8 @@ export function runRentalHousingExceptionStep(
     reductionResult, rheReductionAmount, rheSurtaxVerdict, reductionNotice, lthdNotice,
   } = applyRentalHousingReductions({
     input, effectiveInput, parsedRates, steps, calculatedTax: rheTaxResult.calculatedTax, totalTaxableIncome, rheBasicDeduction, rheTaxBase,
+    // §97의5 B — 주택분(배율 이내 부수토지 포함) + 나중 취득 부수토지분. 배율 초과 비사업용 토지분 제외.
+    housingIncome: rhe.taxableGain + laterLandIncome,
   });
 
   // L-2 (2026-06-03): 특례 경로는 finalizeTransferTax를 거치지 않으므로
