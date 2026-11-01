@@ -114,6 +114,8 @@ export type TransferReductionStub =
       rentalEndDate?: Date;
       /** §97의5①1호 — 매입임대주택(매매·증여 등으로 소유권 취득) 여부. `true`만 충족 */
       isPurchaseRental?: boolean;
+      /** 조특령 §97의5③ — 세무서 사업자등록일 (임대개시 기산의 한 축, isTaxRegistered면 필수) */
+      taxRegistrationDate?: Date;
       /** 조특령 §97의5①2호·3호 — 수용·정비사업 간주기간 (redevelopment는 인가일~준공일 입력, 엔진이 ±6개월) */
       deemedRentalPeriods?: { reason: "expropriation" | "redevelopment"; startDate: Date; endDate: Date }[];
       officialPriceAtStart?: number;

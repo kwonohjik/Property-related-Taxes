@@ -76,6 +76,9 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
         ...("rentalEndDate" in r && r.rentalEndDate
           ? { rentalEndDate: toOptionalDate(r.rentalEndDate) }
           : {}),
+        ...("taxRegistrationDate" in r && r.taxRegistrationDate
+          ? { taxRegistrationDate: toOptionalDate(r.taxRegistrationDate) }
+          : {}),
         // 령 §97의5①2호·3호 간주기간 — `...r`만 믿으면 string이 엔진에 도달해 비교가 조용히 틀린다
         ...("deemedRentalPeriods" in r && r.deemedRentalPeriods
           ? {

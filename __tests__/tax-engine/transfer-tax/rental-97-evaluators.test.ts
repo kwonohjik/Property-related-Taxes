@@ -129,6 +129,7 @@ function base975(overrides?: Partial<Rental97EvaluationInput>): Rental97Evaluati
   return {
     id: "rental_97_5",
     isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
+    taxRegistrationDate: new Date("2018-12-01"), // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
     transferDate: new Date("2029-02-01"),
     acquisitionDate: new Date("2018-10-01"),
     registrationDate: new Date("2018-12-01"),

@@ -25,6 +25,8 @@ import { Rental975DeemedPeriodsField } from "./Rental975DeemedPeriodsField";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 import { addMonths } from "date-fns";
 import { RENTAL_97_5_REGISTRATION_MONTHS } from "@/lib/tax-engine/transfer-reductions";
+import { evaluateContinuousRental975 } from "@/lib/tax-engine/transfer-reductions/rental-97-5-period";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 type Rental975Form = Extract<RentalReductionFormVariant, { type: "rental_97_5" }>;
 
@@ -57,18 +59,6 @@ function registrationDeadline(dateStr: string): Date | null {
   return addMonths(d, RENTAL_97_5_REGISTRATION_MONTHS);
 }
 
-function diffYearsMonths(from: string, to: string): string {
-  if (!from || !to) return "—";
-  const d1 = new Date(from);
-  const d2 = new Date(to);
-  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return "—";
-  const totalMonths =
-    (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
-  if (totalMonths < 0) return "—";
-  const years = Math.floor(totalMonths / 12);
-  const months = totalMonths % 12;
-  return months > 0 ? `${years}년 ${months}개월` : `${years}년`;
-}
 
 export function Rental975InputForm({ value, onChange, acquisitionDate, transferDate }: Props) {
   const uid = useId();
@@ -92,10 +82,33 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
   // emerald 자동 표시
   // 종점 — 양도 전 임대 종료면 임대 종료일(§97의5①2호), 아니면 양도일
   const ended = value.rentalContinuesToTransfer === false;
-  const rentalDuration = useMemo(
-    () => diffYearsMonths(value.rentalStartDate, (ended ? value.rentalEndDate : transferDate) ?? ""),
-    [value.rentalStartDate, value.rentalEndDate, ended, transferDate],
-  );
+  /**
+   * 리뷰 9번 — 엔진과 **같은 판정 함수**(`evaluateContinuousRental975`)로 미리 보여 준다.
+   * 기산일 = 임대개시일·임대사업자 등록일·사업자등록일 중 늦은 날(조특령 §97의5③), 종점 = 양도일 또는 임대 종료일,
+   * 6개월 초과 공실 단절·수용/정비사업 간주기간 반영. 종전에는 임대개시일→양도일 단순 차이였다.
+   */
+  const rentalPreview = useMemo(() => {
+    const dates = [value.rentalStartDate, value.registrationDate, value.isTaxRegistered ? value.taxRegistrationDate : ""]
+      .map((d) => toOptionalDate(d))
+      .filter((d): d is Date => d !== undefined);
+    const start = toOptionalDate(value.rentalStartDate) ? new Date(Math.max(...dates.map((d) => d.getTime()))) : undefined;
+    const end = toOptionalDate(ended ? value.rentalEndDate : transferDate);
+    if (!start || !end) return null;
+    const toSpans = (rows: { startDate: string; endDate: string }[]) =>
+      rows
+        .map((r) => ({ startDate: toOptionalDate(r.startDate), endDate: toOptionalDate(r.endDate) }))
+        .filter((r): r is { startDate: Date; endDate: Date } => !!r.startDate && !!r.endDate);
+    return evaluateContinuousRental975({
+      start,
+      end,
+      vacancyPeriods: value.hasVacancyOverGrace ? toSpans(value.vacancyPeriods ?? []) : [],
+      deemedRentalPeriods: value.hasDeemedRentalPeriod
+        ? (value.deemedRentalPeriods ?? [])
+            .map((p) => ({ reason: p.reason, startDate: toOptionalDate(p.startDate), endDate: toOptionalDate(p.endDate) }))
+            .filter((p): p is { reason: typeof p.reason; startDate: Date; endDate: Date } => !!p.startDate && !!p.endDate)
+        : [],
+    });
+  }, [value, ended, transferDate]);
 
   return (
     <div className="mt-2 ml-4 space-y-3">
@@ -107,7 +120,8 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
           <p className="mb-1 text-xs font-medium">임대주택 취득 유형</p>
           <p className="mb-1.5 text-micro text-muted-foreground">
             §97의5①1호 — 민간매입임대주택(민특법 §2 3호 「매매 등으로 소유권을 취득」) 또는 공공매입임대주택만 대상입니다.
-            증여·분양으로 취득한 주택도 매입임대입니다. 임대사업자가 직접 건설한 건설임대주택은 대상이 아닙니다.
+            증여·분양으로 취득한 주택도 매입임대입니다. 건설임대주택(민특법 §2 2호 — 임대 목적으로 건설하거나 주택건설사업자가
+            건설 후 미분양으로 임대)은 대상이 아닙니다.
           </p>
           <RadioCardGroup
             data-field={`reduction.${value.type}.isPurchaseRental`}
@@ -118,7 +132,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             onChange={(v) => onChange({ isPurchaseRental: v === "purchase" })}
             options={[
               { value: "purchase", label: "매입임대 (매매·증여·분양 등으로 취득)" },
-              { value: "construction", label: "건설임대 (직접 건설)" },
+              { value: "construction", label: "건설임대 (건설·미분양 임대)" },
             ]}
           />
           {value.isPurchaseRental === null && (
@@ -156,6 +170,20 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
           checked={value.isTaxRegistered}
           onCheckedChange={(v) => onChange({ isTaxRegistered: v })}
         />
+        {/* 조특령 §97의5③ — 사업자등록·임대사업자등록·임대 중 늦은 날부터 임대 개시 */}
+        {value.isTaxRegistered && (
+          <div>
+            <label className="mb-1 block text-xs font-medium">세무서 사업자등록일</label>
+            <DateInput
+              data-field={`reduction.${value.type}.taxRegistrationDate`}
+              value={value.taxRegistrationDate}
+              onChange={(v) => onChange({ taxRegistrationDate: v })}
+            />
+            <p className="mt-1 text-micro text-muted-foreground">
+              조특령 §97의5③ — 사업자등록·임대사업자 등록·임대개시 중 가장 늦은 날부터 임대를 개시한 것으로 봅니다.
+            </p>
+          </div>
+        )}
 
         <div>
           <label className="mb-1 block text-xs font-medium">임대개시일</label>
@@ -233,10 +261,19 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">
-            {ended ? "임대기간 (임대개시일→임대 종료일)" : "양도일 기준 임대기간 (임대개시일→양도일)"}
+            {ended ? "계속 임대기간 (기산일→임대 종료일)" : "계속 임대기간 (기산일→양도일)"}
           </span>
-          <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">{rentalDuration}</span>
+          <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">
+            {rentalPreview ? `${rentalPreview.years}년` : "—"}
+          </span>
         </div>
+        {rentalPreview && rentalPreview.breaks.length > 0 && rentalPreview.longestSegment && (
+          <p className="text-micro text-muted-foreground">
+            6개월을 넘는 공실 {rentalPreview.breaks.length}건으로 계속 임대가 끊겨 가장 긴 구간(
+            {rentalPreview.longestSegment.start.toLocaleDateString("ko-KR")} ~{" "}
+            {rentalPreview.longestSegment.end.toLocaleDateString("ko-KR")})으로 셉니다.
+          </p>
+        )}
       </div>
     </div>
   );

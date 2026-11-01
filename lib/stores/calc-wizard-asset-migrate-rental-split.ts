@@ -98,6 +98,8 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
             : {}),
           // 리뷰 6번 — §97의5①1호 매입임대 확인(3-state). 구 세션은 미선택으로 둔다(다시 묻는다).
           ...(r.type === "rental_97_5" && r.isPurchaseRental === undefined ? { isPurchaseRental: null } : {}),
+          // 리뷰 9번 — 조특령 §97의5③ 세무서 사업자등록일. 구 세션엔 없다(⑧이 다시 묻는다).
+          ...(r.type === "rental_97_5" && r.taxRegistrationDate === undefined ? { taxRegistrationDate: "" } : {}),
           // 리뷰 5번 — 령 §97의5①2호·3호 간주기간. 구 세션엔 없다(= 없음).
           ...(r.type === "rental_97_5" && r.deemedRentalPeriods === undefined
             ? { hasDeemedRentalPeriod: false, deemedRentalPeriods: [] }

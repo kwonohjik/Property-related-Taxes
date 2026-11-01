@@ -181,6 +181,7 @@ describe("§97의5 엔진 — 리뷰 실측 시나리오 재현 (D2-03)", () => 
   const BASE = {
     id: "rental_97_5" as const,
     isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
+    taxRegistrationDate: D("2018-08-01"), // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
     acquisitionDate: D("2018-06-01"),
     registrationDate: D("2018-08-01"),
     rentalStartDate: D("2018-09-01"),

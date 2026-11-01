@@ -324,6 +324,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // §97의5①1호 — 매입임대 확인(3-state). 미선택을 매입임대로 읽지 않는다. 「건설임대」 선택은 엔진이 불적용 사유로 보인다.
           if (r.type === "rental_97_5" && (r.isPurchaseRental === null || r.isPurchaseRental === undefined))
             return fail(fieldError(`reduction.${r.type}.isPurchaseRental`, `${label} 적용: 임대주택 취득 유형(매입임대/건설임대)을 선택하세요 (§97의5①1호).`));
+          // 조특령 §97의5③ — 사업자등록을 확인했으면 그 날짜가 임대개시 기산의 한 축이다(엔진 MISSING_TAX_REGISTRATION_DATE)
+          if (r.type === "rental_97_5" && r.isTaxRegistered && !r.taxRegistrationDate)
+            return fail(fieldError(`reduction.${r.type}.taxRegistrationDate`, `${label} 적용: 세무서 사업자등록일을 입력하세요 (조특령 §97의5③ — 늦으면 그날부터 임대 개시).`));
           // 3-state: "" = 미선택 → 차단 (간소화 모드 명시 선택 강제)
           if (r.rentIncreaseViolationMode === "")
             return fail(fieldError(`reduction.${r.type}.rentIncreaseViolationMode`, `${label} 적용: 임대료 5% 증액 위반 이력 여부(없음/있음)를 선택하세요.`));

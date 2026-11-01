@@ -243,6 +243,8 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
    * `true`만 충족 — 미입력·`false`(건설임대)는 불적용 사유 (§97의5 전용).
    */
   isPurchaseRental?: boolean;
+  /** 「소득세법」 §168 세무서 사업자등록일 — §97의5 임대개시 기산의 한 축 (조특령 §97의5③). `isTaxRegistered`면 필수 */
+  taxRegistrationDate?: Date;
   /**
    * 조특령 §97의5①2호·3호 — 수용·협의매수 / 정비사업으로 임대할 수 없던 기간 (§97의5 전용).
    * 「계속하여 임대한 것으로 본다」 — 공실 판정에서 빼고 기간에 산입한다. 상세: `rental-97-5-period.ts`.

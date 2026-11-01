@@ -78,7 +78,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
     vacancyGraceMonths === 3
       ? "조특칙 §44 — 기존 임차인 퇴거일부터 다음 임차인 입주일까지 3월 이내는 임대기간에 산입"
       : "조특령 §97의5①1호 — 기존 임차인 퇴거일부터 다음 임차인 주민등록 이전일까지 6개월 이내는 계속 임대 간주. " +
-        "6개월을 넘는 공실이 있으면 계속 임대가 끊겨 그 공실이 끝난 날(다음 임차인 입주일)부터 10년을 다시 셉니다.";
+        "6개월을 넘는 공실이 있으면 계속 임대가 끊기며, 끊기지 않은 구간 중 가장 긴 구간이 10년 이상이어야 합니다.";
   // ── 임대료 계약 이력 ──
   function addRentHistory() {
     const next: RentHistoryFormItem = {
@@ -137,6 +137,13 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
       <ToneCard tone="violet" sectionNum={sec3} title="임대료 증액 제한 (§97의3①2호)" bodyClassName="space-y-2">
         <div>
           <p className="text-xs text-muted-foreground mb-1.5">임대료 5% 증액 위반 이력</p>
+          {/* §97의5 — 조특령 §97의3③1호 후단(1년 이내 재증액 금지)도 엔진이 계약 이력으로 판정한다 */}
+          {is975 && (
+            <p className="mb-1.5 text-micro text-muted-foreground">
+              조특령 §97의3③1호 — 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다.
+              이 경우 「있음」을 고르고 계약 이력을 입력하세요.
+            </p>
+          )}
           <RadioCardGroup
             data-field={`reduction.${fieldType}.rentIncreaseViolationMode`}
             name={`rentIncreaseViolationMode-${uid}`}

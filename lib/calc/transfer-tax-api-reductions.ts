@@ -271,6 +271,8 @@ export function toEngineReductions(
           ...(r.isPurchaseRental !== null && r.isPurchaseRental !== undefined
             ? { isPurchaseRental: r.isPurchaseRental }
             : {}),
+          // 조특령 §97의5③ — 사업자등록을 확인했을 때만 그 날짜를 싣는다
+          ...(r.isTaxRegistered && r.taxRegistrationDate ? { taxRegistrationDate: r.taxRegistrationDate } : {}),
           // 령 §97의5①2호·3호 간주기간 — 토글 ON + 날짜가 다 있는 행만
           ...(r.hasDeemedRentalPeriod && (r.deemedRentalPeriods ?? []).length > 0
             ? {

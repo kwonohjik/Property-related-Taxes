@@ -186,14 +186,22 @@ export const reductionSchema = z.discriminatedUnion("type", [
     rentalEndDate: z.string().date().optional(),
     /** §97의5①1호 — 매입임대주택 여부 (true만 충족) */
     isPurchaseRental: z.boolean().optional(),
+    /** 조특령 §97의5③ — 세무서 사업자등록일 */
+    taxRegistrationDate: z.string().date().optional(),
     /** 조특령 §97의5①2호·3호 간주기간 — ⑫에 없으면 침묵 stripping된다 */
     deemedRentalPeriods: z
       .array(
-        z.object({
-          reason: z.enum(["expropriation", "redevelopment"]),
-          startDate: z.string().date(),
-          endDate: z.string().date(),
-        }),
+        z
+          .object({
+            reason: z.enum(["expropriation", "redevelopment"]),
+            startDate: z.string().date(),
+            endDate: z.string().date(),
+          })
+          // ⑧과 같은 규칙 — 역순 구간은 공실 판정을 조용히 뒤튼다 (YYYY-MM-DD 문자열 비교)
+          .refine((p) => p.startDate <= p.endDate, {
+            message: "간주기간의 시작일(정비사업은 인가일)이 종료일(준공일)보다 늦습니다 (조특령 §97의5①2호·3호).",
+            path: ["endDate"],
+          }),
       )
       .optional(),
     ...rental97CommonShape,

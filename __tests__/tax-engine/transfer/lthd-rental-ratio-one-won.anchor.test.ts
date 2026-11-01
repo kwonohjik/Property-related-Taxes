@@ -72,6 +72,7 @@ describe("#7 임대기간 분 비율 — 정수 분수", () => {
   const base = {
     id: "rental_97_5", acquisitionDate: D0("2014-06-01"), registrationDate: D0("2014-08-01"), rentalStartDate: D0("2014-09-01"),
     isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
+    taxRegistrationDate: D0("2014-08-01"), // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
     transferDate: D0("2026-07-01"), isTaxRegistered: true, rentIncreaseViolated: false, isNationalHousingScale: true, region: "capital",
     stdPriceAtAcquisition: 300_000_000, officialPriceAtStart: 320_000_000, stdPriceAtTransfer: 640_000_000,
     rentalContinuesToTransfer: false, stdPriceAtRentalEnd: 560_000_000,

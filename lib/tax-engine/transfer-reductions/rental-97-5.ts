@@ -27,6 +27,7 @@ import {
   type RentalGainFraction,
   checkRental973Clause24,
   validateRentIncrease,
+  validateRentIncreaseInterval,
   DEFAULT_JEONSE_CONVERSION_RATE,
 } from "./rental-97-shared-helpers";
 import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result } from "./types";
@@ -69,6 +70,13 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
       message: "세무서 사업자등록(소득세법 §168)이 확인되지 않았습니다 (조특령 §97의5③).",
       legalBasis: "조특령 §97의5③",
     });
+  } else if (!input.taxRegistrationDate) {
+    // 임대개시 기산일의 한 축 — 미입력을 「등록일 이전」으로 읽지 않는다(자동 fallback 금지)
+    reasons.push({
+      code: "MISSING_TAX_REGISTRATION_DATE",
+      message: "세무서 사업자등록일이 입력되지 않았습니다 — 사업자등록일이 늦으면 그날부터 임대를 개시한 것으로 봅니다 (조특령 §97의5③).",
+      legalBasis: "조특령 §97의5③",
+    });
   }
 
   /**
@@ -83,7 +91,7 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
       code: "NOT_PURCHASE_RENTAL",
       message:
         input.isPurchaseRental === false
-          ? "임대사업자가 직접 건설한 건설임대주택은 대상이 아닙니다 — 매입임대주택(매매·증여 등으로 소유권을 취득)이어야 합니다 (§97의5①1호)."
+          ? "건설임대주택(민특법 §2 2호)은 대상이 아닙니다 — 매입임대주택(매매·증여 등으로 소유권을 취득)이어야 합니다 (§97의5①1호)."
           : "매입임대주택(매매·증여 등으로 소유권을 취득한 주택)인지 확인되지 않았습니다 (§97의5①1호).",
       legalBasis,
     });
@@ -112,6 +120,22 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
         code: "RENT_INCREASE_VIOLATED",
         message: `임대료(환산보증금) 증액 5% 제한 위반 계약 ${validation.violations.length}건 (§97의5①3호 — §97의3①2호 준용).`,
         legalBasis,
+      });
+    }
+    // 리뷰 9번 — 조특령 §97의3③1호 후단: 계약·증액 후 1년 이내 재증액 금지
+    const interval = validateRentIncreaseInterval(
+      input.rentHistory,
+      input.jeonseConversionRate ?? DEFAULT_JEONSE_CONVERSION_RATE,
+    );
+    if (!interval.isAllValid) {
+      reasons.push({
+        code: "RENT_INCREASE_WITHIN_1_YEAR",
+        message:
+          `직전 계약(증액)일로부터 1년 이내에 임대료(환산보증금)를 올린 계약 ${interval.violations.length}건 ` +
+          `(${interval.violations.map((v) => `${ymd(v.previousContractDate)} → ${ymd(v.contractDate)}`).join(", ")}) ` +
+          `— 조특령 §97의3③1호 후단 「증액이 있은 후 1년 이내에는 하지 못하고」 (§97의5①3호 준용). ` +
+          `1년은 민법 기간 계산으로 다음 해 같은 날에 만료합니다.`,
+        legalBasis: "조특령 §97의3③1호",
       });
     }
   } else if (input.rentIncreaseViolated === true) {
@@ -145,12 +169,17 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
      * 임대한 후 양도할 것」이고, 조특령 §97의5①은 「10년 이상 계속하여 등록하고,
      * 그 **등록한 기간 동안** 계속하여 10년 이상 임대한 경우로 한다」이다.
      * ⇒ 등록 이전 임대기간은 산입하지 않는다.
+     *
+     * 리뷰 9번 — 「소득세법」 §168 **사업자등록**도 같은 문장의 요건이다. 세무서 사업자등록이 늦으면
+     * 그날부터 개시한다(종전에는 예/아니오만 받아 기산일에 반영하지 못했다).
      */
-    const effectiveStart =
-      input.registrationDate !== undefined &&
-      input.registrationDate.getTime() > input.rentalStartDate.getTime()
-        ? input.registrationDate
-        : input.rentalStartDate;
+    const effectiveStart = new Date(
+      Math.max(
+        input.rentalStartDate.getTime(),
+        input.registrationDate?.getTime() ?? 0,
+        input.taxRegistrationDate?.getTime() ?? 0,
+      ),
+    );
 
     /**
      * 종점 — 법 §97의5①2호 「10년 이상 계속하여 … 임대한 **후 양도**할 것」.
@@ -183,7 +212,7 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
     }
 
     if (periodEnd) {
-      // 리뷰 2·5번 — 6개월 초과 공실은 계속성을 끊고(다시 셈), 수용·정비사업 간주기간은 계속 임대로 본다.
+      // 리뷰 2·5번 — 6개월 초과 공실은 계속성을 끊고(가장 긴 연속 구간으로 판정), 수용·정비사업 간주기간은 계속 임대로 본다.
       const cont = evaluateContinuousRental975({
         start: effectiveStart,
         end: periodEnd,
@@ -192,10 +221,12 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
       });
       eligibleRentalYears = cont.years;
       if (eligibleRentalYears < RENTAL_97_5_MANDATORY_YEARS) {
-        const restartNote = cont.breakingVacancy
-          ? ` 6개월을 넘는 공실(${ymd(cont.breakingVacancy.start)}~${ymd(cont.breakingVacancy.end)})로 계속 임대가 ` +
-            `끊겨 ${ymd(cont.breakingVacancy.end)}부터 다시 계산했습니다 (조특령 §97의5①1호 — 6개월 이내 공실만 계속 임대로 봄).`
-          : "";
+        const restartNote =
+          cont.breaks.length > 0 && cont.longestSegment
+            ? ` 6개월을 넘는 공실(${cont.breaks.map((b) => `${ymd(b.start)}~${ymd(b.end)}`).join(", ")})로 계속 임대가 ` +
+              `끊겨, 가장 긴 계속 임대 구간(${ymd(cont.longestSegment.start)}~${ymd(cont.longestSegment.end)})으로 ` +
+              `판정했습니다 (조특령 §97의5①1호 — 6개월 이내 공실만 계속 임대로 봄).`
+            : "";
         reasons.push({
           code: "RENTAL_PERIOD_SHORT",
           message: `계속 임대기간 ${eligibleRentalYears}년 — 10년 이상 계속 임대 요건 미달 (§97의5①2호).${restartNote}`,

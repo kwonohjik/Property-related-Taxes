@@ -4,7 +4,9 @@
  * ## 2. 6개월 초과 공실 → 「계속」 단절 (조특령 §97의5①1호)
  * 국세청 서면-2020-법규재산-4965(2022.5.31): 공실이 여러 번이면 **각** 공실이 6개월 이내인지 본다.
  * 6개월 초과 공실의 처리 해석례는 찾지 못했다 — **가정**: 「계속하여 10년」(§97의5①) ↔ 「통산하여 10년」(§97의3②)
- * 대비에 따라 계속성이 끊기고, 그 공실이 끝난 날부터 다시 센다. 종전(초과 구간만 차감 후 합산)은 통산 모델이었다.
+ * 대비에 따라 계속성이 끊기고, 초과 공실로 나뉜 **가장 긴 연속 구간**이 10년 이상이어야 한다.
+ * 종전(초과 구간만 차감 후 합산)은 통산 모델이었다. 「마지막 단절 이후만 센다」는 중간안은 선행 10년 구간을
+ * 버려 법 §97의5①2호 「10년 이상 계속하여 임대한 **후** 양도」와 어긋났다(리뷰 게이트 C-3).
  *
  * ## 5. 수용·정비사업 간주기간 (조특령 §97의5①2호·3호)
  * 「해당 기간 동안 계속하여 임대한 것으로 본다」 — 공실 판정에서 빼고 기간에 산입한다.
@@ -44,6 +46,7 @@ const BASE: Rental97EvaluationInput = {
   rentalStartDate: D("2014-09-01"),
   transferDate: D("2026-07-01"),
   isPurchaseRental: true,
+  taxRegistrationDate: D("2014-08-01"), // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
   isTaxRegistered: true,
   rentIncreaseViolated: false,
   isNationalHousingScale: true,
@@ -66,16 +69,27 @@ describe("6. §97의5①1호 — 매입임대주택", () => {
   it("🔴 건설임대(false) → 불적용, 사유에 건설임대 명시", () => {
     const r = evaluateRental975({ ...BASE, isPurchaseRental: false });
     expect(codes(r)).toEqual(["NOT_PURCHASE_RENTAL"]);
-    expect(reasonText(r)).toMatch(/건설임대주택은 대상이 아닙니다/);
+    expect(reasonText(r)).toMatch(/건설임대주택\(민특법 §2 2호\)은 대상이 아닙니다/);
   });
 });
 
-describe("2. 6개월 초과 공실 — 계속 임대 단절 후 다시 셈 (가정: 「계속하여」 문언)", () => {
-  it("🔴 7개월 공실(2016-01-01~2016-08-01) → 2016-08-01부터 다시 세면 9년 → 미달", () => {
+describe("2. 6개월 초과 공실 — 계속 임대 단절, 가장 긴 연속 구간으로 판정 (가정: 「계속하여」 문언)", () => {
+  it("🔴 7개월 공실(2016-01-01~2016-08-01) → 앞 1년·뒤 9년 → 미달", () => {
     // 종전 통산 모델: 11년 10개월 − 7개월 = 11년 3개월 → 적격이었다
     const r = evaluateRental975({ ...BASE, vacancyPeriods: [{ startDate: D("2016-01-01"), endDate: D("2016-08-01") }] });
     expect(codes(r)).toEqual(["RENTAL_PERIOD_SHORT"]);
-    expect(reasonText(r)).toMatch(/2016-08-01부터 다시 계산/);
+    expect(reasonText(r)).toMatch(/가장 긴 계속 임대 구간\(2016-08-01~2026-07-01\)/);
+  });
+
+  it("🔴 10년 연속 임대 후 양도 직전 7개월 공실 → 적격 (「10년 이상 계속하여 임대한 후 양도」)", () => {
+    // 리뷰 게이트 probe A — 「마지막 단절 이후」 모델은 0년으로 배제했다
+    const r = evaluateRental975({ ...BASE, vacancyPeriods: [{ startDate: D("2025-12-01"), endDate: D("2026-07-01") }] });
+    expect(r.isEligible).toBe(true);
+  });
+
+  it("🔴 선행 10년 3개월 연속 후 중간 7개월 공실 → 적격 (probe B)", () => {
+    const r = evaluateRental975({ ...BASE, vacancyPeriods: [{ startDate: D("2025-01-01"), endDate: D("2025-08-01") }] });
+    expect(r.isEligible).toBe(true);
   });
 
   it("정확히 6개월(「이내」 포함) → 계속 임대로 본다", () => {
@@ -94,15 +108,39 @@ describe("2. 6개월 초과 공실 — 계속 임대 단절 후 다시 셈 (가�
     expect(r.isEligible).toBe(true);
   });
 
-  it("단절 후 다시 센 기간이 10년 이상이면 적격 — 기산일만 바뀐다", () => {
+  it("단절 뒤 구간이 10년 이상이면 그 구간으로 적격", () => {
     const r = evaluateContinuousRental975({
       start: D("2014-09-01"),
       end: D("2026-07-01"),
       vacancyPeriods: [{ startDate: D("2015-01-01"), endDate: D("2016-01-01") }],
       deemedRentalPeriods: [],
     });
-    expect(r.restartDate).toEqual(D("2016-01-01"));
+    expect(r.longestSegment).toEqual({ start: D("2016-01-01"), end: D("2026-07-01") });
     expect(r.years).toBe(10);
+    expect(r.breaks).toHaveLength(1);
+  });
+
+  it("월말 경계 — 8/31 퇴거 → 2/28 전입은 6개월 이내(addMonths 말일 clamp), 3/1이면 초과", () => {
+    const run = (end: string) =>
+      evaluateContinuousRental975({
+        start: D("2014-09-01"),
+        end: D("2026-07-01"),
+        vacancyPeriods: [{ startDate: D("2018-08-31"), endDate: D(end) }],
+        deemedRentalPeriods: [],
+      }).breaks.length;
+    expect(run("2019-02-28")).toBe(0);
+    expect(run("2019-03-01")).toBe(1);
+  });
+
+  it("역순 간주기간은 무시한다 — 엔진 단독 호출 방어", () => {
+    const r = evaluateContinuousRental975({
+      start: D("2014-09-01"),
+      end: D("2026-07-01"),
+      vacancyPeriods: [],
+      deemedRentalPeriods: [{ reason: "expropriation", startDate: D("2019-12-01"), endDate: D("2017-06-01") }],
+    });
+    expect(r.years).toBe(11);
+    expect(r.breaks).toEqual([]);
   });
 });
 
@@ -196,6 +234,7 @@ describe("파이프라인·배관 — isPurchaseRental · deemedRentalPeriods", 
     expect(missing.rental97TaxDetail && codes(missing.rental97TaxDetail)).toContain("NOT_PURCHASE_RENTAL");
     const ok = run({
       isPurchaseRental: true,
+      taxRegistrationDate: D("2014-08-01"), // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
       deemedRentalPeriods: [{ reason: "redevelopment", startDate: D("2017-06-01"), endDate: D("2019-12-01") }],
     });
     expect(ok.rental97TaxDetail?.isEligible).toBe(true);
@@ -215,6 +254,7 @@ describe("파이프라인·배관 — isPurchaseRental · deemedRentalPeriods", 
       region: "capital",
       rentalContinuesToTransfer: true,
       isPurchaseRental: true,
+      taxRegistrationDate: "2014-08-01", // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
       ...over,
     } as AssetReductionForm;
   }
@@ -298,5 +338,15 @@ describe("파이프라인·배관 — isPurchaseRental · deemedRentalPeriods", 
         })?.message,
       ).toMatch(msg);
     });
+  });
+});
+
+describe("⑫ Zod — 간주기간 역순 거부", () => {
+  it("startDate > endDate → parse 실패", () => {
+    const r = reductionSchema.safeParse({
+      type: "rental_97_5",
+      deemedRentalPeriods: [{ reason: "expropriation", startDate: "2019-12-01", endDate: "2017-06-01" }],
+    });
+    expect(r.success).toBe(false);
   });
 });

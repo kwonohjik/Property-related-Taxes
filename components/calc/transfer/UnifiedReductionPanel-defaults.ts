@@ -157,6 +157,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       region: "capital",
       isNationalHousingScale: false, // CA-01 — 확인 토글(ToggleCard 패턴, §97의3과 동일)
       isPurchaseRental: null, // §97의5①1호 — 3-state. 미선택을 매입임대로 읽지 않는다.
+      taxRegistrationDate: "", // 조특령 §97의5③ — 임대개시 기산의 한 축
       hasDeemedRentalPeriod: false,
       deemedRentalPeriods: [],
     };

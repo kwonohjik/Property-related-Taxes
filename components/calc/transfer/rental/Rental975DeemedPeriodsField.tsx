@@ -53,7 +53,7 @@ export function Rental975DeemedPeriodsField({ enabled, periods, onChange, uid }:
           })
         }
         title="수용·정비사업으로 임대할 수 없던 기간이 있음"
-        description="조특령 §97의5①2호·3호 — 그 기간은 계속 임대한 것으로 봅니다"
+        description="조특령 §97의5①2호·3호 — 그 기간은 계속 임대한 것으로 봅니다(위 공실 구간과 겹치는 부분을 공실에서 뺍니다)"
         tone="sky"
       >
         <div className="space-y-3" data-field="reduction.rental_97_5.deemedRentalPeriods">

@@ -363,8 +363,9 @@ describe("LR-04: 공공지원민간임대 8년 50% 감면", () => {
   });
 });
 
-describe("LR-05: 공공매입임대 100% 감면", () => {
-  it("공공매입 — 100% 감면 (경고 포함)", () => {
+describe("LR-05: 공공매입임대(§97의5) — 레거시 경로에서는 판정하지 않는다 (리뷰 7번)", () => {
+  it("🔴 public_purchase → 불적용 + 정본 경로(reductions rental_97_5) 안내", () => {
+    // 종전: 의무기간 0년·산출세액 100% 감면 + 법령에 없는 「공공기관 매각 조건」 경고 — §97의5 요건을 하나도 보지 않았다
     const result = calculateRentalReduction(
       makeInput({
         rentalHousingType: "public_purchase",
@@ -372,10 +373,10 @@ describe("LR-05: 공공매입임대 100% 감면", () => {
       }),
       RULES,
     );
-    expect(result.isEligible).toBe(true);
-    expect(result.reductionRate).toBe(1.0);
-    expect(result.reductionAmount).toBe(3_000_000);
-    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.isEligible).toBe(false);
+    expect(result.reductionAmount).toBe(0);
+    expect(result.ineligibleReasons.map((r) => r.code)).toContain("LEGACY_97_5_UNSUPPORTED");
+    expect(result.warnings.some((w) => w.includes("공공기관에 매각"))).toBe(false);
   });
 });
 

@@ -269,6 +269,8 @@ export type RentalReductionFormVariant =
       isNationalHousingScale: boolean;
       /** §97의5①1호 — 매입임대주택(매매·증여 등으로 소유권 취득)인가 (3-state, null = 미선택) */
       isPurchaseRental: boolean | null;
+      /** 조특령 §97의5③ — 세무서 사업자등록일 (YYYY-MM-DD). 사업자등록 확인 시 필수 — 임대개시 기산의 한 축 */
+      taxRegistrationDate: string;
       /** 조특령 §97의5①2호·3호 — 수용·정비사업으로 임대할 수 없던 기간이 있는가 */
       hasDeemedRentalPeriod: boolean;
       deemedRentalPeriods: DeemedRentalPeriodFormItem[];

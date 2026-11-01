@@ -9,7 +9,7 @@
  * - 임대료 5% 증액 제한·전월세 전환: 조특령 §97의3③1호 (민특법 §44④ 기준 준용)
  */
 
-import { addDays, addMonths, differenceInDays, differenceInYears } from "date-fns";
+import { addDays, addMonths, addYears, differenceInDays, differenceInYears } from "date-fns";
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import type {
   Rental97IneligibleReason,
@@ -143,6 +143,37 @@ export function validateRentIncrease(
     }
   }
 
+  return { isAllValid: violations.length === 0, violations };
+}
+
+/**
+ * 임대료 증액 **간격** 검증 — 조특령 §97의3③1호 후단
+ * 「이 경우 임대료등 증액 청구는 임대차계약 또는 약정한 임대료등의 증액이 있은 후 **1년 이내에는 하지 못하고**…」
+ *
+ * 직전 계약(또는 증액)일로부터 1년 이내에 환산보증금이 오른 계약을 위반으로 본다.
+ * - 기간 계산: 민법 §157(초일 불산입)·§160 — 직전 계약일 D의 1년은 **다음 해 같은 날**에 만료한다
+ *   ⇒ 그날까지의 증액은 「1년 이내」다(가정: 계약 이력의 `contractDate`를 증액 시점으로 본다 — 청구일 입력은 없다).
+ * - 감액·동결 계약은 증액이 아니므로 보지 않는다.
+ *
+ * 현재 §97의5 평가기만 호출한다(같은 1호를 쓰는 §97의3·§97의4 적용은 별건).
+ */
+export function validateRentIncreaseInterval(
+  history: Rental97RentHistoryItem[],
+  conversionRate: number,
+): { isAllValid: boolean; violations: { contractIndex: number; contractDate: Date; previousContractDate: Date }[] } {
+  const violations: { contractIndex: number; contractDate: Date; previousContractDate: Date }[] = [];
+  for (let i = 1; i < history.length; i++) {
+    const prev = convertToStandardDeposit(history[i - 1], conversionRate);
+    const curr = convertToStandardDeposit(history[i], conversionRate);
+    if (curr <= prev) continue;
+    if (history[i].contractDate.getTime() <= addYears(history[i - 1].contractDate, 1).getTime()) {
+      violations.push({
+        contractIndex: i,
+        contractDate: history[i].contractDate,
+        previousContractDate: history[i - 1].contractDate,
+      });
+    }
+  }
   return { isAllValid: violations.length === 0, violations };
 }
 
@@ -403,6 +434,22 @@ export function checkRental973Clause24(
       message:
         "임대개시일 당시 주택과 부수토지의 기준시가 합계가 입력되지 않았습니다 " +
         `(${legalBasisPrefix}조특령 §97의3③4호 한도 검증).`,
+      legalBasis: "조특령 §97의3③4호",
+    });
+  } else if (
+    input.region === undefined &&
+    input.officialPriceAtStart > OFFICIAL_PRICE_LIMIT_NON_CAPITAL &&
+    input.officialPriceAtStart <= OFFICIAL_PRICE_LIMIT_CAPITAL
+  ) {
+    /**
+     * 리뷰 9번 — 소재지가 없으면 종전에는 수도권 한도(6억)로 읽었다. 3억 초과 ~ 6억 이하는 소재지가
+     * 적격을 가르므로 추정하지 않는다(앱은 소재지를 항상 보낸다 — API 직접 호출만 해당).
+     */
+    reasons.push({
+      code: "MISSING_REGION",
+      message:
+        "임대개시일 당시 기준시가가 3억원을 넘어 소재지(수도권/수도권 밖)에 따라 한도(6억/3억) 충족 여부가 달라지는데 " +
+        `소재지가 입력되지 않았습니다 (${legalBasisPrefix}조특령 §97의3③4호).`,
       legalBasis: "조특령 §97의3③4호",
     });
   } else {

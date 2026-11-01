@@ -115,6 +115,7 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         rentalEndDate: r.rentalEndDate,
         // §97의5①1호 매입임대 · 령 §97의5①2호·3호 간주기간. ⚠️ 명시 매핑.
         isPurchaseRental: r.isPurchaseRental,
+        taxRegistrationDate: r.taxRegistrationDate,
         deemedRentalPeriods: r.deemedRentalPeriods,
         // 「소득세법」 §90① 감면세액 산식 입력 — §97의5 evaluator만 읽는다.
         transferIncome: ctx.transferIncome,

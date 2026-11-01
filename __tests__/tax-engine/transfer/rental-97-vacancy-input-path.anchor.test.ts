@@ -105,6 +105,7 @@ describe("🔴 엔진 — 같은 4개월 공실이 §97에서는 임대기간을
   const BASE_97_5 = {
     id: "rental_97_5" as const,
     isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
+    taxRegistrationDate: D("2018-03-01"), // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
     acquisitionDate: D("2018-01-01"),
     registrationDate: D("2018-03-01"), // 취득 후 3개월 이내
     rentalStartDate: D("2018-03-01"), // 취득일 이후지만 기준시가 3점으로 안분
