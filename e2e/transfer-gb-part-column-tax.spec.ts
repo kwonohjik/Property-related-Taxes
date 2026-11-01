@@ -38,4 +38,10 @@ test("GPC-1: 토지 + 일반건물 — 세율·산출세액은 토지 열과 합
   }
   await expect(form.locator("tr", { hasText: /^세율\s*/ }).filter({ hasNotText: "구분" }).first().locator("td").nth(3)).toHaveText("-");
   await expect(form.locator("tr", { hasText: "양도가액" }).first().locator("td").nth(3)).toHaveText(/^[\d,]+$/);
+  // 상세명세서 — 산출세액 펼침에는 토지 행만, 가산세액 펼침에는 파트 행까지 남는다.
+  for (const [label, count] of [["산출세액", 1], ["가산세액", 3]] as const) {
+    const row = page.locator(`[data-statement-row="${label}"]`).first();
+    await row.getByRole("button", { name: "자산별 펼치기" }).click();
+    await expect(row.getByText("├─")).toHaveCount(count);
+  }
 });

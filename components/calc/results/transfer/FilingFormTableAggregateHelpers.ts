@@ -35,6 +35,8 @@ import { reductionEligibleIncome } from "./reduction-eligible-income";
 import { selectPriorFiledIndices } from "@/lib/calc/multi-prior-filed";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { assetOfCardSuffix } from "./sale-split-unentered-notice";
+import { GB_CARD_BASE_IDS } from "./gb-part-card";
+import { isGbPartCard } from "./gb-part-card";
 import { preDeemedAcqDateNote, preDeemedAcqPriceNote, preDeemedDetailOfCard } from "./pre-deemed-purchase-filing-note";
 import { purchasedPartParentIdOf } from "@/lib/tax-engine/general-building-share-id";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
@@ -44,16 +46,6 @@ import { splitAcqBasisView } from "@/lib/tax-engine/transfer-tax-split-display";
 import { gbResultDonorBuiltEchoes } from "@/lib/tax-engine/gb-result-donor-built-echoes";
 import { donorBuiltPenaltyFilingNote } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
 import { selfBuiltPenaltyFilingNote, selfBuiltResultEchoes } from "@/lib/tax-engine/transfer-tax-self-built-display";
-
-/** 일반건물이 엔진 내부에서 분해하는 카드 id (지분 접미사 제거 후 기준). */
-const GB_CARD_BASE_IDS = new Set([
-  "land",
-  "land_business",
-  "land_nbl",
-  "building",
-  "building1",
-  "building2",
-]);
 
 /**
  * 자산별 환산취득가 표시 소스 — 단건(`FilingFormTableHelpers`)의 `estimatedDisplay`와 **같은 규칙**.
@@ -192,11 +184,9 @@ export function buildAggregateRows(
     /**
      * 이 열이 **일반건물 일괄이 엔진 내부에서 쪼갠 파트**인가(토지·건물1·건물2).
      * 다건 양도의 「자산」과 달리 독립 신고 단위가 아니라 한 자산의 계산 파트다 —
-     * 아래 세액 행에서 이 구별이 필요하다. 함께 양도에서는 일반건물이 몇째 자산이든 같으므로 이 열의 자산으로 본다.
+     * 아래 세액 행에서 이 구별이 필요하다.
      */
-    const isGbPartColumn =
-      a?.assetKind === "general_building" &&
-      GB_CARD_BASE_IDS.has(baseCardId(purchasedPartParentIdOf(col)));
+    const isGbPartColumn = isGbPartCard(col, a);
     // GB 카드별 정확한 취득일(원건물=건물취득일·증축건물=증축일·토지=토지취득일).
     // 일반 자산은 asset.acquisitionDate 그대로.
     // 부담부증여 × 이월과세 A 채택이면 당초 증여자 취득일(엔진 보유기간 축) — 각주로 밝힌다.
