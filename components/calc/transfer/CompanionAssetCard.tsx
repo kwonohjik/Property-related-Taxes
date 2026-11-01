@@ -15,6 +15,7 @@
  */
 import type { MergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import { bgPreDeemedShareJudgmentFields } from "@/lib/calc/bg-pre-deemed-shares";
+import { bgRtmiShareJudgmentFields } from "@/lib/calc/bg-rtmi-std-acq";
 import { useMemo, useRef, useState } from "react";
 
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -177,6 +178,8 @@ export function CompanionAssetCard({
             ...soleSplitRightJudgmentFacts(asset, primaryAsset),
             // 의제취득일 전 상속·증여 지분 — ③ 술어가 병합 자산과 같게 판정하도록 양도 형태·부담부증여 평가 값(②에서만 편집)을 준다(PR-7b-5 D-3)
             ...bgPreDeemedShareJudgmentFields(asset, primaryAsset),
+            // 승계 입주권 지분 — 담보·임대 승(괄호 열거 시기)이면 이 카드도 취득시 기준시가 2칸을 입력한다(X-3). 승자·시기는 첫 카드 병합값으로 판정한다.
+            ...bgRtmiShareJudgmentFields(asset, primaryAsset),
           }
         : asset,
     [hideInheritedSections, primaryAsset, asset],

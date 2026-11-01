@@ -257,6 +257,7 @@
 | I-1 | 승계 입주권: 엔진 발동 + 0 가드 + 개산공제 1% + ⑤ 칸 + ④ 전송 + ⑧ + 결과 카드 (I-0의 fail-fast를 「취득시 입주권 기준시가 > 0 요구」로 교체) | Q-I1·I2 | 대 — **구현 결과: 엔진 3파일 · ④ 1곳 · ⑤ 5파일 · ⑧ 3파일 · ⑫ Zod 2곳(`isSuccessor` + 승계 담보 승 실지 요구 면제) · ⑥⑦ 무변경**. 열거 이전은 실지, 단건 승계만(`bg-successor-rtmi-std-acq.plan.md`) |
 | X-1 | 승계 입주권 묶음(함께 양도) ⑧ 게이트 해제 — 열거 이전은 승계·원조합원, 열거 이후는 승계만 (`bg-successor-rtmi-bundle-gate.plan.md`) | 실측 `bg-successor-rtmi-extend-measure.md` | 소 — ⑧ 한 곳 |
 | X-2 | 공유 지분(축 A) 승계 입주권 — 술어 확장·⑤ 기준시가 칸·⑧ 해제, 원조합원 지분은 제외 (`bg-successor-rtmi-axis-a-share.plan.md`) | X-1 | 중 |
+| X-3 | 축 B(같은 물건 지분 분할) 승계 입주권 — 카드별 기준시가 칸·⑧ 해제·⑤ 첫 카드 값 주입 (`bg-successor-rtmi-axis-b.plan.md`) | X-2 | 중 |
 | (질의) | H-1·H-2 — 발송본 작성·원문 대조 완료(`bg-nonsupp-winner-inquiries.md`, 2026-11-01). **접수는 사용자 명의로 직접.** 회신 자료는 계획서 갱신 PR | — | 문서 |
 | I-2 | 원조합원 | H-2 | 중 |
 | M-1 | 겸용 단독 단건 | H-1, Q-M1~M3 | 중~대 |

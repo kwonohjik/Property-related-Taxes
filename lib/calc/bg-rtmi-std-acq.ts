@@ -15,6 +15,7 @@ import { BG_PAREN_MORTGAGE_66_FROM, BG_PAREN_RENTAL_61_5_FROM } from "@/lib/tax-
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
 import { bgWholeGiftValuation } from "./burdened-gift-collateral-win";
 import { isBgSuccessorRight } from "./transfer-successor-right";
+import { mergePrimaryBasic } from "./transfer-tax-api-helpers";
 
 /** 담보·임대 승이 양도일 당시 §159①1호 A 괄호의 열거 시기에 드는가 — 날짜는 ISO 문자열 비교(양도일 칸의 원값). */
 function parenEraStarted(mode: "mortgage" | "rental", transferDate: string): boolean {
@@ -58,11 +59,31 @@ export function bgRtmiBundleWinnerComputable(asset: AssetForm, mode: "mortgage" 
 
 /**
  * 승계 입주권에서 취득가액이 입주권 기준시가로 강제되는가 — 이때만 ⑤가 취득일 기준시가 2칸을 열고 ⑧이 그 합 > 0을 요구한다.
- * 지분 100%(단건·함께 양도 묶음)와 **축 A 공유 지분**(X-2 — `isFractionalSplit === false`로 축을 알릴 때만)을 푼다. 축 B(같은 물건 지분 분할, `true`)는 X-3 전까지 `false`이고,
+ * 지분 100%(단건·함께 양도 묶음)·**축 A 공유 지분**(X-2 — `isFractionalSplit === false`)·**축 B 지분 분할 카드**(X-3 — `true`, 카드마다 자기 취득 시점의 기준시가를 입력)를 푼다.
  * 지분 < 1에 축을 모르면(`undefined`) 승자를 정하지 못해 `false`다(`bgWholeGiftValuation` fail-closed).
- * 지분이 있으면 취득가액 = 입주권 기준시가 × 지분 × 채무비율이다(엔진 `resolveBgAcquisitionBasis` — 기준시가 2칸은 물건 전체 값을 입력한다).
+ * 지분이 있으면 취득가액 = 입주권 기준시가 × 지분 × 채무비율이다(엔진 `resolveBgAcquisitionBasis` — 기준시가 2칸은 물건 전체 값을 입력한다. 축 B는 카드별 값을 지분 가중).
+ * 축 B 지분 카드는 ② 양도정보(부담부증여 평가 값)가 숨겨져 있으므로 호출자는 첫 카드의 값을 병합한 자산(`axisBEffectiveAsset` · ⑤는 `bgRtmiShareJudgmentFields`)을 넘긴다.
  */
 export function bgSuccessorRightStdForced(asset: AssetForm, transferDate: string | undefined, isFractionalSplit?: boolean): boolean {
-  if (!isBgSuccessorRight(asset) || isFractionalSplit === true) return false;
+  if (!isBgSuccessorRight(asset)) return false;
   return bgRtmiParenEnumerated(asset, transferDate, isFractionalSplit);
+}
+
+/**
+ * 축 B(같은 물건 지분 분할) 카드의 입주권 비보충 승을 ⑧이 계산 대상으로 두는가 (X-3) — 시가 모드 담보 승 「주택만」 차단(`bgSplitAxisCollateralWinUnsupported`)에서 입주권을 거른다.
+ * **승계 카드만**(열거 이전·이후 모두). 원조합원 카드는 열거 이후 H-2 대기, 열거 이전은 청산금 규약 불명이라 막는다(X-2 계획서 §4와 같다).
+ */
+export function bgRtmiAxisBWinnerComputable(asset: AssetForm): boolean {
+  return asset.assetKind === "right_to_move_in" && isBgSuccessorRight(asset);
+}
+
+/**
+ * 축 B 둘째 이후 승계 입주권 지분 카드의 ⑤ 판정용 주입값 — 지분 카드는 ② 양도정보(부담부증여 평가 값)를 숨겨 그 카드의 저장값만으로는 승자·열거 시기를 알 수 없다.
+ * 첫 카드와 병합한 값(`mergePrimaryBasic` — ④·⑧과 같은 병합) 중 양도 형태·부담부증여(`bg*`)만 준다(`bgPreDeemedShareJudgmentFields`와 같은 방식).
+ * 승계 입주권 카드가 아니면 빈 객체. ③이 편집하는 값(`successorRight*`)은 덮지 않는다.
+ */
+export function bgRtmiShareJudgmentFields(share: AssetForm, primary: AssetForm): Partial<AssetForm> {
+  const merged = mergePrimaryBasic(share, primary);
+  if (merged.assetKind !== "right_to_move_in" || !isBgSuccessorRight(merged)) return {};
+  return Object.fromEntries(Object.entries(merged).filter(([k]) => k === "transferType" || k.startsWith("bg"))) as Partial<AssetForm>;
 }
