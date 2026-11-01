@@ -192,6 +192,15 @@ export function resolveWholeBgAcquisition(ctx: BgAcquisitionContext): BgAcquisit
     } else {
       const totalAcqStd = landStdPriceAtAcquisition + buildingStdPriceAtAcquisition;
       const total = info.actualAcquisitionTotal ?? 0;
+      // 🔴 조합원입주권은 K-4 고정이라 실지취득가액이 비면 취득가액 0 → 양도차익 과대(막히지 않는 오답)다. 자동 대체값을 쓰지 않고 중단한다 —
+      //   ⑧(승계: 승계취득가액 · 원조합원: 종전 부동산 실지취득가액)은 이미 요구한다. 단건 시가 모드는 ⑫ refine이 먼저 막았고, 기준시가 모드·묶음·축 B는 여기가 처음이다.
+      if (isRightToMoveInValuation && total <= 0) {
+        throw new TaxCalculationError(
+          TaxErrorCode.INVALID_INPUT,
+          "[burdened_gift] 조합원입주권의 취득가액은 실지취득가액을 입력해야 합니다 — 승계조합원은 승계취득가액(+ 추가분담금), 원조합원은 종전 부동산 실지취득가액(「소득세법 시행령」 제166조 제1항 제1호)입니다. " +
+            "입력이 없으면 취득가액이 0원으로 계산되어 양도차익이 과대해집니다.",
+        );
+      }
       landActualAcquisition = totalAcqStd === 0 ? 0 : safeMultiplyThenDivide(total, landStdPriceAtAcquisition, totalAcqStd);
       buildingActualAcquisition = total - landActualAcquisition;
     }
