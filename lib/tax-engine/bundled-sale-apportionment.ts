@@ -320,3 +320,28 @@ export function toBundledAsset(
     fixedSalePrice: options?.fixedSalePrice,
   };
 }
+
+/**
+ * 완전 지분 번들(축 B, 같은 물건 지분 분할)의 확정 양도가액 — `floor(총액 × 지분율)` 절사로 Σ확정가 ≠ 총액일 때 한 자산이 잔액을 흡수해
+ * Σ = 총액이 되게 한다. 정수 보정(1~2원)일 뿐 안분 방식 선택이 아니다 — `feedback_floor_residual_absorption`.
+ *
+ * 흡수자 = 확정 양도가액 > 0 자산 중 (배열 위치 0 = 주 자산을 뺀) assetId 사전순 최대 — 컴패니언 입력 순서와 무관(V-7).
+ * 컴패니언 중 양수가 없으면 양수인 주 자산, 전부 0이면 전 자산 중 사전순 최대. 주 자산 id는 서버가 `"primary"` 리터럴로 고정이라 id가 아니라 위치 0으로 가른다.
+ * `apportionBundledSale` Step 3·5(양도가액·공통경비 흡수자)와 같은 규칙이다.
+ *
+ * 서버(`prepareBundledApportionment`)와 사이드바 계산 전 프리뷰(`computeApportionedSaleMap`)가 이 함수 하나를 쓴다 — 사이드바에 이 보정이 없어
+ * 잔여가 생기는 입력에서 계산 전 합이 총액과 달랐다(계획서 `sidebar-axis-b-sale-residual.plan.md`). 합이 총액을 넘어도 같은 규칙이다(흡수자가 음의 잔액을 받는다) —
+ * 허용 대역 밖 입력은 호출 쪽(⑧·⑫ 가드·사이드바)이 거른다. 입력 배열은 바꾸지 않는다.
+ */
+export function absorbFractionalResidual(
+  assets: ReadonlyArray<{ assetId: string; fixedSalePrice: number }>,
+  totalSalePrice: number,
+): number[] {
+  const allIdx = assets.map((_, i) => i);
+  const positive = allIdx.filter((i) => assets[i].fixedSalePrice > 0);
+  const companionIdx = positive.filter((i) => i !== 0);
+  const pool = companionIdx.length > 0 ? companionIdx : positive.length > 0 ? positive : allIdx;
+  const absorber = pool.reduce((best, i) => (assets[i].assetId > assets[best].assetId ? i : best), pool[0]);
+  const sumExceptAbsorber = allIdx.filter((i) => i !== absorber).reduce((s, i) => s + assets[i].fixedSalePrice, 0);
+  return assets.map((a, i) => (i === absorber ? totalSalePrice - sumExceptAbsorber : a.fixedSalePrice));
+}

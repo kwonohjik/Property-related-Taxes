@@ -124,9 +124,14 @@ export function computeTransferPerAssetSummary(
    * (계획서 `docs/00-pm/burdened-gift-bundle-residuals.plan.md` Q-1 a). 종전에는 일반 주택 600,000,000을 171,428,571로 보였다.
    */
   const blockedMixedBg = isBlockedMixedBurdenedGiftBundle(formData.assets, formData.assetSplitMode);
-  // 계산 전 안분 프리뷰 맵 (bundled 결과가 없을 때만 사용)
+  // 계산 전 안분 프리뷰 맵 (bundled 결과가 없을 때만 사용). 축 B(같은 물건 지분 분할)는 총액 × 지분율이 확정가라 안분 모드가 아니어도(실가 모드) 맵을 만든다 —
+  // 서버가 floor 절사 잔액을 한 자산에 흡수하는 것까지 같은 함수로 미리 보여야 계산 전 합이 총액과 같다(`computeApportionedSaleMap`).
   const apportionedMap =
-    !bundledResult && canApportion(formData) ? computeApportionedSaleMap(formData) : null;
+    !bundledResult &&
+    (canApportion(formData) ||
+      (isFullFractionalBundle(formData.assets, formData.assetSplitMode) && parseRaw(formData.contractTotalPrice) > 0))
+      ? computeApportionedSaleMap(formData)
+      : null;
 
   /**
    * 단건 환산 프리뷰 게이트 — **공통 §176의2② 경로**(양도가액 × 취득시 기준시가 ÷ 양도시 기준시가)를

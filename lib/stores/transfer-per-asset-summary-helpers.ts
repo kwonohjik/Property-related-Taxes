@@ -18,6 +18,8 @@ import { isRedevSuccessorAptActualOnly } from "@/lib/calc/redev-acquisition-pric
 import type { BundledAssetInput } from "@/lib/tax-engine/types/bundled-sale.types";
 import type { BundledAssetKind } from "@/lib/tax-engine/types/bundled-sale.types";
 import { apportionBundledSale } from "@/lib/tax-engine/bundled-sale-apportionment";
+import { absorbFractionalResidual } from "@/lib/tax-engine/bundled-sale-apportionment";
+import { isFractionalRatioSumOutOfTolerance } from "@/lib/calc/fractional-ratio-sum-tolerance";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { hasPre1990LandEstimation } from "@/lib/calc/transfer-pre1990-land-gate";
@@ -132,6 +134,18 @@ export function apportionStdPriceAtTransfer(
 export function computeApportionedSaleMap(formData: TransferFormData): Map<string, number> | null {
   const total = parseRaw(formData.contractTotalPrice);
   const axisB = isFullFractionalBundle(formData.assets, formData.assetSplitMode);
+  // 축 B — 서버(`prepareBundledApportionment`)처럼 floor 절사 잔액을 한 자산이 흡수한다(같은 `absorbFractionalResidual`). 지분율 합이 허용 대역 밖이면
+  // (편집 중) 흡수하지 않는다 — 서버도 ⑫가 400으로 막는 입력이라 «엔진 값»이 없고, 흡수하면 합 210%에서 마지막 자산이 음수로 보인다.
+  const axisBFixed = axisB
+    ? formData.assets.map((a) => applyRatio(total, ownershipRatioOf(a)))
+    : null;
+  const absorbed =
+    axisBFixed && total > 0 && !isFractionalRatioSumOutOfTolerance(formData.assets.reduce((s, a) => s + ownershipRatioOf(a), 0))
+      ? absorbFractionalResidual(
+          formData.assets.map((a, i) => ({ assetId: a.assetId, fixedSalePrice: axisBFixed![i] })),
+          total,
+        )
+      : axisBFixed;
   const assets: BundledAssetInput[] = formData.assets.map((a, i) => {
     const ratio = ownershipRatioOf(a);
     const std = apportionStdPriceAtTransfer(formData, a, i);
@@ -140,7 +154,7 @@ export function computeApportionedSaleMap(formData: TransferFormData): Map<strin
       assetLabel: a.assetLabel,
       assetKind: toBundledKind(a.assetKind),
       standardPriceAtTransfer: ratio < 1 && !axisB ? applyRatio(std, ratio) : std,
-      fixedSalePrice: ratio < 1 && axisB ? applyRatio(total, ratio) : undefined,
+      fixedSalePrice: ratio < 1 && axisB ? absorbed![i] : undefined,
     };
   });
   try {
