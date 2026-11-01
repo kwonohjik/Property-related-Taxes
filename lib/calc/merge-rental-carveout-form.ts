@@ -23,7 +23,8 @@ export function mergeRentalState(form: {
 }): MergeRentalState {
   const asset = form.assets?.[0];
   const rh = asset?.rentalHousingException;
-  if (asset?.assetKind !== "housing" || !rh?.applyException || rh.scenario !== "A" || rh.rentalUnits?.length !== 1) return undefined;
+  const isHouse = asset?.assetKind === "housing" || (asset?.assetKind === "redevelopment_apt" && asset.redevReceiveOnlyMode !== "yes");
+  if (!isHouse || !rh?.applyException || rh.scenario !== "A" || rh.rentalUnits?.length !== 1) return undefined;
   if (!form.isFirstTransferredInMerge) return undefined;
   if (!!form.marriageDate === !!form.parentalCareMergeDate) return undefined;
   const mergeDate = toOptionalDate(form.marriageDate || form.parentalCareMergeDate);
