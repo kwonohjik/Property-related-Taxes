@@ -33,7 +33,7 @@ import {
   RATE_SPECIAL_REDUCTION_IDS,
 } from "./transfer-reductions/income-deduction-router";
 import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step";
-import { withMergeRentalCarveout } from "./one-house/merge-rental-carveout";
+import { mergeRentalCarveoutSurchargeNotice, withMergeRentalCarveout } from "./one-house/merge-rental-carveout";
 import { runIncomeAndBaseSteps } from "./transfer-tax-income-steps";
 import { runOneHouseJudgmentStep } from "./transfer-tax-one-house-judgment-step";
 import { applyLthd982AndPushSteps } from "./transfer-tax-lthd-982-step";
@@ -44,6 +44,7 @@ import {
   applyCommercialBuildingStep,
 } from "./transfer-tax-helpers";
 import { oneHouseJudgmentWarnings } from "./transfer-tax-one-house-warnings";
+import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
 import { resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { landOnlyRateInput } from "./land-only-owner-household";
 import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
@@ -555,6 +556,15 @@ function calculateTransferTaxCore(
     isSurchargeApplied: isSurchargeCase && !suspendedResult && !appurtenantCardHouseSurcharge(effectiveInput),
   });
   if (surchargeFallbackNotice) warnings.push(surchargeFallbackNotice);
+  if (effectiveInput.mergeRentalCarveout && surchargeApplication.isRateSurchargeApplied) {
+    warnings.push(
+      mergeRentalCarveoutSurchargeNotice(
+        effectiveInput,
+        multiHouseSurchargeResult?.effectiveHouseCount ?? effectiveInput.householdHousingCount,
+        !!parsedRates.oneHouseSpecialRules && meetsOneHouseHoldingResidence(effectiveInput, parsedRates.oneHouseSpecialRules.one_house_exemption),
+      ),
+    );
+  }
   // 부담부증여 × 다주택 중과 — 한시 배제가 실제로 적용된 결과에서만 고지한다(1h-G1-11)
   if (transferBurdenedGiftBreakdown && effectiveInput.propertyType === "housing" && isSurchargeCase && suspendedResult) {
     warnings.push(burdenedGiftSurchargeSuspendedNotice(multiHouseSurchargeResult?.effectiveHouseCount ?? effectiveInput.householdHousingCount));

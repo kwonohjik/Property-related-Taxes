@@ -15,7 +15,7 @@
  * 🔑 상대 쪽 주택의 2년 거주는 0061의 사실이라 3-state 문항으로 받는다 — 미선택은 불성립(Q-5 (a)).
  */
 import { TRANSFER } from "../legal-codes/transfer";
-import { TRANSFER_RENTAL_HOUSING } from "../legal-codes";
+import { CLAUSE_13_SURCHARGE_EXCLUSION_EFFECTIVE_DATE, MULTI_HOUSE, TRANSFER_RENTAL_HOUSING } from "../legal-codes";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { resolveExemptionHouseCountExclusions } from "../transfer-tax-house-exclusion-step";
 import { judgeRentalHousingEligibility } from "../transfer-tax-rental-housing-judge";
@@ -112,6 +112,27 @@ export function mergeRentalCarveoutNotice(input: Pick<TransferTaxInput, "marriag
   return input.marriageMerge
     ? `${head} 혼인 합가에서 임대주택이 없는 쪽 주택을 먼저 양도한 정면 회신은 확인하지 못해 동거봉양 회신과 문형이 같다고 보았습니다 — 확인 필요.`
     : head;
+}
+
+/**
+ * 중과 고지 — 이 경로에서 중과세율이 걸렸을 때만 낸다. 임대를 빼는 것은 비과세 판정 주택 수뿐이고, 중과 주택 수는 영 §167의3① 본문대로 따로 센다
+ * (수에서 빼는 것은 1호·12호뿐 — 서울행정법원 2020구단76589). 양도 주택이 §154① 요건을 못 갖추면 배제 호(§167의3①13호 · §167의10①15호)도 받지 못한다.
+ */
+export function mergeRentalCarveoutSurchargeNotice(
+  input: Pick<TransferTaxInput, "marriageMerge" | "transferDate">,
+  surchargeHouseCount: number,
+  meetsOneHouseRequirements: boolean,
+): string {
+  const head =
+    `합가 특례(${MERGE_RENTAL_CARVEOUT_RULING})에서 장기임대주택 1채를 뺀 것은 비과세 판정의 주택 수입니다. ` +
+    `중과 판정의 주택 수는 따로 세어 ${surchargeHouseCount}주택으로 보고 중과세율을 적용했습니다`;
+  const clause =
+    surchargeHouseCount < 3
+      ? input.marriageMerge ? MULTI_HOUSE.MARRIAGE_MERGE_2HOUSE_BASIS : MULTI_HOUSE.PARENTAL_CARE_MERGE_2HOUSE_BASIS
+      : input.transferDate >= CLAUSE_13_SURCHARGE_EXCLUSION_EFFECTIVE_DATE ? MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS : undefined;
+  return !meetsOneHouseRequirements && clause
+    ? `${head} — 양도 주택이 「소득세법 시행령」 §154① 요건을 충족하지 못해 ${clause}의 중과 배제를 받지 못합니다.`
+    : `${head}.`;
 }
 
 /**
