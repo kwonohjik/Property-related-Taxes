@@ -178,13 +178,10 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
   // 2) 임대료 증액 제한 (소령 §167의3①2호 장기임대주택 요건)
   if (input.rentHistory && input.rentHistory.length >= 2) {
     // 5% 한도 — 직전(기준) 계약이 2019.2.12 이후 체결·갱신된 경우만 (RENT_CAP_RULE_CONTRACTS_FROM 주석)
-    const history = input.rentHistory;
     const capViolations = validateRentIncrease(
-      history,
+      input.rentHistory,
       input.jeonseConversionRate ?? DEFAULT_JEONSE_CONVERSION_RATE,
-    ).violations.filter(
-      (v) => history[v.contractIndex - 1].contractDate.getTime() >= RENT_CAP_RULE_CONTRACTS_FROM.getTime(),
-    );
+    ).violations.filter((v) => v.previousContractDate.getTime() >= RENT_CAP_RULE_CONTRACTS_FROM.getTime());
     if (capViolations.length > 0) {
       reasons.push({
         code: "RENT_INCREASE_VIOLATED",

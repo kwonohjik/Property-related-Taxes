@@ -22,7 +22,8 @@ import { evaluateRental973 } from "@/lib/tax-engine/transfer-reductions/rental-9
 import { rental97EffectiveStart } from "@/lib/tax-engine/transfer-reductions/rental-97-shared-helpers";
 import type { Rental97EvaluationInput, Rental97Result } from "@/lib/tax-engine/transfer-reductions/types";
 
-const D = (s: string) => new Date(`${s}T00:00:00`);
+/** UTC 자정 — 엔진 날짜 상수·API 경로(`toDate("YYYY-MM-DD")`)와 같은 축. 로컬 자정은 KST에서 9시간 앞서 시행일 경계가 어긋난다. */
+const D = (s: string) => new Date(s);
 const codes = (r: Rental97Result) => (r.isEligible ? [] : r.ineligibleReasons.map((x) => x.code));
 const jeonse = (date: string, deposit: number) => ({ contractDate: D(date), contractType: "jeonse" as const, deposit, monthlyRent: 0 });
 

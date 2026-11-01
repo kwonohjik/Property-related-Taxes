@@ -23,7 +23,8 @@ import { normalizeRentalAndSplitFields } from "@/lib/stores/calc-wizard-asset-mi
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
 import type { AssetReductionForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 
-const D = (s: string) => new Date(`${s}T00:00:00`);
+/** UTC 자정 — 엔진 날짜 상수·API 경로(`toDate("YYYY-MM-DD")`)와 같은 축. 로컬 자정은 KST에서 9시간 앞서 시행일 경계가 어긋난다. */
+const D = (s: string) => new Date(s);
 const codes = (r: Rental97Result) => (r.isEligible ? [] : r.ineligibleReasons.map((x) => x.code));
 
 /** 등록 2018-08-01 · 임대개시 2018-09-01 · 양도 2029-01-01 (10년 4개월) */
