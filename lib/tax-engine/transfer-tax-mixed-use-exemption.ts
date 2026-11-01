@@ -53,6 +53,8 @@ import { resolveHouseCountExclusion, resolveSpecialHouseExclusions } from "./tra
 import type { HouseCountExclusionDetail } from "./transfer-reductions/unsold-98-9";
 import { resolveArticle89Clause2, type Article89Clause2Result } from "./transfer-tax-89-2-exclusion";
 import { mixedUseUnmetNotices } from "./transfer-tax-mixed-use-unmet-notices";
+import { decisiveProvisoException } from "./one-house/decisive-proviso";
+import { deemedPathProvisoNotices } from "./transfer-tax-one-house-warnings";
 import { isOldSurchargeClauseEra } from "./data/surcharge-old-clauses-era";
 import {
   article89Clause2Notices,
@@ -64,6 +66,29 @@ import type {
   Unsold989Result,
   SpecialHouseExclusionResolution,
 } from "./transfer-reductions";
+
+/** §155 의제 판정 결과 → 일반 경로 판정의 적용 특례 id(`one-house/deemed-verdict.ts`). 근거 고지 leaf가 이 id를 읽는다. */
+function deemedAppliedIds(basis: DeemedOneHouseBasis | undefined): string[] {
+  const temp = "155-1-temporary-two-house";
+  const marriage = "155-5-marriage-merge";
+  const parental = "155-4-parental-care-merge";
+  switch (basis) {
+    case "temporary_two_house":
+      return [temp];
+    case "marriage_merge":
+      return [marriage];
+    case "parental_care_merge":
+      return [parental];
+    case "marriage_merge_overlap":
+      return [marriage, temp];
+    case "parental_care_merge_overlap":
+      return [parental, temp];
+    case "double_merge":
+      return [marriage, parental];
+    default:
+      return [];
+  }
+}
 
 export function judgeMixedUseOneHouseExemption(
   asset: MixedUseAssetInput,
@@ -449,6 +474,19 @@ export function judgeMixedUseOneHouseExemption(
         transferDate,
         oneHouseExemptionProviso: asset.oneHouseExemptionProviso,
       }),
+    );
+  }
+  // §155 의제 경로의 §154① 단서(5호 · 삭제 전 4호) 근거 — 겸용 결과뷰에는 적용 특례 행이 없어 일반 경로와 같은 문장을 경고로 싣는다.
+  const decisiveProviso = isOneHouseExempt
+    ? decisiveProvisoException(exemptionReqInput, oneHouseSpecialRules.one_house_exemption)
+    : undefined;
+  if (decisiveProviso) {
+    warnings.push(
+      ...deemedPathProvisoNotices([
+        decisiveProviso.id,
+        ...deemedAppliedIds(deemedOneHouseBy155),
+        ...(special155Basis !== undefined ? ["155-6-special-house"] : []),
+      ]),
     );
   }
   // 배제 확정 — 단건은 판정 결과(`article89Clause2`)를 결과 카드가 보여 주지만 겸용 결과뷰에는 그 칸이 없다 ⇒ 경고로 사유를 싣는다.

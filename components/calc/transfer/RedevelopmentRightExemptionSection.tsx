@@ -184,6 +184,9 @@ export function RedevelopmentRightExemptionSection({
             `"no"` 입력은 3-state를 온전히 표현하는 `ExemptionAtApprovalCard`의
             RadioCardGroup(`RedevelopmentBlock.tsx:598`)이 담당한다.
             anchor: `__tests__/components/redev-exemption-toggle-tri-state.anchor.test.tsx` */}
+        <p className="text-caption text-muted-foreground" data-testid="redev-right-rental-4ho-hint">
+          삭제 전 §154①4호(2019.12.16. 이전 임대사업자 등록 신청) 요건을 갖춘 종전주택도 거주기간 제한이 없습니다.
+        </p>
         <ToggleCard
           tone="violet"
           checked={isToggleOn}

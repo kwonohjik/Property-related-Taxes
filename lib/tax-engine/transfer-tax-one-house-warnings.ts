@@ -31,6 +31,26 @@ export function unmetExceptionWarning(u: Pick<OneHouseUnmetException, "label" | 
   return u.notice ?? `${u.label}을 적용하지 않았습니다 — ${u.reasons.join(" ")}`;
 }
 
+/**
+ * §155 의제 경로에 거주기간만 푸는 §154① 단서(5호 · 삭제 전 4호)를 적용했을 때 무엇에 기댔는지 — 일반 경로와 겸용 경로
+ * (`transfer-tax-mixed-use-exemption.ts`)가 같은 문장을 낸다. `appliedIds`는 판정 메뉴 「적용된 특례」 id 형식이다.
+ */
+export function deemedPathProvisoNotices(appliedIds: readonly string[]): string[] {
+  const out: string[] = [];
+  // F-2 — 일시적 2주택 종전주택에 §154① 단서 5호(공고 전 계약 · 거주요건 면제)를 적용했으면 근거의 한계를 남긴다.
+  if (appliedIds.includes("155-1-temporary-two-house") && appliedIds.includes("154-1-proviso:pre_designation_contract")) {
+    out.push(
+      "일시적 2주택(「소득세법 시행령」 §155①) 종전주택에 §154① 단서 5호(조정대상지역 공고 전 계약)를 적용해 거주요건을 면제했습니다 — " +
+        "§155①이 「1세대1주택으로 보아 제154조제1항을 적용」하고, 5호의 무주택은 계약금 지급일 현재 기준이라 그 뒤 일시적 2주택과 양립한다고 보았습니다. " +
+        "5호는 「1년 이상 지난 후 취득」 요건은 면제하지 않습니다. 일시적 2주택 종전주택에 5호를 적용한 정면 해석례는 확인하지 못했습니다 — 확인 필요.",
+    );
+  }
+  // 2026-11-01 Q-1 (a) — §155 의제 경로의 삭제 전 §154①4호는 무엇에 기댔는지 남긴다.
+  const rental4hoNotice = rental4hoDeemedPathNotice(appliedIds);
+  if (rental4hoNotice) out.push(rental4hoNotice);
+  return out;
+}
+
 export function oneHouseJudgmentWarnings(
   exemptionResult: OneHouseJudgment,
   ctx: {
@@ -103,22 +123,7 @@ export function oneHouseJudgmentWarnings(
   // §155⑦3호 귀농주택 — ⑩4호·⑪은 입력으로 받아 판정한다(결정 #44). 장래 사실인 ⑫ 사후관리(추징)만 고지한다 — 판정 메뉴 결과와 같은 문장.
   if (exemptionResult.exemptReason?.includes("§155⑦3호")) warnings.push(returnToFarmPostManagementNotice(input.ruralHouse));
 
-  // F-2 — 일시적 2주택 종전주택에 §154① 단서 5호(공고 전 계약 · 거주요건 면제)를 적용했으면 근거의 한계를 남긴다.
-  const applied = exemptionResult.appliedExceptions ?? [];
-  if (
-    applied.some((e) => e.id === "155-1-temporary-two-house") &&
-    applied.some((e) => e.id === "154-1-proviso:pre_designation_contract")
-  ) {
-    warnings.push(
-      "일시적 2주택(「소득세법 시행령」 §155①) 종전주택에 §154① 단서 5호(조정대상지역 공고 전 계약)를 적용해 거주요건을 면제했습니다 — " +
-        "§155①이 「1세대1주택으로 보아 제154조제1항을 적용」하고, 5호의 무주택은 계약금 지급일 현재 기준이라 그 뒤 일시적 2주택과 양립한다고 보았습니다. " +
-        "5호는 「1년 이상 지난 후 취득」 요건은 면제하지 않습니다. 일시적 2주택 종전주택에 5호를 적용한 정면 해석례는 확인하지 못했습니다 — 확인 필요.",
-    );
-  }
-
-  // 2026-11-01 Q-1 (a) — §155 의제 경로의 삭제 전 §154①4호는 무엇에 기댔는지 남긴다.
-  const rental4hoNotice = rental4hoDeemedPathNotice(applied.map((e) => e.id));
-  if (rental4hoNotice) warnings.push(rental4hoNotice);
+  warnings.push(...deemedPathProvisoNotices((exemptionResult.appliedExceptions ?? []).map((e) => e.id)));
 
   // F-1 — ①+④⑤ 중첩 의제는 국세청 해석에 기댄다. 무엇에 기댔고 어디까지 확인됐는지 남긴다.
   if (exemptionResult.exemptReason?.includes("중첩")) {

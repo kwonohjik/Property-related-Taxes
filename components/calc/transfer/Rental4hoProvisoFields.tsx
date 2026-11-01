@@ -118,6 +118,10 @@ export function Rental4hoProvisoFields({ value, mode, onChange }: Props) {
             onChange={(v) => onChange({ proviso4hoRegulatedOneHouse: v })}
             options={yesNoOptions("proviso-4ho-regulated-one-house", "예", "아니오")}
           />
+          <p className="text-caption text-muted-foreground" data-testid="proviso-4ho-regulated-one-house-hint">
+            양도일 현재 주택 수가 아니라 등록 신청 당시의 세대로 답합니다. 합가·혼인 전에 신청했다면 그때의 세대가 기준입니다
+            (기준-2024-법규재산-0061).
+          </p>
         </div>
       )}
 
