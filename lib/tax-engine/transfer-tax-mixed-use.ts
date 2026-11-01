@@ -16,6 +16,7 @@ import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { highValueExcessRulingNoticeText } from "./transfer-tax-appurtenant-land";
 import { appurtenantLandLthdNoticeText } from "./appurtenant-land-lthd-rate";
 import { judgeMixedUseOneHouseExemption } from "./transfer-tax-mixed-use-exemption";
+import { mergeRentalCarveoutSurchargeNotice } from "./one-house/merge-rental-carveout";
 import { resolveMixedUseRentalResidence, withRentalResidenceSurchargeHouses } from "./transfer-tax-mixed-use-rental-residence";
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
 import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
@@ -278,6 +279,12 @@ function calcMixedUseCore(
    */
   const surchargeFromFallback =
     multiHouseSurcharge === undefined && surchargeApplication.isSurchargeApplied;
+  if (rentalResidence?.mergeCarved && surchargeApplication.isRateSurchargeApplied) {
+    const source = asset.rentalResidenceInput!;
+    warnings.push(
+      mergeRentalCarveoutSurchargeNotice(source, multiHouseSurcharge?.effectiveHouseCount ?? source.householdHousingCount, meetsOneHouseRequirements),
+    );
+  }
 
   // §95② 본문 괄호 — 「제104조 제7항 각 호에 따른 자산」의 장기보유특별공제 **배제**.
   //

@@ -23,6 +23,7 @@ import { makeDefaultAsset, makeDefaultRentalUnit } from "@/lib/stores/calc-wizar
 import { RentalHousingExceptionSection } from "@/components/calc/transfer/RentalHousingExceptionSection";
 import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import { runCalc, redevAptForm, houseRow, allIssues } from "./_helpers/redev-one-house-route";
+import { mergeRentalCarveoutSurchargeNotice } from "@/lib/tax-engine/one-house/merge-rental-carveout";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -136,6 +137,47 @@ describe("§154①은 그대로 — 강남(취득 당시 조정)", () => {
     const none = await runCalc(form({ ...late, merge }));
     expect(none.result.multiHouseSurchargeEvaluation?.surchargeApplicable).toBe(true);
     expect(none.result.totalTax).toBeGreaterThan(yes.result.totalTax);
+  });
+});
+
+describe("중과 고지 — 임대를 뺀 것은 비과세 주택 수뿐", () => {
+  const notice = (r: { result: { warnings?: string[] } }) => (r.result.warnings ?? []).filter((m) => m.includes("중과 판정의 주택 수는")).join("\n");
+  const P4 = { officialPrice: "400000000", region: "capital", regionCode: GANGNAM, isApartment: true };
+  const rows = [other("a", "2018-09-27", { mergeOrigin: "counterpart_side", ...P4 }), other("b", "2018-09-27", { mergeOrigin: "counterpart_side", isLongTermRental: true, ...P4 })];
+  const base = { region: GANGNAM, transfer: "2026-06-18", houses: rows };
+  it("MR-7a ★ 강남 거주 0 · 2026-06 3주택 중과 → 수·13호 미충족을 밝힌다", async () => {
+    const r = await runCalc(form(base));
+    expect(r.result.multiHouseSurchargeEvaluation?.surchargeApplicable).toBe(true);
+    expect(notice(r)).toContain("3주택으로 보고 중과세율을 적용했습니다");
+    expect(notice(r)).toContain("§167의3①13호의 중과 배제를 받지 못합니다");
+    expect(notice(r)).toContain(RULING);
+  });
+  it("MR-7b 임대가 지방 저가 → 2주택 중과는 15호로 말한다", async () => {
+    const r = await runCalc(form({ ...base, houses: [rows[0], other("b", "2018-09-27", { mergeOrigin: "counterpart_side", isLongTermRental: true })] }));
+    expect(notice(r)).toContain("2주택으로 보고 중과세율을 적용했습니다");
+    expect(notice(r)).toContain("§167의10①15호·§155④의 중과 배제를 받지 못합니다");
+  });
+  it("MR-7c 혼인 합가 2주택 → 15호·§155⑤", async () => {
+    const r = await runCalc(form({ ...base, merge: MARRIAGE, houses: [rows[0], other("b", "2018-09-27", { mergeOrigin: "counterpart_side", isLongTermRental: true })] }));
+    expect(notice(r)).toContain("§167의10①15호·§155⑤");
+  });
+  it("MR-7d 13호 시행 전 양도 → 중과는 밝히되 호를 대지 않는다", async () => {
+    const r = await runCalc(form({ ...base, transfer: "2020-09-18", acq: "2017-10-01", merge: { ...PARENTAL, parentalCareMergeDate: "2019-06-28" } }));
+    expect(r.result.multiHouseSurchargeEvaluation?.surchargeApplicable).toBe(true);
+    expect(notice(r)).toContain("3주택으로 보고 중과세율을 적용했습니다.");
+    expect(notice(r)).not.toContain("13호");
+  });
+  it("MR-7f §154① 요건을 갖췄는데 중과면 「요건 미충족」이라고 말하지 않는다", () => {
+    const m = mergeRentalCarveoutSurchargeNotice({ transferDate: new Date("2026-06-18") }, 3, true);
+    expect(m).toContain("3주택으로 보고 중과세율을 적용했습니다.");
+    expect(m).not.toContain("받지 못합니다");
+  });
+  it("MR-7e ★ 13호 배제 · 한시 배제 · ⑳ 미선언에는 고지가 없다", async () => {
+    expect(notice(await runCalc(form({ ...base, res: { residencePeriods: [{ moveInDate: "2019-08-08", moveOutDate: "2021-08-08" }] } })))).toBe("");
+    expect(notice(await runCalc(form({ ...base, transfer: "2026-05-08" })))).toBe("");
+    const undeclared = await runCalc(form({ ...base, rhe: null }));
+    expect(undeclared.result.multiHouseSurchargeEvaluation?.surchargeApplicable).toBe(true);
+    expect(notice(undeclared)).toBe("");
   });
 });
 
