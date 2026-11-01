@@ -68,7 +68,7 @@ export function SettlementAnnouncementDateField({
     <FieldCard
       label="소유권이전 고시일"
       field="redevSettlementSaleDate"
-      hint="도시정비법 §86 소유권이전 고시일. 양도일(NTS 집행기준 + 시행령 §162①9호)은 다음날로 자동 산정됩니다."
+      hint={`${REDEVELOPMENT.REDEV_OWNERSHIP_TRANSFER_NOTICE} 소유권이전 고시일을 입력합니다. 양도일은 그 다음날로 자동 산정됩니다 (${REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_DECREE} · ${REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_GUIDELINE} · 사전-2022-법규재산-1282).`}
     >
       <div className="space-y-2">
         <DateInput value={announcementDate} onChange={handleAnnouncementChange} />
@@ -110,7 +110,7 @@ export function ReceiveOnlyToggleCard({
           종전부동산 취득가액은 권리가액 대비 청산금 비율로 자동 안분됩니다.
         </p>
         <p>
-          ※ <span className="font-semibold">양도일</span>은 소유권이전 고시일의 익일로 입력하세요 (NTS 집행기준).
+          ※ <span className="font-semibold">양도일</span>은 소유권이전 고시일의 익일로 입력하세요 ({REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_GUIDELINE}).
         </p>
         <p>
           {/* 🔴 「본 PR 미매핑」은 저장소 내부 사정이다 — 사용자 화면에 쓰지 않는다(B1). */}
