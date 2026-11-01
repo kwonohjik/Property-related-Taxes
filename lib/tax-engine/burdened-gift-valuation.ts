@@ -325,6 +325,7 @@ export function computeSangjeungbeopValuation(
  * | 기준시가 모드 · 입주권 | 미발동(§61③) |
  * | 기준시가 모드 · 그 외 | 발동 |
  * | 시가 모드 · 담보(§66) 승 · 입주권 아님 | 발동(`collateralForcedStdInMarketMode`) |
+ * | 시가 모드 · 담보(§66) 승 · 입주권 | 여기서는 미발동 — 단 양도일 2023.2.28. 이후면 `buildBurdenedGiftBreakdown`이 기준시가 모드와 같이 fail-fast(입주권 기준시가 입력 경로 없음) |
  * | 시가 모드 그 밖 | 미발동 |
  */
 export function resolveBgAcquisitionBasis(
