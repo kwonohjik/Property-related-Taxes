@@ -3,8 +3,8 @@
  * 계획서: docs/02-design/features/realestate-pre-deemed-purchase-176-2-4.plan.md §4.2·§4.3
  *
  * ⑤ 카드(`PreDeemedPurchaseCard`)·④ 단건·컴패니언·⑧·⑥·다건 차단이 모두 `isPreDeemedPurchaseAsset`을 읽는다(3중 패턴).
- * 게이트는 엔진 1차 범위(`preDeemedPurchaseOutOfScopeReason`)와 같은 자산만 연다 — 취득일 칸이 덮어쓰기 결과(1985-01-01)인
- * 매매 토지·주택·건물·상가 · 겸용·부담부증여·토지·건물 취득일 분리(PHD 같은 날 제외)·다필지 제외.
+ * 게이트는 엔진 범위(`preDeemedPurchaseOutOfScopeReason`)와 같은 자산만 연다 — 취득일 칸이 덮어쓰기 결과(1985-01-01)인
+ * 매매 토지·주택·건물·상가·재개발 원조합원(완공 APT·입주권) · 겸용·부담부증여·토지·건물 취득일 분리(PHD 같은 날 제외)·다필지 제외.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { parseDecimal } from "@/lib/calc/number-parse";
@@ -12,6 +12,7 @@ import { isBeforePpiSeries } from "@/lib/tax-engine/producer-price-ratio";
 import { PRE_DEEMED_PURCHASE_PPI_RATIO_REQUIRED_MESSAGE } from "@/lib/tax-engine/transfer-pre-deemed-purchase-messages";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 import { fieldError } from "./transfer-tax-validate-field";
+import { isRedevelopmentSec166Asset, redevHidesGeneralAcqSection } from "./redev-acquisition-price-source";
 
 export const PRE_DEEMED_DATE = "1985-01-01";
 
@@ -27,13 +28,17 @@ type GateFields = Pick<
   | "hasSeperateLandAcquisitionDate"
   | "usePreHousingDisclosure"
   | "parcelMode"
+  | "isSuccessorRightToMoveIn"
+  | "redevIsSuccessorMember"
 >;
 
 /** 카드를 여는 자산인가 — 취득일 칸이 의제취득일(덮어쓰기 결과)인 1차 범위 매매 자산 */
 export function isPreDeemedPurchaseAsset(a: GateFields): boolean {
   if (a.acquisitionCause !== "purchase" || a.transferType === "burdened_gift") return false;
   if (a.acquisitionDate !== PRE_DEEMED_DATE) return false;
-  if (!KINDS.has(a.assetKind) || a.isMixedUseHouse || a.parcelMode) return false;
+  // 재개발은 원조합원만(승계조합원은 취득일이 승계 시점이고 §166③ 대상이 아니다 · Q-4 a)
+  const kindOpen = isRedevelopmentSec166Asset(a) ? redevHidesGeneralAcqSection(a) : KINDS.has(a.assetKind);
+  if (!kindOpen || a.isMixedUseHouse || a.parcelMode) return false;
   // 토지·건물 취득일을 따로 두면 파트마다 취득월이 다르다(2차 범위) — PHD는 같은 날 두 칸이라 연다
   if (a.hasSeperateLandAcquisitionDate && !a.usePreHousingDisclosure) return false;
   return true;
@@ -47,8 +52,10 @@ export function preDeemedPurchaseApplies(a: GateFields & Pick<AssetForm, "preDee
 
 /** 환산·감정·매매사례 모드인가 — 그때만 「함께 견줄 실가」 칸이 ②의 기준이다(실가 모드는 취득가액 칸) */
 export function preDeemedPurchaseUsesCompareActual(
-  a: Pick<AssetForm, "useEstimatedAcquisition" | "isAppraisalAcquisition" | "isSalesCaseAcquisition">,
+  a: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "useEstimatedAcquisition" | "isAppraisalAcquisition" | "isSalesCaseAcquisition">,
 ): boolean {
+  // 재개발 ⑤ 라디오는 실가·환산뿐이다 — 숨은 감정·매매사례 플래그를 읽지 않는다(엔진과 같은 규칙)
+  if (isRedevelopmentSec166Asset(a)) return a.useEstimatedAcquisition === true;
   return a.useEstimatedAcquisition === true || a.isAppraisalAcquisition === true || a.isSalesCaseAcquisition === true;
 }
 

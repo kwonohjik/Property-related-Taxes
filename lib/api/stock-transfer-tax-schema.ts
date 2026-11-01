@@ -10,11 +10,6 @@
 
 import { z } from "zod";
 import { foreignStockInputSchema } from "./stock-transfer-foreign-schema";
-import { toOptionalDate } from "./date-coerce";
-import {
-  isTradingHaltMarketScopeViolation,
-  TRADING_HALT_MARKET_SCOPE_MESSAGE,
-} from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
 
 
 /**
@@ -224,7 +219,7 @@ export const stockTransferInputSchema = z.object({
   isListedSmallShareholder: z.boolean(),
   isVentureCompany: z.boolean(),
   isKOTCTrading: z.boolean(),
-  // §94①3 가목 1) 단서 — 장내 거래 여부 (default true, 기존 동작 호환)
+  // §94①3 가목 2) 반대해석 — 장내 거래 여부 (default true, 기존 동작 호환)
   isOnMarketTransaction: z.boolean().optional().default(true),
   // F-15·F-16 (2026-05-19) — 대차주식·사모펀드 간접소유 자동 가산 (§157 2013.2.15.~)
   lentSharesCount: z.number().int().nonnegative().optional().default(0),

@@ -92,7 +92,12 @@ describe("취득일 칸 덮어쓰기 — 원 입력을 실제 취득일로 보�
   function Harness({ initial }: { initial: string }) {
     const [a, setA] = useState<AssetForm>(asset({ assetKind: "land", acquisitionCause: "purchase", acquisitionDate: initial }));
     const patch = (p: Partial<AssetForm>) => setA((x) => ({ ...x, ...p }));
-    const block = { acquisitionDate: a.acquisitionDate, onAcquisitionDateChange: (v: string) => patch({ acquisitionDate: v }), asset: a, onAssetChange: patch, assetKind: a.assetKind } as unknown as BlockProps;
+    const block = {
+      acquisitionDate: a.acquisitionDate,
+      onAcquisitionDateChange: (v: string) => patch({ acquisitionDate: v }),
+      onAcquisitionDateClamp: (v: string, o: string) => patch({ acquisitionDate: v, preDeemedOriginalAcquisitionDate: o }),
+      asset: a, onAssetChange: patch, assetKind: a.assetKind,
+    } as unknown as BlockProps;
     return (
       <>
         <CompanionAcqDateSection block={block} isSplitable={false} isSplit={false} isMixedUse={false} acqDateLabel="취득일" saleStdInSaleAxis />
@@ -126,7 +131,10 @@ describe("게이트 isPreDeemedPurchaseAsset — 엔진 1차 범위와 같은 �
     ["토지·건물 취득일 분리", LAND({ assetKind: "housing", hasSeperateLandAcquisitionDate: true }), false],
     ["다필지", LAND({ parcelMode: true }), false],
     ["일반건물", LAND({ assetKind: "general_building" }), false],
-    ["입주권", LAND({ assetKind: "right_to_move_in" }), false],
+    ["입주권 원조합원", LAND({ assetKind: "right_to_move_in" }), true],
+    ["완공 APT 원조합원", LAND({ assetKind: "redevelopment_apt" }), true],
+    ["승계 입주권", LAND({ assetKind: "right_to_move_in", isSuccessorRightToMoveIn: true }), false],
+    ["승계조합원 완공 APT", LAND({ assetKind: "redevelopment_apt", redevIsSuccessorMember: "yes" }), false],
   ] as [string, A, boolean][])("%s → %s", (_n, o, v) => {
     expect(isPreDeemedPurchaseAsset(asset(o))).toBe(v);
   });

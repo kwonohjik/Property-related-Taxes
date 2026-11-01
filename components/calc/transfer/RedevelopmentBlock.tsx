@@ -70,6 +70,7 @@ import {
   ACQ_MODE_OPTIONS,
   APPROVAL_LAW_OPTIONS,
 } from "./RedevelopmentBlockOptions";
+import { PreDeemedPurchaseCard } from "./PreDeemedPurchaseCard";
 import {
   shouldShowRedevValuationSection,
   isHousingContribEstimatedBranch,
@@ -597,6 +598,8 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           )}
         </ToneCard>
       )}
+      {/* 의제취득일 전 매수 원조합원 영 §176조의2④ — ⑤의 방식이 ①을 정한다(일반 취득가액 영역이 숨어 그쪽 카드는 그려지지 않는다) */}
+      <PreDeemedPurchaseCard asset={asset} onAssetChange={onChange} />
 
       {/* §⑤ 거주월수 분리 입력 (사례 45 — 1세대1주택 + 12억 초과) — **완공 APT 양도 전용**.
           「기존주택 거주월수 / 신축주택 거주월수」 분리는 신축 APT가 존재해야 성립한다.

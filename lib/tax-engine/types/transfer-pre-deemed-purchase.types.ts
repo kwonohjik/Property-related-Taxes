@@ -34,7 +34,8 @@ export interface PreDeemedPurchaseDetail {
   clause2Amount: number;
   /** ① 의제취득일 현재 추계 가액 — 실가 모드면 없다(미산정) */
   clause1Amount?: number;
-  clause1Method?: "estimated" | "appraisal" | "salesCase";
+  /** `redevelopment166_3` — 재개발 원조합원의 ①은 영 §166③ 값이다(계획서 Q-4 a) */
+  clause1Method?: "estimated" | "appraisal" | "salesCase" | "redevelopment166_3";
   /** 동액이면 ② */
   selected: "clause1" | "clause2";
   /** ② 채택 = 실비(법 §97②1호 나목) · ① 채택 = 개산공제(법 §97②2호) */

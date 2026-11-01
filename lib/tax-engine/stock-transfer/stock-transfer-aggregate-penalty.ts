@@ -72,7 +72,7 @@ export function stripItemPenalties(items: StockTransferResult[]): StockTransferR
   return items.map((r) => {
     /**
      * 🔑 비과세 종목은 건드리지 않는다 — `applyExemptZeroing`이 `finalTax`를 0으로 **강제**해
-     * 두었고 `calculatedTax`는 echo 로 남는다(§94①3 가목1) 단서 등). 아래 식으로 다시 쓰면
+     * 두었고 `calculatedTax`는 echo 로 남는다(§94①3 가목 2) 반대해석 등). 아래 식으로 다시 쓰면
      * 비과세 종목에 세액이 되살아난다(anchor AG-EX-4가 이 회귀를 잡는다).
      */
     if (r.isExempt) return r;

@@ -268,7 +268,7 @@ export function KiwoomAutoFetchButton({
             {info.anchorShifted && (
               <p className="rounded border border-sky-300 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/30 px-2 py-1 text-sky-800 dark:text-sky-200">
                 ℹ️ {dateLabel}이 매매 없는 날이라 직전 거래일 <strong>{info.anchorDate}</strong>{" "}
-                기준으로 계산했습니다 (상증법 §63①1가목 단서 · 소득세법 §99①3 준용).
+                기준으로 계산했습니다 (상증법 §63①1가목 괄호 · 소득세법 §99①3 준용).
               </p>
             )}
 

@@ -87,7 +87,7 @@ export interface StockTransferFormData {
   judgmentDateOverride: string;
   judgmentBasis: "default" | "merger" | "split" | "split_new_entity" | "incorporation";
   /**
-   * 거래소 장내 거래 여부 (§94①3 가목 1) 단서).
+   * 거래소 장내 거래 여부 (§94①3 가목 2) 반대해석).
    * KOSPI/KOSDAQ/KONEX 비대주주 + 非K-OTC 시 비과세 판정의 명시 입력.
    * 3중 패턴 default: true (기존 동작 유지).
    */
