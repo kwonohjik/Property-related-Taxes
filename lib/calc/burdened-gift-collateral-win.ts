@@ -95,7 +95,7 @@ export function bgCollateralForcesStdAcq(asset: AssetForm, isFractionalSplit?: b
  * 함께 부담부증여 묶음에서 **비보충 승자(담보 §66·임대 §61⑤)를 계산하지 않는** 자산인가 — 화면·엔진의 취득가액 처리를 확인하지 못한 범위다.
  * · 지분 보유: 주택(이월과세·의제취득일 전 상속·증여·겸용 제외)만 계산한다 — 기준시가 모드는 임대·담보, 시가 모드는 담보 승이 모두 취득가액 = 취득시 기준시가 × 지분 × 채무비율이다
  *   (균일 승자 묶음의 ⑫ 값은 자산별 단건 지분 실행의 합과 ±0 — `bg-axis-a-nonsupp-win.plan.md`). 그 밖의 종류는 확인하지 못해 막는다.
- * · 조합원입주권 · 겸용주택: 위 `bgCollateralForcesStdAcq` 주석과 같다. 단 묶음 게이트는 지분 100% 입주권을 `bgRtmiBundleWinnerComputable`로 걸러 푼다(X-1 — 이 함수는 «입주권이면 true»로 둔다).
+ * · 조합원입주권 · 겸용주택: 위 `bgCollateralForcesStdAcq` 주석과 같다. 단 묶음 게이트는 입주권을 `bgRtmiBundleWinnerComputable`로 걸러 푼다(이 함수는 «입주권이면 true»로 둔다).
  * · 이월과세는 막지 않는다 — 기준시가 모드는 임대·담보 승(1단계), 시가 모드는 담보 승(2단계)이 모두 취득가액 = 취득시 기준시가 × 채무비율이라
  *   (A = 당초 증여자 · B = 양도인) 균일 승자 묶음의 ⑫ 값이 단건 합·오라클과 맞는다(`bg-carryover-std-uniform-bundle.plan.md` · `bg-carryover-mkt-collateral-win.plan.md`).
  *   시가 모드의 임대 승은 존재하지 않는다(엔진 `computeSangjeungbeopValuation` — 임대 환산은 시가가 없을 때만 비교).

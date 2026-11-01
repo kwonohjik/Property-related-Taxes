@@ -9,7 +9,7 @@
  *   원조합원 열거 이전 = 30억 − (실지 3억 + 청산금 2억) = 2,500,000,000 · 임대(기준시가 모드) 주택 = 30억 − 3.75억 − 1,125만 = 2,613,750,000 / 입주권 2,772,750,000.
  *
  * · BG-1 격자 — ⑧ 통과 ∧ ⑫ 200 ∧ 합계 = 단건 합.
- * · BG-2 범위 — 원조합원 열거 이후는 ⑧ 차단 ∧ ⑫ 400(유지) · 열거 이전 원조합원은 통과 · 지분 50% 원조합원 입주권 묶음은 차단(공유 지분은 승계만 — X-2).
+ * · BG-2 범위 — 원조합원 열거 이후는 ⑧ 차단 ∧ ⑫ 400(유지) · 열거 이전 원조합원은 통과 · 지분 50% 원조합원 입주권 묶음은 열거 이전 통과(`transfer.route.bg-orig-rtmi-preera-share.anchor.test.ts`).
  * · BG-3 입력 요구 정합 ⑧ ⊇ ⑫ — 기준시가 2칸 비움: ⑧ 1건 ∧ ⑫ 400 · 승계취득가액 비움: ⑧·⑫ 통과 · 열거 이전 승계취득가액 비움: ⑧ 차단(⑫는 막지 않는다 — 아래 «확인 필요»).
  * · BG-4 혼합 승자는 종전대로 ⑧·⑫ 모두 막는다.
  * · BG-5 술어 진리표 `bgRtmiBundleWinnerComputable` + 경계일.
@@ -106,11 +106,9 @@ describe("BG-2 범위 — 원조합원 열거 이후·원조합원 지분은 계
     expect(m[0].message).toContain("원조합원 입주권의 기준시가");
     expect((await post(f)).status).toBe(400);
   });
-  it("지분 50% 원조합원 입주권 묶음: 게이트가 막는다(공유 지분은 승계만 — X-2)", () => {
+  it("지분 50% 원조합원 입주권 묶음 · 열거 이전: 게이트가 막지 않는다", () => {
     const f = cmp([house(), base(ORIG, MKT, x({ bgMortgageDebtAmount: "1,500,000,000", bgMortgageSetAmount: "1,500,000,000" }), x({ ownershipNumerator: "50", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes" }))], "2023-02-27");
-    const m = gate(f);
-    expect(m.length).toBe(1);
-    expect(m[0].message).toContain("조합원입주권 자산은");
+    expect(gate(f)).toEqual([]);
   });
 });
 
@@ -157,14 +155,15 @@ describe("BG-5 술어 진리표 · 경계일", () => {
     expect(at("rental", "2020-02-11", o)).toBe(false);
     expect(at("rental", "2020-02-11", s)).toBe(true);
   });
-  it("양도일 없음·입주권 아님은 계산 대상이 아니다(막는다) · 지분 < 1은 승계만(X-2)", () => {
+  it("양도일 없음·입주권 아님은 계산 대상이 아니다(막는다) · 지분 < 1 원조합원은 열거 이전만", () => {
     const s = base(SUCC, MKT, MORT, STDIN);
     expect(at("mortgage", undefined, s)).toBe(false);
     expect(at("mortgage", "2026-02-16", house())).toBe(false);
     const half = x({ ownershipNumerator: "50", ownershipDenominator: "100" });
     expect(at("mortgage", "2026-02-16", base(SUCC, half))).toBe(true);
     expect(at("mortgage", "2023-02-27", base(SUCC, half))).toBe(true);
-    expect(at("mortgage", "2023-02-27", base(ORIG, half))).toBe(false);
+    expect(at("mortgage", "2023-02-27", base(ORIG, half))).toBe(true);
+    expect(at("mortgage", "2026-02-16", base(ORIG, half))).toBe(false);
   });
   it.each([
     ["담보 2023-02-27", "2023-02-27", 5_085_000_000],

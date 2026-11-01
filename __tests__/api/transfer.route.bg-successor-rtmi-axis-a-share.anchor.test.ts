@@ -15,7 +15,7 @@
  *
  * · XA-1 격자 — ⑧ 통과 ∧ ⑫ 200 ∧ 양도차익 = 오라클 ∧ 취득가액·개산공제.
  * · XA-2 입력 요구 정합 ⑧ ⊇ ⑫ — 기준시가 2칸 비움: ⑧ 1건 ∧ ⑫ 400 · 승계취득가액 비움: ⑧·⑫ 통과 · 열거 이전 실지 비움: ⑧ 차단 ∧ ⑫ 400.
- * · XA-3 범위 — 원조합원 열거 이후 ⑧ 차단 ∧ ⑫ 400 · 원조합원 열거 이전 지분은 막는다(청산금 규약 불명). 축 B는 X-3이 열었다.
+ * · XA-3 범위 — 원조합원 열거 이후 ⑧ 차단 ∧ ⑫ 400 · 원조합원 열거 이전 지분은 `transfer.route.bg-orig-rtmi-preera-share.anchor.test.ts`가 덮는다. 축 B는 X-3이 열었다.
  * · XA-4 함께 양도 묶음 — 승계 지분 입주권 포함 균일 승자 묶음이 ⑧ 통과 ∧ 단건 합.
  * · XA-5 술어 진리표.
  */
@@ -140,9 +140,12 @@ describe("XA-3 범위 — 원조합원은 계속 막는다", () => {
     expect(m[0].message).toContain("원조합원 입주권의 기준시가");
     expect((await post(f)).status).toBe(400);
   });
-  it("원조합원 열거 이전 지분 · 시가 담보: ⑧ 차단 (⑫는 200이지만 청산금이 지분만큼 줄지 않아 입력 규약이 불명 — 계획서 §3)", () => {
+  it("원조합원 열거 이전 지분 · 시가 담보: ⑧ 통과 ∧ ⑫ 200 — 청산금 2억은 본인 지분 해당분으로 그대로 뺀다(15억 − 2억 − 3억 × 0.5)", async () => {
     const f = form([base(ORIG, MKT, M15, SHARE)], "2023-02-27");
-    expect(full(f).length).toBeGreaterThan(0);
+    expect(full(f)).toEqual([]);
+    const r = await post(f);
+    expect(r.status).toBe(200);
+    expect(gain(r)).toBe(1_150_000_000);
   });
 });
 
@@ -174,11 +177,12 @@ describe("XA-5 술어 진리표", () => {
     expect(bgSuccessorRightStdForced(base(ORIG, MKT, M15, STDIN, SHARE), "2026-02-16", false)).toBe(false);
     expect(bgSuccessorRightStdForced(base(SUCC, MKT, MORT, STDIN), "2026-02-16", undefined)).toBe(true);
   });
-  it("bgRtmiShareWinnerComputable — 지분 < 1 승계만(양도일 필요)", () => {
+  it("bgRtmiShareWinnerComputable — 지분 < 1 · 승계는 시기 무관 · 원조합원은 열거 이전만(양도일 필요)", () => {
     expect(bgRtmiShareWinnerComputable(base(SUCC, SHARE), "2026-02-16")).toBe(true);
     expect(bgRtmiShareWinnerComputable(base(SUCC, SHARE), "2023-02-27")).toBe(true);
     expect(bgRtmiShareWinnerComputable(base(SUCC, SHARE), undefined)).toBe(false);
-    expect(bgRtmiShareWinnerComputable(base(ORIG, SHARE), "2023-02-27")).toBe(false);
+    expect(bgRtmiShareWinnerComputable(base(ORIG, MKT, M15, SHARE), "2023-02-27")).toBe(true);
+    expect(bgRtmiShareWinnerComputable(base(ORIG, MKT, M15, SHARE), "2026-02-16")).toBe(false);
     expect(bgRtmiShareWinnerComputable(base(SUCC), "2026-02-16")).toBe(false);
     expect(bgRtmiShareWinnerComputable(house(), "2026-02-16")).toBe(false);
   });

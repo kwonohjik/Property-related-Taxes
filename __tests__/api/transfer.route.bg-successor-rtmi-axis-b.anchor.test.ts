@@ -136,21 +136,21 @@ describe("XB-3 범위 — 원조합원 카드(열거 이후)는 계속 막는다
   });
 });
 
-describe("XB-3b 범위 — 열거 이전 원조합원 카드도 막는다 (청산금 규약 불명 — X-2 계획서 §4)", () => {
-  it("카드 2가 원조합원 · 2023-02-27 · 시가 담보: ⑧ 차단", () => {
+describe("XB-3b 범위 — 열거 이전 원조합원 카드는 계산한다 (`transfer.route.bg-orig-rtmi-preera-share.anchor.test.ts`)", () => {
+  it("카드 2가 원조합원 · 2023-02-27 · 시가 담보: ⑧ 통과", () => {
     const orig2 = base(ORIG, x({ assetId: "s2", ownershipNumerator: "40", ownershipDenominator: "100" }));
     const f = form([card("p", "60", [MKT, MORT, STDIN]), orig2], "2023-02-27", { assetSplitMode: "fractional", contractTotalPrice: "3000000000" });
-    expect(full(f).length).toBeGreaterThan(0);
+    expect(full(f)).toEqual([]);
   });
 });
 
 describe("XB-4 술어 · ⑤ 주입", () => {
-  it("bgSuccessorRightStdForced — 축 B(true)에서도 켜진다 · bgRtmiAxisBWinnerComputable은 승계만", () => {
+  it("bgSuccessorRightStdForced — 축 B(true)에서도 켜진다 · bgRtmiAxisBWinnerComputable은 승계 또는 열거 이전 원조합원", () => {
     const c = card("p", "60", [MKT, MORT, STDIN]);
     expect(bgSuccessorRightStdForced(c, "2026-02-16", true)).toBe(true);
     expect(bgSuccessorRightStdForced(c, "2023-02-27", true)).toBe(false);
-    expect(bgRtmiAxisBWinnerComputable(c)).toBe(true);
-    expect(bgRtmiAxisBWinnerComputable(base(ORIG))).toBe(false);
+    expect(bgRtmiAxisBWinnerComputable(c, "2026-02-16")).toBe(true);
+    expect(bgRtmiAxisBWinnerComputable(base(ORIG), undefined)).toBe(false);
   });
   it("비주 카드: 주입 없이는 승자를 몰라 칸이 닫히고, 첫 카드 주입값을 받으면 열린다(⑤ CompanionAssetCard와 같은 병합)", () => {
     const primary = card("p", "60", [MKT, MORT, STDIN]);
