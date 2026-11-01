@@ -16,6 +16,7 @@ import { temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { calcFinalHouseRestartInScope, collectFinalHouseRestartErrors } from "./final-house-restart";
+import { shareResidenceNeedsIntervals } from "./axis-b-share-residence";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { calcGiftPriorResidenceAsked } from "./gift-household-payload";
 import { directResidenceMonthsOverflowError } from "./residence-interval-validate";
@@ -379,5 +380,13 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       if (overflow) issues.push({ step, message: overflow });
     }
   }
+  if (shareResidenceNeedsIntervals(form))
+    issues.push({
+      step,
+      message: fieldError(
+        "residencePeriodMonthsAsset",
+        "지분별 취득일이 달라 거주한 시점이 필요합니다. 「거주 기간 입력」 토글을 켜고 입주일·퇴거일로 입력하세요 (소득세법 시행령 §154① 「그 보유기간 중」).",
+      ),
+    });
   return issues;
 }
