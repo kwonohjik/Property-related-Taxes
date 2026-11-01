@@ -95,7 +95,7 @@ export function bgCollateralForcesStdAcq(asset: AssetForm, isFractionalSplit?: b
  * 함께 부담부증여 묶음에서 **비보충 승자(담보 §66·임대 §61⑤)를 계산하지 않는** 자산인가 — 화면·엔진의 취득가액 처리를 확인하지 못한 범위다.
  * · 지분 보유: 주택(이월과세·의제취득일 전 상속·증여·겸용 제외)만 계산한다 — 기준시가 모드는 임대·담보, 시가 모드는 담보 승이 모두 취득가액 = 취득시 기준시가 × 지분 × 채무비율이다
  *   (균일 승자 묶음의 ⑫ 값은 자산별 단건 지분 실행의 합과 ±0 — `bg-axis-a-nonsupp-win.plan.md`). 그 밖의 종류는 확인하지 못해 막는다.
- * · 조합원입주권 · 겸용주택: 위 `bgCollateralForcesStdAcq` 주석과 같다.
+ * · 조합원입주권 · 겸용주택: 위 `bgCollateralForcesStdAcq` 주석과 같다. 단 묶음 게이트는 지분 100% 입주권을 `bgRtmiBundleWinnerComputable`로 걸러 푼다(X-1 — 이 함수는 «입주권이면 true»로 둔다).
  * · 이월과세는 막지 않는다 — 기준시가 모드는 임대·담보 승(1단계), 시가 모드는 담보 승(2단계)이 모두 취득가액 = 취득시 기준시가 × 채무비율이라
  *   (A = 당초 증여자 · B = 양도인) 균일 승자 묶음의 ⑫ 값이 단건 합·오라클과 맞는다(`bg-carryover-std-uniform-bundle.plan.md` · `bg-carryover-mkt-collateral-win.plan.md`).
  *   시가 모드의 임대 승은 존재하지 않는다(엔진 `computeSangjeungbeopValuation` — 임대 환산은 시가가 없을 때만 비교).
@@ -123,9 +123,9 @@ export function bgUnsupportedWinnerReason(asset: AssetForm): string {
 export const BG_RTMI_ORIGINAL_CAUSE =
   "원조합원 입주권의 기준시가(「소득세법 시행령」 제165조 제1항 — 취득일까지 납입한 금액과 취득일 현재의 프리미엄)는 「취득일」과 「납입한 금액」에 종전 부동산 평가액·청산금을 포함하는지가 정해지지 않아 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
 
-/** 승계 입주권이라도 단건(지분 100% · 함께 양도 아님)만 계산한다 — 묶음·지분은 확인하지 못했다. */
+/** 승계 입주권이라도 지분 100%만 계산한다(단건·함께 양도 묶음) — 지분을 가진 승계 입주권은 확인하지 못했다. */
 export const BG_RTMI_SUCCESSOR_SINGLE_ONLY_CAUSE =
-  "승계 조합원입주권의 담보·임대 평가에서 취득가액을 입주권 기준시가로 정하는 계산은 단독 소유 단건만 합니다 — 함께 양도 묶음·지분은 확인하지 못했습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
+  "승계 조합원입주권의 담보·임대 평가에서 취득가액을 입주권 기준시가로 정하는 계산은 지분 100%(단독 소유)만 합니다 — 지분을 가진 입주권은 확인하지 못했습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
 
 export function bgUnsupportedWinnerCause(asset: AssetForm): string {
   if (asset.assetKind === "right_to_move_in") return asset.isSuccessorRightToMoveIn === true ? BG_RTMI_SUCCESSOR_SINGLE_ONLY_CAUSE : BG_RTMI_ORIGINAL_CAUSE;
