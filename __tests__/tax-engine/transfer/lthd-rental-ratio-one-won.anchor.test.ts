@@ -74,6 +74,8 @@ describe("#7 임대기간 분 비율 — 정수 분수", () => {
     transferDate: D0("2026-07-01"), isTaxRegistered: true, rentIncreaseViolated: false, isNationalHousingScale: true, region: "capital",
     stdPriceAtAcquisition: 300_000_000, officialPriceAtStart: 320_000_000, stdPriceAtTransfer: 640_000_000,
     rentalContinuesToTransfer: false, stdPriceAtRentalEnd: 560_000_000,
+    // §97의5①2호 — 조기 종료면 10년 판정의 종점(임대 종료일)이 필수다 (2026-11-01 정정)
+    rentalEndDate: D0("2025-06-01"),
   };
   it("§97의5 감면세액 = 산출세액 × 13/17 정확값 (85,000,000 → 65,000,000 · 종전 64,999,999)", () => {
     for (const [tax, want] of [[85_000_000, 65_000_000], [170_000_000, 130_000_000]] as const) {
