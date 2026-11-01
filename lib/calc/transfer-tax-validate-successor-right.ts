@@ -50,6 +50,8 @@ export function validateSuccessorRightAsset(
   typeToggleSection: string = successorTypeToggleSectionLabel(false),
   /** 양도일 — 부담부증여 담보·임대 승(괄호 열거 시기)이면 승계취득가액이 쓰이지 않는다(`bgSuccessorRightStdForced`). */
   formTransferDate?: string,
+  /** 지분 분할 취득(축 B) 묶음 여부 — 지분 < 1이면 축 A(`false`)에서만 입주권 기준시가가 강제된다(`bgSuccessorRightStdForced`). */
+  isFractionalSplitAxis?: boolean,
 ): string | null {
   // ── 취득일 ── 이월과세는 취득일 칸이 화면에 없다 — ④와 같은 leaf(원값 → 증여 등기일)로 읽는다(계획서 `successor-right-carryover-validation.plan.md` Q-1 a).
   const acqDate = primaryAcquisitionDateOf(asset);
@@ -107,7 +109,7 @@ export function validateSuccessorRightAsset(
 
   if (mode === "actual") {
     // 부담부증여 담보·임대 승(괄호 열거 시기) — 취득가액이 입주권 기준시가(취득일 2칸)라 승계취득가액·추가분담금은 쓰이지 않는다. 기준시가 2칸은 부담부증여 검증(5-c‴)이 요구한다.
-    if (bgSuccessorRightStdForced(asset, formTransferDate)) return null;
+    if (bgSuccessorRightStdForced(asset, formTransferDate, isFractionalSplitAxis)) return null;
     const acqPrice = parseAmount(asset.successorRightAcqPrice);
     if (acqPrice <= 0) {
       return fieldError("successorRightAcqPrice", `${label}: 조합원입주권 승계취득가액을 입력하세요. (소득세법 §97①1호 가목 — 취득에 든 실지거래가액)`);

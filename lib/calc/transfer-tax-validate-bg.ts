@@ -58,6 +58,7 @@ import { bgFractionalCollateralKindSupported } from "./burdened-gift-collateral-
 import { bgSplitAxisCollateralWinUnsupported } from "./burdened-gift-collateral-win";
 import { bgRtmiParenEnumerated } from "./bg-rtmi-std-acq";
 import { bgSuccessorRightStdForced } from "./bg-rtmi-std-acq";
+import { bgRtmiShareWinnerComputable } from "./bg-rtmi-std-acq";
 import { BG_RTMI_ORIGINAL_CAUSE } from "./burdened-gift-collateral-win";
 import { BG_RTMI_SUCCESSOR_SINGLE_ONLY_CAUSE } from "./burdened-gift-collateral-win";
 import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
@@ -491,7 +492,7 @@ export function validateBurdenedGiftAsset(
     const giftValuation = wholeValuation?.value ?? giftValuationMarket;
     // 지분 자산(축 A)의 담보 승 — 채무 합계가 시가 해당분보다 커서 아래 「초과」 검사에 걸리지만 그 사유가 아니다. 주택은 계산하고(취득시 기준시가 × 지분 × 채무비율 — ⑤ 칸·(5-c)·⑫),
     // 취득가액 처리를 확인하지 못한 종류만 이 사유로 막는다(`bgFractionalCollateralWin` · `bgFractionalCollateralKindSupported`).
-    if (!isFractionalSplitAxis && bgFractionalCollateralWin(asset) && !bgFractionalCollateralKindSupported(asset)) {
+    if (!isFractionalSplitAxis && bgFractionalCollateralWin(asset) && !bgFractionalCollateralKindSupported(asset) && !bgRtmiShareWinnerComputable(asset, formTransferDate)) {
       return `${label}: 지분 ${formatOwnershipPercent(asset.ownershipNumerator, asset.ownershipDenominator)}를 가진 자산에서 담보평가액(「상속세 및 증여세법」 제66조)이 시가 해당분보다 커서 증여가액이 담보평가액이 됩니다. 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 주택(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다. 단독 소유라면 지분율을 100%로 입력하고, 시가·채무액·채권최고액을 재확인하세요.`;
     }
     if (giftValuation > 0 && assumedDebt > giftValuation) {
@@ -626,7 +627,7 @@ export function validateBurdenedGiftAsset(
 
   // (5-c″) 기준시가 모드 조합원입주권 × 담보·임대 승 — 평가 3항·실지취득가액 필수 검사 **뒤**여야 한다(앞에 두면 그 안내를 가린다). 시가 모드는 위 (4) 안에서 같은 헬퍼가 막는다.
   if (asset.bgValuationMode === "sangjeungbeop_standard" && isFractionalSplitAxis !== true) {
-    const rtmiIssue = rtmiNonSupplementaryWinnerIssue(asset, label, bgWholeGiftValuation(asset), formTransferDate, false);
+    const rtmiIssue = rtmiNonSupplementaryWinnerIssue(asset, label, bgWholeGiftValuation(asset, false), formTransferDate, false);
     if (rtmiIssue) return rtmiIssue;
   }
 
