@@ -46,6 +46,7 @@ const BASE_973 = {
   acquisitionDate: D("2010-01-01"),
   transferDate: D("2021-01-01"),
   isTaxRegistered: true,
+  taxRegistrationDate: D("2010-01-01"), // 조특령 §97의3④ — 기산일을 바꾸지 않는 이른 날
   rentIncreaseViolated: false,
   officialPriceAtStart: 400_000_000,
   stdPriceAtRentalStart: 400_000_000,
@@ -140,6 +141,7 @@ describe("§97의5 — 같은 구조 (령 §97의5③·§97의5①)", () => {
     acquisitionDate: D("2010-01-01"),
     transferDate: D("2021-01-01"),
     isTaxRegistered: true,
+    taxRegistrationDate: D("2015-01-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
     rentIncreaseViolated: false,
     officialPriceAtStart: 400_000_000,
     stdPriceAtAcquisition: 400_000_000,

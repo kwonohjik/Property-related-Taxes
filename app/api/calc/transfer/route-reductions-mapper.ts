@@ -7,6 +7,7 @@
 import type { z } from "zod";
 import type { reductionSchema } from "@/lib/api/transfer-tax-schema-sub";
 import type { TransferReduction } from "@/lib/tax-engine/transfer-tax";
+import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 
 type ReductionPayload = z.infer<typeof reductionSchema>;
 
@@ -68,6 +69,23 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
               belowMin5UnitsPeriods: r.belowMin5UnitsPeriods.map((v) => ({
                 startDate: new Date(v.startDate),
                 endDate: new Date(v.endDate),
+              })),
+            }
+          : {}),
+        // §97의5①2호 — 조기 종료 시 10년 판정의 종점 (§97의5 전용 필드 — 다른 5종에는 키가 없다)
+        ...("rentalEndDate" in r && r.rentalEndDate
+          ? { rentalEndDate: toOptionalDate(r.rentalEndDate) }
+          : {}),
+        ...("taxRegistrationDate" in r && r.taxRegistrationDate
+          ? { taxRegistrationDate: toOptionalDate(r.taxRegistrationDate) }
+          : {}),
+        // 령 §97의5①2호·3호 간주기간 — `...r`만 믿으면 string이 엔진에 도달해 비교가 조용히 틀린다
+        ...("deemedRentalPeriods" in r && r.deemedRentalPeriods
+          ? {
+              deemedRentalPeriods: r.deemedRentalPeriods.map((p) => ({
+                reason: p.reason,
+                startDate: toDate(p.startDate, "deemedRentalPeriods.startDate"),
+                endDate: toDate(p.endDate, "deemedRentalPeriods.endDate"),
               })),
             }
           : {}),

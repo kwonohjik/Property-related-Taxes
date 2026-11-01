@@ -509,7 +509,7 @@ describe("F-1 LTHD 「공제율 → 공제액」의 부동소수 1원 과소 —
       standardPriceAtAcquisition: 200_000_000, standardPriceAtTransfer: 400_000_000,
       reductions: [{
         type: "rental_97_3", registrationDate: D("2013-01-01"), rentalStartDate: D("2013-01-01"),
-        isTaxRegistered: true, isNationalHousingScale: true, officialPriceAtStart: 300_000_000, region: "capital",
+        isTaxRegistered: true, taxRegistrationDate: D("2013-01-01"), isNationalHousingScale: true, officialPriceAtStart: 300_000_000, region: "capital",
         isPrivateConstructionRental: true, rentalContinuesToTransfer: true,
       }],
     } as Partial<TransferTaxInput>);

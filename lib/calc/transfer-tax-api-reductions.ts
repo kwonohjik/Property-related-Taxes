@@ -9,6 +9,7 @@ import { parseDecimal } from "@/lib/calc/number-parse";
 import { calcReductionAcquisitionStdPrice, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
+import { hasRentIncreaseRule } from "./rental-rent-increase-label";
 
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
 /**
@@ -205,9 +206,10 @@ export function toEngineReductions(
         rentalStartDate: r.rentalStartDate || undefined,
         isTaxRegistered: r.isTaxRegistered,
         // 간소화 모드: "none" → false / "has_violation" → true. 미선택("")은 validate(⑧)에서 차단.
-        rentIncreaseViolated: r.rentIncreaseViolationMode === "has_violation",
+        // §97(본문·단서)·§97의2는 임대료 증액 요건이 없어 싣지 않는다 (`hasRentIncreaseRule`) — 구 세션에 남은 값도 무시.
+        rentIncreaseViolated: hasRentIncreaseRule(r.type) ? r.rentIncreaseViolationMode === "has_violation" : undefined,
         rentHistory:
-          r.rentIncreaseViolationMode === "has_violation" && r.rentHistory && r.rentHistory.length >= 2
+          hasRentIncreaseRule(r.type) && r.rentIncreaseViolationMode === "has_violation" && r.rentHistory && r.rentHistory.length >= 2
             ? r.rentHistory.map((h) => ({
                 contractDate: h.contractDate,
                 contractType: h.contractType,
@@ -246,6 +248,9 @@ export function toEngineReductions(
           rentalHousingType: r.rentalHousingType,
           isConvertedFromShortTerm: r.isConvertedFromShortTerm,
           isPrivateConstructionRental: r.isPrivateConstructionRental, // D2-07
+          // §97의3①1호 — 조기 종료 시 임대기간 종점 · 조특령 §97의3④ 사업자등록일 (§97의5와 같은 조건)
+          ...(r.rentalContinuesToTransfer === false && r.rentalEndDate ? { rentalEndDate: r.rentalEndDate } : {}),
+          ...(r.isTaxRegistered && r.taxRegistrationDate ? { taxRegistrationDate: r.taxRegistrationDate } : {}),
         };
       }
       if (r.type === "rental_97_4") {
@@ -263,6 +268,24 @@ export function toEngineReductions(
           type: "rental_97_5" as const,
           ...common,
           isNationalHousingScale: r.isNationalHousingScale, // CA-01
+          // §97의5①2호 — 조기 종료 시 10년 판정의 종점. 「계속 임대」면 싣지 않는다(종점 = 양도일).
+          ...(r.rentalContinuesToTransfer === false && r.rentalEndDate
+            ? { rentalEndDate: r.rentalEndDate }
+            : {}),
+          // §97의5①1호 — null(미선택)은 보내지 않아 엔진이 불적용 사유를 붙이게 한다(⑧이 먼저 막는다).
+          ...(r.isPurchaseRental !== null && r.isPurchaseRental !== undefined
+            ? { isPurchaseRental: r.isPurchaseRental }
+            : {}),
+          // 조특령 §97의5③ — 사업자등록을 확인했을 때만 그 날짜를 싣는다
+          ...(r.isTaxRegistered && r.taxRegistrationDate ? { taxRegistrationDate: r.taxRegistrationDate } : {}),
+          // 령 §97의5①2호·3호 간주기간 — 토글 ON + 날짜가 다 있는 행만
+          ...(r.hasDeemedRentalPeriod && (r.deemedRentalPeriods ?? []).length > 0
+            ? {
+                deemedRentalPeriods: r.deemedRentalPeriods
+                  .filter((p) => p.startDate && p.endDate)
+                  .map((p) => ({ reason: p.reason, startDate: p.startDate, endDate: p.endDate })),
+              }
+            : {}),
           officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
           region: r.region,
         };

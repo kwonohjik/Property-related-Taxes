@@ -46,6 +46,7 @@ const RENTAL_97_3_ELIGIBLE = {
   registrationDate: D("2013-01-01"),
   rentalStartDate: D("2013-01-01"),
   isTaxRegistered: true,
+  taxRegistrationDate: D("2013-01-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
   isNationalHousingScale: true,
   officialPriceAtStart: 300_000_000,
   region: "capital" as const,
@@ -139,6 +140,7 @@ describe("재개발 × §97의4 — 추가율 가산", () => {
     registrationDate: D("2013-05-01"),
     rentalStartDate: D("2013-06-01"),
     isTaxRegistered: true,
+    taxRegistrationDate: D("2013-05-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
     rental974Category: "purchase_a" as const,
     officialPriceAtStart: 500_000_000,
     region: "capital" as const,

@@ -71,9 +71,13 @@ describe("#7 임대기간 분 비율 — 정수 분수", () => {
   // E 취득 3억 · B 임대종료 5.6억 · D 양도 6.4억 → (5.6 − 3) / (6.4 − 3) = 13/17
   const base = {
     id: "rental_97_5", acquisitionDate: D0("2014-06-01"), registrationDate: D0("2014-08-01"), rentalStartDate: D0("2014-09-01"),
+    isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
+    taxRegistrationDate: D0("2014-08-01"), // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
     transferDate: D0("2026-07-01"), isTaxRegistered: true, rentIncreaseViolated: false, isNationalHousingScale: true, region: "capital",
     stdPriceAtAcquisition: 300_000_000, officialPriceAtStart: 320_000_000, stdPriceAtTransfer: 640_000_000,
     rentalContinuesToTransfer: false, stdPriceAtRentalEnd: 560_000_000,
+    // §97의5①2호 — 조기 종료면 10년 판정의 종점(임대 종료일)이 필수다 (2026-11-01 정정)
+    rentalEndDate: D0("2025-06-01"),
   };
   it("§97의5 감면세액 = 산출세액 × 13/17 정확값 (85,000,000 → 65,000,000 · 종전 64,999,999)", () => {
     for (const [tax, want] of [[85_000_000, 65_000_000], [170_000_000, 130_000_000]] as const) {
@@ -136,8 +140,10 @@ describe("#7 §97의3 장특 임대분 안분 — 전체 계산 경로", () => {
         isOneHousehold: false, householdHousingCount: 2, standardPriceAtAcquisition: 300_000_000, standardPriceAtTransfer: 600_000_000,
         reductions: [{
           type: "rental_97_3", registrationDate: D0("2014-02-01"), rentalStartDate: D0("2018-01-01"), isTaxRegistered: true,
+          taxRegistrationDate: D0("2014-02-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
           officialPriceAtStart: 400_000_000, stdPriceAtRentalStart: 400_000_000, isNationalHousingScale: true, region: "capital",
           propertyType: "apartment", rentalHousingType: "long_term_private", rentalContinuesToTransfer: false, stdPriceAtRentalEnd: 455_000_000,
+          rentalEndDate: D0("2029-01-01"), // §97의3①1호 — 조기 종료면 종점 필수 (임대 11년)
         }],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any),

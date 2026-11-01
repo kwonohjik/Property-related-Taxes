@@ -17,6 +17,7 @@
  */
 
 import { useMemo } from "react";
+import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -81,6 +82,20 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
           onIsTaxRegisteredChange={(v) => onChange({ isTaxRegistered: v })}
           onRentalStartDateChange={(v) => onChange({ rentalStartDate: v })}
         />
+        {/* 조특령 §97의3④ — 사업자등록·임대사업자등록·임대 중 늦은 날부터 임대 개시 */}
+        {value.isTaxRegistered && (
+          <div>
+            <label className="mb-1 block text-xs font-medium">세무서 사업자등록일</label>
+            <DateInput
+              data-field={`reduction.${value.type}.taxRegistrationDate`}
+              value={value.taxRegistrationDate}
+              onChange={(v) => onChange({ taxRegistrationDate: v })}
+            />
+            <p className="mt-1 text-micro text-muted-foreground">
+              조특령 §97의3④ — 사업자등록·임대사업자 등록·임대개시 중 가장 늦은 날부터 임대를 개시한 것으로 봅니다.
+            </p>
+          </div>
+        )}
 
         <div>
           <p className="mb-1 text-xs font-medium">임대주택 유형</p>

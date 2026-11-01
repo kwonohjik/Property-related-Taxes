@@ -30,6 +30,7 @@ describe("§97의3 통합 anchor (B-1)", () => {
           registrationDate: new Date("2014-01-01"),
           rentalStartDate: new Date("2014-01-01"),
           isTaxRegistered: true,
+          taxRegistrationDate: new Date("2014-01-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
           rentIncreaseViolated: false,
           officialPriceAtStart: 400_000_000,
           isNationalHousingScale: true,
@@ -116,6 +117,7 @@ describe("§97의3 — 결과 카드 산식 echo (D-9)", () => {
             registrationDate: new Date("2014-01-01"),
             rentalStartDate: new Date("2014-01-01"),
             isTaxRegistered: true,
+            taxRegistrationDate: new Date("2014-01-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
             rentIncreaseViolated: false,
             officialPriceAtStart: 400_000_000,
             isNationalHousingScale: true,

@@ -177,13 +177,35 @@ const UNSOLD_99_2 = table("unsold_99_2", hybrid("unsold_99_2"), u992Ok, {}, [
 
 // ── 장기임대 §97 시리즈 ─────────────────────────────────────────────────────
 /** 공통(임대료 증액 · 공실) 케이스 — 폼 5개가 `RentalCommonFields`를 공유하므로 조문마다 한 번씩 배선을 본다 */
-const commonRows = (label: string, grace: string): Row[] => [
-  { name: "임대료 증액 위반 여부", prop: "rentIncreaseViolationMode", message: new RegExp(`^${label} 적용: 임대료 5% 증액 위반 이력 여부`), patch: { rentIncreaseViolationMode: "" } },
+const commonRows = (label: string, grace: string, rentRule = false): Row[] => [
+  // 임대료 증액 제한은 §97의3·§97의4·§97의5만 묻는다 (`lib/calc/rental-rent-increase-label.ts` `hasRentIncreaseRule`)
+  ...(rentRule
+    ? [
+        {
+          name: "임대료 증액 위반 여부",
+          prop: "rentIncreaseViolationMode",
+          message: new RegExp(`^${label} 적용: 임대료 증액 위반 이력\\(5% 초과 또는 1년 이내 재증액\\) 여부`),
+          patch: { rentIncreaseViolationMode: "" },
+        },
+      ]
+    : []),
   { name: "공실 여부", prop: "hasVacancyOverGrace", message: new RegExp(`^${label} 적용: ${grace}을 초과하는 공실 여부`), patch: { hasVacancyOverGrace: null } },
 ];
 /** 증액 위반 이력·공실 구간 — 한 조문에서 목록형 칸 배선을 본다 */
 const listRows = (label: string): Row[] => [
   { name: "임대료 이력 목록", prop: "rentHistory", message: new RegExp(`^${label} 적용: 위반 이력 "있음" 선택 시 계약별`), patch: { rentIncreaseViolationMode: "has_violation", rentHistory: [] } },
+  {
+    name: "임대료 이력 계약일",
+    prop: "rentHistory",
+    message: new RegExp(`^${label} 적용: 임대료 계약 이력의 계약일을 모두 입력`),
+    patch: {
+      rentIncreaseViolationMode: "has_violation",
+      rentHistory: [
+        { contractDate: "2020-03-01", contractType: "jeonse", deposit: "100000000", monthlyRent: "" },
+        { contractDate: "", contractType: "jeonse", deposit: "110000000", monthlyRent: "" },
+      ],
+    },
+  },
   { name: "공실 구간 목록", prop: "vacancyPeriods", message: new RegExp(`^${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건`), patch: { hasVacancyOverGrace: true, vacancyPeriods: [] } },
   { name: "공실 구간 날짜", prop: "vacancyPeriods", message: new RegExp(`^${label} 적용: 공실 구간의 시작일·종료일`), patch: { hasVacancyOverGrace: true, vacancyPeriods: [{ startDate: "", endDate: "" }] } },
 ];
@@ -193,10 +215,10 @@ const dateRows = (label: string): Row[] => [
   { name: "등록일", prop: "registrationDate", message: new RegExp(`^${label} 적용: 임대사업자 등록일`), patch: { registrationDate: "" } },
 ];
 
-const r973Ok = { ...rentalBase, isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };
+const r973Ok = { ...rentalBase, taxRegistrationDate: "2019-06-01", isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };
 const RENTAL_97_3 = table("rental_97_3", hybrid("rental_97_3"), r973Ok, {}, [
   ...dateRows("§97의3"),
-  ...commonRows("§97의3", "3개월"),
+  ...commonRows("§97의3", "3개월", true),
   ...listRows("§97의3"),
   { name: "민간건설임대(2021~ 등록)", prop: "isPrivateConstructionRental", message: /^§97의3 적용: 민간건설임대주택이 아닌 임대주택\(민간매입임대\)의 등록 시한/, patch: { registrationDate: "2021-06-01", rentalStartDate: "2021-06-01", isPrivateConstructionRental: false } },
   { name: "민간건설임대(2023~ 등록)", prop: "isPrivateConstructionRental", message: /^§97의3 적용: 2023\.1\.1 이후 등록분은 민간건설임대주택/, patch: { registrationDate: "2023-06-01", rentalStartDate: "2023-06-01", isPrivateConstructionRental: false } },
@@ -204,6 +226,8 @@ const RENTAL_97_3 = table("rental_97_3", hybrid("rental_97_3"), r973Ok, {}, [
   { name: "임대개시 당시 기준시가", prop: "officialPriceAtStart", message: /^§97의3 적용: 임대개시일 당시 기준시가\(주택\+부속토지 합계\)/, patch: { officialPriceAtStart: "" } },
   { name: "임대 계속 여부", prop: "rentalContinuesToTransfer", message: /^§97의3 적용: 임대가 양도일까지 계속되었는지/, patch: { rentalContinuesToTransfer: null } },
   { name: "임대 종료일 기준시가", prop: "stdPriceAtRentalEnd", message: /^§97의3 적용: 임대 종료일 당시 기준시가/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "" } },
+  { name: "임대 종료일", prop: "rentalEndDate", message: /^§97의3 적용: 양도 전에 임대를 종료했으면 임대 종료일/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "200000000", rentalEndDate: "" } },
+  { name: "세무서 사업자등록일", prop: "taxRegistrationDate", message: /^§97의3 적용: 세무서 사업자등록일을 입력/, patch: { taxRegistrationDate: "" } },
   { name: "안분 취득 당시 기준시가", prop: "stdPriceAtAcquisition", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtAcquisition: "" } },
   { name: "안분 양도 당시 기준시가", prop: "stdPriceAtTransfer", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtTransfer: "" } },
 ]);
@@ -211,19 +235,23 @@ const RENTAL_97_3 = table("rental_97_3", hybrid("rental_97_3"), r973Ok, {}, [
 const r974Ok = { ...rentalBase, rental974Category: "purchase_a", officialPriceAtStart: "300000000", region: "capital" };
 const RENTAL_97_4 = table("rental_97_4", hybrid("rental_97_4"), r974Ok, {}, [
   ...dateRows("§97의4"),
-  ...commonRows("§97의4", "3개월"),
+  ...commonRows("§97의4", "3개월", true),
   { name: "임대주택 유형", prop: "rental974Category", message: /^§97의4 적용: 장기임대주택 유형/, patch: { rental974Category: "" } },
   { name: "임대개시 당시 기준시가", prop: "officialPriceAtStart", message: /^§97의4 적용: 임대개시일 당시 기준시가\(주택\+부수토지 합계\)를 입력/, patch: { officialPriceAtStart: "" } },
   { name: "기준시가 한도 초과", prop: "officialPriceAtStart", message: /^§97의4 적용: 임대개시일 당시 기준시가 합계가 한도/, patch: { officialPriceAtStart: "700000000" } },
 ]);
 
-const r975Ok = { ...rentalBase, isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };
+const r975Ok = { ...rentalBase, isPurchaseRental: true, taxRegistrationDate: "2019-06-01", hasDeemedRentalPeriod: false, deemedRentalPeriods: [], isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };
 const RENTAL_97_5 = table("rental_97_5", hybrid("rental_97_5"), r975Ok, {}, [
   ...dateRows("§97의5"),
-  ...commonRows("§97의5", "6개월"),
+  ...commonRows("§97의5", "6개월", true),
   { name: "국민주택규모", prop: "isNationalHousingScale", message: /^§97의5 적용: 국민주택규모 이하 요건/, patch: { isNationalHousingScale: false } },
   { name: "임대개시 당시 기준시가", prop: "officialPriceAtStart", message: /^§97의5 적용: 임대개시일 당시 기준시가\(주택\+부속토지 합계\)/, patch: { officialPriceAtStart: "" } },
   { name: "임대 계속 여부", prop: "rentalContinuesToTransfer", message: /^§97의5 적용: 임대가 양도일까지 계속되었는지/, patch: { rentalContinuesToTransfer: null } },
+  { name: "세무서 사업자등록일", prop: "taxRegistrationDate", message: /^§97의5 적용: 세무서 사업자등록일을 입력/, patch: { taxRegistrationDate: "" } },
+  { name: "임대주택 취득 유형", prop: "isPurchaseRental", message: /^§97의5 적용: 임대주택 취득 유형/, patch: { isPurchaseRental: null } },
+  { name: "수용·정비사업 간주기간", prop: "deemedRentalPeriods", message: /^§97의5 적용: 수용·정비사업으로 임대할 수 없던 기간/, patch: { hasDeemedRentalPeriod: true, deemedRentalPeriods: [{ reason: "redevelopment", startDate: "", endDate: "" }] } },
+  { name: "임대 종료일", prop: "rentalEndDate", message: /^§97의5 적용: 양도 전에 임대를 종료했으면 임대 종료일/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "200000000", rentalEndDate: "" } },
 ]);
 
 const rMainOk = { rentalStartDate: "2000-01-01", constructionYear: "1995", rentIncreaseViolationMode: "none", hasVacancyOverGrace: false, hasMin5RentalUnits: true, belowMin5UnitsPeriods: [] };
@@ -241,7 +269,6 @@ const rProvisoOk = { provisoCase: "a_construction", rentalStartDate: "2000-01-01
 const RENTAL_97_PROVISO = table("rental_97_proviso", hybrid("rental_97_proviso"), rProvisoOk, {}, [
   { name: "단서 유형", prop: "provisoCase", message: /^§97 단서 적용: 단서 유형/, patch: { provisoCase: "" } },
   { name: "취득 당시 입주 사실(나목)", prop: "isUnoccupiedAtAcquisition", message: /^§97 단서 적용: 취득 당시 입주 사실 여부를 선택하세요 \(조특법 §97① 단서 나목\)/, patch: { provisoCase: "b_purchase", isUnoccupiedAtAcquisition: null } },
-  { name: "임대료 증액 위반 여부", prop: "rentIncreaseViolationMode", message: /^§97 단서 적용: 임대료 5% 증액 위반 이력 여부/, patch: { rentIncreaseViolationMode: "" } },
 ]);
 
 const r972Ok = { rentalStartDate: "2005-06-01", registrationDate: "2005-06-01", rental972Type: "construction", hasNewRentalPlus2Units: true, rentIncreaseViolationMode: "none", hasVacancyOverGrace: false, isUnoccupiedAtAcquisition: true };

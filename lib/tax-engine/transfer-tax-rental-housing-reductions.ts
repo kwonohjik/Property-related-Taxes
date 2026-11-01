@@ -26,8 +26,13 @@ export function applyRentalHousingReductions(args: {
   totalTaxableIncome: number;
   rheBasicDeduction: number;
   rheTaxBase: number;
+  /**
+   * 주택분 과세대상 양도소득금액 — 주택(+ 배율 이내 부수토지) 특례 적용 후 + 나중 취득 부수토지분(G-3).
+   * 배율 초과 비사업용 토지분은 뺀다. §97의5 감면대상 소득(「소득세법」 §90①의 B) 기준이다.
+   */
+  housingIncome: number;
 }) {
-  const { input, effectiveInput, parsedRates, steps, calculatedTax, totalTaxableIncome, rheBasicDeduction, rheTaxBase } = args;
+  const { input, effectiveInput, parsedRates, steps, calculatedTax, totalTaxableIncome, rheBasicDeduction, rheTaxBase, housingIncome } = args;
   /**
    * ── 조특법 감면 (F08) ──────────────────────────────────────────────────
    *
@@ -99,6 +104,12 @@ export function applyRentalHousingReductions(args: {
     undefined, // 5B 파트별 판정 — 이 경로는 범위 밖
     expropriationAcquisitionDate(effectiveInput), // §77⑨·§77의3③ — 상속 = 피상속인 취득일
     effectiveInput.nonHeirBequest, // 수유자 — §69 피상속인 경작기간 미합산 · §77 불성립 고지
+    /**
+     * §97의5 — 감면은 임대**주택**의 「임대기간 중 발생한 양도소득」에 한정된다. `totalTaxableIncome`에는
+     * 배율 초과 비사업용 토지분이 섞여 있어 그대로 B로 쓰면 그 토지분 세액까지 감면된다(계속 임대면 비율 1).
+     * 겸용주택 경로(`transfer-tax-mixed-use-totals.ts`)와 같이 주택분만 넘긴다.
+     */
+    Math.max(0, housingIncome),
   );
 
   const cap = applyReductionStatutoryCap({

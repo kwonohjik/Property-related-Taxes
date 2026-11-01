@@ -169,6 +169,18 @@ export interface VacancyPeriodFormItem {
   endDate: string;                            // YYYY-MM-DD
 }
 
+/**
+ * 조특령 §97의5①2호·3호 간주기간 (§97의5 전용).
+ * - `expropriation`: 협의매수·수용되어 임대할 수 없던 기간 (시작~종료)
+ * - `redevelopment`: 관리처분계획 인가일(소규모정비 사업시행계획 인가일 · 리모델링 허가일/사업계획승인일) ~ 준공일.
+ *   엔진이 앞뒤 6개월을 붙인다.
+ */
+export interface DeemedRentalPeriodFormItem {
+  reason: "expropriation" | "redevelopment";
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+}
+
 /** §97 시리즈 공통 폼 필드 (5개 variant 공유) */
 export interface RentalCommonFormFields {
   /** 지자체 임대사업자 등록일 (YYYY-MM-DD) — 엔진 PeriodCheckContext.registrationDate 동일 키 */
@@ -196,6 +208,11 @@ export interface RentalCommonFormFields {
   rentalContinuesToTransfer: boolean | null;
   /** 실제 임대기간 마지막 날의 기준시가 (원) — 위가 「아니오」일 때만 사용 */
   stdPriceAtRentalEnd: string;
+  /**
+   * 실제 임대기간의 마지막 날 (YYYY-MM-DD) — 위가 「아니오」일 때만 사용.
+   * **§97의5 전용**: 법 §97의5①2호 10년 계속 임대 판정의 종점. ④·⑤는 `rental_97_5`에서만 싣고 그린다.
+   */
+  rentalEndDate: string;
   /**
    * 안분 산식의 분모 감수 E — **취득 당시** 기준시가 (주택+부속토지 합계, 원).
    *
@@ -235,6 +252,8 @@ export type RentalReductionFormVariant =
       isConvertedFromShortTerm: boolean;
       /** D2-07 — §97의3① 「민간건설임대주택」 한정 (2023.1.1 이후 등록분에만 요구) */
       isPrivateConstructionRental: boolean;
+      /** 조특령 §97의3④ — 세무서 사업자등록일 (YYYY-MM-DD). 사업자등록 확인 시 필수 — 임대개시 기산의 한 축 */
+      taxRegistrationDate: string;
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_4";
@@ -250,6 +269,13 @@ export type RentalReductionFormVariant =
       region: "capital" | "non_capital";
       /** CA-01 — §97의5①3호 준용 (조특령 §97의3③2호 국민주택규모 이하) */
       isNationalHousingScale: boolean;
+      /** §97의5①1호 — 매입임대주택(매매·증여 등으로 소유권 취득)인가 (3-state, null = 미선택) */
+      isPurchaseRental: boolean | null;
+      /** 조특령 §97의5③ — 세무서 사업자등록일 (YYYY-MM-DD). 사업자등록 확인 시 필수 — 임대개시 기산의 한 축 */
+      taxRegistrationDate: string;
+      /** 조특령 §97의5①2호·3호 — 수용·정비사업으로 임대할 수 없던 기간이 있는가 */
+      hasDeemedRentalPeriod: boolean;
+      deemedRentalPeriods: DeemedRentalPeriodFormItem[];
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_main" | "rental_97_proviso";

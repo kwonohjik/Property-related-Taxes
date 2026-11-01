@@ -33,7 +33,6 @@ export {
   RENTAL_VACANCY_GRACE_MONTHS_97,
   RENTAL_VACANCY_GRACE_MONTHS_97_5,
 };
-import { TRANSFER } from "./legal-codes";
 import type { LongTermRentalRuleSet } from "./schemas/rate-table.schema";
 
 // ============================================================
@@ -370,6 +369,25 @@ export function calculateRentalReduction(
     });
   }
 
+  /**
+   * ── Step 1-1: §97의5(`public_purchase`)는 이 레거시 엔진에서 판정하지 않는다 (리뷰 7번) ──
+   *
+   * 이 경로는 의무기간 0년·산출세액 100%로 계산해, 조특법 §97의5①의 요건 — 2018.12.31 취득 시한(1호)·
+   * 취득 후 3개월 내 등록(1호)·매입임대(1호)·10년 계속 임대(2호)·조특령 §97의3③ 준용(3호)·
+   * 임대기간 분 안분(령 §97의5②)·「소득세법」 §90① 감면세액 — 을 **하나도** 보지 않았다.
+   * 앱 화면은 이 경로를 쓰지 않지만 `/api/calc/transfer`의 `rentalReductionDetails`로 직접 도달한다.
+   * 정본은 `transfer-reductions/rental-97-5.ts`(`reductions[].type = "rental_97_5"`)다 — 두 곳에서 판정하지 않는다.
+   */
+  if (input.rentalHousingType === "public_purchase") {
+    ineligibleReasons.push({
+      code: "LEGACY_97_5_UNSUPPORTED",
+      message:
+        "조특법 §97의5 감면은 이 입력 형식(rentalReductionDetails)으로 계산하지 않습니다 — " +
+        "감면 목록(reductions)에 type \"rental_97_5\"로 요건(취득 시한·3개월 내 등록·매입임대·10년 계속 임대 등)을 입력하세요.",
+      field: "rentalHousingType",
+    });
+  }
+
   // ── Step 2: 아파트 장기일반 등록 제한 (2020.8.18 이후) ──
   if (
     lawVersion === "post_2020_08_18" &&
@@ -518,10 +536,7 @@ export function calculateRentalReduction(
     reductionAmount = applyRate(input.calculatedTax, reductionRate);
   }
 
-  // 공공매입임대: 공공기관 매각 조건부 — 경고
-  if (input.rentalHousingType === "public_purchase") {
-    warnings.push(`공공매입임대(${TRANSFER.REDUCTION_LONG_RENTAL_PUBLIC}): 공공기관에 매각하는 조건이 충족된 경우에만 100% 감면 적용`);
-  }
+  // (종전 「공공기관에 매각하는 조건이 충족된 경우에만 100% 감면」 경고는 현행 §97의5에 없는 요건이라 삭제 — 리뷰 7번)
 
   // 구법 적용: 경고
   if (lawVersion === "pre_2018_09_14") {

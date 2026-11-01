@@ -130,8 +130,8 @@ describe("#25 — 라디오 name이 인스턴스마다 다르다", () => {
   it("🔑 D-1: 같은 폼을 두 번 렌더하면 라디오 그룹이 서로 다른 name을 갖는다", () => {
     const { container } = render(
       <div>
-        <RentalCommonFields value={rentalValue} onChange={() => {}} vacancyGraceMonths={3} />
-        <RentalCommonFields value={rentalValue} onChange={() => {}} vacancyGraceMonths={3} />
+        <RentalCommonFields value={rentalValue} onChange={() => {}} vacancyGraceMonths={3} fieldType="rental_97_3" />
+        <RentalCommonFields value={rentalValue} onChange={() => {}} vacancyGraceMonths={3} fieldType="rental_97_3" />
       </div>,
     );
     const names = new Set(
@@ -141,6 +141,7 @@ describe("#25 — 라디오 name이 인스턴스마다 다르다", () => {
     );
     const violation = [...names].filter((n) => n.startsWith("rentIncreaseViolationMode-"));
     // 두 인스턴스가 서로 다른 접두사를 얻어야 자산 간 선택이 서로를 해제하지 않는다.
+    // fieldType: 임대료 섹션은 §97의3·§97의4·§97의5만 그린다(2026-11-01 `hasRentIncreaseRule`) — 그 조문으로 렌더한다.
     expect(violation.length).toBe(2);
   });
 });
@@ -153,6 +154,7 @@ describe("#28 — 섹션 배지가 원문자로 통일된다", () => {
         onChange={() => {}}
         vacancyGraceMonths={3}
         sectionOffset={3}
+        fieldType="rental_97_3"
       />,
     );
     expect(screen.getByText("③")).toBeTruthy();

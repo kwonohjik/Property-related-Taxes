@@ -180,6 +180,8 @@ describe("§97의5 엔진 — 리뷰 실측 시나리오 재현 (D2-03)", () => 
   /** 취득 2018-06-01(3억) · 등록 2018-08-01 · 임대개시 2018-09-01(3.2억) · 양도 2029-07-01(6억) */
   const BASE = {
     id: "rental_97_5" as const,
+    isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
+    taxRegistrationDate: D("2018-08-01"), // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
     acquisitionDate: D("2018-06-01"),
     registrationDate: D("2018-08-01"),
     rentalStartDate: D("2018-09-01"),
@@ -243,6 +245,7 @@ describe("⑬ router — 임대 종료 축이 evaluator까지 도달한다", () 
             registrationDate: D("2014-02-01"),
             rentalStartDate: D("2018-01-01"),
             isTaxRegistered: true,
+            taxRegistrationDate: D("2014-02-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
             officialPriceAtStart: 400_000_000,
             stdPriceAtRentalStart: 400_000_000,
             isNationalHousingScale: true,
@@ -251,6 +254,8 @@ describe("⑬ router — 임대 종료 축이 evaluator까지 도달한다", () 
             rentalHousingType: "long_term_private",
             rentalContinuesToTransfer: continues,
             ...(endPrice === undefined ? {} : { stdPriceAtRentalEnd: endPrice }),
+            // §97의3①1호 — 조기 종료면 종점 필수 (임대 11년 — 공제율이 아니라 안분만 갈리게)
+            ...(continues ? {} : { rentalEndDate: D("2029-01-01") }),
           },
         ],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

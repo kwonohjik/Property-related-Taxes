@@ -87,6 +87,7 @@ describe("D2-07 — §97의3 건설한정은 2023.1.1 이후 등록분만", () =
     transferDate: D("2035-01-01"),
     rentalStartDate: D("2013-06-01"),
     isTaxRegistered: true,
+    taxRegistrationDate: D("2020-01-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
     rentIncreaseViolated: false,
     officialPriceAtStart: 400_000_000,
     stdPriceAtRentalStart: 400_000_000,
@@ -168,6 +169,7 @@ describe("D2-04 잔여 — 소령 §167의3①2호 단서(2018.3.31)", () => {
     acquisitionDate: D("2010-01-01"),
     rentalStartDate: D("2010-03-01"),
     isTaxRegistered: true,
+    taxRegistrationDate: D("2018-06-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
     rentIncreaseViolated: false,
     rental974Category: "purchase_a" as const,
     region: "capital" as const,

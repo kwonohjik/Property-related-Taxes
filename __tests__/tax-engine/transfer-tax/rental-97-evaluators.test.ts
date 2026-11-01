@@ -18,6 +18,7 @@ function base973(overrides?: Partial<Rental97EvaluationInput>): Rental97Evaluati
     registrationDate: new Date("2014-01-01"),
     rentalStartDate: new Date("2014-01-01"),
     isTaxRegistered: true,
+    taxRegistrationDate: new Date("2014-01-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
     rentIncreaseViolated: false,
     officialPriceAtStart: 400_000_000,
     isNationalHousingScale: true,
@@ -128,6 +129,8 @@ describe("§97의3 evaluateRental973", () => {
 function base975(overrides?: Partial<Rental97EvaluationInput>): Rental97EvaluationInput {
   return {
     id: "rental_97_5",
+    isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
+    taxRegistrationDate: new Date("2018-12-01"), // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
     transferDate: new Date("2029-02-01"),
     acquisitionDate: new Date("2018-10-01"),
     registrationDate: new Date("2018-12-01"),
@@ -302,6 +305,7 @@ describe("§97의4 evaluateRental974 (⚠️ R-3 — 추가율 표 원문 미확
       registrationDate: new Date("2016-03-01"),
       rentalStartDate: new Date("2016-03-01"),
       isTaxRegistered: true,
+      taxRegistrationDate: new Date("2016-03-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
       rentIncreaseViolated: false,
       // D2-04 — 조특령 §97의4① → 소령 §167의3①2호 가목·다목 대상 요건.
       // 종전 픽스처엔 없어 기준시가 한도를 넘는 주택도 §97의4를 적용받았다.
@@ -322,6 +326,7 @@ describe("§97의4 evaluateRental974 (⚠️ R-3 — 추가율 표 원문 미확
       registrationDate: new Date("2016-03-01"),
       rentalStartDate: new Date("2016-03-01"),
       isTaxRegistered: true,
+      taxRegistrationDate: new Date("2016-03-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
       rentIncreaseViolated: false,
     });
     expect(r.isEligible).toBe(false);

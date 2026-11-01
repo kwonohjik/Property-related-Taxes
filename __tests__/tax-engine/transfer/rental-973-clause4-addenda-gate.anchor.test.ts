@@ -48,6 +48,7 @@ function input(over: Record<string, unknown> = {}) {
     registrationDate: D("2010-03-01"),
     rentalStartDate: D("2010-04-01"),
     isTaxRegistered: true,
+    taxRegistrationDate: D("2010-03-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
     isNationalHousingScale: true,
     officialPriceAtStart: 700_000_000,
     region: "capital" as const,

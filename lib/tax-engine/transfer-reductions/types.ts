@@ -119,9 +119,10 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   /** 세무서 사업자 등록 (소법 §168) — §97의3·§97의5 임대개시 인정 요건 (조특령 §97의3④·§97의5③) */
   isTaxRegistered?: boolean;
   /**
-   * 유예를 **초과하는** 공실 구간 — 구간 전체를 유효임대기간에서 차감.
+   * 유예를 **초과하는** 공실 구간 — §97·§97의2·§97의3·§97의4는 구간 전체를 유효임대기간에서 차감.
    * 유예는 조문마다 다르다(D1-03) — §97·§97의2·§97의3·§97의4 = 3월(조특칙 §44) /
    * §97의5 = 6개월(조특령 §97의5①1호). 상수는 `rental-97-shared-helpers.ts` 참조.
+   * ⚠️ §97의5는 차감이 아니라 **계속성 단절**(그 공실 종료일부터 10년을 다시 셈) — `rental-97-5-period.ts`.
    */
   vacancyPeriods?: Rental97VacancyPeriod[];
   /** 간소화 모드 — 사용자 명시 신고 (true = 임대료 5% 증액 위반 있음 → 불적용) */
@@ -229,9 +230,46 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   rentalContinuesToTransfer?: boolean;
   /** B — 실제 임대기간 마지막 날의 기준시가 (원). 계속 임대한 경우 불요. */
   stdPriceAtRentalEnd?: number;
+  /**
+   * 실제 임대기간의 **마지막 날** — `rentalContinuesToTransfer === false`일 때 필수 (§97의5 전용).
+   *
+   * 조특법 §97의5①2호 「…10년 이상 계속하여 … 임대한 **후 양도**할 것」 — 10년 판정의 종점은
+   * 임대 종료일이다. 양도일까지 계속 임대했으면 양도일과 같으므로 받지 않는다.
+   * 종전에는 조기 종료를 선언해도 종점이 양도일이라 임대 7년·보유 11년 사안이 10년 요건을 통과했다.
+   */
+  rentalEndDate?: Date;
+  /**
+   * §97의5①1호 — 매입임대주택(민특법 §2 3호 「매매 등으로 소유권을 취득」 · 공공매입임대)인가.
+   * `true`만 충족 — 미입력·`false`(건설임대)는 불적용 사유 (§97의5 전용).
+   */
+  isPurchaseRental?: boolean;
+  /** 「소득세법」 §168 세무서 사업자등록일 — §97의5 임대개시 기산의 한 축 (조특령 §97의5③). `isTaxRegistered`면 필수 */
+  taxRegistrationDate?: Date;
+  /**
+   * 조특령 §97의5①2호·3호 — 수용·협의매수 / 정비사업으로 임대할 수 없던 기간 (§97의5 전용).
+   * 「계속하여 임대한 것으로 본다」 — 공실 판정에서 빼고 기간에 산입한다. 상세: `rental-97-5-period.ts`.
+   */
+  deemedRentalPeriods?: import("./rental-97-5-period").DeemedRentalPeriod975[];
   // ── 세액감면 계열 컨텍스트 ──
   /** 산출세액 (tax_amount 계열 — §97·§97의2·§97의5) */
   calculatedTax?: number;
+  /**
+   * 「소득세법」 §90① 감면세액 산식의 입력 — §97의5 안분 시 사용 (calcReductions가 주입).
+   *   감면액 = 산출세액 × (B − C) ÷ D × 감면율
+   *   B 감면대상 양도소득금액 = transferIncome × 임대기간 분 비율
+   *   C 감면소득에 배정되는 기본공제 — §103② 「감면소득금액 외의 양도소득금액에서 먼저 공제」
+   *   D 양도소득 과세표준 = taxBase
+   * 셋 중 하나라도 없으면(단위 호출) 산출세액 × 비율로 계산한다.
+   */
+  transferIncome?: number;
+  basicDeduction?: number;
+  taxBase?: number;
+  /**
+   * B의 기준 소득 — 감면대상 **임대주택분** 양도소득금액 (없으면 `transferIncome` 전체).
+   * 겸용주택은 양도소득금액이 주택분·상가분·비사업용토지분으로 갈리는데 §97의5 감면은 임대주택의
+   * 「임대기간 중 발생한 양도소득」에 한정되므로 주택분만 B에 넣는다(상가분 세액을 감면하지 않는다).
+   */
+  reducibleBaseIncome?: number;
 }
 
 export interface Rental97IneligibleReason {
@@ -283,6 +321,18 @@ export interface RentalTaxAmountEffect {
   /** 같은 비율의 정수 분수(§97의5 안분 시) — 금액 안분은 이것으로(`applyRentalGainShare`). */
   rentalGainFraction?: { num: number; den: number };
   isFullExemption: boolean;
+  /**
+   * [echo] 「소득세법」 §90① 산식 값 — §97의5 안분 사안에서만 채운다(결과 카드 표시용).
+   * 감면세액 = 산출세액 × (reducibleIncome − basicDeductionAllocated) ÷ taxBase × 감면율
+   */
+  section90?: {
+    /** B — 감면대상 양도소득금액 */
+    reducibleIncome: number;
+    /** C — 감면소득에 배정된 기본공제 (§103②) */
+    basicDeductionAllocated: number;
+    /** D — 양도소득 과세표준 */
+    taxBase: number;
+  };
 }
 
 export type Rental97Result =

@@ -31,6 +31,12 @@ export interface Rental97EngineContext {
   stdPriceAtTransfer?: number;
   /** 세액감면 계열 전용 */
   calculatedTax?: number;
+  /** §97의5 — 「소득세법」 §90① 감면세액 산식 입력 (양도소득금액·기본공제·과세표준) */
+  transferIncome?: number;
+  basicDeduction?: number;
+  taxBase?: number;
+  /** §97의5 B의 기준 소득 — 겸용주택은 주택분 양도소득금액 (없으면 transferIncome 전체) */
+  reducibleBaseIncome?: number;
 }
 
 type RentalReductionVariant = Extract<
@@ -87,6 +93,9 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         // D9-07 — propertyType(아파트 여부)·rentalHousingType은 evaluateRental973이
         // 읽지 않으므로 엔진 입력에 싣지 않는다. 「엔진 입력은 엔진이 읽는 것만 담는다」.
         isConvertedFromShortTerm: r.isConvertedFromShortTerm,
+        // §97의3①1호 종점 · 조특령 §97의3④ 사업자등록일 (§97의5와 같은 축). ⚠️ 명시 매핑.
+        rentalEndDate: r.rentalEndDate,
+        taxRegistrationDate: r.taxRegistrationDate,
       };
     case "rental_97_4":
       // D2-04 — 종전에는 region만 넘겨 기준시가 한도를 판정할 입력이 없었다.
@@ -105,6 +114,17 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         // CA-01 — §97의5①3호가 조특령 §97의3③2호(국민주택규모)를 준용한다.
         // ⚠️ 이 case도 **명시 매핑**이라 적지 않으면 조용히 사라진다.
         isNationalHousingScale: r.isNationalHousingScale,
+        // §97의5①2호 — 조기 종료 시 10년 판정의 종점. ⚠️ 명시 매핑.
+        rentalEndDate: r.rentalEndDate,
+        // §97의5①1호 매입임대 · 령 §97의5①2호·3호 간주기간. ⚠️ 명시 매핑.
+        isPurchaseRental: r.isPurchaseRental,
+        taxRegistrationDate: r.taxRegistrationDate,
+        deemedRentalPeriods: r.deemedRentalPeriods,
+        // 「소득세법」 §90① 감면세액 산식 입력 — §97의5 evaluator만 읽는다.
+        transferIncome: ctx.transferIncome,
+        basicDeduction: ctx.basicDeduction,
+        taxBase: ctx.taxBase,
+        reducibleBaseIncome: ctx.reducibleBaseIncome,
       };
     case "rental_97_main":
     case "rental_97_proviso":

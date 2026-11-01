@@ -186,6 +186,12 @@ export function calcReductions(
    * §77·§77의3의 피상속인 취득일 소급은 `expropriationAcquisitionDate`를 만드는 쪽이 이미 뺐다 — 여기서는 불성립 사유에 고지만 붙인다.
    */
   nonHeirBequest?: boolean,
+  /**
+   * §97의5 감면대상 소득(「소득세법」 §90①의 B)의 기준 — **임대주택분** 양도소득금액.
+   * 겸용주택(`transfer-tax-mixed-use-totals.ts`)은 `transferIncome`이 주택분·상가분·비사업용토지분
+   * 합계라 주택분만 넘긴다. 미제공이면 `transferIncome` 전체.
+   */
+  rental975ReducibleBaseIncome?: number,
 ): ReductionsResult & {
   rentalReductionDetail?: RentalReductionResult;
   newHousingReductionDetail?: NewHousingReductionResult;
@@ -278,6 +284,11 @@ export function calcReductions(
       stdPriceAtAcquisition: standardPriceAtAcquisition,
       stdPriceAtTransfer: standardPriceAtTransfer,
       calculatedTax,
+      // §97의5 — 「소득세법」 §90① 감면세액 산식 (B − C) ÷ D
+      transferIncome,
+      basicDeduction,
+      taxBase,
+      reducibleBaseIncome: rental975ReducibleBaseIncome,
     });
     if (rental97Result) {
       rental97TaxDetail = rental97Result;
@@ -293,10 +304,13 @@ export function calcReductions(
         candidates.push({
           amount: rental97Result.reductionAmount,
           type: rental97Result.id,
+          // ⑲ 감면대상 소득 = §90①의 B — §97의5가 §90① 산식을 탔으면 그 B(겸용은 주택분 한정)
           reducibleIncome:
-            transferIncome === undefined
-              ? undefined
-              : applyRentalGainShare(transferIncome, rental97Result),
+            "section90" in rental97Result && rental97Result.section90
+              ? rental97Result.section90.reducibleIncome
+              : transferIncome === undefined
+                ? undefined
+                : applyRentalGainShare(transferIncome, rental97Result),
           aggregateReductionRate: rental97Result.reductionRate,
         });
       }

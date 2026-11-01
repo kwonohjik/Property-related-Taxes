@@ -25,6 +25,8 @@ import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { engineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
+import { hasRentIncreaseRule } from "./rental-rent-increase-label";
+import { RENT_INCREASE_VIOLATION_LABEL } from "./rental-rent-increase-label";
 
 /**
  * 「PHD 환산 모드」 메시지가 가리킬 입력칸 — 메시지는 5칸을 한꺼번에 묻지만(`canCalcReductionPhd`)
@@ -321,11 +323,22 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (!r.rentalStartDate) return fail(fieldError(`reduction.${r.type}.rentalStartDate`, `${label} 적용: 임대개시일을 입력하세요.`));
           if ((r.type === "rental_97_3" || r.type === "rental_97_4" || r.type === "rental_97_5") && !r.registrationDate)
             return fail(fieldError(`reduction.${r.type}.registrationDate`, `${label} 적용: 임대사업자 등록일을 입력하세요.`));
+          // §97의5①1호 — 매입임대 확인(3-state). 미선택을 매입임대로 읽지 않는다. 「건설임대」 선택은 엔진이 불적용 사유로 보인다.
+          if (r.type === "rental_97_5" && (r.isPurchaseRental === null || r.isPurchaseRental === undefined))
+            return fail(fieldError(`reduction.${r.type}.isPurchaseRental`, `${label} 적용: 임대주택 취득 유형(매입임대/건설임대)을 선택하세요 (§97의5①1호).`));
+          // 조특령 §97의5③ — 사업자등록을 확인했으면 그 날짜가 임대개시 기산의 한 축이다(엔진 MISSING_TAX_REGISTRATION_DATE)
+          if ((r.type === "rental_97_5" || r.type === "rental_97_3") && r.isTaxRegistered && !r.taxRegistrationDate)
+            return fail(fieldError(`reduction.${r.type}.taxRegistrationDate`, `${label} 적용: 세무서 사업자등록일을 입력하세요 (조특령 ${r.type === "rental_97_5" ? "§97의5③" : "§97의3④"} — 늦으면 그날부터 임대 개시).`));
           // 3-state: "" = 미선택 → 차단 (간소화 모드 명시 선택 강제)
-          if (r.rentIncreaseViolationMode === "")
-            return fail(fieldError(`reduction.${r.type}.rentIncreaseViolationMode`, `${label} 적용: 임대료 5% 증액 위반 이력 여부(없음/있음)를 선택하세요.`));
-          if (r.rentIncreaseViolationMode === "has_violation" && (!r.rentHistory || r.rentHistory.length < 2))
+          // 임대료 증액 제한은 §97의3·§97의4·§97의5만 — §97(본문·단서)·§97의2는 묻지도 막지도 않는다 (`hasRentIncreaseRule`)
+          const rentRule = hasRentIncreaseRule(r.type);
+          if (rentRule && r.rentIncreaseViolationMode === "")
+            return fail(fieldError(`reduction.${r.type}.rentIncreaseViolationMode`, `${label} 적용: ${RENT_INCREASE_VIOLATION_LABEL} 여부(없음/있음)를 선택하세요.`));
+          if (rentRule && r.rentIncreaseViolationMode === "has_violation" && (!r.rentHistory || r.rentHistory.length < 2))
             return fail(fieldError(`reduction.${r.type}.rentHistory`, `${label} 적용: 위반 이력 "있음" 선택 시 계약별 임대료 이력을 2건 이상 입력하세요.`));
+          // 빈 계약일 — 공실 구간과 같은 이유(아래). 개수만 보면 ⑧을 통과한 뒤 Zod가 영문 경로로 400을 냈다(리뷰 게이트 2026-11-01).
+          if (rentRule && r.rentIncreaseViolationMode === "has_violation" && r.rentHistory?.some((h) => !h.contractDate))
+            return fail(fieldError(`reduction.${r.type}.rentHistory`, `${label} 적용: 임대료 계약 이력의 계약일을 모두 입력하세요. 해당 없으면 행을 삭제하세요.`));
           if (r.hasVacancyOverGrace === null) {
             // D1-03 — 유예는 조문마다 다르다: §97의5만 6개월(조특령 §97의5①1호),
             // 나머지 넷은 3월(조특령 §97⑤5호 → 조특칙 §44). ⑤UI 질문 문구와 같은 값이어야 한다.
@@ -345,6 +358,12 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (r.hasVacancyOverGrace === true && r.vacancyPeriods?.some((p) => !p.startDate || !p.endDate))
             return fail(fieldError(`reduction.${r.type}.vacancyPeriods`, `${label} 적용: 공실 구간의 시작일·종료일을 모두 입력하세요. 해당 없으면 구간을 삭제하세요.`,
             ));
+          // 조특령 §97의5①2호·3호 간주기간 — 켰으면 행마다 두 날짜가 있어야 하고 시작 ≤ 종료
+          if (r.type === "rental_97_5" && r.hasDeemedRentalPeriod) {
+            const rows = r.deemedRentalPeriods ?? [];
+            if (rows.length === 0 || rows.some((p) => !p.startDate || !p.endDate || p.startDate > p.endDate))
+              return fail(fieldError(`reduction.${r.type}.deemedRentalPeriods`, `${label} 적용: 수용·정비사업으로 임대할 수 없던 기간의 시작일·종료일(정비사업은 인가일·준공일)을 확인하세요 (조특령 §97의5①2호·3호).`));
+          }
           // D2-07 — 2023.1.1 이후 등록분은 §97의3①이 민간건설임대주택에 한정한다.
           //          그 전 등록분은 법률 제19199호 부칙 §38 경과조치로 종전 규정을 따른다.
           // ⚠️ 종전 규정에도 **등록 시한**이 있다 — 매입임대는 2020.12.31, 건설임대는 2022.12.31
@@ -407,19 +426,35 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             )
               return fail(fieldError(`reduction.${r.type}.stdPriceAtRentalEnd`, `${label} 적용: 임대 종료일 당시 기준시가를 입력하세요 (안분 산식의 B). 자동 안분은 수행하지 않습니다.`,
               ));
+            // §97의5①2호 — 조기 종료면 10년 판정의 종점(임대 종료일)이 필수. 엔진 `MISSING_RENTAL_END_DATE`·
+            // `INVALID_RENTAL_END_DATE`와 같은 조건이다(YYYY-MM-DD 문자열 비교).
+            if ((r.type === "rental_97_5" || r.type === "rental_97_3") && r.rentalContinuesToTransfer === false) {
+              const end = r.rentalEndDate || "";
+              if (!end)
+                return fail(fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: 양도 전에 임대를 종료했으면 임대 종료일을 입력하세요 (${r.type === "rental_97_5" ? "§97의5①2호" : "§97의3①1호"} — 임대기간 판정의 종점).`));
+              // 엔진 기산일과 같은 축 — 임대개시일·등록일·사업자등록일 중 늦은 날 (YYYY-MM-DD 문자열 max)
+              const start = [r.rentalStartDate, r.registrationDate, r.isTaxRegistered ? r.taxRegistrationDate : ""]
+                .filter((d): d is string => !!d)
+                .reduce((a, b) => (b > a ? b : a), "");
+              if ((start && end < start) || (form.transferDate && end > form.transferDate))
+                return fail(fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: 임대 종료일은 임대개시일(등록일·사업자등록일이 늦으면 그날)과 양도일 사이여야 합니다.`));
+            }
             /**
              * Q10 — 분모의 두 시점(E 취득당시 · D 양도당시). 감면-수준 override 또는
              * 자산-수준(환산 모드) 값 중 **하나는** 있어야 한다. §66⑦ 블록(:167)과 같은 모양.
              *
              * ⚠️ **안분이 실제로 필요할 때만 묻는다** — `calcRentalGainRatio`는
-             *    「양도일까지 계속 임대 + 임대개시 ≤ 취득일」이면 기준시가를 **보지도 않고**
-             *    비율 1을 돌려준다(`rental-97-shared-helpers.ts:211`). 그 경우까지 막으면
+             *    「양도일까지 계속 임대 + (임대개시 ≤ 취득일 또는 §97의5)」이면 기준시가를 **보지도 않고**
+             *    비율 1을 돌려준다(`calcRentalGainFraction` 조기 반환). 그 경우까지 막으면
              *    필요 없는 값을 요구하는 오탐이 된다.
              */
             const rentalStart = r.rentalStartDate || "";
+            // §97의5②는 분자의 감수가 취득당시라 계속 임대면 임대개시일과 무관하게 비율 1이다
+            // (`calcRentalGainFraction` 조기 반환) — 조기 종료일 때만 묻는다.
             const prorationNeeded =
               r.rentalContinuesToTransfer === false ||
-              (!!rentalStart && !!asset.acquisitionDate && rentalStart > asset.acquisitionDate);
+              (r.type !== "rental_97_5" &&
+                !!rentalStart && !!asset.acquisitionDate && rentalStart > asset.acquisitionDate);
             if (prorationNeeded) {
               const hasAcqStd =
                 parseAmount(r.stdPriceAtAcquisition || "") > 0 ||

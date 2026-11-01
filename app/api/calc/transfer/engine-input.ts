@@ -304,19 +304,20 @@ export function buildTransferEngineInput(
     oneHouseExemptionProviso: toEngineOneHouseExemptionProviso(data.oneHouseExemptionProviso),
     // ⑭ OH-22 §154⑤ 단서 처분 이력 — 날짜는 date-coerce(`toEngineFinalHouseRestart`)
     finalOneHouseRestart: toEngineFinalHouseRestart(data.finalOneHouseRestart),
-    // [C7 수정] 장기임대 감면 정밀 입력
+    // [C7 수정] 장기임대 감면 정밀 입력 — 날짜는 date-coerce `toDate`(다건 `multi/route.ts`와 같은 변환).
+    // 종전 `new Date(문자열)` 직접 호출은 저장소 규칙 위반이었다(리뷰 게이트 2026-11-01 — 결과값은 같다).
     rentalReductionDetails: data.rentalReductionDetails
       ? {
           ...data.rentalReductionDetails,
-          registrationDate: new Date(data.rentalReductionDetails.registrationDate),
-          rentalStartDate: new Date(data.rentalReductionDetails.rentalStartDate),
-          transferDate: new Date(data.rentalReductionDetails.transferDate),
+          registrationDate: toDate(data.rentalReductionDetails.registrationDate, "rentalReductionDetails.registrationDate"),
+          rentalStartDate: toDate(data.rentalReductionDetails.rentalStartDate, "rentalReductionDetails.rentalStartDate"),
+          transferDate: toDate(data.rentalReductionDetails.transferDate, "rentalReductionDetails.transferDate"),
           vacancyPeriods: data.rentalReductionDetails.vacancyPeriods.map((v) => ({
-            startDate: new Date(v.startDate),
-            endDate: new Date(v.endDate),
+            startDate: toDate(v.startDate, "rentalReductionDetails.vacancyPeriods.startDate"),
+            endDate: toDate(v.endDate, "rentalReductionDetails.vacancyPeriods.endDate"),
           })),
           rentHistory: data.rentalReductionDetails.rentHistory.map((r) => ({
-            contractDate: new Date(r.contractDate),
+            contractDate: toDate(r.contractDate, "rentalReductionDetails.rentHistory.contractDate"),
             monthlyRent: r.monthlyRent,
             deposit: r.deposit,
             contractType: r.contractType,

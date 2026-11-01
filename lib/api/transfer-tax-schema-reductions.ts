@@ -156,6 +156,10 @@ export const reductionSchema = z.discriminatedUnion("type", [
     type: z.literal("rental_97_3"),
     /** D2-07 — §97의3① 「민간건설임대주택」 한정 (2023.1.1 이후 등록분) */
     isPrivateConstructionRental: z.boolean().optional(),
+    /** §97의3①1호 — 양도 전 임대 종료 시 임대기간 종점. ⑫에 없으면 침묵 stripping된다. */
+    rentalEndDate: z.string().date().optional(),
+    /** 조특령 §97의3④ — 세무서 사업자등록일 */
+    taxRegistrationDate: z.string().date().optional(),
     /** @deprecated Phase 1 stub 호환 */
     rentalYears: z.number().int().nonnegative().optional(),
     /** @deprecated Phase 1 stub 호환 */
@@ -182,6 +186,28 @@ export const reductionSchema = z.discriminatedUnion("type", [
     type: z.literal("rental_97_5"),
     /** CA-01 — §97의5①3호 준용 (조특령 §97의3③2호 국민주택규모) */
     isNationalHousingScale: z.boolean().optional(),
+    /** §97의5①2호 — 양도 전 임대 종료 시 실제 임대기간의 마지막 날. ⑫에 없으면 침묵 stripping된다. */
+    rentalEndDate: z.string().date().optional(),
+    /** §97의5①1호 — 매입임대주택 여부 (true만 충족) */
+    isPurchaseRental: z.boolean().optional(),
+    /** 조특령 §97의5③ — 세무서 사업자등록일 */
+    taxRegistrationDate: z.string().date().optional(),
+    /** 조특령 §97의5①2호·3호 간주기간 — ⑫에 없으면 침묵 stripping된다 */
+    deemedRentalPeriods: z
+      .array(
+        z
+          .object({
+            reason: z.enum(["expropriation", "redevelopment"]),
+            startDate: z.string().date(),
+            endDate: z.string().date(),
+          })
+          // ⑧과 같은 규칙 — 역순 구간은 공실 판정을 조용히 뒤튼다 (YYYY-MM-DD 문자열 비교)
+          .refine((p) => p.startDate <= p.endDate, {
+            message: "간주기간의 시작일(정비사업은 인가일)이 종료일(준공일)보다 늦습니다 (조특령 §97의5①2호·3호).",
+            path: ["endDate"],
+          }),
+      )
+      .optional(),
     ...rental97CommonShape,
     officialPriceAtStart: z.number().int().nonnegative().optional(),
     region: z.enum(["capital", "non_capital"]).optional(),

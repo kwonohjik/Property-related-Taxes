@@ -11,11 +11,15 @@
  */
 
 import { useId } from "react";
+import type { ReactNode } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { hasRentIncreaseRule } from "@/lib/calc/rental-rent-increase-label";
+import { RENT_INCREASE_VIOLATION_LABEL } from "@/lib/calc/rental-rent-increase-label";
+import { rentIncreaseSectionTitle } from "@/lib/calc/rental-rent-increase-label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type {
   RentalCommonFormFields,
@@ -45,6 +49,11 @@ interface Props {
    * (`transfer-tax-validate-reductions.ts`). §97 시리즈 6조문이 이 폼을 공유한다.
    */
   fieldType?: string;
+  /**
+   * 공실 카드 하단 슬롯 — §97의5의 수용·정비사업 간주기간(조특령 §97의5①2호·3호).
+   * 공실 판정과 같은 축(계속 임대 판정)이라 같은 카드에 둔다(UI 순서 = 엔진 순서).
+   */
+  vacancyExtra?: ReactNode;
 }
 
 const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> = {
@@ -56,7 +65,7 @@ const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> 
 /** 섹션 배지 원문자 — 임대 감면 입력 폼 전체가 공유하는 표기(`Rental97MainInputForm`의 `CIRCLED`와 같은 것). */
 export const CIRCLED_SECTION_NUM = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧"] as const;
 
-export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancyGraceMonths, hasGainProration = false, fieldType = "unspecified" }: Props) {
+export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancyGraceMonths, hasGainProration = false, fieldType = "unspecified", vacancyExtra }: Props) {
   /**
    * 🔴 라디오 `name`이 전역 상수라 **자산 간에 한 그룹으로 묶였다**
    *    (2026-09-07 대장 재대조 · #25). 감면은 자산-수준(`asset.reductions`)이므로 다자산에서
@@ -65,11 +74,19 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
    *    (`CompanionAcquisitionCauseSection`이 같은 결함을 이미 고쳤다).
    */
   const uid = useId();
+  /** §97의5 — 안분 분모 생략 분기 (조특령 §97의5② — 계속 임대면 비율 1) */
+  const is975 = fieldType === "rental_97_5";
+  /**
+   * 임대 종료일(종점)·1년 재증액 안내를 쓰는 조문 — §97의5①2호·§97의3①1호 「10년 이상 계속하여 임대한 후 양도」,
+   * 조특령 §97의3③1호 후단(§97의5는 ①3호로 준용). 두 평가기만 이 값을 읽는다.
+   */
+  const usesEndDateAndInterval = fieldType === "rental_97_5" || fieldType === "rental_97_3";
   const graceLabel = vacancyGraceMonths === 3 ? "3개월" : "6개월";
   const graceBasis =
     vacancyGraceMonths === 3
       ? "조특칙 §44 — 기존 임차인 퇴거일부터 다음 임차인 입주일까지 3월 이내는 임대기간에 산입"
-      : "조특령 §97의5①1호 — 기존 임차인 퇴거일부터 다음 임차인 주민등록 이전일까지 6개월 이내는 계속 임대 간주";
+      : "조특령 §97의5①1호 — 기존 임차인 퇴거일부터 다음 임차인 주민등록 이전일까지 6개월 이내는 계속 임대 간주. " +
+        "6개월을 넘는 공실이 있으면 계속 임대가 끊기며, 끊기지 않은 구간 중 가장 긴 구간이 10년 이상이어야 합니다.";
   // ── 임대료 계약 이력 ──
   function addRentHistory() {
     const next: RentHistoryFormItem = {
@@ -117,17 +134,29 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
    *    원문자를 넘기는데 이 컴포넌트만 raw 숫자를 넘겼다. 표기를 호출부와 통일한다.
    */
   const circled = (n: number) => CIRCLED_SECTION_NUM[n - 1] ?? String(n);
+  /** §97(본문·단서)·§97의2는 임대료 증액 요건이 없어 그 섹션을 그리지 않고, 뒤 섹션 번호를 당긴다 (`hasRentIncreaseRule`) */
+  const showRentSection = hasRentIncreaseRule(fieldType);
+  const rentSlots = showRentSection ? 1 : 0;
   const sec3 = circled(sectionOffset);
-  const sec4 = circled(sectionOffset + 1);
+  const sec4 = circled(sectionOffset + rentSlots);
   // 🔴 종전 `sec4 + 1`은 이미 원문자 **문자열**이라 덧셈이 연결이 되어 「④1」로 떴다(S16-9). 번호 계산은 숫자로 한다.
-  const sec5 = circled(sectionOffset + 2);
+  const sec5 = circled(sectionOffset + rentSlots + 1);
 
   return (
     <>
-      {/* ③ 임대료 증액 제한 */}
-      <ToneCard tone="violet" sectionNum={sec3} title="임대료 증액 제한 (§97의3①2호)" bodyClassName="space-y-2">
+      {/* ③ 임대료 증액 제한 — §97의3·§97의4·§97의5만 */}
+      {showRentSection && (
+      <ToneCard tone="violet" sectionNum={sec3} title={rentIncreaseSectionTitle(fieldType)} bodyClassName="space-y-2">
         <div>
-          <p className="text-xs text-muted-foreground mb-1.5">임대료 5% 증액 위반 이력</p>
+          <p className="text-xs text-muted-foreground mb-1.5">{RENT_INCREASE_VIOLATION_LABEL}</p>
+          {/* §97의3·§97의5 — 조특령 §97의3③1호 후단, §97의4 — 소령 §167의3①2호 가·다목 괄호.
+              1년 이내 재증액 금지도 엔진이 계약 이력으로 판정한다 */}
+            <p className="mb-1.5 text-micro text-muted-foreground">
+              {fieldType === "rental_97_4"
+                ? "소득세법 시행령 §167의3①2호 — 5% 한도는 2019.2.12 이후 체결·갱신한 계약을 기준으로 다음 계약의 증가율을 판정하고, 1년 이내 재증액 금지는 2020.2.11 이후 체결·갱신한 계약을 기준으로 그 다음 증액부터 판정합니다. 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다."
+                : "조특령 §97의3③1호 — 임대사업자 등록일·세무서 사업자등록일·실제 임대개시일 중 가장 늦은 날 이후 체결·갱신한 계약부터 판정합니다. 1년 이내 재증액 금지는 직전 계약이 2020.2.11 이후인 경우부터 적용합니다. 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다."}
+              {" "}이 경우 「있음」을 고르고 계약 이력을 입력하세요.
+            </p>
           <RadioCardGroup
             data-field={`reduction.${fieldType}.rentIncreaseViolationMode`}
             name={`rentIncreaseViolationMode-${uid}`}
@@ -222,6 +251,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
           </div>
         )}
       </ToneCard>
+      )}
 
       {/* ④ 공실 기간 */}
       <ToneCard tone="sky" sectionNum={sec4} title="공실 기간" bodyClassName="space-y-2">
@@ -282,6 +312,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
             </button>
           </div>
         )}
+        {vacancyExtra}
       </ToneCard>
 
       {/* 임대 종료 시점 — 조특령 §97의3⑤ B · §97의5② (D2-06) */}
@@ -326,6 +357,20 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
 
           {value.rentalContinuesToTransfer === false && (
             <div className="mt-2 border-t border-violet-200 pt-2">
+              {/* §97의5①2호·§97의3①1호 — 임대기간 판정의 종점. 두 평가기만 읽으므로 그 조문에서만 묻는다. */}
+              {usesEndDateAndInterval && (
+                <div className="mb-2">
+                  <label className="mb-1 block text-xs font-medium">임대 종료일</label>
+                  <DateInput
+                    data-field={`reduction.${fieldType}.rentalEndDate`}
+                    value={value.rentalEndDate}
+                    onChange={(v) => onChange({ rentalEndDate: v })}
+                  />
+                  <p className="mt-1 text-micro text-muted-foreground">
+                    실제 임대기간의 마지막 날 — 임대기간 요건은 이 날까지로 판정합니다 ({is975 ? "§97의5①2호" : "§97의3①1호"} 「10년 이상 계속하여 임대한 후 양도」).
+                  </p>
+                </div>
+              )}
               <CurrencyInput
                 label="임대 종료일 당시 기준시가 (주택+부속토지 합계)"
                 data-field={`reduction.${fieldType}.stdPriceAtRentalEnd`}
@@ -342,6 +387,8 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               추계·분리 모드에서만 엔진에 전송되므로, 실지거래가액 모드에서는 채울 칸이
               없어 안분이 성립하지 않았다(§97의3 전액 불적용). 비우면 자산 카드 값으로
               폴백하므로 추계 모드 사용자는 종전과 같다. */}
+          {/* §97의5② — 계속 임대면 (D − E) ÷ (D − E) = 1이라 분모 기준시가가 결과를 바꾸지 않는다(묻지 않는다). */}
+          {!(is975 && value.rentalContinuesToTransfer !== false) && (
           <div className="mt-2 space-y-2 border-t border-violet-200 pt-2">
             <p className="text-micro text-muted-foreground">
               안분 산식의 분모 — <strong>양도 당시 기준시가 D − 취득 당시 기준시가 E</strong>.
@@ -362,6 +409,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               onChange={(v) => onChange({ stdPriceAtTransfer: v })}
             />
           </div>
+          )}
         </ToneCard>
       )}
     </>

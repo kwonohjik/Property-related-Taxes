@@ -48,6 +48,7 @@ const R973 = {
   registrationDate: D("2018-08-01"),
   rentalStartDate: D("2018-09-01"),
   isTaxRegistered: true,
+  taxRegistrationDate: D("2018-08-01"), // 조특령 §97의3④ 사업자등록일
   officialPriceAtStart: 600_000_000,
   stdPriceAtRentalStart: 600_000_000,
   isNationalHousingScale: true,
@@ -57,6 +58,8 @@ const R973 = {
 
 const R975 = {
   type: "rental_97_5",
+  isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
+  taxRegistrationDate: D("2018-08-01"), // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
   // CA-01 — §97의5①3호가 준용하는 조특령 §97의3③2호(국민주택규모)·4호(기준시가 한도)
   isNationalHousingScale: true,
   registrationDate: D("2018-08-01"),

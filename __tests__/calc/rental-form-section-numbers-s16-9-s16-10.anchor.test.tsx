@@ -88,9 +88,11 @@ describe("S16-10 §97의2 폼 번호", () => {
     expectSequential(hs);
     expect(hs.find((h) => h.includes("2호 요건"))?.[0]).toBe("③");
   });
-  it("대조: 유형 미선택은 ① ② ③ ④ ⑤ 연속(유형 조건부 카드 없음)", () => {
+  it("대조: 유형 미선택은 ① ② ③ ④ 연속(유형 조건부 카드 없음)", () => {
     const hs = r972({});
     expectSequential(hs);
-    expect(hs).toHaveLength(5);
+    // §97의2는 임대료 증액 요건이 없어 그 카드를 그리지 않는다(2026-11-01, `hasRentIncreaseRule`) — 종전 5장
+    expect(hs).toHaveLength(4);
+    expect(hs.some((h) => h.includes("임대료 증액 제한"))).toBe(false);
   });
 });

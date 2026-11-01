@@ -99,6 +99,7 @@ const RENTAL_COMMON_DEFAULTS = {
   // D2-06 — 3-state. 미입력을 「계속 임대」로 읽지 않는다.
   rentalContinuesToTransfer: null,
   stdPriceAtRentalEnd: "",
+  rentalEndDate: "",
   // Q10 — 안분 기준시가 override. 비우면 자산-수준 값으로 폴백한다(라우터).
   stdPriceAtAcquisition: "",
   stdPriceAtTransfer: "",
@@ -137,6 +138,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       isNationalHousingScale: false,
       isConvertedFromShortTerm: false,
       isPrivateConstructionRental: false, // D2-07 — 확인 토글
+      taxRegistrationDate: "", // 조특령 §97의3④ — 임대개시 기산의 한 축
     };
   }
   if (id === "rental_97_4") {
@@ -155,6 +157,10 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       officialPriceAtStart: "",
       region: "capital",
       isNationalHousingScale: false, // CA-01 — 확인 토글(ToggleCard 패턴, §97의3과 동일)
+      isPurchaseRental: null, // §97의5①1호 — 3-state. 미선택을 매입임대로 읽지 않는다.
+      taxRegistrationDate: "", // 조특령 §97의5③ — 임대개시 기산의 한 축
+      hasDeemedRentalPeriod: false,
+      deemedRentalPeriods: [],
     };
   }
   if (id === "rental_97_main") {

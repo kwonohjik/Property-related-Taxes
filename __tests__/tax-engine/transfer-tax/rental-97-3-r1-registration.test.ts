@@ -33,6 +33,7 @@ describe("§97의3 R-1 등록일별 공제율", () => {
           registrationDate: opts.reg,
           rentalStartDate: opts.rentalStart,
           isTaxRegistered: true,
+          taxRegistrationDate: opts.reg, // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
           rentIncreaseViolated: false,
           officialPriceAtStart: 400_000_000,
           isNationalHousingScale: true,

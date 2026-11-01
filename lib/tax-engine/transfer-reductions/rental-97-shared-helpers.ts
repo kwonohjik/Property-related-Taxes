@@ -9,7 +9,7 @@
  * - 임대료 5% 증액 제한·전월세 전환: 조특령 §97의3③1호 (민특법 §44④ 기준 준용)
  */
 
-import { addDays, addMonths, differenceInDays, differenceInYears } from "date-fns";
+import { addDays, addMonths, addYears, differenceInDays, differenceInYears } from "date-fns";
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import type {
   Rental97IneligibleReason,
@@ -40,6 +40,9 @@ export const RENTAL_VACANCY_GRACE_MONTHS_97 = 3;
  * ⚠️ §97의5③은 조특령 §97⑤ 중 **1호·3호만** 준용하고 **5호를 준용하지 않는다** —
  *    그래서 조특칙 §44의 3월이 §97의5에는 걸리지 않고, 이 6개월이 §97의5 고유 규칙이다.
  *    반대로 이 6개월을 다른 조문에 전용하면 임대기간이 과대 산정돼 감면이 과다 적용된다.
+ *
+ * ⚠️ §97의5 평가기(`rental-97-5.ts`)는 이 상수로 `calculateEffectiveRentalPeriod`(초과 공실 차감·통산)를 쓰지 않는다 —
+ *    「계속하여」라 초과 공실이 계속성을 끊는다(`rental-97-5-period.ts`). 레거시 `rental-housing-reduction.ts`만 쓴다.
  */
 export const RENTAL_VACANCY_GRACE_MONTHS_97_5 = 6;
 
@@ -47,8 +50,11 @@ export const RENTAL_VACANCY_GRACE_MONTHS_97_5 = 6;
 export const DEFAULT_JEONSE_CONVERSION_RATE = 0.04;
 
 export interface RentalRentViolation {
+  /** 계약일 오름차순으로 정렬한 이력 기준 인덱스 — 입력 배열 인덱스가 아니다 (`sortRentHistory`) */
   contractIndex: number;
   contractDate: Date;
+  /** 비교 기준이 된 직전 계약일 */
+  previousContractDate: Date;
   increaseRate: number;
   maxAllowed: number;
 }
@@ -67,6 +73,10 @@ export interface RentalRentViolation {
  * @param graceMonths 조문별 유예 개월 — `RENTAL_VACANCY_GRACE_MONTHS_97`(3) 또는
  *                    `RENTAL_VACANCY_GRACE_MONTHS_97_5`(6). 기본값을 두지 않는다:
  *                    호출부가 조문을 명시하지 않으면 컴파일이 실패해야 한다.
+ * - 공실·무유예 구간은 **[rentalStartDate, transferDate]로 잘라서** 본다. 기간 밖 공실(등록 전·임대 종료 후)은
+ *   임대기간을 줄일 수 없다 — 종전에는 통째로 차감해 등록 전 공실 1년 반이 10년을 8년으로 만들었다
+ *   (리뷰 게이트 2026-11-01). 유예 판정도 잘린 구간으로 한다(§97의5 `evaluateContinuousRental975`와 같은 기준 — 가정).
+ *   `transferDate`는 판정 종점이다 — §97의3은 조기 종료 시 임대 종료일을 넘긴다.
  * @param noGracePeriods **유예 없이** 전부 차감할 구간 — 조특령 §97⑤4호의 「5호 미만의 주택을
  *                    임대한 기간」이 여기 해당한다. 그 기간은 애초에 주택임대기간이 아니므로
  *                    공실 유예를 적용할 여지가 없다(2개월이어도 차감된다).
@@ -81,15 +91,25 @@ export function calculateEffectiveRentalPeriod(
   const totalDays = differenceInDays(transferDate, rentalStartDate);
   if (totalDays <= 0) return 0;
 
+  const clip = (p: Rental97VacancyPeriod): Rental97VacancyPeriod | null => {
+    const startDate = new Date(Math.max(p.startDate.getTime(), rentalStartDate.getTime()));
+    const endDate = new Date(Math.min(p.endDate.getTime(), transferDate.getTime()));
+    return endDate.getTime() > startDate.getTime() ? { startDate, endDate } : null;
+  };
+
   let deductDays = 0;
-  for (const vp of vacancyPeriods) {
+  for (const raw of vacancyPeriods) {
+    const vp = clip(raw);
+    if (!vp) continue;
     const graceEnd = addMonths(vp.startDate, graceMonths);
     if (vp.endDate.getTime() > graceEnd.getTime()) {
       deductDays += differenceInDays(vp.endDate, vp.startDate);
     }
   }
-  for (const np of noGracePeriods) {
-    deductDays += Math.max(0, differenceInDays(np.endDate, np.startDate));
+  for (const raw of noGracePeriods) {
+    const np = clip(raw);
+    if (!np) continue;
+    deductDays += differenceInDays(np.endDate, np.startDate);
   }
 
   const effectiveDays = Math.max(0, totalDays - deductDays);
@@ -111,15 +131,30 @@ export function convertToStandardDeposit(
 }
 
 /**
+ * 계약 이력을 계약일 오름차순으로 정렬한 사본 (같은 날은 입력 순서 유지).
+ * 두 증액 검증은 「직전 계약」을 배열 앞 칸으로 읽는다 — 최신순으로 입력하면 증액이 감액으로 보여
+ * 5% 위반이 숨고, 날짜가 역순인 쌍은 1년 위반으로 잘못 잡혔다(리뷰 게이트 2026-11-01).
+ * UI·validate·Zod 어디서도 순서를 강제하지 않으므로 엔진 판정 직전에 정렬한다.
+ */
+export function sortRentHistory(history: Rental97RentHistoryItem[]): Rental97RentHistoryItem[] {
+  return history
+    .map((h, i) => ({ h, i }))
+    .sort((a, b) => a.h.contractDate.getTime() - b.h.contractDate.getTime() || a.i - b.i)
+    .map((x) => x.h);
+}
+
+/**
  * 직전 계약 대비 임대료 증액률 검증 — 환산보증금 5% 이내 (조특령 §97의3③1호).
+ * 이력은 계약일 순으로 정렬해 비교한다 (`sortRentHistory`).
  * 위반 1건이라도 있으면 감면 전액 배제.
  */
 export function validateRentIncrease(
-  history: Rental97RentHistoryItem[],
+  rawHistory: Rental97RentHistoryItem[],
   conversionRate: number,
   limit: number = 0.05,
 ): { isAllValid: boolean; violations: RentalRentViolation[] } {
-  if (history.length < 2) return { isAllValid: true, violations: [] };
+  if (rawHistory.length < 2) return { isAllValid: true, violations: [] };
+  const history = sortRentHistory(rawHistory);
 
   const violations: RentalRentViolation[] = [];
 
@@ -134,12 +169,98 @@ export function validateRentIncrease(
       violations.push({
         contractIndex: i,
         contractDate: history[i].contractDate,
+        previousContractDate: history[i - 1].contractDate,
         increaseRate,
         maxAllowed: limit,
       });
     }
   }
 
+  return { isAllValid: violations.length === 0, violations };
+}
+
+/**
+ * §97의3·§97의5 임대개시 기산일 — 조특령 §97의3④·§97의5③
+ * 「「소득세법」 제168조에 따른 사업자등록과 … 임대사업자등록을 하고 장기일반민간임대주택등으로
+ *  등록하여 임대하는 날부터 임대를 개시한 것으로 본다」
+ * ⇒ 임대일·임대사업자등록일·세무서 사업자등록일 중 **가장 늦은 날**. 임대일 미입력이면 undefined.
+ */
+export function rental97EffectiveStart(input: {
+  rentalStartDate?: Date;
+  registrationDate?: Date;
+  taxRegistrationDate?: Date;
+}): Date | undefined {
+  if (!input.rentalStartDate) return undefined;
+  return new Date(
+    Math.max(
+      input.rentalStartDate.getTime(),
+      input.registrationDate?.getTime() ?? 0,
+      input.taxRegistrationDate?.getTime() ?? 0,
+    ),
+  );
+}
+
+/**
+ * §97의3·§97의5 임대료 증액 제한(령 §97의3③1호)은 **임대개시일부터** 지킬 요건이다
+ * (법 §97의3①2호 「임대기간 중」 · §97의5①3호 「임대기간 중 … 준수할 것」 — 사용자 확인 2026-11-01).
+ * ⇒ 증액한 계약의 체결·갱신일이 기산일 이후인 위반만 센다. 비교 기준(직전 계약)은 기산일 전 계약이어도 된다
+ *   — 등록 당시 존속하던 계약의 임대료가 첫 기준이다.
+ * 기산일을 모르면(임대일 미입력) 걸러내지 않는다 — 그 경우는 MISSING_RENTAL_START가 따로 막는다.
+ */
+export function rentViolationsFromRentalStart<T extends { contractDate: Date }>(
+  violations: T[],
+  start: Date | undefined,
+): T[] {
+  if (!start) return violations;
+  return violations.filter((v) => v.contractDate.getTime() >= start.getTime());
+}
+
+/**
+ * 1년 이내 재증액 금지의 시행일 — 세 조문 모두 2020.2.11 개정으로 생겼다 (KoreanLaw MCP 실독 2026-11-01).
+ *   · 조특령 §97의3③1호 후단 「…증액이 있은 후 1년 이내에는 하지 못하고」 — 대통령령 제30390호.
+ *     2020.1.1 시행본 ③1호는 「연 증가율이 100분의 5를 초과하지 아니할 것」뿐이었다.
+ *     부칙 §16 「제97조의3제3항의 개정규정은 이 영 시행 이후 주택 임대차계약을 갱신하거나 새로 체결하는 분부터 적용」.
+ *     §97의5①3호는 §97의3①2호 → 령 §97의3③을 준용하므로 같은 날이다.
+ *   · 소령 §167의3①2호 가·다목 괄호(§97의4) — 대통령령 제30395호, 부칙 §16 같은 문언.
+ * ⇒ **직전(기준) 계약**이 이 날 이후 체결·갱신된 경우에만 그 다음 증액의 1년 간격을 따진다(사용자 확인 2026-11-01).
+ */
+export const RENT_INTERVAL_RULE_FROM = new Date("2020-02-11");
+
+/** 1년 재증액 위반 중 직전 계약이 2020.2.11 이후인 것만 (`RENT_INTERVAL_RULE_FROM` 주석) */
+export function rentIntervalViolationsFromRuleDate<T extends { previousContractDate: Date }>(violations: T[]): T[] {
+  return violations.filter((v) => v.previousContractDate.getTime() >= RENT_INTERVAL_RULE_FROM.getTime());
+}
+
+/**
+ * 임대료 증액 **간격** 검증 — 조특령 §97의3③1호 후단
+ * 「이 경우 임대료등 증액 청구는 임대차계약 또는 약정한 임대료등의 증액이 있은 후 **1년 이내에는 하지 못하고**…」
+ *
+ * 직전 계약(또는 증액)일로부터 1년 이내에 환산보증금이 오른 계약을 위반으로 본다.
+ * - 기간 계산: 민법 §157(초일 불산입)·§160 — 직전 계약일 D의 1년은 **다음 해 같은 날**에 만료한다
+ *   ⇒ 그날까지의 증액은 「1년 이내」다(가정: 계약 이력의 `contractDate`를 증액 시점으로 본다 — 청구일 입력은 없다).
+ * - 감액·동결 계약은 증액이 아니므로 보지 않는다.
+ *
+ * §97의3·§97의5(①3호 준용)·§97의4(소령 §167의3①2호 가·다목 괄호)가 호출한다.
+ * 이력은 계약일 순으로 정렬해 비교한다 (`sortRentHistory`).
+ */
+export function validateRentIncreaseInterval(
+  rawHistory: Rental97RentHistoryItem[],
+  conversionRate: number,
+): { isAllValid: boolean; violations: { contractIndex: number; contractDate: Date; previousContractDate: Date }[] } {
+  const history = sortRentHistory(rawHistory);
+  const violations: { contractIndex: number; contractDate: Date; previousContractDate: Date }[] = [];
+  for (let i = 1; i < history.length; i++) {
+    const prev = convertToStandardDeposit(history[i - 1], conversionRate);
+    const curr = convertToStandardDeposit(history[i], conversionRate);
+    if (curr <= prev) continue;
+    if (history[i].contractDate.getTime() <= addYears(history[i - 1].contractDate, 1).getTime()) {
+      violations.push({
+        contractIndex: i,
+        contractDate: history[i].contractDate,
+        previousContractDate: history[i - 1].contractDate,
+      });
+    }
+  }
   return { isAllValid: violations.length === 0, violations };
 }
 
@@ -213,6 +334,22 @@ export function calcRentalGainFraction(args: {
     args.rentalContinuesToTransfer &&
     args.rentalStartDate.getTime() <= args.acquisitionDate.getTime()
   ) {
+    return FULL_RENTAL_SHARE;
+  }
+  /**
+   * §97의5②(감수 = 취득당시 E) + 계속 임대(B = D) → (D − E) / (D − E) = 1 — **임대개시일과 무관**하다.
+   *
+   * 🔴 종전에는 위의 「임대개시 ≤ 취득일」 조건만 있었다. 그 조건은 감수가 임대개시일 C인
+   *    §97의3⑤용이다. §97의5는 「취득 후 3개월 내 등록 → 임대개시」 구조라 임대개시일이 거의 항상
+   *    취득일보다 늦어, 결과를 바꾸지 않는 기준시가 두 점을 요구하고 미입력이면 감면을 전액 배제했다.
+   *    기준시가가 하락한 사안(D ≤ E)은 분모 ≤ 0이라 같은 사유로 배제됐다.
+   *
+   * 하락 사안도 1로 본다 — 계속 임대면 령 §97의5②의 「임대기간의 마지막 날」이 양도일이라
+   * 분자와 분모가 **같은 식**(양도 당시 − 취득당시)이다. 즉 보유기간 전체가 임대기간이고, 양도소득 전부가
+   * 「임대기간 중 발생한 양도소득」이다. 반면 조기 종료(B ≠ D)에서 D ≤ E면 두 식이 갈리고 산식이 성립하지
+   * 않으므로 evaluator가 `PRORATION_DENOMINATOR_NONPOSITIVE`로 불적용 처리한다(자동 안분 금지).
+   */
+  if (args.rentalContinuesToTransfer && args.numeratorBase === "acquisition") {
     return FULL_RENTAL_SHARE;
   }
 
@@ -384,6 +521,22 @@ export function checkRental973Clause24(
       message:
         "임대개시일 당시 주택과 부수토지의 기준시가 합계가 입력되지 않았습니다 " +
         `(${legalBasisPrefix}조특령 §97의3③4호 한도 검증).`,
+      legalBasis: "조특령 §97의3③4호",
+    });
+  } else if (
+    input.region === undefined &&
+    input.officialPriceAtStart > OFFICIAL_PRICE_LIMIT_NON_CAPITAL &&
+    input.officialPriceAtStart <= OFFICIAL_PRICE_LIMIT_CAPITAL
+  ) {
+    /**
+     * 리뷰 9번 — 소재지가 없으면 종전에는 수도권 한도(6억)로 읽었다. 3억 초과 ~ 6억 이하는 소재지가
+     * 적격을 가르므로 추정하지 않는다(앱은 소재지를 항상 보낸다 — API 직접 호출만 해당).
+     */
+    reasons.push({
+      code: "MISSING_REGION",
+      message:
+        "임대개시일 당시 기준시가가 3억원을 넘어 소재지(수도권/수도권 밖)에 따라 한도(6억/3억) 충족 여부가 달라지는데 " +
+        `소재지가 입력되지 않았습니다 (${legalBasisPrefix}조특령 §97의3③4호).`,
       legalBasis: "조특령 §97의3③4호",
     });
   } else {

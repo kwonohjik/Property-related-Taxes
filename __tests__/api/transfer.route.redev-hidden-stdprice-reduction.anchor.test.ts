@@ -44,6 +44,7 @@ const rental973 = (card: { acq?: string; tr?: string } = {}) => ({
   registrationDate: "2013-01-01",
   rentalStartDate: "2013-01-01",
   isTaxRegistered: true,
+  taxRegistrationDate: "2013-01-01", // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
   rentIncreaseViolationMode: "none",
   rentHistory: [],
   hasVacancyOverGrace: false,

@@ -33,6 +33,8 @@ import {
   calculateEffectiveRentalPeriod,
   RENTAL_VACANCY_GRACE_MONTHS_97,
   validateRentIncrease,
+  validateRentIncreaseInterval,
+  rentIntervalViolationsFromRuleDate,
   DEFAULT_JEONSE_CONVERSION_RATE,
 } from "./rental-97-shared-helpers";
 import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result } from "./types";
@@ -67,6 +69,17 @@ const STD_PRICE_CAP_NON_CAPITAL = 300_000_000;
 const REGISTRATION_SUNSET = new Date("2018-03-31");
 /** 그 단서의 시행일 (대통령령 제28637호). 이전 양도분에는 소급하지 않는다. */
 const CLAUSE_SUNSET_EFFECTIVE_FROM = new Date("2018-04-01");
+/**
+ * 소령 §167의3①2호 가·다목 「임대보증금 또는 임대료의 연 증가율이 100분의 5를 초과하지 않는」 —
+ * 대통령령 제29523호(2019.2.12)가 신설했다. 그 전 가·다목에는 임대료 요건이 없었다(2019.1.1 시행본 실독).
+ * 같은 영 부칙 §6: 「이 영 시행 이후 주택 임대차계약을 체결하거나 기존 계약을 갱신하는 분부터 적용」.
+ * ⇒ **비교 기준이 되는 직전 계약**이 이 날 이후 체결·갱신된 경우에만, 그 계약 대비 다음 계약의 증가율을
+ *   따진다(사용자 확인 2026-11-01). 시행일 이후 첫 계약이 기준 임대료가 되며, 그 계약 자체의 증가율
+ *   (시행 전 계약 대비)은 판정하지 않는다.
+ *   ≠ §97의3·§97의5 — 그쪽은 처음부터 있던 요건이라 등록 당시 존속 계약이 기준이 될 수 있다
+ *   (`rentViolationsFromRentalStart`).
+ */
+const RENT_CAP_RULE_CONTRACTS_FROM = new Date("2019-02-12");
 
 export function evaluateRental974(input: Rental97EvaluationInput): Rental97Result {
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.RENTAL_97_4;
@@ -164,15 +177,35 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
 
   // 2) 임대료 증액 제한 (소령 §167의3①2호 장기임대주택 요건)
   if (input.rentHistory && input.rentHistory.length >= 2) {
-    const validation = validateRentIncrease(
+    // 5% 한도 — 직전(기준) 계약이 2019.2.12 이후 체결·갱신된 경우만 (RENT_CAP_RULE_CONTRACTS_FROM 주석)
+    const capViolations = validateRentIncrease(
       input.rentHistory,
       input.jeonseConversionRate ?? DEFAULT_JEONSE_CONVERSION_RATE,
-    );
-    if (!validation.isAllValid) {
+    ).violations.filter((v) => v.previousContractDate.getTime() >= RENT_CAP_RULE_CONTRACTS_FROM.getTime());
+    if (capViolations.length > 0) {
       reasons.push({
         code: "RENT_INCREASE_VIOLATED",
-        message: `임대료(환산보증금) 증액 5% 제한 위반 계약 ${validation.violations.length}건.`,
+        message:
+          `임대료(환산보증금) 증액 5% 제한 위반 계약 ${capViolations.length}건 (소령 §167의3①2호). ` +
+          "2019.2.12 이후 체결·갱신한 계약을 기준으로 다음 계약의 증가율을 판정합니다(대통령령 제29523호 부칙 §6).",
         legalBasis,
+      });
+    }
+    // 소령 §167의3①2호 가·다목 괄호 — 계약·증액 후 1년 이내 재증액 금지 (§97의3·§97의5와 공용 헬퍼)
+    const intervalAll = validateRentIncreaseInterval(
+      input.rentHistory,
+      input.jeonseConversionRate ?? DEFAULT_JEONSE_CONVERSION_RATE,
+    ).violations;
+    // 직전(기준) 계약이 2020.2.11 이후인 경우만 — 대통령령 제30395호 부칙 §16 (`RENT_INTERVAL_RULE_FROM` 주석)
+    const intervalViolations = rentIntervalViolationsFromRuleDate(intervalAll);
+    if (intervalViolations.length > 0) {
+      reasons.push({
+        code: "RENT_INCREASE_WITHIN_1_YEAR",
+        message:
+          `직전 계약(증액)일로부터 1년 이내에 임대료(환산보증금)를 올린 계약 ${intervalViolations.length}건 ` +
+          "— 소령 §167의3①2호 「증액이 있은 후 1년 이내에는 하지 못하고」. 1년은 민법 기간 계산으로 다음 해 같은 날에 만료합니다. " +
+          "2020.2.11 이후 체결·갱신한 계약을 기준으로 그 다음 증액을 판정합니다(대통령령 제30395호 부칙 §16).",
+        legalBasis: "소득세법 시행령 §167의3①2호",
       });
     }
   } else if (input.rentIncreaseViolated === true) {

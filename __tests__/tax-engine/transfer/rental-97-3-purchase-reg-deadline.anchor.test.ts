@@ -41,6 +41,7 @@ describe("A. 엔진 — 등록 시한 축(매입 2020.12.31)과 범위 한정 �
     transferDate: D("2035-01-01"),
     rentalStartDate: D("2013-06-01"),
     isTaxRegistered: true,
+    taxRegistrationDate: D("2013-01-01"), // 조특령 §97의3④ — 등록일·임대개시보다 앞서 기산일을 바꾸지 않는다
     rentIncreaseViolated: false,
     officialPriceAtStart: 400_000_000,
     stdPriceAtRentalStart: 400_000_000,
@@ -110,6 +111,7 @@ describe("B. 세액 — 2021~2022 등록 매입임대의 과소과세 실측", (
           registrationDate: new Date(reg),
           rentalStartDate: new Date(reg),
           isTaxRegistered: true,
+          taxRegistrationDate: new Date(reg), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
           rentIncreaseViolated: false,
           officialPriceAtStart: 400_000_000,
           isNationalHousingScale: true,
@@ -165,6 +167,7 @@ describe("C. ⑧ validate — 등록 시한 경계 동기화", () => {
       ...getReductionDefault("rental_97_3"),
       rentalStartDate: "2016-01-05",
       isTaxRegistered: true,
+      taxRegistrationDate: "2015-01-01", // 조특령 §97의3④ — 기산일을 바꾸지 않는 이른 날
       rentIncreaseViolationMode: "none",
       rentalContinuesToTransfer: true,
       hasVacancyOverGrace: false,

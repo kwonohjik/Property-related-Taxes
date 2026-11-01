@@ -689,4 +689,16 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  {
+    // ③1호 5% 한도·1년 이내 재증액 금지(후단은 대통령령 제30390호 2020.2.11 신설) · ④ 임대개시 기산일.
+    // `rental-97-3.ts`·`rental-97-5.ts`(①3호 준용)·`rental-97-shared-helpers.ts`. 원문 MST 288915 실독 2026-11-01.
+    id: "TRANSFER_DECREE.LONG_GENERAL_RENTAL_97_3",
+    citation: "조특령 §97의3",
+    keywords: [
+      "임대보증금 또는 임대료(이하 이 호에서 \"임대료등\"이라 한다)의 증가율이 100분의 5를 초과하지 않을 것",
+      "임대료등 증액 청구는 임대차계약 또는 약정한 임대료등의 증액이 있은 후 1년 이내에는 하지 못하고",
+      "등록하여 임대하는 날부터 임대를 개시한 것으로 보며",
+    ],
+    keywordMode: "ALL",
+  },
 ];
