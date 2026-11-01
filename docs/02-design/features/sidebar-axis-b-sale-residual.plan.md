@@ -81,3 +81,21 @@
 4. 뮤테이션 — 흡수 미적용 · 흡수 자산을 마지막 행으로 고정(위치 규칙) · 대역 가드 제거 · 서버만 옛 인라인 · 사이드바만 복사본 · 안분 모드 게이트 복귀 → 전체 회귀 → tsc · eslint.
 5. 브라우저(UI 영향 있음 — 사이드바 양도가액 칸·합계): Playwright로 축 B 3지분 33.33×3(실가·안분) 계산 전 사이드바 합 = 계약 총액, 계산 후 값 유지, Network 본문 확인.
 6. V-6·V-7은 건드리지 않고 이 계획서에 «별건»으로 남긴다. 800줄: `summary.ts` 611 · `helpers.ts` 198 · `bundled-apportionment.ts` 278 · `bundled-sale-apportionment.ts` 322 — 모두 여유.
+
+## 4. 구현 결과 (Q-1 b · Q-2 a · Q-3 a — 2026-11-01)
+
+| 항목 | 결과 |
+|---|---|
+| 공유 함수 | `lib/tax-engine/bundled-sale-apportionment.ts`에 `absorbFractionalResidual(assets, total)` 추가(확정 가액 > 0 컴패니언 중 assetId 사전순 최대, 없으면 양수인 주 자산, 전부 0이면 전 자산 사전순 최대 — 서버 규칙 그대로). 입력 배열은 바꾸지 않는다. |
+| 서버 | `app/api/calc/transfer/bundled-apportionment.ts`의 인라인 흡수 블록을 이 함수 호출로 교체(동작 무변경 — #2786 anchor 전부 통과). |
+| 사이드바 | `computeApportionedSaleMap`이 축 B에서 같은 함수로 흡수한 값을 쓴다. 지분율 합이 허용 대역 밖이면 흡수하지 않는다(`isFractionalRatioSumOutOfTolerance`). `summary.ts`는 안분 모드가 아니어도 축 B(총액 > 0)면 맵을 만든다(실가 모드 폴백 제거). |
+| 테스트 먼저 | 새 anchor 2개 — 단위 8건(`fractional-residual-absorber.anchor.test.ts`) · 폼 → 사이드바 → route 25건(`transfer.route.sidebar-axis-b-sale-residual.anchor.test.ts`). **원본 코드에서 22건 실패**(단위 8 + 잔여 12셀 + 사전순 2셀)·11건 통과(잔여 0 4 · 대역 밖 6 · 총액 0 1) — 계획서 V-2·V-5와 일치 — 확인 후 구현. |
+| 확인 내용 | 잔여 6시료 × 두 모드: 사이드바(계산 전) = 엔진 = 사이드바(계산 후), 합 = 총액, 라벨(`saleIsApportioned`) 계산 전후 동일. 컴패니언 id가 A9·A2 순서(사전순 ≠ 위치)에서 가운데 행 A9가 잔액 +100,000을 받는다(V-4 해소). 대역 밖(70/70/70 · 50/30/10 · 99.9%)은 입력값 그대로. |
+| 뮤테이션 10종 | 사이드바 흡수 제거(14건 실패) · 대역 가드 제거(6) · 가드 반전(20) · 맵 게이트를 안분 모드만(7) · 흡수자 마지막 위치(8) · 사전순 최소(9) · 주 자산 포함(21) · 확정가 0 포함(4) · 서버 흡수 제거(23) · 서버 총액 +1(29) — **전부 KILLED**. 복원은 scratchpad 백업 `cmp` 일치로 확인(백업 4개 존재를 먼저 확인). |
+| 전체 회귀 | vitest 3650개 파일 통과 · 1 skipped · 실패 0(44,802 tests). `tsc --noEmit` 0건 · eslint 오류·경고 0. 파일 줄 수: `summary.ts` 616 · `helpers.ts` 212 · `bundled-apportionment.ts` 272 · `bundled-sale-apportionment.ts` 347(800 미만). |
+| 브라우저(Playwright, 축 B 토지) | 사이드바 계산 전 — 33.33×3(실가·안분 모드): 양도가액 333,300,000 · 333,300,000 · **333,400,000**, 합계 양도가액 **1,000,000,000** / 14.29×7(두 모드): 142,900,000 ×6 · **142,600,000**, 합계 **1,000,000,000**. 계산 응답 status 4건 모두 **200**. 계산 후에는 결과 화면으로 넘어가 사이드바가 사라져 **계산 후 사이드바 값은 브라우저로 확인하지 못했다**(anchor로 확인). 임시 스펙의 마지막 `screenshot` 단계가 «페이지 닫힘»으로 실패해 Playwright 종료 코드는 실패였으나 측정 줄은 그 앞에서 출력됐다(스펙은 커밋하지 않음). |
+
+### 별건·미측정 (이 PR에서 건드리지 않음)
+
+- V-6: `FractionalAutoSalePriceCard`(자산별 «총 양도가액 × 지분율» 카드) 화면 · 일반건물·입주권·겸용 지분 축 B 사이드바(`gbShareBgCards` 등 전용 분기) — 확인 필요.
+- V-7: 주택 지분 축 B 수치(토지만 쟀다).

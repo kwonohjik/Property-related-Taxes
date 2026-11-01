@@ -12,6 +12,7 @@ import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritan
 import type { InheritanceAssetKind } from "@/lib/tax-engine/inheritance-acquisition-price";
 import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
 import {
+  absorbFractionalResidual,
   apportionBundledSale,
   type BundledAssetInput,
   type BundledApportionmentResult,
@@ -182,22 +183,15 @@ export function prepareBundledApportionment(
   // 완전 지분 모드: applyRatio(floor) 절사로 Σfixed < total일 수 있으므로
   // 한 자산이 잔액을 흡수해 Σfixed = totalSalePrice 불변식 보장
   // (apportionBundledSale "잔여 양도가액 있으나 안분 대상 없음" throw 회피).
-  // 정수 보정(1~2원)일 뿐 안분 방식 선택이 아님 — feedback_floor_residual_absorption.
-  // 흡수자 = 확정 양도가액 > 0 자산 중 (배열 위치 0 = 주 자산을 뺀) assetId 사전순 최대 — 컴패니언 입력 순서와 무관(V-7).
-  // `apportionBundledSale` Step 3·5와 같은 규칙이다. 주 자산 id는 ⑭ 본문에 없어 `"primary"`로 고정이므로 id가 아니라 위치 0으로 가른다.
+  // 흡수 규칙(확정 양도가액 > 0 컴패니언 중 assetId 사전순 최대 — V-7)은 사이드바 프리뷰와 공유하는 `absorbFractionalResidual` 하나다.
   if (isFullFractionalBundle && bundleAssets.every((a) => a.fixedSalePrice !== undefined)) {
-    const allIdx = bundleAssets.map((_, i) => i);
-    const positive = allIdx.filter((i) => (bundleAssets[i].fixedSalePrice ?? 0) > 0);
-    const companionIdx = positive.filter((i) => i !== 0);
-    const pool = companionIdx.length > 0 ? companionIdx : positive.length > 0 ? positive : allIdx;
-    const absorber = pool.reduce(
-      (best, i) => (bundleAssets[i].assetId > bundleAssets[best].assetId ? i : best),
-      pool[0],
+    const absorbed = absorbFractionalResidual(
+      bundleAssets.map((a) => ({ assetId: a.assetId, fixedSalePrice: a.fixedSalePrice ?? 0 })),
+      primary.totalSalePrice!,
     );
-    const sumExceptAbsorber = allIdx
-      .filter((i) => i !== absorber)
-      .reduce((s, i) => s + (bundleAssets[i].fixedSalePrice ?? 0), 0);
-    bundleAssets[absorber].fixedSalePrice = primary.totalSalePrice! - sumExceptAbsorber;
+    bundleAssets.forEach((a, i) => {
+      a.fixedSalePrice = absorbed[i];
+    });
   }
 
   /**
