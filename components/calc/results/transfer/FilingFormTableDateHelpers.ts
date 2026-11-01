@@ -57,6 +57,9 @@ export function holdingPeriodFromDates(acq?: string, transfer?: string): string 
   return fmtPeriod(months);
 }
 
+/** 겸용 파트 카드 중 토지 파트 — `app/api/calc/transfer/mixed-use-part-cards.ts` `MIXED_USE_PART_IDS` */
+const MIXED_USE_LAND_CARD_IDS = new Set(["mu-house-land", "mu-comm-land", "mu-nbl"]);
+
 // ── 장특공제 보유/거주 분할 ────────────────────────────────────
 
 /**
@@ -73,6 +76,8 @@ export function holdingPeriodFromDates(acq?: string, transfer?: string): string 
  */
 export function getAcqDateForCard(asset: import("@/lib/stores/calc-wizard-asset").AssetForm | undefined, pid: string): string {
   if (!asset) return "";
+  // 겸용 파트 카드(`mu-house-land#${자산id}` 등) — 토지 파트는 토지 취득일이다(④ `transfer-tax-api-mixed-use.ts`가 엔진에 보내는 값과 같은 식).
+  if (asset.isMixedUseHouse && MIXED_USE_LAND_CARD_IDS.has(baseCardId(pid))) return partAcquisitionDates(asset).land;
   if (asset.assetKind !== "general_building") return asset.acquisitionDate || "";
   // 🔴 지분(%) 분할 카드는 `building2#0` 꼴이라 접미사를 벗기고 봐야 한다 —
   //    안 벗기면 증축분 카드가 default로 떨어져 **증축일 대신 원건물 취득일**을 표시한다.
