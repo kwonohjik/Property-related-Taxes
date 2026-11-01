@@ -334,7 +334,8 @@ export function computeTransferPerAssetSummary(
     //   ② 채택이면 엔진 값(②) · ① 채택이면 아래 기존 분기(환산·감정·매매사례 프리뷰·결과)가 그대로 맞다.
     const pdDetail = isSingle ? singleResult?.preDeemedPurchaseDetail : bundledProperty?.preDeemedPurchaseDetail;
     const pdPending = preDeemedPurchaseApplies(a) && !pdDetail && (isSingle ? !singleResult : !bundledProperty);
-    if (pdDetail?.selected === "clause2") {
+    // 재개발은 ②가 인가전 분 기준일 뿐이다 — 자산 취득가액 합은 §166 분해(아래 `redevResultTotals`)가 정본이다.
+    if (pdDetail?.selected === "clause2" && !redevResultTotals) {
       acqPrice = pdDetail.clause2Amount;
       acqPending = false;
     } else if (pdPending) {

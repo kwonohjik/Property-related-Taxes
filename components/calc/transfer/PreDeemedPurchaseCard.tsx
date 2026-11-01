@@ -15,6 +15,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isPreDeemedPurchaseAsset, preDeemedPurchaseUsesCompareActual } from "@/lib/calc/transfer-pre-deemed-purchase-form";
+import { isRedevelopmentSec166Asset } from "@/lib/calc/redev-acquisition-price-source";
 import { isBeforePpiSeries, ppiMonthlyX100 } from "@/lib/tax-engine/producer-price-ratio";
 
 /** 취득월 지수가 1984.12.보다 높은가 — 배율 < 1(1984.9.·10.) 안내(Q-5 a 하한 없음) */
@@ -36,12 +37,14 @@ export function PreDeemedPurchaseCard({
   const original = asset.preDeemedOriginalAcquisitionDate;
   const compare = preDeemedPurchaseUsesCompareActual(asset);
   const isPre = !!original && original < "1985-01-01";
+  const isRedev = isRedevelopmentSec166Asset(asset);
 
   return (
     <div data-testid="pre-deemed-purchase-card">
       <ToneCard tone="amber" title="의제취득일 전 매수 — 「많은 것」 (소득세법 시행령 §176조의2④)" bodyClassName="space-y-3">
         <p className="text-xs text-amber-800 leading-relaxed dark:text-amber-200">
-          1985.1.1. 전에 매수한 자산은 취득일을 의제취득일(1985.1.1.)로 보고, 취득가액은 ① 의제취득일 현재 매매사례가액·감정가액·환산취득가액과
+          1985.1.1. 전에 매수한 자산은 취득일을 의제취득일(1985.1.1.)로 보고, 취득가액은 ① 의제취득일 현재{" "}
+          {isRedev ? "§166③ 환산취득가액" : "매매사례가액·감정가액·환산취득가액"}과
           ② 취득 당시 실지거래가액에 취득일부터 1984.12.31.까지의 <strong>생산자물가상승분</strong>을 더한 금액 중 <strong>많은 것</strong>입니다 (
           <LawArticleModal legalBasis="소득세법 시행령 §176의2" label="영 §176조의2④" />
           {" · "}
@@ -73,8 +76,12 @@ export function PreDeemedPurchaseCard({
           />
         ) : (
           <p className="text-xs text-amber-800 leading-relaxed dark:text-amber-200" data-testid="pre-deemed-purchase-actual-note">
-            위에 입력한 취득가액(실지거래가액)으로 ②를 계산합니다. ①과 견주려면 취득가액 산정 방식에서 「환산취득가」·「감정가액」·「매매사례가액」을
-            고르고 취득 당시 실지거래가액을 함께 입력하세요.
+            {isRedev ? (
+              <>위 ⑤에 입력한 실거래가 취득가액으로 ②를 계산합니다. ①과 견주려면 ⑤에서 환산을 고르고 §166③ 칸과 취득 당시 실지거래가액을 함께 입력하세요.</>
+            ) : (
+              <>위에 입력한 취득가액(실지거래가액)으로 ②를 계산합니다. ①과 견주려면 취득가액 산정 방식에서 「환산취득가」·「감정가액」·「매매사례가액」을
+              고르고 취득 당시 실지거래가액을 함께 입력하세요.</>
+            )}
           </p>
         )}
 
