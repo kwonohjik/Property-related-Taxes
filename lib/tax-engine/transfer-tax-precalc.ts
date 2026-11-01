@@ -34,6 +34,8 @@ import { applyFamilyBusinessCgtStep } from "./transfer-tax-family-business";
 import { resolveAcquisitionOverride } from "./transfer-tax-acquisition-override";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 import { runSameAdjustmentPeriodStep } from "./transfer-tax-same-period-step";
+import { runPreDeemedPurchaseStep } from "./transfer-pre-deemed-purchase";
+import type { PreDeemedPurchaseDetail } from "./types/transfer-pre-deemed-purchase.types";
 import { calcCarryoverScenarios, resolveHouseCountExclusionAcqDate } from "./transfer-tax-carryover";
 import { donorBuiltPenaltyNotice } from "./transfer-tax-carryover-donor-display";
 import { donorBuiltFactsOf } from "./transfer-tax-carryover-donor-penalty";
@@ -79,6 +81,8 @@ export interface PreCalcResult {
   splitCarryover?: SplitCarryoverDetail;
   transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
   hceGeneralHouseAcquisitionDate: Date;
+  /** STEP 0.471 영 §176조의2④ 비교 내역 — 호출부(`calculateTransferTax`)가 결과에 싣는다 */
+  preDeemedPurchaseDetail?: PreDeemedPurchaseDetail;
 }
 
 export function runPreCalculationSteps(
@@ -164,6 +168,17 @@ export function runPreCalculationSteps(
   if (samePeriodStep) {
     input = samePeriodStep.updatedInput;
     steps.push(samePeriodStep.step);
+  }
+  // STEP 0.471: 의제취득일(1985.1.1.) 전 «매수» — 영 §176조의2④ ①·② 비교 (preDeemedPurchase 없으면 no-op).
+  //   기준시가가 확정된 뒤(0.4·0.47)라 ①이 본 계산과 같은 값이다.
+  let preDeemedPurchaseDetail: PreDeemedPurchaseDetail | undefined;
+  const preDeemedPurchaseStep = runPreDeemedPurchaseStep(input, options?.acquisitionOverride !== undefined);
+  if (preDeemedPurchaseStep && !preDeemedPurchaseStep.applied) warnings.push(preDeemedPurchaseStep.warning);
+  if (preDeemedPurchaseStep?.applied) {
+    input = preDeemedPurchaseStep.updatedInput;
+    steps.push(preDeemedPurchaseStep.step);
+    preDeemedPurchaseDetail = preDeemedPurchaseStep.detail;
+    if (preDeemedPurchaseStep.dropsEstimatedEcho) pre1990LandResult = undefined;
   }
   let workingInput = input;
   // STEP 0.476: 주택 split **파트** 이월과세 §97조의2① (토지·건물 파트 서브객체 없으면 skip, 재귀 입력은 서브객체를 비우므로 재진입 없음).
@@ -277,6 +292,7 @@ export function runPreCalculationSteps(
     splitCarryover,
     transferBurdenedGiftBreakdown,
     hceGeneralHouseAcquisitionDate,
+    preDeemedPurchaseDetail,
   };
 }
 

@@ -16,6 +16,7 @@ import type { RentalReductionResult } from "../rental-housing-reduction";
 import type { NewHousingReductionResult } from "../new-housing-reduction";
 import type { TransferTaxPenaltyResult } from "../transfer-tax-penalty";
 import type { Pre1990LandValuationResult } from "../pre-1990-land-valuation";
+import type { PreDeemedPurchaseDetail } from "./transfer-pre-deemed-purchase.types";
 import type { PublicExpropriationReductionResult } from "../public-expropriation-reduction";
 import type { GbDesignatedLandResult } from "../gb-designated-land-reduction";
 import type { ReplacementLandResult } from "../replacement-land-reduction";
@@ -491,6 +492,8 @@ export interface TransferTaxResult {
    * pre1990Land 제공 시만 포함. UI에 5유형 분류·분모/비율 capping 내역 표시용.
    */
   pre1990LandValuationDetail?: Pre1990LandValuationResult;
+  /** 의제취득일 전 «매수» — 영 §176조의2④ ①·② 비교 내역(적용했을 때만) */
+  preDeemedPurchaseDetail?: PreDeemedPurchaseDetail;
   /** 다필지 계산 상세 결과 (parcels 제공 시만 포함) */
   parcelDetails?: ParcelResult[];
   /** 토지/건물 분리 계산 상세 (landAcquisitionDate 제공 시) — 각 양도차익·장특 내역 표시용 */

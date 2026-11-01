@@ -47,7 +47,9 @@ import type { InheritanceHouseValuationInput } from "./inheritance-house-valuati
 import type { MixedUseAssetInput } from "./transfer-mixed-use.types";
 import type { CarryoverTaxationInput } from "./transfer-carryover.types";
 import type { CommercialAppurtenantLandInput } from "./commercial-appurtenant.types";
+import type { PreDeemedPurchaseInput } from "./transfer-pre-deemed-purchase.types";
 export type { CommercialAppurtenantLandInput } from "./commercial-appurtenant.types";
+export type { PreDeemedPurchaseInput, PreDeemedPurchaseDetail } from "./transfer-pre-deemed-purchase.types";
 
 // CarryoverTaxationInput, CarryoverTaxationDetail 은 transfer-carryover.types.ts 에 정의됨.
 // 외부 소비자 편의를 위해 재수출.
@@ -1254,6 +1256,11 @@ export interface TransferTaxInput {
    * propertyType === "land" + acquisitionDate < 1990-08-30 일 때만 의미 있음.
    */
   pre1990Land?: Pre1990LandValuationInput;
+  /**
+   * 의제취득일(1985.1.1.) 전 «매수» — 영 §176조의2④ ①·② 비교 입력(선택 · `transfer-pre-deemed-purchase.ts`).
+   * 취득일(`acquisitionDate`)은 의제취득일로 오고, 실제 취득일은 여기로 온다.
+   */
+  preDeemedPurchase?: PreDeemedPurchaseInput;
   /**
    * 다필지 분리 계산 입력 (선택).
    * 제공 시 각 필지별로 면적 안분 → 취득가 산출 → 장특공제를 독립 계산 후 합산.

@@ -1,7 +1,7 @@
 # 양도세 — 의제취득일(1985.1.1.) 전 매매 부동산 영 §176조의2④ 공통 적용 계획서
 
 - 출처: `successor-right-carryover-contribution.plan.md` §19 Q-1 **(b)** 「부동산 매매 전 자산 공통 계획서」(사용자 결정 2026-11-01 「권장안으로 진행해」) · 메모리 「매매(유상) pre-deemed PPI = 미구현 신규 기능」 · 주식 계획서 `docs/00-pm/stock-pre-deemed-acquisition-176-2-4.plan.md` §9 Z-2
-- 상태: **Plan** — 결정(Q) 전. 코드 변경 없음. 조사: 엔진·UI 시니어 병렬(2026-11-01) + 핵심 수치·file:line 직접 재확인.
+- 상태: **Do — PR-1(엔진) 진행** · 결정 Q-1~Q-13 전부 권장안(사용자 2026-11-01 「권장안으로」) · 조사: 엔진·UI 시니어 병렬(2026-11-01) + 핵심 수치·file:line 직접 재확인.
 
 ## 1. 요약
 
@@ -157,3 +157,18 @@
 ## 8. 범위 밖
 
 - 상속·증여 의제취득일 전(기존 3자 max — 변경 없음) · 주식(구현 완료) · 의제취득일 × 보유기간(별개 축 `transfer-gb-pre1985-163-9.plan.md` §6 (3)) · 2009.3.15. 이전 양도.
+
+## 9. 결정 (사용자 2026-11-01 「권장안으로」)
+
+Q-1 (B) · Q-2 (a) · Q-3 (a) · Q-4 (a) · Q-5 (a) · Q-6 주식 규약 · Q-7 배율 칸 · Q-8 (a) · Q-9 별건 · Q-10 유지 · Q-11 (b) · Q-12 (a) · Q-13 (a).
+
+## 10. PR-1 엔진 결과
+
+- 공용 leaf `lib/tax-engine/producer-price-ratio.ts` — 주식 모듈의 지수 유틸(`isBeforePpiSeries`·`monthKey`·`ppiMonthlyX100`·`mulDivFloor`·`ratioToScaled6`)을 본문 그대로 옮겼다. 주식은 이 파일을 import하고 기존 import 경로용으로 `isBeforePpiSeries`·`ppiMonthlyX100`을 재노출한다(주식 테스트 1,519건 통과 — Q-13 a).
+- 입력 `TransferTaxInput.preDeemedPurchase`(`types/transfer-pre-deemed-purchase.types.ts`): `originalAcquisitionDate`(실제 취득일 — 취득일 칸은 의제취득일) · `actualPrice`(환산·감정·매매사례 모드의 함께 견줄 실가 · `acquisitionPrice`와 같은 금액 규약) · `ppiRatio`(1965.01 전). 결과 `preDeemedPurchaseDetail`(① · ② · 지수 · 배율 · 채택 · 필요경비 방식).
+- STEP 0.471(`transfer-pre-deemed-purchase.ts` `runPreDeemedPurchaseStep` · 호출 `transfer-tax-precalc.ts` STEP 0.47 뒤): ①은 본 계산과 같은 함수로 구한다(`calcTransferGain().estimatedBase` · 상가 환산은 `runCommercialBuildingStep`). ② 채택이면 `acquisitionPrice = ②` · 추계 모드는 `useEstimatedAcquisition: false`·`acquisitionMethod: "actual"`로 실가 경로(실비 · 개산공제 없음) · 1990.8.30. 전 토지 환산 echo 제거. 범위 밖(취득원인 · 부담부증여 · 상속·증여·이월과세 · 재개발·다필지·겸용 · 자산 종류 · 토지·건물 취득일 분리 · 외부 취득가액 지정)과 1965.01 전 배율 빈칸은 값을 바꾸지 않고 경고만 남긴다.
+- 결과 echo는 반환 경로(비과세·차손·다필지·§155⑳·정상)가 다섯 갈래라 `calculateTransferTax`를 얇게 감싼 한 곳에서 싣는다(본체는 `calculateTransferTaxCore`).
+- 법령 상수 `TRANSFER.PRE_DEEMED_PURCHASE_MAX`(「소득세법 시행령 §176조의2 ④」)·`PRE_DEEMED_PPI_RATE_RULE`(「소득세법 시행규칙 §85의2」) — 두 인용 모두 manifest에 이미 있다(커버리지 게이트 통과).
+- anchor `__tests__/tax-engine/transfer/pre-deemed-purchase-176-2-4.anchor.test.ts` 27건(수정 전 25건 실패): 실가 1984-06 → ② 101,411,574 · 양도차익 398,588,426 · 1984-12 배율 1 · 1984-09 99,171,760 · 1980-01 156,471,686 · 환산 ① 2억 vs ② 101,411,574 → ① · 실가 3억 → ② 304,234,724 · 동액 → ② · 감정·매매사례 ①/② · 1990 전 토지 환산 ② 채택 시 1990 echo 없음 · PHD ① = 분리 경로 값 · 상가 실가 608,469,449 · 상가 환산 ① 4억 / ② 507,057,874 · 1963 배율 빈칸 경고 / 3.5 → 350,000,000 · 범위 밖 3종 · 외부 지정.
+- 전체 vitest 44,700건 통과 · tsc 0 · ESLint 오류 0·경고 373(기준선과 같음).
+- 뮤테이션 22개 사멸. 살아남은 4개는 결과에 영향이 없는 중복 줄이라 코드에서 지웠다. ② 채택 시 PHD·파트 모드·감정·매매사례 값을 끊는 줄은, 같은 날 토지 취득일이면 분리 경로를 타지 않고 방식이 「실가」면 감정·매매사례 분기에 들어가지 않아 지웠다.
