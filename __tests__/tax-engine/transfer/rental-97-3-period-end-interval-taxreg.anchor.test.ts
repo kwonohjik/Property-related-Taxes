@@ -76,12 +76,12 @@ describe("1. §97의3①1호 — 종점은 임대 종료일", () => {
 
 describe("2. 조특령 §97의3③1호 후단 — 1년 이내 재증액 금지", () => {
   it("🔴 다음 해 같은 날 4% 증액 → 위반", () => {
-    const r = evaluateRental973({ ...BASE, rentHistory: [jeonse("2015-01-01", 100_000_000), jeonse("2016-01-01", 104_000_000)] });
+    const r = evaluateRental973({ ...BASE, rentHistory: [jeonse("2020-03-01", 100_000_000), jeonse("2021-03-01", 104_000_000)] });
     expect(codes(r)).toEqual(["RENT_INCREASE_WITHIN_1_YEAR"]);
   });
 
   it("다음 날 증액 → 적격", () => {
-    const r = evaluateRental973({ ...BASE, rentHistory: [jeonse("2015-01-01", 100_000_000), jeonse("2016-01-02", 104_000_000)] });
+    const r = evaluateRental973({ ...BASE, rentHistory: [jeonse("2020-03-01", 100_000_000), jeonse("2021-03-02", 104_000_000)] });
     expect(r.isEligible).toBe(true);
   });
 });

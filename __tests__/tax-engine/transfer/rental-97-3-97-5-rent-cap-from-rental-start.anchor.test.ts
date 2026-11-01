@@ -10,6 +10,9 @@
  * §97의4는 다르다 — 소령 §167의3 문언이 개정으로 생겨 계약일 시행일 게이트를 쓴다
  *   (`rental-97-4-rent-interval.anchor.test.ts`).
  *
+ * 1년 이내 재증액 금지는 따로 시행일이 있다 — 조특령 §97의3③1호 후단은 대통령령 제30390호(2020.2.11) 신설,
+ *   부칙 §16 「시행 이후 갱신하거나 새로 체결하는 분부터」. **직전 계약이 2020.2.11 이후**인 경우부터 판정한다.
+ *
  * 판정 단위: **증액한 계약**의 체결·갱신일이 기산일 이후인가. 비교 기준(직전 계약)은 기산일 전 계약이어도 된다
  *   — 등록 당시 존속하던 계약의 임대료가 첫 기준이다.
  */
@@ -86,7 +89,7 @@ describe("§97의5 (①3호 → 령 §97의3③1호)", () => {
   it("🔴 1년 이내 재증액도 같은 기산일 — 등록 전 1년 이내 증액은 판정하지 않는다", () => {
     const pre = [jeonse("2017-01-01", 100_000_000), jeonse("2017-06-01", 104_000_000)];
     expect(evaluateRental975({ ...BASE_975, rentHistory: pre }).isEligible).toBe(true);
-    const post = [jeonse("2018-08-01", 100_000_000), jeonse("2019-02-01", 104_000_000)];
+    const post = [jeonse("2020-08-01", 100_000_000), jeonse("2021-02-01", 104_000_000)];
     expect(codes(evaluateRental975({ ...BASE_975, rentHistory: post }))).toEqual(["RENT_INCREASE_WITHIN_1_YEAR"]);
   });
 
@@ -119,6 +122,27 @@ const BASE_973: Rental97EvaluationInput = {
   stdPriceAtRentalStart: 300_000_000,
   stdPriceAtTransfer: 600_000_000,
 };
+
+describe("1년 이내 재증액 금지 — 직전 계약이 2020.2.11 이후인 경우부터 (대통령령 제30390호 부칙 §16)", () => {
+  const early = [jeonse("2020-02-10", 100_000_000), jeonse("2020-06-01", 104_000_000)];
+  const onDay = [jeonse("2020-02-11", 100_000_000), jeonse("2020-06-01", 104_000_000)];
+
+  it("🔴 §97의5 — 직전 계약 2020-02-10(시행 전날) → 4개월 뒤 증액도 판정하지 않는다 (종전: 위반)", () => {
+    expect(evaluateRental975({ ...BASE_975, rentHistory: early }).isEligible).toBe(true);
+  });
+
+  it("§97의5 — 직전 계약 2020-02-11(시행일) → 4개월 뒤 증액은 위반", () => {
+    expect(codes(evaluateRental975({ ...BASE_975, rentHistory: onDay }))).toEqual(["RENT_INCREASE_WITHIN_1_YEAR"]);
+  });
+
+  it("🔴 §97의3 — 직전 계약 2020-02-10 → 판정하지 않는다 (종전: 위반)", () => {
+    expect(evaluateRental973({ ...BASE_973, rentHistory: early }).isEligible).toBe(true);
+  });
+
+  it("§97의3 — 직전 계약 2020-02-11 → 위반", () => {
+    expect(codes(evaluateRental973({ ...BASE_973, rentHistory: onDay }))).toEqual(["RENT_INCREASE_WITHIN_1_YEAR"]);
+  });
+});
 
 describe("§97의3 (①2호 → 령 §97의3③1호)", () => {
   const HISTORY = [jeonse("2014-01-01", 100_000_000), jeonse("2015-03-01", 110_000_000)];

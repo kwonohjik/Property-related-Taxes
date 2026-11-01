@@ -183,6 +183,22 @@ export function rentViolationsFromRentalStart<T extends { contractDate: Date }>(
 }
 
 /**
+ * 1년 이내 재증액 금지의 시행일 — 세 조문 모두 2020.2.11 개정으로 생겼다 (KoreanLaw MCP 실독 2026-11-01).
+ *   · 조특령 §97의3③1호 후단 「…증액이 있은 후 1년 이내에는 하지 못하고」 — 대통령령 제30390호.
+ *     2020.1.1 시행본 ③1호는 「연 증가율이 100분의 5를 초과하지 아니할 것」뿐이었다.
+ *     부칙 §16 「제97조의3제3항의 개정규정은 이 영 시행 이후 주택 임대차계약을 갱신하거나 새로 체결하는 분부터 적용」.
+ *     §97의5①3호는 §97의3①2호 → 령 §97의3③을 준용하므로 같은 날이다.
+ *   · 소령 §167의3①2호 가·다목 괄호(§97의4) — 대통령령 제30395호, 부칙 §16 같은 문언.
+ * ⇒ **직전(기준) 계약**이 이 날 이후 체결·갱신된 경우에만 그 다음 증액의 1년 간격을 따진다(사용자 확인 2026-11-01).
+ */
+export const RENT_INTERVAL_RULE_FROM = new Date("2020-02-11");
+
+/** 1년 재증액 위반 중 직전 계약이 2020.2.11 이후인 것만 (`RENT_INTERVAL_RULE_FROM` 주석) */
+export function rentIntervalViolationsFromRuleDate<T extends { previousContractDate: Date }>(violations: T[]): T[] {
+  return violations.filter((v) => v.previousContractDate.getTime() >= RENT_INTERVAL_RULE_FROM.getTime());
+}
+
+/**
  * 임대료 증액 **간격** 검증 — 조특령 §97의3③1호 후단
  * 「이 경우 임대료등 증액 청구는 임대차계약 또는 약정한 임대료등의 증액이 있은 후 **1년 이내에는 하지 못하고**…」
  *

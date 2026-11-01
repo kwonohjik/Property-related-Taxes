@@ -44,6 +44,7 @@ import {
   validateRentIncreaseInterval,
   rental97EffectiveStart,
   rentViolationsFromRentalStart,
+  rentIntervalViolationsFromRuleDate,
   DEFAULT_JEONSE_CONVERSION_RATE,
 } from "./rental-97-shared-helpers";
 import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result } from "./types";
@@ -193,9 +194,12 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
       });
     }
     // 조특령 §97의3③1호 후단 — 계약·증액 후 1년 이내 재증액 금지 (§97의5와 공용 헬퍼)
+    // 직전(기준) 계약이 2020.2.11 이후 + 증액 계약이 임대개시일 이후 — 대통령령 제30390호 부칙 §16
     const intervalViolations = rentViolationsFromRentalStart(
-      validateRentIncreaseInterval(input.rentHistory, input.jeonseConversionRate ?? DEFAULT_JEONSE_CONVERSION_RATE)
-        .violations,
+      rentIntervalViolationsFromRuleDate(
+        validateRentIncreaseInterval(input.rentHistory, input.jeonseConversionRate ?? DEFAULT_JEONSE_CONVERSION_RATE)
+          .violations,
+      ),
       rentStart,
     );
     if (intervalViolations.length > 0) {
@@ -203,7 +207,7 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
         code: "RENT_INCREASE_WITHIN_1_YEAR",
         message:
           `직전 계약(증액)일로부터 1년 이내에 임대료(환산보증금)를 올린 계약 ${intervalViolations.length}건 ` +
-          `— 조특령 §97의3③1호 후단 「증액이 있은 후 1년 이내에는 하지 못하고」. 1년은 민법 기간 계산으로 다음 해 같은 날에 만료합니다. 임대사업자 등록일·세무서 사업자등록일·실제 임대개시일 중 가장 늦은 날 이후 체결·갱신한 계약만 셉니다.`,
+          `— 조특령 §97의3③1호 후단 「증액이 있은 후 1년 이내에는 하지 못하고」. 1년은 민법 기간 계산으로 다음 해 같은 날에 만료합니다. 임대사업자 등록일·세무서 사업자등록일·실제 임대개시일 중 가장 늦은 날 이후 체결·갱신한 계약만 세며, 직전 계약이 2020.2.11 이후인 경우부터 적용합니다(대통령령 제30390호 부칙 §16).`,
         legalBasis: "조특령 §97의3③1호",
       });
     }
