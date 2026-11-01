@@ -5,7 +5,7 @@
  * ⑧은 「채무액이 증여가액 초과」라는 틀린 사유로 막았다(분모가 시가 × 지분율). 담보가 이기려면 채무 합계가 시가 해당분보다 커야 하므로 이 차단에는 항상 걸린다.
  * 화면이 지분 자산의 담보 승 취득가액(⑤ 칸 노출·취득시 기준시가 요구)을 다루지 않아 계산 자체는 막되, 사유를 정확히 말한다.
  *
- * · SF-1 지분 50% 담보 승 — ⑧ 1건(지분 자산 담보 승 사유) · 「초과합니다」 사유 아님 · 엔진은 200(범위 밖이라 막는다는 기록).
+ * · SF-1 지분 50% 담보 승 — 주택은 S-2가 열었다(⑧ 통과 ∧ ⑫ 200, 상세는 `transfer.route.bg-axis-a-nonsupp-win.anchor.test.ts`) · 그 밖의 종류(재개발 APT)는 ⑧ 1건(지분 자산 담보 승 사유) · 「초과합니다」 사유 아님 · 엔진은 200.
  * · SF-2 진짜 채무 초과(설정액이 작아 담보가 못 이김) — 종전 「초과」 문구 그대로.
  * · SF-3 대조 — 지분 50% 보충 승 통과 · 100% 담보 승 통과(종전 O-5).
  */
@@ -49,12 +49,16 @@ async function run(a: AssetForm) {
 const FRAC_WIN = "지분 50%를 가진 자산에서 담보평가액";
 const EXCESS = "채무액(";
 
-describe("SF-1 지분 50% 담보 승 — 정확한 사유로 막는다", () => {
-  it("⑧ 1건(지분 자산 담보 승) · 「채무액(」 초과 사유 없음 · 엔진은 200", async () => {
+describe("SF-1 지분 50% 담보 승 — 주택은 계산하고, 확인하지 못한 종류는 정확한 사유로 막는다", () => {
+  it("주택: ⑧ 통과 · ⑫ 200 (S-2)", async () => {
     const r = await run(house(HALF));
+    expect(r.issues).toEqual([]);
+    expect(r.status).toBe(200);
+  });
+  it("재개발 APT: ⑧ 1건(지분 자산 담보 승 사유) · 「채무액(」 초과 사유 없음", async () => {
+    const r = await run(house(HALF, x({ assetKind: "redevelopment_apt" })));
     expect(r.issues.filter((m) => m.includes(FRAC_WIN)).length).toBe(1);
     expect(r.issues.some((m) => m.includes(EXCESS))).toBe(false);
-    expect(r.status).toBe(200); // 엔진은 계산한다 — 화면이 이 취득가액 처리를 다루지 않아 막는 것이다
   });
 });
 

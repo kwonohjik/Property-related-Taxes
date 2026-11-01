@@ -157,11 +157,11 @@ describe("CW-2 ⑧ 차단 유지 — 정당하지 않은 경우와 범위 밖", 
     expect(m).toContain("자산 1 담보평가(상증법 §66) · 자산 2 보충적평가: 증여재산 평가 방식이 달라 함께 양도와 같이 계산할 수 없습니다");
   });
 
-  it("지분 1/2 — 담보 승 판정은 단독 소유만 · ⑧은 지분 자산의 담보 승을 정확한 사유로 막는다", () => {
-    const m = allIssues(form([house({ ownershipNumerator: "1", ownershipDenominator: "2", ownershipRemainderThirdParty: "yes", bgMarketValueAtTransfer: "1000000000" })])).map((x) => x.message).join("\n");
-    expect(m).toContain("지분 50%를 가진 자산에서 담보평가액");
-    expect(m).not.toContain("을 초과합니다");
-    expect(bgCollateralForcesStdAcq(house({ ownershipNumerator: "1", ownershipDenominator: "2", bgMarketValueAtTransfer: "1000000000" }))).toBe(false);
+  it("지분 1/2 — 축을 넘기지 않으면 담보 승을 확정하지 않는다(false) · 주택은 ⑧이 막지 않는다(S-2 — 축 A 지분 주택은 계산한다)", () => {
+    const half = house({ ownershipNumerator: "1", ownershipDenominator: "2", ownershipRemainderThirdParty: "yes", bgMarketValueAtTransfer: "1000000000" });
+    expect(allIssues(form([half])).map((x) => x.message).join("\n")).not.toContain("을 초과합니다");
+    expect(bgCollateralForcesStdAcq(half)).toBe(false); // 축 미지정 — 미전환 호출처는 종전처럼 승자를 확정하지 않는다
+    expect(bgCollateralForcesStdAcq(half, false)).toBe(true); // 축 A로 확인한 호출
   });
 });
 
