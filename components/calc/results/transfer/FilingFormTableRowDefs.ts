@@ -48,10 +48,12 @@ export function buildRowsFromOrder(
   acqNotes?: Record<ColumnKey, string>,
   /** 「비과세 양도소득금액」 행 라벨 — 「(소령 §161①)」은 B(직전거주주택보유주택)에만 붙는다(S06-8). */
   nontaxableIncomeRowLabel = "비과세 양도소득금액 (소령 §161①)",
+  /** 취득일자 행 열별 주석 — 의제취득일 전 매수의 실제 취득일(V-6) */
+  acqDateNotes?: Record<ColumnKey, string>,
 ): RowDef[] {
   const rowOrder: Array<[string, string, Partial<RowDef>?]> = [
     ["transferDate", "양도일자"],
-    ["acquisitionDate", acqDateRowLabel],
+    ["acquisitionDate", acqDateRowLabel, acqDateNotes ? { notes: acqDateNotes } : undefined],
     ["holdingPeriod", "보유기간"],
     ["moveOut", "퇴거일"],
     ["moveIn", "입주일"],

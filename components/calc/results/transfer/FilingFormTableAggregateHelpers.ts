@@ -33,6 +33,7 @@ import { resolveFilingRateCode } from "./filing-rate-code";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
 import { selectPriorFiledIndices } from "@/lib/calc/multi-prior-filed";
 import { baseCardId, shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
+import { preDeemedAcqDateNote, preDeemedAcqPriceNote, preDeemedDetailOfCard } from "./pre-deemed-purchase-filing-note";
 import { purchasedPartParentIdOf } from "@/lib/tax-engine/general-building-share-id";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
@@ -374,6 +375,12 @@ export function buildAggregateRows(
         return basis && !part.swapApplied ? [`${splitAcqBasisFormula(basis)} (${basis.legalBasis})`] : [];
       });
       if (basisNotes.length > 0) acqNotes[col] = basisNotes.join(" / ");
+    }
+    // 의제취득일 전 매수 영 §176조의2④ — 실제 취득일·①② 채택(V-6). 칸 값은 그대로다.
+    const preDeemed = preDeemedDetailOfCard(col, p.preDeemedPurchaseDetail, aggregated);
+    if (preDeemed) {
+      acqDateNotes[col] = preDeemedAcqDateNote(preDeemed);
+      acqNotes[col] = [acqNotes[col], preDeemedAcqPriceNote(preDeemed)].filter(Boolean).join(" / ");
     }
 
     // 농어촌특별세·지방세 — 합산-only

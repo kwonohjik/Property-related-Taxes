@@ -52,7 +52,9 @@ export function PreDeemedPurchaseOutOfScopeNotice({ asset, isNonPrimary }: { ass
     <div data-testid="pre-deemed-purchase-out-of-scope" data-kind={kind}>
       <ToneCard tone="amber" title="의제취득일 전 매수 (소득세법 시행령 §176조의2④)" bodyClassName="space-y-2">
         <p className="text-xs text-amber-800 leading-relaxed dark:text-amber-200">
-          {OUT_OF_SCOPE_SUBJECT[kind]} ① 의제취득일 현재 가액과 ② 취득 당시 실지거래가액 + 생산자물가상승분 중 많은 것을 고르는 비교는 계산에 반영하지 않습니다 — 입력한 값으로 계산합니다. 확인 필요.
+          {OUT_OF_SCOPE_SUBJECT[kind]} ① 의제취득일 현재 가액과 ② 취득 당시 실지거래가액 + 생산자물가상승분 중 많은 것을 고르는 비교는 계산에 반영하지 않습니다 — 입력한 값으로 계산합니다.
+          {kind === "carryover" && " 증여자 실지거래가액을 확인할 수 없어 환산·감정·매매사례로 입력한다면 의제취득일(1985.1.1.) 현재 가액을 입력하세요 (소득세법 시행령 §163⑫·§176조의2④)."}
+          {" "}확인 필요.
         </p>
       </ToneCard>
     </div>
