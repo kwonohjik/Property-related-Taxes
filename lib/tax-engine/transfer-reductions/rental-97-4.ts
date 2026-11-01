@@ -202,7 +202,7 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
       reasons.push({
         code: "RENT_INCREASE_WITHIN_1_YEAR",
         message:
-          `직전 계약(증액)일로부터 1년 이내에 임대료(환산보증금)를 올린 계약 ${intervalViolations.length}건 ` +
+          `마지막 증액일(증액 전이면 첫 계약일)로부터 1년 이내에 임대료(환산보증금)를 올린 계약 ${intervalViolations.length}건 ` +
           "— 소령 §167의3①2호 「증액이 있은 후 1년 이내에는 하지 못하고」. 1년은 민법 기간 계산으로 다음 해 같은 날에 만료합니다. " +
           "2020.2.11 이후 체결·갱신한 계약을 기준으로 그 다음 증액을 판정합니다(대통령령 제30395호 부칙 §16).",
         legalBasis: "소득세법 시행령 §167의3①2호",
