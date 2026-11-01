@@ -18,6 +18,7 @@
  * 799 → 697줄 (2026-08-07, 상가 3블록 위임 — 트리거 800 직하라 여유분 확보).
  */
 
+import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import { validateMixedSaleSplit } from "./transfer-tax-validate-mixed-use-sale-split";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
@@ -438,6 +439,7 @@ export function validateAssetEntry(
       : undefined,
     // §154① 단서 1호·2호가목·3호면 거주주택 보유 2년을 막지 않는다 — ④가 첫 자산에 싣는 것과 같은 게이트·정규화 값(D-9).
     index === 0 ? effectiveProvisoReason(calcProvisoMode(form), form.provisoReason) : undefined,
+    index === 0 ? mergeRentalState(form) : undefined,
   );
   if (rhError) return rhError;
 

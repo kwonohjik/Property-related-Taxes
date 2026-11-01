@@ -18,6 +18,7 @@
  * (`HousesListSection.tsx:529`). API 변환 층이 `id:"selling"` 행을 앞에 붙이며 그 행의
  * 취득일·기준시가·지역을 전부 `assets[0]`에서 읽는다. ⇒ 양도 대상은 **여기서 직접** 받는다.
  */
+import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import { RIGHT_TO_MOVE_IN_SCOPE_HINT } from "@/lib/calc/right-to-move-in-scope-hint";
 import { UNREGISTERED_EXCLUSION_HINT } from "@/lib/calc/unregistered-exclusion-hint";
 import { useMemo } from "react";
@@ -612,6 +613,7 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
         acquisitionDate={primary.acquisitionDate ?? ""}
         transferDate={form.transferDate}
         onChange={(rentalHousingException) => patchAsset({ rentalHousingException })}
+        mergeRental={mergeRentalState(form)}
         // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건 실시간 표시(③)에 쓴다.
         wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
       />

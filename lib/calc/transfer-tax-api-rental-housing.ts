@@ -123,6 +123,9 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
     // OH-40 — 미선택("")은 보내지 않는다(엔진이 판정 보류 고지). A만 의미가 있다(⑤ 노출 조건과 동일).
     priorRentalExemptionHistory:
       rh.scenario === "A" && rh.priorRentalExemptionHistory ? rh.priorRentalExemptionHistory : undefined,
+    // 합가 상대 쪽 임대(0061) — 미선택("")은 보내지 않는다(모름 = 불성립).
+    counterpartHouseResidedTwoYears:
+      rh.counterpartHouseResidedTwoYears === "yes" ? true : rh.counterpartHouseResidedTwoYears === "no" ? false : undefined,
     residenceTransitionUnderAddendum: rh.residenceTransitionUnderAddendum === true ? true : undefined,
     // D11 — 체크가 켜졌을 때만 사유를 보낸다(⑤ 노출 조건과 같다). 미선택("")은 보내지 않는다.
     residenceTransitionBasis:

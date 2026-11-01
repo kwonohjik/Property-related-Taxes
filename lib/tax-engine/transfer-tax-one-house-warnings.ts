@@ -11,6 +11,7 @@
  *    산출물이라 여기 두지 않는다.
  */
 import { rental4hoDeemedPathNotice } from "./one-house/rental-registration-4ho";
+import { mergeRentalCarveoutMissingNotice, mergeRentalCarveoutNotice } from "./one-house/merge-rental-carveout";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { OneHouseJudgment, OneHouseUnmetException } from "./one-house/types";
@@ -124,6 +125,14 @@ export function oneHouseJudgmentWarnings(
   if (exemptionResult.exemptReason?.includes("§155⑦3호")) warnings.push(returnToFarmPostManagementNotice(input.ruralHouse));
 
   warnings.push(...deemedPathProvisoNotices((exemptionResult.appliedExceptions ?? []).map((e) => e.id)));
+
+  // §155④⑤ × ⑳ 상대 쪽 임대 — 적용했으면 근거를, 입력이 없어 못 열었으면 결론을 가를 때만 안내한다.
+  if (exemptionResult.isExempt || exemptionResult.isPartialExempt) {
+    if (input.mergeRentalCarveout) warnings.push(mergeRentalCarveoutNotice(input));
+  } else {
+    const missing = mergeRentalCarveoutMissingNotice(input, oneHouseRules.one_house_exemption);
+    if (missing) warnings.push(missing);
+  }
 
   // F-1 — ①+④⑤ 중첩 의제는 국세청 해석에 기댄다. 무엇에 기댔고 어디까지 확인됐는지 남긴다.
   if (exemptionResult.exemptReason?.includes("중첩")) {

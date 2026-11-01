@@ -124,6 +124,8 @@ export interface RentalHousingExceptionFormSlice {
      * "" = 미선택.
      */
     priorRentalExemptionHistory?: "" | "none" | "used";
+    /** 합가 상대 쪽 주택(임대 외)에 2년 이상 거주했는가(기준-2024-법규재산-0061). "" · undefined = 미선택. */
+    counterpartHouseResidedTwoYears?: "" | "yes" | "no";
     /** 대통령령 제29523호 부칙 제7조② 경과조치 해당(2019-02-12 당시 거주 중 · 그 전 계약금 지급) — OH-40 */
     residenceTransitionUnderAddendum?: boolean;
     /** 위 경과조치의 사유(D11) — "" = 미선택(판정 메뉴 ⑧이 막는다). 체크를 끄면 함께 비운다. */

@@ -78,7 +78,7 @@ export function judgmentMarriageRentalOriginVisible(form: OneHouseJudgmentFormDa
   return (
     judgmentSaleIsHousing(form) && // 입주권 양도에는 ⑳ 선언이 없다(G066)
     judgmentMergeInputVisible(form) &&
-    !!form.marriageDate &&
+    (!!form.marriageDate || !!form.parentalCareMergeDate) &&
     rh?.applyException === true &&
     (rh.rentalUnits?.length ?? 0) > 0
   );

@@ -87,6 +87,9 @@ export function migrateRentalHousingException(a: Record<string, unknown>): void 
     if (rhe.priorRentalExemptionHistory !== "none" && rhe.priorRentalExemptionHistory !== "used") {
       rhe.priorRentalExemptionHistory = "";
     }
+    if (rhe.counterpartHouseResidedTwoYears !== "yes" && rhe.counterpartHouseResidedTwoYears !== "no") {
+      rhe.counterpartHouseResidedTwoYears = "";
+    }
     if (typeof rhe.residenceTransitionUnderAddendum !== "boolean") rhe.residenceTransitionUnderAddendum = false;
     // D11 — 경과조치 사유. 구 세션엔 없다 → 미선택(엔진은 사유 없이 종전 규정을 주지 않는다 · 판정 메뉴 ⑧이 묻는다)
     if (

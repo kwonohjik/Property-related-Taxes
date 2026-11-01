@@ -27,30 +27,24 @@ import type {
 } from "./types/transfer.types";
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
 import { runRentalHousingExceptionStep, canEarlyReturnPrhp } from "./transfer-tax-rental-housing-step";
-import { restoreRentalUnitsToHouseCount, prhpUnappliedExemptionNotice, revokeExemptionOnStandardPathUnmet } from "./transfer-tax-rental-housing-judge";
-import { prhpUnmetOtherExemptionNotice, resolvePrhpUnmet } from "./transfer-tax-rental-housing-judge";
-import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
+import { prhpUnappliedExemptionNotice } from "./transfer-tax-rental-housing-judge";
 import { rentalNoticesForEarlyReturn } from "./transfer-tax-rental-housing-step";
-import type { New993Result } from "./transfer-reductions/new-99-3";
 import {
-  resolveIncomeDeduction,
-  buildIncomeDeductionStep,
   RATE_SPECIAL_REDUCTION_IDS,
 } from "./transfer-reductions/income-deduction-router";
 import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step";
+import { withMergeRentalCarveout } from "./one-house/merge-rental-carveout";
+import { runIncomeAndBaseSteps } from "./transfer-tax-income-steps";
+import { runOneHouseJudgmentStep } from "./transfer-tax-one-house-judgment-step";
 import { applyLthd982AndPushSteps } from "./transfer-tax-lthd-982-step";
 
 import {
   calcTransferGain,
   calcLongTermHoldingDeduction,
-  calcBasicDeduction,
   applyCommercialBuildingStep,
-  presaleRightStartDate,
 } from "./transfer-tax-helpers";
-import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { oneHouseJudgmentWarnings } from "./transfer-tax-one-house-warnings";
 import { resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
-import { applyLandOnlyHouseholdRule } from "./land-only-owner-household";
 import { landOnlyRateInput } from "./land-only-owner-household";
 import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
 import {
@@ -61,13 +55,12 @@ import {
 import { LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE } from "./land-only-owner-household";
 import { landOnlyOtherHouseholdRateNotice } from "./land-only-owner-household";
 import { landOnlyMergeDateAppliedNotice } from "./land-only-owner-household";
-import { landOnlyMergeResidenceNotice } from "./land-only-owner-household";
 import { nblDeferralAreaNotice } from "./transfer-tax-nbl-deferral-notice";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { publicExpropriationReducedPart } from "./public-expropriation-reduction";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
-import { isLaterAcquiredLandExemptExcluded, landOnlyMergeNoticeSuppressed, laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice, housingExcessAcqContractNotice, housingExcessInheritedNotice } from "./transfer-tax-appurtenant-land";
+import { isLaterAcquiredLandExemptExcluded, laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice, housingExcessAcqContractNotice, housingExcessInheritedNotice } from "./transfer-tax-appurtenant-land";
 import { buildingSec164ApportionNotice, houseLandSec164Notice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
 import { landRebuildNoticeOf } from "./transfer-tax-rebuild-notice";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
@@ -103,7 +96,7 @@ function calculateTransferTaxCore(
 
   // STEP 0 ~ 0.48: 취득가액·입력 정규화 전처리 — 별도 파일로 분리 (800줄 정책, CB-08).
   //   순서가 곧 규약이라 한 덩어리로 옮겼다. `steps`·`warnings`는 참조로 넘겨 그대로 push된다.
-  const pre = runPreCalculationSteps(rawInput, rates, options, steps, warnings, calculateTransferTax);
+  const pre = runPreCalculationSteps(withMergeRentalCarveout(rawInput), rates, options, steps, warnings, calculateTransferTax);
   echo.preDeemedPurchaseDetail = pre.preDeemedPurchaseDetail;
   if (pre.earlyReturn) return pre.earlyReturn;
   const {
@@ -266,42 +259,14 @@ function calculateTransferTaxCore(
     houseCountExclusionDetails,
     specialHouseExclusionDetail,
   } = runHouseCountExclusionStep(effectiveInput, steps, hceGeneralHouseAcquisitionDate);
-  // STEP 0.96 (E-1 한계 G5): §155⑳ A 미충족이면 「임대주택 제외」 주택 수 1 전제를 되돌린다 — 판정·장특이 한 전제를 본다.
-  const rentalPremise = restoreRentalUnitsToHouseCount(judgeInputBeforeRental, effectiveInput, parsedRates, hceGeneralHouseAcquisitionDate);
-  // 증여세 마법사는 세대 보유 주택 명부 입력 칸이 없어 합가 전 구성 「모름」을 불리하게 쓰지 않는다(Q-10) — 그 화면이 싣는
-  // 표식(`burdenedGiftInfo.houseRosterInputUnavailable`)이 있을 때만 세운다(1h-G1-12). 계산기·판정 메뉴·표식 없는 호출은 세우지 않는다.
-  const exemptionJudgeInput = {
-    ...rentalPremise.input,
-    noMergeRosterInputPath: hasNoMergeRosterInputPath(effectiveInput),
-  };
-
-  /**
-   * STEP 1: 1세대1주택 비과세 판정 — **공유 판정 엔진**을 거친다(P2 · D-1).
-   *
-   * 판정 메뉴(P4)와 같은 진입점이다. 계산기는 이미 `TransferTaxInput`을 들고 있지만 일부러
-   * `OneHouseFacts`로 분해했다가 다시 조립한다 — 「사실만으로 같은 판정이 나오는가」를 매
-   * 테스트마다 증명시키기 위해서다(`one-house/judge.ts` 머리 주석).
-   */
-  // §154⑩ 표준 경로(B · 0호) 불성립이면 비과세를 거둔다. 세대 구성 불성립은 거두지 않는다 — 판정이 임대주택을 센 결론이 정본(composition-revoke Q-1).
-  const rentalComposition = revokeExemptionOnStandardPathUnmet(
-    judgeOneHouseExemptionFromInput(exemptionJudgeInput, parsedRates.oneHouseSpecialRules, presaleRightStartDate(parsedRates)),
+  // STEP 0.96 + STEP 1: 임대 전제 되돌림 → 공유 판정 엔진 → 임대·토지 세대 고지 — transfer-tax-one-house-judgment-step.ts (800줄 정책 분리).
+  const { exemptionJudgeInput, exemptionResult, prhpUnmet } = runOneHouseJudgmentStep({
+    judgeInputBeforeRental,
     effectiveInput,
-  );
-  // V-3′ — 토지만 본인 × 건물(주택) 소유자 다른 세대면 이 세대의 1주택에 딸린 토지가 아니다 · 같은 세대면 합가일 고지(`land-only-owner-household.ts`).
-  const landOnlyHousehold = applyLandOnlyHouseholdRule(rentalComposition.judgment, effectiveInput, landOnlyMergeNoticeSuppressed(effectiveInput));
-  const exemptionResult = landOnlyHousehold.judgment;
-  // §155⑳ 불성립 원인(호별·거주 · 세대 구성) — 조기 반환·㉒ 안내·불성립 고지가 한 판정을 본다(composition-revoke D-2).
-  const prhpUnmet =
-    effectiveInput.rentalHousingException?.applyException === true
-      ? resolvePrhpUnmet(effectiveInput, resolveRentalResidenceComposition(effectiveInput, parsedRates, hceGeneralHouseAcquisitionDate))
-      : undefined;
-  // F-1 D-3 — STEP 0.96 고지는 판정 뒤에 확정한다: 임대주택을 센 판정이 다른 특례로 비과세를 내면 「…적용하지 않습니다」 대신 불성립 고지.
-  const rentalUnmetOther = prhpUnmetOtherExemptionNotice(effectiveInput, exemptionResult, prhpUnmet);
-  if (rentalUnmetOther) warnings.push(rentalUnmetOther);
-  else if (rentalPremise.notice) warnings.push(rentalPremise.notice);
-  if (rentalComposition.notice) warnings.push(rentalComposition.notice);
-  // 거주기간 합가일 이후 통산 고지 — 비과세로 끝나는 경로에서도 실려야 하므로 합가 판정 고지와 같은 자리에서 단다.
-  for (const n of [landOnlyHousehold.notice, landOnlyMergeResidenceNotice(effectiveInput)]) if (n) warnings.push(n);
+    parsedRates,
+    generalHouseAcquisitionDate: hceGeneralHouseAcquisitionDate,
+    warnings,
+  });
 
   // §89② 고지 · 판정 보류 · 지구 미선언 · 재기산 · 미충족 특례 · 합가 「모름」 · 귀농 사후관리 · 중첩 의제 — 완공APT 경로와 공용 leaf.
   warnings.push(
@@ -639,64 +604,9 @@ function calculateTransferTaxCore(
   longTermHoldingDeduction = lthd982.longTermHoldingDeduction;
   longTermHoldingRate = lthd982.longTermHoldingRate;
 
-  // STEP 4.5: 양도소득금액 = 양도차익 − 장기보유특별공제 (소득세법 §95 ①)
-  const transferIncomeBefore993 = Math.max(0, taxableGain - longTermHoldingDeduction);
-  steps.push({
-    label: "양도소득금액",
-    formula: `양도차익 ${taxableGain.toLocaleString()} - 장기보유특별공제 ${longTermHoldingDeduction.toLocaleString()}`,
-    amount: transferIncomeBefore993,
-    legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
-  });
-
-  // STEP 4.6: 차감형 감면(§99의3·§99·§98의8) — 양도소득금액 차감 방식 (income-deduction-router)
-  // 5년 내 = 발생분 전액(§98의8은 50%) / 5년 후 = 기준시가 안분. 농특세는 finalize 2-pass.
-  let transferIncome = transferIncomeBefore993;
-  // 조특법 §129② — 미등기면 차감형도 적용하지 않는다(D15, `unregisteredReductionNotice`).
-  const incomeDeduction = resolveIncomeDeduction(input.isUnregistered ? undefined : input.reductions, {
-    transferDate: input.transferDate,
-    acquisitionDate: input.acquisitionDate,
-    assetContractDate: input.assetContractDate,
-    transferPrice: input.transferPrice,
-    // 고가주택 가액 요건은 물건 전체 기준 — §89 12억 안분(:447-465)과 같은 소스를 쓴다.
-    totalPropertyTransferPrice: input.totalPropertyTransferPrice,
-    standardPriceAtTransfer: input.standardPriceAtTransfer,
-    transferIncome: transferIncomeBefore993,
-  });
-  const new993PreliminaryResult: New993Result | undefined = incomeDeduction.new993Detail;
-  if (incomeDeduction.appliedId) {
-    transferIncome = Math.max(0, transferIncomeBefore993 - incomeDeduction.reducible);
-  }
-  if (incomeDeduction.stepLabel) {
-    steps.push(buildIncomeDeductionStep(incomeDeduction, transferIncomeBefore993, transferIncome));
-  }
-
-  // STEP 5: 기본공제 (aggregate 엔진에서 호출 시 skipBasicDeduction=true로 스킵)
-  const basicDeduction = effectiveInput.skipBasicDeduction
-    ? 0
-    : calcBasicDeduction(
-        taxableGain,
-        longTermHoldingDeduction,
-        effectiveInput.annualBasicDeductionUsed,
-        effectiveInput.isUnregistered,
-        parsedRates.basicDeductionRules,
-      );
-  if (!effectiveInput.skipBasicDeduction) {
-    steps.push({
-      label: "기본공제",
-      formula: `연 한도 ${parsedRates.basicDeductionRules.annualLimit.toLocaleString()} - 기사용 ${effectiveInput.annualBasicDeductionUsed.toLocaleString()}`,
-      amount: basicDeduction,
-      legalBasis: TRANSFER.BASIC_DEDUCTION,
-    });
-  }
-
-  // STEP 6: 과세표준 = 양도소득금액 − 기본공제 (소득세법 §92 — 원 단위, 절사 규정 없음)
-  const taxBase = Math.max(0, transferIncome - basicDeduction);
-  steps.push({
-    label: "과세표준",
-    formula: `양도소득금액 ${transferIncome.toLocaleString()} - 기본공제 ${basicDeduction.toLocaleString()}`,
-    amount: taxBase,
-    legalBasis: TRANSFER.TAX_BASE_CALC,
-  });
+  // STEP 4.5~6: 양도소득금액 · 차감형 감면 · 기본공제 · 과세표준 — transfer-tax-income-steps.ts (800줄 정책 분리).
+  const { transferIncome, incomeDeduction, new993PreliminaryResult, basicDeduction, taxBase, transferIncomeBefore993 } =
+    runIncomeAndBaseSteps({ input, effectiveInput, parsedRates, taxableGain, longTermHoldingDeduction, steps });
 
   // STEP 7: 산출세액
   // selfOwns="land_only" 시 단기/장기 세율 판정은 토지 취득일 기준 (소령 §166⑥)

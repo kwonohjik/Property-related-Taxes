@@ -14,6 +14,7 @@
  * B 시나리오 취득/현양도 기준시가는 환산 모드 연동 시(isPhrpStdPriceLinked) 자산-수준
  * standardPriceAtAcq/Transfer가 단일 소스 — UI(⑤)·API 변환(④)과 동일 ternary (3중 패턴).
  */
+import type { MergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import { canDeclareRentalHousingException } from "./rental-housing-exception-scope";
@@ -93,6 +94,8 @@ export function validateRentalHousingException(
    * `rental-residence-holding-proviso.plan.md` D-9. §154⑩ 단독 경로(B · 0호)는 엔진과 같이 범위 밖이다.
    */
   provisoReason?: string,
+  /** §155④⑤ × ⑳ 상대 쪽 임대(`lib/calc/merge-rental-carveout-form.ts`) — 시나리오 A 거주 2년 분기만 본다. */
+  mergeRental?: MergeRentalState,
 ): string | null {
   if (!rh?.applyException) return null;
   /**
@@ -438,7 +441,12 @@ export function validateRentalHousingException(
     if (postReg < 24 && !winWinResidenceExempt) {
       return fieldError("rentalHousingException.postRegistrationResidenceMonths", `${label}: 장기임대주택 특례 — 임대→거주 전환 주택은 사업자등록·임대사업자 등록 이후 거주기간이 2년(24개월) 이상이어야 합니다 (현재: ${postReg}개월, 소령 §155⑳1호${isStandalone154_10 ? " 괄호 준용" : ""}).`);
     }
-  } else if (requirementMonths < 24 && !winWinResidenceExempt) {
+  } else if (mergeRental === "unanswered" && requirementMonths < 24 && !winWinResidenceExempt) {
+    return fieldError(
+      "rentalHousingException.counterpartHouseResidedTwoYears",
+      `${label}: 합가 상대 쪽 주택에 2년 이상 거주했는지 답하세요 — 「예」면 양도 주택에는 거주주택 2년을 적용하지 않습니다(기준-2024-법규재산-0061).`,
+    );
+  } else if (mergeRental !== "waived" && requirementMonths < 24 && !winWinResidenceExempt) {
     return fieldError("residencePeriods", `${label}: 장기임대주택 특례 — 거주주택 거주기간 2년(24개월) 이상이 필요합니다. "거주주택 거주기간"(개월 직접 또는 입주·퇴거 구간)을 24개월 이상으로 입력하세요. 증여·상속 전 같은 세대로 거주한 기간은 그 칸에 입력하면 통산합니다. (현재: ${requirementText})`);
   }
 
