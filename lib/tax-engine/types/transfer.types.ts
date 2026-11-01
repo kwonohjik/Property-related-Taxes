@@ -1642,6 +1642,11 @@ export interface TransferTaxInput {
    * 시나리오 B(PHRP)는 §161① 기준시가 안분으로 직전거주주택 양도일 이후분만 비과세.
    */
   rentalHousingException?: import("../transfer-tax/rental-housing-exception/types").RentalHousingExceptionInput;
+  /**
+   * 엔진 내부 표식 — §155④⑤ × ⑳ 합가 상대 쪽 임대 1채를 빼고 합가 의제로 판정한다(`one-house/merge-rental-carveout.ts`).
+   * `withMergeRentalCarveout`만 싣는다. API로 받지 않는다. 임대가 명부 밖이면 `rentalRowId`가 없다.
+   */
+  mergeRentalCarveout?: { rentalRowId?: string };
 
   // ── 부수토지 일체과세 — companion 전용 필드 (사례 28, 세율 축: §104①2호 괄호·영 §167의5) ──
   /**

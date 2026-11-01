@@ -579,6 +579,7 @@ export async function POST(request: NextRequest) {
             // OH-15·OH-40 판정 사실 (단건 `_rental-engine-input.ts`와 동일 매핑)
             postRegistrationResidenceMonths: p.rentalHousingException.postRegistrationResidenceMonths,
             priorRentalExemptionHistory: p.rentalHousingException.priorRentalExemptionHistory,
+            counterpartHouseResidedTwoYears: p.rentalHousingException.counterpartHouseResidedTwoYears,
             residenceTransitionUnderAddendum: p.rentalHousingException.residenceTransitionUnderAddendum,
             residenceTransitionBasis: p.rentalHousingException.residenceTransitionBasis,
             // §154⑩ 표준 경로(I-5) — rentalUnits 0호일 때만 엔진이 참조 (단건과 동일 매핑)

@@ -8,8 +8,10 @@
  * 시나리오 B: 임대주택→거주주택 전환 후 양도 (PHRP, §161① 안분)
  */
 
+import type { MergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { RentalCounterpartResidedQuestion } from "./RentalCounterpartResidedQuestion";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { PeriodRangeEditor } from "./PeriodRangeEditor";
@@ -108,6 +110,8 @@ interface RentalHousingExceptionSectionProps {
    * (`checkPhrp154_10Eligibility`)이 최종 판정하므로 세액은 침묵으로 틀려지지 않는다.
    */
   wasRegulatedAtAcquisition?: boolean;
+  /** §155④⑤ × ⑳ 상대 쪽 임대(`lib/calc/merge-rental-carveout-form.ts`) — 이 경로면 상대 쪽 거주를 묻고, 「예」면 거주 2년을 요건으로 표시하지 않는다. */
+  mergeRental?: MergeRentalState;
 }
 
 export function RentalHousingExceptionSection({
@@ -120,6 +124,7 @@ export function RentalHousingExceptionSection({
   mode = "full",
   judgmentLoaded = false,
   wasRegulatedAtAcquisition = false,
+  mergeRental,
 }: RentalHousingExceptionSectionProps) {
   /** §161 안분은 **세액 산식**이다 — 판정 메뉴는 그 입력을 받지 않는다(Q-7). */
   const showAllocationInputs = mode !== "facts";
@@ -490,7 +495,7 @@ export function RentalHousingExceptionSection({
         const postRegRaw = rh.postRegistrationResidenceMonths ?? "";
         const liveMonths = usesPostRegField ? parseInt(postRegRaw, 10) || 0 : totalLiveMonths;
         // §154⑩ 표준 경로 + 종전규정(preRegime)이면 취득 당시 조정대상지역일 때만 거주요건이 있다.
-        const residenceRequired = !(isStandalone154_10Path && preRegime154_10 && !wasRegulatedAtAcquisition);
+        const residenceRequired = !(isStandalone154_10Path && preRegime154_10 && !wasRegulatedAtAcquisition) && mergeRental !== "waived";
         // 보유기간 — 취득일 ~ 양도일. ⑧·엔진(`judgeRentalHousingEligibility`)과 **같은 함수**다
         // (소령 §154⑤ → 법 §95④ 초일 산입). 일수 근사(730일·365일·30일)는 응당일 전날 양도에서 하루 어긋났다.
         let holdPass = false;
@@ -608,11 +613,20 @@ export function RentalHousingExceptionSection({
               </p>
             )}
 
+            {mergeRental && (
+              <RentalCounterpartResidedQuestion
+                value={rh.counterpartHouseResidedTwoYears}
+                onChange={(v) => onChange({ ...rh, counterpartHouseResidedTwoYears: v })}
+              />
+            )}
+
             {/* 실시간 충족 표시 (소령 §155⑳ 거주주택 요건 또는 §154⑩+§154① 원칙) */}
             <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2.5 space-y-1.5 text-xs dark:bg-violet-950/40">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-violet-800 dark:text-violet-200">
-                  {!residenceRequired
+                  {mergeRental === "waived"
+                    ? "거주주택 2년 — 합가 상대 쪽 임대 경로라 적용하지 않음 (§154① 거주는 별도 판정)"
+                    : !residenceRequired
                     ? "거주주택 거주기간 (조정대상지역 취득이 아니므로 불필요)"
                     : usesPostRegField
                       ? "거주주택 거주기간 — 등록 이후 (2년 이상 필요)"

@@ -17,6 +17,7 @@
  * 「요건 미달이라 계산조차 못 하는」 화면이 되어, 사용자가 왜 비과세가 아닌지 알 수 없다.
  * 여기서 막는 것은 **판정이 불가능한 입력**(필수값 부재·모순)뿐이다.
  */
+import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import { parentalCareAgeIssues } from "./parental-care-age-issue";
 import { giftHouseholdFactErrors, giftPriorResidenceAsked } from "@/lib/calc/gift-household-payload";
 import {
@@ -197,14 +198,24 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     }
   }
 
-  // 혼인합가 1199 — 명부 밖 장기임대주택의 혼인 전 보유자(칸과 같은 게이트). 고르지 않으면 엔진은 결론을 가를 때 불성립.
+  // 혼인합가 1199 · 합가 상대 쪽 임대(0061) — 명부 밖 장기임대주택의 합가 전 보유자(칸과 같은 게이트). 고르지 않으면 엔진은 결론을 가를 때 불성립.
   if (judgmentMarriageRentalOriginVisible(form)) {
+    if (mergeRentalState(form) === "unanswered") {
+      errors.push(
+        err(
+          "rentalHousingException.counterpartHouseResidedTwoYears",
+          "합가 상대 쪽 주택에 2년 이상 거주했는지 답하세요 — 「예」면 양도 주택에 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061).",
+        ),
+      );
+    }
     form.assets[0].rentalHousingException!.rentalUnits.forEach((u, i) => {
       if (!u.mergeOrigin) {
         errors.push(
           err(
             `rentalUnits.${i}.mergeOrigin`,
-            `장기임대주택 ${i + 1}: 혼인 전 보유자를 고르세요 — 각각 2주택 이상인 사람끼리의 혼인이면 혼인합가 특례가 적용되지 않아(기획재정부 조세정책과-1199) 임대주택도 양쪽 주택 수에 셉니다.`,
+            form.marriageDate
+              ? `장기임대주택 ${i + 1}: 혼인 전 보유자를 고르세요 — 각각 2주택 이상인 사람끼리의 혼인이면 혼인합가 특례가 적용되지 않아(기획재정부 조세정책과-1199) 임대주택도 양쪽 주택 수에 셉니다.`
+              : `장기임대주택 ${i + 1}: 합가 전 보유자를 고르세요 — 임대주택이 합가 상대 쪽이면 양도 주택에 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061).`,
           ),
         );
       }

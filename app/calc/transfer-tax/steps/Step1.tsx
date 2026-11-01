@@ -1,3 +1,4 @@
+import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import { useState } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
@@ -378,6 +379,7 @@ export function Step1({
           judgmentLoaded={hasJudgmentProvenance(form)}
           wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
           formRegionCode={form.regionCode}
+          mergeRental={mergeRentalState(form)}
           /**
            * 입주권 §⑥ 카드의 거주요건 경고 게이트 (U1-03).
            *

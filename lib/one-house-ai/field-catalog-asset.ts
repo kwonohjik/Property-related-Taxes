@@ -351,6 +351,18 @@ export const ONE_HOUSE_FIELD_CATALOG_ASSET = [
     when: "marriageDate ≠ \"\" + asset.rentalHousingException.applyException = true",
   },
   {
+    path: "asset.rentalHousingException.counterpartHouseResidedTwoYears",
+    kind: "enum",
+    values: [
+      { value: "", label: "미선택" },
+      { value: "yes", label: "예" },
+      { value: "no", label: "아니오" },
+    ],
+    label: "합가 상대 쪽 주택에 2년 이상 거주했나요?",
+    hint: "양도 주택이 임대주택 없는 쪽 소유이고 합가 상대 쪽이 그 주택 + 장기임대주택 1채를 보유할 때만 묻는다(기준-2024-법규재산-0061). 모르면 비움 — 미선택은 이 경로를 적용하지 않는다.",
+    when: "합가일 ≠ \"\" + asset.rentalHousingException.applyException = true + 임대주택이 상대 쪽",
+  },
+  {
     path: "asset.rentalHousingException.priorRentalExemptionHistory",
     kind: "enum",
     values: [

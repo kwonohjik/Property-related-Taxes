@@ -19,17 +19,20 @@ import { buildRentalHousingVerdict, applyRentalHousingVerdict } from "@/lib/tax-
 import { settleRentalVerdictForOtherExemption } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import { rosterCountsRentalUnits } from "@/lib/tax-engine/transfer-tax-rental-housing-judge";
 import { deriveHouseholdHousingCount } from "@/lib/tax-engine/one-house/house-count";
+import { mergeRentalCarveoutNotice, withMergeRentalCarveout, MERGE_RENTAL_CARVEOUT_NOTICE_ID } from "@/lib/tax-engine/one-house/merge-rental-carveout";
 import { buildOneRightVerdict, applyOneRightVerdict } from "@/lib/tax-engine/one-house/one-right-verdict";
 import { applyNonResidentVerdict } from "@/lib/tax-engine/one-house/non-resident";
 import { applyDemolishedBeforeBalanceVerdict } from "@/lib/tax-engine/one-house/demolished-before-balance";
 import type { CalculationStep, TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 
 export function runOneHouseJudgmentPipeline(
-  engineInput: TransferTaxInput,
+  rawEngineInput: TransferTaxInput,
   parsedRates: ParsedRates,
   judgmentBaseDate: Date,
   isRightSale: boolean,
 ) {
+  // §155④⑤ × ⑳ 상대 쪽 임대 — 계산기 진입과 같은 번역. 성립하면 ⑳ 단계를 건너뛰고 합가 의제로 판정한다.
+  const engineInput = withMergeRentalCarveout(rawEngineInput);
   /**
    * 단계 6: 주택 수 제외 → 판정.
    *
@@ -125,7 +128,15 @@ export function runOneHouseJudgmentPipeline(
    * 단계 6.8: 매매특약에 따른 잔금 전 주택 멸실(결정 #46) — 판정 메뉴 전용.
    * 2022-12-20 이후 계약이면 양도물건을 잔금청산일 현황(나대지)으로 판정해 주택 비과세를 거둔다.
    */
-  const judgment = applyDemolishedBeforeBalanceVerdict(afterNonResident, engineInput, isRightSale);
+  const afterBalance = applyDemolishedBeforeBalanceVerdict(afterNonResident, engineInput, isRightSale);
+  // 판정 메뉴에는 계산기 경고 칸이 없다 — 적용 근거를 확인 사항으로 싣는다.
+  const judgment =
+    engineInput.mergeRentalCarveout && (afterBalance.isExempt || afterBalance.isPartialExempt)
+      ? {
+          ...afterBalance,
+          undetermined: [...afterBalance.undetermined, { id: MERGE_RENTAL_CARVEOUT_NOTICE_ID, reason: mergeRentalCarveoutNotice(engineInput) }],
+        }
+      : afterBalance;
 
   return { exclusion, rentalVerdict, oneRightVerdict, judgment, rentalDeemedHouseIds: rentalRowIds };
 }

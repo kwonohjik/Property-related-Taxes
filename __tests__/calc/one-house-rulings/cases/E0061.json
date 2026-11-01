@@ -1,0 +1,63 @@
+[
+  {
+    "id": "E0061-parental-rental-counterpart",
+    "docNo": "기준-2024-법규재산-0061",
+    "docDate": "2026.08.20.",
+    "basis": "current",
+    "today": "2026-08-20",
+    "summary": "父 거주주택·장기임대 1채, 子 1채(비조정 시료)가 동거봉양 합가 후 子 주택 양도 — §155⑳1호 거주요건 미적용",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2023-09-18",
+      "contractTotalPrice": "800000000",
+      "parentalCareMergeDate": "2023-06-28",
+      "parentalCareParentAge": "over_60",
+      "isFirstTransferredInMerge": true,
+      "wasRegulatedAtAcquisition": false,
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-08-08",
+        "regionCode": "4682025021",
+        "residenceInputMode": "direct",
+        "residencePeriodMonthsAsset": "0",
+        "rentalHousingException": {
+          "applyException": true,
+          "scenario": "A",
+          "priorRentalExemptionHistory": "none",
+          "counterpartHouseResidedTwoYears": "yes",
+          "rentalUnits": [
+            {
+              "unitId": "c",
+              "businessRegistrationDate": "2019-09-26",
+              "rentalRegistrationDate": "2019-09-26",
+              "rentalCategory": "long_general",
+              "rentalAcquisitionType": "purchase",
+              "isApartment": false,
+              "region": "seoul-metro",
+              "standardPriceAtRentalStart": "300000000",
+              "acquisitionOfficialPrice": "300000000",
+              "isNationalSizeHousing": true,
+              "hasMinimum2Units": true,
+              "rentalMonths": "48",
+              "requirementsConfirmed": true,
+              "mergeOrigin": "counterpart_side"
+            }
+          ]
+        }
+      },
+      "houses": [
+        {
+          "id": "a",
+          "region": "capital",
+          "acquisitionDate": "2018-09-27",
+          "mergeOrigin": "counterpart_side"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match(2026-11-01 — 사용자 결정 Q-1 a·Q-5 a). 원문은 C가 조정 취득이면 §154① 거주가 남고 등록 당시 세대 조정 1주택일 때만 구 4호라고 했다. 일자·소재지 시료 가정: 비조정, 거주 0, 양도가 8억."
+  }
+]

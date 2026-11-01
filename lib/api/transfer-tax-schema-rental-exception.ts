@@ -87,6 +87,8 @@ export const rentalHousingExceptionSchema = z
     /** B — 사업자등록·임대사업자 등록 이후 거주기간(개월) §155⑳1호 괄호 (OH-15) */
     postRegistrationResidenceMonths: z.number().int().nonnegative().optional(),
     priorRentalExemptionHistory: PriorRentalExemptionHistoryEnum.optional(),
+    /** 합가 상대 쪽 주택 2년 거주 — 기준-2024-법규재산-0061 */
+    counterpartHouseResidedTwoYears: z.boolean().optional(),
     /** 대통령령 제29523호 부칙 제7조② 경과조치 (OH-40) */
     residenceTransitionUnderAddendum: z.boolean().optional(),
     /** D11 — 경과조치 사유(1호 거주 · 2호 계약금 + 2019.2.12. 전 등록 임대주택 소유 여부) */

@@ -10,6 +10,8 @@
  */
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { RentalCounterpartResidedQuestion } from "@/components/calc/transfer/RentalCounterpartResidedQuestion";
+import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
 type Origin = "seller_side" | "counterpart_side" | "after_merge";
@@ -37,14 +39,24 @@ export function RentalUnitsMarriageOriginSection({ form, onChange }: Props) {
       ),
     });
 
+  const marriage = !!form.marriageDate;
   // `ToneCard`는 data-testid를 전달하지 않는다 — 바깥 div에 붙인다.
   return (
     <div data-testid="rental-units-marriage-origin">
-      <ToneCard tone="violet" bodyClassName="space-y-3" title="장기임대주택의 혼인 전 보유자">
+      <ToneCard tone="violet" bodyClassName="space-y-3" title={marriage ? "장기임대주택의 혼인 전 보유자" : "장기임대주택의 합가 전 보유자"}>
         <p className="text-caption text-muted-foreground">
-          각각 2주택 이상을 보유한 사람끼리 혼인해 1세대가 4주택 이상이 되면 혼인합가 특례가 적용되지 않습니다
-          (기획재정부 조세정책과-1199). 장기임대주택도 이 주택 수에 들어가므로, 앞에서 입력한 장기임대주택마다 혼인 전에
-          누가 보유했는지 고르세요.
+          {marriage ? (
+            <>
+              각각 2주택 이상을 보유한 사람끼리 혼인해 1세대가 4주택 이상이 되면 혼인합가 특례가 적용되지 않습니다
+              (기획재정부 조세정책과-1199). 장기임대주택도 이 주택 수에 들어가므로, 앞에서 입력한 장기임대주택마다 혼인 전에
+              누가 보유했는지 고르세요.
+            </>
+          ) : (
+            <>
+              임대주택이 합가 상대 쪽 1채이고 양도 주택이 그 쪽 소유가 아니면 양도 주택에 거주 2년을 적용하지 않습니다
+              (기준-2024-법규재산-0061). 앞에서 입력한 장기임대주택을 합가 전에 누가 보유했는지 고르세요.
+            </>
+          )}
         </p>
         {rh.rentalUnits.map((u, i) => (
           <div key={u.unitId ?? i} className="space-y-1" data-field={`rentalUnits.${i}.mergeOrigin`}>
@@ -60,25 +72,39 @@ export function RentalUnitsMarriageOriginSection({ form, onChange }: Props) {
                 {
                   value: "seller_side",
                   label: "양도자 쪽",
-                  description: "양도하는 주택의 소유자가 혼인 전부터 보유",
+                  description: marriage ? "양도하는 주택의 소유자가 혼인 전부터 보유" : "양도하는 주택의 소유자가 합가 전부터 보유",
                   testId: `rental-merge-origin-${i}-seller`,
                 },
                 {
                   value: "counterpart_side",
-                  label: "배우자 쪽",
-                  description: "배우자가 혼인 전부터 보유",
+                  label: marriage ? "배우자 쪽" : "직계존속 쪽",
+                  description: marriage ? "배우자가 혼인 전부터 보유" : "합가한 직계존속이 합가 전부터 보유",
                   testId: `rental-merge-origin-${i}-counterpart`,
                 },
                 {
                   value: "after_merge",
-                  label: "혼인 후 취득",
-                  description: "혼인한 뒤에 취득",
+                  label: marriage ? "혼인 후 취득" : "합가 후 취득",
+                  description: marriage ? "혼인한 뒤에 취득" : "합가한 뒤에 취득",
                   testId: `rental-merge-origin-${i}-after`,
                 },
               ]}
             />
           </div>
         ))}
+        {mergeRentalState(form) && (
+          <RentalCounterpartResidedQuestion
+            value={rh.counterpartHouseResidedTwoYears}
+            onChange={(counterpartHouseResidedTwoYears) =>
+              onChange({
+                assets: form.assets.map((a, i) =>
+                  i === 0 && a.rentalHousingException
+                    ? { ...a, rentalHousingException: { ...a.rentalHousingException, counterpartHouseResidedTwoYears } }
+                    : a,
+                ),
+              })
+            }
+          />
+        )}
       </ToneCard>
     </div>
   );

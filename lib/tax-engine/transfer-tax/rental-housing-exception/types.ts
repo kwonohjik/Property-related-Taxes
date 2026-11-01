@@ -191,6 +191,11 @@ export type RentalHousingExceptionInput = {
    */
   priorRentalExemptionHistory?: "none" | "used";
   /**
+   * 합가 상대 쪽 주택(임대주택 외)에 2년 이상 거주했는가 — 기준-2024-법규재산-0061의 사실.
+   * `withMergeRentalCarveout`만 읽는다. 미제공 = 모름 = 그 경로 불성립.
+   */
+  counterpartHouseResidedTwoYears?: boolean;
+  /**
    * 대통령령 제29523호 부칙 제7조② 경과조치 — 2019-02-12 당시 그 거주주택에 거주 중이었거나, 그 전에
    * 매매계약을 체결하고 계약금을 지급한 사실이 증빙서류로 확인된다(종전 규정 적용). 미입력 = false.
    */

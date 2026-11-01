@@ -97,6 +97,9 @@ export function resolveExemptionHouseCountExclusions(
     entries: [...specialDeclared.entries, ...popDecline.entries],
     excludedCount: specialDeclared.excludedCount + popDecline.excludedCount,
   };
+  // §155④⑤ × ⑳ — 합가 상대 쪽 임대 행(`one-house/merge-rental-carveout.ts`). 비과세·중과 15호 ① 요소가 함께 뺀다. 중과 주택 수 자체는 그대로다.
+  const mergeRentalRowId = effectiveInput.mergeRentalCarveout?.rentalRowId;
+  const mergeRentalExcluded = mergeRentalRowId ? 1 : 0;
   const popUnconfirmed = popDecline.entries.filter((e) => e.article === POP_DECLINE_71_2_ARTICLE && !e.eligible && e.unconfirmed);
   return {
     /** 조특법 §71의2① 후보 중 모름·미답·해석 미확보로 불성립한 것 — 결론을 가를 때만 확인 필요를 알리는 재료 */
@@ -108,13 +111,14 @@ export function resolveExemptionHouseCountExclusions(
     specialHouseExclusionDetail,
     inheritedExclusion,
     /** 조특법(§99의4·§98의9·보유 감면주택)으로 뺀 수 */
-    specialActExcludedCount: hceApplied.length + specialHouseExclusionDetail.excludedCount,
+    specialActExcludedCount: hceApplied.length + specialHouseExclusionDetail.excludedCount + mergeRentalExcluded,
+    mergeRentalExcluded,
     /** §155④⑤ 합가 전 구성 판정(PR-3)이 명부에서 뺄 행 id — 세 출처 중 houseId가 있는 것만. */
     knownHouseExclusionHouseIds: collectKnownHouseExclusionIds({
       hceApplied,
       specialEntries: specialHouseExclusionDetail.entries,
       inheritedExcludedHouses: inheritedExclusion.excludedHouses,
-    }),
+    }).concat(mergeRentalRowId ? [mergeRentalRowId] : []),
     ...verifiedSpecialAct15Exclusions(specialHouseExclusionDetail, hceApplied),
   };
 }
@@ -355,9 +359,10 @@ export function runHouseCountExclusionStep(
     inheritedExclusion,
     knownHouseExclusionHouseIds,
     popDecline71_2Unconfirmed,
+    mergeRentalExcluded,
   } = resolveExemptionHouseCountExclusions(effectiveInput, generalHouseAcquisitionDate);
   const totalExcluded =
-    hceApplied.length + specialHouseExclusionDetail.excludedCount + inheritedExclusion.excludedCount;
+    hceApplied.length + specialHouseExclusionDetail.excludedCount + inheritedExclusion.excludedCount + mergeRentalExcluded;
   // knownHouseExclusionCount·knownHouseExclusionHouseIds — §155④⑤ 합가 전 구성 판정
   // (`resolveMergeComposition`)이 명부 행 수와 판정 주택수의 불일치를 「알려진 제외로 설명됨
   // (행까지 특정되면 그 행을 빼고 판정 · PR-3)」과 「입력 누락(불성립)」으로 가르는 echo.
