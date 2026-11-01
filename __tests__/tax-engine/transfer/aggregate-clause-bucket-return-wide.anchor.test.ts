@@ -133,10 +133,10 @@ describe("A-5 — 같은 호는 합산하고 다른 호는 따로 계산한다(�
 describe("A-9 — 감면 자산의 호 버킷이 세율군을 넘을 때 §90① 호별 산정(F-9)", () => {
   // 2026-06-01 양도. 기본공제는 비감면 P가 먼저 흡수한다(§103②).
   //   B: 사업용 토지 5억 / 1.5억(2015) · §77 공익수용 현금보상(감면율 15%) → progressive · 1호 273,000,000(장특 22%)
-  //   P: 13억 / 3억(2015) · 면적 50% 비사업용 → non_business_land · 파트 1호 388,750,000 · 8호 388,750,000(기본공제 2,500,000 차감 후)
+  //   P: 13억 / 3억(2015) · 면적 50% 비사업용 → non_business_land · 파트 소득 각 390,000,000. 기본공제는 세율 높은 8호 파트에서 → 1호 390,000,000 · 8호 387,500,000
   //   1호 = prog(1,050,500,000) = 406,785,000
-  //   2호 = 1호 버킷 prog(273,000,000 + 388,750,000) 241,995,000 + 8호 버킷 nblTax(388,750,000) 168,435,000 = 410,430,000
-  //   감면(호별) = 1호 버킷 세액 × 감면소득분 / 1호 버킷 과세표준 = 241,995,000 × (273,000,000 × 15%) / 661,750,000
+  //   2호 = 1호 버킷 prog(273,000,000 + 390,000,000) 242,520,000 + 8호 버킷 nblTax(387,500,000) 167,810,000 = 410,330,000
+  //   감면(호별) = 1호 버킷 세액 × 감면소득분 / 1호 버킷 과세표준 = 242,520,000 × (273,000,000 × 15%) / 663,000,000
   //   감면(합산 — 1호 채택 시) = 406,785,000 × 40,950,000 / 1,050,500,000
   //   §104⑤ 괄호: 감면 차감 후 2호 쪽이 크다 → 2호·호별 감면을 채택한다.
   //   종전(세율군 안에서만 합산)은 2호 381,795,000 < 1호라 1호·합산 감면(15,857,064)이었다.
@@ -148,26 +148,26 @@ describe("A-9 — 감면 자산의 호 버킷이 세율군을 넘을 때 §90①
     calculateTransferTaxAggregate({ taxYear: 2026, annualBasicDeductionUsed: 0, properties: props }, rates);
   const div = (a: number, n: number, d: number) => Number((BigInt(a) * BigInt(n)) / BigInt(d));
 
-  it("독립 산식: 2호 410,430,000 · 호별 감면 14,974,983 — 감면 차감 후에도 2호(395,455,017) > 1호(390,927,936)", () => {
-    const bucket1 = prog(661_750_000);
-    const clause2 = bucket1 + nblTax(388_750_000);
-    expect(bucket1).toBe(241_995_000);
-    expect(clause2).toBe(410_430_000);
-    expect(div(bucket1, 40_950_000, 661_750_000)).toBe(14_974_983);
+  it("독립 산식: 2호 410,330,000 · 호별 감면 14,979,176 — 감면 차감 후에도 2호(395,350,824) > 1호(390,927,936)", () => {
+    const bucket1 = prog(663_000_000);
+    const clause2 = bucket1 + nblTax(387_500_000);
+    expect(bucket1).toBe(242_520_000);
+    expect(clause2).toBe(410_330_000);
+    expect(div(bucket1, 40_950_000, 663_000_000)).toBe(14_979_176);
     const clause1 = prog(1_050_500_000);
     expect(clause1).toBe(406_785_000);
     expect(div(clause1, 40_950_000, 1_050_500_000)).toBe(15_857_064);
-    expect(clause2 - 14_974_983).toBeGreaterThan(clause1 - 15_857_064);
+    expect(clause2 - 14_979_176).toBeGreaterThan(clause1 - 15_857_064);
   });
 
-  it("[B,P] = [P,B]: 산출 410,430,000 · 감면 14,974,983(호별 — 1호 버킷 241,995,000 / 661,750,000)", () => {
+  it("[B,P] = [P,B]: 산출 410,330,000 · 감면 14,979,176(호별 — 1호 버킷 242,520,000 / 663,000,000)", () => {
     for (const r of [run([b(), p()]), run([p(), b()])]) {
       expect(r.comparedTaxApplied).toBe("groups");
-      expect(r.calculatedTax).toBe(410_430_000);
-      expect(r.reductionAmount).toBe(14_974_983);
+      expect(r.calculatedTax).toBe(410_330_000);
+      expect(r.reductionAmount).toBe(14_979_176);
       const row = r.reductionBreakdown[0] as { clauseBasis?: string; aggregateCalculatedTax: number; aggregateTaxBase: number };
       expect(row.clauseBasis).toBe("per_clause");
-      expect([row.aggregateCalculatedTax, row.aggregateTaxBase]).toEqual([241_995_000, 661_750_000]);
+      expect([row.aggregateCalculatedTax, row.aggregateTaxBase]).toEqual([242_520_000, 663_000_000]);
     }
   });
 });

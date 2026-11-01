@@ -60,20 +60,22 @@ const allocOf = (r: ReturnType<typeof run>) =>
 const cardOf = (r: ReturnType<typeof run>) =>
   Object.fromEntries(r.groupTaxes.map((g) => [g.group, g.groupCalculatedTax]));
 
-describe("A-1 — 같은 날 부분 비사업용 토지 + 비사업용 토지: 입력 순서와 무관하게 유리한 순서", () => {
-  // 2023-03-20 양도. L: 13억 / 3억 · 취득 2022-03-20 · 면적 80% 비사업용(파트가 단기 세율군).
-  // n: 비사업용 토지 12억 / 3억 · 취득 2017-02-20. 종전에는 기본공제가 먼저 입력된 자산으로 가 [L,n] 918,192,000 ↔ [n,L] 918,126,000.
-  const T = "2023-03-20";
-  const L = () => item("L", T, { transferPrice: 1_300_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2022-03-20"), isNonBusinessLand: true, nonBusinessLandAreaRatio: 0.8 } as Partial<TransferTaxItemInput>);
-  const n = () => item("n", T, { transferPrice: 1_200_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2017-02-20"), isNonBusinessLand: true });
+describe("A-1 — 같은 날 사업용 토지 + 단기 토지: 입력 순서와 무관하게 유리한 순서", () => {
+  // 2026-06-01 양도. A: 3.5억 / 3억 · 2015 → 장특 22% · 소득 39,000,000 · 1호.
+  // Z: 3.5억 / 3억 · 2025-01-10 → 소득 50,000,000 · 1~2년 40%. id는 A가 앞이라 propertyId 순이면 A로 간다.
+  //   A에 공제: prog(36,500,000) 4,215,000 + 20,000,000 = 24,215,000 × 1.1 = 26,636,500
+  //   Z에 공제: prog(39,000,000) 4,590,000 + 19,000,000 = 23,590,000 × 1.1 = 25,949,000
+  const T = "2026-06-01";
+  const A = () => item("A", T, { transferPrice: 350_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2015-01-01") });
+  const Z = () => item("Z", T, { transferPrice: 350_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2025-01-10") });
 
-  it("두 순서의 후보(FIRST) 중 총 부담이 작은 쪽 — n에 공제 · 총 918,126,000", () => {
-    const lFirst = run([L(), n()], "FIRST").totalTax;
-    const nFirst = run([n(), L()], "FIRST").totalTax;
-    expect([lFirst, nFirst]).toEqual([918_192_000, 918_126_000]);
-    for (const r of [run([L(), n()]), run([n(), L()])]) {
-      expect(r.totalTax).toBe(Math.min(lFirst, nFirst));
-      expect(allocOf(r)).toEqual({ L: 0, n: 2_500_000 });
+  it("두 순서의 후보(FIRST) 중 총 부담이 작은 쪽 — Z에 공제 · 총 25,949,000", () => {
+    const aFirst = run([A(), Z()], "FIRST").totalTax;
+    const zFirst = run([Z(), A()], "FIRST").totalTax;
+    expect([aFirst, zFirst]).toEqual([26_636_500, 25_949_000]);
+    for (const r of [run([A(), Z()]), run([Z(), A()])]) {
+      expect(r.totalTax).toBe(25_949_000);
+      expect(allocOf(r)).toEqual({ A: 0, Z: 2_500_000 });
     }
   });
 });
@@ -103,21 +105,19 @@ describe("A-2 — 세액이 같으면 propertyId 순으로 정해 세율군 카�
   });
 });
 
-describe("A-3 — 종전 대리 지표(단독 적용세율)가 불리한 쪽을 고르던 사례", () => {
+describe("A-3 — 부분 비사업용 + 비사업용: 파트 안 기본공제가 세율 높은 파트로 가면 두 후보의 세액이 같다", () => {
   // 2026-06-01 양도. P: 13억 / 3억 · 2015 · 면적 50% 비사업용. N: 비사업용 토지 5억 / 3억 · 2017-02-20.
-  // 종전에는 단독 적용세율이 높은 P에 공제해 총 419,155,000 — N에 주면 418,990,000.
+  // P의 비사업용 파트와 N은 8호 한 버킷이라 어느 쪽에서 공제해도 8호 과세표준에서 빠진다.
+  // 종전에는 P에 주면 파트 비율로 나뉘어 1호 파트까지 줄어 419,155,000 · N에 주면 418,990,000이었다.
   const T = "2026-06-01";
   const P = () => item("P", T, { transferPrice: 1_300_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2015-01-01"), isNonBusinessLand: true, nonBusinessLandAreaRatio: 0.5 } as Partial<TransferTaxItemInput>);
   const N = () => item("N", T, { transferPrice: 500_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2017-02-20"), isNonBusinessLand: true });
 
-  it("후보 419,155,000(P) · 418,990,000(N) 중 N — 양 순서 동일", () => {
-    const pFirst = run([P(), N()], "FIRST").totalTax;
-    const nFirst = run([N(), P()], "FIRST").totalTax;
-    expect([pFirst, nFirst]).toEqual([419_155_000, 418_990_000]);
-    for (const r of [run([P(), N()]), run([N(), P()])]) {
-      expect(r.totalTax).toBe(418_990_000);
-      expect(allocOf(r)).toEqual({ P: 0, N: 2_500_000 });
-    }
+  it("후보 모두 418,990,000 — 양 순서 동일", () => {
+    expect([run([P(), N()], "FIRST").totalTax, run([N(), P()], "FIRST").totalTax]).toEqual([418_990_000, 418_990_000]);
+    expect(run([P(), N()]).totalTax).toBe(418_990_000);
+    expect(run([N(), P()]).totalTax).toBe(418_990_000);
+    expect(allocOf(run([P(), N()]))).toEqual(allocOf(run([N(), P()])));
   });
 });
 
@@ -175,17 +175,17 @@ describe("A-4b — 감면율이 낮은 쪽이 한계세율도 낮아도 감면�
 });
 
 describe("A-5 — 양도일이 다르면 유리 판정 없이 먼저 양도한 자산부터(§103② 명문)", () => {
-  // A-1의 L을 하루 먼저 양도 — n에 주는 쪽이 유리해도 L이 먼저다.
-  const L = () => item("L", "2023-03-19", { transferPrice: 1_300_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2022-03-20"), isNonBusinessLand: true, nonBusinessLandAreaRatio: 0.8 } as Partial<TransferTaxItemInput>);
-  const n = () => item("n", "2023-03-20", { transferPrice: 1_200_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2017-02-20"), isNonBusinessLand: true });
+  // A-1의 A를 먼저 양도 — Z에 주는 쪽이 유리해도 A가 먼저다.
+  const A = () => item("A", "2026-03-01", { transferPrice: 350_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2015-01-01") });
+  const Z = () => item("Z", "2026-06-01", { transferPrice: 350_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2025-01-10") });
 
-  it("양 순서 모두 L에 공제 — n에 주는 후보보다 총 부담이 커도 그렇다", () => {
-    const lFirst = run([L(), n()], "FIRST").totalTax;
-    const nFirst = run([n(), L()], "FIRST").totalTax;
-    expect(lFirst).toBeGreaterThan(nFirst);
-    for (const r of [run([L(), n()]), run([n(), L()])]) {
-      expect(allocOf(r)).toEqual({ L: 2_500_000, n: 0 });
-      expect(r.totalTax).toBe(lFirst);
+  it("양 순서 모두 A에 공제 — Z에 주는 후보보다 총 부담이 커도 그렇다", () => {
+    const aFirst = run([A(), Z()], "FIRST").totalTax;
+    const zFirst = run([Z(), A()], "FIRST").totalTax;
+    expect(aFirst).toBeGreaterThan(zFirst);
+    for (const r of [run([A(), Z()]), run([Z(), A()])]) {
+      expect(allocOf(r)).toEqual({ A: 2_500_000, Z: 0 });
+      expect(r.totalTax).toBe(aFirst);
     }
   });
 });
@@ -212,10 +212,10 @@ describe("D-5 — 계산 과정 「기본공제」 단계에 같은 날 처리 �
   const E77 = { type: "public_expropriation", cashCompensation: 500_000_000, bondCompensation: 0, businessApprovalDate: D("2018-01-01") };
 
   it("같은 날 비감면 자산 2건 — 유리한 순서 문구", () => {
-    const T = "2023-03-20";
+    const T = "2026-06-01";
     const r = run([
-      item("L", T, { transferPrice: 1_300_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2022-03-20"), isNonBusinessLand: true, nonBusinessLandAreaRatio: 0.8 } as Partial<TransferTaxItemInput>),
-      item("n", T, { transferPrice: 1_200_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2017-02-20"), isNonBusinessLand: true }),
+      item("A", T, { transferPrice: 350_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2015-01-01") }),
+      item("Z", T, { transferPrice: 350_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2025-01-10") }),
     ]);
     expect(stepOf(r)).toContain(FAVORABLE);
     expect(stepOf(r)).not.toContain(LOWER_RATE);
@@ -253,8 +253,8 @@ describe("D-5 — 계산 과정 「기본공제」 단계에 같은 날 처리 �
 
   it("양도일이 다르면 두 문구 모두 없다 — 종전 문구 그대로", () => {
     const r = run([
-      item("L", "2023-03-19", { transferPrice: 1_300_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2022-03-20"), isNonBusinessLand: true, nonBusinessLandAreaRatio: 0.8 } as Partial<TransferTaxItemInput>),
-      item("n", "2023-03-20", { transferPrice: 1_200_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2017-02-20"), isNonBusinessLand: true }),
+      item("A", "2026-03-01", { transferPrice: 350_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2015-01-01") }),
+      item("Z", "2026-06-01", { transferPrice: 350_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2025-01-10") }),
     ]);
     expect(stepOf(r)).toBe("연 한도 2,500,000 - 기사용 0 = 2,500,000 (감면 외 소득 → 양도일이 빠른 자산 (소득세법 §103②) 배분)");
   });
