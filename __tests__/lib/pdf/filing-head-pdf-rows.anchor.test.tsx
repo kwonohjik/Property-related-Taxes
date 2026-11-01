@@ -57,6 +57,7 @@ const LAND = (o: A = {}): A => ({
 
 import { buildFilingHeadPdfRows, buildSingleFilingHeadPdfRows } from "@/components/calc/results/transfer/filing-head-pdf-rows";
 import { TransferSection } from "@/lib/pdf/ResultPdfTransferSections";
+import { ResultPdfDocument } from "@/lib/pdf/ResultPdfDocument";
 import { s as pdfStyles } from "@/lib/pdf/ResultPdfPrimitives";
 import { BESSHI_FONT_STACK } from "@/lib/pdf/fonts";
 const GB = (o: A = {}): A => ({
@@ -149,6 +150,10 @@ describe("결과 PDF 신고서 머리 행 — 화면 신고서 표와 같은 값
     expect(rows).toEqual(buildFilingHeadPdfRows({ result: r, formData: f, asset: f.assets[0], redevSubject: "right", redevSettlementDirection: "pay" }));
     expect(rows).not.toEqual(buildFilingHeadPdfRows({ result: r, formData: f, asset: f.assets[0] }));
     expect(rows.find((x) => x.label.startsWith("취득일자"))?.note).toContain("실제 취득일 1984-06-01");
+    // 구분 칸이 비면 자산 종류로 정한다 — 입주권은 "right"
+    const blank = { ...f.assets[0], redevSubject: "", redevSettlementDirection: "" } as AssetForm;
+    expect(buildSingleFilingHeadPdfRows({ result: r, formData: f, asset: blank })).toEqual(buildFilingHeadPdfRows({ result: r, formData: f, asset: blank, redevSubject: "right", redevSettlementDirection: "pay" }));
+    expect(buildSingleFilingHeadPdfRows({ result: r, formData: f, asset: blank })).not.toEqual(buildFilingHeadPdfRows({ result: r, formData: f, asset: blank, redevSubject: "apt", redevSettlementDirection: "pay" }));
   });
 
   it("TransferSection — 머리 행과 주석을 그린다 · 없으면 종전 그대로", () => {
@@ -161,6 +166,18 @@ describe("결과 PDF 신고서 머리 행 — 화면 신고서 표와 같은 값
     const off = textOf(TransferSection({ r }));
     expect(off).not.toContain("취득일자");
     expect(off).toContain("전체 양도차익");
+  });
+  it("ResultPdfDocument — inputData.filingHeadRows가 양도세 섹션까지 닿는다", () => {
+    const props = { taxType: "transfer", taxTypeLabel: "양도소득세", createdAt: "x", resultData: { transferGain: 100, determinedTax: 1 }, inputData: { filingHeadRows: [{ label: "취득일자", value: "1985-01-01" }] } };
+    const walk = (n: unknown): string => {
+      if (n == null || typeof n === "boolean") return "";
+      if (typeof n === "string" || typeof n === "number") return String(n);
+      if (Array.isArray(n)) return n.map(walk).join(" ");
+      const el = n as { type?: unknown; props?: { children?: unknown } };
+      if (typeof el.type === "function") { try { return walk((el.type as (p: unknown) => unknown)(el.props)); } catch { return ""; } }
+      return walk(el.props?.children);
+    };
+    expect(walk(ResultPdfDocument(props as never))).toContain("1985-01-01");
   });
   it("글꼴 — NanumGothic에 없는 원문자·㎡ 대체 글꼴을 페이지 기본으로 쓴다", () => {
     expect(pdfStyles.page.fontFamily).toEqual([...BESSHI_FONT_STACK]);
