@@ -8,7 +8,7 @@
  *  - 헤더 요약은 **라벨 전용, 금액 미포함**(dual-truth 회피 — 금액 합계는 사이드바 computeTransferSummary)
  *  - 8 assetKind × (지분/부담부/환산/특수자산/일괄안분) 분기에서 라벨이 깨지지 않음
  *  - ④ filled 는 자산-수준 금액(>0) 또는 폼-전역 일괄 양도비 활성으로 판정 (자산 transferExpense 기본 "0")
- *  - ⑤ extras 는 land+NBL정밀 / housing·입주권에서만 non-null
+ *  - ⑤ extras 는 land+NBL정밀 / housing·완공APT·입주권에서만 non-null
  */
 import { describe, it, expect } from "vitest";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
@@ -102,6 +102,11 @@ describe("summarizeAssetSections — 헤더 라벨 요약 (금액 없음)", () =
       {},
     );
     expect(s.extras).toEqual({ label: "비사업용 토지", filled: true });
+  });
+
+  it("재개발·재건축 완공APT → ⑤ 장기임대 거주주택 특례 노출 (거주 문항·거주기간 칸이 여기 있다)", () => {
+    expect(summarizeAssetSections(asset({ assetKind: "redevelopment_apt" }), {}).extras).toEqual({ label: "장기임대 거주주택 특례", filled: false });
+    expect(summarizeAssetSections(asset({ assetKind: "redevelopment_apt", redevReceiveOnlyMode: "yes" }), {}).extras).toBeNull();
   });
 
   it("토지라도 비사업용이 아니면 ⑤ 카드가 없다 · 비사업용 플래그가 남은 주택도 없다", () => {
