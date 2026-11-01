@@ -9,6 +9,7 @@ import { parseDecimal } from "@/lib/calc/number-parse";
 import { calcReductionAcquisitionStdPrice, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
+import { hasRentIncreaseRule } from "./rental-rent-increase-label";
 
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
 /**
@@ -205,9 +206,10 @@ export function toEngineReductions(
         rentalStartDate: r.rentalStartDate || undefined,
         isTaxRegistered: r.isTaxRegistered,
         // 간소화 모드: "none" → false / "has_violation" → true. 미선택("")은 validate(⑧)에서 차단.
-        rentIncreaseViolated: r.rentIncreaseViolationMode === "has_violation",
+        // §97(본문·단서)·§97의2는 임대료 증액 요건이 없어 싣지 않는다 (`hasRentIncreaseRule`) — 구 세션에 남은 값도 무시.
+        rentIncreaseViolated: hasRentIncreaseRule(r.type) ? r.rentIncreaseViolationMode === "has_violation" : undefined,
         rentHistory:
-          r.rentIncreaseViolationMode === "has_violation" && r.rentHistory && r.rentHistory.length >= 2
+          hasRentIncreaseRule(r.type) && r.rentIncreaseViolationMode === "has_violation" && r.rentHistory && r.rentHistory.length >= 2
             ? r.rentHistory.map((h) => ({
                 contractDate: h.contractDate,
                 contractType: h.contractType,

@@ -17,8 +17,8 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { hasRentIntervalRule } from "@/lib/calc/rental-rent-increase-label";
-import { rentIncreaseViolationLabel } from "@/lib/calc/rental-rent-increase-label";
+import { hasRentIncreaseRule } from "@/lib/calc/rental-rent-increase-label";
+import { RENT_INCREASE_VIOLATION_LABEL } from "@/lib/calc/rental-rent-increase-label";
 import { rentIncreaseSectionTitle } from "@/lib/calc/rental-rent-increase-label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type {
@@ -134,27 +134,29 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
    *    원문자를 넘기는데 이 컴포넌트만 raw 숫자를 넘겼다. 표기를 호출부와 통일한다.
    */
   const circled = (n: number) => CIRCLED_SECTION_NUM[n - 1] ?? String(n);
+  /** §97(본문·단서)·§97의2는 임대료 증액 요건이 없어 그 섹션을 그리지 않고, 뒤 섹션 번호를 당긴다 (`hasRentIncreaseRule`) */
+  const showRentSection = hasRentIncreaseRule(fieldType);
+  const rentSlots = showRentSection ? 1 : 0;
   const sec3 = circled(sectionOffset);
-  const sec4 = circled(sectionOffset + 1);
+  const sec4 = circled(sectionOffset + rentSlots);
   // 🔴 종전 `sec4 + 1`은 이미 원문자 **문자열**이라 덧셈이 연결이 되어 「④1」로 떴다(S16-9). 번호 계산은 숫자로 한다.
-  const sec5 = circled(sectionOffset + 2);
+  const sec5 = circled(sectionOffset + rentSlots + 1);
 
   return (
     <>
-      {/* ③ 임대료 증액 제한 */}
+      {/* ③ 임대료 증액 제한 — §97의3·§97의4·§97의5만 */}
+      {showRentSection && (
       <ToneCard tone="violet" sectionNum={sec3} title={rentIncreaseSectionTitle(fieldType)} bodyClassName="space-y-2">
         <div>
-          <p className="text-xs text-muted-foreground mb-1.5">{rentIncreaseViolationLabel(fieldType)}</p>
+          <p className="text-xs text-muted-foreground mb-1.5">{RENT_INCREASE_VIOLATION_LABEL}</p>
           {/* §97의3·§97의5 — 조특령 §97의3③1호 후단, §97의4 — 소령 §167의3①2호 가·다목 괄호.
               1년 이내 재증액 금지도 엔진이 계약 이력으로 판정한다 */}
-          {hasRentIntervalRule(fieldType) && (
             <p className="mb-1.5 text-micro text-muted-foreground">
               {fieldType === "rental_97_4"
                 ? "소득세법 시행령 §167의3①2호 — 5% 한도는 2019.2.12 이후 체결·갱신한 계약을 기준으로 다음 계약의 증가율을 판정하고, 1년 이내 재증액 금지는 2020.2.11 이후 체결·갱신한 계약을 기준으로 그 다음 증액부터 판정합니다. 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다."
                 : "조특령 §97의3③1호 — 임대사업자 등록일·세무서 사업자등록일·실제 임대개시일 중 가장 늦은 날 이후 체결·갱신한 계약부터 판정합니다. 1년 이내 재증액 금지는 직전 계약이 2020.2.11 이후인 경우부터 적용합니다. 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다."}
               {" "}이 경우 「있음」을 고르고 계약 이력을 입력하세요.
             </p>
-          )}
           <RadioCardGroup
             data-field={`reduction.${fieldType}.rentIncreaseViolationMode`}
             name={`rentIncreaseViolationMode-${uid}`}
@@ -249,6 +251,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
           </div>
         )}
       </ToneCard>
+      )}
 
       {/* ④ 공실 기간 */}
       <ToneCard tone="sky" sectionNum={sec4} title="공실 기간" bodyClassName="space-y-2">

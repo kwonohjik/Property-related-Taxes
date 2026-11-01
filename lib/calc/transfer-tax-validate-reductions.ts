@@ -25,7 +25,8 @@ import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { engineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
-import { rentIncreaseViolationLabel } from "./rental-rent-increase-label";
+import { hasRentIncreaseRule } from "./rental-rent-increase-label";
+import { RENT_INCREASE_VIOLATION_LABEL } from "./rental-rent-increase-label";
 
 /**
  * 「PHD 환산 모드」 메시지가 가리킬 입력칸 — 메시지는 5칸을 한꺼번에 묻지만(`canCalcReductionPhd`)
@@ -329,12 +330,14 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if ((r.type === "rental_97_5" || r.type === "rental_97_3") && r.isTaxRegistered && !r.taxRegistrationDate)
             return fail(fieldError(`reduction.${r.type}.taxRegistrationDate`, `${label} 적용: 세무서 사업자등록일을 입력하세요 (조특령 ${r.type === "rental_97_5" ? "§97의5③" : "§97의3④"} — 늦으면 그날부터 임대 개시).`));
           // 3-state: "" = 미선택 → 차단 (간소화 모드 명시 선택 강제)
-          if (r.rentIncreaseViolationMode === "")
-            return fail(fieldError(`reduction.${r.type}.rentIncreaseViolationMode`, `${label} 적용: ${rentIncreaseViolationLabel(r.type)} 여부(없음/있음)를 선택하세요.`));
-          if (r.rentIncreaseViolationMode === "has_violation" && (!r.rentHistory || r.rentHistory.length < 2))
+          // 임대료 증액 제한은 §97의3·§97의4·§97의5만 — §97(본문·단서)·§97의2는 묻지도 막지도 않는다 (`hasRentIncreaseRule`)
+          const rentRule = hasRentIncreaseRule(r.type);
+          if (rentRule && r.rentIncreaseViolationMode === "")
+            return fail(fieldError(`reduction.${r.type}.rentIncreaseViolationMode`, `${label} 적용: ${RENT_INCREASE_VIOLATION_LABEL} 여부(없음/있음)를 선택하세요.`));
+          if (rentRule && r.rentIncreaseViolationMode === "has_violation" && (!r.rentHistory || r.rentHistory.length < 2))
             return fail(fieldError(`reduction.${r.type}.rentHistory`, `${label} 적용: 위반 이력 "있음" 선택 시 계약별 임대료 이력을 2건 이상 입력하세요.`));
           // 빈 계약일 — 공실 구간과 같은 이유(아래). 개수만 보면 ⑧을 통과한 뒤 Zod가 영문 경로로 400을 냈다(리뷰 게이트 2026-11-01).
-          if (r.rentIncreaseViolationMode === "has_violation" && r.rentHistory?.some((h) => !h.contractDate))
+          if (rentRule && r.rentIncreaseViolationMode === "has_violation" && r.rentHistory?.some((h) => !h.contractDate))
             return fail(fieldError(`reduction.${r.type}.rentHistory`, `${label} 적용: 임대료 계약 이력의 계약일을 모두 입력하세요. 해당 없으면 행을 삭제하세요.`));
           if (r.hasVacancyOverGrace === null) {
             // D1-03 — 유예는 조문마다 다르다: §97의5만 6개월(조특령 §97의5①1호),

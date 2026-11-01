@@ -177,16 +177,18 @@ const UNSOLD_99_2 = table("unsold_99_2", hybrid("unsold_99_2"), u992Ok, {}, [
 
 // ── 장기임대 §97 시리즈 ─────────────────────────────────────────────────────
 /** 공통(임대료 증액 · 공실) 케이스 — 폼 5개가 `RentalCommonFields`를 공유하므로 조문마다 한 번씩 배선을 본다 */
-const commonRows = (label: string, grace: string, intervalRule = false): Row[] => [
-  {
-    name: "임대료 증액 위반 여부",
-    prop: "rentIncreaseViolationMode",
-    // §97의3·§97의4·§97의5 — 1년 이내 재증액 금지도 같은 선택에 들어간다 (`lib/calc/rental-rent-increase-label.ts`)
-    message: new RegExp(
-      `^${label} 적용: ${intervalRule ? "임대료 증액 위반 이력\\(5% 초과 또는 1년 이내 재증액\\)" : "임대료 5% 증액 위반 이력"} 여부`,
-    ),
-    patch: { rentIncreaseViolationMode: "" },
-  },
+const commonRows = (label: string, grace: string, rentRule = false): Row[] => [
+  // 임대료 증액 제한은 §97의3·§97의4·§97의5만 묻는다 (`lib/calc/rental-rent-increase-label.ts` `hasRentIncreaseRule`)
+  ...(rentRule
+    ? [
+        {
+          name: "임대료 증액 위반 여부",
+          prop: "rentIncreaseViolationMode",
+          message: new RegExp(`^${label} 적용: 임대료 증액 위반 이력\\(5% 초과 또는 1년 이내 재증액\\) 여부`),
+          patch: { rentIncreaseViolationMode: "" },
+        },
+      ]
+    : []),
   { name: "공실 여부", prop: "hasVacancyOverGrace", message: new RegExp(`^${label} 적용: ${grace}을 초과하는 공실 여부`), patch: { hasVacancyOverGrace: null } },
 ];
 /** 증액 위반 이력·공실 구간 — 한 조문에서 목록형 칸 배선을 본다 */
@@ -267,7 +269,6 @@ const rProvisoOk = { provisoCase: "a_construction", rentalStartDate: "2000-01-01
 const RENTAL_97_PROVISO = table("rental_97_proviso", hybrid("rental_97_proviso"), rProvisoOk, {}, [
   { name: "단서 유형", prop: "provisoCase", message: /^§97 단서 적용: 단서 유형/, patch: { provisoCase: "" } },
   { name: "취득 당시 입주 사실(나목)", prop: "isUnoccupiedAtAcquisition", message: /^§97 단서 적용: 취득 당시 입주 사실 여부를 선택하세요 \(조특법 §97① 단서 나목\)/, patch: { provisoCase: "b_purchase", isUnoccupiedAtAcquisition: null } },
-  { name: "임대료 증액 위반 여부", prop: "rentIncreaseViolationMode", message: /^§97 단서 적용: 임대료 5% 증액 위반 이력 여부/, patch: { rentIncreaseViolationMode: "" } },
 ]);
 
 const r972Ok = { rentalStartDate: "2005-06-01", registrationDate: "2005-06-01", rental972Type: "construction", hasNewRentalPlus2Units: true, rentIncreaseViolationMode: "none", hasVacancyOverGrace: false, isUnoccupiedAtAcquisition: true };
