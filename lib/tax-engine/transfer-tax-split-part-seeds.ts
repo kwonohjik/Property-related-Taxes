@@ -9,7 +9,7 @@
  * 계획서 `docs/02-design/features/transfer-104-5-split-nonhouse-followups.plan.md` §3 ·
  * `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §4.
  */
-import { applyRate } from "./tax-utils";
+import { applyFairMarketRatio } from "./tax-utils";
 import { calcTax } from "./transfer-tax-rate-calc";
 import { offsetLossesCore } from "./loss-offset-core";
 import { lossOffsetRateKey } from "./loss-offset-rate-key";
@@ -176,7 +176,7 @@ export const partialNblRateInputs = (input: TransferTaxInput): { nbl: TransferTa
 
 /** 자산 양도소득금액 중 비사토 파트 몫(면적 비율). 차손이면 음수다 — 절사 방향은 양수와 같게 절댓값으로. */
 export const partialNblIncome = (income: number, ratio: number): number =>
-  income >= 0 ? applyRate(income, ratio) : -applyRate(-income, ratio);
+  income >= 0 ? applyFairMarketRatio(income, ratio) : -applyFairMarketRatio(-income, ratio);
 
 /**
  * 파트 차손 통산(「소득세법 시행령」 §167의2①) — 다건과 같은 코어(`offsetLossesCore`)·같은 「같은 세율」 키(`lossOffsetRateKey`)를 쓴다.

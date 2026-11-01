@@ -33,7 +33,7 @@
  * 12억 안분 대상에서 그 토지분을 빼는 방식으로 처리한다
  * (`transfer-tax-mixed-use-helpers.ts` `buildHousingPart` ①→②).
  */
-import { applyRate, applyFairMarketRatio, calculateProgressiveTax, safeMultiplyThenDivide } from "./tax-utils";
+import { calculateProgressiveTax } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { calcTax, computeBracketBreakdown, clauseBucketKey } from "./transfer-tax-rate-calc";
@@ -41,7 +41,7 @@ import type { RateClause } from "./transfer-tax-rate-calc";
 import { provisoMergeId } from "./transfer-tax-rate-clause";
 import { resolveLandStatutoryAcquisitionDate } from "./transfer-tax-appurtenant-land";
 import { buildNblPartRateInput } from "./transfer-tax-appurtenant-land";
-import { hasPartialNonBusinessLand, keepsNonHousingParts, partialNblRateInputs, prepareSplitParts } from "./transfer-tax-split-part-seeds";
+import { hasPartialNonBusinessLand, keepsNonHousingParts, partialNblIncome, partialNblRateInputs, prepareSplitParts } from "./transfer-tax-split-part-seeds";
 
 export { hasPartialNonBusinessLand };
 import { resolveClause5TaxDetailed, rentalLaterLandPartDetail } from "./transfer-tax-rental-housing-nbl-split";
@@ -410,26 +410,31 @@ function computePartialNblTax(
   const ratio = input.nonBusinessLandAreaRatio!;
   if (ctx.taxBase <= 0) return null;
 
-  // 안분 기준은 **면적비율**로 종전(`calcTax` T-2)과 동일하게 둔다. split이 쓰는
-  // 「기본공제를 최고세율 파트에 전액 귀속」으로 바꾸는 것은 P8 범위 밖이다(Surgical).
-  // 정수 분수연산 — `applyRate`(double 곱)는 ratio 0.7 등에서 1~2원 과소 안분한다 (E6-02).
-  // `applyFairMarketRatio`는 비율을 정수 분자(×10000)로 바꿔 곱하므로 같은 계열의 드리프트가 없다
-  // (`transfer-tax-lthd.ts`가 같은 이유로 이미 이 헬퍼를 쓴다 — 「세법은 floor」 원칙 유지).
-  // 다건에서 파트 단위로 통산했으면(`partIncomeWeights`) 통산 후 파트 소득으로 나눈다 — 면적 비율로 되돌리면 통산 결과가 사라진다.
-  // 그때는 한 파트가 0이어도 파트로 남긴다(호별 합산 단위).
+  // 파트 소득은 면적비율로 나눈다 — 다건에서 파트 단위로 통산했으면(`partIncomeWeights`) 통산 후 파트 소득이다.
+  // 기본공제는 split과 같은 규칙으로 세율 높은 파트부터 준다.
+  // 그 기준으로 나눈 값이 분리 신고와 같다(계획서 `transfer-partial-nbl-loss-offset.investigation.plan.md` §6).
   const w = ctx.partIncomeWeights?.length === 2 ? ctx.partIncomeWeights : undefined;
-  const wSum = w ? w[0] + w[1] : 0;
-  const nblBase = w && wSum > 0
-    ? safeMultiplyThenDivide(ctx.taxBase, w[0], wSum)
-    : applyFairMarketRatio(ctx.taxBase, ratio);
+  const { nbl: nblRateInput, other: otherRateInput } = partialNblRateInputs(input);
+  const nblIncome = w ? w[0] : partialNblIncome(ctx.transferIncome, ratio);
+  const otherIncome = ctx.transferIncome - nblIncome;
+  if (!w && (nblIncome <= 0 || otherIncome <= 0)) return null;
+  const rateOf = (income: number, rateInput: TransferTaxInput) =>
+    calcTax(Math.max(0, income), ctx.parsedRates, rateInput, ctx.multiHouseSurchargeResult).appliedRate;
+  const allocation = allocateBasicDeductionAcrossParts(
+    [
+      { idx: 0, income: nblIncome, rate: rateOf(nblIncome, nblRateInput) },
+      { idx: 1, income: otherIncome, rate: rateOf(otherIncome, otherRateInput) },
+    ],
+    ctx.basicDeduction,
+  );
+  const nblBasic = allocation.find((a) => a.idx === 0)?.amount ?? 0;
+  const nblBase = nblIncome - nblBasic;
   const otherBase = ctx.taxBase - nblBase;
-  if (!w && (nblBase <= 0 || otherBase <= 0)) return null;
 
   // 2호 — 각 파트를 `calcTax`에 그대로 위임한다.
   //   비사토 파트: `ratio`를 1로 되돌려 자기 과세표준 **전량**에 §104①8호(+ §104① 후단) 적용
   //   그 외 파트 : 비사업용이 아니므로 §104①1호(2년 미만이면 2·3호)
   // 파트별 세율 판정 입력 — 아래 파트 상세가 **같은 객체**를 실어 보낸다(재구성 금지).
-  const { nbl: nblRateInput, other: otherRateInput } = partialNblRateInputs(input);
   const nblPart = calcTax(nblBase, ctx.parsedRates, nblRateInput, ctx.multiHouseSurchargeResult);
   const otherPart = calcTax(otherBase, ctx.parsedRates, otherRateInput, ctx.multiHouseSurchargeResult);
   const clause2 = nblPart.calculatedTax + otherPart.calculatedTax;
@@ -441,17 +446,6 @@ function computePartialNblTax(
   // 파트를 내보내, 다건 `aggregateByGroup`이 §104⑤2호 본문의 **호별 합산** 단위를 잡을 수
   // 있게 한다(예규 「"자산별" = 각 호별로 합산한 자산」 — §1.6-A). 2단계에서 소비한다.
   //
-  // 소득금액·기본공제 배분은 자산 단위에서 이미 끝났으므로, 과세표준과 **같은 면적비율**로
-  // 되돌려 표시값을 만든다. 마지막 파트가 잔액을 흡수해
-  // `Σ 파트 = 자산 값` 불변식을 지킨다(memory `feedback_floor_residual_absorption`).
-  //
-  // 배분액을 clamp하지 않는다 — 음수가 될 수 없기 때문이다(엔진이 조용히 0으로 깎으면
-  // 오답이 눈에 띄지 않는다는 것이 이 파일 전반의 규약이다):
-  //   `transferIncome ≥ taxBase`이고 `applyRate`는 floor라 `nblIncome ≥ nblBase`,
-  //   `floor(ti·r) − floor(tb·r) ≤ ⌈(ti−tb)·r⌉ ≤ ti − tb`(r ≤ 1)라 그 외 파트도 음수가 안 된다.
-  //   ⇒ `Σ allocatedBasicDeduction = basicDeduction`이 성립한다(anchor A-3c가 고정).
-  const nblIncome = w ? w[0] : applyRate(ctx.transferIncome, ratio);
-  const otherIncome = ctx.transferIncome - nblIncome;
   const splitPartDetail: SplitPartRateResult = {
     parts: [
       {

@@ -10,8 +10,9 @@
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
-import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggregate.types";
+import { buildCrossLossRows, computeCrossLossOffset } from "@/lib/calc/cross-102-2-loss-offset";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 
 const rates = makeMockRates();
@@ -97,5 +98,53 @@ describe("부분 비사업용 토지가 받는 차손 — 같은 세율 파트�
       expect.objectContaining({ fromPart: "non_business_land", amount: 50_000_000, scope: "other_group" }),
     ]);
     expect(r.totalTax).toBe(aggUsed([...sepLoss(), ["Z", gain()]]).totalTax);
+  });
+});
+
+describe("파트 안 기본공제 — 세율 높은 파트부터, 다건은 §103② 배분 행으로", () => {
+  const part = (ratio: number) => base({ transferPrice: 900_000_000, acquisitionPrice: 270_000_000, isNonBusinessLand: true, nonBusinessLandAreaRatio: ratio });
+
+  it("단건 = 다건(자산 1건) = 분리 신고 — 비율 50%", () => {
+    // 파트 소득 각 245,700,000. 8호 243,200,000 → 0.38 × − 19,940,000 + 24,320,000 = 96,796,000
+    // 1호 245,700,000 → 0.38 × − 19,940,000 = 73,426,000 · 합 170,222,000 + 지방소득세 17,022,200 = 187,244,200
+    const single = calculateTransferTax(part(0.5), rates);
+    expect(single.calculatedTax).toBe(170_222_000);
+    expect(single.totalTax).toBe(187_244_200);
+    expect(agg([["A", part(0.5)]]).totalTax).toBe(187_244_200);
+    const separated = agg([
+      ["A1", base({ transferPrice: 450_000_000, acquisitionPrice: 135_000_000 })],
+      ["A2", base({ transferPrice: 450_000_000, acquisitionPrice: 135_000_000, isNonBusinessLand: true })],
+    ]);
+    expect(separated.totalTax).toBe(187_244_200);
+  });
+
+  it("차손 + 3건 — 입력 순서와 무관, 분리 신고와 같다", () => {
+    const gain = () => base({ transferPrice: 800_000_000, acquisitionPrice: 300_000_000 });
+    const a = agg([["A", part50()], ["G", gain()], ["Z", landLoss3()]]);
+    const b = agg([["Z", landLoss3()], ["G", gain()], ["A", part50()]]);
+    expect(a.totalTax).toBe(b.totalTax);
+    expect(a.totalTax).toBe(agg([...sep50(), ["G", gain()], ["Z", landLoss3()]]).totalTax);
+  });
+
+  it("현금·채권 혼합이면 파트로 펼치지 않는다 — 합산 + 안내", () => {
+    const mix = [{ type: "public_expropriation", cashCompensation: 450_000_000, bondCompensation: 450_000_000, businessApprovalDate: D("2018-01-01") }];
+    const r = agg([["A", base({ transferPrice: 900_000_000, acquisitionPrice: 270_000_000, isNonBusinessLand: true, nonBusinessLandAreaRatio: 0.5, reductions: mix })], ["B", base({ transferPrice: 500_000_000, acquisitionPrice: 300_000_000, isUnregistered: true })]]);
+    expect(r.warnings.some((w) => w.includes("서로 다른 세율의 호에 걸쳐"))).toBe(true);
+  });
+});
+
+describe("크로스 통산 — 부분 비사업용 자산은 파트 행으로 들어간다", () => {
+  const otherAsset = (income: number) =>
+    ({ basicDeductionGroup: "real_estate_and_other_asset", taxCategory: "other_asset_block_shareholder", isShortTermHolding: false, transferIncome: income, isExempt: false }) as unknown as Parameters<typeof buildCrossLossRows>[1];
+
+  it("파트 소득 546,000,000씩 2행 · 호가 갈리고 기타자산 차손 2억 흡수 합계는 200,000,000", () => {
+    const rows = buildCrossLossRows(aggUsed([["A", part50()]]), otherAsset(-200_000_000));
+    if (!rows.ok) throw new Error(rows.reason);
+    const own = rows.rows.filter((r) => r.source === "real_estate");
+    expect(own.map((r) => r.income)).toEqual([546_000_000, 546_000_000]);
+    expect(new Set(own.map((r) => r.rateKey)).size).toBe(2);
+    const out = computeCrossLossOffset(rows.rows);
+    expect(out.assets.find((a) => a.id === "A")?.absorbed).toBe(200_000_000);
+    expect(out.unusedLoss).toBe(0);
   });
 });
