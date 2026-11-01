@@ -12,7 +12,8 @@ import { BundledAllocationCard } from "@/components/calc/results/BundledAllocati
 import { MixedUseResultCard } from "@/components/calc/results/mixed-use/MixedUseResultCard";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
-import { collectStepIssues, collectStepWarnings, type ValidationIssue } from "@/lib/calc/transfer-tax-validate";
+import { collectStepWarnings, type ValidationIssue } from "@/lib/calc/transfer-tax-validate";
+import { collectWizardStepIssues, filingUnitCorrectionOf } from "@/lib/calc/filing-unit-correction";
 import { StepWarningBanner } from "@/components/calc/transfer/StepWarningBanner";
 import { ValidationIssuePanel } from "@/components/calc/transfer/ValidationIssuePanel";
 import { jumpToIssueField } from "@/components/calc/transfer/validation-jump";
@@ -53,6 +54,8 @@ export default function TransferTaxCalculator({
   const pathname = usePathname();
   // 다건 양도 편집 모드 내 임베딩 여부
   const isEmbeddedInMulti = pathname?.includes("/multi") ?? false;
+  // 다건 신고서 단위 수정신고·경정청구 — 상태가 자산 폼이 아니라 다건 폼에 있다
+  const filingUnitCorrection = useMultiTransferStore((s) => filingUnitCorrectionOf(isEmbeddedInMulti, s.form));
   // 단건/다건 모두 6단계 — 가산세는 자산별 입력
   const STEPS = STEPS_SINGLE;
   const { currentStep, formData, result, setStep, updateFormData, setResult, clearResult, reset } =
@@ -66,8 +69,8 @@ export default function TransferTaxCalculator({
   // seq는 패널 key — 새 실패마다 접힘 상태를 펼침으로 되돌린다.
   const [failed, setFailed] = useState<{ step: number; seq: number } | null>(null);
   const issues = useMemo(
-    () => (failed ? collectStepIssues(failed.step, formData) : []),
-    [failed, formData],
+    () => (failed ? collectWizardStepIssues(failed.step, formData, filingUnitCorrection) : []),
+    [failed, formData, filingUnitCorrection],
   );
   // 자산 카드 인라인 배너 — 오류가 있는 **모든** 자산 카드에 그 카드의 첫 오류(계획서 D-5).
   //   배너가 걸린 카드는 섹션이 전부 펼쳐져(`CompanionAssetCard` forceOpenAll) 입력칸으로 갈 수 있다.
@@ -235,7 +238,7 @@ export default function TransferTaxCalculator({
   }
 
   function handleNext() {
-    const list = collectStepIssues(currentStep, formData);
+    const list = collectWizardStepIssues(currentStep, formData, filingUnitCorrection);
     if (list.length > 0) { failWithIssues(currentStep, list); return; }
     clearError();
     setStep(currentStep + 1);
@@ -259,7 +262,7 @@ export default function TransferTaxCalculator({
   // 실패하면 첫 실패 step으로 옮겨 오류를 띄우고 false.
   function passesAllSteps(): boolean {
     for (let s = 0; s < totalSteps; s++) {
-      const list = collectStepIssues(s, formData);
+      const list = collectWizardStepIssues(s, formData, filingUnitCorrection);
       if (list.length > 0) {
         setStep(s); // 검증 실패 step으로 자동 이동 (사용자가 어디서 누락됐는지 즉시 인지)
         failWithIssues(s, list); // 오류 목록 + 자동 스크롤
@@ -355,11 +358,12 @@ export default function TransferTaxCalculator({
       assetErrors={currentStep === 0 ? assetErrors : undefined}
       onInvalidateResult={clearResult}
       embeddedInMulti={isEmbeddedInMulti}
+      filingUnitCorrection={filingUnitCorrection}
       getLatestAssets={() => useCalcWizardStore.getState().formData.assets}
     />,
     <Step4 key={1} form={formData} onChange={updateFormAndInvalidate} />,
     <Step5 key={2} form={formData} onChange={updateFormAndInvalidate} />,
-    <Step6 key={3} form={formData} onChange={updateFormAndInvalidate} determinedTax={calcDeterminedTax} />,
+    <Step6 key={3} form={formData} onChange={updateFormAndInvalidate} determinedTax={calcDeterminedTax} filingUnitCorrection={filingUnitCorrection} />,
   ];
   const stepComponents = stepComponentsAll;
 
@@ -369,7 +373,7 @@ export default function TransferTaxCalculator({
   const stepStatuses = useMemo<StepStatus[]>(
     () =>
       STEPS_SINGLE.map((_, i) => {
-        const hasError = collectStepIssues(i, formData).length > 0;
+        const hasError = collectWizardStepIssues(i, formData, filingUnitCorrection).length > 0;
         if (hasError) return i < currentStep ? "attention" : "neutral";
         return i <= currentStep ? "complete" : "neutral";
       }),
@@ -611,7 +615,7 @@ export default function TransferTaxCalculator({
 
           {/* 네비게이션 — 뒤로가기(항상) + 다음/계산 */}
           <div className="mt-6 space-y-2">
-            {isLastStep && formData.enablePenalty && (
+            {isLastStep && formData.enablePenalty && !filingUnitCorrection && (
               <div className="flex justify-end">
                 <CtaButton
                   tone="outline"
