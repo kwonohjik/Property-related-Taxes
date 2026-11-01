@@ -67,7 +67,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     isListedSmallShareholder: false,
     isVentureCompany: false,             // 3중 패턴 default
     isKOTCTrading: false,                // 3중 패턴 default
-    isOnMarketTransaction: true,         // 3중 패턴 default (§94①3 가목 1) 단서 — 기존 비과세 동작 보존)
+    isOnMarketTransaction: true,         // 3중 패턴 default (§94①3 가목 2) 반대해석 — 기존 비과세 동작 보존)
     lentSharesCount: "0", pefIndirectSharesCount: "0",
     judgmentDateOverride: "", judgmentBasis: "default",
 

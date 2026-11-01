@@ -35,7 +35,7 @@ type TaxableSumField = "transferIncome" | "taxBase" | "calculatedTax" | "basicDe
  *    것은 다르다. 결과뷰가 비과세 종목의 「가상 산출세액」을 보여주는 규약은 유지된다
  *    (anchor AG-EX-4 가 고정).
  *
- * 법령: 소득세법 §94①3호 가목 1) 단서(과세대상 제외) · §92②(산출세액은 과세표준에 세율 적용).
+ * 법령: 소득세법 §94①3호 가목 2) 반대해석(과세대상 제외) · §92②(산출세액은 과세표준에 세율 적용).
  *       비과세 자산은 과세표준·산출세액 어느 단계에도 산입되지 않는다.
  */
 export function taxableField(r: StockTransferResult, field: TaxableSumField): number {
