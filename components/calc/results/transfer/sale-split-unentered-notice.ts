@@ -19,6 +19,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
 import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
+import { shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
 
 const BASIS_LABEL: Record<ApportionBasisKind, string> = {
   appraisal: "양도시 감정평가가액",
@@ -41,6 +42,18 @@ export function saleSplitUnenteredNotice(actual: boolean | undefined, kind: Appo
 }
 
 /** `FilingFormTableAggregateHelpers`의 `findAssetByPropertyId`와 같은 규약 — 카드 id → 폼 자산. */
+/**
+ * 카드 id 접미사 → 폼 자산: `land#${자산id}`(함께 양도) · `land#primary`(첫 자산) · `land#1`(지분 — 접미사가 자산 인덱스).
+ * 접미사가 없거나 찾지 못하면 `undefined`.
+ */
+export function assetOfCardSuffix(propertyId: string, assets: AssetForm[]): AssetForm | undefined {
+  const suffix = cardSuffixOf(propertyId);
+  if (!suffix) return undefined;
+  if (suffix === "primary") return assets[0];
+  const shareIdx = shareIndexOf(propertyId);
+  return shareIdx !== undefined ? assets[shareIdx] : assets.find((a) => a.assetId === suffix);
+}
+
 export function assetOfProperty(
   propertyId: string,
   formData: TransferFormData | undefined,
@@ -52,6 +65,8 @@ export function assetOfProperty(
   if (!assets) return undefined;
   const direct = assets.find((a) => a.assetId === propertyId);
   if (direct) return direct;
+  const byCard = assetOfCardSuffix(propertyId, assets);
+  if (byCard) return byCard;
   // 첫 자산은 카드 id가 "primary"(한도 초과 분리 시 "primary__appurtenant" / "primary__excess" · 이월과세 채무 부분(매입분) 조각은 "primary__purchased")다.
   const basePid = propertyId.replace(/__(appurtenant|excess|purchased)$/, "");
   if (basePid === "primary") return assets[0];

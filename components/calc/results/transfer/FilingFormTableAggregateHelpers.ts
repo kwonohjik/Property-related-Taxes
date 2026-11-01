@@ -33,7 +33,8 @@ import { fmtRatePct } from "./FilingFormTableRowDefs";
 import { resolveFilingRateCode } from "./filing-rate-code";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
 import { selectPriorFiledIndices } from "@/lib/calc/multi-prior-filed";
-import { baseCardId, shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
+import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
+import { assetOfCardSuffix } from "./sale-split-unentered-notice";
 import { preDeemedAcqDateNote, preDeemedAcqPriceNote, preDeemedDetailOfCard } from "./pre-deemed-purchase-filing-note";
 import { purchasedPartParentIdOf } from "@/lib/tax-engine/general-building-share-id";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
@@ -118,18 +119,11 @@ export function buildAggregateRows(
     if (fromPropertyForm) return fromPropertyForm;
     if (!formData) return undefined;
     if (pid === "primary") return formData.assets[0];
-    // 일반건물(토지+건물 일괄) — 토지·건물 분해된 카드는 assets에서 취득일·필요경비 메타를 가져온다.
-    //
-    // 🔴 **지분(%) 분할이면 `assets[0]`이 아니다.** 카드 id는 `land#1` 꼴이고 접미사 인덱스가
-    //    곧 `assets`의 인덱스다(`transfer-tax-api-gb-shares.ts:168` — 같은 배열을 같은 순서로
-    //    순회해 태깅한다). 지분마다 취득일이 다른 것이 이 기능의 존재 이유이므로,
-    //    전부 `assets[0]`로 보내면 **신고서 취득일이 전 행 동일하게 틀린다**.
-    //    종전에는 정확 비교라 `land#1`이 여기서 아예 안 걸려 메타가 **누락**됐다.
-    // 채무 부분(매입분) 꼬리 카드(`land__purchased#1`)는 증여분 카드(`land#1`)와 같은 폼 자산·같은 지분의 계산 파트다 — 부모 id로 푼다.
-    if (formData.assets[0]?.assetKind === "general_building" && GB_CARD_BASE_IDS.has(baseCardId(purchasedPartParentIdOf(pid)))) {
-      const shareIdx = shareIndexOf(pid);
-      return shareIdx !== undefined ? formData.assets[shareIdx] : formData.assets[0];
-    }
+    // 카드 접미사가 자산을 가리킨다 — 함께 양도 `land#${자산id}` · 지분 `land#1` · 매입분 꼬리 `land__purchased#1`.
+    const byCard = assetOfCardSuffix(pid, formData.assets);
+    if (byCard) return byCard;
+    // 일반건물 단독 — 접미사 없는 파트 카드(`land`·`building`)의 자산은 첫 자산이다.
+    if (formData.assets[0]?.assetKind === "general_building" && GB_CARD_BASE_IDS.has(baseCardId(purchasedPartParentIdOf(pid)))) return formData.assets[0];
     const direct = formData.assets.find((a) => a.assetId === pid);
     if (direct) return direct;
     // split suffix 제거 fallback — 부수토지 한도 초과 분리 시 원본 assetId로 재조회
