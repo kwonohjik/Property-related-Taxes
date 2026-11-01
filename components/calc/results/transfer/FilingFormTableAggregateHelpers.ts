@@ -192,10 +192,10 @@ export function buildAggregateRows(
     /**
      * 이 열이 **일반건물 일괄이 엔진 내부에서 쪼갠 파트**인가(토지·건물1·건물2).
      * 다건 양도의 「자산」과 달리 독립 신고 단위가 아니라 한 자산의 계산 파트다 —
-     * 아래 세액 행에서 이 구별이 필요하다(`findAssetByPropertyId`와 같은 판정).
+     * 아래 세액 행에서 이 구별이 필요하다. 함께 양도에서는 일반건물이 몇째 자산이든 같으므로 이 열의 자산으로 본다.
      */
     const isGbPartColumn =
-      formData?.assets[0]?.assetKind === "general_building" &&
+      a?.assetKind === "general_building" &&
       GB_CARD_BASE_IDS.has(baseCardId(purchasedPartParentIdOf(col)));
     // GB 카드별 정확한 취득일(원건물=건물취득일·증축건물=증축일·토지=토지취득일).
     // 일반 자산은 asset.acquisitionDate 그대로.
