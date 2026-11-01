@@ -33,6 +33,7 @@ import {
   calculateEffectiveRentalPeriod,
   RENTAL_VACANCY_GRACE_MONTHS_97,
   validateRentIncrease,
+  validateRentIncreaseInterval,
   DEFAULT_JEONSE_CONVERSION_RATE,
 } from "./rental-97-shared-helpers";
 import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result } from "./types";
@@ -67,6 +68,14 @@ const STD_PRICE_CAP_NON_CAPITAL = 300_000_000;
 const REGISTRATION_SUNSET = new Date("2018-03-31");
 /** 그 단서의 시행일 (대통령령 제28637호). 이전 양도분에는 소급하지 않는다. */
 const CLAUSE_SUNSET_EFFECTIVE_FROM = new Date("2018-04-01");
+/**
+ * 소령 §167의3①2호 가·다목 괄호 「임대료등의 증액 청구는 임대차계약의 체결 또는 약정한 임대료등의
+ * 증액이 있은 후 1년 이내에는 하지 못하고」 — 대통령령 제30395호(2020.2.11)가 신설했다
+ * (그 전 문언은 「임대보증금 또는 임대료의 연 증가율이 100분의 5를 초과하지 않는」뿐).
+ * 같은 영 부칙 §16: 「이 영 시행 이후 주택 임대차계약을 갱신하거나 새로 체결하는 분부터 적용」.
+ * ⇒ 증액한 계약의 체결·갱신일이 이 날 이후인 경우에만 1년 간격을 따진다.
+ */
+const RENT_INTERVAL_RULE_CONTRACTS_FROM = new Date("2020-02-11");
 
 export function evaluateRental974(input: Rental97EvaluationInput): Rental97Result {
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.RENTAL_97_4;
@@ -173,6 +182,21 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
         code: "RENT_INCREASE_VIOLATED",
         message: `임대료(환산보증금) 증액 5% 제한 위반 계약 ${validation.violations.length}건.`,
         legalBasis,
+      });
+    }
+    // 소령 §167의3①2호 가·다목 괄호 — 계약·증액 후 1년 이내 재증액 금지 (§97의3·§97의5와 공용 헬퍼)
+    const intervalViolations = validateRentIncreaseInterval(
+      input.rentHistory,
+      input.jeonseConversionRate ?? DEFAULT_JEONSE_CONVERSION_RATE,
+    ).violations.filter((v) => v.contractDate.getTime() >= RENT_INTERVAL_RULE_CONTRACTS_FROM.getTime());
+    if (intervalViolations.length > 0) {
+      reasons.push({
+        code: "RENT_INCREASE_WITHIN_1_YEAR",
+        message:
+          `직전 계약(증액)일로부터 1년 이내에 임대료(환산보증금)를 올린 계약 ${intervalViolations.length}건 ` +
+          "— 소령 §167의3①2호 「증액이 있은 후 1년 이내에는 하지 못하고」. 1년은 민법 기간 계산으로 다음 해 같은 날에 만료합니다. " +
+          "2020.2.11 이후 체결·갱신한 계약에만 적용합니다(대통령령 제30395호 부칙 §16).",
+        legalBasis: "소득세법 시행령 §167의3①2호",
       });
     }
   } else if (input.rentIncreaseViolated === true) {

@@ -142,11 +142,14 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
       <ToneCard tone="violet" sectionNum={sec3} title="임대료 증액 제한 (§97의3①2호)" bodyClassName="space-y-2">
         <div>
           <p className="text-xs text-muted-foreground mb-1.5">임대료 5% 증액 위반 이력</p>
-          {/* §97의3·§97의5 — 조특령 §97의3③1호 후단(1년 이내 재증액 금지)도 엔진이 계약 이력으로 판정한다 */}
-          {usesEndDateAndInterval && (
+          {/* §97의3·§97의5 — 조특령 §97의3③1호 후단, §97의4 — 소령 §167의3①2호 가·다목 괄호.
+              1년 이내 재증액 금지도 엔진이 계약 이력으로 판정한다 */}
+          {(usesEndDateAndInterval || fieldType === "rental_97_4") && (
             <p className="mb-1.5 text-micro text-muted-foreground">
-              조특령 §97의3③1호 — 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다.
-              이 경우 「있음」을 고르고 계약 이력을 입력하세요.
+              {fieldType === "rental_97_4"
+                ? "소득세법 시행령 §167의3①2호 — 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다(2020.2.11 이후 체결·갱신한 계약부터)."
+                : "조특령 §97의3③1호 — 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다."}
+              {" "}이 경우 「있음」을 고르고 계약 이력을 입력하세요.
             </p>
           )}
           <RadioCardGroup
