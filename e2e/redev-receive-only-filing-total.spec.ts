@@ -41,9 +41,9 @@ function seedForm() {
           redevPreApprovalExpenses: "0",
           redevPostApprovalExpenses: "0",
         }],
-        // 폼에 남은 신축APT 양도가·양도일 — receiveOnly에서는 신고 대상이 아니다.
-        transferDate: "2026-03-02",
-        filingDate: "2026-04-30",
+        // 폼에 남은 신축APT 양도가 — receiveOnly에서는 신고 대상이 아니다. 양도일은 고시일 다음날이어야 ⑧을 지난다.
+        transferDate: "2024-01-26",
+        filingDate: "2024-03-31",
         contractTotalPrice: "525000000",
         householdHousingCount: "2",
         // roster-required PR-B(재개발APT): 명부 0행 + 미확정이면 ⑧이 차단한다 — houses가 비어

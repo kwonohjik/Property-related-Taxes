@@ -118,7 +118,8 @@ describe("완공APT 경로가 공용 안내를 받는다", () => {
         redevSettlementSaleDate: "2023-01-02",
         redevSettlementAmount: "50000000",
       },
-      formOver: { ...RENTAL_4HO_FORM, isRegulatedArea: false, wasRegulatedAtAcquisition: true } as never,
+      // 단독 신고의 양도일 = 고시일 다음날(⑧)
+      formOver: { ...RENTAL_4HO_FORM, isRegulatedArea: false, wasRegulatedAtAcquisition: true, transferDate: "2023-01-02", filingDate: "2023-03-31" } as never,
     });
     const r = await runCalc(f);
     expect(r.issues).toEqual([]);

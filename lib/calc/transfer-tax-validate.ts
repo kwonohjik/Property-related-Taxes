@@ -22,6 +22,8 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { isFractionalRatioSumOutOfTolerance } from "./fractional-ratio-sum-tolerance";
 import { receiveOnlyShareIssue } from "./axis-b-receive-only";
 import { bundleReceiveOnlyIssue } from "./bundle-receive-only";
+import { receiveOnlyFilingDateIssue } from "./receive-only-filing-date";
+import { isAllBurdenedGift } from "./filing-deadline";
 import { effectiveBundledSaleMode } from "./bundled-sale-mode";
 import { isReceiveOnlyFiling } from "./redev-field-scope";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -513,6 +515,15 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
       if (sumActual !== parseAmount(form.contractTotalPrice))
         issues.push({ step, field: "contractTotalPrice", message: "구분 기재된 양도가액 합이 총 양도가액과 일치하지 않습니다." });
     }
+
+    // 청산금 수령 단독 — 신고기한의 기준 양도일(⑫는 ④가 바꾼 날짜만 봐서 폼 날짜를 알 수 없다 — ⑧ 전용).
+    const receiveOnlyFilingDate = receiveOnlyFilingDateIssue({
+      transferDate: form.transferDate,
+      filingDate: form.filingDate,
+      isBurdenedGift: isAllBurdenedGift(form.assets),
+      assets: form.assets.map((a) => ({ receiveOnly: isReceiveOnlyFiling(a), saleDate: a.redevSettlementSaleDate })),
+    });
+    if (receiveOnlyFilingDate) issues.push({ step, assetIndex: 0, field: "transferDate", message: receiveOnlyFilingDate });
 
     // 함께 양도 × 청산금 수령 단독 — 계약서 가액은 ④와 같이 지분율을 곱한 값으로 비교한다.
     if (form.assets.length > 1 && !fullFractional && !fractionalModeWithoutBundle && !form.assets.some((a) => a.transferType === "burdened_gift")) {
