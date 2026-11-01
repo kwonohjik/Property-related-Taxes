@@ -19,7 +19,7 @@ afterEach(cleanup);
 
 const asset = (o: Partial<AssetForm>) => ({ ...makeDefaultAsset(1), acquisitionCause: "purchase", ...o }) as AssetForm;
 const state = (a: AssetForm) =>
-  `${a.acquisitionDate}|${a.landAcquisitionDate}|${a.preDeemedOriginalAcquisitionDate}`;
+  `${a.acquisitionDate}|${a.landAcquisitionDate}|${a.preDeemedOriginalAcquisitionDate}|${a.preDeemedOriginalLandAcquisitionDate}`;
 
 function GbHarness({ initial }: { initial: Partial<AssetForm> }) {
   const [a, setA] = useState<AssetForm>(
@@ -52,7 +52,7 @@ describe("일반건물 매매 — 덮어쓰기가 토지·건물 날짜 키를 �
   it("분리 OFF 1984-06-01 → 토지·건물 둘 다 1985-01-01 (불변식 land = acq)", () => {
     render(<GbHarness initial={{ acquisitionDate: "1984-06-01", landAcquisitionDate: "1984-06-01" }} />);
     fireEvent.blur(screen.getByTestId("acq-date-building"));
-    expect(screen.getByTestId("state").textContent).toBe("1985-01-01|1985-01-01|1984-06-01");
+    expect(screen.getByTestId("state").textContent).toBe("1985-01-01|1985-01-01|1984-06-01|");
   });
   it("분리 ON 토지 1984-06-01 · 건물 1995-03-01 → 토지만 1985-01-01 · 건물 1995 유지", () => {
     render(
@@ -61,7 +61,21 @@ describe("일반건물 매매 — 덮어쓰기가 토지·건물 날짜 키를 �
       />,
     );
     fireEvent.blur(screen.getByTestId("acq-date-building"));
-    expect(screen.getByTestId("state").textContent).toBe("1995-03-01|1985-01-01|");
+    expect(screen.getByTestId("state").textContent).toBe("1995-03-01|1985-01-01||1984-06-01");
+  });
+});
+
+describe("토지·건물 취득일 분리 — 파트 칸", () => {
+  it("일반건물 분리 ON 건물 칸 1984 → 건물 1985-01-01 · 건물 실제 취득일 보존", () => {
+    render(<GbHarness initial={{ hasSeperateLandAcquisitionDate: true, acquisitionDate: "1984-06-01", landAcquisitionDate: "1995-03-01" }} />);
+    const card = screen.getByText("건물 취득일").closest('[data-field="acquisitionDate"]') as HTMLElement;
+    fireEvent.blur(card.querySelector("input")!);
+    expect(screen.getByTestId("state").textContent).toBe("1985-01-01|1995-03-01|1984-06-01|");
+  });
+  it("주택 토지 칸 1984 → 토지 1985-01-01 · 토지 실제 취득일 보존 · 건물 그대로", () => {
+    render(<SingleHarness initial={{ assetKind: "housing", hasSeperateLandAcquisitionDate: true, acquisitionDate: "1990-03-01", landAcquisitionDate: "1984-06-01" }} />);
+    fireEvent.blur(screen.getByTestId("acq-date-land").querySelector("input")!);
+    expect(screen.getByTestId("state").textContent).toBe("1990-03-01|1985-01-01||1984-06-01");
   });
 });
 
@@ -69,6 +83,6 @@ describe("토지·주택 매매(1차 범위) — 덮어쓰기와 원값 보존�
   it("토지 1984-06-01 → 취득일 1985-01-01 · 실제 취득일 1984-06-01", () => {
     render(<SingleHarness initial={{ assetKind: "land", acquisitionDate: "1984-06-01" }} />);
     fireEvent.blur(screen.getByTestId("acq-date-building"));
-    expect(screen.getByTestId("state").textContent).toMatch(/^1985-01-01\|.*\|1984-06-01$/);
+    expect(screen.getByTestId("state").textContent).toMatch(/^1985-01-01\|.*\|1984-06-01\|$/);
   });
 });

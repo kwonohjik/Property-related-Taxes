@@ -14,90 +14,110 @@ import { PRE_DEEMED_PURCHASE_PPI_RATIO_REQUIRED_MESSAGE } from "@/lib/tax-engine
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 import { fieldError } from "./transfer-tax-validate-field";
 import { isRedevelopmentSec166Asset, redevHidesGeneralAcqSection } from "./redev-acquisition-price-source";
-import { gbPartModes } from "./transfer-tax-split-acq-mode";
+import { effectivePartAcqMode, gbPartModes } from "./transfer-tax-split-acq-mode";
+import { effectiveBuildingCauseMix, landCauseDisplay } from "./transfer-land-part-cause";
 
 export const PRE_DEEMED_DATE = "1985-01-01";
 
 const KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set(["land", "housing", "building", "commercial_building"]);
 
-type GateFields = Pick<
-  AssetForm,
-  | "acquisitionCause"
-  | "transferType"
-  | "acquisitionDate"
-  | "assetKind"
-  | "isMixedUseHouse"
-  | "hasSeperateLandAcquisitionDate"
-  | "usePreHousingDisclosure"
-  | "parcelMode"
-  | "isSuccessorRightToMoveIn"
-  | "redevIsSuccessorMember"
->;
+type Fields = AssetForm;
 
-type GbGateFields = Pick<
-  AssetForm,
-  | "acquisitionCause"
-  | "transferType"
-  | "acquisitionDate"
-  | "assetKind"
-  | "hasSeperateLandAcquisitionDate"
-  | "landAcquisitionDate"
-  | "gbBuildingAcquisitionCause"
-  | "gbHasExtension"
-> & Parameters<typeof gbPartModes>[0];
+/**
+ * 토지·건물 취득일 분리에서 의제취득일 전 매수인 파트 — 한 파트만일 때. 날짜 칸이 덮어쓰기 결과(1985-01-01)이고 상대 파트는 그 뒤다.
+ * 두 파트 모두 1985 전이면 칸이 같은 값이라 별개 취득이 꺼지고 파트 실가·취득월을 받을 곳이 없다 — 비교하지 않고 안내만(계획서 §12.8).
+ */
+export function preDeemedSplitPart(a: Pick<Fields, "hasSeperateLandAcquisitionDate" | "landAcquisitionDate" | "acquisitionDate">): "land" | "building" | undefined {
+  if (!a.hasSeperateLandAcquisitionDate) return undefined;
+  const { landAcquisitionDate: l, acquisitionDate: b } = a;
+  if (l === PRE_DEEMED_DATE && b > PRE_DEEMED_DATE) return "land";
+  if (b === PRE_DEEMED_DATE && l > PRE_DEEMED_DATE) return "building";
+  return undefined;
+}
 
-/** 일반건물 일괄취득 매매(분리 OFF · 증축 없음)이고 취득일 칸이 의제취득일인가 — 모드는 따로 본다 */
-function isGbPreDeemedBundledPurchase(a: GbGateFields): boolean {
+/** 파트 칸이 모두 의제취득일 — 분리 ON인데 두 파트 모두 1985 전 */
+const bothPartsDeemed = (a: Pick<Fields, "hasSeperateLandAcquisitionDate" | "landAcquisitionDate" | "acquisitionDate">) =>
+  !!a.hasSeperateLandAcquisitionDate && a.landAcquisitionDate === PRE_DEEMED_DATE && a.acquisitionDate === PRE_DEEMED_DATE;
+
+/** 주택 PHD 두 칸의 실제 취득월이 다른가(둘 다 입력된 경우만 — 옛 저장값은 토지 원값이 없다) */
+function phdMonthsDiffer(a: Pick<Fields, "preDeemedOriginalAcquisitionDate" | "preDeemedOriginalLandAcquisitionDate">): boolean {
+  const l = a.preDeemedOriginalLandAcquisitionDate;
+  const b = a.preDeemedOriginalAcquisitionDate;
+  return !!l && !!b && l.slice(0, 7) !== b.slice(0, 7);
+}
+
+/** 매수뿐인가 — 파트 원인 혼합·소유자 분리 없음 */
+function isPlainPurchase(a: Fields): boolean {
   return (
-    a.assetKind === "general_building" &&
     a.acquisitionCause === "purchase" &&
     a.transferType !== "burdened_gift" &&
-    a.acquisitionDate === PRE_DEEMED_DATE &&
-    a.landAcquisitionDate === PRE_DEEMED_DATE &&
-    !a.hasSeperateLandAcquisitionDate &&
-    !a.gbHasExtension &&
-    (a.gbBuildingAcquisitionCause || "purchase") === "purchase"
+    !landCauseDisplay(a) &&
+    !effectiveBuildingCauseMix(a) &&
+    (a.selfOwns ?? "both") === "both"
   );
 }
 
-function isGbActualMode(a: GbGateFields): boolean {
+/** 일반건물 매수 공통(증축 없음 · 건물도 매수) — 모드는 따로 본다 */
+function isGbPlainPurchase(a: Fields): boolean {
+  return a.assetKind === "general_building" && isPlainPurchase(a) && !a.gbHasExtension && (a.gbBuildingAcquisitionCause || "purchase") === "purchase";
+}
+const isGbBundledDeemed = (a: Fields) => !a.hasSeperateLandAcquisitionDate && a.acquisitionDate === PRE_DEEMED_DATE && a.landAcquisitionDate === PRE_DEEMED_DATE;
+
+function isGbActualMode(a: Fields): boolean {
   const m = gbPartModes(a);
   return m.land === "actual" && m.building === "actual";
 }
 
-/** ⑤ 안내 — 일반건물 일괄취득 추계 모드는 ②를 비교하지 않는다(Q-15 b · 환산→실가 전환 장치 없음) */
-export function gbPreDeemedPurchaseNotCompared(a: GbGateFields): boolean {
-  return isGbPreDeemedBundledPurchase(a) && !isGbActualMode(a);
+/**
+ * ⑤ 안내 — 의제취득일 전 매수인데 ①·② 비교를 반영하지 않는 입력(값은 그대로 계산한다 · Q-12 a):
+ *   일반건물 추계 모드(Q-15 b) · 분리 ON 두 파트 모두 1985 전 · PHD 두 칸 실제 취득월 다름
+ */
+export function preDeemedPurchaseNotCompared(a: Fields): boolean {
+  if (!isPlainPurchase(a)) return false;
+  if (a.assetKind === "general_building") {
+    if (!isGbPlainPurchase(a)) return false;
+    return bothPartsDeemed(a) || ((isGbBundledDeemed(a) || !!preDeemedSplitPart(a)) && !isGbActualMode(a));
+  }
+  if (a.assetKind !== "housing" && a.assetKind !== "building") return false;
+  if (a.isMixedUseHouse || a.parcelMode || !bothPartsDeemed(a)) return false;
+  return !a.usePreHousingDisclosure || phdMonthsDiffer(a);
 }
 
-/** 카드를 여는 자산인가 — 취득일 칸이 의제취득일(덮어쓰기 결과)인 1차 범위 매매 자산 */
-export function isPreDeemedPurchaseAsset(a: GateFields & Partial<GbGateFields>): boolean {
-  if (a.assetKind === "general_building") {
-    const g = a as GbGateFields;
-    return isGbPreDeemedBundledPurchase(g) && isGbActualMode(g);
-  }
+/** 카드를 여는 자산인가 — 취득일 칸이 의제취득일(덮어쓰기 결과)인 범위 안 매매 자산 */
+export function isPreDeemedPurchaseAsset(a: Fields): boolean {
+  if (preDeemedPurchaseNotCompared(a)) return false;
   if (a.acquisitionCause !== "purchase" || a.transferType === "burdened_gift") return false;
+  const part = preDeemedSplitPart(a);
+  if (a.assetKind === "general_building") {
+    return isGbPlainPurchase(a) && isGbActualMode(a) && (isGbBundledDeemed(a) || !!part);
+  }
+  if (part) return (a.assetKind === "housing" || a.assetKind === "building") && !a.isMixedUseHouse && !a.parcelMode && isPlainPurchase(a);
   if (a.acquisitionDate !== PRE_DEEMED_DATE) return false;
   // 재개발은 원조합원만(승계조합원은 취득일이 승계 시점이고 §166③ 대상이 아니다 · Q-4 a)
   const kindOpen = isRedevelopmentSec166Asset(a) ? redevHidesGeneralAcqSection(a) : KINDS.has(a.assetKind);
   if (!kindOpen || a.isMixedUseHouse || a.parcelMode) return false;
-  // 토지·건물 취득일을 따로 두면 파트마다 취득월이 다르다(2차 범위) — PHD는 같은 날 두 칸이라 연다
-  if (a.hasSeperateLandAcquisitionDate && !a.usePreHousingDisclosure) return false;
+  // 분리 ON + 두 칸 같은 날은 PHD만 연다(위 안내가 나머지를 거른다) · 날짜가 다른데 파트가 없으면(1985-01-01 + 그 전 값) 범위 밖
+  if (a.hasSeperateLandAcquisitionDate && !(a.usePreHousingDisclosure && (!a.landAcquisitionDate || a.landAcquisitionDate === PRE_DEEMED_DATE))) return false;
   return true;
 }
 
+/** 그 자산(파트)의 실제 취득일 칸 값 */
+export function preDeemedOriginalDate(a: Fields): string {
+  return preDeemedSplitPart(a) === "land" ? a.preDeemedOriginalLandAcquisitionDate : a.preDeemedOriginalAcquisitionDate;
+}
+
 /** 실제 취득일이 의제취득일 전으로 입력됐는가 — 이때만 ④가 보내고 ⑥이 「계산 후 확정」으로 둔다 */
-export function preDeemedPurchaseApplies(a: GateFields & Pick<AssetForm, "preDeemedOriginalAcquisitionDate">): boolean {
-  const o = a.preDeemedOriginalAcquisitionDate;
+export function preDeemedPurchaseApplies(a: Fields): boolean {
+  const o = preDeemedOriginalDate(a);
   return isPreDeemedPurchaseAsset(a) && !!o && o < PRE_DEEMED_DATE;
 }
 
 /** 환산·감정·매매사례 모드인가 — 그때만 「함께 견줄 실가」 칸이 ②의 기준이다(실가 모드는 취득가액 칸) */
-export function preDeemedPurchaseUsesCompareActual(
-  a: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "useEstimatedAcquisition" | "isAppraisalAcquisition" | "isSalesCaseAcquisition">,
-): boolean {
+export function preDeemedPurchaseUsesCompareActual(a: Fields): boolean {
   // 재개발 ⑤ 라디오는 실가·환산뿐이다 — 숨은 감정·매매사례 플래그를 읽지 않는다(엔진과 같은 규칙)
   if (isRedevelopmentSec166Asset(a)) return a.useEstimatedAcquisition === true;
+  const part = a.assetKind === "general_building" ? undefined : preDeemedSplitPart(a);
+  if (part) return effectivePartAcqMode(part === "land" ? a.landAcqMode : a.buildingAcqMode, a) !== "actual";
   return a.useEstimatedAcquisition === true || a.isAppraisalAcquisition === true || a.isSalesCaseAcquisition === true;
 }
 
@@ -105,14 +125,16 @@ export function preDeemedPurchaseUsesCompareActual(
 export function buildPreDeemedPurchasePayload(
   a: AssetForm,
   ratioed: (v: string | undefined) => number | undefined,
-): { preDeemedPurchase?: { originalAcquisitionDate: string; actualPrice?: number; ppiRatio?: number } } {
+): { preDeemedPurchase?: { part?: "land" | "building"; originalAcquisitionDate: string; actualPrice?: number; ppiRatio?: number } } {
   // 일반건물은 서브객체로 싣는다(`buildGbPreDeemedPurchasePayload` — 단건·함께 양도·지분이 같은 빌더)
   if (a.assetKind === "general_building" || !preDeemedPurchaseApplies(a)) return {};
-  const o = a.preDeemedOriginalAcquisitionDate;
+  const o = preDeemedOriginalDate(a);
+  const part = preDeemedSplitPart(a);
   const actualPrice = preDeemedPurchaseUsesCompareActual(a) ? ratioed(a.preDeemedActualPrice) : undefined;
   const ratio = parseDecimal(a.preDeemedPpiRatio);
   return {
     preDeemedPurchase: {
+      ...(part ? { part } : {}),
       originalAcquisitionDate: o,
       ...(actualPrice ? { actualPrice } : {}),
       ...(isBeforePpiSeries(o) && ratio > 0 ? { ppiRatio: ratio } : {}),
@@ -121,26 +143,28 @@ export function buildPreDeemedPurchasePayload(
 }
 
 /** ④ 일반건물 `generalBuildingValuation` 실가 payload — 실가 모드라 ②의 기준은 일괄 취득가액이다 */
-export function buildGbPreDeemedPurchasePayload(a: AssetForm): { preDeemedPurchase?: { originalAcquisitionDate: string; ppiRatio?: number } } {
+export function buildGbPreDeemedPurchasePayload(a: AssetForm): { preDeemedPurchase?: { part?: "land" | "building"; originalAcquisitionDate: string; ppiRatio?: number } } {
   if (!preDeemedPurchaseApplies(a)) return {};
-  const o = a.preDeemedOriginalAcquisitionDate;
+  const o = preDeemedOriginalDate(a);
+  const part = preDeemedSplitPart(a);
   const ratio = parseDecimal(a.preDeemedPpiRatio);
-  return { preDeemedPurchase: { originalAcquisitionDate: o, ...(isBeforePpiSeries(o) && ratio > 0 ? { ppiRatio: ratio } : {}) } };
+  return { preDeemedPurchase: { ...(part ? { part } : {}), originalAcquisitionDate: o, ...(isBeforePpiSeries(o) && ratio > 0 ? { ppiRatio: ratio } : {}) } };
 }
 
 /** ⑧ — 카드에 칸이 있을 때만 요구한다(막다른 길 금지) */
 export function preDeemedPurchaseInputError(a: AssetForm, label: string): string | null {
   if (!isPreDeemedPurchaseAsset(a)) return null;
-  const o = a.preDeemedOriginalAcquisitionDate;
+  const o = preDeemedOriginalDate(a);
+  const dateField = preDeemedSplitPart(a) === "land" ? "preDeemedOriginalLandAcquisitionDate" : "preDeemedOriginalAcquisitionDate";
   if (!o) {
     return fieldError(
-      "preDeemedOriginalAcquisitionDate",
+      dateField,
       `${label}: 실제 취득일을 입력하세요 — 1985.1.1. 전에 매수했으면 취득가액을 ${TRANSFER.PRE_DEEMED_PURCHASE_MAX}에 따라 비교합니다(취득일 칸은 의제취득일 1985.1.1.로 둡니다).`,
     );
   }
   if (o > PRE_DEEMED_DATE) {
     return fieldError(
-      "preDeemedOriginalAcquisitionDate",
+      dateField,
       `${label}: 실제 취득일이 1985.1.1. 이후입니다 — 취득일 칸에 실제 취득일을 입력하세요.`,
     );
   }

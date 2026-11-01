@@ -96,7 +96,8 @@ export function CompanionAcqDateSection(props: {
   function handleLandAcquisitionDateBlur() {
     if (landCause) return;
     if (p.landAcquisitionDate && p.landAcquisitionDate < MIN_ACQ_DATE) {
-      p.onLandAcquisitionDateChange?.(MIN_ACQ_DATE);
+      if (p.onLandAcquisitionDateClamp) p.onLandAcquisitionDateClamp(MIN_ACQ_DATE, p.landAcquisitionDate);
+      else p.onLandAcquisitionDateChange?.(MIN_ACQ_DATE);
       setLandDateClampMsg(true);
     }
   }

@@ -371,13 +371,14 @@ export function GeneralBuildingAcquisitionCards({
           <CompanionAcqPurchaseBlock
             acquisitionDate={asset.landAcquisitionDate}
             onAcquisitionDateChange={setLandAcqDate}
-            // 분리 OFF 일괄취득만 실제 취득일을 보존한다(영 §176조의2④ · Q-8 a) — 분리 ON은 파트별이라 2차 B에서 받는다.
-            {...(isSeparate
-              ? {}
-              : {
-                  onAcquisitionDateClamp: (v: string, original: string) =>
-                    onChange({ acquisitionDate: v, landAcquisitionDate: v, preDeemedOriginalAcquisitionDate: original }),
-                })}
+            // 덮어쓸 때 실제 취득일 보존(영 §176조의2④) — 분리 OFF는 일괄 · 분리 ON은 이 칸이 토지 파트다.
+            onAcquisitionDateClamp={(v: string, original: string) =>
+              onChange(
+                isSeparate
+                  ? { landAcquisitionDate: v, preDeemedOriginalLandAcquisitionDate: original }
+                  : { acquisitionDate: v, landAcquisitionDate: v, preDeemedOriginalAcquisitionDate: original },
+              )
+            }
             fieldAcquisitionDate={isSeparate ? "landAcquisitionDate" : "acquisitionDate"}
             useEstimatedAcquisition={asset.useEstimatedAcquisition}
             onUseEstimatedChange={(v) => onChange({ useEstimatedAcquisition: v })}
@@ -657,6 +658,12 @@ export function GeneralBuildingAcquisitionCards({
           <DateInput
             value={asset.acquisitionDate}
             onChange={setBuildingAcqDate}
+            // 매수 건물 1985.1.1. 전 — 토지 칸과 같은 덮어쓰기 · 실제 취득일 보존(영 §176조의2④)
+            onBlur={() => {
+              if (asset.gbBuildingAcquisitionCause === "purchase" && asset.acquisitionDate && asset.acquisitionDate < "1985-01-01") {
+                onChange({ acquisitionDate: "1985-01-01", preDeemedOriginalAcquisitionDate: asset.acquisitionDate });
+              }
+            }}
           />
         </FieldCard>
 

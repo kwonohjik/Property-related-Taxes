@@ -347,7 +347,8 @@ export function computeTransferPerAssetSummary(
     // 결과가 오면 내린다 — 일반건물 결과는 `mode: "bundled"` 카드 합이라 `singleResult`·`bundledProperty`로는 못 잡는다.
     const pdPending = preDeemedPurchaseApplies(a) && !pdDetail && !result;
     // 재개발은 ②가 인가전 분 기준일 뿐이다 — 자산 취득가액 합은 §166 분해(아래 `redevResultTotals`)가 정본이다.
-    if (pdDetail?.selected === "clause2" && !redevResultTotals) {
+    //   파트 비교도 같다 — ②는 한 파트 금액이고 자산 합은 분리 결과(`splitDetail`)가 정본이다.
+    if (pdDetail?.selected === "clause2" && !redevResultTotals && !pdDetail.part) {
       acqPrice = pdDetail.clause2Amount;
       acqPending = false;
     } else if (pdPending) {
@@ -427,12 +428,13 @@ export function computeTransferPerAssetSummary(
       acqPending = false;
       // 일반건물·상가 프리뷰는 §97③ 감가상각비를 이미 공제한 값이다 — 아래에서 또 빼지 않는다.
       depAlreadyDeducted = true;
-    } else if (isSingle && acqPending && singleResult?.splitDetail) {
+    } else if (isSingle && (acqPending || pdDetail?.part) && singleResult?.splitDetail) {
       // 토지·건물 분리(split) — 환산·감정 파트, 영 §163⑨ 단서 1호(D1-4)·2호(D2-4)의 max는 입력 단계에서 엔진만 알아 pending
       // (`separateAcqPartsSum`)이다. 결과가 오면 엔진이 실제로 차감한 파트 합으로 푼다(bundled split 분기와 같은 정본
       // `summarizeSplitGain().acquisitionDeducted`). 종전엔 D1-4·D2-2 원인 혼합에만 열려 있어 **일반 매매 split의 환산 파트**는
       // 계산 후에도 「계산 후 표시」에 갇혔다(실측). **입력 프리뷰가 pending일 때만** — 실가·평가액처럼 프리뷰로 확정되는 경우에
       // 이 분기를 타면 결과 도착 후 입력을 고쳐도 옛 엔진 값에 머문다(D2-2 Check).
+      // 의제취득일 전 매수 파트는 프리뷰(입력 합)가 ②를 모른다 — 엔진 값이 정본이다(영 §176조의2④).
       acqPrice = summarizeSplitGain(singleResult.splitDetail).acquisitionDeducted;
       acqPending = false;
       depAlreadyDeducted = true;

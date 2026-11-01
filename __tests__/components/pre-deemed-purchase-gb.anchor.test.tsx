@@ -33,7 +33,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
 import { GbResultBlocks } from "@/components/calc/results/transfer/GbResultBlocks";
 import { PreDeemedPurchaseCard } from "@/components/calc/transfer/PreDeemedPurchaseCard";
-import { gbPreDeemedPurchaseNotCompared, isPreDeemedPurchaseAsset } from "@/lib/calc/transfer-pre-deemed-purchase-form";
+import { preDeemedPurchaseNotCompared, isPreDeemedPurchaseAsset } from "@/lib/calc/transfer-pre-deemed-purchase-form";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -125,7 +125,7 @@ describe("범위 게이트 (Q-8 a · Q-15 b)", () => {
     ["환산", GB({ useEstimatedAcquisition: true }), false, true],
     ["감정", GB({ isAppraisalAcquisition: true }), false, true],
     ["매매사례", GB({ isSalesCaseAcquisition: true }), false, true],
-    ["분리 ON", GB({ hasSeperateLandAcquisitionDate: true }), false, false],
+    ["분리 ON 두 파트 모두 의제취득일", GB({ hasSeperateLandAcquisitionDate: true }), false, true],
     ["증축", GB({ gbHasExtension: true }), false, false],
     ["건물 신축", GB({ gbBuildingAcquisitionCause: "newConstruction" }), false, false],
     ["상속", GB({ acquisitionCause: "inheritance" }), false, false],
@@ -135,7 +135,7 @@ describe("범위 게이트 (Q-8 a · Q-15 b)", () => {
   ] as [string, A, boolean, boolean][])("%s → 카드 %s · 안내 %s", (_n, o, open, note) => {
     const a = asset(o);
     expect(isPreDeemedPurchaseAsset(a)).toBe(open);
-    expect(gbPreDeemedPurchaseNotCompared(a)).toBe(note);
+    expect(preDeemedPurchaseNotCompared(a)).toBe(note);
   });
   it("⑤ 카드 — 실가는 입력 카드 · 환산은 안내만", () => {
     render(<PreDeemedPurchaseCard asset={asset(GB())} onAssetChange={() => {}} />);

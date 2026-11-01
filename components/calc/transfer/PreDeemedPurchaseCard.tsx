@@ -14,7 +14,13 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import { gbPreDeemedPurchaseNotCompared, isPreDeemedPurchaseAsset, preDeemedPurchaseUsesCompareActual } from "@/lib/calc/transfer-pre-deemed-purchase-form";
+import {
+  isPreDeemedPurchaseAsset,
+  preDeemedOriginalDate,
+  preDeemedPurchaseNotCompared,
+  preDeemedPurchaseUsesCompareActual,
+  preDeemedSplitPart,
+} from "@/lib/calc/transfer-pre-deemed-purchase-form";
 import { isRedevelopmentSec166Asset } from "@/lib/calc/redev-acquisition-price-source";
 import { isBeforePpiSeries, ppiMonthlyX100 } from "@/lib/tax-engine/producer-price-ratio";
 
@@ -33,20 +39,26 @@ export function PreDeemedPurchaseCard({
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
 }) {
-  if (gbPreDeemedPurchaseNotCompared(asset)) {
+  if (preDeemedPurchaseNotCompared(asset)) {
     return (
       <div data-testid="pre-deemed-purchase-gb-not-compared">
         <ToneCard tone="amber" title="의제취득일 전 매수 (소득세법 시행령 §176조의2④)" bodyClassName="space-y-2">
           <p className="text-xs text-amber-800 leading-relaxed dark:text-amber-200">
-            일반건물은 취득가액 산정 방식이 실지거래가액일 때만 ② 취득 당시 실지거래가액 + 생산자물가상승분을 계산합니다. 이 방식의 계산에는 ①·② 비교를 반영하지 않습니다 —
-            취득 당시 실지거래가액을 알면 산정 방식을 실지거래가액으로 바꿔 ②로 계산해 보세요.
+            {asset.assetKind === "general_building" && !(asset.landAcquisitionDate === "1985-01-01" && asset.acquisitionDate === "1985-01-01" && asset.hasSeperateLandAcquisitionDate) ? (
+              <>일반건물은 취득가액 산정 방식이 실지거래가액일 때만 ② 취득 당시 실지거래가액 + 생산자물가상승분을 계산합니다. 이 방식의 계산에는 ①·② 비교를 반영하지 않습니다 —
+              취득 당시 실지거래가액을 알면 산정 방식을 실지거래가액으로 바꿔 ②로 계산해 보세요.</>
+            ) : (
+              <>토지와 건물을 모두 1985.1.1. 전에 따로 매수한 경우의 ① 의제취득일 현재 가액과 ② 취득 당시 실지거래가액 + 생산자물가상승분 비교는 계산에 반영하지 않습니다 — 확인 필요.</>
+            )}
           </p>
         </ToneCard>
       </div>
     );
   }
   if (!isPreDeemedPurchaseAsset(asset)) return null;
-  const original = asset.preDeemedOriginalAcquisitionDate;
+  const original = preDeemedOriginalDate(asset);
+  const part = preDeemedSplitPart(asset);
+  const partLabel = part === "land" ? "토지 " : part === "building" ? "건물 " : "";
   const compare = preDeemedPurchaseUsesCompareActual(asset);
   const isPre = !!original && original < "1985-01-01";
   const isRedev = isRedevelopmentSec166Asset(asset);
@@ -65,21 +77,21 @@ export function PreDeemedPurchaseCard({
         </p>
 
         <FieldCard
-          label="실제 취득일"
+          label={`${partLabel}실제 취득일`}
           required
           hint="위 취득일 칸은 의제취득일로 바뀌었습니다 — 매매계약서상 실제 취득일(잔금일 등)을 확인하세요. 생산자물가상승분은 이 날짜가 속한 달부터 계산합니다."
         >
           <DateInput
             value={original}
-            onChange={(v) => onAssetChange({ preDeemedOriginalAcquisitionDate: v })}
-            data-field="preDeemedOriginalAcquisitionDate"
+            onChange={(v) => onAssetChange(part === "land" ? { preDeemedOriginalLandAcquisitionDate: v } : { preDeemedOriginalAcquisitionDate: v })}
+            data-field={part === "land" ? "preDeemedOriginalLandAcquisitionDate" : "preDeemedOriginalAcquisitionDate"}
             data-testid="pre-deemed-purchase-original-date"
           />
         </FieldCard>
 
         {compare ? (
           <CurrencyInput
-            label="취득 당시 실지거래가액 (선택)"
+            label={`${partLabel}취득 당시 실지거래가액 (선택)`}
             hint="알고 있으면 입력하세요(물건 전체 금액 — 지분이면 시스템이 지분율을 적용합니다). ② 실가 + 생산자물가상승분과 위 ①을 견줍니다. 비우면 ①만 계산합니다."
             value={asset.preDeemedActualPrice}
             onChange={(v) => onAssetChange({ preDeemedActualPrice: v })}
@@ -91,7 +103,7 @@ export function PreDeemedPurchaseCard({
             {isRedev ? (
               <>위 ⑤에 입력한 실거래가 취득가액으로 ②를 계산합니다. ①과 견주려면 ⑤에서 환산을 고르고 §166③ 칸과 취득 당시 실지거래가액을 함께 입력하세요.</>
             ) : (
-              <>위에 입력한 취득가액(실지거래가액)으로 ②를 계산합니다. ①과 견주려면 취득가액 산정 방식에서 「환산취득가」·「감정가액」·「매매사례가액」을
+              <>위에 입력한 {partLabel}취득가액(실지거래가액)으로 ②를 계산합니다. ①과 견주려면 취득가액 산정 방식에서 「환산취득가」·「감정가액」·「매매사례가액」을
               고르고 취득 당시 실지거래가액을 함께 입력하세요.</>
             )}
           </p>
