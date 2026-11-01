@@ -127,11 +127,12 @@ describe("P12 2단계 — 파트가 자기 호로 합산된다", () => {
   it("B-44 (D-12): 부분 비사토 2건 — ①8호끼리 · ①1호끼리 합산", () => {
     const r = agg([partialNbl("L1", 300_000_000), partialNbl("L2", 300_000_000)]);
     const g = r.groupTaxes.find((x) => x.group === "non_business_land")!;
-    expect(g.groupTaxBase).toBe(468_000_000);
+    expect(g.groupTaxBase).toBe(234_000_000);
     // §104①8호: 117,000,000 × 2 = 234,000,000 → 누진 68,980,000 + 10% 23,400,000 = 92,380,000
     // §104①1호: 117,000,000 × 2 = 234,000,000 → 68,980,000
     // 종전(자산별 합): 137,960,000 — P10이 모델 A(184,660,000)를 지나쳐 과소로 착지했다
-    expect(g.groupCalculatedTax).toBe(161_360_000);
+    expect(g.groupCalculatedTax).toBe(92_380_000);
+    expect(r.calculatedTaxByGroups).toBe(161_360_000);
   });
 });
 

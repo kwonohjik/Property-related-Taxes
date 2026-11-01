@@ -108,10 +108,11 @@ describe("§104①1호 버킷 echo (C-3a / 2b-1)", () => {
     expect(r.clause1BucketTax).toBe(27_610_000);
     expect(r.clause8TaxBase).toBe(369_000_000);
     expect(r.clause8Tax).toBe(158_560_000);
-    // 두 버킷의 합이 그룹과 정확히 일치한다 — 그룹 하나가 두 호로 갈리는 유일한 경로다.
-    expect(r.clause1BucketTaxBase + r.clause8TaxBase).toBe(g.groupTaxBase);
-    expect(r.clause1BucketTax + r.clause8Tax).toBe(g.groupCalculatedTax);
-    expect(g.groupCalculatedTax).toBe(186_170_000);
+    // 세율군 줄도 호대로 갈린다 — 비사업용 줄 = 8호 버킷, 일반 줄 = 1호 버킷.
+    expect([g.groupTaxBase, g.groupCalculatedTax]).toEqual([r.clause8TaxBase, r.clause8Tax]);
+    const general = groupOf(r, "progressive")!;
+    expect([general.groupTaxBase, general.groupCalculatedTax]).toEqual([r.clause1BucketTaxBase, r.clause1BucketTax]);
+    expect(r.calculatedTaxByGroups).toBe(186_170_000);
   });
 
   it("A-5: 단기(2년 미만) 자산은 제외된다 (후보가 `{104-1-2}`)", () => {

@@ -92,13 +92,10 @@ describe("A-3 — 한 필지 중 일부만 비사업용인 토지의 1호 파트
     }
   });
 
-  it("세율군 카드: 1호 버킷 세액을 과세표준 비율로 나눈다 — progressive 73,731,428 · non_business_land 408,388,572 (양 순서 동일)", () => {
-    // progressive 몫 = floor(258,060,000 × 200,000,000 / 700,000,000) — 나머지는 버킷 안 과세표준이 큰 P(non_business_land)가 받는다.
-    const share = Number((BigInt(bucket1) * 200_000_000n) / 700_000_000n); // 곱이 2^53을 넘어 BigInt로 정확히 나눈다
-    expect(share).toBe(73_731_428);
+  it("세율군 카드: 부분 비사업용의 1호 파트는 일반 줄에 실린다 — progressive = 1호 버킷 · non_business_land = 8호 버킷 (양 순서 동일)", () => {
     for (const r of [agg(2023, [p(), q()]), agg(2023, [q(), p()])]) {
-      expect(card(r, "progressive")).toBe(share);
-      expect(card(r, "non_business_land")).toBe(bucket1 - share + bucket8);
+      expect(card(r, "progressive")).toBe(bucket1);
+      expect(card(r, "non_business_land")).toBe(bucket8);
       expect(cardSum(r)).toBe(r.calculatedTaxByGroups);
     }
   });

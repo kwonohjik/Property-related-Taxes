@@ -203,37 +203,50 @@ describe("A-5. 단일세율 호(단기보유)는 누진공제 0이 «사실»이
  */
 describe("A-6. 한 그룹 안에서 «버킷이 갈리면» 승계하지 않는다", () => {
   /**
-   * **부분 비사업용 토지** — 한 자산이 배율 초과분(§104①8호 파트)과 그 밖(1호 파트)으로
-   * 갈려 **같은 그룹 안에 버킷이 둘**이 된다. 그때 그룹 산출세액은 **버킷별 합계**라
-   * 닫힌 산식이 성립하지 않는다 ⇒ 종전 규약(누진공제 0)을 유지해야 한다.
+   * **2주택(+20%p)과 3주택(+30%p)** — 호가 달라 **같은 세율군 안에 버킷이 둘**이 된다. 그때 세율군 산출세액은
+   * **버킷별 합계**라 닫힌 산식이 성립하지 않는다 ⇒ 종전 규약(누진공제 0)을 유지해야 한다.
    *
    * 🔑 이 fixture가 없으면 「버킷이 하나일 때만 승계한다」는 조건이 **한 번도 시험되지 않는다**.
    */
-  function runPartialNbl() {
-    const partial = {
-      ...plainAsset("P", 400_000_000),
-      isNonBusinessLand: true,
-      nonBusinessLandAreaRatio: 0.5,
-    } as unknown as TransferTaxItemInput;
+  function runTwoSurchargeClauses() {
+    const house = (id: string, gain: number, count: number) =>
+      ({
+        ...plainAsset(id, gain),
+        propertyType: "housing",
+        isRegulatedArea: true,
+        isOneHousehold: true,
+        householdHousingCount: count,
+      }) as unknown as TransferTaxItemInput;
     return calculateTransferTaxAggregate(
-      { taxYear: 2021, annualBasicDeductionUsed: 2_500_000, properties: [partial] },
+      { taxYear: 2021, annualBasicDeductionUsed: 2_500_000, properties: [house("H2", 400_000_000, 2), house("H3", 300_000_000, 3)] },
       rates,
     );
   }
 
   it("누진공제는 0으로 남는다 — 닫힌 산식이 성립하지 않는다", () => {
-    const g = runPartialNbl().groupTaxes[0];
+    const g = runTwoSurchargeClauses().groupTaxes[0];
     expect(g.progressiveDeduction).toBe(0);
-    // 400,000,000 × 48% − 0 = 192,000,000 ≠ 132,120,000 → 닫힌 산식은 거짓이다
+    // 700,000,000 × 68% − 0 = 476,000,000 ≠ 398,120,000 → 닫힌 산식은 거짓이다
     expect(Math.floor(g.groupTaxBase * g.appliedRate) - g.progressiveDeduction).not.toBe(
       g.groupCalculatedTax,
     );
   });
 
   it("🔒 세액은 손대지 않는다", () => {
-    const g = runPartialNbl().groupTaxes[0];
-    expect(g.groupTaxBase).toBe(400_000_000);
-    expect(g.groupCalculatedTax).toBe(132_120_000);
+    const g = runTwoSurchargeClauses().groupTaxes[0];
+    expect(g.groupTaxBase).toBe(700_000_000);
+    // 400,000,000 × 60% − 25,940,000 = 214,060,000 + 300,000,000 × 68% − 19,940,000 = 184,060,000
+    expect(g.groupCalculatedTax).toBe(398_120_000);
+  });
+
+  it("부분 비사업용 토지는 줄이 호대로 갈려 줄마다 닫힌 산식이 성립한다", () => {
+    const partial = { ...plainAsset("P", 400_000_000), isNonBusinessLand: true, nonBusinessLandAreaRatio: 0.5 } as unknown as TransferTaxItemInput;
+    const r = calculateTransferTaxAggregate({ taxYear: 2021, annualBasicDeductionUsed: 2_500_000, properties: [partial] }, rates);
+    expect(r.groupTaxes.map((g) => g.group).sort()).toEqual(["non_business_land", "progressive"]);
+    expect(r.calculatedTaxByGroups).toBe(132_120_000);
+    for (const g of r.groupTaxes) {
+      expect(Math.floor(g.groupTaxBase * g.appliedRate) - g.progressiveDeduction).toBe(g.groupCalculatedTax);
+    }
   });
 });
 
