@@ -49,6 +49,7 @@ import {
   type TransferPrintSectionId,
 } from "@/lib/print/transfer-print-sections";
 import { downloadSelectedPdf } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
+import { buildFilingHeadPdfRows } from "@/components/calc/results/transfer/filing-head-pdf-rows";
 import { extractRelevantBuildingStdSnapshots } from "@/lib/storage/use-auto-save-calculation";
 import { useMemo, useState } from "react";
 
@@ -172,7 +173,14 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
         // 합산 결과를 단건 result 형태로 어댑팅(신고서 표와 같은 어댑터 — 단일 소스).
         resultData: aggregateToFilingResult(aggregated) as unknown as Record<string, unknown>,
         // 건물 기준시가 계산서 PDF는 inputData.buildingStdSnapshots에서 재유도.
-        inputData: { buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: formData.assets }) },
+        inputData: {
+          buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: formData.assets }),
+          filingHeadRows: buildFilingHeadPdfRows({
+            result: aggregateToFilingResult(aggregated),
+            formData,
+            aggregate: { properties: aggregated.properties, aggregated, ownershipMap },
+          }),
+        },
         filenamePrefix: "양도소득세_계산결과",
       },
       pdfSections,

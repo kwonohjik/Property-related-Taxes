@@ -62,6 +62,7 @@ function getTotalTax(taxType: string, r: R): number | undefined {
 }
 // ─── 양도세 섹션 3종 — ResultPdfTransferSections.tsx로 분리 (800줄 정책) ───
 import { TransferSection, TransferMultiSection } from "./ResultPdfTransferSections";
+import type { FilingHeadPdfRow } from "@/components/calc/results/transfer/filing-head-pdf-rows";
 
 
 function AcquisitionSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
@@ -390,7 +391,7 @@ export function ResultPdfDocument({
         {inputData && <InputSection taxType={taxType} inputData={inputData} />}
 
         {/* 세금 유형별 상세 섹션 */}
-        {taxType === "transfer" && <TransferSection r={r} selectedSectionIds={selectedSectionIds} phdApartment={inputData?.phdApartment === true} />}
+        {taxType === "transfer" && <TransferSection r={r} selectedSectionIds={selectedSectionIds} phdApartment={inputData?.phdApartment === true} headRows={inputData?.filingHeadRows as FilingHeadPdfRow[] | undefined} />}
         {taxType === "transfer_multi" && <TransferMultiSection r={r} selectedSectionIds={selectedSectionIds} />}
         {taxType === "acquisition" && <AcquisitionSection r={r} selectedSectionIds={selectedSectionIds} />}
         {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} selectedSectionIds={selectedSectionIds} />}
