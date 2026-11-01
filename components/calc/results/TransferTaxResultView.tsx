@@ -38,6 +38,7 @@ import { SplitGainDetailSection } from "@/components/calc/results/transfer/Split
 import { isSaleSplitActual } from "@/components/calc/results/transfer/sale-split-unentered-notice";
 import { isPhdApartment } from "@/components/calc/results/transfer/phd-housing-term";
 import { Pre1990LandValuationDetailCard } from "@/components/calc/results/transfer/Pre1990LandValuationDetailCard";
+import { PreDeemedPurchaseResultCard } from "@/components/calc/results/transfer/PreDeemedPurchaseResultCard";
 import { resolveRuralSurtax } from "@/components/calc/results/transfer/reduction-eligible-income";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -518,6 +519,8 @@ export function TransferTaxResultView({
         {result.splitDetail?.housingExpropriationValuationDetail && (
           <HousingExpropriationValuationCard detail={result.splitDetail.housingExpropriationValuationDetail} />
         )}
+
+        {result.preDeemedPurchaseDetail && <PreDeemedPurchaseResultCard detail={result.preDeemedPurchaseDetail} />}
 
         {result.pre1990LandValuationDetail && (
           <Pre1990LandValuationDetailCard detail={result.pre1990LandValuationDetail} />

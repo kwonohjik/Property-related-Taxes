@@ -4,6 +4,7 @@
  * 800줄 정책에 따라 `transfer-tax-schema-sub.ts`에서 분리(2026-09-30). 공개 경로는 종전대로
  * `transfer-tax-schema-sub.ts`의 재export다.
  */
+import { preDeemedPurchaseSchema } from "./transfer-tax-schema-pre-deemed-purchase";
 import { z } from "zod";
 import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 import { carryoverTaxationEngineShape } from "./transfer-tax-building-schemas";
@@ -297,6 +298,8 @@ export const companionAssetSchema = z.object({
    * 종전엔 ⑫에 없어 컴패니언 감정가액이 실가로 읽혀 개산공제가 0이었다. 매매사례는 ⑧이 컴패니언에서 막으므로 받지 않는다.
    */
   acquisitionMethod: z.enum(["appraisal"]).optional(),
+  /** ⑫ 의제취득일 전 매수 영 §176조의2④ — 본체와 같은 스키마(⑭ `bundled-split-helpers.ts`) */
+  preDeemedPurchase: preDeemedPurchaseSchema.optional(),
   /**
    * ⑫ 신축·증축 특례(소득세법 §114조의2) — 컴패니언(함께양도·지분 카드)도 입력 칸이 있는데 종전엔 ⑫에 없어
    * **입력해도 엔진에 닿지 않았다**(침묵 strip → 가산세 0). 본체(`transfer-tax-schema-base-shape.ts`)와 같은 필드·같은 형태.

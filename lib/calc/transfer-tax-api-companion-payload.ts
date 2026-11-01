@@ -59,6 +59,7 @@ import {
   isFullFractionalBundle,
 } from "./transfer-tax-api-asset-basics";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
+import { buildPreDeemedPurchasePayload } from "./transfer-pre-deemed-purchase-form";
 import { isRedevelopmentSec166Asset, redevActualAcquisitionPriceRaw } from "./redev-acquisition-price-source";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { isRedevSuccessorAptActualOnly } from "./redev-acquisition-price-source";
@@ -306,6 +307,8 @@ export function buildAssetPayload(
     ...(splitActive ? buildLandPartCausePayload(asset, { isNonPrimary: true }) : {}),
     // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). 바꾸지 않았으면 싣지 않는다(분리 축 무관 — 자산 단위 경로도 읽는다)
     ...buildHouseFirstDisclosurePayload(asset),
+    // ⑬ 의제취득일 전 매수 영 §176조의2④ — 주 자산과 같은 leaf · 같은 지분 금액 규약
+    ...buildPreDeemedPurchasePayload(asset, makeRatioed(ratio, fractional)),
     assetId: asset.assetId,
     assetLabel: asset.assetLabel,
     /**

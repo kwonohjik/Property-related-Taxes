@@ -4,6 +4,7 @@
  */
 
 import { MIXED_USE_DEFAULTS } from "./calc-wizard-asset-mixed-use";
+import { PRE_DEEMED_PURCHASE_DEFAULTS } from "./calc-wizard-asset-pre-deemed-purchase";
 import { PARTIAL_AREA_APPORTION_DEFAULTS } from "./calc-wizard-asset-partial-area";
 import { residenceDefaults } from "./calc-wizard-asset-residence";
 import { CARRYOVER_DEFAULTS } from "./calc-wizard-asset-carryover";
@@ -416,6 +417,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     supplementaryLandUnitPrice: "",
     supplementaryBuildingValue: "",
     ...MIXED_USE_DEFAULTS,
+    ...PRE_DEEMED_PURCHASE_DEFAULTS,
     rentalHousingException: { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS },
     // ── 상업용건물·오피스텔 환산취득가 cb* 필드 (사례 29, 소득세법 시행령 §164⑥) ──
     cbEra: "",

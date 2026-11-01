@@ -14,6 +14,7 @@
  * 근거: 소득세법 시행령 §166⑥ (양도가액 기준시가 비율 안분).
  */
 
+import { preDeemedPurchaseApplies } from "@/lib/calc/transfer-pre-deemed-purchase-form";
 import { effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
 import { hasStaleSplitInput } from "@/lib/calc/transfer-land-part-cause";
 import { neutralizeCarryoverDonorSplitForCompanion } from "@/lib/calc/transfer-land-part-cause";
@@ -324,7 +325,17 @@ export function computeTransferPerAssetSummary(
     let acqPending = acqSource.pending;
     /** 아래 분기가 이미 감가상각비를 공제한 값을 내는가(일반건물 카드 합) — 이중 공제 방지. */
     let depAlreadyDeducted = false;
-    if (mixedResult && i === 0) {
+    // 의제취득일 전 매수 영 §176조의2④ — 취득가액은 ①·② 비교 후 엔진이 정한다(계산 전 「계산 후 확정」 · 주식과 같은 규약).
+    //   ② 채택이면 엔진 값(②) · ① 채택이면 아래 기존 분기(환산·감정·매매사례 프리뷰·결과)가 그대로 맞다.
+    const pdDetail = isSingle ? singleResult?.preDeemedPurchaseDetail : bundledProperty?.preDeemedPurchaseDetail;
+    const pdPending = preDeemedPurchaseApplies(a) && !pdDetail && (isSingle ? !singleResult : !bundledProperty);
+    if (pdDetail?.selected === "clause2") {
+      acqPrice = pdDetail.clause2Amount;
+      acqPending = false;
+    } else if (pdPending) {
+      acqPrice = 0;
+      acqPending = true;
+    } else if (mixedResult && i === 0) {
       // 겸용주택: 결과 카드와 같은 단일 소스(B1 파트 모델은 단서 판정 후 실제 차감값).
       acqPrice = mixedUseDisplayedAcqPrice(mixedResult);
       if (bgMixed) acqPending = false;
@@ -489,7 +500,11 @@ export function computeTransferPerAssetSummary(
     // 입력분만 더한 부분합을 총액으로 보이지 않게 pending으로 시작한다.
     let expensePending = isParcelMode(a) && parcelAcqSum(a).pending;
     if (expensePending) expense = 0;
-    if (mixedResult && i === 0) {
+    if (pdPending) {
+      // 의제취득일 전 매수 — ①(개산공제)·②(실비) 중 어느 쪽인지 비교 후에야 정해진다(위 취득가액과 같은 술어).
+      expense = 0;
+      expensePending = true;
+    } else if (mixedResult && i === 0) {
       // 겸용주택 필요경비 = 주택·상가 각 토지·건물분 개산공제(§163⑥) 합.
       // (swap §97② 발동 시 실제 필요경비와 달라질 수 있음 — 계획서 §6 리스크 참조)
       const { housingPart: h, commercialPart: c } = mixedResult;

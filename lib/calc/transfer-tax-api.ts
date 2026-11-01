@@ -6,6 +6,7 @@
  * assets.length === 1 → single 엔드포인트, >= 2 → bundled 엔드포인트.
  */
 
+import { buildPreDeemedPurchasePayload } from "./transfer-pre-deemed-purchase-form";
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { sellingHouseStdPricePayload } from "@/lib/calc/selling-std-price-scope";
 import { buildExemptionProvisoPayload } from "./exemption-proviso-payload";
@@ -724,6 +725,8 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     ...(hasPre1990 || hasPre1990ForSec164
       ? buildPre1990LandPayload(primary, form.transferDate)
       : {}),
+    // ⑬ 의제취득일 전 매수 영 §176조의2④ — 1차 범위 자산이고 실제 취득일이 1985.1.1. 전일 때만(⑤⑧과 같은 leaf)
+    ...buildPreDeemedPurchasePayload(primary, ratioed),
     // 겸용주택 분리계산 입력
     ...(mixedUsePayload ? { mixedUse: mixedUsePayload } : {}),
     // 배우자등 이월과세 (§97조의2)
