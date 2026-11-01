@@ -54,6 +54,8 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
   /** 양도일 — 부담부증여 담보·임대 승(괄호 열거 시기) 판정(`bgSuccessorRightStdForced`). */
   transferDate?: string;
+  /** 지분 분할 취득(축 B) 카드인가 — 축 A 공유 지분 승계 입주권은 기준시가 2칸이 열리고 축 B는 열리지 않는다(`bgSuccessorRightStdForced`). */
+  isFractionalSplit?: boolean;
 }
 
 type AcqMode = ReturnType<typeof successorRightEstimationMode>;
@@ -84,7 +86,7 @@ function acqModePatch(mode: AcqMode): Partial<AssetForm> {
   };
 }
 
-export function SuccessorRightAcquisitionBlock({ asset, onChange, transferDate }: Props) {
+export function SuccessorRightAcquisitionBlock({ asset, onChange, transferDate, isFractionalSplit }: Props) {
   // 표시 전용 합계 — 저장하지 않는다. 산식은 API 변환과 **같은 헬퍼**를 쓴다.
   const { successorRightAcqPrice, successorRightAddedContribution } = asset;
   const total = useMemo(
@@ -104,7 +106,7 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange, transferDate }
   const deemed = isDeemedValueSuccessorRight(asset);
   const hidden = carryover || deemed;
   // 부담부증여 × 담보·임대 승(괄호 열거 시기) — 취득가액이 입주권 기준시가(취득일까지 납입한 금액 + 취득일 현재 프리미엄)라 승계취득가액·추가분담금은 쓰이지 않는다(⑧ 면제와 같은 술어).
-  const stdForced = bgSuccessorRightStdForced(asset, transferDate);
+  const stdForced = bgSuccessorRightStdForced(asset, transferDate, isFractionalSplit === true);
   const isActual = !hidden && !stdForced && mode === "actual";
   // §165① 기준시가 미리보기 — 저장하지 않는다(합산은 ④ 변환과 같은 헬퍼)
   const stdAtAcq = successorRightStdPriceAtAcq(asset);

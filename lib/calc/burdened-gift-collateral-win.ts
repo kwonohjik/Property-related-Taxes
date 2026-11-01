@@ -123,9 +123,9 @@ export function bgUnsupportedWinnerReason(asset: AssetForm): string {
 export const BG_RTMI_ORIGINAL_CAUSE =
   "원조합원 입주권의 기준시가(「소득세법 시행령」 제165조 제1항 — 취득일까지 납입한 금액과 취득일 현재의 프리미엄)는 「취득일」과 「납입한 금액」에 종전 부동산 평가액·청산금을 포함하는지가 정해지지 않아 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
 
-/** 승계 입주권이라도 지분 100%만 계산한다(단건·함께 양도 묶음) — 지분을 가진 승계 입주권은 확인하지 못했다. */
+/** 승계 입주권이라도 같은 물건을 지분으로 나눠 취득한 경우(축 B)는 계산하지 않는다 — 확인하지 못했다. 단건·함께 양도 묶음(지분 100%)과 공유 지분(축 A)은 계산한다. */
 export const BG_RTMI_SUCCESSOR_SINGLE_ONLY_CAUSE =
-  "승계 조합원입주권의 담보·임대 평가에서 취득가액을 입주권 기준시가로 정하는 계산은 지분 100%(단독 소유)만 합니다 — 지분을 가진 입주권은 확인하지 못했습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
+  "승계 조합원입주권의 담보·임대 평가에서 취득가액을 입주권 기준시가로 정하는 계산은 지분 100%이거나 공유 지분인 경우만 합니다 — 같은 물건을 지분으로 나눠 취득한(지분 분할 취득) 경우는 확인하지 못했습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
 
 export function bgUnsupportedWinnerCause(asset: AssetForm): string {
   if (asset.assetKind === "right_to_move_in") return asset.isSuccessorRightToMoveIn === true ? BG_RTMI_SUCCESSOR_SINGLE_ONLY_CAUSE : BG_RTMI_ORIGINAL_CAUSE;
