@@ -22,6 +22,8 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { isFractionalRatioSumOutOfTolerance } from "./fractional-ratio-sum-tolerance";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
+import { fractionalModeShareIssue } from "./transfer-tax-validate-asset";
+import { isFractionalModeWithoutBundle } from "./transfer-tax-validate-asset";
 import { evaluateUnconditionalExemption } from "./nbl-unconditional-exemption-status";
 import { buildFractionalShareNblRecord } from "./non-business-land-request";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
@@ -428,9 +430,10 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
     //    `mergePrimaryBasic`의 7키만으로는 「자산 2: 토지면적을 입력하세요」가 뜬다 —
     //    화면에 칸이 없는데 입력하라는 **UI 통과 ↔ validate 차단 모순**이다(CLAUDE.md ⑧).
     //    ④ API 변환과 **같은 함수**를 쓴다(단일 소스 — 목록이 갈리면 한쪽만 통과한다). 감면 검증·⑤ 감면 패널도 같은 leaf다.
+    const fractionalModeWithoutBundle = isFractionalModeWithoutBundle(form);
     for (let i = 0; i < form.assets.length; i++) {
       const entry = axisBEffectiveAsset(form, i);
-      const message = validateAssetEntry(entry, i, form);
+      const message = fractionalModeWithoutBundle ? fractionalModeShareIssue(form.assets[i], i) : validateAssetEntry(entry, i, form);
       if (message) issues.push({ step, assetIndex: i, message });
     }
 
@@ -490,7 +493,7 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
     // (`buildAssetPayload`·`primaryActualSalePrice`와 같은 `applyRatio` — 종전엔 지분 자산이 하나라도 있으면 생략해
     // 합이 어긋난 채 route 500, 2026-10-10 실측).
     // 전 자산 부담부증여는 계약서 가액 칸이 없고 총 양도가액도 받지 않는다(위 `allBurdenedGift` — 양도가액은 §159가 정한다).
-    if (form.assets.length > 1 && form.bundledSaleMode === "actual" && !fullFractional && !allBurdenedGift) {
+    if (form.assets.length > 1 && form.bundledSaleMode === "actual" && !fullFractional && !fractionalModeWithoutBundle && !allBurdenedGift) {
       const sumActual = form.assets.reduce((s, a) => {
         const v = parseAmount(a.actualSalePrice);
         const r = getOwnershipRatio(a);
