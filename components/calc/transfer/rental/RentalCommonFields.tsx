@@ -17,6 +17,8 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { hasRentIntervalRule } from "@/lib/calc/rental-rent-increase-label";
+import { rentIncreaseViolationLabel } from "@/lib/calc/rental-rent-increase-label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type {
   RentalCommonFormFields,
@@ -141,10 +143,10 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
       {/* ③ 임대료 증액 제한 */}
       <ToneCard tone="violet" sectionNum={sec3} title="임대료 증액 제한 (§97의3①2호)" bodyClassName="space-y-2">
         <div>
-          <p className="text-xs text-muted-foreground mb-1.5">임대료 5% 증액 위반 이력</p>
+          <p className="text-xs text-muted-foreground mb-1.5">{rentIncreaseViolationLabel(fieldType)}</p>
           {/* §97의3·§97의5 — 조특령 §97의3③1호 후단, §97의4 — 소령 §167의3①2호 가·다목 괄호.
               1년 이내 재증액 금지도 엔진이 계약 이력으로 판정한다 */}
-          {(usesEndDateAndInterval || fieldType === "rental_97_4") && (
+          {hasRentIntervalRule(fieldType) && (
             <p className="mb-1.5 text-micro text-muted-foreground">
               {fieldType === "rental_97_4"
                 ? "소득세법 시행령 §167의3①2호 — 5% 한도는 2019.2.12 이후 체결·갱신한 계약을 기준으로 다음 계약의 증가율을 판정하고, 1년 이내 재증액 금지는 2020.2.11 이후 체결·갱신한 계약을 기준으로 그 다음 증액부터 판정합니다. 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다."

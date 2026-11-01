@@ -25,6 +25,7 @@ import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { engineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
+import { rentIncreaseViolationLabel } from "./rental-rent-increase-label";
 
 /**
  * 「PHD 환산 모드」 메시지가 가리킬 입력칸 — 메시지는 5칸을 한꺼번에 묻지만(`canCalcReductionPhd`)
@@ -329,7 +330,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(fieldError(`reduction.${r.type}.taxRegistrationDate`, `${label} 적용: 세무서 사업자등록일을 입력하세요 (조특령 ${r.type === "rental_97_5" ? "§97의5③" : "§97의3④"} — 늦으면 그날부터 임대 개시).`));
           // 3-state: "" = 미선택 → 차단 (간소화 모드 명시 선택 강제)
           if (r.rentIncreaseViolationMode === "")
-            return fail(fieldError(`reduction.${r.type}.rentIncreaseViolationMode`, `${label} 적용: 임대료 5% 증액 위반 이력 여부(없음/있음)를 선택하세요.`));
+            return fail(fieldError(`reduction.${r.type}.rentIncreaseViolationMode`, `${label} 적용: ${rentIncreaseViolationLabel(r.type)} 여부(없음/있음)를 선택하세요.`));
           if (r.rentIncreaseViolationMode === "has_violation" && (!r.rentHistory || r.rentHistory.length < 2))
             return fail(fieldError(`reduction.${r.type}.rentHistory`, `${label} 적용: 위반 이력 "있음" 선택 시 계약별 임대료 이력을 2건 이상 입력하세요.`));
           if (r.hasVacancyOverGrace === null) {
