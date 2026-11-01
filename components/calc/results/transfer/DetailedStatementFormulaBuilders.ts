@@ -583,6 +583,10 @@ export function buildAcquisitionPriceFormula(
         )
       : `취득가액(추계) ${estBase}${capExStr}${depStr} — 소득세법 §97 / 시행령 §163·§176의2`;
   }
+  // 영 §176조의2④ ② 채택 — 입력 실가가 아니라 실가 + 생산자물가상승분이다(파트 비교는 위 파트 문구)
+  if (result.preDeemedPurchaseDetail?.selected === "clause2" && !result.preDeemedPurchaseDetail.part) {
+    return `취득가액 ${(singleAcq - capEx + depreciation).toLocaleString()}${capExStr} (취득 당시 실지거래가액 + 생산자물가상승분)${depStr}`;
+  }
   // 실가 — 값은 공제 후이므로 산식은 「실지거래가액 − 감가상각비」로 적어 값이 자기를 만들게 한다.
   return depreciation > 0
     ? `취득가액 ${(singleAcq - capEx + depreciation).toLocaleString()}${capExStr} (실제 거래가액)${depStr}`

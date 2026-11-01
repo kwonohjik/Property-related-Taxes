@@ -25,7 +25,10 @@ import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residenc
 import { estimatedDeductionRate } from "@/lib/tax-engine/legal-codes";
 import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
-import { getAcqDateForCard } from "./FilingFormTableHelpers";
+import { getAcqDateForCard, ownershipRatioOfAsset } from "./FilingFormTableHelpers";
+import { assetOfProperty } from "./sale-split-unentered-notice";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { preDeemedAcqPriceNote, preDeemedDetailOfCard } from "./pre-deemed-purchase-filing-note";
 import { gbCarryoverAcqDateOverride } from "./FilingFormTableDateHelpers";
 import {
   buildGbTransferFormula,
@@ -132,7 +135,8 @@ export function buildStatementItems(
   // ④ API 변환(`transfer-tax-api.ts:332`·`:341`)과 같은 규칙을 ⑦ 표시에 적용한다.
   const receiveOnly = resolveReceiveOnlyDisplay(
     result,
-    transferPriceOverride ?? parseAmount(formData?.contractTotalPrice),
+    // 신고서 표와 같은 규칙 — 폼 계약금액은 100% 기준이라 지분 단건은 지분분으로 표시한다
+    transferPriceOverride ?? applyRatio(parseAmount(formData?.contractTotalPrice), ownershipRatioOfAsset(asset ?? formData?.assets[0])),
     formData?.transferDate ?? "",
   );
   const transferDate = receiveOnly.transferDate;
@@ -150,7 +154,7 @@ export function buildStatementItems(
    *   자산 축이 없어 1번 건의 값 하나뿐이었다. 같은 화면 신고서 양식은 `propertyFormMap`으로
    *   정확히 표시하고 있었다 (결과탭 코드리뷰 #054·#093).
    */
-  const assetOf = (pid: string) => aggregate?.propertyFormMap?.get(pid)?.assets[0] ?? primary;
+  const assetOf = (pid: string) => assetOfProperty(pid, formData, aggregate?.propertyFormMap) ?? primary;
   const transferDateOf = (pid: string) =>
     aggregate?.propertyFormMap?.get(pid)?.transferDate ?? transferDate;
   // 일반건물 부담부증여 × 이월과세 A 채택 — 당초 증여자 취득일(신고서 표와 같은 leaf).
@@ -192,6 +196,8 @@ export function buildStatementItems(
   const residenceMs = residenceMonthsOfAsset(primary, transferDate);
   // ── 1단계: 일자·기간 (DetailedStatementDateItems.ts) ─────────────
   setDateAndResidenceItems(items, {
+    preDeemed: isAggregate ? undefined : result.preDeemedPurchaseDetail,
+    preDeemedOf: (p) => (aggregate ? preDeemedDetailOfCard(p.propertyId, p.preDeemedPurchaseDetail, aggregate.aggregated) : undefined),
     isAggregate,
     properties,
     primary,
@@ -355,7 +361,9 @@ export function buildStatementItems(
   // 이월과세 × 당초 증여 채무 부분(매입분) — 시나리오 A로 나누어 계산했으면 한 줄 고지(PDF와 같은 문장 정본). 어댑터 echo가 없으면(옛 결과·E3) 비어 있다.
   // 주택 분리 계산(E3)은 나누지 않고 분자에서만 뺀 사실(T2)을 알린다 — 단건 `splitDetail`의 파트 echo가 근거다.
   const splitView = !isAggregate ? splitCarryoverView(result.splitDetail) : undefined;
+  const preDeemedSingle = isAggregate ? undefined : result.preDeemedPurchaseDetail;
   const purchasedPartNote = [
+    ...(preDeemedSingle ? [preDeemedAcqPriceNote(preDeemedSingle)] : []),
     ...(result.purchasedPartEchoes ?? []).map(({ label, split }) => ((result.purchasedPartEchoes?.length ?? 0) > 1 ? `[${label}] ` : "") + carryoverPurchasedPartLine(split)),
     ...(splitView ? splitCarryoverDebtNotices(splitView) : []),
   ].join(" / ");
@@ -371,7 +379,9 @@ export function buildStatementItems(
           (p) => p.acquisitionPrice + capExInAcquisitionColumnOfProperty(p),
           (p) => {
             const g = gbOf(p);
-            return purchasedPartPieceFormula(properties, p.propertyId, "acquisition") ?? buildGbAcquisitionFormula(p, g.gb, g.asset, burdenedGift);
+            const formula = purchasedPartPieceFormula(properties, p.propertyId, "acquisition") ?? buildGbAcquisitionFormula(p, g.gb, g.asset, burdenedGift);
+            const preDeemed = aggregate ? preDeemedDetailOfCard(p.propertyId, p.preDeemedPurchaseDetail, aggregate.aggregated) : undefined;
+            return preDeemed ? [formula, preDeemedAcqPriceNote(preDeemed)].filter(Boolean).join(" · ") : formula;
           },
         )
       : undefined,

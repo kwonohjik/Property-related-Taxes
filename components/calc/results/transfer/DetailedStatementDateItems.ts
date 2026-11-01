@@ -13,6 +13,8 @@ import type { StatementItem } from "./DetailedStatementConfig";
 import { splitCarryoverView } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 import { splitCarryoverDateText } from "./split-acq-text";
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
+import type { PreDeemedPurchaseDetail } from "@/lib/tax-engine/types/transfer-pre-deemed-purchase.types";
+import { preDeemedAcqDateNote } from "./pre-deemed-purchase-filing-note";
 
 interface DateItemsArgs {
   isAggregate: boolean;
@@ -30,6 +32,9 @@ interface DateItemsArgs {
   acqDateOf: (pid: string) => string;
   /** 파트 이월과세(P2 C) echo — 취득일자·보유기간 행이 파트별 기산일을 밝힌다. 없으면 종전 */
   splitDetail?: SplitGainResult;
+  /** 의제취득일 전 매수 영 §176조의2④ — 단건 echo · 합산은 열별(V-6) */
+  preDeemed?: PreDeemedPurchaseDetail;
+  preDeemedOf?: (p: PerPropertyBreakdown) => PreDeemedPurchaseDetail | undefined;
 }
 
 export function setDateAndResidenceItems(items: Map<string, StatementItem>, args: DateItemsArgs): void {
@@ -44,6 +49,8 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
     transferDateOf,
     acqDateOf,
     splitDetail,
+    preDeemed,
+    preDeemedOf,
   } = args;
   const splitCarryover = isAggregate ? undefined : splitCarryoverView(splitDetail);
   items.set("transferDate", {
@@ -68,7 +75,9 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
   items.set("acquisitionDate", {
     label: acquisitionDateLabel ? `취득일자 ${acquisitionDateLabel}` : "취득일자",
     value: fmtDate(displayAcqDate),
-    formula: acquisitionDateOverride
+    formula: preDeemed
+      ? preDeemedAcqDateNote(preDeemed)
+      : acquisitionDateOverride
       ? "이월과세 적용 시 증여자 취득일 기산 (소득세법 §97조의2 ①)"
       : splitCarryover
         ? `${!splitCarryover.buildingGifted ? "건물 취득일 — 토지는 이월과세(증여)" : splitCarryover.landGifted ? "수증자 취득일 = 증여 등기접수일" : "건물 취득일 = 증여 등기접수일 — 토지는 매매"} — 파트별 장기보유특별공제 기산일: ${splitCarryoverDateText(splitDetail)}`
@@ -78,6 +87,7 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
       ? properties.map((p) => ({
           label: p.propertyLabel,
           value: fmtDate(acqDateOf(p.propertyId)),
+          ...(preDeemedOf?.(p) ? { formula: preDeemedAcqDateNote(preDeemedOf(p)!) } : {}),
         }))
       : undefined,
   });

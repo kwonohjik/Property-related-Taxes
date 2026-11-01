@@ -183,7 +183,15 @@ import { mixedBgFilingNotes } from "./DetailedStatementBgMixedFormulas";
 import { redevFilingTotals } from "./redev-acquisition-inverse";
 import { redevInverseTransferPrice } from "@/lib/tax-engine/burdened-gift-totals";
 import { appliedFormTotalTransferExpense } from "@/lib/calc/transfer-expense-in-scope";
+import { preDeemedAcqDateNote, preDeemedAcqPriceNote } from "./pre-deemed-purchase-filing-note";
 export { fmtCell } from "./FilingFormTableRowDefs";
+
+/** 자산의 소유 지분(1.0 = 단독) — 신고서 표·명세서가 양도가액을 지분분으로 표시할 때 같은 값을 쓴다 */
+export function ownershipRatioOfAsset(primary: AssetForm | undefined): number {
+  const ownNum = parseFloat(primary?.ownershipNumerator || "100");
+  const ownDen = parseFloat(primary?.ownershipDenominator || "100");
+  return isFinite(ownNum) && isFinite(ownDen) && ownDen > 0 && ownNum > 0 ? Math.min(ownNum / ownDen, 1.0) : 1.0;
+}
 
 export function buildRows(
   result: TransferTaxResult,
@@ -215,12 +223,7 @@ export function buildRows(
   const rawTotalPrice =
     transferPriceOverride ??
     parseAmount(formData?.contractTotalPrice || primary?.actualSalePrice || "0");
-  const ownNum = parseFloat(primary?.ownershipNumerator || "100");
-  const ownDen = parseFloat(primary?.ownershipDenominator || "100");
-  const ownRatio =
-    isFinite(ownNum) && isFinite(ownDen) && ownDen > 0 && ownNum > 0
-      ? Math.min(ownNum / ownDen, 1.0)
-      : 1.0;
+  const ownRatio = ownershipRatioOfAsset(primary);
   // receiveOnly(사례 46) — 신고단위 양도가액·양도일은 청산금 분 단독이다(§166①2호 가목).
   // ④ API 변환(`transfer-tax-api.ts:332`·`:341`)과 같은 규칙을 ⑦ 표시에 적용한다.
   // 미발동이면 fallback을 그대로 돌려주므로 아래 지분 안분 분기가 종전대로 살아 있다.
@@ -724,9 +727,16 @@ export function buildRows(
     : "취득일자";
 
   // B1 — 겸용 별개 취득 파트 모델: 취득가액 행 열별 주석(엔진 echo 소비 — 재도출 금지)
-  const acqNotes = mode === "fourpart" || mode === "mixed-4col" ? separateAcqFilingNotes(mu) : undefined;
+  const preDeemed = result.preDeemedPurchaseDetail;
+  const preDeemedCol = preDeemed?.part ?? "total";
+  const acqNotes =
+    mode === "fourpart" || mode === "mixed-4col"
+      ? separateAcqFilingNotes(mu)
+      : preDeemed
+        ? { [preDeemedCol]: preDeemedAcqPriceNote(preDeemed) }
+        : undefined;
   // 「비과세 양도소득금액」 행: 특례 적용 결과는 「(소령 §161①)」을 B에만 붙인다(S06-8). 그 외(미적용)는 종전 라벨.
   const rhDetail = result.rentalHousingExceptionDetail;
   const nontaxableRowLabel = rhDetail?.applied === true ? nontaxableIncomeLabel(rhDetail.scenarioId) : undefined;
-  return buildRowsFromOrder(v, roseNotesMap, acqDateRowLabel, singleTaxNotes, acqNotes, nontaxableRowLabel);
+  return buildRowsFromOrder(v, roseNotesMap, acqDateRowLabel, singleTaxNotes, acqNotes, nontaxableRowLabel, preDeemed ? { [preDeemedCol]: preDeemedAcqDateNote(preDeemed) } : undefined);
 }
