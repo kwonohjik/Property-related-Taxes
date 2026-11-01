@@ -203,3 +203,27 @@ describe("§155④⑤ 합가 상대 쪽 임대 (0061)", () => {
     expect(w(r)).toContain("기준-2024-법규재산-0061");
   });
 });
+
+describe("합가 상대 쪽 임대 — 중과 고지", () => {
+  const notice = (r: { result: { warnings?: string[] } }) => (r.result.warnings ?? []).filter((m) => m.includes("중과 판정의 주택 수는")).join("\n");
+  const rows = [other("a", "2018-09-27", { mergeOrigin: "counterpart_side", ...PRICEY }), other("b", "2018-09-27", { mergeOrigin: "counterpart_side", isLongTermRental: true, ...PRICEY })];
+  const base = { region: GANGNAM, rhe: CARVE, merge: PARENTAL, houses: rows, transfer: "2026-06-18", extra: BIG };
+  it("MX-21 ★ 강남 거주 0 · 3주택 중과 → 겸용도 같은 문장", async () => {
+    const r = await runCalc(form(base));
+    expect(payable(r)).toBeGreaterThan(0);
+    expect(notice(r)).toContain("3주택으로 보고 중과세율을 적용했습니다");
+    expect(notice(r)).toContain("§167의3①13호의 중과 배제를 받지 못합니다");
+  });
+  it("MX-22 거주 30 → 13호 배제 · 고지 없음", async () => {
+    expect(notice(await runCalc(form({ ...base, res: R30 })))).toBe("");
+  });
+  it("MX-23 ⑳ 미선언 → 이 경로가 아니라 고지 없음", async () => {
+    expect(notice(await runCalc(form({ ...base, rhe: null })))).toBe("");
+  });
+  it("MX-24 ⑳ 선언 · 상대 쪽 거주 문항 미답 → 합가 임대 경로가 아니라 중과여도 고지 없음", async () => {
+    const r = await runCalc(form({ ...base, rhe: RHE() }));
+    expect(w(r)).toContain("를 적용하지 않았습니다");
+    expect(r.result.multiHouseSurcharge?.surchargeApplicable).toBe(true);
+    expect(notice(r)).toBe("");
+  });
+});
