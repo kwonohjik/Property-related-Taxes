@@ -5,6 +5,7 @@
  * 🔑 문서 파일에 남겨 두면 `document ↔ sections` **순환**이 되므로 leaf로 뺐다(800줄 분리).
  */
 import { StyleSheet } from "@react-pdf/renderer";
+import { BESSHI_FONT_STACK } from "./fonts";
 
 export type R = Record<string, unknown>;
 
@@ -19,7 +20,8 @@ export const C = {
 
 export const s = StyleSheet.create({
   page: {
-    fontFamily: "NanumGothic",
+    // NanumGothic에 없는 원문자(①②…)·㎡는 글자별로 대체 글꼴을 쓴다 — 없으면 낮은 바이트로 잘려 「a」「c」로 찍힌다.
+    fontFamily: [...BESSHI_FONT_STACK],
     fontSize: 9,
     color: C.primary,
     paddingTop: 40,

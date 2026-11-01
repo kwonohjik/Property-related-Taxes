@@ -43,7 +43,7 @@ import {
 
 // ─── 세금 유형별 상세 섹션 ────────────────────────────────────────
 
-export function TransferSection({ r, selectedSectionIds, phdApartment }: { r: R; selectedSectionIds?: string[]; phdApartment?: boolean }) {
+export function TransferSection({ r, selectedSectionIds, phdApartment, headRows }: { r: R; selectedSectionIds?: string[]; phdApartment?: boolean; headRows?: { label: string; value: string; note?: string }[] }) {
   if (bool(r.isExempt)) return null;
   // calculation 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (계산 내역, 검토 U1)
   if (selectedSectionIds !== undefined && !selectedSectionIds.includes("calculation")) return null;
@@ -108,6 +108,13 @@ export function TransferSection({ r, selectedSectionIds, phdApartment }: { r: R;
       <View style={s.table}>
         {num(r.transferPrice) !== undefined && (<View style={s.row}><Text style={s.lbl}>양도가액</Text><Text style={s.val}>{fmt(r.transferPrice)}</Text></View>)}
         {num(r.acquisitionPrice) !== undefined && (<View style={s.row}><Text style={s.lbl}>취득가액</Text><Text style={s.val}>{fmt(r.acquisitionPrice)}</Text></View>)}
+        {/* 화면 신고서 표와 같은 값·주석(`buildFilingHeadPdfRows`) */}
+        {headRows?.map((row, i) => (
+          <Fragment key={`head${i}`}>
+            <View style={s.row}><Text style={s.lbl}>{row.label}</Text><Text style={s.val}>{row.value}</Text></View>
+            {row.note && <Text style={{ fontSize: 7, color: C.muted, paddingLeft: 8, marginBottom: 2 }}>※ {row.note}</Text>}
+          </Fragment>
+        ))}
         <View style={s.row}><Text style={s.lbl}>전체 양도차익</Text><Text style={s.val}>{fmt(transferGain)}</Text></View>
         {taxableGain !== transferGain && (<View style={s.row}><Text style={s.lblSub}>과세대상 양도차익</Text><Text style={s.val}>{fmt(taxableGain)}</Text></View>)}
         {num(r.longTermHoldingRate) !== undefined && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제 ({fmtRate(r.longTermHoldingRate)})</Text><Text style={s.val}>{ltdAmount > 0 ? `- ${fmt(ltdAmount)}` : "해당없음"}</Text></View>)}

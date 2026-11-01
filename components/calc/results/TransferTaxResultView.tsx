@@ -23,6 +23,7 @@ import { DetailedCalculationStatementCard } from "@/components/calc/results/tran
 import { resolveBgCarryoverSingleDisplay } from "@/components/calc/results/transfer/DetailedStatementBgFormulas";
 import { bgRedevFilingTransferPrice } from "@/lib/tax-engine/burdened-gift-totals";
 import { formatRate, downloadSelectedPdf } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
+import { buildSingleFilingHeadPdfRows } from "@/components/calc/results/transfer/filing-head-pdf-rows";
 import { SelfBuiltPenaltyCard } from "@/components/calc/results/transfer/SelfBuiltPenaltyCard";
 import { ParcelDisclosure } from "@/components/calc/results/transfer/ParcelDisclosure";
 import { SingleDetailCards, hasSingleDetailCards } from "@/components/calc/results/transfer/SingleDetailCards";
@@ -149,6 +150,7 @@ export function TransferTaxResultView({
           buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: formData?.assets }),
           // PHD(§164⑦) 결과 이름 — 화면과 같은 단일 정의(`isPhdApartment`). 표시 전용, 엔진·API 무관
           phdApartment: isPhdApartment(resolvedAsset),
+          filingHeadRows: buildSingleFilingHeadPdfRows({ result, formData, asset: resolvedAsset, transferPriceOverride }),
         },
         filenamePrefix: "양도소득세_계산결과",
       },
