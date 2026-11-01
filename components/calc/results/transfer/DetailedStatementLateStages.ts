@@ -45,6 +45,8 @@ import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain
 import { splitCarryoverNotices, splitCarryoverView } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 import { splitCarryoverDateText, splitCarryoverRateDateText, splitCauseDateText, splitRateHoldingNote } from "./split-acq-text";
 import { localTaxablePenaltyOf } from "@/components/calc/results/transfer/local-income-tax-display";
+import { assetOfProperty } from "./sale-split-unentered-notice";
+import { isGbPartCard } from "./gb-part-card";
 
 /** 후반 단계 — `items` 에 **append 만** 한다(반환 없음 · out 0 실측). */
 export function appendLateStageItems(
@@ -60,7 +62,11 @@ export function appendLateStageItems(
     aggregate: AggregateMeta | undefined;
   },
 ) {
-  const { result, isAggregate, primary, properties, totalTransferPrice, aggregate } = ctx;
+  const { result, isAggregate, primary, properties, totalTransferPrice, formData, aggregate } = ctx;
+  // 산출세액·결정세액은 참고값이다 — 일반건물 파트 행은 합계와 맞지 않아 신고서 표처럼 싣지 않는다. 감면세액·가산세는 합계를 나눈 값이라 남긴다.
+  const refTaxProperties = properties.filter(
+    (p) => !isGbPartCard(p.propertyId, assetOfProperty(p.propertyId, formData, aggregate?.propertyFormMap) ?? primary),
+  );
   // ── 4단계: 다건 합산 절차 (다건 모드 전용) ─────────────────────────
   // 단건 모드에서는 result.steps에 해당 step이 없으므로 Map.set 자체를 건너뜀
   // → STATEMENT_GROUPS의 'aggregate' 그룹이 빈 itemKeys로 자동 미렌더.
@@ -122,7 +128,7 @@ export function appendLateStageItems(
     note: [result.shortTermNote, splitCauseDateText(result.splitDetail), splitRateHoldingNote(result.splitDetail), splitCarryoverNote(result.splitDetail), splitCarryoverNoticeNote(result.splitDetail)].filter(Boolean).join(" · ") || undefined,
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
-          properties,
+          refTaxProperties,
           (p) => p.refCalculatedTax,
           buildCalculatedTaxFormula,
         )
@@ -158,7 +164,7 @@ export function appendLateStageItems(
     legalBasis: determinedStep?.legalBasis ?? TRANSFER.FINAL_TAX,
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
-          properties,
+          refTaxProperties,
           (p) => p.refDeterminedTax,
           buildDeterminedTaxFormula,
         )
