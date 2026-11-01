@@ -88,6 +88,7 @@
 - 개산공제는 §159 STEP 5 단일 출처이고 그 base는 `*StdPriceAtAcquisition`이다(뒤집힌 판정 2).
 - 입주권은 **K-4 전용**으로 좁혔고(§설계 결정 D-2), **K-4는 개산공제를 적용하지 않는다** — 실비(자본적지출·양도비)로 대체된다(`burdened-gift-apportionment.ts:298`).
 - 1%가 필요한 경로(R-4 일반 경로 환산)는 도달 불가(뒤집힌 판정 3).
+  - **정정(2026-11-01, I-1 `docs/00-pm/bg-successor-rtmi-std-acq.plan.md`):** 위 «도달 불가»는 R-4 **환산** 경로에 한한 판정이다. 승계 입주권이 담보(§66)·임대(§61⑤) 승으로 소령 §159①1호 A 괄호가 열거된 시기(담보 2023.2.28.~ · 임대 2020.2.11.~)에 취득가액이 입주권 기준시가(소령 §165①)로 정해지면 필요경비는 개산공제이고, 그 율은 소령 §163⑥4호 **1%**다 — `burdened-gift-acquisition.ts` STEP 5가 `estimatedDeductionRate(isUnregistered, "right_to_move_in")`를 쓴다. 판정 3의 «취득시 2필드 불필요»도 이 경로에서는 승계의 `successorRightStdPaidAtAcq`·`PremiumAtAcq`가 필요하다.
 
 ⇒ **`OTHER_ASSET_ESTIMATED_DEDUCTION_RATE` 신설 불요.** 위 분석은 분양권 지원 재개·`useEstimatedAcquisition` 강제 해제 시를 위한 **기록**으로만 남긴다.
 ⚠️ 만약 후일 1%를 넣게 되면 `estimatedDeductionRate()`(`legal-codes/transfer-nbl.ts:183`) **SSOT 함수를 확장**할 것 — 그 주석이 「신규 개산공제 지점은 반드시 이 함수를 경유. 리터럴 `0.03` 금지」를 명시하고, 근거로 2026-07-28 「15곳 3% 고정 → 미등기 10배 오류」 이력을 든다. 네 번째 중복 소스를 만들지 말 것.

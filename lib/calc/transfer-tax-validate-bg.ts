@@ -56,7 +56,11 @@ import { bgCollateralForcesStdAcq, bgWholeGiftValuation } from "./burdened-gift-
 import { bgFractionalCollateralWin } from "./burdened-gift-collateral-win";
 import { bgFractionalCollateralKindSupported } from "./burdened-gift-collateral-win";
 import { bgSplitAxisCollateralWinUnsupported } from "./burdened-gift-collateral-win";
-import { BG_RTMI_WINNER_CAUSE } from "./burdened-gift-collateral-win";
+import { bgRtmiParenEnumerated } from "./bg-rtmi-std-acq";
+import { bgSuccessorRightStdForced } from "./bg-rtmi-std-acq";
+import { BG_RTMI_ORIGINAL_CAUSE } from "./burdened-gift-collateral-win";
+import { BG_RTMI_SUCCESSOR_SINGLE_ONLY_CAUSE } from "./burdened-gift-collateral-win";
+import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
 import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
@@ -86,20 +90,27 @@ const SUPPORTED_KINDS: AssetForm["assetKind"][] = [
 
 /**
  * 조합원입주권 단건·묶음 자산의 비보충 승자(담보 §66 · 임대 §61⑤) 차단 — 시가·기준시가 모드 공통.
- * 기준시가 모드에서도 엔진이 담보·임대 승 입주권을 400으로 중단하므로(`burdened-gift-apportionment.ts` fail-fast) ⑧이 앞서 막는다(⑧ ⊇ ⑫).
- * 승자를 확정하지 못하는 자산(`wholeValuation` 없음 — 축 B 등)은 건너뛴다.
+ * 괄호가 열거된 시기(`bgRtmiParenEnumerated` — 담보 2023.2.28.~ · 임대 2020.2.11.~)가 아니면 취득가액이 실지라 막지 않는다(엔진 `rtmiParenEnumerated`와 같은 경계).
+ * 열거 시기에는 **승계 입주권 단건**만 계산한다(취득시 기준시가 2칸 — (5-c‴)이 요구). 원조합원은 「취득일」·「납입한 금액」이 불명확해(H-2 대기), 지분·축 B·묶음은
+ * 확인하지 못해 막는다(⑧ ⊇ ⑫ — 엔진은 원조합원을 400으로 중단한다).
+ * 승자를 확정하지 못하는 자산(`wholeValuation` 없음 — 축 미지정 등)은 건너뛴다.
  */
 function rtmiNonSupplementaryWinnerIssue(
   asset: AssetForm,
   label: string,
   wholeValuation: ReturnType<typeof bgWholeGiftValuation>,
+  formTransferDate: string | undefined,
+  isFractionalSplit?: boolean,
 ): string | undefined {
   if (!wholeValuation || wholeValuation.selectedMode === "supplementary" || asset.assetKind !== "right_to_move_in") return undefined;
+  if (!bgRtmiParenEnumerated(asset, formTransferDate, isFractionalSplit)) return undefined;
+  if (bgSuccessorRightStdForced(asset, formTransferDate, isFractionalSplit)) return undefined;
   const mortgage = wholeValuation.selectedMode === "mortgage";
   const decided = mortgage
     ? `담보평가액(${wholeValuation.value.toLocaleString()}원 — 「상속세 및 증여세법」 제66조)${asset.bgValuationMode === "sangjeungbeop_market" ? "이 시가보다 커서 증여가액이 담보평가액이 됩니다" : "으로 증여재산 평가가 결정됩니다"}`
     : `임대료 환산액(${wholeValuation.value.toLocaleString()}원 — 「상속세 및 증여세법」 제61조 제5항)으로 증여재산 평가가 결정됩니다`;
-  return fieldError(mortgage ? "bgMortgageDebtAmount" : "bgLendingDepositTotal", `${label}: ${decided}. ${BG_RTMI_WINNER_CAUSE}`);
+  const cause = isBgSuccessorRight(asset) ? BG_RTMI_SUCCESSOR_SINGLE_ONLY_CAUSE : BG_RTMI_ORIGINAL_CAUSE;
+  return fieldError(mortgage ? "bgMortgageDebtAmount" : "bgLendingDepositTotal", `${label}: ${decided}. ${cause}`);
 }
 
 /** B/C > 1 차단 문구 — 시가 모드·기준시가 모드가 같은 사실을 말한다(엔진 `EXCESS_BURDENED_GIFT` 와 같은 조건). */
@@ -283,7 +294,7 @@ export function validateBurdenedGiftAsset(
       asset.assetKind === "right_to_move_in" ? "actual" : asset.bgAcquisitionMethod || "";
     /**
      * 담보 승(「상속세 및 증여세법」 제66조) — 단독 소유 단건만 엔진과 같은 증여가액 C로 판정한다(`bgWholeGiftValuation` 범위 주석).
-     * 조합원입주권은 담보·임대 승이면 취득가액을 기준시가로 정해야 하는데 입주권 기준시가 입력 경로가 없어 막는다(`BG_RTMI_WINNER_CAUSE` — 겸용은 MB-7이 막는다).
+     * 조합원입주권은 담보·임대 승이면 취득가액을 기준시가로 정해야 하는데 입주권 기준시가 입력 경로가 없어 막는다(`rtmiNonSupplementaryWinnerIssue` — 겸용은 MB-7이 막는다).
      * 이월과세는 막지 않는다 — 두 시나리오 모두 취득시 기준시가 × 채무비율이고 당초 증여자 기준시가는 아래 `missingCoDonorBasisLabel`이 요구한다
      * (`bg-carryover-mkt-collateral-win.plan.md`). 계획서 `docs/00-pm/burdened-gift-residuals-o3-o5-o8.plan.md` O-5.
      */
@@ -293,7 +304,7 @@ export function validateBurdenedGiftAsset(
     // 증여가액 C가 시가로 남았고, 시가 모드 담보 승이면 «채무액이 증여가액 초과»라는 틀린 사유로 막았다(⑫는 200 — 계획서 `bg-axis-b-mkt-collateral-win.plan.md`).
     const splitAxis = isFractionalSplitAxis === true;
     const wholeValuation = bgWholeGiftValuation(asset, splitAxis);
-    const rtmiIssue = rtmiNonSupplementaryWinnerIssue(asset, label, wholeValuation);
+    const rtmiIssue = rtmiNonSupplementaryWinnerIssue(asset, label, wholeValuation, formTransferDate, splitAxis);
     if (rtmiIssue) return rtmiIssue;
     // 축 B 시가 모드 담보 승 — 취득가액 처리(취득시 기준시가 × 채무비율)를 확인한 범위는 주택뿐이다. 그 밖의 종류는 «채무액 초과»가 아니라 이 사유로 막는다.
     if (splitAxis && bgSplitAxisCollateralWinUnsupported(asset)) {
@@ -615,8 +626,17 @@ export function validateBurdenedGiftAsset(
 
   // (5-c″) 기준시가 모드 조합원입주권 × 담보·임대 승 — 평가 3항·실지취득가액 필수 검사 **뒤**여야 한다(앞에 두면 그 안내를 가린다). 시가 모드는 위 (4) 안에서 같은 헬퍼가 막는다.
   if (asset.bgValuationMode === "sangjeungbeop_standard" && isFractionalSplitAxis !== true) {
-    const rtmiIssue = rtmiNonSupplementaryWinnerIssue(asset, label, bgWholeGiftValuation(asset));
+    const rtmiIssue = rtmiNonSupplementaryWinnerIssue(asset, label, bgWholeGiftValuation(asset), formTransferDate, false);
     if (rtmiIssue) return rtmiIssue;
+  }
+
+  // (5-c‴) 승계 입주권 × 담보·임대 승(괄호 열거 시기) — 취득가액이 입주권 기준시가(소령 §165① — 취득일까지 납입한 금액 + 취득일 현재 프리미엄)다. 엔진이 같은 상태에서 400을 낸다.
+  //   승계취득가액·추가분담금은 쓰이지 않아 요구하지 않는다(승계 검증이 그 요구를 같은 술어로 면제한다 — ⑧ ⊇ ⑫, 쓰이지 않는 값을 요구하지 않는다).
+  if (bgSuccessorRightStdForced(asset, formTransferDate, isFractionalSplitAxis === true) && successorRightStdPriceAtAcq(asset) <= 0) {
+    return fieldError(
+      "successorRightStdPaidAtAcq",
+      `${label}: 부담부증여 — 증여재산 평가가 ${bgWholeGiftValuation(asset, false)?.selectedMode === "rental" ? "임대평가(「상속세 및 증여세법」 제61조 제5항)" : "담보평가(「상속세 및 증여세법」 제66조)"}로 결정돼 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 취득가액은 입주권의 취득시 기준시가(같은 영 제165조 제1항)입니다. 취득일까지 납입한 금액과 취득일 현재의 프리미엄을 입력하세요.`,
+    );
   }
 
   // (5-d) 이월과세 × 당초 증여자 신축·증축 §114조의2 (PR-4) — 환산(K-5)·감정(K-7) 입력 다음 순서. 범위 밖 stale 은 요구하지 않는다.

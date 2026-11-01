@@ -288,7 +288,7 @@ function validateAssetAcquisitionBranches(
    * 술어는 `transfer-successor-right.ts` 단일 소스(UI·API·사이드바 공용).
    */
   if (isSuccessorRightTransfer(asset)) {
-    const succErr = validateSuccessorRightAsset(asset, label, typeToggleSection);
+    const succErr = validateSuccessorRightAsset(asset, label, typeToggleSection, formTransferDate);
     if (succErr || !isCarryoverSuccessorRight(asset)) return succErr;
     // 이월과세(비부담부증여) — 비재개발 이월과세와 같은 검증(⑫ `refineCarryoverTaxation`·환산 기준시가 규칙과 같다 · 계획서 `successor-right-carryover-validation.plan.md` Q-2 a).
     //   종전엔 이월과세 칸을 보지 않아 주 자산은 ⑫ 400, 함께 양도는 환산 기준시가 빈칸이 A 취득가액 0으로 계산됐다(G-3·G-4).

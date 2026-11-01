@@ -18,6 +18,7 @@ import { refineGbBgCarryoverBundled } from "./transfer-tax-schema-donor-built";
 import { refineGbBgCarryoverParts } from "./transfer-tax-schema-donor-built";
 import { refineBgMarketValueByPart } from "./transfer-tax-schema-donor-built";
 import { collateralForcesStdAcquisition } from "./transfer-tax-schema-collateral-win";
+import { successorRtmiMarketCollateralForcesStd } from "./transfer-tax-schema-collateral-win";
 import { refineCarryoverTaxation } from "./transfer-tax-schema-companion-refines";
 import { carryoverDebtPiecesUnsupportedReason } from "@/lib/tax-engine/carryover-debt-pieces-scope";
 import { refineMixedUsePresence } from "./transfer-tax-schema-mixed-use";
@@ -144,6 +145,8 @@ export function refineBurdenedGiftInputs(
     mixedUse?: unknown;
     /** 지분율 — 담보 승 판정이 엔진처럼 시가를 지분분으로 줄여 비교한다(`collateralForcesStdAcquisition`). */
     ownershipRatio?: number;
+    /** 양도일(ISO) — 승계 입주권 담보 승의 괄호 열거 시기 판정(`successorRtmiMarketCollateralForcesStd`). */
+    transferDate?: string;
   },
   ctx: z.RefinementCtx,
 ) {
@@ -182,8 +185,8 @@ export function refineBurdenedGiftInputs(
       // 위 주석 — 3자 max(①②③) · 겸용 상속·증여 평가액
     } else if (!bg.acquisitionMethod) {
       issue(["burdenedGiftInfo", "acquisitionMethod"], "부담부증여 시가 모드는 취득가액 산정방식(actual·salesCase·appraisal·converted)이 필요합니다 (소득세법 §100①)");
-    } else if (collateralForcesStdAcquisition(bg, data.ownershipRatio)) {
-      // 담보 승 — 엔진이 방식별 금액을 읽지 않는다(아래 함수 주석). ⑤가 그 칸을 숨기고 ⑧도 요구하지 않는다(O-5).
+    } else if (collateralForcesStdAcquisition(bg, data.ownershipRatio) || successorRtmiMarketCollateralForcesStd(bg, data.transferDate, data.ownershipRatio)) {
+      // 담보 승 — 엔진이 방식별 금액을 읽지 않는다(아래 함수 주석). ⑤가 그 칸을 숨기고 ⑧도 요구하지 않는다(O-5). 승계 입주권(괄호 열거 시기)도 같다(I-1).
     } else if (
       bg.acquisitionMethod === "actual" &&
       !positive(bg.actualAcquisitionTotal) &&

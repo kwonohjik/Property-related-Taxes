@@ -141,6 +141,8 @@ export const burdenedGiftInfoSchema = z.object({
       memberRightsValue: z.number().int().nonnegative(),
       paidInstallments: z.number().int().nonnegative(),
       premium: z.number().int().nonnegative(),
+      /** 승계조합원 표지 — 없으면 엔진이 침묵 strip해 원조합원으로 읽는다(승계의 기준시가 취득가액 경로가 닫힌다). */
+      isSuccessor: z.boolean().optional(),
     })
     .optional(),
   // Phase 3 (2026-05-12): 증여세 통합 입력

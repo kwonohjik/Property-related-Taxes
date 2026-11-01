@@ -41,6 +41,7 @@ import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
 import { gbBgGiftTaxedValueByPart } from "./gb-bg-gift-tax-return";
 import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
 import { isBgSuccessorRight } from "./transfer-successor-right";
+import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
 import { successorRightAcquisitionTotal } from "./transfer-successor-right";
 
 export interface BurdenedGiftInfoPayload {
@@ -84,6 +85,8 @@ export interface BurdenedGiftInfoPayload {
     memberRightsValue: number;
     paidInstallments: number;
     premium: number;
+    /** 승계조합원 — 엔진 `rightValuation.isSuccessor`(담보·임대 승의 기준시가 취득가액 경로를 승계만 연다). */
+    isSuccessor?: boolean;
   };
   // Phase 3: 증여세 통합 입력
   donorRelation?:
@@ -539,7 +542,9 @@ export function buildBurdenedGiftInfo(
       landStdPriceAtTransfer: 0,
       buildingStdPriceAtTransfer: rightTotal,
       landStdPriceAtAcquisition: 0,
-      buildingStdPriceAtAcquisition: 0,
+      // 승계조합원은 취득시 입주권 기준시가(소령 §165① — 취득일까지 납입한 금액 + 취득일 현재 프리미엄)를 싣는다. 엔진은 담보(§66)·임대(§61⑤) 승으로 §159①1호 A 괄호가
+      // 열거된 시기에만 읽고(`rtmiParenEnumerated`), 그 밖에는 실지(K-4)라 읽지 않는다 — 그래서 승자·시기를 여기서 가리지 않는다. 원조합원은 0(H-2 대기).
+      buildingStdPriceAtAcquisition: isBgSuccessorRight(primary) ? successorRightStdPriceAtAcq(primary) : 0,
       // D-2: K-4 고정. 시가 모드에서 사용자가 「환산」을 골라 뒀어도 입주권에는 그 경로가 없다.
       acquisitionMethod: "actual" as const,
       // 승계조합원은 승계 블록 2칸(승계취득가액 + 추가분담금)이 실지취득가액이다 — 「종전 부동산」 칸은 원조합원 전용(`isBgSuccessorRight`).
@@ -550,6 +555,7 @@ export function buildBurdenedGiftInfo(
         memberRightsValue: deriveMemberRightsValue(primary),
         paidInstallments: parseAmount(primary.bgRightPaidInstallments) || 0,
         premium: parseAmount(primary.bgRightPremium) || 0,
+        ...(isBgSuccessorRight(primary) ? { isSuccessor: true } : {}),
       },
     };
   }

@@ -19,6 +19,7 @@ import {
   applyRatio,
   computeEstimatedDeduction,
 } from "./tax-utils";
+import { estimatedDeductionRate } from "./legal-codes/transfer-nbl";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type {
   BurdenedGiftInfo,
@@ -80,6 +81,7 @@ function scaleRightValuation(
     memberRightsValue,
     paidInstallments,
     premium: scaledTotal - memberRightsValue - paidInstallments,
+    ...(rv.isSuccessor !== undefined ? { isSuccessor: rv.isSuccessor } : {}),
   };
 }
 
@@ -155,6 +157,22 @@ export const MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE =
 export const BG_PAREN_ENUMERATED_FROM = new Date("2015-02-03");
 export const BG_PAREN_RENTAL_61_5_FROM = new Date("2020-02-11");
 export const BG_PAREN_MORTGAGE_66_FROM = new Date("2023-02-28");
+
+/**
+ * 조합원입주권의 담보(§66)·임대(§61⑤) 승이 양도일(증여일) 당시 §159①1호 A 괄호의 열거에 드는가.
+ * 입주권 평가 자체는 §61③(열거 밖)이라 보충적평가 승은 해당 없다 — 시가 모드에서 담보평가가, 기준시가 모드에서 담보·임대 평가가 이겨 양도가액의 산정 근거가
+ * §66·§61⑤가 된 경우만이다. 열거 이전 양도는 실지취득가액(§97①1호)이다(비입주권의 현행 문언 계산 + 확인 필요 고지와 달리, 입주권은 괄호를 발동시킬 입력이 시기에
+ * 따라 갈려 열거 밖을 실지로 둔다 — `bg-successor-rtmi-std-acq.plan.md` §3). 양도일이 없으면 판정하지 않는다(`false`).
+ */
+export function rtmiParenEnumerated(
+  selectedMode: "supplementary" | "mortgage" | "rental",
+  transferDate: Date | undefined,
+): boolean {
+  if (transferDate === undefined) return false;
+  if (selectedMode === "mortgage") return transferDate >= BG_PAREN_MORTGAGE_66_FROM;
+  if (selectedMode === "rental") return transferDate >= BG_PAREN_RENTAL_61_5_FROM;
+  return false;
+}
 
 /**
  * 취득가액을 기준시가로 강제했는데 양도일(증여일) 당시 괄호에 그 평가 조문이 없었던 경우의 확인 필요 안내. 해당 없으면 `undefined`.
@@ -493,7 +511,10 @@ export function apportionAcquisitionPrice(
 export function estimatedDeductionForBurdenedGift(
   standardPriceApportioned: number,
   isUnregistered = false,
+  isRightToMoveIn = false,
 ): number {
+  // 조합원입주권은 §163⑥4호 1%(미등기 단서 없음) — SSOT `estimatedDeductionRate`가 판정한다(리터럴 금지).
+  if (isRightToMoveIn) return computeEstimatedDeduction(standardPriceApportioned, estimatedDeductionRate(isUnregistered, "right_to_move_in"));
   const rate = isUnregistered
     ? UNREGISTERED_ESTIMATED_DEDUCTION_RATE
     : REGISTERED_ESTIMATED_DEDUCTION_RATE;

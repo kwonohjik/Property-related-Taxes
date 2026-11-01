@@ -46,7 +46,7 @@ import {
   apportionTransferPrice,
   apportionAcquisitionPrice,
   fractionalHighValueDenominator,
-  BG_PAREN_MORTGAGE_66_FROM,
+  rtmiParenEnumerated,
   withDeemedAcquisitionStd,
 } from "./burdened-gift-valuation";
 
@@ -248,14 +248,39 @@ export function buildBurdenedGiftBreakdown(params: {
   } = resolveBgAcquisitionBasis(info, sangjeungbeopValuation.selectedMode);
 
   /**
-   * 🔴 입주권 × 담보(§66)·임대(§61⑤) 승리는 **fail-fast**.
+   * 🔴 조합원입주권 × 담보(§66)·임대(§61⑤) 승 — §159①1호 A 괄호가 **열거된 시기**(`rtmiParenEnumerated` — 담보 2023.2.28.~ · 임대 2020.2.11.~)에는 취득가액을
+   * 기준시가로 정한다. 입주권의 기준시가는 소령 §165①(취득일까지 납입한 금액 + 취득일 현재의 프리미엄)이다
+   * (`bg-successor-rtmi-std-acq.plan.md` · 종전 I-0 `bg-rtmi-mkt-collateral-failfast.plan.md`가 입력 경로가 없어 중단하던 자리).
    *
-   * 그 경로는 괄호가 발동해 「입주권의 기준시가」(소령 §165①)를 요구하는데, 본 설계는 그 입력을
-   * 두지 않는다(입주권은 K-4 전용). 값이 0으로 흘러 **취득가액 0 → 양도차익 과대**가 되므로
-   * 근거 없는 불리 적용을 막기 위해 계산을 중단한다 — `assertBurdenedGiftEligible`과 같은 층위다.
+   * · **승계조합원**(`rightValuation.isSuccessor`): 취득시 입주권 기준시가(`buildingStdPriceAtAcquisition`)가 있으면 괄호대로 계산한다(취득가액 = 그 값 × B/C, 개산공제 1% — §163⑥4호).
+   *   없으면(0) 취득가액이 0이 되어 양도차익이 통째로 부푸는 막히지 않는 오답이라 입력을 요구한다(자동 fallback 금지 — 기준시가·시가 모드 공통).
+   * · **원조합원**: 「취득일」·「납입한 금액」의 범위(종전 부동산 평가액·청산금 포함 여부)가 불명확해 계산하지 않는다(질의 H-2 대기) — 입력이 있어도 쓰지 않는다.
+   * · 열거 이전 양도·보충적평가 승(§61③)은 괄호가 발동하지 않아 실지취득가액(K-4)이다. 양도일(`giftDate`)이 없으면 열거 여부를 판정하지 못해 종전대로
+   *   기준시가 모드의 담보·임대 승만 중단한다(시가 모드는 실지).
    */
+  const rtmiEnumerated = isRightToMoveInValuation && rtmiParenEnumerated(sangjeungbeopValuation.selectedMode, params.giftDate);
+  if (rtmiEnumerated && info.rightValuation?.isSuccessor !== true) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "[burdened_gift] 조합원입주권의 증여재산 평가가 " +
+        (sangjeungbeopValuation.selectedMode === "mortgage" ? "담보(§66)" : "임대(§61⑤)") +
+        " 평가로 결정됐습니다. 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 취득가액도 기준시가로 산정해야 하는데, " +
+        "원조합원 입주권의 기준시가(같은 영 제165조 제1항 — 「취득일」까지 납입한 금액과 취득일 현재의 프리미엄)는 종전 부동산 평가액·청산금의 포함 범위가 " +
+        "정해지지 않아 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인하세요.",
+    );
+  }
+  if (rtmiEnumerated && landStdPriceAtAcquisition + buildingStdPriceAtAcquisition <= 0) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "[burdened_gift] 승계 입주권의 증여재산 평가가 " +
+        (sangjeungbeopValuation.selectedMode === "mortgage" ? "담보(§66)" : "임대(§61⑤)") +
+        " 평가로 결정돼 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 취득가액을 입주권의 취득시 기준시가로 산정해야 합니다. " +
+        "취득일까지 납입한 금액과 취득일 현재의 프리미엄(같은 영 제165조 제1항)을 입력하세요.",
+    );
+  }
   if (
     isRightToMoveInValuation &&
+    params.giftDate === undefined &&
     isStandardMode &&
     sangjeungbeopValuation.selectedMode !== "supplementary"
   ) {
@@ -263,35 +288,11 @@ export function buildBurdenedGiftBreakdown(params: {
       TaxErrorCode.INVALID_INPUT,
       "[burdened_gift] 조합원입주권의 증여재산 평가가 " +
         (sangjeungbeopValuation.selectedMode === "mortgage" ? "담보(§66)" : "임대(§61⑤)") +
-        " 평가로 결정됐습니다. 이 경우 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 " +
-        "취득가액도 기준시가로 산정해야 하는데, 조합원입주권의 기준시가(같은 영 제165조 제1항) " +
-        "입력 경로가 없어 계산할 수 없습니다. 담보 설정액·임대 보증금 입력을 재확인하세요.",
+        " 평가로 결정됐지만 양도일(증여일)이 없어 「소득세법 시행령」 제159조 제1항 제1호 괄호의 적용 시기를 판정할 수 없습니다.",
     );
   }
-
-  /**
-   * 🔴 입주권 × **시가 모드** × 담보(§66) 승리 × 양도일(증여일) 2023.2.28. 이후 — 위 기준시가 모드와 같은 **fail-fast**(`bg-rtmi-mkt-collateral-failfast.plan.md`).
-   *
-   * 「소득세법 시행령」 제159조 제1항 제1호 괄호는 2023.2.28.부터 양도가액을 상증법 §66으로 산정한 경우도 열거한다(`BG_PAREN_MORTGAGE_66_FROM`) — 입주권이라고 달라지지 않는다
-   * (입주권 평가는 §61③이지만 시가 모드에서 담보평가가 이겨 C가 §66 평가액이 되면 양도가액의 산정 근거가 §66이다). 그런데 종전 엔진은 시가 모드 입주권을 괄호 발동에서
-   * 제외해(`resolveBgAcquisitionBasis`) 실지취득가액(K-4)으로 계산했다 — 기준시가 모드는 같은 상황을 위 fail-fast로 막으니 **같은 사실이 모드에 따라 값이 달랐다**.
-   * 입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어 값을 정할 수 없으므로 두 모드 모두 계산을 중단한다. 이전 양도는 열거에 §66이 없어 실지 그대로다.
-   * `giftDate`가 없으면(증여세 계산을 생략하는 호출) 판정하지 않는다 — 종전 동작.
-   */
-  if (
-    isRightToMoveInValuation &&
-    info.valuationMode === "sangjeungbeop_market" &&
-    sangjeungbeopValuation.selectedMode === "mortgage" &&
-    params.giftDate !== undefined &&
-    params.giftDate >= BG_PAREN_MORTGAGE_66_FROM
-  ) {
-    throw new TaxCalculationError(
-      TaxErrorCode.INVALID_INPUT,
-      "[burdened_gift] 조합원입주권의 증여재산 시가 평가에서 담보(§66) 평가액이 시가보다 커 C가 담보평가액으로 결정됐습니다. " +
-        "양도일(증여일)이 2023.2.28. 이후라 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 취득가액도 기준시가로 산정해야 하는데, " +
-        "조합원입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어 계산할 수 없습니다. 담보 설정액·채권최고액 입력을 재확인하세요.",
-    );
-  }
+  /** 괄호 발동 — 기본 판정에 입주권의 열거 시기 승계 건을 더한다(단일 소스는 `resolveBgAcquisitionBasis` + 위 `rtmiEnumerated`). */
+  const acqStdForced = acqStdPriceForced || rtmiEnumerated;
 
   /**
    * 시가 평가인데 담보평가(§66)가 시가보다 커서 C가 담보평가가 된 경우 — 괄호가 문언대로 발동한다(「제66조에 따라 기준시가로 산정한
@@ -325,7 +326,7 @@ export function buildBurdenedGiftBreakdown(params: {
    * 의제취득일 전 자산은 의제취득일 기준시가를 요구하는 자기 안내가 따로 있고(`resolveWholeBgAcquisition`), 입주권은 괄호가 발동하지 않는다(`acqStdPriceForced`).
    * ⑧이 화면에서 먼저 막고, 여기는 API 직접 호출·함께 양도를 한 곳에서 막는다.
    */
-  if (isStandardMode && acqStdPriceForced && !preDeemed && landStdPriceAtAcquisition + buildingStdPriceAtAcquisition <= 0) {
+  if (isStandardMode && acqStdForced && !isRightToMoveInValuation && !preDeemed && landStdPriceAtAcquisition + buildingStdPriceAtAcquisition <= 0) {
     throw new TaxCalculationError(
       TaxErrorCode.INVALID_INPUT,
       "[burdened_gift] 기준시가로 평가했는데 취득시 기준시가가 없습니다. 취득가액이 취득시 기준시가 × 채무비율로 정해지므로 " +
@@ -346,7 +347,7 @@ export function buildBurdenedGiftBreakdown(params: {
     buildingTransferPrice,
     assumedDebtAmount,
     giftValuation,
-    acqStdPriceForced,
+    acqStdPriceForced: acqStdForced,
     isRightToMoveInValuation,
     preDeemed,
     params: { capitalExpenditure: params.capitalExpenditure, transferExpense: params.transferExpense },
@@ -354,7 +355,7 @@ export function buildBurdenedGiftBreakdown(params: {
   };
   const partwise =
     // 단일 자산 `preDeemed`(STEP 0.45)와 함께 오지 않는다 — 파트 ①②는 일반건물 route만 싣고, 일반건물은 STEP 0.45를 타지 않는다.
-    !acqStdPriceForced && (params.preDeemedParts?.land || params.preDeemedParts?.building)
+    !acqStdForced && (params.preDeemedParts?.land || params.preDeemedParts?.building)
       ? resolvePartwiseBgAcquisition(acqCtx, params.preDeemedParts)
       : undefined;
   const acq = partwise ? partwise.slots : resolveWholeBgAcquisition(acqCtx);
@@ -449,7 +450,7 @@ export function buildBurdenedGiftBreakdown(params: {
     giftValuation,
     wholePropertySupplementary,
     // 시가 평가인데 담보평가가 이겨 취득가액도 기준시가로 산정했는가 — 확인 필요 고지의 근거(1h-G1-2)
-    ...(collateralForcedStdInMarketMode ? { acquisitionStdForcedByCollateral: true } : {}),
+    ...(collateralForcedStdInMarketMode || (rtmiEnumerated && info.valuationMode === "sangjeungbeop_market") ? { acquisitionStdForcedByCollateral: true } : {}),
     // 지분 모드의 12억 판정 가액(소령 §156① — 지분 증여가액 ÷ 지분율). 단독 소유는 없음.
     ...(ownershipRatio !== undefined && ownershipRatio > 0 && ownershipRatio < 1
       ? {
@@ -487,7 +488,7 @@ export function buildBurdenedGiftBreakdown(params: {
     acquisitionMethodUsed,
     ...(preDeemed
       ? {
-          preDeemed: acqStdPriceForced
+          preDeemed: acqStdForced
             ? { basis: "deemed_std" as const, stdAtDeemed: preDeemed.stdAtDeemed }
             : {
                 basis: "three_way" as const,

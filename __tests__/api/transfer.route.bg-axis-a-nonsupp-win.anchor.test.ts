@@ -189,7 +189,7 @@ describe("AA-4 범위 밖 — 주택 외·이월과세는 정확한 사유로 �
     expect(bgNonSupplementaryWinnerUnsupported(base(x({ assetKind: "right_to_move_in" })))).toBe(true);
     expect(bgNonSupplementaryWinnerUnsupported(base(x({ isMixedUseHouse: true })))).toBe(true);
     expect(bgNonSupplementaryWinnerUnsupported(base(x({ assetKind: "land" })))).toBe(true);
-    expect(bgUnsupportedWinnerCause(base(x({ assetKind: "right_to_move_in" })))).toContain("조합원입주권의 기준시가");
+    expect(bgUnsupportedWinnerCause(base(x({ assetKind: "right_to_move_in" })))).toContain("원조합원 입주권의 기준시가");
   });
   it("축 미지정(undefined)은 종전처럼 지분 자산의 담보 승을 확정하지 않는다 — 미전환 호출처의 fail-closed", () => {
     const a = house(1, HALF, debt("700000000"));
