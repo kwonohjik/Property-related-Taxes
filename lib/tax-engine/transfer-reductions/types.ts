@@ -251,6 +251,12 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   transferIncome?: number;
   basicDeduction?: number;
   taxBase?: number;
+  /**
+   * B의 기준 소득 — 감면대상 **임대주택분** 양도소득금액 (없으면 `transferIncome` 전체).
+   * 겸용주택은 양도소득금액이 주택분·상가분·비사업용토지분으로 갈리는데 §97의5 감면은 임대주택의
+   * 「임대기간 중 발생한 양도소득」에 한정되므로 주택분만 B에 넣는다(상가분 세액을 감면하지 않는다).
+   */
+  reducibleBaseIncome?: number;
 }
 
 export interface Rental97IneligibleReason {

@@ -283,6 +283,7 @@ export function buildTotalTax(
   // ── 산출세액 이후 — 감면 · 농특세 · 가산세 (F17-B) ────────────────────────
   const post = computeMixedUsePostTax(
     transferTax, aggregateIncome, BASIC_DEDUCTION, taxBase, postTax && { ...postTax, isUnregistered },
+    Math.max(0, housingIncome),
   );
   const determinedTax = Math.max(0, transferTax - post.reductionAmount);
   // 지방소득세 base는 **결정세액**이다(지방세법 §103② 과세표준 × §103의3 세율 − §103의4 감면).
@@ -416,6 +417,8 @@ function computeMixedUsePostTax(
   basicDeduction: number,
   taxBase: number,
   input: MixedUsePostTaxInput | undefined,
+  /** 주택분 양도소득금액(통산 후) — §97의5 감면대상 소득을 주택분으로 한정한다 */
+  housingIncome: number,
 ): MixedUsePostTaxResult {
   if (!input) return EMPTY_POST;
 
@@ -485,6 +488,12 @@ function computeMixedUsePostTax(
           undefined, // 5B 파트별 판정 — 이 경로는 범위 밖
           input.expropriationAcquisitionDate,
           input.nonHeirBequest, // 수유자 — §69 피상속인 경작기간 미합산 · §77 불성립 고지
+          /**
+           * §97의5 — 감면은 임대주택의 「임대기간 중 발생한 양도소득」에 한정된다. 합계 소득을 B로
+           * 쓰면 상가분·비사업용토지분 세액까지 감면된다(계속 임대면 안분 비율 1이므로 산출세액 전액).
+           * 주택분만 B로 넘겨 「소득세법」 §90① A × (B − C) ÷ D로 계산한다.
+           */
+          housingIncome,
         )
       : { reductionAmount: 0, reductionType: undefined, reductionTypeApplied: undefined };
 

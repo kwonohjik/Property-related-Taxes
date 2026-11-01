@@ -222,6 +222,11 @@ export function calcRentalGainFraction(args: {
    *    §97의3⑤용이다. §97의5는 「취득 후 3개월 내 등록 → 임대개시」 구조라 임대개시일이 거의 항상
    *    취득일보다 늦어, 결과를 바꾸지 않는 기준시가 두 점을 요구하고 미입력이면 감면을 전액 배제했다.
    *    기준시가가 하락한 사안(D ≤ E)은 분모 ≤ 0이라 같은 사유로 배제됐다.
+   *
+   * 하락 사안도 1로 본다 — 계속 임대면 령 §97의5②의 「임대기간의 마지막 날」이 양도일이라
+   * 분자와 분모가 **같은 식**(양도 당시 − 취득당시)이다. 즉 보유기간 전체가 임대기간이고, 양도소득 전부가
+   * 「임대기간 중 발생한 양도소득」이다. 반면 조기 종료(B ≠ D)에서 D ≤ E면 두 식이 갈리고 산식이 성립하지
+   * 않으므로 evaluator가 `PRORATION_DENOMINATOR_NONPOSITIVE`로 불적용 처리한다(자동 안분 금지).
    */
   if (args.rentalContinuesToTransfer && args.numeratorBase === "acquisition") {
     return FULL_RENTAL_SHARE;

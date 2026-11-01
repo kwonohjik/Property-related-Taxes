@@ -280,14 +280,18 @@ function calcSection90Reduction(
 } {
   const tax = input.calculatedTax!;
   const f = share.rentalGainFraction;
-  // 비율 1 — 분수가 없거나 `{ num: 1, den: 1 }`(FULL_RENTAL_SHARE)·클램프로 num = den
-  if (!f || f.num >= f.den) return { reductionAmount: tax };
+  const { transferIncome, basicDeduction, taxBase, reducibleBaseIncome } = input;
+  // 비율 1 — 분수가 없거나 `{ num: 1, den: 1 }`(FULL_RENTAL_SHARE)·클램프로 num = den.
+  // 감면대상이 양도소득금액 전체일 때만 A 그대로다(겸용주택 등 일부 파트 한정이면 §90①로 계산).
+  const fullShare = !f || f.num >= f.den;
+  if (fullShare && reducibleBaseIncome === undefined) return { reductionAmount: tax };
 
-  const { transferIncome, basicDeduction, taxBase } = input;
   if (transferIncome === undefined || basicDeduction === undefined || taxBase === undefined || taxBase <= 0) {
     return { reductionAmount: applyRentalGainShare(tax, share) };
   }
-  const reducibleIncome = applyRentalGainShare(transferIncome, share); // B
+  const base = Math.min(transferIncome, Math.max(0, reducibleBaseIncome ?? transferIncome));
+  if (fullShare && base === transferIncome) return { reductionAmount: tax };
+  const reducibleIncome = applyRentalGainShare(base, share); // B
   const nonReducible = transferIncome - reducibleIncome;
   const basicDeductionAllocated = Math.min(reducibleIncome, Math.max(0, basicDeduction - nonReducible)); // C
   const reductionAmount = Math.min(

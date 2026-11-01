@@ -35,6 +35,8 @@ export interface Rental97EngineContext {
   transferIncome?: number;
   basicDeduction?: number;
   taxBase?: number;
+  /** §97의5 B의 기준 소득 — 겸용주택은 주택분 양도소득금액 (없으면 transferIncome 전체) */
+  reducibleBaseIncome?: number;
 }
 
 type RentalReductionVariant = Extract<
@@ -115,6 +117,7 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         transferIncome: ctx.transferIncome,
         basicDeduction: ctx.basicDeduction,
         taxBase: ctx.taxBase,
+        reducibleBaseIncome: ctx.reducibleBaseIncome,
       };
     case "rental_97_main":
     case "rental_97_proviso":

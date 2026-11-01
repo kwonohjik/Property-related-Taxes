@@ -18,6 +18,8 @@ import { evaluateRental975 } from "@/lib/tax-engine/transfer-reductions/rental-9
 import type { Rental97EvaluationInput, Rental97Result } from "@/lib/tax-engine/transfer-reductions/types";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { makeMockRates, baseTransferInput } from "@/__tests__/tax-engine/_helpers/mock-rates";
+import { calcMixedUseTransferTaxIdN as calcMixedUseIdN } from "@/__tests__/tax-engine/_helpers/mixed-use-identity-std";
+import { mixedUseCase14 } from "@/__tests__/tax-engine/_helpers/mixed-use-fixture";
 import { reductionSchema } from "@/lib/api/transfer-tax-schema-reductions";
 import { mapReductionsToEngine } from "@/app/api/calc/transfer/route-reductions-mapper";
 import { toEngineReductions } from "@/lib/calc/transfer-tax-api-reductions";
@@ -293,5 +295,46 @@ describe("배관 ④⑫⑭ — rentalEndDate", () => {
       const issue = check({ rentalContinuesToTransfer: true, stdPriceAtAcquisition: "", stdPriceAtTransfer: "" });
       expect(issue?.message ?? "").not.toMatch(/취득 당시·양도 당시 기준시가/);
     });
+  });
+});
+
+describe("겸용주택 — §97의5 감면대상 소득(B)은 주택분만 (리뷰 게이트 지적)", () => {
+  /**
+   * 겸용 경로는 `transferIncome`에 주택분·상가분·비사업용토지분 합계를 넘긴다. 4번 정정(계속 임대 → 비율 1)
+   * 이후 B를 합계로 잡으면 **상가분 세액까지 전액 감면**된다(종전에는 기준시가가 없어 사실상 항상 배제).
+   * 주택분 양도소득금액만 B로 넘겨 「소득세법」 §90① A × (B − C) ÷ D로 계산한다.
+   */
+  it("🔴 감면세액 = 산출세액 × 주택분 소득 ÷ 과세표준 — 상가분 세액은 감면하지 않는다", () => {
+    const r = calcMixedUseIdN(
+      2_600_000_000,
+      new Date("2026-06-01"),
+      {
+        ...mixedUseCase14(),
+        landAcquisitionDate: D("2014-06-01"),
+        buildingAcquisitionDate: D("2014-06-01"),
+        residencePeriodYears: 0,
+        table2ResidencePeriodYears: 0,
+        reductions: [
+          {
+            type: "rental_97_5",
+            registrationDate: D("2014-08-01"),
+            rentalStartDate: D("2014-09-01"),
+            isTaxRegistered: true,
+            isNationalHousingScale: true,
+            region: "capital",
+            officialPriceAtStart: 320_000_000,
+            rentalContinuesToTransfer: true,
+          },
+        ],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
+      makeMockRates(),
+    );
+    expect(r.housingPart.incomeAmount).toBe(77_134_875);
+    expect(r.total.taxBase).toBe(651_314_173);
+    expect(r.total.transferTax).toBe(237_611_952);
+    // 237,611,952 × 77,134,875 ÷ 651,314,173 = 28,140,287.x → 절사 (C = 0: 상가분이 기본공제 흡수)
+    expect(r.total.reductionAmount).toBe(28_140_287);
+    expect(r.total.reductionAmount, "합계 소득을 B로 쓰면 산출세액 전액이 감면된다").not.toBe(r.total.transferTax);
   });
 });
