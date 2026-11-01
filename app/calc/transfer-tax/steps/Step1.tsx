@@ -20,7 +20,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { getFilingDeadline, isFilingOverdue, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
+import { filingOverdueNote, getFilingDeadline, isFilingOverdue, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import { Button } from "@/components/ui/button";
 import { OneHouseJudgmentLoadModal } from "@/components/calc/transfer/OneHouseJudgmentLoadModal";
@@ -371,6 +371,7 @@ export function Step1({
           transferDate={form.transferDate}
           filingDate={form.filingDate}
           filingOverdue={filingOverdue}
+          filingOverdueNote={filingOverdueNote(form)}
           filingDeadline={filingDeadline}
           onFormChange={onChange}
           contractTotalPrice={form.contractTotalPrice}

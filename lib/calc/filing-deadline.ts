@@ -126,3 +126,62 @@ export function derivePenaltyFields(
 
   return needsOff ? offPatch : {};
 }
+
+/** `penaltyPatchOnFormChange`가 읽는 폼 — 현재 가산세 상태 + 기한을 정하는 입력 */
+export interface PenaltyFormView extends PenaltyDerivationState {
+  transferDate: string;
+  filingDate: string;
+  assets?: ReadonlyArray<{ transferType?: string }>;
+}
+
+/**
+ * 폼 입력 변경 시 가산세 패치 — 날짜·기한 입력이 **실제로 바뀔 때만** 움직인다.
+ *
+ * 🔴 파생을 모든 자산 입력에 걸면 상세주소만 고쳐도 사용자가 켠 가산세가 꺼지고 끈 가산세가 켜진다(계획서
+ *    `penalty-history-restore.plan.md` V-3 — 494,300·39,600 과소). 기한 내 신고여도 과소신고가산세(「국세기본법」 §47의3①)와
+ *    납부지연가산세(§47의4①1호)가 생기므로 「기한 내 = OFF」는 자동 켜기의 해제로만 맞다.
+ *
+ * - 기한 경과 여부가 뒤집힘 → `derivePenaltyFields`대로 켜고 끈다.
+ * - 그대로 + 기한 후 + ON → 납부기한·납부일을 맞춘다.
+ * - 그 외 → ON·OFF를 두고, 옛 값을 그대로 들고 있는 납부기한·납부일만 따라간다(사용자가 넣은 값은 두고).
+ */
+export function penaltyPatchOnFormChange(
+  prev: PenaltyFormView,
+  patch: Partial<Pick<PenaltyFormView, "transferDate" | "filingDate" | "assets">>,
+): PenaltyPatch {
+  const transferDate = patch.transferDate ?? prev.transferDate;
+  const filingDate = patch.filingDate ?? prev.filingDate;
+  const wasBurdened = isAllBurdenedGift(prev.assets);
+  const isBurdened = isAllBurdenedGift(patch.assets ?? prev.assets);
+  if (
+    transferDate === prev.transferDate &&
+    filingDate === prev.filingDate &&
+    isBurdened === wasBurdened
+  ) {
+    return {};
+  }
+
+  const wasOverdue = isFilingOverdue(prev.transferDate, prev.filingDate, wasBurdened);
+  const isOverdue = isFilingOverdue(transferDate, filingDate, isBurdened);
+  if (wasOverdue !== isOverdue || (isOverdue && prev.enablePenalty)) {
+    return derivePenaltyFields(transferDate, filingDate, prev, isBurdened);
+  }
+
+  const out: PenaltyPatch = {};
+  const deadline = getFilingDeadline(transferDate, isBurdened);
+  if (deadline && prev.paymentDeadline === getFilingDeadline(prev.transferDate, wasBurdened) && prev.paymentDeadline !== deadline) {
+    out.paymentDeadline = deadline;
+  }
+  if (isOverdue && prev.actualPaymentDate === prev.filingDate && prev.actualPaymentDate !== filingDate) {
+    out.actualPaymentDate = filingDate;
+  }
+  return out;
+}
+
+/**
+ * 기한 경과 안내의 뒷부분 — 가산세 상태대로. 수정신고는 일반 가산세 블록을 보내지 않으므로 경과 사실만 알린다.
+ */
+export function filingOverdueNote(form: { enablePenalty?: boolean; amendmentMode?: boolean }): string {
+  if (form.amendmentMode) return "";
+  return form.enablePenalty ? "가산세 자동 적용" : "가산세 계산이 꺼져 있어 세액에 포함되지 않습니다";
+}

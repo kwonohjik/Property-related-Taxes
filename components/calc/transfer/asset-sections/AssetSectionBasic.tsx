@@ -81,6 +81,8 @@ interface Props {
   filingDate?: string;
   /** 신고기한 초과 여부 (Step1 산출) */
   filingOverdue?: boolean;
+  /** 기한 경과 안내 뒷부분 — 가산세 상태대로 (Step1 산출) */
+  filingOverdueNote?: string;
   /** 신고기한 문자열 (Step1 산출, 양도일 미입력 시 빈 문자열) */
   filingDeadline?: string;
   /** 폼-전역 패치 (양도일·신고일 write — handleFormChange 경유) */
@@ -104,6 +106,7 @@ export function AssetSectionBasic({
   transferDate,
   filingDate,
   filingOverdue,
+  filingOverdueNote,
   filingDeadline,
   onFormChange,
   isFirst,
@@ -120,7 +123,7 @@ export function AssetSectionBasic({
             required
             warning={
               filingOverdue
-                ? `⚠ 신고기한(${filingDeadline})을 지났습니다 — 가산세 자동 적용`
+                ? `⚠ 신고기한(${filingDeadline})을 지났습니다${filingOverdueNote ? ` — ${filingOverdueNote}` : ""}`
                 : undefined
             }
           >

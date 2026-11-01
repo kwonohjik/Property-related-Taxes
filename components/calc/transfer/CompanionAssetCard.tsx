@@ -59,6 +59,8 @@ interface Props {
   filingDate?: string;
   /** 신고기한 초과 여부 (Step1 산출 — 양도일 warning) */
   filingOverdue?: boolean;
+  /** 기한 경과 안내 뒷부분 — 가산세 상태대로 (Step1 산출) */
+  filingOverdueNote?: string;
   /** 신고기한 문자열 (Step1 산출 — warning·hint 표시) */
   filingDeadline?: string;
   /** 첫 자산(index 0)일 때 양도일·신고일 입력란 노출 + ① 자동 펼침 */
@@ -119,6 +121,7 @@ export function CompanionAssetCard({
   transferDate,
   filingDate,
   filingOverdue,
+  filingOverdueNote,
   filingDeadline,
   showFormDates,
   onFormChange,
@@ -376,6 +379,7 @@ export function CompanionAssetCard({
             transferDate={transferDate}
             filingDate={filingDate}
             filingOverdue={filingOverdue}
+            filingOverdueNote={filingOverdueNote}
             filingDeadline={filingDeadline}
             onFormChange={onFormChange}
             isFirst={index === 0}
