@@ -20,6 +20,8 @@ import {
 } from "@/lib/tax-engine/data/transfer-supported-period";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { isFractionalRatioSumOutOfTolerance } from "./fractional-ratio-sum-tolerance";
+import { receiveOnlyShareIssue } from "./axis-b-receive-only";
+import { isReceiveOnlyFiling } from "./redev-field-scope";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { fractionalModeShareIssue } from "./transfer-tax-validate-asset";
@@ -486,6 +488,10 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
           message: `지분 분할 취득: 전체 지분율 합계가 100%가 되어야 합니다 (현재 ${(sumRatio * 100).toFixed(2)}%).`,
         });
       }
+      const receiveOnlyIssue = receiveOnlyShareIssue(
+        form.assets.map((a) => ({ receiveOnly: isReceiveOnlyFiling(a), saleDate: a.redevSettlementSaleDate })),
+      );
+      if (receiveOnlyIssue) issues.push({ step, message: receiveOnlyIssue });
     }
 
     // actual 모드 합계 검증 — 축 B(같은 물건 지분 분할)는 ratio 자동 적용(합 100% 검증은 위)이라 생략.

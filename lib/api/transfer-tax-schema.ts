@@ -47,6 +47,7 @@ import { refineMultiUnsupported } from "./transfer-tax-schema-multi-refines";
 import { refineGbBurdenedGiftActualPath } from "./transfer-tax-schema-gb-bg-refines";
 import { burdenedGiftBundleKind } from "@/lib/calc/burdened-gift-transfer-price-scope";
 import { FRACTIONAL_RATIO_SUM_TOLERANCE } from "@/lib/calc/fractional-ratio-sum-tolerance";
+import { receiveOnlyShareIssue } from "@/lib/calc/axis-b-receive-only";
 import { MIXED_BURDENED_GIFT_BUNDLE_MESSAGE } from "@/lib/calc/burdened-gift-transfer-price-scope";
 
 // ─── ⑫ 상업용건물·일반건물 환산취득가 Zod 스키마 → sibling 파일 분리 ──────
@@ -278,6 +279,18 @@ export const propertySchema = z
             path: ["totalSalePrice"],
             message: `지분 분할 취득: 자산별 양도가액 합(${sumShares.toLocaleString()})이 총 양도가액(${data.totalSalePrice.toLocaleString()})과 허용오차(${tolerance.toLocaleString()}원)를 넘게 다릅니다 — 지분율 합계가 100%가 되어야 합니다`,
           });
+        }
+      }
+
+      if (fullFractionalBundle) {
+        const receiveOnlyIssue = receiveOnlyShareIssue(
+          [data.redevelopment, ...companions.map((c) => c.redevelopment)].map((rd) => ({
+            receiveOnly: rd?.receiveOnlyMode === true,
+            saleDate: rd?.settlementSaleDate,
+          })),
+        );
+        if (receiveOnlyIssue) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets"], message: receiveOnlyIssue });
         }
       }
 

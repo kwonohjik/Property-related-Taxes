@@ -41,6 +41,8 @@ import { FalseContractPriceNoticeForItems } from "@/components/calc/results/shar
 import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { CalculationWarningsCard } from "./shared/CalculationWarningsCard";
+import { allPropertiesReceiveOnly } from "@/components/calc/results/transfer/receive-only-display";
+import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-helpers";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
   TRANSFER_PRINT_SECTIONS,
@@ -140,6 +142,7 @@ import { PropertyCard, AggregatedTaxSummary } from "./BundledAllocationSubCards"
 
 export function BundledAllocationCard({ apportionment, aggregated, ownershipMap, formData, transferBurdenedGiftBreakdown, onBack, onReset }: Props) {
   const gbViews = useMemo(() => gbBlockViewsOf(aggregated, apportionment, formData), [aggregated, apportionment, formData]);
+  const receiveOnlyShares = isFullFractionalBundle(formData.assets, formData.assetSplitMode) && allPropertiesReceiveOnly(aggregated.properties);
   /**
    * 출력 항목 선택 — 단건(`TransferTaxResultView`)과 동일한 패널.
    * 일반건물·일괄양도는 이 카드가 결과뷰 종착지인데 종전에는 패널 자체가 없어
@@ -244,7 +247,8 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
         />
       )}
 
-      {/* 안분 결과 */}
+      {/* 안분 결과 — 축 B 전 지분 청산금 수령 단독 신고는 안분이 없다(양도가액 = 지분별 수령액 직접 입력). */}
+      {!receiveOnlyShares && (
       <div className="rounded-lg border bg-card p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-base">양도가액 안분</h3>
@@ -289,6 +293,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           </tfoot>
         </table>
       </div>
+      )}
 
       {/* 일반건물 결과 카드 블록 6종 — 일반건물 한 물건분씩. 함께 양도는 자산마다 소제목 아래 반복한다(`gb-bundled-result-blocks.plan.md`). */}
       {gbViews.map((v) => (

@@ -58,6 +58,8 @@ export type { PerAssetValue, StatementItem, GroupDef } from "./DetailedStatement
 export { STATEMENT_GROUPS } from "./DetailedStatementConfig";
 import type { PerAssetValue, StatementItem } from "./DetailedStatementConfig";
 import { resolveReceiveOnlyDisplay } from "./receive-only-display";
+import { allPropertiesReceiveOnly } from "./receive-only-display";
+import { receiveOnlyTransferDateOf } from "./receive-only-display";
 import {
   resolveBgSingleDisplay,
   resolveBgCarryoverSingleDisplay,
@@ -135,7 +137,11 @@ export function buildStatementItems(
     transferPriceOverride ?? parseAmount(formData?.contractTotalPrice),
     formData?.transferDate ?? "",
   );
-  const transferDate = receiveOnly.transferDate;
+  // 축 B 전 지분 단독 신고 — 합산 결과에는 §166 상세가 자산별로만 있다. 고시일은 전 지분이 같다(⑧·⑫).
+  const transferDate =
+    aggregate && !aggregate.propertyFormMap && allPropertiesReceiveOnly(aggregate.properties)
+      ? receiveOnlyTransferDateOf(aggregate.properties[0], receiveOnly.transferDate)
+      : receiveOnly.transferDate;
   const primary = asset ?? formData?.assets[0];
   const isAggregate = !!aggregate && aggregate.properties.length > 0;
   const properties = aggregate?.properties ?? [];
@@ -152,7 +158,8 @@ export function buildStatementItems(
    */
   const assetOf = (pid: string) => aggregate?.propertyFormMap?.get(pid)?.assets[0] ?? primary;
   const transferDateOf = (pid: string) =>
-    aggregate?.propertyFormMap?.get(pid)?.transferDate ?? transferDate;
+    aggregate?.propertyFormMap?.get(pid)?.transferDate ??
+    receiveOnlyTransferDateOf(aggregate?.properties.find((p) => p.propertyId === pid), transferDate);
   // 일반건물 부담부증여 × 이월과세 A 채택 — 당초 증여자 취득일(신고서 표와 같은 leaf).
   const acqDateOf = (pid: string) =>
     gbCarryoverAcqDateOverride(aggregate?.aggregated, pid) ?? getAcqDateForCard(assetOf(pid), pid);
@@ -254,7 +261,9 @@ export function buildStatementItems(
       : burdenedGift
       ? `양도가액 = 인수 채무액 (임대보증금 + 담보차입금) = ${burdenedGift.assumedDebtAmount.toLocaleString()} (소령 §159 — 채무 인수분이 양도가액으로 의제, 자산별 §166⑥ 비율 안분)`
       : isAggregate
-        ? "자산별 양도가액 합계 — §166⑥ 안분(토지·건물·증축건물 기준시가 비율) 후"
+        ? allPropertiesReceiveOnly(properties)
+          ? "자산별 청산금 수령액 합계"
+          : "자산별 양도가액 합계 — §166⑥ 안분(토지·건물·증축건물 기준시가 비율) 후"
         : ownerSplitTransfer
           ? `본인 소유 파트 양도가 — ${ownerSplitTransfer.parts.map((p) => `${p.label} ${p.transferPrice.toLocaleString()}`).join(" + ")} (일괄양도가액 ${totalTransferPrice.toLocaleString()} 중 · 소령 §166⑥·§168②)`
           : "사용자 입력 (실제 매매계약서상 거래금액)",

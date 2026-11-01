@@ -6,6 +6,7 @@
  * (과세표준·기본공제·지방세 등)은 합계만 채우고 자산 셀은 null.
  */
 
+import { receiveOnlyTransferDateOf } from "./receive-only-display";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import {
   effectiveGrossGain,
@@ -143,7 +144,7 @@ export function buildAggregateRows(
   // 합계 열 — 머리 정보 (자산별이라 합계는 양도일자만 채움)
   // 자산 양도일이 모두 동일하면 그 값, 다르면 "-" (상이 양도일은 대표값 무의미)
   const allColTransferDates = properties.map(
-    (p) => aggregate.propertyFormMap?.get(p.propertyId)?.transferDate ?? transferDate,
+    (p) => aggregate.propertyFormMap?.get(p.propertyId)?.transferDate ?? receiveOnlyTransferDateOf(p, transferDate),
   );
   const uniqTransferDates = new Set(allColTransferDates.filter(Boolean));
   setStr(
@@ -191,7 +192,7 @@ export function buildAggregateRows(
   for (const p of properties) {
     const col = p.propertyId;
     // 다건 multi: 자산별 양도일 (bundled는 propertyFormMap 미주입 → 단일 transferDate 폴백)
-    const colTransferDate = aggregate.propertyFormMap?.get(col)?.transferDate ?? transferDate;
+    const colTransferDate = aggregate.propertyFormMap?.get(col)?.transferDate ?? receiveOnlyTransferDateOf(p, transferDate);
     const a = findAssetByPropertyId(col);
     /**
      * 이 열이 **일반건물 일괄이 엔진 내부에서 쪼갠 파트**인가(토지·건물1·건물2).

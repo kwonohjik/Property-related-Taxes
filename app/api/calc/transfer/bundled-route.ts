@@ -198,7 +198,15 @@ export function calculateBundledTransfer(
     gbCarryoverDrafts.push(draft);
   };
 
-  const itemsRaw: TransferTaxItemInput[] = apportionment.apportioned.flatMap((a, idx) => {
+  // 전 지분 청산금 수령 단독 신고 — 신고 단위 양도가액은 지분 수령액이다(단건 ④와 같은 규칙). 엔진은 이 신고에서 양도가액을 읽지 않아
+  // 세액은 그대로이고, 표시(양도가액·역산 취득가액)가 계약 총액 × 지분율로 나가던 것만 바로잡는다(계획서 `axis-b-receive-only.plan.md` V-2).
+  const shareRedev = [data.redevelopment, ...companions.map((c) => c.redevelopment)];
+  const apportioned =
+    isFullFractionalBundle && shareRedev.every((rd) => rd?.receiveOnlyMode === true && rd.settlementAmount > 0)
+      ? apportionment.apportioned.map((a, i) => ({ ...a, allocatedSalePrice: shareRedev[i]!.settlementAmount }))
+      : apportionment.apportioned;
+
+  const itemsRaw: TransferTaxItemInput[] = apportioned.flatMap((a, idx) => {
     if (a.assetId === "primary") {
       // 주 자산: engineInput을 복제 + 안분 결과로 양도·취득·필요경비 덮어쓰기
       // 지분 모드: data.totalPropertyTransferPrice는 engineInput에서 이미 상속됨 (...engineInput).
@@ -423,7 +431,7 @@ export function calculateBundledTransfer(
 
   return {
     mode: "bundled" as const,
-    apportionment,
+    apportionment: { ...apportionment, apportioned },
     aggregated,
     /**
      * 축 B(지분 분할 취득) × 부담부증여 — **물건 전체 기준 §159 1건**.
