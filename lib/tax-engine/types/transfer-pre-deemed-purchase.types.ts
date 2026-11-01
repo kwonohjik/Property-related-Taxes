@@ -12,12 +12,19 @@ export interface PreDeemedPurchaseInput {
    * 금액 규약은 `acquisitionPrice`와 같다(지분 자산이면 지분 금액). 실가 모드는 `acquisitionPrice`가 기준이라 쓰지 않는다.
    */
   actualPrice?: number;
+  /**
+   * 토지·건물 취득일 분리에서 의제취득일 전 매수인 파트(한 파트만 — 두 파트 모두 1985 전은 비교하지 않는다 · 계획서 §12.8).
+   * ②의 기준은 그 파트 실가(`landAcquisitionPrice`·`buildingAcquisitionPrice`) · 추계 파트면 `actualPrice`.
+   */
+  part?: "land" | "building";
   /** 취득월이 생산자물가지수 계열(1965.01~) 전이면 직접 입력하는 배율(의제취득일 직전 달 지수 ÷ 취득월 지수) */
   ppiRatio?: number;
 }
 
 /** 결과 echo — ①·② 비교 내역 */
 export interface PreDeemedPurchaseDetail {
+  /** 파트별 비교면 그 파트 — 없으면 자산 전체 */
+  part?: "land" | "building";
   /** 실제 취득일 "YYYY-MM-DD" */
   originalAcquisitionDate: string;
   /** 취득월 "YYYY-MM" */

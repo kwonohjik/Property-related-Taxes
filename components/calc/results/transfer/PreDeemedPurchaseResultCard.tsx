@@ -26,7 +26,7 @@ export function PreDeemedPurchaseResultCard({ detail }: { detail: PreDeemedPurch
   return (
     <ToneCard
       tone="amber"
-      title="의제취득일 전 매수 — 취득가액 「많은 것」 비교"
+      title={`의제취득일 전 매수${detail.part === "land" ? " (토지)" : detail.part === "building" ? " (건물)" : ""} — 취득가액 「많은 것」 비교`}
       titleExtra={
         <LawArticleModal
           legalBasis="소득세법 시행령 §176의2"

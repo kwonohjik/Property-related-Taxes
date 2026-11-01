@@ -366,12 +366,21 @@ export function buildActualGeneralBuildingCards(
       landAcq = landAcquisitionPrice;
       buildingAcq = buildingAcquisitionPrice;
       actualSource = "part_input";
+      // 의제취득일 전 매수 파트 영 §176조의2④ — 별개 취득이면 그 파트 실가에만 배율(Q-8 · 계획서 §12.8)
+      if (preDeemedPurchase?.part) {
+        const c2 = computePreDeemedClause2(preDeemedPurchase.part === "land" ? landAcq : buildingAcq, preDeemedPurchase);
+        if (c2) {
+          preDeemedPurchaseDetail = { part: preDeemedPurchase.part, ...c2, selected: "clause2", expenseBasis: "actual" };
+          if (preDeemedPurchase.part === "land") landAcq = c2.clause2Amount;
+          else buildingAcq = c2.clause2Amount;
+        }
+      }
     } else if (actualAcquisitionPrice > 0) {
       actualSource = "bundled_apportion";
       // 🔴 **취득시** 비율이다(P-2) — §100② 본문 「취득 당시」. 종전 양도시 비율은 정정 대상이었다.
       requireAcqStd("취득가액");
       // 의제취득일 전 매수 일괄취득 영 §176조의2④ — 취득월이 하나라 안분 전 총액에 배율 1회(Q-8 a). 실가 모드라 ①은 미산정(Q-2 a).
-      const c2 = preDeemedPurchase && computePreDeemedClause2(actualAcquisitionPrice, preDeemedPurchase);
+      const c2 = preDeemedPurchase && !preDeemedPurchase.part && computePreDeemedClause2(actualAcquisitionPrice, preDeemedPurchase);
       if (c2) preDeemedPurchaseDetail = { ...c2, selected: "clause2", expenseBasis: "actual" };
       const totalAcq = c2 ? c2.clause2Amount : actualAcquisitionPrice;
       landAcq = apportionByStdPrice(totalAcq, acqLandStdTotal, acqBuildingStd).land;
@@ -572,7 +581,7 @@ export function buildActualGeneralBuildingCards(
       ? multiplyByArea(acquisitionLandPricePerSqm, landArea)
       : undefined,
     acqBuilding1StdTotal: acquisitionBuildingStdPrice ?? undefined,
-    bundledActualAcquisitionPrice: preDeemedPurchaseDetail?.clause2Amount ?? actualAcquisitionPrice ?? undefined,
+    bundledActualAcquisitionPrice: (preDeemedPurchaseDetail?.part ? undefined : preDeemedPurchaseDetail?.clause2Amount) ?? actualAcquisitionPrice ?? undefined,
     bundledActualExpenses: actualExpenses ?? undefined,
     // 신규 두 칸 입력일 때만 — legacy 후퇴(`declaredExpenses === 0`)에서는 안분 echo가 없다(표시 계층이 종전 산식을 쓴다).
     // 파트 자본적지출 칸만 있고 legacy 총액이 없으면 그 값도 싣는다 — 산식이 「직접 입력」 항목으로 적는다(`resolvePartExpenses`와 같은 축).

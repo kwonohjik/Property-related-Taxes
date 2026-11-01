@@ -302,6 +302,7 @@ export function CompanionAcquisitionCauseSection({
           }
           landAcquisitionDate={asset.landAcquisitionDate}
           onLandAcquisitionDateChange={(v) => onChange({ landAcquisitionDate: v })}
+          onLandAcquisitionDateClamp={(v, original) => onChange({ landAcquisitionDate: v, preDeemedOriginalLandAcquisitionDate: original })}
           landTransferPrice={asset.landTransferPrice}
           onLandTransferPriceChange={(v) => onChange({ landTransferPrice: v })}
           buildingTransferPrice={asset.buildingTransferPrice}

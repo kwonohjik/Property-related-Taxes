@@ -15,6 +15,8 @@ export interface BlockProps {
    * 일반건물처럼 같은 칸이 다른 날짜 키(`landAcquisitionDate`)를 쓰는 호출부가 키를 잃지 않게 한다(PR-3a).
    */
   onAcquisitionDateClamp?: (clamped: string, original: string) => void;
+  /** 토지 취득일 칸 덮어쓰기 — 위와 같은 규약(토지 파트 실제 취득일 보존) */
+  onLandAcquisitionDateClamp?: (clamped: string, original: string) => void;
   /**
    * Round 9 (2026-05-06): 매매계약일 (분양/매매계약 + 계약금 납부 기준일).
    * 신축·미분양·임대 감면 13개 조문(§99·§99의3·§98 시리즈·§97의2·§97의5·§99의2)의 시한 판정 1차 기준.

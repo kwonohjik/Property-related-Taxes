@@ -12,6 +12,8 @@ export const preDeemedPurchaseSchema = z
     originalAcquisitionDate: z.string().date(),
     /** 환산·감정·매매사례 모드의 함께 견줄 취득 당시 실지거래가액(지분 금액) */
     actualPrice: z.number().int().positive().optional(),
+    /** 토지·건물 취득일 분리 — 의제취득일 전 매수인 파트 */
+    part: z.enum(["land", "building"]).optional(),
     /** 1965.01. 전 취득 직접 입력 배율 */
     ppiRatio: z.number().positive().optional(),
   })

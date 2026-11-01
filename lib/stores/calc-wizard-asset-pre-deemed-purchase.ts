@@ -8,6 +8,8 @@
 export interface PreDeemedPurchaseFormSlice {
   /** 실제 취득일 "YYYY-MM-DD" — 덮어쓸 때 자동 보존 · 카드에서 확인·수정 */
   preDeemedOriginalAcquisitionDate: string;
+  /** 토지 칸의 실제 취득일 — 토지·건물 취득일 분리에서 토지 파트가 의제취득일 전일 때 · PHD 두 칸 취득월 대조 */
+  preDeemedOriginalLandAcquisitionDate: string;
   /** 환산·감정·매매사례 모드에서 함께 견줄 취득 당시 실지거래가액(선택) — 실가 모드는 취득가액 칸이 기준 */
   preDeemedActualPrice: string;
   /** 1965.01. 전 취득 — 물가상승 배율(소수) 직접 입력 */
@@ -16,6 +18,7 @@ export interface PreDeemedPurchaseFormSlice {
 
 export const PRE_DEEMED_PURCHASE_DEFAULTS: PreDeemedPurchaseFormSlice = {
   preDeemedOriginalAcquisitionDate: "",
+  preDeemedOriginalLandAcquisitionDate: "",
   preDeemedActualPrice: "",
   preDeemedPpiRatio: "",
 };
@@ -23,6 +26,7 @@ export const PRE_DEEMED_PURCHASE_DEFAULTS: PreDeemedPurchaseFormSlice = {
 /** sessionStorage·이력에서 누락된 필드를 기본값으로 채운다 */
 export function migratePreDeemedPurchaseFields(a: Record<string, unknown>): void {
   if (typeof a.preDeemedOriginalAcquisitionDate !== "string") a.preDeemedOriginalAcquisitionDate = "";
+  if (typeof a.preDeemedOriginalLandAcquisitionDate !== "string") a.preDeemedOriginalLandAcquisitionDate = "";
   if (typeof a.preDeemedActualPrice !== "string") a.preDeemedActualPrice = "";
   if (typeof a.preDeemedPpiRatio !== "string") a.preDeemedPpiRatio = "";
 }
