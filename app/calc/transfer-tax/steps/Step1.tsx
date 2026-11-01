@@ -21,6 +21,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { filingOverdueNote, getFilingDeadline, isFilingOverdue, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
+import type { FilingUnitCorrection } from "@/lib/calc/filing-unit-correction";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import { Button } from "@/components/ui/button";
 import { OneHouseJudgmentLoadModal } from "@/components/calc/transfer/OneHouseJudgmentLoadModal";
@@ -79,6 +80,7 @@ export function Step1({
   assetErrors,
   onInvalidateResult,
   embeddedInMulti = false,
+  filingUnitCorrection = null,
   getLatestAssets,
 }: {
   form: TransferFormData;
@@ -89,6 +91,8 @@ export function Step1({
   onInvalidateResult?: () => void;
   /** 다건 편집에 임베드된 마운트 — 다건은 함께 양도 자산을 지원하지 않으므로(`MULTI_COMPANION_UNSUPPORTED_MESSAGE`) 순서 바꾸기 카드를 숨긴다. */
   embeddedInMulti?: boolean;
+  /** 다건 신고서 단위 수정신고·경정청구 — 자산 가산세가 요청에서 빠지므로 기한 경과 사실만 안내한다. */
+  filingUnitCorrection?: FilingUnitCorrection;
   /** 스토어의 최신 자산 배열 — 이 단계를 떠난 뒤 늦게 끝난 자산 카드 비동기가 옛 스냅샷으로 덮어쓰지 않게 한다(`CompanionAssetsSection.updateAsset`). */
   getLatestAssets?: () => AssetForm[];
 }) {
@@ -371,7 +375,7 @@ export function Step1({
           transferDate={form.transferDate}
           filingDate={form.filingDate}
           filingOverdue={filingOverdue}
-          filingOverdueNote={filingOverdueNote(form)}
+          filingOverdueNote={filingOverdueNote({ ...form, amendmentMode: form.amendmentMode || !!filingUnitCorrection })}
           filingDeadline={filingDeadline}
           onFormChange={onChange}
           contractTotalPrice={form.contractTotalPrice}

@@ -179,8 +179,9 @@ export function enterMultiAmendment(record: CalculationRecord, router: AppRouter
   Promise.all([
     import("@/lib/stores/multi-transfer-tax-store"),
     import("@/lib/calc/transfer-amendment-helpers"),
-  ]).then(([{ useMultiTransferStore }, { deriveStatutoryDeadline }]) => {
-    const input = record.inputData as unknown as MultiTransferFormData;
+  ]).then(([{ useMultiTransferStore, migrateMultiForm }, { deriveStatutoryDeadline }]) => {
+    // 「편집」(`resumeTransferRecord`)과 같이 자산 폼을 마이그레이션한다 — 구 이력의 자산 없는 폼·후속 추가 필드.
+    const input = migrateMultiForm(record.inputData as unknown as MultiTransferFormData);
     const rd = record.resultData as { determinedTax?: number };
     useMultiTransferStore.getState().setForm({
       ...input,
@@ -205,8 +206,9 @@ export function enterMultiRefundClaim(record: CalculationRecord, router: AppRout
   Promise.all([
     import("@/lib/stores/multi-transfer-tax-store"),
     import("@/lib/calc/transfer-amendment-helpers"),
-  ]).then(([{ useMultiTransferStore }, { deriveStatutoryDeadline }]) => {
-    const input = record.inputData as unknown as MultiTransferFormData;
+  ]).then(([{ useMultiTransferStore, migrateMultiForm }, { deriveStatutoryDeadline }]) => {
+    // 「편집」(`resumeTransferRecord`)과 같이 자산 폼을 마이그레이션한다 — 구 이력의 자산 없는 폼·후속 추가 필드.
+    const input = migrateMultiForm(record.inputData as unknown as MultiTransferFormData);
     const rd = record.resultData as { determinedTax?: number };
     useMultiTransferStore.getState().setForm({
       ...input,

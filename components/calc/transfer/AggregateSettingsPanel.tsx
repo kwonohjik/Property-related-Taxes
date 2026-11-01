@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
+import { aggregatePenaltyNotice } from "@/lib/calc/filing-unit-correction";
 
 type BasicDeductionAllocation = MultiTransferFormData["basicDeductionAllocation"];
 
@@ -142,7 +143,7 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
       </div>
 
       <p className="text-xs text-muted-foreground border-t pt-4">
-        가산세(신고불성실·납부지연)는 자산별로 다를 수 있어 각 자산 편집 마법사 마지막 단계에서 입력합니다.
+        {aggregatePenaltyNotice(form)}
       </p>
     </div>
   );

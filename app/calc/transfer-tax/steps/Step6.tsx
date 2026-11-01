@@ -11,7 +11,9 @@ import {
   expandToggleLabel,
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import { AmendmentBlock } from "@/components/calc/transfer/AmendmentBlock";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { effectiveUnpaidTaxMode } from "@/lib/calc/transfer-unpaid-tax-mode";
+import { filingUnitCorrectionStepNotice, type FilingUnitCorrection } from "@/lib/calc/filing-unit-correction";
 
 // ============================================================
 // Step 6: 가산세 (선택 입력)
@@ -20,10 +22,13 @@ export function Step6({
   form,
   onChange,
   determinedTax,
+  filingUnitCorrection = null,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
   determinedTax: number | null;
+  /** 다건 신고서 단위 수정신고·경정청구 — 자산별 가산세가 요청에서 빠지므로(G-28) 입력칸을 내지 않는다. 저장 값은 그대로 둔다. */
+  filingUnitCorrection?: FilingUnitCorrection;
 }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -46,6 +51,10 @@ export function Step6({
     <div className="space-y-5">
       {form.amendmentMode ? (
         <AmendmentBlock form={form} onChange={onChange} />
+      ) : filingUnitCorrection ? (
+        <ToneCard tone="amber">
+          <p className="text-sm">{filingUnitCorrectionStepNotice(filingUnitCorrection)}</p>
+        </ToneCard>
       ) : (
       <>
       <p className="text-sm text-muted-foreground">
