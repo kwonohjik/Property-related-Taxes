@@ -7,6 +7,7 @@
  * ⚠️ 성공 응답은 route가 `okJson`으로 감싼다 — 여기서 `NextResponse`를 만들지 않는다(E-14l 비유한 값 가드).
  * ⚠️ `engineInput`을 그대로 고친다(주 자산 토지의 `primaryContextForCompanionRate`) — 종전 route 본문과 같은 동작이다.
  */
+import { inheritedShareResidenceMonths } from "@/lib/api/transfer-tax-schema-household-refines";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import type { PropertySchemaInput } from "@/lib/api/transfer-tax-schema";
@@ -274,6 +275,12 @@ export function calculateBundledTransfer(
       totalPropertyTransferPrice: shareWholePropertyPrice(
         rawC.totalPropertyTransferPrice, rawC.ownershipRatio, a.allocatedSalePrice, isFullFractionalBundle,
       ),
+      // 축 B — 같은 주택에 산 기간이라 주 자산 값을 승계한다. 컴패니언에는 거주 입력칸이 없다. 부수토지는 `buildCompanionEngineInputs`가 맡는다.
+      residencePeriodMonths:
+        rawC.residencePeriodMonths ??
+        (isFullFractionalBundle && rawC.landNature !== "appurtenant_to_housing" && engineInput.residencePeriodMonths !== undefined
+          ? inheritedShareResidenceMonths(engineInput.residencePeriodMonths, rawC, data.transferDate)
+          : undefined),
     };
     const built = buildCompanionEngineInputs(c, a, {
       primaryCtxForSplit,
