@@ -20,6 +20,8 @@ interface Props {
   onChange: (patch: { hasDeemedRentalPeriod?: boolean; deemedRentalPeriods?: DeemedRentalPeriodFormItem[] }) => void;
   /** 라디오 name 접두사 — 다자산에서 그룹이 섞이지 않게 인스턴스마다 다르게 */
   uid: string;
+  /** 검증 오류 → 입력칸 이동 앵커의 조문 타입 — `reduction.${fieldType}.…` (⑧과 같은 템플릿) */
+  fieldType: string;
 }
 
 const LABELS: Record<DeemedRentalPeriodFormItem["reason"], { start: string; end: string; note: string }> = {
@@ -37,14 +39,14 @@ const LABELS: Record<DeemedRentalPeriodFormItem["reason"], { start: string; end:
   },
 };
 
-export function Rental975DeemedPeriodsField({ enabled, periods, onChange, uid }: Props) {
+export function Rental975DeemedPeriodsField({ enabled, periods, onChange, uid, fieldType }: Props) {
   const update = (idx: number, patch: Partial<DeemedRentalPeriodFormItem>) =>
     onChange({ deemedRentalPeriods: periods.map((p, i) => (i === idx ? { ...p, ...patch } : p)) });
 
   return (
     <div className="mt-2 border-t border-sky-200 pt-2 dark:border-sky-800/40">
       <ToggleCard
-        data-field="reduction.rental_97_5.hasDeemedRentalPeriod"
+        data-field={`reduction.${fieldType}.hasDeemedRentalPeriod`}
         checked={enabled}
         onCheckedChange={(v) =>
           onChange({
@@ -56,7 +58,7 @@ export function Rental975DeemedPeriodsField({ enabled, periods, onChange, uid }:
         description="조특령 §97의5①2호·3호 — 그 기간은 계속 임대한 것으로 봅니다(위 공실 구간과 겹치는 부분을 공실에서 뺍니다)"
         tone="sky"
       >
-        <div className="space-y-3" data-field="reduction.rental_97_5.deemedRentalPeriods">
+        <div className="space-y-3" data-field={`reduction.${fieldType}.deemedRentalPeriods`}>
           {periods.map((p, idx) => (
             <div key={idx} className="space-y-1.5 rounded border border-sky-200 p-2 dark:border-sky-800/40">
               <RadioCardGroup

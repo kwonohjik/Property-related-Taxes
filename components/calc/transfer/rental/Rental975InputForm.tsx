@@ -248,6 +248,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             periods={value.deemedRentalPeriods ?? []}
             onChange={(patch) => onChange(patch)}
             uid={uid}
+            fieldType={value.type}
           />
         }
       />
