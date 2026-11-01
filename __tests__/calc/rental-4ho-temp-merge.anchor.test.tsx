@@ -4,6 +4,7 @@
  *
  * 근거 회신: 부동산납세과-1321(2021.9.29.) 「제155조 제1항에 따른 일시적 2주택 적용 시에도 해당 주택은 거주기간의 제한을 받지 아니」 ·
  * 부동산납세과-1334(2023.5.15.) 「제155조제5항에 따른 혼인합가 특례 적용 시에도 해당주택은 거주기간의 제한을 받지 아니」.
+ * 기준-2024-법규재산-0061(법규과-2152, 2026.8.20.) 동거봉양 합가 — 「등록을 할 당시 자녀가 속한 세대가 조정대상지역에 1주택을 보유한 경우에만」.
  * 금액은 mock 세율. 시료 일자는 각 회신의 사실관계를 따른다. 다른 주택은 비조정(경남).
  *
  * | # | 주장 |
@@ -13,14 +14,16 @@
  * | RT-3 | 계산기 일시적 2주택 + 미완 → ⑧ 0건 · 본문 미탑재 · 과세 · 고지(카드가 없는 화면) |
  * | RT-4 | 1년 안 취득 → 과세(4호는 §155① 1년 요건을 면제하지 않는다) |
  * | RT-5 | 신청 2019-12-17 → 과세 + 미적용 사유 |
- * | RT-6 | 혼인 합가 → 비과세 · 1334 고지 / 동거봉양 → 비과세 · 정면 회신 미확보 고지 |
+ * | RT-6 | 혼인 합가 → 비과세 · 1334 고지 / 동거봉양 → 비과세 · 0061 고지 · 신청 당시 「아니오」면 과세 |
  * | RT-7 | 합가 맥락은 카드가 있어 ⑧이 미완을 막는다 |
  * | RT-8 | §155⑦ · 근거 표시 |
  * | RT-9 | 미선택 고지 — 일시적 2주택·합가는 결론을 가를 때만 · 순수 2주택 없음 · 1주택 보유 미달은 유지 |
  * | RT-10 | 다건·판정 route 도달 |
  * | RT-11 | 판정 → 계산기 전달 |
  * | RT-12 | 화면 — 일시적 2주택·합가 옵션에 4호, 칸에 값 · 전달 카드는 ④와 같은 사유만 적는다 |
- * | RT-13 | 겸용주택 — 일시적 2주택·혼인 합가 + 4호 → 주택분 비과세(대조 과세) |
+ * | RT-13 | 겸용주택 — 일시적 2주택·합가 + 4호 → 주택분 비과세(대조 과세) · 일반 경로와 같은 근거 고지 · 거주 충족이면 고지 없음 |
+ * | RT-14 | 완공 신축주택(법규과-824 사실 · 멸실 말소) + 4호 → 비과세(대조 과세) |
+ * | RT-15 | 안내 — 신청 당시 세대 기준 · 입주권 인가일 요건 · 4호 미선택 안내의 입력 위치 |
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -49,7 +52,10 @@ import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgme
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS, TEMP_TWO_HOUSE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
+import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import { RedevelopmentRightExemptionSection } from "@/components/calc/transfer/RedevelopmentRightExemptionSection";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
+import { Rental4hoProvisoFields } from "@/components/calc/transfer/Rental4hoProvisoFields";
 import { ImportedOneHouseFactsCard } from "@/components/calc/transfer/ImportedOneHouseFactsCard";
 
 beforeEach(() => {
@@ -165,11 +171,17 @@ describe("§155 의제 × 4호", () => {
     expect(warnings(r.result)).toContain("부동산납세과-1334");
   });
 
-  it("RT-6′ 동거봉양 합가 → 비과세 · 정면 회신 미확보 고지", async () => {
+  it("RT-6′ 동거봉양 합가 → 비과세 · 0061 고지 · 신청 당시 「아니오」면 과세 + 사유", async () => {
     const r = await runCalc(form({ ...MERGE, f: { ...PARENTAL, ...MERGE_P } }));
     expect(r.result.totalTax).toBe(0);
-    expect(warnings(r.result)).toContain("정면 회신을 확인하지 못했습니다");
+    expect(warnings(r.result)).toContain("기준-2024-법규재산-0061");
+    expect(warnings(r.result)).toContain("등록 당시");
+    expect(warnings(r.result)).not.toContain("정면 회신을 확인하지 못했습니다");
     expect(warnings(r.result)).not.toContain("부동산납세과-1334");
+    const no = await runCalc(form({ ...MERGE, f: { ...PARENTAL, ...facts("2018-09-01", { proviso4hoRegulatedOneHouse: "no" }) } }));
+    expect(no.result.isExempt).toBe(false);
+    expect(no.result.totalTax).toBe(TAXED_MERGE);
+    expect(warnings(no.result)).toContain("신청 당시 세대가 조정대상지역에 1주택만 보유한 경우가 아닙니다");
   });
 
   it("RT-7 합가 맥락 + 미완 → 카드가 있어 ⑧이 막는다", () => {
@@ -340,5 +352,93 @@ describe("RT-13 겸용주택", () => {
     expect(allIssues(f)).toEqual([]);
     expect((await runCalc(f)).result.housingPart.isExempt).toBe(true);
     expect((await runCalc(mixed(m, ctx))).result.housingPart.isExempt).toBe(false);
+  });
+  it.each([
+    ["일시적 2주택", TEMP, {}, TEMP_F, "부동산납세과-1321"],
+    ["혼인 합가", MERGE, MARRIAGE, MERGE_P, "부동산납세과-1334"],
+    ["동거봉양 합가", MERGE, PARENTAL, MERGE_P, "기준-2024-법규재산-0061"],
+  ])("근거 고지 — %s는 일반 경로와 같은 문장", async (_l, m, ctx, p, cite) => {
+    const plain = (await runCalc(form({ ...m, f: { ...ctx, ...p } }))).result;
+    const r = (await runCalc(mixed(m, { ...ctx, ...p }))).result;
+    expect(r.housingPart.isExempt).toBe(true);
+    const line = (r.warnings as string[]).find((w) => w.includes(cite));
+    expect(line).toBeDefined();
+    expect(plain.warnings).toContain(line);
+  });
+  it("근거 고지 — 거주 충족(4호가 결론을 가르지 않음) · 1주택이면 내지 않는다", async () => {
+    const livedForm = redevAptForm({
+      kind: "housing", price: TEMP.price, count: "2", houses: TEMP.houses,
+      assetOver: { ...MIXED, acquisitionDate: TEMP.acq, regionCode: GANGNAM, residencePeriods: [{ moveInDate: "2019-02-01", moveOutDate: "2023-03-20" }] },
+      formOver: { transferDate: TEMP.transfer, filingDate: "2023-12-31", ...TEMP_F } as never,
+    });
+    const lived = (await runCalc(livedForm)).result;
+    expect(lived.housingPart.isExempt).toBe(true);
+    expect(warnings(lived)).not.toContain("부동산납세과-1321");
+    const one = (await runCalc(redevAptForm({
+      kind: "housing", price: TEMP.price, count: "1", houses: [],
+      assetOver: { ...MIXED, acquisitionDate: TEMP.acq, regionCode: GANGNAM, residencePeriods: [] },
+      formOver: { transferDate: TEMP.transfer, filingDate: "2023-12-31", ...TEMP_F } as never,
+    }))).result;
+    expect(one.housingPart.isExempt).toBe(true);
+    expect(warnings(one)).not.toContain("부동산납세과-1321");
+  });
+  it("근거 고지 — 4호 요건 미충족으로 과세면 내지 않는다", async () => {
+    const r = (await runCalc(mixed(TEMP, facts("2019-03-01", { proviso4hoRegulatedOneHouse: "no" })))).result;
+    expect(r.housingPart.isExempt).toBe(false);
+    expect(warnings(r)).not.toContain("부동산납세과-1321");
+    expect(warnings(r)).toContain("신청 당시 세대가 조정대상지역에 1주택만 보유한 경우가 아닙니다");
+  });
+  it("근거 고지 — 일시적 2주택 + 5호도 일반 경로와 같은 문장", async () => {
+    const r = (await runCalc(redevAptForm({
+      kind: "housing", price: "1000000000", count: "2", houses: [other("n1", "2021-09-01")],
+      assetOver: { ...MIXED, acquisitionDate: "2020-08-01", regionCode: "3020000000", residencePeriods: [] },
+      formOver: { transferDate: "2023-06-01", filingDate: "2023-12-31", provisoReason: "pre_designation_contract", provisoPreContractNoHouse: true } as never,
+    }))).result;
+    expect(r.housingPart.isExempt).toBe(true);
+    expect(warnings(r)).toContain("§154① 단서 5호(조정대상지역 공고 전 계약)를 적용해 거주요건을 면제했습니다");
+  });
+});
+
+describe("RT-14 완공 신축주택", () => {
+  const AO = {
+    acquisitionDate: "2018-09-01", redevApprovalDate: "2022-08-01", redevCompletionDate: "2025-06-01", regionCode: GANGNAM,
+    residenceInputMode: "direct", residencePeriods: [], redevPriorResidenceMonths: "0", redevPostResidenceMonths: "0",
+  };
+  const FO = { residencePeriodMonths: "0", transferDate: "2026-09-01", filingDate: "2026-12-31" };
+  it("법규과-824 사실 — 멸실 말소 + 4호 → 비과세 / 4호 없음 → 과세 + 미선택 고지", async () => {
+    const yes = await runCalc(redevAptForm({ price: "1000000000", assetOver: AO, formOver: { ...FO, ...facts("2018-10-01", { proviso4hoStatus: "demolition_cancelled" }) } as never }));
+    expect(yes.issues).toEqual([]);
+    expect(yes.result.totalTax).toBe(0);
+    expect(yes.result.exemptReason).toContain("§154① 단서 4호");
+    const no = await runCalc(redevAptForm({ price: "1000000000", assetOver: AO, formOver: FO as never }));
+    expect(no.result.totalTax).toBe(155_166_000);
+    expect(warnings(no.result)).toContain(NOTICE_ID);
+  });
+});
+
+describe("RT-15 안내", () => {
+  it("4호 칸 — 신청 당시 세대 기준 · 근거", () => {
+    render(<Rental4hoProvisoFields value={{ transferDate: "2024-06-01" }} mode="deemed_one_house" onChange={() => {}} />);
+    const hint = screen.getByTestId("proviso-4ho-regulated-one-house-hint").textContent ?? "";
+    expect(hint).toContain("등록 신청 당시의 세대");
+    expect(hint).toContain("기준-2024-법규재산-0061");
+  });
+  it("입주권 인가일 요건 — 삭제 전 4호도 거주 제한이 없다고 알린다 · 「예」 0 / 「아니오」 과세", async () => {
+    const RO = { assetKind: "right_to_move_in", redevSubject: "right", acquisitionDate: "2018-09-01", redevApprovalDate: "2022-08-01", regionCode: GANGNAM, residencePeriods: [] };
+    const FO = { transferDate: "2024-06-01", filingDate: "2024-12-31", householdRightCount: "1" };
+    const yes = await runCalc(redevAptForm({ price: "1000000000", count: "0", assetOver: { ...RO, redevExemptionEligibleAtApproval: "yes" }, formOver: FO as never }));
+    expect(yes.result.totalTax).toBe(0);
+    const no = await runCalc(redevAptForm({ price: "1000000000", count: "0", assetOver: { ...RO, redevExemptionEligibleAtApproval: "no" }, formOver: FO as never }));
+    expect(no.result.totalTax).toBe(177_166_000);
+    // 토글을 켜기 전에 읽어야 하는 안내다 — 꺼진 상태에서도 보인다.
+    render(<RedevelopmentRightExemptionSection asset={{ ...makeDefaultAsset(1), assetKind: "right_to_move_in", redevSubject: "right", redevExemptionEligibleAtApproval: "" } as never} onChange={() => {}} />);
+    expect(screen.getByTestId("redev-right-rental-4ho-hint").textContent).toContain("삭제 전 §154①4호");
+  });
+  it("미선택 안내의 입력 위치 — 일시적 2주택은 판정 메뉴, 합가는 이 화면 단서 카드", async () => {
+    const temp = warnings((await runCalc(form(TEMP))).result);
+    expect(temp).toContain("1세대1주택 판정 메뉴의 §154① 단서에서");
+    const merge = warnings((await runCalc(form({ ...MERGE, f: MARRIAGE }))).result);
+    expect(merge).toContain(NOTICE_ID);
+    expect(merge).not.toContain("1세대1주택 판정 메뉴의 §154① 단서에서");
   });
 });

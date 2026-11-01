@@ -25,8 +25,9 @@
  * - 분양권 상태 등록도 적용 — 사전-2025-법규재산-0117(2025.3.17.).
  * - 2019.12.17. 이후 배우자 증여로 포괄승계 후 이혼·별도세대면 **부적용** — 사전-2024-법규재산-0747(2024.11.21.).
  *
- * 🔑 미입력은 **판정 보류**다(`undetermined`) — 면제로 추정하지 않는다. 「1주택 보유」 판정 시점(신청 당시 vs
- *    양도 당시)은 직접 선례 미확보라 **신청 당시 선언**을 받고, 양도일 1주택은 단서 문언이 따로 요구한다
+ * 🔑 미입력은 **판정 보류**다(`undetermined`) — 면제로 추정하지 않는다. 「1주택 보유」는 **등록 당시 그 세대** 기준이다 —
+ *    기준-2024-법규재산-0061(법규과-2152, 2026.8.20.) 「임대사업자 등록을 할 당시 자녀가 속한 세대가 조정대상지역에 1주택을 보유한
+ *    경우에만」. 그래서 **신청 당시 선언**을 받고, 양도일 1주택은 단서 문언이 따로 요구한다
  *    (1주택 맥락이면 `provisoGate`, §155 의제 맥락이면 「1세대1주택으로 보아 제154조제1항을 적용」이 각 분기의 성립 술어로 담보 —
  *    부동산납세과-1321·1334 · `docs/00-pm/rental-4ho-temp-merge-gaps.plan.md`).
  */
@@ -182,18 +183,26 @@ export function rental4hoDeemedPathNotice(appliedIds: readonly string[]): string
   if (!appliedIds.includes(`154-1-proviso:${RENTAL_4HO_REASON}`)) return undefined;
   const temp = appliedIds.includes("155-1-temporary-two-house");
   const marriage = appliedIds.includes("155-5-marriage-merge");
-  const other = appliedIds.some((id) => ["155-4-", "155-6-", "155-7-", "155-8-", "155-2-2-"].some((p) => id.startsWith(p)));
+  const parental = appliedIds.includes("155-4-parental-care-merge");
+  const other = appliedIds.some((id) => ["155-6-", "155-7-", "155-8-", "155-2-2-"].some((p) => id.startsWith(p)));
+  const answered = [temp, marriage, parental].filter(Boolean).length;
   const label = "삭제 전 「소득세법 시행령」 §154①4호(임대사업자 등록)를 적용해 거주요건을 면제했습니다";
-  if (temp && !marriage && !other) {
+  if (temp && answered === 1 && !other) {
     return (
       `일시적 2주택(「소득세법 시행령」 §155①) 종전주택에 ${label} — 부동산납세과-1321(2021.9.29.) 회신을 따랐습니다. ` +
       "4호는 「1년 이상 지난 후 취득」 요건과 처분기한은 면제하지 않습니다."
     );
   }
-  if (marriage && !temp && !other) return `혼인 합가(「소득세법 시행령」 §155⑤) 주택에 ${label} — 부동산납세과-1334(2023.5.15.) 회신을 따랐습니다.`;
-  if (!temp && !marriage && !other) return undefined;
+  if (marriage && answered === 1 && !other) return `혼인 합가(「소득세법 시행령」 §155⑤) 주택에 ${label} — 부동산납세과-1334(2023.5.15.) 회신을 따랐습니다.`;
+  if (parental && answered === 1 && !other) {
+    return (
+      `동거봉양 합가(「소득세법 시행령」 §155④) 주택에 ${label} — 기준-2024-법규재산-0061(법규과-2152, 2026.8.20.) 회신을 따랐습니다. ` +
+      "이 회신은 등록 당시 그 주택 소유자가 속한 세대가 조정대상지역에 1주택을 보유한 경우에만 적용합니다."
+    );
+  }
+  if (answered === 0 && !other) return undefined;
   return (
-    `§155 특례로 1세대1주택으로 보는 주택에 ${label} — 이 특례도 제154조제1항을 적용하는 구조라 일시적 2주택·혼인 합가 회신과 같다고 보았습니다. ` +
+    `§155 특례로 1세대1주택으로 보는 주택에 ${label} — 이 특례도 제154조제1항을 적용하는 구조라 일시적 2주택·합가 회신과 같다고 보았습니다. ` +
     "이 맥락에 4호를 적용한 정면 회신을 확인하지 못했습니다 — 확인 필요."
   );
 }
