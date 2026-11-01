@@ -40,7 +40,7 @@ export interface ReceiveOnlyDisplay {
  * receiveOnly 분기가 실제로 발동한 결과인지 판정.
  * 플래그 + 파트 0 **둘 다** 만족해야 한다(위 주석 V-1 참조).
  */
-function isReceiveOnlyApplied(result: TransferTaxResult): boolean {
+function isReceiveOnlyApplied(result: Pick<TransferTaxResult, "redevelopmentDetail">): boolean {
   const d = result.redevelopmentDetail;
   if (!d || d.receiveOnlyMode !== true) return false;
   return (
@@ -91,4 +91,21 @@ export function resolveReceiveOnlyDisplay(
     transferDate: branchDate || fallbackTransferDate,
     applied: true,
   };
+}
+
+/** 합산 결과의 자산별 양도일 — 단독 신고면 단건과 같은 날짜(고시일 다음날), 아니면 fallback. */
+export function receiveOnlyTransferDateOf(
+  property: Pick<TransferTaxResult, "redevelopmentDetail"> | undefined,
+  fallbackTransferDate: string,
+): string {
+  if (!property || !isReceiveOnlyApplied(property)) return fallbackTransferDate;
+  const date = property.redevelopmentDetail!.settlement.branchTransferDate;
+  return (date ? toDateString(date) : "") || fallbackTransferDate;
+}
+
+/** 합산 결과의 전 자산이 단독 신고인가. */
+export function allPropertiesReceiveOnly(
+  properties: readonly Pick<TransferTaxResult, "redevelopmentDetail">[],
+): boolean {
+  return properties.length > 0 && properties.every(isReceiveOnlyApplied);
 }
