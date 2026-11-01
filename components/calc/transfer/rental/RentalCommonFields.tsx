@@ -147,7 +147,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
           {(usesEndDateAndInterval || fieldType === "rental_97_4") && (
             <p className="mb-1.5 text-micro text-muted-foreground">
               {fieldType === "rental_97_4"
-                ? "소득세법 시행령 §167의3①2호 — 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다(2020.2.11 이후 체결·갱신한 계약부터)."
+                ? "소득세법 시행령 §167의3①2호 — 5% 한도는 2019.2.12 이후, 1년 이내 재증액 금지는 2020.2.11 이후 체결·갱신한 계약부터 적용합니다. 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다."
                 : "조특령 §97의3③1호 — 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다."}
               {" "}이 경우 「있음」을 고르고 계약 이력을 입력하세요.
             </p>

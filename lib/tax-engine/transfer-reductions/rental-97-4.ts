@@ -69,6 +69,13 @@ const REGISTRATION_SUNSET = new Date("2018-03-31");
 /** 그 단서의 시행일 (대통령령 제28637호). 이전 양도분에는 소급하지 않는다. */
 const CLAUSE_SUNSET_EFFECTIVE_FROM = new Date("2018-04-01");
 /**
+ * 소령 §167의3①2호 가·다목 「임대보증금 또는 임대료의 연 증가율이 100분의 5를 초과하지 않는」 —
+ * 대통령령 제29523호(2019.2.12)가 신설했다. 그 전 가·다목에는 임대료 요건이 없었다(2019.1.1 시행본 실독).
+ * 같은 영 부칙 §6: 「이 영 시행 이후 주택 임대차계약을 체결하거나 기존 계약을 갱신하는 분부터 적용」.
+ * ⇒ 증액한 계약의 체결·갱신일이 이 날 이후인 경우에만 5% 한도를 따진다.
+ */
+const RENT_CAP_RULE_CONTRACTS_FROM = new Date("2019-02-12");
+/**
  * 소령 §167의3①2호 가·다목 괄호 「임대료등의 증액 청구는 임대차계약의 체결 또는 약정한 임대료등의
  * 증액이 있은 후 1년 이내에는 하지 못하고」 — 대통령령 제30395호(2020.2.11)가 신설했다
  * (그 전 문언은 「임대보증금 또는 임대료의 연 증가율이 100분의 5를 초과하지 않는」뿐).
@@ -173,14 +180,17 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
 
   // 2) 임대료 증액 제한 (소령 §167의3①2호 장기임대주택 요건)
   if (input.rentHistory && input.rentHistory.length >= 2) {
-    const validation = validateRentIncrease(
+    // 5% 한도 — 2019.2.12 이후 체결·갱신한 계약만 (RENT_CAP_RULE_CONTRACTS_FROM 주석)
+    const capViolations = validateRentIncrease(
       input.rentHistory,
       input.jeonseConversionRate ?? DEFAULT_JEONSE_CONVERSION_RATE,
-    );
-    if (!validation.isAllValid) {
+    ).violations.filter((v) => v.contractDate.getTime() >= RENT_CAP_RULE_CONTRACTS_FROM.getTime());
+    if (capViolations.length > 0) {
       reasons.push({
         code: "RENT_INCREASE_VIOLATED",
-        message: `임대료(환산보증금) 증액 5% 제한 위반 계약 ${validation.violations.length}건.`,
+        message:
+          `임대료(환산보증금) 증액 5% 제한 위반 계약 ${capViolations.length}건 (소령 §167의3①2호). ` +
+          "2019.2.12 이후 체결·갱신한 계약에만 적용합니다(대통령령 제29523호 부칙 §6).",
         legalBasis,
       });
     }
