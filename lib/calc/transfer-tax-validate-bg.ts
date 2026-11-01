@@ -308,7 +308,7 @@ export function validateBurdenedGiftAsset(
     const rtmiIssue = rtmiNonSupplementaryWinnerIssue(asset, label, wholeValuation, formTransferDate, splitAxis);
     if (rtmiIssue) return rtmiIssue;
     // 축 B 시가 모드 담보 승 — 취득가액 처리(취득시 기준시가 × 채무비율)를 확인한 범위는 주택뿐이다. 그 밖의 종류는 «채무액 초과»가 아니라 이 사유로 막는다.
-    if (splitAxis && bgSplitAxisCollateralWinUnsupported(asset) && !bgRtmiAxisBWinnerComputable(asset)) {
+    if (splitAxis && bgSplitAxisCollateralWinUnsupported(asset) && !bgRtmiAxisBWinnerComputable(asset, formTransferDate)) {
       return fieldError(
         "bgMortgageDebtAmount",
         `${label}: 지분 분할 취득(같은 물건)에서 담보평가액(「상속세 및 증여세법」 제66조)이 시가보다 커서 증여가액이 담보평가액이 됩니다. 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 주택(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다. 시가·채무액·채권최고액을 재확인하거나 다른 평가 유형으로 입력하세요.`,

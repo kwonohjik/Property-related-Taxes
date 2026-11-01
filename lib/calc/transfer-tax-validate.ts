@@ -364,7 +364,7 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
        * ⇒ 「침묵 오산보다 명시 차단」(`multi-transfer-tax-validate.ts:57-71`)과 같은 층위로 틀리는 조합만 좁게 막는다.
        *    양도세 자체는 카드별 Aᵢ로 정확하므로, 이 게이트를 넓히면 지원되는 조합까지 막힌다.
        *    주택 외 종류의 지분·입주권·겸용 자산의 비보충 승자는 화면·엔진의 취득가액 처리를 확인하지 못한 범위라 그대로 막는다(`bgNonSupplementaryWinnerUnsupported` — 이월과세와 지분 주택은 풀렸다).
-       *    지분 100% 입주권은 열거 이전(실지)이면 승계·원조합원, 열거 이후면 승계만 푼다(`bgRtmiBundleWinnerComputable` — X-1).
+       *    입주권(지분 100%·공유 지분)은 열거 이전(실지)이면 승계·원조합원, 열거 이후면 승계만 푼다(`bgRtmiBundleWinnerComputable`).
        *
        * 축 B(지분 분할)는 대상이 아니다 — 물건이 하나라 `burdenedGiftWholeInfo`가 primary의
        * 미안분 info 그대로이고 합산이 없다.
