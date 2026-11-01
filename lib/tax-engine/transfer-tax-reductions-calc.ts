@@ -278,6 +278,10 @@ export function calcReductions(
       stdPriceAtAcquisition: standardPriceAtAcquisition,
       stdPriceAtTransfer: standardPriceAtTransfer,
       calculatedTax,
+      // §97의5 — 「소득세법」 §90① 감면세액 산식 (B − C) ÷ D
+      transferIncome,
+      basicDeduction,
+      taxBase,
     });
     if (rental97Result) {
       rental97TaxDetail = rental97Result;

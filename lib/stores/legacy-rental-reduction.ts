@@ -34,6 +34,7 @@ export function legacyLongTermRentalToRental973(
     hasVacancyOverGrace: null,
     rentalContinuesToTransfer: null,
     stdPriceAtRentalEnd: "",
+    rentalEndDate: "",
     stdPriceAtAcquisition: "",
     stdPriceAtTransfer: "",
     vacancyPeriods: [],

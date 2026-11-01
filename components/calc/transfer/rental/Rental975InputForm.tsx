@@ -3,8 +3,9 @@
 /**
  * §97의5 장기일반민간임대 — 산출세액 100% 감면 입력 폼
  *
- * 요건: 2018.12.31까지 취득 + 취득 후 3개월 내 등록 + 10년 임대
- * 전용면적 요건 없음 (법령상 규정 없음).
+ * 요건: 2018.12.31까지 취득 + 취득 후 3개월 내 등록 + 10년 계속 임대 후 양도
+ * + ①3호가 준용하는 조특령 §97의3③ — 국민주택규모 이하(2호)·임대개시 당시 기준시가 6억(수도권 밖 3억) 이하(4호).
+ *   (종전 주석의 「전용면적 요건 없음」은 ①3호 준용 사슬을 놓친 것이었다 — CA-01.)
  *
  * 특이사항:
  * - 등록일 입력 직하에 3개월 검증 배지 (useMemo 파생)
@@ -87,9 +88,11 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
   }, [acquisitionDate, value.registrationDate]);
 
   // emerald 자동 표시
+  // 종점 — 양도 전 임대 종료면 임대 종료일(§97의5①2호), 아니면 양도일
+  const ended = value.rentalContinuesToTransfer === false;
   const rentalDuration = useMemo(
-    () => diffYearsMonths(value.rentalStartDate, transferDate ?? ""),
-    [value.rentalStartDate, transferDate],
+    () => diffYearsMonths(value.rentalStartDate, (ended ? value.rentalEndDate : transferDate) ?? ""),
+    [value.rentalStartDate, value.rentalEndDate, ended, transferDate],
   );
 
   return (
@@ -195,7 +198,9 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
           <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">10년</span>
         </div>
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">양도일 기준 임대기간 (임대개시일→양도일)</span>
+          <span className="text-muted-foreground">
+            {ended ? "임대기간 (임대개시일→임대 종료일)" : "양도일 기준 임대기간 (임대개시일→양도일)"}
+          </span>
           <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">{rentalDuration}</span>
         </div>
       </div>

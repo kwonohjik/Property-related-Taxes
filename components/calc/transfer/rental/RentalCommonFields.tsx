@@ -65,6 +65,8 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
    *    (`CompanionAcquisitionCauseSection`이 같은 결함을 이미 고쳤다).
    */
   const uid = useId();
+  /** §97의5 — 임대 종료일 입력·안분 분모 생략 분기 (조특법 §97의5①2호 · 조특령 §97의5②) */
+  const is975 = fieldType === "rental_97_5";
   const graceLabel = vacancyGraceMonths === 3 ? "3개월" : "6개월";
   const graceBasis =
     vacancyGraceMonths === 3
@@ -326,6 +328,20 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
 
           {value.rentalContinuesToTransfer === false && (
             <div className="mt-2 border-t border-violet-200 pt-2">
+              {/* §97의5①2호 — 10년 계속 임대 판정의 종점. §97의5 엔진만 읽으므로 그 조문에서만 묻는다. */}
+              {is975 && (
+                <div className="mb-2">
+                  <label className="mb-1 block text-xs font-medium">임대 종료일</label>
+                  <DateInput
+                    data-field={`reduction.${fieldType}.rentalEndDate`}
+                    value={value.rentalEndDate}
+                    onChange={(v) => onChange({ rentalEndDate: v })}
+                  />
+                  <p className="mt-1 text-micro text-muted-foreground">
+                    실제 임대기간의 마지막 날 — 10년 계속 임대 요건은 이 날까지로 판정합니다 (§97의5①2호 「10년 이상 계속하여 임대한 후 양도」).
+                  </p>
+                </div>
+              )}
               <CurrencyInput
                 label="임대 종료일 당시 기준시가 (주택+부속토지 합계)"
                 data-field={`reduction.${fieldType}.stdPriceAtRentalEnd`}
@@ -342,6 +358,8 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               추계·분리 모드에서만 엔진에 전송되므로, 실지거래가액 모드에서는 채울 칸이
               없어 안분이 성립하지 않았다(§97의3 전액 불적용). 비우면 자산 카드 값으로
               폴백하므로 추계 모드 사용자는 종전과 같다. */}
+          {/* §97의5② — 계속 임대면 (D − E) ÷ (D − E) = 1이라 분모 기준시가가 결과를 바꾸지 않는다(묻지 않는다). */}
+          {!(is975 && value.rentalContinuesToTransfer !== false) && (
           <div className="mt-2 space-y-2 border-t border-violet-200 pt-2">
             <p className="text-micro text-muted-foreground">
               안분 산식의 분모 — <strong>양도 당시 기준시가 D − 취득 당시 기준시가 E</strong>.
@@ -362,6 +380,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               onChange={(v) => onChange({ stdPriceAtTransfer: v })}
             />
           </div>
+          )}
         </ToneCard>
       )}
     </>

@@ -229,9 +229,28 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   rentalContinuesToTransfer?: boolean;
   /** B — 실제 임대기간 마지막 날의 기준시가 (원). 계속 임대한 경우 불요. */
   stdPriceAtRentalEnd?: number;
+  /**
+   * 실제 임대기간의 **마지막 날** — `rentalContinuesToTransfer === false`일 때 필수 (§97의5 전용).
+   *
+   * 조특법 §97의5①2호 「…10년 이상 계속하여 … 임대한 **후 양도**할 것」 — 10년 판정의 종점은
+   * 임대 종료일이다. 양도일까지 계속 임대했으면 양도일과 같으므로 받지 않는다.
+   * 종전에는 조기 종료를 선언해도 종점이 양도일이라 임대 7년·보유 11년 사안이 10년 요건을 통과했다.
+   */
+  rentalEndDate?: Date;
   // ── 세액감면 계열 컨텍스트 ──
   /** 산출세액 (tax_amount 계열 — §97·§97의2·§97의5) */
   calculatedTax?: number;
+  /**
+   * 「소득세법」 §90① 감면세액 산식의 입력 — §97의5 안분 시 사용 (calcReductions가 주입).
+   *   감면액 = 산출세액 × (B − C) ÷ D × 감면율
+   *   B 감면대상 양도소득금액 = transferIncome × 임대기간 분 비율
+   *   C 감면소득에 배정되는 기본공제 — §103② 「감면소득금액 외의 양도소득금액에서 먼저 공제」
+   *   D 양도소득 과세표준 = taxBase
+   * 셋 중 하나라도 없으면(단위 호출) 산출세액 × 비율로 계산한다.
+   */
+  transferIncome?: number;
+  basicDeduction?: number;
+  taxBase?: number;
 }
 
 export interface Rental97IneligibleReason {
@@ -283,6 +302,18 @@ export interface RentalTaxAmountEffect {
   /** 같은 비율의 정수 분수(§97의5 안분 시) — 금액 안분은 이것으로(`applyRentalGainShare`). */
   rentalGainFraction?: { num: number; den: number };
   isFullExemption: boolean;
+  /**
+   * [echo] 「소득세법」 §90① 산식 값 — §97의5 안분 사안에서만 채운다(결과 카드 표시용).
+   * 감면세액 = 산출세액 × (reducibleIncome − basicDeductionAllocated) ÷ taxBase × 감면율
+   */
+  section90?: {
+    /** B — 감면대상 양도소득금액 */
+    reducibleIncome: number;
+    /** C — 감면소득에 배정된 기본공제 (§103②) */
+    basicDeductionAllocated: number;
+    /** D — 양도소득 과세표준 */
+    taxBase: number;
+  };
 }
 
 export type Rental97Result =

@@ -215,6 +215,17 @@ export function calcRentalGainFraction(args: {
   ) {
     return FULL_RENTAL_SHARE;
   }
+  /**
+   * §97의5②(감수 = 취득당시 E) + 계속 임대(B = D) → (D − E) / (D − E) = 1 — **임대개시일과 무관**하다.
+   *
+   * 🔴 종전에는 위의 「임대개시 ≤ 취득일」 조건만 있었다. 그 조건은 감수가 임대개시일 C인
+   *    §97의3⑤용이다. §97의5는 「취득 후 3개월 내 등록 → 임대개시」 구조라 임대개시일이 거의 항상
+   *    취득일보다 늦어, 결과를 바꾸지 않는 기준시가 두 점을 요구하고 미입력이면 감면을 전액 배제했다.
+   *    기준시가가 하락한 사안(D ≤ E)은 분모 ≤ 0이라 같은 사유로 배제됐다.
+   */
+  if (args.rentalContinuesToTransfer && args.numeratorBase === "acquisition") {
+    return FULL_RENTAL_SHARE;
+  }
 
   if (acq === undefined || transfer === undefined || acq <= 0 || transfer <= 0) return null;
 

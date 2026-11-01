@@ -7,6 +7,7 @@
 import type { z } from "zod";
 import type { reductionSchema } from "@/lib/api/transfer-tax-schema-sub";
 import type { TransferReduction } from "@/lib/tax-engine/transfer-tax";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 type ReductionPayload = z.infer<typeof reductionSchema>;
 
@@ -70,6 +71,10 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
                 endDate: new Date(v.endDate),
               })),
             }
+          : {}),
+        // §97의5①2호 — 조기 종료 시 10년 판정의 종점 (§97의5 전용 필드 — 다른 5종에는 키가 없다)
+        ...("rentalEndDate" in r && r.rentalEndDate
+          ? { rentalEndDate: toOptionalDate(r.rentalEndDate) }
           : {}),
       } as TransferReduction;
     }

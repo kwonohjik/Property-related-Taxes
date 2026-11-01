@@ -214,7 +214,9 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
       reductionAmount: number;
       rentalGainRatio: number;
       isFullExemption: boolean;
+      section90?: { reducibleIncome: number; basicDeductionAllocated: number; taxBase: number };
     };
+    const s90 = taxEffect.section90;
     return (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 dark:border-emerald-800/40 dark:bg-emerald-950/20 p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
@@ -260,6 +262,21 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
             <p className="text-muted-foreground">
               감면세액은 여러 건 합산 재계산(§133 한도) 후 확정 — 「감면세액 합산 재계산 내역」 참조
             </p>
+          ) : s90 ? (
+            <>
+              {/* 「소득세법」 §90① — 감면대상 소득에서 그 소득에 배정된 기본공제(§103②)를 빼고 과세표준으로 나눈다 */}
+              <p className="text-muted-foreground">
+                감면세액 = 산출세액 × (감면대상 양도소득금액 − 감면소득에 배정된 기본공제) ÷ 과세표준 × 감면율
+              </p>
+              <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
+                {formatN(calculatedTax)} × ({formatN(s90.reducibleIncome)} − {formatN(s90.basicDeductionAllocated)}) ÷{" "}
+                {formatN(s90.taxBase)} × {formatRate(taxEffect.reductionRate)} = {formatN(taxEffect.reductionAmount)}
+              </p>
+              <p className="text-micro text-muted-foreground">
+                감면대상 양도소득금액 = 양도소득금액 × 임대기간 분 비율 {formatRateFine(taxEffect.rentalGainRatio)} (조특령 §97의5②) ·
+                기본공제는 감면소득 외의 양도소득금액에서 먼저 공제 (소득세법 §103②)
+              </p>
+            </>
           ) : taxEffect.rentalGainRatio < 1 ? (
             <>
               <p className="text-muted-foreground">

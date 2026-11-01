@@ -182,6 +182,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
     type: z.literal("rental_97_5"),
     /** CA-01 — §97의5①3호 준용 (조특령 §97의3③2호 국민주택규모) */
     isNationalHousingScale: z.boolean().optional(),
+    /** §97의5①2호 — 양도 전 임대 종료 시 실제 임대기간의 마지막 날. ⑫에 없으면 침묵 stripping된다. */
+    rentalEndDate: z.string().date().optional(),
     ...rental97CommonShape,
     officialPriceAtStart: z.number().int().nonnegative().optional(),
     region: z.enum(["capital", "non_capital"]).optional(),

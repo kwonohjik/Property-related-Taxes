@@ -21,6 +21,7 @@ function form(over: Record<string, unknown> = {}): AssetReductionForm {
     hasVacancyOverGrace: false,
     rentalContinuesToTransfer: true,
     stdPriceAtRentalEnd: "",
+    rentalEndDate: "",
     stdPriceAtAcquisition: "",
     stdPriceAtTransfer: "",
     vacancyPeriods: [],

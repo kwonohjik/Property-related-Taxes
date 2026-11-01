@@ -263,6 +263,10 @@ export function toEngineReductions(
           type: "rental_97_5" as const,
           ...common,
           isNationalHousingScale: r.isNationalHousingScale, // CA-01
+          // §97의5①2호 — 조기 종료 시 10년 판정의 종점. 「계속 임대」면 싣지 않는다(종점 = 양도일).
+          ...(r.rentalContinuesToTransfer === false && r.rentalEndDate
+            ? { rentalEndDate: r.rentalEndDate }
+            : {}),
           officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
           region: r.region,
         };

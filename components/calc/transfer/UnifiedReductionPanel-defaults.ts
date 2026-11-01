@@ -99,6 +99,7 @@ const RENTAL_COMMON_DEFAULTS = {
   // D2-06 — 3-state. 미입력을 「계속 임대」로 읽지 않는다.
   rentalContinuesToTransfer: null,
   stdPriceAtRentalEnd: "",
+  rentalEndDate: "",
   // Q10 — 안분 기준시가 override. 비우면 자산-수준 값으로 폴백한다(라우터).
   stdPriceAtAcquisition: "",
   stdPriceAtTransfer: "",

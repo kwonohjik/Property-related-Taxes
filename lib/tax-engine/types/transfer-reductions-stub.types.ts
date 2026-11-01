@@ -110,6 +110,8 @@ export type TransferReductionStub =
   | ({ type: "rental_97_5";
       /** CA-01 — §97의5①3호가 준용하는 조특령 §97의3③2호 (국민주택규모 이하) */
       isNationalHousingScale?: boolean;
+      /** §97의5①2호 — 양도 전 임대 종료 시 실제 임대기간의 마지막 날 (`rentalContinuesToTransfer === false`이면 필수) */
+      rentalEndDate?: Date;
       officialPriceAtStart?: number;
       region?: "capital" | "non_capital";
     } & Rental97CommonFields)

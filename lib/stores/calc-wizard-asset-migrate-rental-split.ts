@@ -45,6 +45,7 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           // D2-06 — 신규 3-state. 구 세션엔 값이 없다.
           rentalContinuesToTransfer: null,
           stdPriceAtRentalEnd: "",
+          rentalEndDate: "",
           // Q10 — 안분 기준시가 override(신규). 구 세션엔 값이 없다(비면 자산-수준 폴백).
           stdPriceAtAcquisition: "",
           stdPriceAtTransfer: "",

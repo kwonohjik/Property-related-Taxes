@@ -31,6 +31,10 @@ export interface Rental97EngineContext {
   stdPriceAtTransfer?: number;
   /** 세액감면 계열 전용 */
   calculatedTax?: number;
+  /** §97의5 — 「소득세법」 §90① 감면세액 산식 입력 (양도소득금액·기본공제·과세표준) */
+  transferIncome?: number;
+  basicDeduction?: number;
+  taxBase?: number;
 }
 
 type RentalReductionVariant = Extract<
@@ -105,6 +109,12 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         // CA-01 — §97의5①3호가 조특령 §97의3③2호(국민주택규모)를 준용한다.
         // ⚠️ 이 case도 **명시 매핑**이라 적지 않으면 조용히 사라진다.
         isNationalHousingScale: r.isNationalHousingScale,
+        // §97의5①2호 — 조기 종료 시 10년 판정의 종점. ⚠️ 명시 매핑.
+        rentalEndDate: r.rentalEndDate,
+        // 「소득세법」 §90① 감면세액 산식 입력 — §97의5 evaluator만 읽는다.
+        transferIncome: ctx.transferIncome,
+        basicDeduction: ctx.basicDeduction,
+        taxBase: ctx.taxBase,
       };
     case "rental_97_main":
     case "rental_97_proviso":
