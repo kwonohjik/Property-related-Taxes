@@ -10,6 +10,7 @@
  */
 import { test, expect } from "@playwright/test";
 import { gotoTransferHoldingsStep } from "./_helpers/transfer-seed";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { makeDefaultRentalUnit } from "../lib/stores/calc-wizard-asset-factory";
 
 test("[RRE-1] 완공APT + §155⑳ 선언 — 카드가 선언을 요약하고 계산 본문에 실려 비과세", async ({ page }) => {
@@ -54,6 +55,9 @@ test("[RRE-1] 완공APT + §155⑳ 선언 — 카드가 선언을 요약하고 �
     formOver: { transferDate: "2024-06-01", filingDate: "2024-08-31", contractTotalPrice: "1000000000" },
   });
   // 카드는 선언을 요약한다 — 「판정 메뉴로 가세요」 안내가 아니다.
+  await page.getByRole("button", { name: "자산 목록" }).first().click();
+  await expandAssetSection(page, 5);
+  await expect(page.getByTestId("imported-rental-housing-facts")).toBeVisible();
   await expect(page.getByTestId("rental-housing-handoff-notice")).toHaveCount(0);
   for (const step of ["감면·공제", "가산세"]) {
     await page.getByRole("button", { name: step }).first().click();
