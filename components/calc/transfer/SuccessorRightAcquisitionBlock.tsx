@@ -44,6 +44,7 @@ import { successorRightStdPriceAtAcq } from "@/lib/calc/transfer-successor-right
 import { successorRightStdPriceAtTransfer } from "@/lib/calc/transfer-successor-right";
 import { successorRightEstimationMode } from "@/lib/calc/transfer-successor-right";
 import { isBgSuccessorRight } from "@/lib/calc/transfer-successor-right";
+import { bgSuccessorRightStdForced } from "@/lib/calc/bg-rtmi-std-acq";
 import { isCarryoverSuccessorRight } from "@/lib/calc/transfer-successor-right";
 import { isDeemedValueSuccessorRight } from "@/lib/calc/transfer-successor-right";
 import { SuccessorRightStdPriceSection } from "./SuccessorRightStdPriceSection";
@@ -51,6 +52,8 @@ import { SuccessorRightStdPriceSection } from "./SuccessorRightStdPriceSection";
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
+  /** 양도일 — 부담부증여 담보·임대 승(괄호 열거 시기) 판정(`bgSuccessorRightStdForced`). */
+  transferDate?: string;
 }
 
 type AcqMode = ReturnType<typeof successorRightEstimationMode>;
@@ -81,7 +84,7 @@ function acqModePatch(mode: AcqMode): Partial<AssetForm> {
   };
 }
 
-export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
+export function SuccessorRightAcquisitionBlock({ asset, onChange, transferDate }: Props) {
   // 표시 전용 합계 — 저장하지 않는다. 산식은 API 변환과 **같은 헬퍼**를 쓴다.
   const { successorRightAcqPrice, successorRightAddedContribution } = asset;
   const total = useMemo(
@@ -100,7 +103,9 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
   // 상속·증여 — 취득가액은 위 취득 정보의 §163⑨ 평가액(증여 신고가액·상속개시일 평가액)이다. 같은 이유로 숨긴다(계획서 `successor-right-carryover-contribution.plan.md` Q-2 a).
   const deemed = isDeemedValueSuccessorRight(asset);
   const hidden = carryover || deemed;
-  const isActual = !hidden && mode === "actual";
+  // 부담부증여 × 담보·임대 승(괄호 열거 시기) — 취득가액이 입주권 기준시가(취득일까지 납입한 금액 + 취득일 현재 프리미엄)라 승계취득가액·추가분담금은 쓰이지 않는다(⑧ 면제와 같은 술어).
+  const stdForced = bgSuccessorRightStdForced(asset, transferDate);
+  const isActual = !hidden && !stdForced && mode === "actual";
   // §165① 기준시가 미리보기 — 저장하지 않는다(합산은 ④ 변환과 같은 헬퍼)
   const stdAtAcq = successorRightStdPriceAtAcq(asset);
   const stdAtTransfer = successorRightStdPriceAtTransfer(asset);
@@ -135,7 +140,12 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
             일반 경로의 축이다. 같은 문구를 쓰면 사용자도 셀렉터도 둘을 구분하지 못한다. */}
         {/* 부담부증여는 실지거래가액만 받는다 — 라디오를 숨기고 ④·⑧도 같은 술어로 실거래가로 읽는다
             (`successorRightEstimationMode` · 계획서 `bg-successor-rtmi-acquisition-input.plan.md` Q-2 a). */}
-        {isBgSuccessorRight(asset) ? (
+        {stdForced ? (
+          <p className="text-xs text-muted-foreground" data-testid="bg-successor-right-std-forced">
+            증여재산 평가가 담보(§66)·임대(§61⑤)로 결정돼 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 취득가액은 아래 입주권 기준시가(취득일까지 납입한 금액 + 취득일 현재 프리미엄)에 채무 비율을 곱한 값입니다.
+            승계취득가액·추가분담금은 계산에 쓰이지 않고, 필요경비는 개산공제(1%)만 적용됩니다.
+          </p>
+        ) : isBgSuccessorRight(asset) ? (
           <p className="text-xs text-muted-foreground" data-testid="bg-successor-right-actual-only">
             부담부증여는 아래 승계취득가액 + 추가분담금(실지거래가액)으로 계산합니다. 채무 비율만큼 안분됩니다.
           </p>
@@ -239,7 +249,8 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
           </FieldCard>
         )}
 
-        {!hidden && mode !== "actual" && <SuccessorRightStdPriceSection asset={asset} onChange={onChange} mode={mode} stdAtAcq={stdAtAcq} stdAtTransfer={stdAtTransfer} />}
+        {!hidden && stdForced && <SuccessorRightStdPriceSection asset={asset} onChange={onChange} mode="appraisal" stdAtAcq={stdAtAcq} stdAtTransfer={stdAtTransfer} />}
+        {!hidden && !stdForced && mode !== "actual" && <SuccessorRightStdPriceSection asset={asset} onChange={onChange} mode={mode} stdAtAcq={stdAtAcq} stdAtTransfer={stdAtTransfer} />}
 
         {isActual && total > 0 && (
           <div className="rounded-md border border-sky-200 bg-sky-100/60 p-2.5 text-caption text-sky-900 space-y-1 dark:text-sky-200 dark:bg-sky-900/40">

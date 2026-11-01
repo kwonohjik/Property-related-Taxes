@@ -16,14 +16,17 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 import { isSplitValidationActive } from "./transfer-tax-validate-split";
 import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
+import { bgSuccessorRightStdForced } from "./bg-rtmi-std-acq";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
 import { bgAnyCarryover } from "./bg-carryover-parts";
 
 /** 취득가액 산정 근거 — 안내 문구가 그 이름으로 말한다. 칸이 쓰이면 null. */
-export function bgExpenseUnusedBasis(asset: AssetForm, isFractionalSplit?: boolean): "기준시가" | "감정가액" | "매매사례가액" | null {
+export function bgExpenseUnusedBasis(asset: AssetForm, isFractionalSplit?: boolean, transferDate?: string): "기준시가" | "감정가액" | "매매사례가액" | null {
   if (asset.transferType !== "burdened_gift") return null;
-  if (asset.assetKind === "right_to_move_in" || asset.assetKind === "redevelopment_apt") return null;
+  // 승계 입주권 × 담보·임대 승(괄호 열거 시기) — 취득가액이 입주권 기준시가라 필요경비는 개산공제(1%)뿐이다(I-1). 양도일을 알아야 판정한다.
+  if (asset.assetKind === "right_to_move_in") return bgSuccessorRightStdForced(asset, transferDate, isFractionalSplit) ? "기준시가" : null;
+  if (asset.assetKind === "redevelopment_apt") return null;
   if (bgAnyCarryover(asset)) return null;
   if (isSplitValidationActive(asset)) return null;
   // 평가 모드 미선택은 ④가 기준시가 모드로 보낸다(`buildBurdenedGiftInfo` — `bgValuationMode || "sangjeungbeop_standard"`).
@@ -37,6 +40,6 @@ export function bgExpenseUnusedBasis(asset: AssetForm, isFractionalSplit?: boole
   return asset.bgAcquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
 }
 
-export function bgExpenseInputsUnused(asset: AssetForm, isFractionalSplit?: boolean): boolean {
-  return bgExpenseUnusedBasis(asset, isFractionalSplit) !== null;
+export function bgExpenseInputsUnused(asset: AssetForm, isFractionalSplit?: boolean, transferDate?: string): boolean {
+  return bgExpenseUnusedBasis(asset, isFractionalSplit, transferDate) !== null;
 }

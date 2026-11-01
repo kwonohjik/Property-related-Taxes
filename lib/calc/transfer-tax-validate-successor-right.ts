@@ -28,6 +28,7 @@ import { fieldError } from "./transfer-tax-validate-field";
 // 술어·합산은 `transfer-successor-right.ts` 단일 소스 — ④ 변환·⑤ UI와 같은 함수를 쓴다.
 import { successorRightEstimationMode, successorTypeToggleSectionLabel } from "./transfer-successor-right";
 import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
+import { bgSuccessorRightStdForced } from "./bg-rtmi-std-acq";
 import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 import { isCarryoverSuccessorRight } from "./transfer-successor-right";
 import { isDeemedValueSuccessorRight } from "./transfer-successor-right";
@@ -47,6 +48,8 @@ export function validateSuccessorRightAsset(
   label: string,
   /** 「조합원 유형」 질문이 있는 섹션 — 축 B 둘째 이후 지분 카드는 ③ 취득정보(`successorTypeToggleSectionLabel`). */
   typeToggleSection: string = successorTypeToggleSectionLabel(false),
+  /** 양도일 — 부담부증여 담보·임대 승(괄호 열거 시기)이면 승계취득가액이 쓰이지 않는다(`bgSuccessorRightStdForced`). */
+  formTransferDate?: string,
 ): string | null {
   // ── 취득일 ── 이월과세는 취득일 칸이 화면에 없다 — ④와 같은 leaf(원값 → 증여 등기일)로 읽는다(계획서 `successor-right-carryover-validation.plan.md` Q-1 a).
   const acqDate = primaryAcquisitionDateOf(asset);
@@ -103,6 +106,8 @@ export function validateSuccessorRightAsset(
   const mode = successorRightEstimationMode(asset);
 
   if (mode === "actual") {
+    // 부담부증여 담보·임대 승(괄호 열거 시기) — 취득가액이 입주권 기준시가(취득일 2칸)라 승계취득가액·추가분담금은 쓰이지 않는다. 기준시가 2칸은 부담부증여 검증(5-c‴)이 요구한다.
+    if (bgSuccessorRightStdForced(asset, formTransferDate)) return null;
     const acqPrice = parseAmount(asset.successorRightAcqPrice);
     if (acqPrice <= 0) {
       return fieldError("successorRightAcqPrice", `${label}: 조합원입주권 승계취득가액을 입력하세요. (소득세법 §97①1호 가목 — 취득에 든 실지거래가액)`);

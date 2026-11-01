@@ -65,6 +65,8 @@ export function summarizeAssetSections(
     bundledSaleMode?: string;
     /** 지분 분할(축 B) — 양도가액 칸이 자동산정 카드로 대체된다. */
     isFractionalSplit?: boolean;
+    /** 양도일 — 승계 입주권 담보·임대 승(괄호 열거 시기)의 필요경비 «개산공제만» 판정. */
+    transferDate?: string;
   } = {},
 ): AssetSummary {
   const kindLabel = ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind;
@@ -130,7 +132,7 @@ export function summarizeAssetSections(
     amount(asset.directExpenses) > 0;
   // 부담부증여 · 기준시가(감정가액·매매사례가액) 산정 — 칸이 숨겨지고 개산공제만 쓰인다. 숨은 값을 「입력됨」으로 세지 않는다.
   //   사용자가 입력할 것이 없으므로 완료(✓)로 표시하지 않는다.
-  const expense: SectionSummary = bgExpenseInputsUnused(asset, ctx.isFractionalSplit === true)
+  const expense: SectionSummary = bgExpenseInputsUnused(asset, ctx.isFractionalSplit === true, ctx.transferDate)
     ? { label: "개산공제만", filled: false }
     : {
         label: expenseFilled ? "입력됨" : "미입력",

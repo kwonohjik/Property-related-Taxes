@@ -349,7 +349,7 @@ export function AssetSectionAcquisition({
           가른다 — 취득가액은 §97①1호 가목 실지거래가액(승계취득가 + 추가분담금)이다.
           술어는 `transfer-successor-right.ts` 단일 소스(API·validate·사이드바 공용). */}
       {isSuccessorRightTransfer(asset) ? (
-        <SuccessorRightAcquisitionBlock asset={asset} onChange={onChange} />
+        <SuccessorRightAcquisitionBlock asset={asset} onChange={onChange} transferDate={transferDate} />
       ) : (
         (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") && (
           <RedevelopmentBlock
