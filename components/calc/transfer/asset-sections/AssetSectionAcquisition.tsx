@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ParcelListInput } from "@/components/calc/inputs/ParcelListInput";
+import { PreDeemedPurchaseOutOfScopeNotice } from "../PreDeemedPurchaseCard";
 import { EXPR_VALUATION_MIN_TRANSFER_DATE } from "@/lib/tax-engine/expropriation-scope";
 import { MixedUseExpandedPanel } from "../MixedUseSection";
 import {
@@ -276,6 +277,9 @@ export function AssetSectionAcquisition({
           />
         </ToggleCard>
       )}
+
+      {/* 의제취득일 전 매수 영 §176조의2④ 범위 밖 안내 — 다필지·이월과세는 매매 블록이 없어 공통 자리에 둔다 */}
+      <PreDeemedPurchaseOutOfScopeNotice asset={asset} isNonPrimary={!isFirst} />
 
       {/* 겸용주택 확장 패널 — 체크박스 ON 시 직접 귀속 필요경비 위에 노출. */}
       {asset.assetKind === "housing" && (
