@@ -337,7 +337,8 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
     ["감면·LTHD echo 26종", "TransferReductionDetailSource", "pickReductionDetails", 26],
     // 14종 — 2026-10-16 비사업용 토지 중과배제 사유 echo(`nblSurchargeExcludedBy`, 양도일 유예 A3). `nblSurchargeExcluded`와 같은 계약에 실린다.
     // 15종 — 2026-10-23 일체 주택 본인 신축 §114조의2 건물분 base echo(`selfBuiltHousingPenalty`, Q-12 PR-1).
-    ["평가·판정 15종", "TransferValuationDetailSource", "pickValuationDetails", 15],
+    // 16종 — 2026-11-01 의제취득일 전 매수 영 §176조의2④ 비교 내역(`preDeemedPurchaseDetail`, realestate-pre-deemed-purchase PR-2).
+    ["평가·판정 16종", "TransferValuationDetailSource", "pickValuationDetails", 16],
   ])("%s — 계약 ↔ 주입 헬퍼 동기화", async (_label, typeName, fnName, minCount) => {
     const { readFileSync } = await import("node:fs");
     const typeSrc = readFileSync("lib/tax-engine/types/transfer-result.types.ts", "utf8");

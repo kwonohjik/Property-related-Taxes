@@ -172,3 +172,29 @@ Q-1 (B) · Q-2 (a) · Q-3 (a) · Q-4 (a) · Q-5 (a) · Q-6 주식 규약 · Q-7 
 - anchor `__tests__/tax-engine/transfer/pre-deemed-purchase-176-2-4.anchor.test.ts` 27건(수정 전 25건 실패): 실가 1984-06 → ② 101,411,574 · 양도차익 398,588,426 · 1984-12 배율 1 · 1984-09 99,171,760 · 1980-01 156,471,686 · 환산 ① 2억 vs ② 101,411,574 → ① · 실가 3억 → ② 304,234,724 · 동액 → ② · 감정·매매사례 ①/② · 1990 전 토지 환산 ② 채택 시 1990 echo 없음 · PHD ① = 분리 경로 값 · 상가 실가 608,469,449 · 상가 환산 ① 4억 / ② 507,057,874 · 1963 배율 빈칸 경고 / 3.5 → 350,000,000 · 범위 밖 3종 · 외부 지정.
 - 전체 vitest 44,700건 통과 · tsc 0 · ESLint 오류 0·경고 373(기준선과 같음).
 - 뮤테이션 22개 사멸. 살아남은 4개는 결과에 영향이 없는 중복 줄이라 코드에서 지웠다. ② 채택 시 PHD·파트 모드·감정·매매사례 값을 끊는 줄은, 같은 날 토지 취득일이면 분리 경로를 타지 않고 방식이 「실가」면 감정·매매사례 분기에 들어가지 않아 지웠다.
+
+## 11. PR-2 화면·14지점 결과
+
+- ①②③ 슬라이스 `lib/stores/calc-wizard-asset-pre-deemed-purchase.ts`(`preDeemedOriginalAcquisitionDate`·`preDeemedActualPrice`·`preDeemedPpiRatio`) — AssetForm extends · factory `PRE_DEEMED_PURCHASE_DEFAULTS` · migrate `migratePreDeemedPurchaseFields`.
+- 단일 술어 `lib/calc/transfer-pre-deemed-purchase-form.ts`: `isPreDeemedPurchaseAsset`(매매 · 부담부증여 아님 · 취득일 칸 = 1985-01-01 · 토지·주택·건물·상가 · 겸용·다필지 아님 · 토지·건물 취득일 분리는 PHD일 때만) · `preDeemedPurchaseApplies`(실제 취득일 < 1985-01-01) · ④ `buildPreDeemedPurchasePayload`(단건 `ratioed` · 컴패니언 `makeRatioed` — 지분 금액 규약) · ⑧ `preDeemedPurchaseInputError`(실제 취득일 빈칸 · 1985 이후 · 1965.01. 전 배율 빈칸). ⑤·⑥·⑧·④·다건이 같은 술어를 읽는다.
+- ⑤ 취득일 칸 덮어쓰기(`CompanionAcqDateSection`)가 원 입력을 `preDeemedOriginalAcquisitionDate`에 보존한다 — 두 키를 한 패치로(연속 패치는 `assetsRef` 옛 스냅샷이 앞 패치를 덮는다). 카드 `PreDeemedPurchaseCard`(실제 취득일 · 추계 모드면 함께 견줄 실가 · 1965.01. 전 배율 · 1984.9.·10. 배율 1 미만 안내)를 `CompanionAcqPurchaseBlock` 기준시가 섹션 뒤에 둔다(주 자산·컴패니언 공통).
+- ⑫ `lib/api/transfer-tax-schema-pre-deemed-purchase.ts`(실제 취득일 < 1985-01-01 · 1965.01. 전이면 배율 필수) — 본체 base-shape · 컴패니언 스키마. ⑭ `engine-input.ts` · 컴패니언 `bundled-split-helpers.ts`(Date 변환).
+- 다건(Q-11 b): ⑧ `validateMultiSupportedMode` · 서버 `MULTI_REJECT_RULES.preDeemedPurchase` — 같은 문구 `MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE`.
+- ⑥ 사이드바: 실제 취득일이 1985 전이면 계산 전 취득가액·필요경비 「계산 후 확정」 · ② 채택 결과 후 ② 금액. ⑦ 결과 카드 `PreDeemedPurchaseResultCard` — 단건 결과뷰 · 공용 `ValuationDetailCards`(함께 양도·다건 카드) · `TransferValuationDetailSource`·`pickValuationDetails`에 `preDeemedPurchaseDetail` 추가.
+- 클라이언트 번들 함정: 공용 문구를 엔진 본체 파일에 두면 화면 → 엔진 → `transfer-tax-helpers` → DB(`next/headers`)를 끌어와 Build Error — `transfer-pre-deemed-purchase-messages.ts`로 분리했다.
+- 명세서 산식(`DetailedStatementFormulaBuilders`)·별지 서식 「취득가액」 행 주석은 이번 PR에서 바꾸지 않았다(결과 카드·계산 단계 줄이 근거를 보인다) — V-6과 함께 후속.
+- 검증:
+  - anchor `__tests__/components/pre-deemed-purchase-ui.anchor.test.tsx` 37건 · 수정 전 15건 실패.
+  - 뮤테이션 24개 전부 사멸.
+  - E2E `e2e/pre-deemed-purchase-176-2-4.spec.ts`(PD-E1~E3) 3회 연속 통과 · 수정 전 3건 실패.
+  - 관련 E2E 59스펙 330건 통과.
+  - vitest 전체: 3건 갱신 후 통과.
+    - 리터럴 `÷` 문구 2건 → 「…를 …로 나눈 비율」.
+    - 계약 개수 15 → 16.
+  - tsc 0 · ESLint 0 / 373.
+  - 라이트·다크·375px 스크린샷 가로 스크롤 없음.
+- 실측(E2E·mock):
+  - 1984-06-01 입력 → 취득일 칸 1985-01-01 · 카드 실제 취득일 1984-06-01 · 요청 `preDeemedPurchase: { originalAcquisitionDate: "1984-06-01" }` · 결과 ② 101,411,574 채택.
+  - 환산 + 함께 견줄 실가 3억 → ② 304,234,724(① 200,000,000).
+  - 1984-09 → ② 297,515,282(배율 0.9917).
+- 1990.8.30. 전 토지는 환산이면 §164④ 칸(1990.1.1. 공시지가·등급)이 ①의 분자를 만든다 — 그 칸 없이 환산을 고르면 기존 ⑧이 막는다(정상).

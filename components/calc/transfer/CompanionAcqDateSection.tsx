@@ -81,7 +81,11 @@ export function CompanionAcqDateSection(props: {
   function handleAcquisitionDateBlur() {
     if (buildingCause) return;
     if (p.acquisitionDate && p.acquisitionDate < MIN_ACQ_DATE) {
-      p.onAcquisitionDateChange(MIN_ACQ_DATE);
+      // 영 §176조의2④ — 덮어쓰기 전 원 입력을 실제 취득일로 보존한다(계획서 realestate-pre-deemed-purchase Q-1 B).
+      //   두 키를 **한 패치**로 쓴다 — 연달아 두 번 부르면 뒤 패치가 앞 패치를 옛 스냅샷으로 덮는다(다중키 patch 함정).
+      //   이 갈래는 `buildingCause`가 없어 날짜 핸들러도 `{ acquisitionDate }` 한 키라 결과가 같다.
+      if (p.onAssetChange) p.onAssetChange({ acquisitionDate: MIN_ACQ_DATE, preDeemedOriginalAcquisitionDate: p.acquisitionDate });
+      else p.onAcquisitionDateChange(MIN_ACQ_DATE);
       setDateClampMsg(true);
     }
   }

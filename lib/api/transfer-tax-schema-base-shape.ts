@@ -9,6 +9,7 @@
  *    동기화 지점이다(루트 CLAUDE.md 14지점). 필드를 더할 때 ④⑬⑭도 함께 볼 것.
  */
 
+import { preDeemedPurchaseSchema } from "./transfer-tax-schema-pre-deemed-purchase";
 import { z } from "zod";
 import { rentalHousingExceptionSchema } from "./transfer-tax-schema-rental-exception";
 import { splitCarryoverShape } from "./transfer-tax-schema-split-carryover";
@@ -299,6 +300,8 @@ export const propertyBaseShape = {
   appraisalValue: z.number().int().nonnegative().optional(),
   // ⑫ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 엔진에 전달
   similarSalesValue: z.number().int().nonnegative().optional(),
+  // ⑫ 의제취득일 전 매수 영 §176조의2④ — 실제 취득일·함께 견줄 실가·배율(⑭ `engine-input.ts`)
+  preDeemedPurchase: preDeemedPurchaseSchema.optional(),
   isSelfBuilt: z.boolean().optional(),
   buildingType: z.enum(["new", "extension"]).optional(),
   constructionDate: z.string().date().optional(),

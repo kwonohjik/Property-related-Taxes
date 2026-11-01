@@ -27,6 +27,7 @@ import { clauseADeclarationError } from "./transfer-tax-validate-clause-a";
 import { postDeemedClauseARequiredError } from "./transfer-tax-validate-clause-a";
 import { originalMemberClauseARequiredError } from "./transfer-tax-validate-clause-a";
 import { preDeemedConversionInputError } from "./transfer-tax-validate-clause-a";
+import { preDeemedPurchaseInputError } from "./transfer-pre-deemed-purchase-form";
 import { redevPreDeemedEstimatedRequiredError } from "./transfer-tax-validate-clause-a";
 import { validateCommercialInheritanceAsset } from "./transfer-tax-validate-commercial-asset";
 import { validateCommercialAppurtenantLand } from "./transfer-tax-validate-commercial-asset";
@@ -213,6 +214,9 @@ function validateAssetAcquisitionBranches(
   // 재개발 종전자산은 ③이 §166③ — ①② 없이 선언했으면 ⑤ 「환산」이어야 한다(실가면 취득가액 0).
   const redevPreDeemedError = redevPreDeemedEstimatedRequiredError(asset, label);
   if (redevPreDeemedError) return redevPreDeemedError;
+  // 의제취득일 전 매수 영 §176조의2④ — 실제 취득일·1965.01. 전 배율(⑤ 카드 칸 · ⑫와 같은 규칙)
+  const preDeemedPurchaseError = preDeemedPurchaseInputError(asset, label);
+  if (preDeemedPurchaseError) return preDeemedPurchaseError;
 
   // ── post-deemed 상속: ①(상증법 평가액) 또는 ②(§164⑤~⑦) 필수 (근거·예외는 함수 JSDoc) ──
   // ⚠️ E-1과 **같은 자리**여야 한다 — 위 조기 return(용도변경·부담부증여)보다 뒤면 dead code다.

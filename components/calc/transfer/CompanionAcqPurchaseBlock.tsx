@@ -12,6 +12,7 @@
  *   - 1990.8.30. 이전이면 공시지가 연도 자동 1990년, Pre1990 섹션 자동 활성화
  */
 
+import { PreDeemedPurchaseCard } from "./PreDeemedPurchaseCard";
 import { useState, useEffect } from "react";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
@@ -521,6 +522,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         transferPricePerSqm={transferPricePerSqm}
         onTransferPricePerSqmChange={onTransferPricePerSqmChange}
       />
+      {/* 의제취득일 전 매수 영 §176조의2④ — 취득가액 산정 방식·기준시가 뒤(①의 방식이 위에서 정해진다) */}
+      {props.asset && props.onAssetChange && <PreDeemedPurchaseCard asset={props.asset} onAssetChange={props.onAssetChange} />}
       </>
       )}
 

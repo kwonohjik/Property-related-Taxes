@@ -328,6 +328,10 @@ export function buildCompanionEngineInputs(
     // ⑭ §164⑧ 동일조정기간 환산 — 컴패니언도 자기 취득·양도일 축으로 판정된다.
     //    이 명시 매핑이 없으면 ⑫를 통과한 값이 엔진에 도달하지 못한다(침묵 strip).
     sameAdjustmentPeriod: c.sameAdjustmentPeriod,
+    // ⑭ 의제취득일 전 매수 영 §176조의2④ — 주 자산(`engine-input.ts`)과 같은 변환
+    preDeemedPurchase: c.preDeemedPurchase
+      ? { ...c.preDeemedPurchase, originalAcquisitionDate: toDate(c.preDeemedPurchase.originalAcquisitionDate, "companionAssets.preDeemedPurchase.originalAcquisitionDate") }
+      : undefined,
     // ⑭ 개산공제(§163⑥) base 지분 축소 — 기준시가는 물건 전체 값을 유지하고 개산공제만 지분분이 된다.
     //    단건 `engine-input.ts:218`·겸용 `route.ts:333`과 같은 축(F39).
     ownershipRatio: c.ownershipRatio,

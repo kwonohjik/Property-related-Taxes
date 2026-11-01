@@ -19,6 +19,7 @@ import { MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transf
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
@@ -63,6 +64,8 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown) => string | null> =
         ? MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE
         : null,
   mixedUse: whenPresent(MULTI_MIXED_USE_UNSUPPORTED_MESSAGE),
+  // 의제취득일 전 매수 §176조의2④ — 다건 ④·⑭는 이 입력을 옮기지 않는다(계획서 realestate-pre-deemed-purchase Q-11 b).
+  preDeemedPurchase: whenPresent(MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE),
   generalBuildingValuation: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
   generalBuildingShares: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
   commercialBuildingValuation: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),

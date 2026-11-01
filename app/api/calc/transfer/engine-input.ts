@@ -336,6 +336,10 @@ export function buildTransferEngineInput(
     appraisalValue: data.appraisalValue,
     // ⑭ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 엔진에 전달 (TypeScript 미감지 영역)
     similarSalesValue: data.similarSalesValue,
+    // ⑭ 의제취득일 전 매수 영 §176조의2④ — 날짜만 Date로(⑫ 통과 후 여기서 빠지면 침묵 strip)
+    preDeemedPurchase: data.preDeemedPurchase
+      ? { ...data.preDeemedPurchase, originalAcquisitionDate: toDate(data.preDeemedPurchase.originalAcquisitionDate, "preDeemedPurchase.originalAcquisitionDate") }
+      : undefined,
     isSelfBuilt: data.isSelfBuilt,
     buildingType: data.buildingType,
     constructionDate: toOptionalDate(data.constructionDate),

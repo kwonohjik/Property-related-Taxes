@@ -7,6 +7,7 @@
 
 import { round2 } from "@/lib/tax-engine/area-utils";
 import { migrateMixedUseFields } from "./calc-wizard-asset-mixed-use";
+import { migratePreDeemedPurchaseFields } from "./calc-wizard-asset-pre-deemed-purchase";
 import { normalizeRentalAndSplitFields, hasPositiveAmount } from "./calc-wizard-asset-migrate-rental-split";
 import { migrateResidenceFields } from "./calc-wizard-asset-residence";
 import { migrateRentalHousingException } from "./calc-wizard-asset-migrate-rhe";
@@ -288,6 +289,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   migrateSplitPartCarryoverFields(a);
   // 겸용주택 분리계산 + 보유 중 일부 용도변경 필드 (별도 모듈)
   migrateMixedUseFields(a);
+  migratePreDeemedPurchaseFields(a);
   // 거주 정보 (자산-수준)
   migrateResidenceFields(a);
   // ③ 신축(자가건축) 취득일 4-시점 + 부수토지 필드 마이그레이션 (사례 28, 2026-05-07; G-5 4번째 시점)

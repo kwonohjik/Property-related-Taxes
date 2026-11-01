@@ -68,7 +68,8 @@ import type { HousingExcessFormSlice } from "./calc-wizard-asset-housing-excess"
 import type { SplitAcquisitionFormSlice } from "./calc-wizard-asset-split-acq";
 import type { AcqPriceConversionFormSlice } from "./calc-wizard-asset-acq-conversion";
 import type { RentalHousingExceptionFormSlice } from "./calc-wizard-asset-rental-exception";
-export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice, PartialAreaApportionFormSlice, NblJudgmentFormSlice, CommercialBuildingFormSlice, UsageConversionFormSlice, SellingHouseOriginFormSlice, HousingExcessFormSlice, SplitAcquisitionFormSlice, AcqPriceConversionFormSlice, RentalHousingExceptionFormSlice {
+import type { PreDeemedPurchaseFormSlice } from "./calc-wizard-asset-pre-deemed-purchase";
+export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice, PartialAreaApportionFormSlice, NblJudgmentFormSlice, CommercialBuildingFormSlice, UsageConversionFormSlice, SellingHouseOriginFormSlice, HousingExcessFormSlice, SplitAcquisitionFormSlice, AcqPriceConversionFormSlice, RentalHousingExceptionFormSlice, PreDeemedPurchaseFormSlice {
   assetId: string;
   assetLabel: string;
   /**

@@ -35,6 +35,7 @@ import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/t
 import { CarryoverComparisonCard } from "@/components/calc/results/transfer/CarryoverComparisonCard";
 import { SplitGainDetailSection } from "@/components/calc/results/transfer/SplitGainDetailSection";
 import { Pre1990LandValuationDetailCard } from "@/components/calc/results/transfer/Pre1990LandValuationDetailCard";
+import { PreDeemedPurchaseResultCard } from "@/components/calc/results/transfer/PreDeemedPurchaseResultCard";
 import { SelfBuiltPenaltyCard } from "@/components/calc/results/transfer/SelfBuiltPenaltyCard";
 
 interface Props {
@@ -89,6 +90,7 @@ export function ValuationDetailCards({
     !!result.carryoverTaxationDetail ||
     !!result.splitDetail ||
     !!result.pre1990LandValuationDetail ||
+    !!result.preDeemedPurchaseDetail ||
     !!result.selfBuiltHousingPenalty;
 
   if (!hasAny) return null;
@@ -136,6 +138,7 @@ export function ValuationDetailCards({
       {result.familyBusinessDetail && (
         <FamilyBusinessImputedComparisonCard detail={result.familyBusinessDetail} />
       )}
+      {result.preDeemedPurchaseDetail && <PreDeemedPurchaseResultCard detail={result.preDeemedPurchaseDetail} />}
       {result.pre1990LandValuationDetail && (
         <Pre1990LandValuationDetailCard detail={result.pre1990LandValuationDetail} />
       )}

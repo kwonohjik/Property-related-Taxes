@@ -14,6 +14,8 @@ import { MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "./multi-transfer-suppor
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { isPreDeemedPurchaseAsset } from "./transfer-pre-deemed-purchase-form";
 import { MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
@@ -125,6 +127,8 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   if (a.assetKind === "redevelopment_apt") {
     return MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE;
   }
+  // 의제취득일 전 매수 §176조의2④ — 단건과 같은 카드가 뜨지만 다건 ④·⑭는 그 입력을 옮기지 않는다(Q-11 b · 서버 `MULTI_REJECT_RULES`와 같은 문구)
+  if (isPreDeemedPurchaseAsset(a)) return MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE;
   /**
    * 조합원입주권 — `redevelopment_apt`와 **같은 이유**로 차단한다 (2026-08-23).
    *

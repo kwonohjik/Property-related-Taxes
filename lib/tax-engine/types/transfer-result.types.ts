@@ -627,6 +627,7 @@ export type TransferValuationDetailSource = Pick<
   | "familyBusinessDetail"
   | "carryoverTaxationDetail"
   | "splitDetail"
+  | "preDeemedPurchaseDetail"
   | "pre1990LandValuationDetail"
   | "selfBuiltHousingPenalty"
 >;
