@@ -84,7 +84,7 @@ export function ResidencePeriodSection({
       </div>
       {appliesToOtherShares && (
         <p data-testid="residence-other-shares-hint" className="text-xs leading-relaxed text-muted-foreground">
-          같은 주택의 다른 지분에도 적용합니다(그 지분의 보유기간까지).
+          같은 주택의 다른 지분에도 적용합니다(그 지분을 보유한 동안의 거주만).
         </p>
       )}
       {mergeStartDate && (

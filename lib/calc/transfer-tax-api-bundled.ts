@@ -1,3 +1,4 @@
+import { laterShareResidenceMonths } from "./axis-b-share-residence";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { sec164LandAreaField } from "./transfer-163-9-base-date";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -79,7 +80,13 @@ export function buildBundledPrimaryPayload(c: {
         const nblRaw = fractionalBundleMerge
           ? buildNonBusinessLandRaw(buildFractionalShareNblRecord(a, primary), form.transferDate)
           : undefined;
-        return nblRaw ? { ...payload, nonBusinessLandRaw: nblRaw } : payload;
+        // ⑬ 축 B에서 늦게 취득한 지분의 거주 — 그 지분을 보유한 동안의 구간만 센다(없으면 서버가 주 자산 값을 승계).
+        const shareResidence = laterShareResidenceMonths(a, form);
+        return {
+          ...payload,
+          ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
+          ...(shareResidence !== undefined ? { residencePeriodMonths: shareResidence } : {}),
+        };
       }),
     // 🔴 신고 단위 선언도 **파생값**이다(H8) — 자산별 계산만 안분하고 여기를 raw로 두면
     //    한 요청 안에서 「자산은 안분 / 신고는 구분기재」로 어긋난다.

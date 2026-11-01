@@ -9,7 +9,6 @@
  */
 import { z } from "zod";
 import { directResidenceMonthsOverflowError } from "@/lib/calc/residence-interval-validate";
-import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { residenceStartWithMerge } from "@/lib/calc/self-owns-scope";
 
 type Issue = (path: (string | number)[], message: string) => void;
@@ -223,7 +222,7 @@ export function newConstructionLandOnlyIssue(d: { acquisitionCause?: string; sel
     : null;
 }
 
-/** 거주 상한의 기산일을 정하는 사실 — ⑫ 상한(`residenceMonthsOverflowIssue`)과 축 B 거주 승계(`inheritedShareResidenceMonths`)가 함께 읽는다. */
+/** 거주 상한의 기산일을 정하는 사실 — ⑫ 상한(`residenceMonthsOverflowIssue`)과 축 B 거주 승계의 기산일(`shareResidenceStart`)이 함께 읽는다. */
 interface ResidenceCapFacts {
   acquisitionDate?: string;
   selfOwns?: string;
@@ -261,15 +260,30 @@ function residenceCapStart(d: ResidenceCapFacts, acquisitionDate: string, includ
 }
 
 /**
- * 축 B(같은 주택 지분) 컴패니언이 승계할 거주 개월 — 주 자산 값을 그 지분의 보유 기산일~양도일로 자른다.
- *
- * 거주는 1세대·해당 주택 기준이고(「소득세법 시행령」 §154①·⑥ · §159의4) 「그 보유기간 중」이 지분별 상한이다(`axis-b-companion-residence.plan.md` Q-2 a).
- * 서버가 채우는 값은 Zod를 지나지 않아 ⑫ 상한에 걸리지 않으므로 여기서 직접 자른다. 기산일은 ⑫와 같다.
+ * 지분의 거주를 세기 시작하는 날. ⑫ 상한(`residenceCapStart`)은 «어떤 기산일로도 설명되지 않는 값»만 막으려고 느슨하지만, 값 계산은 실제 기산일이어야 한다 —
+ * 일반 증여는 증여받은 날이다(사전-2025-법규재산-0506 질의2 — 증여 전 동일세대 거주는 표2 대상 판정의 별도 칸이 맡는다). 이월과세는 증여자 취득일이다(법규과-1660).
  */
-export function inheritedShareResidenceMonths(primaryMonths: number, c: ResidenceCapFacts, transferDate: string): number {
-  if (!c.acquisitionDate) return primaryMonths;
-  const { start } = residenceCapStart(c, c.acquisitionDate, !!c.mixedUse);
-  return transferDate < start ? 0 : Math.min(primaryMonths, residenceIntervalMonths(start, transferDate));
+function shareResidenceStart(d: ShareResidenceFacts, acquisitionDate: string): string {
+  const facts = d.acquisitionCause === "gift" ? { ...d, donorAcquisitionDate: undefined, giftHouseholdHoldingStartDate: undefined } : d;
+  return residenceCapStart(facts, acquisitionDate, !!d.mixedUse).start;
+}
+
+type ShareResidenceFacts = ResidenceCapFacts & { acquisitionCause?: string };
+
+/** 축 B — 이 지분이 주 자산보다 늦게 보유를 시작했는가. 주 자산 거주가 이 지분 취득 전일 수 있다. */
+export function shareStartsLaterThanPrimary(c: ShareResidenceFacts, primary: ShareResidenceFacts): boolean {
+  if (!c.acquisitionDate || !primary.acquisitionDate) return false;
+  return shareResidenceStart(c, c.acquisitionDate) > shareResidenceStart(primary, primary.acquisitionDate);
+}
+
+/**
+ * 축 B(같은 주택 지분) 컴패니언이 승계할 거주 개월(`axis-b-share-residence-overcount.plan.md` Q-2).
+ *
+ * 거주는 1세대·해당 주택 기준이다(「소득세법 시행령」 §154①·⑥ · §159의4). 보유 시작이 주 자산과 같거나 빠른 지분은 주 자산 값을 쓴다.
+ * 늦은 지분은 주 자산 거주가 그 지분 취득 전일 수 있어 개월 수만으로는 알 수 없다 — 화면은 ④가 구간에서 계산해 값을 싣고, 값이 없는 API 직접 호출은 0개월이다.
+ */
+export function inheritedShareResidenceMonths(primaryMonths: number, c: ShareResidenceFacts, primary: ShareResidenceFacts): number {
+  return shareStartsLaterThanPrimary(c, primary) ? 0 : primaryMonths;
 }
 
 /**

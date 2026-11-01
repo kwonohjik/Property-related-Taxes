@@ -1,6 +1,6 @@
 /**
- * 축 B(같은 주택 지분 분할) 컴패니언의 거주기간 — 주 자산 값을 승계하고 그 지분의 보유 기산일로 자른다
- * (계획서 `docs/02-design/features/axis-b-companion-residence.plan.md` Q-1 a · Q-2 a).
+ * 축 B(같은 주택 지분 분할) 컴패니언의 거주기간 — 같거나 먼저 취득한 지분은 주 자산 값을 승계하고, 늦게 취득한 지분은 그 지분을 보유한 동안의 거주만 센다
+ * (계획서 `docs/02-design/features/axis-b-companion-residence.plan.md` · `axis-b-share-residence-overcount.plan.md`).
  *
  * 종전: 컴패니언은 거주 입력칸이 없는데 fallback이 0개월이라 둘째 지분 이후가 표1·과세로 떨어졌다.
  * 거주는 1세대·해당 주택 기준이다(「소득세법 시행령」 §154①·⑥ · §159의4).
@@ -21,6 +21,7 @@ import { allIssues, captureBody, postTransfer } from "../calc/_helpers/redev-one
 import { withIdentityHousingBuildingStdOnForm } from "../tax-engine/_helpers/mixed-use-identity-std-form";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -36,9 +37,10 @@ const D2023 = "2023-03-03";
 const D2025 = "2025-03-03";
 const REDEV = { acquisitionCause: "purchase", acquisitionDate: "2010-03-01", useEstimatedAcquisition: false, fixedAcquisitionPrice: "", redevActualAcquisitionPrice: "400000000", redevApprovalDate: "2018-05-01", redevRightsValue: "600000000", redevSettlementDirection: "pay", redevSettlementAmount: "100000000", redevPreApprovalExpenses: "20000000", redevOriginalAssetType: "housing", capitalExpenditure: "30000000", transferExpense: "10000000", addressJibun: "서울 A 1" };
 const MIXED = { assetKind: "housing", isMixedUseHouse: true, acquisitionCause: "purchase", acquisitionDate: "2009-03-01", useEstimatedAcquisition: false, fixedAcquisitionPrice: "500000000", capitalExpenditure: "100000000", transferExpense: "20000000", residentialFloorArea: "60", nonResidentialFloorArea: "40", buildingFootprintArea: "50", mixedUseTotalLandArea: "300", mixedTransferHousingPrice: "1600000000", mixedTransferCommercialBuildingPrice: "200000000", mixedTransferLandPricePerSqm: "1000000", mixedAcqHousingPrice: "400000000", mixedAcqCommercialBuildingPrice: "50000000", mixedAcqLandPricePerSqm: "300000", addressJibun: "서울 A 1" };
+const GIFT = { acquisitionCause: "gift", donorAcquisitionDate: "2010-01-01", giftDonorRelation: "other", giftSameHousehold: "no" };
 const APT = { ...REDEV, assetKind: "redevelopment_apt", redevSubject: "apt" };
 
-const PIN = { direct24: 24_557_500, bundled: 140_646_000, zero: 57_277_000, land: 402_831_000, appurtenant: 437_068_500 };
+const PIN = { direct24: 24_557_500, bundled: 140_646_000, zero: 57_277_000, land: 402_831_000, appurtenant: 437_068_500, giftNoValue: 43_232_200 };
 
 function house(pcts: string[], total: string, hh: L, acqs: string[], over: L = {}) {
   const f = createDefaultTransferFormData() as L;
@@ -60,7 +62,7 @@ async function calc(form: never, patch?: (b: L) => void) {
   patch?.(body);
   const r = await postTransfer(body);
   const data = r.json?.data as L | undefined;
-  return { status: r.status, body, totalTax: data?.aggregated?.totalTax, props: (data?.aggregated?.properties ?? []) as L[], error: r.json?.error as L | undefined };
+  return { status: r.status, body, warnings: (data?.aggregated?.warnings ?? []) as string[], totalTax: data?.aggregated?.totalTax, props: (data?.aggregated?.properties ?? []) as L[], error: r.json?.error as L | undefined };
 }
 
 describe("같은 취득일 — 100% 단건과 같아진다", () => {
@@ -97,35 +99,134 @@ describe("같은 취득일 — 100% 단건과 같아진다", () => {
   });
 });
 
-describe("취득일이 다른 지분 — 그 지분의 보유 기산일로 자른다", () => {
-  it("조정 10억, 둘째 2023 취득(보유 35개월) — 비과세", async () => {
-    const t = await calc(house(["50", "50"], "1000000000", REG, [D2018, D2023]));
-    expect(t.status).toBe(200);
+describe("늦게 취득한 지분 — 그 지분을 보유한 동안의 거주만 센다", () => {
+  /** 구간 입력 — 거주 60개월이 양도일까지 이어진다. */
+  const LIVED_TO_END = { residenceInputMode: "interval", residencePeriods: [{ id: "p1", moveInDate: "2021-02-16", moveOutDate: "2026-02-15" }] };
+  const LIVED_2018_2020 = { residenceInputMode: "interval", residencePeriods: [{ id: "p1", moveInDate: "2018-03-03", moveOutDate: "2020-03-02" }] };
+  const LIVED_2015_2020 = { residenceInputMode: "interval", residencePeriods: [{ id: "p1", moveInDate: "2015-03-03", moveOutDate: "2020-03-02" }] };
+  const G = "2022-02-16";
+
+  function withPrimary(f: never, over: L) {
+    (f as unknown as L).assets[0] = { ...(f as unknown as L).assets[0], ...over };
+    return f;
+  }
+  function second(f: never, over: L) {
+    (f as unknown as L).assets[1] = { ...(f as unknown as L).assets[1], ...over };
+    return f;
+  }
+
+  it("조정 10억, 둘째 2023 취득 · 양도일까지 거주 — 겹친 개월로 비과세", async () => {
+    const f = withPrimary(house(["50", "50"], "1000000000", REG, [D2018, D2023]), LIVED_TO_END);
+    expect(allIssues(f)).toEqual([]);
+    const t = await calc(f);
+    expect(t.body.companionAssets[0].residencePeriodMonths).toBe(35);
     expect(t.totalTax).toBe(0);
   });
 
-  it("조정 10억, 둘째 2025 취득(보유 11개월) — 보유 미달 과세 267,575,000", async () => {
-    const t = await calc(house(["50", "50"], "1000000000", REG, [D2018, D2025]));
+  it("조정 10억, 둘째 2025 취득 — 보유 미달 과세 267,575,000", async () => {
+    const t = await calc(withPrimary(house(["50", "50"], "1000000000", REG, [D2018, D2025]), LIVED_TO_END));
     expect(t.totalTax).toBe(267_575_000);
   });
 
   it("비조정 15억, 둘째 2023 취득 — 47,245,000(보유 3년 미만 장특 0)", async () => {
-    const t = await calc(house(["50", "50"], "1500000000", ONE, [D2015, D2023]));
+    const t = await calc(withPrimary(house(["50", "50"], "1500000000", ONE, [D2015, D2023]), LIVED_TO_END));
     expect(t.totalTax).toBe(47_245_000);
     expect(t.props[1].longTermHoldingDeduction).toBe(0);
   });
 
-  it("상한 경계 — 둘째 보유 36개월 이상이면 잘린 값이 곧 그 보유기간이다", async () => {
-    const capped = await calc(house(["50", "50"], "1500000000", ONE, [D2015, "2021-02-16"]));
-    const direct = await calc(house(["50", "50"], "1500000000", ONE, [D2015, "2021-02-16"]), (b) => {
-      b.companionAssets[0].residencePeriodMonths = 60;
+  it("거주가 둘째 취득 전에 끝남 — 조정 10억 112,046,000 · 본문 0개월", async () => {
+    const f = withPrimary(house(["50", "50"], "1000000000", REG, [D2018, G]), LIVED_2018_2020);
+    const t = await calc(f);
+    expect(t.body.companionAssets[0].residencePeriodMonths).toBe(0);
+    expect(t.totalTax).toBe(112_046_000);
+  });
+
+  it("거주가 둘째 취득 전에 끝남 — 비조정 15억 43,232,200", async () => {
+    const t = await calc(withPrimary(house(["50", "50"], "1500000000", ONE, [D2015, G]), LIVED_2015_2020));
+    expect(t.totalTax).toBe(43_232_200);
+  });
+
+  it("구간이 일부만 겹침 — 겹친 개월만 센다(여러 구간 합산)", async () => {
+    const f = withPrimary(house(["50", "50"], "1500000000", ONE, [D2015, G]), {
+      residenceInputMode: "interval",
+      residencePeriods: [
+        { id: "p1", moveInDate: "2015-03-03", moveOutDate: "2020-03-02" },
+        { id: "p2", moveInDate: "2021-02-16", moveOutDate: "2024-02-15" },
+      ],
     });
-    expect(capped.totalTax).toBe(direct.totalTax);
-    const longer = await calc(house(["50", "50"], "1500000000", { ...ONE }, [D2015, "2022-02-16"]));
-    const longerDirect = await calc(house(["50", "50"], "1500000000", ONE, [D2015, "2022-02-16"]), (b) => {
-      b.companionAssets[0].residencePeriodMonths = 48;
+    const t = await calc(f);
+    expect(t.body.companionAssets[0].residencePeriodMonths).toBe(24);
+  });
+
+  it("일반 증여 — 증여일 이후 거주만, 양도일까지 거주면 48개월 31,949,500", async () => {
+    const f = second(withPrimary(house(["50", "50"], "1500000000", ONE, [D2015, G]), LIVED_TO_END), GIFT);
+    const t = await calc(f);
+    expect(t.body.companionAssets[0].residencePeriodMonths).toBe(48);
+    expect(t.totalTax).toBe(31_949_500);
+  });
+
+  it("일반 증여 API 직접 호출(값 없음) — 증여자 취득일로 넓히지 않고 0개월", async () => {
+    const f = second(house(["50", "50"], "1500000000", ONE, [D2015, G]), GIFT);
+    const t = await calc(f);
+    expect(t.totalTax).toBe(PIN.giftNoValue);
+  });
+
+  it("상속 — 상속개시일 이후 거주 31,949,500", async () => {
+    const f = second(withPrimary(house(["50", "50"], "1500000000", ONE, [D2015, G]), LIVED_TO_END), { acquisitionCause: "inheritance", decedentAcquisitionDate: "2010-01-01", publishedValueAtInheritance: "300000000" });
+    const t = await calc(f);
+    expect(t.totalTax).toBe(31_949_500);
+  });
+
+  it("이월과세 — 증여자 취득일(2010)이 주 자산보다 빠르면 주 자산 값 승계 30,101,500", async () => {
+    const f = second(house(["50", "50"], "1500000000", ONE, [D2015, G]), {
+      acquisitionCause: "carryover_gift",
+      carryover: { ...CARRYOVER_DEFAULTS, giftRegistryDate: G, donorAcquisitionDate: "2010-01-01", donorAcquisitionPrice: "300000000", giftTaxAmount: "0", giftDateValuation: "300000000", donorRelation: "spouse" },
     });
-    expect(longer.totalTax).toBe(longerDirect.totalTax);
+    const t = await calc(f);
+    expect(t.totalTax).toBe(30_101_500);
+  });
+
+  it("⑧ — 직접 입력 + 늦게 취득한 지분이면 구간 입력을 요구한다", () => {
+    const issues = allIssues(house(["50", "50"], "1500000000", ONE, [D2015, G])).map((i) => i.message);
+    expect(issues.some((m) => m.includes("거주한 시점이 필요합니다"))).toBe(true);
+  });
+
+  it("⑧ — 취득일이 같으면 묻지 않는다 · 거주 0이면 묻지 않는다 · 다주택이면 묻지 않는다", () => {
+    const msg = "거주한 시점이 필요합니다";
+    const has = (f: never) => allIssues(f).some((i) => i.message.includes(msg));
+    expect(has(house(["50", "50"], "1500000000", ONE, [D2015, D2015]))).toBe(false);
+    const zero = house(["50", "50"], "1500000000", { ...ONE, residencePeriodMonths: "0" }, [D2015, G]) as unknown as L;
+    zero.assets[0].residencePeriodMonthsAsset = "0";
+    expect(has(zero as never)).toBe(false);
+    expect(has(house(["50", "50"], "1500000000", { ...ONE, isOneHousehold: false, householdHousingCount: "3" }, [D2015, G]))).toBe(false);
+  });
+
+  it("⑧ — 이월과세는 증여자 취득일 기준이라 그 날이 빠르면 묻지 않는다", () => {
+    const f = second(house(["50", "50"], "1500000000", ONE, [D2015, G]), {
+      acquisitionCause: "carryover_gift",
+      carryover: { ...CARRYOVER_DEFAULTS, giftRegistryDate: G, donorAcquisitionDate: "2010-01-01" },
+    });
+    expect(allIssues(f).some((i) => i.message.includes("거주한 시점이 필요합니다"))).toBe(false);
+  });
+
+  it("④ — 직접 입력에 숨은 옛 구간은 읽지 않는다", async () => {
+    const f = withPrimary(house(["50", "50"], "1500000000", ONE, [D2015, G]), { residencePeriods: LIVED_TO_END.residencePeriods });
+    const body = (await captureBody(f)) as L;
+    expect(body.companionAssets[0].residencePeriodMonths).toBeUndefined();
+  });
+
+  it("고지 — 재개발 APT 지분도 뜬다", async () => {
+    const f = second(redevOrMixed(APT, false), { acquisitionDate: "2015-03-03" });
+    const t = await calc(f);
+    expect(t.status).toBe(200);
+    expect(t.warnings.some((w: string) => w.includes("지분별 보유기간 안에서 판정"))).toBe(true);
+  });
+
+  it("고지 — 늦게 취득한 지분이 있을 때만", async () => {
+    const later = await calc(withPrimary(house(["50", "50"], "1500000000", ONE, [D2015, G]), LIVED_TO_END));
+    const same = await calc(house(["50", "50"], "1500000000", ONE, [D2015, D2015]));
+    expect(later.warnings.some((w: string) => w.includes("지분별 보유기간 안에서 판정"))).toBe(true);
+    expect(same.warnings.some((w: string) => w.includes("지분별 보유기간 안에서 판정"))).toBe(false);
   });
 });
 
