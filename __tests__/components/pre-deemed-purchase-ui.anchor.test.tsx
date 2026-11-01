@@ -92,7 +92,12 @@ describe("취득일 칸 덮어쓰기 — 원 입력을 실제 취득일로 보�
   function Harness({ initial }: { initial: string }) {
     const [a, setA] = useState<AssetForm>(asset({ assetKind: "land", acquisitionCause: "purchase", acquisitionDate: initial }));
     const patch = (p: Partial<AssetForm>) => setA((x) => ({ ...x, ...p }));
-    const block = { acquisitionDate: a.acquisitionDate, onAcquisitionDateChange: (v: string) => patch({ acquisitionDate: v }), asset: a, onAssetChange: patch, assetKind: a.assetKind } as unknown as BlockProps;
+    const block = {
+      acquisitionDate: a.acquisitionDate,
+      onAcquisitionDateChange: (v: string) => patch({ acquisitionDate: v }),
+      onAcquisitionDateClamp: (v: string, o: string) => patch({ acquisitionDate: v, preDeemedOriginalAcquisitionDate: o }),
+      asset: a, onAssetChange: patch, assetKind: a.assetKind,
+    } as unknown as BlockProps;
     return (
       <>
         <CompanionAcqDateSection block={block} isSplitable={false} isSplit={false} isMixedUse={false} acqDateLabel="취득일" saleStdInSaleAxis />

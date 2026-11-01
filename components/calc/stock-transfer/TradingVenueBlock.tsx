@@ -7,7 +7,7 @@
  *   종전에는 「대주주 판정」 섹션 안에 있었다. 그런데 이 토글은 **판정 입력이 아니다** —
  *   판정 **결과를 쓰는** 쪽이고, 축도 다르다:
  *
- *     ① 소득세법 §94①3 가목1) 단서 — 상장 **비대주주**의 장내 양도는 과세대상 밖.
+ *     ① 소득세법 §94①3 가목 2) 반대해석 — 상장 **비대주주**의 장내 양도는 과세대상 밖.
  *     ② 증권거래세법 §8②·시행령 §5 — 탄력세율은 「**증권시장에서 거래되는 주권에 한정**」.
  *        농특세도 「**증권시장에서 거래된** 증권의 양도가액」이 과세표준이다(농특세법 §5①5호).
  *
@@ -57,7 +57,7 @@ export function TradingVenueBlock({ form, onChange }: TradingVenueBlockProps) {
     <ToggleCard
       checked={form.isOnMarketTransaction}
       onCheckedChange={(v) => onChange({ isOnMarketTransaction: v })}
-      title="거래소 장내 거래 (§94①3 가목1) 단서 · 증권거래세법 §8②)"
+      title="거래소 장내 거래 (§94①3 가목 2) · 증권거래세법 §8②)"
       description={
         form.isOnMarketTransaction
           ? isMajor

@@ -116,7 +116,7 @@ export function MajorShareholderResultCard({
         )}
         {/* 상장 비과세 사유 표시 */}
         {result.isExempt && !isUnlisted && (
-          <div className="text-xs text-violet-700 mt-1 dark:text-violet-400">→ 비과세 (§94①3 가목 단서)</div>
+          <div className="text-xs text-violet-700 mt-1 dark:text-violet-400">→ 비과세 (§94①3 가목 2) 반대해석)</div>
         )}
       </dl>
     </div>
