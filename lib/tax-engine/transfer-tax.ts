@@ -239,6 +239,15 @@ function calculateTransferTaxCore(
       isBurdenedGift: transferBurdenedGiftBreakdown !== undefined,
     });
     if (redevBgNotice) warnings.push(redevBgNotice);
+    if (redevInput.mergeRentalCarveout && multiHouseSurchargeResult?.surchargeApplicable) {
+      warnings.push(
+        mergeRentalCarveoutSurchargeNotice(
+          redevInput,
+          multiHouseSurchargeResult.effectiveHouseCount,
+          !!redevJudgeInput && meetsOneHouseHoldingResidence(redevJudgeInput, parsedRates.oneHouseSpecialRules.one_house_exemption),
+        ),
+      );
+    }
 
     return calculateRedevelopmentTax(redevInput, parsedRates, steps, multiHouseSurchargeResult, {
       exemptionResult: redevExemption,

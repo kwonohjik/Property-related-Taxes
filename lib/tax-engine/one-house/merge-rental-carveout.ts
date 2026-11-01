@@ -23,6 +23,7 @@ import { meetsOneHouseHoldingResidence } from "../transfer-tax-exemption-require
 import type { TransferTaxInput } from "../types/transfer.types";
 import { classifyMergeHouse } from "./merge-composition";
 import { resolveMergeDeeming } from "./merge-deeming";
+import { translateRedevAptForHousingJudgment } from "./redev-apt-judgment-input";
 
 export const MERGE_RENTAL_CARVEOUT_RULING = "기준-2024-법규재산-0061";
 /** 판정 메뉴 확인 사항 id */
@@ -75,14 +76,17 @@ function deemsWithoutRental(input: TransferTaxInput, rentalRowId: string | undef
 }
 
 /** 임대 행을 빼면 §155④⑤가 서는 양도인가 — 임대 요건·상대 쪽 거주 문항은 빼고 본다. */
-function structureHolds(input: TransferTaxInput): { rentalRowId?: string } | undefined {
+function structureHolds(raw: TransferTaxInput): { rentalRowId?: string } | undefined {
+  // 완공APT도 §154①의 주택이다(판정 번역). 청산금 수령 단독신고는 신축주택을 양도하지 않고 ⑳도 받지 않는다(`judgeRedevAptOneHouseExemption`).
+  if (raw.redevelopment?.settlementDirection === "receive" && raw.redevelopment.receiveOnlyMode === true) return undefined;
+  const input = translateRedevAptForHousingJudgment(raw);
   if (input.propertyType !== "housing" || !input.isOneHousehold || input.isUnregistered || !input.sellingHouseId) return undefined;
   const mergeDate = singleMergeDate(input);
   if (!mergeDate) return undefined;
   const roster = rosterOf(input, mergeDate);
   if (!roster.holds) return undefined;
   if (input.householdHousingCount !== (roster.rentalRowId ? 3 : 2)) return undefined;
-  const ex = resolveExemptionHouseCountExclusions(input, input.acquisitionDate);
+  const ex = resolveExemptionHouseCountExclusions(raw, raw.acquisitionDate); // 주택 수 제외는 번역 전 원본을 본다(`redev-apt-judgment-input.ts`)
   if (ex.specialActExcludedCount + ex.inheritedExclusion.excludedCount > 0) return undefined; // 3중첩 불허(서면-2022-법규재산-4283)
   return deemsWithoutRental(input, roster.rentalRowId) ? { rentalRowId: roster.rentalRowId } : undefined;
 }
@@ -97,7 +101,7 @@ export function withMergeRentalCarveout(input: TransferTaxInput): TransferTaxInp
   if (rhe.counterpartHouseResidedTwoYears !== true) return input;
   const structure = structureHolds(input);
   if (!structure) return input;
-  const eligibility = judgeRentalHousingEligibility(input);
+  const eligibility = judgeRentalHousingEligibility(translateRedevAptForHousingJudgment(input));
   if (!eligibility || eligibility.failReasons.length > 0) return input;
   return { ...input, rentalHousingException: undefined, mergeRentalCarveout: structure };
 }
@@ -146,7 +150,7 @@ export function mergeRentalCarveoutMissingNotice(
   if (input.mergeRentalCarveout) return undefined;
   const rhe = input.rentalHousingException;
   if (rhe?.applyException && (rhe.scenario !== "A" || rhe.counterpartHouseResidedTwoYears !== undefined)) return undefined;
-  if (!structureHolds(input) || !meetsOneHouseHoldingResidence(input, rule)) return undefined;
+  if (!structureHolds(input) || !meetsOneHouseHoldingResidence(translateRedevAptForHousingJudgment(input), rule)) return undefined;
   const ask = rhe?.applyException
     ? "상대 쪽 주택에 2년 이상 거주했는지 답하세요"
     : `장기임대주택 특례(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20})를 선언해 임대 요건을 입력하세요`;
