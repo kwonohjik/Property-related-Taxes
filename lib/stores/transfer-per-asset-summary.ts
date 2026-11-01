@@ -33,6 +33,7 @@ import { usesSelfComputedTransferPrice } from "@/lib/calc/burdened-gift-transfer
 import { burdenedGiftPerAssetTotals } from "@/lib/tax-engine/burdened-gift-totals";
 import { SHARE_ID_SEPARATOR } from "@/lib/tax-engine/general-building-share-id";
 import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
+import { isPurchasedPieceId } from "@/lib/tax-engine/general-building-share-id";
 import { parseRaw } from "./transfer-per-asset-direct";
 import { isParcelMode } from "./transfer-per-asset-direct";
 import { isRedevelopmentPath } from "./transfer-per-asset-direct";
@@ -200,6 +201,15 @@ export function computeTransferPerAssetSummary(
     const bundledMatch = bundledResult?.apportionment.apportioned.find((p) => p.assetId === bundledAssetId);
     // 엔진이 이 자산에 **실제로 쓴** 취득가액·필요경비(E-U1 이후 분리 자산도 파트 합) — 취득·경비 두 칸이 같은 축을 읽는다.
     const bundledProperty = bundledResult?.aggregated?.properties?.find((p) => p.propertyId === bundledAssetId);
+    // 함께 양도 — 엔진이 이 자산에 실제로 쓴 값. 한 자산이 여러 카드로 갈라지면(일반건물 `land#${id}`·`building#${id}`, 배율 초과 부수토지 `${id}__appurtenant`·`${id}__excess`) 카드 합이다.
+    const bundledCardsOfAsset = (bundledResult?.aggregated?.properties ?? []).filter(
+      (p) => !isPurchasedPieceId(p.propertyId) && (cardSuffixOf(p.propertyId) === bundledAssetId || p.propertyId.startsWith(`${bundledAssetId}__`)),
+    );
+    const bundledEcho = bundledProperty
+      ? { acq: bundledProperty.acquisitionPrice, exp: bundledProperty.necessaryExpense }
+      : bundledCardsOfAsset.length > 0
+        ? bundledCardsOfAsset.reduce((acc, p) => ({ acq: acc.acq + p.acquisitionPrice, exp: acc.exp + p.necessaryExpense }), { acq: 0, exp: 0 })
+        : null;
     // 이월과세 채무 부분(매입분) — `${id}__purchased` 행은 같은 자산의 일부라 양도가액·취득가액·필요경비에 더한다(없으면 null).
     const purchased = purchasedPartTotals(bundledResult, bundledAssetId);
 
@@ -363,7 +373,9 @@ export function computeTransferPerAssetSummary(
       acqPrice = 0;
       acqPending = true;
     } else if (bundledMatch) {
-      acqPrice = bundledMatch.allocatedAcquisitionPrice + (purchased?.acq ?? 0);
+      // 안분 행은 입력값이라 환산·감정·매매사례 첫째 자산이면 0이다 — 아래 필요경비와 같은 축(엔진 표시 echo · §97③ 공제 후)을 읽는다.
+      acqPrice = (bundledEcho?.acq ?? bundledMatch.allocatedAcquisitionPrice) + (purchased?.acq ?? 0);
+      if (bundledEcho) depAlreadyDeducted = true;
       // 엔진이 이 자산의 취득가액을 확정했다 — 입력 단계 pending(환산 파트·필지)을 내린다. 남겨 두면 엔진 값이 0일 때
       // 계산 후에도 「계산 후 표시」에 갇힌다.
       acqPending = false;
@@ -537,7 +549,7 @@ export function computeTransferPerAssetSummary(
     } else if (bundledMatch) {
       // 엔진이 자산별로 **실제 차감한** 필요경비 — 안분 결과(`allocatedExpenses`)는 입력 경비만
       // 담고 개산공제(§163⑥)는 그 뒤 단건 엔진이 더하므로, 추계 자산에서 0으로 보였다(F-14).
-      expense = gbBundledBgCards?.n ? gbBundledBgCards.exp : (bundledProperty?.necessaryExpense ?? bundledMatch.allocatedExpenses) + (purchased?.exp ?? 0);
+      expense = gbBundledBgCards?.n ? gbBundledBgCards.exp : (bundledEcho?.exp ?? bundledMatch.allocatedExpenses) + (purchased?.exp ?? 0);
     } else if (bundledCards) {
       // 자산카드 분해(일반건물) — 카드별 필요경비 합(개산공제 포함).
       expense = bundledCards.exp;
