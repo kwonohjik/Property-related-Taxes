@@ -198,6 +198,7 @@ export function RentalHousingExceptionSection({
           {/* 시나리오 선택 */}
           <RadioCardGroup
             name={`rental-scenario-${asset.assetId ?? "primary"}`}
+            data-field="rentalHousingException.scenario"
             tone="violet"
             layout="stack"
             options={[

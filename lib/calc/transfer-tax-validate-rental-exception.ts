@@ -32,6 +32,7 @@ import {
 } from "@/lib/tax-engine/data/rental-155-20-era";
 import { aptDeadlineExtensionIncomplete, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { fieldError } from "./transfer-tax-validate-field";
+import { MIXED_USE_RENTAL_B_UNSUPPORTED } from "@/lib/tax-engine/transfer-tax-mixed-use-rental-residence-message";
 import { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
 import { landContributedOriginalApt } from "./redev-field-scope";
 import { resolveAptResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
@@ -98,6 +99,7 @@ export function validateRentalHousingException(
   mergeRental?: MergeRentalState,
 ): string | null {
   if (!rh?.applyException) return null;
+  if (asset.isMixedUseHouse && rh.scenario === "B") return fieldError("rentalHousingException.scenario", `${label}: ${MIXED_USE_RENTAL_B_UNSUPPORTED}`);
   /**
    * 🔴 자산 종류 게이트 — ⑤와 **같은 술어**를 쓴다 (2026-09-07 UI 리뷰).
    *

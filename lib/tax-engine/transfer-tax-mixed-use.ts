@@ -16,6 +16,7 @@ import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { highValueExcessRulingNoticeText } from "./transfer-tax-appurtenant-land";
 import { appurtenantLandLthdNoticeText } from "./appurtenant-land-lthd-rate";
 import { judgeMixedUseOneHouseExemption } from "./transfer-tax-mixed-use-exemption";
+import { resolveMixedUseRentalResidence, withRentalResidenceSurchargeHouses } from "./transfer-tax-mixed-use-rental-residence";
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
 import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
 import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
@@ -141,6 +142,10 @@ function calcMixedUseCore(
     selfFarmingRules,
   } = parsedRates;
 
+  // §155⑳ 거주주택 · §155④⑤ 합가 상대 쪽 임대 — 단건과 같은 판정 함수(`transfer-tax-mixed-use-rental-residence.ts`)
+  const rentalResidence = resolveMixedUseRentalResidence(asset, parsedRates);
+  if (rentalResidence) warnings.push(...rentalResidence.notices);
+
   // ── §89①3호 1세대1주택 비과세 판정 (§154① 보유·거주 · 주택 수 제외 · §155 의제) — 800줄 정책 분리(E-14d) ──
   const {
     meetsOneHouseRequirements,
@@ -162,6 +167,7 @@ function calcMixedUseCore(
     oneHouseSpecialRules,
     warnings,
     presaleRightStartDate(parsedRates),
+    rentalResidence,
   );
 
   // ── 법 §104⑦ 다주택 중과 판정 ────────────────────────────────────────────────
@@ -171,7 +177,7 @@ function calcMixedUseCore(
   // ⚠️ `houseCountExclusionRules`가 없으면(DB 키 부재) 판정을 **건너뛴다** — 단건 엔진
   //    (`transfer-tax.ts:184`)과 동일한 가드다. 예외를 던지지 않으므로 테스트에서
   //    `makeMockRates()`를 쓰면 중과가 조용히 스킵된다(계획서 R-9).
-  const multiHouse = asset.multiHouse;
+  const multiHouse = withRentalResidenceSurchargeHouses(asset, rentalResidence);
   // ⑥ 주택 수 제외의 확인된 영 §167의3①5호 조문 → 10호 「일반주택」 판정의 5호 주택 — 단건(`runMultiHouseSurchargeStep`)과 같은 leaf
   const judgeMixedSurcharge = (houses: NonNullable<typeof multiHouse>["houses"]) =>
     determineMultiHouseSurcharge(

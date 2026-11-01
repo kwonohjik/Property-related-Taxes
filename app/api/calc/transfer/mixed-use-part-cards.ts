@@ -495,6 +495,7 @@ export function buildMixedUseCompanionItems(
      * ⇒ 종전 동작 유지(`inheritedHouseExclusion`과 같은 이유 · 확인 필요 — 컴패니언 겸용 × §155⑥⑦⑧ 별건).
      */
     article155SpecialHouses: undefined,
+    rentalResidenceInput: undefined,
     isOneHousehold: companionEngine.isOneHousehold ?? false,
     isRegulatedArea: ctx.primaryEngineInput.isRegulatedArea,
     isSelfCultivatedExpropriatedLand: g.isSelfCultivatedExpropriatedLand,
