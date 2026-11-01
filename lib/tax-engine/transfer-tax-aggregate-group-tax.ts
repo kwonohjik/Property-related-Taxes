@@ -176,12 +176,15 @@ export function aggregateByGroup(
   assetPartClauseKeys: Partial<Record<SplitRatePart["kind"], string[]>>[];
   /** 자산별 파트 종류 → 세액 계산에서 그 파트가 받은 기본공제(파트 내부 배분 후) — 감면 귀속의 C. */
   assetPartBasic: Partial<Record<SplitRatePart["kind"], number>>[];
+  /** 자산별 파트 종류 → 파트 소득(과세표준 + 파트 기본공제) — 감면소득을 파트에 귀속하는 데 쓴다. */
+  assetPartIncome: Partial<Record<SplitRatePart["kind"], number>>[];
 } {
   const groupMap = new Map<RateGroup, number[]>();
   const clauseTaxes = new Map<string, ClauseTaxEcho>();
   const assetClauseKeySets = records.map(() => new Set<string>());
   const assetPartClauseKeySets = records.map(() => new Map<SplitRatePart["kind"], Set<string>>());
   const assetPartBasic = records.map((): Partial<Record<SplitRatePart["kind"], number>> => ({}));
+  const assetPartIncome = records.map((): Partial<Record<SplitRatePart["kind"], number>> => ({}));
   records.forEach((r, i) => {
     if (r.result.isExempt) return;
     const list = groupMap.get(r.rateGroup) ?? [];
@@ -297,6 +300,7 @@ export function aggregateByGroup(
     if (a.parts) {
       for (const p of a.parts) {
         assetPartBasic[i][p.kind] = (assetPartBasic[i][p.kind] ?? 0) + p.allocatedBasicDeduction;
+        assetPartIncome[i][p.kind] = (assetPartIncome[i][p.kind] ?? 0) + p.taxBase + p.allocatedBasicDeduction;
         units.push({
           taxBase: p.taxBase,
           calculatedTax: p.calculatedTax,
@@ -507,6 +511,7 @@ export function aggregateByGroup(
       Object.fromEntries([...byKind].map(([kind, ids]) => [kind, [...ids]])),
     ),
     assetPartBasic,
+    assetPartIncome,
   };
 }
 
