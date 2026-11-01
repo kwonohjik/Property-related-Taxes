@@ -50,7 +50,7 @@ export interface RedevelopmentFormSlice {
 
   /**
    * 청산금 수령 시 양도일 — 소유권이전 고시일 다음날.
-   * NTS 집행기준 + 소법 §95④ 보유기간 정의 조합 도출.
+   * 소득세법 시행령 §162①9호 단서 · 양도소득세 집행기준 98-162-14.
    * redevSettlementDirection === "receive" 시 필수. YYYY-MM-DD.
    */
   redevSettlementSaleDate: string;

@@ -127,7 +127,7 @@ export interface RedevelopmentInfo {
   settlementAmount: number;
 
   /**
-   * 청산금 수령 시 양도일 — 소유권이전 고시일의 다음날 (NTS 집행기준 + 소법 §95④ 보유기간 정의).
+   * 청산금 수령 시 양도일 — 소유권이전 고시일의 다음날 (소득세법 시행령 §162①9호 단서 · 양도소득세 집행기준 98-162-14).
    *
    * settlementDirection === "receive" 시 필수.
    * LTHD `settlement.holdingMonths` = monthsBetween(acquisitionDate, settlementSaleDate).

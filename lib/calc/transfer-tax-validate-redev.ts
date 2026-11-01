@@ -7,7 +7,7 @@
  *  - 분기 결정 ToggleCard (subject·approvalLawBasis·originalAssetType·settlementDirection)
  *  - 일정·금액 (approvalDate·rightsValue·preApprovalExpenses)
  *  - 인가일 ≥ 취득일 (승계조합원 인가 후 취득은 후속 PR 차단)
- *  - 청산금 수령 시 settlementSaleDate 필수 (NTS 집행기준 + §95④)
+ *  - 청산금 수령 시 settlementSaleDate 필수 (소득세법 시행령 §162①9호 단서 · 양도소득세 집행기준 98-162-14)
  *  - 환산 모드 (useEstimatedAcquisition=true) 시 acquisitionStdPrice + managementDisposalStdPrice 필수
  *  - §164⑦ 단서 — 최초공시일 입력 시 최초고시 기준시가 동반 필수
  *  - §164⑦ 단서 차단 — 취득일 < 최초공시일이면 firstDisclosureStdPrice 필수
@@ -33,6 +33,9 @@ import { successorTypeToggleSectionLabel } from "@/lib/calc/transfer-successor-r
 import { isSec164ClauseAFilled } from "./transfer-tax-validate-clause-a";
 import { effectiveRedevLandPricePerSqmAtAcq } from "./transfer-pre1990-redev-bridge";
 import { redevLandSec164Applies } from "./transfer-pre1990-redev-bridge";
+import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
+const SETTLEMENT_SALE_DATE_BASIS = `${REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_DECREE} · ${REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_GUIDELINE}`;
+
 export function validateRedevelopmentAsset(
   asset: AssetForm,
   label: string,
@@ -235,7 +238,7 @@ export function validateRedevelopmentAsset(
     if (subject === "apt"
         && asset.redevSettlementDirection === "receive"
         && !asset.redevSettlementSaleDate) {
-      return fieldError("redevSettlementSaleDate", `${label}: 청산금 수령 시 소유권이전 고시일의 다음날을 입력하세요. (NTS 집행기준 + 소법 §95④)`);
+      return fieldError("redevSettlementSaleDate", `${label}: 청산금 수령 시 소유권이전 고시일의 다음날을 입력하세요. (${SETTLEMENT_SALE_DATE_BASIS})`);
     }
 
     // 실가 모드 (사례 42 land+apt+receive 등) — 종전 자산 취득가액 필수.
@@ -414,7 +417,7 @@ export function validateRedevelopmentAsset(
   if (subject === "apt"
       && asset.redevSettlementDirection === "receive"
       && !asset.redevSettlementSaleDate) {
-    return fieldError("redevSettlementSaleDate", `${label}: 청산금 수령 시 소유권이전 고시일의 다음날을 입력하세요. (NTS 집행기준 + 소법 §95④)`);
+    return fieldError("redevSettlementSaleDate", `${label}: 청산금 수령 시 소유권이전 고시일의 다음날을 입력하세요. (${SETTLEMENT_SALE_DATE_BASIS})`);
   }
 
   // ── 실가 모드 검증 — 인가전 분 종전 주택 취득가액(실거래가) 필수 ──

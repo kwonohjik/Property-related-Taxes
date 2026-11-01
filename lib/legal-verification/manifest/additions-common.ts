@@ -313,6 +313,13 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // 청산금 수령분 양도시기 — 이전고시 다음 날 소유권 취득 (사전-2022-법규재산-1282)
+    id: "URBAN_RENEWAL.OWNERSHIP_TRANSFER_NOTICE",
+    citation: "도시 및 주거환경정비법 §86",
+    keywords: ["이전고시 등", "고시가 있은 날의 다음 날"],
+    keywordMode: "ALL",
+  },
+  {
     // 소규모주택정비사업 — 사업시행계획인가 (조합원입주권 판정의 대응 조문)
     id: "SMALL_SCALE_RENEWAL.PLAN_APPROVAL",
     citation: "빈집 및 소규모주택 정비에 관한 특례법 §29",

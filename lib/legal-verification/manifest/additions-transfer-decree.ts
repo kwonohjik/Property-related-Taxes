@@ -60,6 +60,13 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** 9호 단서 — 재개발 청산금 양도시기 근거(`REDEV_SETTLEMENT_SALE_DATE_DECREE`). */
+    id: "TRANSFER_DECREE.REPLOTTING_PROVISO_SALE_DATE",
+    citation: "소득세법 시행령 §162",
+    keywords: ["환지처분의 공고가 있은 날의 다음날"],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER_DECREE.GROUNDWATER_RIGHT_PRICE",
     citation: "소득세법 시행령 §162의2",
     keywords: ["지하수개발ㆍ이용권", "토사석의 채취허가", "임목"],
