@@ -85,7 +85,7 @@ describe("케이스 3 — 코스피 비대주주 장내거래 비과세", () => 
     expect(result.isExempt).toBe(true);
     expect(result.exemptReason).toBe("non_major_in_market");
     expect(result.finalTax).toBe(0);
-    // 신규 정책 (PR §94①3 가목 1) 단서 silent 비과세 차단):
+    // 신규 정책 (PR §94①3 가목 2) 반대해석 silent 비과세 차단):
     // 비과세 분기에서도 산출세액·과세표준은 사용자 입력 데이터로 echo. 최종 finalTax만 0.
     expect(result.calculatedTax).toBeGreaterThanOrEqual(0);
     expect(result.taxCategory).toBe("listed_non_major_in_market");
@@ -112,7 +112,7 @@ describe("케이스 4 — 코스피 비대주주 장외거래 과세", () => {
    * 2026-08-27 축 교정: 종전 픽스처는 「장외거래」를 `isKOTCTrading: true`로 표현했다(주석까지 그렇게
    * 적혀 있었다). 그러나 **K-OTC는 비상장 전용 시장**이고(자본시장법 §286①5호 「증권시장에
    * 상장되지 아니한 주권」), 상장주식의 장외 양도를 나타내는 축은 `isOnMarketTransaction: false`다.
-   * §94①3 가목1) 단서용으로 그 필드가 나중에 추가되며 축이 갈렸는데 이 픽스처가 안 따라왔다.
+   * §94①3 가목 2) 반대해석용으로 그 필드가 나중에 추가되며 축이 갈렸는데 이 픽스처가 안 따라왔다.
    *
    * 두 카테고리는 세율이 동일하므로(`stock-transfer-rate-calc.ts:114-115` fall-through)
    * 세액 기대값은 그대로다 — 바뀌는 것은 **분류와 조문뿐**이다.

@@ -197,7 +197,7 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
 
 /**
  * 비과세 여부 판정
- * 1. 상장 비대주주 장내거래 (§94①3 가목 1) — 주된 비과세)
+ * 1. 상장 비대주주 장내거래 (§94①3 가목 2) 반대해석 — 주된 비과세)
  * 2. K-OTC 중소·중견 소액주주 (§94①3 나목 단서)
  * 3. K-OTC 벤처기업 비대주주 (조특법 §14①7호)
  *
@@ -255,8 +255,8 @@ function judgeExemption(
     return { isExempt: false };
   }
 
-  // 1. 상장 비대주주 장내거래 → 비과세 (§94①3 가목 1) 단서)
-  //    isOnMarketTransaction이 명시적으로 false면 장외 거래 → 본문 적용 (과세)
+  // 1. 상장 비대주주 장내거래 → 비과세 (§94①3 가목 2) 반대해석)
+  //    isOnMarketTransaction이 명시적으로 false면 장외 거래 → 가목 2) 적용 (과세)
   if (
     (marketType === "kospi" || marketType === "kosdaq" || marketType === "konex") &&
     !isMajor &&

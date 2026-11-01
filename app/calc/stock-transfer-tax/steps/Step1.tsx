@@ -363,12 +363,12 @@ export function Step1({ form, onChange }: Step1Props) {
     }
 
     // 5. 거래 구분 · 증권거래세 — 대주주 판정이 **아니다**(C-9, 2026-09-08).
-    //    §94①3 가목1) 단서(과세대상)와 증권거래세법 §8②(탄력세율)의 축이라 별도 섹션이다.
+    //    §94①3 가목 2) 반대해석(과세대상)과 증권거래세법 §8②(탄력세율)의 축이라 별도 섹션이다.
     //    다만 설명문이 대주주 여부로 4갈래 갈리므로 판정 **바로 뒤**에 둔다.
     if (isTradingVenueApplicable(form)) {
       items.push({
         key: "venue",
-        title: "거래 구분 · 증권거래세 (§94①3 가목1) 단서 · 증권거래세법 §8②)",
+        title: "거래 구분 · 증권거래세 (§94①3 가목 2) · 증권거래세법 §8②)",
         render: () => <TradingVenueBlock form={form} onChange={onChange} />,
       });
     }

@@ -10,6 +10,12 @@ export interface BlockProps {
   acquisitionDate: string;
   onAcquisitionDateChange: (v: string) => void;
   /**
+   * 1985.1.1. 전 매매 취득일 덮어쓰기 — 의제취득일(`clamped`)과 원 입력(`original`)을 **호출부의 날짜 키로 한 패치에** 쓴다
+   * (영 §176조의2④ 실제 취득일 보존 · 계획서 realestate-pre-deemed-purchase Q-1 B). 없으면 `onAcquisitionDateChange(clamped)`만 —
+   * 일반건물처럼 같은 칸이 다른 날짜 키(`landAcquisitionDate`)를 쓰는 호출부가 키를 잃지 않게 한다(PR-3a).
+   */
+  onAcquisitionDateClamp?: (clamped: string, original: string) => void;
+  /**
    * Round 9 (2026-05-06): 매매계약일 (분양/매매계약 + 계약금 납부 기준일).
    * 신축·미분양·임대 감면 13개 조문(§99·§99의3·§98 시리즈·§97의2·§97의5·§99의2)의 시한 판정 1차 기준.
    * 주택 자산만 의미 있음. 미입력 시 acquisitionDate fallback.

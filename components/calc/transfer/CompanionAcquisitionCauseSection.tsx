@@ -218,6 +218,9 @@ export function CompanionAcquisitionCauseSection({
           acquisitionDate={asset.acquisitionDate}
           // D2 상속 호스트는 상속개시일 3키를 한 patch로 쓴다(상속 블록과 같은 leaf) — 한쪽만 쓰면 다른 키가 stale로 남는다.
           onAcquisitionDateChange={(v) => onChange(d2On ? buildingDatePatch(asset.acquisitionCause, v) : { acquisitionDate: v })}
+          onAcquisitionDateClamp={(v, original) =>
+            onChange({ ...(d2On ? buildingDatePatch(asset.acquisitionCause, v) : { acquisitionDate: v }), preDeemedOriginalAcquisitionDate: original })
+          }
           isSalesCaseAcquisition={successorAptActualOnly ? false : asset.isSalesCaseAcquisition}
           onIsSalesCaseAcquisitionChange={(v) => onChange({ isSalesCaseAcquisition: v })}
           similarSalesValue={asset.similarSalesValue}
