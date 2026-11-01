@@ -272,6 +272,7 @@ export function computeAggregateOnce(
     assetClauseKeys,
     assetPartClauseKeys,
     assetPartBasic,
+    assetPartIncome,
   } = computeGroupsAndComparison(assetRecords, taxableAfterReduction, allocatedBasic, rates, partBasic);
 
   // §104⑤ 괄호 — 호별 감면(F-9)이 두 경로에서 달라지면 **감면 차감 후** 세액으로 고른다.
@@ -291,7 +292,7 @@ export function computeAggregateOnce(
       calculatedTaxByGeneral,
       calculatedTax: calculatedTaxBeforeReduction,
       comparedTaxApplied: comparedBeforeReduction,
-      perClause: { clauseTaxes, assetClauseKeys, assetPartClauseKeys, assetPartBasic, allocatedBasic },
+      perClause: { clauseTaxes, assetClauseKeys, assetPartClauseKeys, assetPartBasic, assetPartIncome, allocatedBasic },
     });
 
   steps.push({

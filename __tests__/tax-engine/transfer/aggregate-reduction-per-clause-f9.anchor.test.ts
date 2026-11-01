@@ -163,7 +163,9 @@ describe("F-9 다건 감면 호별 산정", () => {
     expect(r.reductionBreakdown[0].clauseRows).toHaveLength(2);
   });
 
-  it("F9-8 감면 자산의 파트가 두 호에 걸치면(부분 비사업용) 합산 유지 + 안내 — 대조: 파트 없는 자산은 호별", () => {
+  it("F9-8 감면 자산의 파트가 두 호에 걸치고 현금·채권이 섞이면(부분 비사업용) 합산 유지 + 안내 — 대조: 파트 없는 자산은 호별", () => {
+    // 현금 100%면 파트 소득이 곧 감면소득이라 호별로 간다 — `aggregate-reduction-whole-asset-parts.anchor.test.ts`.
+    const E77_MIX = { ...E77_2026, cashCompensation: 300_000_000, bondCompensation: 300_000_000 };
     const partialNbl = {
       ...y2026,
       isNonBusinessLand: true,
@@ -179,7 +181,7 @@ describe("F-9 다건 감면 호별 산정", () => {
         gracePeriods: [],
       },
     };
-    const r = agg([card("L", partialNbl, [E77_2026]), card("B", { ...y2026, isUnregistered: true })], 2026);
+    const r = agg([card("L", partialNbl, [E77_MIX]), card("B", { ...y2026, isUnregistered: true })], 2026);
     expect(r.reductionBreakdown[0].clauseBasis).toBeUndefined();
     expect((r.warnings ?? []).some((w) => /서로 다른 세율의 호에 걸쳐/.test(w))).toBe(true);
 
