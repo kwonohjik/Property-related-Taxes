@@ -131,7 +131,10 @@ describe("게이트 isPreDeemedPurchaseAsset — 엔진 1차 범위와 같은 �
     ["토지·건물 취득일 분리", LAND({ assetKind: "housing", hasSeperateLandAcquisitionDate: true }), false],
     ["다필지", LAND({ parcelMode: true }), false],
     ["일반건물", LAND({ assetKind: "general_building" }), false],
-    ["입주권", LAND({ assetKind: "right_to_move_in" }), false],
+    ["입주권 원조합원", LAND({ assetKind: "right_to_move_in" }), true],
+    ["완공 APT 원조합원", LAND({ assetKind: "redevelopment_apt" }), true],
+    ["승계 입주권", LAND({ assetKind: "right_to_move_in", isSuccessorRightToMoveIn: true }), false],
+    ["승계조합원 완공 APT", LAND({ assetKind: "redevelopment_apt", redevIsSuccessorMember: "yes" }), false],
   ] as [string, A, boolean][])("%s → %s", (_n, o, v) => {
     expect(isPreDeemedPurchaseAsset(asset(o))).toBe(v);
   });

@@ -16,6 +16,7 @@ const METHOD: Record<NonNullable<PreDeemedPurchaseDetail["clause1Method"]>, stri
   estimated: "환산취득가액",
   appraisal: "감정가액",
   salesCase: "매매사례가액",
+  redevelopment166_3: "§166③ 환산취득가액",
 };
 const dot = (d: string) => d.replace(/-0?/g, ".") + ".";
 
@@ -81,7 +82,9 @@ export function PreDeemedPurchaseResultCard({ detail }: { detail: PreDeemedPurch
         <p className="text-caption text-amber-700 dark:text-amber-300">
           {picked2
             ? "② 채택 — 필요경비는 개산공제 없이 실제 지출액(자본적지출·양도비)입니다 (소득세법 §97②1호 나목)."
-            : "① 채택 — 필요경비는 개산공제(환산취득가액이면 소득세법 §97②2호 단서 비교 포함)입니다."}
+            : detail.clause1Method === "redevelopment166_3"
+              ? "① 채택 — 인가전 분 필요경비는 개산공제입니다 (소득세법 시행령 §166③·§163⑥)."
+              : "① 채택 — 필요경비는 개산공제(환산취득가액이면 소득세법 §97②2호 단서 비교 포함)입니다."}
         </p>
         <p className="text-caption text-slate-600 dark:text-slate-400">{PRE_DEEMED_PPI_FOOTNOTE}</p>
       </div>

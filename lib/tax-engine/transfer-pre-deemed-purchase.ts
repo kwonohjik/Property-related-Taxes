@@ -11,8 +11,9 @@
  *   ② 채택이면 실가 경로(법 §97②1호 나목 — 실비, 개산공제 없음) · 실가 모드는 ①이 없어 ②만(「① 미산정」).
  * ①은 이 STEP 뒤의 본 계산과 같은 함수로 구한다(`calcTransferGain` · 상가 `runCommercialBuildingStep`) — 산식 이중화 금지.
  *
- * 1차 범위(계획서 `docs/02-design/features/realestate-pre-deemed-purchase-176-2-4.plan.md` Q-3 a):
- *   토지·주택(토지·건물 같은 날 취득 · PHD 포함)·건물·상가. 그 밖의 입력은 값을 바꾸지 않고 사유를 경고로 남긴다(⑧·⑫가 먼저 막는다).
+ * 범위(계획서 `docs/02-design/features/realestate-pre-deemed-purchase-176-2-4.plan.md` Q-3 a · §12):
+ *   토지·주택(토지·건물 같은 날 취득 · PHD 포함)·건물·상가 · 재개발 원조합원(완공 APT·입주권 — ① = 영 §166③ · Q-4 a).
+ *   그 밖의 입력은 값을 바꾸지 않고 사유를 경고로 남긴다(⑧·⑫가 먼저 막는다).
  */
 
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
@@ -21,6 +22,8 @@ import { DEEMED_ACQUISITION_DATE } from "./types/inheritance-acquisition.types";
 import { monthKey, mulDivFloor, ppiMonthlyX100, ratioToScaled6 } from "./producer-price-ratio";
 import { calcTransferGain } from "./transfer-tax-helpers";
 import { runCommercialBuildingStep } from "./transfer-tax-commercial-step";
+import { isRedevelopmentActive } from "./redevelopment-dispatch";
+import { resolveRedevelopment166_3AcquisitionPrice } from "./redevelopment-166-3-price";
 import { TRANSFER } from "./legal-codes/transfer";
 
 const IN_SCOPE_PROPERTY_TYPES: ReadonlySet<TransferTaxInput["propertyType"]> = new Set([
@@ -37,17 +40,27 @@ const METHOD_LABEL: Record<NonNullable<PreDeemedPurchaseDetail["clause1Method"]>
   estimated: "환산취득가액",
   appraisal: "감정가액",
   salesCase: "매매사례가액",
+  redevelopment166_3: "§166③ 환산취득가액",
 };
 
 const sameDay = (a: Date, b: Date) => a.getTime() === b.getTime();
 
-/** 1차 범위 밖이면 그 사유 — 없으면 범위 안 */
+/** 범위 밖이면 그 사유 — 없으면 범위 안 */
 export function preDeemedPurchaseOutOfScopeReason(input: TransferTaxInput): string | undefined {
   if (input.acquisitionCause !== undefined && input.acquisitionCause !== "purchase") return "취득원인이 매매가 아닙니다";
   if (input.transferType === "burdened_gift") return "부담부증여";
   if (input.inheritedAcquisition || input.carryoverTaxation) return "상속·증여·이월과세 취득가액";
-  if (input.redevelopment || input.parcels?.length || input.mixedUse) return "재개발·다필지·겸용주택";
-  if (!IN_SCOPE_PROPERTY_TYPES.has(input.propertyType)) return "자산 종류";
+  if (input.parcels?.length || input.mixedUse) return "다필지·겸용주택";
+  if (input.redevelopment) {
+    if (
+      !isRedevelopmentActive(input.propertyType, input.redevelopment, input.isSuccessorRightToMoveIn) ||
+      input.redevelopment.isSuccessorMember === true
+    ) {
+      return "재개발 원조합원 외";
+    }
+  } else if (!IN_SCOPE_PROPERTY_TYPES.has(input.propertyType)) {
+    return "자산 종류";
+  }
   if (input.landAcquisitionDate && !(input.preHousingDisclosure && sameDay(input.landAcquisitionDate, input.acquisitionDate))) {
     return "토지·건물 취득일 분리";
   }
@@ -66,6 +79,10 @@ export type PreDeemedPurchaseStepResult =
     };
 
 function clause1Of(input: TransferTaxInput): { amount: number; method: NonNullable<PreDeemedPurchaseDetail["clause1Method"]> } | undefined {
+  if (input.redevelopment) {
+    const amount = resolveRedevelopment166_3AcquisitionPrice(input.redevelopment, input.acquisitionDate) ?? 0;
+    return amount > 0 ? { amount, method: "redevelopment166_3" } : undefined;
+  }
   if (input.useEstimatedAcquisition) {
     const cb = runCommercialBuildingStep(input);
     const amount = cb ? cb.acquisitionPrice : calcTransferGain(input).estimatedBase;
@@ -92,8 +109,10 @@ export function runPreDeemedPurchaseStep(
     return { applied: false, warning: `${TRANSFER.PRE_DEEMED_PURCHASE_MAX} 비교를 적용하지 않았습니다 — 범위 밖(${outOfScope}).` };
   }
 
-  const isActualMode =
-    !input.useEstimatedAcquisition && input.acquisitionMethod !== "appraisal" && input.acquisitionMethod !== "salesCase";
+  // 재개발 §166 경로는 감정·매매사례를 읽지 않는다 — 모드는 환산 플래그 하나다(`transfer-tax-redevelopment-steps.ts`).
+  const isActualMode = input.redevelopment
+    ? !input.useEstimatedAcquisition
+    : !input.useEstimatedAcquisition && input.acquisitionMethod !== "appraisal" && input.acquisitionMethod !== "salesCase";
   const actualBase = Math.max(0, Math.floor(isActualMode ? input.acquisitionPrice : (pd.actualPrice ?? 0)));
   if (!(actualBase > 0)) return undefined;
 
