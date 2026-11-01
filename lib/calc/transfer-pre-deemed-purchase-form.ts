@@ -13,9 +13,10 @@ import { isBeforePpiSeries } from "@/lib/tax-engine/producer-price-ratio";
 import { PRE_DEEMED_PURCHASE_PPI_RATIO_REQUIRED_MESSAGE } from "@/lib/tax-engine/transfer-pre-deemed-purchase-messages";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 import { fieldError } from "./transfer-tax-validate-field";
+import { effectiveSelfOwns } from "./self-owns-scope";
 import { isRedevelopmentSec166Asset, redevHidesGeneralAcqSection } from "./redev-acquisition-price-source";
 import { effectivePartAcqMode, gbPartModes } from "./transfer-tax-split-acq-mode";
-import { effectiveBuildingCauseMix, landCauseDisplay } from "./transfer-land-part-cause";
+import { effectiveBuildingCarryoverMix, effectiveBuildingCauseMix, effectiveCarryoverDonorSplit, effectiveLandCarryover, landCauseDisplay } from "./transfer-land-part-cause";
 
 export const PRE_DEEMED_DATE = "1985-01-01";
 
@@ -95,10 +96,55 @@ export function isPreDeemedPurchaseAsset(a: Fields): boolean {
   if (a.acquisitionDate !== PRE_DEEMED_DATE) return false;
   // 재개발은 원조합원만(승계조합원은 취득일이 승계 시점이고 §166③ 대상이 아니다 · Q-4 a)
   const kindOpen = isRedevelopmentSec166Asset(a) ? redevHidesGeneralAcqSection(a) : KINDS.has(a.assetKind);
-  if (!kindOpen || a.isMixedUseHouse || a.parcelMode) return false;
+  // 소유자 분리는 파트 경로라 엔진이 전체 비교를 받지 않는다(범위 밖 안내 · 카드가 칸을 요구하면 막다른 길)
+  if (!kindOpen || a.isMixedUseHouse || a.parcelMode || (effectiveSelfOwns(a) ?? "both") !== "both") return false;
   // 분리 ON + 두 칸 같은 날은 PHD만 연다(위 안내가 나머지를 거른다) · 날짜가 다른데 파트가 없으면(1985-01-01 + 그 전 값) 범위 밖
   if (a.hasSeperateLandAcquisitionDate && !(a.usePreHousingDisclosure && (!a.landAcquisitionDate || a.landAcquisitionDate === PRE_DEEMED_DATE))) return false;
   return true;
+}
+
+/** 범위 밖 자산의 종류 — ⑤ 안내 문구가 읽는다(Q-12 a · 값은 그대로 계산한다) */
+export type PreDeemedOutOfScopeKind = "parcels" | "carryover" | "burdened_gift" | "mixed_use" | "extension" | "part_cause" | "other";
+
+const isBeforeDeemed = (d: string | undefined) => !!d && d < PRE_DEEMED_DATE;
+
+/** 이월과세 증여자가 1985 전에 매수했는가 — 증여자 취득일 칸은 덮어쓰지 않아 원 입력 그대로다. 받는 칸이 있는 서브폼만 읽는다(잔재 무시). */
+function carryoverDonorPreDeemed(a: Fields, isNonPrimary: boolean): boolean {
+  const wholeOn = a.acquisitionCause === "carryover_gift";
+  const forms = [
+    wholeOn || effectiveBuildingCarryoverMix(a) ? a.carryover : undefined,
+    effectiveLandCarryover(a) || (wholeOn && effectiveCarryoverDonorSplit(a, { isNonPrimary })) ? a.landCarryover : undefined,
+    a.assetKind === "general_building" && a.gbBuildingAcquisitionCause === "carryover_gift" ? a.buildingCarryover : undefined,
+  ];
+  return forms.some((c) => c && c.donorAcquisitionCause === "purchase" && isBeforeDeemed(c.donorAcquisitionDate));
+}
+
+/** 매수 파트의 취득일 칸이 의제취득일(덮어쓰기 결과)인가 — 상속·증여·이월과세 파트 칸은 보지 않는다 */
+function hasDeemedPurchaseDate(a: Fields): boolean {
+  const landDeemed = a.landAcquisitionDate === PRE_DEEMED_DATE;
+  const buildingDeemed = a.acquisitionDate === PRE_DEEMED_DATE;
+  if (a.assetKind === "general_building") {
+    return (a.acquisitionCause === "purchase" && landDeemed) || ((a.gbBuildingAcquisitionCause || a.acquisitionCause) === "purchase" && buildingDeemed);
+  }
+  // 건물 상속·증여·이월과세 + 토지 매수 — 건물 칸은 사실값이다
+  if (effectiveBuildingCauseMix(a) || effectiveBuildingCarryoverMix(a)) return landDeemed;
+  if (a.acquisitionCause !== "purchase") return false;
+  return buildingDeemed || (!landCauseDisplay(a) && !!a.hasSeperateLandAcquisitionDate && landDeemed);
+}
+
+/**
+ * ⑤ 안내 — 의제취득일 전 매수인데 ①·② 비교 범위 밖인 자산의 종류. 입력 카드·`preDeemedPurchaseNotCompared` 안내가 뜨는 자산은 undefined.
+ * 겸용 부담부증여는 ⑧ MB-16이 이미 막는다(Q-10) — 안내하지 않는다. 다필지는 ④가 필지 값만 쓰므로 필지 날짜를 본다.
+ */
+export function preDeemedPurchaseOutOfScopeKind(a: Fields, opts: { isNonPrimary?: boolean } = {}): PreDeemedOutOfScopeKind | undefined {
+  if (a.assetKind === "land" && a.parcelMode) return (a.parcels ?? []).some((p) => !p.useDayAfterReplotting && isBeforeDeemed(p.acquisitionDate)) ? "parcels" : undefined;
+  if (carryoverDonorPreDeemed(a, !!opts.isNonPrimary)) return "carryover";
+  if (isPreDeemedPurchaseAsset(a) || preDeemedPurchaseNotCompared(a) || !hasDeemedPurchaseDate(a)) return undefined;
+  if (a.transferType === "burdened_gift") return a.isMixedUseHouse ? undefined : "burdened_gift";
+  if (a.isMixedUseHouse) return "mixed_use";
+  if (a.assetKind === "general_building" && a.gbHasExtension) return "extension";
+  const buildingCauseSplit = a.assetKind === "general_building" && (a.gbBuildingAcquisitionCause || a.acquisitionCause) !== "purchase";
+  return !isPlainPurchase(a) || buildingCauseSplit ? "part_cause" : "other";
 }
 
 /** 그 자산(파트)의 실제 취득일 칸 값 */

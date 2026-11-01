@@ -18,6 +18,8 @@ import {
   isPreDeemedPurchaseAsset,
   preDeemedOriginalDate,
   preDeemedPurchaseNotCompared,
+  preDeemedPurchaseOutOfScopeKind,
+  type PreDeemedOutOfScopeKind,
   preDeemedPurchaseUsesCompareActual,
   preDeemedSplitPart,
 } from "@/lib/calc/transfer-pre-deemed-purchase-form";
@@ -30,6 +32,31 @@ function ratioBelowOne(date: string): boolean {
   const acq = y && m ? ppiMonthlyX100(y, m) : undefined;
   const prev = ppiMonthlyX100(1984, 12);
   return acq !== undefined && prev !== undefined && acq > prev;
+}
+
+const OUT_OF_SCOPE_SUBJECT: Record<PreDeemedOutOfScopeKind, string> = {
+  parcels: "1985.1.1. 전에 매수한 필지가 있으면",
+  carryover: "증여자가 1985.1.1. 전에 매수한 자산이면",
+  burdened_gift: "증여자가 1985.1.1. 전에 매수한 자산이면",
+  mixed_use: "겸용주택을 1985.1.1. 전에 매수했다면",
+  extension: "증축이 있는 일반건물을 1985.1.1. 전에 매수했다면",
+  part_cause: "토지·건물의 취득원인이나 소유자가 나뉜 자산의 매수 부분을 1985.1.1. 전에 매수했다면",
+  other: "이 자산을 1985.1.1. 전에 매수했다면",
+};
+
+/** ⑤ 범위 밖 자산 안내(Q-12 a) — 칸 없이 빠진 비교만 밝힌다. 다필지·이월과세 증여자 칸이 있는 취득 섹션 공통 자리에 한 번 둔다. */
+export function PreDeemedPurchaseOutOfScopeNotice({ asset, isNonPrimary }: { asset: AssetForm; isNonPrimary?: boolean }) {
+  const kind = preDeemedPurchaseOutOfScopeKind(asset, { isNonPrimary });
+  if (!kind) return null;
+  return (
+    <div data-testid="pre-deemed-purchase-out-of-scope" data-kind={kind}>
+      <ToneCard tone="amber" title="의제취득일 전 매수 (소득세법 시행령 §176조의2④)" bodyClassName="space-y-2">
+        <p className="text-xs text-amber-800 leading-relaxed dark:text-amber-200">
+          {OUT_OF_SCOPE_SUBJECT[kind]} ① 의제취득일 현재 가액과 ② 취득 당시 실지거래가액 + 생산자물가상승분 중 많은 것을 고르는 비교는 계산에 반영하지 않습니다 — 입력한 값으로 계산합니다. 확인 필요.
+        </p>
+      </ToneCard>
+    </div>
+  );
 }
 
 export function PreDeemedPurchaseCard({
