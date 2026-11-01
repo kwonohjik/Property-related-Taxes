@@ -106,7 +106,6 @@ describe("UW-2 여전히 막힘 — 혼합 승자 · 지분·입주권·겸용�
   });
 
   it.each([
-    ["지분 50% 담보 승", () => [house(1, HM), house(2, HM, x({ ownershipNumerator: "50", ownershipDenominator: "100" }))], "지분 보유"],
     ["조합원입주권 담보 승", () => [house(1, HM), house(2, HM, x({ assetKind: "right_to_move_in" }))], "조합원입주권"],
     ["겸용주택 담보 승", () => [house(1, HM), house(2, HM, x({ isMixedUseHouse: true }))], "겸용주택"],
   ] as const)("%s — 해당 자산만 ⑧이 막는다", async (_l, mk, reason) => {

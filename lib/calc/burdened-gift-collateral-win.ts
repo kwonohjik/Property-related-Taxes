@@ -8,12 +8,14 @@
  * 종전 ⑧은 분모를 시가 입력값으로 둬, 담보평가액 = 인수 채무(채무비율 정확히 1)인 정당한 경우까지 「채무액이 증여가액 초과」로 막았다.
  * 같은 사실을 기준시가 모드로 넣으면 계산됐다(128,124,000) — 계획서 `docs/00-pm/burdened-gift-residuals-o3-o5-o8.plan.md` O-5.
  *
- * ## 범위 — 단독 소유(지분 100%)만
+ * ## 범위 — 지분이 있으면 축을 아는 호출만, 종류는 주택만
  *
  * 지분이 있으면 채무 입력 규약이 축마다 반대다(축 A 공유 소유 = 지분 인수분 · 축 B 지분 분할 = 물건 전체 후 ④가 안분). 자산 하나만으로는
- * 축을 가릴 수 없어 승자를 잘못 판정할 수 있으므로 `undefined`/`false`를 돌려 종전 처리(⑧ 시가 분모)를 유지한다. 함께 부담부증여 묶음은
- * 승자가 **섞이면** 막고(`bgBundleWinnersMixed` — 합산 증여가액 불일치), 지분·입주권·겸용 자산의 비보충 승자는 이 범위 밖이라 따로 막는다
- * (`bgNonSupplementaryWinnerUnsupported`). 균일 승자(100% 소유)는 단건과 같은 판정·같은 분모를 쓴다.
+ * 축을 가릴 수 없으므로 `isFractionalSplit`를 **세 상태**로 받는다 — `true` 축 B(비율 1로 물건 전체 판정) · `false` 축 A(지분분 판정) ·
+ * `undefined` 축 미지정(승자를 확정하지 않고 `undefined`/`false`를 돌려 종전처럼 막는다 — 호출처를 단계적으로 옮겨도 미전환 호출처가 침묵 오판정하지 않는다).
+ * 지분 자산의 담보 승 취득가액(취득시 기준시가 × 채무비율 — ⑤ 칸·⑧ 요구·⑫ 요구)을 확인한 종류는 **주택**(이월과세·의제취득일 전 상속·증여·겸용 제외)뿐이다
+ * (`bgFractionalCollateralKindSupported`) — 그 밖의 종류는 ⑧이 정확한 사유로 막는다. 함께 부담부증여 묶음은 승자가 **섞이면** 막는다
+ * (`bgBundleWinnersMixed` — 합산 증여가액 불일치). 균일 승자는 단건과 같은 판정·같은 분모를 쓴다.
  *
  * 값은 ④가 엔진에 싣는 info(`buildBurdenedGiftInfo`)를 엔진과 같은 경로(`companionBurdenedGiftValuations` — 지분 축소 → Max)로 계산한다.
  */
@@ -26,46 +28,46 @@ import { bgAnyCarryover } from "./bg-carryover-parts";
 import { BG_PAREN_MORTGAGE_66_FROM } from "@/lib/tax-engine/burdened-gift-valuation";
 
 /**
- * 단독 소유 단건의 증여가액 C(엔진 `giftValuation.max`)와 승자. 지분이 있으면 `undefined`(위 범위).
+ * 단건의 증여가액 C(엔진 `giftValuation.max`)와 승자. 지분이 있으면 축을 알아야 한다 — 축 미지정(`undefined`)은 `undefined`(위 범위).
  *
- * `isFractionalSplit`(축 B — 같은 물건을 지분으로 나눠 취득)이면 지분이 있어도 **비율 1로 물건 전체**를 판정한다 — 축 B는 채무·시가를 물건 전체로 입력하고
- * ④가 채무를 지분율로 줄여 보내며 엔진이 시가를 같은 비율로 줄여 비교하므로(`scaleBurdenedGiftInfo`) 승자는 물건 전체 판정과 같다
- * (실측: 60/40 카드 모두 엔진 승자와 일치 — `bg-axis-b-mkt-collateral-win.plan.md`). 카드 하나를 지분 비율로 줄여 판정하면 틀린다 — 40% 카드는 채무 6억 > 지분 시가 4억이라
- * 담보 승으로 읽히지만 엔진은 보충 승이다.
+ * · `isFractionalSplit === true`(축 B — 같은 물건을 지분으로 나눠 취득): 지분이 있어도 **비율 1로 물건 전체**를 판정한다 — 축 B는 채무·시가를 물건 전체로 입력하고
+ *   ④가 채무를 지분율로 줄여 보내며 엔진이 시가를 같은 비율로 줄여 비교하므로(`scaleBurdenedGiftInfo`) 승자는 물건 전체 판정과 같다
+ *   (실측: 60/40 카드 모두 엔진 승자와 일치 — `bg-axis-b-mkt-collateral-win.plan.md`). 카드 하나를 지분 비율로 줄여 판정하면 틀린다 — 40% 카드는 채무 6억 > 지분 시가 4억이라
+ *   담보 승으로 읽히지만 엔진은 보충 승이다.
+ * · `isFractionalSplit === false`(축 A — 공유 소유): 채무가 본인 인수분이므로 **지분분**으로 판정한다(엔진과 같은 경로 — 지분 축소 → Max).
  */
-export function bgWholeGiftValuation(asset: AssetForm, isFractionalSplit = false): CompanionBurdenedGiftValuation | undefined {
-  if (!isFractionalSplit && getOwnershipRatio(asset) < 1) return undefined;
-  return companionBurdenedGiftValuations([buildBurdenedGiftInfo(asset)], [1])[0];
+export function bgWholeGiftValuation(asset: AssetForm, isFractionalSplit?: boolean): CompanionBurdenedGiftValuation | undefined {
+  const ratio = getOwnershipRatio(asset);
+  if (ratio >= 1 || isFractionalSplit === true) return companionBurdenedGiftValuations([buildBurdenedGiftInfo(asset)], [1])[0];
+  if (isFractionalSplit === false) return companionBurdenedGiftValuations([buildBurdenedGiftInfo(asset)], [ratio])[0];
+  return undefined;
 }
 
 /**
- * 축 B(지분 분할 취득) 카드에서 시가 모드 담보 승의 취득가액 처리(취득시 기준시가 × 채무비율 — ⑤ 칸·⑧ 요구·⑫ 요구)를 **확인한 범위**.
+ * 지분 자산(축 A·B)에서 담보·임대 승의 취득가액 처리(취득시 기준시가 × 채무비율 — ⑤ 칸·⑧ 요구·⑫ 요구)를 **확인한 범위**.
  * 주택(`housing`)만이다 — 이월과세·의제취득일 전 상속·증여는 교차를 측정하지 않았고, 토지·일반건물·재개발·입주권·겸용은 종류별 격자를 측정하지 않았다
- * (계획서 `bg-nonsupp-winner-support.plan.md` V-S1·V-S4). 범위 밖은 ⑧이 `bgSplitAxisCollateralWinUnsupported`로 막는다.
+ * (계획서 `bg-nonsupp-winner-support.plan.md` V-S1·V-S4). 범위 밖은 ⑧이 막는다(`bgSplitAxisCollateralWinUnsupported` · `bgFractionalCollateralWin`).
  */
-function bgSplitAxisCollateralSupported(asset: AssetForm): boolean {
+export function bgFractionalCollateralKindSupported(asset: AssetForm): boolean {
   return asset.assetKind === "housing" && !isBgPreDeemedAsset(asset) && !bgAnyCarryover(asset) && !isMixedBurdenedGift(asset);
 }
 
 /** 축 B 카드에서 시가 모드 담보평가(§66)가 이기는데 취득가액 처리를 확인하지 못한 종류인가 — ⑧ 차단용(거짓 사유 「채무액 초과」 대체). */
 export function bgSplitAxisCollateralWinUnsupported(asset: AssetForm): boolean {
   if (asset.transferType !== "burdened_gift" || asset.bgValuationMode !== "sangjeungbeop_market") return false;
-  if (bgSplitAxisCollateralSupported(asset)) return false;
+  if (bgFractionalCollateralKindSupported(asset)) return false;
   return bgWholeGiftValuation(asset, true)?.selectedMode === "mortgage";
 }
 
 /**
  * 지분을 가진 자산(축 A 공유 소유 — 채무는 본인 인수분)에서 시가 모드 담보평가(§66)가 이기는가. 이기면 그 증여가액 C는 담보평가액이다.
- * 이 경우는 계산하지 않는다 — ⑤ 칸 노출·⑧ 취득가액 요구가 단독 소유만 다루고(`bgCollateralForcesStdAcq`), 축을 가릴 수 없는 자산 하나만으로는
- * 승자를 확정할 수 없다(범위 주석). 엔진은 이 입력을 계산하지만(취득가액 = 취득시 기준시가 × 지분 × 채무비율) 화면이 그 취득가액 입력을 다루지 않는다.
- * 지분 자산의 담보 승은 채무 합계가 항상 시가 해당분보다 커서 ⑧의 「채무액이 증여가액 초과」 검사에 걸리므로, 그 틀린 사유 대신 이 판정으로 정확히 막는다.
+ * 지분 자산의 담보 승은 채무 합계가 항상 시가 해당분보다 커서 ⑧의 「채무액이 증여가액 초과」 검사에 걸리므로, 확인하지 못한 종류(`bgFractionalCollateralKindSupported`가 false)는
+ * 그 틀린 사유 대신 이 판정으로 정확히 막는다. 주택은 계산한다 — 취득가액 = 취득시 기준시가 × 지분 × 채무비율(엔진 `resolveBgAcquisitionBasis`)을 ⑤ 칸·⑧·⑫가 같은 술어로 다룬다.
  * 축 B(지분 분할 취득)는 호출자가 거른다 — 물건 전체 입력이라 이 승자 판정이 맞지 않는다.
  */
 export function bgFractionalCollateralWin(asset: AssetForm): boolean {
   if (asset.transferType !== "burdened_gift" || asset.bgValuationMode !== "sangjeungbeop_market") return false;
-  const ratio = getOwnershipRatio(asset);
-  if (ratio >= 1) return false;
-  return companionBurdenedGiftValuations([buildBurdenedGiftInfo(asset)], [ratio])[0]?.selectedMode === "mortgage";
+  return getOwnershipRatio(asset) < 1 && bgWholeGiftValuation(asset, false)?.selectedMode === "mortgage";
 }
 
 /**
@@ -77,35 +79,37 @@ export function bgFractionalCollateralWin(asset: AssetForm): boolean {
  *
  * 화면이 이 경우를 다루지 않는 자산은 `false`다 — ⑧이 따로 막는다:
  * - 겸용주택: 엔진 MB-7(담보평가를 주택·상가로 나눌 법정 기준 없음).
- * - 지분 보유: 위 범위. 단 **축 B 주택**은 `isFractionalSplit`를 넘기면 물건 전체로 판정해 다룬다(`bgSplitAxisCollateralSupported`).
+ * - 지분 보유: **주택**만(`bgFractionalCollateralKindSupported`). 축을 `isFractionalSplit`로 넘겨야 한다 — 축 B `true`(물건 전체 판정) · 축 A `false`(지분분 판정) ·
+ *   미지정 `undefined`면 지분 자산은 `false`(종전 — 승자를 확정하지 않는다).
  */
-export function bgCollateralForcesStdAcq(asset: AssetForm, isFractionalSplit = false): boolean {
+export function bgCollateralForcesStdAcq(asset: AssetForm, isFractionalSplit?: boolean): boolean {
   if (asset.transferType !== "burdened_gift" || asset.bgValuationMode !== "sangjeungbeop_market") return false;
   if (asset.assetKind === "right_to_move_in") return false;
   if (isMixedBurdenedGift(asset)) return false;
-  // 축 B는 확인한 범위(주택)만 — 그 밖은 false로 두고 ⑧이 `bgSplitAxisCollateralWinUnsupported`로 먼저 막는다.
-  if (isFractionalSplit && !bgSplitAxisCollateralSupported(asset)) return false;
+  // 지분 자산은 확인한 범위(주택)만 — 그 밖은 false로 두고 ⑧이 `bgSplitAxisCollateralWinUnsupported`·`bgFractionalCollateralWin`으로 먼저 막는다.
+  if ((isFractionalSplit === true || getOwnershipRatio(asset) < 1) && !bgFractionalCollateralKindSupported(asset)) return false;
   return bgWholeGiftValuation(asset, isFractionalSplit)?.selectedMode === "mortgage";
 }
 
 /**
  * 함께 부담부증여 묶음에서 **비보충 승자(담보 §66·임대 §61⑤)를 계산하지 않는** 자산인가 — 화면·엔진의 취득가액 처리를 확인하지 못한 범위다.
- * · 지분 보유: 승자 판정(`bgWholeGiftValuation`)과 ⑤ 칸 노출(`bgCollateralForcesStdAcq`)이 단독 소유만 다룬다.
+ * · 지분 보유: 주택(이월과세·의제취득일 전 상속·증여·겸용 제외)만 계산한다 — 기준시가 모드는 임대·담보, 시가 모드는 담보 승이 모두 취득가액 = 취득시 기준시가 × 지분 × 채무비율이다
+ *   (균일 승자 묶음의 ⑫ 값은 자산별 단건 지분 실행의 합과 ±0 — `bg-axis-a-nonsupp-win.plan.md`). 그 밖의 종류는 확인하지 못해 막는다.
  * · 조합원입주권 · 겸용주택: 위 `bgCollateralForcesStdAcq` 주석과 같다.
  * · 이월과세는 막지 않는다 — 기준시가 모드는 임대·담보 승(1단계), 시가 모드는 담보 승(2단계)이 모두 취득가액 = 취득시 기준시가 × 채무비율이라
  *   (A = 당초 증여자 · B = 양도인) 균일 승자 묶음의 ⑫ 값이 단건 합·오라클과 맞는다(`bg-carryover-std-uniform-bundle.plan.md` · `bg-carryover-mkt-collateral-win.plan.md`).
  *   시가 모드의 임대 승은 존재하지 않는다(엔진 `computeSangjeungbeopValuation` — 임대 환산은 시가가 없을 때만 비교).
  */
 export function bgNonSupplementaryWinnerUnsupported(asset: AssetForm): boolean {
-  if (getOwnershipRatio(asset) < 1) return true;
+  if (getOwnershipRatio(asset) < 1) return !bgFractionalCollateralKindSupported(asset);
   return asset.assetKind === "right_to_move_in" || isMixedBurdenedGift(asset);
 }
 
-/** `bgNonSupplementaryWinnerUnsupported`가 true인 이유 — ⑧ 안내 문구용. 판정 순서는 위 함수와 같다. */
+/** `bgNonSupplementaryWinnerUnsupported`가 true인 이유 — ⑧ 안내 문구용. 입주권·겸용을 지분 여부보다 먼저 가른다(원인이 지분이 아니다). */
 export function bgUnsupportedWinnerReason(asset: AssetForm): string {
-  if (getOwnershipRatio(asset) < 1) return "지분 보유";
   if (asset.assetKind === "right_to_move_in") return "조합원입주권";
-  return "겸용주택";
+  if (isMixedBurdenedGift(asset)) return "겸용주택";
+  return "지분 보유";
 }
 
 /**
@@ -113,16 +117,17 @@ export function bgUnsupportedWinnerReason(asset: AssetForm): string {
  * · 조합원입주권: 「소득세법 시행령」 제159조 제1항 제1호 괄호가 취득가액을 기준시가로 정하지만 입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없다
  *   (엔진 `burdened-gift-apportionment.ts` fail-fast — 기준시가 모드에서 담보·임대 승이면 400).
  * · 겸용주택: 담보·임대 평가액을 주택과 상가로 나눌 법정 기준이 없어 보충적평가·시가인 단독 소유 단건만 계산한다(엔진 MB-7 · 함께 양도는 MB-6).
- * · 지분 보유: 종전 문구 그대로(축 정보를 몰라 승자를 확정하지 못하는 범위). 뒤 문장은 사유별 조치 안내다.
+ * · 지분 보유(주택 외): 취득가액 처리를 확인한 종류가 주택뿐이다. 뒤 문장은 사유별 조치 안내다.
  */
 /** 조합원입주권 비보충 승 차단 사유 — 지분율과 무관하게 같은 말이다(축 B 카드도 «함께 양도 토글을 끄고 단건으로»가 아니라 이 안내여야 한다). */
 export const BG_RTMI_WINNER_CAUSE =
   "「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 이 경우의 취득가액은 기준시가로 산정해야 하는데, 조합원입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
 
 export function bgUnsupportedWinnerCause(asset: AssetForm): string {
-  if (getOwnershipRatio(asset) < 1) return "이 경우의 취득가액 산정 기준을 확인하지 못했습니다. 함께 양도 토글을 끄고 단건으로 계산하세요.";
   if (asset.assetKind === "right_to_move_in") return BG_RTMI_WINNER_CAUSE;
-  return "겸용주택 부담부증여는 단독 소유 단건만 계산하며, 담보·임대로 평가되는 경우 증여가액을 주택과 상가로 나눌 법정 기준이 없어 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
+  if (isMixedBurdenedGift(asset))
+    return "겸용주택 부담부증여는 단독 소유 단건만 계산하며, 담보·임대로 평가되는 경우 증여가액을 주택과 상가로 나눌 법정 기준이 없어 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
+  return "지분을 가진 자산의 담보·임대 평가에서 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 주택(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
 }
 
 /**

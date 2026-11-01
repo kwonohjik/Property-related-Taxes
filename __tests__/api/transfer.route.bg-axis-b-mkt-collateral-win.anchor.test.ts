@@ -14,7 +14,7 @@
  * · AB-2 입력 요구 정합 — 시가 모드 담보 승: 실지취득가액은 요구하지 않고(⑧·⑫ 모두), 취득시 기준시가는 둘 다 요구한다(⑧ ⊇ ⑫).
  * · AB-3 ⑤ 술어 — 축 B 플래그를 넘기면 취득가액 강제 ∧ 취득시 기준시가 칸 ∧ 필요경비 칸 숨김. 플래그가 없으면 종전(false) — 카드 하나로 판정하면 틀린다.
  * · AB-4 범위 밖 종류는 정확한 사유로 막는다(«채무액 초과» 아님).
- * · AB-5 축 A는 열리지 않았다(S-2) — 단건 시가 담보 승·컴패니언 묶음 비보충 승자 게이트.
+ * · AB-5 축 A의 주택 외 종류는 여전히 막힌다(주택은 S-2가 열었다 — `transfer.route.bg-axis-a-nonsupp-win.anchor.test.ts`) — 단건 시가 담보 승·컴패니언 묶음 비보충 승자 게이트.
  * · AB-6 ⑫ 판정은 엔진처럼 시가를 지분분으로 줄인다.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -198,18 +198,18 @@ describe("AB-4 범위 밖 종류는 «채무액 초과»가 아니라 정확한 
   });
 });
 
-describe("AB-5 축 A는 열리지 않았다 (S-2 범위)", () => {
-  it("단건 지분 50% 시가 담보 승(축 A)은 종전처럼 FRAC_WIN으로 막는다", () => {
-    const a = house(1, "50", "2012-03-01", { ...MKT, bgMortgageDebtAmount: "700000000", bgMortgageSetAmount: "700000000", bgLendingDepositTotal: "0", ownershipRemainderThirdParty: "yes" });
+describe("AB-5 축 A의 주택 외 종류는 여전히 막힌다 (주택은 S-2가 열었다)", () => {
+  it("단건 지분 50% 시가 담보 승(축 A) 재개발 APT는 종전처럼 FRAC_WIN으로 막는다", () => {
+    const a = house(1, "50", "2012-03-01", { assetKind: "redevelopment_apt", ...MKT, bgMortgageDebtAmount: "700000000", bgMortgageSetAmount: "700000000", bgLendingDepositTotal: "0", ownershipRemainderThirdParty: "yes" });
     const f = Object.assign(createDefaultTransferFormData(), {
       transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false,
       householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, assets: [a],
     }) as TransferFormData;
     expect(issues(f).some((i) => i.message.includes("담보평가액") && i.message.includes("시가 해당분보다 커서"))).toBe(true);
   });
-  it("컴패니언(다른 물건) 묶음의 지분 자산 담보 승은 비보충 승자 게이트로 막는다", () => {
+  it("컴패니언(다른 물건) 묶음의 지분 재개발 APT 담보 승은 비보충 승자 게이트로 막는다", () => {
     const whole = (id: number, over: A) => house(id, "100", "2015-01-01", { ...MKT, ...over });
-    const share = house(2, "50", "2012-03-01", { ...MKT, ...W.mortgage });
+    const share = house(2, "50", "2012-03-01", { assetKind: "redevelopment_apt", ...MKT, ...W.mortgage });
     const f = Object.assign(form({}, {}, { assets: [whole(1, W.mortgage), share] }), { assetSplitMode: "companion" }) as TransferFormData;
     expect(issues(f).some((i) => i.message.includes("함께 양도와 같이 계산하지 않습니다"))).toBe(true);
   });
