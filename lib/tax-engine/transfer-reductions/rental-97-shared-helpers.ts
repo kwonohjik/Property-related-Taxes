@@ -147,6 +147,42 @@ export function validateRentIncrease(
 }
 
 /**
+ * §97의3·§97의5 임대개시 기산일 — 조특령 §97의3④·§97의5③
+ * 「「소득세법」 제168조에 따른 사업자등록과 … 임대사업자등록을 하고 장기일반민간임대주택등으로
+ *  등록하여 임대하는 날부터 임대를 개시한 것으로 본다」
+ * ⇒ 임대일·임대사업자등록일·세무서 사업자등록일 중 **가장 늦은 날**. 임대일 미입력이면 undefined.
+ */
+export function rental97EffectiveStart(input: {
+  rentalStartDate?: Date;
+  registrationDate?: Date;
+  taxRegistrationDate?: Date;
+}): Date | undefined {
+  if (!input.rentalStartDate) return undefined;
+  return new Date(
+    Math.max(
+      input.rentalStartDate.getTime(),
+      input.registrationDate?.getTime() ?? 0,
+      input.taxRegistrationDate?.getTime() ?? 0,
+    ),
+  );
+}
+
+/**
+ * §97의3·§97의5 임대료 증액 제한(령 §97의3③1호)은 **임대개시일부터** 지킬 요건이다
+ * (법 §97의3①2호 「임대기간 중」 · §97의5①3호 「임대기간 중 … 준수할 것」 — 사용자 확인 2026-11-01).
+ * ⇒ 증액한 계약의 체결·갱신일이 기산일 이후인 위반만 센다. 비교 기준(직전 계약)은 기산일 전 계약이어도 된다
+ *   — 등록 당시 존속하던 계약의 임대료가 첫 기준이다.
+ * 기산일을 모르면(임대일 미입력) 걸러내지 않는다 — 그 경우는 MISSING_RENTAL_START가 따로 막는다.
+ */
+export function rentViolationsFromRentalStart<T extends { contractDate: Date }>(
+  violations: T[],
+  start: Date | undefined,
+): T[] {
+  if (!start) return violations;
+  return violations.filter((v) => v.contractDate.getTime() >= start.getTime());
+}
+
+/**
  * 임대료 증액 **간격** 검증 — 조특령 §97의3③1호 후단
  * 「이 경우 임대료등 증액 청구는 임대차계약 또는 약정한 임대료등의 증액이 있은 후 **1년 이내에는 하지 못하고**…」
  *
@@ -155,7 +191,7 @@ export function validateRentIncrease(
  *   ⇒ 그날까지의 증액은 「1년 이내」다(가정: 계약 이력의 `contractDate`를 증액 시점으로 본다 — 청구일 입력은 없다).
  * - 감액·동결 계약은 증액이 아니므로 보지 않는다.
  *
- * 현재 §97의5 평가기만 호출한다(같은 1호를 쓰는 §97의3·§97의4 적용은 별건).
+ * §97의3·§97의5(①3호 준용)·§97의4(소령 §167의3①2호 가·다목 괄호)가 호출한다.
  */
 export function validateRentIncreaseInterval(
   history: Rental97RentHistoryItem[],
