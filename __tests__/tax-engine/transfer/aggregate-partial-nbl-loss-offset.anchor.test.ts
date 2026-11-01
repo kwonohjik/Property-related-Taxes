@@ -147,4 +147,26 @@ describe("크로스 통산 — 부분 비사업용 자산은 파트 행으로 �
     expect(out.assets.find((a) => a.id === "A")?.absorbed).toBe(200_000_000);
     expect(out.unusedLoss).toBe(0);
   });
+
+  it("재계산 후 세액 396,484,000 = 분리 신고 — 기타자산 차손 2억은 1호 파트에서 공제", () => {
+    // 1호 346,000,000 → 0.40 × 346,000,000 − 25,940,000 = 112,460,000
+    // 8호 546,000,000 → 0.42 × 546,000,000 − 35,940,000 + 54,600,000 = 247,980,000
+    // 360,440,000 + 지방소득세 36,044,000 = 396,484,000
+    const recalc = (xs: [string, TransferTaxInput][]) => {
+      const rows = buildCrossLossRows(aggUsed(xs), otherAsset(-200_000_000));
+      if (!rows.ok) throw new Error(rows.reason);
+      const oa = rows.rows.find((r) => r.source === "other_asset")!;
+      return calculateTransferTaxAggregate(
+        {
+          taxYear: 2026,
+          annualBasicDeductionUsed: 2_500_000,
+          crossLossOffsetExternal: [{ id: oa.id, income: oa.income, rateKey: oa.rateKey, exempt: oa.exempt }],
+          properties: xs.map(([id, x]) => ({ ...x, propertyId: id, propertyLabel: id }) as unknown as TransferTaxItemInput),
+        },
+        rates,
+      ).totalTax;
+    };
+    expect(recalc([["A", part50()]])).toBe(396_484_000);
+    expect(recalc(sep50())).toBe(396_484_000);
+  });
 });
