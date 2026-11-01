@@ -21,6 +21,8 @@ interface Props {
   filingDate?: string;
   /** 신고기한 초과 여부 (Step1 산출) */
   filingOverdue?: boolean;
+  /** 기한 경과 안내 뒷부분 — 가산세 상태대로 (Step1 산출) */
+  filingOverdueNote?: string;
   /** 신고기한 문자열 (Step1 산출) */
   filingDeadline?: string;
   /** 폼-전역 패치 (양도일·신고일 write — handleFormChange 경유) */
@@ -69,7 +71,7 @@ interface Props {
   getLatestAssets?: () => AssetForm[];
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, wasRegulatedAtAcquisition, formRegionCode, mergeRental, assetErrors, splitMode, onFractionalToggle, remountEpoch = 0, onRemoveAsset, getLatestAssets }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingOverdueNote, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, wasRegulatedAtAcquisition, formRegionCode, mergeRental, assetErrors, splitMode, onFractionalToggle, remountEpoch = 0, onRemoveAsset, getLatestAssets }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -141,6 +143,7 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           transferDate={transferDate}
           filingDate={filingDate}
           filingOverdue={filingOverdue}
+          filingOverdueNote={filingOverdueNote}
           filingDeadline={filingDeadline}
           showFormDates={idx === 0}
           onFormChange={onFormChange}

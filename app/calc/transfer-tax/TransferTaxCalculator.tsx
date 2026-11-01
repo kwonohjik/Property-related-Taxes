@@ -17,7 +17,7 @@ import { StepWarningBanner } from "@/components/calc/transfer/StepWarningBanner"
 import { ValidationIssuePanel } from "@/components/calc/transfer/ValidationIssuePanel";
 import { jumpToIssueField } from "@/components/calc/transfer/validation-jump";
 import type { StepStatus } from "@/components/calc/StepIndicator";
-import { derivePenaltyFields, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
+import { penaltyPatchOnFormChange } from "@/lib/calc/filing-deadline";
 import { derivedHouseCountPatch } from "@/lib/calc/household-house-count";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
@@ -161,8 +161,8 @@ export default function TransferTaxCalculator({
   // 신고일·양도일 변경 시 가산세 필드 cross-field 파생.
   // memory `feedback_useeffect_store_mirror_forbidden` — useEffect→store 미러링 금지.
   // onChange 핸들러에서 직접 파생(아래 handleFormChange). 로드 시점 보정은 migrateLegacyForm에서 처리.
-  // assets 패치도 트리거 — transferType(부담부증여) 변경 시 신고기한이 2↔3개월로 바뀜 (§105①3호).
-  // derivePenaltyFields는 동일 상태면 빈 패치 반환이므로 빈번 호출 무해.
+  // assets 패치도 본다 — transferType(부담부증여) 변경 시 신고기한이 2↔3개월로 바뀜 (§105①3호).
+  // 다른 자산 입력은 빈 패치다 — 사용자가 정한 가산세 ON·OFF를 건드리지 않는다.
   const updateFormAndInvalidate = useCallback(
     (patch: Partial<typeof formData>) => {
       if (patchInvalidatesDeterminedTax(patch)) setCalcDeterminedTax(null);
@@ -181,14 +181,8 @@ export default function TransferTaxCalculator({
     (patch: Partial<typeof formData>) => {
       if ("transferDate" in patch || "filingDate" in patch || "assets" in patch) {
         const nextTransferDate = patch.transferDate ?? formData.transferDate;
-        const nextFilingDate = patch.filingDate ?? formData.filingDate;
         const nextAssets = patch.assets ?? formData.assets;
-        const penaltyPatch = derivePenaltyFields(
-          nextTransferDate,
-          nextFilingDate,
-          formData,
-          isAllBurdenedGift(nextAssets),
-        );
+        const penaltyPatch = penaltyPatchOnFormChange(formData, patch);
         // 양도일을 옮기면 같은 명부 행이 양도일 현재 보유 ↔ 미보유로 바뀐다 — 파생 주택 수 스칼라를 같은 patch에 싣는다.
         // 명부 편집(`HousesListSection.patchHouses`)과 같은 leaf다. onChange 동시 갱신이지 useEffect 미러링이 아니다.
         const rosterPatch =
