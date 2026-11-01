@@ -133,11 +133,12 @@ describe("UI-P §154① 단서 카드 (삭제 전 4호 OH-38 포함)", () => {
     render(<Harness start={item({ householdHousingCount: 3 })} giftDate="2021-06-01" />);
     expect(has("proviso-reason-rental_4ho")).toBe(false);
   });
-  it("일시적 2주택 맥락 → 카드는 있으나 4호는 없다(1·2가·3호만)", () => {
+  it("일시적 2주택 맥락 → 카드와 4호가 있다(부동산납세과-1321) · 나·다목은 없다", () => {
     const tt = { previousAcquisitionDate: new Date("2018-03-01"), newAcquisitionDate: new Date("2020-06-01") };
     render(<Harness start={item({ householdHousingCount: 2, temporaryTwoHouse: tt })} giftDate="2021-06-01" />);
     expect(has("proviso-reason-unavoidable")).toBe(true);
-    expect(has("proviso-reason-rental_4ho")).toBe(false);
+    expect(has("proviso-reason-rental_4ho")).toBe(true);
+    expect(has("proviso-reason-overseas_migration")).toBe(false);
   });
 });
 

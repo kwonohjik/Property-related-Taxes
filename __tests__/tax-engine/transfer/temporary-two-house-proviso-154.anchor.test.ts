@@ -141,10 +141,10 @@ describe("provisoGate·effectiveProvisoReason — UI 파생 (앵커)", () => {
     expect(provisoGate({ ...base, isOneHousehold: false })).toEqual({ visible: false, mode: null });
     expect(provisoGate({ ...base, isHousing: false })).toEqual({ visible: false, mode: null });
   });
-  it('effectiveProvisoReason: temp+나·다목·삭제 전 4호 → ""(받는 사유 밖)', () => {
+  it('effectiveProvisoReason: temp+나·다목 → ""(받는 사유 밖)', () => {
     expect(effectiveProvisoReason("temporary_two_house", "overseas_migration")).toBe("");
-    expect(effectiveProvisoReason("temporary_two_house", "rental_registration_4ho")).toBe("");
-    // 5호는 2026-10-26 F-2(Q-F1)부터 받는다 — `__tests__/calc/temp-two-house-proviso-5.anchor.test.tsx` T5-5
+    expect(effectiveProvisoReason("temporary_two_house", "overseas_residence")).toBe("");
+    // 5호는 2026-10-26 F-2(Q-F1)부터, 삭제 전 4호는 2026-11-01 Q-1부터 받는다 — T5-5 · `__tests__/calc/rental-4ho-temp-merge.anchor.test.tsx`
   });
   it("effectiveProvisoReason: temp+1·2가·3호 → 유지", () => {
     expect(effectiveProvisoReason("temporary_two_house", "expropriation")).toBe("expropriation");

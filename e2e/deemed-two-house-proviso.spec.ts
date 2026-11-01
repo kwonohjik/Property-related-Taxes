@@ -8,6 +8,7 @@
  * 시료: 서울 강남(2017-08-03~ 조정대상지역) 2017-10-01 취득 · 거주 0 · 양도 10억 · 2024-06-01 양도 ·
  *   혼인 2023-03-01 · 배우자 쪽 주택 1채(경남 비조정 · 기준시가 4억 · 2015-01-01 취득).
  */
+import { fillDateAndVerify } from "./_helpers/tax-flow";
 import { test, expect, type Page } from "@playwright/test";
 import { gotoTransferHoldingsStep, otherHouse } from "./_helpers/transfer-seed";
 import { gotoJudgmentHoldingsStep } from "./_helpers/judgment-seed";
@@ -16,7 +17,7 @@ const GANGNAM = "1168010100";
 const NON_REGULATED = "4682025021";
 const MARRIAGE = { marriageDate: "2023-03-01", isFirstTransferredInMerge: true };
 const SPOUSE_HOUSE = { regionCode: NON_REGULATED, officialPrice: "400000000", mergeOrigin: "counterpart_side" };
-const HIDDEN_REASONS = ["proviso-reason-overseas_migration", "proviso-reason-overseas_residence", "proviso-reason-rental_4ho"];
+const HIDDEN_REASONS = ["proviso-reason-overseas_migration", "proviso-reason-overseas_residence"];
 
 async function seedCalc(page: Page, merge: boolean) {
   await gotoTransferHoldingsStep(page, {
@@ -60,6 +61,20 @@ test("[DPE-1] ★ 계산기 — 혼인 합가 2주택에 단서 카드가 보이
   expect(body.data.result.totalTax).toBe(0);
   expect(body.data.result.exemptReason).toBe("혼인 합가 (§155⑤) 1세대1주택 비과세 (§154① 단서 5호 공고전계약)");
   await expect(page.getByText(/§154① 단서 5호/).first()).toBeVisible();
+});
+
+test("[DPE-1b] ★ 계산기 — 혼인 합가 2주택 + 삭제 전 4호 → 비과세 · 부동산납세과-1334 고지", async ({ page }) => {
+  await seedCalc(page, true);
+  await page.getByTestId("proviso-reason-rental_4ho").click();
+  await fillDateAndVerify(page, { year: "2018", month: "06", day: "01" }, { scope: page.getByTestId("proviso-4ho-business-date") });
+  await fillDateAndVerify(page, { year: "2018", month: "06", day: "01" }, { scope: page.getByTestId("proviso-4ho-rental-date") });
+  await page.getByTestId("proviso-4ho-regulated-one-house-yes").click();
+  await page.getByTestId("proviso-4ho-status-auto_cancelled").click();
+  const { request, body } = await calculate(page);
+  expect((request.oneHouseExemptionProviso as { reason: string }).reason).toBe("rental_registration_4ho");
+  expect(body.data.result.totalTax).toBe(0);
+  expect(body.data.result.exemptReason).toBe("혼인 합가 (§155⑤) 1세대1주택 비과세 (§154① 단서 4호 임대사업자 등록)");
+  await expect(page.getByText(/부동산납세과-1334/).first()).toBeVisible();
 });
 
 test("[DPE-2] 계산기 — 의제 선언 없는 순수 2주택은 단서 카드가 없다(현행 유지)", async ({ page }) => {

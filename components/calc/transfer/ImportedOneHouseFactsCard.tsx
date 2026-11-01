@@ -16,6 +16,8 @@
  * 것은 **사용자가 판정 메뉴에 넣은 사실**뿐이고, 결론은 결과 화면이 엔진 값으로 말한다
  * (`feedback_aggregate_display_rederives_engine_value`).
  */
+import { unconfirmedTempTwoHouseProviso4ho } from "@/lib/calc/exemption-proviso-payload";
+import type { Rental4hoFormSlice } from "@/lib/calc/rental-4ho-proviso";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { OneHouseJudgmentExtraFields } from "@/lib/stores/one-house-extra-fields.types";
@@ -100,6 +102,7 @@ export type ImportedSpecialsSlice = Pick<
   | "replResidenceMonths"
   | "replWillResideNewHouse"
   | "provisoReason"
+  | keyof Rental4hoFormSlice
 >;
 
 /** ⑤ 위젯(③ 농어촌 라디오)의 value·label 그대로 — 두 벌이면 한쪽만 개정 반영된다. */
@@ -124,6 +127,7 @@ const PROVISO_REASON: Record<string, string> = {
   unavoidable: "부득이한 사유 (3호)",
   rental_5yr_residence: "임대주택 거주 5년 (1호)",
   pre_designation_contract: "조정 공고 전 계약 (5호)",
+  rental_registration_4ho: "임대사업자 등록 (4호 — 2020.2.11. 삭제 전)",
 };
 
 /**
@@ -163,7 +167,9 @@ function specialsRows(
    *    편집 칸과 읽기 전용 요약 두 곳에 보인다. 값은 ④가 보내는 유효 사유(`effectiveProvisoReason`).
    */
   if (provisoMode === "temporary_two_house") {
-    push("§154① 단서 사유", PROVISO_REASON[effectiveProvisoReason(provisoMode, f.provisoReason)]);
+    // ④가 싣지 않는 미완 4호는 「적용」으로 적지 않는다.
+    const reason = effectiveProvisoReason(provisoMode, f.provisoReason);
+    if (!unconfirmedTempTwoHouseProviso4ho(provisoMode, reason, f)) push("§154① 단서 사유", PROVISO_REASON[reason]);
   }
   /**
    * §155①2호 조정대상지역 사실(OH-01 A2b) — 명부 도출 경로에서도 ④가 싣으므로 토글과 무관하게

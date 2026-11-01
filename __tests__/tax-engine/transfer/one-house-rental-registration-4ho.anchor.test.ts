@@ -215,3 +215,29 @@ describe("미입력 → 판정 보류(면제로 추정하지 않는다)", () => 
     expect(calc(i).warnings?.join("\n")).toContain("직접 선례를 확보하지 못했습니다");
   });
 });
+
+describe("§155의2② 장기저당 동거봉양 합가 × 4호 — 근거는 단서가 결론을 바꿨을 때만", () => {
+  const mortgage = (isTransferredHouseMortgaged: boolean) =>
+    scenario(COMPLIANT, {
+      householdHousingCount: 2,
+      isFirstTransferredInMerge: true,
+      longTermMortgageHouse: {
+        parentalCareMerge: true,
+        borrowerAgeAtContract: 60,
+        contractYears: 10,
+        maturityLumpSumRepayment: true,
+        transferredBeforeMaturity: false,
+        isTransferredHouseMortgaged,
+      },
+    } as Partial<TransferTaxInput>);
+  const applied = (i: TransferTaxInput) => (judge(i).appliedExceptions ?? []).map((e) => e.id);
+
+  it("담보주택이 아니면 4호가 거주를 푼다 → 비과세 · 근거 행", () => {
+    expect(judge(mortgage(false)).isExempt).toBe(true);
+    expect(applied(mortgage(false))).toContain("154-1-proviso:rental_registration_4ho");
+  });
+  it("담보주택이면 §155의2①이 이미 풀었다 → 비과세 · 4호 행 없음", () => {
+    expect(judge(mortgage(true)).isExempt).toBe(true);
+    expect(applied(mortgage(true))).not.toContain("154-1-proviso:rental_registration_4ho");
+  });
+});

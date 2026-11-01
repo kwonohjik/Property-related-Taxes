@@ -93,10 +93,10 @@ export function provisoGate(args: {
 }
 
 /**
- * §154① 단서 reason 정규화 — temporary_two_house·deemed_one_house 모드에서 받는 사유(1·2가·3호 + 5호 — `TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS`) 밖 reason은 "" 로 취급.
- * deemed_one_house도 같은 집합이다(V-F4 Q-M2 (a)) — 나·다목은 「출국일 현재 1주택」이 2주택 세대와 맞지 않고, 삭제 전 4호는 F-2와 같이 뺀다.
+ * §154① 단서 reason 정규화 — temporary_two_house·deemed_one_house 모드에서 받는 사유(1·2가·3호 + 5호·삭제 전 4호 — `TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS`) 밖 reason은 "" 로 취급.
+ * deemed_one_house도 같은 집합이다(V-F4 Q-M2 (a) · 2026-11-01 Q-1 (a)) — 나·다목은 「출국일 현재 1주택」이 2주택 세대와 맞지 않는다.
  * UI 선택표시·API 조립·validation 3곳이 단일 소비 → 옵션 필터로 숨긴 stale 무효 reason이 엔진/검증에 도달하지 않음.
- * (1주택 모드서 나·다목·삭제 전 4호 선택 후 일시적 2주택 전환 시 데드락 방지 — 파생이라 clear-onChange 불필요.)
+ * (1주택 모드서 나·다목 선택 후 일시적 2주택 전환 시 데드락 방지 — 파생이라 clear-onChange 불필요.)
  */
 export function effectiveProvisoReason(mode: ProvisoMode, reason: string | undefined | null): string {
   if (!reason) return "";

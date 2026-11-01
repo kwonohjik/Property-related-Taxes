@@ -198,11 +198,11 @@ describe("DP-7 게이트·정규화", () => {
     expect(provisoGate({ ...base, deemedOneHouseContextDeclared: false })).toEqual({ visible: false, mode: null });
     expect(provisoGate({ ...base, householdHousingCount: 1 })).toEqual({ visible: true, mode: "one_house" });
   });
-  it("deemed_one_house — 1·2가·3·5호 통과 · 나·다목·삭제 전 4호는 버림", () => {
-    for (const r of ["rental_5yr_residence", "expropriation", "unavoidable", "pre_designation_contract"]) {
+  it("deemed_one_house — 1·2가·3·5호·삭제 전 4호 통과 · 나·다목은 버림", () => {
+    for (const r of ["rental_5yr_residence", "expropriation", "unavoidable", "pre_designation_contract", "rental_registration_4ho"]) {
       expect(effectiveProvisoReason("deemed_one_house", r), r).toBe(r);
     }
-    for (const r of ["overseas_migration", "overseas_residence", "rental_registration_4ho"]) {
+    for (const r of ["overseas_migration", "overseas_residence"]) {
       expect(effectiveProvisoReason("deemed_one_house", r), r).toBe("");
     }
   });
@@ -271,7 +271,7 @@ describe("1주택 판정 메뉴", () => {
 });
 
 describe("DP-10 카드", () => {
-  it("deemed_one_house — 옵션은 해당없음 + 1·2가·3·5호, 의제 안내문", () => {
+  it("deemed_one_house — 옵션은 해당없음 + 1·2가·3·5호·삭제 전 4호, 의제 안내문", () => {
     render(
       <ExemptionProvisoSection
         provisoReason=""
@@ -281,12 +281,13 @@ describe("DP-10 카드", () => {
         provisoBusinessApprovalDate=""
         provisoRentalLeaseResidenceMonths=""
         provisoPreContractNoHouse={false}
+        rental4ho={{}}
         mode="deemed_one_house"
         onChange={() => {}}
       />,
     );
     const values = Array.from(document.querySelectorAll('input[name="provisoReason"]')).map((e) => (e as HTMLInputElement).value);
-    expect([...values].sort()).toEqual(["expropriation", "none", "pre_designation_contract", "rental_5yr_residence", "unavoidable"]);
+    expect([...values].sort()).toEqual(["expropriation", "none", "pre_designation_contract", "rental_5yr_residence", "rental_registration_4ho", "unavoidable"]);
     expect(screen.getByText(/합가·문화유산·농어촌·수도권 밖 부득이 주택 특례로 1세대1주택으로 보는 주택은/)).toBeTruthy();
   });
 });

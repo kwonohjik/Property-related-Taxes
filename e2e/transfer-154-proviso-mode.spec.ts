@@ -3,7 +3,7 @@
  *
  * - 1주택(one_house) → 섹션② 카드 노출 + 전체 옵션(나·다목·5호 포함)
  * - 순수 2주택(§155① 불성립)·3주택 → 카드 숨김
- * - 일시적 2주택(temporary_two_house) → 섹션③ 카드 노출 + 나·다목·삭제 전 4호 옵션 부재(1·2가·3호 + 5호 — 5호는 2026-10-26 F-2부터)
+ * - 일시적 2주택(temporary_two_house) → 섹션③ 카드 노출 + 나·다목 옵션 부재(1·2가·3호 + 5호·삭제 전 4호 — 5호는 2026-10-26 F-2, 4호는 2026-11-01 Q-1부터)
  *
  * 계획서: docs/02-design/features/transfer-154-proviso-temporary-two-house-gap.plan.md §9(DoD E2E).
  *
@@ -108,7 +108,7 @@ test.describe("§154① 단서 카드 mode별 노출·옵션 필터", () => {
     await expect(page.getByTestId("proviso-reason-none")).toHaveCount(0);
   });
 
-  test("판정 메뉴 — 일시적 2주택 → 카드 노출(섹션③) + 나·다목·4호 옵션 부재(1·2가·3호 + 5호)", async ({ page }) => {
+  test("판정 메뉴 — 일시적 2주택 → 카드 노출(섹션③) + 나·다목 옵션 부재(1·2가·3호 + 5호·4호)", async ({ page }) => {
     await gotoJudgmentStep2(page, {
       assets: judgeAsset,
       houses: [HOUSE("h1")],
@@ -122,9 +122,10 @@ test.describe("§154① 단서 카드 mode별 노출·옵션 필터", () => {
     await expect(page.getByTestId("proviso-reason-rental")).toBeVisible();
     // 5호(공고 전 계약)는 거주요건만 면제 — F-2(2026-10-26 · `docs/00-pm/temp-two-house-proviso-5.plan.md`)부터 받는다
     await expect(page.getByTestId("proviso-reason-pre_contract")).toBeVisible();
-    // 나·다목·삭제 전 4호는 옵션 필터로 부재
+    // 삭제 전 4호도 거주요건만 면제 — 부동산납세과-1321(`docs/00-pm/rental-4ho-temp-merge-gaps.plan.md`)
+    await expect(page.getByTestId("proviso-reason-rental_4ho")).toBeVisible();
+    // 나·다목은 옵션 필터로 부재
     await expect(page.getByTestId("proviso-reason-overseas_migration")).toHaveCount(0);
-    await expect(page.getByTestId("proviso-reason-rental_4ho")).toHaveCount(0);
     await expect(page.getByTestId("proviso-reason-overseas_residence")).toHaveCount(0);
   });
 

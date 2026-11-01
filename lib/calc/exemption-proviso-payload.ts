@@ -10,7 +10,7 @@
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import { effectiveProvisoReason, type ProvisoMode } from "./transfer-tax-api-helpers";
-import { buildRental4hoPayload, type Rental4hoFormSlice } from "./rental-4ho-proviso";
+import { buildRental4hoPayload, rental4hoFactsComplete, type Rental4hoFormSlice } from "./rental-4ho-proviso";
 
 export type ExemptionProvisoFormSlice = Pick<
   TransferFormData,
@@ -65,6 +65,14 @@ export function unconfirmedTempTwoHouseProviso5(mode: ProvisoMode, reason: strin
   return mode === "temporary_two_house" && reason === "pre_designation_contract" && preContractNoHouse !== true;
 }
 
+/**
+ * 2026-11-01 Q-1 (a) — 일시적 2주택 맥락의 삭제 전 4호인데 사실이 미완이면 싣지 않는다. 위 5호와 같은 이유다(계산기에 칸이 없다).
+ * 완비면 싣는다 — 판정 메뉴에서 넘어온 값이고, 적용되면 결과 사유·고지에 드러난다. 판정 메뉴·부담부증여는 ⑧이 먼저 막는다.
+ */
+export function unconfirmedTempTwoHouseProviso4ho(mode: ProvisoMode, reason: string, form: Partial<Rental4hoFormSlice>): boolean {
+  return mode === "temporary_two_house" && reason === "rental_registration_4ho" && !rental4hoFactsComplete(form);
+}
+
 export function buildExemptionProvisoPayload(
   form: ExemptionProvisoFormSlice,
   mode: ProvisoMode,
@@ -72,6 +80,7 @@ export function buildExemptionProvisoPayload(
   const reason = effectiveProvisoReason(mode, form.provisoReason);
   if (!reason) return {};
   if (unconfirmedTempTwoHouseProviso5(mode, reason, form.provisoPreContractNoHouse)) return {};
+  if (unconfirmedTempTwoHouseProviso4ho(mode, reason, form)) return {};
   return {
     oneHouseExemptionProviso: {
       reason,

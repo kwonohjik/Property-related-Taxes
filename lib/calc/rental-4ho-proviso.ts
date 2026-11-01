@@ -68,6 +68,14 @@ export function buildRental4hoPayload(form: Rental4hoFormSlice): Rental4hoApiPay
   };
 }
 
+/**
+ * 4호 사실이 다 찼는가 — ⑧과 같은 규칙. 계산기 일시적 2주택은 카드가 없어(판정 메뉴 전용 — P6-b) ⑧로 막으면 고칠 칸이 없으므로
+ * 미완이면 ④가 싣지 않는다(`unconfirmedTempTwoHouseProviso4ho`).
+ */
+export function rental4hoFactsComplete(form: Partial<Rental4hoFormSlice>): boolean {
+  return collectRental4hoErrors(form).length === 0;
+}
+
 /** ⑧ — 4호를 골랐을 때 화면에 보이는 칸만 필수로 본다. */
 export function collectRental4hoErrors(form: Partial<Rental4hoFormSlice>): string[] {
   const errors: string[] = [];

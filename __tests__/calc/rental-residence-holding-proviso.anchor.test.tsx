@@ -224,6 +224,7 @@ describe("⑤ 카드 — rental_residence 옵션·안내", () => {
         provisoBusinessApprovalDate=""
         provisoRentalLeaseResidenceMonths=""
         provisoPreContractNoHouse={false}
+        rental4ho={{}}
         mode="rental_residence"
         onChange={() => {}}
       />,

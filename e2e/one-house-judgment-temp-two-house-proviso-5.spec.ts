@@ -63,7 +63,7 @@ test("[P5E-2] ★ 5호 + 무주택 확인 → 비과세 · 본문에 5호", asyn
   await seed(page);
   const group = page.getByTestId("sale-house-specials");
   await expect(group.getByTestId("proviso-reason-pre_contract")).toBeVisible();
-  for (const id of ["proviso-reason-overseas_migration", "proviso-reason-overseas_residence", "proviso-reason-rental_4ho"]) {
+  for (const id of ["proviso-reason-overseas_migration", "proviso-reason-overseas_residence"]) {
     await expect(group.getByTestId(id)).toHaveCount(0);
   }
   await group.getByTestId("proviso-reason-pre_contract").click();

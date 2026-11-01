@@ -193,6 +193,8 @@ export interface EraNoticeRelevance {
   ruralFarmFactsDecide?: () => boolean;
   /** 신규 주택 취득 경위 「모름」·미입력·3년 경과 예외 미선언 고지(결정 #43) — 경위를 일반 취득으로 채운 반사실 판정이 비과세인가 */
   newHouseOriginDecides?: () => boolean;
+  /** 삭제 전 §154①4호 고지(1주택 밖 맥락) — 4호가 성립한다고 채운 반사실 판정이 비과세·부분과세인가 */
+  rental4hoDecides?: () => boolean;
   /** 조특법 §71의2① 인구감소지역주택 「모름」·해석 미확보 고지(결정 #42) — 그 후보를 소유주택에서 뺀 반사실 판정이 비과세인가 */
   popDeclineDecides?: () => boolean;
 }
@@ -275,11 +277,12 @@ export function collectEraUndetermined(
   if (
     !settled &&
     !capitalNewTownEra &&
-    input.householdHousingCount === 1 &&
     (rental4ho === null || rental4ho.status === "undetermined") &&
     // 취득 당시 비조정이면 거주요건 자체가 없어 아래 술어가 참이다 — 조정 여부를 따로 보지 않는다.
     !qualifiesLongTermMortgageResidenceExemption(input) &&
-    !meetsOneHouseResidenceRequirement(input, oneHouseRules.one_house_exemption)
+    !meetsOneHouseResidenceRequirement(input, oneHouseRules.one_house_exemption) &&
+    // 1주택은 현행대로 낸다(보유 미달도 — 시간이 해소한다). 일시적 2주택·§155 의제는 4호로 결론이 바뀔 때만.
+    (input.householdHousingCount === 1 || (relevance?.rental4hoDecides?.() ?? false))
   ) {
     out.push({
       id: "154-1-4ho-rental-registration-unverified",
@@ -287,7 +290,7 @@ export function collectEraUndetermined(
         rental4ho === null
           ? `조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 ` +
             `신청했다면, 삭제 전 ${law("①")}4호(거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 ` +
-            `증액은 제외)가 적용됩니다(대통령령 제30395호 부칙 제38조). 해당하면 §154① 단서에서 「4호 임대사업자 등록」을 ` +
+            `증액은 제외)가 적용됩니다(대통령령 제30395호 부칙 제38조). 해당하면 ${input.householdHousingCount === 1 ? "" : "1세대1주택 판정 메뉴의 "}§154① 단서에서 「4호 임대사업자 등록」을 ` +
             "선택하고 등록 사실을 입력하세요 — 입력하지 않아 이 경과조치는 판정하지 않았습니다."
           : `삭제 전 ${law("①")}4호(임대사업자 등록)를 선택했지만 다음 사실이 입력되지 않아 판정하지 않았습니다: ` +
             `${rental4ho.missing.join(" · ")}.`,

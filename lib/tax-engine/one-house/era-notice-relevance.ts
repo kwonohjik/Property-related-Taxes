@@ -8,6 +8,7 @@
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { describeOneHouseHoldingRequirement } from "../transfer-tax-exemption-holding";
 import type { EraNoticeRelevance } from "./era-undetermined";
+import { RENTAL_4HO_REASON, RENTAL_4HO_REGISTRATION_DEADLINE } from "./rental-registration-4ho";
 import type { GiftHouseholdBasis } from "./gift-household-basis";
 import { giftHouseholdFactDecides, giftPriorResidenceDecides } from "./gift-household-notice";
 import { withUnconfirmedFactsFavorable } from "./rural-return-to-farm-facts";
@@ -107,6 +108,24 @@ export function buildEraNoticeRelevance(ctx: {
         return `${r.isExempt}|${r.isPartialExempt}`;
       };
       return verdictIf(new Date(input.acquisitionDate.getTime() + 86_400_000)) !== verdictIf(input.acquisitionDate);
+    },
+    // 삭제 전 §154①4호(1주택 밖 맥락) — 4호가 성립한다고 채운 본체 판정이 비과세·부분과세일 때만 고지한다. 채운 입력은 `applies`라 고지가 생기지 않는다.
+    rental4hoDecides: () => {
+      if (article89Excluded) return false;
+      const applied = new Date(Math.min(RENTAL_4HO_REGISTRATION_DEADLINE.getTime(), input.transferDate.getTime()));
+      const v = core({
+        ...input,
+        oneHouseExemptionProviso: {
+          reason: RENTAL_4HO_REASON,
+          rentalRegistration4ho: {
+            businessRegistrationApplicationDate: applied,
+            rentalRegistrationApplicationDate: applied,
+            regulatedOneHouseAtApplication: true,
+            statusAtTransfer: "auto_cancelled",
+          },
+        },
+      });
+      return v.isExempt || v.isPartialExempt;
     },
     // 귀농주택 ⑩4호·⑪·귀농 전 취득 「모름」·미응답(결정 #44) — 그 사실만 유리하게 채운 본체 판정이 비과세일 때만 확인 필요를 낸다.
     ruralFarmFactsDecide: () => {

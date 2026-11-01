@@ -130,7 +130,7 @@ describe("⑤ §155⑥1호 문화유산 주택 — **명부 행**에 선언 칸�
    *    그 게이트가 살아 있음을 여기서 고정한다 — 없어지면 1주택에도 특례가 붙는다.
    */
   it("★ 2주택 요건은 엔진 게이트가 지킨다 — 화면 게이트로 옮기지 않았다", () => {
-    const src = readFileSync("lib/tax-engine/transfer-tax-exemption.ts", "utf8");
+    const src = readFileSync("lib/tax-engine/one-house/deemed-verdict.ts", "utf8");
     // 2주택 게이트는 공용 술어 `twoHouseSpecialCountHolds`(2주택 + ②③ 동시 제외 상한 — S01-2)다. 평가기(E-3.6)와 겸용 판정(S08-3)이
     // 같은 술어 `qualifiesCulturalHeritageHouse`를 부르고, 그 술어가 2주택 게이트 + 선언을 잇는다. 그 술어가 2주택을 요구하는지도 고정한다.
     expect(src).toMatch(/qualifiesCulturalHeritageHouse\(input\)\s*&&\s*meetsOneHouseHoldingResidence\(input, rule\)/);
