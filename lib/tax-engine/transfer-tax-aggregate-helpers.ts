@@ -552,6 +552,11 @@ export function applyGeneralProgressive(taxBase: number, rates: TaxRatesMap): nu
 /** 동순위 후보 상한(사용자 결정 Q-2) — 넘으면 묶음마다 「누가 첫째인가」만 평가한다. */
 const TIE_CANDIDATE_LIMIT = 24;
 
+/** 순열 수 — 순열을 만들기 전에 상한을 판정한다(큰 묶음은 순열 자체가 heap을 고갈시킨다). */
+function factorial(n: number): number {
+  return n <= 1 ? 1 : n * factorial(n - 1);
+}
+
 function permutations<T>(xs: T[]): T[][] {
   if (xs.length <= 1) return [xs];
   return xs.flatMap((x, i) => permutations([...xs.slice(0, i), ...xs.slice(i + 1)]).map((rest) => [x, ...rest]));
@@ -577,11 +582,10 @@ export function pickFavorableTieRank(
 ): TieCandidate {
   const ranksOf = (gs: number[][]): Map<number, number>[] => {
     const sorted = gs.map((g) => [...g].sort(order));
-    const full = sorted.map((g) => permutations(g));
-    const fullCount = full.reduce((n, p) => n * p.length, 1);
+    const fullCount = sorted.reduce((n, g) => n * factorial(g.length), 1);
     const perGroup =
       fullCount <= TIE_CANDIDATE_LIMIT
-        ? full
+        ? sorted.map((g) => permutations(g))
         : sorted.map((g) => g.map((first) => [first, ...g.filter((x) => x !== first)]));
     let candidates: number[][][] = [[]];
     for (const options of perGroup) {
