@@ -140,8 +140,10 @@ describe("#7 §97의3 장특 임대분 안분 — 전체 계산 경로", () => {
         isOneHousehold: false, householdHousingCount: 2, standardPriceAtAcquisition: 300_000_000, standardPriceAtTransfer: 600_000_000,
         reductions: [{
           type: "rental_97_3", registrationDate: D0("2014-02-01"), rentalStartDate: D0("2018-01-01"), isTaxRegistered: true,
+          taxRegistrationDate: D0("2014-02-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
           officialPriceAtStart: 400_000_000, stdPriceAtRentalStart: 400_000_000, isNationalHousingScale: true, region: "capital",
           propertyType: "apartment", rentalHousingType: "long_term_private", rentalContinuesToTransfer: false, stdPriceAtRentalEnd: 455_000_000,
+          rentalEndDate: D0("2029-01-01"), // §97의3①1호 — 조기 종료면 종점 필수 (임대 11년)
         }],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any),

@@ -245,6 +245,7 @@ describe("⑬ router — 임대 종료 축이 evaluator까지 도달한다", () 
             registrationDate: D("2014-02-01"),
             rentalStartDate: D("2018-01-01"),
             isTaxRegistered: true,
+            taxRegistrationDate: D("2014-02-01"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
             officialPriceAtStart: 400_000_000,
             stdPriceAtRentalStart: 400_000_000,
             isNationalHousingScale: true,
@@ -253,6 +254,8 @@ describe("⑬ router — 임대 종료 축이 evaluator까지 도달한다", () 
             rentalHousingType: "long_term_private",
             rentalContinuesToTransfer: continues,
             ...(endPrice === undefined ? {} : { stdPriceAtRentalEnd: endPrice }),
+            // §97의3①1호 — 조기 종료면 종점 필수 (임대 11년 — 공제율이 아니라 안분만 갈리게)
+            ...(continues ? {} : { rentalEndDate: D("2029-01-01") }),
           },
         ],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

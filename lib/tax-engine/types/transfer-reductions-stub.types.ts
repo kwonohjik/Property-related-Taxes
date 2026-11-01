@@ -98,6 +98,10 @@ export type TransferReductionStub =
       rentalHousingType?: "long_term_private" | "public_support_private";
       /** 2020.7.11 이후 단기→장기 변경 신고분 (§97의3① 괄호 — 적용 제외) */
       isConvertedFromShortTerm?: boolean;
+      /** §97의3①1호 — 양도 전 임대 종료 시 실제 임대기간의 마지막 날 */
+      rentalEndDate?: Date;
+      /** 조특령 §97의3④ — 세무서 사업자등록일 (isTaxRegistered면 필수) */
+      taxRegistrationDate?: Date;
     } & Rental97CommonFields)
   | ({ type: "rental_97_4";
       /** D2-04 — 임대개시일 당시 기준시가 합계 (소령 §167의3①2호 가목·다목 한도) */

@@ -21,6 +21,7 @@ function reduction(over: Record<string, unknown> = {}): AssetReductionForm {
     registrationDate: "2015-03-02",
     rentalStartDate: "2016-01-05", // 취득일보다 늦다 → 안분 필요
     isTaxRegistered: true,
+    taxRegistrationDate: "2015-03-02", // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
     rentIncreaseViolationMode: "none",
     rentalContinuesToTransfer: true,
     hasVacancyOverGrace: false,
@@ -91,6 +92,7 @@ describe("§97의3⑤ 안분 기준시가 — ⑧ 검증", () => {
       rentalStartDate: "2015-01-05",
       rentalContinuesToTransfer: false,
       stdPriceAtRentalEnd: "700,000,000",
+      rentalEndDate: "2026-01-01", // §97의3①1호 — 조기 종료면 종점 필수 (2026-11-01)
     });
     expect(issue?.message).toMatch(MSG);
   });

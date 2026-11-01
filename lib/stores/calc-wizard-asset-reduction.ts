@@ -252,6 +252,8 @@ export type RentalReductionFormVariant =
       isConvertedFromShortTerm: boolean;
       /** D2-07 — §97의3① 「민간건설임대주택」 한정 (2023.1.1 이후 등록분에만 요구) */
       isPrivateConstructionRental: boolean;
+      /** 조특령 §97의3④ — 세무서 사업자등록일 (YYYY-MM-DD). 사업자등록 확인 시 필수 — 임대개시 기산의 한 축 */
+      taxRegistrationDate: string;
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_4";

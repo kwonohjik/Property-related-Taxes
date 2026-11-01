@@ -138,6 +138,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       isNationalHousingScale: false,
       isConvertedFromShortTerm: false,
       isPrivateConstructionRental: false, // D2-07 — 확인 토글
+      taxRegistrationDate: "", // 조특령 §97의3④ — 임대개시 기산의 한 축
     };
   }
   if (id === "rental_97_4") {

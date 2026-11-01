@@ -93,6 +93,9 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         // D9-07 — propertyType(아파트 여부)·rentalHousingType은 evaluateRental973이
         // 읽지 않으므로 엔진 입력에 싣지 않는다. 「엔진 입력은 엔진이 읽는 것만 담는다」.
         isConvertedFromShortTerm: r.isConvertedFromShortTerm,
+        // §97의3①1호 종점 · 조특령 §97의3④ 사업자등록일 (§97의5와 같은 축). ⚠️ 명시 매핑.
+        rentalEndDate: r.rentalEndDate,
+        taxRegistrationDate: r.taxRegistrationDate,
       };
     case "rental_97_4":
       // D2-04 — 종전에는 region만 넘겨 기준시가 한도를 판정할 입력이 없었다.

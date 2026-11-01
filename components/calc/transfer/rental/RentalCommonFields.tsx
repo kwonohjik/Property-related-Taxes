@@ -71,8 +71,13 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
    *    (`CompanionAcquisitionCauseSection`이 같은 결함을 이미 고쳤다).
    */
   const uid = useId();
-  /** §97의5 — 임대 종료일 입력·안분 분모 생략 분기 (조특법 §97의5①2호 · 조특령 §97의5②) */
+  /** §97의5 — 안분 분모 생략 분기 (조특령 §97의5② — 계속 임대면 비율 1) */
   const is975 = fieldType === "rental_97_5";
+  /**
+   * 임대 종료일(종점)·1년 재증액 안내를 쓰는 조문 — §97의5①2호·§97의3①1호 「10년 이상 계속하여 임대한 후 양도」,
+   * 조특령 §97의3③1호 후단(§97의5는 ①3호로 준용). 두 평가기만 이 값을 읽는다.
+   */
+  const usesEndDateAndInterval = fieldType === "rental_97_5" || fieldType === "rental_97_3";
   const graceLabel = vacancyGraceMonths === 3 ? "3개월" : "6개월";
   const graceBasis =
     vacancyGraceMonths === 3
@@ -137,8 +142,8 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
       <ToneCard tone="violet" sectionNum={sec3} title="임대료 증액 제한 (§97의3①2호)" bodyClassName="space-y-2">
         <div>
           <p className="text-xs text-muted-foreground mb-1.5">임대료 5% 증액 위반 이력</p>
-          {/* §97의5 — 조특령 §97의3③1호 후단(1년 이내 재증액 금지)도 엔진이 계약 이력으로 판정한다 */}
-          {is975 && (
+          {/* §97의3·§97의5 — 조특령 §97의3③1호 후단(1년 이내 재증액 금지)도 엔진이 계약 이력으로 판정한다 */}
+          {usesEndDateAndInterval && (
             <p className="mb-1.5 text-micro text-muted-foreground">
               조특령 §97의3③1호 — 5% 이내라도 직전 계약(증액)일로부터 1년 이내(다음 해 같은 날까지)에 올렸다면 위반입니다.
               이 경우 「있음」을 고르고 계약 이력을 입력하세요.
@@ -343,8 +348,8 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
 
           {value.rentalContinuesToTransfer === false && (
             <div className="mt-2 border-t border-violet-200 pt-2">
-              {/* §97의5①2호 — 10년 계속 임대 판정의 종점. §97의5 엔진만 읽으므로 그 조문에서만 묻는다. */}
-              {is975 && (
+              {/* §97의5①2호·§97의3①1호 — 임대기간 판정의 종점. 두 평가기만 읽으므로 그 조문에서만 묻는다. */}
+              {usesEndDateAndInterval && (
                 <div className="mb-2">
                   <label className="mb-1 block text-xs font-medium">임대 종료일</label>
                   <DateInput
@@ -353,7 +358,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
                     onChange={(v) => onChange({ rentalEndDate: v })}
                   />
                   <p className="mt-1 text-micro text-muted-foreground">
-                    실제 임대기간의 마지막 날 — 10년 계속 임대 요건은 이 날까지로 판정합니다 (§97의5①2호 「10년 이상 계속하여 임대한 후 양도」).
+                    실제 임대기간의 마지막 날 — 임대기간 요건은 이 날까지로 판정합니다 ({is975 ? "§97의5①2호" : "§97의3①1호"} 「10년 이상 계속하여 임대한 후 양도」).
                   </p>
                 </div>
               )}

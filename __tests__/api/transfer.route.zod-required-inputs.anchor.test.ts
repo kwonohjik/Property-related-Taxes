@@ -119,6 +119,7 @@ const R973 = {
   registrationDate: "2015-01-01",
   rentalStartDate: "2015-01-01",
   isTaxRegistered: true,
+  taxRegistrationDate: "2015-01-01", // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
   rentIncreaseViolated: false,
   officialPriceAtStart: 300_000_000,
   isNationalHousingScale: true,
@@ -183,7 +184,8 @@ describe("감면 — 비우면 400 (종전 200 + 다른 세액)", () => {
 
   it("R6 §97의3 임대 계속 여부 — 🟢 false+B 50,043,333 · true 25,685,000 / 🔴 생략 400 (종전 true로 읽음)", async () => {
     await expectTax(
-      { ...RENTAL, reductions: [{ ...R973, rentalContinuesToTransfer: false, stdPriceAtRentalEnd: 400_000_000 }] },
+      // §97의3①1호 — 조기 종료면 종점 필수: 2025-03-01 (임대 10년 2개월 — 70% 유지)
+      { ...RENTAL, reductions: [{ ...R973, rentalContinuesToTransfer: false, stdPriceAtRentalEnd: 400_000_000, rentalEndDate: "2025-03-01" }] },
       50_043_333,
     );
     await expectTax({ ...RENTAL, reductions: [{ ...R973, rentalContinuesToTransfer: true }] }, 25_685_000);

@@ -246,6 +246,9 @@ export function toEngineReductions(
           rentalHousingType: r.rentalHousingType,
           isConvertedFromShortTerm: r.isConvertedFromShortTerm,
           isPrivateConstructionRental: r.isPrivateConstructionRental, // D2-07
+          // §97의3①1호 — 조기 종료 시 임대기간 종점 · 조특령 §97의3④ 사업자등록일 (§97의5와 같은 조건)
+          ...(r.rentalContinuesToTransfer === false && r.rentalEndDate ? { rentalEndDate: r.rentalEndDate } : {}),
+          ...(r.isTaxRegistered && r.taxRegistrationDate ? { taxRegistrationDate: r.taxRegistrationDate } : {}),
         };
       }
       if (r.type === "rental_97_4") {

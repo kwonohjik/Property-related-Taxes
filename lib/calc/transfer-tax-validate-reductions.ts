@@ -325,8 +325,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (r.type === "rental_97_5" && (r.isPurchaseRental === null || r.isPurchaseRental === undefined))
             return fail(fieldError(`reduction.${r.type}.isPurchaseRental`, `${label} 적용: 임대주택 취득 유형(매입임대/건설임대)을 선택하세요 (§97의5①1호).`));
           // 조특령 §97의5③ — 사업자등록을 확인했으면 그 날짜가 임대개시 기산의 한 축이다(엔진 MISSING_TAX_REGISTRATION_DATE)
-          if (r.type === "rental_97_5" && r.isTaxRegistered && !r.taxRegistrationDate)
-            return fail(fieldError(`reduction.${r.type}.taxRegistrationDate`, `${label} 적용: 세무서 사업자등록일을 입력하세요 (조특령 §97의5③ — 늦으면 그날부터 임대 개시).`));
+          if ((r.type === "rental_97_5" || r.type === "rental_97_3") && r.isTaxRegistered && !r.taxRegistrationDate)
+            return fail(fieldError(`reduction.${r.type}.taxRegistrationDate`, `${label} 적용: 세무서 사업자등록일을 입력하세요 (조특령 ${r.type === "rental_97_5" ? "§97의5③" : "§97의3④"} — 늦으면 그날부터 임대 개시).`));
           // 3-state: "" = 미선택 → 차단 (간소화 모드 명시 선택 강제)
           if (r.rentIncreaseViolationMode === "")
             return fail(fieldError(`reduction.${r.type}.rentIncreaseViolationMode`, `${label} 적용: 임대료 5% 증액 위반 이력 여부(없음/있음)를 선택하세요.`));
@@ -421,13 +421,16 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               ));
             // §97의5①2호 — 조기 종료면 10년 판정의 종점(임대 종료일)이 필수. 엔진 `MISSING_RENTAL_END_DATE`·
             // `INVALID_RENTAL_END_DATE`와 같은 조건이다(YYYY-MM-DD 문자열 비교).
-            if (r.type === "rental_97_5" && r.rentalContinuesToTransfer === false) {
+            if ((r.type === "rental_97_5" || r.type === "rental_97_3") && r.rentalContinuesToTransfer === false) {
               const end = r.rentalEndDate || "";
               if (!end)
-                return fail(fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: 양도 전에 임대를 종료했으면 임대 종료일을 입력하세요 (§97의5①2호 — 10년 계속 임대 판정의 종점).`));
-              const start = (r.registrationDate || "") > (r.rentalStartDate || "") ? r.registrationDate : r.rentalStartDate;
+                return fail(fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: 양도 전에 임대를 종료했으면 임대 종료일을 입력하세요 (${r.type === "rental_97_5" ? "§97의5①2호" : "§97의3①1호"} — 임대기간 판정의 종점).`));
+              // 엔진 기산일과 같은 축 — 임대개시일·등록일·사업자등록일 중 늦은 날 (YYYY-MM-DD 문자열 max)
+              const start = [r.rentalStartDate, r.registrationDate, r.isTaxRegistered ? r.taxRegistrationDate : ""]
+                .filter((d): d is string => !!d)
+                .reduce((a, b) => (b > a ? b : a), "");
               if ((start && end < start) || (form.transferDate && end > form.transferDate))
-                return fail(fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: 임대 종료일은 임대개시일(등록일이 늦으면 등록일)과 양도일 사이여야 합니다.`));
+                return fail(fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: 임대 종료일은 임대개시일(등록일·사업자등록일이 늦으면 그날)과 양도일 사이여야 합니다.`));
             }
             /**
              * Q10 — 분모의 두 시점(E 취득당시 · D 양도당시). 감면-수준 override 또는

@@ -156,6 +156,10 @@ export const reductionSchema = z.discriminatedUnion("type", [
     type: z.literal("rental_97_3"),
     /** D2-07 — §97의3① 「민간건설임대주택」 한정 (2023.1.1 이후 등록분) */
     isPrivateConstructionRental: z.boolean().optional(),
+    /** §97의3①1호 — 양도 전 임대 종료 시 임대기간 종점. ⑫에 없으면 침묵 stripping된다. */
+    rentalEndDate: z.string().date().optional(),
+    /** 조특령 §97의3④ — 세무서 사업자등록일 */
+    taxRegistrationDate: z.string().date().optional(),
     /** @deprecated Phase 1 stub 호환 */
     rentalYears: z.number().int().nonnegative().optional(),
     /** @deprecated Phase 1 stub 호환 */

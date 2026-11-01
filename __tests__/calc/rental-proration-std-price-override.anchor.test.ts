@@ -19,6 +19,7 @@ const BASE = {
   registrationDate: new Date("2015-03-02"),
   rentalStartDate: new Date("2016-01-05"), // 취득일보다 늦다 → 안분 필요
   isTaxRegistered: true,
+  taxRegistrationDate: new Date("2015-03-02"), // 조특령 §97의3④·§97의5③ 사업자등록일 (등록일과 같게)
   rentIncreaseViolated: false,
   rentalContinuesToTransfer: true,
   officialPriceAtStart: 400_000_000,

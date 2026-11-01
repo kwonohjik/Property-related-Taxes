@@ -193,7 +193,7 @@ const dateRows = (label: string): Row[] => [
   { name: "등록일", prop: "registrationDate", message: new RegExp(`^${label} 적용: 임대사업자 등록일`), patch: { registrationDate: "" } },
 ];
 
-const r973Ok = { ...rentalBase, isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };
+const r973Ok = { ...rentalBase, taxRegistrationDate: "2019-06-01", isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };
 const RENTAL_97_3 = table("rental_97_3", hybrid("rental_97_3"), r973Ok, {}, [
   ...dateRows("§97의3"),
   ...commonRows("§97의3", "3개월"),
@@ -204,6 +204,8 @@ const RENTAL_97_3 = table("rental_97_3", hybrid("rental_97_3"), r973Ok, {}, [
   { name: "임대개시 당시 기준시가", prop: "officialPriceAtStart", message: /^§97의3 적용: 임대개시일 당시 기준시가\(주택\+부속토지 합계\)/, patch: { officialPriceAtStart: "" } },
   { name: "임대 계속 여부", prop: "rentalContinuesToTransfer", message: /^§97의3 적용: 임대가 양도일까지 계속되었는지/, patch: { rentalContinuesToTransfer: null } },
   { name: "임대 종료일 기준시가", prop: "stdPriceAtRentalEnd", message: /^§97의3 적용: 임대 종료일 당시 기준시가/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "" } },
+  { name: "임대 종료일", prop: "rentalEndDate", message: /^§97의3 적용: 양도 전에 임대를 종료했으면 임대 종료일/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "200000000", rentalEndDate: "" } },
+  { name: "세무서 사업자등록일", prop: "taxRegistrationDate", message: /^§97의3 적용: 세무서 사업자등록일을 입력/, patch: { taxRegistrationDate: "" } },
   { name: "안분 취득 당시 기준시가", prop: "stdPriceAtAcquisition", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtAcquisition: "" } },
   { name: "안분 양도 당시 기준시가", prop: "stdPriceAtTransfer", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtTransfer: "" } },
 ]);

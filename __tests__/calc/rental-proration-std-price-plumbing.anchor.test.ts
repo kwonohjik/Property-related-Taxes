@@ -16,6 +16,7 @@ function form(over: Record<string, unknown> = {}): AssetReductionForm {
     registrationDate: "2015-03-02",
     rentalStartDate: "2016-01-05",
     isTaxRegistered: true,
+    taxRegistrationDate: "2015-03-02",
     rentIncreaseViolationMode: "",
     rentHistory: [],
     hasVacancyOverGrace: false,

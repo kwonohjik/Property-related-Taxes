@@ -48,6 +48,7 @@ const R973 = {
   registrationDate: D("2018-08-01"),
   rentalStartDate: D("2018-09-01"),
   isTaxRegistered: true,
+  taxRegistrationDate: D("2018-08-01"), // 조특령 §97의3④ 사업자등록일
   officialPriceAtStart: 600_000_000,
   stdPriceAtRentalStart: 600_000_000,
   isNationalHousingScale: true,
