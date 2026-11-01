@@ -48,6 +48,8 @@ import { reverseAppurtenantHouseAssetId } from "./reverse-appurtenant-house";
 import {
   ownershipRatioError,
   formatOwnershipPercent,
+  isFractionalRatioStr,
+  isOwnershipRatioBlank,
 } from "./transfer-tax-api-asset-basics";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 import { calcGiftHouseholdFactAsked } from "./gift-household-payload";
@@ -115,6 +117,23 @@ export function getAssetDateOrderError(
  *
  * collectStepIssues(transfer-tax-validate.ts)가 자산별로 호출해 일괄 수집한다.
  */
+/**
+ * 지분 분할 모드인데 축 B를 이루지 못한 묶음(지분 100%·빈칸 등) — 양도가액·기준시가·① 기본정보 칸은 화면에 없다.
+ * 칸별 검사(`validateAssetEntry`)는 그 칸을 요구해 사용자가 풀 수 없으므로 지분 칸 오류만 낸다(`fractionalModeShareIssue`).
+ */
+export function isFractionalModeWithoutBundle(form: Pick<TransferFormData, "assets" | "assetSplitMode">): boolean {
+  return form.assetSplitMode === "fractional" && form.assets.length > 1 && !isFullFractionalBundle(form.assets, form.assetSplitMode);
+}
+
+/** 그 묶음의 지분 칸 오류. 빈칸은 null — 「공유 지분율을 입력하세요」 전용 검사가 맡는다. */
+export function fractionalModeShareIssue(a: AssetForm, index: number): string | null {
+  if (isOwnershipRatioBlank(a)) return null;
+  const message =
+    ownershipRatioError(a.ownershipNumerator, a.ownershipDenominator) ??
+    (isFractionalRatioStr(a.ownershipNumerator, a.ownershipDenominator) ? null : "지분 분할은 각 지분이 100% 미만이어야 합니다.");
+  return message ? fieldError("ownershipNumerator", `자산 ${index + 1}: ${message}`) : null;
+}
+
 export function validateAssetEntry(
   a: AssetForm,
   index: number,
