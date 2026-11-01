@@ -170,3 +170,27 @@ describe("크로스 통산 — 부분 비사업용 자산은 파트 행으로 �
     expect(recalc(sep50())).toBe(396_484_000);
   });
 });
+
+describe("표시 — 세율군 줄과 자산별 산출세액 문구", () => {
+  const lineOf = (r: ReturnType<typeof agg>) =>
+    Object.fromEntries(r.groupTaxes.map((g) => [g.group, [g.groupIncomeAmount, g.groupTaxBase, g.groupCalculatedTax]]));
+
+  it("세율군 줄이 분리 신고와 같다 — 일반 차손 3억: 일반 246,000,000 · 73,540,000 / 비사업용 546,000,000 · 247,980,000", () => {
+    const merged = aggUsed([["A", part50()], ["Z", landLoss3()]]);
+    expect(lineOf(merged)).toEqual({
+      progressive: [246_000_000, 246_000_000, 73_540_000],
+      non_business_land: [546_000_000, 546_000_000, 247_980_000],
+    });
+    expect(lineOf(merged)).toEqual(lineOf(aggUsed([...sep50(), ["Z", landLoss3()]])));
+    expect(merged.calculatedTaxByGroups).toBe(321_520_000);
+  });
+
+  it("차손 없이 자산 1건 — 파트 소득과 파트 기본공제가 세율군 줄로 갈린다", () => {
+    expect(lineOf(agg([["A", part50()]]))).toEqual(lineOf(agg(sep50())));
+  });
+
+  it("산출세액 문구는 통산 후 파트 세액이다 — 비사업용 247,980,000 + 그 외 73,540,000", () => {
+    const note = aggUsed([["A", part50()], ["Z", landLoss3()]]).properties.find((p) => p.propertyId === "A")?.shortTermNote;
+    expect(note).toContain("비사업용 247,980,000 + 그 외 73,540,000");
+  });
+});

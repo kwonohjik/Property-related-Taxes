@@ -75,22 +75,21 @@ describe("§104①8호 버킷 echo (C-2 / 2-1)", () => {
     expect(r.clause8Tax).toBe(0);
   });
 
-  it("A-3: ⭐ **부분 비사토** — 그룹과 8호 버킷이 갈린다 (그룹으로 대신할 수 없는 이유)", () => {
+  it("A-3: ⭐ **부분 비사토** — 8호 버킷에는 8호 파트만 들어간다", () => {
     const r = agg([
       land("A", 300_000_000, { nonBusinessLandAreaRatio: 0.5 } as Partial<TransferTaxItemInput>),
       land("B", 300_000_000),
     ]);
     const g = groupOf(r, "non_business_land")!;
-    // 그룹 = 8호 파트 + 1호 파트
-    expect(g.groupTaxBase).toBe(492_000_000);
-    // 8호 버킷만 = 순수 비사토 246,000,000 + 부분 비사토의 8호 파트 123,000,000
+    // 비사업용 세율군 줄도 8호 파트까지다(1호 파트는 일반 줄).
+    expect(g.groupTaxBase).toBe(369_000_000);
+    // 8호 버킷 = 순수 비사토 246,000,000 + 부분 비사토의 8호 파트 123,000,000
     expect(r.clause8TaxBase).toBe(369_000_000);
-    expect(r.clause8TaxBase).not.toBe(g.groupTaxBase);
     // 369,000,000 × 50% − 25,940,000 = 158,560,000
     expect(r.clause8Tax).toBe(158_560_000);
-    // 그룹 세액 = 8호 버킷 158,560,000 + 1호 버킷(123,000,000 × 35% − 15,440,000 = 27,610,000)
-    expect(g.groupCalculatedTax).toBe(186_170_000);
-    expect(g.groupCalculatedTax - r.clause8Tax).toBe(27_610_000);
+    expect(g.groupCalculatedTax).toBe(158_560_000);
+    // 일반 줄 = 1호 파트(123,000,000 × 35% − 15,440,000 = 27,610,000)
+    expect(r.calculatedTaxByGroups - g.groupCalculatedTax).toBe(27_610_000);
   });
 
   it("A-4: **단기(1~2년) 비사토는 제외**한다 (G-2 좁은 해석)", () => {

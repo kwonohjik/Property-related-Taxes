@@ -572,7 +572,8 @@ export function computeAggregateOnce(
       filingDelayedPenaltyTax: r.result.isExempt ? 0 : r.result.penaltyDetail?.totalPenalty ?? 0,
       penaltyDetail: r.result.penaltyDetail,
       steps: r.result.steps,
-      shortTermNote: r.result.shortTermNote,
+      // 파트가 있는 자산의 문구는 1패스 단건 값이 아니라 통산·기본공제를 반영한 재계산 값이다.
+      shortTermNote: partAssetTax ? partAssetTax.note : r.result.shortTermNote,
     };
   });
 

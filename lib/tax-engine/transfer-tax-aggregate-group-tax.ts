@@ -334,6 +334,21 @@ export function aggregateByGroup(
   });
 
   /**
+   * 세율군 표시 — 부분 비사업용 토지의 사업용 파트는 비사업용 세율군이 아니다(분리 신고와 같은 줄에 싣는다).
+   * 표시 전용이다 — 호 버킷과 세액은 이 분류를 읽지 않고, `rateGroup`(통산·기본공제 축)도 그대로다.
+   */
+  const unitGroupOf = (u: ClausePart): RateGroup =>
+    u.partKind === "land" &&
+    records[u.assetIdx].rateGroup === "non_business_land" &&
+    hasPartialNonBusinessLand(records[u.assetIdx].correctedSingleInput)
+      ? "progressive"
+      : records[u.assetIdx].rateGroup;
+  const splitGroupAssets = new Set(units.filter((u) => unitGroupOf(u) !== records[u.assetIdx].rateGroup).map((u) => u.assetIdx));
+  for (const i of splitGroupAssets) groupMap.set("progressive", [...(groupMap.get("progressive") ?? []), i]);
+  const partKindInGroup = (i: number, group: RateGroup): SplitRatePart["kind"] | undefined =>
+    splitGroupAssets.has(i) ? (group === "non_business_land" ? "non_business_land" : "land") : undefined;
+
+  /**
    * 버킷 식별자 — `clauseBucketKey`(`short_term` 분기·`computeSplitPartTax`와 **같은 규약**)에
    * **분양권 구분자**를 더한다.
    *
@@ -398,7 +413,7 @@ export function aggregateByGroup(
     // 🔒 **식별자가 정확히 `"104-1-8"`인 버킷만** 잡는다(계획서 §5-B **G-2 — 좁은 해석**). 단기(1~2년)
     //   비사토는 후보가 `{104-1-2, 104-1-8}`이라 키가 `"104-1-2+104-1-8|…"`다. 그것까지 8호로 묶으면 세율이
     //   8호 표로 바뀌어 **세액이 오르고** §104⑤2호 단서와도 충돌 소지가 있다 ⇒ 「법 근거 없이 불리 적용 금지」.
-    // ⚠️ 세율군 세액으로 대신할 수 없다 — **부분 비사업용 토지**는 한 자산이 8호 파트와 1호 파트로 갈린다.
+    // ⚠️ 세율군 세액으로 대신할 수 없다 — 세율군은 표시 축이고 호 버킷이 세액 축이다.
     if (id === "104-1-8") {
       clause8TaxBase += bucketBase;
       clause8Tax += bucketTax;
@@ -410,7 +425,7 @@ export function aggregateByGroup(
 
     const baseByGroup = new Map<RateGroup, number>();
     for (const p of members) {
-      const g = records[p.assetIdx].rateGroup;
+      const g = unitGroupOf(p);
       baseByGroup.set(g, (baseByGroup.get(g) ?? 0) + p.taxBase);
     }
     for (const [g, share] of allocateBucketTax(bucketTax, bucketBase, baseByGroup)) {
@@ -420,7 +435,7 @@ export function aggregateByGroup(
         bucketBase,
         bucketRate,
         groupBase: baseByGroup.get(g)!,
-        rep: members.find((p) => records[p.assetIdx].rateGroup === g)!,
+        rep: members.find((p) => unitGroupOf(p) === g)!,
       });
       groupTouched.set(g, touched);
     }
@@ -428,18 +443,26 @@ export function aggregateByGroup(
 
   const out: GroupTaxResult[] = [];
   for (const [group, idxList] of groupMap) {
-    const groupGrossGain = idxList
-      .filter((i) => records[i].income > 0)
-      .reduce((s, i) => s + records[i].income, 0);
-    const groupGrossLoss = idxList
-      .filter((i) => records[i].income < 0)
-      .reduce((s, i) => s + Math.abs(records[i].income), 0);
-    const groupIncomeAmount = idxList.reduce((s, i) => s + incomeAfterOffset[i], 0);
-    const groupBasicDeduction = idxList.reduce((s, i) => s + allocatedBasic[i], 0);
+    const grossOf = (i: number) => {
+      const kind = partKindInGroup(i, group);
+      return kind ? (records[i].lossParts?.find((p) => p.kind === kind)?.income ?? 0) : records[i].income;
+    };
+    const incomeOf = (i: number) => {
+      const kind = partKindInGroup(i, group);
+      return kind ? (assetPartIncome[i][kind] ?? 0) : incomeAfterOffset[i];
+    };
+    const basicOf = (i: number) => {
+      const kind = partKindInGroup(i, group);
+      return kind ? (assetPartBasic[i][kind] ?? 0) : allocatedBasic[i];
+    };
+    const groupGrossGain = idxList.reduce((s, i) => s + Math.max(0, grossOf(i)), 0);
+    const groupGrossLoss = idxList.reduce((s, i) => s + Math.max(0, -grossOf(i)), 0);
+    const groupIncomeAmount = idxList.reduce((s, i) => s + incomeOf(i), 0);
+    const groupBasicDeduction = idxList.reduce((s, i) => s + basicOf(i), 0);
     const groupTaxBase = Math.max(0, groupIncomeAmount - groupBasicDeduction);
     const groupCalculatedTax = groupTax.get(group) ?? 0;
     const touched = groupTouched.get(group) ?? [];
-    const groupParts = units.filter((p) => records[p.assetIdx].rateGroup === group);
+    const groupParts = units.filter((p) => unitGroupOf(p) === group);
 
     let appliedRate: number;
     let surchargeRate: number | undefined;
