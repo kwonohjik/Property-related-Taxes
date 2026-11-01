@@ -8,9 +8,15 @@
  * 🔑 판정을 다시 쓰지 않는다 — 단서만 뺀 입력으로 정본 술어를 그대로 부른다.
  */
 import { TRANSFER } from "../legal-codes";
+import { RENTAL_4HO_REASON, rental4hoLegalBasis } from "./rental-registration-4ho";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { meetsOneHouseHoldingResidence, PROVISO_LABEL, type ExemptionReqInput } from "../transfer-tax-exemption-requirements";
 import type { OneHouseAppliedException } from "./types";
+
+/** §154① 단서 근거 — 삭제된 4호는 현행 §154①이 아니라 종전 규정 + 경과조치 부칙이 근거다(OH-38). */
+export function provisoLegalBasis(reason: string, transferDate: Date): string {
+  return reason === RENTAL_4HO_REASON ? rental4hoLegalBasis(transferDate) : TRANSFER.ONE_HOUSE_REQUIREMENT;
+}
 
 /**
  * 호출부는 정본이 **참**인 것을 확인한 뒤 부른다(이 함수는 「단서 없이도 참인가」만 본다).
@@ -23,5 +29,5 @@ export function decisiveProvisoException(
   const reason = input.oneHouseExemptionProviso?.reason;
   if (!reason) return undefined;
   if (meetsOneHouseHoldingResidence({ ...input, oneHouseExemptionProviso: undefined }, rule)) return undefined;
-  return { id: `154-1-proviso:${reason}`, label: `§154① 단서 ${PROVISO_LABEL[reason]}`, legalBasis: TRANSFER.ONE_HOUSE_REQUIREMENT };
+  return { id: `154-1-proviso:${reason}`, label: `§154① 단서 ${PROVISO_LABEL[reason]}`, legalBasis: provisoLegalBasis(reason, input.transferDate) };
 }

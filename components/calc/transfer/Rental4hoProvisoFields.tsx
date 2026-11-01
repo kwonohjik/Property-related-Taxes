@@ -14,6 +14,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { rental4hoFieldScope, type Rental4hoFormSlice } from "@/lib/calc/rental-4ho-proviso";
+import type { ProvisoMode } from "@/lib/calc/transfer-tax-api-helpers";
 
 type Fields = Omit<Rental4hoFormSlice, "transferDate">;
 type Status = Exclude<Fields["proviso4hoStatus"], "">;
@@ -21,6 +22,7 @@ type YesNo = "yes" | "no";
 
 interface Props {
   value: Partial<Rental4hoFormSlice>;
+  mode: ProvisoMode;
   onChange: (patch: Partial<Fields>) => void;
 }
 
@@ -62,7 +64,7 @@ const yesNoOptions = (prefix: string, yes: string, no: string): RadioCardOption<
   { value: "no", label: no, testId: `${prefix}-no` },
 ];
 
-export function Rental4hoProvisoFields({ value, onChange }: Props) {
+export function Rental4hoProvisoFields({ value, mode, onChange }: Props) {
   const scope = rental4hoFieldScope({
     transferDate: value.transferDate ?? "",
     proviso4hoStatus: value.proviso4hoStatus ?? "",
@@ -74,6 +76,11 @@ export function Rental4hoProvisoFields({ value, onChange }: Props) {
         2020년 2월 11일 이후 양도는 2019년 12월 16일 이전에 두 등록을 모두 신청한 경우에만 적용됩니다
         (대통령령 제30395호 부칙 제38조). 거주요건만 면제되고 보유 2년은 필요합니다.
       </p>
+      {mode === "temporary_two_house" && (
+        <p className="text-caption text-violet-700 dark:text-violet-300" data-testid="proviso-4ho-temp-limits">
+          일시적 2주택은 종전 주택 취득 후 1년이 지나 신규 주택을 취득한 요건과 처분기한은 그대로 봅니다(부동산납세과-1321).
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <FieldCard field="proviso4hoBusinessRegDate" label="사업자등록 신청일" required hint="세무서 — 소득세법 §168①">
           <div data-testid="proviso-4ho-business-date">
@@ -87,7 +94,7 @@ export function Rental4hoProvisoFields({ value, onChange }: Props) {
           field="proviso4hoRentalRegDate"
           label="임대사업자 등록 신청일"
           required
-          hint="시·군·구 — 민간임대주택법 §5①. 분양권 상태에서 신청한 경우도 포함됩니다. 지위를 포괄승계했다면 최초 신청일"
+          hint="시·군·구 — 민간임대주택법 §5①. 분양권 상태에서 신청한 경우도 포함됩니다. 지위를 포괄승계했다면 최초 신청일 — 2019년 12월 17일 이후 매매로 넘겨받은 경우는 적용 여부를 정한 해석례가 없어 확인이 필요합니다"
         >
           <div data-testid="proviso-4ho-rental-date">
             <DateInput

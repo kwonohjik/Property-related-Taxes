@@ -84,3 +84,58 @@ test.describe("판정 메뉴 — 삭제 전 §154①4호 임대사업자 등록"
     await expect(page.getByTestId("one-house-judgment-result")).toHaveCount(0);
   });
 });
+
+/** 부동산납세과-1321 사실 — 강남 2019-02-01 취득 · 거주 0 · 신규 2022-03-01(경남) · 2023-03-20 양도 · 10억 */
+async function seedTempTwoHouse(page: Page) {
+  await gotoJudgmentHoldingsStep(page, {
+    transferDate: "2023-03-20",
+    contractTotalPrice: "1000000000",
+    wasRegulatedAtAcquisition: true,
+    assets: [
+      {
+        assetKind: "housing",
+        acquisitionDate: "2019-02-01",
+        regionCode: "1168010100",
+        addressJibun: "서울특별시 강남구 테스트동 1",
+        residenceInputMode: "direct",
+        residencePeriodMonthsAsset: "0",
+      },
+    ],
+    houses: [
+      {
+        id: "h1",
+        region: "non_capital",
+        regionCode: "4682025021",
+        acquisitionOrigin: "general",
+        acquisitionDate: "2022-03-01",
+        officialPrice: "100000000",
+        isInherited: false,
+        isLongTermRental: false,
+        isApartment: false,
+        isOfficetel: false,
+        isUnsoldHousing: false,
+      },
+    ],
+  });
+}
+
+test.describe("판정 메뉴 — 일시적 2주택 × 삭제 전 §154①4호", () => {
+  test("[R4-T1] ★ 4호 칸 입력 → 비과세 · 사유를 고르지 않으면 과세 + 고지", async ({ page }) => {
+    await seedTempTwoHouse(page);
+    await judge(page);
+    await expect(page.getByTestId("one-house-verdict")).toHaveText("과세");
+    await expect(page.getByText(/입력하지 않아 이 경과조치는 판정하지 않았습니다/).first()).toBeVisible();
+
+    await seedTempTwoHouse(page);
+    const group = page.getByTestId("sale-house-specials");
+    await group.getByTestId("proviso-reason-rental_4ho").click();
+    await expect(group.getByTestId("proviso-4ho-temp-limits")).toBeVisible();
+    await fillDateAndVerify(page, { year: "2019", month: "03", day: "01" }, { scope: group.getByTestId("proviso-4ho-business-date") });
+    await fillDateAndVerify(page, { year: "2019", month: "03", day: "01" }, { scope: group.getByTestId("proviso-4ho-rental-date") });
+    await group.getByTestId("proviso-4ho-regulated-one-house-yes").click();
+    await group.getByTestId("proviso-4ho-status-auto_cancelled").click();
+    const body = await judge(page);
+    expect((body.oneHouseExemptionProviso as { reason: string }).reason).toBe("rental_registration_4ho");
+    await expect(page.getByTestId("one-house-verdict")).toHaveText("비과세");
+  });
+});

@@ -259,13 +259,13 @@ describe("P ⑭ route — §154① 단서 사유가 엔진에 닿는다", () => 
     expect(three).not.toHaveProperty("oneHouseExemptionProviso");
   });
 
-  it("P-5 ④ 일시적 2주택 맥락 — 1·2가·3호만 싣는다(4호는 1주택 맥락 전용)", () => {
+  it("P-5 ④ 일시적 2주택 맥락 — 삭제 전 4호·3호를 싣는다(부동산납세과-1321)", () => {
     const tt = { previousAcquisitionDate: new Date("2018-03-01"), newAcquisitionDate: new Date("2020-06-01") };
     const four = buildGiftBurdenedTransferBody(
       giftItem({ ...REGULATED_BGT, ...FOUR_HO, householdHousingCount: 2, temporaryTwoHouse: tt } as Partial<BurdenedGiftTransferTaxInput>),
       giftForm("2021-06-01"),
     );
-    expect(four).not.toHaveProperty("oneHouseExemptionProviso");
+    expect((four as { oneHouseExemptionProviso: { reason: string } }).oneHouseExemptionProviso.reason).toBe("rental_registration_4ho");
     const unav = buildGiftBurdenedTransferBody(
       giftItem({ ...REGULATED_BGT, provisoReason: "unavoidable", householdHousingCount: 2, temporaryTwoHouse: tt } as Partial<BurdenedGiftTransferTaxInput>),
       giftForm("2021-06-01"),

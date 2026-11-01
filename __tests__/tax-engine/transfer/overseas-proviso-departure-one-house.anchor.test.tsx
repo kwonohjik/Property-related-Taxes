@@ -94,6 +94,7 @@ describe("⑤ 입력 카드", () => {
     provisoBusinessApprovalDate: "",
     provisoRentalLeaseResidenceMonths: "",
     provisoPreContractNoHouse: false,
+    rental4ho: {},
     mode: "one_house" as const,
   };
   it("나·다목이면 질문이 뜨고 고른 값을 돌려준다 · 다른 사유면 없다", () => {

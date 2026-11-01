@@ -380,7 +380,7 @@ export const ONE_HOUSE_FIELD_CATALOG_TOP = [
       { value: "rental_registration_4ho", label: "임대사업자 등록 (4호 — 2020.2.11. 삭제 전)" },
     ],
     label: "§154① 단서 — 보유·거주 요건 면제 사유 (선택)",
-    hint: "보유 2년(조정취득 시 거주 2년)에 못 미쳐도 비과세되는 사유. 일시적 2주택 종전주택이면 1호·2호가목·3호만 적용된다. 사유가 없으면 비움.",
+    hint: "보유 2년(조정취득 시 거주 2년)에 못 미쳐도 비과세되는 사유. 일시적 2주택 종전주택이면 1호·2호가목·3호와 5호·삭제 전 4호(거주요건만 면제)를 적용한다. 사유가 없으면 비움.",
   },
   {
     path: "provisoDepartureDate",
@@ -440,7 +440,7 @@ export const ONE_HOUSE_FIELD_CATALOG_TOP = [
     path: "proviso4hoRentalRegDate",
     kind: "date",
     label: "임대사업자 등록 신청일",
-    hint: "시·군·구 임대사업자 등록 신청일(민간임대주택법 §5①). 분양권 상태에서 신청한 경우 포함, 지위를 포괄승계했다면 최초 신청일.",
+    hint: "시·군·구 임대사업자 등록 신청일(민간임대주택법 §5①). 분양권 상태에서 신청한 경우 포함, 지위를 포괄승계했다면 최초 신청일(2019.12.17. 이후 매매로 넘겨받은 경우는 해석례가 없어 확인 필요).",
     when: "provisoReason = rental_registration_4ho",
   },
   {

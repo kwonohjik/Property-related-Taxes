@@ -3,7 +3,7 @@
  *
  * ── F-39 `lib/legal-verification/coverage-collect.ts` `MODULES` 가 8개로 고정돼 있다
  *    `lib/tax-engine/legal-codes/` 에는 파일이 15개인데 수집기는 8개만 import 한다.
- *    `transfer.ts` 가 `transfer-nbl`·`transfer-house` 를 `export *` 로 재수출하므로 그 둘은 구제되지만,
+ *    `transfer.ts` 가 `transfer-nbl`·`transfer-house`·`transfer-one-house` 를 `export *` 로 재수출하므로 그 둘은 구제되지만,
  *    나머지는 수집 대상 밖이다 — 빠진 조문은 **모수에서도 사라져 uncovered 에도 뜨지 않으므로
  *    게이트가 100% 로 초록불이 된다.**
  *
@@ -62,8 +62,8 @@ describe("F-39 커버리지 수집 모듈 열거 — §1 (수정 전 실패)", (
     expect(guard).not.toContain("expect(MODULES).toHaveLength(8)");
   });
 
-  it("transfer 재수출 목록은 사실 고정 — nbl·house", () => {
-    expect(reExportedByTransfer()).toEqual(["transfer-house", "transfer-nbl"]);
+  it("transfer 재수출 목록은 사실 고정 — nbl·house·one-house", () => {
+    expect(reExportedByTransfer()).toEqual(["transfer-house", "transfer-nbl", "transfer-one-house"]);
   });
 });
 

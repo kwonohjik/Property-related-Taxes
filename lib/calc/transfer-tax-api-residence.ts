@@ -15,7 +15,7 @@ import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./f
 import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
 import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption";
 import { provisoGate, effectiveProvisoReason, buildSameHouseholdInheritancePayload, type ProvisoMode } from "./transfer-tax-api-helpers";
-import { unconfirmedTempTwoHouseProviso5 } from "./exemption-proviso-payload";
+import { unconfirmedTempTwoHouseProviso4ho, unconfirmedTempTwoHouseProviso5 } from "./exemption-proviso-payload";
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
@@ -90,9 +90,12 @@ export function buildResidenceReqInput(
    */
   const provisoMode = calcProvisoMode(form);
   const provisoCandidate = effectiveProvisoReason(provisoMode, form.provisoReason);
-  // F-2 — ④가 버리는 무주택 미확인 5호(일시적 2주택 맥락)는 여기서도 버린다 — 안내와 계산이 같은 사유를 본다.
+  // F-2 — ④가 버리는 무주택 미확인 5호·미완 4호(일시적 2주택 맥락)는 여기서도 버린다 — 안내와 계산이 같은 사유를 본다.
   const effectiveReason = (
-    unconfirmedTempTwoHouseProviso5(provisoMode, provisoCandidate, form.provisoPreContractNoHouse) ? "" : provisoCandidate
+    unconfirmedTempTwoHouseProviso5(provisoMode, provisoCandidate, form.provisoPreContractNoHouse) ||
+    unconfirmedTempTwoHouseProviso4ho(provisoMode, provisoCandidate, form)
+      ? ""
+      : provisoCandidate
   ) as NonNullable<ResidenceReqInput["oneHouseExemptionProviso"]>["reason"] | "";
   // §154⑧3호 동일세대 상속 사실 — ④(`transfer-tax-api.ts`)·판정 메뉴 ④와 **같은 leaf**다(OH-18).
   // 보유 개시일(`decedentCohabitationHoldingStartDate`)까지 같이 싣는다 — 빠지면 거주요건의 「취득 당시」·보유 기산일이

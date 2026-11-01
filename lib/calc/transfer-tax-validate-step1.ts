@@ -271,7 +271,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
    */
 
   // ⑧ §154① 단서 — 사유별 필수 입력. effectiveProvisoReason로 정규화
-  // (카드 숨김·temp-two-house 무효 reason(나·다목·삭제 전 4호)은 검증 skip — Part B/D mirror·데드락 차단)
+  // (카드 숨김·temp-two-house 무효 reason(나·다목)은 검증 skip — Part B/D mirror·데드락 차단)
   const provisoMode = provisoGate({
     isOneHousehold: form.isOneHousehold,
     // OH-20 — 재개발 완공APT도 §89①3호가목 「주택」이다(⑤ Step4 · ④와 같은 술어).

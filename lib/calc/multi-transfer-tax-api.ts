@@ -62,7 +62,7 @@ import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
 import { departureOnlyHousePayload } from "@/lib/calc/exemption-proviso-payload";
-import { unconfirmedTempTwoHouseProviso5 } from "@/lib/calc/exemption-proviso-payload";
+import { unconfirmedTempTwoHouseProviso4ho, unconfirmedTempTwoHouseProviso5 } from "@/lib/calc/exemption-proviso-payload";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
@@ -214,8 +214,10 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     }),
   }).mode;
   const provisoCandidate = effectiveProvisoReason(provisoMode, form.provisoReason);
-  // F-2 — 일시적 2주택 맥락의 무주택 미확인 5호는 싣지 않는다(단건 ④와 같은 leaf).
-  const effectiveProviso = unconfirmedTempTwoHouseProviso5(provisoMode, provisoCandidate, form.provisoPreContractNoHouse)
+  // F-2 — 일시적 2주택 맥락의 무주택 미확인 5호·미완 4호는 싣지 않는다(단건 ④와 같은 leaf).
+  const effectiveProviso =
+    unconfirmedTempTwoHouseProviso5(provisoMode, provisoCandidate, form.provisoPreContractNoHouse) ||
+    unconfirmedTempTwoHouseProviso4ho(provisoMode, provisoCandidate, form)
     ? ""
     : provisoCandidate;
 
@@ -451,7 +453,7 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     ...buildParentalCareMergeFact(form.parentalCareMergeDate, form.parentalCareParentAge),
     // 🔴 §154① 단서 reason 정규화 — 단건 ④(`transfer-tax-api.ts:521`)와 **같은 두 leaf**를 쓴다.
     //    종전 다건은 `form.provisoReason`을 게이트 없이 그대로 실어, 카드가 숨겨진 상태(mode=null)나
-    //    일시적 2주택에서 무효인 사유(나·다목·삭제 전 4호)까지 엔진에 도달했다 — 화면에 없는 선언이 계산을 바꿨다.
+    //    일시적 2주택에서 무효인 사유(나·다목)까지 엔진에 도달했다 — 화면에 없는 선언이 계산을 바꿨다.
     ...(effectiveProviso
       ? {
           oneHouseExemptionProviso: {

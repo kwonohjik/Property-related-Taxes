@@ -15,9 +15,9 @@
  * | T5-2 | 다른 주택을 1년 안에 취득 → 과세 그대로(5호는 1년 요건을 면제하지 않는다) |
  * | T5-3 | 단서 없음 → 과세(음성 짝) |
  * | T5-4 | 무주택 미확인 — 계산기 ④는 싣지 않아 과세(400 아님) · 판정 메뉴 ⑧은 막는다 |
- * | T5-5 | 정규화·집합 단위 — temp에서 5호 통과 · 나·다목·삭제 전 4호는 버림 · 1년 요건 집합엔 5호 없음 |
+ * | T5-5 | 정규화·집합 단위 — temp에서 5호 통과 · 나·다목은 버림 · 1년 요건 집합엔 5호 없음 |
  * | T5-6 | 1주택 판정 메뉴 — 같은 사실관계가 같은 결론 · 적용 특례 행에 5호 |
- * | T5-7 | 화면 — temp 모드 옵션에 5호가 보이고 나·다목·4호는 안 보인다 |
+ * | T5-7 | 화면 — temp 모드 옵션에 5호가 보이고 나·다목은 안 보인다 |
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -124,9 +124,9 @@ describe("계산기 — 일시적 2주택 종전주택 × 5호", () => {
 });
 
 describe("T5-5 정규화·집합", () => {
-  it("일시적 2주택 맥락 — 5호는 통과, 나·다목·삭제 전 4호는 버린다", () => {
+  it("일시적 2주택 맥락 — 5호는 통과, 나·다목은 버린다", () => {
     expect(effectiveProvisoReason("temporary_two_house", PROVISO_5)).toBe(PROVISO_5);
-    for (const r of ["overseas_migration", "overseas_residence", "rental_registration_4ho"]) {
+    for (const r of ["overseas_migration", "overseas_residence"]) {
       expect(effectiveProvisoReason("temporary_two_house", r), r).toBe("");
     }
     expect(effectiveProvisoReason("temporary_two_house", "expropriation")).toBe("expropriation");
@@ -195,6 +195,7 @@ describe("T5-7 화면 — 일시적 2주택 맥락 옵션", () => {
     provisoRentalLeaseResidenceMonths: "",
     provisoPreContractNoHouse: false,
     provisoDepartureOnlyHouse: "" as const,
+    rental4ho: {},
     mode: "temporary_two_house" as const,
     onChange: () => {},
   };
@@ -202,7 +203,7 @@ describe("T5-7 화면 — 일시적 2주택 맥락 옵션", () => {
     render(<ExemptionProvisoSection {...props} />);
     expect(screen.getByTestId("proviso-reason-pre_contract")).toBeTruthy();
     expect(screen.getByTestId("proviso-reason-unavoidable")).toBeTruthy();
-    for (const id of ["proviso-reason-overseas_migration", "proviso-reason-overseas_residence", "proviso-reason-rental_4ho"]) {
+    for (const id of ["proviso-reason-overseas_migration", "proviso-reason-overseas_residence"]) {
       expect(screen.queryByTestId(id), id).toBeNull();
     }
     cleanup();

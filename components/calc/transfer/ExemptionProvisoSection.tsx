@@ -9,10 +9,10 @@
  * 거주 충족(3호 1년)은 거주기간 입력(residencePeriodMonths) 재사용. 1호 5년은 「임차일부터」 기산이라 취득 전 임차
  * 거주를 포함한다 — 전용 칸(provisoRentalLeaseResidenceMonths)을 두고, 비우면 거주기간 입력으로 판정한다.
  *
- * mode: 일시적 2주택(temporary_two_house)이면 §155① 준용으로 1호·2호가목·3호 + 5호만 노출(나·다목·삭제 전 4호 제외 · F-2).
+ * mode: 일시적 2주택(temporary_two_house)이면 §155① 준용으로 1호·2호가목·3호 + 5호·삭제 전 4호만 노출(나·다목 제외 · F-2 · 2026-11-01 Q-1).
  *       §155 의제 2주택 이상(deemed_one_house — 합가·⑥⑦⑧)도 같은 사유만 노출한다(V-F4 Q-M2).
  *       §155⑳ 거주주택(rental_residence)은 보유 2년만 푸는 1호·2호가목·3호만 노출한다(`rental-residence-holding-proviso.plan.md`).
- *   선택값은 effectiveProvisoReason로 정규화 — 1주택서 나·다목·4호 선택 후 전환 시 stale 무효값 표시 방지.
+ *   선택값은 effectiveProvisoReason로 정규화 — 1주택서 나·다목 선택 후 전환 시 stale 무효값 표시 방지.
  */
 
 import { DateInput } from "@/components/ui/date-input";
@@ -49,10 +49,9 @@ interface Props {
   provisoRentalLeaseResidenceMonths: string;
   provisoPreContractNoHouse: boolean;
   /**
-   * 삭제 전 4호 입력(OH-38) — 폼을 그대로 넘긴다. 4호는 `one_house` 맥락에서만 선택되므로
-   * `temporary_two_house` 맥락 호출부는 생략한다.
+   * 삭제 전 4호 입력(OH-38) — 폼을 그대로 넘긴다. 4호가 보이는 맥락이 여럿이라 필수다(빠뜨리면 칸이 비어 ⑧이 영구 차단한다).
    */
-  rental4ho?: Partial<Rental4hoFormSlice>;
+  rental4ho: Partial<Rental4hoFormSlice>;
   /** 노출 맥락 — one_house(1주택, 전체 옵션) / temporary_two_house(1·2가·3호만) */
   mode: ProvisoMode;
   onChange: (
@@ -129,11 +128,11 @@ export function ExemptionProvisoSection({
   mode,
   onChange,
 }: Props) {
-  // temp-two-house 모드에서 받는 사유(1·2가·3호 + 5호) 밖 stale reason은 "" 로 정규화 — 표시·조건 분기 모두 이 값 기준
+  // temp-two-house 모드에서 받는 사유(1·2가·3호 + 5호·삭제 전 4호) 밖 stale reason은 "" 로 정규화 — 표시·조건 분기 모두 이 값 기준
   const effReason = effectiveProvisoReason(mode, provisoReason);
   const reason: ReasonOrNone = effReason === "" ? "none" : (effReason as ProvisoReason);
   const isOverseas = effReason === "overseas_migration" || effReason === "overseas_residence";
-  // temp-two-house·§155 의제(합가·⑥⑦⑧)면 해당없음 + 1·2가·3호 + 5호만 노출(입력오류 예방 — 나·다목·삭제 전 4호는 받지 않는다 · F-2 Q-F1·Q-F2 · V-F4 Q-M2)
+  // temp-two-house·§155 의제(합가·⑥⑦⑧)면 해당없음 + 1·2가·3호 + 5호·삭제 전 4호만 노출(입력오류 예방 — 나·다목은 받지 않는다 · F-2 Q-F1 · V-F4 Q-M2)
   const visibleOptions = OPTIONS.filter((o) => {
     if (o.value === "none") return true;
     if (mode === "rental_residence") return RENTAL_RESIDENCE_PROVISO_REASONS.has(o.value);
@@ -156,12 +155,12 @@ export function ExemptionProvisoSection({
       </p>
       {mode === "temporary_two_house" && (
         <p className="text-caption text-violet-700 dark:text-violet-300">
-          일시적 2주택 종전주택은 1호·2호가목·3호(1년 요건도 면제)와 5호(거주요건만 면제) 사유를 적용합니다.
+          일시적 2주택 종전주택은 1호·2호가목·3호(1년 요건도 면제)와 5호·삭제 전 4호(거주요건만 면제) 사유를 적용합니다.
         </p>
       )}
       {mode === "deemed_one_house" && (
         <p className="text-caption text-violet-700 dark:text-violet-300">
-          합가·문화유산·농어촌·수도권 밖 부득이 주택 특례로 1세대1주택으로 보는 주택은 1호·2호가목·3호와 5호(거주요건만 면제) 사유를 적용합니다.
+          합가·문화유산·농어촌·수도권 밖 부득이 주택 특례로 1세대1주택으로 보는 주택은 1호·2호가목·3호와 5호·삭제 전 4호(거주요건만 면제) 사유를 적용합니다.
         </p>
       )}
       {mode === "rental_residence" && (
@@ -254,7 +253,7 @@ export function ExemptionProvisoSection({
       )}
 
       {effReason === "rental_registration_4ho" && (
-        <Rental4hoProvisoFields value={rental4ho ?? {}} onChange={onChange} />
+        <Rental4hoProvisoFields value={rental4ho} mode={mode} onChange={onChange} />
       )}
 
       {/*

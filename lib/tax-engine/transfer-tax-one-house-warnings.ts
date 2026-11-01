@@ -10,6 +10,7 @@
  * ⚠️ §155⑳ 세대 구성 불성립 회수 고지(`revokeExemptionOnRentalCompositionExceeded`)는 일반 경로 전용 단계의
  *    산출물이라 여기 두지 않는다.
  */
+import { rental4hoDeemedPathNotice } from "./one-house/rental-registration-4ho";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { OneHouseJudgment, OneHouseUnmetException } from "./one-house/types";
@@ -114,6 +115,10 @@ export function oneHouseJudgmentWarnings(
         "5호는 「1년 이상 지난 후 취득」 요건은 면제하지 않습니다. 일시적 2주택 종전주택에 5호를 적용한 정면 해석례는 확인하지 못했습니다 — 확인 필요.",
     );
   }
+
+  // 2026-11-01 Q-1 (a) — §155 의제 경로의 삭제 전 §154①4호는 무엇에 기댔는지 남긴다.
+  const rental4hoNotice = rental4hoDeemedPathNotice(applied.map((e) => e.id));
+  if (rental4hoNotice) warnings.push(rental4hoNotice);
 
   // F-1 — ①+④⑤ 중첩 의제는 국세청 해석에 기댄다. 무엇에 기댔고 어디까지 확인됐는지 남긴다.
   if (exemptionResult.exemptReason?.includes("중첩")) {
