@@ -3,6 +3,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax-exemption";
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { isMultiHouseSurchargeSuppressed, provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
+import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -545,6 +546,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 residencePeriodMonthsAsset={primary.residencePeriodMonthsAsset}
                 transferDate={form.transferDate}
                 mergeStartDate={landOnlyMergeResidenceStart(primary)}
+                appliesToOtherShares={isFullFractionalBundle(form.assets, form.assetSplitMode)}
                 onChange={(patch) =>
                   onChange({
                     assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)),

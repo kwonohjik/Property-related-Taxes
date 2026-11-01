@@ -29,6 +29,8 @@ interface Props {
   transferDate: string;
   /** 토지만 본인 × 같은 세대 합가 — 거주를 산입하기 시작하는 합가일(`landOnlyMergeResidenceStart`). 있으면 힌트를 띄운다. */
   mergeStartDate?: string;
+  /** 축 B(같은 주택 지분) — 컴패니언에는 거주 칸이 없고 이 값을 승계한다. 있으면 힌트를 띄운다. */
+  appliesToOtherShares?: boolean;
   onChange: (
     patch: Partial<{
       residenceInputMode: "interval" | "direct";
@@ -51,6 +53,7 @@ export function ResidencePeriodSection({
   residencePeriodMonthsAsset,
   transferDate,
   mergeStartDate,
+  appliesToOtherShares,
   onChange,
 }: Props) {
   const isInterval = residenceInputMode === "interval";
@@ -79,6 +82,11 @@ export function ResidencePeriodSection({
         <LawArticleModal legalBasis="소득세법 §89①3호" label="§89①3호 비과세" />
         <LawArticleModal legalBasis="소득세법 §95②" label="§95② 표2 장특공제" />
       </div>
+      {appliesToOtherShares && (
+        <p data-testid="residence-other-shares-hint" className="text-xs leading-relaxed text-muted-foreground">
+          같은 주택의 다른 지분에도 적용합니다(그 지분의 보유기간까지).
+        </p>
+      )}
       {mergeStartDate && (
         <ToneCard tone="amber">
           <p data-testid="residence-merge-hint" className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">

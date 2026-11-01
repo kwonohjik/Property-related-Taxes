@@ -9,6 +9,7 @@
  */
 import { z } from "zod";
 import { directResidenceMonthsOverflowError } from "@/lib/calc/residence-interval-validate";
+import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { residenceStartWithMerge } from "@/lib/calc/self-owns-scope";
 
 type Issue = (path: (string | number)[], message: string) => void;
@@ -222,6 +223,55 @@ export function newConstructionLandOnlyIssue(d: { acquisitionCause?: string; sel
     : null;
 }
 
+/** 거주 상한의 기산일을 정하는 사실 — ⑫ 상한(`residenceMonthsOverflowIssue`)과 축 B 거주 승계(`inheritedShareResidenceMonths`)가 함께 읽는다. */
+interface ResidenceCapFacts {
+  acquisitionDate?: string;
+  selfOwns?: string;
+  buildingOwnerSameHousehold?: boolean;
+  buildingOwnerHouseholdMerged?: boolean;
+  buildingOwnerHouseholdMergeDate?: string;
+  mixedUse?: unknown;
+  landAcquisitionDate?: string;
+  donorAcquisitionDate?: string;
+  giftHouseholdHoldingStartDate?: string;
+  carryoverTaxation?: unknown;
+  landCarryoverPart?: unknown;
+  buildingCarryoverPart?: unknown;
+}
+
+function residenceCapStart(d: ResidenceCapFacts, acquisitionDate: string, includeMixedDates: boolean) {
+  const mu = d.mixedUse as { landAcquisitionDate?: string; buildingAcquisitionDate?: string } | null | undefined;
+  type DonorDates = { donorAcquisitionDate?: string; donorHouseholdHoldingStartDate?: string } | null | undefined;
+  const donorDates = (o: unknown) => [(o as DonorDates)?.donorAcquisitionDate, (o as DonorDates)?.donorHouseholdHoldingStartDate];
+  const earliest = [
+    acquisitionDate, d.landAcquisitionDate, d.donorAcquisitionDate, d.giftHouseholdHoldingStartDate,
+    ...(includeMixedDates ? [mu?.landAcquisitionDate, mu?.buildingAcquisitionDate] : []),
+    ...donorDates(d.carryoverTaxation), ...donorDates(d.landCarryoverPart), ...donorDates(d.buildingCarryoverPart),
+  ]
+    .filter((x): x is string => typeof x === "string" && x.length > 0)
+    .reduce((a, b) => (b < a ? b : a));
+  return residenceStartWithMerge(earliest, {
+    assetKind: "housing",
+    isMixedUseHouse: !!d.mixedUse,
+    selfOwns: (d.selfOwns ?? "both") as "both" | "land_only" | "building_only",
+    buildingOwnerSameHousehold: d.buildingOwnerSameHousehold,
+    buildingOwnerHouseholdMerged: d.buildingOwnerHouseholdMerged,
+    buildingOwnerHouseholdMergeDate: d.buildingOwnerHouseholdMergeDate,
+  });
+}
+
+/**
+ * 축 B(같은 주택 지분) 컴패니언이 승계할 거주 개월 — 주 자산 값을 그 지분의 보유 기산일~양도일로 자른다.
+ *
+ * 거주는 1세대·해당 주택 기준이고(「소득세법 시행령」 §154①·⑥ · §159의4) 「그 보유기간 중」이 지분별 상한이다(`axis-b-companion-residence.plan.md` Q-2 a).
+ * 서버가 채우는 값은 Zod를 지나지 않아 ⑫ 상한에 걸리지 않으므로 여기서 직접 자른다. 기산일은 ⑫와 같다.
+ */
+export function inheritedShareResidenceMonths(primaryMonths: number, c: ResidenceCapFacts, transferDate: string): number {
+  if (!c.acquisitionDate) return primaryMonths;
+  const { start } = residenceCapStart(c, c.acquisitionDate, !!c.mixedUse);
+  return transferDate < start ? 0 : Math.min(primaryMonths, residenceIntervalMonths(start, transferDate));
+}
+
 /**
  * ⑫ 거주 개월 **일반 상한** — 거주 개월이 «가능한 가장 이른 보유 기산일»~양도일을 넘으면 막는다. 종전에는 상한이 없어 API 직접 호출에서 보유 60개월 · 거주 120개월이
  * 오류 없이 장특 거주분 40%(10년)로 계산됐다(계획서 `land-only-o11-o13-o14-o16-o17-measure.plan.md` O-14 · Q-3 a). 법 근거: 법 §95② 표2 «보유기간 중 거주기간» · 시행령 §154① 괄호 «그 보유기간 중 거주기간».
@@ -237,25 +287,13 @@ export function newConstructionLandOnlyIssue(d: { acquisitionCause?: string; sel
  * 조건: 1세대1주택(`isOneHousehold`) · 주택·겸용 · 재개발 서브객체 없음(재개발은 자체 상한 — 승계 APT `successorAptMaxResidenceMonths` · 세대원 건물 `householdBuildingResidenceOverflow`).
  * 토지만 본인 × 같은 세대 × 합가면 합가일이 기준일을 늦춘다. ⚠️ 계산 leaf(`calcLongTermRate`)에서 파트별 보유연수로 자르지 않는다 — 거주는 주택 단위라 겸용·분리취득에서 틀린다(시험 적용 26건 실패).
  */
-export function residenceMonthsOverflowIssue(d: {
+export function residenceMonthsOverflowIssue(d: ResidenceCapFacts & {
   propertyType?: string;
   acquisitionCause?: string;
-  acquisitionDate?: string;
   transferDate?: string;
   isOneHousehold?: boolean;
   residencePeriodMonths?: number;
-  selfOwns?: string;
-  buildingOwnerSameHousehold?: boolean;
-  buildingOwnerHouseholdMerged?: boolean;
-  buildingOwnerHouseholdMergeDate?: string;
-  mixedUse?: unknown;
   redevelopment?: unknown;
-  landAcquisitionDate?: string;
-  donorAcquisitionDate?: string;
-  giftHouseholdHoldingStartDate?: string;
-  carryoverTaxation?: unknown;
-  landCarryoverPart?: unknown;
-  buildingCarryoverPart?: unknown;
 }): string | null {
   const isMixedUse = d.propertyType === "mixed-use-house";
   if ((d.propertyType !== "housing" && !isMixedUse) || d.isOneHousehold !== true || d.redevelopment) return null;
@@ -264,23 +302,7 @@ export function residenceMonthsOverflowIssue(d: {
   // 겸용은 거주를 연수로 받는다(`mixedUse.residencePeriodYears` = floor(개월 / 12)) — 실제 개월은 12 × 연수 이상이므로 그 하한이 상한을 넘을 때만 막는다(⑧ 통과 ⇒ ⑫ 통과).
   const residenceMonths = isMixedUse ? (mu?.residencePeriodYears === undefined ? undefined : mu.residencePeriodYears * 12) : d.residencePeriodMonths;
   if (residenceMonths === undefined || !d.acquisitionDate) return null;
-  type DonorDates = { donorAcquisitionDate?: string; donorHouseholdHoldingStartDate?: string } | null | undefined;
-  const donorDates = (o: unknown) => [(o as DonorDates)?.donorAcquisitionDate, (o as DonorDates)?.donorHouseholdHoldingStartDate];
-  const earliest = [
-    d.acquisitionDate, d.landAcquisitionDate, d.donorAcquisitionDate, d.giftHouseholdHoldingStartDate,
-    ...(isMixedUse ? [mu?.landAcquisitionDate, mu?.buildingAcquisitionDate] : []),
-    ...donorDates(d.carryoverTaxation), ...donorDates(d.landCarryoverPart), ...donorDates(d.buildingCarryoverPart),
-  ]
-    .filter((x): x is string => typeof x === "string" && x.length > 0)
-    .reduce((a, b) => (b < a ? b : a));
-  const start = residenceStartWithMerge(earliest, {
-    assetKind: "housing",
-    isMixedUseHouse: !!d.mixedUse,
-    selfOwns: (d.selfOwns ?? "both") as "both" | "land_only" | "building_only",
-    buildingOwnerSameHousehold: d.buildingOwnerSameHousehold,
-    buildingOwnerHouseholdMerged: d.buildingOwnerHouseholdMerged,
-    buildingOwnerHouseholdMergeDate: d.buildingOwnerHouseholdMergeDate,
-  });
+  const start = residenceCapStart(d, d.acquisitionDate, isMixedUse);
   const msg = directResidenceMonthsOverflowError({
     months: residenceMonths,
     acquisitionDate: start.start,
