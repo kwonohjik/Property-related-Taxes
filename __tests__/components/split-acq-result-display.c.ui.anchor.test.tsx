@@ -538,18 +538,14 @@ describe("[사이드바] 컴패니언 분리 자산 — 취득가액·필요경�
     expect(s.rows[0].salePrice - s.rows[0].acqPrice - s.rows[0].expense).toBe(a.properties[0].transferGain);
   });
 
-  it("평범한 자산 — 종전대로 안분 프리뷰 취득가액(100,000,000)", () => {
+  it("평범한 자산 — 엔진 echo 취득가액(100,000,000)", () => {
     const s = stateWith(a.properties);
     expect(s.rows[1].acqPrice).toBe(100_000_000);
   });
 
-  it("splitDetail 없는 집계 속성이면 분리 자산이라도 종전(안분 프리뷰) — echo 부재 안전", () => {
-    const stripped = a.properties.map((p) => {
-      const { splitDetail: _s, ...rest } = p;
-      void _s;
-      return rest as PerPropertyBreakdown;
-    });
-    const s = stateWith(stripped);
+  it("집계 속성에 그 자산이 없으면 안분 행으로 돌아간다 — echo 부재 안전", () => {
+    const s = stateWith([]);
     expect(s.rows[0].acqPrice).toBe(0);
+    expect(s.rows[1].acqPrice).toBe(100_000_000);
   });
 });
