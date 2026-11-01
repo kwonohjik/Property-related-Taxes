@@ -231,14 +231,30 @@ export function rentIntervalViolationsFromRuleDate<T extends { previousContractD
   return violations.filter((v) => v.previousContractDate.getTime() >= RENT_INTERVAL_RULE_FROM.getTime());
 }
 
+export interface RentIntervalViolation {
+  /** 계약일 오름차순으로 정렬한 이력 기준 인덱스 */
+  contractIndex: number;
+  /** 1년 이내에 증액한 계약일 */
+  contractDate: Date;
+  /** 바로 앞 계약일 — 시행일 게이트(대통령령 제30390호·제30395호 부칙 §16)의 기준 */
+  previousContractDate: Date;
+  /** 1년 기산점 — 마지막 증액일(증액이 없었으면 첫 계약일) */
+  lastIncreaseDate: Date;
+}
+
 /**
  * 임대료 증액 **간격** 검증 — 조특령 §97의3③1호 후단
  * 「이 경우 임대료등 증액 청구는 임대차계약 또는 약정한 임대료등의 증액이 있은 후 **1년 이내에는 하지 못하고**…」
  *
- * 직전 계약(또는 증액)일로부터 1년 이내에 환산보증금이 오른 계약을 위반으로 본다.
- * - 기간 계산: 민법 §157(초일 불산입)·§160 — 직전 계약일 D의 1년은 **다음 해 같은 날**에 만료한다
+ * **마지막 증액일**로부터 1년 이내에 환산보증금이 오른 계약을 위반으로 본다(사용자 확인 2026-11-01).
+ * - 기산점: 직전 증액이 있으면 그 증액 계약일, 아직 증액이 없으면 이력의 첫 계약일(임대차계약 체결).
+ *   **동결·감액 갱신은 기산점을 새로 열지 않는다** — 종전에는 「직전 계약일」부터 세서, 동결 갱신 직후의
+ *   증액을 1년 이내로 잡았다(마지막 증액으로부터는 1년이 지났는데도).
+ * - 기간 계산: 민법 §157(초일 불산입)·§160 — 기산일 D의 1년은 **다음 해 같은 날**에 만료한다
  *   ⇒ 그날까지의 증액은 「1년 이내」다(가정: 계약 이력의 `contractDate`를 증액 시점으로 본다 — 청구일 입력은 없다).
- * - 감액·동결 계약은 증액이 아니므로 보지 않는다.
+ * - 감액·동결 계약은 증액이 아니므로 위반 판정 대상도 아니다.
+ * - `previousContractDate`(바로 앞 계약)는 시행일 게이트(`rentIntervalViolationsFromRuleDate`)가 쓰고,
+ *   `lastIncreaseDate`(기산점)는 1년 판정과 메시지가 쓴다.
  *
  * §97의3·§97의5(①3호 준용)·§97의4(소령 §167의3①2호 가·다목 괄호)가 호출한다.
  * 이력은 계약일 순으로 정렬해 비교한다 (`sortRentHistory`).
@@ -246,20 +262,25 @@ export function rentIntervalViolationsFromRuleDate<T extends { previousContractD
 export function validateRentIncreaseInterval(
   rawHistory: Rental97RentHistoryItem[],
   conversionRate: number,
-): { isAllValid: boolean; violations: { contractIndex: number; contractDate: Date; previousContractDate: Date }[] } {
+): { isAllValid: boolean; violations: RentIntervalViolation[] } {
   const history = sortRentHistory(rawHistory);
-  const violations: { contractIndex: number; contractDate: Date; previousContractDate: Date }[] = [];
+  const violations: RentIntervalViolation[] = [];
+  if (history.length === 0) return { isAllValid: true, violations };
+  /** 1년 기산점 — 첫 계약일에서 시작해 증액이 있을 때만 그 계약일로 옮긴다 */
+  let lastIncreaseDate = history[0].contractDate;
   for (let i = 1; i < history.length; i++) {
     const prev = convertToStandardDeposit(history[i - 1], conversionRate);
     const curr = convertToStandardDeposit(history[i], conversionRate);
-    if (curr <= prev) continue;
-    if (history[i].contractDate.getTime() <= addYears(history[i - 1].contractDate, 1).getTime()) {
+    if (curr <= prev) continue; // 동결·감액 — 기산점 유지
+    if (history[i].contractDate.getTime() <= addYears(lastIncreaseDate, 1).getTime()) {
       violations.push({
         contractIndex: i,
         contractDate: history[i].contractDate,
         previousContractDate: history[i - 1].contractDate,
+        lastIncreaseDate,
       });
     }
+    lastIncreaseDate = history[i].contractDate;
   }
   return { isAllValid: violations.length === 0, violations };
 }
