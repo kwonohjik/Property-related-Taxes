@@ -227,18 +227,26 @@ export function computeTransferPerAssetSummary(
     const carryoverCards = apportionedCards ? carryoverCardTotals(bundledResult) : null;
     const bundledCards = apportionedCards && carryoverCards ? { ...apportionedCards, ...carryoverCards } : apportionedCards;
 
-    // 축 B 일반건물 지분 × 부담부증여 — 그 지분 카드(`land#i`·`building#i`) 합 = 엔진이 §159로 정한 값. `bundledMatch`(폼 assetId)·`bundledCards`(단건 전용)가
-    // 못 잡아 계산 후에도 «계산 후 표시»에 갇혔다(PR-3 실측). 비부담부증여 지분 행은 종전 그대로.
-    const gbShareBgCards =
-      axisBBundle && bundledResult && a.assetKind === "general_building" && usesSelfComputedTransferPrice(a)
-        ? bundledResult.apportionment.apportioned
-            .filter((p) => p.assetId.endsWith(`${SHARE_ID_SEPARATOR}${i}`))
-            .reduce((acc, p) => ({ n: acc.n + 1, sale: acc.sale + p.allocatedSalePrice, acq: acc.acq + p.allocatedAcquisitionPrice, exp: acc.exp + p.allocatedExpenses }), { n: 0, sale: 0, acq: 0, exp: 0 })
+    // 축 B 일반건물 지분 — 그 지분 카드(`land#i`·`building#i`) 합 = 엔진이 실제 쓴 값(부담부증여면 §159로 정한 값). `bundledMatch`(폼 assetId)·`bundledCards`(단건 전용)가
+    // 못 잡아 부담부증여는 계산 후에도 «계산 후 표시»에 갇혔고(PR-3 실측), 일반 양도는 floor 폴백(합 ≠ 총액)·취득가액 0으로 떨어졌다(`axis-b-sidebar-nonland.plan.md` D-1).
+    // 양도가액은 안분 행 합, 취득가액·필요경비는 엔진이 실제 차감한 집계 값 합 — 안분 행은 이월과세 시나리오 A 채택·개산공제를 반영하지 못한다(`carryoverCardTotals`와 같은 이유).
+    const gbShareSuffix = `${SHARE_ID_SEPARATOR}${i}`;
+    const gbShareCards =
+      axisBBundle && bundledResult && a.assetKind === "general_building"
+        ? {
+            n: bundledResult.apportionment.apportioned.filter((p) => p.assetId.endsWith(gbShareSuffix)).length,
+            sale: bundledResult.apportionment.apportioned
+              .filter((p) => p.assetId.endsWith(gbShareSuffix))
+              .reduce((n, p) => n + p.allocatedSalePrice, 0),
+            ...(bundledResult.aggregated?.properties ?? [])
+              .filter((p) => p.propertyId.endsWith(gbShareSuffix))
+              .reduce((acc, p) => ({ acq: acc.acq + p.acquisitionPrice, exp: acc.exp + p.necessaryExpense }), { acq: 0, exp: 0 }),
+          }
         : null;
 
     // 일반건물 × 부담부증여 × 함께 양도(축 A) — 엔진은 자산 하나를 `land#${자산id}`·`building#${자산id}` 카드로 쪼개 돌려준다(이월과세 꼬리 `land__purchased#${자산id}` 포함).
     // `bundledProperty`(propertyId === 자산id)는 이 모양을 못 잡고, 안분 행 취득가액은 §159 입력 전 값(0)이라 계산 후에도 취득가액·필요경비가 「-」였다.
-    // 그 자산의 카드 합 = 엔진이 §159로 실제 쓴 값이다. 축 B는 위 `gbShareBgCards`가 맡는다.
+    // 그 자산의 카드 합 = 엔진이 §159로 실제 쓴 값이다. 축 B는 위 `gbShareCards`가 맡는다.
     const gbBundledBgCards =
       !axisBBundle && !isSingle && bundledMatch && a.assetKind === "general_building" && usesSelfComputedTransferPrice(a)
         ? (bundledResult?.aggregated?.properties ?? [])
@@ -276,7 +284,7 @@ export function computeTransferPerAssetSummary(
        */
       const brkd = singleResult?.transferBurdenedGiftBreakdown;
       if (bundledMatch) salePrice = bundledMatch.allocatedSalePrice;
-      else if (gbShareBgCards?.n) salePrice = gbShareBgCards.sale;
+      else if (gbShareCards?.n) salePrice = gbShareCards.sale;
       else if (isSingle && brkd) salePrice = burdenedGiftTransferPrice(brkd);
       else salePending = true;
     } else if (bundledMatch) {
@@ -286,6 +294,9 @@ export function computeTransferPerAssetSummary(
       // 자산카드 분해(일반건물) — 카드 양도가액 합 = 그 자산의 양도가액. 카드 간 분할은
       // 자산 내부 안분이므로 «기준시가 안분» 라벨은 붙이지 않는다.
       salePrice = bundledCards.sale;
+    } else if (gbShareCards?.n) {
+      // 축 B 일반건물 지분 — 카드 합이 서버의 확정 가액(잔액 흡수 포함)이다. 안분 라벨은 붙이지 않는다.
+      salePrice = gbShareCards.sale;
     } else if (apportionedMap && apportionedMap.has(a.assetId)) {
       // 안분 프리뷰 (지분 자산 포함 — 엔진과 동일하게 fixedSalePrice 제외·잔여흡수 반영).
       // 축 B 지분 자산만 고정값(«지분 N%»), 나머지(함께 양도 묶음의 지분 자산 포함)는 기준시가 안분값(«기준시가 안분»).
@@ -376,9 +387,9 @@ export function computeTransferPerAssetSummary(
       acqPrice = bundledCards.acq;
       acqPending = false;
       depAlreadyDeducted = true;
-    } else if (gbShareBgCards?.n) {
-      // 축 B 일반건물 지분 × 부담부증여 — 그 지분 카드의 §159 취득가액 합(엔진이 실제 쓴 값 — 감가상각은 §159 경로에서 공제 대상이 아니다).
-      acqPrice = gbShareBgCards.acq;
+    } else if (gbShareCards?.n) {
+      // 축 B 일반건물 지분 — 그 지분 카드의 취득가액 합(엔진이 실제 쓴 값 — 감가상각은 `buildApportionment`가 공제한 후이고, 부담부증여 §159 경로는 공제 대상이 아니다).
+      acqPrice = gbShareCards.acq;
       acqPending = false;
       depAlreadyDeducted = true;
     } else if (isParcelMode(a) && singleResult?.parcelDetails?.length) {
@@ -528,8 +539,8 @@ export function computeTransferPerAssetSummary(
     } else if (bundledCards) {
       // 자산카드 분해(일반건물) — 카드별 필요경비 합(개산공제 포함).
       expense = bundledCards.exp;
-    } else if (gbShareBgCards?.n) {
-      expense = gbShareBgCards.exp; // 축 B 일반건물 지분 × 부담부증여 — 그 지분 카드의 개산공제·실비 합
+    } else if (gbShareCards?.n) {
+      expense = gbShareCards.exp; // 축 B 일반건물 지분 — 그 지분 카드의 개산공제·실비 합
     } else if (isParcelMode(a) && singleResult?.parcelDetails?.length) {
       // 다필지 — 필지별 결과 필요경비 합(환산 필지의 개산공제 §163⑥ 포함). pending 해소.
       expense = singleResult.parcelDetails.reduce((s, p) => s + p.expenses, 0);
