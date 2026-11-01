@@ -40,6 +40,9 @@ export const RENTAL_VACANCY_GRACE_MONTHS_97 = 3;
  * ⚠️ §97의5③은 조특령 §97⑤ 중 **1호·3호만** 준용하고 **5호를 준용하지 않는다** —
  *    그래서 조특칙 §44의 3월이 §97의5에는 걸리지 않고, 이 6개월이 §97의5 고유 규칙이다.
  *    반대로 이 6개월을 다른 조문에 전용하면 임대기간이 과대 산정돼 감면이 과다 적용된다.
+ *
+ * ⚠️ §97의5 평가기(`rental-97-5.ts`)는 이 상수로 `calculateEffectiveRentalPeriod`(초과 공실 차감·통산)를 쓰지 않는다 —
+ *    「계속하여」라 초과 공실이 계속성을 끊는다(`rental-97-5-period.ts`). 레거시 `rental-housing-reduction.ts`만 쓴다.
  */
 export const RENTAL_VACANCY_GRACE_MONTHS_97_5 = 6;
 

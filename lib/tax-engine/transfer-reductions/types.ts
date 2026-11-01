@@ -119,9 +119,10 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   /** 세무서 사업자 등록 (소법 §168) — §97의3·§97의5 임대개시 인정 요건 (조특령 §97의3④·§97의5③) */
   isTaxRegistered?: boolean;
   /**
-   * 유예를 **초과하는** 공실 구간 — 구간 전체를 유효임대기간에서 차감.
+   * 유예를 **초과하는** 공실 구간 — §97·§97의2·§97의3·§97의4는 구간 전체를 유효임대기간에서 차감.
    * 유예는 조문마다 다르다(D1-03) — §97·§97의2·§97의3·§97의4 = 3월(조특칙 §44) /
    * §97의5 = 6개월(조특령 §97의5①1호). 상수는 `rental-97-shared-helpers.ts` 참조.
+   * ⚠️ §97의5는 차감이 아니라 **계속성 단절**(그 공실 종료일부터 10년을 다시 셈) — `rental-97-5-period.ts`.
    */
   vacancyPeriods?: Rental97VacancyPeriod[];
   /** 간소화 모드 — 사용자 명시 신고 (true = 임대료 5% 증액 위반 있음 → 불적용) */
@@ -237,6 +238,16 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
    * 종전에는 조기 종료를 선언해도 종점이 양도일이라 임대 7년·보유 11년 사안이 10년 요건을 통과했다.
    */
   rentalEndDate?: Date;
+  /**
+   * §97의5①1호 — 매입임대주택(민특법 §2 3호 「매매 등으로 소유권을 취득」 · 공공매입임대)인가.
+   * `true`만 충족 — 미입력·`false`(건설임대)는 불적용 사유 (§97의5 전용).
+   */
+  isPurchaseRental?: boolean;
+  /**
+   * 조특령 §97의5①2호·3호 — 수용·협의매수 / 정비사업으로 임대할 수 없던 기간 (§97의5 전용).
+   * 「계속하여 임대한 것으로 본다」 — 공실 판정에서 빼고 기간에 산입한다. 상세: `rental-97-5-period.ts`.
+   */
+  deemedRentalPeriods?: import("./rental-97-5-period").DeemedRentalPeriod975[];
   // ── 세액감면 계열 컨텍스트 ──
   /** 산출세액 (tax_amount 계열 — §97·§97의2·§97의5) */
   calculatedTax?: number;

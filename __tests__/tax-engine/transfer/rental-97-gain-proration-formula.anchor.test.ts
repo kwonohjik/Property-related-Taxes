@@ -180,6 +180,7 @@ describe("§97의5 엔진 — 리뷰 실측 시나리오 재현 (D2-03)", () => 
   /** 취득 2018-06-01(3억) · 등록 2018-08-01 · 임대개시 2018-09-01(3.2억) · 양도 2029-07-01(6억) */
   const BASE = {
     id: "rental_97_5" as const,
+    isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
     acquisitionDate: D("2018-06-01"),
     registrationDate: D("2018-08-01"),
     rentalStartDate: D("2018-09-01"),

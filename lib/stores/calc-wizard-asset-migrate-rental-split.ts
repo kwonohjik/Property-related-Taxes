@@ -96,6 +96,12 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           ...(r.type === "rental_97_2" && r.hasNewRentalPlus2Units === undefined
             ? { hasNewRentalPlus2Units: null }
             : {}),
+          // 리뷰 6번 — §97의5①1호 매입임대 확인(3-state). 구 세션은 미선택으로 둔다(다시 묻는다).
+          ...(r.type === "rental_97_5" && r.isPurchaseRental === undefined ? { isPurchaseRental: null } : {}),
+          // 리뷰 5번 — 령 §97의5①2호·3호 간주기간. 구 세션엔 없다(= 없음).
+          ...(r.type === "rental_97_5" && r.deemedRentalPeriods === undefined
+            ? { hasDeemedRentalPeriod: false, deemedRentalPeriods: [] }
+            : {}),
           // D2-04 — §97의4 대상 요건 신규 필드. 구 세션은 미선택으로 둔다.
           ...(r.type === "rental_97_4" && r.rental974Category === undefined
             ? { rental974Category: "", officialPriceAtStart: r.officialPriceAtStart ?? "" }

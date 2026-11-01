@@ -33,6 +33,7 @@ const D = (s: string) => new Date(`${s}T00:00:00`);
 /** 취득 2018-06-01 · 등록 2018-08-01 · 임대개시 2018-09-01 · 양도 2029-07-01 (임대개시 > 취득일) */
 const BASE: Rental97EvaluationInput = {
   id: "rental_97_5",
+  isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
   acquisitionDate: D("2018-06-01"),
   registrationDate: D("2018-08-01"),
   rentalStartDate: D("2018-09-01"),
@@ -195,6 +196,7 @@ describe("파이프라인 — calcReductions·router가 §90① 입력과 종료
         reductions: [
           {
             type: "rental_97_5",
+            isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
             registrationDate: D("2018-08-01"),
             rentalStartDate: D("2018-09-01"),
             isTaxRegistered: true,
@@ -236,6 +238,7 @@ describe("배관 ④⑫⑭ — rentalEndDate", () => {
   function form(over: Record<string, unknown> = {}): AssetReductionForm {
     return {
       ...getReductionDefault("rental_97_5"),
+      isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
       registrationDate: "2018-08-01",
       rentalStartDate: "2018-09-01",
       isTaxRegistered: true,
@@ -317,6 +320,7 @@ describe("겸용주택 — §97의5 감면대상 소득(B)은 주택분만 (리�
         reductions: [
           {
             type: "rental_97_5",
+            isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
             registrationDate: D("2014-08-01"),
             rentalStartDate: D("2014-09-01"),
             isTaxRegistered: true,

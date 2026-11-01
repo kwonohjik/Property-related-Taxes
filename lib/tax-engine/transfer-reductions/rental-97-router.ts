@@ -113,6 +113,9 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         isNationalHousingScale: r.isNationalHousingScale,
         // §97의5①2호 — 조기 종료 시 10년 판정의 종점. ⚠️ 명시 매핑.
         rentalEndDate: r.rentalEndDate,
+        // §97의5①1호 매입임대 · 령 §97의5①2호·3호 간주기간. ⚠️ 명시 매핑.
+        isPurchaseRental: r.isPurchaseRental,
+        deemedRentalPeriods: r.deemedRentalPeriods,
         // 「소득세법」 §90① 감면세액 산식 입력 — §97의5 evaluator만 읽는다.
         transferIncome: ctx.transferIncome,
         basicDeduction: ctx.basicDeduction,

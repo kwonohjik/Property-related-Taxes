@@ -217,13 +217,16 @@ const RENTAL_97_4 = table("rental_97_4", hybrid("rental_97_4"), r974Ok, {}, [
   { name: "기준시가 한도 초과", prop: "officialPriceAtStart", message: /^§97의4 적용: 임대개시일 당시 기준시가 합계가 한도/, patch: { officialPriceAtStart: "700000000" } },
 ]);
 
-const r975Ok = { ...rentalBase, isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };
+const r975Ok = { ...rentalBase, isPurchaseRental: true, hasDeemedRentalPeriod: false, deemedRentalPeriods: [], isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };
 const RENTAL_97_5 = table("rental_97_5", hybrid("rental_97_5"), r975Ok, {}, [
   ...dateRows("§97의5"),
   ...commonRows("§97의5", "6개월"),
   { name: "국민주택규모", prop: "isNationalHousingScale", message: /^§97의5 적용: 국민주택규모 이하 요건/, patch: { isNationalHousingScale: false } },
   { name: "임대개시 당시 기준시가", prop: "officialPriceAtStart", message: /^§97의5 적용: 임대개시일 당시 기준시가\(주택\+부속토지 합계\)/, patch: { officialPriceAtStart: "" } },
   { name: "임대 계속 여부", prop: "rentalContinuesToTransfer", message: /^§97의5 적용: 임대가 양도일까지 계속되었는지/, patch: { rentalContinuesToTransfer: null } },
+  { name: "임대주택 취득 유형", prop: "isPurchaseRental", message: /^§97의5 적용: 임대주택 취득 유형/, patch: { isPurchaseRental: null } },
+  { name: "수용·정비사업 간주기간", prop: "deemedRentalPeriods", message: /^§97의5 적용: 수용·정비사업으로 임대할 수 없던 기간/, patch: { hasDeemedRentalPeriod: true, deemedRentalPeriods: [{ reason: "redevelopment", startDate: "", endDate: "" }] } },
+  { name: "임대 종료일", prop: "rentalEndDate", message: /^§97의5 적용: 양도 전에 임대를 종료했으면 임대 종료일/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "200000000", rentalEndDate: "" } },
 ]);
 
 const rMainOk = { rentalStartDate: "2000-01-01", constructionYear: "1995", rentIncreaseViolationMode: "none", hasVacancyOverGrace: false, hasMin5RentalUnits: true, belowMin5UnitsPeriods: [] };

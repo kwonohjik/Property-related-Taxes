@@ -11,6 +11,7 @@
  */
 
 import { useId } from "react";
+import type { ReactNode } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -45,6 +46,11 @@ interface Props {
    * (`transfer-tax-validate-reductions.ts`). §97 시리즈 6조문이 이 폼을 공유한다.
    */
   fieldType?: string;
+  /**
+   * 공실 카드 하단 슬롯 — §97의5의 수용·정비사업 간주기간(조특령 §97의5①2호·3호).
+   * 공실 판정과 같은 축(계속 임대 판정)이라 같은 카드에 둔다(UI 순서 = 엔진 순서).
+   */
+  vacancyExtra?: ReactNode;
 }
 
 const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> = {
@@ -56,7 +62,7 @@ const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> 
 /** 섹션 배지 원문자 — 임대 감면 입력 폼 전체가 공유하는 표기(`Rental97MainInputForm`의 `CIRCLED`와 같은 것). */
 export const CIRCLED_SECTION_NUM = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧"] as const;
 
-export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancyGraceMonths, hasGainProration = false, fieldType = "unspecified" }: Props) {
+export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancyGraceMonths, hasGainProration = false, fieldType = "unspecified", vacancyExtra }: Props) {
   /**
    * 🔴 라디오 `name`이 전역 상수라 **자산 간에 한 그룹으로 묶였다**
    *    (2026-09-07 대장 재대조 · #25). 감면은 자산-수준(`asset.reductions`)이므로 다자산에서
@@ -71,7 +77,8 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
   const graceBasis =
     vacancyGraceMonths === 3
       ? "조특칙 §44 — 기존 임차인 퇴거일부터 다음 임차인 입주일까지 3월 이내는 임대기간에 산입"
-      : "조특령 §97의5①1호 — 기존 임차인 퇴거일부터 다음 임차인 주민등록 이전일까지 6개월 이내는 계속 임대 간주";
+      : "조특령 §97의5①1호 — 기존 임차인 퇴거일부터 다음 임차인 주민등록 이전일까지 6개월 이내는 계속 임대 간주. " +
+        "6개월을 넘는 공실이 있으면 계속 임대가 끊겨 그 공실이 끝난 날(다음 임차인 입주일)부터 10년을 다시 셉니다.";
   // ── 임대료 계약 이력 ──
   function addRentHistory() {
     const next: RentHistoryFormItem = {
@@ -284,6 +291,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
             </button>
           </div>
         )}
+        {vacancyExtra}
       </ToneCard>
 
       {/* 임대 종료 시점 — 조특령 §97의3⑤ B · §97의5② (D2-06) */}

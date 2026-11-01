@@ -321,6 +321,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (!r.rentalStartDate) return fail(fieldError(`reduction.${r.type}.rentalStartDate`, `${label} 적용: 임대개시일을 입력하세요.`));
           if ((r.type === "rental_97_3" || r.type === "rental_97_4" || r.type === "rental_97_5") && !r.registrationDate)
             return fail(fieldError(`reduction.${r.type}.registrationDate`, `${label} 적용: 임대사업자 등록일을 입력하세요.`));
+          // §97의5①1호 — 매입임대 확인(3-state). 미선택을 매입임대로 읽지 않는다. 「건설임대」 선택은 엔진이 불적용 사유로 보인다.
+          if (r.type === "rental_97_5" && (r.isPurchaseRental === null || r.isPurchaseRental === undefined))
+            return fail(fieldError(`reduction.${r.type}.isPurchaseRental`, `${label} 적용: 임대주택 취득 유형(매입임대/건설임대)을 선택하세요 (§97의5①1호).`));
           // 3-state: "" = 미선택 → 차단 (간소화 모드 명시 선택 강제)
           if (r.rentIncreaseViolationMode === "")
             return fail(fieldError(`reduction.${r.type}.rentIncreaseViolationMode`, `${label} 적용: 임대료 5% 증액 위반 이력 여부(없음/있음)를 선택하세요.`));
@@ -345,6 +348,12 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (r.hasVacancyOverGrace === true && r.vacancyPeriods?.some((p) => !p.startDate || !p.endDate))
             return fail(fieldError(`reduction.${r.type}.vacancyPeriods`, `${label} 적용: 공실 구간의 시작일·종료일을 모두 입력하세요. 해당 없으면 구간을 삭제하세요.`,
             ));
+          // 조특령 §97의5①2호·3호 간주기간 — 켰으면 행마다 두 날짜가 있어야 하고 시작 ≤ 종료
+          if (r.type === "rental_97_5" && r.hasDeemedRentalPeriod) {
+            const rows = r.deemedRentalPeriods ?? [];
+            if (rows.length === 0 || rows.some((p) => !p.startDate || !p.endDate || p.startDate > p.endDate))
+              return fail(fieldError(`reduction.${r.type}.deemedRentalPeriods`, `${label} 적용: 수용·정비사업으로 임대할 수 없던 기간의 시작일·종료일(정비사업은 인가일·준공일)을 확인하세요 (조특령 §97의5①2호·3호).`));
+          }
           // D2-07 — 2023.1.1 이후 등록분은 §97의3①이 민간건설임대주택에 한정한다.
           //          그 전 등록분은 법률 제19199호 부칙 §38 경과조치로 종전 규정을 따른다.
           // ⚠️ 종전 규정에도 **등록 시한**이 있다 — 매입임대는 2020.12.31, 건설임대는 2022.12.31

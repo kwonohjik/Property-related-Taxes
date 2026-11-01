@@ -49,6 +49,7 @@ const D = (s: string) => new Date(`${s}T00:00:00`);
 
 const BASE = {
   id: "rental_97_5" as const,
+  isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
   transferDate: D("2029-02-01"),
   acquisitionDate: D("2018-10-01"),
   registrationDate: D("2018-12-01"),
@@ -146,6 +147,7 @@ describe("⑬ router — 국민주택규모가 evaluator까지 도달한다", ()
   };
   const R = {
     type: "rental_97_5",
+    isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
     registrationDate: D("2018-12-01"),
     rentalStartDate: D("2018-12-01"),
     isTaxRegistered: true,

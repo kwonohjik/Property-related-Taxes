@@ -71,6 +71,7 @@ describe("#7 임대기간 분 비율 — 정수 분수", () => {
   // E 취득 3억 · B 임대종료 5.6억 · D 양도 6.4억 → (5.6 − 3) / (6.4 − 3) = 13/17
   const base = {
     id: "rental_97_5", acquisitionDate: D0("2014-06-01"), registrationDate: D0("2014-08-01"), rentalStartDate: D0("2014-09-01"),
+    isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
     transferDate: D0("2026-07-01"), isTaxRegistered: true, rentIncreaseViolated: false, isNationalHousingScale: true, region: "capital",
     stdPriceAtAcquisition: 300_000_000, officialPriceAtStart: 320_000_000, stdPriceAtTransfer: 640_000_000,
     rentalContinuesToTransfer: false, stdPriceAtRentalEnd: 560_000_000,

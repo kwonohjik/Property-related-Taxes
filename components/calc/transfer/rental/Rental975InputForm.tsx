@@ -14,13 +14,14 @@
  * - rentalHousingType·isConvertedFromShortTerm 없음
  */
 
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RentalCommonFields, TaxRegistrationToggle } from "./RentalCommonFields";
+import { Rental975DeemedPeriodsField } from "./Rental975DeemedPeriodsField";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 import { addMonths } from "date-fns";
 import { RENTAL_97_5_REGISTRATION_MONTHS } from "@/lib/tax-engine/transfer-reductions";
@@ -70,6 +71,7 @@ function diffYearsMonths(from: string, to: string): string {
 }
 
 export function Rental975InputForm({ value, onChange, acquisitionDate, transferDate }: Props) {
+  const uid = useId();
   const patchCommon = (patch: Partial<RentalCommonFormFields>) => {
     onChange(patch as Partial<Rental975Form>);
   };
@@ -99,6 +101,30 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
       <ToneCard tone="violet" sectionNum="①" title="등록·신분">
+
+        {/* §97의5①1호 — 매입임대주택을 취득하고 3개월 내 등록 (취득 유형 → 등록일 순서) */}
+        <div>
+          <p className="mb-1 text-xs font-medium">임대주택 취득 유형</p>
+          <p className="mb-1.5 text-micro text-muted-foreground">
+            §97의5①1호 — 민간매입임대주택(민특법 §2 3호 「매매 등으로 소유권을 취득」) 또는 공공매입임대주택만 대상입니다.
+            증여·분양으로 취득한 주택도 매입임대입니다. 임대사업자가 직접 건설한 건설임대주택은 대상이 아닙니다.
+          </p>
+          <RadioCardGroup
+            data-field={`reduction.${value.type}.isPurchaseRental`}
+            name={`isPurchaseRental-${uid}`}
+            layout="inline"
+            tone="violet"
+            value={value.isPurchaseRental === null ? "" : value.isPurchaseRental ? "purchase" : "construction"}
+            onChange={(v) => onChange({ isPurchaseRental: v === "purchase" })}
+            options={[
+              { value: "purchase", label: "매입임대 (매매·증여·분양 등으로 취득)" },
+              { value: "construction", label: "건설임대 (직접 건설)" },
+            ]}
+          />
+          {value.isPurchaseRental === null && (
+            <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+          )}
+        </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium">지자체 임대사업자 등록일</label>
@@ -188,6 +214,14 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
         value={value}
         onChange={patchCommon}
         sectionOffset={3}
+        vacancyExtra={
+          <Rental975DeemedPeriodsField
+            enabled={value.hasDeemedRentalPeriod}
+            periods={value.deemedRentalPeriods ?? []}
+            onChange={(patch) => onChange(patch)}
+            uid={uid}
+          />
+        }
       />
 
       {/* emerald 자동 표시 박스 */}

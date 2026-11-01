@@ -11,6 +11,7 @@
  */
 
 import type { Rental97Result } from "@/lib/tax-engine/types/transfer.types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: Rental97Result;
@@ -266,11 +267,16 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
             <>
               {/* 「소득세법」 §90① — 감면대상 소득에서 그 소득에 배정된 기본공제(§103②)를 빼고 과세표준으로 나눈다 */}
               <p className="text-muted-foreground">
-                감면세액 = 산출세액 × (감면대상 양도소득금액 − 감면소득에 배정된 기본공제) ÷ 과세표준 × 감면율
+                감면세액 = 산출세액 ×{" "}
+                <Frac top="감면대상 양도소득금액 − 감면소득에 배정된 기본공제" bottom="과세표준" /> × 감면율
               </p>
               <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
-                {formatN(calculatedTax)} × ({formatN(s90.reducibleIncome)} − {formatN(s90.basicDeductionAllocated)}) ÷{" "}
-                {formatN(s90.taxBase)} × {formatRate(taxEffect.reductionRate)} = {formatN(taxEffect.reductionAmount)}
+                {formatN(calculatedTax)} ×{" "}
+                <Frac
+                  top={`${formatN(s90.reducibleIncome)} − ${formatN(s90.basicDeductionAllocated)}`}
+                  bottom={formatN(s90.taxBase)}
+                />{" "}
+                × {formatRate(taxEffect.reductionRate)} = {formatN(taxEffect.reductionAmount)}
               </p>
               <p className="text-micro text-muted-foreground">
                 감면대상 양도소득금액 = 양도소득금액 × 임대기간 분 비율 {formatRateFine(taxEffect.rentalGainRatio)} (조특령 §97의5②) ·

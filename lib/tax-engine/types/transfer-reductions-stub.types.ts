@@ -112,6 +112,10 @@ export type TransferReductionStub =
       isNationalHousingScale?: boolean;
       /** §97의5①2호 — 양도 전 임대 종료 시 실제 임대기간의 마지막 날 (`rentalContinuesToTransfer === false`이면 필수) */
       rentalEndDate?: Date;
+      /** §97의5①1호 — 매입임대주택(매매·증여 등으로 소유권 취득) 여부. `true`만 충족 */
+      isPurchaseRental?: boolean;
+      /** 조특령 §97의5①2호·3호 — 수용·정비사업 간주기간 (redevelopment는 인가일~준공일 입력, 엔진이 ±6개월) */
+      deemedRentalPeriods?: { reason: "expropriation" | "redevelopment"; startDate: Date; endDate: Date }[];
       officialPriceAtStart?: number;
       region?: "capital" | "non_capital";
     } & Rental97CommonFields)

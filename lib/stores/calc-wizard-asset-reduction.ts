@@ -169,6 +169,18 @@ export interface VacancyPeriodFormItem {
   endDate: string;                            // YYYY-MM-DD
 }
 
+/**
+ * 조특령 §97의5①2호·3호 간주기간 (§97의5 전용).
+ * - `expropriation`: 협의매수·수용되어 임대할 수 없던 기간 (시작~종료)
+ * - `redevelopment`: 관리처분계획 인가일(소규모정비 사업시행계획 인가일 · 리모델링 허가일/사업계획승인일) ~ 준공일.
+ *   엔진이 앞뒤 6개월을 붙인다.
+ */
+export interface DeemedRentalPeriodFormItem {
+  reason: "expropriation" | "redevelopment";
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+}
+
 /** §97 시리즈 공통 폼 필드 (5개 variant 공유) */
 export interface RentalCommonFormFields {
   /** 지자체 임대사업자 등록일 (YYYY-MM-DD) — 엔진 PeriodCheckContext.registrationDate 동일 키 */
@@ -255,6 +267,11 @@ export type RentalReductionFormVariant =
       region: "capital" | "non_capital";
       /** CA-01 — §97의5①3호 준용 (조특령 §97의3③2호 국민주택규모 이하) */
       isNationalHousingScale: boolean;
+      /** §97의5①1호 — 매입임대주택(매매·증여 등으로 소유권 취득)인가 (3-state, null = 미선택) */
+      isPurchaseRental: boolean | null;
+      /** 조특령 §97의5①2호·3호 — 수용·정비사업으로 임대할 수 없던 기간이 있는가 */
+      hasDeemedRentalPeriod: boolean;
+      deemedRentalPeriods: DeemedRentalPeriodFormItem[];
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_main" | "rental_97_proviso";

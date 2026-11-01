@@ -184,6 +184,18 @@ export const reductionSchema = z.discriminatedUnion("type", [
     isNationalHousingScale: z.boolean().optional(),
     /** §97의5①2호 — 양도 전 임대 종료 시 실제 임대기간의 마지막 날. ⑫에 없으면 침묵 stripping된다. */
     rentalEndDate: z.string().date().optional(),
+    /** §97의5①1호 — 매입임대주택 여부 (true만 충족) */
+    isPurchaseRental: z.boolean().optional(),
+    /** 조특령 §97의5①2호·3호 간주기간 — ⑫에 없으면 침묵 stripping된다 */
+    deemedRentalPeriods: z
+      .array(
+        z.object({
+          reason: z.enum(["expropriation", "redevelopment"]),
+          startDate: z.string().date(),
+          endDate: z.string().date(),
+        }),
+      )
+      .optional(),
     ...rental97CommonShape,
     officialPriceAtStart: z.number().int().nonnegative().optional(),
     region: z.enum(["capital", "non_capital"]).optional(),

@@ -267,6 +267,18 @@ export function toEngineReductions(
           ...(r.rentalContinuesToTransfer === false && r.rentalEndDate
             ? { rentalEndDate: r.rentalEndDate }
             : {}),
+          // §97의5①1호 — null(미선택)은 보내지 않아 엔진이 불적용 사유를 붙이게 한다(⑧이 먼저 막는다).
+          ...(r.isPurchaseRental !== null && r.isPurchaseRental !== undefined
+            ? { isPurchaseRental: r.isPurchaseRental }
+            : {}),
+          // 령 §97의5①2호·3호 간주기간 — 토글 ON + 날짜가 다 있는 행만
+          ...(r.hasDeemedRentalPeriod && (r.deemedRentalPeriods ?? []).length > 0
+            ? {
+                deemedRentalPeriods: r.deemedRentalPeriods
+                  .filter((p) => p.startDate && p.endDate)
+                  .map((p) => ({ reason: p.reason, startDate: p.startDate, endDate: p.endDate })),
+              }
+            : {}),
           officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
           region: r.region,
         };
