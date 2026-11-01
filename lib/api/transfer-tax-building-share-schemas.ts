@@ -8,6 +8,7 @@ import { z } from "zod";
 import { generalBuildingValuationSchema, carryoverTaxationEngineShape, rejectDebtPiecesKeyRefine } from "./transfer-tax-building-schemas";
 import { reductionSchema } from "./transfer-tax-schema-reductions";
 import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
+import { FRACTIONAL_RATIO_SUM_TOLERANCE } from "@/lib/calc/fractional-ratio-sum-tolerance";
 
 // ── ⑫ 일반건물 × 지분(%) 분할 취득 ──────────────────────────────────────
 
@@ -195,9 +196,9 @@ export const generalBuildingSharesSchema = z
         }
       }
     }
-    // (2) 지분율 합계 100% — 허용오차는 클라 validate(`transfer-tax-validate.ts`)와 **같은 값**.
+    // (2) 지분율 합계 100% — 허용오차는 클라 validate(`transfer-tax-validate.ts`)와 **같은 상수**.
     const sum = shares.reduce((s, x) => s + x.ownershipRatio, 0);
-    if (Math.abs(sum - 1) > 0.005) {
+    if (Math.abs(sum - 1) > FRACTIONAL_RATIO_SUM_TOLERANCE) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: [],
