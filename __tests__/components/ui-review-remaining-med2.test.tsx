@@ -96,8 +96,9 @@ describe("#35 — 한 화면에 같은 번호가 두 번 나오지 않는다", (
     //    공통 필드 자리로 정상 이어진다 — 확인해야 할 것은 「조건부 카드가 번호를 안 먹는다」다.
     expect(screen.queryByText("§97①2호 요건")).toBeNull();
     expect(screen.queryByText("단서 분기 — 100% 감면 요건")).toBeNull();
+    // §97은 임대료 증액 요건이 없어 공통 필드가 공실 기간 한 장(③)만 그린다(2026-11-01 `hasRentIncreaseRule` — 종전 ③ 임대료·④ 공실).
     expect(screen.getAllByText("③")).toHaveLength(1);
-    expect(screen.getAllByText("④")).toHaveLength(1);
+    expect(screen.queryByText("④")).toBeNull();
     expect(screen.queryByText("⑤")).toBeNull();
   });
 });
