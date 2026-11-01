@@ -23,7 +23,7 @@ import { validateStepDetailed } from "@/lib/calc/transfer-tax-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import { buildRows, type RowDef, type ColumnMode } from "@/components/calc/results/transfer/FilingFormTableHelpers";
+import { buildRows, getAcqDateForCard, type RowDef } from "@/components/calc/results/transfer/FilingFormTableHelpers";
 import { buildStatementItems } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
 
