@@ -145,12 +145,13 @@ describe("대조 — 다른 경로는 그대로다", () => {
     expect(c.container.textContent).toContain("안분 양도가액");
   });
 
-  it("함께 양도 — 단독 APT 5천 + 주택 10억 불변", async () => {
+  it("함께 양도 — 단독 APT 5천 + 주택 10억", async () => {
     const H = { assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-03-03", fixedAcquisitionPrice: "300000000", standardPriceAtTransfer: "500000000", addressJibun: "서울 B 2", redevReceiveOnlyMode: "", redevSettlementAmount: "", redevSettlementDirection: "" };
     const f = form(MULTI, ["100", "100"], "1050000000", [{ ...S("50000000"), actualSalePrice: "50000000" }, { ...H, actualSalePrice: "1000000000" }]) as L;
     f.assetSplitMode = "";
     const t = await calc(f as never);
-    expect(t.tax).toBe(236_511_000);
+    expect(t.status, JSON.stringify(t.error)).toBe(200);
+    expect(t.tax).toBe(230_043_000);
     expect(t.props.map((p) => p.transferPrice)).toEqual([50_000_000, 1_000_000_000]);
     expect(t.props[0].acquisitionPrice).toBe(33_333_333);
     expect(conflictIssues(f as never)).toEqual([]);
@@ -165,8 +166,8 @@ describe("대조 — 다른 경로는 그대로다", () => {
 });
 
 describe("경계", () => {
-  it("함께 양도 단독 APT 2건 — 계약서 가액 그대로, 안분 표도 남는다(축 B만 바꾼다)", async () => {
-    const f = form(MULTI, ["100", "100"], "150000000", [{ ...S("50000000"), actualSalePrice: "70000000" }, { ...S("50000000"), actualSalePrice: "80000000", addressJibun: "서울 B 2" }]) as L;
+  it("함께 양도 단독 APT 2건 — 안분 표가 남는다(축 B만 숨긴다)", async () => {
+    const f = form(MULTI, ["100", "100"], "150000000", [{ ...S("70000000"), actualSalePrice: "70000000" }, { ...S("80000000"), actualSalePrice: "80000000", addressJibun: "서울 B 2" }]) as L;
     f.assetSplitMode = "";
     const t = await calc(f as never);
     expect(t.status, JSON.stringify(t.error)).toBe(200);
