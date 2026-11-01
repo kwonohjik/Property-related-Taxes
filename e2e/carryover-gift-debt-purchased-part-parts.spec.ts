@@ -369,7 +369,7 @@ test.describe("CDPP-15 E2 함께 양도(컴패니언) 일반건물 — 꼬리 id
     await expect(form).toContainText("181,746,000");
     // 꼬리 카드(land__purchased#gb2)가 있어도 신고서 표는 주 자산 + 컴패니언 열 + 매입분 열
     expect((await formRow(page, "항목")).slice(1)).toEqual(["합계", "주 자산(주택)", "자산 2 토지(1001)(증여분)", "자산 2 건물(3001)", "자산 2 토지(1001)(매입분)"]);
-    expect(await formRow(page, "보유기간")).toEqual(["보유기간", "-", "11년 0월", "20년 9월", "-", "5년 0월"]);
+    expect(await formRow(page, "보유기간")).toEqual(["보유기간", "-", "11년 0월", "20년 9월", "5년 0월", "5년 0월"]);
     expect(await formRow(page, "양도가액")).toEqual(["양도가액", "1,600,000,000", "800,000,000", "300,000,000", "400,000,000", "100,000,000"]);
     expect(await formRow(page, "취득가액")).toEqual(["취득가액", "875,000,000", "300,000,000", "225,000,000", "200,000,000", "150,000,000"]);
     expect(await formRow(page, "필요경비")).toEqual(["필요경비", "73,000,000", "0", "70,000,000", "3,000,000", "0"]);
