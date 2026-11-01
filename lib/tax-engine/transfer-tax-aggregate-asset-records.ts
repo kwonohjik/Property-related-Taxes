@@ -369,6 +369,8 @@ export function buildAssetRecords(
 
 /**
  * 비주택 토지·건물 split 자산의 차손 통산 파트 행(Q-F3a) — 파트마다 「같은 세율을 적용받는 자산」 키를 만든다.
+ * 한 필지 중 일부만 비사업용인 토지도 파트로 통산한다(대법원 2012두15371 · 영 §167의2①은 세율 기준. 차손 통산을 정면으로
+ * 다룬 해석례는 없다 — 계획서 `transfer-partial-nbl-loss-offset.investigation.plan.md` §3).
  * 파트 소득 합이 자산 양도소득금액과 어긋나면(감면 등으로 축이 다르면) 자산 한 행으로 둔다.
  */
 function lossPartsOf(
@@ -381,6 +383,7 @@ function lossPartsOf(
     pa.correctedSingleInput,
     parseRatesFromMap(pa.rates),
     pa.result.multiHouseSurchargeEvaluation,
+    income,
   );
   if (!parts || parts.reduce((s, p) => s + p.income, 0) !== income) return undefined;
   return parts.map((p) => ({
