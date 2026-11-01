@@ -10,6 +10,9 @@
  *
  * 문구가 이 테스트의 주제라 라벨을 단언한다(값 축은 기존 `rentIncreaseViolationMode` 테스트가 본다).
  * validate 메시지(⑧)는 `transfer-validation-field-jump-cases.test.ts`가 조문별 정규식으로 본다.
+ *
+ * 섹션 제목(같은 게이트의 경미 결함): 다섯 조문 폼이 모두 「§97의3①2호」를 달았다. §97의4의 근거는 소득세법 시행령
+ * §167의3①2호이고, §97의5는 ①3호가 §97의3①2호를 준용한다. 빈 계약일 검증(⑧)도 필드 점프 케이스가 본다.
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -17,6 +20,7 @@ import { Rental974InputForm } from "@/components/calc/transfer/rental/Rental974I
 import { Rental97MainInputForm } from "@/components/calc/transfer/rental/Rental97MainInputForm";
 import { getReductionDefault } from "@/components/calc/transfer/UnifiedReductionPanel-defaults";
 import { rentIncreaseViolationLabel } from "@/lib/calc/rental-rent-increase-label";
+import { rentIncreaseSectionTitle } from "@/lib/calc/rental-rent-increase-label";
 import type { RentalReductionFormVariant } from "@/lib/stores/calc-wizard-asset-reduction";
 
 afterEach(cleanup);
@@ -49,5 +53,23 @@ describe("임대료 증액 위반 이력 라벨", () => {
       <Rental97MainInputForm value={getReductionDefault("rental_97_main") as Rental97MainForm} onChange={() => {}} />,
     );
     expect(screen.getByText(OLD_LABEL)).toBeTruthy();
+  });
+
+  it.each([
+    ["rental_97_3", "임대료 증액 제한 (§97의3①2호)"],
+    ["rental_97_5", "임대료 증액 제한 (§97의5①3호 → §97의3①2호)"],
+    ["rental_97_4", "임대료 증액 제한 (소득세법 시행령 §167의3①2호)"],
+    ["rental_97_main", "임대료 증액 제한"],
+    ["rental_97_2", "임대료 증액 제한"],
+  ])("섹션 제목 — %s → %s", (type, title) => {
+    expect(rentIncreaseSectionTitle(type)).toBe(title);
+  });
+
+  it("🔴 §97의4 폼의 섹션 제목이 소득세법 시행령 §167의3①2호다 (종전: §97의3①2호)", () => {
+    render(
+      <Rental974InputForm value={getReductionDefault("rental_97_4") as Rental974Form} onChange={() => {}} />,
+    );
+    expect(screen.getByText("임대료 증액 제한 (소득세법 시행령 §167의3①2호)")).toBeTruthy();
+    expect(screen.queryByText("임대료 증액 제한 (§97의3①2호)")).toBeNull();
   });
 });

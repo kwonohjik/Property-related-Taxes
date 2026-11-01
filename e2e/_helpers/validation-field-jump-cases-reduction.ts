@@ -192,6 +192,18 @@ const commonRows = (label: string, grace: string, intervalRule = false): Row[] =
 /** 증액 위반 이력·공실 구간 — 한 조문에서 목록형 칸 배선을 본다 */
 const listRows = (label: string): Row[] => [
   { name: "임대료 이력 목록", prop: "rentHistory", message: new RegExp(`^${label} 적용: 위반 이력 "있음" 선택 시 계약별`), patch: { rentIncreaseViolationMode: "has_violation", rentHistory: [] } },
+  {
+    name: "임대료 이력 계약일",
+    prop: "rentHistory",
+    message: new RegExp(`^${label} 적용: 임대료 계약 이력의 계약일을 모두 입력`),
+    patch: {
+      rentIncreaseViolationMode: "has_violation",
+      rentHistory: [
+        { contractDate: "2020-03-01", contractType: "jeonse", deposit: "100000000", monthlyRent: "" },
+        { contractDate: "", contractType: "jeonse", deposit: "110000000", monthlyRent: "" },
+      ],
+    },
+  },
   { name: "공실 구간 목록", prop: "vacancyPeriods", message: new RegExp(`^${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건`), patch: { hasVacancyOverGrace: true, vacancyPeriods: [] } },
   { name: "공실 구간 날짜", prop: "vacancyPeriods", message: new RegExp(`^${label} 적용: 공실 구간의 시작일·종료일`), patch: { hasVacancyOverGrace: true, vacancyPeriods: [{ startDate: "", endDate: "" }] } },
 ];

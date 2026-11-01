@@ -333,6 +333,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(fieldError(`reduction.${r.type}.rentIncreaseViolationMode`, `${label} 적용: ${rentIncreaseViolationLabel(r.type)} 여부(없음/있음)를 선택하세요.`));
           if (r.rentIncreaseViolationMode === "has_violation" && (!r.rentHistory || r.rentHistory.length < 2))
             return fail(fieldError(`reduction.${r.type}.rentHistory`, `${label} 적용: 위반 이력 "있음" 선택 시 계약별 임대료 이력을 2건 이상 입력하세요.`));
+          // 빈 계약일 — 공실 구간과 같은 이유(아래). 개수만 보면 ⑧을 통과한 뒤 Zod가 영문 경로로 400을 냈다(리뷰 게이트 2026-11-01).
+          if (r.rentIncreaseViolationMode === "has_violation" && r.rentHistory?.some((h) => !h.contractDate))
+            return fail(fieldError(`reduction.${r.type}.rentHistory`, `${label} 적용: 임대료 계약 이력의 계약일을 모두 입력하세요. 해당 없으면 행을 삭제하세요.`));
           if (r.hasVacancyOverGrace === null) {
             // D1-03 — 유예는 조문마다 다르다: §97의5만 6개월(조특령 §97의5①1호),
             // 나머지 넷은 3월(조특령 §97⑤5호 → 조특칙 §44). ⑤UI 질문 문구와 같은 값이어야 한다.
