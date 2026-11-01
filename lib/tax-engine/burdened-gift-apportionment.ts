@@ -46,6 +46,7 @@ import {
   apportionTransferPrice,
   apportionAcquisitionPrice,
   fractionalHighValueDenominator,
+  BG_PAREN_MORTGAGE_66_FROM,
   withDeemedAcquisitionStd,
 } from "./burdened-gift-valuation";
 
@@ -265,6 +266,30 @@ export function buildBurdenedGiftBreakdown(params: {
         " 평가로 결정됐습니다. 이 경우 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 " +
         "취득가액도 기준시가로 산정해야 하는데, 조합원입주권의 기준시가(같은 영 제165조 제1항) " +
         "입력 경로가 없어 계산할 수 없습니다. 담보 설정액·임대 보증금 입력을 재확인하세요.",
+    );
+  }
+
+  /**
+   * 🔴 입주권 × **시가 모드** × 담보(§66) 승리 × 양도일(증여일) 2023.2.28. 이후 — 위 기준시가 모드와 같은 **fail-fast**(`bg-rtmi-mkt-collateral-failfast.plan.md`).
+   *
+   * 「소득세법 시행령」 제159조 제1항 제1호 괄호는 2023.2.28.부터 양도가액을 상증법 §66으로 산정한 경우도 열거한다(`BG_PAREN_MORTGAGE_66_FROM`) — 입주권이라고 달라지지 않는다
+   * (입주권 평가는 §61③이지만 시가 모드에서 담보평가가 이겨 C가 §66 평가액이 되면 양도가액의 산정 근거가 §66이다). 그런데 종전 엔진은 시가 모드 입주권을 괄호 발동에서
+   * 제외해(`resolveBgAcquisitionBasis`) 실지취득가액(K-4)으로 계산했다 — 기준시가 모드는 같은 상황을 위 fail-fast로 막으니 **같은 사실이 모드에 따라 값이 달랐다**.
+   * 입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어 값을 정할 수 없으므로 두 모드 모두 계산을 중단한다. 이전 양도는 열거에 §66이 없어 실지 그대로다.
+   * `giftDate`가 없으면(증여세 계산을 생략하는 호출) 판정하지 않는다 — 종전 동작.
+   */
+  if (
+    isRightToMoveInValuation &&
+    info.valuationMode === "sangjeungbeop_market" &&
+    sangjeungbeopValuation.selectedMode === "mortgage" &&
+    params.giftDate !== undefined &&
+    params.giftDate >= BG_PAREN_MORTGAGE_66_FROM
+  ) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "[burdened_gift] 조합원입주권의 증여재산 시가 평가에서 담보(§66) 평가액이 시가보다 커 C가 담보평가액으로 결정됐습니다. " +
+        "양도일(증여일)이 2023.2.28. 이후라 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 취득가액도 기준시가로 산정해야 하는데, " +
+        "조합원입주권의 기준시가(같은 영 제165조 제1항) 입력 경로가 없어 계산할 수 없습니다. 담보 설정액·채권최고액 입력을 재확인하세요.",
     );
   }
 
