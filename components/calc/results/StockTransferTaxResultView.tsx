@@ -100,7 +100,7 @@ interface StockTransferTaxResultViewProps {
 // 분류 배지 라벨
 const TAX_CATEGORY_LABEL: Record<StockTransferResult["taxCategory"], string> = {
   listed_major: "§94①3 가목 — 상장 대주주",
-  listed_non_major_in_market: "§94①3 가목1) — 장내 비과세",
+  listed_non_major_in_market: "§94①3 가목 2) 반대해석 — 장내 비과세",
   // legacy — 2026-08-27 통합 이후 새로 만들지 않는다(저장된 이력 표시용)
   listed_otc_non_major: "§94①3 가목2) — 상장 비대주주 증권시장 밖 양도 (구 분류)",
   listed_off_market_non_major: "§94①3 가목2) — 상장 비대주주 증권시장 밖 양도",
@@ -260,7 +260,7 @@ export function StockTransferTaxResultView({
         : result.exemptReason === "kotc_venture"
           ? "K-OTC 벤처기업 소액주주 비과세 (조특법 §14①7호)"
           : result.exemptReason === "non_major_in_market"
-            ? "상장주식 장내거래 비대주주 비과세 (§94①3 가목1))"
+            ? "상장주식 장내거래 비대주주 비과세 (§94①3 가목 2) 반대해석)"
             : "비과세";
 
     return (
@@ -352,7 +352,7 @@ export function StockTransferTaxResultView({
             <ResultRow label="지방소득세 (10%) — 비과세 미적용" value={result.localIncomeTax} />
           </div>
           <div className="bg-emerald-100 dark:bg-emerald-950/30 px-4 py-3 text-xs text-emerald-800 dark:text-emerald-200">
-            ※ §94①3 가목 1) 단서에 따라 위 산출세액은 면제 — 최종 납부세액 <strong>0</strong>.
+            ※ §94①3 가목 2) 반대해석(비대주주의 장내 양도는 과세대상 아님)에 따라 위 산출세액은 면제 — 최종 납부세액 <strong>0</strong>.
             {" "}장외 거래·대주주 양도분이라면 산출세액 <strong>{fmt(result.calculatedTax)}</strong>이 그대로 부과됩니다.
           </div>
         </div>

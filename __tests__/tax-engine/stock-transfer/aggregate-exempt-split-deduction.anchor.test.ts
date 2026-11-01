@@ -14,7 +14,7 @@
  *   SPLIT-ECHO-1 (#28) split 단일세율 경로의 appliedRate·누진공제 echo 가 실제 계산과 일치
  *   SPLIT-ECHO-2 (#28) 기타자산 split 도 §55 누진공제를 echo 한다
  *
- * 근거 조문: 소득세법 §92② · §94①3호 가목 1) 단서 · §103①1호·2호·② · §104①11호 가목 1)·2)
+ * 근거 조문: 소득세법 §92② · §94①3호 가목 2) 반대해석 · §103①1호·2호·② · §104①11호 가목 1)·2)
  */
 
 import { describe, it, expect } from "vitest";
@@ -76,7 +76,7 @@ function baseInput(overrides: Partial<StockTransferInput> = {}): StockTransferIn
   } as StockTransferInput;
 }
 
-/** 코스피 소액주주 장내 — §94①3호 가목 1) 단서 비과세. 차익 4,000만. */
+/** 코스피 소액주주 장내 — §94①3호 가목 2) 반대해석 비과세. 차익 4,000만. */
 const EXEMPT_ITEM = baseInput({ isOnMarketTransaction: true });
 
 /** 코스피 대주주 장외 — 과세. 차익 1,000만. */
