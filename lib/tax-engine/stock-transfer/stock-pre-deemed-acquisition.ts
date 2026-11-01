@@ -25,11 +25,7 @@ import { actualAcquisitionTotal } from "./stock-actual-acquisition";
 import type { AcquisitionBasisResult } from "./stock-acquisition-basis";
 import { resolveStockDeemedDate, stockDeemedAcquisitionDate } from "./stock-deemed-acquisition-date";
 import { isMarketSampleAllowedMarket } from "./stock-valuation-market-sample";
-import {
-  PRODUCER_PRICE_INDEX_MONTHLY,
-  PPI_MONTHLY_FIRST_YEAR,
-  PPI_MONTHLY_LAST_YEAR,
-} from "../data/producer-price-index";
+import { isBeforePpiSeries, monthKey, mulDivFloor, ppiMonthlyX100, ratioToScaled6 } from "../producer-price-ratio";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import type { AcquisitionLot, StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
 
@@ -59,43 +55,13 @@ export function isPreDeemedPurchase(args: {
   return resolveStockDeemedDate(d, args.is94_4).isDeemedApplied;
 }
 
-/** 취득월이 PPI 계열(1965.01~) 이전인가 — 이때만 직접 입력 배율이 필요하다(계획서 Q-4) */
-export function isBeforePpiSeries(date: Date | string | undefined): boolean {
-  if (!date) return false;
-  const d = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(d.getTime())) return false;
-  return d.getUTCFullYear() < PPI_MONTHLY_FIRST_YEAR;
-}
-
-/** "YYYY-MM" — 날짜의 UTC 연월 */
-function monthKey(d: Date): { year: number; month: number; key: string } {
-  const year = d.getUTCFullYear();
-  const month = d.getUTCMonth() + 1;
-  return { year, month, key: `${year}-${String(month).padStart(2, "0")}` };
-}
+// 지수 유틸은 공용 leaf `../producer-price-ratio`로 옮겼다(부동산 매수 pre-deemed 공용 — 계획서 realestate-pre-deemed-purchase Q-13 a). 기존 import 경로 보존용 재노출.
+export { isBeforePpiSeries, ppiMonthlyX100 };
 
 /** 의제취득일의 «직전일이 속하는 달» — 의제취득일은 항상 1월 1일이라 전년 12월이다 */
 export function deemedPrevMonth(is94_4: boolean): { year: number; month: number; key: string } {
   const deemed = new Date(stockDeemedAcquisitionDate(is94_4));
   return monthKey(new Date(deemed.getTime() - 86_400_000));
-}
-
-/** 월간 지수 ×100 고정소수 — 표 밖이면 undefined. 표는 ECOS 소수 2자리라 ×100이 정수다. */
-export function ppiMonthlyX100(year: number, month: number): number | undefined {
-  if (year < PPI_MONTHLY_FIRST_YEAR || year > PPI_MONTHLY_LAST_YEAR) return undefined;
-  const v = PRODUCER_PRICE_INDEX_MONTHLY[year]?.[month - 1];
-  // 소수 2자리 데이터의 정수화 — 세액 반올림이 아니라 부동소수 표현(17.61 → 1761.0000000000002) 제거다.
-  return v === undefined ? undefined : Math.round(v * 100);
-}
-
-/** floor(base × num ÷ den) — BigInt, 총액 1회 절사 */
-function mulDivFloor(base: number, num: bigint, den: bigint): number {
-  return Number((BigInt(base) * num) / den);
-}
-
-/** 사용자 직접 입력 배율(소수) → 10^-6 고정소수. 6자리 문자열 변환이라 부동소수 곱셈 오차가 없다. */
-function ratioToScaled6(ratio: number): bigint {
-  return BigInt(ratio.toFixed(6).replace(".", ""));
 }
 
 export interface PreDeemedResolution {

@@ -82,12 +82,21 @@ export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-o
 export { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calcTax } from "./transfer-tax-rate-calc";
 import { unregisteredReductionNotice } from "./transfer-tax-reductions-calc";
+import type { PreDeemedPurchaseDetail } from "./types/transfer-pre-deemed-purchase.types";
 export { calcTax };
 
-export function calculateTransferTax(
+export function calculateTransferTax(rawInput: TransferTaxInput, rates: TaxRatesMap, options?: TransferTaxAcquisitionOptions): TransferTaxResult {
+  // STEP 0.471 영 §176조의2④ 비교 내역은 반환 경로(비과세·차손·다필지·§155⑳·정상)와 무관하게 여기 한 곳에서 싣는다.
+  const echo: { preDeemedPurchaseDetail?: PreDeemedPurchaseDetail } = {};
+  const r = calculateTransferTaxCore(rawInput, rates, options, echo);
+  return echo.preDeemedPurchaseDetail ? { ...r, preDeemedPurchaseDetail: echo.preDeemedPurchaseDetail } : r;
+}
+
+function calculateTransferTaxCore(
   rawInput: TransferTaxInput,
   rates: TaxRatesMap,
-  options?: TransferTaxAcquisitionOptions,
+  options: TransferTaxAcquisitionOptions | undefined,
+  echo: { preDeemedPurchaseDetail?: PreDeemedPurchaseDetail },
 ): TransferTaxResult {
   const steps: CalculationStep[] = [];
   const warnings: string[] = []; // F-2: 케이스 12 등 비차단 안내
@@ -95,6 +104,7 @@ export function calculateTransferTax(
   // STEP 0 ~ 0.48: 취득가액·입력 정규화 전처리 — 별도 파일로 분리 (800줄 정책, CB-08).
   //   순서가 곧 규약이라 한 덩어리로 옮겼다. `steps`·`warnings`는 참조로 넘겨 그대로 push된다.
   const pre = runPreCalculationSteps(rawInput, rates, options, steps, warnings, calculateTransferTax);
+  echo.preDeemedPurchaseDetail = pre.preDeemedPurchaseDetail;
   if (pre.earlyReturn) return pre.earlyReturn;
   const {
     parsedRates,
