@@ -198,3 +198,41 @@ Q-1 (B) · Q-2 (a) · Q-3 (a) · Q-4 (a) · Q-5 (a) · Q-6 주식 규약 · Q-7 
   - 환산 + 함께 견줄 실가 3억 → ② 304,234,724(① 200,000,000).
   - 1984-09 → ② 297,515,282(배율 0.9917).
 - 1990.8.30. 전 토지는 환산이면 §164④ 칸(1990.1.1. 공시지가·등급)이 ①의 분자를 만든다 — 그 칸 없이 환산을 고르면 기존 ⑧이 막는다(정상).
+
+## 12. PR-3 상세 설계 (2차 범위 · 엔진·UI 시니어 병렬 조사 2026-11-01 · 주요 file:line 직접 재확인)
+
+### 12.1 PR-3a — PR-2 회귀: 일반건물 매매 취득일 덮어쓰기가 날짜 키를 잃음 (수정)
+
+- 원인: PR-2가 덮어쓰기를 `onAssetChange({ acquisitionDate: 1985-01-01, preDeemedOriginalAcquisitionDate })` 한 패치로 바꿨다. 일반건물 매매 카드는 같은 칸에 `landAcquisitionDate`를 넘기고 날짜 핸들러 `setLandAcqDate`가 분리 여부로 키를 고른다(`GeneralBuildingAcquisitionCards.tsx:159-160·372-373·452`).
+- 실측(수정 전 · anchor·E2E): 분리 OFF 1984-06-01 → 저장값 `acquisitionDate` 1985-01-01 · `landAcquisitionDate` 1984-06-01(불변식 깨짐 · 칸은 1984 그대로) / 분리 ON 토지 1984-06-01 · 건물 1995-03-01 → **건물 취득일이 1985-01-01로 덮임**(1995 소실).
+- 수정: 덮어쓰기 패치를 호출부가 만든다 — `BlockProps.onAcquisitionDateClamp(clamped, original)`. 토지·주택 호출부(`CompanionAcquisitionCauseSection`)는 날짜 패치 + 원값 보존을 한 패치로 쓰고, 일반건물은 넘기지 않아 종전처럼 `setLandAcqDate(1985-01-01)`만 탄다(일반건물은 아직 범위 밖 — 원값 보존은 일반건물 PR에서).
+- 검증: anchor `__tests__/components/pre-deemed-clamp-callers.anchor.test.tsx` 3건(실제 호출부 렌더 · 수정 전 2건 실패) · 뮤테이션 3개 사멸 · E2E `e2e/pre-deemed-clamp-general-building.spec.ts` PD-GB1·2 3회 연속 통과 · 수정 전 2건 실패 · 관련 E2E 129건(취득일 칸) + 297건(일반건물) 통과 · 전체 vitest 44,809 통과 · tsc 0 · ESLint 0/373. 화면 모양 변경 없음(스크린샷 생략).
+
+### 12.2 남은 2차 범위 — 경로별 현행과 설계
+
+실측은 mock 세율 · 1984-06-01 매수 · ② = floor(실가 × 5029 ÷ 4959). 「기대」는 STEP 치환과 같은 입력을 수동으로 넣어 돌린 값(구현 후 anchor 기준값).
+
+| 경로 | 현행 | ① 계산 함수(본 계산과 같은 함수) | ② 채택 전환 | 실측 현행 → 기대(결정세액) |
+|---|---|---|---|---|
+| C 재개발 원조합원(완공 APT·입주권) | `transfer-pre-deemed-purchase.ts:53` 범위 밖 경고 · 실가 `redevelopment-split.ts:121` | `resolveRedevelopment166_3AcquisitionPrice`(`redevelopment-166-3-price.ts` · 상속 3자 max ③과 같은 함수 · Q-4 a) · 실가 모드는 ① 없음 | 실가: `acquisitionPrice = ②` · 환산: `useEstimatedAcquisition: false`(재개발 단계 입력이 STEP 뒤 `effectiveInput`에서 만들어짐 `transfer-tax-redevelopment-steps.ts:85-86`) | APT 실가 1억 67,480,121 → 67,104,643 · 입주권 실가 92,160,000 → 91,784,521 · 환산 ① 141,221,534 vs 함께 견줄 실가 3억 ② 304,234,724 → 55,836,614 → 9,020,106 |
+| A 일반건물 일괄(분리 OFF) | `route.ts:288` 일반건물 분기가 STEP 0.471을 안 거쳐 `preDeemedPurchase`를 **말없이 무시**(경고 0 · 화면은 게이트가 안 열어 직접 호출만) | 환산 ① = `buildEstimatedGeneralBuildingCards(...).gbOut.acquisition` 토지+건물(상속 의제 trial 선례 `general-building-route-helper.ts:203`) | 실가: 안분 전 `actualAcquisitionPrice`(`route.ts:293` `bundledAcq`)를 ②로(Q-8 a) · 환산 → 실가 뒤집기 장치 없음(선례 `general-building-pre-deemed.ts`는 실가 → 환산 한 방향) | 실가 5억 110,082,826 → 107,748,757(② 507,057,874 · 취득시 기준시가 비율 안분) |
+| B 토지·건물 취득일 분리(주택·건물·상가 · 일반건물 분리 ON) | `:57-59` 범위 밖 · 토지 칸 덮어쓰기는 원값을 버림(`CompanionAcqDateSection.tsx` `handleLandAcquisitionDateBlur`) | 파트 `calcPartAcquisitionPrice`(`transfer-tax-split-acq-price.ts:220-254`) — STEP에서 `calcSplitGain` probe(선례 `transfer-tax-split-carryover.ts:248`) | 실가 파트: `landAcquisitionPrice = ②` · 추계 파트: `landAcqMode = "actual"` + `landAcquisitionPrice = ②`(감정 모드는 같은 칸이라 함께 견줄 실가 칸 별도) | 토지 1984 실가 1억 · 건물 1990: 113,060,000 → 112,664,759 · 토지 환산 ① 1억 vs 실가 1.5억 ② 152,117,362: 112,220,000 → 98,467,138 |
+
+- 입력: C·A는 `PreDeemedPurchaseInput` 그대로(취득월 하나). B는 파트별 취득월이라 토지 파트 3필드가 새로 필요하다(Q-16).
+- echo: C는 단건 래퍼(`transfer-tax.ts:90-95`)가 그대로 싣는다 — `clause1Method`에 §166③ 표지 추가(`estimated`로 쓰면 근거가 §176조의2③3호로 잘못 보인다). A는 `generalBuildingValuationDetail`에 싣고 결과는 `GbResultBlocks.tsx:151-153` 옆. B는 파트별(Q-18).
+- 화면: C는 PR-2 카드가 `hidesGeneralAcqSection` 안이라 원조합원에 안 그려진다 — `RedevelopmentBlock.tsx` ⑤ 「인가전 분 종전 부동산 취득가액」 안에 같은 카드. ④⑫⑭는 최상위 `preDeemedPurchase` 배관을 그대로 탄다. A는 ⑥ 일반건물 결과가 `mode: "bundled"`라 PR-2 `pdPending` 조건(`transfer-per-asset-summary.ts:331`)을 그대로 열면 계산 뒤에도 「계산 후 확정」에 갇힐 수 있다(코드 추론 · 확인 필요).
+- 다건: 일반건물·재개발은 이미 막혀 있다. 분리는 술어를 넓히면 `validateMultiSupportedMode`·`MULTI_REJECT_RULES.preDeemedPurchase`가 그대로 막는다.
+
+### 12.3 PR-2에서 남은 구멍 (B에서 함께 닫음)
+
+- 주택 PHD 분리 갈래(토지·건물 날짜 두 칸): 둘 다 1985-01-01로 덮이면 엔진 범위 판정(같은 날)을 통과하는데, 실제 취득월이 서로 달라도 배율은 건물 원값 하나로 간다(토지 원값은 보존되지 않음). 세액 영향 미측정 — 확인 필요.
+
+### 12.4 결정 필요 (Q-14~)
+
+| ID | 쟁점 | 선택지 | 권장 |
+|---|---|---|---|
+| Q-14 | 남은 PR 순서 | (a) 경로별 C → A → B(각 PR에 실가·추계 모두) / (b) 모드별(세 경로 실가 ②만 → 추계 ①) | **(a)** — 카드 배치·결과 화면이 경로마다 달라 한 경로씩 닫는 편이 화면을 두 번 건드리지 않는다. C가 가장 작다(배관 재사용 · ① 함수 있음) |
+| Q-15 | 일반건물 환산·감정·매매사례에서 ② 채택 | (a) 환산 → 실가 뒤집기 장치 신설(필요경비 파트 축 ↔ 자산 축 역매핑) / (b) 일반건물은 실가 모드만 비교 · 추계 모드는 「비교는 반영하지 않습니다」 안내(Q-12 a) | **(b)** — 뒤집기는 선례가 없고 필요경비 매핑 회귀 위험이 크다. 약점: 일반건물 추계 + 높은 실가는 ②를 못 쓴다(안내로 밝힘) |
+| Q-16 | B 입력 모양 | (a) 평면형 토지 파트 3필드 추가(기존 3필드 = 건물 파트) / (b) `parts: { land, building }` 중첩 | **(a)** — 슬라이스·⑫·④ 변경 최소 |
+| Q-17 | B ① 획득 | (a) STEP에서 `calcSplitGain` probe / (b) `calcSplitAcquisitionPrice` 안에서 비교 | **(a)** — 분리 엔진 무변경 · 선례 있음 |
+| Q-18 | B echo | (a) 한 detail 안 파트 목록 / (b) 파트별 echo 2개 | **(a)** — 결과 카드 1개 유지 |
