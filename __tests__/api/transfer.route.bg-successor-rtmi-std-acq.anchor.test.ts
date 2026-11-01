@@ -19,7 +19,7 @@
  * · SR-2 연혁 경계 — 담보 2023-02-27/28 · 임대 2020-02-10/11: 열거 이전은 실지(값 불변), 이후는 기준시가.
  * · SR-3 입력 요구 정합 ⑧ ⊇ ⑫ — 기준시가 칸 비움: ⑧ 1건 ∧ ⑫ 400 · 승계취득가액 비움: ⑧·⑫ 통과(쓰이지 않는 값) · 열거 이전 승계취득가액 비움: 종전대로 ⑧ 차단.
  * · SR-4 원조합원은 계속 막는다(질의 H-2 대기) — ⑧ 차단 ∧ ⑫ 400 · 기준시가 칸을 채워도 같다.
- * · SR-5 범위 — 지분·함께 양도 묶음 승계 입주권은 막는다 · 보충 승·열거 이전은 막지 않는다.
+ * · SR-5 범위 — 지분 승계 입주권은 막는다(함께 양도 묶음은 X-1이 열었다) · 보충 승·열거 이전은 막지 않는다.
  * · SR-6 필요경비 — 자본적지출·양도비는 개산공제로 대체돼 값에 영향이 없다 ∧ ⑤ 술어(필요경비 칸 숨김).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -188,22 +188,9 @@ describe("SR-5 범위 — 승계 입주권 단건만", () => {
       expect(gain(r)).toBe(440_000_000);
     }
   });
-  it("지분 50% 승계 입주권 담보 승: ⑧ 차단(단독 소유 단건만)", () => {
+  it("지분 50% 승계 입주권 담보 승: ⑧ 차단(지분 100%만)", () => {
     const f = form([base(SUCC, MKT, MORT, STDIN, x({ ownershipNumerator: "50", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes" }))]);
-    expect(full(f).some((i) => i.message.includes("단독 소유 단건만 합니다"))).toBe(true);
-  });
-  it("함께 양도 묶음의 승계 입주권 담보 승: 묶음 게이트가 «단독 소유 단건만» 사유로 막는다", () => {
-    const house = Object.assign({ ...makeDefaultAsset(1) }, x({
-      assetId: "h1", addressJibun: "서울 강남구 테스트동 1-1", assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-01-01",
-      standardPriceAtTransfer: "1000000000", standardPriceAtAcq: "500000000", transferType: "burdened_gift", bgDonorRelation: "lineal_descendant",
-      bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1000000000", bgLendingDepositTotal: "0", bgMortgageDebtAmount: "3,000,000,000", bgMortgageSetAmount: "3,000,000,000",
-      bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "300000000",
-    })) as AssetForm;
-    const f = form([house, base(SUCC, MKT, MORT, STDIN)], "2026-02-16", { assetSplitMode: "companion", bundledSaleMode: "actual", contractTotalPrice: "6000000000" });
-    const m = full(f).filter((i) => i.message.includes("함께 양도와 같이 계산하지 않습니다"));
-    expect(m.length).toBe(1);
-    expect(m[0].message).toContain("조합원입주권 자산은");
-    expect(m[0].message).toContain("단독 소유 단건만 합니다");
+    expect(full(f).some((i) => i.message.includes("지분 100%(단독 소유)만 합니다"))).toBe(true);
   });
 });
 
