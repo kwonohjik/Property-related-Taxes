@@ -330,11 +330,11 @@ describe("대조군 — 불변이어야 하는 경로 (수정 전 값 그대로)
 
   it("한 필지 일부 비사업용(computePartialNblTax) + 짝 비사업용 토지: 양 순서 537,174,000", () => {
     // 항상 파트를 붙이는 형제 경로 — 이 수정과 무관해야 한다.
-    // 같은 날 양도라 기본공제는 납세자에게 유리한 쪽(재일46014-1685): 부분 비사업용 쪽 537,339,000 · 짝 쪽 537,174,000.
-    //   (종전 537,339,000은 단독 적용세율 내림차순 대리 지표가 불리한 쪽을 고른 값 — 계획서 transfer-basic-deduction-same-day-tie.plan.md)
+    // 부분 비사업용 자산의 기본공제는 세율 높은 8호 파트부터라, 어느 쪽에 주어도 8호 버킷에서 빠져 537,174,000으로 같다.
+    //   (종전 537,339,000은 파트 비율로 나눠 1호 파트까지 줄인 값 — 계획서 transfer-partial-nbl-loss-offset.investigation.plan.md §6)
     const partial = nblLand("2023-03-20", 1_300_000_000, 300_000_000, "2020-09-20", 0.5);
     const first = (a: TransferTaxInput, b: TransferTaxInput) => bothOrders("2023-03-20", a, b, 0, "FIRST").ab.totalTax;
-    expect([first(partial, N_USER()), first(N_USER(), partial)]).toEqual([537_339_000, 537_174_000]);
+    expect([first(partial, N_USER()), first(N_USER(), partial)]).toEqual([537_174_000, 537_174_000]);
     const { ab, ba } = bothOrders("2023-03-20", partial, N_USER());
     expect([ab.totalTax, ba.totalTax]).toEqual([537_174_000, 537_174_000]);
   });

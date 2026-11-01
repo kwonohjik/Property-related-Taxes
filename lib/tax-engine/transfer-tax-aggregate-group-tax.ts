@@ -11,7 +11,7 @@
  */
 
 import { calcTax, parseRatesFromMap, type TransferTaxInput } from "./transfer-tax";
-import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
+import { hasPartialNonBusinessLand, resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import type { SplitRatePart, SplitPartRateContext } from "./transfer-tax-split-rate";
 import { publicExpropriationReducedPart } from "./public-expropriation-reduction";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
@@ -321,7 +321,11 @@ export function aggregateByGroup(
         appliedRate: a.rate,
         candidateClauses: a.candidateClauses,
         bucketFlatRate: a.bucketFlatRate,
-        rateInput: r.correctedSingleInput,
+        // 과세표준이 0인 부분 비사업용 자산(차손 등)이 버킷 대표가 되면 면적 비율이 짝 자산의 과세표준 전체에 10%p × 비율로 묻는다.
+        rateInput:
+          a.taxBase === 0 && hasPartialNonBusinessLand(r.correctedSingleInput)
+            ? { ...r.correctedSingleInput, nonBusinessLandAreaRatio: 1 }
+            : r.correctedSingleInput,
         surchargeRate: a.surcharge,
         mhResult,
         assetIdx: i,

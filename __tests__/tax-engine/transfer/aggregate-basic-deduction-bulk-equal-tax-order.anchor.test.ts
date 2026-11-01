@@ -86,13 +86,13 @@ describe("일괄양도 — 세액이 같으면 한계세율 높은 자산 → �
     expect(r.totalTax).toBe(48_749_800);
   });
 
-  it("B-5 세액이 다르면 유리 판정이 이긴다 — #2220 A-1 L·n에 일괄 규칙을 걸어도 n · 총 918,126,000", () => {
-    const T23 = "2023-03-20";
-    const L = item("primary", { transferDate: D(T23), transferPrice: 1_300_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2022-03-20"), isNonBusinessLand: true, nonBusinessLandAreaRatio: 0.8 } as Partial<TransferTaxItemInput>);
-    const n = item(LATE, { transferDate: D(T23), transferPrice: 1_200_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2017-02-20"), isNonBusinessLand: true });
-    const r = run([L, n]);
+  it("B-5 세액이 다르면 유리 판정이 이긴다 — 주 자산이 먼저여도 단기 토지에 공제 · 총 25,949,000", () => {
+    // same-day-tie A-1과 같은 값: 주 자산에 주면 26,636,500 · 단기 토지에 주면 25,949,000.
+    const A = item("primary", { transferPrice: 350_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2015-01-01") });
+    const Z = item(LATE, { transferPrice: 350_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2025-01-10") });
+    const r = run([A, Z]);
     expect(allocOf(r)).toEqual({ primary: 0, [LATE]: 2_500_000 });
-    expect(r.totalTax).toBe(918_126_000);
+    expect(r.totalTax).toBe(25_949_000);
   });
 });
 

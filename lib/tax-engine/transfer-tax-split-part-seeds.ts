@@ -9,6 +9,7 @@
  * 계획서 `docs/02-design/features/transfer-104-5-split-nonhouse-followups.plan.md` §3 ·
  * `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §4.
  */
+import { applyFairMarketRatio } from "./tax-utils";
 import { calcTax } from "./transfer-tax-rate-calc";
 import { offsetLossesCore } from "./loss-offset-core";
 import { lossOffsetRateKey } from "./loss-offset-rate-key";
@@ -136,7 +137,19 @@ export function splitPartsForLossOffset(
   input: TransferTaxInput,
   parsedRates: ParsedRates,
   multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined,
+  income: number,
 ): LossOffsetPart[] | null {
+  if (!splitDetail && hasPartialNonBusinessLand(input)) {
+    const { nbl, other } = partialNblRateInputs(input);
+    const nblIncome = partialNblIncome(income, input.nonBusinessLandAreaRatio!);
+    return [
+      { kind: "non_business_land" as const, income: nblIncome, rateInput: nbl },
+      { kind: "land" as const, income: income - nblIncome, rateInput: other },
+    ].map((s) => {
+      const t = calcTax(Math.max(0, s.income), parsedRates, s.rateInput, multiHouseSurchargeResult);
+      return { kind: s.kind, income: s.income, rateClause: t.rateClause, appliedRate: t.appliedRate, propertyType: s.rateInput.propertyType };
+    });
+  }
   const seeds = buildSplitPartSeeds(splitDetail, input);
   if (!seeds) return null;
   return seeds.map((s) => {
@@ -144,6 +157,26 @@ export function splitPartsForLossOffset(
     return { kind: s.kind, income: s.raw, rateClause: t.rateClause, appliedRate: t.appliedRate, propertyType: s.rateInput.propertyType };
   });
 }
+
+/**
+ * 한 필지 중 일부만 비사업용인 토지인가 — `ratio = 1`(전량 비사토)·미지정은 나눌 대상이 없다.
+ *
+ * **단일 소스다.** 자산 세액·다건 합산·차손 통산이 같은 술어를 쓴다. 한쪽만 바뀌면 §104⑤가 조용히 우회된다(계획서 D-12).
+ */
+export function hasPartialNonBusinessLand(input: TransferTaxInput): boolean {
+  const ratio = input.nonBusinessLandAreaRatio;
+  return input.isNonBusinessLand === true && ratio !== undefined && ratio > 0 && ratio < 1;
+}
+
+/** 부분 비사업용 토지의 파트별 세율 판정 입력 — 비사토 파트는 전량 8호, 그 외 파트는 비사업용이 아니다. */
+export const partialNblRateInputs = (input: TransferTaxInput): { nbl: TransferTaxInput; other: TransferTaxInput } => ({
+  nbl: { ...input, nonBusinessLandAreaRatio: 1 },
+  other: { ...input, isNonBusinessLand: false, nonBusinessLandAreaRatio: undefined },
+});
+
+/** 자산 양도소득금액 중 비사토 파트 몫(면적 비율). 차손이면 음수다 — 절사 방향은 양수와 같게 절댓값으로. */
+export const partialNblIncome = (income: number, ratio: number): number =>
+  income >= 0 ? applyFairMarketRatio(income, ratio) : -applyFairMarketRatio(-income, ratio);
 
 /**
  * 파트 차손 통산(「소득세법 시행령」 §167의2①) — 다건과 같은 코어(`offsetLossesCore`)·같은 「같은 세율」 키(`lossOffsetRateKey`)를 쓴다.

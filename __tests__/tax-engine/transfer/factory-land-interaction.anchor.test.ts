@@ -38,7 +38,7 @@ const TRANSFER_DATE = new Date("2020-06-01");
  * 🔄 SHIFTED(A1a — 보유기간 초일 산입): 종전 2013-06-01은 양도일(2020-06-01)의 응당일이라
  * §95④ 초일 산입(정본 anchor `holding-period-first-day-inclusion.anchor.test.ts`)에서 보유가
  * 6년 → 7년(장특 12% → 14%)으로 바뀌고, 과세표준이 613,500,000 → 599,500,000으로 줄어
- * **E104-2의 §104⑤ 전환 경계(45.45%에서 상승)가 사라진다**(45.45%: 파트 합 215,717,820 <
+ * **E104-2의 §104⑤ 전환 경계가 사라진다**(45.45%: 파트 합 215,717,820 <
  * 일반 215,850,000). 이 파일의 축은 보유기간이 아니라 §104⑤·부칙·swap·수용이므로, 실측 수치를
  * 그대로 지키려고 보유 6년이 유지되는 가장 가까운 날(06-03 — 06-02 취득이면 7년 만료일이 2020-06-01이라 여전히 7년이다)로
  * 옮겼다. 이 파일의 세액 수치는 전부 「보유 6년·장특 12%」 기준이다.
@@ -132,21 +132,24 @@ describe("§104⑤ 비교과세 — 낮은 초과비율에서는 세액이 변�
     expect(r.calculatedTax).toBe(BASELINE); // §104⑤로 일반세액 채택
   });
 
-  it("E104-2: 경계 — 40%는 불변이나 45.45%부터 상승한다", () => {
-    const at40 = calculateTransferTax(land({}, 20_000), rates);
+  it("E104-2: 경계 — 45.45%까지 불변이고 50%에서 상승한다", () => {
+    // 소득 616,000,000. 기본공제는 세율 높은 비사업용 파트에서 공제하고, 1호는 221,730,000이다.
+    //   45.45%: 비사업용 277,472,000 → 파트 합 221,717,760 < 1호 → 불변.
+    //   50%: 비사업용 305,500,000 × 50% − 25,940,000 + 그 외 308,000,000 × 40% − 25,940,000 → 224,070,000 > 1호.
     const at4545 = calculateTransferTax(land({}, 22_000), rates);
-    expect(ratioOf(at40)).toBe(0.4);
+    const at50 = calculateTransferTax(land({}, 24_000), rates);
     expect(ratioOf(at4545)).toBe(0.4545);
-    expect(at40.calculatedTax).toBe(BASELINE);
-    expect(at4545.calculatedTax).toBe(221_826_860);
-    expect(at4545.calculatedTax).toBeGreaterThan(at40.calculatedTax);
+    expect(ratioOf(at50)).toBe(0.5);
+    expect(at4545.calculatedTax).toBe(BASELINE);
+    expect(at50.calculatedTax).toBe(224_070_000);
+    expect(at50.calculatedTax).toBeGreaterThan(at4545.calculatedTax);
   });
 
   it.each([
-    ["초과 50%", 24_000, 0.5, 224_195_000],
-    ["초과 60%", 30_000, 0.6, 231_422_000],
-    ["초과 70%", 40_000, 0.7, 238_784_000],
-    ["초과 90%", 120_000, 0.9, 260_142_000],
+    ["초과 50%", 24_000, 0.5, 224_070_000],
+    ["초과 60%", 30_000, 0.6, 231_302_000],
+    ["초과 70%", 40_000, 0.7, 238_694_000],
+    ["초과 90%", 120_000, 0.9, 260_072_000],
   ])("E104-3 %s — 세액이 실제로 오른다", (_label, total, expectedRatio, expectedTax) => {
     const r = calculateTransferTax(land({}, total), rates);
     expect(ratioOf(r)).toBe(expectedRatio);
@@ -158,7 +161,7 @@ describe("부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득은 +10%p 배�
   /**
    * ⚠️ **검증에는 세액이 실제로 오르는 비율을 써야 한다.** 초과 40% 이하는 §104⑤ 때문에
    * 원래 세액이 안 오르므로, 그 구간으로 테스트하면 "배제됐다"와 "원래 안 오른다"를
-   * 구분하지 못해 공허하게 통과한다. ⇒ 초과 70%(세액 +17,054,000 확인된 구간)를 쓴다.
+   * 구분하지 못해 공허하게 통과한다. ⇒ 초과 70%(세액 +16,964,000 확인된 구간)를 쓴다.
    */
   it("E-CRISIS-1: 초과 70%인데도 배제 구간 취득이면 세액이 오르지 않는다", () => {
     const base = calculateTransferTax(land({}, 0, CRISIS_ACQ_DATE), rates);
@@ -174,7 +177,7 @@ describe("부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득은 +10%p 배�
 
   it("E-CRISIS-2: 같은 초과비율이라도 배제 구간 밖 취득이면 오른다 (대조)", () => {
     const outside = calculateTransferTax(land({}, 40_000, ACQ_DATE), rates);
-    expect(outside.calculatedTax).toBe(238_784_000);
+    expect(outside.calculatedTax).toBe(238_694_000);
     expect(outside.calculatedTax).toBeGreaterThan(221_730_000);
   });
 });
@@ -199,8 +202,8 @@ describe("§97②2호 swap × 공장 초과분 — 두 축은 독립이다", () 
     expect(ratioOf(withFactory)).toBe(0.7); // 판정도 그대로
 
     expect(base.calculatedTax).toBe(163_140_000);
-    expect(withFactory.calculatedTax).toBe(173_698_500);
-    expect(withFactory.calculatedTax - base.calculatedTax).toBe(10_558_500);
+    expect(withFactory.calculatedTax).toBe(173_586_000);
+    expect(withFactory.calculatedTax - base.calculatedTax).toBe(10_446_000);
   });
 
   it("E-SWAP-2: swap은 양도차익을, 공장은 세율을 건드린다 — 중과폭이 서로 다르다", () => {
@@ -212,8 +215,8 @@ describe("§97②2호 swap × 공장 초과분 — 두 축은 독립이다", () 
       calculateTransferTax(land(SWAP, 40_000), rates).calculatedTax -
       calculateTransferTax(land(SWAP, 0), rates).calculatedTax;
 
-    expect(plainDiff).toBe(17_054_000);
-    expect(swapDiff).toBe(10_558_500);
+    expect(plainDiff).toBe(16_964_000);
+    expect(swapDiff).toBe(10_446_000);
     expect(swapDiff).toBeLessThan(plainDiff); // 과세표준이 작으므로
   });
 });
@@ -227,8 +230,8 @@ describe("공익수용 × 공장 초과분", () => {
 
     expect(ratioOf(withFactory)).toBe(0.7);
     expect(base.calculatedTax).toBe(221_730_000);
-    expect(withFactory.calculatedTax).toBe(238_784_000);
-    expect(withFactory.calculatedTax - base.calculatedTax).toBe(17_054_000);
+    expect(withFactory.calculatedTax).toBe(238_694_000);
+    expect(withFactory.calculatedTax - base.calculatedTax).toBe(16_964_000);
   });
 });
 

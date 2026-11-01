@@ -28,7 +28,7 @@ const base = (o: Record<string, unknown>) =>
 const E77 = (cash: number, bond = 0) => ({ type: "public_expropriation", cashCompensation: cash, bondCompensation: bond, businessApprovalDate: D("2018-01-01") });
 const FARM = { type: "self_farming", farmingYears: 10 };
 
-/** 부분 비사업용 50% · 9억 / 2.7억 — 파트 소득 각 245,700,000(장특 22%). */
+/** 부분 비사업용 50% · 9억 / 2.7억 — 파트 소득 각 245,700,000(장특 22%). 기본공제는 8호 파트부터. */
 const partial = (reductions: unknown[]) =>
   base({ transferPrice: 900_000_000, acquisitionPrice: 270_000_000, isNonBusinessLand: true, nonBusinessLandAreaRatio: 0.5, reductions });
 /** 미등기 짝 — 소득 200,000,000 × 70% = 140,000,000. */
@@ -58,22 +58,23 @@ const rowsOf = (r: ReturnType<typeof agg>) => r.reductionBreakdown[0].clauseRows
 const warned = (r: ReturnType<typeof agg>) => r.warnings.some((w) => w.includes(SPAN));
 
 describe("A — 부분 비사업용 + §77 현금 100% + 미등기 짝", () => {
-  it("감면 25,552,050 = 1호 10,942,650 + 8호 14,609,400 (종전 신고 전체 기준 33,037,156)", () => {
-    // 1호 72,951,000 × (245,700,000 − 1,250,000) × 15% / 244,450,000 = 10,942,650
-    // 8호 97,396,000 × (245,700,000 − 1,250,000) × 15% / 244,450,000 = 14,609,400
+  it("감면 25,533,300 = 1호 11,013,900 + 8호 14,519,400 (종전 신고 전체 기준 33,037,156)", () => {
+    // 기본공제 2,500,000은 세율 높은 8호 파트에서 공제한다.
+    // 1호 73,426,000 × 245,700,000 × 15% / 245,700,000 = 11,013,900
+    // 8호 96,796,000 × (245,700,000 − 2,500,000) × 15% / 243,200,000 = 14,519,400
     // 종전: 310,347,000 × 488,900,000 × 15% / 688,900,000 = 33,037,156 — 미등기 70%가 감면으로 번졌다.
     const r = agg([partial([E77(900_000_000)]), unreg()]);
-    expect(r.reductionAmount).toBe(25_552_050);
+    expect(r.reductionAmount).toBe(25_533_300);
     expect(rowsOf(r)).toEqual([
-      expect.objectContaining({ clauseLabel: "§104①1호", calculatedTax: 72_951_000, taxBase: 244_450_000, numerator: 36_667_500, raw: 10_942_650 }),
-      expect.objectContaining({ clauseLabel: "§104①8호", calculatedTax: 97_396_000, taxBase: 244_450_000, numerator: 36_667_500, raw: 14_609_400 }),
+      expect.objectContaining({ clauseLabel: "§104①1호", calculatedTax: 73_426_000, taxBase: 245_700_000, numerator: 36_855_000, raw: 11_013_900 }),
+      expect.objectContaining({ clauseLabel: "§104①8호", calculatedTax: 96_796_000, taxBase: 243_200_000, numerator: 36_480_000, raw: 14_519_400 }),
     ]);
     expect(warned(r)).toBe(false);
   });
 
-  it("총세액 318,384,855 — 입력 순서와 무관", () => {
-    expect(agg([partial([E77(900_000_000)]), unreg()]).totalTax).toBe(318_384_855);
-    expect(agg([unreg(), partial([E77(900_000_000)])]).totalTax).toBe(318_384_855);
+  it("총세액 318,264,230 — 입력 순서와 무관", () => {
+    expect(agg([partial([E77(900_000_000)]), unreg()]).totalTax).toBe(318_264_230);
+    expect(agg([unreg(), partial([E77(900_000_000)])]).totalTax).toBe(318_264_230);
   });
 });
 
@@ -95,9 +96,9 @@ describe("B — 비주택 토지(비사업용) + 건물 split + 비사업용 토
 });
 
 describe("합산 + 안내를 유지하는 경우", () => {
-  it("C 현금·채권 혼합 — 파트 몫을 입력이 정하지 않는다. 총세액 306,667,345", () => {
+  it("C 현금·채권 혼합 — 파트 몫을 입력이 정하지 않는다. 총세액 306,543,827", () => {
     const r = agg([partial([E77(450_000_000, 450_000_000)]), unreg()]);
-    expect(r.totalTax).toBe(306_667_345);
+    expect(r.totalTax).toBe(306_543_827);
     expect(r.reductionBreakdown[0].clauseBasis).toBeUndefined();
     expect(warned(r)).toBe(true);
   });
@@ -118,11 +119,11 @@ describe("합산 + 안내를 유지하는 경우", () => {
 });
 
 describe("D — 짝이 없으면(자산 1건) 호마다 (B − C) = D라 합산과 값이 같다", () => {
-  it("총세액 164,384,855 불변 · 호별 2행 · 단건과 같다", () => {
+  it("총세액 164,264,230 불변 · 호별 2행 · 단건과 같다", () => {
     const r = agg([partial([E77(900_000_000)])]);
     const s = calculateTransferTax(partial([E77(900_000_000)]), rates);
-    expect(r.totalTax).toBe(164_384_855);
-    expect(s.totalTax).toBe(164_384_855);
+    expect(r.totalTax).toBe(164_264_230);
+    expect(s.totalTax).toBe(164_264_230);
     expect(r.reductionAmount).toBe(s.reductionAmount);
     expect(rowsOf(r)).toHaveLength(2);
     expect(warned(r)).toBe(false);
@@ -130,9 +131,9 @@ describe("D — 짝이 없으면(자산 1건) 호마다 (B − C) = D라 합산�
 });
 
 describe("G — 조특법 §69 자경도 같다, §133 한도는 호별 합계에 건다", () => {
-  it("원시 170,347,000(100%) → 한도 100,000,000", () => {
+  it("원시 170,222,000(100%) → 한도 100,000,000", () => {
     const r = agg([partial([FARM]), unreg()]);
-    expect(rowsOf(r).map((x) => x.raw)).toEqual([72_951_000, 97_396_000]);
+    expect(rowsOf(r).map((x) => x.raw)).toEqual([73_426_000, 96_796_000]);
     expect(r.reductionAmount).toBe(100_000_000);
     expect(warned(r)).toBe(false);
   });

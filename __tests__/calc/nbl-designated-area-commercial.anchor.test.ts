@@ -68,14 +68,14 @@ describe("노출 술어 — 엔진 판정 함수(`judgeAppurtenantLandExcess`)�
 });
 
 describe("단건 — 폼 → ④ → Zod → route → 엔진", () => {
-  it("미선언 → 중과 유지 297,517,000 + «확인 필요» 고지 1건", async () => {
+  it("미선언 → 중과 유지 297,385,000 + «확인 필요» 고지 1건", async () => {
     const r = await runCalc(form([commercial(1)]));
     expect(r.issues).toEqual([]);
     expect(r.body.isDesignatedArea).toBeUndefined();
-    expect(r.result.totalTax).toBe(297_517_000);
+    expect(r.result.totalTax).toBe(297_385_000);
     expect(notices(r.result.warnings)).toBe(1);
   });
-  it("🔑 «아님» → 값이 엔진에 닿아 유예 278,960,000 · 사유 transfer_deferral · 고지 없음 (수정 전: ④에서 사라져 297,517,000)", async () => {
+  it("🔑 «아님» → 값이 엔진에 닿아 유예 278,960,000 · 사유 transfer_deferral · 고지 없음 (수정 전: ④에서 사라져 중과 유지)", async () => {
     const r = await runCalc(form([commercial(1, { isDesignatedArea: false })]));
     expect(r.body.isDesignatedArea).toBe(false);
     expect(r.result.totalTax).toBe(278_960_000);
@@ -84,19 +84,20 @@ describe("단건 — 폼 → ④ → Zod → route → 엔진", () => {
   });
   it("독립 도출 — 과세표준 697,500,000 · 미선언은 §104⑤ 2호(파트별 합) · «아님»은 가산이 빠져 1호(합산 누진)가 이긴다", async () => {
     // mock 표: 40% 구간 누진공제 25,400,000 · 38% 구간 19,400,000. 초과 비율 600/1,000 = 60%.
-    //   비사업용 파트 418,500,000 × 50%(40% + 10%p) − 25,400,000 = 183,850,000 · 나머지 279,000,000 × 38% − 19,400,000 = 86,620,000
-    //   미선언: 2호 270,470,000 ≥ 1호 697,500,000 × 40% − 25,400,000 = 253,600,000 → 270,470,000
+    //   소득 700,000,000 → 파트 420,000,000 · 280,000,000. 기본공제 250만은 세율 높은 비사업용 파트에서.
+    //   비사업용 파트 417,500,000 × 50%(40% + 10%p) − 25,400,000 = 183,350,000 · 나머지 280,000,000 × 38% − 19,400,000 = 87,000,000
+    //   미선언: 2호 270,350,000 ≥ 1호 697,500,000 × 40% − 25,400,000 = 253,600,000 → 270,470,000
     //   «아님»: 비사업용 파트도 40% → 2호 < 1호 → 253,600,000
     const und = await runCalc(form([commercial(1)]));
     const no = await runCalc(form([commercial(1, { isDesignatedArea: false })]));
     expect(und.result.taxBase).toBe(697_500_000);
-    expect(und.result.calculatedTax).toBe(418_500_000 * 0.5 - 25_400_000 + (279_000_000 * 0.38 - 19_400_000));
+    expect(und.result.calculatedTax).toBe(417_500_000 * 0.5 - 25_400_000 + (280_000_000 * 0.38 - 19_400_000));
     expect(no.result.calculatedTax).toBe(697_500_000 * 0.4 - 25_400_000);
   });
   it("«지정지역» → 중과 유지 · 미선언과 같은 세액 · 고지 없음", async () => {
     const r = await runCalc(form([commercial(1, { isDesignatedArea: true })]));
     expect(r.body.isDesignatedArea).toBe(true);
-    expect(r.result.totalTax).toBe(297_517_000);
+    expect(r.result.totalTax).toBe(297_385_000);
     expect(notices(r.result.warnings)).toBe(0);
   });
   it("🔑 무허가 단서(부속토지 전체 비사업용)도 «아님»이 닿는다", async () => {
@@ -128,10 +129,10 @@ describe("함께 양도 — 상업용건물이 컴패니언", () => {
   const run = (over: Record<string, unknown>) => runCalc(form([land(1), commercial(2, over)], { contractTotalPrice: "1300000000" }));
   const comp = (r: R) => (r.body.companionAssets as { isDesignatedArea?: boolean }[])[0];
   type Row = { nblSurchargeExcludedBy?: string };
-  it("🔑 미선언 330,850,000 + 고지 1건 / «아님» → 314,400,000 · 사유 transfer_deferral (수정 전: 컴패니언 값이 사라져 330,850,000)", async () => {
+  it("🔑 미선언 330,750,000 + 고지 1건 / «아님» → 314,400,000 · 사유 transfer_deferral (수정 전: 컴패니언 값이 사라져 중과 유지)", async () => {
     const und = await run({});
     expect(und.issues).toEqual([]);
-    expect(und.json.data.aggregated.determinedTax).toBe(330_850_000);
+    expect(und.json.data.aggregated.determinedTax).toBe(330_750_000);
     expect(notices(und.json.data.aggregated.warnings)).toBe(1);
     const no = await run({ isDesignatedArea: false });
     expect(comp(no).isDesignatedArea).toBe(false);
