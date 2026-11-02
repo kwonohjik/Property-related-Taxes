@@ -371,6 +371,8 @@ export function buildCompanionEngineInputs(
     ...(c.redevelopment?.subject === "right" && ctx.primaryEngineInput.oneRightHouseholdFacts
       ? ctx.primaryEngineInput.oneRightHouseholdFacts
       : {}),
+    // ⑭ 축 B 주택 지분 — 위 타입 주석. 토지·입주권 지분에는 싣지 않는다.
+    ...(c.assetKind === "housing" || c.assetKind === "mixed_use_house" || c.redevelopment?.subject === "apt" ? ctx.primaryEngineInput.shareHouseFacts : {}),
     // ⑭ §104①4호 단서(영 §167의6) — 컴패니언 분양권 전용(세대 단위 사실, 위 타입 주석 참조).
     presaleRightNoOtherRight: ctx.primaryEngineInput.presaleRightNoOtherRight,
     presaleRightAgeOrSpouseMet: ctx.primaryEngineInput.presaleRightAgeOrSpouseMet,
@@ -483,6 +485,9 @@ export function buildCompanionEngineInputs(
       assetId: c.assetId,
       assetLabel: c.assetLabel ?? "",
       allocatedSalePrice: a.allocatedSalePrice,
+      rentalResidence: ctx.primaryEngineInput.onShareMixedRentalNotices
+        ? { input: { ...companionEngine, annualBasicDeductionUsed: 0 }, onNotices: ctx.primaryEngineInput.onShareMixedRentalNotices } // 판정 함수는 기본공제를 읽지 않는다
+        : undefined,
     });
   }
 
