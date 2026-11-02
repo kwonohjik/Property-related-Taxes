@@ -66,3 +66,27 @@
 2. ④가 자산 종류로 가르는 다른 분기(`gbEstimatedExpense`·`gbModes`·`mixedSaleSplitScope`·`bgExpenseUnusedBasis`·`carryoverPurchasedPartScope`)도 둘째 지분에서 바뀐다 — 구현 때 축 B 일반건물·부담부증여·이월과세 지분에서 ④ 표시가 ⑧·④와 같아지는지 실측한다(바뀌는 것이 있으면 이 계획서에 기록).
 3. anchor(jsdom): 축 B 재개발 둘째 카드 — 옛 칸+자본적 지출액이면 옛 칸·안내 표시 · 재개발 인가 후 안내 표시 · 일반건물 둘째 카드 옛 칸 안내 표시.
 4. E2E: 위 V-3 막다른 길 시드 → 「다음」 → 옛 칸으로 초점 → 비우면 계산.
+
+## 4. 구현 결과 (Q-1 a — 사용자 결정 2026-11-02)
+
+**변경** — `CompanionAssetCard.tsx` ④ `AssetSectionExpense`에 `asset={acquisitionAsset}`(③과 같은 판정 자산) · 그 useMemo 주석에 ④도 읽는다고 적었다. 한 줄 외 변경 없음.
+
+**§3-2 실측 — 둘째 지분 ④ 렌더 전후(저장 자산 종류 「주택」, jsdom)**: 바뀐 것은 **안내가 새로 뜨는 것뿐**이고 사라진 칸·안내는 없다.
+
+| 시료(첫 카드 · 둘째 지분) | 새로 뜨는 것 | ⑧ 둘째 지분 |
+|---|---|---|
+| 재개발 APT 납부 · 환산 · 단독 신고 / 입주권 / 부담부증여 입주권 | `redev-expense-post-approval-notice` | 해당 칸 없음 |
+| 재개발 APT · 옛 칸 + 자본적 지출액 | 위 안내 + 옛 칸 안내 + **옛 칸 `directExpenses`** | `directExpenses` |
+| 재개발 APT · 옛 칸만 / 부담부증여 입주권 · 옛 칸 | 위 안내 + 옛 칸 안내 | `directExpenses` |
+| 일반건물 환산 · 옛 칸 | `gb-legacy-expense-unused-notice` | `directExpenses` |
+| 일반건물 감정 | `gb-deduction-only-notice` | — |
+| 일반건물 실가·환산(옛 칸 없음) · 주택 · 토지 | 변화 없음 | — |
+
+새 안내가 세액과 맞는지(API 경유):
+- 일반건물 감정 지분 — 둘째 지분 자본적 지출액 0 / 1천만 모두 253,878,900(필요경비 개산공제 3,075,000 · 2,250,000 그대로) → 「자본적지출·양도비가 쓰이지 않는다」 안내가 맞다.
+- 재개발 지분 — 둘째 지분 자본적 지출액 1천만 → 155,327,586 → 154,140,276, 둘째 지분 필요경비 0 → 4,000,000(× 40%) → 「인가 후 분」 안내가 맞다.
+
+**검증**
+- anchor `__tests__/components/axis-b-share-expense-section-kind.anchor.test.tsx` 6건(실제 `CompanionAssetCard` 렌더): AXK-1 재개발 지분 옛 칸 + 자본적 지출액·양도비·단독 — ⑧이 `directExpenses`를 지목하고 ④에 그 칸과 안내가 있다 · AXK-2 재개발 인가 후 안내 · 일반건물 옛 칸 안내 · 일반건물 감정 안내.
+- 뮤테이션: `asset={asset}`로 되돌리면 6건 모두 실패.
+- E2E `e2e/axis-b-share-redev-legacy-expense.spec.ts`: 막다른 길 시드 → 「다음」 → 둘째 카드 안내 · 옛 칸 초점 → 비우면 계산(`expenses` 0). 되돌린 코드에서는 안내를 못 찾아 실패. 관련 spec(#2858 옛 칸 · 축 B 조합원 유형 · 부담부증여 축 B 입주권) 함께 통과.

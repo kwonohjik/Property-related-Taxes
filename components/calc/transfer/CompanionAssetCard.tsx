@@ -153,6 +153,8 @@ export function CompanionAssetCard({
 
   /**
    * ③ 취득정보가 읽는 자산 — 지분 companion은 **`assetKind`만** primary값으로 덮는다.
+   * ④ 필요경비도 같은 값을 읽는다 — ⑧은 병합 자산(첫 카드 자산 종류)으로 막는데 ④가 저장값 «주택»을 읽으면
+   * 재개발 지분 옛 칸이 숨은 채 막히고 안내도 빠졌다(계획서 `axis-b-share-expense-section-kind.plan.md` Q-1 a).
    *
    * 🔴 지분 sibling은 `makeDefaultAsset`로 생성돼 `assetKind`가 **"housing"**이다
    *    (`Step1.tsx` `handleFractionalToggle` → `calc-wizard-asset-factory.ts`).
@@ -480,7 +482,7 @@ export function CompanionAssetCard({
           forceOpen={forceOpenAll}
         >
           <AssetSectionExpense
-            asset={asset}
+            asset={acquisitionAsset}
             onChange={onChange}
             isSingleAsset={!hasSiblings}
             isNonPrimaryAsset={!isPrimary}
