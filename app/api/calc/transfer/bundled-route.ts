@@ -22,6 +22,7 @@ import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
 import type { MixedUseCompanionContext } from "./bundled-companion-types";
 import { buildGbCompanionItems, type GbBgCarryoverUnitDraft } from "./general-building-part-cards";
+import { withRedevCommonExpense } from "./engine-input";
 import { attachGbCarryoverUnits, toGbCarryoverUnits } from "./bundled-gb-carryover-units";
 import { toTransferorBasisInfo } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 import {
@@ -206,6 +207,7 @@ export function calculateBundledTransfer(
       ? apportionment.apportioned.map((a, i) => ({ ...a, allocatedSalePrice: shareRedev[i]!.settlementAmount }))
       : apportionment.apportioned;
 
+  const mixedRentalNotices: string[] = [];
   const itemsRaw: TransferTaxItemInput[] = apportioned.flatMap((a, idx) => {
     if (a.assetId === "primary") {
       // 주 자산: engineInput을 복제 + 안분 결과로 양도·취득·필요경비 덮어쓰기
@@ -219,6 +221,7 @@ export function calculateBundledTransfer(
         ),
         acquisitionPrice: a.allocatedAcquisitionPrice,
         expenses: a.allocatedExpenses,
+        ...(engineInput.redevelopment ? { redevelopment: withRedevCommonExpense(engineInput.redevelopment, a.allocatedCommonExpense) } : {}),
         propertyId: "primary",
         propertyLabel: a.assetLabel,
         // F-13 — 주 자산 주택은 배율 이내 부수토지 카드와 「1세대1주택 단위」를 이룬다(합산 엔진이 묶는다).
@@ -268,6 +271,7 @@ export function calculateBundledTransfer(
             assetId: "primary",
             assetLabel: a.assetLabel ?? "",
             allocatedSalePrice: a.allocatedSalePrice,
+            rentalResidence: { input: engineInput, onNotices: (n) => mixedRentalNotices.push(...n) },
           },
         );
       }
@@ -411,6 +415,10 @@ export function calculateBundledTransfer(
       ).result,
   );
 
+  // 주택 카드의 단건 엔진이 이미 낸 문장(0061 — `[자산명]` 접두)은 다시 싣지 않는다.
+  for (const notice of mixedRentalNotices) {
+    if (!aggregated.warnings.some((w) => w.includes(notice))) aggregated.warnings.push(notice);
+  }
   // 일반건물 부담부증여 × 본인 신축 §114조의2 가산세가 붙었으면 고지(Q-14) — 단건(`runActualGeneralBuildingOnce`)과 같은 문구·같은 조건.
   //   전 자산 부담부증여 묶음에서 카드의 `penaltyAxis`는 GB 부담부증여 카드만 싣는다(일반 양도 GB 카드의 감정 신호는 혼합 묶음이라 ⑧이 막는다).
   if (isAllBurdenedGift && items.some((it) => it.penaltyAxis) && !aggregated.warnings.includes(GB_BG_SELF_BUILT_NOTICE)) {

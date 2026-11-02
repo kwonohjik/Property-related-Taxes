@@ -215,8 +215,9 @@ export function CompanionAssetCard({
         bundledSaleMode,
         isFractionalSplit: splitMode === "fractional",
         transferDate,
+        assetIndex: index,
       }),
-    [acquisitionAsset, totalTransferExpense, bundledSaleMode, splitMode, transferDate],
+    [acquisitionAsset, totalTransferExpense, bundledSaleMode, splitMode, transferDate, index],
   );
 
   // 접기 상태 — 첫 자산(양도일·신고일 호스트)은 ① 자동 펼침, 그 외 전부 접힘.
@@ -224,6 +225,12 @@ export function CompanionAssetCard({
   // E2E는 양도일 fill을 섹션 expand보다 먼저 실행한다.
   const [open, setOpen] = useState<Record<number, boolean>>(showFormDates ? { 1: true } : {});
   const forceOpenAll = !!errorMessage; // 검증 오류 시 5개 전부 펼침 (H2)
+  // 오류가 풀려도 펼친 채 둔다 — 입력하던 칸이 답하자마자 접히거나 위 섹션이 접혀 밀린다. 렌더 중 상태 조정(useEffect 아님).
+  const [wasForceOpen, setWasForceOpen] = useState(forceOpenAll);
+  if (wasForceOpen !== forceOpenAll) {
+    setWasForceOpen(forceOpenAll);
+    if (!forceOpenAll) setOpen({ 1: true, 2: true, 3: true, 4: true, 5: true });
+  }
   const cardRef = useRef<HTMLDivElement>(null);
 
   function toggleSection(num: number) {

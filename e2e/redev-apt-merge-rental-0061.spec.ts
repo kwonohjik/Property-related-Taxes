@@ -102,7 +102,7 @@ test("[RME-1] ★ 문항에 답하지 않으면 막히고, ⑤에서 「예」�
   await expect(page.getByTestId("rental-counterpart-resided-yes")).toBeFocused();
   await page.getByTestId("rental-counterpart-resided-yes").click();
   await expect(page.getByTestId("validation-issues")).toHaveCount(0);
-  await expandAssetSection(page, 5); // 오류가 사라지면 강제 펼침이 풀려 ⑤가 접힌다
+  // 오류가 풀려도 ⑤는 펼친 채 남아 답의 결과가 바로 보인다.
   await expect(page.getByText("합가 상대 쪽 임대 경로라 적용하지 않음", { exact: false })).toBeVisible();
 
   await gotoLastStep(page);

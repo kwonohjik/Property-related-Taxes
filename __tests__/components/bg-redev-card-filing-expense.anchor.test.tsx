@@ -261,10 +261,10 @@ describe("단건 카드 — 신고서 필요경비 줄 (Q-1 a · Q-2 b)", () => 
 });
 
 /**
- * 입력 경로 — 원조합원의 인가 후 분 경비는 일반 자본적지출·양도비 칸으로 들어간다(`transfer-tax-api-redev.ts` `postApprovalExpenses` =
- * 승계조합원 전용 `redevPostApprovalExpenses` + 자본적지출 + 양도비, 채무비율 안분). 종전 계획서 §6 V-1은 승계조합원 전용 칸으로 잘못 재현했다.
+ * 입력 경로 — 원조합원의 경비는 일반 자본적지출·양도비 칸으로 들어간다(자본적지출은 `postApprovalExpenses`, 양도비는 `transferExpense` — 채무비율 뒤 인가 전·후 안분,
+ * `redev-total-transfer-expense.plan.md`). 종전 계획서 §6 V-1은 승계조합원 전용 칸으로 잘못 재현했다.
  * 기존 부담부증여 묶음 응답 계측 247건에는 자본적지출 입력 시료가 0건이라, 「카드별 필요경비 합 = 자산별 필요경비 합」을 이 시료들로 다시 고정한다.
- * 값은 route 실측(자본적지출 5,000,000 + 양도비 1,000,000 → 채무비율 40% = 2,400,000).
+ * 값은 route 실측(자본적지출 5,000,000 + 양도비 1,000,000 → 채무비율 40% = 2,400,000 · 양도비 몫 400,000 중 인가 전 167,023 — 환산이면 개산공제와 택일이라 공제되지 않는다).
  */
 const CAP: A = { capitalExpenditure: "5,000,000", transferExpense: "1,000,000" };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -278,25 +278,25 @@ const cardExpenseSum = (d: any) =>
 const propertyExpenseSum = (d: any) => (d.aggregated.properties as any[]).reduce((s, p) => s + p.necessaryExpense, 0);
 
 describe("입력 경로 — 자본적지출·양도비(인가 후 분 · 청산금 분)", () => {
-  it("묶음 · 완공 APT ③ + 자본적지출·양도비 — 인가 전 개산공제 1,020,419 + 인가 후 1,686,296 + 청산금 713,704 = 3,420,419 = 자산별 필요경비", async () => {
+  it("묶음 · 완공 APT ③ + 자본적지출·양도비 — 인가 전 개산공제 1,020,419 + 인가 후 1,568,941 + 청산금 664,036 = 3,253,396 = 자산별 필요경비", async () => {
     const v = await bundleView(mk([HOUSING, { ...REDEV, ...CAP }], "825000000"));
-    expect(v.total[0]).toContain("3,420,419");
+    expect(v.total[0]).toContain("3,253,396");
     expect(v.pre[0]).toContain("1,020,419");
-    expect(v.post[0]).toContain("1,686,296");
-    expect(v.settlement[0]).toContain("713,704");
-    expect(v.necessary).toEqual([3_420_419]);
+    expect(v.post[0]).toContain("1,568,941");
+    expect(v.settlement[0]).toContain("664,036");
+    expect(v.necessary).toEqual([3_253_396]);
     expect(cardExpenseSum(v.d)).toBe(propertyExpenseSum(v.d));
-    expect(v.tax).toBe(34_061_170);
+    expect(v.tax).toBe(34_106_183);
   });
 
-  it("묶음 · 완공 APT ① 실비 + 자본적지출·양도비 — 합 3,600,000 = 인가 전 실비 1,200,000 + 인가 후 + 청산금", async () => {
+  it("묶음 · 완공 APT ① 실비 + 자본적지출·양도비 — 합 3,600,000 = 인가 전 실비 1,200,000 + 양도비 몫 167,023 + 인가 후 + 청산금", async () => {
     const v = await bundleView(mk([HOUSING, { ...REDEV_ACTUAL, ...CAP }], "825000000"));
     expect(v.total[0]).toContain("3,600,000");
-    expect(v.pre[0]).toContain("1,200,000");
-    expect(v.post[0]).toContain("1,686,296");
-    expect(v.settlement[0]).toContain("713,704");
+    expect(v.pre[0]).toContain("1,367,023");
+    expect(v.post[0]).toContain("1,568,941");
+    expect(v.settlement[0]).toContain("664,036");
     expect(cardExpenseSum(v.d)).toBe(propertyExpenseSum(v.d));
-    expect(v.tax).toBe(14_242_113);
+    expect(v.tax).toBe(14_228_885);
   });
 
   it("묶음 · 비재개발 주택(실지)에 자본적지출·양도비 + 재개발 카드 — 카드별 합(주택 §159 칸 2,400,000 + 재개발 1,020,419) = 자산별 필요경비 합", async () => {
@@ -314,15 +314,15 @@ describe("입력 경로 — 자본적지출·양도비(인가 후 분 · 청산�
     expect(v.settlement).toHaveLength(1);
     expect(v.necessary).toEqual([1_800_000, 600_000]);
     expect(cardExpenseSum(v.d)).toBe(propertyExpenseSum(v.d));
-    expect(v.tax).toBe(128_498_480);
+    expect(v.tax).toBe(128_506_928);
   });
 
-  it("단건 · 완공 APT ③ + 자본적지출·양도비 — 합 3,420,419 · 인가 후·청산금 분 줄", async () => {
+  it("단건 · 완공 APT ③ + 자본적지출·양도비 — 합 3,253,396 · 인가 후·청산금 분 줄", async () => {
     const v = await singleView(mk([{ ...REDEV, ...CAP }], "", { householdHousingCount: "0" }));
-    expect(v.total[0]).toContain("3,420,419");
-    expect(v.post[0]).toContain("1,686,296");
-    expect(v.settlement[0]).toContain("713,704");
-    expect(redevBranchTotals(v.res.redevelopmentDetail).expenses).toBe(3_420_419);
+    expect(v.total[0]).toContain("3,253,396");
+    expect(v.post[0]).toContain("1,568,941");
+    expect(v.settlement[0]).toContain("664,036");
+    expect(redevBranchTotals(v.res.redevelopmentDetail).expenses).toBe(3_253_396);
   });
 
   it("단건 · 입주권(원조합원) — 인가 전 실비 3,000,000 × 채무비율 = 1,200,000 · 자본적지출·양도비까지 3,600,000 (인가 후 분이 없는 입주권은 청산금 분에 들어간다)", async () => {
@@ -336,8 +336,8 @@ describe("입력 경로 — 자본적지출·양도비(인가 후 분 · 청산�
     cleanup();
     const withCap = await singleView(single({ ...RT, ...CAP } as AssetForm));
     expect(withCap.total[0]).toContain("3,600,000");
-    expect(withCap.pre[0]).toContain("1,200,000");
-    expect(withCap.settlement[0]).toContain("2,400,000");
+    expect(withCap.pre[0]).toContain("1,440,000"); // 인가 전 실비 1,200,000 + 양도비 몫 400,000의 240,000
+    expect(withCap.settlement[0]).toContain("2,160,000");
     expect(redevBranchTotals(withCap.res.redevelopmentDetail).expenses).toBe(3_600_000);
   });
 });

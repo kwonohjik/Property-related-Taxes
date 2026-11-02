@@ -137,15 +137,15 @@ describe("PR-7b-4 재개발 완공 아파트 × 의제취득일 전 × 부담부
     expect(r.status).toBe(400);
   });
 
-  it("M-6 경비 — ③ 채택은 종전 환산과, ① 채택은 종전 실지와 1원까지 같다(3,759,728 · 481,644)", async () => {
+  it("M-6 경비 — ③ 채택은 종전 환산과, ① 채택은 종전 실지와 1원까지 같다(3,935,103 · 451,579)", async () => {
     const conv = await run({ ...MARKET, preDeemedClauseAUnconfirmed: true, ...EXPENSES });
     const purchaseConv = await run({ ...MARKET, acquisitionCause: "purchase", bgAcquisitionMethod: "converted", ...EXPENSES });
     const rep = await run({ ...MARKET, publishedValueAtInheritance: "200,000,000", ...EXPENSES });
     const purchaseActual = await run({ ...MARKET, acquisitionCause: "purchase", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "200,000,000", ...EXPENSES });
     expect([conv.issues, rep.issues]).toEqual([[], []]);
-    expect(conv.tax).toBe(3_759_728);
+    expect(conv.tax).toBe(3_935_103);
     expect(conv.tax).toBe(purchaseConv.tax);
-    expect(rep.tax).toBe(481_644);
+    expect(rep.tax).toBe(451_579);
     expect(rep.tax).toBe(purchaseActual.tax);
   });
 

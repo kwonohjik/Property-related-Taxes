@@ -41,6 +41,7 @@ const FULL_PAYLOAD = {
   settlementSaleDate: "2023-03-02",
   preApprovalExpenses: 5_000_000,
   postApprovalExpenses: 3_000_000,
+  transferExpense: 2_000_000,
   originalAssetType: "land",
   acquisitionStdPrice: 80_000_000,
   managementDisposalStdPrice: 150_000_000,

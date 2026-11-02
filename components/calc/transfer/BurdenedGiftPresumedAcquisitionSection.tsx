@@ -263,7 +263,7 @@ export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method
           <CurrencyInput
             label=""
             hideUnit
-            data-field={f.total}
+            data-field={carryover ? "bgCoDonorPresumedAcquisitionTotal" : "bgPresumedAcquisitionTotal"}
             value={asset[f.total]}
             onChange={(v) => onChange({ [f.total]: v })}
           />

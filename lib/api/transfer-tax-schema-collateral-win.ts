@@ -16,7 +16,23 @@ export type CollateralWinLike = {
   mortgageSetAmount?: number;
   /** 조합원입주권 평가 3항 — 있으면 §159①1호 괄호가 발동하지 않는다(엔진 `resolveBgAcquisitionBasis`). */
   rightValuation?: unknown;
+  acquisitionMethod?: string;
+  actualAcquisitionTotal?: number;
+  actualLandAcquisitionPrice?: number;
+  actualBuildingAcquisitionPrice?: number;
 };
+
+const positive = (v: number | undefined) => typeof v === "number" && v > 0;
+
+/**
+ * 시가 모드 · K-4(실지취득가액 안분)인데 금액이 하나도 없는가 — 엔진이 취득가액 0으로 계산한다(양도차익 과대). 주 자산(`refineBurdenedGiftInputs`)과 컴패니언이 공용한다.
+ * 담보 승이면 엔진이 금액을 읽지 않아 요구하지 않는다(아래 두 판정).
+ */
+export function bgActualAcquisitionMissing(bg: CollateralWinLike, ownershipRatio: number | undefined, transferDate: string | undefined): boolean {
+  if (bg.valuationMode !== "sangjeungbeop_market" || bg.acquisitionMethod !== "actual") return false;
+  if (positive(bg.actualAcquisitionTotal) || positive(bg.actualLandAcquisitionPrice) || positive(bg.actualBuildingAcquisitionPrice)) return false;
+  return !collateralForcesStdAcquisition(bg, ownershipRatio) && !successorRtmiMarketCollateralForcesStd(bg, transferDate, ownershipRatio);
+}
 
 /**
  * 시가 모드 · 담보 승(「상속세 및 증여세법」 제66조) — 엔진이 산정방식과 무관하게 취득가액을 취득시 기준시가 × 채무비율로 강제하고

@@ -546,3 +546,8 @@ export function toEngineRedevelopment(
     otherHouseAcquisitionDate: toOptionalDate(redev.otherHouseAcquisitionDate),
   };
 }
+
+/** 총 양도비의 이 자산 몫(§100② 후문)을 §166 양도비에 더한다 — 안분 결과의 `expenses`는 §166 산식이 읽지 않는다. 일반건물 `withBundledCommonExpense`와 같은 자리. */
+export function withRedevCommonExpense<T extends { transferExpense?: number }>(redev: T, commonExpense: number | undefined): T {
+  return commonExpense && commonExpense > 0 ? { ...redev, transferExpense: (redev.transferExpense ?? 0) + commonExpense } : redev;
+}

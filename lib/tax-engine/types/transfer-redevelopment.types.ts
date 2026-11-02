@@ -150,6 +150,12 @@ export interface RedevelopmentInfo {
   postApprovalExpenses?: number;
 
   /**
+   * 양도비(「소득세법」 §97①3호, 원, optional). 인가 전·후로 안분해 위 두 칸에 더한다(`apportionRedevTransferExpense`).
+   * 함께 양도의 총 양도비 몫은 route가 여기에 더한다(`withRedevCommonExpense`).
+   */
+  transferExpense?: number;
+
+  /**
    * 출자 자산 종류 — subject="apt" 시 의미 있음.
    * - "land":    토지출자 (사례 40~43)
    * - "housing": 주택출자 (사례 44~46)
@@ -526,7 +532,7 @@ export interface RedevelopmentBranchDetail {
    * - postApprovalExistingHouse (apt): 취득일 → 신축양도일 (§166⑤2호나목)
    * - postApprovalExistingHouse (right): 0 (LTHD 대상 양도차익 부존재)
    * - settlement (apt+pay):     approvalDate → transferDate (§166⑤2호가목)
-   * - settlement (apt+receive): acquisitionDate → settlementSaleDate (§95④ + NTS 집행기준)
+   * - settlement (apt+receive): acquisitionDate → settlementSaleDate (§95④ + 양도소득세 집행기준 98-162-14)
    * - settlement (right):       0 (LTHD 대상 자산 부존재)
    */
   holdingMonths: number;
@@ -672,6 +678,13 @@ export interface RedevelopmentResult {
    * 사례 46 — 청산금 수령분 단독 신고에서 settlement 단독 산식 라벨 적용.
    */
   receiveOnlyMode?: boolean;
+
+  /**
+   * 청산금 수령 단독 신고 × 환산의 「소득세법」 §97②2호 단서 비교(지분 반영 · 안분 전 금액).
+   * estimatedSide = 환산취득가액 + 개산공제, directSide = 자본적지출·양도비 등. direct면 환산취득가액을 차감하지 않는다.
+   * 나목 입력이 없거나 부담부증여면 비교하지 않아 undefined다.
+   */
+  receiveOnlyProvisoComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
 
   /**
    * **청산금 수령분이 본 양도가액과 별개의 대가인 경우 그 금액** (표시 전용 echo).

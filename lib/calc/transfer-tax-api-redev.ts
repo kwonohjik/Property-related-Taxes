@@ -15,6 +15,7 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio } from "./transfer-tax-api-helpers";
 import { parseDecimal } from "@/lib/calc/number-parse";
+import { redevPreApprovalExpensesUnused } from "./redev-pre-approval-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import {
   resolveRedevSubject,
@@ -22,6 +23,7 @@ import {
   postApprovalExpensesInScope,
   settlementOneHouseAtSaleInScope,
   redevCompletionDateInScope,
+  isReceiveOnlyFiling,
   householdBuildingCarryoverApplied,
   landContributedOriginalApt,
   landHouseholdBuildingInScope,
@@ -113,9 +115,16 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
     settlementAmount: parseAmount(asset.redevSettlementAmount),
     settlementSaleDate: asset.redevSettlementSaleDate || undefined,
     // 스케일 O — 필요경비(§97①2·3호). 화면 규약 「필요경비는 100% 기준 입력」.
-    preApprovalExpenses: share(parseAmount(asset.redevPreApprovalExpenses)),
-    // 인가후 분 필요경비 = redev 전용 입력 + 자본적지출(§97① 가목) + 양도비(§97① 나목)
-    // 신축APT 양도 시점에 발생한 자본적지출·양도비는 인가후 분에 귀속.
+    // 단독 신고 × 환산은 칸이 숨어도 §97②2호 단서의 나목에 합산되므로 저장값을 싣지 않는다.
+    // 감정·매매사례 플래그가 남으면 ④가 환산으로 보내지 않으므로(`transfer-tax-api-primary-context.ts` isEstimated) 여기서도 환산으로 보지 않는다.
+    preApprovalExpenses:
+      isReceiveOnlyFiling(asset) &&
+      redevPreApprovalExpensesUnused(asset) &&
+      asset.isAppraisalAcquisition !== true &&
+      asset.isSalesCaseAcquisition !== true
+        ? 0
+        : share(parseAmount(asset.redevPreApprovalExpenses)),
+    // 인가후 분 필요경비 = redev 전용 입력 + 자본적지출(§97① 가목). 양도비는 엔진이 인가 전·후로 안분하므로 따로 싣는다(`transferExpense`).
     postApprovalExpenses: (() => {
       // U1-02 — 승계조합원 전용 칸이다. 원조합원으로 되돌리면 화면에서 사라지지만 저장값은 남고,
       //         그 축에는 지울 위젯이 없다 ⇒ **범위 밖이면 합산하지 않는다**(마이그레이션과 2중선).
@@ -124,12 +133,13 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
           ? parseAmount(asset.redevPostApprovalExpenses)
           : 0;
       const capex = parseAmount(asset.capitalExpenditure);
-      const transferExp = parseAmount(asset.transferExpense);
-      // 스케일 O — 세 성분 모두 100% 기준 입력이다. 합친 뒤 한 번만 적용한다
-      // (성분별로 나눠 적용하면 floor가 세 번 걸려 잔액이 새 나간다).
-      const total = share(redevPost + capex + transferExp);
+      // 스케일 O — 두 성분 모두 100% 기준 입력이다. 합친 뒤 한 번만 적용한다
+      // (성분별로 나눠 적용하면 floor가 두 번 걸려 잔액이 새 나간다).
+      const total = share(redevPost + capex);
       return total > 0 ? total : undefined;
     })(),
+    // 스케일 O — 양도비(§97① 나목). 비면 싣지 않는다.
+    transferExpense: share(parseAmount(asset.transferExpense)) || undefined,
     originalAssetType: (asset.redevOriginalAssetType || "housing") as "land" | "housing" | undefined,
     acquisitionStdPrice: asset.redevAcquisitionStdPrice
       ? parseAmount(asset.redevAcquisitionStdPrice)

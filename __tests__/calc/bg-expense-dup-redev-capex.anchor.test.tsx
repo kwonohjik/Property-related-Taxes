@@ -4,7 +4,7 @@
  *
  * O-3: 부담부증여 실지취득가액(K-4) 박스와 ④가 같은 `capitalExpenditure`·`transferExpense`를 두 칸으로 받았다. ④는 「총 양도비」가
  *      있으면 양도비 칸을 끄는데 박스 칸은 켜져 있어, 박스 값이 총 양도비보다 우선해 ④ 안내와 계산이 갈렸다 → 박스 칸을 없애고 ④로 안내.
- * O-8: 원조합원 재개발 자산의 ④ 두 칸은 인가 후 분 필요경비로만 합산된다. 인가 전 지출을 넣으면 개산공제 모드에서 공제되지 않을
+ * O-8: 원조합원 재개발 자산의 ④ 자본적지출은 인가 후 분, 양도비는 인가 전·후 안분이다(`redev-total-transfer-expense.plan.md`). 인가 전 지출을 넣으면 개산공제 모드에서 공제되지 않을
  *      실비가 공제된다(부담부증여 기준시가 −2,386,285 · 일반 환산 −6,264,000) → ④에 모드별 한 줄 안내.
  * D3: 일반 양도 환산 모드의 「인가전 분 필요경비」는 개산공제와 택일이라 쓰이지 않는데 보였다 → 숨기고 안내.
  */
@@ -138,7 +138,7 @@ describe("BDX-2 세액 — 칸을 옮겨도 같은 상태값이라 세액이 같
 const notice = (a: AssetForm) =>
   render(<AssetSectionExpense asset={a} onChange={() => {}} />).container.querySelector('[data-testid="redev-expense-post-approval-notice"]')?.textContent ?? null;
 const ACTUAL = "「인가전 분 필요경비」에 넣으세요";
-const LUMP = "공제되지 않습니다 — 이 칸에 넣지 마세요";
+const LUMP = "공제되지 않습니다 — 인가 전 비용은 이 칸에 넣지 마세요";
 
 describe("BDX-3 ④ 안내 — 인가 전 필요경비가 실비인 모드: 재개발 블록 칸으로", () => {
   it.each([
@@ -148,7 +148,7 @@ describe("BDX-3 ④ 안내 — 인가 전 필요경비가 실비인 모드: 재�
     ["일반 양도 원조합원 입주권 · 실지", genRightEst({ useEstimatedAcquisition: false, redevActualAcquisitionPrice: "300,000,000" })],
   ] as const)("%s", (_l, a) => {
     const t = notice(a);
-    expect(t).toContain("관리처분계획인가 후 분 필요경비로 계산합니다");
+    expect(t).toContain("자본적지출은 관리처분계획인가 후 분 필요경비로");
     expect(t).toContain(ACTUAL);
     expect(t).not.toContain(LUMP);
   });
@@ -162,7 +162,7 @@ describe("BDX-4 ④ 안내 — 인가 전 필요경비가 개산공제인 모드
     ["일반 양도 원조합원 입주권 · 환산", genRightEst()],
   ] as const)("%s", (_l, a) => {
     const t = notice(a);
-    expect(t).toContain("관리처분계획인가 후 분 필요경비로 계산합니다");
+    expect(t).toContain("자본적지출은 관리처분계획인가 후 분 필요경비로");
     expect(t).toContain(LUMP);
     expect(t).not.toContain(ACTUAL);
   });

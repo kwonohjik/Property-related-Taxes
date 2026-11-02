@@ -4,6 +4,10 @@
  * 미정의 시 침묵 stripping 방지를 위해 명시 필수.
  */
 import { z } from "zod";
+import { REDEV_RECEIVE_SETTLEMENT_LIMIT_MESSAGE } from "@/lib/calc/redev-receive-settlement-limit";
+import { redevReceiveSettlementReachesValue } from "@/lib/calc/redev-receive-settlement-limit";
+import { REDEV_RIGHTS_VALUE_REQUIRED_MESSAGE } from "@/lib/calc/redev-rights-value-required";
+import { redevRightsValueMissing } from "@/lib/calc/redev-rights-value-required";
 
 export const redevelopmentSchema = z
   .object({
@@ -18,6 +22,8 @@ export const redevelopmentSchema = z
     settlementSaleDate: z.string().date().optional(),
     preApprovalExpenses: z.number().int().nonnegative(),
     postApprovalExpenses: z.number().int().nonnegative().optional(),
+    // ★★★ 침묵 stripping 차단 — 양도비(§97①3호). 엔진이 인가 전·후로 안분한다.
+    transferExpense: z.number().int().nonnegative().optional(),
     originalAssetType: z.enum(["land", "housing"]).optional(),
     acquisitionStdPrice: z.number().int().nonnegative().optional(),
     managementDisposalStdPrice: z.number().int().nonnegative().optional(),
@@ -97,6 +103,14 @@ export const redevelopmentSchema = z
   .refine(
     (v) => v.receiveOnlyMode !== true || v.settlementDirection === "receive",
     { message: "receiveOnlyMode=true 인 경우 settlementDirection은 'receive' 이어야 함 (사례 46 정합성)" },
+  )
+  .refine(
+    (v) => !redevRightsValueMissing(v),
+    { message: REDEV_RIGHTS_VALUE_REQUIRED_MESSAGE, path: ["rightsValue"] },
+  )
+  .refine(
+    (v) => !redevReceiveSettlementReachesValue(v),
+    { message: REDEV_RECEIVE_SETTLEMENT_LIMIT_MESSAGE, path: ["settlementAmount"] },
   )
   .refine(
     (v) => v.subject !== "apt" || v.originalAssetType != null,

@@ -127,6 +127,16 @@ export interface RedevelopmentSplitResult {
    */
   estimatedLumpDeduction?: number;
 
+  /** 청산금 수령 단독 신고에서 settlement 양도차익이 부담한 필요경비(양도소득세 집행기준 100-166-10 — 원, 정수). */
+  receiveOnlyExpenseShare?: number;
+
+  /**
+   * 청산금 수령 단독 신고 × 환산의 「소득세법」 §97②2호 단서 비교(지분 반영 · 안분 전 금액).
+   * estimatedSide = 환산취득가액 + 개산공제, directSide = 자본적지출·양도비 등. direct면 환산취득가액을 차감하지 않는다.
+   * 나목 입력이 없거나 부담부증여면 비교하지 않아 undefined다.
+   */
+  receiveOnlyProvisoComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
+
   /** 이월과세 증여세 상당액 중 인가 전 분 양도차익 한도를 적용해 실제 산입한 금액(`carryoverGiftTaxExpense` 입력이 있을 때만). */
   carryoverGiftTaxApplied?: number;
   /** 위 한도 — 인가 전 분 양도차익(증여세 산입 전, 0 하한). */

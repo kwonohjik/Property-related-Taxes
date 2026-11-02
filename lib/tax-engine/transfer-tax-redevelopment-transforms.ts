@@ -628,10 +628,14 @@ export function emitRedevelopmentSteps(
   //    진실이 되고 (b) 산식 산술이 amount와 맞지 않는다.
   //    ⇒ 계산과 같은 헬퍼(`preApprovalNecessaryExpense`)가 고른 **하나만** 근거와 함께 표시한다.
   const preApprovalLumpDeduction = redev.estimatedLumpDeduction ?? 0;
-  const preApprovalExpenseChosen = preApprovalNecessaryExpense(
-    preApprovalLumpDeduction,
-    redevInfo.preApprovalExpenses,
-  );
+  // 청산금 수령 단독 신고에는 인가전 분 행이 없다 — 필요경비는 청산금 수령분 단계에 적는다.
+  const preApprovalExpenseChosen =
+    redev.receiveOnlyMode === true
+      ? 0
+      : redev.preApproval.expenses !== undefined
+        // 분기가 실제로 뺀 값 — 입력 칸은 양도비 안분·β 스케일 전이다. 이월과세 증여세 상당액은 아래에 따로 적는다.
+        ? redev.preApproval.expenses - (redev.preApproval.carryoverGiftTaxExpense ?? 0)
+        : preApprovalNecessaryExpense(preApprovalLumpDeduction, redevInfo.preApprovalExpenses);
   const preApprovalExpenseLabel =
     preApprovalLumpDeduction > 0 ? "개산공제(시행령 §163⑥)" : "필요경비(법 §97①2·3호)";
   // 이월과세 증여세 상당액(「소득세법」 §97의2①3호)은 택일 밖의 산입항이라 따로 적는다 — 없으면 종전 산식 그대로.
@@ -661,7 +665,9 @@ export function emitRedevelopmentSteps(
   if (redev.settlement.gain > 0) {
     steps.push({
       label: redevInfo.settlementDirection === "pay" ? "청산금 납부분 양도차익" : "청산금 수령분 양도차익",
-      formula: `안분 양도가 ${redev.settlement.apportionedTransfer.toLocaleString()} - 안분 취득가 ${redev.settlement.apportionedAcquisition.toLocaleString()}`,
+      formula:
+        `안분 양도가 ${redev.settlement.apportionedTransfer.toLocaleString()} - 안분 취득가 ${redev.settlement.apportionedAcquisition.toLocaleString()}` +
+        ((redev.settlement.expenses ?? 0) > 0 ? ` - 필요경비 ${(redev.settlement.expenses ?? 0).toLocaleString()}` : ""),
       amount: redev.settlement.gain,
       legalBasis: redevInfo.settlementDirection === "pay" ? REDEVELOPMENT.APT_PAY : REDEVELOPMENT.RIGHT_RECEIVE,
     });

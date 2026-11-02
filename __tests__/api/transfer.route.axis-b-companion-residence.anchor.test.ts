@@ -88,9 +88,9 @@ describe("같은 취득일 — 100% 단건과 같아진다", () => {
     expect(ltd[1]).toBe(ltd[0]);
   });
 
-  it("재개발 APT 20억 50/50 — 89,914,440", async () => {
+  it("재개발 APT 20억 50/50 — 89,974,632", async () => {
     const t = await calc(redevOrMixed(APT, false));
-    expect(t.totalTax).toBe(89_914_440);
+    expect(t.totalTax).toBe(89_974_632);
   });
 
   it("겸용 20억 50/50 — 96,640,214", async () => {

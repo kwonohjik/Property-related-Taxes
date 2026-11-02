@@ -15,7 +15,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
-function seedForm() {
+function seedForm(assetPatch: Record<string, string | boolean> = {}) {
   return {
     state: {
       formData: {
@@ -40,6 +40,7 @@ function seedForm() {
           redevSettlementSaleDate: "2024-01-26",  // 소유권이전 고시일(2024-01-25) 익일
           redevPreApprovalExpenses: "0",
           redevPostApprovalExpenses: "0",
+          ...assetPatch,
         }],
         // 폼에 남은 신축APT 양도가 — receiveOnly에서는 신고 대상이 아니다. 양도일은 고시일 다음날이어야 ⑧을 지난다.
         transferDate: "2024-01-26",
@@ -60,10 +61,10 @@ function seedForm() {
   };
 }
 
-async function seedAndCalc(page: Page) {
+async function seedAndCalc(page: Page, assetPatch: Record<string, string | boolean> = {}) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedForm());
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedForm(assetPatch));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.getByRole("button", { name: "가산세", exact: true }).first().click();
@@ -82,5 +83,51 @@ test.describe("청산금 수령분 단독 신고 — 신고서 합계 열", () =
     // 결함 값(폼 양도가액 그대로 · 역산 취득가액)이 화면에 없어야 한다.
     await expect(page.getByText("525,000,000")).toHaveCount(0);
     await expect(page.getByText("456,600,000")).toHaveCount(0);
+  });
+
+  /**
+   * 양도소득세 집행기준 100-166-10 — (취득가액 + 필요경비 등) × 청산금 ÷ 평가액.
+   * 필요경비 10,000,000(인가전 분 4,000,000 + 자본적지출 5,000,000 + 양도비 1,000,000) × 114,000,000 ÷ 500,000,000 = 2,280,000
+   * 양도차익 = 114,000,000 − 45,600,000 − 2,280,000 = 66,120,000
+   */
+  test("필요경비 칸이 폼→API→엔진을 거쳐 청산금 비율로 안분된다", async ({ page }) => {
+    test.setTimeout(60_000);
+    const requestPromise = page.waitForRequest((r) => r.url().includes("/api/calc/transfer") && r.method() === "POST");
+    await seedAndCalc(page, { redevPreApprovalExpenses: "4000000", capitalExpenditure: "5000000", transferExpense: "1000000" });
+    const body = (await requestPromise).postDataJSON();
+    expect(body.redevelopment.preApprovalExpenses).toBe(4_000_000);
+    expect(body.redevelopment.postApprovalExpenses).toBe(5_000_000);
+    expect(body.redevelopment.transferExpense).toBe(1_000_000);
+
+    await expect(page.getByRole("row", { name: /필요경비.*2,280,000/ }).first()).toBeVisible();
+    await expect(page.getByRole("row", { name: /양도차익.*66,120,000/ }).first()).toBeVisible();
+    await expect(page.getByRole("row", { name: /취득가액.*45,600,000/ }).first()).toBeVisible();
+  });
+
+  /**
+   * 「소득세법」 §97②2호 단서 — 환산취득가액 100,000,000 + 개산공제 3,000,000 < 자본적지출·양도비 200,000,000.
+   * 필요경비 = 200,000,000 × 114,000,000 ÷ 500,000,000 = 45,600,000 · 양도차익 = 114,000,000 − 45,600,000 = 68,400,000
+   * 환산이면 숨는 인가전 분 칸의 저장값(4,000,000)은 나목에 들어가지 않는다.
+   */
+  test("환산 — 자본적지출·양도비가 더 크면 환산취득가액 대신 그 합계를 안분해 공제한다", async ({ page }) => {
+    test.setTimeout(60_000);
+    const requestPromise = page.waitForRequest((r) => r.url().includes("/api/calc/transfer") && r.method() === "POST");
+    await seedAndCalc(page, {
+      useEstimatedAcquisition: true,
+      redevActualAcquisitionPrice: "",
+      redevAcquisitionHousingPrice: "100000000",
+      redevManagementDisposalHousingPrice: "500000000",
+      redevPreApprovalExpenses: "4000000",
+      capitalExpenditure: "190000000",
+      transferExpense: "10000000",
+    });
+    const body = (await requestPromise).postDataJSON();
+    expect(body.redevelopment.preApprovalExpenses).toBe(0);
+    expect(body.redevelopment.postApprovalExpenses).toBe(190_000_000);
+    expect(body.redevelopment.transferExpense).toBe(10_000_000);
+
+    await expect(page.getByRole("row", { name: /필요경비.*45,600,000/ }).first()).toBeVisible();
+    await expect(page.getByRole("row", { name: /양도차익.*68,400,000/ }).first()).toBeVisible();
+    await expect(page.getByTestId("redev-receive-only-proviso")).toContainText("103,000,000");
   });
 });

@@ -101,25 +101,36 @@ export function ReceiveOnlyToggleCard({
       checked={asset.redevReceiveOnlyMode === "yes"}
       onCheckedChange={(v) => onChange({ redevReceiveOnlyMode: v ? "yes" : "no" })}
       title="청산금 수령분 단독 신고"
-      description="신축APT 양도 없이 청산금 수령분만 신고 — 시행령 §166① 본문 + 제1항 제2호 가목 단독 적용 (NTS 집행기준)"
+      description={`신축APT 양도 없이 청산금 수령분만 신고 — 종전 부동산의 분할양도로 계산 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE} · ${REDEVELOPMENT.REDEV_SETTLEMENT_DISPOSAL_RULING})`}
     >
       <div className="space-y-2 text-caption text-rose-800 leading-relaxed dark:text-rose-200">
         <p>
           본 모드 ON 시 인가전·인가후 양도차익은 신고 대상이 아니며,{" "}
           <span className="font-semibold">청산금 수령액만 양도가액으로 의제</span>됩니다.
-          종전부동산 취득가액은 권리가액 대비 청산금 비율로 자동 안분됩니다.
+          종전부동산 취득가액과 필요경비는 권리가액 대비 청산금 비율로 자동 안분됩니다.
         </p>
         <p>
           ※ <span className="font-semibold">양도일</span>은 소유권이전 고시일의 익일로 입력하세요 ({REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_GUIDELINE}).
         </p>
         <p>
-          {/* 🔴 「본 PR 미매핑」은 저장소 내부 사정이다 — 사용자 화면에 쓰지 않는다(B1). */}
-          ※ 본 모드에서 자본적지출·양도비·인가후 필요경비 입력은{" "}
-          <span className="font-semibold">0으로 처리</span>됩니다. §97①2·3호의 필요경비 항목은
-          법문상 존재하나 이 모드에서는 산정하지 않으므로, 해당분이 있으면 별도 산정해 신고하세요.
+          ※ 본 모드에서 인가전 분 필요경비와 자본적지출·양도비 입력은 종전 부동산의 필요경비로 합산해{" "}
+          <span className="font-semibold">같은 비율로 안분</span>해 공제합니다
+          (취득가액을 환산하면 개산공제를 안분합니다).
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
-          <LawArticleModal legalBasis="소득세법 시행령 §166 ① 2호" label="시행령 §166①2호" />
+          <LawArticleModal legalBasis={REDEVELOPMENT.EVALUATION} label="시행령 §166④1호" />
+          <PrecedentArticleModal
+            citation={REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE}
+            label="집행기준 100-166-10 (청산금 양도차익)"
+            kind="interpretation"
+            summary="양도가액은 지급받은 청산금이고, 취득가액은 기존건물과 딸린 토지의 취득가액과 필요경비 등의 합계에 그 평가액 대비 청산금 수령액의 비율을 곱한 금액이다."
+          />
+          <PrecedentArticleModal
+            citation="법규재산2012-358 (2012.11.09)"
+            label={`${REDEVELOPMENT.REDEV_SETTLEMENT_DISPOSAL_RULING} (청산금 과세)`}
+            kind="ruling"
+            summary="「도시 및 주거환경정비법」에 의한 주택재개발사업에 참여한 조합원이 소유하던 종전 주택과 그에 딸린 토지(이하 ‘종전 부동산’이라 함)를 조합에 제공하고 그 대가로 당해 조합으로부터 새로운 아파트를 취득할 수 있는 권리와 청산금을 교부받은 경우 그 청산금은 종전 부동산의 유상이전에 해당하여 양도소득세가 과세되는 것입니다."
+          />
           <PrecedentArticleModal
             citation="기획재정부 재산-439 (2014.06.09)"
             label="재산-439 (장기보유특별공제 기간)"

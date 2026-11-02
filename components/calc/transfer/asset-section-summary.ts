@@ -10,6 +10,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ASSET_KIND_LABELS, ACQUISITION_CAUSE_LABELS, TRANSFER_TYPE_LABELS } from "./asset-labels";
 import { bgExpenseInputsUnused } from "@/lib/calc/burdened-gift-expense-scope";
 import { bgIgnoresAssetAppraisalSalesCase } from "@/lib/calc/bg-asset-acq-mode-scope";
+import { canDeclareRentalHousingException } from "@/lib/calc/rental-housing-exception-scope";
 
 export type AssetSectionKey = "basic" | "transfer" | "acquisition" | "expense" | "extras";
 
@@ -67,6 +68,8 @@ export function summarizeAssetSections(
     isFractionalSplit?: boolean;
     /** 양도일 — 승계 입주권 담보·임대 승(괄호 열거 시기)의 필요경비 «개산공제만» 판정. */
     transferDate?: string;
+    /** 자산 카드 순번 — §155⑳은 첫 자산에서만 선언한다 */
+    assetIndex?: number;
   } = {},
 ): AssetSummary {
   const kindLabel = ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind;
@@ -146,10 +149,12 @@ export function summarizeAssetSections(
   //    지정지역 질문(양도일 유예 요건)이 함께 도달 불가가 된다.
   const nblDetailed = asset.assetKind === "land" && asset.isNonBusinessLand;
   // 완공APT 수령 단독신고는 ⑳을 열지 않는다(`merge-rental-carveout-form.ts`의 `isHouse`와 같은 축).
+  // 렌더할 내용(`AssetSectionExtras`)이 있을 때만 뜬다 — 선언할 수 있거나, 남은 선언을 밝혀야 하거나. 아니면 빈 카드다.
   const isRentalEligible =
-    asset.assetKind === "housing" ||
-    (asset.assetKind === "redevelopment_apt" && asset.redevReceiveOnlyMode !== "yes") ||
-    asset.assetKind === "right_to_move_in";
+    (asset.assetKind === "housing" ||
+      (asset.assetKind === "redevelopment_apt" && asset.redevReceiveOnlyMode !== "yes") ||
+      asset.assetKind === "right_to_move_in") &&
+    (canDeclareRentalHousingException(asset.assetKind, ctx.assetIndex ?? 0) || asset.rentalHousingException?.applyException === true);
   if (nblDetailed) {
     extras = { label: asset.nblUseDetailedJudgment ? "비사업용 토지 정밀판정" : "비사업용 토지", filled: true };
   } else if (isRentalEligible) {

@@ -12,13 +12,15 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 afterEach(cleanup);
 
-const sibling: AssetForm = { ...makeDefaultAsset(2), acquisitionCause: "purchase", acquisitionDate: "2014-01-02" };
+const plain: AssetForm = { ...makeDefaultAsset(2), acquisitionCause: "purchase", acquisitionDate: "2014-01-02" };
+// 둘째 카드의 ⑤는 남은 §155⑳ 선언을 밝힐 때만 내용이 있다 — 첫 카드 종류를 따르는지는 이 상태에서 갈린다.
+const sibling: AssetForm = { ...plain, rentalHousingException: { ...plain.rentalHousingException, applyException: true } };
 
-function renderSibling(kind: AssetForm["assetKind"], splitMode: "fractional" | "companion" = "fractional") {
+function renderSibling(kind: AssetForm["assetKind"], splitMode: "fractional" | "companion" = "fractional", asset = sibling) {
   return render(
     <CompanionAssetCard
       index={1}
-      asset={sibling}
+      asset={asset}
       primaryAsset={{ ...makeDefaultAsset(1), assetKind: kind, acquisitionDate: "2014-01-02" }}
       bundledSaleMode="actual"
       onChange={() => {}}
@@ -42,6 +44,11 @@ describe("축 B 둘째 지분 카드 — 섹션 요약은 첫 카드 자산 종�
   it("AC-2 짝 — 첫 카드가 주택이면 그대로 있다", () => {
     renderSibling("housing");
     expect(screen.getByText("장기임대 거주주택 특례")).toBeTruthy();
+  });
+
+  it("AC-2a 남은 선언이 없으면 첫 카드가 주택이어도 내용 없는 ⑤를 띄우지 않는다", () => {
+    renderSibling("housing", "fractional", plain);
+    expect(screen.queryByText("장기임대 거주주택 특례")).toBeNull();
   });
 
   it("AC-3 ③ 칩 — 일반건물(전용 블록 자산)은 산정방식 없이 원인만", () => {
