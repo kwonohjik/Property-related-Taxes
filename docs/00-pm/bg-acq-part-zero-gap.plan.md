@@ -31,12 +31,15 @@ K-4 시료: 시가 10억 · 채무 4억(채무비율 0.4) · 실지 2.5억(일�
 
 면제: 의제취득일 전 파트(3자 max) · 담보 승(취득시 기준시가 강제) · 파트별 이월과세의 증여받지 않은 파트 칸.
 
+## 2.1 주택·건물 토지·건물 분리 (`bgHouseSplitActive`) — 직접 API만
+⑧은 전부터 `transfer-tax-validate-bg-house-split.ts`가 전부 막았다. ⑫는 본인 K-4만 엔진 `assertBgSplitInputs`가 막고 나머지는 200이었다(실측: K-7 토지만 355,200,000 · 정상 295,200,000 / 이월과세 K-7 시나리오 A 토지만 결정세액 84,520,480 · 정상 72,664,480 / 시나리오 B 한쪽은 이 시료에서 세액 불변).
+시나리오 B는 양도인 토지·건물 취득일이 같아 `assertBgSplitInputs`가 돌지 않으므로 엔진 함수를 넓혀도 막히지 않는다 ⇒ ⑫ `requireBgAcquisitionParts`로 한 곳에서 막았다. 주택·건물 총액 입력은 총액 면제로 걸리지 않는다.
+
 ## 3. 검증
-- anchor `__tests__/api/transfer.route.bg-acq-part-zero-gap.anchor.test.ts` 29건 — PZ-1 K-4 · PZ-2 K-6/K-7 · PZ-3 이월과세 A·B · PZ-4 묶음 · PZ-5 담보 승 면제.
+- anchor `__tests__/api/transfer.route.bg-acq-part-zero-gap.anchor.test.ts` — PZ-1 K-4 · PZ-2 K-6/K-7 · PZ-3 이월과세 A·B · PZ-4 묶음 · PZ-5 담보 승 면제 · PZ-6 주택·건물 분리.
 - 뮤테이션 13종 전부 적색.
 - E2E `e2e/bg-acq-part-zero-gap.spec.ts` 2건 — 한쪽 비움 차단(칸이 보인다) · 두 칸 입력 300,000,000.
 - 기존 anchor 1셀 정정: `bg-presumed-acquisition` 「하나만 있어도 통과」 → 두 칸 요구.
 
 ## 4. 확인 필요
-- 주택·건물 토지·건물 분리(`bgHouseSplitActive`)의 K-6/K-7 한쪽 입력은 ⑧이 두 칸을 요구하게 됐으나 ⑫ 직접 호출은 재지 않았다.
 - `lib/calc/transfer-tax-validate-bg.ts`는 750줄 위험구간이다. 이번 변경은 분리하지 않았다.

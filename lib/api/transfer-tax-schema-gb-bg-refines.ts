@@ -115,23 +115,24 @@ function bgBundleMixedWinner(data: Subject): boolean {
   return bgBundleWinnersMixed(entries);
 }
 
-export const GB_BG_ACQ_PART_REQUIRED_MESSAGE =
-  "일반건물 부담부증여 취득가액은 토지·건물 칸이 모두 필요합니다 — 비운 쪽은 취득가액 0으로 계산되어 양도차익이 과대해집니다.";
+export const BG_ACQ_PART_REQUIRED_MESSAGE =
+  "부담부증여 취득가액은 토지·건물 칸이 모두 필요합니다 — 비운 쪽은 취득가액 0으로 계산되어 양도차익이 과대해집니다.";
 
 /**
  * 시가 모드 — 토지·건물 금액을 파트별로 받는 일반건물은 **두 칸 모두** 요구한다(엔진은 비운 쪽을 0으로 읽는다 · ⑧ `transfer-tax-validate-bg.ts`와 같은 범위).
  * · K-4: 실지취득가액 · K-6/K-7: 매매사례가액·감정가액 · 이월과세 K-6/K-7: 당초 증여자 금액(증여받은 파트만) + 전체 이월과세면 시나리오 B의 양도인 평가액(`actual*` — 소령 §163⑨).
  * 쓰이지 않으면 요구하지 않는다: 의제취득일 전 파트(3자 max) · 담보 승(취득시 기준시가 강제). 단일 총액은 엔진이 기준시가 비율로 나눈다(직접 호출 경로 — ④는 파트별로 보낸다).
+ * 주택·건물은 토지·건물 취득일이 다를 때만 파트로 받고 평소에는 총액이라 위 총액 면제로 빠진다. 파트 입력의 ⑧은 `transfer-tax-validate-bg-house-split.ts`.
  */
-function requireGbAcquisitionParts(info: unknown, gbv: Gbv, ownershipRatio: number | undefined, path: (string | number)[], ctx: z.RefinementCtx): void {
+function requireBgAcquisitionParts(info: unknown, gbv: Gbv, ownershipRatio: number | undefined, path: (string | number)[], ctx: z.RefinementCtx): void {
   type PartInfo = CollateralWinLike & Record<string, unknown>;
   const i = info as PartInfo | null | undefined;
   if (!i || i.valuationMode !== "sangjeungbeop_market" || collateralForcesStdAcquisition(i, ownershipRatio)) return;
   const positive = (v: unknown) => typeof v === "number" && v > 0;
   const need = (at: (string | number)[], o: Record<string, unknown>, total: string, land: string, building: string, wantLand: boolean, wantBuilding: boolean) => {
     if (positive(o[total])) return;
-    if (wantLand && !positive(o[land])) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...at, land], message: GB_BG_ACQ_PART_REQUIRED_MESSAGE });
-    if (wantBuilding && !positive(o[building])) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...at, building], message: GB_BG_ACQ_PART_REQUIRED_MESSAGE });
+    if (wantLand && !positive(o[land])) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...at, land], message: BG_ACQ_PART_REQUIRED_MESSAGE });
+    if (wantBuilding && !positive(o[building])) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...at, building], message: BG_ACQ_PART_REQUIRED_MESSAGE });
   };
   const at = [...path, "burdenedGiftInfo"];
   const ownLand = !gbv?.landPreDeemedClauseA;
@@ -176,24 +177,28 @@ export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementC
   if (bgBundleMixedWinner(data)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["burdenedGiftInfo"], message: GB_BG_MIXED_WINNER_MESSAGE });
   }
+  if ((data.propertyType === "housing" || data.propertyType === "building") && data.transferType === "burdened_gift") {
+    requireBgAcquisitionParts(data.burdenedGiftInfo, undefined, data.ownershipRatio, [], ctx);
+  }
   // 지분(축 B) — 부담부증여면 **모든 지분**이 info 를 가져야 한다. 누락 지분은 일반 양도로 계산된다(침묵 무시 금지).
   if (data.propertyType === "general_building" && data.transferType === "burdened_gift") {
     requireStd(data.burdenedGiftInfo, []);
     // 축 B는 지분마다 본다(지분 비율로 담보 승을 판정해야 한다).
-    if ((data.generalBuildingShares?.length ?? 0) < 2) requireGbAcquisitionParts(data.burdenedGiftInfo, data.generalBuildingValuation, data.ownershipRatio, [], ctx);
+    if ((data.generalBuildingShares?.length ?? 0) < 2) requireBgAcquisitionParts(data.burdenedGiftInfo, data.generalBuildingValuation, data.ownershipRatio, [], ctx);
     (data.generalBuildingShares ?? []).forEach((s, i) => {
       if (!s.burdenedGiftInfo) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["generalBuildingShares", i, "burdenedGiftInfo"], message: GB_BG_SHARE_INFO_REQUIRED_MESSAGE });
       }
       requireStd(s.burdenedGiftInfo, ["generalBuildingShares", i]);
-      if ((data.generalBuildingShares?.length ?? 0) >= 2) requireGbAcquisitionParts(s.burdenedGiftInfo, s.valuation, s.valuation?.ownershipRatio, ["generalBuildingShares", i], ctx);
+      if ((data.generalBuildingShares?.length ?? 0) >= 2) requireBgAcquisitionParts(s.burdenedGiftInfo, s.valuation, s.valuation?.ownershipRatio, ["generalBuildingShares", i], ctx);
     });
   }
   // 컴패니언 — `burdenedGiftInfo` 존재가 부담부증여 표지다(`bundled-route.ts` · `transfer-tax-schema-companion-refines.ts`와 같은 규율).
   (data.companionAssets ?? []).forEach((c, i) => {
+    if (c.assetKind === "housing" || c.assetKind === "building") requireBgAcquisitionParts(c.burdenedGiftInfo, undefined, c.ownershipRatio, ["companionAssets", i], ctx);
     if (c.assetKind !== "general_building" || !c.burdenedGiftInfo) return;
     requireStd(c.burdenedGiftInfo, ["companionAssets", i]);
-    requireGbAcquisitionParts(c.burdenedGiftInfo, c.generalBuildingValuation, c.ownershipRatio, ["companionAssets", i], ctx);
+    requireBgAcquisitionParts(c.burdenedGiftInfo, c.generalBuildingValuation, c.ownershipRatio, ["companionAssets", i], ctx);
     if (!c.generalBuildingValuation) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "generalBuildingValuation"], message: GB_BG_VALUATION_REQUIRED_MESSAGE });
     }

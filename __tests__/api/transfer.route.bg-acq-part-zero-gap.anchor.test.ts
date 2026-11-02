@@ -11,6 +11,7 @@
  * · PZ-1 일반건물 K-4 · PZ-2 일반건물 K-6/K-7 · PZ-3 이월과세 시나리오 A·B — 한쪽 입력: ⑧ 그 칸 ∧ ⑫ 400, 두 칸: 통과 ∧ 값.
  * · PZ-4 함께 양도 둘째 이후 K-4 — ⑧ ⊇ ⑫.
  * · PZ-5 쓰이지 않으면 요구하지 않는다 — 담보 승.
+ * · PZ-6 주택·건물 토지·건물 분리(취득일 다름) — ⑧은 전부터 막았고 ⑫ 직접 호출이 200이었다. 두 칸 K-7 오라클: 4억 − 2.5억 × 0.4 − 개산공제(기준시가 4억 × 0.4 × 3% = 480만) = 295,200,000.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -26,6 +27,7 @@ import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { captureBody } from "../calc/_one-house-pr3a-calc-route";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
+import { bgAsset, bgForm } from "@/__tests__/calc/_helpers/carryover-donor-built-bg-form";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -168,4 +170,53 @@ describe("PZ-5 쓰이지 않으면 요구하지 않는다 — 담보 승(취득�
     const r = await post(form([a("general_building", "a", BLANK, MORT, { bgCoDonorLandStdPriceAtAcq: "", bgActualAcquisitionTotal: "" })]));
     expect(r.status, JSON.stringify(r.j)).toBe(200);
   });
+});
+
+describe("PZ-6 주택·건물 토지·건물 분리 — 한쪽 입력 ⑧ ∧ ⑫ 400", () => {
+  const SPLIT = { bgMarketValueAtTransfer: "1,000,000,000", bgLendingDepositTotal: "0", bgMortgageDebtAmount: "400,000,000", bgMarketValueLand: "600,000,000", bgMarketValueBuilding: "400,000,000" };
+  const own = (over: Record<string, unknown>) => bgAsset("converted", { donorBuilt: false }, {
+    acquisitionCause: "purchase", acquisitionDate: "2022-01-10", hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2000-06-01", ...SPLIT,
+    bgAcquisitionMethod: "appraisal", bgActualAcquisitionTotal: "", bgActualAcquisitionLand: "", bgActualAcquisitionBuilding: "", bgPresumedAcquisitionLand: "100,000,000", bgPresumedAcquisitionBuilding: "150,000,000", ...over,
+  } as Partial<AssetForm>);
+  const carry = (over: Record<string, unknown>) => bgAsset("converted", { donorBuilt: false }, {
+    carryoverDonorSplit: true, ...SPLIT, bgAcquisitionMethod: "appraisal", bgActualAcquisitionTotal: "", bgActualAcquisitionLand: "600,000,000", bgActualAcquisitionBuilding: "400,000,000",
+    bgCoDonorActualAcquisitionTotal: "", bgCoDonorPresumedAcquisitionLand: "50,000,000", bgCoDonorPresumedAcquisitionBuilding: "100,000,000", bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000",
+    carryover: { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2023-06-01", donorAcquisitionDate: "2000-06-01", donorAcquisitionPrice: "150,000,000", giftDateValuation: "1,000,000,000", giftTaxAmount: "0", donorRelation: "lineal", donorSameHousehold: "no" },
+    buildingCarryover: { ...CARRYOVER_DEFAULTS, donorAcquisitionDate: "2015-01-01" }, ...over,
+  } as Partial<AssetForm>);
+
+  it("두 칸 입력은 그대로 계산된다 — K-7 295,200,000 · 건물 자산 같은 값 · K-4 300,000,000", async () => {
+    expect(gain(await post(bgForm(own({}))))).toBe(295_200_000);
+    expect(gain(await post(bgForm(own({ assetKind: "building" }))))).toBe(295_200_000);
+    expect(gain(await post(bgForm(own({ bgAcquisitionMethod: "actual", bgActualAcquisitionLand: "100,000,000", bgActualAcquisitionBuilding: "150,000,000" }))))).toBe(300_000_000);
+    expect((await post(bgForm(carry({})))).status).toBe(200);
+  });
+  it.each([
+    ["K-7 토지만 (종전 355,200,000)", () => own({ bgPresumedAcquisitionBuilding: "" }), "burdenedGiftInfo.presumedBuildingAcquisitionPrice"],
+    ["K-7 건물만 (종전 335,200,000)", () => own({ bgPresumedAcquisitionLand: "" }), "burdenedGiftInfo.presumedLandAcquisitionPrice"],
+    ["K-6 토지만", () => own({ bgAcquisitionMethod: "salesCase", bgPresumedAcquisitionBuilding: "" }), "burdenedGiftInfo.presumedBuildingAcquisitionPrice"],
+    ["건물 자산 K-7 토지만", () => own({ assetKind: "building", bgPresumedAcquisitionBuilding: "" }), "burdenedGiftInfo.presumedBuildingAcquisitionPrice"],
+    ["K-4 토지만", () => own({ bgAcquisitionMethod: "actual", bgActualAcquisitionLand: "100,000,000" }), "burdenedGiftInfo.actualBuildingAcquisitionPrice"],
+    ["이월과세 K-7 시나리오 A 토지만 (종전 결정세액 84,520,480)", () => carry({ bgCoDonorPresumedAcquisitionBuilding: "" }), "burdenedGiftInfo.carryoverDonorBasis.presumedBuildingAcquisitionPrice"],
+    ["이월과세 K-7 시나리오 A 건물만", () => carry({ bgCoDonorPresumedAcquisitionLand: "" }), "burdenedGiftInfo.carryoverDonorBasis.presumedLandAcquisitionPrice"],
+    ["이월과세 K-7 시나리오 B 토지만", () => carry({ bgActualAcquisitionBuilding: "" }), "burdenedGiftInfo.actualBuildingAcquisitionPrice"],
+    ["이월과세 K-4 시나리오 B 토지만", () => carry({ bgAcquisitionMethod: "actual", bgCoDonorActualAcquisitionLand: "50,000,000", bgCoDonorActualAcquisitionBuilding: "100,000,000", bgActualAcquisitionBuilding: "" }), "burdenedGiftInfo.actualBuildingAcquisitionPrice"],
+  ] as const)("%s", async (_n, mk, path) => {
+    const f = bgForm(mk());
+    expect(issues(f).length).toBeGreaterThan(0);
+    const r = await post(f);
+    expect(r.status, JSON.stringify(r.j)).toBe(400);
+    expect(r.j.error.fieldErrors[path]).toBeDefined();
+  });
+  it("묶음 둘째 자산 · K-7 토지만: ⑧ ∧ ⑫ 400", async () => {
+    const f = form([a("housing", "h"), Object.assign(own({ bgPresumedAcquisitionBuilding: "" }), { assetId: "b" })], BD);
+    expect(issues(f).length).toBeGreaterThan(0);
+    const r = await post(f);
+    expect(r.status, JSON.stringify(r.j)).toBe(400);
+    expect(r.j.error.fieldErrors["companionAssets.0.burdenedGiftInfo.presumedBuildingAcquisitionPrice"]).toBeDefined();
+  });
+  it("담보 승은 금액을 읽지 않아 한쪽만 있어도 막지 않는다", async () => {
+    expect((await post(bgForm(own({ bgMortgageDebtAmount: "1,200,000,000", bgMortgageSetAmount: "1,200,000,000", bgPresumedAcquisitionBuilding: "" })))).status).toBe(200);
+  });
+  it("주택 총액 입력(분리 아님)은 한쪽 규칙이 걸리지 않는다", async () => { await open(form([a("housing", "a")]), 300_000_000); });
 });
