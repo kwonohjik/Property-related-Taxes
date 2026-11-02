@@ -202,6 +202,20 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
             ※ 임대기간 분 양도차익 한정 적용 — 조특령 §97의3⑤ 기준시가 안분
           </p>
         )}
+        {/* 양도일 구간 고지 (`data/rental-97-3-proration-era.ts`) — echo 없는 구 이력은 미표시 */}
+        {lthdEffect.prorationEra === "whole_gain" && (
+          <p className="text-micro text-violet-700 dark:text-violet-400" data-testid="rental973-era-whole-gain">
+            ※ 2020.12.31 이전 양도분은 양도소득 전체에 특례 공제율을 적용합니다 — 법률 제17759호 개정 전 조특법 §97의3① 「그 주택을 양도함으로써 발생하는 소득」
+          </p>
+        )}
+        {(lthdEffect.prorationEra === "pre_decree" || lthdEffect.prorationEra === "no_formula") &&
+          lthdEffect.rentalGainRatio < 1 && (
+            <p className="text-micro text-violet-700 dark:text-violet-400" data-testid="rental973-era-formula-applied">
+              ※ 안분 산식은 2026.2.27 조특령 §97의3⑤ 개정으로 명문화되었습니다. 그 전 양도분은 시행령에 산식이 없어(
+              {lthdEffect.prorationEra === "pre_decree" ? "2021.2.17 전에는 위임 시행령 자체가 없었습니다" : "「기준시가를 기준으로 산정한다」만 규정"}
+              ) 같은 산식을 준용해 계산했습니다.
+            </p>
+          )}
 
         <p className="text-micro text-muted-foreground">근거 조문: {detail.legalBasis}</p>
       </div>

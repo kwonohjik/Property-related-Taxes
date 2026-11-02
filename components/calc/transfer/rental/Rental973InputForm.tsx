@@ -24,6 +24,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RentalCommonFields, RegistrationFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
+import { rental97EffectiveStartString } from "@/lib/calc/rental-97-effective-start";
 
 type Rental973Form = Extract<RentalReductionFormVariant, { type: "rental_97_3" }>;
 
@@ -53,9 +54,14 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
   };
 
   // ─ emerald 자동 표시 박스 — useMemo, store 미기록 ─
+  // 기산은 엔진·⑧과 같은 의제 개시일 — 임대일·임대사업자 등록일·세무서 사업자등록일 중 늦은 날 (조특령 §97의3④)
+  const effectiveStart = useMemo(
+    () => rental97EffectiveStartString(value),
+    [value],
+  );
   const rentalDuration = useMemo(
-    () => diffYearsMonths(value.rentalStartDate, transferDate ?? ""),
-    [value.rentalStartDate, transferDate],
+    () => diffYearsMonths(effectiveStart, transferDate ?? ""),
+    [effectiveStart, transferDate],
   );
 
   // 등록일별 공제율 안내 (R-1: 2022.12.31 이전 등록분 8년 50% 경과규정) — store 미기록
@@ -170,7 +176,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
       <ToneCard tone="violet" sectionNum="②" title="임대 개시 정보">
 
         <div>
-          <label className="mb-1 block text-xs font-medium">임대개시 당시 기준시가 (원)</label>
+          <label className="mb-1 block text-xs font-medium">임대개시일 당시 기준시가 (원)</label>
           <CurrencyInput
             data-field={`reduction.${value.type}.officialPriceAtStart`}
             label=""
@@ -179,6 +185,10 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
           />
           <p className="mt-1 text-micro text-muted-foreground">
             주택+부속토지 합계 — 6억(수도권 밖 3억) 이하 요건 (령 §97의3③4호)
+          </p>
+          <p className="mt-1 text-micro text-muted-foreground">
+            임대개시일은 실제 임대일·임대사업자 등록일·세무서 사업자등록일 중 늦은 날입니다 (령 §97의3④).
+            그날이 취득일보다 늦으면 이 값이 임대기간 분 양도차익 안분의 개시일 기준시가로도 쓰입니다 (령 §97의3⑤).
           </p>
         </div>
 
@@ -218,7 +228,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
           </span>
         </div>
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">양도일 기준 임대기간 (임대개시일→양도일)</span>
+          <span className="text-muted-foreground">양도일 기준 임대기간 (임대개시일→양도일, 임대개시일 = 임대일·등록일·사업자등록일 중 늦은 날)</span>
           <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">{rentalDuration}</span>
         </div>
         <p className="text-micro text-emerald-700 dark:text-emerald-300">

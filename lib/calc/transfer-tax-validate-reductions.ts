@@ -25,6 +25,7 @@ import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { engineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
+import { rentalProrationIssue } from "./transfer-tax-validate-rental-proration";
 import { hasRentIncreaseRule } from "./rental-rent-increase-label";
 import { RENT_INCREASE_VIOLATION_LABEL } from "./rental-rent-increase-label";
 
@@ -415,68 +416,10 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(
               `${label} 적용: §97의5 세액감면과 중복하여 적용할 수 없습니다 (조특법 §97의5②). 하나만 선택하세요.`,
             );
-          // D2-06 — 안분이 있는 두 조문만. 3-state 미선택을 「계속 임대」로 읽지 않는다.
+          // D2-06 — 안분이 있는 두 조문만(§97의3⑤·§97의5②). 안분 축 검사는 leaf로 분리했다 — 엔진과 같은 의제 개시일·양도일 구간.
           if (r.type === "rental_97_3" || r.type === "rental_97_5") {
-            if (r.rentalContinuesToTransfer === null || r.rentalContinuesToTransfer === undefined)
-              return fail(fieldError(`reduction.${r.type}.rentalContinuesToTransfer`, `${label} 적용: 임대가 양도일까지 계속되었는지 선택하세요 (조특령 ${r.type === "rental_97_5" ? "§97의5②" : "§97의3⑤"}).`,
-              ));
-            if (
-              r.rentalContinuesToTransfer === false &&
-              parseAmount(r.stdPriceAtRentalEnd || "0") <= 0
-            )
-              return fail(fieldError(`reduction.${r.type}.stdPriceAtRentalEnd`, `${label} 적용: 임대 종료일 당시 기준시가를 입력하세요 (안분 산식의 B). 자동 안분은 수행하지 않습니다.`,
-              ));
-            // §97의5①2호 — 조기 종료면 10년 판정의 종점(임대 종료일)이 필수. 엔진 `MISSING_RENTAL_END_DATE`·
-            // `INVALID_RENTAL_END_DATE`와 같은 조건이다(YYYY-MM-DD 문자열 비교).
-            if ((r.type === "rental_97_5" || r.type === "rental_97_3") && r.rentalContinuesToTransfer === false) {
-              const end = r.rentalEndDate || "";
-              if (!end)
-                return fail(fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: 양도 전에 임대를 종료했으면 임대 종료일을 입력하세요 (${r.type === "rental_97_5" ? "§97의5①2호" : "§97의3①1호"} — 임대기간 판정의 종점).`));
-              // 엔진 기산일과 같은 축 — 임대개시일·등록일·사업자등록일 중 늦은 날 (YYYY-MM-DD 문자열 max)
-              const start = [r.rentalStartDate, r.registrationDate, r.isTaxRegistered ? r.taxRegistrationDate : ""]
-                .filter((d): d is string => !!d)
-                .reduce((a, b) => (b > a ? b : a), "");
-              if ((start && end < start) || (form.transferDate && end > form.transferDate))
-                return fail(fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: 임대 종료일은 임대개시일(등록일·사업자등록일이 늦으면 그날)과 양도일 사이여야 합니다.`));
-            }
-            /**
-             * Q10 — 분모의 두 시점(E 취득당시 · D 양도당시). 감면-수준 override 또는
-             * 자산-수준(환산 모드) 값 중 **하나는** 있어야 한다. §66⑦ 블록(:167)과 같은 모양.
-             *
-             * ⚠️ **안분이 실제로 필요할 때만 묻는다** — `calcRentalGainRatio`는
-             *    「양도일까지 계속 임대 + (임대개시 ≤ 취득일 또는 §97의5)」이면 기준시가를 **보지도 않고**
-             *    비율 1을 돌려준다(`calcRentalGainFraction` 조기 반환). 그 경우까지 막으면
-             *    필요 없는 값을 요구하는 오탐이 된다.
-             */
-            const rentalStart = r.rentalStartDate || "";
-            // §97의5②는 분자의 감수가 취득당시라 계속 임대면 임대개시일과 무관하게 비율 1이다
-            // (`calcRentalGainFraction` 조기 반환) — 조기 종료일 때만 묻는다.
-            const prorationNeeded =
-              r.rentalContinuesToTransfer === false ||
-              (r.type !== "rental_97_5" &&
-                !!rentalStart && !!asset.acquisitionDate && rentalStart > asset.acquisitionDate);
-            if (prorationNeeded) {
-              const hasAcqStd =
-                parseAmount(r.stdPriceAtAcquisition || "") > 0 ||
-                (!redevHiddenStd.acq && parseAmount(asset.standardPriceAtAcq || "") > 0);
-              const hasTransferStd =
-                parseAmount(r.stdPriceAtTransfer || "") > 0 ||
-                engineStdPriceAtTransfer(form, ai) > 0;
-              if (!hasAcqStd || !hasTransferStd) {
-                const prorationMsg =
-                  `${label} 적용: 안분 산식의 취득 당시·양도 당시 기준시가를 입력하세요 ` +
-                  (redevHiddenStd.acq
-                    ? `(이 자산은 자산 카드에 기준시가 칸이 없어 감면 카드에 입력합니다). `
-                    : `(감면 카드의 두 칸, 또는 자산 카드의 환산 입력). `) +
-                  `자동 안분은 수행하지 않습니다.`;
-                // 두 칸을 한꺼번에 묻는 메시지 — 비어 있는 칸(취득 당시 먼저)으로 보낸다
-                return fail(
-                  !hasAcqStd
-                    ? fieldError(`reduction.${r.type}.stdPriceAtAcquisition`, prorationMsg)
-                    : fieldError(`reduction.${r.type}.stdPriceAtTransfer`, prorationMsg),
-                );
-              }
-            }
+            const prorationIssue = rentalProrationIssue({ r, label, asset, assetIndex: ai, form, redevHiddenStd });
+            if (prorationIssue) return fail(prorationIssue);
           }
           if ((r.type === "rental_97_main" || r.type === "rental_97_proviso") && !(parseInt((r as { constructionYear?: string }).constructionYear || "") > 0))
             return fail(fieldError(`reduction.${r.type}.constructionYear`, `${label} 적용: 신축 연도를 입력하세요.`));

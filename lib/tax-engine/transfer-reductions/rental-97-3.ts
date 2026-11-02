@@ -34,6 +34,7 @@
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { checkReductionPeriod } from "./period-check";
+import { resolveRental973ProrationEra } from "../data/rental-97-3-proration-era";
 import {
   calcRentalGainFraction,
   type RentalGainFraction,
@@ -296,11 +297,15 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
   }
 
   // 7) 임대기간 분 양도차익 안분 (령 §97의3⑤ — 기준시가 비례)
+  //    양도일 구간(#4): 2020.12.31 이전 양도는 법 ①이 「양도함으로써 발생하는 소득」이라 안분하지 않는다.
+  const prorationEra = resolveRental973ProrationEra(input.transferDate);
+  // 조특령 §97의3⑤ C 「실제 임대기간의 개시일」 = ④가 의제한 개시일(#2 — 가정 A-2). 임대기간 판정(:6)과 같은 축.
+  const effectiveRentalStartDate = rental97EffectiveStart(input);
   let rentalGainRatio = 1;
   let rentalGainFraction: RentalGainFraction | undefined;
-  if (input.rentalStartDate && input.acquisitionDate) {
+  if (prorationEra !== "whole_gain" && effectiveRentalStartDate && input.acquisitionDate) {
     const fraction = calcRentalGainFraction({
-      rentalStartDate: input.rentalStartDate,
+      rentalStartDate: effectiveRentalStartDate,
       acquisitionDate: input.acquisitionDate,
       // 조특령 §97의3⑤ — 분자의 감수 C = 실제 임대기간 **개시일**의 기준시가
       numeratorBase: "rental_start",
@@ -314,8 +319,8 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
       reasons.push({
         code: "MISSING_PRORATION_PRICES",
         message:
-          "임대개시일이 취득일보다 늦어 임대기간 분 양도차익 안분(조특령 §97의3⑤)이 필요하지만 " +
-          "취득시·임대개시시·양도시 기준시가 3점이 모두 입력되지 않았습니다. 자동 안분은 수행하지 않습니다.",
+          "임대개시일(임대사업자 등록일·세무서 사업자등록일·실제 임대일 중 늦은 날)이 취득일보다 늦거나 양도 전에 임대를 종료해 " +
+          "임대기간 분 양도차익 안분(조특령 §97의3⑤)이 필요하지만 취득시·임대개시시·양도시 기준시가가 모두 입력되지 않았습니다. 자동 안분은 수행하지 않습니다.",
         legalBasis: "조특령 §97의3⑤",
       });
     } else {
@@ -343,5 +348,6 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
     rentalGainRatio,
     rentalGainFraction,
     eligibleRentalYears,
+    prorationEra,
   };
 }

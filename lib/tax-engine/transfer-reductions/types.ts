@@ -294,6 +294,11 @@ export interface RentalLthdEffect {
   rentalGainFraction?: { num: number; den: number };
   eligibleRentalYears: number;
   /**
+   * [echo] §97의3 — 양도일 기준 안분 구간(`data/rental-97-3-proration-era.ts`). 결과 카드 고지용.
+   * `whole_gain`이면 안분하지 않았다(비율 1). §97의4는 undefined.
+   */
+  prorationEra?: "whole_gain" | "pre_decree" | "no_formula" | "formula";
+  /**
    * [echo] 결과 카드 산식 표시용 — `transfer-tax-lthd.ts`가 공제액 산출 직후 채운다.
    * 계산에는 관여하지 않는다(표시 전용). 평가 시점(`rental-97-3.ts`)에는 양도차익을 모르므로
    * 여기서는 optional이고, LTHD 단계를 거치지 않은 경로에서는 undefined다.
