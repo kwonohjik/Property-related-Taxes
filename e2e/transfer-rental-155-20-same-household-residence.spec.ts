@@ -5,6 +5,7 @@
  * 엔진·⑧ 주장은 anchor가 고정한다(`rh-residence-same-household-consolidation.anchor.test.ts` ·
  * `rental-exception-same-household-residence.anchor.test.ts`). 여기서만 관측되는 것은 **계산기 화면이 본인 거주 12개월에서
  * 계산을 막지 않고 끝까지 가서, 결과에 통산 내역이 보이는가**다 — 종전에는 ⑧이 엔진에 닿기 전에 막았다.
+ * 통산해도 24개월 미만이면 ⑧은 막지 않고 엔진이 특례 없이 과세한다(RS-1).
  *
  * 실행: E2E_PORT=<worktree 포트> npx playwright test e2e/transfer-rental-155-20-same-household-residence.spec.ts
  */
@@ -85,12 +86,21 @@ async function seed(page: Page, assetOver: Record<string, unknown>) {
 const BLOCK = /장기임대주택 특례 — 거주주택 거주기간 2년\(24개월\) 이상이 필요합니다/;
 
 test.describe("§155⑳ 거주 2년 — 증여 전 같은 세대 거주 통산 (별건 ⑥)", () => {
-  test("[RS-1] 증여 전 거주 개월이 없으면 종전대로 본인 12개월에서 막힌다", async ({ page }) => {
+  /** 계산기 ⑧은 요건 미달을 막지 않는다(`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` B) — 엔진이 특례 없이 계산한다. */
+  test("[RS-1] 증여 전 거주 개월이 없으면 본인 12개월로 거주 2년 미달 — 막지 않고 특례 없이 과세", async ({ page }) => {
+    test.setTimeout(120_000);
     await seed(page, { giftPriorHouseholdResidenceMonths: "" });
     await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+    const resP = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", {
+      timeout: 30_000,
+    });
     await page.getByRole("button", { name: "세금 계산하기" }).click();
-    await expect(page.getByText(BLOCK).first()).toBeVisible();
-    await expect(page.getByText(/\(현재: 12개월\)/).first()).toBeVisible();
+    const resp = await resP;
+    expect(resp.ok(), `계산 API 비정상 응답 ${resp.status()}`).toBe(true);
+    const json = (await resp.json()) as { data: { result: { totalTax: number; isExempt: boolean } } };
+    expect(json.data.result.isExempt).toBe(false);
+    expect(json.data.result.totalTax).toBeGreaterThan(0);
+    await expect(page.getByText(BLOCK)).toHaveCount(0);
   });
 
   test("[RS-2] ★ 증여 전 같은 세대 거주 18개월이면 막히지 않고 비과세 0 — 결과에 통산 내역", async ({ page }) => {
