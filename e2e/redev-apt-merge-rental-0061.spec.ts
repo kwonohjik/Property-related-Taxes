@@ -98,9 +98,11 @@ test("[RME-1] ★ 문항에 답하지 않으면 막히고, ⑤에서 「예」�
   await page.getByRole("button", { name: /계산하기/ }).click();
   await expect(page.getByText(/합가 상대 쪽 주택에 2년 이상 거주했는지 답하세요/).first()).toBeVisible();
 
-  await page.getByRole("button", { name: "자산 목록" }).first().click();
-  await expandAssetSection(page, 5);
+  // 계산 실패가 문항으로 데려다준다 — ⑤ 헤더를 또 누르면 자동 펼침과 겹쳐 접힐 수 있다.
+  await expect(page.getByTestId("rental-counterpart-resided-yes")).toBeFocused();
   await page.getByTestId("rental-counterpart-resided-yes").click();
+  await expect(page.getByTestId("validation-issues")).toHaveCount(0);
+  await expandAssetSection(page, 5); // 오류가 사라지면 강제 펼침이 풀려 ⑤가 접힌다
   await expect(page.getByText("합가 상대 쪽 임대 경로라 적용하지 않음", { exact: false })).toBeVisible();
 
   await gotoLastStep(page);
@@ -181,6 +183,37 @@ test("[RME-5] 선언 없는 완공APT → ⑤가 판정 메뉴로 안내 · 수�
   await expect(page.locator('[data-asset-card-index="0"] [data-asset-section="4"]')).toBeVisible();
   await expect(page.locator('[data-asset-card-index="0"] [data-asset-section="5"]')).toHaveCount(0);
 });
+
+for (const [name, asset] of [
+  ["완공APT", {}],
+  ["일반 주택", { assetKind: "housing", acquisitionDate: "2019-08-08", fixedAcquisitionPrice: "300000000" }],
+] as const) {
+  test(`[RME-7] ★ ${name} — 문항 미답 오류는 계산 실패 즉시, 그리고 안내를 누르면 거주 문항으로 간다`, async ({ page }) => {
+    await openExtras(page, { asset });
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" }); // dev 표시기가 하단 버튼을 덮는다
+    await gotoLastStep(page);
+    await page.getByRole("button", { name: /계산하기/ }).click();
+
+    const question = page.getByTestId("rental-counterpart-resided-yes");
+    await expect(question).toBeFocused();
+    await expect(question).toBeInViewport();
+
+    await page.evaluate(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+      window.scrollTo({ top: 0, behavior: "instant" });
+    });
+    await expect(question).not.toBeFocused();
+    await expect(question).not.toBeInViewport();
+
+    const issue = page.getByTestId("validation-issues").getByRole("button", { name: /합가 상대 쪽 주택에 2년 이상 거주했는지 답하세요/ });
+    await issue.click();
+    await expect(question).toBeFocused();
+    await expect(question).toBeInViewport();
+
+    await question.click();
+    await expect(issue).toHaveCount(0);
+  });
+}
 
 for (const [name, colorScheme] of [["다크 375", "dark"], ["라이트 375", "light"]] as const) {
   test.describe(name, () => {
