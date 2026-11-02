@@ -79,10 +79,15 @@ describe("계산기 — §154⑩ 단독 경로 × §154① 단서", () => {
     expect((r.result.warnings as string[]).some((w) => w.includes("§154⑩ 경로에 §154① 단서를 적용한 정면 해석례가 없어 확인이 필요합니다"))).toBe(true);
   });
 
-  it("PC-2 부정 짝 — 단서 없음·5호는 ⑧이 종전대로 보유 2년으로 막는다", () => {
-    expect(allIssues(form()).some((i) => i.message.includes(HOLDING_BLOCK))).toBe(true);
-    const p5 = form({ provisoReason: "pre_designation_contract", provisoPreContractNoHouse: true });
-    expect(allIssues(p5).some((i) => i.message.includes(HOLDING_BLOCK))).toBe(true);
+  /** 계산기 ⑧은 요건 미달을 막지 않는다(`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` B) — 엔진이 불성립으로 계산하고 선언하지 않은 값과 같다(2026-11-02 실측). */
+  it("PC-2 부정 짝 — 단서 없음·5호는 보유 2년을 풀지 않아 특례 없이 과세 61,215,000(⑧은 막지 않음)", async () => {
+    const off = form();
+    off.assets[0].rentalHousingException = { ...rh, applyException: false };
+    expect((await runCalc(off)).result.totalTax).toBe(61_215_000);
+    for (const f of [form(), form({ provisoReason: "pre_designation_contract", provisoPreContractNoHouse: true })]) {
+      expect(allIssues(f).some((i) => i.message.includes(HOLDING_BLOCK))).toBe(false);
+      expect((await runCalc(f)).result.totalTax).toBe(61_215_000);
+    }
   });
 });
 

@@ -97,6 +97,14 @@ export function validateRentalHousingException(
   provisoReason?: string,
   /** §155④⑤ × ⑳ 상대 쪽 임대(`lib/calc/merge-rental-carveout-form.ts`) — 시나리오 A 거주 2년 분기만 본다. */
   mergeRental?: MergeRentalState,
+  /**
+   * 거주주택 **요건 미달**(거주 2년·등록 후 거주 2년·§154⑩ 종전규정 거주 2년·보유 2년)을 막는가. 계산기(`calc` 카드)는 false다 —
+   * 선언을 끌 칸이 없어 막으면 판정 메뉴가 「과세」로 답한 사실의 세액을 낼 수 없다. 엔진은 선언이 있어도 불성립으로 계산한다 — 임대주택을
+   * 센 특례 없는 세액이다(명부에 임대 행이 있으면 미선언과 같다 · 실측 6건 · 계획서 `axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` B ·
+   * 카드의 「✗ 미충족」 표시가 안내한다). 선언 토글이 있는
+   * 부담부증여 카드(`mode="full"`)는 종전대로 막는다. 미입력·입력 모순·미답 문항은 이 값과 무관하게 막는다.
+   */
+  blockRequirementShortfall = true,
 ): string | null {
   if (!rh?.applyException) return null;
   if (asset.isMixedUseHouse && rh.scenario === "B") return fieldError("rentalHousingException.scenario", `${label}: ${MIXED_USE_RENTAL_B_UNSUPPORTED}`);
@@ -431,7 +439,7 @@ export function validateRentalHousingException(
   const residenceWaivedByProviso = isStandalone154_10 && !!provisoReason && PHRP_154_10_RESIDENCE_PROVISO_REASONS.has(provisoReason);
   if (isStandalone154_10 && preRegime154_10) {
     // 「종전규정」 — §154① 원칙: 취득 당시 조정대상지역인 경우에만 거주 2년(일반 거주기간)
-    if (wasRegulatedAtAcquisition && requirementMonths < 24 && !winWinResidenceExempt && !residenceWaivedByProviso) {
+    if (blockRequirementShortfall && wasRegulatedAtAcquisition && requirementMonths < 24 && !winWinResidenceExempt && !residenceWaivedByProviso) {
       return fieldError("residencePeriods", `${label}: 장기임대주택 특례(§154⑩) — 2019.2.12 전 취득으로 소령 §154① 원칙이 적용됩니다. 조정대상지역 취득 주택은 거주기간 2년(24개월) 이상이 필요합니다. (현재: ${requirementText})`);
     }
   } else if (rh.scenario === "B") {
@@ -440,7 +448,7 @@ export function validateRentalHousingException(
     if (postReg > (liveMonthsVal || 0)) {
       return fieldError("rentalHousingException.postRegistrationResidenceMonths", `${label}: 임대→거주 전환 주택 시나리오 — 등록 이후 거주기간(${postReg}개월)이 전체 거주기간(${liveMonthsVal || 0}개월)보다 깁니다. 확인 후 재입력하세요.`);
     }
-    if (postReg < 24 && !winWinResidenceExempt) {
+    if (blockRequirementShortfall && postReg < 24 && !winWinResidenceExempt) {
       return fieldError("rentalHousingException.postRegistrationResidenceMonths", `${label}: 장기임대주택 특례 — 임대→거주 전환 주택은 사업자등록·임대사업자 등록 이후 거주기간이 2년(24개월) 이상이어야 합니다 (현재: ${postReg}개월, 소령 §155⑳1호${isStandalone154_10 ? " 괄호 준용" : ""}).`);
     }
   } else if (mergeRental === "unanswered" && requirementMonths < 24 && !winWinResidenceExempt) {
@@ -448,7 +456,7 @@ export function validateRentalHousingException(
       "rentalHousingException.counterpartHouseResidedTwoYears",
       `${label}: 합가 상대 쪽 주택에 2년 이상 거주했는지 답하세요 — 「예」면 양도 주택에는 거주주택 2년을 적용하지 않습니다(기준-2024-법규재산-0061).`,
     );
-  } else if (mergeRental !== "waived" && requirementMonths < 24 && !winWinResidenceExempt) {
+  } else if (blockRequirementShortfall && mergeRental !== "waived" && requirementMonths < 24 && !winWinResidenceExempt) {
     return fieldError("residencePeriods", `${label}: 장기임대주택 특례 — 거주주택 거주기간 2년(24개월) 이상이 필요합니다. "거주주택 거주기간"(개월 직접 또는 입주·퇴거 구간)을 24개월 이상으로 입력하세요. 증여·상속 전 같은 세대로 거주한 기간은 그 칸에 입력하면 통산합니다. (현재: ${requirementText})`);
   }
 
@@ -463,7 +471,7 @@ export function validateRentalHousingException(
     const trn = new Date(formTransferDate);
     if (Number.isFinite(acq.getTime()) && Number.isFinite(trn.getTime())) {
       const hp = calculateHoldingPeriod(acq, trn);
-      if (hp.years < 2) {
+      if (blockRequirementShortfall && hp.years < 2) {
         return fieldError("acquisitionDate", `${label}: 장기임대주택 특례 — 거주주택 보유기간 2년 이상이 필요합니다. (취득일~양도일: ${hp.years}년 ${hp.months}개월 ${hp.days}일)`);
       }
     }

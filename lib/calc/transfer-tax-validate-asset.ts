@@ -440,6 +440,8 @@ export function validateAssetEntry(
     // §154① 단서 1호·2호가목·3호면 거주주택 보유 2년을 막지 않는다 — ④가 첫 자산에 싣는 것과 같은 게이트·정규화 값(D-9).
     index === 0 ? effectiveProvisoReason(calcProvisoMode(form), form.provisoReason) : undefined,
     index === 0 ? mergeRentalState(form) : undefined,
+    // 계산기 카드에는 선언을 끌 칸이 없다 — 요건 미달은 막지 않고 카드의 「✗ 미충족」 표시로 안내한다(엔진은 불성립으로 계산).
+    false,
   );
   if (rhError) return rhError;
 

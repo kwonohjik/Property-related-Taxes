@@ -91,9 +91,16 @@ test("[RHE-1] ★ 장기임대 행이 있는 2주택 — 단서 카드는 1·2�
   await expect(page.getByText(/정면 해석례가 없어 확인이 필요합니다/).first()).toBeVisible();
 });
 
-test("[RHE-2] 단서를 고르지 않으면 종전대로 보유 2년에서 막힌다", async ({ page }) => {
+/** 계산기 ⑧은 요건 미달을 막지 않는다(`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` B) — 엔진이 특례 없이 계산한다. */
+test("[RHE-2] 단서를 고르지 않으면 보유 2년 미달로 특례 없이 과세된다(⑧은 막지 않음)", async ({ page }) => {
   await seed(page);
   await goToCalculate(page);
+  const rp = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", { timeout: 30_000 });
   await page.getByRole("button", { name: /계산하기/ }).click();
-  await expect(page.getByText(HOLDING_BLOCK).first()).toBeVisible();
+  const resp = await rp;
+  expect(resp.ok(), `계산 API 비정상 응답 ${resp.status()}`).toBe(true);
+  const json = (await resp.json()) as { data: { result: { isExempt: boolean; totalTax: number } } };
+  expect(json.data.result.isExempt).toBe(false);
+  expect(json.data.result.totalTax).toBeGreaterThan(0);
+  await expect(page.getByText(HOLDING_BLOCK)).toHaveCount(0);
 });

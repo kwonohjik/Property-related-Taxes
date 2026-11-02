@@ -138,9 +138,9 @@ describe("§155④⑤ 합가 상대 쪽 임대 (0061)", () => {
 
 describe("불성립 · 미선언은 종전 그대로", () => {
   const TAXED = 214_335_000;
-  it("MB-8 거주 0 → ⑧이 막고 · 엔진은 전 카드 과세 · 불성립 고지", async () => {
+  it("MB-8 거주 0 → ⑧은 막지 않고(계산기 요건 미달 미차단) · 엔진은 전 카드 과세 · 불성립 고지", async () => {
     const f = form({ ...R0, rentalHousingException: RHE() }, [R]);
-    expect(allIssues(f).map((i) => i.field)).toContain("residencePeriods");
+    expect(allIssues(f).map((i) => i.field)).not.toContain("residencePeriods");
     const r = await calc(f);
     expect(r.total).toBe(TAXED);
     expect(r.house.every((p) => !p.isExempt)).toBe(true);

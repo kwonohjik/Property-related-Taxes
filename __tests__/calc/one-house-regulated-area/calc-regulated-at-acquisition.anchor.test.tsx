@@ -23,6 +23,8 @@ const INCHEON_SEO = "2826010100"; // 2018-01-01 취득 당시 조정대상지역
 const REGULATED_TEXT = "이 주택은 조정대상지역 취득입니다.";
 const NOT_REGULATED_TEXT = "이 주택은 조정대상지역 취득이 아니므로 거주요건이 없습니다.";
 const BLOCK = "조정대상지역 취득 주택은 거주기간 2년(24개월) 이상이 필요합니다";
+/** 계산기 ⑧은 요건 미달을 막지 않는다(`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` B) — ⑤ 카드의 미충족 안내가 같은 값을 읽는지로 본다. */
+const SHORTFALL = "거주주택 요건이 충족되지 않으면 본 특례가 적용되지 않고 일반 양도소득세로 계산됩니다";
 
 function form(regionCode: string, stored: boolean): TransferFormData {
   const f = createDefaultTransferFormData();
@@ -71,32 +73,40 @@ function card(f: TransferFormData) {
 }
 
 describe("G1-13 계산기 — ⑤ 카드·⑧은 주소가 있으면 엔진과 같은 취득시 조정대상지역을 읽는다", () => {
-  it("정방향 — 강남 코드 + 저장값 false: ⑤ 「조정대상지역 취득」 · ⑧ 차단", () => {
+  it("정방향 — 강남 코드 + 저장값 false: ⑤ 「조정대상지역 취득」 · 미충족 안내 · ⑧ 막지 않음", () => {
     const f = form(GANGNAM, false);
     const t = card(f);
     expect(t).toContain(REGULATED_TEXT);
     expect(t).not.toContain(NOT_REGULATED_TEXT);
-    expect(gate(f)).toContain(BLOCK);
+    expect(t).toContain(SHORTFALL);
+    expect(gate(f)).not.toContain(BLOCK);
   });
   it("역방향 — 인천 서구 코드 + 저장값 true: ⑤ 「조정대상지역 취득이 아니므로」 · ⑧ 통과", () => {
     const f = form(INCHEON_SEO, true);
     const t = card(f);
     expect(t).toContain(NOT_REGULATED_TEXT);
     expect(t).not.toContain(REGULATED_TEXT);
+    expect(t).not.toContain(SHORTFALL);
     expect(gate(f)).not.toContain(BLOCK);
   });
-  it("긍정 짝 — 주소 없음: 저장값을 따른다(true → 취득·⑧ 차단 / false → 아님·통과)", () => {
+  it("긍정 짝 — 주소 없음: 저장값을 따른다(true → 취득·미충족 안내 / false → 아님·안내 없음)", () => {
     const on = form("", true);
-    expect(card(on)).toContain(REGULATED_TEXT);
-    expect(gate(on)).toContain(BLOCK);
+    const tOn = card(on);
+    expect(tOn).toContain(REGULATED_TEXT);
+    expect(tOn).toContain(SHORTFALL);
+    expect(gate(on)).not.toContain(BLOCK);
     cleanup();
     const off = form("", false);
-    expect(card(off)).toContain(NOT_REGULATED_TEXT);
+    const tOff = card(off);
+    expect(tOff).toContain(NOT_REGULATED_TEXT);
+    expect(tOff).not.toContain(SHORTFALL);
     expect(gate(off)).not.toContain(BLOCK);
   });
-  it("긍정 짝 — 강남 코드 + 저장값 true: 같으면 같다(취득·⑧ 차단)", () => {
+  it("긍정 짝 — 강남 코드 + 저장값 true: 같으면 같다(취득·미충족 안내)", () => {
     const f = form(GANGNAM, true);
-    expect(card(f)).toContain(REGULATED_TEXT);
-    expect(gate(f)).toContain(BLOCK);
+    const t = card(f);
+    expect(t).toContain(REGULATED_TEXT);
+    expect(t).toContain(SHORTFALL);
+    expect(gate(f)).not.toContain(BLOCK);
   });
 });

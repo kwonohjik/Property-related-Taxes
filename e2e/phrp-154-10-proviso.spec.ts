@@ -66,9 +66,16 @@ test("[PHE-1] ★ 1주택 · §154⑩ 단독 — 3호 → ⑧ 통과 · §161 �
   await expect(page.getByText(/§154⑩ 경로에 §154① 단서를 적용한 정면 해석례가 없어 확인이 필요합니다/).first()).toBeVisible();
 });
 
-test("[PHE-2] 단서를 고르지 않으면 종전대로 보유 2년에서 막힌다", async ({ page }) => {
+/** 계산기 ⑧은 요건 미달을 막지 않는다(`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` B) — 엔진이 특례 없이 계산하고 사유를 계산 과정에 남긴다. */
+test("[PHE-2] 단서를 고르지 않으면 보유 2년 미달로 특례 없이 계산된다(⑧은 막지 않음)", async ({ page }) => {
   await seed(page);
   await goToCalculate(page);
+  const rp = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", { timeout: 30_000 });
   await page.getByRole("button", { name: /계산하기/ }).click();
-  await expect(page.getByText(HOLDING_BLOCK).first()).toBeVisible();
+  const resp = await rp;
+  expect(resp.ok(), `계산 API 비정상 응답 ${resp.status()}`).toBe(true);
+  const json = (await resp.json()) as { data: { result: { determinedTax: number; steps: { label: string; formula: string }[] } } };
+  expect(json.data.result.determinedTax).toBeGreaterThan(0);
+  expect(json.data.result.steps.some((s) => s.label === "장기임대주택 거주주택 비과세 특례 — 적용 불가" && /보유기간 2년 미충족/.test(s.formula))).toBe(true);
+  await expect(page.getByText(HOLDING_BLOCK)).toHaveCount(0);
 });

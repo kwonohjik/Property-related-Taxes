@@ -78,7 +78,11 @@ describe("V-42 OH-42 — 상생임대 거주요건 면제", () => {
   it("V-42b 거주 0개월 · 상생임대 → 통과", () => {
     expect(V(asset({}, { residencePeriodMonthsAsset: "0" }), "2026-06-01", "full", true)).toBeNull();
   });
-  it("V-42c 계산기 ⑧ 진입점(validateAssetEntry)이 운반 상자의 상생임대 사실을 넘긴다", () => {
+  /**
+   * 계산기 ⑧은 거주 2년 미달을 막지 않는다(`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` B) — 상생임대 사실 유무와 관계없이 통과하고,
+   * 면제 판정은 엔진(`checkEligibility`)이 한다. 술어 자체는 V-42a·b가, 막는 경로(부담부증여 카드)는 `gift-burdened-rental-exception`이 지킨다.
+   */
+  it("V-42c 계산기 ⑧ 진입점(validateAssetEntry)은 상생임대 사실이 없어도 거주 2년 미달을 막지 않는다", () => {
     const f = createDefaultTransferFormData();
     f.transferDate = "2024-06-01";
     const a = asset({}, {
@@ -90,10 +94,8 @@ describe("V-42 OH-42 — 상생임대 거주요건 면제", () => {
     });
     f.assets = [a];
     const withFacts = { ...f, importedOneHouseFacts: WIN_WIN_FACTS };
-    const blocked = validateAssetEntry(a, 0, f);
-    const passed = validateAssetEntry(a, 0, withFacts);
-    expect(blocked ?? "").toContain("거주기간 2년");
-    expect(passed ?? "").not.toContain("장기임대주택 특례");
+    expect(validateAssetEntry(a, 0, f) ?? "").not.toContain("장기임대주택 특례");
+    expect(validateAssetEntry(a, 0, withFacts) ?? "").not.toContain("장기임대주택 특례");
   });
 });
 
