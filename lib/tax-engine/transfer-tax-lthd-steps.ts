@@ -15,6 +15,8 @@
 import type { CalculationStep } from "./types/transfer.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
 import { TRANSFER, LTHD_EXCLUSION_LABEL } from "./legal-codes/transfer";
+import { TRANSFER_REDUCTION_ARTICLE } from "./legal-codes/transfer-house";
+import type { Rental97Result } from "./transfer-reductions/types";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { LTHD_TABLE2_RESIDENCE_MIN_YEARS, resolveLthdTable2Era, table2ResidencePct } from "./data/lthd-table2-era";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
@@ -71,6 +73,42 @@ export interface LthdStepArgs {
    * 파트 echo가 없거나 합이 총액과 어긋나면(§98의2 특칙 재할당 등) 종전 문구로 후퇴한다.
    */
   splitDetail?: SplitGainResult;
+  /**
+   * 조특법 §97의3(특례 공제율 대체)·§97의4(추가공제율 가산) echo(`transfer-tax-lthd-rental97.ts`).
+   * 있으면 `longTermHoldingRate`는 §95② 표의 율이 아니라 **혼합율(§97의3)·가산율(§97의4)**이다 —
+   * 표1·표2 분해 문구를 그 율 옆에 붙이면 「보유 20년×2% = 64%」처럼 자기모순이 된다.
+   * 표 분해는 echo의 일반 공제율(`baseLthdRate`)로 쓴다. 표시 전용 — 공제액·세액과 무관하다.
+   */
+  rental97LthdDetail?: Rental97Result;
+}
+
+/** 공제율(소수) → % 표시값(표시 전용 — 세액 계산에 쓰지 않는다) */
+const pctOf = (rate: number) => Math.round(rate * 100);
+
+type RentalLthdView =
+  | { kind: "special"; overrideRate: number; baseRate: number; rentalGain: number; nonRentalGain: number }
+  | { kind: "additional"; additionalRate: number; baseRate: number };
+
+/** §97의3 특례가 **적용된** 경우·§97의4 가산이 **적용된** 경우만 — 미적용·배제는 일반 문구 그대로다. */
+function resolveRentalLthdView(d: Rental97Result | undefined): RentalLthdView | undefined {
+  if (!d || !d.isEligible) return undefined;
+  if (d.effectCategory === "long_term_holding_special") {
+    // specialApplied === false: 일반 공제액이 커서 특례를 적용하지 않았다(§97의3③) — 율이 이미 일반 공제율이다.
+    if (d.specialApplied === false || d.overrideRate === undefined || d.baseLthdRate === undefined) return undefined;
+    if (d.rentalGainApplied === undefined || d.nonRentalGainApplied === undefined) return undefined;
+    return {
+      kind: "special",
+      overrideRate: d.overrideRate,
+      baseRate: d.baseLthdRate,
+      rentalGain: d.rentalGainApplied,
+      nonRentalGain: d.nonRentalGainApplied,
+    };
+  }
+  if (d.effectCategory === "long_term_holding_additional") {
+    if (d.additionalRate === undefined || d.baseLthdRate === undefined) return undefined;
+    return { kind: "additional", additionalRate: d.additionalRate, baseRate: d.baseLthdRate };
+  }
+  return undefined;
 }
 
 /** STEP 4 + 4.1 + 4.2 — 장특공제 본 step과 보유분/거주분 sub-step을 push한다. */
@@ -93,7 +131,12 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     meetsTable2Residence,
     transferDate,
     splitDetail,
+    rental97LthdDetail,
   } = args;
+  // §98의2 특칙은 공제액을 덮어쓰고, §95⑤·§95④ 후단은 자기 분해 문구가 있다 — 그 경우 임대 특례 문구를 쓰지 않는다.
+  const rentalView = lthd982Applied || conv || fbLthdFormula ? undefined : resolveRentalLthdView(rental97LthdDetail);
+  // 표1·표2 분해 문구에 쓰는 율 — 임대 특례가 적용됐으면 혼합·가산 전의 일반 공제율이다.
+  const tableRatePct = pctOf(rentalView ? rentalView.baseRate : longTermHoldingRate);
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
     : "";
@@ -134,16 +177,35 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
   const lthdFormulaRate = fbLthdFormula
     ? `${fbLthdFormula} (소득세법 §95④ 후단)`
     : lthd982Applied
-    ? `§98의2 특칙 — 표2 보유 ${holdingPeriod.years}년×4% = ${Math.round(longTermHoldingRate * 100)}% (40% 한도, 법 §98의2①1호)`
+    ? `§98의2 특칙 — 표2 보유 ${holdingPeriod.years}년×4% = ${pctOf(longTermHoldingRate)}% (40% 한도, 법 §98의2①1호)`
     : conv
     ? `비주택 보유 ${conv.nonHousingYears}년 표1 ${conv.table1Pct}% + 주택 보유 ${conv.housingYears}년 표2 ${conv.table2HoldingPct}%`
       + ` = 보유분 ${holdingPct}%${conv.holdingRateCapped ? " (40% 한도 적용)" : ""}`
       + ` + ${residenceTerm} = ${holdingPct + residencePct}%`
     : singleAxisTable2
-    ? `표2 보유 ${holdingPeriod.years}년×8% = ${Math.round(longTermHoldingRate * 100)}% (80% 한도 — 2020.12.31. 이전 양도분)`
+    ? `표2 보유 ${holdingPeriod.years}년×8% = ${tableRatePct}% (80% 한도 — 2020.12.31. 이전 양도분)`
     : isOneHouseSpecial
-    ? `보유 ${holdingPeriod.years}년×4%=${holdingPct}% + ${residenceTerm} = ${Math.round(longTermHoldingRate * 100)}%`
-    : `보유 ${holdingPeriod.years}년×2% = ${Math.round(longTermHoldingRate * 100)}% (30% 한도)`;
+    ? `보유 ${holdingPeriod.years}년×4%=${holdingPct}% + ${residenceTerm} = ${tableRatePct}%`
+    : `보유 ${holdingPeriod.years}년×2% = ${tableRatePct}% (30% 한도)`;
+  // §97의3 — 「임대기간 분 × 특례율 + 그 밖의 분 × 일반 공제율」(혼합율 하나로 쓰면 분해와 맞지 않는다).
+  // §97의4 — 「일반 공제율 + 추가공제율 = 적용 공제율」.
+  const rentalHead =
+    rentalView?.kind === "special"
+      ? [
+          `임대기간 분 양도차익 ${rentalView.rentalGain.toLocaleString()} × ${pctOf(rentalView.overrideRate)}%`,
+          ...(rentalView.nonRentalGain > 0
+            ? [`그 밖의 양도차익 ${rentalView.nonRentalGain.toLocaleString()} × ${tableRatePct}%`]
+            : []),
+        ].join(" + ") + ` = ${longTermHoldingDeduction.toLocaleString()}`
+      : undefined;
+  const formulaRateText =
+    rentalView?.kind === "special"
+      ? `${TRANSFER_REDUCTION_ARTICLE.RENTAL_97_3} 장기보유특별공제 특례` +
+        (rentalView.nonRentalGain > 0 ? ` — 그 밖의 양도차익의 일반 공제율: ${lthdFormulaRate}` : "")
+      : rentalView?.kind === "additional"
+        ? `${lthdFormulaRate} + ${TRANSFER_REDUCTION_ARTICLE.RENTAL_97_4} 추가공제율 ${pctOf(rentalView.additionalRate)}%` +
+          ` = ${pctOf(longTermHoldingRate)}%`
+        : lthdFormulaRate;
   const lthdExcluded = lthdExclusionReason !== undefined && !lthd982Applied;
   // split: 파트별 풀어 쓰기. 용도변경(§95⑤)·가업상속 후단·§98의2 특칙과는 병용되지 않지만(엔진 분기가 split을 먼저
   // 반환) 표시 계층도 같은 조건을 가드로 둔다 — 하나라도 걸리면 종전 문구다.
@@ -165,8 +227,8 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
       : splitFormula
       ? splitFormula
       : [
-          `${taxableGain.toLocaleString()} × ${Math.round(longTermHoldingRate * 100)}%`,
-          lthdFormulaRate,
+          rentalHead ?? `${taxableGain.toLocaleString()} × ${pctOf(longTermHoldingRate)}%`,
+          formulaRateText,
           holdingPeriodStr,
         ].filter(Boolean).join(" | "),
     amount: longTermHoldingDeduction,
