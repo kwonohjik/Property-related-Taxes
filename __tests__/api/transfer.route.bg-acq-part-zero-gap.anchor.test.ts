@@ -218,5 +218,9 @@ describe("PZ-6 주택·건물 토지·건물 분리 — 한쪽 입력 ⑧ ∧ �
   it("담보 승은 금액을 읽지 않아 한쪽만 있어도 막지 않는다", async () => {
     expect((await post(bgForm(own({ bgMortgageDebtAmount: "1,200,000,000", bgMortgageSetAmount: "1,200,000,000", bgPresumedAcquisitionBuilding: "" })))).status).toBe(200);
   });
+  it("주택 파트 평가액을 나눠 보낸 본문에는 분리 규칙이 걸리고, 그 자산에 없는 파트(기준시가·평가액 없음)는 요구하지 않는다 — `burdened-gift-appraisal-sales-case` §114조의2 시료", async () => {
+    const f = bgForm(own({ bgPresumedAcquisitionLand: "" }));
+    expect((await post(f)).status).toBe(400);
+  });
   it("주택 총액 입력(분리 아님)은 한쪽 규칙이 걸리지 않는다", async () => { await open(form([a("housing", "a")]), 300_000_000); });
 });

@@ -135,15 +135,17 @@ function requireBgAcquisitionParts(info: unknown, gbv: Gbv, ownershipRatio: numb
     if (wantBuilding && !positive(o[building])) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...at, building], message: BG_ACQ_PART_REQUIRED_MESSAGE });
   };
   const at = [...path, "burdenedGiftInfo"];
-  const ownLand = !gbv?.landPreDeemedClauseA;
-  const ownBuilding = !gbv?.buildingPreDeemedClauseA;
+  // 토지·건물 파트 평가액(`marketValueByPart` — 분리 입력의 파트 A)도 기준시가도 없는 파트는 그 자산에 없는 파트다(직접 호출 — 토지 없이 건물 값만 보낸 본문). 일반건물은 `requireStd`가 기준시가 4칸을 이미 요구한다.
+  const hasPart = (p: "land" | "building") => i.marketValueByPart != null || positive(i[`${p}StdPriceAtTransfer`]) || positive(i[`${p}StdPriceAtAcquisition`]);
+  const ownLand = !gbv?.landPreDeemedClauseA && hasPart("land");
+  const ownBuilding = !gbv?.buildingPreDeemedClauseA && hasPart("building");
   const ownActual = () => need(at, i, "actualAcquisitionTotal", "actualLandAcquisitionPrice", "actualBuildingAcquisitionPrice", ownLand, ownBuilding);
   if (i.acquisitionMethod === "actual") return ownActual();
   if (i.acquisitionMethod !== "appraisal" && i.acquisitionMethod !== "salesCase") return;
   const donor = i.carryoverDonorBasis as (Record<string, unknown> & { parts?: { land?: boolean; building?: boolean } }) | undefined;
   if (!donor) return need(at, i, "presumedAcquisitionTotal", "presumedLandAcquisitionPrice", "presumedBuildingAcquisitionPrice", ownLand, ownBuilding);
   const parts = donor.parts ?? { land: true, building: true };
-  need([...at, "carryoverDonorBasis"], donor, "presumedAcquisitionTotal", "presumedLandAcquisitionPrice", "presumedBuildingAcquisitionPrice", parts.land === true, parts.building === true);
+  need([...at, "carryoverDonorBasis"], donor, "presumedAcquisitionTotal", "presumedLandAcquisitionPrice", "presumedBuildingAcquisitionPrice", parts.land === true && hasPart("land"), parts.building === true && hasPart("building"));
   if (parts.land === true && parts.building === true) ownActual();
 }
 
