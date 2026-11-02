@@ -151,6 +151,13 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       region: "capital",
       officialPriceAtStart: "",
       rental974Category: "",
+      taxRegistrationDate: "", // 조특령 §97의4② — 임대개시 기산의 한 축
+      isInherited974: false, // 조특령 §97⑤3호 — 상속 합산
+      inheritanceDate974: "",
+      decedentRegistrationDate974: "",
+      decedentRentalStartDate974: "",
+      isAutoCancelled974: false, // 민특법 §6⑤ 자동말소 — 임대기간 종점
+      autoCancelledDate974: "",
     };
   }
   if (id === "rental_97_5") {

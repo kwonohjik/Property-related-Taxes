@@ -232,13 +232,19 @@ const RENTAL_97_3 = table("rental_97_3", hybrid("rental_97_3"), r973Ok, {}, [
   { name: "안분 양도 당시 기준시가", prop: "stdPriceAtTransfer", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtTransfer: "" } },
 ]);
 
-const r974Ok = { ...rentalBase, rental974Category: "purchase_a", officialPriceAtStart: "300000000", region: "capital" };
+const r974Ok = { ...rentalBase, taxRegistrationDate: "2019-06-01", rental974Category: "purchase_a", officialPriceAtStart: "300000000", region: "capital" };
 const RENTAL_97_4 = table("rental_97_4", hybrid("rental_97_4"), r974Ok, {}, [
   ...dateRows("§97의4"),
   ...commonRows("§97의4", "3개월", true),
   { name: "임대주택 유형", prop: "rental974Category", message: /^§97의4 적용: 장기임대주택 유형/, patch: { rental974Category: "" } },
   { name: "임대개시 당시 기준시가", prop: "officialPriceAtStart", message: /^§97의4 적용: 임대개시일 당시 기준시가\(주택\+부수토지 합계\)를 입력/, patch: { officialPriceAtStart: "" } },
   { name: "기준시가 한도 초과", prop: "officialPriceAtStart", message: /^§97의4 적용: 임대개시일 당시 기준시가 합계가 한도/, patch: { officialPriceAtStart: "700000000" } },
+  // 리뷰 R-1·R-3·R-4 (2026-11-02) — 조특령 §97의4② 사업자등록일 · §97⑤3호 상속 합산 · 자동말소 종점
+  { name: "세무서 사업자등록일", prop: "taxRegistrationDate", message: /^§97의4 적용: 세무서 사업자등록일을 입력/, patch: { taxRegistrationDate: "" } },
+  { name: "상속개시일", prop: "inheritanceDate974", message: /^§97의4 적용: 상속개시일을 입력/, patch: { isInherited974: true, inheritanceDate974: "", decedentRegistrationDate974: "2010-01-01", decedentRentalStartDate974: "2010-01-01" } },
+  { name: "피상속인 사업자등록등일", prop: "decedentRegistrationDate974", message: /^§97의4 적용: 피상속인의 사업자등록등일/, patch: { isInherited974: true, inheritanceDate974: "2015-01-01", decedentRegistrationDate974: "", decedentRentalStartDate974: "2010-01-01" } },
+  { name: "피상속인 임대개시일", prop: "decedentRentalStartDate974", message: /^§97의4 적용: 피상속인의 임대개시일/, patch: { isInherited974: true, inheritanceDate974: "2015-01-01", decedentRegistrationDate974: "2010-01-01", decedentRentalStartDate974: "" } },
+  { name: "자동말소일", prop: "autoCancelledDate974", message: /^§97의4 적용: 임대사업자 등록 자동말소일/, patch: { isAutoCancelled974: true, autoCancelledDate974: "" } },
 ]);
 
 const r975Ok = { ...rentalBase, isPurchaseRental: true, taxRegistrationDate: "2019-06-01", hasDeemedRentalPeriod: false, deemedRentalPeriods: [], isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };

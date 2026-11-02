@@ -330,8 +330,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (r.type === "rental_97_5" && (r.isPurchaseRental === null || r.isPurchaseRental === undefined))
             return fail(fieldError(`reduction.${r.type}.isPurchaseRental`, `${label} 적용: 임대주택 취득 유형(매입임대/건설임대)을 선택하세요 (§97의5①1호).`));
           // 조특령 §97의5③ — 사업자등록을 확인했으면 그 날짜가 임대개시 기산의 한 축이다(엔진 MISSING_TAX_REGISTRATION_DATE)
-          if ((r.type === "rental_97_5" || r.type === "rental_97_3") && r.isTaxRegistered && !r.taxRegistrationDate)
-            return fail(fieldError(`reduction.${r.type}.taxRegistrationDate`, `${label} 적용: 세무서 사업자등록일을 입력하세요 (조특령 ${r.type === "rental_97_5" ? "§97의5③" : "§97의3④"} — 늦으면 그날부터 임대 개시).`));
+          if ((r.type === "rental_97_5" || r.type === "rental_97_3" || r.type === "rental_97_4") && r.isTaxRegistered && !r.taxRegistrationDate)
+            return fail(fieldError(`reduction.${r.type}.taxRegistrationDate`, `${label} 적용: 세무서 사업자등록일을 입력하세요 (조특령 ${r.type === "rental_97_5" ? "§97의5③" : r.type === "rental_97_4" ? "§97의4②" : "§97의3④"} — 늦으면 그날부터 임대 개시).`));
           // 3-state: "" = 미선택 → 차단 (간소화 모드 명시 선택 강제)
           // 임대료 증액 제한은 §97의3·§97의4·§97의5만 — §97(본문·단서)·§97의2는 묻지도 막지도 않는다 (`hasRentIncreaseRule`)
           const rentRule = hasRentIncreaseRule(r.type);
@@ -411,6 +411,25 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             if (std > cap)
               return fail(fieldError(`reduction.${r.type}.officialPriceAtStart`, `${label} 적용: 임대개시일 당시 기준시가 합계가 한도 ${(cap / 100_000_000).toFixed(0)}억원을 초과합니다 — 장기임대주택에 해당하지 않습니다 (소령 §167의3①2호 ${cat === "purchase_a" ? "가목" : "다목"}).`,
               ));
+            // 조특령 §97⑤3호 — 상속 합산. ④는 세 날짜가 다 있을 때만 싣는다 → 빈 칸은 여기서 막는다(조용히 합산 누락 방지).
+            if (r.isInherited974) {
+              if (!r.inheritanceDate974)
+                return fail(fieldError(`reduction.${r.type}.inheritanceDate974`, `${label} 적용: 상속개시일을 입력하세요 (조특령 §97⑤3호 — 피상속인 임대기간 합산).`));
+              if (!r.decedentRegistrationDate974)
+                return fail(fieldError(`reduction.${r.type}.decedentRegistrationDate974`, `${label} 적용: 피상속인의 사업자등록등일(세무서 사업자등록·임대사업자등록 중 늦은 날)을 입력하세요.`));
+              if (!r.decedentRentalStartDate974)
+                return fail(fieldError(`reduction.${r.type}.decedentRentalStartDate974`, `${label} 적용: 피상속인의 임대개시일을 입력하세요.`));
+              // 엔진 INVALID_INHERITANCE_DATES와 같은 조건 (YYYY-MM-DD 문자열 비교)
+              if (r.decedentRegistrationDate974 >= r.inheritanceDate974 || r.decedentRentalStartDate974 >= r.inheritanceDate974)
+                return fail(fieldError(`reduction.${r.type}.inheritanceDate974`, `${label} 적용: 피상속인의 임대개시일·사업자등록등일은 상속개시일보다 앞서야 합니다.`));
+            }
+            // 민특법 §6⑤ 자동말소 — ④는 날짜가 있을 때만 싣는다
+            if (r.isAutoCancelled974) {
+              if (!r.autoCancelledDate974)
+                return fail(fieldError(`reduction.${r.type}.autoCancelledDate974`, `${label} 적용: 임대사업자 등록 자동말소일을 입력하세요 (임대기간 종점).`));
+              if (form.transferDate && r.autoCancelledDate974 > form.transferDate)
+                return fail(fieldError(`reduction.${r.type}.autoCancelledDate974`, `${label} 적용: 자동말소일은 양도일 이전이어야 합니다.`));
+            }
           }
           // D2-05 — 조특법 §97의5②: §97의5 세액감면은 §97의3·§97의4 과세특례와 중복 적용 불가.
           // ⑧에도 같은 상호배타를 둬야 「UI 통과 ↔ 엔진 배제」 모순이 생기지 않는다.

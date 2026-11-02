@@ -708,4 +708,24 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  {
+    // §97의4 임대기간 계산 준용·임대개시 의제(`RENTAL_97_4_PERIOD.EFFECTIVE_START`). 원문 MST 288915 실독 2026-11-02.
+    id: "TRANSFER_DECREE.LONG_RENTAL_97_4",
+    citation: "조특령 §97의4",
+    keywords: [
+      "제97조제5항제1호ㆍ제3호 및 제5호를 준용한다",
+      "임대하는 날부터 임대를 개시한 것으로 본다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // ⑤1호 기산일·3호 상속 합산(`RENTAL_97_4_PERIOD.INHERITANCE_MERGE`). 원문 MST 288915 실독 2026-11-02.
+    id: "TRANSFER_DECREE.LONG_RENTAL_97",
+    citation: "조특령 §97",
+    keywords: [
+      "주택임대기간의 기산일은 주택의 임대를 개시한 날로 할 것",
+      "피상속인의 주택임대기간을 상속인의 주택임대기간에 합산할 것",
+    ],
+    keywordMode: "ALL",
+  },
 ];

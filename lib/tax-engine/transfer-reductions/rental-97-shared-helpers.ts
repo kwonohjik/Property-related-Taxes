@@ -88,6 +88,28 @@ export function calculateEffectiveRentalPeriod(
   graceMonths: number,
   noGracePeriods: Rental97VacancyPeriod[] = [],
 ): number {
+  const effectiveDays = calculateEffectiveRentalDays(
+    rentalStartDate,
+    transferDate,
+    vacancyPeriods,
+    graceMonths,
+    noGracePeriods,
+  );
+  const effectiveEndDate = addDays(rentalStartDate, effectiveDays);
+  return differenceInYears(effectiveEndDate, rentalStartDate);
+}
+
+/**
+ * 유효 임대일수 — `calculateEffectiveRentalPeriod`의 일수 단계(공실 규칙 동일, 구간 [rentalStartDate, transferDate]).
+ * 구간이 둘인 임대기간(조특령 §97⑤3호 — 피상속인 분 + 상속인 분)을 일수로 더한 뒤 연수로 바꿀 때 쓴다.
+ */
+export function calculateEffectiveRentalDays(
+  rentalStartDate: Date,
+  transferDate: Date,
+  vacancyPeriods: Rental97VacancyPeriod[],
+  graceMonths: number,
+  noGracePeriods: Rental97VacancyPeriod[] = [],
+): number {
   const totalDays = differenceInDays(transferDate, rentalStartDate);
   if (totalDays <= 0) return 0;
 
@@ -112,9 +134,7 @@ export function calculateEffectiveRentalPeriod(
     deductDays += differenceInDays(np.endDate, np.startDate);
   }
 
-  const effectiveDays = Math.max(0, totalDays - deductDays);
-  const effectiveEndDate = addDays(rentalStartDate, effectiveDays);
-  return differenceInYears(effectiveEndDate, rentalStartDate);
+  return Math.max(0, totalDays - deductDays);
 }
 
 /**

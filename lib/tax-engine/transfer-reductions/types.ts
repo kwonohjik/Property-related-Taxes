@@ -155,6 +155,27 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
    * 나목은 §97의4 대상이 아니다(조특령 §97의4①이 「가목 및 다목」만 인용).
    */
   rental974Category?: "purchase_a" | "construction_c";
+  /**
+   * §97의4 — 상속받은 임대주택 (조특령 §97의4② → 조특령 §97⑤3호 「피상속인의 주택임대기간을 상속인의
+   * 주택임대기간에 합산할 것」). 있으면 `registrationDate`·`taxRegistrationDate`·`rentalStartDate`는 **상속인 본인** 값이다.
+   * - 피상속인 분 = [max(피상속인 임대개시일, 피상속인 사업자등록등일), 상속개시일]
+   * - 소령 §167의3①2호 가·다목 단서 「2018.3.31까지 사업자등록등을 한 주택」은 **피상속인** 사업자등록등일로 본다
+   *   (사용자 결정 2026-11-02 — 조문 주어가 「주택」이고 기간 합산 취지와 맞음. 정면 해석례 미확보 → 결과에 확인 필요 고지).
+   * - 기준시가 한도의 「임대개시일 당시」도 피상속인 임대개시일 기준 (`officialPriceAtStart` 입력 의미 — 같은 결정).
+   */
+  inheritance974?: {
+    /** 상속개시일 — 피상속인 분의 종점 */
+    inheritanceDate: Date;
+    /** 피상속인 사업자등록등일 — 세무서 사업자등록·임대사업자등록 중 늦은 날 */
+    decedentRegistrationDate: Date;
+    /** 피상속인이 그 주택을 임대하기 시작한 날 */
+    decedentRentalStartDate: Date;
+  };
+  /**
+   * §97의4 — 임대사업자 등록이 자동말소된 날(민간임대주택에 관한 특별법 §6⑤ — 임대의무기간 종료일).
+   * 임대기간 종점 = min(양도일, 이 날) (국세청 서면-2021-법규재산-1422, 2022.6.21. — 「임대개시일부터 자동말소일까지」).
+   */
+  autoCancelledDate974?: Date;
   /** 2020.7.11 이후 단기민간임대 → 장기일반 변경 신고분 — 적용 제외 (§97의3① 괄호) */
   isConvertedFromShortTerm?: boolean;
   /**
@@ -304,6 +325,16 @@ export interface RentalLthdEffect {
   /** 같은 비율의 정수 분수 — 금액 안분은 이것으로(`applyRentalGainShare`). 비율 1이면 없을 수 있다. */
   rentalGainFraction?: { num: number; den: number };
   eligibleRentalYears: number;
+  /**
+   * [echo] §97의4 — 임대기간 산정 구간(YYYY-MM-DD). 결과 카드 표시 전용 — 계산에는 관여하지 않는다. 구 이력은 없다.
+   * `heir` = 본인(상속이면 상속인) 분 [의제 임대개시일, 종점] · `decedent` = 피상속인 분(상속일 때만).
+   * `endReason` = 종점이 양도일인지 자동말소일인지.
+   */
+  rentalPeriod974?: {
+    heir?: { start: string; end: string };
+    decedent?: { start: string; end: string };
+    endReason: "transfer" | "auto_cancel";
+  };
   /**
    * [echo] §97의3 — 양도일 기준 안분 구간(`data/rental-97-3-proration-era.ts`). 결과 카드 고지용.
    * `whole_gain`이면 안분하지 않았다(비율 1). §97의4는 undefined.
