@@ -50,6 +50,8 @@ const MAPO = "1144010100";
 const REGULATED_TEXT = "이 주택은 조정대상지역 취득입니다.";
 const NOT_REGULATED_TEXT = "이 주택은 조정대상지역 취득이 아니므로 거주요건이 없습니다.";
 const BLOCK = "조정대상지역 취득 주택은 거주기간 2년(24개월) 이상이 필요합니다";
+/** 계산기 ⑧은 요건 미달을 막지 않는다(`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` B) — ⑤ 카드의 미충족 안내가 같은 값을 읽는지로 본다. */
+const SHORTFALL = "거주주택 요건이 충족되지 않으면 본 특례가 적용되지 않고 일반 양도소득세로 계산됩니다";
 
 const RENTAL = {
   ...RENTAL_HOUSING_EXCEPTION_DEFAULTS,
@@ -151,28 +153,34 @@ describe("D-2 ⑤ §155⑳ 카드 · ⑧", () => {
     const t = card(f);
     expect(t).toContain(NOT_REGULATED_TEXT);
     expect(t).not.toContain(REGULATED_TEXT);
+    expect(t).not.toContain(SHORTFALL);
     expect(gate(f)).not.toContain(BLOCK);
   });
-  it("[D-2b] 긍정 짝 — 별도 세대(아니오)는 증여일 기준 해당: 카드 「조정대상지역 취득」 · ⑧ 막는다", () => {
+  it("[D-2b] 긍정 짝 — 별도 세대(아니오)는 증여일 기준 해당: 카드 「조정대상지역 취득」 · 미충족 안내(⑧은 막지 않음)", () => {
     const f = giftForm("no", "");
     const t = card(f);
     expect(t).toContain(REGULATED_TEXT);
     expect(t).not.toContain(NOT_REGULATED_TEXT);
-    expect(gate(f)).toContain(BLOCK);
+    expect(t).toContain(SHORTFALL);
+    expect(gate(f)).not.toContain(BLOCK);
   });
 });
 
 describe("D-3 다건 임베드 — #38-3 이후 다건 ④도 증여 세대 사실을 싣는다", () => {
-  it("[D-3] 같은 반대 방향 입력이 다건 임베드여도 단건과 같다(미해당 · ⑧ 막지 않음) · 긍정 짝: 별도 세대(아니오)는 둘 다 해당", () => {
+  it("[D-3] 같은 반대 방향 입력이 다건 임베드여도 단건과 같다(미해당 · 안내 없음) · 긍정 짝: 별도 세대(아니오)는 둘 다 해당(미충족 안내)", () => {
     for (const path of ["/calc/transfer-tax", "/calc/transfer-tax/multi/edit"]) {
       pathname = path;
       const f = giftForm("yes", "2016-01-01");
-      expect(card(f)).toContain(NOT_REGULATED_TEXT);
+      const tf = card(f);
+      expect(tf).toContain(NOT_REGULATED_TEXT);
+      expect(tf).not.toContain(SHORTFALL);
       expect(gate(f)).not.toContain(BLOCK);
       expect(auto(f)).toMatch(/취득일 기준 조정대상지역 미해당/);
       const g = giftForm("no", "");
-      expect(card(g)).toContain(REGULATED_TEXT);
-      expect(gate(g)).toContain(BLOCK);
+      const tg = card(g);
+      expect(tg).toContain(REGULATED_TEXT);
+      expect(tg).toContain(SHORTFALL);
+      expect(gate(g)).not.toContain(BLOCK);
     }
     pathname = "/calc/transfer-tax";
   });

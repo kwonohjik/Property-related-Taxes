@@ -57,6 +57,13 @@ export interface HouseInfo {
    * (§155① `effectiveNewHouseAcquisitionDate`와 같은 술어 · §156의2⑤ `replacement-house.ts`). 없으면 `acquisitionDate`.
    */
   predecessorHouseAcquisitionDate?: Date;
+  /**
+   * 축 B 지분 카드의 양도 행 — **그 지분의 취득일**(첫 지분과 다를 때만). `acquisitionDate`는 주택(첫 지분) 취득일 그대로다.
+   * 중과 배제의 보유·취득 시기 요건(영 §167의3①12의2호·2020.2.18. 시행본 12호 10년·제9270호 부칙 §14①)만 이 날짜로 본다 —
+   * 법 §95④ 보유기간은 「그 자산의 취득일부터」. 주택 단위 판정(혼인 5년 단서·세컨드홈 선후·§71의2 등)은 `acquisitionDate`
+   * (계획서 `axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` A). 없으면 `acquisitionDate`.
+   */
+  shareAcquisitionDate?: Date;
   /** 공시가격 (원) — 취득 시 기준 */
   officialPrice: number;
   /**

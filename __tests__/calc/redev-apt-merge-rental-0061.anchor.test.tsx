@@ -127,9 +127,9 @@ describe("이 경로가 아닌 입력", () => {
   it("RM-9 ★ 상대 쪽 거주 미답 → ⑧이 문항으로 보낸다", () => {
     expect(allIssues(form({ rhe: RHE("") })).map((i) => i.field)).toContain("rentalHousingException.counterpartHouseResidedTwoYears");
   });
-  it("RM-10 「아니오」 → ⑧ 거주 2년 · 엔진은 ⑳ 불성립 과세", async () => {
+  it("RM-10 「아니오」 → ⑧은 막지 않음(계산기 요건 미달 미차단) · 엔진은 ⑳ 불성립 과세", async () => {
     const f = form({ rhe: RHE("no") });
-    expect(allIssues(f).map((i) => i.field)).toContain("residencePeriods");
+    expect(allIssues(f).map((i) => i.field)).not.toContain("residencePeriods");
     expect((await runCalc(f)).result.totalTax).toBeGreaterThan(0);
   });
   it("RM-11 ⑳ 미선언 · 거주 요건 충족 → 입력 안내", async () => {

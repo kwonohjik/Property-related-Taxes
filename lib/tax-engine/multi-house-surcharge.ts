@@ -537,7 +537,7 @@ function computeMultiHouseSurcharge(
   //   근거: 기재부 재산세제과-1422(2023.12.26.) — 조정지역 소재 시 §104①1호 세율.
   //   sellingHouse는 L202에서 이미 산정(input.sellingHouseId).
   const statutoryRateExcluded =
-    !!sellingHouse && isRegulatedAtTransfer && isCrisisAcqExempt(sellingHouse.acquisitionDate);
+    !!sellingHouse && isRegulatedAtTransfer && isCrisisAcqExempt(sellingHouse.shareAcquisitionDate ?? sellingHouse.acquisitionDate);
 
   return {
     effectiveHouseCount,
