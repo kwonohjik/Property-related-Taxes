@@ -87,3 +87,22 @@ test("[MXR-2] B → ⑧이 막아 계산 요청이 나가지 않는다", async (
   await expect(page.getByText(/겸용주택은 직전거주주택보유주택/).first()).toBeVisible();
   expect(posted).toBe(false);
 });
+
+test("[MXR-3] ★ 겸용 + 토지 묶음 + ⑳ → 상가 카드까지 비과세 · 근거 문구", async ({ page }) => {
+  const form = formOf("A");
+  const land = {
+    ...makeDefaultAsset(2), assetId: "ld2", addressJibun: "경상남도 창원시 테스트동 2", regionCode: NC, assetKind: "land", landNature: "standalone", landType: "building_site",
+    acquisitionCause: "purchase", acquisitionDate: "2019-08-08", useEstimatedAcquisition: false, fixedAcquisitionPrice: "100000000", actualSalePrice: "200000000",
+    standardPriceAtTransfer: "200000000", standardPriceAtAcq: "100000000", acquisitionArea: "100", transferArea: "100", areaScenario: "same",
+  };
+  const primary = { ...form.assets[0], useEstimatedAcquisition: false, standardPriceAtTransfer: "800000000", standardPriceAtAcq: "400000000" };
+  await seed(page, { ...form, contractTotalPrice: "1200000000", assets: [primary, land] });
+  const res = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST");
+  await calculate(page);
+  const json = await (await res).json();
+  const cards = json.data.aggregated.properties as { propertyId: string; isExempt?: boolean }[];
+  const comm = cards.filter((c) => c.propertyId.startsWith("mu-comm"));
+  expect(comm.length).toBe(2);
+  expect(comm.every((c) => c.isExempt === true)).toBe(true);
+  await expect(page.getByText(/겸용주택의 주택 부분을 거주주택으로/).first()).toBeVisible();
+});
