@@ -101,7 +101,7 @@ export function ReceiveOnlyToggleCard({
       checked={asset.redevReceiveOnlyMode === "yes"}
       onCheckedChange={(v) => onChange({ redevReceiveOnlyMode: v ? "yes" : "no" })}
       title="청산금 수령분 단독 신고"
-      description="신축APT 양도 없이 청산금 수령분만 신고 — 시행령 §166① 본문 + 제1항 제2호 가목 단독 적용 (NTS 집행기준)"
+      description={`신축APT 양도 없이 청산금 수령분만 신고 — 종전 부동산의 분할양도로 계산 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE} · ${REDEVELOPMENT.REDEV_SETTLEMENT_DISPOSAL_RULING})`}
     >
       <div className="space-y-2 text-caption text-rose-800 leading-relaxed dark:text-rose-200">
         <p>
@@ -119,7 +119,13 @@ export function ReceiveOnlyToggleCard({
           법문상 존재하나 이 모드에서는 산정하지 않으므로, 해당분이 있으면 별도 산정해 신고하세요.
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
-          <LawArticleModal legalBasis="소득세법 시행령 §166 ① 2호" label="시행령 §166①2호" />
+          <LawArticleModal legalBasis={REDEVELOPMENT.EVALUATION} label="시행령 §166④1호" />
+          <PrecedentArticleModal
+            citation="법규재산2012-358 (2012.11.09)"
+            label={`${REDEVELOPMENT.REDEV_SETTLEMENT_DISPOSAL_RULING} (청산금 과세)`}
+            kind="ruling"
+            summary="「도시 및 주거환경정비법」에 의한 주택재개발사업에 참여한 조합원이 소유하던 종전 주택과 그에 딸린 토지(이하 ‘종전 부동산’이라 함)를 조합에 제공하고 그 대가로 당해 조합으로부터 새로운 아파트를 취득할 수 있는 권리와 청산금을 교부받은 경우 그 청산금은 종전 부동산의 유상이전에 해당하여 양도소득세가 과세되는 것입니다."
+          />
           <PrecedentArticleModal
             citation="기획재정부 재산-439 (2014.06.09)"
             label="재산-439 (장기보유특별공제 기간)"

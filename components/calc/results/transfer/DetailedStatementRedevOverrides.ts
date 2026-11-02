@@ -14,6 +14,7 @@ import type { StatementItem } from "./DetailedStatementHelpers";
 import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
 import type { LthdExclusionReason } from "@/lib/tax-engine/legal-codes/transfer";
 import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
+import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { redevBranchTotals, redevFilingTotals } from "./redev-acquisition-inverse";
 import {
   fmt,
@@ -272,6 +273,9 @@ export function applyRedevelopmentOverrides(
 
   const isRightSubject = subject === "right";
   const isRightReceive = isRightSubject && settlementDirection === "receive";
+  // 사례 46 단독 신고 — 3분할 §166 구조가 아니라 청산금 수령분 하나다(집행기준 100-166-10).
+  // 🔴 legalBasis는 조문 모달로 열린다. 집행기준·해석례를 넣으면 「조문 정보를 파싱할 수 없습니다」가 뜨므로 산식 문구에 적는다.
+  const isReceiveOnly = !isRightSubject && redev.receiveOnlyMode === true;
 
   // 양도가액 — 합계는 totalTransferPrice 유지.
   // ⚠️ 산식 문구는 **합계가 아니라 분할 구조**를 설명한다. 종전 문구("인가전 + 인가후 + 청산금")는
@@ -281,7 +285,10 @@ export function applyRedevelopmentOverrides(
     // 청산금 **수령** 동시신고는 신고 단위가 두 개의 양도다 — 신축APT 양도가액 + 청산금.
     // 신고서 양식과 같은 leaf를 써서 두 카드가 같은 합계를 말하게 한다.
     const separate = redev.settlementSeparateConsideration ?? 0;
-    if (separate > 0) {
+    if (isReceiveOnly) {
+      transferItem.formula = `양도가액 = 청산금 수령액 (종전 부동산의 분할양도 — ${REDEVELOPMENT.REDEV_SETTLEMENT_DISPOSAL_RULING})`;
+      transferItem.legalBasis = "소득세법 §88 1호";
+    } else if (separate > 0) {
       transferItem.value = redevFilingTotals(redev, totalTransferPrice).transferPrice;
       transferItem.formula = `합계 = 신축주택 양도가액 ${fmt(totalTransferPrice)} + 청산금 수령액 ${fmt(separate)} — 동시신고 단위의 대가 전부(§166①2호 가목은 별개의 양도다)`;
       transferItem.legalBasis = "소득세법 시행령 §166①2호 가목 · §166②·④";
@@ -304,7 +311,10 @@ export function applyRedevelopmentOverrides(
     // 합계는 **역산**이다 — 파트 합(단계별 의제)이 아니라 자기일관식에서 얻는다.
     // 신고서 양식과 같은 leaf·같은 인자(`redevFilingTotals`)를 쓴다.
     acqItem.value = redevFilingTotals(redev, totalTransferPrice).acquisition;
-    if (isRightReceive) {
+    if (isReceiveOnly) {
+      acqItem.formula = `취득가액 = 종전 취득가액을 평가액 대비 청산금 수령액 비율로 안분 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
+      acqItem.legalBasis = REDEVELOPMENT.EVALUATION;
+    } else if (isRightReceive) {
       acqItem.formula = "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166①2호 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(실가 또는 환산 − 안분 취득가)·청산금 분(종전취득가 × 청산금/권리가)";
       acqItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166③";
     } else {
@@ -329,7 +339,10 @@ export function applyRedevelopmentOverrides(
   // 전체 양도차익 — 합계는 기존 result.transferGain 유지
   const gainItem = items.get("transferGain");
   if (gainItem) {
-    if (isRightReceive) {
+    if (isReceiveOnly) {
+      gainItem.formula = `양도차익 = 청산금 수령액 − 안분 취득가액 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
+      gainItem.legalBasis = "소득세법 §88 1호";
+    } else if (isRightReceive) {
       gainItem.formula = "입주권 §166①2호 분할별 양도차익 합 = 인가전(나목 축소) + 청산금(가목)";
       gainItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목";
     } else {
@@ -350,7 +363,10 @@ export function applyRedevelopmentOverrides(
   // 장기보유특별공제 — 분할별 lthdRate 상이
   const ltItem = items.get("ltDeduction");
   if (ltItem) {
-    if (isRightReceive) {
+    if (isReceiveOnly) {
+      ltItem.formula = "청산금 수령분 — 취득일부터 청산금분 양도일까지의 보유기간으로 장기보유특별공제 적용 (재산-439)";
+      ltItem.legalBasis = "소득세법 §95 ④";
+    } else if (isRightReceive) {
       ltItem.formula = "§95② 본문 괄호 + §166⑤1호 — 인가전(나목) 분만 장기보유특별공제 적용. 청산금(가목) 분 장기보유특별공제 0 (§94①2호)";
       ltItem.legalBasis = "소득세법 §95② 본문 괄호 · §94①2호 · 시행령 §166⑤1호 · §166①2호 가목";
     } else {
@@ -379,7 +395,9 @@ export function applyRedevelopmentOverrides(
   // 양도소득금액 — 합계 기존 유지
   const incomeItem = items.get("incomeAmount");
   if (incomeItem) {
-    incomeItem.formula = "재개발 §166 분할별 (양도차익 − 장기보유특별공제) 합 (음수 시 0)";
+    incomeItem.formula = isReceiveOnly
+      ? "청산금 수령분 양도차익 − 장기보유특별공제 (음수 시 0)"
+      : "재개발 §166 분할별 (양도차익 − 장기보유특별공제) 합 (음수 시 0)";
     incomeItem.legalBasis = "소득세법 §95①";
     incomeItem.perAsset = buildRedevPerAssetForIncome(redev, subject, settlementDirection);
   }
