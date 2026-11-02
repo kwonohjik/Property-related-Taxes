@@ -34,6 +34,10 @@ import { isSec164ClauseAFilled } from "./transfer-tax-validate-clause-a";
 import { effectiveRedevLandPricePerSqmAtAcq } from "./transfer-pre1990-redev-bridge";
 import { redevLandSec164Applies } from "./transfer-pre1990-redev-bridge";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
+import { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
+import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
+import { REDEV_RECEIVE_SETTLEMENT_LIMIT_MESSAGE } from "./redev-receive-settlement-limit";
+import { redevReceiveSettlementReachesValue } from "./redev-receive-settlement-limit";
 const SETTLEMENT_SALE_DATE_BASIS = `${REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_DECREE} · ${REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_GUIDELINE}`;
 
 export function validateRedevelopmentAsset(
@@ -199,7 +203,13 @@ export function validateRedevelopmentAsset(
   }
 
   // ── originalAssetType="land" 분기 (사례 37·40) — housing 전용 로직 skip ──
+  // 수령 청산금 상한 — ⑫와 같은 술어를 ④ payload로 본다. 토지 출자는 아래에서 일찍 반환하므로 두 분기가 각각 확인한다.
+  const settlementLimitIssue = redevReceiveSettlementReachesValue(buildRedevelopmentPayload(asset, getOwnershipRatio(asset)))
+    ? fieldError("redevSettlementAmount", `${label}: ${REDEV_RECEIVE_SETTLEMENT_LIMIT_MESSAGE}`)
+    : null;
+
   if (originalAssetType === "land") {
+    if (settlementLimitIssue) return settlementLimitIssue;
     /**
      * ✅ 2026-08-27 — land + **apt** + receive + 환산(사례 43) 차단을 해제했다.
      *
@@ -407,6 +417,7 @@ export function validateRedevelopmentAsset(
   if (parseAmount(asset.redevSettlementAmount) < 0) {
     return fieldError("redevSettlementAmount", `${label}: 청산금 금액을 입력하세요. (없으면 0)`);
   }
+  if (settlementLimitIssue) return settlementLimitIssue;
   if (parseAmount(asset.redevPreApprovalExpenses) < 0) {
     return fieldError("redevPreApprovalExpenses", `${label}: 인가전 분 필요경비를 입력하세요. (없으면 0)`);
   }

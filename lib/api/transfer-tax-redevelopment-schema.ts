@@ -4,6 +4,8 @@
  * 미정의 시 침묵 stripping 방지를 위해 명시 필수.
  */
 import { z } from "zod";
+import { REDEV_RECEIVE_SETTLEMENT_LIMIT_MESSAGE } from "@/lib/calc/redev-receive-settlement-limit";
+import { redevReceiveSettlementReachesValue } from "@/lib/calc/redev-receive-settlement-limit";
 
 export const redevelopmentSchema = z
   .object({
@@ -97,6 +99,10 @@ export const redevelopmentSchema = z
   .refine(
     (v) => v.receiveOnlyMode !== true || v.settlementDirection === "receive",
     { message: "receiveOnlyMode=true 인 경우 settlementDirection은 'receive' 이어야 함 (사례 46 정합성)" },
+  )
+  .refine(
+    (v) => !redevReceiveSettlementReachesValue(v),
+    { message: REDEV_RECEIVE_SETTLEMENT_LIMIT_MESSAGE, path: ["settlementAmount"] },
   )
   .refine(
     (v) => v.subject !== "apt" || v.originalAssetType != null,
