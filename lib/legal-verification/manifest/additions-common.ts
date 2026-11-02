@@ -313,6 +313,13 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // 청산금의 정의 — 분양받은 자의 종전 가격과 분양 가격의 차액 (수령액이 평가액에 이르지 못하는 근거)
+    id: "URBAN_RENEWAL.SETTLEMENT_DEFINITION",
+    citation: "도시 및 주거환경정비법 §89",
+    keywords: ["분양받은 자가 종전에 소유하고 있던", "그 차액에 상당하는 금액", "분양받은 자에게 지급"],
+    keywordMode: "ALL",
+  },
+  {
     // 청산금 수령분 양도시기 — 이전고시 다음 날 소유권 취득 (사전-2022-법규재산-1282)
     id: "URBAN_RENEWAL.OWNERSHIP_TRANSFER_NOTICE",
     citation: "도시 및 주거환경정비법 §86",
