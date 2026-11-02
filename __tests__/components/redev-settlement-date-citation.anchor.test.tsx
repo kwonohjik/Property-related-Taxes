@@ -50,6 +50,17 @@ describe("청산금 양도시기 근거 문구", () => {
     expect(text).toContain(`양도일은 소유권이전 고시일의 익일로 입력하세요 (${GUIDELINE}).`);
   });
 
+  it("단독 신고 카드 설명 — 산식 근거는 집행기준 100-166-10이고 §166①2호 가목이 아니다", () => {
+    const text = textOf(
+      <ReceiveOnlyToggleCard asset={asset({ redevReceiveOnlyMode: "yes" })} onChange={() => {}} />,
+    );
+    expect(text).toContain(
+      "신축APT 양도 없이 청산금 수령분만 신고 — 양도가액은 지급받은 청산금, 취득가액은 평가액 대비 청산금 비율로 안분 (양도소득세 집행기준 100-166-10)",
+    );
+    expect(text).not.toContain("가목");
+    expect(text).not.toContain("NTS 집행기준");
+  });
+
   it.each([
     ["토지 출자", "land"],
     ["주택 출자", "housing"],

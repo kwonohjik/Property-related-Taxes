@@ -526,7 +526,7 @@ export interface RedevelopmentBranchDetail {
    * - postApprovalExistingHouse (apt): 취득일 → 신축양도일 (§166⑤2호나목)
    * - postApprovalExistingHouse (right): 0 (LTHD 대상 양도차익 부존재)
    * - settlement (apt+pay):     approvalDate → transferDate (§166⑤2호가목)
-   * - settlement (apt+receive): acquisitionDate → settlementSaleDate (§95④ + NTS 집행기준)
+   * - settlement (apt+receive): acquisitionDate → settlementSaleDate (§95④ + 양도소득세 집행기준 98-162-14)
    * - settlement (right):       0 (LTHD 대상 자산 부존재)
    */
   holdingMonths: number;

@@ -522,9 +522,11 @@ export function runOriginalMember(
    * ⚠️ 입주권(`isRight`)의 settlement은 §166①2호 **가목**(인가후 분)이라 이 축이 아니다.
    */
   const settlementPreExpenseShare =
-    !isRight && redevelopment.settlementDirection === "receive"
-      ? rawPreApprovalExpenses - preApprovalDisplayExpenses
-      : 0;
+    redevelopment.receiveOnlyMode === true && split.receiveOnlyExpenseShare !== undefined
+      ? split.receiveOnlyExpenseShare
+      : !isRight && redevelopment.settlementDirection === "receive"
+        ? rawPreApprovalExpenses - preApprovalDisplayExpenses
+        : 0;
 
   /**
    * 인가후 필요경비 **표시 몫** — 엔진이 한 번만 차감한 금액을 열에 나눠 붙인다.
@@ -538,7 +540,7 @@ export function runOriginalMember(
    * |---|---|---|
    * | 완공APT + 납부 | `splitAptPay` 이전 인가후양도차익에서 1회 → 평가액:청산금 비율로 갈림 | 같은 비율로 안분 |
    * | 완공APT + 수령 | `computeAptReceive`의 인가후 기존주택분에서만 | 기존주택분 전액 · 청산금분 0 |
-   * | 완공APT + 수령(단독신고) | **차감 없음**(receiveOnly 조기반환이 값을 쓰지 않는다) | 양쪽 0 |
+   * | 완공APT + 수령(단독신고) | 인가전 필요경비와 합쳐 안분(`receiveOnlyExpenseShare` · 집행기준 100-166-10) | 양쪽 0(청산금분은 위 몫으로 표시) |
    * | 입주권 (납부·수령) | 청산금분(§166①1호·①2호 가목)에서 1회 | 청산금분 전액 (종전과 동일) |
    */
   const rawPostApprovalExpenses = redevelopment.postApprovalExpenses ?? 0;

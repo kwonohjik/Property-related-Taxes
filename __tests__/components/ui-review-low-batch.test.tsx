@@ -221,7 +221,8 @@ describe("L7 — 사례 46의 0 산식은 법령 근거 한국어다", () => {
     ];
     for (const s of out) {
       expect(s).not.toContain("receiveOnly");
-      expect(s).toContain("§166①2호 가목");
+      expect(s).toContain("양도소득세 집행기준 100-166-10");
+      expect(s).not.toContain("가목");
       expect(s.startsWith("0 ")).toBe(true);
     }
   });

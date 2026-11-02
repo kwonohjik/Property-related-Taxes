@@ -80,7 +80,8 @@ describe("R09·R17·B1 · 저장소 내부 용어가 사용자 화면에 없다"
     const guide = src("components/calc/transfer/SettlementExemptionGuideCard.tsx");
     expect(codeOnly("components/calc/transfer/SettlementExemptionGuideCard.tsx")).not.toContain("별도 산정");
     expect(guide).toContain("권리가액 기준 안분");
-    expect(src("components/calc/transfer/RedevelopmentBlockCards.tsx")).toContain("별도 산정");
+    // 단독 신고 카드의 「별도 산정」도 사라졌다 — 필요경비를 집행기준 100-166-10대로 안분해 계산에 넣는다.
+    expect(src("components/calc/transfer/RedevelopmentBlockCards.tsx")).not.toContain("별도 산정");
   });
 });
 

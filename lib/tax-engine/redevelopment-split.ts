@@ -323,13 +323,30 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
   // ─ 사례 46 분기: 청산금 수령분 단독 신고 (receiveOnlyMode) ─
   // 법령 근거: 신축APT 완공 후 청산금 수령분만 별도 신고.
   // 인가전·인가후 양도차익 = 0 강제, settlement 분 단독 산정.
-  // settlement.gain = 청산금 수령액 − 안분 취득가액 (APT 완공 후 청산금 비율 안분)
+  // settlement.gain = 청산금 수령액 − (취득가액 + 필요경비 등) × 청산금 ÷ 평가액 (양도소득세 집행기준 100-166-10)
   if (redevelopment.receiveOnlyMode === true) {
-    const aptReceiveSettlementGain = calcAptReceiveSettlementGain(
-      oldAcquisitionPrice,
-      redevelopment.rightsValue,
-      redevelopment.settlementAmount,
-    );
+    /**
+     * 필요경비 등 — 환산이면 §163⑥ 개산공제, 실가면 인가전 분 칸 + 자본적지출·양도비 칸(택일).
+     * 신축주택을 양도하지 않으므로 두 칸 모두 종전 부동산의 비용이다.
+     * 이월과세 증여세 상당액은 택일 밖의 독립 항이라 위에 더한다(동시신고 `preExpenseTotal`과 같다).
+     * 동시신고의 `preExpenseSettlementShare`와 같은 **잔액 흡수** — 별도 floor 금지.
+     */
+    const lump = args.estimatedLumpDeduction ?? 0;
+    const giftTax = args.carryoverGiftTaxApplied ?? 0;
+    const remaining = Math.max(0, redevelopment.rightsValue - redevelopment.settlementAmount);
+    const shareOf = (amount: number) =>
+      redevelopment.rightsValue > 0 && redevelopment.settlementAmount > 0
+        ? amount - safeMultiplyThenDivide(amount, remaining, redevelopment.rightsValue)
+        : 0;
+    const expenseTotal =
+      (lump > 0 ? lump : redevelopment.preApprovalExpenses + (redevelopment.postApprovalExpenses ?? 0)) + giftTax;
+    const settlementExpenseShare = shareOf(expenseTotal);
+    const aptReceiveSettlementGain =
+      calcAptReceiveSettlementGain(
+        oldAcquisitionPrice,
+        redevelopment.rightsValue,
+        redevelopment.settlementAmount,
+      ) - settlementExpenseShare;
     const aptReceiveApportionedAcq = safeMultiplyThenDivide(
       oldAcquisitionPrice,
       redevelopment.settlementAmount,
@@ -351,9 +368,12 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
         apportionedAcquisition: aptReceiveApportionedAcq,
         gain: aptReceiveSettlementGain,
       },
-      salePriceTotal: Math.max(0, redevelopment.rightsValue - redevelopment.settlementAmount),
+      salePriceTotal: remaining,
       valuationMeta,
-      estimatedLumpDeduction: 0, // receiveOnly는 인가전 분 0이므로 개산공제도 0
+      estimatedLumpDeduction: 0, // 인가전 분 행이 없다 — 개산공제의 청산금분 몫은 receiveOnlyExpenseShare로 싣는다
+      receiveOnlyExpenseShare: settlementExpenseShare,
+      // 실제로 공제된 몫만 싣는다 — 인가전 분이 없어 나머지는 이 신고에서 공제되지 않는다.
+      ...carryoverGiftEcho({ ...args, carryoverGiftTaxApplied: args.carryoverGiftTaxApplied === undefined ? undefined : shareOf(giftTax) }),
     };
   }
 
