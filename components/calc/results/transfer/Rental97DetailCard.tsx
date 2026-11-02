@@ -98,12 +98,23 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
       rentalGainApplied?: number;
       nonRentalGainApplied?: number;
       deductionApplied?: number;
+      // [echo] §97의3 특례·일반 공제액 비교 (조특법 §97의3③ — `transfer-tax-lthd-rental97.ts`). 구 이력은 없다.
+      specialApplied?: boolean;
+      deductionWithSpecial?: number;
+      deductionWithoutSpecial?: number;
     };
     // 산식은 echo가 모두 있을 때만 — 구 저장 이력에는 없다(graceful fallback)
     const hasLthdEcho =
       lthdEffect.gainApplied !== undefined &&
       lthdEffect.deductionApplied !== undefined &&
       lthdEffect.baseLthdRate !== undefined;
+    // 요건은 충족했으나 일반 공제액이 더 커 특례를 적용하지 않은 경우 — 비교 echo가 모두 있을 때만
+    const specialNotApplied =
+      lthdEffect.specialApplied === false &&
+      lthdEffect.deductionWithSpecial !== undefined &&
+      lthdEffect.deductionWithoutSpecial !== undefined;
+    // 특례 산식의 우변 — 미적용이면 「특례를 적용했다면」의 값이다(실제 적용값은 일반 공제액)
+    const specialDeduction = specialNotApplied ? lthdEffect.deductionWithSpecial! : lthdEffect.deductionApplied!;
     const isPartialRental =
       lthdEffect.rentalGainRatio < 1 &&
       lthdEffect.rentalGainApplied !== undefined &&
@@ -118,6 +129,13 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
             {ARTICLE_LABELS[detail.id] ?? detail.id}
           </span>
         </div>
+
+        {specialNotApplied && (
+          <p className="text-xs text-violet-900 dark:text-violet-200" data-testid="rental973-special-not-applied">
+            일반 장기보유특별공제액({formatN(lthdEffect.deductionWithoutSpecial!)})이 특례 적용 공제액(
+            {formatN(lthdEffect.deductionWithSpecial!)})보다 커서 특례를 적용하지 않은 것으로 계산했습니다 (조특법 §97의3③ 과세특례 적용 신청).
+          </p>
+        )}
 
         <div className="rounded bg-white/70 dark:bg-white/5 border border-violet-100 dark:border-violet-800/30 p-2.5 text-xs space-y-1.5">
           {lthdEffect.overrideRate !== undefined && (
@@ -160,7 +178,7 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
               isPartialRental ? (
                 <>
                   <p className="text-muted-foreground">
-                    장기보유특별공제 = 임대기간 분 양도차익 × 특례 공제율 + 비임대 분 양도차익 × 일반 공제율
+                    {specialNotApplied ? "특례 적용 시 " : ""}장기보유특별공제 = 임대기간 분 양도차익 × 특례 공제율 + 비임대 분 양도차익 × 일반 공제율
                   </p>
                   <p className="text-muted-foreground">
                     임대기간 분 양도차익 = 양도차익{" "}
@@ -171,15 +189,17 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
                   <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
                     {formatN(lthdEffect.rentalGainApplied!)} × {formatRate(lthdEffect.overrideRate)} +{" "}
                     {formatN(lthdEffect.nonRentalGainApplied!)} × {formatRateFine(lthdEffect.baseLthdRate!)} ={" "}
-                    {formatN(lthdEffect.deductionApplied!)}
+                    {formatN(specialDeduction)}
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="text-muted-foreground">장기보유특별공제 = 양도차익 × 특례 공제율</p>
+                  <p className="text-muted-foreground">
+                    {specialNotApplied ? "특례 적용 시 " : ""}장기보유특별공제 = 양도차익 × 특례 공제율
+                  </p>
                   <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
                     {formatN(lthdEffect.gainApplied!)} × {formatRate(lthdEffect.overrideRate)} ={" "}
-                    {formatN(lthdEffect.deductionApplied!)}
+                    {formatN(specialDeduction)}
                   </p>
                 </>
               )
@@ -193,6 +213,15 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
                   {formatRateFine(lthdEffect.additionalRate ?? 0)}) = {formatN(lthdEffect.deductionApplied!)}
                 </p>
               </>
+            )}
+            {specialNotApplied && (
+              <div className="border-t border-violet-100 dark:border-violet-800/30 pt-1.5 space-y-1" data-testid="rental973-general-formula">
+                <p className="text-muted-foreground">적용한 장기보유특별공제 = 양도차익 × 일반 공제율</p>
+                <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
+                  {formatN(lthdEffect.gainApplied!)} × {formatRateFine(lthdEffect.baseLthdRate!)} ={" "}
+                  {formatN(lthdEffect.deductionWithoutSpecial!)}
+                </p>
+              </div>
             )}
           </div>
         )}

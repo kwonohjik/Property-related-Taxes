@@ -25,6 +25,7 @@ import {
   oneRightHighValueBase,
 } from "./transfer-tax-redevelopment-transforms";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
+import { shouldApplyRental973Special } from "./transfer-tax-lthd-rental97";
 import {
   resolveOneHouseAtSettlementSale,
   settlementHighValueThreshold,
@@ -371,7 +372,7 @@ export function runRedevelopmentGainSteps(
    * ⚠️ LTHD가 배제된 경우(미등기 §95② 괄호·다주택 중과)에는 적용하지 않는다 — 배제를
    *   특례가 되살리면 §95②의 배제 문언이 무력화된다.
    */
-  const rental97Special = lthdExclusionReason
+  let rental97Special = lthdExclusionReason
     ? undefined
     : evaluateRental97Lthd(input.reductions, {
         transferDate: input.transferDate,
@@ -393,23 +394,46 @@ export function runRedevelopmentGainSteps(
     rental97Special.effectCategory === "long_term_holding_special" &&
     rental97Special.overrideRate !== undefined
   ) {
-    // §97의3 — 임대분 70% 대체
-    redevAfterRight = applyRental97LthdSpecial(redevAfterLthdExclusion, {
+    // §97의3 — 임대분 70% 대체. 단, 일반 공제액(3분기 합계)이 더 크면 적용하지 않는다(PR-B #1 —
+    //   조특법 §97의3③ 신청 선택. 신청은 주택 단위라 분기별이 아니라 **합계**로 비교한다).
+    const withSpecial = applyRental97LthdSpecial(redevAfterLthdExclusion, {
       overrideRate: rental97Special.overrideRate,
       rentalGainRatio: rental97Special.rentalGainRatio,
       rentalGainFraction: rental97Special.rentalGainFraction,
     });
-    steps.push({
-      label: "장기보유특별공제 특례 — 장기일반민간임대주택 (조특법 §97의3①)",
-      formula:
-        `임대기간분 양도차익 × 70% + 비임대분 × 분기별 공제율. 임대분 비율 ` +
-        `${(rental97Special.rentalGainRatio * 100).toFixed(2)}% (조특령 §97의3⑤) · ` +
-        `인가전·인가후 기존건물·청산금 3분기에 각각 적용 (소득세법 시행령 §166⑤). ` +
-        `공제액 ${redevAfterLthdExclusion.total.lthd.toLocaleString()} → ` +
-        `${redevAfterRight.total.lthd.toLocaleString()}`,
-      amount: redevAfterRight.total.lthd,
-      legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
-    });
+    const deductionWithSpecial = withSpecial.total.lthd;
+    const deductionWithoutSpecial = redevAfterLthdExclusion.total.lthd;
+    const specialApplied = shouldApplyRental973Special(deductionWithSpecial, deductionWithoutSpecial);
+    rental97Special = {
+      ...rental97Special,
+      specialApplied,
+      deductionWithSpecial,
+      deductionWithoutSpecial,
+      deductionApplied: specialApplied ? deductionWithSpecial : deductionWithoutSpecial,
+    };
+    if (specialApplied) {
+      redevAfterRight = withSpecial;
+      steps.push({
+        label: "장기보유특별공제 특례 — 장기일반민간임대주택 (조특법 §97의3①)",
+        formula:
+          `임대기간분 양도차익 × 70% + 비임대분 × 분기별 공제율. 임대분 비율 ` +
+          `${(rental97Special.rentalGainRatio * 100).toFixed(2)}% (조특령 §97의3⑤) · ` +
+          `인가전·인가후 기존건물·청산금 3분기에 각각 적용 (소득세법 시행령 §166⑤). ` +
+          `공제액 ${deductionWithoutSpecial.toLocaleString()} → ` +
+          `${deductionWithSpecial.toLocaleString()}`,
+        amount: redevAfterRight.total.lthd,
+        legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+      });
+    } else {
+      steps.push({
+        label: "장기보유특별공제 특례 — 미적용 (조특법 §97의3③)",
+        formula:
+          `일반 장기보유특별공제액 ${deductionWithoutSpecial.toLocaleString()}이 ` +
+          `특례 적용 공제액 ${deductionWithSpecial.toLocaleString()}보다 커서 특례를 적용하지 않은 것으로 계산했습니다.`,
+        amount: redevAfterRight.total.lthd,
+        legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+      });
+    }
   } else if (
     rental97Special?.isEligible &&
     rental97Special.effectCategory === "long_term_holding_additional" &&

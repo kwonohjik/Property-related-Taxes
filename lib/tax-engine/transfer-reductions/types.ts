@@ -311,6 +311,16 @@ export interface RentalLthdEffect {
   nonRentalGainApplied?: number;
   /** 실제 적용된 장기보유특별공제액 */
   deductionApplied?: number;
+  /**
+   * [echo] §97의3 — 특례 채택 여부(조특법 §97의3③ 신청 선택 — `transfer-tax-lthd-rental97.ts`).
+   * false = 일반 장기보유특별공제액이 더 커서 특례를 적용하지 않음(요건은 충족 — `isEligible` true 유지).
+   * undefined = 비교 이전 구 이력 → 적용으로 렌더.
+   */
+  specialApplied?: boolean;
+  /** [echo] §97의3 — 특례를 적용했을 때의 공제액 */
+  deductionWithSpecial?: number;
+  /** [echo] §97의3 — 특례를 적용하지 않았을 때(일반 공제율)의 공제액 */
+  deductionWithoutSpecial?: number;
   /** 안분 전 양도차익 (음수 clamp 후) */
   gainApplied?: number;
 }
