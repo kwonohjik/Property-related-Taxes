@@ -169,22 +169,37 @@
 - 2020.7.10 이전 변경분(적용 대상)의 개시일 의제가 없다.
 - 사용자가 `registrationDate`에 장기 변경 수리일을 넣으면 max 클램프로 소급이 사라져 `RENTAL_PERIOD_SHORT`가 된다. 단기 등록일을 넣으면 적격이다 [실측]. 같은 사실관계가 입력 방식에 따라 결과가 갈린다.
 
+**용어**: 「변경신고 의제 개시일」 = 령 ④ 후단에 따라 단기임대 시절로 소급해 정하는 임대개시일.
+
+**기산 원칙 (사용자 확인 2026-11-02 — Q-4 결정)**
+- 단기→장기 변경신고 주택의 임대개시일은 **단기임대주택으로 등록한 날**로 소급한다.
+- 그날은 **max(단기 지자체 임대사업자 등록일, 세무서 사업자등록일, 실제 임대개시일)**, 즉 세 날짜 중 늦은 날이다.
+- 기존 `rental97EffectiveStart`(max 3종) 로직을 그대로 쓴다. 변경신고 주택에서는 `registrationDate`에 **단기 지자체 등록일**을 넣는다는 입력 의미만 정한다. 장기 변경 수리일은 별도 필드로 받는다.
+- ⇒ 종전안의 `shortTermMandatoryStartDate`(단기 시절 기산 시점) 필드는 **삭제**한다.
+
+**가정 A-3 (나목)**
+- 단기 임대의무기간(4년) 종료 **후** 변경신고한 경우가 대상이다(당시 민특령 §34①3호 나목: 「변경신고의 수리일부터 … 임대의무기간을 역산한 날」).
+- 이 경우 소급 기산일 = **max(수리일 − N년, 세무서 사업자등록일, 실제 임대개시일)**로 둔다.
+- 세 날짜 중 늦은 날 원칙을 나목에도 적용하는 가정이다. 나목은 단기 등록이 2016.7.10 이전이고 변경신고가 의무기간 종료 후인 경우에만 생긴다.
+
 **엔진 입력 확장** (`Rental97EvaluationInput`, `transfer-reductions/types.ts:117`)
 ```ts
 shortTermConversion?: {
-  reportedDate: Date;                // 변경 신고일 — 법 ① 괄호 제외 판정 (≥ 2020-07-11 → 제외)
-  acceptedDate: Date;                // 변경신고 수리일 — 민특령 §34①(당시 3호) 가/나 판정·나목 역산 기준
-  shortTermMandatoryStartDate: Date; // 단기 시절 의무기간 기산 시점(당시 §34①1·2호)
-  shortTermKind?: "construction" | "purchase"; // 안내·검증용, 계산 미사용
+  reportedDate: Date; // 변경 신고일 — 법 ① 괄호 제외 판정 (≥ 2020-07-11 → 제외)
+  acceptedDate: Date; // 변경신고 수리일 — 가/나 판정·나목 역산 기준·(Q-5 R1이면) 등록기간 기산
 }
+// registrationDate = 단기 지자체 임대사업자 등록일 (변경신고 주택일 때의 입력 의미)
 ```
 
-**기산일 순수 함수** (신규 `transfer-reductions/rental-97-short-term-conversion.ts`, 약 70줄. `rental-97-shared-helpers.ts`는 578줄이라 분리)
+**기산일 순수 함수** (신규 `transfer-reductions/rental-97-short-term-conversion.ts`, 약 50줄. `rental-97-shared-helpers.ts`는 578줄이라 분리)
 ```ts
-resolveShortTermConversionStart(a: { acceptedDate: Date; shortTermMandatoryStartDate: Date }):
-  { startDate: Date; branch: "before_obligation_end" | "after_obligation_end"; obligationEndDate: Date }
+resolveShortTermConversionStart(a: {
+  registrationDate: Date; acceptedDate: Date; rentalStartDate: Date; taxRegistrationDate?: Date;
+}): { startDate: Date; branch: "before_obligation_end" | "after_obligation_end"; obligationEndDate: Date }
 ```
-- `obligationEnd = shortTermMandatoryStartDate + N년`(N은 Q-3). 수리일 < 종료일이면 가목으로 `start = shortTermMandatoryStartDate`, 아니면 나목으로 `start = acceptedDate − N년`.
+- `obligationEnd = registrationDate + N년`(N은 Q-3).
+- 수리일 < 종료일이면 가목: `start = max(registrationDate, taxRegistrationDate, rentalStartDate)`. 이는 `rental97EffectiveStart`와 같다.
+- 그 밖이면 나목: `start = max(acceptedDate − N년, taxRegistrationDate, rentalStartDate)`(A-3).
 - 종료일 당일·역산 초일 처리는 V-6이다. 가정을 경계 anchor로 고정한다.
 
 **판정 규칙**
@@ -194,7 +209,7 @@ resolveShortTermConversionStart(a: { acceptedDate: Date; shortTermMandatoryStart
 | `shortTermConversion` 없음 + 플래그 false | 현행 불변 |
 | `shortTermConversion` 없음 + 플래그 true | 현행 불변(`CONVERTED_FROM_SHORT_TERM` 제외) |
 | `reportedDate ≥ 2020-07-11` | 제외 |
-| `reportedDate < 2020-07-11` | 개시일 = `resolveShortTermConversionStart`(+ Q-4 클램프), 등록기간 = Q-5 |
+| `reportedDate < 2020-07-11` | 개시일 = `resolveShortTermConversionStart`(세 날짜 중 늦은 날), 등록기간 = Q-5 |
 | 플래그 true + `reportedDate < 2020-07-11` | 상충 — ⑧에서 차단 |
 
 - §97의5가 같은 `rental97EffectiveStart`를 쓴다(`rental-97-5.ts:118,185`). 변경 기산 우회는 §97의3 전용 분기로 두어 §97의5에 영향이 없게 한다.
@@ -208,21 +223,23 @@ resolveShortTermConversionStart(a: { acceptedDate: Date; shortTermMandatoryStart
 **UI** (권장: RadioCardGroup 3택 + 조건부 날짜)
 - 「변경신고 없음 / 2020.7.10 이전 변경신고 / 2020.7.11 이후 변경신고(적용 제외)」, `layout="stack"`, tone `amber` 유지.
 - 기존 토글 자리(:129-136)에 둔다. 의제 개시일 입력(임대일·등록일·사업자등록일) 뒤에 배치한다(계산 순서 = 표시 순서).
-- 「이전」 선택 시 `DateInput` 3개(신고일·수리일·단기 의무기간 기산 시점)와 단기 유형 라디오를 노출한다. hint에 숫자 예시는 넣지 않는다.
+- 「이전」 선택 시 `DateInput` 2개(변경 신고일·수리일)를 노출한다.
+- 같은 선택에서 기존 「임대사업자 등록일」 hint를 「단기민간임대주택으로 등록한 지자체 등록일」로 바꿔 보여 준다(렌더 조건 파생, useEffect 금지).
+- hint에 숫자 예시는 넣지 않는다.
 - 선택 변경 시 불필요해진 날짜는 `onChange` 안에서 비운다(useEffect 금지).
 
 **14개 동기화 지점** (UI 담당 조사, 선례 = `taxRegistrationDate`)
 
 | # | 지점 | 파일:줄 | 작업 |
 |---|---|---|---|
-| ① | 폼 타입 | `lib/stores/calc-wizard-asset-reduction.ts:238-257` | `rental_97_3` variant에 `shortTermConversionMode`(enum) + 날짜 string 3개 + kind |
+| ① | 폼 타입 | `lib/stores/calc-wizard-asset-reduction.ts:238-257` | `rental_97_3` variant에 `shortTermConversionMode`(enum) + 날짜 string 2개(신고일·수리일) |
 | ② | initial | `components/calc/transfer/UnifiedReductionPanel-defaults.ts:131-143` · **`lib/stores/legacy-rental-reduction.ts:46`**(중복 default) | mode `"none"`, 날짜 `""` |
 | ③ | normalize | `lib/stores/calc-wizard-asset-migrate-rental-split.ts:26-113` | undefined면 default. 구 `isConvertedFromShortTerm: true` → mode `"after"` 파생 |
 | ④ | API 변환 | `lib/calc/transfer-tax-api-reductions.ts:241-254` | mode `"before"`일 때만 객체 spread. `isConvertedFromShortTerm = (mode === "after")` 파생 전송 유지 |
 | ⑤ | UI | `Rental973InputForm.tsx:129-136` | 위 UI |
 | ⑥ | 사이드바 | 해당 없음(rental 참조 0건) | — |
 | ⑦ | 결과 카드 | `Rental97DetailCard.tsx` | 소급 개시일·가/나 구분 echo가 있으면 표시 |
-| ⑧ | validate | **신규 leaf** `lib/calc/rental-97-3-validate.ts`(본 파일 773줄) | mode `"before"`면 3개 날짜 필수, 신고일 < 2020-07-11, 수리일 ≥ 신고일, 기산 시점 < 수리일, 플래그 상충 차단 |
+| ⑧ | validate | **신규 leaf** `lib/calc/rental-97-3-validate.ts`(본 파일 773줄) | mode `"before"`면 신고일·수리일 필수, 신고일 < 2020-07-11, 수리일 ≥ 신고일, 등록일(단기) < 수리일, 플래그 상충 차단 |
 | ⑨⑩ | Zod enum | `lib/api/transfer-tax-schema-reductions.ts` rental_97_3 | 컴패니언은 `reductionSchema` 공유라 추가 작업 없음 |
 | ⑪ | acquisitionDate fallback | 해당 없음 | — |
 | ⑫ | Zod 입력 객체 | 같은 파일 :155-174 | `shortTermConversion: z.object({ … z.string().date() … }).optional()` — 누락 시 침묵 stripping |
@@ -279,10 +296,11 @@ resolveShortTermConversionStart(a: { acceptedDate: Date; shortTermMandatoryStart
 | R3-2 | 나목 경계: 수리 2020-05-15(N = 4 → 개시 2016-05-15), 양도 2026-05-14 / 05-15 | 둘 다 `RENTAL_PERIOD_SHORT` | (R2) 9년 → 50% / 10년 → 70% |
 | R3-3 | 가/나 분기: 의무 종료 2020-03-01, 수리 2020-02-29 / 03-01 / 03-02 | — | V-6 가정으로 고정 |
 | R3-4 | 제외 게이트: 신고 2020-07-10 / 07-11 | 플래그만 | 포함 / 제외. 신고 07-10·수리 07-15는 신고일 기준 포함 |
-| R3-5 | 사업자등록 클램프: 사업자등록 2017-01-01 | — | Q-4 A면 2016-03-01, B면 2017-01-01 |
+| R3-5 | 사업자등록 클램프: 사업자등록 2017-01-01 | — | 개시 2017-01-01(Q-4 결정: 세 날짜 중 늦은 날) |
+| R3-5b | 나목 클램프(A-3): 수리 2020-05-15 → 역산 2016-05-15, 사업자등록 2016-09-01 | — | 개시 2016-09-01 |
 | R3-6 | 하위호환: 플래그 true + 객체 없음 | 제외 | 불변 |
 | R3-7 | 상충: 플래그 true + 신고 2019 | — | ⑧ 차단 |
-| R3-8 | 건설임대 단기 유형 | — | `shortTermMandatoryStartDate` = 입주지정기간 개시일 입력 경로 |
+| R3-8 | 건설임대 단기 유형 | — | 같은 원칙(지자체 등록일·사업자등록일·실제 임대개시일 중 늦은 날). 민특령 §34①1호(입주지정기간 개시일)는 별도 반영하지 않음 |
 
 ---
 
@@ -324,7 +342,7 @@ resolveShortTermConversionStart(a: { acceptedDate: Date; shortTermMandatoryStart
 | Q-1 | §97의3 선택을 「신청 의사」로 볼까, 자동 max로 둘까 | (a) 자동 max + 안내 / (b) 「특례 적용 신청」 토글 신설 | **(a)** | 법 ③은 신청을 요건으로 두지만 신청 여부는 계산 시점에 정해지지 않는다. (a)는 UI 입력이 늘지 않고 결과에 두 값을 모두 보여 준다 |
 | Q-2 | 변경 신고일·수리일 입력 | (a) 둘 다 필수 / (b) 신고일 미입력 시 수리일로 대체 | **(a)** | 제외 기준(신고일)과 기산 기준(수리일)이 다르다. (b)는 자동 fallback 금지 정책과 충돌한다 |
 | Q-3 | 나목 역산 기간 | (a) 변경신고 당시 문언 = 단기 임대의무기간 4년 / (b) 현행 6년 | **(a)** | 적용 대상은 2020.7.10 이전 변경분뿐이고 당시 3호 문언은 「임대의무기간을 역산」이다(V-4) |
-| Q-4 | 사업자등록일(소득세법 §168) 클램프를 소급 기산일에도 걸까 | (A) 걸지 않음(후단 직독) / (B) max(소급일, 사업자등록일) | **(A)** — 가정 명시 | 후단은 「…변경 신고한 경우에는 …시점부터 임대를 개시한 것으로 본다」로 사업자등록을 언급하지 않는다. 다만 전단의 전제로 읽는 독법도 가능하다(V-3) |
+| Q-4 | 사업자등록일(소득세법 §168) 클램프를 소급 기산일에도 걸까 | (A) 걸지 않음 / (B) 세 날짜 중 늦은 날 | **✅ 결정 (B)** — 사용자 확인 2026-11-02 | 「단기임대주택으로 등록한 날(지자체 등록일, 세무서 등록일, 임대개시일 중 늦은 날)로 임대개시일을 소급」. 나목은 가정 A-3 |
 | Q-5 | 령 ② 「10년 이상 계속하여 **등록**」의 등록기간 기산 | (R1) 장기 변경 수리일부터 별도 검증 / (R2) 소급 개시일부터 | **확인 후 결정**(잠정 R1) | 문언상 R1이 직독(단기 등록은 「장기일반민간임대주택등으로」의 등록이 아님). R1이면 변경분은 2028.7.17 이후에야 10년이 되어(8년은 2026.7.17 이후) 후단의 실익이 안분·임대료 판정에 한정된다. 해석례 검색 실패(국세청·조세심판원 키워드 검색 0건) — **PR-C 착수 전 해석례 재조사 필수** |
 | Q-6 | E1(2021.1.1~2.16 양도) 처리 | (a) E2와 동일 + 안내 / (b) 비율 1 | **(a)** | 법이 이미 「임대기간 중」으로 한정했다. 정상 입력으로는 도달하지 않는 구간이다 |
 | Q-7 | 소급 개시일 이전 단기 시절 계약의 임대료 5% 판정 | (a) 소급 개시일부터 센다 / (b) 장기 수리일부터 센다 | **(a)** | 임대 개시를 의제한 날부터가 「임대기간」이다. Q-5와 독립 |
@@ -337,7 +355,7 @@ resolveShortTermConversionStart(a: { acceptedDate: Date; shortTermMandatoryStart
 |---|---|---|
 | V-1 | 일반 경로 L-2' 이전 return 경로(분리취득·부수토지 등)에서 §97의3 미평가가 별도 결함인지 | 범위 밖 — §9 별건 |
 | V-2 | 령 ⑤ C를 ④ 의제 개시일로 읽는 해석(A-2) | 해석례·집행기준 조회. 없으면 가정 유지·결과 카드에 기준일 표시 |
-| V-3 | ④ 후단과 사업자등록 클램프 관계(Q-4) | 해석례 조회 |
+| V-3 | ~~④ 후단과 사업자등록 클램프 관계~~ | ✅ Q-4 사용자 결정으로 닫음. 나목 적용(A-3)만 잔여 |
 | V-4 | 조특령의 「§34①3호」 인용을 변경신고 당시 3호로 읽는 것, 역산 4년 | 민특령 2018-07-16~2020-12-07 시행본 전 구간 문언 동일성 확인(2020-06-11본만 확인) + 2018.7.16 이전 변경분 문언 |
 | V-5 | 준공공임대 도입 시점(E0·E1 도달 불가 판단의 전제) | 민특법/임대주택법 연혁 조회 |
 | V-6 | 가/나 경계(의무 종료일 당일 수리)·역산 초일 처리 | 민법 기간 계산(§157·§160) 적용 가정 → anchor 고정 |
