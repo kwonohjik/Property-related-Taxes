@@ -21,6 +21,7 @@ import {
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
 import type { MixedUseCompanionContext } from "./bundled-companion-types";
+import { SHARE_HOUSE_FACT_KEYS, type ShareHouseFacts } from "./bundled-companion-types";
 import { buildGbCompanionItems, type GbBgCarryoverUnitDraft } from "./general-building-part-cards";
 import { attachGbCarryoverUnits, toGbCarryoverUnits } from "./bundled-gb-carryover-units";
 import { toTransferorBasisInfo } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
@@ -309,6 +310,8 @@ export function calculateBundledTransfer(
         // 축 B 입주권 카드의 §89①4호 판정 사실(세대 단위) — 같은 물건이라 주 카드와 같은 사실이다(#11 별건).
         ...(isFullFractionalBundle
           ? {
+              shareHouseFacts: Object.fromEntries(SHARE_HOUSE_FACT_KEYS.map((k) => [k, engineInput[k]])) as ShareHouseFacts,
+              onShareMixedRentalNotices: (n: string[]) => mixedRentalNotices.push(...n),
               oneRightHouseholdFacts: {
                 householdRightCount: engineInput.householdRightCount,
                 householdNoPresaleRightsConfirmed: engineInput.householdNoPresaleRightsConfirmed,

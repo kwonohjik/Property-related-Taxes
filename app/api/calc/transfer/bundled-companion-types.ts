@@ -164,6 +164,14 @@ export interface CompanionBuildContext {
       | "contestedRightSaleParentalCareMergeApply"
     >;
     /**
+     * §89①3호·영 §155 판정 사실(세대·물건 단위) — **축 B(같은 물건 지분 분할 취득)의 주택 지분에만** 실린다.
+     * 주택 수는 넘기면서 이 사실은 안 넘겨, 앞 지분은 비과세인데 둘째 지분은 ⑳·합가·일시적 2주택을 못 받아 과세됐다.
+     * 함께 양도(다른 물건)는 싣지 않는다. 취득일·거주기간은 지분마다 자기 값을 쓴다.
+     */
+    shareHouseFacts?: ShareHouseFacts;
+    /** 축 B 겸용 지분의 ⑳·0061 근거 문장 — 서브엔진 `warnings`가 버려지므로 route가 받아 싣는다. */
+    onShareMixedRentalNotices?: (notices: string[]) => void;
+    /**
      * §104①4호 단서(영 §167의6 1·2호) — 세대 단위 사실. 컴패니언이 분양권(`presale_right`)이면
      * 이 값으로 단서를 판정한다. 미제공 시 단서 불성립(모름 = 혜택 불성립).
      */
@@ -201,6 +209,25 @@ export interface CompanionBuildContext {
  *    route가 그것을 넘기지 않는 한 컴파일이 실패한다. 손으로 나열했다면 조용히 누락됐을 축이다.
  *    자산-수준·세대 축은 컴패니언 자기 값(`c`·`primaryEngineInput`)을 쓰므로 여기 없다.
  */
+/** 🔴 손 목록이라 컴파일러가 누락을 잡지 못한다 — 판정 입력을 늘리면 anchor `axis-b-share-house-facts`에 행을 더할 것. */
+export const SHARE_HOUSE_FACT_KEYS = [
+  "houses",
+  "sellingHouseId",
+  "marriageMerge",
+  "parentalCareMerge",
+  "isFirstTransferredInMerge",
+  "temporaryTwoHouse",
+  "winWinRentalHouse",
+  "specialHouseExclusions",
+  "rentalHousingException",
+  "oneHouseExemptionProviso",
+  "gracePeriod",
+  "unavoidableOutsideCapitalHouse",
+  "regionCode",
+  "regionInDesignatedDistrict",
+] as const satisfies readonly (keyof TransferTaxItemInput)[];
+export type ShareHouseFacts = Pick<TransferTaxItemInput, (typeof SHARE_HOUSE_FACT_KEYS)[number]>;
+
 export interface MixedUseCompanionContext {
   rates: TaxRatesMap;
   globals: Pick<
