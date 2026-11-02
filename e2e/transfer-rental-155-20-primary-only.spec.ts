@@ -61,7 +61,6 @@ async function goto2Assets(page: Page, companionOver: Record<string, unknown>) {
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await expandAssetSection(page, 5, 0);
-  await expandAssetSection(page, 5, 1);
 }
 
 test.describe("§155⑳ 주 자산 전용", () => {
@@ -78,6 +77,7 @@ test.describe("§155⑳ 주 자산 전용", () => {
     // 주 자산: 선언이 없으므로 판정 메뉴 안내가 뜬다(P6-c-2).
     await expect(card0.getByTestId("rental-housing-handoff-notice")).toBeVisible();
     // 컴패니언: 섹션 자체가 없다.
+    await expect(card1.locator('[data-asset-section="5"]')).toHaveCount(0);
     await expect(card1.getByTestId("rental-housing-handoff-notice")).toHaveCount(0);
     await expect(card1.getByTestId("imported-rental-housing-facts")).toHaveCount(0);
   });
@@ -85,6 +85,7 @@ test.describe("§155⑳ 주 자산 전용", () => {
   /** 🔑 값을 지우지 않으므로 화면이 밝혀야 한다 — 조용히 사라진 입력이 되면 안 된다(OH-20). */
   test("[RP-E2E-2] 컴패니언에 stale 선언이 남아 있으면 안내가 뜬다", async ({ page }) => {
     await goto2Assets(page, DECLARED);
+    await expandAssetSection(page, 5, 1);
 
     const card1 = page.locator('[data-asset-card-index="1"]');
     const notice = card1.getByTestId("rental-exception-companion-notice");

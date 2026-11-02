@@ -210,7 +210,7 @@ describe("L6 — ⑤ 카드 안의 하위 배지는 「5」가 아니다", () =>
  * L7 — 산식 칸의 코드 토큰
  * ──────────────────────────────────────────────────────────────────────── */
 
-describe("L7 — 사례 46의 0 산식은 법령 근거 한국어다", () => {
+describe("L7 — 사례 46의 0 산식은 한국어다", () => {
   const redev = { receiveOnlyMode: true } as never;
 
   it("🔑 F-1: 양도가액·취득가액·필요경비 3곳 모두 receiveOnly를 노출하지 않는다", () => {
@@ -221,9 +221,8 @@ describe("L7 — 사례 46의 0 산식은 법령 근거 한국어다", () => {
     ];
     for (const s of out) {
       expect(s).not.toContain("receiveOnly");
-      expect(s).toContain("양도소득세 집행기준 100-166-10");
-      expect(s).not.toContain("가목");
-      expect(s.startsWith("0 ")).toBe(true);
+      // 입주권 산식(§166①2호 가목)은 단독 신고의 근거가 아니다 — redev-receive-only-gain-citation.plan.md
+      expect(s).toBe("0 (청산금 수령분만 신고 대상)");
     }
   });
 });

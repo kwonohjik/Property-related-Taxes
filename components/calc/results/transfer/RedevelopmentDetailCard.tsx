@@ -20,6 +20,7 @@
 import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
 import type { LthdExclusionReason } from "@/lib/tax-engine/legal-codes/transfer";
 import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
+import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
 import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
@@ -64,6 +65,8 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
   const isRightSubject = subject === "right";
   // 완공APT 청산금 **수령** — 시행령 §166②2호(제1항제2호 가목·나목) 구조. 납부(§166②1호) 문구·행 이름을 쓰지 않는다 (G3-10).
   const isAptReceive = !isRightSubject && !successorMemberApplied && settlementDirection === "receive";
+  // 사례 46 단독 신고 — §166②2호 수령 구조가 아니라 청산금 수령분 하나다(집행기준 100-166-10).
+  const isReceiveOnly = isAptReceive && detail.receiveOnlyMode === true;
   // 이월과세 증여세 상당액(「소득세법」 §97의2①3호) — 엔진이 인가 전 분 필요경비에 택일 밖의 독립 항으로 싣는다(청산금 수령은 나목 안분 후 값).
   const preApprovalGiftTax = preApproval.carryoverGiftTaxExpense ?? 0;
 
@@ -115,7 +118,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             </>
           ) : (
             <>
-              <span className="rounded-full bg-violet-200 px-2 py-0.5 text-micro font-bold text-violet-800">{isAptReceive ? "시행령 §166②2호" : "시행령 §166②1호"}</span>
+              <span className="rounded-full bg-violet-200 px-2 py-0.5 text-micro font-bold text-violet-800">{isReceiveOnly ? REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE : isAptReceive ? "시행령 §166②2호" : "시행령 §166②1호"}</span>
               <h3 className="text-sm font-semibold text-violet-900 dark:text-violet-200">재개발/재건축 양도차익 3분할</h3>
             </>
           )}
@@ -140,7 +143,9 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </>
         ) : (
           <>
-            {isAptReceive ? (
+            {isReceiveOnly ? (
+              <LawArticleModal legalBasis={REDEVELOPMENT.EVALUATION} label="시행령 §166④1호" />
+            ) : isAptReceive ? (
               <LawArticleModal legalBasis="소득세법 시행령 §166 ② 2호" label="시행령 §166②2호" />
             ) : (
               <LawArticleModal legalBasis="소득세법 시행령 §166 ② 1호" label="시행령 §166②1호" />
@@ -298,8 +303,16 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
       {/* §166②1호(납부) · §166②2호(수령) 의제구조 안내 — subject="apt" 전용, 승계조합원 분기·입주권 분기에서 숨김 */}
       {!successorMemberApplied && !isRightSubject && (
         <div className="rounded-md bg-violet-100/60 border border-violet-200 p-2 text-caption text-violet-900 leading-relaxed dark:text-violet-200 dark:bg-violet-900/40">
-          <span className="font-semibold">{isAptReceive ? "시행령 §166②2호 (제1항제2호) 수령 구조" : "시행령 §166②1호 의제구조"}</span> — 분기별 양도가·취득가는 의제 안분값으로,
-          합계 행의 단순 산식(양도가 − 취득가 − 필요경비) 검산은 본문 산식이 아닙니다. 양도차익은 인가전/인가후/청산금 3분기 의제 산식의 합으로 산출됩니다.
+          {isReceiveOnly ? (
+            <>
+              <span className="font-semibold">청산금 수령분 단독 신고</span> — 종전 부동산의 분할양도로, 양도차익은 청산금 수령액 − 안분 취득가액 − 안분 필요경비입니다 ({REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE} · {REDEVELOPMENT.REDEV_SETTLEMENT_DISPOSAL_RULING}).
+            </>
+          ) : (
+            <>
+              <span className="font-semibold">{isAptReceive ? "시행령 §166②2호 (제1항제2호) 수령 구조" : "시행령 §166②1호 의제구조"}</span> — 분기별 양도가·취득가는 의제 안분값으로,
+              합계 행의 단순 산식(양도가 − 취득가 − 필요경비) 검산은 본문 산식이 아닙니다. 양도차익은 인가전/인가후/청산금 3분기 의제 산식의 합으로 산출됩니다.
+            </>
+          )}
         </div>
       )}
 
@@ -540,6 +553,8 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           <p className="text-micro text-violet-700 dark:text-violet-400">
             {isRightSubject
               ? "§166①1호 · §166⑤1호 (취득일 → 관리처분 인가일 기산)"
+              : isReceiveOnly
+                ? "미신고 — 청산금 수령분 단독 신고"
               : isAptReceive
                 ? "§166②2호 · §166①2호 나목 (수령 안분)"
                 : "§166①1호 · §166⑤2호나목 (취득일 기산)"}
@@ -567,7 +582,9 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         <div className="rounded-md bg-white dark:bg-gray-900 border border-violet-200 p-3 space-y-1.5">
           <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">② 인가후 기존건물분</p>
           <p className="text-micro text-violet-700 dark:text-violet-400">
-            {isAptReceive
+            {isReceiveOnly
+              ? "미신고 — 청산금 수령분 단독 신고"
+              : isAptReceive
               ? "§166②2호 · §166①2호 가목 (양도가액 − (평가액 − 지급받은 청산금))"
               : "§166②1호 안분 (권리가액/분양가) · §166⑤2호나목"}
           </p>

@@ -133,7 +133,7 @@ export function buildStatementItems(
   acquisitionDateOverride?: string,
 ): Map<string, StatementItem> {
   const items = new Map<string, StatementItem>();
-  // receiveOnly(사례 46) — 신고단위 양도가액·양도일은 청산금 분 단독이다(양도소득세 집행기준 100-166-10).
+  // receiveOnly(사례 46) — 신고단위 양도가액·양도일은 청산금 분 단독이다(집행기준 100-166-10).
   // ④ API 변환(`transfer-tax-api.ts:332`·`:341`)과 같은 규칙을 ⑦ 표시에 적용한다.
   const receiveOnly = resolveReceiveOnlyDisplay(
     result,

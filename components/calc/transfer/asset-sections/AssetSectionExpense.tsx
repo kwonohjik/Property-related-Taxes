@@ -120,8 +120,8 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
             <p className="text-xs text-violet-900 dark:text-violet-200" data-testid="redev-expense-post-approval-notice">
               {redevReceiveOnly ? (
                 redevPostOnly === "actual"
-                  ? `청산금 수령분 단독 신고 — 이 칸의 자본적지출·양도비는 「인가전 분 필요경비」와 합쳐 종전 부동산의 필요경비로 보고, 청산금 비율로 안분해 공제합니다(${REDEVELOPMENT.REDEV_SETTLEMENT_GAIN_GUIDELINE}).`
-                  : `청산금 수령분 단독 신고 — 취득가액을 환산하면 개산공제를 청산금 비율로 안분해 공제합니다(${REDEVELOPMENT.REDEV_SETTLEMENT_GAIN_GUIDELINE} · 「소득세법 시행령」 제163조 제6항). 자본적지출·양도비 합계가 환산취득가액과 개산공제의 합계보다 큰 경우의 「소득세법」 제97조 제2항 제2호 단서는 이 계산에 반영되지 않으므로 해당하면 별도로 검토하세요.`
+                  ? `청산금 수령분 단독 신고 — 이 칸의 자본적지출·양도비는 「인가전 분 필요경비」와 합쳐 종전 부동산의 필요경비로 보고, 청산금 비율로 안분해 공제합니다(${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE}).`
+                  : `청산금 수령분 단독 신고 — 취득가액을 환산하면 개산공제를 청산금 비율로 안분해 공제합니다(${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE} · 「소득세법 시행령」 제163조 제6항). 자본적지출·양도비 합계가 환산취득가액과 개산공제의 합계보다 큰 경우의 「소득세법」 제97조 제2항 제2호 단서는 이 계산에 반영되지 않으므로 해당하면 별도로 검토하세요.`
               ) : (
                 <>
                   재개발·재건축 조합원 자산 — 이 칸의 자본적지출·양도비는 관리처분계획인가 <b>후</b> 분 필요경비로 계산합니다.

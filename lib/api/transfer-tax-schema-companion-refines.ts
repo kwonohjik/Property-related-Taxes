@@ -16,6 +16,7 @@ import { DEEMED_ACQUISITION_DATE } from "@/lib/calc/transfer-163-9-base-date";
 import { refineCompanionMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refines";
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
 import { refineGbValuationPresent } from "./transfer-tax-schema-required-refines-gb";
+import { bgActualAcquisitionMissing } from "./transfer-tax-schema-collateral-win";
 
 type CompanionAsset = z.infer<typeof companionAssetSchema>;
 
@@ -30,6 +31,16 @@ export function addCompanionAcquisitionCauseRefines(
   // ── 컴패니언별 acquisitionCause 검증 ──
   for (let i = 0; i < companions.length; i++) {
     const c = companions[i];
+    // K-4 실지취득가액 — 주 자산(`refineBurdenedGiftInputs`)과 같은 요구. 비우면 취득가액 0으로 200이었다(⑧은 막는다).
+    // 입주권은 엔진 K-4가 막는다(자기 안내). 일반건물 두 파트 의제취득일 전은 3자 max라 금액을 읽지 않는다(`gbAllPartsPreDeemed`와 같은 축).
+    if (
+      c.burdenedGiftInfo &&
+      !c.burdenedGiftInfo.rightValuation &&
+      !(c.generalBuildingValuation?.landPreDeemedClauseA && c.generalBuildingValuation?.buildingPreDeemedClauseA) &&
+      bgActualAcquisitionMissing(c.burdenedGiftInfo, c.ownershipRatio, transferDate)
+    ) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "burdenedGiftInfo", "actualAcquisitionTotal"], message: "부담부증여 실지취득가액 안분은 실지취득가액이 필요합니다" });
+    }
     /**
      * 🔴 **부담부증여 제외** (축 B, 2026-09-03).
      *

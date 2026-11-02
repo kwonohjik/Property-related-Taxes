@@ -55,7 +55,7 @@ describe("청산금 양도시기 근거 문구", () => {
       <ReceiveOnlyToggleCard asset={asset({ redevReceiveOnlyMode: "yes" })} onChange={() => {}} />,
     );
     expect(text).toContain(
-      "신축APT 양도 없이 청산금 수령분만 신고 — 양도가액은 지급받은 청산금, 취득가액은 평가액 대비 청산금 비율로 안분 (양도소득세 집행기준 100-166-10)",
+      "신축APT 양도 없이 청산금 수령분만 신고 — 종전 부동산의 분할양도로 계산 (양도소득세 집행기준 100-166-10 · 법규재산2012-358)",
     );
     expect(text).not.toContain("가목");
     expect(text).not.toContain("NTS 집행기준");

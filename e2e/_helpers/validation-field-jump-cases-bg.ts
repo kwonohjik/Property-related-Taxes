@@ -65,7 +65,7 @@ export const BG_FIELD_JUMP_CASES: FieldJumpCase[] = [
     form: market({ assetKind: "land", bgActualAcquisitionTotal: "", bgActualAcquisitionLand: "" }),
   },
   {
-    name: "bg: 실지취득가액 (일반건물)", field: "bgActualAcquisitionLand", step: 0, assetIndex: A, message: /^자산: 부담부증여 실지취득가액 안분 — 토지 또는 건물/,
+    name: "bg: 실지취득가액 (일반건물)", field: "bgActualAcquisitionLand", step: 0, assetIndex: A, message: /^자산: 부담부증여 실지취득가액 안분 — 토지 실지취득가액/,
     form: market({ assetKind: "general_building", bgActualAcquisitionTotal: "" }),
   },
   { name: "bg: 감정가액 (주택)", field: "bgPresumedAcquisitionTotal", step: 0, assetIndex: A, message: /^자산: 부담부증여 감정가액 — 취득 당시 감정가액을 입력하세요/, form: presumed({ bgPresumedAcquisitionTotal: "" }) },
@@ -74,7 +74,7 @@ export const BG_FIELD_JUMP_CASES: FieldJumpCase[] = [
     form: presumed({ assetKind: "land", bgAcquisitionMethod: "salesCase", bgPresumedAcquisitionTotal: "", bgPresumedAcquisitionLand: "" }),
   },
   {
-    name: "bg: 감정가액 (일반건물)", field: "bgPresumedAcquisitionLand", step: 0, assetIndex: A, message: /^자산: 부담부증여 감정가액 — 토지 또는 건물의 취득 당시 감정가액/,
+    name: "bg: 감정가액 (일반건물)", field: "bgPresumedAcquisitionLand", step: 0, assetIndex: A, message: /^자산: 부담부증여 감정가액 — 토지·건물의 취득 당시 감정가액/,
     form: presumed({ assetKind: "general_building", bgPresumedAcquisitionTotal: "" }),
   },
   {

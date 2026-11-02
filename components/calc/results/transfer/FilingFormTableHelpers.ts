@@ -224,7 +224,7 @@ export function buildRows(
     transferPriceOverride ??
     parseAmount(formData?.contractTotalPrice || primary?.actualSalePrice || "0");
   const ownRatio = ownershipRatioOfAsset(primary);
-  // receiveOnly(사례 46) — 신고단위 양도가액·양도일은 청산금 분 단독이다(양도소득세 집행기준 100-166-10).
+  // receiveOnly(사례 46) — 신고단위 양도가액·양도일은 청산금 분 단독이다(집행기준 100-166-10).
   // ④ API 변환(`transfer-tax-api.ts:332`·`:341`)과 같은 규칙을 ⑦ 표시에 적용한다.
   // 미발동이면 fallback을 그대로 돌려주므로 아래 지분 안분 분기가 종전대로 살아 있다.
   const receiveOnly = resolveReceiveOnlyDisplay(
