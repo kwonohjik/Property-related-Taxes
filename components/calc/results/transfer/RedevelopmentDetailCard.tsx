@@ -306,6 +306,13 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           {isReceiveOnly ? (
             <>
               <span className="font-semibold">청산금 수령분 단독 신고</span> — 종전 부동산의 분할양도로, 양도차익은 청산금 수령액 − 안분 취득가액 − 안분 필요경비입니다 ({REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE} · {REDEVELOPMENT.REDEV_SETTLEMENT_DISPOSAL_RULING}).
+              {detail.receiveOnlyProvisoComparison && (
+                <span className="block pt-1" data-testid="redev-receive-only-proviso">
+                  {detail.receiveOnlyProvisoComparison.chosen === "direct"
+                    ? `${REDEVELOPMENT.REDEV_RECEIVE_ONLY_CONVERSION_PROVISO} 적용 — 환산취득가액 + 개산공제 ${fmt(detail.receiveOnlyProvisoComparison.estimatedSide)} < 자본적지출·양도비 등 ${fmt(detail.receiveOnlyProvisoComparison.directSide)}이므로 환산취득가액을 차감하지 않고 자본적지출·양도비 등을 안분해 공제합니다.`
+                    : `환산취득가액 + 개산공제 ${fmt(detail.receiveOnlyProvisoComparison.estimatedSide)} ≥ 자본적지출·양도비 등 ${fmt(detail.receiveOnlyProvisoComparison.directSide)}이므로 ${REDEVELOPMENT.REDEV_RECEIVE_ONLY_CONVERSION_PROVISO}를 적용하지 않습니다.`}
+                </span>
+              )}
             </>
           ) : (
             <>

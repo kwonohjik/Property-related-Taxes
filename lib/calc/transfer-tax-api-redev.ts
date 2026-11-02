@@ -15,6 +15,7 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio } from "./transfer-tax-api-helpers";
 import { parseDecimal } from "@/lib/calc/number-parse";
+import { redevPreApprovalExpensesUnused } from "./redev-pre-approval-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import {
   resolveRedevSubject,
@@ -22,6 +23,7 @@ import {
   postApprovalExpensesInScope,
   settlementOneHouseAtSaleInScope,
   redevCompletionDateInScope,
+  isReceiveOnlyFiling,
   householdBuildingCarryoverApplied,
   landContributedOriginalApt,
   landHouseholdBuildingInScope,
@@ -113,7 +115,15 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
     settlementAmount: parseAmount(asset.redevSettlementAmount),
     settlementSaleDate: asset.redevSettlementSaleDate || undefined,
     // 스케일 O — 필요경비(§97①2·3호). 화면 규약 「필요경비는 100% 기준 입력」.
-    preApprovalExpenses: share(parseAmount(asset.redevPreApprovalExpenses)),
+    // 단독 신고 × 환산은 칸이 숨어도 §97②2호 단서의 나목에 합산되므로 저장값을 싣지 않는다.
+    // 감정·매매사례 플래그가 남으면 ④가 환산으로 보내지 않으므로(`transfer-tax-api-primary-context.ts` isEstimated) 여기서도 환산으로 보지 않는다.
+    preApprovalExpenses:
+      isReceiveOnlyFiling(asset) &&
+      redevPreApprovalExpensesUnused(asset) &&
+      asset.isAppraisalAcquisition !== true &&
+      asset.isSalesCaseAcquisition !== true
+        ? 0
+        : share(parseAmount(asset.redevPreApprovalExpenses)),
     // 인가후 분 필요경비 = redev 전용 입력 + 자본적지출(§97① 가목) + 양도비(§97① 나목)
     // 신축APT 양도 시점에 발생한 자본적지출·양도비는 인가후 분에 귀속.
     postApprovalExpenses: (() => {
