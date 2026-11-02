@@ -412,13 +412,8 @@ const RENTAL_CASES: FieldJumpCase[] = [
   },
   { name: "leaf: rental 등록 이후 거주기간 미입력", field: "rentalHousingException.postRegistrationResidenceMonths", step: 0, assetIndex: A, message: /^자산: 임대→거주 전환 주택 시나리오 — 사업자등록·임대사업자 등록 이후 거주기간\(개월\)을 입력/, form: R(PHRP) },
   { name: "leaf: rental 등록 이후 거주기간 > 전체", field: "rentalHousingException.postRegistrationResidenceMonths", step: 0, assetIndex: A, message: /^자산: 임대→거주 전환 주택 시나리오 — 등록 이후 거주기간\(40개월\)이 전체/, form: R({ ...PHRP, postRegistrationResidenceMonths: "40" }) },
-  { name: "leaf: rental 등록 이후 거주기간 < 24", field: "rentalHousingException.postRegistrationResidenceMonths", step: 0, assetIndex: A, message: /^자산: 장기임대주택 특례 — 임대→거주 전환 주택은 사업자등록·임대사업자 등록 이후 거주기간이 2년/, form: R({ ...PHRP, postRegistrationResidenceMonths: "10" }) },
-  { name: "leaf: rental 거주기간 < 24개월", field: "residencePeriods", step: 0, assetIndex: A, message: /^자산: 장기임대주택 특례 — 거주주택 거주기간 2년\(24개월\) 이상이 필요합니다/, form: R({}, undefined, { residencePeriodMonthsAsset: "10" }) },
-  { name: "leaf: rental 보유기간 < 2년", field: "acquisitionDate", step: 0, assetIndex: A, message: /^자산: 장기임대주택 특례 — 거주주택 보유기간 2년 이상이 필요합니다/, form: R({}, undefined, { acquisitionDate: "2023-06-01" }) },
-  {
-    name: "leaf: rental §154⑩ 종전규정 거주 24개월", field: "residencePeriods", step: 0, assetIndex: A, message: /^자산: 장기임대주택 특례\(§154⑩\) — 2019\.2\.12 전 취득으로/,
-    form: R({ ...PHRP, wasRegisteredRentalOrChildcare: true }, [], { acquisitionDate: "2015-03-01", residencePeriodMonthsAsset: "10" }, { wasRegulatedAtAcquisition: true }),
-  },
+  // 거주 2년·등록 후 거주 2년·§154⑩ 종전규정 거주 2년·보유 2년 미달은 계산기 ⑧이 막지 않는다 — 카드의 「✗ 미충족」 안내 · 엔진 불성립 계산
+  //   (`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` B). 오류가 없으니 이동할 항목도 없다.
 ];
 
 export const LEAF_FIELD_JUMP_CASES: FieldJumpCase[] = [...EXPR_CASES, ...MISC_CASES, ...CLAUSE_A_CASES, ...SEC164_CASES, ...SPLIT_CASES, ...RENTAL_CASES];

@@ -197,17 +197,17 @@ describe("불성립 — 현행 유지", () => {
     expect(issues.some((i) => i.field === "rentalHousingException.counterpartHouseResidedTwoYears")).toBe(true);
     expect((await runCalc(f)).result.totalTax).toBe(TAXED);
   });
-  it("MR-10 「아니오」 → ⑧ 거주 2년 · 과세", async () => {
+  it("MR-10 「아니오」 → ⑧은 막지 않음(계산기 요건 미달 미차단) · 과세", async () => {
     const f = form({ rhe: RHE("no") });
-    expect(allIssues(f).some((i) => i.field === "residencePeriods")).toBe(true);
+    expect(allIssues(f).some((i) => i.field === "residencePeriods")).toBe(false);
     expect((await runCalc(f)).result.totalTax).toBe(TAXED);
   });
   it.each([
     ["임대가 양도자 쪽", [A_ROW, other("b", "2018-09-27", { mergeOrigin: "seller_side", isLongTermRental: true })]],
     ["임대 2채(Q-1 a · 0598 · 2020구단76589)", [A_ROW, B_ROW, other("b2", "2018-09-27", { mergeOrigin: "counterpart_side", isLongTermRental: true })]],
-  ])("MR-11 %s → ⑧ 거주 2년 그대로 · 0061 고지 없음", async (_l, houses) => {
+  ])("MR-11 %s → 거주 2년 그대로(⑳ 불성립 — ⑧은 막지 않음) · 0061 고지 없음", async (_l, houses) => {
     const f = form({ houses });
-    expect(allIssues(f).some((i) => i.field === "residencePeriods")).toBe(true);
+    expect(allIssues(f).some((i) => i.field === "residencePeriods")).toBe(false);
     const r = await runCalc(f);
     expect(r.result.isExempt).not.toBe(true);
     expect(w(r.result)).not.toContain(RULING);
