@@ -59,6 +59,9 @@ import { reductionsForCard } from "./general-building-route-cards";
 import { resolveRateBasisAcquisitionDate } from "@/lib/tax-engine/transfer-rate-holding-basis";
 import { resolveBaseHoldingStartDate } from "@/lib/tax-engine/transfer-tax-exemption-holding";
 import { giftHouseholdHoldingStart } from "@/lib/tax-engine/one-house/gift-household-basis";
+import { resolveMixedUseRentalResidence } from "@/lib/tax-engine/transfer-tax-mixed-use-rental-residence";
+import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
+import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 
 /** 파트 카드 id 접미사 — 결과뷰·신고서가 자산을 되짚을 수 있게 `#<assetId>`를 붙인다. */
 export const MIXED_USE_PART_IDS = {
@@ -430,6 +433,11 @@ export function buildMixedUseCompanionItems(
     assetId: string;
     assetLabel: string;
     allocatedSalePrice: number;
+    /**
+     * §155⑳ 거주주택 · §155④⑤ 합가 상대 쪽 임대 — 선언을 받는 주 자산만 넘긴다(`route.ts`와 같은 `engineInput`).
+     * 상가 카드의 주택 취급(§154③ 본문)이 이 판정을 본다. 근거 문장은 서브엔진 `warnings`가 버려지므로 `onNotices`로 돌려준다.
+     */
+    rentalResidence?: { input: TransferTaxInput; onNotices: (notices: string[]) => void };
   },
 ): TransferTaxItemInput[] {
   /**
@@ -495,7 +503,7 @@ export function buildMixedUseCompanionItems(
      * ⇒ 종전 동작 유지(`inheritedHouseExclusion`과 같은 이유 · 확인 필요 — 컴패니언 겸용 × §155⑥⑦⑧ 별건).
      */
     article155SpecialHouses: undefined,
-    rentalResidenceInput: undefined,
+    rentalResidenceInput: asset.rentalResidence?.input,
     isOneHousehold: companionEngine.isOneHousehold ?? false,
     isRegulatedArea: ctx.primaryEngineInput.isRegulatedArea,
     isSelfCultivatedExpropriatedLand: g.isSelfCultivatedExpropriatedLand,
@@ -514,6 +522,7 @@ export function buildMixedUseCompanionItems(
     burdenedGift: undefined,
     acquisitionCause: undefined,
   });
+  asset.rentalResidence?.onNotices(resolveMixedUseRentalResidence(mixedAsset, parseRatesFromMap(ctx.mixedUseCtx.rates))?.notices ?? []);
   return buildMixedUsePartCards(
     companionEngine,
     mixedAsset,

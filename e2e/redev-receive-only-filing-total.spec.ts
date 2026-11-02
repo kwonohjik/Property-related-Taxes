@@ -15,7 +15,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 
-function seedForm(assetPatch: Record<string, string> = {}) {
+function seedForm(assetPatch: Record<string, string | boolean> = {}) {
   return {
     state: {
       formData: {
@@ -61,7 +61,7 @@ function seedForm(assetPatch: Record<string, string> = {}) {
   };
 }
 
-async function seedAndCalc(page: Page, assetPatch: Record<string, string> = {}) {
+async function seedAndCalc(page: Page, assetPatch: Record<string, string | boolean> = {}) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedForm(assetPatch));
@@ -102,5 +102,32 @@ test.describe("청산금 수령분 단독 신고 — 신고서 합계 열", () =
     await expect(page.getByRole("row", { name: /필요경비.*2,280,000/ }).first()).toBeVisible();
     await expect(page.getByRole("row", { name: /양도차익.*66,120,000/ }).first()).toBeVisible();
     await expect(page.getByRole("row", { name: /취득가액.*45,600,000/ }).first()).toBeVisible();
+  });
+
+  /**
+   * 「소득세법」 §97②2호 단서 — 환산취득가액 100,000,000 + 개산공제 3,000,000 < 자본적지출·양도비 200,000,000.
+   * 필요경비 = 200,000,000 × 114,000,000 ÷ 500,000,000 = 45,600,000 · 양도차익 = 114,000,000 − 45,600,000 = 68,400,000
+   * 환산이면 숨는 인가전 분 칸의 저장값(4,000,000)은 나목에 들어가지 않는다.
+   */
+  test("환산 — 자본적지출·양도비가 더 크면 환산취득가액 대신 그 합계를 안분해 공제한다", async ({ page }) => {
+    test.setTimeout(60_000);
+    const requestPromise = page.waitForRequest((r) => r.url().includes("/api/calc/transfer") && r.method() === "POST");
+    await seedAndCalc(page, {
+      useEstimatedAcquisition: true,
+      redevActualAcquisitionPrice: "",
+      redevAcquisitionHousingPrice: "100000000",
+      redevManagementDisposalHousingPrice: "500000000",
+      redevPreApprovalExpenses: "4000000",
+      capitalExpenditure: "190000000",
+      transferExpense: "10000000",
+    });
+    const body = (await requestPromise).postDataJSON();
+    expect(body.redevelopment.preApprovalExpenses).toBe(0);
+    expect(body.redevelopment.postApprovalExpenses).toBe(190_000_000);
+    expect(body.redevelopment.transferExpense).toBe(10_000_000);
+
+    await expect(page.getByRole("row", { name: /필요경비.*45,600,000/ }).first()).toBeVisible();
+    await expect(page.getByRole("row", { name: /양도차익.*68,400,000/ }).first()).toBeVisible();
+    await expect(page.getByTestId("redev-receive-only-proviso")).toContainText("103,000,000");
   });
 });

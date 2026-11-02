@@ -680,6 +680,13 @@ export interface RedevelopmentResult {
   receiveOnlyMode?: boolean;
 
   /**
+   * 청산금 수령 단독 신고 × 환산의 「소득세법」 §97②2호 단서 비교(지분 반영 · 안분 전 금액).
+   * estimatedSide = 환산취득가액 + 개산공제, directSide = 자본적지출·양도비 등. direct면 환산취득가액을 차감하지 않는다.
+   * 나목 입력이 없거나 부담부증여면 비교하지 않아 undefined다.
+   */
+  receiveOnlyProvisoComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
+
+  /**
    * **청산금 수령분이 본 양도가액과 별개의 대가인 경우 그 금액** (표시 전용 echo).
    *
    * 완공APT 양도 + 청산금 수령 동시신고(사례 47)에서 신고 단위는 **두 개의 양도**다 —

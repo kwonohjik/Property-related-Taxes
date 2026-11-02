@@ -312,8 +312,11 @@ export function applyRedevelopmentOverrides(
     // 신고서 양식과 같은 leaf·같은 인자(`redevFilingTotals`)를 쓴다.
     acqItem.value = redevFilingTotals(redev, totalTransferPrice).acquisition;
     if (isReceiveOnly) {
-      acqItem.formula = `취득가액 = 종전 취득가액을 평가액 대비 청산금 수령액 비율로 안분 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
-      acqItem.legalBasis = REDEVELOPMENT.EVALUATION;
+      const provisoApplied = redev.receiveOnlyProvisoComparison?.chosen === "direct";
+      acqItem.formula = provisoApplied
+        ? `취득가액 = 0 — 환산취득가액을 차감하지 않음 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_CONVERSION_PROVISO})`
+        : `취득가액 = 종전 취득가액을 평가액 대비 청산금 수령액 비율로 안분 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
+      acqItem.legalBasis = provisoApplied ? REDEVELOPMENT.REDEV_RECEIVE_ONLY_CONVERSION_PROVISO : REDEVELOPMENT.EVALUATION;
     } else if (isRightReceive) {
       acqItem.formula = "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166①2호 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(실가 또는 환산 − 안분 취득가)·청산금 분(종전취득가 × 청산금/권리가)";
       acqItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166③";
@@ -333,7 +336,7 @@ export function applyRedevelopmentOverrides(
     expItem.value = redevBranchTotals(redev).expenses;
     if (isReceiveOnly) {
       expItem.formula = `필요경비 = 종전 부동산의 필요경비를 평가액 대비 청산금 수령액 비율로 안분 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
-      expItem.legalBasis = "소득세법 §97 ①";
+      expItem.legalBasis = redev.receiveOnlyProvisoComparison?.chosen === "direct" ? REDEVELOPMENT.REDEV_RECEIVE_ONLY_CONVERSION_PROVISO : "소득세법 §97 ①";
     } else {
       expItem.formula = "분할별 필요경비 합 — 인가전 개산공제(§163⑥) + 인가후·청산금 분 필요경비";
       expItem.legalBasis = "소득세법 시행령 §163⑥";

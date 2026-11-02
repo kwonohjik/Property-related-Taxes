@@ -158,6 +158,65 @@ describe("입주권 경로", () => {
   });
 });
 
+describe("§97②2호 단서 비교 표시", () => {
+  const PROVISO = "소득세법 §97 ② 2호 단서";
+  const estimated = (postApprovalExpenses: number) =>
+    calculateTransferTax(
+      baseTransferInput({
+        propertyType: "redevelopment_apt",
+        transferPrice: 114_000_000,
+        transferDate: new Date("2024-01-26"),
+        acquisitionDate: new Date("2002-04-09"),
+        acquisitionPrice: 0,
+        expenses: 0,
+        useEstimatedAcquisition: true,
+        isOneHousehold: false,
+        householdHousingCount: 2,
+        residencePeriodMonths: 0,
+        redevelopment: {
+          subject: "apt",
+          approvalLawBasis: "urban_renovation_art_74",
+          approvalDate: new Date("2009-10-23"),
+          rightsValue: 500_000_000,
+          settlementDirection: "receive",
+          settlementAmount: 114_000_000,
+          settlementSaleDate: new Date("2024-01-26"),
+          preApprovalExpenses: 0,
+          postApprovalExpenses,
+          originalAssetType: "housing",
+          exemptionEligibleAtApproval: false,
+          receiveOnlyMode: true,
+          acquisitionHousingPrice: 100_000_000,
+          managementDisposalHousingPrice: 500_000_000,
+        } as RedevelopmentInfo,
+      }),
+      rates,
+    );
+
+  it("단서 적용 — 카드·명세서가 비교 금액과 미차감을 밝힌다", () => {
+    const result = estimated(200_000_000);
+    expect(cardText(result)).toContain(
+      `${PROVISO} 적용 — 환산취득가액 + 개산공제 103,000,000 < 자본적지출·양도비 등 200,000,000이므로 환산취득가액을 차감하지 않고`,
+    );
+    const text = statementText(result);
+    expect(text).toContain(`취득가액 = 0 — 환산취득가액을 차감하지 않음 (${PROVISO})`);
+    expect(text).toContain(`환산취득가액 차감 안 함 (${PROVISO}`);
+    expect(text).toContain("자본적지출·양도비 등 200,000,000을 권리가액 대비 청산금 비율로 안분 = 45,600,000");
+  });
+
+  it("본문 — 비교 결과만 밝히고 안분 취득가액 산식은 그대로다", () => {
+    const result = estimated(50_000_000);
+    expect(cardText(result)).toContain(`환산취득가액 + 개산공제 103,000,000 ≥ 자본적지출·양도비 등 50,000,000이므로 ${PROVISO}를 적용하지 않습니다.`);
+    const text = statementText(result);
+    expect(text).toContain(`취득가액 = 종전 취득가액을 평가액 대비 청산금 수령액 비율로 안분 (${GUIDELINE})`);
+    expect(text).not.toContain("차감하지 않음");
+  });
+
+  it("실가 — 비교 안내가 없다", () => {
+    expect(cardText(receiveOnly())).not.toContain(PROVISO);
+  });
+});
+
 describe("결과 카드", () => {
   it("단독 신고 — §166②2호 수령 구조로 설명하지 않는다", () => {
     const text = cardText(receiveOnly());

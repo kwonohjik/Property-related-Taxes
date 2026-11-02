@@ -243,6 +243,32 @@ describe("B. 인가 전·후 안분 — 평가액 : (양도가액 − 평가액)
   }, 30_000);
 });
 
+describe("B-2. 단독 신고 × 환산 — 양도비가 「소득세법」 §97②2호 단서의 나목에 들어간다", () => {
+  // 평가액 1.2억·청산금 2천만·기준시가 6천만/1.2억 ⇒ 가목 61,800,000 · 비율 1/6. 나목 7천만이면 단서: 20,000,000 − 11,666,667.
+  const receiveOnlyEstimated = (over: A = {}) =>
+    apt(1, "20000000", {
+      ...ESTIMATED, ...RECEIVE_ONLY, redevRightsValue: "120000000", redevSettlementAmount: "20000000", redevSettlementSaleDate: "2024-06-01",
+      redevAcquisitionHousingPrice: "60000000", redevManagementDisposalHousingPrice: "120000000", ...over,
+    });
+  const PROVISO_GAIN = 8_333_333;
+  const BODY_GAIN = 9_700_000;
+
+  it("단건 — 자산 칸 양도비 7천만이면 단서, 양도비가 없으면 본문", async () => {
+    expect((await run(form([receiveOnlyEstimated({ transferExpense: "70000000" })], "20000000"))).gain[0]).toBe(PROVISO_GAIN);
+    expect((await run(form([receiveOnlyEstimated()], "20000000"))).gain[0]).toBe(BODY_GAIN);
+  }, 30_000);
+
+  it("함께 양도 — 총 양도비 몫 7천만도 단서로 판정이 바뀐다", async () => {
+    const assets = (e: string) => [receiveOnlyEstimated({ transferExpense: e }), land(2, "20000000", { transferExpense: e })];
+    const total = await run(form(assets(""), "40000000", { totalTransferExpense: "140000000" }));
+    const direct = await run(form(assets("70000000"), "40000000"));
+    const none = await run(form(assets(""), "40000000"));
+    expect(total.gain[0]).toBe(PROVISO_GAIN);
+    expect(direct.gain[0]).toBe(PROVISO_GAIN);
+    expect(none.gain[0]).toBe(BODY_GAIN);
+  }, 30_000);
+});
+
 describe("C. 부담부증여·이월과세", () => {
   const HALF = { ownershipNumerator: "50", ownershipDenominator: "100", ownershipRemainderThirdParty: "" };
   const BB = {
