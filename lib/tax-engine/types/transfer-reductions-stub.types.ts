@@ -112,6 +112,12 @@ export type TransferReductionStub =
       rental974Category?: "purchase_a" | "construction_c";
       rentalHousingType4?: "long_term_private" | "public_support_private" | "public_construction" | "public_purchase";
       region?: "capital" | "non_capital";
+      /** 조특령 §97의4② — 세무서 사업자등록일 (isTaxRegistered면 필수) */
+      taxRegistrationDate?: Date;
+      /** 조특령 §97⑤3호 준용 — 상속받은 임대주택의 피상속인 임대기간 (엔진 `Rental97EvaluationInput.inheritance974`) */
+      inheritance974?: { inheritanceDate: Date; decedentRegistrationDate: Date; decedentRentalStartDate: Date };
+      /** 민간임대주택에 관한 특별법 §6⑤ 자동말소일 — 임대기간 종점 (서면-2021-법규재산-1422) */
+      autoCancelledDate974?: Date;
     } & Rental97CommonFields)
   | ({ type: "rental_97_5";
       /** CA-01 — §97의5①3호가 준용하는 조특령 §97의3③2호 (국민주택규모 이하) */

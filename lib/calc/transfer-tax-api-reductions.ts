@@ -266,6 +266,20 @@ export function toEngineReductions(
           // D2-04 — 소령 §167의3①2호 가목·다목 한도 판정용
           officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
           ...(r.rental974Category ? { rental974Category: r.rental974Category } : {}),
+          // 조특령 §97의4② — 사업자등록을 확인했을 때만 그 날짜를 싣는다 (§97의3·§97의5와 같은 조건)
+          ...(r.isTaxRegistered && r.taxRegistrationDate ? { taxRegistrationDate: r.taxRegistrationDate } : {}),
+          // 조특령 §97⑤3호 — 토글 ON + 세 날짜가 다 있을 때만 (⑧이 빈 날짜를 막는다)
+          ...(r.isInherited974 && r.inheritanceDate974 && r.decedentRegistrationDate974 && r.decedentRentalStartDate974
+            ? {
+                inheritance974: {
+                  inheritanceDate: r.inheritanceDate974,
+                  decedentRegistrationDate: r.decedentRegistrationDate974,
+                  decedentRentalStartDate: r.decedentRentalStartDate974,
+                },
+              }
+            : {}),
+          // 민특법 §6⑤ 자동말소일 — 토글 ON + 날짜
+          ...(r.isAutoCancelled974 && r.autoCancelledDate974 ? { autoCancelledDate974: r.autoCancelledDate974 } : {}),
         };
       }
       if (r.type === "rental_97_5") {
