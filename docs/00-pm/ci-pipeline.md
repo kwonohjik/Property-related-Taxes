@@ -154,6 +154,7 @@ pre-push에는 넣지 않는다 — 매 푸시에 붙으면 개발 흐름이 끊
 
 키워드는 **KoreanLaw MCP로 조회한 본문의 verbatim 표현**이어야 한다(강학상 용어 금지). 등록 후 `npm run verify:legal`로 키워드가 실제 법문과 맞는지 확인한다.
 - 문서 전용(`**.md`·`docs/**`·`.claude/**`)·draft PR은 건너뛴다 — **대기시간** 때문이다.
+  - draft 해제 때 CI가 돌도록 `on.pull_request.types`에 `ready_for_review`를 넣어 둔다. 빠지면 기본값(opened·synchronize·reopened)만 남아 draft로 연 PR은 해제 후에도 SKIPPED 체크만 남는다(#2864 실측 — 「CI 18/18」 판정이 영영 안 나온다).
 
 ### 🔒 신규 워크플로는 `runs-on: ubuntu-latest`가 **기본**이다 (pre-push 하드블록)
 
