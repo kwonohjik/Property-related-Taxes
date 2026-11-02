@@ -49,6 +49,8 @@ import { isSuccessorRightTransfer, successorTypeToggleSectionLabel } from "./tra
 import { validateUsageConversion } from "./transfer-tax-validate-usage-conversion";
 import { validateSuccessorRightAsset } from "./transfer-tax-validate-successor-right";
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
+import { redevLegacyExpenseUnused } from "./redev-legacy-expense-unused";
+import { redevLegacyExpenseUnusedMessage } from "./redev-legacy-expense-unused";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { validateGeneralPhdEstimated } from "./transfer-tax-validate-phd-general";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
@@ -307,6 +309,8 @@ function validateAssetAcquisitionBranches(
   if (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") {
     const redevError = validateRedevelopmentAsset(asset, label, isOneHousehold, typeToggleSection, isNonPrimaryAsset);
     if (redevError) return redevError;
+    // 이전 입력 형식 필요경비 — 재개발 산식이 읽지 않아 침묵 누락된다. ⑤ 안내와 같은 술어·같은 문장(계획서 `redev-transfer-expense-residual.plan.md` Q-1 a).
+    if (redevLegacyExpenseUnused(asset)) return fieldError("directExpenses", `${label}: ${redevLegacyExpenseUnusedMessage(asset)}`);
     // 재개발 × 이월과세(비부담부증여) — 이 분기는 `validateCarryoverAsset`를 타지 않으므로 증여 사건 칸(가업상속·날짜·관계·평가액 / 음수·채무·세대)을
     //   같은 leaf로 본다(⑫ `refineCarryoverTaxation`과 같은 규칙 · 계획서 `redev-carryover-validation-scope.plan.md` Q-2 a). 환산 방식·PHD·증여자 신축 칸은 재개발에 없다.
     const redevCarryover = asset.acquisitionCause === "carryover_gift" && asset.transferType !== "burdened_gift";
