@@ -209,7 +209,6 @@ export function validateRedevelopmentAsset(
     : null;
 
   if (originalAssetType === "land") {
-    if (settlementLimitIssue) return settlementLimitIssue;
     /**
      * ✅ 2026-08-27 — land + **apt** + receive + 환산(사례 43) 차단을 해제했다.
      *
@@ -281,6 +280,7 @@ export function validateRedevelopmentAsset(
       }
     }
     // land 검증 통과 — housing 전용 로직(하우스 라목값, PHD, 거주월수 등) skip
+    if (settlementLimitIssue) return settlementLimitIssue;
     return null;
   }
 
