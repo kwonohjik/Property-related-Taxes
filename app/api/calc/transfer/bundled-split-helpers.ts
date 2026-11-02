@@ -38,6 +38,7 @@ import type {
   CompanionBuildContext,
   CompanionOwnedKeys,
   CompanionRawAsset,
+  ShareHouseFacts,
 } from "./bundled-companion-types";
 import {
   calculateHoldingPeriod,
@@ -143,6 +144,26 @@ export function resolveHousingContextFromCompanion(
 
 // ─── companion engineInput 빌드 + split 분기 통합 헬퍼 ────────────
 // route.ts의 인라인 60줄을 헬퍼로 추출 (800줄 정책 준수).
+
+/**
+ * 축 B 주택 지분 판정 사실 — 명부의 양도 주택 행에 이 지분 카드의 취득일(`shareAcquisitionDate`)을 싣는다.
+ *
+ * 명부 양도 행은 첫 지분 취득일을 싣는다(`transfer-tax-api-houses.ts`). 엔진은 그 행 취득일로 중과 배제의 보유·취득 요건
+ * (영 §167의3①12호·12의2호 · 제9270호 부칙 §14①)을 보므로, 늦게 취득한 지분이 첫 지분 날짜로 배제를 받았다.
+ * 법 §95④ 보유기간은 「그 자산의 취득일부터」이고 양도 자산은 이 지분이다 — 비과세 판정도 지분별이다(#2813).
+ * 행 `acquisitionDate`(주택 = 첫 지분)와 다른 행·키는 그대로다 — 주택 단위 판정은 바꾸지 않는다(타입 주석 · 계획서
+ * `axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` A).
+ */
+function withShareSellingAcquisitionDate(facts: ShareHouseFacts | undefined, acquisitionDate: Date): ShareHouseFacts | undefined {
+  const selling = facts?.houses?.find((h) => h.id === facts.sellingHouseId);
+  if (!facts?.houses || !selling || selling.acquisitionDate.getTime() === acquisitionDate.getTime()) return facts;
+  return {
+    ...facts,
+    houses: facts.houses.map((h) =>
+      h.id === facts.sellingHouseId ? { ...h, shareAcquisitionDate: acquisitionDate } : h,
+    ),
+  };
+}
 
 /**
  * companion 자산 1개 → engineInput 1~2개 (한도 초과 split 시 2개) 빌드.
@@ -372,7 +393,9 @@ export function buildCompanionEngineInputs(
       ? ctx.primaryEngineInput.oneRightHouseholdFacts
       : {}),
     // ⑭ 축 B 주택 지분 — 위 타입 주석. 토지·입주권 지분에는 싣지 않는다.
-    ...(c.assetKind === "housing" || c.assetKind === "mixed_use_house" || c.redevelopment?.subject === "apt" ? ctx.primaryEngineInput.shareHouseFacts : {}),
+    ...(c.assetKind === "housing" || c.assetKind === "mixed_use_house" || c.redevelopment?.subject === "apt"
+      ? withShareSellingAcquisitionDate(ctx.primaryEngineInput.shareHouseFacts, acqDate)
+      : {}),
     // ⑭ §104①4호 단서(영 §167의6) — 컴패니언 분양권 전용(세대 단위 사실, 위 타입 주석 참조).
     presaleRightNoOtherRight: ctx.primaryEngineInput.presaleRightNoOtherRight,
     presaleRightAgeOrSpouseMet: ctx.primaryEngineInput.presaleRightAgeOrSpouseMet,

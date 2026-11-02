@@ -215,3 +215,85 @@ describe("판정 사실 키 — 둘째 지분 카드가 첫 지분과 같은 값
     for (const k of FACT_KEYS) expect(second[k], k).toEqual(first[k]);
   });
 });
+
+/**
+ * 늦게 취득한 지분 × 중과 배제 — 명부 양도 행 취득일은 그 지분 카드 취득일이다(`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` A).
+ * 60/40 · 강남 3주택 · 20억. 첫 지분 날짜를 빌리면 둘째 지분이 배제를 받아 세액이 줄었다(#2860 회귀).
+ * 기대값은 #2860 전 master(`869abd203`) 실측과 같다 — 그때는 둘째 지분에 명부가 없어 배제가 닿지 않았다.
+ */
+const LATE_HOUSES = [other("x", "2008-01-01", PRICEY), other("y", "2008-01-02", PRICEY)];
+const T26 = { transferDate: "2026-06-18", filingDate: "2026-08-31" };
+const GRACE = { gracePeriod: { contractDate: "2026-04-01", isLandPermitTarget: false, depositReceiptConfirmed: true } };
+const lateShares = (first: string, second: string, over: object, res: object = R30) =>
+  form(
+    [1, 2].map((n) =>
+      share(n, n === 1 ? "60" : "40", { regionCode: GANGNAM, actualSalePrice: "2000000000", acquisitionDate: n === 1 ? first : second, ...res }),
+    ),
+    LATE_HOUSES,
+    { ...FR, contractTotalPrice: "2000000000", householdNoOtherHousesConfirmed: false, ...over },
+  );
+const LATE_TAX: [string, string, string, object, object, object, number][] = [
+  ["C0 12의2 다목 · 같은 날 취득", "2019-08-08", "2019-08-08", T26, GRACE, R30, 579_628_500],
+  ["C1 12의2 다목 · 둘째 보유 1년 3개월 → 둘째는 배제 없음", "2019-08-08", "2025-03-01", T26, GRACE, R30, 760_056_000],
+  ["C1b 12의2 다목 · 둘째 보유 2년 3개월 → 둘째도 배제", "2019-08-08", "2024-03-01", T26, GRACE, R30, 615_268_500],
+  ["C2 12호 보유 10년 · 둘째 2019 취득 → 둘째는 배제 없음", "2008-01-01", "2019-01-01", { transferDate: "2020-05-15", filingDate: "2020-07-31" }, {}, R0, 645_623_000],
+  ["C3 부칙 §14① · 둘째 2015 취득 → 둘째는 세율 중과", "2010-01-01", "2015-01-01", T26, {}, R30, 809_952_000],
+];
+
+describe("늦게 취득한 지분 × 중과 배제 — 그 지분 취득일로 판정한다", () => {
+  it.each(LATE_TAX)("SH-80 💰 %s", async (_c, first, second, over, patch, res, expected) => {
+    expect(await totalWith(lateShares(first, second, over, res), patch)).toBe(expected);
+  });
+  it.each([
+    ["일반 주택", {}],
+    ["겸용", MIXED],
+    ["완공APT", APT],
+  ] as const)("SH-81 🔑 %s — 명부 양도 행 지분 취득일만 카드 취득일이고 행 취득일·나머지 키는 첫 지분과 같다", async (_n, kind) => {
+    const r = await postTransfer(await captureBody(shares(kind, R30, [R], {}, { acquisitionDate: "2021-05-01" })));
+    expect(r.status, JSON.stringify(r.json?.error)).toBe(200);
+    // 겸용은 지분마다 파트 카드 4장이다 — 카드 전부에서 본다.
+    const cards = seen.properties.filter((p) => Array.isArray(p.houses));
+    const sellingOf = (p: Record<string, unknown>) => (p.houses as { id: string; acquisitionDate: Date }[]).find((h) => h.id === p.sellingHouseId)!;
+    const rest = (p: Record<string, unknown>) => (p.houses as { id: string }[]).filter((h) => h.id !== p.sellingHouseId);
+    expect(cards.map((p) => (p.acquisitionDate as Date).toISOString().slice(0, 10))).toContain("2021-05-01");
+    const houseLevel = (cards[0].acquisitionDate as Date).getTime();
+    const bare = (p: Record<string, unknown>) => ({ ...sellingOf(p), shareAcquisitionDate: undefined });
+    for (const p of cards) {
+      // 주택 단위 날짜(행 취득일)는 첫 지분 그대로 — 세컨드홈 선후·§71의2·혼인 단서 등은 바뀌지 않는다
+      expect(sellingOf(p).acquisitionDate.getTime(), String(p.propertyId)).toBe(houseLevel);
+      // 보유·취득 시기 요건용 지분 날짜 = 카드 취득일
+      const own = sellingOf(p) as { shareAcquisitionDate?: Date; acquisitionDate: Date };
+      expect(own.shareAcquisitionDate ?? own.acquisitionDate, String(p.propertyId)).toEqual(p.acquisitionDate);
+      expect(rest(p)).toEqual(rest(cards[0]));
+      expect(bare(p)).toEqual(bare(cards[0]));
+    }
+  });
+  it("SH-83 📢 늦은 지분이 중과 판정을 받으면 지분별 판정 고지 · 같은 날·비조정은 없음", async () => {
+    const SURCHARGE_NOTICE = "다주택 중과 배제의 보유기간·취득 시기 요건을 지분마다 그 지분의 취득일로 판정했습니다";
+    const warningsOf = async (f: never, patch: object) => {
+      const r = await postTransfer(Object.assign(await captureBody(f), patch));
+      expect(r.status).toBe(200);
+      return (r.json.data.aggregated.warnings as string[]).join("\n");
+    };
+    expect(await warningsOf(lateShares("2019-08-08", "2025-03-01", T26), GRACE)).toContain(SURCHARGE_NOTICE);
+    expect(await warningsOf(lateShares("2019-08-08", "2019-08-08", T26), GRACE)).not.toContain(SURCHARGE_NOTICE);
+    // 비조정 2주택(지방 4억 — 저가 주택 아님): 중과 판정은 돌지만 조정대상지역이 아니다
+    const nc2 = shares({}, R30, [other("x", undefined, { officialPrice: "400000000" })], {}, { acquisitionDate: "2023-02-01" });
+    expect(await warningsOf(nc2, {})).not.toContain(SURCHARGE_NOTICE);
+  });
+  /** 영 §167의3⑨ 단서 「새로운 주택을 취득한 경우」 — 혼인 후 지분을 더 취득해도 주택 수는 늘지 않는다. 단건(혼인 전 취득)과 같다. */
+  it("SH-82 💰 혼인 후 둘째 지분 취득 · 배우자 1채 → 혼인 차감 유지 998,178,500 (단건과 같음)", async () => {
+    const H = [other("x", "2008-01-01", PRICEY), other("s", "2015-01-01", { ...PRICEY, spouseHeldAtTransfer: "yes" })];
+    const M = { marriageMerge: { marriageDate: "2023-01-01" } };
+    const mk = (pcts: string[], dates: string[]) =>
+      form(
+        pcts.map((p, i) => share(i + 1, p, { regionCode: GANGNAM, actualSalePrice: "2000000000", acquisitionDate: dates[i], ...R0 })),
+        H,
+        { ...(pcts.length > 1 ? FR : {}), contractTotalPrice: "2000000000", householdNoOtherHousesConfirmed: false, ...T26 },
+      );
+    expect(await totalWith(mk(["60", "40"], ["2019-08-08", "2024-01-01"]), M)).toBe(998_178_500);
+    expect(await totalWith(mk(["100"], ["2019-08-08"]), M)).toBe(998_178_500);
+    // 대조: 주택 자체를 혼인 후 취득하면 단서로 차감이 없다
+    expect(await totalWith(mk(["100"], ["2024-01-01"]), M)).toBe(1_162_903_500);
+  });
+});

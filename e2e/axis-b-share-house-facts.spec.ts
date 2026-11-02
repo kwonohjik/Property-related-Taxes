@@ -48,3 +48,44 @@ test("[ASH-1] ★ 60/40 지분 + ⑳ → 둘째 지분 카드도 비과세 · �
   expect(cards.every((c) => c.isExempt === true)).toBe(true);
   expect(json.data.aggregated.totalTax).toBe(0);
 });
+
+const GANGNAM = "1168010100";
+const pricey = (id: string, acq: string) => ({
+  id, region: "capital", regionCode: GANGNAM, acquisitionDate: acq, officialPrice: "400000000", isInherited: false, isLongTermRental: false,
+  isApartment: true, isOfficetel: false, isUnsoldHousing: false, acquisitionOrigin: "general",
+});
+
+/** 늦게 취득한 지분 × 중과 배제(`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` A) — 세액은 anchor SH-80이 고정한다. */
+test("[ASH-2] ★ 2010 취득 첫 지분 + 2015 취득 둘째 지분 · 강남 3주택 → 부칙 세율 배제는 첫 지분만 · 지분별 판정 고지", async ({ page }) => {
+  const res30 = { residencePeriods: [{ moveInDate: "2019-08-08", moveOutDate: "2022-02-08" }] };
+  const formData = {
+    ...createDefaultTransferFormData(), transferDate: "2026-06-18", filingDate: "2026-08-31", contractTotalPrice: "2000000000",
+    assetSplitMode: "fractional", bundledSaleMode: "actual", isOneHousehold: true, householdHousingCount: "3", householdNoPresaleRightsConfirmed: true,
+    houses: [pricey("x", "2008-01-01"), pricey("y", "2008-01-02")],
+    assets: [
+      share(1, "60", { regionCode: GANGNAM, addressJibun: "서울특별시 강남구 테스트동 1", actualSalePrice: "2000000000", acquisitionDate: "2010-01-01", ...res30 }),
+      share(2, "40", { regionCode: GANGNAM, addressJibun: "서울특별시 강남구 테스트동 1", actualSalePrice: "2000000000", acquisitionDate: "2015-01-01", ...res30 }),
+    ],
+  };
+  await page.goto("/calc/transfer-tax");
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), { state: { formData, currentStep: 0, pendingMigration: false }, version: 0 });
+  await page.reload();
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-testid="transfer-date"] input');
+    return !!el && Object.keys(el).some((k) => k.startsWith("__react"));
+  });
+  const res = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST");
+  await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+  await page.getByRole("button", { name: "세금 계산하기" }).click();
+  const json = await (await res).json();
+  const cards = json.data.aggregated.properties as { propertyId: string; multiHouseSurchargeDetail?: { rateSurchargeStatutoryExcluded?: boolean } }[];
+  expect(cards.length).toBe(2);
+  const [first, second] = [cards.find((c) => c.propertyId === "primary")!, cards.find((c) => c.propertyId !== "primary")!];
+  expect(first.multiHouseSurchargeDetail?.rateSurchargeStatutoryExcluded).toBe(true);
+  expect(second.multiHouseSurchargeDetail?.rateSurchargeStatutoryExcluded).not.toBe(true);
+  const NOTICE = "다주택 중과 배제의 보유기간·취득 시기 요건을 지분마다 그 지분의 취득일로 판정했습니다";
+  expect((json.data.aggregated.warnings as string[]).some((w) => w.includes(NOTICE))).toBe(true);
+  await expect(page.getByText(NOTICE).first()).toBeVisible();
+});
