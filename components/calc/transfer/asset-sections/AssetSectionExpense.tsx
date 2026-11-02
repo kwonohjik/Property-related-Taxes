@@ -14,6 +14,8 @@ import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { legacyExpenseMovesToParts } from "@/lib/calc/split-legacy-expense";
 import { gbLegacyExpenseUnused } from "@/lib/calc/gb-legacy-expense-unused";
 import { GB_LEGACY_EXPENSE_UNUSED_MESSAGE } from "@/lib/calc/gb-legacy-expense-unused";
+import { redevLegacyExpenseUnused } from "@/lib/calc/redev-legacy-expense-unused";
+import { REDEV_LEGACY_EXPENSE_UNUSED_MESSAGE } from "@/lib/calc/redev-legacy-expense-unused";
 import { bgExpenseUnusedBasis } from "@/lib/calc/burdened-gift-expense-scope";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { isRedevelopmentSec166Asset } from "@/lib/calc/redev-acquisition-price-source";
@@ -241,9 +243,11 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
 
       {/* legacy 단일 필드 — backward-compat (sessionStorage 로드 시 표시).
           분리 계산 자산은 ⑧이 이 값을 파트 칸으로 옮기라고 막으므로(`legacyExpenseMovesToParts`) 양도비가 있어도 보인다 — 숨은 값으로 막지 않는다.
-          총 양도비가 쓰이면 꺼진 양도비는 ④가 0으로 본다(O-9 `withInScopeTransferExpenses`) — 같은 값으로 판정해야 이 칸이 숨은 채 쓰이지 않는다. */}
+          총 양도비가 쓰이면 꺼진 양도비는 ④가 0으로 본다(O-9 `withInScopeTransferExpenses`) — 같은 값으로 판정해야 이 칸이 숨은 채 쓰이지 않는다.
+          §166 자산은 ⑧이 값이 있기만 하면 막으므로(`redevLegacyExpenseUnused`) 자본적지출·양도비가 있어도 보인다. */}
       {parseInt(asset.directExpenses || "0", 10) > 0
        && (legacyExpenseMovesToParts(asset)
+         || redevLegacyExpenseUnused(asset)
          || (parseInt(asset.capitalExpenditure || "0", 10) === 0
            && (parseAmount(totalTransferExpense || "0") > 0 || parseInt(asset.transferExpense || "0", 10) === 0))) && (
         <>
@@ -251,6 +255,13 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
             <ToneCard tone="amber">
               <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="gb-legacy-expense-unused-notice">
                 {GB_LEGACY_EXPENSE_UNUSED_MESSAGE}
+              </p>
+            </ToneCard>
+          )}
+          {redevLegacyExpenseUnused(asset) && (
+            <ToneCard tone="amber">
+              <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="redev-legacy-expense-unused-notice">
+                {REDEV_LEGACY_EXPENSE_UNUSED_MESSAGE}
               </p>
             </ToneCard>
           )}
