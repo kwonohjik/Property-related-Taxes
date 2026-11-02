@@ -292,6 +292,10 @@ export function buildRedevAcquisitionFormula(
   if (redev.receiveOnlyMode === true) {
     if (branch === "settlement") {
       // salePriceTotal = rights − settlement → rights = salePriceTotal + settlement
+      const proviso = redev.receiveOnlyProvisoComparison;
+      if (proviso?.chosen === "direct") {
+        return `환산취득가액 차감 안 함 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_CONVERSION_PROVISO} — 환산취득가액 + 개산공제 ${fmt(proviso.estimatedSide)} < 자본적지출·양도비 등 ${fmt(proviso.directSide)})`;
+      }
       const settle = redev.settlement.apportionedTransfer;
       const rights = (redev.salePriceTotal ?? 0) + settle;
       const apportioned = redev.settlement.apportionedAcquisition;
@@ -336,6 +340,10 @@ export function buildRedevExpenseFormula(
   // 사례 46 receiveOnly — 필요경비 등을 청산금 비율로 안분한 값 (집행기준 100-166-10)
   if (redev.receiveOnlyMode === true) {
     if (branch === "settlement") {
+      const proviso = redev.receiveOnlyProvisoComparison;
+      if (proviso?.chosen === "direct") {
+        return `자본적지출·양도비 등 ${fmt(proviso.directSide)}을 권리가액 대비 청산금 비율로 안분 = ${fmt(redev.settlement.expenses ?? 0)} (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_CONVERSION_PROVISO} · ${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
+      }
       return `필요경비 등을 권리가액 대비 청산금 비율로 안분 = ${fmt(redev.settlement.expenses ?? 0)} (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
     }
     return RECEIVE_ONLY_ZERO_FORMULA;

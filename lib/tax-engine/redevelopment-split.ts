@@ -203,6 +203,8 @@ export function computeRedevelopmentSplit(
       estimatedLumpDeduction,
       carryoverGiftTaxApplied,
       carryoverGiftTaxCap,
+      carryoverGiftTaxExpense: input.carryoverGiftTaxExpense,
+      conversionProvisoEligible: input.debtFraction === undefined && valuationMeta?.method.startsWith("estimated") === true,
     });
   }
 
@@ -248,6 +250,10 @@ interface BranchArgs {
   carryoverGiftTaxApplied?: number;
   /** 같은 한도(인가전 양도차익, 증여세 산입 전·0 하한). */
   carryoverGiftTaxCap?: number;
+  /** 증여세 한도를 나목 기준으로 다시 잡기 위한 한도 전 값 — 단독 신고 §97②2호 단서 전용. */
+  carryoverGiftTaxExpense?: number;
+  /** §97②2호 단서 비교 대상 — §166③ 환산이고 부담부증여가 아닐 때만. */
+  conversionProvisoEligible?: boolean;
 }
 
 /** 결과에 `carryoverGiftTaxApplied`·한도를 싣는다 — 입력이 없으면 키 자체를 만들지 않는다(일반 양도 결과 불변). */
@@ -330,25 +336,41 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
      * 신축주택을 양도하지 않으므로 두 칸 모두 종전 부동산의 비용이다.
      * 이월과세 증여세 상당액은 택일 밖의 독립 항이라 위에 더한다(동시신고 `preExpenseTotal`과 같다).
      * 동시신고의 `preExpenseSettlementShare`와 같은 **잔액 흡수** — 별도 floor 금지.
+     *
+     * 「소득세법」 §97②2호 단서 — 환산취득가액 + 개산공제(가목) < 자본적지출·양도비 등(나목)이면 나목을 필요경비로 하고
+     * 환산취득가액은 차감하지 않는다. 양쪽에 같은 비율을 곱하므로 안분 전후 어디서 비교해도 결론이 같다.
+     * 증여세 상당액은 비교 밖이고, 한도(양도차익)만 나목 기준으로 다시 잡는다.
+     * ⚠️ 영 §163⑫의 「환산취득가액」은 §176의2 가액이고 §166③ 환산은 별개 규정이다 — §166③에 단서를 적용하는 것은
+     *    사용자 결정(2026-11-02)이며 정면 해석례는 찾지 못했다.
      */
     const lump = args.estimatedLumpDeduction ?? 0;
-    const giftTax = args.carryoverGiftTaxApplied ?? 0;
+    const directSide = redevelopment.preApprovalExpenses + (redevelopment.postApprovalExpenses ?? 0);
+    const estimatedSide = oldAcquisitionPrice + lump;
+    const provisoCompared = args.conversionProvisoEligible === true && directSide > 0;
+    const provisoApplied = provisoCompared && estimatedSide < directSide;
+    const giftTaxCap = provisoApplied ? Math.max(0, redevelopment.rightsValue - directSide) : args.carryoverGiftTaxCap;
+    const giftTaxApplied =
+      provisoApplied && args.carryoverGiftTaxExpense !== undefined
+        ? Math.min(args.carryoverGiftTaxExpense, giftTaxCap ?? 0)
+        : args.carryoverGiftTaxApplied;
+    const giftTax = giftTaxApplied ?? 0;
+    const deductedAcquisition = provisoApplied ? 0 : oldAcquisitionPrice;
     const remaining = Math.max(0, redevelopment.rightsValue - redevelopment.settlementAmount);
     const shareOf = (amount: number) =>
       redevelopment.rightsValue > 0 && redevelopment.settlementAmount > 0
         ? amount - safeMultiplyThenDivide(amount, remaining, redevelopment.rightsValue)
         : 0;
     const expenseTotal =
-      (lump > 0 ? lump : redevelopment.preApprovalExpenses + (redevelopment.postApprovalExpenses ?? 0)) + giftTax;
+      (!provisoApplied && lump > 0 ? lump : directSide) + giftTax;
     const settlementExpenseShare = shareOf(expenseTotal);
     const aptReceiveSettlementGain =
       calcAptReceiveSettlementGain(
-        oldAcquisitionPrice,
+        deductedAcquisition,
         redevelopment.rightsValue,
         redevelopment.settlementAmount,
       ) - settlementExpenseShare;
     const aptReceiveApportionedAcq = safeMultiplyThenDivide(
-      oldAcquisitionPrice,
+      deductedAcquisition,
       redevelopment.settlementAmount,
       redevelopment.rightsValue,
     );
@@ -372,8 +394,11 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
       valuationMeta,
       estimatedLumpDeduction: 0, // 인가전 분 행이 없다 — 개산공제의 청산금분 몫은 receiveOnlyExpenseShare로 싣는다
       receiveOnlyExpenseShare: settlementExpenseShare,
+      ...(provisoCompared
+        ? { receiveOnlyProvisoComparison: { estimatedSide, directSide, chosen: provisoApplied ? ("direct" as const) : ("estimated" as const) } }
+        : {}),
       // 실제로 공제된 몫만 싣는다 — 인가전 분이 없어 나머지는 이 신고에서 공제되지 않는다.
-      ...carryoverGiftEcho({ ...args, carryoverGiftTaxApplied: args.carryoverGiftTaxApplied === undefined ? undefined : shareOf(giftTax) }),
+      ...carryoverGiftEcho({ ...args, carryoverGiftTaxCap: giftTaxCap, carryoverGiftTaxApplied: giftTaxApplied === undefined ? undefined : shareOf(giftTax) }),
     };
   }
 

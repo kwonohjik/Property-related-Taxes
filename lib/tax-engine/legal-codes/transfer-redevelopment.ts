@@ -102,6 +102,8 @@ export const REDEVELOPMENT = {
    * 🔴 §166①2호 가목(입주권 양도 산식)이 아니다.
    */
   REDEV_RECEIVE_ONLY_GAIN_GUIDELINE: "양도소득세 집행기준 100-166-10",
+  /** 소득세법 §97 ② 2호 단서 — 환산취득가액 + 개산공제 < 자본적지출·양도비 등이면 후자를 필요경비로 할 수 있다. */
+  REDEV_RECEIVE_ONLY_CONVERSION_PROVISO: "소득세법 §97 ② 2호 단서",
   /** 법규재산2012-358 (2012.11.09) — 청산금은 종전 부동산의 유상이전(분할양도)으로 과세. */
   REDEV_SETTLEMENT_DISPOSAL_RULING: "법규재산2012-358",
   /**
