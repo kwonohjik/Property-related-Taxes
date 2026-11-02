@@ -123,14 +123,17 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
 
   // 1-0) 상속받은 임대주택 — 조특령 §97의4② → 조특령 §97⑤3호 (피상속인 임대기간 합산)
   const inh = input.inheritance974;
+  // 상속개시일이 양도일 뒤면 피상속인 분이 양도일까지 잘려 과대 산정된다 — 같은 사유로 막는다(독립 검토 2026-11-02).
   if (
     inh &&
     (inh.decedentRentalStartDate.getTime() >= inh.inheritanceDate.getTime() ||
-      inh.decedentRegistrationDate.getTime() >= inh.inheritanceDate.getTime())
+      inh.decedentRegistrationDate.getTime() >= inh.inheritanceDate.getTime() ||
+      inh.inheritanceDate.getTime() > input.transferDate.getTime())
   ) {
     reasons.push({
       code: "INVALID_INHERITANCE_DATES",
-      message: "피상속인의 임대개시일·사업자등록등일은 상속개시일보다 앞서야 합니다 (조특령 §97⑤3호 — 피상속인 임대기간 합산).",
+      message:
+        "피상속인의 임대개시일·사업자등록등일은 상속개시일보다 앞서고, 상속개시일은 양도일 이전이어야 합니다 (조특령 §97⑤3호 — 피상속인 임대기간 합산).",
       legalBasis: RENTAL_97_4_PERIOD.INHERITANCE_MERGE,
     });
   }

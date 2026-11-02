@@ -422,6 +422,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               // 엔진 INVALID_INHERITANCE_DATES와 같은 조건 (YYYY-MM-DD 문자열 비교)
               if (r.decedentRegistrationDate974 >= r.inheritanceDate974 || r.decedentRentalStartDate974 >= r.inheritanceDate974)
                 return fail(fieldError(`reduction.${r.type}.inheritanceDate974`, `${label} 적용: 피상속인의 임대개시일·사업자등록등일은 상속개시일보다 앞서야 합니다.`));
+              if (form.transferDate && r.inheritanceDate974 > form.transferDate)
+                return fail(fieldError(`reduction.${r.type}.inheritanceDate974`, `${label} 적용: 상속개시일은 양도일 이전이어야 합니다.`));
             }
             // 민특법 §6⑤ 자동말소 — ④는 날짜가 있을 때만 싣는다
             if (r.isAutoCancelled974) {

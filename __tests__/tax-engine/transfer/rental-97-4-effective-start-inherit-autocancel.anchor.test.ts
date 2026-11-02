@@ -177,6 +177,11 @@ describe("R-3 상속 — 피상속인 임대기간 합산 (조특령 §97⑤3호
     expect(r.rentalPeriod974.heir.start).toBe("2016-01-01");
   });
 
+  it("🔴 상속개시일이 양도일 뒤면 INVALID_INHERITANCE_DATES — 피상속인 분을 양도일까지 잘라 과대 산정하지 않는다", () => {
+    const r = run({ ...HEIR, inheritance974: { ...INH, inheritanceDate: D("2021-01-01") } });
+    expect(codes(r)).toContain("INVALID_INHERITANCE_DATES");
+  });
+
   it("피상속인 날짜가 상속개시일 이후면 INVALID_INHERITANCE_DATES", () => {
     const r = run({ ...HEIR, inheritance974: { ...INH, decedentRentalStartDate: D("2016-02-01") } });
     expect(codes(r)).toContain("INVALID_INHERITANCE_DATES");

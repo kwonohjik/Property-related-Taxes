@@ -136,6 +136,9 @@ describe("⑧ validate", () => {
   it("피상속인 날짜가 상속개시일 이후 → 차단 (엔진 INVALID_INHERITANCE_DATES와 같은 조건)", () => {
     expect(check({ decedentRentalStartDate974: "2016-01-01" })).toContain("상속개시일보다 앞서야");
   });
+  it("상속개시일이 양도일 뒤 → 차단 (엔진 INVALID_INHERITANCE_DATES와 같은 조건)", () => {
+    expect(check({ inheritanceDate974: "2021-01-01" })).toContain("상속개시일은 양도일 이전");
+  });
   it("자동말소 ON + 날짜 없음 / 양도일 이후 → 차단", () => {
     expect(check({ isAutoCancelled974: true, autoCancelledDate974: "" })).toContain("자동말소일");
     expect(check({ isAutoCancelled974: true, autoCancelledDate974: "2021-01-01" })).toContain("양도일 이전");
