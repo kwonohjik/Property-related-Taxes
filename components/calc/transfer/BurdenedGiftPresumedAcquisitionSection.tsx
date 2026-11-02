@@ -259,7 +259,7 @@ export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method
           />
         </FieldCard>
       ) : (
-        <FieldCard label={`${prefix}${label} (주택·건물 전체)`} hint={PRESUMED_HINT[method]}>
+        <FieldCard label={`${prefix}${label} (주택·건물 전체)`} hint={PRESUMED_HINT[method]} field={carryover ? "bgCoDonorPresumedAcquisitionTotal" : "bgPresumedAcquisitionTotal"}>
           <CurrencyInput
             label=""
             hideUnit
