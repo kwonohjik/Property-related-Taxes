@@ -632,7 +632,10 @@ export function emitRedevelopmentSteps(
   const preApprovalExpenseChosen =
     redev.receiveOnlyMode === true
       ? 0
-      : preApprovalNecessaryExpense(preApprovalLumpDeduction, redevInfo.preApprovalExpenses);
+      : redev.preApproval.expenses !== undefined
+        // 분기가 실제로 뺀 값 — 입력 칸은 양도비 안분·β 스케일 전이다. 이월과세 증여세 상당액은 아래에 따로 적는다.
+        ? redev.preApproval.expenses - (redev.preApproval.carryoverGiftTaxExpense ?? 0)
+        : preApprovalNecessaryExpense(preApprovalLumpDeduction, redevInfo.preApprovalExpenses);
   const preApprovalExpenseLabel =
     preApprovalLumpDeduction > 0 ? "개산공제(시행령 §163⑥)" : "필요경비(법 §97①2·3호)";
   // 이월과세 증여세 상당액(「소득세법」 §97의2①3호)은 택일 밖의 산입항이라 따로 적는다 — 없으면 종전 산식 그대로.

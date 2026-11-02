@@ -21,6 +21,7 @@ import {
 } from "./redevelopment-split";
 import { runSuccessorMember } from "./redevelopment-successor";
 import { scaleRedevelopmentForBurdenedGift } from "./redevelopment-burdened-gift";
+import { apportionRedevTransferExpense } from "./redevelopment-transfer-expense";
 import {
 } from "./redevelopment-land-contribution";
 import {
@@ -107,10 +108,12 @@ export function runRedevelopment(
         "취득가액은 소령 §159①1호가 정하는 값(기준시가 또는 실지거래가액)을 채무비율로 안분합니다.",
     );
   }
+  // 양도비 인가 전·후 안분 — β 스케일 뒤의 평가액·양도가액으로 나눈다. 분기별 산식은 안분된 두 칸만 읽는다.
+  const resolvedRedevelopment = apportionRedevTransferExpense(scaledRedevelopment, rawInput.transferPrice);
   const input: RedevelopmentOrchestratorInput =
-    scaledRedevelopment === rawInput.redevelopment
+    resolvedRedevelopment === rawInput.redevelopment
       ? rawInput
-      : { ...rawInput, redevelopment: scaledRedevelopment };
+      : { ...rawInput, redevelopment: resolvedRedevelopment };
 
   // 사례 48 — 승계조합원 분기 (관리처분 후 입주권 승계 → 신축APT 양도).
   // §166 안분 우회 + 준공일 기산 LTHD/세율 (사전-2019-법령해석재산-0649).

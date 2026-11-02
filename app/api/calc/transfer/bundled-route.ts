@@ -22,6 +22,7 @@ import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
 import type { MixedUseCompanionContext } from "./bundled-companion-types";
 import { buildGbCompanionItems, type GbBgCarryoverUnitDraft } from "./general-building-part-cards";
+import { withRedevCommonExpense } from "./engine-input";
 import { attachGbCarryoverUnits, toGbCarryoverUnits } from "./bundled-gb-carryover-units";
 import { toTransferorBasisInfo } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 import {
@@ -220,6 +221,7 @@ export function calculateBundledTransfer(
         ),
         acquisitionPrice: a.allocatedAcquisitionPrice,
         expenses: a.allocatedExpenses,
+        ...(engineInput.redevelopment ? { redevelopment: withRedevCommonExpense(engineInput.redevelopment, a.allocatedCommonExpense) } : {}),
         propertyId: "primary",
         propertyLabel: a.assetLabel,
         // F-13 — 주 자산 주택은 배율 이내 부수토지 카드와 「1세대1주택 단위」를 이룬다(합산 엔진이 묶는다).
