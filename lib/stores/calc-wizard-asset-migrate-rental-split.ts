@@ -106,6 +106,14 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           ...(r.type === "rental_97_5" && r.deemedRentalPeriods === undefined
             ? { hasDeemedRentalPeriod: false, deemedRentalPeriods: [] }
             : {}),
+          // PR-C — 단기→장기 변경신고 구분. 구 세션의 boolean(2020.7.11 이후 변경분 = 적용 제외)을 그대로 옮긴다.
+          ...(r.type === "rental_97_3" && r.shortTermConversionMode === undefined
+            ? {
+                shortTermConversionMode: r.isConvertedFromShortTerm ? ("after" as const) : ("none" as const),
+                conversionReportedDate: "",
+                conversionAcceptedDate: "",
+              }
+            : {}),
           // D2-04 — §97의4 대상 요건 신규 필드. 구 세션은 미선택으로 둔다.
           ...(r.type === "rental_97_4" && r.rental974Category === undefined
             ? { rental974Category: "", officialPriceAtStart: r.officialPriceAtStart ?? "" }

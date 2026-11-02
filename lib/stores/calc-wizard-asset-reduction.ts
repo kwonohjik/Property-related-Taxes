@@ -248,8 +248,21 @@ export type RentalReductionFormVariant =
       officialPriceAtStart: string;
       /** 국민주택규모 이하 확인 (령 §97의3③2호) */
       isNationalHousingScale: boolean;
-      /** 2020.7.11 이후 단기→장기 변경 신고분 (§97의3① 괄호 — 적용 제외) */
+      /**
+       * 2020.7.11 이후 단기→장기 변경 신고분 (§97의3① 괄호 — 적용 제외).
+       * PR-C 이후 정본은 `shortTermConversionMode`다 — ⑤가 `mode === "after"`로 함께 쓴다(구 세션 호환).
+       */
       isConvertedFromShortTerm: boolean;
+      /**
+       * PR-C — 단기민간임대 → 장기일반 변경신고 구분 (조특법 §97의3① 괄호 · 조특령 §97의3④ 후단).
+       * `before` = 2020.7.10 이전 변경신고(단기 임대기간 산입) · `after` = 2020.7.11 이후(적용 제외).
+       * `before`이면 `registrationDate`는 **단기 지자체 등록일**이다.
+       */
+      shortTermConversionMode: "none" | "before" | "after";
+      /** PR-C — 변경 신고일 (YYYY-MM-DD). `before`이면 필수 */
+      conversionReportedDate: string;
+      /** PR-C — 변경신고 수리일 = 장기 등록일 (YYYY-MM-DD). `before`이면 필수 */
+      conversionAcceptedDate: string;
       /** D2-07 — §97의3① 「민간건설임대주택」 한정 (2023.1.1 이후 등록분에만 요구) */
       isPrivateConstructionRental: boolean;
       /** 조특령 §97의3④ — 세무서 사업자등록일 (YYYY-MM-DD). 사업자등록 확인 시 필수 — 임대개시 기산의 한 축 */

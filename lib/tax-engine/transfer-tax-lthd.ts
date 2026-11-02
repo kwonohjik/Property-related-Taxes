@@ -53,7 +53,7 @@ import type { TransferTaxInput, SplitGainResult } from "./types/transfer.types";
 import type { SplitPartResult } from "./types/transfer-split-gain.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
-import { applyRentalGainShare } from "./transfer-reductions/rental-97-shared-helpers";
+import { applyRental97Lthd } from "./transfer-tax-lthd-rental97";
 
 interface LongTermHoldingResult {
   deduction: number;
@@ -614,110 +614,31 @@ export function calcLongTermHoldingDeduction(
     return { deduction, rate: blendedRate, holdingPeriod, fbLthdFormula };
   }
 
-  // L-2': 장기임대 §97의3 (장특 70% 대체) / §97의4 (추가율 가산) — Phase 2 (2026-06-11)
+  // L-2': 장기임대 §97의3 (장특 70% 대체 — 일반 공제액과 비교해 큰 쪽) / §97의4 (추가율 가산)
   // reductions[]의 rental_97_3/rental_97_4 본 필드 항목을 평가. 임대분 안분은 조특령 §97의3⑤.
+  // 적용 leaf: `transfer-tax-lthd-rental97.ts` (PR-B #1 — 조특법 §97의3③ 신청 선택)
   const rental97Eval = evaluateRental97Lthd(input.reductions, {
     transferDate: input.transferDate,
     acquisitionDate: input.acquisitionDate,
     stdPriceAtAcquisition: input.standardPriceAtAcquisition,
     stdPriceAtTransfer: input.standardPriceAtTransfer,
   });
-  if (
-    rental97Eval?.isEligible &&
-    rental97Eval.effectCategory === "long_term_holding_special" &&
-    rental97Eval.overrideRate !== undefined
-  ) {
-    // §97의3: 임대기간 분 양도차익 × 70% + 비임대분 × 일반율 (ratio=1이면 전액 70%)
-    const positiveGain = Math.max(taxableGain, 0);
-    const rentalGain = applyRentalGainShare(positiveGain, rental97Eval);
-    const nonRentalGain = positiveGain - rentalGain;
-    // F-1: 공제율(임대분 0.7·0.5, 비임대분 `rate`)은 정수 % 상수라 정수 분수연산을 쓴다 — `applyRate(g, 0.7)`은
-    //   g=700에서 489(정확 490)다. 임대기간 분 비율은 기준시가 비율(임의 소수)이라 `applyLthdRate`(소수 4자리 반올림)가 아니라
-    //   **기준시가 정수 분수**(`applyRentalGainShare`)로 곱한다 — 종전 `applyRate(g, 비율)`의 1원 과소 해소(2026-10-11).
-    const deduction =
-      applyLthdRate(rentalGain, rental97Eval.overrideRate) + applyLthdRate(nonRentalGain, rate);
-    const blendedRate =
-      rental97Eval.overrideRate * rental97Eval.rentalGainRatio + rate * (1 - rental97Eval.rentalGainRatio);
+  const rental97 = applyRental97Lthd({ rental97Eval, taxableGain, rate, useTable2 });
+  if (rental97.kind === "applied") {
     return {
-      deduction,
-      rate: blendedRate,
+      deduction: rental97.deduction,
+      rate: rental97.rate,
       holdingPeriod,
-      // [echo] 결과 카드 산식 표시용 — 계산에는 관여하지 않는다(위 값 그대로 실어 보낸다)
-      rental97LthdDetail: {
-        ...rental97Eval,
-        baseLthdRate: rate,
-        gainApplied: positiveGain,
-        rentalGainApplied: rentalGain,
-        nonRentalGainApplied: nonRentalGain,
-        deductionApplied: deduction,
-      },
+      rental97LthdDetail: rental97.rental97LthdDetail,
     };
   }
-  if (
-    rental97Eval?.isEligible &&
-    rental97Eval.effectCategory === "long_term_holding_additional" &&
-    rental97Eval.additionalRate !== undefined
-  ) {
-    // §97의4① **단서** — 「다만, 같은 항 단서에 해당하는 경우에는 그러하지 아니하다」 (D2-01)
-    //
-    // 직전 지시어가 「같은 조 **제2항**」이므로 「같은 항」 = 소득세법 §95②이고,
-    // §95② 단서는 「다만, 대통령령으로 정하는 **1세대 1주택**…의 경우에는 … **표 2**…」다.
-    // ⇒ 표2가 적용되는 1세대1주택 고가주택에는 추가공제율을 **가산하지 않는다**.
-    //
-    // 🔑 판정 술어를 새로 만들지 않는다 — 위 :269의 `useTable2`가 이미 §95② 단서 해당 여부다.
-    //    (같은 사실을 두 술어로 판정하면 드리프트한다 — memory `feedback_shared_predicate_argument_parity`)
-    //
-    // ⚠️ 배제해도 `rental97LthdDetail`은 남긴다. 사용자가 §97의4를 선택했는데 결과 화면에서
-    //    통째로 사라지면 「왜 반영이 안 됐는지」를 알 길이 없다.
-    if (useTable2) {
-      return {
-        deduction: applyLthdRate(taxableGain, rate),
-        rate,
-        holdingPeriod,
-        rental97LthdDetail: {
-          ...rental97Eval,
-          isEligible: false,
-          ineligibleReasons: [
-            {
-              code: "TABLE2_PROVISO_EXCLUDED",
-              message:
-                "1세대1주택 장기보유특별공제 표2(소득세법 §95② 단서) 적용 대상이므로 " +
-                "§97의4 추가공제율을 가산하지 않습니다 (조특법 §97의4① 단서).",
-              legalBasis: "조특법 §97의4① 단서 · 소득세법 §95② 단서",
-            },
-          ],
-          baseLthdRate: rate,
-          gainApplied: taxableGain,
-          deductionApplied: applyLthdRate(taxableGain, rate),
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
-      };
-    }
-
-    // §97의4: 보유기간별 공제율(§95② 표1)에 추가율 가산 — 기본 공제율이 0(보유 3년 미만)이면 가산 불가
-    if (rate > 0) {
-      const combined = rate + rental97Eval.additionalRate;
-      const combinedDeduction = applyLthdRate(taxableGain, combined);
-      return {
-        deduction: combinedDeduction,
-        rate: combined,
-        holdingPeriod,
-        // [echo] 산식 표시용 — 계산 무관
-        rental97LthdDetail: {
-          ...rental97Eval,
-          baseLthdRate: rate,
-          gainApplied: taxableGain,
-          deductionApplied: combinedDeduction,
-        },
-      };
-    }
-    return { deduction: 0, rate: 0, holdingPeriod, rental97LthdDetail: rental97Eval };
-  }
+  // 폴스루 — 특례 미선택·미적격·§97의3 일반 공제가 큰 경우. echo는 비교 결과를 담는다.
+  const rental97LthdDetail = rental97.rental97LthdDetail;
 
   if (rate > 0) {
     const deduction = applyLthdRate(taxableGain, rate);
-    return { deduction, rate, holdingPeriod, rental97LthdDetail: rental97Eval, ...cardEcho };
+    return { deduction, rate, holdingPeriod, rental97LthdDetail, ...cardEcho };
   }
 
-  return { deduction: 0, rate: 0, holdingPeriod, rental97LthdDetail: rental97Eval };
+  return { deduction: 0, rate: 0, holdingPeriod, rental97LthdDetail };
 }

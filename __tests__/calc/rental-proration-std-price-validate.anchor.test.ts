@@ -83,8 +83,14 @@ describe("§97의3⑤ 안분 기준시가 — ⑧ 검증", () => {
 
   it("🔑 취득 즉시 임대 + 양도일까지 계속 — 안분이 필요 없으므로 묻지 않는다", () => {
     // 비율이 항상 1이라 기준시가를 보지도 않는다. 여기서 막으면 오탐이다.
-    const issue = check({ rentalStartDate: "2015-01-05" });
+    // 「취득 즉시」는 의제 개시일(임대일·등록일·사업자등록일 중 늦은 날 — 조특령 §97의3④) 기준이다(PR-A #2).
+    // 종전 픽스처는 등록·사업자등록(2015-03-02)이 취득(2015-02-01)보다 늦은데도 원 임대일만 보고 통과시켰다.
+    const issue = check({ rentalStartDate: "2015-01-05", registrationDate: "2015-01-05", taxRegistrationDate: "2015-01-05" });
     expect(issue?.message ?? "").not.toMatch(MSG);
+  });
+
+  it("PR-A #2 — 임대일만 취득 전이고 등록이 취득 후면 「취득 즉시 임대」가 아니므로 묻는다", () => {
+    expect(check({ rentalStartDate: "2015-01-05" })?.message).toMatch(MSG);
   });
 
   it("🔑 임대를 먼저 끝냈으면(B≠D) 취득 즉시 임대라도 묻는다", () => {

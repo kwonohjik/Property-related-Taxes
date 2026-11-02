@@ -157,6 +157,17 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   rental974Category?: "purchase_a" | "construction_c";
   /** 2020.7.11 이후 단기민간임대 → 장기일반 변경 신고분 — 적용 제외 (§97의3① 괄호) */
   isConvertedFromShortTerm?: boolean;
+  /**
+   * §97의3 — 2020.7.10 이전 단기민간임대 → 장기일반 **변경신고 주택** (조특령 §97의3④ 후단, PR-C #3).
+   * 있으면 `registrationDate`는 **단기 지자체 등록일**이고, 장기 등록일은 `acceptedDate`(수리일)다.
+   * 계산: `rental-97-short-term-conversion.ts`.
+   */
+  shortTermConversion?: {
+    /** 변경 신고일 — 구간 판정(≤2019-02-11 종전 50% / ~2020-07-10 민특령 §34① 시점 / ≥2020-07-11 제외) */
+    reportedDate: Date;
+    /** 변경신고 수리일 = 장기 등록일 */
+    acceptedDate: Date;
+  };
   // ── §97 본문/단서 ──
   /**
    * 조특령 §97① 주체 요건 — 「임대주택을 **5호 이상** 임대하는 거주자」 자기확인.
@@ -294,6 +305,21 @@ export interface RentalLthdEffect {
   rentalGainFraction?: { num: number; den: number };
   eligibleRentalYears: number;
   /**
+   * [echo] §97의3 — 양도일 기준 안분 구간(`data/rental-97-3-proration-era.ts`). 결과 카드 고지용.
+   * `whole_gain`이면 안분하지 않았다(비율 1). §97의4는 undefined.
+   */
+  prorationEra?: "whole_gain" | "pre_decree" | "no_formula" | "formula";
+  /**
+   * [echo] §97의3 단기→장기 변경신고 주택의 임대개시 의제 결과(PR-C #3). 결과 카드 표시용.
+   * `deemedStartDate`는 YYYY-MM-DD 문자열(JSON 직렬화 안전).
+   */
+  shortTermConversionDetail?: {
+    era: "old" | "old_grandfathered" | "new_before_end" | "new_after_end";
+    deemedStartDate: string;
+    obligationYears?: number;
+    creditedDays?: number;
+  };
+  /**
    * [echo] 결과 카드 산식 표시용 — `transfer-tax-lthd.ts`가 공제액 산출 직후 채운다.
    * 계산에는 관여하지 않는다(표시 전용). 평가 시점(`rental-97-3.ts`)에는 양도차익을 모르므로
    * 여기서는 optional이고, LTHD 단계를 거치지 않은 경로에서는 undefined다.
@@ -306,6 +332,16 @@ export interface RentalLthdEffect {
   nonRentalGainApplied?: number;
   /** 실제 적용된 장기보유특별공제액 */
   deductionApplied?: number;
+  /**
+   * [echo] §97의3 — 특례 채택 여부(조특법 §97의3③ 신청 선택 — `transfer-tax-lthd-rental97.ts`).
+   * false = 일반 장기보유특별공제액이 더 커서 특례를 적용하지 않음(요건은 충족 — `isEligible` true 유지).
+   * undefined = 비교 이전 구 이력 → 적용으로 렌더.
+   */
+  specialApplied?: boolean;
+  /** [echo] §97의3 — 특례를 적용했을 때의 공제액 */
+  deductionWithSpecial?: number;
+  /** [echo] §97의3 — 특례를 적용하지 않았을 때(일반 공제율)의 공제액 */
+  deductionWithoutSpecial?: number;
   /** 안분 전 양도차익 (음수 clamp 후) */
   gainApplied?: number;
 }

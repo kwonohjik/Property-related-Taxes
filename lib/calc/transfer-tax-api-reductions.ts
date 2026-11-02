@@ -246,7 +246,12 @@ export function toEngineReductions(
           isNationalHousingScale: r.isNationalHousingScale,
           region: r.region,
           rentalHousingType: r.rentalHousingType,
-          isConvertedFromShortTerm: r.isConvertedFromShortTerm,
+          // PR-C — 정본은 `shortTermConversionMode`. 구 세션 boolean과 같은 의미(after = 적용 제외)로 파생한다.
+          isConvertedFromShortTerm: (r.shortTermConversionMode ?? (r.isConvertedFromShortTerm ? "after" : "none")) === "after",
+          // 조특령 §97의3④ 후단 — 2020.7.10 이전 변경신고(registrationDate = 단기 지자체 등록일). 두 날짜가 있을 때만 싣는다(⑧이 필수로 막는다).
+          ...(r.shortTermConversionMode === "before" && r.conversionReportedDate && r.conversionAcceptedDate
+            ? { shortTermConversion: { reportedDate: r.conversionReportedDate, acceptedDate: r.conversionAcceptedDate } }
+            : {}),
           isPrivateConstructionRental: r.isPrivateConstructionRental, // D2-07
           // §97의3①1호 — 조기 종료 시 임대기간 종점 · 조특령 §97의3④ 사업자등록일 (§97의5와 같은 조건)
           ...(r.rentalContinuesToTransfer === false && r.rentalEndDate ? { rentalEndDate: r.rentalEndDate } : {}),

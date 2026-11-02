@@ -137,6 +137,9 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       officialPriceAtStart: "",
       isNationalHousingScale: false,
       isConvertedFromShortTerm: false,
+      shortTermConversionMode: "none", // PR-C — 조특령 §97의3④ 후단
+      conversionReportedDate: "",
+      conversionAcceptedDate: "",
       isPrivateConstructionRental: false, // D2-07 — 확인 토글
       taxRegistrationDate: "", // 조특령 §97의3④ — 임대개시 기산의 한 축
     };

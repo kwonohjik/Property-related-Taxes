@@ -98,12 +98,30 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
       rentalGainApplied?: number;
       nonRentalGainApplied?: number;
       deductionApplied?: number;
+      // [echo] §97의3 특례·일반 공제액 비교 (조특법 §97의3③ — `transfer-tax-lthd-rental97.ts`). 구 이력은 없다.
+      specialApplied?: boolean;
+      deductionWithSpecial?: number;
+      deductionWithoutSpecial?: number;
+      // [echo] PR-C — 단기→장기 변경신고 주택의 임대개시 의제(조특령 §97의3④ 후단). 구 이력은 없다.
+      shortTermConversionDetail?: {
+        era: "old" | "old_grandfathered" | "new_before_end" | "new_after_end";
+        deemedStartDate: string;
+        obligationYears?: number;
+        creditedDays?: number;
+      };
     };
     // 산식은 echo가 모두 있을 때만 — 구 저장 이력에는 없다(graceful fallback)
     const hasLthdEcho =
       lthdEffect.gainApplied !== undefined &&
       lthdEffect.deductionApplied !== undefined &&
       lthdEffect.baseLthdRate !== undefined;
+    // 요건은 충족했으나 일반 공제액이 더 커 특례를 적용하지 않은 경우 — 비교 echo가 모두 있을 때만
+    const specialNotApplied =
+      lthdEffect.specialApplied === false &&
+      lthdEffect.deductionWithSpecial !== undefined &&
+      lthdEffect.deductionWithoutSpecial !== undefined;
+    // 특례 산식의 우변 — 미적용이면 「특례를 적용했다면」의 값이다(실제 적용값은 일반 공제액)
+    const specialDeduction = specialNotApplied ? lthdEffect.deductionWithSpecial! : lthdEffect.deductionApplied!;
     const isPartialRental =
       lthdEffect.rentalGainRatio < 1 &&
       lthdEffect.rentalGainApplied !== undefined &&
@@ -118,6 +136,13 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
             {ARTICLE_LABELS[detail.id] ?? detail.id}
           </span>
         </div>
+
+        {specialNotApplied && (
+          <p className="text-xs text-violet-900 dark:text-violet-200" data-testid="rental973-special-not-applied">
+            일반 장기보유특별공제액({formatN(lthdEffect.deductionWithoutSpecial!)})이 특례 적용 공제액(
+            {formatN(lthdEffect.deductionWithSpecial!)})보다 커서 특례를 적용하지 않은 것으로 계산했습니다 (조특법 §97의3③ 과세특례 적용 신청).
+          </p>
+        )}
 
         <div className="rounded bg-white/70 dark:bg-white/5 border border-violet-100 dark:border-violet-800/30 p-2.5 text-xs space-y-1.5">
           {lthdEffect.overrideRate !== undefined && (
@@ -140,6 +165,19 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
             <span className="text-muted-foreground">유효 임대기간</span>
             <span className="font-mono">{lthdEffect.eligibleRentalYears}년</span>
           </div>
+          {lthdEffect.shortTermConversionDetail && (
+            <div data-testid="rental973-conversion-detail">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">임대개시일 (단기→장기 변경신고 의제)</span>
+                <span className="font-mono">{lthdEffect.shortTermConversionDetail.deemedStartDate}</span>
+              </div>
+              <p className="text-micro text-muted-foreground">
+                {lthdEffect.shortTermConversionDetail.era === "old" || lthdEffect.shortTermConversionDetail.era === "old_grandfathered"
+                  ? `단기로 임대한 기간 중 5년까지의 50%(최대 2년 6개월)인 ${lthdEffect.shortTermConversionDetail.creditedDays ?? 0}일을 장기 임대기간에 산입 (조특령 §97의3④ 후단 종전 규정${lthdEffect.shortTermConversionDetail.era === "old_grandfathered" ? " — 2019.2.12 현재 단기 8년 초과 임대, 대통령령 제29527호 부칙 §29②" : ""})`
+                  : `단기로 임대한 기간을 산입 — 단기 임대의무기간 ${lthdEffect.shortTermConversionDetail.obligationYears ?? ""}년${lthdEffect.shortTermConversionDetail.era === "new_after_end" ? " 종료 후 변경신고라 수리일부터 의무기간을 역산" : " 종료 전 변경신고라 단기 등록 시점부터"} (조특령 §97의3④ 후단 · 민특령 §34①)`}
+              </p>
+            </div>
+          )}
           {lthdEffect.rentalGainRatio < 1 && (
             <div className="flex justify-between border-t border-violet-100 dark:border-violet-800/30 pt-1.5 mt-0.5">
               <span className="text-muted-foreground">임대기간 분 양도차익 안분 비율</span>
@@ -160,7 +198,7 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
               isPartialRental ? (
                 <>
                   <p className="text-muted-foreground">
-                    장기보유특별공제 = 임대기간 분 양도차익 × 특례 공제율 + 비임대 분 양도차익 × 일반 공제율
+                    {specialNotApplied ? "특례 적용 시 " : ""}장기보유특별공제 = 임대기간 분 양도차익 × 특례 공제율 + 비임대 분 양도차익 × 일반 공제율
                   </p>
                   <p className="text-muted-foreground">
                     임대기간 분 양도차익 = 양도차익{" "}
@@ -171,15 +209,17 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
                   <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
                     {formatN(lthdEffect.rentalGainApplied!)} × {formatRate(lthdEffect.overrideRate)} +{" "}
                     {formatN(lthdEffect.nonRentalGainApplied!)} × {formatRateFine(lthdEffect.baseLthdRate!)} ={" "}
-                    {formatN(lthdEffect.deductionApplied!)}
+                    {formatN(specialDeduction)}
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="text-muted-foreground">장기보유특별공제 = 양도차익 × 특례 공제율</p>
+                  <p className="text-muted-foreground">
+                    {specialNotApplied ? "특례 적용 시 " : ""}장기보유특별공제 = 양도차익 × 특례 공제율
+                  </p>
                   <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
                     {formatN(lthdEffect.gainApplied!)} × {formatRate(lthdEffect.overrideRate)} ={" "}
-                    {formatN(lthdEffect.deductionApplied!)}
+                    {formatN(specialDeduction)}
                   </p>
                 </>
               )
@@ -194,6 +234,15 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
                 </p>
               </>
             )}
+            {specialNotApplied && (
+              <div className="border-t border-violet-100 dark:border-violet-800/30 pt-1.5 space-y-1" data-testid="rental973-general-formula">
+                <p className="text-muted-foreground">적용한 장기보유특별공제 = 양도차익 × 일반 공제율</p>
+                <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
+                  {formatN(lthdEffect.gainApplied!)} × {formatRateFine(lthdEffect.baseLthdRate!)} ={" "}
+                  {formatN(lthdEffect.deductionWithoutSpecial!)}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -202,6 +251,20 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
             ※ 임대기간 분 양도차익 한정 적용 — 조특령 §97의3⑤ 기준시가 안분
           </p>
         )}
+        {/* 양도일 구간 고지 (`data/rental-97-3-proration-era.ts`) — echo 없는 구 이력은 미표시 */}
+        {lthdEffect.prorationEra === "whole_gain" && (
+          <p className="text-micro text-violet-700 dark:text-violet-400" data-testid="rental973-era-whole-gain">
+            ※ 2020.12.31 이전 양도분은 양도소득 전체에 특례 공제율을 적용합니다 — 법률 제17759호 개정 전 조특법 §97의3① 「그 주택을 양도함으로써 발생하는 소득」
+          </p>
+        )}
+        {(lthdEffect.prorationEra === "pre_decree" || lthdEffect.prorationEra === "no_formula") &&
+          lthdEffect.rentalGainRatio < 1 && (
+            <p className="text-micro text-violet-700 dark:text-violet-400" data-testid="rental973-era-formula-applied">
+              ※ 안분 산식은 2026.2.27 조특령 §97의3⑤ 개정으로 명문화되었습니다. 그 전 양도분은 시행령에 산식이 없어(
+              {lthdEffect.prorationEra === "pre_decree" ? "2021.2.17 전에는 위임 시행령 자체가 없었습니다" : "「기준시가를 기준으로 산정한다」만 규정"}
+              ) 같은 산식을 준용해 계산했습니다.
+            </p>
+          )}
 
         <p className="text-micro text-muted-foreground">근거 조문: {detail.legalBasis}</p>
       </div>
