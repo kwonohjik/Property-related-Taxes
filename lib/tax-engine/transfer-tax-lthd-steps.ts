@@ -18,6 +18,7 @@ import { TRANSFER, LTHD_EXCLUSION_LABEL } from "./legal-codes/transfer";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { LTHD_TABLE2_RESIDENCE_MIN_YEARS, resolveLthdTable2Era, table2ResidencePct } from "./data/lthd-table2-era";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
+import type { Rental97Result } from "./transfer-reductions/types";
 import { buildSplitLthdFormula, buildSplitLthdSubFormulas } from "./transfer-tax-split-display";
 
 /**
@@ -71,6 +72,53 @@ export interface LthdStepArgs {
    * 파트 echo가 없거나 합이 총액과 어긋나면(§98의2 특칙 재할당 등) 종전 문구로 후퇴한다.
    */
   splitDetail?: SplitGainResult;
+  /**
+   * 조특법 §97의3 echo(`calcLongTermHoldingDeduction`의 `rental97LthdDetail`). 특례가 채택돼 공제액을 정했으면
+   * 공제율이 「임대분 특례율 × 비율 + 일반율 × (1 − 비율)」의 혼합값이라 「양도차익 × 혼합율 | 보유 N년×2%」로
+   * 쓰면 자기모순이 된다 — 그 경우 임대기간 분·비임대 분으로 풀어 쓴다(`rental97LthdFormula`).
+   */
+  rental97Lthd?: Rental97Result;
+}
+
+/** 공제율 표기 — 정수면 정수, 소수가 있으면 첫째 자리까지(반올림 표시 전용 — 세액 무관). */
+function pctLabel(rate: number): string {
+  return `${+(rate * 100).toFixed(1)}%`;
+}
+
+/**
+ * 조특법 §97의3 특례가 **채택돼 공제액을 정한 경우**의 산식 문구. 아니면 null(종전 문구).
+ *
+ * 채택 판정은 echo의 `specialApplied`(undefined = 비교 이전 구 이력 → 적용)이고, echo 공제액이 확정 공제액과
+ * 다르면(§98의2 특칙 재할당 등) 이 문구는 공제액을 설명하지 못하므로 쓰지 않는다.
+ */
+export function rental97LthdFormula(
+  r97: Rental97Result | undefined,
+  longTermHoldingDeduction: number,
+): string | null {
+  if (!r97?.isEligible || r97.effectCategory !== "long_term_holding_special") return null;
+  if (r97.specialApplied === false) return null;
+  const { overrideRate, baseLthdRate, gainApplied, rentalGainApplied, nonRentalGainApplied, deductionApplied } = r97;
+  if (
+    overrideRate === undefined ||
+    baseLthdRate === undefined ||
+    gainApplied === undefined ||
+    rentalGainApplied === undefined ||
+    nonRentalGainApplied === undefined ||
+    deductionApplied !== longTermHoldingDeduction
+  ) {
+    return null;
+  }
+  const body =
+    nonRentalGainApplied > 0
+      ? `임대기간 분 양도차익 ${rentalGainApplied.toLocaleString()} × 특례 공제율 ${pctLabel(overrideRate)}` +
+        ` + 비임대 분 양도차익 ${nonRentalGainApplied.toLocaleString()} × 일반 공제율 ${pctLabel(baseLthdRate)}` +
+        ` = ${longTermHoldingDeduction.toLocaleString()}`
+      : `양도차익 ${gainApplied.toLocaleString()} × 특례 공제율 ${pctLabel(overrideRate)} = ${longTermHoldingDeduction.toLocaleString()}`;
+  const note =
+    nonRentalGainApplied > 0
+      ? "조특법 §97의3 장기보유특별공제 특례 — 임대기간 분 양도차익은 조특령 §97의3⑤ 기준시가 안분"
+      : "조특법 §97의3 장기보유특별공제 특례";
+  return `${body} | ${note}`;
 }
 
 /** STEP 4 + 4.1 + 4.2 — 장특공제 본 step과 보유분/거주분 sub-step을 push한다. */
@@ -93,6 +141,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     meetsTable2Residence,
     transferDate,
     splitDetail,
+    rental97Lthd,
   } = args;
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
@@ -158,12 +207,20 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
         }
       : undefined;
   const splitFormula = splitArgs ? buildSplitLthdFormula(splitArgs) : null;
+  // 조특법 §97의3 특례 채택 — 혼합 공제율 옆에 표1/표2 분해를 붙이지 않고 임대기간 분·비임대 분으로 풀어 쓴다.
+  // §98의2 특칙·§95⑤·§95④ 후단·split 경로는 각자의 문구가 우선이다(echo 공제액 불일치 가드도 함께 건다).
+  const r97Formula =
+    !lthdExcluded && !lthd982Applied && !conv && !fbLthdFormula && !splitFormula
+      ? rental97LthdFormula(rental97Lthd, longTermHoldingDeduction)
+      : null;
   steps.push({
     label: "장기보유특별공제",
     formula: lthdExcluded
       ? `0 — ${LTHD_EXCLUSION_LABEL[lthdExclusionReason!]}`
       : splitFormula
       ? splitFormula
+      : r97Formula
+      ? [r97Formula, holdingPeriodStr].filter(Boolean).join(" | ")
       : [
           `${taxableGain.toLocaleString()} × ${Math.round(longTermHoldingRate * 100)}%`,
           lthdFormulaRate,

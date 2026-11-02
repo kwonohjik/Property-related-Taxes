@@ -16,6 +16,7 @@ import type { LthdExclusionReason } from "./legal-codes/transfer";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
+import type { Rental97Result } from "./transfer-reductions/types";
 
 export interface Lthd982StepArgs {
   steps: CalculationStep[];
@@ -39,6 +40,8 @@ export interface Lthd982StepArgs {
   /** 겸용 파트 카드 주택 부수토지에 통칙 95-0…1을 적용해 공제율이 달라진 경우의 고지 입력(`calcLongTermHoldingDeduction` echo) */
   appurtenantLthdNotice?: Parameters<typeof appurtenantLandLthdNoticeText>[0];
   splitDetail?: SplitGainResult;
+  /** 조특법 §97의3 echo — 특례 채택 시 장특 산식을 임대기간 분·비임대 분으로 풀어 쓴다(표시 전용). */
+  rental97LthdDetail?: Rental97Result;
 }
 
 export function applyLthd982AndPushSteps(
@@ -93,6 +96,7 @@ export function applyLthd982AndPushSteps(
     appurtenantTable1Applied: a.appurtenantTable1Applied,
     transferDate: exemptionJudgeInput.transferDate,
     splitDetail: a.splitDetail,
+    rental97Lthd: a.rental97LthdDetail,
   });
   // 기본통칙 95-0…1 — 토지가 주택보다 먼저 취득돼 토지분 공제율이 「표1·표2 중 큰 공제율」로 정해졌고 그 값이 토지 자신의
   // 보유연수로 표2를 적용한 값과 달라졌을 때만 고지한다(사실만 — 세액은 파트별 공제액이 정본). §98의2 특칙이 총액을 덮어쓴 경우는 제외.
