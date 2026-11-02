@@ -319,7 +319,7 @@ function resolveLongHoldingTemporaryExclusion(
   const w = LONG_HOLDING_TEMPORARY_EXCLUSION;
   if (!sellingHouse || input.transferDate < w.FROM || input.transferDate > w.UNTIL) return undefined;
   // 「법 제95조제4항에 따른 보유기간」 — 초일(취득일) 산입(유형 C · MST 214261 실독 · E-11).
-  const years = calculateHoldingPeriod(sellingHouse.acquisitionDate, input.transferDate).years;
+  const years = calculateHoldingPeriod(sellingHouse.shareAcquisitionDate ?? sellingHouse.acquisitionDate, input.transferDate).years;
   if (years < w.MIN_HOLDING_YEARS) return undefined;
   const basis =
     countedRightCount > 0
@@ -638,7 +638,7 @@ export function determineSurchargeExclusion(
   //   sellingHouse.acquisitionDate가 그 기산일을 담는다는 전제 — 기존 §167의3 3년 판정 L213과 동일 관례.)
   //   E-11 — §95④ 보유기간은 초일 산입(`meetsSurchargeSuspensionHolding` — ⑤ 화면 게이트와 같은 함수).
   const meetsSuspensionHolding = sellingHouse
-    ? meetsSurchargeSuspensionHolding(sellingHouse.acquisitionDate, input.transferDate)
+    ? meetsSurchargeSuspensionHolding(sellingHouse.shareAcquisitionDate ?? sellingHouse.acquisitionDate, input.transferDate)
     : false;
 
   // 2022.5.10. 전 양도분에는 12의2(가·나·다목 모두)가 없다 — 제32654호 부칙 제4조(E-14k).

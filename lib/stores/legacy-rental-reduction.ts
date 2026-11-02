@@ -44,6 +44,9 @@ export function legacyLongTermRentalToRental973(
     officialPriceAtStart: "",
     isNationalHousingScale: false,
     isConvertedFromShortTerm: false,
+    shortTermConversionMode: "none",
+    conversionReportedDate: "",
+    conversionAcceptedDate: "",
     isPrivateConstructionRental: false,
   };
 }

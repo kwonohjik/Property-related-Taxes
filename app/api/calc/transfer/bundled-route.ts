@@ -41,6 +41,8 @@ import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-pe
 
 const AXIS_B_LATER_SHARE_RESIDENCE_NOTICE =
   "지분별 취득일이 달라 거주기간을 지분별 보유기간 안에서 판정했습니다. 증여·상속 지분의 공제율 기산은 사전-2025-법규재산-0506을 따랐고, 매매로 추가 취득한 지분을 정면으로 다룬 해석은 확인하지 못했습니다 — 확인 필요.";
+const AXIS_B_LATER_SHARE_SURCHARGE_NOTICE =
+  "지분별 취득일이 달라 다주택 중과 배제의 보유기간·취득 시기 요건을 지분마다 그 지분의 취득일로 판정했습니다. 매매로 추가 취득한 지분을 정면으로 다룬 해석은 확인하지 못했습니다 — 확인 필요.";
 
 export function calculateBundledTransfer(
   data: PropertySchemaInput,
@@ -436,6 +438,18 @@ export function calculateBundledTransfer(
     companions.some((c) => shareStartsLaterThanPrimary(c, data))
   ) {
     aggregated.warnings.push(AXIS_B_LATER_SHARE_RESIDENCE_NOTICE);
+  }
+  // 늦게 취득한 지분 — 중과 배제의 보유·취득 요건을 그 지분 취득일로 판정했다(`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` Q-A2 a).
+  //   조정대상지역 2주택 이상으로 중과 판정을 받은 카드에만 — 그 밖에는 이 판정이 결론에 닿지 않는다.
+  if (isFullFractionalBundle) {
+    const laterShareIds = new Set(items.filter((it) => it.houses?.length && it.acquisitionDate > acquisitionDate).map((it) => it.propertyId));
+    if (
+      aggregated.properties.some(
+        (p) => laterShareIds.has(p.propertyId) && p.multiHouseSurchargeDetail?.isRegulatedAtTransfer && p.multiHouseSurchargeDetail.effectiveHouseCount >= 2,
+      )
+    ) {
+      aggregated.warnings.push(AXIS_B_LATER_SHARE_SURCHARGE_NOTICE);
+    }
   }
   attachGbCarryoverUnits(calc, aggregated, gbCarryoverDrafts, gbCarryoverUnits, gbDetailsByAsset);
   if (Object.keys(gbDetailsByAsset).length > 0) aggregated.generalBuildingDetailsByAsset = gbDetailsByAsset;

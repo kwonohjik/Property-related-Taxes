@@ -170,6 +170,13 @@ export const reductionSchema = z.discriminatedUnion("type", [
     region: z.enum(["capital", "non_capital"]).optional(),
     rentalHousingType: z.enum(["long_term_private", "public_support_private"]).optional(),
     isConvertedFromShortTerm: z.boolean().optional(),
+    /**
+     * PR-C — 조특령 §97의3④ 후단: 2020.7.10 이전 단기→장기 변경신고. ⑫에 없으면 침묵 stripping된다.
+     * 이 객체가 있으면 registrationDate는 단기 지자체 등록일이다.
+     */
+    shortTermConversion: z
+      .object({ reportedDate: z.string().date(), acceptedDate: z.string().date() })
+      .optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
   z.object({

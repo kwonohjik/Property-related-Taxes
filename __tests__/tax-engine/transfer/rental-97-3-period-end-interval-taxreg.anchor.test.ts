@@ -88,8 +88,16 @@ describe("2. 조특령 §97의3③1호 후단 — 1년 이내 재증액 금지",
 });
 
 describe("3. 조특령 §97의3④ — 사업자등록일도 기산의 한 축", () => {
+  /**
+   * 사업자등록이 취득보다 늦으면 의제 개시일(2017)이 취득일(2015)보다 늦어 령 §97의3⑤ 안분이 필요하다
+   * (PR-A #2 — 종전에는 원 임대일로 안분해 비율 1이었다). 기준시가 3점을 함께 준다.
+   */
+  const LATE_TAX_REG_PRICES = { stdPriceAtAcquisition: 300_000_000, stdPriceAtTransfer: 600_000_000 } as const;
   it("🔴 사업자등록 2017-01-01(늦음) → 9년 6개월 → 2022.12.31 전 등록분 50%", () => {
-    expect(rate(evaluateRental973({ ...BASE, taxRegistrationDate: D("2017-01-01") }))).toBe(0.5);
+    expect(rate(evaluateRental973({ ...BASE, ...LATE_TAX_REG_PRICES, taxRegistrationDate: D("2017-01-01") }))).toBe(0.5);
+  });
+  it("사업자등록 2017-01-01(늦음) + 기준시가 미입력 → 안분 불가로 불적용 (자동 안분 금지)", () => {
+    expect(codes(evaluateRental973({ ...BASE, taxRegistrationDate: D("2017-01-01") }))).toContain("MISSING_PRORATION_PRICES");
   });
 
   it("🔴 사업자등록 확인 + 날짜 미입력 → MISSING_TAX_REGISTRATION_DATE", () => {
@@ -108,6 +116,9 @@ describe("파이프라인·배관 — rentalEndDate · taxRegistrationDate (§97
           acquisitionDate: D("2015-01-01"),
           isOneHousehold: false,
           householdHousingCount: 2,
+          // 사업자등록 2017 → 의제 개시일 > 취득일이라 령 §97의3⑤ 안분용 기준시가가 필요하다 (PR-A #2)
+          standardPriceAtAcquisition: 300_000_000,
+          standardPriceAtTransfer: 600_000_000,
           reductions: [
             {
               type: "rental_97_3",

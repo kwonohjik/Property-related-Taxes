@@ -79,6 +79,15 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
         ...("taxRegistrationDate" in r && r.taxRegistrationDate
           ? { taxRegistrationDate: toOptionalDate(r.taxRegistrationDate) }
           : {}),
+        // PR-C §97의3④ 후단 — 변경 신고일·수리일. `...r`만 믿으면 string이 엔진에 도달해 비교가 조용히 틀린다.
+        ...("shortTermConversion" in r && r.shortTermConversion
+          ? {
+              shortTermConversion: {
+                reportedDate: toDate(r.shortTermConversion.reportedDate, "shortTermConversion.reportedDate"),
+                acceptedDate: toDate(r.shortTermConversion.acceptedDate, "shortTermConversion.acceptedDate"),
+              },
+            }
+          : {}),
         // 령 §97의5①2호·3호 간주기간 — `...r`만 믿으면 string이 엔진에 도달해 비교가 조용히 틀린다
         ...("deemedRentalPeriods" in r && r.deemedRentalPeriods
           ? {
