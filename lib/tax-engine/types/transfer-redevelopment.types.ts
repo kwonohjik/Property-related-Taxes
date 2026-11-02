@@ -150,6 +150,12 @@ export interface RedevelopmentInfo {
   postApprovalExpenses?: number;
 
   /**
+   * 양도비(「소득세법」 §97①3호, 원, optional). 인가 전·후로 안분해 위 두 칸에 더한다(`apportionRedevTransferExpense`).
+   * 함께 양도의 총 양도비 몫은 route가 여기에 더한다(`withRedevCommonExpense`).
+   */
+  transferExpense?: number;
+
+  /**
    * 출자 자산 종류 — subject="apt" 시 의미 있음.
    * - "land":    토지출자 (사례 40~43)
    * - "housing": 주택출자 (사례 44~46)

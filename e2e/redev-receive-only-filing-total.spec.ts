@@ -96,7 +96,8 @@ test.describe("청산금 수령분 단독 신고 — 신고서 합계 열", () =
     await seedAndCalc(page, { redevPreApprovalExpenses: "4000000", capitalExpenditure: "5000000", transferExpense: "1000000" });
     const body = (await requestPromise).postDataJSON();
     expect(body.redevelopment.preApprovalExpenses).toBe(4_000_000);
-    expect(body.redevelopment.postApprovalExpenses).toBe(6_000_000);
+    expect(body.redevelopment.postApprovalExpenses).toBe(5_000_000);
+    expect(body.redevelopment.transferExpense).toBe(1_000_000);
 
     await expect(page.getByRole("row", { name: /필요경비.*2,280,000/ }).first()).toBeVisible();
     await expect(page.getByRole("row", { name: /양도차익.*66,120,000/ }).first()).toBeVisible();

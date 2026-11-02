@@ -42,7 +42,7 @@
  * 분기가 늘 때마다 빠뜨릴 자리가 생기고, `runSuccessorMember`처럼 `computeRedevelopmentSplit`
  * **앞에서 조기 반환**하는 경로는 아예 도달하지 않는다.
  *
- * ⇒ `runRedevelopment` 진입부에서 **`RedevelopmentInfo`의 절대 금액항 4개만** 한 번에 줄인다.
+ * ⇒ `runRedevelopment` 진입부에서 **`RedevelopmentInfo`의 절대 금액항 5개만** 한 번에 줄인다.
  *   비율항은 분자·분모가 함께 `r`배라 자동으로 no-op이다.
  */
 
@@ -64,7 +64,7 @@ export interface BurdenedGiftDebtFraction {
 /**
  * β — §166 산식의 **물건 전체 스케일 절대항**을 채무비율 `r`로 줄인다.
  *
- * 대상 4개는 §166 산식이 직접 더하고 빼는 금액항이다:
+ * 대상 5개는 §166 산식이 직접 더하고 빼는 금액항이다:
  *
  * | 필드 | 조문 | 성격 |
  * |---|---|---|
@@ -72,6 +72,7 @@ export interface BurdenedGiftDebtFraction {
  * | `settlementAmount` | §166①②의 청산금 | 분양가 구성 · 수령분 안분 |
  * | `preApprovalExpenses` | §97①2·3호 | 인가전 필요경비 |
  * | `postApprovalExpenses` | 동상 | 인가후 필요경비 |
+ * | `transferExpense` | 동상 | 양도비 — 스케일 뒤 인가 전·후로 안분 |
  *
  * **줄이지 않는 것**:
  *   · 기준시가·면적 계열(`managementDisposalHousingPrice`·`housingStdPriceAt*`·`landStdPriceAt*`
@@ -119,6 +120,7 @@ export function scaleRedevelopmentForBurdenedGift(
     ...(info.postApprovalExpenses !== undefined
       ? { postApprovalExpenses: scale(info.postApprovalExpenses) }
       : {}),
+    ...(info.transferExpense !== undefined ? { transferExpense: scale(info.transferExpense) } : {}),
   };
 }
 

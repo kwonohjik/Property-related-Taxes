@@ -18,6 +18,8 @@ export const redevelopmentSchema = z
     settlementSaleDate: z.string().date().optional(),
     preApprovalExpenses: z.number().int().nonnegative(),
     postApprovalExpenses: z.number().int().nonnegative().optional(),
+    // ★★★ 침묵 stripping 차단 — 양도비(§97①3호). 엔진이 인가 전·후로 안분한다.
+    transferExpense: z.number().int().nonnegative().optional(),
     originalAssetType: z.enum(["land", "housing"]).optional(),
     acquisitionStdPrice: z.number().int().nonnegative().optional(),
     managementDisposalStdPrice: z.number().int().nonnegative().optional(),
