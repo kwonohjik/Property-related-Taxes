@@ -196,13 +196,15 @@ describe("⑧ validate", () => {
     expect(r.field).toBe("bgPresumedAcquisitionTotal");
   });
 
-  it("금액 필수 — 일반건물: 토지·건물 둘 다 비면 토지 칸, 하나만 있어도 통과", () => {
+  it("금액 필수 — 일반건물: 토지·건물 두 칸 모두 요구하고 첫 빈 칸을 가리킨다(비운 쪽은 엔진이 취득가액 0으로 읽는다)", () => {
     const gb = (l: string, b: string) =>
       V(land({ assetKind: "general_building", bgPresumedAcquisitionLand: l, bgPresumedAcquisitionBuilding: b, gbAcqLandPricePerSqm: "1", gbAcqBuildingValue: "1" }));
     const empty = gb("", "");
-    expect(empty.msg).toMatch(/토지 또는 건물의 취득 당시 감정가액/);
+    expect(empty.msg).toMatch(/토지·건물의 취득 당시 감정가액/);
     expect(empty.field).toBe("bgPresumedAcquisitionLand");
-    expect(gb("", "50,000,000").msg).toBeNull();
+    expect(gb("", "50,000,000").field).toBe("bgPresumedAcquisitionLand");
+    expect(gb("50,000,000", "").field).toBe("bgPresumedAcquisitionBuilding");
+    expect(gb("50,000,000", "50,000,000").msg).toBeNull();
   });
 
   it("🔴 stale 방지 — 토지 자산에서 총액 칸만 차 있으면 금액 없음으로 본다 (④가 싣는 칸과 같은 칸만 본다)", () => {

@@ -117,14 +117,14 @@ type AmountAsset = Pick<
 >;
 
 /**
- * 입력 형태에 맞는 금액이 있는가 — ⑧ 「금액 필수」 판정. ④가 싣는 칸과 같은 칸만 본다
- * (Zod refine `presumed*` 중 하나가 양수여야 통과 · 엔진 STEP 4 분기와 같은 축).
+ * 입력 형태에 맞는 금액이 있는가 — ⑧ 「금액 필수」 판정. ④가 싣는 칸과 같은 칸만 본다(엔진 STEP 4 분기와 같은 축).
+ * 토지·건물 두 칸이면 둘 다다 — 엔진은 비운 쪽을 취득가액 0으로 읽는다(양도차익 과대).
  */
 export function hasBgPresumedAmount(asset: AmountAsset): boolean {
   switch (bgPresumedInputKind(asset)) {
     case "split":
       return (
-        (parseAmount(asset.bgPresumedAcquisitionLand) || 0) > 0 ||
+        (parseAmount(asset.bgPresumedAcquisitionLand) || 0) > 0 &&
         (parseAmount(asset.bgPresumedAcquisitionBuilding) || 0) > 0
       );
     case "land":
@@ -136,10 +136,12 @@ export function hasBgPresumedAmount(asset: AmountAsset): boolean {
 
 /** 입력 형태에 맞는 첫 빈 칸의 필드명 — ⑧ 필드 점프용. */
 export function firstEmptyBgPresumedField(
-  asset: Pick<AssetForm, "assetKind">,
-): "bgPresumedAcquisitionLand" | "bgPresumedAcquisitionTotal" {
-  return bgPresumedInputKind(asset) === "total"
-    ? "bgPresumedAcquisitionTotal"
+  asset: AmountAsset,
+): "bgPresumedAcquisitionLand" | "bgPresumedAcquisitionBuilding" | "bgPresumedAcquisitionTotal" {
+  const kind = bgPresumedInputKind(asset);
+  if (kind === "total") return "bgPresumedAcquisitionTotal";
+  return kind === "split" && (parseAmount(asset.bgPresumedAcquisitionLand) || 0) > 0
+    ? "bgPresumedAcquisitionBuilding"
     : "bgPresumedAcquisitionLand";
 }
 
