@@ -102,6 +102,13 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
       specialApplied?: boolean;
       deductionWithSpecial?: number;
       deductionWithoutSpecial?: number;
+      // [echo] PR-C — 단기→장기 변경신고 주택의 임대개시 의제(조특령 §97의3④ 후단). 구 이력은 없다.
+      shortTermConversionDetail?: {
+        era: "old" | "old_grandfathered" | "new_before_end" | "new_after_end";
+        deemedStartDate: string;
+        obligationYears?: number;
+        creditedDays?: number;
+      };
     };
     // 산식은 echo가 모두 있을 때만 — 구 저장 이력에는 없다(graceful fallback)
     const hasLthdEcho =
@@ -158,6 +165,19 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
             <span className="text-muted-foreground">유효 임대기간</span>
             <span className="font-mono">{lthdEffect.eligibleRentalYears}년</span>
           </div>
+          {lthdEffect.shortTermConversionDetail && (
+            <div data-testid="rental973-conversion-detail">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">임대개시일 (단기→장기 변경신고 의제)</span>
+                <span className="font-mono">{lthdEffect.shortTermConversionDetail.deemedStartDate}</span>
+              </div>
+              <p className="text-micro text-muted-foreground">
+                {lthdEffect.shortTermConversionDetail.era === "old" || lthdEffect.shortTermConversionDetail.era === "old_grandfathered"
+                  ? `단기로 임대한 기간 중 5년까지의 50%(최대 2년 6개월)인 ${lthdEffect.shortTermConversionDetail.creditedDays ?? 0}일을 장기 임대기간에 산입 (조특령 §97의3④ 후단 종전 규정${lthdEffect.shortTermConversionDetail.era === "old_grandfathered" ? " — 2019.2.12 현재 단기 8년 초과 임대, 대통령령 제29527호 부칙 §29②" : ""})`
+                  : `단기로 임대한 기간을 산입 — 단기 임대의무기간 ${lthdEffect.shortTermConversionDetail.obligationYears ?? ""}년${lthdEffect.shortTermConversionDetail.era === "new_after_end" ? " 종료 후 변경신고라 수리일부터 의무기간을 역산" : " 종료 전 변경신고라 단기 등록 시점부터"} (조특령 §97의3④ 후단 · 민특령 §34①)`}
+              </p>
+            </div>
+          )}
           {lthdEffect.rentalGainRatio < 1 && (
             <div className="flex justify-between border-t border-violet-100 dark:border-violet-800/30 pt-1.5 mt-0.5">
               <span className="text-muted-foreground">임대기간 분 양도차익 안분 비율</span>

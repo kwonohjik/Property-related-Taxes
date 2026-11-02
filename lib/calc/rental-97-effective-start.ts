@@ -1,3 +1,9 @@
+import { toOptionalDate } from "@/lib/api/date-coerce";
+import {
+  resolveShortTermConversion,
+  toIsoDay,
+} from "@/lib/tax-engine/transfer-reductions/rental-97-short-term-conversion";
+
 /**
  * §97의3·§97의5 임대개시 기산일 — 클라이언트(⑤ UI·⑧ validate) 공용 leaf (YYYY-MM-DD 문자열).
  *
@@ -20,4 +26,37 @@ export function rental97EffectiveStartString(r: {
   return [r.rentalStartDate, r.registrationDate, r.isTaxRegistered ? r.taxRegistrationDate : ""]
     .filter((d): d is string => !!d)
     .reduce((a, b) => (b > a ? b : a), "");
+}
+
+/**
+ * §97의3 — 의제 임대개시일(YYYY-MM-DD). 2020.7.10 이전 단기→장기 변경신고 주택이면 단기 임대기간 산입을 반영한
+ * 날(조특령 §97의3④ 후단 — PR-C), 아니면 `rental97EffectiveStartString`.
+ *
+ * 계산은 엔진 leaf `resolveShortTermConversion`을 그대로 쓴다(단일 소스) — ⑤ 자동 산출 박스·⑧ 안분 필요 판정이
+ * 엔진과 같은 날짜를 보게 한다. 날짜가 덜 채워졌거나 2020.7.11 이후 신고(적용 제외)면 ④ 전단 기준으로 되돌아간다.
+ */
+export function rental973DeemedStartString(r: {
+  rentalStartDate?: string;
+  registrationDate?: string;
+  isTaxRegistered?: boolean;
+  taxRegistrationDate?: string;
+  shortTermConversionMode?: "none" | "before" | "after";
+  conversionReportedDate?: string;
+  conversionAcceptedDate?: string;
+}): string {
+  const plain = rental97EffectiveStartString(r);
+  if (r.shortTermConversionMode !== "before") return plain;
+  const registrationDate = toOptionalDate(r.registrationDate);
+  const rentalStartDate = toOptionalDate(r.rentalStartDate);
+  const reportedDate = toOptionalDate(r.conversionReportedDate);
+  const acceptedDate = toOptionalDate(r.conversionAcceptedDate);
+  if (!registrationDate || !rentalStartDate || !reportedDate || !acceptedDate) return plain;
+  const res = resolveShortTermConversion({
+    registrationDate,
+    rentalStartDate,
+    taxRegistrationDate: r.isTaxRegistered ? toOptionalDate(r.taxRegistrationDate) : undefined,
+    reportedDate,
+    acceptedDate,
+  });
+  return res.deemedStartDate ? toIsoDay(res.deemedStartDate) : plain;
 }

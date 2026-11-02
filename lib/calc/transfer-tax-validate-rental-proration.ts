@@ -20,6 +20,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
 import { engineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import { rental97EffectiveStartString } from "./rental-97-effective-start";
+import { rental973DeemedStartString } from "./rental-97-effective-start";
 
 type ProrationReduction = Extract<AssetReductionForm, { type: "rental_97_3" | "rental_97_5" }>;
 
@@ -44,8 +45,9 @@ export function rentalProrationIssue(args: {
   if (!wholeGain && r.rentalContinuesToTransfer === false && parseAmount(r.stdPriceAtRentalEnd || "0") <= 0)
     return fieldError(`reduction.${r.type}.stdPriceAtRentalEnd`, `${label} 적용: 임대 종료일 당시 기준시가를 입력하세요 (안분 산식의 B). 자동 안분은 수행하지 않습니다.`);
 
-  // 엔진 기산일과 같은 축 — 임대개시일·등록일·사업자등록일 중 늦은 날 (YYYY-MM-DD 문자열 max)
-  const start = rental97EffectiveStartString(r);
+  // 엔진 기산일과 같은 축 — 임대개시일·등록일·사업자등록일 중 늦은 날 (YYYY-MM-DD 문자열 max).
+  // §97의3 단기→장기 변경신고 주택은 단기 임대기간 산입을 반영한 의제 개시일(PR-C — 엔진 leaf 단일 소스).
+  const start = r.type === "rental_97_3" ? rental973DeemedStartString(r) : rental97EffectiveStartString(r);
 
   // §97의5①2호·§97의3①1호 — 조기 종료면 기간 판정의 종점(임대 종료일)이 필수. 엔진 `MISSING_RENTAL_END_DATE`·
   // `INVALID_RENTAL_END_DATE`와 같은 조건이다(YYYY-MM-DD 문자열 비교).

@@ -31,6 +31,9 @@ function form(over: Record<string, unknown> = {}): AssetReductionForm {
     officialPriceAtStart: "400,000,000",
     isNationalHousingScale: true,
     isConvertedFromShortTerm: false,
+    shortTermConversionMode: "none", // PR-C
+    conversionReportedDate: "",
+    conversionAcceptedDate: "",
     isPrivateConstructionRental: false,
     ...over,
   } as AssetReductionForm;

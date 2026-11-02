@@ -26,6 +26,8 @@ import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { engineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import { rentalProrationIssue } from "./transfer-tax-validate-rental-proration";
+import { rentalConversionIssue } from "./transfer-tax-validate-rental-conversion";
+import { rental973LongRegistrationDate } from "./transfer-tax-validate-rental-conversion";
 import { hasRentIncreaseRule } from "./rental-rent-increase-label";
 import { RENT_INCREASE_VIOLATION_LABEL } from "./rental-rent-increase-label";
 
@@ -370,13 +372,16 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // ⚠️ 종전 규정에도 **등록 시한**이 있다 — 매입임대는 2020.12.31, 건설임대는 2022.12.31
           //    (법률 제17759호로 신설된 괄호). 그래서 2021.1.1~2022.12.31 등록 매입임대는
           //    「한정」이 아니라 **시한** 축에서 배제된다. 엔진 `rental-97-3.ts`의 두 분기와 동형.
+          // PR-C — 변경신고 주택은 「등록」일이 수리일이다(엔진 `longRegistrationDate`). 변경신고 입력 검사도 여기서.
+          const conversionIssue = r.type === "rental_97_3" ? rentalConversionIssue(r, label) : null;
+          if (conversionIssue) return fail(conversionIssue);
+          const longReg = r.type === "rental_97_3" ? rental973LongRegistrationDate(r) : "";
           if (
             r.type === "rental_97_3" &&
-            (r as { registrationDate?: string }).registrationDate &&
-            (r as { registrationDate: string }).registrationDate > "2020-12-31" &&
+            longReg > "2020-12-31" &&
             (r as { isPrivateConstructionRental?: boolean }).isPrivateConstructionRental !== true
           )
-            return fail(fieldError(`reduction.${r.type}.isPrivateConstructionRental`, (r as { registrationDate: string }).registrationDate >= "2023-01-01"
+            return fail(fieldError(`reduction.${r.type}.isPrivateConstructionRental`, longReg >= "2023-01-01"
                 ? `${label} 적용: 2023.1.1 이후 등록분은 민간건설임대주택(민특법 §2 2호)에 한정합니다 — 해당 여부를 확인하세요 (조특법 §97의3①).`
                 : `${label} 적용: 민간건설임대주택이 아닌 임대주택(민간매입임대)의 등록 시한은 2020.12.31입니다 — 2021.1.1 이후 등록분은 적용되지 않습니다. 민간건설임대주택이면 해당 여부를 확인하세요 (조특법 §97의3① 종전 규정).`,
             ));

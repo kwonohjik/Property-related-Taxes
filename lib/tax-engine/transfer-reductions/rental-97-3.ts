@@ -35,6 +35,7 @@
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { checkReductionPeriod } from "./period-check";
 import { resolveRental973ProrationEra } from "../data/rental-97-3-proration-era";
+import { resolveShortTermConversion, toIsoDay } from "./rental-97-short-term-conversion";
 import {
   calcRentalGainFraction,
   type RentalGainFraction,
@@ -97,7 +98,11 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
   const reasons: Rental97IneligibleReason[] = [];
 
   // 0) 시한 — 등록 ~2027.12.31 (period-check 기존 로직 재사용)
-  const period = checkReductionPeriod("rental_97_3", input);
+  //    변경신고 주택은 장기일반 「등록」이 변경신고 수리일이다(PR-C — `longRegistrationDate`와 같은 축).
+  const period = checkReductionPeriod(
+    "rental_97_3",
+    input.shortTermConversion ? { ...input, registrationDate: input.shortTermConversion.acceptedDate } : input,
+  );
   if (!period.inPeriod) {
     reasons.push({
       code: "OUT_OF_PERIOD",
@@ -138,6 +143,43 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
   }
 
   /**
+   * 2-0) 2020.7.10 이전 단기→장기 변경신고 주택 — 조특령 §97의3④ 후단 임대개시 의제 (PR-C #3)
+   * 변경 신고일로 구간(종전 50% 산입 / 민특령 §34① 시점 / 제외)을 나눈다 — `rental-97-short-term-conversion.ts`.
+   * 이 경우 `registrationDate`는 **단기 지자체 등록일**, 장기 등록일은 `shortTermConversion.acceptedDate`(수리일)이다.
+   */
+  const conv = input.shortTermConversion;
+  if (conv && conv.acceptedDate.getTime() < conv.reportedDate.getTime()) {
+    reasons.push({
+      code: "INVALID_SHORT_TERM_CONVERSION_DATES",
+      message: "변경신고 수리일은 변경 신고일과 같거나 그 뒤여야 합니다 (조특령 §97의3④ 후단).",
+      legalBasis,
+    });
+  }
+  const conversion =
+    conv && input.registrationDate && input.rentalStartDate
+      ? resolveShortTermConversion({
+          registrationDate: input.registrationDate,
+          rentalStartDate: input.rentalStartDate,
+          taxRegistrationDate: input.taxRegistrationDate,
+          reportedDate: conv.reportedDate,
+          acceptedDate: conv.acceptedDate,
+        })
+      : undefined;
+  if (conversion?.era === "excluded" && !input.isConvertedFromShortTerm) {
+    reasons.push({
+      code: "CONVERTED_FROM_SHORT_TERM",
+      message: "변경 신고일이 2020.7.11 이후라 단기민간임대주택을 장기일반민간임대주택으로 변경 신고한 주택에 해당하여 적용이 제외됩니다 (§97의3① 괄호).",
+      legalBasis,
+    });
+  }
+  // 의제 개시일 — 변경신고 주택이면 단기 임대기간 산입을 반영한 날(Q-4·Q-5), 아니면 ④ 전단(임대일·등록일·사업자등록일 중 늦은 날)
+  const deemedStart = conversion?.deemedStartDate ?? rental97EffectiveStart(input);
+  // 임대료 증액 판정 기산 — 변경신고 주택은 장기 변경 수리일(Q-7), 아니면 의제 개시일
+  const rentCheckStart = conversion?.rentCheckStartDate ?? rental97EffectiveStart(input);
+  // 장기일반민간임대주택등 「등록」일 — 등록 시한·건설한정·8년 경과규정의 축. 변경신고 주택은 수리일이다.
+  const longRegistrationDate = conv?.acceptedDate ?? input.registrationDate;
+
+  /**
    * 2-1) §97의3① 본문 — 「「민간임대주택에 관한 특별법」 제2조제2호에 따른 **민간건설임대주택**
    *      으로서 같은 조 제4호 또는 제5호에 따른 공공지원민간임대주택 또는 장기일반민간임대주택」
    *      (D2-07)
@@ -152,8 +194,8 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
    *   2023.1.1~: 「민간건설임대주택**으로서**…」 — 여기서 비로소 **범위 한정**이 된다.
    *   (2023-12-21 등 이후 버전은 타법개정으로 문언만 이어받았고 §97의3 적용례가 없다.)
    */
-  if (input.registrationDate !== undefined && input.isPrivateConstructionRental !== true) {
-    if (input.registrationDate.getTime() >= RENTAL_97_3_CONSTRUCTION_ONLY_FROM.getTime()) {
+  if (longRegistrationDate !== undefined && input.isPrivateConstructionRental !== true) {
+    if (longRegistrationDate.getTime() >= RENTAL_97_3_CONSTRUCTION_ONLY_FROM.getTime()) {
       reasons.push({
         code: "NOT_PRIVATE_CONSTRUCTION_RENTAL",
         message:
@@ -161,7 +203,7 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
           "한합니다 (조특법 §97의3① — 법률 제19199호 부칙 §38에 따라 2023.1.1 전 등록분은 종전 규정).",
         legalBasis,
       });
-    } else if (input.registrationDate.getTime() > RENTAL_97_3_PURCHASE_REG_DEADLINE.getTime()) {
+    } else if (longRegistrationDate.getTime() > RENTAL_97_3_PURCHASE_REG_DEADLINE.getTime()) {
       /**
        * 2021.1.1~2022.12.31 등록 + 매입임대 — **범위 한정이 아니라 등록 시한** 초과다.
        * 종전 문언의 시한이 매입임대는 2020.12.31에서 끝난다(`RENTAL_97_3_PURCHASE_REG_DEADLINE`).
@@ -182,7 +224,7 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
   // 5) 임대료 증액 제한 (령 §97의3③1호)
   if (input.rentHistory && input.rentHistory.length >= 2) {
     // 임대개시일(령 §97의3④·§97의5③ 기산일) 이후 체결·갱신한 계약의 증액만 판정한다
-    const rentStart = rental97EffectiveStart(input);
+    const rentStart = rentCheckStart;
     const capViolations = rentViolationsFromRentalStart(
       validateRentIncrease(input.rentHistory, input.jeonseConversionRate ?? DEFAULT_JEONSE_CONVERSION_RATE).violations,
       rentStart,
@@ -242,7 +284,7 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
      *    없는 입력을 추정해 판정하지 않는다.
      */
     // 「소득세법」 §168 사업자등록도 같은 문장(④ 후단)의 요건 — 늦으면 그날부터 개시한다.
-    const effectiveStart = rental97EffectiveStart(input) as Date; // rentalStartDate 확인됨
+    const effectiveStart = deemedStart as Date; // rentalStartDate 확인됨 (변경신고 주택은 단기 산입 반영 — PR-C)
 
     /**
      * 종점 — 법 §97의3①1호 「10년 이상 계속하여 임대한 **후** 양도하는 경우」.
@@ -276,8 +318,8 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
       ? calculateEffectiveRentalPeriod(effectiveStart, periodEnd, input.vacancyPeriods ?? [], RENTAL_VACANCY_GRACE_MONTHS_97)
       : 0;
     const isPre2023Registration =
-      input.registrationDate !== undefined &&
-      input.registrationDate.getTime() < RENTAL_97_3_PRE_2023_REG_CUTOFF.getTime();
+      longRegistrationDate !== undefined &&
+      longRegistrationDate.getTime() < RENTAL_97_3_PRE_2023_REG_CUTOFF.getTime();
 
     if (!periodEnd) {
       // 종점을 정할 수 없다 — 위에서 사유를 붙였다(기간 미달로 이중 표시하지 않는다)
@@ -300,7 +342,7 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
   //    양도일 구간(#4): 2020.12.31 이전 양도는 법 ①이 「양도함으로써 발생하는 소득」이라 안분하지 않는다.
   const prorationEra = resolveRental973ProrationEra(input.transferDate);
   // 조특령 §97의3⑤ C 「실제 임대기간의 개시일」 = ④가 의제한 개시일(#2 — 가정 A-2). 임대기간 판정(:6)과 같은 축.
-  const effectiveRentalStartDate = rental97EffectiveStart(input);
+  const effectiveRentalStartDate = deemedStart;
   let rentalGainRatio = 1;
   let rentalGainFraction: RentalGainFraction | undefined;
   if (prorationEra !== "whole_gain" && effectiveRentalStartDate && input.acquisitionDate) {
@@ -349,5 +391,15 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
     rentalGainFraction,
     eligibleRentalYears,
     prorationEra,
+    ...(conversion?.deemedStartDate
+      ? {
+          shortTermConversionDetail: {
+            era: conversion.era as Exclude<typeof conversion.era, "excluded">,
+            deemedStartDate: toIsoDay(conversion.deemedStartDate),
+            ...(conversion.obligationYears !== undefined ? { obligationYears: conversion.obligationYears } : {}),
+            ...(conversion.creditedDays !== undefined ? { creditedDays: conversion.creditedDays } : {}),
+          },
+        }
+      : {}),
   };
 }
