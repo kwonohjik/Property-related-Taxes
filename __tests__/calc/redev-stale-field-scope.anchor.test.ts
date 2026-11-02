@@ -190,7 +190,8 @@ describe("U1-02 · 승계조합원 인가후 필요경비의 범위", () => {
         }),
       ),
     );
-    expect(redevOf(body).postApprovalExpenses).toBe(35_000_000);
+    expect(redevOf(body).postApprovalExpenses).toBe(30_000_000);
+    expect(redevOf(body).transferExpense).toBe(5_000_000);
   });
 
   it("U1-02-03: 마이그레이션이 저장값을 정규화한다 (payload 게이트와 2중선)", () => {

@@ -82,7 +82,6 @@ describe("RL-1 평가액 이상 — ⑧ 차단 ∧ ⑫ 400", () => {
     ["축 A 부담부증여 · 초과(종전 1,500,000,000)", () => single({ ...RIGHT, ...BG, ...SHARE, ...s("500000000") }, BG_DATE)],
     ["축 B 60/40 · 첫째만 지분 평가액 초과", () => axisB(s("600000000"), s("100000000"))],
     ["축 B 60/40 · 둘째만 지분 평가액 초과", () => axisB(s("100000000"), s("400000000"))],
-    ["입주권 토지 출자 · 권리가액 비움(⑧ 조기 반환 분기)", () => single({ ...RIGHT, redevOriginalAssetType: "land", redevRightsValue: "", ...s("100000000") })],
     ["묶음 둘째 자산 · 초과", () => form([{ ...RIGHT, actualSalePrice: "3000000000", ...s("100000000") }, { ...RIGHT, addressJibun: "서울 B 2", actualSalePrice: "3000000000", ...s("1000000000") }], { assetSplitMode: "companion", contractTotalPrice: "6000000000" })],
   ])("%s", async (_n, make) => {
     const f = make();

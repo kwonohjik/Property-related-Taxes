@@ -28,6 +28,7 @@
 
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { toEngineRedevelopment } from "./engine-input";
+import { withRedevCommonExpense } from "./engine-input";
 import { buildGbCompanionItems } from "./general-building-part-cards";
 import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
@@ -340,7 +341,7 @@ export function buildCompanionEngineInputs(
     // ⑭ §166 서브객체 — 열거 누락 시 침묵 strip이라 그 자산만 인가전·인가후 3분할을 잃는다.
     //    Date 변환은 단건과 **같은 leaf**를 쓴다(`toEngineRedevelopment`) — 복제하면 한쪽만
     //    필드가 늘어 그 경로에서 `Date < string` silent false가 난다.
-    ...(c.redevelopment ? { redevelopment: toEngineRedevelopment(c.redevelopment) } : {}),
+    ...(c.redevelopment ? { redevelopment: withRedevCommonExpense(toEngineRedevelopment(c.redevelopment), a.allocatedCommonExpense) } : {}),
     // ⑭ 승계조합원 입주권 표지 — 단건 `engine-input.ts`와 같은 키. 없으면 엔진이 원조합원 입주권으로 읽어 §95② 장특 배제가 빠진다(침묵 strip).
     isSuccessorRightToMoveIn: c.isSuccessorRightToMoveIn,
     // ⑭ 상가 서브객체 — 열거 누락 시 침묵 strip이라 그 자산만 §101①·환산을 잃는다.

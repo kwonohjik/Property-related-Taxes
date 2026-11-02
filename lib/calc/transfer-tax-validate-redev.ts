@@ -38,6 +38,8 @@ import { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
 import { REDEV_RECEIVE_SETTLEMENT_LIMIT_MESSAGE } from "./redev-receive-settlement-limit";
 import { redevReceiveSettlementReachesValue } from "./redev-receive-settlement-limit";
+import { REDEV_RIGHTS_VALUE_REQUIRED_MESSAGE } from "./redev-rights-value-required";
+import { redevRightsValueMissing } from "./redev-rights-value-required";
 const SETTLEMENT_SALE_DATE_BASIS = `${REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_DECREE} · ${REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_GUIDELINE}`;
 
 export function validateRedevelopmentAsset(
@@ -204,7 +206,8 @@ export function validateRedevelopmentAsset(
 
   // ── originalAssetType="land" 분기 (사례 37·40) — housing 전용 로직 skip ──
   // 수령 청산금 상한 — ⑫와 같은 술어를 ④ payload로 본다. 토지 출자는 아래에서 일찍 반환하므로 두 분기가 각각 확인한다.
-  const settlementLimitIssue = redevReceiveSettlementReachesValue(buildRedevelopmentPayload(asset, getOwnershipRatio(asset)))
+  const redevPayload = buildRedevelopmentPayload(asset, getOwnershipRatio(asset));
+  const settlementLimitIssue = redevReceiveSettlementReachesValue(redevPayload)
     ? fieldError("redevSettlementAmount", `${label}: ${REDEV_RECEIVE_SETTLEMENT_LIMIT_MESSAGE}`)
     : null;
 
@@ -280,6 +283,10 @@ export function validateRedevelopmentAsset(
       }
     }
     // land 검증 통과 — housing 전용 로직(하우스 라목값, PHD, 거주월수 등) skip
+    // 권리가액은 housing 분기만 확인했다 — 비우면 §166① 산식이 평가액 0으로 돈다(완공APT 납부 0은 세액 0).
+    if (redevRightsValueMissing(redevPayload)) {
+      return fieldError("redevRightsValue", `${label}: ${REDEV_RIGHTS_VALUE_REQUIRED_MESSAGE}`);
+    }
     if (settlementLimitIssue) return settlementLimitIssue;
     return null;
   }

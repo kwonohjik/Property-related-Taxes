@@ -148,9 +148,10 @@ describe("재개발APT·입주권 × 지분 분할 취득 (축 B)", () => {
     const b = await run(axisB(APT));
     expect(single.json.data?.mode).toBe("single");
     expect(b.json.data?.mode).toBe("bundled");
-    expect(b.json.data?.aggregated?.totalTax).toBe(single.json.data?.result?.totalTax);
+    // 카드별 독립 floor로 1원까지 갈린다 — 같은 금액을 인가 전 칸·자본적지출 칸으로 나눠 넣어도 453,734,442 ↔ 453,734,443으로 같다(양도비 안분과 무관).
+    expect(Math.abs(Number(b.json.data?.aggregated?.totalTax) - Number(single.json.data?.result?.totalTax))).toBeLessThanOrEqual(1);
     // 값이 0이면 위 단언이 공허해진다.
-    expect(single.json.data?.result?.totalTax).toBe(453_700_500);
+    expect(single.json.data?.result?.totalTax).toBe(453_734_442);
   });
 
   it("RF-3 🔴 입주권 — 이미 열려 있었고 **틀려 있었다**", async () => {
@@ -161,7 +162,7 @@ describe("재개발APT·입주권 × 지분 분할 취득 (축 B)", () => {
      * 🔑 **구별력** — 컴패니언에 `ownershipRatio`를 안 넘기던 종전에는 40% 카드의 권리가액·
      *    필요경비가 100% 값으로 남아 **579,390,900**(45,381,600 과소)이었다.
      */
-    expect(single.json.data?.result?.totalTax).toBe(624_772_500);
+    expect(single.json.data?.result?.totalTax).toBe(625_010_100);
   });
 
   it("RF-4 컴패니언 §166 서브객체가 **지분 스케일**돼 실린다", async () => {
@@ -170,7 +171,8 @@ describe("재개발APT·입주권 × 지분 분할 취득 (축 B)", () => {
     // 스케일 O — §166④1호 평가액 · §97①2·3호 필요경비
     expect(redev.rightsValue).toBe(240_000_000); // 600,000,000 × 40%
     expect(redev.preApprovalExpenses).toBe(8_000_000); // 20,000,000 × 40%
-    expect(redev.postApprovalExpenses).toBe(16_000_000); // (30,000,000 + 10,000,000) × 40%
+    expect(redev.postApprovalExpenses).toBe(12_000_000); // 30,000,000 × 40%
+    expect(redev.transferExpense).toBe(4_000_000); // 10,000,000 × 40% — 엔진이 인가 전·후로 안분한다
     // 🔴 스케일 X — 「납부한 청산금」은 사실이라 사용자가 지분 납부분을 직접 넣는다.
     expect(redev.settlementAmount).toBe(40_000_000);
   });
