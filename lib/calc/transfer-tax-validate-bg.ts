@@ -341,11 +341,9 @@ export function validateBurdenedGiftAsset(
           return fieldError(field, `${label}: 부담부증여 실지취득가액 — 의제취득일(1985.1.1.) 전 파트가 아닌 ${gbParts.land ? "건물" : "토지"}의 실지취득가액을 입력하세요 (§97①1호가목).`);
         }
       } else if (asset.assetKind === "general_building") {
-        if (
-          !parseAmount(asset.bgActualAcquisitionLand) &&
-          !parseAmount(asset.bgActualAcquisitionBuilding)
-        ) {
-          return fieldError("bgActualAcquisitionLand", `${label}: 부담부증여 실지취득가액 안분 — 토지 또는 건물의 실지취득가액을 입력하세요 (§97①1호가목).`);
+        // 비운 쪽은 취득가액 0으로 계산된다(양도차익 과대) — 두 칸 모두 요구한다(⑫ `refineGbBurdenedGiftActualPath`).
+        for (const [field, part] of [["bgActualAcquisitionLand", "토지"], ["bgActualAcquisitionBuilding", "건물"]] as const) {
+          if (!parseAmount(asset[field])) return fieldError(field, `${label}: 부담부증여 실지취득가액 안분 — ${part} 실지취득가액을 입력하세요 (§97①1호가목).`);
         }
       } else if (asset.assetKind === "land") {
         if (!parseAmount(asset.bgActualAcquisitionLand)) {
@@ -372,8 +370,9 @@ export function validateBurdenedGiftAsset(
          * 실지거래가액으로 본다 — K-4 실지취득가액 칸이 그 값이다. 어느 쪽도 다른 쪽으로 대신하지 않는다.
          */
         if (asset.assetKind === "general_building") {
-          if (!parseAmount(asset.bgActualAcquisitionLand) && !parseAmount(asset.bgActualAcquisitionBuilding)) {
-            return fieldError("bgActualAcquisitionLand", `${label}: 이월과세 — 양도인(증여받은 사람)이 증여받은 때의 상증법 평가액(토지 또는 건물)을 입력하세요 (소령 §163⑨ · 시나리오 B).`);
+          // 비운 쪽은 시나리오 B 취득가액 0이라 §97의2②3호 비교의 채택 시나리오까지 바뀐다 — 두 칸 모두 요구한다.
+          for (const [field, part] of [["bgActualAcquisitionLand", "토지"], ["bgActualAcquisitionBuilding", "건물"]] as const) {
+            if (!parseAmount(asset[field])) return fieldError(field, `${label}: 이월과세 — 양도인(증여받은 사람)이 증여받은 때의 ${part}분 상증법 평가액을 입력하세요 (소령 §163⑨ · 시나리오 B).`);
           }
         } else if (asset.assetKind === "land") {
           if (!parseAmount(asset.bgActualAcquisitionLand)) {
@@ -391,7 +390,7 @@ export function validateBurdenedGiftAsset(
         }
       } else if (!hasBgPresumedAmount(asset)) {
         const kind = bgPresumedInputKind(asset);
-        const target = kind === "split" ? "토지 또는 건물의 " : kind === "land" ? "토지 " : "";
+        const target = kind === "split" ? "토지·건물의 " : kind === "land" ? "토지 " : "";
         return fieldError(
           firstEmptyBgPresumedField(asset),
           `${label}: 부담부증여 ${methodLabel} — ${target}취득 당시 ${methodLabel}을 입력하세요 (소득세법 시행령 §176의2③${acqMethod === "appraisal" ? "2" : "1"}호).`,
@@ -698,17 +697,13 @@ function missingCoDonorBasisLabel(asset: AssetForm): { label: string; field: Iss
   if (isPresumed) {
     const methodLabel = BG_PRESUMED_LABEL[asset.bgAcquisitionMethod as "salesCase" | "appraisal"];
     const kind = bgPresumedInputKind(asset);
-    const has =
-      kind === "split"
-        ? filled(asset.bgCoDonorPresumedAcquisitionLand) || filled(asset.bgCoDonorPresumedAcquisitionBuilding)
-        : kind === "land"
-          ? filled(asset.bgCoDonorPresumedAcquisitionLand)
-          : filled(asset.bgCoDonorPresumedAcquisitionTotal);
-    if (!has) {
-      return {
-        label: methodLabel,
-        field: kind === "total" ? "bgCoDonorPresumedAcquisitionTotal" : "bgCoDonorPresumedAcquisitionLand",
-      };
+    if (kind === "total") {
+      if (!filled(asset.bgCoDonorPresumedAcquisitionTotal)) return { label: methodLabel, field: "bgCoDonorPresumedAcquisitionTotal" };
+    } else {
+      // 두 칸이면 증여받은 파트의 칸을 모두 요구한다 — 비운 쪽은 시나리오 A 취득가액 0이다(한 파트만이면 다른 파트 칸은 화면에 없다).
+      const coParts = kind === "split" ? bgCarryoverParts(asset) : { land: true, building: false };
+      if (coParts.land && !filled(asset.bgCoDonorPresumedAcquisitionLand)) return { label: methodLabel, field: "bgCoDonorPresumedAcquisitionLand" };
+      if (coParts.building && !filled(asset.bgCoDonorPresumedAcquisitionBuilding)) return { label: methodLabel, field: "bgCoDonorPresumedAcquisitionBuilding" };
     }
   }
   // 증여받은 파트의 칸만 요구한다 — 한 파트만이면 다른 파트 칸은 화면에 없다(⑤ · 엔진 `describeRequiredDonorFields`와 같은 조건).
