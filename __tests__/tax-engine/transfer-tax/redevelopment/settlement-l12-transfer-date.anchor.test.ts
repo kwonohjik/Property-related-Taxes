@@ -298,7 +298,7 @@ describe("L-12 표시 — 단독신고 상세명세서 헤더가 비과세·안�
     expect(label(solo())).toContain("1세대1주택 비과세");
     expect(label(solo({ rightsValue: 1_500_000_000 }))).toContain("권리가액 기준 고가주택 안분");
     expect(label(solo({ exemptionEligibleAtApproval: false }))).toBe(
-      "③ 청산금 수령분 (단독 신고) (§166①2호 가목 · 재산-439 · 서면2016-2705)",
+      "③ 청산금 수령분 (단독 신고) (양도소득세 집행기준 100-166-10 · 법규재산2012-358 · 재산-439 · 서면2016-2705)",
     );
   });
 });

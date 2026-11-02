@@ -14,6 +14,7 @@ import type { StatementItem, PerAssetValue } from "./DetailedStatementHelpers";
 import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
 import type { LthdExclusionReason } from "@/lib/tax-engine/legal-codes/transfer";
 import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
+import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
 import { calcLongTermRate } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
 import { redevBranchTotals } from "./redev-acquisition-inverse";
@@ -46,7 +47,7 @@ const BRANCH_LABEL_RIGHT_PAY: Record<RedevBranch, BranchLabelDef> = {
 };
 
 /*
- * 사례 46 — 청산금 **수령 단독 신고** 전용 라벨 (§166①2호 가목 단독, 인가전·인가후 0 강제).
+ * 사례 46 — 청산금 **수령 단독 신고** 전용 라벨 (양도소득세 집행기준 100-166-10, 인가전·인가후 0 강제).
  *
  * 🔴 `legal` 자리는 화면·PDF에서 **근거 조문**으로 읽힌다(다른 분기는 전부 「§166①1호 ·
  *    §166⑤2호나목」 같은 인용이다). 종전에는 여기에 내부 플래그 이름이 그대로 실려
@@ -62,15 +63,15 @@ const BRANCH_LABEL_RIGHT_PAY: Record<RedevBranch, BranchLabelDef> = {
  *    인쇄해 사용자가 한 화면에서 코드 토큰을 6번 봤다. 산식 슬롯은 components/calc/CLAUDE.md가
  *    「한국어 풀어쓰기·법정 용어 우선」을 요구하는 자리다.
  */
-const RECEIVE_ONLY_ZERO_FORMULA = "0 (청산금 수령분만 신고 대상 — §166①2호 가목)";
+const RECEIVE_ONLY_ZERO_FORMULA = "0 (청산금 수령분만 신고 대상)";
 
 const BRANCH_LABEL_RECEIVE_ONLY: Record<RedevBranch, BranchLabelDef> = {
-  preApproval: { prefix: "① 인가전 분 (미신고)", legal: "§166①2호 가목 — 청산금 수령분 단독 신고" },
+  preApproval: { prefix: "① 인가전 분 (미신고)", legal: `청산금 수령분 단독 신고 — ${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE}` },
   postApprovalExistingHouse: {
     prefix: "② 인가후 기존건물분 (미신고)",
-    legal: "§166①2호 가목 — 청산금 수령분 단독 신고",
+    legal: `청산금 수령분 단독 신고 — ${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE}`,
   },
-  settlement: { prefix: "③ 청산금 수령분 (단독 신고)", legal: "§166①2호 가목 · 재산-439 · 서면2016-2705" },
+  settlement: { prefix: "③ 청산금 수령분 (단독 신고)", legal: `${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE} · ${REDEVELOPMENT.REDEV_SETTLEMENT_DISPOSAL_RULING} · 재산-439 · 서면2016-2705` },
 };
 
 // 사례 48 — 승계조합원 신축APT 양도 (안분 우회 단순 차감).
@@ -235,7 +236,7 @@ export function buildRedevTransferFormula(
   // 사례 46 receiveOnly — 인가전·인가후 0 강제, settlement만 청산금 수령액 자체
   if (redev.receiveOnlyMode === true) {
     if (branch === "settlement") {
-      return `청산금 수령액 = ${fmt(redev.settlement.apportionedTransfer)} (§166①2호 가목 — 양도가액 의제)`;
+      return `청산금 수령액 = ${fmt(redev.settlement.apportionedTransfer)} (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE} — 양도가액)`;
     }
     return RECEIVE_ONLY_ZERO_FORMULA;
   }
@@ -296,7 +297,7 @@ export function buildRedevAcquisitionFormula(
       const apportioned = redev.settlement.apportionedAcquisition;
       // 종전 취득가액 = apportioned × rights / settle (역산)
       const oldAcq = settle > 0 ? Math.round((apportioned * rights) / settle) : 0;
-      return `안분 취득가액 = ${fmt(oldAcq)} × (${fmt(settle)} ÷ ${fmt(rights)}) = ${fmt(apportioned)} (§166①2호 가목 — 종전 취득가 × 청산금 ÷ 권리가액, 1원 미만 절사)`;
+      return `안분 취득가액 = ${fmt(oldAcq)} × (${fmt(settle)} ÷ ${fmt(rights)}) = ${fmt(apportioned)} (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE} — 종전 취득가 × 청산금 ÷ 권리가액, 1원 미만 절사)`;
     }
     return RECEIVE_ONLY_ZERO_FORMULA;
   }
