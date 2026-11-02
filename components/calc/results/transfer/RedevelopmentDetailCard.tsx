@@ -305,7 +305,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         <div className="rounded-md bg-violet-100/60 border border-violet-200 p-2 text-caption text-violet-900 leading-relaxed dark:text-violet-200 dark:bg-violet-900/40">
           {isReceiveOnly ? (
             <>
-              <span className="font-semibold">청산금 수령분 단독 신고</span> — 종전 부동산의 분할양도로, 양도차익은 청산금 수령액 − 안분 취득가액입니다 ({REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE} · {REDEVELOPMENT.REDEV_SETTLEMENT_DISPOSAL_RULING}).
+              <span className="font-semibold">청산금 수령분 단독 신고</span> — 종전 부동산의 분할양도로, 양도차익은 청산금 수령액 − 안분 취득가액 − 안분 필요경비입니다 ({REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE} · {REDEVELOPMENT.REDEV_SETTLEMENT_DISPOSAL_RULING}).
             </>
           ) : (
             <>

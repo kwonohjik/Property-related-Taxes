@@ -107,19 +107,24 @@ export function ReceiveOnlyToggleCard({
         <p>
           본 모드 ON 시 인가전·인가후 양도차익은 신고 대상이 아니며,{" "}
           <span className="font-semibold">청산금 수령액만 양도가액으로 의제</span>됩니다.
-          종전부동산 취득가액은 권리가액 대비 청산금 비율로 자동 안분됩니다.
+          종전부동산 취득가액과 필요경비는 권리가액 대비 청산금 비율로 자동 안분됩니다.
         </p>
         <p>
           ※ <span className="font-semibold">양도일</span>은 소유권이전 고시일의 익일로 입력하세요 ({REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_GUIDELINE}).
         </p>
         <p>
-          {/* 🔴 「본 PR 미매핑」은 저장소 내부 사정이다 — 사용자 화면에 쓰지 않는다(B1). */}
-          ※ 본 모드에서 자본적지출·양도비·인가후 필요경비 입력은{" "}
-          <span className="font-semibold">0으로 처리</span>됩니다. §97①2·3호의 필요경비 항목은
-          법문상 존재하나 이 모드에서는 산정하지 않으므로, 해당분이 있으면 별도 산정해 신고하세요.
+          ※ 본 모드에서 인가전 분 필요경비와 자본적지출·양도비 입력은 종전 부동산의 필요경비로 합산해{" "}
+          <span className="font-semibold">같은 비율로 안분</span>해 공제합니다
+          (취득가액을 환산하면 개산공제를 안분합니다).
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
           <LawArticleModal legalBasis={REDEVELOPMENT.EVALUATION} label="시행령 §166④1호" />
+          <PrecedentArticleModal
+            citation={REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE}
+            label="집행기준 100-166-10 (청산금 양도차익)"
+            kind="interpretation"
+            summary="양도가액은 지급받은 청산금이고, 취득가액은 기존건물과 딸린 토지의 취득가액과 필요경비 등의 합계에 그 평가액 대비 청산금 수령액의 비율을 곱한 금액이다."
+          />
           <PrecedentArticleModal
             citation="법규재산2012-358 (2012.11.09)"
             label={`${REDEVELOPMENT.REDEV_SETTLEMENT_DISPOSAL_RULING} (청산금 과세)`}

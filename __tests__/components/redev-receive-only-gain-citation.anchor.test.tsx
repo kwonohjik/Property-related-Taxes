@@ -122,7 +122,7 @@ describe("상세명세서", () => {
     expect(text).toContain(`취득가액 = 종전 취득가액을 평가액 대비 청산금 수령액 비율로 안분 (${GUIDELINE})`);
     expect(text).toContain("청산금 수령분 양도차익 − 장기보유특별공제 (음수 시 0)");
     expect(text).not.toContain("§166 분할별");
-    expect(text).toContain(`양도차익 = 청산금 수령액 − 안분 취득가액 (${GUIDELINE})`);
+    expect(text).toContain(`양도차익 = 청산금 수령액 − 안분 취득가액 − 안분 필요경비 (${GUIDELINE})`);
     expect(text).toContain("청산금 수령분 — 취득일부터 청산금분 양도일까지");
   });
 
@@ -164,7 +164,7 @@ describe("결과 카드", () => {
     expect(text).not.toContain("§166②2호");
     expect(text).not.toContain("가목");
     expect(text).not.toContain("나목");
-    expect(text).toContain(`청산금 수령분 단독 신고 — 종전 부동산의 분할양도로, 양도차익은 청산금 수령액 − 안분 취득가액입니다 (${GUIDELINE} · ${RULING}).`);
+    expect(text).toContain(`청산금 수령분 단독 신고 — 종전 부동산의 분할양도로, 양도차익은 청산금 수령액 − 안분 취득가액 − 안분 필요경비입니다 (${GUIDELINE} · ${RULING}).`);
     expect(text).toContain("시행령 §166④1호");
     expect(text).toContain("미신고 — 청산금 수령분 단독 신고");
   });

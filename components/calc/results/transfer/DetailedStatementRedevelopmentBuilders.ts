@@ -333,10 +333,10 @@ export function buildRedevExpenseFormula(
   branch: RedevBranch,
   redev: RedevelopmentResult,
 ): string {
-  // 사례 46 receiveOnly — settlement 분 별도 필요경비 미산정 (§97①2·3호 슬롯 본 PR 미매핑)
+  // 사례 46 receiveOnly — 필요경비 등을 청산금 비율로 안분한 값 (집행기준 100-166-10)
   if (redev.receiveOnlyMode === true) {
     if (branch === "settlement") {
-      return "0 (청산금 수령분 별도 필요경비 미산정 — §97①2·3호 슬롯 미매핑)";
+      return `필요경비 등을 권리가액 대비 청산금 비율로 안분 = ${fmt(redev.settlement.expenses ?? 0)} (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
     }
     return RECEIVE_ONLY_ZERO_FORMULA;
   }
@@ -410,6 +410,9 @@ export function buildRedevGainFormula(
   const t = detail.apportionedTransfer;
   const a = detail.apportionedAcquisition;
   const hva = redev.highValueAllocation;
+  // 청산금분은 엔진이 필요경비를 뺀 값이 양도차익이다 — 그 항을 적어야 산식이 값을 만든다.
+  const settlementExpenseTerm =
+    branch === "settlement" && (detail.expenses ?? 0) > 0 ? ` − 필요경비 ${fmt(detail.expenses ?? 0)}` : "";
 
   // 사례 47·46 — 청산금 수령분 전액 비과세 (L-12: 신축주택 12억 안분을 거치지 않는다)
   if (
@@ -419,9 +422,9 @@ export function buildRedevGainFormula(
   ) {
     const before = detail.gainBeforeAllocation ?? detail.gainAfterAllocation;
     const after = detail.gainAfterAllocation;
-    if (gross) return `${fmt(t)} − ${fmt(a)} = ${fmt(before)}`;
+    if (gross) return `${fmt(t)} − ${fmt(a)}${settlementExpenseTerm} = ${fmt(before)}`;
     return (
-      `${fmt(t)} − ${fmt(a)} = ${fmt(before)} ` +
+      `${fmt(t)} − ${fmt(a)}${settlementExpenseTerm} = ${fmt(before)} ` +
       `− 1세대1주택 비과세 차감 ${fmt(after)} = 0 ` +
       `(청산금분 양도일 현재 1세대1주택 · 권리가액 ≤ 고가주택 기준금액 — 부동산거래관리과-380 · 사전-2022-법규재산-1282)`
     );
@@ -452,7 +455,7 @@ export function buildRedevGainFormula(
     const giftTerm = giftTax > 0 ? ` − 이월과세 증여세 상당액${apportioned} ${fmt(giftTax)}` : "";
     return `${fmt(t)} − ${fmt(a)} − ${expenseLabel}${apportioned} ${fmt(expense)}${giftTerm} = ${fmt(value)}${suffix}`;
   }
-  return `${fmt(t)} − ${fmt(a)} = ${fmt(value)}${suffix}`;
+  return `${fmt(t)} − ${fmt(a)}${settlementExpenseTerm} = ${fmt(value)}${suffix}`;
 }
 
 /** 장기보유공제 분할별 산식 (사례 45 — 거주월수 귀속 분리 시 안내) */

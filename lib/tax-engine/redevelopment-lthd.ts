@@ -9,7 +9,7 @@
  *
  * - 본법 §95② 본문 괄호 — 입주권 양도 시 인가전 분만 LTHD (원조합원 한정, 승계 0)
  * - 본법 §95④ — LTHD 보유기간 = 취득일~양도일 (청산금 수령 LTHD 종료일 도출)
- * - NTS 집행기준 — 청산금 수령분 양도시기 = 소유권이전 고시일 다음날
+ * - 양도소득세 집행기준 98-162-14 — 청산금 수령분 양도시기 = 소유권이전 고시일 다음날
  *
  * LTHD 율 산식 (소법 §95② 표1/표2):
  * - 표1 (일반): 3년차 6% / 매년 2% 가산 / 15년+ 30% 캡
@@ -604,7 +604,7 @@ function computeAptLthd(args: {
         : {}),
     };
   } else {
-    // 수령: §95④ + NTS 집행기준 — 취득일 ~ settlementSaleDate (소유권이전 고시일 다음날)
+    // 수령: §95④ + 양도소득세 집행기준 98-162-14 — 취득일 ~ settlementSaleDate (소유권이전 고시일 다음날)
     // 거주월수도 신축거주만 (해석례 동일 적용 — 수령 분기는 별도 해석례 없으나 보수적 적용)
     const endDate = settlementSaleDate ?? transferDate;
     const receiveHolding = calculateHoldingPeriod(acquisitionDate, endDate);

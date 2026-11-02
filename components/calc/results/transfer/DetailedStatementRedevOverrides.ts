@@ -331,8 +331,13 @@ export function applyRedevelopmentOverrides(
   const expItem = items.get("expenses");
   if (expItem) {
     expItem.value = redevBranchTotals(redev).expenses;
-    expItem.formula = "분할별 필요경비 합 — 인가전 개산공제(§163⑥) + 인가후·청산금 분 필요경비";
-    expItem.legalBasis = "소득세법 시행령 §163⑥";
+    if (isReceiveOnly) {
+      expItem.formula = `필요경비 = 종전 부동산의 필요경비를 평가액 대비 청산금 수령액 비율로 안분 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
+      expItem.legalBasis = "소득세법 §97 ①";
+    } else {
+      expItem.formula = "분할별 필요경비 합 — 인가전 개산공제(§163⑥) + 인가후·청산금 분 필요경비";
+      expItem.legalBasis = "소득세법 시행령 §163⑥";
+    }
     expItem.perAsset = buildRedevPerAssetForExpense(redev, subject, settlementDirection);
   }
 
@@ -340,7 +345,7 @@ export function applyRedevelopmentOverrides(
   const gainItem = items.get("transferGain");
   if (gainItem) {
     if (isReceiveOnly) {
-      gainItem.formula = `양도차익 = 청산금 수령액 − 안분 취득가액 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
+      gainItem.formula = `양도차익 = 청산금 수령액 − 안분 취득가액 − 안분 필요경비 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
       gainItem.legalBasis = "소득세법 §88 1호";
     } else if (isRightReceive) {
       gainItem.formula = "입주권 §166①2호 분할별 양도차익 합 = 인가전(나목 축소) + 청산금(가목)";
