@@ -24,6 +24,8 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RentalCommonFields, RegistrationFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
+import { rental973DeemedStartString } from "@/lib/calc/rental-97-effective-start";
+import { rental973LongRegistrationDate } from "@/lib/calc/transfer-tax-validate-rental-conversion";
 
 type Rental973Form = Extract<RentalReductionFormVariant, { type: "rental_97_3" }>;
 
@@ -53,25 +55,94 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
   };
 
   // ─ emerald 자동 표시 박스 — useMemo, store 미기록 ─
+  // 기산은 엔진·⑧과 같은 의제 개시일 — 임대일·임대사업자 등록일·세무서 사업자등록일 중 늦은 날 (조특령 §97의3④).
+  // 2020.7.10 이전 단기→장기 변경신고 주택은 단기 임대기간 산입을 반영한 날(④ 후단 — 엔진 leaf 단일 소스, PR-C)
+  const effectiveStart = useMemo(
+    () => rental973DeemedStartString(value),
+    [value],
+  );
+  // 장기일반민간임대주택등 「등록」일 — 변경신고 주택은 수리일(엔진 `longRegistrationDate`·⑧과 같은 축)
+  const longRegistrationDate = rental973LongRegistrationDate(value);
   const rentalDuration = useMemo(
-    () => diffYearsMonths(value.rentalStartDate, transferDate ?? ""),
-    [value.rentalStartDate, transferDate],
+    () => diffYearsMonths(effectiveStart, transferDate ?? ""),
+    [effectiveStart, transferDate],
   );
 
   // 등록일별 공제율 안내 (R-1: 2022.12.31 이전 등록분 8년 50% 경과규정) — store 미기록
   const rateGuide = useMemo(() => {
-    if (!value.registrationDate) return null;
-    const reg = new Date(value.registrationDate);
-    if (isNaN(reg.getTime())) return null;
-    return reg.getTime() < new Date("2023-01-01").getTime()
+    if (!longRegistrationDate) return null;
+    return longRegistrationDate < "2023-01-01"
       ? "2022.12.31 이전 등록 — 8년↑ 50% / 10년↑ 70%"
       : "2023.1.1 이후 등록 — 10년↑ 70%만";
-  }, [value.registrationDate]);
+  }, [longRegistrationDate]);
 
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
       <ToneCard tone="violet" sectionNum="①" title="등록·신분">
+
+        {/* PR-C — 단기민간임대 → 장기일반 변경신고. 이 선택이 아래 「임대사업자 등록일」의 의미를 바꾸므로
+            (변경신고 주택 = 단기 지자체 등록일) 그 입력 **직전**에 둔다(입력 화면 작성 원칙 「모드 토글은 영향 필드 직전」).
+            정본은 `shortTermConversionMode`이고 구 boolean(`isConvertedFromShortTerm` = 적용 제외)은 onChange에서 함께 쓴다. */}
+        <div>
+          <p className="mb-1 text-xs font-medium">단기민간임대주택 → 장기일반 변경신고</p>
+          <RadioCardGroup
+            name="shortTermConversionMode_973"
+            layout="stack"
+            tone="amber"
+            value={value.shortTermConversionMode}
+            onChange={(v) => {
+              const mode = v as Rental973Form["shortTermConversionMode"];
+              onChange({
+                shortTermConversionMode: mode,
+                isConvertedFromShortTerm: mode === "after",
+                ...(mode === "before" ? {} : { conversionReportedDate: "", conversionAcceptedDate: "" }),
+              });
+            }}
+            options={[
+              { value: "none", label: "변경신고 없음", description: "처음부터 장기일반·공공지원민간임대주택으로 등록" },
+              {
+                value: "before",
+                label: "2020.7.10 이전 변경신고",
+                description: "단기로 임대한 기간을 장기 임대기간에 산입 (조특령 §97의3④ 후단)",
+              },
+              {
+                value: "after",
+                label: "2020.7.11 이후 변경신고",
+                description: "적용 제외 (조특법 §97의3① 괄호)",
+              },
+            ]}
+          />
+        </div>
+        {value.shortTermConversionMode === "before" && (
+          <>
+            <p className="text-micro text-muted-foreground">
+              변경신고 주택은 아래 「임대사업자 등록일」에 <b>단기민간임대주택으로 등록한 날</b>(지자체)을 입력합니다.
+              2019.2.11 이전 신고분은 단기로 임대한 기간 중 5년까지의 50%(최대 2년 6개월), 2019.2.12 이후 신고분은 전부(단기 임대의무기간 한도)를 산입합니다.
+              단기 의무기간은 2015.12.28 이전 등록(구 임대주택법)이면 5년, 이후 등록이면 4년으로 봅니다.
+              단기 건설임대주택의 입주지정기간 개시일(민특령 §34①1호)은 반영하지 않고 등록일 기준으로 계산합니다.
+            </p>
+            <div>
+              <label className="mb-1 block text-xs font-medium">변경 신고일</label>
+              <DateInput
+                data-field={`reduction.${value.type}.conversionReportedDate`}
+                value={value.conversionReportedDate}
+                onChange={(v) => onChange({ conversionReportedDate: v })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">변경신고 수리일 (장기일반 등록일)</label>
+              <DateInput
+                data-field={`reduction.${value.type}.conversionAcceptedDate`}
+                value={value.conversionAcceptedDate}
+                onChange={(v) => onChange({ conversionAcceptedDate: v })}
+              />
+              <p className="mt-1 text-micro text-muted-foreground">
+                임대료 5% 증액 제한은 수리일 이후 체결·갱신한 계약부터 판정합니다.
+              </p>
+            </div>
+          </>
+        )}
 
         <RegistrationFields
           fieldType={value.type}
@@ -126,20 +197,12 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
         </div>
 
 
-        <ToggleCard
-          variant="chip"
-          checked={value.isConvertedFromShortTerm}
-          onCheckedChange={(v) => onChange({ isConvertedFromShortTerm: v })}
-          title="단기→장기 변경 신고"
-          description="2020.7.11 이후 변경분은 적용 제외 (§97의3① 괄호)"
-          tone="amber"
-        />
 
         {/* D2-07 — §97의3① 「민간건설임대주택」 한정은 2023.1.1 이후 등록분(법률 제19199호 부칙 §38
             경과조치 — 그 전 등록분은 종전 규정). 다만 **종전 규정에도 등록 시한**이 있어 매입임대는
             2020.12.31에서 끝나므로(건설임대만 2022.12.31), 2021.1.1 이후 등록분이면 시대와 무관하게
             건설임대 여부를 물어야 한다 — 엔진·⑧과 같은 경계(2020.12.31). */}
-        {value.registrationDate > "2020-12-31" && (
+        {longRegistrationDate > "2020-12-31" && (
           <ToggleCard
             data-field={`reduction.${value.type}.isPrivateConstructionRental`}
             variant="chip"
@@ -147,7 +210,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
             onCheckedChange={(v) => onChange({ isPrivateConstructionRental: v })}
             title="민간건설임대주택"
             description={
-              value.registrationDate >= "2023-01-01"
+              longRegistrationDate >= "2023-01-01"
                 ? "민특법 §2 2호 — 2023.1.1 이후 등록분은 건설임대에 한정 (§97의3①)"
                 : "민특법 §2 2호 — 매입임대 등록 시한은 2020.12.31, 건설임대는 2022.12.31 (§97의3① 종전 규정)"
             }
@@ -170,7 +233,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
       <ToneCard tone="violet" sectionNum="②" title="임대 개시 정보">
 
         <div>
-          <label className="mb-1 block text-xs font-medium">임대개시 당시 기준시가 (원)</label>
+          <label className="mb-1 block text-xs font-medium">임대개시일 당시 기준시가 (원)</label>
           <CurrencyInput
             data-field={`reduction.${value.type}.officialPriceAtStart`}
             label=""
@@ -179,6 +242,12 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
           />
           <p className="mt-1 text-micro text-muted-foreground">
             주택+부속토지 합계 — 6억(수도권 밖 3억) 이하 요건 (령 §97의3③4호)
+          </p>
+          <p className="mt-1 text-micro text-muted-foreground">
+            임대개시일은 실제 임대일·임대사업자 등록일·세무서 사업자등록일 중 늦은 날입니다 (령 §97의3④).
+            그날이 취득일보다 늦으면 이 값이 임대기간 분 양도차익 안분의 개시일 기준시가로도 쓰입니다 (령 §97의3⑤).
+            {value.shortTermConversionMode === "before" &&
+              " 단기→장기 변경신고 주택은 단기 임대기간 산입을 반영한 임대개시일(자동 산출 박스의 기산일) 당시 값을 입력합니다."}
           </p>
         </div>
 
@@ -218,7 +287,15 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
           </span>
         </div>
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">양도일 기준 임대기간 (임대개시일→양도일)</span>
+          <span className="text-muted-foreground">
+            임대개시일 (기산일{value.shortTermConversionMode === "before" ? " — 단기 임대기간 산입 반영" : ""})
+          </span>
+          <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200" data-testid="rental973-effective-start">
+            {effectiveStart || "—"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">양도일 기준 임대기간 (임대개시일→양도일, 임대개시일 = 임대일·등록일·사업자등록일 중 늦은 날)</span>
           <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">{rentalDuration}</span>
         </div>
         <p className="text-micro text-emerald-700 dark:text-emerald-300">
