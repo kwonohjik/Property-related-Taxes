@@ -412,6 +412,11 @@ export function computeTransferPerAssetSummary(
     } else if (redevResultTotals) {
       acqPrice = redevResultTotals.acquisition;
       acqPending = false;
+    } else if (receiveOnlySalePrice > 0) {
+      // 청산금 수령 단독 신고 — 취득가액은 종전 취득가액 중 청산금분 안분액이라 엔진이 정한다. ⑤ 종전 취득가액 전액을 보이면
+      // 양도가액(청산금) 옆에 그보다 큰 금액이 서 손실처럼 읽힌다(실측 300,000,000 ↔ 엔진 33,333,333).
+      acqPrice = 0;
+      acqPending = true;
     } else if (usesSelfComputedTransferPrice(a)) {
       /**
        * 부담부증여 — 취득가액은 엔진이 §159로 정한다(취득시 기준시가 × 채무비율 등 — 소득세법 시행령 §159①). 화면에 자산 일반
@@ -634,11 +639,17 @@ export function computeTransferPerAssetSummary(
        *   · 입주권 승계조합원(`isSuccessorRightToMoveIn`)          — §166 미적용(§97①1호 가목)
        * 후자를 빠뜨리면 「승계취득가액 + 추가분담금」 합계에 「인가전 분」 라벨이 붙어
        * 화면의 입력 카드와 사이드바가 서로 다른 개념을 가리킨다(2026-08-23 브라우저 실측).
+       *
+       * 「인가전 분」은 계산 전 ⑤ 입력값일 때만이다. 계산 후 값은 신고서·계산명세서의 「취득가액」 합계(역산)라
+       * 납부 청산금 등을 포함한다(실측 납부 2억: 인가 전 분 300,000,000 ↔ 표시 500,000,000). 청산금 수령 단독 신고는
+       * 인가 전 분을 신고하지 않으므로 계산 전에도 쓰지 않는다.
        */
       acqLabel:
         isRedevelopmentPath(a) &&
         a.redevIsSuccessorMember !== "yes" &&
-        !isSuccessorRightTransfer(a)
+        !isSuccessorRightTransfer(a) &&
+        !result &&
+        receiveOnlySalePrice === 0
           ? "인가전 분 취득가액"
           : "취득가액",
       expense,
