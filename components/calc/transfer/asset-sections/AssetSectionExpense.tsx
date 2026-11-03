@@ -15,7 +15,7 @@ import { legacyExpenseMovesToParts } from "@/lib/calc/split-legacy-expense";
 import { gbLegacyExpenseUnused } from "@/lib/calc/gb-legacy-expense-unused";
 import { GB_LEGACY_EXPENSE_UNUSED_MESSAGE } from "@/lib/calc/gb-legacy-expense-unused";
 import { redevLegacyExpenseUnused } from "@/lib/calc/redev-legacy-expense-unused";
-import { REDEV_LEGACY_EXPENSE_UNUSED_MESSAGE } from "@/lib/calc/redev-legacy-expense-unused";
+import { redevLegacyExpenseUnusedMessage } from "@/lib/calc/redev-legacy-expense-unused";
 import { bgExpenseUnusedBasis } from "@/lib/calc/burdened-gift-expense-scope";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { isRedevelopmentSec166Asset } from "@/lib/calc/redev-acquisition-price-source";
@@ -261,7 +261,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
           {redevLegacyExpenseUnused(asset) && (
             <ToneCard tone="amber">
               <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="redev-legacy-expense-unused-notice">
-                {REDEV_LEGACY_EXPENSE_UNUSED_MESSAGE}
+                {redevLegacyExpenseUnusedMessage(asset)}
               </p>
             </ToneCard>
           )}

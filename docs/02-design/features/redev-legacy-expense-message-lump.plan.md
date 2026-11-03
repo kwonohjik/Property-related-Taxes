@@ -92,3 +92,16 @@
 3. anchor: 위 V-1 경로 × 문안 대응(대조 3 + 개산공제 5 + 단독 신고 2 + 이월과세 1) — ⑧ 메시지 = ⑤ 안내 문자열, 개산공제 갈래에 「인가전 분 필요경비」가 나오지 않음. #2858 anchor `RL-1`(⑧ 메시지 ⊇ 상수)은 함수 값으로 바꾼다(형제 단언 유지 — 경로별 차단 1건·0 입력 통과는 그대로).
 4. 뮤테이션: 함수를 상수로 되돌림 · 갈래 술어 반전 · 단독 신고 갈래 제거.
 5. E2E: V-2 시드(완공 APT 환산 · 옛 칸 7백만) → 노란 안내에 「인가전 분 필요경비」 없음 · 보라 안내와 모순 없음 → 칸 비우면 계산.
+
+## 4. 구현 결과 (Q-1 a · Q-2 a — 사용자 결정 2026-11-02)
+
+**변경**
+- `lib/calc/redev-legacy-expense-unused.ts`: 상수 `REDEV_LEGACY_EXPENSE_UNUSED_MESSAGE` → 함수 `redevLegacyExpenseUnusedMessage(asset)`. 앞 문장 공통, 뒷 문장 4갈래 — 칸 있음(종전 문장) · 개산공제 · 단독 신고 환산 · 단독 신고 × 부담부증여. 이월과세 ② 환산 ON은 종전 문장(Q-2).
+- ⑧ `transfer-tax-validate-acquisition.ts` · ⑤ `AssetSectionExpense.tsx`가 같은 함수를 읽는다. 세액·④·⑫ 변경 없음.
+
+**검증**
+- anchor `__tests__/components/redev-legacy-expense-message-lump.anchor.test.tsx` 24건 — LM-1 V-1 경로 12개: 뒷 문장 · ③ 인가전 분 칸 유무 · ⑧ 메시지 끝 = 문장 · ⑤ 안내 = 문장 · 옛 칸 비우면 통과 / LM-2 칸 없는 경로는 「인가전 분 필요경비」를 지목하지 않고 보라 안내와 방향이 같다 / LM-3 축 B 둘째 지분(실가·환산) ⑤ = ⑧.
+- #2858 anchor `RL-1`·`RL-3`, E2E 2개(#2858 · #2862)는 상수 대신 함수 값으로 단언한다(경로별 차단 1건·0 입력 통과 단언은 그대로).
+- 뮤테이션 6/6 KILLED: 문구 하나로 되돌림(15건 실패) · 이월과세 제외 제거 · 단독 신고 갈래 제거 · 부담부증여 단독 신고 반전 · ⑤가 다른 자산으로 계산 · ⑧이 다른 자산으로 계산.
+- E2E `e2e/redev-legacy-expense-message-lump.spec.ts`: V-2 시드 → 「다음」 → 노란 안내 = 함수 문장 · 「인가전 분 필요경비」 없음 · ③ 개산공제 안내 1 · 보라 안내 「넣지 마세요」 → 비우면 계산(`expenses` 0). 문구를 종전으로 되돌리면 실패. #2858·#2862 E2E 함께 통과.
+- 회귀: `npm run test:transfer` 21,098 통과 · `__tests__/calc`·`__tests__/components` 17,642 통과 · tsc 0 · eslint 0.

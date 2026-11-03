@@ -51,7 +51,7 @@ import { validateSuccessorRightAsset } from "./transfer-tax-validate-successor-r
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { redevLegacyExpenseUnused } from "./redev-legacy-expense-unused";
-import { REDEV_LEGACY_EXPENSE_UNUSED_MESSAGE } from "./redev-legacy-expense-unused";
+import { redevLegacyExpenseUnusedMessage } from "./redev-legacy-expense-unused";
 import { validateGeneralPhdEstimated } from "./transfer-tax-validate-phd-general";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
@@ -342,7 +342,7 @@ function validateAssetAcquisitionBranches(
     // 이월과세는 취득일 칸이 화면에 없다 — ④와 같은 leaf(원값 → 증여 등기일)로 읽는다(계획서 Q-1 a · 종전 원값이라 새 입력은 칸 없는 막다른 길).
     if (!primaryAcquisitionDateOf(asset)) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
     // 이전 입력 형식 필요경비 — §166 산식이 읽지 않아 침묵 누락된다(계획서 redev-transfer-expense-residual Q-1 a). ⑤가 같은 술어로 칸을 보인다.
-    if (redevLegacyExpenseUnused(asset)) return fieldError("directExpenses", `${label}: ${REDEV_LEGACY_EXPENSE_UNUSED_MESSAGE}`);
+    if (redevLegacyExpenseUnused(asset)) return fieldError("directExpenses", `${label}: ${redevLegacyExpenseUnusedMessage(asset)}`);
     return null;
   }
 

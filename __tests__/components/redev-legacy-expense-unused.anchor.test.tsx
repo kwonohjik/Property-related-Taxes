@@ -9,7 +9,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup, screen } from "@testing-library/react";
 import { AssetSectionExpense } from "@/components/calc/transfer/asset-sections/AssetSectionExpense";
-import { REDEV_LEGACY_EXPENSE_UNUSED_MESSAGE } from "@/lib/calc/redev-legacy-expense-unused";
+import { redevLegacyExpenseUnusedMessage } from "@/lib/calc/redev-legacy-expense-unused";
 import { redevLegacyExpenseUnused } from "@/lib/calc/redev-legacy-expense-unused";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
@@ -97,7 +97,7 @@ describe("RL-1 ⑧ — §166 자산은 옛 칸 값이 있으면 막고, 비우�
     expect(redevLegacyExpenseUnused(lastAsset(withLegacy))).toBe(true);
     const hit = issues(withLegacy).filter((i) => i.field === "directExpenses");
     expect(hit).toHaveLength(1);
-    expect(hit[0].message).toContain(REDEV_LEGACY_EXPENSE_UNUSED_MESSAGE);
+    expect(hit[0].message).toContain(redevLegacyExpenseUnusedMessage(lastAsset(withLegacy)));
     expect(issues(mk({}))).toEqual([]);
   });
 });
@@ -112,8 +112,9 @@ describe("RL-2 대조군 — 옛 칸이 세액에 반영되는 자산은 막지 
 
 describe("RL-3 ⑤ — 안내는 차단 문장과 같고 옛 칸 위에 뜬다", () => {
   it("완공 APT — 안내 + 칸", () => {
-    renderExpense(apt(1, { directExpenses: "7000000" }) as AssetForm);
-    expect(screen.getByTestId("redev-legacy-expense-unused-notice").textContent).toBe(REDEV_LEGACY_EXPENSE_UNUSED_MESSAGE);
+    const a = apt(1, { directExpenses: "7000000" }) as AssetForm;
+    renderExpense(a);
+    expect(screen.getByTestId("redev-legacy-expense-unused-notice").textContent).toBe(redevLegacyExpenseUnusedMessage(a));
     expect(document.querySelector('[data-field="directExpenses"]')).not.toBeNull();
   });
 
