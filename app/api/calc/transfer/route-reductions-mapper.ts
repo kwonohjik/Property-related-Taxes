@@ -79,6 +79,19 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
         ...("taxRegistrationDate" in r && r.taxRegistrationDate
           ? { taxRegistrationDate: toOptionalDate(r.taxRegistrationDate) }
           : {}),
+        // §97의4 — 조특령 §97⑤3호 상속 합산 · 민특법 §6⑤ 자동말소일 (리뷰 R-3·R-4). `...r`만 믿으면 string이 엔진에 도달한다.
+        ...("inheritance974" in r && r.inheritance974
+          ? {
+              inheritance974: {
+                inheritanceDate: toDate(r.inheritance974.inheritanceDate, "inheritance974.inheritanceDate"),
+                decedentRegistrationDate: toDate(r.inheritance974.decedentRegistrationDate, "inheritance974.decedentRegistrationDate"),
+                decedentRentalStartDate: toDate(r.inheritance974.decedentRentalStartDate, "inheritance974.decedentRentalStartDate"),
+              },
+            }
+          : {}),
+        ...("autoCancelledDate974" in r && r.autoCancelledDate974
+          ? { autoCancelledDate974: toOptionalDate(r.autoCancelledDate974) }
+          : {}),
         // PR-C §97의3④ 후단 — 변경 신고일·수리일. `...r`만 믿으면 string이 엔진에 도달해 비교가 조용히 틀린다.
         ...("shortTermConversion" in r && r.shortTermConversion
           ? {

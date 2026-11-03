@@ -37,6 +37,7 @@ const BASE: Rental97EvaluationInput = {
   rentalStartDate: D("2016-03-01"),
   transferDate: D("2024-06-01"),
   isTaxRegistered: true,
+  taxRegistrationDate: D("2016-03-01"), // 조특령 §97의4② 사업자등록일 (등록일과 같게 — 기산일 불변)
   rentIncreaseViolated: true,
   rental974Category: "purchase_a",
   region: "capital",
@@ -131,6 +132,7 @@ describe("파이프라인 — calculateTransferTax까지", () => {
             registrationDate: D("2016-03-01"),
             rentalStartDate: D("2016-03-01"),
             isTaxRegistered: true,
+            taxRegistrationDate: D("2016-03-01"), // 조특령 §97의4② 사업자등록일 (등록일과 같게 — 기산일 불변)
             rentIncreaseViolated: true,
             region: "capital",
             rental974Category: "purchase_a",

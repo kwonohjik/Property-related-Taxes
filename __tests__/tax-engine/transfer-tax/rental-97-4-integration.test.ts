@@ -26,6 +26,7 @@ describe("§97의4 통합 anchor (R-3 활성)", () => {
           registrationDate: new Date("2016-03-01"),
           rentalStartDate: new Date("2016-03-01"), // 임대 8.25년 → 추가율 6%
           isTaxRegistered: true,
+          taxRegistrationDate: new Date("2016-03-01"), // 조특령 §97의4② 사업자등록일 (등록일과 같게 — 기산일 불변)
           rentIncreaseViolated: false,
           region: "capital",
           // D2-04 — 조특령 §97의4① → 소령 §167의3①2호 가목·다목 대상 요건.
@@ -55,7 +56,16 @@ describe("§97의4 통합 anchor (R-3 활성)", () => {
     const tenYear = {
       ...base,
       acquisitionDate: new Date("2013-01-01"),
-      reductions: [{ ...base.reductions[0], rentalStartDate: new Date("2013-06-01") } as (typeof base.reductions)[0]],
+      // 등록·사업자등록도 함께 옮긴다 — 임대일만 옮기면 조특령 §97의4② 의제 개시일(늦은 날)이 2016-03-01로 남아
+      // 8년(6%)이다. 종전 픽스처는 임대일만 옮겨 10년을 셌다(등록 전 임대기간 산입 — 리뷰 R-1 2026-11-02).
+      reductions: [
+        {
+          ...base.reductions[0],
+          rentalStartDate: new Date("2013-06-01"),
+          registrationDate: new Date("2013-06-01"),
+          taxRegistrationDate: new Date("2013-06-01"),
+        } as (typeof base.reductions)[0],
+      ],
     };
     const withR = calculateTransferTax(tenYear, rates);
     expect((withR.rental97LthdDetail as { additionalRate?: number }).additionalRate).toBe(0.10);

@@ -508,6 +508,17 @@ export const TRANSFER_RENTAL_HOUSING = {
  * 보지 아니한다」(§97의2②는 「신축임대주택에 관하여는 제97조제2항부터 제4항까지의 규정을 준용한다」).
  * 1세대1주택 비과세 판정의 주택 수에서만 빠진다 — 보유 주택 수 제외(`SPECIAL_HOUSE_EXCLUSION_WINDOWS`).
  */
+/**
+ * 조특법 §97의4 임대기간 계산 — 조특령 §97의4② 「장기임대주택의 임대기간의 계산에 관하여는 제97조제5항제1호ㆍ제3호 및
+ * 제5호를 준용한다. 이 경우 … 사업자등록과 … 임대사업자등록을 하거나 … 임대하는 날부터 임대를 개시한 것으로 본다」
+ * → 조특령 §97⑤3호 「상속인이 상속으로 인하여 피상속인의 임대주택을 취득하여 임대하는 경우에는 피상속인의
+ *   주택임대기간을 상속인의 주택임대기간에 합산할 것」 (`transfer-reductions/rental-97-4.ts`)
+ */
+export const RENTAL_97_4_PERIOD = {
+  EFFECTIVE_START: "조특령 §97의4②",
+  INHERITANCE_MERGE: "조특령 §97⑤3호",
+} as const;
+
 export const RENTAL_HOUSE_COUNT_EXCLUSION = {
   RENTAL_97: "조특법 §97②",
   RENTAL_97_2: "조특법 §97의2②",

@@ -191,6 +191,8 @@ describe("D2-04 잔여 — 소령 §167의3①2호 단서(2018.3.31)", () => {
     const r = evaluateRental974({
       ...BASE,
       registrationDate: D("2018-03-31"),
+      // 「사업자등록등」 = 세무서 사업자등록 + 임대사업자등록 — 둘 다 기한 안이어야 한다(늦은 날로 판정, 리뷰 R-1 2026-11-02).
+      taxRegistrationDate: D("2018-03-31"),
       transferDate: D("2024-06-01"),
     } as Any);
     expect(codesOf(r)).not.toContain("REGISTRATION_AFTER_2018_03_31");

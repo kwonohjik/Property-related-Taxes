@@ -161,8 +161,14 @@ const DATE_BEARING_VARIANTS: Array<[string, Record<string, unknown>, string[]]> 
   ],
   [
     "rental_97_4",
-    { type: "rental_97_4", ...RENTAL_97_COMMON },
-    ["registrationDate", "rentalStartDate"],
+    {
+      type: "rental_97_4",
+      ...RENTAL_97_COMMON,
+      // 리뷰 R-1·R-4 (2026-11-02) — 신규 날짜 키도 ⑭에서 Date로 바뀌어야 한다
+      taxRegistrationDate: "2016-03-01",
+      autoCancelledDate974: "2023-01-01",
+    },
+    ["registrationDate", "rentalStartDate", "taxRegistrationDate", "autoCancelledDate974"],
   ],
   [
     "rental_97_5",

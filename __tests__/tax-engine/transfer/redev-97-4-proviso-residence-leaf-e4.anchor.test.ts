@@ -32,6 +32,7 @@ const R974 = {
   registrationDate: D("2013-05-01"),
   rentalStartDate: D("2013-06-01"),
   isTaxRegistered: true,
+  taxRegistrationDate: D("2013-05-01"), // 조특령 §97의4② 사업자등록일 (등록일과 같게 — 기산일 불변)
   rental974Category: "purchase_a" as const,
   officialPriceAtStart: 500_000_000,
   region: "capital" as const,

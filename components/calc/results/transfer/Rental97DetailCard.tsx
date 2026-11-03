@@ -102,6 +102,12 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
       specialApplied?: boolean;
       deductionWithSpecial?: number;
       deductionWithoutSpecial?: number;
+      // [echo] §97의4 임대기간 구간(조특령 §97의4② 기산 · §97⑤3호 상속 합산 · 자동말소 종점). 구 이력은 없다.
+      rentalPeriod974?: {
+        heir?: { start: string; end: string };
+        decedent?: { start: string; end: string };
+        endReason: "transfer" | "auto_cancel";
+      };
       // [echo] PR-C — 단기→장기 변경신고 주택의 임대개시 의제(조특령 §97의3④ 후단). 구 이력은 없다.
       shortTermConversionDetail?: {
         era: "old" | "old_grandfathered" | "new_before_end" | "new_after_end";
@@ -165,6 +171,38 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
             <span className="text-muted-foreground">유효 임대기간</span>
             <span className="font-mono">{lthdEffect.eligibleRentalYears}년</span>
           </div>
+          {lthdEffect.rentalPeriod974 && (
+            <div data-testid="rental974-period-detail" className="space-y-0.5">
+              {lthdEffect.rentalPeriod974.decedent && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">피상속인 임대기간 (조특령 §97⑤3호 합산)</span>
+                  <span className="font-mono">
+                    {lthdEffect.rentalPeriod974.decedent.start} ~ {lthdEffect.rentalPeriod974.decedent.end}
+                  </span>
+                </div>
+              )}
+              {lthdEffect.rentalPeriod974.heir && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    {lthdEffect.rentalPeriod974.decedent ? "상속인 임대기간" : "임대기간"}
+                  </span>
+                  <span className="font-mono">
+                    {lthdEffect.rentalPeriod974.heir.start} ~ {lthdEffect.rentalPeriod974.heir.end}
+                  </span>
+                </div>
+              )}
+              <p className="text-micro text-muted-foreground">
+                임대개시일은 사업자등록·임대사업자 등록 후 임대한 날입니다 (조특령 §97의4②)
+                {lthdEffect.rentalPeriod974.endReason === "auto_cancel"
+                  ? " · 등록이 자동말소된 날까지만 셉니다 (국세청 서면-2021-법규재산-1422)"
+                  : ""}
+                {lthdEffect.rentalPeriod974.decedent
+                  ? " · 상속 주택의 「2018.3.31까지 사업자등록등」 요건과 기준시가 한도는 피상속인 기준으로 판정했습니다 — 정면 해석례가 없어 확인이 필요합니다"
+                  : ""}
+                .
+              </p>
+            </div>
+          )}
           {lthdEffect.shortTermConversionDetail && (
             <div data-testid="rental973-conversion-detail">
               <div className="flex justify-between">

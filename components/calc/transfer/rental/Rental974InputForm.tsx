@@ -17,6 +17,9 @@ import { useMemo } from "react";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { DateInput } from "@/components/ui/date-input";
+import { rental974PeriodSegmentsString } from "@/lib/calc/rental-97-effective-start";
 import { RentalCommonFields, RegistrationFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 
@@ -55,16 +58,65 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
     onChange(patch as Partial<Rental974Form>);
   };
 
-  // emerald 자동 표시 박스 — useMemo, store 미기록
-  const rentalDuration = useMemo(
-    () => diffYearsMonths(value.rentalStartDate, transferDate ?? ""),
-    [value.rentalStartDate, transferDate],
-  );
+  // emerald 자동 표시 박스 — useMemo, store 미기록.
+  // 구간은 엔진과 같은 축 — 조특령 §97의4② 의제 개시일(임대일·등록일·사업자등록일 중 늦은 날)부터,
+  // 자동말소면 그 날까지, 상속이면 피상속인 분을 따로 (리뷰 R-1·R-3·R-4)
+  const segments = useMemo(() => rental974PeriodSegmentsString(value, transferDate ?? ""), [value, transferDate]);
 
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
       <ToneCard tone="violet" sectionNum="①" title="등록·신분">
+
+        {/* 상속 여부가 아래 등록·임대일의 주체(상속인 본인)를 바꾸므로 그 입력 직전에 둔다 (모드 토글은 영향 필드 직전) */}
+        <ToggleCard
+          data-field={`reduction.${value.type}.isInherited974`}
+          checked={value.isInherited974}
+          onCheckedChange={(v) =>
+            onChange(
+              v
+                ? { isInherited974: true }
+                : { isInherited974: false, inheritanceDate974: "", decedentRegistrationDate974: "", decedentRentalStartDate974: "" },
+            )
+          }
+          title="상속받은 임대주택"
+          description="피상속인의 임대기간을 상속인의 임대기간에 합산합니다 (조특령 §97⑤3호 준용)"
+          tone="violet"
+        >
+          <div className="space-y-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium">상속개시일</label>
+              <DateInput
+                data-field={`reduction.${value.type}.inheritanceDate974`}
+                value={value.inheritanceDate974}
+                onChange={(v) => onChange({ inheritanceDate974: v })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">피상속인 사업자등록등일</label>
+              <DateInput
+                data-field={`reduction.${value.type}.decedentRegistrationDate974`}
+                value={value.decedentRegistrationDate974}
+                onChange={(v) => onChange({ decedentRegistrationDate974: v })}
+              />
+              <p className="mt-1 text-micro text-muted-foreground">
+                피상속인의 세무서 사업자등록일과 임대사업자 등록일 중 늦은 날입니다. 「2018.3.31까지 사업자등록등」 요건(소령
+                §167의3①2호 가·다목 단서)도 이 날로 판정합니다 — 상속 주택을 이렇게 판정한 해석례는 찾지 못했으므로 확인이 필요합니다.
+              </p>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">피상속인 임대개시일</label>
+              <DateInput
+                data-field={`reduction.${value.type}.decedentRentalStartDate974`}
+                value={value.decedentRentalStartDate974}
+                onChange={(v) => onChange({ decedentRentalStartDate974: v })}
+              />
+            </div>
+            <p className="text-micro text-muted-foreground">
+              아래 등록일·임대개시일에는 <b>상속인 본인</b>의 날짜를 입력합니다. 상속개시일부터 상속인이 등록·임대한 날 전까지는 임대기간에 넣지 않습니다.
+            </p>
+          </div>
+        </ToggleCard>
 
         <RegistrationFields
           fieldType={value.type}
@@ -75,6 +127,42 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
           onIsTaxRegisteredChange={(v) => onChange({ isTaxRegistered: v })}
           onRentalStartDateChange={(v) => onChange({ rentalStartDate: v })}
         />
+        {/* 조특령 §97의4② — 사업자등록·임대사업자등록·임대 중 늦은 날부터 임대 개시 */}
+        {value.isTaxRegistered && (
+          <div>
+            <label className="mb-1 block text-xs font-medium">세무서 사업자등록일</label>
+            <DateInput
+              data-field={`reduction.${value.type}.taxRegistrationDate`}
+              value={value.taxRegistrationDate}
+              onChange={(v) => onChange({ taxRegistrationDate: v })}
+            />
+            <p className="mt-1 text-micro text-muted-foreground">
+              조특령 §97의4② — 사업자등록·임대사업자 등록·임대개시 중 가장 늦은 날부터 임대를 개시한 것으로 봅니다.
+            </p>
+          </div>
+        )}
+
+        {/* 임대기간 종점 — 국세청 서면-2021-법규재산-1422: 자동말소된 주택은 임대개시일부터 자동말소일까지 */}
+        <ToggleCard
+          data-field={`reduction.${value.type}.isAutoCancelled974`}
+          checked={value.isAutoCancelled974}
+          onCheckedChange={(v) => onChange(v ? { isAutoCancelled974: true } : { isAutoCancelled974: false, autoCancelledDate974: "" })}
+          title="임대사업자 등록 자동말소"
+          description="임대의무기간이 끝나 등록이 자동말소된 주택 (민간임대주택에 관한 특별법 §6⑤) — 임대기간은 자동말소일까지만 셉니다"
+          tone="violet"
+        >
+          <div>
+            <label className="mb-1 block text-xs font-medium">자동말소일</label>
+            <DateInput
+              data-field={`reduction.${value.type}.autoCancelledDate974`}
+              value={value.autoCancelledDate974}
+              onChange={(v) => onChange({ autoCancelledDate974: v })}
+            />
+            <p className="mt-1 text-micro text-muted-foreground">
+              국세청 서면-2021-법규재산-1422(2022.6.21.) — 자동말소 후 계속 임대했더라도 추가공제율의 임대기간은 자동말소일까지입니다.
+            </p>
+          </div>
+        </ToggleCard>
 
         <div className="rounded-md border border-dashed border-violet-300 bg-violet-50/80 px-3 py-2 dark:bg-violet-950/40">
           <p className="text-micro text-violet-800 dark:text-violet-200">
@@ -181,6 +269,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
               ? "3억원 (가목 — 수도권 밖)"
               : "6억원"}
             를 초과하면 장기임대주택에 해당하지 않아 §97의4를 적용할 수 없습니다.
+            {value.isInherited974 && " 상속받은 주택은 피상속인 임대개시일 당시 기준시가를 입력합니다."}
           </p>
         </div>
       </ToneCard>
@@ -201,10 +290,28 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
           <span className="text-muted-foreground">최소 의무임대기간</span>
           <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">6년</span>
         </div>
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">양도일 기준 임대기간 (임대개시일→양도일)</span>
-          <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">{rentalDuration}</span>
+        {segments.decedent && (
+          <div className="flex items-center justify-between text-xs" data-testid="rental974-decedent-segment">
+            <span className="text-muted-foreground">
+              피상속인 임대기간 ({segments.decedent.start}→{segments.decedent.end})
+            </span>
+            <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">
+              {diffYearsMonths(segments.decedent.start, segments.decedent.end)}
+            </span>
+          </div>
+        )}
+        <div className="flex items-center justify-between text-xs" data-testid="rental974-own-segment">
+          <span className="text-muted-foreground">
+            {value.isInherited974 ? "상속인 임대기간" : "임대기간"} (
+            {segments.own ? `${segments.own.start}→${segments.own.end}` : "의제 임대개시일→" + (value.isAutoCancelled974 ? "자동말소일" : "양도일")})
+          </span>
+          <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">
+            {segments.own ? diffYearsMonths(segments.own.start, segments.own.end) : "—"}
+          </span>
         </div>
+        <p className="text-micro text-emerald-700 dark:text-emerald-300">
+          ※ 임대개시일은 임대일·임대사업자 등록일·세무서 사업자등록일 중 가장 늦은 날입니다 (조특령 §97의4②).
+        </p>
         <p className="text-micro text-emerald-700 dark:text-emerald-300">
           ※ 공실 차감 후 실제 유효임대기간과 적용 추가율은 엔진이 계산합니다.
         </p>

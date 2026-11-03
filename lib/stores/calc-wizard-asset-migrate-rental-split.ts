@@ -99,7 +99,7 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           // 리뷰 6번 — §97의5①1호 매입임대 확인(3-state). 구 세션은 미선택으로 둔다(다시 묻는다).
           ...(r.type === "rental_97_5" && r.isPurchaseRental === undefined ? { isPurchaseRental: null } : {}),
           // 리뷰 9번 — 조특령 §97의5③ 세무서 사업자등록일. 구 세션엔 없다(⑧이 다시 묻는다).
-          ...((r.type === "rental_97_5" || r.type === "rental_97_3") && r.taxRegistrationDate === undefined
+          ...((r.type === "rental_97_5" || r.type === "rental_97_3" || r.type === "rental_97_4") && r.taxRegistrationDate === undefined
             ? { taxRegistrationDate: "" }
             : {}),
           // 리뷰 5번 — 령 §97의5①2호·3호 간주기간. 구 세션엔 없다(= 없음).
@@ -117,6 +117,13 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           // D2-04 — §97의4 대상 요건 신규 필드. 구 세션은 미선택으로 둔다.
           ...(r.type === "rental_97_4" && r.rental974Category === undefined
             ? { rental974Category: "", officialPriceAtStart: r.officialPriceAtStart ?? "" }
+            : {}),
+          // 리뷰 R-3·R-4 (2026-11-02) — §97의4 상속 합산·자동말소 신규 필드. 구 세션엔 없다(= 해당 없음).
+          ...(r.type === "rental_97_4" && r.isInherited974 === undefined
+            ? { isInherited974: false, inheritanceDate974: "", decedentRegistrationDate974: "", decedentRentalStartDate974: "" }
+            : {}),
+          ...(r.type === "rental_97_4" && r.isAutoCancelled974 === undefined
+            ? { isAutoCancelled974: false, autoCancelledDate974: "" }
             : {}),
         };
       }

@@ -107,6 +107,11 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         region: r.region,
         officialPriceAtStart: r.officialPriceAtStart,
         rental974Category: r.rental974Category,
+        // 리뷰 R-1·R-3·R-4 (2026-11-02) — 조특령 §97의4② 기산일 · §97⑤3호 상속 합산 · 자동말소 종점.
+        // ⚠️ 명시 매핑이라 적지 않으면 조용히 사라진다.
+        taxRegistrationDate: r.taxRegistrationDate,
+        inheritance974: r.inheritance974,
+        autoCancelledDate974: r.autoCancelledDate974,
       };
     case "rental_97_5":
       return {

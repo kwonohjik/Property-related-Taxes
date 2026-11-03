@@ -53,6 +53,7 @@ const BASE = {
   registrationDate: D("2016-03-01"),
   rentalStartDate: D("2016-03-01"),
   isTaxRegistered: true,
+  taxRegistrationDate: D("2016-03-01"), // 조특령 §97의4② 사업자등록일 (등록일과 같게 — 기산일 불변)
   rentIncreaseViolated: false,
 };
 
