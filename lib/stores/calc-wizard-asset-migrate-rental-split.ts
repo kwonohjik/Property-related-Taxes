@@ -125,6 +125,10 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           ...(r.type === "rental_97_4" && r.isAutoCancelled974 === undefined
             ? { isAutoCancelled974: false, autoCancelledDate974: "" }
             : {}),
+          // 가목2) 단서(사목) — 자진말소. 구 세션엔 없다(= 해당 없음).
+          ...(r.type === "rental_97_4" && r.isVoluntaryCancelled974 === undefined
+            ? { isVoluntaryCancelled974: false, voluntaryCancelledDate974: "" }
+            : {}),
           // 리뷰 R-2 — 소령 §167의3①2호 가목2) 아파트 여부. 구 세션은 미선택.
           ...(r.type === "rental_97_4" && r.isApartment974 === undefined ? { isApartment974: "" } : {}),
         };

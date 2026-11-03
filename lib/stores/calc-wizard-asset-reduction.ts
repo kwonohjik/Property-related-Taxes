@@ -291,6 +291,10 @@ export type RentalReductionFormVariant =
       isAutoCancelled974: boolean;
       /** 자동말소일 (YYYY-MM-DD) — 임대기간 종점 */
       autoCancelledDate974: string;
+      /** 민간임대주택에 관한 특별법 §6①11호 — 임대사업자가 말소를 신청해 등록이 말소됐는가(자진말소) */
+      isVoluntaryCancelled974: boolean;
+      /** 자진말소일 (YYYY-MM-DD) — 임대기간 종점 · 가목 아파트면 사목 양도기한(말소일부터 1년) */
+      voluntaryCancelledDate974: string;
       /** 소령 §167의3①2호 가목2) — 아파트(도시형 생활주택 제외)인가. "" = 미선택 (가목 + 양도일 2027.12.31. 뒤일 때만 묻는다) */
       isApartment974: "yes" | "no" | "";
       /** 소령 §167의3⑪ 기한 연장 사실 — 아파트일 때만. undefined = 모름 */

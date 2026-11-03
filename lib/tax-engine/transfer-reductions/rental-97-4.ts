@@ -29,8 +29,9 @@
 
 import { addDays, differenceInYears } from "date-fns";
 import { RENTAL_97_4_PERIOD, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
-import { TRANSFER_RENTAL_HOUSING } from "../legal-codes";
-import { aptDeadlineConfirmNotice, judgeAptTransferDeadline } from "../rental-article/rules";
+import { MULTI_HOUSE, RENTAL_REGISTRATION_4HO, TRANSFER_RENTAL_HOUSING } from "../legal-codes";
+import { aptDeadlineConfirmNotice } from "../rental-article/rules";
+import { judgeRental974AptDeadline } from "./rental-97-4-apt-deadline";
 import { checkReductionPeriod } from "./period-check";
 import { toIsoDay } from "./rental-97-short-term-conversion";
 import {
@@ -216,18 +217,42 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
   //   민간임대주택 중 아파트(도시형 생활주택인 아파트 제외)를 임대하는 민간매입임대주택은 「제11항에 따른 기한까지
   //   양도할 것」. 기한 = 2027.12.31.과 ⑪ 각 호의 날 중 가장 늦은 날 — 판정은 중과·§155⑳와 같은 단일 함수.
   //   §97의4 가목 주택은 2018.3.31.까지 등록한 매입임대(단서 1))라 종전 장기일반(준공공 포함)·단기 중 하나다.
-  //   다목(건설임대)에는 이 요건이 없다. 단서(사목 해당 시 사목 양도기한)는 자진말소 입력이 없어 반영하지 않는다.
+  //   다목(건설임대)에는 이 요건이 없다. 단서(사목 = 자진말소면 말소일부터 1년)와 ⑪1호(자동말소일) 연동은
+  //   `judgeRental974AptDeadline` — ⑧과 같은 단일 판정.
   //   아파트 여부를 모르면 — 기한 안이면 결론과 무관, 기한을 넘겼으면 입력 누락으로 막는다.
+  //   (아파트 여부를 모르면 ④가 ⑪ 연장 사실을 싣지 않는다 — 기한은 자동말소·자진말소 사실만으로 정해진다.)
+  const voluntaryCancel =
+    input.voluntaryCancelledDate974 && input.voluntaryCancelledDate974.getTime() <= input.transferDate.getTime()
+      ? input.voluntaryCancelledDate974
+      : undefined;
   if (input.rental974Category === "purchase_a" && input.isApartment974 !== false) {
-    const verdict = judgeAptTransferDeadline(input.transferDate, input.aptDeadlineExtension974);
+    const verdict = judgeRental974AptDeadline(input.transferDate, {
+      autoCancelledDate: input.autoCancelledDate974,
+      voluntaryCancelledDate: voluntaryCancel,
+      extension: input.aptDeadlineExtension974,
+    });
+    const saMok = verdict.saMokDeadline !== undefined;
+    const deadlineLabel = saMok
+      ? `${MULTI_HOUSE.LONG_TERM_RENTAL_VOLUNTARY_CANCEL_BASIS} 양도기한(자진말소일부터 1년)`
+      : "소령 §167의3⑪ 기한(연장 사유가 없으면 2027.12.31.)";
     if (!verdict.within) {
       if (input.isApartment974 === undefined) {
         reasons.push({
           code: "MISSING_APARTMENT_974",
           message:
-            "양도일이 소령 §167의3⑪ 기한(연장 사유가 없으면 2027.12.31.) 뒤입니다 — 아파트(도시형 생활주택 제외)인지 입력하세요. 아파트를 임대하는 민간매입임대주택은 " +
-            "소령 §167의3⑪에 따른 기한까지 양도해야 가목 장기임대주택에 해당합니다 (소령 §167의3①2호 가목2)).",
+            `양도일이 ${deadlineLabel} 뒤입니다 — 아파트(도시형 생활주택 제외)인지 입력하세요. 아파트를 임대하는 민간매입임대주택은 ` +
+            "소령 §167의3⑪에 따른 기한(사목에 해당하면 사목의 양도기한)까지 양도해야 가목 장기임대주택에 해당합니다 (소령 §167의3①2호 가목2)).",
           legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11,
+        });
+      } else if (saMok) {
+        reasons.push({
+          code: "APT_TRANSFER_DEADLINE_PASSED",
+          message:
+            `임대사업자 등록을 자진말소(${RENTAL_REGISTRATION_4HO.VOLUNTARY_CANCELLATION})한 아파트 민간매입임대주택을 말소일부터 1년이 지난 뒤 양도했습니다 — ` +
+            "소령 §167의3①2호 가목2) 단서 「해당 주택이 사목에 해당하는 경우에는 같은 목에 따른 양도기한을 적용한다」에 따라 " +
+            `⑪ 기한(2027.12.31. 등) 대신 ${MULTI_HOUSE.LONG_TERM_RENTAL_VOLUNTARY_CANCEL_BASIS} 양도기한을 적용해 가목 장기임대주택에 해당하지 않는 것으로 계산했습니다(§97의4 적용 불가). ` +
+            "자진말소한 주택은 1년이 지나도 ⑪ 기한으로 돌아가지 않는다고 읽었습니다 — 이 단서에 대한 정면 해석례를 찾지 못했습니다(확인 필요).",
+          legalBasis: MULTI_HOUSE.LONG_TERM_RENTAL_VOLUNTARY_CANCEL_BASIS,
         });
       } else {
         reasons.push({
@@ -294,9 +319,20 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
   let rentalPeriod974: RentalLthdEffect["rentalPeriod974"];
   const ownStart = rental97EffectiveStart(input);
   if (ownStart) {
+    // 자진말소(민특법 §6①11호)도 같은 종점 — 자동말소 해석(1422)을 유추했다(사용자 결정 2026-11-03 · 정면 해석례 없음).
+    //   둘 다 오면(⑧이 막는다) 먼저 말소된 날.
     const autoCancel = input.autoCancelledDate974;
     const autoCancelApplies = autoCancel !== undefined && autoCancel.getTime() < input.transferDate.getTime();
-    const end = autoCancelApplies ? autoCancel : input.transferDate;
+    const voluntaryApplies =
+      voluntaryCancel !== undefined &&
+      voluntaryCancel.getTime() < input.transferDate.getTime() &&
+      !(autoCancelApplies && autoCancel.getTime() <= voluntaryCancel.getTime());
+    const endReason: "transfer" | "auto_cancel" | "voluntary_cancel" = voluntaryApplies
+      ? "voluntary_cancel"
+      : autoCancelApplies
+        ? "auto_cancel"
+        : "transfer";
+    const end = voluntaryApplies ? voluntaryCancel : autoCancelApplies ? autoCancel : input.transferDate;
     const vacancies = input.vacancyPeriods ?? [];
     const heirStart = inh ? new Date(Math.max(ownStart.getTime(), inh.inheritanceDate.getTime())) : ownStart;
     let days = calculateEffectiveRentalDays(heirStart, end, vacancies, RENTAL_VACANCY_GRACE_MONTHS_97);
@@ -314,7 +350,7 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
     rentalPeriod974 = {
       heir: { start: toIsoDay(heirStart), end: toIsoDay(end) },
       ...(decedentSegment ? { decedent: decedentSegment } : {}),
-      endReason: autoCancelApplies ? "auto_cancel" : "transfer",
+      endReason,
     };
     if (eligibleRentalYears < RENTAL_97_4_MANDATORY_YEARS) {
       reasons.push({
@@ -322,7 +358,11 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
         message:
           `임대기간 ${eligibleRentalYears}년 — 6년 이상 임대 요건 미달 (§97의4①). ` +
           "임대기간은 사업자등록·임대사업자등록 후 임대한 날부터 셉니다 (조특령 §97의4②)" +
-          (autoCancelApplies ? " — 등록이 자동말소된 날까지만 셉니다." : "."),
+          (endReason === "auto_cancel"
+            ? " — 등록이 자동말소된 날까지만 셉니다."
+            : endReason === "voluntary_cancel"
+              ? " — 등록이 자진말소된 날까지만 셉니다(자동말소 해석 서면-2021-법규재산-1422 유추 · 확인 필요)."
+              : "."),
         legalBasis,
       });
     }

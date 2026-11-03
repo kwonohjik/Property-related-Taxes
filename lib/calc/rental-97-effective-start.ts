@@ -80,16 +80,20 @@ export function rental974PeriodSegmentsString(
     decedentRentalStartDate974?: string;
     isAutoCancelled974?: boolean;
     autoCancelledDate974?: string;
+    isVoluntaryCancelled974?: boolean;
+    voluntaryCancelledDate974?: string;
   },
   transferDate: string,
 ): { own?: { start: string; end: string }; decedent?: { start: string; end: string } } {
   if (!transferDate) return {};
   const max = (a: string, b: string) => (b > a ? b : a);
   const min = (a: string, b: string) => (b < a ? b : a);
-  const end =
-    r.isAutoCancelled974 && r.autoCancelledDate974 && r.autoCancelledDate974 < transferDate
-      ? r.autoCancelledDate974
-      : transferDate;
+  // 종점 — 자동말소일·자진말소일 중 양도일 전인 것(엔진 `rental-97-4.ts`와 같은 규칙 · ⑤가 둘을 서로 끈다)
+  const cancel = [
+    r.isAutoCancelled974 ? r.autoCancelledDate974 : undefined,
+    r.isVoluntaryCancelled974 ? r.voluntaryCancelledDate974 : undefined,
+  ].filter((d): d is string => !!d && d < transferDate);
+  const end = cancel.length ? cancel.reduce((a, b) => (b < a ? b : a)) : transferDate;
   const inherited = !!(r.isInherited974 && r.inheritanceDate974);
   const ownStart = rental97EffectiveStartString(r);
   const own = ownStart

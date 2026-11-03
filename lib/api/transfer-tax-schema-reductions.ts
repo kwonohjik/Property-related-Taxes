@@ -198,6 +198,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
       .optional(),
     /** 민간임대주택에 관한 특별법 §6⑤ 자동말소일 — 임대기간 종점. ⑫에 없으면 침묵 stripping된다. */
     autoCancelledDate974: z.string().date().optional(),
+    /** 민간임대주택에 관한 특별법 §6①11호 자진말소일 — 임대기간 종점 · 가목2) 단서. ⑫에 없으면 침묵 stripping된다. */
+    voluntaryCancelledDate974: z.string().date().optional(),
     /** 소령 §167의3①2호 가목2) — 아파트(도시형 생활주택 제외) 여부. ⑫에 없으면 침묵 stripping된다. */
     isApartment974: z.boolean().optional(),
     /** 소령 §167의3⑪ 기한 연장 사실 (미전송 = 모름). ⑫에 없으면 침묵 stripping된다. */

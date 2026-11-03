@@ -21,6 +21,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
 import { rental974PeriodSegmentsString } from "@/lib/calc/rental-97-effective-start";
 import { rental974ApartmentAnswerRequired } from "@/lib/calc/apt-deadline-extension-scope";
+import { rental974SaMokApplies } from "@/lib/calc/apt-deadline-extension-scope";
 import { AptDeadlineExtensionFields } from "../AptDeadlineExtensionFields";
 import { RentalCommonFields, RegistrationFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
@@ -148,7 +149,13 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
         <ToggleCard
           data-field={`reduction.${value.type}.isAutoCancelled974`}
           checked={value.isAutoCancelled974}
-          onCheckedChange={(v) => onChange(v ? { isAutoCancelled974: true } : { isAutoCancelled974: false, autoCancelledDate974: "" })}
+          onCheckedChange={(v) =>
+            onChange(
+              v
+                ? { isAutoCancelled974: true, isVoluntaryCancelled974: false, voluntaryCancelledDate974: "" }
+                : { isAutoCancelled974: false, autoCancelledDate974: "" },
+            )
+          }
           title="임대사업자 등록 자동말소"
           description="임대의무기간이 끝나 등록이 자동말소된 주택 (민간임대주택에 관한 특별법 §6⑤) — 임대기간은 자동말소일까지만 셉니다"
           tone="violet"
@@ -162,6 +169,38 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
             />
             <p className="mt-1 text-micro text-muted-foreground">
               국세청 서면-2021-법규재산-1422(2022.6.21.) — 자동말소 후 계속 임대했더라도 추가공제율의 임대기간은 자동말소일까지입니다.
+              자동말소일이 2027.1.1. 이후면 가목 아파트의 양도기한도 그날부터 1년이 되는 날까지 늘어납니다(소령 §167의3⑪1호) —
+              아래 연장 사유에 같은 날을 다시 넣지 않아도 됩니다.
+            </p>
+          </div>
+        </ToggleCard>
+
+        {/* 자진말소 — 임대기간 종점(1422 유추 · 확인 필요) · 가목 아파트는 소령 §167의3①2호 가목2) 단서 → 사목 양도기한 */}
+        <ToggleCard
+          data-field={`reduction.${value.type}.isVoluntaryCancelled974`}
+          checked={value.isVoluntaryCancelled974}
+          onCheckedChange={(v) =>
+            onChange(
+              v
+                ? { isVoluntaryCancelled974: true, isAutoCancelled974: false, autoCancelledDate974: "" }
+                : { isVoluntaryCancelled974: false, voluntaryCancelledDate974: "" },
+            )
+          }
+          title="임대사업자 등록 자진말소"
+          description="임대의무기간 중 임대사업자가 말소를 신청해 등록이 말소된 주택 (민간임대주택에 관한 특별법 §6①11호) — 임대기간은 자진말소일까지만 셉니다"
+          tone="violet"
+        >
+          <div>
+            <label className="mb-1 block text-xs font-medium">자진말소일</label>
+            <DateInput
+              data-field={`reduction.${value.type}.voluntaryCancelledDate974`}
+              value={value.voluntaryCancelledDate974}
+              onChange={(v) => onChange({ voluntaryCancelledDate974: v })}
+            />
+            <p className="mt-1 text-micro text-muted-foreground">
+              자동말소에 대한 국세청 해석(서면-2021-법규재산-1422)을 유추해 임대기간을 자진말소일까지 셉니다 — 자진말소에 대한 정면
+              해석례는 찾지 못했습니다(확인 필요). 가목 아파트는 말소일부터 1년이 되는 날까지 양도해야 합니다(소령 §167의3①2호
+              가목2) 단서 → 사목 양도기한).
             </p>
           </div>
         </ToggleCard>
@@ -254,13 +293,19 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
                 기한(2027.12.31. — 연장 사유가 있으면 그 날)까지 양도해야 가목 장기임대주택에 해당합니다 (소령 §167의3①2호 가목2)).
                 2027.12.31.까지 양도하면 결과에 영향이 없습니다.
               </p>
-              {value.isApartment974 === "" && rental974ApartmentAnswerRequired(value.rental974Category, transferDate) && (
+              {value.isApartment974 === "" && rental974ApartmentAnswerRequired(value, transferDate) && (
                 <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">
-                  ※ 양도일이 2027.12.31. 뒤라 반드시 선택하세요
+                  ※ 양도일이 아파트 양도기한 뒤라 반드시 선택하세요
                 </p>
               )}
             </div>
-            {value.isApartment974 === "yes" && (
+            {value.isApartment974 === "yes" && rental974SaMokApplies(value) && (
+              <p className="text-micro text-muted-foreground">
+                자진말소한 주택이라 소령 §167의3⑪ 기한 대신 사목의 양도기한(자진말소일부터 1년이 되는 날)을 적용합니다 — ⑪ 연장
+                사유는 묻지 않습니다 (소령 §167의3①2호 가목2) 단서).
+              </p>
+            )}
+            {value.isApartment974 === "yes" && !rental974SaMokApplies(value) && (
               <div data-field={`reduction.${value.type}.aptDeadlineExtension974`}>
                 <AptDeadlineExtensionFields
                   value={value.aptDeadlineExtension974}

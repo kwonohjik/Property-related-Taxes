@@ -433,6 +433,15 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               if (form.transferDate && r.autoCancelledDate974 > form.transferDate)
                 return fail(fieldError(`reduction.${r.type}.autoCancelledDate974`, `${label} 적용: 자동말소일은 양도일 이전이어야 합니다.`));
             }
+            // 민특법 §6①11호 자진말소 — ④는 날짜가 있을 때만 싣는다. 자동말소와 함께 고를 수 없다(⑤가 서로 끈다).
+            if (r.isVoluntaryCancelled974) {
+              if (r.isAutoCancelled974)
+                return fail(fieldError(`reduction.${r.type}.voluntaryCancelledDate974`, `${label} 적용: 자동말소와 자진말소 중 하나만 고르세요.`));
+              if (!r.voluntaryCancelledDate974)
+                return fail(fieldError(`reduction.${r.type}.voluntaryCancelledDate974`, `${label} 적용: 임대사업자 등록 자진말소일을 입력하세요 (임대기간 종점).`));
+              if (form.transferDate && r.voluntaryCancelledDate974 > form.transferDate)
+                return fail(fieldError(`reduction.${r.type}.voluntaryCancelledDate974`, `${label} 적용: 자진말소일은 양도일 이전이어야 합니다.`));
+            }
             // 소령 §167의3①2호 가목2) 아파트 양도기한(⑪) — 리뷰 R-2
             const aptIssue = rental974AptDeadlineIssue(r, form.transferDate);
             if (aptIssue?.key === "isApartment974") return fail(fieldError(`reduction.${r.type}.isApartment974`, `${label} 적용: ${aptIssue.message}`));

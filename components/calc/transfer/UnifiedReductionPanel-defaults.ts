@@ -158,6 +158,8 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       decedentRentalStartDate974: "",
       isAutoCancelled974: false, // 민특법 §6⑤ 자동말소 — 임대기간 종점
       autoCancelledDate974: "",
+      isVoluntaryCancelled974: false, // 민특법 §6①11호 자진말소 — 임대기간 종점 · 가목2) 단서
+      voluntaryCancelledDate974: "",
       isApartment974: "", // 소령 §167의3①2호 가목2) — 아파트 양도기한
     };
   }
