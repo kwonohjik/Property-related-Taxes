@@ -20,6 +20,8 @@ import { bgExpenseUnusedBasis } from "@/lib/calc/burdened-gift-expense-scope";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { isRedevelopmentSec166Asset } from "@/lib/calc/redev-acquisition-price-source";
 import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { redevPreApprovalExpensesScenarioDependent } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { isReceiveOnlyFiling } from "@/lib/calc/redev-field-scope";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-redevelopment";
 import { gbCapexBeforeExtensionSlots } from "@/lib/calc/gb-extension-capex-timing";
@@ -130,7 +132,8 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
                 <>
                   재개발·재건축 조합원 자산 — 자본적지출은 관리처분계획인가 <b>후</b> 분 필요경비로, 양도비(총 양도비의 이 자산 몫 포함)는 평가액 : (양도가액 − 평가액) 비율로 인가 전·후 분에 나누어 계산합니다.
                   {redevPostOnly === "actual"
-                    ? " 인가 전에 종전 부동산에 쓴 비용은 「③ 취득정보 › 재개발 일정·금액」의 「인가전 분 필요경비」에 넣으세요(「소득세법 시행령」 제166조 제1항)."
+                    ? " 인가 전에 종전 부동산에 쓴 비용은 「③ 취득정보 › 재개발 일정·금액」의 「인가전 분 필요경비」에 넣으세요(「소득세법 시행령」 제166조 제1항)." +
+                      (redevPreApprovalExpensesScenarioDependent(asset) ? ` ${REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE}` : "")
                     : " 인가 전 분 필요경비는 개산공제로 계산하므로 인가 전에 종전 부동산에 쓴 비용과 양도비의 인가 전 몫은 공제되지 않습니다 — 인가 전 비용은 이 칸에 넣지 마세요(「소득세법 시행령」 제166조 제1항 · 제163조 제6항)."}
                 </>
               )}

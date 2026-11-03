@@ -103,8 +103,8 @@ const CASES: [string, TransferFormData, boolean, string][] = [
     false,
     RECEIVE_ONLY_BG,
   ],
-  // Q-2 a — B가 채택되면 숨은 칸 값이 쓰여(계획서 V-5) 개산공제 문장이 틀리다. 별건 계획서에서 칸 게이트와 함께 정한다.
-  ["이월과세 완공 APT ② 환산 ON(문구 유지)", form([carryApt({ ...CARRY_EST, directExpenses: "7000000" })], "700000000", CARRY_DATES), false, FIELD],
+  // Q-2 a(계획서 V-5) — B가 채택되면 칸 값이 쓰이므로 칸을 보인다(`redev-carryover-est-pre-approval-expense.plan.md` Q-1 a). 문구는 칸 있음 문장.
+  ["이월과세 완공 APT ② 환산 ON(칸 있음)", form([carryApt({ ...CARRY_EST, directExpenses: "7000000" })], "700000000", CARRY_DATES), true, FIELD],
 ];
 
 const lastAsset = (f: TransferFormData) => f.assets[f.assets.length - 1];
@@ -141,7 +141,7 @@ describe("LM-1 문구는 ③ 인가전 분 칸 유무로 갈리고 ⑧·⑤가 �
 });
 
 describe("LM-2 같은 ④의 보라 안내와 방향이 같다", () => {
-  it.each(CASES.filter(([n]) => !n.includes("이월과세")))("%s", (_n, f, preField, tail) => {
+  it.each(CASES)("%s", (_n, f, preField, tail) => {
     const a = lastAsset(f);
     const { legacy, postApproval } = expenseSection(a, f.transferDate);
     if (preField) {

@@ -43,6 +43,7 @@ import { directExpenseRaw } from "./transfer-per-asset-direct";
 import { splitHasNonActualOwnedPart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isReceiveOnlyFiling } from "@/lib/calc/redev-field-scope";
 import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { redevPreApprovalExpensesScenarioDependent } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { withInScopeTransferExpenses } from "@/lib/calc/transfer-expense-in-scope";
 import { redevFilingTotals } from "@/components/calc/results/transfer/redev-acquisition-inverse";
 import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
@@ -578,9 +579,10 @@ export function computeTransferPerAssetSummary(
       // 화면의 자본적지출을 그대로 보이면 엔진 값과 다르다(실측 50,000,000 vs 6,000,000). 계산 후는 아래 엔진 `expenses`·echo.
       expense = 0;
       expensePending = true;
-    } else if (!result && isRedevelopmentPath(a) && redevPreApprovalExpensesUnused(a)) {
+    } else if (!result && isRedevelopmentPath(a) && (redevPreApprovalExpensesUnused(a) || redevPreApprovalExpensesScenarioDependent(a))) {
       // 원조합원 재개발 · 환산 — 인가 전 분 필요경비는 개산공제(§163⑥)라 계산 후 확정된다. 재개발 블록이 숨긴 인가 전 실비를 더한
       // 부분합을 보이면 쓰이지 않는 금액을 보여 준다(실측 10,000,000 ↔ 엔진 9,000,000 — `burdened-gift-residuals-o3-o5-o8.plan.md` D3).
+      // 이월과세 ② 환산 ON은 칸이 보이지만 A(개산공제)·B(실비) 채택이 계산 후에 정해진다(`redev-carryover-est-pre-approval-expense.plan.md` Q-2 a).
       expense = 0;
       expensePending = true;
     } else if (!result && isGbNonActualPart(a)) {

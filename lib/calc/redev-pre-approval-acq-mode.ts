@@ -18,6 +18,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { isRedevCarryoverDonorBasis } from "./redev-carryover-acq-mode";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
+import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-redevelopment";
 
 export type RedevPreApprovalAcqMode = "actual" | "estimated" | "burdened_gift" | "carryover_donor";
 
@@ -97,6 +99,8 @@ export function redevSec166DisplayOf(result: {
  */
 export function redevPreApprovalExpensesUnused(asset: RedevPreApprovalAcqModeFields): boolean {
   if (asset.redevIsSuccessorMember === "yes" || asset.isSuccessorRightToMoveIn === true) return false;
+  // 이월과세 ② 환산 ON — 실비를 쓰는지는 A·B 채택이 정한다(아래 술어). 칸을 숨기면 B에서 숨은 값이 공제되고 넣을 칸이 없다.
+  if (redevPreApprovalExpensesScenarioDependent(asset)) return false;
   if (asset.transferType !== "burdened_gift") {
     return (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") && redevPreApprovalAcqMode(asset) === "estimated";
   }
@@ -110,3 +114,18 @@ export function redevPreApprovalExpensesUnused(asset: RedevPreApprovalAcqModeFie
     bgCollateralForcesStdAcq(asset as AssetForm)
   );
 }
+
+/**
+ * 원조합원 재개발 × 이월과세(비부담부증여) × ② 「환산취득가 사용」 ON — 「인가전 분 필요경비」(실비)가 쓰이는지는 엔진의 A·B 채택이 정한다.
+ * A(증여자 기준)는 §166③ 환산 + 개산공제라 실비가 쓰이지 않고, B(이월과세 미적용 · 증여 당시 평가액)는 실가라 실비를 공제한다.
+ * 채택은 두 시나리오 세액을 비교한 뒤에야 정해지므로(「소득세법」 §97의2②3호) 칸을 보이고 두 경우를 안내한다(③ 칸 · ④ 보라 안내 · 사이드바 계산 전 「계산 후 표시」).
+ * 계획서 `docs/02-design/features/redev-carryover-est-pre-approval-expense.plan.md` Q-1 a · Q-2 a.
+ */
+export function redevPreApprovalExpensesScenarioDependent(asset: RedevPreApprovalAcqModeFields): boolean {
+  return isRedevCarryoverDonorBasis(asset as AssetForm) && asset.carryover?.useEstimatedAcquisition === true;
+}
+
+/** ③ 「인가전 분 필요경비」 칸 안내 · ④ 보라 안내가 함께 쓰는 문장(`redevPreApprovalExpensesScenarioDependent`일 때). */
+export const REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE =
+  "「인가전 분 필요경비」는 이월과세를 적용하지 않는 계산(수증자 기준 — 증여 당시 평가액)이 채택될 때만 공제되고, " +
+  `증여자 기준 환산이 채택되면 개산공제(${TRANSFER.CARRYOVER_ESTIMATED_LUMP_DED})를 적용해 쓰이지 않습니다(${TRANSFER.CARRYOVER_COMPARISON} · ${REDEVELOPMENT.GAIN_BASE}).`;
