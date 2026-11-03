@@ -11,7 +11,8 @@
  */
 import { test, expect } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
-import { REDEV_LEGACY_EXPENSE_UNUSED_MESSAGE } from "../lib/calc/redev-legacy-expense-unused";
+import { redevLegacyExpenseUnusedMessage } from "../lib/calc/redev-legacy-expense-unused";
+import type { AssetForm } from "../lib/stores/calc-wizard-store";
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 import { calculate, seedWizard } from "./_helpers/split-acq-display";
 
@@ -74,7 +75,7 @@ test("축 B 둘째 재개발 지분: 옛 칸 + 자본적 지출액 → 칸·안�
 
   await page.getByRole("button", { name: "다음", exact: true }).click();
   const second = page.locator('[data-asset-card-index="1"]');
-  await expect(second.getByTestId("redev-legacy-expense-unused-notice")).toHaveText(REDEV_LEGACY_EXPENSE_UNUSED_MESSAGE);
+  await expect(second.getByTestId("redev-legacy-expense-unused-notice")).toHaveText(redevLegacyExpenseUnusedMessage(seed.state.formData.assets[1] as unknown as AssetForm));
   await expect.poll(() => page.evaluate(inField, "directExpenses")).toBe(true);
 
   await second.locator('[data-field="directExpenses"]').locator("input").first().fill("");
