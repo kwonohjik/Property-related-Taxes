@@ -115,7 +115,9 @@ describe("§154①은 그대로 — 강남(취득 당시 조정)", () => {
     const zero = await runCalc(form({ region: GANGNAM }));
     expect(zero.result.isExempt).toBe(false);
     expect(zero.result.totalTax).toBe(TAXED);
-    expect(w(zero.result)).not.toContain(RULING + ")");
+    // 적용 고지는 없고, 0061 경로로 판정했지만 §154① 거주 미달로 과세라는 사유 고지만 있다(`rhe-e1-notice-and-card-verdict-mismatch.plan.md` A · Q-A1 (a)).
+    expect(w(zero.result)).not.toContain("§155④를 적용했습니다");
+    expect(w(zero.result)).toContain("§155④로 판정했지만, 양도 주택이 「소득세법 시행령」 §154① 거주 2년(현재 0개월) 요건을 충족하지 못해 비과세되지 않습니다");
     const lived = await runCalc(form({ region: GANGNAM, res: R30 }));
     expect(lived.result.totalTax).toBe(0);
     expect(lived.result.exemptReason).toContain("§155④");

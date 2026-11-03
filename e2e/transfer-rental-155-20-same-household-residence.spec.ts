@@ -10,6 +10,7 @@
  * 실행: E2E_PORT=<worktree 포트> npx playwright test e2e/transfer-rental-155-20-same-household-residence.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 function seedState(assetOver: Record<string, unknown>) {
@@ -106,6 +107,10 @@ test.describe("§155⑳ 거주 2년 — 증여 전 같은 세대 거주 통산 (
   test("[RS-2] ★ 증여 전 같은 세대 거주 18개월이면 막히지 않고 비과세 0 — 결과에 통산 내역", async ({ page }) => {
     test.setTimeout(120_000);
     await seed(page, { giftPriorHouseholdResidenceMonths: "18" });
+    // ⑤ 카드 ✓/✗는 ⑧·엔진과 같은 leaf다 — 통산 30개월로 ✓, 「일반 양도소득세」 안내 없음(`rhe-e1-notice-and-card-verdict-mismatch.plan.md` B)
+    await expandAssetSection(page, 5);
+    await expect(page.getByText("현재 30개월 (같은 세대 거주 통산 18개월 포함)", { exact: false }).first()).toBeVisible();
+    await expect(page.getByText("일반 양도소득세로 계산됩니다", { exact: false })).toHaveCount(0);
     await page.getByRole("button", { name: "가산세", exact: true }).first().click();
     const resP = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", {
       timeout: 30_000,
