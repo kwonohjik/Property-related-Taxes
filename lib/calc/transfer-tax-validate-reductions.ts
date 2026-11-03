@@ -30,6 +30,7 @@ import { rentalConversionIssue } from "./transfer-tax-validate-rental-conversion
 import { rental973LongRegistrationDate } from "./transfer-tax-validate-rental-conversion";
 import { hasRentIncreaseRule } from "./rental-rent-increase-label";
 import { RENT_INCREASE_VIOLATION_LABEL } from "./rental-rent-increase-label";
+import { rental974AptDeadlineIssue } from "./apt-deadline-extension-scope";
 
 /**
  * 「PHD 환산 모드」 메시지가 가리킬 입력칸 — 메시지는 5칸을 한꺼번에 묻지만(`canCalcReductionPhd`)
@@ -432,6 +433,10 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               if (form.transferDate && r.autoCancelledDate974 > form.transferDate)
                 return fail(fieldError(`reduction.${r.type}.autoCancelledDate974`, `${label} 적용: 자동말소일은 양도일 이전이어야 합니다.`));
             }
+            // 소령 §167의3①2호 가목2) 아파트 양도기한(⑪) — 리뷰 R-2
+            const aptIssue = rental974AptDeadlineIssue(r, form.transferDate);
+            if (aptIssue?.key === "isApartment974") return fail(fieldError(`reduction.${r.type}.isApartment974`, `${label} 적용: ${aptIssue.message}`));
+            if (aptIssue) return fail(fieldError(`reduction.${r.type}.aptDeadlineExtension974`, `${label} 적용: ${aptIssue.message}`));
           }
           // D2-05 — 조특법 §97의5②: §97의5 세액감면은 §97의3·§97의4 과세특례와 중복 적용 불가.
           // ⑧에도 같은 상호배타를 둬야 「UI 통과 ↔ 엔진 배제」 모순이 생기지 않는다.

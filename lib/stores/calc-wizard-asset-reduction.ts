@@ -5,6 +5,8 @@
  * calc-wizard-asset.ts 800줄 정책에 따라 분리 (2026-05-11).
  */
 
+import type { AptDeadlineExtensionForm } from "./calc-wizard-asset-nbl-rental";
+
 export type AssetReductionForm =
   | {
       type: "self_farming";
@@ -289,6 +291,10 @@ export type RentalReductionFormVariant =
       isAutoCancelled974: boolean;
       /** 자동말소일 (YYYY-MM-DD) — 임대기간 종점 */
       autoCancelledDate974: string;
+      /** 소령 §167의3①2호 가목2) — 아파트(도시형 생활주택 제외)인가. "" = 미선택 (가목 + 양도일 2027.12.31. 뒤일 때만 묻는다) */
+      isApartment974: "yes" | "no" | "";
+      /** 소령 §167의3⑪ 기한 연장 사실 — 아파트일 때만. undefined = 모름 */
+      aptDeadlineExtension974?: AptDeadlineExtensionForm;
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_5";

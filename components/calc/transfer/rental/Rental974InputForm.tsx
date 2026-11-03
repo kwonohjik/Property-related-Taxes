@@ -20,6 +20,8 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
 import { rental974PeriodSegmentsString } from "@/lib/calc/rental-97-effective-start";
+import { rental974ApartmentAnswerRequired } from "@/lib/calc/apt-deadline-extension-scope";
+import { AptDeadlineExtensionFields } from "../AptDeadlineExtensionFields";
 import { RentalCommonFields, RegistrationFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 
@@ -229,6 +231,47 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
             </p>
           )}
         </div>
+
+        {/* 소령 §167의3①2호 가목2) — 아파트 매입임대는 ⑪ 기한까지 양도해야 가목에 해당한다. 다목(건설임대)에는 없는 요건. */}
+        {value.rental974Category === "purchase_a" && (
+          <div className="border-t border-sky-200 pt-2 space-y-2">
+            <div>
+              <p className="mb-1 text-xs font-medium">아파트 여부</p>
+              <RadioCardGroup
+                data-field={`reduction.${value.type}.isApartment974`}
+                name="isApartment974"
+                layout="inline"
+                tone="sky"
+                value={value.isApartment974}
+                onChange={(v) => onChange({ isApartment974: v as Rental974Form["isApartment974"] })}
+                options={[
+                  { value: "yes", label: "아파트", testId: "r974-apt-yes" },
+                  { value: "no", label: "아파트 아님 (도시형 생활주택 포함)", testId: "r974-apt-no" },
+                ]}
+              />
+              <p className="mt-1 text-micro text-muted-foreground">
+                아파트(「주택법」에 따른 도시형 생활주택인 아파트는 제외)를 임대하는 민간매입임대주택은 소령 §167의3⑪에 따른
+                기한(2027.12.31. — 연장 사유가 있으면 그 날)까지 양도해야 가목 장기임대주택에 해당합니다 (소령 §167의3①2호 가목2)).
+                2027.12.31.까지 양도하면 결과에 영향이 없습니다.
+              </p>
+              {value.isApartment974 === "" && rental974ApartmentAnswerRequired(value.rental974Category, transferDate) && (
+                <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">
+                  ※ 양도일이 2027.12.31. 뒤라 반드시 선택하세요
+                </p>
+              )}
+            </div>
+            {value.isApartment974 === "yes" && (
+              <div data-field={`reduction.${value.type}.aptDeadlineExtension974`}>
+                <AptDeadlineExtensionFields
+                  value={value.aptDeadlineExtension974}
+                  onChange={(next) => onChange({ aptDeadlineExtension974: next })}
+                  idPrefix="r974"
+                  tone="sky"
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/*
           소재지 — 가목의 기준시가 한도를 6억/3억으로 가르는 축(소령 §167의3①2호 가목 괄호).

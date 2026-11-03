@@ -29,6 +29,8 @@
 
 import { addDays, differenceInYears } from "date-fns";
 import { RENTAL_97_4_PERIOD, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { TRANSFER_RENTAL_HOUSING } from "../legal-codes";
+import { aptDeadlineConfirmNotice, judgeAptTransferDeadline } from "../rental-article/rules";
 import { checkReductionPeriod } from "./period-check";
 import { toIsoDay } from "./rental-97-short-term-conversion";
 import {
@@ -207,6 +209,36 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
           "장기임대주택에 해당하지 않아 §97의4를 적용할 수 없습니다.",
         legalBasis: "소득세법 시행령 §167의3①2호",
       });
+    }
+  }
+
+  // 1-2) 가목2) 아파트 양도기한 — 소령 §167의3①2호 가목2)(대통령령 제36737호, 2026.10.1. 시행): 종전 장기일반·단기
+  //   민간임대주택 중 아파트(도시형 생활주택인 아파트 제외)를 임대하는 민간매입임대주택은 「제11항에 따른 기한까지
+  //   양도할 것」. 기한 = 2027.12.31.과 ⑪ 각 호의 날 중 가장 늦은 날 — 판정은 중과·§155⑳와 같은 단일 함수.
+  //   §97의4 가목 주택은 2018.3.31.까지 등록한 매입임대(단서 1))라 종전 장기일반(준공공 포함)·단기 중 하나다.
+  //   다목(건설임대)에는 이 요건이 없다. 단서(사목 해당 시 사목 양도기한)는 자진말소 입력이 없어 반영하지 않는다.
+  //   아파트 여부를 모르면 — 기한 안이면 결론과 무관, 기한을 넘겼으면 입력 누락으로 막는다.
+  if (input.rental974Category === "purchase_a" && input.isApartment974 !== false) {
+    const verdict = judgeAptTransferDeadline(input.transferDate, input.aptDeadlineExtension974);
+    if (!verdict.within) {
+      if (input.isApartment974 === undefined) {
+        reasons.push({
+          code: "MISSING_APARTMENT_974",
+          message:
+            "양도일이 소령 §167의3⑪ 기한(연장 사유가 없으면 2027.12.31.) 뒤입니다 — 아파트(도시형 생활주택 제외)인지 입력하세요. 아파트를 임대하는 민간매입임대주택은 " +
+            "소령 §167의3⑪에 따른 기한까지 양도해야 가목 장기임대주택에 해당합니다 (소령 §167의3①2호 가목2)).",
+          legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11,
+        });
+      } else {
+        reasons.push({
+          code: "APT_TRANSFER_DEADLINE_PASSED",
+          message:
+            "아파트를 임대하는 민간매입임대주택을 소령 §167의3⑪에 따른 기한이 지난 뒤 양도했습니다 — 가목 장기임대주택에 " +
+            "해당하지 않아 §97의4를 적용할 수 없습니다 (소령 §167의3①2호 가목2))." +
+            verdict.pending.map((r) => " " + aptDeadlineConfirmNotice(r)).join(""),
+          legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11,
+        });
+      }
     }
   }
 

@@ -12,6 +12,8 @@
  *      lib/tax-engine/transfer-reductions/metadata.ts REDUCTION_METADATA
  */
 
+import type { AptTransferDeadlineExtension } from "../rental-article/rules";
+
 /**
  * 장기임대 §97 시리즈 — Phase 2 본격 구현 공통 필드 (2026-06-11).
  * Date 필드는 route handler에서 date-coerce 적용 후 전달.
@@ -118,6 +120,10 @@ export type TransferReductionStub =
       inheritance974?: { inheritanceDate: Date; decedentRegistrationDate: Date; decedentRentalStartDate: Date };
       /** 민간임대주택에 관한 특별법 §6⑤ 자동말소일 — 임대기간 종점 (서면-2021-법규재산-1422) */
       autoCancelledDate974?: Date;
+      /** 소령 §167의3①2호 가목2) — 아파트(도시형 생활주택 제외) 여부 (엔진 `Rental97EvaluationInput.isApartment974`) */
+      isApartment974?: boolean;
+      /** 소령 §167의3⑪ 기한 연장 사실 (엔진 `aptDeadlineExtension974`) */
+      aptDeadlineExtension974?: AptTransferDeadlineExtension;
     } & Rental97CommonFields)
   | ({ type: "rental_97_5";
       /** CA-01 — §97의5①3호가 준용하는 조특령 §97의3③2호 (국민주택규모 이하) */

@@ -10,6 +10,7 @@ import { calcReductionAcquisitionStdPrice, canCalcReductionPhd } from "@/lib/tax
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { hasRentIncreaseRule } from "./rental-rent-increase-label";
+import { aptDeadlineExtensionPayload } from "./apt-deadline-extension-scope";
 
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
 /**
@@ -280,6 +281,11 @@ export function toEngineReductions(
             : {}),
           // 민특법 §6⑤ 자동말소일 — 토글 ON + 날짜
           ...(r.isAutoCancelled974 && r.autoCancelledDate974 ? { autoCancelledDate974: r.autoCancelledDate974 } : {}),
+          // 소령 §167의3①2호 가목2) — 가목일 때만(⑤ 노출과 같은 범위). 연장 사실은 아파트일 때만 (리뷰 R-2)
+          ...(r.rental974Category === "purchase_a" && r.isApartment974 ? { isApartment974: r.isApartment974 === "yes" } : {}),
+          ...(r.rental974Category === "purchase_a" && r.isApartment974 === "yes"
+            ? { aptDeadlineExtension974: aptDeadlineExtensionPayload(r.aptDeadlineExtension974) }
+            : {}),
         };
       }
       if (r.type === "rental_97_5") {
