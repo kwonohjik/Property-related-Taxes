@@ -106,7 +106,7 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
       rentalPeriod974?: {
         heir?: { start: string; end: string };
         decedent?: { start: string; end: string };
-        endReason: "transfer" | "auto_cancel";
+        endReason: "transfer" | "auto_cancel" | "voluntary_cancel";
       };
       // [echo] PR-C — 단기→장기 변경신고 주택의 임대개시 의제(조특령 §97의3④ 후단). 구 이력은 없다.
       shortTermConversionDetail?: {
@@ -195,7 +195,9 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
                 임대개시일은 사업자등록·임대사업자 등록 후 임대한 날입니다 (조특령 §97의4②)
                 {lthdEffect.rentalPeriod974.endReason === "auto_cancel"
                   ? " · 등록이 자동말소된 날까지만 셉니다 (국세청 서면-2021-법규재산-1422)"
-                  : ""}
+                  : lthdEffect.rentalPeriod974.endReason === "voluntary_cancel"
+                    ? " · 등록이 자진말소된 날까지만 셉니다 — 자동말소 해석(국세청 서면-2021-법규재산-1422)을 유추했고 자진말소에 대한 정면 해석례가 없어 확인이 필요합니다"
+                    : ""}
                 {lthdEffect.rentalPeriod974.decedent
                   ? " · 상속 주택의 「2018.3.31까지 사업자등록등」 요건과 기준시가 한도는 피상속인 기준으로 판정했습니다 — 정면 해석례가 없어 확인이 필요합니다"
                   : ""}

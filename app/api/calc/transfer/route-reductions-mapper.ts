@@ -97,6 +97,9 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
         ...("autoCancelledDate974" in r && r.autoCancelledDate974
           ? { autoCancelledDate974: toOptionalDate(r.autoCancelledDate974) }
           : {}),
+        ...("voluntaryCancelledDate974" in r && r.voluntaryCancelledDate974
+          ? { voluntaryCancelledDate974: toOptionalDate(r.voluntaryCancelledDate974) }
+          : {}),
         // PR-C §97의3④ 후단 — 변경 신고일·수리일. `...r`만 믿으면 string이 엔진에 도달해 비교가 조용히 틀린다.
         ...("shortTermConversion" in r && r.shortTermConversion
           ? {

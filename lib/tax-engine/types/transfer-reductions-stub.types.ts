@@ -120,6 +120,8 @@ export type TransferReductionStub =
       inheritance974?: { inheritanceDate: Date; decedentRegistrationDate: Date; decedentRentalStartDate: Date };
       /** 민간임대주택에 관한 특별법 §6⑤ 자동말소일 — 임대기간 종점 (서면-2021-법규재산-1422) */
       autoCancelledDate974?: Date;
+      /** 민간임대주택에 관한 특별법 §6①11호 자진말소일 — 임대기간 종점 · 가목2) 단서 사목 양도기한 (엔진 `voluntaryCancelledDate974`) */
+      voluntaryCancelledDate974?: Date;
       /** 소령 §167의3①2호 가목2) — 아파트(도시형 생활주택 제외) 여부 (엔진 `Rental97EvaluationInput.isApartment974`) */
       isApartment974?: boolean;
       /** 소령 §167의3⑪ 기한 연장 사실 (엔진 `aptDeadlineExtension974`) */

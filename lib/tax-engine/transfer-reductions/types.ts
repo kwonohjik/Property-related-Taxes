@@ -178,6 +178,12 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
    */
   autoCancelledDate974?: Date;
   /**
+   * §97의4 — 임대사업자가 임대의무기간 내 말소를 신청해 등록이 말소된 날(민간임대주택에 관한 특별법 §6①11호 · 자진말소).
+   * - 임대기간 종점 = min(양도일, 이 날) — 자동말소 해석(서면-2021-법규재산-1422)을 유추(사용자 결정 2026-11-03 · 정면 해석례 없음 → 결과 카드 확인 필요).
+   * - 가목 아파트면 소령 §167의3①2호 가목2) 단서 — ⑪ 기한 대신 사목 양도기한(말소일부터 1년) (`rental-97-4-apt-deadline.ts`).
+   */
+  voluntaryCancelledDate974?: Date;
+  /**
    * §97의4 가목 — 아파트(「주택법」 도시형 생활주택인 아파트 제외) 여부. 소령 §167의3①2호 가목2): 아파트를 임대하는
    * 민간매입임대주택은 「제11항에 따른 기한까지 양도할 것」. 미입력 = 모름 — 기한(⑪)을 넘긴 양도면 입력 누락으로 막는다.
    * 다목(건설임대)에는 이 요건이 없다.
@@ -337,12 +343,12 @@ export interface RentalLthdEffect {
   /**
    * [echo] §97의4 — 임대기간 산정 구간(YYYY-MM-DD). 결과 카드 표시 전용 — 계산에는 관여하지 않는다. 구 이력은 없다.
    * `heir` = 본인(상속이면 상속인) 분 [의제 임대개시일, 종점] · `decedent` = 피상속인 분(상속일 때만).
-   * `endReason` = 종점이 양도일인지 자동말소일인지.
+   * `endReason` = 종점이 양도일인지 자동말소일·자진말소일인지.
    */
   rentalPeriod974?: {
     heir?: { start: string; end: string };
     decedent?: { start: string; end: string };
-    endReason: "transfer" | "auto_cancel";
+    endReason: "transfer" | "auto_cancel" | "voluntary_cancel";
   };
   /**
    * [echo] §97의3 — 양도일 기준 안분 구간(`data/rental-97-3-proration-era.ts`). 결과 카드 고지용.

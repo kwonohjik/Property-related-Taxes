@@ -239,6 +239,21 @@ export function judgeAptTransferDeadline(transferDate: Date, ext?: AptTransferDe
   return { within: false, pending: if3.pending.length ? [...if3.pending, "AUTH_DATE_UNKNOWN"] : [] };
 }
 
+/**
+ * 소령 §167의3①2호 사목 양도기한 — 「「민간임대주택에 관한 특별법」 제6조제1항제11호에 따라 … 등록이 말소된 경우 …
+ * 로서 등록 말소 이후 1년 이내 양도하는 주택」. 가목2)·라목8) 단서·마목4) 괄호 「해당 주택이 사목에 해당하는 경우에는
+ * 같은 목에 따른 양도기한을 적용한다」가 ⑪ 기한 대신 쓰는 날이다.
+ *
+ * - 기한 = 말소일부터 1년이 되는 날(⑪ 각 호와 같은 `periodEndFrom` — 초일불산입·역에 의한 계산). 판정은 호출부가
+ *   `isOnOrBeforeDeadline`(민법 §161)으로 한다.
+ * - 민특법 §6①11호 자진말소는 법률 제17482호(2020.8.18. 시행)로 생겼다 — 그 전 말소일은 사목이 아니다(null).
+ */
+export function saMokTransferDeadline(voluntaryCancelDate: Date): Date | null {
+  const t = validTs(voluntaryCancelDate);
+  if (t == null || t < RA_CUT.Y2020_08_18) return null;
+  return new Date(oneYearDayFrom(t));
+}
+
 const ART_11_3 = `${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11}3호`;
 
 /**

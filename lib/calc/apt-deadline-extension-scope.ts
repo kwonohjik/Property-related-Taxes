@@ -10,8 +10,9 @@
  * 값 정리는 ⑤ onChange가 하고(useEffect 미러링 금지), ④도 상태에 맞는 값만 싣는다.
  */
 import { APT_DEADLINE_GATED_ARTICLES } from "@/lib/tax-engine/rental-article/rules";
-import { APT_TRANSFER_DEADLINE_FLOOR } from "@/lib/tax-engine/rental-article/rules";
-import { isOnOrBeforeDeadline } from "@/lib/tax-engine/civil-period";
+import { judgeRental974AptDeadline } from "@/lib/tax-engine/transfer-reductions/rental-97-4-apt-deadline";
+import { saMokTransferDeadline } from "@/lib/tax-engine/rental-article/rules";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import { ARTICLE_BY_RENTAL_TYPE } from "@/lib/tax-engine/multi-house-surcharge-count";
 import {
   deriveEffectiveRegDate,
@@ -141,35 +142,62 @@ export function rentalUnitAptDeadlineInScope(u: RentalUnitForm | undefined): boo
   return !(u.rentalAutoTermination && isTerminationEligibleArticle(article));
 }
 
+/** §97의4 폼 중 가목2) 기한 판정에 쓰는 칸 */
+export type Rental974DeadlineFormFacts = {
+  rental974Category: string;
+  isAutoCancelled974?: boolean;
+  autoCancelledDate974?: string;
+  isVoluntaryCancelled974?: boolean;
+  voluntaryCancelledDate974?: string;
+};
+
+const ymd = (s?: string): Date | undefined => toOptionalDate(s);
+const autoCancelOf = (r: Rental974DeadlineFormFacts) => (r.isAutoCancelled974 ? ymd(r.autoCancelledDate974) : undefined);
+const voluntaryCancelOf = (r: Rental974DeadlineFormFacts) =>
+  r.isVoluntaryCancelled974 ? ymd(r.voluntaryCancelledDate974) : undefined;
+
+/**
+ * 가목2) 단서 — 자진말소일이 사목 양도기한을 만드는가(2020.8.18. 이후 말소). 그러면 ⑪ 연장 사실은 쓰이지 않는다
+ * (⑤ 연장 칸 숨김 · ⑧ 연장 입력 검사 생략 — 엔진 `judgeRental974AptDeadline`과 같은 분기).
+ */
+export function rental974SaMokApplies(r: Rental974DeadlineFormFacts): boolean {
+  const v = voluntaryCancelOf(r);
+  return r.rental974Category === "purchase_a" && v !== undefined && saMokTransferDeadline(v) !== null;
+}
+
 /**
  * 조특법 §97의4 감면 폼 — 소령 §167의3①2호 가목2) 아파트 여부가 **필수**인가(⑧ · ⑤ 미선택 경고).
- * 가목(민간매입) + 양도일이 ⑪ 바닥(2027.12.31.) 뒤. 그 전 양도는 연장 사유와 무관하게 기한 안이라 아파트 여부가
- * 결론을 바꾸지 않는다 — 엔진도 기한을 넘겼을 때만 아파트 여부를 요구한다(`MISSING_APARTMENT_974`).
+ * 가목(민간매입) + 양도일이 아파트 여부를 모를 때의 기한 뒤 — 엔진 `MISSING_APARTMENT_974`와 같은 판정
+ * (`judgeRental974AptDeadline` · 아파트 여부를 모르면 ④가 ⑪ 연장 사실을 싣지 않으므로 자동말소(⑪1호)·자진말소(사목)만 본다).
  * 질문 자체는 가목이면 늘 보이고(④도 가목이면 싣는다) 양도일로 숨기지 않는다 — 감면 변환(④)이 양도일을 모른다.
  */
-export function rental974ApartmentAnswerRequired(rental974Category: string, transferDate: string | undefined): boolean {
-  if (rental974Category !== "purchase_a" || !transferDate) return false;
-  const t = new Date(transferDate);
-  return !Number.isNaN(t.getTime()) && !isOnOrBeforeDeadline(t, new Date(APT_TRANSFER_DEADLINE_FLOOR));
+export function rental974ApartmentAnswerRequired(r: Rental974DeadlineFormFacts, transferDate: string | undefined): boolean {
+  const t = ymd(transferDate);
+  if (r.rental974Category !== "purchase_a" || !t) return false;
+  return !judgeRental974AptDeadline(t, {
+    autoCancelledDate: autoCancelOf(r),
+    voluntaryCancelledDate: voluntaryCancelOf(r),
+  }).within;
 }
 
 /**
  * ⑧ §97의4 가목2) 입력 미완 — 고칠 칸과 문구. 완결이면 null.
- * - 아파트 여부 미선택: 가목 + 양도일 2027.12.31. 뒤일 때만(`rental974ApartmentAnswerRequired` — 엔진 `MISSING_APARTMENT_974`와 같은 조건)
- * - 「연장 사유 있음」 입력 미완: 가목 + 아파트일 때(⑤ 노출·④ 전송과 같은 범위 — 미완 3호는 ⑫ refine이 400으로 막는다)
+ * - 아파트 여부 미선택: `rental974ApartmentAnswerRequired`일 때만(엔진 `MISSING_APARTMENT_974`와 같은 조건)
+ * - 「연장 사유 있음」 입력 미완: 가목 + 아파트 + 사목 아님일 때(⑤ 노출과 같은 범위 — 미완 3호는 ⑫ refine이 400으로 막는다)
  */
 export function rental974AptDeadlineIssue(
-  r: { rental974Category: string; isApartment974?: string; aptDeadlineExtension974?: AptDeadlineExtensionForm },
+  r: Rental974DeadlineFormFacts & { isApartment974?: string; aptDeadlineExtension974?: AptDeadlineExtensionForm },
   transferDate: string | undefined,
 ): { key: "isApartment974" | "aptDeadlineExtension974"; message: string } | null {
   if (r.rental974Category !== "purchase_a") return null;
-  if (!r.isApartment974 && rental974ApartmentAnswerRequired(r.rental974Category, transferDate)) {
+  if (!r.isApartment974 && rental974ApartmentAnswerRequired(r, transferDate)) {
     return {
       key: "isApartment974",
       message:
-        "양도일이 2027.12.31. 뒤입니다 — 아파트(도시형 생활주택 제외)인지 선택하세요 (소령 §167의3①2호 가목2) — 아파트는 ⑪에 따른 기한까지 양도해야 합니다).",
+        "양도일이 아파트 양도기한(2027.12.31. 등 — 자진말소했으면 말소일부터 1년) 뒤입니다 — 아파트(도시형 생활주택 제외)인지 선택하세요 (소령 §167의3①2호 가목2)).",
     };
   }
+  if (rental974SaMokApplies(r)) return null;
   const ext = r.isApartment974 === "yes" ? aptDeadlineExtensionIncomplete(r.aptDeadlineExtension974) : null;
   return ext ? { key: "aptDeadlineExtension974", message: `아파트 양도기한 연장 사유(소령 §167의3⑪) — ${ext}` } : null;
 }

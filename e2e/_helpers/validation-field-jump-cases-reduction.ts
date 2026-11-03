@@ -245,13 +245,15 @@ const RENTAL_97_4 = table("rental_97_4", hybrid("rental_97_4"), r974Ok, {}, [
   { name: "피상속인 사업자등록등일", prop: "decedentRegistrationDate974", message: /^§97의4 적용: 피상속인의 사업자등록등일/, patch: { isInherited974: true, inheritanceDate974: "2015-01-01", decedentRegistrationDate974: "", decedentRentalStartDate974: "2010-01-01" } },
   { name: "피상속인 임대개시일", prop: "decedentRentalStartDate974", message: /^§97의4 적용: 피상속인의 임대개시일/, patch: { isInherited974: true, inheritanceDate974: "2015-01-01", decedentRegistrationDate974: "2010-01-01", decedentRentalStartDate974: "" } },
   { name: "자동말소일", prop: "autoCancelledDate974", message: /^§97의4 적용: 임대사업자 등록 자동말소일/, patch: { isAutoCancelled974: true, autoCancelledDate974: "" } },
+  // 가목2) 단서(사목) — 민특법 §6①11호 자진말소일
+  { name: "자진말소일", prop: "voluntaryCancelledDate974", message: /^§97의4 적용: 임대사업자 등록 자진말소일/, patch: { isVoluntaryCancelled974: true, voluntaryCancelledDate974: "" } },
   // 리뷰 R-2 — 소령 §167의3①2호 가목2) 아파트 양도기한(⑪)
   { name: "아파트 양도기한 연장 사유", prop: "aptDeadlineExtension974", message: /^§97의4 적용: 아파트 양도기한 연장 사유/, patch: { isApartment974: "yes", aptDeadlineExtension974: { status: "has" } } },
 ]);
-// 아파트 여부는 양도일이 2027.12.31. 뒤일 때만 필수 — 표의 공통 양도일(2024-03-01)로는 나오지 않아 양도일만 바꾼다.
+// 아파트 여부는 양도일이 아파트 양도기한(연장·자진말소 사실이 없으면 2027.12.31.) 뒤일 때만 필수 — 표의 공통 양도일(2024-03-01)로는 나오지 않아 양도일만 바꾼다.
 {
   const [c] = table("rental_97_4", hybrid("rental_97_4"), r974Ok, {}, [
-    { name: "아파트 여부", prop: "isApartment974", message: /^§97의4 적용: 양도일이 2027\.12\.31\. 뒤입니다/ },
+    { name: "아파트 여부", prop: "isApartment974", message: /^§97의4 적용: 양도일이 아파트 양도기한/ },
   ]);
   const base = c.form;
   RENTAL_97_4.push({ ...c, form: () => ({ ...base(), transferDate: "2028-07-03", filingDate: "2028-09-30" }) });
