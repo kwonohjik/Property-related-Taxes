@@ -88,10 +88,15 @@ name: CI
 #       (범위를 좁히면 pre-push의 재탕이 된다).
 #
 # 문서 전용·draft PR은 건너뛴다(대기시간).
+#
+# ⚠️ `types`에 `ready_for_review`가 있어야 draft 해제 때 CI가 돈다. 생략하면 기본값
+#    (opened·synchronize·reopened)뿐이라, draft로 연 PR은 해제 후에도 SKIPPED 체크만
+#    남는다(#2864 — 13:47 draft로 실행·전 job SKIPPED, 14:05 해제 후 재실행 없음).
 # ══════════════════════════════════════════════════════════════════
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [master, main]
     paths-ignore:
       - "**.md"
