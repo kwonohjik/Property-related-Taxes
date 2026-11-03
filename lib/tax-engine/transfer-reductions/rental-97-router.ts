@@ -112,6 +112,9 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         taxRegistrationDate: r.taxRegistrationDate,
         inheritance974: r.inheritance974,
         autoCancelledDate974: r.autoCancelledDate974,
+        // 리뷰 R-2 — 소령 §167의3①2호 가목2) 아파트 양도기한(⑪)
+        isApartment974: r.isApartment974,
+        aptDeadlineExtension974: r.aptDeadlineExtension974,
       };
     case "rental_97_5":
       return {

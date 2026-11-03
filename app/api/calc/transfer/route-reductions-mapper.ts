@@ -8,6 +8,7 @@ import type { z } from "zod";
 import type { reductionSchema } from "@/lib/api/transfer-tax-schema-sub";
 import type { TransferReduction } from "@/lib/tax-engine/transfer-tax";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
+import { toEngineAptDeadlineExtension } from "@/lib/api/transfer-route-multi-house";
 
 type ReductionPayload = z.infer<typeof reductionSchema>;
 
@@ -88,6 +89,10 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
                 decedentRentalStartDate: toDate(r.inheritance974.decedentRentalStartDate, "inheritance974.decedentRentalStartDate"),
               },
             }
+          : {}),
+        // 소령 §167의3⑪ 연장 사실 — 날짜 Date 변환 (isApartment974는 boolean이라 `...r`로 온다)
+        ...("aptDeadlineExtension974" in r && r.aptDeadlineExtension974
+          ? { aptDeadlineExtension974: toEngineAptDeadlineExtension(r.aptDeadlineExtension974) }
           : {}),
         ...("autoCancelledDate974" in r && r.autoCancelledDate974
           ? { autoCancelledDate974: toOptionalDate(r.autoCancelledDate974) }

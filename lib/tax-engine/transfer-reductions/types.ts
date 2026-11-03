@@ -15,6 +15,7 @@
  */
 
 import type { ReductionEffectCategory } from "../legal-codes/transfer";
+import type { AptTransferDeadlineExtension } from "../rental-article/rules";
 
 /** 24개 조문 식별자 (rental 6 + new_housing 4 + unsold_housing 10 + standalone 4) */
 export type TransferReductionId =
@@ -176,6 +177,14 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
    * 임대기간 종점 = min(양도일, 이 날) (국세청 서면-2021-법규재산-1422, 2022.6.21. — 「임대개시일부터 자동말소일까지」).
    */
   autoCancelledDate974?: Date;
+  /**
+   * §97의4 가목 — 아파트(「주택법」 도시형 생활주택인 아파트 제외) 여부. 소령 §167의3①2호 가목2): 아파트를 임대하는
+   * 민간매입임대주택은 「제11항에 따른 기한까지 양도할 것」. 미입력 = 모름 — 기한(⑪)을 넘긴 양도면 입력 누락으로 막는다.
+   * 다목(건설임대)에는 이 요건이 없다.
+   */
+  isApartment974?: boolean;
+  /** §97의4 가목2) — 소령 §167의3⑪ 기한 연장 사실 (미입력 = 모름 → 기한 2027.12.31. + 확인 필요 고지) */
+  aptDeadlineExtension974?: AptTransferDeadlineExtension;
   /** 2020.7.11 이후 단기민간임대 → 장기일반 변경 신고분 — 적용 제외 (§97의3① 괄호) */
   isConvertedFromShortTerm?: boolean;
   /**

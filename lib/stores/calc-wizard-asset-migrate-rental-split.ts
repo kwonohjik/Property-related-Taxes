@@ -125,6 +125,8 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           ...(r.type === "rental_97_4" && r.isAutoCancelled974 === undefined
             ? { isAutoCancelled974: false, autoCancelledDate974: "" }
             : {}),
+          // 리뷰 R-2 — 소령 §167의3①2호 가목2) 아파트 여부. 구 세션은 미선택.
+          ...(r.type === "rental_97_4" && r.isApartment974 === undefined ? { isApartment974: "" } : {}),
         };
       }
       // §99의4 (2026-06-11): 구 stub 데이터(_phase1Stub) 본 필드 누락 보정 (③)

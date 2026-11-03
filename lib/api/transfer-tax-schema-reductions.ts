@@ -8,6 +8,7 @@
 import { z } from "zod";
 // 공용 leaf에서 직접 import — sub와의 순환(ESM 초기화 TDZ) 방지
 import { rentHistorySchema, vacancyPeriodSchema } from "./transfer-tax-schema-rental";
+import { aptDeadlineExtensionSchema } from "./transfer-tax-schema-apt-deadline";
 
 /**
  * 장기임대 §97 시리즈 공통 필드 (Phase 2 — 2026-06-11).
@@ -197,6 +198,10 @@ export const reductionSchema = z.discriminatedUnion("type", [
       .optional(),
     /** 민간임대주택에 관한 특별법 §6⑤ 자동말소일 — 임대기간 종점. ⑫에 없으면 침묵 stripping된다. */
     autoCancelledDate974: z.string().date().optional(),
+    /** 소령 §167의3①2호 가목2) — 아파트(도시형 생활주택 제외) 여부. ⑫에 없으면 침묵 stripping된다. */
+    isApartment974: z.boolean().optional(),
+    /** 소령 §167의3⑪ 기한 연장 사실 (미전송 = 모름). ⑫에 없으면 침묵 stripping된다. */
+    aptDeadlineExtension974: aptDeadlineExtensionSchema.optional(),
     ...rental97CommonShape,
     region: z.enum(["capital", "non_capital"]).optional(),
     _phase1Stub: z.literal(true).optional(),
