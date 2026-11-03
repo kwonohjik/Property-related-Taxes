@@ -1,5 +1,6 @@
 "use client";
 
+import type { RentalResidenceRequirementFacts } from "@/lib/calc/rental-residence-requirement-status";
 import type { MergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import { useEffect, useRef } from "react";
 import { type AssetForm, type TransferFormData, makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
@@ -46,6 +47,8 @@ interface Props {
   formRegionCode?: string;
   /** §155④⑤ × ⑳ 상대 쪽 임대 — 첫 자산 카드에만 넘긴다 */
   mergeRental?: MergeRentalState;
+  /** §155⑳ 카드 거주·보유 표시용 폼 사실(상생임대 · §154① 단서) — ⑧과 같은 값(`calcRentalResidenceFacts`). 첫 자산 카드에만 넘긴다 */
+  rentalResidenceFacts?: Pick<RentalResidenceRequirementFacts, "winWinResidenceExempt" | "provisoReason" | "provisoScope">;
   /*
    * 🔄 `wasRegulatedAtAcquisition`은 **지웠다** (P6-c-1) — 입주권 §⑥ 카드가 판정 메뉴
    *    전용이 되면서 이 체인의 소비처가 사라졌다. U1-03 감시는 판정 메뉴 경로로 옮겼다.
@@ -71,7 +74,7 @@ interface Props {
   getLatestAssets?: () => AssetForm[];
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingOverdueNote, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, wasRegulatedAtAcquisition, formRegionCode, mergeRental, assetErrors, splitMode, onFractionalToggle, remountEpoch = 0, onRemoveAsset, getLatestAssets }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingOverdueNote, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, wasRegulatedAtAcquisition, formRegionCode, mergeRental, rentalResidenceFacts, assetErrors, splitMode, onFractionalToggle, remountEpoch = 0, onRemoveAsset, getLatestAssets }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -158,6 +161,7 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
           formRegionCode={formRegionCode}
           mergeRental={idx === 0 ? mergeRental : undefined}
+          rentalResidenceFacts={idx === 0 ? rentalResidenceFacts : undefined}
           errorMessage={assetErrors?.[idx]}
           splitMode={splitMode}
           onFractionalToggle={onFractionalToggle}

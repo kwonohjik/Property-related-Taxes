@@ -143,6 +143,8 @@ test("[RME-3] 강남 거주 0 · 2026-06 → 3주택 중과와 그 근거가 결
   expect(result.isExempt).toBe(false);
   expect(result.totalTax).toBeGreaterThan(0);
   await expect(page.getByText(/중과 판정의 주택 수는 따로 세어 3주택으로 보고/).first()).toBeVisible();
+  // 0061 경로로 판정했지만 §154① 거주가 모자라 과세 — 사유 고지(`rhe-e1-notice-and-card-verdict-mismatch.plan.md` A · V-A2 결과 화면)
+  await expect(page.getByText(/§155④로 판정했지만, 양도 주택이 「소득세법 시행령」 §154① 거주 2년\(현재 0개월\) 요건을 충족하지 못해 비과세되지 않습니다/).first()).toBeVisible();
 });
 
 test("[RME-4] ★ 판정 메뉴에서 답하고 넘어와 완공APT로 바꿔도 사실과 문항 답이 ⑤에 남는다", async ({ page }) => {

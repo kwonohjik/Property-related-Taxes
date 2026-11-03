@@ -8,6 +8,7 @@
  * 시나리오 B: 임대주택→거주주택 전환 후 양도 (PHRP, §161① 안분)
  */
 
+import { useMemo } from "react";
 import type { MergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -15,7 +16,6 @@ import { RentalCounterpartResidedQuestion } from "./RentalCounterpartResidedQues
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { PeriodRangeEditor } from "./PeriodRangeEditor";
-import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -33,7 +33,8 @@ import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
 import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { isLifetimeLimitEra155_20, isPreLifetimeLimitRegime } from "@/lib/tax-engine/data/rental-155-20-era";
-import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
+import { rentalResidenceRequirementStatus } from "@/lib/calc/rental-residence-requirement-status";
+import type { RentalResidenceRequirementFacts } from "@/lib/calc/rental-residence-requirement-status";
 
 // ── 메인 섹션 ─────────────────────────────────────────────────────
 
@@ -112,6 +113,11 @@ interface RentalHousingExceptionSectionProps {
   wasRegulatedAtAcquisition?: boolean;
   /** §155④⑤ × ⑳ 상대 쪽 임대(`lib/calc/merge-rental-carveout-form.ts`) — 이 경로면 상대 쪽 거주를 묻고, 「예」면 거주 2년을 요건으로 표시하지 않는다. */
   mergeRental?: MergeRentalState;
+  /**
+   * 계산기만 — 폼 수준 사실(상생임대 · §154① 단서 사유)을 ⑧과 같은 값(`calcRentalResidenceFacts`)으로 받는다.
+   * 넘기지 않으면(판정 메뉴·부담부증여) 그 면제는 표시하지 않는다 — 자산에서 나오는 통산·분리 거주는 화면과 무관하게 반영한다.
+   */
+  residenceFacts?: Pick<RentalResidenceRequirementFacts, "winWinResidenceExempt" | "provisoReason" | "provisoScope">;
 }
 
 export function RentalHousingExceptionSection({
@@ -125,6 +131,7 @@ export function RentalHousingExceptionSection({
   judgmentLoaded = false,
   wasRegulatedAtAcquisition = false,
   mergeRental,
+  residenceFacts,
 }: RentalHousingExceptionSectionProps) {
   /** §161 안분은 **세액 산식**이다 — 판정 메뉴는 그 입력을 받지 않는다(Q-7). */
   const showAllocationInputs = mode !== "facts";
@@ -161,6 +168,18 @@ export function RentalHousingExceptionSection({
   const allocationVisible = rh.scenario === "B" && showAllocationInputs;
   /** §154⑩ 표준 경로(I-5) — 공동보유 장기임대주택이 0호인 시나리오 B(§155⑳ 본문 미성립). */
   const isStandalone154_10Path = rh.scenario === "B" && rh.rentalUnits.length === 0;
+  // ③ 거주·보유 상태 — ⑧과 같은 leaf(`rentalResidenceRequirementStatus`). 완공APT 분리 거주 · 증여·상속 전 동일세대 통산 ·
+  // 상생임대 · §154① 단서 면제를 ⑧·엔진처럼 반영한다(종전에는 빠져 엔진 비과세인데 「✗ 미충족」 — 계획서
+  // `rhe-e1-notice-and-card-verdict-mismatch.plan.md` B). 같은 입력이면 다시 만들지 않는다(판정 메뉴 basis 메모 D-7).
+  const st = useMemo(
+    () =>
+      rentalResidenceRequirementStatus(rh, { ...asset, acquisitionDate }, 0, transferDate, {
+        ...residenceFacts,
+        wasRegulatedAtAcquisition,
+        mergeRental,
+      }),
+    [rh, asset, acquisitionDate, transferDate, residenceFacts, wasRegulatedAtAcquisition, mergeRental],
+  );
   const allocationNum = showJudgmentFacts ? 2 : 1;
   const residenceNum = (showJudgmentFacts ? 1 : 0) + (allocationVisible ? 1 : 0) + 1;
 
@@ -473,44 +492,15 @@ export function RentalHousingExceptionSection({
         거주기간 편집기는 계속 보여야 한다 — 이 블록이 그 편집기의 유일한 입력 경로다(R21).
       */}
       {(() => {
-        // 거주기간(개월) — interval/direct 도출값(엔진·validation과 동일 소스)
-        const totalLiveMonths = deriveResidencePeriodMonths(asset, transferDate, "");
-        // OH-15 — B의 §155⑳1호 거주요건은 등록 이후 거주기간이다(엔진 `checkEligibility`와 같은 축).
-        const isB = rh.scenario === "B";
-        /**
-         * §154⑩ 표준 경로(I-5)의 취득 시기별 분기 — `isPreLifetimeLimitRegime`가 단일 소스(엔진
-         * `checkPhrp154_10Eligibility`와 같은 leaf). 2019.2.12 전 취득(「종전규정」)이면 §155⑳1호
-         * 괄호를 쓰지 않고 §154① 원칙(조정대상지역 취득 시에만 거주 2년, 일반 거주기간)을 쓴다.
-         */
-        const preRegime154_10 =
-          isStandalone154_10Path && acquisitionDate && !Number.isNaN(new Date(acquisitionDate).getTime())
-            ? isPreLifetimeLimitRegime(
-                new Date(acquisitionDate),
-                rh.residenceTransitionUnderAddendum === true,
-                rh.residenceTransitionBasis,
-              )
-            : false;
+        const preRegime154_10 = st.preRegime154_10;
         // 등록일 이후 거주기간(postRegistrationResidenceMonths) 칸을 쓰는 경우 — 일반 B(임대주택
         // 있음) 또는 §154⑩ 표준 경로인데 2019.2.12 이후 취득(「종전규정」 아님).
-        const usesPostRegField = isB && !preRegime154_10;
+        const usesPostRegField = st.residenceAxis === "post_registration";
         const postRegRaw = rh.postRegistrationResidenceMonths ?? "";
-        const liveMonths = usesPostRegField ? parseInt(postRegRaw, 10) || 0 : totalLiveMonths;
-        // §154⑩ 표준 경로 + 종전규정(preRegime)이면 취득 당시 조정대상지역일 때만 거주요건이 있다.
-        const residenceRequired = !(isStandalone154_10Path && preRegime154_10 && !wasRegulatedAtAcquisition) && mergeRental !== "waived";
-        // 보유기간 — 취득일 ~ 양도일. ⑧·엔진(`judgeRentalHousingEligibility`)과 **같은 함수**다
-        // (소령 §154⑤ → 법 §95④ 초일 산입). 일수 근사(730일·365일·30일)는 응당일 전날 양도에서 하루 어긋났다.
-        let holdPass = false;
-        let holdYearsLabel = "-";
-        if (acquisitionDate && transferDate) {
-          const acqDate = new Date(acquisitionDate);
-          const trnDate = new Date(transferDate);
-          if (Number.isFinite(acqDate.getTime()) && Number.isFinite(trnDate.getTime()) && trnDate.getTime() > acqDate.getTime()) {
-            const hp = calculateHoldingPeriod(acqDate, trnDate);
-            holdPass = hp.years >= 2;
-            holdYearsLabel = `${hp.years}년 ${hp.months}개월`;
-          }
-        }
-        const livePass = !residenceRequired || liveMonths >= 24;
+        const liveMonths = st.residenceMonths;
+        const holdPass = st.holdingMet;
+        const holdYearsLabel = st.holding ? `${st.holding.years}년 ${st.holding.months}개월` : "-";
+        const livePass = st.residenceMet;
 
         return (
           <div className="space-y-2">
@@ -625,10 +615,14 @@ export function RentalHousingExceptionSection({
             <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2.5 space-y-1.5 text-xs dark:bg-violet-950/40">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-violet-800 dark:text-violet-200">
-                  {mergeRental === "waived"
+                  {st.residenceWaiver === "merge_waived"
                     ? "거주주택 2년 — 합가 상대 쪽 임대 경로라 적용하지 않음 (§154① 거주는 별도 판정)"
-                    : !residenceRequired
+                    : st.residenceWaiver === "pre_regime_not_regulated"
                     ? "거주주택 거주기간 (조정대상지역 취득이 아니므로 불필요)"
+                    : st.residenceWaiver === "win_win"
+                    ? "거주주택 거주기간 — 상생임대주택이라 적용하지 않음 (소득세법 시행령 §155의3①)"
+                    : st.residenceWaiver === "proviso"
+                    ? "거주주택 거주기간 — §154① 단서 사유가 성립해 적용하지 않음"
                     : usesPostRegField
                       ? "거주주택 거주기간 — 등록 이후 (2년 이상 필요)"
                       : "거주주택 거주기간 (2년 이상 필요)"}
@@ -641,10 +635,15 @@ export function RentalHousingExceptionSection({
                 >
                   {livePass ? "✓ 충족" : "✗ 미충족"} —{" "}
                   현재 {liveMonths}개월
+                  {st.residenceAxis === "total" && st.priorMonths > 0 && ` (같은 세대 거주 통산 ${st.priorMonths}개월 포함)`}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-violet-800 dark:text-violet-200">거주주택 보유기간 (2년 이상 필요)</span>
+                <span className="text-violet-800 dark:text-violet-200">
+                  {st.holdingWaivedByProviso
+                    ? "거주주택 보유기간 — §154① 단서 사유가 성립해 적용하지 않음"
+                    : "거주주택 보유기간 (2년 이상 필요)"}
+                </span>
                 <span
                   className={cn(
                     "font-semibold",

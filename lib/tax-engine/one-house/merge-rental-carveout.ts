@@ -19,7 +19,11 @@ import { CLAUSE_13_SURCHARGE_EXCLUSION_EFFECTIVE_DATE, MULTI_HOUSE, TRANSFER_REN
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { resolveExemptionHouseCountExclusions } from "../transfer-tax-house-exclusion-step";
 import { judgeRentalHousingEligibility } from "../transfer-tax-rental-housing-judge";
-import { meetsOneHouseHoldingResidence } from "../transfer-tax-exemption-requirements";
+import {
+  describeOneHouseHoldingRequirement,
+  describeOneHouseResidenceRequirement,
+  meetsOneHouseHoldingResidence,
+} from "../transfer-tax-exemption-requirements";
 import type { TransferTaxInput } from "../types/transfer.types";
 import { classifyMergeHouse } from "./merge-composition";
 import { resolveMergeDeeming } from "./merge-deeming";
@@ -116,6 +120,34 @@ export function mergeRentalCarveoutNotice(input: Pick<TransferTaxInput, "marriag
   return input.marriageMerge
     ? `${head} 혼인 합가에서 임대주택이 없는 쪽 주택을 먼저 양도한 정면 회신은 확인하지 못해 동거봉양 회신과 문형이 같다고 보았습니다 — 확인 필요.`
     : head;
+}
+
+/**
+ * 불성립 고지 — 이 경로로 판정했는데(⑳ 선언을 걷었다) §154① 보유·거주가 모자라 비과세가 아닐 때만 낸다.
+ * ⑳ 선언을 걷었으므로 「장기임대주택 거주주택 비과세 특례 — 적용 불가」 단계가 남지 않는다 — 그 자리를 이 고지가 채운다
+ * (`rhe-e1-notice-and-card-verdict-mismatch.plan.md` A · Q-A1 (a)). §154①이 충족인데도 비과세가 아니면 사유를 단정할 수 없어 내지 않는다.
+ */
+export function mergeRentalCarveoutUnmetNotice(
+  input: Pick<TransferTaxInput, "marriageMerge" | "mergeRentalCarveout">,
+  judgeInput: TransferTaxInput,
+  rule: OneHouseSpecialRulesData["one_house_exemption"],
+): string | undefined {
+  if (!input.mergeRentalCarveout) return undefined;
+  const holding = describeOneHouseHoldingRequirement(judgeInput, rule);
+  const residence = describeOneHouseResidenceRequirement(judgeInput, rule);
+  const parts: string[] = [];
+  // 재기산 미답(`restartUnanswered`)은 여기 오지 않는다 — 0061 문항은 양도 주택의 ⑳ 카드에 있어 `applyException`이 켜져 있고,
+  // 그런 세대는 순수 1주택이 아니라 「판정 보류」(`final-house-restart.ts` `isPlainSingleHouseHousehold`)다(2026-11-03 probe:
+  // 2022.3.2. 양도 · 이력 미답 · 보유 2년 8개월 → 비과세).
+  if (!holding.provisoWaives && !holding.met) parts.push(`보유 ${holding.requiredYears}년(현재 ${holding.years}년 ${holding.months}개월)`);
+  if (residence.basis === "unmet") parts.push(`거주 ${residence.requiredYears}년(현재 ${residence.residenceMonths}개월)`);
+  if (parts.length === 0) return undefined;
+  const base = input.marriageMerge ? TRANSFER.MARRIAGE_MERGE_EXEMPT : TRANSFER.PARENTAL_CARE_MERGE_EXEMPT;
+  return (
+    `합가 상대 쪽 장기임대주택 1채를 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}에 따라 주택 수에서 빼고 ${base}로 판정했지만, ` +
+    `양도 주택이 「소득세법 시행령」 §154① ${parts.join(" · ")} 요건을 충족하지 못해 비과세되지 않습니다 ` +
+    `(양도 주택에 같은 항 1호의 거주 2년은 적용하지 않았습니다 — ${MERGE_RENTAL_CARVEOUT_RULING}).`
+  );
 }
 
 /**

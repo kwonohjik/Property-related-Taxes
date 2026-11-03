@@ -11,7 +11,7 @@
  *    산출물이라 여기 두지 않는다.
  */
 import { rental4hoDeemedPathNotice } from "./one-house/rental-registration-4ho";
-import { mergeRentalCarveoutMissingNotice, mergeRentalCarveoutNotice } from "./one-house/merge-rental-carveout";
+import { mergeRentalCarveoutMissingNotice, mergeRentalCarveoutNotice, mergeRentalCarveoutUnmetNotice } from "./one-house/merge-rental-carveout";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { OneHouseJudgment, OneHouseUnmetException } from "./one-house/types";
@@ -132,6 +132,9 @@ export function oneHouseJudgmentWarnings(
   } else {
     const missing = mergeRentalCarveoutMissingNotice(input, oneHouseRules.one_house_exemption);
     if (missing) warnings.push(missing);
+    // 이 경로로 판정했는데 §154① 보유·거주가 모자라 과세 — ⑳ 「적용 불가」 단계가 남지 않으므로 사유를 고지한다(Q-A1 (a)).
+    const unmet = mergeRentalCarveoutUnmetNotice(input, judgeInput, oneHouseRules.one_house_exemption);
+    if (unmet) warnings.push(unmet);
   }
 
   // F-1 — ①+④⑤ 중첩 의제는 국세청 해석에 기댄다. 무엇에 기댔고 어디까지 확인됐는지 남긴다.

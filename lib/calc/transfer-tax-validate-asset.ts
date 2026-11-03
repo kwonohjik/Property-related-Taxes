@@ -18,7 +18,6 @@
  * 799 → 697줄 (2026-08-07, 상가 3블록 위임 — 트리거 800 직하라 여유분 확보).
  */
 
-import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import { validateMixedSaleSplit } from "./transfer-tax-validate-mixed-use-sale-split";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
@@ -38,13 +37,8 @@ import { validateRentalHousingException } from "./transfer-tax-validate-rental-e
 import { validateDepreciation } from "./transfer-tax-validate-depreciation";
 import { validateHousingExcessSplitInputs } from "./transfer-tax-validate-housing-excess";
 import { validateSeparateLandDateRequired } from "./separate-land-date-required";
-import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
-import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
-import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
-import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
-import { calcProvisoMode } from "./transfer-tax-api-residence";
 import { reverseAppurtenantHouseAssetId } from "./reverse-appurtenant-house";
 import {
   ownershipRatioError,
@@ -74,7 +68,7 @@ export { validateAssetAcquisition } from "./transfer-tax-validate-acquisition";
 import { validateAssetAcquisition } from "./transfer-tax-validate-acquisition";
 import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
-import { calcEffectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
+import { calcRentalResidenceFacts } from "./rental-residence-form-facts";
 
 /**
  * 날짜 순서 교차 검증 — 자산 카드 실시간 인라인 경고(UI)와
@@ -414,32 +408,20 @@ export function validateAssetEntry(
       return `${label}: 가업상속공제 — 상속개시일을 입력하세요.`;
   }
 
-  // ⑧ 장기임대주택 거주주택 비과세 특례 검증 (소령 §155⑳)
-  // OH-42 — 상생임대주택(§155의3①)이면 §155⑳1호 거주요건 면제. 엔진과 같은 술어·같은 사실(④가 보내는 운반 상자).
+  // ⑧ 장기임대주택 거주주택 비과세 특례 검증 (소령 §155⑳) — 상생임대·조정 취득·§154① 단서·합가 문항은 ⑤ 카드와 같은 폼 사실(`calcRentalResidenceFacts`).
+  const rf = calcRentalResidenceFacts(form, a, index);
   const rhError = validateRentalHousingException(
     a.rentalHousingException, a, index, label, form.transferDate, "full",
-    qualifiesWinWinRental({
-      winWinRentalHouse: toWinWinRentalHouseFact(form.importedOneHouseFacts),
-      // ①1호 「취득한 후 체결」 날짜 하한 — 엔진과 같은 취득일·동일세대 상속 사실(④가 primary에서 싣는 값).
-      acquisitionDate: toOptionalDate(a.acquisitionDate),
-      decedentSameHouseholdBeforeInheritance:
-        a.acquisitionCause === "inheritance" ? a.decedentSameHouseholdBeforeInheritance : undefined,
-    }),
-    // §154⑩ 표준 경로(I-5) — 거주주택 취득 당시 조정대상지역 여부. 주소(법정동코드)가 있으면 엔진과 같은 주소 판정,
-    // 없으면 폼-전역 토글(일반 §154① 흐름과 동일 소스) — ⑤ 카드와 같은 실효값(G1-13).
-    // 결정 #38-10 — 증여받은 주택은 ④와 같은 세대 사실 basis(첫 자산 — ⑤ 위젯과 같은 게이트)로 읽는다.
-    calcEffectiveWasRegulatedAtAcquisition(a, form.wasRegulatedAtAcquisition, form.regionCode, {
-      isPrimary: index === 0,
-    }),
+    rf.winWinResidenceExempt,
+    rf.wasRegulatedAtAcquisition,
     undefined,
     // §161 취득 뒤 하락했다가 회복한 입력을 12억 이하에서만 연다 — 물건 양도가액은 ④가 보내는 값과 같은 단건 계약 총액이다.
     // 함께양도 묶음·부담부증여는 12억 판정가가 엔진/route에서 정해져 ⑧이 모른다 → 미전달(열지 않는다).
     form.assets.length === 1 && a.transferType !== "burdened_gift" && parseAmount(form.contractTotalPrice) > 0
       ? { transferPrice: parseAmount(form.contractTotalPrice) }
       : undefined,
-    // §154① 단서 1호·2호가목·3호면 거주주택 보유 2년을 막지 않는다 — ④가 첫 자산에 싣는 것과 같은 게이트·정규화 값(D-9).
-    index === 0 ? effectiveProvisoReason(calcProvisoMode(form), form.provisoReason) : undefined,
-    index === 0 ? mergeRentalState(form) : undefined,
+    rf.provisoReason,
+    rf.mergeRental,
     // 계산기 카드에는 선언을 끌 칸이 없다 — 요건 미달은 막지 않고 카드의 「✗ 미충족」 표시로 안내한다(엔진은 불성립으로 계산).
     false,
   );

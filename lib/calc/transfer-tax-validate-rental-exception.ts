@@ -20,7 +20,6 @@ import { parseDecimal } from "@/lib/calc/number-parse";
 import { canDeclareRentalHousingException } from "./rental-housing-exception-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
-import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import {
   deriveEffectiveRegDate,
   deriveRentalArticle,
@@ -32,20 +31,9 @@ import {
 } from "@/lib/tax-engine/data/rental-155-20-era";
 import { aptDeadlineExtensionIncomplete, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { fieldError } from "./transfer-tax-validate-field";
+import { rentalResidenceRequirementStatus } from "./rental-residence-requirement-status";
 import { MIXED_USE_RENTAL_B_UNSUPPORTED } from "@/lib/tax-engine/transfer-tax-mixed-use-rental-residence-message";
-import { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
-import { landContributedOriginalApt } from "./redev-field-scope";
-import { resolveAptResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
-import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
-import { RENTAL_RESIDENCE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
-import { PHRP_154_10_HOLDING_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
-import { PHRP_154_10_RESIDENCE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
 import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "@/lib/tax-engine/one-house/threshold";
-import { consolidateResidenceMonths } from "@/lib/tax-engine/one-house/residence-months";
-import { giftHouseholdPriorResidenceMonths } from "@/lib/tax-engine/one-house/gift-household-basis";
-import { calcGiftHouseholdBasis } from "./effective-regulated-at-acquisition";
-import { buildSameHouseholdInheritancePayload } from "./transfer-tax-api-helpers";
-import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 
 export function validateRentalHousingException(
   rh: AssetForm["rentalHousingException"] | undefined,
@@ -377,19 +365,17 @@ export function validateRentalHousingException(
   }
 
   /**
-   * §154⑩ 표준 경로(I-5)의 취득 시기별 분기 — `isPreLifetimeLimitRegime`가 단일 소스(엔진
-   * `checkPhrp154_10Eligibility`와 같은 leaf). 2019.2.12 전 취득(「종전규정」)이면 §155⑳1호
-   * 괄호를 쓰지 않고 §154① 원칙(조정대상지역 취득 시에만 거주 2년, 일반 거주기간)을 쓴다.
+   * 거주주택 자신의 거주·보유 상태 — ⑤ 카드와 같은 leaf(`rentalResidenceRequirementStatus` — 계획서
+   * `rhe-e1-notice-and-card-verdict-mismatch.plan.md` B). §154⑩ 종전규정 분기·완공APT 분리 거주·동일세대 통산·면제 사유가 여기 있다.
    */
   const isStandalone154_10 = isStandalone154_10Path;
-  const preRegime154_10 =
-    isStandalone154_10 && asset.acquisitionDate
-      ? isPreLifetimeLimitRegime(
-          new Date(asset.acquisitionDate),
-          rh.residenceTransitionUnderAddendum === true,
-          rh.residenceTransitionBasis,
-        )
-      : false;
+  const st = rentalResidenceRequirementStatus(rh, asset, assetIndex, formTransferDate, {
+    winWinResidenceExempt,
+    wasRegulatedAtAcquisition,
+    provisoReason,
+    mergeRental,
+  });
+  const preRegime154_10 = st.preRegime154_10;
 
   /**
    * OH-15 — B의 §155⑳1호 거주요건은 「사업자등록·임대사업자 등록 또는 어린이집 인가일 이후
@@ -423,40 +409,27 @@ export function validateRentalHousingException(
     return fieldError("acquisitionDate", `${label}: 장기임대주택 특례 — 거주주택 취득일을 입력하세요.`);
   }
 
-  // interval 모드는 residencePeriodMonthsAsset(raw)를 sync하지 않으므로 도출값 사용 —
-  // 엔진 deriveResidencePeriodMonths와 동일 소스(interval 모드 거주기간 오차단 방지).
-  const step4Months = deriveResidencePeriodMonths(asset, formTransferDate ?? "", "");
-  // 완공APT는 엔진이 재개발 카드의 분리 입력(종전·신축 거주 통산 — 부동산납세과-827)으로 센다 — 같은 leaf로 맞춘다(아래 함수).
-  const liveMonthsVal = asset.assetKind === "redevelopment_apt" ? redevAptResidenceMonths(asset, step4Months || 0) : step4Months;
-  // 별건 ⑥ — 거주요건(2년)은 증여·상속 전 동일세대 거주를 통산한 값으로 본다(엔진 `judgeRentalHousingEligibility`와 같은 leaf).
-  // B의 등록 이후 거주기간 검증은 본인 전체 거주기간과 비교하므로 통산값을 쓰지 않는다.
-  const priorMonths = rentalResidencePriorHouseholdMonths(asset, assetIndex);
-  const requirementMonths = (liveMonthsVal || 0) + priorMonths;
-  const requirementText = priorMonths > 0 ? `${requirementMonths}개월 — 같은 세대 거주 통산 ${priorMonths}개월 포함` : `${requirementMonths}개월`;
+  const requirementText = st.priorMonths > 0 ? `${st.residenceMonths}개월 — 같은 세대 거주 통산 ${st.priorMonths}개월 포함` : `${st.residenceMonths}개월`;
 
-  // §154⑩ 단독 경로 — §154⑩이 「제1항을 적용」하므로 §154① 단서 사유가 종전규정 거주(1호~5호)·보유(1호~3호)를 푼다(V-R3 (a)).
-  // 단서가 실제로 성립하는지는 엔진(`resolveExemptionProviso`)이 판정한다 — ⑳ 경로와 같은 분담.
-  const residenceWaivedByProviso = isStandalone154_10 && !!provisoReason && PHRP_154_10_RESIDENCE_PROVISO_REASONS.has(provisoReason);
-  if (isStandalone154_10 && preRegime154_10) {
+  if (preRegime154_10) {
     // 「종전규정」 — §154① 원칙: 취득 당시 조정대상지역인 경우에만 거주 2년(일반 거주기간)
-    if (blockRequirementShortfall && wasRegulatedAtAcquisition && requirementMonths < 24 && !winWinResidenceExempt && !residenceWaivedByProviso) {
+    if (blockRequirementShortfall && !st.residenceMet) {
       return fieldError("residencePeriods", `${label}: 장기임대주택 특례(§154⑩) — 2019.2.12 전 취득으로 소령 §154① 원칙이 적용됩니다. 조정대상지역 취득 주택은 거주기간 2년(24개월) 이상이 필요합니다. (현재: ${requirementText})`);
     }
-  } else if (rh.scenario === "B") {
+  } else if (st.residenceAxis === "post_registration") {
     // OH-15 — 등록 이후 거주기간은 전체 거주기간의 일부다. 더 길면 두 입력 중 하나가 틀렸다.
-    const postReg = parseInt(rh.postRegistrationResidenceMonths ?? "", 10) || 0;
-    if (postReg > (liveMonthsVal || 0)) {
-      return fieldError("rentalHousingException.postRegistrationResidenceMonths", `${label}: 임대→거주 전환 주택 시나리오 — 등록 이후 거주기간(${postReg}개월)이 전체 거주기간(${liveMonthsVal || 0}개월)보다 깁니다. 확인 후 재입력하세요.`);
+    if (st.residenceMonths > st.ownMonths) {
+      return fieldError("rentalHousingException.postRegistrationResidenceMonths", `${label}: 임대→거주 전환 주택 시나리오 — 등록 이후 거주기간(${st.residenceMonths}개월)이 전체 거주기간(${st.ownMonths}개월)보다 깁니다. 확인 후 재입력하세요.`);
     }
-    if (blockRequirementShortfall && postReg < 24 && !winWinResidenceExempt) {
-      return fieldError("rentalHousingException.postRegistrationResidenceMonths", `${label}: 장기임대주택 특례 — 임대→거주 전환 주택은 사업자등록·임대사업자 등록 이후 거주기간이 2년(24개월) 이상이어야 합니다 (현재: ${postReg}개월, 소령 §155⑳1호${isStandalone154_10 ? " 괄호 준용" : ""}).`);
+    if (blockRequirementShortfall && !st.residenceMet) {
+      return fieldError("rentalHousingException.postRegistrationResidenceMonths", `${label}: 장기임대주택 특례 — 임대→거주 전환 주택은 사업자등록·임대사업자 등록 이후 거주기간이 2년(24개월) 이상이어야 합니다 (현재: ${st.residenceMonths}개월, 소령 §155⑳1호${isStandalone154_10 ? " 괄호 준용" : ""}).`);
     }
-  } else if (mergeRental === "unanswered" && requirementMonths < 24 && !winWinResidenceExempt) {
+  } else if (mergeRental === "unanswered" && !st.residenceMet) {
     return fieldError(
       "rentalHousingException.counterpartHouseResidedTwoYears",
       `${label}: 합가 상대 쪽 주택에 2년 이상 거주했는지 답하세요 — 「예」면 양도 주택에는 거주주택 2년을 적용하지 않습니다(기준-2024-법규재산-0061).`,
     );
-  } else if (blockRequirementShortfall && mergeRental !== "waived" && requirementMonths < 24 && !winWinResidenceExempt) {
+  } else if (blockRequirementShortfall && !st.residenceMet) {
     return fieldError("residencePeriods", `${label}: 장기임대주택 특례 — 거주주택 거주기간 2년(24개월) 이상이 필요합니다. "거주주택 거주기간"(개월 직접 또는 입주·퇴거 구간)을 24개월 이상으로 입력하세요. 증여·상속 전 같은 세대로 거주한 기간은 그 칸에 입력하면 통산합니다. (현재: ${requirementText})`);
   }
 
@@ -464,52 +437,10 @@ export function validateRentalHousingException(
   // `eligibility.ts` 상단 주석 · 서면법규재산-2020-1309 질의5 · 기준-2020-법령해석재산-0143).
   // 엔진(`judgeRentalHousingEligibility`)과 **같은 함수**(`calculateHoldingPeriod` — 소령 §154⑤ → 법 §95④
   // 초일 산입)다. 일수(730일)로 세면 응당일 전날 양도에서 엔진은 충족인데 여기서만 차단됐다.
-  const holdingWaivedByProviso =
-    !!provisoReason && (isStandalone154_10 ? PHRP_154_10_HOLDING_PROVISO_REASONS : RENTAL_RESIDENCE_PROVISO_REASONS).has(provisoReason);
-  if (formTransferDate && asset.acquisitionDate && !holdingWaivedByProviso) {
-    const acq = new Date(asset.acquisitionDate);
-    const trn = new Date(formTransferDate);
-    if (Number.isFinite(acq.getTime()) && Number.isFinite(trn.getTime())) {
-      const hp = calculateHoldingPeriod(acq, trn);
-      if (blockRequirementShortfall && hp.years < 2) {
-        return fieldError("acquisitionDate", `${label}: 장기임대주택 특례 — 거주주택 보유기간 2년 이상이 필요합니다. (취득일~양도일: ${hp.years}년 ${hp.months}개월 ${hp.days}일)`);
-      }
-    }
+  if (blockRequirementShortfall && formTransferDate && st.holding && !st.holdingMet) {
+    const hp = st.holding;
+    return fieldError("acquisitionDate", `${label}: 장기임대주택 특례 — 거주주택 보유기간 2년 이상이 필요합니다. (취득일~양도일: ${hp.years}년 ${hp.months}개월 ${hp.days}일)`);
   }
 
   return null;
-}
-
-/**
- * 완공APT의 §155⑳1호 거주 개월 — 엔진 번역(`translateRedevAptForHousingJudgment`)과 같은 leaf(`resolveAptResidenceMonths`)에
- * ④가 실제로 싣는 재개발 값(`buildRedevelopmentPayload`)을 넣는다. Step4 값만 보면 재개발 카드의 분리 입력(종전 12 + 신축 12)을
- * 0으로 읽어 엔진은 충족인데 ⑧만 막는다(계획서 redev-apt-rental-residence-155-20.plan.md §10 실측).
- * 토지 출자 원조합원의 세대원 건물 통산(#12)도 엔진처럼 더한다.
- */
-function redevAptResidenceMonths(asset: AssetForm, step4Months: number): number {
-  const p = buildRedevelopmentPayload(asset);
-  const landContributed = landContributedOriginalApt(asset);
-  return (
-    resolveAptResidenceMonths({
-      isSuccessorMember: p.isSuccessorMember === true || landContributed,
-      successorGiftSameHousehold: p.isSuccessorMember === true ? p.successorGiftSameHousehold : undefined,
-      priorHouseResidenceMonths: p.priorHouseResidenceMonths,
-      newHouseResidenceMonths: p.newHouseResidenceMonths,
-      residencePeriodMonths: step4Months,
-    }) + (landContributed ? (p.householdBuilding?.residenceMonths ?? 0) : 0)
-  );
-}
-
-/**
- * §155⑳1호 거주요건에 더하는 **증여·상속 전 동일세대 거주 개월** — 엔진 `resolveExemptionRequirementResidenceMonths`에서 본인 거주를 뺀 몫과 같다
- * (별건 ⑥ · 서면-2022-부동산-2643 · 서면-2016-부동산-3992). 판정식 사본을 만들지 않고 엔진 leaf에 ④와 같은 사실을 넣는다:
- * 상속은 `buildSameHouseholdInheritancePayload`(④ 단건)를 `consolidateResidenceMonths`에, 증여는 ④와 같은 basis(`calcGiftHouseholdBasis`)를
- * `giftHouseholdPriorResidenceMonths`에. 용도변경 주택은 엔진이 상속 통산을 하지 않는다(`resolveExemptionResidenceMonths`) — 같은 게이트.
- * 입력된 개월만 통산한다(미답 = 0 — 사용자 결정 2026-10-19 Q-2). §155⑳은 첫 자산만 선언한다(`canDeclareRentalHousingException`).
- */
-function rentalResidencePriorHouseholdMonths(asset: AssetForm, assetIndex: number): number {
-  const inheritance = isUsageConversionActive(asset)
-    ? 0
-    : consolidateResidenceMonths(0, { acquisitionCause: asset.acquisitionCause, ...buildSameHouseholdInheritancePayload(asset) });
-  return inheritance + giftHouseholdPriorResidenceMonths(calcGiftHouseholdBasis(asset, { isPrimary: assetIndex === 0 }));
 }

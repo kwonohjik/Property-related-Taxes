@@ -5,6 +5,7 @@
  * CompanionAssetCard L701–720 JSX를 그대로 이동 (border-t 래퍼는 AssetSection 컨테이너로 대체).
  * 조건부 섹션 — 호출부(orchestrator)가 둘 중 하나라도 적용될 때만 렌더.
  */
+import type { RentalResidenceRequirementFacts } from "@/lib/calc/rental-residence-requirement-status";
 import type { MergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { NblSectionContainer } from "../nbl/NblSectionContainer";
@@ -31,9 +32,11 @@ interface Props {
   formRegionCode?: string;
   /** §155④⑤ × ⑳ 상대 쪽 임대 — ⑧과 같은 술어(첫 자산) */
   mergeRental?: MergeRentalState;
+  /** §155⑳ 카드 거주·보유 표시용 폼 사실(상생임대 · §154① 단서) — ⑧과 같은 값 */
+  rentalResidenceFacts?: Pick<RentalResidenceRequirementFacts, "winWinResidenceExempt" | "provisoReason" | "provisoScope">;
 }
 
-export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange, transferDate, wasRegulatedAtAcquisition, formRegionCode, mergeRental }: Props) {
+export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange, transferDate, wasRegulatedAtAcquisition, formRegionCode, mergeRental, rentalResidenceFacts }: Props) {
   /**
    * 🔴 **컴패니언에는 §155⑳ 카드를 띄우지 않는다** (P6-c-4). ④는 단건·다건 모두 primary만
    *    보낸다 — 엔진 입력의 `rentalHousingException`이 top-level **단일 객체**이기 때문이다.
@@ -111,6 +114,7 @@ export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange
           onChangeResidence={(patch) => onChange(patch)}
           onChange={(rh) => onChange({ rentalHousingException: rh })}
           mergeRental={mergeRental}
+          residenceFacts={rentalResidenceFacts}
           // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건 실시간 표시. ⑧과 같은 실효값(G1-13).
           wasRegulatedAtAcquisition={calcEffectiveWasRegulatedAtAcquisition(asset, wasRegulatedAtAcquisition, formRegionCode, {
             isPrimary: assetIndex === 0,

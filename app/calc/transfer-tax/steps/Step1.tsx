@@ -1,4 +1,5 @@
 import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
+import { calcRentalResidenceFacts } from "@/lib/calc/rental-residence-form-facts";
 import { useState } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
@@ -385,6 +386,8 @@ export function Step1({
           wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
           formRegionCode={form.regionCode}
           mergeRental={mergeRentalState(form)}
+          // §155⑳ 카드의 거주·보유 ✓/✗ — ⑧과 같은 폼 사실(첫 자산 · `calcRentalResidenceFacts`)
+          rentalResidenceFacts={form.assets[0] ? calcRentalResidenceFacts(form, form.assets[0], 0) : undefined}
           /**
            * 입주권 §⑥ 카드의 거주요건 경고 게이트 (U1-03).
            *

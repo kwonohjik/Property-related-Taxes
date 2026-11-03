@@ -13,6 +13,7 @@
  *  - 검증 오류 시 5개 전부 forceOpen(H2 — ValidationIssue에 section 키 없음).
  *  - assetKind 특수종류·겸용 토글 ON 시 ③ 자동 펼침(G7 — onChange 핸들러 로컬 setState, useEffect 아님).
  */
+import type { RentalResidenceRequirementFacts } from "@/lib/calc/rental-residence-requirement-status";
 import type { MergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import { bgPreDeemedShareJudgmentFields } from "@/lib/calc/bg-pre-deemed-shares";
 import { bgRtmiShareJudgmentFields } from "@/lib/calc/bg-rtmi-std-acq";
@@ -91,6 +92,8 @@ interface Props {
   formRegionCode?: string;
   /** §155④⑤ × ⑳ 상대 쪽 임대 — `AssetSectionExtras`로 넘긴다 */
   mergeRental?: MergeRentalState;
+  /** §155⑳ 카드 거주·보유 표시용 폼 사실 — `AssetSectionExtras`로 넘긴다 */
+  rentalResidenceFacts?: Pick<RentalResidenceRequirementFacts, "winWinResidenceExempt" | "provisoReason" | "provisoScope">;
   /** 폼-전역 조정대상지역 취득 여부 — 입주권 §⑥ 거주요건 경고 게이트 (U1-03) */
   /** 검증 실패 메시지 — 이 자산 카드에 해당하는 오류. 상단 인라인 배너 + 테두리 강조 + 전체 펼침. */
   errorMessage?: string;
@@ -137,6 +140,7 @@ export function CompanionAssetCard({
   wasRegulatedAtAcquisition,
   formRegionCode,
   mergeRental,
+  rentalResidenceFacts,
   errorMessage,
   splitMode,
   onFractionalToggle,
@@ -504,7 +508,7 @@ export function CompanionAssetCard({
           onToggle={() => toggleSection(5)}
           forceOpen={forceOpenAll}
         >
-          <AssetSectionExtras asset={asset} mergeRental={mergeRental} assetIndex={index} judgmentLoaded={judgmentLoaded} onChange={onChange} transferDate={transferDate} wasRegulatedAtAcquisition={wasRegulatedAtAcquisition} formRegionCode={formRegionCode} />
+          <AssetSectionExtras asset={asset} mergeRental={mergeRental} rentalResidenceFacts={rentalResidenceFacts} assetIndex={index} judgmentLoaded={judgmentLoaded} onChange={onChange} transferDate={transferDate} wasRegulatedAtAcquisition={wasRegulatedAtAcquisition} formRegionCode={formRegionCode} />
         </AssetSection>
       )}
 
