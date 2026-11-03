@@ -2,7 +2,7 @@
  * 검증 오류 → 입력칸 이동 E2E 케이스 — **Phase 4 (reduction)**. 규약은 `validation-field-jump-cases.ts` 헤더와 같다.
  * 케이스 이름은 **「reduction: 」 접두**로 시작한다(E2E `-g` 선택용).
  *
- * 대상: 「감면·공제」(2단계) — `lib/calc/transfer-tax-validate-reductions.ts`. 한 메시지 = 한 케이스.
+ * 대상: 「감면·공제」(2단계) — `lib/calc/transfer-tax-validate-reductions.ts`(§97 시리즈는 `transfer-tax-validate-rental-97.ts`). 한 메시지 = 한 케이스.
  *
  * ⚠️ 2단계 감면 검증은 **첫 오류 1건만** 돌려준다(`validateStep2Reductions`). 그래서 각 케이스는
  *    「통과하는 입력(ok)」에서 **그 칸 하나만** 비운 폼이다 — 다른 칸이 비면 그 오류가 먼저 나와 항목을 못 찾는다.
