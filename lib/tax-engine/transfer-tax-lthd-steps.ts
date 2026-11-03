@@ -16,6 +16,7 @@ import type { CalculationStep } from "./types/transfer.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
 import { TRANSFER, LTHD_EXCLUSION_LABEL } from "./legal-codes/transfer";
 import { TRANSFER_REDUCTION_ARTICLE } from "./legal-codes/transfer-house";
+import { applyRate } from "./tax-utils";
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { LTHD_TABLE2_RESIDENCE_MIN_YEARS, resolveLthdTable2Era, table2ResidencePct } from "./data/lthd-table2-era";
@@ -259,7 +260,36 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     });
   } else if ((isOneHouseSpecial || conv) && !singleAxisTable2 && longTermHoldingDeduction > 0) {
     const totalRate = holdingPct + residencePct;
-    if (totalRate > 0) {
+    if (totalRate > 0 && rentalView?.kind === "special") {
+      // §97의3 특례(§95② 표2 대상 1세대1주택) — 특례 공제율은 「§95②에도 불구하고」 적용하는 단일 율이라
+      // 거주기간별 공제율이 아니다 ⇒ 임대기간 분 공제는 보유 기간분에 넣고, 거주 기간분은 그 밖의 양도차익 × 표2
+      // 거주기간별 공제율만이다(가정 — 법문은 보유·거주를 나누지 않는다). 총액을 표2 비율(40%/48%)로 나누던 종전
+      // 금액은 특례 공제를 거주분에도 배분했다. 합 = 총 장특공제 불변(잔액은 보유분에 흡수).
+      const residenceAmt = applyRate(rentalView.nonRentalGain, residencePct / 100);
+      const holdingAmt = longTermHoldingDeduction - residenceAmt;
+      steps.push({
+        label: LTHD_HOLDING_STEP_LABEL,
+        formula:
+          `임대기간 분 양도차익 ${rentalView.rentalGain.toLocaleString()} × ${pctOf(rentalView.overrideRate)}%` +
+          ` (${TRANSFER_REDUCTION_ARTICLE.RENTAL_97_3})` +
+          (rentalView.nonRentalGain > 0
+            ? ` + 그 밖의 양도차익 ${rentalView.nonRentalGain.toLocaleString()} × ${holdingPct}% (보유 ${holdingPeriod.years}년 × 4%, 40% 한도)`
+            : "") +
+          ` = ${holdingAmt.toLocaleString()}`,
+        amount: holdingAmt,
+        legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+        sub: true,
+      });
+      steps.push({
+        label: LTHD_RESIDENCE_STEP_LABEL,
+        formula:
+          `그 밖의 양도차익 ${rentalView.nonRentalGain.toLocaleString()} × ${residencePct}% = ${residenceAmt.toLocaleString()}` +
+          ` (거주 ${residenceYearsForStep}년 × 4%, 40% 한도 — 임대기간 분 양도차익은 ${TRANSFER_REDUCTION_ARTICLE.RENTAL_97_3} 특례 공제율만 적용)`,
+        amount: residenceAmt,
+        legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+        sub: true,
+      });
+    } else if (totalRate > 0) {
       // 보유·거주 기간분 각각 자기 공제율로 직접 산정(§95② 표2 / §95⑤). floor 잔액(≤1원)은
       // 보유분(기저 공제)에 흡수 — 합 = 총 장특공제 불변식 유지. 세액은 총액만 사용(무관).
       const residenceAmt = Math.floor((longTermHoldingDeduction * residencePct) / totalRate);

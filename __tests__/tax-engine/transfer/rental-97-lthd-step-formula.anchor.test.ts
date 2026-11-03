@@ -77,7 +77,7 @@ describe("§97의3 특례 적용 — 임대기간 분·그 밖의 분으로 풀�
     expect(lthdStep(r).amount).toBe(964_285_713);
   });
 
-  it("LS-2 1세대1주택 거주 2년(표2 48% < 70%) — 그 밖의 분은 표2 분해 · 보유·거주 기간분 행 금액 불변", () => {
+  it("LS-2 1세대1주택 거주 2년(표2 48% < 70%) — 그 밖의 분은 표2 분해", () => {
     const r = run([R973], { residencePeriodMonths: 24 });
     expect(r.rental97LthdDetail.specialApplied).toBe(true);
     expect(r.longTermHoldingDeduction).toBe(401_142_856);
@@ -86,10 +86,34 @@ describe("§97의3 특례 적용 — 임대기간 분·그 밖의 분으로 풀�
     expect(f).toContain("임대기간 분 양도차익 514,285,714 × 70% + 그 밖의 양도차익 85,714,286 × 48% = 401,142,856");
     expect(f).toContain("보유 20년×4%=40% + 거주 2년×4%=8% = 48%");
     expect(f).not.toContain("= 67%");
-    // 신고서 양식도 읽는 sub-step 금액은 그대로(표시 계층 단일 소스 — lthd-split-display.ts)
-    const sub = (label: string) => r.steps.find((s: Any) => s.label === label)?.amount;
-    expect(sub("보유 기간분 장특")).toBe(334_285_714);
-    expect(sub("거주 기간분 장특")).toBe(66_857_142);
+  });
+
+  /**
+   * LS-5 보유·거주 기간분 행 — 특례 공제(임대기간 분 × 70%)는 거주기간별 공제율이 아니므로 보유 기간분에 넣는다.
+   * 거주 기간분 = 그 밖의 양도차익 85,714,286 × 8% = 6,857,142 (종전: 총액 × 8%/48% = 66,857,142 — 특례 공제까지 배분)
+   * 보유 기간분 = 401,142,856 − 6,857,142 = 394,285,714. 합 = 총 장특공제 불변. 신고서 양식도 이 금액을 읽는다.
+   */
+  it("LS-5 보유·거주 기간분 — 거주분은 그 밖의 양도차익 × 거주율만 · 합 = 총액", () => {
+    const r = run([R973], { residencePeriodMonths: 24 });
+    const step = (label: string) => r.steps.find((s: Any) => s.label === label);
+    const holding = step("보유 기간분 장특");
+    const residence = step("거주 기간분 장특");
+    expect(residence.amount).toBe(6_857_142);
+    expect(holding.amount).toBe(394_285_714);
+    expect(holding.amount + residence.amount).toBe(r.longTermHoldingDeduction);
+    expect(holding.formula).toBe(
+      "임대기간 분 양도차익 514,285,714 × 70% (조특법 §97의3) + 그 밖의 양도차익 85,714,286 × 40% (보유 20년 × 4%, 40% 한도) = 394,285,714",
+    );
+    expect(residence.formula).toContain("그 밖의 양도차익 85,714,286 × 8% = 6,857,142");
+    expect(r.determinedTax).toBe(54_675_714);
+  });
+
+  it("LS-6 대조 — 특례 미적용(표2 80%)이면 종전 표2 비율 분해 그대로", () => {
+    const r = run([R973]);
+    const step = (label: string) => r.steps.find((s: Any) => s.label === label);
+    expect(step("보유 기간분 장특").formula).toContain("× 40% / 80%");
+    expect(step("거주 기간분 장특").formula).toContain("× 40% / 80%");
+    expect(step("보유 기간분 장특").amount + step("거주 기간분 장특").amount).toBe(480_000_000);
   });
 
   it("LS-3 대조 — 특례 미적용(표2 80% > 특례)이면 종전 일반 산식 그대로", () => {
