@@ -14,7 +14,6 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { parseAmount } from "./number-parse";
 import { isRedevelopmentSec166Asset } from "./redev-acquisition-price-source";
 import { redevPreApprovalExpensesUnused } from "./redev-pre-approval-acq-mode";
-import { isRedevCarryoverDonorBasis } from "./redev-carryover-acq-mode";
 import { isReceiveOnlyFiling } from "./redev-field-scope";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-redevelopment";
 
@@ -22,11 +21,11 @@ import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-redevelopme
  * ⑤ 안내 · ⑧ 차단 문장 — 앞 문장은 공통이고, 금액을 옮길 곳은 인가 전 분 필요경비 칸이 있는가로 가른다
  * (계획서 `docs/02-design/features/redev-legacy-expense-message-lump.plan.md` Q-1 a). 칸이 없는 개산공제 모드에서
  * 그 칸을 지목하면 같은 ④의 보라 안내(`AssetSectionExpense` — 같은 술어)와 반대가 됐다.
- * 이월과세 ② 환산은 엔진이 B를 고르면 인가 전 실비가 쓰여 개산공제 문장이 틀리므로 종전 문장을 둔다(같은 계획서 Q-2 — 별건).
+ * 이월과세 ② 환산은 칸이 보이므로(`redevPreApprovalExpensesScenarioDependent`) 첫 갈래다.
  */
 export function redevLegacyExpenseUnusedMessage(asset: AssetForm): string {
   const head = `「직접 귀속 필요경비 — 이전 입력 형식」은 재개발·재건축 완공 아파트와 조합원입주권에서는 계산에 쓰이지 않습니다(${REDEVELOPMENT.GAIN_BASE}). `;
-  if (!redevPreApprovalExpensesUnused(asset) || isRedevCarryoverDonorBasis(asset)) {
+  if (!redevPreApprovalExpensesUnused(asset)) {
     return head + "금액을 「자본적 지출액」과 「양도비」 칸에 나눠 입력하고(원조합원이 관리처분계획 인가 전에 쓴 비용은 「인가전 분 필요경비」) 이 칸은 비우세요.";
   }
   if (isReceiveOnlyFiling(asset)) {

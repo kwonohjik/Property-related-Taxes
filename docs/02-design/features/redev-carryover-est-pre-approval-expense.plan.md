@@ -73,3 +73,37 @@ B에서는 자본적 지출액 7백만이 인가 전 칸 7백만과 같은 세�
 9. E2E 1건: ② ON 완공 APT → ③ 칸 보임 + 안내 → 7백만 입력 → 계산 → body `redevelopment.preApprovalExpenses = 7000000` · 결과 화면 B 채택 · 인가 전 분 필요경비 표시(V-4 확인).
 
 예상 규모: 코드 4파일 · 각 수 줄 + anchor 1 + E2E 1. 구현은 1~2시간이다.
+
+## 4. 구현 결과 (Q-1 a · Q-2 a · 2026-11-03)
+
+| 파일 | 변경 |
+|---|---|
+| `lib/calc/redev-pre-approval-acq-mode.ts` | 새 술어 `redevPreApprovalExpensesScenarioDependent` · `redevPreApprovalExpensesUnused`가 그 경우 `false` · ③·④ 공용 문장 `REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE`(법령 상수 `TRANSFER.CARRYOVER_ESTIMATED_LUMP_DED`·`CARRYOVER_COMPARISON` · `REDEVELOPMENT.GAIN_BASE` — 새 조문 없음) |
+| `components/calc/transfer/RedevelopmentBlock.tsx` | ③ 칸이 보인다(술어) · 칸 `hint` = 공용 문장 |
+| `components/calc/transfer/asset-sections/AssetSectionExpense.tsx` | ④ 보라 안내 「…「인가전 분 필요경비」에 넣으세요」 뒤에 공용 문장 |
+| `lib/stores/transfer-per-asset-summary.ts` | 계산 전 필요경비 「계산 후 표시」 유지(Q-2 a) |
+| `lib/calc/redev-legacy-expense-unused.ts` | `|| isRedevCarryoverDonorBasis` 제거(1번 이후 도달하지 않는 갈래) · 주석 갱신 |
+
+엔진·④·⑧은 바꾸지 않았다.
+
+### 검증
+
+- anchor `__tests__/components/redev-carryover-est-pre-approval-expense.anchor.test.tsx` 19건:
+  - RC-1: §1 V-1 네 경로에서 ③ 칸 + 문장 · 개산공제 안내 없음 · ④ 보라 문장 · 옛 칸 안내 첫 갈래 · 사이드바 pending · ⑧ 0건.
+  - RC-2: 세액. B 채택 60,621,000 → 57,695,000 · 함께 양도 127,006,000 → 123,926,000 · A 채택 452,679,899 불변 · ④ 전송 7,000,000.
+  - RC-3: 대조군. ② OFF는 칸 있음 · 문장 없음 · 사이드바 7,000,000. 이월과세 아닌 환산은 칸 숨김 · 개산공제 안내. 부담부증여는 범위 밖.
+- #2865 anchor `redev-legacy-expense-message-lump` LM-1의 「이월과세 ② 환산 ON」 케이스를 「칸 있음」(true)으로 갱신했다. LM-2의 이월과세 제외 필터도 제거해 그 경로도 보라 안내 방향을 단언한다(45건 통과).
+- 뮤테이션 5종(술어 false · `Unused` 갈래 제거 · 사이드바 조건 제거 · hint 갈래 제거 · 보라 문장 제거): 모두 4건 실패로 잡힘.
+- 회귀 `__tests__/components · calc · lib · stores · tax-engine/transfer`: 26,779 통과(갱신 전 실패 1건 = 위 LM-1, 의도된 변경). tsc · eslint 0건.
+- E2E `e2e/redev-carryover-est-pre-approval-expense.spec.ts`(신규): ③ 칸 + 문장 → 7백만 입력 → body `preApprovalExpenses` 7,000,000 → B 채택 · 총결정세액 57,695,000 · 결과 신고서 [B] 필요경비 「합계 7,000,000 · ① 인가전 분 7,000,000」(V-4 해소). 관련 E2E 3건(#2865 · #2858 · 이월과세 검증 범위) 함께 통과.
+
+### V-4 측정 — 청산금 수령 단독 신고 × 이월과세 ② 환산 ON
+
+④의 0 전송 갈래(`isReceiveOnlyFiling && redevPreApprovalExpensesUnused`)가 칸 게이트 변경으로 이 조합에서 꺼진다. 양도 1억 · 수령 청산금 1억 시료로 측정했다.
+
+| 채택 | 인가전 분 0 | 7백만 | 「자본적 지출액」 7백만 |
+|---|---|---|---|
+| B(증여 당시 평가액 3억) | 10,604,000 | **10,398,666**(종전 숨김 · 0 전송이라 10,604,000) | 10,398,666 |
+| A(증여 당시 평가액 9억) | 4,979,700 | 4,979,700 | 4,979,700 |
+
+B에서는 칸 값이 「자본적 지출액」과 같은 몫으로 반영된다. 이전에는 수증자 인가 전 실비가 사라졌다. A에서는 쓰이지 않는다. 둘 다 칸 안내 문장대로다. ⑧ 0건.
