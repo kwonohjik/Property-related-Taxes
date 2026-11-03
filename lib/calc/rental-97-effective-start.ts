@@ -60,3 +60,44 @@ export function rental973DeemedStartString(r: {
   });
   return res.deemedStartDate ? toIsoDay(res.deemedStartDate) : plain;
 }
+
+/**
+ * §97의4 임대기간 구간 미리보기(YYYY-MM-DD) — ⑤ 자동 산출 박스 전용. 엔진 `evaluateRental974`의 구간과 같은 축이다:
+ * - 본인(상속이면 상속인) 분 시작 = 조특령 §97의4② 의제 개시일(`rental97EffectiveStartString`) — 상속이면 상속개시일 전으로 가지 않는다
+ * - 종점 = 자동말소일(민특법 §6⑤ — 양도일 전일 때) 또는 양도일
+ * - 피상속인 분(조특령 §97⑤3호) = [max(피상속인 임대개시일, 피상속인 사업자등록등일), min(상속개시일, 종점)]
+ * 공실 차감·연수 환산은 하지 않는다(엔진 단일 진실). 날짜가 비면 해당 구간은 undefined.
+ */
+export function rental974PeriodSegmentsString(
+  r: {
+    rentalStartDate?: string;
+    registrationDate?: string;
+    isTaxRegistered?: boolean;
+    taxRegistrationDate?: string;
+    isInherited974?: boolean;
+    inheritanceDate974?: string;
+    decedentRegistrationDate974?: string;
+    decedentRentalStartDate974?: string;
+    isAutoCancelled974?: boolean;
+    autoCancelledDate974?: string;
+  },
+  transferDate: string,
+): { own?: { start: string; end: string }; decedent?: { start: string; end: string } } {
+  if (!transferDate) return {};
+  const max = (a: string, b: string) => (b > a ? b : a);
+  const min = (a: string, b: string) => (b < a ? b : a);
+  const end =
+    r.isAutoCancelled974 && r.autoCancelledDate974 && r.autoCancelledDate974 < transferDate
+      ? r.autoCancelledDate974
+      : transferDate;
+  const inherited = !!(r.isInherited974 && r.inheritanceDate974);
+  const ownStart = rental97EffectiveStartString(r);
+  const own = ownStart
+    ? { start: inherited ? max(ownStart, r.inheritanceDate974!) : ownStart, end }
+    : undefined;
+  const decedent =
+    inherited && r.decedentRegistrationDate974 && r.decedentRentalStartDate974
+      ? { start: max(r.decedentRentalStartDate974, r.decedentRegistrationDate974), end: min(r.inheritanceDate974!, end) }
+      : undefined;
+  return { own, decedent };
+}

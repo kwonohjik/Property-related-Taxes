@@ -60,6 +60,9 @@ const rental: AssetForm["rentalHousingException"] = {
   ],
 };
 
+/** ⑳ 불성립 · 선언한 임대 호를 주택 수에 넣은 과세액(mock) — 명부에 임대 행을 넣고 선언하지 않은 입력과 같다(2026-11-02 실측). */
+const TAXED_NO_SPECIAL = 130_350_000;
+
 function form(formOver: Record<string, unknown> = {}, assetOver: Record<string, unknown> = {}, roster = false) {
   return redevAptForm({
     kind: "housing",
@@ -112,9 +115,10 @@ describe("계산기 — §155⑳ 거주주택 보유 2년 × §154① 단서", (
     expect(r.body.oneHouseExemptionProviso).toEqual({ reason: "unavoidable" });
     expect(r.result.totalTax).toBe(0);
     expect(r.result.exemptReason).toBe("장기임대주택 보유자 거주주택 비과세 (§155⑳ · §154① 단서 3호 부득이)");
-    // 같은 명부에 5호를 고르면 ④가 보내지 않는다(정규화) — ⑧은 보유 2년으로 막는다
+    // 같은 명부에 5호를 고르면 ④가 보내지 않는다(정규화) — 보유 2년 미달로 ⑳ 불성립 과세(계산기 ⑧은 요건 미달을 막지 않는다)
     const p5 = form({ provisoReason: "pre_designation_contract", provisoPreContractNoHouse: true }, {}, true);
-    expect(allIssues(p5).some((i) => i.message.includes(HOLDING_BLOCK))).toBe(true);
+    expect(allIssues(p5).some((i) => i.message.includes(HOLDING_BLOCK))).toBe(false);
+    expect((await runCalc(p5)).result.totalTax).toBe(TAXED_NO_SPECIAL);
   });
 
   it("RC-6 ⑧ 단서 필수 입력도 ⑳ 맥락(2주택)에서 본다 — 2호가목 수용일 미입력이면 막는다", () => {
@@ -123,19 +127,29 @@ describe("계산기 — §155⑳ 거주주택 보유 2년 × §154① 단서", (
     expect(allIssues(form({ provisoReason: "expropriation", provisoBusinessApprovalDate: "2024-01-15", provisoExpropriationDate: "2024-12-01" }, {}, true))).toEqual([]);
   });
 
-  it("RC-2 부정 짝 — 단서 없음이면 ⑧이 종전대로 보유 2년으로 막는다", () => {
-    expect(allIssues(form()).some((i) => i.message.includes(HOLDING_BLOCK))).toBe(true);
+  /**
+   * 계산기 ⑧은 요건 미달을 막지 않는다(`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` B) — 단서가 보유 2년을 풀지 못하면 엔진이 ⑳ 불성립으로 계산한다.
+   * 선언한 임대 호가 주택 수에 남아 과세다(명부에 임대 행을 넣고 선언하지 않은 값과 같다 — RC-2 대조). 단서 인자의 ⑧ leaf 판정은 아래 「⑧ leaf」가 지킨다.
+   */
+  it("RC-2 부정 짝 — 단서 없음이면 ⑳ 불성립 과세(⑧은 막지 않음)", async () => {
+    const f = form();
+    expect(allIssues(f).some((i) => i.message.includes(HOLDING_BLOCK))).toBe(false);
+    expect((await runCalc(f)).result.totalTax).toBe(TAXED_NO_SPECIAL);
+    // 대조: 임대 행을 명부에 넣고 ⑳을 선언하지 않은 입력
+    const control = form({}, { rentalHousingException: { ...rental, applyException: false } }, true);
+    expect((await runCalc(control)).result.totalTax).toBe(TAXED_NO_SPECIAL);
   });
 
-  it("RC-3 ★ 받지 않는 사유 — 5호(무주택 확인)는 ⑧ 보유 차단을 풀지 않는다", () => {
-    const issues = allIssues(form({ provisoReason: "pre_designation_contract", provisoPreContractNoHouse: true }));
-    expect(issues.some((i) => i.message.includes(HOLDING_BLOCK))).toBe(true);
+  it("RC-3 ★ 받지 않는 사유 — 5호(무주택 확인)는 보유 2년을 풀지 않아 ⑳ 불성립 과세", async () => {
+    const f = form({ provisoReason: "pre_designation_contract", provisoPreContractNoHouse: true });
+    expect(allIssues(f).some((i) => i.message.includes(HOLDING_BLOCK))).toBe(false);
+    expect((await runCalc(f)).result.totalTax).toBe(TAXED_NO_SPECIAL);
   });
 
-  it("RC-4 거주 2년은 여전히 막는다 — 통산 없음(본인 18개월) + 3호", () => {
-    const issues = allIssues(form({ provisoReason: "unavoidable" }, { giftPriorHouseholdResidenceMonths: "0" }));
-    expect(issues.some((i) => i.message.includes("거주주택 거주기간 2년(24개월) 이상이 필요합니다"))).toBe(true);
-    expect(issues.some((i) => i.message.includes(HOLDING_BLOCK))).toBe(false);
+  it("RC-4 거주 2년은 단서가 풀지 않는다 — 통산 없음(본인 18개월) + 3호 → ⑳ 불성립 과세", async () => {
+    const f = form({ provisoReason: "unavoidable" }, { giftPriorHouseholdResidenceMonths: "0" });
+    expect(allIssues(f)).toEqual([]);
+    expect((await runCalc(f)).result.totalTax).toBe(TAXED_NO_SPECIAL);
   });
 });
 

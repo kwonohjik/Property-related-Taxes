@@ -28,6 +28,14 @@ function mkS162(transferDate: string, acq: string): RulingCase {
   };
 }
 const HOLD_ERR = /거주주택 보유기간 2년/;
+/**
+ * 보유 2년 경계 leaf — 요건 미달을 막는 경로(부담부증여 카드 `mode="full"`)가 쓰는 판정이다. 계산기 진입점은 요건 미달을 막지 않는다
+ * (`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` B — 선언을 끌 칸이 없어 막다른 길이었다). 경계는 엔진과 같은 함수여야 한다.
+ */
+const leafHold = (f: ReturnType<typeof handoff>) => {
+  const a = f.assets[0];
+  return validateRentalHousingException(a.rentalHousingException, a, 0, "자산1", f.transferDate, "full") ?? "";
+};
 
 describe("S16-2 ⑧ 거주주택 보유 2년 — 엔진 calculateHoldingPeriod(초일 산입)와 같은 날 경계", () => {
   it("응당일 전날(2021-05-10→2023-05-09): 엔진 2년 충족 → ⑧도 차단하지 않는다", async () => {
@@ -39,23 +47,26 @@ describe("S16-2 ⑧ 거주주택 보유 2년 — 엔진 calculateHoldingPeriod(�
       expect(allIssues(handoff(form)).filter((m) => HOLD_ERR.test(m))).toEqual([]);
     });
   });
-  it("[짝] 이틀 전(2023-05-08): 엔진 미충족 → ⑧ 차단 유지, 문구에 일수(730일) 대신 연·월·일", async () => {
+  it("[짝] 이틀 전(2023-05-08): 엔진 미충족 → leaf 차단 유지(문구에 일수 730일 대신 연·월·일) · 계산기 진입점은 막지 않음", async () => {
     expect(calculateHoldingPeriod(new Date("2021-05-10"), new Date("2023-05-08")).years).toBe(1);
     const c = mkS162("2023-05-08", "2021-05-10");
     await withToday(c.today, async () => {
-      const hits = allIssues(handoff(buildCaseForm(c))).filter((m) => HOLD_ERR.test(m));
-      expect(hits).toHaveLength(1);
-      expect(hits[0]).toContain("1년 11개월 29일");
-      expect(hits[0]).not.toContain("730");
+      const f = handoff(buildCaseForm(c));
+      const hit = leafHold(f);
+      expect(hit).toMatch(HOLD_ERR);
+      expect(hit).toContain("1년 11개월 29일");
+      expect(hit).not.toContain("730");
+      expect(allIssues(f).filter((m) => HOLD_ERR.test(m))).toEqual([]);
     });
   });
-  it("윤일 구간: 2022-03-01→2024-02-28은 미충족(차단), 2024-02-29는 충족(무차단) — 엔진과 일치", async () => {
+  it("윤일 구간: 2022-03-01→2024-02-28은 미충족(leaf 차단), 2024-02-29는 충족(무차단) — 엔진과 일치", async () => {
     for (const [td, blocked] of [["2024-02-28", true], ["2024-02-29", false]] as const) {
       expect(calculateHoldingPeriod(new Date("2022-03-01"), new Date(td)).years >= 2).toBe(!blocked);
       const c = mkS162(td, "2022-03-01");
       await withToday(c.today, async () => {
-        const n = allIssues(handoff(buildCaseForm(c))).filter((m) => HOLD_ERR.test(m)).length;
-        expect(n, td).toBe(blocked ? 1 : 0);
+        const f = handoff(buildCaseForm(c));
+        expect(HOLD_ERR.test(leafHold(f)), td).toBe(blocked);
+        expect(allIssues(f).filter((m) => HOLD_ERR.test(m)), td).toEqual([]);
       });
     }
   });

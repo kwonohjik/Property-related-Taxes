@@ -14,7 +14,7 @@
  * | RR-1 | 계산기 화면 · 원조합원 · 명부 없음(주택 수 1) — ④가 특례를 싣고 비과세 0 · 일반 주택 짝도 0 |
  * | RR-2 | 명부에 장기임대 행(주택 수 2) — 임대주택을 뺀 주택 수로 판정해 비과세 |
  * | RR-3 | 20억 — 부분과세 = 특례 없는 순수 1주택 완공APT와 같은 세액(12억 초과 안분·표2를 기존 §166 경로가 처리) |
- * | RR-4 | 거주 통산(827) — 종전주택 1년 + 신축 1년 = 비과세 · 신축 1년만이면 ⑧ 차단 + 엔진 과세 124,366,000 · 되돌림 고지 |
+ * | RR-4 | 거주 통산(827) — 종전주택 1년 + 신축 1년 = 비과세 · 신축 1년만이면 엔진 과세 124,366,000 · 되돌림 고지(계산기 ⑧은 요건 미달을 막지 않는다) |
  * | RR-5 | 승계조합원 — 사용승인 후 거주 3년 · 비과세 |
  * | RR-6 | 세대 구성 초과(다른 일반주택 2채) — 과세 124,366,000 · 구성 불성립 고지 |
  * | RR-7 | 시나리오 B — ⑧ 차단(Q-2 (a)) · API 직접이면 비과세를 거두고 확인 필요 고지 |
@@ -106,7 +106,7 @@ describe("완공APT × §155⑳ — 화면 경로", () => {
     expect(withRental.result.totalTax).toBe(plain.result.totalTax);
   });
 
-  it("RR-4 거주 통산 — 종전 1년 + 신축 1년 비과세 · 신축 1년만이면 ⑧ 차단 + 엔진 과세", async () => {
+  it("RR-4 거주 통산 — 종전 1년 + 신축 1년 비과세 · 신축 1년만이면 엔진 과세(⑧은 막지 않음)", async () => {
     const both = await runCalc(
       redevAptForm({
         price: "1000000000",
@@ -118,7 +118,7 @@ describe("완공APT × §155⑳ — 화면 경로", () => {
     const newOnly = await runCalc(
       redevAptForm({ price: "1000000000", assetOver: { rentalHousingException: rhe(), residencePeriods: [{ moveInDate: "2023-06-01", moveOutDate: "2024-06-01" }] } }),
     );
-    expect(newOnly.issues.map((i) => i.field)).toContain("residencePeriods");
+    expect(newOnly.issues.map((i) => i.field)).not.toContain("residencePeriods");
     expect(newOnly.result.isExempt).toBe(false);
     expect(newOnly.result.totalTax).toBe(124_366_000);
     expect((newOnly.result.warnings as string[]).filter((w) => UNMET_TEXT.test(w))).toHaveLength(1);

@@ -113,11 +113,18 @@ test("[RME-1] ★ 문항에 답하지 않으면 막히고, ⑤에서 「예」�
   await expect(page.getByText(RULING).first()).toBeVisible();
 });
 
-test("[RME-2] 「아니오」 → 거주 2년 안내로 막힌다", async ({ page }) => {
+/**
+ * 계산기 ⑧은 요건 미달을 막지 않는다(`axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` B) — 판정 메뉴처럼 「과세」로 계산된다.
+ * 종전에는 「거주 2년」으로 막고 계산기에 선언을 끌 칸이 없어 세액을 낼 수 없었다.
+ */
+test("[RME-2] 「아니오」 → ⑤에 미충족 안내 · 막지 않고 특례 없이 과세", async ({ page }) => {
   await openExtras(page, { answer: "no" });
+  await expect(page.getByText("거주주택 요건이 충족되지 않으면 본 특례가 적용되지 않고 일반 양도소득세로 계산됩니다").first()).toBeVisible();
   await gotoLastStep(page);
-  await page.getByRole("button", { name: /계산하기/ }).click();
-  await expect(page.getByText(/거주주택 거주기간 2년\(24개월\) 이상이 필요합니다/).first()).toBeVisible();
+  const { result } = await calculate(page);
+  expect(result.isExempt).toBe(false);
+  expect(result.totalTax).toBeGreaterThan(0);
+  await expect(page.getByText(/거주주택 거주기간 2년\(24개월\) 이상이 필요합니다/)).toHaveCount(0);
 });
 
 test("[RME-3] 강남 거주 0 · 2026-06 → 3주택 중과와 그 근거가 결과에 보인다", async ({ page }) => {

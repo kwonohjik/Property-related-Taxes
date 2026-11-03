@@ -185,6 +185,18 @@ export const reductionSchema = z.discriminatedUnion("type", [
     officialPriceAtStart: z.number().int().nonnegative().optional(),
     /** D2-04 — 가목(민간매입 1호↑) / 다목(건설임대 2호↑) */
     rental974Category: z.enum(["purchase_a", "construction_c"]).optional(),
+    /** 조특령 §97의4② — 세무서 사업자등록일. ⑫에 없으면 침묵 stripping된다. */
+    taxRegistrationDate: z.string().date().optional(),
+    /** 조특령 §97⑤3호 준용 — 상속받은 임대주택. ⑫에 없으면 침묵 stripping된다. */
+    inheritance974: z
+      .object({
+        inheritanceDate: z.string().date(),
+        decedentRegistrationDate: z.string().date(),
+        decedentRentalStartDate: z.string().date(),
+      })
+      .optional(),
+    /** 민간임대주택에 관한 특별법 §6⑤ 자동말소일 — 임대기간 종점. ⑫에 없으면 침묵 stripping된다. */
+    autoCancelledDate974: z.string().date().optional(),
     ...rental97CommonShape,
     region: z.enum(["capital", "non_capital"]).optional(),
     _phase1Stub: z.literal(true).optional(),

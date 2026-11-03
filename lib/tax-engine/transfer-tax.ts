@@ -619,6 +619,7 @@ function calculateTransferTaxCore(
     appurtenantTable1Applied,
     appurtenantLthdNotice,
     splitDetail,
+    rental97LthdDetail,
   });
   longTermHoldingDeduction = lthd982.longTermHoldingDeduction;
   longTermHoldingRate = lthd982.longTermHoldingRate;

@@ -275,6 +275,20 @@ export type RentalReductionFormVariant =
       officialPriceAtStart: string;
       /** D2-04 — 가목(민간매입 1호↑) / 다목(건설임대 2호↑). "" = 미선택 */
       rental974Category: "purchase_a" | "construction_c" | "";
+      /** 조특령 §97의4② — 세무서 사업자등록일 (YYYY-MM-DD). 사업자등록 확인 시 필수 — 임대개시 기산의 한 축 */
+      taxRegistrationDate: string;
+      /** 조특령 §97⑤3호 준용 — 상속받은 임대주택인가. true면 위 등록·임대일은 상속인 본인 값 */
+      isInherited974: boolean;
+      /** 상속개시일 (YYYY-MM-DD) */
+      inheritanceDate974: string;
+      /** 피상속인 사업자등록등일 — 세무서 사업자등록·임대사업자등록 중 늦은 날 (YYYY-MM-DD) */
+      decedentRegistrationDate974: string;
+      /** 피상속인이 그 주택을 임대하기 시작한 날 (YYYY-MM-DD) */
+      decedentRentalStartDate974: string;
+      /** 민간임대주택에 관한 특별법 §6⑤ — 등록이 자동말소됐는가 */
+      isAutoCancelled974: boolean;
+      /** 자동말소일 (YYYY-MM-DD) — 임대기간 종점 */
+      autoCancelledDate974: string;
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_5";
