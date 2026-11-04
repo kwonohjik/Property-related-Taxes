@@ -183,7 +183,16 @@ export function resolveDisplayAcquisitionAndExpense(r: {
                 ? safeMultiplyThenDivide(r.singleInput.transferPrice, r.singleInput.standardPriceAtAcquisition ?? 0, tsfStd)
                 : 0))
           : // 영 §176조의2④ ② 채택 — `singleInput`은 치환 전 입력값이다(파트 비교는 위 `splitSummary`가 받는다)
-            (r.result.preDeemedPurchaseDetail?.selected === "clause2" ? r.result.preDeemedPurchaseDetail.clause2Amount : r.singleInput.acquisitionPrice)) - (r.result.depreciationAmount ?? 0));
+            (r.result.preDeemedPurchaseDetail?.selected === "clause2"
+              ? r.result.preDeemedPurchaseDetail.clause2Amount
+              : /**
+                 * 🔴 상속·증여 「소득세법 시행령」 §163⑨ — 단건 엔진은 STEP 0.45에서 취득가액을 채택값(① 평가액 · ② §164 기준시가 중
+                 *    큰 금액, 지분 적용 뒤)으로 바꾸고 `inheritedAcquisitionDetail.acquisitionPrice`에 남긴다. `singleInput`은 route 입력 ①이라
+                 *    ②가 채택되면 취득가액 칸이 ①(②만이면 0)이 되고, 아래 역산이 그 차액을 필요경비로 보냈다 — 실측(상속 주택 ① 3억 + ② 7.2억):
+                 *    취득가액 300,000,000 · 필요경비 420,000,000(정답 720,000,000 · 0). 역산이라 항등식은 성립해 자기검산이 가렸다(위 F-14와 같은 함정).
+                 *    계획서 `docs/02-design/features/multi-inherited-acq-display-echo.plan.md` Q-1 a.
+                 */
+                (r.result.inheritedAcquisitionDetail?.acquisitionPrice ?? r.singleInput.acquisitionPrice))) - (r.result.depreciationAmount ?? 0));
   // 비과세 자산: gross(exemptGrossGain)와 취득가액으로 필요경비 역산(환산 시 개산공제분).
   //   → 신고서 양식 컬럼 교차검산(양도가액 − 취득가액 − 필요경비 = 전체 양도차익) 정합.
   // 비-비과세: 엔진 transferGain으로 역산(개산공제·양도비 포함).
