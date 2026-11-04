@@ -16,6 +16,7 @@ import { preDesignationContractInScope } from "./pre-designation-contract-scope"
 import { rentIncreaseContractDatePayload } from "./rent-cap-contract-date-scope";
 import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from "./tax-incentive-rental-scope";
 import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
+import { rentalDeclarationUrbanLifeQuestionInScope } from "./apt-deadline-extension-scope";
 import { twoHouseExclusionStatusPayload } from "./two-house-exclusion-status";
 import { dayCareUsageStatusPayload } from "./daycare-usage-status";
 import { popDeclineAcquiredFromOther } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
@@ -424,6 +425,9 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
             isExcludedAfter20200711Apt: h.isExcludedAfter20200711Apt,
             isExcludedShortToLongChange: h.isExcludedShortToLongChange,
             hasContractDepositProof: h.hasContractDepositProof,
+            // 가목2) 괄호 도시형 생활주택인 아파트 — ⑤가 묻는 범위에서 「예」일 때만(3호 선언이면 아래 3호 spread가 같은 칸 값을 싣는다)
+            isUrbanLifeHousingApartment:
+              rentalDeclarationUrbanLifeQuestionInScope(h) && h.isUrbanLifeHousingApartment === true ? true : undefined,
             // §167의3⑪ 연장 사실 — 양도 주택 매핑과 같은 범위 술어
             rentalAptDeadlineExtension: rentalDeclarationAptDeadlineInScope(h)
               ? aptDeadlineExtensionPayload(h.rentalAptDeadlineExtension)

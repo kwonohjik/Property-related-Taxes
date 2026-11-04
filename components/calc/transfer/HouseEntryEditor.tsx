@@ -273,7 +273,8 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
                         isTaxIncentiveRental: false,
                         isTaxIncentiveRentalPurchase: undefined,
                         taxIncentiveRentalRegistrationType: undefined,
-                        isUrbanLifeHousingApartment: undefined,
+                        // 도시형 생활주택 아파트는 2호 양도기한에도 쓰는 같은 칸 — 2호가 켜져 있으면 남긴다(임대기간과 같은 규칙)
+                        isUrbanLifeHousingApartment: house.isLongTermRental ? house.isUrbanLifeHousingApartment : undefined,
                         taxIncentiveRentalAptDeadlineExtension: undefined,
                         rentalPeriodYears: house.isLongTermRental ? house.rentalPeriodYears : undefined,
                       },
@@ -652,6 +653,7 @@ function LongTermRentalSection({
             idPrefix={house.id}
             onUpdate={onUpdate}
             aptDeadlineExtensionEnabled={aptDeadlineExtensionEnabled}
+            urbanLifeHousingQuestionEnabled
           />
         </div>
       </ToggleCard>

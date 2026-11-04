@@ -27,6 +27,8 @@ export type RentalDeclaration = Partial<
     // 공통 — 아파트 여부는 아·자목 일괄 제외 / 가·마목 2020.7.11 이후 등록 제외의 판정 입력이다
     | "isLongTermRental"
     | "isApartment"
+    // 「주택법」 도시형 생활주택인 아파트 — 가목2) 괄호로 양도기한(⑪)만 비적용. 명부 행은 3호 칸과 같은 필드(같은 사실)
+    | "isUrbanLifeHousingApartment"
     // legacy 등록 경로 (rentalType 미선택 시)
     | "isRegisteredRental"
     | "rentalRegistrationDate"

@@ -120,6 +120,15 @@ const isGated = (article: SharedRentalArticle) => APT_DEADLINE_GATED_ARTICLES.in
  * 사목(G)은 같은 목의 자체 양도기한이 대체한다(가목2) 단서 등) — 대상 아님. 유형 미선택(legacy)도 목을 모르므로 아님.
  */
 export function rentalDeclarationAptDeadlineInScope(d: RentalDeclaration | undefined): boolean {
+  return rentalDeclarationUrbanLifeQuestionInScope(d) && d?.isUrbanLifeHousingApartment !== true;
+}
+
+/**
+ * 2호 — 「도시형 생활주택인 아파트인가」를 묻는 선언: 위 ⑪ 게이트 범위와 같다(가목2) 괄호 「도시형 생활주택인 아파트는 제외한다.
+ * 이하 이 목, 나목2)ㆍ라목8) 및 마목4)에서 같다」가 바로 이 양도기한에만 걸린다). 「예」면 ⑪ 연장 사실은 묻지도 싣지도 않는다
+ * (엔진 `check.ts` (m) 게이트 · `toNormalizedFromHouse`와 같은 조건). ⑤·④가 같은 술어를 쓴다.
+ */
+export function rentalDeclarationUrbanLifeQuestionInScope(d: RentalDeclaration | undefined): boolean {
   if (!d?.isLongTermRental || !d.isApartment || !d.rentalType) return false;
   return isGated(ARTICLE_BY_RENTAL_TYPE[d.rentalType]);
 }
