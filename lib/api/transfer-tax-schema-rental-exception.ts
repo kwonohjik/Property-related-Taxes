@@ -38,6 +38,8 @@ export const rentalUnitSchema = z.object({
   rentalCategory: RentalCategoryEnum,
   rentalAcquisitionType: RentalAcqTypeEnum,
   isApartment: z.boolean(),
+  /** 「주택법」 도시형 생활주택인 아파트 — 소령 §167의3①2호 가목2) 괄호(양도기한 게이트만 비적용) */
+  isUrbanLifeHousingApartment: z.boolean().optional(),
   region: RentalRegionEnum,
   /** 소재지 법정동코드 10자리 — ⑳ 불성립 시 중과 주택 수의 영 §167의3①1호 지역기준/가액기준 판정(결정 #20 C 후속) */
   regionCode: z.string().regex(/^\d{10}$/).optional(),

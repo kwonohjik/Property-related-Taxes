@@ -33,6 +33,11 @@ export interface RentalHousingExceptionFormSlice {
       rentalCategory: 'long_general' | 'short_6y' | 'pre_2018' | 'existing_business' | 'unsold_08_09';
       rentalAcquisitionType: 'purchase' | 'construction';
       isApartment: boolean;
+      /**
+       * 「주택법」 도시형 생활주택인 아파트(§167의3①2호 가목2) 괄호) — 아파트 양도기한(⑪)만 비적용. 마목2) 아파트 배제는 그대로.
+       * ⑤는 양도기한 게이트 대상 호(`rentalUnitUrbanLifeQuestionInScope`)에서만 묻는다. 미입력 = 아님(양도기한 적용).
+       */
+      isUrbanLifeHousingApartment?: boolean;
       /** 소재지역 수도권/비수도권 (918 조정취득은 isExcluded918Rule 별도) */
       region: 'seoul-metro' | 'non-metro';
       /** 소재지 법정동코드 10자리 (주소 검색 시 자동 채움 — region 자동판별 소스·자동배지 신호). 미검색 시 "" */

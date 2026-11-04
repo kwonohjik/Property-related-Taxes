@@ -263,6 +263,7 @@ export interface HouseInfo {
   /**
    * ③ 감면대상장기임대주택 아파트가 「주택법」상 도시형 생활주택인 아파트인지 — 후단이 명시
    * 제외한다(도시형 생활주택인 아파트는 게이트 대상 아님). 미제공은 "모른다".
+   * 2호 가목2)·나목2)·라목8)·마목4) 양도기한도 같은 괄호로 이 아파트를 뺀다(`toNormalizedFromHouse` — ⑳ 카드 합성 행 포함).
    */
   isUrbanLifeHousingApartment?: boolean;
   /**
