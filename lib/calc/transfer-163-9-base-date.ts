@@ -153,12 +153,14 @@ export function isSec163_9House(assetKind: AssetForm["assetKind"] | undefined): 
  * 원조합원이 인가 전 상속·증여받은 것은 기존건물·부수토지다(영 §166① 「기존건물과 그 부수토지의 취득가액」 → 법 §97①1호가목 →
  * 영 §163⑨ 단서 2호) — 같은 사실을 완공 아파트로 팔면 ②를 비교받았고 입주권으로 팔면 못 받았다(실측 317,490,000 ↔ ② 165,060,000).
  * 승계 입주권은 권리라 대상이 아니다(⑫ `refineSuccessorRightNoSec164Inputs`). 계획서 successor-right-carryover-contribution.plan.md §14·§15.
+ * 승계조합원 완공 아파트도 준공 전(입주권 상태)에 받았으면 같다(`isSuccessorAptReceivedAsRight`).
  */
 export function isSec163_9HouseAsset(
-  asset: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "redevIsSuccessorMember" | "redevOriginalAssetType">,
+  asset: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "redevIsSuccessorMember" | "redevOriginalAssetType" | "redevCompletionDate"> & Partial<Sec163_9Asset>,
 ): boolean {
   // 토지를 출자한 원조합원의 완공 아파트는 주택 축이 아니다 — 상속·증여받은 것이 토지다(`isSec163_9LandAsset` · 계획서 §16 Q-2).
   if (isOriginalMemberLandAsset(asset)) return false;
+  if (isSuccessorAptReceivedAsRight(asset)) return false;
   if (isSec163_9House(asset.assetKind)) return true;
   return (
     asset.assetKind === "right_to_move_in" &&
@@ -166,6 +168,19 @@ export function isSec163_9HouseAsset(
     asset.redevIsSuccessorMember !== "yes" &&
     asset.redevOriginalAssetType === "housing"
   );
+}
+
+/**
+ * 승계조합원 완공 아파트를 준공 전(입주권 상태)에 상속·증여받았는가 — 받은 것이 「부동산을 취득할 수 있는 권리」라
+ * §163⑨ 단서(1호 토지 · 2호 건물)가 닿지 않고 본문 평가액(①)만이다(국세청 상속증여세과-260 — 관리처분계획인가일 이후 상속은
+ * 부동산을 취득할 수 있는 권리). 준공 뒤 받았으면 건물이라 대상이 아니다. 계획서 redev-successor-inherit-right-no-sec164.plan.md Q-1 a.
+ */
+export function isSuccessorAptReceivedAsRight(
+  asset: Partial<Pick<AssetForm, "assetKind" | "redevIsSuccessorMember" | "redevCompletionDate">> & Partial<Sec163_9Asset>,
+): boolean {
+  if (asset.assetKind !== "redevelopment_apt" || asset.redevIsSuccessorMember !== "yes") return false;
+  const baseDate = deriveSec163_9BaseDate(asset as Sec163_9Asset);
+  return !!baseDate && !!asset.redevCompletionDate && baseDate < asset.redevCompletionDate;
 }
 
 type OriginalMemberFields = Partial<Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "redevIsSuccessorMember" | "redevOriginalAssetType">>;

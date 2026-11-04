@@ -81,9 +81,13 @@ const INH = {
   acquisitionCause: "inheritance", fixedAcquisitionPrice: "", publishedValueAtInheritance: "450,000,000",
   inheritanceValuationMethod: "supplementary", decedentAcquisitionDate: "2010-01-01",
 };
-/** 개별주택가격 공시 전(2005.4.30. 전) 상속 — ②(§164⑤ 주택 기준시가) 칸이 열린다. */
+/**
+ * 개별주택가격 공시 전(2005.4.30. 전) 상속 — ②(§164⑤ 주택 기준시가) 칸이 열린다.
+ * 준공(2003-12-01) **뒤** 받은 것이다 — 준공 전(입주권 상태)에 받았으면 ②가 닫힌다(계획서 redev-successor-inherit-right-no-sec164 ·
+ * anchor `transfer.route.redev-successor-inherit-right-no-sec164`). 종전 시료(인가 2003 · 준공 2006)는 그 경로라 옮겼다.
+ */
 const Y2004 = {
-  ...INH, publishedValueAtInheritance: "", acquisitionDate: "2004-03-01", redevApprovalDate: "2003-02-20", redevCompletionDate: "2006-12-02",
+  ...INH, publishedValueAtInheritance: "", acquisitionDate: "2004-03-01", redevApprovalDate: "2001-02-20", redevCompletionDate: "2003-12-01",
   decedentAcquisitionDate: "2000-01-01", inheritanceAssetKind: "house_individual", inhHouseValLandArea: "100",
   inhHouseValLandPricePerSqmAtTransfer: "5,000,000", inhHouseValLandPricePerSqmAtFirst: "3,000,000",
   inhHouseValHousePriceAtFirst: "300,000,000", inhHouseValLandPricePerSqmAtInheritance: "2,500,000",

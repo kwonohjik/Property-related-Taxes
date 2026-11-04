@@ -36,6 +36,7 @@ import { refineCompanionPreDeemedAcquisitionSource } from "./transfer-tax-schema
 import { refineDeemedSuccessorRightPrimary } from "./transfer-tax-schema-successor-deemed";
 import { refineDeemedSuccessorRightCompanion } from "./transfer-tax-schema-successor-deemed";
 import { refineSuccessorRightNoSec164Inputs } from "./transfer-tax-schema-successor-deemed";
+import { refineSuccessorAptRightNoSec164Inputs } from "./transfer-tax-schema-successor-deemed";
 import { refineOriginalMemberDeemedPrimary } from "./transfer-tax-schema-original-member-deemed";
 import { refineOriginalMemberDeemedCompanion } from "./transfer-tax-schema-original-member-deemed";
 import { refineOriginalMemberSec164Channel } from "./transfer-tax-schema-original-member-deemed";
@@ -149,6 +150,7 @@ export const propertySchema = z
     refineDeemedSuccessorRightPrimary(data, ctx);
     // 승계 입주권 — §163⑨ 단서 ②(§164④~⑦) 운반 키 거부(단서는 토지·건물만)
     refineSuccessorRightNoSec164Inputs(data, data.propertyType === "right_to_move_in", ctx);
+    refineSuccessorAptRightNoSec164Inputs(data, data.propertyType === "redevelopment_apt", ctx);
     // 원조합원 종전자산 상속·증여 — §163⑨ 평가액(또는 ②) 필수(「종전 부동산 실거래가」 fallback 차단)
     refineOriginalMemberDeemedPrimary(data, ctx);
     refineOriginalMemberSec164Channel(data, ctx);
@@ -191,6 +193,7 @@ export const propertySchema = z
       // 상속 승계 입주권 — 상속개시일 평가액 필수(구 계약 fixedAcquisitionPrice는 승계취득가액 축)
       refineDeemedSuccessorRightCompanion(c, ctx, ["companionAssets", i]);
       refineSuccessorRightNoSec164Inputs(c, c.assetKind === "right_to_move_in", ctx, ["companionAssets", i]);
+      refineSuccessorAptRightNoSec164Inputs(c, c.assetKind === "redevelopment_apt", ctx, ["companionAssets", i]);
       refineOriginalMemberDeemedCompanion(c, ctx, ["companionAssets", i]);
       // 재개발·재건축 §166③ 환산 입력 — 주 자산과 같은 규칙(종전에는 컴패니언에 없어 분모 비움이 엔진 throw 500)
       refineRedevelopment166_3Inputs(c, ctx, ["companionAssets", i]);
