@@ -8,6 +8,7 @@
  */
 
 import { rentalPhrpPriceFieldErrors } from "@/lib/api/rental-phrp-price-guard";
+import { rentalResidenceNoRosterFieldErrors } from "@/lib/api/rental-residence-roster-guard";
 import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -121,7 +122,10 @@ export async function POST(request: NextRequest) {
 
   // 단계 2b: §155⑳ B(임대 1호 이상) §161 기준시가 3개 필수 — 계산기 ⑧(full)과 같은 규칙. 판정 메뉴 route는 같은 스키마를 쓰지만 이 입력을 받지 않아
   //   스키마가 아니라 계산 route에서만 건다(결정 #19 X1-1 · Q-7).
-  const phrpPriceErrors = rentalPhrpPriceFieldErrors(parsed.data.rentalHousingException);
+  // 단계 2c: §155⑳ + 목록 없음 + 조특법 주택 수 제외 선언 — 계산기 ⑧(옛 선언 차단)과 같은 결론(V-9 · 결정 2026-11-04).
+  const phrpPriceErrors =
+    rentalPhrpPriceFieldErrors(parsed.data.rentalHousingException) ??
+    rentalResidenceNoRosterFieldErrors(parsed.data.rentalHousingException, parsed.data.houses, parsed.data.specialHouseExclusions);
   if (phrpPriceErrors) {
     return NextResponse.json(
       { error: { code: TaxErrorCode.INVALID_INPUT, message: "입력값이 올바르지 않습니다", fieldErrors: phrpPriceErrors } },
