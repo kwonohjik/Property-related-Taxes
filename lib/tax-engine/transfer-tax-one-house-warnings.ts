@@ -26,6 +26,7 @@ import { CALC_WARNING_UNMET_IDS } from "./one-house/unmet-exceptions";
 import { article89Clause2Notices, surchargeDeclarationMatters } from "./transfer-tax-89-2-consequences";
 import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
 import { mergeConfirmWarnings } from "./one-house/merge-confirm-warnings";
+import { requirementReviewUnmetNotice } from "./one-house/requirement-review-notice";
 
 /** 「적용되지 않은 특례」 1건 → 결과 경고 문장 — 겸용주택 경로(`transfer-tax-mixed-use-unmet-notices.ts`)와 같은 형식. */
 export function unmetExceptionWarning(u: Pick<OneHouseUnmetException, "label" | "reasons" | "notice">): string {
@@ -135,6 +136,12 @@ export function oneHouseJudgmentWarnings(
     // 이 경로로 판정했는데 §154① 보유·거주가 모자라 과세 — ⑳ 「적용 불가」 단계가 남지 않으므로 사유를 고지한다(Q-A1 (a)).
     const unmet = mergeRentalCarveoutUnmetNotice(input, judgeInput, oneHouseRules.one_house_exemption);
     if (unmet) warnings.push(unmet);
+    // Q-A2 — 1주택·일시적 2주택·합가 과세면 요건 검토표의 미충족 행을 알린다. 위 고지가 같은 사유를 냈으면 생략(Q-3 a),
+    //   앞서 낸 고지와 같은 사유의 행은 뺀다(Q-5 a).
+    else {
+      const reviewNotice = requirementReviewUnmetNotice(exemptionResult, warnings);
+      if (reviewNotice) warnings.push(reviewNotice);
+    }
   }
 
   // F-1 — ①+④⑤ 중첩 의제는 국세청 해석에 기댄다. 무엇에 기댔고 어디까지 확인됐는지 남긴다.

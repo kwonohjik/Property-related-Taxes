@@ -21,6 +21,9 @@ import { parentalCareAgeVerdict } from "./parental-care-age";
  * 증여세 마법사 3주택 합가 고지 문구 — 비과세뿐 아니라 다주택 중과 배제도 판정하지 않았음을 함께 적는다.
  * 「소득세법 시행령」 §167의3①13호(3주택 이상 중과 배제 — 제155조에 따라 1세대 1주택으로 보는 주택).
  */
+/** 합가 구성·직계존속 연령 「모름」 확인 필요 고지의 머리 — 계산기 요건 검토 고지가 같은 원인의 행을 뺄 때 본다. */
+export const MERGE_CONFIRM_NOTICE_PREFIX = "§155④⑤ 합가 특례 — 확인 필요: ";
+
 export const NO_ROSTER_THREE_HOUSE_MERGE_NOTICE =
   "§155 합가 특례(3주택) — 확인 필요: 증여세 계산 화면에는 다른 보유 주택 목록 입력 칸이 없어, 3주택이 된 합가 특례" +
   "(일시적 2주택과 합가의 중첩 · 혼인과 동거봉양의 이중 합가)를 판정하지 않고 계산했습니다. " +
@@ -63,7 +66,7 @@ export function mergeConfirmWarnings(
   if (!meetsHoldingResidence) return [];
   const out: string[] = [];
   const single = resolveMergeCompositionConfirmNotice(input);
-  if (single) out.push(`§155④⑤ 합가 특례 — 확인 필요: ${single}`);
+  if (single) out.push(`${MERGE_CONFIRM_NOTICE_PREFIX}${single}`);
   // 1세대가 아니면 구성과 무관하게 과세다 — 고지하지 않는다(결정 #26 조건).
   if (input.noMergeRosterInputPath === true && input.isOneHousehold && threeHouseMergeRequirementsHold(input)) {
     out.push(NO_ROSTER_THREE_HOUSE_MERGE_NOTICE);
