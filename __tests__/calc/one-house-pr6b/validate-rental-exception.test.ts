@@ -2,7 +2,8 @@
  * PR6b — 장기임대주택 특례(소령 §155⑳·§154⑩) ⑧ 막다른 오류 3건 (S16-2 · S06-10 · S16-6)
  *
  * 세 건 모두 「⑧이 엔진이 판정할 수 있는 사례를 막거나(S16-2 · S16-6) ⑤가 필수로 띄운 칸을 안 막는(S06-10)」
- * 게이트 불일치다. 계산기(full)는 세액을 내려면 확정이 필요해 호별 요건 토글을 종전대로 막는다(짝).
+ * 게이트 불일치다. 호별 요건 토글은 부담부증여 카드(full 기본값)만 막는다(짝) — 계산기(full + `blockRequirementShortfall` false)는
+ * 호 카드를 그리지 않아 고칠 칸이 없으므로 막지 않고 엔진이 불성립으로 계산한다(사용자 결정 2026-11-04 D-3, `rental-155-20-review-fixes.plan.md` PR-3).
  */
 import { describe, it, expect } from "vitest";
 import { buildCaseForm, type RulingCase } from "../one-house-rulings/harness";
@@ -135,9 +136,13 @@ function asset(unit: Record<string, unknown>): AssetForm {
     },
   };
 }
-const V = (unit: Record<string, unknown>, mode: "facts" | "full") => {
+const V = (unit: Record<string, unknown>, mode: "facts" | "full" | "calc") => {
   const a = asset(unit);
-  return validateRentalHousingException(a.rentalHousingException, a, 0, "임대", "2026-03-15", mode);
+  // "calc" = 계산기 호출(`transfer-tax-validate-asset.ts` — full + 마지막 인자 blockRequirementShortfall false)
+  return mode === "calc"
+    ? validateRentalHousingException(a.rentalHousingException, a, 0, "임대", "2026-03-15", "full",
+        undefined, undefined, undefined, undefined, undefined, undefined, false)
+    : validateRentalHousingException(a.rentalHousingException, a, 0, "임대", "2026-03-15", mode);
 };
 
 const OFF: [string, Record<string, unknown>][] = [
@@ -149,13 +154,15 @@ const OFF: [string, Record<string, unknown>][] = [
   ["다목 ⑳2호 자기확인 OFF", { ...DA, requirementsConfirmed: false }],
 ];
 
-describe("S16-6 호별 요건 토글 — facts 비차단 / full 차단(짝)", () => {
-  it.each([["나목", NA], ["라목", LA], ["다목", DA]] as const)("[대조] %s 전 토글 ON: facts·full 모두 통과", (_n, u) => {
+describe("S16-6 호별 요건 토글 — facts·계산기 비차단 / 부담부증여(full) 차단(짝)", () => {
+  it.each([["나목", NA], ["라목", LA], ["다목", DA]] as const)("[대조] %s 전 토글 ON: facts·계산기·full 모두 통과", (_n, u) => {
     expect(V(u, "facts")).toBeNull();
+    expect(V(u, "calc")).toBeNull();
     expect(V(u, "full")).toBeNull();
   });
-  it.each(OFF)("%s: facts null, full 차단", (_n, u) => {
+  it.each(OFF)("%s: facts null, 계산기 null(C-13), full 차단(C-14)", (_n, u) => {
     expect(V(u, "facts")).toBeNull();
+    expect(V(u, "calc")).toBeNull();
     expect(V(u, "full")).not.toBeNull();
   });
 });
