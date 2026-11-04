@@ -35,6 +35,10 @@ import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { appurtenantCardAreaM2 } from "./transfer-tax-api-helpers";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
 import { sec164LandAreaField } from "./transfer-163-9-base-date";
+import { isSec163_9HouseAsset } from "./transfer-163-9-base-date";
+import { isSec163_9LandAsset } from "./transfer-163-9-base-date";
+import { isOriginalMemberLandAsset } from "./transfer-163-9-base-date";
+import { sec164LandStatus } from "./sec164-required-fields";
 import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { isSplitPayloadActive } from "./transfer-tax-api-split";
@@ -574,7 +578,8 @@ export function buildAssetPayload(
           ...buildInheritedAcquisitionPayload(asset, ratio, fractional),
           ...buildInheritedHouseValuationPayload(asset, transferDate),
           ...buildCommercialInheritanceValuationPayload(asset),
-          ...(asset.assetKind === "land" && isSec163_9Cause(asset.acquisitionCause)
+          // 토지를 출자한 원조합원도 — 단서 1호 구간(1990.8.30. 전 상속·증여)에서만(주 자산 `hasPre1990ForSec164`와 같은 식)
+          ...((asset.assetKind === "land" ? isSec163_9Cause(asset.acquisitionCause) : isOriginalMemberLandAsset(asset) && sec164LandStatus(asset) !== null)
             ? buildPre1990LandPayload(asset, transferDate)
             : {}),
         }),
@@ -731,7 +736,17 @@ function ownsAcquisitionSubobject(asset: AssetForm): boolean {
   return (
     (asset.assetKind === "housing" && asset.isMixedUseHouse === true) ||
     asset.assetKind === "general_building" ||
-    asset.assetKind === "right_to_move_in" ||
-    (asset.assetKind === "redevelopment_apt" && !isBgPreDeemedAsset(asset))
+    (asset.assetKind === "right_to_move_in" && !isRedevSec163_9Deemed(asset)) ||
+    (asset.assetKind === "redevelopment_apt" && !isBgPreDeemedAsset(asset) && !isRedevSec163_9Deemed(asset))
   );
+}
+
+/**
+ * 재개발 자산이지만 상속·증여받은 것이 §163⑨ 토지·건물인 경우 — 원조합원 종전 주택·종전 토지(입주권·완공 아파트),
+ * 승계 완공 아파트를 준공 뒤 받음. 주 자산처럼 ①②를 운반한다(단서 1호·2호 「많은 금액」은 주 자산·함께 양도를 가리지 않는다).
+ * 종전에는 재개발을 통째로 빼서 화면의 ② 칸이 버려졌다(실측: 원조합원 입주권 합산 266,250,000 ↔ 116,260,000).
+ * 승계 입주권·준공 전 받은 승계 아파트는 권리를 받은 것이라 두 술어가 거짓이다 — 계속 자기 서브객체. 계획서 redev-companion-sec164-carry.plan.md.
+ */
+function isRedevSec163_9Deemed(asset: AssetForm): boolean {
+  return isSec163_9Cause(asset.acquisitionCause) && (isSec163_9HouseAsset(asset) || isSec163_9LandAsset(asset));
 }
