@@ -54,6 +54,8 @@ import { resolveHouseCountExclusion, resolveSpecialHouseExclusions } from "./tra
 import type { HouseCountExclusionDetail } from "./transfer-reductions/unsold-98-9";
 import { resolveArticle89Clause2, type Article89Clause2Result } from "./transfer-tax-89-2-exclusion";
 import { mixedUseUnmetNotices } from "./transfer-tax-mixed-use-unmet-notices";
+import { mixedUseRequirementReviewNotice } from "./transfer-tax-mixed-use-unmet-notices";
+import { mixedUseResidenceYearsLabel } from "./transfer-tax-mixed-use-unmet-notices";
 import { decisiveProvisoException } from "./one-house/decisive-proviso";
 import { deemedPathProvisoNotices } from "./transfer-tax-one-house-warnings";
 import { isOldSurchargeClauseEra } from "./data/surcharge-old-clauses-era";
@@ -486,6 +488,17 @@ export function judgeMixedUseOneHouseExemption(
       }),
     );
   }
+  // 일시적 2주택 · 합가 의제가 깨져 주택 수 축이 서지 않으면 아래 자체 §154① 문장이 나가지 않는다 — 정본 요건 검토표의
+  //   미충족 행을 일반 계산기와 같은 문장으로 알린다(`mixed-use-unmet-reason-calc.plan.md` Q-1 a). 위 고지와 같은 사유는 뺀다.
+  //   주택 수 축이 서지 않으면 비과세(`isOneHouseExempt`)도 아니다 — 따로 묻지 않는다.
+  if (deemedInput.isOneHousehold && !houseCountOk) {
+    const reviewNotice = mixedUseRequirementReviewNotice(deemedInput, oneHouseSpecialRules, {
+      isUnregistered,
+      article89Clause2,
+      inherited: asset.acquisitionCause === "inheritance" || asset.acquisitionByInheritance === true,
+    }, warnings);
+    if (reviewNotice) warnings.push(reviewNotice);
+  }
   // §155 의제 경로의 §154① 단서(5호 · 삭제 전 4호) 근거 — 겸용 결과뷰에는 적용 특례 행이 없어 일반 경로와 같은 문장을 경고로 싣는다.
   const decisiveProviso = isOneHouseExempt
     ? decisiveProvisoException(exemptionReqInput, oneHouseSpecialRules.one_house_exemption)
@@ -512,7 +525,7 @@ export function judgeMixedUseOneHouseExemption(
     warnings.push(
       `${exemptionHoldingStart.getTime() === asset.buildingAcquisitionDate.getTime() ? "건물 보유기간" : "세대 통산 보유기간"} ` +
         `${exemptionHolding.years}년 ${exemptionHolding.months}개월 · ` +
-        `거주기간 ${exemptionReqInput.residencePeriodMonths / 12}년 · ` +
+        `거주기간 ${mixedUseResidenceYearsLabel(exemptionReqInput.residencePeriodMonths)} · ` +
         `취득 당시 조정대상지역 ${asset.wasRegulatedAtAcquisition ? "해당" : "미해당"} — ` +
         `1세대1주택 비과세 요건(보유 ${resolveOneHouseMinHoldingYears(transferDate, r.minHoldingYears)}년, 조정대상지역 취득 시 거주 ` +
         `${r.regulatedAreaMinResidenceYears}년, 소득세법 시행령 §154①) 미충족으로 주택분도 과세됩니다.`,

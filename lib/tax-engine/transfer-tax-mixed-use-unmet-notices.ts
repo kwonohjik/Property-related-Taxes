@@ -18,6 +18,10 @@ import { evaluateTemporaryTwoHouseTiming, type DeemedOneHouseReqInput } from "./
 import { temporaryTwoHouseOrderReason } from "./one-house/new-house-origin";
 import { twoHouseSpecialCountHolds } from "./transfer-tax-exemption-holding";
 import { unmetExceptionWarning } from "./transfer-tax-one-house-warnings";
+import { buildRequirementReview } from "./one-house/requirement-review";
+import { requirementReviewUnmetNotice } from "./one-house/requirement-review-notice";
+import type { OneHouseJudgeInput, OneHouseRequirementCheck } from "./one-house/types";
+import type { Article89Clause2Result } from "./transfer-tax-89-2-exclusion";
 
 export function mixedUseUnmetNotices(
   /** §155① 판정에 넘긴 입력 그대로 — 주택 수·타이밍이 같은 술어를 본다 */
@@ -35,3 +39,53 @@ export function mixedUseUnmetNotices(
   for (const u of collectRental4hoUnmet(rental4hoInput)) out.push(unmetExceptionWarning(u));
   return out;
 }
+
+/**
+ * 겸용 거주기간 표기 — 겸용 엔진은 거주를 **연 단위 내림 값**으로 받는다(`transfer-tax-api-mixed-use.ts`
+ * `residencePeriodYears: Math.floor(resMonths / 12)` → 엔진 `× 12`). 23개월이 「1년」으로 보이지 않도록
+ * 내림임을 밝혀 쓴다(`docs/00-pm/mixed-use-unmet-reason-calc.plan.md` Q-2 a). 판정 경계(2년)는 내림과 무관하다.
+ */
+export function mixedUseResidenceYearsLabel(residenceMonths: number): string {
+  const years = Math.floor(residenceMonths / 12);
+  return years === 0 ? "1년 미만" : `만 ${years}년`;
+}
+
+/** 거주 행의 「거주기간 N개월」은 내림 값이라 겸용 표기로 바꾼다. */
+function withMixedResidenceFact(item: OneHouseRequirementCheck): OneHouseRequirementCheck {
+  if (item.id !== "residence") return item;
+  return {
+    ...item,
+    facts: item.facts.map((f) => (f.label === "거주기간" ? { ...f, value: mixedUseResidenceYearsLabel(parseInt(f.value, 10)) } : f)),
+  };
+}
+
+/**
+ * 겸용 — 일시적 2주택 · 합가 의제가 깨져 주택 수 축이 서지 않으면 자체 §154① 문장이 나가지 않아 사유가 0건이었다.
+ * 정본 요건 검토표(`buildRequirementReview`)를 겸용 판정 입력으로 만들어 일반 계산기(#2880)와 같은 문장으로 고지한다
+ * (계획서 `mixed-use-unmet-reason-calc.plan.md` Q-1 a). 호출부가 「1세대 · 주택 수 축 불성립(그래서 비과세 아님)」일 때만 부른다.
+ *
+ * - 판정을 다시 하지 않는다 — 검토표는 겸용 판정이 쓰는 같은 입력·같은 술어(`evaluateTemporaryTwoHouseTiming` 등)로 행을 만든다.
+ * - 상속 취득이면 보유 행을 싣지 않는다(리뷰 게이트 BLOCK) — 겸용 엔진은 피상속인과 동일세대로 보유한 기간(영 §154⑧3호)을
+ *   통산할 입력을 받지 않아(`transfer-tax-mixed-use-exemption.ts` `exemptionReqInput` 주석) 보유 기산이 상속개시일로 잡힌다.
+ *   그 값으로 「보유 2년 미충족」을 단정하면 동일세대 상속에서 틀린 말이 된다(일반 경로는 통산해 충족). 별도세대 상속은 침묵만 늘어난다.
+ * - `transferPrice`(0)는 검토표의 고가주택 행만 읽는다. 그 행은 `met`/`partial`뿐이라(미충족 없음) 고지에 오르지 않는다 —
+ *   겸용 고가 판정(주택분 안분)은 따로 한다.
+ */
+export function mixedUseRequirementReviewNotice(
+  deemedInput: DeemedOneHouseReqInput,
+  oneHouseRules: OneHouseSpecialRulesData,
+  facts: { isUnregistered: boolean; article89Clause2: Article89Clause2Result | undefined; inherited: boolean },
+  shown: readonly string[],
+): string | undefined {
+  const judgeInput = { ...deemedInput, propertyType: "housing", isUnregistered: facts.isUnregistered, transferPrice: 0 } as OneHouseJudgeInput;
+  const review = buildRequirementReview(
+    judgeInput,
+    oneHouseRules,
+    { isExempt: false, isPartialExempt: false, appliedExceptions: [] },
+    facts.article89Clause2 ?? { status: "not_applicable" },
+  );
+  if (!review) return undefined;
+  const items = review.items.filter((i) => !(facts.inherited && i.id === "holding")).map(withMixedResidenceFact);
+  return requirementReviewUnmetNotice({ isExempt: false, isPartialExempt: false, requirementReview: { ...review, items } }, shown);
+}
+

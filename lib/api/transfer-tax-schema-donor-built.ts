@@ -336,6 +336,10 @@ export const GB_BG_BUILDING_DONOR_DATE_MESSAGE =
 export const GB_BG_BUILDING_STD_ZERO_MESSAGE =
   "일반건물의 당초 증여자 취득 당시 건물 기준시가(burdenedGiftInfo.carryoverDonorBasis.buildingStdPriceAtAcquisition)는 0일 수 없습니다 — 당초 증여자가 건물을 신축했으면 사용승인일 당시(「소득세법 시행령」 제162조 제1항 제4호) 건물 기준시가입니다";
 
+/** 주택·건물 토글 C(당초 증여자가 토지·건물을 다른 날 취득) — 토지·건물을 따로 계산하므로 건물 기준시가 0을 거부한다(⑧ `validateBgHouseSplit`과 같은 조건). */
+export const BG_HOUSE_SPLIT_BUILDING_STD_ZERO_MESSAGE =
+  "당초 증여자가 토지·건물을 다른 날 취득한 주택·건물(burdenedGiftInfo.carryoverDonorBasis.buildingDonorAcquisitionDate)의 당초 증여자 취득 당시 건물 기준시가(carryoverDonorBasis.buildingStdPriceAtAcquisition)는 0일 수 없습니다 — 토지·건물을 따로 계산합니다. 당초 증여자가 건물을 신축했으면 사용승인일 당시(「소득세법 시행령」 제162조 제1항 제4호) 건물 기준시가입니다";
+
 type PartsLike = { land: boolean; building: boolean } | undefined;
 type BgInfoPartsLike =
   | (CollateralWinLike & {
@@ -403,12 +407,17 @@ export function refineGbBgCarryoverParts(
     data.generalBuildingShares?.forEach((s, i) =>
       check(s.burdenedGiftInfo, s.valuation?.landAcquisitionCause, s.valuation?.buildingAcquisitionCause, ["generalBuildingShares", i, "valuation", "buildingAcquisitionCause"], ["generalBuildingShares", i, "burdenedGiftInfo"]),
     );
-  } else
-    bothPartsOnlyIssues(
-      data.burdenedGiftInfo,
-      ["burdenedGiftInfo"],
-      data.transferType === "burdened_gift" && data.acquisitionCause === "carryover_gift" && (data.propertyType === "housing" || data.propertyType === "building"),
-    );
+  } else {
+    const houseSplitCarryover =
+      data.transferType === "burdened_gift" && data.acquisitionCause === "carryover_gift" && (data.propertyType === "housing" || data.propertyType === "building");
+    bothPartsOnlyIssues(data.burdenedGiftInfo, ["burdenedGiftInfo"], houseSplitCarryover);
+    // 토글 C — ④는 건물분 증여자 취득일을 토글 C에서만 싣는다. ⑧은 기준시가를 쓰는 방식(기준시가 평가·환산·감정·매매사례)에서 건물 0을 막는다 — 같은 조건(⑧ ⊇ ⑫).
+    const info = data.burdenedGiftInfo;
+    const usesDonorStd =
+      info?.valuationMode !== "sangjeungbeop_market" || info.acquisitionMethod === "converted" || info.acquisitionMethod === "appraisal" || info.acquisitionMethod === "salesCase";
+    if (houseSplitCarryover && info?.carryoverDonorBasis?.buildingDonorAcquisitionDate !== undefined && usesDonorStd && info.carryoverDonorBasis.buildingStdPriceAtAcquisition === 0)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["burdenedGiftInfo", "carryoverDonorBasis", "buildingStdPriceAtAcquisition"], message: BG_HOUSE_SPLIT_BUILDING_STD_ZERO_MESSAGE });
+  }
   data.companionAssets?.forEach((c, i) => {
     if (c.assetKind === "general_building" && c.transferType === "burdened_gift")
       check(c.burdenedGiftInfo, c.acquisitionCause, c.generalBuildingValuation?.buildingAcquisitionCause, ["companionAssets", i, "generalBuildingValuation", "buildingAcquisitionCause"], ["companionAssets", i, "burdenedGiftInfo"]);
