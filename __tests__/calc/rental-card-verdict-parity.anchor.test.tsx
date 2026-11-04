@@ -104,6 +104,14 @@ const CASES: [string, ReturnType<typeof form>, { exempt: boolean; text?: RegExp 
     { exempt: true, text: /현재 24개월/ }],
   ["M3 상생임대 · 본인 거주 0", { ...form({ ...LATER, residencePeriodMonths: "0" }, { ...NO_GIFT, acquisitionDate: "2021-01-04", residencePeriodMonthsAsset: "0" }), importedOneHouseFacts: WIN_WIN_FACTS } as ReturnType<typeof form>,
     { exempt: true, text: /상생임대주택이라 적용하지 않음/ }],
+  // SYNC-1(계획서 rental-155-20-review-fixes PR-3) — §155의3① 양도기한(대통령령 제36737호): 종료일 2024-03-01 → 2026.12.31. 이전 종료라 2027-12-31까지.
+  //   카드가 양도일을 술어에 넘기지 않던 때는 2028 양도에도 「상생임대주택이라 적용하지 않음」 ✓ — 엔진은 불성립(과세)이었다.
+  ["M3d 상생임대 · 종료 2024-03-01 · 양도 2027-06-01(기한 안) · 본인 거주 0",
+    { ...form({ transferDate: "2027-06-01", filingDate: "2027-08-31", residencePeriodMonths: "0" }, { ...NO_GIFT, acquisitionDate: "2021-01-04", residencePeriodMonthsAsset: "0" }), importedOneHouseFacts: { ...WIN_WIN_FACTS, winWinRentalLeaseEndDate: "2024-03-01" } } as ReturnType<typeof form>,
+    { exempt: true, text: /상생임대주택이라 적용하지 않음/ }],
+  ["M3x 짝 · 같은 상생임대 · 양도 2028-06-01(기한 2027-12-31 경과) · 본인 거주 0",
+    { ...form({ transferDate: "2028-06-01", filingDate: "2028-08-31", residencePeriodMonths: "0" }, { ...NO_GIFT, acquisitionDate: "2021-01-04", residencePeriodMonthsAsset: "0" }), importedOneHouseFacts: { ...WIN_WIN_FACTS, winWinRentalLeaseEndDate: "2024-03-01" } } as ReturnType<typeof form>,
+    { exempt: false }],
   ["M4 §154① 단서 3호 · 보유 1년 6개월 · 명부 임대 행", form({ provisoReason: "unavoidable" }, {}, true), { exempt: true, text: /보유기간 — §154① 단서 사유가 성립해 적용하지 않음/ }],
   // 리뷰 게이트 재현(2026-11-03) — 사유만 고르고 성립하지 않으면(1호 임차 거주 12개월 < 5년) 엔진은 과세 → 카드도 ✗. 성립(72개월)이면 ✓.
   ["M4n 짝 · §154① 단서 1호 불성립(임차 거주 12개월) · 명부 임대 행", form({ provisoReason: "rental_5yr_residence", provisoRentalLeaseResidenceMonths: "12" }, {}, true), { exempt: false }],

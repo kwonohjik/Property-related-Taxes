@@ -21,6 +21,9 @@ export function calcRentalResidenceFacts(form: TransferFormData, a: AssetForm, i
     // OH-42 — 상생임대주택(§155의3①)이면 §155⑳1호 거주요건 면제. 엔진과 같은 술어·같은 사실(④가 보내는 운반 상자).
     winWinResidenceExempt: qualifiesWinWinRental({
       winWinRentalHouse: toWinWinRentalHouseFact(form.importedOneHouseFacts),
+      // §155의3① 양도기한(대통령령 제36737호 · 2026.10.1. 시행) — 엔진(`transfer-tax-rental-housing-step.ts`)·부담부증여와 같은 양도일.
+      // 빠지면 술어가 기한을 보지 않아 카드는 「거주 충족」, 엔진은 불성립으로 갈린다(SYNC-1).
+      transferDate: toOptionalDate(form.transferDate),
       // ①1호 「취득한 후 체결」 날짜 하한 — 엔진과 같은 취득일·동일세대 상속 사실(④가 primary에서 싣는 값).
       acquisitionDate: toOptionalDate(a.acquisitionDate),
       decedentSameHouseholdBeforeInheritance:

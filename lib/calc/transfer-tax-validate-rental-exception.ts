@@ -142,10 +142,12 @@ export function validateRentalHousingException(
    * (`one-house-exemption-validate.ts` 헤더 「막는 것은 판정이 **불가능한** 입력뿐」). 여기서 막으면 사실대로 끄거나
    * 모르는 사용자가 「충족」을 켜야만 진행되어(모름 = 혜택 불성립 + 확인 필요와 반대 방향) 불성립 결론에 도달할 수 없다.
    * 같은 「2호 이상」 토글이 다·바·자목에서는 이미 막지 않는다. 자기확인 OFF도 엔진이 「확인 필요」 사유로 불성립 처리한다.
-   * 계산기는 세액을 내려면 확정이 필요하므로 종전대로 막는다(거주 미달과 같은 구조).
+   * 계산기(`blockRequirementShortfall` false)도 막지 않는다 — 계산기 카드(`mode="calc"`)는 호 카드를 그리지 않아 고칠 칸이
+   * 없고(판정 메뉴에서 넘겨받은 호), 엔진이 같은 입력을 불성립으로 계산한다(#2868 거주·보유 미달과 같은 구조 · 사용자 결정
+   * 2026-11-04 D-3, `docs/00-pm/rental-155-20-review-fixes.plan.md` PR-3). 부담부증여 카드(`full` 기본값)는 종전대로 막는다.
    * ④는 OFF를 `false`로 보내므로(`?? false`) ⑧을 풀어도 엔진 입력이 달라지지 않는다 — 3중 패턴.
    */
-  const blocksUnitFactToggles = mode === "full";
+  const blocksUnitFactToggles = mode === "full" && blockRequirementShortfall;
 
   // 호별 검증 (임대주택이 있을 때만 — §154⑩ 표준 경로는 0호라 이 루프를 건너뛴다)
   for (let i = 0; i < rh.rentalUnits.length; i++) {
