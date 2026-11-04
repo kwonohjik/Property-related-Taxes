@@ -15,6 +15,7 @@ import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { buildMixedUseAssetInput } from "./mixed-use-asset-input";
+import { sameHouseholdInheritanceOf } from "./mixed-use-asset-input";
 import { MIXED_USE_RENTAL_B_UNSUPPORTED } from "@/lib/tax-engine/transfer-tax-mixed-use-rental-residence-message";
 import { pickArticle89Clause2Facts } from "@/lib/tax-engine/transfer-tax-89-2-consequences";
 import { dispatchGeneralBuilding } from "./general-building-route-helper";
@@ -230,6 +231,7 @@ export async function POST(request: NextRequest) {
         reductions: engineInput.reductions,
         // §155의3 상생임대 (P5-c) — ⚠️ `engineInput`(Date 변환본). raw `data.*`는 계약일이 string이다.
         winWinRentalHouse: engineInput.winWinRentalHouse,
+        sameHouseholdInheritance: sameHouseholdInheritanceOf(engineInput), // ⑭ §154⑧3호 동일세대 상속 보유 통산(Date 변환본)
         giftHouseholdBasis: engineInput.giftHouseholdBasis, // ⑭ 결정 #38 후속 — 증여 세대 사실(Date 변환본) · 겸용 §154① 판정이 단건과 같은 leaf로 읽는다
         filingPenaltyDetails: engineInput.filingPenaltyDetails,
         delayedPaymentDetails: engineInput.delayedPaymentDetails,

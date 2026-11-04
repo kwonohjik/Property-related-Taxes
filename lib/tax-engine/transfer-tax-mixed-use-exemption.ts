@@ -154,11 +154,23 @@ export function judgeMixedUseOneHouseExemption(
     acquisitionDate: asset.buildingAcquisitionDate,
     transferDate,
     // 거주기간은 §154⑧3호 **통산값**(동일세대 상속분 포함)을 쓴다. API 변환
-    // (`transfer-tax-api-mixed-use.ts:171`)이 `consolidateResidenceMonths`로 이미 통산해
-    // 보내므로, 여기서 `acquisitionCause`·`decedent*`를 함께 넘기면 **통산이 두 번** 걸린다
-    // → 의도적으로 미전달. 같은 미전달이 `resolveExemptionHoldingStartDate`의 backdate도
-    // 막는다(겸용에는 그 입력 자체가 없다). 보유 기산이 건물 취득일에서 움직이는 경로는 아래 증여 세대 통산뿐이다.
+    // (`transfer-tax-api-mixed-use.ts` `table2ResidencePeriodYears`)이 `consolidateResidenceMonths`로 이미 통산해
+    // 보내므로 `decedentCohabitationResidenceMonths`는 **넘기지 않는다**(넘기면 통산이 두 번 걸린다).
     residencePeriodMonths: (asset.table2ResidencePeriodYears ?? asset.residencePeriodYears) * 12,
+    /**
+     * §154⑧3호 동일세대 상속 — 「상속개시 전에 … 동일세대로서 거주하고 보유한 기간」의 **보유** 통산.
+     * 정본 `sameHouseholdInheritanceHoldingStart`가 보유 기산일과 「취득 당시」 조정대상지역 · 거주요건 경과규정 기준일을
+     * 같은 날로 옮긴다(M4). 거주 개월은 위에서 이미 통산했으므로 이 3키만 싣는다 — 정본 거주 합산은 미전달 개월을 0으로 더한다.
+     * 🔴 종전에는 거주 이중 통산을 막으려고 `acquisitionCause`·`decedent*`를 통째로 뺐는데 보유 backdate까지 막혀,
+     *    동일세대 상속 겸용 1주택이 보유 2년 미달로 과세됐다(일반 주택은 비과세 — `mixed-use-inherit-same-household-holding.plan.md`).
+     */
+    ...(asset.sameHouseholdInheritance
+      ? {
+          acquisitionCause: "inheritance" as const,
+          decedentSameHouseholdBeforeInheritance: true,
+          decedentCohabitationHoldingStartDate: asset.sameHouseholdInheritance.holdingStartDate,
+        }
+      : {}),
     oneHouseExemptionProviso: asset.oneHouseExemptionProviso,
     regionCode: asset.regionCode,
     // 미주입 시 false — 조정대상지역이 아니면 거주요건 자체가 없다(종전 동작 불변).
@@ -495,7 +507,6 @@ export function judgeMixedUseOneHouseExemption(
     const reviewNotice = mixedUseRequirementReviewNotice(deemedInput, oneHouseSpecialRules, {
       isUnregistered,
       article89Clause2,
-      inherited: asset.acquisitionCause === "inheritance" || asset.acquisitionByInheritance === true,
     }, warnings);
     if (reviewNotice) warnings.push(reviewNotice);
   }

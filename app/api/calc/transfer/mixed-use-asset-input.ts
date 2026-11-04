@@ -102,6 +102,8 @@ export interface MixedUseAssetInputSources {
    * ⚠️ `engineInput.giftHouseholdBasis`(Date 변환본)를 넘긴다. 파트 카드 경로는 그 item의 값(주 자산 겸용 묶음은 primary item)을 넘긴다.
    */
   giftHouseholdBasis: TransferTaxInput["giftHouseholdBasis"];
+  /** 동일세대 상속 보유 통산(§154⑧3호) — `sameHouseholdInheritanceOf(engineInput)`. 파트 카드 경로는 그 item에서 고른다. */
+  sameHouseholdInheritance: MixedUseAssetInput["sameHouseholdInheritance"];
   isRegulatedArea: boolean;
   isSelfCultivatedExpropriatedLand: boolean | undefined;
   priorReductionUsage: MixedUseAssetInput["priorReductionUsage"];
@@ -143,6 +145,20 @@ export interface MixedUseAssetInputSources {
 }
 
 /** 겸용 엔진 입력 1건을 조립한다. 키 커버리지는 함수 안의 가드가 강제한다. */
+/**
+ * 겸용 엔진에 넘길 동일세대 상속 사실(§154⑧3호) — ⚠️ `engineInput`(Date 변환본)에서 고른다. 상속이 아니거나 동일세대가 아니거나
+ * 개시일이 없으면 `undefined`(종전 동작). 개시일이 상속개시일보다 앞서는지는 엔진 정본(`sameHouseholdInheritanceHoldingStart`)이 본다.
+ */
+export function sameHouseholdInheritanceOf(
+  ei: Pick<TransferTaxInput, "acquisitionCause" | "decedentSameHouseholdBeforeInheritance" | "decedentCohabitationHoldingStartDate">,
+): MixedUseAssetInput["sameHouseholdInheritance"] {
+  return ei.acquisitionCause === "inheritance" &&
+    ei.decedentSameHouseholdBeforeInheritance === true &&
+    ei.decedentCohabitationHoldingStartDate
+    ? { holdingStartDate: ei.decedentCohabitationHoldingStartDate }
+    : undefined;
+}
+
 export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseAssetInput {
   const phdInput = s.mixedUse.preHousingDisclosure
     ? {
@@ -260,6 +276,7 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     winWinRentalHouse: s.winWinRentalHouse,
     // ⑭ 결정 #38 후속 — 증여 세대 통산. §154① 판정(`exemptionReqInput`)과 D4-05 일반주택 취득일만 읽는다(장특·세율은 증여일).
     giftHouseholdBasis: s.giftHouseholdBasis,
+    sameHouseholdInheritance: s.sameHouseholdInheritance,
     filingPenaltyDetails: s.filingPenaltyDetails,
     delayedPaymentDetails: s.delayedPaymentDetails,
     priorReductionUsage: s.priorReductionUsage ?? [],
