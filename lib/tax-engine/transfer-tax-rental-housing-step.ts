@@ -57,6 +57,8 @@ import {
 import { landRebuildNoticeOf } from "./transfer-tax-rebuild-notice";
 import { landOnlyRateInput } from "./land-only-owner-household";
 import { landOnlyAppurtenantHouseYears } from "./land-only-owner-household";
+import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
+import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 
 // 요건 판정·조기반환 게이트는 800줄 정책으로 분리 — 기존 import 경로 호환 재export.
 export {
@@ -145,6 +147,13 @@ function resolveHighValueDenominator(effectiveInput: TransferTaxInput): number {
  * STEP 2.5: 장기임대주택 거주주택 비과세 특례 처리.
  * gain 계산 완료 후 호출. 호출측은 `if (effectiveInput.rentalHousingException?.applyException)` 가드 후 호출.
  */
+/**
+ * D-2 — 다주택 중과가 붙는 주택은 장기보유특별공제 대상에서 빠진다(소득세법 §95② 괄호 「제104조제7항 각 호에 따른 자산은 제외」).
+ * 일반 경로는 L-1(`transfer-tax-lthd.ts`)이 같은 조건으로 배제한다. 계획서 `docs/00-pm/rental-155-20-review-fixes.plan.md` PR-2.
+ */
+export const RENTAL_SURCHARGE_LTHD_EXCLUDED_NOTICE =
+  "다주택 중과세율을 적용하는 주택이라 장기보유특별공제를 적용하지 않았습니다(소득세법 §95② — 제104조제7항 각 호에 따른 자산은 공제 대상에서 제외).";
+
 export function runRentalHousingExceptionStep(
   args: RentalHousingStepArgs,
 ): TransferTaxResult | null {
@@ -233,6 +242,18 @@ export function runRentalHousingExceptionStep(
     splitDetail, nonBusinessGain: nbl?.gain ?? 0, laterLandExcluded: !!laterLand, housingGain,
     houseYearsOverride: splitDetail ? landOnlyAppurtenantHouseYears(effectiveInput, splitDetail.building.holdingYears) : undefined,
   });
+  /**
+   * D-2 — 다주택 중과 대상이면 장기보유특별공제를 배제한다(소득세법 §95② 괄호 · 일반 경로 L-1 `transfer-tax-lthd.ts`와 같은 조건).
+   * 아래 세액 `calcTax(…, effectiveInput, multiHouseSurchargeResult)`가 중과를 정하는 것과 **같은 술어·같은 입력**으로 미리 구한다.
+   * **B(직전거주주택보유주택)만** — 결정 범위가 B의 과세 기간분 중과(#2188)다. A는 §167의10①15호로 중과가 배제되는 것이 정상이고,
+   * 명부 없는 주택 수 fallback이 A에 중과를 붙이는 판정 보류 입력(`transfer.route.unknown-unfavorable-interp-axes` UX-A4·A5·A8)은
+   * 이번 범위 밖이라 종전 값(장특 적용)을 유지한다.
+   */
+  const surchargeForLthd = resolveSurchargeApplication(effectiveInput, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules);
+  const lthdExcludedBySurcharge =
+    effectiveInput.rentalHousingException!.scenario === "B" &&
+    surchargeForLthd.isSurchargeCase && !surchargeForLthd.isSuspended && isMultiHouseLthdExclusionEra(effectiveInput.transferDate);
+  const surchargeLthdNotice = lthdExcludedBySurcharge ? RENTAL_SURCHARGE_LTHD_EXCLUDED_NOTICE : undefined;
   const calcRhe = (rhInput: RentalHousingExceptionInput, eligibilityOverride?: EligibilityResult) => calculateRentalHousingException(
     rhInput,
     housingGain,
@@ -250,6 +271,7 @@ export function runRentalHousingExceptionStep(
     rulingFacts,
     lthdParts,
     eligibilityOverride,
+    lthdExcludedBySurcharge,
   );
   let rhe = calcRhe(effectiveInput.rentalHousingException!);
   /**
@@ -484,6 +506,14 @@ export function runRentalHousingExceptionStep(
       legalBasis: rheBasis,
     });
   }
+  if (surchargeLthdNotice) {
+    steps.push({
+      label: "장기보유특별공제 배제 — 다주택 중과",
+      formula: surchargeLthdNotice,
+      amount: 0,
+      legalBasis: "소득세법 §95②",
+    });
+  }
   if (nbl) {
     steps.push(nbl.step);
     if (laterLand?.step) steps.push(laterLand.step);
@@ -588,7 +618,7 @@ export function runRentalHousingExceptionStep(
     ...(unsold989Detail ? { unsold989Detail } : {}),
     ...(houseCountExclusionDetails ? { houseCountExclusionDetails } : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
-    ...(phrp154_10Notice || provisoNotice || reductionNotice || lthdNotice || rebuildNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || laterLandNotice || laterLandPhrpNotice || rhe.eligibility.notices?.length
+    ...(phrp154_10Notice || provisoNotice || reductionNotice || lthdNotice || rebuildNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || surchargeLthdNotice || highValueExcessNotice || laterLandNotice || laterLandPhrpNotice || rhe.eligibility.notices?.length
       ? {
           warnings: [
             phrp154_10Notice,
@@ -599,6 +629,7 @@ export function runRentalHousingExceptionStep(
             periodPendingNotice,
             table2ReadingNotice,
             prhpSurchargeNotice,
+            surchargeLthdNotice,
             highValueExcessNotice,
             laterLandNotice,
             laterLandPhrpNotice,
