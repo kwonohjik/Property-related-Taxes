@@ -37,6 +37,8 @@ const asset = (n: number, over: Record<string, unknown> = {}) => ({
   transferCause: "general",
   bgValuationMode: "sangjeungbeop_market",
   bgAcquisitionMethod: "converted",
+  // K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 Q-2 a) — 2.5억 × 채무비율 0.5 = 종전 환산 취득가액과 같은 금액
+  bgActualAcquisitionLand: "250000000", bgActualAcquisitionBuilding: "250000000",
   bgMarketValueAtTransfer: "1000000000",
   bgLendingDepositTotal: "0",
   bgMortgageDebtAmount: "500000000",
@@ -188,7 +190,7 @@ test.describe("일반건물 부담부증여 × 이월과세 — 화면 증여세
       .toBe(true);
   });
 
-  test("GBGT-E6 분리 ON 둘 다: 토지 블록 6억 · 건물 블록 4억 → 상당액 1억 · A 93,742,700 < B → 97,800,000(종전 A 99,966,000 채택)", async ({ page }) => {
+  test("GBGT-E6 분리 ON 둘 다: 토지 블록 6억 · 건물 블록 4억 → 상당액 1억 · A 93,742,700 < B → 99,000,000(종전 A 99,966,000 채택)", async ({ page }) => {
     test.setTimeout(180_000);
     const co = { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2024-05-01", donorAcquisitionDate: "2015-01-01", donorAcquisitionPrice: "100000000", giftDateValuation: "", giftTaxAmount: "", donorRelation: "lineal", donorSameHousehold: "no" };
     await seedWizard(page, seedOf([asset(1, { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2024-05-01", buildingCarryover: co })]));
@@ -196,7 +198,7 @@ test.describe("일반건물 부담부증여 × 이월과세 — 화면 증여세
     const body = (await calculate(page)) as Wire;
     expect(body.carryoverTaxation?.giftTaxAmount).toBe(100_000_000);
     expect(body.burdenedGiftInfo?.carryoverDonorBasis?.giftValuationByPart).toEqual({ land: 600_000_000, building: 400_000_000 });
-    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("97,800,000");
+    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("99,000,000");
   });
 
   /**
@@ -225,7 +227,7 @@ test.describe("일반건물 부담부증여 × 이월과세 — 화면 증여세
    * V-3 Q-1 a · Q-2 a — 계산에 닿지 않던 칸을 숨긴다. 증여 사건(등기접수일·산출세액·과세가액·적용배제)은 토지 블록 한 벌,
    * 당초 증여자 취득가액은 「당초 증여자」 블록이 정본이다. 숨긴 칸 없이 계산까지 간다(⑧·⑫ 막힘 없음).
    */
-  test("GBGT-E9 분리 ON 둘 다: 건물 블록엔 사건 칸이 없고, 두 블록 모두 증여자 취득가액·취득원인 칸이 없다 → 그대로 97,800,000", async ({ page }) => {
+  test("GBGT-E9 분리 ON 둘 다: 건물 블록엔 사건 칸이 없고, 두 블록 모두 증여자 취득가액·취득원인 칸이 없다 → 그대로 99,000,000", async ({ page }) => {
     test.setTimeout(180_000);
     const co = { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2024-05-01", donorAcquisitionDate: "2015-01-01", giftDateValuation: "", giftTaxAmount: "", donorRelation: "lineal", donorSameHousehold: "no" };
     await seedWizard(page, seedOf([asset(1, { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2024-05-01", buildingCarryover: co, carryover: { ...co } })]));
@@ -238,7 +240,7 @@ test.describe("일반건물 부담부증여 × 이월과세 — 화면 증여세
     await expect(card.getByTestId("gb-bg-donor-basis-elsewhere")).toHaveCount(2);
     const body = (await calculate(page)) as Wire & { carryoverTaxation?: { donorAcquisitionPrice?: number } };
     expect(body.carryoverTaxation?.donorAcquisitionPrice).toBeUndefined();
-    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("97,800,000");
+    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("99,000,000");
   });
   /**
    * V-7(`docs/00-pm/carryover-gift-tax-numerator-net.plan.md` Q-2 a · Q-3 a) — 영 §163의2②2호 분자는 증여세 과세가액(평가액 − 당초 증여 때 인수한 채무)이다.

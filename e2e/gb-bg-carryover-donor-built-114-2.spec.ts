@@ -43,6 +43,8 @@ const gbBgAsset = (co: Over = {}, over: Over = {}): Over => ({
   transferCause: "general",
   bgValuationMode: "sangjeungbeop_market",
   bgAcquisitionMethod: "converted",
+  // K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 Q-2 a) — 2.5억 × 채무비율 0.5 = 종전 환산 취득가액과 같은 금액
+  bgActualAcquisitionLand: "250000000", bgActualAcquisitionBuilding: "250000000",
   bgMarketValueAtTransfer: "1000000000",
   bgMortgageDebtAmount: "500000000",
   bgMortgageSetAmount: "500000000",
