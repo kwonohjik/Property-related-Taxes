@@ -52,6 +52,7 @@ import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-u
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { buildMixedUseAssetInput } from "./mixed-use-asset-input";
+import { sameHouseholdInheritanceOf } from "./mixed-use-asset-input";
 import { pickArticle89Clause2Facts } from "@/lib/tax-engine/transfer-tax-89-2-consequences";
 import type { MixedUseZodPayload } from "./mixed-use-asset-input";
 import type { MixedUseCompanionContext } from "./bundled-companion-types";
@@ -484,6 +485,8 @@ export function buildMixedUseCompanionItems(
      * 주 자산이 겸용인 묶음은 primary item(`...engineInput`)에 값이 있고, 함께 양도하는 겸용은 입력 경로가 없어 undefined다(⑤⑧④ 첫 자산만).
      */
     giftHouseholdBasis: companionEngine.giftHouseholdBasis,
+    // §154⑧3호 동일세대 상속 보유 통산 — 위 증여 세대 사실과 같은 이유로 이 item에서 고른다(파트 카드 단건 판정이 같은 item의 `decedent*`를 읽는다).
+    sameHouseholdInheritance: sameHouseholdInheritanceOf(companionEngine),
     householdHousingCount: ctx.primaryEngineInput.householdHousingCount,
     /**
      * §155②③ 상속주택 제외(E-14d)는 **싣지 않는다** — 파트 카드의 비과세는 aggregate item이 재판정하는데

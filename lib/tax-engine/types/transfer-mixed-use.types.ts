@@ -247,6 +247,16 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
    */
   giftHouseholdBasis?: TransferTaxInput["giftHouseholdBasis"];
   /**
+   * 동일세대로 상속받은 겸용주택 — 「소득세법 시행령」 §154⑧3호 「상속개시 전에 상속인과 피상속인이 동일세대로서 거주하고 보유한 기간」의
+   * 보유 개시일. 상속 · 상속개시 당시 동일세대 · 개시일이 모두 있을 때만 싣는다(`sameHouseholdInheritanceOf`).
+   *
+   * §154① 보유 기산 · 「취득 당시」 조정대상지역 · 거주요건 경과규정 기준일(`exemptionReqInput` → 정본
+   * `sameHouseholdInheritanceHoldingStart`)만 읽는다. **거주 통산은 싣지 않는다** — API가 `table2ResidencePeriodYears`에
+   * 이미 더했다(`lib/calc/transfer-tax-api-mixed-use.ts`). 장기보유특별공제 · 세율 보유기간은 건물 취득일(상속개시일) 그대로다.
+   * 미전달이면 종전 동작(건물 취득일 기산).
+   */
+  sameHouseholdInheritance?: { holdingStartDate: Date };
+  /**
    * §89①3호 **주택수 제외** 판정용 세대 보유 주택 수 (양도하는 겸용주택 자신을 포함) — D4-02.
    *
    * 겸용 경로는 `calculateTransferTax`를 타지 않아 `runHouseCountExclusionStep`이 한 번도

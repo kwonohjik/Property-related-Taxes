@@ -65,16 +65,16 @@ function withMixedResidenceFact(item: OneHouseRequirementCheck): OneHouseRequire
  * (계획서 `mixed-use-unmet-reason-calc.plan.md` Q-1 a). 호출부가 「1세대 · 주택 수 축 불성립(그래서 비과세 아님)」일 때만 부른다.
  *
  * - 판정을 다시 하지 않는다 — 검토표는 겸용 판정이 쓰는 같은 입력·같은 술어(`evaluateTemporaryTwoHouseTiming` 등)로 행을 만든다.
- * - 상속 취득이면 보유 행을 싣지 않는다(리뷰 게이트 BLOCK) — 겸용 엔진은 피상속인과 동일세대로 보유한 기간(영 §154⑧3호)을
- *   통산할 입력을 받지 않아(`transfer-tax-mixed-use-exemption.ts` `exemptionReqInput` 주석) 보유 기산이 상속개시일로 잡힌다.
- *   그 값으로 「보유 2년 미충족」을 단정하면 동일세대 상속에서 틀린 말이 된다(일반 경로는 통산해 충족). 별도세대 상속은 침묵만 늘어난다.
+ * - 상속 취득도 보유 행을 그대로 싣는다. 동일세대 상속 보유 통산(영 §154⑧3호)은 판정 입력(`exemptionReqInput`)이 이미 담아
+ *   검토표가 같은 기산일을 본다(#2885 리뷰 게이트의 「상속이면 보유 행 제외」 임시 회피는
+ *   `mixed-use-inherit-same-household-holding.plan.md` Q-3 a로 지웠다).
  * - `transferPrice`(0)는 검토표의 고가주택 행만 읽는다. 그 행은 `met`/`partial`뿐이라(미충족 없음) 고지에 오르지 않는다 —
  *   겸용 고가 판정(주택분 안분)은 따로 한다.
  */
 export function mixedUseRequirementReviewNotice(
   deemedInput: DeemedOneHouseReqInput,
   oneHouseRules: OneHouseSpecialRulesData,
-  facts: { isUnregistered: boolean; article89Clause2: Article89Clause2Result | undefined; inherited: boolean },
+  facts: { isUnregistered: boolean; article89Clause2: Article89Clause2Result | undefined },
   shown: readonly string[],
 ): string | undefined {
   const judgeInput = { ...deemedInput, propertyType: "housing", isUnregistered: facts.isUnregistered, transferPrice: 0 } as OneHouseJudgeInput;
@@ -85,7 +85,7 @@ export function mixedUseRequirementReviewNotice(
     facts.article89Clause2 ?? { status: "not_applicable" },
   );
   if (!review) return undefined;
-  const items = review.items.filter((i) => !(facts.inherited && i.id === "holding")).map(withMixedResidenceFact);
+  const items = review.items.map(withMixedResidenceFact);
   return requirementReviewUnmetNotice({ isExempt: false, isPartialExempt: false, requirementReview: { ...review, items } }, shown);
 }
 

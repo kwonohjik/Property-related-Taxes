@@ -168,15 +168,19 @@ describe("리뷰 게이트 — 상속 취득 겸용", () => {
       },
       formOver: { transferDate: "2023-09-18", filingDate: "2023-12-31", residencePeriodMonths: "0", ...TEMP("2023-09-01") } as never,
     });
-  it.each([
-    ["동일세대 상속", true],
-    ["별도세대 상속(보유 행은 침묵만 늘어난다)", false],
-  ] as const)("MU-4 %s · 일시적 2주택 1년 미경과 → 1년 행만 · 보유 행 없음", async (_n, same) => {
-    const r = await runCalc(inherited(same));
+  const ONE_YEAR = "종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득 미충족(종전주택 취득일 2022-10-01, 1년 경과일 2023-10-02, 신규주택 취득일 2023-09-01)";
+  it("MU-4 동일세대 상속(동거 보유 2015-01-01부터 통산) · 일시적 2주택 1년 미경과 → 1년 행만 · 보유 행 없음(충족)", async () => {
+    const r = await runCalc(inherited(true));
+    expect(r.issues).toEqual([]);
+    expect(exemptOf(r)).toBe(false);
+    expect(noticesOf(r)).toEqual([`${T155}${ONE_YEAR}.`]);
+  });
+  it("MU-4b 별도세대 상속 · 일시적 2주택 1년 미경과 → 1년 행 + 보유 미충족 행(상속개시일 기산)", async () => {
+    const r = await runCalc(inherited(false));
     expect(r.issues).toEqual([]);
     expect(exemptOf(r)).toBe(false);
     expect(noticesOf(r)).toEqual([
-      `${T155}종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득 미충족(종전주택 취득일 2022-10-01, 1년 경과일 2023-10-02, 신규주택 취득일 2023-09-01).`,
+      `${T155}${ONE_YEAR} · 종전주택 보유기간 2년 이상 미충족(보유 기산일 2022-10-01, 보유기간 0년 11개월).`,
     ]);
   });
 });
