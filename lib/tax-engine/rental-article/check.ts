@@ -67,6 +67,8 @@ export type NormalizedRentalUnit = {
   /** 수도권 여부 (다주택 region==="capital" / §155⑳ region==="seoul-metro" 정규화) */
   isCapitalArea: boolean;
   isApartment: boolean;
+  /** 도시형 생활주택인 아파트 — (m) 양도기한 게이트에서만 아파트로 보지 않는다(가목2) 괄호). 미제공 = 아님. */
+  isUrbanLifeHousingApartment?: boolean;
   /** 임대개시일 기준시가 (원) */
   rentalStartOfficialPrice: number;
   /** 취득당시 기준시가 (원) — 나·라목 cap 측정시점 */
@@ -341,6 +343,7 @@ function checkArticleGates(
   if (gate.fivePct && isRentCapBreached(article, u)) fails.push("REQUIREMENTS_NOT_CONFIRMED");
 
   // (m) 가목2)·나목2)·라목8)·마목4) 양도기한(§167조의3⑪, 대통령령 제36737호) — 아파트만.
+  // 도시형 생활주택인 아파트는 이 게이트에서 아파트가 아니다(가목2) 괄호 「이하 이 목, 나목2)ㆍ라목8) 및 마목4)에서 같다」).
   // 사목 base 검사(skipAptDeadline)·§155㉓ 경로(skipAptTransferDeadlineGate)는 각각 사목 자체
   // 양도기한·㉓ 괄호의 명시 비적용으로 대체되므로 이 게이트를 보지 않는다.
   let aptDeadlinePending = false;
@@ -348,6 +351,7 @@ function checkArticleGates(
   if (
     gate.aptDeadlineGate &&
     u.isApartment &&
+    u.isUrbanLifeHousingApartment !== true &&
     !opts.skipAptDeadline &&
     !u.skipAptTransferDeadlineGate
   ) {

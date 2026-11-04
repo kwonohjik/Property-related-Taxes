@@ -36,6 +36,7 @@ import {
 import { deadlineEndNote } from "@/lib/tax-engine/civil-period";
 import { isMa1IncludedIn15520 } from "@/lib/tax-engine/data/rental-155-20-era";
 import { rentalUnitAptDeadlineInScope } from "@/lib/calc/apt-deadline-extension-scope";
+import { rentalUnitUrbanLifeQuestionInScope } from "@/lib/calc/apt-deadline-extension-scope";
 import { AptDeadlineExtensionFields } from "./AptDeadlineExtensionFields";
 import { rentalUnitLowPriceInScope } from "@/lib/calc/rental-unit-low-price-scope";
 import { rentalUnitApartmentInScope } from "@/lib/calc/rental-unit-apartment-scope";
@@ -566,7 +567,20 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
         </ToggleCard>
       )}
 
-      {/* §167의3⑪ — 가목2)·나목2)·라목8)·마목4) 아파트 양도기한. ㉓ 말소 경로는 비적용(④·⑧과 같은 술어) */}
+      {/* §167의3①2호 가목2) 괄호 — 도시형 생활주택인 아파트는 아래 양도기한만 비적용(마목2) 아파트 배제는 그대로). ④와 같은 술어 */}
+      {rentalUnitUrbanLifeQuestionInScope(unit) && (
+        <ToggleCard
+          variant="card"
+          size="sm"
+          tone="violet"
+          title="「주택법」에 따른 도시형 생활주택인 아파트입니다."
+          description="도시형 생활주택인 아파트는 아파트 양도기한(2027.12.31. — 소령 §167의3⑪)을 적용하지 않습니다(같은 조 ①2호 가목2) 괄호). 2020.7.11. 이후 등록 신청한 아파트의 장기일반 제외에는 그대로 아파트로 봅니다."
+          checked={unit.isUrbanLifeHousingApartment === true}
+          onCheckedChange={(v) => set("isUrbanLifeHousingApartment", v)}
+        />
+      )}
+
+      {/* §167의3⑪ — 가목2)·나목2)·라목8)·마목4) 아파트 양도기한. ㉓ 말소 경로·도시형 생활주택 아파트는 비적용(④·⑧과 같은 술어) */}
       {rentalUnitAptDeadlineInScope(unit) && (
         <AptDeadlineExtensionFields
           value={unit.aptDeadlineExtension}

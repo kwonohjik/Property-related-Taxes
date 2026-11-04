@@ -462,6 +462,7 @@ export function checkEligibility(
       rentalRegistrationDate: unit.rentalRegistrationDate,
       isCapitalArea: unit.region === "seoul-metro",
       isApartment: unit.isApartment,
+      isUrbanLifeHousingApartment: unit.isUrbanLifeHousingApartment, // 가목2) 괄호 — 양도기한 게이트만
       rentalStartOfficialPrice: unit.standardPriceAtRentalStart,
       acquisitionOfficialPrice: unit.acquisitionOfficialPrice ?? 0, // 나목 cap 측정시점(취득당시)
       rentalYears: unit.rentalMonths / 12,

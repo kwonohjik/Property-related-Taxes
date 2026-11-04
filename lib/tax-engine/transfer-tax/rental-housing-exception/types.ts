@@ -52,6 +52,13 @@ export type RentalUnitInput = {
   rentalAcquisitionType: "purchase" | "construction";
   /** 아파트 여부 (2020.7.11 이후 등록 아파트는 장기일반 불가·단기/건설은 항상 제외) */
   isApartment: boolean;
+  /**
+   * 「주택법」에 따른 도시형 생활주택인 아파트 — 소령 §167의3①2호 가목2) 괄호(「도시형 생활주택인 아파트는 제외한다.
+   * 이하 이 목, 나목2)ㆍ라목8) 및 마목4)에서 같다」)로 **아파트 양도기한(⑪) 게이트에서만** 아파트가 아니다.
+   * 마목2)(2020.7.11. 이후 등록 신청 아파트 배제)에는 괄호가 없어 그대로 아파트다(`isApartment`가 가른다).
+   * 미제공 = 도시형 아님(양도기한 적용 — 불리 쪽).
+   */
+  isUrbanLifeHousingApartment?: boolean;
   /** 소재지 구분 (수도권/비수도권 — cap 산정축) */
   region: RegionType;
   /**
