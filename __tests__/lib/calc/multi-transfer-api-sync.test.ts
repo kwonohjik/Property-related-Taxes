@@ -23,6 +23,7 @@ import {
   validateMultiSettings,
 } from "@/lib/calc/multi-transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 
 function baseForm() {
@@ -308,7 +309,9 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     expect(validateMultiSupportedMode(form)).toBeNull();
   });
 
-  it("[R2-H1] 상속 auto + 신고가액 공란 → 차단 (단건 전용 산정 필요)", () => {
+  // 계획서 multi-sec163-9-support.plan.md Q-2 a — 다건 전용 「상속 ① 공란」 가드를 지웠다. 다건도 §163⑨(①②③)를 단건 빌더로 싣고,
+  // ① 공란은 건별 ⑧(`validateStep` · `postDeemedClauseARequiredError`)이 단건과 같이 막는다(아래 두 건은 그 반전).
+  it("[R2-H1] 상속 auto + 신고가액 공란 → 다건 고유 차단 없음 · 건별 ⑧이 「상속개시일 평가액」을 짚는다", () => {
     const form = baseForm();
     form.assets[0] = {
       ...form.assets[0],
@@ -317,13 +320,13 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
       inheritanceAssetKind: "house_apart",
       publishedValueAtInheritance: "",
       fixedAcquisitionPrice: "",
+      addressJibun: "서울 강남구 테스트동 1-1", // 자산 ⑧은 첫 오류에서 멈춘다 — 소재지를 채워 평가액 규칙까지 가게 한다
     };
-    const msg = validateMultiSupportedMode(form);
-    expect(msg).not.toBeNull();
-    expect(msg).toContain("신고가액");
+    expect(validateMultiSupportedMode(form)).toBeNull();
+    expect([0, 1, 2, 3].flatMap((st) => collectStepIssues(st, form)).map((i) => i.field)).toContain("publishedValueAtInheritance");
   });
 
-  it("[R2-H1] 상속 fixedAcquisitionPrice 폐기 — 신고가액 없으면 차단 (P2c 통합)", () => {
+  it("[R2-H1] 상속 fixedAcquisitionPrice 폐기 — 신고가액 없으면 건별 ⑧이 막는다 (P2c 통합)", () => {
     const form = baseForm();
     form.assets[0] = {
       ...form.assets[0],
@@ -331,9 +334,10 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
       decedentAcquisitionDate: "2000-01-01",
       fixedAcquisitionPrice: "300,000,000", // P2c: 상속 fixedAcq 미사용 → 신고가액 없어 차단
       publishedValueAtInheritance: "",
+      addressJibun: "서울 강남구 테스트동 1-1",
     };
-    const msg = validateMultiSupportedMode(form);
-    expect(msg).not.toBeNull();
+    expect(validateMultiSupportedMode(form)).toBeNull();
+    expect([0, 1, 2, 3].flatMap((st) => collectStepIssues(st, form)).map((i) => i.field)).toContain("publishedValueAtInheritance");
   });
 
   it("[리뷰 H-1 → Q4] 모드 2 — 보유 감면주택 주택수 제외(specialHouseExclusions)는 더 막지 않는다", () => {

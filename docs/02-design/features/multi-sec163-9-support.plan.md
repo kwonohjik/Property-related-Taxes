@@ -80,6 +80,7 @@
   - MS-2 의제 전 1984 토지 ③ 칸 · ①만(본문 `mode: pre-deemed`) · MS-2b ③ 채택 143,701,555 < 282,711,000.
   - MS-3 ⑫ 상가 키 400 유지.
 - 의도된 반전: #2888 anchor `multi-sec163-9-clause-b-drop` 삭제(막힘을 고정했다 — MS-1이 대체) · E2E를 `e2e/multi-sec163-9-support.spec.ts`로 바꿔 씀(막힘 → 200 · 149,006,000) · `transfer-land-part-cause.d2.predo` C16(다건 전용 가드 문구 → 건별 단건 ⑧ `publishedValueAtInheritance` 이슈).
+- pre-push 첫 시도에서 `__tests__/lib`의 의도된 반전 3건이 더 나왔다(회귀를 api·calc·components로만 돌려 놓쳤다): `multi-transfer-api-sync` R2-H1 ×2(다건 전용 「신고가액」 차단 → 다건 고유 차단 없음 · 건별 ⑧ `publishedValueAtInheritance` — 시료에 소재지를 채워 자산 ⑧이 평가액 규칙까지 가게 했다) · `pre1990-land-gate` A09-12(1987 증여 토지 다건 `pre1990Land` 미구성 → 단건과 같은 값 — 단건은 §163⑨1호로 이미 싣고 있었다).
 - E2E MS-E1·E2(headless Playwright — 사람이 직접 한 브라우저 확인은 아니다) + 인접 다건 E2E 10건 통과(`transfer-multi-pre1990-land` 1건은 회귀와 동시 실행 중 첫 시도 page.goto 시간 초과 → 재시도 통과 · load 45). E2E 뮤테이션(M1) → MS-E1 실패 확인.
 - mutation:
 
