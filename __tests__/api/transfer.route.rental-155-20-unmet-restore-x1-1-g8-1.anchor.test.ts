@@ -32,6 +32,10 @@ vi.mock("@/lib/api/rate-limit", () => ({
 
 import { POST as SINGLE } from "@/app/api/calc/transfer/route";
 import { POST as MULTI } from "@/app/api/calc/transfer/multi/route";
+import { buildTransferEngineInput } from "@/app/api/calc/transfer/engine-input";
+import { propertySchema as inputSchema } from "@/lib/api/transfer-tax-schema";
+import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
+import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { callMultiTransferTaxAPI } from "@/lib/calc/multi-transfer-tax-api";
@@ -413,6 +417,13 @@ describe("X1-1 B + 세대 구성 불성립(3중첩) — 요건은 충족해도 �
  * (사용자 결정 2026-10-12 — ⑳ 호별 판정과 다르다: 가목 1) 2018.3.31. 등록기한 · 마목 1) 조정대상지역 신규 취득 · ㉓ 말소).
  * 정답은 「같은 사실을 명부 장기임대 행으로 넣은 입력」이다 — 카드 행과 명부 행이 같은 값을 내야 한다.
  */
+const C6_SPECIAL = {
+  article: "unsold_99_2",
+  houseAcquisitionDate: "2013-06-01",
+  houseContractDate: "2013-06-01",
+  isNationalHousing: false,
+  requirementsConfirmed: true,
+} as const;
 describe("C 카드 임대 호 → 중과 판정 명부 (결정 #20 C)", () => {
   /** 카드의 임대 호(withRental)와 같은 사실의 명부 장기임대 행 — 마목(E) · 2019.3.1. 등록 · 90개월 */
   const cardEquivalentRow = (rentalStartPrice: string, over: Partial<HouseEntry> = {}): HouseEntry => ({
@@ -485,22 +496,26 @@ describe("C 카드 임대 호 → 중과 판정 명부 (결정 #20 C)", () => {
     expect(mh(s).exclusionReasons).toEqual([]);
   });
 
-  it("C-6 짝 — 명부 없음 · 주택 수 2(조특법 감면주택 1채 제외 후 1)면 비과세는 되돌리지만 중과 명부는 합성하지 않는다 — 고지에 중과 문장 없음", async () => {
+  it("C-6 짝 — 명부 없음 · 주택 수 2(조특법 감면주택 1채 제외 후 1)면 비과세는 되돌리지만 중과 명부는 합성하지 않는다 — 고지에 중과 문장 없음 (엔진 직접)", async () => {
+    // 이 입력(명부 없음 + 폼 전역 조특법 선언 + ⑳)은 route가 400으로 거절한다(V-9, 아래 C-6b) — 계산기 ⑧도 막는다.
+    // 합성 조건(`restoreRentalUnitsToHouseCount` — 명부 있음 또는 주택 수 1)의 엔진 분기는 남아 있어, route 검증 다음 단계(엔진 입력 빌드 → 엔진)를 직접 탄다.
     const f = failRental(withRental(form([], { householdHousingCount: "2", contractTotalPrice: "1,500,000,000" })));
-    Object.assign(f, {
-      specialHouseExclusions: [
-        {
-          article: "unsold_99_2",
-          houseAcquisitionDate: "2013-06-01",
-          houseContractDate: "2013-06-01",
-          isNationalHousing: false,
-          requirementsConfirmed: true,
-        },
-      ],
-    });
-    const w = hasRestoreNotice((await single(f)).warnings);
+    Object.assign(f, { specialHouseExclusions: [C6_SPECIAL] });
+    const data = inputSchema.parse(await bodyOf(() => callTransferTaxAPI(f)));
+    const engineInput = buildTransferEngineInput(data, toDate(data.transferDate, "transferDate"), toDate(data.acquisitionDate, "acquisitionDate"), toOptionalDate(data.assetContractDate));
+    const r = calculateTransferTax(engineInput, loadFallbackTransferRates(new Date(TRANSFER_DATE)));
+    const w = hasRestoreNotice(r.warnings ?? []);
     expect(w).toContain("(2주택)");
     expect(w).not.toContain("다주택 중과 판정");
+  });
+
+  it("C-6b 명부 없음 + 폼 전역 조특법 감면주택 선언 + ⑳ → route 400 (V-9 · 계산기 ⑧ 옛 선언 차단과 같은 결론)", async () => {
+    const f = failRental(withRental(form([], { householdHousingCount: "2", contractTotalPrice: "1,500,000,000" })));
+    Object.assign(f, { specialHouseExclusions: [C6_SPECIAL] });
+    const res = await post(SINGLE, "http://l/api/calc/transfer", await bodyOf(() => callTransferTaxAPI(f)));
+    expect(res.status).toBe(400);
+    const json = (await res.json()) as { error: { fieldErrors: Record<string, string[]> } };
+    expect(json.error.fieldErrors.specialHouseExclusions?.[0]).toMatch(/다른 보유 주택 목록이 비어 있어/);
   });
 
   it("C-5 짝 — ⑳ 요건을 충족하면 카드 행을 더하지 않는다(15호 · 임대 행 없는 2주택 의제 그대로)", async () => {

@@ -389,22 +389,47 @@ describe("조특법 소유주택 제외와의 겹침 — §99의2와 같은 문�
     expect(await multi(f)).toBe(RH_EXCLUDED);
   });
 
-  it("UX-A4 명부 없음 · 폼 전역 §98의8 · 세대 3채 → 종전대로 적용(판정 보류) 199,997,600 · 고지 없음", async () => {
+  // V-9(사용자 결정 2026-11-04 「1 — 목록 입력 요구」·「API도 차단」): 명부 없이 폼 전역 선언만 있으면 엔진이 ⑳ 구성은 세우면서
+  // 중과는 주택 수 숫자로만 매겨 중과 + 장특이 함께 붙었다(종전 199,997,600 — 명부 입력 시 102,086,600). 계산기 ⑧은 옛 선언을 막고,
+  // route도 400으로 거절한다(`lib/api/rental-residence-roster-guard.ts`).
+  it("UX-A4 명부 없음 · 폼 전역 §98의8 · 세대 3채 → route 400 (V-9 · 종전 199,997,600)", async () => {
     const f = withRental(
       form([], { householdHousingCount: "3", specialHouseExclusions: [special("unsold_98_8", "2015-06-01")] }),
     );
     const s = await single(f);
-    expect(s).toMatchObject({ totalTax: 199_997_600, rentalApplied: true });
-    expect(s.confirm).toBeUndefined();
+    expect(s.status).toBe(400);
+    expect(s.fieldErrors?.specialHouseExclusions?.[0]).toMatch(/다른 보유 주택 목록이 비어 있어/);
   });
 
-  it("UX-A5 (양성 짝) 명부 없음 · 폼 전역 §99의2 → 종전대로 적용(판정 보류) 199,997,600 · 고지 없음", async () => {
+  it("UX-A5 명부 없음 · 폼 전역 §99의2 → route 400 (V-9 · 종전 199,997,600)", async () => {
     const f = withRental(
       form([], { householdHousingCount: "3", specialHouseExclusions: [special("unsold_99_2", "2013-06-01")] }),
     );
     const s = await single(f);
-    expect(s).toMatchObject({ totalTax: 199_997_600, rentalApplied: true });
-    expect(s.confirm).toBeUndefined();
+    expect(s.status).toBe(400);
+    expect(s.fieldErrors?.specialHouseExclusions?.[0]).toMatch(/다른 보유 주택 목록이 비어 있어/);
+  });
+
+  it("UX-A5b [짝] 같은 선언을 명부 행에 연결하면(UX-A3) 거절하지 않는다 — 가드는 「명부 없음」에만", async () => {
+    const s = await single(withRental(form([SPECIAL_ROW("unsold_99_2", "2013-06-01"), RENTAL_ROW])));
+    expect(s.status).toBe(200);
+  });
+
+  it("UX-A5c [짝] ⑳을 선언하지 않으면 거절하지 않는다 — 가드는 ⑳ 계산에만", async () => {
+    const f = form([], { householdHousingCount: "3", specialHouseExclusions: [special("unsold_99_2", "2013-06-01")] });
+    expect((await single(f)).status).toBe(200);
+  });
+
+  it("UX-A5d 다건 route도 같은 입력을 400으로 거절한다", async () => {
+    const f = withRental(
+      form([], { householdHousingCount: "3", specialHouseExclusions: [special("unsold_99_2", "2013-06-01")] }),
+    );
+    const mf = { taxYear: 2026, annualBasicDeductionUsed: "0", basicDeductionAllocation: "EARLIEST_TRANSFER" } as MultiTransferFormData;
+    const body = await bodyOf(() => callMultiTransferTaxAPI(mf, [{ propertyId: "p1", propertyLabel: "p1", form: f, completionPercent: 100 }]));
+    const res = await post(MULTI, "http://l/api/calc/transfer/multi", body);
+    expect(res.status).toBe(400);
+    const json = (await res.json()) as { error: { fieldErrors: Record<string, string[]> } };
+    expect(json.error.fieldErrors["properties.0.specialHouseExclusions"]?.[0]).toMatch(/다른 보유 주택 목록이 비어 있어/);
   });
 
   // 조특령 §98② 「…해당 미분양주택 외의 다른 주택만을 기준으로 하여 …제89조제1항제3호를 적용한다」 — §99의2와 효과가 같다(사용자 결정 Q-4 (c) 2026-10-24).
@@ -423,11 +448,11 @@ describe("조특법 소유주택 제외와의 겹침 — §99의2와 같은 문�
     expect(s.confirm).toBeUndefined();
   });
 
-  it("UX-A8 명부 없음 · 폼 전역 §98 · 세대 3채 → 종전대로 적용(판정 보류) 199,997,600 = §99의2 짝 (Q-4 (c) · 종전 불성립 + 확인 필요)", async () => {
+  it("UX-A8 명부 없음 · 폼 전역 §98 · 세대 3채 → route 400 = §99의2 짝 (V-9 · 종전 199,997,600)", async () => {
     const f = withRental(form([], { householdHousingCount: "3", specialHouseExclusions: [special("unsold_98", "1996-06-01")] }));
     const s = await single(f);
-    expect(s).toMatchObject({ totalTax: 199_997_600, rentalApplied: true });
-    expect(s.confirm).toBeUndefined();
+    expect(s.status).toBe(400);
+    expect(s.fieldErrors?.specialHouseExclusions?.[0]).toMatch(/다른 보유 주택 목록이 비어 있어/);
   });
 });
 

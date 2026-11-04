@@ -14,6 +14,7 @@
 import { toEngineOneHouseExemptionProviso } from "@/lib/api/exemption-proviso-coerce";
 import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
 import { rentalPhrpPriceFieldErrors } from "@/lib/api/rental-phrp-price-guard";
+import { rentalResidenceNoRosterFieldErrors } from "@/lib/api/rental-residence-roster-guard";
 import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { rateDateKey, type RatesByTransferDate } from "@/lib/tax-engine/transfer-tax-item-rates";
@@ -103,7 +104,15 @@ export async function POST(request: NextRequest) {
 
   // §155⑳ B(임대 1호 이상) §161 기준시가 3개 필수 — 단건 route·계산기 ⑧(full)과 같은 규칙(결정 #19 X1-1)
   for (const [i, p] of data.properties.entries()) {
-    const phrpPriceErrors = rentalPhrpPriceFieldErrors(p.rentalHousingException, `properties.${i}.rentalHousingException`);
+    // §155⑳ + 목록 없음 + 조특법 주택 수 제외 선언(건별 키 우선 — ⑭와 같은 fallback) — 단건 route와 같은 규칙(V-9)
+    const phrpPriceErrors =
+      rentalPhrpPriceFieldErrors(p.rentalHousingException, `properties.${i}.rentalHousingException`) ??
+      rentalResidenceNoRosterFieldErrors(
+        p.rentalHousingException,
+        p.houses,
+        p.specialHouseExclusions?.length ? p.specialHouseExclusions : data.specialHouseExclusions,
+        `properties.${i}.specialHouseExclusions`,
+      );
     if (phrpPriceErrors) {
       return NextResponse.json(
         { error: { code: TaxErrorCode.INVALID_INPUT, message: "입력값이 올바르지 않습니다", fieldErrors: phrpPriceErrors } },
