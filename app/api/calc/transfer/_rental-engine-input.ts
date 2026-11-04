@@ -7,6 +7,7 @@
 import type { z } from "zod";
 import type { rentalHousingExceptionSchema } from "@/lib/api/transfer-tax-schema";
 import type { RentalHousingExceptionInput } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
+import { toDate } from "@/lib/api/date-coerce";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { toEngineAptDeadlineExtension } from "@/lib/api/transfer-route-multi-house";
 
@@ -20,8 +21,8 @@ export function toRentalHousingExceptionEngineInput(
     applyException: rhe.applyException,
     scenario: rhe.scenario,
     rentalUnits: rhe.rentalUnits.map((u) => ({
-      businessRegistrationDate: new Date(u.businessRegistrationDate),
-      rentalRegistrationDate: new Date(u.rentalRegistrationDate),
+      businessRegistrationDate: toDate(u.businessRegistrationDate, "businessRegistrationDate"),
+      rentalRegistrationDate: toDate(u.rentalRegistrationDate, "rentalRegistrationDate"),
       rentalCategory: u.rentalCategory,
       rentalAcquisitionType: u.rentalAcquisitionType,
       isApartment: u.isApartment,
@@ -38,7 +39,7 @@ export function toRentalHousingExceptionEngineInput(
       totalFloorAreaM2: u.totalFloorAreaM2,
       hasMinimum2Units: u.hasMinimum2Units,
       hasMinimum5UnitsInCity: u.hasMinimum5UnitsInCity,
-      firstSaleContractDate: u.firstSaleContractDate ? new Date(u.firstSaleContractDate) : undefined,
+      firstSaleContractDate: toOptionalDate(u.firstSaleContractDate),
       rentalMonths: u.rentalMonths,
       rentalAutoTermination: u.rentalAutoTermination,
       registrationCancellationDate: toOptionalDate(u.registrationCancellationDate), // I-4 §155㉓
@@ -48,9 +49,7 @@ export function toRentalHousingExceptionEngineInput(
       mergeOrigin: u.mergeOrigin, // 혼인합가 1199
       requirementsConfirmed: u.requirementsConfirmed,
     })),
-    priorResidenceTransferDate: rhe.priorResidenceTransferDate
-      ? new Date(rhe.priorResidenceTransferDate)
-      : undefined,
+    priorResidenceTransferDate: toOptionalDate(rhe.priorResidenceTransferDate),
     standardPriceAtAcquisition: rhe.standardPriceAtAcquisitionForPhrp,
     standardPriceAtPriorTransfer: rhe.standardPriceAtPriorTransfer,
     standardPriceAtTransfer: rhe.standardPriceAtTransferForPhrp,

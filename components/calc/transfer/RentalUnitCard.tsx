@@ -38,6 +38,7 @@ import { isMa1IncludedIn15520 } from "@/lib/tax-engine/data/rental-155-20-era";
 import { rentalUnitAptDeadlineInScope } from "@/lib/calc/apt-deadline-extension-scope";
 import { AptDeadlineExtensionFields } from "./AptDeadlineExtensionFields";
 import { rentalUnitLowPriceInScope } from "@/lib/calc/rental-unit-low-price-scope";
+import { rentalUnitApartmentInScope } from "@/lib/calc/rental-unit-apartment-scope";
 
 /** 도출 목 → 사람이 읽는 라벨 */
 const ARTICLE_LABEL: Record<string, string> = {
@@ -123,7 +124,8 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
   }
   const reqYears = deriveRequiredYears(article, regAppDate);
   const cap = deriveStdPriceCap(article, unit.region, effRegDate);
-  const aptRestricted = isApartmentRestricted(article, regAppDate, unit.isApartment);
+  // 묻지 않는 구분(아·자)의 남은 「아파트」 값은 ④가 보내지 않으므로 경고에도 쓰지 않는다(SYNC-3).
+  const aptRestricted = isApartmentRestricted(article, regAppDate, rentalUnitApartmentInScope(unit) && unit.isApartment);
 
   const isNa = article === "나"; // 기존사업자 매입임대(취득당시 3억·국민주택·2호·지역무관)
   const isLa = article === "라"; // 미분양 매입임대(취득당시 3억·비수도권·5호·298/149)
@@ -157,7 +159,8 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
       : null;
   const transferTs = transferDate ? new Date(transferDate).getTime() : NaN;
   // F6: 다·바(건설 장기)도 일반 아파트 허용. 나·라목도 허용. 아·자(단기)만 아파트 제외.
-  const showApartment = article === "가" || article === "나" || isLa || article === "마" || article === "구법" || article === "다" || article === "바";
+  // 아·자(단기 6년)만 묻지 않는다 — ④와 같은 술어(`rentalUnitApartmentInScope`).
+  const showApartment = rentalUnitApartmentInScope(unit);
   const bothRegMissing = !unit.businessRegistrationDate || !unit.rentalRegistrationDate;
   // 주소로 법정동코드가 채워지면 소재 지역을 자동판별 배지로 표시(regionCode 비면 수동 라디오 fallback).
   // ?? "" : 타입은 non-optional이나 migrate 미경유 stale sessionStorage 유닛은 undefined일 수 있어 방어.

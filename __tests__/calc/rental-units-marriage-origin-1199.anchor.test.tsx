@@ -83,7 +83,8 @@ describe("P-1 ④ · ⑫ · ⑭", () => {
     expect(rentalUnitSchema.pick({ mergeOrigin: true }).safeParse({ mergeOrigin: "second_merge_side" }).success).toBe(false);
     const engine = toRentalHousingExceptionEngineInput({
       ...(body as object),
-      rentalUnits: [{ ...body.rentalUnits[0], ...parsed }],
+      // ⑭는 Zod 필수 날짜를 `toDate`로 바꾼다(SYNC-4) — 기본 호는 날짜가 비어 있으니 Zod를 통과한 형태로 채운다.
+      rentalUnits: [{ ...body.rentalUnits[0], businessRegistrationDate: "2019-03-01T00:00:00.000Z", rentalRegistrationDate: "2019-03-01T00:00:00.000Z", ...parsed }],
     } as never);
     expect(engine?.rentalUnits[0].mergeOrigin).toBe("counterpart_side");
   });

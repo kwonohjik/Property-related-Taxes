@@ -152,7 +152,7 @@ describe("I4-4 입력이 모자라면 판정하지 않는다(침묵 비과세 �
 
 describe("I4-5 OH-39(자진말소 1/2) 회귀 — 기한 안이면 종전 결론 그대로", () => {
   const t = (months: number, type: RentalUnitInput["terminatedRegistrationType"]) =>
-    cancelled("2021-03-03", { rentalMonths: months, terminatedRegistrationType: type });
+    cancelled("2021-03-03", { rentalMonths: months, terminatedRegistrationType: type, ...(type === "long_term_general" ? { isApartment: true } : {}) }); // D-5 — ㉓은 법률 제17482호 부칙 §5① 주택만(장기일반은 아파트 매입임대) — 장기일반 말소 픽스처는 아파트로 둔다.
   it("단기 24 충족 / 23 불충족 · 장기일반 48 충족 / 47 불충족", () => {
     expect(run([t(24, "short_term")], "2024-06-01").passed).toBe(true);
     expect(codes(run([t(23, "short_term")], "2024-06-01"))).toEqual([[0, "RENTAL_TERMINATION_RESTRICTED"]]);
