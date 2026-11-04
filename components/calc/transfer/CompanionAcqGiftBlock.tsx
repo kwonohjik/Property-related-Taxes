@@ -46,6 +46,12 @@ interface BlockProps {
    * (`docs/00-pm/gb-companion-gift-fixed-acq-price.plan.md` Q-2 a). 날짜 두 칸은 그대로다.
    */
   hideFixedAcquisitionPrice?: boolean;
+  /**
+   * 겸용주택(부담부증여 제외) — 증여일 평가액은 「주택 기준시가」·「상가 기준시가」 섹션의 주택분·상가분 「증여일 신고가액」 칸이 받고
+   * 이 자산 전체 칸은 세액에 쓰이지 않는다(빈칸·6억·9억 같은 세액 — 실측 · ⑧ 요구 안 함 · ⑫ 면제). 칸 대신 그 칸을 가리키는 안내를 띄운다
+   * — 상속 블록의 겸용 안내(`CompanionAcqInheritanceBlock` `isMixedUse`)와 같은 모양(`docs/00-pm/mixed-gift-fixed-acq-price.plan.md` Q-1 a).
+   */
+  mixedUseReportedElsewhere?: boolean;
   /** 증여일 칸의 검증 오류 이동 앵커 키(기본 `acquisitionDate`) — `CompanionAcqPurchaseBlock.types.ts`의 같은 prop */
   fieldAcquisitionDate?: string;
   /**
@@ -86,7 +92,19 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
         </div>
       </div>
 
-      {(props.isBurdenedGift && props.bgPartReportedElsewhere) || (!props.isBurdenedGift && props.hideFixedAcquisitionPrice) ? null : props.isBurdenedGift ? (
+      {!props.isBurdenedGift && props.mixedUseReportedElsewhere ? (
+        <ToneCard
+          tone="violet"
+          title="취득가액 — 겸용주택 증여일 평가액(주택분·상가분)"
+          titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
+        >
+          <p className="text-xs text-violet-800 dark:text-violet-200">
+            겸용주택(주택+상가)은 증여일 현재 상증법 §60~66 평가액을 주택분·상가분으로 나눠 아래
+            &ldquo;주택 기준시가&rdquo;·&ldquo;상가 기준시가&rdquo; 섹션의 &ldquo;증여일 신고가액&rdquo; 칸에 입력합니다.
+            자산 전체 증여 신고가액은 계산에 쓰이지 않으므로 이 화면에는 표시하지 않습니다.
+          </p>
+        </ToneCard>
+      ) : (props.isBurdenedGift && props.bgPartReportedElsewhere) || (!props.isBurdenedGift && props.hideFixedAcquisitionPrice) ? null : props.isBurdenedGift ? (
         <ToneCard
           tone="amber"
           title="취득가액 — 부담부증여 §159 자동 산정"

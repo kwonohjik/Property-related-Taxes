@@ -138,9 +138,14 @@ export function addCompanionAcquisitionCauseRefines(
        *  · 일반건물 분리 ON — 토지 파트 취득가액(`landAcquisitionPrice`)이 있으면 파트 값이 취득가액을 정하고 자산 전체 값은 세액에 쓰이지 않는다(1,000원·6억·50억 모두 같은 세액 — 실측).
        *    ⑧도 이 칸을 요구하지 않는다(분리 ON 은 파트 칸 V-7). **분리 OFF 일괄 증여는 파트 가액이 없어 면제하지 않는다** — ⑧이 같은 칸을 요구하고 값이 세액에 쓰인다.
        *    매매 갈래의 별개 취득 면제(`isSeparateAcquisition`)와 달리 같은 날 분리 ON 도 파트 값으로 판정한다.
+       *  · 겸용주택 — 증여일 평가액은 주택분·상가분 칸(`mixedUse.housing/commercialInheritedValue`)이 정하고 이 칸은 세액에 쓰이지 않는다
+       *    (빈칸·6억·9억 같은 세액 — 실측). ⑧도 겸용은 `validateMixedUseAsset`로 분기해 요구하지 않는다(`docs/00-pm/mixed-gift-fixed-acq-price.plan.md` Q-2 a).
+       *    술어는 ⑭ 겸용 분기(`bundled-split-helpers.ts` `c.assetKind === "mixed_use_house" && c.mixedUse`)와 같다 — `mixedUse`만 보면 일반 주택
+       *    분기로 가는 요청(API 직접 호출)이 이 칸 없이 통과해 취득가액 0으로 계산된다.
        */
       const gbLandPartPrice = (c.generalBuildingValuation as { landAcquisitionPrice?: number } | undefined)?.landAcquisitionPrice ?? 0;
-      const giftPriceFromOtherSource = c.burdenedGiftInfo !== undefined || gbLandPartPrice > 0;
+      const mixedUsePartsValuation = c.assetKind === "mixed_use_house" && c.mixedUse !== undefined;
+      const giftPriceFromOtherSource = c.burdenedGiftInfo !== undefined || gbLandPartPrice > 0 || mixedUsePartsValuation;
       if (!isBuildingCauseMixCompanion(c) && !giftPriceFromOtherSource && (!c.fixedAcquisitionPrice || c.fixedAcquisitionPrice <= 0)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
