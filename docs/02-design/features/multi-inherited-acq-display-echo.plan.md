@@ -73,7 +73,7 @@
 
 | ID | 항목 | 상태 |
 |---|---|---|
-| V-1 | 겸용주택 상속(겸용 엔진이 따로 내는 `inheritedAcquisitionDetail`)이 다건·함께 양도에서 같은 echo 분기를 타는가 | ⏳ 확인 필요 — 다건은 겸용을 파트 카드로 펼치므로 카드별 echo가 다를 수 있다 |
+| V-1 | 겸용주택 상속(겸용 엔진이 따로 내는 `inheritedAcquisitionDetail`)이 다건·함께 양도에서 같은 echo 분기를 타는가 | ✅ 2026-11-04 결함 없음 — 다건은 겸용을 막아 해당 없음 · 함께 양도 파트 카드 10건이 단건 겸용 엔진 파트 값과 같음(겸용 엔진이 §163⑨를 먼저 끝낸 값을 카드에 싣는다) · 계획서 `companion-mixed-use-inherited-acq-echo.plan.md` |
 | V-2 | 상속 + 감가상각비(§97③) 자산 — echo가 채택값에서 `depreciationAmount`를 빼는 순서가 단건 신고서와 같은가 | ✅ 2026-11-04 — 상속 주택 ① + ② · 감가상각비 5천만 → 다건 취득가액 670,000,000 · 필요경비 0 = 단건 엔진 필요경비 · 항등식 성립(anchor DE-1) |
 | V-3 | PDF 출력(합산 신고서) — 같은 echo를 읽는다고 echo 머리 주석에 적혀 있다 | ✅ 코드 확인 — 다건 자산별 「취득가액」 행이 `p.acquisitionPrice`(echo)를 읽는다(`lib/pdf/ResultPdfTransferSections.tsx:505`). PDF를 실제로 만들어 보지는 않았다 |
 
