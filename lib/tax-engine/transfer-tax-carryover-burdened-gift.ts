@@ -311,6 +311,26 @@ export function isBurdenedGiftCarryover(
   return input.transferType === "burdened_gift" && input.burdenedGiftInfo !== undefined;
 }
 
+/**
+ * 시나리오 A(이월과세 적용)용 `redevelopment` — 재개발·재건축 완공 아파트 원조합원 × 부담부증여 × 환산(K-5)만 바꾼다.
+ *
+ * 이 조합은 §159 안분 대신 「소득세법 시행령」 제166조 제3항 환산(평가액 × 취득일 기준시가 ÷ 관리처분계획등 인가일 기준시가)을 쓴다
+ * (`transfer-tax-burdened-gift-step.ts` `redevSec166Conversion`). A의 취득가액은 당초 증여자가 종전 부동산을 취득할 당시 금액이므로
+ * (「소득세법」 제97조의2 제1항 제1호) 분자 「취득일 기준시가」는 **당초 증여자 취득일** 기준이다 — 당초 증여자 토지·건물 기준시가 합계(⑧·⑫ 필수 칸).
+ * 종전에는 양도인 쪽 칸(`acquisitionHousingPrice` · 토지 출자 `landStdPriceAtAcq`)을 A·B가 같이 써 취득가액이 늘 같았다
+ * (계획서 `docs/02-design/features/bg-redev-carryover-k5-sec166-3.plan.md` Q-1 a). B는 그대로다(Q-2′ b′ — 별도 계획서).
+ * 합계가 0 이하이면 바꾸지 않는다(⑧·⑫가 먼저 막는다).
+ */
+export function redevelopmentForCarryoverScenarioA(input: TransferTaxInput): TransferTaxInput["redevelopment"] {
+  const r = input.redevelopment;
+  const info = input.burdenedGiftInfo;
+  if (!r || !info || input.propertyType !== "redevelopment_apt" || r.isSuccessorMember === true || info.acquisitionMethod !== "converted") return r;
+  const basis = info.carryoverDonorBasis;
+  const donorStd = (basis?.landStdPriceAtAcquisition ?? 0) + (basis?.buildingStdPriceAtAcquisition ?? 0);
+  if (donorStd <= 0) return r;
+  return r.originalAssetType === "land" ? { ...r, landStdPriceAtAcq: donorStd } : { ...r, acquisitionHousingPrice: donorStd };
+}
+
 /** 이월과세 × 매매사례가액·감정가액(K-6/K-7)인가 — 이때 `acquisitionMethod`는 당초 증여자 쪽 방식이다. */
 export function isPresumedCarryover(info: BurdenedGiftInfo): boolean {
   return (

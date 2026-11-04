@@ -16,6 +16,7 @@ import {
   applyCarryoverDonorBasis,
   bgCarryoverPartDates,
   isBurdenedGiftCarryover,
+  redevelopmentForCarryoverScenarioA,
 } from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
@@ -306,6 +307,8 @@ function calcCarryoverScenariosCore(
             rawInput.burdenedGiftInfo!,
             ct.giftTaxAmount,
           ),
+          // 재개발 원조합원 × K-5 — §166③ 분자를 당초 증여자 취득일 기준시가로(계획서 bg-redev-carryover-k5-sec166-3 Q-1 a)
+          redevelopment: redevelopmentForCarryoverScenarioA(rawInput),
         }
       : {}),
     // §154① 「취득 당시」(조정대상지역 판정 · 2017.8.3. 경과규정)는 수증자 취득일(증여일) 또는, 증여자와 계속 같은 세대로 확인되면
