@@ -13,6 +13,7 @@
  * 계획서 `docs/02-design/features/successor-right-carryover-contribution.plan.md` §9.
  */
 import { z } from "zod";
+import { MIXED_USE } from "@/lib/tax-engine/legal-codes";
 
 type SuccessorDeemedLike = {
   isSuccessorRightToMoveIn?: boolean;
@@ -64,6 +65,39 @@ export function refineSuccessorRightNoSec164Inputs(
       code: z.ZodIssueCode.custom,
       path: [...prefix, key],
       message: `승계 입주권은 부동산을 취득할 수 있는 권리라 §164④~⑦ 가액과 비교하지 않습니다 — ${key} 키는 보내지 마세요 (소득세법 시행령 §163⑨ 단서는 토지·건물만)`,
+    });
+  }
+}
+
+/**
+ * 승계조합원 완공 아파트를 준공 전(입주권 상태)에 상속·증여받은 경우 — 위 승계 입주권 규칙과 같다(받은 것이 권리).
+ * ⑧·④·화면은 `isSuccessorAptReceivedAsRight`(`lib/calc/transfer-163-9-base-date.ts`)로 ② 칸을 닫는다 — 이것은 직접 호출의 거울이다.
+ * 기준일은 §163⑨ 페이로드의 상속개시일(단건) · 컴패니언 상속 평가 객체의 상속일 · 없으면 취득일(증여일). 준공 뒤 받았으면 건물이라 대상이 아니다.
+ * 계획서 `docs/02-design/features/redev-successor-inherit-right-no-sec164.plan.md` Q-1 a · Q-2 a.
+ */
+export function refineSuccessorAptRightNoSec164Inputs(
+  d: {
+    acquisitionCause?: string;
+    acquisitionDate?: string;
+    redevelopment?: { isSuccessorMember?: boolean; completionDate?: string } | null;
+    inheritedAcquisition?: { inheritanceStartDate?: string } | null;
+    inheritanceValuation?: { inheritanceDate?: string } | null;
+  } & Partial<Record<(typeof SEC164_CHANNEL_KEYS)[number], unknown>>,
+  isRedevelopmentApt: boolean,
+  ctx: z.RefinementCtx,
+  prefix: (string | number)[] = [],
+): void {
+  if (!isRedevelopmentApt || d.redevelopment?.isSuccessorMember !== true) return;
+  if (d.acquisitionCause !== "inheritance" && d.acquisitionCause !== "gift") return;
+  const completion = d.redevelopment.completionDate;
+  const baseDate = d.inheritedAcquisition?.inheritanceStartDate || d.inheritanceValuation?.inheritanceDate || d.acquisitionDate;
+  if (!completion || !baseDate || baseDate >= completion) return;
+  for (const key of SEC164_CHANNEL_KEYS) {
+    if (d[key] == null) continue;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...prefix, key],
+      message: `준공 전(입주권 상태)에 ${d.acquisitionCause === "gift" ? "증여" : "상속"}받은 승계조합원 아파트는 부동산을 취득할 수 있는 권리를 받은 것이라 §164④~⑦ 가액과 비교하지 않습니다 — ${key} 키는 보내지 마세요 (${MIXED_USE.INHERITANCE_DIRECT} 단서는 토지·건물만)`,
     });
   }
 }

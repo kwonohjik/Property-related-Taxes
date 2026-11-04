@@ -1,6 +1,7 @@
 # 승계조합원 완공 아파트 — 입주권으로 상속·증여받았으면 §164 기준시가(②)와 비교하지 않는다
 
 > **출처**: `redev-successor-inherit-valuation-required.plan.md` §3 V-1·V-3·V-4(2026-10-26 · #2586).
+> **결정**: 사용자 「권장안으로」(2026-11-04) — Q-1 a · Q-2 a · Q-3 a.
 > **검증 깊이**: L3 — 세액이 바뀐다(바로잡힌다). 2005.4.30. 전(개별주택가격 공시 전) 상속·증여 + 준공 전(입주권 상태) 승계조합원 완공 아파트에서만.
 
 ## 0. 결론
@@ -72,3 +73,36 @@
 - 소득세법 시행령 §163⑨ 본문·단서 1호(토지)·2호(건물) — KoreanLaw MCP 현행(mst 290841, 2026.10.1. 시행) 본문 확인.
 - 국세청 상속증여세과-260(2014.7.15.) — 관리처분계획인가일 이후 상속은 「부동산을 취득할 수 있는 권리」(상증법 §61③ · 상증령 §51②).
 - 선례: `successor-right-carryover-contribution.plan.md` §11·§12(#2761) — 승계 입주권 ② 거절.
+
+## 6. 구현 결과 (2026-11-04)
+
+### 6.1 변경
+
+1. `lib/calc/transfer-163-9-base-date.ts` — 새 술어 `isSuccessorAptReceivedAsRight`(승계조합원 완공 아파트 ∧ §163⑨ 기준일 < 준공일). `isSec163_9HouseAsset`이 이 경우 거짓을 낸다 → 화면 ② 칸(`PostDeemedInputs`·`PreDeemedInputs`·`GiftHouseStdPriceSection`)·⑧(`sec164HouseStatus`)·④(`inheritedHouseValuation`·`sec164Ready`)·자동값이 함께 닫힌다.
+   - §3 1의 확인 필요 항목: `deriveEngineInheritanceAssetKind`는 이제 `house_apart`를 싣는다(승계 입주권과 같은 「그 밖」 갈래). ① 단독 세액은 같다(204,090,000 전후 동일 · H-3a 327,250,000 · H-3b 358,535,000 불변).
+2. ⑧ `transfer-tax-validate-redev.ts` — 코드 변경 없음. ②가 닫혀 `sec164Filled`가 거짓이 되므로 ① 칸을 요구한다(RA-2d).
+3. ⑫ `transfer-tax-schema-successor-deemed.ts` `refineSuccessorAptRightNoSec164Inputs` — 단건·컴패니언(`transfer-tax-schema.ts`)에서 승계 완공 아파트 · 상속·증여 · 기준일 < 준공일이면 `inheritedHouseValuation`·`pre1990Land`·`commercialInheritanceValuation` 키를 거절한다. 기준일은 `inheritedAcquisition.inheritanceStartDate` → `inheritanceValuation.inheritanceDate` → `acquisitionDate` 순. 인용은 `MIXED_USE.INHERITANCE_DIRECT`(기존 상수 · 새 조문 없음).
+
+### 6.2 테스트
+
+- 신규 anchor `__tests__/api/transfer.route.redev-successor-inherit-right-no-sec164.anchor.test.ts` 17건:
+  - RA-1 술어 격자 6행(준공 전 상속·증여 / 준공 뒤 / 준공일 당일 / 매매 / 원조합원).
+  - RA-2 주 자산: ① 1억 + ② → 100,000,000 · 204,090,000(= ① 단독) / ① 2억 + ② → 174,690,000 / 증여 204,090,000 / ②만 → ⑧ ① 칸.
+  - RA-3 대조: 준공 뒤 받음 250,000,000 · 160,660,000 / 컴패니언 준공 전 ① 2억 ± ② → 합산 233,490,000.
+  - RA-4 ⑫: 준공 전 상속·증여·컴패니언 + ② 키 → 400 / 준공 뒤 → 200 / 매매 승계 + 키 → 이 규칙 안 걸림.
+- 기존 #2586 anchor H-2a~d — 시료 `Y2004`를 준공 뒤 상속(인가 2001-02-20 · 준공 2003-12-01)으로 옮겼다. 종전 시료는 준공 전 받음이라 이번 규칙과 반대되는 「②는 ①의 대안」을 고정하고 있었다(의도된 단언 반전 — 단서 2호 경로 안전망은 옮긴 시료가 계속 지킨다 · H-2a 160,660,000 그대로).
+- E2E `e2e/redev-successor-inherit-right-no-sec164.spec.ts` RN-1·RN-2(headless Playwright — 사람이 직접 한 브라우저 확인은 아니다): ② 칸까지 채워 저장된 준공 전 상속 폼 → ② 칸 없음 · 본문 `inheritedHouseValuation` 없음 · `inheritedAcquisition.reportedValue` 100,000,000 · 산출세액 204,090,000 / 준공 뒤 상속 → ② 칸 보임. 기존 RI-1~3 함께 통과(5/5).
+- 변경 전 안전망: 이 동작을 지키는 테스트 0건(H-2a는 반대로 고정).
+- mutation(각각 의도한 테스트만 실패):
+
+| M | 무력화 | 실패 |
+|---|---|---|
+| M1 | `isSec163_9HouseAsset`의 제외 줄 제거 | RA-1 준공 전 상속·증여 · RA-2a~d · E2E RN-1 |
+| M2 | `<` → `<=`(준공일 당일 포함) | RA-1 준공일 당일 |
+| M3 | 승계 조건 제거 | RA-1 원조합원 |
+| M4 | ⑫ 단건 호출 제거 | RA-4a · RA-4c |
+| M5 | ⑫ 준공 뒤 제외 제거 | RA-3a · RA-4b · H-2a |
+| M6 | ⑫ 컴패니언 호출 제거 | RA-4d |
+| M7 | ⑫ 상속·증여 조건 제거 | RA-4e |
+
+- 회귀: `__tests__/api`·`__tests__/calc`·`__tests__/components` 23,362건 통과 · 2건 실패(`gb-bg-carryover-total-transfer-expense` BC-2 · `phd-non-estimated-method-axis` 대조군) — 두 파일 단독 재실행 139건 전부 통과(대량 실행 부하 · 이 변경과 무관한 영역). tsc 0 · 변경 파일 eslint 0.
