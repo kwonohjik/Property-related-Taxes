@@ -70,7 +70,8 @@ export function refineOriginalMemberDeemedCompanion(
 ): void {
   const baseDate = c.inheritanceValuation?.inheritanceDate ?? c.acquisitionDate;
   if (!isOriginalMemberDeemed(c.assetKind, c, baseDate)) return;
-  if (c.inheritedHouseValuation != null) return;
+  // ②(주택 §164⑤~⑦ · 토지 출자 §164④)만으로도 정해진다 — ④가 컴패니언 원조합원에도 운반한다(계획서 redev-companion-sec164-carry.plan.md Q-2 a)
+  if (c.inheritedHouseValuation != null || c.pre1990Land != null) return;
   const isGift = c.acquisitionCause === "gift";
   const value = isGift ? c.fixedAcquisitionPrice : c.inheritanceValuation?.publishedValueAtInheritance;
   if ((value ?? 0) > 0) return;

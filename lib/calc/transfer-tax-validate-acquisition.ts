@@ -225,7 +225,7 @@ function validateAssetAcquisitionBranches(
   const postDeemedError = postDeemedClauseARequiredError(asset, label);
   if (postDeemedError) return postDeemedError;
   // 원조합원 종전자산 상속·증여 — 같은 규칙(재개발은 위 함수가 뺀다 · 「종전 부동산 실거래가」 fallback 차단)
-  const originalMemberError = originalMemberClauseARequiredError(asset, label, isNonPrimaryAsset);
+  const originalMemberError = originalMemberClauseARequiredError(asset, label);
   if (originalMemberError) return originalMemberError;
 
   // ── 상업용건물·오피스텔 전용 검증 — transfer-tax-validate-commercial-asset.ts 위임 ──
@@ -307,7 +307,7 @@ function validateAssetAcquisitionBranches(
   // redevSubject="" 미입력 시에도 redev 검증 진입 (3중 패턴 — API/validate 동기화):
   // buildRedevelopmentPayload와 동일 fallback (right_to_move_in → "right", 그 외 → "apt")
   if (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") {
-    const redevError = validateRedevelopmentAsset(asset, label, isOneHousehold, typeToggleSection, isNonPrimaryAsset);
+    const redevError = validateRedevelopmentAsset(asset, label, isOneHousehold, typeToggleSection);
     if (redevError) return redevError;
     // 재개발 × 이월과세(비부담부증여) — 이 분기는 `validateCarryoverAsset`를 타지 않으므로 증여 사건 칸(가업상속·날짜·관계·평가액 / 음수·채무·세대)을
     //   같은 leaf로 본다(⑫ `refineCarryoverTaxation`과 같은 규칙 · 계획서 `redev-carryover-validation-scope.plan.md` Q-2 a). 환산 방식·PHD·증여자 신축 칸은 재개발에 없다.
