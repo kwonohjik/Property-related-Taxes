@@ -20,6 +20,7 @@ import type { RentalHousingType } from "@/lib/tax-engine/multi-house-surcharge";
 import type { RentalDeclaration } from "@/lib/stores/calc-wizard-store";
 import { rentIncreaseContractDateInScope } from "@/lib/calc/rent-cap-contract-date-scope";
 import { rentalDeclarationAptDeadlineInScope } from "@/lib/calc/apt-deadline-extension-scope";
+import { rentalDeclarationUrbanLifeQuestionInScope } from "@/lib/calc/apt-deadline-extension-scope";
 import { AptDeadlineExtensionFields } from "@/components/calc/transfer/AptDeadlineExtensionFields";
 
 interface Props {
@@ -36,6 +37,11 @@ interface Props {
    * 판정을 바꾸지 않아(중과 축 미호출) 넘기지 않는다. 범위는 ④·⑧과 같은 술어(`rentalDeclarationAptDeadlineInScope`).
    */
   aptDeadlineExtensionEnabled?: boolean;
+  /**
+   * 「도시형 생활주택인 아파트」 질문을 연다 — **명부 행만**. 명부 행은 3호 칸과 같은 필드(`HouseEntry.isUrbanLifeHousingApartment`)를
+   * 쓰지만, 양도 주택은 3호 선언(`sellingHouseExclusion.taxIncentiveRental`)이 따로 사실을 들고 있어 두 칸이 갈린다(별건 V-12).
+   */
+  urbanLifeHousingQuestionEnabled?: boolean;
 }
 
 // 유형별 노출 필드 (엔진 checkRentalType_X 요구 필드 — 공통 등록정보 외)
@@ -78,7 +84,13 @@ const FIELD_META: Record<string, { kind: FieldKind; label: string; hint?: string
   hasContractDepositProof: { kind: "bool", label: "계약금 지급 증빙 보유" },
 };
 
-export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate, aptDeadlineExtensionEnabled = false }: Props) {
+export function HouseEntryRentalTypeSection({
+  house,
+  idPrefix,
+  onUpdate,
+  aptDeadlineExtensionEnabled = false,
+  urbanLifeHousingQuestionEnabled = false,
+}: Props) {
   const rentalType = house.rentalType;
   let fields: Array<keyof RentalDeclaration> = rentalType ? [...TYPE_FIELDS[rentalType]] : [];
   // 사목(G) — base 목 선택 시 그 목의 "해당 목의 다른 요건" 필드 동적 추가(중복 제거)
@@ -215,7 +227,20 @@ export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate, aptDead
         </div>
       )}
 
-      {/* 가목2)·나목2)·라목8)·마목4) — 아파트는 ⑪ 기한까지 양도해야 이 목에 해당한다 */}
+      {/* 가목2) 괄호 — 도시형 생활주택인 아파트는 아래 양도기한만 비적용(2020.7.11. 이후 등록 아파트 결격은 그대로). ④와 같은 술어 */}
+      {aptDeadlineExtensionEnabled && urbanLifeHousingQuestionEnabled && rentalDeclarationUrbanLifeQuestionInScope(house) && (
+        <ToggleCard
+          variant="card"
+          size="sm"
+          tone="violet"
+          title="「주택법」에 따른 도시형 생활주택인 아파트입니다."
+          description="도시형 생활주택인 아파트는 아파트 양도기한(2027.12.31. — 소령 §167의3⑪)을 적용하지 않습니다(같은 조 ①2호 가목2) 괄호). 2020.7.11. 이후 등록 신청한 아파트의 결격에는 그대로 아파트로 봅니다."
+          checked={house.isUrbanLifeHousingApartment === true}
+          onCheckedChange={(v) => onUpdate({ isUrbanLifeHousingApartment: v ? true : undefined })}
+        />
+      )}
+
+      {/* 가목2)·나목2)·라목8)·마목4) — 아파트는 ⑪ 기한까지 양도해야 이 목에 해당한다(도시형 생활주택인 아파트 제외) */}
       {aptDeadlineExtensionEnabled && rentalDeclarationAptDeadlineInScope(house) && (
         <AptDeadlineExtensionFields
           value={house.rentalAptDeadlineExtension}
