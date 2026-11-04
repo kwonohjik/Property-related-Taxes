@@ -22,6 +22,10 @@ import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "./multi-transfer-supp
 import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { multiRosterBlockMessage } from "./multi-roster-parity";
+import { MULTI_SEC164_CLAUSE_B_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { sec164HouseStatus } from "./sec164-required-fields";
+import { sec164LandStatus } from "./sec164-required-fields";
+import { sec164CommercialStatus } from "./sec164-required-fields";
 
 /**
  * 다건 합산 엔진(`calculateTransferTaxAggregate`)이 미지원하는 감면 조문 집합 (2026-06-12 리뷰 H-1).
@@ -150,6 +154,16 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   // P3 A — 토지만 이월과세도 같다(⑫ `MULTI_REJECT_RULES`가 파트 키를 거부한다 — ⑧이 먼저 막는다).
   if (a.acquisitionCause === "carryover_gift" || effectiveLandCarryover(a)) {
     return MULTI_CARRYOVER_UNSUPPORTED_MESSAGE;
+  }
+  // §163⑨ 단서 ② — 다건 ④는 ①(신고가액)만 싣는다. ② 전용 칸(공유 면적 칸 제외 — `triggered`)에 입력이 있으면 그 값이 조용히 빠졌다
+  //   (실측: 상속 주택 ① 3억 + ② 7.2억 → 282,711,000 = ① 단독 ↔ ① 7.2억 149,006,000). 막고 단건으로 보낸다 —
+  //   계획서 multi-sec163-9-clause-b-drop.plan.md Q-1 a · Q-2 a. ②를 비운 자산은 단건과 같이 ①로 계산한다.
+  //   D2(건물 상속·증여 + 토지 매매)는 제외 — 건물 몫 ②는 파트 페이로드(`buildingSec164Value`)로 다건도 싣는다(anchor D2-4a G-1).
+  if (
+    !effectiveBuildingCauseMix(a) &&
+    [sec164HouseStatus(a), sec164LandStatus(a), sec164CommercialStatus(a)].some((st) => st?.triggered === true)
+  ) {
+    return MULTI_SEC164_CLAUSE_B_UNSUPPORTED_MESSAGE;
   }
   if (
     a.acquisitionCause === "inheritance" &&
