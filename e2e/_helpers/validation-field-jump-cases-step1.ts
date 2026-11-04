@@ -61,7 +61,7 @@ const HOUSE_ROW_CASES: FieldJumpCase[] = [
   { name: "step1: 보유 주택 취득일", field: R, step: 1, message: /^보유 주택 1: 취득일을 입력하세요/, form: holding([row({ acquisitionDate: "" })]) },
   { name: "step1: 보유 주택 기준시가", field: R, step: 1, message: /^보유 주택 1: 기준시가\(공시가격\)를 입력하세요/, form: holding([row({ officialPrice: "" })]) },
   { name: "step1: 보유 주택 상속개시일", field: R, step: 1, message: /^보유 주택 1: 상속주택이면 상속개시일/, form: holding([row({ isInherited: true, inheritedDate: "" })]) },
-  { name: "step1: 보유 주택 임대사업자 등록일", field: R, step: 1, message: /^보유 주택 1: 임대사업자 등록일을 입력하세요/, form: holding([rental({ isRegisteredRental: true, rentalRegistrationDate: "" })]) },
+  { name: "step1: 보유 주택 임대사업자 등록일", field: R, step: 1, message: /^보유 주택 1: 임대사업자 등록 신청일을 입력하세요/, form: holding([rental({ isRegisteredRental: true, rentalRegistrationDate: "" })]) },
   {
     name: "step1: 보유 주택 사업자 등록일", field: R, step: 1, message: /^보유 주택 1: 사업자 등록일을 입력하세요/,
     form: holding([rental({ isRegisteredRental: true, rentalRegistrationDate: "2018-01-01", businessRegistrationDate: "" })]),

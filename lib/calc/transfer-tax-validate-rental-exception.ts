@@ -21,7 +21,7 @@ import { canDeclareRentalHousingException } from "./rental-housing-exception-sco
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
 import {
-  deriveEffectiveRegDate,
+  deriveRegApplicationDate,
   deriveRentalArticle,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
 import {
@@ -175,8 +175,8 @@ export function validateRentalHousingException(
       }
     }
 
-    // 도출 목 재사용(deriveRentalArticle) — UI 조건부 노출·엔진 판정과 3중 동기화
-    const eff = deriveEffectiveRegDate({
+    // 도출 목 재사용(deriveRentalArticle · 지자체 등록 신청일 기준 — D-1) — UI 조건부 노출·엔진 판정과 3중 동기화
+    const eff = deriveRegApplicationDate({
       businessRegistrationDate: new Date(u.businessRegistrationDate),
       rentalRegistrationDate: new Date(u.rentalRegistrationDate),
     });

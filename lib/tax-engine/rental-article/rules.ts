@@ -57,10 +57,11 @@ export function rentalStdPriceCap(
 }
 
 /**
- * 목·등록기준일별 의무임대기간(년).
- * 가/나/다/라/구법: 5 | 마/바: ≤2020.8.17 준용 8·이후 10 | 아/자: 6.
+ * 목·등록 신청일별 의무임대기간(년).
+ * 가/나/다/라/구법: 5 | 마/바: 2020.8.18. 전 등록 신청 8·이후 10(부칙<제31083호> 제5조 「등록을 신청한」) | 아/자: 6.
+ * @param regApplicationTs 지자체 임대사업자등록 신청일 ts(두 등록 완비 시, 아니면 0) — 세무서 사업자등록일과의 max가 아니다.
  */
-export function rentalRequiredYears(article: SharedRentalArticle, effRegTs: number): number {
+export function rentalRequiredYears(article: SharedRentalArticle, regApplicationTs: number): number {
   switch (article) {
     case "가":
     case "나":
@@ -73,7 +74,7 @@ export function rentalRequiredYears(article: SharedRentalArticle, effRegTs: numb
       return 6;
     case "마":
     case "바":
-      return effRegTs < RA_CUT.Y2020_08_18 ? 8 : 10;
+      return regApplicationTs < RA_CUT.Y2020_08_18 ? 8 : 10;
     default:
       return 10;
   }

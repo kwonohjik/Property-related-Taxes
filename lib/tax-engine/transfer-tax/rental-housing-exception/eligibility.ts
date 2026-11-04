@@ -143,7 +143,7 @@ export function firstTerminationCancellation(
     const u = rentalUnits[i];
     const cd = u.registrationCancellationDate;
     if (!u.rentalAutoTermination || !validDate(cd)) continue;
-    const art = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, deriveEffectiveRegDate(u));
+    const art = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, deriveRegApplicationDate(u));
     if (!isTerminationEligibleArticle(art)) continue;
     if (dayOf(cd) < RA_CUT.Y2020_08_18 || dayOf(cd) > dayOf(transferDate)) continue;
     if (!first || dayOf(cd) < dayOf(first.date)) first = { date: cd, unitIndex: i };
@@ -175,6 +175,18 @@ export function deriveEffectiveRegDate(
   const rTs = unit.rentalRegistrationDate?.getTime?.();
   if (bTs == null || rTs == null || Number.isNaN(bTs) || Number.isNaN(rTs)) return null;
   return new Date(Math.max(bTs, rTs));
+}
+
+/**
+ * 지자체 임대사업자등록 **신청일** — 목 도출(가/마·다/바 2020.7.11.)·마목 2) 아파트 제한·마·바목 의무기간(2020.8.18.)의 기준.
+ * ⑳ 본문 「2020년 7월 10일 이전에 … 임대사업자등록 신청 … 을 한 주택으로 한정」·§167의3①2호 마목 2)·부칙<제31083호> 제5조가
+ * 모두 「신청」이라 세무서 사업자등록일은 넣지 않는다(사용자 결정 2026-11-04 D-1, `docs/00-pm/rental-155-20-review-fixes.plan.md`).
+ * 등록 완비(두 등록 모두 유효)가 아니면 null — `deriveEffectiveRegDate`와 같은 규칙이라 미입력 동작은 종전과 같다.
+ */
+export function deriveRegApplicationDate(
+  unit: Pick<RentalUnitInput, "businessRegistrationDate" | "rentalRegistrationDate">,
+): Date | null {
+  return deriveEffectiveRegDate(unit) ? unit.rentalRegistrationDate : null;
 }
 
 /** 임대 구분(rentalCategory)별 등록시기 활성 판정 결과 (UI disabled·사유 표시용). */
@@ -228,19 +240,19 @@ export function deriveCategoryAvailability(
 
 /**
  * 도출 엔진 목 (§167조의3①2호 가~자).
- * long_general은 취득방법 × 등록기준일 경계로 가/마(매입)·다/바(건설).
+ * long_general은 취득방법 × **지자체 등록 신청일** 2020.7.11. 경계로 가/마(매입)·다/바(건설) — `deriveRegApplicationDate`.
  */
 export function deriveRentalArticle(
   rentalCategory: RentalCategory,
   acqType: "purchase" | "construction",
-  effectiveRegDate: Date | null,
+  regApplicationDate: Date | null,
 ): RentalArticle {
   if (rentalCategory === "pre_2018") return "구법";
   if (rentalCategory === "existing_business") return "나"; // 기존사업자 매입임대(취득방법 매입 고정)
   if (rentalCategory === "unsold_08_09") return "라"; // 미분양 매입임대(취득방법 매입 고정)
   if (rentalCategory === "short_6y") return acqType === "construction" ? "자" : "아";
   // long_general
-  const regTs = effectiveRegDate?.getTime() ?? 0;
+  const regTs = regApplicationDate?.getTime() ?? 0;
   if (acqType === "construction") {
     return regTs < CUT_2020_07_11 ? "다" : "바";
   }
@@ -248,13 +260,13 @@ export function deriveRentalArticle(
 }
 
 /**
- * 도출 목·등록기준일에 따른 의무임대기간(년). 공용 `rental-article/rules.ts` 위임(단일 소스).
+ * 도출 목·지자체 등록 신청일에 따른 의무임대기간(년). 공용 `rental-article/rules.ts` 위임(단일 소스).
  */
 export function deriveRequiredYears(
   article: RentalArticle,
-  effectiveRegDate: Date | null,
+  regApplicationDate: Date | null,
 ): number {
-  return rentalRequiredYears(article, effectiveRegDate?.getTime() ?? 0);
+  return rentalRequiredYears(article, regApplicationDate?.getTime() ?? 0);
 }
 
 /**
@@ -435,7 +447,7 @@ export function checkEligibility(
 
     // 목 도출 + 공용 canonical predicate(check.ts)에 위임 — 판정 로직 단일 소스.
     const effectiveRegDate = deriveEffectiveRegDate(unit);
-    const article = deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, effectiveRegDate);
+    const article = deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, deriveRegApplicationDate(unit));
     derivedArticles.push(article);
     /**
      * OH-16 — 양도일 2021-02-17 이후 ⑳은 「같은 호 마목에 해당하는 주택의 경우에는 같은 목 1)에 따른

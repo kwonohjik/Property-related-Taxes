@@ -26,6 +26,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import {
   deriveCategoryAvailability,
   deriveEffectiveRegDate,
+  deriveRegApplicationDate,
   deriveRentalArticle,
   deriveRequiredYears,
   deriveStdPriceCap,
@@ -78,9 +79,18 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
     });
   }, [unit.businessRegistrationDate, unit.rentalRegistrationDate]);
 
+  // 목 도출·마목 2) 아파트 제한·마·바목 의무기간은 지자체 등록 **신청일** 기준(엔진 `deriveRegApplicationDate`와 같은 규칙 — D-1).
+  const regAppDate = useMemo(() => {
+    if (!unit.businessRegistrationDate || !unit.rentalRegistrationDate) return null;
+    return deriveRegApplicationDate({
+      businessRegistrationDate: new Date(unit.businessRegistrationDate),
+      rentalRegistrationDate: new Date(unit.rentalRegistrationDate),
+    });
+  }, [unit.businessRegistrationDate, unit.rentalRegistrationDate]);
+
   const article = useMemo(
-    () => deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, effRegDate),
-    [unit.rentalCategory, unit.rentalAcquisitionType, effRegDate],
+    () => deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, regAppDate),
+    [unit.rentalCategory, unit.rentalAcquisitionType, regAppDate],
   );
 
   // 임대개시일 = 최초 임대 시작일(min 유효 rentalPeriods[].start) → 없으면 등록기준일. 조회연도 추천용.
@@ -111,9 +121,9 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
     if (!avail[next.rentalCategory]?.available) next.rentalCategory = "long_general";
     onChange(next);
   }
-  const reqYears = deriveRequiredYears(article, effRegDate);
+  const reqYears = deriveRequiredYears(article, regAppDate);
   const cap = deriveStdPriceCap(article, unit.region, effRegDate);
-  const aptRestricted = isApartmentRestricted(article, effRegDate, unit.isApartment);
+  const aptRestricted = isApartmentRestricted(article, regAppDate, unit.isApartment);
 
   const isNa = article === "나"; // 기존사업자 매입임대(취득당시 3억·국민주택·2호·지역무관)
   const isLa = article === "라"; // 미분양 매입임대(취득당시 3억·비수도권·5호·298/149)
@@ -283,7 +293,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
               <p className="text-muted-foreground">
                 등록기준일 {effRegDate ? effRegDate.toISOString().slice(0, 10) : "-"}
                 {article === "가" || article === "마"
-                  ? " · 아파트 2020.7.11 이후 등록분 제외"
+                  ? " · 아파트 2020.7.11 이후 등록 신청분 제외"
                   : article === "아" || article === "자"
                     ? " · 아파트 제외 유형"
                     : " · 아파트 허용"}
@@ -606,7 +616,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
 
       {/* 아파트 여부 (매입 계열만 선택 — 단기·건설은 고정 제외) */}
       {showApartment ? (
-        <FieldCard label="아파트 여부" hint="2020.7.11 이후 등록 아파트는 장기일반 특례 제외">
+        <FieldCard label="아파트 여부" hint="2020.7.11 이후 등록 신청한 아파트는 장기일반 특례 제외">
           <RadioCardGroup
             name={`rental-apartment-${index}`}
             tone="violet"

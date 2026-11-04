@@ -8,7 +8,7 @@
  * ⑧(`transfer-tax-validate-rental-exception.ts`)은 이미 같은 목에만 말소 필드를 검사한다.
  */
 import {
-  deriveEffectiveRegDate,
+  deriveRegApplicationDate,
   deriveRentalArticle,
   isTerminationEligibleArticle,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
@@ -20,7 +20,7 @@ export function rentalUnitTerminationInScope(u: RentalUnitForm): boolean {
   if (!u.rentalAutoTermination) return false;
   const effReg =
     u.businessRegistrationDate && u.rentalRegistrationDate
-      ? deriveEffectiveRegDate({
+      ? deriveRegApplicationDate({
           businessRegistrationDate: new Date(u.businessRegistrationDate),
           rentalRegistrationDate: new Date(u.rentalRegistrationDate),
         })

@@ -48,7 +48,7 @@ export function houseRowSurchargeAxisIssue(
     return `${label}: 상속주택이면 상속개시일을 입력하세요. (상속 5년 중과배제 판정 기준)`;
   // 장기임대 등록 경로: 등록사업자 선택 시 등록일 2종·임대기간 필수
   if (h.isLongTermRental && h.isRegisteredRental) {
-    if (!h.rentalRegistrationDate) return `${label}: 임대사업자 등록일을 입력하세요.`;
+    if (!h.rentalRegistrationDate) return `${label}: 임대사업자 등록 신청일을 입력하세요.`;
     if (!h.businessRegistrationDate) return `${label}: 사업자 등록일을 입력하세요.`;
     if (!h.rentalPeriodYears || parseFloat(h.rentalPeriodYears) <= 0)
       return `${label}: 임대기간(년)을 입력하세요.`;
