@@ -89,7 +89,7 @@
 ### PR-4 (Low)
 1. R-2(D-5): ㉓ 대상 판정 `isTerminationEligibleArticle`(`eligibility.ts:125`)에 「법률 제17482호 부칙 §5① 적용 주택」 = 단기민간임대 또는 장기일반 **매입 아파트** 게이트 추가(`terminatedRegistrationType`·`isApartment`·`rentalAcquisitionType`). 아니면 ㉓ 불성립 + 사유 문구. ⑤ 말소 토글 노출 술어(`rental-unit-termination-scope.ts`)도 같은 조건(3중).
 2. R-3: `RentalHousingExceptionSection` 상단 안내에 「장기어린이집(§167의3①8호의2) 보유자는 이 계산에서 ⑳을 적용하지 않습니다」 한 줄(ToneCard).
-3. R-4: `RentalUnitCard.tsx:609` 아파트 hint에 「도시형 생활주택인 아파트는 아파트로 보지 않습니다(§167의3①2호 가목2) 괄호)」.
+3. R-4: ~~아파트 hint에 도시형 생활주택 제외 문구~~ — **보류(V-10)**. 같은 「아파트 여부」 토글이 마목 2)(2020.7.11. 이후 아파트 배제 — 도시형 생활주택인 아파트도 아파트)와 가목2)·나목2)·라목8)·마목4) 양도기한(도시형 생활주택인 아파트 제외)을 함께 가른다. 문구만 넣으면 도시형 아파트 보유자가 「아님」을 골라 마목 2) 배제가 빠지는(유리한 오답) 경로가 생긴다 — 3호 후단의 `isUrbanLifeHousingApartment`처럼 별도 칸이 필요(별건).
 4. SYNC-3: ④ `transfer-tax-api-rental-housing.ts:59` `isApartment`를 ⑤ `showApartment`(`RentalUnitCard.tsx:150`)와 같은 술어일 때만 보내고 아니면 `false` — 술어는 leaf로 빼 ⑤·④가 공유.
 5. SYNC-4: `app/api/calc/transfer/_rental-engine-input.ts:23·24·41·52` `new Date(x)` → `toDate(v, "field")`/`toOptionalDate(v)`.
 
@@ -133,5 +133,6 @@
 | V-6 | 조특법 감면 `rental-housing-reduction.ts:176-177` 단일 `registrationDate` 컷오프 의미 — **범위 밖, 별건 후보** | 별건 |
 | V-7 | SYNC-2 재실측(에이전트 수치) + 계산기 결과 화면에서 OFF 호 불성립 사유 표시 | PR-3 Do 전 |
 | V-8 | `calcRentalResidenceFacts`의 호출처 전수(계산기 ⑤·⑧, 판정 메뉴 카드) — SYNC-1이 판정 메뉴 ✓/✗에도 있는지 | PR-3 Do 전 |
+| V-10 | R-4 도시형 생활주택 아파트 — ⑳ 호에 별도 입력(`isUrbanLifeHousingApartment`)을 두고 양도기한 게이트만 제외할지 — **별건** | 별건 |
 | Q-1 | ✅ (a) 라벨 변경 — D-4 (2026-11-04) | — |
 | Q-2 | ✅ (a) 게이트 넣음 — D-5 (2026-11-04) | — |

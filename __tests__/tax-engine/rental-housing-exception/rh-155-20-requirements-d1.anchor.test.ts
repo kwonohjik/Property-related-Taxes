@@ -161,6 +161,8 @@ describe("OH-39 ㉓ 자진말소 1/2 기준", () => {
     rentalMonths: months,
     rentalAutoTermination: true,
     terminatedRegistrationType: type,
+    // D-5 — ㉓은 법률 제17482호 부칙 §5① 주택만(장기일반은 아파트 매입임대) — 장기일반 말소 픽스처는 아파트로 둔다.
+    ...(type === "long_term_general" ? { isApartment: true } : {}),
   });
 
   it("OH39-1 단기(4년) 27개월 → 24개월 이상이라 ㉓ 충족(리뷰 F6 — 종전 30개월 기준으로 탈락)", () => {

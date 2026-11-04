@@ -65,6 +65,13 @@ export function buildFailMessage(
     case "RENTAL_TERMINATION_RESTRICTED": {
       // ⑳ 경로에서는 ㉓(말소 후 5년 내 거주주택 양도)만 이 코드를 쓴다 — 사목은 ⑳에서 도출되지 않는다.
       const t = unit.terminatedRegistrationType;
+      if (t === "long_term_general" && !(unit.isApartment && unit.rentalAcquisitionType === "purchase")) {
+        return (
+          `${n}호: ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23}은 법률 제17482호(민간임대주택법) 부칙 제5조제1항이 적용되는 주택 — ` +
+          "단기민간임대주택 또는 장기일반민간임대주택 중 아파트 매입임대 — 의 말소에만 적용됩니다. 장기일반으로 등록한 비아파트·건설임대는 " +
+          "그 말소로 장기임대주택이 되지 않습니다."
+        );
+      }
       if (!t) {
         return `${n}호: 말소된 임대주택의 민간임대주택 등록 유형(단기 4년·장기일반 8년)을 선택해야 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호(임대의무기간 1/2 이상)를 판정할 수 있습니다.`;
       }
