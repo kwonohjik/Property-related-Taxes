@@ -88,9 +88,14 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
             value={asset.decedentAcquisitionDate}
             onChange={(v) => onChange({ decedentAcquisitionDate: v })}
           />
-          <p className="text-caption text-muted-foreground">단기보유 통산용 (소득세법 §104②1호)</p>
         </div>
       </div>
+      {/* 이 날짜를 쓰는 규정 전부 — 계획서 inherit-decedent-date-early-return.plan.md §5.1 · Q-1 c */}
+      <p className="text-caption text-muted-foreground" data-testid="decedent-acq-date-uses">
+        피상속인 취득일은 세율의 보유기간 기산일입니다(소득세법 §104②1호 — 상속개시일부터 2년 이상 보유했으면 세율은
+        달라지지 않습니다). 가업상속공제 적용 비율분의 장기보유특별공제 기산일(소득세법 §95④ 단서), 수용 감면의
+        취득일(조특법 §77⑨), 수용 토지의 비사업용 토지 제외 판정 취득일(소득령 §168의14③3호나목)로도 씁니다.
+      </p>
 
       {/*
         수유자 — 취득일·취득가액은 상속 그대로이고 상속 특례만 갈린다. 세율 보유기간 통산(§104②1호)은 모든 자산이 읽으므로
