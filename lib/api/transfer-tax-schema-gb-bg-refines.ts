@@ -141,8 +141,14 @@ function requireBgAcquisitionParts(info: unknown, gbv: Gbv, ownershipRatio: numb
   const ownBuilding = !gbv?.buildingPreDeemedClauseA && hasPart("building");
   const ownActual = () => need(at, i, "actualAcquisitionTotal", "actualLandAcquisitionPrice", "actualBuildingAcquisitionPrice", ownLand, ownBuilding);
   if (i.acquisitionMethod === "actual") return ownActual();
-  if (i.acquisitionMethod !== "appraisal" && i.acquisitionMethod !== "salesCase") return;
   const donor = i.carryoverDonorBasis as (Record<string, unknown> & { parts?: { land?: boolean; building?: boolean } }) | undefined;
+  // 이월과세 × K-5(두 파트 모두 증여받음) — 시나리오 B는 양도인 증여일 평가액(소령 §163⑨ · 엔진 `isConvertedCarryoverReadingGiftValuation`)
+  if (i.acquisitionMethod === "converted") {
+    const p = donor?.parts ?? { land: true, building: true };
+    if (donor && p.land === true && p.building === true) ownActual();
+    return;
+  }
+  if (i.acquisitionMethod !== "appraisal" && i.acquisitionMethod !== "salesCase") return;
   if (!donor) return need(at, i, "presumedAcquisitionTotal", "presumedLandAcquisitionPrice", "presumedBuildingAcquisitionPrice", ownLand, ownBuilding);
   const parts = donor.parts ?? { land: true, building: true };
   need([...at, "carryoverDonorBasis"], donor, "presumedAcquisitionTotal", "presumedLandAcquisitionPrice", "presumedBuildingAcquisitionPrice", parts.land === true && hasPart("land"), parts.building === true && hasPart("building"));

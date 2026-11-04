@@ -48,7 +48,7 @@ function gbAsset(over: Partial<AssetForm> = {}, co: Record<string, unknown> = {}
     gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
     transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_market",
     bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
-    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted",
+    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted", bgActualAcquisitionLand: "250,000,000", bgActualAcquisitionBuilding: "250,000,000", /* K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨) */
     bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000",
     carryover: {
       ...CARRYOVER_DEFAULTS,
@@ -179,7 +179,7 @@ describe("경로 1 — 부담부증여 일반건물 · 둘 다 이월과세 (④
     expect([r.det, detail(r).adoptedScenario]).toEqual([107_454_000, "A"]);
   });
 
-  /** 이 자산만 증여 · 과세가액 6억 = 10억 − 채무 4억 · 산출세액 1.05억. 토글 OFF면 평가액 합 10억 > 6억으로 막히고, ON이면 분자 6억 → 상당액 105,000,000(B 채택 97,800,000). */
+  /** 이 자산만 증여 · 과세가액 6억 = 10억 − 채무 4억 · 산출세액 1.05억. 토글 OFF면 평가액 합 10억 > 6억으로 막히고, ON이면 분자 6억 → 상당액 105,000,000(B 채택 99,000,000 — K-5 B §163⑨로 개산공제가 빠진다 · 종전 97,800,000). */
   it("P0 → 토글 OFF ⑧ 차단(인수채무 안내) · ON 통과 · 상당액 105,000,000", async () => {
     const off = p1({ calc: "105,000,000", base: "600,000,000" });
     expect(fields(off)).toEqual(["buildingCarryover.giftDateValuation"]);
@@ -187,7 +187,7 @@ describe("경로 1 — 부담부증여 일반건물 · 둘 다 이월과세 (④
     const on = p1({ calc: "105,000,000", base: "600,000,000" }, DEBT_2_2);
     expect((await bodyOf(on)).carryoverTaxation.giftTaxAmount).toBe(105_000_000);
     const r = await ok(on);
-    expect([r.det, detail(r).adoptedScenario]).toEqual([97_800_000, "B"]);
+    expect([r.det, detail(r).adoptedScenario]).toEqual([99_000_000, "B"]);
   });
 
   it("토지분 채무 = 토지 평가액 → 토지 분자 0 · 배분 비율 0 : 3억(⑫는 0을 받는다) · 상당액 6,000,000", async () => {

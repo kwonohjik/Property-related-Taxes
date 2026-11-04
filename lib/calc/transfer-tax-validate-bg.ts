@@ -66,6 +66,8 @@ import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
 import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
 import { bgAnyCarryover, bgCarryoverForm, bgCarryoverParts } from "./bg-carryover-parts";
+import { bgConvertedCarryoverReadsGiftValuation } from "./bg-carryover-parts";
+import { transferorGiftValuationError } from "./transfer-tax-validate-bg-carryover-b";
 import { bgHouseSplitActive } from "./bg-house-split";
 import { validateBgHouseSplit } from "./transfer-tax-validate-bg-house-split";
 
@@ -369,18 +371,8 @@ export function validateBurdenedGiftAsset(
          * (`missingCoDonorBasisLabel`이 이미 요구했다), 양도인 쪽(시나리오 B)은 증여받은 자산이라 소령 §163⑨가 증여일 상증법 평가액을
          * 실지거래가액으로 본다 — K-4 실지취득가액 칸이 그 값이다. 어느 쪽도 다른 쪽으로 대신하지 않는다.
          */
-        if (asset.assetKind === "general_building") {
-          // 비운 쪽은 시나리오 B 취득가액 0이라 §97의2②3호 비교의 채택 시나리오까지 바뀐다 — 두 칸 모두 요구한다.
-          for (const [field, part] of [["bgActualAcquisitionLand", "토지"], ["bgActualAcquisitionBuilding", "건물"]] as const) {
-            if (!parseAmount(asset[field])) return fieldError(field, `${label}: 이월과세 — 양도인(증여받은 사람)이 증여받은 때의 ${part}분 상증법 평가액을 입력하세요 (소령 §163⑨ · 시나리오 B).`);
-          }
-        } else if (asset.assetKind === "land") {
-          if (!parseAmount(asset.bgActualAcquisitionLand)) {
-            return fieldError("bgActualAcquisitionLand", `${label}: 이월과세 — 양도인(증여받은 사람)이 증여받은 때의 상증법 평가액(토지)을 입력하세요 (소령 §163⑨ · 시나리오 B).`);
-          }
-        } else if (!houseSplit && !parseAmount(asset.bgActualAcquisitionTotal)) {
-          return fieldError("bgActualAcquisitionTotal", `${label}: 이월과세 — 양도인(증여받은 사람)이 증여받은 때의 상증법 평가액을 입력하세요 (소령 §163⑨ · 시나리오 B).`);
-        }
+        const err = transferorGiftValuationError(asset, label, houseSplit);
+        if (err) return err;
         // 신축·증축 × 이월과세는 화면에서 도달하지 않는다 — 신축 입력은 매매 취득에서만 열린다(`selfBuiltActive`).
         //   API 직접 호출은 엔진 `assertCarryoverDonorBasis`가 막는다.
       } else if (asset.assetKind === "general_building" && gbParts.any) {
@@ -429,6 +421,11 @@ export function validateBurdenedGiftAsset(
       if (isBgPostDeemedInheritance(asset)) {
         return fieldError("bgAcquisitionMethod", `${label}: 상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액입니다(소득세법 시행령 §163⑨) — 환산취득가액을 쓸 수 없습니다(소득세법 §97①1호 단서). 「실지취득가액 안분」에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.`);
       }
+      // 이월과세 × K-5(두 파트 모두 증여받음) — 시나리오 B는 양도인 증여일 상증법 평가액(소령 §163⑨ · ⑤·④·⑫와 같은 leaf)
+      if (bgConvertedCarryoverReadsGiftValuation(asset) && !bgCollateralForcesStdAcq(asset, isFractionalSplitAxis === true)) {
+        const err = transferorGiftValuationError(asset, label, houseSplit);
+        if (err) return err;
+      }
       // K-5 환산취득가액 — 취득·양도시 기준시가 필수. general_building은 (5-b)에서 별도 검사.
       //   칸은 「② 양도정보」에 있다(B2 — 종전에는 시가 모드가 두 칸을 숨겨 채울 곳이 없었다).
       //   재개발 완공 아파트는 취득시 기준시가(일반 환산 분자)를 쓰지 않는다 — 종전 부동산 취득가액을 §166③으로 환산하고
@@ -438,7 +435,7 @@ export function validateBurdenedGiftAsset(
       if (asset.assetKind !== "general_building" && asset.assetKind !== "land" && !isMixedBurdenedGift(asset)) {
         if (
           !parseAmount(asset.standardPriceAtTransfer) ||
-          (!redevSec166 && !parseAmount(asset.standardPriceAtAcq))
+          (!redevSec166 && !bgConvertedCarryoverReadsGiftValuation(asset) && !parseAmount(asset.standardPriceAtAcq))
         ) {
           return fieldError(
             !parseAmount(asset.standardPriceAtTransfer) ? "standardPriceAtTransfer" : "standardPriceAtAcq",

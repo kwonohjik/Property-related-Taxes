@@ -105,7 +105,8 @@ describe("입력 방어선 — assertGbBgDonorBuiltInput (엔진 직접 호출)"
   });
   it("F27 진입점: 이월과세 적격 + donorBuilt 가 잘못된 조합이면 두 시나리오 계산 前에 던진다(⑫ 를 우회한 직접 호출) — 본인 신축 · 신축일 범위", () => {
     const ctIn = { giftRegistryDate: d("2024-05-01"), donorAcquisitionDate: d("2015-01-01"), donorAcquisitionPrice: 0, useEstimatedAcquisition: false, giftTaxAmount: 0, giftDateValuation: 1_000_000_000, donorRelation: "lineal" };
-    const info = (db: DonorBuiltInput) => ({ ...INFO(), carryoverDonorBasis: { landStdPriceAtAcquisition: 10_000_000, buildingStdPriceAtAcquisition: 40_000_000, donorBuilt: db } });
+    // K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04) — 그 칸이 비면 그 검사가 먼저 던진다
+    const info = (db: DonorBuiltInput) => ({ ...INFO({ actualLandAcquisitionPrice: 250_000_000, actualBuildingAcquisitionPrice: 250_000_000 }), carryoverDonorBasis: { landStdPriceAtAcquisition: 10_000_000, buildingStdPriceAtAcquisition: 40_000_000, donorBuilt: db } });
     const call = (db: DonorBuiltInput, cause: string) =>
       field(() => calculateGeneralBuildingActualTransfer(
         { burdenedGiftInfo: info(db), transferDate: TD, buildingAcquisitionCause: cause } as never, 2026, 0, [], makeMockRates() as never, { carryoverTaxation: ctIn } as never));

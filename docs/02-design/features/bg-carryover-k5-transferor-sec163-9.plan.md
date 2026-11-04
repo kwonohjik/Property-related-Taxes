@@ -115,6 +115,16 @@ probe: 폼 → ⑧ `collectStepIssues` → ④ `callTransferTaxAPI` → ⑫⑭ `
 - 화면 변경 없음 — #2886 안내 「두 칸 합계로 계산합니다」가 K-5에서도 참이 된다.
 - 연동 영향 — 당초 증여자 신축 가산세(「소득세법」 제114조의2, 부담부증여 PR-4): 주택 K-5 「토지 1억 · 건물 0」은 종전 base 0(`zero_base`)이었고, 이제 「0 · 1억」과 같은 base 62,500,000 · 가산세 3,125,000이다(`carryover-donor-built-bg.anchor.test.ts` — `zero_base` 시료를 「합계 0」으로 바꿈). 부담부증여 주택의 base가 토지분을 포함한 자산 전체 환산가액인 것은 이번 변경 전부터다(「0 · 1억」 입력) — `carryover-donor-built-114-2.plan.md` Q-2(일체 주택 건물분 안분)는 부담부증여 경로에 적용되지 않는다. **확인 필요(별건 V-7)**.
 - 뮤테이션: 두 분기(토지 자리 0 · 건물 자리 0)를 각각 끄면 anchor 5건 · 1건 실패.
+- 머지: #2901(dbbb98027).
+
+### 5.2 PR-2 (K-5 B §163⑨ · Q-2 a · Q-3 a · Q-4 a) 구현
+- 엔진 `isConvertedCarryoverReadingGiftValuation`(시가 + 환산 + 두 파트 모두 증여받음) → `toTransferorBasisInfo`가 K-6/K-7처럼 `actual`로 읽는다(단건·묶음·지분·일반건물 경로가 공유). `assertCarryoverDonorBasis`가 양도인 평가액(`actual*` > 0)을 요구한다(`assertTransferorGiftValuation` — K-6/K-7과 공용).
+- 화면 leaf `bgConvertedCarryoverReadsGiftValuation`(`bg-carryover-parts.ts`) — ④ `usesActualAcquisitionFields` · ⑤ 「양도인이 증여받은 때의 상증법 평가액」 블록(안내 문구 K-5용) · ⑧ `transferorGiftValuationError`(K-6/K-7 분기와 공용 · 새 파일 `transfer-tax-validate-bg-carryover-b.ts`) · ⑫ `transfer-tax-schema-required-refines.ts`·`transfer-tax-schema-gb-bg-refines.ts`.
+- Q-3 a: `needsBgAcqStdPriceInput`(② 칸 노출·⑧ 공용)이 K-5 이월과세에서 false — K-6/K-7 이월과세와 같다. ⑧ K-5 분기의 양도인 취득시 기준시가 요구도 뺐다. ④는 종전처럼 남은 값을 싣지만 B(실지)·A(당초 증여자 값)가 읽지 않는다 — 주택·건물·토지 「비움 = 채움」(자본적지출·양도비 있는 시료) anchor로 확인.
+- Q-4 실측: 함께 양도(컴패니언) K-5 이월과세 — 200 · B 60,000,000(평가액 × 0.2) · A 채택 8,514,528(종전 B 채택 10,913,760). 일반건물 지분·묶음 — 200 · B는 평가액 경로(아래 기존 anchor 갱신).
+- anchor: `transfer.route.bg-carryover-k5-scenario-b-sec163-9.anchor.test.ts`(18 · 주택·건물·상가·토지 B 320,000,000 · 12,840,000 / B 채택 55,110,000 / 일반건물 B 200,000,000·120,000,000 / 재개발 360,000,000 · 4,365,000 / ⑧·⑫·엔진 방어선 / Q-3) · `bg-carryover-k5-transferor-valuation-ui.anchor.test.tsx`(5). 뮤테이션 10/10(엔진 B 술어·평가액 필수·한 파트 제외 · ④ · ⑤ · ⑧ 평가액·취득시 기준시가 · ⑫ 일반·일반건물 · ② 칸 노출). 회귀 45,312 통과.
+- 범위 밖(확인 필요): 일반건물 한 파트만 증여받은 K-5 이월과세는 B 종전 환산 — 다른 파트가 양도인 자기 방식이라 한 신고 안에서 파트마다 방식이 갈린다(K-6/K-7은 이 조합을 막는다).
+- 기존 anchor 갱신(K-5 이월과세 시료에 양도인 증여일 평가액 추가 · 일반건물 토지·건물 각 2.5억 = 종전 환산 취득가액과 같은 금액): A 채택 결정세액은 그대로이고, B는 실지라 개산공제가 빠져 +1,200,000(지분 단위 +600,000) — 예: 97,800,000 → 99,000,000. 「양도인 취득시 기준시가가 커서 A 채택」 시료는 평가액 4.5억·4.5억을 함께 넣어 의도를 유지. 재개발 원조합원 B = (평가액 10억 + 청산금 1억) × 0.4 = 440,000,000(종전 §166③ 190,000,000). 단건 토지 B 채택 표시 시료는 평가액 2.25억(B 45,000,000) · 결정세액 3,453,000 → 3,615,000 · 취득가액 산식은 실지(§159①1호 본문). 「환산 B 개산공제 문구」 행은 삭제(해당 없음).
 
 ## 6. 확인 필요
 

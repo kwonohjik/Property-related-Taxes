@@ -62,6 +62,8 @@ const INFO = (basis: object = {}) => ({
   valuationMode: "sangjeungbeop_market", acquisitionMethod: "converted", marketValueAtTransfer: 1_000_000_000,
   lendingDepositTotal: 0, mortgageDebtAmount: 500_000_000, annualRentTotal: 0, mortgageSetAmount: 500_000_000,
   landStdPriceAtTransfer: 200_000_000, buildingStdPriceAtTransfer: 200_000_000, landStdPriceAtAcquisition: 100_000_000, buildingStdPriceAtAcquisition: 100_000_000,
+  // K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 Q-2 a)
+  actualLandAcquisitionPrice: 250_000_000, actualBuildingAcquisitionPrice: 250_000_000,
   donorRelation: "lineal_descendant",
   carryoverDonorBasis: { landStdPriceAtAcquisition: 10_000_000, buildingStdPriceAtAcquisition: 40_000_000, ...basis },
 });
