@@ -1,6 +1,7 @@
 # 다건 계산 — 상속·증여 §163⑨ 취득가액(①②③)을 단건과 같은 경로로 지원
 
 > **출처**: `multi-sec163-9-clause-b-drop.plan.md` §4 V-1(#2888) — 「Q-1 b(다건 ② 지원) 별건」. #2888은 다건에서 ② 입력을 **막았다**. 이 계획은 막는 대신 **계산한다**.
+> **결정**: 사용자 「권장안으로」(2026-11-04) — Q-1 a · Q-2 a · Q-3 a.
 > **검증 깊이**: L3 — 다건 세액이 단건과 같아진다(②가 큰 자산은 바로잡히고, ①만 쓰던 자산은 그대로).
 
 ## 0. 결론
@@ -54,10 +55,41 @@
 
 | ID | 항목 | 상태 |
 |---|---|---|
-| V-1 | 의제취득일 전(1985.1.1. 전) 상속 ③(환산 · 3자 max) 다건 = 단건 | ⏳ 구현 때 격자에 넣는다 |
+| V-1 | 의제취득일 전(1985.1.1. 전) 상속 ③(환산 · 3자 max) 다건 = 단건 | ✅ 2026-11-04 — 1984 상속 토지 ① 3억 · ③ 칸(의제취득일 기준시가 5억 · 양도시 9억) → 다건 143,701,555(= ⌊단건 × 1.1⌋ · ① 단독 282,711,000보다 낮음 = ③ 채택) · 본문 `inheritedAcquisition.mode` = `pre-deemed` |
 | V-2 | 다건 결과 화면이 §163⑨ 결과(`inheritedAcquisitionDetail`)를 보여 주는가 | ⏳ 확인 필요 — 세액은 같아도 산식 표시가 빠질 수 있다 |
 | V-3 | 다건 「이력 불러오기」로 들어온 단건 기록(②가 있는 상속 자산) | ⏳ 확인 필요 |
 
 ## 5. 법령 근거
 
 - 소득세법 시행령 §163⑨ 본문·단서 1호·2호 · §176조의2④ — 단건 엔진이 이미 구현(이 계획은 배관만). KoreanLaw MCP 현행(mst 290841) 본문은 #2876 계획서 §5와 같은 조회.
+
+## 6. 구현 결과 (2026-11-04)
+
+### 6.1 변경
+
+1. ④ `buildPropertyPayload`(`lib/calc/multi-transfer-tax-api.ts`) — 단건과 같은 빌더 `buildInheritedAcquisitionPayload`·`buildInheritedHouseValuationPayload` spread · `pre1990Land` 게이트를 `hasPre1990 || hasPre1990ForSec164`(`primaryAcquisitionModeFlags`)로.
+2. ⑫ `MULTI_REJECT_RULES` — `inheritedAcquisition`·`inheritedHouseValuation` 거절 삭제(상가 `commercialInheritanceValuation`은 유지).
+3. ⑭ `multi/route.ts` — `pre1990Land` 손 매핑을 공용 leaf `toEngineSec163_9Inputs`로. 넘기는 키를 객체로 **명시**했다 — F-12 키 분류 가드가 `p.<키>`로 매핑을 읽는다(초안의 `toEngineSec163_9Inputs(p, …)`는 그 가드를 깼다).
+4. ⑧ `validateMultiSupportedMode` — #2888의 ② 입력 차단과 다건 전용 「상속 ① 공란」 가드를 지웠다. 다건 검증은 건별로 단건 ⑧(`validateStep`)도 돌리므로 ① 공란은 `postDeemedClauseARequiredError`가 단건과 같이 짚는다(② 완전 입력이면 통과 — Q-2 a).
+5. 고아 정리 — 문구 상수 `MULTI_SEC164_CLAUSE_B_UNSUPPORTED_MESSAGE`(#2888)·`MULTI_INHERITANCE_VALUATION_UNSUPPORTED_MESSAGE`, 그 import, `legal-codes` import, ⑧의 `effectiveBuildingCauseMix`·`sec164*Status` import.
+
+### 6.2 테스트
+
+- 신규 anchor `__tests__/calc/multi-sec163-9-support.anchor.test.ts` 12건(정본: 다건 `totalTax` = ⌊단건 결정세액 × 1.1⌋):
+  - MS-1 격자 7칸(상속 주택 ①+② · ②만 · ①만 · 증여 ①+② · 토지 1988 ①+② · ②만 · 2010 ①만 — ⑧ 통과 · 본문 키) + D2.
+  - MS-2 의제 전 1984 토지 ③ 칸 · ①만(본문 `mode: pre-deemed`) · MS-2b ③ 채택 143,701,555 < 282,711,000.
+  - MS-3 ⑫ 상가 키 400 유지.
+- 의도된 반전: #2888 anchor `multi-sec163-9-clause-b-drop` 삭제(막힘을 고정했다 — MS-1이 대체) · E2E를 `e2e/multi-sec163-9-support.spec.ts`로 바꿔 씀(막힘 → 200 · 149,006,000) · `transfer-land-part-cause.d2.predo` C16(다건 전용 가드 문구 → 건별 단건 ⑧ `publishedValueAtInheritance` 이슈).
+- E2E MS-E1·E2(headless Playwright — 사람이 직접 한 브라우저 확인은 아니다) + 인접 다건 E2E 10건 통과(`transfer-multi-pre1990-land` 1건은 회귀와 동시 실행 중 첫 시도 page.goto 시간 초과 → 재시도 통과 · load 45). E2E 뮤테이션(M1) → MS-E1 실패 확인.
+- mutation:
+
+| M | 무력화 | 실패 |
+|---|---|---|
+| M1 | ④ `inheritedAcquisition` 빌더 제거 | MS-1 7칸 · MS-2 ③ · MS-2b(10건) |
+| M2 | ④ `inheritedHouseValuation` 빌더 제거 | MS-1 주택 ② 3칸 |
+| M3 | ④ `pre1990Land` 게이트 종전으로 | MS-1 토지 2칸 |
+| M4 | ⑫ `inheritedAcquisition` 거절 복원 | MS-1 7칸 · MS-2 ③ · MS-2b(10건) |
+| M5 | ⑭ `pre1990Land`만 매핑 | MS-1 ② 5칸 · MS-2 ③ · MS-2b(7건) |
+| M6 | ⑧ 다건 전용 ① 공란 가드 복원 | MS-1 ②만 2칸 |
+
+- 회귀: `__tests__/api`·`__tests__/calc`·`__tests__/components` 23,464 통과 · 실패 6 — 의도된 반전 1(C16) · F-12 1(⑭ 키 명시로 해결) · S13-3 4(단독 실행 통과 — 부하). 갱신 후 관련 3파일 40/40. tsc 0 · 변경 파일 eslint 0.

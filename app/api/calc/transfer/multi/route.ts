@@ -11,6 +11,7 @@
  *   2차: determinedTax 주입 후 가산세 포함 재계산
  */
 
+import { toEngineSec163_9Inputs } from "../route-inherited-acquisition";
 import { toEngineOneHouseExemptionProviso } from "@/lib/api/exemption-proviso-coerce";
 import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
 import { rentalPhrpPriceFieldErrors } from "@/lib/api/rental-phrp-price-guard";
@@ -510,19 +511,14 @@ export async function POST(request: NextRequest) {
       extensionAppraisalValue: p.extensionAppraisalValue,
       // ⑭ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — ⑫(단건 shape 공유)를 통과한 값이 여기서 빠지면 침묵 strip. 중첩 객체에 Date 없음.
       selfBuiltHousing: p.selfBuiltHousing,
-      pre1990Land: p.pre1990Land
-        ? {
-            acquisitionDate: toDate(p.pre1990Land.acquisitionDate, "pre1990Land.acquisitionDate"),
-            transferDate: toDate(p.pre1990Land.transferDate, "pre1990Land.transferDate"),
-            areaSqm: p.pre1990Land.areaSqm,
-            pricePerSqm_1990: p.pre1990Land.pricePerSqm_1990,
-            pricePerSqm_atTransfer: p.pre1990Land.pricePerSqm_atTransfer,
-            grade_1990_0830: p.pre1990Land.grade_1990_0830,
-            gradePrev_1990_0830: p.pre1990Land.gradePrev_1990_0830,
-            gradeAtAcquisition: p.pre1990Land.gradeAtAcquisition,
-            forceRatioCap: p.pre1990Land.forceRatioCap,
-          }
-        : undefined,
+      // ⑭ §163⑨ 4키(`pre1990Land`·`inheritedAcquisition`·`inheritedHouseValuation`·`commercialInheritanceValuation`) — 단건·컴패니언과 **같은 leaf**
+      //    (Date 변환 포함 · 계획서 multi-sec163-9-support.plan.md). 상가 키는 ⑫ `MULTI_REJECT_RULES`가 거절해 여기 오지 않는다.
+      //    키를 명시해 넘긴다 — F-12 키 분류 가드(`transfer.route.multi-key-coverage-f12`)가 `p.<키>`로 매핑을 읽는다.
+      ...toEngineSec163_9Inputs(
+        { pre1990Land: p.pre1990Land, inheritedAcquisition: p.inheritedAcquisition, inheritedHouseValuation: p.inheritedHouseValuation },
+        toDate(p.transferDate, "transferDate"),
+        p.transferPrice,
+      ),
       parcels: p.parcels?.map((parcel) => ({
         ...parcel,
         acquisitionDate: toDate(parcel.acquisitionDate, "parcels.acquisitionDate"),

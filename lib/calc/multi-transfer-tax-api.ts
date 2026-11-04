@@ -52,6 +52,9 @@ import { unpaidTaxPayload } from "./transfer-unpaid-tax-mode";
 
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
+import { primaryAcquisitionModeFlags } from "./transfer-tax-api-primary-context";
+import { buildInheritedAcquisitionPayload } from "./transfer-tax-api-inheritance";
+import { buildInheritedHouseValuationPayload } from "./transfer-tax-api-inheritance";
 import { selfBuiltActive } from "./self-built-scope";
 import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
 import { withSelfBuiltHousing } from "./transfer-tax-api-self-built-housing";
@@ -424,7 +427,12 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
       : {}),
     ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
     // ⑬ 1990.8.30. 이전 취득 토지 환산 (route ⑭·엔진 STEP 0.4 지원) — 단건과 공용 헬퍼
-    ...(hasPre1990 && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),
+    // ⑬ 상속·증여 §163⑨ 취득가액(① 평가액 · ② §164④·§164⑤~§164⑦ · 의제 전 ③ 환산) — 단건 ④와 **같은 빌더**
+    //    (계획서 multi-sec163-9-support.plan.md Q-1 a). 종전에는 ①만 `acquisitionPrice`로 싣고 ②를 버렸다(#2888이 막았던 입력).
+    //    `pre1990Land`도 단건과 같이 매매 1990 환산(`hasPre1990`) 또는 §163⑨1호(`hasPre1990ForSec164`)일 때 싣는다.
+    ...((hasPre1990 || (primary ? primaryAcquisitionModeFlags(primary).hasPre1990ForSec164 : false)) && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),
+    ...(primary ? buildInheritedAcquisitionPayload(primary, primaryRatio, primaryFractional) : {}),
+    ...(primary ? buildInheritedHouseValuationPayload(primary, form.transferDate) : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
     // ⑬ §89①4호 가·나목 분양권 게이트 — 단건(`transfer-tax-api.ts`)과 같은 echo(roster-required-other-assets §4-6).

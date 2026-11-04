@@ -39,6 +39,7 @@ import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { buildLandPartCausePayload } from "@/lib/calc/transfer-tax-api-split";
 import { buildPropertyPayload } from "@/lib/calc/multi-transfer-tax-api";
 import { validateMultiSupportedMode } from "@/lib/calc/multi-transfer-tax-validate";
+import { validateStepDetailed } from "@/lib/calc/transfer-tax-validate";
 import { buildAssetPayload } from "@/lib/calc/transfer-tax-api-companion-payload";
 import { buildHousesPayload } from "@/lib/calc/transfer-tax-api-houses";
 import { allowsFamilyBusinessInheritance } from "@/lib/calc/transfer-fb-gate";
@@ -451,7 +452,12 @@ describe("C. D2-1 활성", () => {
   it("C16 ⑧ 다건: D2 유효 상속 자산이 신고가액 미입력으로 막히지 않는다 / D2가 아니면 종전 차단 · PHD 플래그는 D2 유효 시 무시", () => {
     const item = (a: AssetForm) => ({ ...form(a), assets: [a] }) as never;
     expect(validateMultiSupportedMode(item(d2()))).toBeNull();
-    expect(validateMultiSupportedMode(item(d2({ hasSeperateLandAcquisitionDate: false, landAcquisitionCause: "" }))) ?? "").toContain("상속 취득가액(신고가액)");
+    // D2가 아닌 상속 · 신고가액 비움 — 다건 전용 가드는 지웠고(계획서 multi-sec163-9-support Q-2 a) 건별 ⑧(단건 규칙)이 같은 입력을 막는다
+    const notD2 = item(d2({ hasSeperateLandAcquisitionDate: false, landAcquisitionCause: "" }));
+    expect(validateMultiSupportedMode(notD2)).toBeNull();
+    const issue = [0, 1, 2, 3].map((st) => validateStepDetailed(st, notD2)).find(Boolean);
+    expect(issue?.field).toBe("publishedValueAtInheritance");
+    expect(issue?.message).toContain("상속개시일 평가액(상속세 신고가액)을 입력하세요");
     expect(validateMultiSupportedMode(item(d2({ usePreHousingDisclosure: true })))).toBeNull();
     expect(phdFlagEffective(d2({ usePreHousingDisclosure: true }))).toBe(false);
   });
