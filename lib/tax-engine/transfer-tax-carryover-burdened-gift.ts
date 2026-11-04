@@ -280,9 +280,11 @@ export function applyCarryoverDonorBasis(
   }
   return {
     ...info,
-    landStdPriceAtAcquisition: d.landStdPriceAtAcquisition ?? info.landStdPriceAtAcquisition,
-    buildingStdPriceAtAcquisition:
+    ...foldDonorStdForConverted(
+      info,
+      d.landStdPriceAtAcquisition ?? info.landStdPriceAtAcquisition,
       d.buildingStdPriceAtAcquisition ?? info.buildingStdPriceAtAcquisition,
+    ),
     marketValueAtAcquisition: d.marketValueAtAcquisition ?? info.marketValueAtAcquisition,
     actualLandAcquisitionPrice: d.actualLandAcquisitionPrice ?? info.actualLandAcquisitionPrice,
     actualBuildingAcquisitionPrice:
@@ -298,6 +300,29 @@ export function applyCarryoverDonorBasis(
       : {}),
     carryoverGiftTaxAmount: giftTaxAmount > 0 ? giftTaxAmount : undefined,
   };
+}
+
+/**
+ * 시가 평가 환산(K-5) 시나리오 A — 양도시 기준시가가 0인 파트에 들어간 당초 증여자 기준시가를 다른 파트에 더한다.
+ *
+ * K-5 환산은 파트별이라(`burdened-gift-acquisition.ts` — 양도시 기준시가 0인 파트의 취득가액 = 0) 주택·건물·상가(양도시 기준시가를
+ * 건물 자리 하나에 싣는다)에서 당초 증여자 토지 칸 값이 버려졌다. 주택·상가 기준시가는 토지를 포함한 한 값이므로
+ * (「소득세법」 제99조 제1항 제1호 다목·라목) 두 칸 합계가 분자다 — K-1~K-3·K-7·담보 승과 같다
+ * (계획서 `docs/02-design/features/bg-carryover-k5-transferor-sec163-9.plan.md` Q-1 a · V-6).
+ * 두 파트 모두 양도시 기준시가가 있으면(일반건물) 그대로 둔다.
+ */
+function foldDonorStdForConverted(
+  info: BurdenedGiftInfo,
+  land: number,
+  building: number,
+): { landStdPriceAtAcquisition: number; buildingStdPriceAtAcquisition: number } {
+  if (info.valuationMode !== "sangjeungbeop_market" || info.acquisitionMethod !== "converted")
+    return { landStdPriceAtAcquisition: land, buildingStdPriceAtAcquisition: building };
+  if (info.landStdPriceAtTransfer === 0 && info.buildingStdPriceAtTransfer > 0)
+    return { landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: land + building };
+  if (info.buildingStdPriceAtTransfer === 0 && info.landStdPriceAtTransfer > 0)
+    return { landStdPriceAtAcquisition: land + building, buildingStdPriceAtAcquisition: 0 };
+  return { landStdPriceAtAcquisition: land, buildingStdPriceAtAcquisition: building };
 }
 
 /**

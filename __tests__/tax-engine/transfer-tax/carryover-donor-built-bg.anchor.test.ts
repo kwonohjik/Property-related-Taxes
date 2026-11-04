@@ -155,10 +155,18 @@ describe("가산세가 붙지 않는 경우 — echo 로 이유를 말한다 (R2
     expect(echoOf(on)).toMatchObject({ applied: false, notAppliedReason: "scenario_b" });
   });
 
-  it("가산세 기준액(채무비율 안분 후 건물분)이 0원이면 zero_base — 당초 증여자 건물 기준시가가 0", () => {
-    const r = run(info("converted", {}, NEW_DB, { landStdPriceAtAcquisition: 100_000_000, buildingStdPriceAtAcquisition: 0 }));
+  // 주택은 당초 증여자 기준시가 두 칸 합계로 환산한다(V-6 · `foldDonorStdForConverted`) — 「토지 1억 · 건물 0」은 「0 · 1억」과 같은 base라 합계 0으로 만든다.
+  it("가산세 기준액(채무비율 안분 후 건물분)이 0원이면 zero_base — 당초 증여자 기준시가 합계가 0", () => {
+    const r = run(info("converted", {}, NEW_DB, { landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 0 }));
     expect(r.penaltyTax).toBe(0);
     expect(echoOf(r)).toMatchObject({ applied: false, notAppliedReason: "zero_base", fifthAnniversary: "2027-01-10" });
+  });
+
+  it("주택 K-5: 당초 증여자 「토지 1억 · 건물 0」 = 「0 · 1억」 — 같은 base(500M × 1억 ÷ 800M = 62,500,000) · 가산세 3,125,000", () => {
+    const a = run(info("converted", {}, NEW_DB, { landStdPriceAtAcquisition: 100_000_000, buildingStdPriceAtAcquisition: 0 }));
+    const b = run(info("converted", {}, NEW_DB, { landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 100_000_000 }));
+    expect(echoOf(a)).toMatchObject({ applied: true, base: 62_500_000, penalty: 3_125_000 });
+    expect(a.totalTax).toBe(b.totalTax);
   });
 
   it("5년 경과: 양도일이 신축일+5년 +1일이면 outside_penalty_window · 당일이면 발동", () => {
