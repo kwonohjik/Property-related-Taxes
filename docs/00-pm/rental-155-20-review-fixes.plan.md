@@ -76,7 +76,7 @@
 
 ### PR-2 (F-1)
 1. **중과 판정을 장특 전에** — ⑳ step(`transfer-tax-rental-housing-step.ts:148`)은 `transfer-tax.ts:485`에서 불리고, 중과 판정 `resolveSurchargeApplication`은 그 뒤 `transfer-tax.ts:542-555`에 있다. step 안 세액은 `calcTax(rheTaxBase, …, multiHouseSurchargeResult)`(`step.ts:461-476`)가 중과를 붙인다. → step 진입 시 같은 술어로 `isSurchargeCase && !isSuspended && isMultiHouseLthdExclusionEra(transferDate)`를 구해(V-1: calcTax 내부 판정과 결론 일치 실측) `calculateRentalHousingException`에 `lthdExcludedBySurcharge` 인자로 넘긴다.
-2. `rental-housing-exception/index.ts:128-131` `bothTables`가 플래그면 표1·표2 공제 0(파트별 `ByParts`도 0). **B 시나리오에만** 적용(A는 §167의10①15호로 중과 배제 — anchor N-3a로 고정).
+2. `rental-housing-exception/index.ts:128-131` `bothTables`가 플래그면 표1·표2 공제 0(파트별 `ByParts`도 0). **B 시나리오에만** 적용(A는 §167의10①15호로 중과 배제 — anchor N-3a로 고정). ⚠️ 구현 중 실측: 명부 없는 주택 수 fallback이 A에 중과를 붙이는 판정 보류 입력(`transfer.route.unknown-unfavorable-interp-axes` UX-A4·A5·A8)은 A에도 적용하면 199,997,600→497,046,000으로 뛴다 — 결정 범위(B) 밖이라 적용하지 않고 별건(V-9)으로 남긴다.
 3. echo: 결과에 장특 배제 사유(`exclusionReason: "multi_house_surcharge"` — 일반 경로 L-1과 같은 값) · steps 산식에 「중과 대상이라 장기보유특별공제 배제(소득세법 §95②)」.
 4. 고지 `PRHP_SURCHARGE_UNVERIFIED_NOTICE`(`transfer-tax-rental-housing-judge.ts:489-490`)에 「장기보유특별공제도 적용하지 않았다」를 덧붙인다(해석 미확보 고지는 유지).
 5. 형제 경로: 완공APT ⑳(`transfer-tax-redevelopment-apt-rental-residence.ts`) B 분기 · 다건(`transfer-tax-aggregate-asset-records.ts:354-360` ⑳ 슬롯) · 배율 초과 분리(`transfer-tax-rental-housing-nbl-split.ts`) — V-2·V-3에서 실측 후 같은 플래그 전달.
@@ -125,13 +125,14 @@
 
 | ID | 내용 | 착수 조건 |
 |---|---|---|
-| V-1 | step 진입 시 구한 중과 여부가 `calcTax` 내부 판정(`step.ts:461-476`)과 같은 결론인지 — 다른 경우(합가·부수토지 카드 `appurtenantCardHouseSurcharge` 등) 격자 실측 | PR-2 Do 전 |
-| V-2 | 다건 경로가 ⑳ 슬롯을 step 결과 그대로 쓰는지 · 다건 rateGroup에서 중과 여부가 단건과 갈리는 입력 | PR-2 Do 전 |
-| V-3 | 완공APT ⑳ B · 배율 초과 분리 파트(`nbl-split`)에서 장특 배제 전달 위치 | PR-2 Do 전 |
+| V-1 | ✅ 해소(PR-2) — step의 `calcTax(…, effectiveInput, multiHouseSurchargeResult)`가 쓰는 같은 술어 `resolveSurchargeApplication`을 같은 입력으로 장특 전에 부른다(구조적으로 같은 결론). | — |
+| V-2 | ✅ 해소(PR-2) — 단건 route = 다건 route(자산 1건) 510,362,600 · 짝 216,673,182 (`__tests__/api/rental-155-20-b-surcharge-lthd.route.anchor.test.ts`). 다건 rateGroup이 갈리는 2건 이상 입력은 미실측. | — |
+| V-3 | ✅ 해소(PR-2) — 완공APT ⑳은 시나리오 B를 지원하지 않고(`transfer-tax-redevelopment-apt-rental-residence.ts:61` 비과세 거둠), 겸용주택은 A만. 배율 초과 분리 시 주택분은 같은 `calculateRentalHousingException`을 탄다. | — |
 | V-4 | R-1 방향 단조성(유리 쪽만) 격자 확인 — 가/마·다/바·8/10년·아파트 | PR-1 Do 전 |
 | V-5 | 바목 cap 2025.2.28.·아·자목 2025.6.4. 게이트 문언(신청 vs 사업자등록등) — **범위 밖, 별건 후보** | 별건 |
 | V-6 | 조특법 감면 `rental-housing-reduction.ts:176-177` 단일 `registrationDate` 컷오프 의미 — **범위 밖, 별건 후보** | 별건 |
 | V-7 | SYNC-2 재실측(에이전트 수치) + 계산기 결과 화면에서 OFF 호 불성립 사유 표시 | PR-3 Do 전 |
 | V-8 | `calcRentalResidenceFacts`의 호출처 전수(계산기 ⑤·⑧, 판정 메뉴 카드) — SYNC-1이 판정 메뉴 ✓/✗에도 있는지 | PR-3 Do 전 |
+| V-9 | 시나리오 A에 명부 없는 주택 수 fallback으로 중과가 붙는 판정 보류 입력(UX-A4·A5·A8) — 중과 + 표2 장특이 함께 적용되는 상태. A의 15호 배제와 fallback 중과 중 어느 쪽이 맞는지 · 장특 배제를 A에도 할지 — **별건, 사용자 결정 필요** | 별건 |
 | Q-1 | ✅ (a) 라벨 변경 — D-4 (2026-11-04) | — |
 | Q-2 | ✅ (a) 게이트 넣음 — D-5 (2026-11-04) | — |

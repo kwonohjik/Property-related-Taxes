@@ -124,11 +124,20 @@ export function calculateRentalHousingException(
    * 거주요건은 그 특례를 낸 판정이 이미 §154①로 봤다(재산세제과-1081 · rental-155-20-b-154-10-and-q4 Q-2 (b)).
    */
   eligibilityOverride?: EligibilityResult,
+  /**
+   * 다주택 중과 대상(유예 아님 · 2018.4.1. 이후 양도)이라 장기보유특별공제를 배제한다 — 소득세법 §95② 괄호
+   * 「제104조제7항 각 호에 따른 자산은 제외」. 일반 경로 L-1(`transfer-tax-lthd.ts`)과 같은 조건을 호출부가 정한다.
+   * 직전거주주택보유주택(B)의 과세 기간분에 중과가 붙는 경우(사용자 결정 2026-11-04 D-2,
+   * `docs/00-pm/rental-155-20-review-fixes.plan.md`)가 대상이다 — 표1·표2 공제를 모두 0으로 본다.
+   */
+  lthdExcludedBySurcharge = false,
 ): RentalHousingExceptionResult {
   const bothTables = (g: number, parts?: RentalLthdParts): Gain95BothTables | Gain95BothTablesByParts =>
-    parts
-      ? calculateGain95BothTablesByParts(parts, liveYears, transferDate)
-      : calculateGain95BothTables(g, holdYears, liveYears, transferDate);
+    lthdExcludedBySurcharge
+      ? { ltcTable1: 0, ltcTable2: 0, gain95Table1: g, gain95Table2: g, rateTable1: 0, rateTable2: 0 }
+      : parts
+        ? calculateGain95BothTablesByParts(parts, liveYears, transferDate)
+        : calculateGain95BothTables(g, holdYears, liveYears, transferDate);
   const isByParts = (t: Gain95BothTables | Gain95BothTablesByParts): t is Gain95BothTablesByParts => "land" in t;
   const withPartsEcho = (r: RentalHousingExceptionResult, t: Gain95BothTables | Gain95BothTablesByParts): RentalHousingExceptionResult =>
     isByParts(t)

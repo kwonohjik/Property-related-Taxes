@@ -6,7 +6,8 @@
  *
  * | # | 주장 |
  * |---|---|
- * | N-1 | B 성립 + 임대 포함 주택 수 2 + 조정 + 한시 배제 밖 → 중과 2주택 + 확인 필요 고지 |
+ * | N-1 | B 성립 + 임대 포함 주택 수 2 + 조정 + 한시 배제 밖 → 중과 2주택 + 확인 필요 고지 + **장기보유특별공제 배제**(소득세법 §95② — 사용자 결정 2026-11-04 D-2) |
+ * | N-1b | [짝] 한시 배제 기간(2024) 양도 → 중과 없음 → 장특 그대로 · 배제 고지 없음 |
  * | N-2 | 같은 입력이라도 중과가 안 붙으면(비조정 · 임대 제외 주택 수 1) 고지 없음 — 값은 입력 방식에 따라 갈린다(현행 · 결정 반영) |
  * | N-3 | 시나리오 A는 15호로 중과 배제 — 고지 없음 · B가 불성립이면 이 고지가 아니라 되돌림 고지 |
  * | N-4 | 고지 leaf 가드 — 중과 유형 · 시나리오 B · 요건 통과가 모두 있어야 한다(계산 경로로는 도달하지 못하는 방어 조건) |
@@ -20,6 +21,7 @@ import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
 import { PRHP_SURCHARGE_UNVERIFIED_NOTICE, prhpSurchargeUnverifiedNotice } from "@/lib/tax-engine/transfer-tax-rental-housing-judge";
+import { RENTAL_SURCHARGE_LTHD_EXCLUDED_NOTICE } from "@/lib/tax-engine/transfer-tax-rental-housing-step";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { runCalc } from "./one-house-pr6b/_helpers";
 
@@ -28,9 +30,9 @@ beforeEach(() => {
 });
 
 /** 2009 취득 · 양도 2026-08-01(한시 배제 2026-05-09 종료 뒤) · 15억 · 임대 1호(가목 5년 이상 80개월) 보유. */
-function form(count: string, regulated: boolean, scenario: "A" | "B", postRegMonths = "30") {
+function form(count: string, regulated: boolean, scenario: "A" | "B", postRegMonths = "30", transferDate = "2026-08-01") {
   const f = createDefaultTransferFormData();
-  Object.assign(f, { transferDate: "2026-08-01", householdHousingCount: count, isOneHousehold: true, isRegulatedArea: regulated, wasRegulatedAtAcquisition: false, contractTotalPrice: "1,500,000,000" });
+  Object.assign(f, { transferDate, householdHousingCount: count, isOneHousehold: true, isRegulatedArea: regulated, wasRegulatedAtAcquisition: false, contractTotalPrice: "1,500,000,000" });
   Object.assign(f.assets[0], { assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2009-08-12", actualSalePrice: "1,500,000,000", fixedAcquisitionPrice: "489,000,000", useEstimatedAcquisition: false, residenceInputMode: "direct", residencePeriodMonthsAsset: "30" });
   f.assets[0].rentalHousingException = {
     ...f.assets[0].rentalHousingException,
@@ -50,17 +52,29 @@ function form(count: string, regulated: boolean, scenario: "A" | "B", postRegMon
 const warns = (r: { result: { warnings?: unknown } }) => ((r.result.warnings ?? []) as string[]);
 
 describe("#20 성립 B 중과 — 확인 필요 고지", () => {
-  it("N-1 B 성립 + 주택 수 2 + 조정 → 중과 2주택(+20%p)이 붙고 고지가 실린다", async () => {
+  it("N-1 B 성립 + 주택 수 2 + 조정 → 중과 2주택(+20%p)이 붙고 장기보유특별공제를 배제한다(종전 장특 303,300,000 · 338,676,602)", async () => {
     const r = await runCalc(form("2", true, "B"));
     expect(r.result.rentalHousingExceptionDetail.scenarioId).toBe("RH-B2");
     expect(r.result.surchargeType).toBe("multi_house_2");
-    expect(r.result.totalTax).toBe(338_676_602);
+    expect(r.result.longTermHoldingDeduction).toBe(0);
+    expect(r.result.totalTax).toBe(510_362_600);
     expect(warns(r)).toContain(PRHP_SURCHARGE_UNVERIFIED_NOTICE);
+    expect(warns(r)).toContain(RENTAL_SURCHARGE_LTHD_EXCLUDED_NOTICE);
+  });
+
+  it("N-1b [짝] 한시 배제 기간(2024-06-01) 양도 → 중과 없음 → 장특 그대로 · 배제 고지 없음", async () => {
+    const r = await runCalc(form("2", true, "B", "30", "2024-06-01"));
+    expect(r.result.surchargeType).toBeUndefined();
+    expect(r.result.longTermHoldingDeduction).toBe(283_080_000);
+    expect(r.result.totalTax).toBe(223_679_412);
+    expect(warns(r)).not.toContain(RENTAL_SURCHARGE_LTHD_EXCLUDED_NOTICE);
   });
 
   it("N-2a [짝] 비조정이면 중과가 안 붙어 고지 없음 — 값은 임대 제외 입력과 같다", async () => {
     const r = await runCalc(form("2", false, "B"));
     expect(r.result.totalTax).toBe(216_673_182);
+    expect(r.result.longTermHoldingDeduction).toBe(303_300_000);
+    expect(warns(r)).not.toContain(RENTAL_SURCHARGE_LTHD_EXCLUDED_NOTICE);
     expect(warns(r)).not.toContain(PRHP_SURCHARGE_UNVERIFIED_NOTICE);
   });
 
