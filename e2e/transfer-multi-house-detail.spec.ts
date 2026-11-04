@@ -99,7 +99,7 @@ test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () =>
 
     // 등록사업자 ON → 등록일 2종 + 임대기간 노출
     await toggleCardByTitle(dialog, "임대사업자 정식 등록");
-    await expect(dialog.getByText("임대사업자 등록일", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("임대사업자 등록 신청일", { exact: true })).toBeVisible();
     await expect(dialog.getByText("사업자 등록일", { exact: true })).toBeVisible();
     await expect(dialog.getByText("임대기간 (년)", { exact: true })).toBeVisible();
 

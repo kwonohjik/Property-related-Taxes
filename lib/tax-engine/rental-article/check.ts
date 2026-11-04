@@ -238,21 +238,32 @@ function deriveEffectiveRegDate(biz: Date | null, rent: Date | null): Date | nul
 }
 
 /**
+ * 지자체 임대사업자등록 **신청일** ts — 2020.7.11.(마목 2) 아파트)·2020.8.18.(마·바목 의무기간 8→10년) 컷오프의 기준.
+ * 법문이 「임대사업자등록 신청」(소득세법 시행령 §155⑳ 본문·§167의3①2호 마목 2)·부칙<제31083호> 제5조)이라
+ * 세무서 사업자등록일은 넣지 않는다. 등록 완비(두 등록 모두)가 아니면 0 — `deriveEffectiveRegDate`의 null과 같은 규칙.
+ * 2018.3.31.(가목 1) 「사업자등록등」)·바목 2025.2.28. 상한·아·자목 2025.6.4. 하한은 종전대로 등록기준일(max)을 쓴다.
+ */
+function regApplicationTs(effRegDate: Date | null, rent: Date | null): number {
+  return effRegDate && rent ? rent.getTime() : 0;
+}
+
+/**
  * 아파트 등록 제한 (§167조의3①2호 목별 — 다주택 checkRentalType_* 정합).
  * - 단기(아/자): blanket 제외.
- * - 매입 장기(가/마): 등록기준일 ≥ 2020.7.11 & 아파트 → 제한.
+ * - 매입 장기(가/마): 지자체 등록 신청일 ≥ 2020.7.11 & 아파트 → 제한(마목 2) 「2020년 7월 11일 이후 … 임대사업자등록 신청」).
  * - 건설 장기(다/바)·구법·나: 일반 아파트 허용(다주택 checkRentalType_C/F에 isApartment 검사 없음).
  *   ※ 마·라 단기→장기/2020.7.11 이후 등록 아파트 배제는 isExcludedAfter20200711Apt 별도 flag(checkRentalArticle에서 결합).
  */
 export function isApartmentRestrictedForArticle(
   article: SharedRentalArticle,
-  effectiveRegDate: Date | null,
+  /** 지자체 임대사업자등록 신청일(두 등록 완비 시) — 세무서 사업자등록일과의 max가 아니다. */
+  regApplicationDate: Date | null,
   isApartment: boolean,
 ): boolean {
   if (!isApartment) return false;
   if (article === "아" || article === "자") return true;
   if (article === "가" || article === "마") {
-    return (effectiveRegDate?.getTime() ?? 0) >= RA_CUT.Y2020_07_11;
+    return (regApplicationDate?.getTime() ?? 0) >= RA_CUT.Y2020_07_11;
   }
   return false;
 }
@@ -272,7 +283,8 @@ function checkArticleGates(
   const gate = GATES[article];
   const effRegDate = deriveEffectiveRegDate(u.businessRegistrationDate, u.rentalRegistrationDate);
   const effTs = effRegDate?.getTime() ?? 0;
-  const requiredYears = rentalRequiredYears(article, effTs);
+  const appTs = regApplicationTs(effRegDate, u.rentalRegistrationDate);
+  const requiredYears = rentalRequiredYears(article, appTs);
   const stdPriceCap = rentalStdPriceCap(article, u.isCapitalArea, effTs);
   const fails: ArticleFailCode[] = [];
 
@@ -314,7 +326,7 @@ function checkArticleGates(
 
   // (i) 아파트 — 아·자 blanket / 가·마 date / 마·라 flag 결합
   const aptRestricted =
-    isApartmentRestrictedForArticle(article, effRegDate, u.isApartment) ||
+    isApartmentRestrictedForArticle(article, appTs ? new Date(appTs) : null, u.isApartment) ||
     (!!u.isExcludedAfter20200711Apt && (article === "마" || article === "라"));
   if (aptRestricted) fails.push("APARTMENT_RESTRICTED");
 
@@ -369,7 +381,8 @@ export function checkRentalArticle(
 ): ArticleCheckResult {
   const effRegDate = deriveEffectiveRegDate(u.businessRegistrationDate, u.rentalRegistrationDate);
   const effTs = effRegDate?.getTime() ?? 0;
-  const requiredYears = rentalRequiredYears(article, effTs);
+  const appTs = regApplicationTs(effRegDate, u.rentalRegistrationDate);
+  const requiredYears = rentalRequiredYears(article, appTs);
   const stdPriceCap = rentalStdPriceCap(article, u.isCapitalArea, effTs);
   const fails: ArticleFailCode[] = [];
 

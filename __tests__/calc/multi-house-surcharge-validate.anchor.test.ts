@@ -102,7 +102,7 @@ describe("VC-2 — 가액기준 행의 기준시가(③ 보유 주택)", () => {
 describe("VC-3~5 — 중과 축 leaf", () => {
   it("[VC-3] 등록 장기임대 행의 등록일 누락: 중과 ⑧만 막는다(1주택 ⑧은 그 칸을 닫는다)", () => {
     const f = form(GANGNAM, "", [row("h1", { regionCode: GANGNAM, officialPrice: "500000000", isLongTermRental: true, isRegisteredRental: true })]);
-    expect(errorsOf(f, 2).map((e) => e.message).join()).toMatch(/임대사업자 등록일/);
+    expect(errorsOf(f, 2).map((e) => e.message).join()).toMatch(/임대사업자 등록 신청일/);
     expect(validateStepByIndex(f, 2).filter((e) => e.severity === "error")).toEqual([]);
   });
   it("[VC-4] 1주택 ⑧이 이미 오류를 낸 행에는 중과 축 오류를 더하지 않는다(행별 첫 오류 1건)", () => {

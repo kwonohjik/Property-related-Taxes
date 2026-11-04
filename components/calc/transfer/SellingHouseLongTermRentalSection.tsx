@@ -89,7 +89,7 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
             <div className="space-y-2 pt-1">
               <div className="space-y-1">
                 <label className="block text-caption text-muted-foreground font-medium">
-                  임대사업자 등록일
+                  임대사업자 등록 신청일
                 </label>
                 <DateInput
                   value={ltr.rentalRegistrationDate ?? ""}

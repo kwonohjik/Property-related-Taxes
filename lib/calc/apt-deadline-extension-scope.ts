@@ -15,7 +15,7 @@ import { saMokTransferDeadline } from "@/lib/tax-engine/rental-article/rules";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { ARTICLE_BY_RENTAL_TYPE } from "@/lib/tax-engine/multi-house-surcharge-count";
 import {
-  deriveEffectiveRegDate,
+  deriveRegApplicationDate,
   deriveRentalArticle,
   isTerminationEligibleArticle,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
@@ -132,7 +132,7 @@ export function rentalUnitAptDeadlineInScope(u: RentalUnitForm | undefined): boo
   if (!u?.isApartment) return false;
   const effReg =
     u.businessRegistrationDate && u.rentalRegistrationDate
-      ? deriveEffectiveRegDate({
+      ? deriveRegApplicationDate({
           businessRegistrationDate: new Date(u.businessRegistrationDate),
           rentalRegistrationDate: new Date(u.rentalRegistrationDate),
         })

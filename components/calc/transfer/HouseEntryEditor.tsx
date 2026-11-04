@@ -575,7 +575,7 @@ function LongTermRentalSection({
           >
             <div className="space-y-2 pt-1">
               <div className="space-y-1">
-                <label className="block text-caption text-muted-foreground font-medium">임대사업자 등록일</label>
+                <label className="block text-caption text-muted-foreground font-medium">임대사업자 등록 신청일</label>
                 <DateInput
                   value={house.rentalRegistrationDate ?? ""}
                   onChange={(v) => onUpdate({ rentalRegistrationDate: v || undefined })}
@@ -643,7 +643,7 @@ function LongTermRentalSection({
             >
               위 <strong>「임대사업자 정식 등록」</strong>이 완료되지 않아, 아래 유형을 모두
               채워도 <strong>중과 배제가 적용되지 않습니다</strong>. 등록 토글을 켜고
-              임대사업자 등록일·사업자 등록일을 입력하세요.
+              임대사업자 등록 신청일·사업자 등록일을 입력하세요.
             </p>
           )}
           {/* 9유형(가~자목) 매트릭스 — 유형 선택 시 유형별 요건 정밀 판정 */}
