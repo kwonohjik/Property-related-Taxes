@@ -6,7 +6,6 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { validateStep } from "./transfer-tax-validate";
-import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { effectiveLandCarryover } from "./transfer-land-part-cause";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
@@ -22,10 +21,6 @@ import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "./multi-transfer-supp
 import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { multiRosterBlockMessage } from "./multi-roster-parity";
-import { MULTI_SEC164_CLAUSE_B_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
-import { sec164HouseStatus } from "./sec164-required-fields";
-import { sec164LandStatus } from "./sec164-required-fields";
-import { sec164CommercialStatus } from "./sec164-required-fields";
 
 /**
  * 다건 합산 엔진(`calculateTransferTaxAggregate`)이 미지원하는 감면 조문 집합 (2026-06-12 리뷰 H-1).
@@ -155,26 +150,9 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   if (a.acquisitionCause === "carryover_gift" || effectiveLandCarryover(a)) {
     return MULTI_CARRYOVER_UNSUPPORTED_MESSAGE;
   }
-  // §163⑨ 단서 ② — 다건 ④는 ①(신고가액)만 싣는다. ② 전용 칸(공유 면적 칸 제외 — `triggered`)에 입력이 있으면 그 값이 조용히 빠졌다
-  //   (실측: 상속 주택 ① 3억 + ② 7.2억 → 282,711,000 = ① 단독 ↔ ① 7.2억 149,006,000). 막고 단건으로 보낸다 —
-  //   계획서 multi-sec163-9-clause-b-drop.plan.md Q-1 a · Q-2 a. ②를 비운 자산은 단건과 같이 ①로 계산한다.
-  //   D2(건물 상속·증여 + 토지 매매)는 제외 — 건물 몫 ②는 파트 페이로드(`buildingSec164Value`)로 다건도 싣는다(anchor D2-4a G-1).
-  if (
-    !effectiveBuildingCauseMix(a) &&
-    [sec164HouseStatus(a), sec164LandStatus(a), sec164CommercialStatus(a)].some((st) => st?.triggered === true)
-  ) {
-    return MULTI_SEC164_CLAUSE_B_UNSUPPORTED_MESSAGE;
-  }
-  if (
-    a.acquisitionCause === "inheritance" &&
-    !effectiveBuildingCauseMix(a) && // D2 — 건물 평가액은 건물 파트 취득가액 칸(`buildingAcquisitionPrice`)이 정본이라 신고가액을 요구하지 않는다
-    parseAmount(a.publishedValueAtInheritance ?? "0") <= 0
-  ) {
-    // (b) 다건은 상속세 신고가액(publishedValueAtInheritance)을 취득가액으로 직접 사용.
-    // 신고가액이 확정되면 허용하고, 공란이면 보충적평가 자동조회·환산 등 단건 전용 산정 경로가
-    // 필요한데 다건 route 미지원 → 취득가액 0 과대과세되므로 신고가액 확정 전까지만 차단.
-    return "상속 취득가액(신고가액)을 입력하거나 단건 계산기를 사용하세요. 보충적평가 자동조회·환산취득가는 단건 계산기에서만 지원됩니다.";
-  }
+  // 상속·증여 §163⑨ 취득가액(① 평가액 · ② §164 기준시가 · 의제 전 ③ 환산)은 다건도 단건과 같은 빌더로 싣는다
+  //   (`buildPropertyPayload` — 계획서 multi-sec163-9-support.plan.md Q-1 a). ① 공란·② 부분 입력은 건별 ⑧(`validateStep` —
+  //   `postDeemedClauseARequiredError` 등)이 단건과 같이 짚는다(Q-2 a). 종전 다건 전용 「상속 ① 공란」 가드와 #2888의 ② 입력 차단은 지웠다.
   // 비주택 → 주택 용도변경(§95⑤·⑥ · 영 §154⑤ 단서)은 **차단하지 않는다** (G2-4, 2026-10-11).
   //    종전 차단(Q26)의 사유는 다건 ④⑬이 `nonHousingToHousingConversion` 키와 §95⑤2호 거주월수 클램프를
   //    만들지 않는다는 배관 미비뿐이었다. 지금은 ④⑬(`multi-transfer-tax-api.ts`)이 단건과 같은 두 leaf

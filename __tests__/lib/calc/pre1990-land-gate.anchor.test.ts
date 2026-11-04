@@ -134,10 +134,14 @@ describe("[A09] ⑬ 다건 — 단건과 같은 게이트 (종전엔 가드가 �
     expect(payload.pre1990Land).toBeUndefined();
   });
 
-  it("A09-12: post-1985 증여 배제 — 종전 다건에는 이 가드가 없었다", () => {
-    const payload = buildPropertyPayload(
-      landForm({ acquisitionCause: "gift", acquisitionDate: "1987-05-01" }),
-    ) as Record<string, unknown>;
-    expect(payload.pre1990Land).toBeUndefined();
+  // 계획서 multi-sec163-9-support.plan.md — 다건 게이트를 단건과 같은 `hasPre1990 || hasPre1990ForSec164`로 맞췄다.
+  // 1990.8.30. 전 증여 토지는 §163⑨ 단서 1호(②: §164④) 대상이라 단건도 pre1990Land를 싣는다 — 종전 「다건은 미구성」은 단건과 달랐다(의도된 반전).
+  it("A09-12: 1987 증여 토지(§163⑨1호) — 단건과 같이 pre1990Land 구성", async () => {
+    const f = landForm({ acquisitionCause: "gift", acquisitionDate: "1987-05-01" });
+    const payload = buildPropertyPayload(f) as Record<string, unknown>;
+    const { run, get } = captureBody(landForm({ acquisitionCause: "gift", acquisitionDate: "1987-05-01" }));
+    await run();
+    expect(payload.pre1990Land).toBeDefined();
+    expect(payload.pre1990Land).toEqual((get() as Record<string, unknown>).pre1990Land);
   });
 });

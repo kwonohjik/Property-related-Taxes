@@ -1,9 +1,10 @@
 /**
- * 다건 — 상속 §164 기준시가(②) 입력이 있으면 「단건 계산기에서만 지원」으로 막는다
- * (계획서 `docs/02-design/features/multi-sec163-9-clause-b-drop.plan.md` Q-1 a · Q-2 a · Q-3 a).
+ * 다건 — 상속 §164 기준시가(②)를 단건과 같은 경로로 계산한다
+ * (계획서 `docs/02-design/features/multi-sec163-9-support.plan.md` Q-1 a · Q-2 a · 종전 #2888은 같은 입력을 막았다).
  *
- *   MB-E1 상속 주택(2000) · ① 3억 + ② 채움 → 「세액 계산」에서 막히고 요청이 나가지 않는다(종전: ②가 조용히 빠져 282,711,000).
- *   MB-E2 같은 자산 · ② 비움 → 막지 않고 200(① 단독 · 단건과 같은 계산).
+ *   MS-E1 상속 주택(2000) · ① 3억 + ② 7.2억 → 「세액 계산」 200 · 본문 `properties[0].inheritedHouseValuation` · 총세액 149,006,000
+ *         (단건 135,460,000 × 1.1 · #2888 전에는 ②가 빠져 282,711,000).
+ *   MS-E2 같은 자산 · ① 비우고 ②만 → 막지 않고 같은 149,006,000.
  * 사람이 브라우저로 직접 한 수동 확인은 아니다(headless Playwright). 워크트리는 `E2E_PORT=<포트> npx playwright test <spec>`.
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -43,19 +44,27 @@ async function seedMulti(page: Page, form: Record<string, unknown>) {
   await page.waitForTimeout(1500);
 }
 
-test("MB-E1·E2: 다건 상속 주택 — ② 입력이 있으면 막고, 비우면 계산한다", async ({ page }) => {
-  test.setTimeout(150_000);
-  let posted = false;
-  page.on("request", (r) => { if (r.url().includes("/api/calc/transfer/multi") && r.method() === "POST") posted = true; });
-  await seedMulti(page, formOf({ ...HOUSE, ...SEC164 }));
-  await page.getByRole("button", { name: "세액 계산" }).click();
-  await expect(page.getByText(/§164 기준시가\(②\)와 비교하는 상속·증여 취득가액/).first()).toBeVisible({ timeout: 15_000 });
-  expect(posted).toBe(false);
+type Loose = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-  await seedMulti(page, formOf(HOUSE));
+async function calc(page: Page) {
   const resp = page.waitForResponse((r) => r.url().includes("/api/calc/transfer/multi") && r.request().method() === "POST", { timeout: 30_000 });
   await page.getByRole("button", { name: "세액 계산" }).click();
   const r = await resp;
-  expect(r.status()).toBe(200);
-  await expect(page.getByText(/§164 기준시가\(②\)와 비교하는/)).toHaveCount(0);
+  const json = (await r.json()) as Loose;
+  return { status: r.status(), json, sent: r.request().postDataJSON() as Loose };
+}
+
+test("MS-E1·E2: 다건 상속 주택 — ①+② · ②만 모두 ②로 계산한다(149,006,000)", async ({ page }) => {
+  test.setTimeout(150_000);
+  await seedMulti(page, formOf({ ...HOUSE, ...SEC164 }));
+  const a = await calc(page);
+  expect(a.status, JSON.stringify(a.json).slice(0, 400)).toBe(200);
+  expect(a.sent.properties?.[0]?.inheritedHouseValuation).toBeDefined();
+  expect(a.json.data?.result?.totalTax ?? a.json.data?.totalTax).toBe(149_006_000);
+  await expect(page.getByText(/단건 계산기에서만 지원/)).toHaveCount(0);
+
+  await seedMulti(page, formOf({ ...HOUSE, ...SEC164, publishedValueAtInheritance: "" }));
+  const b = await calc(page);
+  expect(b.status, JSON.stringify(b.json).slice(0, 400)).toBe(200);
+  expect(b.json.data?.result?.totalTax ?? b.json.data?.totalTax).toBe(149_006_000);
 });
