@@ -36,6 +36,11 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
   const eventKey = bgCarryoverFormKey(asset);
   /** 주택·건물 토글 C — 당초 증여자 값도 토지·건물 두 칸(④·⑧과 같은 술어 · 설계서 `bg-house-building-split.design.md` §5.2). */
   const houseSplit = bgHouseSplitActive(asset);
+  /**
+   * 주택·상가는 기준시가가 토지를 포함한 한 값으로 고시된다(「소득세법」 제99조 제1항 제1호 라목·다목) — 엔진은 당초 증여자 두 칸의 **합계**만 쓴다
+   * (④ 양도인 쪽도 한 값을 건물 자리에 싣는다). 그래서 0은 오입력이 아니라 「합계를 한 칸에」의 정상 입력이다. 토글 C(houseSplit)면 토지·건물을 따로 계산한다.
+   */
+  const singleStd = houseSplit ? undefined : asset.assetKind === "housing" ? "housing" : asset.assetKind === "commercial_building" ? "commercial" : undefined;
   return (
     <div
       className="rounded-lg border border-sky-300 bg-sky-50/70 p-3 space-y-2 dark:bg-sky-950/40"
@@ -83,7 +88,13 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
           {parts.land && (
             <FieldCard
               label="당초 증여자 취득 당시 토지 기준시가"
-              hint="개별공시지가 × 면적. 토지가 없으면 0을 입력하세요."
+              hint={
+                singleStd === "housing"
+                  ? "주택의 기준시가는 토지를 포함한 한 값(개별주택가격·공동주택가격 — 「소득세법」 제99조 제1항 제1호 라목)입니다. 그 값을 이 칸에 넣고 건물 칸은 0을 입력하세요 — 두 칸 합계로 계산합니다."
+                  : singleStd === "commercial"
+                    ? "국세청이 토지와 건물을 일괄 고시하는 상업용 건물·오피스텔(「소득세법」 제99조 제1항 제1호 다목)이면 그 기준시가를 이 칸에 넣고 건물 칸은 0을 입력하세요. 그 밖에는 개별공시지가 × 면적입니다 — 두 칸 합계로 계산합니다."
+                    : "개별공시지가 × 면적. 토지가 없으면 0을 입력하세요."
+              }
             >
               <CurrencyInput
                 label=""
@@ -100,7 +111,11 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
               hint={
                 asset.assetKind === "general_building" || houseSplit
                   ? "당초 증여자가 건물을 취득할 당시의 건물 기준시가 — 직접 신축했으면 사용승인일 당시(「소득세법 시행령」 제162조 제1항 제4호). 0일 수 없습니다."
-                  : "건물이 없으면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
+                  : singleStd === "housing"
+                    ? "토지 칸에 개별주택가격·공동주택가격을 넣었으면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
+                    : singleStd === "commercial"
+                      ? "토지 칸에 일괄 고시 기준시가를 넣었으면 0을 입력하세요. 그 밖에는 국세청 건물 기준시가(「소득세법」 제99조 제1항 제1호 나목)입니다."
+                      : "건물이 없으면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
               }
             >
               <CurrencyInput
