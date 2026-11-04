@@ -242,6 +242,8 @@ function toNormalizedFromHouse(house: HouseInfo, transferDate: Date): Normalized
     rentalRegistrationDate: house.rentalRegistrationDate ?? null,
     isCapitalArea: isCapitalAreaHouse(house),
     isApartment: house.isApartment,
+    // 같은 사실(「주택법」 도시형 생활주택인 아파트)이 2호 가목2) 괄호에도 걸린다 — 양도기한 게이트만 비적용.
+    isUrbanLifeHousingApartment: house.isUrbanLifeHousingApartment,
     rentalStartOfficialPrice: house.rentalStartOfficialPrice ?? house.officialPrice,
     acquisitionOfficialPrice: house.acquisitionOfficialPrice ?? house.officialPrice,
     rentalYears: calcRentalPeriodYears(house),

@@ -85,6 +85,7 @@ function rowFor(unit: RentalUnitInput, index: number, transferDate: Date, rental
     isOfficetel: false,
     isUnsoldHousing: false,
     isApartment: unit.isApartment,
+    isUrbanLifeHousingApartment: unit.isUrbanLifeHousingApartment, // 2호 양도기한 게이트 — ⑳ 판정과 같은 사실
     isLongTermRental: true,
     isRegisteredRental: true,
     rentalType,

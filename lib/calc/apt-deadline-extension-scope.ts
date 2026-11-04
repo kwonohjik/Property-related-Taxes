@@ -125,10 +125,11 @@ export function rentalDeclarationAptDeadlineInScope(d: RentalDeclaration | undef
 }
 
 /**
- * §155⑳ 임대주택 카드 — 도출 목이 가·나·라·마 + 아파트 + §155㉓ 말소 경로가 아님(㉓은 이 요건을 적용하지
- * 않는다 — 엔진 `skipAptTransferDeadlineGate`와 같은 조건).
+ * §155⑳ 임대주택 카드 — 「도시형 생활주택인 아파트인가」를 묻는 호: 도출 목이 가·나·라·마 + 아파트 + §155㉓ 말소 경로가
+ * 아님. 가목2) 괄호(「도시형 생활주택인 아파트는 제외한다. 이하 이 목, 나목2)ㆍ라목8) 및 마목4)에서 같다」)가 바로 이
+ * 양도기한에만 걸리므로 범위가 양도기한 게이트와 같다. ⑤ 노출 · ④ 전송이 같은 술어를 쓴다.
  */
-export function rentalUnitAptDeadlineInScope(u: RentalUnitForm | undefined): boolean {
+export function rentalUnitUrbanLifeQuestionInScope(u: RentalUnitForm | undefined): boolean {
   if (!u?.isApartment) return false;
   const effReg =
     u.businessRegistrationDate && u.rentalRegistrationDate
@@ -140,6 +141,14 @@ export function rentalUnitAptDeadlineInScope(u: RentalUnitForm | undefined): boo
   const article = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, effReg);
   if (!isGated(article)) return false;
   return !(u.rentalAutoTermination && isTerminationEligibleArticle(article));
+}
+
+/**
+ * §155⑳ 임대주택 카드 — ⑪ 연장 사실을 묻는 호: 위 범위 + 도시형 생활주택인 아파트가 아님(엔진 `check.ts` (m) 게이트와 같은 조건 ·
+ * ㉓ 말소 경로는 엔진 `skipAptTransferDeadlineGate`와 같은 조건). ⑤·④·⑧이 같은 술어를 쓴다.
+ */
+export function rentalUnitAptDeadlineInScope(u: RentalUnitForm | undefined): boolean {
+  return rentalUnitUrbanLifeQuestionInScope(u) && u?.isUrbanLifeHousingApartment !== true;
 }
 
 /** §97의4 폼 중 가목2) 기한 판정에 쓰는 칸 */

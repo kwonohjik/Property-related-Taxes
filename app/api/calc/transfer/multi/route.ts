@@ -554,6 +554,7 @@ export async function POST(request: NextRequest) {
               rentalCategory: u.rentalCategory,
               rentalAcquisitionType: u.rentalAcquisitionType,
               isApartment: u.isApartment,
+              isUrbanLifeHousingApartment: u.isUrbanLifeHousingApartment, // 가목2) 괄호 — 양도기한 게이트만 (단건과 동일)
               region: u.region,
               regionCode: u.regionCode, // 영 §167의3①1호 지역기준(결정 #20 C 후속)
               officialPriceAtTransfer: u.officialPriceAtTransfer, // 영 §167의3①1호 양도 당시 기준시가
