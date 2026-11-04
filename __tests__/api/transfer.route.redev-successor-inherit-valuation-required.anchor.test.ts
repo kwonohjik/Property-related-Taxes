@@ -149,11 +149,10 @@ describe("H-2 ②(§164④~⑦ 기준시가)는 ①의 대안 — ④와 같은 
     const r = await run(single({ ...Y2004, inhHouseValHousePriceAtFirst: "" }));
     expect(r.fields).toEqual(["inhHouseValHousePriceAtFirst"]);
   });
-  it("H-2d 컴패니언은 ②를 대안으로 보지 않는다 — ④가 ①만 싣는다(종전 ⑧ 통과 ↔ 엔진 400 · 리뷰 게이트 지적)", async () => {
+  it("H-2d 컴패니언도 ②가 ①의 대안이다 — ④가 ②를 싣는다(계획서 redev-companion-sec164-carry Q-2 a · 종전: ⑧이 ① 칸 요구)", async () => {
     const onlySec164 = await run(bundle(Y2004));
-    expect(onlySec164.fields).toEqual(["publishedValueAtInheritance"]);
-    expect(onlySec164.messages[0]).toContain("함께 양도하는 자산은 §164 기준시가로 대신 계산하지 않습니다");
-    expect(onlySec164.status).toBe(400);
+    expect(onlySec164.fields).toEqual([]);
+    expect(onlySec164.status).toBe(200);
     const withReported = await run(bundle({ ...Y2004, publishedValueAtInheritance: "200,000,000" }));
     expect(withReported.fields).toEqual([]);
     expect(withReported.status).toBe(200);

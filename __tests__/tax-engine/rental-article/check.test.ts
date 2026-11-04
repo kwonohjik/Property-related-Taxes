@@ -205,13 +205,35 @@ describe("checkRentalArticle — C3 확장 (나·라·사·아·자 게이트)",
     expect(shortToLong.failCodes).toContain("SHORT_TO_LONG_CHANGE");
   });
 
-  it("D-1: split-date 마목 max(biz 2020-09·rent 2020-07) → 10년 요건", () => {
+  /**
+   * 2020.8.18. 컷오프는 지자체 등록 **신청일** 기준(부칙<제31083호> 제5조 「등록을 신청한」 — 사용자 결정 2026-11-04 D-1,
+   * `docs/00-pm/rental-155-20-review-fixes.plan.md`). Phase2 통합(D-1)이 max(두 등록일)로 균일화했던 것을 되돌린다.
+   */
+  it("D-1: split-date 마목(biz 2020-09·rent 2020-07) → 신청일 2020-07 < 2020-08-18 → 8년 요건", () => {
     const r = checkRentalArticle("마", base({
       businessRegistrationDate: new Date("2020-09-01"), rentalRegistrationDate: new Date("2020-07-01"),
       rentalYears: 9,
     }));
-    expect(r.requiredYears).toBe(10); // max=2020-09 ≥ 2020-08-18 → 10 (지자체-only였다면 8)
+    expect(r.requiredYears).toBe(8);
+    expect(r.failCodes).not.toContain("RENTAL_PERIOD_SHORT");
+  });
+  it("D-1 [짝] 신청일이 2020-08-18 이후면 세무서 등록이 앞서도 10년", () => {
+    const r = checkRentalArticle("마", base({
+      businessRegistrationDate: new Date("2020-07-01"), rentalRegistrationDate: new Date("2020-08-18"),
+      rentalYears: 9,
+    }));
+    expect(r.requiredYears).toBe(10);
     expect(r.failCodes).toContain("RENTAL_PERIOD_SHORT");
+  });
+  it("D-1 마목 아파트: 신청 2020-07-09·세무서 2020-08-03 → 아파트 제한 없음 / 신청 2020-07-11 → 제한", () => {
+    const pass = checkRentalArticle("마", base({
+      businessRegistrationDate: new Date("2020-08-03"), rentalRegistrationDate: new Date("2020-07-09"), isApartment: true, rentalYears: 9,
+    }));
+    expect(pass.failCodes).not.toContain("APARTMENT_RESTRICTED");
+    const fail = checkRentalArticle("마", base({
+      businessRegistrationDate: new Date("2020-07-09"), rentalRegistrationDate: new Date("2020-07-11"), isApartment: true, rentalYears: 9,
+    }));
+    expect(fail.failCodes).toContain("APARTMENT_RESTRICTED");
   });
 
   it("마목 아파트: 2021 등록 아파트 → APARTMENT_RESTRICTED (date-derived)", () => {

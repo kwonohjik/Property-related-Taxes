@@ -218,16 +218,18 @@ describe("⑤ 화면 — 토지 출자 원조합원에 §164④ 칸 · 주택 �
   });
 });
 
-describe("컴패니언 — ② 운반 없음(범위 밖) · ⑧이 ①을 요구해 ⑫ 400 막다른 길을 막는다", () => {
+describe("컴패니언 — ②도 운반한다(계획서 redev-companion-sec164-carry.plan.md Q-1 a · Q-2 a · 종전: ② 운반 없음 · ⑧이 ①을 요구)", () => {
   const LAND: A = { addressJibun: "서울 강남구 테스트동 1-1", assetKind: "land", landNature: "standalone", acquisitionCause: "purchase", acquisitionDate: "2015-01-01", fixedAcquisitionPrice: "100000000", actualSalePrice: "200,000,000", fixedSalePrice: "200,000,000" };
   const pair = (o: A) => Object.assign(mk([LAND, { ...o, actualSalePrice: "1,100,000,000", fixedSalePrice: "1,100,000,000" }]), { bundledSaleMode: "actual" }) as TransferFormData;
   const total = (r: { data: Body }) => r.data?.aggregated?.totalDeterminedTax ?? r.data?.aggregated?.determinedTax;
   it.each([
-    ["토지 출자 1988 ① 빈칸 + ②(종전: ⑧ 통과 ↔ ⑫ 400)", OM({ ...at("1988-06-01"), ...GRADE, publishedValueAtInheritance: "" })],
-    ["주택 출자 2000 ① 빈칸 + ②(#2778부터 같은 막다른 길)", OM({ ...at("2000-06-01"), ...IND, redevOriginalAssetType: "housing", publishedValueAtInheritance: "" })],
-  ] as [string, A][])("%s → ⑧ 「함께 양도하는 자산은 §164 기준시가로 대신 계산하지 않습니다」", async (_n, o) => {
+    ["토지 출자 1988 ① 빈칸 + ② 4.8억", OM({ ...at("1988-06-01"), ...GRADE, publishedValueAtInheritance: "" }), 211_650_000],
+    ["주택 출자 2000 ① 빈칸 + ② 7.2억", OM({ ...at("2000-06-01"), ...IND, redevOriginalAssetType: "housing", publishedValueAtInheritance: "" }), 116_260_000],
+  ] as [string, A, number][])("%s → ⑧ 통과 · 200 · %d(종전: ⑧ 「함께 양도하는 자산은 §164 기준시가로 대신 계산하지 않습니다」)", async (_n, o, tax) => {
     const r = await check(pair(o));
-    expect(issueText(r)).toContain("함께 양도하는 자산은 §164 기준시가로 대신 계산하지 않습니다");
+    expect(issueText(r)).toBe("");
+    expect(r.status).toBe(200);
+    expect(total(r)).toBe(tax);
   });
   it("묶음 주 자산이 토지 출자 원조합원 — primaryInheritanceValuation 면적 = 종전 토지 · 264,570,000(master와 같음)", async () => {
     const f = Object.assign(mk([{ ...OM(at("1988-06-01")), actualSalePrice: "1,100,000,000", fixedSalePrice: "1,100,000,000" }, LAND]), { bundledSaleMode: "actual" }) as TransferFormData;
