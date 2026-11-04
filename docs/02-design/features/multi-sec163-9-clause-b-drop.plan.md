@@ -1,6 +1,7 @@
 # 다건 계산 — 상속·증여 §164 기준시가(②)를 조용히 버린다
 
 > **출처**: `redev-successor-inherit-right-no-sec164.plan.md` §4 V-2′(#2876) · `redev-companion-sec164-carry.plan.md` §4 V-2(#2882) — 「다건(`/api/calc/transfer/multi`) 측정 안 함」.
+> **결정**: 사용자 「권장안으로」(2026-11-04) — Q-1 a · Q-2 a · Q-3 a.
 > **검증 깊이**: L3 — 세액이 바뀐다(또는 막힌다). 재개발은 다건이 이미 막는다 — 결함은 **일반** 상속·증여 주택·토지에서 나왔다.
 
 ## 0. 결론
@@ -62,9 +63,37 @@
 | ID | 항목 | 상태 |
 |---|---|---|
 | V-1 | Q-1 b(다건 ② 지원) | ⏳ 별건 — Q-1 a로 막은 뒤 필요하면 계획서 |
-| V-2 | 다건 ⑤ 화면에 ② 칸이 실제로 보이는가(다건은 단건 마법사를 임베드한다 — 보인다고 추정) | ⏳ Playwright로 확인 |
-| V-3 | D2·축 B 지분 카드 ② 경로 | ⏳ 구현 전 측정 |
+| V-2 | 다건 ⑤ 화면에 ② 칸이 실제로 보이는가 | ⏳ 확인 안 함 — E2E는 저장 상태를 넣고 「세액 계산」만 누른다. 가드는 칸 표시와 무관하게 입력값으로 판정한다 |
+| V-3 | D2·축 B 지분 카드 ② 경로 | ✅ 2026-11-04 실측 — **D2는 다건이 이미 지원한다**(건물 몫 ②를 파트 페이로드 `buildingSec164Value`로 싣는다 · 기존 anchor D2-4a G-1). 초안 가드가 D2를 막아(`sec164HouseStatus.triggered`) `effectiveBuildingCauseMix` 제외를 더했다(§6 · M2). 축 B는 다건 가드가 첫 자산만 본다 — 종전과 같다 |
 
 ## 5. 법령 근거
 
 - 소득세법 시행령 §163⑨ 본문·단서 1호·2호 — KoreanLaw MCP 현행(mst 290841) 본문(#2876 계획서 §5와 같은 조회).
+
+## 6. 구현 결과 (2026-11-04)
+
+### 6.1 변경
+
+1. ⑧ `validateMultiSupportedMode`(`lib/calc/multi-transfer-tax-validate.ts`) — D2 아님(`!effectiveBuildingCauseMix`) ∧ `sec164HouseStatus`·`sec164LandStatus`·`sec164CommercialStatus` 중 하나가 `triggered`(② 전용 칸 입력 — 공유 면적 칸 제외) → `MULTI_SEC164_CLAUSE_B_UNSUPPORTED_MESSAGE`. 기존 상속 ① 공란 가드보다 **앞**이라 ②만 넣은 경우도 새 문구를 본다. 재개발·입주권·상가 차단은 더 앞이라 그대로다.
+2. 문구 `lib/calc/multi-transfer-support-messages.ts` — 「§164 기준시가(②)와 비교하는 상속·증여 취득가액(소득세법 시행령 §163⑨ 단서)은 단건 계산기에서만 지원됩니다. ② 칸을 비우면 상속세·증여세 신고가액(①)으로 계산합니다.」 인용은 `MIXED_USE.INHERITANCE_DIRECT`(기존 상수 · 새 조문 없음). 이 파일은 서버 스키마가 import하므로 의존성이 없어야 했다 — 순수 상수 모듈 `legal-codes`만 예외로 적었다.
+3. ⑫·④·⑭ — 변경 없음.
+
+### 6.2 테스트
+
+- 신규 anchor `__tests__/calc/multi-sec163-9-clause-b-drop.anchor.test.ts` 13건:
+  - MB-1 막음: 상속 주택 ①+② · ② 한 칸 · ②만 · 증여 주택 ①+② · 상속 토지 1988 등급 · 문구.
+  - MB-2 통과: 상속 주택 ① 단독(다건 route 200 · 282,711,000 = 단건 257,010,000 × 1.1) · 토지 면적만(공유 칸) · 2010 상속 남은 ② 값 · 매매 남은 ② 값 · D2(통과 + 다건 route 200 · 본문 `buildingSec164Value` · 단건 × 1.1과 같은 세액) · 재개발은 기존 문구가 먼저.
+- E2E `e2e/multi-sec163-9-clause-b-drop.spec.ts` MB-E1·E2(headless Playwright — 사람이 직접 한 브라우저 확인은 아니다): ② 채운 상속 주택 → 「세액 계산」에서 문구 · 요청 없음 / ② 비움 → 200. 인접 다건 E2E(`transfer-multi-pre1990-land` · `transfer-phd-non-estimated-mode`) 포함 10/10. E2E 뮤테이션(M1) → MB-E1 실패 확인.
+- 변경 전 안전망: 다건에서 ② 입력을 막는 테스트 0건.
+- mutation:
+
+| M | 무력화 | 실패 |
+|---|---|---|
+| M1 | 가드 반환 제거 | MB-1 ×5 · E2E MB-E1 |
+| M2 | D2 제외 제거 | MB-2 D2 |
+| M3 | `triggered` → `filled > 0`(공유 칸도 셈) | MB-2 토지 면적만 |
+| M4 | 토지 상태 제거 | MB-1 토지 |
+| M5 | 주택 상태 제거 | MB-1 주택 ×4 |
+| M6 | 가드를 상속 ① 공란 가드 뒤로 | MB-1 ②만 |
+
+- 다건 관련 기존 테스트(다건 validate·API·D2-4a 포함) 83파일 1,208건 통과 · tsc 0 · 변경 파일 eslint 0.
