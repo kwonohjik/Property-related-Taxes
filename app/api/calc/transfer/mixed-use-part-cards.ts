@@ -207,6 +207,15 @@ export function buildMixedUsePartCards(
     totalPropertyTransferPrice: undefined,
     /** 겸용 서브객체는 **파트로 대체**됐다 — 남기면 item이 겸용 엔진을 다시 부른다. */
     mixedUse: undefined,
+    /**
+     * · **§163⑨ 상속·증여 취득가액 의제**(`inheritedAcquisition`): 겸용 엔진이 상속개시일·증여일 평가액을 주택분·상가분으로
+     *   **이미 안분해** 각 파트 취득가액에 넣었다(`inheritedAcquisitionDetail`). 남기면 카드마다 STEP 0.45가 **자산 전체**
+     *   평가액으로 취득가액을 다시 덮어 같은 값을 카드 수만큼 뺀다 — 주 자산 겸용(상속 평가액 6억)이 전 카드 차손 · 세액 0이었다
+     *   (컴패니언 배치 208,837,200 · `mixed-primary-inherited-acquisition-dup.plan.md`). 컴패니언 ④는 이 키를 아예 싣지 않는다
+     *   (`ownsAcquisitionSubobject`) — 주 자산 ④는 겸용이어도 싣는다(그 화면에 칸이 없는 상속은 잔재, 증여는 「증여 신고가액」).
+     *   보조 2키(`inheritedHouseValuation`·`commercialInheritanceValuation`)는 이 키가 없으면 STEP 0.45가 읽지 않는다.
+     */
+    inheritedAcquisition: undefined,
   } satisfies Partial<TransferTaxItemInput>;
 
   /** 주택이 아닌 파트 — 세대 축을 지운다(GB `buildProperties`와 같은 규약). */
