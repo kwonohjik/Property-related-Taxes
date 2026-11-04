@@ -21,6 +21,7 @@ import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
+import { bgConvertedCarryoverReadsGiftValuation } from "./bg-carryover-parts";
 
 type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause" | "redevIsSuccessorMember" | "isMixedUseHouse">> & Pick<
   AssetForm,
@@ -63,7 +64,8 @@ export function needsBgAcqStdPriceInput(asset: AcqStdAsset, isFractionalSplit?: 
   return (
     asset.transferType === "burdened_gift" &&
     (asset.bgValuationMode !== "sangjeungbeop_market" ||
-      asset.bgAcquisitionMethod === "converted" ||
+      // 이월과세 × K-5·K-6/K-7 — A는 당초 증여자 값, B는 양도인 증여일 평가액(소령 §163⑨)이라 양도인 취득시 기준시가를 읽지 않는다(계획서 bg-carryover-k5-transferor-sec163-9 Q-3 a)
+      (asset.bgAcquisitionMethod === "converted" && !bgConvertedCarryoverReadsGiftValuation(asset as AssetForm)) ||
       (isBgPresumedMethod(asset.bgAcquisitionMethod) && asset.acquisitionCause !== "carryover_gift") ||
       // 시가 모드 · 담보 승(상증법 §66) — 산정방식과 무관하게 취득가액이 취득시 기준시가 × 채무비율이다(엔진 `acqStdPriceForced`). 실지(K-4)여도 이 칸을 쓴다.
       bgCollateralForcesStdAcq(asset as AssetForm, isFractionalSplit)) &&

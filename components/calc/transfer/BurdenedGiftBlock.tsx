@@ -62,6 +62,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { computeMortgageValuation } from "@/lib/tax-engine/burdened-gift-valuation";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { bgAnyCarryover } from "@/lib/calc/bg-carryover-parts";
+import { bgConvertedCarryoverReadsGiftValuation } from "@/lib/calc/bg-carryover-parts";
 import { isBgSuccessorRight } from "@/lib/calc/transfer-successor-right";
 
 interface Props {
@@ -210,6 +211,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   const coDonorNeedsStdPrice = bgCoDonorNeedsStdPrice(asset, isFractionalSplit === true);
   /** 이월과세 × K-6/K-7 — 당초 증여자 값은 이월과세 박스, 양도인 값은 실지취득가액 블록(증여일 상증법 평가액)에서 받는다. */
   const isCarryoverPresumed = isCarryover && isBgPresumedMethod(asset.bgAcquisitionMethod);
+  /** 이월과세 × K-5(두 파트 모두 증여받음) — 시나리오 B도 증여일 상증법 평가액(소령 §163⑨)이라 K-6/K-7과 같은 칸을 연다(④·⑧과 같은 leaf). */
+  const isCarryoverConverted = bgConvertedCarryoverReadsGiftValuation(asset);
+  const readsTransferorGiftValuation = isCarryoverPresumed || isCarryoverConverted;
   /** 주택·건물 × 토지·건물 취득일 다름 — 실지취득가액도 토지·건물 두 칸(총액 칸 없음 · ④·⑧과 같은 술어). */
   const houseSplit = bgHouseSplitActive(asset);
   const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -464,18 +468,20 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
       <BurdenedGiftHouseSplitCard asset={asset} onChange={onChange} transferDate={transferDate} />
 
       {/* 의제 첫 지분이라도 범위 밖 지분이 있으면 그 지분의 실지취득가액을 여기서 받는다(위 라디오와 같은 판정 · ⑧이 요구 — PR-7b-5) */}
-      {((isMarketMode && !collateralForced && (!preDeemed || methodForOtherShares) && !noMethod && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
+      {((isMarketMode && !collateralForced && (!preDeemed || methodForOtherShares) && !noMethod && (asset.bgAcquisitionMethod === "actual" || readsTransferorGiftValuation)) || isRightToMoveIn) && (
           <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2 dark:bg-amber-900/40">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-                {isCarryoverPresumed ? "양도인이 증여받은 때의 상증법 평가액 입력" : isSuccessorRight ? "실지취득가액 — ③ 승계취득 정보에서 입력" : "실지취득가액 입력"}
+                {readsTransferorGiftValuation ? "양도인이 증여받은 때의 상증법 평가액 입력" : isSuccessorRight ? "실지취득가액 — ③ 승계취득 정보에서 입력" : "실지취득가액 입력"}
               </span>
               <LawArticleModal legalBasis="소득세법 §97" label="§97①1호가목" />
             </div>
-            {isCarryoverPresumed ? (
+            {readsTransferorGiftValuation ? (
               <div className="rounded border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 p-2 text-caption text-violet-800 dark:text-violet-200" data-testid="bg-carryover-presumed-transferor-notice">
                 이월과세를 적용하지 않는 경우(시나리오 B)의 <b>양도인</b> 취득가액입니다. 양도인은 이 자산을 증여받았으므로 증여일 현재 상증법 평가액이
-                취득 당시 실지거래가액으로 간주됩니다(소득세법 시행령 §163⑨) — 매매사례가액·감정가액은 <b>당초 증여자</b> 값만 아래 이월과세 박스에 입력합니다.
+                취득 당시 실지거래가액으로 간주됩니다(소득세법 시행령 §163⑨) — {isCarryoverConverted
+                  ? <>환산취득가액은 <b>당초 증여자</b> 기준(아래 이월과세 박스의 당초 증여자 기준시가)으로만 계산합니다.</>
+                  : <>매매사례가액·감정가액은 <b>당초 증여자</b> 값만 아래 이월과세 박스에 입력합니다.</>}
               </div>
             ) : (
               <div className="rounded border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 p-2 text-caption text-violet-800 dark:text-violet-200" data-testid="bg-k4-expense-pointer">

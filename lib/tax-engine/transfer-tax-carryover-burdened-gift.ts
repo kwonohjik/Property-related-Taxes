@@ -207,19 +207,7 @@ export function assertCarryoverDonorBasis(
           "(필요경비는 개산공제 — 취득 당시 기준시가 × 3%, 소득세법 시행령 제163조 제6항). 건물이 없으면 0을 입력하세요.",
       );
     }
-    const positive = (n: number | undefined) => (n ?? 0) > 0;
-    if (
-      !positive(info.actualAcquisitionTotal) &&
-      !positive(info.actualLandAcquisitionPrice) &&
-      !positive(info.actualBuildingAcquisitionPrice)
-    ) {
-      throw new TaxCalculationError(
-        TaxErrorCode.INVALID_INPUT,
-        "부담부증여에 이월과세를 적용하려면 양도인(증여받은 사람)이 증여받은 때의 「상속세 및 증여세법」 평가액이 필요합니다 — " +
-          "증여받은 자산은 그 평가액이 취득 당시 실지거래가액이기 때문입니다(소득세법 시행령 제163조 제9항). " +
-          "같은 법 제97조의2 제2항 제3호의 세액 비교가 양도인 기준과 당초 증여자 기준을 동시에 요구합니다.",
-      );
-    }
+    assertTransferorGiftValuation(info);
     assertNoAppraisalPenaltyWithCarryover(info, rawInput);
     return;
   }
@@ -235,6 +223,28 @@ export function assertCarryoverDonorBasis(
         "정하는데, 부담부증여의 취득가액은 「소득세법 시행령」 제159조 제1항 제1호가 " +
         "양도인 기준 값으로 따로 산정하므로 두 값이 모두 필요합니다 " +
         "(같은 조 제2항 제3호의 세액 비교가 두 시나리오를 동시에 요구합니다).",
+    );
+  }
+  // K-5 — A는 당초 증여자 기준시가로 환산하고, B는 양도인 증여일 평가액(소령 §163⑨)이다(`toTransferorBasisInfo`).
+  if (isConvertedCarryoverReadingGiftValuation(info)) assertTransferorGiftValuation(info);
+}
+
+/**
+ * 시나리오 B(양도인 기준)의 취득가액 — 양도인이 증여받은 때의 상증법 평가액(`actual*`, 소령 §163⑨)이 있어야 한다.
+ * 미입력을 당초 증여자 값으로 대신하면 A=B가 되어 §97의2②3호 비교가 조용히 무력화된다.
+ */
+function assertTransferorGiftValuation(info: BurdenedGiftInfo): void {
+  const positive = (n: number | undefined) => (n ?? 0) > 0;
+  if (
+    !positive(info.actualAcquisitionTotal) &&
+    !positive(info.actualLandAcquisitionPrice) &&
+    !positive(info.actualBuildingAcquisitionPrice)
+  ) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "부담부증여에 이월과세를 적용하려면 양도인(증여받은 사람)이 증여받은 때의 「상속세 및 증여세법」 평가액이 필요합니다 — " +
+        "증여받은 자산은 그 평가액이 취득 당시 실지거래가액이기 때문입니다(소득세법 시행령 제163조 제9항). " +
+        "같은 법 제97조의2 제2항 제3호의 세액 비교가 양도인 기준과 당초 증여자 기준을 동시에 요구합니다.",
     );
   }
 }
@@ -365,14 +375,24 @@ export function isPresumedCarryover(info: BurdenedGiftInfo): boolean {
 }
 
 /**
- * 시나리오 B(이월과세 미적용 = 양도인 기준)용 `burdenedGiftInfo` — K-6/K-7이면 **실지취득가액(K-4)으로 읽게** 바꾼다.
+ * 이월과세 × 시가 평가 환산(K-5) · 토지·건물 모두 증여받음 — 시나리오 B 취득가액이 양도인 증여일 평가액(소령 §163⑨)이다.
+ * 환산(§97①1호나목 · 소령 §163⑫)은 실지거래가액을 확인할 수 없을 때인데, 증여받은 자산은 증여일 평가액이 실지거래가액이다
+ * (계획서 `docs/02-design/features/bg-carryover-k5-transferor-sec163-9.plan.md` Q-2 a · K-6/K-7과 같은 결론).
+ * 한 파트만 증여받은 일반건물은 다른 파트가 양도인 자기 방식(환산)이라 종전대로 둔다 — 확인 필요(계획서 §6).
+ */
+export function isConvertedCarryoverReadingGiftValuation(info: BurdenedGiftInfo): boolean {
+  return info.valuationMode === "sangjeungbeop_market" && info.acquisitionMethod === "converted" && !isPartialCarryover(info);
+}
+
+/**
+ * 시나리오 B(이월과세 미적용 = 양도인 기준)용 `burdenedGiftInfo` — K-5·K-6/K-7이면 **실지취득가액(K-4)으로 읽게** 바꾼다.
  *
  * 양도인은 이 자산을 증여받았으므로 소령 §163⑨가 증여일 현재 상증법 평가액을 실지거래가액(§97①1호가목)으로 본다 —
- * 매매사례가액·감정가액(나목)에 닿지 않는다. 그 평가액은 `actual*` 칸에 있고, 당초 증여자용 `presumed*`는 B에서 읽지 않는다.
- * K-6/K-7이 아니면 그대로 돌려준다(기존 K-1~K-5 거동 불변).
+ * 매매사례가액·감정가액·환산(나목)에 닿지 않는다. 그 평가액은 `actual*` 칸에 있고, 당초 증여자용 `presumed*`는 B에서 읽지 않는다.
+ * 그 밖에는 그대로 돌려준다(K-1~K-4 거동 불변).
  */
 export function toTransferorBasisInfo(info: BurdenedGiftInfo): BurdenedGiftInfo {
-  if (!isPresumedCarryover(info)) return info;
+  if (!isPresumedCarryover(info) && !isConvertedCarryoverReadingGiftValuation(info)) return info;
   return {
     ...info,
     acquisitionMethod: "actual",

@@ -1,0 +1,64 @@
+/**
+ * anchor — ⑤ 부담부증여 × 이월과세 × 시가 평가 환산(K-5): 「양도인이 증여받은 때의 상증법 평가액」 칸(2026-11-04 Q-2 a · Q-3 a)
+ *
+ * 계획서: `docs/02-design/features/bg-carryover-k5-transferor-sec163-9.plan.md`
+ * 시나리오 B 취득가액은 양도인 증여일 평가액(「소득세법 시행령」 제163조 제9항)이라 K-6/K-7과 같은 칸을 연다(④·⑧·⑫와 같은 leaf).
+ * 양도인 취득시 기준시가(② 양도정보)는 K-5 이월과세에서 묻지 않는다 — `needsBgAcqStdPriceInput`(⑤ ②·⑧ 공용).
+ * 계산 쪽은 `__tests__/api/transfer.route.bg-carryover-k5-scenario-b-sec163-9.anchor.test.ts`.
+ */
+import { describe, it, expect, afterEach } from "vitest";
+import { render, cleanup, screen } from "@testing-library/react";
+import { BurdenedGiftBlock } from "@/components/calc/transfer/BurdenedGiftBlock";
+import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
+import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+
+afterEach(cleanup);
+
+const house = (over: Partial<AssetForm> = {}): AssetForm => ({
+  ...makeDefaultAsset(1),
+  assetKind: "housing",
+  acquisitionDate: "2023-06-01",
+  acquisitionCause: "carryover_gift",
+  transferType: "burdened_gift",
+  bgValuationMode: "sangjeungbeop_market",
+  bgMarketValueAtTransfer: "1,000,000,000",
+  bgMortgageDebtAmount: "400,000,000",
+  bgDonorRelation: "lineal_descendant",
+  bgAcquisitionMethod: "converted",
+  standardPriceAtTransfer: "500,000,000",
+  ...over,
+} as AssetForm);
+
+const NOTICE = "bg-carryover-presumed-transferor-notice";
+
+describe("⑤ K-5 이월과세 — 양도인 증여일 평가액 칸", () => {
+  it("주택: 평가액 총액 칸 + §163⑨ 안내(환산은 당초 증여자 기준)", () => {
+    const { container } = render(<BurdenedGiftBlock asset={house()} onChange={() => {}} />);
+    expect(screen.getByText("양도인이 증여받은 때의 상증법 평가액 입력")).toBeTruthy();
+    expect(screen.getByTestId(NOTICE).textContent).toContain("환산취득가액은 당초 증여자 기준");
+    expect(container.querySelector('[data-field="bgActualAcquisitionTotal"]')).not.toBeNull();
+  });
+
+  it("토지: 토지 칸", () => {
+    const { container } = render(<BurdenedGiftBlock asset={house({ assetKind: "land" })} onChange={() => {}} />);
+    expect(container.querySelector('[data-field="bgActualAcquisitionLand"]')).not.toBeNull();
+  });
+
+  it("이월과세가 아닌 K-5(매매)는 열지 않는다", () => {
+    render(<BurdenedGiftBlock asset={house({ acquisitionCause: "purchase" })} onChange={() => {}} />);
+    expect(screen.queryByTestId(NOTICE)).toBeNull();
+  });
+
+  it("K-7 이월과세 안내는 종전 문구(매매사례가액·감정가액은 당초 증여자 값만)", () => {
+    render(<BurdenedGiftBlock asset={house({ bgAcquisitionMethod: "appraisal" })} onChange={() => {}} />);
+    expect(screen.getByTestId(NOTICE).textContent).toContain("매매사례가액·감정가액은 당초 증여자 값만");
+  });
+});
+
+describe("② 양도인 취득시 기준시가 — K-5 이월과세에서는 묻지 않는다", () => {
+  it("이월과세 K-5 → false · 매매 K-5 → true", () => {
+    expect(needsBgAcqStdPriceInput(house())).toBe(false);
+    expect(needsBgAcqStdPriceInput(house({ acquisitionCause: "purchase" }))).toBe(true);
+  });
+});

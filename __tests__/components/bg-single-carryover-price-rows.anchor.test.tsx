@@ -75,6 +75,8 @@ async function post(f: TransferFormData): Promise<{ status: number; data: any; e
   return { status: res.status, data: json.data, error: json.error };
 }
 
+/** K-5 × 이월과세 B 채택 시료 — 양도인 증여일 평가액 2.25억(B 취득가액 45,000,000 · 소령 §163⑨). */
+const K5_B: A = { bgActualAcquisitionLand: "225000000" };
 const gt = (n: string, over: A = {}): A => ({ carryover: { ...CARRYOVER, giftTaxAmount: n, ...over } });
 const HOUSE_CARRY = (g: string, extra: A = {}): A => ({
   assetKind: "housing", bgActualAcquisitionLand: "", bgActualAcquisitionTotal: "300000000", bgCoDonorPresumedAcquisitionLand: "", bgCoDonorPresumedAcquisitionTotal: "250000000",
@@ -110,10 +112,11 @@ describe("부담부증여 단건 × 이월과세 — 명세서·신고서 양식
     ["토지 감정가액 · 증여세 0", "appraisal", "0", "A", [80_000_000, 50_000_000, 900_000], 29_100_000, 1_507_800],
     ["토지 감정가액 · 증여세 2M", "appraisal", "2000000", "A", [80_000_000, 50_000_000, 1_300_000], 28_700_000, 1_464_600],
     ["토지 매매사례가액 · 증여세 2M", "salesCase", "2000000", "A", [80_000_000, 50_000_000, 1_300_000], 28_700_000, 1_464_600],
-    ["토지 환산 · 증여세 2M (B 채택)", "converted", "2000000", "B", [80_000_000, 45_000_000, 1_080_000], 33_920_000, 3_453_000],
+    // K-5 B = 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 Q-2 a) — 평가액 2.25억 × 0.2 = 45,000,000(종전 환산과 같은 금액) · 실지라 개산공제 없음(종전 [.., 45M, 1,080,000] · 33,920,000)
+    ["토지 환산 · 증여세 2M (B 채택)", "converted", "2000000", "B", [80_000_000, 45_000_000, 0], 35_000_000, 3_615_000],
     ["토지 감정가액 · 증여세 30M (B 채택)", "appraisal", "30000000", "B", [80_000_000, 60_000_000, 0], 20_000_000, 1_365_000],
   ] as const)("%s", async (_n, method, g, adopted, slots, gain, tax) => {
-    const c = await rows({ bgAcquisitionMethod: method, ...gt(g) });
+    const c = await rows({ bgAcquisitionMethod: method, ...(method === "converted" ? K5_B : {}), ...gt(g) });
     expect(c.adopted).toBe(adopted);
     expect(c.slots).toEqual(slots);
     // 상세 명세서: 양도가액·취득가액·필요경비·양도차익 = 슬롯·엔진 값 (종전 0 / 음수)
@@ -150,9 +153,10 @@ describe("부담부증여 단건 × 이월과세 — 명세서·신고서 양식
   it("취득가액 산식 — A는 「증여자 취득가액 승계」 문구 유지 · B는 슬롯 산식(음수 문구 없음)", async () => {
     const a = await rows({ bgAcquisitionMethod: "appraisal", ...gt("2000000") });
     expect(a.acqFormula).toContain("증여자 취득 당시 취득가액 50,000,000 — 이월과세 §97의2① (증여자 취득가액 승계)");
-    const b = await rows({ bgAcquisitionMethod: "converted", ...gt("2000000") });
+    const b = await rows({ bgAcquisitionMethod: "converted", ...K5_B, ...gt("2000000") });
     expect(b.adopted).toBe("B");
-    expect(b.acqFormula).toContain("취득가액 = 자산별 양도가액 × 취득시 기준시가 / 양도시 기준시가 (소득세법 시행령 §176의2②2호 — 환산취득가액)");
+    // K-5 B는 §163⑨ 실지(K-4 산식) — 종전 「환산취득가액(§176의2②2호)」 산식
+    expect(b.acqFormula).toContain("취득가액 = 실지취득가액 × 채무액 / 증여재산 평가액 (소득세법 §97①1호가목 · 시행령 §159①1호 본문) = 225,000,000 × 80,000,000 / 400,000,000");
     expect(b.acqFormula).toContain("= 45,000,000");
     expect(b.acqFormula).not.toMatch(/취득가액 -[0-9]/);
     expect(b.acqFormula).not.toContain("실제 거래가액");

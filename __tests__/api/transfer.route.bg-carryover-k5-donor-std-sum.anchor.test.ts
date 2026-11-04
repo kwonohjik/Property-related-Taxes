@@ -62,7 +62,8 @@ const k5 = (land: string, building: string, over: Partial<AssetForm> = {}) =>
     carryover: CO as never,
     ...over,
   } as Partial<AssetForm>);
-const LAND = { assetKind: "land", acquisitionArea: "100", transferArea: "100", landStandardPriceAtTransfer: "500,000,000", buildingStandardPriceAtTransfer: "0" } as Partial<AssetForm>;
+/** 토지 — 시나리오 B 양도인 증여일 평가액은 토지 칸(소령 §163⑨ · 주택 등은 픽스처 기본 총액 6억과 같은 값). */
+const LAND = { assetKind: "land", acquisitionArea: "100", transferArea: "100", landStandardPriceAtTransfer: "500,000,000", buildingStandardPriceAtTransfer: "0", bgActualAcquisitionTotal: "", bgActualAcquisitionLand: "600,000,000" } as Partial<AssetForm>;
 
 /** 합계 1억 → A 취득가액 = 4억(채무 안분 양도가액) × 1억 ÷ 5억 = 80,000,000 (계획서 §1.1 「0 · 1억」 행). */
 const SUM_ACQ_A = 80_000_000;

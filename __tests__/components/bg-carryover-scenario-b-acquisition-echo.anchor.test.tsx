@@ -116,7 +116,8 @@ describe("단건 — 미채택 요약·비교 카드 B 열은 §159 슬롯 취�
   it.each([
     ["감정가액 · 증여세 2M · 실지취득 300M (A 채택)", { bgAcquisitionMethod: "appraisal", ...gt("2000000") }, "A", 60_000_000, 20_000_000],
     ["감정가액 · 증여세 2M · 실지취득 280M (B 채택)", { bgAcquisitionMethod: "appraisal", bgActualAcquisitionLand: "280000000", ...gt("2000000") }, "B", 56_000_000, 24_000_000],
-    ["환산 · 증여세 0 · 실지취득 280M (B 채택)", { bgAcquisitionMethod: "converted", bgActualAcquisitionLand: "280000000", ...gt("0") }, "B", 45_000_000, 33_920_000],
+    // 환산(K-5) B = 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 Q-2 a) — 평가액 2.25억 × 0.2 = 45,000,000 · 개산공제 없음(종전 환산 45,000,000 · 33,920,000)
+    ["환산 · 증여세 0 · 증여일 평가액 225M (B 채택)", { bgAcquisitionMethod: "converted", bgActualAcquisitionLand: "225000000", ...gt("0") }, "B", 45_000_000, 35_000_000],
     ["실지 · 증여세 2M · 실지취득 280M (B 채택)", { bgAcquisitionMethod: "actual", bgActualAcquisitionLand: "280000000", bgCoDonorActualAcquisitionLand: "250000000", ...gt("2000000") }, "B", 56_000_000, 24_000_000],
   ] as const)("%s", async (_n, a, adopted, acq, gain) => {
     const c = await single(a as A);

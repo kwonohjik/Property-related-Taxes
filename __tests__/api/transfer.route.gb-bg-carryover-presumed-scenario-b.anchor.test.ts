@@ -52,7 +52,7 @@ function gbAsset(over: Partial<AssetForm> = {}, co: Record<string, unknown> = {}
     gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
     transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_market",
     bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
-    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted",
+    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted", bgActualAcquisitionLand: "250,000,000", bgActualAcquisitionBuilding: "250,000,000", /* K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨) */
     bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000",
     carryover: {
       ...CARRYOVER_DEFAULTS,
@@ -155,11 +155,12 @@ describe("등식 — 두 시나리오가 대조군과 정확히 같다", () => {
   });
 });
 
-describe("회귀 — K-1~K-5는 그대로", () => {
-  it("K-5(환산) × 이월과세: A 109,326,000 · B 97,800,000 · A 채택(수정 前과 같다)", async () => {
+describe("회귀 — K-1~K-4는 그대로 · K-5 B는 §163⑨(2026-11-04 Q-2 a)", () => {
+  // K-5 B = 양도인 증여일 평가액(토지·건물 각 2.5억 × 채무비율 0.5 = 종전 환산 취득가액과 같은 금액) — 실지라 개산공제(3,000,000)가 빠진다.
+  it("K-5(환산) × 이월과세: A 109,326,000 · B 99,000,000(종전 환산 97,800,000) · A 채택", async () => {
     const { r } = await calc({});
     expect(r.status).toBe(200);
-    expect(r.co).toMatchObject({ adoptedScenario: "A", determinedTaxA: 109_326_000, determinedTaxB: 97_800_000 });
+    expect(r.co).toMatchObject({ adoptedScenario: "A", determinedTaxA: 109_326_000, determinedTaxB: 99_000_000 });
   });
 });
 

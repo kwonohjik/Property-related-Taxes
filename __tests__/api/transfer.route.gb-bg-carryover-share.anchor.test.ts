@@ -49,7 +49,7 @@ function gbShare(over: Partial<AssetForm> = {}, co: Record<string, unknown> = {}
     gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
     transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_market",
     bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
-    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted",
+    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted", bgActualAcquisitionLand: "250,000,000", bgActualAcquisitionBuilding: "250,000,000", /* K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨) */
     bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000",
     ...half,
     carryover: {
@@ -112,11 +112,12 @@ const propsAcq = (a: Record<string, any>) => a.properties.map((p: { acquisitionP
 const unitsOf = (a: Record<string, any>) => // eslint-disable-line @typescript-eslint/no-explicit-any
   Object.fromEntries(Object.entries(a.burdenedGiftCarryoverUnits ?? {}).map(([k, v]: [string, any]) => [k, [v.adoptedScenario, v.determinedTaxA, v.determinedTaxB]])); // eslint-disable-line @typescript-eslint/no-explicit-any
 
+// K-5 이월과세 B는 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 Q-2 a) — 실지라 개산공제가 빠져 B가 지분당 600,000(물건 1,200,000) 커진다(종전 환산 값은 주석의 「종전」).
 describe("지분 분할 50/50 × 이월과세 — 지분마다 A/B를 신고 단위 결정세액으로 비교한다(수정 前: ⑧·⑫ 400 「단건으로 계산하세요」)", () => {
-  it("P1 같은 사실 50/50 → AA 109,326,000 = 단건 A · 단위 키 = 카드 접미사 · 한 지분만 A(AB·BA)는 93,186,350", async () => {
+  it("P1 같은 사실 50/50 → AA 109,326,000 = 단건 A · 단위 키 = 카드 접미사 · 한 지분만 A(AB·BA)는 93,786,350(종전 93,186,350)", async () => {
     const a = await ok(shares(gbShare(), gbShare()));
     expect(a.determinedTax).toBe(109_326_000);
-    expect(unitsOf(a)).toEqual({ "0": ["A", 109_326_000, 93_186_350], "1": ["A", 109_326_000, 93_186_350] });
+    expect(unitsOf(a)).toEqual({ "0": ["A", 109_326_000, 93_786_350], "1": ["A", 109_326_000, 93_786_350] });
     // 채택된 A 카드가 신고 카드다 — 지분 몫(당초 증여자 기준시가 × 지분 50% × 채무비율 0.5) · 산식 재료도 A 카드
     expect(propsAcq(a)).toEqual([6_250_000, 25_000_000, 6_250_000, 25_000_000]);
     expect(a.generalBuildingValuationDetail.assetCards.map((c: { acquisitionPrice: number }) => c.acquisitionPrice)).toEqual([6_250_000, 25_000_000, 6_250_000, 25_000_000]);
@@ -136,10 +137,10 @@ describe("지분 분할 50/50 × 이월과세 — 지분마다 A/B를 신고 단
     expect([bb.determinedTax, oneB.determinedTax]).toEqual([97_800_000, 97_800_000]);
   });
 
-  it("P3 당초 증여자 취득일 지분별 2015/2010 → AA 102,338,000 (첫 지분만 B = 86,547,750 · 둘째만 B = 93,186,350)", async () => {
+  it("P3 당초 증여자 취득일 지분별 2015/2010 → AA 102,338,000 (첫 지분만 B = 87,147,750 · 둘째만 B = 93,786,350 — 종전 86,547,750 · 93,186,350)", async () => {
     const a = await ok(shares(gbShare(), gbShare({}, { donorAcquisitionDate: "2010-01-01" })));
     expect(a.determinedTax).toBe(102_338_000);
-    expect(unitsOf(a)).toEqual({ "0": ["A", 102_338_000, 86_547_750], "1": ["A", 102_338_000, 93_186_350] });
+    expect(unitsOf(a)).toEqual({ "0": ["A", 102_338_000, 87_147_750], "1": ["A", 102_338_000, 93_786_350] });
     expect(a.burdenedGiftCarryoverUnits["1"].scenarioA.landHoldingStartDate).toBe("2010-01-01");
   });
 
@@ -150,14 +151,14 @@ describe("지분 분할 50/50 × 이월과세 — 지분마다 A/B를 신고 단
     expect((await ok(single(gbShare({}, { giftTaxAmount: "30,000,000" })))).determinedTax).toBe(104_646_000);
   });
 
-  it("P2 둘째 지분만 이월과세(첫 지분은 증여) → B 유지 97,800,000 · 단위는 둘째 지분 하나(A 93,186,350 < B)", async () => {
+  it("P2 둘째 지분만 이월과세(첫 지분은 증여) → B 유지 98,400,000(종전 97,800,000) · 단위는 둘째 지분 하나(A 93,186,350 < B)", async () => {
     const f = shares(gbShare(gift), gbShare());
     const body = await bodyOf(f);
     expect(body.carryoverTaxation).toBeUndefined();
     expect(body.generalBuildingShares.map((s: { carryoverTaxation?: unknown }) => s.carryoverTaxation !== undefined)).toEqual([false, true]);
     const a = await ok(f);
-    expect(a.determinedTax).toBe(97_800_000);
-    expect(unitsOf(a)).toEqual({ "1": ["B", 93_186_350, 97_800_000] });
+    expect(a.determinedTax).toBe(98_400_000);
+    expect(unitsOf(a)).toEqual({ "1": ["B", 93_186_350, 98_400_000] });
     expect(propsAcq(a)).toEqual([62_500_000, 62_500_000, 62_500_000, 62_500_000]);
   });
 
@@ -170,11 +171,11 @@ describe("지분 분할 50/50 × 이월과세 — 지분마다 A/B를 신고 단
     expect((await ok(single(gbShare(K7)))).determinedTax).toBe(82_627_700);
   });
 
-  it("②3호 — A가 적으면 B: 당초 증여자 기준시가가 양도인과 같으면 A 56,286,880 < B ⇒ 97,800,000 · 신고 카드·산식 재료·명세는 B 그대로", async () => {
+  it("②3호 — A가 적으면 B: 당초 증여자 기준시가가 양도인과 같으면 A 56,886,880 < B ⇒ 99,000,000(종전 56,286,880 · 97,800,000) · 신고 카드·산식 재료·명세는 B 그대로", async () => {
     const same = { bgCoDonorLandStdPriceAtAcq: "180,000,000", bgCoDonorBuildingStdPriceAtAcq: "100,000,000" } as Partial<AssetForm>;
     const a = await ok(shares(gbShare(same), gbShare(same)));
-    expect(a.determinedTax).toBe(97_800_000);
-    expect(unitsOf(a)).toEqual({ "0": ["B", 56_286_880, 97_800_000], "1": ["B", 56_286_880, 97_800_000] });
+    expect(a.determinedTax).toBe(99_000_000);
+    expect(unitsOf(a)).toEqual({ "0": ["B", 56_886_880, 99_000_000], "1": ["B", 56_886_880, 99_000_000] });
     // 미채택 [A] 요약은 반사실 실행(이 단위만 A)에서 — 최종(B) 카드를 다시 쓰면 두 열이 같아진다
     expect(acqOf(a.burdenedGiftCarryoverUnits["0"].scenarioA)).toEqual([112_500_000, 62_500_000]);
     expect(a.generalBuildingValuationDetail.assetCards.map((c: { acquisitionPrice: number }) => c.acquisitionPrice)).toEqual([62_500_000, 62_500_000, 62_500_000, 62_500_000]);
@@ -187,9 +188,9 @@ describe("지분 분할 50/50 × 이월과세 — 지분마다 A/B를 신고 단
     const first = gbShare({ ...gift, acquisitionDate: "2019-01-01" });
     const conv = { gbHouseToCommercialConversion: true, gbConversionDate: "2020-06-01", gbWasMultiHouseAtConversion: true } as Partial<AssetForm>;
     const base = await ok(shares(first, gbShare()));
-    expect(unitsOf(base)).toEqual({ "1": ["A", 84_196_150, 70_133_500] });
+    expect(unitsOf(base)).toEqual({ "1": ["A", 84_196_150, 70_733_500] });
     const a = await ok(shares({ ...first, ...conv } as AssetForm, gbShare()));
-    expect(unitsOf(a)).toEqual({ "1": ["A", 96_135_000, 71_862_500] });
+    expect(unitsOf(a)).toEqual({ "1": ["A", 96_135_000, 72_462_500] });
   });
 });
 

@@ -46,7 +46,7 @@ function gbAsset(over: Partial<AssetForm> = {}, co: Record<string, unknown> = {}
     gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
     transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_market",
     bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
-    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted",
+    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted", bgActualAcquisitionLand: "250,000,000", bgActualAcquisitionBuilding: "250,000,000", /* K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨) */
     bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000",
     carryover: {
       ...CARRYOVER_DEFAULTS,
@@ -121,8 +121,14 @@ const both = async (gift: string, calc: string, over: Partial<AssetForm> = {}) =
     buildingCarryover: { ...CO, ...gt } as never, bgCoDonorBuildingStdPriceAtAcq: "190,000,000", ...over,
   } as Partial<AssetForm>, gt)]));
 };
-/** 양도인 취득 당시 기준시가 1.8억·1.8억 — B 차익이 작아 A가 채택된다. */
-const HIGH_OWN = { gbAcqLandPricePerSqm: "1,800,000", gbAcqBuildingValue: "180,000,000" } as Partial<AssetForm>;
+/**
+ * 양도인 쪽 취득가액이 커서 B 차익이 작아 A가 채택된다. K-5 B는 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 Q-2 a)이라
+ * 평가액 4.5억·4.5억(× 채무비율 0.5 = 종전 환산 취득가액 2.25억·2.25억과 같은 금액)을 함께 넣는다.
+ */
+const HIGH_OWN = {
+  gbAcqLandPricePerSqm: "1,800,000", gbAcqBuildingValue: "180,000,000",
+  bgActualAcquisitionLand: "450,000,000", bgActualAcquisitionBuilding: "450,000,000",
+} as Partial<AssetForm>;
 
 describe("둘 다 이월과세 · A 채택 — 건물 몫이 건물 잔액을 넘으면 건물에서 자른다 (수정 前 건물 양도차익 음수)", () => {
   it.each([
@@ -145,10 +151,11 @@ describe("둘 다 이월과세 · A 채택 — 건물 몫이 건물 잔액을 �
 });
 
 describe("둘 다 이월과세 · B 채택 — A 세액만 바뀐다", () => {
-  it("증여 2024 · 산출세액 1억 → A 25,923,700 → 31,296,200 · 채택 B 97,800,000 그대로", async () => {
+  // B 99,000,000 = 종전 환산 97,800,000 + 개산공제 제외분(K-5 B가 §163⑨ 실지가 되어 개산공제 3,000,000이 빠진다 · 2026-11-04 Q-2 a)
+  it("증여 2024 · 산출세액 1억 → A 25,923,700 → 31,296,200 · 채택 B 99,000,000 그대로", async () => {
     const r = await ok200(await both("2024-05-01", "100,000,000", { bgCoDonorLandStdPriceAtAcq: "190,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000" } as Partial<AssetForm>));
     const d = detail(r);
-    expect([d.determinedTaxA, d.determinedTaxB, d.adoptedScenario, r.det]).toEqual([31_296_200, 97_800_000, "B", 97_800_000]);
+    expect([d.determinedTaxA, d.determinedTaxB, d.adoptedScenario, r.det]).toEqual([31_296_200, 99_000_000, "B", 99_000_000]);
     // 토지 잔액 9,650,000 < 토지 몫 2,500만 → 토지 0 · 건물은 몫 그대로(199,400,000 − 25,000,000)
     expect([card(d.scenarioA, "토지").transferGain, card(d.scenarioA, "건물").transferGain]).toEqual([0, 174_400_000]);
   });
@@ -158,9 +165,9 @@ describe("회귀 0 — 한도가 걸리지 않으면 종전과 같다", () => {
   it("L3 둘 다 · 증여세 없음 → 109,326,000", async () => {
     expect((await ok200(await bothBody())).det).toBe(109_326_000);
   });
-  it("둘 다 · 산출세액 1억 · 한도 미발동 → A 93,742,700 · 채택 B 97,800,000", async () => {
+  it("둘 다 · 산출세액 1억 · 한도 미발동 → A 93,742,700 · 채택 B 99,000,000(K-5 B §163⑨ — 종전 97,800,000)", async () => {
     const r = await ok200(await both("2024-05-01", "100,000,000", { bgCoDonorBuildingStdPriceAtAcq: "40,000,000" } as Partial<AssetForm>));
-    expect([detail(r).determinedTaxA, r.det]).toEqual([93_742_700, 97_800_000]);
+    expect([detail(r).determinedTaxA, r.det]).toEqual([93_742_700, 99_000_000]);
   });
   it("분리 OFF L1(산출 3천만) → 104,646,000 · 건물만 B1 → 70,371,560", async () => {
     expect((await ok200(await bodyOf(formOf([gbAsset({}, RETURN)])))).det).toBe(104_646_000);

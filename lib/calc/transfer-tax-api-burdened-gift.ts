@@ -37,6 +37,7 @@ import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { gbBgMarketPreDeemedParts } from "./gb-pre-deemed";
 import { bgAnyCarryover, bgCarryoverPartsPayload } from "./bg-carryover-parts";
+import { bgConvertedCarryoverReadsGiftValuation } from "./bg-carryover-parts";
 import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
 import { gbBgGiftTaxedValueByPart } from "./gb-bg-gift-tax-return";
 import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
@@ -281,13 +282,14 @@ function donorBuiltExtensionAppraisal(primary: AssetForm): Pick<BurdenedGiftInfo
 }
 
 /**
- * K-4 실지취득가액 칸을 읽는 조합인가 — 실지 방식이거나, **이월과세 × K-6/K-7**(양도인 쪽 시나리오 B는
+ * K-4 실지취득가액 칸을 읽는 조합인가 — 실지 방식이거나, **이월과세 × K-5·K-6/K-7**(양도인 쪽 시나리오 B는
  * 증여받은 자산이라 증여일 상증법 평가액이 실지거래가액이다 — 소령 §163⑨).
  */
 function usesActualAcquisitionFields(primary: AssetForm): boolean {
   return (
     primary.bgAcquisitionMethod === "actual" ||
-    (primary.acquisitionCause === "carryover_gift" && isBgPresumedMethod(primary.bgAcquisitionMethod))
+    (primary.acquisitionCause === "carryover_gift" && isBgPresumedMethod(primary.bgAcquisitionMethod)) ||
+    bgConvertedCarryoverReadsGiftValuation(primary)
   );
 }
 

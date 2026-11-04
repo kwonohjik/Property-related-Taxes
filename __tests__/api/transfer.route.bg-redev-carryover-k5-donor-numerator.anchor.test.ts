@@ -5,7 +5,8 @@
  * A(이월과세 적용)의 취득가액은 당초 증여자가 종전 부동산을 취득할 당시 금액(「소득세법」 제97조의2 제1항 제1호)이다.
  * 실지를 모르면 §166③ — 분자는 **당초 증여자 취득일** 기준시가 = 「당초 증여자 취득 당시 토지·건물 기준시가」 두 칸(⑧·⑫ 필수).
  * 수정 前: A·B가 같은 「취득당시 개별주택공시가격」 칸으로 환산해 취득가액이 늘 같았다(190,000,000 · B 채택 57,770,000).
- * B(§163⑨)는 이번 범위 밖(Q-2′ b′) — 종전 값 그대로를 고정한다.
+ * B는 2026-11-04 Q-2 a(`bg-carryover-k5-transferor-sec163-9.plan.md`)로 양도인 증여일 평가액(소령 §163⑨) — (평가액 10억 + 납부 청산금 1억) × 0.4 = 440,000,000(§166②).
+ *   종전 §166③ 환산(190,000,000 · 「취득당시 개별주택공시가격」 칸)은 B에도 쓰지 않는다.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -69,7 +70,8 @@ const stdCarry = (bStd: string, over: Partial<AssetForm> = {}) =>
 const REDEV = { assetKind: "redevelopment_apt", redevSubject: "apt", redevIsSuccessorMember: "no", redevOriginalAssetType: "housing", redevApprovalLawBasis: "urban_renovation_art_74", redevApprovalDate: "2024-01-10", redevRightsValue: "900000000",
   redevSettlementDirection: "pay", redevSettlementAmount: "100000000", redevCompletionDate: "2025-09-01", redevManagementDisposalHousingPrice: "600000000",
   redevAcquisitionHousingPrice: "250000000", addressJibun: "서울 B 2", bgCoDonorLandStdPriceAtAcq: "100,000,000", bgCoDonorBuildingStdPriceAtAcq: "0" } as Partial<AssetForm>;
-const K5 = { bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgAcquisitionMethod: "converted" } as Partial<AssetForm>;
+/** K-5 · 양도인 증여일 평가액 10억(이월과세 박스 「증여 당시 평가액」과 같은 사실) — 시나리오 B(소령 §163⑨). */
+const K5 = { bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgAcquisitionMethod: "converted", bgActualAcquisitionTotal: "1,000,000,000" } as Partial<AssetForm>;
 const CO = { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2023-06-01", donorAcquisitionDate: "2000-06-01", donorAcquisitionPrice: "150,000,000", giftDateValuation: "1,000,000,000", giftTaxAmount: "0", donorRelation: "lineal", donorSameHousehold: "no", donorHouseholdHoldingStartDate: "2012-01-01" };
 const detail = async (o: Partial<AssetForm>) => {
   const r = await ok(bgForm(stdCarry("0", { ...REDEV, ...o, carryover: CO as never })));
@@ -78,12 +80,11 @@ const detail = async (o: Partial<AssetForm>) => {
 };
 
 describe("K5-1 종전 주택 — A의 §166③ 분자 = 당초 증여자 기준시가", () => {
-  it("A 취득가액 (900M × 1억/6억 + 청산금 1억) × 0.4 = 100,000,000 · A 58,590,800 ≥ B 57,770,000 → A 채택 (수정 前 A=B 190,000,000 · B 채택 57,770,000)", async () => {
+  it("A 취득가액 (900M × 1억/6억 + 청산금 1억) × 0.4 = 100,000,000 · A 58,590,800 · B (10억 + 1억) × 0.4 = 440,000,000 → A 채택 (수정 前 A=B 190,000,000 · B 채택 57,770,000)", async () => {
     const d = await detail(K5);
     expect(d.a.acquisitionPrice).toBe(100_000_000);
     expect(d.a.determinedTax).toBe(58_590_800);
-    expect(d.b.acquisitionPrice).toBe(190_000_000); // B는 범위 밖(Q-2′ b′) — 종전 그대로
-    expect(d.b.determinedTax).toBe(57_770_000);
+    expect(d.b.acquisitionPrice).toBe(440_000_000); // B = 양도인 증여일 평가액(소령 §163⑨ · §166②) — 2026-11-04 Q-2 a
     expect(d.adopted).toBe("A");
     expect(d.det).toBe(58_590_800);
   });
@@ -93,18 +94,18 @@ describe("K5-1 종전 주택 — A의 §166③ 분자 = 당초 증여자 기준�
     expect((await detail({ ...K5, bgCoDonorLandStdPriceAtAcq: "200,000,000" })).a.acquisitionPrice).toBe(160_000_000);
   });
 
-  it("「취득당시 개별주택공시가격」(양도인 증여일 기준)은 A에 닿지 않는다 — B만 움직인다", async () => {
+  it("「취득당시 개별주택공시가격」(양도인 증여일 기준)은 A에도 B에도 닿지 않는다 — B는 증여일 평가액(종전 B만 115,000,000으로 움직였다)", async () => {
     const d = await detail({ ...K5, redevAcquisitionHousingPrice: "125000000" });
     expect(d.a.acquisitionPrice).toBe(100_000_000);
-    expect(d.b.acquisitionPrice).toBe(115_000_000);
+    expect(d.b.acquisitionPrice).toBe(440_000_000);
   });
 });
 
 describe("K5-3 종전 토지 — 분자는 토지 기준시가(§166③ 토지 출자)", () => {
   const LAND = { ...K5, redevOriginalAssetType: "land", redevLandArea: "100", redevLandPricePerSqmAtAcq: "500,000", redevLandPricePerSqmAtApproval: "3,000,000" } as Partial<AssetForm>;
-  it("A (900M × 당초 증여자 1억 / 인가일 3억 + 1억) × 0.4 = 160,000,000 · B (900M × 5천만/3억 + 1억) × 0.4 = 100,000,000", async () => {
+  it("A (900M × 당초 증여자 1억 / 인가일 3억 + 1억) × 0.4 = 160,000,000 · B (평가액 10억 + 1억) × 0.4 = 440,000,000(종전 §166③ 100,000,000)", async () => {
     const d = await detail(LAND);
-    expect(d.b.acquisitionPrice).toBe(100_000_000);
+    expect(d.b.acquisitionPrice).toBe(440_000_000);
     expect(d.a.acquisitionPrice).toBe(160_000_000);
   });
 });

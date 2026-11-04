@@ -104,10 +104,16 @@ describe("이월과세 × 감정가액·매매사례가액 × 묶음 — route 2
     expect(r.data.aggregated.totalTax).toBe(tax);
   });
 
-  it("대조 — 이월과세 환산 함께 양도는 종전에도 200 · 세액 같음", async () => {
+  /**
+   * 함께 양도 × 이월과세 × 환산(K-5) — B는 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 Q-2 a)이라 컴패니언도 평가액 3억 × 0.2 = 60,000,000.
+   * 종전 B는 환산 45,000,000(+ 개산공제)이라 B 세액이 A보다 커서 B 채택 10,913,760 → 이제 B 세액 1,740,000 < A 3,146,400 → A 채택 8,514,528.
+   */
+  it("대조 — 이월과세 환산 함께 양도 200 · B = 증여일 평가액 60,000,000 · A 채택 8,514,528(종전 B 채택 10,913,760)", async () => {
     const r = await post(together({ bgAcquisitionMethod: "converted" }, { bgAcquisitionMethod: "converted" }));
     expect(r.status).toBe(200);
-    expect(r.data.aggregated.totalTax).toBe(10_913_760);
+    expect(r.data.aggregated.totalTax).toBe(8_514_528);
+    for (const p of r.data.aggregated.properties as { carryoverTaxationDetail: { adoptedScenario: string; scenarioB: { acquisitionPrice: number } } }[])
+      expect([p.carryoverTaxationDetail.adoptedScenario, p.carryoverTaxationDetail.scenarioB.acquisitionPrice]).toEqual(["A", 60_000_000]);
   });
 });
 

@@ -38,7 +38,7 @@ function gbAsset(land: string, building: string, separate: boolean, buildingCaus
     gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
     transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_market",
     bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
-    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted",
+    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted", bgActualAcquisitionLand: "250,000,000", bgActualAcquisitionBuilding: "250,000,000", /* K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨) */
     bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000",
     carryover: { ...CO, giftDateValuation: land },
     buildingCarryover: { ...CO, giftDateValuation: building },
