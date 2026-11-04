@@ -1,7 +1,7 @@
 # 다건·함께 양도 — 상속·증여 §163⑨ ② 채택 자산의 취득가액·필요경비 표시 정정
 
 > **출처**: `multi-sec163-9-support.plan.md` §4 V-2·V-3(#2891 남은 확인). V-2를 재다가 표시 결함을 찾았다.
-> **결정**: ⏳ 사용자 결정 대기(§2).
+> **결정**: 사용자 「권장안으로」(2026-11-04) — Q-1 a · Q-2 a.
 > **검증 깊이**: L2 — 표시 전용(세액 불변). 다건·함께 양도의 신고서 양식·계산결과 상세명세서·합산 결과 카드의 취득가액·필요경비 칸.
 
 ## 0. 결론
@@ -74,9 +74,24 @@
 | ID | 항목 | 상태 |
 |---|---|---|
 | V-1 | 겸용주택 상속(겸용 엔진이 따로 내는 `inheritedAcquisitionDetail`)이 다건·함께 양도에서 같은 echo 분기를 타는가 | ⏳ 확인 필요 — 다건은 겸용을 파트 카드로 펼치므로 카드별 echo가 다를 수 있다 |
-| V-2 | 상속 + 감가상각비(§97③) 자산 — echo가 채택값에서 `depreciationAmount`를 빼는 순서가 단건 신고서와 같은가 | ⏳ 확인 필요(구현 때 격자 1행 추가) |
-| V-3 | PDF 출력(합산 신고서) — 같은 echo를 읽는다고 echo 머리 주석에 적혀 있다 | ⏳ 구현 뒤 PDF 경로 1건 확인 |
+| V-2 | 상속 + 감가상각비(§97③) 자산 — echo가 채택값에서 `depreciationAmount`를 빼는 순서가 단건 신고서와 같은가 | ✅ 2026-11-04 — 상속 주택 ① + ② · 감가상각비 5천만 → 다건 취득가액 670,000,000 · 필요경비 0 = 단건 엔진 필요경비 · 항등식 성립(anchor DE-1) |
+| V-3 | PDF 출력(합산 신고서) — 같은 echo를 읽는다고 echo 머리 주석에 적혀 있다 | ✅ 코드 확인 — 다건 자산별 「취득가액」 행이 `p.acquisitionPrice`(echo)를 읽는다(`lib/pdf/ResultPdfTransferSections.tsx:505`). PDF를 실제로 만들어 보지는 않았다 |
 
 ## 5. 법령 근거
 
 - 소득세법 시행령 §163⑨ 본문·단서 1호·2호 — 단건 엔진이 이미 구현. 이 계획은 표시만 바꾼다(세액 불변).
+
+## 6. 구현 결과 (2026-11-04)
+
+### 6.1 변경
+
+1. `lib/tax-engine/transfer-tax-aggregate-display-echo.ts` — 실가 분기 취득가액을 `r.result.inheritedAcquisitionDetail?.acquisitionPrice ?? r.singleInput.acquisitionPrice`로(주석에 원인·실측·「역산 항등식이 가린다」). 세액 경로는 이 함수를 읽지 않는다.
+
+### 6.2 테스트
+
+- 신규 anchor `__tests__/calc/multi-inherited-acq-display-echo.anchor.test.ts` 18건:
+  - DE-1 다건 12행 — §1.2 11행 + 감가상각비 행(V-2). 취득가액·필요경비 고정값 · 필요경비 = 단건 엔진 `expenses` · 항등식 · 양도차익 = 단건 · 세액 = ⌊단건 × 1.1⌋.
+  - DE-2 함께 양도 6행 — 상속 자산 열 취득가액 = `inheritedAcquisitionDetail.acquisitionPrice` · 필요경비 0 · 항등식.
+- E2E `e2e/multi-inherited-acq-display-echo.spec.ts` DE-E1(headless Playwright — 사람이 직접 한 브라우저 확인은 아니다): 다건 상속 주택 ① + ② → 응답 자산별 720,000,000 · 0 · 「신고서 양식」 취득가액 행 720,000,000 · 300,000,000 행과 필요경비 420,000,000 행 없음 · 총세액 149,006,000.
+- mutation(채택값 우선 제거 → `r.singleInput.acquisitionPrice`): anchor 13건 실패(② 채택 행 전부 · 불변 5행은 통과) · E2E DE-E1 실패(기대 720,000,000 · 받음 300,000,000).
+- 회귀: `__tests__/api`·`calc`·`components`·`lib`·`tax-engine/transfer` 36,315 통과 · 실패 1(`aggregate-rental-housing-split-part-income` 대조군 — 단독 재실행 20/20 통과 · load 23). tsc 0 · 변경 파일 eslint 0.
