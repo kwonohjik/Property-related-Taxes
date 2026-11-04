@@ -115,3 +115,20 @@ describe("Z-2 토글 C(주택·건물) — 토지·건물을 따로 계산하므
     expect((await post(body)).status).toBe(200);
   });
 });
+
+describe("Z-3 재개발 완공 아파트 원조합원 · 기준시가 평가 — 종전 부동산 기준시가 두 칸도 합계로 계산한다", () => {
+  const REDEV = { assetKind: "redevelopment_apt", redevSubject: "apt", redevApprovalLawBasis: "urban_renovation_art_74", redevApprovalDate: "2024-01-10", redevRightsValue: "900000000",
+    redevSettlementDirection: "pay", redevSettlementAmount: "100000000", redevCompletionDate: "2025-09-01", redevManagementDisposalHousingPrice: "600000000",
+    redevAcquisitionHousingPrice: "250000000", addressJibun: "서울 B 2" } as Partial<AssetForm>;
+  const CO = { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2023-06-01", donorAcquisitionDate: "2000-06-01", donorAcquisitionPrice: "150,000,000", giftDateValuation: "1,000,000,000", giftTaxAmount: "0", donorRelation: "lineal", donorSameHousehold: "no", donorHouseholdHoldingStartDate: "2012-01-01" };
+  const gainA = async (l: string, b: string) => {
+    const r = await ok(bgForm(stdCarry(b, { ...REDEV, bgCoDonorLandStdPriceAtAcq: l, carryover: CO as never })));
+    return (r.data as Body).carryoverTaxationDetail?.scenarioA?.transferGain as number;
+  };
+  it("1천만·0 = 0·1천만 = 5백만·5백만 (시나리오 A 양도차익 같음) · 합계가 다르면 다르다", async () => {
+    const same = [await gainA("10,000,000", "0"), await gainA("0", "10,000,000"), await gainA("5,000,000", "5,000,000")];
+    expect(new Set(same).size).toBe(1);
+    expect(await gainA("20,000,000", "0")).not.toBe(same[0]);
+  });
+});
+

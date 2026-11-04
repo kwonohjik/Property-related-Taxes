@@ -41,6 +41,14 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
    * (④ 양도인 쪽도 한 값을 건물 자리에 싣는다). 그래서 0은 오입력이 아니라 「합계를 한 칸에」의 정상 입력이다. 토글 C(houseSplit)면 토지·건물을 따로 계산한다.
    */
   const singleStd = houseSplit ? undefined : asset.assetKind === "housing" ? "housing" : asset.assetKind === "commercial_building" ? "commercial" : undefined;
+  /**
+   * 재개발·재건축 완공 아파트 원조합원 × 기준시가 평가 — 취득가액은 종전 부동산(기존건물과 그 부수토지)의 것이다(「소득세법 시행령」 제166조 제2항·제7항 제1호,
+   * 「소득세법」 제97조의2 제1항 제1호 「해당 자산을 취득할 당시」). 엔진은 두 칸 합계만 쓴다(2026-11-04 실측). 환산(K-5)은 이 칸 대신 §166③ 칸을 쓰므로 종전 안내를 둔다.
+   */
+  const redevOriginal =
+    asset.assetKind === "redevelopment_apt" && asset.redevIsSuccessorMember !== "yes" && asset.redevSubject !== "right" && asset.bgValuationMode === "sangjeungbeop_standard"
+      ? asset.redevOriginalAssetType === "land" ? "land" : "housing"
+      : undefined;
   return (
     <div
       className="rounded-lg border border-sky-300 bg-sky-50/70 p-3 space-y-2 dark:bg-sky-950/40"
@@ -89,7 +97,11 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
             <FieldCard
               label="당초 증여자 취득 당시 토지 기준시가"
               hint={
-                singleStd === "housing"
+                redevOriginal === "housing"
+                  ? "당초 증여자가 종전 부동산(기존건물과 그 부수토지)을 취득할 당시의 기준시가입니다(「소득세법 시행령」 제166조 제7항 제1호). 종전 주택은 개별주택가격·공동주택가격 한 값(「소득세법」 제99조 제1항 제1호 라목)이므로 그 값을 이 칸에 넣고 건물 칸은 0을 입력하세요 — 두 칸 합계로 계산합니다."
+                  : redevOriginal === "land"
+                    ? "당초 증여자가 종전 토지를 취득할 당시의 토지 기준시가(개별공시지가 × 면적 — 「소득세법」 제99조 제1항 제1호 가목 · 「소득세법 시행령」 제166조 제7항 제1호)입니다. 건물 칸은 0을 입력하세요."
+                  : singleStd === "housing"
                   ? "주택의 기준시가는 토지를 포함한 한 값(개별주택가격·공동주택가격 — 「소득세법」 제99조 제1항 제1호 라목)입니다. 그 값을 이 칸에 넣고 건물 칸은 0을 입력하세요 — 두 칸 합계로 계산합니다."
                   : singleStd === "commercial"
                     ? "국세청이 토지와 건물을 일괄 고시하는 상업용 건물·오피스텔(「소득세법」 제99조 제1항 제1호 다목)이면 그 기준시가를 이 칸에 넣고 건물 칸은 0을 입력하세요. 그 밖에는 개별공시지가 × 면적입니다 — 두 칸 합계로 계산합니다."
@@ -111,6 +123,10 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
               hint={
                 asset.assetKind === "general_building" || houseSplit
                   ? "당초 증여자가 건물을 취득할 당시의 건물 기준시가 — 직접 신축했으면 사용승인일 당시(「소득세법 시행령」 제162조 제1항 제4호). 0일 수 없습니다."
+                  : redevOriginal === "housing"
+                    ? "토지 칸에 종전 주택의 개별주택가격·공동주택가격을 넣었으면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
+                  : redevOriginal === "land"
+                    ? "종전 부동산이 토지뿐이면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
                   : singleStd === "housing"
                     ? "토지 칸에 개별주택가격·공동주택가격을 넣었으면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
                     : singleStd === "commercial"

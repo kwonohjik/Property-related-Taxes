@@ -45,6 +45,28 @@ describe("⑤ 당초 증여자 기준시가 안내", () => {
     expect(t).not.toContain(OLD_BUILDING);
   });
 
+  const REDEV = { assetKind: "redevelopment_apt", redevSubject: "apt", redevIsSuccessorMember: "no", bgValuationMode: "sangjeungbeop_standard", bgAcquisitionMethod: "" } as Partial<AssetForm>;
+  it("재개발 완공 아파트 원조합원 · 종전 주택 — 종전 부동산 취득 당시 기준시가(§166⑦1호) 한 값을 토지 칸에", () => {
+    const t = textOf({ ...REDEV, redevOriginalAssetType: "housing" } as Partial<AssetForm>);
+    expect(t).toContain("종전 부동산(기존건물과 그 부수토지)을 취득할 당시의 기준시가");
+    expect(t).toContain("토지 칸에 종전 주택의 개별주택가격·공동주택가격을 넣었으면 0");
+    expect(t).not.toContain(OLD_BUILDING);
+  });
+
+  it("재개발 완공 아파트 원조합원 · 종전 토지 — 토지 기준시가, 건물 칸 0", () => {
+    const t = textOf({ ...REDEV, redevOriginalAssetType: "land" } as Partial<AssetForm>);
+    expect(t).toContain("종전 토지를 취득할 당시의 토지 기준시가");
+    expect(t).toContain("종전 부동산이 토지뿐이면 0");
+  });
+
+  it("재개발 — 승계조합원·환산(K-5)은 바꾸지 않는다(취득가액 기준이 다르거나 이 칸을 쓰지 않는다)", () => {
+    for (const over of [{ redevIsSuccessorMember: "yes" }, { bgValuationMode: "sangjeungbeop_market", bgAcquisitionMethod: "converted" }]) {
+      const t = textOf({ ...REDEV, redevOriginalAssetType: "housing", ...over } as Partial<AssetForm>);
+      expect(t).not.toContain("종전 부동산(기존건물과 그 부수토지)을 취득할 당시");
+      cleanup();
+    }
+  });
+
   it("토지 — 종전 안내 그대로(건물이 없다)", () => {
     const t = textOf({ assetKind: "land" });
     expect(t).toContain(OLD_BUILDING);
