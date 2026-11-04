@@ -100,7 +100,7 @@ describe("부담부증여 단건 × 이월과세 — 필요경비 줄은 개산�
     ["감정가액 · 증여세 0", "appraisal", "0", "A", 900_000, 1_507_800],
     ["감정가액 · 증여세 2M", "appraisal", "2000000", "A", 1_300_000, 1_464_600],
     ["매매사례가액 · 증여세 2M", "salesCase", "2000000", "A", 1_300_000, 1_464_600],
-    ["환산 · 증여세 2M (B 채택)", "converted", "2000000", "B", 1_080_000, 3_453_000],
+    // 환산(K-5) B 채택 행은 뺐다 — 이월과세 K-5의 B는 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 Q-2 a)이라 개산공제가 없다(종전 1,080,000 · 3,453,000).
   ] as const)("%s", async (_n, method, g, adopted, value, tax) => {
     const c = await expense({ bgAcquisitionMethod: method, ...gt(g) });
     expect(c.adopted).toBe(adopted);

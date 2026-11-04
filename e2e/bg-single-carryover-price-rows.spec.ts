@@ -6,12 +6,14 @@
  * 종전: 명세서 양도가액 0 · 취득가액 −30,000,000(A) / −35,000,000(B), 신고서 양식 두 칸 값 없음.
  *
  *   PR-E1. 감정가액 · 증여세 2,000,000(A 채택) — 양도 80,000,000 · 취득 50,000,000 · 필요경비 1,300,000
- *   PR-E2. 환산 · 증여세 2,000,000(B 채택) — 양도 80,000,000 · 취득 45,000,000 · 필요경비 1,080,000
+ *   PR-E2. 환산 · 증여세 2,000,000(B 채택) — 양도 80,000,000 · 취득 45,000,000 · 필요경비 0
+ *          K-5 이월과세 B는 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 `bg-carryover-k5-transferor-sec163-9.plan.md` Q-2 a) —
+ *          평가액 225,000,000 × 0.2 = 45,000,000(종전 환산과 같은 금액) · 실지라 개산공제 없음(종전 필요경비 1,080,000).
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
-const asset = (giftTax: string, method: string) => ({
+const asset = (giftTax: string, method: string, over: Record<string, unknown> = {}) => ({
   ...makeDefaultAsset(1),
   addressJibun: "서울 강남구 테스트동 1-1",
   assetKind: "land",
@@ -25,9 +27,10 @@ const asset = (giftTax: string, method: string) => ({
   bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "400000000", bgMortgageDebtAmount: "80000000", bgDonorRelation: "lineal_descendant",
   bgAcquisitionMethod: method, standardPriceAtTransfer: "320000000", standardPriceAtAcq: "180000000",
   bgActualAcquisitionLand: "300000000", bgCoDonorPresumedAcquisitionLand: "250000000", bgCoDonorLandStdPriceAtAcq: "150000000", bgCoDonorBuildingStdPriceAtAcq: "0",
+  ...over,
 });
 
-async function calc(page: Page, giftTax: string, method: string) {
+async function calc(page: Page, giftTax: string, method: string, over: Record<string, unknown> = {}) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
   await page.evaluate(
@@ -35,7 +38,7 @@ async function calc(page: Page, giftTax: string, method: string) {
     {
       state: {
         formData: {
-          assets: [asset(giftTax, method)], transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "1", isOneHousehold: false,
+          assets: [asset(giftTax, method, over)], transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "1", isOneHousehold: false,
           householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, isRegulatedArea: false, wasRegulatedAtAcquisition: false, isUnregistered: false,
         },
         pendingMigration: false,
@@ -58,16 +61,16 @@ const sectionText = (page: Page, id: string) => page.locator(`[data-print-id="${
 /** 신고서 양식 본표(채택 시나리오 열)의 행 — 라벨로 시작하는 첫 행. */
 const filingRow = (page: Page, label: string) => page.locator('[data-print-id="form-table"] tr').filter({ hasText: new RegExp(`^\\s*${label}\\s*[0-9-]`) }).first();
 
-async function check(page: Page, vals: { transfer: string; acq: string; exp: string }) {
+async function check(page: Page, vals: { transfer: string; acq: string; exp?: string }) {
   // 상세 명세서 항목은 「… 법령 근거 ↗값」 순으로 렌더된다.
   const stmt = await sectionText(page, "detailed-statement");
   expect(stmt).toContain(`소득세법 시행령 §159·§166 ↗${vals.transfer}`);
   expect(stmt).toContain(`소득세법 §97 / 시행령 §163·§176의2 ↗${vals.acq}`);
-  expect(stmt).toContain(`소득세법 §97 / 시행령 §163⑥ ↗${vals.exp}`);
+  if (vals.exp) expect(stmt).toContain(`소득세법 §97 / 시행령 §163⑥ ↗${vals.exp}`);
   expect(stmt).not.toMatch(/↗-[0-9]/);
   await expect(filingRow(page, "양도가액")).toContainText(vals.transfer);
   await expect(filingRow(page, "취득가액")).toContainText(vals.acq);
-  await expect(filingRow(page, "필요경비")).toContainText(vals.exp);
+  if (vals.exp) await expect(filingRow(page, "필요경비")).toContainText(vals.exp);
 }
 
 test("PR-E1: 감정가액 · 증여세 2M (A 채택) — 양도 80,000,000 · 취득 50,000,000 · 필요경비 1,300,000", async ({ page }) => {
@@ -76,8 +79,10 @@ test("PR-E1: 감정가액 · 증여세 2M (A 채택) — 양도 80,000,000 · �
   await check(page, { transfer: "80,000,000", acq: "50,000,000", exp: "1,300,000" });
 });
 
-test("PR-E2: 환산 · 증여세 2M (B 채택) — 양도 80,000,000 · 취득 45,000,000 · 필요경비 1,080,000", async ({ page }) => {
+test("PR-E2: 환산 · 증여세 2M (B 채택) — 양도 80,000,000 · 취득 45,000,000(증여일 평가액 × 채무비율) · 개산공제 없음", async ({ page }) => {
   test.setTimeout(240_000);
-  await calc(page, "2000000", "converted");
-  await check(page, { transfer: "80,000,000", acq: "45,000,000", exp: "1,080,000" });
+  await calc(page, "2000000", "converted", { bgActualAcquisitionLand: "225000000" });
+  await check(page, { transfer: "80,000,000", acq: "45,000,000" });
+  // 개산공제 줄(§163⑥)이 아니다 — B는 실지(소령 §163⑨)
+  expect(await sectionText(page, "detailed-statement")).not.toContain("개산공제, 소령 §163⑥) = 150,000,000");
 });

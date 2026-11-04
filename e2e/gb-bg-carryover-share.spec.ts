@@ -37,6 +37,8 @@ const share = (n: number, over: Record<string, unknown> = {}) => ({
   transferCause: "general",
   bgValuationMode: "sangjeungbeop_market",
   bgAcquisitionMethod: "converted",
+  // K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 Q-2 a) — 2.5억 × 채무비율 0.5 = 종전 환산 취득가액과 같은 금액
+  bgActualAcquisitionLand: "250000000", bgActualAcquisitionBuilding: "250000000",
   bgMarketValueAtTransfer: "1000000000",
   bgLendingDepositTotal: "0",
   bgMortgageDebtAmount: "500000000",
@@ -111,7 +113,7 @@ test.describe("일반건물 지분 분할 50/50 × 부담부증여 × 이월과�
     await expect(cards).toHaveCount(2);
     await expect(cards.nth(1)).toContainText("이월과세 비교과세 결과 — 자산 2");
     await expect(cards.nth(1)).toContainText("109,326,000");
-    await expect(cards.nth(1)).toContainText("93,186,350");
+    await expect(cards.nth(1)).toContainText("93,786,350"); // K-5 B §163⑨ — 개산공제가 빠져 지분 단위 +600,000(종전 93,186,350)
     await expect(cards.nth(1)).toContainText("✓ 채택");
     await expect(cards.nth(1)).toContainText("신고 전체 금액");
 

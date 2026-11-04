@@ -2,7 +2,7 @@
  * anchor — 함께 부담부증여 묶음 × 일반건물 × 배우자등 이월과세 — §97의2②3호 신고단위 비교 배선 (PR-1)
  *
  * 계획서 `docs/00-pm/gb-bg-carryover-share-bundled.plan.md` §1.2·§4.5. 수정 前: ⑧·⑫ 가 「단건으로 계산하세요」로 막았고(PR-3),
- * 그 전에는 묶음 카드가 이월과세를 읽지 않아 양도인 기준(B) 110,760,000 만 냈다. 계획서 실측(일회성 probe): A 140,526,000 · 위치 무관 ·
+ * 그 전에는 묶음 카드가 이월과세를 읽지 않아 양도인 기준(B) 111,960,000 만 냈다. 계획서 실측(일회성 probe): A 140,526,000 · 위치 무관 ·
  * 증여세 3천만이면 135,846,000(효과 −4,680,000 = 단건과 같다).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -48,7 +48,7 @@ function gbAsset(over: Partial<AssetForm> = {}, co: Record<string, unknown> = {}
     gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
     transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_market",
     bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
-    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted",
+    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted", bgActualAcquisitionLand: "250,000,000", bgActualAcquisitionBuilding: "250,000,000", /* K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨) */
     bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000",
     carryover: {
       ...CARRYOVER_DEFAULTS,
@@ -111,12 +111,13 @@ const landCarry = (n: number) =>
   ({ ...landBg(n), acquisitionCause: "carryover_gift", bgCoDonorActualAcquisitionLand: "20,000,000", carryover: { ...gbAsset().carryover, giftDateValuation: "300,000,000" } }) as AssetForm;
 const acqOf = (u: { parts: { acquisitionPrice: number }[] }) => u.parts.map((p) => p.acquisitionPrice);
 
+// K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 Q-2 a) — 실지라 개산공제가 빠져 B 결정세액 +1,200,000(종전 110,760,000 · 120,580,000).
 describe("일반건물 부담부증여 × 이월과세 — 묶음에서 신고단위 A/B 비교(수정 前: ⑧·⑫ 400 「단건으로 계산하세요」)", () => {
-  it("Q1 일반건물 첫 자산 · K-5 → A 채택 140,526,000 (미적용 110,760,000)", async () => {
+  it("Q1 일반건물 첫 자산 · K-5 → A 채택 140,526,000 (미적용 111,960,000)", async () => {
     const a = await ok(formOf([gbAsset(), landBg(2)], BUNDLE));
     expect(a.determinedTax).toBe(140_526_000);
     const u = a.burdenedGiftCarryoverUnits.primary;
-    expect(u).toMatchObject({ adoptedScenario: "A", determinedTaxA: 140_526_000, determinedTaxB: 110_760_000, assetLabel: "주 자산" });
+    expect(u).toMatchObject({ adoptedScenario: "A", determinedTaxA: 140_526_000, determinedTaxB: 111_960_000, assetLabel: "주 자산" });
     // [A] 당초 증여자 기준시가 1천만·4천만의 §159 몫 · 기산일 = 당초 증여자 취득일 / [B] 양도인 기준 · 증여받은 날
     expect(acqOf(u.scenarioA)).toEqual([12_500_000, 50_000_000]);
     expect(acqOf(u.scenarioB)).toEqual([125_000_000, 125_000_000]);
@@ -129,7 +130,7 @@ describe("일반건물 부담부증여 × 이월과세 — 묶음에서 신고�
   it("Q2 토지 첫 자산 · 일반건물 둘째 → Q1과 같다(위치 무관 · 단위 키 = 자산 id)", async () => {
     const a = await ok(formOf([landBg(1), second(gbAsset())], BUNDLE));
     expect(a.determinedTax).toBe(140_526_000);
-    expect(a.burdenedGiftCarryoverUnits.a2).toMatchObject({ adoptedScenario: "A", determinedTaxA: 140_526_000, determinedTaxB: 110_760_000 });
+    expect(a.burdenedGiftCarryoverUnits.a2).toMatchObject({ adoptedScenario: "A", determinedTaxA: 140_526_000, determinedTaxB: 111_960_000 });
   });
 
   it("Q3 Q1 + 증여세 3천만 → 135,846,000(효과 −4,680,000 = 단건과 같다)", async () => {
@@ -147,10 +148,10 @@ describe("일반건물 부담부증여 × 이월과세 — 묶음에서 신고�
     expect(acqOf(u.scenarioB)).toEqual([150_000_000, 150_000_000]);
   });
 
-  it("②3호 — A가 적으면 B: 당초 증여자 기준시가가 양도인과 같으면 A 51,965,120 < B ⇒ B 110,760,000 · 신고 카드·명세는 B 그대로", async () => {
+  it("②3호 — A가 적으면 B: 당초 증여자 기준시가가 양도인과 같으면 A 51,965,120 < B ⇒ B 111,960,000 · 신고 카드·명세는 B 그대로", async () => {
     const a = await ok(formOf([gbAsset({ bgCoDonorLandStdPriceAtAcq: "180,000,000", bgCoDonorBuildingStdPriceAtAcq: "100,000,000" }), landBg(2)], BUNDLE));
-    expect(a.determinedTax).toBe(110_760_000);
-    expect(a.burdenedGiftCarryoverUnits.primary).toMatchObject({ adoptedScenario: "B", determinedTaxA: 51_965_120, determinedTaxB: 110_760_000 });
+    expect(a.determinedTax).toBe(111_960_000);
+    expect(a.burdenedGiftCarryoverUnits.primary).toMatchObject({ adoptedScenario: "B", determinedTaxA: 51_965_120, determinedTaxB: 111_960_000 });
     // 미채택 [A] 요약은 반사실 실행(이 단위만 A)에서 — 최종(B) 카드를 다시 쓰면 두 열이 같아진다
     expect(acqOf(a.burdenedGiftCarryoverUnits.primary.scenarioA)).toEqual([225_000_000, 125_000_000]);
     expect(acqOf(a.burdenedGiftCarryoverUnits.primary.scenarioB)).toEqual([125_000_000, 125_000_000]);
@@ -164,7 +165,7 @@ describe("일반건물 부담부증여 × 이월과세 — 묶음에서 신고�
   it("혼재 단위 — 토지 이월과세(단건 엔진 단위)와 일반건물 이월과세(외부 단위)를 한 번의 순차 고정점으로 푼다", async () => {
     const a = await ok(formOf([gbAsset(), landCarry(2)], BUNDLE));
     expect(a.determinedTax).toBe(153_006_000);
-    expect(a.burdenedGiftCarryoverUnits.primary).toMatchObject({ adoptedScenario: "A", determinedTaxA: 153_006_000, determinedTaxB: 120_580_000 });
+    expect(a.burdenedGiftCarryoverUnits.primary).toMatchObject({ adoptedScenario: "A", determinedTaxA: 153_006_000, determinedTaxB: 121_780_000 });
     expect(a.properties[2].carryoverTaxationDetail).toMatchObject({
       adoptedScenario: "A",
       filingUnitComparison: { determinedTaxWithCarryover: 153_006_000, determinedTaxWithout: 149_326_000 },

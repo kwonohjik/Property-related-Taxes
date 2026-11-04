@@ -39,6 +39,15 @@ export function bgPartialCarryover(asset: PartScope): boolean {
  * ④ `burdenedGiftInfo.carryoverDonorBasis.parts` — 일반건물 분리 ON만 싣는다(미전송 = 둘 다).
  * ⑫ `refineGbBgCarryoverParts`가 같은 본문의 토지·건물 취득원인과 대조한다.
  */
+/**
+ * 이월과세 × 시가 평가 환산(K-5) · 토지·건물 모두 증여받음 — 시나리오 B 취득가액이 양도인 증여일 상증법 평가액(소령 §163⑨)이라
+ * K-6/K-7처럼 「양도인이 증여받은 때의 상증법 평가액」 칸(`bgActual*`)을 연다(⑤)·싣는다(④)·요구한다(⑧).
+ * 엔진 `isConvertedCarryoverReadingGiftValuation`·⑫와 같은 조건이다(계획서 `bg-carryover-k5-transferor-sec163-9.plan.md` Q-2 a).
+ */
+export function bgConvertedCarryoverReadsGiftValuation(asset: PartScope & Pick<AssetForm, "bgAcquisitionMethod">): boolean {
+  return asset.bgAcquisitionMethod === "converted" && asset.acquisitionCause === "carryover_gift" && !bgPartialCarryover(asset);
+}
+
 export function bgCarryoverPartsPayload(asset: PartScope): { land: boolean; building: boolean } | undefined {
   return splitsParts(asset) ? bgCarryoverParts(asset) : undefined;
 }

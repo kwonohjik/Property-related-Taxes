@@ -52,7 +52,7 @@ function gbAsset(over: Partial<AssetForm> = {}, co: Record<string, unknown> = {}
     gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
     transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_market",
     bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
-    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted",
+    bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgAcquisitionMethod: "converted", bgActualAcquisitionLand: "250,000,000", bgActualAcquisitionBuilding: "250,000,000", /* K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨) */
     bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000",
     carryover: {
       ...CARRYOVER_DEFAULTS,
@@ -117,7 +117,7 @@ describe("둘 다 이월과세 — 토지분 6억 · 건물분 4억 → 상당�
   /**
    * 채무비율 0.5 → 상당액 5천만 → 토지 3천만 · 건물 2천만(평가액 6:4).
    * A: 토지 237,350,000 − 30,000,000 = 207,350,000 · 건물 199,400,000 − 20,000,000 = 179,400,000 · 장특 22%
-   *    → 161,733,000 + 139,932,000 − 기본공제 2,500,000 = 299,165,000 × 38% − 19,940,000 = 93,742,700 < B 97,800,000 → B 채택.
+   *    → 161,733,000 + 139,932,000 − 기본공제 2,500,000 = 299,165,000 × 38% − 19,940,000 = 93,742,700 < B 99,000,000(K-5 B §163⑨ — 종전 환산 97,800,000) → B 채택.
    * 수정 前(분리 ON): 분자가 토지분 6억뿐 → 상당액 6천만 → A 99,966,000 > B → A 채택(뒤집힘).
    */
   it.each([["분리 ON(건물 블록)", true], ["분리 OFF(같은 블록 건물분 칸)", false]] as const)("%s", async (_n, separate) => {
@@ -127,7 +127,8 @@ describe("둘 다 이월과세 — 토지분 6억 · 건물분 4억 → 상당�
     expect(b.burdenedGiftInfo.carryoverDonorBasis.giftValuationByPart).toEqual({ land: 600_000_000, building: 400_000_000 });
     const r = await ok(f);
     const d = detail(r);
-    expect([d.determinedTaxA, d.determinedTaxB, d.adoptedScenario]).toEqual([93_742_700, 97_800_000, "B"]);
+    // B 99,000,000 — K-5 B가 §163⑨ 실지가 되어 개산공제 3,000,000이 빠진다(종전 환산 97,800,000 · 2026-11-04 Q-2 a)
+    expect([d.determinedTaxA, d.determinedTaxB, d.adoptedScenario]).toEqual([93_742_700, 99_000_000, "B"]);
     expect([card(d.scenarioA, "토지").transferGain, card(d.scenarioA, "건물").transferGain]).toEqual([207_350_000, 179_400_000]);
   });
 });
@@ -146,6 +147,8 @@ describe("배분 축이 한도와 만나면 세액이 갈린다 — 건물 잔�
     const f = both(true, "900,000,000", "100,000,000", {
       landAcquisitionDate: "2021-05-01", acquisitionDate: "2021-05-01", bgCoDonorBuildingStdPriceAtAcq: "190,000,000",
       gbAcqLandPricePerSqm: "1,800,000", gbAcqBuildingValue: "180,000,000",
+      // K-5 B = 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04) — 4.5억 × 채무비율 0.5 = 종전 환산 2.25억과 같은 금액(A 채택 유지)
+      bgActualAcquisitionLand: "450,000,000", bgActualAcquisitionBuilding: "450,000,000",
       carryover: { ...CO, ...RET, ...gt, giftDateValuation: "900,000,000" } as never,
       buildingCarryover: { ...CO, ...RET, ...gt, giftDateValuation: "100,000,000" } as never,
     } as Partial<AssetForm>);
@@ -162,6 +165,8 @@ describe("지분 · 묶음 — 같은 builder로 실려 엔진까지 닿는다 (
     return { ...both(true, "900,000,000", "100,000,000", {
       landAcquisitionDate: "2021-05-01", acquisitionDate: "2021-05-01", bgCoDonorBuildingStdPriceAtAcq: "190,000,000",
       gbAcqLandPricePerSqm: "1,800,000", gbAcqBuildingValue: "180,000,000",
+      // K-5 B = 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04) — 4.5억 × 채무비율 0.5 = 종전 환산 2.25억과 같은 금액(A 채택 유지)
+      bgActualAcquisitionLand: "450,000,000", bgActualAcquisitionBuilding: "450,000,000",
       carryover: { ...CO, ...RET, ...gt, giftDateValuation: "900,000,000" } as never,
       buildingCarryover: { ...CO, ...RET, ...gt, giftDateValuation: "100,000,000" } as never,
       ...extra,

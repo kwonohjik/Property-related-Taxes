@@ -118,6 +118,8 @@ type BurdenedGiftLike = {
     presumedAcquisitionTotal?: number;
     presumedLandAcquisitionPrice?: number;
     presumedBuildingAcquisitionPrice?: number;
+    /** 증여받은 파트(일반건물 분리) — 한 파트만이면 K-5 B는 종전 환산이다(엔진 `isConvertedCarryoverReadingGiftValuation`). */
+    parts?: { land?: boolean; building?: boolean };
   };
   donorRelation?: string;
 };
@@ -189,6 +191,14 @@ export function refineBurdenedGiftInputs(
       // 담보 승은 엔진이 방식별 금액을 읽지 않아 요구하지 않는다. ⑤가 그 칸을 숨기고 ⑧도 요구하지 않는다(O-5). 승계 입주권(괄호 열거 시기)도 같다(I-1).
       issue(["burdenedGiftInfo", "actualAcquisitionTotal"], "부담부증여 실지취득가액 안분은 실지취득가액이 필요합니다");
     }
+    // 이월과세 × K-5(두 파트 모두 증여받음) — 시나리오 B는 양도인 증여일 평가액 `actual*`(소령 §163⑨ · 엔진 `isConvertedCarryoverReadingGiftValuation`)
+    const donorParts = bg.carryoverDonorBasis?.parts;
+    if (
+      !(preDeemed || gbAllPartsPreDeemed || mixedDeemed) && bg.acquisitionMethod === "converted" && bg.carryoverDonorBasis &&
+      (!donorParts || donorParts.land === donorParts.building) && !collateralForcesStdAcquisition(bg, data.ownershipRatio) &&
+      !positive(bg.actualAcquisitionTotal) && !positive(bg.actualLandAcquisitionPrice) && !positive(bg.actualBuildingAcquisitionPrice)
+    )
+      issue(["burdenedGiftInfo", "actualAcquisitionTotal"], "이월과세 부담부증여는 양도인이 증여받은 때의 상증법 평가액이 필요합니다 (소득세법 시행령 §163⑨ — 시나리오 B)");
     if (!(preDeemed || gbAllPartsPreDeemed || mixedDeemed) && (bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") && !collateralForcesStdAcquisition(bg, data.ownershipRatio)) {
       const label = bg.acquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
       const donor = bg.carryoverDonorBasis;

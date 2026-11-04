@@ -111,7 +111,8 @@ const formOf = (assets: AssetForm[], over: Record<string, unknown> = {}): Transf
 const BUNDLE = { assetSplitMode: "companion", bundledSaleMode: "actual" };
 
 const K4 = { bgAcquisitionMethod: "actual", bgCoDonorActualAcquisitionLand: "100,000,000", bgCoDonorActualAcquisitionBuilding: "200,000,000", bgActualAcquisitionLand: "300,000,000", bgActualAcquisitionBuilding: "300,000,000" } as Partial<AssetForm>;
-const K5 = {} as Partial<AssetForm>;
+/** K-5 × 이월과세 — 시나리오 B는 양도인 증여일 평가액(소령 §163⑨ · K-4/K-7과 같은 칸 · 2026-11-04 Q-2 a). */
+const K5 = { bgActualAcquisitionLand: "300,000,000", bgActualAcquisitionBuilding: "300,000,000" } as Partial<AssetForm>;
 /** 당초 증여자가 건물을 토지보다 늦게 취득 — 파트별 보유기간(장기보유특별공제)이 갈려 배분 차이가 세액에 닿는다. */
 const LATER_BUILDING = { buildingCarryover: { ...CARRYOVER_DEFAULTS, donorAcquisitionDate: "2023-01-01" } } as Partial<AssetForm>;
 const money = (n: number) => n.toLocaleString("en-US");

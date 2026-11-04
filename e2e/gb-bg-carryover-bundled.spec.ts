@@ -4,7 +4,7 @@
  * 계획서: docs/00-pm/gb-bg-carryover-share-bundled.plan.md §1.2 Q1 · §4.6
  * 종전(F27 B PR-3)에는 ⑧ 이 「단건으로 계산하세요」로 막았다. 시드는 vitest anchor(`transfer.route.gb-bg-carryover-bundled.anchor.test.ts`)와 같다 —
  * 일반건물 K-5 · 시가 10억 · 채무 5억 · 증여 2024-05-01 · 당초 증여자 취득 2015-01-01(취득 당시 기준시가 토지 1천만·건물 4천만) + 토지 부담부증여 3억 ·
- * 계약 13억 · 양도 2026-03-01 → A 채택 140,526,000 (미적용 110,760,000).
+ * 계약 13억 · 양도 2026-03-01 → A 채택 140,526,000 (미적용 111,960,000 — K-5 B §163⑨ · 종전 110,760,000).
  *
  * 실행(워크트리): E2E_PORT=3291 npx playwright test e2e/gb-bg-carryover-bundled.spec.ts
  */
@@ -33,6 +33,8 @@ const gbAsset = {
   transferCause: "general",
   bgValuationMode: "sangjeungbeop_market",
   bgAcquisitionMethod: "converted",
+  // K-5 이월과세 B = 양도인 증여일 평가액(소령 §163⑨ · 2026-11-04 Q-2 a) — 2.5억 × 채무비율 0.5 = 종전 환산 취득가액과 같은 금액
+  bgActualAcquisitionLand: "250000000", bgActualAcquisitionBuilding: "250000000",
   bgMarketValueAtTransfer: "1000000000",
   bgLendingDepositTotal: "0",
   bgMortgageDebtAmount: "500000000",
@@ -113,7 +115,7 @@ test.describe("함께 부담부증여 묶음 × 일반건물 이월과세 (PR-1)
     await expect(card).toHaveCount(1);
     await expect(card).toContainText("이월과세 비교과세 결과 — 주 자산");
     await expect(card).toContainText("140,526,000");
-    await expect(card).toContainText("110,760,000");
+    await expect(card).toContainText("111,960,000");
     await expect(card).toContainText("✓ 채택");
     await expect(card).not.toContainText("더 큰 세액");
     await expect(card).toContainText("신고 전체 금액");
