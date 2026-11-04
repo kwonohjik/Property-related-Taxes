@@ -699,7 +699,8 @@ export function RentalHousingExceptionSection({
         checked={rh.applyException}
         onCheckedChange={handleToggle}
         title="장기임대주택 보유자 거주주택 비과세 특례 적용"
-        description="임대주택을 주택수에서 제외하고 1세대1주택으로 봄 (소령 §155⑳)"
+        // R-3 — 장기어린이집(소령 §167의3①8호의2 · ⑳3호)은 이 계산이 다루지 않는다(확정 미구현 G-8) — 불성립으로 계산되므로 알린다.
+        description="임대주택을 주택수에서 제외하고 1세대1주택으로 봄 (소령 §155⑳) — 장기어린이집 보유자의 특례는 이 계산에서 다루지 않습니다"
         tone="violet"
         trailing={
           <LawArticleModal

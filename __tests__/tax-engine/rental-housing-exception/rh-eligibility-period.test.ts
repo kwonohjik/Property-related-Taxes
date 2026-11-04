@@ -438,7 +438,12 @@ describe("checkEligibility — Phase3 라목·말소 특례", () => {
 
   // OH-39(2026-09-26): ㉓1호의 1/2은 소득세법 목별 기간(마목 10년)이 아니라 「민간임대주택에 관한 특별법」
   //   제43조 임대의무기간(종전 §2 5호 장기일반 8년 → 48개월)이다 — 등록 유형을 함께 입력한다.
-  it("㉓ 말소 특례: 마목 자진말소 1/2(장기일반 8년×1/2=48개월 ≤ 60개월) + 5년내 양도 → 의무기간 간주 충족 passed", () => {
+  /**
+   * D-5(2026-11-04) — 2021 등록 장기일반 비아파트는 법률 제17482호 부칙 §5① 주택(장기일반 아파트 매입·단기)이 아니라 자진말소·
+   * 자동말소 대상이 아니다 → ㉓이 서지 않는다(종전 단언은 목만 보고 통과시켰다). 1/2 기준(8년 → 48개월)은
+   * `rh-155-20-requirements-d1` OH39-3·4가 아파트 픽스처로 지킨다.
+   */
+  it("㉓ 말소 특례: 마목(2021 등록 장기일반 비아파트) 자진말소 → 부칙 §5① 주택이 아니라 ㉓ 불성립", () => {
     const maTerminated = makeUnit({
       rentalCategory: "long_general", rentalAcquisitionType: "purchase",
       businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
@@ -448,8 +453,8 @@ describe("checkEligibility — Phase3 라목·말소 특례", () => {
       terminatedRegistrationType: "long_term_general",
     });
     const r = checkEligibility([maTerminated], 5, 5);
-    expect(r.passed).toBe(true);
-    expect(r.failReasons.find((f) => f.code === "RENTAL_PERIOD_SHORT")).toBeUndefined();
+    expect(r.passed).toBe(false);
+    expect(r.failReasons.map((f) => f.message).join("\n")).toMatch(/부칙 제5조제1항/);
   });
 
   // OH-39: 48개월은 이제 장기일반 8년의 1/2 **충족**이다(종전 10년×1/2=60 기준은 법령 오독) — 미달 경계는 47개월.

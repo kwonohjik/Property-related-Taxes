@@ -1,8 +1,9 @@
 /**
  * 다건 합산(/multi) 미지원 모드 안내 — ⑧(`multi-transfer-tax-validate.ts`)과 ⑫(`lib/api/transfer-tax-schema.ts`)가
  * **같은 문구**를 쓰도록 모은 곳. 서버 스키마가 import하므로 이 파일은 **의존성이 없어야** 한다
- * (validate 파일은 클라이언트 컴포넌트·스토어를 끌고 온다).
+ * (validate 파일은 클라이언트 컴포넌트·스토어를 끌고 온다). 법령 조문 상수(`legal-codes` — 순수 상수 모듈)는 예외다.
  */
+import { MIXED_USE } from "@/lib/tax-engine/legal-codes";
 
 /** 다건 route(⑭)는 `carryoverTaxation`을 매핑하지 않는다 — 이월과세는 단건 전용(F-5). */
 export const MULTI_CARRYOVER_UNSUPPORTED_MESSAGE = "배우자등 이월과세(§97의2)는 단건 계산기에서만 지원됩니다.";
@@ -33,3 +34,10 @@ export const MULTI_INHERITANCE_VALUATION_UNSUPPORTED_MESSAGE =
 export const MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE =
   "미분양·신축주택 감면(조특법 §98·§98의2~§98의8·§99·§99의2·§99의3)은 단건 계산기에서만 지원됩니다. " +
   "합산 계산은 세율군을 다시 계산하는 과정에서 세율 특칙(§98① 20% 단일세율·§98의3계 단기세율 배제)을 반영하지 못합니다.";
+/**
+ * 화면 전용 — 다건 ④는 §163⑨ 단서(②: §164④ 토지 · §164⑤~§164⑦ 주택 · §164⑥ 상가)를 운반하지 않아 ①(신고가액)만으로 계산한다.
+ * ② 칸에 입력이 있으면 막는다(계획서 multi-sec163-9-clause-b-drop.plan.md Q-1 a · Q-2 a · Q-3 a).
+ */
+export const MULTI_SEC164_CLAUSE_B_UNSUPPORTED_MESSAGE =
+  `§164 기준시가(②)와 비교하는 상속·증여 취득가액(${MIXED_USE.INHERITANCE_DIRECT} 단서)은 단건 계산기에서만 지원됩니다. ` +
+  "② 칸을 비우면 상속세·증여세 신고가액(①)으로 계산합니다.";

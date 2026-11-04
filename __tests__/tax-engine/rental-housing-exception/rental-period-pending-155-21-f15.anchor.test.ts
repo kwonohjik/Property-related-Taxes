@@ -122,7 +122,9 @@ describe("F-15 ㉒ — 사후 추징 안내", () => {
       clawback(calculateTransferTax(input(unit({ rentalMonths: 120 }), 1_500_000_000), rates).warnings),
     ).toEqual([]);
     // OH-39: ㉓1호 1/2은 민특법 임대의무기간 기준 — 등록 유형(장기일반 8년 → 48개월)을 함께 둔다.
-    const terminated = unit({ rentalMonths: 72, rentalAutoTermination: true, terminatedRegistrationType: "long_term_general" });
+    // D-5 — ㉓은 법률 제17482호 부칙 §5① 주택만(장기일반은 아파트 매입임대). 이 픽스처는 2021 등록이라 아파트면 마목 2)에 걸리므로
+    //   부칙 주택인 단기 등록 유형(임대의무기간 4년 → 1/2 = 24개월 ≤ 72개월)으로 둔다.
+    const terminated = unit({ rentalMonths: 72, rentalAutoTermination: true, terminatedRegistrationType: "short_term" });
     expect(checkEligibility([terminated], 5, 5).passed).toBe(true);
     expect(checkEligibility([terminated], 5, 5).periodPendingUnitIndexes).toEqual([]);
     expect(clawback(calculateTransferTax(input(terminated), rates).warnings)).toEqual([]);

@@ -544,11 +544,23 @@ export function checkEligibility(
       ctx && unit.rentalAutoTermination && terminationEligibleArticle
         ? terminationWindowIssues(i, unit, ctx, first, firstDeadline)
         : [];
+    /**
+     * D-5 — ㉓은 「법률 제17482호 민간임대주택에 관한 특별법 일부개정법률 부칙 제5조제1항이 적용되는 주택으로 한정」한다.
+     * 부칙 §5①은 종전 장기일반민간임대주택 중 **아파트 매입임대**와 단기민간임대주택만이다 — 장기일반으로 등록한 비아파트·건설임대는
+     * 자진말소(민특법 §6①11호)·자동말소(§6⑤) 대상이 아니라 ㉓으로 장기임대주택이 되지 않는다(사용자 결정 2026-11-04,
+     * `docs/00-pm/rental-155-20-review-fixes.plan.md` PR-4). 등록 유형 미선택은 아래 1/2 판정이 종전대로 막는다.
+     */
+    const terminationOutsideAddendum =
+      unit.rentalAutoTermination &&
+      terminationEligibleArticle &&
+      unit.terminatedRegistrationType === "long_term_general" &&
+      !(unit.isApartment && unit.rentalAcquisitionType === "purchase");
     // ㉓1호 1/2 충족 여부. 창(windowIssues)을 벗어나면 아래에서 호를 불충족으로 따로 떨어뜨린다 —
     // 1/2을 채운 호의 사유는 창 사유만 남는다(「의무임대기간 미충족」을 함께 내지 않는다).
     const terminationRelief =
       unit.rentalAutoTermination &&
       terminationEligibleArticle &&
+      !terminationOutsideAddendum &&
       dutyYears != null &&
       unit.rentalMonths >= dutyYears * 6;
     if (
@@ -572,6 +584,10 @@ export function checkEligibility(
     if ((terminationRelief || periodPending) && result.failCodes.includes("RENTAL_PERIOD_SHORT")) {
       result.failCodes = result.failCodes.filter((c) => c !== "RENTAL_PERIOD_SHORT");
       result.passed = result.failCodes.length === 0;
+    }
+    if (terminationOutsideAddendum) {
+      if (!result.failCodes.includes("RENTAL_TERMINATION_RESTRICTED")) result.failCodes.push("RENTAL_TERMINATION_RESTRICTED");
+      result.passed = false;
     }
     if (periodPending && result.passed) periodPendingUnitIndexes.push(i);
     if (windowIssues.length > 0) result.passed = false;
