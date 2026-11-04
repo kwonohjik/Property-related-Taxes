@@ -81,6 +81,18 @@ function fmt(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** 이중 합가 구성 행 라벨 — 계산기 고지(`requirement-review-notice.ts`)가 머리말을 고를 때도 본다. */
+export const DOUBLE_MERGE_COMPOSITION_LABEL = "혼인·동거봉양 두 합가를 거쳐 합가 전 각자 1주택을 보유하다가 1세대 3주택이 됨(이중 합가)";
+
+/**
+ * 기한 행의 「이 날까지 양도하면 충족」 안내 — 판정 메뉴(양도 예정)용이다. 계산기 고지는 이 문장을 뺀다
+ * (`REACHABLE_DEADLINE_NOTE_PATTERN` — 계산기에는 판정 기준일이 없어 이미 지난 기한을 제안하게 된다).
+ */
+function reachableDeadlineNote(deadline: Date): string {
+  return `${fmt(deadline)}까지 양도하면 이 요건을 충족합니다.`;
+}
+export const REACHABLE_DEADLINE_NOTE_PATTERN = /\s*\d{4}-\d{2}-\d{2}까지 양도하면 이 요건을 충족합니다\./;
+
 /**
  * 「이 날까지 양도」 기한이 **판정 기준일에 아직 이룰 수 있는가** — 기한 당일까지 양도할 수 있다.
  * pending 필터(`checkExemption`)와 요건 행 안내가 **같은 술어**를 쓴다.
@@ -249,7 +261,7 @@ function temporaryTwoHouseItems(
     deadlineNotes.push(
       judgmentBaseDate && !isDeadlineStillReachable(timing.deadline, judgmentBaseDate)
         ? `처분기한이 판정 기준일(${fmt(judgmentBaseDate)}) 전에 지나 양도일을 조정해도 충족할 수 없습니다.`
-        : `${fmt(timing.deadline)}까지 양도하면 이 요건을 충족합니다.`,
+        : reachableDeadlineNote(timing.deadline),
     );
   }
   if (timing.deadlineNote) deadlineNotes.push(timing.deadlineNote);
@@ -372,7 +384,7 @@ function mergeItems(
   items.push({
     id: "merge-composition",
     label: doubleOrder
-      ? "혼인·동거봉양 두 합가를 거쳐 합가 전 각자 1주택을 보유하다가 1세대 3주택이 됨(이중 합가)"
+      ? DOUBLE_MERGE_COMPOSITION_LABEL
       : `${event} 전 각자 1주택을 보유하다가 ${isMarriage ? "혼인으로" : "합가로"} 1세대 2주택이 됨`,
     status: !countHolds || composition.status === "fails" ? "unmet" : composition.status === "holds" ? "met" : "unchecked",
     facts: [{ label: "세대 주택 수", value: `${count}채` }, ...compositionFacts],
@@ -482,7 +494,7 @@ function mergeItems(
       : !within
         ? judgmentBaseDate && !isDeadlineStillReachable(deadline, judgmentBaseDate)
           ? `기한이 판정 기준일(${fmt(judgmentBaseDate)}) 전에 지나 양도일을 조정해도 충족할 수 없습니다.`
-          : `${fmt(deadline)}까지 양도하면 이 요건을 충족합니다.`
+          : reachableDeadlineNote(deadline)
         : undefined,
     deadlineNote,
   ]
