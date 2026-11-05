@@ -9,6 +9,8 @@ import { addYears } from "date-fns";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
+import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
+import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import {
   isIncomeDeductionTrack,
   isTaxAmountTrack,
@@ -237,6 +239,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // 「1호」로 표시하고, 1호 매매계약일은 자산-수준 칸이라 항상 열려 있다(막다른 길 아님).
           if (r.acquisitionType993 === "self_built") {
             if (!r.usageApprovalDate993) return fail(fieldError("reduction.new_99_3.usageApprovalDate993", "§99의3 2호 적용: 사용승인일을 선택하세요."));
+            // 법률 제6762호 부칙 §29② — 사용승인 2003.1.1.~6.30.이면 2003.1.1. 전 착공 여부 필수 (⑫ refine과 같은 술어 — 자동 fallback 금지).
+            if (isAddenda29_2WindowIso(r.acquisitionType993, r.usageApprovalDate993) && !r.constructionStartedBefore2003_993)
+              return fail(fieldError("reduction.new_99_3.constructionStartedBefore2003_993", `§99의3 2호 적용: 사용승인일이 2003.1.1.~2003.6.30.이면 2003.1.1. 전에 공사에 착수했는지(예·아니오·모름) 선택하세요 (${NEW_99_3_ADDENDA_6762.PRIOR_CONSTRUCTION_STARTED}).`));
           } else {
             const hasContractDate = !!(r.contractDate993 || asset.assetContractDate);
             if (!hasContractDate) return fail(fieldError("assetContractDate", "§99의3 1호 적용: 매매계약일을 펼침 영역 상단에 입력하세요."));

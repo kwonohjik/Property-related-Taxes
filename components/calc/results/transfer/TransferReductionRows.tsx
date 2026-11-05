@@ -9,11 +9,39 @@
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { ReductionDetailWarnings } from "@/components/calc/results/transfer/ReductionDetailWarnings";
 import { ReductionStatutoryCapRow } from "@/components/calc/results/transfer/ReductionStatutoryCapRow";
 import { RATED_REDUCIBLE_INCOME_LABEL } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { ELIGIBLE_INCOME_VS_FORM_NOTE } from "@/components/calc/results/transfer/reduction-eligible-income";
+
+/**
+ * §99의3 시기 축 안내 — 종전 규정 적용 근거(부칙 §29①·②)와 착공 여부 확인 필요 (NH-01).
+ * 순수 표시 — 판정은 엔진(`resolveNew993Era`)이 정해 `priorRuleBasis`·`needsConstructionStartConfirmation`으로 내려준다.
+ */
+function New993EraNotes({ detail: d }: { detail: NonNullable<TransferTaxResult["new993Detail"]> }) {
+  if (!d.priorRuleBasis && !d.needsConstructionStartConfirmation) return null;
+  return (
+    <div className="space-y-0.5" data-testid="new993-era-notes">
+      {d.priorRuleBasis === "addenda_29_1" && (
+        <p className="text-muted-foreground" data-testid="new993-era-prior-29-1">
+          2003.1.1. 전 계약·사용승인분이라 종전 규정을 적용했습니다 — 가격 급등 지역 제외가 없고, 고급주택은 계약·승인일 당시 기준입니다 ({NEW_99_3_ADDENDA_6762.PRIOR_CONTRACT_OR_APPROVAL}).
+        </p>
+      )}
+      {d.priorRuleBasis === "addenda_29_2" && (
+        <p className="text-muted-foreground" data-testid="new993-era-prior-29-2">
+          2003.1.1. 전에 공사에 착수하고 2003.6.30.까지 사용승인을 받은 자기건설 주택이라 종전 규정을 적용했습니다 — 가격 급등 지역 제외가 없고, 고급주택은 종전 기준입니다 ({NEW_99_3_ADDENDA_6762.PRIOR_CONSTRUCTION_STARTED}).
+        </p>
+      )}
+      {d.needsConstructionStartConfirmation && (
+        <p className="font-medium text-amber-800 dark:text-amber-300" data-testid="new993-era-confirm">
+          확인 필요: 2003.1.1. 전 공사 착수 여부가 확인되지 않아 개정규정(가격 급등 지역 제외 · 양도 당시 고가주택 기준)으로 계산했습니다. 착공 전이면 종전 규정이 적용됩니다 ({NEW_99_3_ADDENDA_6762.PRIOR_CONSTRUCTION_STARTED}).
+        </p>
+      )}
+    </div>
+  );
+}
 
 /** §99의3 신축주택 과세특례 상세 (적용/불가 양쪽) */
 export function New993DetailCard({
@@ -34,6 +62,7 @@ export function New993DetailCard({
             <li key={i}>{r.message}</li>
           ))}
         </ul>
+        <New993EraNotes detail={d} />
       </div>
     );
   }
@@ -45,6 +74,7 @@ export function New993DetailCard({
         <LawArticleModal legalBasis="조세특례제한법 시행령 §99의3" label="조특령 §99의3" />
         <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
       </div>
+      <New993EraNotes detail={d} />
       <p className="text-muted-foreground">
         {d.isWithin5Years
           ? "5년 이내 양도 — 양도소득금액 전액 차감"

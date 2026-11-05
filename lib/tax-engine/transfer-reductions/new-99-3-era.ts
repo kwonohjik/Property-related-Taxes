@@ -18,9 +18,11 @@
 const D = (s: string) => new Date(s);
 
 /** 법률 제6762호 시행일 — 이 날 이후 계약·승인분은 원칙적으로 개정규정(지역 제외·고가주택 단서). */
-const AMENDED_EFFECTIVE = D("2003-01-01");
+const AMENDED_EFFECTIVE_ISO = "2003-01-01";
 /** 부칙 §29② 사용승인 상한 */
-const ADDENDA_29_2_APPROVAL_END = D("2003-06-30");
+const ADDENDA_29_2_APPROVAL_END_ISO = "2003-06-30";
+const AMENDED_EFFECTIVE = D(AMENDED_EFFECTIVE_ISO);
+const ADDENDA_29_2_APPROVAL_END = D(ADDENDA_29_2_APPROVAL_END_ISO);
 /**
  * §29② 해당분의 «종전 고급주택 기준» 기준일 — 소득세법 시행령 §156(2002.10.1. 시행본: 공동주택 149㎡ 이상 + 6억 초과)의
  * 마지막 시행일. 2003.1.1.부터는 «고가주택 6억 초과»로 바뀐다(대통령령 제17825호).
@@ -46,6 +48,22 @@ export function isAddenda29_2Window(
   baseDate: Date,
 ): boolean {
   return acquisitionType === "self_built" && baseDate >= AMENDED_EFFECTIVE && baseDate <= ADDENDA_29_2_APPROVAL_END;
+}
+
+/**
+ * 착공 여부를 묻는 범위인가 — 폼 문자열(YYYY-MM-DD) 판. UI·validate(⑧)·Zod(⑫)가 같은 술어를 쓴다.
+ * 2호(자기건설)이고 사용승인일이 2003.1.1.~2003.6.30.일 때만 참이다(Date 판 `isAddenda29_2Window`와 같은 경계).
+ */
+export function isAddenda29_2WindowIso(
+  acquisitionType: string | undefined,
+  usageApprovalDateIso: string | undefined,
+): boolean {
+  return (
+    acquisitionType === "self_built" &&
+    !!usageApprovalDateIso &&
+    usageApprovalDateIso >= AMENDED_EFFECTIVE_ISO &&
+    usageApprovalDateIso <= ADDENDA_29_2_APPROVAL_END_ISO
+  );
 }
 
 /**

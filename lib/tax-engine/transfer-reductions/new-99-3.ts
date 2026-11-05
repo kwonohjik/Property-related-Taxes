@@ -28,7 +28,7 @@
  */
 
 import { addYears } from "date-fns";
-import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { NEW_99_3_ADDENDA_6762, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import {
   PRIOR_ADVANCED_HOUSE_STANDARD_DATE,
@@ -317,7 +317,7 @@ function checkIneligibility(input: New993Input, era: New993Era): New993Ineligibl
   if (input.region === "speculation" && era.priorRuleBasis === undefined) {
     reasons.push({
       code: "SPECULATION_AREA",
-      message: "가격 급등 지역(서울·과천·5대 신도시) 내 신축주택은 §99의3이 적용되지 않습니다 (2003.1.1. 이후 계약·사용승인분 — 법률 제6762호 개정규정)",
+      message: "가격 급등 지역(서울·과천·5대 신도시) 내 신축주택은 §99의3이 적용되지 않습니다 (2003.1.1. 이후 계약·사용승인분 — 개정규정)",
       legalBasis,
     });
     return reasons;
@@ -400,8 +400,8 @@ function checkIneligibility(input: New993Input, era: New993Era): New993Ineligibl
       era.priorRuleBasis === undefined
         ? `양도일 ${input.transferDate.toISOString().split("T")[0]} 당시 기준`
         : era.priorRuleBasis === "addenda_29_2"
-          ? "종전 고급주택 기준 — 법률 제6762호 부칙 §29②"
-          : `적용기준일 ${hvBaseDate.toISOString().split("T")[0]} 당시 기준 — 법률 제6762호 부칙 §29①`;
+          ? `종전 고급주택 기준 — ${NEW_99_3_ADDENDA_6762.PRIOR_CONSTRUCTION_STARTED}`
+          : `적용기준일 ${hvBaseDate.toISOString().split("T")[0]} 당시 기준 — ${NEW_99_3_ADDENDA_6762.PRIOR_CONTRACT_OR_APPROVAL}`;
     reasons.push({
       code: "HIGH_VALUE_HOUSE",
       message: `고가주택(소득세법 §89①3호)은 §99의3 ① 단서로 적용 배제됩니다 (${basisLabel})`,
