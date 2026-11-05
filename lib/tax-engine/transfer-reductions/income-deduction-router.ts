@@ -186,7 +186,7 @@ interface ReductionLike {
 
 const STEP_LABELS: Record<IncomeDeductionId, string> = {
   new_99_3: "§99의3 신축주택 과세특례",
-  new_99: "§99 신축주택 감면 (IMF 1차)",
+  new_99: "§99 신축주택 감면",
   unsold_98_8: "§98의8 준공후미분양 50% 공제",
   unsold_98_7: "§98의7 미분양주택 과세특례",
   unsold_99_2: "§99의2 신축주택등 과세특례",

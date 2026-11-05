@@ -67,7 +67,7 @@
 |---|---|---|
 | V-3 | D-1의 반대쪽(토지 상속개시일 ≤ 피상속인 취득일 < 건물 취득일이 통과) | ✅ 실측 — 수정 전 통과(틀린 입력 수용) · 수정 후 ⑧·⑫ 차단(§5.2) |
 | V-4 | 일반건물 「건물 피상속인 취득일」(`gbBuildingDecedentAcquisitionDate`)과 건물 상속개시일의 순서 검사 | ✅ 실측 2026-11-05 — 검사 없음 · 틀린 날짜로 세액이 바뀐다 → [gb-building-decedent-order.plan.md](gb-building-decedent-order.plan.md) |
-| V-5 | 판정 메뉴(`one-house-exemption-validate.ts`)·부담부증여 1주택(`gift-burdened-one-house.ts`)의 같은 비교식 | 일반건물 분리 입력이 없는 화면이라 해당 없음으로 보이나 확인 필요 |
+| V-5 | 판정 메뉴(`one-house-exemption-validate.ts`)·부담부증여 1주택(`gift-burdened-one-house.ts`)의 같은 비교식 | ✅ 확인 2026-11-05 — **결함 없음** → §6 |
 
 ## 4. 구현 계획(권장안 기준)
 
@@ -105,3 +105,16 @@
 ### 5.3 남은 것
 
 - V-4 일반건물 「건물 피상속인 취득일」과 건물 상속개시일의 순서 검사 · V-5 판정 메뉴·부담부증여 1주택의 같은 비교식 — §3 그대로.
+
+## 6. V-5 확인 (2026-11-05) — 결함 없음
+
+두 화면 모두 `decedentAcquisitionDate >= acquisitionDate`로 비교한다. #2915의 기준일 교체(`decedentOrderBasisDate`)가 필요한 경우는 「일반건물 · 토지·건물 취득일 분리 ON · 토지 상속」뿐이다. 두 화면에는 그 입력 자체가 없다.
+
+| 화면 | 비교식 | 토지·건물 취득일 분리 입력 | 서버로 보내는 키(코드 확인) | 판단 |
+|---|---|---|---|---|
+| 1세대1주택 판정 메뉴 | `one-house-exemption-validate.ts` `validateStep3` — 상속 **주택** 매도(`judgmentSaleIsHousing`)일 때 | 없음 | `one-house-exemption-api.ts` → `POST /api/calc/one-house-exemption` — `propertyType`·`acquisitionDate`·`decedentAcquisitionDate`만, `generalBuildingValuation`·`isSeparateAcquisition`·`landAcquisitionDate` 없음 | `acquisitionDate` = 상속개시일 — 맞다 |
+| 증여세 부담부증여 양도분(1주택) | `gift-burdened-one-house.ts` `giftBurdenedInheritanceError` — `giftBurdenedInheritanceSlice`의 `acquisitionDate` 한 개 | 없음 | `gift-burdened-transfer-api.ts` — 위 세 키 없음 | 맞다 |
+
+- 두 화면의 ⑫는 일반건물 분리 키가 없으므로 #2915 이후에도 `acquisitionDate` 기준이다. ⑧과 같은 기준이다.
+- 기존 anchor가 현 master(559601b17 기준 워크트리)에서 통과한다: `judgment-validate-12-mirror-s09-1.anchor.test.ts`(같은 날 → 차단 · 앞선 날 → 통과) · `gift-burdened-one-house-limits-e1z.anchor.test.ts` · `gift-burdened-one-house-remaining-e1r.anchor.test.ts` — 3파일 47건.
+- 코드 변경 없음.

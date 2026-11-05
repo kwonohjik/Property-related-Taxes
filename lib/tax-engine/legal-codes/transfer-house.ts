@@ -624,6 +624,32 @@ export const NEW_99_4_STD_PRICE_ADDENDA = {
 /** 조세특례제한법 시행령 §99의4⑭ — 「대통령령으로 정하는 한옥」(지방자치단체의 장에게 등록된 한옥) */
 export const NEW_99_4_HANOK_DECREE = "조특령 §99의4⑭";
 
+/**
+ * 조특법 §99·§99의3·§99의4 감면 판정 사유가 인용하는 **하위 법령·같은 조 다른 항** (리뷰 NH-43·NH-48·NH-69).
+ *
+ * 종전에는 `transfer-reductions/new-99.ts`·`new-99-3.ts`·`new-99-4.ts`에 리터럴로만 있어 커버리지 수집기
+ * (`legal-codes/*`만 순회)와 `npm run verify:legal` 대상 밖이었다. 키워드 등록은
+ * `legal-verification/manifest/additions-transfer-new-housing.ts`(본문 KoreanLaw 실독 2026-11-05).
+ */
+export const NEW_HOUSING_SUB_ARTICLE = {
+  /** 조특령 §99① — §99 감면대상 양도소득금액 계산(1호 5년 이내·재개발 단서 / 2호 5년 후 안분) */
+  NEW_99_INCOME: "조특령 §99①",
+  /** 조특령 §99② — 1998.5.21. 이전 분양계약 해제 후 재분양·대체취득 주택(법 §99①2호 단서) */
+  NEW_99_RECONTRACT: "조특령 §99②",
+  /** 조특령 §99의3② — §99의3 감면대상 양도소득금액 계산 */
+  NEW_99_3_INCOME: "조특령 §99의3 ②",
+  /** 조특령 §99의3②2호 — 취득일부터 5년 후 양도 안분 */
+  NEW_99_3_INCOME_AFTER_5Y: "조특령 §99의3 ② 2호",
+  /** 조특령 §99의3④ — 2001.5.23. 전 분양계약 해제 후 재분양·대체취득 주택(법 §99의3①1호) */
+  NEW_99_3_RECONTRACT: "조특령 §99의3 ④",
+  /** 조특칙 §44의4 — 령 §99② 단서·§99의3④ 단서의 제외 사유(소득세법 시행규칙 §71③ 사유로 다른 주택을 분양받아 취득) */
+  RECONTRACT_EXCEPTION_RULE: "조특칙 §44의4",
+  /** 조특법 §99의4③ — 농어촌주택은 같은·연접 읍·면·동, 고향주택은 같은·연접 시에 일반주택이 있으면 적용하지 않음 */
+  NEW_99_4_ADJACENT: "조특법 §99의4③",
+  /** 조특령 §99의4⑥ — 「대통령령으로 정하는 고향」 */
+  NEW_99_4_HOMETOWN_DECREE: "조특령 §99의4⑥",
+} as const;
+
 /** 장특공제 배제 사유 (§95② 본문 괄호 — 미등기·§104⑦ 중과 자산 등). UI 표시 전용 echo. */
 export type LthdExclusionReason =
   | "unregistered"

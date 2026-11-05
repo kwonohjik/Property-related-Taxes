@@ -305,7 +305,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate)));
           if (needsStdPriceAtTransfer && !hasStdPriceAtTransfer993) {
             return fail(fieldError("reduction.new_99_3.standardPriceAtTransfer993", r.isRedevelopedNewHouse993
-                ? "§99의3 적용: 재개발·재건축 신축주택 변형은 5년 이내 양도에도 양도시 기준시가가 필요합니다 (조특령 §99의3②2호 안분의 분자)."
+                ? "§99의3 적용: 재개발·재건축 신축주택 변형은 5년 이내 양도에도 양도시 기준시가가 필요합니다 (조특령 §99의3②1호 단서 안분)."
                 : "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액·기준시가 안분 모드가 아니거나 재개발·재건축 원조합원 자산이면 자산값이 전달되지 않습니다).",
             ));
           }
@@ -342,6 +342,25 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // 재개발·재건축 변형 ON 시 종전주택 기준시가 필수 (B-11 — 자동 안분 fallback 금지)
           if (r.isRedevelopedNewHouse99 && parseAmount(r.previousHouseStdPrice99 || "0") <= 0)
             return fail(fieldError("reduction.new_99.previousHouseStdPrice99", "§99 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요."));
+          /**
+           * 안분 기준시가 — 엔진(`new-99.ts` MISSING_STD_PRICE)과 **같은 조건**으로 앞단에서 막는다 (리뷰 NH-25).
+           * 종전에는 ⑧이 묻지 않아 계산은 통과하고 엔진이 감면을 0으로 냈다(실측 155,166,000 vs 95,595,000).
+           *   - 5년시점: 5년 **후** 양도만(조특령 §99①2호 분자). 라우터에 자산값 fallback이 없다.
+           *   - 양도시: 5년 후 양도 또는 재개발 변형(①1호 단서 분자·분모). 라우터가 자산값으로 대신하므로 ④가 싣는 값만 인정(§99의3과 같은 leaf).
+           * 일자 미입력이면 5년 판정을 하지 않는다(변형만 본다) — 일자는 step0 영역.
+           */
+          const hasDates99 = !!asset.acquisitionDate && !!form.transferDate;
+          const over5Y99 =
+            hasDates99 && !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate));
+          if (over5Y99 && parseAmount(r.standardPriceAt5Years99 || "0") <= 0)
+            return fail(fieldError(`reduction.${r.type}.standardPriceAt5Years`, "§99 적용: 취득 후 5년 경과 양도는 취득일부터 5년이 되는 날의 기준시가를 입력하세요 (조특령 §99①2호 — 미입력 시 감면이 적용되지 않습니다)."));
+          if (
+            (over5Y99 || !!r.isRedevelopedNewHouse99) &&
+            !(parseAmount(r.standardPriceAtTransfer99 || "0") > 0 || engineStdPriceAtTransfer(form, ai) > 0)
+          )
+            return fail(fieldError(`reduction.${r.type}.standardPriceAtTransfer`, r.isRedevelopedNewHouse99
+              ? "§99 적용: 재개발·재건축 신축주택은 5년 이내 양도에도 양도시 기준시가가 필요합니다 (조특령 §99①1호 단서)."
+              : "§99 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (조특령 §99①2호 안분의 분모 — 환산취득가액·기준시가 안분 모드가 아니면 자산값이 전달되지 않습니다)."));
         }
         // P1 §98의8 준공후미분양 50% (2026-06-11): 계약일·취득가·면적·임대개시일 필수 (⑧).
         // 자격 토글 3종은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).

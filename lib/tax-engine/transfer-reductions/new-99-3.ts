@@ -109,7 +109,8 @@ export interface New993Input {
    *  **당해주택건설업자로부터 다른 주택을 분양받아 취득하는 경우**의 주택을 말한다.」
    *
    * 소칙 §71③ 사유 = 취학 · 근무상 형편(전근 등) · 1년 이상 치료·요양을 요하는 질병 ·
-   * 학교폭력으로 인한 전학. **대체취득(다른 주택 분양) 갈래에만** 대응한다
+   * 학교폭력으로 인한 전학 — **그 사유로 다른 시·군으로 주거를 이전하는 경우**에 한한다(1998.8.11.·2002.1.1.·현행
+   * 시행본 모두 같은 요건, 리뷰 NH-42·NH-45). **대체취득(다른 주택 분양) 갈래에만** 대응한다
    * (당초 주택을 다시 분양받은 경우는 카브백 대상이 아니다).
    *
    * 🔴 이 카브백이 없으면 부득이한 사유로 대체취득한 정상 대상자를 **법 근거 없이 배제**한다.
@@ -309,7 +310,7 @@ function checkIneligibility(input: New993Input, era: New993Era): New993Ineligibl
   if (!input.isResident) {
     reasons.push({
       code: "NOT_RESIDENT",
-      message: "거주자가 아닌 자에게는 §99의3이 적용되지 않습니다 (대통령령으로 정하는 거주자 한정)",
+      message: "거주자가 아닌 자에게는 §99의3이 적용되지 않습니다 (법 §99의3① 본문 「거주자(주택건설사업자는 제외한다)가」)",
       legalBasis,
     });
     return reasons; // 즉시 반환 (다른 사유는 무의미)
@@ -357,14 +358,20 @@ function checkIneligibility(input: New993Input, era: New993Era): New993Ineligibl
   if (input.acquisitionType === "from_builder" && input.hasOccupancyAtContract) {
     reasons.push({
       code: "OCCUPANCY_AT_CONTRACT",
-      message: "매매계약일 현재 다른 자가 입주한 사실이 있는 주택은 §99의3 ① 1호 단서로 적용 배제됩니다",
+      // 「다른 자가」는 법률 제6538호(2002.1.1. 시행 — 그 뒤 양도분부터, 부칙 §2②)로 삭제됐다 — 현행 법문은 입주 주체를 한정하지 않는다 (리뷰 NH-35).
+      message: "매매계약일 현재 입주한 사실이 있는 주택은 §99의3 ① 1호 단서로 적용 배제됩니다",
       legalBasis,
     });
     return reasons;
   }
 
   // 5-a. 재계약·대체취득 배제 (조특령 §99의3④) — 단, 조특칙 §44의4 카브백이 있으면 유지.
-  if (input.isRecontractExcluded === true && input.recontractUnavoidableCause !== true) {
+  //   조특령 §99의3④는 «법 제99조의3제1항제1호»의 사유다 — 2호(자기건설)에 남은 선언으로 배제하지 않는다 (리뷰 NH-57).
+  if (
+    input.acquisitionType === "from_builder" &&
+    input.isRecontractExcluded === true &&
+    input.recontractUnavoidableCause !== true
+  ) {
     reasons.push({
       code: "RECONTRACT_EXCLUDED",
       message:
@@ -592,9 +599,11 @@ export function evaluateNew993(input: New993Input): New993Result {
         ineligibleReasons: [
           {
             code: "MISSING_STD_PRICE",
-            message:
-              "5년 후 양도 안분 계산에 필요한 기준시가(취득시·5년시점·양도시)가 입력되지 않았습니다 (조특령 §99의3②2호).",
-            legalBasis: "조특령 §99의3 ② 2호",
+            // 5년 이내 + 재개발 변형은 ②1호 단서 산식(5년시점 불요)이다 — ②2호로 인용하지 않는다 (리뷰 NH-44).
+            message: isWithin5Years
+              ? "재개발·재건축 신축주택의 5년 이내 양도 안분 계산에 필요한 기준시가(취득시·양도시)가 입력되지 않았습니다 (조특령 §99의3②1호 단서)."
+              : "5년 후 양도 안분 계산에 필요한 기준시가(취득시·5년시점·양도시)가 입력되지 않았습니다 (조특령 §99의3②2호).",
+            legalBasis: isWithin5Years ? "조특령 §99의3 ② 1호 단서" : "조특령 §99의3 ② 2호",
           },
         ],
         isWithin5Years: false,

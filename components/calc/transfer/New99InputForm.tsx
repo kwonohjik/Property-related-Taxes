@@ -190,23 +190,26 @@ export function New99InputForm({
             onCheckedChange={(v) => onChange({ hasOccupancyAtContract99: v })}
           />
         )}
-        <ToggleCard
-          tone="rose"
-          title="1998.5.21 이전 분양계약 해제 후 재계약·대체취득"
-          description="해제한 본인·배우자(직계존비속·형제자매 포함)가 다시 분양받은 주택은 배제됩니다 (조특령 §99②)"
-          checked={value.isRecontractExcluded99}
-          onCheckedChange={(v) => onChange({ isRecontractExcluded99: v })}
-        >
-          {/* 조특칙 §44의4 카브백 — 없으면 부득이한 사유 대체취득자를 법 근거 없이 배제한다. */}
+        {/* 조특령 §99②는 법 §99①2호 단서의 사유 — 2호(주택건설사업자로부터 취득)에만 묻는다 (리뷰 NH-57). 엔진도 2호에만 건다. */}
+        {isFromBuilder && (
           <ToggleCard
-            variant="chip"
-            tone="emerald"
-            title="부득이한 사유로 «다른 주택»을 분양받아 취득"
-            description={"취학·근무상 형편·1년 이상 치료를 요하는 질병·학교폭력 전학 사유로 «당해 주택건설업자로부터 다른 주택»을 분양받은 경우에는 배제하지 않습니다 (조특칙 §44의4 → 소칙 §71③)"}
-            checked={value.recontractUnavoidableCause99}
-            onCheckedChange={(v) => onChange({ recontractUnavoidableCause99: v })}
-          />
-        </ToggleCard>
+            tone="rose"
+            title="1998.5.21 이전 분양계약 해제 후 재계약·대체취득"
+            description="해제한 본인·배우자(직계존비속·형제자매 포함)가 다시 분양받은 주택은 배제됩니다 (조특령 §99②)"
+            checked={value.isRecontractExcluded99}
+            onCheckedChange={(v) => onChange({ isRecontractExcluded99: v })}
+          >
+            {/* 조특칙 §44의4 카브백 — 없으면 부득이한 사유 대체취득자를 법 근거 없이 배제한다. */}
+            <ToggleCard
+              variant="chip"
+              tone="emerald"
+              title="부득이한 사유로 «다른 주택»을 분양받아 취득"
+              description={"취학·근무상 형편·1년 이상 치료를 요하는 질병·학교폭력 전학 사유로 다른 시·군으로 주거를 이전하면서 «당해 주택건설업자로부터 다른 주택»을 분양받은 경우에는 배제하지 않습니다 (조특칙 §44의4 → 소득세법 시행규칙 §71③)"}
+              checked={value.recontractUnavoidableCause99}
+              onCheckedChange={(v) => onChange({ recontractUnavoidableCause99: v })}
+            />
+          </ToggleCard>
+        )}
       </SectionShell>
 
       {/*
