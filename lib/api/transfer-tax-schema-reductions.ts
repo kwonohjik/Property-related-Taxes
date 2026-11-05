@@ -288,6 +288,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
     region993: z.enum(["outside_speculation", "speculation"]).optional(),
     /** 취득 유형 — 1호 / 2호 */
     acquisitionType993: z.enum(["from_builder", "self_built"]).optional(),
+    /** (2호 · 사용승인 2003.1.1.~6.30.만) 2003.1.1. 전 착공 여부 — 법률 제6762호 부칙 §29② (⑫ — 누락 시 침묵 strip) */
+    constructionStartedBefore2003_993: z.enum(["yes", "no", "unknown"]).optional(),
     /** 매매계약일 입주사실 (1호 단서) */
     hasOccupancyAtContract: z.boolean().optional(),
     /** 거주자 여부 */

@@ -122,6 +122,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       exclusiveAreaSqm993: "",
       region993: "outside_speculation",
       acquisitionType993: "from_builder",
+      constructionStartedBefore2003_993: "",
       hasOccupancyAtContract: false,
       isResident993: true,
       isHousingConstructionBusiness993: false,

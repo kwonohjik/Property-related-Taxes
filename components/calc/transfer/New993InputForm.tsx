@@ -12,12 +12,15 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReductionPhdInput, type ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { calcReductionAcquisitionStdPrice, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
+import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
+import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 
 /** YYYY-MM-DD 문자열의 연도에 n년 가산 (new Date 금지 정책 회피 — 5년 시점 referenceDate 파생). */
@@ -27,6 +30,28 @@ function addYearsStr(dateStr: string | undefined, n: number): string | undefined
   if (!Number.isFinite(year)) return undefined;
   return `${year + n}${dateStr.slice(4)}`;
 }
+
+/** 법률 제6762호 부칙 §29② — 2003.1.1. 전 공사 착수 여부 (2호 · 사용승인 2003.1.1.~6.30.만 묻는다). */
+const CONSTRUCTION_START_OPTIONS = [
+  {
+    value: "yes" as const,
+    label: "예 — 2003.1.1. 전에 공사에 착수했다",
+    description: "종전 규정 적용(가격 급등 지역 제외 없음 · 종전 고급주택 기준)",
+    testId: "new993-construction-start-yes",
+  },
+  {
+    value: "no" as const,
+    label: "아니오 — 2003.1.1. 이후에 착수했다",
+    description: "개정규정 적용(가격 급등 지역 제외 · 양도 당시 고가주택 기준)",
+    testId: "new993-construction-start-no",
+  },
+  {
+    value: "unknown" as const,
+    label: "모름",
+    description: "개정규정으로 계산하고 결과에 확인 필요로 표시합니다",
+    testId: "new993-construction-start-unknown",
+  },
+];
 
 // ============================================================================
 // 서브 컴포넌트: §99의3 본격 입력 폼
@@ -259,15 +284,18 @@ export function New993InputForm({
             <SelectTrigger>
               <SelectValue>
                 {value.region993 === "speculation"
-                  ? "가격 급등 지역(서울·과천·5대 신도시) — 적용 배제"
+                  ? "가격 급등 지역(서울·과천·5대 신도시) — 2003.1.1. 이후 계약·승인분만 적용 배제"
                   : "가격 급등 지역 외"}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="outside_speculation">가격 급등 지역 외</SelectItem>
-              <SelectItem value="speculation">가격 급등 지역(서울·과천·5대 신도시) — 적용 배제</SelectItem>
+              <SelectItem value="speculation">가격 급등 지역(서울·과천·5대 신도시) — 2003.1.1. 이후 계약·승인분만 적용 배제</SelectItem>
             </SelectContent>
           </Select>
+          <p className="mt-1 text-micro text-muted-foreground">
+            지역 제외는 2003.1.1. 시행 개정규정부터입니다 — 그 전 계약·사용승인분은 종전 규정이라 해당 지역이어도 배제하지 않습니다 ({NEW_99_3_ADDENDA_6762.PRIOR_CONTRACT_OR_APPROVAL})
+          </p>
         </div>
 
         {value.acquisitionType993 === "self_built" && (
@@ -275,6 +303,25 @@ export function New993InputForm({
             <label className="mb-1 block text-xs font-medium">사용승인일</label>
             <DateInput data-field="reduction.new_99_3.usageApprovalDate993" value={value.usageApprovalDate993 ?? ""} onChange={(v) => onUpdate("usageApprovalDate993", v)} />
             <p className="mt-1 text-micro text-muted-foreground">2001.5.23~2003.6.30 시한</p>
+          </div>
+        )}
+
+        {/* 부칙 §29② — 사용승인이 2003.1.1.~6.30.일 때만 묻는다. 모름도 선택지(= 개정규정 + 확인 필요)이며 미응답은 validate(⑧)가 막는다. */}
+        {isAddenda29_2WindowIso(value.acquisitionType993, value.usageApprovalDate993) && (
+          <div className="space-y-1.5 sm:col-span-2" data-field="reduction.new_99_3.constructionStartedBefore2003_993">
+            <p className="text-caption text-muted-foreground font-medium">2003.1.1. 전에 공사에 착수했나요?</p>
+            <RadioCardGroup
+              name="new993-construction-start"
+              tone="amber"
+              layout="stack"
+              options={CONSTRUCTION_START_OPTIONS}
+              value={value.constructionStartedBefore2003_993 ?? ""}
+              onChange={(v) => onUpdate("constructionStartedBefore2003_993", v)}
+              data-testid="new993-construction-start"
+            />
+            <p className="text-micro text-muted-foreground">
+              사용승인일이 2003.1.1.~2003.6.30.인 자기건설 주택은 2003.1.1. 전에 공사에 착수한 경우에만 종전 규정이 적용됩니다 ({NEW_99_3_ADDENDA_6762.PRIOR_CONSTRUCTION_STARTED})
+            </p>
           </div>
         )}
       </div>
@@ -350,7 +397,7 @@ export function New993InputForm({
           ) : !jibun ? (
             <p className="mt-1 text-micro text-muted-foreground">소재지 지번 입력 시 조회 가능</p>
           ) : null}
-          <p className="mt-1 text-micro text-muted-foreground">공동주택 조회 시 자동 채움 · 2002.12.31 이전 취득 고가주택 판정(165/149㎡ AND 6억 초과)</p>
+          <p className="mt-1 text-micro text-muted-foreground">공동주택 조회 시 자동 채움 · 종전 규정 적용분(2002.12.31. 이전 계약·승인 등)의 고급주택 판정(165/149㎡ AND 6억 초과)</p>
         </div>
       </div>
       </ToneCard>
