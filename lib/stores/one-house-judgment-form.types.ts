@@ -159,7 +159,18 @@ export function normalizeOneHouseJudgmentForm(
    * 🔑 계산기의 `migrateAsset`을 **그대로** 쓴다 — 자산-수준 기본값의 정본이 그것이고,
    *    이력 재개에서 그 leaf를 빠뜨려 결함을 낸 전례가 이미 있다(2026-09-07).
    */
-  return { ...merged, assets: (merged.assets ?? []).map(migrateAsset) };
+  return {
+    ...merged,
+    assets: (merged.assets ?? []).map(migrateAsset),
+    /**
+     * 조정대상지역 토글의 「직접 만짐」 표지 — 판정 메뉴 토글은 2026-11 전까지 표지를 세우지 않았다(계획서
+     * `judgment-menu-regulated-area-address.plan.md` Q-4 a). 그 기록의 `true`는 사용자가 고른 값뿐이므로 표지를 세워 지킨다.
+     * `false`는 기본값과 구별할 수 없으므로 표지 없이 두어 주소 판정(`calcStoredRegulatedFlags`)을 따른다.
+     */
+    isRegulatedAreaTouched: merged.isRegulatedAreaTouched === true || merged.isRegulatedArea === true,
+    wasRegulatedAtAcquisitionTouched:
+      merged.wasRegulatedAtAcquisitionTouched === true || merged.wasRegulatedAtAcquisition === true,
+  };
 }
 
 /**
