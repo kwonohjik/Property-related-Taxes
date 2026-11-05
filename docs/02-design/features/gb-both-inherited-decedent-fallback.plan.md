@@ -50,3 +50,25 @@
 2. 구현: ⑧ `validateGbDecedentDates` · ⑫ D3′에 대체값 분기를 더한다(기존 직접 입력 분기·문구 불변).
 3. 뮤테이션 → 회귀(묶음별) → tsc·eslint → 입력칸 이동 레지스트리 +1 · Playwright.
 4. 결과를 §5에 적는다.
+
+## 5. 구현 결과 (2026-11-05 · 결정: Q-1 a · Q-2 a)
+
+### 5.1 변경
+
+| 항목 | 파일 | 내용 |
+|---|---|---|
+| Q-1 ⑧ | `lib/calc/transfer-tax-validate-gb-required.ts` `validateGbDecedentDates` | 분리 ON · 토지·건물 모두 상속 · 건물 칸 비움 · 토지·건물 상속개시일이 다르고 토지 피상속인 취득일 ≥ 건물 상속개시일이면 「토지의 피상속인 취득일이 건물 상속개시일보다 늦어 건물에 쓸 수 없습니다. 건물 피상속인 취득일을 따로 입력하세요.」 · 칸 `gbBuildingDecedentAcquisitionDate` |
+| Q-1 ⑫ | `lib/api/transfer-tax-schema-required-refines-gb.ts` D3″ | 같은 규칙 · `generalBuildingValuation.buildingDecedentAcquisitionDate` 400 |
+| Q-2 | — | 「토지와 같으면 비워 두세요」 안내 그대로 |
+
+같은 날 상속이면 기존 토지 순서 검사가 먼저 막으므로 새 검사는 걸지 않는다(문구 중복 없음 — anchor 대조). 엔진 불변.
+
+### 5.2 테스트
+
+- route anchor `__tests__/api/gb-both-inherited-decedent-fallback.anchor.test.ts` 9건 — 수정 전 막아야 할 F2·F5가 통과(종전 결함) → 수정 후:
+  - 차단: F2 · F5 · F8(토지 피상속인 = 건물 상속개시일 경계) → ⑧ 새 문구·칸 · ⑫ 400.
+  - 통과·세액 불변: F1 173,060,000 · F3 199,000,000 · F4 180,932,307 · F6 163,829,230 · F7(다른 날 상속 · 토지 값이 건물보다 앞섬) 173,060,000.
+  - 대조: 같은 날 상속에서 토지 피상속인 ≥ 상속개시일 → 종전 토지 검사 하나만 · ⑫ 건물 키 없음.
+- 입력칸 이동 레지스트리 +1 — vitest 통과 · E2E(headless Playwright) 일반건물 피상속인 4건 통과(새 케이스 — 오류 클릭 → 그 칸).
+- 뮤테이션: M1 ⑧ 끔(2 실패) · M2 ⑫ 끔(2) · M3 ⑧ 같은 날 가드 제거(1) · M4 ⑫ 같은 날 가드 제거(1) · M5 ⑧ `>=`→`>` — **첫 회 생존** → 경계 F8 추가 후 잡힘(1) · ⑫ 같은 변형도 잡힘(1).
+- 회귀(묶음별 순차): `__tests__/api` 5,874 · `lib` 3,329 · `components` 6,787 · `calc` 11,217 통과 · tsc 0 · eslint 0.
