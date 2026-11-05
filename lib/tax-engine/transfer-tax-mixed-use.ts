@@ -17,10 +17,12 @@ import { highValueExcessRulingNoticeText } from "./transfer-tax-appurtenant-land
 import { appurtenantLandLthdNoticeText } from "./appurtenant-land-lthd-rate";
 import { judgeMixedUseOneHouseExemption } from "./transfer-tax-mixed-use-exemption";
 import { mergeRentalCarveoutSurchargeNotice } from "./one-house/merge-rental-carveout";
-import { resolveMixedUseRentalResidence, withRentalResidenceSurchargeHouses } from "./transfer-tax-mixed-use-rental-residence";
-import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
-import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
-import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
+import { resolveMixedUseRentalResidence } from "./transfer-tax-mixed-use-rental-residence";
+import { judgeMixedUseMultiHouseSurcharge } from "./transfer-tax-mixed-use-surcharge-judge";
+import {
+  buildMixedReductionSurchargeExclusionStep,
+  mixedReductionSurchargeExclusionNotice,
+} from "./transfer-tax-mixed-use-reduction-surcharge";
 import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
 import { buildMixedRateParts } from "./transfer-tax-mixed-use-rate-parts";
@@ -171,61 +173,38 @@ function calcMixedUseCore(
     rentalResidence,
   );
 
-  // ── 법 §104⑦ 다주택 중과 판정 ────────────────────────────────────────────────
-  // 주택 수 산정·배제 주택·혼인합가 차감·한시 유예는 전부 정본
-  // `determineMultiHouseSurcharge`가 갖고 있다. 겸용은 그 결과만 받아 쓴다.
-  //
-  // ⚠️ `houseCountExclusionRules`가 없으면(DB 키 부재) 판정을 **건너뛴다** — 단건 엔진
-  //    (`transfer-tax.ts:184`)과 동일한 가드다. 예외를 던지지 않으므로 테스트에서
-  //    `makeMockRates()`를 쓰면 중과가 조용히 스킵된다(계획서 R-9).
-  const multiHouse = withRentalResidenceSurchargeHouses(asset, rentalResidence);
-  // ⑥ 주택 수 제외의 확인된 영 §167의3①5호 조문 → 10호 「일반주택」 판정의 5호 주택 — 단건(`runMultiHouseSurchargeStep`)과 같은 leaf
-  const judgeMixedSurcharge = (houses: NonNullable<typeof multiHouse>["houses"]) =>
-    determineMultiHouseSurcharge(
-      {
-        ...multiHouse!,
-        houses,
-        transferDate,
-        // §155⑤ 1세대1주택 의제 중과배제(배제2) 게이트 — 위에서 만든 §154① 통합 판정을
-        // 그대로 넘긴다. 단건이 `transfer-tax.ts:202`에서 넘기는 값과 **같은 함수의 결과**다.
-        sellingHouseMeetsOneHouseRequirements: meetsOneHouseRequirements,
-        // §167의10①15호 ① 요소 — §155① 의제 성립. 단건과 **같은 정본 함수**를 쓴다
-        // (기한 규칙 재구현 금지 — 계획서 F-2). `temporaryTwoHouse` 미주입 시 undefined.
-        // E-14d — §155②③(상속주택 + 일반주택) 경로(`inherited_general_house`)도 담는다.
-        deemedOneHouseBy155: surchargeDeemedOneHouseBy155,
-        deemedOneHouseSource: surchargeDeemedOneHouseSource,
-        deemedRestsOnInheritedExclusion: surchargeDeemedRestsOnInheritedExclusion,
-        unavoidableOutsideCapitalHouse:
-          surchargeUnavoidableOutsideCapitalSlot ?? multiHouse!.unavoidableOutsideCapitalHouse,
-        // E-7 — §156의2·§156의3 의제의 구 §167의11①1호 인용 범위(단건 `runMultiHouseSurchargeStep`과 같은 값).
-        rightDeemingCitedByOldClause1,
-        // E-14e — 구 §167의10①8호(2023.2.28. 전 양도분). 단건과 같은 leaf · 실제 소유 주택 수(조심2021중1803).
-        oldClause8TemporaryTwoHouse: qualifiesOldClause8TemporaryTwoHouse({
-          isOneHousehold: multiHouse!.isOneHousehold,
-          householdHousingCount: asset.householdHousingCountForExclusion,
-          transferDate,
-          temporaryTwoHouse: asset.temporaryTwoHouse,
-        }),
-      },
-      houseCountExclusionRules!,
-      regulatedAreaHistory ?? null,
-      surchargeSpecialRules,
-      multiHouse!.isRegulatedArea,
-    );
-  const mixedHouses = multiHouse
-    ? linkTaxIncentiveHouse5ho(multiHouse.houses, asset.specialHouseExclusions, transferDate, multiHouse.sellingHouseId)
-    : undefined;
-  const multiHouseSurcharge =
-    multiHouse && mixedHouses && houseCountExclusionRules
-      ? withTaxIncentiveRental3hoNotice(
-          judgeMixedSurcharge(mixedHouses),
-          mixedHouses,
-          asset.specialHouseExclusions,
-          transferDate,
-          multiHouse.sellingHouseId,
-          judgeMixedSurcharge,
-        )
-      : undefined;
+  // NH-09 — 감면주택 중과 배제 선판정(아래 §104⑦ 블록)이 고가주택 판정 가액으로 주택분 안분 결과를 읽으므로 안분을 먼저 한다(계산은 순수 — 순서만 앞당김).
+  // 파생값 (면적 비율)
+  const derived = computeDerivedAreas(asset);
+  // 보유 중 일부 용도변경 시 취득시 면적 파생값 (시행령 §166⑥)
+  const acqDerived = computeAcqDerivedAreas(asset, derived);
+
+  // STEP 2: 양도가액 안분 — 계약서 구분·감정가액 입력이 있으면 1차 토지:건물 → 2차 주택:상가(`mixed-use-sale-split.ts`).
+  // 입력이 없거나 기준시가로 귀결되면 `base`(현행 기준시가 비율) 그대로다.
+  const saleSplit = prepareMixedSaleSplit({
+    asset, derived, transferPrice, transferDate, base: apportionTransferPrice(transferPrice, asset, derived),
+  });
+  const apportionmentBase = saleSplit.apportionment;
+  const housingSalePart = saleSplit.parts ? salePartsFor(saleSplit.parts, "housing", asset.transferExpense ?? 0) : undefined;
+  const commercialSalePart = saleSplit.parts ? salePartsFor(saleSplit.parts, "commercial", asset.transferExpense ?? 0) : undefined;
+  // BG — 양도가액은 «채무 귀속으로 정한 부분별 양도가액»(B_h'·B_c')으로 덮어쓴다. 고가주택 안분 분모는 주택분 증여가액 C_h(해석 B).
+  const apportionment: MixedUseApportionment = bg
+    ? { ...apportionmentBase, housingTransferPrice: bg.debt.housingDebt, commercialTransferPrice: bg.debt.commercialDebt, wholeHousingTransferPrice: bg.value.housing }
+    : apportionmentBase;
+
+  // ── 법 §104⑦ 다주택 중과 판정 + 감면주택 중과 배제 선판정(NH-09) — `transfer-tax-mixed-use-surcharge-judge.ts` ──
+  const { multiHouseSurcharge, reductionExclusion } = judgeMixedUseMultiHouseSurcharge({
+    asset, transferDate, transferPrice, apportionment, rentalResidence,
+    rates: { houseCountExclusionRules, regulatedAreaHistory, surchargeSpecialRules },
+    exemption: {
+      meetsOneHouseRequirements,
+      surchargeDeemedOneHouseBy155,
+      surchargeDeemedOneHouseSource,
+      surchargeDeemedRestsOnInheritedExclusion,
+      surchargeUnavoidableOutsideCapitalSlot,
+      rightDeemingCitedByOldClause1,
+    },
+  });
 
   // §95② 본문 괄호 — 「제104조 제7항 각 호에 따른 자산」의 장기보유특별공제 **배제**.
   //
@@ -305,25 +284,12 @@ function calcMixedUseCore(
     );
   }
 
-  // 파생값 (면적 비율)
-  const derived = computeDerivedAreas(asset);
-  // 보유 중 일부 용도변경 시 취득시 면적 파생값 (시행령 §166⑥)
-  const acqDerived = computeAcqDerivedAreas(asset, derived);
-
-  // STEP 2: 양도가액 안분 — 계약서 구분·감정가액 입력이 있으면 1차 토지:건물 → 2차 주택:상가(`mixed-use-sale-split.ts`).
-  // 입력이 없거나 기준시가로 귀결되면 `base`(현행 기준시가 비율) 그대로다.
-  const saleSplit = prepareMixedSaleSplit({
-    asset, derived, transferPrice, transferDate, base: apportionTransferPrice(transferPrice, asset, derived),
-  });
-  const apportionmentBase = saleSplit.apportionment;
-  const housingSalePart = saleSplit.parts ? salePartsFor(saleSplit.parts, "housing", asset.transferExpense ?? 0) : undefined;
-  const commercialSalePart = saleSplit.parts ? salePartsFor(saleSplit.parts, "commercial", asset.transferExpense ?? 0) : undefined;
-  // BG — 양도가액은 «채무 귀속으로 정한 부분별 양도가액»(B_h'·B_c')으로 덮어쓴다. 고가주택 안분 분모는 주택분 증여가액 C_h(해석 B).
-  const apportionment: MixedUseApportionment = bg
-    ? { ...apportionmentBase, housingTransferPrice: bg.debt.housingDebt, commercialTransferPrice: bg.debt.commercialDebt, wholeHousingTransferPrice: bg.value.housing }
-    : apportionmentBase;
   steps.push(buildApportionmentStep(apportionment));
   if (bg) steps.unshift(buildMixedBurdenedGiftStep(bg));
+  if (reductionExclusion?.excluded) {
+    steps.push(buildMixedReductionSurchargeExclusionStep(reductionExclusion));
+    warnings.push(mixedReductionSurchargeExclusionNotice(reductionExclusion));
+  }
 
   // STEP 2.5: 취득가액 총액 안분 (법 §100²) — 실거래가(R1) 또는 감정/매매사례(R-B) 총액을
   // 취득시 기준시가 비율로 주택분/상가분에 안분(양도가액 안분의 취득시 미러). 개산공제 차이는 각 part에서.
