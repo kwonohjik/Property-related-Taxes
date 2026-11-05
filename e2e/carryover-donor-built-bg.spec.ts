@@ -32,7 +32,15 @@ const CARRYOVER = {
   donorRelation: "lineal",
   donorSameHousehold: "no",
 };
-const DONOR_BUILT_NEW = { donorBuilt: true, donorBuiltType: "new", donorBuiltDate: "2022-01-10" };
+/**
+ * V-7 — 일체 주택 신축은 건물분 안분 입력이 필요하다(⑧·⑫·엔진). 취득·양도 당시 모두 토지:건물 기준시가 1:1(1백만 원/㎡ × 100㎡ = 1억 · 건물 1억)이라
+ * 가산세 base = 주택 전체 값 ÷ 2 (vitest `__tests__/calc/_helpers/carryover-donor-built-bg-form.ts`와 같은 값).
+ */
+const DONOR_BUILT_NEW = {
+  donorBuilt: true, donorBuiltType: "new", donorBuiltDate: "2022-01-10",
+  donorBuiltLandPricePerSqm: "1000000", donorBuiltLandArea: "100", donorBuiltBuildingStdAtAcq: "100000000",
+};
+const HOUSING_WIRE = { landPricePerSqmAtAcquisition: 1_000_000, landArea: 100, buildingStdPriceAtAcquisition: 100_000_000, landStdPriceAtTransfer: 100_000_000, buildingStdPriceAtTransfer: 100_000_000 };
 
 const asset = (method: "appraisal" | "converted", co: Over = {}, over: Over = {}): Over => ({
   ...makeDefaultAsset(1),
@@ -52,7 +60,9 @@ const asset = (method: "appraisal" | "converted", co: Over = {}, over: Over = {}
   standardPriceAtTransfer: "800000000",
   standardPriceAtAcq: "400000000",
   landStandardPriceAtTransfer: "0",
-  buildingStandardPriceAtTransfer: "800000000",
+  standardPricePerSqmAtTransfer: "1000000",
+  transferArea: "100",
+  buildingStandardPriceAtTransfer: "100000000",
   bgActualAcquisitionTotal: "600000000",
   bgCoDonorLandStdPriceAtAcq: "0",
   bgCoDonorBuildingStdPriceAtAcq: "150000000",
@@ -91,11 +101,11 @@ async function readStore(page: Page) {
 }
 
 test.describe("부담부증여 × 이월과세 × 당초 증여자 신축·증축 §114조의2", () => {
-  test("DBG-E1 K-7 A 채택: body 의 burdenedGiftInfo.carryoverDonorBasis.donorBuilt · 결과 카드 안분 후 기준액 · 신고서 가산세 6,250,000", async ({ page }) => {
+  test("DBG-E1 K-7 A 채택: body 의 burdenedGiftInfo.carryoverDonorBasis.donorBuilt(housing 포함) · 결과 카드 안분 후 건물분 기준액 · 신고서 가산세 3,125,000", async ({ page }) => {
     test.setTimeout(180_000);
     await seedWizard(page, seed([asset("appraisal")]));
     const body = (await calculate(page)) as Wire;
-    expect(body.burdenedGiftInfo?.carryoverDonorBasis?.donorBuilt).toEqual({ buildingType: "new", constructionDate: "2022-01-10" });
+    expect(body.burdenedGiftInfo?.carryoverDonorBasis?.donorBuilt).toEqual({ buildingType: "new", constructionDate: "2022-01-10", housing: HOUSING_WIRE });
     expect(body.isSelfBuilt).not.toBe(true); // 양도인 본인 신축 축은 이월과세에서 보내지 않는다
     const card = page.getByTestId("donor-built-penalty-card").first();
     await expect(card).toHaveAttribute("data-applied", "true");
@@ -103,21 +113,21 @@ test.describe("부담부증여 × 이월과세 × 당초 증여자 신축·증�
     await expect(card.locator("xpath=..")).toContainText("감정가액 가산세");
     await expect(card.locator("xpath=..")).not.toContainText("환산취득가액");
     await expect(page.getByTestId("donor-built-window").first()).toHaveText("증여자 신축 취득일 2022-01-10부터 5년이 되는 날(2027-01-10)까지 양도하는 경우입니다.");
-    await expect(card).toContainText("가산세 기준액 = 당초 증여자 건물 감정가액 중 채무비율 안분 후 금액 125,000,000");
-    await expect(page.getByTestId("donor-built-penalty-line").first()).toHaveText("가산세 6,250,000 = 125,000,000 × 5%");
+    await expect(card).toContainText("가산세 기준액 = 당초 증여자 건물 감정가액 중 채무비율 안분 후 금액 62,500,000");
+    await expect(page.getByTestId("donor-built-penalty-line").first()).toHaveText("가산세 3,125,000 = 62,500,000 × 5%");
     await expect(page.getByTestId("donor-built-notice").first()).toContainText("정면 해석례는 확인하지 못했습니다 — 확인 필요");
-    expect(num((await formRow(page, "가산세액"))[1])).toBe(6_250_000);
+    expect(num((await formRow(page, "가산세액"))[1])).toBe(3_125_000);
     expect(await stmtText(page, "가산세액")).toContain("증여자 신축·증축");
   });
 
-  test("DBG-E2 K-5 A 채택: 환산취득가액 안분 후 기준액 · 가산세 4,687,500", async ({ page }) => {
+  test("DBG-E2 K-5 A 채택: 환산취득가액 안분 후 건물분 기준액 · 가산세 2,343,750", async ({ page }) => {
     test.setTimeout(180_000);
     await seedWizard(page, seed([asset("converted")]));
     await calculate(page);
     await expect(page.getByTestId("donor-built-penalty-card").first().locator("xpath=..")).toContainText("건물 환산취득가액 가산세");
-    await expect(page.getByTestId("donor-built-penalty-card").first()).toContainText("가산세 기준액 = 당초 증여자 건물 환산취득가액 중 채무비율 안분 후 금액 93,750,000");
-    await expect(page.getByTestId("donor-built-penalty-line").first()).toHaveText("가산세 4,687,500 = 93,750,000 × 5%");
-    expect(num((await formRow(page, "가산세액"))[1])).toBe(4_687_500);
+    await expect(page.getByTestId("donor-built-penalty-card").first()).toContainText("가산세 기준액 = 당초 증여자 건물 환산취득가액 중 채무비율 안분 후 금액 46,875,000");
+    await expect(page.getByTestId("donor-built-penalty-line").first()).toHaveText("가산세 2,343,750 = 46,875,000 × 5%");
+    expect(num((await formRow(page, "가산세액"))[1])).toBe(2_343_750);
   });
 
   test("DBG-E3 ②3호 B 채택: 가산세 없음 + 중립 안내 (「더했다」류 문구 없음)", async ({ page }) => {
@@ -142,7 +152,7 @@ test.describe("부담부증여 × 이월과세 × 당초 증여자 신축·증�
     await expect(page.getByTestId("donor-built-fields")).toHaveCount(0);
     await toggle.getByRole("switch").first().click();
     await expect(page.getByTestId("donor-built-fields")).toBeVisible();
-    // 일체 주택 안분 칸은 없다 — §159 가 토지·건물을 자산별로 따로 구한다
+    // 구분 미선택이면 일체 주택 안분 칸은 아직 없다(신축일 때만 — V-7)
     await expect(page.getByTestId("donor-built-housing")).toHaveCount(0);
     expect(await readStore(page)).toMatchObject({ donorBuilt: true, donorBuiltType: "", donorBuiltDate: "" });
     await page.getByTestId("donor-built-type").getByRole("radio", { name: "신축" }).check();
@@ -152,9 +162,13 @@ test.describe("부담부증여 × 이월과세 × 당초 증여자 신축·증�
     await dateScope.locator('input[type="text"][aria-label="월"]').first().fill(m);
     await dateScope.locator('input[type="text"][aria-label="일"]').first().fill(d);
     expect(await readStore(page)).toMatchObject({ donorBuilt: true, donorBuiltType: "new", donorBuiltDate: "2022-01-10" });
+    // 신축을 고르면 일체 주택 건물분 안분 칸(가 취득 당시 · 나 양도 당시 기준시가)이 열린다 — 값은 시드에 있다(V-7)
+    await expect(page.getByTestId("donor-built-housing")).toBeVisible();
+    for (const key of ["carryover.donorBuiltLandPricePerSqm", "carryover.donorBuiltLandArea", "carryover.donorBuiltBuildingStdAtAcq", "standardPricePerSqmAtTransfer", "buildingStandardPriceAtTransfer"])
+      await expect(page.locator(`[data-asset-card-index="0"] [data-field="${key}"]`).first(), key).toBeVisible();
     const body = (await calculate(page)) as Wire;
-    expect(body.burdenedGiftInfo?.carryoverDonorBasis?.donorBuilt).toEqual({ buildingType: "new", constructionDate: "2022-01-10" });
-    await expect(page.getByTestId("donor-built-penalty-line").first()).toHaveText("가산세 6,250,000 = 125,000,000 × 5%");
+    expect(body.burdenedGiftInfo?.carryoverDonorBasis?.donorBuilt).toEqual({ buildingType: "new", constructionDate: "2022-01-10", housing: HOUSING_WIRE });
+    await expect(page.getByTestId("donor-built-penalty-line").first()).toHaveText("가산세 3,125,000 = 62,500,000 × 5%");
   });
 
   test("DBG-E5 ⑧ 차단: 토글 ON 인데 신축일이 비면 «다음» 이 막히고 그 칸으로 이동한다", async ({ page }) => {

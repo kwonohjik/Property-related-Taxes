@@ -62,3 +62,12 @@
 - 입력 검사: `assertSelfBuiltHousingInput` 부담부증여 분기(`assertBgSelfBuiltHousingInput`) — 주택·신축·시가 환산/감정·필수 칸. 일반 양도 경로(`unreachableReason`)는 부담부증여에서 계속 관여하지 않는다(스텝이 읽는다).
 - anchor `__tests__/tax-engine/transfer-tax/bg-housing-114-2-building-base.anchor.test.ts` 5건 = §3 손계산 그대로: 본인 신축 K-5 20,000,000 · 가산세 1,000,000(총부담 −1,650,000) · K-7 직접 60,000,000 / 비율 48,000,000 · 당초 증여자 K-5 35,156,250 · 1,757,812 · K-7 46,875,000 · 2,343,750. 입력 없으면 종전 값(회귀 0). 종전 단언(`self-built-housing-penalty.anchor.test.ts` 「부담부증여는 이 입력을 거부」)을 반전.
 - 뮤테이션 8/9 — 살아남은 1건은 스텝의 증축 제외 조건(입력 검사가 먼저 막아 닿지 않는 이중 방어선).
+
+## 7. PR-2 화면·엄격화 (구현)
+
+- 엔진 엄격화(Q-3 a): §159 스텝 — 일체 주택 신축 × K-5/K-7 × 가산세 창 열림 × 토지·건물 취득일 분리 아님인데 `selfBuiltHousing`(당초 증여자는 `donorBuilt.housing`)이 없으면 INVALID_INPUT. 이월과세 시나리오 B 사본(방식이 §163⑨로 실지에 파생)은 입력 검사 예외 — 직접 API 호출 회귀에서 실측으로 발견.
+- 양도세 계산기 · 본인 신축: `selfBuiltHousingScope` 부담부증여 분기(시가 환산·감정 · 신축 · 담보 승·주택 토지·건물 분리 아님 · 가산세 창) → ⑤ 건물분 카드(양도가액 구분 없이 `TransferStdPriceCard`) · ④ `sale` 미전송·건물 감정가액 축소 없음 · ⑧ 부담부증여 분기 · ⑫ 부담부증여 거부 해제. 지분 카드(축 B)도 같은 카드가 열린다(E2E CS-1).
+- 양도세 계산기 · 당초 증여자 신축: `CarryoverDonorBuiltSection` 일체 주택 칸(신축만) · ④ `housing` · ⑧ 다섯 칸 · ⑫ `bgDonorBuiltShape`가 `housing`을 받는다(주택 신축만 — 그 밖 400).
+- 증여세 마법사 · 부담부증여 양도세(2026-11-05 사용자 「칸 추가」): leaf `lib/calc/gift-burdened-self-built-housing.ts`(⑤④⑧ 공용) · 칸 = 건물 감정가액 또는 취득 당시 토지 ㎡당 공시지가·면적·건물 기준시가 + (환산) 양도 당시 토지 ㎡당 공시지가·건물 기준시가 · 타입 `BurdenedGiftTransferTaxInput.selfBuiltHousing`.
+- 기존 시료: 1:1 안분 헬퍼(`__tests__/tax-engine/_helpers/bg-housing-half-split.ts` · 폼 시드 `carryover-donor-built-bg-form.ts`)로 base·가산세를 절반으로 다시 고정 — 손계산 일치(당초 증여자 K-7 총납부 89,360,562 · K-5 97,644,937). 종전 단언 「부담부증여는 이미 건물분」(4곳) 반전.
+- 검증: 새 anchor(`__tests__/calc/bg-self-built-housing.anchor.test.ts` 8 · 증여세 경로 2 · 당초 증여자 ⑧ 6) · E2E 9 spec 58 passed(본인 신축 PA-7·7b · 당초 증여자 DBG-E1~E6 · 증여세 마법사 P114·PG-2 · 지분 카드 CS-1 — 모두 화면에서 칸 노출 확인) · 뮤테이션 11/12(살아남은 1 = ⑧ 부담부증여 분기의 양도 당시 기준시가 요구 — 일반 분기와 같은 칸을 요구하는 동치 변형, 다른 점인 연혁 면제는 시행일 게이트로 닿지 않음).

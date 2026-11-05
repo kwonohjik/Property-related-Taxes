@@ -551,7 +551,9 @@ function GiftSelfBuiltHousingFields({
   const put = (patch: Partial<NonNullable<BurdenedGiftTransferTaxInput["selfBuiltHousing"]>>) => set({ selfBuiltHousing: { ...h, ...patch } });
   const amount = (v: number | undefined) => (v && v > 0 ? String(v) : "");
   return (
-    <ToneCard tone="amber" title="건물분만 가산세 대상입니다" data-testid="gift-bg-self-built-housing">
+    // ToneCard 는 data-testid 를 넘기지 않는다 — 바깥 div 에 단다
+    <div data-testid="gift-bg-self-built-housing">
+    <ToneCard tone="amber" title="건물분만 가산세 대상입니다">
       <p className="text-xs text-muted-foreground leading-relaxed">
         소득세법 §114조의2①은 «해당 건물»의 {scope.method === "appraisal" ? "감정가액" : "환산취득가액"}의 5%를 가산세로 정합니다. 주택공시가격은 토지와 건물을 합친 가격이라,
         토지 기준시가와 건물 기준시가의 비율로 나눈 건물분으로 가산세 기준액을 구합니다 (소득세법 §99①1호, 시행령 §166⑥).
@@ -596,5 +598,6 @@ function GiftSelfBuiltHousingFields({
         </>
       )}
     </ToneCard>
+    </div>
   );
 }

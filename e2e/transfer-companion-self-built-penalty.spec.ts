@@ -3,7 +3,7 @@
  *
  * 종전에는 컴패니언 카드에도 「본인이 신축 또는 증축한 건물입니까?」 칸이 있는데 ⑫·④가 그 값을 싣지 않아
  * 첫 자산만 가산세가 붙고 컴패니언은 조용히 0이었다.
- *   CS-1. 부담부증여 지분 카드(축 B) × 신축 × 감정가액 — 자산 2의 신축이 가산세 6,000,000(감정가액 5억×40%×채무비율 0.6 = 1.2억의 5%)
+ *   CS-1. 부담부증여 지분 카드(축 B) × 신축 × 감정가액 — 자산 2 카드의 건물분 칸에 건물 감정가액 2.5억 입력 → 가산세 3,000,000(2.5억×40%×채무비율 0.6 = 6천만의 5% · V-7 전 주택 전체 5억 기준 6,000,000)
  *   CS-2. 함께 양도(다른 물건) × 환산 × 신축 — 자산 2의 가산세가 payload·결과에 반영된다. 일체 주택은 «해당 건물»분이 base 라
  *         건물분 입력(Q-12 PR-2)을 채운다: 1,874,999(종전 전체 base 99,999,999 · 4,999,999)
  *   CS-3. 함께 양도 × 감정가액 × 신축(자산 2) — 가산세 5,500,000(건물 감정가액 1.1억 직접 입력 × 5%, 종전 감정가액 총액 3억 · 15,000,000) · 개산공제 6,000,000(§163⑥)
@@ -105,20 +105,25 @@ async function calculate(page: Page) {
 type Prop = { penaltyTax: number; penaltyBase: number };
 
 test.describe("컴패니언 신축·증축 특례 §114조의2", () => {
-  test("CS-1: 축 B 지분 카드(자산 2) × 신축 × 감정가액 → 가산세 6,000,000", async ({ page }) => {
+  test("CS-1: 축 B 지분 카드(자산 2) × 신축 × 감정가액 → 카드의 건물분 칸 입력 → 가산세 3,000,000", async ({ page }) => {
     test.setTimeout(120_000);
     await seedAndOpen(page, [
       tranche(1, "60", "2009-03-01", { bgPresumedAcquisitionTotal: "400000000", standardPriceAtAcq: "200000000" }),
       tranche(2, "40", "2012-03-01", { bgPresumedAcquisitionTotal: "500000000", standardPriceAtAcq: "300000000", ...SB }),
     ]);
+    // V-7 — 지분 카드에도 일체 주택 건물분 카드가 열린다(입력 경로) · 감정평가서의 건물 감정가액(물건 전체 기준)
+    await expandAssetSection(page, 3, 1);
+    const share = page.locator('[data-asset-card-index="1"] [data-testid="self-built-housing-share"]');
+    await expect(share).toBeVisible();
+    await share.locator('[data-field="selfBuiltBuildingAppraisal"] input').first().fill("250000000");
     const resp = await calculate(page);
     const sent = resp.request().postDataJSON() as { companionAssets?: Record<string, unknown>[] };
     expect(sent.companionAssets?.[0].isSelfBuilt).toBe(true);
     const body = await resp.json();
     const props = body.data.aggregated.properties as Prop[];
     expect(props[0].penaltyTax).toBe(0);
-    expect(props[1].penaltyBase).toBe(120_000_000);
-    expect(props[1].penaltyTax).toBe(6_000_000);
+    expect(props[1].penaltyBase).toBe(60_000_000);
+    expect(props[1].penaltyTax).toBe(3_000_000);
   });
 
   test("CS-2: 함께 양도 × 환산 × 신축(자산 2) → 자산 2 가산세 1,874,999(건물분 base 37,499,999)", async ({ page }) => {

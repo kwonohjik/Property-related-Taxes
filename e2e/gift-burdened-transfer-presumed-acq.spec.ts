@@ -93,6 +93,9 @@ test.describe("부담부증여 양도세 — 매매사례가액·감정가액 (K
     await selfBuilt.click();
     await expect(selfBuilt).toHaveAttribute("aria-checked", "true");
     await fillBuildingDate(dialog, "2021", "1", "10");
+    // V-7 — 신축 주택 × 감정가액은 건물분만 가산세 대상 — 감정평가서의 건물 감정가액 칸(필수)
+    await expect(dialog.getByTestId("gift-bg-self-built-housing")).toBeVisible();
+    await dialog.getByTestId("gift-bg-sbh-building-appraisal").fill("125000000");
     await calculate(page, dialog);
 
     expect(mock.bodies.length, "양도세 API 호출").toBeGreaterThan(0);
@@ -102,6 +105,7 @@ test.describe("부담부증여 양도세 — 매매사례가액·감정가액 (K
     expect(info.presumedAcquisitionTotal).toBe(250_000_000);
     expect(info.actualAcquisitionTotal).toBeUndefined();
     expect(body.isSelfBuilt).toBe(true);
+    expect(body.selfBuiltHousing).toEqual({ buildingAppraisalValue: 125_000_000 });
     expect(body.buildingType).toBe("new");
     expect(body.constructionDate).toBe("2021-01-10");
     expect(body.capitalExpenditure).toBe(0);
