@@ -184,7 +184,10 @@ const RULES: Rule[] = [
      *   리터럴을 전역 금지할 수 없다 ⇒ **§99의3 전용 카드 파일**로 범위를 좁힌다.
      */
     id: "L1-14 §99의3 위임령을 조특령 §99로 인용",
-    files: (rel) => rel.endsWith("components/calc/results/transfer/TransferReductionRows.tsx"),
+    // 리뷰 NH-44 — §99의3 입력 폼의 조문 링크도 같은 결함이었다(「조특령 §99」).
+    files: (rel) =>
+      rel.endsWith("components/calc/results/transfer/TransferReductionRows.tsx") ||
+      rel.endsWith("components/calc/transfer/New993InputForm.tsx"),
     hit: (l) => /(조세특례제한법\s*시행령|조특령)\s*§?\s*99(?!의)/.test(l),
     correct: "「조세특례제한법 시행령 §99의3」 — 조특령 §99는 법 §99(감면)의 위임 조문이다",
   },
