@@ -14,6 +14,7 @@ import { DetailedCalculationStatementCard } from "@/components/calc/results/tran
 import { useState, useMemo } from "react";
 import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
 import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
+import { RegulatedAreaAssumptionLine } from "@/components/calc/results/transfer/RegulatedAreaAssumptionLine";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
@@ -107,6 +108,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
       */}
       <OneHouseJudgmentProvenanceLine form={formData} />
       <SameDayOrderLine form={formData} />
+      <RegulatedAreaAssumptionLine form={formData} />
 
       <PrintSelectionPanel
         allGroups={MIXED_USE_PRINT_SECTIONS}

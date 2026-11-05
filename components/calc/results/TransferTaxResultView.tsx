@@ -45,6 +45,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
 import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
+import { RegulatedAreaAssumptionLine } from "@/components/calc/results/transfer/RegulatedAreaAssumptionLine";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
@@ -184,6 +185,7 @@ export function TransferTaxResultView({
       */}
       <OneHouseJudgmentProvenanceLine form={formData} />
       <SameDayOrderLine form={formData} />
+      <RegulatedAreaAssumptionLine form={formData} />
 
       <PrintSelectionPanel
         allGroups={TRANSFER_PRINT_SECTIONS}
