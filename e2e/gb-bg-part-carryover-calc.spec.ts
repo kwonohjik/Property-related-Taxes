@@ -33,6 +33,9 @@ const asset = (n: number, over: Record<string, unknown> = {}) => ({
   transferCause: "general",
   bgValuationMode: "sangjeungbeop_market",
   bgAcquisitionMethod: "converted",
+  // K-5 이월과세 B — 증여받은 파트는 양도인 증여일 평가액(소령 §163⑨ · `bg-carryover-k5-one-part-b.plan.md`). 2.5억 = 종전 환산과 같은 금액이라 A 채택 결정세액은 그대로다.
+  bgActualAcquisitionLand: "250000000",
+  bgActualAcquisitionBuilding: "250000000",
   bgMarketValueAtTransfer: "1000000000",
   bgLendingDepositTotal: "0",
   bgMortgageDebtAmount: "500000000",

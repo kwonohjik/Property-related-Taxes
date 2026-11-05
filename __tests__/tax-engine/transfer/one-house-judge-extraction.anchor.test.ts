@@ -78,6 +78,7 @@ const JUDGE_INPUT_KEYS = [
   "ruralHouse",
   "unavoidableOutsideCapitalHouse",
   "culturalHeritageHouse",
+  "culturalHeritageHouseId",
   "longTermMortgageHouse",
   "winWinRentalHouse",
   "houses",
@@ -168,6 +169,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   ruralHouse: { kind: "farm_exit", isOutsideCapitalEupMyeon: true, ownerResidenceYears: 7 },
   unavoidableOutsideCapitalHouse: { reason: "illness", resolvedDate: D("2023-04-04") },
   culturalHeritageHouse: true,
+  culturalHeritageHouseId: "heritage-row",
   houses: [
     {
       id: "sell",
@@ -202,6 +204,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
     sameInheritanceAsSoldCount: 0,
     rankingDisqualifiedCoMinorityCount: 0,
     unexcludedCoMinorityHouseIds: [],
+    coveredBySpecialActHouseIds: [],
   },
   knownHouseExclusionHouseIds: ["inherited-house"],
   noMergeRosterInputPath: true,

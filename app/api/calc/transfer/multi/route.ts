@@ -346,6 +346,7 @@ export async function POST(request: NextRequest) {
             reason: p.unavoidableOutsideCapitalHouse.reason,
             resolvedDate: toOptionalDate(p.unavoidableOutsideCapitalHouse.resolvedDate),
             unresolvedAtTransfer: p.unavoidableOutsideCapitalHouse.unresolvedAtTransfer,
+            houseId: p.unavoidableOutsideCapitalHouse.houseId,
           }
         : undefined,
       // ⑭ §155⑦ 농어촌주택 — acquisitionDate만 Date 변환 대상. 나머지는 boolean·number라 그대로 통과.
@@ -380,6 +381,7 @@ export async function POST(request: NextRequest) {
             : p.rightThreeYearException,
       mergedHouseholdFirstHouse: p.mergedHouseholdFirstHouse,
       culturalHeritageHouse: p.culturalHeritageHouse,
+      culturalHeritageHouseId: p.culturalHeritageHouseId,
       /**
        * ⑭ §155의2 장기저당담보주택 · §155의3 상생임대주택 — **단건과 같은 규칙을 다건에도 싣는다**.
        *

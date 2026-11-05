@@ -62,3 +62,23 @@ describe("② 양도인 취득시 기준시가 — K-5 이월과세에서는 묻
     expect(needsBgAcqStdPriceInput(house({ acquisitionCause: "purchase" }))).toBe(true);
   });
 });
+
+describe("⑤ 한 파트만 증여받은 일반건물 K-5 — 그 파트 평가액 칸만 (`bg-carryover-k5-one-part-b.plan.md` Q-2 a)", () => {
+  const gb = (over: Partial<AssetForm>) => house({ assetKind: "general_building", hasSeperateLandAcquisitionDate: true, gbBuildingAcquisitionCause: "purchase", ...over });
+  const fields = (c: HTMLElement) => ["bgActualAcquisitionLand", "bgActualAcquisitionBuilding", "bgActualAcquisitionTotal"].map((k) => c.querySelector(`[data-field="${k}"]`) !== null);
+  it("토지만 → 토지 칸만 · 안내 「증여받은 토지만」", () => {
+    const { container } = render(<BurdenedGiftBlock asset={gb({})} onChange={() => {}} />);
+    expect(fields(container)).toEqual([true, false, false]);
+    expect(screen.getByTestId(NOTICE).textContent).toContain("증여받은 토지만 입력합니다");
+  });
+  it("건물만 → 건물 칸만", () => {
+    const { container } = render(<BurdenedGiftBlock asset={gb({ acquisitionCause: "purchase", gbBuildingAcquisitionCause: "carryover_gift" })} onChange={() => {}} />);
+    expect(fields(container)).toEqual([false, true, false]);
+    expect(screen.getByTestId(NOTICE).textContent).toContain("증여받은 건물만 입력합니다");
+  });
+  it("두 파트 모두 → 두 칸 · 종전 안내", () => {
+    const { container } = render(<BurdenedGiftBlock asset={gb({ gbBuildingAcquisitionCause: "carryover_gift" })} onChange={() => {}} />);
+    expect(fields(container)).toEqual([true, true, false]);
+    expect(screen.getByTestId(NOTICE).textContent).toContain("환산취득가액은 당초 증여자 기준");
+  });
+});

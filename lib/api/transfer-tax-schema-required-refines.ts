@@ -118,7 +118,7 @@ type BurdenedGiftLike = {
     presumedAcquisitionTotal?: number;
     presumedLandAcquisitionPrice?: number;
     presumedBuildingAcquisitionPrice?: number;
-    /** 증여받은 파트(일반건물 분리) — 한 파트만이면 K-5 B는 종전 환산이다(엔진 `isConvertedCarryoverReadingGiftValuation`). */
+    /** 증여받은 파트(일반건물 분리) — 한 파트만이면 K-5 B의 그 파트 평가액은 일반건물 refine(`requireBgAcquisitionParts`)이 요구한다. */
     parts?: { land?: boolean; building?: boolean };
   };
   donorRelation?: string;
@@ -191,7 +191,8 @@ export function refineBurdenedGiftInputs(
       // 담보 승은 엔진이 방식별 금액을 읽지 않아 요구하지 않는다. ⑤가 그 칸을 숨기고 ⑧도 요구하지 않는다(O-5). 승계 입주권(괄호 열거 시기)도 같다(I-1).
       issue(["burdenedGiftInfo", "actualAcquisitionTotal"], "부담부증여 실지취득가액 안분은 실지취득가액이 필요합니다");
     }
-    // 이월과세 × K-5(두 파트 모두 증여받음) — 시나리오 B는 양도인 증여일 평가액 `actual*`(소령 §163⑨ · 엔진 `isConvertedCarryoverReadingGiftValuation`)
+    // 이월과세 × K-5(두 파트 모두 증여받음) — 시나리오 B는 양도인 증여일 평가액 `actual*`(소령 §163⑨ · 엔진 `isConvertedCarryoverReadingGiftValuation`).
+    // 한 파트만(일반건물)은 `transfer-tax-schema-gb-bg-refines.ts` `requireBgAcquisitionParts`가 그 파트 칸을 요구한다.
     const donorParts = bg.carryoverDonorBasis?.parts;
     if (
       !(preDeemed || gbAllPartsPreDeemed || mixedDeemed) && bg.acquisitionMethod === "converted" && bg.carryoverDonorBasis &&

@@ -21,6 +21,7 @@ import { phdPayloadActive } from "./phd-toggle-scope";
 import { unpaidTaxPayload } from "./transfer-unpaid-tax-mode";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
+import { exemptionCountExcludedHouseIds } from "./temp-two-house-candidate-exclusion";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
@@ -244,9 +245,12 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
             },
           }
         : {}),
-    }, form.transferDate);
+    }, form.transferDate,
+    // NH-12 — 이미 주택 수에서 빠진 행(조특법 §99의4 등 · §155②③ 상속주택)은 §155⑥⑦⑧ 상대방으로 싣지 않는다. 판정 메뉴·거울과 같은 집합.
+    exemptionCountExcludedHouseIds(form));
     return {
       ...(derived.culturalHeritageHouse ? { culturalHeritageHouse: true } : {}),
+      ...(derived.culturalHeritageHouseId ? { culturalHeritageHouseId: derived.culturalHeritageHouseId } : {}),
       ...(derived.ruralHouse ? { ruralHouse: derived.ruralHouse } : {}),
       ...(derived.unavoidableOutsideCapitalHouse
         ? { unavoidableOutsideCapitalHouse: derived.unavoidableOutsideCapitalHouse }

@@ -9,6 +9,7 @@ import {
   judgmentSpecialHouseExclusions,
 } from "./one-house-judgment-section-scope";
 import { deriveOneHouseFactsFromHouses } from "./one-house-row-facts";
+import { exemptionCountExcludedHouseIds } from "./temp-two-house-candidate-exclusion";
 import { sameDayExcludedRows } from "./same-day-transfer-notice";
 import { housesOwnedAtTransfer } from "./household-house-count";
 import {
@@ -86,6 +87,8 @@ export function computeOneHouseJudgmentSummary(
     housesOwnedAtTransfer(form.houses, form.transferDate, form.assets?.[0]?.assetKind),
     factsLegacy,
     form.transferDate,
+    // ④와 같은 행 선택 — 이미 주택 수에서 빠진 행은 ⑥⑦⑧ 선언 행으로 읽지 않는다(NH-12).
+    exemptionCountExcludedHouseIds(form),
   );
   const declared = [
     rowFacts.culturalHeritageHouse && "문화유산주택",

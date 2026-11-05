@@ -168,6 +168,8 @@ export const propertyBaseShape = {
   ruralHouse: ruralHouseSchema.optional(),
   /** ⑫ §155⑥1호 문화유산 주택 — §156의2⑩·§156의3⑦의 특수주택 판정에도 쓰인다. */
   culturalHeritageHouse: z.boolean().optional(),
+  /** ⑫ §155⑥1호 선언 행 id — 그 행이 이미 주택 수에서 빠졌으면 이 선언을 쓰지 않는다(NH-12). 누락하면 침묵 strip. */
+  culturalHeritageHouseId: z.string().optional(),
   /**
    * ⑨⑩⑫ §155의2 장기저당담보주택 · §155의3 상생임대주택 — **거주요건 면제 축**.
    *

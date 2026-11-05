@@ -303,7 +303,7 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
    * 🔑 키를 **필수**로 둔 매핑 타입이다 — route가 셋 중 하나를 빠뜨리면 컴파일이 실패한다(값은 undefined 가능).
    */
   article155SpecialHouses?: {
-    [K in "ruralHouse" | "culturalHeritageHouse" | "unavoidableOutsideCapitalHouse"]: TransferTaxInput[K];
+    [K in "ruralHouse" | "culturalHeritageHouse" | "culturalHeritageHouseId" | "unavoidableOutsideCapitalHouse"]: TransferTaxInput[K];
   };
   /**
    * §155⑳ 거주주택·§155④⑤ 합가 상대 쪽 임대 판정용 **단건 입력** — route가 주입한다(`engineInput`, Date 변환본).

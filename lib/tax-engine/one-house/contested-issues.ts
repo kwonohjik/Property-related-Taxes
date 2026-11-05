@@ -25,7 +25,7 @@ import { isBeforeCoInheritedRankingClause } from "../data/co-inherited-ranking-c
 import {
   isHeirInheritedHouse,
   passesHouseholdGate,
-  resolveInheritedHouseExclusionFromInput,
+  resolveInheritedHouseExclusionForJudgment,
 } from "../transfer-inheritance-exclusion";
 import { deriveHouseholdHousingCount } from "./house-count";
 import type { HouseInfo } from "../types/multi-house-surcharge.types";
@@ -238,7 +238,8 @@ export function detectContestedIssues(input: TransferTaxInput): DetectedConteste
     //   반대(B)는 그 행들을 명부에서 빼고 주택 수를 다시 구해 판정. 감지 집합은 엔진 정본(`unexcludedCoMinorityHouseIds`)이 낸다.
     //   같은 피상속인으로 한정하지 않는다(부부가 각자 받은 소수지분도 개정 전 양도분이면 대상). C2(동일세대)는 게이트 통과 행만 센다.
     if (isBeforeCoInheritedRankingClause(input.transferDate)) {
-      const ids = resolveInheritedHouseExclusionFromInput(input).unexcludedCoMinorityHouseIds;
+      // STEP 0.95의 정본 결과(echo)를 이어받는다 — 조특법으로 이미 뺀 행을 「주택 수에 남은 소수지분」으로 세지 않는다(NH-13).
+      const ids = resolveInheritedHouseExclusionForJudgment(input).unexcludedCoMinorityHouseIds;
       if (ids.length > 0) {
         const houses = (input.houses ?? []).filter((h) => !ids.includes(h.id));
         out.push({

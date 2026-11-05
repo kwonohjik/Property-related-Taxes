@@ -148,6 +148,7 @@ export function buildTransferEngineInput(
           reason: data.unavoidableOutsideCapitalHouse.reason,
           resolvedDate: toOptionalDate(data.unavoidableOutsideCapitalHouse.resolvedDate),
           unresolvedAtTransfer: data.unavoidableOutsideCapitalHouse.unresolvedAtTransfer,
+          houseId: data.unavoidableOutsideCapitalHouse.houseId,
         }
       : undefined,
     // ⑭ §155⑦ — acquisitionDate만 Date 변환 대상. 나머지는 boolean·number라 그대로 통과.
@@ -192,6 +193,7 @@ export function buildTransferEngineInput(
     mergedHouseholdFirstHouse: data.mergedHouseholdFirstHouse,
     // ⑭ §155⑥1호 문화유산 주택 — boolean이라 그대로 통과.
     culturalHeritageHouse: data.culturalHeritageHouse,
+    culturalHeritageHouseId: data.culturalHeritageHouseId,
     /**
      * ⑭ §155의2 장기저당담보주택 — `contractDate`만 string → Date 변환 대상.
      *

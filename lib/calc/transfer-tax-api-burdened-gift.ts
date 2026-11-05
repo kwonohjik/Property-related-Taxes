@@ -38,6 +38,7 @@ import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { gbBgMarketPreDeemedParts } from "./gb-pre-deemed";
 import { bgAnyCarryover, bgCarryoverPartsPayload } from "./bg-carryover-parts";
 import { bgConvertedCarryoverReadsGiftValuation } from "./bg-carryover-parts";
+import { bgConvertedCarryoverGiftedPart } from "./bg-carryover-parts";
 import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
 import { gbBgGiftTaxedValueByPart } from "./gb-bg-gift-tax-return";
 import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
@@ -293,6 +294,12 @@ function usesActualAcquisitionFields(primary: AssetForm): boolean {
   );
 }
 
+/** 실지 칸 하나를 싣는가 — 이월과세 × K-5 · 한 파트만 증여받았으면 그 파트 칸만(다른 파트는 환산 · 총액은 파트를 가를 수 없다). */
+function usesActualField(primary: AssetForm, field: "land" | "building" | "total"): boolean {
+  const gifted = bgConvertedCarryoverGiftedPart(primary);
+  return gifted ? field === gifted : usesActualAcquisitionFields(primary);
+}
+
 /** K-6/K-7 금액 3칸 → payload. 방식이 아니면 전부 undefined. */
 function buildPresumedAcquisition(
   primary: AssetForm,
@@ -391,15 +398,15 @@ export function buildBurdenedGiftInfo(
     // K-4/K-5 취득가액 산정방식 (시가 모드). 미선택 시 undefined → 엔진 backward-compat.
     acquisitionMethod: preDeemed ? undefined : primary.bgAcquisitionMethod || undefined,
     actualLandAcquisitionPrice:
-      !preDeemed && usesActualAcquisitionFields(primary) && primary.bgActualAcquisitionLand
+      !preDeemed && usesActualField(primary, "land") && primary.bgActualAcquisitionLand
         ? parseAmount(primary.bgActualAcquisitionLand) || undefined
         : undefined,
     actualBuildingAcquisitionPrice:
-      !preDeemed && usesActualAcquisitionFields(primary) && primary.bgActualAcquisitionBuilding
+      !preDeemed && usesActualField(primary, "building") && primary.bgActualAcquisitionBuilding
         ? parseAmount(primary.bgActualAcquisitionBuilding) || undefined
         : undefined,
     actualAcquisitionTotal:
-      !preDeemed && usesActualAcquisitionFields(primary) && primary.bgActualAcquisitionTotal
+      !preDeemed && usesActualField(primary, "total") && primary.bgActualAcquisitionTotal
         ? parseAmount(primary.bgActualAcquisitionTotal) || undefined
         : undefined,
     /**
