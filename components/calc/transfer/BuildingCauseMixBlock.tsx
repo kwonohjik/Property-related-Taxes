@@ -124,7 +124,7 @@ export function BuildingCauseMixBlock(props: {
               <FieldCard
                 label="건물 피상속인 취득일"
                 field="decedentAcquisitionDate"
-                hint="건물의 세율 판정 보유기간을 피상속인이 취득한 날부터 통산합니다 (「소득세법」 제104조 제2항 제1호)."
+                hint="건물의 세율 판정 보유기간을 피상속인이 취득한 날부터 통산합니다 (「소득세법」 제104조 제2항 제1호). 수용으로 양도하면 감면의 「2년 이전 취득」도 이 날로 판정합니다 (「조세특례제한법」 제77조 제9항)."
               >
                 <DateInput
                   value={asset.decedentAcquisitionDate}

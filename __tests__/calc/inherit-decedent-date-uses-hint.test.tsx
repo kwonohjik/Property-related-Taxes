@@ -1,6 +1,7 @@
 /**
  * 피상속인 취득일 칸 안내 — 이 날짜를 쓰는 규정 4개를 모두 밝힌다.
  * 계획서 `docs/02-design/features/inherit-decedent-date-early-return.plan.md` §5.1 · Q-1 c.
+ * 일반건물(가업상속 입력 없음)은 §95④ 단서 문장을 뺀다 — `decedent-date-hint-followups.anchor.test.tsx`.
  * 종전 안내는 「단기보유 통산용 (소득세법 §104②1호)」뿐이라 가업상속·수용 감면·비사업용 토지 수용 쓰임이 빠져 있었다.
  */
 import { describe, it, expect, afterEach } from "vitest";
@@ -21,7 +22,9 @@ const asset = (assetKind: AssetForm["assetKind"]): AssetForm => ({
 });
 
 describe("피상속인 취득일 안내 — 쓰는 규정 전부", () => {
-  for (const kind of ["housing", "land", "general_building"] as const) {
+  // 일반건물은 가업상속 입력이 없어 §95④ 단서 문장을 빼므로 이 목록에서 뺐다 — 그 쪽은
+  // `decedent-date-hint-followups.anchor.test.tsx` Q-1 ③이 지킨다(계획서 decedent-date-hint-followups.plan.md).
+  for (const kind of ["housing", "land"] as const) {
     it(`${kind}: 규정 4개를 모두 밝히고 종전 한 줄 안내는 없다`, () => {
       render(<CompanionAcqInheritanceBlock asset={asset(kind)} onChange={noop} />);
       const text = screen.getByTestId("decedent-acq-date-uses").textContent ?? "";

@@ -21,6 +21,7 @@
 import { validateMixedSaleSplit } from "./transfer-tax-validate-mixed-use-sale-split";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
+import type { IssueField } from "./transfer-tax-validate-field";
 import { sellingStdPriceIssue } from "./selling-std-price-scope";
 import { parseAmount } from "@/lib/calc/number-parse";
 import {
@@ -73,15 +74,16 @@ import { calcRentalResidenceFacts } from "./rental-residence-form-facts";
 /**
  * 날짜 순서 교차 검증 — 자산 카드 실시간 인라인 경고(UI)와
  * 단계 차단(validateAssetEntry)이 공유하는 단일 진실.
- * label 없는 순수 메시지 반환 — 차단 경로에서는 호출부가 `${label}: ` prefix를 붙인다.
+ * label 없는 순수 메시지 + 고칠 입력칸(`data-field`) — 차단 경로에서는 호출부가 `${label}: ` prefix를 붙여
+ * `fieldError`로 기록한다(칸 키가 없으면 오류를 눌러도 카드 맨 위로만 간다 — 계획서 `decedent-date-hint-followups.plan.md` Q-3).
  */
-export function getAssetDateOrderError(
+export function getAssetDateOrderIssue(
   a: AssetForm,
   transferDate: string | undefined,
-): string | null {
+): { message: string; field: IssueField } | null {
   // 취득일-양도일 순서 (다필지 모드 외)
   if (!a.parcelMode && a.acquisitionDate && transferDate && a.acquisitionDate >= transferDate)
-    return "취득일은 양도일보다 이전이어야 합니다.";
+    return { message: "취득일은 양도일보다 이전이어야 합니다.", field: "acquisitionDate" };
   // 상속·증여자 취득일 순서
   if (
     a.acquisitionCause === "inheritance" &&
@@ -89,21 +91,26 @@ export function getAssetDateOrderError(
     a.acquisitionDate &&
     a.decedentAcquisitionDate >= a.acquisitionDate
   )
-    return "피상속인 취득일은 상속개시일보다 이전이어야 합니다.";
+    return { message: "피상속인 취득일은 상속개시일보다 이전이어야 합니다.", field: "decedentAcquisitionDate" };
   if (
     a.acquisitionCause === "gift" &&
     a.donorAcquisitionDate &&
     a.acquisitionDate &&
     a.donorAcquisitionDate >= a.acquisitionDate
   )
-    return "증여자 취득일은 증여일보다 이전이어야 합니다.";
+    return { message: "증여자 취득일은 증여일보다 이전이어야 합니다.", field: "donorAcquisitionDate" };
   // §154⑧3호 동일세대 상속 통산 개시일 — 판정 메뉴 ⑧과 **같은 leaf**(E-2). 게이트는 ⑤
   // (`CompanionAcqInheritanceBlock` — 주택일 때만 동일세대 토글을 연다)와 같다.
   if (a.assetKind === "housing") {
     const cohabitation = sameHouseholdInheritanceOrderError(a);
-    if (cohabitation) return cohabitation;
+    if (cohabitation) return { message: cohabitation, field: "decedentCohabitationHoldingStartDate" };
   }
   return null;
+}
+
+/** `getAssetDateOrderIssue`의 메시지만 — 카드 인라인 경고용. */
+export function getAssetDateOrderError(a: AssetForm, transferDate: string | undefined): string | null {
+  return getAssetDateOrderIssue(a, transferDate)?.message ?? null;
 }
 
 /**
@@ -428,8 +435,8 @@ export function validateAssetEntry(
   if (rhError) return rhError;
 
   // 날짜 순서 (취득-양도·상속·증여) — 실시간 인라인 경고와 단일 진실 공유
-  const dateOrderError = getAssetDateOrderError(a, form.transferDate);
-  if (dateOrderError) return `${label}: ${dateOrderError}`;
+  const dateOrder = getAssetDateOrderIssue(a, form.transferDate);
+  if (dateOrder) return fieldError(dateOrder.field, `${label}: ${dateOrder.message}`);
 
   return null;
 }

@@ -29,6 +29,7 @@ import { buildingDatePatch } from "@/lib/calc/transfer-land-part-cause";
 import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isMixedBgDeemedPath } from "@/lib/calc/burdened-gift-mixed-use-scope";
+import { allowsFamilyBusinessInheritance } from "@/lib/calc/transfer-fb-gate";
 
 interface Props {
   asset: AssetForm;
@@ -93,8 +94,10 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
       {/* 이 날짜를 쓰는 규정 전부 — 계획서 inherit-decedent-date-early-return.plan.md §5.1 · Q-1 c */}
       <p className="text-caption text-muted-foreground" data-testid="decedent-acq-date-uses">
         피상속인 취득일은 세율의 보유기간 기산일입니다(소득세법 §104②1호 — 상속개시일부터 2년 이상 보유했으면 세율은
-        달라지지 않습니다). 가업상속공제 적용 비율분의 장기보유특별공제 기산일(소득세법 §95④ 단서), 수용 감면의
-        취득일(조특법 §77⑨), 수용 토지의 비사업용 토지 제외 판정 취득일(소득령 §168의14③3호나목)로도 씁니다.
+        달라지지 않습니다).{" "}
+        {/* 일반건물은 가업상속 입력이 없다(`transfer-fb-gate.ts`) — §95④ 단서가 쓰일 길이 없는 자산엔 그 문장을 뺀다(계획서 decedent-date-hint-followups.plan.md Q-1) */}
+        {allowsFamilyBusinessInheritance(asset) && "가업상속공제 적용 비율분의 장기보유특별공제 기산일(소득세법 §95④ 단서), "}
+        수용 감면의 취득일(조특법 §77⑨), 수용 토지의 비사업용 토지 제외 판정 취득일(소득령 §168의14③3호나목)로도 씁니다.
       </p>
 
       {/*
