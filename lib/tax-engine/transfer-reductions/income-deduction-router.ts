@@ -259,6 +259,7 @@ function evalNew993(
       isHousingConstructionBusiness: (r993.isHousingConstructionBusiness993 as boolean | undefined) ?? false,
       acquisitionType: (r993.acquisitionType993 as "from_builder" | "self_built" | undefined) ?? "from_builder",
       hasOccupancyAtContract: r993.hasOccupancyAtContract as boolean | undefined,
+      constructionStartedBefore2003: r993.constructionStartedBefore2003_993 as "yes" | "no" | "unknown" | undefined,
       // 농특세는 finalize에서 2-pass 재계산 (placeholder 0)
       calculatedTaxBeforeReduction: 0,
       calculatedTaxAfterReduction: 0,

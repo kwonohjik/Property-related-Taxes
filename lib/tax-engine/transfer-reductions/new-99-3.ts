@@ -30,6 +30,14 @@
 import { addYears } from "date-fns";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
+import {
+  PRIOR_ADVANCED_HOUSE_STANDARD_DATE,
+  isHighValueHouseAtDate,
+  resolveNew993Era,
+  type ConstructionStartAnswer,
+  type New993Era,
+  type New993PriorRuleBasis,
+} from "./new-99-3-era";
 
 // ============================================================================
 // 타입 정의
@@ -67,6 +75,11 @@ export interface New993Input {
   exclusiveAreaSqm: number;
   /** 지역 — 가격 급등 지역(speculation) 내/외 */
   region: "outside_speculation" | "speculation";
+  /**
+   * (2호 · 사용승인 2003.1.1.~2003.6.30.만) 2003.1.1. 전 공사 착수 여부 — 법률 제6762호 부칙 §29②.
+   * «예» = 종전 규정(지역 제외 없음·종전 고급주택 기준), «아니오» = 개정규정, «모름»·미입력 = §29② 불성립(개정규정) + 확인 필요.
+   */
+  constructionStartedBefore2003?: ConstructionStartAnswer;
   /** 거주자 여부 */
   isResident: boolean;
   /** 본인이 주택건설사업자인 경우 적용 배제 */
@@ -172,6 +185,10 @@ export interface New993Result {
   isExcludedFromHouseCountFor1H1H: boolean;
   /** 법적 근거 */
   legalBasis: string;
+  /** 종전 규정 적용 근거(법률 제6762호 부칙 §29①·②) — 없으면 개정규정 적용 */
+  priorRuleBasis?: New993PriorRuleBasis;
+  /** 부칙 §29② 요건(2003.1.1. 전 착공)이 확인되지 않아 개정규정을 적용했다 — 확인 필요 */
+  needsConstructionStartConfirmation?: boolean;
 }
 
 /** §99의3 ②항 입력 (선택) — 호출자가 1세대1주택 비과세 판정 시 사용 */
@@ -194,8 +211,6 @@ const PERIOD_END = D("2003-06-30");
 // 고가주택 적용기준일 분기점
 const HV_2002_09_30 = D("2002-09-30");
 const HV_2002_12_31 = D("2002-12-31");
-const HV_2008_10_05 = D("2008-10-05");
-const HV_2021_12_07 = D("2021-12-07");
 
 // ============================================================================
 // 헬퍼: 고가주택 판정 (분양계약일 기준 4단계 정의)
@@ -235,6 +250,10 @@ export function resolveNew99BaseDate(
  * - 2003.1.1~2008.10.5: 양도가 6억 초과 (고가주택)
  * - 2008.10.6~2021.12.7: 양도가 9억 초과 (고가주택)
  * - 2021.12.8~: 양도가 12억 초과 (고가주택)
+ *
+ * ⚠️ 이 함수는 «기준일 당시 기준»이다. §99의3의 2003.1.1. 이후 계약·승인분은 양도 당시 §89①3호 기준이라
+ *    `checkIneligibility`가 `isHighValueHouseAtDate(양도일)`을 직접 부른다(NH-04 · `new-99-3-era.ts`).
+ *    §99(`new-99.ts`)는 기준일이 모두 2003 전이라 이 함수를 그대로 쓴다.
  */
 export function isHighValueHouseUnder993(
   baseDate: Date,
@@ -248,13 +267,7 @@ export function isHighValueHouseUnder993(
   if (baseDate <= HV_2002_12_31) {
     return exclusiveAreaSqm >= 149 && wholePropertyTransferPrice > 600_000_000;
   }
-  if (baseDate <= HV_2008_10_05) {
-    return wholePropertyTransferPrice > 600_000_000;
-  }
-  if (baseDate <= HV_2021_12_07) {
-    return wholePropertyTransferPrice > 900_000_000;
-  }
-  return wholePropertyTransferPrice > 1_200_000_000;
+  return isHighValueHouseAtDate(baseDate, wholePropertyTransferPrice);
 }
 
 // ============================================================================
@@ -276,7 +289,7 @@ export function isWithin5YearsCheck(acquisitionDate: Date, transferDate: Date): 
 // 헬퍼: 적용 배제 검증 (우선순위 순)
 // ============================================================================
 
-function checkIneligibility(input: New993Input): New993IneligibleReason[] {
+function checkIneligibility(input: New993Input, era: New993Era): New993IneligibleReason[] {
   const reasons: New993IneligibleReason[] = [];
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.NEW_99_3;
 
@@ -300,11 +313,11 @@ function checkIneligibility(input: New993Input): New993IneligibleReason[] {
     return reasons;
   }
 
-  // 3. 가격 급등 지역
-  if (input.region === "speculation") {
+  // 3. 가격 급등 지역 — 2003.1.1. 이후 계약·승인분(개정규정)만. 종전 규정 적용분(부칙 §29①·②)은 지역 제외가 없다 (NH-01).
+  if (input.region === "speculation" && era.priorRuleBasis === undefined) {
     reasons.push({
       code: "SPECULATION_AREA",
-      message: "가격 급등 지역(서울·과천·5대 신도시) 내 신축주택은 §99의3이 적용되지 않습니다",
+      message: "가격 급등 지역(서울·과천·5대 신도시) 내 신축주택은 §99의3이 적용되지 않습니다 (2003.1.1. 이후 계약·사용승인분 — 법률 제6762호 개정규정)",
       legalBasis,
     });
     return reasons;
@@ -372,10 +385,26 @@ function checkIneligibility(input: New993Input): New993IneligibleReason[] {
     input.usageApprovalDate,
     input.acquisitionDate,
   );
-  if (isHighValueHouseUnder993(hvBaseDate, input.wholePropertyTransferPrice, input.exclusiveAreaSqm)) {
+  // 종전 규정 적용분 — §29① 계약·승인일 당시 고급주택 기준 / §29② 종전 고급주택 기준(재산세제과-96: 2002.12.31. 시행 소령 §156).
+  // 개정규정 적용분 — 양도 당시 소득세법 §89①3호 고가주택(재산세과-3466). 기준일 축 6억을 양도 후 20년 넘게 끌고 가지 않는다 (NH-04).
+  const isHighValue =
+    era.priorRuleBasis === undefined
+      ? isHighValueHouseAtDate(input.transferDate, input.wholePropertyTransferPrice)
+      : isHighValueHouseUnder993(
+          era.priorRuleBasis === "addenda_29_2" ? PRIOR_ADVANCED_HOUSE_STANDARD_DATE : hvBaseDate,
+          input.wholePropertyTransferPrice,
+          input.exclusiveAreaSqm,
+        );
+  if (isHighValue) {
+    const basisLabel =
+      era.priorRuleBasis === undefined
+        ? `양도일 ${input.transferDate.toISOString().split("T")[0]} 당시 기준`
+        : era.priorRuleBasis === "addenda_29_2"
+          ? "종전 고급주택 기준 — 법률 제6762호 부칙 §29②"
+          : `적용기준일 ${hvBaseDate.toISOString().split("T")[0]} 당시 기준 — 법률 제6762호 부칙 §29①`;
     reasons.push({
       code: "HIGH_VALUE_HOUSE",
-      message: `고가주택(소득세법 §89①3호)은 §99의3 ① 단서로 적용 배제됩니다 (적용기준일 ${hvBaseDate.toISOString().split("T")[0]} 기준)`,
+      message: `고가주택(소득세법 §89①3호)은 §99의3 ① 단서로 적용 배제됩니다 (${basisLabel})`,
       legalBasis,
     });
     return reasons;
@@ -472,8 +501,19 @@ export function evaluateNew993(input: New993Input): New993Result {
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.NEW_99_3;
   const formulaSteps: New993FormulaStep[] = [];
 
+  // STEP 0: 시기 축 — 종전 규정(법률 제6762호 부칙 §29①·②) vs 개정규정. 지역 제외·고가주택 판정이 이 값을 따른다 (NH-01 · NH-04).
+  const era = resolveNew993Era(
+    resolveNew99BaseDate(input.acquisitionType, input.contractDate, input.usageApprovalDate, input.acquisitionDate),
+    input.acquisitionType,
+    input.constructionStartedBefore2003,
+  );
+  const eraEcho = {
+    priorRuleBasis: era.priorRuleBasis,
+    needsConstructionStartConfirmation: era.needsConstructionStartConfirmation || undefined,
+  };
+
   // STEP 1: 적용 배제 검증
-  const ineligibleReasons = checkIneligibility(input);
+  const ineligibleReasons = checkIneligibility(input, era);
   if (ineligibleReasons.length > 0) {
     return {
       isEligible: false,
@@ -487,6 +527,7 @@ export function evaluateNew993(input: New993Input): New993Result {
       ruralSurtax: 0,
       isExcludedFromHouseCountFor1H1H: false,
       legalBasis,
+      ...eraEcho,
     };
   }
 
@@ -553,6 +594,7 @@ export function evaluateNew993(input: New993Input): New993Result {
         ruralSurtax: 0,
         isExcludedFromHouseCountFor1H1H: false,
         legalBasis,
+        ...eraEcho,
       };
     }
     const numerator = isWithin5Years
@@ -670,5 +712,6 @@ export function evaluateNew993(input: New993Input): New993Result {
     ruralSurtax,
     isExcludedFromHouseCountFor1H1H,
     legalBasis,
+    ...eraEcho,
   };
 }
