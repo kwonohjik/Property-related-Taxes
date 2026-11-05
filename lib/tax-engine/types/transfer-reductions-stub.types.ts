@@ -160,6 +160,14 @@ export type TransferReductionStub =
       recontractUnavoidableCause99?: boolean;
       isRedevelopedNewHouse99?: boolean;
       previousHouseStdPrice99?: number;
+      /** 고급주택(기준일 당시 소득세법 시행령 §156) 주택 유형·단독주택 사실 (NH-02) */
+      houseType99?: "apartment" | "detached";
+      grossFloorAreaSqm99?: number;
+      attachedLandAreaSqm99?: number;
+      stdPriceFloorMet99?: "yes" | "no" | "unknown";
+      luxuryFacility99?: "yes" | "no" | "unknown";
+      /** (2호 · 매매) 최초 매매계약·계약금 납부자 본인 여부 — 조특법 §99①2호 (NH-03) */
+      firstContract99?: "yes" | "no" | "unknown";
       _phase1Stub?: true }
   // §99의3 — Phase 2 본격 구현 (2026-05-06): 본 요건 필드 union 멤버
   | {
@@ -182,6 +190,14 @@ export type TransferReductionStub =
       acquisitionType993?: "from_builder" | "self_built";
       /** (2호 · 사용승인 2003.1.1.~6.30.만) 2003.1.1. 전 착공 여부 — 법률 제6762호 부칙 §29② (NH-01) */
       constructionStartedBefore2003_993?: "yes" | "no" | "unknown";
+      /** 종전 고급주택(기준일 당시 소득세법 시행령 §156) 주택 유형·단독주택 사실 — 종전 규정 적용분 (NH-02) */
+      houseType993?: "apartment" | "detached";
+      grossFloorAreaSqm993?: number;
+      attachedLandAreaSqm993?: number;
+      stdPriceFloorMet993?: "yes" | "no" | "unknown";
+      luxuryFacility993?: "yes" | "no" | "unknown";
+      /** (1호 · 매매) 최초 매매계약·계약금 납부자 본인 여부 — 조특법 §99의3①1호 (NH-17) */
+      firstContract993?: "yes" | "no" | "unknown";
       hasOccupancyAtContract?: boolean;
       isResident993?: boolean;
       isHousingConstructionBusiness993?: boolean;

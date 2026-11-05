@@ -14,6 +14,8 @@
  * 착공 여부(§29② 요건)는 3-state — «모름»·미입력은 §29② 불성립(개정규정 적용) + 확인 필요(자동으로 종전 규정을 적용하지 않는다).
  */
 
+import { NEW_99_DECREE_ADDENDA_26959 } from "../legal-codes/transfer-house";
+
 /** UTC 자정 파싱 — API 경유 입력(new Date("YYYY-MM-DD") = UTC midnight)과 같은 기준. */
 const D = (s: string) => new Date(s);
 
@@ -97,4 +99,45 @@ export function isHighValueHouseAtDate(date: Date, wholePropertyTransferPrice: n
   if (date <= HV_2008_10_05) return wholePropertyTransferPrice > 600_000_000;
   if (date <= HV_2021_12_07) return wholePropertyTransferPrice > 900_000_000;
   return wholePropertyTransferPrice > 1_200_000_000;
+}
+
+/**
+ * §99의3 종전 규정 기준일(ISO 판) — 고급주택 종전 기준(소득세법 시행령 §156 당시 시행본)을 쓰는 계산인가 (리뷰 NH-02).
+ * `resolveNew993Era`가 종전 규정(부칙 §29①·②)을 고르는 조건과 같다. UI·validate(⑧)·Zod(⑫)가 같은 술어를 쓴다.
+ * 기준일: 1호 = 매매계약일(비면 취득일) · 2호 = 사용승인일(비면 취득일). 일자가 모두 비면 false(일자 칸이 먼저 막는다).
+ */
+export function isNew993PriorRuleEraIso(
+  acquisitionType: string | undefined,
+  contractDateIso: string | undefined,
+  usageApprovalDateIso: string | undefined,
+  acquisitionDateIso: string | undefined,
+  constructionStartedBefore2003: string | undefined,
+): boolean {
+  const base =
+    acquisitionType === "self_built"
+      ? usageApprovalDateIso || acquisitionDateIso
+      : contractDateIso || acquisitionDateIso;
+  if (!base) return false;
+  if (base < AMENDED_EFFECTIVE_ISO) return true;
+  return isAddenda29_2WindowIso(acquisitionType, usageApprovalDateIso) && constructionStartedBefore2003 === "yes";
+}
+
+/** 법률 제13560호(2016.1.1. 시행) 시행 전 마지막 양도일 — 대통령령 제26959호 부칙 §16·§35의 경계 */
+const PRE_2016_RULE_LAST = D("2015-12-31");
+
+/**
+ * 2015.12.31.까지 양도한 §99·§99의3 — 종전 규정 적용 대상 고지 (리뷰 NH-49 · 사용자 결정 「현행 계산 + 확인 필요 고지」).
+ *
+ * 대통령령 제26959호 부칙 §35: 법률 제13560호 시행 전에 양도한 경우 조특령 §99① · §99의3②의 개정규정에도 불구하고 종전의 규정에 따른다.
+ * 종전 법률(2015.12.31. 시행본, MST 177204)은 5년 이내 양도분을 §99는 «양도소득세의 100분의 100에 상당하는 세액을 감면», §99의3은 «양도소득세를 면제»하는 세액 구조였다.
+ * 계산은 현행 산식(양도소득금액 차감) 그대로 하고, 고지만 단다 — 세액은 바뀌지 않는다.
+ */
+export function pre2016RuleNotice(transferDate: Date, article: "new_99" | "new_99_3"): string | undefined {
+  if (transferDate > PRE_2016_RULE_LAST) return undefined;
+  const label = article === "new_99_3" ? "§99의3" : "§99";
+  const priorEffect = article === "new_99_3" ? "«양도소득세 면제»" : "«양도소득세의 100분의 100에 상당하는 세액 감면»";
+  return (
+    `확인 필요: 2015.12.31. 이전 양도분이라 ${label}는 종전 규정 적용 대상입니다(${NEW_99_DECREE_ADDENDA_26959.TRANSITION} — 종전 법은 5년 이내 양도를 ${priorEffect}으로 정했습니다). ` +
+    "이 계산은 현행 산식(양도소득금액 차감)으로 했으므로 실제 신고·경정 세액과 다를 수 있습니다."
+  );
 }

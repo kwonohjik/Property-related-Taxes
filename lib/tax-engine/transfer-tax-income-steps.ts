@@ -43,6 +43,8 @@ export function runIncomeAndBaseSteps(args: {
     burdenedGiftDenominator: effectiveInput.burdenedGiftDenominator,
     // 토지만 본인 소유면 §99·§99의3 불성립 — STEP 0.45 중과 배제 선판정과 같은 값 (NH-08).
     selfOwns: effectiveInput.selfOwns,
+    // 상속·증여(지분 포함)로 받은 주택은 §99·§99의3 불성립 (NH-03 · NH-17 · NH-40)
+    acquisitionCause: input.acquisitionCause,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
     transferIncome: transferIncomeBefore993,
   });

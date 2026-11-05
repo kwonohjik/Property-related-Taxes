@@ -26,7 +26,8 @@ const asset = (over: Record<string, unknown> = {}): AssetForm =>
     actualSalePrice: "1000000000",
     reductions: [
       {
-        type: "new_99_3",
+        type: "new_99_3", houseType993: "apartment", firstContract993: "yes", // NH-02·NH-17 ⑧ 필수 (#L1b)
+
         // 선행 ⑧ 검증(취득유형·취득시 기준시가·전용면적·5년 시점 기준시가)을 모두 채워
         // 이 축을 격리한다 — 앞 가드가 먼저 return하면 anchor가 아무것도 관측하지 못한다.
         acquisitionType993: "purchase",
