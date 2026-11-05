@@ -32,13 +32,13 @@ const houses = (acq: string, n: number, sellingOver: Record<string, unknown> = {
   ...Array.from({ length: n - 1 }, (_, i) => house(`h${i + 2}`, "2015-03-01")),
 ];
 const r993 = {
-  type: "new_99_3", contractDate993: "2002-03-01", acquisitionType993: "from_builder", region993: "outside_speculation",
+  type: "new_99_3", contractDate993: "2002-03-01", acquisitionType993: "from_builder", firstContract993: "yes" as const, region993: "outside_speculation",
   standardPriceAtAcquisition993: 100_000_000, standardPriceAt5Years: 200_000_000, standardPriceAtTransfer993: 400_000_000,
   exclusiveAreaSqm993: 84, isResident993: true, isHousingConstructionBusiness993: false, hasOccupancyAtContract: false,
   isRecontractExcluded993: false, recontractUnavoidableCause993: false, isRedevelopedNewHouse993: false,
 };
 const r99 = {
-  type: "new_99", contractDate99: "1998-06-01", acquisitionType99: "from_builder", isNationalHousing99: false,
+  type: "new_99", contractDate99: "1998-06-01", acquisitionType99: "from_builder", firstContract99: "yes" as const, isNationalHousing99: false,
   standardPriceAtAcquisition99: 100_000_000, standardPriceAt5Years99: 160_000_000, standardPriceAtTransfer99: 400_000_000,
   exclusiveAreaSqm99: 84, isResident99: true, isHousingConstructionBusiness99: false, hasOccupancyAtContract99: false,
   isRecontractExcluded99: false, recontractUnavoidableCause99: false, isRedevelopedNewHouse99: false,

@@ -14,7 +14,9 @@
  * - 이월과세 증여(`carryover_gift`)도 증여 취득이라 불성립이다(리뷰 Q-3 — 해석 원문 확인 후 불인정으로 결정). 이월과세는 양도차익을
  *   증여자 기준으로 계산하는 특례(소득세법 §97의2①)일 뿐 수증자가 최초 계약자·건설자가 되는 것은 아니다.
  * - 매매로 취득한 주택건설사업자 갈래는 분양권 승계 여부를 3-state로 받는다. «아니오»는 불성립, «모름»은 불성립 + 확인 필요.
- *   화면(⑧)은 답을 필수로 받는다. 값이 없는 직접 API·옛 이력은 종전과 같이 계산한다(레거시 경로 현행 유지 — 리뷰 Q-3 계획서 결정).
+ *   화면(⑧)은 답을 필수로 받는다. 값이 없는 직접 API·옛 이력도 «모름»과 같이 불성립 + 확인 필요다(사용자 결정 — L1c, #2935 후속).
+ * - 이월과세 시나리오 B는 세율 보유기간(§104②2호) 때문에 입력의 `acquisitionCause`를 `"purchase"`로 바꾼다. 감면 판정은
+ *   실제 취득 원인이 우선이다 — `reductionAcquisitionCauseOf`(차감 STEP 4.6 · 중과 배제 선판정 STEP 0.45 · 재개발 Step C.5 · 판정 메뉴 공용).
  * - §99의3의 조합원은 관리처분계획 인가일(사업계획 승인일) 현재의 조합원이다(조특령 §99의3③2호·⑤). 재개발 자산의 승계조합원
  *   (인가일 뒤 입주권 승계 — `redevelopment.isSuccessorMember`, 인가일은 자산의 관리처분계획 인가일)은 어느 갈래에도 해당하지 않는다.
  *   §99 조합원 갈래(§99①1호 괄호)에는 인가일 요건이 없다.
@@ -47,6 +49,17 @@ export interface New99AcquisitionGateReason {
   code: "ACQUIRED_BY_INHERITANCE_OR_GIFT" | "NOT_FIRST_CONTRACT" | "FIRST_CONTRACT_UNCONFIRMED" | "NOT_MEMBER_AT_APPROVAL";
   message: string;
   legalBasis: string;
+}
+
+/**
+ * 감면 판정에 쓰는 취득 원인 — 엔진 내부 `reductionAcquisitionCause`(이월과세 시나리오 B가 싣는 실제 취득 원인)가 있으면 그 값.
+ * 이월과세 증여 수증자는 §99·§99의3 불성립이다(서면인터넷방문상담4팀-1192 · 서면인터넷방문상담4팀-1719 · 사전-2025-법규재산-0749).
+ */
+export function reductionAcquisitionCauseOf(input: {
+  acquisitionCause?: New99AcquisitionCause;
+  reductionAcquisitionCause?: New99AcquisitionCause;
+}): New99AcquisitionCause | undefined {
+  return input.reductionAcquisitionCause ?? input.acquisitionCause;
 }
 
 /** 주택건설사업자 갈래에서 최초 계약 여부를 물어야 하는 취득 원인인가 — UI·⑧·④·⑫·엔진 공용 술어 */
@@ -98,7 +111,7 @@ export function evaluateNew99AcquisitionGate(input: New99AcquisitionGateInput): 
 
   if (!needsFirstContractAnswer(acquisitionType, acquisitionCause)) return undefined;
   const branch = builderArticle;
-  if (input.firstContract === "yes" || input.firstContract === undefined) return undefined;
+  if (input.firstContract === "yes") return undefined;
   if (input.firstContract === "no") {
     return {
       code: "NOT_FIRST_CONTRACT",
@@ -106,6 +119,7 @@ export function evaluateNew99AcquisitionGate(input: New99AcquisitionGateInput): 
       legalBasis: branch,
     };
   }
+  // «모름» 또는 빈 값(직접 API·옛 이력) — 불성립 + 확인 필요
   return {
     code: "FIRST_CONTRACT_UNCONFIRMED",
     message:

@@ -31,7 +31,7 @@ const after = (t: string[], label: string) => { const i = t.indexOf(label); retu
 
 // §99 1호(주택건설사업자 분양) — 1998.6.1. 계약, 1999.1.1. 취득, 5년 이내가 아닌 양도(안분)
 const R99 = {
-  type: "new_99" as const, contractDate99: D("1998-06-01"), acquisitionType99: "from_builder" as const, isNationalHousing99: false,
+  type: "new_99" as const, contractDate99: D("1998-06-01"), acquisitionType99: "from_builder" as const, firstContract99: "yes" as const, isNationalHousing99: false,
   standardPriceAtAcquisition99: 100_000_000, standardPriceAt5Years99: 300_000_000, standardPriceAtTransfer99: 500_000_000, exclusiveAreaSqm99: 84,
 };
 

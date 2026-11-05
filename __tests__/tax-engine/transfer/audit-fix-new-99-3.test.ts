@@ -45,7 +45,7 @@ function makeEligibleAfter5Y(overrides: Partial<New993Input> = {}): New993Input 
     region: "outside_speculation",
     isResident: true,
     isHousingConstructionBusiness: false,
-    acquisitionType: "from_builder",
+    acquisitionType: "from_builder", firstContract: "yes" as const,
     hasOccupancyAtContract: false,
     calculatedTaxBeforeReduction: 100_000_000,
     calculatedTaxAfterReduction: 50_000_000,

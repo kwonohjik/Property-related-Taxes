@@ -79,6 +79,7 @@ describe("H2: 라우터가 물건 전체 양도가액을 넘긴다", () => {
       standardPriceAt5Years: 500_000_000,
       standardPriceAtTransfer993: 900_000_000,
       exclusiveAreaSqm993: 60,
+      firstContract993: "yes",
     },
   ];
 

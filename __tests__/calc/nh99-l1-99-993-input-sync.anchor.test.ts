@@ -140,7 +140,7 @@ describe("NH-57 재계약·대체취득 배제는 주택건설사업자로부터
       region: "outside_speculation",
       isResident: true,
       isHousingConstructionBusiness: false,
-      acquisitionType: "from_builder",
+      acquisitionType: "from_builder", firstContract: "yes" as const,
       isRecontractExcluded: true,
       calculatedTaxBeforeReduction: 0,
       calculatedTaxAfterReduction: 0,
@@ -246,7 +246,7 @@ describe("NH-35·NH-44 엔진 안내 문구 — 법문 대조", () => {
     region: "outside_speculation" as const,
     isResident: true,
     isHousingConstructionBusiness: false,
-    acquisitionType: "from_builder" as const,
+    acquisitionType: "from_builder" as const, firstContract: "yes" as const,
     calculatedTaxBeforeReduction: 0,
     calculatedTaxAfterReduction: 0,
   };

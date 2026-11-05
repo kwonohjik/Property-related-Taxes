@@ -159,6 +159,23 @@ export function refineGbValuationRequired(v: GbValuationLike, ctx: z.RefinementC
   )
     issue(["buildingDecedentAcquisitionDate"], "건물 피상속인 취득일은 건물 상속개시일보다 이전이어야 합니다");
 
+  // D3″ — 비움이면 엔진이 토지의 피상속인 취득일을 건물에 쓴다. 그 대체값도 건물 상속개시일보다 앞서야 한다.
+  //       같은 날 상속이면 최상위 순서 검사가 이미 막는다(중복 방지). ⑧ `validateGbDecedentDates`와 같은 규칙
+  //       (계획서 `docs/02-design/features/gb-both-inherited-decedent-fallback.plan.md`).
+  if (
+    v.buildingAcquisitionCause === "inheritance" &&
+    !v.buildingDecedentAcquisitionDate &&
+    v.landAcquisitionCause === "inheritance" &&
+    v.decedentAcquisitionDate &&
+    v.buildingAcquisitionDate &&
+    v.landAcquisitionDate !== v.buildingAcquisitionDate &&
+    v.decedentAcquisitionDate >= v.buildingAcquisitionDate
+  )
+    issue(
+      ["buildingDecedentAcquisitionDate"],
+      "토지의 피상속인 취득일이 건물 상속개시일보다 늦어 건물에 쓸 수 없습니다. 건물 피상속인 취득일을 따로 입력하세요",
+    );
+
   // I2 — 환산 경로(증축 없음)의 **비-환산 파트**는 그 파트의 취득가액이 필요하다. 비우면 엔진이
   //      `TaxCalculationError`(경로 없음)를 던졌다. ⑧ `transfer-tax-validate-gb.ts` V-7(상속 파트는
   //      평가액이 ④에서 이 칸으로 실린다 — V3·V4). 감정·실가 = `*AcquisitionPrice`, 매매사례 = `*SalesCaseValue`

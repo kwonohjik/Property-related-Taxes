@@ -55,7 +55,7 @@ function makeBaseInput(overrides: Partial<New993Input> = {}): New993Input {
     region: "outside_speculation",
     isResident: true,
     isHousingConstructionBusiness: false,
-    acquisitionType: "from_builder",
+    acquisitionType: "from_builder", firstContract: "yes" as const,
     hasOccupancyAtContract: false,
     calculatedTaxBeforeReduction: 139_107_473,
     calculatedTaxAfterReduction: 68_486_533,
@@ -190,7 +190,7 @@ describe("§99의3 — 적용 배제 (우선순위 7단계)", () => {
   it("Case 8: 신축주택취득기간 외 (분양계약 2003.7.1) → 적용 배제 (OUT_OF_ACQUISITION_PERIOD)", () => {
     const input = makeBaseInput({
       contractDate: new Date("2003-07-01"),
-      acquisitionType: "from_builder",
+      acquisitionType: "from_builder", firstContract: "yes" as const,
     });
     const r = evaluateNew993(input);
     expect(r.isEligible).toBe(false);
@@ -294,7 +294,7 @@ describe("§99의3 — Case 13: 자기건설 (2호) 본격 분기 (P2-2)", () =>
   it("주건업(1호) 취득은 사용승인일이 아닌 분양계약일로 시한 검증", () => {
     // contractDate(분양계약일)이 시한 내, usageApprovalDate(사용승인일)이 시한 외라도 적용 가능
     const input = makeBaseInput({
-      acquisitionType: "from_builder",
+      acquisitionType: "from_builder", firstContract: "yes" as const,
       contractDate: new Date("2002-01-01"), // 시한 내
       usageApprovalDate: new Date("2004-12-31"), // 시한 외 — 무시
     });
