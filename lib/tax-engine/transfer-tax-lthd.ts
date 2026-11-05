@@ -45,7 +45,6 @@ import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import { appurtenantCardHouseHoldingMonths } from "./land-only-owner-household";
 import { landOnlyAppurtenantHouseYears } from "./land-only-owner-household";
 import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
-import { getLongTermDeductionOverride } from "./rental-housing-reduction";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { LongTermRentalRuleSet } from "./schemas/rate-table.schema";
@@ -121,6 +120,10 @@ export function calcLongTermHoldingDeduction(
   rules: ParsedRates["longTermHoldingRules"],
   isSurcharge: boolean,
   isSuspended: boolean,
+  /**
+   * ⚠️ **읽지 않는다** (V-6, 2026-11-05). 레거시 `rentalReductionDetails` 경로의 §97의3·§97의4 장특 특례(L-1c)를 닫았다 —
+   * 정본은 감면 목록(`reductions` — `rental_97_3`·`rental_97_4`)이다. 13개 호출부가 위치 인자로 넘겨 시그니처는 유지한다(위 `rules`와 같은 처리).
+   */
   longTermRentalRules?: LongTermRentalRuleSet,
   splitDetail?: SplitGainResult,
   /**
@@ -269,23 +272,6 @@ export function calcLongTermHoldingDeduction(
       // 표2 대상인데 표1이 이긴 경우에만 표시 축을 뒤집는다(표2 미대상은 원래 표1 형식이다).
       ...(useTable2ForCompanion && useTable1Axis ? { appurtenantTable1Applied: true } : {}),
     };
-  }
-
-  // L-1c: 장기임대주택 특례율 우선 적용
-  if (input.rentalReductionDetails && longTermRentalRules) {
-    const override = getLongTermDeductionOverride(
-      input.rentalReductionDetails,
-      longTermRentalRules,
-    );
-    if (override.hasOverride) {
-      const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
-      const deduction = applyLthdRate(taxableGain, override.overrideRate);
-      return {
-        deduction,
-        rate: override.overrideRate,
-        holdingPeriod: { years: holding.years, months: holding.months },
-      };
-    }
   }
 
   /**

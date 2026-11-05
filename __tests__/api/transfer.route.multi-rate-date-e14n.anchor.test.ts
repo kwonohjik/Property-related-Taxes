@@ -13,7 +13,7 @@
  * | `surcharge:_default` 2022-05-10 | 중과 유예 판정 | E-14k로 이미 같음 |
  * | `surcharge:_default` 2024-01-10 | 중과 유예 판정 | 같음 — 2023-01-01 행과 유예 값이 같다(`legal_basis` 문자열만 다르고 소비자 0) |
  * | `special:house_count_exclusion` 2018-04-01 | STEP 0.5 정밀 중과 판정 게이트 | **갈림** — 2018.1.1.~3.31. 양도 · 보유 3년 이상: 다건만 정밀 판정을 타 장특 배제가 달라졌다 |
- * | `deduction:long_term_rental_v2` 2020-08-18 | legacy `rentalReductionDetails`(API 직접 입력 전용) 감면·장특 특례율 | **갈림** — 장기일반·공공지원 2020.1.1.~8.17. |
+ * | `deduction:long_term_rental_v2` 2020-08-18 | legacy `rentalReductionDetails`(API 직접 입력 전용) 감면·장특 특례율 | **갈림** — 장기일반·공공지원 2020.1.1.~8.17. ⇒ V-6(2026-11-05) 이 경로를 닫아 소비자 0 — 아래 ②는 「legacy 입력이 세액을 바꾸지 않는다 · 단건 = 다건」만 본다 |
  * | `deduction:new_housing_matrix` 2001-05-23 | legacy `newHousingDetails`(API 직접 입력 전용) 감면 | **갈림** — 2001.1.1.~5.22. |
  *
  * ## 수정
@@ -251,17 +251,19 @@ describe("E-14n ① house_count_exclusion 2018-04-01 행 — 2018.1.1.~3.31. 양
 });
 
 describe("E-14n ② long_term_rental_v2 2020-08-18 행 — legacy 장기임대 감면(API 직접 입력)", () => {
-  // ⚠️ 2020-08-18 전 값은 **현행 seed 결과**다(그 전 시점의 행이 없다) — 법령 판정이 아니라 단건과 같은지만 본다.
+  // V-6(2026-11-05) — legacy `rentalReductionDetails` 경로를 닫았다(정본은 감면 목록 rental_97_*). 이 행의 소비자가 없어져
+  // 행 앞뒤 모두 legacy 입력이 세액을 바꾸지 않는다 — 단건 = 다건 · legacy 입력 없는 세액과 같다.
+  // (종전: 2020-03-02 347,587,500 · 2020-08-17 338,305,500 · 2020-08-18 208,357,500 — 감면·장특 특례가 붙던 값)
   for (const type of ["long_term_private", "public_support_private"]) {
-    it(`R-${type} 2020-03-02 · 2020-08-17 → 단건 = 다건`, async () => {
-      expect(await expectSame(plain("2009-06-01", "2020-03-02"), rental("2020-03-02", type))).toBe(347_587_500);
-      expect(await expectSame(plain("2009-06-01", "2020-08-17"), rental("2020-08-17", type))).toBe(338_305_500);
+    it(`R-${type} 2020-03-02 · 2020-08-17 → 단건 = 다건 · legacy 입력 무효`, async () => {
+      for (const d of ["2020-03-02", "2020-08-17"]) {
+        expect(await expectSame(plain("2009-06-01", d), rental(d, type))).toBe(await expectSame(plain("2009-06-01", d)));
+      }
     });
   }
-  it("R-긍정 짝 — 장기일반 2020-08-18 → 208,357,500 (불변)", async () => {
-    expect(await expectSame(plain("2009-06-01", "2020-08-18"), rental("2020-08-18", "long_term_private"))).toBe(
-      208_357_500,
-    );
+  it("R-짝 — 장기일반 2020-08-18(행 시작일)도 legacy 입력 무효", async () => {
+    const d = "2020-08-18";
+    expect(await expectSame(plain("2009-06-01", d), rental(d, "long_term_private"))).toBe(await expectSame(plain("2009-06-01", d)));
   });
 });
 
@@ -282,7 +284,8 @@ describe("E-14n ②′ 가산세 base(예정신고 세액)도 양도일 세율",
     };
     const s = await single(plain("2009-06-01", "2020-03-02"), penalty);
     const m = await multi([plain("2009-06-01", "2020-03-02")], [penalty]);
-    expect(s.totalTax).toBeGreaterThan(347_587_500); // 가산세가 실제로 붙었다
+    // 가산세가 실제로 붙었다 — 같은 입력의 무가산세 세액과 비교(V-6 뒤 legacy 감면이 없어져 종전 고정값 347,587,500은 가산세 없이도 넘는다)
+    expect(s.totalTax).toBeGreaterThan((await single(plain("2009-06-01", "2020-03-02"), rental("2020-03-02", "long_term_private"))).totalTax);
     expect(m.totalTax).toBe(s.totalTax);
   });
 });

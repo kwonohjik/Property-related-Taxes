@@ -16,7 +16,7 @@ import { makeMockRates, baseTransferInput as baseInput, LONG_TERM_RENTAL_RULES_M
 const mockRates = makeMockRates();
 
 describe("T-27: 장기임대 감면 정밀 엔진 연동", () => {
-  it("T-27a: rentalReductionDetails 제공 → 8년 임대 50% 감면 적용", () => {
+  it("T-27a: rentalReductionDetails 제공 → 레거시 경로 폐지(V-6) — 요건을 채워도 감면 0 · 정본 감면 목록(rental_97_3) 안내", () => {
     const rentalDetails: RentalReductionInput = {
       isRegisteredLandlord: true,
       isTaxRegistered: true,
@@ -47,12 +47,12 @@ describe("T-27: 장기임대 감면 정밀 엔진 연동", () => {
 
     const result = calculateTransferTax(input, rates);
     expect(result.isExempt).toBe(false);
-    expect(result.reductionAmount).toBeGreaterThan(0);
-    // 50% 감면 = 산출세액 × 0.5
-    expect(result.reductionAmount).toBe(Math.floor(result.calculatedTax * 0.5));
-    expect(result.rentalReductionDetail).toBeDefined();
-    expect(result.rentalReductionDetail?.isEligible).toBe(true);
-    expect(result.rentalReductionDetail?.reductionRate).toBe(0.5);
+    expect(result.calculatedTax).toBeGreaterThan(0);
+    // 종전: 산출세액 × 0.5 감면. 같은 조문을 정본(`transfer-reductions/rental-97-3.ts`)이 판정하므로 이 경로는 닫았다.
+    expect(result.reductionAmount ?? 0).toBe(0);
+    expect(result.rentalReductionDetail?.isEligible).toBe(false);
+    const legacy = result.rentalReductionDetail?.ineligibleReasons.find((r) => r.code === "LEGACY_RENTAL_DETAILS_UNSUPPORTED");
+    expect(legacy?.message).toContain("rental_97_3");
   });
 
   it("T-27b: rentalReductionDetails 의무기간 미충족 → 감면 0", () => {

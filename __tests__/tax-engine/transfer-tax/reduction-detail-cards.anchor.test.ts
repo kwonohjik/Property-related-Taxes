@@ -226,7 +226,7 @@ describe("A-2: newHousingReductionDetail anchor", () => {
 // ── A-3: 장기임대 감면 — rentalReductionDetail ────────────────────────
 
 describe("A-3: rentalReductionDetail anchor", () => {
-  it("A-3a: 8년 임대 요건 충족 → isEligible=true, reductionRate=0.5", () => {
+  it("A-3a: 8년 임대 요건 충족이어도 레거시 경로 폐지(V-6) → isEligible=false · 감면 0 · 정본 안내 사유", () => {
     const rentalDetails: RentalReductionInput = {
       isRegisteredLandlord: true,
       isTaxRegistered: true,
@@ -256,11 +256,10 @@ describe("A-3: rentalReductionDetail anchor", () => {
 
     const result = calculateTransferTax(input, rates);
     expect(result.rentalReductionDetail).toBeDefined();
-    expect(result.rentalReductionDetail!.isEligible).toBe(true);
-    expect(result.rentalReductionDetail!.reductionRate).toBe(0.5);
-    expect(result.rentalReductionDetail!.reductionAmount).toBe(
-      Math.floor(result.calculatedTax * 0.5),
-    );
+    expect(result.rentalReductionDetail!.isEligible).toBe(false);
+    expect(result.rentalReductionDetail!.reductionAmount).toBe(0);
+    // 결과 카드가 띄울 사유 — 정본 감면 목록으로 안내한다
+    expect(result.rentalReductionDetail!.ineligibleReasons.map((r) => r.code)).toEqual(["LEGACY_RENTAL_DETAILS_UNSUPPORTED"]);
     // reductionType anchor
     expect(result.rentalReductionDetail!.reductionType).toBe("long_term_private");
   });

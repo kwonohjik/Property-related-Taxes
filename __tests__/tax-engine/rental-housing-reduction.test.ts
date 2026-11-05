@@ -12,7 +12,6 @@ import {
   RENTAL_VACANCY_GRACE_MONTHS_97_5,
   convertToStandardDeposit,
   determineApplicableLaw,
-  getLongTermDeductionOverride,
   validateRentIncrease,
   type RentalReductionInput,
   type VacancyPeriod,
@@ -23,6 +22,14 @@ import type { LongTermRentalRuleSet } from "@/lib/tax-engine/schemas/rate-table.
 // ============================================================
 // 테스트용 감면 규칙 픽스처
 // ============================================================
+
+/**
+ * V-6(2026-11-05) — 이 레거시 경로(`rentalReductionDetails`)는 모든 유형에서 `LEGACY_RENTAL_DETAILS_UNSUPPORTED`로 부적격이다
+ * (정본 `transfer-reductions/rental-97-*` 감면 목록으로 안내 · 감면액 0 · 장특 특례 override 삭제). 아래 요건 사유·의무기간·감면율 필드는
+ * 결과 카드에 함께 보이는 정보라 그대로 고정하고, 「적용」 기준선은 **요건 사유가 없음**(`gateCodes`)으로 읽는다.
+ */
+const gateCodes = (r: { ineligibleReasons: { code: string }[] }) =>
+  r.ineligibleReasons.map((x) => x.code).filter((c) => c !== "LEGACY_RENTAL_DETAILS_UNSUPPORTED");
 
 const RULES: LongTermRentalRuleSet = {
   type: "long_term_rental_v2",
@@ -302,9 +309,9 @@ describe("LR-01: 공공건설임대 100% 감면", () => {
       }),
       RULES,
     );
-    expect(result.isEligible).toBe(true);
+    expect(gateCodes(result)).toEqual([]);
     expect(result.reductionRate).toBe(1.0);
-    expect(result.reductionAmount).toBe(5_000_000); // 100%
+    expect(result.reductionAmount).toBe(0); // V-6 레거시 폐지 — 종전 5,000,000(100%)
   });
 });
 
@@ -320,9 +327,9 @@ describe("LR-02: 장기일반민간 8년 50% 감면", () => {
       }),
       RULES,
     );
-    expect(result.isEligible).toBe(true);
+    expect(gateCodes(result)).toEqual([]);
     expect(result.reductionRate).toBe(0.5);
-    expect(result.reductionAmount).toBe(5_000_000);
+    expect(result.reductionAmount).toBe(0); // V-6 레거시 폐지 — 종전 5,000,000
   });
 });
 
@@ -338,10 +345,10 @@ describe("LR-03: 장기일반민간 10년 70% 감면 (2020.7.11 이후 등록)",
       }),
       RULES,
     );
-    expect(result.isEligible).toBe(true);
+    expect(gateCodes(result)).toEqual([]);
     expect(result.mandatoryPeriodYears).toBe(10);
     expect(result.reductionRate).toBe(0.7);
-    expect(result.reductionAmount).toBe(7_000_000);
+    expect(result.reductionAmount).toBe(0); // V-6 레거시 폐지 — 종전 7,000,000
   });
 });
 
@@ -357,9 +364,9 @@ describe("LR-04: 공공지원민간임대 8년 50% 감면", () => {
       }),
       RULES,
     );
-    expect(result.isEligible).toBe(true);
+    expect(gateCodes(result)).toEqual([]);
     expect(result.reductionRate).toBe(0.5);
-    expect(result.reductionAmount).toBe(4_000_000);
+    expect(result.reductionAmount).toBe(0); // V-6 레거시 폐지 — 종전 4,000,000
   });
 });
 
@@ -396,7 +403,7 @@ describe("LR-07: 의무임대기간 경계값", () => {
       }),
       RULES,
     );
-    expect(result.isEligible).toBe(true);
+    expect(gateCodes(result)).toEqual([]);
     expect(result.effectiveRentalYears).toBeGreaterThanOrEqual(8);
   });
 
@@ -517,7 +524,7 @@ describe("LR-13: 등록일 2020.7.10 vs 2020.7.11 — 의무기간 차이", () =
       }),
       RULES,
     );
-    expect(result.isEligible).toBe(true);
+    expect(gateCodes(result)).toEqual([]);
     expect(result.mandatoryPeriodYears).toBe(8);
     expect(result.reductionRate).toBe(0.5);
   });
@@ -644,91 +651,6 @@ describe("LR-16: 임대료 증액 위반 시 감면 전액 배제", () => {
 // LR-17: 장기보유공제 특례율
 // ============================================================
 
-describe("getLongTermDeductionOverride", () => {
-  it("LR-17: 8년 충족 → 장기보유공제 특례율 50%", () => {
-    const result = getLongTermDeductionOverride(
-      makeInput({
-        rentalStartDate: new Date("2019-01-01"),
-        transferDate: new Date("2027-06-01"),
-        rentHistory: [], // 위반 없음
-      }),
-      RULES,
-    );
-    expect(result.hasOverride).toBe(true);
-    expect(result.overrideRate).toBe(0.5);
-  });
-
-  it("2020.7.11 이후 등록 → 10년 충족 시 70%", () => {
-    const result = getLongTermDeductionOverride(
-      makeInput({
-        registrationDate: new Date("2020-07-11"),
-        rentalStartDate: new Date("2020-07-11"),
-        transferDate: new Date("2031-01-01"),
-        rentHistory: [],
-      }),
-      RULES,
-    );
-    expect(result.hasOverride).toBe(true);
-    expect(result.overrideRate).toBe(0.7);
-  });
-
-  it("공공건설임대 → 장기보유공제 특례 없음 (0)", () => {
-    const result = getLongTermDeductionOverride(
-      makeInput({ rentalHousingType: "public_construction" }),
-      RULES,
-    );
-    expect(result.hasOverride).toBe(false);
-  });
-
-  it("임대사업자 미등록 → 특례 없음", () => {
-    const result = getLongTermDeductionOverride(
-      makeInput({ isRegisteredLandlord: false }),
-      RULES,
-    );
-    expect(result.hasOverride).toBe(false);
-  });
-
-  it("임대료 위반 → 특례 없음", () => {
-    const rentHistory: RentHistory[] = [
-      {
-        contractDate: new Date("2019-01-01"),
-        monthlyRent: 0,
-        deposit: 200_000_000,
-        contractType: "jeonse",
-      },
-      {
-        contractDate: new Date("2021-01-01"),
-        monthlyRent: 0,
-        deposit: 215_000_000, // 7.5% 위반
-        contractType: "jeonse",
-      },
-    ];
-    const result = getLongTermDeductionOverride(
-      makeInput({ rentHistory }),
-      RULES,
-    );
-    expect(result.hasOverride).toBe(false);
-  });
-
-  it("아파트 + 2020.8.18 이후 → 특례 없음", () => {
-    const result = getLongTermDeductionOverride(
-      makeInput({
-        propertyType: "apartment",
-        registrationDate: new Date("2020-08-18"),
-        rentalStartDate: new Date("2020-08-18"),
-        transferDate: new Date("2031-01-01"),
-        rentHistory: [],
-      }),
-      RULES,
-    );
-    expect(result.hasOverride).toBe(false);
-  });
-});
-
-// ============================================================
-// LR-18: 감면 한도 (조특법 §133)
-// ============================================================
-
 describe("LR-18: 감면 한도 적용", () => {
   it("감면액 1억 이하 → 한도 미적용", () => {
     const result = calculateRentalReduction(
@@ -740,7 +662,7 @@ describe("LR-18: 감면 한도 적용", () => {
       RULES,
     );
     // 50% 감면 = 5000만원 < 1억 → 한도 미적용
-    expect(result.reductionAmount).toBe(50_000_000);
+    expect(result.reductionAmount).toBe(0); // V-6 레거시 폐지 — 종전 50,000,000
     expect(result.isLimitApplied).toBe(false);
   });
 
@@ -767,7 +689,7 @@ describe("LR-18: 감면 한도 적용", () => {
       RULES,
     );
     expect(result.isLimitApplied).toBe(false);
-    expect(result.reductionAmount).toBe(300_000_000);
+    expect(result.reductionAmount).toBe(0); // V-6 레거시 폐지 — 종전 300,000,000
   });
 
   it("🔴 2015 임대개시는 §97① 본문 시한 외로 배제된다 (D1-04)", () => {
@@ -834,5 +756,32 @@ describe("calculateEffectiveRentalPeriod — 8년 경계 (P1-2 회귀)", () => {
     );
     // 1일 공실은 3월 유예 이내라 차감 없음 → 8년 + 1일 → 8년
     expect(years).toBe(8);
+  });
+});
+
+describe("V-6 레거시 경로 폐지 — 정본 감면 목록 안내", () => {
+  const cases = [
+    ["public_construction", "rental_97_main"],
+    ["long_term_private", "rental_97_3"],
+    ["public_support_private", "rental_97_4"],
+  ] as const;
+  for (const [type, canonical] of cases) {
+    it(`${type} → 부적격 · 감면 0 · ${canonical} 안내`, () => {
+      const result = calculateRentalReduction(
+        makeInput({ rentalHousingType: type, calculatedTax: 10_000_000, rentalStartDate: new Date("2010-01-01"), transferDate: new Date("2024-01-01") }),
+        RULES,
+      );
+      expect(result.isEligible).toBe(false);
+      expect(result.reductionAmount).toBe(0);
+      const legacy = result.ineligibleReasons.find((r) => r.code === "LEGACY_RENTAL_DETAILS_UNSUPPORTED");
+      expect(legacy?.message).toContain(canonical);
+    });
+  }
+
+  it("public_purchase는 종전 §97의5 사유 하나만(중복 사유 없음)", () => {
+    const result = calculateRentalReduction(makeInput({ rentalHousingType: "public_purchase" }), RULES);
+    const codes = result.ineligibleReasons.map((r) => r.code);
+    expect(codes).toContain("LEGACY_97_5_UNSUPPORTED");
+    expect(codes).not.toContain("LEGACY_RENTAL_DETAILS_UNSUPPORTED");
   });
 });

@@ -268,66 +268,6 @@ function determineMandatoryPeriod(
 
 
 // ============================================================
-// 1단계 연동 함수: 장기보유공제 특례율 조회
-// ============================================================
-
-/**
- * transfer-tax 엔진이 장기보유공제 계산 전에 호출
- * 장기임대 특례율(50%/70%)이 있으면 일반 공제 대신 적용
- */
-export function getLongTermDeductionOverride(
-  input: RentalReductionInput,
-  rules: LongTermRentalRuleSet | undefined,
-): { hasOverride: boolean; overrideRate: number } {
-  if (!rules) return { hasOverride: false, overrideRate: 0 };
-  if (!input.isRegisteredLandlord || !input.isTaxRegistered) {
-    return { hasOverride: false, overrideRate: 0 };
-  }
-  if (
-    input.rentalHousingType !== "long_term_private" &&
-    input.rentalHousingType !== "public_support_private"
-  ) {
-    return { hasOverride: false, overrideRate: 0 };
-  }
-
-  const lawVersion = determineApplicableLaw(input.registrationDate);
-
-  // 2020.8.18 이후 아파트 장기일반민간 등록 불가 → 특례 없음
-  if (
-    lawVersion === "post_2020_08_18" &&
-    input.propertyType === "apartment" &&
-    input.rentalHousingType === "long_term_private"
-  ) {
-    return { hasOverride: false, overrideRate: 0 };
-  }
-
-  const tier = determineMandatoryPeriod(input.rentalHousingType, lawVersion, rules);
-  if (!tier || tier.longTermDeductionRate === 0) {
-    return { hasOverride: false, overrideRate: 0 };
-  }
-
-  const effectiveYears = calculateEffectiveRentalPeriod(
-    input.rentalStartDate,
-    input.transferDate,
-    input.vacancyPeriods,
-    graceMonthsFor(input.rentalHousingType),
-  );
-
-  if (effectiveYears < tier.mandatoryYears) {
-    return { hasOverride: false, overrideRate: 0 };
-  }
-
-  // 임대료 증액 위반 시 특례 없음
-  const CONVERSION_RATE = rules.jeonseConversionRate ?? 0.04; // 전월세전환율 (DB 미설정 시 4%)
-  const rentValidation = validateRentIncrease(input.rentHistory, CONVERSION_RATE);
-  if (!rentValidation.isAllValid) {
-    return { hasOverride: false, overrideRate: 0 };
-  }
-
-  return { hasOverride: true, overrideRate: tier.longTermDeductionRate };
-}
-
-// ============================================================
 // 메인 함수: calculateRentalReduction
 // ============================================================
 
@@ -378,6 +318,28 @@ export function calculateRentalReduction(
    * 앱 화면은 이 경로를 쓰지 않지만 `/api/calc/transfer`의 `rentalReductionDetails`로 직접 도달한다.
    * 정본은 `transfer-reductions/rental-97-5.ts`(`reductions[].type = "rental_97_5"`)다 — 두 곳에서 판정하지 않는다.
    */
+  /**
+   * ── Step 1-2: §97·§97의3·§97의4도 이 레거시 엔진에서 판정하지 않는다 (V-6 · 2026-11-05) ──
+   *
+   * 같은 조문을 정본(`transfer-reductions/rental-97-main.ts`·`rental-97-3.ts`·`rental-97-4.ts`)이 감면 목록(`reductions`)으로
+   * 판정한다. 이 경로는 법 버전을 등록일 하나(`determineApplicableLaw` — 2018.9.14./2020.7.11./2020.8.18.)로 골라 정본과 다른
+   * 시한·요건으로 계산했고(법령 대조 미완), 앱 화면은 이 입력을 보내지 않는다(공개 API 직접 호출만 도달). §97의5와 같이 닫고 안내한다.
+   */
+  const CANONICAL_TYPE: Record<Exclude<RentalHousingType, "public_purchase">, string> = {
+    public_construction: '"rental_97_main"(§97① 본문)·"rental_97_proviso"(§97① 단서)',
+    long_term_private: '"rental_97_3"(§97의3)',
+    public_support_private: '"rental_97_4"(§97의4)',
+  };
+  if (input.rentalHousingType !== "public_purchase") {
+    ineligibleReasons.push({
+      code: "LEGACY_RENTAL_DETAILS_UNSUPPORTED",
+      message:
+        "장기임대주택 감면은 이 입력 형식(rentalReductionDetails)으로 계산하지 않습니다 — " +
+        `감면 목록(reductions)에 type ${CANONICAL_TYPE[input.rentalHousingType]}로 요건을 입력하세요.`,
+      field: "rentalHousingType",
+    });
+  }
+
   if (input.rentalHousingType === "public_purchase") {
     ineligibleReasons.push({
       code: "LEGACY_97_5_UNSUPPORTED",
@@ -453,8 +415,7 @@ export function calculateRentalReduction(
   //    각자 다른 시한을 갖는다(같은 스위치에 있다고 요건을 공유하지 않는다).
   //
   // 📌 같은 요건을 신세대 경로(`transfer-reductions/rental-97-main.ts`)가 이미 정확히
-  //    검사한다. 두 경로가 같은 조문을 판정하는 dual truth 자체는 남아 있고,
-  //    정본 해소는 이 분기의 폐지 또는 위임이다(API 표면 결정이 필요해 별건).
+  //    검사한다. V-6(2026-11-05)으로 이 경로는 Step 1-2에서 부적격으로 닫혔다 — 아래 사유는 결과 카드에 보이는 정보로만 남는다.
   if (input.rentalHousingType === "public_construction") {
     if (input.rentalStartDate.getTime() > RENTAL_97_START_DEADLINE.getTime()) {
       ineligibleReasons.push({
