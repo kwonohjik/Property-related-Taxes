@@ -255,6 +255,43 @@ export function governingDesignationStart(bjdCode: string, date: string, inDistr
 }
 
 /**
+ * 시·도 이름 → 데이터가 쓰는 이름 — 약칭(「서울」「서울시」「경기」「충북」…)·명칭 변경(「전북특별자치도」 2024.1.18. ↔ 데이터 「전라북도」)을
+ * 맞춘다. 주소 문자열을 사람이 직접 쓰면(주소검색의 「입력한 주소를 그대로 사용」) 첫 어절이 정식 명칭이 아닌 경우가 많은데, 정확 일치만
+ * 보던 종전에는 수록 시도도 「데이터 미수록 → 아님」으로 떨어져 비과세·중과 누락이 났다(계획서 regulated-area-abbrev-address).
+ * 「광주시」는 경기도 광주시와 겹쳐 넣지 않는다(「광주」만 광주광역시).
+ */
+const SIDO_CANONICAL: Record<string, string> = {
+  서울특별시: "서울특별시", 서울: "서울특별시", 서울시: "서울특별시",
+  부산광역시: "부산광역시", 부산: "부산광역시", 부산시: "부산광역시",
+  대구광역시: "대구광역시", 대구: "대구광역시", 대구시: "대구광역시",
+  인천광역시: "인천광역시", 인천: "인천광역시", 인천시: "인천광역시",
+  광주광역시: "광주광역시", 광주: "광주광역시",
+  대전광역시: "대전광역시", 대전: "대전광역시", 대전시: "대전광역시",
+  울산광역시: "울산광역시", 울산: "울산광역시", 울산시: "울산광역시",
+  세종특별자치시: "세종특별자치시", 세종: "세종특별자치시", 세종시: "세종특별자치시",
+  경기도: "경기도", 경기: "경기도",
+  강원특별자치도: "강원특별자치도", 강원도: "강원특별자치도", 강원: "강원특별자치도",
+  충청북도: "충청북도", 충북: "충청북도",
+  충청남도: "충청남도", 충남: "충청남도",
+  전라북도: "전라북도", 전북특별자치도: "전라북도", 전북: "전라북도",
+  전라남도: "전라남도", 전남: "전라남도",
+  경상북도: "경상북도", 경북: "경상북도",
+  경상남도: "경상남도", 경남: "경상남도",
+  제주특별자치도: "제주특별자치도", 제주도: "제주특별자치도", 제주: "제주특별자치도",
+};
+
+/** 시·도 어절을 데이터 이름으로 — 모르는 어절이면 `null`. */
+export function canonicalSidoName(token: string): string | null {
+  return SIDO_CANONICAL[token] ?? null;
+}
+
+/** 어절 앞부분이 시·도 정식 명칭이면 그 명칭(붙여 쓴 「서울특별시강남구」용 — 정식 명칭만, 약칭은 오탐이 커서 보지 않는다). */
+export function leadingSidoFullName(token: string): string | null {
+  const full = [...new Set(Object.values(SIDO_CANONICAL))].concat(["강원도", "전북특별자치도", "제주도"]);
+  return full.filter((n) => token.startsWith(n) && token.length > n.length).sort((x, y) => y.length - x.length)[0] ?? null;
+}
+
+/**
  * 데이터에 수록된 시도명 집합 — 등장하는 region.name의 첫 어절(시도명).
  * 정적 리스트 대신 REGULATED_REGIONS에서 동적 도출 → 지방 데이터 추가 시 자동 반영(드리프트 0).
  * 수록 시도 내 미매칭은 "진짜 미지정"(high), 미수록 시도는 판정 불가(low, 직접 확인 유도).
@@ -298,13 +335,20 @@ export function isRegulatedByAddressIn(
 
   if (!region) {
     const covered = coveredSidoNamesOf(regions).has(sido);
-    return {
-      isRegulated: false,
-      confidence: covered ? "high" : "low",
-      basis: covered
-        ? `${fullName} — ${date} 기준 미지정`
-        : `${sido}는 데이터 미수록 — 직접 확인 필요`,
-    };
+    if (covered) return { isRegulated: false, confidence: "high", basis: `${fullName} — ${date} 기준 미지정` };
+    // 아는 시·도인데 데이터에 없다 — 종전대로 「미지정」으로 단정하지 않고 low(직접 확인)다(미수록 시도 안전장치 P-B).
+    if (canonicalSidoName(sido) !== null) {
+      return { isRegulated: false, confidence: "low", basis: `${sido}는 데이터 미수록 — 직접 확인 필요` };
+    }
+    // 시·도를 알아볼 수 없다 — 「아님」으로 단정하지 않는다(모름 = 혜택 불성립 + 확인 필요). 그날 지정된 곳이 하나도 없으면 아님이 확실하다.
+    const anyActive = regions.some((r) => findActiveDesignation(r.designations, date) !== null);
+    return anyActive
+      ? {
+          isRegulated: true,
+          confidence: "low",
+          basis: `소재지 주소(「${sido}」)에서 시·도를 알아볼 수 없어 조정대상지역으로 보고 계산합니다 — 주소검색으로 소재지를 고르거나 직접 확인 필요`,
+        }
+      : { isRegulated: false, confidence: "high", basis: `${date} 기준 지정된 조정대상지역 없음` };
   }
 
   const active = findActiveDesignation(region.designations, date);

@@ -147,7 +147,9 @@ export function useRegulatedAreaAutoTip({
           */}
           {regulatedAuto.confidence !== "high" && !(isOneHouseExemptionAsset(primaryKind) && hasRegionCode) && (
             <p className="text-caption text-amber-700 dark:text-amber-400">
-              ⚠️ 신뢰도: {regulatedAuto.confidence} — 시군구 일부만 지정된 경우{" "}
+              {/* low = 주소에서 시·도를 알아볼 수 없거나 데이터에 없는 시·도(근거는 위 줄) · medium = 시군구 안 일부 동·지구만 지정 */}
+              ⚠️ 신뢰도: {regulatedAuto.confidence} —{" "}
+              {regulatedAuto.confidence === "low" ? "주소만으로 판정하지 못한 경우" : "시군구 일부만 지정된 경우"}{" "}
               {isOneHouseExemptionAsset(primaryKind)
                 ? "아래 체크박스를 수동 확인하세요."
                 : primaryKind === "presale_right"

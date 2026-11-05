@@ -15,8 +15,10 @@
  */
 
 import {
+  canonicalSidoName,
   isRegulatedByAddress,
   isRegulatedByBjdCode,
+  leadingSidoFullName,
   type RegulatedAreaJudgment,
 } from "@/lib/tax-engine/data/regulated-areas";
 
@@ -30,10 +32,16 @@ export type RegulatedAreaResult = RegulatedAreaJudgment;
  */
 export function parseAddressRegion(address: string): { sido: string; sigungu: string } | null {
   if (!address) return null;
-  const parts = address.trim().split(/\s+/);
+  // 우편번호 접두(「(06236) 」「[06236] 」「06236 」)를 뗀다.
+  const trimmed = address.trim().replace(/^[([]?\d{5}[)\]]?\s+/, "");
+  let parts = trimmed.split(/\s+/);
+  // 붙여 쓴 「서울특별시강남구 …」 — 정식 시·도 명칭이 앞에 붙어 있으면 떼어 낸다.
+  const glued = leadingSidoFullName(parts[0] ?? "");
+  if (glued) parts = [glued, parts[0].slice(glued.length), ...parts.slice(1)];
   if (parts.length < 2) return null;
 
-  const sido = parts[0];
+  // 약칭·명칭 변경을 데이터 이름으로(「서울」→「서울특별시」, 「전북특별자치도」→「전라북도」). 모르는 어절은 그대로 둔다.
+  const sido = canonicalSidoName(parts[0]) ?? parts[0];
   let sigungu = parts[1];
 
   // "성남시 수정구" 같은 일반구는 2-단어 시군구로 합침
