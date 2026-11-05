@@ -197,7 +197,7 @@ export type CategoryAvailability = { available: boolean; reason?: string };
  * 배제 기준은 `rental-article/check.ts` checkArticleGates의 REG_DATE_GATE와 1:1(단일 소스, RA_CUT 재사용).
  *   - existing_business(나): 지자체 등록일 > 2003.10.29 또는 세무서 등록일 > 2004.6.30(의제 기한) 이면 배제
  *     (`passesExistingBusinessRegGate` — check.ts와 같은 술어. 날짜 하나만 있어도 그 날짜만으로 확정되면 배제)
- *   - short_6y(아·자): 등록기준일 max < 2025.6.4 이면 배제 (regDateMin, check.ts:186)
+ *   - short_6y(아·자): 지자체 등록(신청)일 < 2025.6.4 이면 배제 (regDateMin — 부칙<제35349호> 제15조② · 세무서 등록일은 보지 않는다)
  * long_general·unsold_08_09(라)·pre_2018(구법)은 등록일 단독 배제 게이트가 없어 항상 활성.
  * 판정 불가(날짜 미입력)면 available=true — 조기 차단 금지(엔진 `?? 0` fail보다 관대·불리 미적용).
  */
@@ -213,7 +213,8 @@ export function deriveCategoryAvailability(
     businessRegistrationDate && rentalRegistrationDate
       ? deriveEffectiveRegDate({ businessRegistrationDate, rentalRegistrationDate })
       : null;
-  const effTs = effRegDate?.getTime() ?? null;
+  // 아·자 하한은 지자체 등록(신청)일 — 엔진 `checkArticleGates` regDateMin과 같은 날(두 등록이 모두 있을 때만 판정)
+  const regAppTs = effRegDate && rentalRegistrationDate ? rentalRegistrationDate.getTime() : null;
 
   // 나목 — 판정 불가(날짜 하나 미입력)는 활성. 엔진 술어(`passesExistingBusinessRegGate`)와 같은 두 경계를 각각 본다(한 날짜만으로 확정되면 배제).
   const rentTs = rentalRegistrationDate?.getTime();
@@ -225,7 +226,7 @@ export function deriveCategoryAvailability(
     : { available: true };
 
   const short6y: CategoryAvailability =
-    effTs != null && effTs < RA_CUT.Y2025_06_04
+    regAppTs != null && regAppTs < RA_CUT.Y2025_06_04
       ? { available: false, reason: "단기 6년(아·자목)은 2025.6.4 이후 등록분만 해당합니다." }
       : { available: true };
 
@@ -270,15 +271,15 @@ export function deriveRequiredYears(
 }
 
 /**
- * 도출 목·지역·등록기준일별 기준시가 상한(원). 공용 `rental-article/rules.ts` 위임(단일 소스).
- * F5: 바목은 등록기준일 2025.2.28 경계로 6억/9억 분기(다주택 정합).
+ * 도출 목·지역·등록일별 기준시가 상한(원). 공용 `rental-article/rules.ts` 위임(단일 소스).
+ * 바목은 지자체 등록(신청)일 2025.2.28. 경계로 6억/9억 분기(부칙<제35349호> 제15조① — `deriveRegApplicationDate`를 넘긴다).
  */
 export function deriveStdPriceCap(
   article: RentalArticle,
   region: RegionType,
-  effectiveRegDate: Date | null,
+  regApplicationDate: Date | null,
 ): number {
-  return rentalStdPriceCap(article, region === "seoul-metro", effectiveRegDate?.getTime() ?? 0);
+  return rentalStdPriceCap(article, region === "seoul-metro", regApplicationDate?.getTime() ?? 0);
 }
 
 /**

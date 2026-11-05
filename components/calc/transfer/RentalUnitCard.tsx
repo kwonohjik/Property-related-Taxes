@@ -124,7 +124,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
     onChange(next);
   }
   const reqYears = deriveRequiredYears(article, regAppDate);
-  const cap = deriveStdPriceCap(article, unit.region, effRegDate);
+  const cap = deriveStdPriceCap(article, unit.region, regAppDate);
   // 묻지 않는 구분(아·자)의 남은 「아파트」 값은 ④가 보내지 않으므로 경고에도 쓰지 않는다(SYNC-3).
   const aptRestricted = isApartmentRestricted(article, regAppDate, rentalUnitApartmentInScope(unit) && unit.isApartment);
 

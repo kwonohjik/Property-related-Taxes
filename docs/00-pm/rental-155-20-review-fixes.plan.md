@@ -129,7 +129,7 @@
 | V-2 | ✅ 해소(PR-2) — 단건 route = 다건 route(자산 1건) 510,362,600 · 짝 216,673,182 (`__tests__/api/rental-155-20-b-surcharge-lthd.route.anchor.test.ts`). 다건 rateGroup이 갈리는 2건 이상 입력은 미실측. | — |
 | V-3 | ✅ 해소(PR-2) — 완공APT ⑳은 시나리오 B를 지원하지 않고(`transfer-tax-redevelopment-apt-rental-residence.ts:61` 비과세 거둠), 겸용주택은 A만. 배율 초과 분리 시 주택분은 같은 `calculateRentalHousingException`을 탄다. | — |
 | V-4 | R-1 방향 단조성(유리 쪽만) 격자 확인 — 가/마·다/바·8/10년·아파트 | PR-1 Do 전 |
-| V-5 | 바목 cap 2025.2.28.·아·자목 2025.6.4. 게이트 문언(신청 vs 사업자등록등) — **범위 밖, 별건 후보** | 별건 |
+| V-5 | 바목 cap 2025.2.28.·아·자목 2025.6.4. 게이트 문언(신청 vs 사업자등록등) | ✅ 2026-11-05 — 근거는 대통령령 제35349호 **부칙 제15조**(①바목 「이 영 시행 이후 민간임대주택으로 등록한」·②아·자목 「2025년 6월 4일 이후 민간임대주택으로 등록한」) — 「사업자등록등」 아님. max(세무서, 지자체) → 지자체 등록(신청)일(신청일 ≤ 등록일 → 불리 방향 대용). 실측 지자체 2025-01-15·세무서 2025-03-10·바목 7억 → 10호 배제 150,766,000 → 2주택 중과 299,816,000. anchor `ba-aja-registration-date-gate.anchor.test.ts` B-1~B-4 · `ba-registration-date-surcharge.anchor.test.ts` S-1·S-2 |
 | V-6 | 조특법 감면 `rental-housing-reduction.ts:176-177` 단일 `registrationDate` 컷오프 의미 — **범위 밖, 별건 후보** | 별건 |
 | V-7 | SYNC-2 재실측(에이전트 수치) + 계산기 결과 화면에서 OFF 호 불성립 사유 표시 | PR-3 Do 전 |
 | V-8 | `calcRentalResidenceFacts`의 호출처 전수(계산기 ⑤·⑧, 판정 메뉴 카드) — SYNC-1이 판정 메뉴 ✓/✗에도 있는지 | PR-3 Do 전 |
