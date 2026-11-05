@@ -17,7 +17,9 @@ const first = {
   ...makeDefaultAsset(1),
   ...DIRECT_RESIDENCE,
   addressJibun: "서울 강남구 테스트동 2-2",
-  regionCode: "1168010100",
+  // 비조정 지역 코드(인천 서구) — 강남 코드면 양도 당시 조정대상지역이라 ⑧ 「같은 날 양도 주택 묶음」 차단이 먼저 걸려(④와 같은 실효값 —
+  //   regulated-area-skip-step4 계획서 R-3 · Step4를 거친 경우와 같다) 이 테스트가 보는 두 번째 자산 계산 요청이 나가지 않는다.
+  regionCode: "2826010100",
   assetKind: "housing",
   acquisitionCause: "purchase",
   acquisitionDate: "2010-03-02",
