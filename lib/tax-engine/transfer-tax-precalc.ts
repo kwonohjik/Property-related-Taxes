@@ -357,6 +357,8 @@ export function runSurchargeAndLandSteps(
     transferPrice: input.transferPrice,
     // 고가주택·소유자 분리 판정은 STEP 4.6 본판정(`runIncomeAndBaseSteps`)과 같은 값을 넘긴다 — 감면은 불성립인데 중과만 배제되는 어긋남 방지 (NH-10 · NH-08).
     // 증여가액은 STEP 0.48 이후에야 생기므로 `workingInput`에서 읽는다(소유자 분리 값은 둘이 같다).
+    // 지분 양도의 고가주택 판정은 물건 전체 가액 — 본판정과 같은 `input.totalPropertyTransferPrice` (NH-26).
+    totalPropertyTransferPrice: input.totalPropertyTransferPrice,
     burdenedGiftDenominator: workingInput.burdenedGiftDenominator,
     selfOwns: input.selfOwns,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
