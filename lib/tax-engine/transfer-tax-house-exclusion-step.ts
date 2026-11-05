@@ -78,7 +78,15 @@ export function resolveExemptionHouseCountExclusions(
     effectiveInput.specialHouseExclusions,
     effectiveInput.transferDate,
   );
-  const inheritedExclusion = resolveInheritedHouseExclusionFromInput(effectiveInput);
+  /**
+   * 조특법(§99의4·§98의9·보유 감면주택 선언)으로 이미 주택 수에서 빠진 행은 상속주택 제외 후보에서 뺀다 — 한 주택은 한 번만 뺀다(NH-13 ·
+   * 사용자 결정 Q-1 A·Q-10 a). 이렇게 만든 `inheritedExclusion`이 **실효** 상속 제외라 개수 소비처(STEP 0.9·중과 15호 ① 요소·근거 라벨·
+   * 판정 메뉴 명세)가 모두 이 값을 그대로 쓴다. 인구감소지역(§71의2①)은 아래에서 이 결과를 보고 겹치는 행을 스스로 뺀다.
+   */
+  const inheritedExclusion = resolveInheritedHouseExclusionFromInput(
+    effectiveInput,
+    new Set(collectKnownHouseExclusionIds({ hceApplied, specialEntries: specialDeclared.entries })),
+  );
   /**
    * 조특법 §71의2① 인구감소지역주택 — 선언이 아니라 **명부에서 도출**한다(결정 #42). 같은 행을 다른 제외가 이미 뺐으면 한 번만 뺀다.
    * 결과 항목은 보유 감면주택 항목 뒤에 이어 붙여(`entries`) 주택 수 제외 개수·행 id·중과 15호 확인 조문·명세 표시가 한 갈래로 읽게 한다.
@@ -100,6 +108,7 @@ export function resolveExemptionHouseCountExclusions(
   // §155④⑤ × ⑳ — 합가 상대 쪽 임대 행(`one-house/merge-rental-carveout.ts`). 비과세·중과 15호 ① 요소가 함께 뺀다. 중과 주택 수 자체는 그대로다.
   const mergeRentalRowId = effectiveInput.mergeRentalCarveout?.rentalRowId;
   const mergeRentalExcluded = mergeRentalRowId ? 1 : 0;
+  const specialActExcludedCount = hceApplied.length + specialHouseExclusionDetail.excludedCount + mergeRentalExcluded;
   const popUnconfirmed = popDecline.entries.filter((e) => e.article === POP_DECLINE_71_2_ARTICLE && !e.eligible && e.unconfirmed);
   return {
     /** 조특법 §71의2① 후보 중 모름·미답·해석 미확보로 불성립한 것 — 결론을 가를 때만 확인 필요를 알리는 재료 */
@@ -111,14 +120,26 @@ export function resolveExemptionHouseCountExclusions(
     specialHouseExclusionDetail,
     inheritedExclusion,
     /** 조특법(§99의4·§98의9·보유 감면주택)으로 뺀 수 */
-    specialActExcludedCount: hceApplied.length + specialHouseExclusionDetail.excludedCount + mergeRentalExcluded,
+    specialActExcludedCount,
+    /**
+     * 비과세 판정 주택 수에서 뺀 **실효** 총수 = 조특법으로 뺀 수 + 상속 실효 수. 같은 행이 조특법과 상속에 함께 걸려도 한 번만 센다
+     * (상속 풀이 조특법 행을 후보에서 이미 뺐다 — `inheritedExclusion`). STEP 0.9·판정 메뉴 명세 `countedForExemption`이 같은 값을 쓴다.
+     */
+    exclusionTotal: specialActExcludedCount + inheritedExclusion.excludedCount,
     mergeRentalExcluded,
-    /** §155④⑤ 합가 전 구성 판정(PR-3)이 명부에서 뺄 행 id — 세 출처 중 houseId가 있는 것만. */
-    knownHouseExclusionHouseIds: collectKnownHouseExclusionIds({
-      hceApplied,
-      specialEntries: specialHouseExclusionDetail.entries,
-      inheritedExcludedHouses: inheritedExclusion.excludedHouses,
-    }).concat(mergeRentalRowId ? [mergeRentalRowId] : []),
+    /**
+     * 주택 수에서 빠진 명부 행 id — 채택 출처와 무관하다(§155⑥⑦⑧ 상대방 대조가 이 목록을 본다 · NH-12). 합가 전 구성 판정(PR-3)도
+     * 이 목록으로 명부에서 뺄 행을 정한다. 세 출처 중 houseId가 있는 것만, 같은 id는 한 번만 담는다.
+     */
+    knownHouseExclusionHouseIds: [
+      ...new Set(
+        collectKnownHouseExclusionIds({
+          hceApplied,
+          specialEntries: specialHouseExclusionDetail.entries,
+          inheritedExcludedHouses: inheritedExclusion.excludedHouses,
+        }).concat(mergeRentalRowId ? [mergeRentalRowId] : []),
+      ),
+    ],
     ...verifiedSpecialAct15Exclusions(specialHouseExclusionDetail, hceApplied),
   };
 }
@@ -302,12 +323,26 @@ export function culturalOrUnavoidableDeemingBasis(p: {
   specialActExcludedCount: number;
   transferDate: Date;
   culturalHeritageHouse: TransferTaxInput["culturalHeritageHouse"];
+  /** ⑥ 선언 행 id — 이미 주택 수에서 빠진 행이면 특례 상대방으로 쓰지 않는다(NH-12). */
+  culturalHeritageHouseId?: TransferTaxInput["culturalHeritageHouseId"];
   unavoidableOutsideCapitalHouse: TransferTaxInput["unavoidableOutsideCapitalHouse"];
+  /** 주택 수에서 빠진 명부 행 id(`resolveExemptionHouseCountExclusions`의 `knownHouseExclusionHouseIds`). */
+  knownHouseExclusionHouseIds?: TransferTaxInput["knownHouseExclusionHouseIds"];
 }): DeemedOneHouseBasis | undefined {
   if (!p.isOneHousehold || p.rawHouseCount <= p.houseCount) return undefined;
   if (p.inheritedExcludedCount + p.specialActExcludedCount <= 0) return undefined;
-  const count = { householdHousingCount: p.houseCount, inheritedHouseExclusionCount: p.inheritedExcludedCount };
-  if (qualifiesCulturalHeritageHouse({ ...count, culturalHeritageHouse: p.culturalHeritageHouse })) {
+  const count = {
+    householdHousingCount: p.houseCount,
+    inheritedHouseExclusionCount: p.inheritedExcludedCount,
+    knownHouseExclusionHouseIds: p.knownHouseExclusionHouseIds,
+  };
+  if (
+    qualifiesCulturalHeritageHouse({
+      ...count,
+      culturalHeritageHouse: p.culturalHeritageHouse,
+      culturalHeritageHouseId: p.culturalHeritageHouseId,
+    })
+  ) {
     return "cultural_heritage_house";
   }
   if (
@@ -359,10 +394,8 @@ export function runHouseCountExclusionStep(
     inheritedExclusion,
     knownHouseExclusionHouseIds,
     popDecline71_2Unconfirmed,
-    mergeRentalExcluded,
+    exclusionTotal: totalExcluded,
   } = resolveExemptionHouseCountExclusions(effectiveInput, generalHouseAcquisitionDate);
-  const totalExcluded =
-    hceApplied.length + specialHouseExclusionDetail.excludedCount + inheritedExclusion.excludedCount + mergeRentalExcluded;
   // knownHouseExclusionCount·knownHouseExclusionHouseIds — §155④⑤ 합가 전 구성 판정
   // (`resolveMergeComposition`)이 명부 행 수와 판정 주택수의 불일치를 「알려진 제외로 설명됨
   // (행까지 특정되면 그 행을 빼고 판정 · PR-3)」과 「입력 누락(불성립)」으로 가르는 echo.

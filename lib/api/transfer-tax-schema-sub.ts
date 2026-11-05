@@ -40,6 +40,8 @@ export const unavoidableOutsideCapitalHouseSchema = z.object({
   resolvedDate: z.string().date().optional(),
   /** 「사유가 양도일 현재 해소되지 않음」 — 해소일과 택일(⑫ superRefine). 둘 다 없으면 「모름」이라 400 */
   unresolvedAtTransfer: z.literal(true).optional(),
+  /** 선언한 명부 행 id — 그 행이 이미 주택 수에서 빠졌으면 특례 상대방으로 쓰지 않는다(NH-12). 누락하면 침묵 strip. */
+  houseId: z.string().optional(),
 }).superRefine((u, ctx) => {
   // 해소일 ↔ 「양도일 현재 미해소」 택일 — 둘 다 없으면 「모름」이 엔진에서 불성립으로 조용히 바뀐다. ⑧ `unavoidableOutsideCapitalStatusIssue`의 거울.
   const issue = unavoidableOutsideCapitalStatusIssue({ resolvedDate: u.resolvedDate, unresolved: u.unresolvedAtTransfer === true })
@@ -49,6 +51,8 @@ export const unavoidableOutsideCapitalHouseSchema = z.object({
 
 /** ⑫ §155⑦ 농어촌주택 — 유형별 요건은 엔진이 판정한다(Zod는 형상만 검증) */
 export const ruralHouseSchema = z.object({
+  /** 선언한 명부 행 id — 그 행이 이미 주택 수에서 빠졌으면 특례 상대방으로 쓰지 않는다(NH-12). 누락하면 침묵 strip. */
+  houseId: z.string().optional(),
   kind: z.enum(["inherited", "farm_exit", "return_to_farm"]),
   isOutsideCapitalEupMyeon: z.boolean(),
   decedentResidenceYears: z.number().nonnegative().optional(),

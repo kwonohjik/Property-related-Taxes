@@ -121,6 +121,11 @@ export interface InheritedHouseExclusionResult {
    * 순위 부적격 선언으로 빠진 행이다. **표시용**(결정 #10 양론 카드 감지의 단일 소스) — 계산은 위 필드가 이미 반영했다.
    */
   unexcludedCoMinorityHouseIds: string[];
+  /**
+   * 조특법으로 이미 주택 수에서 빠져(§99의4 등) 상속주택 제외 후보에서 **뺀** 행 id — 게이트 2종을 통과한 상속주택이라 이 규정이 없었다면
+   * 제외 후보였을 행만 담는다. **표시용**(NH-13 — 한 주택은 한 번만 뺀다). 산식 step·판정 메뉴 명세가 「추가 차감하지 않음」을 말한다.
+   */
+  coveredBySpecialActHouseIds: string[];
 }
 
 /** OH-12 — §155② 괄호 「일반주택」 한정 판정에 쓰는 양도 주택 사실. 미전달이면 이 게이트를 보지 않는다. */
@@ -174,6 +179,16 @@ export function resolveInheritedHouseExclusion(
   sellingHouseId: string | undefined,
   generalHouseGiftedFromDecedentWithin2yr: boolean | undefined,
   generalHouse?: InheritanceGeneralHouseFacts,
+  /**
+   * 조특법(§99의4·§98의9·보유 감면주택 선언)으로 **이미 주택 수에서 빠진** 명부 행 id (NH-13 · Q-1 A · Q-10 a).
+   * 같은 행을 두 번 빼지 않도록 ② 적격 판정 집합에서 이 행들을 뺀다 — 조특법 §99의4①이 그 주택을 「소유주택이 아닌 것으로 보아」
+   * 소득세법 §89①3호를 적용하므로, 소유가 의제로 부정된 주택은 ②의 「상속받은 주택」 자리에 서지 않는다. 그 행을 뺀 나머지 상속주택이
+   * 정확히 1채이면 그 행을 뺀다(서로 다른 피상속인에게서 받은 R1(§99의4)·R2 — 서면-2022-부동산-1896 · 서면-2023-법규재산-3507과 같은 순서).
+   * 불성립 사유 후보(`inheritedOthers`·게이트별 부적격 수)는 바꾸지 않는다 — 단 「적격 N채라 선순위 특정 불가」 고지가 읽는 적격 수
+   * (`eligibleSoleCount`·`eligibleCoMinorityCount`)는 제외 판정에 실제로 쓴 집합(조특법 행을 뺀 나머지)을 세어야 고지가 사실과 맞는다
+   * (V-15 실측). 생략하면 종전과 같다.
+   */
+  specialActHouseIds?: ReadonlySet<string>,
 ): InheritedHouseExclusionResult {
   const empty: InheritedHouseExclusionResult = {
     soleExcludedCount: 0,
@@ -190,6 +205,7 @@ export function resolveInheritedHouseExclusion(
     sameInheritanceAsSoldCount: 0,
     rankingDisqualifiedCoMinorityCount: 0,
     unexcludedCoMinorityHouseIds: [],
+    coveredBySpecialActHouseIds: [],
   };
   if (!houses) return empty;
 
@@ -249,7 +265,10 @@ export function resolveInheritedHouseExclusion(
   const inheritedDateUnknownCount = gatesPassed.filter(
     (h) => isSecondClausePoolHouse(h) && heldVerdict(h) === "unknown",
   ).length;
-  const eligible = gatesPassed.filter((h) => !isSecondClausePoolHouse(h) || heldForSole(h));
+  const eligibleBeforeSpecialAct = gatesPassed.filter((h) => !isSecondClausePoolHouse(h) || heldForSole(h));
+  const coveredBySpecialAct = (h: HouseInfo) => specialActHouseIds?.has(h.id) === true;
+  const eligible = eligibleBeforeSpecialAct.filter((h) => !coveredBySpecialAct(h));
+  const coveredBySpecialActHouseIds = eligibleBeforeSpecialAct.filter(coveredBySpecialAct).map((h) => h.id);
   const soleCount = eligible.filter(isSecondClausePoolHouse).length;
   const coMinorityCount = eligible.filter((h) => !isSecondClausePoolHouse(h)).length;
   const soleExcludedCount = soleCount === 1 ? 1 : 0;
@@ -267,7 +286,7 @@ export function resolveInheritedHouseExclusion(
   }
   const excludedIds = new Set(excludedHouses.map((e) => e.houseId));
   const unexcludedCoMinorityHouseIds = inheritedOthers
-    .filter((h) => !isSecondClausePoolHouse(h) && passesHouseholdGate(h) && !excludedIds.has(h.id))
+    .filter((h) => !isSecondClausePoolHouse(h) && passesHouseholdGate(h) && !excludedIds.has(h.id) && !coveredBySpecialAct(h))
     .map((h) => h.id);
   return {
     soleExcludedCount,
@@ -284,6 +303,7 @@ export function resolveInheritedHouseExclusion(
     sameInheritanceAsSoldCount,
     rankingDisqualifiedCoMinorityCount,
     unexcludedCoMinorityHouseIds,
+    coveredBySpecialActHouseIds,
   };
 }
 
@@ -307,6 +327,8 @@ export function resolveInheritedHouseExclusionFromInput(
     | "transferDate"
   > &
     Partial<Pick<TransferTaxInput, "redevelopment">>,
+  /** 조특법으로 이미 주택 수에서 빠진 행 id — `resolveInheritedHouseExclusion`의 `specialActHouseIds`. */
+  specialActHouseIds?: ReadonlySet<string>,
 ): InheritedHouseExclusionResult {
   /**
    * E-8 — 승계조합원 신축주택(완공APT)은 종전주택을 보유한 적이 없어 `acquisitionDate`(입주권 승계일)가
@@ -353,6 +375,7 @@ export function resolveInheritedHouseExclusionFromInput(
           transferDate: input.transferDate,
           rightAtInheritance: input.generalHouseRightAtInheritance,
         },
+    specialActHouseIds,
   );
 }
 
@@ -409,6 +432,15 @@ export function buildInheritedExclusionSteps(
       formula: `공동상속주택 1채(소수지분) — 주택수 ${afterSole} → ${afterSole - result.coExcludedCount} ${suffix}`,
       amount: 0,
       legalBasis: INHERITED_HOUSE.EXEMPTION_CO_INHERITED_BASIS,
+    });
+  }
+  // NH-13 — 조특법(§99의4 등)으로 이미 뺀 주택이 상속주택이기도 하면 한 번만 뺀다. 주택수 불변, 산식 투명성용.
+  if (result.coveredBySpecialActHouseIds.length > 0) {
+    steps.push({
+      label: "조특법으로 이미 뺀 상속주택 — 상속주택으로 추가 차감하지 않음 (§155②③)",
+      formula: `상속주택 ${result.coveredBySpecialActHouseIds.length}채는 조특법으로 이미 주택 수에서 뺐습니다 — 상속주택(소득세법 시행령 §155②③)으로 추가 차감하지 않습니다(한 주택은 한 번만 뺍니다)`,
+      amount: 0,
+      legalBasis: INHERITED_HOUSE.EXEMPTION_SOLE_BASIS,
     });
   }
   // 부적격 상속주택 안내(제외 대상 아님) — 주택수 불변, 산식 투명성용.

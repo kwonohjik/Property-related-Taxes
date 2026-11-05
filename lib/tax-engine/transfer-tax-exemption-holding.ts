@@ -17,6 +17,7 @@
 import { format } from "date-fns";
 import { isWithinDeadline } from "./civil-period";
 import { passesHouseholdGate } from "./transfer-inheritance-exclusion";
+import { declaredRowAlreadyExcluded } from "./declared-row-excluded";
 import { calculateHoldingPeriod, CONVERSION_EXEMPTION_CUTOFF } from "./tax-utils";
 import { EXEMPTION_PROVISO_CONST } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
@@ -106,7 +107,10 @@ export const RURAL_HOUSE_LABEL: Record<RuralHouseKind, string> = {
  * §154① 충족은 여기서 보지 않는다(15호 ② 요소는 별도 게이트).
  */
 export function qualifiesRuralHouse(
-  input: Pick<TransferTaxInput, "householdHousingCount" | "transferDate" | "ruralHouse" | "inheritedHouseExclusionCount">,
+  input: Pick<
+    TransferTaxInput,
+    "householdHousingCount" | "transferDate" | "ruralHouse" | "inheritedHouseExclusionCount" | "knownHouseExclusionHouseIds"
+  >,
 ): boolean {
   if (!qualifiesRuralHouseApartFromDeadline(input)) return false;
   const r = input.ruralHouse!;
@@ -153,7 +157,10 @@ export function twoHouseSpecialCountHolds(
  *    여기서 보지 않는다 — 호출부(비과세 E-3 · 중과 15호 `resolveDeemedOneHouseBy155`)가 2주택과 같은 술어로 본다.
  */
 export function ruralTemporaryTwoHouseOverlapCountHolds(
-  input: Pick<TransferTaxInput, "householdHousingCount" | "transferDate" | "ruralHouse" | "inheritedHouseExclusionCount">,
+  input: Pick<
+    TransferTaxInput,
+    "householdHousingCount" | "transferDate" | "ruralHouse" | "inheritedHouseExclusionCount" | "knownHouseExclusionHouseIds"
+  >,
 ): boolean {
   // 상속주택 제외까지 겹치면 세 특례 — 인정 해석 없음(`inheritedHouseExclusionCount` 주석).
   if ((input.inheritedHouseExclusionCount ?? 0) > 0) return false;
@@ -167,9 +174,20 @@ export function ruralTemporaryTwoHouseOverlapCountHolds(
  * §154① 충족은 여기서 보지 않는다 — 호출부(`meetsOneHouseHoldingResidence`)가 따로 AND한다.
  */
 export function qualifiesCulturalHeritageHouse(
-  input: Pick<TransferTaxInput, "householdHousingCount" | "inheritedHouseExclusionCount" | "culturalHeritageHouse">,
+  input: Pick<
+    TransferTaxInput,
+    | "householdHousingCount"
+    | "inheritedHouseExclusionCount"
+    | "culturalHeritageHouse"
+    | "culturalHeritageHouseId"
+    | "knownHouseExclusionHouseIds"
+  >,
 ): boolean {
-  return twoHouseSpecialCountHolds(input) && input.culturalHeritageHouse === true;
+  return (
+    twoHouseSpecialCountHolds(input) &&
+    input.culturalHeritageHouse === true &&
+    !declaredRowAlreadyExcluded(input, input.culturalHeritageHouseId)
+  );
 }
 
 /**
@@ -180,10 +198,14 @@ export function qualifiesCulturalHeritageHouse(
  * 베껴 쓰면 한쪽만 개정 반영되므로, 기한 판정만 떼어 낸 이 함수를 둘이 함께 쓴다.
  */
 export function qualifiesRuralHouseApartFromDeadline(
-  input: Pick<TransferTaxInput, "householdHousingCount" | "transferDate" | "ruralHouse" | "inheritedHouseExclusionCount">,
+  input: Pick<
+    TransferTaxInput,
+    "householdHousingCount" | "transferDate" | "ruralHouse" | "inheritedHouseExclusionCount" | "knownHouseExclusionHouseIds"
+  >,
 ): boolean {
   const r = input.ruralHouse;
   if (!twoHouseSpecialCountHolds(input) || !r) return false;
+  if (declaredRowAlreadyExcluded(input, r.houseId)) return false;
   // 소재: 수도권 밖의 읍(도시지역 제외)·면 — 유형 불문 공통 요건.
   if (!r.isOutsideCapitalEupMyeon) return false;
 
@@ -219,11 +241,16 @@ export function qualifiesRuralHouseApartFromDeadline(
 export function qualifiesUnavoidableOutsideCapital(
   input: Pick<
     TransferTaxInput,
-    "householdHousingCount" | "transferDate" | "unavoidableOutsideCapitalHouse" | "inheritedHouseExclusionCount"
+    | "householdHousingCount"
+    | "transferDate"
+    | "unavoidableOutsideCapitalHouse"
+    | "inheritedHouseExclusionCount"
+    | "knownHouseExclusionHouseIds"
   >,
 ): boolean {
   const u = input.unavoidableOutsideCapitalHouse;
   if (!twoHouseSpecialCountHolds(input) || !u) return false;
+  if (declaredRowAlreadyExcluded(input, u.houseId)) return false;
   // 해소일 또는 「양도일 현재 미해소」 택일(#31 · 2026-10-04 원칙) — 둘 다 없으면 「모름」이라 혜택 불성립이다(⑧·⑫가 차단하고
   //   엔진은 직접 호출 방어로 불성립). 종전에는 빈 값을 「미해소」로 읽어 3년 기한 없이 특례를 줬다(계획서 W-1).
   //   🔶 해소 전 양도에 특례를 적용하는 독법(「미해소」 선택)은 사전-2024-법규재산-0319가 질의 전제로 받친다.

@@ -37,6 +37,7 @@ import { unavoidableOutsideCapitalStatusPayload } from "./two-house-exclusion-st
 export type OneHouseFactRow = Partial<
   Pick<
     HouseEntry,
+    | "id"
     | "oneHouseCulturalHeritage"
     | "oneHouseRuralHouse"
     | "ruralHouseKind"
@@ -68,6 +69,8 @@ export type OneHouseFactRow = Partial<
 
 /** ④가 만드는 §155⑦ nested payload — 엔진 `TransferTaxInput["ruralHouse"]`와 같은 모양. */
 export interface RuralHousePayload {
+  /** 선언한 명부 행 id — 엔진이 「이미 주택 수에서 빠진 행」을 특례 상대방으로 다시 쓰지 않게 대조한다(NH-12). 레거시 폴백에는 없다. */
+  houseId?: string;
   kind: "inherited" | "farm_exit" | "return_to_farm";
   isOutsideCapitalEupMyeon: boolean;
   decedentResidenceYears?: number;
@@ -87,6 +90,8 @@ export interface RuralHousePayload {
 
 /** ④가 만드는 §155⑧ nested payload — 엔진 `TransferTaxInput["unavoidableOutsideCapitalHouse"]`. */
 export interface UnavoidableOutsideCapitalPayload {
+  /** 선언한 명부 행 id — 엔진 대조용(NH-12). 레거시 폴백에는 없다. */
+  houseId?: string;
   reason: "study" | "work" | "illness" | "other";
   /** 해소일 — `unresolvedAtTransfer`와 택일(둘 다 없으면 ⑧·⑫ 차단, 엔진은 불성립) */
   resolvedDate?: string;
@@ -106,6 +111,8 @@ export interface OneHouseLegacyFacts {
 export interface DerivedOneHouseRowFacts {
   /** ④⑬ 엔진 입력 `culturalHeritageHouse` — true일 때만 전송한다(false는 미전송 규약 유지). */
   culturalHeritageHouse: boolean;
+  /** ④⑬ 엔진 입력 `culturalHeritageHouseId` — 국가유산주택으로 표시한 **행**이 있을 때만(레거시 폴백에는 없다 · NH-12). */
+  culturalHeritageHouseId?: string;
   /** ④⑬ 엔진 입력 `ruralHouse` — 미해당이면 `undefined`(키 자체 미전송). */
   ruralHouse?: RuralHousePayload;
   /**
@@ -123,6 +130,28 @@ export interface DerivedOneHouseRowFacts {
   fromLegacyOnly: boolean;
 }
 
+/**
+ * 같은 특례(⑥⑦⑧)로 표시된 행이 여럿일 때 **이미 주택 수에서 빠진 행**(조특법 §99의4 등 · §155②③ 상속주택)보다 빠지지 않은 행을 먼저 싣는다 —
+ * 한 주택은 한 번만 반영하므로 빠진 행은 특례 상대방이 될 수 없고, 앞 행이 빠졌다고 뒤의 적법한 행이 엔진에 닿지 않으면 행 순서가
+ * 결론을 가른다(NH-12 · N12-10). 호출부가 `exemptionCountExcludedHouseIds(form)`를 넘긴다(모듈 순환 때문에 여기서 구하지 않는다).
+ *
+ * 🔑 빠지지 않은 행이 **없으면 첫 행을 그대로 싣는다** — 가부는 엔진이 행 id 로 대조해 정한다(`declaredRowAlreadyExcluded`). 어느 행이
+ *    빠지는지는 입장에 따라 달라질 수 있어(판정 메뉴 양론 재판정 — 상속주택 지위를 뒤집은 입장에서는 그 행이 빠지지 않는다) ④가 행을 미리
+ *    버리면 그 입장의 판정이 틀린다. 생략하면 거르지 않는다(종전 동작).
+ */
+type SkipIds = ReadonlySet<string> | undefined;
+function firstNotSkipped<T extends OneHouseFactRow>(rows: readonly T[], skipIds: SkipIds): T | undefined {
+  return rows.find((h) => !(h.id !== undefined && skipIds?.has(h.id) === true)) ?? rows[0];
+}
+
+/** 행 중 §155⑥1호 국가유산주택으로 표시된 **첫 행**(주택 수에서 빠지지 않은 행 우선). */
+export function findCulturalHeritageRow(
+  houses: readonly OneHouseFactRow[] | undefined,
+  skipIds?: SkipIds,
+): OneHouseFactRow | undefined {
+  return firstNotSkipped((houses ?? []).filter((h) => h.oneHouseCulturalHeritage === true), skipIds);
+}
+
 /** 행 중 §155⑥1호 국가유산주택으로 표시된 것이 있는가. */
 export function hasCulturalHeritageRow(
   houses: readonly OneHouseFactRow[] | undefined,
@@ -130,11 +159,15 @@ export function hasCulturalHeritageRow(
   return (houses ?? []).some((h) => h.oneHouseCulturalHeritage === true);
 }
 
-/** 행 중 §155⑦ 농어촌주택으로 표시된 **첫 행**. 법문이 「각각 1개씩」이라 하나만 쓴다. */
+/**
+ * 행 중 §155⑦ 농어촌주택으로 표시된 **첫 행** — 주택 수에서 빠지지 않은 행 우선. 법문이 「각각 1개씩」이라 하나만 쓴다.
+ * 앞 행이 이미 빠졌으면(예: ⑦ + 조특법 §99의4) 건너뛰고 뒤의 적법한 ⑦ 행을 싣는다(NH-12 · N12-10).
+ */
 export function findRuralHouseRow(
   houses: readonly OneHouseFactRow[] | undefined,
+  skipIds?: SkipIds,
 ): OneHouseFactRow | undefined {
-  return (houses ?? []).find((h) => h.oneHouseRuralHouse === true && !!h.ruralHouseKind);
+  return firstNotSkipped((houses ?? []).filter((h) => h.oneHouseRuralHouse === true && !!h.ruralHouseKind), skipIds);
 }
 
 /**
@@ -166,8 +199,9 @@ export function resolveRuralLocationQualified(row: OneHouseFactRow): boolean {
  */
 export function findUnavoidableOutsideCapitalRow(
   houses: readonly OneHouseFactRow[] | undefined,
+  skipIds?: SkipIds,
 ): OneHouseFactRow | undefined {
-  return (houses ?? []).find((h) => h.oneHouseUnavoidableOutsideCapital === true);
+  return firstNotSkipped((houses ?? []).filter((h) => h.oneHouseUnavoidableOutsideCapital === true), skipIds);
 }
 
 const num = (s: string | undefined) => parseFloat(s ?? "") || 0;
@@ -250,6 +284,7 @@ function toRuralPayload(row: OneHouseFactRow): RuralHousePayload | undefined {
   const kind = row.ruralHouseKind;
   if (!kind) return undefined;
   return {
+    ...(row.id ? { houseId: row.id } : {}),
     kind,
     isOutsideCapitalEupMyeon: resolveRuralLocationQualified(row),
     ...(kind === "inherited"
@@ -299,17 +334,21 @@ export function deriveOneHouseFactsFromHouses(
   allHouses: readonly OneHouseFactRow[] | undefined,
   legacy: OneHouseLegacyFacts = {},
   transferDate?: string,
+  /** 이미 주택 수에서 빠진 명부 행 id(`exemptionCountExcludedHouseIds`) — 같은 특례 행이 여럿이면 빠지지 않은 행을 먼저 싣는다(NH-12). 생략하면 거르지 않는다. */
+  skipIds?: SkipIds,
 ): DerivedOneHouseRowFacts {
   const houses = (allHouses ?? []).filter((h) => isOwnedAtTransfer(h.acquisitionDate, transferDate));
-  const rowHeritage = hasCulturalHeritageRow(houses);
+  const heritageRow = findCulturalHeritageRow(houses, skipIds);
+  const rowHeritage = heritageRow !== undefined;
   const legacyHeritage = legacy.culturalHeritageHouseSpecial === true;
 
-  const ruralRow = findRuralHouseRow(houses);
+  const ruralRow = findRuralHouseRow(houses, skipIds);
   const rowRural = ruralRow ? toRuralPayload(ruralRow) : undefined;
 
-  const uocRow = findUnavoidableOutsideCapitalRow(houses);
+  const uocRow = findUnavoidableOutsideCapitalRow(houses, skipIds);
   const rowUoc: UnavoidableOutsideCapitalPayload | undefined = uocRow
     ? {
+        ...(uocRow.id ? { houseId: uocRow.id } : {}),
         reason: uocRow.unavoidableOutsideCapitalReason ?? "work",
         // 해소일 ↔ 「양도일 현재 미해소」 택일(#31) — 빈 값은 「모름」이라 어느 쪽도 싣지 않고 ⑧·⑫가 막는다.
         ...unavoidableOutsideCapitalStatusPayload({
@@ -327,6 +366,8 @@ export function deriveOneHouseFactsFromHouses(
 
   return {
     culturalHeritageHouse: rowHeritage || legacyHeritage,
+    // 행이 선언한 국가유산주택일 때만 id를 싣는다 — 레거시 폴백은 어느 행인지 몰라 대조하지 않는다(Q-3 현행 유지).
+    ...(heritageRow?.id ? { culturalHeritageHouseId: heritageRow.id } : {}),
     ruralHouse: rowRural ?? legacy.ruralHouse,
     unavoidableOutsideCapitalHouse: rowUoc ?? legacy.unavoidableOutsideCapitalHouse,
     fromLegacyOnly: !anyRow && anyLegacy,
