@@ -31,9 +31,12 @@ import { addYears } from "date-fns";
 import { NEW_99_3_ADDENDA_6762, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { LAND_ONLY_OWNER_CODE, landOnlyOwnerMessage } from "./new-99-land-only-owner";
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
+import { judgePriorLuxuryHouse, isPriorLuxuryStandardDate, type PriorLuxuryHouseFacts } from "./new-99-luxury-house";
+import { evaluateNew99AcquisitionGate, type New99AcquisitionCause } from "./new-99-acquisition-cause";
 import {
   PRIOR_ADVANCED_HOUSE_STANDARD_DATE,
   isHighValueHouseAtDate,
+  pre2016RuleNotice,
   resolveNew993Era,
   type ConstructionStartAnswer,
   type New993Era,
@@ -74,6 +77,14 @@ export interface New993Input {
   wholePropertyTransferPrice: number;
   /** 전용면적 (㎡) — 고가주택 면적 기준 (2002.12.31 이전) */
   exclusiveAreaSqm: number;
+  /** 종전 고급주택 기준의 단독주택 사실(주택 유형·연면적·딸린 토지·하한·시설) — 종전 규정 적용분만 읽는다 (NH-02) */
+  luxuryFacts?: Omit<PriorLuxuryHouseFacts, "exclusiveAreaSqm">;
+  /** 자산 취득 원인 — 상속·증여는 불성립 (NH-17 · NH-40) */
+  acquisitionCause?: New99AcquisitionCause;
+  /** (1호 · 매매) 주택건설업자와 최초로 매매계약을 체결하고 계약금을 납부한 사람이 본인인가 (NH-17) */
+  firstContract?: "yes" | "no" | "unknown";
+  /** 재개발 자산의 승계조합원(관리처분계획 인가일 뒤 승계) — 조특령 §99의3③2호·⑤ 불성립 (NH-16) */
+  isRedevSuccessorMember?: boolean;
   /** 지역 — 가격 급등 지역(speculation) 내/외 */
   region: "outside_speculation" | "speculation";
   /**
@@ -196,6 +207,8 @@ export interface New993Result {
   priorRuleBasis?: New993PriorRuleBasis;
   /** 부칙 §29② 요건(2003.1.1. 전 착공)이 확인되지 않아 개정규정을 적용했다 — 확인 필요 */
   needsConstructionStartConfirmation?: boolean;
+  /** 확인 필요 고지 — 「모름」을 불리하게 처리한 고급주택 판정·2015.12.31. 이전 양도 종전 규정(NH-49). 계산에는 쓰지 않는다. */
+  warnings?: string[];
 }
 
 /** §99의3 ②항 입력 (선택) — 호출자가 1세대1주택 비과세 판정 시 사용 */
@@ -296,7 +309,7 @@ export function isWithin5YearsCheck(acquisitionDate: Date, transferDate: Date): 
 // 헬퍼: 적용 배제 검증 (우선순위 순)
 // ============================================================================
 
-function checkIneligibility(input: New993Input, era: New993Era): New993IneligibleReason[] {
+function checkIneligibility(input: New993Input, era: New993Era, warnings: string[]): New993IneligibleReason[] {
   const reasons: New993IneligibleReason[] = [];
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.NEW_99_3;
 
@@ -323,6 +336,19 @@ function checkIneligibility(input: New993Input, era: New993Era): New993Ineligibl
       message: "본인이 주택건설사업자인 경우 §99의3이 적용되지 않습니다 (조문 본문 괄호)",
       legalBasis,
     });
+    return reasons;
+  }
+
+  // 2-1. 취득 원인 — 상속·증여(지분 포함)·분양권 승계·인가일 뒤 승계조합원은 불성립 (NH-17 · NH-40 · NH-16, 공용 leaf)
+  const causeGate = evaluateNew99AcquisitionGate({
+    article: "new_99_3",
+    acquisitionType: input.acquisitionType,
+    acquisitionCause: input.acquisitionCause,
+    firstContract: input.firstContract,
+    isRedevSuccessorMember: input.isRedevSuccessorMember,
+  });
+  if (causeGate) {
+    reasons.push(causeGate);
     return reasons;
   }
 
@@ -406,14 +432,21 @@ function checkIneligibility(input: New993Input, era: New993Era): New993Ineligibl
   );
   // 종전 규정 적용분 — §29① 계약·승인일 당시 고급주택 기준 / §29② 종전 고급주택 기준(재산세제과-96: 2002.12.31. 시행 소령 §156).
   // 개정규정 적용분 — 양도 당시 소득세법 §89①3호 고가주택(재산세과-3466). 기준일 축 6억을 양도 후 20년 넘게 끌고 가지 않는다 (NH-04).
+  // 종전 «고급주택» 시기는 당시 소득세법 시행령 §156의 공동·단독·시설 기준 전부 (NH-02).
+  const priorBase = era.priorRuleBasis === "addenda_29_2" ? PRIOR_ADVANCED_HOUSE_STANDARD_DATE : hvBaseDate;
+  const priorLuxury =
+    era.priorRuleBasis !== undefined && isPriorLuxuryStandardDate(priorBase)
+      ? judgePriorLuxuryHouse(priorBase, input.wholePropertyTransferPrice, {
+          ...input.luxuryFacts,
+          exclusiveAreaSqm: input.exclusiveAreaSqm,
+        })
+      : undefined;
+  if (priorLuxury) warnings.push(...priorLuxury.confirmations);
   const isHighValue =
     era.priorRuleBasis === undefined
       ? isHighValueHouseAtDate(input.transferDate, input.wholePropertyTransferPrice)
-      : isHighValueHouseUnder993(
-          era.priorRuleBasis === "addenda_29_2" ? PRIOR_ADVANCED_HOUSE_STANDARD_DATE : hvBaseDate,
-          input.wholePropertyTransferPrice,
-          input.exclusiveAreaSqm,
-        );
+      : (priorLuxury?.isLuxury ??
+        isHighValueHouseUnder993(priorBase, input.wholePropertyTransferPrice, input.exclusiveAreaSqm));
   if (isHighValue) {
     const basisLabel =
       era.priorRuleBasis === undefined
@@ -526,13 +559,15 @@ export function evaluateNew993(input: New993Input): New993Result {
     input.acquisitionType,
     input.constructionStartedBefore2003,
   );
-  const eraEcho = {
+  const eraEcho: Pick<New993Result, "priorRuleBasis" | "needsConstructionStartConfirmation" | "warnings"> = {
     priorRuleBasis: era.priorRuleBasis,
     needsConstructionStartConfirmation: era.needsConstructionStartConfirmation || undefined,
   };
 
   // STEP 1: 적용 배제 검증
-  const ineligibleReasons = checkIneligibility(input, era);
+  const gateWarnings: string[] = [];
+  const ineligibleReasons = checkIneligibility(input, era, gateWarnings);
+  if (gateWarnings.length > 0) eraEcho.warnings = gateWarnings;
   if (ineligibleReasons.length > 0) {
     return {
       isEligible: false,
@@ -549,6 +584,8 @@ export function evaluateNew993(input: New993Input): New993Result {
       ...eraEcho,
     };
   }
+
+  const pre2016Notice = pre2016RuleNotice(input.transferDate, "new_99_3");
 
   // STEP 2: 5년 내/후 판정
   const isWithin5Years = isWithin5YearsCheck(input.acquisitionDate, input.transferDate);
@@ -734,5 +771,7 @@ export function evaluateNew993(input: New993Input): New993Result {
     isExcludedFromHouseCountFor1H1H,
     legalBasis,
     ...eraEcho,
+    // 2015.12.31. 이전 양도 — 종전 규정 적용 대상 고지(계산 불변, NH-49 · 대통령령 제26959호 부칙 §35)
+    ...(pre2016Notice ? { warnings: [pre2016Notice] } : {}),
   };
 }

@@ -14,7 +14,8 @@
  * - 신축주택취득기간: 1998.5.22~1999.6.30 (국민주택은 ~1999.12.31 — 정의가 1호 괄호에 있으나
  *   "이하 이 조에서 같다"로 1·2호 공통)
  * - 고가주택(소법 §89①3호 비과세 제외 대상) 단서 배제 — 판정 기준일은 §99의3 선례
- *   (isHighValueHouseUnder993 — 기준일은 resolveNew99BaseDate가 취득유형으로 가른다. D-9·D3-09)
+ *   기준일(1998~1999)은 모두 종전 «고급주택» 시기다 — 기준일 당시 소득세법 시행령 §156(공동·단독·시설) 판정은
+ *   `judgePriorLuxuryHouse`(리뷰 NH-02·NH-15). 기준일은 resolveNew99BaseDate가 취득유형으로 가른다(D-9·D3-09).
  *
  * 재개발·재건축 변형 (령 §99①1호 단서·2호 괄호):
  * - 종전주택을 재개발·재건축하여 취득한 신축주택(법 §98의3② 각 호 유형)은
@@ -24,9 +25,11 @@
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { LAND_ONLY_OWNER_CODE, landOnlyOwnerMessage } from "./new-99-land-only-owner";
+import { judgePriorLuxuryHouse, type New99HouseType, type TriStateAnswer } from "./new-99-luxury-house";
+import { evaluateNew99AcquisitionGate, type New99AcquisitionCause } from "./new-99-acquisition-cause";
+import { pre2016RuleNotice } from "./new-99-3-era";
 import {
   calcSignedAllocation,
-  isHighValueHouseUnder993,
   resolveNew99BaseDate,
   isWithin5YearsCheck,
   type New993FormulaStep,
@@ -64,6 +67,20 @@ export interface New99Input {
   wholePropertyTransferPrice: number;
   /** 전용면적 (㎡) — 고가주택 면적 기준 (~2002.12.31 정의) */
   exclusiveAreaSqm?: number;
+  /** 주택 유형 — 고급주택 판정(소득세법 시행령 §156 1호 단독 / 2호 공동). 미입력은 공동주택 기준 (NH-02) */
+  houseType?: New99HouseType;
+  /** (단독) 연면적(㎡) */
+  grossFloorAreaSqm?: number;
+  /** (단독) 딸린 토지 면적(㎡) */
+  attachedLandAreaSqm?: number;
+  /** (단독) 취득세 시가표준액 2천만원(2001.1.1.부터 기준시가 4천만원) 이상 */
+  stdPriceFloorMet?: TriStateAnswer;
+  /** (단독) 엘리베이터·에스컬레이터·67㎡ 이상 수영장 중 1개 이상 설치 */
+  luxuryFacility?: TriStateAnswer;
+  /** 자산 취득 원인 — 상속·증여는 불성립 (NH-03 · NH-40) */
+  acquisitionCause?: New99AcquisitionCause;
+  /** (2호 · 매매) 주택건설업자와 최초로 매매계약을 체결하고 계약금을 납부한 사람이 본인인가 (NH-03) */
+  firstContract?: TriStateAnswer;
   /** 소유자 분리 — 토지만 본인 소유인가(true면 적용 배제). `New993Input.isLandOnlyOwner`와 같은 의미 (NH-08) */
   isLandOnlyOwner?: boolean;
   isResident?: boolean;
@@ -104,6 +121,10 @@ export type New99IneligibleCode =
   | "RECONTRACT_EXCLUDED"
   | typeof LAND_ONLY_OWNER_CODE
   | "HIGH_VALUE_HOUSE"
+  | "ACQUIRED_BY_INHERITANCE_OR_GIFT"
+  | "NOT_FIRST_CONTRACT"
+  | "FIRST_CONTRACT_UNCONFIRMED"
+  | "NOT_MEMBER_AT_APPROVAL"
   | "MISSING_STD_PRICE"
   | "MISSING_PREVIOUS_STD_PRICE"
   | "TRANSFER_BEFORE_ACQUISITION";
@@ -141,9 +162,11 @@ export interface New99Result {
   taxReductionForRuralSurtax: number;
   ruralSurtax: number;
   legalBasis: string;
+  /** 확인 필요 고지 — 「모름」을 불리하게 처리한 판정·2015.12.31. 이전 양도 종전 규정(NH-49) 등. 계산에는 쓰지 않는다. */
+  warnings?: string[];
 }
 
-function ineligible(reasons: New99IneligibleReason[]): New99Result {
+function ineligible(reasons: New99IneligibleReason[], warnings?: string[]): New99Result {
   return {
     id: "new_99",
     isEligible: false,
@@ -157,6 +180,7 @@ function ineligible(reasons: New99IneligibleReason[]): New99Result {
     taxReductionForRuralSurtax: 0,
     ruralSurtax: 0,
     legalBasis: TRANSFER_REDUCTION_ARTICLE.NEW_99,
+    ...(warnings && warnings.length > 0 ? { warnings } : {}),
   };
 }
 
@@ -185,6 +209,19 @@ export function evaluateNew99(input: New99Input): New99Result {
       message: "본인이 주택건설사업자인 경우 §99가 적용되지 않습니다 (법 ① 본문 괄호).",
       legalBasis,
     });
+    return ineligible(reasons);
+  }
+
+  // 1-2) 취득 원인 — 상속·증여(지분 포함)·분양권 승계 취득은 불성립 (NH-03 · NH-40 · 공용 leaf)
+  const acquisitionTypeForGate = input.acquisitionType ?? "from_builder";
+  const causeGate = evaluateNew99AcquisitionGate({
+    article: "new_99",
+    acquisitionType: acquisitionTypeForGate,
+    acquisitionCause: input.acquisitionCause,
+    firstContract: input.firstContract,
+  });
+  if (causeGate) {
+    reasons.push(causeGate);
     return ineligible(reasons);
   }
 
@@ -239,13 +276,22 @@ export function evaluateNew99(input: New99Input): New99Result {
     input.usageApprovalDate,
     input.acquisitionDate,
   );
-  if (isHighValueHouseUnder993(hvBaseDate, input.wholePropertyTransferPrice, input.exclusiveAreaSqm ?? 0)) {
+  // 기준일이 모두 2002.12.31. 이전(종전 «고급주택») — 당시 소득세법 시행령 §156 공동·단독·시설 기준 (NH-02 · NH-15).
+  const luxury = judgePriorLuxuryHouse(hvBaseDate, input.wholePropertyTransferPrice, {
+    houseType: input.houseType,
+    exclusiveAreaSqm: input.exclusiveAreaSqm ?? 0,
+    grossFloorAreaSqm: input.grossFloorAreaSqm,
+    attachedLandAreaSqm: input.attachedLandAreaSqm,
+    stdPriceFloorMet: input.stdPriceFloorMet,
+    luxuryFacility: input.luxuryFacility,
+  });
+  if (luxury.isLuxury) {
     reasons.push({
       code: "HIGH_VALUE_HOUSE",
-      message: `고가주택(소득세법 §89①3호 비과세 제외 대상)은 §99 ① 단서로 적용 배제됩니다 (적용기준일 ${hvBaseDate.toISOString().split("T")[0]} 기준).`,
+      message: `고급주택(기준일 ${hvBaseDate.toISOString().split("T")[0]} 당시 소득세법 시행령 §156)은 §99 ① 단서로 적용 배제됩니다.`,
       legalBasis,
     });
-    return ineligible(reasons);
+    return ineligible(reasons, luxury.confirmations);
   }
 
   // 5) 양도 시점 (§99의4·§98의9 선례)
@@ -339,5 +385,12 @@ export function evaluateNew99(input: New99Input): New99Result {
     taxReductionForRuralSurtax: 0,
     ruralSurtax: 0,
     legalBasis,
+    ...withPre2016Notice(input.transferDate),
   };
+}
+
+/** 2015.12.31. 이전 양도 — 종전 규정 적용 대상 고지(계산 불변, NH-49) */
+function withPre2016Notice(transferDate: Date): { warnings?: string[] } {
+  const notice = pre2016RuleNotice(transferDate, "new_99");
+  return notice ? { warnings: [notice] } : {};
 }

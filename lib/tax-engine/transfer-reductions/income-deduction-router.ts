@@ -140,6 +140,13 @@ export interface IncomeDeductionContext {
    * 차감(STEP 4.6)과 중과 배제 선판정(STEP 0.45)이 같은 값을 넘겨야 «감면은 안 되는데 중과만 배제»되는 어긋남이 없다.
    */
   selfOwns?: "both" | "building_only" | "land_only";
+  /**
+   * 자산 취득 원인 — §99·§99의3은 상속·증여(지분 포함)로 받은 주택에 적용되지 않는다 (NH-03 · NH-17 · NH-40).
+   * 미전달이면 매매로 본다(최초 계약 여부 3-state가 판정한다).
+   */
+  acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
+  /** 재개발 자산의 승계조합원(관리처분계획 인가일 뒤 입주권 승계) — §99의3 불성립(조특령 §99의3③2호·⑤, NH-16) */
+  isRedevSuccessorMember?: boolean;
   standardPriceAtTransfer?: number;
   /** 양도소득금액 (양도차익 − 장특공제). 중과 배제 선판정 시 0 전달 가능 (적격 판정에 무관) */
   transferIncome: number;
@@ -274,6 +281,16 @@ function evalNew993(
       acquisitionType: (r993.acquisitionType993 as "from_builder" | "self_built" | undefined) ?? "from_builder",
       hasOccupancyAtContract: r993.hasOccupancyAtContract as boolean | undefined,
       constructionStartedBefore2003: r993.constructionStartedBefore2003_993 as "yes" | "no" | "unknown" | undefined,
+      luxuryFacts: {
+        houseType: r993.houseType993 as "apartment" | "detached" | undefined,
+        grossFloorAreaSqm: r993.grossFloorAreaSqm993 as number | undefined,
+        attachedLandAreaSqm: r993.attachedLandAreaSqm993 as number | undefined,
+        stdPriceFloorMet: r993.stdPriceFloorMet993 as "yes" | "no" | "unknown" | undefined,
+        luxuryFacility: r993.luxuryFacility993 as "yes" | "no" | "unknown" | undefined,
+      },
+      acquisitionCause: ctx.acquisitionCause,
+      firstContract: r993.firstContract993 as "yes" | "no" | "unknown" | undefined,
+      isRedevSuccessorMember: ctx.isRedevSuccessorMember,
       // 농특세는 finalize에서 2-pass 재계산 (placeholder 0)
       calculatedTaxBeforeReduction: 0,
       calculatedTaxAfterReduction: 0,
@@ -305,6 +322,13 @@ function evalNew99(
       wholePropertyTransferPrice: resolveHighValuePriceCheck(ctx),
       isLandOnlyOwner: ctx.selfOwns === "land_only",
       exclusiveAreaSqm: r99.exclusiveAreaSqm99 as number | undefined,
+      houseType: r99.houseType99 as "apartment" | "detached" | undefined,
+      grossFloorAreaSqm: r99.grossFloorAreaSqm99 as number | undefined,
+      attachedLandAreaSqm: r99.attachedLandAreaSqm99 as number | undefined,
+      stdPriceFloorMet: r99.stdPriceFloorMet99 as "yes" | "no" | "unknown" | undefined,
+      luxuryFacility: r99.luxuryFacility99 as "yes" | "no" | "unknown" | undefined,
+      acquisitionCause: ctx.acquisitionCause,
+      firstContract: r99.firstContract99 as "yes" | "no" | "unknown" | undefined,
       isResident: (r99.isResident99 as boolean | undefined) ?? true,
       isHousingConstructionBusiness: (r99.isHousingConstructionBusiness99 as boolean | undefined) ?? false,
       acquisitionType: (r99.acquisitionType99 as "from_builder" | "self_built" | undefined) ?? "from_builder",
