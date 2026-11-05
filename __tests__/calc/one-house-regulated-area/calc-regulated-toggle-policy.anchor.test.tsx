@@ -43,7 +43,7 @@ const GANGNAM = "1168010100"; // 취득(2018)·양도(2021) 모두 조정대상�
 const YANGPYEONG = "4183010100"; // 경기 양평군 — 2018·2021 모두 미지정(수록 시도 내 미매칭 = high)
 const JEJU = "5011010100"; // 데이터 미수록 — 신뢰도 낮음
 
-function cform(over: { regionCode?: string; acq?: string; transfer?: string; storedTransfer?: boolean; storedAcq?: boolean; houseCount?: string }): TransferFormData {
+function cform(over: { regionCode?: string; acq?: string; transfer?: string; storedTransfer?: boolean; storedAcq?: boolean; houseCount?: string; touched?: boolean }): TransferFormData {
   const f = createDefaultTransferFormData();
   Object.assign(f, {
     transferDate: over.transfer ?? "2021-06-01",
@@ -53,6 +53,8 @@ function cform(over: { regionCode?: string; acq?: string; transfer?: string; sto
     householdNoOtherHousesConfirmed: over.houseCount === undefined,
     isRegulatedArea: over.storedTransfer ?? false,
     wasRegulatedAtAcquisition: over.storedAcq ?? false,
+    // 코드가 없으면 Step4에 토글이 보인다 — 사용자가 직접 고른 값(만짐 표지). 안 만졌으면 주소 문자열 판정이 이긴다(Step4 훅·④ 같은 leaf).
+    ...(over.touched ? { isRegulatedAreaTouched: true, wasRegulatedAtAcquisitionTouched: true } : {}),
   });
   Object.assign(f.assets[0], {
     assetKind: "housing",
@@ -148,10 +150,10 @@ describe("#5 하위 1 가 — ④가 주소 판정값을 싣는다", () => {
     expect(body.wasRegulatedAtAcquisition).toBe(false);
   });
 
-  it("긍정 짝 — 코드가 없으면 저장 토글을 그대로 싣는다", async () => {
-    const on = await captureBody(cform({ storedTransfer: true, storedAcq: true }));
+  it("긍정 짝 — 코드가 없으면 직접 고른 토글을 그대로 싣는다", async () => {
+    const on = await captureBody(cform({ storedTransfer: true, storedAcq: true, touched: true }));
     expect([on.isRegulatedArea, on.wasRegulatedAtAcquisition]).toEqual([true, true]);
-    const off = await captureBody(cform({ storedTransfer: false, storedAcq: false }));
+    const off = await captureBody(cform({ storedTransfer: false, storedAcq: false, touched: true }));
     expect([off.isRegulatedArea, off.wasRegulatedAtAcquisition]).toEqual([false, false]);
   });
 

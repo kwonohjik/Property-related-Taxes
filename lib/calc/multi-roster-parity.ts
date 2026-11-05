@@ -14,6 +14,7 @@
  */
 import { housesOwnedAtTransfer, resolveHouseholdHousingCount } from "@/lib/calc/household-house-count";
 import { sameDayOrderMayDecide } from "@/lib/calc/same-day-transfer-order";
+import { calcEffectiveIsRegulatedAtTransfer } from "@/lib/calc/effective-regulated-at-acquisition";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
@@ -159,7 +160,8 @@ export function collectMultiRosterIssues(properties: readonly PropertyItem[]): M
     const ones = group.filter((_, i) => counts[i] === 1);
     if (ones.length >= 2) {
       // 같은 날 양도하는 주택이 둘 이상인데 각 건이 모두 「세대 주택 1채」로 계산된다 — 어느 순서로도 둘 다 1주택일 수는 없다.
-      if (ones.some((v) => sameDayOrderMayDecide(v.item.form))) {
+      // 조정대상지역은 ④와 같은 실효값(Step4를 건너뛴 주소 문자열 입력 포함) — 저장 토글만 보면 차단이 빠진다.
+      if (ones.some((v) => sameDayOrderMayDecide({ isOneHousehold: v.item.form.isOneHousehold, isRegulatedArea: calcEffectiveIsRegulatedAtTransfer(v.item.form) }))) {
         const names = ones.map(label).join("·");
         for (const v of ones) {
           issues.push({

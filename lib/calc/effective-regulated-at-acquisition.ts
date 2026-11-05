@@ -13,6 +13,7 @@
  * 이 함수는 **읽기 쪽**만 맞춘다 — 주소가 있을 때 토글을 숨기거나 읽기 전용으로 바꾸는 정책은 별개다.
  */
 import { format } from "date-fns";
+import { z } from "zod";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import {
   buildGiftHouseholdPayload,
@@ -33,6 +34,8 @@ import { carryoverGiftHouseholdBasis, type GiftHouseholdBasis } from "@/lib/tax-
 import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house/same-household-inheritance-start";
 import { resolveIsRegulatedAtTransfer } from "@/lib/tax-engine/transfer-tax-temporary-two-house-timing";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
+import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { judgeRegulatedArea } from "@/lib/regulated-area";
 
 export function effectiveWasRegulatedAtAcquisition(o: {
   /** 법정동코드(PNU 앞 10자리). 없으면 저장값 */
@@ -201,16 +204,75 @@ export function effectiveIsRegulatedAtTransfer(o: {
   });
 }
 
+/** `calcStoredRegulatedFlags`가 읽는 폼 조각 — 두 숨은 토글과 「직접 만짐」 표지. */
+export type RegulatedFlagsForm = Pick<
+  TransferFormData,
+  "assets" | "transferDate" | "isRegulatedArea" | "wasRegulatedAtAcquisition" | "isRegulatedAreaTouched" | "wasRegulatedAtAcquisitionTouched"
+>;
+
+/** route 스키마(`/api/address/regulated-area`)와 같은 날짜 검사 — 어긋나면 route가 400을 내고 Step4 훅은 아무것도 쓰지 않는다. */
+const ymd = z.string().date();
+
+/**
+ * 「조정대상지역」 두 숨은 토글의 **Step4를 거친 값** — Step4 `useRegulatedAreaAutoTip`이 토글에 써 넣었을 값을 동기로 낸다.
+ *
+ * 법정동코드가 없고 주소 문자열만 있으면 조정대상지역 판정은 Step4 「보유 상황」이 마운트될 때 도는 그 훅만 했다. 단계 탭은 자유 이동이라
+ * Step4를 건너뛰고 계산하면 기본값(아님)이 ④에 가서 거주요건(소득세법 시행령 §154①)·중과(소득세법 §104⑦)가 빠졌다
+ * (계획서 `docs/00-pm/regulated-area-skip-step4-sync-judgment.plan.md` §1 — 1주택 0 ↔ 237,435,000).
+ *
+ * 훅과 **같은 조건·같은 판정 함수**(`judgeRegulatedArea` — route와 공용)다. 저장값을 바꾸지 않고 읽는 쪽이 파생한다(useEffect → store 미러링 금지).
+ * - 주 자산이 주택 계열(`isHousingLike`)이고 주소 또는 법정동코드, 양도일이 있을 때만 판정한다. 아니면 저장값이다(훅도 쓰지 않는다).
+ * - 사용자가 직접 만진 토글(`*Touched`)은 저장값이다. 단 §154① 판정 대상이 아닌 자산(입주권·분양권)은 Step4가 마운트 때 만짐 표지를
+ *   지우므로(`Step4.tsx` 자산 종류 리셋 effect) 훅이 판정값을 쓴다 — 여기서도 표지를 보지 않는다.
+ * - 취득 당시 기준일은 훅에 넘기는 `residenceJudgmentDate`와 같은 leaf(`calcResidenceJudgmentDate`)다. 없으면 route처럼 「아님」이다.
+ * - 판정 신뢰도(medium·low)는 보지 않는다 — 훅도 신뢰도와 무관하게 쓴다(계획서 Q-3 a).
+ */
+export function calcStoredRegulatedFlags(form: RegulatedFlagsForm): { isRegulatedArea: boolean; wasRegulatedAtAcquisition: boolean } {
+  const stored = {
+    isRegulatedArea: form.isRegulatedArea === true,
+    wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition === true,
+  };
+  const primary = form.assets?.[0];
+  if (!primary || !isHousingLike(primary.assetKind)) return stored;
+  const address = primary.addressRoad || primary.addressJibun || "";
+  const regionCode = primary.regionCode || "";
+  if (!address && !regionCode) return stored;
+  const acquisitionDate = calcResidenceJudgmentDate(primary) || "";
+  if (
+    !ymd.safeParse(form.transferDate).success ||
+    (acquisitionDate && !ymd.safeParse(acquisitionDate).success) ||
+    (address && address.length < 2) ||
+    (regionCode && regionCode.length < 2)
+  ) {
+    return stored;
+  }
+  const loc = {
+    address: address || undefined,
+    regionCode: regionCode || undefined,
+    inDistrict: regionCode ? primary.regionInDesignatedDistrict : undefined,
+  };
+  const respectTouched = isOneHouseExemptionAsset(primary.assetKind);
+  return {
+    isRegulatedArea:
+      respectTouched && form.isRegulatedAreaTouched ? stored.isRegulatedArea : judgeRegulatedArea(loc, form.transferDate).isRegulated,
+    wasRegulatedAtAcquisition:
+      respectTouched && form.wasRegulatedAtAcquisitionTouched
+        ? stored.wasRegulatedAtAcquisition
+        : acquisitionDate
+          ? judgeRegulatedArea(loc, acquisitionDate).isRegulated
+          : false,
+  };
+}
+
 /** 양도세 계산기 폼에서 위 실효값을 낸다 — ④와 같은 코드 폴백(`primary.regionCode || form.regionCode`)·지구 선언 규약. */
-export function calcEffectiveIsRegulatedAtTransfer(
-  form: Pick<TransferFormData, "assets" | "regionCode" | "transferDate" | "isRegulatedArea">,
-): boolean {
+export function calcEffectiveIsRegulatedAtTransfer(form: RegulatedFlagsForm & Pick<TransferFormData, "regionCode">): boolean {
   const primary = form.assets?.[0];
   return effectiveIsRegulatedAtTransfer({
     regionCode: primary?.regionCode || form.regionCode || undefined,
     regionInDesignatedDistrict: primary?.regionCode ? primary.regionInDesignatedDistrict : undefined,
     transferDate: form.transferDate,
-    stored: form.isRegulatedArea,
+    // 코드가 없을 때 쓰는 저장값 — Step4를 거쳤을 값(주소 문자열 판정 포함)이다.
+    stored: calcStoredRegulatedFlags(form).isRegulatedArea,
   });
 }
 

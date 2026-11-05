@@ -12,12 +12,13 @@ import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { validateMultiSupportedMode } from "@/lib/calc/multi-transfer-tax-validate";
 import { sameDayOrderMayDecide } from "@/lib/calc/same-day-transfer-order";
+import { calcEffectiveIsRegulatedAtTransfer, type RegulatedFlagsForm } from "@/lib/calc/effective-regulated-at-acquisition";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 /** 차단 사유 + 사유를 붙일 자산 인덱스(첫 번째 컴패니언 주택). 해당 없으면 null. */
 export function sameDayHousingBundleIssue(
-  form: Pick<TransferFormData, "assets" | "isOneHousehold" | "isRegulatedArea" | "assetSplitMode">,
+  form: Pick<TransferFormData, "assets" | "isOneHousehold" | "assetSplitMode" | "regionCode"> & RegulatedFlagsForm,
 ): { message: string; assetIndex: number } | null {
   const assets = form.assets ?? [];
   if (assets.length < 2 || isFullFractionalBundle(assets, form.assetSplitMode)) return null;
@@ -25,7 +26,8 @@ export function sameDayHousingBundleIssue(
     .map((asset, index) => ({ asset, index }))
     .filter(({ asset }) => isOneHouseExemptionAsset(asset.assetKind));
   if (housing.length < 2) return null;
-  if (!sameDayOrderMayDecide(form)) return null;
+  // 조정대상지역은 ④와 같은 실효값 — 저장 토글만 보면 Step4를 건너뛴 주소 문자열 입력에서 차단이 빠진다.
+  if (!sameDayOrderMayDecide({ isOneHousehold: form.isOneHousehold, isRegulatedArea: calcEffectiveIsRegulatedAtTransfer(form) })) return null;
 
   // 다건(연간 합산)이 받는 자산이면 「다건의 별도 양도 건」으로, 막는 자산(재개발 아파트·겸용주택·부담부증여·이월과세 등)이 섞이면 주택별 단건 + 칩으로 보낸다.
   const multiCan = (asset: AssetForm) =>

@@ -29,7 +29,8 @@ type L = Record<string, any>; // eslint-disable-line @typescript-eslint/no-expli
 
 const HOUSE_PRIMARY = { assetKind: "housing", addressJibun: "서울 강남구 테스트동 1", residenceInputMode: "direct", residencePeriodMonthsAsset: "60", buildingFootprintArea: "100", appurtenantLandZone: "metropolitan_residential", isUrbanArea: true };
 const ONE = { isOneHousehold: true, householdHousingCount: "1", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, residencePeriodMonths: "60" };
-const REG = { ...ONE, isRegulatedArea: true, wasRegulatedAtAcquisition: true };
+// 시료 주소(「서울 강남구 테스트동」 — 시·도 약칭)는 주소 문자열 판정이 「미수록」이다 — 직접 고른 토글(만짐 표지)로 둔다.
+const REG = { ...ONE, isRegulatedArea: true, wasRegulatedAtAcquisition: true, isRegulatedAreaTouched: true, wasRegulatedAtAcquisitionTouched: true };
 const PURCHASE = { acquisitionCause: "purchase", fixedAcquisitionPrice: "300000000", standardPriceAtTransfer: "500000000" };
 const D2015 = "2015-03-03";
 const D2018 = "2018-03-03";

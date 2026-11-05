@@ -3,7 +3,11 @@
  * MultiTransferFormData → POST /api/calc/transfer/multi → AggregateTransferResult
  */
 
-import { calcEffectiveIsRegulatedAtTransfer, calcEffectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
+import {
+  calcEffectiveIsRegulatedAtTransfer,
+  calcEffectiveWasRegulatedAtAcquisition,
+  calcStoredRegulatedFlags,
+} from "@/lib/calc/effective-regulated-at-acquisition";
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { sellingHouseStdPricePayload } from "@/lib/calc/selling-std-price-scope";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
@@ -353,7 +357,7 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     // 결정 #5(G7-6) 하위 1 — 단건(`transfer-tax-api.ts`)과 같은 leaf: 주소가 있으면 저장된 토글 대신 주소 판정값.
     isRegulatedArea: calcEffectiveIsRegulatedAtTransfer(form),
     wasRegulatedAtAcquisition: primary
-      ? calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, form.regionCode)
+      ? calcEffectiveWasRegulatedAtAcquisition(primary, calcStoredRegulatedFlags(form).wasRegulatedAtAcquisition, form.regionCode)
       : form.wasRegulatedAtAcquisition,
     // §104①4호 단서(영 §167의6 1·2호) — presale_right 전용. 단건(`transfer-tax-api.ts`)과 같은 게이트.
     presaleRightNoOtherRight:

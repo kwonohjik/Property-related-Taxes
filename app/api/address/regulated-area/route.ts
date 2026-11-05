@@ -17,11 +17,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  checkRegulatedArea,
-  checkRegulatedAreaByCode,
-  type RegulatedAreaResult,
-} from "@/lib/regulated-area";
+import { judgeRegulatedArea, type RegulatedAreaResult } from "@/lib/regulated-area";
 
 const schema = z
   .object({
@@ -52,8 +48,7 @@ export async function POST(request: NextRequest) {
   const { address, regionCode, transferDate, acquisitionDate, inDistrict } = parsed.data;
 
   // regionCode(법정동코드) 우선 → 동 단위 정밀, 없으면 주소 문자열 fallback
-  const judge = (date: string): RegulatedAreaResult =>
-    regionCode ? checkRegulatedAreaByCode(regionCode, date, inDistrict) : checkRegulatedArea(address!, date);
+  const judge = (date: string): RegulatedAreaResult => judgeRegulatedArea({ address, regionCode, inDistrict }, date);
 
   const transfer = judge(transferDate);
   const acquisition = acquisitionDate ? judge(acquisitionDate) : null;

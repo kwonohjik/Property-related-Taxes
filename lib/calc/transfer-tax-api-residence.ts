@@ -19,7 +19,11 @@ import { unconfirmedTempTwoHouseProviso4ho, unconfirmedTempTwoHouseProviso5 } fr
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
-import { calcEffectiveWasRegulatedAtAcquisition, calcGiftHouseholdBasis } from "./effective-regulated-at-acquisition";
+import {
+  calcEffectiveWasRegulatedAtAcquisition,
+  calcGiftHouseholdBasis,
+  calcStoredRegulatedFlags,
+} from "./effective-regulated-at-acquisition";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
@@ -111,7 +115,7 @@ export function buildResidenceReqInput(
     regionInDesignatedDistrict: primary?.regionCode ? primary.regionInDesignatedDistrict : undefined,
     // 결정 #5(G7-6) — 주소가 있으면 주소 판정값(④와 같은 leaf). 이 빌더는 Step4 안내가 엔진과 같은 값을 보게 한다.
     wasRegulatedAtAcquisition: primary
-      ? calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, form.regionCode, giftScope)
+      ? calcEffectiveWasRegulatedAtAcquisition(primary, calcStoredRegulatedFlags(form).wasRegulatedAtAcquisition, form.regionCode, giftScope)
       : form.wasRegulatedAtAcquisition,
     // 결정 #38-10 — 증여받은 주택의 세대 사실. 엔진(④)이 실어 보내는 것과 같은 basis라야 Step4 거주요건 안내가 엔진과 같은 「취득 당시」를 읽는다.
     giftHouseholdBasis: primary ? calcGiftHouseholdBasis(primary, giftScope) : undefined,
