@@ -334,7 +334,8 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
     // 25종 — 2026-08-05 §95⑤ 용도변경 echo(`usageConversionDetail`) 추가. 감면은 아니지만
     // LTHD가 낳는 echo라 `rental97LthdDetail`과 같은 계약에 실린다.
     // 26종 — 2026-09-30 §99의4·§98의9 선언 전건(`houseCountExclusionDetails`, 계산기 계획서 Q-6).
-    ["감면·LTHD echo 26종", "TransferReductionDetailSource", "pickReductionDetails", 26],
+    // 25종 — 2026-11-05 레거시 장기임대 결과(`rentalReductionDetail`) 삭제(§155⑳ 리뷰 V-6 후속).
+    ["감면·LTHD echo 25종", "TransferReductionDetailSource", "pickReductionDetails", 25],
     // 14종 — 2026-10-16 비사업용 토지 중과배제 사유 echo(`nblSurchargeExcludedBy`, 양도일 유예 A3). `nblSurchargeExcluded`와 같은 계약에 실린다.
     // 15종 — 2026-10-23 일체 주택 본인 신축 §114조의2 건물분 base echo(`selfBuiltHousingPenalty`, Q-12 PR-1).
     // 16종 — 2026-11-01 의제취득일 전 매수 영 §176조의2④ 비교 내역(`preDeemedPurchaseDetail`, realestate-pre-deemed-purchase PR-2).

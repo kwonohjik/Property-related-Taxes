@@ -402,10 +402,8 @@ export function calculateRedevelopmentTax(
     reductionAmount,
     reductionType,
     reductionTypeApplied,
-    reductionLegalBasisOverride,
     reducibleIncome,
     aggregateReductionRate,
-    rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
     gbDesignatedLandDetail,
@@ -417,8 +415,6 @@ export function calculateRedevelopmentTax(
     taxResult.calculatedTax,
     input.reductions,
     parsedRates.selfFarmingRules,
-    input.rentalReductionDetails,
-    parsedRates.longTermRentalRules,
     input.newHousingDetails,
     parsedRates.newHousingMatrix,
     input.transferDate,
@@ -443,7 +439,6 @@ export function calculateRedevelopmentTax(
     legalBasis: getReductionLegalBasis(
       reductionTypeApplied,
       publicExpropriationDetail?.useLegacyRates,
-      reductionLegalBasisOverride,
     ),
   });
 
@@ -706,7 +701,6 @@ export function calculateRedevelopmentTax(
     reductionTypeApplied,
     reducibleIncome,
     aggregateReductionRate,
-    rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
     gbDesignatedLandDetail,

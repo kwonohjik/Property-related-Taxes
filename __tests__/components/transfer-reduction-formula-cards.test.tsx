@@ -143,30 +143,7 @@ describe("D-9 §97의3·§97의4 — 장기보유특별공제 특례 산출근�
   });
 });
 
-describe("D-10 §97 구 방식 — 감면세액 산출근거", () => {
-  it("「산출세액 × 감면율」에 값이 대입된다", () => {
-    renderCards({
-      rentalReductionDetail: {
-        isEligible: true,
-        ineligibleReasons: [],
-        reductionType: "public_construction",
-        applicableLawVersion: "pre_2018_09_14",
-        mandatoryPeriodYears: 5,
-        effectiveRentalYears: 7,
-        reductionRate: 0.5,
-        reductionAmount: 5_000_000,
-        specialLongTermDeductionRate: 0,
-        isLimitApplied: false,
-        annualLimit: 100_000_000,
-        rentIncreaseValidation: { isAllValid: true, violations: [] },
-        warnings: [],
-      },
-    });
-    expect(screen.getByText("감면세액 산출근거")).toBeTruthy();
-    expect(bodyText()).toContain("감면세액 = 산출세액 × 감면율");
-    expect(bodyText()).toContain("10,000,000 × 50% = 5,000,000");
-  });
-});
+// D-10(§97 구 방식 카드 `RentalReductionDetailCard`)은 레거시 입력·카드 삭제로 지웠다(§155⑳ 리뷰 V-6 후속).
 
 describe("D-11 §99 구 방식 — 일수 안분 산출근거", () => {
   const base = {

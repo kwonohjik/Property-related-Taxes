@@ -482,24 +482,6 @@ export async function POST(request: NextRequest) {
             ...(p.parentalCareMerge.parentAge ? { parentAge: p.parentalCareMerge.parentAge } : {}),
           }
         : undefined,
-      rentalReductionDetails: p.rentalReductionDetails
-        ? {
-            ...p.rentalReductionDetails,
-            registrationDate: toDate(p.rentalReductionDetails.registrationDate, "rentalReductionDetails.registrationDate"),
-            rentalStartDate: toDate(p.rentalReductionDetails.rentalStartDate, "rentalReductionDetails.rentalStartDate"),
-            transferDate: toDate(p.rentalReductionDetails.transferDate, "rentalReductionDetails.transferDate"),
-            vacancyPeriods: p.rentalReductionDetails.vacancyPeriods.map((v) => ({
-              startDate: toDate(v.startDate, "vacancyPeriods.startDate"),
-              endDate: toDate(v.endDate, "vacancyPeriods.endDate"),
-            })),
-            rentHistory: p.rentalReductionDetails.rentHistory.map((r) => ({
-              contractDate: toDate(r.contractDate, "rentHistory.contractDate"),
-              monthlyRent: r.monthlyRent,
-              deposit: r.deposit,
-              contractType: r.contractType,
-            })),
-          }
-        : undefined,
       newHousingDetails: p.newHousingDetails
         ? {
             ...p.newHousingDetails,

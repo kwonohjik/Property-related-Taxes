@@ -86,8 +86,6 @@ export function applyRentalHousingReductions(args: {
     calculatedTax,
     taxCreditReductions,
     parsedRates.selfFarmingRules,
-    effectiveInput.rentalReductionDetails,
-    parsedRates.longTermRentalRules,
     // 신축주택(§99·§99의3)은 차감형이라 여기 넘기지 않는다 — 위 축 분리와 일관.
     undefined,
     parsedRates.newHousingMatrix,
@@ -131,7 +129,6 @@ export function applyRentalHousingReductions(args: {
       legalBasis: getReductionLegalBasis(
         reductionResult.reductionTypeApplied,
         reductionResult.publicExpropriationDetail?.useLegacyRates,
-        reductionResult.reductionLegalBasisOverride,
       ),
     });
   }
