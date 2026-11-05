@@ -205,6 +205,7 @@ export const ARTICLE_89_2_FACT_KEYS = [
   "mergedHouseholdFirstHouse",
   "isFirstTransferredInMerge",
   "culturalHeritageHouse",
+  "culturalHeritageHouseId",
   "houses",
   "sellingHouseId",
 ] as const satisfies readonly (keyof Article89Clause2Input)[];

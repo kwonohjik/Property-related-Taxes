@@ -135,7 +135,8 @@ describe("⑤ §155⑥1호 문화유산 주택 — **명부 행**에 선언 칸�
     // 같은 술어 `qualifiesCulturalHeritageHouse`를 부르고, 그 술어가 2주택 게이트 + 선언을 잇는다. 그 술어가 2주택을 요구하는지도 고정한다.
     expect(src).toMatch(/qualifiesCulturalHeritageHouse\(input\)\s*&&\s*meetsOneHouseHoldingResidence\(input, rule\)/);
     const holding = readFileSync("lib/tax-engine/transfer-tax-exemption-holding.ts", "utf8");
-    expect(holding).toMatch(/return twoHouseSpecialCountHolds\(input\) && input\.culturalHeritageHouse === true;/);
+    // NH-12 — 선언 행이 이미 주택 수에서 빠졌으면(`declaredRowAlreadyExcluded`) 특례 상대방으로 쓰지 않는 대조가 같은 술어 안에 더해졌다.
+    expect(holding).toMatch(/twoHouseSpecialCountHolds\(input\) &&\s*input\.culturalHeritageHouse === true &&\s*!declaredRowAlreadyExcluded\(input, input\.culturalHeritageHouseId\)/);
     expect(holding).toMatch(/return input\.householdHousingCount === 2 && !inheritedBothPoolsExcluded\(input\);/);
   });
 

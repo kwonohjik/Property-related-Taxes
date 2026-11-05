@@ -137,7 +137,7 @@ describe("§155⑧ 행 한 채 — 양도일 현재 보유 행만 (PR #2163 후�
     expect(s.status).toBe(200);
     expect(s.totalTax).toBe((await single(form([A]))).totalTax);
     expect((s.body.houses as Obj[]).filter((h) => h.isUnavoidableOutsideCapital === true).map((h) => h.id)).toEqual(["ha"]);
-    expect(s.body.unavoidableOutsideCapitalHouse).toEqual({ reason: "work", resolvedDate: "2025-06-01" });
+    expect(s.body.unavoidableOutsideCapitalHouse).toEqual({ houseId: "ha", reason: "work", resolvedDate: "2025-06-01" }); // NH-12 — 선언 행 id 포함
   });
 
   it("O3 부정 짝 — 양도일 현재 보유 2행 중복이면 그대로 차단 · ⑫ 400", async () => {

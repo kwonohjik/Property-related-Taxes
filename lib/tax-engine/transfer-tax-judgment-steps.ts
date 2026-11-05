@@ -127,7 +127,8 @@ export function resolveSurchargeDeemedOneHouseDetail(
    * 비과세가 종전 동작(적용)을 유지하고 경고하지만, 중과 배제까지 그 가정에 기대지 않는다(확인 필요 — 종전 동작).
    */
   const clause2 = resolveArticle89Clause2(
-    { ...judgedInput, householdHousingCount: count },
+    // 주택 수에서 이미 빠진 행은 §89② 단서의 특수주택(이농주택·국가유산주택)으로 다시 쓰지 않는다 — 비과세와 같은 대조(NH-12 · V-14).
+    { ...judgedInput, householdHousingCount: count, knownHouseExclusionHouseIds: ex.knownHouseExclusionHouseIds },
     presaleRightStartDate(parsedRates),
   );
   if (clause2BlocksSurchargeDeeming(clause2)) return undefined;
@@ -167,7 +168,9 @@ export function resolveSurchargeDeemedOneHouseDetail(
     specialActExcludedCount: ex.specialActExcludedCount,
     transferDate: workingInput.transferDate,
     culturalHeritageHouse: workingInput.culturalHeritageHouse,
+    culturalHeritageHouseId: workingInput.culturalHeritageHouseId,
     unavoidableOutsideCapitalHouse: workingInput.unavoidableOutsideCapitalHouse,
+    knownHouseExclusionHouseIds: ex.knownHouseExclusionHouseIds,
   });
   if (culturalOrUnavoidable) {
     return { basis: culturalOrUnavoidable, ...(restsOnInherited ? { restsOnInheritedExclusion: true } : {}) };
@@ -400,7 +403,13 @@ export function surchargeSlotInput(workingInput: TransferTaxInput, generalHouseA
     ex.specialActVerified15Count,
   );
   if (count === workingInput.householdHousingCount) return workingInput;
-  return { ...workingInput, householdHousingCount: count, inheritedHouseExclusionCount: inheritedExcluded };
+  return {
+    ...workingInput,
+    householdHousingCount: count,
+    inheritedHouseExclusionCount: inheritedExcluded,
+    // 이미 주택 수에서 빠진 행을 ⑧ 특례 상대방으로 다시 쓰지 않는다(NH-12).
+    knownHouseExclusionHouseIds: ex.knownHouseExclusionHouseIds,
+  };
 }
 
 /** STEP 0.5가 판정에 쓰는 주택 집합 — 다주택 중과 판정 메뉴의 행별 판정이 같은 집합을 쓴다(계획서 F-5 · MH-P10). */

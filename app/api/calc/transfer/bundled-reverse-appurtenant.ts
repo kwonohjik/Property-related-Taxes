@@ -125,6 +125,7 @@ const HOUSEHOLD_ONE_HOUSE_FACT_KEYS = [
   "replacementHouse",
   "mergedHouseholdFirstHouse",
   "culturalHeritageHouse",
+  "culturalHeritageHouseId",
   "longTermMortgageHouse",
   "rentalHousingException",
   "generalHouseGiftedFromDecedentWithin2yr",

@@ -888,6 +888,11 @@ export interface TransferTaxInput {
    */
   unavoidableOutsideCapitalHouse?: {
     reason: UnavoidableReasonKind;
+    /**
+     * 이 특례를 선언한 명부 행 id. 그 행이 이미 주택 수에서 빠졌으면(`knownHouseExclusionHouseIds`) 같은 주택을 특례 상대방으로
+     * 다시 쓰지 않는다(조특법 §99의4 등과 한 주택 한 번만 반영 · NH-12). 직접 API·레거시 기록은 비어 있고, 그때는 대조하지 않는다.
+     */
+    houseId?: string;
     /** 부득이한 사유가 해소된 날 — `unresolvedAtTransfer`와 택일. 해소일이 있으면 3년 기한(2012.2.2. 전 해소분은 기한 없음) */
     resolvedDate?: Date;
     /**
@@ -904,6 +909,12 @@ export interface TransferTaxInput {
    * **엔진이 판정할 수 없다** → 경고로 노출한다(계획서 G-4).
    */
   ruralHouse?: {
+    /**
+     * 이 특례를 선언한 명부 행 id. 그 행이 이미 주택 수에서 빠졌으면(`knownHouseExclusionHouseIds`) 같은 주택을 특례 상대방으로
+     * 다시 쓰지 않는다(조특법 §99의4·소득세법 시행령 §155②③ 등과 한 주택 한 번만 반영 · NH-12). 직접 API·레거시 기록은 비어 있고,
+     * 그때는 대조하지 않는다.
+     */
+    houseId?: string;
     kind: RuralHouseKind;
     /** 수도권 밖 + 읍(도시지역 제외)·면 소재 — 자기선언(계획서 W-3) */
     isOutsideCapitalEupMyeon: boolean;
@@ -968,6 +979,11 @@ export interface TransferTaxInput {
    *    입력에서도 성립해야 하므로 세대 단위 선언을 따로 받는다(`ruralHouse` 전례).
    */
   culturalHeritageHouse?: boolean;
+  /**
+   * §155⑥1호 국가유산주택으로 선언한 명부 행 id(NH-12). 그 행이 이미 주택 수에서 빠졌으면(`knownHouseExclusionHouseIds`) 이 선언을
+   * 쓰지 않는다. 직접 API·레거시 기록은 비어 있고, 그때는 대조하지 않는다.
+   */
+  culturalHeritageHouseId?: string;
 
   /**
    * §155의2 — 장기저당담보주택(역모기지)에 대한 1세대1주택 특례.

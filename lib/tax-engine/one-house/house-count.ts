@@ -171,15 +171,20 @@ export function buildOneHouseCountBreakdown(p: {
     return { ...item, houseNo: idx + 1, houseAcquisitionDate: others[idx].acquisitionDate.toISOString().slice(0, 10) };
   };
   const excluded: OneHouseCountExclusion[] = [];
+  // NH-13 — 조특법으로 이미 뺀 주택이 상속주택이기도 하면 한 줄로 합치고 근거를 병기한다(주택 수에서는 한 번만 뺀다).
+  const alsoInherited = (houseId: string | undefined) =>
+    houseId !== undefined && p.inheritedExclusion.coveredBySpecialActHouseIds.includes(houseId)
+      ? " · 상속주택(소득세법 시행령 §155②③)이기도 하지만 주택 수에서는 한 번만 뺍니다"
+      : "";
 
   // §99의4 · §98의9 — 각 1채. 판정 메뉴는 선언에 명부 행 id를 싣는다.
   for (const applied of p.houseCountExclusion.appliedList) {
     excluded.push({
       ...(applied.houseId ? { houseId: applied.houseId } : {}),
       label:
-        applied.id === "unsold_98_9"
+        (applied.id === "unsold_98_9"
           ? "준공후미분양주택 — 소유주택으로 보지 않음"
-          : "농어촌주택등 — 소유주택으로 보지 않음",
+          : "농어촌주택등 — 소유주택으로 보지 않음") + alsoInherited(applied.houseId),
       legalBasis: applied.legalBasis,
     });
   }
@@ -189,7 +194,7 @@ export function buildOneHouseCountBreakdown(p: {
     if (!entry.eligible) continue;
     excluded.push({
       ...(entry.houseId ? { houseId: entry.houseId } : {}),
-      label: `${entry.articleLabel} — 주택 수 제외${entry.notice ? ` · ${entry.notice}` : ""}`,
+      label: `${entry.articleLabel} — 주택 수 제외${entry.notice ? ` · ${entry.notice}` : ""}${alsoInherited(entry.houseId)}`,
       legalBasis: entry.legalBasis,
     });
   }

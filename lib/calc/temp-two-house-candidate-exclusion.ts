@@ -79,15 +79,19 @@ export function inheritedCountExcludedHouseIds(form: CandidateFormLike): Readonl
     generalHouseGiftDate: form.generalHouseGiftDate,
     generalHouseRightAtInheritance: form.generalHouseRightAtInheritance,
   } as Parameters<typeof buildInheritanceGeneralHousePayload>[0]);
-  const r = resolveInheritedHouseExclusionFromInput({
-    houses,
-    sellingHouseId: "selling", // route와 같은 양도 행 id(`transfer-tax-api.ts`·`one-house-exemption-api.ts`)
-    generalHouseGiftedFromDecedentWithin2yr: form.generalHouseGiftedFromDecedentWithin2yr === true,
-    generalHouseGiftDate: toOptionalDate(general.generalHouseGiftDate),
-    generalHouseRightAtInheritance: general.generalHouseRightAtInheritance,
-    acquisitionDate,
-    transferDate,
-  });
+  const r = resolveInheritedHouseExclusionFromInput(
+    {
+      houses,
+      sellingHouseId: "selling", // route와 같은 양도 행 id(`transfer-tax-api.ts`·`one-house-exemption-api.ts`)
+      generalHouseGiftedFromDecedentWithin2yr: form.generalHouseGiftedFromDecedentWithin2yr === true,
+      generalHouseGiftDate: toOptionalDate(general.generalHouseGiftDate),
+      generalHouseRightAtInheritance: general.generalHouseRightAtInheritance,
+      acquisitionDate,
+      transferDate,
+    },
+    // 엔진 STEP 0.9와 같다 — 조특법(§99의4 등)으로 이미 뺀 행은 상속주택 제외 후보에서 뺀다(NH-13 · Q-1 A · Q-10 a).
+    eligibleCountExcludedHouseIds(form),
+  );
   return new Set(r.excludedHouses.map((e) => e.houseId));
 }
 
@@ -98,15 +102,18 @@ export function inheritedCountExcludedHouseIds(form: CandidateFormLike): Readonl
 export function ruralCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
   // 양도일 현재 보유 행만 — ④가 싣는 행·payload와 같다(`deriveOneHouseFactsFromHouses`의 `transferDate`).
   const owned = housesOwnedAtTransfer(form.houses, form.transferDate, form.assets?.[0]?.assetKind);
-  const ruralRow = findRuralHouseRow(owned);
+  // ④와 같은 행 선택 — 빠지지 않은 ⑦ 행을 먼저 본다(NH-12). `exemptionCountExcludedHouseIds`는 이 함수를 부르지 않아 순환하지 않는다.
+  const skipIds = exemptionCountExcludedHouseIds(form);
+  const ruralRow = findRuralHouseRow(owned, skipIds);
   const row = owned.find((h) => h === ruralRow); // 같은 객체 — id가 있는 명부 행 타입으로 되찾는다
-  const rural = deriveOneHouseFactsFromHouses(owned).ruralHouse;
+  const rural = deriveOneHouseFactsFromHouses(owned, {}, undefined, skipIds).ruralHouse;
   const transferDate = toOptionalDate(form.transferDate);
   if (!row?.id || !rural || !transferDate) return new Set();
   const qualifies = qualifiesRuralHouse({
     householdHousingCount: 2,
     transferDate,
     ruralHouse: { ...rural, acquisitionDate: toOptionalDate(rural.acquisitionDate) } as TransferTaxInput["ruralHouse"],
+    knownHouseExclusionHouseIds: [...skipIds], // 엔진 leaf 와 같은 대조 — 이미 빠진 행은 ⑦ 상대방이 아니다(NH-12)
   });
   return qualifies ? new Set([row.id]) : new Set();
 }

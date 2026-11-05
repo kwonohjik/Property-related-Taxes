@@ -256,13 +256,17 @@ export function judgeMixedUseOneHouseExemption(
    */
   const inheritedExclusion =
     asset.inheritedHouseExclusion && asset.householdHousingCountForExclusion !== undefined && isOneHouseholdForHouseCount
-      ? resolveInheritedHouseExclusionFromInput({
-          ...asset.inheritedHouseExclusion,
-          houses: asset.multiHouse?.houses,
-          sellingHouseId: asset.multiHouse?.sellingHouseId,
-          acquisitionDate: asset.buildingAcquisitionDate,
-          transferDate,
-        })
+      ? resolveInheritedHouseExclusionFromInput(
+          {
+            ...asset.inheritedHouseExclusion,
+            houses: asset.multiHouse?.houses,
+            sellingHouseId: asset.multiHouse?.sellingHouseId,
+            acquisitionDate: asset.buildingAcquisitionDate,
+            transferDate,
+          },
+          // 단건(`resolveExemptionHouseCountExclusions`)과 같다 — 조특법으로 이미 뺀 행은 상속주택 제외 후보에서 뺀다(NH-13).
+          new Set(collectKnownHouseExclusionIds({ hceApplied: hceAppliedForMerge, specialEntries: specialEntriesForMerge })),
+        )
       : undefined;
   const inheritedExcludedCount = inheritedExclusion?.excludedCount ?? 0;
   /**
@@ -384,7 +388,10 @@ export function judgeMixedUseOneHouseExemption(
           transferDate,
           ruralHouse: special155Facts.ruralHouse,
           culturalHeritageHouse: special155Facts.culturalHeritageHouse,
+          culturalHeritageHouseId: special155Facts.culturalHeritageHouseId,
           unavoidableOutsideCapitalHouse: special155Facts.unavoidableOutsideCapitalHouse,
+          // 이미 주택 수에서 빠진 행은 ⑥⑦⑧ 상대방으로 다시 쓰지 않는다(NH-12) — 단건 `exemptionJudgeInput`과 같은 목록.
+          knownHouseExclusionHouseIds: deemedInput.knownHouseExclusionHouseIds,
         }
       : undefined;
   const special155Basis = special155Input
@@ -434,6 +441,8 @@ export function judgeMixedUseOneHouseExemption(
         propertyType: "housing",
         isOneHousehold: isOneHouseholdForHouseCount,
         householdHousingCount,
+        // §89② 단서 특수주택(이농·국가유산)에 이미 주택 수에서 빠진 행을 다시 쓰지 않는다(NH-12 · V-14).
+        knownHouseExclusionHouseIds: deemedInput.knownHouseExclusionHouseIds,
       },
       presaleRightStartDate,
     );
@@ -576,7 +585,9 @@ export function judgeMixedUseOneHouseExemption(
           specialActExcludedCount: houseCountExclusionApplied,
           transferDate,
           culturalHeritageHouse: special155Facts?.culturalHeritageHouse,
+          culturalHeritageHouseId: special155Facts?.culturalHeritageHouseId,
           unavoidableOutsideCapitalHouse: special155Facts?.unavoidableOutsideCapitalHouse,
+          knownHouseExclusionHouseIds: deemedInput.knownHouseExclusionHouseIds,
         })
       : undefined;
   const rightDeemed =
@@ -620,6 +631,7 @@ export function judgeMixedUseOneHouseExemption(
             inheritedHouseExclusionCount: inheritedExcludedCount,
             transferDate,
             unavoidableOutsideCapitalHouse: special155Facts.unavoidableOutsideCapitalHouse,
+            knownHouseExclusionHouseIds: deemedInput.knownHouseExclusionHouseIds,
           })
         : undefined,
     // E-14a · E-7 — 조특법 · §156의2·§156의3 경로의 근거 조문(표시용). 다른 경로는 없다.

@@ -260,6 +260,7 @@ export async function POST(request: NextRequest) {
         article155SpecialHouses: {
           ruralHouse: engineInput.ruralHouse,
           culturalHeritageHouse: engineInput.culturalHeritageHouse,
+          culturalHeritageHouseId: engineInput.culturalHeritageHouseId,
           unavoidableOutsideCapitalHouse: engineInput.unavoidableOutsideCapitalHouse,
         },
         // ⑭ §155⑳ 거주주택·§155④⑤ 합가 상대 쪽 임대 — ⚠️ `engineInput`(Date 변환본).

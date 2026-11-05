@@ -96,6 +96,7 @@ import {
 import { resolve1562Clause3Years } from "./data/article-156-2-completion-era";
 import { presaleRightDefinitionAcquisitionDate } from "./presale-right-definition-date";
 import { isHeirInheritedRight } from "./transfer-inheritance-exclusion";
+import { declaredRowAlreadyExcluded } from "./declared-row-excluded";
 
 /* §156의2③·§156의3②의 처분기한(현행 3년)은 양도일 연혁 — `resolve1562Clause3Years`(M7). */
 
@@ -221,6 +222,7 @@ export type Article89Clause2Input = Pick<
   | "mergedHouseholdFirstHouse"
   | "isFirstTransferredInMerge"
   | "culturalHeritageHouse"
+  | "culturalHeritageHouseId"
   | "houses"
   | "sellingHouseId"
   | "regionCode"
@@ -342,12 +344,16 @@ function resolveArticle89Clause2Core(
    * 3주택 이상은 「각각 1개씩」을 벗어나 입력 경로가 없으므로 종전대로 판정 불가로 둔다.
    * 🔑 농어촌주택을 **선언했는데** ⑪(이농)이 아닌 경우(상속·귀농)는 닫지 않는다 — 결정 범위가 「선언 없음」이다.
    */
+  // NH-12 · V-14 — 이미 주택 수에서 빠진 행의 선언은 「선언 없음」과 같다(위 `resolveTwoHouseSpecialArticle`이 쓰지 않은 선언).
+  const heritageDeclared =
+    input.culturalHeritageHouse === true && !declaredRowAlreadyExcluded(input, input.culturalHeritageHouseId);
+  const ruralDeclared = input.ruralHouse !== undefined && !declaredRowAlreadyExcluded(input, input.ruralHouse.houseId);
   const twoHouseAxisClosed =
     input.householdHousingCount === 2 &&
     rights.length === 1 &&
     twoHouseVia === undefined &&
-    input.culturalHeritageHouse !== true &&
-    input.ruralHouse === undefined;
+    !heritageDeclared &&
+    !ruralDeclared;
   if (input.householdHousingCount >= 2 && twoHouseVia === undefined && !twoHouseAxisClosed) {
     open.push(...openArticlesForTwoHouseAxis(input));
   }
@@ -507,10 +513,11 @@ function resolveTwoHouseSpecialArticle(
   if (input.householdHousingCount !== 2 || rights.length !== 1) return undefined;
   // ⑩·⑪은 조합원입주권, §156의3⑦·⑧은 분양권을 요건으로 한다(S05-8).
   const presale = rights[0].type === "presale_right";
-  if (input.culturalHeritageHouse === true) {
+  // NH-12 · V-14 — 이미 주택 수에서 빠진 행(조특법 §99의4 등)은 특수주택으로 다시 쓰지 않는다. 한 주택은 한 번만 반영한다.
+  if (input.culturalHeritageHouse === true && !declaredRowAlreadyExcluded(input, input.culturalHeritageHouseId)) {
     return presale ? TRANSFER.CULTURAL_HERITAGE_PRESALE_156_3_7 : TRANSFER.CULTURAL_HERITAGE_RIGHT_156_2_10;
   }
-  if (input.ruralHouse?.kind === "farm_exit") {
+  if (input.ruralHouse?.kind === "farm_exit" && !declaredRowAlreadyExcluded(input, input.ruralHouse.houseId)) {
     return presale ? TRANSFER.FARM_EXIT_PRESALE_156_3_8 : TRANSFER.FARM_EXIT_RIGHT_156_2_11;
   }
   return undefined;
