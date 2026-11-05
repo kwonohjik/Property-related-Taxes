@@ -185,6 +185,8 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           exclusiveAreaSqm993: "",
           region993: "outside_speculation",
           acquisitionType993: "from_builder",
+          // 부칙 §29② 착공 여부 — 구 세션에는 없다. 미응답("")이면 범위 안에서 validate(⑧)가 차단한다(자동으로 «예»/«아니오»를 채우지 않는다).
+          constructionStartedBefore2003_993: "",
           hasOccupancyAtContract: false,
           isResident993: true,
           isHousingConstructionBusiness993: false,

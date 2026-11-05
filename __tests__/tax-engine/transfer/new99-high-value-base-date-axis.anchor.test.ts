@@ -28,7 +28,8 @@ const D = (s: string) => new Date(`${s}T00:00:00`);
 /**
  * 두 축이 갈리는 격자:
  * - 매매계약일 2002-09-01 → 「165㎡ 이상 AND 6억 초과」 → 100㎡라 고가주택 **아님**
- * - 사용승인일 2003-02-01 → 「6억 초과」(면적 무관) → 7억이라 고가주택 **맞음**
+ * - 사용승인일 2003-02-01 → 개정규정 적용분이라 양도일(2010-06-30) 당시 「9억 초과」(면적 무관) → 9.5억이라 고가주택 **맞음**
+ *   (NH-04: 종전에는 승인일 축 «6억 초과»로 판정했다. 고가주택 가액 기준은 양도 당시 §89①3호 — 재산세과-3466)
  */
 const BASE = {
   transferDate: D("2010-06-30"),
@@ -37,7 +38,7 @@ const BASE = {
   standardPriceAtAcquisition: 200_000_000,
   standardPriceAt5Years: 250_000_000,
   standardPriceAtTransfer: 400_000_000,
-  wholePropertyTransferPrice: 700_000_000,
+  wholePropertyTransferPrice: 950_000_000,
   exclusiveAreaSqm: 100,
   region: "outside_speculation" as const,
   isResident: true,
@@ -54,7 +55,7 @@ describe("§99의3 고가주택 기준일 축", () => {
       usageApprovalDate: D("2003-02-01"),
       contractDate: D("2002-09-01"), // 자산-수준 assetContractDate로 흘러들어오는 값
     });
-    // 사용승인일 축 → 6억 초과라 고가주택 → 배제
+    // 사용승인일 축(개정규정, 양도일 2010-06-30 당시 9억 기준) → 9.5억 초과라 고가주택 → 배제
     expect(r.isEligible).toBe(false);
     expect(r.ineligibleReasons?.map((x) => x.code)).toContain("HIGH_VALUE_HOUSE");
   });

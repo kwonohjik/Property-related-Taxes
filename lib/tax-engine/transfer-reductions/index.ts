@@ -49,6 +49,11 @@ export {
   type New993IneligibleReason,
   type New993SignCase,
 } from "./new-99-3";
+export {
+  isAddenda29_2WindowIso,
+  type ConstructionStartAnswer,
+  type New993PriorRuleBasis,
+} from "./new-99-3-era";
 
 // ── Round 10 (2026-05-06): PHD 환산 공통 헬퍼 ──
 export {
