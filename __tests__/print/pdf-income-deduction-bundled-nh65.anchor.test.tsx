@@ -29,11 +29,11 @@ const after = (t: string[], label: string) => { const i = t.indexOf(label); retu
 
 const N99 = {
   type: "new_99", contractDate99: D("1999-02-01"), standardPriceAtAcquisition99: 100_000_000, standardPriceAt5Years99: 150_000_000,
-  standardPriceAtTransfer99: 300_000_000, exclusiveAreaSqm99: 84, isResident99: true, isHousingConstructionBusiness99: false, acquisitionType99: "from_builder",
+  standardPriceAtTransfer99: 300_000_000, exclusiveAreaSqm99: 84, isResident99: true, isHousingConstructionBusiness99: false, acquisitionType99: "from_builder", firstContract99: "yes",
 };
 const N993 = {
   type: "new_99_3", contractDate993: D("2002-01-01"), standardPriceAtAcquisition993: 100_000_000, standardPriceAt5Years: 160_000_000,
-  standardPriceAtTransfer993: 250_000_000, region993: "outside_speculation", acquisitionType993: "from_builder",
+  standardPriceAtTransfer993: 250_000_000, region993: "outside_speculation", acquisitionType993: "from_builder", firstContract993: "yes",
 };
 const house = (id: string, reductions: unknown[], acq: string) => ({
   ...baseTransferInput({ propertyType: "housing", isOneHousehold: true, householdHousingCount: 2, transferPrice: 800_000_000, acquisitionPrice: 100_000_000, acquisitionDate: D(acq), transferDate: D("2024-06-01"), reductions } as never),

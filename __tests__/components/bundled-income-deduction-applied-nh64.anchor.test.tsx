@@ -16,7 +16,7 @@ afterEach(cleanup);
 const D = (s: string) => new Date(s);
 const N99 = {
   type: "new_99", contractDate99: D("1999-02-01"), standardPriceAtAcquisition99: 100_000_000, standardPriceAt5Years99: 150_000_000,
-  standardPriceAtTransfer99: 300_000_000, exclusiveAreaSqm99: 84, isResident99: true, isHousingConstructionBusiness99: false, acquisitionType99: "from_builder",
+  standardPriceAtTransfer99: 300_000_000, exclusiveAreaSqm99: 84, isResident99: true, isHousingConstructionBusiness99: false, acquisitionType99: "from_builder", firstContract99: "yes",
 };
 /** §99 주택(양도차익 7억) + 차손 2억 토지 — 차손 일부가 감면소득 몫으로 간다 */
 function aggregate() {
