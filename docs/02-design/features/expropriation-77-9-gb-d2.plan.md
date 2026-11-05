@@ -66,7 +66,7 @@
 | ID | 항목 | 상태 |
 |---|---|---|
 | V-3 | D-1의 반대쪽(토지 상속개시일 ≤ 피상속인 취득일 < 건물 취득일이 통과) | ✅ 실측 — 수정 전 통과(틀린 입력 수용) · 수정 후 ⑧·⑫ 차단(§5.2) |
-| V-4 | 일반건물 「건물 피상속인 취득일」(`gbBuildingDecedentAcquisitionDate`)과 건물 상속개시일의 순서 검사 | 코드에서 찾지 못함 — 확인 필요(이번 범위 밖) |
+| V-4 | 일반건물 「건물 피상속인 취득일」(`gbBuildingDecedentAcquisitionDate`)과 건물 상속개시일의 순서 검사 | ✅ 실측 2026-11-05 — 검사 없음 · 틀린 날짜로 세액이 바뀐다 → [gb-building-decedent-order.plan.md](gb-building-decedent-order.plan.md) |
 | V-5 | 판정 메뉴(`one-house-exemption-validate.ts`)·부담부증여 1주택(`gift-burdened-one-house.ts`)의 같은 비교식 | 일반건물 분리 입력이 없는 화면이라 해당 없음으로 보이나 확인 필요 |
 
 ## 4. 구현 계획(권장안 기준)
