@@ -16,6 +16,7 @@ import { applyGeneralProgressive } from "./transfer-tax-aggregate-helpers";
 import { aggregateByGroup } from "./transfer-tax-aggregate-group-tax";
 import type { AssetRecord } from "./transfer-tax-aggregate-helpers";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
+import { activeIncomeDeductionHybrid } from "./income-deduction-hybrid-pick";
 import type {
   TransferReductionDetailSource,
   TransferValuationDetailSource,
@@ -102,13 +103,8 @@ export function pickReductionDetails(r: SingleResult): TransferReductionDetailSo
 }
 
 
-/** effectCategory === "income_deduction"인 하이브리드 detail 탐색(§98의3·§98의5·§98의6·§98의7 등 5년후). */
-export function activeIncomeDeductionHybrid(r: SingleResult) {
-  return [
-    r.unsold987Detail, r.unsold992Detail, r.unsold983Detail, r.unsold985Detail,
-    r.unsold986Detail, r.unsold982Detail, r.unsold984Detail, r.unsold98Detail,
-  ].find((d) => d?.isEligible && d.effectCategory === "income_deduction");
-}
+// 하이브리드 detail 고르기는 서버 의존 없는 leaf로 옮겼다(결과 카드가 직접 import — NH-64). 종전 소비자를 위해 재수출한다.
+export { activeIncomeDeductionHybrid } from "./income-deduction-hybrid-pick";
 
 /**
  * 자산의 income-deduction 감면(§99의3·§99·§98의8·하이브리드 5년후)이 소득금액에서 차감한 금액.

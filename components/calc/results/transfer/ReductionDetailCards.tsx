@@ -24,7 +24,7 @@ import { Rental97DetailCard } from "./Rental97DetailCard";
 import { New994DetailCard } from "./New994DetailCard";
 import { Unsold989DetailCard } from "./Unsold989DetailCard";
 import { IncomeDeductionDetailCard } from "./IncomeDeductionDetailCard";
-import { activeIncomeDeductionHybrid } from "@/lib/tax-engine/transfer-tax-aggregate-pickers";
+import { activeIncomeDeductionHybrid } from "@/lib/tax-engine/income-deduction-hybrid-pick";
 import { SpecialHouseExclusionDetailCard } from "./SpecialHouseExclusionDetailCard";
 import { countExclusionHouseRef, detailHouseId, type HouseRefRow } from "./count-exclusion-house-ref";
 import {
@@ -166,7 +166,7 @@ export function ReductionDetailCards({
    * 적용액은 엔진이 고른 detail 하나의 값이다(`incomeDeductionReducibleOf` — §127⑦ 택일 순서) — 그 카드에만 넘긴다.
    */
   const incomeDeductionOwner = aggregatedContext && incomeDeductionApplied !== undefined
-    ? (result.new993Detail ?? result.new99Detail ?? result.unsold988Detail ?? activeIncomeDeductionHybrid(result as never))
+    ? (result.new993Detail ?? result.new99Detail ?? result.unsold988Detail ?? activeIncomeDeductionHybrid(result))
     : undefined;
   const appliedOf = (d: unknown) => (d !== undefined && d === incomeDeductionOwner ? incomeDeductionApplied : undefined);
 
