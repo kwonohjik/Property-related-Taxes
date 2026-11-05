@@ -185,7 +185,8 @@ describe("#31 화면·API — 해소일 또는 「미해소」 택일 (14지점 
   it("V4 ④ — 「미해소」를 고르면 남은 날짜(stale)는 싣지 않는다 · ⑫는 둘을 함께 받으면 400", async () => {
     const f = form([uocRow({ unavoidableOutsideCapitalUnresolved: true, unavoidableOutsideCapitalResolvedDate: "2010-01-01" })]);
     const body = await bodyOf(() => callTransferTaxAPI(f));
-    expect(body.unavoidableOutsideCapitalHouse).toEqual({ reason: "work", unresolvedAtTransfer: true });
+    // NH-12 — 선언 행 id(houseId)도 함께 싣는다.
+    expect(body.unavoidableOutsideCapitalHouse).toEqual({ houseId: "h-uoc", reason: "work", unresolvedAtTransfer: true });
     const both = { ...body, unavoidableOutsideCapitalHouse: { reason: "work", resolvedDate: "2025-06-01", unresolvedAtTransfer: true } };
     expect((await post(SINGLE, "http://l/api/calc/transfer", both)).status).toBe(400);
   });
@@ -218,9 +219,9 @@ describe("#31 화면·API — 해소일 또는 「미해소」 택일 (14지점 
 
   it("V8 ④ 명부 행 도출 — 해소일 / 미해소 / 빈 값", () => {
     const d = (r: HouseEntry) => deriveOneHouseFactsFromHouses([r], {}, TRANSFER_DATE).unavoidableOutsideCapitalHouse;
-    expect(d(uocRow({ unavoidableOutsideCapitalResolvedDate: "2025-06-01" }))).toEqual({ reason: "work", resolvedDate: "2025-06-01" });
-    expect(d(uocRow({ unavoidableOutsideCapitalUnresolved: true }))).toEqual({ reason: "work", unresolvedAtTransfer: true });
-    expect(d(uocRow())).toEqual({ reason: "work" }); // 「모름」 — 어느 쪽도 싣지 않는다(⑧·⑫가 막는다)
+    expect(d(uocRow({ unavoidableOutsideCapitalResolvedDate: "2025-06-01" }))).toEqual({ houseId: "h-uoc", reason: "work", resolvedDate: "2025-06-01" });
+    expect(d(uocRow({ unavoidableOutsideCapitalUnresolved: true }))).toEqual({ houseId: "h-uoc", reason: "work", unresolvedAtTransfer: true });
+    expect(d(uocRow())).toEqual({ houseId: "h-uoc", reason: "work" }); // 「모름」 — 어느 쪽도 싣지 않는다(⑧·⑫가 막는다)
   });
 });
 
