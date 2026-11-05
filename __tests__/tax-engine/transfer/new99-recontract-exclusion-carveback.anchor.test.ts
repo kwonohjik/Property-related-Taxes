@@ -45,7 +45,7 @@ const BASE_993 = {
   region: "outside_speculation" as const,
   isResident: true,
   isHousingConstructionBusiness: false,
-  acquisitionType: "from_builder" as const,
+  acquisitionType: "from_builder" as const, firstContract: "yes" as const,
   calculatedTaxBeforeReduction: 100_000_000,
   calculatedTaxAfterReduction: 0,
 };
@@ -90,7 +90,7 @@ const BASE_99 = {
   exclusiveAreaSqm: 84,
   isResident: true,
   isHousingConstructionBusiness: false,
-  acquisitionType: "from_builder" as const,
+  acquisitionType: "from_builder" as const, firstContract: "yes" as const,
   calculatedTaxBeforeReduction: 100_000_000,
   calculatedTaxAfterReduction: 0,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -141,7 +141,7 @@ describe("E3-02 anchor — §166 재개발 분기의 차감형 감면 (§99의3)
     standardPriceAt5Years: 160_000_000,
     standardPriceAtTransfer993: 250_000_000,
     region993: "outside_speculation" as const,
-    acquisitionType993: "from_builder" as const,
+    acquisitionType993: "from_builder" as const, firstContract993: "yes" as const,
   };
   const r = calculateTransferTax(
     redevApt([R993] as unknown as TransferTaxInput["reductions"]),

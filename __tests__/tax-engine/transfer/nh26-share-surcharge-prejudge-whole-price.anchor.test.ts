@@ -20,7 +20,7 @@ const red99 = () => [
   {
     type: "new_99",
     contractDate99: D("1998-06-01"),
-    acquisitionType99: "from_builder",
+    acquisitionType99: "from_builder", firstContract99: "yes" as const,
     isNationalHousing99: false,
     standardPriceAtAcquisition99: 100_000_000,
     standardPriceAt5Years99: 160_000_000,
@@ -32,7 +32,7 @@ const red993 = () => [
   {
     type: "new_99_3",
     contractDate993: D("2003-01-15"),
-    acquisitionType993: "from_builder",
+    acquisitionType993: "from_builder", firstContract993: "yes" as const,
     region993: "outside_speculation",
     standardPriceAtAcquisition993: 100_000_000,
     standardPriceAt5Years: 160_000_000,

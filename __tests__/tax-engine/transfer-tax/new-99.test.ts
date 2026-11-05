@@ -18,7 +18,7 @@ function baseInput(overrides?: Partial<New99Input>): New99Input {
     standardPriceAtTransfer: 250_000_000,
     wholePropertyTransferPrice: 500_000_000,
     exclusiveAreaSqm: 84,
-    acquisitionType: "from_builder",
+    acquisitionType: "from_builder", firstContract: "yes" as const,
     ...overrides,
   };
 }

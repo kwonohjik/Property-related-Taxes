@@ -140,7 +140,7 @@ const r993 = () => ({
   previousHouseStdPrice993: "",
   exclusiveAreaSqm993: "84",
   region993: "outside_speculation",
-  acquisitionType993: "from_builder",
+  acquisitionType993: "from_builder", firstContract993: "yes" as const,
   hasOccupancyAtContract: false,
   isResident993: true,
   isHousingConstructionBusiness993: false,

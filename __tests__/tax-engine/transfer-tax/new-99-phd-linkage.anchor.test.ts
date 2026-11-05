@@ -43,7 +43,7 @@ describe("Phase 1 anchor — §99 PHD 환산 → 5년 안분 연동", () => {
       standardPriceAtTransfer: 900_000_000,
       wholePropertyTransferPrice: 500_000_000, // 고가주택 배제 회피(6억 이하)
       exclusiveAreaSqm: 84,
-      acquisitionType: "from_builder",
+      acquisitionType: "from_builder", firstContract: "yes" as const,
     };
     const r = evaluateNew99(input);
     expect(r.isEligible).toBe(true);
@@ -67,7 +67,7 @@ describe("Phase 1 anchor — §99 PHD 환산 → 5년 안분 연동", () => {
       standardPriceAtTransfer: 900_000_000,
       wholePropertyTransferPrice: 500_000_000,
       exclusiveAreaSqm: 84,
-      acquisitionType: "from_builder",
+      acquisitionType: "from_builder", firstContract: "yes" as const,
       standardPriceAtAcquisition: 500_000_000, // 수동
     };
     const manual = evaluateNew99(base);

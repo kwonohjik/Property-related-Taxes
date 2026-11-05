@@ -41,7 +41,10 @@ export interface PriorLuxuryHouseFacts {
   exclusiveAreaSqm: number;
   /** 단독주택 연면적(㎡) — 주택으로 보는 부분·주거전용 지하실 포함 */
   grossFloorAreaSqm?: number;
-  /** 단독주택에 딸린 토지 면적(㎡) */
+  /**
+   * 단독주택에 딸린 토지 면적(㎡) — §156 1호나목 «주택에 부수되는 토지의 연면적»은 **전체 면적**이다(사용자 결정 L1c).
+   * 조특법 §99①·§99의3①의 감면 대상 부수토지(건물 연면적 2배 이내)로 줄이지 않는다.
+   */
   attachedLandAreaSqm?: number;
   /** 단독주택 하한(시가표준액 2천만원 / 기준시가 4천만원) 이상인가 */
   stdPriceFloorMet?: TriStateAnswer;

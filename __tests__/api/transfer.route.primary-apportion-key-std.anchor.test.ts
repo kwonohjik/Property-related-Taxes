@@ -35,7 +35,7 @@ const r993 = (tr = "") => ({
   type: "new_99_3", contractDate993: "2002-01-01", usageApprovalDate993: "", standardPriceAt5Years: "400000000",
   standardPriceAtAcquisition993: "300000000", standardPriceAtTransfer993: tr, isRecontractExcluded993: false, recontractUnavoidableCause993: false,
   isRedevelopedNewHouse993: false, previousHouseStdPrice993: "", exclusiveAreaSqm993: "84", region993: "outside_speculation",
-  acquisitionType993: "from_builder", hasOccupancyAtContract: false, isResident993: true, isHousingConstructionBusiness993: false,
+  acquisitionType993: "from_builder", firstContract993: "yes" as const, hasOccupancyAtContract: false, isResident993: true, isHousingConstructionBusiness993: false,
 });
 /** 원조합원 입주권 부담부증여 — 일반 기준시가 칸이 화면에 0개(#2351 Playwright). */
 const right = (over: Record<string, unknown> = {}) =>

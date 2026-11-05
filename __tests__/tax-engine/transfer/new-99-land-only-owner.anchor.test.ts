@@ -16,11 +16,11 @@ const D = (s: string) => new Date(s);
 const rates = makeMockRates();
 
 const R993 = {
-  type: "new_99_3" as const, contractDate993: D("2002-03-01"), acquisitionType993: "from_builder" as const, region993: "outside_speculation" as const,
+  type: "new_99_3" as const, contractDate993: D("2002-03-01"), acquisitionType993: "from_builder" as const, firstContract993: "yes" as const, region993: "outside_speculation" as const,
   standardPriceAtAcquisition993: 100_000_000, standardPriceAt5Years: 200_000_000, standardPriceAtTransfer993: 400_000_000, exclusiveAreaSqm993: 84,
 };
 const R99 = {
-  type: "new_99" as const, contractDate99: D("1998-06-01"), acquisitionType99: "from_builder" as const, isNationalHousing99: false,
+  type: "new_99" as const, contractDate99: D("1998-06-01"), acquisitionType99: "from_builder" as const, firstContract99: "yes" as const, isNationalHousing99: false,
   standardPriceAtAcquisition99: 100_000_000, standardPriceAt5Years99: 160_000_000, standardPriceAtTransfer99: 250_000_000, exclusiveAreaSqm99: 84,
 };
 

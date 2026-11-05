@@ -48,7 +48,7 @@ const OVER5 = {
   region: "outside_speculation" as const,
   isResident: true,
   isHousingConstructionBusiness: false,
-  acquisitionType: "from_builder" as const,
+  acquisitionType: "from_builder" as const, firstContract: "yes" as const,
   calculatedTaxBeforeReduction: 100_000_000,
   calculatedTaxAfterReduction: 0,
 };

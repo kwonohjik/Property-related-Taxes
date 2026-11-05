@@ -149,6 +149,16 @@ export const GB_FIELD_JUMP_CASES: FieldJumpCase[] = [
     message: /^자산: 건물 피상속인 취득일은 건물 상속개시일보다 이전이어야/,
     form: sep({ gbBuildingAcquisitionCause: "inheritance", gbBuildingInheritedValue: "100000000", gbBuildingDecedentAcquisitionDate: "2016-01-01" }),
   },
+  {
+    // 토지·건물 모두 상속 · 건물 칸 비움 → 토지 피상속인 취득일(2015-06-01)을 건물에 대신 쓰는데 건물 상속개시일(2015-03-01)보다 늦다
+    // (계획서 gb-both-inherited-decedent-fallback.plan.md)
+    name: "gb: gbBuildingDecedentAcquisitionDate (토지 값 대체가 건물 상속개시일 뒤)", field: "gbBuildingDecedentAcquisitionDate", step: 0, assetIndex: A,
+    message: /^자산: 토지의 피상속인 취득일이 건물 상속개시일보다 늦어/,
+    form: inh({
+      hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2016-01-01", inheritanceStartDate: "2016-01-01", acquisitionDate: "2015-03-01",
+      decedentAcquisitionDate: "2015-06-01", gbBuildingDecedentAcquisitionDate: "", landAcqMode: "actual", buildingAcqMode: "actual",
+    }),
+  },
   { name: "gb: publishedValueAtInheritance", field: "publishedValueAtInheritance", step: 0, assetIndex: A, message: /^자산: 상속개시일 토지 평가액/, form: inh({ publishedValueAtInheritance: "" }) },
   { name: "gb: gbBuildingInheritedValue", field: "gbBuildingInheritedValue", step: 0, assetIndex: A, message: /^자산: 상속개시일 건물 신고가액/, form: inh({ gbBuildingInheritedValue: "" }) },
   {
