@@ -28,6 +28,10 @@
  * 산식도 달랐다: §133①1호는 「1억원을 초과하는 부분에 상당하는 금액」을 감면하지 아니한다
  * (**하드 캡**)이지 「초과분의 50%는 감면」이 아니다.
  *
+ * ## V-6 (2026-11-05) — 경로 폐지
+ * 이 경로는 이제 모든 유형에서 `LEGACY_RENTAL_DETAILS_UNSUPPORTED`로 부적격이다(정본 `rental_97_*` 감면 목록으로 안내).
+ * 아래 요건 사유(시한·신축연도)는 결과 카드에 함께 보이는 정보라 그대로 고정한다 — 「적용」 기준선은 **요건 사유가 없음**으로 읽는다.
+ *
  * ## 도달 경로
  * 마법사 UI가 아니라 **공개 API 직접 호출**뿐이다(`rentalReductionDetails`를 채우는
  * 클라이언트 코드 0건). 그래도 Zod·Route·결과 카드가 살아 있어 API 표면으로 도달한다.
@@ -38,6 +42,9 @@ import { calculateRentalReduction } from "@/lib/tax-engine/rental-housing-reduct
 type Any = any;
 
 const D = (s: string) => new Date(`${s}T00:00:00`);
+/** 레거시 폐지 사유(V-6)를 뺀 요건 사유 — 비어 있으면 「요건은 충족」 */
+const gateCodes = (r: { ineligibleReasons: { code: string }[] }) =>
+  r.ineligibleReasons.map((x) => x.code).filter((c) => c !== "LEGACY_RENTAL_DETAILS_UNSUPPORTED");
 
 const BASE = {
   isRegisteredLandlord: true,
@@ -56,9 +63,10 @@ const BASE = {
 };
 
 describe("D1-04 — §97① 본문 시한 (2000.12.31 이전 임대개시)", () => {
-  it("기준선: 1998 임대개시 · 1990 신축 → 적용", () => {
+  it("기준선: 1998 임대개시 · 1990 신축 → 요건 사유 없음 (경로는 V-6로 닫혀 부적격)", () => {
     const r = calculateRentalReduction({ ...BASE } as Any, undefined as Any);
-    expect(r.isEligible).toBe(true);
+    expect(gateCodes(r)).toEqual([]);
+    expect(r.isEligible).toBe(false);
   });
 
   it("🔴 2015 임대개시 → 시한 외로 배제", () => {
@@ -89,13 +97,9 @@ describe("D1-04 — §97① 각 호 신축연도", () => {
     expect(r.ineligibleReasons.map((x) => x.code)).toContain("MISSING_CONSTRUCTION_YEAR");
   });
 
-  it("1호: 1986~2000 신축 → 적용", () => {
-    expect(
-      calculateRentalReduction({ ...BASE, constructionYear: 1986 } as Any, undefined as Any).isEligible,
-    ).toBe(true);
-    expect(
-      calculateRentalReduction({ ...BASE, constructionYear: 2000 } as Any, undefined as Any).isEligible,
-    ).toBe(true);
+  it("1호: 1986~2000 신축 → 요건 사유 없음", () => {
+    expect(gateCodes(calculateRentalReduction({ ...BASE, constructionYear: 1986 } as Any, undefined as Any))).toEqual([]);
+    expect(gateCodes(calculateRentalReduction({ ...BASE, constructionYear: 2000 } as Any, undefined as Any))).toEqual([]);
   });
 
   it("🔴 2호: 1985 이전 신축은 「1986.1.1 현재 미입주」 확인이 있어야 한다", () => {
@@ -107,7 +111,7 @@ describe("D1-04 — §97① 각 호 신축연도", () => {
       { ...BASE, constructionYear: 1984, isUnoccupiedAt1986: true } as Any,
       undefined as Any,
     );
-    expect(withFlag.isEligible, "2호 요건을 갖추면 적용되어야 한다").toBe(true);
+    expect(gateCodes(withFlag), "2호 요건을 갖추면 요건 사유가 없어야 한다").toEqual([]);
   });
 
   it("🔴 2001년 이후 신축은 어느 호에도 없다 → 배제", () => {
@@ -131,11 +135,10 @@ describe("D1-04 — §97① 각 호 신축연도", () => {
 });
 
 describe("D1-05 — §133 한도는 §97 시리즈에 걸리지 않는다", () => {
-  it("🔴 산출세액 3억 · 감면율 100% → 전액 감면 (한도 2억 아님)", () => {
+  it("V-6 — 레거시 경로는 감면액을 내지 않는다(종전 3억 전액 · 정본 rental_97_* 가 판정)", () => {
     const r = calculateRentalReduction({ ...BASE } as Any, undefined as Any);
-    expect(r.isEligible).toBe(true);
-    // 종전: 1억 + floor(2억 × 0.5) = 2억
-    expect(r.reductionAmount, "§133①·②에 §97은 열거돼 있지 않다").toBe(300_000_000);
+    expect(r.reductionAmount).toBe(0);
+    expect(r.ineligibleReasons.map((x) => x.code)).toEqual(["LEGACY_RENTAL_DETAILS_UNSUPPORTED"]);
   });
 
   it("한도 적용 플래그가 서지 않는다 — 화면 안내도 뜨지 않는다", () => {

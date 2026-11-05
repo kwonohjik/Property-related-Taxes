@@ -8,10 +8,9 @@ import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import type { HouseInfo } from "@/lib/tax-engine/multi-house-surcharge";
 import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land";
-import type { RentalReductionInput } from "@/lib/tax-engine/rental-housing-reduction";
 import type { NewHousingReductionInput } from "@/lib/tax-engine/new-housing-reduction";
 import type { TaxRateKey } from "@/lib/tax-engine/types";
-import { makeMockRates, baseTransferInput as baseInput, LONG_TERM_RENTAL_RULES_MOCK } from "../_helpers/mock-rates";
+import { makeMockRates, baseTransferInput as baseInput } from "../_helpers/mock-rates";
 
 const mockRates = makeMockRates();
 
@@ -305,31 +304,6 @@ function makeNewHousingMatrixMock(reductionRate: number) {
   };
 }
 
-// T-45에서 사용: 장기임대 100% 감면 (공공건설임대 — §97)
-const LONG_TERM_RENTAL_100_RULES_MOCK = {
-  "transfer:deduction:long_term_rental_v2": {
-    taxType: "transfer",
-    category: "deduction",
-    subCategory: "long_term_rental_v2",
-    rateTable: null,
-    deductionRules: {
-      type: "long_term_rental_v2",
-      subTypes: [
-        {
-          code: "public_construction",
-          lawArticle: "97",
-          tiers: [
-            { mandatoryYears: 5, reductionRate: 1.0, longTermDeductionRate: 0 },
-          ],
-          maxOfficialPrice: { capital: 300_000_000, non_capital: 300_000_000 },
-          rentIncreaseLimit: 0.05,
-        },
-      ],
-    },
-    specialRules: null,
-  },
-};
-
 describe("T-44: 12억 경계 안분 정수 연산 (P0-1 회귀)", () => {
   it("양도가 정확히 12억 → 전액 비과세 (taxableGain = 0)", () => {
     const result = calculateTransferTax(
@@ -380,142 +354,67 @@ describe("T-44: 12억 경계 안분 정수 연산 (P0-1 회귀)", () => {
 // ============================================================
 
 describe("T-45: 감면 중복배제 — 장기임대 + 신축 동시 해당 (조특법 §127⑦)", () => {
-  it("T-45a: 장기임대 50% vs 신축 80% → 80%(신축) 선택", () => {
-    // 장기임대: long_term_private 8년 → 50%
-    // 신축: §99② 80% (tax_amount 방식)
-    const rentalDetails: RentalReductionInput = {
-      isRegisteredLandlord: true,
-      isTaxRegistered: true,
-      registrationDate: new Date("2009-03-01"),
-      rentalHousingType: "long_term_private",
-      propertyType: "non_apartment",
-      region: "non_capital",
-      officialPriceAtStart: 200_000_000,
-      rentalStartDate: new Date("2009-03-01"),
-      transferDate: new Date("2024-06-01"),  // 15년+ → 8년 의무 충족
-      vacancyPeriods: [],
-      rentHistory: [],
-      calculatedTax: 0,
-    };
+  /**
+   * V-6(2026-11-05) — 레거시 `rentalReductionDetails` 경로를 닫아 장기임대 쪽을 정본 감면 목록(`reductions` — §97 본문 50% ·
+   * 단서 100%)으로 옮겼다. 두 갈래(신축이 이김 · 장기임대가 이김)를 그대로 지킨다.
+   */
+  const rental97 = (type: "rental_97_main" | "rental_97_proviso") => ({
+    type,
+    ...(type === "rental_97_proviso" ? { provisoCase: "c_10years" } : {}),
+    constructionYear: 1990, // §97①1호
+    isNationalHousing: true,
+    rentalStartDate: new Date("1998-04-01"),
+    isTaxRegistered: true,
+    hasMin5RentalUnits: true,
+  });
 
-    const newHousingDetails: NewHousingReductionInput = {
-      acquisitionDate: new Date("2009-06-01"),
-      transferDate: new Date("2024-06-01"),
-      region: "non_metropolitan",
-      acquisitionPrice: 400_000_000,
-      exclusiveAreaSquareMeters: 84,
-      isFirstSale: false,
-      hasUnsoldCertificate: false,
-      totalCapitalGain: 0,
-      calculatedTax: 0,
-    };
+  const newHousingDetails: NewHousingReductionInput = {
+    acquisitionDate: new Date("2009-06-01"),
+    transferDate: new Date("2024-06-01"),
+    region: "non_metropolitan",
+    acquisitionPrice: 400_000_000,
+    exclusiveAreaSquareMeters: 84,
+    isFirstSale: false,
+    hasUnsoldCertificate: false,
+    totalCapitalGain: 0,
+    calculatedTax: 0,
+  };
 
-    const rates = makeMockRates({
-      ...LONG_TERM_RENTAL_RULES_MOCK,
-      ...makeNewHousingMatrixMock(0.8),
-    } as Partial<Record<TaxRateKey, object>>);
+  function run(type: "rental_97_main" | "rental_97_proviso", newRate: number) {
+    const rates = makeMockRates(makeNewHousingMatrixMock(newRate) as Partial<Record<TaxRateKey, object>>);
+    return calculateTransferTax(
+      baseInput({
+        transferPrice: 600_000_000,
+        acquisitionPrice: 300_000_000,
+        acquisitionDate: new Date("2009-06-01"),
+        transferDate: new Date("2024-06-01"),
+        isOneHousehold: false,
+        householdHousingCount: 3,
+        reductions: [rental97(type)],
+        newHousingDetails,
+      } as Partial<TransferTaxInput>),
+      rates,
+    );
+  }
 
-    const input = baseInput({
-      transferPrice: 600_000_000,
-      acquisitionPrice: 300_000_000,
-      acquisitionDate: new Date("2009-06-01"),
-      transferDate: new Date("2024-06-01"),
-      isOneHousehold: false,
-      householdHousingCount: 3,
-      reductions: [],
-      rentalReductionDetails: rentalDetails,
-      newHousingDetails,
-    });
-
-    const result = calculateTransferTax(input, rates);
+  it("T-45a: 장기임대 50%(§97 본문) vs 신축 80% → 80%(신축) 선택", () => {
+    const result = run("rental_97_main", 0.8);
     expect(result.isExempt).toBe(false);
     expect(result.calculatedTax).toBeGreaterThan(0);
-
-    // 두 감면 모두 자격 충족
-    expect(result.rentalReductionDetail).toBeDefined();
-    expect(result.rentalReductionDetail?.isEligible).toBe(true);
-    expect(result.rentalReductionDetail?.reductionRate).toBe(0.5);
-
-    expect(result.newHousingReductionDetail).toBeDefined();
     expect(result.newHousingReductionDetail?.isEligible).toBe(true);
     expect(result.newHousingReductionDetail?.reductionRate).toBe(0.8);
-
-    // 조특법 §127⑦ 중복배제: 80%(신축) 선택
-    const expectedReduction = Math.floor(result.calculatedTax * 0.8);
-    expect(result.reductionAmount).toBe(expectedReduction);
+    expect(result.reductionAmount).toBe(Math.floor(result.calculatedTax * 0.8));
     expect(result.reductionType).toBe("신축주택");
   });
 
-  it("T-45b: 장기임대 100%(공공건설) vs 신축 50% → 100%(장기임대) 선택", () => {
-    // 장기임대: public_construction 5년 → 100%
-    // 신축: §99⑤ 50%
-    const rentalDetails: RentalReductionInput = {
-      isRegisteredLandlord: true,
-      isTaxRegistered: true,
-      registrationDate: new Date("2013-01-01"),
-      rentalHousingType: "public_construction",
-      propertyType: "non_apartment",
-      region: "capital",
-      officialPriceAtStart: 250_000_000,
-      // D1-04 — §97① 본문은 「2000.12.31 이전에 임대를 개시하여」이고 각 호의 신축연도도
-      // 요구한다. 종전 픽스처(2013 임대개시·신축연도 없음)는 시한 외였다.
-      rentalStartDate: new Date("1998-04-01"),
-      constructionYear: 1990, // §97①1호
-      transferDate: new Date("2024-06-01"),  // 26년+ → 5년 의무 충족
-      vacancyPeriods: [],
-      rentHistory: [],
-      calculatedTax: 0,
-    };
-
-    const newHousingDetails: NewHousingReductionInput = {
-      acquisitionDate: new Date("2009-06-01"),
-      transferDate: new Date("2024-06-01"),
-      region: "non_metropolitan",
-      acquisitionPrice: 400_000_000,
-      exclusiveAreaSquareMeters: 84,
-      isFirstSale: false,
-      hasUnsoldCertificate: false,
-      totalCapitalGain: 0,
-      calculatedTax: 0,
-    };
-
-    const rates = makeMockRates({
-      ...LONG_TERM_RENTAL_100_RULES_MOCK,
-      ...makeNewHousingMatrixMock(0.5),
-    } as Partial<Record<TaxRateKey, object>>);
-
-    const input = baseInput({
-      transferPrice: 600_000_000,
-      acquisitionPrice: 300_000_000,
-      acquisitionDate: new Date("2013-06-01"),
-      transferDate: new Date("2024-06-01"),
-      isOneHousehold: false,
-      householdHousingCount: 3,
-      reductions: [],
-      rentalReductionDetails: rentalDetails,
-      newHousingDetails,
-    });
-
-    const result = calculateTransferTax(input, rates);
+  it("T-45b: 장기임대 100%(§97 단서) vs 신축 50% → 100%(장기임대) 선택", () => {
+    const result = run("rental_97_proviso", 0.5);
     expect(result.isExempt).toBe(false);
     expect(result.calculatedTax).toBeGreaterThan(0);
-
-    // 두 감면 모두 자격 충족
-    expect(result.rentalReductionDetail).toBeDefined();
-    expect(result.rentalReductionDetail?.isEligible).toBe(true);
-    expect(result.rentalReductionDetail?.reductionRate).toBe(1.0);
-
-    expect(result.newHousingReductionDetail).toBeDefined();
     expect(result.newHousingReductionDetail?.isEligible).toBe(true);
     expect(result.newHousingReductionDetail?.reductionRate).toBe(0.5);
-
-    // 조특법 §127⑦ 중복배제: 100%(장기임대) 선택
-    // 주의: 장기임대 100%는 연간한도(§133) 적용 가능 — 한도 적용 후 금액이 산출세액보다 클 수도 있음
-    // 한도 적용 전 금액: calculatedTax × 1.0 = calculatedTax
-    // 한도 적용 후: 1억 초과 시 1억 + (초과분 × 50%)
-    // 어느 쪽이든 신축 50%보다 크므로 장기임대 선택
-    expect(result.reductionAmount).toBeGreaterThan(Math.floor(result.calculatedTax * 0.5));
-    expect(result.reductionType).toBe("장기임대주택");
+    expect(result.reductionTypeApplied).toBe("rental_97_proviso");
+    expect(result.reductionAmount).toBe(result.calculatedTax);
   });
 });
 
