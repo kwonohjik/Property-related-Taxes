@@ -35,7 +35,7 @@ beforeEach(() => {
 });
 
 const BASE = {
-  addressJibun: "서울 강남구 테스트동 1-1",
+  addressJibun: "제주특별자치도 강남구 테스트동 1-1",
   assetKind: "housing",
   acquisitionDate: "2015-06-01",
   landAcqMode: "actual",
@@ -51,7 +51,7 @@ const SEPARATE = { acquisitionCause: "purchase", hasSeperateLandAcquisitionDate:
 
 const first = {
   ...makeDefaultAsset(1),
-  addressJibun: "서울 강남구 테스트동 2-2",
+  addressJibun: "제주특별자치도 강남구 테스트동 2-2",
   assetKind: "housing",
   acquisitionCause: "purchase",
   acquisitionDate: "2010-03-02",

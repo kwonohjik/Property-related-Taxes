@@ -34,7 +34,7 @@ async function run(f: Form, extra: Record<string, unknown> = {}) {
 }
 const MIXED = {
   assetKind: "housing", isMixedUseHouse: true, acquisitionCause: "purchase", acquisitionDate: "2009-03-01", useEstimatedAcquisition: true,
-  addressRoad: "서울 강남구 테헤란로 1", residentialFloorArea: "60", nonResidentialFloorArea: "40", buildingFootprintArea: "50",
+  addressRoad: "제주특별자치도 강남구 테헤란로 1", residentialFloorArea: "60", nonResidentialFloorArea: "40", buildingFootprintArea: "50",
   mixedUseTotalLandArea: "600", mixedZoneType: "general_residential", mixedTransferHousingPrice: "900000000",
   mixedTransferCommercialBuildingPrice: "300000000", mixedTransferLandPricePerSqm: "2000000", mixedAcqHousingPrice: "300000000",
   mixedAcqCommercialBuildingPrice: "100000000", mixedAcqLandPricePerSqm: "1000000",

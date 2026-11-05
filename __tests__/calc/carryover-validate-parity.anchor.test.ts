@@ -205,7 +205,7 @@ function gbForm(part: Part, mode: Mode, std: string, phd: "none" | "partial"): T
   const carry = gbCarry({ estimationMode: mode, donorStandardPriceAtAcquisition: std });
   f.assets[0] = {
     ...makeDefaultAsset(1),
-    addressJibun: "서울 강남구 테스트동 1-1",
+    addressJibun: "제주특별자치도 강남구 테스트동 1-1",
     assetKind: "general_building",
     acquisitionCause: part === "land" ? "carryover_gift" : "purchase",
     gbBuildingAcquisitionCause: part === "building" ? "carryover_gift" : "purchase",

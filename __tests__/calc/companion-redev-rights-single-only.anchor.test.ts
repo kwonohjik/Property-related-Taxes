@@ -154,7 +154,7 @@ function bundledForm(companion: Partial<AssetForm>): TransferFormData {
     standardPriceAtTransfer: "600,000,000",
   };
   form.assets.push({
-    ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
+    ...makeDefaultAsset(2), addressJibun: "제주특별자치도 강남구 테스트동 1-1",
     assetId: "companion-fixed",
     acquisitionCause: "purchase",
     acquisitionDate: "2010-05-05",

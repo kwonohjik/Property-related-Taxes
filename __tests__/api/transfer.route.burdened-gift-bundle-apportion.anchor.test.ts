@@ -34,7 +34,7 @@ beforeEach(() => {
 /** 원조합원 입주권 부담부증여 — 일반 기준시가 두 칸이 화면에 없다(#2351 Playwright 0개). */
 const right = (over: Record<string, unknown> = {}) =>
   ({
-    ...makeDefaultAsset(2), assetId: "o", addressJibun: "서울 강남구 테스트동 9-9",
+    ...makeDefaultAsset(2), assetId: "o", addressJibun: "제주특별자치도 강남구 테스트동 9-9",
     assetKind: "right_to_move_in", isSuccessorRightToMoveIn: false, redevSubject: "right",
     acquisitionCause: "purchase", acquisitionDate: "2009-07-01", transferType: "burdened_gift",
     bgValuationMode: "sangjeungbeop_standard", bgMortgageDebtAmount: "600,000,000", bgDonorRelation: "lineal_descendant",
@@ -46,7 +46,7 @@ const right = (over: Record<string, unknown> = {}) =>
   }) as AssetForm;
 const house = (over: Record<string, unknown> = {}) =>
   ({
-    ...makeDefaultAsset(1), assetId: "h", addressJibun: "서울 강남구 테스트동 2-2", assetKind: "housing", acquisitionCause: "purchase",
+    ...makeDefaultAsset(1), assetId: "h", addressJibun: "제주특별자치도 강남구 테스트동 2-2", assetKind: "housing", acquisitionCause: "purchase",
     acquisitionDate: "2015-01-01", fixedAcquisitionPrice: "300000000", actualSalePrice: "600000000", standardPriceAtTransfer: "400000000",
     useEstimatedAcquisition: false, ...over,
   }) as AssetForm;
@@ -60,7 +60,7 @@ const bgHouse = (over: Record<string, unknown> = {}) =>
 /** 시가 모드 부담부증여 — 양도시 기준시가는 `bgMarketValueAtTransfer`가 받는다(공용 칸 없음). */
 const marketHouse = () =>
   house({
-    assetId: "m", addressJibun: "서울 강남구 테스트동 4-4", transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market",
+    assetId: "m", addressJibun: "제주특별자치도 강남구 테스트동 4-4", transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market",
     bgMarketValueAtTransfer: "800000000", bgDonorRelation: "lineal_descendant", bgMortgageDebtAmount: "200000000",
     bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "300000000", standardPriceAtTransfer: "", standardPriceAtAcq: "", actualSalePrice: "",
   });
@@ -108,7 +108,7 @@ describe("BG-1 전 자산 부담부증여 · 안분 — 화면에 없는 안분 
 
 describe("BG-2 전 자산 부담부증여 — 기존 세액 불변 (공용 칸이 있는 주택 2건)", () => {
   const h2 = (over: Record<string, unknown> = {}) =>
-    bgHouse({ assetId: "h2", addressJibun: "서울 강남구 테스트동 3-3", standardPriceAtTransfer: "600000000", ...over });
+    bgHouse({ assetId: "h2", addressJibun: "제주특별자치도 강남구 테스트동 3-3", standardPriceAtTransfer: "600000000", ...over });
 
   it("채무 각 4억: 63,584,000 · 총 양도가액(1원 · 16억 · 빈칸)과 무관", async () => {
     for (const total of ["", "1", "1600000000"]) {
@@ -133,7 +133,7 @@ describe("BG-2 전 자산 부담부증여 — 기존 세액 불변 (공용 칸�
 describe("BG-3 전 자산 부담부증여 · 실가 거래 — 칸 없는 계약서 가액을 요구하지 않는다", () => {
   it.each([
     ["부담부증여 주택(주) + 입주권", () => [bgHouse(), right()], 178_436_400],
-    ["부담부증여 주택 2건", () => [bgHouse(), bgHouse({ assetId: "h2", addressJibun: "서울 강남구 테스트동 3-3", standardPriceAtTransfer: "600000000" })], 63_584_000],
+    ["부담부증여 주택 2건", () => [bgHouse(), bgHouse({ assetId: "h2", addressJibun: "제주특별자치도 강남구 테스트동 3-3", standardPriceAtTransfer: "600000000" })], 63_584_000],
   ] as const)("%s: ⑧ 통과 · 200 · 안분 모드와 같은 세액", async (_l, mk, tax) => {
     const r = await runCalc(bundle(mk(), "actual"));
     expect(r.issues).toEqual([]);
@@ -164,7 +164,7 @@ describe("BG-4 일반 양도 + 부담부증여 혼합 묶음 — 명시 차단",
 });
 
 describe("BG-5 부담부증여가 없는 묶음은 종전 그대로 (면제 범위 가드)", () => {
-  const h2 = () => house({ assetId: "h2", addressJibun: "서울 강남구 테스트동 3-3", actualSalePrice: "700000000", standardPriceAtTransfer: "500000000" });
+  const h2 = () => house({ assetId: "h2", addressJibun: "제주특별자치도 강남구 테스트동 3-3", actualSalePrice: "700000000", standardPriceAtTransfer: "500000000" });
 
   it("안분 키가 없는 일반 컴패니언은 ⑩이 계속 400", async () => {
     const body = await captureBody(bundle([house(), h2()], "apportioned", "1300000000"));

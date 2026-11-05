@@ -44,7 +44,7 @@ const PHD_MAIN = (building: string) => ({
 });
 
 const REDEV: Record<string, unknown> = {
-  addressJibun: "서울 강남구 테스트동 1-1",
+  addressJibun: "제주특별자치도 강남구 테스트동 1-1",
   assetKind: "redevelopment_apt",
   actualSalePrice: "525,000,000",
   redevSubject: "apt",
@@ -74,7 +74,7 @@ const ACTUAL = { acquisitionCause: "purchase", bgAcquisitionMethod: "actual", bg
 const REGULAR_EST = { transferType: "regular", bgValuationMode: "", bgMarketValueAtTransfer: "", bgMortgageDebtAmount: "", bgAcquisitionMethod: "", bgActualAcquisitionTotal: "", acquisitionCause: "purchase", useEstimatedAcquisition: true };
 const HOUSING_REGULAR = {
   ...makeDefaultAsset(1),
-  addressJibun: "서울 강남구 테스트동 2-2", assetKind: "housing", actualSalePrice: "300,000,000", acquisitionCause: "purchase", acquisitionDate: "2000-01-01",
+  addressJibun: "제주특별자치도 강남구 테스트동 2-2", assetKind: "housing", actualSalePrice: "300,000,000", acquisitionCause: "purchase", acquisitionDate: "2000-01-01",
   transferType: "regular", fixedAcquisitionPrice: "100,000,000", standardPriceAtTransfer: "200,000,000",
 };
 

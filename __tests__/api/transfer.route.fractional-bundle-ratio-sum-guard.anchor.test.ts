@@ -36,7 +36,7 @@ const land = (n: number, pct: string): AssetForm =>
   ({
     ...makeDefaultAsset(n),
     assetId: `A${n}`,
-    addressJibun: `서울 강남구 테스트동 ${n}`,
+    addressJibun: `제주특별자치도 강남구 테스트동 ${n}`,
     assetKind: "land",
     acquisitionArea: "300",
     transferArea: "300",
@@ -219,7 +219,7 @@ describe("⑫ 축 B 가드 × 부담부증여 — 양도가액을 §159가 정�
   const bgAsset = (n: number, num: string): AssetForm =>
     ({
       ...makeDefaultAsset(n),
-      addressJibun: "서울 강남구 테스트동 1-1",
+      addressJibun: "제주특별자치도 강남구 테스트동 1-1",
       assetKind: "housing",
       acquisitionCause: "purchase",
       acquisitionDate: "2009-03-01",

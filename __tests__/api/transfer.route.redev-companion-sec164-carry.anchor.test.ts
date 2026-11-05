@@ -72,9 +72,9 @@ const mkO = (assets: A[]) =>
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, contractTotalPrice: "1300000000", bundledSaleMode: "actual",
     assets: assets.map((a, i) => ({ ...makeDefaultAsset(i + 1), ...a }) as AssetForm),
   }) as TransferFormData;
-const LAND: A = { addressJibun: "서울 강남구 테스트동 1-1", assetKind: "land", landNature: "standalone", acquisitionCause: "purchase", acquisitionDate: "2015-01-01", fixedAcquisitionPrice: "100000000", actualSalePrice: "200,000,000", fixedSalePrice: "200,000,000" };
+const LAND: A = { addressJibun: "제주특별자치도 강남구 테스트동 1-1", assetKind: "land", landNature: "standalone", acquisitionCause: "purchase", acquisitionDate: "2015-01-01", fixedAcquisitionPrice: "100000000", actualSalePrice: "200,000,000", fixedSalePrice: "200,000,000" };
 const OM = (over: A): A => ({
-  addressJibun: "서울 강남구 테스트동 7-1", assetKind: "right_to_move_in", redevSubject: "right", redevApprovalLawBasis: "urban_renovation_art_74", redevOriginalAssetType: "housing",
+  addressJibun: "제주특별자치도 강남구 테스트동 7-1", assetKind: "right_to_move_in", redevSubject: "right", redevApprovalLawBasis: "urban_renovation_art_74", redevOriginalAssetType: "housing",
   redevSettlementDirection: "pay", redevApprovalDate: "2015-03-01", redevRightsValue: "500000000", redevPreApprovalExpenses: "0", redevIsSuccessorMember: "no",
   isSuccessorRightToMoveIn: false, useEstimatedAcquisition: false, redevActualAcquisitionPrice: "100000000", redevSettlementAmount: "100000000",
   actualSalePrice: "1,100,000,000", fixedSalePrice: "1,100,000,000", transferType: "regular",
@@ -147,7 +147,7 @@ describe("CC-2 원조합원 종전 토지(토지 출자) — 1990.8.30. 전 상�
 
 // ── 승계 완공 아파트 — #2876 anchor(`transfer.route.redev-successor-inherit-right-no-sec164`)와 같은 시료 ──
 const SUCC: A = {
-  addressJibun: "서울 강남구 테스트동 1-1", assetKind: "redevelopment_apt", actualSalePrice: "920,000,000", redevSubject: "apt", redevApprovalLawBasis: "urban_renovation_art_74",
+  addressJibun: "제주특별자치도 강남구 테스트동 1-1", assetKind: "redevelopment_apt", actualSalePrice: "920,000,000", redevSubject: "apt", redevApprovalLawBasis: "urban_renovation_art_74",
   redevIsSuccessorMember: "yes", redevSettlementDirection: "pay", redevSettlementAmount: "0", redevPreApprovalExpenses: "0", redevPostApprovalExpenses: "0",
   standardPriceAtTransfer: "600,000,000", acquisitionCause: "inheritance", fixedAcquisitionPrice: "", publishedValueAtInheritance: "100,000,000",
   inheritanceValuationMethod: "supplementary", acquisitionDate: "2004-03-01", decedentAcquisitionDate: "2000-01-01", inheritanceAssetKind: "house_individual",
@@ -157,7 +157,7 @@ const SUCC: A = {
 const AFTER: A = { ...SUCC, redevApprovalDate: "2001-02-20", redevCompletionDate: "2003-12-01" };
 const BEFORE: A = { ...SUCC, redevApprovalDate: "2003-02-20", redevCompletionDate: "2006-12-02" };
 const NO_SEC164: A = { inhHouseValLandArea: "", inhHouseValLandPricePerSqmAtTransfer: "", inhHouseValLandPricePerSqmAtFirst: "", inhHouseValHousePriceAtFirst: "", inhHouseValLandPricePerSqmAtInheritance: "" };
-const HOUSE: A = { addressJibun: "서울 강남구 테스트동 2-2", assetKind: "housing", actualSalePrice: "300,000,000", acquisitionCause: "purchase", acquisitionDate: "2000-01-01", fixedAcquisitionPrice: "100,000,000", standardPriceAtTransfer: "200,000,000" };
+const HOUSE: A = { addressJibun: "제주특별자치도 강남구 테스트동 2-2", assetKind: "housing", actualSalePrice: "300,000,000", acquisitionCause: "purchase", acquisitionDate: "2000-01-01", fixedAcquisitionPrice: "100,000,000", standardPriceAtTransfer: "200,000,000" };
 const bundleS = (a: A) =>
   Object.assign(createDefaultTransferFormData(), {
     transferDate: "2023-02-16", filingDate: "2023-04-30", totalTransferExpense: "0", householdHousingCount: "0", isOneHousehold: false,

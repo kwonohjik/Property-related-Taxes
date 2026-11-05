@@ -26,7 +26,7 @@ import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stor
 type F = TransferFormData;
 const A = () => ({ ...HOUSE(0), assetId: "a1", assetLabel: "자산 1" });
 const B = (o: Record<string, unknown> = {}) => ({
-  ...HOUSE(0), assetId: "b1", assetLabel: "자산 2", addressJibun: "서울 테스트동 2", acquisitionDate: "2019-05-02",
+  ...HOUSE(0), assetId: "b1", assetLabel: "자산 2", addressJibun: "제주특별자치도 테스트동 2", acquisitionDate: "2019-05-02",
   residencePeriodMonthsAsset: "0", residenceInputMode: "direct", ...o,
 });
 const base = (over: Partial<F> = {}, ...assets: Record<string, unknown>[]): F =>

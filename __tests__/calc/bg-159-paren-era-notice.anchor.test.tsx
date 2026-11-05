@@ -44,7 +44,7 @@ const form = (assets: AssetForm[], transferDate: string) =>
 /** 주택 · 시가 5억 · 실지 2억 · 취득시 기준시가 1억 · 양도시 기준시가 4억 · 담보채무 6억 · 채권최고액 7.2억 → 담보평가 6억 승(시가 모드). */
 const house = (o: Record<string, unknown> = {}) =>
   ({
-    ...makeDefaultAsset(1), assetId: "h", addressJibun: "서울 강남구 테스트동 2-2", assetKind: "housing", acquisitionCause: "purchase",
+    ...makeDefaultAsset(1), assetId: "h", addressJibun: "제주특별자치도 강남구 테스트동 2-2", assetKind: "housing", acquisitionCause: "purchase",
     acquisitionDate: "2015-01-01", useEstimatedAcquisition: false, fixedAcquisitionPrice: "", actualSalePrice: "",
     transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "500000000", bgDonorRelation: "lineal_descendant",
     bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "200000000", standardPriceAtAcq: "100000000", standardPriceAtTransfer: "400000000",
@@ -178,7 +178,7 @@ describe("ERA-5 2015.2.3. 전 — 괄호가 조문을 열거하지 않던 시기
 describe("ERA-6 양도세 축과 증여세 축의 승자가 갈려도 고지는 양도가액 축으로 말한다(리뷰 F1)", () => {
   it("상가 · 양도시 기준시가 2억 · 증여세 건물 기준시가 3억 · 담보채무 2.5억 → 양도가액은 담보, 증여가액은 보충적", async () => {
     const a = {
-      ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1", assetKind: "commercial_building", transferType: "burdened_gift",
+      ...makeDefaultAsset(1), addressJibun: "제주특별자치도 강남구 테스트동 1-1", assetKind: "commercial_building", transferType: "burdened_gift",
       bgValuationMode: "sangjeungbeop_standard", bgMortgageDebtAmount: "250000000", bgMortgageSetAmount: "300000000", bgDonorRelation: "lineal_descendant",
       bgGiftBuildingStdPriceAtTransfer: "300000000", standardPriceAtTransfer: "200000000", standardPriceAtAcq: "100000000",
       acquisitionCause: "purchase", acquisitionDate: "2012-01-01",
