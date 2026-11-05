@@ -184,6 +184,10 @@ Step4를 건너뛰고 저장된 옛 기록(주소 문자열·코드 없음·토�
   `transfer.route.axis-b-companion-residence`·`dec16-mixed-use-overlap`(「서울 강남구 테스트동」 — 시·도 약칭) · `first-asset-facts` T-2 · `gift-prior-residence-38-7` PR-4d
   (종로구 실주소인데 비조정 가정).
 
+- **CI E2E 8건(6스펙)** — 같은 유형. 「서울 강남구 테스트동」(약칭 → 미수록) 시료 5스펙은 만짐 표지 추가.
+  `transfer-split-part-carryover-c` 컴패니언 테스트는 첫 자산 강남 코드 → R-3로 ⑧ 「같은 날 양도 주택 묶음」이 먼저 걸려(Step4를 거친 경우와 같다)
+  포커스 단언이 가려졌다 — 첫 자산 코드를 비조정(인천 서구)으로 바꿨다. 같은 유형 시료를 쓰는 계산기 스펙 16개 로컬 통과.
+
 추가 발견(미착수 · 별건):
 - **V-6 시·도 약칭 주소** — `checkRegulatedArea`는 「서울 강남구 …」·「서울시 강남구 …」를 `isRegulated: false · confidence: low · 「서울는 데이터 미수록」`으로 낸다
   (「서울특별시 강남구 …」만 true). Step4 훅도 이 값을 토글에 쓰므로(신뢰도 경고만 표시) 이번 변경은 거침과 같다. 다만 「판정 불가」를 「아님」으로

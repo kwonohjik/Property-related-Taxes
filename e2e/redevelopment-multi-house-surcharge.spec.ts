@@ -51,8 +51,11 @@ function seedForm(regulated: boolean) {
         // 있으므로(D-4) 확정만 켜면 스칼라 선언값이 그대로 쓰인다(세액 영향 없음, PR-1 패턴 재사용).
         householdNoOtherHousesConfirmed: true,
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
+        // 시료 주소(「서울 강남구 테스트동」 — 시·도 약칭)는 주소 문자열 판정이 「미수록」이다 — 시료가 정한 토글은 직접 고른 값(만짐 표지)으로 둔다.
         isRegulatedArea: regulated,
         wasRegulatedAtAcquisition: regulated,
+        isRegulatedAreaTouched: true,
+        wasRegulatedAtAcquisitionTouched: true,
         isUnregistered: false,
       },
       pendingMigration: false,

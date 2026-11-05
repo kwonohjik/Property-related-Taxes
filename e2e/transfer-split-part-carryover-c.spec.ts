@@ -336,7 +336,9 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
       carryoverDonorSplit: true, // 잔재 — 둘째 자산엔 토글이 없고 읽는 쪽이 «없음»으로 읽는다
       actualSalePrice: "100000000",
     });
-    await seedWizard(page, cSeed([cAsset({ actualSalePrice: "1100000000" }), second], { contractTotalPrice: "1200000000", bundledSaleMode: "actual" }));
+    // 첫 자산은 비조정 지역 코드(인천 서구)로 둔다 — 강남 코드면 양도 당시 조정대상지역이라 ⑧ 「같은 날 양도 주택 묶음」 차단이 먼저 걸려
+    //   (④와 같은 실효값 — regulated-area-skip-step4 계획서 R-3) 이 테스트가 보는 파트 이월과세 차단·포커스가 가려진다.
+    await seedWizard(page, cSeed([cAsset({ actualSalePrice: "1100000000", regionCode: "2826010100" }), second], { contractTotalPrice: "1200000000", bundledSaleMode: "actual" }));
     await expandAssetSection(page, 3, 0);
     await expandAssetSection(page, 3, 1);
     // 첫 자산: C가 켜진 채 함께 양도 자산이 있다 → N8
