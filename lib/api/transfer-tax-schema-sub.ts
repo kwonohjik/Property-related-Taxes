@@ -191,32 +191,12 @@ export {
 } from "./transfer-tax-schema-nbl";
 
 // rentHistorySchema·vacancyPeriodSchema는 reductions와 공유하는 leaf로 분리
-// (순환 import → ESM 초기화 TDZ 방지). 본 파일 내부(rentalReductionDetailsSchema)에서
-// 직접 참조하므로 import하고, 하위 호환 위해 동일 이름으로 re-export한다.
+// (순환 import → ESM 초기화 TDZ 방지). 하위 호환 위해 동일 이름으로 re-export한다.
 import {
   rentHistorySchema,
   vacancyPeriodSchema,
 } from "./transfer-tax-schema-rental";
 export { rentHistorySchema, vacancyPeriodSchema };
-
-export const rentalReductionDetailsSchema = z.object({
-  isRegisteredLandlord: z.boolean(),
-  isTaxRegistered: z.boolean(),
-  registrationDate: z.string().date(),
-  rentalHousingType: z.enum(["public_construction", "long_term_private", "public_support_private", "public_purchase"]),
-  propertyType: z.enum(["apartment", "non_apartment"]),
-  region: z.enum(["capital", "non_capital"]),
-  officialPriceAtStart: z.number().int().nonnegative(),
-  rentalStartDate: z.string().date(),
-  transferDate: z.string().date(),
-  vacancyPeriods: z.array(vacancyPeriodSchema).default([]),
-  rentHistory: z.array(rentHistorySchema).default([]),
-  calculatedTax: z.number().int().nonnegative().default(0),
-  /** D1-04 — 조특법 §97① 각 호 신축연도 (public_construction 전용) */
-  constructionYear: z.number().int().optional(),
-  /** D1-04 — §97①2호 「1986.1.1 현재 입주된 사실이 없는」 자기확인 */
-  isUnoccupiedAt1986: z.boolean().optional(),
-});
 
 export const newHousingDetailsSchema = z.object({
   acquisitionDate: z.string().date(),

@@ -4,23 +4,21 @@
  * 목적: ReductionDetailCards 렌더 대상 4개 detail 필드가
  *   calculateTransferTax() 결과에 실제로 채워지는지 원단위 toBe() anchor.
  *
- * 4개 필드:
+ * 필드:
  *   - selfFarmingReductionDetail   (조특법 §69 자경농지 감면)
  *   - inheritedHouseValuationDetail (상속주택 환산취득가액)
  *   - newHousingReductionDetail    (조특법 §99 신축주택 감면)
- *   - rentalReductionDetail        (조특법 §97의3 장기임대 감면)
+ *   (A-3 `rentalReductionDetail` — 레거시 장기임대 입력과 함께 삭제 · §155⑳ 리뷰 V-6 후속)
  */
 
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
-import type { RentalReductionInput } from "@/lib/tax-engine/rental-housing-reduction";
 import type { NewHousingReductionInput } from "@/lib/tax-engine/new-housing-reduction";
 import type { TaxRateKey } from "@/lib/tax-engine/types";
 import {
   makeMockRates,
   baseTransferInput as baseInput,
-  LONG_TERM_RENTAL_RULES_MOCK,
 } from "../_helpers/mock-rates";
 
 // ── 신축주택 감면 Mock 데이터 ────────────────────────────────────────
@@ -220,78 +218,6 @@ describe("A-2: newHousingReductionDetail anchor", () => {
     expect(result.newHousingReductionDetail!.isEligible).toBe(false);
     expect(result.newHousingReductionDetail!.ineligibleReasons.length).toBeGreaterThan(0);
     expect(result.reductionAmount).toBe(0);
-  });
-});
-
-// ── A-3: 장기임대 감면 — rentalReductionDetail ────────────────────────
-
-describe("A-3: rentalReductionDetail anchor", () => {
-  it("A-3a: 8년 임대 요건 충족이어도 레거시 경로 폐지(V-6) → isEligible=false · 감면 0 · 정본 안내 사유", () => {
-    const rentalDetails: RentalReductionInput = {
-      isRegisteredLandlord: true,
-      isTaxRegistered: true,
-      registrationDate: new Date("2015-01-01"),
-      rentalHousingType: "long_term_private",
-      propertyType: "non_apartment",
-      region: "capital",
-      officialPriceAtStart: 500_000_000,
-      rentalStartDate: new Date("2015-01-01"),
-      transferDate: new Date("2024-06-01"),   // 9년 이상
-      vacancyPeriods: [],
-      rentHistory: [],
-      calculatedTax: 0,
-    };
-
-    const rates = makeMockRates(LONG_TERM_RENTAL_RULES_MOCK as Partial<Record<TaxRateKey, object>>);
-    const input = baseInput({
-      transferPrice: 600_000_000,
-      acquisitionPrice: 300_000_000,
-      acquisitionDate: new Date("2014-06-01"),
-      transferDate: new Date("2024-06-01"),
-      isOneHousehold: false,
-      householdHousingCount: 3,
-      reductions: [],
-      rentalReductionDetails: rentalDetails,
-    });
-
-    const result = calculateTransferTax(input, rates);
-    expect(result.rentalReductionDetail).toBeDefined();
-    expect(result.rentalReductionDetail!.isEligible).toBe(false);
-    expect(result.rentalReductionDetail!.reductionAmount).toBe(0);
-    // 결과 카드가 띄울 사유 — 정본 감면 목록으로 안내한다
-    expect(result.rentalReductionDetail!.ineligibleReasons.map((r) => r.code)).toEqual(["LEGACY_RENTAL_DETAILS_UNSUPPORTED"]);
-    // reductionType anchor
-    expect(result.rentalReductionDetail!.reductionType).toBe("long_term_private");
-  });
-
-  it("A-3b: 의무기간 미충족 → isEligible=false, ineligibleReasons 존재", () => {
-    const rentalDetails: RentalReductionInput = {
-      isRegisteredLandlord: true,
-      isTaxRegistered: true,
-      registrationDate: new Date("2019-01-01"),
-      rentalHousingType: "long_term_private",
-      propertyType: "non_apartment",
-      region: "capital",
-      officialPriceAtStart: 400_000_000,
-      rentalStartDate: new Date("2019-01-01"),
-      transferDate: new Date("2024-06-01"),   // 5년 → 8년 미충족
-      vacancyPeriods: [],
-      rentHistory: [],
-      calculatedTax: 0,
-    };
-
-    const rates = makeMockRates(LONG_TERM_RENTAL_RULES_MOCK as Partial<Record<TaxRateKey, object>>);
-    const input = baseInput({
-      isOneHousehold: false,
-      householdHousingCount: 2,
-      reductions: [],
-      rentalReductionDetails: rentalDetails,
-    });
-
-    const result = calculateTransferTax(input, rates);
-    expect(result.rentalReductionDetail).toBeDefined();
-    expect(result.rentalReductionDetail!.isEligible).toBe(false);
-    expect(result.rentalReductionDetail!.ineligibleReasons.length).toBeGreaterThan(0);
   });
 });
 

@@ -11,6 +11,7 @@
  */
 
 import { coerceOptionalDate } from "../tax-utils";
+import { MULTI_HOUSE } from "../legal-codes/transfer";
 import { resolveHighValuePriceCheck } from "../one-house/threshold";
 import { evaluateNew993, type New993Result } from "./new-99-3";
 import { evaluateNew99, type New99Result } from "./new-99";
@@ -535,9 +536,17 @@ export function buildSurchargeExclusionStep(exclusion: {
  */
 export function resolveSurchargeExclusionByReduction(
   reductions: ReadonlyArray<{ type: string }> | undefined,
-  ctx: Omit<IncomeDeductionContext, "transferIncome">,
-): { excluded: boolean; appliedId?: IncomeDeductionId; legalBasis?: string } {
-  const resolution = resolveIncomeDeduction(reductions, { ...ctx, transferIncome: 0 });
+  ctx: Omit<IncomeDeductionContext, "transferIncome"> & {
+    /**
+     * 조특법 §129② — 미등기양도자산에는 감면 규정을 적용하지 않으므로 소령 §167의3①5호 「…에 따라 양도소득세가
+     * 감면되는 주택」이 아니다. STEP 4.6 차감(`transfer-tax-income-steps.ts`)과 같은 게이트(NH-58). 단건·겸용·판정 메뉴가 넘긴다.
+     */
+    isUnregistered?: boolean;
+  },
+): SurchargeExclusionByReduction {
+  const { isUnregistered, ...deductionCtx } = ctx;
+  if (isUnregistered) return { excluded: false };
+  const resolution = resolveIncomeDeduction(reductions, { ...deductionCtx, transferIncome: 0 });
   // P2: appliedId → eligibleId 기준 — 하이브리드 5년 내(세액감면 경로)도 §167의3①5호
   // "감면되는 주택"에 해당하므로 효과 경로 무관 적격이면 배제.
   if (resolution.eligibleId && SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS.includes(resolution.eligibleId)) {
@@ -552,4 +561,20 @@ export function resolveSurchargeExclusionByReduction(
     };
   }
   return { excluded: false };
+}
+
+export type SurchargeExclusionByReduction = { excluded: boolean; appliedId?: IncomeDeductionId; legalBasis?: string };
+
+/**
+ * 배제 근거를 세대 구성에 맞춘다(NH-82). 위 근거(§167의3①·§167의10①2호)는 주택만 가진 세대(법 §104⑦1호·3호)의 것이다 —
+ * 산입되는 조합원입주권·분양권이 있는 세대(같은 항 2호·4호)는 소령 §167의11①2호·§167의4③2호가 같은 §167의3①2호~8호를 준용한다.
+ * 판정 결과는 바꾸지 않는다(세액 불변). 산입 여부는 중과 판정 뒤에야 알므로 호출부가 그 결과로 넘긴다(`surchargeHouseholdCountsRights`).
+ */
+export function withSurchargeExclusionRegime(
+  exclusion: SurchargeExclusionByReduction,
+  householdCountsRights: boolean,
+): SurchargeExclusionByReduction {
+  return exclusion.excluded && householdCountsRights
+    ? { ...exclusion, legalBasis: MULTI_HOUSE.TAX_INCENTIVE_HOUSE_RIGHT_REFERENCE_BASIS }
+    : exclusion;
 }

@@ -540,13 +540,7 @@ export function getReductionLegalBasis(
   /** 내부 id (`reductionTypeApplied`). **표시 라벨이 아니다.** */
   reductionTypeId: string | undefined,
   useLegacyRates: boolean | undefined,
-  /**
-   * D1-11 — id만으로 조문을 특정할 수 없는 경우의 확정값(레거시 임대 4유형).
-   * `calcReductions`가 후보 선택 시점에 계산해 내보낸다.
-   */
-  legalBasisOverride?: string,
 ): string | undefined {
-  if (legalBasisOverride) return legalBasisOverride;
   if (!reductionTypeId) return undefined;
   // §77 공익수용만 경과규정 병기가 있다 — 그 분기는 여기서 유지한다.
   if (reductionTypeId === "public_expropriation" && useLegacyRates) {

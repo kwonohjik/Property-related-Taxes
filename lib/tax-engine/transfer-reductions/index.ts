@@ -163,6 +163,7 @@ export {
   resolveSurchargeExclusionByReduction,
   buildIncomeDeductionStep,
   buildSurchargeExclusionStep,
+  withSurchargeExclusionRegime,
   SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS,
   type IncomeDeductionId,
   type IncomeDeductionContext,

@@ -7,61 +7,14 @@
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
-import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import { Rental97MainInputForm } from "@/components/calc/transfer/rental/Rental97MainInputForm";
 import { HouseValuationSection } from "@/components/calc/transfer/inheritance/HouseValuationSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 
 afterEach(cleanup);
 
-/* ── #2 §127⑦ 배너가 §97 세액감면 카드에도 붙는다 ─────────────── */
-
-const rentalResult = () =>
-  ({
-    steps: [],
-    rentalReductionDetail: {
-      reductionRate: 0.5,
-      reductionAmount: 10_000_000,
-      article: "조특법 §97",
-      appliedArticleLabel: "§97",
-      ineligibleReasons: [],
-      warnings: [],
-      rentIncreaseValidation: { isAllValid: true, violations: [] },
-    },
-    reductionTypeApplied: "self_farming",
-  }) as unknown as TransferTaxResult;
-
-describe("#2 — 배제된 §97 감면이 자기 세액을 그대로 인쇄하지 않는다", () => {
-  const props = {
-    calculatedTax: 50_000_000,
-    taxBase: 200_000_000,
-    longTermHoldingDeduction: 0,
-  };
-
-  it("🔑 A-1: 승자가 자경이면 §97 카드에 §127⑦ 배제 배너가 붙는다", () => {
-    render(
-      <ReductionDetailCards
-        result={rentalResult()}
-        {...props}
-        appliedReductionType="self_farming"
-      />,
-    );
-    expect(screen.getByText(/127/)).toBeTruthy();
-  });
-
-  it("A-2: §97이 승자면 배너를 붙이지 않는다", () => {
-    render(
-      <ReductionDetailCards
-        result={rentalResult()}
-        {...props}
-        appliedReductionType="long_term_rental"
-      />,
-    );
-    expect(screen.queryByText(/127/)).toBeNull();
-  });
-});
+/* ── #2 (삭제) 레거시 장기임대 카드(`RentalReductionDetailCard`)의 §127⑦ 배너 — 카드·입력 삭제(§155⑳ 리뷰 V-6 후속) ── */
 
 /* ── #35 §97 폼의 섹션 번호가 렌더 순서대로다 ────────────────── */
 

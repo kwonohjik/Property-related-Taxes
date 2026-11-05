@@ -65,7 +65,7 @@ describe("① §69 — 수유자는 피상속인 경작기간을 합산하지 �
   it("레거시 경로(양도일 등 미전달)도 같은 축 — 수유자면 합산하지 않는다", () => {
     const rules = { conditions: { minFarmingYears: 8 }, maxAmount: 100_000_000, maxRate: 1 } as never;
     const args = [50_000_000, SF() as never, rules] as const;
-    const pad = Array(15).fill(undefined) as undefined[]; // 4번째~18번째 인자 · 19번째 = nonHeirBequest
+    const pad = Array(13).fill(undefined) as undefined[]; // 4번째~16번째 인자 · 17번째 = nonHeirBequest
     expect(calcReductions(...args).reductionAmount).toBe(50_000_000);
     expect(
       (calcReductions as (...a: unknown[]) => { reductionAmount: number })(...args, ...pad, true).reductionAmount,
