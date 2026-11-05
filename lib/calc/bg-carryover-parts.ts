@@ -49,12 +49,17 @@ export function bgConvertedCarryoverReadsGiftValuation(asset: PartScope & Pick<A
 }
 
 /**
- * 이월과세 × K-5 · **한 파트만** 증여받은 일반건물 — 시나리오 B에서 양도인 증여일 평가액(소령 §163⑨)을 쓰는 그 파트.
- * 그 파트의 `bgActual*` 칸만 연다(⑤)·싣는다(④)·요구한다(⑧). 다른 파트는 양도인이 매입·신축한 것이라 환산이다.
- * 엔진 `convertedCarryoverGiftedPart`·⑫ `requireBgAcquisitionParts`와 같은 조건이다(계획서 `bg-carryover-k5-one-part-b.plan.md` Q-1·Q-2 a).
+ * 이월과세 × K-5·K-6/K-7 · **한 파트만** 증여받은 일반건물 — 시나리오 B에서 양도인 증여일 평가액(소령 §163⑨)을 쓰는 그 파트.
+ * 그 파트의 `bgActual*` 칸만 연다(⑤)·싣는다(④)·요구한다(⑧). 다른 파트는 양도인이 매입·신축한 것이라 양도인 자기 방식(환산·매매사례가액·감정가액)이다
+ * — K-6/K-7이면 양도인 `bgPresumed*`는 그 다른 파트 칸만, 당초 증여자 `bgCoDonorPresumed*`는 증여받은 파트 칸만 쓴다.
+ * 엔진 `partialCarryoverGiftValuationPart`·⑫ `requireBgAcquisitionParts`와 같은 조건이다(계획서 `bg-carryover-k5-one-part-b.plan.md` Q-1·Q-2 a · §9).
  */
-export function bgConvertedCarryoverGiftedPart(asset: PartScope & Pick<AssetForm, "bgAcquisitionMethod">): "land" | "building" | undefined {
-  if (asset.bgAcquisitionMethod !== "converted" || !bgPartialCarryover(asset)) return undefined;
+export function bgPartialCarryoverGiftValuationPart(
+  asset: PartScope & Pick<AssetForm, "bgAcquisitionMethod" | "bgValuationMode">,
+): "land" | "building" | undefined {
+  const m = asset.bgAcquisitionMethod;
+  if (asset.bgValuationMode !== "sangjeungbeop_market" || (m !== "converted" && m !== "appraisal" && m !== "salesCase") || !bgPartialCarryover(asset))
+    return undefined;
   return bgCarryoverParts(asset).land ? "land" : "building";
 }
 

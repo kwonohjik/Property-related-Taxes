@@ -12,6 +12,7 @@
  */
 import { deriveHouseRegionFromCode } from "./house-region";
 import { effectiveSellingTaxIncentiveRental } from "./tax-incentive-rental-scope";
+import { effectiveSellingUrbanLife, sellingUrbanLifeAsked } from "./tax-incentive-rental-scope";
 import { createHouseEntry } from "@/lib/stores/house-entry-factory";
 import {
   createInitialOneHouseJudgmentForm,
@@ -32,6 +33,8 @@ const RENTAL_KEYS = [
   "firstSaleContractDate", "acquisitionOfficialPrice", "rentalStartOfficialPrice", "hasHalfDutyPeriodMet", "isSoldWithin1YearOfCancellation",
   "rentalCancellationDate", "saMokBaseArticle", "isExcluded918Rule", "isExcludedAfter20200711Apt", "isExcludedShortToLongChange",
   "hasContractDepositProof", "rentalAptDeadlineExtension",
+  // 가목2) 괄호 도시형 생활주택인 아파트 — 명부 행은 2호·3호가 한 칸, 양도 주택은 3호 칸과 합친 유효 사실(V-12)
+  "isUrbanLifeHousingApartment",
 ] as const satisfies readonly (keyof RentalDeclaration)[];
 
 const TAX_INCENTIVE_KEYS = [
@@ -277,6 +280,9 @@ function rowFromSelling(asset: AssetForm, se: SellingExclusion | undefined, id: 
     ...(se?.isCulturalHeritage ? { oneHouseCulturalHeritage: true } : {}),
     ...(ltr ? pick(ltr, RENTAL_KEYS) : {}),
     ...(tir ? pick(tir, TAX_INCENTIVE_KEYS) : {}),
+    // 도시형 생활주택 사실은 2호·3호가 하나 — 어느 칸이 묻는 범위면 화면·④가 쓰는 유효 사실을 행의 한 칸으로 옮긴다(V-12).
+    //   묻는 범위 밖이면 위 pick의 원값 그대로(왕복 보존 — SW-1).
+    ...(sellingUrbanLifeAsked(se) ? { isUrbanLifeHousingApartment: effectiveSellingUrbanLife(se) } : {}),
   };
 }
 

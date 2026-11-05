@@ -27,6 +27,7 @@ import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEnt
 import { RentalCancellationReasonField } from "@/components/calc/transfer/RentalCancellationReasonField";
 import { hasRentalBasicRegistration } from "@/lib/tax-engine/multi-house-surcharge-count";
 import type { RentalDeclaration, TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { sellingRentalDeclarationView, sellingTaxIncentiveAsksUrbanLife } from "@/lib/calc/tax-incentive-rental-scope";
 
 type SellingExclusion = NonNullable<TransferFormData["sellingHouseExclusion"]>;
 
@@ -161,8 +162,16 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
             </p>
           )}
 
-          {/* 이 섹션은 계산기(중과 축)에만 마운트된다 — ⑪ 연장 사실 칸도 함께 연다 */}
-          <HouseEntryRentalTypeSection house={ltr} idPrefix="selling" onUpdate={patch} aptDeadlineExtensionEnabled />
+          {/* 이 섹션은 계산기(중과 축)에만 마운트된다 — ⑪ 연장 사실 칸도 함께 연다.
+              도시형 생활주택 사실은 3호 칸과 하나다(V-12): 3호 칸이 묻는 범위면 그 답을 쓰고 여기서는 안내만 — 위젯은 유효 사실 보기로 ⑪ 칸 범위를 판정한다. */}
+          <HouseEntryRentalTypeSection
+            house={sellingRentalDeclarationView(v) ?? ltr}
+            idPrefix="selling"
+            onUpdate={patch}
+            aptDeadlineExtensionEnabled
+            urbanLifeHousingQuestionEnabled={!sellingTaxIncentiveAsksUrbanLife(v)}
+            urbanLifeSharedHint="도시형 생활주택인 아파트인지는 아래 「양도 주택이 조특법 감면 임대주택인 경우」 칸의 답을 함께 씁니다 (같은 주택의 같은 사실)."
+          />
         </div>
       </ToggleCard>
     </ToneCard>

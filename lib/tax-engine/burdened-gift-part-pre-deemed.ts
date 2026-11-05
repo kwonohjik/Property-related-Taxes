@@ -14,8 +14,8 @@
  * 실비는 자산 단위와 같은 성질별 시점 비율로 파트에 나눈다(`splitBgRealExpenseByNature`) — 실지 파트는 제 몫을 쓰고, 환산 파트는 제 몫과
  * 가목을 겨룬다. 두 파트가 모두 환산이면 자산 단위 비교 그대로다(종전 K-5와 같다).
  *
- * `fixedActual` — 이월과세 × K-5 · 한 파트만 증여받은 일반건물의 시나리오 B(계획서 `bg-carryover-k5-one-part-b.plan.md` Q-1 a).
- * 그 파트는 양도인 증여일 평가액(소령 §163⑨ — 안분 전 전체 금액)을 실지거래가액으로 쓰고, 다른 파트는 사용자가 고른 산정방식(환산)이다.
+ * `fixedActual` — 이월과세 × K-5·K-6/K-7 · 한 파트만 증여받은 일반건물의 시나리오 B(계획서 `bg-carryover-k5-one-part-b.plan.md` Q-1 a).
+ * 그 파트는 양도인 증여일 평가액(소령 §163⑨ — 안분 전 전체 금액)을 실지거래가액으로 쓰고, 다른 파트는 사용자가 고른 산정방식(환산·매매사례가액·감정가액 — 양도인 값)이다.
  * 경비 규칙은 ①② 채택 파트와 같다(실지 파트 = 실비 몫 · 환산 파트 = 개산공제 + §97②2호 단서).
  */
 import { safeMultiplyThenDivide, calculateEstimatedAcquisitionPrice } from "./tax-utils";

@@ -143,7 +143,7 @@ function requireBgAcquisitionParts(info: unknown, gbv: Gbv, ownershipRatio: numb
   if (i.acquisitionMethod === "actual") return ownActual();
   const donor = i.carryoverDonorBasis as (Record<string, unknown> & { parts?: { land?: boolean; building?: boolean } }) | undefined;
   // 이월과세 × K-5 — 시나리오 B는 양도인 증여일 평가액(소령 §163⑨). 두 파트 모두 증여받았으면 두 칸(엔진 `isConvertedCarryoverReadingGiftValuation`),
-  // 한 파트만이면 그 파트 칸만 — 총액으로는 대신하지 않는다(엔진 `convertedCarryoverGiftedPart` · 계획서 `bg-carryover-k5-one-part-b.plan.md`).
+  // 한 파트만이면 그 파트 칸만 — 총액으로는 대신하지 않는다(엔진 `partialCarryoverGiftValuationPart` · 계획서 `bg-carryover-k5-one-part-b.plan.md`).
   if (i.acquisitionMethod === "converted") {
     const p = donor?.parts ?? { land: true, building: true };
     if (donor && p.land === true && p.building === true) ownActual();
@@ -158,6 +158,14 @@ function requireBgAcquisitionParts(info: unknown, gbv: Gbv, ownershipRatio: numb
   const parts = donor.parts ?? { land: true, building: true };
   need([...at, "carryoverDonorBasis"], donor, "presumedAcquisitionTotal", "presumedLandAcquisitionPrice", "presumedBuildingAcquisitionPrice", parts.land === true && hasPart("land"), parts.building === true && hasPart("building"));
   if (parts.land === true && parts.building === true) ownActual();
+  else if (parts.land !== parts.building) {
+    // 한 파트만 증여받았다 — 그 파트의 양도인 증여일 평가액(B · 소령 §163⑨)과 다른 파트의 양도인 자기 값(A·B · §97①1호나목)
+    // (엔진 `assertPartialPresumedCarryover` · ⑧ `partialCarryoverOwnPresumedError` · 계획서 `bg-carryover-k5-one-part-b.plan.md` §9)
+    const gifted = parts.land === true ? "Land" : "Building";
+    const other = gifted === "Land" ? "Building" : "Land";
+    for (const key of [`actual${gifted}AcquisitionPrice`, `presumed${other}AcquisitionPrice`])
+      if (!positive(i[key])) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...at, key], message: BG_ACQ_PART_REQUIRED_MESSAGE });
+  }
 }
 
 export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementCtx): void {

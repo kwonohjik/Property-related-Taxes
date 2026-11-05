@@ -76,7 +76,7 @@ V = 2.5억은 이 시료에서 환산값과 같아 개산공제만 빠진다(+60
 - b 단건만, 지분·묶음은 ⑧ 차단.
 
 ### Q-4 한 파트 × K-6/K-7 차단
-- **a (권장)** 이번에는 그대로 둔다(별건). K-6/K-7은 다른 파트도 양도인의 매매사례·감정가액을 따로 받아야 해 입력 설계가 다르다.
+- **a (권장)** 이번에는 그대로 둔다(별건). → 2026-11-05 사용자 지시로 후속 PR에서 푼다(§9). K-6/K-7은 다른 파트도 양도인의 매매사례·감정가액을 따로 받아야 해 입력 설계가 다르다.
 - b 함께 푼다.
 
 ### Q-5 PR
@@ -100,3 +100,19 @@ V = 2.5억은 이 시료에서 환산값과 같아 개산공제만 빠진다(+60
 - 엔진: `convertedCarryoverGiftedPart`(한 파트 K-5) → `toTransferorBasisInfo`가 B 사본에 `transferorGiftValuationPart`를 싣고 방식은 환산 그대로 둔다 → `burdened-gift-apportionment.ts`가 그 파트를 `resolvePartwiseBgAcquisition(…, fixedActual)`로 넘긴다(그 파트 = 평가액 × 채무비율 · 실비 몫 / 다른 파트 = 환산 + 개산공제 · §97②2호 단서). `assertTransferorGiftValuation(info, part)` — 그 파트 칸만 요구.
 - ⑫ `requireBgAcquisitionParts` 환산 분기 — 한 파트면 그 파트 `actual*`(총액으로 대신하지 않는다). ④ `usesActualField` — 그 파트 칸만 싣는다. ⑤ 그 파트 칸만 · 안내 문구. ⑧ `convertedCarryoverValuationError`(helper) — 그 파트 칸만. 술어 leaf `bgConvertedCarryoverGiftedPart`.
 - anchor `__tests__/api/transfer.route.bg-carryover-k5-one-part-b.anchor.test.ts` 12건: 엔진(토지만 101,598,000 · 2.5억 71,598,000 A 채택 · 건물만 97,275,500 · 평가액 없음 400) · 화면 경로(④ 그 파트만 · ⑧ 그 칸만 · ⑫ 400) · 지분 = 단건 · 묶음(첫째·둘째) 토지만 129,998,400 · 건물만 125,305,400(K-4 분리 칸 대용과 1원까지 같음 · 수정 前 A 121,785,200 · 105,004,800).
+
+## 9. 후속 — 한 파트 × K-6/K-7 차단 해제 (2026-11-05 사용자 지시 「수정해」)
+
+§2 결론(토지·건물 별개 방식 · 97누11829)을 K-6/K-7에 그대로 적용한다. 증여받지 않은 파트의 산정방식은 사용자가 고른 방식과 같다고 본다(K-5 한 파트와 같은 가정 — 다른 파트만 실지·환산인 조합은 범위 밖, 선행 §7 V-2).
+
+| | 증여받은 파트 | 다른 파트 |
+|---|---|---|
+| A | 당초 증여자 매매사례가액·감정가액(§97의2①1호) + 개산공제(당초 증여자 취득 당시 기준시가) | 양도인 자기 매매사례가액·감정가액 + 개산공제 |
+| B | 양도인 증여일 평가액(소령 §163⑨ · 실비) | A와 같다 |
+
+- 엔진: `partialCarryoverGiftValuationPart`(K-5·K-6/K-7) · `assertPartialPresumedCarryover`(증여받은 파트 당초 증여자 값·기준시가 · 다른 파트 양도인 값 · 증여받은 파트 평가액) · `applyCarryoverDonorBasis` 한 파트 분기가 그 파트 `presumed*`를 당초 증여자 값으로 · `assertPartialCarryoverSupported`의 K-6/K-7 차단 삭제. B는 §8과 같은 `fixedActual` 경로(방식 게이트에 appraisal·salesCase 추가).
+- ④ `buildPresumedAcquisition` — 양도인 값은 다른 파트 칸만 · 당초 증여자 값은 종전대로 증여받은 파트 칸만 · 평가액은 증여받은 파트 칸만(`usesActualField`).
+- ⑤ 양도인 매매사례가액·감정가액 섹션을 한 파트일 때도 열고 증여받은 파트 칸을 숨긴다 · 이월과세 박스 섹션은 다른 파트 칸을 숨긴다 · 평가액 안내 문구.
+- ⑧ `transfer-tax-validate-gb-carryover.ts` 차단 삭제 · 이월과세 분기 판정을 `bgAnyCarryover`로(건물만 이월과세는 토지 원인이 매매라 종전 `acquisitionCause` 판정이 일반 분기로 새 양도인 두 칸을 요구했다) · `partialCarryoverOwnPresumedError`.
+- ⑫ `requireBgAcquisitionParts` K-6/K-7 분기 — 한 파트면 증여받은 파트 `actual*` + 다른 파트 `presumed*`.
+- anchor `transfer.route.bg-carryover-k67-one-part.anchor.test.ts` 24건(감정·매매사례 각각): 토지만 A 91,689,940 · B 103,138,000 채택 · 건물만 A 86,673,560 · B 98,640,500 채택 · 카드 손계산 일치(머리 주석) · ④ 칸별 전송 · ⑧ 6칸 · ⑫ 2경로 · 엔진 4방어선 · 지분 = 단건 · 묶음. ⑤ anchor 3건.

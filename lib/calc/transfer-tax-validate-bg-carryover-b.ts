@@ -3,7 +3,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { fieldError } from "./transfer-tax-validate-field";
 import { bgConvertedCarryoverReadsGiftValuation } from "./bg-carryover-parts";
-import { bgConvertedCarryoverGiftedPart } from "./bg-carryover-parts";
+import { bgPartialCarryoverGiftValuationPart } from "./bg-carryover-parts";
 
 /**
  * 이월과세 × K-5·K-6/K-7 — 시나리오 B 취득가액 = 양도인이 증여받은 때의 상증법 평가액(소령 §163⑨ · `bgActual*` 칸).
@@ -30,7 +30,20 @@ export function transferorGiftValuationError(asset: AssetForm, label: string, ho
  * (다른 파트는 양도인 환산 · ⑤·④·⑫·엔진과 같은 leaf — 계획서 `bg-carryover-k5-one-part-b.plan.md`). K-5 이월과세가 아니면 null.
  */
 export function convertedCarryoverValuationError(asset: AssetForm, label: string, houseSplit: boolean): string | null {
-  const gifted = bgConvertedCarryoverGiftedPart(asset);
+  const gifted = bgPartialCarryoverGiftValuationPart(asset);
   if (gifted) return transferorGiftValuationError(asset, label, houseSplit, gifted);
   return bgConvertedCarryoverReadsGiftValuation(asset) ? transferorGiftValuationError(asset, label, houseSplit) : null;
+}
+
+/**
+ * 이월과세 × K-6/K-7 · 한 파트만 증여받은 일반건물 — 증여받지 않은 파트는 양도인이 취득한 것이라 양도인 자기 매매사례가액·감정가액이 필요하다
+ * (A·B 공통 · 엔진 `assertPartialPresumedCarryover` · ⑫ `requireBgAcquisitionParts`와 같은 조건). 해당 없으면 null.
+ */
+export function partialCarryoverOwnPresumedError(asset: AssetForm, label: string, methodLabel: string): string | null {
+  const gifted = bgPartialCarryoverGiftValuationPart(asset);
+  if (!gifted) return null;
+  const field = gifted === "land" ? "bgPresumedAcquisitionBuilding" : "bgPresumedAcquisitionLand";
+  if (parseAmount(asset[field])) return null;
+  const other = gifted === "land" ? "건물" : "토지";
+  return fieldError(field, `${label}: 증여받지 않은 ${other}은 양도인이 취득한 것이라 양도인의 ${other} 취득 당시 ${methodLabel}을 입력하세요 (소득세법 §97①1호나목).`);
 }

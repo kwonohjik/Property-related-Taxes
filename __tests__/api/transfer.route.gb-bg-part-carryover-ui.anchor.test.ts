@@ -170,9 +170,12 @@ describe("⑧ — 증여받은 파트의 칸만 요구한다", () => {
   it("건물만 · 증여세 산출세액만 → 건물 서브폼의 과세가액 칸", () => {
     expect(fields(formOf([bOnlyUi({ giftTaxCalculated: "30,000,000", giftTaxAmount: "" })]))).toContain("buildingCarryover.giftTaxBase");
   });
-  it.each([["appraisal"], ["salesCase"]] as const)("K-6·K-7(%s) × 한 파트만 → 막는다(Q-3 a)", (m) => {
-    const f = formOf([lOnlyUi("purchase", { bgAcquisitionMethod: m, bgActualAcquisitionLand: "400,000,000", bgActualAcquisitionBuilding: "100,000,000", bgCoDonorPresumedAcquisitionLand: "50,000,000" } as Partial<AssetForm>)]);
-    expect(messages(f).some((s) => s.includes("한 파트"))).toBe(true);
+  // 2026-11-05 차단 해제(`bg-carryover-k5-one-part-b.plan.md` §9) — 종전 「한 파트 × K-6/K-7 → 막는다(Q-3 a)」. 계산은 `transfer.route.bg-carryover-k67-one-part.anchor.test.ts`.
+  it.each([["appraisal"], ["salesCase"]] as const)("K-6·K-7(%s) × 한 파트만 → 막지 않고 다른 파트의 양도인 값을 요구한다", (m) => {
+    const base = { bgAcquisitionMethod: m, bgActualAcquisitionLand: "400,000,000", bgActualAcquisitionBuilding: "100,000,000", bgCoDonorPresumedAcquisitionLand: "50,000,000" };
+    expect(messages(formOf([lOnlyUi("purchase", base as Partial<AssetForm>)])).some((s) => s.includes("한 파트"))).toBe(false);
+    expect(fields(formOf([lOnlyUi("purchase", base as Partial<AssetForm>)]))).toContain("bgPresumedAcquisitionBuilding");
+    expect(fields(formOf([lOnlyUi("purchase", { ...base, bgPresumedAcquisitionBuilding: "240,000,000" } as Partial<AssetForm>)]))).not.toContain("bgPresumedAcquisitionBuilding");
   });
 });
 

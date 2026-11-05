@@ -91,6 +91,8 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
               onChange={onChange}
               method={asset.bgAcquisitionMethod}
               carryover
+              // 한 파트만 증여받았으면 당초 증여자 값은 그 파트 칸만(다른 파트는 위 양도인 칸 · `bg-carryover-k5-one-part-b.plan.md` §9)
+              hidePart={partial ? (parts.land ? "building" : "land") : undefined}
             />
           )}
           {parts.land && (

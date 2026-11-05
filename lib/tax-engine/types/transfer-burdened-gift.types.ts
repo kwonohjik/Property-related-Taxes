@@ -314,8 +314,8 @@ export interface BurdenedGiftInfo {
    */
   carryoverDonorCapexDirect?: number;
   /**
-   * ⚠️ 엔진 내부 전달용 — K-5(환산) 이월과세에서 **한 파트만** 증여받았을 때 시나리오 B의 그 파트(`toTransferorBasisInfo`가 싣는다).
-   * 그 파트는 양도인 증여일 평가액(`actual*` · 「소득세법 시행령」 제163조 제9항)이 실지거래가액이고, 다른 파트는 환산 그대로다
+   * ⚠️ 엔진 내부 전달용 — K-5·K-6/K-7 이월과세에서 **한 파트만** 증여받았을 때 시나리오 B의 그 파트(`toTransferorBasisInfo`가 싣는다).
+   * 그 파트는 양도인 증여일 평가액(`actual*` · 「소득세법 시행령」 제163조 제9항)이 실지거래가액이고, 다른 파트는 양도인 자기 방식(환산·매매사례가액·감정가액) 그대로다
    * (`resolvePartwiseBgAcquisition` · 계획서 `bg-carryover-k5-one-part-b.plan.md`).
    */
   transferorGiftValuationPart?: "land" | "building";
