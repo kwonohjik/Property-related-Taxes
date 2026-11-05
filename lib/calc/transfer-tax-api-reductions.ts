@@ -179,7 +179,7 @@ export function toEngineReductions(
           stdPriceFloorMet993: f.stdPriceFloorMet,
           luxuryFacility993: f.luxuryFacility,
         }))(luxuryFacts(r.houseType993, r.grossFloorAreaSqm993, r.attachedLandAreaSqm993, r.stdPriceFloorMet993, r.luxuryFacility993)),
-        // 최초 계약 여부(NH-17) — 묻는 범위(1호 · 상속·증여·이월과세 증여 아님)에서 답한 값만. ⑧이 범위 안 미응답을 막는다.
+        // 최초 계약 여부(NH-17) — 묻는 범위(1호 · 상속·증여·이월과세 증여 아님 — 이월과세 증여는 해석 확인 후 별도)에서 답한 값만. ⑧이 범위 안 미응답을 막는다.
         firstContract993:
           needsFirstContractAnswer(r.acquisitionType993, ownerAsset.acquisitionCause) && r.firstContract993
             ? r.firstContract993
@@ -442,7 +442,7 @@ export function toEngineReductions(
           stdPriceFloorMet99: f.stdPriceFloorMet,
           luxuryFacility99: f.luxuryFacility,
         }))(luxuryFacts(r.houseType99, r.grossFloorAreaSqm99, r.attachedLandAreaSqm99, r.stdPriceFloorMet99, r.luxuryFacility99)),
-        // 최초 계약 여부(NH-03) — 묻는 범위(2호 · 상속·증여·이월과세 증여 아님)에서 답한 값만
+        // 최초 계약 여부(NH-03) — 묻는 범위(2호 · 상속·증여·이월과세 증여 아님 — 이월과세 증여는 해석 확인 후 별도)에서 답한 값만
         firstContract99:
           needsFirstContractAnswer(r.acquisitionType99, ownerAsset.acquisitionCause) && r.firstContract99
             ? r.firstContract99

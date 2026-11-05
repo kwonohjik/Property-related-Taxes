@@ -4,7 +4,8 @@
  * - NH-15 (사용자 결정 Q-1 a): 기준일 1999.9.17.까지 고급주택 가액 = 양도가액(실지거래가액) 5억원 초과. 1999.9.18.부터 6억원.
  *   (소득세법 시행령 §156 MST 22605·22607 「양도가액이 5억원을 초과」 → MST 22609 「양도당시의 실지거래가액이 6억원을 초과」)
  * - NH-02 (Q-2 b): 단독주택 1호(연면적 264㎡ 또는 딸린 토지 495㎡ + 가액 + 하한), 3호(시설)는 단독주택에만.
- * - NH-03·17·40 (Q-3): 상속·증여(지분 포함)는 불성립, 이월과세 증여는 인정, 매매 취득은 최초 계약 3-state(모름·미입력 = 불성립 + 확인 필요).
+ * - NH-03·17·40 (Q-3): 상속·증여(지분 포함)는 불성립, 매매 취득은 최초 계약 3-state(아니오 불성립 · 모름 불성립 + 확인 필요 · 미입력 종전).
+ *   이월과세 증여(carryover_gift)는 해석 확인 후 별도라 이 파일에서 어느 쪽으로도 고정하지 않는다.
  * - NH-16 (Q-6): 관리처분계획 인가일 뒤 승계조합원은 §99의3 불성립(조특령 §99의3③2호·⑤). §99에는 인가일 요건이 없다.
  * - NH-49: 2015.12.31. 이전 양도는 종전 규정 적용 대상 고지 — 차감액은 그대로.
  */
@@ -149,14 +150,10 @@ describe("NH-03 · NH-17 · NH-40 — 취득 원인 게이트", () => {
     expect(evaluateNew99(in99({ ...builder99 })).isEligible).toBe(true);
     expect(evaluateNew993(in993({ ...builder993 })).isEligible).toBe(true);
   });
-  it("이월과세 증여는 최초 계약자 취득으로 인정(Q-3 — 현행 유지) — 최초 계약 질문 없이 적격", () => {
-    expect(evaluateNew99(in99({ ...builder99, acquisitionCause: "carryover_gift" })).isEligible).toBe(true);
-    expect(evaluateNew993(in993({ ...builder993, acquisitionCause: "carryover_gift" })).isEligible).toBe(true);
-  });
-  it("NH-40 자기건설 지분을 증여·상속으로 취득 → 그 지분 불성립 / 이월과세·매매·신축은 적격", () => {
+  it("NH-40 자기건설 지분을 증여·상속으로 취득 → 그 지분 불성립 / 매매·신축은 적격", () => {
     expect(codes(evaluateNew99(in99({ acquisitionCause: "gift" })))).toEqual(["ACQUIRED_BY_INHERITANCE_OR_GIFT"]);
     expect(codes(evaluateNew993(in993({ acquisitionCause: "inheritance" })))).toEqual(["ACQUIRED_BY_INHERITANCE_OR_GIFT"]);
-    for (const cause of ["carryover_gift", "purchase", "newConstruction"] as const) {
+    for (const cause of ["purchase", "newConstruction"] as const) {
       expect(evaluateNew99(in99({ acquisitionCause: cause })).isEligible).toBe(true);
       expect(evaluateNew993(in993({ acquisitionCause: cause })).isEligible).toBe(true);
     }
