@@ -318,7 +318,8 @@ describe("PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 �
     expect(has(none.warnings, "입력되지 않아")).toBe(true);
     expect(has(none.warnings, TABLE2_NOTICE)).toBe(false);
     // 비조정지역 — 거주요건이 없어 고가주택 부분 비과세이고, 표2 대상 판정의 거주 2년은 별개다
-    const nonReg = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "" }, { wasRegulatedAtAcquisition: false }));
+    // 시료 주소는 종로구(조정대상지역)다 — 비조정은 직접 고른 토글(만짐 표지)로 둔다.
+    const nonReg = await runCalc(calcForm({ giftPriorHouseholdResidenceMonths: "" }, { wasRegulatedAtAcquisition: false, wasRegulatedAtAcquisitionTouched: true }));
     expect(nonReg.r.isPartialExempt).toBe(true);
     expect(has(nonReg.warnings, TABLE2_NOTICE)).toBe(true);
     const t2 = (nonReg.warnings ?? []).find((x: string) => x.includes(TABLE2_NOTICE)) as string;

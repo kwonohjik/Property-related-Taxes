@@ -62,7 +62,7 @@ function form(houses: HouseEntry[]) {
     ...createDefaultTransferFormData(),
     assets: [{ ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1", ...MIXED }],
     transferDate: "2026-09-18", filingDate: "2026-10-31", contractTotalPrice: "1000000000",
-    householdHousingCount: String(houses.length + 1), isOneHousehold: true, isRegulatedArea: true,
+    householdHousingCount: String(houses.length + 1), isOneHousehold: true, isRegulatedArea: true, isRegulatedAreaTouched: true,
     residencePeriodMonths: "120", houses,
   } as unknown as TransferFormData);
 }

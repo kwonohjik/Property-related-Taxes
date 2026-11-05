@@ -12,7 +12,7 @@ import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { calcProvisoMode } from "./transfer-tax-api-residence";
 import { buildResidenceReqInput } from "./transfer-tax-api-residence";
 import { resolveExemptionProviso } from "@/lib/tax-engine/transfer-tax-exemption-holding";
-import { calcEffectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
+import { calcEffectiveWasRegulatedAtAcquisition, calcStoredRegulatedFlags } from "@/lib/calc/effective-regulated-at-acquisition";
 import type { RentalResidenceRequirementFacts } from "./rental-residence-requirement-status";
 
 export function calcRentalResidenceFacts(form: TransferFormData, a: AssetForm, index: number): RentalResidenceRequirementFacts {
@@ -31,7 +31,7 @@ export function calcRentalResidenceFacts(form: TransferFormData, a: AssetForm, i
     }),
     // §154⑩ 표준 경로(I-5) — 거주주택 취득 당시 조정대상지역 여부. 주소(법정동코드)가 있으면 엔진과 같은 주소 판정,
     // 없으면 폼-전역 토글(일반 §154① 흐름과 동일 소스) — G1-13. 결정 #38-10 — 증여받은 주택은 ④와 같은 세대 사실 basis(첫 자산).
-    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(a, form.wasRegulatedAtAcquisition, form.regionCode, {
+    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(a, calcStoredRegulatedFlags(form).wasRegulatedAtAcquisition, form.regionCode, {
       isPrimary: index === 0,
     }),
     // §154① 단서 1호·2호가목·3호면 거주주택 보유 2년을 막지 않는다 — ④가 첫 자산에 싣는 것과 같은 게이트·정규화 값(D-9).

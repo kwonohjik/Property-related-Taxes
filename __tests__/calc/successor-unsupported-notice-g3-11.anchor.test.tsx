@@ -162,7 +162,8 @@ describe("G3-11 · 목록에서 뺀 분기는 막히지 않고 엔진이 처리�
       acquisitionCause: "inheritance", decedentAcquisitionDate: "2005-01-01", redevNewHouseResidenceMonths: "0",
       fixedAcquisitionPrice: "", inheritanceValuationMethod: "supplementary", publishedValueAtInheritance: "900,000,000",
     } as Partial<AssetForm>;
-    const reg = { wasRegulatedAtAcquisition: true } as Partial<TransferFormData>;
+    // 시료 주소(「서울 테스트동」)는 판정할 수 없는 문자열이다 — 직접 고른 토글(만짐 표지)로 둔다.
+    const reg = { wasRegulatedAtAcquisition: true, wasRegulatedAtAcquisitionTouched: true } as Partial<TransferFormData>;
     const same = await runRoute(
       succ("1000000000", { ...inh, decedentSameHouseholdBeforeInheritance: true, decedentCohabitationHoldingStartDate: "2010-01-01", decedentCohabitationResidenceMonths: "60" } as Partial<AssetForm>, reg),
     );

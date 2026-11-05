@@ -15,7 +15,7 @@
  * 판정 메뉴는 묻지 않는다(`hideSpouseOwned`) — 중과 축 전용 사실이고, 판정 메뉴에서 넘어온 「배우자 쪽」 행은 응답 없이 도착해 ⑧이 요구한다.
  */
 import { isMultiHouseSurchargeSuppressed } from "./transfer-tax-api-helpers";
-import { calcEffectiveIsRegulatedAtTransfer } from "./effective-regulated-at-acquisition";
+import { calcEffectiveIsRegulatedAtTransfer, type RegulatedFlagsForm } from "./effective-regulated-at-acquisition";
 import { housesOwnedAtTransfer } from "./household-house-count";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { mergeContextOf, mergeHouseSideOf, type MergeContext } from "./merge-house-origin";
@@ -31,8 +31,9 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
 type Form = Pick<
   TransferFormData,
-  "marriageDate" | "parentalCareMergeDate" | "transferDate" | "houses" | "presaleRights" | "isRegulatedArea" | "regionCode" | "assets"
->;
+  "marriageDate" | "parentalCareMergeDate" | "transferDate" | "houses" | "presaleRights" | "regionCode" | "assets"
+> &
+  RegulatedFlagsForm;
 
 /** 질문이 열리는가 — 혼인 5년 안 양도 · 혼인 뒤 새 취득 없음 · 주택+권리 3 이상 · 중과가 걸리는 양도(조정대상지역, 한시배제 밖). */
 export function spouseHoldingQuestionApplies(form: Form): boolean {

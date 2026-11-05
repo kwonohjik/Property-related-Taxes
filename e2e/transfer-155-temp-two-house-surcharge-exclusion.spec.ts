@@ -40,8 +40,11 @@ function seedForm(over: Record<string, unknown>) {
         contractTotalPrice: "2000000000",
         isOneHousehold: true,
         householdHousingCount: "2",
+        // 시료 주소(「서울 강남구 테스트동」 — 시·도 약칭)는 주소 문자열 판정이 「미수록」이다 — 시료가 정한 토글은 직접 고른 값(만짐 표지)으로 둔다.
         isRegulatedArea: true,
         wasRegulatedAtAcquisition: false,
+        isRegulatedAreaTouched: true,
+        wasRegulatedAtAcquisitionTouched: true,
         isUnregistered: false,
         /**
          * 🔄 **토글·날짜 시드를 뺐다** (2026-09-22). §155①은 이제 명부에서 도출된다

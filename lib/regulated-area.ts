@@ -74,3 +74,15 @@ export function checkRegulatedAreaByCode(regionCode: string, date: string, inDis
   }
   return isRegulatedByBjdCode(regionCode, date, inDistrict);
 }
+
+/**
+ * 소재지(법정동코드 우선, 없으면 주소 문자열) 하나로 판정한다 — `/api/address/regulated-area`와 계산기 실효값
+ * (`calcStoredRegulatedFlags`)이 같은 함수를 부른다(Step4 자동 판별을 건너뛴 계산 = 거친 계산).
+ * @param date YYYY-MM-DD
+ */
+export function judgeRegulatedArea(
+  loc: { address?: string; regionCode?: string; inDistrict?: boolean },
+  date: string,
+): RegulatedAreaResult {
+  return loc.regionCode ? checkRegulatedAreaByCode(loc.regionCode, date, loc.inDistrict) : checkRegulatedArea(loc.address ?? "", date);
+}

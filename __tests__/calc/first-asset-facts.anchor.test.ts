@@ -186,7 +186,8 @@ describe("④ 비전송 — 마커가 있어도 본문이 바이트 동일", () 
 
 describe("실측 연결 — 묶음에 오른 선언은 실제로 새 첫 자산의 ④ 본문을 바꾼다(거짓 경보 방지)", () => {
   const LEAK: [string, Partial<F>][] = [
-    ["regulated", { wasRegulatedAtAcquisition: true }],
+    // 직접 고른 토글(만짐 표지)만 새 첫 자산으로 샌다 — 안 만졌으면 ④가 새 첫 자산의 주소 문자열로 다시 판정한다.
+    ["regulated", { wasRegulatedAtAcquisition: true, wasRegulatedAtAcquisitionTouched: true }],
     ["proviso", { provisoReason: "expropriation", provisoExpropriationDate: "2025-01-01" }],
     ["finalRestart", { transferDate: "2021-12-01", finalHouseRestartHistory: "yes" }],
     ["merge", { marriageDate: "2020-01-01" }],

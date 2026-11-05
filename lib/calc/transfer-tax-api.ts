@@ -26,6 +26,7 @@ import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import {
   calcEffectiveIsRegulatedAtTransfer,
   calcEffectiveWasRegulatedAtAcquisition,
+  calcStoredRegulatedFlags,
   GIFT_HOUSEHOLD_SCOPE_PRIMARY,
 } from "@/lib/calc/effective-regulated-at-acquisition";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
@@ -504,7 +505,7 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     // 결정 #5(G7-6) 하위 1 — 주소(법정동코드)가 있으면 저장된 토글이 아니라 주소 판정값을 싣는다(⑤ 토글을 숨긴 화면과 같은 값).
     isRegulatedArea: calcEffectiveIsRegulatedAtTransfer(form),
     // 결정 #38-10 — 증여받은 주택은 엔진과 같은 세대 사실 basis로 「취득 당시」를 읽는다(단일 기준일이면 거울상·통산 시 엔진과 반대 값이 간다).
-    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, form.regionCode, GIFT_HOUSEHOLD_SCOPE_PRIMARY),
+    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(primary, calcStoredRegulatedFlags(form).wasRegulatedAtAcquisition, form.regionCode, GIFT_HOUSEHOLD_SCOPE_PRIMARY),
     // §104①4호 단서(영 §167의6 1·2호) — presale_right 전용. 그 밖의 자산은 보내지 않는다(3중 패턴).
     presaleRightNoOtherRight:
       primary.assetKind === "presale_right" ? form.presaleRightNoOtherRight : undefined,

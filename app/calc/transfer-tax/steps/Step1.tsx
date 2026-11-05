@@ -24,6 +24,7 @@ import {
 import { filingOverdueNote, getFilingDeadline, isFilingOverdue, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 import type { FilingUnitCorrection } from "@/lib/calc/filing-unit-correction";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
+import { calcStoredRegulatedFlags } from "@/lib/calc/effective-regulated-at-acquisition";
 import { Button } from "@/components/ui/button";
 import { OneHouseJudgmentLoadModal } from "@/components/calc/transfer/OneHouseJudgmentLoadModal";
 import { hasJudgmentProvenance } from "@/lib/calc/one-house-judgment-provenance";
@@ -383,7 +384,8 @@ export function Step1({
           totalTransferExpense={formTotalTransferExpenseInScope(form) ? form.totalTransferExpense : ""}
           isOneHouseSingle={redevOneHouseAxisCandidate(form)}
           judgmentLoaded={hasJudgmentProvenance(form)}
-          wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
+          // 숨은 토글의 「Step4를 거친 값」 — ④·⑧(`calcRentalResidenceFacts`)과 같은 leaf. 저장값을 그대로 넘기면 Step4를 건너뛴 주소 문자열 입력에서 §155⑳ 카드만 반대 값을 보인다.
+          wasRegulatedAtAcquisition={calcStoredRegulatedFlags(form).wasRegulatedAtAcquisition}
           formRegionCode={form.regionCode}
           mergeRental={mergeRentalState(form)}
           // §155⑳ 카드의 거주·보유 ✓/✗ — ⑧과 같은 폼 사실(첫 자산 · `calcRentalResidenceFacts`)

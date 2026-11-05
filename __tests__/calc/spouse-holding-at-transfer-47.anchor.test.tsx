@@ -106,9 +106,9 @@ describe("#47 ⑤⑧ 게이트의 조정대상지역 = ④와 같은 실효값 (
     expect((await runCalc(f)).totalTax).toBe(197_703_000);
   }, 60_000);
 
-  it("[SQ-13] 주소가 없으면 저장된 토글을 읽는다 (엔진과 같은 폴백)", () => {
-    expect(spouseHoldingQuestionApplies(form(rows(), { isRegulatedArea: true }, { regionCode: "" }))).toBe(true);
-    expect(spouseHoldingQuestionApplies(form(rows(), { isRegulatedArea: false }, { regionCode: "" }))).toBe(false);
+  it("[SQ-13] 주소(코드)가 없으면 직접 고른 토글을 읽는다 (엔진과 같은 폴백 · 안 만졌으면 주소 문자열 판정 — 계획서 regulated-area-skip-step4)", () => {
+    expect(spouseHoldingQuestionApplies(form(rows(), { isRegulatedArea: true, isRegulatedAreaTouched: true }, { regionCode: "" }))).toBe(true);
+    expect(spouseHoldingQuestionApplies(form(rows(), { isRegulatedArea: false, isRegulatedAreaTouched: true }, { regionCode: "" }))).toBe(false);
   });
 
   it("[SQ-15] 자산 주소가 없으면 폼 전역 주소(form.regionCode=강남)를 읽는다 — ④ 폴백(primary.regionCode || form.regionCode)과 짝", async () => {
