@@ -244,11 +244,14 @@ describe("산정방식 격자 — 증여받지 않은 파트는 시나리오 B�
     expect(r.status).toBe(400);
     expect(r.message).toContain("한 파트");
   });
-  it.each([["appraisal"], ["salesCase"]] as const)("K-6·K-7(%s) · 한 파트만 → 400 (Q-3)", async (m) => {
+  // 2026-11-05 차단 해제(`bg-carryover-k5-one-part-b.plan.md` §9) — 종전 「한 파트만 → 400 (Q-3)」. 다른 파트(건물)는 양도인 자기 값이 필요하다.
+  it.each([["appraisal"], ["salesCase"]] as const)("K-6·K-7(%s) · 한 파트만 → 양도인 건물 값이 없으면 400 · 있으면 계산된다", async (m) => {
     const b = await landOnlyBody("purchase");
-    const r = await post(patchInfo(b, { acquisitionMethod: m, actualLandAcquisitionPrice: 400_000_000, actualBuildingAcquisitionPrice: 100_000_000 }, { presumedLandAcquisitionPrice: 50_000_000 }));
+    const info = { acquisitionMethod: m, actualLandAcquisitionPrice: 400_000_000, actualBuildingAcquisitionPrice: undefined };
+    const r = await post(patchInfo(b, info, { presumedLandAcquisitionPrice: 50_000_000 }));
     expect(r.status).toBe(400);
-    expect(r.message).toContain("한 파트");
+    expect(r.fieldErrors.some((f) => f.includes("presumedBuildingAcquisitionPrice"))).toBe(true);
+    expect((await post(patchInfo(b, { ...info, presumedBuildingAcquisitionPrice: 240_000_000 }, { presumedLandAcquisitionPrice: 50_000_000 }))).status).toBe(200);
   });
 });
 

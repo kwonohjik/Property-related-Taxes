@@ -38,7 +38,7 @@ import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { gbBgMarketPreDeemedParts } from "./gb-pre-deemed";
 import { bgAnyCarryover, bgCarryoverPartsPayload } from "./bg-carryover-parts";
 import { bgConvertedCarryoverReadsGiftValuation } from "./bg-carryover-parts";
-import { bgConvertedCarryoverGiftedPart } from "./bg-carryover-parts";
+import { bgPartialCarryoverGiftValuationPart } from "./bg-carryover-parts";
 import { gbBgGiftValuationByPart } from "./gb-bg-gift-tax-return";
 import { gbBgGiftTaxedValueByPart } from "./gb-bg-gift-tax-return";
 import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
@@ -296,7 +296,7 @@ function usesActualAcquisitionFields(primary: AssetForm): boolean {
 
 /** 실지 칸 하나를 싣는가 — 이월과세 × K-5 · 한 파트만 증여받았으면 그 파트 칸만(다른 파트는 환산 · 총액은 파트를 가를 수 없다). */
 function usesActualField(primary: AssetForm, field: "land" | "building" | "total"): boolean {
-  const gifted = bgConvertedCarryoverGiftedPart(primary);
+  const gifted = bgPartialCarryoverGiftValuationPart(primary);
   return gifted ? field === gifted : usesActualAcquisitionFields(primary);
 }
 
@@ -307,10 +307,17 @@ function buildPresumedAcquisition(
   BurdenedGiftInfoPayload,
   "presumedLandAcquisitionPrice" | "presumedBuildingAcquisitionPrice" | "presumedAcquisitionTotal"
 > {
-  // 이월과세는 당초 증여자 값(`carryoverDonorBasis.presumed*`)만 쓴다 — 양도인 칸의 stale 값을 싣지 않는다.
-  if (!isBgPresumedMethod(primary.bgAcquisitionMethod) || primary.acquisitionCause === "carryover_gift") return {};
+  if (!isBgPresumedMethod(primary.bgAcquisitionMethod)) return {};
   const num = (v: string | undefined) =>
     v !== undefined && v !== "" ? parseAmount(v) : undefined;
+  // 한 파트만 증여받은 일반건물 — 양도인 값은 증여받지 않은 파트 칸만(증여받은 파트는 당초 증여자 값 · 계획서 `bg-carryover-k5-one-part-b.plan.md` §9).
+  const gifted = bgPartialCarryoverGiftValuationPart(primary);
+  if (gifted) {
+    const v = num(gifted === "land" ? primary.bgPresumedAcquisitionBuilding : primary.bgPresumedAcquisitionLand);
+    return gifted === "land" ? { presumedBuildingAcquisitionPrice: v } : { presumedLandAcquisitionPrice: v };
+  }
+  // 이월과세는 당초 증여자 값(`carryoverDonorBasis.presumed*`)만 쓴다 — 양도인 칸의 stale 값을 싣지 않는다.
+  if (bgAnyCarryover(primary)) return {};
   switch (bgPresumedInputKind(primary)) {
     case "split":
       return {

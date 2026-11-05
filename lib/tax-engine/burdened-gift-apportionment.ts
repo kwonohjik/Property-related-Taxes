@@ -354,10 +354,13 @@ export function buildBurdenedGiftBreakdown(params: {
     isUnregistered,
   };
   /**
-   * 이월과세 × K-5 · 한 파트만 증여받은 일반건물의 시나리오 B — 그 파트는 양도인 증여일 평가액(소령 §163⑨)이 실지거래가액이다
+   * 이월과세 × K-5·K-6/K-7 · 한 파트만 증여받은 일반건물의 시나리오 B — 그 파트는 양도인 증여일 평가액(소령 §163⑨)이 실지거래가액이다
    * (`toTransferorBasisInfo`가 `transferorGiftValuationPart`를 싣는다 · 계획서 `bg-carryover-k5-one-part-b.plan.md`). 지분이면 `info`가 이미 지분 몫이다.
    */
-  const giftedPart = info.acquisitionMethod === "converted" ? info.transferorGiftValuationPart : undefined;
+  const giftedPart =
+    info.acquisitionMethod === "converted" || info.acquisitionMethod === "appraisal" || info.acquisitionMethod === "salesCase"
+      ? info.transferorGiftValuationPart
+      : undefined;
   const fixedActual = giftedPart
     ? { [giftedPart]: (giftedPart === "land" ? info.actualLandAcquisitionPrice : info.actualBuildingAcquisitionPrice) ?? 0 }
     : undefined;
