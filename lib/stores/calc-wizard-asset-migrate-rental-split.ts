@@ -161,6 +161,13 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           standardPriceAt5Years99: "",
           standardPriceAtTransfer99: "",
           exclusiveAreaSqm99: "",
+          // NH-02·NH-03 — 구 세션에는 없다. 미응답("")이면 validate(⑧)가 차단한다.
+          houseType99: "",
+          grossFloorAreaSqm99: "",
+          attachedLandAreaSqm99: "",
+          stdPriceFloorMet99: "",
+          luxuryFacility99: "",
+          firstContract99: "",
           hasOccupancyAtContract99: false,
           isRecontractExcluded99: false,
           recontractUnavoidableCause99: false,
@@ -187,6 +194,13 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           acquisitionType993: "from_builder",
           // 부칙 §29② 착공 여부 — 구 세션에는 없다. 미응답("")이면 범위 안에서 validate(⑧)가 차단한다(자동으로 «예»/«아니오»를 채우지 않는다).
           constructionStartedBefore2003_993: "",
+          // NH-02·NH-17 — 구 세션에는 없다. 미응답("")이면 해당 범위에서 validate(⑧)가 차단한다(자동으로 채우지 않는다).
+          houseType993: "",
+          grossFloorAreaSqm993: "",
+          attachedLandAreaSqm993: "",
+          stdPriceFloorMet993: "",
+          luxuryFacility993: "",
+          firstContract993: "",
           hasOccupancyAtContract: false,
           isResident993: true,
           isHousingConstructionBusiness993: false,

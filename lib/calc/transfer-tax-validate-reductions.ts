@@ -10,6 +10,8 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
 import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
+import { isNew993PriorRuleEraIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
+import { needsFirstContractAnswer } from "@/lib/tax-engine/transfer-reductions/new-99-acquisition-cause";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import {
   isIncomeDeductionTrack,
@@ -264,8 +266,20 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(fieldError("reduction.new_99_3.standardPriceAtAcquisition", "§99의3 적용: 취득시 기준시가를 입력하세요. (공동주택 최초고시 전 취득 시 PHD 환산 모드 ON 권장)"));
           }
           // 전용면적 필수 — 2002.12.31 이전 취득 고가주택(165/149㎡ AND 6억) 판정. §99/§98의8/§99의2와 동일 패턴.
-          if (!(parseDecimal(r.exclusiveAreaSqm993 || "") > 0))
+          // 단독주택(NH-02)은 전용면적이 아니라 연면적·딸린 토지로 판정한다 — 아래 단독주택 칸이 묻는다.
+          if (r.houseType993 !== "detached" && !(parseDecimal(r.exclusiveAreaSqm993 || "") > 0))
             return fail(fieldError("reduction.new_99_3.exclusiveAreaSqm993", "§99의3 적용: 전용면적(㎡)을 입력하세요 (고가주택 판정)."));
+          // NH-02 — 종전 규정 적용분(2003.1.1. 전 계약·승인 등)은 당시 소득세법 시행령 §156 고급주택 기준(공동·단독·시설)이라 주택 유형을 묻는다.
+          //   UI(`New993InputForm`)·⑫와 같은 술어(`isNew993PriorRuleEraIso`).
+          if (
+            isNew993PriorRuleEraIso(r.acquisitionType993, r.contractDate993 || asset.assetContractDate, r.usageApprovalDate993, asset.acquisitionDate, r.constructionStartedBefore2003_993)
+          ) {
+            const luxuryIssue = luxuryFactsIssue("new_99_3", "993", "§99의3", r.houseType993, r.grossFloorAreaSqm993, r.attachedLandAreaSqm993, r.stdPriceFloorMet993, r.luxuryFacility993);
+            if (luxuryIssue) return fail(luxuryIssue);
+          }
+          // NH-17 — 1호 매매 취득은 «최초로 매매계약을 체결하고 계약금을 납부한 자»인지 묻는다(분양권 승계는 불성립). 상속·증여는 엔진이 불성립으로 판정한다.
+          if (needsFirstContractAnswer(r.acquisitionType993, asset.acquisitionCause) && !r.firstContract993)
+            return fail(fieldError("reduction.new_99_3.firstContract993", "§99의3 1호 적용: 주택건설업자와 최초로 매매계약을 체결하고 계약금을 납부한 사람이 본인인지(예·아니오·모름) 선택하세요 (조세특례제한법 §99의3①1호)."));
           // 5년 시점 기준시가 필수 (5년 후 양도인 경우 안분 산식에 사용)
           if (parseAmount(r.standardPriceAt5Years || "0") <= 0) {
             return fail(fieldError("reduction.new_99_3.standardPriceAt5Years", "§99의3 적용: 5년 시점 기준시가를 입력하세요. (취득일+5년 인접 고시일 가격)"));
@@ -337,8 +351,14 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           } else if (parseAmount(r.standardPriceAtAcquisition99 || "0") <= 0) {
             return fail(fieldError(`reduction.${r.type}.standardPriceAtAcquisition`, "§99 적용: 취득시 기준시가를 입력하세요. (공동주택 최초고시 전 취득 시 PHD 환산 모드 ON 권장)"));
           }
-          if (!(parseDecimal(r.exclusiveAreaSqm99 || "") > 0))
+          if (r.houseType99 !== "detached" && !(parseDecimal(r.exclusiveAreaSqm99 || "") > 0))
             return fail(fieldError(`reduction.${r.type}.exclusiveAreaSqm`, "§99 적용: 전용면적(㎡)을 입력하세요 (고가주택 판정)."));
+          // NH-02 — 기준일(1998~1999)이 모두 종전 «고급주택» 시기라 주택 유형(공동·단독)과 단독주택 사실을 묻는다.
+          const luxuryIssue99 = luxuryFactsIssue("new_99", "99", "§99", r.houseType99, r.grossFloorAreaSqm99, r.attachedLandAreaSqm99, r.stdPriceFloorMet99, r.luxuryFacility99);
+          if (luxuryIssue99) return fail(luxuryIssue99);
+          // NH-03 — 2호 매매 취득은 «최초로 매매계약을 체결하고 계약금을 납부한 자»인지 묻는다.
+          if (needsFirstContractAnswer(r.acquisitionType99, asset.acquisitionCause) && !r.firstContract99)
+            return fail(fieldError("reduction.new_99.firstContract99", "§99 2호 적용: 주택건설업자와 최초로 매매계약을 체결하고 계약금을 납부한 사람이 본인인지(예·아니오·모름) 선택하세요 (조세특례제한법 §99①2호)."));
           // 재개발·재건축 변형 ON 시 종전주택 기준시가 필수 (B-11 — 자동 안분 fallback 금지)
           if (r.isRedevelopedNewHouse99 && parseAmount(r.previousHouseStdPrice99 || "0") <= 0)
             return fail(fieldError("reduction.new_99.previousHouseStdPrice99", "§99 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요."));
@@ -538,4 +558,32 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
   }
 
   return null;
+}
+
+/**
+ * §99·§99의3 종전 고급주택 판정 사실(⑧ — NH-02). 주택 유형 필수, 단독주택이면 연면적·딸린 토지·하한·시설 필수.
+ * ⑫ `detachedFactsIssues`의 거울이다(⑫는 유형 자체가 없는 직접 API를 종전 공동주택 기준으로 계산한다 — 화면은 유형을 반드시 받는다).
+ */
+function luxuryFactsIssue(
+  type: "new_99" | "new_99_3",
+  suffix: "99" | "993",
+  label: string,
+  houseType: string | undefined,
+  grossFloorArea: string | undefined,
+  attachedLandArea: string | undefined,
+  stdPriceFloorMet: string | undefined,
+  luxuryFacility: string | undefined,
+): string | undefined {
+  if (!houseType)
+    return fieldError(`reduction.${type}.houseType${suffix}`, `${label} 적용: 고급주택 판정을 위해 주택 유형(공동주택·단독주택)을 선택하세요 (기준일 당시 소득세법 시행령 §156).`);
+  if (houseType !== "detached") return undefined;
+  if (!(parseDecimal(grossFloorArea || "") > 0))
+    return fieldError(`reduction.${type}.grossFloorAreaSqm${suffix}`, `${label} 적용: 단독주택 연면적(㎡)을 입력하세요 (고급주택 판정).`);
+  if (!(parseDecimal(attachedLandArea || "") > 0))
+    return fieldError(`reduction.${type}.attachedLandAreaSqm${suffix}`, `${label} 적용: 단독주택에 딸린 토지 면적(㎡)을 입력하세요 (고급주택 판정).`);
+  if (!stdPriceFloorMet)
+    return fieldError(`reduction.${type}.stdPriceFloorMet${suffix}`, `${label} 적용: 단독주택 시가표준액·기준시가 하한을 넘는지(예·아니오·모름) 선택하세요 (고급주택 판정).`);
+  if (!luxuryFacility)
+    return fieldError(`reduction.${type}.luxuryFacility${suffix}`, `${label} 적용: 엘리베이터·에스컬레이터·67㎡ 이상 수영장 설치 여부(예·아니오·모름)를 선택하세요 (고급주택 판정).`);
+  return undefined;
 }

@@ -9,6 +9,7 @@
  */
 
 import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
+import { ReductionDetailWarnings } from "@/components/calc/results/transfer/ReductionDetailWarnings";
 import type {
   New99Result,
   Unsold988Result,
@@ -141,6 +142,8 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props
             </ul>
           </div>
         )}
+        {/* §99 확인 필요 고지 — 「모름」으로 고급주택 처리(NH-02) */}
+        {kind === "new_99" && <ReductionDetailWarnings detail={result as New99Result} />}
         <p className="text-micro text-rose-700 dark:text-rose-400">근거 조문: {result.legalBasis}</p>
       </div>
     );
@@ -218,6 +221,9 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props
           <p className="text-caption text-sky-900 dark:text-sky-300">{RURAL_EXEMPT_NOTE[kind]}</p>
         </div>
       )}
+
+      {/* §99 확인 필요 고지 — 2015.12.31. 이전 양도 종전 규정(NH-49) */}
+      {kind === "new_99" && <ReductionDetailWarnings detail={result as New99Result} />}
 
       <p className="text-micro text-emerald-700 dark:text-emerald-400">
         근거 조문: {result.legalBasis}

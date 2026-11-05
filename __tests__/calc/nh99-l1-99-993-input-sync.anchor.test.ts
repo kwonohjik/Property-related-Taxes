@@ -85,7 +85,8 @@ const form = (
 
 const r993 = (o: Record<string, unknown>) =>
   ({
-    ...getReductionDefault("new_99_3"),
+    ...getReductionDefault("new_99_3"), houseType993: "apartment", firstContract993: "yes", // NH-02·NH-17 ⑧ 필수 (#L1b)
+
     standardPriceAtAcquisition993: "100,000,000",
     standardPriceAt5Years: "200,000,000",
     standardPriceAtTransfer993: "400,000,000",
@@ -95,7 +96,8 @@ const r993 = (o: Record<string, unknown>) =>
 
 const r99 = (o: Record<string, unknown>) =>
   ({
-    ...getReductionDefault("new_99"),
+    ...getReductionDefault("new_99"), houseType99: "apartment", firstContract99: "yes", // NH-02·NH-03 ⑧ 필수 (#L1b)
+
     standardPriceAtAcquisition99: "100,000,000",
     standardPriceAt5Years99: "160,000,000",
     standardPriceAtTransfer99: "250,000,000",

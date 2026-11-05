@@ -69,7 +69,9 @@ const phdRow = (label: string, phdMode: string): Row => ({
 });
 
 // ── §99의3 ────────────────────────────────────────────────────────────────
-const n993Ok = { acquisitionType993: "from_builder", standardPriceAtAcquisition993: "100000000", exclusiveAreaSqm993: "84", standardPriceAt5Years: "150000000", standardPriceAtTransfer993: "300000000" };
+const n993Ok = { acquisitionType993: "from_builder", standardPriceAtAcquisition993: "100000000", exclusiveAreaSqm993: "84", houseType993: "apartment", firstContract993: "yes", standardPriceAt5Years: "150000000", standardPriceAtTransfer993: "300000000" };
+/** 종전 고급주택 단독주택 사실 — 이 중 한 칸만 비운다 (NH-02) */
+const detached = (sfx: string) => ({ [`houseType${sfx}`]: "detached", [`grossFloorAreaSqm${sfx}`]: "200", [`attachedLandAreaSqm${sfx}`]: "300", [`stdPriceFloorMet${sfx}`]: "yes", [`luxuryFacility${sfx}`]: "no" });
 const n993Asset = { assetContractDate: "2002-01-01" };
 /** PHD 환산 ON + 일부 칸만 채운 상태 — 비어 있는 첫 칸으로 간다 */
 const phdFilled = (upto: number) =>
@@ -87,6 +89,12 @@ const NEW_99_3 = table("new_99_3", hybrid("new_99_3"), n993Ok, n993Asset, [
   { name: "PHD 환산 모드(최초공시시 건물 기준시가)", prop: "phdBuildingStdAtFirst", message: /^§99의3 PHD 환산 모드/, patch: { phdMode993: true, ...phdFilled(5) } },
   { name: "취득시 기준시가", prop: "standardPriceAtAcquisition", message: /^§99의3 적용: 취득시 기준시가를 입력하세요/, patch: { standardPriceAtAcquisition993: "" } },
   { name: "전용면적", prop: "exclusiveAreaSqm993", message: /^§99의3 적용: 전용면적/, patch: { exclusiveAreaSqm993: "" } },
+  { name: "주택 유형(종전 고급주택)", prop: "houseType993", message: /^§99의3 적용: 고급주택 판정을 위해 주택 유형/, patch: { houseType993: "" } },
+  { name: "단독주택 연면적", prop: "grossFloorAreaSqm993", message: /^§99의3 적용: 단독주택 연면적/, patch: { ...detached("993"), grossFloorAreaSqm993: "" } },
+  { name: "단독주택 딸린 토지", prop: "attachedLandAreaSqm993", message: /^§99의3 적용: 단독주택에 딸린 토지/, patch: { ...detached("993"), attachedLandAreaSqm993: "" } },
+  { name: "단독주택 하한", prop: "stdPriceFloorMet993", message: /^§99의3 적용: 단독주택 시가표준액/, patch: { ...detached("993"), stdPriceFloorMet993: "" } },
+  { name: "단독주택 시설", prop: "luxuryFacility993", message: /^§99의3 적용: 엘리베이터/, patch: { ...detached("993"), luxuryFacility993: "" } },
+  { name: "최초 계약 여부", prop: "firstContract993", message: /^§99의3 1호 적용: 주택건설업자와 최초로/, patch: { firstContract993: "" } },
   { name: "5년 시점 기준시가", prop: "standardPriceAt5Years", message: /^§99의3 적용: 5년 시점 기준시가를/, patch: { standardPriceAt5Years: "" } },
   { name: "종전주택 기준시가", prop: "previousHouseStdPrice993", message: /^§99의3 적용: 재개발·재건축 신축주택은 종전주택/, patch: { isRedevelopedNewHouse993: true, previousHouseStdPrice993: "" } },
   { name: "양도시 기준시가(재개발 변형)", prop: "standardPriceAtTransfer993", message: /^§99의3 적용: 재개발·재건축 신축주택 변형은/, patch: { isRedevelopedNewHouse993: true, previousHouseStdPrice993: "100000000", standardPriceAtTransfer993: "" } },
@@ -94,13 +102,17 @@ const NEW_99_3 = table("new_99_3", hybrid("new_99_3"), n993Ok, n993Asset, [
 ]);
 
 // ── §99 ───────────────────────────────────────────────────────────────────
-const n99Ok = { acquisitionType99: "from_builder", contractDate99: "2000-01-01", standardPriceAtAcquisition99: "100000000", exclusiveAreaSqm99: "84" };
+const n99Ok = { acquisitionType99: "from_builder", contractDate99: "2000-01-01", standardPriceAtAcquisition99: "100000000", exclusiveAreaSqm99: "84", houseType99: "apartment", firstContract99: "yes" };
 const NEW_99 = table("new_99", hybrid("new_99"), n99Ok, {}, [
   { name: "자기건설 사용승인일", prop: "usageApprovalDate99", message: /^§99 적용: 자기건설 주택의 사용승인일/, patch: { acquisitionType99: "self_built", usageApprovalDate99: "" } },
   { name: "매매계약일", prop: "contractDate99", message: /^§99 적용: 매매계약일을 입력하세요/, patch: { contractDate99: "" } },
   phdRow("§99", "phdMode99"),
   { name: "취득시 기준시가", prop: "standardPriceAtAcquisition", message: /^§99 적용: 취득시 기준시가를 입력하세요/, patch: { standardPriceAtAcquisition99: "" } },
   { name: "전용면적", prop: "exclusiveAreaSqm", message: /^§99 적용: 전용면적/, patch: { exclusiveAreaSqm99: "" } },
+  { name: "주택 유형(고급주택)", prop: "houseType99", message: /^§99 적용: 고급주택 판정을 위해 주택 유형/, patch: { houseType99: "" } },
+  { name: "단독주택 연면적", prop: "grossFloorAreaSqm99", message: /^§99 적용: 단독주택 연면적/, patch: { ...detached("99"), grossFloorAreaSqm99: "" } },
+  { name: "단독주택 시설", prop: "luxuryFacility99", message: /^§99 적용: 엘리베이터/, patch: { ...detached("99"), luxuryFacility99: "" } },
+  { name: "최초 계약 여부", prop: "firstContract99", message: /^§99 2호 적용: 주택건설업자와 최초로/, patch: { firstContract99: "" } },
   { name: "종전주택 기준시가", prop: "previousHouseStdPrice99", message: /^§99 적용: 재개발·재건축 신축주택은 종전주택/, patch: { isRedevelopedNewHouse99: true, previousHouseStdPrice99: "" } },
 ]);
 

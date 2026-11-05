@@ -20,6 +20,10 @@ import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdP
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { calcReductionAcquisitionStdPrice, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
+import { isNew993PriorRuleEraIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
+import { needsFirstContractAnswer } from "@/lib/tax-engine/transfer-reductions/new-99-acquisition-cause";
+import { New99LuxuryHouseFields } from "@/components/calc/transfer/New99LuxuryHouseFields";
+import { New99FirstContractField } from "@/components/calc/transfer/New99LuxuryHouseFields";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 
@@ -68,6 +72,8 @@ export function New993InputForm({
   ho,
   assetId,
   assetPhdSnapshot,
+  acquisitionCause,
+  assetContractDate,
 }: {
   value: Extract<AssetReductionForm, { type: "new_99_3" }>;
   onUpdate: <K extends keyof Extract<AssetReductionForm, { type: "new_99_3" }>>(
@@ -89,6 +95,10 @@ export function New993InputForm({
   /** 자산-수준 PHD 데이터 스냅샷 — "자산 카드 PHD 데이터 가져오기" 버튼용 */
   assetId?: string;
   assetPhdSnapshot?: ReductionPhdValue;
+  /** 자산 취득 원인 — 매매 취득일 때만 최초 계약 여부를 묻는다(상속·증여는 엔진이 불성립, NH-17) */
+  acquisitionCause?: string;
+  /** 자산-수준 매매계약일 — 1호 기준일(종전 규정 시기 판정, NH-02) */
+  assetContractDate?: string;
 }) {
   const [areaLoading, setAreaLoading] = useState(false);
   const [areaMsg, setAreaMsg] = useState<string | null>(null);
@@ -251,6 +261,17 @@ export function New993InputForm({
         </div>
       )}
 
+      {/* NH-17 — 1호 매매 취득은 최초 계약자인지 묻는다(분양권 승계 불성립). ⑧·④가 같은 술어. */}
+      {needsFirstContractAnswer(value.acquisitionType993, acquisitionCause) && (
+        <New99FirstContractField
+          dataField="reduction.new_99_3.firstContract993"
+          testidPrefix="new993"
+          value={value.firstContract993 ?? ""}
+          onChange={(v) => onUpdate("firstContract993", v)}
+          lawLabel="조세특례제한법 §99의3①1호"
+        />
+      )}
+
       {/* ① 형제 감면 폼 10종과 같은 「색상 카드 + 섹션 번호」 패턴 (2026-09-07 UI 리뷰 L5).
           외곽 primary 래퍼는 저장소 관용구라 그대로 둔다 — 갈린 것은 번호 축뿐이었다. */}
       <ToneCard tone="sky" sectionNum="①" title="취득 유형 · 소재지" bodyClassName="space-y-3">
@@ -400,6 +421,36 @@ export function New993InputForm({
           <p className="mt-1 text-micro text-muted-foreground">공동주택 조회 시 자동 채움 · 종전 규정 적용분(2002.12.31. 이전 계약·승인 등)의 고급주택 판정(165/149㎡ AND 6억 초과)</p>
         </div>
       </div>
+      {/* NH-02 — 종전 규정 적용분은 당시 소득세법 시행령 §156(공동·단독·시설 — 3호는 단독만). ⑧·⑫와 같은 술어. 기준일이 모두 2001년 이후라 하한은 기준시가 4천만원. */}
+      {isNew993PriorRuleEraIso(
+        value.acquisitionType993,
+        value.contractDate993 || assetContractDate,
+        value.usageApprovalDate993,
+        acquisitionDate,
+        value.constructionStartedBefore2003_993,
+      ) && (
+        <New99LuxuryHouseFields
+          fieldPrefix="reduction.new_99_3"
+          testidPrefix="993"
+          floorLabel="소득세법 §99①1호나목 기준시가가 4천만원 이상"
+          value={{
+            houseType: value.houseType993 ?? "",
+            grossFloorAreaSqm: value.grossFloorAreaSqm993 ?? "",
+            attachedLandAreaSqm: value.attachedLandAreaSqm993 ?? "",
+            stdPriceFloorMet: value.stdPriceFloorMet993 ?? "",
+            luxuryFacility: value.luxuryFacility993 ?? "",
+          }}
+          onChange={(p) =>
+            onUpdateMany({
+              ...(p.houseType !== undefined ? { houseType993: p.houseType } : {}),
+              ...(p.grossFloorAreaSqm !== undefined ? { grossFloorAreaSqm993: p.grossFloorAreaSqm } : {}),
+              ...(p.attachedLandAreaSqm !== undefined ? { attachedLandAreaSqm993: p.attachedLandAreaSqm } : {}),
+              ...(p.stdPriceFloorMet !== undefined ? { stdPriceFloorMet993: p.stdPriceFloorMet } : {}),
+              ...(p.luxuryFacility !== undefined ? { luxuryFacility993: p.luxuryFacility } : {}),
+            })
+          }
+        />
+      )}
       </ToneCard>
 
       {/* 조특령 §99의3④는 법 §99의3①1호의 사유 — 2호(자기건설)에는 묻지 않는다 (리뷰 NH-57). ⑧·엔진과 같은 술어(2호가 아니면 1호). */}

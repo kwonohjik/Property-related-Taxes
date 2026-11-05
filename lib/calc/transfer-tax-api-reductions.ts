@@ -7,6 +7,7 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import { calcReductionAcquisitionStdPrice, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
+import { needsFirstContractAnswer } from "@/lib/tax-engine/transfer-reductions/new-99-acquisition-cause";
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { hasRentIncreaseRule } from "./rental-rent-increase-label";
@@ -170,6 +171,19 @@ export function toEngineReductions(
         acquisitionType993: r.acquisitionType993,
         // 부칙 §29② 착공 여부 — ""(미응답)은 보내지 않는다. 범위 밖 옛 응답은 엔진이 읽지 않는다. 범위 안 미응답은 validate(⑧)·Zod(⑫)가 차단.
         constructionStartedBefore2003_993: r.constructionStartedBefore2003_993 || undefined,
+        // 종전 고급주택 기준(NH-02) — 미응답("")은 보내지 않는다. 단독주택 사실은 단독일 때만. 개정규정 시기는 엔진이 읽지 않는다.
+        ...((f) => ({
+          houseType993: f.houseType,
+          grossFloorAreaSqm993: f.grossFloorAreaSqm,
+          attachedLandAreaSqm993: f.attachedLandAreaSqm,
+          stdPriceFloorMet993: f.stdPriceFloorMet,
+          luxuryFacility993: f.luxuryFacility,
+        }))(luxuryFacts(r.houseType993, r.grossFloorAreaSqm993, r.attachedLandAreaSqm993, r.stdPriceFloorMet993, r.luxuryFacility993)),
+        // 최초 계약 여부(NH-17) — 묻는 범위(1호 · 상속·증여·이월과세 증여 아님)에서 답한 값만. ⑧이 범위 안 미응답을 막는다.
+        firstContract993:
+          needsFirstContractAnswer(r.acquisitionType993, ownerAsset.acquisitionCause) && r.firstContract993
+            ? r.firstContract993
+            : undefined,
         hasOccupancyAtContract: r.hasOccupancyAtContract ?? false,
         isResident993: r.isResident993,
         isHousingConstructionBusiness993: r.isHousingConstructionBusiness993,
@@ -420,6 +434,19 @@ export function toEngineReductions(
         standardPriceAt5Years99: parseAmount(r.standardPriceAt5Years99 || "0") || undefined,
         standardPriceAtTransfer99: parseAmount(r.standardPriceAtTransfer99 || "0") || undefined,
         exclusiveAreaSqm99: parseDecimal(r.exclusiveAreaSqm99 || "") || undefined,
+        // 고급주택(기준일 당시 소득세법 시행령 §156) 주택 유형·단독주택 사실 (NH-02)
+        ...((f) => ({
+          houseType99: f.houseType,
+          grossFloorAreaSqm99: f.grossFloorAreaSqm,
+          attachedLandAreaSqm99: f.attachedLandAreaSqm,
+          stdPriceFloorMet99: f.stdPriceFloorMet,
+          luxuryFacility99: f.luxuryFacility,
+        }))(luxuryFacts(r.houseType99, r.grossFloorAreaSqm99, r.attachedLandAreaSqm99, r.stdPriceFloorMet99, r.luxuryFacility99)),
+        // 최초 계약 여부(NH-03) — 묻는 범위(2호 · 상속·증여·이월과세 증여 아님)에서 답한 값만
+        firstContract99:
+          needsFirstContractAnswer(r.acquisitionType99, ownerAsset.acquisitionCause) && r.firstContract99
+            ? r.firstContract99
+            : undefined,
         hasOccupancyAtContract99: r.hasOccupancyAtContract99,
         isRecontractExcluded99: r.isRecontractExcluded99,
         recontractUnavoidableCause99: r.recontractUnavoidableCause99,
@@ -689,4 +716,26 @@ export function toEngineReductions(
     const stubType = (r as unknown as { type: string }).type;
     return { type: stubType, _phase1Stub: true as const };
   });
+}
+
+type TriFormAnswer = "" | "yes" | "no" | "unknown" | undefined;
+
+/**
+ * §99·§99의3 종전 고급주택 판정 사실(④) — 주택 유형을 고른 경우에만, 단독주택 사실은 단독일 때만 싣는다 (NH-02).
+ */
+function luxuryFacts(
+  houseType: "" | "apartment" | "detached" | undefined,
+  grossFloorArea: string | undefined,
+  attachedLandArea: string | undefined,
+  stdPriceFloorMet: TriFormAnswer,
+  luxuryFacility: TriFormAnswer,
+) {
+  const detached = houseType === "detached";
+  return {
+    houseType: houseType || undefined,
+    grossFloorAreaSqm: detached ? parseDecimal(grossFloorArea || "") || undefined : undefined,
+    attachedLandAreaSqm: detached ? parseDecimal(attachedLandArea || "") || undefined : undefined,
+    stdPriceFloorMet: detached ? stdPriceFloorMet || undefined : undefined,
+    luxuryFacility: detached ? luxuryFacility || undefined : undefined,
+  };
 }

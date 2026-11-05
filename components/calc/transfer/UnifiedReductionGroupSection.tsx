@@ -101,6 +101,7 @@ export function GroupCategorySection({
   acquisitionDate,
   transferDate,
   assetJibun,
+  assetAcquisitionCause,
   assetDong,
   assetHo,
   assetPhdSnapshot,
@@ -153,6 +154,8 @@ export function GroupCategorySection({
   transferDate?: string;
   /** 양도물건(asset) 지번 주소 — §99의3 기준시가 Vworld 자동조회 소스 */
   assetJibun?: string;
+  /** 자산 취득 원인 — §99·§99의3 최초 계약 여부를 묻는 범위(NH-03·NH-17) */
+  assetAcquisitionCause?: string;
   /** 양도물건 공동주택 동 — 세대 식별 */
   assetDong?: string;
   /** 양도물건 공동주택 호 — 세대 식별 */
@@ -306,6 +309,8 @@ export function GroupCategorySection({
                       onUpdate={onUpdate993}
                       onUpdateMany={onUpdate993Many}
                       {...reductionAssetProps}
+                      acquisitionCause={assetAcquisitionCause}
+                      assetContractDate={assetContractDate}
                     />
                   )}
                   {/* §97의3 입력 폼 */}
@@ -359,7 +364,7 @@ export function GroupCategorySection({
                     (() => {
                       const form99 = reductions.find((r) => r.type === "new_99");
                       return form99 && form99.type === "new_99" ? (
-                        <New99InputForm value={form99} onChange={onUpdate99} {...reductionAssetProps} />
+                        <New99InputForm value={form99} onChange={onUpdate99} {...reductionAssetProps} acquisitionCause={assetAcquisitionCause} />
                       ) : null;
                     })()}
                   {/* P1 (2026-06-11): §98의8 준공후미분양 50% 입력 폼 */}

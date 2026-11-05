@@ -34,7 +34,8 @@ beforeEach(() => {
 
 const STD_FIELD = "reduction.new_99_3.standardPriceAtTransfer993";
 const r993 = (tr = "") => ({
-  type: "new_99_3", contractDate993: "2002-01-01", usageApprovalDate993: "", standardPriceAt5Years: "400000000",
+  type: "new_99_3", houseType993: "apartment", firstContract993: "yes", // NH-02·NH-17 ⑧ 필수 (#L1b)
+ contractDate993: "2002-01-01", usageApprovalDate993: "", standardPriceAt5Years: "400000000",
   standardPriceAtAcquisition993: "300000000", standardPriceAtTransfer993: tr, isRecontractExcluded993: false, recontractUnavoidableCause993: false,
   isRedevelopedNewHouse993: false, previousHouseStdPrice993: "", exclusiveAreaSqm993: "84", region993: "outside_speculation",
   acquisitionType993: "from_builder", hasOccupancyAtContract: false, isResident993: true, isHousingConstructionBusiness993: false,

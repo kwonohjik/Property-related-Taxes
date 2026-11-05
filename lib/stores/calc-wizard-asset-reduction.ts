@@ -129,6 +129,18 @@ export type AssetReductionForm =
        * 범위 밖에서는 읽지 않는다(엔진이 범위를 판정) — 남은 옛 응답은 무해하다.
        */
       constructionStartedBefore2003_993?: "" | "yes" | "no" | "unknown";
+      /** 종전 고급주택(소득세법 시행령 §156 당시 시행본) 주택 유형 — 종전 규정 적용분만 묻는다 (NH-02). ""=미응답 */
+      houseType993?: "" | "apartment" | "detached";
+      /** (단독) 연면적(㎡) — 주택으로 보는 부분·주거전용 지하실 포함 */
+      grossFloorAreaSqm993?: string;
+      /** (단독) 딸린 토지 면적(㎡) */
+      attachedLandAreaSqm993?: string;
+      /** (단독) 기준시가 4천만원(2000.12.31.까지 취득세 시가표준액 2천만원) 이상 — 「모름」=고급주택으로 보고 확인 필요 */
+      stdPriceFloorMet993?: "" | "yes" | "no" | "unknown";
+      /** (단독) 엘리베이터·에스컬레이터·67㎡ 이상 수영장 중 1개 이상 — 「모름」=고급주택으로 보고 확인 필요 */
+      luxuryFacility993?: "" | "yes" | "no" | "unknown";
+      /** (1호 · 매매 취득) 주택건설업자와 최초로 매매계약·계약금 납부한 사람이 본인인가 (NH-17). ""=미응답 */
+      firstContract993?: "" | "yes" | "no" | "unknown";
       /** (1호만) 매매계약일 입주사실 있는 주택 — 적용 배제 */
       hasOccupancyAtContract?: boolean;
       /** 거주자 여부 — 비거주자는 §99의3 적용 배제 */
@@ -409,6 +421,18 @@ export type RentalReductionFormVariant =
       standardPriceAtTransfer99: string;
       /** 전용면적 (㎡) — 고가주택 판정 (165/149㎡ 기준 시대) */
       exclusiveAreaSqm99: string;
+      /** 고급주택(기준일 당시 소득세법 시행령 §156) 주택 유형 (NH-02). ""=미응답 */
+      houseType99?: "" | "apartment" | "detached";
+      /** (단독) 연면적(㎡) */
+      grossFloorAreaSqm99?: string;
+      /** (단독) 딸린 토지 면적(㎡) */
+      attachedLandAreaSqm99?: string;
+      /** (단독) 취득세 시가표준액 2천만원 이상 */
+      stdPriceFloorMet99?: "" | "yes" | "no" | "unknown";
+      /** (단독) 엘리베이터·에스컬레이터·67㎡ 이상 수영장 중 1개 이상 */
+      luxuryFacility99?: "" | "yes" | "no" | "unknown";
+      /** (2호 · 매매 취득) 주택건설업자와 최초로 매매계약·계약금 납부한 사람이 본인인가 (NH-03). ""=미응답 */
+      firstContract99?: "" | "yes" | "no" | "unknown";
       /** (2호) 매매계약일 현재 다른 자 입주 사실 — ON이면 배제 */
       hasOccupancyAtContract99: boolean;
       /** 령 §99② — 1998.5.21 이전 계약 해제 후 재계약·대체취득 — ON이면 배제 */
