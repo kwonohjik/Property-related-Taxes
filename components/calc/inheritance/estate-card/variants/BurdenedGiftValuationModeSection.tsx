@@ -35,6 +35,9 @@ import {
 import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
 import { giftBgPreDeemedUsesThreeWay } from "@/lib/calc/gift-burdened-pre-deemed";
 import { BurdenedGiftPreDeemedFields } from "./BurdenedGiftPreDeemedFields";
+import { giftBgSelfBuiltHousingScope } from "@/lib/calc/gift-burdened-self-built-housing";
+import type { GiftBgSelfBuiltHousingScope } from "@/lib/calc/gift-burdened-self-built-housing";
+import { resolvePropertyType } from "@/lib/calc/gift-burdened-transfer-api";
 
 
 /** Date → YYYY-MM-DD (DateInput 교환용). new Date 직접 호출 금지 — 역변환은 toOptionalDate. */
@@ -333,7 +336,7 @@ export function ValuationModeSection({
             필요경비는 개산공제(취득시 기준시가 × 3% × 채무비율)만 적용합니다 — 자본적지출·양도비는 공제하지 않습니다 (소령 §163⑥).
           </p>
           {isAppraisal && (
-            <SelfBuiltPenaltyFields bgt={bgt} set={set} isLandType={isLandType} isAppraisal transferDate={transferDate} />
+            <SelfBuiltPenaltyFields bgt={bgt} set={set} isLandType={isLandType} isAppraisal transferDate={transferDate} propertyType={resolvePropertyType(item.category, bgt.isHousing)} />
           )}
         </div>
       )}
@@ -350,7 +353,7 @@ export function ValuationModeSection({
           </p>
           {/* 양도시 기준시가(환산 분모)는 토지·건물 모두 증여재산 평가의 «보충적 평가(기준시가)» 한 칸(총액)이다 — 별도 ㎡당 칸을 두지 않는다. */}
           {/* 건물(non-land): §114조의2 신축·증축 가산세 입력 — 환산(K-5)·감정가액(K-7) 공용 */}
-          <SelfBuiltPenaltyFields bgt={bgt} set={set} isLandType={isLandType} isAppraisal={false} />
+          <SelfBuiltPenaltyFields bgt={bgt} set={set} isLandType={isLandType} isAppraisal={false} transferDate={transferDate} propertyType={resolvePropertyType(item.category, bgt.isHousing)} />
         </div>
       )}
     </div>
@@ -366,9 +369,11 @@ interface SelfBuiltPenaltyFieldsProps {
   /** true면 감정가액(K-7) — 가산세 base가 신축은 건물 감정가액, 증축은 「증축한 부분의 감정가액」 칸이다. */
   isAppraisal: boolean;
   transferDate?: string;
+  /** `resolvePropertyType` — 일체 주택(housing)이면 신축 건물분 안분 칸(V-7)을 연다 */
+  propertyType: string;
 }
 
-function SelfBuiltPenaltyFields({ bgt, set, isLandType, isAppraisal, transferDate }: SelfBuiltPenaltyFieldsProps) {
+function SelfBuiltPenaltyFields({ bgt, set, isLandType, isAppraisal, transferDate, propertyType }: SelfBuiltPenaltyFieldsProps) {
   const baseLabel = isAppraisal ? "감정가액" : "환산취득가액";
   // 증축 5년 이내 × 감정가액 — 가산세 base인 「증축한 부분의 감정가액」 칸을 받는다(엔진·⑧과 같은 술어).
   const showExtensionAppraisal = isAppraisal && giftBgAppraisalExtensionPenaltyApplies(bgt, isLandType, transferDate);
@@ -394,6 +399,7 @@ function SelfBuiltPenaltyFields({ bgt, set, isLandType, isAppraisal, transferDat
                       extensionFloorArea: undefined,
                       extensionStdPriceAtAcquisition: undefined,
                       presumedExtensionAppraisal: undefined,
+                      selfBuiltHousing: undefined,
                     }),
               })
             }
@@ -410,10 +416,11 @@ function SelfBuiltPenaltyFields({ bgt, set, isLandType, isAppraisal, transferDat
                   onChange={(v) =>
                     set({
                       buildingType: v as BurdenedGiftTransferTaxInput["buildingType"],
-                      // 신축↔증축 전환 시 증축 전용 필드 초기화 (store stale 방지)
+                      // 신축↔증축 전환 시 증축 전용 필드 초기화 (store stale 방지) — 건물분 안분(신축 전용 · V-7)도 함께
                       extensionFloorArea: undefined,
                       extensionStdPriceAtAcquisition: undefined,
                       presumedExtensionAppraisal: undefined,
+                      selfBuiltHousing: undefined,
                     })
                   }
                   options={[
@@ -468,6 +475,7 @@ function SelfBuiltPenaltyFields({ bgt, set, isLandType, isAppraisal, transferDat
                   onChange={(v) => set({ constructionDate: toOptionalDate(v) })}
                 />
               </FieldCard>
+              <GiftSelfBuiltHousingFields bgt={bgt} set={set} scope={giftBgSelfBuiltHousingScope(bgt, propertyType, isAppraisal ? "appraisal" : "converted", transferDate)} />
               {/* ⑤' 증축한 부분의 감정가액 — 증축 × 감정가액 × 5년 이내, §114조의2① 가산세 base */}
               {showExtensionAppraisal && (
                 <FieldCard
@@ -519,5 +527,77 @@ function SelfBuiltPenaltyFields({ bgt, set, isLandType, isAppraisal, transferDat
         </div>
       )}
     </>
+  );
+}
+
+// ─── §114조의2 · 일체 주택 신축 — 가산세 base 건물분 안분 입력 (V-7) ─────────────────────
+
+/**
+ * 개별주택가격·공동주택가격은 토지+건물 합계라, 신축 주택의 §114조의2 가산세는 건물분으로 나눠 구한다(소득세법 §114조의2① 「해당 건물」 ·
+ * 계획서 `bg-housing-114-2-building-base.plan.md`). 노출은 ④·⑧과 같은 leaf `giftBgSelfBuiltHousingScope`. 양도 당시 토지 기준시가는
+ * 양도 당시 ㎡당 공시지가 × 같은 토지 면적이다.
+ */
+function GiftSelfBuiltHousingFields({
+  bgt,
+  set,
+  scope,
+}: {
+  bgt: BurdenedGiftTransferTaxInput;
+  set: (patch: Partial<BurdenedGiftTransferTaxInput>) => void;
+  scope: GiftBgSelfBuiltHousingScope | null;
+}) {
+  if (!scope) return null;
+  const h = bgt.selfBuiltHousing ?? {};
+  const put = (patch: Partial<NonNullable<BurdenedGiftTransferTaxInput["selfBuiltHousing"]>>) => set({ selfBuiltHousing: { ...h, ...patch } });
+  const amount = (v: number | undefined) => (v && v > 0 ? String(v) : "");
+  return (
+    // ToneCard 는 data-testid 를 넘기지 않는다 — 바깥 div 에 단다
+    <div data-testid="gift-bg-self-built-housing">
+    <ToneCard tone="amber" title="건물분만 가산세 대상입니다">
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        소득세법 §114조의2①은 «해당 건물»의 {scope.method === "appraisal" ? "감정가액" : "환산취득가액"}의 5%를 가산세로 정합니다. 주택공시가격은 토지와 건물을 합친 가격이라,
+        토지 기준시가와 건물 기준시가의 비율로 나눈 건물분으로 가산세 기준액을 구합니다 (소득세법 §99①1호, 시행령 §166⑥).
+      </p>
+      {scope.method === "appraisal" && (
+        <ToggleCard
+          tone="amber"
+          size="sm"
+          title="감정평가서에 건물 가액이 구분 표시되어 있지 않다"
+          description="켜면 감정가액을 취득 당시 토지·건물 기준시가 비율로 나눠 건물분을 구합니다. 끄면 감정평가서에 구분 표시된 건물 감정가액을 그대로 씁니다."
+          checked={h.appraisalNoSplit === true}
+          onCheckedChange={(v) => put({ appraisalNoSplit: v || undefined })}
+          data-testid="gift-bg-sbh-nosplit"
+        />
+      )}
+      {scope.directAppraisal && (
+        <FieldCard label="건물 감정가액" unit="원" required hint="감정평가서에 토지와 구분해 적힌 건물의 감정가액(물건 전체)입니다. 감정가액 총액을 넘을 수 없습니다.">
+          <CurrencyInput label="건물 감정가액" hideLabel hideUnit value={amount(h.buildingAppraisalValue)} onChange={(v) => put({ buildingAppraisalValue: parseAmount(v) || undefined })} data-testid="gift-bg-sbh-building-appraisal" />
+        </FieldCard>
+      )}
+      {scope.acq && (
+        <>
+          <FieldCard label="취득(신축) 당시 토지 ㎡당 개별공시지가" unit="원/㎡" required hint="토지 기준시가 = ㎡당 공시지가 × 토지 면적 (§99①1호 가목)">
+            <CurrencyInput label="취득 당시 토지 ㎡당 개별공시지가" hideLabel hideUnit value={amount(h.landPricePerSqmAtAcquisition)} onChange={(v) => put({ landPricePerSqmAtAcquisition: parseAmount(v) || undefined })} data-testid="gift-bg-sbh-land-persqm-acq" />
+          </FieldCard>
+          <FieldCard label="토지 면적" unit="㎡" required>
+            <DecimalInput value={h.landArea != null ? String(h.landArea) : ""} onChange={(v) => put({ landArea: v ? parseDecimal(v) || undefined : undefined })} data-testid="gift-bg-sbh-land-area" />
+          </FieldCard>
+          <FieldCard label="취득(신축) 당시 건물 기준시가" unit="원" required hint="국세청장이 산정·고시한 건물 기준시가 (§99①1호 나목) — 주택공시가격에서 토지분을 빼서 대신하지 않습니다">
+            <CurrencyInput label="취득 당시 건물 기준시가" hideLabel hideUnit value={amount(h.buildingStdPriceAtAcquisition)} onChange={(v) => put({ buildingStdPriceAtAcquisition: parseAmount(v) || undefined })} data-testid="gift-bg-sbh-building-std-acq" />
+          </FieldCard>
+        </>
+      )}
+      {scope.transfer && (
+        <>
+          <FieldCard label="양도(증여) 당시 토지 ㎡당 개별공시지가" unit="원/㎡" required hint="양도 당시 토지 기준시가 = ㎡당 공시지가 × 위 토지 면적">
+            <CurrencyInput label="양도 당시 토지 ㎡당 개별공시지가" hideLabel hideUnit value={amount(h.landPricePerSqmAtTransfer)} onChange={(v) => put({ landPricePerSqmAtTransfer: parseAmount(v) || undefined })} data-testid="gift-bg-sbh-land-persqm-transfer" />
+          </FieldCard>
+          <FieldCard label="양도(증여) 당시 건물 기준시가" unit="원" required>
+            <CurrencyInput label="양도 당시 건물 기준시가" hideLabel hideUnit value={amount(h.buildingStdPriceAtTransfer)} onChange={(v) => put({ buildingStdPriceAtTransfer: parseAmount(v) || undefined })} data-testid="gift-bg-sbh-building-std-transfer" />
+          </FieldCard>
+        </>
+      )}
+    </ToneCard>
+    </div>
   );
 }

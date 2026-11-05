@@ -53,8 +53,9 @@ export function buildSelfBuiltHousingPayload(
   const wire: SelfBuiltHousingWire = {};
   if (scope.directAppraisal) {
     const direct = parseAmount(asset.selfBuiltBuildingAppraisal);
-    // 감정가액 총액(`appraisalValue`)과 같은 지분 스케일 — 건물 감정가액은 그 부분집합이다
-    const scaled = ownershipRatio < 1 ? applyRatio(direct, ownershipRatio) : direct;
+    // 감정가액 총액(`appraisalValue`)과 같은 지분 스케일 — 건물 감정가액은 그 부분집합이다.
+    // 부담부증여는 감정가액 총액(`burdenedGiftInfo.presumedAcquisitionTotal`)을 물건 전체 값으로 싣고 엔진이 비율만 쓰므로 축소하지 않는다(V-7).
+    const scaled = ownershipRatio < 1 && !scope.burdenedGift ? applyRatio(direct, ownershipRatio) : direct;
     const v = pos(scaled);
     if (v != null) wire.buildingAppraisalValue = v;
   }
@@ -71,8 +72,11 @@ export function buildSelfBuiltHousingPayload(
     const buildingT = pos(parseAmount(asset.buildingStandardPriceAtTransfer));
     if (landT != null) wire.landStdPriceAtTransfer = landT;
     if (buildingT != null) wire.buildingStdPriceAtTransfer = buildingT;
-    const sale = buildSaleSplitWire(asset, ctx.transferDate, ownershipRatio);
-    if (Object.keys(sale).length > 0) wire.sale = sale;
+    // 부담부증여는 양도가액이 채무 안분분이라 계약서 양도가액 구분이 없다 — 양도 당시 기준시가 비율로만 나눈다(엔진 `bgHousingBuildingPenaltyBase`).
+    if (!scope.burdenedGift) {
+      const sale = buildSaleSplitWire(asset, ctx.transferDate, ownershipRatio);
+      if (Object.keys(sale).length > 0) wire.sale = sale;
+    }
   }
   return wire;
 }

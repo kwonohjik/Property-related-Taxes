@@ -14,6 +14,7 @@
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { scaleBurdenedGiftInfo } from "@/lib/tax-engine/burdened-gift-apportionment";
+import { BG_HOUSING_HALF_SPLIT } from "../_helpers/bg-housing-half-split";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -73,11 +74,11 @@ describe("§114조의2 부담부증여 K-7 감정가액 × 증축 5년 이내 �
     expect(r.penaltyTax).toBe(1_200_000);
   });
 
-  it("[E-1b] 건물 전체 감정가액이 아니라 증축부분만 base다 (신축이면 60M → 3,000,000과 구별)", () => {
+  it("[E-1b] 건물 전체 감정가액이 아니라 증축부분만 base다 (신축이면 건물분 30M → 1,500,000과 구별 · V-7 1:1 안분 입력)", () => {
     const ext = calculateTransferTax(input(), rates);
-    const asNew = calculateTransferTax(input({ buildingType: "new", extensionFloorArea: undefined }), rates);
-    expect(asNew.penaltyBase).toBe(60_000_000);
-    expect(asNew.penaltyTax).toBe(3_000_000);
+    const asNew = calculateTransferTax(input({ buildingType: "new", extensionFloorArea: undefined, selfBuiltHousing: BG_HOUSING_HALF_SPLIT }), rates);
+    expect(asNew.penaltyBase).toBe(30_000_000);
+    expect(asNew.penaltyTax).toBe(1_500_000);
     expect(ext.penaltyTax).toBe(1_200_000);
   });
 
@@ -223,10 +224,10 @@ describe("§114조의2 부담부증여 K-7 감정가액 × 증축 5년 이내 �
 
   it("[E-12] 신축(new)은 이 칸을 쓰지 않는다 — 건물 전체 감정가액 안분값이 base (PR-3 회귀)", () => {
     const r = calculateTransferTax(
-      input({ buildingType: "new", extensionFloorArea: undefined }),
+      input({ buildingType: "new", extensionFloorArea: undefined, selfBuiltHousing: BG_HOUSING_HALF_SPLIT }),
       rates,
     );
-    expect(r.penaltyBase).toBe(60_000_000);
+    expect(r.penaltyBase).toBe(30_000_000); // 건물분(V-7 · 1:1 안분) — 주택 전체 안분값 60M의 절반
   });
 
   it("[E-13 공유지분 A축] scaleBurdenedGiftInfo가 증축부분 감정가액도 같은 비율로 줄인다", () => {

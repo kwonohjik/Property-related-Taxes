@@ -1486,4 +1486,19 @@ export interface BurdenedGiftTransferTaxInput {
    * Phase 2 신규. land·K-4 실지·신축·표준 모드에서는 미사용.
    */
   extensionStdPriceAtAcquisition?: number;
+  /**
+   * 일체 주택(아파트·주택) **신축** × 환산·감정가액 — §114조의2 가산세 base 를 「해당 건물」분으로 구하는 입력(V-7 · `bg-housing-114-2-building-base.plan.md`).
+   * 양도세 계산기 `selfBuiltHousing`과 같은 규칙(⑤·④·⑧ 공용 leaf `lib/calc/gift-burdened-self-built-housing.ts`). 양도 당시 토지 기준시가 = 양도 당시 ㎡당 공시지가 × 같은 토지 면적.
+   */
+  selfBuiltHousing?: {
+    landPricePerSqmAtAcquisition?: number;
+    landArea?: number;
+    buildingStdPriceAtAcquisition?: number;
+    landPricePerSqmAtTransfer?: number;
+    buildingStdPriceAtTransfer?: number;
+    /** 감정평가서에 구분 표시된 건물 감정가액(물건 전체) — 감정가액(K-7)이고 `appraisalNoSplit`이 아닐 때 */
+    buildingAppraisalValue?: number;
+    /** 감정평가서에 건물 가액이 구분 표시되어 있지 않다 — 취득 당시 토지·건물 기준시가 비율로 나눈다 */
+    appraisalNoSplit?: boolean;
+  };
 }

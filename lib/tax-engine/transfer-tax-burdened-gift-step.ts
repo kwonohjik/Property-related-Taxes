@@ -193,6 +193,20 @@ export function runBurdenedGiftStep(
      * 입력이 없거나 모자라면 undefined → 종전 base(PR-1). 증축은 증축 부분 base 가 따로 있다(계획서 V-3).
      */
     const bgInfoRaw = rawInput.burdenedGiftInfo;
+    // PR-2 엄격화(Q-3 a) — 일체 주택 신축 × 가산세 창 열림인데 건물분 입력이 없으면 던진다. 전체 값으로 계산하면 토지분 과다 부과가 조용히 남는다
+    //   (일반 양도 선례 PR-4와 같은 이유). 토지·건물 취득일 분리면 건물 파트가 이미 건물분이라 요구하지 않는다.
+    if (
+      rawInput.propertyType === "housing" && !rawInput.selfBuiltHousing && rawInput.buildingType !== "extension" && !partDatesDiffer &&
+      (isK5SelfBuilt || isAppraisalSelfBuilt) &&
+      calculateBuildingPenalty({ ...rawInput, acquisitionMethod: isK5SelfBuilt ? "estimated" : "appraisal" }, 1) !== null
+    ) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        `[burdened_gift] 일체 주택을 신축하고 5년 이내에 양도하면서 ${isK5SelfBuilt ? "환산취득가액" : "감정가액"}으로 취득가액을 산정하면 「소득세법」 제114조의2 가산세는 「해당 건물」분이 기준이라 ` +
+          `건물분 안분 입력(${rawInput.penaltyDonorBuilt ? "burdenedGiftInfo.carryoverDonorBasis.donorBuilt.housing" : "selfBuiltHousing"})이 필요합니다 — 취득 당시 토지 ㎡당 개별공시지가·면적·건물 기준시가` +
+          `${isK5SelfBuilt ? "와 양도 당시 토지·건물 기준시가" : "(또는 감정평가서의 건물 감정가액)"}를 보내세요. 주택공시가격 합계에서 토지분을 빼 대신 구하지 않습니다.`,
+      );
+    }
     const housingBuildingBase =
       rawInput.propertyType === "housing" && rawInput.selfBuiltHousing && rawInput.buildingType !== "extension" && (isK5SelfBuilt || isAppraisalSelfBuilt)
         ? bgHousingBuildingPenaltyBase({

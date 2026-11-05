@@ -253,7 +253,7 @@ describe("RS-4 ⑫ 거부 — 받아 놓고 무시하지 않는다 (400)", () =>
     ["별개 취득(isSeparateAcquisition)", () => ({ ...SINGLE, isSeparateAcquisition: true, selfBuiltHousing: SB })],
     ["PHD(최초공시 전)", () => ({ ...SINGLE, preHousingDisclosure: { firstDisclosureDate: "2015-04-30", firstDisclosureHousingPrice: 486_000_000, landArea: 212, landPricePerSqmAtAcquisition: 2_360_000, buildingStdPriceAtAcquisition: 220_890_540, landPricePerSqmAtFirstDisclosure: 2_369_000, buildingStdPriceAtFirstDisclosure: 220_725_560, transferHousingPrice: 627_000_000, landPricePerSqmAtTransfer: 3_486_000, buildingStdPriceAtTransfer: 252_871_000 }, selfBuiltHousing: SB })],
     ["증축", () => ({ ...SINGLE, buildingType: "extension", extensionFloorArea: 100, extensionStdPriceAtAcquisition: 15_000_000, selfBuiltHousing: SB })],
-    ["부담부증여", () => ({ ...SINGLE, transferType: "burdened_gift", selfBuiltHousing: SB })],
+    // 「부담부증여」 행 삭제 — V-7(`bg-housing-114-2-building-base.plan.md`)부터 부담부증여도 이 입력을 받는다(§159 스텝이 건물분으로 나눈다).
     ["알 수 없는 키(.strict)", () => ({ ...SINGLE, selfBuiltHousing: { ...SB, bogus: 1 } })],
     ["음수 기준시가", () => ({ ...SINGLE, selfBuiltHousing: { ...SB, buildingStdPriceAtAcquisition: -1 } })],
   ])("%s", async (_label, make) => {

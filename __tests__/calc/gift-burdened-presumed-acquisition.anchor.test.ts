@@ -206,21 +206,25 @@ describe("④ → /api/calc/transfer 통합", () => {
     expect(r.json.data!.result!.transferGain).toBe(28_920_000);
   });
 
-  it("신축 5년 이내 아파트 × 감정가액 150M — 가산세 3,000,000 (PR-3 연결)", async () => {
-    const body = buildGiftBurdenedTransferBody(
-      apt({
-        acquisitionMethod: "appraisal",
-        presumedAcquisitionTotal: 150_000_000,
-        isSelfBuilt: true,
-        buildingType: "new",
-        constructionDate: new Date("2021-01-01"),
-      }),
-      form(apt()),
-    );
+  // V-7 — 일체 주택 신축은 건물분이 base 다(2026-11-05 사용자 「칸 추가」). 건물 감정가액 75M(총액 150M 중) → 75M × 0.4 = 30M · 가산세 1,500,000 (V-7 전 60M · 3,000,000)
+  const SELF_BUILT_APPRAISAL = { acquisitionMethod: "appraisal", presumedAcquisitionTotal: 150_000_000, isSelfBuilt: true, buildingType: "new", constructionDate: new Date("2021-01-01") };
+  it("신축 5년 이내 아파트 × 감정가액 150M · 건물 감정가액 75M — 가산세 1,500,000 (V-7 건물분)", async () => {
+    const bgt = { ...SELF_BUILT_APPRAISAL, selfBuiltHousing: { buildingAppraisalValue: 75_000_000 } };
+    const body = buildGiftBurdenedTransferBody(apt(bgt), form(apt(bgt)));
+    expect(body.selfBuiltHousing).toEqual({ buildingAppraisalValue: 75_000_000 });
     const r = await send(body);
     expect(r.status, JSON.stringify(r.json.error)).toBe(200);
-    expect(r.json.data!.result!.penaltyBase).toBe(60_000_000);
-    expect(r.json.data!.result!.penaltyTax).toBe(3_000_000);
+    expect(r.json.data!.result!.penaltyBase).toBe(30_000_000);
+    expect(r.json.data!.result!.penaltyTax).toBe(1_500_000);
+  });
+  it("⑧ 건물분 입력이 없으면 막는다 · 구분 표시 없음이면 취득 당시 토지·건물 기준시가를 요구한다 · 엔진도 400", async () => {
+    expect(v(apt(SELF_BUILT_APPRAISAL))).toContain("건물 감정가액");
+    expect(v(apt({ ...SELF_BUILT_APPRAISAL, selfBuiltHousing: { appraisalNoSplit: true } }))).toContain("㎡당 개별공시지가");
+    const split = { appraisalNoSplit: true, landPricePerSqmAtAcquisition: 1_000_000, landArea: 100, buildingStdPriceAtAcquisition: 100_000_000 };
+    expect(v(apt({ ...SELF_BUILT_APPRAISAL, selfBuiltHousing: split }))).toBeNull();
+    const ok = await send(buildGiftBurdenedTransferBody(apt({ ...SELF_BUILT_APPRAISAL, selfBuiltHousing: split }), form(apt())));
+    expect(ok.json.data!.result!.penaltyBase).toBe(30_000_000); // 1:1 비율 → 60M의 절반
+    expect((await send(buildGiftBurdenedTransferBody(apt(SELF_BUILT_APPRAISAL), form(apt())))).status).toBe(400);
   });
 
   it("증축 5년 이내 아파트 × 감정가액 150M · 증축한 부분 60M — 가산세 1,200,000 (건물 전체 3,000,000이 아니다)", async () => {
@@ -282,7 +286,9 @@ describe("⑧ 검증", () => {
   });
   it("V-5 감정가액 + 신축 → 신축일 필수", () => {
     expect(v(apt({ ...ok, isSelfBuilt: true, buildingType: "new" }))).toMatch(/신축일/);
-    expect(v(apt({ ...ok, isSelfBuilt: true, buildingType: "new", constructionDate: new Date("2021-01-01") }))).toBeNull();
+    // V-7 — 신축일이 있으면 다음 요구는 건물분 입력이다(건물 감정가액) · 넣으면 통과
+    expect(v(apt({ ...ok, isSelfBuilt: true, buildingType: "new", constructionDate: new Date("2021-01-01") }))).toMatch(/건물 감정가액/);
+    expect(v(apt({ ...ok, isSelfBuilt: true, buildingType: "new", constructionDate: new Date("2021-01-01"), selfBuiltHousing: { buildingAppraisalValue: 75_000_000 } }))).toBeNull();
   });
   it("V-6 감정가액 + 증축(85㎡ 초과) 5년 이내 → 증축한 부분의 감정가액 필수 / 매매사례가액 · 85㎡ 이하는 칸 없이 통과", () => {
     const ext = { isSelfBuilt: true, buildingType: "extension", constructionDate: new Date("2021-01-01"), extensionStdPriceAtAcquisition: 10_000_000 };

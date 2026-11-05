@@ -228,22 +228,24 @@ describe("컴패니언 신축·증축 — 겸용주택은 파트 카드 경로�
 });
 
 describe("축 B(부담부증여 지분 카드) × 신축 × 감정가액 — 지분 카드마다 자기 가산세", () => {
-  const sb = (a: AssetForm, on: boolean) => ({ ...a, ...(on ? SB : {}) }) as AssetForm;
+  // V-7 PR-2 — 일체 주택 신축은 건물분이 base 다. 감정평가서의 건물 감정가액 = 그 카드 감정가액 총액의 절반으로 둔다 → base·가산세가 종전의 절반
+  const sb = (a: AssetForm, on: boolean) =>
+    ({ ...a, ...(on ? { ...SB, selfBuiltBuildingAppraisal: String(Number(String(a.bgPresumedAcquisitionTotal).replace(/,/g, "")) / 2) } : {}) }) as AssetForm;
 
-  it("[B-1] 두 번째 지분 카드의 신축이 가산세로 잡힌다 — 6,000,000(= 감정가액 5억 × 40% × 채무비율 0.6 = 1.2억의 5%)", async () => {
+  it("[B-1] 두 번째 지분 카드의 신축이 가산세로 잡힌다 — 3,000,000(= 건물분 감정가액 2.5억 × 40% × 채무비율 0.6 = 0.6억의 5% · V-7 전 6,000,000)", async () => {
     const [a, b] = bundle();
     const r = await run(form([sb(a, false), sb(b, true)]));
     expect(r.status).toBe(200);
     const p = propsOf(r.data);
     expect(p[0].penaltyTax).toBe(0);
-    expect(p[1].penaltyBase).toBe(120_000_000);
-    expect(p[1].penaltyTax).toBe(6_000_000);
+    expect(p[1].penaltyBase).toBe(60_000_000);
+    expect(p[1].penaltyTax).toBe(3_000_000);
   });
 
-  it("[B-2] 두 카드가 모두 신축이면 각자의 가산세가 따로 붙는다(7,200,000 + 6,000,000)", async () => {
+  it("[B-2] 두 카드가 모두 신축이면 각자의 가산세가 따로 붙는다(3,600,000 + 3,000,000 · 건물분 · V-7 전 7,200,000 + 6,000,000)", async () => {
     const [a, b] = bundle();
     const p = propsOf((await run(form([sb(a, true), sb(b, true)]))).data);
-    expect(p.map((x) => x.penaltyTax)).toEqual([7_200_000, 6_000_000]);
+    expect(p.map((x) => x.penaltyTax)).toEqual([3_600_000, 3_000_000]);
   });
 });
 

@@ -373,7 +373,7 @@ describe("[F] 변하지 않는 셀 — 이미 건물분이거나 이 축이 아�
   });
   // 2026-11-05 V-7(`bg-housing-114-2-building-base.plan.md`) — 종전 「§159 스텝이 이미 건물분 · 이 입력은 거부」는 일체 주택에서 틀렸다(건물 자리 = 주택 전체).
   //   이제 부담부증여도 이 입력을 받아 §159 스텝이 건물분으로 나눈다. 값 고정은 `bg-housing-114-2-building-base.anchor.test.ts`.
-  it("부담부증여 K-5 신축 — 입력 없으면 종전 50,000,000 / 2,500,000 · 입력하면 §159 스텝이 건물분으로 줄인다(거부하지 않는다)", () => {
+  it("부담부증여 K-5 신축 — 입력 없으면 막는다(V-7 PR-2 엄격화 · 종전 50,000,000 / 2,500,000) · 입력하면 §159 스텝이 건물분으로 줄인다(거부하지 않는다)", () => {
     const bgInput = (extra: Partial<TransferTaxInput> = {}) =>
       baseTransferInput({
         propertyType: "housing",
@@ -404,9 +404,7 @@ describe("[F] 변하지 않는 셀 — 이미 건물분이거나 이 축이 아�
         },
         ...extra,
       } as Partial<TransferTaxInput>);
-    const r = run(bgInput());
-    expect(r.penaltyBase).toBe(50_000_000);
-    expect(r.penaltyTax).toBe(2_500_000);
+    expect(() => run(bgInput())).toThrow(/selfBuiltHousing/);
     const withSplit = run(bgInput({ selfBuiltHousing: SB } as Partial<TransferTaxInput>));
     expect(withSplit.penaltyBase).toBeLessThan(50_000_000);
     expect(withSplit.penaltyBase).toBeGreaterThan(0);

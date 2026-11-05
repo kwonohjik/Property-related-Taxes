@@ -57,13 +57,13 @@ export type DonorBuiltWire = z.infer<typeof donorBuiltShape>;
 
 /**
  * 부담부증여(§159) × 이월과세의 «당초 증여자 신축·증축»(PR-4) — `burdenedGiftInfo.carryoverDonorBasis.donorBuilt`.
- * 일체 주택 안분(`housing`)은 받지 않는다(§159가 토지·건물을 자산별로 따로 구한다) — 받으면 조용히 strip 되므로 `.strict()`로 400.
+ * 일체 주택 안분(`housing`)은 **신축 주택만** 받는다 — §159 스텝의 건물 자리는 일체 주택이면 주택 전체(토지 포함)라 건물분으로 나눈다(V-7 ·
+ * `bg-housing-114-2-building-base.plan.md`). 다른 자산·증축은 `refineBgDonorBuilt`가 400. 모르는 키는 `.strict()`로 400.
  *
  * ⑭ Date 변환을 **스키마가 한다**(`constructionDate` transform) — `burdenedGiftInfo`는 단건·컴패니언·번들 안분·일반건물 route 여러 곳으로 객체째 흘러가
  * 지점마다 변환을 두면 한 곳만 빠져도 `Date < string` 침묵 false 가 난다(`lib/api/date-coerce.ts`). 파싱 결과가 곧 엔진 입력 타입이다.
  */
 export const bgDonorBuiltShape = donorBuiltShape
-  .omit({ housing: true })
   .extend({ constructionDate: z.string().date().transform((v) => toDate(v, "burdenedGiftInfo.carryoverDonorBasis.donorBuilt.constructionDate")) })
   .strict();
 
@@ -249,6 +249,9 @@ export function refineBgDonorBuilt(data: BgOuterLike, ctx: z.RefinementCtx): voi
   const built = db.constructionDate instanceof Date ? db.constructionDate.toISOString().slice(0, 10) : undefined;
   if (built && ((ct?.donorAcquisitionDate && built < ct.donorAcquisitionDate) || (ct?.giftRegistryDate && built > ct.giftRegistryDate)))
     issue(["constructionDate"], "증여자의 신축·증축일은 증여자 취득일 이후, 증여 등기접수일 이전이어야 합니다");
+  // 일체 주택 건물분 안분(V-7) — 신축 주택만(엔진 `assertBgSelfBuiltHousingInput`과 같은 조건)
+  if (db.housing !== undefined && (data.propertyType !== "housing" || db.buildingType === "extension"))
+    issue(["housing"], "일체 주택 건물분 입력(housing)은 신축한 주택에만 보낼 수 있습니다 — 건물·일반건물은 건물분이 이미 따로 있고, 증축은 증축한 부분 기준이 따로 있습니다");
   if (db.buildingType === "extension") {
     if (!db.extensionFloorArea) issue(["extensionFloorArea"], "증축은 바닥면적 합계가 필요합니다 (85㎡ 초과만 대상)");
     if (method === "converted" && !db.extensionStdPriceAtAcquisition)

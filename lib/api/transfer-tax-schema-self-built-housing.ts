@@ -27,8 +27,6 @@ export interface SelfBuiltHousingFacts {
   isHousing: boolean;
   isSelfBuilt?: boolean;
   acquisitionCause?: string;
-  /** 부담부증여(transferType / 서브객체) */
-  burdenedGift: boolean;
   /** 겸용주택 서브객체 */
   mixedUse: boolean;
   buildingType?: string;
@@ -48,7 +46,7 @@ export function refineSelfBuiltHousing(
   if (!has) return;
   const issue = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
   if (!f.isHousing) issue("일체 주택의 건물분 가산세 입력은 주택에만 보낼 수 있습니다 — 건물 단독은 전체가 건물분이라 필요 없습니다");
-  if (f.burdenedGift) issue("부담부증여는 §159 스텝이 토지·건물을 따로 구해 이미 건물분을 base 로 씁니다 — 이 입력으로 받지 않습니다");
+  // 부담부증여도 받는다 — §159 스텝의 건물 자리는 일체 주택이면 주택 전체(토지 포함)라 이 입력으로 건물분을 나눈다(V-7 · `bg-housing-114-2-building-base.plan.md`).
   if (f.acquisitionCause !== undefined && f.acquisitionCause !== "purchase")
     issue("이 입력은 본인이 신축해 매매로 취득한 주택에만 적용됩니다 — 이월과세·상속·증여는 취득 경위가 다릅니다");
   if (f.isSelfBuilt !== true) issue("이 입력은 본인 신축(isSelfBuilt)일 때만 보낼 수 있습니다");
