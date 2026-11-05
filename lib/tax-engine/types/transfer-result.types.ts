@@ -12,7 +12,6 @@ import type { RateClause } from "../transfer-tax-rate-clause";
 import type { SurchargeApplication } from "../transfer-tax-surcharge-predicate";
 import type { ExcludedHouse, ExclusionReason, MultiHouseSurchargeResult } from "../multi-house-surcharge";
 import type { NonBusinessLandJudgment } from "../non-business-land";
-import type { RentalReductionResult } from "../rental-housing-reduction";
 import type { NewHousingReductionResult } from "../new-housing-reduction";
 import type { TransferTaxPenaltyResult } from "../transfer-tax-penalty";
 import type { Pre1990LandValuationResult } from "../pre-1990-land-valuation";
@@ -396,11 +395,6 @@ export interface TransferTaxResult {
    */
   nonBusinessLandJudgmentDetail?: NonBusinessLandJudgment;
   /**
-   * 장기임대 감면 상세 결과 (rentalReductionDetails 제공 시만 포함)
-   * UI에서 감면 자격·감면율·위반 사유 표시용
-   */
-  rentalReductionDetail?: RentalReductionResult;
-  /**
    * 장기임대 §97의3·§97의4 장특공제 특례 평가 결과 (Phase 2 — 2026-06-11).
    * reductions에 rental_97_3/rental_97_4 본 필드 항목 포함 시 세팅 (불적용 사유 포함).
    */
@@ -572,7 +566,6 @@ export type TransferReductionDetailSource = Pick<
   | "inheritedAcquisitionDetail"
   | "inheritedHouseValuationDetail"
   | "newHousingReductionDetail"
-  | "rentalReductionDetail"
   | "rental97LthdDetail"
   | "usageConversionDetail"
   | "rental97TaxDetail"

@@ -19,9 +19,6 @@ import type {
   NonBusinessLandInput,
 } from "../non-business-land";
 import type {
-  RentalReductionInput,
-} from "../rental-housing-reduction";
-import type {
   NewHousingReductionInput,
 } from "../new-housing-reduction";
 import type {
@@ -1236,12 +1233,6 @@ export interface TransferTaxInput {
    * finalize.ts STEP 10.5: usedEstimatedAcquisition=true 시 penaltyBase로 사용.
    */
   estimatedBase?: number;
-  /**
-   * 장기임대주택 감면 상세 정보 (선택)
-   * 제공 시 calculateRentalReduction()으로 정밀 감면 판정.
-   * 미제공 시 reductions[] 배열의 long_term_rental 항목으로 단순 처리 (하위 호환).
-   */
-  rentalReductionDetails?: RentalReductionInput;
   /**
    * 신축주택·미분양주택 감면 상세 정보 (선택)
    * 제공 시 determineNewHousingReduction()으로 정밀 감면 판정 (조문 매트릭스 기반).

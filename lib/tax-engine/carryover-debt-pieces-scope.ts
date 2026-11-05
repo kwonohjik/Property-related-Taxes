@@ -63,7 +63,7 @@ export function carryoverDebtPiecesUnsupportedReason(input: Record<string, unkno
     return DEBT_PIECES_REASON.donorEstimation;
   const ct = input.carryoverTaxation as { donorBuilt?: unknown } | undefined;
   if (present(ct?.donorBuilt)) return DEBT_PIECES_REASON.donorBuilt;
-  if (nonEmptyArray(input.reductions) || present(input.rentalReductionDetails) || present(input.newHousingDetails)) return DEBT_PIECES_REASON.reductions;
+  if (nonEmptyArray(input.reductions) || present(input.newHousingDetails)) return DEBT_PIECES_REASON.reductions;
   if (
     present(input.sameAdjustmentPeriod) ||
     present(input.nonHousingToHousingConversion) ||

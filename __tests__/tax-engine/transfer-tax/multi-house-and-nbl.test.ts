@@ -8,7 +8,6 @@ import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import type { HouseInfo } from "@/lib/tax-engine/multi-house-surcharge";
 import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land";
-import type { RentalReductionInput } from "@/lib/tax-engine/rental-housing-reduction";
 import type { NewHousingReductionInput } from "@/lib/tax-engine/new-housing-reduction";
 import { makeMockRates, baseTransferInput as baseInput, makeHouseInfo, makeMockRatesWithHouseEngine } from "../_helpers/mock-rates";
 
@@ -318,6 +317,3 @@ describe("H-1: 비사업용 토지 단기보유 §104①후단 비교과세", ()
   });
 });
 
-// ============================================================
-// T-27: rentalReductionDetails 제공 → 정밀 감면 엔진 연동
-// ============================================================

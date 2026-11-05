@@ -7,23 +7,7 @@
 
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import { reductionTypeLabelOf } from "./transfer-reduction-type-labels";
-import { TRANSFER_REDUCTION_ARTICLE } from "./legal-codes/transfer-house";
 import { TRANSFER } from "./legal-codes/transfer";
-import type { RentalHousingType } from "./rental-housing-reduction";
-
-/**
- * 레거시 임대유형 → 근거 조문 (D1-11).
- *
- * `rental-housing-reduction.ts` 헤더가 네 유형을 §97·§97의3·§97의4·§97의5로 명시한다.
- * 이들이 후보 배열에서는 `long_term_rental` **하나**로 뭉쳐지므로, id 기반 resolver만으로는
- * 전부 「조특법 §97」이 되어 §97의3~§97의5 사안에서 틀린 조문이 인쇄·링크된다.
- */
-const LEGACY_RENTAL_ARTICLE: Record<RentalHousingType, string> = {
-  public_construction: TRANSFER_REDUCTION_ARTICLE.RENTAL_97_MAIN,
-  long_term_private: TRANSFER_REDUCTION_ARTICLE.RENTAL_97_3,
-  public_support_private: TRANSFER_REDUCTION_ARTICLE.RENTAL_97_4,
-  public_purchase: TRANSFER_REDUCTION_ARTICLE.RENTAL_97_5,
-};
 /**
  * §90①의 `B`를 감면율별 조각으로 싣는다 — 소득 0인 조각은 버리고 **감면율 오름차순**으로 정렬.
  *
@@ -41,11 +25,6 @@ function reducibleBuckets(
 }
 
 import type { ParsedRates } from "./transfer-tax-helpers";
-import {
-  type RentalReductionInput,
-  type RentalReductionResult,
-  calculateRentalReduction,
-} from "./rental-housing-reduction";
 import {
   type NewHousingReductionInput,
   type NewHousingReductionResult,
@@ -67,7 +46,7 @@ import { isWithin5YearsCheck } from "./transfer-reductions/new-99-3";
 import { type UnsoldHybridResult } from "./transfer-reductions/unsold-hybrid";
 import { evaluateAnyHybridTaxAmount } from "./transfer-reductions/unsold-hybrid-p3";
 import type { Rental97Result } from "./transfer-reductions/types";
-import type { LongTermRentalRuleSet, NewHousingMatrixData } from "./schemas/rate-table.schema";
+import type { NewHousingMatrixData } from "./schemas/rate-table.schema";
 import type { TransferReduction } from "./types/transfer.types";
 import type { ReducibleIncomeBucket } from "./types/transfer-result.types";
 import { applyRentalGainShare } from "./transfer-reductions/rental-97-shared-helpers";
@@ -112,11 +91,6 @@ export interface ReductionsResult {
    * anchor: `__tests__/tax-engine/transfer/aggregate-reduction-rate-parity.anchor.test.ts`
    */
   aggregateReductionRate?: number;
-  /**
-   * D1-11 — 근거 조문 확정값. 레거시 `long_term_rental` 하나가 §97·§97의3·§97의4·§97의5를
-   * 뭉치므로 id 기반 resolver만으로는 조문을 특정할 수 없다. 지정되면 이 값이 우선한다.
-   */
-  reductionLegalBasisOverride?: string;
 }
 
 /** §77·§77의3 불성립 사유 뒤에 수유자 고지를 붙인다(`NON_HEIR_BEQUEST_77_NOTE`). 성립이거나 수유자가 아니면 그대로다. */
@@ -144,11 +118,10 @@ function withNonHeirBequest77Note<T extends { isEligible: boolean; notEligibleRe
 export function unregisteredReductionNotice(input: {
   isUnregistered?: boolean;
   reductions?: ReadonlyArray<unknown>;
-  rentalReductionDetails?: unknown;
   newHousingDetails?: unknown;
 }): string | undefined {
   if (!input.isUnregistered) return undefined;
-  if (!((input.reductions?.length ?? 0) > 0 || input.rentalReductionDetails || input.newHousingDetails)) {
+  if (!((input.reductions?.length ?? 0) > 0 || input.newHousingDetails)) {
     return undefined;
   }
   return `미등기양도자산에는 양도소득세 감면을 적용하지 않습니다(${TRANSFER.REDUCTION_UNREGISTERED_EXCLUSION}) — 선택한 감면을 계산에서 제외했습니다.`;
@@ -158,8 +131,6 @@ export function calcReductions(
   calculatedTax: number,
   reductions: TransferReduction[],
   selfFarmingRules: ParsedRates["selfFarmingRules"] | undefined,
-  rentalReductionDetails?: RentalReductionInput,
-  longTermRentalRules?: LongTermRentalRuleSet,
   newHousingDetails?: NewHousingReductionInput,
   newHousingMatrix?: NewHousingMatrixData,
   transferDate?: Date,
@@ -193,7 +164,6 @@ export function calcReductions(
    */
   rental975ReducibleBaseIncome?: number,
 ): ReductionsResult & {
-  rentalReductionDetail?: RentalReductionResult;
   newHousingReductionDetail?: NewHousingReductionResult;
   publicExpropriationDetail?: PublicExpropriationReductionResult;
   gbDesignatedLandDetail?: GbDesignatedLandResult;
@@ -202,9 +172,9 @@ export function calcReductions(
   rental97TaxDetail?: Rental97Result;
   hybridTaxDetail?: UnsoldHybridResult;
 } {
-  // 조특법 §129② — 레거시 `rentalReductionDetails`·`newHousingDetails`도 이 함수 안에서 소비되므로 함께 닫힌다.
+  // 조특법 §129② — 레거시 `newHousingDetails`도 이 함수 안에서 소비되므로 함께 닫힌다.
   if (isUnregistered) return { reductionAmount: 0 };
-  if (reductions.length === 0 && !rentalReductionDetails && !newHousingDetails) {
+  if (reductions.length === 0 && !newHousingDetails) {
     return { reductionAmount: 0 };
   }
 
@@ -212,13 +182,6 @@ export function calcReductions(
   interface ReductionCandidate {
     amount: number;
     type: string;
-    /**
-     * 근거 조문 override (D1-11).
-     * 레거시 `long_term_rental` **하나가 4개 조문**(§97·§97의3·§97의4·§97의5)을 뭉치므로
-     * id만으로는 조문을 특정할 수 없다. 후보를 만드는 시점에만 유형을 알 수 있으므로
-     * 여기서 확정해 내보낸다. 지정하지 않으면 id 기반 resolver가 결정한다.
-     */
-    legalBasisOverride?: string;
     /** 감면대상 양도소득금액 (합산 재계산용 분자, 편입 부분감면 시 비율 적용 후) */
     reducibleIncome?: number;
     /**
@@ -247,31 +210,11 @@ export function calcReductions(
   aggregateReductionRate?: number;
   }
   const candidates: ReductionCandidate[] = [];
-  let rentalReductionDetail: RentalReductionResult | undefined;
   let newHousingReductionDetail: NewHousingReductionResult | undefined;
   let publicExpropriationDetail: PublicExpropriationReductionResult | undefined;
   let gbDesignatedLandDetail: GbDesignatedLandResult | undefined;
   let replacementLandDetail: ReplacementLandResult | undefined;
   let selfFarmingReductionDetail: SelfFarmingReductionResult | undefined;
-
-  // R-2-V2: 장기임대 정밀 엔진
-  if (rentalReductionDetails) {
-    const detailsWithTax: RentalReductionInput = { ...rentalReductionDetails, calculatedTax };
-    const rentalResult = calculateRentalReduction(detailsWithTax, longTermRentalRules);
-    rentalReductionDetail = rentalResult;
-    if (rentalResult.isEligible && rentalResult.reductionAmount > 0) {
-      // ⑲ 세액감면대상금액(별지84호 부표 1) = 「§90① 세액감면방식 적용 시 양도자산의 감면소득금액」.
-      // **감면율은 서식의 별도 칸**(부표 1 작성방법 16번)이므로 여기에는 감면율을 곱하지 않는다.
-      candidates.push({
-        amount: rentalResult.reductionAmount,
-        type: "long_term_rental",
-        reducibleIncome: transferIncome,
-        aggregateReductionRate: rentalResult.reductionRate,
-        // D1-11 — 레거시 엔진은 4유형을 한 id로 뭉치지만 조문은 다르다.
-        legalBasisOverride: LEGACY_RENTAL_ARTICLE[rentalReductionDetails.rentalHousingType],
-      });
-    }
-  }
 
   // R-2-97: 장기임대 §97 시리즈 세액감면 (§97 본문/단서·§97의2·§97의5) — Phase 2 (2026-06-11)
   // §127⑦ 중복배제: candidates max 패턴 합류. §97의3·§97의4(장특 계열)는 STEP 4에서 별도 처리.
@@ -593,12 +536,9 @@ export function calcReductions(
     reductionAmount,
     reductionType: reductionTypeDisplay,
     reductionTypeApplied: best.type || undefined,
-    /** D1-11 — 레거시 임대 4유형처럼 id만으로 조문을 특정할 수 없는 경우의 확정 근거 */
-    reductionLegalBasisOverride: best.amount > 0 ? best.legalBasisOverride : undefined,
     reducibleIncome: best.amount > 0 ? best.reducibleIncome : undefined,
     aggregateReductionRate: best.amount > 0 ? best.aggregateReductionRate : undefined,
     reducibleIncomeBuckets: best.amount > 0 ? best.reducibleIncomeBuckets : undefined,
-    rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
     gbDesignatedLandDetail,

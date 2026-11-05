@@ -8,97 +8,23 @@ import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import type { HouseInfo } from "@/lib/tax-engine/multi-house-surcharge";
 import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land";
-import type { RentalReductionInput } from "@/lib/tax-engine/rental-housing-reduction";
 import type { NewHousingReductionInput } from "@/lib/tax-engine/new-housing-reduction";
 import type { TaxRateKey } from "@/lib/tax-engine/types";
-import { makeMockRates, baseTransferInput as baseInput, LONG_TERM_RENTAL_RULES_MOCK } from "../_helpers/mock-rates";
+import { makeMockRates, baseTransferInput as baseInput } from "../_helpers/mock-rates";
 
 const mockRates = makeMockRates();
 
 describe("T-27: 장기임대 감면 정밀 엔진 연동", () => {
-  it("T-27a: rentalReductionDetails 제공 → 레거시 경로 폐지(V-6) — 요건을 채워도 감면 0 · 정본 감면 목록(rental_97_3) 안내", () => {
-    const rentalDetails: RentalReductionInput = {
-      isRegisteredLandlord: true,
-      isTaxRegistered: true,
-      registrationDate: new Date("2015-01-01"),
-      rentalHousingType: "long_term_private",
-      propertyType: "non_apartment",
-      region: "capital",
-      officialPriceAtStart: 500_000_000,
-      rentalStartDate: new Date("2015-01-01"),
-      transferDate: new Date("2024-06-01"),  // 9년 이상
-      vacancyPeriods: [],
-      rentHistory: [],
-      calculatedTax: 0, // calculateTransferTax에서 실제 세액으로 덮어씀
-    };
-
-    const rates = makeMockRates(LONG_TERM_RENTAL_RULES_MOCK as Partial<Record<TaxRateKey, object>>);
-
-    const input = baseInput({
-      transferPrice: 600_000_000,
-      acquisitionPrice: 300_000_000,
-      acquisitionDate: new Date("2014-06-01"),
-      transferDate: new Date("2024-06-01"),
-      isOneHousehold: false,        // 임대주택 다가구 시나리오 → 비과세 제외
-      householdHousingCount: 3,
-      reductions: [],
-      rentalReductionDetails: rentalDetails,
-    });
-
-    const result = calculateTransferTax(input, rates);
-    expect(result.isExempt).toBe(false);
-    expect(result.calculatedTax).toBeGreaterThan(0);
-    // 종전: 산출세액 × 0.5 감면. 같은 조문을 정본(`transfer-reductions/rental-97-3.ts`)이 판정하므로 이 경로는 닫았다.
-    expect(result.reductionAmount ?? 0).toBe(0);
-    expect(result.rentalReductionDetail?.isEligible).toBe(false);
-    const legacy = result.rentalReductionDetail?.ineligibleReasons.find((r) => r.code === "LEGACY_RENTAL_DETAILS_UNSUPPORTED");
-    expect(legacy?.message).toContain("rental_97_3");
-  });
-
-  it("T-27b: rentalReductionDetails 의무기간 미충족 → 감면 0", () => {
-    const rentalDetails: RentalReductionInput = {
-      isRegisteredLandlord: true,
-      isTaxRegistered: true,
-      registrationDate: new Date("2019-01-01"),
-      rentalHousingType: "long_term_private",
-      propertyType: "non_apartment",
-      region: "capital",
-      officialPriceAtStart: 400_000_000,
-      rentalStartDate: new Date("2019-01-01"),
-      transferDate: new Date("2024-06-01"),  // 5년 → 8년 미충족
-      vacancyPeriods: [],
-      rentHistory: [],
-      calculatedTax: 0,
-    };
-
-    const rates = makeMockRates(LONG_TERM_RENTAL_RULES_MOCK as Partial<Record<TaxRateKey, object>>);
-
-    const input = baseInput({
-      isOneHousehold: false,        // 비과세 제외
-      householdHousingCount: 2,
-      reductions: [],
-      rentalReductionDetails: rentalDetails,
-    });
-
-    const result = calculateTransferTax(input, rates);
-    expect(result.reductionAmount).toBe(0);
-    expect(result.rentalReductionDetail?.isEligible).toBe(false);
-    expect(result.rentalReductionDetail?.ineligibleReasons.some(
-      (r) => r.code === "RENTAL_PERIOD_SHORT"
-    )).toBe(true);
-  });
-
-  it("T-27c: rentalReductionDetails 미제공 + reductions long_term_rental → 하위 호환 50%", () => {
+  // T-27a·T-27b(레거시 `rentalReductionDetails` 입력)는 그 입력과 엔진을 삭제하며 지웠다(§155⑳ 리뷰 V-6 후속).
+  it("T-27c: reductions long_term_rental → 하위 호환 50%", () => {
     const result = calculateTransferTax(
       baseInput({
         reductions: [{ type: "long_term_rental", rentalYears: 9, rentIncreaseRate: 0.03 }],
-        // rentalReductionDetails: 미제공
       }),
       makeMockRates(),
     );
     // 기존 단순 로직: 8년+ + 5% 이하 → 50%
     expect(result.reductionAmount).toBe(Math.floor(result.calculatedTax * 0.5));
-    expect(result.rentalReductionDetail).toBeUndefined();
   });
 });
 

@@ -27,7 +27,7 @@
  *
  * ## 안전망 실측 (변경 전)
  * 임계 상수를 180 → 90으로 뒤집고 전건(18,077)을 돌렸을 때 **반응한 테스트는 1건뿐**이었다.
- * 특히 `rental-housing-reduction.test.ts`의 「5개월 공실 → 차감 없음」은 단언이
+ * 특히 `rental-housing-reduction.test.ts`(현 `transfer-tax/rental-97-shared-helpers-lr-cases.test.ts`)의 「5개월 공실 → 차감 없음」은 단언이
  * `toBeGreaterThanOrEqual(8)`이라 151일을 깎아도 참이어서 통과했다 — 구별력 0.
  * 이 파일은 두 조문이 **실제로 갈리는 구간**을 정확한 값으로 고정한다.
  */
