@@ -19,8 +19,7 @@ import { assumedDebtIssue, validateGbCarryoverDebt } from "./transfer-tax-valida
 import { validateGbCarryoverDebtScope } from "./transfer-tax-validate-carryover-debt";
 import { carryoverGiftTaxedValue } from "./carryover-gift-assumed-debt";
 import { gbBgSplitsGiftValuation } from "./gb-bg-gift-tax-return";
-import { bgCarryoverForm, bgPartialCarryover } from "./bg-carryover-parts";
-import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
+import { bgCarryoverForm } from "./bg-carryover-parts";
 
 /**
  * ⑧ 이월과세(§97의2) 입력 검증 — 일반건물 전용.
@@ -73,13 +72,6 @@ export function validateGbCarryover(asset: AssetForm, label: string, formTransfe
    *    예외는 증여세 칸 하나다 — 화면이 일반건물이면 부담부증여여도 산출세액·과세가액을 받고, ④가 그 짝으로 상당액을 만든다.
    *    빈 값은 막지 않으므로(증여세 없음) 「당초 증여자」 요구를 가로채지 않는다(`gb-bg-carryover-gift-tax-input.plan.md` §4.2).
    */
-  /**
-   * 부담부증여 × 한 파트만 이월과세 — 서버는 `carryoverDonorBasis.parts`로 증여받은 파트만 계산한다(`gb-bg-part-carryover-calc.plan.md` PR-1·PR-2).
-   * 감정가액·매매사례가액(K-6·K-7)은 당초 증여자 쪽 방식이라 한 신고 안에서 파트마다 방식이 갈린다 — 아직 계산하지 못한다(Q-3 a · 엔진 `assertPartialCarryoverSupported`와 같은 조건).
-   */
-  if (asset.transferType === "burdened_gift" && bgPartialCarryover(asset) && isBgPresumedMethod(asset.bgAcquisitionMethod))
-    return fieldError("bgAcquisitionMethod", `${label}: 토지·건물 중 한 파트만 이월과세(증여)일 때는 취득가액 산정방식으로 감정가액·매매사례가액을 아직 계산하지 못합니다 — 「소득세법」 제97조의2 제1항은 증여받은 파트에만 당초 증여자의 취득가액을 쓰는데, 감정가액·매매사례가액은 당초 증여자 쪽 방식이라 증여받지 않은 파트의 방식과 갈립니다. 실지취득가액 또는 환산취득가액을 선택하세요.`);
-
   /**
    * 부담부증여 × 둘 다 이월과세 — 당초 증여자의 **건물** 취득일(시나리오 A 건물 기산일 · 「소득세법」 제95조 제4항 단서 「해당 자산을 취득한 날」).
    * 분리 ON 건물 블록 · 분리 OFF 건물분 칸이 같은 키다. 토지 날짜로 채우지 않는다(④ 전송 조건과 같다 · `gb-bg-donor-building-acquisition-date.plan.md` Q-1 a).

@@ -36,11 +36,11 @@ const HH = {
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
 };
 const HOUSE = {
-  addressJibun: "서울 강남구 테스트동 2-2", assetKind: "housing", actualSalePrice: "300,000,000", acquisitionCause: "purchase",
+  addressJibun: "제주특별자치도 강남구 테스트동 2-2", assetKind: "housing", actualSalePrice: "300,000,000", acquisitionCause: "purchase",
   acquisitionDate: "2000-01-01", fixedAcquisitionPrice: "100,000,000", standardPriceAtTransfer: "200,000,000",
 };
 const H: Loose = {
-  addressJibun: "서울 강남구 테스트동 1-1", assetKind: "housing", acquisitionCause: "inheritance", acquisitionDate: "2015-01-01",
+  addressJibun: "제주특별자치도 강남구 테스트동 1-1", assetKind: "housing", acquisitionCause: "inheritance", acquisitionDate: "2015-01-01",
   decedentAcquisitionDate: "2005-01-01", actualSalePrice: "500,000,000", publishedValueAtInheritance: "300,000,000",
   inheritanceValuationMethod: "supplementary", standardPriceAtTransfer: "400,000,000", fixedAcquisitionPrice: "",
 };
@@ -50,7 +50,7 @@ const BG: Loose = {
   bgMortgageDebtAmount: "200,000,000", bgLendingDepositTotal: "0", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "300,000,000",
 };
 const MIXED: Loose = {
-  addressJibun: "서울 강남구 테스트동 8-8", assetKind: "housing", mixedAcqPerPartMode: false, acquisitionDate: "2010-03-15", isMixedUseHouse: true,
+  addressJibun: "제주특별자치도 강남구 테스트동 8-8", assetKind: "housing", mixedAcqPerPartMode: false, acquisitionDate: "2010-03-15", isMixedUseHouse: true,
   residentialFloorArea: "100", nonResidentialFloorArea: "100", mixedUseTotalLandArea: "200", buildingFootprintArea: "100",
   mixedTransferHousingPrice: "600000000", mixedTransferLandPricePerSqm: "5000000", mixedTransferCommercialBuildingPrice: "100000000",
   mixedTransferHousingBuildingStdPrice: "100000000", mixedAcqHousingPrice: "300000000", mixedAcqLandPricePerSqm: "2500000",

@@ -46,7 +46,7 @@ const half = { ownershipNumerator: "50", ownershipDenominator: "100" } as Partia
 function gbShare(over: Partial<AssetForm> = {}, co: Record<string, unknown> = {}): AssetForm {
   return sameDayBuildingDonorDate({
     ...makeDefaultAsset(1),
-    addressJibun: "서울 강남구 테스트동 1-1",
+    addressJibun: "제주특별자치도 강남구 테스트동 1-1",
     assetKind: "general_building",
     acquisitionCause: "carryover_gift",
     acquisitionDate: "2024-05-01",
@@ -189,7 +189,7 @@ describe("BC-2 함께 양도 × 부담부증여 × 이월과세 — 총 양도�
 describe("BC-3 이월과세가 아닌 부담부증여 묶음 — 취득시 비율(1:4)≠양도시 비율(1:1)·토지 취득일 상이에서도 자산 칸과 같다", () => {
   /** 취득시 기준시가 토지 1억 : 건물 4억(1:4) · 양도시 2억 : 2억(1:1) · 토지 취득일이 건물보다 10년 이르다. */
   const plain = (o: Partial<AssetForm> = {}) => ({
-    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1", assetKind: "general_building", acquisitionCause: "purchase",
+    ...makeDefaultAsset(1), addressJibun: "제주특별자치도 강남구 테스트동 1-1", assetKind: "general_building", acquisitionCause: "purchase",
     acquisitionDate: "2015-03-01", landAcquisitionDate: "2005-03-01", gbBuildingAcquisitionCause: "purchase",
     gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbZoneType: "general_residential",
     gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000",

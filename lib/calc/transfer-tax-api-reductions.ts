@@ -168,6 +168,8 @@ export function toEngineReductions(
         exclusiveAreaSqm993: parseDecimal(r.exclusiveAreaSqm993 || "") || undefined,
         region993: r.region993,
         acquisitionType993: r.acquisitionType993,
+        // 부칙 §29② 착공 여부 — ""(미응답)은 보내지 않는다. 범위 밖 옛 응답은 엔진이 읽지 않는다. 범위 안 미응답은 validate(⑧)·Zod(⑫)가 차단.
+        constructionStartedBefore2003_993: r.constructionStartedBefore2003_993 || undefined,
         hasOccupancyAtContract: r.hasOccupancyAtContract ?? false,
         isResident993: r.isResident993,
         isHousingConstructionBusiness993: r.isHousingConstructionBusiness993,

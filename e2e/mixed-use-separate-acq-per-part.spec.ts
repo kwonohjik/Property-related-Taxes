@@ -24,7 +24,7 @@ function ppAsset(over: Record<string, unknown> = {}) {
   return {
     ...makeDefaultAsset(1),
     assetId: "pp1",
-    addressJibun: "서울 강남구 테스트동 1-1",
+    addressJibun: "제주특별자치도 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     isOneHousehold: false,
@@ -467,7 +467,7 @@ test.describe("B1 파트 모델 — 컴패니언(자산 2가 겸용·별개 취�
     test.setTimeout(150_000);
     const first = {
       ...makeDefaultAsset(1),
-      addressJibun: "서울 강남구 테스트동 1-1",
+      addressJibun: "제주특별자치도 강남구 테스트동 1-1",
       assetKind: "housing",
       acquisitionCause: "purchase",
       acquisitionDate: "2015-03-01",

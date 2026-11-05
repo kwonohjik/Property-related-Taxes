@@ -371,7 +371,9 @@ describe("[F] 변하지 않는 셀 — 이미 건물분이거나 이 축이 아�
     expect(r.penaltyBase).toBe(169_332_955);
     expect(r.penaltyTax).toBe(8_466_647);
   });
-  it("부담부증여 K-5 신축 50,000,000 / 2,500,000 — §159 스텝의 건물분", () => {
+  // 2026-11-05 V-7(`bg-housing-114-2-building-base.plan.md`) — 종전 「§159 스텝이 이미 건물분 · 이 입력은 거부」는 일체 주택에서 틀렸다(건물 자리 = 주택 전체).
+  //   이제 부담부증여도 이 입력을 받아 §159 스텝이 건물분으로 나눈다. 값 고정은 `bg-housing-114-2-building-base.anchor.test.ts`.
+  it("부담부증여 K-5 신축 — 입력 없으면 종전 50,000,000 / 2,500,000 · 입력하면 §159 스텝이 건물분으로 줄인다(거부하지 않는다)", () => {
     const bgInput = (extra: Partial<TransferTaxInput> = {}) =>
       baseTransferInput({
         propertyType: "housing",
@@ -405,8 +407,9 @@ describe("[F] 변하지 않는 셀 — 이미 건물분이거나 이 축이 아�
     const r = run(bgInput());
     expect(r.penaltyBase).toBe(50_000_000);
     expect(r.penaltyTax).toBe(2_500_000);
-    // 받아서 닿을 수 없는 조합 — 다른 이유로 던지는 것이 아니라 이 입력이 사유여야 한다
-    expect(() => run(bgInput({ selfBuiltHousing: SB } as Partial<TransferTaxInput>))).toThrow(/selfBuiltHousing/);
+    const withSplit = run(bgInput({ selfBuiltHousing: SB } as Partial<TransferTaxInput>));
+    expect(withSplit.penaltyBase).toBeLessThan(50_000_000);
+    expect(withSplit.penaltyBase).toBeGreaterThan(0);
   });
   it("5년 경과 → 가산세 0 (base 만 환산 값)", () => {
     const r = run(cell({ transferDate: D("2027-01-11") }));

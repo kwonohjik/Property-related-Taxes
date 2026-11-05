@@ -16,6 +16,7 @@ import {
 import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
 import { calculateBuildingPenalty } from "./transfer-tax-building-penalty";
+import { bgHousingBuildingPenaltyBase } from "./burdened-gift-housing-penalty-base";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
@@ -186,6 +187,24 @@ export function runBurdenedGiftStep(
             rawInput.burdenedGiftInfo.buildingStdPriceAtTransfer,
           )
         : undefined;
+    /**
+     * 일체 주택 × 신축(본인 신축 · 이월과세 당초 증여자 신축) — §114조의2 base 는 「해당 건물」분이다(V-7 · `bg-housing-114-2-building-base.plan.md`).
+     * 건물 자리에는 주택공시가격(토지 포함)이 있으므로 건물분 안분 입력(`selfBuiltHousing` — 당초 증여자는 `donorBuilt.housing`을 채택 입력에 옮겨 싣는다)으로 나눈다.
+     * 입력이 없거나 모자라면 undefined → 종전 base(PR-1). 증축은 증축 부분 base 가 따로 있다(계획서 V-3).
+     */
+    const bgInfoRaw = rawInput.burdenedGiftInfo;
+    const housingBuildingBase =
+      rawInput.propertyType === "housing" && rawInput.selfBuiltHousing && rawInput.buildingType !== "extension" && (isK5SelfBuilt || isAppraisalSelfBuilt)
+        ? bgHousingBuildingPenaltyBase({
+            method: isK5SelfBuilt ? "estimated" : "appraisal",
+            split: rawInput.selfBuiltHousing,
+            buildingTransferPrice: building.transferPrice,
+            buildingAcquisitionPrice: transferBurdenedGiftBreakdown.convertedAcquisitionBeforeSwap?.building ?? building.acquisitionPrice,
+            housingStdAtAcquisition: bgInfoRaw.landStdPriceAtAcquisition + bgInfoRaw.buildingStdPriceAtAcquisition,
+            housingStdAtTransfer: bgInfoRaw.landStdPriceAtTransfer + bgInfoRaw.buildingStdPriceAtTransfer,
+            appraisalTotal: bgInfoRaw.presumedAcquisitionTotal ?? ((bgInfoRaw.presumedLandAcquisitionPrice ?? 0) + (bgInfoRaw.presumedBuildingAcquisitionPrice ?? 0)),
+          })
+        : undefined;
     workingInput = {
       ...workingInput,
       transferPrice: totalTransferPrice,
@@ -219,7 +238,7 @@ export function runBurdenedGiftStep(
       // 신축은 건물 전체 감정가액의 안분값, 증축은 증축한 부분 감정가액의 안분값(대상 조합일 때만 위에서 채워진다).
       // 증축인데 대상이 아니면(85㎡ 이하·5년 초과) `calculateBuildingPenalty`가 어차피 null이라 base를 싣지 않아도 같다.
       ...(isAppraisalSelfBuilt && rawInput.buildingType !== "extension"
-        ? { penaltyAxis: { acquisitionMethod: "appraisal" as const, base: building.acquisitionPrice } }
+        ? { penaltyAxis: { acquisitionMethod: "appraisal" as const, base: housingBuildingBase ?? building.acquisitionPrice } }
         : {}),
       ...(extensionAppraisalPenaltyBase !== undefined
         ? {
@@ -241,6 +260,7 @@ export function runBurdenedGiftStep(
             //    ⇒ 스왑 전 값을 보존한 `convertedAcquisitionBeforeSwap`을 우선한다.
             estimatedBase:
               extensionPenaltyBase ??
+              housingBuildingBase ??
               transferBurdenedGiftBreakdown.convertedAcquisitionBeforeSwap?.building ??
               building.acquisitionPrice,
             // 85㎡ 게이트(rate-calc)가 읽는 신호 — spread 의존 제거용 명시 전달(안전 강화)

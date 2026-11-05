@@ -8,6 +8,7 @@
  * |---|---|---|
  * | V10 | 판정 메뉴 ② §155⑳ 임대주택 카드 (#2897) | `__tests__/calc/rental-155-20-urban-life-apt-deadline.anchor.test.ts` |
  * | V11 | 계산기 보유 상황 명부 2호 장기임대 행 (#2899) | `__tests__/calc/roster-2ho-urban-life-apt-deadline.anchor.test.ts` |
+ * | V12 | 계산기 보유 상황 「양도 주택이 장기임대주택인 경우」 2호 선언 | `__tests__/calc/selling-2ho-urban-life-apt-deadline.anchor.test.ts` |
  *
  * 둘 다 2028-06-01 양도(기한 경과)에서 도시형 아님 ↔ 도시형의 결론이 갈리는 짝으로 단언한다.
  */
@@ -102,7 +103,7 @@ async function calculate(page: Page) {
   const body = (await resp.json()) as {
     data: { result: { totalTax: number; multiHouseSurchargeEvaluation: { surchargeType: string } } };
   };
-  return { row: sent.houses?.find((h) => h.id === "h2"), result: body.data.result };
+  return { row: sent.houses?.find((h) => h.id === "h2"), selling: sent.houses?.find((h) => h.id === "selling"), result: body.data.result };
 }
 
 test.describe("V11 계산기 명부 2호 장기임대 행 — 도시형 생활주택 아파트 칸", () => {
@@ -132,6 +133,78 @@ test.describe("V11 계산기 명부 2호 장기임대 행 — 도시형 생활�
     const { row, result } = await calculate(page);
     expect(row?.isUrbanLifeHousingApartment).toBe(true);
     expect(row).not.toHaveProperty("rentalAptDeadlineExtension");
+    expect(result.multiHouseSurchargeEvaluation.surchargeType).toBe("none");
+    expect(result.totalTax).toBe(141_966_000);
+  });
+});
+
+// ─────────────────────────────── V12 계산기 양도 주택 2호 선언 ───────────────────────────────
+
+/** anchor S-1·S-2와 같은 시료 — V11 시료에서 장기임대를 명부 행이 아니라 **양도 주택 자신**에 둔다(명부 행 = 일반 아파트). */
+function sellingSeed() {
+  const s = calcSeed();
+  const h2 = s.state.formData.houses[0];
+  const { rentalType, rentalRegistrationDate, businessRegistrationDate, rentalStartOfficialPrice, rentIncreaseUnder5Pct, rentalPeriodYears, rentalAptDeadlineExtension } = h2;
+  Object.assign(s.state.formData, {
+    houses: [{ ...h2, isLongTermRental: false, isRegisteredRental: false, rentalType: undefined, rentalAptDeadlineExtension: undefined }],
+    sellingHouseExclusion: {
+      longTermRental: {
+        isLongTermRental: true,
+        isApartment: true,
+        isRegisteredRental: true,
+        rentalType,
+        rentalRegistrationDate,
+        businessRegistrationDate,
+        rentalStartOfficialPrice,
+        rentIncreaseUnder5Pct,
+        rentalPeriodYears,
+        rentalAptDeadlineExtension,
+      },
+    },
+  });
+  return s;
+}
+
+async function openSellingRental(page: Page) {
+  await page.goto("/calc/transfer-tax");
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), sellingSeed());
+  await page.reload();
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  await page.getByRole("button", { name: "보유 상황" }).first().click();
+}
+
+test.describe("V12 계산기 양도 주택 2호 선언 — 도시형 생활주택 아파트 칸", () => {
+  test("[V12-1] 도시형 아님 → 2주택 중과 299,816,000", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openSellingRental(page);
+    await expect(page.getByRole("switch", { name: URBAN })).toHaveAttribute("aria-checked", "false");
+    await expect(page.getByTestId("apt-deadline-ext-rental-selling")).toBeVisible();
+
+    const { selling, result } = await calculate(page);
+    expect(selling).not.toHaveProperty("isUrbanLifeHousingApartment");
+    expect(result.multiHouseSurchargeEvaluation.surchargeType).toBe("multi_house_2");
+    expect(result.totalTax).toBe(299_816_000);
+  });
+
+  test("[V12-2] 칸을 켜면 ⑪ 연장 질문이 사라지고 요청에 실려 중과 배제 141,966,000", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openSellingRental(page);
+    const sw = page.getByRole("switch", { name: URBAN });
+    await sw.click();
+    await expect(sw).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByTestId("apt-deadline-ext-rental-selling")).toHaveCount(0);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => JSON.parse(sessionStorage.getItem("transfer-tax-wizard") ?? "{}").state?.formData?.sellingHouseExclusion?.longTermRental?.isUrbanLifeHousingApartment,
+        ),
+      )
+      .toBe(true);
+
+    const { selling, result } = await calculate(page);
+    expect(selling?.isUrbanLifeHousingApartment).toBe(true);
+    expect(selling).not.toHaveProperty("rentalAptDeadlineExtension");
     expect(result.multiHouseSurchargeEvaluation.surchargeType).toBe("none");
     expect(result.totalTax).toBe(141_966_000);
   });

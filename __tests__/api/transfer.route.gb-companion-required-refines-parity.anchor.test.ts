@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 
 const BASE: Partial<AssetForm> = {
-  assetKind: "general_building", addressJibun: "서울 강남구 역삼동 1",
+  assetKind: "general_building", addressJibun: "제주특별자치도 강남구 역삼동 1",
   gbAcqLandPricePerSqm: "1000000", gbAcqBuildingValue: "150000000", gbLandArea: "205", gbBuildingArea: "300", gbBuildingFootprintArea: "135",
   gbZoneType: "general_residential", gbTransferLandPricePerSqm: "5514000", gbTransferBuildingValue: "259072400", actualSalePrice: "1600000000",
   acquisitionCause: "purchase", gbBuildingAcquisitionCause: "purchase", hasSeperateLandAcquisitionDate: false,
@@ -43,7 +43,7 @@ const BASE: Partial<AssetForm> = {
 const gbAsset = (id: number, ...over: Partial<AssetForm>[]) => Object.assign({ ...makeDefaultAsset(id) }, BASE, ...over) as AssetForm;
 const landAsset = (id: number) =>
   ({
-    ...makeDefaultAsset(id), addressJibun: "서울 강남구 테스트동 2-2", assetKind: "land", acquisitionCause: "purchase", acquisitionDate: "2012-01-01",
+    ...makeDefaultAsset(id), addressJibun: "제주특별자치도 강남구 테스트동 2-2", assetKind: "land", acquisitionCause: "purchase", acquisitionDate: "2012-01-01",
     acquisitionArea: "100", transferArea: "100", landNature: "standalone", standardPriceAtAcq: "100000000", standardPriceAtTransfer: "200000000",
     actualSalePrice: "400000000", fixedAcquisitionPrice: "100000000",
   }) as unknown as AssetForm;

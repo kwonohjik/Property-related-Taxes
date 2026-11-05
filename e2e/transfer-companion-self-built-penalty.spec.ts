@@ -28,7 +28,7 @@ const SB_BLDG = {
 
 const tranche = (id: number, num: string, acq: string, over: Record<string, unknown> = {}) => ({
   ...makeDefaultAsset(id),
-  addressJibun: "서울 강남구 테스트동 1-1",
+  addressJibun: "제주특별자치도 강남구 테스트동 1-1",
   assetKind: "housing",
   acquisitionCause: "purchase",
   acquisitionDate: acq,
@@ -46,7 +46,7 @@ const tranche = (id: number, num: string, acq: string, over: Record<string, unkn
 
 const plain = (id: number, over: Record<string, unknown> = {}) => ({
   ...makeDefaultAsset(id),
-  addressJibun: `서울 강남구 테스트동 ${id}-${id}`,
+  addressJibun: `제주특별자치도 강남구 테스트동 ${id}-${id}`,
   assetKind: "housing",
   acquisitionCause: "purchase",
   acquisitionDate: "2021-06-01",

@@ -35,7 +35,7 @@ beforeEach(() => {
 const x = (o: Record<string, unknown>) => o as unknown as Partial<AssetForm>;
 /** 부담부증여 주택(기준시가 모드): 양도시 기준시가 10억 · 보증금 2억 + 차입금 2억 → 보충적평가(10억)가 담보평가(4억)를 이긴다. */
 const house = (id: number, ...over: Partial<AssetForm>[]) => Object.assign({ ...makeDefaultAsset(id) }, x({
-  assetId: `h${id}`, addressJibun: `서울 강남구 테스트동 ${id}-${id}`, assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-01-01",
+  assetId: `h${id}`, addressJibun: `제주특별자치도 강남구 테스트동 ${id}-${id}`, assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-01-01",
   fixedAcquisitionPrice: "300000000", actualSalePrice: "", standardPriceAtTransfer: "1000000000", standardPriceAtAcq: "500000000", useEstimatedAcquisition: false,
   transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_standard", bgDonorRelation: "lineal_descendant",
   bgLendingDepositTotal: "200000000", bgMortgageDebtAmount: "200000000", bgMortgageSetAmount: "200000000",
@@ -54,7 +54,7 @@ async function post(f: TransferFormData) {
 const RENT = x({ bgLendingDepositTotal: "200000000", bgMortgageDebtAmount: "0", bgMortgageSetAmount: "0", bgAnnualRentTotal: "120000000" });
 /** 시가 모드 일반건물(토지·건물 취득 실가 각 2.5억) — 시가 10억. 담보 승으로 만들려면 MORT. */
 const gbM = (id: number, ...over: Partial<AssetForm>[]) => Object.assign({ ...makeDefaultAsset(id) }, x({
-  assetId: `g${id}`, addressJibun: `서울 강남구 테스트동 ${id}-${id}`, assetKind: "general_building", acquisitionCause: "purchase", acquisitionDate: "2015-03-01", gbBuildingAcquisitionCause: "purchase",
+  assetId: `g${id}`, addressJibun: `제주특별자치도 강남구 테스트동 ${id}-${id}`, assetKind: "general_building", acquisitionCause: "purchase", acquisitionDate: "2015-03-01", gbBuildingAcquisitionCause: "purchase",
   gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbZoneType: "general_residential", gbTransferLandPricePerSqm: "2000000", gbTransferBuildingValue: "200000000",
   gbAcqLandPricePerSqm: "1000000", gbAcqBuildingValue: "100000000", transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1000000000",
   bgLendingDepositTotal: "0", bgMortgageDebtAmount: "300000000", bgMortgageSetAmount: "300000000", bgDonorRelation: "lineal_descendant", bgAcquisitionMethod: "actual",

@@ -59,10 +59,16 @@ describe("⑤ 명부 2호 행 도시형 생활주택 칸 (V-11)", () => {
     expect(sw(URBAN)).toBeNull();
   });
 
-  it("U-4 양도 주택 2호 섹션에는 칸이 없다(3호 선언이 사실을 따로 든다 — 별건 V-12)", () => {
-    render(
+  it("U-4 양도 주택 2호 섹션 — 3호가 묻지 않으면 칸이 있고, 3호가 묻으면 안내로 대신한다(V-12 · 상세는 `selling-2ho-urban-life-apt.ui.test.tsx`)", () => {
+    const ltr = { isLongTermRental: true, isApartment: true, rentalType: "A" as const, isRegisteredRental: true };
+    const { rerender } = render(<SellingHouseLongTermRentalSection value={{ longTermRental: ltr }} onChange={() => {}} />);
+    expect(sw(URBAN)).not.toBeNull();
+    rerender(
       <SellingHouseLongTermRentalSection
-        value={{ longTermRental: { isLongTermRental: true, isApartment: true, rentalType: "A", isRegisteredRental: true } }}
+        value={{
+          longTermRental: ltr,
+          taxIncentiveRental: { isTaxIncentiveRental: true, isTaxIncentiveRentalPurchase: true, taxIncentiveRentalRegistrationType: "long_term_general" },
+        }}
         onChange={() => {}}
       />,
     );

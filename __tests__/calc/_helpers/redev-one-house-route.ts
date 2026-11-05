@@ -117,7 +117,7 @@ export function redevAptForm(opts: {
           redevRightsValue: "900000000",
           redevIsSuccessorMember: "no",
           redevActualAcquisitionPrice: "400000000",
-          addressJibun: "서울 테스트동 1",
+          addressJibun: "제주특별자치도 테스트동 1",
           residenceInputMode: "interval",
           residencePeriods: [{ moveInDate: "2019-06-01", moveOutDate: "2024-06-01" }],
           ...shareFields,
@@ -131,7 +131,7 @@ export function redevAptForm(opts: {
           // 재개발 경로의 총 취득가액 = 종전주택 4억 + 납부 청산금 1억 = 5억과 같은 양도차익이 되게 맞춘다.
           fixedAcquisitionPrice: "500000000",
           actualSalePrice: price,
-          addressJibun: "서울 테스트동 1",
+          addressJibun: "제주특별자치도 테스트동 1",
           residenceInputMode: "interval",
           residencePeriods: [{ moveInDate: "2019-06-01", moveOutDate: "2024-06-01" }],
           ...shareFields,

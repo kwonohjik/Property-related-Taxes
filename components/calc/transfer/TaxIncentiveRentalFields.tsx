@@ -110,8 +110,8 @@ export function TaxIncentiveRentalFields({
         >
           <p className="text-caption text-violet-700 dark:text-violet-300/80">
             아파트인 민간매입임대주택(장기일반·단기)은 2027.12.31.(또는 ⑪ 각 호의 날 중 늦은 날)까지
-            양도한 경우에만 해당합니다 (소령 §167의3①3호 후단·⑪). 모르는 칸을 「모름」으로 두면 이 기한이
-            적용되는 주택으로 보고 계산하고, 그 때문에 결과가 달라지면 확인이 필요하다고 안내합니다.
+            양도한 경우에만 해당합니다 (소령 §167의3①3호 후단·⑪). 모르는 칸을 「모름」으로 두거나 고르지 않으면 이
+            기한이 적용되는 주택으로 보고 계산하고, 그 때문에 결과가 달라지면 확인이 필요하다고 안내합니다.
           </p>
 
           <div className="space-y-1">
@@ -154,16 +154,16 @@ export function TaxIncentiveRentalFields({
           {v.isTaxIncentiveRentalPurchase === true && typeTargeted && (
             <div className="space-y-1">
               <label className={LABEL}>「주택법」에 따른 도시형 생활주택인 아파트</label>
-              <RadioCardGroup<Tri>
+              {/* 「모름」은 고를 수 없다(사용자 결정 2026-11-05 · V-12). 고르지 않으면 엔진이 종전대로 「모름」(기한 적용 + 확인 필요 고지)으로 읽는다. */}
+              <RadioCardGroup<"yes" | "no">
                 name={`tir-urban-${idPrefix}`}
                 layout="inline"
                 tone="violet"
-                value={toTri(v.isUrbanLifeHousingApartment)}
-                onChange={(t) => onPatch({ isUrbanLifeHousingApartment: fromTri(t) })}
+                value={v.isUrbanLifeHousingApartment === undefined ? "" : v.isUrbanLifeHousingApartment ? "yes" : "no"}
+                onChange={(t) => onPatch({ isUrbanLifeHousingApartment: t === "yes" })}
                 options={[
                   { value: "yes", label: "도시형 생활주택" },
                   { value: "no", label: "도시형 생활주택 아님" },
-                  { value: "unknown", label: "모름" },
                 ]}
               />
             </div>

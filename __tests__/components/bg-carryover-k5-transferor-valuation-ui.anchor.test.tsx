@@ -82,3 +82,23 @@ describe("⑤ 한 파트만 증여받은 일반건물 K-5 — 그 파트 평가�
     expect(screen.getByTestId(NOTICE).textContent).toContain("환산취득가액은 당초 증여자 기준");
   });
 });
+
+describe("⑤ 한 파트만 증여받은 일반건물 K-6/K-7 — 칸이 파트별로 갈린다 (`bg-carryover-k5-one-part-b.plan.md` §9)", () => {
+  const gb = (over: Partial<AssetForm>) => house({ assetKind: "general_building", hasSeperateLandAcquisitionDate: true, gbBuildingAcquisitionCause: "purchase", bgAcquisitionMethod: "appraisal", ...over });
+  const has = (c: HTMLElement, k: string) => c.querySelector(`[data-field="${k}"]`) !== null;
+  it.each([
+    ["토지만", {}, { own: [false, true], donor: [true, false], v: [true, false] }],
+    ["건물만", { acquisitionCause: "purchase", gbBuildingAcquisitionCause: "carryover_gift" }, { own: [true, false], donor: [false, true], v: [false, true] }],
+  ] as const)("%s → 양도인 값은 다른 파트 · 당초 증여자 값과 평가액은 증여받은 파트", (_n, over, want) => {
+    const { container: c } = render(<BurdenedGiftBlock asset={gb(over as Partial<AssetForm>)} onChange={() => {}} />);
+    expect([has(c, "bgPresumedAcquisitionLand"), has(c, "bgPresumedAcquisitionBuilding")]).toEqual(want.own);
+    expect([has(c, "bgCoDonorPresumedAcquisitionLand"), has(c, "bgCoDonorPresumedAcquisitionBuilding")]).toEqual(want.donor);
+    expect([has(c, "bgActualAcquisitionLand"), has(c, "bgActualAcquisitionBuilding")]).toEqual(want.v);
+    expect(screen.getByTestId(NOTICE).textContent).toContain("감정가액 칸으로 계산");
+  });
+  it("두 파트 모두 → 양도인 감정가액 칸 없음(종전)", () => {
+    const { container: c } = render(<BurdenedGiftBlock asset={gb({ gbBuildingAcquisitionCause: "carryover_gift" })} onChange={() => {}} />);
+    expect([has(c, "bgPresumedAcquisitionLand"), has(c, "bgPresumedAcquisitionBuilding")]).toEqual([false, false]);
+    expect([has(c, "bgCoDonorPresumedAcquisitionLand"), has(c, "bgCoDonorPresumedAcquisitionBuilding")]).toEqual([true, true]);
+  });
+});

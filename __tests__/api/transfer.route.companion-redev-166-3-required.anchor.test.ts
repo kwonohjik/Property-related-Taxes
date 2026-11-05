@@ -35,7 +35,7 @@ vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 type Loose = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 const REDEV: Record<string, unknown> = {
-  addressJibun: "서울 B 2",
+  addressJibun: "제주특별자치도 B 2",
   assetKind: "redevelopment_apt",
   actualSalePrice: "525,000,000",
   redevSubject: "apt",
@@ -67,7 +67,7 @@ const REGULAR_EST = { ...REGULAR, acquisitionCause: "purchase", useEstimatedAcqu
 const NO_D = { redevManagementDisposalHousingPrice: "" };
 const NO_NUM = { redevAcquisitionHousingPrice: "" };
 const HOUSING = {
-  addressJibun: "서울 A 1", assetKind: "housing", actualSalePrice: "300,000,000", acquisitionCause: "purchase", acquisitionDate: "2000-01-01",
+  addressJibun: "제주특별자치도 A 1", assetKind: "housing", actualSalePrice: "300,000,000", acquisitionCause: "purchase", acquisitionDate: "2000-01-01",
   transferType: "burdened_gift", bgDonorRelation: "lineal_descendant", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "300,000,000",
   bgMortgageDebtAmount: "120,000,000", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "100,000,000", standardPriceAtTransfer: "200,000,000",
 };
@@ -79,7 +79,7 @@ const HOUSEHOLD = {
 };
 const single = (a: Record<string, unknown>): TransferFormData =>
   Object.assign(createDefaultTransferFormData(), {
-    ...HOUSEHOLD, contractTotalPrice: "525000000", assets: [{ ...makeDefaultAsset(1), ...REDEV, ...MARKET, addressJibun: "서울 강남구 테스트동 1-1", ...a } as AssetForm],
+    ...HOUSEHOLD, contractTotalPrice: "525000000", assets: [{ ...makeDefaultAsset(1), ...REDEV, ...MARKET, addressJibun: "제주특별자치도 강남구 테스트동 1-1", ...a } as AssetForm],
   }) as TransferFormData;
 const bundle = (rd: Record<string, unknown>, host: Record<string, unknown> = HOUSING): TransferFormData =>
   Object.assign(createDefaultTransferFormData(), {

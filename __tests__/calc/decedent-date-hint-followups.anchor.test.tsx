@@ -52,6 +52,8 @@ describe("Q-1 ①② 일반건물 건물 피상속인 취득일 — §104②1호
       const hint = screen.getByText(/피상속인이 이 건물을 취득한 날/).textContent ?? "";
       expect(hint).toContain("세율의 보유기간 기산일입니다 (소득세법 §104②1호)");
       expect(hint).not.toContain("§95④");
+      // 수용 감면도 이 날로 판정한다 — 계획서 expropriation-77-9-gb-d2.plan.md Q-1(§1.1 G2 실측)
+      expect(hint).toContain("감면의 「2년 이전 취득」도 이 날로 판정합니다 (조세특례제한법 §77⑨)");
     });
   }
   it("⑧ 문구 — 토지·건물 모두 §104②1호", () => {

@@ -10,6 +10,8 @@
  * 매매계약일은 ⑧·라우터와 같이 자산-수준 `assetContractDate`로 대신할 수 있다.
  */
 import { z } from "zod";
+import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
+import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 
 type ReductionLike = { type: string } & Record<string, unknown>;
 
@@ -34,6 +36,15 @@ export function refineReductionRequiredInputs(
       }
       if (!positive(r.exclusiveAreaSqm993))
         issue("exclusiveAreaSqm993", "§99의3 적용: 전용면적(㎡)이 필요합니다(고가주택 판정).");
+      // 법률 제6762호 부칙 §29② — 2호 사용승인 2003.1.1.~6.30.이면 2003.1.1. 전 착공 여부가 필요하다(자동 fallback 금지).
+      if (
+        isAddenda29_2WindowIso(r.acquisitionType993 as string | undefined, r.usageApprovalDate993 as string | undefined) &&
+        !r.constructionStartedBefore2003_993
+      )
+        issue(
+          "constructionStartedBefore2003_993",
+          `§99의3 2호 적용: 사용승인일이 2003.1.1.~2003.6.30.이면 2003.1.1. 전 공사 착수 여부(예·아니오·모름)가 필요합니다 (${NEW_99_3_ADDENDA_6762.PRIOR_CONSTRUCTION_STARTED}).`,
+        );
     }
 
     if (r.type === "new_99") {
