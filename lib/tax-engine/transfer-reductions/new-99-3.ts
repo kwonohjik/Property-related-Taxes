@@ -28,18 +28,18 @@
  */
 
 import { addYears } from "date-fns";
-import { NEW_99_3_ADDENDA_6762, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
-import { LAND_ONLY_OWNER_CODE, landOnlyOwnerMessage } from "./new-99-land-only-owner";
+import { NEW_HOUSING_SUB_ARTICLE, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
-import { judgePriorLuxuryHouse, isPriorLuxuryStandardDate, type PriorLuxuryHouseFacts } from "./new-99-luxury-house";
-import { evaluateNew99AcquisitionGate, type New99AcquisitionCause } from "./new-99-acquisition-cause";
+import type { PriorLuxuryHouseFacts } from "./new-99-luxury-house";
+import type { New99AcquisitionCause } from "./new-99-acquisition-cause";
+import { resolveNew99BaseDate } from "./new-99-3-base-date";
+import { checkNew993Ineligibility } from "./new-99-3-eligibility";
+// 분리 전 export 보존 — new-99.ts·index.ts·테스트가 이 경로로 가져온다
+export { resolveNew99BaseDate, isHighValueHouseUnder993 } from "./new-99-3-base-date";
 import {
-  PRIOR_ADVANCED_HOUSE_STANDARD_DATE,
-  isHighValueHouseAtDate,
   pre2016RuleNotice,
   resolveNew993Era,
   type ConstructionStartAnswer,
-  type New993Era,
   type New993PriorRuleBasis,
 } from "./new-99-3-era";
 
@@ -225,70 +225,7 @@ export interface New993HouseCountExclusionInput {
 // "T00:00:00" 로컬 자정은 KST 서버에서 9시간 어긋나 경계일 오판 (unsold-hybrid-p5 D()와 통일).
 const D = (s: string) => new Date(s);
 
-const PERIOD_START = D("2001-05-23");
-const PERIOD_END = D("2003-06-30");
 
-// 고가주택 적용기준일 분기점
-const HV_2002_09_30 = D("2002-09-30");
-const HV_2002_12_31 = D("2002-12-31");
-
-// ============================================================================
-// 헬퍼: 고가주택 판정 (분양계약일 기준 4단계 정의)
-// ============================================================================
-
-/**
- * §99·§99의3의 **조항 기준일**을 취득유형으로 가른다 — 기간 게이트와 고가주택 단서가 **같은 축**을 써야 한다.
- *
- * §99①·§99의3①은 1호가 **매매계약 체결·계약금 납부일**, 2호가 **사용승인·사용검사일**을
- * 기준일로 삼는다. 고가주택 단서도 같은 조항의 단서이므로 같은 기준일을 쓴다.
- *
- * 🔴 종전에는 기간 게이트만 취득유형으로 분기하고 고가주택 기준일은
- *   `contractDate ?? usageApprovalDate ?? acquisitionDate`로 **분기하지 않았다**(코드리뷰 D3-09).
- *   `contractDate993`에 전용 위젯이 없어 자산-수준 `assetContractDate`가 공급되는데
- *   그 위젯은 취득유형과 무관하게 항상 렌더되므로, 2호(자기건설)에서 계약일이 사용승인일을
- *   밀어내 고가주택 임계(165/149㎡ · 6억/9억/12억)가 갈렸다 — 감면 전액 ↔ 0.
- *   같은 식이 `new-99.ts`에도 복제돼 있어 헬퍼로 단일화한다.
- *
- * anchor: `__tests__/tax-engine/transfer/new99-high-value-base-date-axis.anchor.test.ts`
- */
-export function resolveNew99BaseDate(
-  acquisitionType: "from_builder" | "self_built",
-  contractDate: Date | undefined,
-  usageApprovalDate: Date | undefined,
-  acquisitionDate: Date,
-): Date {
-  return acquisitionType === "from_builder"
-    ? contractDate ?? acquisitionDate
-    : usageApprovalDate ?? acquisitionDate;
-}
-
-/**
- * 고가주택 여부 판정 — 기준일은 `resolveNew99BaseDate`가 정한다(취득유형 축).
- *
- * - ~2002.9.30: 면적 165㎡ 이상 AND 양도가 6억 초과 (고급주택)
- * - 2002.10.1~2002.12.31: 면적 149㎡ 이상 AND 양도가 6억 초과 (고급주택)
- * - 2003.1.1~2008.10.5: 양도가 6억 초과 (고가주택)
- * - 2008.10.6~2021.12.7: 양도가 9억 초과 (고가주택)
- * - 2021.12.8~: 양도가 12억 초과 (고가주택)
- *
- * ⚠️ 이 함수는 «기준일 당시 기준»이다. §99의3의 2003.1.1. 이후 계약·승인분은 양도 당시 §89①3호 기준이라
- *    `checkIneligibility`가 `isHighValueHouseAtDate(양도일)`을 직접 부른다(NH-04 · `new-99-3-era.ts`).
- *    §99(`new-99.ts`)는 기준일이 모두 2003 전이라 이 함수를 그대로 쓴다.
- */
-export function isHighValueHouseUnder993(
-  baseDate: Date,
-  /** **물건 전체(100%) 양도가액**. 지분분을 넘기면 판정이 뒤집힌다 — New993Input 주석 참조. */
-  wholePropertyTransferPrice: number,
-  exclusiveAreaSqm: number,
-): boolean {
-  if (baseDate <= HV_2002_09_30) {
-    return exclusiveAreaSqm >= 165 && wholePropertyTransferPrice > 600_000_000;
-  }
-  if (baseDate <= HV_2002_12_31) {
-    return exclusiveAreaSqm >= 149 && wholePropertyTransferPrice > 600_000_000;
-  }
-  return isHighValueHouseAtDate(baseDate, wholePropertyTransferPrice);
-}
 
 // ============================================================================
 // 헬퍼: 5년 시점 판정
@@ -303,166 +240,6 @@ export function isWithin5YearsCheck(acquisitionDate: Date, transferDate: Date): 
   // setFullYear는 2/29+5년을 3/1로 롤오버해 1일 밀림 → 코드베이스 date-fns 관례로 통일.
   const fiveYearMark = addYears(acquisitionDate, 5);
   return transferDate <= fiveYearMark;
-}
-
-// ============================================================================
-// 헬퍼: 적용 배제 검증 (우선순위 순)
-// ============================================================================
-
-function checkIneligibility(input: New993Input, era: New993Era, warnings: string[]): New993IneligibleReason[] {
-  const reasons: New993IneligibleReason[] = [];
-  const legalBasis = TRANSFER_REDUCTION_ARTICLE.NEW_99_3;
-
-  // 0. 소유자 분리(토지만 본인) — 신축주택(건물)을 취득한 자가 아니다 (NH-08). 다른 사유보다 먼저 낸다.
-  if (input.isLandOnlyOwner === true) {
-    reasons.push({ code: LAND_ONLY_OWNER_CODE, message: landOnlyOwnerMessage("new_99_3"), legalBasis });
-    return reasons;
-  }
-
-  // 1. 거주자 아님
-  if (!input.isResident) {
-    reasons.push({
-      code: "NOT_RESIDENT",
-      message: "거주자가 아닌 자에게는 §99의3이 적용되지 않습니다 (법 §99의3① 본문 「거주자(주택건설사업자는 제외한다)가」)",
-      legalBasis,
-    });
-    return reasons; // 즉시 반환 (다른 사유는 무의미)
-  }
-
-  // 2. 본인이 주택건설사업자
-  if (input.isHousingConstructionBusiness) {
-    reasons.push({
-      code: "HOUSING_CONSTRUCTION_BUSINESS",
-      message: "본인이 주택건설사업자인 경우 §99의3이 적용되지 않습니다 (조문 본문 괄호)",
-      legalBasis,
-    });
-    return reasons;
-  }
-
-  // 2-1. 취득 원인 — 상속·증여(지분 포함)·분양권 승계·인가일 뒤 승계조합원은 불성립 (NH-17 · NH-40 · NH-16, 공용 leaf)
-  const causeGate = evaluateNew99AcquisitionGate({
-    article: "new_99_3",
-    acquisitionType: input.acquisitionType,
-    acquisitionCause: input.acquisitionCause,
-    firstContract: input.firstContract,
-    isRedevSuccessorMember: input.isRedevSuccessorMember,
-  });
-  if (causeGate) {
-    reasons.push(causeGate);
-    return reasons;
-  }
-
-  // 3. 가격 급등 지역 — 2003.1.1. 이후 계약·승인분(개정규정)만. 종전 규정 적용분(부칙 §29①·②)은 지역 제외가 없다 (NH-01).
-  if (input.region === "speculation" && era.priorRuleBasis === undefined) {
-    reasons.push({
-      code: "SPECULATION_AREA",
-      message: "가격 급등 지역(서울·과천·5대 신도시) 내 신축주택은 §99의3이 적용되지 않습니다 (2003.1.1. 이후 계약·사용승인분 — 개정규정)",
-      legalBasis,
-    });
-    return reasons;
-  }
-
-  // 4. 신축주택취득기간 외
-  const periodTarget = resolveNew99BaseDate(
-    input.acquisitionType,
-    input.contractDate,
-    input.usageApprovalDate,
-    input.acquisitionDate,
-  );
-  if (periodTarget < PERIOD_START || periodTarget > PERIOD_END) {
-    const targetLabel =
-      input.acquisitionType === "from_builder" ? "매매계약일" : "사용승인일";
-    reasons.push({
-      code: "OUT_OF_ACQUISITION_PERIOD",
-      message: `신축주택취득기간(2001.5.23~2003.6.30) 외 — 기준일(${targetLabel})이 시한 외입니다`,
-      legalBasis,
-    });
-    return reasons;
-  }
-
-  // 5. 1호 단서: 매매계약일 입주사실 있는 주택
-  if (input.acquisitionType === "from_builder" && input.hasOccupancyAtContract) {
-    reasons.push({
-      code: "OCCUPANCY_AT_CONTRACT",
-      // 「다른 자가」는 법률 제6538호(2002.1.1. 시행 — 그 뒤 양도분부터, 부칙 §2②)로 삭제됐다 — 현행 법문은 입주 주체를 한정하지 않는다 (리뷰 NH-35).
-      message: "매매계약일 현재 입주한 사실이 있는 주택은 §99의3 ① 1호 단서로 적용 배제됩니다",
-      legalBasis,
-    });
-    return reasons;
-  }
-
-  // 5-a. 재계약·대체취득 배제 (조특령 §99의3④) — 단, 조특칙 §44의4 카브백이 있으면 유지.
-  //   조특령 §99의3④는 «법 제99조의3제1항제1호»의 사유다 — 2호(자기건설)에 남은 선언으로 배제하지 않는다 (리뷰 NH-57).
-  if (
-    input.acquisitionType === "from_builder" &&
-    input.isRecontractExcluded === true &&
-    input.recontractUnavoidableCause !== true
-  ) {
-    reasons.push({
-      code: "RECONTRACT_EXCLUDED",
-      message:
-        "2001.5.23 전 분양계약을 해제하고 본인·배우자(직계존비속·형제자매 포함)가 당초 주택을 다시 분양받거나 대체하여 다른 주택을 분양받아 취득한 주택은 적용 배제됩니다 (조특령 §99의3④).",
-      legalBasis: "조특령 §99의3 ④",
-    });
-    return reasons;
-  }
-
-  // 5-b. 재개발·재건축 변형 — 종전주택 기준시가 필수 (자동 안분 fallback 금지). §99 선례와 동일.
-  if (
-    input.isRedevelopedNewHouse === true &&
-    (input.previousHouseStdPriceAtAcquisition === undefined ||
-      input.previousHouseStdPriceAtAcquisition <= 0)
-  ) {
-    reasons.push({
-      code: "MISSING_PREVIOUS_STD_PRICE",
-      message:
-        "재개발·재건축 신축주택의 안분에는 종전주택 취득 당시 기준시가가 필요합니다 (조특령 §99의3② 1호 단서·2호 괄호).",
-      legalBasis: "조특령 §99의3 ②",
-    });
-    return reasons;
-  }
-
-  // 6. 고가주택 (단서)
-  // 기간 게이트(:위)와 **같은 축**이어야 한다 — 두 판정이 갈리면 임계가 뒤집힌다 (D3-09).
-  const hvBaseDate = resolveNew99BaseDate(
-    input.acquisitionType,
-    input.contractDate,
-    input.usageApprovalDate,
-    input.acquisitionDate,
-  );
-  // 종전 규정 적용분 — §29① 계약·승인일 당시 고급주택 기준 / §29② 종전 고급주택 기준(재산세제과-96: 2002.12.31. 시행 소령 §156).
-  // 개정규정 적용분 — 양도 당시 소득세법 §89①3호 고가주택(재산세과-3466). 기준일 축 6억을 양도 후 20년 넘게 끌고 가지 않는다 (NH-04).
-  // 종전 «고급주택» 시기는 당시 소득세법 시행령 §156의 공동·단독·시설 기준 전부 (NH-02).
-  const priorBase = era.priorRuleBasis === "addenda_29_2" ? PRIOR_ADVANCED_HOUSE_STANDARD_DATE : hvBaseDate;
-  const priorLuxury =
-    era.priorRuleBasis !== undefined && isPriorLuxuryStandardDate(priorBase)
-      ? judgePriorLuxuryHouse(priorBase, input.wholePropertyTransferPrice, {
-          ...input.luxuryFacts,
-          exclusiveAreaSqm: input.exclusiveAreaSqm,
-        })
-      : undefined;
-  if (priorLuxury) warnings.push(...priorLuxury.confirmations);
-  const isHighValue =
-    era.priorRuleBasis === undefined
-      ? isHighValueHouseAtDate(input.transferDate, input.wholePropertyTransferPrice)
-      : (priorLuxury?.isLuxury ??
-        isHighValueHouseUnder993(priorBase, input.wholePropertyTransferPrice, input.exclusiveAreaSqm));
-  if (isHighValue) {
-    const basisLabel =
-      era.priorRuleBasis === undefined
-        ? `양도일 ${input.transferDate.toISOString().split("T")[0]} 당시 기준`
-        : era.priorRuleBasis === "addenda_29_2"
-          ? `종전 고급주택 기준 — ${NEW_99_3_ADDENDA_6762.PRIOR_CONSTRUCTION_STARTED}`
-          : `적용기준일 ${hvBaseDate.toISOString().split("T")[0]} 당시 기준 — ${NEW_99_3_ADDENDA_6762.PRIOR_CONTRACT_OR_APPROVAL}`;
-    reasons.push({
-      code: "HIGH_VALUE_HOUSE",
-      message: `고가주택(소득세법 §89①3호)은 §99의3 ① 단서로 적용 배제됩니다 (${basisLabel})`,
-      legalBasis,
-    });
-    return reasons;
-  }
-
-  return reasons; // 빈 배열 = 적용 가능
 }
 
 // ============================================================================
@@ -566,7 +343,7 @@ export function evaluateNew993(input: New993Input): New993Result {
 
   // STEP 1: 적용 배제 검증
   const gateWarnings: string[] = [];
-  const ineligibleReasons = checkIneligibility(input, era, gateWarnings);
+  const ineligibleReasons = checkNew993Ineligibility(input, era, gateWarnings);
   if (gateWarnings.length > 0) eraEcho.warnings = gateWarnings;
   if (ineligibleReasons.length > 0) {
     return {
@@ -640,7 +417,9 @@ export function evaluateNew993(input: New993Input): New993Result {
             message: isWithin5Years
               ? "재개발·재건축 신축주택의 5년 이내 양도 안분 계산에 필요한 기준시가(취득시·양도시)가 입력되지 않았습니다 (조특령 §99의3②1호 단서)."
               : "5년 후 양도 안분 계산에 필요한 기준시가(취득시·5년시점·양도시)가 입력되지 않았습니다 (조특령 §99의3②2호).",
-            legalBasis: isWithin5Years ? "조특령 §99의3 ② 1호 단서" : "조특령 §99의3 ② 2호",
+            legalBasis: isWithin5Years
+              ? `${NEW_HOUSING_SUB_ARTICLE.NEW_99_3_INCOME} 1호 단서`
+              : NEW_HOUSING_SUB_ARTICLE.NEW_99_3_INCOME_AFTER_5Y,
           },
         ],
         isWithin5Years: false,

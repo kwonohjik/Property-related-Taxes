@@ -16,6 +16,7 @@
  *   §99 조합원 갈래(§99①1호 괄호)에는 인가일 요건이 없다.
  */
 import type { TriStateAnswer } from "./new-99-luxury-house";
+import { NEW_HOUSING_ACQUISITION_ARTICLE as ART } from "../legal-codes/transfer-house";
 
 export type New99AcquisitionCause =
   | "purchase"
@@ -53,7 +54,9 @@ export function needsFirstContractAnswer(
 export function evaluateNew99AcquisitionGate(input: New99AcquisitionGateInput): New99AcquisitionGateReason | undefined {
   const { article, acquisitionType, acquisitionCause } = input;
   const is993 = article === "new_99_3";
-  const lawLabel = is993 ? "조세특례제한법 §99의3①" : "조세특례제한법 §99①";
+  // §99: 1호 자기건설 · 2호 주택건설사업자 / §99의3: 1호 주택건설사업자 · 2호 자기건설
+  const selfBuiltArticle = is993 ? ART.NEW_99_3_SELF_BUILT : ART.NEW_99_SELF_BUILT;
+  const builderArticle = is993 ? ART.NEW_99_3_FROM_BUILDER : ART.NEW_99_FROM_BUILDER;
 
   if (acquisitionCause === "inheritance" || acquisitionCause === "gift") {
     const causeLabel = acquisitionCause === "inheritance" ? "상속" : "증여";
@@ -61,16 +64,16 @@ export function evaluateNew99AcquisitionGate(input: New99AcquisitionGateInput): 
       return {
         code: "ACQUIRED_BY_INHERITANCE_OR_GIFT",
         message:
-          `${causeLabel}으로 취득한 주택(지분)은 «자기가 건설한» 신축주택이 아니라 적용되지 않습니다 (${lawLabel}${is993 ? "2호" : "1호"}) — ` +
+          `${causeLabel}으로 취득한 주택(지분)은 «자기가 건설한» 신축주택이 아니라 적용되지 않습니다 (${selfBuiltArticle}) — ` +
           "자기건설 주택의 지분을 증여·상속으로 추가 취득했다면 그 지분은 자기건설분과 따로 판정합니다.",
-        legalBasis: `${lawLabel}${is993 ? "2호" : "1호"}`,
+        legalBasis: selfBuiltArticle,
       };
     }
     return {
       code: "ACQUIRED_BY_INHERITANCE_OR_GIFT",
       message:
-        `${causeLabel}으로 취득한 주택은 «주택건설업자와 최초로 매매계약을 체결하고 계약금을 납부한 자가 취득»한 주택이 아니라 적용되지 않습니다 (${lawLabel}${is993 ? "1호" : "2호"}).`,
-      legalBasis: `${lawLabel}${is993 ? "1호" : "2호"}`,
+        `${causeLabel}으로 취득한 주택은 «주택건설업자와 최초로 매매계약을 체결하고 계약금을 납부한 자가 취득»한 주택이 아니라 적용되지 않습니다 (${builderArticle}).`,
+      legalBasis: builderArticle,
     };
   }
 
@@ -78,14 +81,14 @@ export function evaluateNew99AcquisitionGate(input: New99AcquisitionGateInput): 
     return {
       code: "NOT_MEMBER_AT_APPROVAL",
       message:
-        "관리처분계획 인가일 뒤에 입주권을 승계한 조합원은 «관리처분계획 인가일(사업계획 승인일) 현재의 조합원»이 아니라 §99의3이 적용되지 않습니다 (조세특례제한법 시행령 §99의3③2호·⑤). " +
-        "주택건설업자와 최초로 매매계약을 체결한 자도 아닙니다(조세특례제한법 §99의3①1호).",
-      legalBasis: "조세특례제한법 시행령 §99의3③2호·⑤",
+        `관리처분계획 인가일 뒤에 입주권을 승계한 조합원은 «관리처분계획 인가일(사업계획 승인일) 현재의 조합원»이 아니라 §99의3이 적용되지 않습니다 (${ART.NEW_99_3_MEMBER_AT_APPROVAL}). ` +
+        `주택건설업자와 최초로 매매계약을 체결한 자도 아닙니다(${ART.NEW_99_3_FROM_BUILDER}).`,
+      legalBasis: ART.NEW_99_3_MEMBER_AT_APPROVAL,
     };
   }
 
   if (!needsFirstContractAnswer(acquisitionType, acquisitionCause)) return undefined;
-  const branch = `${lawLabel}${is993 ? "1호" : "2호"}`;
+  const branch = builderArticle;
   if (input.firstContract === "yes" || input.firstContract === undefined) return undefined;
   if (input.firstContract === "no") {
     return {

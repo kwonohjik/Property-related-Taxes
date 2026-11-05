@@ -23,7 +23,7 @@
  *   5년 후: 분자 = 5년시점 − 신축취득시 / 분모 = 양도시 − 종전주택 취득시
  */
 
-import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { NEW_HOUSING_SUB_ARTICLE, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { LAND_ONLY_OWNER_CODE, landOnlyOwnerMessage } from "./new-99-land-only-owner";
 import { judgePriorLuxuryHouse, type New99HouseType, type TriStateAnswer } from "./new-99-luxury-house";
 import { evaluateNew99AcquisitionGate, type New99AcquisitionCause } from "./new-99-acquisition-cause";
@@ -263,7 +263,7 @@ export function evaluateNew99(input: New99Input): New99Result {
     reasons.push({
       code: "RECONTRACT_EXCLUDED",
       message: "1998.5.21 이전 분양계약을 해제하고 본인·배우자(직계존비속·형제자매 포함)가 다시 분양받거나 대체 취득한 주택은 적용 배제됩니다 (조특령 §99②).",
-      legalBasis: "조특령 §99②",
+      legalBasis: NEW_HOUSING_SUB_ARTICLE.NEW_99_RECONTRACT,
     });
     return ineligible(reasons);
   }
@@ -310,7 +310,7 @@ export function evaluateNew99(input: New99Input): New99Result {
     reasons.push({
       code: "MISSING_PREVIOUS_STD_PRICE",
       message: "재개발·재건축 신축주택의 안분에는 종전주택 취득 당시 기준시가가 필요합니다 (조특령 §99①1호 단서).",
-      legalBasis: "조특령 §99①",
+      legalBasis: NEW_HOUSING_SUB_ARTICLE.NEW_99_INCOME,
     });
     return ineligible(reasons);
   }
@@ -344,7 +344,7 @@ export function evaluateNew99(input: New99Input): New99Result {
       return ineligible([{
         code: "MISSING_STD_PRICE",
         message: "안분 계산에 필요한 기준시가(취득시·양도시" + (needs5Y ? "·5년시점" : "") + ")가 입력되지 않았습니다 (조특령 §99①).",
-        legalBasis: "조특령 §99①",
+        legalBasis: NEW_HOUSING_SUB_ARTICLE.NEW_99_INCOME,
       }]);
     }
     const numerator = isWithin5Years ? stdAtTransfer - stdAtAcq : stdAt5Y - stdAtAcq;
