@@ -141,12 +141,14 @@ describe("부담부증여 K-6/K-7 라우트 ⑫", () => {
       burdenedGiftInfo: BUILDING_BGI,
     };
 
-    it("건물 감정가액 150M × 채무비율 0.4 = 60M → 가산세 3,000,000", async () => {
-      const r = await send(BUILDING_BODY);
+    // V-7 — 일체 주택 신축의 base 는 건물분이다. 감정평가서의 건물 감정가액 75M(총액 150M 중) → 75M × 0.4 = 30M · 입력이 없으면 400
+    it("건물분 감정가액 75M × 채무비율 0.4 = 30M → 가산세 1,500,000 · 건물분 입력이 없으면 400", async () => {
+      const r = await send({ ...BUILDING_BODY, selfBuiltHousing: { buildingAppraisalValue: 75_000_000 } });
       expect(r.status, JSON.stringify(r.json.error)).toBe(200);
       const res = r.json.data!.result!;
-      expect(res.penaltyBase).toBe(60_000_000);
-      expect(res.penaltyTax).toBe(3_000_000);
+      expect(res.penaltyBase).toBe(30_000_000);
+      expect(res.penaltyTax).toBe(1_500_000);
+      expect((await send(BUILDING_BODY)).status).toBe(400);
     });
 
     it("🔴 구별력 — 신축이 아니면 0", async () => {

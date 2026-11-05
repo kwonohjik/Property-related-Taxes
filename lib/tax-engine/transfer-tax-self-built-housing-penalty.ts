@@ -144,8 +144,11 @@ function assertBgSelfBuiltHousingInput(input: TransferTaxInput, sb: SelfBuiltHou
   if (input.isSelfBuilt !== true) invalid(`${FIELD} 는 신축(본인 신축 또는 당초 증여자 신축)일 때만 보낼 수 있습니다(${law}).`);
   if (input.mixedUse) invalid(`겸용주택의 가산세 base 는 이 입력으로 받지 않습니다(${law}).`);
   if (input.buildingType === "extension") invalid(`증축은 증축한 부분 한정 base 가 따로 있어 ${FIELD} 로 받지 않습니다(${law}).`);
-  if (input.burdenedGiftInfo!.valuationMode !== "sangjeungbeop_market" || (method !== "converted" && method !== "appraisal"))
+  // 이월과세 시나리오 B 사본은 방식이 실지로 바뀐다(소령 §163⑨ · `toTransferorBasisInfo`) — 사용자가 고른 방식이 아니라 파생값이라 여기서 거부하지 않는다(B에는 가산세 base 를 쓰지 않는다).
+  const derivedScenarioB = input.burdenedGiftInfo!.carryoverDonorBasis !== undefined && method === "actual";
+  if (!derivedScenarioB && (input.burdenedGiftInfo!.valuationMode !== "sangjeungbeop_market" || (method !== "converted" && method !== "appraisal")))
     invalid(`부담부증여의 ${FIELD} 는 시가 평가의 환산취득가액·감정가액일 때만 쓰입니다(${law}).`);
+  if (derivedScenarioB) return;
   const landAtAcq = calcLandStdPriceAtAcq(sb.landPricePerSqmAtAcquisition ?? 0, sb.landArea ?? 0);
   if (method === "appraisal") {
     if (!positive(sb.buildingAppraisalValue) && (landAtAcq == null || !positive(sb.buildingStdPriceAtAcquisition)))

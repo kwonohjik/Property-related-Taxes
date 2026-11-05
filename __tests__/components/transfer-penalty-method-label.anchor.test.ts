@@ -10,6 +10,7 @@ import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { buildStatementItems } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { BG_HOUSING_HALF_SPLIT } from "../tax-engine/_helpers/bg-housing-half-split";
 import { baseTransferInput, makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
@@ -49,6 +50,7 @@ function penaltyFormula(method: "appraisal" | "converted"): string {
       buildingType: "new",
       constructionDate: new Date("2021-01-01"),
       burdenedGiftInfo: info(method),
+      selfBuiltHousing: BG_HOUSING_HALF_SPLIT, // V-7 PR-2 — 일체 주택 신축은 건물분 안분 입력이 필요하다
     }),
     rates,
   );

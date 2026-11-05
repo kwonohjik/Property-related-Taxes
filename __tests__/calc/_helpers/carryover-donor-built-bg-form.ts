@@ -10,7 +10,14 @@ import { withTestAddress } from "@/__tests__/fixtures/transfer-test-address";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset";
 
-export const DB_ON: Partial<CarryoverTaxationForm> = { donorBuilt: true, donorBuiltType: "new", donorBuiltDate: "2022-01-10" };
+/**
+ * V-7 PR-2 — 일체 주택 신축은 건물분 안분 입력이 필요하다(⑧·⑫·엔진). 취득·양도 당시 모두 토지:건물 기준시가 1:1(1천만 원/㎡ × 100㎡ = 1억 · 건물 1억)이라
+ * 가산세 base = 주택 전체 값 ÷ 2(`__tests__/tax-engine/_helpers/bg-housing-half-split.ts`와 같은 값).
+ */
+export const DB_ON: Partial<CarryoverTaxationForm> = {
+  donorBuilt: true, donorBuiltType: "new", donorBuiltDate: "2022-01-10",
+  donorBuiltLandPricePerSqm: "1,000,000", donorBuiltLandArea: "100", donorBuiltBuildingStdAtAcq: "100,000,000",
+};
 
 /** 엔진 anchor 와 같은 셀 — 시가 800M · 채무 500M · 양도 2026-02-16 · 증여 2023-06-01 · 당초 증여자 취득 2000-06-01 */
 export function bgAsset(method: "appraisal" | "converted", co: Partial<CarryoverTaxationForm> = {}, over: Partial<AssetForm> = {}): AssetForm {
@@ -29,7 +36,10 @@ export function bgAsset(method: "appraisal" | "converted", co: Partial<Carryover
     standardPriceAtTransfer: "800,000,000",
     standardPriceAtAcq: "400,000,000",
     landStandardPriceAtTransfer: "0",
-    buildingStandardPriceAtTransfer: "800,000,000",
+    // 양도 당시 토지·건물 기준시가(건물분 안분 · V-7) — 부담부증여 양도시 기준시가(주택 전체)는 위 `standardPriceAtTransfer`
+    standardPricePerSqmAtTransfer: "1,000,000",
+    transferArea: "100",
+    buildingStandardPriceAtTransfer: "100,000,000",
     bgActualAcquisitionTotal: "600,000,000",
     bgCoDonorLandStdPriceAtAcq: "0",
     bgCoDonorBuildingStdPriceAtAcq: "150,000,000",

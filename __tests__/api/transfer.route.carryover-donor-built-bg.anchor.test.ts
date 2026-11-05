@@ -57,18 +57,19 @@ describe("DBG-R1 — donorBuilt 가 엔진에 닿는다 (strip 이면 가산세 
   it("K-7 감정가액: 가산세 6,250,000 (base 125,000,000 = 채무비율 안분 후 건물 감정가액)", async () => {
     const on = await call("appraisal");
     expect(on.status, on.errors).toBe(200);
-    expect(on.result!.penaltyBase).toBe(125_000_000);
-    expect(on.result!.penaltyTax).toBe(6_250_000);
-    expect(on.result!.carryoverTaxationDetail?.donorBuiltPenalty).toMatchObject({ applied: true, base: 125_000_000, burdenedGift: { method: "appraisal" } });
+    // V-7 — 일체 주택은 건물분(시료 1:1 안분 → 주택 전체 125,000,000의 절반)
+    expect(on.result!.penaltyBase).toBe(62_500_000);
+    expect(on.result!.penaltyTax).toBe(3_125_000);
+    expect(on.result!.carryoverTaxationDetail?.donorBuiltPenalty).toMatchObject({ applied: true, base: 62_500_000, burdenedGift: { method: "appraisal" } });
     const off = await call("appraisal", { donorBuilt: false });
     expect(off.result!.penaltyTax).toBe(0);
-    expect(off.result!.totalTax).toBe(on.result!.totalTax - 6_250_000 - 625_000);
+    expect(off.result!.totalTax).toBe(on.result!.totalTax - 3_125_000 - 312_500);
   });
   it("K-5 환산: 가산세 4,687,500 (base 93,750,000)", async () => {
     const on = await call("converted");
     expect(on.status, on.errors).toBe(200);
-    expect(on.result!.penaltyBase).toBe(93_750_000);
-    expect(on.result!.penaltyTax).toBe(4_687_500);
+    expect(on.result!.penaltyBase).toBe(46_875_000); // 건물분(V-7 · 1:1) — 주택 전체 93,750,000의 절반
+    expect(on.result!.penaltyTax).toBe(2_343_750);
   });
   it("증축 K-7: 증축 부분 감정가액 80M × 0.625 = 50M 의 5% = 2,500,000", async () => {
     const on = await call("appraisal", { donorBuiltType: "extension", donorBuiltExtensionArea: "90" }, { bgPresumedExtensionAppraisal: "80,000,000" });
@@ -94,9 +95,17 @@ describe("DBG-R2 ⑫ 거부 — 400 (조용히 무시하지 않는다)", () => {
     expect(o.errors).toContain("다른 축");
     expect(o.fields).toContain("burdenedGiftInfo.carryoverDonorBasis.donorBuilt"); // ⑫(Zod)가 막는다 — 엔진 도달 전
   });
-  it("housing 키는 받지 않는다(strict)", async () => {
-    const o = await mutate("converted", (b) => { b.burdenedGiftInfo.carryoverDonorBasis.donorBuilt.housing = { landPricePerSqmAtAcquisition: 1, landArea: 1, buildingStdPriceAtAcquisition: 1, landStdPriceAtTransfer: 1, buildingStdPriceAtTransfer: 1 }; });
-    expect(o.status).toBe(400);
+  // V-7 — 일체 주택 신축은 housing(건물분 안분)을 받는다. 빠지면 400 · 증축에 실으면 400
+  it("housing — 신축 주택은 필수 · 증축이면 받지 않는다", async () => {
+    expect((await mutate("converted", (b) => { delete b.burdenedGiftInfo.carryoverDonorBasis.donorBuilt.housing; })).status).toBe(400);
+    const ext = await mutate("converted", (b) => {
+      b.burdenedGiftInfo.carryoverDonorBasis.donorBuilt = {
+        buildingType: "extension", constructionDate: "2022-01-10", extensionFloorArea: 90, extensionStdPriceAtAcquisition: 40_000_000,
+        housing: { landPricePerSqmAtAcquisition: 1, landArea: 1, buildingStdPriceAtAcquisition: 1, landStdPriceAtTransfer: 1, buildingStdPriceAtTransfer: 1 },
+      };
+    });
+    expect(ext.status).toBe(400);
+    expect(ext.fields).toContain("burdenedGiftInfo.carryoverDonorBasis.donorBuilt.housing");
   });
   it("신축일이 당초 증여자 취득일 전 / 증여 등기접수일 후", async () => {
     expect((await mutate("converted", (b) => { b.burdenedGiftInfo.carryoverDonorBasis.donorBuilt.constructionDate = "2000-05-31"; })).status).toBe(400);
@@ -119,7 +128,7 @@ describe("DBG-R2 ⑫ 거부 — 400 (조용히 무시하지 않는다)", () => {
 describe("DBG-R3 ⑭ Date 변환", () => {
   it("constructionDate 가 Date 로 엔진에 닿는다 — 신축일+5년 당일은 발동 / +1일은 미발동 (문자열이면 둘 다 NaN 비교로 어긋난다)", async () => {
     // 양도일 2026-02-16 — 신축일 2021-02-16 → 5년 되는 날 2026-02-16(당일 포함)
-    expect((await call("converted", { donorBuiltDate: "2021-02-16" })).result!.penaltyTax).toBe(4_687_500);
+    expect((await call("converted", { donorBuiltDate: "2021-02-16" })).result!.penaltyTax).toBe(2_343_750);
     const late = await call("converted", { donorBuiltDate: "2021-02-15" });
     expect(late.result!.penaltyTax).toBe(0);
     expect(late.result!.carryoverTaxationDetail?.donorBuiltPenalty).toMatchObject({ applied: false, notAppliedReason: "outside_penalty_window" });

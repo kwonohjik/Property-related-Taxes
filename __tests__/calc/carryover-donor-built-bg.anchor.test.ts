@@ -53,7 +53,11 @@ describe("DBG-S 적용 범위 술어", () => {
 describe("DBG-P ④ payload", () => {
   it("신축: burdenedGiftInfo.carryoverDonorBasis.donorBuilt 로 실린다 (carryoverTaxation 에는 없다)", async () => {
     const body = await bodyOf(form(asset("converted")));
-    expect(donorBuiltOf(body)).toEqual({ buildingType: "new", constructionDate: "2022-01-10" });
+    // V-7 — 일체 주택 신축은 건물분 안분 입력(housing)을 함께 싣는다(양도가액 구분 없음)
+    expect(donorBuiltOf(body)).toEqual({
+      buildingType: "new", constructionDate: "2022-01-10",
+      housing: { landPricePerSqmAtAcquisition: 1_000_000, landArea: 100, buildingStdPriceAtAcquisition: 100_000_000, landStdPriceAtTransfer: 100_000_000, buildingStdPriceAtTransfer: 100_000_000 },
+    });
     expect((body.carryoverTaxation as { donorBuilt?: unknown }).donorBuilt).toBeUndefined();
   });
   it("증축 K-5: 바닥면적 + 증축 부분 기준시가 / 증축 K-7: 바닥면적 + info.presumedExtensionAppraisalValue (기준시가 칸은 싣지 않는다)", async () => {

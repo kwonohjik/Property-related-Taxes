@@ -23,6 +23,8 @@
  *   real_estate_apartment               → housing  (항상 주택)
  */
 
+import { buildGiftBgSelfBuiltHousing } from "./gift-burdened-self-built-housing";
+import { giftBgSelfBuiltHousingScope } from "./gift-burdened-self-built-housing";
 import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisition";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
@@ -327,6 +329,14 @@ export function buildGiftBurdenedTransferBody(
           ...(bgt.buildingType === "extension" && bgt.extensionStdPriceAtAcquisition != null
             ? { extensionStdPriceAtAcquisition: bgt.extensionStdPriceAtAcquisition }
             : {}),
+          // 일체 주택 신축 — 가산세 base 건물분 안분 입력(V-7 · ⑤·⑧과 같은 leaf `giftBgSelfBuiltHousingScope`)
+          ...(() => {
+            const sb = buildGiftBgSelfBuiltHousing(
+              bgt,
+              giftBgSelfBuiltHousingScope(bgt, propertyType, acquisitionMethod === "converted" || acquisitionMethod === "appraisal" ? acquisitionMethod : null, form.giftDate),
+            );
+            return sb ? { selfBuiltHousing: sb } : {};
+          })(),
         }
       : {}),
   };

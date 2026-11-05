@@ -46,10 +46,13 @@ describe("토글·구분·일자·증축", () => {
     const carry = (onChange.mock.calls[0][0] as { carryover: Record<string, unknown> }).carryover;
     expect(carry).toMatchObject({ donorBuilt: true, donorBuiltType: "", donorBuiltDate: "" });
   });
-  it("ON 이면 구분 라디오(new·extension) · 일체 주택 안분 칸은 없다", () => {
+  // V-7 — 일체 주택 신축은 건물분 안분 칸(가 취득 당시 · 나 양도 당시 기준시가)을 연다. 증축이면 없다(증축 부분 기준이 따로 있다)
+  it("ON 이면 구분 라디오(new·extension) · 신축 주택은 일체 주택 안분 칸 · 증축은 없음", () => {
     const { container } = mount(bgAsset("converted"));
     expect(radioValues(container, "donorBuiltType-")).toEqual(["new", "extension"]);
-    expect(screen.queryByTestId("donor-built-housing")).toBeNull();
+    expect(screen.getByTestId("donor-built-housing")).toBeTruthy();
+    expect(screen.getByTestId("split-sale-std-card")).toBeTruthy(); // 양도가액 구분 없이 양도 당시 기준시가 카드만
+    expect(screen.queryByTestId("sale-split-mode")).toBeNull();
     expect(screen.getByTestId("donor-built-toggle").textContent).toContain("양도인 본인이 신축한 건물과는 다른 질문입니다");
   });
   it("증축: K-5 는 증축 부분 기준시가 칸 · K-7 은 증축 부분 감정가액 칸이 하나씩만 열린다", () => {

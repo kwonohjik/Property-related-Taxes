@@ -18,6 +18,7 @@
 
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { withBgHousingHalfSplit } from "../_helpers/bg-housing-half-split";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -44,7 +45,8 @@ function k5Info(overrides: Partial<BurdenedGiftInfo> = {}): BurdenedGiftInfo {
 }
 
 function makeInput(overrides: Partial<TransferTaxInput> = {}): TransferTaxInput {
-  return baseTransferInput({
+  // V-7 PR-2 엄격화 — 일체 주택 신축(환산·감정)이면 1:1 건물분 안분 입력을 넣는다 → base = 주택 전체 값 ÷ 2(`bg-housing-half-split.ts`)
+  return withBgHousingHalfSplit(baseTransferInput({
     propertyType: "housing",
     transferDate: TRANSFER_DATE,
     acquisitionDate: CONSTRUCTION_DATE,
@@ -60,20 +62,20 @@ function makeInput(overrides: Partial<TransferTaxInput> = {}): TransferTaxInput 
     constructionDate: CONSTRUCTION_DATE,
     burdenedGiftInfo: k5Info(),
     ...overrides,
-  });
+  }), overrides);
 }
 
 describe("§114조의2 부담부증여 K-5 환산 신축 가산세", () => {
-  it("[P-1] K-5 환산 + 신축 5년내 → penaltyTax = 건물환산취득가 50M × 5% = 2,500,000", () => {
+  it("[P-1] K-5 환산 + 신축 5년내 → penaltyTax = 건물분 환산취득가 25M(주택 전체 50M의 건물분 1/2) × 5% = 1,250,000 (V-7 전 2,500,000)", () => {
     const result = calculateTransferTax(makeInput(), rates);
     expect(result.transferBurdenedGiftBreakdown!.perAsset.building.acquisitionPrice).toBe(
       50_000_000,
     );
-    expect(result.penaltyTax).toBe(2_500_000);
+    expect(result.penaltyTax).toBe(1_250_000);
   });
 
   it("[P-2 회귀] 신축 아님(isSelfBuilt=false) → penaltyTax = 0", () => {
-    const result = calculateTransferTax(makeInput({ isSelfBuilt: false }), rates);
+    const result = calculateTransferTax(makeInput({ isSelfBuilt: false, selfBuiltHousing: undefined }), rates);
     expect(result.penaltyTax).toBe(0);
   });
 
@@ -81,6 +83,7 @@ describe("§114조의2 부담부증여 K-5 환산 신축 가산세", () => {
     const result = calculateTransferTax(
       makeInput({
         burdenedGiftInfo: k5Info({ acquisitionMethod: "actual", actualAcquisitionTotal: 80_000_000 }),
+        selfBuiltHousing: undefined, // 건물분 입력은 환산·감정에서만 받는다
       }),
       rates,
     );
@@ -94,6 +97,7 @@ describe("§114조의2 부담부증여 K-5 환산 신축 가산세", () => {
           valuationMode: "sangjeungbeop_standard",
           acquisitionMethod: undefined,
         }),
+        selfBuiltHousing: undefined,
       }),
       rates,
     );
@@ -110,6 +114,6 @@ describe("§114조의2 부담부증여 K-5 환산 신축 가산세", () => {
     );
     // 조기반환(transferGain≤0) 경로 — 산출세액 0이어도 §114의2② 가산세 부과
     expect(result.calculatedTax).toBe(0);
-    expect(result.penaltyTax).toBe(12_500_000); // 건물환산취득가 250M × 5%
+    expect(result.penaltyTax).toBe(6_250_000); // 건물분 환산취득가 125M(주택 전체 250M의 1/2) × 5% (V-7 전 12,500,000)
   });
 });

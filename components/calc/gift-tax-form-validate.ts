@@ -9,6 +9,8 @@
  *   - API/UI fallback ↔ validate 동기화 (메모리 feedback_validation_sync_8th_point)
  */
 
+import { giftBgSelfBuiltHousingError } from "@/lib/calc/gift-burdened-self-built-housing";
+import { giftBgSelfBuiltHousingScope } from "@/lib/calc/gift-burdened-self-built-housing";
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
 import { DONOR_LABELS } from "@/components/calc/gift-tax-form-shared";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -256,6 +258,11 @@ export function validateStep(step: number, form: FormState): string | null {
           return `${itemLabel}: ${transferStdLabel}를 입력하세요. (양도소득세 §159 안분 분모 필수)`;
         }
       }
+
+      // 일체 주택 신축 × 환산·감정가액 — §114조의2 가산세 base 건물분 입력(V-7 · ⑤·④와 같은 leaf)
+      const sbMethod = isMarketMode && !acqForcedToStandard && (bgt.acquisitionMethod === "converted" || bgt.acquisitionMethod === "appraisal") ? bgt.acquisitionMethod : null;
+      const sbErr = giftBgSelfBuiltHousingError(bgt, giftBgSelfBuiltHousingScope(bgt, propertyType, sbMethod, form.giftDate), itemLabel);
+      if (sbErr) return sbErr;
 
       if (propertyType === "housing" && bgt.isOneHousehold) {
         // 1세대1주택 비과세 판정 시 거주기간 필수 (H11)

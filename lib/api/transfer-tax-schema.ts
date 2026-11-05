@@ -403,7 +403,6 @@ export const propertySchema = z
             isHousing: c.assetKind === "housing",
             isSelfBuilt: c.isSelfBuilt,
             acquisitionCause: c.acquisitionCause,
-            burdenedGift: c.burdenedGiftInfo !== undefined,
             mixedUse: c.mixedUse !== undefined || c.assetKind === "mixed_use_house",
             buildingType: c.buildingType,
             separated: isSeparatedLike(c),

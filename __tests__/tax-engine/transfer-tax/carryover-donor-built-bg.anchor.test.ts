@@ -11,12 +11,13 @@
  * ## 픽스처 산수 (housing — 건물 통째, 양도일 2026-02-16)
  *   시가 C=800M · 채무 B=500M → 채무비율 0.625 · 양도가 500M · 양도시 건물 기준시가 800M
  *   K-7 — 당초 증여자 감정가액 200M → A 취득가액 125M (= 가산세 base, 채무비율 **안분 후** 건물분)
- *   K-5 — 당초 증여자 취득시 기준시가 건물 150M → 환산취득가 = 500M × 150M ÷ 800M = 93,750,000 (= base)
+ *   K-5 — 당초 증여자 취득시 기준시가 건물 150M → 환산취득가 = 500M × 150M ÷ 800M = 93,750,000 — 가산세 base 는 그 건물분(V-7 · 1:1 안분 입력이면 46,875,000)
  *   가산세 = base × 5% (K-7 6,250,000 · K-5 4,687,500) · 지방소득세 10%
  * 증여자 신축일 2022-01-10 → 5년 되는 날 2027-01-10 (양도일 2026-02-16 안).
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { BG_HOUSING_HALF_SPLIT, withBgHousingHalfSplit } from "../_helpers/bg-housing-half-split";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -46,7 +47,8 @@ function info(method: Method, over: Partial<BurdenedGiftInfo> = {}, donorBuilt?:
       buildingStdPriceAtAcquisition: 150_000_000,
       ...(method === "appraisal" ? { presumedBuildingAcquisitionPrice: 200_000_000, presumedLandAcquisitionPrice: 0 } : {}),
       ...donorBasis,
-      ...(donorBuilt ? { donorBuilt } : {}),
+      // V-7 PR-2 엄격화 — 일체 주택 신축은 건물분 안분 입력이 필요하다. 1:1이라 base = 주택 전체 값 ÷ 2(`bg-housing-half-split.ts`)
+      ...(donorBuilt ? { donorBuilt: donorBuilt.buildingType === "new" && !("housing" in donorBuilt) ? { ...donorBuilt, housing: BG_HOUSING_HALF_SPLIT } : donorBuilt } : {}),
     },
     ...over,
   } as BurdenedGiftInfo;
@@ -54,7 +56,7 @@ function info(method: Method, over: Partial<BurdenedGiftInfo> = {}, donorBuilt?:
 
 function run(i: BurdenedGiftInfo, extra: Partial<TransferTaxInput> = {}, ct: Record<string, unknown> = {}) {
   return calculateTransferTax(
-    baseTransferInput({
+    withBgHousingHalfSplit(baseTransferInput({
       propertyType: "housing",
       transferType: "burdened_gift",
       acquisitionCause: "carryover_gift",
@@ -77,34 +79,34 @@ function run(i: BurdenedGiftInfo, extra: Partial<TransferTaxInput> = {}, ct: Rec
       isOneHousehold: false,
       householdHousingCount: 2,
       ...extra,
-    } as Partial<TransferTaxInput>),
+    } as Partial<TransferTaxInput>), extra),
     rates,
   );
 }
 const echoOf = (r: ReturnType<typeof run>) => r.carryoverTaxationDetail!.donorBuiltPenalty;
 
 describe("A 채택 — 채무비율 안분 후 건물분 환산취득가액·감정가액의 5%", () => {
-  it("K-7 감정가액: base 125,000,000 · 가산세 6,250,000 · 총납부 85,923,062 → 92,798,062", () => {
+  it("K-7 감정가액: base 62,500,000(건물분 · V-7 전 125,000,000) · 가산세 3,125,000 · 총납부 85,923,062 → 89,360,562", () => {
     const off = run(info("appraisal"));
     const on = run(info("appraisal", {}, NEW_DB));
     expect(off.carryoverTaxationDetail!.adoptedScenario).toBe("A");
     expect(off.totalTax).toBe(85_923_062);
     expect(on.carryoverTaxationDetail!.adoptedScenario).toBe("A");
-    expect(on.penaltyBase).toBe(125_000_000);
-    expect(on.penaltyTax).toBe(6_250_000);
-    expect(on.totalTax).toBe(92_798_062);
+    expect(on.penaltyBase).toBe(62_500_000);
+    expect(on.penaltyTax).toBe(3_125_000);
+    expect(on.totalTax).toBe(89_360_562);
     expect(on.determinedTax).toBe(off.determinedTax); // ②3호 비교는 가산세 前 결정세액 — 불변
-    expect(echoOf(on)).toMatchObject({ applied: true, base: 125_000_000, penalty: 6_250_000, buildingType: "new", constructionDate: "2022-01-10", fifthAnniversary: "2027-01-10", burdenedGift: { method: "appraisal" } });
+    expect(echoOf(on)).toMatchObject({ applied: true, base: 62_500_000, penalty: 3_125_000, buildingType: "new", constructionDate: "2022-01-10", fifthAnniversary: "2027-01-10", burdenedGift: { method: "appraisal" } });
   });
 
-  it("K-5 환산: base 93,750,000 · 가산세 4,687,500 · 총납부 95,066,812 → 100,223,062", () => {
+  it("K-5 환산: base 46,875,000(건물분 · V-7 전 93,750,000) · 가산세 2,343,750 · 총납부 95,066,812 → 97,644,937", () => {
     const off = run(info("converted"));
     const on = run(info("converted", {}, NEW_DB));
     expect(off.totalTax).toBe(95_066_812);
-    expect(on.penaltyBase).toBe(93_750_000);
-    expect(on.penaltyTax).toBe(4_687_500);
-    expect(on.totalTax).toBe(100_223_062);
-    expect(echoOf(on)).toMatchObject({ applied: true, base: 93_750_000, penalty: 4_687_500, burdenedGift: { method: "estimated" } });
+    expect(on.penaltyBase).toBe(46_875_000);
+    expect(on.penaltyTax).toBe(2_343_750);
+    expect(on.totalTax).toBe(97_644_937);
+    expect(echoOf(on)).toMatchObject({ applied: true, base: 46_875_000, penalty: 2_343_750, burdenedGift: { method: "estimated" } });
   });
 
   it("경고(warnings)에 「적용했다 + 정면 해석례 미확보 — 확인 필요」 고지가 실린다", () => {
@@ -139,8 +141,8 @@ describe("A 채택 — 채무비율 안분 후 건물분 환산취득가액·감
     expect(off.determinedTax).toBe(0);
     expect(on.determinedTax).toBe(0);
     expect(on.penaltyTax).toBeGreaterThan(0);
-    expect(on.penaltyBase).toBe(1_250_000_000);
-    expect(on.penaltyTax).toBe(62_500_000);
+    expect(on.penaltyBase).toBe(625_000_000);
+    expect(on.penaltyTax).toBe(31_250_000);
   });
 });
 
@@ -162,10 +164,10 @@ describe("가산세가 붙지 않는 경우 — echo 로 이유를 말한다 (R2
     expect(echoOf(r)).toMatchObject({ applied: false, notAppliedReason: "zero_base", fifthAnniversary: "2027-01-10" });
   });
 
-  it("주택 K-5: 당초 증여자 「토지 1억 · 건물 0」 = 「0 · 1억」 — 같은 base(500M × 1억 ÷ 800M = 62,500,000) · 가산세 3,125,000", () => {
+  it("주택 K-5: 당초 증여자 「토지 1억 · 건물 0」 = 「0 · 1억」 — 같은 base(500M × 1억 ÷ 800M = 62,500,000의 건물분 31,250,000) · 가산세 1,562,500", () => {
     const a = run(info("converted", {}, NEW_DB, { landStdPriceAtAcquisition: 100_000_000, buildingStdPriceAtAcquisition: 0 }));
     const b = run(info("converted", {}, NEW_DB, { landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 100_000_000 }));
-    expect(echoOf(a)).toMatchObject({ applied: true, base: 62_500_000, penalty: 3_125_000 });
+    expect(echoOf(a)).toMatchObject({ applied: true, base: 31_250_000, penalty: 1_562_500 });
     expect(a.totalTax).toBe(b.totalTax);
   });
 
@@ -173,7 +175,7 @@ describe("가산세가 붙지 않는 경우 — echo 로 이유를 말한다 (R2
     const late = run(info("converted", {}, { buildingType: "new", constructionDate: D("2021-02-15") }));
     expect(late.penaltyTax).toBe(0);
     expect(echoOf(late)).toMatchObject({ applied: false, notAppliedReason: "outside_penalty_window", fifthAnniversary: "2026-02-15" });
-    expect(run(info("converted", {}, { buildingType: "new", constructionDate: D("2021-02-16") })).penaltyTax).toBe(4_687_500);
+    expect(run(info("converted", {}, { buildingType: "new", constructionDate: D("2021-02-16") })).penaltyTax).toBe(2_343_750);
   });
 
   it("이월과세 자체 배제(관계 «그 외»): carryover_excluded", () => {
@@ -209,9 +211,9 @@ describe("두 축 분리 — 본인 신축 플래그만 오면 종전 그대로 
   it("[G-4] 감정가액 × 본인 신축 플래그 × 이월과세는 종전처럼 차단", () => {
     expect(() => run(info("appraisal"), own)).toThrow(/제114조의2/);
   });
-  it("K-5 × 본인 신축 플래그(API 직접 호출)는 종전 거동 — A 채택 환산 base 93,750,000 에 가산세 4,687,500 (화면은 이월과세에서 이 플래그를 보내지 않는다)", () => {
+  it("K-5 × 본인 신축 플래그(API 직접 호출)는 종전 거동 — A 채택 환산 base 의 건물분 46,875,000 에 가산세 2,343,750 (화면은 이월과세에서 이 플래그를 보내지 않는다)", () => {
     const r = run(info("converted"), own);
-    expect(r.penaltyTax).toBe(4_687_500);
+    expect(r.penaltyTax).toBe(2_343_750);
     expect(r.carryoverTaxationDetail!.donorBuiltPenalty).toBeUndefined();
   });
   it("donorBuilt 부재: echo 없음 · 가산세 0 · 총납부 현행", () => {
