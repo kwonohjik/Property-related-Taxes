@@ -72,8 +72,10 @@ function unreachableReason(input: TransferTaxInput): string | undefined {
   const law = TRANSFER.BUILDING_PENALTY;
   if (input.propertyType !== "housing")
     return `일체 주택의 건물분 가산세 입력(${FIELD})은 주택에만 보낼 수 있습니다 — 건물 단독은 전체가 건물분이라 필요 없습니다(${law}).`;
+  // 부담부증여는 §159 스텝이 이 입력을 읽어 건물 자리(주택 전체) 값을 건물분으로 나눈다(`bgHousingBuildingPenaltyBase` · V-7) — 이 leaf 의 일반 양도 base 는 쓰지 않는다.
+  //   입력 검사는 `assertSelfBuiltHousingInput`의 부담부증여 분기가 따로 한다.
   if (input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift" || input.burdenedGiftInfo)
-    return `부담부증여는 §159 스텝이 토지·건물을 따로 구해 이미 건물분을 base 로 쓴다 — ${FIELD} 로 받지 않습니다(${law}).`;
+    return `부담부증여의 ${FIELD} 는 §159 스텝이 읽습니다 — 일반 양도 가산세 base 로 쓰지 않습니다(${law}).`;
   if (input.acquisitionCause !== undefined && input.acquisitionCause !== "purchase")
     return `${FIELD} 는 본인이 신축해 매매로 취득한 주택에만 적용됩니다 — 이월과세·상속·증여는 취득 경위가 다릅니다(${law}).`;
   if (input.isSelfBuilt !== true) return `${FIELD} 는 본인 신축(isSelfBuilt)일 때만 보낼 수 있습니다(${law}).`;
@@ -95,6 +97,7 @@ export function assertSelfBuiltHousingInput(input: TransferTaxInput): void {
   const sb = input.selfBuiltHousing;
   if (!sb) return;
   const law = TRANSFER.BUILDING_PENALTY;
+  if (input.transferType === "burdened_gift" && input.burdenedGiftInfo) return assertBgSelfBuiltHousingInput(input, sb);
   const why = unreachableReason(input);
   if (why) invalid(why);
 
@@ -128,6 +131,31 @@ export function assertSelfBuiltHousingInput(input: TransferTaxInput): void {
     invalid("일체 주택의 건물분을 구하려면 취득 당시 주택공시가격(개별주택가격·공동주택가격)이 필요합니다.", "standardPriceAtAcquisition");
   if (!positive(input.standardPriceAtTransfer))
     invalid("일체 주택의 건물분을 구하려면 양도 당시 주택공시가격(개별주택가격·공동주택가격)이 필요합니다.", "standardPriceAtTransfer");
+}
+
+/**
+ * 부담부증여 × 일체 주택 × 신축 — §159 스텝(`bgHousingBuildingPenaltyBase`)이 읽는 건물분 안분 입력 검사(V-7 · `bg-housing-114-2-building-base.plan.md`).
+ * 본인 신축과 이월과세 당초 증여자 신축(채택 입력에 `donorBuilt.housing`을 옮겨 싣는다) 모두 이 분기다. 닿을 수 없는 조합·모자란 입력은 던진다(조용히 무시하지 않는다).
+ */
+function assertBgSelfBuiltHousingInput(input: TransferTaxInput, sb: SelfBuiltHousingInput): void {
+  const law = TRANSFER.BUILDING_PENALTY;
+  const method = input.burdenedGiftInfo!.acquisitionMethod;
+  if (input.propertyType !== "housing") invalid(`일체 주택의 건물분 가산세 입력(${FIELD})은 주택에만 보낼 수 있습니다(${law}).`);
+  if (input.isSelfBuilt !== true) invalid(`${FIELD} 는 신축(본인 신축 또는 당초 증여자 신축)일 때만 보낼 수 있습니다(${law}).`);
+  if (input.mixedUse) invalid(`겸용주택의 가산세 base 는 이 입력으로 받지 않습니다(${law}).`);
+  if (input.buildingType === "extension") invalid(`증축은 증축한 부분 한정 base 가 따로 있어 ${FIELD} 로 받지 않습니다(${law}).`);
+  if (input.burdenedGiftInfo!.valuationMode !== "sangjeungbeop_market" || (method !== "converted" && method !== "appraisal"))
+    invalid(`부담부증여의 ${FIELD} 는 시가 평가의 환산취득가액·감정가액일 때만 쓰입니다(${law}).`);
+  const landAtAcq = calcLandStdPriceAtAcq(sb.landPricePerSqmAtAcquisition ?? 0, sb.landArea ?? 0);
+  if (method === "appraisal") {
+    if (!positive(sb.buildingAppraisalValue) && (landAtAcq == null || !positive(sb.buildingStdPriceAtAcquisition)))
+      invalid(`일체 주택 감정가액의 건물분 가산세(${law})는 감정평가서의 건물 감정가액을 입력하거나, 구분 표시가 없으면 취득 당시 토지 ㎡당 개별공시지가·면적·건물 기준시가가 필요합니다.`, `${FIELD}.buildingAppraisalValue`);
+    return;
+  }
+  if (landAtAcq == null) invalid("취득 당시 건물분 기준시가를 구하려면 토지의 ㎡당 개별공시지가와 면적이 필요합니다.", `${FIELD}.landPricePerSqmAtAcquisition`);
+  if (!positive(sb.buildingStdPriceAtAcquisition)) invalid("취득 당시 건물분 기준시가를 구하려면 취득 당시 건물 기준시가가 필요합니다 — 합계에서 토지분을 빼 대신하지 않습니다.", `${FIELD}.buildingStdPriceAtAcquisition`);
+  if (!positive(sb.landStdPriceAtTransfer)) invalid("양도 당시 건물분 기준시가를 구하려면 양도 당시 토지 기준시가가 필요합니다.", `${FIELD}.landStdPriceAtTransfer`);
+  if (!positive(sb.buildingStdPriceAtTransfer)) invalid("양도 당시 건물분 기준시가를 구하려면 양도 당시 건물 기준시가가 필요합니다.", `${FIELD}.buildingStdPriceAtTransfer`);
 }
 
 /**

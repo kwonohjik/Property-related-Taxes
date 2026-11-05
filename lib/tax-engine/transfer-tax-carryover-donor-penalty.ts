@@ -370,6 +370,8 @@ export function donorBuiltFactsOf(input: TransferTaxInput): Partial<TransferTaxI
     constructionDate: input.constructionDate,
     extensionFloorArea: input.extensionFloorArea,
     extensionStdPriceAtAcquisition: input.extensionStdPriceAtAcquisition,
+    // 일체 주택 건물분 안분(V-7) — `withBgDonorBuiltPenalty`가 `donorBuilt.housing`을 옮겨 실은 값
+    selfBuiltHousing: input.selfBuiltHousing,
   };
 }
 
@@ -406,7 +408,8 @@ export function assertBgDonorBuiltInput(rawInput: TransferTaxInput, db: DonorBui
  *
  * 채택(A) 입력에 «신축·증축» 사실만 싣는다 — base 는 **기존 §159 step 이 만든다**(`transfer-tax-burdened-gift-step.ts`): K-5 는 채무비율 안분 후 건물 환산취득가
  * (W-6 단서 전 값, 증축은 증축 부분), K-7 은 안분 후 건물 감정가액(증축은 `presumedExtensionAppraisalValue × 채무비율`). A 입력의 `burdenedGiftInfo`가 이미 당초 증여자
- * 기준이라 그 base 가 곧 «증여자 기준·건물분»이다(D2·D4). 본인 신축 K-5/K-7 과 같은 규칙이다.
+ * 기준이라 그 base 가 곧 «증여자 기준»이다(D2). 건물분(D4)은 토지·건물 칸이 나뉜 일반건물에서만 그대로 맞고, 일체 주택은 `donorBuilt.housing`으로
+ * 나눈다(V-7 — 스텝 `bgHousingBuildingPenaltyBase`). 본인 신축 K-5/K-7 과 같은 규칙이다.
  */
 function withBgDonorBuiltPenalty<R extends { detail: CarryoverTaxationDetail; adoptedInput: TransferTaxInput }>(
   rawInput: TransferTaxInput,
@@ -424,7 +427,8 @@ function withBgDonorBuiltPenalty<R extends { detail: CarryoverTaxationDetail; ad
   if (!bg) throw new Error("부담부증여 가산세에는 본 계산 함수가 필요합니다(calcCarryoverScenarios 가 넘긴다).");
 
   const method = rawInput.burdenedGiftInfo!.acquisitionMethod === "appraisal" ? ("appraisal" as const) : ("estimated" as const);
-  const patched: TransferTaxInput = { ...adoptedInput, ...donorBuiltPartPatch(db) };
+  // 일체 주택 — 건물분 안분 입력을 §159 스텝이 읽는 칸으로 옮긴다(V-7 · `bg-housing-114-2-building-base.plan.md`). 없으면 종전 base(PR-1).
+  const patched: TransferTaxInput = { ...adoptedInput, ...donorBuiltPartPatch(db), ...(db.housing ? { selfBuiltHousing: db.housing } : {}) };
   const fifth = ymd(addYears(db.constructionDate, 5));
   if (calculateBuildingPenalty({ ...patched, acquisitionMethod: method }, 1) === null)
     return notApplied("outside_penalty_window", { fifthAnniversary: fifth });
