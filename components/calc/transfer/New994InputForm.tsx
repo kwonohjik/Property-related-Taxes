@@ -18,6 +18,12 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
+import { toOptionalDate } from "@/lib/api/date-coerce";
+import {
+  NEW_99_4_HANOK_DECREE,
+  NEW_99_4_STD_PRICE_ADDENDA,
+} from "@/lib/tax-engine/legal-codes/transfer";
+import { resolveNew994StdPriceLimit } from "@/lib/tax-engine/transfer-reductions/new-99-4";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 
 type New994Rural = Extract<AssetReductionForm, { type: "new_99_4_rural" }>;
@@ -67,6 +73,21 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
     () => diffYears(acquisitionDate, transferDate ?? ""),
     [acquisitionDate, transferDate],
   );
+
+  // 가액 한도 hint — 엔진과 같은 함수(양도일·취득일로 한도가 갈린다). store 기록 없는 파생값.
+  const stdPriceHint = useMemo(() => {
+    const transfer = toOptionalDate(transferDate);
+    const acquired = toOptionalDate(acquisitionDate);
+    if (!transfer || !acquired) {
+      return "한도는 양도일·취득일에 따라 다릅니다(2023.1.1. 이후 양도 3억, 그 전 2억 등) — 양도일을 먼저 입력하세요";
+    }
+    const [amount, note] = resolveNew994StdPriceLimit({
+      transferDate: transfer,
+      ruralHouseAcquisitionDate: acquired,
+      isRegisteredHanok: value.isRegisteredHanok,
+    }).label.split(" — ");
+    return `주택+부속토지 합계 — ${amount} 이하${note ? ` (${note})` : ""} 요건 (양도일·취득일 기준, §99의4①)`;
+  }, [transferDate, acquisitionDate, value.isRegisteredHanok]);
 
   return (
     <div className="mt-2 ml-4 space-y-3">
@@ -131,7 +152,7 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
           onChange={(v) => onChange({ ruralHouseStdPrice: v })}
           jibun={jibun}
           referenceDate={acquisitionDate}
-          hint="주택+부속토지 합계 — 3억 이하 (등록 한옥 4억) 요건 (§99의4①)"
+          hint={stdPriceHint}
           testidPrefix="new994-stdprice"
         />
         <ToggleCard
@@ -139,7 +160,7 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
           checked={value.isRegisteredHanok}
           onCheckedChange={(v) => onChange({ isRegisteredHanok: v })}
           title="등록 한옥"
-          description="지자체 등록 한옥은 한도 4억 (령⑭)"
+          description={`2014.1.1. 이후 구입한 지자체 등록 한옥은 한도 4억 (${NEW_99_4_STD_PRICE_ADDENDA.HANOK_2014_PURCHASE} · ${NEW_99_4_HANOK_DECREE})`}
           tone="sky"
         />
       </ToneCard>

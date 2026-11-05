@@ -44,7 +44,7 @@ export interface New994EvaluationInput {
   transferDate: Date;
   /** 농어촌주택등 취득일 — 시한(rural 2003.8.1~/hometown 2009.1.1~, ~2028.12.31)·3년 보유·취득순서 */
   ruralHouseAcquisitionDate?: Date;
-  /** 취득 당시 주택+부속토지 기준시가 합계 (원) — 3억/4억(한옥) 한도 */
+  /** 취득 당시 주택+부속토지 기준시가 합계 (원) — 한도는 양도일·취득일별(2억/3억, 등록 한옥 4억) */
   ruralHouseStdPrice?: number;
   isRegisteredHanok: boolean;          // 령⑭ 등록 한옥 → 한도 4억
   isAdjacentArea: boolean;             // ③ 같은/연접 읍면동(시) — true면 배제
@@ -81,7 +81,7 @@ export type New994Result =
 1. 필수 입력: `ruralHouseAcquisitionDate`·`ruralHouseStdPrice` 미입력 → 사유 (자동 fallback 금지).
 2. 시한: id별 시기(`RURAL_FROM`/`HOMETOWN_FROM`) ≤ 취득일 ≤ `PERIOD_TO` — **D-1 정정: period-check가 아닌 evaluator 자체 판정** (period-check 항목은 낙관 통과로 변경).
 3. 취득순서: `ruralHouseAcquisitionDate > generalHouseAcquisitionDate` (① "취득 전에 보유하던").
-4. 가액: `stdPrice ≤ (isRegisteredHanok ? 4억 : 3억)` — **경계 포함** (초과만 배제, A-9).
+4. 가액: `stdPrice ≤ resolveNew994StdPriceLimit({ transferDate, ruralHouseAcquisitionDate, isRegisteredHanok }).limit` — **경계 포함** (초과만 배제, A-9). 한도: 2023.1.1. 이후 양도 3억 / 그 전 양도 2억(2009.1.1. 이후 취득) · 1억5천만원(2008년 취득) · 7천만원(2008.1.1. 전 취득) / 등록 한옥 4억(2014.1.1. 이후 구입분부터). 격자·anchor: `docs/00-pm/new-housing-99-review-fixes.plan.md` §3, `__tests__/tax-engine/transfer/new-99-4-std-price-cap.anchor.test.ts`. (A-2·A-9의 3억/4억은 2023.1.1. 이후 양도 기준.)
 5. 소재지·연접·(hometown) 고향 토글 검증.
 6. 보유 3년: `calculateHoldingPeriod(rural취득일, transferDate).years >= 3` — 미만이면 **eligible 유지 + `clawbackWarning: true`** (④ 선적용·⑥ 추징). 산출 연수는 `ruralHoldingYears`로 echo (결과 카드).
 

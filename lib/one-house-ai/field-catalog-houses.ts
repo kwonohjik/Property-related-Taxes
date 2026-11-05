@@ -351,14 +351,14 @@ export const ONE_HOUSE_FIELD_CATALOG_HOUSES = [
     path: "houses[].countExclusion.reduction.ruralHouseStdPrice",
     kind: "amount",
     label: "취득 당시 기준시가 합계",
-    hint: "취득 당시 주택+부속토지 기준시가 합계(원) — 3억 이하(등록 한옥 4억) 요건(§99의4①).",
+    hint: "취득 당시 주택+부속토지 기준시가 합계(원) — 한도는 양도일·농어촌주택 취득일에 따라 다르다(2023.1.1. 이후 양도 3억 · 그 전 양도 2억 · 2008년 이전 취득은 1억5천만원·7천만원, 등록 한옥 4억) 요건(§99의4①).",
     when: "houses[].countExclusion.reduction.type = new_99_4_rural 또는 new_99_4_hometown",
   },
   {
     path: "houses[].countExclusion.reduction.isRegisteredHanok",
     kind: "boolean",
     label: "등록 한옥",
-    hint: "지자체 등록 한옥이면 켠다 — 가액 한도 4억.",
+    hint: "지자체 등록 한옥이면 켠다 — 2014.1.1. 이후 구입분은 가액 한도 4억(법률 제12173호 부칙 제32조).",
     when: "houses[].countExclusion.reduction.type = new_99_4_rural 또는 new_99_4_hometown",
   },
   {
