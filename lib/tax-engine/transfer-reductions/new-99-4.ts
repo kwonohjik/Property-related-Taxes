@@ -11,7 +11,7 @@
  *   1채 취득(자기건설 포함) + 3년 이상 보유 + 취득 전부터 보유하던 일반주택 양도
  * - ①1호나목·2호다목: 취득 당시 주택+부속토지 기준시가 합계가 한도 이하 — 한도는 양도일·농어촌주택 취득일에 따라
  *   2억(2023.1.1. 전 양도) / 3억(2023.1.1. 이후 양도) / 등록 한옥 4억(2014.1.1. 이후 구입분부터) 등 (`resolveNew994StdPriceLimit`)
- * - ③: 일반주택과 같은/연접 읍·면·동(고향은 시) → 미적용
+ * - ③: 일반주택과 같은/연접 행정구역 → 미적용. 비교 단위는 시기별(읍·면·시 / 읍·면 / 읍·면·동, 고향은 시) — `new-99-4-area.ts`
  * - ④: 3년 보유 충족 전 양도해도 적용 (선적용) → ⑥ 3년 미보유 확정 시 추징 (경고 echo)
  * - 소재지(①1호가목/2호나목)·고향(①2호가목·령⑥)은 사용자 확인 토글 (별표12 자동판정 범위 외)
  *
@@ -25,6 +25,11 @@ import {
   TRANSFER_REDUCTION_ARTICLE,
 } from "../legal-codes/transfer";
 import { calculateHoldingPeriod } from "../tax-utils";
+import {
+  new994AdjacentMessage,
+  new994OpportunityZoneApplies,
+  new994RegulatedAreaLabel,
+} from "./new-99-4-area";
 import type {
   New994ArticleId,
   New994EvaluationInput,
@@ -333,29 +338,35 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
     }
   }
 
-  // 5) 소재지·연접·고향 토글 (사용자 확인 — 미확인 시 불적용 사유, 차단 아님)
+  // 5) 소재지·연접·고향 토글 (사용자 확인 — 미확인 시 불적용 사유, 차단 아님). 문언은 취득일·양도일별(new-99-4-area)
   if (input.meetsLocationRequirement !== true) {
+    const regulatedArea = new994RegulatedAreaLabel(input.ruralHouseAcquisitionDate);
     reasons.push({
       code: "LOCATION_UNCONFIRMED",
       message: isHometown
-        ? "소재지 요건(별표12 시 지역 + 수도권·조정대상지역·관광단지 아님)이 확인되지 않았습니다 (§99의4①2호나목)."
-        : "소재지 요건(읍·면 또는 별표12 동 + 배제지역 아님, 기회발전특구 포함)이 확인되지 않았습니다 (§99의4①1호가목).",
+        ? `취득 당시 소재지 요건(별표12 시 지역 + 수도권·${regulatedArea}·관광단지 아님)이 확인되지 않았습니다 (§99의4①2호나목).`
+        : `취득 당시 소재지 요건(읍·면 또는 별표12 시 지역에 속한 동 + 수도권·도시지역·${regulatedArea}·허가구역·관광단지 아님${
+            new994OpportunityZoneApplies(input.transferDate) ? ", 기회발전특구 소재 시 충족" : ""
+          })이 확인되지 않았습니다 (§99의4①1호가목).`,
       legalBasis,
     });
   }
   if (input.isAdjacentArea === true) {
     reasons.push({
       code: "ADJACENT_AREA",
-      message: isHometown
-        ? "고향주택과 일반주택이 같은 시 또는 연접한 시에 있으면 적용되지 않습니다 (§99의4③)."
-        : "농어촌주택과 일반주택이 같은 읍·면·동 또는 연접한 읍·면·동에 있으면 적용되지 않습니다 (§99의4③).",
+      message: new994AdjacentMessage({
+        isHometown,
+        ruralHouseAcquisitionDate: input.ruralHouseAcquisitionDate,
+        transferDate: input.transferDate,
+      }),
       legalBasis: "조특법 §99의4③",
     });
   }
   if (isHometown && input.meetsHometownRequirement !== true) {
     reasons.push({
       code: "HOMETOWN_UNCONFIRMED",
-      message: "고향 요건(가족관계등록부 등록기준지 10년 이상 또는 10년 이상 거주한 시)이 확인되지 않았습니다 (§99의4①2호가목·령⑥).",
+      message:
+        "고향 요건(가족관계등록부에 10년 이상 등재된 등록기준지이면서 10년 이상 거주한 사실이 있는 시 지역 — 이와 연접한 시 지역과 두 요건을 모두 충족한 군 지역에 연접한 시 지역 포함)이 확인되지 않았습니다 (§99의4①2호가목·령⑥).",
       legalBasis: "조특령 §99의4⑥",
     });
   }
