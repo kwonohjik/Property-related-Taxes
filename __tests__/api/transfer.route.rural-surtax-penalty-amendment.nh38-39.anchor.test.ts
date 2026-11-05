@@ -11,6 +11,7 @@
  *   결정되지 않았다 — 현행 산식(2,542,911)을 그대로 고정한다(V-13 미확인).
  *
  * 경로: JSON body → ⑫ Zod → ⑭ route(2-pass) → 엔진. 세율표는 mock(`makeMockRates`)이라 정본 세액이 아니다.
+ * 시료는 §99·§99의3 「최초 계약」 칸을 «예»로 둔다 — 빈 값은 불성립 + 확인 필요다(#2938).
  * Pre-Do 실측(수정 전 · 같은 픽스처): §99 totalTax 116,564,589(농특세분 가산세 0) · C1 농특세 줄 없음 ·
  *   C4 수정신고 총 납부세액 9,019,634만 · C6 농특세 과납 8,437,000 미표시.
  */
@@ -65,7 +66,7 @@ const BASE99 = {
   isOneHousehold: false, residencePeriodMonths: 0, annualBasicDeductionUsed: 0,
 };
 const R99 = (std5: number) => ({
-  type: "new_99", acquisitionType99: "from_builder", contractDate99: "1998-06-01",
+  type: "new_99", acquisitionType99: "from_builder", firstContract99: "yes", contractDate99: "1998-06-01",
   isResident99: true, isHousingConstructionBusiness99: false, isNationalHousing99: true,
   standardPriceAtAcquisition99: 100_000_000, standardPriceAt5Years99: std5,
   standardPriceAtTransfer99: 250_000_000, hasOccupancyAtContract99: false, exclusiveAreaSqm99: 84,
@@ -119,7 +120,7 @@ describe("NH-38 단건 route — 농특세 미납분 납부지연가산세(소�
     const r = await result({
       ...BASE99, transferPrice: 800_000_000, acquisitionDate: "2003-09-01", transferDate: "2022-08-01",
       reductions: [{
-        type: "new_99_3", contractDate993: "2002-03-01", acquisitionType993: "from_builder", region993: "outside_speculation",
+        type: "new_99_3", contractDate993: "2002-03-01", acquisitionType993: "from_builder", firstContract993: "yes", region993: "outside_speculation",
         isResident993: true, isHousingConstructionBusiness993: false, exclusiveAreaSqm993: 84,
         standardPriceAtAcquisition993: 100_000_000, standardPriceAt5Years: 200_000_000, standardPriceAtTransfer993: 400_000_000,
       }],
@@ -142,7 +143,7 @@ const D = (v: string) => new Date(v);
 const R993redev = {
   type: "new_99_3" as const, contractDate993: "2002-01-01",
   standardPriceAtAcquisition993: 100_000_000, standardPriceAt5Years: 160_000_000, standardPriceAtTransfer993: 250_000_000,
-  region993: "outside_speculation" as const, acquisitionType993: "from_builder" as const,
+  region993: "outside_speculation" as const, acquisitionType993: "from_builder" as const, firstContract993: "yes" as const,
 };
 
 describe("NH-38 형제 경로", () => {
