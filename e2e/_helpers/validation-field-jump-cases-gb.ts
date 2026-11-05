@@ -143,6 +143,12 @@ export const GB_FIELD_JUMP_CASES: FieldJumpCase[] = [
     name: "gb: gbBuildingDecedentAcquisitionDate (건물만 상속 · 분리 ON)", field: "gbBuildingDecedentAcquisitionDate", step: 0, assetIndex: A, message: /^자산: 건물 피상속인 취득일/,
     form: sep({ gbBuildingAcquisitionCause: "inheritance", gbBuildingInheritedValue: "100000000" }),
   },
+  {
+    // 순서 — 건물 상속개시일(2015-03-01) 뒤 날짜. 종전엔 ⑧·⑫ 모두 통과(계획서 gb-building-decedent-order.plan.md)
+    name: "gb: gbBuildingDecedentAcquisitionDate (건물 상속개시일 이후 · 순서)", field: "gbBuildingDecedentAcquisitionDate", step: 0, assetIndex: A,
+    message: /^자산: 건물 피상속인 취득일은 건물 상속개시일보다 이전이어야/,
+    form: sep({ gbBuildingAcquisitionCause: "inheritance", gbBuildingInheritedValue: "100000000", gbBuildingDecedentAcquisitionDate: "2016-01-01" }),
+  },
   { name: "gb: publishedValueAtInheritance", field: "publishedValueAtInheritance", step: 0, assetIndex: A, message: /^자산: 상속개시일 토지 평가액/, form: inh({ publishedValueAtInheritance: "" }) },
   { name: "gb: gbBuildingInheritedValue", field: "gbBuildingInheritedValue", step: 0, assetIndex: A, message: /^자산: 상속개시일 건물 신고가액/, form: inh({ gbBuildingInheritedValue: "" }) },
   {

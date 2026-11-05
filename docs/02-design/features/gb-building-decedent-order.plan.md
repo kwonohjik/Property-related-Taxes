@@ -50,3 +50,29 @@
 2. 구현: ⑧ `validateGbDecedentDates`에 순서 검사 · ⑫ D3 옆에 같은 검사 · ⑫ 문구 정정.
 3. 뮤테이션 → 회귀(`__tests__/calc` · `components` · `lib` · `api`) → tsc·eslint → Playwright(오류 클릭 → 칸 이동).
 4. 결과를 §5에 적는다.
+
+## 5. 구현 결과 (2026-11-05 · 결정: Q-1 a · Q-2 a)
+
+### 5.1 변경
+
+| 항목 | 파일 | 내용 |
+|---|---|---|
+| Q-1 ⑧ | `lib/calc/transfer-tax-validate-gb-required.ts` `validateGbDecedentDates` | `gbBuildingOwnDecedentDate`(분리 ON · 건물 상속 · 입력값) ≥ `acquisitionDate`(건물 상속개시일)이면 「건물 피상속인 취득일은 건물 상속개시일보다 이전이어야 합니다.」 · 칸 키 `gbBuildingDecedentAcquisitionDate` |
+| Q-1 ⑫ | `lib/api/transfer-tax-schema-required-refines-gb.ts` D3′ | `buildingDecedentAcquisitionDate` ≥ `buildingAcquisitionDate`이면 같은 문구로 400 |
+| Q-2 | 같은 ⑫ 파일 D1·D3 | 「(소득세법 §95④·§104②1호)」 → 「(소득세법 §104②1호)」 |
+
+엔진 불변. 정상 입력의 세액 불변(아래 anchor).
+
+### 5.2 테스트
+
+- route anchor `__tests__/api/gb-building-decedent-order.anchor.test.ts` 7건 — 수정 전 4건 실패 → 통과:
+  - 정상 2000 → 151,726,963 · 2023-12-01 → 155,629,809(세액 불변).
+  - 2024-01-10 · 2025-01-01 · 2027-01-01 → ⑧ `gbBuildingDecedentAcquisitionDate` · ⑫ 400 `generalBuildingValuation.buildingDecedentAcquisitionDate`.
+  - 대조: 토지만 상속(건물 매매)은 무관 · Q-2 ⑫ 비움 문구.
+- 입력칸 이동 레지스트리(`e2e/_helpers/validation-field-jump-cases-gb.ts`) +1 — vitest 통과 · E2E(headless Playwright) 일반건물 피상속인 3건 통과(새 순서 케이스 포함 — 오류 클릭 → 그 칸).
+- 뮤테이션 4건 모두 잡힘: M1 ⑧ 순서 검사 제거(3 실패) · M2 ⑫ 순서 검사 제거(3) · M3 ⑧ `>=` → `>`(1 — 같은 날) · M4 ⑫ 옛 인용 복원(1).
+- 회귀(묶음별 순차 실행 — 메모리 부족 회피): `__tests__/api` 5,853 · `lib` 3,328 · `components` 6,781 · `calc` 11,164 모두 통과 · tsc 0 · eslint 0.
+
+### 5.3 남은 것
+
+- V-1(토지·건물 모두 상속 · 건물 피상속인 취득일 비움 · 상속개시일이 다를 때 토지 값 fallback) — §3 그대로.

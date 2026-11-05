@@ -134,11 +134,11 @@ export function refineGbValuationRequired(v: GbValuationLike, ctx: z.RefinementC
       "양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).",
     );
 
-  // D1 — 토지 상속: 피상속인 취득일(§95④·§104②1호 단기보유 통산). 엔진 GB 경로는 이 서브객체의 값을
+  // D1 — 토지 상속: 피상속인 취득일(§104②1호 세율 보유기간 — 일반건물은 가업상속 입력이 없어 §95④ 단서 미적용). 엔진 GB 경로는 이 서브객체의 값을
   //      읽는다(최상위 `decedentAcquisitionDate`가 아니다) — 비우면 상속개시일부터 기산해 단기세율이 됐다.
   //      ⑧ `transfer-tax-validate-gb-required.ts` `validateGbDecedentDates`.
   if (v.landAcquisitionCause === "inheritance" && !v.decedentAcquisitionDate)
-    issue(["decedentAcquisitionDate"], "상속으로 취득한 토지는 피상속인 취득일이 필요합니다 (소득세법 §95④·§104②1호)");
+    issue(["decedentAcquisitionDate"], "상속으로 취득한 토지는 피상속인 취득일이 필요합니다 (소득세법 §104②1호)");
 
   // D3 — 건물 상속: 건물 피상속인 취득일. 토지도 상속이면 토지의 피상속인 취득일을 함께 쓴다
   //      (엔진 `buildingDecedentAcquisitionDate ?? decedentAcquisitionDate` — 같은 fallback).
@@ -147,7 +147,17 @@ export function refineGbValuationRequired(v: GbValuationLike, ctx: z.RefinementC
     !v.buildingDecedentAcquisitionDate &&
     !(v.landAcquisitionCause === "inheritance" && v.decedentAcquisitionDate)
   )
-    issue(["buildingDecedentAcquisitionDate"], "상속으로 취득한 건물은 피상속인 취득일이 필요합니다 (소득세법 §95④·§104②1호)");
+    issue(["buildingDecedentAcquisitionDate"], "상속으로 취득한 건물은 피상속인 취득일이 필요합니다 (소득세법 §104②1호)");
+
+  // D3′ — 건물 피상속인 취득일은 건물 상속개시일보다 앞서야 한다. ⑧ `validateGbDecedentDates`와 같은 규칙
+  //       (계획서 `docs/02-design/features/gb-building-decedent-order.plan.md`).
+  if (
+    v.buildingAcquisitionCause === "inheritance" &&
+    v.buildingDecedentAcquisitionDate &&
+    v.buildingAcquisitionDate &&
+    v.buildingDecedentAcquisitionDate >= v.buildingAcquisitionDate
+  )
+    issue(["buildingDecedentAcquisitionDate"], "건물 피상속인 취득일은 건물 상속개시일보다 이전이어야 합니다");
 
   // I2 — 환산 경로(증축 없음)의 **비-환산 파트**는 그 파트의 취득가액이 필요하다. 비우면 엔진이
   //      `TaxCalculationError`(경로 없음)를 던졌다. ⑧ `transfer-tax-validate-gb.ts` V-7(상속 파트는
