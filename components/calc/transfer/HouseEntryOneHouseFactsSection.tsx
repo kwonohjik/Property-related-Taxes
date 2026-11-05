@@ -66,6 +66,10 @@ export function HouseEntryOneHouseFactsSection({ house, onUpdate, otherUocRowNum
         특례입니다. 대개 중과 배제(④)와는 요건이 다르므로 따로 받습니다 — 다만 아래 첫 항목은
         <b>두 축에 함께</b> 쓰입니다.
       </p>
+      <p className="text-xs text-muted-foreground leading-relaxed" data-testid="house-row-one-house-facts-once-note">
+        같은 주택이 조특법 등으로 이미 주택 수에서 빠지면 아래 특례(⑥·⑦·⑧)의 주택으로는 쓰지 않습니다 — 한 주택은 한 번만
+        반영합니다.
+      </p>
 
       {/* §155⑥1호 국가유산주택 */}
       <ToggleCard
