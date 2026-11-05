@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 차감형 감면(§99 신축주택 IMF 1차 · §98의8 준공후미분양 50%) — 결과 상세 카드 (P1, 2026-06-11)
+ * 차감형 감면(§99 신축주택 · §98의8 준공후미분양 50%) — 결과 상세 카드 (P1, 2026-06-11)
  *
  * ⑦ 결과 카드 — 한국어 풀어쓰기·"원" 끝 미표기·내부 id 미노출.
  * 두 조문이 result 구조 동형(차감액·5년 분기·formulaSteps·농특세)이라 공용 카드 1개로 처리.
@@ -40,7 +40,7 @@ type Detail =
 type Props = Detail & CalculatedTaxProp;
 
 const TITLES: Record<Detail["kind"], string> = {
-  new_99: "§99 — 신축주택 양도소득세 감면 (IMF 1차)",
+  new_99: "§99 — 신축주택 양도소득세 감면",
   unsold_98_8: "§98의8 — 준공후미분양주택 50% 공제",
   unsold_98_7: "§98의7 — 미분양주택 과세특례 (9억 이하)",
   unsold_99_2: "§99의2 — 신축주택등 과세특례 (신축·미분양·1세대1주택)",
@@ -70,20 +70,16 @@ const HYBRID_KINDS: ReadonlyArray<string> = [
  * - §98 → 「세율 20% 단일」은 농어촌특별세법 §2①이 정의한 「감면」(1호 세액감면 등 / 2호 열거된
  *   특례세율)에 **해당하지 않는다** ⇒ 과세표준이 성립하지 않는다
  */
-const RURAL_EXEMPT_NOTE: Record<Detail["kind"], string> = {
+const RURAL_EXEMPT_NOTE: Partial<Record<Detail["kind"], string>> = {
   unsold_98_3: "농어촌특별세 비과세 (농어촌특별세법 시행령 §4⑦1호 열거)",
   unsold_98_5: "농어촌특별세 비과세 (농어촌특별세법 시행령 §4⑦1호 열거)",
   unsold_98_2:
     "감면세액이 없어 농어촌특별세 과세표준이 발생하지 않습니다 (농어촌특별세법 §5①1호)",
   unsold_98:
     "양도소득세 세율 특례라 농어촌특별세법 §2①의 「감면」에 해당하지 않아 과세표준(§5①1호 감면세액)이 발생하지 않습니다",
-  // 아래 유형은 `ruralSurtaxExempt`가 false라 이 블록이 렌더되지 않는다(도달 불가 — 값만 채운다).
-  new_99: "농어촌특별세 비과세",
-  unsold_98_8: "농어촌특별세 비과세",
-  unsold_98_7: "농어촌특별세 비과세",
-  unsold_99_2: "농어촌특별세 비과세",
-  unsold_98_6: "농어촌특별세 비과세",
-  unsold_98_4: "농어촌특별세 비과세",
+  // 나머지 유형(§99·§98의8·§98의7·§99의2·§98의6·§98의4)은 농어촌특별세법 §4·같은 법 시행령 §4의 비과세 열거에
+  // 없다(2026-11-05 현행 본문 실측) — `ruralSurtaxExempt`가 false라 이 블록이 렌더되지 않으므로 값을 두지 않는다.
+  // 종전에는 「농어촌특별세 비과세」를 채워 두어 법령과 반대인 문구가 남아 있었다(NH-79).
 };
 
 /**
@@ -213,7 +209,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props
           </p>
         </div>
       )}
-      {isRuralExempt && (
+      {isRuralExempt && RURAL_EXEMPT_NOTE[kind] && (
         <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
           <p className="text-caption text-sky-900 dark:text-sky-300">{RURAL_EXEMPT_NOTE[kind]}</p>
         </div>
