@@ -24,6 +24,11 @@ import {
   NEW_99_4_STD_PRICE_ADDENDA,
 } from "@/lib/tax-engine/legal-codes/transfer";
 import { resolveNew994StdPriceLimit } from "@/lib/tax-engine/transfer-reductions/new-99-4";
+import {
+  new994OpportunityZoneApplies,
+  new994RegulatedAreaLabel,
+  resolveNew994AdjacentScope,
+} from "@/lib/tax-engine/transfer-reductions/new-99-4-area";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 
 type New994Rural = Extract<AssetReductionForm, { type: "new_99_4_rural" }>;
@@ -62,6 +67,37 @@ function diffYears(from: string, to: string): number | null {
   return calculateHoldingPeriod(d1, d2).years;
 }
 
+/**
+ * ③ 소재지 토글 설명 — 「취득 당시」 기준(§99의4①1호가목·2호나목). 배제 지역 문언은 취득일(지정지역→조정대상지역,
+ * 법률 제17759호 부칙 제21조①), 기회발전특구는 양도일(법률 제19936호 부칙 제16조), 수도권 예외 가평군은
+ * 양도일(조세특례제한법 시행규칙 기획재정부령 제1119호 부칙 제4조 「이 규칙 시행 이후 주택을 양도하는 경우부터」)로 갈린다. 엔진 사유와 같은 함수(`new-99-4-area`)로 문언을 고른다.
+ */
+function locationDescription(isHometown: boolean, acquisitionDate: string, transferDate: string): string {
+  const acquired = toOptionalDate(acquisitionDate);
+  const transfer = toOptionalDate(transferDate);
+  const regulated = new994RegulatedAreaLabel(acquired);
+  if (isHometown) {
+    return `취득 당시 별표12 시 지역에 있고 수도권·${regulated}·관광단지가 아니면 켜세요 (§99의4①2호나목)`;
+  }
+  const opportunity =
+    new994OpportunityZoneApplies(transfer) === false
+      ? ""
+      : " · 기회발전특구에 있으면 충족(2024.1.1. 이후 양도분부터)";
+  // 2026.2.27. 개정 전 조특령 §99의4② 「동」은 「일반주택이 소재하는 동과 같거나 연접하지 아니하는 동」이었다.
+  // 날짜 값은 위 toOptionalDate로 검증된 YYYY-MM-DD라 문자열 비교로 시기를 가른다.
+  const beforeDongRule = !acquired || acquisitionDate < "2026-01-01";
+  const dong = beforeDongRule
+    ? ` · 2026.1.1. 전 취득분이 동에 있으면 일반주택이 있는 동과 같거나 연접하지 아니하는 동이어야 합니다(2026.2.27. 개정 전 조특령 §99의4②${
+        transfer && transferDate >= "2026-02-27" ? " — 2026.2.27. 이후 양도분에 적용되는지는 확인 필요" : ""
+      })`
+    : "";
+  return (
+    `취득 당시 읍·면 또는 별표12 시 지역에 속한 동에 있고, 수도권(접경지역 예외 — 연천·가평군, 강화·옹진군은 양도일에 따라 범위가 다르며 가평군은 2025.3.21. 이후 양도분부터)·` +
+    `도시지역(인구감소지역 중 영암·해남, 태안 관광레저형 기업도시개발구역은 예외 — 조특령 §99의4④ 2023.2.28. 신설)·` +
+    `${regulated}·허가구역·관광단지가 아니면 켜세요${opportunity}${dong} (§99의4①1호가목)`
+  );
+}
+
 export function New994InputForm({ value, onChange, transferDate, rowFacts }: Props) {
   const isHometown = value.type === "new_99_4_hometown";
   const houseLabel = isHometown ? "고향주택" : "농어촌주택";
@@ -88,6 +124,20 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
     }).label.split(" — ");
     return `주택+부속토지 합계 — ${amount} 이하${note ? ` (${note})` : ""} 요건 (양도일·취득일 기준, §99의4①)`;
   }, [transferDate, acquisitionDate, value.isRegisteredHanok]);
+
+  // ③ 비교 단위 — 엔진 사유와 같은 함수(취득일·양도일별). store 기록 없는 파생값.
+  const adjacentScope = useMemo(
+    () =>
+      resolveNew994AdjacentScope({
+        isHometown,
+        ruralHouseAcquisitionDate: toOptionalDate(acquisitionDate),
+        transferDate: toOptionalDate(transferDate),
+      }),
+    [isHometown, acquisitionDate, transferDate],
+  );
+  const adjacentTail = adjacentScope
+    ? [adjacentScope.basis, adjacentScope.unsettled].filter(Boolean).join(" · ")
+    : "";
 
   return (
     <div className="mt-2 ml-4 space-y-3">
@@ -171,18 +221,18 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
           checked={value.meetsLocationRequirement}
           onCheckedChange={(v) => onChange({ meetsLocationRequirement: v })}
           title="소재지 요건 충족 확인"
-          description={
-            isHometown
-              ? "인구 등 기준의 시 지역(별표12) 소재 + 수도권·조정대상지역·관광단지 아님 (§99의4①2호나목)"
-              : "읍·면(또는 별표12 동) 소재 + 수도권·도시지역·조정대상지역·허가구역·관광단지 아님. 기회발전특구 소재 시 충족 (§99의4①1호가목)"
-          }
+          description={locationDescription(isHometown, acquisitionDate, transferDate ?? "")}
           tone="rose"
         />
         <ToggleCard
           checked={value.isAdjacentArea}
           onCheckedChange={(v) => onChange({ isAdjacentArea: v })}
-          title={isHometown ? "일반주택과 같은·연접 시" : "일반주택과 같은·연접 읍면동"}
-          description={`해당되면(ON) 특례가 적용되지 않습니다 (§99의4③ — ${isHometown ? "같은 시·연접 시" : "같은 읍·면·동·연접"} 배제)`}
+          title={adjacentScope ? `일반주택과 같은·연접 ${adjacentScope.unit}` : "일반주택과 같은·연접 행정구역"}
+          description={
+            adjacentScope
+              ? `${houseLabel}과 일반주택이 행정구역상 같은 ${adjacentScope.unit} 또는 연접한 ${adjacentScope.unit}에 있으면 켜세요 — 켜면 특례가 적용되지 않습니다 (§99의4③${adjacentTail ? ` · ${adjacentTail}` : ""})`
+              : `비교할 행정구역 단위는 ${isHometown ? "양도일에 따라 다릅니다(읍·면·시 / 시)" : "취득일·양도일에 따라 다릅니다(읍·면·시 / 읍·면 / 읍·면·동)"} — 날짜를 먼저 입력하세요 (§99의4③)`
+          }
           tone="rose"
         />
         {value.type === "new_99_4_hometown" && (
@@ -190,7 +240,7 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
             checked={value.meetsHometownRequirement}
             onCheckedChange={(v) => onChange({ meetsHometownRequirement: v })}
             title="고향 요건 충족"
-            description="가족관계등록부 등록기준지 10년 이상 또는 10년 이상 거주한 시 (령⑥)"
+            description="가족관계등록부에 10년 이상 등재된 등록기준지이면서 10년 이상 거주한 사실이 있는 시 지역(이와 연접한 시 지역과 두 요건을 모두 충족한 군 지역에 연접한 시 지역 포함)이면 켜세요 — 두 요건을 모두 충족해야 합니다 (조특령 §99의4⑥)"
             tone="violet"
           />
         )}
@@ -208,12 +258,18 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
         {holdingYears !== null && holdingYears < 3 && (
           <p className="text-micro text-amber-700 dark:text-amber-300">
             ⚠ 보유 3년 미만 — 양도 후에도 특례는 적용되지만(④), 이후 {houseLabel}을 3년 이상
-            보유하지 못하게 되면 줄어든 세액을 2개월 내 납부해야 합니다 (§99의4⑥)
+            보유하지 아니하게 되면 그 날이 속하는 달의 말일부터 2개월 이내에 특례로 줄어든 세액을
+            양도소득세로 납부해야 합니다 (§99의4⑥. 수용(협의매수 포함)·사망으로 인한 상속·멸실은 제외 —
+            조특령 §99의4⑨)
           </p>
         )}
         <p className="text-micro text-emerald-700 dark:text-emerald-300">
           ※ 적격 여부·1세대1주택 판정은 계산 시 엔진이 수행합니다. 다주택 중과 주택 수에는
           반영되지 않습니다.
+        </p>
+        <p className="text-micro text-emerald-700 dark:text-emerald-300">
+          ※ 특례를 적용받으려면 과세특례신고서를 양도소득세 과세표준 신고기한(소득세법 §105·§110) 안에
+          제출해야 합니다 (조특법 §99의4⑦·조특령 §99의4⑩).
         </p>
       </div>
     </div>
