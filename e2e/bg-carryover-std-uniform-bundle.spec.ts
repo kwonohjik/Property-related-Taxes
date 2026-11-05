@@ -12,7 +12,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 const house = (id: number, over: Record<string, unknown> = {}, carryover: Record<string, unknown> = {}) => ({
   ...makeDefaultAsset(id),
-  addressJibun: `서울 강남구 테스트동 ${id}-1`, assetKind: "housing", transferType: "burdened_gift", acquisitionCause: "carryover_gift", acquisitionDate: "2023-06-01",
+  addressJibun: `제주특별자치도 강남구 테스트동 ${id}-1`, assetKind: "housing", transferType: "burdened_gift", acquisitionCause: "carryover_gift", acquisitionDate: "2023-06-01",
   carryover: {
     giftRegistryDate: "2023-06-01", donorAcquisitionDate: "2000-06-01", donorAcquisitionCause: "purchase", donorAcquisitionPrice: "100000000", useEstimatedAcquisition: false,
     estimationMode: "", giftTaxAmount: "0", donorCapitalExpenditure: "0", giftDateValuation: "600000000", exclusionDeclared: {}, donorRelation: "lineal", donorSameHousehold: "no", ...carryover,

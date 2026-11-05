@@ -39,7 +39,7 @@ vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 type Loose = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 const REDEV: Record<string, unknown> = {
-  addressJibun: "서울 강남구 테스트동 1-1",
+  addressJibun: "제주특별자치도 강남구 테스트동 1-1",
   assetKind: "redevelopment_apt",
   actualSalePrice: "525,000,000",
   redevSubject: "apt",
@@ -223,7 +223,7 @@ describe("PR-7b-4 · 범위 밖은 종전 그대로", () => {
 describe("PR-7b-4 · 리뷰 게이트 반영 (F-1 컴패니언 · F-2 입주권 엔진 가드 · 경계)", () => {
   /** 주 자산 = 매매 주택(실지 1억) · 컴패니언 = 재개발 — 같은 묶음에서 의제 컴패니언과 매매 컴패니언(K-4·K-5)을 나란히 잰다 */
   const HOUSING = {
-    addressJibun: "서울 A 1", assetKind: "housing", actualSalePrice: "300,000,000", acquisitionCause: "purchase", acquisitionDate: "2000-01-01",
+    addressJibun: "제주특별자치도 A 1", assetKind: "housing", actualSalePrice: "300,000,000", acquisitionCause: "purchase", acquisitionDate: "2000-01-01",
     transferType: "burdened_gift", bgDonorRelation: "lineal_descendant", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "300,000,000",
     bgMortgageDebtAmount: "120,000,000", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "100,000,000", standardPriceAtTransfer: "200,000,000",
   };
@@ -233,7 +233,7 @@ describe("PR-7b-4 · 리뷰 게이트 반영 (F-1 컴패니언 · F-2 입주권 
       householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, contractTotalPrice: "825000000",
       assets: [
         { ...makeDefaultAsset(1), ...HOUSING } as AssetForm,
-        { ...makeDefaultAsset(2), ...REDEV, ...MARKET, addressJibun: "서울 B 2", ...rd } as AssetForm,
+        { ...makeDefaultAsset(2), ...REDEV, ...MARKET, addressJibun: "제주특별자치도 B 2", ...rd } as AssetForm,
       ],
     }) as TransferFormData;
     const fields = allIssues(f).map((i: { field?: string }) => i.field);

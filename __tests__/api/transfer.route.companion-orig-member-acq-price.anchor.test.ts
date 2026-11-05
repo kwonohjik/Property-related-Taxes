@@ -101,7 +101,7 @@ function mkForm(assets: Partial<AssetForm>[], extra: Partial<TransferFormData>):
     (over, i) =>
       ({
         ...(i === 0 ? form.assets[0] : makeDefaultAsset(i + 1)),
-        addressJibun: i === 0 ? form.assets[0].addressJibun : "서울 강남구 테스트동 1-1",
+        addressJibun: i === 0 ? form.assets[0].addressJibun : "제주특별자치도 강남구 테스트동 1-1",
         assetId: `a${i}`,
         ...over,
       }) as AssetForm,

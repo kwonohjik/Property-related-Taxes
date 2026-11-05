@@ -171,11 +171,20 @@ describe("§99의3 — 적용 배제 (우선순위 7단계)", () => {
     expect(r.ineligibleReasons[0].code).toBe("HOUSING_CONSTRUCTION_BUSINESS");
   });
 
-  it("Case 6: 가격 급등 지역(서울) 내 → 적용 배제 (SPECULATION_AREA)", () => {
-    const input = makeBaseInput({ region: "speculation" });
+  it("Case 6: 가격 급등 지역(서울) 내 · 2003.1.1. 이후 계약 → 적용 배제 (SPECULATION_AREA)", () => {
+    // 지역 제외는 2003.1.1. 시행본(법률 제6762호)부터다 — 2003 전 계약분은 부칙 §29①로 종전 규정(NH-01).
+    const input = makeBaseInput({ region: "speculation", contractDate: new Date("2003-03-01") });
     const r = evaluateNew993(input);
     expect(r.isEligible).toBe(false);
     expect(r.ineligibleReasons[0].code).toBe("SPECULATION_AREA");
+  });
+
+  it("Case 6-b: 가격 급등 지역(서울) 내 · 2003.1.1. 전 계약(2001.5.24.) → 종전 규정이라 지역 제외 없음 (부칙 §29①)", () => {
+    // PDF 사례 26(서초, 계약 2001.5.24.) — 종전에는 지역 제외로 감면 0이었다(NH-01). docs/…/reduction-99-3-case-2023.md
+    const input = makeBaseInput({ region: "speculation" });
+    const r = evaluateNew993(input);
+    expect(r.isEligible).toBe(true);
+    expect(r.priorRuleBasis).toBe("addenda_29_1");
   });
 
   it("Case 8: 신축주택취득기간 외 (분양계약 2003.7.1) → 적용 배제 (OUT_OF_ACQUISITION_PERIOD)", () => {
@@ -195,15 +204,23 @@ describe("§99의3 — 적용 배제 (우선순위 7단계)", () => {
     expect(r.ineligibleReasons[0].code).toBe("OCCUPANCY_AT_CONTRACT");
   });
 
-  it("Case 7: 고가주택 (2003.1.1~2008.10.5 적용기준일, 양도가 6억 초과) → 적용 배제 (HIGH_VALUE_HOUSE)", () => {
-    // 분양계약일이 2003.5.1 → 적용기준일 2003.1.1~2008.10.5 → 6억 초과 시 고가
+  it("Case 7: 고가주택 (2003.1.1. 이후 계약 · 양도 2023 당시 12억 초과) → 적용 배제 (HIGH_VALUE_HOUSE)", () => {
+    // 개정규정 적용분은 양도 당시 소득세법 §89①3호 기준이다 (NH-04 · 재산세과-3466) — 종전 «계약일 축 6억»은 결함이었다.
     const input = makeBaseInput({
       contractDate: new Date("2003-05-01"),
-      wholePropertyTransferPrice: 700_000_000, // 6억 초과
+      wholePropertyTransferPrice: 1_300_000_000, // 양도일 2023-02-16 당시 12억 초과
     });
     const r = evaluateNew993(input);
     expect(r.isEligible).toBe(false);
     expect(r.ineligibleReasons[0].code).toBe("HIGH_VALUE_HOUSE");
+  });
+
+  it("Case 7-c: 2003.1.1. 이후 계약 · 양도 2023 · 7억 → 양도 당시 12억 이하라 고가주택 아님 (적용 가능)", () => {
+    const input = makeBaseInput({
+      contractDate: new Date("2003-05-01"),
+      wholePropertyTransferPrice: 700_000_000,
+    });
+    expect(evaluateNew993(input).isEligible).toBe(true);
   });
 
   it("Case 7-b: 분양계약일 ~2002.9.30 + 면적 165㎡ 미달 → 고가주택 아님 (적용 가능)", () => {
@@ -260,12 +277,14 @@ describe("§99의3 — Case 13: 자기건설 (2호) 본격 분기 (P2-2)", () =>
   });
 
   it("자기건설(2호) + 고가주택 적용기준일은 사용승인일 기준 (분양계약일 없음)", () => {
-    // 자기건설에서 고가주택 적용기준일은 contractDate 없으므로 usageApprovalDate fallback
+    // 자기건설에서 고가주택 적용기준일은 contractDate 없으므로 usageApprovalDate fallback.
+    // 사용승인 2003.5.1.은 개정규정 적용분(착공 «아니오») → 양도 당시(2023) 12억 초과 시 고가 (NH-04).
     const input = makeBaseInput({
       acquisitionType: "self_built",
       contractDate: undefined,
-      usageApprovalDate: new Date("2003-05-01"), // ~2008.10.5 → 6억 초과 시 고가
-      wholePropertyTransferPrice: 700_000_000, // 6억 초과
+      usageApprovalDate: new Date("2003-05-01"),
+      constructionStartedBefore2003: "no",
+      wholePropertyTransferPrice: 1_300_000_000,
     });
     const r = evaluateNew993(input);
     expect(r.isEligible).toBe(false);

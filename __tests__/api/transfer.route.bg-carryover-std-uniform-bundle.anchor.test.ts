@@ -62,7 +62,7 @@ const asset = (kind: Kind, win: Win, id: number, carry: boolean, ...over: Partia
       ...(carry ? { buildingCarryover: { ...CARRYOVER_DEFAULTS, donorAcquisitionDate: "2000-06-01" }, bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000" } : {}),
     });
   return Object.assign({ ...makeDefaultAsset(id) }, x({
-    addressJibun: `서울 강남구 테스트동 ${id}-${id}`, transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_standard", bgDonorRelation: "lineal_descendant",
+    addressJibun: `제주특별자치도 강남구 테스트동 ${id}-${id}`, transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_standard", bgDonorRelation: "lineal_descendant",
   }), base, carry ? x({ carryover: { ...CO } }) : {}, WIN[kind][win], ...over) as AssetForm;
 };
 

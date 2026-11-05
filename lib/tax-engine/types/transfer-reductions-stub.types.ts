@@ -180,6 +180,8 @@ export type TransferReductionStub =
       exclusiveAreaSqm993?: number;
       region993?: "outside_speculation" | "speculation";
       acquisitionType993?: "from_builder" | "self_built";
+      /** (2호 · 사용승인 2003.1.1.~6.30.만) 2003.1.1. 전 착공 여부 — 법률 제6762호 부칙 §29② (NH-01) */
+      constructionStartedBefore2003_993?: "yes" | "no" | "unknown";
       hasOccupancyAtContract?: boolean;
       isResident993?: boolean;
       isHousingConstructionBusiness993?: boolean;

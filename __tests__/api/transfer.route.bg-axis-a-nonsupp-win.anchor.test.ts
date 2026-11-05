@@ -45,7 +45,7 @@ const x = (o: Record<string, unknown>) => o as unknown as Partial<AssetForm>;
 /** 주택 — 물건 전체 시가·기준시가 10억 · 취득시 기준시가 5억 · 실지 4억. 시가 모드 기본. 채무는 호출이 정한다. */
 const house = (id: number, ...over: Partial<AssetForm>[]) =>
   Object.assign({ ...makeDefaultAsset(id) }, x({
-    assetId: `h${id}`, addressJibun: `서울 강남구 테스트동 ${id}-1`, assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-01-01",
+    assetId: `h${id}`, addressJibun: `제주특별자치도 강남구 테스트동 ${id}-1`, assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-01-01",
     standardPriceAtTransfer: "1000000000", standardPriceAtAcq: "500000000", useEstimatedAcquisition: false, transferType: "burdened_gift",
     bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1000000000", bgDonorRelation: "lineal_descendant",
     bgLendingDepositTotal: "0", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "400000000", ownershipNumerator: "100", ownershipDenominator: "100",

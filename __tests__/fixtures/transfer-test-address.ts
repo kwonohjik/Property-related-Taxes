@@ -11,8 +11,12 @@
  *    [[feedback_fixture_default_masks_gate_defect]]
  */
 
-/** 픽스처 공용 지번. 실제 조회를 타지 않는 문자열이면 충분하다(⑧은 비어 있는지만 본다). */
-export const TEST_JIBUN = "서울 강남구 테스트동 1-1";
+/**
+ * 픽스처 공용 지번 — ⑧은 비어 있는지만 보지만, **조정대상지역 주소 문자열 판정은 이 값을 읽는다**(법정동코드가 없을 때 · `checkRegulatedArea`).
+ * 지정 이력이 없는 시·도(제주특별자치도)라 「조정대상지역 아님」으로 판정된다. 종전 「서울 강남구 …」는 시·도 약칭이라 「데이터 미수록 → 아님」으로
+ * 떨어졌을 뿐이다 — 약칭 정규화(계획서 regulated-area-abbrev-address) 뒤에는 서울 강남구 = 조정대상지역이 되어 이 시료에 기댄 세액이 뒤집힌다.
+ */
+export const TEST_JIBUN = "제주특별자치도 강남구 테스트동 1-1";
 
 /** 폼의 모든 자산에 소재지를 채워 돌려준다(이미 있으면 유지). 원본을 그대로 반환한다. */
 export function withTestAddress<T extends { assets?: unknown[] }>(form: T): T {

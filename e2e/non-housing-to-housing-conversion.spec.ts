@@ -30,7 +30,7 @@ function seedForm(
         householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         assets: [{
-          ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+          ...makeDefaultAsset(1), addressJibun: "제주특별자치도 강남구 테스트동 1-1",
           assetKind: "housing",
           acquisitionCause: "purchase",
           acquisitionDate: "2018-02-10",

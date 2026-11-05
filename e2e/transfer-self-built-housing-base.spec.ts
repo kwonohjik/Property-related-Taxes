@@ -46,7 +46,7 @@ const asset = (over: Over = {}): Over => ({
   ...DIRECT_RESIDENCE,
   // regionCode 를 두지 않는다 — 주소 코드가 있으면 조정대상지역 여부를 주소에서 판정해 폼에 싣는데(효과 실행 시점에 따라 바뀐다),
   // 함께 양도 주택 2채는 그 값에 따라 «같은 날 양도 순서» 차단(`sameDayHousingBundleIssue`)이 걸리고 풀려 SB-8 이 간헐 실패했다.
-  addressJibun: "서울 강남구 테스트동 1-1",
+  addressJibun: "제주특별자치도 강남구 테스트동 1-1",
   assetKind: "housing",
   acquisitionCause: "purchase",
   acquisitionDate: "2022-01-10",
@@ -231,7 +231,7 @@ test.describe("일체 주택 본인 신축 §114조의2 base 건물분", () => {
       assetId: makeDefaultAsset(2).assetId,
       assetLabel: "자산 2",
       acquisitionDate: "2021-06-01",
-      addressJibun: "서울 강남구 테스트동 2-2",
+      addressJibun: "제주특별자치도 강남구 테스트동 2-2",
       standardPriceAtTransfer: "1000000001",
       constructionDate: "2021-06-01",
       standardPricePerSqmAtTransfer: "6000000",

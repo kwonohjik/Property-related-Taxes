@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
+import { decedentOrderBasisDate } from "@/lib/calc/decedent-order-basis";
 import { toDate } from "@/lib/api/date-coerce";
 import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 
@@ -248,7 +249,12 @@ export function addPropertyRefines(
         path: ["decedentAcquisitionDate"],
         message: "상속의 경우 피상속인 취득일이 필수입니다",
       });
-    } else if (data.decedentAcquisitionDate >= data.acquisitionDate) {
+    } else if (
+      // 상속개시일 = 일반건물 분리 ON이면 토지 상속개시일 — ⑧ `getAssetDateOrderIssue`와 같은 기준(`decedentOrderBasisDate`)
+      data.decedentAcquisitionDate >=
+      (decedentOrderBasisDate(!!data.generalBuildingValuation && data.isSeparateAcquisition === true, data.acquisitionDate, data.landAcquisitionDate) ??
+        data.acquisitionDate)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["decedentAcquisitionDate"],

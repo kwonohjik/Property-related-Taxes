@@ -39,8 +39,8 @@ function seedForm(companionOver: Record<string, unknown> = {}) {
     state: {
       formData: {
         assets: [
-          { ...makeDefaultAsset(1), ...DIRECT_RESIDENCE, ...HOUSE, addressJibun: "서울 테스트동 1", acquisitionArea: "250", transferArea: "250" },
-          { ...makeDefaultAsset(2), ...DIRECT_RESIDENCE, ...HOUSE, addressJibun: "서울 테스트동 2", acquisitionArea: "500", transferArea: "500", ...FIVE, ...companionOver },
+          { ...makeDefaultAsset(1), ...DIRECT_RESIDENCE, ...HOUSE, addressJibun: "제주특별자치도 테스트동 1", acquisitionArea: "250", transferArea: "250" },
+          { ...makeDefaultAsset(2), ...DIRECT_RESIDENCE, ...HOUSE, addressJibun: "제주특별자치도 테스트동 2", acquisitionArea: "500", transferArea: "500", ...FIVE, ...companionOver },
         ],
         transferDate: "2026-02-16",
         contractTotalPrice: "1000000000",

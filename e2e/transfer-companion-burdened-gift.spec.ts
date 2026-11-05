@@ -32,7 +32,7 @@ function seedForm() {
         householdNoPresaleRightsConfirmed: true, // roster-required PR-D
         assets: [
           {
-            ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+            ...makeDefaultAsset(1), addressJibun: "제주특별자치도 강남구 테스트동 1-1",
             assetKind: "housing",
             acquisitionCause: "purchase",
             acquisitionDate: "2009-03-01",
@@ -44,7 +44,7 @@ function seedForm() {
             standardPriceAtAcq: "500000000",
           },
           {
-            ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
+            ...makeDefaultAsset(2), addressJibun: "제주특별자치도 강남구 테스트동 1-1",
             assetKind: "housing",
             acquisitionCause: "purchase",
             acquisitionDate: "2009-03-01",

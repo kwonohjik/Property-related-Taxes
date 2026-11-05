@@ -124,6 +124,11 @@ export type AssetReductionForm =
       region993: "outside_speculation" | "speculation";
       /** 취득 유형 — 1호(주건업 취득) | 2호(자기건설) */
       acquisitionType993: "from_builder" | "self_built";
+      /**
+       * (2호 · 사용승인 2003.1.1.~6.30.만) 2003.1.1. 전 공사 착수 여부 — 법률 제6762호 부칙 §29②. ""=미응답.
+       * 범위 밖에서는 읽지 않는다(엔진이 범위를 판정) — 남은 옛 응답은 무해하다.
+       */
+      constructionStartedBefore2003_993?: "" | "yes" | "no" | "unknown";
       /** (1호만) 매매계약일 입주사실 있는 주택 — 적용 배제 */
       hasOccupancyAtContract?: boolean;
       /** 거주자 여부 — 비거주자는 §99의3 적용 배제 */

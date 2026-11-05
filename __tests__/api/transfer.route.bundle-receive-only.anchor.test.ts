@@ -28,8 +28,8 @@ vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
 type L = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-const APT = { assetKind: "redevelopment_apt", redevSubject: "apt", acquisitionCause: "purchase", acquisitionDate: "2010-03-01", useEstimatedAcquisition: false, fixedAcquisitionPrice: "", redevActualAcquisitionPrice: "400000000", redevApprovalDate: "2018-05-01", redevRightsValue: "600000000", redevSettlementDirection: "receive", redevSettlementAmount: "50000000", redevPreApprovalExpenses: "0", redevOriginalAssetType: "housing", capitalExpenditure: "0", transferExpense: "0", addressJibun: "서울 A 1", redevReceiveOnlyMode: "yes", actualSalePrice: "50000000", standardPriceAtTransfer: "100000000" };
-const HOUSE = { assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-03-03", fixedAcquisitionPrice: "300000000", standardPriceAtTransfer: "500000000", addressJibun: "서울 B 2", actualSalePrice: "1000000000" };
+const APT = { assetKind: "redevelopment_apt", redevSubject: "apt", acquisitionCause: "purchase", acquisitionDate: "2010-03-01", useEstimatedAcquisition: false, fixedAcquisitionPrice: "", redevActualAcquisitionPrice: "400000000", redevApprovalDate: "2018-05-01", redevRightsValue: "600000000", redevSettlementDirection: "receive", redevSettlementAmount: "50000000", redevPreApprovalExpenses: "0", redevOriginalAssetType: "housing", capitalExpenditure: "0", transferExpense: "0", addressJibun: "제주특별자치도 A 1", redevReceiveOnlyMode: "yes", actualSalePrice: "50000000", standardPriceAtTransfer: "100000000" };
+const HOUSE = { assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-03-03", fixedAcquisitionPrice: "300000000", standardPriceAtTransfer: "500000000", addressJibun: "제주특별자치도 B 2", actualSalePrice: "1000000000" };
 const HH = { isOneHousehold: false, householdHousingCount: "2", residencePeriodMonths: "0", filingDate: "2026-12-31", contractTotalPrice: "1050000000", bundledSaleMode: "actual" };
 const D = (d: string, over: L = {}) => ({ ...APT, redevSettlementSaleDate: d, ...over });
 
@@ -74,14 +74,14 @@ describe("대조 — 미러가 필요한 경로는 그대로다", () => {
   });
 
   it("전 자산 단독 함께 양도 — 첫 자산의 고시일 다음날", async () => {
-    const second = { acquisitionDate: "2016-03-01", redevActualAcquisitionPrice: "100000000", addressJibun: "서울 C 3" };
+    const second = { acquisitionDate: "2016-03-01", redevActualAcquisitionPrice: "100000000", addressJibun: "제주특별자치도 C 3" };
     const a = await calc(form([D("2026-03-01"), D("2026-05-01", second)], { contractTotalPrice: "100000000" }));
     expect(a.body.transferDate).toBe("2026-03-01");
     expect(a.tax).toBe(5_626_500);
   });
 
   it("단독 없는 묶음 — 새 판정이 걸리지 않는다", () => {
-    const h2 = { ...HOUSE, addressJibun: "서울 C 3", actualSalePrice: "50000000" };
+    const h2 = { ...HOUSE, addressJibun: "제주특별자치도 C 3", actualSalePrice: "50000000" };
     expect(conflicts(form([h2, HOUSE]))).toEqual([]);
     expect(conflicts(form([h2, HOUSE], { bundledSaleMode: "apportioned" }))).toEqual([]);
   });
@@ -109,7 +109,7 @@ describe("막는 입력 — ⑧·⑫ 같은 문구", () => {
   const BLOCKED: [string, L[], L, string][] = [
     ["다른 과세연도 · APT 먼저", [D("2020-03-01"), HOUSE], {}, BUNDLE_RECEIVE_ONLY_YEAR_MESSAGE],
     ["다른 과세연도 · 주택 먼저", [HOUSE, D("2020-03-01")], {}, BUNDLE_RECEIVE_ONLY_YEAR_MESSAGE],
-    ["전 자산 단독 · 고시일 연도가 다름", [D("2025-03-01"), D("2026-03-01", { addressJibun: "서울 C 3" })], { contractTotalPrice: "100000000" }, BUNDLE_RECEIVE_ONLY_YEAR_MESSAGE],
+    ["전 자산 단독 · 고시일 연도가 다름", [D("2025-03-01"), D("2026-03-01", { addressJibun: "제주특별자치도 C 3" })], { contractTotalPrice: "100000000" }, BUNDLE_RECEIVE_ONLY_YEAR_MESSAGE],
     ["apportioned · APT 먼저", [D("2026-06-01"), HOUSE], { bundledSaleMode: "apportioned" }, BUNDLE_RECEIVE_ONLY_APPORTIONED_MESSAGE],
     ["apportioned · 주택 먼저", [HOUSE, D("2026-06-01")], { bundledSaleMode: "apportioned" }, BUNDLE_RECEIVE_ONLY_APPORTIONED_MESSAGE],
     ["계약서 가액 ≠ 수령액 · APT 먼저", [D("2026-06-01", { actualSalePrice: "70000000" }), HOUSE], { contractTotalPrice: "1070000000" }, BUNDLE_RECEIVE_ONLY_PRICE_MESSAGE],

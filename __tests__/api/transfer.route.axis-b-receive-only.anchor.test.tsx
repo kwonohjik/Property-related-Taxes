@@ -33,7 +33,7 @@ vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
 type L = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-const APT = { assetKind: "redevelopment_apt", redevSubject: "apt", acquisitionCause: "purchase", acquisitionDate: "2010-03-01", useEstimatedAcquisition: false, fixedAcquisitionPrice: "", redevActualAcquisitionPrice: "400000000", redevApprovalDate: "2018-05-01", redevRightsValue: "600000000", redevSettlementDirection: "receive", redevSettlementAmount: "100000000", redevSettlementSaleDate: "2024-03-01", redevPreApprovalExpenses: "0", redevOriginalAssetType: "housing", capitalExpenditure: "0", transferExpense: "0", addressJibun: "서울 A 1", redevReceiveOnlyMode: "yes" };
+const APT = { assetKind: "redevelopment_apt", redevSubject: "apt", acquisitionCause: "purchase", acquisitionDate: "2010-03-01", useEstimatedAcquisition: false, fixedAcquisitionPrice: "", redevActualAcquisitionPrice: "400000000", redevApprovalDate: "2018-05-01", redevRightsValue: "600000000", redevSettlementDirection: "receive", redevSettlementAmount: "100000000", redevSettlementSaleDate: "2024-03-01", redevPreApprovalExpenses: "0", redevOriginalAssetType: "housing", capitalExpenditure: "0", transferExpense: "0", addressJibun: "제주특별자치도 A 1", redevReceiveOnlyMode: "yes" };
 const HIGH = { ...APT, redevRightsValue: "2000000000", redevActualAcquisitionPrice: "500000000" };
 const DECLARED = { redevExemptionEligibleAtApproval: "yes" };
 const MULTI = { isOneHousehold: false, householdHousingCount: "2", residencePeriodMonths: "0" };
@@ -47,7 +47,7 @@ function form(hh: L, pcts: string[], total: string, per: L[] = [], base: L = APT
   const f = createDefaultTransferFormData() as L;
   Object.assign(f, { transferDate: "2024-06-01", filingDate: "2024-08-31", contractTotalPrice: total, bundledSaleMode: "actual" }, hh);
   if (pcts.length > 1) f.assetSplitMode = "fractional";
-  f.assets = pcts.map((p, k) => ({ ...makeDefaultAsset(k + 1), ...base, ...(k === 0 ? { residenceInputMode: "direct", residencePeriodMonthsAsset: hh.residencePeriodMonths, addressJibun: "서울 A 1", buildingFootprintArea: "100", appurtenantLandZone: "metropolitan_residential", isUrbanArea: true } : {}), assetId: `A${k + 1}`, ownershipNumerator: p, ownershipDenominator: "100", ownershipRemainderThirdParty: "", ...(pcts.length === 1 ? { actualSalePrice: total } : {}), ...(per[k] ?? {}) }));
+  f.assets = pcts.map((p, k) => ({ ...makeDefaultAsset(k + 1), ...base, ...(k === 0 ? { residenceInputMode: "direct", residencePeriodMonthsAsset: hh.residencePeriodMonths, addressJibun: "제주특별자치도 A 1", buildingFootprintArea: "100", appurtenantLandZone: "metropolitan_residential", isUrbanArea: true } : {}), assetId: `A${k + 1}`, ownershipNumerator: p, ownershipDenominator: "100", ownershipRemainderThirdParty: "", ...(pcts.length === 1 ? { actualSalePrice: total } : {}), ...(per[k] ?? {}) }));
   return f as never;
 }
 
@@ -146,7 +146,7 @@ describe("대조 — 다른 경로는 그대로다", () => {
   });
 
   it("함께 양도 — 단독 APT 5천 + 주택 10억", async () => {
-    const H = { assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-03-03", fixedAcquisitionPrice: "300000000", standardPriceAtTransfer: "500000000", addressJibun: "서울 B 2", redevReceiveOnlyMode: "", redevSettlementAmount: "", redevSettlementDirection: "" };
+    const H = { assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-03-03", fixedAcquisitionPrice: "300000000", standardPriceAtTransfer: "500000000", addressJibun: "제주특별자치도 B 2", redevReceiveOnlyMode: "", redevSettlementAmount: "", redevSettlementDirection: "" };
     const f = form(MULTI, ["100", "100"], "1050000000", [{ ...S("50000000"), actualSalePrice: "50000000" }, { ...H, actualSalePrice: "1000000000" }]) as L;
     f.assetSplitMode = "";
     const t = await calc(f as never);
@@ -167,7 +167,7 @@ describe("대조 — 다른 경로는 그대로다", () => {
 
 describe("경계", () => {
   it("함께 양도 단독 APT 2건 — 안분 표가 남는다(축 B만 숨긴다)", async () => {
-    const f = form(MULTI, ["100", "100"], "150000000", [{ ...S("70000000"), actualSalePrice: "70000000" }, { ...S("80000000"), actualSalePrice: "80000000", addressJibun: "서울 B 2" }]) as L;
+    const f = form(MULTI, ["100", "100"], "150000000", [{ ...S("70000000"), actualSalePrice: "70000000" }, { ...S("80000000"), actualSalePrice: "80000000", addressJibun: "제주특별자치도 B 2" }]) as L;
     f.assetSplitMode = "";
     const t = await calc(f as never);
     expect(t.status, JSON.stringify(t.error)).toBe(200);

@@ -157,7 +157,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     category: "new_housing",
     effectCategory: "capital_gain",
     uiLabel: "§99의3 — 신축주택 과세특례 (IMF 2차)",
-    effectLabel: "5년 내 = 취득~양도 발생분 차감 / 5년 후 = 5년간 발생분 차감 (2001.5.23~2003.6.30, 가격 급등 지역 외)",
+    effectLabel: "5년 내 = 취득~양도 발생분 차감 / 5년 후 = 5년간 발생분 차감 (2001.5.23~2003.6.30, 2003.1.1. 이후 계약·승인분은 가격 급등 지역 외)",
     isFullyImplemented: true,
   },
   new_99_4_rural: {

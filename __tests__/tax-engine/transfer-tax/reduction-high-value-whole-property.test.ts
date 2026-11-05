@@ -59,10 +59,10 @@ describe("H1: 고가주택 임계 — 시점 매트릭스", () => {
 // H2 — 라우터: 지분 모드에서 물건 전체 값이 판정에 쓰인다
 // ════════════════════════════════════════════════════════════
 describe("H2: 라우터가 물건 전체 양도가액을 넘긴다", () => {
-  // §99의3 취득기간은 2001.5.23~2003.6.30이고 고가주택 기준일은
-  // `contractDate ?? usageApprovalDate ?? acquisitionDate`(new-99-3.ts:279)다.
-  // → 이 조문에서 실제로 적용되는 임계는 **6억**(2008-10-05 이전 구간, 면적요건 없음)이다.
-  //   물건 전체 11억 / 지분 50% 5.5억으로 두면 두 값의 판정이 **반대**가 된다(판별력).
+  // §99의3 취득기간은 2001.5.23~2003.6.30이다. 계약일 2003-01-15는 개정규정 적용분(법률 제6762호 부칙 §29 밖)이라
+  // 고가주택은 **양도일(2024-05-01) 당시** 소득세법 §89①3호 기준 **12억**이다 (NH-04 · 재산세과-3466).
+  // (종전에는 계약일 축 6억으로 판정했다 — 결함 고정이어서 갱신.)
+  //   물건 전체 13억 / 지분 50% 6.5억으로 두면 두 값의 판정이 **반대**가 된다(판별력).
   const CONTRACT = new Date("2003-01-15");
   const baseCtx = {
     transferDate: TRANSFER_DATE,
@@ -90,20 +90,20 @@ describe("H2: 라우터가 물건 전체 양도가액을 넘긴다", () => {
     return detail!.ineligibleReasons.map((x) => x.message).join(" · ");
   };
 
-  it("🔴 지분 50% — 물건 전체 11억이면 지분분 5.5억이어도 고가주택으로 배제된다", () => {
+  it("🔴 지분 50% — 물건 전체 13억이면 지분분 6.5억이어도 고가주택으로 배제된다", () => {
     const reason = reasonOf({
-      transferPrice: 550_000_000, // 지분분 (엔진 도달값) — 6억 이하
-      totalPropertyTransferPrice: 1_100_000_000, // 물건 전체 — 6억 초과
+      transferPrice: 650_000_000, // 지분분 (엔진 도달값) — 12억 이하
+      totalPropertyTransferPrice: 1_300_000_000, // 물건 전체 — 12억 초과
     });
-    expect(reason, "물건 전체 11억 > 6억이므로 고가주택 배제여야 한다").toMatch(/고가주택/);
+    expect(reason, "물건 전체 13억 > 12억이므로 고가주택 배제여야 한다").toMatch(/고가주택/);
   });
 
   it("단독소유 — 100% echo가 없으면 transferPrice로 후퇴한다 (회귀 가드)", () => {
     const withEcho = reasonOf({
-      transferPrice: 1_100_000_000,
-      totalPropertyTransferPrice: 1_100_000_000,
+      transferPrice: 1_300_000_000,
+      totalPropertyTransferPrice: 1_300_000_000,
     });
-    const withoutEcho = reasonOf({ transferPrice: 1_100_000_000 });
+    const withoutEcho = reasonOf({ transferPrice: 1_300_000_000 });
     expect(withoutEcho).toBe(withEcho);
     expect(withoutEcho).toMatch(/고가주택/);
   });
