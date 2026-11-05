@@ -65,8 +65,10 @@ export function TransferSidebarSummary({ summary }: { summary: TransferPerAssetS
               <p className="mb-1 text-sm text-muted-foreground">공제·감면 사항</p>
               {row.reductionTypes.length > 0 ? (
                 <ul className="space-y-0.5">
-                  {row.reductionTypes.map((t) => (
-                    <li key={t} className="text-sm">
+                  {/* 저장 감면 + 명부 행 감면을 이어 붙여 같은 조문이 두 번 올 수 있다 — 조문만으로 key를 잡으면
+                      겹쳐 감면을 빼도 옛 칩이 남는다(NH-62). 정적 목록이라 순번을 key에 섞는다. */}
+                  {row.reductionTypes.map((t, j) => (
+                    <li key={`${j}-${t}`} className="text-sm">
                       {REDUCTION_SHORT_LABELS[t]}
                     </li>
                   ))}

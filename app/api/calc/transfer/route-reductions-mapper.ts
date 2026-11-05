@@ -125,18 +125,16 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
     if (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown") {
       return {
         ...r,
-        ruralHouseAcquisitionDate: r.ruralHouseAcquisitionDate
-          ? new Date(r.ruralHouseAcquisitionDate)
-          : undefined,
+        ruralHouseAcquisitionDate: toOptionalDate(r.ruralHouseAcquisitionDate),
       } as TransferReduction;
     }
-    // P1 §99 신축주택 IMF 1차 (2026-06-11): string 일자 → Date 변환 (⑭)
+    // P1 §99 신축주택 (2026-06-11): string 일자 → Date 변환 (⑭)
     // (income-deduction-router는 coerceOptionalDate로 string도 수용하나, 엔진 입력 계약은 Date)
     if (r.type === "new_99") {
       return {
         ...r,
-        contractDate99: r.contractDate99 ? new Date(r.contractDate99) : undefined,
-        usageApprovalDate99: r.usageApprovalDate99 ? new Date(r.usageApprovalDate99) : undefined,
+        contractDate99: toOptionalDate(r.contractDate99),
+        usageApprovalDate99: toOptionalDate(r.usageApprovalDate99),
       } as TransferReduction;
     }
     // P1 §98의8 준공후미분양 50% (2026-06-11): string 일자 → Date 변환 (⑭)
