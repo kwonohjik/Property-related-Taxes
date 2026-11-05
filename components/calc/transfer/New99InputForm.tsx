@@ -19,6 +19,9 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
 import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
+import { New99LuxuryHouseFields } from "@/components/calc/transfer/New99LuxuryHouseFields";
+import { New99FirstContractField } from "@/components/calc/transfer/New99LuxuryHouseFields";
+import { needsFirstContractAnswer } from "@/lib/tax-engine/transfer-reductions/new-99-acquisition-cause";
 
 type New99Form = Extract<AssetReductionForm, { type: "new_99" }>;
 
@@ -36,6 +39,8 @@ interface Props {
   /** 자산-수준 PHD 스냅샷 — "자산 카드 PHD 가져오기" 소스 */
   assetId?: string;
   assetPhdSnapshot?: ReductionPhdValue;
+  /** 자산 취득 원인 — 매매 취득일 때만 최초 계약 여부를 묻는다(상속·증여는 엔진이 불성립, NH-03) */
+  acquisitionCause?: string;
 }
 
 function SectionShell({
@@ -70,6 +75,7 @@ export function New99InputForm({
   ho,
   assetId,
   assetPhdSnapshot,
+  acquisitionCause,
 }: Props) {
   const isFromBuilder = value.acquisitionType99 === "from_builder";
   const periodEndLabel = value.isNationalHousing99 ? "1999.12.31" : "1999.6.30";
@@ -109,6 +115,17 @@ export function New99InputForm({
           <div>
             <label className="mb-1 block text-xs font-medium">사용승인·사용검사일 (임시사용승인 포함)</label>
             <DateInput data-field="reduction.new_99.usageApprovalDate99" value={value.usageApprovalDate99} onChange={(v) => onChange({ usageApprovalDate99: v })} />
+          </div>
+        )}
+        {/* NH-03 — 2호 매매 취득은 최초 계약자인지 묻는다(분양권 승계 불성립). ⑧·④가 같은 술어. */}
+        {needsFirstContractAnswer(value.acquisitionType99, acquisitionCause) && (
+          <div data-field="reduction.new_99.firstContract99">
+            <New99FirstContractField
+              testidPrefix="new99"
+              value={value.firstContract99 ?? ""}
+              onChange={(v) => onChange({ firstContract99: v })}
+              lawLabel="조세특례제한법 §99①2호"
+            />
           </div>
         )}
       </SectionShell>
@@ -156,7 +173,29 @@ export function New99InputForm({
           testidPrefix="new99"
           fieldType="new_99"
           snapshotKeyPrefix="red99"
-          areaHint="주택 전용면적만 입력 — 부수토지 면적은 포함하지 마세요. 고가주택 판정용이며, 1998~2002.9 계약 기준은 전용 165㎡ 이상이면서 양도가 6억 초과 시 적용 제외 (법 §99① 단서)"
+          areaHint="주택 전용면적만 입력 — 부수토지 면적은 포함하지 마세요. 공동주택 고급주택 판정용이며, 전용 165㎡ 이상이면서 양도가액이 5억원(기준일 1999.9.18.부터 6억원)을 넘으면 적용 제외 (법 §99① 단서 · 소득세법 시행령 §156 2호)"
+        />
+        {/* NH-02 — 기준일 당시 소득세법 시행령 §156: 공동(2호)·단독(1호)·시설(3호, 단독만). §99 기준일은 모두 2000.12.31. 이전이라 하한은 시가표준액 2천만원. */}
+        <New99LuxuryHouseFields
+          reductionType="new_99"
+          testidPrefix="99"
+          floorLabel="취득세 시가표준액이 2천만원 이상"
+          value={{
+            houseType: value.houseType99 ?? "",
+            grossFloorAreaSqm: value.grossFloorAreaSqm99 ?? "",
+            attachedLandAreaSqm: value.attachedLandAreaSqm99 ?? "",
+            stdPriceFloorMet: value.stdPriceFloorMet99 ?? "",
+            luxuryFacility: value.luxuryFacility99 ?? "",
+          }}
+          onChange={(p) =>
+            onChange({
+              ...(p.houseType !== undefined ? { houseType99: p.houseType } : {}),
+              ...(p.grossFloorAreaSqm !== undefined ? { grossFloorAreaSqm99: p.grossFloorAreaSqm } : {}),
+              ...(p.attachedLandAreaSqm !== undefined ? { attachedLandAreaSqm99: p.attachedLandAreaSqm } : {}),
+              ...(p.stdPriceFloorMet !== undefined ? { stdPriceFloorMet99: p.stdPriceFloorMet } : {}),
+              ...(p.luxuryFacility !== undefined ? { luxuryFacility99: p.luxuryFacility } : {}),
+            })
+          }
         />
       </SectionShell>
 
@@ -190,23 +229,26 @@ export function New99InputForm({
             onCheckedChange={(v) => onChange({ hasOccupancyAtContract99: v })}
           />
         )}
-        <ToggleCard
-          tone="rose"
-          title="1998.5.21 이전 분양계약 해제 후 재계약·대체취득"
-          description="해제한 본인·배우자(직계존비속·형제자매 포함)가 다시 분양받은 주택은 배제됩니다 (조특령 §99②)"
-          checked={value.isRecontractExcluded99}
-          onCheckedChange={(v) => onChange({ isRecontractExcluded99: v })}
-        >
-          {/* 조특칙 §44의4 카브백 — 없으면 부득이한 사유 대체취득자를 법 근거 없이 배제한다. */}
+        {/* 조특령 §99②는 법 §99①2호 단서의 사유 — 2호(주택건설사업자로부터 취득)에만 묻는다 (리뷰 NH-57). 엔진도 2호에만 건다. */}
+        {isFromBuilder && (
           <ToggleCard
-            variant="chip"
-            tone="emerald"
-            title="부득이한 사유로 «다른 주택»을 분양받아 취득"
-            description={"취학·근무상 형편·1년 이상 치료를 요하는 질병·학교폭력 전학 사유로 «당해 주택건설업자로부터 다른 주택»을 분양받은 경우에는 배제하지 않습니다 (조특칙 §44의4 → 소칙 §71③)"}
-            checked={value.recontractUnavoidableCause99}
-            onCheckedChange={(v) => onChange({ recontractUnavoidableCause99: v })}
-          />
-        </ToggleCard>
+            tone="rose"
+            title="1998.5.21 이전 분양계약 해제 후 재계약·대체취득"
+            description="해제한 본인·배우자(직계존비속·형제자매 포함)가 다시 분양받은 주택은 배제됩니다 (조특령 §99②)"
+            checked={value.isRecontractExcluded99}
+            onCheckedChange={(v) => onChange({ isRecontractExcluded99: v })}
+          >
+            {/* 조특칙 §44의4 카브백 — 없으면 부득이한 사유 대체취득자를 법 근거 없이 배제한다. */}
+            <ToggleCard
+              variant="chip"
+              tone="emerald"
+              title="부득이한 사유로 «다른 주택»을 분양받아 취득"
+              description={"취학·근무상 형편·1년 이상 치료를 요하는 질병·학교폭력 전학 사유로 다른 시·군으로 주거를 이전하면서 «당해 주택건설업자로부터 다른 주택»을 분양받은 경우에는 배제하지 않습니다 (조특칙 §44의4 → 소득세법 시행규칙 §71③)"}
+              checked={value.recontractUnavoidableCause99}
+              onCheckedChange={(v) => onChange({ recontractUnavoidableCause99: v })}
+            />
+          </ToggleCard>
+        )}
       </SectionShell>
 
       {/*

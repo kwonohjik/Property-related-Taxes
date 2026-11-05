@@ -15,6 +15,9 @@ import {
   Text,
 } from "@react-pdf/renderer";
 import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
+import { incomeDeductionReducible } from "@/components/calc/results/transfer/reduction-eligible-income";
+import { incomeDeductionRuralSurtax } from "@/components/calc/results/transfer/reduction-eligible-income";
+import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { assetTaxableGain, sumAssetGains } from "@/components/calc/results/transfer/exempt-gross-gain";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 import {
@@ -64,16 +67,17 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows 
     (r.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
     num(r.eligibleIncomeAfterLoss),
   );
-  const new993 = r.new993Detail as { isEligible?: boolean; reducibleTransferIncome?: number; ruralSurtax?: number } | undefined;
-  const new993Reducible = (new993?.isEligible && new993.reducibleTransferIncome) ? new993.reducibleTransferIncome : 0;
+  // 소득금액 감면대상 = 소득금액차감방식(§90②) 11개 조문 합 — 화면 신고서 표 ⑳(`FilingFormTableHelpers`)와 같은 헬퍼.
+  // 종전에는 `new993Detail`만 읽어 §99·§98의8·하이브리드 차감이 0으로 찍혔다(NH-53).
+  const incomeDeduction = incomeDeductionReducible(r as unknown as TransferTaxResult);
   // 「감면후 소득금액」에서 빼는 것은 **§90②(소득금액 차감방식)뿐**이다.
   // §90①(세액감면방식)은 세액을 감면할 뿐 소득금액을 줄이지 않는다
   // — 별지84호 본 서식 ⑧ 과세표준 = ④+⑤−⑥−⑦에서 차감 대상 ⑥은 「소득감면대상 소득금액」이고,
   //   작성방법 6번이 이를 §90② 적용 시로 한정한다.
   // 종전에는 세액감면분(reducibleIncome)까지 빼서 화면(DetailedStatementHelpers)과 어긋났다.
-  const incomeAmountAfter = isRH ? ((num(r.taxableGain) ?? 0) as number) : Math.max(0, incomeAmount - new993Reducible);
-  // 농특세 총액 echo가 정본 — `new993.ruralSurtax`만 보면 세액감면형(§77 계열)이 빠진다.
-  const ruralSurtax = (num(r.ruralSurtax) ?? new993?.ruralSurtax ?? 0) as number;
+  const incomeAmountAfter = isRH ? ((num(r.taxableGain) ?? 0) as number) : Math.max(0, incomeAmount - incomeDeduction);
+  // 농특세 총액 echo가 정본 — 소득금액차감 detail 합은 총액 echo가 없는 옛 저장 결과 전용 폴백(화면 `resolveRuralSurtax`와 같은 순서).
+  const ruralSurtax = (num(r.ruralSurtax) ?? incomeDeductionRuralSurtax(r as unknown as TransferTaxResult)) as number;
   /**
    * ㉘ 가산세액 — **두 축의 합**이다(「소득세법」 제92조 제3항 제3호).
    *   · `r.penaltyTax`    : 「소득세법」 제114조의2 환산가액적용가산세
@@ -121,7 +125,7 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows 
         <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(incomeAmount)}</Text></View>
         {num(r.nontaxableGainAmount) !== undefined && (r.nontaxableGainAmount as number) > 0 && (<View style={s.row}><Text style={s.lblSub}>{nontaxableIncomeLabel(rhDetail?.scenarioId)}</Text><Text style={s.val}>- {fmt(r.nontaxableGainAmount)}</Text></View>)}
         <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{eligible19 > 0 ? fmt(eligible19) : "0"}</Text></View>
-        <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{new993Reducible > 0 ? fmt(new993Reducible) : "0"}</Text></View>
+        <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{incomeDeduction > 0 ? fmt(incomeDeduction) : "0"}</Text></View>
         <View style={s.row}><Text style={s.lbl}>감면후 소득금액</Text><Text style={s.val}>{fmt(incomeAmountAfter)}</Text></View>
         {num(r.basicDeduction) !== undefined && (<View style={s.row}><Text style={s.lbl}>기본공제</Text><Text style={s.val}>{(r.basicDeduction as number) > 0 ? `- ${fmt(r.basicDeduction)}` : "0"}</Text></View>)}
         {num(r.taxBase) !== undefined && (<View style={s.rowBg}><Text style={s.lbl}>과세표준</Text><Text style={s.valAccent}>{fmt(r.taxBase)}</Text></View>)}

@@ -259,6 +259,14 @@ export const reductionSchema = z.discriminatedUnion("type", [
     recontractUnavoidableCause99: z.boolean().optional(),
     isRedevelopedNewHouse99: z.boolean().optional(),
     previousHouseStdPrice99: z.number().int().nonnegative().optional(),
+    /** 고급주택(기준일 당시 소득세법 시행령 §156) 주택 유형·단독주택 사실 (NH-02 — ⑫ 누락 시 침묵 strip) */
+    houseType99: z.enum(["apartment", "detached"]).optional(),
+    grossFloorAreaSqm99: z.number().nonnegative().optional(),
+    attachedLandAreaSqm99: z.number().nonnegative().optional(),
+    stdPriceFloorMet99: z.enum(["yes", "no", "unknown"]).optional(),
+    luxuryFacility99: z.enum(["yes", "no", "unknown"]).optional(),
+    /** (2호 · 매매) 최초 매매계약·계약금 납부자 본인 여부 — 조특법 §99①2호 (NH-03) */
+    firstContract99: z.enum(["yes", "no", "unknown"]).optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
   // §99의3 — Phase 2 본격 구현 (2026-05-06): 본 요건 필드 추가 + Phase 1 stub 호환
@@ -290,6 +298,14 @@ export const reductionSchema = z.discriminatedUnion("type", [
     acquisitionType993: z.enum(["from_builder", "self_built"]).optional(),
     /** (2호 · 사용승인 2003.1.1.~6.30.만) 2003.1.1. 전 착공 여부 — 법률 제6762호 부칙 §29② (⑫ — 누락 시 침묵 strip) */
     constructionStartedBefore2003_993: z.enum(["yes", "no", "unknown"]).optional(),
+    /** 종전 고급주택(소득세법 시행령 §156 당시 시행본) 주택 유형·단독주택 사실 (NH-02 — ⑫ 누락 시 침묵 strip) */
+    houseType993: z.enum(["apartment", "detached"]).optional(),
+    grossFloorAreaSqm993: z.number().nonnegative().optional(),
+    attachedLandAreaSqm993: z.number().nonnegative().optional(),
+    stdPriceFloorMet993: z.enum(["yes", "no", "unknown"]).optional(),
+    luxuryFacility993: z.enum(["yes", "no", "unknown"]).optional(),
+    /** (1호 · 매매) 최초 매매계약·계약금 납부자 본인 여부 — 조특법 §99의3①1호 (NH-17) */
+    firstContract993: z.enum(["yes", "no", "unknown"]).optional(),
     /** 매매계약일 입주사실 (1호 단서) */
     hasOccupancyAtContract: z.boolean().optional(),
     /** 거주자 여부 */

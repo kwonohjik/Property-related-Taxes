@@ -275,7 +275,7 @@ describe("D15 다건 집계 — 게이트는 카드(자산) 단위", () => {
 
 describe("D15 leaf — calcReductions · unregisteredReductionNotice", () => {
   it("D15-A8 calcReductions: 미등기 인자면 후보·레거시 인자와 무관하게 0", () => {
-    const args = [50_000_000, [E77] as never, undefined, undefined, undefined, undefined, undefined, D("2024-06-01"), 400_000_000, 2_500_000, 397_500_000] as const;
+    const args = [50_000_000, [E77] as never, undefined, undefined, undefined, D("2024-06-01"), 400_000_000, 2_500_000, 397_500_000] as const;
     expect(calcReductions(...args).reductionAmount).toBeGreaterThan(0);
     expect(
       calcReductions(...args, undefined, undefined, undefined, undefined, true).reductionAmount,
@@ -285,7 +285,6 @@ describe("D15 leaf — calcReductions · unregisteredReductionNotice", () => {
   it("D15-A9 안내: 미등기 + 감면(현행·레거시 인자 포함)일 때만", () => {
     expect(unregisteredReductionNotice({ isUnregistered: true, reductions: [E77] })).toContain(NOTICE);
     expect(unregisteredReductionNotice({ isUnregistered: true, newHousingDetails: {} })).toContain(NOTICE);
-    expect(unregisteredReductionNotice({ isUnregistered: true, rentalReductionDetails: {} })).toContain(NOTICE);
     expect(unregisteredReductionNotice({ isUnregistered: true, reductions: [] })).toBeUndefined();
     expect(unregisteredReductionNotice({ isUnregistered: false, reductions: [E77] })).toBeUndefined();
   });

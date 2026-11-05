@@ -171,7 +171,8 @@ describe("RH-2 컴패니언 완공APT × §97의3", () => {
 
 describe("RH-3 차감형 감면 — 5년 안분 양도시 기준시가", () => {
   const r993 = {
-    type: "new_99_3",
+    type: "new_99_3", houseType993: "apartment", firstContract993: "yes", // NH-02·NH-17 ⑧ 필수 (#L1b)
+
     contractDate993: "2002-01-01",
     usageApprovalDate993: "",
     standardPriceAt5Years: "160000000",

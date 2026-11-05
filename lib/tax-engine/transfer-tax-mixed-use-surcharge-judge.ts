@@ -6,6 +6,8 @@
  */
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
 import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
+import { surchargeHouseholdCountsRights } from "./surcharge-tax-incentive-house-link";
+import { withSurchargeExclusionRegime } from "./transfer-reductions";
 import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
 import { withRentalResidenceSurchargeHouses, type resolveMixedUseRentalResidence } from "./transfer-tax-mixed-use-rental-residence";
 import {
@@ -113,5 +115,15 @@ export function judgeMixedUseMultiHouseSurcharge(args: MixedSurchargeJudgeArgs) 
           judgeMixedSurcharge,
         )
       : undefined;
-  return { multiHouseSurcharge, reductionExclusion };
+  // 배제 근거를 세대 구성(산입 조합원입주권·분양권 유무)에 맞춘다 — 단건 `runMultiHouseSurchargeStep`과 같은 leaf (NH-82)
+  return {
+    multiHouseSurcharge,
+    reductionExclusion:
+      reductionExclusion && multiHouse && houseCountExclusionRules
+        ? withSurchargeExclusionRegime(
+            reductionExclusion,
+            surchargeHouseholdCountsRights(multiHouse.presaleRights ?? [], houseCountExclusionRules, multiHouseSurcharge),
+          )
+        : reductionExclusion,
+  };
 }

@@ -118,7 +118,7 @@ const reductionAmount = Math.min(best.amount, calculatedTax);
 
 - `comprehensive-tax.ts` → `property-tax.ts` (재산세 결과를 종부세 재산세 비율 안분 공제에 사용). **역방향 금지**.
 - `transfer-tax-aggregate.ts` → `transfer-tax.ts` (다건 양도 오케스트레이션은 단건 엔진을 반복 호출).
-- `transfer-tax.ts` → `multi-house-surcharge.ts` / `non-business-land/engine.ts` / `rental-housing-reduction.ts` / `new-housing-reduction.ts` / `public-expropriation-reduction.ts` / `transfer-tax-penalty.ts` / `pre-1990-land-valuation.ts` / `multi-parcel-transfer.ts` (서브엔진 fan-out).
+- `transfer-tax.ts` → `multi-house-surcharge.ts` / `non-business-land/engine.ts` / `new-housing-reduction.ts` / `public-expropriation-reduction.ts` / `transfer-tax-penalty.ts` / `pre-1990-land-valuation.ts` / `multi-parcel-transfer.ts` (서브엔진 fan-out).
 - `transfer-reductions/` — **진입점은 하나가 아니다**. 효과 유형별 4계열: 세액감면형 `calcReductions`(`transfer-tax-reductions-calc.ts`) · 소득차감형 `resolveIncomeDeduction` · 장특공 대체형 `evaluateRental97Lthd` · 주택수 제외형 `resolveHouseCountExclusion`. `index.ts`는 공용 메타·시한·게이트 배럴이다(헤더 참조). 신규 세액감면 조문은 `calcReductions()` 후보 배열에 push.
 - `transfer-tax-mixed-use.ts` → `transfer-tax-mixed-use-helpers.ts` → `transfer-tax-mixed-use-fourpart.ts` (Case A 4부분 안분 어댑터) / `transfer-tax-mixed-use-totals.ts` (조립 헬퍼) / `transfer-tax-pre-housing-disclosure.ts` (PHD §164⑦ — 건물분은 §164⑤ 준용).
 

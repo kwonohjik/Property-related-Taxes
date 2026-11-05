@@ -23,6 +23,13 @@ const mapped = new Set([...route.matchAll(/\bp\.([A-Za-z0-9_]+)/g)].map((m) => m
 const keys = Object.keys(propertyItemSchema.shape);
 const rejected = new Set(Object.keys(MULTI_REJECT_RULES));
 const ignored = new Set(Object.keys(MULTI_IGNORED_KEYS));
+/** 스키마 자체가 값을 받지 않는 키(`z.never().optional()` — 폐지된 입력을 400으로 막는다, 예: `rentalReductionDetails`) */
+const schemaRejected = new Set(
+  keys.filter((k) => {
+    const f = (propertyItemSchema.shape as Record<string, z.ZodType>)[k];
+    return f instanceof z.ZodOptional && f.unwrap() instanceof z.ZodNever;
+  }),
+);
 
 describe("F-12 다건 키 분류", () => {
   it("스키마 키가 스캔된다(가드 자체의 구별력)", () => {
@@ -31,7 +38,7 @@ describe("F-12 다건 키 분류", () => {
   });
 
   it("모든 키가 매핑·거부·무효과 중 하나", () => {
-    const unclassified = keys.filter((k) => !mapped.has(k) && !rejected.has(k) && !ignored.has(k));
+    const unclassified = keys.filter((k) => !mapped.has(k) && !rejected.has(k) && !ignored.has(k) && !schemaRejected.has(k));
     expect(unclassified).toEqual([]);
   });
 

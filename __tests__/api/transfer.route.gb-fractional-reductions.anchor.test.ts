@@ -35,7 +35,8 @@ beforeEach(() => {
 /** 조특법 §77 공익수용 — 현금보상 8억, 사업인정고시일 2024-01-01. */
 const R77 = { type: "public_expropriation", expropriationCash: "800000000", expropriationBond: "0", expropriationBondHoldingYears: "none", expropriationApprovalDate: "2024-01-01" };
 const r993 = (tr = "") => ({
-  type: "new_99_3", contractDate993: "2002-01-01", usageApprovalDate993: "", standardPriceAt5Years: "400000000",
+  type: "new_99_3", houseType993: "apartment", firstContract993: "yes", // NH-02·NH-17 ⑧ 필수 (#L1b)
+ contractDate993: "2002-01-01", usageApprovalDate993: "", standardPriceAt5Years: "400000000",
   standardPriceAtAcquisition993: "300000000", standardPriceAtTransfer993: tr, isRecontractExcluded993: false, recontractUnavoidableCause993: false,
   isRedevelopedNewHouse993: false, previousHouseStdPrice993: "", exclusiveAreaSqm993: "84", region993: "outside_speculation",
   acquisitionType993: "from_builder", hasOccupancyAtContract: false, isResident993: true, isHousingConstructionBusiness993: false,

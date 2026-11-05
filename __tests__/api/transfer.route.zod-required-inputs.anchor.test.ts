@@ -510,3 +510,39 @@ describe("다건 — 단건과 같은 규칙", () => {
     );
   });
 });
+
+// ── 폐지된 레거시 장기임대 감면 입력 (§155⑳ 리뷰 V-6 후속) ─────────────────────
+// 엔진(`rental-housing-reduction.ts`)과 Zod 스키마를 지웠다. 키를 받고 조용히 버리면 감면이 빠진 세액이
+// 200으로 나가므로 400 + 정본 감면 목록 안내로 막는다.
+describe("레거시 rentalReductionDetails — 받으면 400", () => {
+  const LEGACY = {
+    isRegisteredLandlord: true,
+    isTaxRegistered: true,
+    registrationDate: "2015-01-01",
+    rentalHousingType: "long_term_private",
+    propertyType: "non_apartment",
+    region: "capital",
+    officialPriceAtStart: 300_000_000,
+    rentalStartDate: "2015-01-01",
+    transferDate: "2024-03-01",
+    vacancyPeriods: [],
+    rentHistory: [],
+  };
+  it("단건 🔴 400 · 안내 문구에 정본 type", async () => {
+    const r = await single({ ...BASE, rentalReductionDetails: LEGACY });
+    expect(r.status).toBe(400);
+    expect(issuePaths(r.json)).toContain("rentalReductionDetails");
+    expect(JSON.stringify(r.json.error)).toContain("rental_97_3");
+  });
+  it("다건 🔴 400", async () => {
+    await expectRejected(
+      { taxYear: 2024, properties: [{ ...BASE, propertyId: "p1", propertyLabel: "p1", rentalReductionDetails: LEGACY }], annualBasicDeductionUsed: 0 },
+      "properties.0.rentalReductionDetails",
+      multi,
+    );
+  });
+  it("🟢 짝 — 키가 없으면 200", async () => {
+    const r = await single(BASE);
+    expect(r.status, JSON.stringify(r.json.error)).toBe(200);
+  });
+});

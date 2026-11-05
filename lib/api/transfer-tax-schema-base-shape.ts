@@ -27,7 +27,6 @@ import {
   longTermMortgageHouseSchema,
   winWinRentalHouseSchema,
   nonBusinessLandRawSchema,
-  rentalReductionDetailsSchema,
   newHousingDetailsSchema,
   houseSchema,
   presaleRightSchema,
@@ -296,7 +295,17 @@ export const propertyBaseShape = {
       areaDesignatedDate: z.string().date().optional(),
     })
     .optional(),
-  rentalReductionDetails: rentalReductionDetailsSchema.optional(),
+  /**
+   * 폐지된 레거시 장기임대 감면 입력(§155⑳ 리뷰 V-6 후속). 받고 조용히 버리지 않도록 400 —
+   * 정본은 감면 목록 `reductions[].type`의 `rental_97_main`·`rental_97_proviso`·`rental_97_3`·`rental_97_4`·`rental_97_5`.
+   */
+  rentalReductionDetails: z
+    .never({
+      error:
+        "rentalReductionDetails는 더 이상 받지 않습니다 — 장기임대주택 감면은 감면 목록(reductions)에 " +
+        'type "rental_97_main"·"rental_97_proviso"·"rental_97_3"·"rental_97_4"·"rental_97_5"로 입력하세요.',
+    })
+    .optional(),
   newHousingDetails: newHousingDetailsSchema.optional(),
   acquisitionMethod: z.enum(["actual", "estimated", "appraisal", "salesCase"]).optional(),
   appraisalValue: z.number().int().nonnegative().optional(),
