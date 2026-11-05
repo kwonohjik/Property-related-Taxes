@@ -47,7 +47,7 @@ const filingOf = (td: string) => (td < "2016" ? "2016-02-29" : td < "2026" ? "20
 const splitAsset = (over: Record<string, unknown> = {}) =>
   ({
     ...makeDefaultAsset(1),
-    addressJibun: "서울 강남구 테스트동 1-1",
+    addressJibun: "제주특별자치도 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     acquisitionDate: "2005-06-01",
@@ -90,7 +90,7 @@ const gbAsset = (over: Record<string, unknown> = {}) =>
   ({
     ...makeDefaultAsset(1),
     assetKind: "general_building",
-    addressJibun: "서울 강남구 테스트동 1-1",
+    addressJibun: "제주특별자치도 강남구 테스트동 1-1",
     acquisitionCause: "purchase",
     acquisitionDate: "2005-03-01",
     landAcquisitionDate: "1999-05-24",
@@ -268,7 +268,7 @@ describe("T-B3 · 다건 route · 컴패니언 · 파트 이월과세 C — 같�
   it("컴패니언(함께 양도) split 자산: 한쪽만 입력 → ⑧ 차단 ∧ ⑫ 400 · key가 companionAssets.0.*", async () => {
     const plain = {
       ...makeDefaultAsset(1),
-      addressJibun: "서울 강남구 테스트동 9-9",
+      addressJibun: "제주특별자치도 강남구 테스트동 9-9",
       assetKind: "housing",
       acquisitionCause: "purchase",
       acquisitionDate: "2008-03-02",

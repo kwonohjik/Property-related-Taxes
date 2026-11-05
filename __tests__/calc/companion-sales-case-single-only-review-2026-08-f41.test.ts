@@ -65,7 +65,7 @@ function bundledForm(over: { primary?: Partial<AssetForm>; companion?: Partial<A
     ...over.primary,
   };
   form.assets.push({
-    ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 1-1",
+    ...makeDefaultAsset(2), addressJibun: "제주특별자치도 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     acquisitionDate: "2010-05-05",
@@ -79,7 +79,7 @@ function bundledForm(over: { primary?: Partial<AssetForm>; companion?: Partial<A
 /** 일반건물 지분 1건 — `generalBuildingShares` 경로가 성립하는 최소 입력 */
 function gbShare(over: Partial<AssetForm> = {}): AssetForm {
   return {
-    ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
+    ...makeDefaultAsset(1), addressJibun: "제주특별자치도 강남구 테스트동 1-1",
     assetKind: "general_building",
     acquisitionCause: "purchase",
     gbBuildingAcquisitionCause: "purchase",
@@ -195,7 +195,7 @@ describe("[F41] 컴패니언 매매사례가액 — ⑧ 명시 차단", () => {
     });
     form.contractTotalPrice = "2,300,000,000";
     form.assets.push({
-      ...makeDefaultAsset(3), addressJibun: "서울 강남구 테스트동 1-1",
+      ...makeDefaultAsset(3), addressJibun: "제주특별자치도 강남구 테스트동 1-1",
       assetKind: "housing",
       acquisitionCause: "purchase",
       acquisitionDate: "2011-05-05",

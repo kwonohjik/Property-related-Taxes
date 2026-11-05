@@ -38,7 +38,7 @@ beforeEach(() => {
 
 const x = (o: Record<string, unknown>) => o as unknown as Partial<AssetForm>;
 const FORM = { filingDate: "2026-04-30", totalTransferExpense: "0", isOneHousehold: false, householdHousingCount: "2", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true };
-const COMMON = { addressJibun: "서울 강남구 테스트동 1-1", acquisitionCause: "purchase", acquisitionDate: "2015-01-01", transferType: "burdened_gift", bgDonorRelation: "lineal_descendant",
+const COMMON = { addressJibun: "제주특별자치도 강남구 테스트동 1-1", acquisitionCause: "purchase", acquisitionDate: "2015-01-01", transferType: "burdened_gift", bgDonorRelation: "lineal_descendant",
   bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1000000000", bgLendingDepositTotal: "0", bgMortgageDebtAmount: "400000000", bgMortgageSetAmount: "400000000", bgAcquisitionMethod: "actual",
   standardPriceAtTransfer: "800000000", standardPriceAtAcq: "400000000" };
 const KIND: Record<string, Record<string, unknown>> = {
@@ -102,7 +102,7 @@ describe("PZ-1 일반건물 K-4 — 토지·건물 두 칸", () => {
 
 /** 양도가액 5억 · 채무비율 0.5 · 이월과세 시료(`transfer.route.gb-bg-carryover-presumed-scenario-b` 와 같은 값). */
 const gb5 = (over: Record<string, unknown>, co: Record<string, unknown> = {}) => Object.assign({ ...makeDefaultAsset(1) }, x({
-  assetId: "a", addressJibun: "서울 강남구 테스트동 1-1", assetKind: "general_building", acquisitionCause: "carryover_gift", acquisitionDate: "2024-05-01", gbBuildingAcquisitionCause: "purchase",
+  assetId: "a", addressJibun: "제주특별자치도 강남구 테스트동 1-1", assetKind: "general_building", acquisitionCause: "carryover_gift", acquisitionDate: "2024-05-01", gbBuildingAcquisitionCause: "purchase",
   gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbZoneType: "general_residential", gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
   transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
   bgLendingDepositTotal: "0", bgMortgageDebtAmount: "500,000,000", bgMortgageSetAmount: "500,000,000", bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000",

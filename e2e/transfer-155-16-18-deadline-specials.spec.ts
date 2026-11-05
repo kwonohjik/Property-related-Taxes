@@ -27,7 +27,7 @@ function gotoHolding(page: Page, over: Record<string, unknown> = {}) {
     assets: [
       {
         ...makeDefaultAsset(1), ...DIRECT_RESIDENCE,
-        addressJibun: "서울 강남구 테스트동 1-1",
+        addressJibun: "제주특별자치도 강남구 테스트동 1-1",
         assetKind: "housing",
         acquisitionCause: "purchase",
         acquisitionDate: "2018-01-01",
@@ -67,7 +67,7 @@ async function gotoCalcHolding(page: Page, over: Record<string, unknown> = {}) {
           assets: [
             {
               ...makeDefaultAsset(1), ...DIRECT_RESIDENCE,
-              addressJibun: "서울 강남구 테스트동 1-1",
+              addressJibun: "제주특별자치도 강남구 테스트동 1-1",
               assetKind: "housing",
               acquisitionCause: "purchase",
               acquisitionDate: "2018-01-01",

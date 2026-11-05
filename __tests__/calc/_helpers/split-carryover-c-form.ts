@@ -16,7 +16,7 @@ import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 export function cAsset(over: Record<string, unknown> = {}): AssetForm {
   return {
     ...makeDefaultAsset(1),
-    addressJibun: "서울 강남구 테스트동 1-1",
+    addressJibun: "제주특별자치도 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "carryover_gift",
     carryoverDonorSplit: true,

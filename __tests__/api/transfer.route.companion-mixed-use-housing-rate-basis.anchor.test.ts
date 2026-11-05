@@ -90,7 +90,7 @@ const MIXED_FIELDS = {
 
 function asset(i: number, over: Record<string, unknown> = {}) {
   return {
-    ...makeDefaultAsset(i), addressJibun: "서울 강남구 테스트동 1-1",
+    ...makeDefaultAsset(i), addressJibun: "제주특별자치도 강남구 테스트동 1-1",
     assetKind: "housing",
     acquisitionCause: "purchase",
     acquisitionDate: "2015-03-01",
