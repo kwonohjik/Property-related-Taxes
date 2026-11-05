@@ -19,21 +19,22 @@ export const RA_CUT = {
   Y2019_02_12: new Date("2019-02-12").getTime(), // 가·다·마·바 5% 문언 시행 — 대통령령 제29523호 부칙 제6조(계약)·제2조②(양도)
   Y2020_07_11: new Date("2020-07-11").getTime(), // 매입 장기 아파트 제한 개시
   Y2020_08_18: new Date("2020-08-18").getTime(), // 마·바 의무기간 8→10년 / 사목 말소일 하한
-  Y2025_02_28: new Date("2025-02-28").getTime(), // 바목 cap 6억→9억 (다주택 tested·MCP amendment_track 미확인 — 확인 필요)
-  Y2025_06_04: new Date("2025-06-04").getTime(), // 아·자 단기 6년 신설(등록기준일 하한)
+  Y2025_02_28: new Date("2025-02-28").getTime(), // 바목 cap 6억→9억 — 부칙<제35349호> 제15조① 「이 영 시행 이후 민간임대주택으로 등록한」
+  Y2025_06_04: new Date("2025-06-04").getTime(), // 아·자 단기 6년 — 같은 부칙 제15조② 「2025년 6월 4일 이후 민간임대주택으로 등록한」(지자체 등록일 하한)
 } as const;
 
 /**
  * 목·지역·등록기준일별 기준시가 상한(원).
  * @param isCapital 수도권 여부
- * @param effRegTs  등록기준일 getTime() = max(세무서, 지자체). 바목 6억/9억 경계 판정용.
+ * @param regTs 지자체 임대사업자등록(신청)일 getTime() — 바목 6억/9억 경계 판정용(부칙<제35349호> 제15조① 「민간임대주택으로 등록한」 ·
+ *              세무서 사업자등록일과의 max가 아니다 — V-5).
  *
  * 가/마/구법: 6억(수도권)·3억 | 나/라: 취득당시 3억(지역무관) | 다/자: 6억 | 바: 6억(→2025.2.28↑ 9억) | 아: 4억(수도권)·2억.
  */
 export function rentalStdPriceCap(
   article: SharedRentalArticle,
   isCapital: boolean,
-  effRegTs: number,
+  regTs: number,
 ): number {
   switch (article) {
     case "가":
@@ -47,8 +48,8 @@ export function rentalStdPriceCap(
     case "자":
       return 600_000_000;
     case "바":
-      // F5: 2025.2.28 이후 등록분 9억, 이전 6억 (다주택 checkRentalType_F 정합)
-      return effRegTs >= RA_CUT.Y2025_02_28 ? 900_000_000 : 600_000_000;
+      // 2025.2.28.(시행일) 이후 지자체 등록분 9억, 이전 6억
+      return regTs >= RA_CUT.Y2025_02_28 ? 900_000_000 : 600_000_000;
     case "아":
       return isCapital ? 400_000_000 : 200_000_000;
     default:

@@ -3,7 +3,7 @@
  *
  * 배제 근거 = rental-article/check.ts REG_DATE_GATE 투영(단일 소스):
  *   - existing_business(나): 세무서 등록일 > 2003-10-29 → 배제
- *   - short_6y(아·자): 등록기준일 max(세무서,지자체) < 2025-06-04 → 배제
+ *   - short_6y(아·자): 지자체 등록(신청)일 < 2025-06-04 → 배제 (부칙<제35349호> 제15조② · 세무서 등록일은 보지 않는다 — V-5)
  * long_general·unsold_08_09·pre_2018은 등록일 단독 배제 게이트 없음 → 항상 활성.
  * 미입력은 조기 차단 금지(available=true).
  */
@@ -74,12 +74,13 @@ describe("deriveCategoryAvailability — 등록시기별 임대 구분 활성 �
     expect(a.existing_business.available).toBe(false);
   });
 
-  it("등록기준일 = max(세무서, 지자체) — 늦은 날 기준으로 short_6y 판정", () => {
-    // 세무서 2025-07-01(≥cutoff)·지자체 2025-05-01 → max=2025-07-01 ≥ cutoff → 활성
+  it("short_6y는 지자체 등록(신청)일 기준 — 세무서 등록이 6.4. 뒤여도 지자체가 전이면 배제(V-5)", () => {
+    // 세무서 2025-07-01(≥cutoff)·지자체 2025-05-01 → 지자체 < cutoff → 배제 (종전 max 기준이면 활성이었다)
     const a = deriveCategoryAvailability(D("2025-07-01"), D("2025-05-01"));
-    expect(a.short_6y.available).toBe(true);
-    // 세무서 2025-07-01·지자체 2025-06-01 → max=2025-07-01 ≥ cutoff → 활성
-    // 세무서 2025-05-01·지자체 2025-05-31 → max=2025-05-31 < cutoff → 배제
+    expect(a.short_6y.available).toBe(false);
+    // [짝] 세무서 2025-05-01·지자체 2025-06-04(당일) → 활성
+    expect(deriveCategoryAvailability(D("2025-05-01"), D("2025-06-04")).short_6y.available).toBe(true);
+    // 세무서 2025-05-01·지자체 2025-05-31 → 지자체 < cutoff → 배제
     const b = deriveCategoryAvailability(D("2025-05-01"), D("2025-05-31"));
     expect(b.short_6y.available).toBe(false);
   });

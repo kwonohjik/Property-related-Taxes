@@ -243,7 +243,8 @@ function deriveEffectiveRegDate(biz: Date | null, rent: Date | null): Date | nul
  * 지자체 임대사업자등록 **신청일** ts — 2020.7.11.(마목 2) 아파트)·2020.8.18.(마·바목 의무기간 8→10년) 컷오프의 기준.
  * 법문이 「임대사업자등록 신청」(소득세법 시행령 §155⑳ 본문·§167의3①2호 마목 2)·부칙<제31083호> 제5조)이라
  * 세무서 사업자등록일은 넣지 않는다. 등록 완비(두 등록 모두)가 아니면 0 — `deriveEffectiveRegDate`의 null과 같은 규칙.
- * 2018.3.31.(가목 1) 「사업자등록등」)·바목 2025.2.28. 상한·아·자목 2025.6.4. 하한은 종전대로 등록기준일(max)을 쓴다.
+ * 바목 2025.2.28. 상한·아·자목 2025.6.4. 하한도 이 날이다 — 부칙<제35349호> 제15조 「민간임대주택으로 등록한」(V-5 · 2026-11-05).
+ *   화면 칸이 신청일이라 등록일을 대신한다(신청일 ≤ 등록일 → 두 게이트 모두 불리 방향). 2018.3.31.(가목 1) 「사업자등록등」)만 max다.
  */
 function regApplicationTs(effRegDate: Date | null, rent: Date | null): number {
   return effRegDate && rent ? rent.getTime() : 0;
@@ -284,14 +285,14 @@ function checkArticleGates(
 ): { fails: ArticleFailCode[]; aptDeadlinePending: boolean; aptDeadlineConfirmReasons: AptDeadlinePendingReason[] } {
   const gate = GATES[article];
   const effRegDate = deriveEffectiveRegDate(u.businessRegistrationDate, u.rentalRegistrationDate);
-  const effTs = effRegDate?.getTime() ?? 0;
   const appTs = regApplicationTs(effRegDate, u.rentalRegistrationDate);
   const requiredYears = rentalRequiredYears(article, appTs);
-  const stdPriceCap = rentalStdPriceCap(article, u.isCapitalArea, effTs);
+  const stdPriceCap = rentalStdPriceCap(article, u.isCapitalArea, appTs);
   const fails: ArticleFailCode[] = [];
 
   // (b) 등록기준일 경계 게이트
-  if (gate.regDateMin != null && effTs < gate.regDateMin) fails.push("REG_DATE_GATE"); // 아·자
+  // 아·자 — 부칙<제35349호> 제15조② 「2025년 6월 4일 이후 민간임대주택으로 등록한」: 지자체 등록(신청)일(세무서 사업자등록일 아님)
+  if (gate.regDateMin != null && appTs < gate.regDateMin) fails.push("REG_DATE_GATE");
   if (gate.existingBusinessGate) {
     // 나 — 세무서·지자체 두 등록일을 함께 본다(S06-12: 세무서 단독 비교는 의제 방향 불통과·역방향 통과 오류)
     if (!passesExistingBusinessRegGate(u.businessRegistrationDate?.getTime(), u.rentalRegistrationDate?.getTime())) fails.push("REG_DATE_GATE");
@@ -384,10 +385,9 @@ export function checkRentalArticle(
   u: NormalizedRentalUnit,
 ): ArticleCheckResult {
   const effRegDate = deriveEffectiveRegDate(u.businessRegistrationDate, u.rentalRegistrationDate);
-  const effTs = effRegDate?.getTime() ?? 0;
   const appTs = regApplicationTs(effRegDate, u.rentalRegistrationDate);
   const requiredYears = rentalRequiredYears(article, appTs);
-  const stdPriceCap = rentalStdPriceCap(article, u.isCapitalArea, effTs);
+  const stdPriceCap = rentalStdPriceCap(article, u.isCapitalArea, appTs);
   const fails: ArticleFailCode[] = [];
 
   // (a) 등록 완비
