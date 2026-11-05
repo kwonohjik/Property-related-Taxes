@@ -53,7 +53,7 @@ export const KNOWN_ABSENT_ARTICLES = new Set<string>([
  */
 export const UNVERIFIABLE_LAW_NAMES: Record<string, string> = {
   "조특법 법률":
-    "법률 제13560호 부칙 §53(공익사업 수용 감면 종전 감면율) — 조문 API(lawService.do target=eflaw)는 본칙만 내려준다. 부칙 원문은 target=law + 그 개정본 MST(177204)로 별도 조회해야 하므로 조문 단위 키워드 대조 대상이 아니다",
+    "법률 제13560호 부칙 §53(공익사업 수용 감면 종전 감면율)·법률 제19199호 부칙 §39·제17759호 부칙 §21②·제12173호 부칙 §32·제9272호 부칙 §22·제8827호 부칙 §31(§99의4① 가액 한도의 시기 분기 — 양도분/취득분 적용례, 2026-11-05 개정본 MST별 부칙 실독) — 조문 API(lawService.do target=eflaw)는 본칙만 내려준다. 부칙 원문은 target=law + 그 개정본 MST(177204)로 별도 조회해야 하므로 조문 단위 키워드 대조 대상이 아니다",
   "상증법 법률":
     "법률 제14388호 부칙 §5②(§39①3호 전환주식 — 2017.1.1. 이후 신주 발행분부터 적용) — 부칙이라 조문 API(lawService.do target=eflaw) 대상이 아니다. 원문은 target=law + 그 개정본 MST(188353) 부칙단위로 별도 조회(2026-09-28 실독)",
   "상증령 대통령령":

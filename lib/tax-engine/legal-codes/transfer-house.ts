@@ -586,6 +586,27 @@ export type ReductionEffectCategory =
 // REDEVELOPMENT(재개발/재건축 조문 상수)는 800줄 정책에 따라 ./transfer-redevelopment.ts 로 분리.
 export { REDEVELOPMENT } from "./transfer-redevelopment";
 
+/**
+ * 조특법 §99의4① 1호나목·2호다목 가액 한도의 시기 분기 근거 — 부칙은 법제처 조문 API 대상이 아니라
+ * `legal-verification/coverage.ts` `UNVERIFIABLE_LAW_NAMES["조특법 법률"]`에 사유를 적는다.
+ * 표기는 `조특법 법률 제N호 부칙 제M조` 한 형태로 둔다(다른 표기는 파서가 lawAbbr를 「법률」로 읽어 모수 밖으로 샌다).
+ */
+export const NEW_99_4_STD_PRICE_ADDENDA = {
+  /** 2023.1.1. 개정(2억→3억) — 시행 전 양도는 종전 규정 */
+  AMEND_2023_TRANSFER: "조특법 법률 제19199호 부칙 제39조",
+  /** 2021.1.1. 개정 — 가액 목 이동·대지 요건 삭제, 「이 법 시행 이후 양도하는 경우부터 적용」 */
+  AMEND_2021_TRANSFER: "조특법 법률 제17759호 부칙 제21조②",
+  /** 2014.1.1. 한옥 4억 — 「이 법 시행 후 최초로 주택을 구입하는 분부터」 */
+  HANOK_2014_PURCHASE: "조특법 법률 제12173호 부칙 제32조",
+  /** 2009.1.1. 개정(2억) — 「이 법 시행 후 최초로 농어촌주택 또는 고향주택을 취득하는 분부터」 */
+  AMEND_2009_ACQUISITION: "조특법 법률 제9272호 부칙 제22조",
+  /** 2008.1.1. 개정(1억5천만원) — 「이 법 시행 후 최초로 취득하는 분부터」 */
+  AMEND_2008_ACQUISITION: "조특법 법률 제8827호 부칙 제31조",
+} as const;
+
+/** 조세특례제한법 시행령 §99의4⑭ — 「대통령령으로 정하는 한옥」(지방자치단체의 장에게 등록된 한옥) */
+export const NEW_99_4_HANOK_DECREE = "조특령 §99의4⑭";
+
 /** 장특공제 배제 사유 (§95② 본문 괄호 — 미등기·§104⑦ 중과 자산 등). UI 표시 전용 echo. */
 export type LthdExclusionReason =
   | "unregistered"
