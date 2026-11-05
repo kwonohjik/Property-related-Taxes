@@ -11,6 +11,7 @@ import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
+import { surchargeHouseholdCountsRights } from "./surcharge-tax-incentive-house-link";
 import {
   determineMultiHouseSurcharge,
   type MultiHouseSurchargeInput,
@@ -35,6 +36,7 @@ import {
 import { rentalCardSurchargeRows } from "./rental-card-surcharge-rows";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 import { buildSurchargeExclusionStep } from "./transfer-reductions";
+import { withSurchargeExclusionRegime } from "./transfer-reductions";
 import {
   resolveExemptionHouseCountExclusions,
   surcharge15HouseCount,
@@ -559,7 +561,11 @@ export function runMultiHouseSurchargeStep(
     ) {
       return undefined;
     }
-    if (surchargeExclusionByReduction.excluded) steps.push(buildSurchargeExclusionStep(surchargeExclusionByReduction));
+    // 근거는 세대 구성(산입 조합원입주권·분양권 유무)에 맞춘다 — NH-82
+    if (surchargeExclusionByReduction.excluded) {
+      const countsRights = surchargeHouseholdCountsRights(mhInput.presaleRights, parsedRates.houseCountExclusionRules, multiHouseSurchargeResult);
+      steps.push(buildSurchargeExclusionStep(withSurchargeExclusionRegime(surchargeExclusionByReduction, countsRights)));
+    }
   }
   return multiHouseSurchargeResult;
 }
