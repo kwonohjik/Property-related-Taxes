@@ -90,6 +90,13 @@ const landOnlySelfBuilt = asset(1, {
   gbBuildingAcquisitionCause: "newConstruction", bgCoDonorBuildingStdPriceAtAcq: "0",
 });
 
+/** 분리 ON · 토지만 이월과세 · 건물 양도인 매매(2020) · 감정가액(K-7) — 2026-11-05 차단 해제(`bg-carryover-k5-one-part-b.plan.md` §9). vitest `transfer.route.bg-carryover-k67-one-part.anchor.test.ts`와 같은 값. */
+const landOnlyAppraisal = asset(1, {
+  hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2024-05-01", acquisitionDate: "2020-01-01", gbBuildingAcquisitionCause: "purchase",
+  bgAcquisitionMethod: "appraisal", bgCoDonorPresumedAcquisitionLand: "30000000", bgPresumedAcquisitionBuilding: "240000000",
+  bgActualAcquisitionLand: "100000000", bgActualAcquisitionBuilding: "",
+});
+
 const card = (page: Page) => page.getByTestId("gb-bg-carryover-card").first();
 /** [A] 열 — 증여세 상당액 행과 같은 부모(`ScenarioCol` 본문). [B] 열도 「수증자」 꼬리표를 쓰므로 범위를 좁힌다. */
 const colA = (page: Page) => card(page).getByTestId("gb-bg-carryover-gift-tax").locator("xpath=..");
@@ -135,5 +142,22 @@ test.describe("일반건물 부담부증여 × 이월과세 — 토지·건물 �
     const body = (await calculate(page)) as { carryoverTaxation?: unknown };
     expect(body.carryoverTaxation).toBeUndefined();
     await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("66,675,500");
+  });
+
+  test("GBPC-E4 토지만 이월과세 × 감정가액 → 칸이 파트별로 갈리고 계산된다(B 103,138,000 채택)", async ({ page }) => {
+    test.setTimeout(180_000);
+    await seedWizard(page, seedOf([landOnlyAppraisal]));
+    await expandAssetSection(page, 2);
+    const has = (k: string) => page.locator(`[data-asset-card-index="0"] [data-field="${k}"]`);
+    await expect(has("bgPresumedAcquisitionBuilding")).toHaveCount(1); // 양도인 값 = 증여받지 않은 건물
+    await expect(has("bgPresumedAcquisitionLand")).toHaveCount(0);
+    await expect(has("bgCoDonorPresumedAcquisitionLand")).toHaveCount(1); // 당초 증여자 값 = 증여받은 토지
+    await expect(has("bgCoDonorPresumedAcquisitionBuilding")).toHaveCount(0);
+    await expect(has("bgActualAcquisitionLand")).toHaveCount(1); // 양도인 증여일 평가액 = 증여받은 토지
+    await expect(has("bgActualAcquisitionBuilding")).toHaveCount(0);
+    const body = await calculate(page);
+    const info = body.burdenedGiftInfo as Record<string, unknown>;
+    expect([info.presumedBuildingAcquisitionPrice, info.actualLandAcquisitionPrice]).toEqual([240_000_000, 100_000_000]);
+    await expect(page.locator('[data-print-id="form-table"]').first()).toContainText("103,138,000");
   });
 });

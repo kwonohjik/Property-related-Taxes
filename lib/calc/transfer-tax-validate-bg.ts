@@ -69,6 +69,8 @@ import { bgAnyCarryover, bgCarryoverForm, bgCarryoverParts } from "./bg-carryove
 import { bgConvertedCarryoverReadsGiftValuation } from "./bg-carryover-parts";
 import { transferorGiftValuationError } from "./transfer-tax-validate-bg-carryover-b";
 import { convertedCarryoverValuationError } from "./transfer-tax-validate-bg-carryover-b";
+import { partialCarryoverOwnPresumedError } from "./transfer-tax-validate-bg-carryover-b";
+import { bgPartialCarryoverGiftValuationPart } from "./bg-carryover-parts";
 import { bgHouseSplitActive } from "./bg-house-split";
 import { validateBgHouseSplit } from "./transfer-tax-validate-bg-house-split";
 
@@ -366,13 +368,14 @@ export function validateBurdenedGiftAsset(
       if (block) {
         return fieldError("bgAcquisitionMethod", `${label}: ${block.long}`);
       }
-      if (asset.acquisitionCause === "carryover_gift") {
+      if (bgAnyCarryover(asset)) { // 건물만 이월과세(토지 원인은 매매)도 이 분기다 — 한 파트 K-6/K-7(§9)
         /**
          * 이월과세 × K-6/K-7 — 방식은 **당초 증여자** 쪽이다(소법 §97의2①1호). 그 금액은 이월과세 박스의 당초 증여자 칸이고
          * (`missingCoDonorBasisLabel`이 이미 요구했다), 양도인 쪽(시나리오 B)은 증여받은 자산이라 소령 §163⑨가 증여일 상증법 평가액을
          * 실지거래가액으로 본다 — K-4 실지취득가액 칸이 그 값이다. 어느 쪽도 다른 쪽으로 대신하지 않는다.
          */
-        const err = transferorGiftValuationError(asset, label, houseSplit);
+        // 한 파트만 증여받은 일반건물 — 증여받은 파트 평가액 + 다른 파트의 양도인 자기 값(`bg-carryover-k5-one-part-b.plan.md` §9 · helper)
+        const err = transferorGiftValuationError(asset, label, houseSplit, bgPartialCarryoverGiftValuationPart(asset)) ?? partialCarryoverOwnPresumedError(asset, label, methodLabel);
         if (err) return err;
         // 신축·증축 × 이월과세는 화면에서 도달하지 않는다 — 신축 입력은 매매 취득에서만 열린다(`selfBuiltActive`).
         //   API 직접 호출은 엔진 `assertCarryoverDonorBasis`가 막는다.
