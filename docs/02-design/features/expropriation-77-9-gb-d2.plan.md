@@ -65,7 +65,7 @@
 
 | ID | 항목 | 상태 |
 |---|---|---|
-| V-3 | D-1의 반대쪽(토지 상속개시일 ≤ 피상속인 취득일 < 건물 취득일이 통과) | 확인 필요 — Q-3 a 구현 때 anchor로 실측한다 |
+| V-3 | D-1의 반대쪽(토지 상속개시일 ≤ 피상속인 취득일 < 건물 취득일이 통과) | ✅ 실측 — 수정 전 통과(틀린 입력 수용) · 수정 후 ⑧·⑫ 차단(§5.2) |
 | V-4 | 일반건물 「건물 피상속인 취득일」(`gbBuildingDecedentAcquisitionDate`)과 건물 상속개시일의 순서 검사 | 코드에서 찾지 못함 — 확인 필요(이번 범위 밖) |
 | V-5 | 판정 메뉴(`one-house-exemption-validate.ts`)·부담부증여 1주택(`gift-burdened-one-house.ts`)의 같은 비교식 | 일반건물 분리 입력이 없는 화면이라 해당 없음으로 보이나 확인 필요 |
 
@@ -78,3 +78,30 @@
 2. 구현: ⑧ `getAssetDateOrderIssue`와 ⑫ 상속 분기에 같은 기준일(일반건물 · 분리 ON · 토지 상속이면 `landAcquisitionDate`).
 3. 뮤테이션 → 회귀(`__tests__/calc` · `components` · `lib` · `api`) → tsc·eslint → Playwright(G3 화면에서 「다음」 통과).
 4. 결과를 §5에 적는다.
+
+## 5. 구현 결과 (2026-11-05 · 결정: Q-1 a · Q-2 a · Q-3 a)
+
+### 5.1 변경
+
+| 항목 | 파일 | 내용 |
+|---|---|---|
+| Q-1 | `components/calc/transfer/GeneralBuildingAcquisitionCards.tsx` | 「건물 피상속인 취득일」 안내 2문구에 「수용으로 양도하면 감면의 「2년 이전 취득」도 이 날로 판정합니다 (조세특례제한법 §77⑨)」 |
+| Q-3 | `lib/calc/decedent-order-basis.ts`(신규) | `decedentOrderBasisDate` — 일반건물 · 분리 ON이면 `landAcquisitionDate`, 그 밖은 `acquisitionDate` |
+| Q-3 ⑧ | `lib/calc/transfer-tax-validate-asset.ts` | `getAssetDateOrderIssue` 피상속인 순서 검사가 위 기준일과 비교 |
+| Q-3 ⑫ | `lib/api/transfer-tax-schema-refines.ts` | 상속 분기 순서 검사가 같은 기준일(`generalBuildingValuation` ∧ `isSeparateAcquisition`) |
+
+엔진 불변. 종전에 계산되던 입력의 세액은 그대로다(아래 Q-2 고정값이 수정 전후 같다).
+
+### 5.2 테스트
+
+- route anchor `__tests__/api/expropriation-77-9-gb-d2.anchor.test.ts` 12건:
+  - Q-2(6건 · 수정 전부터 통과 — 동작 고정): G1 25,958,999 / 0 · G2 26,775,345 / 22,872,499 · D2 18,759,000 / 13,913,960.
+  - Q-3(6건 · 수정 전 3건 실패): G3 2000 → 26,702,653(대조) · **2010 → 200 · 감면 26,702,653**(종전 ⑧·⑫ 400) · **2023-12-01 → 200 · 감면 4,657,087**(토지분 불성립 · 건물분만) · 토지 상속개시일 뒤 2024-06-01 → ⑧·⑫ 같은 칸 차단 · **V-3 반대쪽(토지 상속 2010 · 건물 매수 2015 · 피상속인 2012) → 차단**(종전 통과 — V-3 실측으로 확인) · 분리 OFF 일반건물·D2 대조 종전대로.
+- 렌더 anchor `decedent-date-hint-followups.anchor.test.tsx` — 일반건물 건물 칸 안내에 §77⑨ 단언 추가(수정 전 2건 실패).
+- 뮤테이션 5건 모두 잡힘: M1 기준일 항상 `acquisitionDate`(3 실패) · M2 ⑧ 일반건물 분리 플래그 끔(3) · M3 ⑫ 같은 플래그 끔(3) · M4 기준일 항상 토지(2 — D2 대조) · M5 안내 §77⑨ 삭제(2).
+- 회귀: 따로 돌린 실행(calc·components·lib·api · tsc · eslint)은 시스템 메모리 부족으로 중단됐다 — push 전 검사(전체 vitest · tsc · lint)로 대신한다.
+- 화면(Playwright): 이번 변경에서는 하지 않았다.
+
+### 5.3 남은 것
+
+- V-4 일반건물 「건물 피상속인 취득일」과 건물 상속개시일의 순서 검사 · V-5 판정 메뉴·부담부증여 1주택의 같은 비교식 — §3 그대로.

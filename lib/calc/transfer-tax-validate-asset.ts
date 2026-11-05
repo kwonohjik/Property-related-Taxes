@@ -68,6 +68,7 @@ export function todayLocalISO(): string {
 export { validateAssetAcquisition } from "./transfer-tax-validate-acquisition";
 import { validateAssetAcquisition } from "./transfer-tax-validate-acquisition";
 import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
+import { decedentOrderBasisDate } from "./decedent-order-basis";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import { calcRentalResidenceFacts } from "./rental-residence-form-facts";
 
@@ -85,11 +86,17 @@ export function getAssetDateOrderIssue(
   if (!a.parcelMode && a.acquisitionDate && transferDate && a.acquisitionDate >= transferDate)
     return { message: "취득일은 양도일보다 이전이어야 합니다.", field: "acquisitionDate" };
   // 상속·증여자 취득일 순서
+  // 상속개시일 = 일반건물 분리 ON이면 토지 상속개시일(`decedentOrderBasisDate` — ⑫와 같은 기준)
+  const inheritedOn = decedentOrderBasisDate(
+    a.assetKind === "general_building" && a.hasSeperateLandAcquisitionDate === true,
+    a.acquisitionDate,
+    a.landAcquisitionDate,
+  );
   if (
     a.acquisitionCause === "inheritance" &&
     a.decedentAcquisitionDate &&
-    a.acquisitionDate &&
-    a.decedentAcquisitionDate >= a.acquisitionDate
+    inheritedOn &&
+    a.decedentAcquisitionDate >= inheritedOn
   )
     return { message: "피상속인 취득일은 상속개시일보다 이전이어야 합니다.", field: "decedentAcquisitionDate" };
   if (
