@@ -13,6 +13,8 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { isFractionalSplitEntryBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
+import { isHousingLike } from "@/lib/calc/housing-like-asset";
+import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 
 type ReverseAppurtenantAsset = Pick<
   AssetForm,
@@ -38,4 +40,22 @@ export function reverseAppurtenantHouseAssetId(
   if (houseLike.length !== 1) return undefined;
   const [house] = houseLike;
   return house.assetKind === "housing" && !house.isMixedUseHouse ? house.assetId : undefined;
+}
+
+/**
+ * NH-14 — 첫 자산이 주택 계열이 아니고(토지·건물 등) 함께 양도하는 자산에 주택(겸용주택·재개발 완공주택 포함)이 있으면 그 주택들의 id.
+ *
+ * 보유 상황 단계의 ① 세대·주택 현황(1세대·주택 수·명부·거주기간·조정대상지역)은 첫 자산이 주택 계열일 때만 열린다(`Step4` `isHousingLike`).
+ * 그대로 계산하면 함께 양도한 주택이 숨은 기본값(1세대 해당·1주택·거주 0·조정대상지역 아님)으로 1세대1주택 판정을 받는다
+ * (리뷰 실측: 독립 나대지 먼저 12,012,000 vs 주택 먼저 86,537,000). G1(`reverseAppurtenantHouseAssetId` — 부수토지 + 일반 주택 1건)을 포함하는
+ * 넓은 구성이다(사용자 결정 Q-24 — ⑧이 막고 주택을 첫 자산으로 바꾸는 버튼·고지를 둔다). 지분 분할 묶음은 G1과 같은 이유로 제외한다.
+ */
+export function companionHousesHiddenFromHouseholdFacts(
+  assets: readonly ReverseAppurtenantAsset[],
+  declaredMode?: TransferFormData["assetSplitMode"],
+): string[] {
+  if (declaredMode === "fractional" || isFractionalSplitEntryBundle(assets)) return [];
+  const [primary, ...companions] = assets;
+  if (!primary || isHousingLike(primary.assetKind)) return [];
+  return companions.filter((a) => isOneHouseExemptionAsset(a.assetKind)).map((a) => a.assetId);
 }

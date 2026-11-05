@@ -41,6 +41,8 @@ import { validateSeparateLandDateRequired } from "./separate-land-date-required"
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import { reverseAppurtenantHouseAssetId } from "./reverse-appurtenant-house";
+import { companionHousesHiddenFromHouseholdFacts } from "./reverse-appurtenant-house";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import {
   ownershipRatioError,
   formatOwnershipPercent,
@@ -282,6 +284,15 @@ export function validateAssetEntry(
         );
       }
     }
+  }
+
+  // NH-14 — 첫 자산이 주택 계열이 아닌데 주택을 함께 양도하면 ① 세대·주택 현황이 열리지 않아 그 주택이 숨은 기본값으로 판정된다(사용자 결정 Q-24).
+  //   G1(위 토지 블록 — 부수토지 + 일반 주택 1건)은 먼저 자기 문구로 막는다. 주택을 첫 자산으로 바꾸는 버튼은 1단계 안내 카드(`ReverseAppurtenantSwapNotice`).
+  if (index === 0 && companionHousesHiddenFromHouseholdFacts(form.assets, form.assetSplitMode).length > 0) {
+    return fieldError(
+      "assetKind",
+      `${label}: 첫 자산이 주택이 아니고 주택을 함께 양도하는 자산으로 넣으면 1세대1주택 판정에 필요한 세대·주택 수·거주기간·조정대상지역 입력이 열리지 않아 계산할 수 없습니다. 주택을 첫 자산으로 입력하세요(${TRANSFER.ONE_HOUSE_EXEMPT}).`,
+    );
   }
 
   // G2 후속 — 「토지·건물 취득일 다름」 ON인데 토지 취득일이 비면 같은 날 취득으로 조용히 계산됐다. 일반건물·겸용처럼 필수로 받는다.

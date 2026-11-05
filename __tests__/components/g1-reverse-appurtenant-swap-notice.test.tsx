@@ -81,13 +81,39 @@ describe("노출 조건", () => {
 
   it.each([
     ["주택 먼저", () => form(HOUSE(0), LAND("l1", 300))],
-    ["토지 성격 독립 나대지", () => form({ ...LAND("l1", 300), landNature: "standalone" }, HOUSE(0))],
-    ["주택 2건", () => form(LAND("l1", 300), HOUSE(0), { ...HOUSE(0), assetId: "h2" })],
-    ["겸용주택", () => form(LAND("l1", 300), { ...HOUSE(0), isMixedUseHouse: true })],
     ["단건", () => form(LAND("l1", 300))],
   ])("%s — 카드 없음", (_n, mk) => {
     render(<Host init={mk()} />);
     expect(screen.queryByTestId(NOTICE)).toBeNull();
+  });
+
+  /**
+   * 🔄 반전(NH-14 · 사용자 결정 Q-24) — 종전에는 독립 나대지·주택 2건·겸용주택 구성에 카드가 없었다(⑧도 막지 않아 숨은 기본값으로 계산됐다).
+   * 이제 ⑧이 막으므로 같은 카드가 안내와 버튼을 낸다. 주택 먼저·단건은 위 테스트가 «카드 없음»을 지킨다.
+   */
+  it.each([
+    ["토지 성격 독립 나대지", () => form({ ...LAND("l1", 300), landNature: "standalone" }, HOUSE(0))],
+    ["겸용주택", () => form(LAND("l1", 300), { ...HOUSE(0), isMixedUseHouse: true })],
+  ])("🔄 %s — 「첫 자산이 주택이 아닙니다」 카드 + 버튼 1개", (_n, mk) => {
+    render(<Host init={mk()} />);
+    expect(screen.getByText("첫 자산이 주택이 아닙니다")).toBeTruthy();
+    expect(screen.queryByTestId(BTN)).not.toBeNull();
+  });
+
+  it("🔄 주택 2건 — 주택마다 버튼 · 누르면 그 주택이 맨 앞", () => {
+    const patches: Partial<F>[] = [];
+    render(<Host init={form(LAND("l1", 300), HOUSE(0), { ...HOUSE(0), assetId: "h2" })} patches={patches} />);
+    expect(screen.queryByTestId(BTN)).toBeNull();
+    fireEvent.click(screen.getByTestId(`${BTN}-h2`));
+    expect(patches.at(-1)?.assets?.map((a) => a.assetId)).toEqual(["h2", "l1", "h1"]);
+    expect(screen.queryByTestId(NOTICE)).toBeNull();
+  });
+
+  it("🔄 첫 자산이 일반건물 — 카드는 보이고 버튼 없이 사유 한 줄", () => {
+    render(<Host init={form({ ...LAND("g1", 300), assetKind: "general_building", landNature: undefined }, HOUSE(0))} />);
+    expect(screen.queryByTestId(NOTICE)).not.toBeNull();
+    expect(screen.queryByTestId(BTN)).toBeNull();
+    expect(screen.getByTestId(REASON).textContent).toContain("첫 자산이 토지가 아니어서");
   });
 
   it("다건 임베드 모드에서는 숨긴다", () => {
