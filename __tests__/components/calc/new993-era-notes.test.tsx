@@ -5,6 +5,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { afterEach, describe, it, expect } from "vitest";
 import { New993DetailCard } from "@/components/calc/results/transfer/TransferReductionRows";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 
 afterEach(cleanup);
 
@@ -28,13 +29,13 @@ const detail = (over: Partial<Detail>): Detail =>
 describe("New993DetailCard 시기 축 안내", () => {
   it("§29① 종전 규정 적용분 — 적용 카드에 근거를 적는다", () => {
     render(<New993DetailCard detail={detail({ priorRuleBasis: "addenda_29_1" })} />);
-    expect(screen.getByTestId("new993-era-prior-29-1").textContent).toContain("부칙 §29①");
+    expect(screen.getByTestId("new993-era-prior-29-1").textContent).toContain(NEW_99_3_ADDENDA_6762.PRIOR_CONTRACT_OR_APPROVAL);
     expect(screen.queryByTestId("new993-era-confirm")).toBeNull();
   });
 
   it("§29② 종전 규정 적용분", () => {
     render(<New993DetailCard detail={detail({ priorRuleBasis: "addenda_29_2" })} />);
-    expect(screen.getByTestId("new993-era-prior-29-2").textContent).toContain("부칙 §29②");
+    expect(screen.getByTestId("new993-era-prior-29-2").textContent).toContain(NEW_99_3_ADDENDA_6762.PRIOR_CONSTRUCTION_STARTED);
   });
 
   it("착공 여부 확인 필요 — 적용 불가 카드에도 표시한다", () => {
