@@ -237,7 +237,7 @@ describe("⑦ 결과 화면", () => {
       ...base,
       houseCount: {
         ...base.houseCount,
-        notApplied: [{ label: "농어촌주택등 — 요건 미충족으로 주택 수에서 빼지 않음", legalBasis: "조특법 §99의4 (농어촌주택)", reasons: ["취득 당시 기준시가 합계가 한도(3억)를 초과합니다"] }],
+        notApplied: [{ label: "농어촌주택등 — 요건 미충족으로 주택 수에서 빼지 않음", legalBasis: "조특법 §99의4 (농어촌주택)", reasons: ["취득 당시 기준시가 합계가 한도(3억)를 초과합니다 (조특법 §99의4①1호나목(고향주택 2호다목))"] }],
       },
     } as unknown as OneHouseExemptionResponse;
     render(<OneHouseJudgmentResultView result={r} />);

@@ -42,7 +42,8 @@ describe("H 엔진 helper", () => {
 const RURAL: RowCountExclusionReduction = {
   type: "new_99_4_rural",
   ruralHouseAcquisitionDate: "",
-  ruralHouseStdPrice: "100000000",
+  // 2003-11-15 취득·2010-12-15 양도 = 2008.1.1. 전 취득분 한도 7천만원 이하(NH-05 PR-2a — 종전 1억원은 한도 초과)
+  ruralHouseStdPrice: "60000000",
   isRegisteredHanok: false,
   isAdjacentArea: false,
   meetsLocationRequirement: true,
@@ -79,5 +80,11 @@ describe("C-1 클라이언트 제외 행 집합", () => {
   it("직계존속 주택이 농어촌주택보다 먼저 → f-rural 제외 / 나중이면 제외 안 함(음성 짝)", () => {
     expect([...eligibleCountExcludedHouseIds(form("2001-12-15"))]).toEqual(["f-rural"]);
     expect([...eligibleCountExcludedHouseIds(form("2004-05-15"))]).toEqual([]);
+  });
+  it("가액 짝: 같은 사실에서 기준시가가 7천만원을 넘으면(1억) 순서가 맞아도 제외 안 함 — 이 테스트는 순서 축만 검증하므로 6천만원을 쓴다", () => {
+    const f = form("2001-12-15");
+    const rural = f.houses.find((h) => h.id === "f-rural")!;
+    rural.countExclusion = { kind: "reduction", reduction: { ...RURAL, ruralHouseStdPrice: "100000000" } };
+    expect([...eligibleCountExcludedHouseIds(f)]).toEqual([]);
   });
 });

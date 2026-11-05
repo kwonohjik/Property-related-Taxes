@@ -146,7 +146,7 @@ describe("ROW-1 해석례 재현 — 일시적 2주택 + §99의4 농어촌주�
 describe("ROW-2 요건 미달 농어촌주택은 빼지 않는다 (Q-3(b))", () => {
   const OVER = { ...RURAL, ruralHouseStdPrice: "400000000" } as RowCountExclusionReduction;
 
-  it("[ROW-2] 기준시가 3억 초과 → 제외 행 없음 · 신규 주택 미도출 · 과세 · 사유가 명세에 남는다", async () => {
+  it("[ROW-2] 기준시가 한도 초과(2021 양도 — 한도 2억, 시료 4억) → 제외 행 없음 · 신규 주택 미도출 · 과세 · 사유가 명세에 남는다", async () => {
     const f = jForm([B, ruralRow("c", "2019-10-21", OVER)]);
     expect([...eligibleCountExcludedHouseIds(f)]).toEqual([]);
     expect(judgmentDerivedNewHouse(f)).toBeUndefined();
