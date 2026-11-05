@@ -83,6 +83,8 @@ const MODULES: ReadonlyArray<{
       "RENTAL_97_4_PERIOD",
       // 2026-11-05 — 조특법 §99의4① 가액 한도 시기 분기 부칙 5건 · 조특령 §99의4⑭ 등록 한옥.
       "NEW_99_4_STD_PRICE_ADDENDA", "NEW_99_4_HANOK_DECREE",
+      // 2026-11-05 — 조특법 §99·§99의3·§99의4 하위 법령 인용(NH-43·NH-48·NH-69).
+      "NEW_HOUSING_SUB_ARTICLE",
       "MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE", "CLAUSE_13_SURCHARGE_EXCLUSION_EFFECTIVE_DATE",
       // E-14(2026-09-28) — 구 §167의10①13호(2주택 §155② 상속주택) 신설일. 3주택 13호와 호가 달라 따로 둔다.
       "INHERITED_GENERAL_HOUSE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE",

@@ -1,5 +1,5 @@
 /**
- * 양도세 감면 분류 정정 마이그레이션 (Phase 1 산출물, 활성화는 Phase 2~)
+ * 양도세 감면 분류 정정 마이그레이션 (Phase 1 산출물 — Phase 2에서 `db.ts` version(4)에 통합됨)
  *
  * 배경:
  * - 2026-05-06 매핑 감사로 §99의3 = 신축주택(미분양 X) 분류 오류 확정
@@ -13,12 +13,8 @@
  * - `type: "long_term_rental"` → `type: "rental_97_3"` (등록일 기반 추가 분기는 Phase 2)
  * - `type: "new_housing"` → `type: "new_99"` (시기 분기는 Phase 2)
  *
- * 활성화 절차 (Phase 2 진입 시):
- * 1. lib/storage/db.ts 에 version(4) 추가
- * 2. `.upgrade(tx => migrateReductionReclassification(tx))` 호출
- * 3. 사용자에게 1회 토스트 안내
- *
- * **현재 (Phase 1)**: 본 함수는 export 되었지만 db.ts에 통합되지 않음. 회귀 위험 0.
+ * 통합 위치: `lib/storage/db.ts`의 `this.version(4)…upgrade(async (tx) => { await migrateReductionReclassification(tx); })`
+ * — IndexedDB가 v4 미만인 브라우저에서 1회 실행된다. (종전 헤더의 「db.ts에 통합되지 않음」은 v4 통합 뒤 갱신되지 않은 문구였다 — NH-79.)
  */
 
 import type { Transaction } from "dexie";
