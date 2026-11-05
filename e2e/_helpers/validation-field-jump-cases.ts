@@ -91,6 +91,12 @@ const graceBase = (gracePeriod: Record<string, unknown>) =>
     },
   );
 
+/** 상속 주택 — 날짜 순서 케이스 공통(상속개시일 2015-01-01) */
+const INH_ORDER = {
+  acquisitionCause: "inheritance", acquisitionDate: "2015-01-01", inheritanceStartDate: "2015-01-01",
+  publishedValueAtInheritance: "300000000", inheritanceValuationMethod: "supplementary", fixedAcquisitionPrice: "",
+};
+
 export interface FieldJumpCase {
   field: string;
   /** 테스트 이름 — 같은 키를 여러 분기에서 볼 때 구분한다(없으면 field) */
@@ -117,6 +123,11 @@ export const FIELD_JUMP_CASES: FieldJumpCase[] = [
       "세션 복원이 빈·미지의 자산 종류를 \"building\"으로 채우고(`calc-wizard-asset-migrate.ts:290`) 화면은 항상 한 종류가 선택돼 있다 — E2E 실측(2026-09-30): 오류 항목 자체가 뜨지 않음",
   },
   { field: "acquisitionDate", step: 0, assetIndex: 0, message: /^자산: 양도일\(2024-03-01\)이 취득일/, form: () => withPrimary({ acquisitionDate: "2025-01-01" }) },
+  // 날짜 순서 오류(`getAssetDateOrderIssue`) — 종전엔 칸 키가 없어 카드 맨 위로만 갔다(계획서 decedent-date-hint-followups.plan.md Q-3)
+  { name: "acquisitionDate (취득일=양도일 · 날짜 순서)", field: "acquisitionDate", step: 0, assetIndex: 0, message: /^자산: 취득일은 양도일보다 이전이어야/, form: () => withPrimary({ acquisitionDate: "2024-03-01" }) },
+  { name: "decedentAcquisitionDate (피상속인 취득일 ≥ 상속개시일)", field: "decedentAcquisitionDate", step: 0, assetIndex: 0, message: /^자산: 피상속인 취득일은 상속개시일보다 이전이어야/, form: () => withPrimary({ ...INH_ORDER, decedentAcquisitionDate: "2015-01-01" }) },
+  { name: "decedentCohabitationHoldingStartDate (개시일 ≥ 상속개시일)", field: "decedentCohabitationHoldingStartDate", step: 0, assetIndex: 0, message: /^자산: 동일세대 거주·보유 개시일은 상속개시일/, form: () => withPrimary({ ...INH_ORDER, decedentAcquisitionDate: "2005-01-01", decedentSameHouseholdBeforeInheritance: true, decedentCohabitationHoldingStartDate: "2015-06-01" }) },
+  { name: "decedentCohabitationHoldingStartDate (개시일 < 피상속인 취득일)", field: "decedentCohabitationHoldingStartDate", step: 0, assetIndex: 0, message: /^자산: 동일세대 거주·보유 개시일이 피상속인 취득일보다 빠릅니다/, form: () => withPrimary({ ...INH_ORDER, decedentAcquisitionDate: "2005-01-01", decedentSameHouseholdBeforeInheritance: true, decedentCohabitationHoldingStartDate: "2004-01-01" }) },
   {
     field: "landAcquisitionDate", step: 0, assetIndex: 0, message: /^자산: 양도일\(2024-03-01\)이 토지 취득일/,
     form: () => withPrimary({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2025-01-01" }),

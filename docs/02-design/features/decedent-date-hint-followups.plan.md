@@ -85,3 +85,30 @@
    - Q-3: `collectStepIssues` 칸 키 단언(B1·B2·B4·B5) + E2E — 오류 클릭 후 커서가 그 칸 안.
 2. 구현 → 뮤테이션(칸 키 1개 제거 · §95④ 조건 제거) → 회귀(`__tests__/calc` · `components` · `lib`) → tsc·eslint → Playwright.
 3. 결과를 이 문서 §5에 적는다.
+
+## 5. 구현 결과 (2026-11-05 · 결정: Q-1 a · Q-2 a · Q-3 a)
+
+### 5.1 변경
+
+| 항목 | 파일 | 내용 |
+|---|---|---|
+| Q-1 ① | `components/calc/transfer/GeneralBuildingAcquisitionCards.tsx` | 「건물 피상속인 취득일」 안내 2문구: 「단기보유 통산용 (소득세법 §95④·§104②1호)」 → 「세율의 보유기간 기산일입니다 (소득세법 §104②1호)」 |
+| Q-1 ② | `lib/calc/transfer-tax-validate-gb-required.ts` | ⑧ 문구 2개(토지·건물)를 같은 인용으로 |
+| Q-1 ③ | `components/calc/transfer/CompanionAcqInheritanceBlock.tsx` | 가업상속 문장을 `allowsFamilyBusinessInheritance(asset)`일 때만 — 일반건물 토지 카드에서 빠진다 |
+| Q-2 | `components/calc/transfer/BuildingCauseMixBlock.tsx` | D2 안내에 「수용으로 양도하면 감면의 「2년 이전 취득」도 이 날로 판정합니다 (「조세특례제한법」 제77조 제9항)」 |
+| Q-3 | `lib/calc/transfer-tax-validate-asset.ts` | `getAssetDateOrderIssue`(메시지 + 칸 키) 신설 · 단계 차단은 `fieldError`로 기록 · 카드 인라인 경고용 `getAssetDateOrderError`는 그 메시지만(호출부 불변) |
+
+⑧ 통과·차단 여부 · ⑫ · 엔진 · 세액 불변.
+
+### 5.2 테스트
+
+- anchor `__tests__/calc/decedent-date-hint-followups.anchor.test.tsx` 11건 — 수정 전 9건 실패(단언 실패만) → 수정 후 통과.
+- #2906 anchor `inherit-decedent-date-uses-hint.test.tsx`의 일반건물 행은 의도된 반전 → 목록에서 빼고(주택·토지 유지), 일반건물 쪽은 새 anchor Q-1 ③이 지킨다.
+- 입력칸 이동 레지스트리 `e2e/_helpers/validation-field-jump-cases.ts`에 4건(B1·B2·B4·B5) — vitest `transfer-validation-field-jump-cases.test.ts` 707건 통과 · E2E `transfer-validation-field-jump.spec.ts` 새 4건 포함 8건 통과(오류 클릭 → 커서가 그 칸 안).
+- 뮤테이션 5건 모두 잡힘: M1 가업상속 문장 항상 표시(1 실패) · M2 항상 숨김(4) · M3 `fieldError` 제거(4) · M4 동일세대 칸 키 오기(2) · M5 피상속인 칸 키 오기(1).
+- 회귀: `__tests__/calc` · `components` · `lib` 1,769파일 21,215건 통과 · tsc 0 · eslint 0.
+- 화면(headless Playwright · 사람이 직접 한 확인 아님): 일반건물 토지 상속 카드 안내에 §95④ 문장 없음 · 일반건물 건물 칸 안내·⑧ 문구 §104②1호 · D2 안내에 §77⑨ · D2 피상속인 취득일 오류 클릭 → 그 칸 · 375px 가로 스크롤 없음.
+
+### 5.3 남은 것
+
+- V-1(일반건물 §77⑨) · V-2(D2 §77⑨ 화면 경로) — §3 그대로.

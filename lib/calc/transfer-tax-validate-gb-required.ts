@@ -27,7 +27,7 @@ export function gbBuildingOwnDecedentDate(asset: AssetForm): string {
 }
 
 /**
- * D1·D3 — 상속 파트의 피상속인 취득일(「소득세법」 §95④·§104②1호 단기보유 통산 기산일).
+ * D1·D3 — 상속 파트의 피상속인 취득일(「소득세법」 §104②1호 세율 보유기간 기산일 — 일반건물은 가업상속 입력이 없어 §95④ 단서가 쓰이지 않는다).
  *
  * 🔴 D1: 종전에는 일반건물 ⑧이 토지 상속의 피상속인 취득일을 요구하지 않았다 — 일반 자산 규칙
  *    (`transfer-tax-validate-acquisition.ts` 상속 분기)은 일반건물이 그보다 앞에서 위임되어 닿지 않는다.
@@ -41,13 +41,13 @@ export function gbBuildingOwnDecedentDate(asset: AssetForm): string {
 export function validateGbDecedentDates(asset: AssetForm, label: string): string | null {
   const landInherited = asset.acquisitionCause === "inheritance";
   if (landInherited && !asset.decedentAcquisitionDate)
-    return fieldError("decedentAcquisitionDate", `${label}: 피상속인 취득일을 입력하세요. 상속받은 토지의 단기보유 통산 기산일입니다 (소득세법 §95④·§104②1호).`);
+    return fieldError("decedentAcquisitionDate", `${label}: 피상속인 취득일을 입력하세요. 상속받은 토지의 세율 보유기간 기산일입니다 (소득세법 §104②1호).`);
   if (
     asset.gbBuildingAcquisitionCause === "inheritance" &&
     !gbBuildingOwnDecedentDate(asset) &&
     !(landInherited && asset.decedentAcquisitionDate)
   )
-    return fieldError("gbBuildingDecedentAcquisitionDate", `${label}: 건물 피상속인 취득일을 입력하세요. 상속받은 건물의 단기보유 통산 기산일입니다 (소득세법 §95④·§104②1호).`);
+    return fieldError("gbBuildingDecedentAcquisitionDate", `${label}: 건물 피상속인 취득일을 입력하세요. 상속받은 건물의 세율 보유기간 기산일입니다 (소득세법 §104②1호).`);
   return null;
 }
 
