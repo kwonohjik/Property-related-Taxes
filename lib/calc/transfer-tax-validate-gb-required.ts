@@ -53,6 +53,24 @@ export function validateGbDecedentDates(asset: AssetForm, label: string): string
   const ownBuildingDecedent = gbBuildingOwnDecedentDate(asset);
   if (ownBuildingDecedent && asset.acquisitionDate && ownBuildingDecedent >= asset.acquisitionDate)
     return fieldError("gbBuildingDecedentAcquisitionDate", `${label}: 건물 피상속인 취득일은 건물 상속개시일보다 이전이어야 합니다.`);
+  // 비움 → 엔진이 토지의 피상속인 취득일을 건물에 쓴다(`buildingDecedent ?? decedent`). 토지·건물 상속개시일이 다르면
+  // 그 값이 건물 상속개시일보다 늦을 수 있다 — 같은 날짜를 직접 쓰면 위 검사가 막으므로 대체값도 같은 규칙으로 막는다.
+  // 같은 날 상속이면 토지 순서 검사(`getAssetDateOrderIssue`)가 이미 막는다(중복 문구 방지). ⑫ D3″와 같은 규칙.
+  // 계획서 `docs/02-design/features/gb-both-inherited-decedent-fallback.plan.md`
+  if (
+    !ownBuildingDecedent &&
+    asset.hasSeperateLandAcquisitionDate &&
+    asset.gbBuildingAcquisitionCause === "inheritance" &&
+    landInherited &&
+    asset.decedentAcquisitionDate &&
+    asset.acquisitionDate &&
+    asset.landAcquisitionDate !== asset.acquisitionDate &&
+    asset.decedentAcquisitionDate >= asset.acquisitionDate
+  )
+    return fieldError(
+      "gbBuildingDecedentAcquisitionDate",
+      `${label}: 토지의 피상속인 취득일이 건물 상속개시일보다 늦어 건물에 쓸 수 없습니다. 건물 피상속인 취득일을 따로 입력하세요.`,
+    );
   return null;
 }
 
