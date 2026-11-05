@@ -158,9 +158,9 @@ export function toEngineReductions(
         usageApprovalDate993: r.usageApprovalDate993 || undefined,
         standardPriceAt5Years: parseAmount(r.standardPriceAt5Years || "0"),
         standardPriceAtAcquisition993: acqStdPrice993,
-        standardPriceAtTransfer993: r.standardPriceAtTransfer993
-          ? parseAmount(r.standardPriceAtTransfer993)
-          : undefined,
+        // 「0」도 미입력으로 본다 — ⑧(`> 0 || 자산값`)·라우터(`?? 자산값`)와 같은 fallback이다.
+        //   종전에는 문자열 "0"이 truthy라 0을 실어 라우터가 자산값으로 대신하지 못하고 감면이 0이 됐다 (리뷰 NH-56).
+        standardPriceAtTransfer993: parseAmount(r.standardPriceAtTransfer993 || "0") || undefined,
         isRecontractExcluded993: r.isRecontractExcluded993,
         recontractUnavoidableCause993: r.recontractUnavoidableCause993,
         isRedevelopedNewHouse993: r.isRedevelopedNewHouse993,

@@ -238,7 +238,7 @@ export function New993InputForm({
       <p className="text-xs font-semibold text-primary">조특법 §99의3 신축주택 과세특례 입력</p>
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="조세특례제한법 §99의3" label="§99의3 신축주택" />
-        <LawArticleModal legalBasis="조세특례제한법 시행령 §99" label="조특령 §99" />
+        <LawArticleModal legalBasis="조세특례제한법 시행령 §99의3" label="조특령 §99의3" />
       </div>
 
       {/* Round 9 정정 (2026-05-06): 1호(주건업) 시한 기준은 상단 "매매계약일"을 재사용. 본 폼에서는 입력 X. */}
@@ -402,23 +402,26 @@ export function New993InputForm({
       </div>
       </ToneCard>
 
-      <ToggleCard
-        tone="rose"
-        title="2001.5.23 전 분양계약 해제 후 재계약·대체취득"
-        description="해제한 본인·배우자(직계존비속·형제자매 포함)가 당초 주택을 다시 분양받거나 대체하여 다른 주택을 분양받아 취득한 주택은 배제됩니다 (조특령 §99의3④)"
-        checked={value.isRecontractExcluded993}
-        onCheckedChange={(v) => onUpdate("isRecontractExcluded993", v)}
-      >
-        {/* 조특칙 §44의4 카브백 — 없으면 부득이한 사유 대체취득자를 법 근거 없이 배제한다. */}
+      {/* 조특령 §99의3④는 법 §99의3①1호의 사유 — 2호(자기건설)에는 묻지 않는다 (리뷰 NH-57). ⑧·엔진과 같은 술어(2호가 아니면 1호). */}
+      {value.acquisitionType993 !== "self_built" && (
         <ToggleCard
-          variant="chip"
-          tone="emerald"
-          title="부득이한 사유로 «다른 주택»을 분양받아 취득"
-          description={"취학·근무상 형편·1년 이상 치료를 요하는 질병·학교폭력 전학 사유로 «당해 주택건설업자로부터 다른 주택»을 분양받은 경우에는 배제하지 않습니다 (조특칙 §44의4 → 소칙 §71③)"}
-          checked={value.recontractUnavoidableCause993}
-          onCheckedChange={(v) => onUpdate("recontractUnavoidableCause993", v)}
-        />
-      </ToggleCard>
+          tone="rose"
+          title="2001.5.23 전 분양계약 해제 후 재계약·대체취득"
+          description="해제한 본인·배우자(직계존비속·형제자매 포함)가 당초 주택을 다시 분양받거나 대체하여 다른 주택을 분양받아 취득한 주택은 배제됩니다 (조특령 §99의3④)"
+          checked={value.isRecontractExcluded993}
+          onCheckedChange={(v) => onUpdate("isRecontractExcluded993", v)}
+        >
+          {/* 조특칙 §44의4 카브백 — 없으면 부득이한 사유 대체취득자를 법 근거 없이 배제한다. */}
+          <ToggleCard
+            variant="chip"
+            tone="emerald"
+            title="부득이한 사유로 «다른 주택»을 분양받아 취득"
+            description={"취학·근무상 형편·1년 이상 치료를 요하는 질병·학교폭력 전학 사유로 다른 시·군으로 주거를 이전하면서 «당해 주택건설업자로부터 다른 주택»을 분양받은 경우에는 배제하지 않습니다 (조특칙 §44의4 → 소득세법 시행규칙 §71③)"}
+            checked={value.recontractUnavoidableCause993}
+            onCheckedChange={(v) => onUpdate("recontractUnavoidableCause993", v)}
+          />
+        </ToggleCard>
+      )}
 
       {/*
         조특령 §99의3② 1호 단서·2호 괄호 — 재개발·재건축 신축주택 안분 변형.
@@ -453,8 +456,8 @@ export function New993InputForm({
           variant="chip"
           checked={value.hasOccupancyAtContract ?? false}
           onCheckedChange={(v) => onUpdate("hasOccupancyAtContract", v)}
-          title="매매계약일 현재 다른 자가 입주한 사실 있음"
-          description="1호 단서 — 적용 배제"
+          title="매매계약일 현재 입주한 사실 있음"
+          description="법 §99의3①1호 단서 「매매계약일 현재 입주한 사실이 있거나」 — 적용 배제"
           tone="rose"
         />
       )}
