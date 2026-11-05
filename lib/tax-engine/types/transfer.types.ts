@@ -676,6 +676,12 @@ export interface TransferTaxInput {
    * @deprecated `"burdened_gift"`는 Phase 2(2026-05-12) 이후 deprecation — `transferType: "burdened_gift"` 사용 권장.
    */
   acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
+  /**
+   * [엔진 내부] 조특법 §99·§99의3 취득 원인 게이트가 읽는 **실제 취득 원인** — 이월과세 시나리오 B(`buildInputB`)만 싣는다.
+   * B는 §104②2호 세율 보유기간 때문에 `acquisitionCause`를 `"purchase"`로 바꾸지만 수증자는 최초 계약자·건설자가 아니다
+   * (서면인터넷방문상담4팀-1192 등 — `new-99-acquisition-cause.ts`). 사용자 입력 필드가 아니다(⑫에 없음).
+   */
+  reductionAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
 
   /**
    * 양도 형태 (양도자 관점) — Phase 2(2026-05-12) 신규.

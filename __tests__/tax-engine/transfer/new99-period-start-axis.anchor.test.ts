@@ -46,12 +46,12 @@ describe("NH-77 §99 신축주택취득기간 시작 전 — 1호는 사용승�
 
 describe("NH-77 §99 신축주택취득기간 시작 전 — 2호는 매매계약일 축", () => {
   it("🔴 계약 1998.5.21.(시작 전날) · 사용승인은 기간 안 → 기간 외 (사용승인일을 읽으면 통과해 버린다)", () => {
-    const i = input({ acquisitionType: "from_builder", contractDate: D("1998-05-21"), usageApprovalDate: D("1998-09-01") });
+    const i = input({ acquisitionType: "from_builder", firstContract: "yes" as const, contractDate: D("1998-05-21"), usageApprovalDate: D("1998-09-01") });
     expect(codes(i)).toEqual(["OUT_OF_ACQUISITION_PERIOD"]);
     expect(evaluateNew99(i).ineligibleReasons[0].message).toContain("매매계약일");
   });
   it("🟢 계약 1998.5.22.(시작일) · 사용승인은 시작 전 → 적용 (경계 포함 · 사용승인일을 읽으면 배제된다)", () => {
-    const r = evaluateNew99(input({ acquisitionType: "from_builder", contractDate: D("1998-05-22"), usageApprovalDate: D("1998-05-01") }));
+    const r = evaluateNew99(input({ acquisitionType: "from_builder", firstContract: "yes" as const, contractDate: D("1998-05-22"), usageApprovalDate: D("1998-05-01") }));
     expect(r.isEligible).toBe(true);
     expect(r.reducibleTransferIncome).toBe(40_000_000);
   });

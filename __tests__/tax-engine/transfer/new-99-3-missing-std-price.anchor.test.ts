@@ -29,7 +29,7 @@ const BASE = {
   region: "outside_speculation" as const,
   isResident: true,
   isHousingConstructionBusiness: false,
-  acquisitionType: "from_builder" as const,
+  acquisitionType: "from_builder" as const, firstContract: "yes" as const,
   calculatedTaxBeforeReduction: 215_010_000,
   calculatedTaxAfterReduction: 0,
 };
