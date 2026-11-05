@@ -39,6 +39,7 @@ import {
 import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
 import { FalseContractPriceNoticeForItems } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
+import { RegulatedAreaAssumptionLine } from "@/components/calc/results/transfer/RegulatedAreaAssumptionLine";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { CalculationWarningsCard } from "./shared/CalculationWarningsCard";
 import { allPropertiesReceiveOnly } from "@/components/calc/results/transfer/receive-only-display";
@@ -202,6 +203,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
       */}
       <OneHouseJudgmentProvenanceLine form={formData} />
       <SameDayOrderLine form={formData} />
+      <RegulatedAreaAssumptionLine form={formData} />
 
       <PrintSelectionPanel
         allGroups={TRANSFER_PRINT_SECTIONS}

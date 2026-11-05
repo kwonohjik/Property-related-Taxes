@@ -35,7 +35,7 @@ import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house
 import { resolveIsRegulatedAtTransfer } from "@/lib/tax-engine/transfer-tax-temporary-two-house-timing";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
-import { judgeRegulatedArea } from "@/lib/regulated-area";
+import { judgeRegulatedArea, type RegulatedAreaResult } from "@/lib/regulated-area";
 
 export function effectiveWasRegulatedAtAcquisition(o: {
   /** 법정동코드(PNU 앞 10자리). 없으면 저장값 */
@@ -228,9 +228,17 @@ const ymd = z.string().date();
  * - 판정 신뢰도(medium·low)는 보지 않는다 — 훅도 신뢰도와 무관하게 쓴다(계획서 Q-3 a).
  */
 export function calcStoredRegulatedFlags(form: RegulatedFlagsForm): { isRegulatedArea: boolean; wasRegulatedAtAcquisition: boolean } {
+  const j = storedRegulatedJudgments(form);
+  return { isRegulatedArea: j.transfer.value, wasRegulatedAtAcquisition: j.acquisition.value };
+}
+
+/** 두 숨은 토글의 값과, 그 값이 주소 판정에서 왔으면 그 판정(기준일·근거) — `calcStoredRegulatedFlags`·결과 고지가 같은 판정을 읽는다. */
+type StoredRegulatedJudgment = { value: boolean; judged?: { date: string; judgment: RegulatedAreaResult } };
+
+function storedRegulatedJudgments(form: RegulatedFlagsForm): { transfer: StoredRegulatedJudgment; acquisition: StoredRegulatedJudgment } {
   const stored = {
-    isRegulatedArea: form.isRegulatedArea === true,
-    wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition === true,
+    transfer: { value: form.isRegulatedArea === true },
+    acquisition: { value: form.wasRegulatedAtAcquisition === true },
   };
   const primary = form.assets?.[0];
   if (!primary || !isHousingLike(primary.assetKind)) return stored;
@@ -252,16 +260,51 @@ export function calcStoredRegulatedFlags(form: RegulatedFlagsForm): { isRegulate
     inDistrict: regionCode ? primary.regionInDesignatedDistrict : undefined,
   };
   const respectTouched = isOneHouseExemptionAsset(primary.assetKind);
-  return {
-    isRegulatedArea:
-      respectTouched && form.isRegulatedAreaTouched ? stored.isRegulatedArea : judgeRegulatedArea(loc, form.transferDate).isRegulated,
-    wasRegulatedAtAcquisition:
-      respectTouched && form.wasRegulatedAtAcquisitionTouched
-        ? stored.wasRegulatedAtAcquisition
-        : acquisitionDate
-          ? judgeRegulatedArea(loc, acquisitionDate).isRegulated
-          : false,
+  const judgeAt = (date: string): StoredRegulatedJudgment => {
+    const judgment = judgeRegulatedArea(loc, date);
+    return { value: judgment.isRegulated, judged: { date, judgment } };
   };
+  return {
+    transfer: respectTouched && form.isRegulatedAreaTouched ? stored.transfer : judgeAt(form.transferDate),
+    acquisition:
+      respectTouched && form.wasRegulatedAtAcquisitionTouched
+        ? stored.acquisition
+        : acquisitionDate
+          ? judgeAt(acquisitionDate)
+          : { value: false },
+  };
+}
+
+/** 결과 화면 고지 한 줄 — 어느 값을 어느 날 기준으로 어떻게 판정했는가. */
+export type RegulatedAddressAssumption = {
+  which: "transfer" | "acquisition";
+  /** YYYY-MM-DD */
+  date: string;
+  isRegulated: boolean;
+  confidence: "medium" | "low";
+  basis: string;
+};
+
+/**
+ * 결과 화면 「조정대상지역 판정 — 확인 필요」(계획서 `docs/00-pm/regulated-area-assumption-notice.plan.md` Q-1~Q-3 a).
+ *
+ * ④가 실은 두 값 중 **주소 문자열 판정에서 왔고 신뢰도가 high가 아닌 것**을 낸다 — 시·도를 알아볼 수 없어 조정대상지역으로 본 경우(low),
+ * 시군구 단위 매칭이라 동·읍·면 예외를 못 본 경우(medium), 데이터에 없는 시·도(low · 아님) 모두. 판정은 `calcStoredRegulatedFlags`와
+ * 같은 함수 호출이다(별도 판정식 금지).
+ * - 법정동코드(자산 → 폼 전역)가 있으면 ④는 코드로 판정한다 → 빈 배열.
+ * - 직접 만진 토글은 사용자가 정한 값이다 → 그 값은 내지 않는다(입주권·분양권은 표지를 보지 않는다 — `calcStoredRegulatedFlags`와 같다).
+ */
+export function regulatedAddressAssumptions(form: RegulatedFlagsForm & Pick<TransferFormData, "regionCode">): RegulatedAddressAssumption[] {
+  const primary = form.assets?.[0];
+  if (!primary || primary.regionCode || form.regionCode) return [];
+  const j = storedRegulatedJudgments(form);
+  const out: RegulatedAddressAssumption[] = [];
+  for (const [which, v] of [["transfer", j.transfer], ["acquisition", j.acquisition]] as const) {
+    const c = v.judged?.judgment.confidence;
+    if (!v.judged || c === undefined || c === "high") continue;
+    out.push({ which, date: v.judged.date, isRegulated: v.value, confidence: c, basis: v.judged.judgment.basis });
+  }
+  return out;
 }
 
 /** 양도세 계산기 폼에서 위 실효값을 낸다 — ④와 같은 코드 폴백(`primary.regionCode || form.regionCode`)·지구 선언 규약. */
