@@ -234,6 +234,10 @@ export function buildSurchargeJudgmentPayload(
     acquisitionDate: engineInput.acquisitionDate,
     assetContractDate: engineInput.assetContractDate,
     transferPrice: engineInput.transferPrice,
+    // 지분 양도의 고가주택 판정은 물건 전체 가액 (NH-26) · 부담부증여는 증여가액 (NH-10) · 토지만 본인 소유는 감면 불성립 (NH-08)
+    totalPropertyTransferPrice: engineInput.totalPropertyTransferPrice,
+    burdenedGiftDenominator: engineInput.burdenedGiftDenominator,
+    selfOwns: engineInput.selfOwns,
     standardPriceAtTransfer: engineInput.standardPriceAtTransfer,
   });
   const hce = resolveHceGeneralHouseAcquisitionDate(engineInput);

@@ -284,23 +284,41 @@ test.describe("부담부증여 — 매매사례가액·감정가액 (K-6/K-7)", 
     };
   }
 
-  test("PA-7: 신축 5년 이내 × 감정가액 — 가산세 3,000,000(건물 감정가액 150M × 40% = 60M의 5%)", async ({ page }) => {
+  // V-7 — 일체 주택 신축은 건물분이 base 다. 화면의 「건물 감정가액」 칸에 75M(총액 150M 중)을 넣는다 → 75M × 40% = 30M의 5% = 1,500,000 (V-7 전 60M · 3,000,000)
+  test("PA-7: 신축 5년 이내 × 감정가액 — 건물분 카드에 건물 감정가액 입력 → 가산세 1,500,000(30M의 5%)", async ({ page }) => {
     test.setTimeout(120_000);
     await seedAndOpen(page, [newBuiltSeed()]);
+    await expandAssetSection(page, 3); // ③ 취득 정보 — 본인 신축 토글 본문 끝에 건물분 카드가 있다
+    const share = page.locator('[data-asset-card-index="0"] [data-testid="self-built-housing-share"]');
+    await expect(share).toBeVisible();
+    await share.locator('[data-field="selfBuiltBuildingAppraisal"] input').first().fill("75000000");
     const res = await calculate(page);
     const body = await res.json();
     const r = body.data?.result ?? body.result ?? body.data;
     expect(r.transferBurdenedGiftBreakdown.acquisitionMethodUsed).toBe("appraisal");
     expect(r.transferBurdenedGiftBreakdown.perAsset.building.acquisitionPrice).toBe(60_000_000);
-    expect(r.penaltyBase).toBe(60_000_000);
-    expect(r.penaltyTax).toBe(3_000_000);
+    expect(r.penaltyBase).toBe(30_000_000);
+    expect(r.penaltyTax).toBe(1_500_000);
     // 결과 화면 — 상세 계산 명세서 6단계가 산정방식을 「감정가액」으로 밝히고(환산이라 적지 않는다) 기준액·금액이 맞다
     const statement = page.locator('[data-print-section="detailed-statement"]');
     await expect(statement).toBeVisible({ timeout: 30_000 });
     const expandAll = statement.getByRole("button", { name: /전체 펼치기/ });
     if (await expandAll.isVisible().catch(() => false)) await expandAll.click();
-    await expect(statement).toContainText("§114조의2 감정가액 가산세 3,000,000 (= 60,000,000 × 5%)");
+    await expect(statement).toContainText("§114조의2 감정가액 가산세 1,500,000 (= 30,000,000 × 5%)");
     await expect(statement).not.toContainText("§114조의2 환산취득가액 가산세");
+  });
+
+  // V-7 — 환산(K-5) 본인 신축: 건물분 카드가 (가) 취득 당시 ㎡당 공시지가·면적·건물 기준시가 · (나) 양도 당시 토지·건물 기준시가를 연다(계산값은 vitest)
+  test("PA-7b: 신축 5년 이내 × 환산 — 건물분 카드 칸(취득·양도 당시 기준시가·토지 면적)이 모두 화면에 있다 · 양도가액 구분 없음", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedAndOpen(page, [newBuiltSeed({ bgAcquisitionMethod: "converted", bgPresumedAcquisitionTotal: "" })]);
+    await expandAssetSection(page, 3);
+    const share = page.locator('[data-asset-card-index="0"] [data-testid="self-built-housing-share"]');
+    await expect(share).toBeVisible();
+    for (const key of ["standardPricePerSqmAtAcq", "buildingStandardPriceAtAcq", "standardPricePerSqmAtTransfer", "transferArea", "buildingStandardPriceAtTransfer"])
+      await expect(share.locator(`[data-field="${key}"]`).first(), key).toBeVisible();
+    await expect(share.locator('[data-testid="sale-split-mode"]')).toHaveCount(0); // 부담부증여는 양도가액 구분이 없다
+    await expect(page.locator('[data-asset-card-index="0"] [data-field="acquisitionArea"]').first(), "취득 당시 토지 면적 칸").toBeVisible();
   });
 
   /** 증축 5년 이내(증축일 2021-01-01 · 양도일 2023-06-01) 주택 — 감정가액 총액 150M, 증축부분 취득시 기준시가 10M. */

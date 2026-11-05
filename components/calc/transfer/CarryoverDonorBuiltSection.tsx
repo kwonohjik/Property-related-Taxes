@@ -22,6 +22,7 @@ import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupFi
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
+import { TransferStdPriceCard } from "./TransferStdPriceCards";
 import { donorBuiltApplicable, donorBuiltNeedsHousingSplit } from "@/lib/calc/donor-built-scope";
 import { donorBuiltPartApplicable } from "@/lib/calc/donor-built-part-scope";
 import { donorBuiltBgApplicable } from "@/lib/calc/donor-built-bg-scope";
@@ -88,9 +89,10 @@ export function CarryoverDonorBuiltSection({ mode = "whole", bgBundled = false, 
       />
     );
   }
-  // 건물 파트는 파트별 기준시가가 이미 토지·건물로 나뉘어 있고, 부담부증여는 §159 가 토지·건물을 자산별로 따로 구해 일체 주택 안분 입력이 없다.
-  const housing = !part && !bg && !gb && donorBuiltNeedsHousingSplit(asset);
+  // 건물 파트·일반건물은 기준시가가 이미 토지·건물로 나뉘어 있다. 부담부증여 일체 주택은 §159 스텝의 건물 자리가 주택 전체(토지 포함)라
+  // **신축이면** 건물분 안분 입력을 받는다(V-7 · ④ `bgDonorBuiltNeedsHousing`·⑧과 같은 조건 — 증축은 증축 부분 기준이 따로 있다).
   const isExtension = c.donorBuiltType === "extension";
+  const housing = !part && !gb && donorBuiltNeedsHousingSplit(asset) && (!bg || c.donorBuiltType === "new");
 
   return (
     <ToggleCard
@@ -204,6 +206,12 @@ export function CarryoverDonorBuiltSection({ mode = "whole", bgBundled = false, 
               </div>
             </ToneCard>
 
+            {bg ? (
+              // 부담부증여 — 양도가액이 채무 안분분이라 계약서 구분이 없고 양도 당시 기준시가만 받는다(④ `buildDonorBuiltBgPayload`와 같은 칸)
+              <ToneCard tone="emerald" title="양도 당시 토지·건물 기준시가" sectionNum="나">
+                <TransferStdPriceCard asset={asset} onChange={onChange} transferDate={transferDate} />
+              </ToneCard>
+            ) : (
             <ToneCard tone="emerald" title="양도 당시 토지·건물 기준시가와 양도가액 구분" sectionNum="나">
               <LandBuildingSaleSplitSection
                 isBurdenedGift={false}
@@ -219,6 +227,7 @@ export function CarryoverDonorBuiltSection({ mode = "whole", bgBundled = false, 
                 transferDate={transferDate}
               />
             </ToneCard>
+            )}
           </div>
         )}
       </div>

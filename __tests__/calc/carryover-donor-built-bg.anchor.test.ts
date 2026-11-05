@@ -53,7 +53,11 @@ describe("DBG-S 적용 범위 술어", () => {
 describe("DBG-P ④ payload", () => {
   it("신축: burdenedGiftInfo.carryoverDonorBasis.donorBuilt 로 실린다 (carryoverTaxation 에는 없다)", async () => {
     const body = await bodyOf(form(asset("converted")));
-    expect(donorBuiltOf(body)).toEqual({ buildingType: "new", constructionDate: "2022-01-10" });
+    // V-7 — 일체 주택 신축은 건물분 안분 입력(housing)을 함께 싣는다(양도가액 구분 없음)
+    expect(donorBuiltOf(body)).toEqual({
+      buildingType: "new", constructionDate: "2022-01-10",
+      housing: { landPricePerSqmAtAcquisition: 1_000_000, landArea: 100, buildingStdPriceAtAcquisition: 100_000_000, landStdPriceAtTransfer: 100_000_000, buildingStdPriceAtTransfer: 100_000_000 },
+    });
     expect((body.carryoverTaxation as { donorBuilt?: unknown }).donorBuilt).toBeUndefined();
   });
   it("증축 K-5: 바닥면적 + 증축 부분 기준시가 / 증축 K-7: 바닥면적 + info.presumedExtensionAppraisalValue (기준시가 칸은 싣지 않는다)", async () => {
@@ -139,5 +143,22 @@ describe("DBG-G ⑧↔⑫ 격자 — ⑧ 통과 ⇒ ⑫ 통과", () => {
       expect(issues(f).length).toBeGreaterThan(0);
       expect(propertySchema.safeParse(await bodyOf(f)).success).toBe(false);
     }
+  });
+});
+
+describe("V-7 ⑧ — 일체 주택 신축의 건물분 안분 칸(다섯 칸 모두 · ⑫ `donorBuiltHousingShape`와 같은 조건)", () => {
+  const fieldsOf = (f: TransferFormData) => collectStepIssues(0, f).map((i) => (i as { field?: string }).field);
+  it.each([
+    ["carryover.donorBuiltLandPricePerSqm", { donorBuiltLandPricePerSqm: "" }, {}],
+    ["carryover.donorBuiltLandArea", { donorBuiltLandArea: "" }, {}],
+    ["carryover.donorBuiltBuildingStdAtAcq", { donorBuiltBuildingStdAtAcq: "" }, {}],
+    ["standardPricePerSqmAtTransfer", {}, { standardPricePerSqmAtTransfer: "" }],
+    ["buildingStandardPriceAtTransfer", {}, { buildingStandardPriceAtTransfer: "" }],
+  ] as const)("%s 비움 → 그 칸", (field, co, over) => {
+    expect(fieldsOf(form(asset("converted", co, over as never)))).toContain(field);
+  });
+  it("증축은 건물분 칸을 요구하지 않는다", () => {
+    const ext = { donorBuiltType: "extension" as const, donorBuiltExtensionArea: "90", donorBuiltExtensionStdPrice: "40,000,000", donorBuiltLandPricePerSqm: "" };
+    expect(fieldsOf(form(asset("converted", ext)))).not.toContain("carryover.donorBuiltLandPricePerSqm");
   });
 });

@@ -146,6 +146,14 @@ test.describe("부담부증여 양도세 — §114조의2 신축 가산세 (증�
       await dialog.getByRole("textbox", { name: "월" }).last().fill("1");
       await dialog.getByRole("textbox", { name: "일" }).last().fill("10");
 
+      // V-7 — 신축 주택은 건물분만 가산세 대상 — 5년 창이 열리면 건물분 칸(취득·양도 당시 토지 ㎡당 공시지가·면적·건물 기준시가)이 열리고 필수다
+      await expect(dialog.getByTestId("gift-bg-self-built-housing")).toBeVisible();
+      await dialog.getByTestId("gift-bg-sbh-land-persqm-acq").fill("1000000");
+      await dialog.getByTestId("gift-bg-sbh-land-area").fill("100");
+      await dialog.getByTestId("gift-bg-sbh-building-std-acq").fill("100000000");
+      await dialog.getByTestId("gift-bg-sbh-land-persqm-transfer").fill("1000000");
+      await dialog.getByTestId("gift-bg-sbh-building-std-transfer").fill("100000000");
+
       await dialog.getByRole("button", { name: "닫기" }).click();
       await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
 
@@ -173,6 +181,10 @@ test.describe("부담부증여 양도세 — §114조의2 신축 가산세 (증�
       expect((body.burdenedGiftInfo as Record<string, unknown>).acquisitionMethod).toBe(
         "converted",
       );
+      expect(body.selfBuiltHousing).toEqual({
+        landPricePerSqmAtAcquisition: 1_000_000, landArea: 100, buildingStdPriceAtAcquisition: 100_000_000,
+        landStdPriceAtTransfer: 100_000_000, buildingStdPriceAtTransfer: 100_000_000,
+      });
     },
   );
 

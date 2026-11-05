@@ -23,9 +23,11 @@ interface Props {
   coDonorNeedsStdPrice: boolean;
   /** 지분 분할 취득·함께 부담부증여 묶음 — 당초 증여자 신축·증축 토글을 새로 보이지 않는다(⑫·⑧ 범위 밖) */
   bundled?: boolean;
+  /** 양도일 — 「증여자 신축」 일체 주택 칸(V-7)의 양도 당시 공시지가 연도 자동 조회. 없으면 그 조회만 「기준일 미입력」이다 */
+  transferDate?: string;
 }
 
-export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPrice, bundled }: Props) {
+export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPrice, bundled, transferDate }: Props) {
   // 증여받은 파트의 칸만 보인다(④ 전송·⑧ 필수와 같은 술어 · `gb-bg-part-carryover-calc.plan.md` §4.6). 일반건물 분리 ON에서만 갈린다.
   const parts = bgCarryoverParts(asset);
   const partial = parts.land !== parts.building;
@@ -214,7 +216,7 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
         mode="bg"
         bgBundled={bundled}
         asset={{ ...asset, carryover: eventForm }}
-        transferDate=""
+        transferDate={transferDate ?? ""}
         onChange={onChange}
         onCarryoverChange={(patch) => onChange({ [eventKey]: { ...(eventForm ?? CARRYOVER_DEFAULTS), ...patch } })}
       />

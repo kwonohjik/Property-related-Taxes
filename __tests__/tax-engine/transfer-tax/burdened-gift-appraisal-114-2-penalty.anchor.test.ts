@@ -12,10 +12,11 @@
  *
  * 시나리오(housing — land=0·building 통째, K-5 `burdened-gift-114-2-penalty.test.ts`와 같은 모양):
  *   시가 C=500M · 채무 B=200M → debtRatio 0.4 · 건물 양도가 200M
- *   취득 당시 감정가액 150M → 양도분 취득가액 150M × 0.4 = 60M · 가산세 = 60M × 5% = 3,000,000
+ *   취득 당시 감정가액 150M → 양도분 취득가액 150M × 0.4 = 60M · 가산세 base = 그 건물분 30M(V-7 · 1:1 안분 입력) · 가산세 1,500,000 (V-7 전 60M · 3,000,000)
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { withBgHousingHalfSplit } from "../_helpers/bg-housing-half-split";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -44,7 +45,8 @@ function info(overrides: Partial<BurdenedGiftInfo> = {}): BurdenedGiftInfo {
 }
 
 function input(overrides: Partial<TransferTaxInput> = {}): TransferTaxInput {
-  return baseTransferInput({
+  // V-7 PR-2 엄격화 — 일체 주택 신축(환산·감정)이면 1:1 건물분 안분 입력을 넣는다 → base = 주택 전체 값 ÷ 2(`bg-housing-half-split.ts`)
+  return withBgHousingHalfSplit(baseTransferInput({
     propertyType: "housing",
     transferDate: TRANSFER_DATE,
     acquisitionDate: CONSTRUCTION_DATE,
@@ -60,16 +62,16 @@ function input(overrides: Partial<TransferTaxInput> = {}): TransferTaxInput {
     constructionDate: CONSTRUCTION_DATE,
     burdenedGiftInfo: info(),
     ...overrides,
-  });
+  }), overrides);
 }
 
 describe("§114조의2 부담부증여 K-7 감정가액 × 신축 5년 이내 가산세", () => {
-  it("[P-1] 감정가액 + 신축 5년 이내 → penaltyBase 60M · penaltyTax 3,000,000", () => {
+  it("[P-1] 감정가액 + 신축 5년 이내 → penaltyBase 30M(건물분) · penaltyTax 1,500,000", () => {
     const r = calculateTransferTax(input(), rates);
     expect(r.transferBurdenedGiftBreakdown!.acquisitionMethodUsed).toBe("appraisal");
     expect(r.transferBurdenedGiftBreakdown!.perAsset.building.acquisitionPrice).toBe(60_000_000);
-    expect(r.penaltyBase).toBe(60_000_000);
-    expect(r.penaltyTax).toBe(3_000_000);
+    expect(r.penaltyBase).toBe(30_000_000); // 건물분 1/2 (V-7 전 60,000,000)
+    expect(r.penaltyTax).toBe(1_500_000);
   });
 
   it("[P-1b] 총액 입력(건물 한 칸)도 같은 값 — 토지가 0이라 안분 몫이 건물 전부", () => {
@@ -83,14 +85,14 @@ describe("§114조의2 부담부증여 K-7 감정가액 × 신축 5년 이내 �
       }),
       rates,
     );
-    expect(r.penaltyTax).toBe(3_000_000);
+    expect(r.penaltyTax).toBe(1_500_000);
   });
 
-  it("[P-2] 가산세가 총결정세액·지방소득세에 반영된다 (신축 아님 대비 +3,000,000 +10% 300,000)", () => {
+  it("[P-2] 가산세가 총결정세액·지방소득세에 반영된다 (신축 아님 대비 +1,500,000 +10% 150,000)", () => {
     const withPenalty = calculateTransferTax(input(), rates);
     const without = calculateTransferTax(input({ isSelfBuilt: false }), rates);
     expect(without.penaltyTax).toBe(0);
-    expect(withPenalty.totalTax - without.totalTax).toBe(3_300_000);
+    expect(withPenalty.totalTax - without.totalTax).toBe(1_650_000);
   });
 
   it("[P-3] 양도차익은 가산세 연결로 달라지지 않는다 — 감정가액 안분값 그대로", () => {
@@ -105,8 +107,8 @@ describe("§114조의2 부담부증여 K-7 감정가액 × 신축 5년 이내 �
       rates,
     );
     expect(r.calculatedTax).toBe(0);
-    expect(r.penaltyBase).toBe(240_000_000);
-    expect(r.penaltyTax).toBe(12_000_000);
+    expect(r.penaltyBase).toBe(120_000_000); // 건물분 1/2 (V-7 전 240,000,000)
+    expect(r.penaltyTax).toBe(6_000_000);
   });
 
   it("[P-5] 취득일 5년 초과 양도 → 0", () => {

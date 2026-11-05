@@ -338,7 +338,6 @@ export function addPropertyRefines(
       isHousing: data.propertyType === "housing",
       isSelfBuilt: data.isSelfBuilt,
       acquisitionCause: data.acquisitionCause,
-      burdenedGift: data.transferType === "burdened_gift" || data.burdenedGiftInfo !== undefined,
       mixedUse: !!data.mixedUse,
       buildingType: data.buildingType,
       separated: isSeparatedLike(data),

@@ -7,7 +7,7 @@
  * «화면에 없는 stale 값이 전송»된다(`donor-built-scope.ts`·`extension-appraisal-penalty.ts` 선례). 숨은 입력 = 미전송 = 미요구.
  *
  * 엔진 거울: `transfer-tax-self-built-housing-penalty.ts` 의 `unreachableReason`(정적 거부) + `selfBuiltHousingGateOpen`(5년·시행일) + `splitActive`(건물 파트가 이미 축).
- *   · 정적 거부 — 비주택·부담부증여·매매 외 취득·본인 신축 아님·겸용·증축·PHD  → 모두 null
+ *   · 정적 거부 — 비주택·매매 외 취득·본인 신축 아님·겸용·증축·PHD  → 모두 null (부담부증여는 `bgSelfBuiltHousingScope` — V-7)
  *   · 게이트 — 신축일부터 5년 이내(당일 포함) ∧ 환산은 양도일 ≥ 2018-01-01, 감정은 ≥ 2020-01-01. 실지거래가·매매사례는 조문 대상이 아니다
  *   · 분리 — 토지·건물 취득일 분리·소유자 분리·배율 초과분 분리는 `isSplitPayloadActive` 가 참 → null (그 카드(S3-1·#17)가 같은 칸을 받는다 — `data-field` 중복 방지)
  *   · 영 §164⑨ 공익수용·공매 특례는 범위 밖이 아니다(Q-12 후속 PR-A) — 환산이면 H_T′(차감 후)를 같은 비례 규칙으로 나눠 건물분을 구하고, 감정은 양도 당시 기준시가를 쓰지 않아 무관하다. 새 입력 칸은 없다(보상액·보상기초·경락가는 ② 양도정보 입력) —
@@ -25,6 +25,8 @@ import { selfBuiltActive } from "./self-built-scope";
 import { primaryAcquisitionModeFlags } from "./transfer-tax-api-primary-context";
 import { isSplitPayloadActive } from "./transfer-tax-api-split";
 import { usesPhdGate } from "./transfer-lump-sum-base-gate";
+import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
+import { bgHouseSplitActive } from "./bg-house-split";
 
 export interface SelfBuiltHousingScopeCtx {
   /** 양도일(YYYY-MM-DD) — 5년·시행일 게이트와 배율 초과분 분리 판정에 필요 */
@@ -43,6 +45,11 @@ export interface SelfBuiltHousingScope {
   directAppraisal: boolean;
   /** 환산 ∧ 영 §164⑨ 공익수용(1호)·공매·경락(2호) — 카드 안내 문단 판정. 엔진이 분모를 H_T′ 로 쓰는 셀과 같은 원 플래그(1호 우선) */
   sec164_9?: "expropriation" | "auction";
+  /**
+   * 부담부증여(§159) — 양도가액이 채무 안분분이라 계약서 양도가액 구분(`sale` 하위)이 없고, 양도 당시 토지·건물 기준시가만 받는다.
+   * 감정가액 총액은 ⑤ 부담부증여 블록의 감정가액(`bgPresumedAcquisitionTotal`)이다(V-7 · `bg-housing-114-2-building-base.plan.md`).
+   */
+  burdenedGift?: true;
 }
 
 /** 환산 ∧ 영 §164⑨ 특례 원 플래그 — 1호(수용)가 2호(공매·경락)보다 우선한다(`resolveConversionDenominatorAtTransfer` 의 N3 배타와 같은 순서). 감정이면 없음. */
@@ -73,7 +80,8 @@ function gateOpen(asset: AssetForm, transferDate: string | undefined, method: "e
  */
 export function selfBuiltHousingScope(asset: AssetForm | undefined, ctx: SelfBuiltHousingScopeCtx = {}): SelfBuiltHousingScope | null {
   if (!asset || asset.assetKind !== "housing" || !selfBuiltActive(asset)) return null;
-  if (asset.isMixedUseHouse === true || asset.transferType === "burdened_gift") return null;
+  if (asset.isMixedUseHouse === true) return null;
+  if (asset.transferType === "burdened_gift") return bgSelfBuiltHousingScope(asset, ctx);
   // 증축 제외(Q-4) · 구분 미선택은 ⑧의 «구분 선택» 요구가 먼저다
   if (asset.buildingType !== "new") return null;
   const flags = primaryAcquisitionModeFlags(asset);
@@ -94,4 +102,21 @@ export function selfBuiltHousingScope(asset: AssetForm | undefined, ctx: SelfBui
   return method === "estimated"
     ? { method, acq: true, sale: true, directAppraisal: false, ...sec }
     : { method, acq: noSplit, sale: false, directAppraisal: !noSplit, ...sec };
+}
+
+/**
+ * 부담부증여(§159) × 일체 주택 × 본인 신축 — §159 스텝이 건물 자리(주택 전체)의 환산·감정가액을 건물분으로 나누는 입력(엔진 `bgHousingBuildingPenaltyBase` ·
+ * `assertBgSelfBuiltHousingInput` · ⑫ `selfBuiltHousingShape`와 같은 집합 · V-7). 시가 평가의 환산(K-5)·감정(K-7)만, 신축만, 담보 승(취득가액이 기준시가로 강제)·
+ * 토지·건물 취득일 분리(건물 파트가 이미 건물분)는 범위 밖이다.
+ */
+function bgSelfBuiltHousingScope(asset: AssetForm, ctx: SelfBuiltHousingScopeCtx): SelfBuiltHousingScope | null {
+  if (asset.buildingType !== "new" || asset.bgValuationMode !== "sangjeungbeop_market") return null;
+  const method = asset.bgAcquisitionMethod === "converted" ? "estimated" : asset.bgAcquisitionMethod === "appraisal" ? "appraisal" : null;
+  if (!method) return null;
+  if (bgCollateralForcesStdAcq(asset) || bgHouseSplitActive(asset, { isNonPrimary: ctx.isNonPrimary })) return null;
+  if (!gateOpen(asset, ctx.transferDate, method)) return null;
+  const noSplit = selfBuiltAppraisalNoSplit(asset);
+  return method === "estimated"
+    ? { method, acq: true, sale: true, directAppraisal: false, burdenedGift: true }
+    : { method, acq: noSplit, sale: false, directAppraisal: !noSplit, burdenedGift: true };
 }

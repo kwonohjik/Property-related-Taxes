@@ -18,6 +18,7 @@
 
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { withBgHousingHalfSplit } from "../_helpers/bg-housing-half-split";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -169,7 +170,8 @@ const k5Info: BurdenedGiftInfo = {
 };
 
 function makeK5Input(overrides: Partial<TransferTaxInput> = {}): TransferTaxInput {
-  return baseTransferInput({
+  // V-7 PR-2 엄격화 — 일체 주택 신축(환산)이면 1:1 건물분 안분 입력 → base = 주택 전체 값 ÷ 2(`bg-housing-half-split.ts`)
+  return withBgHousingHalfSplit(baseTransferInput({
     propertyType: "housing",
     transferDate: K5_TRANSFER_DATE,
     acquisitionDate: K5_CONSTRUCTION_DATE,
@@ -185,15 +187,15 @@ function makeK5Input(overrides: Partial<TransferTaxInput> = {}): TransferTaxInpu
     constructionDate: K5_CONSTRUCTION_DATE,
     burdenedGiftInfo: k5Info,
     ...overrides,
-  });
+  }), overrides);
 }
 
 describe("부담부증여 K-5 penalty — stale 산정방식 교차 (회귀 방어)", () => {
-  it("케이스 5: K-5 기준선 → penaltyTax = 2,500,000 (건물 환산취득가 50M × 5%)", () => {
+  it("케이스 5: K-5 기준선 → penaltyTax = 1,250,000 (건물분 환산취득가 25M × 5% · V-7 전 주택 전체 50M → 2,500,000)", () => {
     const r = calculateTransferTax(makeK5Input(), rates);
     expect(r.transferBurdenedGiftBreakdown!.perAsset.building.acquisitionPrice).toBe(50_000_000);
     expect(r.penaltyTax, "acquisitionMethod:'actual' 정규화가 K-5의 'estimated' override를 덮으면 안 됨").toBe(
-      2_500_000,
+      1_250_000,
     );
   });
 
@@ -211,8 +213,8 @@ describe("부담부증여 K-5 penalty — stale 산정방식 교차 (회귀 방�
     );
     expect(
       r.penaltyTax,
-      "penalty base = K-5 건물 환산취득가(50M)여야 함 — stale 감정가액(9억) 아님",
-    ).toBe(2_500_000);
+      "penalty base = K-5 건물분 환산취득가(25M · V-7 1:1 안분)여야 함 — stale 감정가액(9억) 아님",
+    ).toBe(1_250_000);
   });
 
   it("케이스 6: 비-K5 부담부증여 + stale appraisal + 신축 → 가짜 penalty 발동 금지", () => {

@@ -22,6 +22,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
+import { TransferStdPriceCard } from "./TransferStdPriceCards";
 import { selfBuiltAppraisalNoSplit, selfBuiltHousingScope } from "@/lib/calc/self-built-housing-scope";
 import { isPartialAreaScenario } from "@/lib/calc/transfer-pre1990-housing-land-bridge";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -116,7 +117,14 @@ export function SelfBuiltHousingShareBlock({ asset, onChange, transferDate, isNo
         </ToneCard>
       )}
 
-      {scope.sale && (
+      {/* 부담부증여 — 양도가액이 채무 안분분이라 양도가액 구분이 없고 양도 당시 기준시가만 받는다(V-7 · ④·⑧과 같은 `scope.burdenedGift`) */}
+      {scope.sale && scope.burdenedGift && (
+        <ToneCard tone="emerald" title="양도 당시 토지·건물 기준시가" sectionNum="나">
+          <TransferStdPriceCard asset={asset} onChange={onChange} transferDate={transferDate} />
+        </ToneCard>
+      )}
+
+      {scope.sale && !scope.burdenedGift && (
         <ToneCard tone="emerald" title="양도 당시 토지·건물 기준시가와 양도가액 구분" sectionNum="나">
           <LandBuildingSaleSplitSection
             isBurdenedGift={false}

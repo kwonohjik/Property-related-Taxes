@@ -14,7 +14,7 @@
  *      L_acq = 1,000,000 × 100㎡ = 100M · N 60M → B_acq = 150M − ⌊150M × 100/160⌋ = 56,250,000 / L_T 500M · N_T 300M → B_tr = 800M − 500M = 300M · S_b = 500M − ⌊500M × 500/800⌋ = 187,500,000
  *      base = 187,500,000 × 56,250,000 ÷ 300,000,000 = 35,156,250 (수정 前 93,750,000) · 가산세 1,757,812 (수정 前 4,687,500)
  *  · 당초 증여자 신축 K-7 (당초 증여자 감정가액 200M · A 건물 자리 취득가액 125M) → 건물분 200M − ⌊200M × 100/160⌋ = 75M → 125M × 75/200 = 46,875,000 (수정 前 125,000,000)
- * 입력이 없으면 종전 base(PR-1 · 엄격화는 화면 PR-2).
+ * 입력이 없으면 막는다(PR-2 엄격화 · Q-3 a) — PR-1(#2916)까지는 종전 base였다.
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
@@ -44,23 +44,39 @@ describe("본인 신축 (isSelfBuilt) × 일체 주택", () => {
       rates,
     );
 
-  it("K-5: base 20,000,000 · 가산세 1,000,000 (수정 前 50,000,000 · 2,500,000) · 결정세액 전 값 불변", () => {
-    const off = run(info());
+  it("K-5: base 20,000,000 · 가산세 1,000,000 (수정 前 50,000,000 · 2,500,000) · 입력 없으면 막는다", () => {
+    expect(() => run(info())).toThrow(/selfBuiltHousing/);
     const on = run(info(), { selfBuiltHousing: SPLIT });
-    expect([off.penaltyBase, off.penaltyTax]).toEqual([50_000_000, 2_500_000]);
     expect([on.penaltyBase, on.penaltyTax]).toEqual([20_000_000, 1_000_000]);
     expect(on.transferBurdenedGiftBreakdown!.perAsset.building.acquisitionPrice).toBe(50_000_000); // 양도차익은 그대로
-    expect(on.totalTax - off.totalTax).toBe(-1_650_000); // 가산세 −1,500,000 + 지방소득세 −150,000
   });
   it("K-7: 건물 감정가액 직접 60,000,000 · 없으면 취득 당시 비율 48,000,000 (수정 前 120,000,000)", () => {
     const k7 = info({ acquisitionMethod: "appraisal", presumedAcquisitionTotal: 300_000_000 });
-    expect(run(k7).penaltyBase).toBe(120_000_000);
+    expect(() => run(k7)).toThrow(/selfBuiltHousing/);
     expect(run(k7, { selfBuiltHousing: { buildingAppraisalValue: 150_000_000 } }).penaltyBase).toBe(60_000_000);
     expect(run(k7, { selfBuiltHousing: SPLIT }).penaltyBase).toBe(48_000_000);
   });
   it("입력이 모자라면 던진다(조용히 무시하지 않는다) · 증축이면 받지 않는다", () => {
     expect(() => run(info(), { selfBuiltHousing: { ...SPLIT, landStdPriceAtTransfer: undefined } })).toThrow(/양도 당시 토지 기준시가/);
     expect(() => run(info(), { selfBuiltHousing: SPLIT, buildingType: "extension", extensionFloorArea: 90, extensionStdPriceAtAcquisition: 10_000_000 })).toThrow(/증축/);
+  });
+});
+
+describe("가산세 창 밖(5년 경과)이면 입력 없이도 계산된다 — 엄격화는 가산세가 붙을 때만", () => {
+  it("본인 신축 K-5 · 양도 2026-03-01(신축 2021-01-01부터 5년 초과)", () => {
+    const r = calculateTransferTax(
+      baseTransferInput({
+        propertyType: "housing", transferDate: D("2026-03-01"), acquisitionDate: D("2021-01-01"), transferPrice: 0, acquisitionPrice: 0, expenses: 0,
+        useEstimatedAcquisition: false, transferType: "burdened_gift", isOneHousehold: false, householdHousingCount: 2,
+        isSelfBuilt: true, buildingType: "new", constructionDate: D("2021-01-01"),
+        burdenedGiftInfo: {
+          valuationMode: "sangjeungbeop_market", acquisitionMethod: "converted", marketValueAtTransfer: 500_000_000, lendingDepositTotal: 0, mortgageDebtAmount: 200_000_000,
+          annualRentTotal: 0, mortgageSetAmount: 200_000_000, landStdPriceAtTransfer: 0, buildingStdPriceAtTransfer: 400_000_000, landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 100_000_000,
+        } as BurdenedGiftInfo,
+      }),
+      rates,
+    );
+    expect(r.penaltyTax).toBe(0);
   });
 });
 
@@ -91,14 +107,14 @@ describe("당초 증여자 신축 (이월과세 A · carryoverDonorBasis.donorBu
     );
 
   it("K-5: base 35,156,250 · 가산세 1,757,812 (수정 前 93,750,000 · 4,687,500) · echo도 같은 값", () => {
-    expect([run(info("converted")).penaltyBase, run(info("converted")).penaltyTax]).toEqual([93_750_000, 4_687_500]);
+    expect(() => run(info("converted"))).toThrow(/donorBuilt\.housing/);
     const on = run(info("converted", HOUSING));
     expect(on.carryoverTaxationDetail!.adoptedScenario).toBe("A");
     expect([on.penaltyBase, on.penaltyTax]).toEqual([35_156_250, 1_757_812]);
     expect(on.carryoverTaxationDetail!.donorBuiltPenalty).toMatchObject({ applied: true, base: 35_156_250, penalty: 1_757_812 });
   });
   it("K-7: base 46,875,000 (수정 前 125,000,000)", () => {
-    expect(run(info("appraisal")).penaltyBase).toBe(125_000_000);
+    expect(() => run(info("appraisal"))).toThrow(/donorBuilt\.housing/);
     const on = run(info("appraisal", HOUSING));
     expect([on.penaltyBase, on.penaltyTax]).toEqual([46_875_000, 2_343_750]);
   });
