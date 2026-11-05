@@ -48,6 +48,11 @@ export function validateGbDecedentDates(asset: AssetForm, label: string): string
     !(landInherited && asset.decedentAcquisitionDate)
   )
     return fieldError("gbBuildingDecedentAcquisitionDate", `${label}: 건물 피상속인 취득일을 입력하세요. 상속받은 건물의 세율 보유기간 기산일입니다 (소득세법 §104②1호).`);
+  // 순서 — 분리 ON에서 `acquisitionDate`는 건물 상속개시일이다. ⑫ `transfer-tax-schema-required-refines-gb.ts` D3′와 같은 규칙
+  // (계획서 `docs/02-design/features/gb-building-decedent-order.plan.md` — 종전엔 늦은 날짜도 통과해 세율·수용 감면이 바뀌었다)
+  const ownBuildingDecedent = gbBuildingOwnDecedentDate(asset);
+  if (ownBuildingDecedent && asset.acquisitionDate && ownBuildingDecedent >= asset.acquisitionDate)
+    return fieldError("gbBuildingDecedentAcquisitionDate", `${label}: 건물 피상속인 취득일은 건물 상속개시일보다 이전이어야 합니다.`);
   return null;
 }
 
