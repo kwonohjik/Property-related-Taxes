@@ -356,9 +356,9 @@ export type RentalReductionFormVariant =
       ruralHouseAcquisitionDate: string;
       /** 농어촌주택 지번 주소 — 기준시가 조회 소스(별개 물건, 양도물건 아님). 엔진 미전달·폼 지속 전용 */
       ruralHouseJibun?: string;
-      /** 취득 당시 주택+부속토지 기준시가 합계 (원) — 3억(한옥 4억) 한도 */
+      /** 취득 당시 주택+부속토지 기준시가 합계 (원) — 한도는 양도일·취득일별(2억·3억, 등록 한옥 4억 — `resolveNew994StdPriceLimit`) */
       ruralHouseStdPrice: string;
-      /** 령⑭ 지자체 등록 한옥 — 한도 4억 */
+      /** 령⑭ 지자체 등록 한옥 — 2014.1.1. 이후 구입분 한도 4억 */
       isRegisteredHanok: boolean;
       /** ③ 일반주택과 같은/연접 읍·면·동 — ON이면 배제 */
       isAdjacentArea: boolean;

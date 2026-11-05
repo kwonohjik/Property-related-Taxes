@@ -9,7 +9,8 @@
  * 요건 (law.go.kr 2026-06-11 원문 전문 검증 — plan §1):
  * - ①: 취득기간(rural 2003.8.1~ / hometown 2009.1.1~, ~2028.12.31) 중 농어촌주택등
  *   1채 취득(자기건설 포함) + 3년 이상 보유 + 취득 전부터 보유하던 일반주택 양도
- * - ①1호나목·2호다목: 취득 당시 주택+부속토지 기준시가 합계 3억(등록 한옥 4억) 이하
+ * - ①1호나목·2호다목: 취득 당시 주택+부속토지 기준시가 합계가 한도 이하 — 한도는 양도일·농어촌주택 취득일에 따라
+ *   2억(2023.1.1. 전 양도) / 3억(2023.1.1. 이후 양도) / 등록 한옥 4억(2014.1.1. 이후 구입분부터) 등 (`resolveNew994StdPriceLimit`)
  * - ③: 일반주택과 같은/연접 읍·면·동(고향은 시) → 미적용
  * - ④: 3년 보유 충족 전 양도해도 적용 (선적용) → ⑥ 3년 미보유 확정 시 추징 (경고 echo)
  * - 소재지(①1호가목/2호나목)·고향(①2호가목·령⑥)은 사용자 확인 토글 (별표12 자동판정 범위 외)
@@ -18,7 +19,11 @@
  *      본 evaluator에서 ruralHouseAcquisitionDate 기준으로 수행.
  */
 
-import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import {
+  NEW_99_4_HANOK_DECREE,
+  NEW_99_4_STD_PRICE_ADDENDA,
+  TRANSFER_REDUCTION_ARTICLE,
+} from "../legal-codes/transfer";
 import { calculateHoldingPeriod } from "../tax-utils";
 import type {
   New994ArticleId,
@@ -34,10 +39,99 @@ export const NEW_99_4_RURAL_FROM = new Date("2003-08-01");
 export const NEW_99_4_HOMETOWN_FROM = new Date("2009-01-01");
 /** 취득기간 종기 (농어촌주택등취득기간 — 양도일과 무관) */
 export const NEW_99_4_PERIOD_TO = new Date("2028-12-31");
-/** ①1호나목·2호다목 — 취득 당시 기준시가 합계 한도 */
+/** ①1호나목·2호다목 — 취득 당시 기준시가 합계 한도 (2023.1.1. 이후 양도분 — 법률 제19199호) */
 export const NEW_99_4_STD_PRICE_LIMIT = 300_000_000;
-/** 령⑭ 등록 한옥 한도 */
+/** 령⑭ 등록 한옥 한도 (2014.1.1. 이후 구입분부터 — 법률 제12173호 부칙 제32조) */
 export const NEW_99_4_STD_PRICE_LIMIT_HANOK = 400_000_000;
+/** 2023.1.1. 전 양도분 한도 — 2009.1.1. 이후 취득분(법률 제9272호 부칙 제22조) */
+export const NEW_99_4_STD_PRICE_LIMIT_PRE_2023 = 200_000_000;
+/** 2008년 취득분 한도 (법률 제8827호 부칙 제31조) */
+export const NEW_99_4_STD_PRICE_LIMIT_ACQ_2008 = 150_000_000;
+/** 2003.8.1.~2007.12.31. 취득분 한도 (구 조특법 §99의4①3호) */
+export const NEW_99_4_STD_PRICE_LIMIT_ACQ_2003_2007 = 70_000_000;
+
+// 한도 분기 경계 — 행(농어촌주택 취득일) R1 ~2007 · R2 2008 · R3 2009~2013 · R4 2014~ / 열(양도일) ~2020(C1·C2는 한도가 같아 한 칸) · C3 2021~2022 · C4 2023~
+const ACQ_R2_FROM = new Date("2008-01-01").getTime();
+const ACQ_R3_FROM = new Date("2009-01-01").getTime();
+const ACQ_R4_FROM = new Date("2014-01-01").getTime();
+const TRANSFER_C3_FROM = new Date("2021-01-01").getTime();
+const TRANSFER_C4_FROM = new Date("2023-01-01").getTime();
+
+const CURRENT_LIMIT_BASIS = "조특법 §99의4①1호나목(고향주택 2호다목)";
+const PRE_2008_BASIS = `${NEW_99_4_STD_PRICE_ADDENDA.AMEND_2009_ACQUISITION} · ${NEW_99_4_STD_PRICE_ADDENDA.AMEND_2008_ACQUISITION}`;
+
+export interface New994StdPriceLimit {
+  /** 가액 한도 (원) — 「초과하지 아니할 것」이라 이 금액까지 적격 */
+  limit: number;
+  /** 메시지용 한도 표기 (예: 「2억」「1억5천만원」「4억 — 등록 한옥」) */
+  label: string;
+  /** 메시지용 근거 */
+  legalBasis: string;
+}
+
+/**
+ * ①1호나목·2호다목 취득 당시 기준시가 합계 한도 — **양도일**(일반주택)과 **농어촌주택 취득일**로 가른다.
+ *
+ * - 법률 제19199호(2023.1.1.): 2억→3억, 시행 전 양도는 종전 규정(부칙 제39조). 종전 2억은 2009.1.1. 이후 취득분
+ *   (법률 제9272호 부칙 제22조), 2008년 취득분은 1억5천만원(법률 제8827호 부칙 제31조), 그 전 취득분은 7천만원.
+ * - 등록 한옥 4억: 2014.1.1. 이후 구입분부터(법률 제12173호 부칙 제32조). 한옥이어도 그 전 취득이고 2021.1.1. 전 양도면 일반과 같다.
+ * - 해석 칸(2009.1.1. 전 취득 × 2021.1.1. 이후 양도, 한옥 2014.1.1. 전 취득 × 2021.1.1. 이후 양도)은 후보 읽기 중 최대 한도를 쓴다
+ *   — 법률 제17759호 부칙 제21조②가 두 가지로 읽히며 정면 해석례는 확인 필요(계획서 NH-05 PR-2b).
+ * - 2009.3.15. 이전 양도는 범위 밖이라 열 C1에 포함해 둔다. 취득기간(2003.8.1.) 전 취득은 OUT_OF_PERIOD가 따로 막는다.
+ */
+export function resolveNew994StdPriceLimit(input: {
+  transferDate: Date;
+  ruralHouseAcquisitionDate: Date;
+  isRegisteredHanok?: boolean;
+}): New994StdPriceLimit {
+  const acq = input.ruralHouseAcquisitionDate.getTime();
+  const tr = input.transferDate.getTime();
+  const row = acq < ACQ_R2_FROM ? 1 : acq < ACQ_R3_FROM ? 2 : acq < ACQ_R4_FROM ? 3 : 4;
+  const col = tr < TRANSFER_C3_FROM ? 2 : tr < TRANSFER_C4_FROM ? 3 : 4;
+  const hanok = input.isRegisteredHanok === true;
+
+  // 등록 한옥 4억 — 2014.1.1. 이후 구입분(R4) 또는 2021.1.1. 이후 양도분(해석 칸은 현행 유지)
+  if (hanok && (row === 4 || col >= 3)) {
+    return {
+      limit: NEW_99_4_STD_PRICE_LIMIT_HANOK,
+      label: "4억 — 등록 한옥",
+      legalBasis: `${CURRENT_LIMIT_BASIS} · ${NEW_99_4_HANOK_DECREE}`,
+    };
+  }
+  const hanokNote = hanok
+    ? ` · 등록 한옥 4억원은 2014.1.1. 이후 구입분부터(${NEW_99_4_STD_PRICE_ADDENDA.HANOK_2014_PURCHASE})`
+    : "";
+  const suffix = hanok ? " — 등록 한옥" : "";
+
+  if (col === 4) {
+    return { limit: NEW_99_4_STD_PRICE_LIMIT, label: `3억${suffix}`, legalBasis: CURRENT_LIMIT_BASIS + hanokNote };
+  }
+  if (row >= 3) {
+    return {
+      limit: NEW_99_4_STD_PRICE_LIMIT_PRE_2023,
+      label: `2억${suffix}`,
+      legalBasis: `조특법 §99의4① · ${NEW_99_4_STD_PRICE_ADDENDA.AMEND_2023_TRANSFER}(2023.1.1. 전 양도 — 종전 규정 2억원)${hanokNote}`,
+    };
+  }
+  if (col === 3) {
+    return {
+      limit: NEW_99_4_STD_PRICE_LIMIT_PRE_2023,
+      label: `2억${suffix}`,
+      legalBasis: `2009.1.1. 전 취득분의 한도는 종전 규정(7천만원·1억5천만원) 또는 2억원(${NEW_99_4_STD_PRICE_ADDENDA.AMEND_2021_TRANSFER})으로 읽히며 어느 쪽이든 초과${hanokNote}`,
+    };
+  }
+  return row === 1
+    ? {
+        limit: NEW_99_4_STD_PRICE_LIMIT_ACQ_2003_2007,
+        label: `7천만원${suffix}`,
+        legalBasis: `${PRE_2008_BASIS}(2008.1.1. 전 취득 — 종전 규정 7천만원)${hanokNote}`,
+      }
+    : {
+        limit: NEW_99_4_STD_PRICE_LIMIT_ACQ_2008,
+        label: `1억5천만원${suffix}`,
+        legalBasis: `${PRE_2008_BASIS}(2008년 취득 — 종전 규정 1억5천만원)${hanokNote}`,
+      };
+}
 /** ① 의무 보유기간 (3년 — ④ 선적용 허용, ⑥ 추징) */
 export const NEW_99_4_MANDATORY_YEARS = 3;
 
@@ -187,7 +281,7 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
   if (input.ruralHouseStdPrice === undefined || input.ruralHouseStdPrice <= 0) {
     reasons.push({
       code: "MISSING_STD_PRICE",
-      message: `${houseLabel} 취득 당시 기준시가 합계가 입력되지 않았습니다 (3억 한도 검증 — §99의4①).`,
+      message: `${houseLabel} 취득 당시 기준시가 합계가 입력되지 않았습니다 (가액 한도 검증 — 조특법 §99의4①).`,
       legalBasis,
     });
   }
@@ -223,13 +317,17 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
     }
   }
 
-  // 4) 가액 — 3억(등록 한옥 4억) "초과하지 아니할 것" → 경계 포함 적용
-  if (input.ruralHouseStdPrice !== undefined && input.ruralHouseStdPrice > 0) {
-    const limit = input.isRegisteredHanok ? NEW_99_4_STD_PRICE_LIMIT_HANOK : NEW_99_4_STD_PRICE_LIMIT;
-    if (input.ruralHouseStdPrice > limit) {
+  // 4) 가액 — 양도일·취득일별 한도 "초과하지 아니할 것" → 경계 포함 적용 (취득일 미입력이면 한도를 정할 수 없어 건너뜀 — 위 1)이 이미 불성립)
+  if (input.ruralHouseStdPrice !== undefined && input.ruralHouseStdPrice > 0 && input.ruralHouseAcquisitionDate) {
+    const cap = resolveNew994StdPriceLimit({
+      transferDate: input.transferDate,
+      ruralHouseAcquisitionDate: input.ruralHouseAcquisitionDate,
+      isRegisteredHanok: input.isRegisteredHanok,
+    });
+    if (input.ruralHouseStdPrice > cap.limit) {
       reasons.push({
         code: "STD_PRICE_EXCEEDED",
-        message: `취득 당시 기준시가 합계가 한도(${input.isRegisteredHanok ? "4억 — 등록 한옥" : "3억"})를 초과합니다 (§99의4①1호나목${isHometown ? "·2호다목" : ""}).`,
+        message: `취득 당시 기준시가 합계가 한도(${cap.label})를 초과합니다 (${cap.legalBasis}).`,
         legalBasis,
       });
     }

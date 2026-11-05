@@ -443,9 +443,9 @@ export interface New994EvaluationInput {
   transferDate: Date;
   /** 농어촌주택등 취득일 — 시한(rural 2003.8.1~ / hometown 2009.1.1~, ~2028.12.31)·3년 보유·취득순서 */
   ruralHouseAcquisitionDate?: Date;
-  /** 취득 당시 주택+부속토지 기준시가 합계 (원) — 3억(등록 한옥 4억) 한도 (①1호나목·2호다목) */
+  /** 취득 당시 주택+부속토지 기준시가 합계 (원) — 한도는 양도일·취득일별(2억·3억, 등록 한옥 4억 — `resolveNew994StdPriceLimit`) (①1호나목·2호다목) */
   ruralHouseStdPrice?: number;
-  /** 령⑭ 지자체 등록 한옥 — 한도 4억 전환 */
+  /** 령⑭ 지자체 등록 한옥 — 2014.1.1. 이후 구입분 한도 4억 전환 */
   isRegisteredHanok?: boolean;
   /** ③ 일반주택과 같은/연접 읍·면·동(고향은 시) — true면 배제 */
   isAdjacentArea?: boolean;

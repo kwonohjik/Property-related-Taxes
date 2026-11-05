@@ -102,6 +102,7 @@ export {
   NEW_99_4_STD_PRICE_LIMIT,
   NEW_99_4_STD_PRICE_LIMIT_HANOK,
   NEW_99_4_MANDATORY_YEARS,
+  resolveNew994StdPriceLimit,
 } from "./new-99-4";
 export type {
   New994ArticleId,

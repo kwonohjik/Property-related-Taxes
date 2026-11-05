@@ -697,6 +697,16 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // §99의4 가액 한도 한옥 4억의 「대통령령으로 정하는 한옥」(`NEW_99_4_HANOK_DECREE`). 원문 MST 288915 실독 2026-11-05.
+    id: "TRANSFER_DECREE.NEW_99_4_HANOK",
+    citation: "조특령 §99의4",
+    keywords: [
+      "대통령령으로 정하는 한옥",
+      "지방자치단체의 장에게 등록된 한옥",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     // ③1호 5% 한도·1년 이내 재증액 금지(후단은 대통령령 제30390호 2020.2.11 신설) · ④ 임대개시 기산일.
     // `rental-97-3.ts`·`rental-97-5.ts`(①3호 준용)·`rental-97-shared-helpers.ts`. 원문 MST 288915 실독 2026-11-01.
     id: "TRANSFER_DECREE.LONG_GENERAL_RENTAL_97_3",
