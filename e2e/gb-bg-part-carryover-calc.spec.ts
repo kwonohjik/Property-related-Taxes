@@ -148,12 +148,13 @@ test.describe("일반건물 부담부증여 × 이월과세 — 토지·건물 �
     test.setTimeout(180_000);
     await seedWizard(page, seedOf([landOnlyAppraisal]));
     await expandAssetSection(page, 2);
+    // FieldCard(`field`)와 입력칸(`data-field`)이 같은 키를 달 수 있어 개수가 아니라 있음/없음으로 본다
     const has = (k: string) => page.locator(`[data-asset-card-index="0"] [data-field="${k}"]`);
-    await expect(has("bgPresumedAcquisitionBuilding")).toHaveCount(1); // 양도인 값 = 증여받지 않은 건물
+    await expect(has("bgPresumedAcquisitionBuilding").first()).toBeVisible(); // 양도인 값 = 증여받지 않은 건물
     await expect(has("bgPresumedAcquisitionLand")).toHaveCount(0);
-    await expect(has("bgCoDonorPresumedAcquisitionLand")).toHaveCount(1); // 당초 증여자 값 = 증여받은 토지
+    await expect(has("bgCoDonorPresumedAcquisitionLand").first()).toBeVisible(); // 당초 증여자 값 = 증여받은 토지
     await expect(has("bgCoDonorPresumedAcquisitionBuilding")).toHaveCount(0);
-    await expect(has("bgActualAcquisitionLand")).toHaveCount(1); // 양도인 증여일 평가액 = 증여받은 토지
+    await expect(has("bgActualAcquisitionLand").first()).toBeVisible(); // 양도인 증여일 평가액 = 증여받은 토지
     await expect(has("bgActualAcquisitionBuilding")).toHaveCount(0);
     const body = await calculate(page);
     const info = body.burdenedGiftInfo as Record<string, unknown>;
