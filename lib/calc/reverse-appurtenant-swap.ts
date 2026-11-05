@@ -13,7 +13,6 @@
  */
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { reverseAppurtenantHouseAssetId } from "@/lib/calc/reverse-appurtenant-house";
-import { companionHousesHiddenFromHouseholdFacts } from "@/lib/calc/reverse-appurtenant-house";
 import { selfBuiltActive } from "@/lib/calc/self-built-scope";
 import { hasPre1990LandEstimation } from "@/lib/calc/transfer-pre1990-land-gate";
 import { isSec163_9Cause } from "@/lib/calc/transfer-163-9-base-date";
@@ -50,48 +49,26 @@ function firstAssetOnlyLabels(first: AssetForm): string[] {
   return FIRST_ASSET_ONLY_INPUTS.filter((i) => i.active(first)).map((i) => i.label);
 }
 
-/**
- * 첫 자산으로 올릴 수 있는 주택 id — G1 짝 주택, 또는 NH-14 구성(첫 자산 토지 + 함께 양도 주택: 독립 나대지·성격 미선택·겸용·재개발 완공주택·
- * 주택 2건 이상)의 주택들(사용자 결정 Q-24). 첫 자산이 토지가 아니면(건물 등) 비운다 — «첫 자산 전용» 입력 가드(`FIRST_ASSET_ONLY_INPUTS`)는
- * 토지만 실측했다(계획서 §4-4). 그 구성은 ⑧과 안내 카드의 사유 한 줄이 안내한다(`reverseAppurtenantSwapBlockReason`).
- */
-function swapHouseIdsRaw(form: SwapForm): string[] {
-  const paired = reverseAppurtenantHouseAssetId(form.assets, form.assetSplitMode);
-  if (paired !== undefined) return [paired];
-  return form.assets[0]?.assetKind === "land" ? companionHousesHiddenFromHouseholdFacts(form.assets, form.assetSplitMode) : [];
-}
-
-/** 구성이 «첫 자산 토지 + 함께 양도 주택»이면 그 주택(`houseId`가 없으면 첫 후보)의 index, 아니면 -1. */
-function pairedHouseIndexRaw(form: SwapForm, houseId?: string): number {
-  const ids = swapHouseIdsRaw(form);
-  const id = houseId === undefined ? ids[0] : ids.find((x) => x === houseId);
-  return id === undefined ? -1 : form.assets.findIndex((a) => a.assetId === id);
+/** 구성이 «첫 자산 토지 + 짝 주택»이면 그 주택의 index, 아니면 -1. */
+function pairedHouseIndexRaw(form: SwapForm): number {
+  const houseId = reverseAppurtenantHouseAssetId(form.assets, form.assetSplitMode);
+  return houseId === undefined ? -1 : form.assets.findIndex((a) => a.assetId === houseId);
 }
 
 /** 증환지 증가분이 있는가 — 증가분의 양도시 기준시가가 `assets[0]`(당초분)에서 파생된다(`replot-increment-std-price.ts`)라 주택이 0번이 되면 깨진다. */
 const hasReplotIncrement = (form: SwapForm) => form.assets.some((a) => a.isReplotIncrement);
 
-/** 교환 대상 주택의 index. 대상이 없으면 -1 — 버튼을 숨긴다. 증환지 증가분은 사유가 따로 있다(`BlockReason`). */
-function pairedHouseIndex(form: SwapForm, houseId?: string): number {
-  return hasReplotIncrement(form) ? -1 : pairedHouseIndexRaw(form, houseId);
-}
-
-/** 버튼 후보 — 첫 자산으로 올릴 수 있는 주택(id·라벨). 증환지 증가분·«첫 자산 전용» 입력이 있으면 비운다(패치와 같은 가드). */
-export function reverseAppurtenantSwapCandidates(form: SwapForm): { assetId: string; label: string }[] {
-  return swapHouseIdsRaw(form)
-    .filter((id) => reverseAppurtenantSwapPatch(form, id) !== null)
-    .map((id) => {
-      const a = form.assets.find((x) => x.assetId === id)!;
-      return { assetId: id, label: a.addressJibun ? `${a.assetLabel} · ${a.addressJibun}` : a.assetLabel };
-    });
+/** 교환 대상 짝 주택의 index. 짝 주택이 없으면 -1 — 사유 문구 없이 버튼만 숨긴다(현행 ⑧·엔진 경고가 그대로 안내). 증환지 증가분은 사유가 따로 있다(`BlockReason`). */
+function pairedHouseIndex(form: SwapForm): number {
+  return hasReplotIncrement(form) ? -1 : pairedHouseIndexRaw(form);
 }
 
 /**
  * 교환 패치. 가드가 하나라도 걸리면 `null`(버튼을 보이지 않는다).
  * - 짝 주택이 없다(주택 2건 이상·겸용·재개발 완공·토지 성격 미선택·지분 분할 묶음 …) · 증환지 증가분이 있다 · 첫 자산 토지에 «첫 자산 전용» 입력이 있다.
  */
-export function reverseAppurtenantSwapPatch(form: SwapForm, houseId?: string): ReverseAppurtenantSwapPatch | null {
-  const houseIdx = pairedHouseIndex(form, houseId);
+export function reverseAppurtenantSwapPatch(form: SwapForm): ReverseAppurtenantSwapPatch | null {
+  const houseIdx = pairedHouseIndex(form);
   if (houseIdx < 0) return null;
   const [oldFirst] = form.assets;
   if (firstAssetOnlyLabels(oldFirst).length > 0) return null;
@@ -118,11 +95,7 @@ export function reverseAppurtenantSwapPatch(form: SwapForm, houseId?: string): R
  * 문구는 사실만 적는다.
  */
 export function reverseAppurtenantSwapBlockReason(form: SwapForm): string | null {
-  if (pairedHouseIndexRaw(form) < 0) {
-    // NH-14 — 첫 자산이 토지가 아닌(건물 등) 구성은 ⑧이 막지만 버튼을 두지 않는다(위 `swapHouseIdsRaw`).
-    if (companionHousesHiddenFromHouseholdFacts(form.assets, form.assetSplitMode).length === 0) return null;
-    return "첫 자산이 토지가 아니어서 버튼으로 순서를 바꾸지 않습니다. 주택을 첫 자산으로 입력하세요.";
-  }
+  if (pairedHouseIndexRaw(form) < 0) return null;
   if (hasReplotIncrement(form)) {
     return "증환지 증가분이 있어 첫 자산을 바꿀 수 없습니다. 증가분의 양도시 기준시가가 첫 자산(당초분)의 ㎡당 기준시가에서 정해집니다.";
   }

@@ -306,7 +306,7 @@ export function buildCompanionEngineInputs(
     transferDate: ctx.transferDate,
     acquisitionPrice: acqPrice,
     acquisitionDate: acqDate,
-    assetContractDate: c.assetContractDate ? new Date(c.assetContractDate) : undefined,
+    assetContractDate: toOptionalDate(c.assetContractDate), // NH-81 — 정본 변환(`lib/api/date-coerce.ts`). 종전 `new Date` 직접 호출
     expenses: a.allocatedExpenses,
     capitalExpenditure: c.capitalExpenditure,
     transferExpense: c.transferExpense,

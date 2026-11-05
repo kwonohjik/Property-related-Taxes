@@ -24,6 +24,7 @@ import { Rental97DetailCard } from "./Rental97DetailCard";
 import { New994DetailCard } from "./New994DetailCard";
 import { Unsold989DetailCard } from "./Unsold989DetailCard";
 import { IncomeDeductionDetailCard } from "./IncomeDeductionDetailCard";
+import { activeIncomeDeductionHybrid } from "@/lib/tax-engine/transfer-tax-aggregate-pickers";
 import { SpecialHouseExclusionDetailCard } from "./SpecialHouseExclusionDetailCard";
 import { countExclusionHouseRef, detailHouseId, type HouseRefRow } from "./count-exclusion-house-ref";
 import {
@@ -90,6 +91,12 @@ interface Props {
    * 실제 50,000,000, 차액 15,540,250이 아무 설명 없이 남았다(결과탭 코드리뷰 #046).
    */
   appliedReductionAmount?: number;
+  /**
+   * 함께 양도·다건 자산별 — 합산 엔진이 실제로 소득금액에서 뺀 소득금액차감 감면액(`PerPropertyBreakdown.incomeDeductionReducible`, NH-64).
+   * 단건 detail의 `reducibleTransferIncome`은 받은 양도차손의 감면소득 몫(소득세법 시행령 §167의2②)을 빼기 전 값이라, 넘기지 않으면
+   * 카드가 적용되지 않은 금액과 단건 농어촌특별세를 찍는다. 단건은 넘기지 않는다.
+   */
+  incomeDeductionApplied?: number;
 }
 
 /** 자경농지 감면의 식별자 3종 — 상속인 합산·편입일 부분감면 변형까지 **같은 감면**이다. */
@@ -144,6 +151,7 @@ export function ReductionDetailCards({
   appliedReductionType,
   appliedReductionAmount,
   houses,
+  incomeDeductionApplied,
 }: Props) {
   /**
    * 이 카드가 §127⑦로 **배제된 후보인가** — 승자 식별자가 자기 것이 아니면 배제다.
@@ -153,6 +161,14 @@ export function ReductionDetailCards({
     !!appliedReductionType && !ownTypes.includes(appliedReductionType);
   const hasAny = hasReductionDetailCards(result);
   if (!hasAny) return null;
+  /**
+   * 합산 경로에서만 합산 엔진 적용액으로 카드 금액을 바꾼다(NH-64). 단건은 undefined — 종전 표시.
+   * 적용액은 엔진이 고른 detail 하나의 값이다(`incomeDeductionReducibleOf` — §127⑦ 택일 순서) — 그 카드에만 넘긴다.
+   */
+  const incomeDeductionOwner = aggregatedContext && incomeDeductionApplied !== undefined
+    ? (result.new993Detail ?? result.new99Detail ?? result.unsold988Detail ?? activeIncomeDeductionHybrid(result as never))
+    : undefined;
+  const appliedOf = (d: unknown) => (d !== undefined && d === incomeDeductionOwner ? incomeDeductionApplied : undefined);
 
   return (
     <>
@@ -242,40 +258,40 @@ export function ReductionDetailCards({
         </>
       )}
       {/* P1 차감형 (2026-06-11): §99 신축주택 IMF 1차 · §98의8 준공후미분양 50% */}
-      {result.new99Detail && <IncomeDeductionDetailCard kind="new_99" result={result.new99Detail} calculatedTax={calculatedTax} />}
+      {result.new99Detail && <IncomeDeductionDetailCard kind="new_99" result={result.new99Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.new99Detail)} />}
       {result.unsold988Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_8" result={result.unsold988Detail} calculatedTax={calculatedTax} />
+        <IncomeDeductionDetailCard kind="unsold_98_8" result={result.unsold988Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold988Detail)} />
       )}
       {/* P2 하이브리드 (2026-06-11): §98의7 9억↓ 미분양 · §99의2 신축·미분양·1세대1주택 */}
       {result.unsold987Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_7" result={result.unsold987Detail} calculatedTax={calculatedTax} />
+        <IncomeDeductionDetailCard kind="unsold_98_7" result={result.unsold987Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold987Detail)} />
       )}
       {result.unsold992Detail && (
-        <IncomeDeductionDetailCard kind="unsold_99_2" result={result.unsold992Detail} calculatedTax={calculatedTax} />
+        <IncomeDeductionDetailCard kind="unsold_99_2" result={result.unsold992Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold992Detail)} />
       )}
       {/* P3 하이브리드 (2026-06-12) */}
       {result.unsold983Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_3" result={result.unsold983Detail} calculatedTax={calculatedTax} />
+        <IncomeDeductionDetailCard kind="unsold_98_3" result={result.unsold983Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold983Detail)} />
       )}
       {result.unsold985Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_5" result={result.unsold985Detail} calculatedTax={calculatedTax} />
+        <IncomeDeductionDetailCard kind="unsold_98_5" result={result.unsold985Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold985Detail)} />
       )}
       {result.unsold986Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_6" result={result.unsold986Detail} calculatedTax={calculatedTax} />
+        <IncomeDeductionDetailCard kind="unsold_98_6" result={result.unsold986Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold986Detail)} />
       )}
       {/* P4 (2026-06-12) */}
       {result.unsold982Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_2" result={result.unsold982Detail} calculatedTax={calculatedTax} />
+        <IncomeDeductionDetailCard kind="unsold_98_2" result={result.unsold982Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold982Detail)} />
       )}
       {result.unsold984Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_4" result={result.unsold984Detail} calculatedTax={calculatedTax} />
+        <IncomeDeductionDetailCard kind="unsold_98_4" result={result.unsold984Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold984Detail)} />
       )}
       {/* P5 (2026-06-12) */}
       {result.unsold98Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98" result={result.unsold98Detail} calculatedTax={calculatedTax} />
+        <IncomeDeductionDetailCard kind="unsold_98" result={result.unsold98Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold98Detail)} />
       )}
       {/* §99의3 신축주택 과세특례 — 양도소득금액 차감 방식 5년 안분 산식 */}
-      {result.new993Detail && <New993DetailCard detail={result.new993Detail} />}
+      {result.new993Detail && <New993DetailCard detail={result.new993Detail} aggregateApplied={appliedOf(result.new993Detail)} />}
       {/* 비자발적 양도 감면 §77·§77의2·§77의3 — 감면세액 산출근거(변수값).
           적용 불가여도 렌더한다 — 카드가 사유를 표시한다(§77의2·§77의3과 동일).
           detail은 §77 감면을 입력했을 때만 생성되므로(transfer-tax-reductions-calc.ts:171)

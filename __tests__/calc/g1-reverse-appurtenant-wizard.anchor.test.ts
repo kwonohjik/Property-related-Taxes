@@ -26,8 +26,6 @@ import { runCalc, allIssues, captureBody, postTransfer } from "./_helpers/redev-
 import { HOUSE, LAND, form, aggOf, blocked, type Agg } from "./_helpers/g1-reverse-appurtenant-fixtures";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { reverseAppurtenantHouseAssetId } from "@/lib/calc/reverse-appurtenant-house";
-import { reverseAppurtenantSwapPatch } from "@/lib/calc/reverse-appurtenant-swap";
-import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildAggregateRows } from "@/components/calc/results/transfer/FilingFormTableAggregateHelpers";
 import type { AggregateMeta } from "@/components/calc/results/transfer/FilingFormTableHelpers";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
@@ -69,17 +67,9 @@ describe("G1 화면 경로 — 첫 자산 주택부수토지 + 함께 양도 주
     expect(blocked(rv)).toHaveLength(1);
   });
 
-  /**
-   * 🔄 반전(NH-14 · 사용자 결정 Q-24) — 종전 단언은 「짝 주택을 정할 수 없는 구성(주택 2건 · 겸용)은 막지 않는다」였다. 그 구성도 첫 자산이 토지라
-   * ① 세대·주택 현황이 숨고 주택이 숨은 기본값으로 판정됐다. G1 문구(`blocked`)로는 여전히 막지 않고(짝 주택이 아니다), NH-14 문구로 막는다 —
-   * G1 문구만 보는 `toEqual([])`는 넓힌 차단이 있어도 통과하므로 NH-14 문구를 따로 단언한다.
-   */
-  it("🔄 짝 주택을 정할 수 없는 구성(함께 양도 주택 2건 · 겸용주택)은 G1 문구가 아니라 NH-14 문구로 막는다", () => {
-    for (const f of [form(LAND("l1", 300), HOUSE(0), { ...HOUSE(0), assetId: "h2" }), form(LAND("l1", 300), { ...HOUSE(0), isMixedUseHouse: true })]) {
-      const issues = allIssues(f);
-      expect(blocked(issues)).toEqual([]);
-      expect(nh14(issues)).toHaveLength(1);
-    }
+  it("짝 주택을 정할 수 없는 구성(함께 양도 주택 2건 · 겸용주택)은 막지 않는다 — 종전대로 계산하고 엔진이 안내한다", () => {
+    expect(blocked(allIssues(form(LAND("l1", 300), HOUSE(0), { ...HOUSE(0), assetId: "h2" })))).toEqual([]);
+    expect(blocked(allIssues(form(LAND("l1", 300), { ...HOUSE(0), isMixedUseHouse: true })))).toEqual([]);
   });
 
   it("④ — 짝 주택(신축 아님)에는 정착면적을 싣지 않는다(화면에서 역방향 단위를 만들지 않는다 · 종전 동작)", async () => {
@@ -110,58 +100,5 @@ describe("G1 화면 경로 — 첫 자산 주택부수토지 + 함께 양도 주
     expect(acq["primary__appurtenant"]).toBe("2012-05-05");
     expect(acq["primary__excess"]).toBe("2012-05-05");
     expect(acq["h1"]).toBe("2014-01-02");
-  });
-});
-
-/** NH-14 ⑧ 문구의 식별 부분 문자열. */
-const NH14 = "첫 자산이 주택이 아니고 주택을 함께 양도하는 자산으로 넣으면";
-const nh14 = (issues: { step: number; field?: string; message: string }[]) => issues.filter((i) => i.message.includes(NH14));
-
-/**
- * NH-14(사용자 결정 Q-24) — 첫 자산이 주택 계열이 아니고 주택을 함께 양도하면 ① 세대·주택 현황이 열리지 않아, 함께 양도한 주택이 숨은 기본값
- * (1세대 해당 · 1주택 · 거주 0 · 조정대상지역 아님)으로 1세대1주택 판정을 받았다. G1(부수토지 + 일반 주택 1건)만 막던 ⑧을 넓힌다.
- */
-describe("NH-14 — 첫 자산이 주택이 아닌 함께 양도는 막고 주택 먼저로 안내", () => {
-  const SA = { ...LAND("l1", 300), landNature: "standalone" };
-  const OTHER = { id: "o1", region: "non_capital", regionCode: "4682025021", acquisitionDate: "2015-01-01", officialPrice: "300000000", isInherited: false, isLongTermRental: false, isApartment: false, isOfficetel: false, isUnsoldHousing: false };
-  const withFacts = (f: never, o: object) => ({ ...(f as object), ...o }) as never;
-  /** 실제 세대 사실 — 다른 주택 1채(주택 먼저에서만 입력할 수 있다) */
-  const TWO = { houses: [OTHER], householdHousingCount: "2", householdNoOtherHousesConfirmed: false };
-  /** 토지 먼저에서 사용자가 볼 수 없는 기본값 그대로 */
-  const HIDDEN = { householdHousingCount: "1", householdNoOtherHousesConfirmed: false, residencePeriodMonths: "0" };
-
-  it("💰 숨은 기본값 비과세 — 독립 나대지 먼저 18,628,500(⑧ 없음이던 값) vs 주택 먼저 154,286,000 · 이제 토지 먼저는 1단계에서 막힌다", async () => {
-    const rv = await runCalc(withFacts(form(SA, HOUSE(0)), HIDDEN));
-    expect(aggOf(rv).totalTax).toBe(18_628_500); // route는 그대로 계산한다 — 막는 곳은 ⑧
-    const issues = nh14(rv.issues);
-    expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ step: 0, field: "assetKind" });
-    const fw = await runCalc(withFacts(form(HOUSE(0), SA), TWO));
-    expect(nh14(fw.issues)).toEqual([]);
-    expect(aggOf(fw).totalTax).toBe(154_286_000);
-  });
-
-  it("🔑 넓힌 범위 — 독립 나대지·재개발 완공주택·일반건물 먼저도 막는다 · G1 구성은 G1 문구 하나만", () => {
-    expect(nh14(allIssues(form(SA, HOUSE(0))))).toHaveLength(1);
-    expect(nh14(allIssues(form(LAND("l1", 300), { ...HOUSE(0), assetKind: "redevelopment_apt" })))).toHaveLength(1);
-    expect(nh14(allIssues(form({ ...SA, assetKind: "general_building", landNature: undefined }, HOUSE(0))))).toHaveLength(1);
-    const g1 = allIssues(form(LAND("l1", 300), HOUSE(0)));
-    expect(blocked(g1)).toHaveLength(1);
-    expect(nh14(g1)).toEqual([]);
-  });
-
-  it("💰 전환 버튼 — 독립 나대지 먼저를 바꾸면 주택 먼저 폼과 같은 세액 154,286,000 · ⑧ 없음", async () => {
-    const f = withFacts(form(SA, HOUSE(0)), TWO) as TransferFormData;
-    const p = reverseAppurtenantSwapPatch(f, "h1")!;
-    const sw = await runCalc({ ...f, ...p } as never);
-    expect(nh14(sw.issues)).toEqual([]);
-    expect(aggOf(sw).totalTax).toBe(154_286_000);
-  });
-
-  it("형제 안전망 — 주택 먼저 · 주택 없는 토지 묶음 · 지분 분할 묶음은 막지 않는다", () => {
-    expect(nh14(allIssues(form(HOUSE(0), SA)))).toEqual([]);
-    expect(nh14(allIssues(form(SA, { ...SA, assetId: "l2" })))).toEqual([]);
-    const frac = { ...(form({ ...SA, ownershipNumerator: "50", ownershipDenominator: "100" }, { ...SA, assetId: "l2", ownershipNumerator: "50", ownershipDenominator: "100" }) as object), assetSplitMode: "fractional" } as never;
-    expect(nh14(allIssues(frac))).toEqual([]);
   });
 });

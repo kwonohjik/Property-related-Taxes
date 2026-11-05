@@ -25,7 +25,6 @@ import {
   reverseAppurtenantSwapPatch,
   reverseAppurtenantSwapBlockReason,
   reverseAppurtenantSwapNewlyReflected,
-  reverseAppurtenantSwapCandidates,
 } from "@/lib/calc/reverse-appurtenant-swap";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -142,48 +141,20 @@ describe("가드 표(계획서 §5-1) — 전 분기", () => {
     expect(reverseAppurtenantSwapBlockReason(f)).toBeNull();
   });
 
-  it("주택이 첫 자산이거나 함께 양도 주택이 없으면 버튼도 사유도 없다", () => {
+  it("짝 주택이 없으면 버튼도 사유도 없다 — 현행 ⑧·엔진 경고가 안내한다", () => {
     const cases: [string, F][] = [
       ["주택 먼저(역방향 아님)", form(HOUSE(0), L("l1")) as F],
+      ["토지 성격 독립 나대지", form({ ...L("l1"), landNature: "standalone" }, HOUSE(0)) as F],
+      ["토지 성격 미선택", form({ ...L("l1"), landNature: undefined }, HOUSE(0)) as F],
+      ["주택 2건", form(L("l1"), HOUSE(0), { ...HOUSE(0), assetId: "h2" }) as F],
+      ["겸용주택", form(L("l1"), { ...HOUSE(0), isMixedUseHouse: true }) as F],
+      ["재개발 완공주택만", form(L("l1"), { ...HOUSE(0), assetKind: "redevelopment_apt" }) as F],
       ["단건", form(L("l1")) as F],
-      ["토지 2건(주택 없음)", form(L("l1"), L("l2")) as F],
     ];
     for (const [name, f] of cases) {
       expect(reverseAppurtenantSwapPatch(f), name).toBeNull();
       expect(reverseAppurtenantSwapBlockReason(f), name).toBeNull();
-      expect(reverseAppurtenantSwapCandidates(f), name).toEqual([]);
     }
-  });
-
-  /**
-   * 🔄 반전(NH-14 · 사용자 결정 Q-24) — 종전에는 짝 주택이 없는 구성(독립 나대지·성격 미선택·주택 2건·겸용·재개발 완공주택)에 버튼도 사유도 없었다.
-   * 그 구성도 첫 자산이 토지라 ① 세대·주택 현황이 숨고 함께 양도 주택이 숨은 기본값으로 판정됐다(리뷰 실측 +74,525,000). 이제 ⑧이 막고 같은 버튼으로
-   * 주택을 첫 자산으로 올린다. 주택 먼저·주택 없음은 위 테스트가 계속 «버튼 없음»을 지킨다(형제 안전망).
-   */
-  it("🔄 첫 자산 토지 + 함께 양도 주택(짝 주택 아님) → 버튼 후보가 그 주택들이고, 고른 주택이 맨 앞으로 간다", () => {
-    const cases: [string, F, string[]][] = [
-      ["토지 성격 독립 나대지", form({ ...L("l1"), landNature: "standalone" }, HOUSE(0)) as F, ["h1"]],
-      ["토지 성격 미선택", form({ ...L("l1"), landNature: undefined }, HOUSE(0)) as F, ["h1"]],
-      ["주택 2건", form(L("l1"), HOUSE(0), { ...HOUSE(0), assetId: "h2" }) as F, ["h1", "h2"]],
-      ["겸용주택", form(L("l1"), { ...HOUSE(0), isMixedUseHouse: true }) as F, ["h1"]],
-      ["재개발 완공주택만", form(L("l1"), { ...HOUSE(0), assetKind: "redevelopment_apt" }) as F, ["h1"]],
-    ];
-    for (const [name, f, expected] of cases) {
-      expect(reverseAppurtenantSwapCandidates(f).map((c) => c.assetId), name).toEqual(expected);
-      expect(reverseAppurtenantSwapBlockReason(f), name).toBeNull();
-      for (const id of expected) {
-        const p = reverseAppurtenantSwapPatch(f, id)!;
-        expect(ids(p), name).toEqual([id, ...ids(f).filter((x) => x !== id)]);
-        expect(p.assets.map((a) => a.isPrimaryForHouseholdFlags), name).toEqual(p.assets.map((_, i) => i === 0));
-      }
-    }
-  });
-
-  it("🔄 첫 자산이 토지가 아닌(일반건물) 함께 양도 — 버튼 없이 사유 한 줄(«첫 자산 전용» 입력 가드를 토지만 실측했다)", () => {
-    const f = form({ ...L("g1"), assetKind: "general_building", landNature: undefined }, HOUSE(0)) as F;
-    expect(reverseAppurtenantSwapCandidates(f)).toEqual([]);
-    expect(reverseAppurtenantSwapPatch(f)).toBeNull();
-    expect(reverseAppurtenantSwapBlockReason(f)).toContain("첫 자산이 토지가 아니어서");
   });
 
   it("🔑 지분 분할(축 B) 토글 진입 직후(전 자산 지분율 빈칸) — 형제가 짝 주택으로 보이지 않는다(⑧ 오탐 보정 · 막다른 길 없음)", () => {

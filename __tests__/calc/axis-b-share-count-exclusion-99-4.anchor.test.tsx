@@ -17,10 +17,22 @@ vi.mock("@/lib/api/rate-limit", async (importOriginal) => ({
   getClientIp: vi.fn().mockReturnValue("127.0.0.1"),
   shouldBypassRateLimit: vi.fn().mockReturnValue(true),
 }));
+// 카드 입력 확인용(NH-81) — 합산 엔진은 그대로 돌리고 받은 카드만 기록한다.
+const seen = vi.hoisted(() => ({ properties: [] as Record<string, unknown>[] }));
+vi.mock("@/lib/tax-engine/transfer-tax-aggregate", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/tax-engine/transfer-tax-aggregate")>();
+  return {
+    ...actual,
+    calculateTransferTaxAggregateWithUnits: (...args: Parameters<typeof actual.calculateTransferTaxAggregateWithUnits>) => {
+      seen.properties = args[0].properties as unknown as Record<string, unknown>[];
+      return actual.calculateTransferTaxAggregateWithUnits(...args);
+    },
+  };
+});
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
-import { runCalc, houseRow } from "./_helpers/redev-one-house-route";
+import { runCalc, houseRow, captureBody, postTransfer } from "./_helpers/redev-one-house-route";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -80,5 +92,18 @@ describe("재개발 완공 아파트 지분도 같다", () => {
     const R96 = { residencePeriodMonths: "96" };
     expect(await totalOf(form([share(1, "100", APT)], [rural("2020-03-01")], R96))).toBe(0);
     expect(await totalOf(form([share(1, "50", APT), share(2, "50", APT)], [rural("2020-03-01")], { ...FR, ...R96 }))).toBe(0);
+  });
+});
+
+describe("NH-81 컴패니언 매매계약일 — 정본 변환(`toOptionalDate`)", () => {
+  it("본문의 문자열 계약일이 엔진 카드에 Date로 도달한다", async () => {
+    const body = await captureBody(form([share(1, "50"), share(2, "50")], [], FR));
+    const companions = body.companionAssets as Record<string, unknown>[];
+    companions[0].assetContractDate = "2018-02-01";
+    const r = await postTransfer(body);
+    expect(r.status, JSON.stringify(r.json?.error)).toBe(200);
+    const card = seen.properties.find((p) => p.propertyId === companions[0].assetId)!;
+    expect(card.assetContractDate).toBeInstanceOf(Date);
+    expect((card.assetContractDate as Date).toISOString().slice(0, 10)).toBe("2018-02-01");
   });
 });
