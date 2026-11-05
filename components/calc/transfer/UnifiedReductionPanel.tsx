@@ -22,6 +22,8 @@ import type { RentalReductionFormVariant } from "@/lib/stores/calc-wizard-asset-
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
+import { landOnlyOwnerMessage } from "@/lib/tax-engine/transfer-reductions/new-99-land-only-owner";
+import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import {
   isIncomeDeductionTrack,
   isTaxAmountTrack,
@@ -345,8 +347,26 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     return { ded: label(ded), tax: label(tax) };
   }, [asset.acquisitionDate, transferDate, reductions]);
 
+  /**
+   * 토지만 본인 소유(소유자 분리) 카드에서 §99·§99의3을 골랐으면 계산 전에 알린다 — 엔진이 신축주택 취득자가 아니라 적용 배제한다(NH-08 · Q-28).
+   * 선택은 막지 않는다(막다른 길 방지 · 결과 카드도 같은 사유를 보인다). 문구는 엔진 평가기와 같은 단일 소스다.
+   */
+  const landOnlyNewHousing = useMemo(
+    () => (effectiveSelfOwns(asset) === "land_only" ? (["new_99_3", "new_99"] as const).filter((t) => (asset.reductions ?? []).some((r) => r.type === t)) : []),
+    [asset],
+  );
+
   return (
     <div className="space-y-3">
+      {landOnlyNewHousing.length > 0 && (
+        <ToneCard tone="amber" title="토지만 본인 소유 — 신축주택 감면은 적용되지 않습니다" bodyClassName="space-y-1">
+          {landOnlyNewHousing.map((t) => (
+            <p key={t} className="text-xs" data-testid={`land-only-owner-notice-${t}`}>
+              {landOnlyOwnerMessage(t)}
+            </p>
+          ))}
+        </ToneCard>
+      )}
       {trackConflict && (
         <ToneCard tone="rose" title="조특법 §127⑦ — 두 감면은 택일입니다">
           <p className="text-xs">

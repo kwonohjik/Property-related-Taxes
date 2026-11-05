@@ -23,6 +23,7 @@
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { LAND_ONLY_OWNER_CODE, landOnlyOwnerMessage } from "./new-99-land-only-owner";
 import {
   calcSignedAllocation,
   isHighValueHouseUnder993,
@@ -63,6 +64,8 @@ export interface New99Input {
   wholePropertyTransferPrice: number;
   /** 전용면적 (㎡) — 고가주택 면적 기준 (~2002.12.31 정의) */
   exclusiveAreaSqm?: number;
+  /** 소유자 분리 — 토지만 본인 소유인가(true면 적용 배제). `New993Input.isLandOnlyOwner`와 같은 의미 (NH-08) */
+  isLandOnlyOwner?: boolean;
   isResident?: boolean;
   isHousingConstructionBusiness?: boolean;
   acquisitionType?: "from_builder" | "self_built";
@@ -98,6 +101,7 @@ export type New99IneligibleCode =
   | "OUT_OF_ACQUISITION_PERIOD"
   | "OCCUPANCY_AT_CONTRACT"
   | "RECONTRACT_EXCLUDED"
+  | typeof LAND_ONLY_OWNER_CODE
   | "HIGH_VALUE_HOUSE"
   | "MISSING_STD_PRICE"
   | "MISSING_PREVIOUS_STD_PRICE"
@@ -158,6 +162,12 @@ function ineligible(reasons: New99IneligibleReason[]): New99Result {
 export function evaluateNew99(input: New99Input): New99Result {
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.NEW_99;
   const reasons: New99IneligibleReason[] = [];
+
+  // 0) 소유자 분리(토지만 본인) — 신축주택(건물)을 취득한 자가 아니다. 정면 해석례 없음 → 확인 필요 고지 (NH-08 · Q-28).
+  if (input.isLandOnlyOwner === true) {
+    reasons.push({ code: LAND_ONLY_OWNER_CODE, message: landOnlyOwnerMessage("new_99"), legalBasis });
+    return ineligible(reasons);
+  }
 
   // 1) 거주자·주건업 (법 ① 본문 괄호)
   if (input.isResident === false) {
