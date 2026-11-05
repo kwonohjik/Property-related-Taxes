@@ -30,14 +30,14 @@ const triOptions = (prefix: string, yes: string, no: string, unknownDesc: string
 ];
 
 export function New99LuxuryHouseFields({
-  fieldPrefix,
+  reductionType,
   testidPrefix,
   value,
   onChange,
   floorLabel,
 }: {
-  /** data-field 접두사 — `reduction.new_99` 또는 `reduction.new_99_3` */
-  fieldPrefix: string;
+  /** 감면 타입 — data-field 키 `reduction.<타입>.<속성><접미사>` (validate ⑧ 키와 같은 모양 — 앵커 커버리지 게이트) */
+  reductionType: "new_99" | "new_99_3";
   /** 키 접미사 — validate(⑧) 필드 키와 같다 (`99`·`993`) */
   testidPrefix: string;
   value: New99LuxuryValue;
@@ -48,7 +48,7 @@ export function New99LuxuryHouseFields({
   const suffix = testidPrefix;
   return (
     <div className="space-y-2" data-testid={`new${suffix}-luxury-fields`}>
-      <div data-field={`${fieldPrefix}.houseType${suffix}`}>
+      <div data-field={`reduction.${reductionType}.houseType${suffix}`}>
         <p className="mb-1 text-xs font-medium">주택 유형 (고급주택 판정 — 기준일 당시 소득세법 시행령 §156)</p>
         <RadioCardGroup
           name={`new${suffix}-house-type`}
@@ -77,7 +77,7 @@ export function New99LuxuryHouseFields({
           <div>
             <label className="mb-1 block text-xs font-medium">연면적 (㎡)</label>
             <DecimalInput
-              data-field={`${fieldPrefix}.grossFloorAreaSqm${suffix}`}
+              data-field={`reduction.${reductionType}.grossFloorAreaSqm${suffix}`}
               value={value.grossFloorAreaSqm}
               onChange={(v) => onChange({ grossFloorAreaSqm: v })}
             />
@@ -86,13 +86,13 @@ export function New99LuxuryHouseFields({
           <div>
             <label className="mb-1 block text-xs font-medium">딸린 토지 면적 (㎡)</label>
             <DecimalInput
-              data-field={`${fieldPrefix}.attachedLandAreaSqm${suffix}`}
+              data-field={`reduction.${reductionType}.attachedLandAreaSqm${suffix}`}
               value={value.attachedLandAreaSqm}
               onChange={(v) => onChange({ attachedLandAreaSqm: v })}
             />
             <p className="mt-1 text-micro text-muted-foreground">495㎡ 이상이면 면적 기준 충족</p>
           </div>
-          <div className="sm:col-span-2" data-field={`${fieldPrefix}.stdPriceFloorMet${suffix}`}>
+          <div className="sm:col-span-2" data-field={`reduction.${reductionType}.stdPriceFloorMet${suffix}`}>
             <p className="mb-1 text-xs font-medium">주택의 {floorLabel}인가요?</p>
             <RadioCardGroup
               name={`new${suffix}-std-floor`}
@@ -103,7 +103,7 @@ export function New99LuxuryHouseFields({
               options={triOptions(`new${suffix}-std-floor`, "하한 이상", "하한 미만 — 면적·가액 기준을 넘어도 고급주택이 아닙니다", "고급주택으로 보고 결과에 확인 필요로 표시합니다")}
             />
           </div>
-          <div className="sm:col-span-2" data-field={`${fieldPrefix}.luxuryFacility${suffix}`}>
+          <div className="sm:col-span-2" data-field={`reduction.${reductionType}.luxuryFacility${suffix}`}>
             <p className="mb-1 text-xs font-medium">엘리베이터·에스컬레이터·67㎡ 이상 수영장 중 하나라도 설치돼 있나요?</p>
             <RadioCardGroup
               name={`new${suffix}-facility`}
@@ -120,15 +120,16 @@ export function New99LuxuryHouseFields({
   );
 }
 
-/** 최초 계약 여부 — 주택건설사업자 갈래 · 매매 취득에서만 렌더한다(호출자가 `needsFirstContractAnswer`로 가린다). */
+/**
+ * 최초 계약 여부 — 주택건설사업자 갈래 · 매매 취득에서만 렌더한다(호출자가 `needsFirstContractAnswer`로 가린다).
+ * 호출자가 `data-field` 앵커(문자열 그대로)로 감싼다 — validate(⑧) 키와 정적 대조된다.
+ */
 export function New99FirstContractField({
-  dataField,
   testidPrefix,
   value,
   onChange,
   lawLabel,
 }: {
-  dataField: string;
   testidPrefix: string;
   value: FormTri;
   onChange: (v: Tri) => void;
@@ -136,7 +137,7 @@ export function New99FirstContractField({
   lawLabel: string;
 }) {
   return (
-    <div className="space-y-1.5" data-field={dataField}>
+    <div className="space-y-1.5">
       <p className="text-xs font-medium">주택건설업자와 최초로 매매계약을 체결하고 계약금을 낸 사람이 본인인가요?</p>
       <RadioCardGroup
         name={`${testidPrefix}-first-contract`}

@@ -263,13 +263,14 @@ export function New993InputForm({
 
       {/* NH-17 — 1호 매매 취득은 최초 계약자인지 묻는다(분양권 승계 불성립). ⑧·④가 같은 술어. */}
       {needsFirstContractAnswer(value.acquisitionType993, acquisitionCause) && (
-        <New99FirstContractField
-          dataField="reduction.new_99_3.firstContract993"
-          testidPrefix="new993"
-          value={value.firstContract993 ?? ""}
-          onChange={(v) => onUpdate("firstContract993", v)}
-          lawLabel="조세특례제한법 §99의3①1호"
-        />
+        <div data-field="reduction.new_99_3.firstContract993">
+          <New99FirstContractField
+            testidPrefix="new993"
+            value={value.firstContract993 ?? ""}
+            onChange={(v) => onUpdate("firstContract993", v)}
+            lawLabel="조세특례제한법 §99의3①1호"
+          />
+        </div>
       )}
 
       {/* ① 형제 감면 폼 10종과 같은 「색상 카드 + 섹션 번호」 패턴 (2026-09-07 UI 리뷰 L5).
@@ -430,7 +431,7 @@ export function New993InputForm({
         value.constructionStartedBefore2003_993,
       ) && (
         <New99LuxuryHouseFields
-          fieldPrefix="reduction.new_99_3"
+          reductionType="new_99_3"
           testidPrefix="993"
           floorLabel="소득세법 §99①1호나목 기준시가가 4천만원 이상"
           value={{

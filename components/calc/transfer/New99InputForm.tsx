@@ -119,13 +119,14 @@ export function New99InputForm({
         )}
         {/* NH-03 — 2호 매매 취득은 최초 계약자인지 묻는다(분양권 승계 불성립). ⑧·④가 같은 술어. */}
         {needsFirstContractAnswer(value.acquisitionType99, acquisitionCause) && (
-          <New99FirstContractField
-            dataField="reduction.new_99.firstContract99"
-            testidPrefix="new99"
-            value={value.firstContract99 ?? ""}
-            onChange={(v) => onChange({ firstContract99: v })}
-            lawLabel="조세특례제한법 §99①2호"
-          />
+          <div data-field="reduction.new_99.firstContract99">
+            <New99FirstContractField
+              testidPrefix="new99"
+              value={value.firstContract99 ?? ""}
+              onChange={(v) => onChange({ firstContract99: v })}
+              lawLabel="조세특례제한법 §99①2호"
+            />
+          </div>
         )}
       </SectionShell>
 
@@ -176,7 +177,7 @@ export function New99InputForm({
         />
         {/* NH-02 — 기준일 당시 소득세법 시행령 §156: 공동(2호)·단독(1호)·시설(3호, 단독만). §99 기준일은 모두 2000.12.31. 이전이라 하한은 시가표준액 2천만원. */}
         <New99LuxuryHouseFields
-          fieldPrefix="reduction.new_99"
+          reductionType="new_99"
           testidPrefix="99"
           floorLabel="취득세 시가표준액이 2천만원 이상"
           value={{

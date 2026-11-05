@@ -564,9 +564,9 @@ export const NEW_HOUSING_ACQUISITION_ARTICLE = {
 
 export const NEW_99_DECREE_ADDENDA_26959 = {
   /** 제16조 — 개정규정은 법률 제13560호 시행 이후 양도하는 분부터 적용 */
-  APPLICATION: "조특령 대통령령 제26959호 부칙 제16조",
+  APPLICATION: "대통령령 제26959호 부칙 제16조",
   /** 제35조 — 법률 제13560호 시행 전 양도분은 종전의 규정 */
-  TRANSITION: "조특령 대통령령 제26959호 부칙 제35조",
+  TRANSITION: "대통령령 제26959호 부칙 제35조",
 } as const;
 
 export const TRANSFER_REDUCTION_ARTICLE = {
