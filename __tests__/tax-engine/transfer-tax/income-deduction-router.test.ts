@@ -81,7 +81,7 @@ describe("[B4] §99의3 고가주택 면적기준 배제 (exclusiveAreaSqm993 �
     standardPriceAt5Years: 300_000_000,
     standardPriceAtTransfer993: 400_000_000,
     region993: "outside_speculation",
-    acquisitionType993: "from_builder",
+    acquisitionType993: "from_builder", firstContract993: "yes" as const,
     isResident993: true,
     isHousingConstructionBusiness993: false,
     hasOccupancyAtContract: false,

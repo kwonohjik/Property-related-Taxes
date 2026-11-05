@@ -18,7 +18,7 @@ const R993 = {
   standardPriceAt5Years: 160_000_000,
   standardPriceAtTransfer993: 250_000_000,
   region993: "outside_speculation" as const,
-  acquisitionType993: "from_builder" as const,
+  acquisitionType993: "from_builder" as const, firstContract993: "yes" as const,
 };
 
 /** §99의3 5년후 자산 (단건 anchor: taxBase 152,300,000·reducible 103,200,000). */

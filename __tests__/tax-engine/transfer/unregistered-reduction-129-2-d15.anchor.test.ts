@@ -51,7 +51,7 @@ const N99 = {
   exclusiveAreaSqm99: 84,
   isResident99: true,
   isHousingConstructionBusiness99: false,
-  acquisitionType99: "from_builder",
+  acquisitionType99: "from_builder", firstContract99: "yes" as const,
 };
 
 /** 토지 6억/2억 · 2010→2024-06-01 */
@@ -181,7 +181,7 @@ describe("D15 조기반환·분기 경로", () => {
       standardPriceAt5Years: 160_000_000,
       standardPriceAtTransfer993: 250_000_000,
       region993: "outside_speculation",
-      acquisitionType993: "from_builder",
+      acquisitionType993: "from_builder", firstContract993: "yes" as const,
     };
     const u993 = rd(true, [R993]);
     expect(u993.totalTax).toBe(rd(true, []).totalTax);

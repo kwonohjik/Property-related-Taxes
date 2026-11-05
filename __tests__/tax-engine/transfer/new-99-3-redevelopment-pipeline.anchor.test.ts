@@ -31,7 +31,7 @@ function run(variant: boolean) {
         {
           type: "new_99_3",
           contractDate993: D("2002-01-10"),
-          acquisitionType993: "from_builder",
+          acquisitionType993: "from_builder", firstContract993: "yes" as const,
           standardPriceAtAcquisition993: 200_000_000,
           standardPriceAt5Years: 300_000_000,
           standardPriceAtTransfer993: 500_000_000,
@@ -86,7 +86,7 @@ describe("⑫ Zod가 신규 필드를 통과시킨다", () => {
   it("`isRedevelopedNewHouse993`·`previousHouseStdPrice993`이 parse 후에도 살아남는다", () => {
     const parsed = reductionSchema.parse({
       type: "new_99_3",
-      acquisitionType993: "from_builder",
+      acquisitionType993: "from_builder", firstContract993: "yes" as const,
       standardPriceAt5Years: 300_000_000,
       standardPriceAtAcquisition993: 200_000_000,
       standardPriceAtTransfer993: 500_000_000,

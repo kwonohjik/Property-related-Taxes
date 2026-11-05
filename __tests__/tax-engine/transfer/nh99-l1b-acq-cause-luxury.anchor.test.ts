@@ -4,7 +4,7 @@
  * - NH-15 (사용자 결정 Q-1 a): 기준일 1999.9.17.까지 고급주택 가액 = 양도가액(실지거래가액) 5억원 초과. 1999.9.18.부터 6억원.
  *   (소득세법 시행령 §156 MST 22605·22607 「양도가액이 5억원을 초과」 → MST 22609 「양도당시의 실지거래가액이 6억원을 초과」)
  * - NH-02 (Q-2 b): 단독주택 1호(연면적 264㎡ 또는 딸린 토지 495㎡ + 가액 + 하한), 3호(시설)는 단독주택에만.
- * - NH-03·17·40 (Q-3): 상속·증여(지분 포함)는 불성립, 매매 취득은 최초 계약 3-state(아니오 불성립 · 모름 불성립 + 확인 필요 · 미입력 종전).
+ * - NH-03·17·40 (Q-3): 상속·증여(지분 포함)는 불성립, 매매 취득은 최초 계약 3-state(아니오 불성립 · 모름 불성립 + 확인 필요 · 미입력도 불성립 + 확인 필요 — L1c 사용자 결정).
  *   이월과세 증여(carryover_gift)도 증여 취득이라 불성립(Q-3 — 서면4팀-1192·1719 · 사전-2025-법규재산-0749 원문 확인 후 불인정).
  * - NH-16 (Q-6): 관리처분계획 인가일 뒤 승계조합원은 §99의3 불성립(조특령 §99의3③2호·⑤). §99에는 인가일 요건이 없다.
  * - NH-49: 2015.12.31. 이전 양도는 종전 규정 적용 대상 고지 — 차감액은 그대로.
@@ -146,9 +146,11 @@ describe("NH-03 · NH-17 · NH-40 — 취득 원인 게이트", () => {
     expect(codes(evaluateNew993(in993({ ...builder993, firstContract: "no" })))).toEqual(["NOT_FIRST_CONTRACT"]);
     expect(evaluateNew993(in993({ ...builder993, firstContract: "yes" })).isEligible).toBe(true);
   });
-  it("값 없는 직접 API·옛 이력(미입력)은 종전과 같이 계산한다 — 화면(⑧)이 답을 필수로 받는다", () => {
-    expect(evaluateNew99(in99({ ...builder99 })).isEligible).toBe(true);
-    expect(evaluateNew993(in993({ ...builder993 })).isEligible).toBe(true);
+  it("값 없는 직접 API·옛 이력(미입력)도 불성립 + 확인 필요 — 「모름」과 같다 (L1c 사용자 결정 · 종전 적용)", () => {
+    for (const r of [evaluateNew99(in99({ ...builder99 })), evaluateNew993(in993({ ...builder993 }))]) {
+      expect(codes(r)).toEqual(["FIRST_CONTRACT_UNCONFIRMED"]);
+      expect(r.ineligibleReasons[0].message).toContain("확인 필요");
+    }
   });
   it("이월과세 증여(carryover_gift)도 불성립 — §99 2호·§99의3 1호·자기건설 모두 (Q-3 불인정 · 서면4팀-1192 등)", () => {
     const r99 = evaluateNew99(in99({ ...builder99, acquisitionCause: "carryover_gift" }));
