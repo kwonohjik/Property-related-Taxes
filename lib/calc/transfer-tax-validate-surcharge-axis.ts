@@ -16,6 +16,7 @@ import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { collectPreDesignationContractErrors } from "./pre-designation-contract-scope";
 import {
   effectiveSellingTaxIncentiveRental,
+  sellingRentalDeclarationView,
   taxIncentiveAptDeadlineIncomplete,
   taxIncentiveRentalPeriodMissing,
 } from "./tax-incentive-rental-scope";
@@ -101,7 +102,8 @@ export function collectSellingHouseSurchargeIssues(form: TransferFormData): Surc
   if (taxIncentiveRentalPeriodMissing(effectiveSellingTaxIncentiveRental(se)))
     out.push({ field: "sellingHouseExclusion.taxIncentiveRentalYears", message: "양도 주택 조특법 감면 임대주택: 임대기간(년)을 입력하세요." });
   // ⑧ 양도 주택 §167의3⑪ 「연장 사유 있음」 입력 미완 — 2호·3호 각자의 범위 술어(⑤·④와 같음)
-  const sell2Issue = rentalDeclarationAptDeadlineInScope(se?.longTermRental)
+  //   2호 범위는 3호 칸과 합친 도시형 생활주택 유효 사실로 본다(V-12 — ⑤·④와 같은 보기).
+  const sell2Issue = rentalDeclarationAptDeadlineInScope(sellingRentalDeclarationView(se))
     ? aptDeadlineExtensionIncomplete(se?.longTermRental?.rentalAptDeadlineExtension)
     : null;
   if (sell2Issue)

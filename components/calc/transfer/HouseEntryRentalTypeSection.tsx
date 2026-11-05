@@ -38,10 +38,12 @@ interface Props {
    */
   aptDeadlineExtensionEnabled?: boolean;
   /**
-   * 「도시형 생활주택인 아파트」 질문을 연다 — **명부 행만**. 명부 행은 3호 칸과 같은 필드(`HouseEntry.isUrbanLifeHousingApartment`)를
-   * 쓰지만, 양도 주택은 3호 선언(`sellingHouseExclusion.taxIncentiveRental`)이 따로 사실을 들고 있어 두 칸이 갈린다(별건 V-12).
+   * 「도시형 생활주택인 아파트」 질문을 연다. 명부 행은 3호 칸과 같은 필드(`HouseEntry.isUrbanLifeHousingApartment`)를 쓴다.
+   * 양도 주택은 3호 칸이 묻는 범위면 끄고(그 답을 쓴다 — `effectiveSellingUrbanLife`) 아래 `urbanLifeSharedHint`를 보인다(V-12).
    */
   urbanLifeHousingQuestionEnabled?: boolean;
+  /** 질문 대신 보일 안내 — 같은 사실을 다른 칸이 묻고 있을 때(양도 주택 3호). 질문과 같은 범위에서만 보인다. */
+  urbanLifeSharedHint?: string;
 }
 
 // 유형별 노출 필드 (엔진 checkRentalType_X 요구 필드 — 공통 등록정보 외)
@@ -90,6 +92,7 @@ export function HouseEntryRentalTypeSection({
   onUpdate,
   aptDeadlineExtensionEnabled = false,
   urbanLifeHousingQuestionEnabled = false,
+  urbanLifeSharedHint,
 }: Props) {
   const rentalType = house.rentalType;
   let fields: Array<keyof RentalDeclaration> = rentalType ? [...TYPE_FIELDS[rentalType]] : [];
@@ -238,6 +241,11 @@ export function HouseEntryRentalTypeSection({
           checked={house.isUrbanLifeHousingApartment === true}
           onCheckedChange={(v) => onUpdate({ isUrbanLifeHousingApartment: v ? true : undefined })}
         />
+      )}
+      {aptDeadlineExtensionEnabled && !urbanLifeHousingQuestionEnabled && urbanLifeSharedHint && rentalDeclarationUrbanLifeQuestionInScope(house) && (
+        <p className="text-caption text-muted-foreground" data-testid={`rental-urban-life-shared-${idPrefix}`}>
+          {urbanLifeSharedHint}
+        </p>
       )}
 
       {/* 가목2)·나목2)·라목8)·마목4) — 아파트는 ⑪ 기한까지 양도해야 이 목에 해당한다(도시형 생활주택인 아파트 제외) */}

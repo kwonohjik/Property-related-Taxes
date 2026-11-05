@@ -20,6 +20,8 @@
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TaxIncentiveRentalFacts } from "@/lib/stores/calc-wizard-asset-nbl";
 import { aptDeadlineExtensionIncomplete, aptDeadlineExtensionPayload } from "./apt-deadline-extension-scope";
+import { rentalDeclarationUrbanLifeQuestionInScope } from "./apt-deadline-extension-scope";
+import type { RentalDeclaration } from "@/lib/stores/calc-wizard-asset-nbl";
 
 type SellingExclusion = TransferFormData["sellingHouseExclusion"];
 
@@ -58,6 +60,41 @@ export function effectiveSellingTaxIncentiveRental(se: SellingExclusion): TaxInc
       ? ltr?.isNationalSizeHousing
       : tir.isNationalSizeHousing,
   };
+}
+
+/**
+ * 양도 주택 3호 칸이 「도시형 생활주택인 아파트」를 묻는가 — ⑤(`TaxIncentiveRentalFields`)가 그 질문을 여는 조건과 같다
+ * (아파트 · 민간매입 · 장기일반/단기). 아파트 여부는 2호가 켜져 있으면 2호 칸 값이다(유효 사실).
+ */
+export function sellingTaxIncentiveAsksUrbanLife(se: SellingExclusion): boolean {
+  const eff = effectiveSellingTaxIncentiveRental(se);
+  if (!eff?.isApartment || eff.isTaxIncentiveRentalPurchase !== true) return false;
+  return eff.taxIncentiveRentalRegistrationType === "long_term_general" || eff.taxIncentiveRentalRegistrationType === "short_term";
+}
+
+/**
+ * 양도 주택의 「「주택법」에 따른 도시형 생활주택인 아파트」 — 엔진 `HouseInfo` 한 칸에 실리는 **하나의 사실**(V-12 · 사용자 결정 2026-11-05).
+ *
+ * 2호(소령 §167의3①2호 가목2) 괄호 — 가·나·라·마목 아파트 양도기한만 비적용)와 3호 후단(같은 조 ①3호 — 매입 장기일반·단기 아파트)이
+ * 같은 사실을 묻는다. 3호 칸이 묻는 범위면 **3호 칸의 답**, 아니면 2호 칸이 묻는 범위에서 2호 토글(켜면 true)이다. 어느 칸도 묻지 않으면
+ * undefined — 화면에 없는 옛 값은 싣지 않는다. ⑤·④·⑧·양도 주택 교체가 같은 값을 본다.
+ */
+export function effectiveSellingUrbanLife(se: SellingExclusion): boolean | undefined {
+  if (sellingTaxIncentiveAsksUrbanLife(se)) return se?.taxIncentiveRental?.isUrbanLifeHousingApartment;
+  const ltr = se?.longTermRental;
+  return rentalDeclarationUrbanLifeQuestionInScope(ltr) && ltr?.isUrbanLifeHousingApartment === true ? true : undefined;
+}
+
+/** 양도 주택에서 도시형 생활주택 사실을 묻는 칸이 있는가(3호 또는 2호) — 없으면 유효 사실은 정해지지 않는다(양도 주택 교체는 원값을 옮긴다). */
+export function sellingUrbanLifeAsked(se: SellingExclusion): boolean {
+  return sellingTaxIncentiveAsksUrbanLife(se) || rentalDeclarationUrbanLifeQuestionInScope(se?.longTermRental);
+}
+
+/** 2호 선언에 위 유효 사실을 덮은 보기 — 2호 위젯·④·⑧이 ⑪ 연장 칸 범위(`rentalDeclarationAptDeadlineInScope`)를 같은 값으로 판정한다. */
+export function sellingRentalDeclarationView(se: SellingExclusion): RentalDeclaration | undefined {
+  const ltr = se?.longTermRental;
+  if (!ltr) return undefined;
+  return { ...ltr, isUrbanLifeHousingApartment: effectiveSellingUrbanLife(se) };
 }
 
 /**

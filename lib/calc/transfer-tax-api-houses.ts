@@ -15,6 +15,7 @@ import { deriveHouseRegionFromCode } from "./house-region";
 import { preDesignationContractInScope } from "./pre-designation-contract-scope";
 import { rentIncreaseContractDatePayload } from "./rent-cap-contract-date-scope";
 import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from "./tax-incentive-rental-scope";
+import { effectiveSellingUrbanLife, sellingRentalDeclarationView } from "./tax-incentive-rental-scope";
 import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { rentalDeclarationUrbanLifeQuestionInScope } from "./apt-deadline-extension-scope";
 import { twoHouseExclusionStatusPayload } from "./two-house-exclusion-status";
@@ -47,6 +48,10 @@ export function buildSellingRentalPayload(ltr: RentalDeclaration | undefined): o
     rentalCancelledDate: ltr.rentalCancelledDate || undefined,
     // 말소 사유(§167의3①2호 단서) — 말소일이 있을 때만(⑤가 그때만 묻는다)
     rentalCancellationReason: (ltr.rentalCancelledDate && ltr.rentalCancellationReason) || undefined,
+    // 가목2) 괄호 — 도시형 생활주택인 아파트는 양도기한(⑪)만 비적용. 명부 행과 같은 규약(묻는 범위에서 「예」일 때만).
+    //   호출부가 3호 칸과 합친 유효 사실의 보기(`sellingRentalDeclarationView`)를 넘긴다.
+    isUrbanLifeHousingApartment:
+      rentalDeclarationUrbanLifeQuestionInScope(ltr) && ltr.isUrbanLifeHousingApartment === true ? true : undefined,
     ...(ltr.rentalType
       ? {
           rentalType: ltr.rentalType,
@@ -94,7 +99,8 @@ export function buildSellingTaxIncentiveRentalPayload(
 ): object {
   const eff = effectiveSellingTaxIncentiveRental(se);
   if (!eff) return {};
-  return { ...taxIncentiveRentalPayload(eff), isApartment: eff.isApartment ?? false };
+  // 도시형 생활주택 사실은 2호 칸과 하나다 — 3호가 묻지 않는 범위의 옛 값 대신 유효 사실(2호 spread와 같은 값)을 싣는다(V-12).
+  return { ...taxIncentiveRentalPayload(eff), isApartment: eff.isApartment ?? false, isUrbanLifeHousingApartment: effectiveSellingUrbanLife(se) };
 }
 
 /** 장기임대 나·라목의 「취득 당시 기준시가」 — 부득이 3호와 칸을 겸하므로 분리했다. */
@@ -199,7 +205,7 @@ export function buildHousesPayload(
      * 🔑 9목 전부가 양도 주택에 성립하므로 명부 행과 **같은 필드 묶음**을 그대로 보낸다
      *    (근거: `RentalDeclaration` 주석의 법문 실독 — 사목은 문언이 「양도하는 주택」).
      */
-    ...buildSellingRentalPayload(se?.longTermRental),
+    ...buildSellingRentalPayload(sellingRentalDeclarationView(se)),
     // ④⑬ §167의3①3호 — 위 2호 spread 뒤(아파트 사실 덮어쓰기 순서 — 함수 주석)
     ...buildSellingTaxIncentiveRentalPayload(se),
     isOfficetel: false,
