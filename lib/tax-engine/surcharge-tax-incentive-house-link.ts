@@ -35,7 +35,13 @@ import {
   type SpecialHouseExclusionArticle,
   type SpecialHouseExclusionInput,
 } from "./transfer-reductions/unsold-hybrid-p5";
-import type { HouseInfo, MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
+import { isPresaleRightCounted } from "./multi-house-surcharge-count";
+import type {
+  HouseCountExclusionRules,
+  HouseInfo,
+  MultiHouseSurchargeResult,
+  PresaleRight,
+} from "./types/multi-house-surcharge.types";
 
 /** ⑥ 선언 조문 → 영 §167의3① 호. 키 누락은 컴파일러가 잡는다(`satisfies`). */
 const ARTICLE_167_3_CLAUSE = {
@@ -115,4 +121,19 @@ export function withTaxIncentiveRental3hoNotice(
   const alt = judge(houses.map((h) => (targets.includes(h) ? { ...h, isUnsoldHousing: true } : h)));
   if (alt.surchargeApplicable) return result;
   return { ...result, warnings: [...result.warnings, TAX_INCENTIVE_RENTAL_3HO_UNCONFIRMED_NOTICE] };
+}
+
+/**
+ * 중과 판정이 산입한 조합원입주권·분양권이 있는가 — STEP 0.45 배제 근거의 세대 구성 축(NH-82 · `withSurchargeExclusionRegime`).
+ * 산식은 정본(`determineMultiHouseSurcharge`의 `countedRightCount`)과 같다: 산입 술어(`isPresaleRightCounted`)를 통과한 권리 수 −
+ * 혼인 합가 배우자 보유 차감분(영 §167의4⑤ — `excludedPresaleRights`). 판정 결과가 없으면(명부 없음) 주택만의 세대로 둔다.
+ */
+export function surchargeHouseholdCountsRights(
+  presaleRights: readonly PresaleRight[],
+  rules: Pick<HouseCountExclusionRules, "presaleRightStartDate">,
+  result: Pick<MultiHouseSurchargeResult, "excludedPresaleRights"> | undefined,
+): boolean {
+  if (!result) return false;
+  const start = new Date(rules.presaleRightStartDate);
+  return presaleRights.filter((r) => isPresaleRightCounted(r, start)).length - (result.excludedPresaleRights?.length ?? 0) > 0;
 }

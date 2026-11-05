@@ -423,6 +423,7 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           acquisitionDate={asset.acquisitionDate}
           transferDate={transferDate}
           assetJibun={asset.addressJibun || undefined}
+          assetAcquisitionCause={asset.acquisitionCause}
           assetDong={asset.addressDong || undefined}
           assetHo={asset.addressHo || undefined}
           assetPhdSnapshot={assetPhdSnapshot}

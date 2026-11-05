@@ -13,11 +13,9 @@
  * ⇒ 조회 키를 **내부 id**로 바꾸고 id 기반 `resolveTypeLegalBasis`에 위임했다.
  *   그 resolver의 default가 `REDUCTION_METADATA[type].article`이라 신규 조문도 자동으로 잡힌다.
  *
- * ## D1-11 — 레거시 `long_term_rental` 하나가 4개 조문을 뭉친다
- * `rental-housing-reduction.ts` 헤더가 네 유형을 §97·§97의3·§97의4·§97의5로 명시하는데
- * 후보 배열에서는 한 id로 합쳐진다. id만 보면 전부 「조특법 §97」이 되어
- * §97의3~§97의5 사안에서 틀린 조문 모달이 열린다.
- * ⇒ 후보 선택 시점에 `rentalHousingType`으로 조문을 확정해 override로 내보낸다.
+ * ## D1-11 — (삭제) 레거시 `rentalReductionDetails`의 네 유형을 override로 가르던 축
+ * 그 입력과 엔진(`rental-housing-reduction.ts`)을 삭제하며 override도 지웠다(§155⑳ 리뷰 V-6 후속).
+ * 정본 `rental_97_*`는 id마다 조문이 따로 있다.
  */
 import { describe, it, expect } from "vitest";
 import { getReductionLegalBasis } from "@/lib/tax-engine/transfer-tax-helpers";
@@ -72,31 +70,8 @@ describe("D1-12 — id를 키로 쓴다 (라벨 아님)", () => {
   });
 });
 
-describe("D1-11 — 레거시 임대 4유형은 override로 조문을 가른다", () => {
-  it("🔴 override가 id 기반 결과보다 우선한다", () => {
-    const base = getReductionLegalBasis("long_term_rental", undefined);
-    const overridden = getReductionLegalBasis(
-      "long_term_rental",
-      undefined,
-      TRANSFER_REDUCTION_ARTICLE.RENTAL_97_3,
-    );
-    expect(base).not.toBe(overridden);
-    expect(overridden).toBe("조특법 §97의3");
-  });
-
-  it("네 유형이 서로 다른 조문으로 갈린다 — 구별력", () => {
-    const arts = [
-      TRANSFER_REDUCTION_ARTICLE.RENTAL_97_MAIN,
-      TRANSFER_REDUCTION_ARTICLE.RENTAL_97_3,
-      TRANSFER_REDUCTION_ARTICLE.RENTAL_97_4,
-      TRANSFER_REDUCTION_ARTICLE.RENTAL_97_5,
-    ].map((a) => getReductionLegalBasis("long_term_rental", undefined, a));
-    expect(new Set(arts).size, "네 유형이 한 조문으로 뭉치면 안 된다").toBe(4);
-  });
-
-  it("override가 없으면 id 기반 결과를 쓴다 (종전 동작 보존)", () => {
-    expect(getReductionLegalBasis("long_term_rental", undefined, undefined)).toBe(
-      TRANSFER.REDUCTION_LONG_RENTAL,
-    );
+describe("D1-11 이후 — 레거시 임대 입력·override 삭제(§155⑳ 리뷰 V-6 후속)", () => {
+  it("long_term_rental은 id 기반 결과를 쓴다", () => {
+    expect(getReductionLegalBasis("long_term_rental", undefined)).toBe(TRANSFER.REDUCTION_LONG_RENTAL);
   });
 });

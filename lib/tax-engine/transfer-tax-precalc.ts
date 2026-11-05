@@ -362,6 +362,8 @@ export function runSurchargeAndLandSteps(
     burdenedGiftDenominator: workingInput.burdenedGiftDenominator,
     selfOwns: input.selfOwns,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
+    // 조특법 §129② — 미등기면 STEP 4.6이 감면을 막는다. 같은 게이트로 «감면되는 주택»도 아니다 (NH-58).
+    isUnregistered: input.isUnregistered,
   });
 
   const multiHouseSurchargeResult = runMultiHouseSurchargeStep(

@@ -414,7 +414,6 @@ export type MixedUseReductionDetails = Pick<
   | "selfFarmingReductionDetail"
   | "rental97TaxDetail"
   | "newHousingReductionDetail"
-  | "rentalReductionDetail"
 >;
 
 const EMPTY_POST: MixedUsePostTaxResult = { reductionAmount: 0, ruralSurtax: 0, penaltyTax: 0 };
@@ -473,8 +472,6 @@ function computeMixedUsePostTax(
           calculatedTax,
           taxCredit,
           input.selfFarmingRules,
-          undefined,
-          undefined,
           undefined,
           undefined,
           input.transferDate,
@@ -553,7 +550,6 @@ function computeMixedUsePostTax(
       selfFarmingReductionDetail: result.selfFarmingReductionDetail,
       rental97TaxDetail: result.rental97TaxDetail,
       newHousingReductionDetail: result.newHousingReductionDetail,
-      rentalReductionDetail: result.rentalReductionDetail,
     },
     ruralSurtax: surtax.surtax,
     penaltyTax: penalty?.totalPenalty ?? 0,

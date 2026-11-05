@@ -11,6 +11,7 @@
  */
 
 import { coerceOptionalDate } from "../tax-utils";
+import { MULTI_HOUSE } from "../legal-codes/transfer";
 import { resolveHighValuePriceCheck } from "../one-house/threshold";
 import { evaluateNew993, type New993Result } from "./new-99-3";
 import { evaluateNew99, type New99Result } from "./new-99";
@@ -140,6 +141,13 @@ export interface IncomeDeductionContext {
    * 차감(STEP 4.6)과 중과 배제 선판정(STEP 0.45)이 같은 값을 넘겨야 «감면은 안 되는데 중과만 배제»되는 어긋남이 없다.
    */
   selfOwns?: "both" | "building_only" | "land_only";
+  /**
+   * 자산 취득 원인 — §99·§99의3은 상속·증여(지분 포함)로 받은 주택에 적용되지 않는다 (NH-03 · NH-17 · NH-40).
+   * 미전달이면 매매로 본다(최초 계약 여부 3-state가 판정한다).
+   */
+  acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
+  /** 재개발 자산의 승계조합원(관리처분계획 인가일 뒤 입주권 승계) — §99의3 불성립(조특령 §99의3③2호·⑤, NH-16) */
+  isRedevSuccessorMember?: boolean;
   standardPriceAtTransfer?: number;
   /** 양도소득금액 (양도차익 − 장특공제). 중과 배제 선판정 시 0 전달 가능 (적격 판정에 무관) */
   transferIncome: number;
@@ -274,6 +282,16 @@ function evalNew993(
       acquisitionType: (r993.acquisitionType993 as "from_builder" | "self_built" | undefined) ?? "from_builder",
       hasOccupancyAtContract: r993.hasOccupancyAtContract as boolean | undefined,
       constructionStartedBefore2003: r993.constructionStartedBefore2003_993 as "yes" | "no" | "unknown" | undefined,
+      luxuryFacts: {
+        houseType: r993.houseType993 as "apartment" | "detached" | undefined,
+        grossFloorAreaSqm: r993.grossFloorAreaSqm993 as number | undefined,
+        attachedLandAreaSqm: r993.attachedLandAreaSqm993 as number | undefined,
+        stdPriceFloorMet: r993.stdPriceFloorMet993 as "yes" | "no" | "unknown" | undefined,
+        luxuryFacility: r993.luxuryFacility993 as "yes" | "no" | "unknown" | undefined,
+      },
+      acquisitionCause: ctx.acquisitionCause,
+      firstContract: r993.firstContract993 as "yes" | "no" | "unknown" | undefined,
+      isRedevSuccessorMember: ctx.isRedevSuccessorMember,
       // 농특세는 finalize에서 2-pass 재계산 (placeholder 0)
       calculatedTaxBeforeReduction: 0,
       calculatedTaxAfterReduction: 0,
@@ -305,6 +323,13 @@ function evalNew99(
       wholePropertyTransferPrice: resolveHighValuePriceCheck(ctx),
       isLandOnlyOwner: ctx.selfOwns === "land_only",
       exclusiveAreaSqm: r99.exclusiveAreaSqm99 as number | undefined,
+      houseType: r99.houseType99 as "apartment" | "detached" | undefined,
+      grossFloorAreaSqm: r99.grossFloorAreaSqm99 as number | undefined,
+      attachedLandAreaSqm: r99.attachedLandAreaSqm99 as number | undefined,
+      stdPriceFloorMet: r99.stdPriceFloorMet99 as "yes" | "no" | "unknown" | undefined,
+      luxuryFacility: r99.luxuryFacility99 as "yes" | "no" | "unknown" | undefined,
+      acquisitionCause: ctx.acquisitionCause,
+      firstContract: r99.firstContract99 as "yes" | "no" | "unknown" | undefined,
       isResident: (r99.isResident99 as boolean | undefined) ?? true,
       isHousingConstructionBusiness: (r99.isHousingConstructionBusiness99 as boolean | undefined) ?? false,
       acquisitionType: (r99.acquisitionType99 as "from_builder" | "self_built" | undefined) ?? "from_builder",
@@ -511,9 +536,17 @@ export function buildSurchargeExclusionStep(exclusion: {
  */
 export function resolveSurchargeExclusionByReduction(
   reductions: ReadonlyArray<{ type: string }> | undefined,
-  ctx: Omit<IncomeDeductionContext, "transferIncome">,
-): { excluded: boolean; appliedId?: IncomeDeductionId; legalBasis?: string } {
-  const resolution = resolveIncomeDeduction(reductions, { ...ctx, transferIncome: 0 });
+  ctx: Omit<IncomeDeductionContext, "transferIncome"> & {
+    /**
+     * 조특법 §129② — 미등기양도자산에는 감면 규정을 적용하지 않으므로 소령 §167의3①5호 「…에 따라 양도소득세가
+     * 감면되는 주택」이 아니다. STEP 4.6 차감(`transfer-tax-income-steps.ts`)과 같은 게이트(NH-58). 단건·겸용·판정 메뉴가 넘긴다.
+     */
+    isUnregistered?: boolean;
+  },
+): SurchargeExclusionByReduction {
+  const { isUnregistered, ...deductionCtx } = ctx;
+  if (isUnregistered) return { excluded: false };
+  const resolution = resolveIncomeDeduction(reductions, { ...deductionCtx, transferIncome: 0 });
   // P2: appliedId → eligibleId 기준 — 하이브리드 5년 내(세액감면 경로)도 §167의3①5호
   // "감면되는 주택"에 해당하므로 효과 경로 무관 적격이면 배제.
   if (resolution.eligibleId && SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS.includes(resolution.eligibleId)) {
@@ -528,4 +561,20 @@ export function resolveSurchargeExclusionByReduction(
     };
   }
   return { excluded: false };
+}
+
+export type SurchargeExclusionByReduction = { excluded: boolean; appliedId?: IncomeDeductionId; legalBasis?: string };
+
+/**
+ * 배제 근거를 세대 구성에 맞춘다(NH-82). 위 근거(§167의3①·§167의10①2호)는 주택만 가진 세대(법 §104⑦1호·3호)의 것이다 —
+ * 산입되는 조합원입주권·분양권이 있는 세대(같은 항 2호·4호)는 소령 §167의11①2호·§167의4③2호가 같은 §167의3①2호~8호를 준용한다.
+ * 판정 결과는 바꾸지 않는다(세액 불변). 산입 여부는 중과 판정 뒤에야 알므로 호출부가 그 결과로 넘긴다(`surchargeHouseholdCountsRights`).
+ */
+export function withSurchargeExclusionRegime(
+  exclusion: SurchargeExclusionByReduction,
+  householdCountsRights: boolean,
+): SurchargeExclusionByReduction {
+  return exclusion.excluded && householdCountsRights
+    ? { ...exclusion, legalBasis: MULTI_HOUSE.TAX_INCENTIVE_HOUSE_RIGHT_REFERENCE_BASIS }
+    : exclusion;
 }

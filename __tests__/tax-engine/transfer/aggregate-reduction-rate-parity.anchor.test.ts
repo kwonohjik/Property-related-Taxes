@@ -130,7 +130,7 @@ describe("M-8 감면율 패리티", () => {
 
   it("같은 유형 안에서 자산마다 감면율이 다르면 자산별로 곱해 합산한다", () => {
     // `long_term_rental`(정밀 장기임대 엔진)은 `housingType`·등록시기에 따라 rate가
-    // 1.0 / 0.7 / 0.5로 갈린다(`rental-housing-reduction.ts:284-296`). `new_housing`도
+    // 1.0 / 0.7 / 0.5로 갈린다(삭제된 레거시 `rental-housing-reduction.ts`). `new_housing`도
     // 가격·시기 matrix로 갈린다. 즉 **같은 type 문자열 아래 rate가 균일하지 않다**.
     // 그룹 rate 하나를 last-write-wins로 덮으면 한쪽 자산에 틀린 율이 곱해진다.
     const A = 200_000_000;

@@ -239,6 +239,8 @@ export function buildSurchargeJudgmentPayload(
     burdenedGiftDenominator: engineInput.burdenedGiftDenominator,
     selfOwns: engineInput.selfOwns,
     standardPriceAtTransfer: engineInput.standardPriceAtTransfer,
+    // 조특법 §129② 미등기 게이트 (NH-58)
+    isUnregistered: engineInput.isUnregistered,
   });
   const hce = resolveHceGeneralHouseAcquisitionDate(engineInput);
   const headline = runMultiHouseSurchargeStep(engineInput, parsedRates, [], exclusionByReduction, hce);

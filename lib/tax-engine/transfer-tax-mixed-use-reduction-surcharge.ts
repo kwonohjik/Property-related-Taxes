@@ -59,6 +59,8 @@ export function resolveMixedReductionSurchargeExclusion(
     assetContractDate: asset.assetContractDate,
     transferPrice,
     totalPropertyTransferPrice: mixedHighValueJudgmentPrice(asset, transferPrice, apportionment),
+    // 조특법 §129② — 미등기면 «감면되는 주택»이 아니다(단건 STEP 0.45와 같은 게이트 · NH-58)
+    isUnregistered: asset.isUnregistered,
   });
 }
 

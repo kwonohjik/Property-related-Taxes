@@ -98,7 +98,7 @@ export function validateUsageConversion(
   //      (상속분은 `...-inheritance-c21.plan.md`)
 
   // C-18·C-20 — 장기임대(§97의3·§97의4)는 장특 특례율이, §98의2는 표2 강제가 §95⑤과 충돌한다.
-  // ⚠️ 엔진 `rentalReductionDetails`는 폼에 없어 여기서 볼 수 없다 — 폼의 `reductions`로 판별한다.
+  // 판별은 폼의 `reductions`로 한다(레거시 엔진 입력 `rentalReductionDetails`는 삭제됐다).
   const conflicting = asset.reductions?.find(
     (r) => r.type === "rental_97_3" || r.type === "rental_97_4" || r.type === "unsold_98_2",
   );

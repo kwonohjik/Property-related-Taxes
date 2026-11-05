@@ -77,7 +77,6 @@ export function pickReductionDetails(r: SingleResult): TransferReductionDetailSo
     inheritedAcquisitionDetail: r.inheritedAcquisitionDetail,
     inheritedHouseValuationDetail: r.inheritedHouseValuationDetail,
     newHousingReductionDetail: r.newHousingReductionDetail,
-    rentalReductionDetail: r.rentalReductionDetail,
     rental97LthdDetail: r.rental97LthdDetail,
     usageConversionDetail: r.usageConversionDetail,
     rental97TaxDetail: r.rental97TaxDetail,

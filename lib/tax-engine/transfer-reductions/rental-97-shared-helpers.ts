@@ -1,8 +1,7 @@
 /**
  * 장기임대 §97 시리즈 — 공유 순수 헬퍼
  *
- * 레거시 `rental-housing-reduction.ts`에 복제돼 있던 순수 함수 3종의 **단일 소스**다(D1-08).
- * 레거시는 이 파일을 import한다 — 같은 조문의 임대기간을 두 곳에서 판정하지 않는다.
+ * 레거시 `rental-housing-reduction.ts`(삭제 — §155⑳ 리뷰 V-6 후속)에 복제돼 있던 순수 함수 3종의 **단일 소스**다(D1-08).
  *
  * 법령 근거:
  * - 공실 유예: **조문마다 다르다** — 아래 RENTAL_VACANCY_GRACE_MONTHS_* 주석 참조
@@ -42,7 +41,7 @@ export const RENTAL_VACANCY_GRACE_MONTHS_97 = 3;
  *    반대로 이 6개월을 다른 조문에 전용하면 임대기간이 과대 산정돼 감면이 과다 적용된다.
  *
  * ⚠️ §97의5 평가기(`rental-97-5.ts`)는 이 상수로 `calculateEffectiveRentalPeriod`(초과 공실 차감·통산)를 쓰지 않는다 —
- *    「계속하여」라 초과 공실이 계속성을 끊는다(`rental-97-5-period.ts`). 레거시 `rental-housing-reduction.ts`만 쓴다.
+ *    「계속하여」라 초과 공실이 계속성을 끊는다(`rental-97-5-period.ts`). 이 상수를 쓰던 레거시 엔진은 삭제됐다(헬퍼 사례 테스트만 쓴다).
  */
 export const RENTAL_VACANCY_GRACE_MONTHS_97_5 = 6;
 

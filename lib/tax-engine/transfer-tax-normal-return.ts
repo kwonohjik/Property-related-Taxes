@@ -117,7 +117,6 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     reducibleIncome,
     aggregateReductionRate,
     reducibleIncomeBuckets,
-    rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
     // §77의3·§77의2 — finalize가 필수로 돌려주는데 종전에는 이 두 키만 구조분해에서 빠져
@@ -212,7 +211,6 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
       cbStep,
       splitDetail: splitDetailForRate,
     }),
-    rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
     gbDesignatedLandDetail,

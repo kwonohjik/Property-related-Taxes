@@ -13,7 +13,7 @@
  * | `surcharge:_default` 2022-05-10 | 중과 유예 판정 | E-14k로 이미 같음 |
  * | `surcharge:_default` 2024-01-10 | 중과 유예 판정 | 같음 — 2023-01-01 행과 유예 값이 같다(`legal_basis` 문자열만 다르고 소비자 0) |
  * | `special:house_count_exclusion` 2018-04-01 | STEP 0.5 정밀 중과 판정 게이트 | **갈림** — 2018.1.1.~3.31. 양도 · 보유 3년 이상: 다건만 정밀 판정을 타 장특 배제가 달라졌다 |
- * | `deduction:long_term_rental_v2` 2020-08-18 | legacy `rentalReductionDetails`(API 직접 입력 전용) 감면·장특 특례율 | **갈림** — 장기일반·공공지원 2020.1.1.~8.17. ⇒ V-6(2026-11-05) 이 경로를 닫아 소비자 0 — 아래 ②는 「legacy 입력이 세액을 바꾸지 않는다 · 단건 = 다건」만 본다 |
+ * | `deduction:long_term_rental_v2` 2020-08-18 | legacy `rentalReductionDetails`(API 직접 입력 전용) 감면·장특 특례율 | **갈림** — 장기일반·공공지원 2020.1.1.~8.17. ⇒ V-6(2026-11-05) 이 경로를 닫고 후속으로 입력·엔진을 삭제(⑫ 400) — 소비자 0, ② 삭제 |
  * | `deduction:new_housing_matrix` 2001-05-23 | legacy `newHousingDetails`(API 직접 입력 전용) 감면 | **갈림** — 2001.1.1.~5.22. |
  *
  * ## 수정
@@ -104,25 +104,6 @@ const plain = (acq: string, td: string, count = "3") => {
   return f;
 };
 
-/** legacy 장기임대 감면(`rentalReductionDetails`) — ④가 만들지 않는 API 직접 입력 전용 경로 */
-const rental =
-  (td: string, type: string): Inject =>
-  (b) => {
-    b.rentalReductionDetails = {
-      isRegisteredLandlord: true,
-      isTaxRegistered: true,
-      registrationDate: "2010-01-01",
-      rentalHousingType: type,
-      propertyType: "apartment",
-      region: "capital",
-      officialPriceAtStart: 200_000_000,
-      rentalStartDate: "2010-01-01",
-      transferDate: td,
-      vacancyPeriods: [],
-      rentHistory: [],
-      calculatedTax: 0,
-    };
-  };
 /** legacy 신축주택 감면(`newHousingDetails`) — API 직접 입력 전용 경로 */
 const newHousing =
   (td: string): Inject =>
@@ -165,13 +146,11 @@ const post = (handler: (req: NextRequest) => Promise<Response>, url: string, bod
 interface AssetView {
   lthd: number;
   appliedRate: number;
-  rentalEligible?: boolean;
   newHousingEligible?: boolean;
 }
 const view = (r: Obj): AssetView => ({
   lthd: r.longTermHoldingDeduction as number,
   appliedRate: r.appliedRate as number,
-  rentalEligible: (r.rentalReductionDetail as { isEligible?: boolean } | undefined)?.isEligible,
   newHousingEligible: (r.newHousingReductionDetail as { isEligible?: boolean } | undefined)?.isEligible,
 });
 
@@ -250,27 +229,9 @@ describe("E-14n ① house_count_exclusion 2018-04-01 행 — 2018.1.1.~3.31. 양
   });
 });
 
-describe("E-14n ② long_term_rental_v2 2020-08-18 행 — legacy 장기임대 감면(API 직접 입력)", () => {
-  // V-6(2026-11-05) — legacy `rentalReductionDetails` 경로를 닫았다(정본은 감면 목록 rental_97_*). 이 행의 소비자가 없어져
-  // 행 앞뒤 모두 legacy 입력이 세액을 바꾸지 않는다 — 단건 = 다건 · legacy 입력 없는 세액과 같다.
-  // (종전: 2020-03-02 347,587,500 · 2020-08-17 338,305,500 · 2020-08-18 208,357,500 — 감면·장특 특례가 붙던 값)
-  for (const type of ["long_term_private", "public_support_private"]) {
-    it(`R-${type} 2020-03-02 · 2020-08-17 → 단건 = 다건 · legacy 입력 무효`, async () => {
-      for (const d of ["2020-03-02", "2020-08-17"]) {
-        expect(await expectSame(plain("2009-06-01", d), rental(d, type))).toBe(await expectSame(plain("2009-06-01", d)));
-      }
-    });
-  }
-  it("R-짝 — 장기일반 2020-08-18(행 시작일)도 legacy 입력 무효", async () => {
-    const d = "2020-08-18";
-    expect(await expectSame(plain("2009-06-01", d), rental(d, "long_term_private"))).toBe(await expectSame(plain("2009-06-01", d)));
-  });
-});
-
 describe("E-14n ②′ 가산세 base(예정신고 세액)도 양도일 세율", () => {
-  it("P-1 장기일반 legacy · 2020-03-02 · 무신고 가산세 → 단건 = 다건", async () => {
+  it("P-1 2020-03-02 · 무신고 가산세 → 단건 = 다건", async () => {
     const penalty: Inject = (b) => {
-      rental("2020-03-02", "long_term_private")(b);
       b.filingPenaltyDetails = {
         determinedTax: 0,
         reductionAmount: 0,
@@ -284,8 +245,8 @@ describe("E-14n ②′ 가산세 base(예정신고 세액)도 양도일 세율",
     };
     const s = await single(plain("2009-06-01", "2020-03-02"), penalty);
     const m = await multi([plain("2009-06-01", "2020-03-02")], [penalty]);
-    // 가산세가 실제로 붙었다 — 같은 입력의 무가산세 세액과 비교(V-6 뒤 legacy 감면이 없어져 종전 고정값 347,587,500은 가산세 없이도 넘는다)
-    expect(s.totalTax).toBeGreaterThan((await single(plain("2009-06-01", "2020-03-02"), rental("2020-03-02", "long_term_private"))).totalTax);
+    // 가산세가 실제로 붙었다 — 같은 입력의 무가산세 세액과 비교(종전 시료의 legacy 장기임대 입력은 삭제 — ⑫ 400)
+    expect(s.totalTax).toBeGreaterThan((await single(plain("2009-06-01", "2020-03-02"))).totalTax);
     expect(m.totalTax).toBe(s.totalTax);
   });
 });
@@ -314,14 +275,13 @@ describe("E-14n ④ 연중 경계 양쪽 자산을 한 신고에", () => {
     expect(m.totalTax).toBe(1_239_524_000);
   });
 
-  it("B-2 2020 — 장기일반 3.2.(행 전) + 9.1.(행 후) → 자산별 장특·감면 적격이 각 단건과 같다", async () => {
+  // 종전 시료의 legacy 장기임대 입력(`rentalReductionDetails`)은 입력·엔진 삭제로 뺐다(⑫ 400 — §155⑳ 리뷰 V-6 후속).
+  it("B-2 2020 — 3.2. + 9.1. → 자산별 장특이 각 단건과 같다", async () => {
     const fa = plain("2009-06-01", "2020-03-02");
     const fb = plain("2009-06-01", "2020-09-01");
-    const ia = rental("2020-03-02", "long_term_private");
-    const ib = rental("2020-09-01", "long_term_private");
-    const m = await multi([fa, fb], [ia, ib]);
-    expect(m.assets[0]).toEqual((await single(fa, ia)).asset);
-    expect(m.assets[1]).toEqual((await single(fb, ib)).asset);
+    const m = await multi([fa, fb]);
+    expect(m.assets[0]).toEqual((await single(fa)).asset);
+    expect(m.assets[1]).toEqual((await single(fb)).asset);
     expect(m.assets[0].lthd).not.toBe(m.assets[1].lthd);
   });
 

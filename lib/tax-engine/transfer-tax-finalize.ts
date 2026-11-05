@@ -117,12 +117,10 @@ export interface FinalizeResult {
   reductionAmount: number;
   reductionType: ReturnType<typeof calcReductions>["reductionType"];
   reductionTypeApplied: ReturnType<typeof calcReductions>["reductionTypeApplied"];
-  reductionLegalBasisOverride: ReturnType<typeof calcReductions>["reductionLegalBasisOverride"];
   reducibleIncome?: number;
   aggregateReductionRate?: number;
   /** `reducibleIncome`이 이미 기본공제를 뺀 값인가 (§90①의 `B − C`) — 다건 M-8이 이중 차감을 피하는 축. */
   reducibleIncomeBuckets?: ReducibleIncomeBucket[];
-  rentalReductionDetail: TransferTaxResult["rentalReductionDetail"];
   newHousingReductionDetail: TransferTaxResult["newHousingReductionDetail"];
   publicExpropriationDetail: TransferTaxResult["publicExpropriationDetail"];
   gbDesignatedLandDetail: TransferTaxResult["gbDesignatedLandDetail"];
@@ -218,11 +216,9 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     reductionAmount,
     reductionType,
     reductionTypeApplied,
-    reductionLegalBasisOverride,
     reducibleIncome,
     aggregateReductionRate,
     reducibleIncomeBuckets,
-    rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
     gbDesignatedLandDetail,
@@ -234,8 +230,6 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     taxResult.calculatedTax,
     input.reductions,
     parsedRates.selfFarmingRules,
-    input.rentalReductionDetails,
-    parsedRates.longTermRentalRules,
     input.newHousingDetails,
     parsedRates.newHousingMatrix,
     input.transferDate,
@@ -261,7 +255,6 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     legalBasis: getReductionLegalBasis(
       reductionTypeApplied,
       publicExpropriationDetail?.useLegacyRates,
-      reductionLegalBasisOverride,
     ),
   });
 
@@ -475,11 +468,9 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     reductionAmount: cappedReductionAmount,
     reductionType,
     reductionTypeApplied,
-    reductionLegalBasisOverride,
     reducibleIncome,
     aggregateReductionRate,
     reducibleIncomeBuckets,
-    rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
     gbDesignatedLandDetail,
