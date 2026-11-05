@@ -551,3 +551,57 @@ PR-2b 세액 anchor: 면적 요건 세액은 리뷰에서도 미측정이다. �
 - 문서: 엔진 설계 `transfer-reduction-99-3.engine.design.md` · anchor `reduction-99-3-case-2023.md`
 - 뮤테이션: 종전 판정 분기(`baseDate < 2003-01-01`) · §29② 착공 게이트(`=== "yes"`) · 양도일 고가 기준(`isHighValueHouseAtDate(transferDate)`) 각각을 되돌려 anchor 실패 확인.
 - 남은 확인 필요: 소령 §156 2008.10.6. 하루 경계(계산 범위 밖) · 단독주택 고급주택 기준(NH-02) · 1998~1999 가액 해석(V-4 앞부분, NH-15).
+
+---
+
+## 12. PR-4 — NH-08(토지만 본인 소유 카드) · NH-10(부담부증여 고가주택 판정 가액)
+
+- 작성 2026-11-05 · 워크트리 `Property-related-Taxes-nh99p4`(브랜치 `fix/nh99-land-only-bg-high-value`, base `9f868c33a`). 리뷰 NH-08(F-69)·NH-10(F-71←F-45·F-53)·Q-28(사용자 확정: §99도 불성립 + 확인 필요 고지). 세율표는 anchor별로 명시(mock / route 폴백) — 정본 세액이 아니다.
+
+### 12-1. 법령·해석례 재확인 (KoreanLaw MCP 2026-11-05 — 요약과 일치, 정정 없음)
+
+| 항목 | 확인한 원문 | 쓰임 |
+|---|---|---|
+| 조특법 §99의3① · §99① (현행 MST 284389) | 둘 다 «신축주택(그 주택에 딸린 토지로서 …)을 **취득하여** … 양도»한 거주자 + 단서 «소득세법 제89조제1항제3호에 따라 … 비과세대상에서 제외되는 고가 주택» | NH-08 문언 구조가 같다 · NH-10 단서의 고가주택 = §89①3호 개념 |
+| 서면인터넷방문상담4팀-1118(2005.07.01.) | 「주택과 부수토지의 소유자가 상이한 경우에는 그 소유자들이 동일세대원이라 할지라도 부수토지의 양도소득은 신축주택 감면대상에 포함되지 않습니다」 (질의: 토지 본인·주택 처 명의 자기건설, §99의3) | NH-08 §99의3 |
+| 국심2006중4504(2007.06.07. 기각) · 조심2013중3556(2013.12.04. 기각) | 토지 소유자와 건축주(배우자)가 다르면 부수토지 양도소득은 §99의3 대상 아님 · «동일 세대원인지 여부는 고려대상이 아닌 점». 3556은 취득기간 경과도 병기 | NH-08 §99의3 (세 건 모두 2호 사건 — 1호는 문언 동일이라 같은 법리, 정면 사례는 못 찾음) |
+| §99 정면 해석례 | MCP 검색 없음 | Q-28 → 불성립 + «확인 필요» |
+| 서면인터넷방문상담4팀-1692(2007.05.16.)·-1526(2004.09.24.) · 국심2007서2099 | 「소령 §156① 고가주택의 판정은 … 부담부 증여이전 등 이전방식에 관계없이 1주택의 전체가액 … 1주택을 부담부 증여하는 경우 고가주택 판정은 당해 주택의 증여가액」 | NH-10. 모두 §89①3호·소령 §156① 해석이며 조특법 단서는 §89①3호를 가리키므로 같은 가액을 쓴다(조특법 직접 사례는 없다) |
+
+### 12-2. 설계
+
+1. **NH-08** — 평가기(`evaluateNew993`·`evaluateNew99`) 입력 `isLandOnlyOwner`. true면 **가장 먼저** `LAND_ONLY_OWNER` 사유로 불성립(`new-99-land-only-owner.ts`가 사유 코드·문구 단일 소스). §99 문구에만 «확인 필요». 라우터 `IncomeDeductionContext.selfOwns`(`=== "land_only"`)를 넘긴다.
+2. **NH-10** — `IncomeDeductionContext.burdenedGiftDenominator`. 고가 판정 가액 = `resolveHighValuePriceCheck`(`one-house/threshold.ts` — 증여가액 → 총 물건가 → 양도가액, §89 판정 7곳과 같은 식). 지분 부담부증여는 엔진이 이미 «지분 증여가액 ÷ 지분율»을 `burdenedGiftDenominator`에 싣는다(`transfer-tax-burdened-gift-step.ts` — 결정 #28 A).
+3. **배선(두 값 모두)**: STEP 4.6(`transfer-tax-income-steps.ts` — `effectiveInput`) · STEP 0.45(`transfer-tax-precalc.ts` — 증여가액은 STEP 0.48 뒤라 `workingInput`, `selfOwns`는 `input`) · 판정 메뉴(`surcharge-judgment-payload.ts`)는 입력에 `reductions`·`selfOwns`가 없어(`judgment-request.ts` grep) 변경하지 않는다. 감면이 불성립이면 소령 §167의3①5호 «감면되는 주택»이 아니어서 중과도 배제하지 않는다 — 두 STEP이 같은 값을 보게 해 «감면 없음 + 중과 배제»를 막는다.
+4. **⑧ 차단 대신 엔진 불성립 + 고지** — 선택을 막지 않으므로 막다른 길이 없고 ⑧↔⑫가 어긋나지 않는다(⑧ 변경 없음, route anchor가 ⑧ 이슈 없음 ⇔ 200을 고정). 계산 전 안내는 `UnifiedReductionPanel`의 amber `ToneCard`(문구는 엔진과 같은 `landOnlyOwnerMessage`). 결과 카드는 기존 `ineligibleReasons` 목록(`New993DetailCard`·`IncomeDeductionDetailCard`)이 그대로 사유를 보인다.
+
+### 12-3. 케이스 매트릭스 (전 → 후, 총부담 = 결정세액 + 농특세 + 지방소득세)
+
+| # | 사실 | 전 | 후 | 대조 |
+|---|---|---:|---:|---|
+| 1 | land_only × §99의3 (mock, 양도 2022-08-01, 8억 사례) | 83,610,998 | 124,366,000 | 감면 없는 대조 |
+| 2 | land_only × §99 | 75,631,000 | 124,366,000 | 〃 (+ «확인 필요») |
+| 3 | land_only × §99의3 / §99 (route 폴백) | 84,204,998 / 76,225,000 | 124,960,000 | 〃 — 리뷰 실측과 일치 |
+| 4 | both × §99의3 / §99 · building_only × 둘 | 94,390,999 / 85,613,000 · 2,401,500 / 2,086,500 | 불변 | 짝 불변 |
+| 5 | land_only 2주택 조정(STEP 0.45, house-engine mock) | 중과 배제됨 | 배제 없음, 대조와 같은 세액 | |
+| 6 | 부담부증여 C 10억·채무 3억 §99의3 (2021-08-01, 기준 9억) | 18,031,720 | 30,187,300 | 감면 없는 대조 |
+| 7 | 〃 채무 7억 | 적용(채무 7억 < 9억) | 배제, 98,049,160 | 증여가액이 기준이라 채무 크기 무관 |
+| 8 | 〃 C 8억 · 채무 3억 | 적용 | 적용(불변) | 비고가 짝 |
+| 9 | C 9억 정확히 / +1원 | 적용 / 적용 | 적용 / 배제 | 경계 |
+| 10 | §99 1998 계약 170㎡ C 10억 · 채무 3억 | 적용 | 배제 | 6억 초과 + 165㎡ 이상 |
+| 11 | 부담부증여 2주택 조정 STEP 0.45 (mock) | 중과 배제 | 배제 없음(17,437,720 → 89,014,200) | 감면 없는 대조 |
+| 12 | 라우터: 증여가액 우선 · 지분(물건 전체 24억) · 증여가액 없음 = 종전 순서 | | 단위 단언 | |
+
+route(폼 → ④ → ⑫ → ⑭, 폴백 세율) BG 사례의 합은 89,608,200 = 감면 선택 없는 대조(자산 값이 달라 리뷰 probe의 30,187,300과는 다르다).
+
+### 12-4. 14지점 · 변경 파일
+
+- 14지점: 입력 필드를 새로 받지 않는다(기존 `selfOwns`·`burdenedGiftDenominator`를 엔진 안에서 라우터로 넘길 뿐) ⇒ ①~⑫ 변경 없음. ⑭만 엔진 내부 전달(income-steps·precalc). ⑦ 결과 카드는 기존 사유 목록 사용. ⑧ 변경 없음(엔진 불성립 + 고지 — 위 12-2-4).
+- 엔진: `new-99-land-only-owner.ts`(신규) · `new-99-3.ts` · `new-99.ts` · `income-deduction-router.ts` · `transfer-tax-income-steps.ts` · `transfer-tax-precalc.ts`. UI: `UnifiedReductionPanel.tsx`.
+- anchor: `__tests__/tax-engine/transfer/new-99-land-only-owner.anchor.test.ts` · `new-99-burdened-gift-high-value.anchor.test.ts` · `__tests__/api/transfer.route.new-99-land-only-bg-high-value.anchor.test.ts` · `__tests__/components/calc/unified-reduction-panel-land-only-notice.test.tsx`.
+
+### 12-5. 범위 밖 · 남은 확인
+
+- NH-26(지분 non-BG의 STEP 0.45가 `totalPropertyTransferPrice`를 안 받음)은 이 PR에서 고치지 않는다(리뷰상 별건).
+- `transfer-tax-redevelopment.ts:254`(재개발 경로) 라우터 호출은 `burdenedGiftDenominator`·`selfOwns`를 넘기지 않는다 — 부담부증여 × 재개발 × §99의3 조합은 미측정(입주권은 소유자 분리 축이 없다).
+- §99 land_only는 정면 해석례가 없다 — Q-28 결정대로 불성립 + 고지이며, 해석례가 나오면 문구와 판정을 다시 본다.
