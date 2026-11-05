@@ -63,6 +63,7 @@ import { computeMortgageValuation } from "@/lib/tax-engine/burdened-gift-valuati
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { bgAnyCarryover } from "@/lib/calc/bg-carryover-parts";
 import { bgConvertedCarryoverReadsGiftValuation } from "@/lib/calc/bg-carryover-parts";
+import { bgConvertedCarryoverGiftedPart } from "@/lib/calc/bg-carryover-parts";
 import { isBgSuccessorRight } from "@/lib/calc/transfer-successor-right";
 
 interface Props {
@@ -213,7 +214,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   const isCarryoverPresumed = isCarryover && isBgPresumedMethod(asset.bgAcquisitionMethod);
   /** 이월과세 × K-5(두 파트 모두 증여받음) — 시나리오 B도 증여일 상증법 평가액(소령 §163⑨)이라 K-6/K-7과 같은 칸을 연다(④·⑧과 같은 leaf). */
   const isCarryoverConverted = bgConvertedCarryoverReadsGiftValuation(asset);
-  const readsTransferorGiftValuation = isCarryoverPresumed || isCarryoverConverted;
+  /** 이월과세 × K-5 · 한 파트만 증여받은 일반건물 — 그 파트 평가액 칸만 연다(다른 파트는 양도인 환산 · ④·⑧과 같은 leaf). */
+  const convertedGiftedPart = bgConvertedCarryoverGiftedPart(asset);
+  const readsTransferorGiftValuation = isCarryoverPresumed || isCarryoverConverted || convertedGiftedPart !== undefined;
   /** 주택·건물 × 토지·건물 취득일 다름 — 실지취득가액도 토지·건물 두 칸(총액 칸 없음 · ④·⑧과 같은 술어). */
   const houseSplit = bgHouseSplitActive(asset);
   const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -479,7 +482,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             {readsTransferorGiftValuation ? (
               <div className="rounded border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 p-2 text-caption text-violet-800 dark:text-violet-200" data-testid="bg-carryover-presumed-transferor-notice">
                 이월과세를 적용하지 않는 경우(시나리오 B)의 <b>양도인</b> 취득가액입니다. 양도인은 이 자산을 증여받았으므로 증여일 현재 상증법 평가액이
-                취득 당시 실지거래가액으로 간주됩니다(소득세법 시행령 §163⑨) — {isCarryoverConverted
+                취득 당시 실지거래가액으로 간주됩니다(소득세법 시행령 §163⑨) — {convertedGiftedPart
+                  ? <>증여받은 <b>{convertedGiftedPart === "land" ? "토지" : "건물"}</b>만 입력합니다. {convertedGiftedPart === "land" ? "건물" : "토지"}은 양도인이 취득한 것이라 양도인 취득 당시 기준시가로 환산합니다.</>
+                  : isCarryoverConverted
                   ? <>환산취득가액은 <b>당초 증여자</b> 기준(아래 이월과세 박스의 당초 증여자 기준시가)으로만 계산합니다.</>
                   : <>매매사례가액·감정가액은 <b>당초 증여자</b> 값만 아래 이월과세 박스에 입력합니다.</>}
               </div>
@@ -505,14 +510,14 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             )}
             {asset.assetKind === "general_building" || houseSplit ? (
               <>
-                {gbHidePart !== "land" && (
+                {gbHidePart !== "land" && convertedGiftedPart !== "building" && (
                 <FieldCard label="토지 실지취득가액">
                   <CurrencyInput label="" hideUnit
                     value={asset.bgActualAcquisitionLand} data-field="bgActualAcquisitionLand"
                     onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
                 </FieldCard>
                 )}
-                {gbHidePart !== "building" && (
+                {gbHidePart !== "building" && convertedGiftedPart !== "land" && (
                 <FieldCard label="건물 실지취득가액">
                   <CurrencyInput label="" hideUnit
                     value={asset.bgActualAcquisitionBuilding} data-field="bgActualAcquisitionBuilding"

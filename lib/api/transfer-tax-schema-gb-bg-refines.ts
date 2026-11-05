@@ -142,10 +142,15 @@ function requireBgAcquisitionParts(info: unknown, gbv: Gbv, ownershipRatio: numb
   const ownActual = () => need(at, i, "actualAcquisitionTotal", "actualLandAcquisitionPrice", "actualBuildingAcquisitionPrice", ownLand, ownBuilding);
   if (i.acquisitionMethod === "actual") return ownActual();
   const donor = i.carryoverDonorBasis as (Record<string, unknown> & { parts?: { land?: boolean; building?: boolean } }) | undefined;
-  // 이월과세 × K-5(두 파트 모두 증여받음) — 시나리오 B는 양도인 증여일 평가액(소령 §163⑨ · 엔진 `isConvertedCarryoverReadingGiftValuation`)
+  // 이월과세 × K-5 — 시나리오 B는 양도인 증여일 평가액(소령 §163⑨). 두 파트 모두 증여받았으면 두 칸(엔진 `isConvertedCarryoverReadingGiftValuation`),
+  // 한 파트만이면 그 파트 칸만 — 총액으로는 대신하지 않는다(엔진 `convertedCarryoverGiftedPart` · 계획서 `bg-carryover-k5-one-part-b.plan.md`).
   if (i.acquisitionMethod === "converted") {
     const p = donor?.parts ?? { land: true, building: true };
     if (donor && p.land === true && p.building === true) ownActual();
+    else if (donor && p.land !== p.building) {
+      const key = p.land === true ? "actualLandAcquisitionPrice" : "actualBuildingAcquisitionPrice";
+      if (!positive(i[key])) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...at, key], message: BG_ACQ_PART_REQUIRED_MESSAGE });
+    }
     return;
   }
   if (i.acquisitionMethod !== "appraisal" && i.acquisitionMethod !== "salesCase") return;

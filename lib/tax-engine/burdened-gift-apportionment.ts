@@ -353,10 +353,18 @@ export function buildBurdenedGiftBreakdown(params: {
     params: { capitalExpenditure: params.capitalExpenditure, transferExpense: params.transferExpense },
     isUnregistered,
   };
+  /**
+   * 이월과세 × K-5 · 한 파트만 증여받은 일반건물의 시나리오 B — 그 파트는 양도인 증여일 평가액(소령 §163⑨)이 실지거래가액이다
+   * (`toTransferorBasisInfo`가 `transferorGiftValuationPart`를 싣는다 · 계획서 `bg-carryover-k5-one-part-b.plan.md`). 지분이면 `info`가 이미 지분 몫이다.
+   */
+  const giftedPart = info.acquisitionMethod === "converted" ? info.transferorGiftValuationPart : undefined;
+  const fixedActual = giftedPart
+    ? { [giftedPart]: (giftedPart === "land" ? info.actualLandAcquisitionPrice : info.actualBuildingAcquisitionPrice) ?? 0 }
+    : undefined;
   const partwise =
     // 단일 자산 `preDeemed`(STEP 0.45)와 함께 오지 않는다 — 파트 ①②는 일반건물 route만 싣고, 일반건물은 STEP 0.45를 타지 않는다.
-    !acqStdForced && (params.preDeemedParts?.land || params.preDeemedParts?.building)
-      ? resolvePartwiseBgAcquisition(acqCtx, params.preDeemedParts)
+    !acqStdForced && (params.preDeemedParts?.land || params.preDeemedParts?.building || fixedActual)
+      ? resolvePartwiseBgAcquisition(acqCtx, params.preDeemedParts ?? {}, fixedActual)
       : undefined;
   const acq = partwise ? partwise.slots : resolveWholeBgAcquisition(acqCtx);
   const { acquisitionMethodUsed, necessaryExpenseSwap, necessaryExpenseInput, convertedAcquisitionBeforeSwap } = acq;

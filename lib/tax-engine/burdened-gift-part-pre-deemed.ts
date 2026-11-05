@@ -13,6 +13,10 @@
  * 필요경비: ①② 채택 파트는 실지거래가액 의제(영 §163⑨)라 실제 필요경비, ③ 채택 파트는 개산공제(영 §163⑥) + §97②2호 단서.
  * 실비는 자산 단위와 같은 성질별 시점 비율로 파트에 나눈다(`splitBgRealExpenseByNature`) — 실지 파트는 제 몫을 쓰고, 환산 파트는 제 몫과
  * 가목을 겨룬다. 두 파트가 모두 환산이면 자산 단위 비교 그대로다(종전 K-5와 같다).
+ *
+ * `fixedActual` — 이월과세 × K-5 · 한 파트만 증여받은 일반건물의 시나리오 B(계획서 `bg-carryover-k5-one-part-b.plan.md` Q-1 a).
+ * 그 파트는 양도인 증여일 평가액(소령 §163⑨ — 안분 전 전체 금액)을 실지거래가액으로 쓰고, 다른 파트는 사용자가 고른 산정방식(환산)이다.
+ * 경비 규칙은 ①② 채택 파트와 같다(실지 파트 = 실비 몫 · 환산 파트 = 개산공제 + §97②2호 단서).
  */
 import { safeMultiplyThenDivide, calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
@@ -50,6 +54,7 @@ function selectOf(c: GbPreDeemedClauseA, converted: number): BgPartPreDeemedEcho
 export function resolvePartwiseBgAcquisition(
   ctx: BgAcquisitionContext,
   parts: BgPreDeemedParts,
+  fixedActual: Partial<Record<Part, number>> = {},
 ): { slots: BgAcquisitionSlots; parts: { land?: BgPartPreDeemedEcho; building?: BgPartPreDeemedEcho } } {
   const { info, assumedDebtAmount, giftValuation, isUnregistered, params } = ctx;
   const std = {
@@ -58,7 +63,7 @@ export function resolvePartwiseBgAcquisition(
   };
 
   // 의제취득일 전이 아닌 파트 — 사용자가 고른 산정방식의 STEP 4 값(실비 없이 불러 §97②2호 단서가 끼지 않게 한다 · 경비는 아래에서 파트별로)
-  const userPart = !parts.land || !parts.building;
+  const userPart = !(parts.land || fixedActual.land !== undefined) || !(parts.building || fixedActual.building !== undefined);
   if (userPart && !info.acquisitionMethod) {
     throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, BG_PART_METHOD_REQUIRED_MESSAGE);
   }
@@ -72,6 +77,11 @@ export function resolvePartwiseBgAcquisition(
   const echo: { land?: BgPartPreDeemedEcho; building?: BgPartPreDeemedEcho } = {};
   const out = {} as Record<Part, { method: Method; acquisition: number; actual?: number; presumed?: number }>;
   for (const p of ["land", "building"] as const) {
+    const fixed = fixedActual[p];
+    if (fixed !== undefined) {
+      out[p] = { method: "actual", acquisition: apportionAcquisitionPrice(fixed, assumedDebtAmount, giftValuation.max), actual: fixed };
+      continue;
+    }
     const clauseA = parts[p];
     if (!clauseA) {
       out[p] = {

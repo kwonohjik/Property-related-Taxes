@@ -1,6 +1,6 @@
 # 부담부증여 × 이월과세 × K-5 — 한 파트만 증여받은 일반건물의 시나리오 B 취득가액(§163⑨) 계획서
 
-> 작성 2026-11-05 · 상태: **결정 대기 — Q-1~Q-5**
+> 작성 2026-11-05 · 상태: **결정 완료 — Q-1~Q-5 모두 a(2026-11-05 사용자 「모두 권장안으로」)** · 구현 §8
 > 선행: `bg-carryover-k5-transferor-sec163-9.plan.md` §5.2 「범위 밖(확인 필요)」 — 이 계획서가 그 항목이다 · #2905(두 파트 모두 증여받은 K-5 B = §163⑨)
 > 선례: 파트별 산정방식 혼합 = `lib/tax-engine/burdened-gift-part-pre-deemed.ts` `resolvePartwiseBgAcquisition`(의제취득일 전 파트 3자 max · 파트별 개산공제·§97②2호 단서)
 
@@ -94,3 +94,9 @@ V = 2.5억은 이 시료에서 환산값과 같아 개산공제만 빠진다(+60
 - **V-2** 다른 파트(양도인 매입·신축)의 실지거래가액을 아는 경우 — K-4 분리 칸을 고르면 B는 맞지만(§1 대용), A가 증여받은 파트에 당초 증여자 실지취득가액을 요구한다. 당초 증여자 실지를 모르고 양도인 다른 파트 실지만 아는 조합은 K-4·K-5 어느 쪽으로도 정확히 입력할 수 없다 — 이번 범위 밖, 빈도 미확인.
 - **V-3** 결과 카드·신고서의 파트별 「환산」/「실지」 표기 — 의제취득일 전 파트 경로는 `perAsset.*.acquisitionMethod`로 갈라 쓴다. 이월과세 B 카드가 같은 값을 읽는지 미확인.
 - **V-4** 증여받은 파트가 건물이고 당초 증여자 신축(§114조의2)인 경우 — A만 영향(가산세)이고 B는 무관하다고 보지만 측정하지 않았다.
+
+## 8. 구현 (Q-1~Q-5 a · PR 1개)
+
+- 엔진: `convertedCarryoverGiftedPart`(한 파트 K-5) → `toTransferorBasisInfo`가 B 사본에 `transferorGiftValuationPart`를 싣고 방식은 환산 그대로 둔다 → `burdened-gift-apportionment.ts`가 그 파트를 `resolvePartwiseBgAcquisition(…, fixedActual)`로 넘긴다(그 파트 = 평가액 × 채무비율 · 실비 몫 / 다른 파트 = 환산 + 개산공제 · §97②2호 단서). `assertTransferorGiftValuation(info, part)` — 그 파트 칸만 요구.
+- ⑫ `requireBgAcquisitionParts` 환산 분기 — 한 파트면 그 파트 `actual*`(총액으로 대신하지 않는다). ④ `usesActualField` — 그 파트 칸만 싣는다. ⑤ 그 파트 칸만 · 안내 문구. ⑧ `convertedCarryoverValuationError`(helper) — 그 파트 칸만. 술어 leaf `bgConvertedCarryoverGiftedPart`.
+- anchor `__tests__/api/transfer.route.bg-carryover-k5-one-part-b.anchor.test.ts` 12건: 엔진(토지만 101,598,000 · 2.5억 71,598,000 A 채택 · 건물만 97,275,500 · 평가액 없음 400) · 화면 경로(④ 그 파트만 · ⑧ 그 칸만 · ⑫ 400) · 지분 = 단건 · 묶음(첫째·둘째) 토지만 129,998,400 · 건물만 125,305,400(K-4 분리 칸 대용과 1원까지 같음 · 수정 前 A 121,785,200 · 105,004,800).
