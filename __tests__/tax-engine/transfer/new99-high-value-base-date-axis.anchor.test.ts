@@ -63,7 +63,7 @@ describe("§99의3 고가주택 기준일 축", () => {
   it("1호(주택건설사업자 취득)는 매매계약일을 기준으로 판정한다", () => {
     const r = evaluateNew993({
       ...BASE,
-      acquisitionType: "from_builder",
+      acquisitionType: "from_builder", firstContract: "yes" as const,
       contractDate: D("2002-09-01"),
       usageApprovalDate: D("2003-02-01"),
     });
@@ -90,13 +90,13 @@ describe("§99의3 고가주택 기준일 축", () => {
   it("대조군 — 1호에 사용승인일이 없어도 결과가 같다", () => {
     const withApproval = evaluateNew993({
       ...BASE,
-      acquisitionType: "from_builder",
+      acquisitionType: "from_builder", firstContract: "yes" as const,
       contractDate: D("2002-09-01"),
       usageApprovalDate: D("2003-02-01"),
     });
     const withoutApproval = evaluateNew993({
       ...BASE,
-      acquisitionType: "from_builder",
+      acquisitionType: "from_builder", firstContract: "yes" as const,
       contractDate: D("2002-09-01"),
     });
     expect(withApproval.isEligible).toBe(withoutApproval.isEligible);

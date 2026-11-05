@@ -90,7 +90,7 @@ export function New99LuxuryHouseFields({
               value={value.attachedLandAreaSqm}
               onChange={(v) => onChange({ attachedLandAreaSqm: v })}
             />
-            <p className="mt-1 text-micro text-muted-foreground">495㎡ 이상이면 면적 기준 충족</p>
+            <p className="mt-1 text-micro text-muted-foreground">주택에 부수되는 토지 전체 면적 — 감면 대상 부수토지(건물 연면적 2배 이내)로 줄이지 않습니다. 495㎡ 이상이면 면적 기준 충족</p>
           </div>
           <div className="sm:col-span-2" data-field={`reduction.${reductionType}.stdPriceFloorMet${suffix}`}>
             <p className="mb-1 text-xs font-medium">주택의 {floorLabel}인가요?</p>

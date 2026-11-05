@@ -28,6 +28,8 @@ import type { SurchargeNarrative } from "@/lib/tax-engine/multi-house-surcharge-
 import { runMultiHouseSurchargeStep } from "@/lib/tax-engine/transfer-tax-judgment-steps";
 import { resolveHceGeneralHouseAcquisitionDate } from "@/lib/tax-engine/transfer-tax-precalc";
 import { resolveSurchargeExclusionByReduction } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
+import { reductionAcquisitionCauseOf } from "@/lib/tax-engine/transfer-reductions/new-99-acquisition-cause";
+import { isRedevelopmentActive } from "@/lib/tax-engine/redevelopment-dispatch";
 import {
   resolveSurchargeApplication,
   SURCHARGE_SUBJECT_PROPERTY_TYPES,
@@ -239,6 +241,11 @@ export function buildSurchargeJudgmentPayload(
     burdenedGiftDenominator: engineInput.burdenedGiftDenominator,
     selfOwns: engineInput.selfOwns,
     standardPriceAtTransfer: engineInput.standardPriceAtTransfer,
+    // 취득 원인·승계조합원 게이트 — 계산기 STEP 0.45와 같은 값 (NH-03 · NH-17 · NH-40 · NH-16 · L1c)
+    acquisitionCause: reductionAcquisitionCauseOf(engineInput),
+    isRedevSuccessorMember:
+      isRedevelopmentActive(engineInput.propertyType, engineInput.redevelopment, engineInput.isSuccessorRightToMoveIn) &&
+      engineInput.redevelopment?.isSuccessorMember === true,
     // 조특법 §129② 미등기 게이트 (NH-58)
     isUnregistered: engineInput.isUnregistered,
   });

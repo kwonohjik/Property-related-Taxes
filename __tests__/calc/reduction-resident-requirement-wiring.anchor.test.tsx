@@ -156,7 +156,7 @@ describe("D11-05 거주자·내국인 요건 배선", () => {
             {
               type: "new_99",
               contractDate99: D("1998-06-01"),
-              acquisitionType99: "from_builder",
+              acquisitionType99: "from_builder", firstContract99: "yes" as const,
               isNationalHousing99: true,
               standardPriceAtAcquisition99: 100_000_000,
               standardPriceAt5Years99: 160_000_000,

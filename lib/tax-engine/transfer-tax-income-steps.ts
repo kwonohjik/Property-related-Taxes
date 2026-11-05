@@ -8,6 +8,7 @@ import { calcBasicDeduction } from "./transfer-tax-helpers";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { buildIncomeDeductionStep, resolveIncomeDeduction } from "./transfer-reductions/income-deduction-router";
 import type { New993Result } from "./transfer-reductions/new-99-3";
+import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
 
 export function runIncomeAndBaseSteps(args: {
@@ -43,8 +44,8 @@ export function runIncomeAndBaseSteps(args: {
     burdenedGiftDenominator: effectiveInput.burdenedGiftDenominator,
     // 토지만 본인 소유면 §99·§99의3 불성립 — STEP 0.45 중과 배제 선판정과 같은 값 (NH-08).
     selfOwns: effectiveInput.selfOwns,
-    // 상속·증여(지분 포함)로 받은 주택은 §99·§99의3 불성립 (NH-03 · NH-17 · NH-40)
-    acquisitionCause: input.acquisitionCause,
+    // 상속·증여(지분 포함)로 받은 주택은 §99·§99의3 불성립 (NH-03 · NH-17 · NH-40) — 이월과세 B는 실제 취득 원인 (NH-34)
+    acquisitionCause: reductionAcquisitionCauseOf(input),
     standardPriceAtTransfer: input.standardPriceAtTransfer,
     transferIncome: transferIncomeBefore993,
   });
