@@ -63,6 +63,8 @@ export function New993DetailCard({
           ))}
         </ul>
         <New993EraNotes detail={d} />
+        {/* 확인 필요 고지 — 「모름」으로 고급주택 처리(NH-02) 등 */}
+        <ReductionDetailWarnings detail={d} />
       </div>
     );
   }
@@ -75,6 +77,8 @@ export function New993DetailCard({
         <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
       </div>
       <New993EraNotes detail={d} />
+      {/* 2015.12.31. 이전 양도 종전 규정 고지(NH-49) */}
+      <ReductionDetailWarnings detail={d} />
       <p className="text-muted-foreground">
         {d.isWithin5Years
           ? "5년 이내 양도 — 양도소득금액 전액 차감"

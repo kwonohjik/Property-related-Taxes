@@ -34,7 +34,7 @@ export function refineReductionRequiredInputs(
       } else if (!r.contractDate993 && !assetContractDate) {
         issue("contractDate993", "§99의3 1호 적용: 매매계약일(contractDate993 또는 assetContractDate)이 필요합니다.");
       }
-      if (!positive(r.exclusiveAreaSqm993))
+      if (r.houseType993 !== "detached" && !positive(r.exclusiveAreaSqm993))
         issue("exclusiveAreaSqm993", "§99의3 적용: 전용면적(㎡)이 필요합니다(고가주택 판정).");
       // 법률 제6762호 부칙 §29② — 2호 사용승인 2003.1.1.~6.30.이면 2003.1.1. 전 착공 여부가 필요하다(자동 fallback 금지).
       if (
@@ -45,6 +45,7 @@ export function refineReductionRequiredInputs(
           "constructionStartedBefore2003_993",
           `§99의3 2호 적용: 사용승인일이 2003.1.1.~2003.6.30.이면 2003.1.1. 전 공사 착수 여부(예·아니오·모름)가 필요합니다 (${NEW_99_3_ADDENDA_6762.PRIOR_CONSTRUCTION_STARTED}).`,
         );
+      detachedFactsIssues(r, "993", "§99의3", issue, positive);
     }
 
     if (r.type === "new_99") {
@@ -54,8 +55,9 @@ export function refineReductionRequiredInputs(
         // 조특법 §99①2호 — 「신축주택취득기간 중에 … 최초로 매매계약을 체결하고 계약금을 납부한 자」
         issue("contractDate99", "§99 적용: 매매계약일(contractDate99 또는 assetContractDate)이 필요합니다.");
       }
-      if (!positive(r.exclusiveAreaSqm99))
+      if (r.houseType99 !== "detached" && !positive(r.exclusiveAreaSqm99))
         issue("exclusiveAreaSqm99", "§99 적용: 전용면적(㎡)이 필요합니다(고가주택 판정).");
+      detachedFactsIssues(r, "99", "§99", issue, positive);
     }
 
     if ((r.type === "rental_97_3" || r.type === "rental_97_5") && r.rentalContinuesToTransfer === undefined) {
@@ -65,4 +67,26 @@ export function refineReductionRequiredInputs(
       );
     }
   });
+}
+
+/**
+ * 단독주택을 고른 고급주택 판정(소득세법 시행령 §156 1호·3호 — NH-02)은 연면적·딸린 토지·하한·시설이 모두 있어야 한다 (⑧ 거울).
+ * 주택 유형 자체가 없으면(직접 API·옛 이력) 종전과 같이 공동주택 기준으로 계산한다 — 여기서 막지 않는다.
+ */
+function detachedFactsIssues(
+  r: ReductionLike,
+  suffix: "99" | "993",
+  label: string,
+  issue: (key: string, message: string) => void,
+  positive: (v: unknown) => boolean,
+) {
+  if (r[`houseType${suffix}`] !== "detached") return;
+  if (!positive(r[`grossFloorAreaSqm${suffix}`]))
+    issue(`grossFloorAreaSqm${suffix}`, `${label} 적용: 단독주택 연면적(㎡)이 필요합니다(고급주택 판정).`);
+  if (!positive(r[`attachedLandAreaSqm${suffix}`]))
+    issue(`attachedLandAreaSqm${suffix}`, `${label} 적용: 단독주택에 딸린 토지 면적(㎡)이 필요합니다(고급주택 판정).`);
+  if (!r[`stdPriceFloorMet${suffix}`])
+    issue(`stdPriceFloorMet${suffix}`, `${label} 적용: 단독주택 시가표준액·기준시가 하한 충족 여부(예·아니오·모름)가 필요합니다.`);
+  if (!r[`luxuryFacility${suffix}`])
+    issue(`luxuryFacility${suffix}`, `${label} 적용: 엘리베이터·에스컬레이터·67㎡ 이상 수영장 설치 여부(예·아니오·모름)가 필요합니다.`);
 }

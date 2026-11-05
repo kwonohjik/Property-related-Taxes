@@ -258,6 +258,9 @@ export function calculateRedevelopmentTax(
     transferPrice: input.transferPrice,
     // 고가주택 가액 요건은 물건 전체 기준 — Step A의 §95③ 12억 안분과 같은 소스를 쓴다.
     totalPropertyTransferPrice: input.totalPropertyTransferPrice,
+    // 상속·증여 취득 · 관리처분계획 인가일 뒤 승계조합원은 §99의3 불성립 (NH-17 · NH-40 · NH-16 — 조특령 §99의3③2호·⑤)
+    acquisitionCause: input.acquisitionCause,
+    isRedevSuccessorMember: input.redevelopment?.isSuccessorMember === true,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
     transferIncome: transferIncomeBefore993,
   });

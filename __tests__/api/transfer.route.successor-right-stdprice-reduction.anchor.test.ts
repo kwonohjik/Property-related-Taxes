@@ -95,7 +95,8 @@ function companion(asset: AssetForm, bundledSaleMode: "actual" | "apportioned" =
 
 /** §99의3 — 2002 계약 · 감면 카드 취득시 300,000,000 · 5년 시점 400,000,000. 양도시는 인자로. */
 const r993 = (tr = "") => ({
-  type: "new_99_3",
+  type: "new_99_3", houseType993: "apartment", firstContract993: "yes", // NH-02·NH-17 ⑧ 필수 (#L1b)
+
   contractDate993: "2002-01-01",
   usageApprovalDate993: "",
   standardPriceAt5Years: "400000000",
