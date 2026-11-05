@@ -1031,9 +1031,11 @@ export interface MixedUseTotalTax {
   penaltyDetail?: import("../transfer-tax-penalty").TransferTaxPenaltyResult;
   /** 농어촌특별세 = 감면세액 × 20% (농특세법 §5①1호 · 비과세는 시행령 §4 열거) */
   ruralSurtax: number;
+  /** NH-38 — 농특세 미납분 납부지연가산세(소득세분 `penaltyTax`와 별도 · Q-22). 납부지연 입력·미납 농특세가 있을 때만 */
+  ruralSurtaxDelayedPenalty?: import("../transfer-tax-rural-surtax-penalty").RuralSurtaxDelayedPenaltyDetail;
   /** 지방소득세 (결정세액 × 10%) */
   localTax: number;
-  /** 총 납부세액 = 결정세액 + 지방소득세 + 가산세 + 농특세 */
+  /** 총 납부세액 = 결정세액 + 지방소득세 + 가산세 + 농특세 + 농특세 납부지연가산세 */
   totalPayable: number;
 }
 

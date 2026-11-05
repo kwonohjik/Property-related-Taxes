@@ -17,6 +17,11 @@ export type AmendmentUnderReductionMode =
 export interface AmendmentInput {
   /** 당초 결정세액(=당초 납부 본세) */
   originalDeterminedTax: number;
+  /**
+   * NH-39 — 당초 신고·납부한 농어촌특별세(「농어촌특별세법」 §7①). 미제공 = 0.
+   * 소득세와 상계하지 않고 별도 줄로 추가 납부·환급을 낸다(Q-22).
+   */
+  originalRuralSurtax?: number;
   /** 신고불성실가산세(§47의3) 적용 여부 */
   applyUnderReportingPenalty: boolean;
   /** 신고불성실 기본율 (normal 10% / fraudulent 40% / offshore_fraud 60%) */
@@ -71,5 +76,26 @@ export interface AmendmentDetail {
   claimDeadline?: string;
   /** 청구기한 도과 경고 */
   isDeadlineExceeded?: boolean;
+  /**
+   * NH-39 — 농어촌특별세 정정(소득세와 **별도 줄** · 세목 간 상계 안 함, Q-22).
+   * 당초·정정 후 농특세가 모두 0이면 키가 없다.
+   */
+  ruralSurtax?: AmendmentRuralSurtaxDetail;
   steps: CalculationStep[];
+}
+
+/** NH-39 — 수정신고·경정청구의 농어촌특별세 정정 (「농어촌특별세법」 §7① · 「국세기본법」 §45·§45의2) */
+export interface AmendmentRuralSurtaxDetail {
+  /** 당초 신고·납부 농특세 */
+  originalRuralSurtax: number;
+  /** 정정 후 농특세(이번 계산) */
+  amendedRuralSurtax: number;
+  /** 추가 납부 농특세 = max(0, 정정 후 − 당초) */
+  additionalRuralSurtax: number;
+  /** 농특세 추가분의 납부지연가산세(「국세기본법」 §47의4①). 과소신고가산세는 붙지 않는다(§47의3① 괄호) */
+  latePaymentPenalty: number;
+  /** 환급 농특세 = max(0, 당초 − 정정 후) — 소득세 납부액과 상계하지 않는다 */
+  refundRuralSurtax: number;
+  /** 농특세 납부 합계 = 추가 납부 농특세 + 납부지연가산세 */
+  totalPayable: number;
 }

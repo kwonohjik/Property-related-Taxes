@@ -118,6 +118,8 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
     localIncomeTax: localTax,
     // 겸용 엔진도 농특세를 산정해 `totalPayable`에 합산한다 — 승계하지 않으면 신고서·명세서에서 0이 된다.
     ruralSurtax: t.ruralSurtax,
+    // NH-38 — 농특세 미납분 납부지연가산세(totalPayable에 이미 포함) — 승계하지 않으면 신고서 칸·요약이 0이 된다.
+    ...(t.ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty: t.ruralSurtaxDelayedPenalty } : {}),
     totalTax: t.totalPayable,
     // b.steps는 MixedUseStep[] (id/title/legalBasis/values 구조)로 CalculationStep[]과
     // 형태가 달라 재사용 불가. 명세서 카드는 mixedUseDetail·result 필드로 값을 뽑고

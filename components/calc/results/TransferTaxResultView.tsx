@@ -365,6 +365,8 @@ export function TransferTaxResultView({
               {(() => {
                 const totalAllPenalty = result.penaltyTax + (result.penaltyDetail?.totalPenalty ?? 0);
                 const ruralSurtax = resolveRuralSurtax(result);
+                // NH-38 — 농특세 미납분 납부지연가산세(소득세분 가산세와 별도 줄 · totalTax에 포함)
+                const ruralPenalty = result.ruralSurtaxDelayedPenalty?.penalty ?? 0;
                 return (
                   <>
                     <span>결정세액 {formatKRW(result.determinedTax)}</span>
@@ -380,6 +382,12 @@ export function TransferTaxResultView({
                       <>
                         <span>+</span>
                         <span>농어촌특별세 {formatKRW(ruralSurtax)}</span>
+                      </>
+                    )}
+                    {ruralPenalty > 0 && (
+                      <>
+                        <span>+</span>
+                        <span>농어촌특별세 납부지연가산세 {formatKRW(ruralPenalty)}</span>
                       </>
                     )}
                   </>

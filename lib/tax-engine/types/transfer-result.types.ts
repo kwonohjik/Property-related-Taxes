@@ -358,6 +358,12 @@ export interface TransferTaxResult {
    * 미지정(옛 저장 결과)이면 종전 detail 합산으로 폴백한다.
    */
   ruralSurtax?: number;
+  /**
+   * NH-38 — 농어촌특별세 미납분의 납부지연가산세(「국세기본법」 §2 1호 차목·§47의4①).
+   * 소득세분 `penaltyDetail.delayedPaymentPenalty`와 **별도**다(Q-22 — 세목 간 상계 안 함) — `totalTax`에 포함된다.
+   * 납부지연 입력이 있고 미납 농특세가 있을 때만 존재한다.
+   */
+  ruralSurtaxDelayedPenalty?: import("../transfer-tax-rural-surtax-penalty").RuralSurtaxDelayedPenaltyDetail;
   /** 총 납부세액 */
   totalTax: number;
   /** 계산 과정 steps */

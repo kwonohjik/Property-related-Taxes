@@ -553,6 +553,11 @@ export interface TransferFormData {
   lateFilingNotified: boolean;
   unpaidTax: string;
   /**
+   * NH-38 — 기납부 농어촌특별세. 농특세 미납분 납부지연가산세의 미납세액 = 농특세 − 이 값
+   * (「국세기본법」 §2 1호 차목·§47의4①). 빈 값 = 0(농특세 전액 미납). 소득세 `priorPaidTax`와 상계하지 않는다(Q-22).
+   */
+  priorPaidRuralSurtax: string;
+  /**
    * PEN-C(2026-09-30) — 미납세액 산정 방식. `auto` = 결정세액 전액 미납 · `manual` = `unpaidTax` 그대로
    * (**0 = 완납**). **부재는 값으로 판정**한다(0·빈칸 → auto, 양수 → manual) — 종전 저장 폼·이력의 의미
    * 그대로다. 판정은 `effectiveUnpaidTaxMode`(`lib/calc/transfer-unpaid-tax-mode.ts`) 하나만 쓴다.
@@ -566,6 +571,8 @@ export interface TransferFormData {
   amendmentMode: boolean;
   /** 당초 결정세액(=당초 납부 본세) — 이력에서 자동 prefill, 수정 가능 */
   originalDeterminedTax: string;
+  /** NH-39 — 당초 신고·납부한 농어촌특별세(「농어촌특별세법」 §7①). 이력에서 자동 prefill · 빈 값 = 0 */
+  originalRuralSurtax: string;
   /** 불러온 당초 이력 id (추적용) */
   amendmentSourceId: string;
   /** 법정신고기한(YYYY-MM-DD) — 양도일 파생, 수정 가능 (소득세법 §110①) */

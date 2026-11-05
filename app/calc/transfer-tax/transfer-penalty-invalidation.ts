@@ -33,6 +33,7 @@ export const PENALTY_ONLY_KEYS: ReadonlySet<string> = new Set([
   "priorPaidTax",
   "unpaidTax",
   "unpaidTaxMode",
+  "priorPaidRuralSurtax", // NH-38 — 농특세 미납분 가산세만 움직인다(결정세액 불변)
   "filingType",
   "penaltyReason",
   "lateFilingNotified",
@@ -45,6 +46,7 @@ export const PENALTY_ONLY_KEYS: ReadonlySet<string> = new Set([
   // AmendmentBlock — 수정신고·경정청구
   "amendmentMode",
   "originalDeterminedTax",
+  "originalRuralSurtax", // NH-39 — 농특세 정정 줄만 움직인다(결정세액 불변)
   "claimReasonType",
   "statutoryFilingDeadline",
   "posteriorEventDate",

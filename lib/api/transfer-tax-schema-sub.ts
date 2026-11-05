@@ -448,6 +448,8 @@ export const delayedPaymentDetailsSchema = z.object({
    * (0 → 전액 · 값 → 그 값). 엔진 `resolveUnpaidTax`(`lib/tax-engine/transfer-tax-unpaid-tax.ts`).
    */
   unpaidTaxMode:      z.enum(["auto", "manual"]).optional(),
+  /** NH-38 — 기납부 농어촌특별세(미입력 = 0 → 농특세 전액 미납). 엔진 `computeRuralSurtaxDelayedPenalty` */
+  paidRuralSurtax:    z.number().int().nonnegative().optional(),
   paymentDeadline:    z.string().date(),
   actualPaymentDate:  z.string().date().optional(),
 }).superRefine((d, ctx) => {
@@ -463,6 +465,8 @@ export const delayedPaymentDetailsSchema = z.object({
 /** 수정신고(경정) — 국세기본법 §45·§48 */
 export const amendmentSchema = z.object({
   originalDeterminedTax:      z.number().int().nonnegative(),
+  /** NH-39 — 당초 신고·납부 농어촌특별세(미입력 = 0). 소득세와 별도 줄로 정정한다 */
+  originalRuralSurtax:        z.number().int().nonnegative().optional(),
   applyUnderReportingPenalty: z.boolean(),
   underReportingReason:       z.enum(["normal", "fraudulent", "offshore_fraud"]),
   underReductionMode:         z.enum(["exempt", "auto_48_2"]),

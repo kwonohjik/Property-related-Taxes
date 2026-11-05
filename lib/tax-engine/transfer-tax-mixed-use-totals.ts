@@ -11,6 +11,10 @@ import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import { resolveUnpaidTax } from "./transfer-tax-unpaid-tax";
 import {
+  computeRuralSurtaxDelayedPenalty,
+  type RuralSurtaxDelayedPenaltyDetail,
+} from "./transfer-tax-rural-surtax-penalty";
+import {
   calculateTransferTaxPenalty,
   type TransferTaxPenaltyResult,
 } from "./transfer-tax-penalty";
@@ -315,8 +319,10 @@ export function buildTotalTax(
     // 🔴 G-43: 산출근거 echo — 어댑터가 결과뷰의 `penaltyDetail` 슬롯으로 승계한다.
     ...(post.penaltyDetail ? { penaltyDetail: post.penaltyDetail } : {}),
     ruralSurtax: post.ruralSurtax,
+    ...(post.ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty: post.ruralSurtaxDelayedPenalty } : {}),
     localTax,
-    totalPayable: determinedTax + localTax + post.penaltyTax + post.ruralSurtax,
+    totalPayable:
+      determinedTax + localTax + post.penaltyTax + post.ruralSurtax + (post.ruralSurtaxDelayedPenalty?.penalty ?? 0),
   };
 }
 
@@ -392,6 +398,8 @@ interface MixedUsePostTaxResult {
    * `-multi-parcel-branch.ts:309` · `-redevelopment.ts:901`).
    */
   penaltyDetail?: TransferTaxPenaltyResult;
+  /** NH-38 — 농특세 미납분 납부지연가산세(소득세분 `penaltyTax`와 별도 · 단건 finalize와 같은 leaf) */
+  ruralSurtaxDelayedPenalty?: RuralSurtaxDelayedPenaltyDetail;
 }
 
 /**
@@ -529,6 +537,8 @@ function computeMixedUsePostTax(
             : undefined,
         })
       : undefined;
+  // NH-38 — 농특세 미납분 납부지연가산세(국세기본법 §2 1호 차목·§47의4①)
+  const ruralSurtaxDelayedPenalty = computeRuralSurtaxDelayedPenalty(input.delayedPaymentDetails, surtax.surtax);
 
   return {
     reductionAmount,
@@ -549,5 +559,6 @@ function computeMixedUsePostTax(
     penaltyTax: penalty?.totalPenalty ?? 0,
     // 🔴 G-43: 산출근거 echo — 세액은 penaltyTax가 정본이고 여기서 다시 더하지 않는다.
     ...(penalty ? { penaltyDetail: penalty } : {}),
+    ...(ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty } : {}),
   };
 }
