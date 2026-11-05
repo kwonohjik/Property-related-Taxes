@@ -39,6 +39,10 @@ export function runIncomeAndBaseSteps(args: {
     transferPrice: input.transferPrice,
     // 고가주택 가액 요건은 물건 전체 기준 — §89 12억 안분(:447-465)과 같은 소스를 쓴다.
     totalPropertyTransferPrice: input.totalPropertyTransferPrice,
+    // 부담부증여는 `input.transferPrice`가 채무액 placeholder라 증여가액(STEP 0.48이 `effectiveInput`에 싣는다)이 우선한다 — §89 판정과 같은 소스 (NH-10).
+    burdenedGiftDenominator: effectiveInput.burdenedGiftDenominator,
+    // 토지만 본인 소유면 §99·§99의3 불성립 — STEP 0.45 중과 배제 선판정과 같은 값 (NH-08).
+    selfOwns: effectiveInput.selfOwns,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
     transferIncome: transferIncomeBefore993,
   });

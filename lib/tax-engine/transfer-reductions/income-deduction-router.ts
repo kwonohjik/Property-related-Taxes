@@ -11,6 +11,7 @@
  */
 
 import { coerceOptionalDate } from "../tax-utils";
+import { resolveHighValuePriceCheck } from "../one-house/threshold";
 import { evaluateNew993, type New993Result } from "./new-99-3";
 import { evaluateNew99, type New99Result } from "./new-99";
 import { evaluateUnsold988, type Unsold988Result } from "./unsold-98-8";
@@ -127,6 +128,18 @@ export interface IncomeDeductionContext {
    * `transferPrice`로 후퇴한다(`TransferTaxInput.totalPropertyTransferPrice`가 지분 모드에서만 채워짐).
    */
   totalPropertyTransferPrice?: number;
+  /**
+   * **부담부증여 증여가액 기준 물건 전체 가액** — 부담부증여에서 `transferPrice`는 채무액 placeholder라 고가주택 판정에 쓸 수 없다.
+   * 소령 §156① 고가주택 판정은 «이전방식에 관계없이 1주택의 전체가액» — 부담부증여는 당해 주택의 증여가액
+   * (서면인터넷방문상담4팀-1692·-1526 · 국심2007서2099). 지분이면 «지분 증여가액 ÷ 지분율»(물건 전체) — §89①3호 판정(`checkExemptionCore`)과
+   * 같은 소스(`TransferTaxInput.burdenedGiftDenominator`)다. 있으면 `totalPropertyTransferPrice`·`transferPrice`보다 우선한다 (NH-10).
+   */
+  burdenedGiftDenominator?: number;
+  /**
+   * 소유자 분리 축 — `"land_only"`(토지만 본인 소유)면 §99·§99의3은 신축주택(건물) 취득자가 아니라 적용 배제된다 (NH-08 · Q-28).
+   * 차감(STEP 4.6)과 중과 배제 선판정(STEP 0.45)이 같은 값을 넘겨야 «감면은 안 되는데 중과만 배제»되는 어긋남이 없다.
+   */
+  selfOwns?: "both" | "building_only" | "land_only";
   standardPriceAtTransfer?: number;
   /** 양도소득금액 (양도차익 − 장특공제). 중과 배제 선판정 시 0 전달 가능 (적격 판정에 무관) */
   transferIncome: number;
@@ -252,7 +265,8 @@ function evalNew993(
       recontractUnavoidableCause: r993.recontractUnavoidableCause993 as boolean | undefined,
       isRedevelopedNewHouse: r993.isRedevelopedNewHouse993 as boolean | undefined,
       previousHouseStdPriceAtAcquisition: r993.previousHouseStdPrice993 as number | undefined,
-      wholePropertyTransferPrice: ctx.totalPropertyTransferPrice ?? ctx.transferPrice,
+      wholePropertyTransferPrice: resolveHighValuePriceCheck(ctx),
+      isLandOnlyOwner: ctx.selfOwns === "land_only",
       exclusiveAreaSqm: (r993.exclusiveAreaSqm993 as number | undefined) ?? 0, // 고가주택 면적기준(2002.12.31 이전 취득) 판정용
       region: (r993.region993 as "outside_speculation" | "speculation" | undefined) ?? "outside_speculation",
       isResident: (r993.isResident993 as boolean | undefined) ?? true,
@@ -288,7 +302,8 @@ function evalNew99(
       standardPriceAt5Years: r99.standardPriceAt5Years99 as number | undefined,
       standardPriceAtTransfer:
         (r99.standardPriceAtTransfer99 as number | undefined) ?? ctx.standardPriceAtTransfer,
-      wholePropertyTransferPrice: ctx.totalPropertyTransferPrice ?? ctx.transferPrice,
+      wholePropertyTransferPrice: resolveHighValuePriceCheck(ctx),
+      isLandOnlyOwner: ctx.selfOwns === "land_only",
       exclusiveAreaSqm: r99.exclusiveAreaSqm99 as number | undefined,
       isResident: (r99.isResident99 as boolean | undefined) ?? true,
       isHousingConstructionBusiness: (r99.isHousingConstructionBusiness99 as boolean | undefined) ?? false,

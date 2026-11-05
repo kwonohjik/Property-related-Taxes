@@ -29,6 +29,7 @@
 
 import { addYears } from "date-fns";
 import { NEW_99_3_ADDENDA_6762, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { LAND_ONLY_OWNER_CODE, landOnlyOwnerMessage } from "./new-99-land-only-owner";
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import {
   PRIOR_ADVANCED_HOUSE_STANDARD_DATE,
@@ -80,6 +81,11 @@ export interface New993Input {
    * «예» = 종전 규정(지역 제외 없음·종전 고급주택 기준), «아니오» = 개정규정, «모름»·미입력 = §29② 불성립(개정규정) + 확인 필요.
    */
   constructionStartedBefore2003?: ConstructionStartAnswer;
+  /**
+   * 소유자 분리 — 토지만 본인 소유(`selfOwns === "land_only"`)인가. true면 신축주택(건물) 취득자가 아니라 적용 배제한다
+   * (서면인터넷방문상담4팀-1118 · 국심2006중4504 · 조심2013중3556 — `new-99-land-only-owner.ts`, 리뷰 NH-08).
+   */
+  isLandOnlyOwner?: boolean;
   /** 거주자 여부 */
   isResident: boolean;
   /** 본인이 주택건설사업자인 경우 적용 배제 */
@@ -292,6 +298,12 @@ export function isWithin5YearsCheck(acquisitionDate: Date, transferDate: Date): 
 function checkIneligibility(input: New993Input, era: New993Era): New993IneligibleReason[] {
   const reasons: New993IneligibleReason[] = [];
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.NEW_99_3;
+
+  // 0. 소유자 분리(토지만 본인) — 신축주택(건물)을 취득한 자가 아니다 (NH-08). 다른 사유보다 먼저 낸다.
+  if (input.isLandOnlyOwner === true) {
+    reasons.push({ code: LAND_ONLY_OWNER_CODE, message: landOnlyOwnerMessage("new_99_3"), legalBasis });
+    return reasons;
+  }
 
   // 1. 거주자 아님
   if (!input.isResident) {
