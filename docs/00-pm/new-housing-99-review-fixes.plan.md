@@ -605,3 +605,37 @@ route(폼 → ④ → ⑫ → ⑭, 폴백 세율) BG 사례의 합은 89,608,200
 - NH-26(지분 non-BG의 STEP 0.45가 `totalPropertyTransferPrice`를 안 받음)은 이 PR에서 고치지 않는다(리뷰상 별건).
 - `transfer-tax-redevelopment.ts:254`(재개발 경로) 라우터 호출은 `burdenedGiftDenominator`·`selfOwns`를 넘기지 않는다 — 부담부증여 × 재개발 × §99의3 조합은 미측정(입주권은 소유자 분리 축이 없다).
 - §99 land_only는 정면 해석례가 없다 — Q-28 결정대로 불성립 + 고지이며, 해석례가 나오면 문구와 판정을 다시 본다.
+
+---
+
+## 13. PR-6 — NH-09 (겸용주택 × 감면주택 다주택 중과 배제 자동 주입)
+
+- 작성 2026-11-05 · 워크트리 `Property-related-Taxes-nh99p6`(브랜치 `fix/nh99-mixed-use-surcharge-exclusion`, base `52f25ddc4`). 리뷰 NH-09(F-70←F-46). 세율표는 mock(`makeMockRatesWithHouseEngine`) / route 동일 mock — 정본 세액이 아니다.
+- 법령: 소득세법 시행령 §167의3①5호(3주택 이상)·§167의10①2호(2주택 — ①5호 준용)가 조특법 §99·§99의3 등으로 «감면되는 주택»을 중과에서 뺀다. 새 쟁점 없음(단건 STEP 0.45가 이미 같은 조문을 구현 — 본 PR은 배선).
+
+### 13-1. 결함과 설계
+
+- 결함: 단건은 STEP 0.45(`runSurchargeAndLandSteps`)가 적격이면 양도 주택 행에 `isTaxSpecialExemption`을 주입하는데, 겸용(`calcMixedUseTransferTax`)은 감면 선택을 «차감형은 계산하지 않고 고지»(`transfer-tax-mixed-use-totals.ts`)로만 다뤄 주입이 없었다 → 중과 유지 + 고지 없음(이중 진실: 수동 5호 토글만 배제).
+- 수정: 같은 leaf `resolveSurchargeExclusionByReduction`을 겸용에서 호출하고 양도 주택 행에 얹는다(`transfer-tax-mixed-use-reduction-surcharge.ts` 신규, 중과 판정 조립은 `…-surcharge-judge.ts`로 옮김). 수동 토글과 우선순위는 단건과 같다 — 자동 도출이 «행 표시를 켜는» 것이라 수동 토글(이미 켜진 행)과 합쳐도 같은 결과(이중 계상 없음).
+- **인자 대조(단건 ↔ 겸용)**: `acquisitionDate` = 건물 취득일(겸용 §89 판정의 주택 부분 취득일과 같음) · `assetContractDate` 그대로 · `selfOwns` 미전달(겸용은 소유자 분리 축 밖 — `selfOwnsSplitApplicable`) · `burdenedGiftDenominator` 미전달(부담부증여 겸용은 `asset.totalPropertyTransferPrice` = 증여가액 C로 이미 덮임) · `standardPriceAtTransfer` 미전달(3분할이라 단일 값 없음 — 감면 입력 자신의 칸이 쓰임).
+- **고가주택 판정 가액(근거: 코드 실독)**: 조특법 §99①·§99의3① 단서의 고가주택 = 소득세법 §89①3호 개념이고 겸용은 소령 §156②. 기존 겸용 판정이 `주택 연면적 > 주택 외 연면적(§154③ 본문)`이면 건물 전체 `totalPropertyTransferPrice ?? transferPrice`(`transfer-tax-mixed-use.ts` L-10), 아니면 주택분 `wholeHousingTransferPrice ?? housingTransferPrice`(`transfer-tax-mixed-use-helpers.ts` `highValueBase`). 라우터의 «물건 전체 가액» 칸에 **같은 식**을 싣는다(`mixedHighValueJudgmentPrice`). 이 값은 안분 뒤에야 나오므로 `derived`·양도가액 안분 계산을 중과 블록 앞으로 옮겼다(순수 계산 — 순서만).
+- 결과 표시: 단건 `buildSurchargeExclusionStep`과 같은 라벨·근거의 step(`surcharge-exclusion-by-reduction`) + «중과 배제만 반영» 고지. 기존 «차감형 미반영» 고지는 그대로(NH-33 미결 — 범위 밖).
+
+### 13-2. 케이스 매트릭스 (전 → 후, totalPayable)
+
+| # | 사실 | 전 | 후 | 대조 |
+|---|---|---:|---:|---|
+| 1 | 3주택 조정, §99의3, 11억(engine fixture case14) | 423,062,208 | 222,176,600 | 수동 5호 토글 |
+| 2 | 〃 2주택 | 368,585,036 | 222,176,600 | 수동 5호 토글 |
+| 3 | 〃 §99, 30억(1998 계약 84㎡) | 1,293,158,093 | 702,072,863 | 수동 5호 토글 |
+| 4 | route 3주택 조정 §99의3 | 399,379,198 | 211,470,601 | 수동 토글(body `houses[selling].isTaxSpecialExemption`) |
+| 5 | 고가(§99 170㎡·6억 초과) / 기간 밖 계약 | 불변 | 불변(중과 유지) | 감면 미선택 |
+| 6 | 비조정 · 1주택 · 유예 구간(2023-06-01, 유예 활성 rates) | 불변 | 불변 | 감면 미선택 |
+| 7 | 판정 가액: 주택 연면적 60<140 → 주택분(6억 이하) 적격 / 140>60 → 전체 11억(6억 초과) 불성립 | | 배제 / 유지 | §89 겸용 판정과 같은 소스 |
+
+### 13-3. 14지점 · 변경 파일 · 범위 밖
+
+- 14지점: 입력 필드 신설 없음(`reductions`·`assetContractDate`·`houses`는 기존 배선) ⇒ ①~⑬ 변경 없음, ⑭는 엔진 내부. ⑦ 결과 카드는 기존 `warnings` 표시 사용. ⑧ 변경 없음(선택을 막지 않음).
+- 엔진: `transfer-tax-mixed-use.ts`(759→725) · `transfer-tax-mixed-use-reduction-surcharge.ts` · `transfer-tax-mixed-use-surcharge-judge.ts`(신규). anchor: `__tests__/tax-engine/transfer/nh09-mixed-use-surcharge-exclusion-by-reduction.anchor.test.ts` · `__tests__/api/transfer.route.mixed-use-reduction-surcharge-exclusion.nh09.anchor.test.ts`.
+- 형제 경로: 다건(합산)은 겸용을 `MULTI_MIXED_USE_UNSUPPORTED_MESSAGE`로 막음 · 함께 양도 컴패니언 겸용은 서브엔진 `total`을 버리고 파트 카드를 단건 엔진(STEP 0.45)이 계산 · 판정 메뉴는 `reductions` 입력 없음 ⇒ 변경 없음.
+- 범위 밖·남은 확인: NH-33(차감 미반영, Q-14) · **houses[] 없이 원시 플래그 fallback으로 중과를 거는 경로는 단건·겸용 모두 감면 배제가 없다**(실측: 단건 `householdHousingCount: 3` + §99의3 = `multi_house_3plus` 유지) — 두 경로가 같아 이번엔 건드리지 않음, 별건 후보.
