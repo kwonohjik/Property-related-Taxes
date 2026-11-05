@@ -50,11 +50,10 @@ export const NEW_99_4_STD_PRICE_LIMIT_ACQ_2008 = 150_000_000;
 /** 2003.8.1.~2007.12.31. 취득분 한도 (구 조특법 §99의4①3호) */
 export const NEW_99_4_STD_PRICE_LIMIT_ACQ_2003_2007 = 70_000_000;
 
-// 한도 분기 경계 — 행(농어촌주택 취득일) R1 ~2007 · R2 2008 · R3 2009~2013 · R4 2014~ / 열(양도일) C1 ~2016 · C2 2017~2020 · C3 2021~2022 · C4 2023~
+// 한도 분기 경계 — 행(농어촌주택 취득일) R1 ~2007 · R2 2008 · R3 2009~2013 · R4 2014~ / 열(양도일) ~2020(C1·C2는 한도가 같아 한 칸) · C3 2021~2022 · C4 2023~
 const ACQ_R2_FROM = new Date("2008-01-01").getTime();
 const ACQ_R3_FROM = new Date("2009-01-01").getTime();
 const ACQ_R4_FROM = new Date("2014-01-01").getTime();
-const TRANSFER_C2_FROM = new Date("2017-01-01").getTime();
 const TRANSFER_C3_FROM = new Date("2021-01-01").getTime();
 const TRANSFER_C4_FROM = new Date("2023-01-01").getTime();
 
@@ -88,7 +87,7 @@ export function resolveNew994StdPriceLimit(input: {
   const acq = input.ruralHouseAcquisitionDate.getTime();
   const tr = input.transferDate.getTime();
   const row = acq < ACQ_R2_FROM ? 1 : acq < ACQ_R3_FROM ? 2 : acq < ACQ_R4_FROM ? 3 : 4;
-  const col = tr < TRANSFER_C2_FROM ? 1 : tr < TRANSFER_C3_FROM ? 2 : tr < TRANSFER_C4_FROM ? 3 : 4;
+  const col = tr < TRANSFER_C3_FROM ? 2 : tr < TRANSFER_C4_FROM ? 3 : 4;
   const hanok = input.isRegisteredHanok === true;
 
   // 등록 한옥 4억 — 2014.1.1. 이후 구입분(R4) 또는 2021.1.1. 이후 양도분(해석 칸은 현행 유지)
