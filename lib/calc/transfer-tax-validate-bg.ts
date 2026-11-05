@@ -68,6 +68,7 @@ import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-p
 import { bgAnyCarryover, bgCarryoverForm, bgCarryoverParts } from "./bg-carryover-parts";
 import { bgConvertedCarryoverReadsGiftValuation } from "./bg-carryover-parts";
 import { transferorGiftValuationError } from "./transfer-tax-validate-bg-carryover-b";
+import { convertedCarryoverValuationError } from "./transfer-tax-validate-bg-carryover-b";
 import { bgHouseSplitActive } from "./bg-house-split";
 import { validateBgHouseSplit } from "./transfer-tax-validate-bg-house-split";
 
@@ -421,9 +422,9 @@ export function validateBurdenedGiftAsset(
       if (isBgPostDeemedInheritance(asset)) {
         return fieldError("bgAcquisitionMethod", `${label}: 상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액입니다(소득세법 시행령 §163⑨) — 환산취득가액을 쓸 수 없습니다(소득세법 §97①1호 단서). 「실지취득가액 안분」에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.`);
       }
-      // 이월과세 × K-5(두 파트 모두 증여받음) — 시나리오 B는 양도인 증여일 상증법 평가액(소령 §163⑨ · ⑤·④·⑫와 같은 leaf)
-      if (bgConvertedCarryoverReadsGiftValuation(asset) && !bgCollateralForcesStdAcq(asset, isFractionalSplitAxis === true)) {
-        const err = transferorGiftValuationError(asset, label, houseSplit);
+      // 이월과세 × K-5 — 시나리오 B는 양도인 증여일 상증법 평가액(소령 §163⑨ · ⑤·④·⑫와 같은 leaf · 한 파트만이면 그 파트 칸만)
+      if (!bgCollateralForcesStdAcq(asset, isFractionalSplitAxis === true)) {
+        const err = convertedCarryoverValuationError(asset, label, houseSplit);
         if (err) return err;
       }
       // K-5 환산취득가액 — 취득·양도시 기준시가 필수. general_building은 (5-b)에서 별도 검사.

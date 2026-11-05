@@ -150,7 +150,8 @@ describe("토지만 이월과세 — 건물은 양도인 값·양도인 기산�
     const r = await ok200(await landOnlyBody(cause, over as Partial<AssetForm>));
     const d = detail(r);
     expect(d.adoptedScenario).toBe("A");
-    expect([d.determinedTaxA, d.determinedTaxB, r.det]).toEqual([90_758_940, 70_998_000, 90_758_940]);
+    // B: 증여받은 토지는 양도인 증여일 평가액 2.5억(소령 §163⑨ · `bg-carryover-k5-one-part-b.plan.md`) — 종전 환산과 같은 금액이라 개산공제만 빠져 +600,000(종전 70,998,000)
+    expect([d.determinedTaxA, d.determinedTaxB, r.det]).toEqual([90_758_940, 71_598_000, 90_758_940]);
     // 토지 A = 250,000,000 × 10,000,000 / 200,000,000 · 건물 = 양도인 환산 250,000,000 × 1억 / 2억
     expect([card(d.scenarioA, "토지").acquisitionPrice, card(d.scenarioA, "건물").acquisitionPrice]).toEqual([12_500_000, 125_000_000]);
     // 건물 장특 = 123,500,000 × 12%(2020-01-01부터 6년) — 수정 前 2015년부터 22%
@@ -174,7 +175,8 @@ describe("건물만 이월과세 — 토지는 양도인 값 (수정 前 ⑫ 400
   it("B0 증여세 없음 → 74,817,560", async () => {
     const r = await ok200(await buildingOnlyBody());
     const d = detail(r);
-    expect([d.determinedTaxA, d.determinedTaxB, d.adoptedScenario]).toEqual([74_817_560, 66_675_500, "A"]);
+    // B: 증여받은 건물은 양도인 증여일 평가액 2.5억(소령 §163⑨) — 개산공제만 빠져 +600,000(종전 66,675,500)
+    expect([d.determinedTaxA, d.determinedTaxB, d.adoptedScenario]).toEqual([74_817_560, 67_275_500, "A"]);
     expect([card(d.scenarioA, "토지").acquisitionPrice, card(d.scenarioA, "건물").acquisitionPrice]).toEqual([125_000_000, 50_000_000]);
     expect([prop(r, "토지").longTermHoldingDeduction, prop(r, "건물").longTermHoldingDeduction]).toEqual([27_170_000, 43_868_000]);
   });
@@ -315,7 +317,7 @@ describe("지분·묶음 — 단건과 같은 leaf (V-2 실측 2026-10-26)", () 
     };
     const rl = await ok200(put(L, L, LAND));
     expect(rl.det).toBe(121_785_200);
-    expect(units(rl).map((u) => [u.determinedTaxB, u.scenarioA.buildingHoldingStartDate])).toEqual([[99_398_400, "2020-01-01"]]);
+    expect(units(rl).map((u) => [u.determinedTaxB, u.scenarioA.buildingHoldingStartDate])).toEqual([[99_998_400, "2020-01-01"]]); // B +600,000 — 토지 평가액(소령 §163⑨ · 종전 99,398,400)
     const rb = await ok200(put(B, B, BLDG));
     expect(rb.det).toBe(105_004_800);
     expect(units(rb).map((u) => (u.scenarioA.parts as Body[]).map((p) => p.acquisitionPrice))).toEqual([[125_000_000, 50_000_000]]);
