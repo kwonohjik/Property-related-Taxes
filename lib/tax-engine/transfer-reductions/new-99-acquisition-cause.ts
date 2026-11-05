@@ -4,11 +4,15 @@
  * 조세특례제한법 §99①·§99의3①은 감면 대상 신축주택을 두 갈래로 한정한다.
  *   - 주택건설사업자로부터 취득(§99①2호 · §99의3①1호): «주택건설업자와 **최초로 매매계약을 체결하고 계약금을 납부한 자**가 취득»
  *   - 자기건설(§99①1호 · §99의3①2호): «**자기가 건설한**» 주택(조합원 취득 포함)
- * 상속·증여로 받은 주택은 법문상 어느 갈래에도 해당하지 않는다(리뷰 인용 해석례 재산세제과-1028·서면4팀-1192 — 본문 미확인, 메시지는 법문만 인용).
+ * 상속·증여로 받은 주택은 법문상 어느 갈래에도 해당하지 않는다. 증여(이월과세 대상인 배우자·직계존비속 증여 포함)는 국세청 해석도 같다 —
+ * 서면인터넷방문상담4팀-1192(2006.4.28.: §99의3①1호 「최초로 매매계약을 체결하고 계약금을 납부한 자가 취득하는 주택」에 배우자로부터
+ * 증여받아 취득하는 주택은 포함하지 아니함, 보충설명에서 §99도 함께 언급) · 서면인터넷방문상담4팀-1719(2005.9.23.: 배우자가 증여·재산분할로
+ * 취득한 주택은 해당하지 아니함) · 사전-2025-법규재산-0749(2025.9.23.) — 메인 세션 원문 확인(2026-11-05).
  * 자기건설 주택의 지분을 증여·상속으로 추가 취득한 경우도 그 지분은 자기가 건설한 것이 아니라 지분별로 판정한다
  * (사용자 결정 리뷰 Q-3 지분별 — 리뷰 인용 대법원 2010두6847 · 기준-2024-0151). 계산 입력 하나(자산·지분 하나)의 취득 원인이 그 판정 단위다.
  *
- * - 이월과세 증여(`carryover_gift`)는 이 게이트가 판정하지 않는다 — 수정 전 동작 그대로 둔다(국세청 해석 원문 확인 후 별도, 리뷰 Q-3 보류).
+ * - 이월과세 증여(`carryover_gift`)도 증여 취득이라 불성립이다(리뷰 Q-3 — 해석 원문 확인 후 불인정으로 결정). 이월과세는 양도차익을
+ *   증여자 기준으로 계산하는 특례(소득세법 §97의2①)일 뿐 수증자가 최초 계약자·건설자가 되는 것은 아니다.
  * - 매매로 취득한 주택건설사업자 갈래는 분양권 승계 여부를 3-state로 받는다. «아니오»는 불성립, «모름»은 불성립 + 확인 필요.
  *   화면(⑧)은 답을 필수로 받는다. 값이 없는 직접 API·옛 이력은 종전과 같이 계산한다(레거시 경로 현행 유지 — 리뷰 Q-3 계획서 결정).
  * - §99의3의 조합원은 관리처분계획 인가일(사업계획 승인일) 현재의 조합원이다(조특령 §99의3③2호·⑤). 재개발 자산의 승계조합원
@@ -17,6 +21,9 @@
  */
 import type { TriStateAnswer } from "./new-99-luxury-house";
 import { NEW_HOUSING_ACQUISITION_ARTICLE as ART } from "../legal-codes/transfer-house";
+
+/** 증여 취득 불성립 해석 — 서면4팀-1192(배우자 증여) · 서면4팀-1719(배우자 증여·재산분할) · 사전-2025-법규재산-0749 */
+const GIFT_RULINGS = "서면인터넷방문상담4팀-1192 · 서면인터넷방문상담4팀-1719 · 사전-2025-법규재산-0749";
 
 export type New99AcquisitionCause =
   | "purchase"
@@ -58,21 +65,23 @@ export function evaluateNew99AcquisitionGate(input: New99AcquisitionGateInput): 
   const selfBuiltArticle = is993 ? ART.NEW_99_3_SELF_BUILT : ART.NEW_99_SELF_BUILT;
   const builderArticle = is993 ? ART.NEW_99_3_FROM_BUILDER : ART.NEW_99_FROM_BUILDER;
 
-  if (acquisitionCause === "inheritance" || acquisitionCause === "gift") {
-    const causeLabel = acquisitionCause === "inheritance" ? "상속" : "증여";
+  if (acquisitionCause === "inheritance" || acquisitionCause === "gift" || acquisitionCause === "carryover_gift") {
+    const causeLabel =
+      acquisitionCause === "inheritance" ? "상속으로" : acquisitionCause === "carryover_gift" ? "증여(이월과세 대상 증여)로" : "증여로";
+    const rulings = acquisitionCause === "inheritance" ? "" : ` — ${GIFT_RULINGS}`;
     if (acquisitionType === "self_built") {
       return {
         code: "ACQUIRED_BY_INHERITANCE_OR_GIFT",
         message:
-          `${causeLabel}으로 취득한 주택(지분)은 «자기가 건설한» 신축주택이 아니라 적용되지 않습니다 (${selfBuiltArticle}) — ` +
-          "자기건설 주택의 지분을 증여·상속으로 추가 취득했다면 그 지분은 자기건설분과 따로 판정합니다.",
+          `${causeLabel} 취득한 주택(지분)은 «자기가 건설한» 신축주택이 아니라 적용되지 않습니다 (${selfBuiltArticle}) — ` +
+          `자기건설 주택의 지분을 증여·상속으로 추가 취득했다면 그 지분은 자기건설분과 따로 판정합니다${rulings}.`,
         legalBasis: selfBuiltArticle,
       };
     }
     return {
       code: "ACQUIRED_BY_INHERITANCE_OR_GIFT",
       message:
-        `${causeLabel}으로 취득한 주택은 «주택건설업자와 최초로 매매계약을 체결하고 계약금을 납부한 자가 취득»한 주택이 아니라 적용되지 않습니다 (${builderArticle}).`,
+        `${causeLabel} 취득한 주택은 «주택건설업자와 최초로 매매계약을 체결하고 계약금을 납부한 자가 취득»한 주택이 아니라 적용되지 않습니다 (${builderArticle}${rulings}).`,
       legalBasis: builderArticle,
     };
   }

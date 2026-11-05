@@ -124,9 +124,10 @@ describe("NH-03 · NH-17 · NH-40 route — 취득 원인", () => {
     expect(codes(r.r)).toEqual(["NOT_FIRST_CONTRACT"]);
     expect(r.totalTax).toBe(c.totalTax);
   });
-  it("⑧ — 매매 취득은 최초 계약 여부를 묻고, 상속은 묻지 않는다 · ④는 묻지 않는 범위의 옛 답을 싣지 않는다", async () => {
+  it("⑧ — 매매 취득은 최초 계약 여부를 묻고, 상속·이월과세 증여는 묻지 않는다(엔진이 불성립) · ④는 묻지 않는 범위의 옛 답을 싣지 않는다", async () => {
     expect(allIssues(house({ ...args, reductions: [red993({ firstContract993: "" })] })).some((m) => /최초로 매매계약/.test(m))).toBe(true);
     expect(allIssues(house({ ...args, cause: "inheritance", reductions: [red993({ firstContract993: "" })] })).some((m) => /최초로 매매계약/.test(m))).toBe(false);
+    expect(allIssues(house({ ...args, cause: "carryover_gift", reductions: [red993({ firstContract993: "" })] })).some((m) => /최초로 매매계약/.test(m))).toBe(false);
     const body = await captureBody(house({ ...args, cause: "inheritance", reductions: [red993({ firstContract993: "no" })] }));
     expect(JSON.stringify(body)).not.toContain("firstContract993");
   });
