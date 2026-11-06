@@ -60,7 +60,7 @@ const RURAL: RowCountExclusionReduction = {
   ruralHouseAcquisitionDate: "",
   ruralHouseStdPrice: "150000000",
   isRegisteredHanok: false,
-  isAdjacentArea: false,
+  adjacentArea994: "no" as const,
   meetsLocationRequirement: true,
 };
 const ruralRow = (id: string, date: string, reduction: RowCountExclusionReduction = RURAL) =>

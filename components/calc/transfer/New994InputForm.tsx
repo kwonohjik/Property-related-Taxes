@@ -13,6 +13,8 @@
 import { useMemo } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
@@ -30,6 +32,8 @@ import {
   resolveNew994AdjacentScope,
 } from "@/lib/tax-engine/transfer-reductions/new-99-4-area";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
+import { new994CapitalRegionConflict, resolveNew994SizeScope } from "@/lib/tax-engine/transfer-reductions/new-99-4-size";
+import { new994AdjacentAnswer } from "@/lib/calc/new-99-4-form";
 
 type New994Rural = Extract<AssetReductionForm, { type: "new_99_4_rural" }>;
 type New994Hometown = Extract<AssetReductionForm, { type: "new_99_4_hometown" }>;
@@ -44,7 +48,14 @@ interface Props {
    * 명부 행 ⑥에서 쓸 때(판정 메뉴·계산기) — 취득일·주소는 **행 값**이다(`HouseEntry.countExclusion` 주석).
    * 주면 두 칸을 입력으로 받지 않고 읽기 전용으로 보여 준다(두 벌 입력 금지).
    */
-  rowFacts?: { acquisitionDate: string; jibun: string };
+  rowFacts?: {
+    acquisitionDate: string;
+    jibun: string;
+    /** 행 전용면적(㎡) — 공동주택 면적 요건(NH-05 PR-2b)은 이 값으로 본다 */
+    exclusiveArea?: string;
+    /** 행 법정동코드 — 수도권 모순 안내(NH-20) */
+    regionCode?: string;
+  };
 }
 
 /**
@@ -138,6 +149,26 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
   const adjacentTail = adjacentScope
     ? [adjacentScope.basis, adjacentScope.unsettled].filter(Boolean).join(" · ")
     : "";
+  const adjacentUnit = adjacentScope ? adjacentScope.unit : "행정구역";
+
+  // 종전 면적 요건 범위(대지 2021.1.1. 전 양도 · 주택 2017.1.1. 전 양도) — ⑧·엔진과 같은 함수. store 기록 없는 파생값.
+  const sizeScope = useMemo(
+    () =>
+      resolveNew994SizeScope({
+        transferDate: toOptionalDate(transferDate),
+        ruralHouseAcquisitionDate: toOptionalDate(acquisitionDate),
+      }),
+    [transferDate, acquisitionDate],
+  );
+
+  // NH-20 — 행 주소가 예외 아닌 수도권인데 소재지 요건을 켰으면 ⑧·⑫가 막는다. 같은 문장을 여기서 먼저 보인다.
+  const capitalConflict = new994CapitalRegionConflict({
+    isHometown,
+    meetsLocationRequirement: value.meetsLocationRequirement,
+    regionCode: rowFacts?.regionCode,
+    transferDate: toOptionalDate(transferDate),
+    ruralHouseAcquisitionDate: toOptionalDate(acquisitionDate),
+  });
 
   return (
     <div className="mt-2 ml-4 space-y-3">
@@ -213,6 +244,72 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
           description={`2014.1.1. 이후 구입한 지자체 등록 한옥은 한도 4억 (${NEW_99_4_STD_PRICE_ADDENDA.HANOK_2014_PURCHASE} · ${NEW_99_4_HANOK_DECREE})`}
           tone="sky"
         />
+        {(sizeScope.land || sizeScope.house) && (
+          <div className="space-y-2" data-testid="new994-size-fields">
+            <p className="text-xs font-medium">면적 요건 (양도일 기준 — 종전 조특법 §99의4①{isHometown ? "2호다목" : "1호나목"})</p>
+            {sizeScope.land && (
+              <div>
+                <label className="mb-1 block text-xs font-medium">대지면적 (㎡)</label>
+                <DecimalInput
+                  data-testid="new994-land-area"
+                  value={value.ruralLandAreaSqm994 ?? ""}
+                  onChange={(v) => onChange({ ruralLandAreaSqm994: v })}
+                  unit="㎡"
+                />
+                <p className="mt-1 text-micro text-muted-foreground">
+                  2021.1.1. 전 양도분은 대지면적이 660㎡ 이내여야 합니다 (조특법 법률 제17759호 부칙 제21조② — 2021.1.1. 이후 양도분부터 삭제)
+                </p>
+              </div>
+            )}
+            {sizeScope.house && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium">주택 유형 — 2017.1.1. 전 양도분 주택 면적 기준</p>
+                <RadioCardGroup
+                  name={`new994-house-type-${value.houseId ?? "form"}`}
+                  tone="sky"
+                  layout="stack"
+                  value={value.ruralHouseType994 ?? ""}
+                  onChange={(v) => onChange({ ruralHouseType994: v })}
+                  options={[
+                    {
+                      value: "multi_unit" as const,
+                      label: "공동주택",
+                      description: "아파트·연립주택·다세대주택 — 전용면적 116㎡ 이내",
+                      testId: "new994-house-type-multi_unit",
+                    },
+                    {
+                      value: "other" as const,
+                      label: "그 밖의 주택",
+                      description: "단독주택·다가구주택 등 — 연면적 150㎡ 이내",
+                      testId: "new994-house-type-other",
+                    },
+                  ]}
+                />
+                {value.ruralHouseType994 === "multi_unit" && (
+                  <p className="text-xs" data-testid="new994-row-exclusive-area">
+                    전용면적: {(rowFacts?.exclusiveArea ?? "") || "—"}
+                    {rowFacts?.exclusiveArea ? "㎡" : ""}{" "}
+                    <span className="text-caption text-muted-foreground">(이 주택의 기본 정보 전용면적)</span>
+                  </p>
+                )}
+                {value.ruralHouseType994 === "other" && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">주택 연면적 (㎡)</label>
+                    <DecimalInput
+                      data-testid="new994-floor-area"
+                      value={value.ruralHouseFloorAreaSqm994 ?? ""}
+                      onChange={(v) => onChange({ ruralHouseFloorAreaSqm994: v })}
+                      unit="㎡"
+                    />
+                  </div>
+                )}
+                <p className="text-micro text-muted-foreground">
+                  주택의 연면적 150㎡(공동주택은 전용면적 116㎡) 이내 — 종전 조특령 §99의4⑤, 2017.1.1. 이후 양도분부터 삭제(조특법 법률 제14390호 부칙 제2조③)
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </ToneCard>
 
       {/* ③ 소재지·자격 */}
@@ -224,17 +321,38 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
           description={locationDescription(isHometown, acquisitionDate, transferDate ?? "")}
           tone="rose"
         />
-        <ToggleCard
-          checked={value.isAdjacentArea}
-          onCheckedChange={(v) => onChange({ isAdjacentArea: v })}
-          title={adjacentScope ? `일반주택과 같은·연접 ${adjacentScope.unit}` : "일반주택과 같은·연접 행정구역"}
-          description={
-            adjacentScope
-              ? `${houseLabel}과 일반주택이 행정구역상 같은 ${adjacentScope.unit} 또는 연접한 ${adjacentScope.unit}에 있으면 켜세요 — 켜면 특례가 적용되지 않습니다 (§99의4③${adjacentTail ? ` · ${adjacentTail}` : ""})`
-              : `비교할 행정구역 단위는 ${isHometown ? "양도일에 따라 다릅니다(읍·면·시 / 시)" : "취득일·양도일에 따라 다릅니다(읍·면·시 / 읍·면 / 읍·면·동)"} — 날짜를 먼저 입력하세요 (§99의4③)`
-          }
-          tone="rose"
-        />
+        {/* 🔑 testid는 바깥 div에 — `ToneCard`는 `data-testid`를 전달하지 않는다. */}
+        {capitalConflict && (
+          <div data-testid="new994-capital-conflict">
+            <ToneCard tone="rose" title="수도권 주소">
+              <p className="text-xs">{capitalConflict}</p>
+            </ToneCard>
+          </div>
+        )}
+        {/* NH-30 — 예/아니오/모름(기본값 없음 · ⑧ 필수). 모름은 불성립 + 확인 필요(엔진). */}
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium">
+            {houseLabel}과 일반주택(양도 주택)이 행정구역상 같은 {adjacentUnit} 또는 연접한 {adjacentUnit}에 있나요?
+          </p>
+          <RadioCardGroup
+            name={`new994-adjacent-${value.houseId ?? "form"}`}
+            tone="rose"
+            layout="inline"
+            value={new994AdjacentAnswer(value)}
+            onChange={(v) => onChange({ adjacentArea994: v, isAdjacentArea: undefined })}
+            data-testid="new994-adjacent"
+            options={[
+              { value: "yes" as const, label: "예", description: "특례가 적용되지 않습니다", testId: "new994-adjacent-yes" },
+              { value: "no" as const, label: "아니오", description: "같지도 연접하지도 않습니다", testId: "new994-adjacent-no" },
+              { value: "unknown" as const, label: "모름", description: "적용하지 않고 결과에 확인 필요로 표시합니다", testId: "new994-adjacent-unknown" },
+            ]}
+          />
+          <p className="text-micro text-muted-foreground">
+            {adjacentScope
+              ? `§99의4③${adjacentTail ? ` · ${adjacentTail}` : ""}`
+              : `비교할 행정구역 단위는 ${isHometown ? "양도일에 따라 다릅니다(읍·면·시 / 시)" : "취득일·양도일에 따라 다릅니다(읍·면·시 / 읍·면 / 읍·면·동)"} — 날짜를 먼저 입력하세요 (§99의4③)`}
+          </p>
+        </div>
         {value.type === "new_99_4_hometown" && (
           <ToggleCard
             checked={value.meetsHometownRequirement}

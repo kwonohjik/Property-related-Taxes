@@ -9,6 +9,7 @@
  */
 
 import type { New994Result } from "@/lib/tax-engine/types/transfer.types";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 interface Props {
   detail: New994Result;
@@ -83,7 +84,29 @@ export function New994DetailCard({ detail, houseRef }: Props) {
             {detail.ruralHoldingYears}년
           </span>
         </div>
+        {/* 계획서 Q-9 (a) — 적용한 가액 한도(양도일·취득일별, `resolveNew994StdPriceLimit`)와 근거 */}
+        {detail.appliedLimit && (
+          <div className="flex justify-between gap-3" data-testid="new994-applied-limit">
+            <span className="text-muted-foreground shrink-0">적용 한도</span>
+            <span className="text-right text-violet-900 dark:text-violet-200">
+              취득 당시 기준시가 합계 {detail.appliedLimit.label.split(" — ")[0]} 이하 ({detail.appliedLimit.legalBasis})
+            </span>
+          </div>
+        )}
       </div>
+
+      {/* 계획서 Q-4·Q-5 (c) — 해석례가 없는 칸의 「확인 필요」 */}
+      {detail.notices && detail.notices.length > 0 && (
+        <div data-testid="new994-notices">
+          <ToneCard tone="amber">
+            <ul className="text-caption space-y-0.5 pl-4 list-disc">
+              {detail.notices.map((n, i) => (
+                <li key={i}>{n}</li>
+              ))}
+            </ul>
+          </ToneCard>
+        </div>
+      )}
 
       {detail.clawbackWarning && (
         <div className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-950/30 px-3 py-2">

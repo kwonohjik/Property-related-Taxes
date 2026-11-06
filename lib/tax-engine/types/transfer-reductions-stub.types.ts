@@ -218,8 +218,15 @@ export type TransferReductionStub =
       ruralHouseAcquisitionDate?: Date;
       ruralHouseStdPrice?: number;
       isRegisteredHanok?: boolean;
-      isAdjacentArea?: boolean;
+      /** ③ 연접 — 예/아니오/모름 (미입력 = 모름, NH-30) */
+      adjacentArea994?: "yes" | "no" | "unknown";
       meetsLocationRequirement?: boolean;
+      /** 종전 면적 요건 (NH-05 PR-2b — `new-99-4-size.ts`) */
+      ruralLandAreaSqm994?: number;
+      ruralHouseType994?: "multi_unit" | "other";
+      ruralHouseAreaSqm994?: number;
+      /** 명부 행 법정동코드 — ⑫ 수도권 모순 판정 전용(NH-20). 엔진 평가에는 쓰지 않는다 */
+      ruralHouseRegionCode?: string;
       _phase1Stub?: true }
   | { type: "new_99_4_hometown";
       /** 판정 메뉴 명부 행 id — 「어느 주택인가」 */
@@ -227,8 +234,15 @@ export type TransferReductionStub =
       ruralHouseAcquisitionDate?: Date;
       ruralHouseStdPrice?: number;
       isRegisteredHanok?: boolean;
-      isAdjacentArea?: boolean;
+      /** ③ 연접 — 예/아니오/모름 (미입력 = 모름, NH-30) */
+      adjacentArea994?: "yes" | "no" | "unknown";
       meetsLocationRequirement?: boolean;
+      /** 종전 면적 요건 (NH-05 PR-2b — `new-99-4-size.ts`) */
+      ruralLandAreaSqm994?: number;
+      ruralHouseType994?: "multi_unit" | "other";
+      ruralHouseAreaSqm994?: number;
+      /** 명부 행 법정동코드 — ⑫ 수도권 모순 판정 전용(NH-20). 엔진 평가에는 쓰지 않는다 */
+      ruralHouseRegionCode?: string;
       meetsHometownRequirement?: boolean;
       _phase1Stub?: true }
   // 미분양 §98 시리즈 + §99의2

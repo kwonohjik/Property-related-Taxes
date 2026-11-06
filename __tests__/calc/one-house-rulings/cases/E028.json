@@ -26,7 +26,10 @@
               "ruralHouseAcquisitionDate": "",
               "ruralHouseStdPrice": "100000000",
               "isRegisteredHanok": false,
-              "isAdjacentArea": false,
+              "adjacentArea994": "no",
+              "ruralLandAreaSqm994": "330",
+              "ruralHouseType994": "other",
+              "ruralHouseFloorAreaSqm994": "99",
               "meetsLocationRequirement": true
             }
           },

@@ -13,6 +13,7 @@ import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { hasRentIncreaseRule } from "./rental-rent-increase-label";
 import { aptDeadlineExtensionPayload } from "./apt-deadline-extension-scope";
 import { rental974SaMokApplies } from "./apt-deadline-extension-scope";
+import { toNew994Payload } from "./new-99-4-form";
 
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
 /**
@@ -386,24 +387,7 @@ export function toEngineReductions(
     }
     // ── §99의4 농어촌·고향주택 (2026-06-11): 주택수 제외 본 변환 (④) ──
     // 날짜는 string 그대로 전달 — Route handler(⑭ route-reductions-mapper)에서 Date 변환.
-    if (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown") {
-      const common994 = {
-        ...(r.houseId ? { houseId: r.houseId } : {}),
-        ruralHouseAcquisitionDate: r.ruralHouseAcquisitionDate || undefined,
-        ruralHouseStdPrice: parseAmount(r.ruralHouseStdPrice || "0") || undefined,
-        isRegisteredHanok: r.isRegisteredHanok,
-        isAdjacentArea: r.isAdjacentArea,
-        meetsLocationRequirement: r.meetsLocationRequirement,
-      };
-      if (r.type === "new_99_4_hometown") {
-        return {
-          type: "new_99_4_hometown" as const,
-          ...common994,
-          meetsHometownRequirement: r.meetsHometownRequirement,
-        };
-      }
-      return { type: "new_99_4_rural" as const, ...common994 };
-    }
+    if (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown") return toNew994Payload(r);
     // ── P1 §99 신축주택 IMF 1차 (2026-06-11): 차감형 본 변환 (④) ──
     // 날짜는 string 그대로 — Route handler(⑭ route-reductions-mapper)에서 Date 변환.
     if (r.type === "new_99") {
