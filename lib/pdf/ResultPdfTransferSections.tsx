@@ -79,6 +79,8 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows 
   const incomeAmountAfter = isRH ? ((num(r.taxableGain) ?? 0) as number) : Math.max(0, incomeAmount - incomeDeduction);
   // 농특세 총액 echo가 정본 — 소득금액차감 detail 합은 총액 echo가 없는 옛 저장 결과 전용 폴백(화면 `resolveRuralSurtax`와 같은 순서).
   const ruralSurtax = (num(r.ruralSurtax) ?? incomeDeductionRuralSurtax(r as unknown as TransferTaxResult)) as number;
+  // NH-38 — 농특세 미납분 납부지연가산세(엔진 echo · 소득세 가산세와 별도 줄)
+  const ruralPenalty = (r as unknown as TransferTaxResult).ruralSurtaxDelayedPenalty?.penalty ?? 0;
   /**
    * ㉘ 가산세액 — **두 축의 합**이다(「소득세법」 제92조 제3항 제3호).
    *   · `r.penaltyTax`    : 「소득세법」 제114조의2 환산가액적용가산세
@@ -150,6 +152,8 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows 
         ))}
         <View style={s.rowBg}><Text style={s.lbl}>총결정세액</Text><Text style={s.valAccent}>{fmt(totalDeterminedTax)}</Text></View>
         {ruralSurtax > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세</Text><Text style={s.val}>{fmt(ruralSurtax)}</Text></View>)}
+        {/* NH-38 — 농특세 미납분 납부지연가산세(소득세 가산세와 별도 줄) */}
+        {ruralPenalty > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세 납부지연가산세</Text><Text style={s.val}>{fmt(ruralPenalty)}</Text></View>)}
         {num(r.localIncomeTax) !== undefined && (<View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>)}
       </View>
     </>

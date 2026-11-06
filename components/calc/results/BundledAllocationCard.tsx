@@ -126,6 +126,8 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     localIncomeTax: a.localIncomeTax,
     // 집계 엔진은 농특세를 이미 총액(소득금액차감분 + 세액감면분)으로 노출한다.
     ruralSurtax: a.ruralSurtax,
+    // NH-38 — 일괄·일반건물은 가산세가 신고서 단위다(자산별 입력 없음) — 그 농특세분 납부지연가산세 상세를 승계한다.
+    ...(a.filingUnitRuralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty: a.filingUnitRuralSurtaxDelayedPenalty } : {}),
     totalTax: a.totalTax,
     steps: a.steps,
     // UI 자산별 산식 인라인 표시용 — 사례 31·33 일반건물 일괄 모드만 채워짐.
