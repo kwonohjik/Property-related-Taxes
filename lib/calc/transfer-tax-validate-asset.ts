@@ -18,6 +18,8 @@
  * 799 → 697줄 (2026-08-07, 상가 3블록 위임 — 트리거 800 직하라 여유분 확보).
  */
 
+import { UNSOLD_98_SERIES_HOUSING_ONLY_IDS } from "@/lib/tax-engine/transfer-reductions/asset-kind-gate";
+import { REDUCTION_METADATA } from "@/lib/tax-engine/transfer-reductions/metadata";
 import { validateMixedSaleSplit } from "./transfer-tax-validate-mixed-use-sale-split";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
@@ -270,6 +272,27 @@ export function validateAssetEntry(
         "landNature",
         `${label}: 주택부수토지를 첫 자산으로 넣고 주택을 함께 양도하는 자산으로 넣으면 1세대1주택 판정에 필요한 세대·거주기간·조정대상지역 입력이 열리지 않아 계산할 수 없습니다. 주택을 첫 자산으로, 이 토지를 함께 양도하는 자산(주택부수토지)으로 입력하세요 — 배율 이내·초과 구분과 1세대1주택 합산 판정을 합니다(소득세법 §89①3호).`,
       );
+    }
+    /**
+     * US-34 — 조특법 §98 시리즈 감면주택의 부수토지를 별도 토지 카드로 나누면 토지분이 특례에서 빠진다(토지 카드에는 감면을 걸 수 없다 —
+     * 조문 게이트 `UNSOLD_98_SERIES_HOUSING_ONLY_IDS`). 해석례는 실제 부수토지로 쓰는 부분도 특례 대상으로 본다(재산세과-861 · 재산세과-1685 ·
+     * 부동산거래관리과-1097). 사용자 결정 2026-11-06 「조합 차단」 — 한 장의 주택 카드로 입력하게 안내한다(실측: 분리 시 §98의7 18,239,998 과대).
+     */
+    if (a.landNature === "appurtenant" && form.assetSplitMode !== "fractional") {
+      const unsoldIds = new Set(
+        form.assets
+          .filter((o) => o.assetId !== a.assetId && o.assetKind === "housing")
+          .flatMap((o) => (o.reductions ?? []).map((r) => r.type))
+          .filter((t) => UNSOLD_98_SERIES_HOUSING_ONLY_IDS.has(t)),
+      );
+      if (unsoldIds.size > 0) {
+        const labels = [...unsoldIds].map((t) => REDUCTION_METADATA[t as keyof typeof REDUCTION_METADATA]?.uiLabel ?? t).join(" · ");
+        return fieldError(
+          "landNature",
+          `${label}: 함께 양도하는 주택에 ${labels} 특례를 선택했습니다. 그 주택의 부수토지를 별도 토지 카드로 나누면 토지분이 특례에서 빠집니다 ` +
+            "(실제 주택 부수토지로 쓰는 부분도 특례 대상 — 재산세과-861). 주택과 부수토지를 한 장의 주택 카드로 입력하세요.",
+        );
+      }
     }
     // #18 하위 1 — 부수토지로 선언한 토지는 면적이 있어야 배율 이내인지(비과세·표2 대상)와 12억 고가주택 판정 합계를 가를 수 있다.
     //   ④(`transfer-tax-api-companion-payload.ts`)가 `areaM2`로 싣는 식과 **같은 식**(양도면적 우선, 없으면 취득면적)이다 — 3중 패턴.
