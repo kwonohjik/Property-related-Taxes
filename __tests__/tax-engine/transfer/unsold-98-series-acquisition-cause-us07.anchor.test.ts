@@ -132,6 +132,8 @@ describe("US-06 명부 행 — 상속 감면주택은 주택 수에서 빠지지
     article,
     houseId: "h2",
     houseAcquisitionDate: article === "new_99" ? new Date("1999-03-01") : new Date("2009-06-01"),
+    // #2951(NH-24) 이후 §99·§99의3 행은 유형 필수 — 자기건설(사용승인일=취득일 축)
+    ...(article === "new_99" ? { housingKind: "self_built" as const } : {}),
     requirementsConfirmed: true,
     ...extra,
   });
@@ -165,7 +167,7 @@ describe("US-06 명부 행 — 상속 감면주택은 주택 수에서 빠지지
     expect(resolveSpecialHouseExclusions([decl("new_99", { acquiredByGift: true })], T99).excludedCount).toBe(0);
     expect(resolveSpecialHouseExclusions([decl("new_99", { acquiredByGift: false })], T99).excludedCount).toBe(1);
     const r993 = resolveSpecialHouseExclusions(
-      [{ article: "new_99_3", houseId: "h2", houseAcquisitionDate: new Date("2002-06-01"), requirementsConfirmed: true, acquiredByGift: true }],
+      [{ article: "new_99_3", houseId: "h2", houseAcquisitionDate: new Date("2002-06-01"), housingKind: "self_built" as const, requirementsConfirmed: true, acquiredByGift: true }],
       new Date("2007-06-01"),
     );
     expect(r993.entries[0].eligible).toBe(false);
