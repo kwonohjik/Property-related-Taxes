@@ -27,6 +27,8 @@ import { Unsold989InputForm } from "@/components/calc/transfer/Unsold989InputFor
 import { SpecialHouseExclusionItemFields } from "@/components/calc/transfer/SpecialHouseExclusionSection";
 import { InheritedPresaleQuestion } from "@/components/calc/transfer/InheritedPresaleQuestion";
 import { asksInheritedPresaleQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
+import { asksRowGiftQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { getReductionDefault } from "@/components/calc/transfer/UnifiedReductionPanel-defaults";
 import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
 import type {
@@ -217,6 +219,20 @@ export function HouseEntryCountExclusionSection({
                 })
               }
             />
+            {/* US-06 후속 — 상속 행이 아니면 증여 취득 여부(기본 꺼짐). 상속 행은 행 사실(상속)이 이미 정한다. */}
+            {house.isInherited !== true && asksRowGiftQuestion(current.special.article) && (
+              <div data-testid="house-row-count-exclusion-acquired-by-gift">
+                <ToggleCard
+                  tone="violet"
+                  checked={current.special.acquiredByGift === true}
+                  onCheckedChange={(v) =>
+                    onUpdate({ countExclusion: { kind: "special", special: { ...current.special, acquiredByGift: v } } })
+                  }
+                  title="증여(배우자·직계존비속 이월과세 대상 증여 포함)로 취득한 주택"
+                  description="증여로 받은 이 조문의 주택은 증여받은 사람의 소유주택에서 빠지지 않습니다 — 켜면 주택 수에 그대로 셉니다."
+                />
+              </div>
+            )}
             {/* US-06 — 상속 행: §98의3·§98의5·§98의7만 분양권 상속 예외를 묻는다(⑧·⑬과 같은 술어). 그 밖의 조문은 엔진이 불성립 사유로 안내한다. */}
             {house.isInherited === true && asksInheritedPresaleQuestion(current.special.article, "inheritance") && (
               <InheritedPresaleQuestion

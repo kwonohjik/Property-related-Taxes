@@ -588,6 +588,7 @@ export function toEngineReductions(
           : parseAmount(r.standardPriceAtAcquisition985 || "0");
       return {
         type: "unsold_98_5" as const,
+        isEligibleSubject985: r.isEligibleSubject985,
         contractDate985: r.contractDate985 || undefined,
         /**
          * D5-02 — ⚠️ `|| undefined`는 **0을 undefined로 바꾼다**. 조특법 §98의5①1호가
@@ -624,6 +625,7 @@ export function toEngineReductions(
           : parseAmount(r.standardPriceAtAcquisition986 || "0");
       return {
         type: "unsold_98_6" as const,
+        isEligibleSubject986: r.isEligibleSubject986,
         hoType986: r.hoType986,
         stdPriceSumAtBase986: parseAmount(r.stdPriceSumAtBase986 || "0") || undefined,
         floorAreaSqm986: parseDecimal(r.floorAreaSqm986 || "") || undefined,

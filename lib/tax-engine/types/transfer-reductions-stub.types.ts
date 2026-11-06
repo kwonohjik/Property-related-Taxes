@@ -271,7 +271,7 @@ export type TransferReductionStub =
   // §98의3 — P3 본격 구현 (2026-06-12): 하이브리드 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "unsold_98_3";
       region?: "metropolitan" | "non_metropolitan"; // Phase 1 stub 호환
-      residencyType983?: "resident" | "nonresident_no_pe";
+      residencyType983?: "resident" | "nonresident_no_pe" | "nonresident_with_pe";
       houseType983?: "purchased" | "self_built";
       contractDate983?: Date;
       constructionStartDate983?: Date;
@@ -298,6 +298,8 @@ export type TransferReductionStub =
   // §98의5 — P3 본격 구현 (2026-06-12)
   | { type: "unsold_98_5";
       priceReductionRate?: number; // Phase 1 stub 호환
+      /** US-42 — 거주자 또는 국내사업장 없는 비거주자. 미제공 = true */
+      isEligibleSubject985?: boolean;
       contractDate985?: Date;
       priceReductionRatePct985?: number;
       isNonCapitalUnsoldAtCutoff985?: boolean;
@@ -311,6 +313,8 @@ export type TransferReductionStub =
   // §98의6 — P3 본격 구현 (2026-06-12)
   | { type: "unsold_98_6";
       hoType986?: "seller_rented" | "buyer_rented";
+      /** US-42 — 거주자 또는 국내사업장 없는 비거주자. 미제공 = true */
+      isEligibleSubject986?: boolean;
       stdPriceSumAtBase986?: number;
       floorAreaSqm986?: number;
       isUnsoldAfterCompletion986?: boolean;

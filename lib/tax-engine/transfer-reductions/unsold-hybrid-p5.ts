@@ -263,6 +263,8 @@ export interface SpecialHouseExclusionInput {
   isInherited?: boolean;
   /** 상속 당시 분양권이었고 상속인이 잔금을 내고 취득했는가 — `isInherited`이고 §98의3·§98의5·§98의7일 때만 읽는다 */
   inheritedPresaleCompletedByHeir?: "yes" | "no" | "unknown";
+  /** 증여(이월과세 대상 증여 포함)로 취득한 감면주택 — §98 시리즈(§98의6 포함)·§99·§99의3은 주택 수에서 빠지지 않는다 */
+  acquiredByGift?: boolean;
 }
 
 /**
@@ -513,7 +515,8 @@ function evaluateSpecialHouseExclusion(
       };
     }
   }
-  const inheritedFail = e.isInherited === true ? inheritedSpecialHouseReason(e) : undefined;
+  const inheritedFail =
+    e.isInherited === true ? inheritedSpecialHouseReason(e) : e.acquiredByGift === true ? giftSpecialHouseReason(e) : undefined;
   if (inheritedFail) {
     return {
       article: e.article,
@@ -547,6 +550,16 @@ function inheritedSpecialHouseReason(e: SpecialHouseExclusionInput): { message: 
     inheritedPresaleCompletedByHeir: e.inheritedPresaleCompletedByHeir,
   });
   return r ? { message: r.message, ...(r.unconfirmed ? { unconfirmed: true } : {}) } : undefined;
+}
+
+/** 증여 취득 행 — §98 시리즈 6조문(§98의6 포함 — 2호 예외는 상속에만)·§99·§99의3 감면주택은 소유주택에서 빠지지 않는다. */
+function giftSpecialHouseReason(e: SpecialHouseExclusionInput): { message: string; unconfirmed?: boolean } | undefined {
+  if (e.article === "new_99" || e.article === "new_99_3") {
+    const gate = evaluateNew99AcquisitionGate({ article: e.article, acquisitionType: "from_builder", acquisitionCause: "gift" });
+    return gate ? { message: gate.message } : undefined;
+  }
+  const r = unsold98AcquisitionCauseReason(e.article, "gift");
+  return r ? { message: r.message } : undefined;
 }
 
 /**

@@ -41,6 +41,22 @@ describe("행 ⑥ 분양권 상속 질문", () => {
     });
   });
 
+  it("U-3: 증여 토글 — 상속이 아닌 행 §98의3에서 보이고, 켜면 선언에 acquiredByGift가 저장된다 · 상속 행·범위 밖 조문에는 없다", () => {
+    const onUpdate = vi.fn();
+    render(<HouseEntryCountExclusionSection house={row("unsold_98_3", false)} onUpdate={onUpdate} />);
+    const box = screen.getByTestId("house-row-count-exclusion-acquired-by-gift");
+    fireEvent.click(box.querySelector('[role="switch"]') as Element);
+    expect(onUpdate).toHaveBeenCalledWith({
+      countExclusion: { kind: "special", special: expect.objectContaining({ article: "unsold_98_3", acquiredByGift: true }) },
+    });
+    cleanup();
+    render(<HouseEntryCountExclusionSection house={row("unsold_98_3", true)} onUpdate={() => {}} />);
+    expect(screen.queryByTestId("house-row-count-exclusion-acquired-by-gift")).toBeNull();
+    cleanup();
+    render(<HouseEntryCountExclusionSection house={row("unsold_98_8", false)} onUpdate={() => {}} />);
+    expect(screen.queryByTestId("house-row-count-exclusion-acquired-by-gift")).toBeNull();
+  });
+
   it("U-2: 상속이 아닌 행 · 묻지 않는 조문(§98의2·§99)에서는 보이지 않는다", () => {
     render(<HouseEntryCountExclusionSection house={row("unsold_98_3", false)} onUpdate={() => {}} />);
     expect(screen.queryByTestId(Q)).toBeNull();

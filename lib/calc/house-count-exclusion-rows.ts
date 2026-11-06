@@ -21,6 +21,7 @@
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { asksInheritedPresaleQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
+import { asksRowGiftQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
 import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
 import { resolveHouseCountExclusion } from "@/lib/tax-engine/transfer-reductions/unsold-98-9";
 import { resolveSpecialHouseExclusions } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
@@ -340,9 +341,10 @@ export function specialHouseExclusionsPayload(form: CalcFormLike) {
  * 조문을 바꾼 뒤 남은 값은 보내지 않는다(⑤·⑧과 같은 술어 `asksInheritedPresaleQuestion`).
  */
 export function specialHouseInheritancePayload(
-  e: Pick<SpecialHouseExclusionFormItem, "article" | "isInherited" | "inheritedPresaleCompletedByHeir">,
-): { isInherited?: true; inheritedPresaleCompletedByHeir?: "yes" | "no" | "unknown" } {
-  if (e.isInherited !== true) return {};
+  e: Pick<SpecialHouseExclusionFormItem, "article" | "isInherited" | "inheritedPresaleCompletedByHeir" | "acquiredByGift">,
+): { isInherited?: true; inheritedPresaleCompletedByHeir?: "yes" | "no" | "unknown"; acquiredByGift?: true } {
+  // 증여 토글 — 상속 행이 아니고 취득 원인으로 갈리는 조문일 때만(조문을 바꾼 뒤 남은 값은 보내지 않는다 · ⑤와 같은 술어)
+  if (e.isInherited !== true) return e.acquiredByGift === true && asksRowGiftQuestion(e.article) ? { acquiredByGift: true } : {};
   const a = e.inheritedPresaleCompletedByHeir;
   return {
     isInherited: true as const,

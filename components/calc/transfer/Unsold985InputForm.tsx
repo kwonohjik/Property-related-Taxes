@@ -70,6 +70,18 @@ export function Unsold985InputForm({
         <LawArticleModal legalBasis="조세특례제한법 시행령 §98의4" label="조특령 §98의4" />
       </div>
 
+      {/* US-42 — 적용 주체(법 §98의5① 「거주자 또는 「소득세법」 제120조에 따른 국내사업장이 없는 비거주자」). D11-05와 같이 화면에 보이고 끌 수 있다. */}
+      <div className="flex flex-wrap gap-2 text-xs">
+        <ToggleCard
+          variant="chip"
+          tone="violet"
+          title="거주자 또는 국내사업장 없는 비거주자"
+          description="법 §98의5① — 국내사업장이 있는 비거주자는 해제(적용 배제)"
+          checked={value.isEligibleSubject985 ?? true}
+          onCheckedChange={(v) => onChange({ isEligibleSubject985: v })}
+        />
+      </div>
+
       <SectionShell num="①" title="최초 매매계약 정보" tone="sky">
         <div>
           <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
