@@ -490,8 +490,10 @@ function calculateTransferTaxCore(
   // gain 계산 완료 후 실행. applied=true 시 특례 결과로 즉시 반환(STEP 3 이후 생략),
   // false 시 미적용 사유만 steps에 기록하고 일반 경로 계속. (구현: transfer-tax-rental-housing-step.ts)
   // V-3′ — 다른 세대 주택의 부수토지는 이 세대의 거주주택이 아니다(§155⑳ 「1세대가」) — 특례 없이 일반 경로(STEP 1이 비과세를 거뒀다).
+  const rheUnmet: { detail?: TransferTaxResult["rentalHousingExceptionDetail"] } = {}; // ⑳ 불성립 판정 출구(V-7)
   if (effectiveInput.rentalHousingException?.applyException && !landOnlyBuildingOwnerOtherHousehold(effectiveInput)) {
     const rheResult = runRentalHousingExceptionStep({
+      unmetOut: rheUnmet,
       effectiveInput,
       input,
       transferGain,
@@ -671,6 +673,7 @@ function calculateTransferTaxCore(
 
   // STEP 7.5 ~ 11/12: 산출세액 이후 단계 + 결과 조립 (transfer-tax-normal-return.ts)
   return buildNormalTransferTaxResult({
+    rentalHousingExceptionUnmetDetail: rheUnmet.detail,
     input,
     effectiveInput,
     rawInput,

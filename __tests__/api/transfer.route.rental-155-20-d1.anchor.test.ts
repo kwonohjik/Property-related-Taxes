@@ -233,7 +233,7 @@ describe("OH-15 route — B 등록 이후 거주기간", () => {
       "2024-03-03",
     );
   it("D1R-6 등록 이후 0개월 → 특례 미적용 / 24개월 → RH-B1 적용", async () => {
-    expect((await single(b("0"))).rentalApplied).toBeUndefined();
+    expect((await single(b("0"))).rentalApplied).toBe(false);
     expect((await single(b("24"))).rentalApplied).toBe(true);
   });
   /**

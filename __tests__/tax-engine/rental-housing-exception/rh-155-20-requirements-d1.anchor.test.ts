@@ -139,7 +139,7 @@ describe("OH-15 PHRP 거주요건 = 사업자·임대사업자 등록 이후 거
 
   it("OH15-6 전엔진(리뷰 F4): 거주 48개월 전부 등록 전 → 특례 미적용(과세 경로)", () => {
     const r = calculateTransferTax(inputB(0), rates);
-    expect(r.rentalHousingExceptionDetail).toBeUndefined();
+    expect(r.rentalHousingExceptionDetail?.applied).toBe(false);
     expect(r.steps.find((s) => s.label.includes("적용 불가"))?.formula).toContain("임대사업자 등록 이후");
   });
 

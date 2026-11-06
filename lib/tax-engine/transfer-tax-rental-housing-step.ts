@@ -36,6 +36,7 @@ import type {
   TransferTaxResult,
 } from "./types/transfer.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
+import type { RentalHousingExceptionResult } from "./transfer-tax/rental-housing-exception/types";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { calcTax } from "./transfer-tax-rate-calc";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -121,6 +122,12 @@ export interface RentalHousingStepArgs {
   new994Detail?: TransferTaxResult["new994Detail"];
   unsold989Detail?: TransferTaxResult["unsold989Detail"];
   houseCountExclusionDetails?: TransferTaxResult["houseCountExclusionDetails"];
+  /**
+   * 호별·거주 요건 불성립으로 이 step이 `null`(일반 경로 계속)을 돌려줄 때 그 판정(`applied: false`)을 담는 출구.
+   * `null`은 「적용 안 함」만 알려서, 불성립 사유가 접힌 계산 과정(`steps`)에만 남고 결과 카드가 없었다(V-7) —
+   * 호출부가 이 값을 최종 결과의 `rentalHousingExceptionDetail`로 싣는다. 세액 불변(표시 전용).
+   */
+  unmetOut?: { detail?: RentalHousingExceptionResult };
 }
 
 /**
@@ -326,6 +333,7 @@ export function runRentalHousingExceptionStep(
   // applied=false: 미적용 사유를 steps에 기록하여 결과 화면에서 노출 (침묵 실패 차단)
   if (!phrpUnmetReason && !rhe.applied) {
     const reasonText = rentalUnmetReasonText(rhe.eligibility);
+    if (args.unmetOut) args.unmetOut.detail = rhe;
     steps.push({
       label: "장기임대주택 거주주택 비과세 특례 — 적용 불가",
       formula: reasonText,

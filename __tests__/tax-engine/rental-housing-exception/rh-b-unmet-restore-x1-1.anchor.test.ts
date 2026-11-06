@@ -76,7 +76,7 @@ describe("X1-1 B 불충족 — 임대주택을 주택 수에 되돌린다", () =
     expect(r.isExempt).toBe(false);
     expect(r.isPartialExempt).toBe(false);
     expect(r.exemptReason).toBeUndefined();
-    expect(r.rentalHousingExceptionDetail).toBeUndefined();
+    expect(r.rentalHousingExceptionDetail?.applied).toBe(false);
     const base = baseline(1_500_000_000);
     expect(r.totalTax).toBe(base.totalTax);
     expect(r.longTermHoldingRate).toBe(base.longTermHoldingRate);
