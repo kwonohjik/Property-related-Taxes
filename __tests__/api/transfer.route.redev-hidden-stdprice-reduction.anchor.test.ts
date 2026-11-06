@@ -197,33 +197,32 @@ describe("RH-3 차감형 감면 — 5년 안분 양도시 기준시가", () => {
     }
   });
 
-  it("§98의3(⑧ 가드 없음 — Q-3 a): 숨은 옛 값은 엔진에 가지 않고, 엔진이 미입력 사유로 감면을 뺀다", async () => {
-    const r983 = {
-      type: "unsold_98_3",
-      residencyType983: "resident",
-      houseType983: "purchased",
-      contractDate983: "2009-06-01",
-      constructionStartDate983: "",
-      usageApprovalDate983: "",
-      isOutsideSeoulNotDesignated983: true,
-      isOverconcentration983: false,
-      landAreaSqm983: "",
-      floorAreaSqm983: "",
-      isUnsoldConfirmed983: true,
-      isFirstContract983: true,
-      isNotOccupiedAtContract983: true,
-      isNotRecontract983: true,
-      isNotExcludedSelfBuilt983: true,
-      standardPriceAtAcquisition983: "100000000",
-      standardPriceAt5Years983: "160000000",
-      standardPriceAtTransfer983: "",
+  /** 🔄 2026-11-06 US-44: §98의3은 완공APT에서 막혀(사용자 결정 Q-4) 같은 하이브리드 코어의 §99의2로 옮겼다. */
+  it("§99의2(⑧ 가드 없음 — Q-3 a): 숨은 옛 값은 엔진에 가지 않고, 엔진이 미입력 사유로 감면을 뺀다", async () => {
+    const r992 = {
+      type: "unsold_99_2",
+      houseType992: "new_or_unsold",
+      contractDate992: "2013-06-01",
+      usageApprovalDate992: "",
+      acquisitionPrice992: "500000000",
+      exclusiveAreaSqm992: "84",
+      meetsHouseTypeRequirement992: true,
+      isNotExcludedSelfBuilt992: false,
+      meetsOneHouseSellerRequirement992: false,
+      isOfficetel992: false,
+      meetsOfficetelRequirement992: false,
+      isNotRecontract992: true,
+      hasConfirmationSeal992: true,
+      standardPriceAtAcquisition992: "100000000",
+      standardPriceAt5Years992: "160000000",
+      standardPriceAtTransfer992: "",
     };
     for (const stale of [{}, { standardPriceAtTransfer: "250000000" }, { standardPriceAtTransfer: "500000000" }]) {
-      const r = await runCalc(mainForm({ ...EST, ...stale, acquisitionDate: "2009-07-01", reductions: [r983] }));
+      const r = await runCalc(mainForm({ ...EST, ...stale, acquisitionDate: "2009-07-01", reductions: [r992] }));
       expect(r.body.standardPriceAtTransfer).toBeUndefined();
-      // 수정 전 옛 값이면 272,519,280 · 403,022,730 — 지금은 빈 칸과 같다
+      // 감면 미입력 사유로 빠지므로 감면 없는 세액과 같다(RH-4 「주 자산 완공APT 환산」)
       expect(r.result.totalTax).toBe(485_529_000);
-      const step = (r.result.steps as { label: string; formula?: string }[]).find((s) => s.label.startsWith("§98의3"));
+      const step = (r.result.steps as { label: string; formula?: string }[]).find((s) => s.label.startsWith("§99의2"));
       expect(step?.label).toContain("적용 불가");
       expect(step?.formula).toContain("입력되지 않았습니다");
     }

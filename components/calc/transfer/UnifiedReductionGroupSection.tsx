@@ -43,6 +43,7 @@ import {
   type ReductionAssetKind,
   type PeriodCheckContext,
 } from "@/lib/tax-engine/transfer-reductions";
+import { assetKindGateReason } from "@/lib/tax-engine/transfer-reductions";
 import { ROW_COUNT_EXCLUSION_TYPES } from "@/lib/calc/house-count-exclusion-rows";
 
 // ============================================================================
@@ -256,9 +257,9 @@ export function GroupCategorySection({
              */
             /**
              * 🔴 조문 단위 게이트 — 카테고리 게이트만 보면 ⑧이 막는 것을 ⑤가 못 막는다.
-             *   §98의2는 미분양주택 정의상 조합원 취득 자산(재개발APT·입주권)에 적용될 수
-             *   없는데, 카테고리(`unsold_housing`)는 그 자산종류를 허용한다.
-             *   ⑧ `transfer-tax-validate-reductions.ts:95`와 **같은 술어**를 쓴다.
+             *   §98 시리즈 6조문은 미분양주택 정의상 조합원 취득 자산(재개발APT·입주권)과 분양권에
+             *   적용될 수 없는데(US-44), 카테고리(`unsold_housing`)는 그 자산종류를 허용한다.
+             *   ⑧ `transfer-tax-validate-reductions.ts`와 **같은 술어·같은 사유 문구**를 쓴다.
              */
             const articleAllowed = isReductionAllowedForAssetKind(id, assetKind);
             const isDisabled =
@@ -269,7 +270,7 @@ export function GroupCategorySection({
             const disabledReason = !housingAllowed
               ? `🏠 주택 양도에만 적용되는 감면입니다 (현재 자산: ${assetKindLabel})`
               : !articleAllowed
-              ? `🏠 이 조문은 현재 자산 종류(${assetKindLabel})에 적용되지 않습니다`
+              ? `🏠 ${assetKindGateReason(id, assetKind) ?? `이 조문은 현재 자산 종류(${assetKindLabel})에 적용되지 않습니다`}`
               : !period.inPeriod
                 ? `⚠ ${period.failReason ?? "시한 외"}`
                 : !isFullyImplemented

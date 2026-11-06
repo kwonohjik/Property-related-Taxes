@@ -311,36 +311,8 @@ export function calculateRedevelopmentTax(
     incomeDeduction.eligibleId !== undefined &&
     RATE_SPECIAL_REDUCTION_IDS.includes(incomeDeduction.eligibleId);
   const flatRate20Active = incomeDeduction.eligibleId === "unsold_98";
-  /**
-   * §98의2 × 조합원 경로 — **결합이 구조적으로 성립하지 않는다** (CB-02·D5-05 후속).
-   *
-   * §97의3·§97의4는 위 Step A.8b가 계산에 반영한다. 남은 것은 §98의2뿐인데, 이 조합은
-   * 애초에 존재할 수 없다:
-   *
-   * - 조특법 §98의2①의 대상은 조특령이 정하는 **미분양주택**(사업주체등이 공급했으나 분양되지
-   *   않은 주택)이다. 재개발·재건축 **조합원 물량은 관리처분계획에 따라 배정**되는 것이라
-   *   분양 대상이 아니므로 미분양주택에 해당할 수 없다.
-   * - 반대로 미분양 일반분양분을 취득한 자는 조합원이 아니라 취득일이 잔금청산일 하나뿐이라
-   *   소령 §166⑤의 3분기 구조 자체가 없다.
-   *
-   * ⇒ 정상 경로는 `asset-kind-gate.ts`가 ⑤·⑧에서 차단한다. 여기 남긴 것은 그 게이트를 거치지
-   *   않는 **API 직접 호출**용 방어다 — 「아직 반영하지 않았다」가 아니라 「적용 대상이 아니다」로
-   *   적어야 한다. 종전 문구는 사용자가 받을 수 있는 특례를 놓치고 있다고 오해하게 만들었다.
-   */
-  const unsold982Selected = (input.reductions ?? []).filter((r) => r.type === "unsold_98_2");
-  if (unsold982Selected.length > 0) {
-    const notice =
-      "지방 미분양주택 과세특례(조세특례제한법 §98의2①1호)는 재개발·재건축 조합원이 취득한 " +
-      "자산에는 적용되지 않습니다 — 조합원 배정분은 사업주체가 공급하고 남은 미분양주택에 " +
-      "해당할 수 없습니다. 이 계산에 반영하지 않았습니다.";
-    steps.push({
-      label: "조특법 §98의2 — 적용 대상 아님 (조합원 취득 자산)",
-      formula: notice,
-      amount: 0,
-      legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
-    });
-    lthdSpecialNotice = notice;
-  }
+  // §98의2 등 §98 시리즈 × 조합원 경로는 진입부(`stripAssetKindGatedReductions`, US-44)가 이미 걷어 내고
+  //   「적용 대상 아님」을 고지한다 — 이 분기에 도달하는 input.reductions에는 남아 있지 않다.
   const taxRateInput = flatRate20Active
     ? { ...input, forceFlatRate20: true }
     : rateSpecialActive
