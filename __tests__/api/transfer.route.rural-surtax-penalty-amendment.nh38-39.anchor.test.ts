@@ -147,21 +147,23 @@ const R993redev = {
 };
 
 describe("NH-38 형제 경로", () => {
-  it("재개발 §166 경로 §99의3(사례 44 · 182일): 농특세 5,950,012 → 238,238", () => {
+  it("재개발 §166 경로 §99의3(사례 44 · 182일): 농특세 5,284,890 → 211,606", () => {
     const input = baseTransferInput({
       propertyType: "redevelopment_apt", transferPrice: 525_000_000, transferDate: D("2026-02-16"),
       acquisitionDate: D("2005-04-09"), acquisitionPrice: 0, expenses: 0, useEstimatedAcquisition: true,
       isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0,
-      redevelopment: case44RedevelopmentInfo(), reductions: [R993redev],
+      // 원조합원 완공 아파트는 §99의3 조합원 갈래(#2944 NH-36 · NH-16 · NH-32): 준공 2012-06-01(기간 경과 후) · 잔여주택 계약 「예」 · 주택 출자 재개발 변형
+      redevelopment: { ...case44RedevelopmentInfo(), completionDate: D("2012-06-01") },
+      reductions: [{ ...R993redev, remainderContract993: "yes", previousHouseStdPrice993: 80_000_000 }],
     } as never);
     const plain = calculateTransferTax(input, rates);
     const r = calculateTransferTax(
       { ...input, delayedPaymentDetails: { unpaidTax: plain.determinedTax, unpaidTaxMode: "manual", paymentDeadline: D("2026-04-30"), actualPaymentDate: D("2026-10-30") } },
       rates,
     );
-    expect(r.ruralSurtax).toBe(5_950_012);
-    expect(r.ruralSurtaxDelayedPenalty?.penalty).toBe(238_238);
-    expect(r.totalTax).toBe(plain.totalTax + (r.penaltyDetail?.totalPenalty ?? 0) + 238_238);
+    expect(r.ruralSurtax).toBe(5_284_890);
+    expect(r.ruralSurtaxDelayedPenalty?.penalty).toBe(211_606);
+    expect(r.totalTax).toBe(plain.totalTax + (r.penaltyDetail?.totalPenalty ?? 0) + 211_606);
   });
 
   const house = () =>
