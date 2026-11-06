@@ -59,7 +59,7 @@ function run(o: { price: number; acq: number; unregistered: boolean; special: bo
 describe("F-8 §155⑳ × 미등기 (§91①)", () => {
   it("F8-1 15억 거주주택: 미등기면 특례 불적용 → 308,000,000 (종전 25,179,000) · 특례 없는 미등기와 같다", () => {
     const r = run({ price: 1_500_000_000, acq: 1_100_000_000, unregistered: true, special: true });
-    expect(r.rentalHousingExceptionDetail).toBeUndefined();
+    expect(r.rentalHousingExceptionDetail?.applied).toBe(false);
     expect(r.isExempt).toBe(false);
     expect(r.totalTax).toBe(308_000_000);
     expect(r.totalTax).toBe(run({ price: 1_500_000_000, acq: 1_100_000_000, unregistered: true, special: false }).totalTax);
