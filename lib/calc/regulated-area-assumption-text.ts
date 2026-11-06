@@ -23,7 +23,7 @@ const SELECT_WHERE_LABEL: Record<RegulatedAssumptionSelectWhere, string> = {
 
 /** 줄 앞부분 — 「양도일(2026-06-01)」 */
 export function regulatedAssumptionRowHead(r: RegulatedAddressAssumption): string {
-  return `${WHICH_LABEL[r.which]}(${r.date})`;
+  return `${WHICH_LABEL[r.which]}(${r.dateLabel ? `${r.dateLabel} ` : ""}${r.date})`;
 }
 
 /** 줄 판정 부분 — 「조정대상지역으로 보고 계산」 */
