@@ -424,6 +424,8 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           transferDate={transferDate}
           assetJibun={asset.addressJibun || undefined}
           assetAcquisitionCause={asset.acquisitionCause}
+          assetInheritedPresale={asset.inheritedPresaleCompletedByHeir ?? ""}
+          onAssetInheritedPresaleChange={(v) => onChange({ inheritedPresaleCompletedByHeir: v })}
           assetDong={asset.addressDong || undefined}
           assetHo={asset.addressHo || undefined}
           assetPhdSnapshot={assetPhdSnapshot}

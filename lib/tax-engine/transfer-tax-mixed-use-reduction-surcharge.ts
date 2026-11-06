@@ -30,6 +30,7 @@
  * 차감(양도소득금액 공제) 자체는 이 파일이 하지 않는다(NH-33 — 그대로 고지만).
  */
 import { resolveSurchargeExclusionByReduction, buildSurchargeExclusionStep } from "./transfer-reductions";
+import { stripAcquisitionCauseGatedReductions } from "./transfer-reductions/unsold-98-acquisition-cause";
 import type { MixedUseApportionment, MixedUseAssetInput, MixedUseStep } from "./types/transfer-mixed-use.types";
 import type { HouseInfo } from "./types/multi-house-surcharge.types";
 
@@ -54,7 +55,14 @@ export function resolveMixedReductionSurchargeExclusion(
   transferPrice: number,
   apportionment: MixedUseApportionment,
 ): MixedReductionSurchargeExclusion {
-  return resolveSurchargeExclusionByReduction(asset.reductions, {
+  // US-07 — 상속·증여로 받은 주택은 §98 시리즈 «감면되는 주택»이 아니다. 단건은 진입부(`stripUnsold98GatedReductions`)가 걷어 내지만
+  //   겸용은 `calculateTransferTax`를 거치지 않으므로 여기서 같은 leaf로 거른다(리뷰 게이트 N-1 실측: 증여 겸용 + §98의3 → 중과 배제).
+  const reductions = stripAcquisitionCauseGatedReductions(
+    asset.reductions,
+    asset.acquisitionCause,
+    asset.inheritedPresaleCompletedByHeir,
+  ).reductions;
+  return resolveSurchargeExclusionByReduction(reductions, {
     transferDate,
     acquisitionDate: asset.buildingAcquisitionDate,
     assetContractDate: asset.assetContractDate,

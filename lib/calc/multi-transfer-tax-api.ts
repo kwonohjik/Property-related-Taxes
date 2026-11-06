@@ -3,6 +3,7 @@
  * MultiTransferFormData → POST /api/calc/transfer/multi → AggregateTransferResult
  */
 
+import { inheritedPresalePayload } from "./unsold-98-inherited-presale";
 import {
   calcEffectiveIsRegulatedAtTransfer,
   calcEffectiveWasRegulatedAtAcquisition,
@@ -379,6 +380,8 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
         ? primary.decedentAcquisitionDate
         : undefined,
     nonHeirBequest: acquisitionCause === "inheritance" && primary?.nonHeirBequest ? true : undefined,
+    // ④ US-07 — 단건과 같은 leaf
+    inheritedPresaleCompletedByHeir: inheritedPresalePayload(primary),
     // §154⑧3호 상속주택 자체 양도 보유기간 통산
     decedentSameHouseholdBeforeInheritance:
       acquisitionCause === "inheritance"

@@ -291,6 +291,8 @@ export async function POST(request: NextRequest) {
       acquisitionCause: p.acquisitionCause,
       decedentAcquisitionDate: toOptionalDate(p.decedentAcquisitionDate),
       nonHeirBequest: p.nonHeirBequest,
+      // ⑭ US-07 — 단건 정본(`engine-input.ts`)과 같다
+      inheritedPresaleCompletedByHeir: p.acquisitionCause === "inheritance" ? p.inheritedPresaleCompletedByHeir : undefined,
       decedentSameHouseholdBeforeInheritance: p.decedentSameHouseholdBeforeInheritance,
       decedentCohabitationHoldingStartDate: toOptionalDate(p.decedentCohabitationHoldingStartDate),
       decedentCohabitationResidenceMonths: p.decedentCohabitationResidenceMonths,

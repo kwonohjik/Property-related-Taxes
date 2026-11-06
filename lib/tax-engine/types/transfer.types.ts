@@ -682,6 +682,12 @@ export interface TransferTaxInput {
    * (서면인터넷방문상담4팀-1192 등 — `new-99-acquisition-cause.ts`). 사용자 입력 필드가 아니다(⑫에 없음).
    */
   reductionAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
+  /**
+   * 상속 자산 — 상속 당시 **분양권**이었고 상속인이 잔금을 내고 취득했는가(US-07). §98의3·§98의5·§98의7은 「예」일 때만 적용한다
+   * (기획재정부 조세법령운용과-1103). 「아니오」는 불성립, 「모름」·미제공은 불성립 + 확인 필요(`unsold-98-acquisition-cause.ts`).
+   * `acquisitionCause === "inheritance"`가 아니면 읽지 않는다.
+   */
+  inheritedPresaleCompletedByHeir?: "yes" | "no" | "unknown";
 
   /**
    * 양도 형태 (양도자 관점) — Phase 2(2026-05-12) 신규.

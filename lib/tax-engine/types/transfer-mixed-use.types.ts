@@ -110,6 +110,8 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
    * 취득가액 경로는 읽지 않는다(아래 `acquisitionBy*`·`use*` 플래그가 정한다).
    */
   acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
+  /** US-07 — 상속 자산 §98의3·§98의5·§98의7: 상속 당시 분양권 + 상속인 잔금 취득(중과 배제 선판정의 취득 원인 게이트만 읽는다). 컴패니언은 `undefined`. */
+  inheritedPresaleCompletedByHeir?: "yes" | "no" | "unknown";
 
   // ── 면적 (㎡, 건축물대장) ──
   /** 주택 연면적 (4·5층 단독주택 등 거주용 합계) */
