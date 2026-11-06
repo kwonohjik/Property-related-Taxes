@@ -334,11 +334,11 @@ test.describe("V10 판정 메뉴 §155⑳ 임대주택 카드 — 도시형 생�
    *    — store 값이 true가 된 뒤 계산한다.
    */
   for (const c of [
-    { name: "[V10-3] 도시형 → ⑳ 성립 RH-A1 · 세액 0", urban: true, scenarioId: "RH-A1", surchargeType: "none", tax: 0 },
+    { name: "[V10-3] 도시형 → ⑳ 성립 RH-A1 · 세액 0", urban: true, applied: true, surchargeType: "none", tax: 0 },
     {
       name: "[V10-4] 짝 — 도시형 아님(연장 사유 없음) → ⑳ 불성립 · 2주택 중과 190,366,000",
       urban: false,
-      scenarioId: undefined,
+      applied: false, // V-7: 불성립도 판정(applied=false)을 결과에 싣는다 — 종전엔 상세가 없었다
       surchargeType: "multi_house_2",
       tax: 190_366_000,
     },
@@ -381,13 +381,14 @@ test.describe("V10 판정 메뉴 §155⑳ 임대주택 카드 — 도시형 생�
           data: {
             result: {
               totalTax: number;
-              rentalHousingExceptionDetail?: { scenarioId?: string };
+              rentalHousingExceptionDetail?: { applied?: boolean; scenarioId?: string };
               multiHouseSurchargeEvaluation: { surchargeType: string };
             };
           };
         }
       ).data;
-      expect(result.rentalHousingExceptionDetail?.scenarioId).toBe(c.scenarioId);
+      expect(result.rentalHousingExceptionDetail?.applied).toBe(c.applied);
+      expect(result.rentalHousingExceptionDetail?.scenarioId).toBe("RH-A1");
       expect(result.multiHouseSurchargeEvaluation.surchargeType).toBe(c.surchargeType);
       expect(result.totalTax).toBe(c.tax);
     });
