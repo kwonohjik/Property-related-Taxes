@@ -53,6 +53,13 @@ export function AmendmentBlock({
             data-field="originalDeterminedTax"
             hint="당초 신고·납부한 양도소득세 본세 (이력에서 자동 입력)"
           />
+          <CurrencyInput
+            label="당초 농어촌특별세"
+            value={form.originalRuralSurtax ?? ""}
+            onChange={(v) => onChange({ originalRuralSurtax: v })}
+            data-field="originalRuralSurtax"
+            hint="당초 신고·납부한 농어촌특별세 (이력에서 자동 입력) — 양도소득세와 상계하지 않고 별도로 환급·추가 납부를 계산합니다 (농어촌특별세법 §7①)"
+          />
 
           <div className="space-y-1.5">
             <label className="block text-sm font-medium">경정청구 사유 유형</label>
@@ -178,6 +185,13 @@ export function AmendmentBlock({
           onChange={(v) => onChange({ originalDeterminedTax: v })}
           data-field="originalDeterminedTax"
           hint="당초 신고·납부한 양도소득세 본세 (이력에서 자동 입력)"
+        />
+        <CurrencyInput
+          label="당초 농어촌특별세"
+          value={form.originalRuralSurtax ?? ""}
+          onChange={(v) => onChange({ originalRuralSurtax: v })}
+          data-field="originalRuralSurtax"
+          hint="당초 신고·납부한 농어촌특별세 (이력에서 자동 입력) — 양도소득세와 상계하지 않고 별도로 추가 납부·환급을 계산합니다 (농어촌특별세법 §7①)"
         />
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">법정신고기한</label>

@@ -120,7 +120,9 @@ export function MultiTransferTaxSummaryCard({
   const totalDue = result.settlementTotalDue;
   // 농특세는 정산(§111③) 축 밖에 있으므로 최종 합계에 따로 더한다 — 신고서 양식과 같은 축.
   const ruralSurtax = result.ruralSurtax ?? 0;
-  const finalDue = totalDue + ruralSurtax;
+  // NH-38 — 농특세 미납분 납부지연가산세(엔진 totalTax에 포함 · 정산 축 밖) — 농특세와 같은 축으로 따로 더한다.
+  const ruralPenalty = result.ruralSurtaxDelayedPenalty ?? 0;
+  const finalDue = totalDue + ruralSurtax + ruralPenalty;
 
   return (
     <Card className="border-primary/20 bg-primary/5">
@@ -233,6 +235,9 @@ export function MultiTransferTaxSummaryCard({
             <Separator />
             <ResultRow label="농어촌특별세" value={ruralSurtax} />
           </>
+        )}
+        {ruralPenalty > 0 && (
+          <ResultRow label="농어촌특별세 납부지연가산세" value={ruralPenalty} />
         )}
 
         <Separator />
