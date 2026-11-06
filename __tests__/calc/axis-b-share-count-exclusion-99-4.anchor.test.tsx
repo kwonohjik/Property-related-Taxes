@@ -39,7 +39,7 @@ beforeEach(() => {
 });
 
 const GANGNAM = "1168010100";
-const RURAL = { type: "new_99_4_rural", ruralHouseAcquisitionDate: "", ruralHouseStdPrice: "100000000", isRegisteredHanok: false, isAdjacentArea: false, meetsLocationRequirement: true };
+const RURAL = { type: "new_99_4_rural", ruralHouseAcquisitionDate: "", ruralHouseStdPrice: "100000000", isRegisteredHanok: false, adjacentArea994: "no", meetsLocationRequirement: true };
 const rural = (acq: string) =>
   houseRow("rural", acq, { region: "non_capital", regionCode: "4682025021", isApartment: false, officialPrice: "100000000", countExclusion: { kind: "reduction", reduction: RURAL } } as never);
 const RES = { residencePeriods: [{ moveInDate: "2018-03-01", moveOutDate: "2025-03-01" }] };
