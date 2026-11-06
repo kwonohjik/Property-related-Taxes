@@ -14,33 +14,40 @@ import {
   type RegulatedFlagsForm,
 } from "@/lib/calc/effective-regulated-at-acquisition";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
-
-const WHICH_LABEL = { transfer: "양도일", acquisition: "취득 당시" } as const;
+import {
+  REGULATED_ASSUMPTION_TITLE,
+  regulatedAssumptionFooter,
+  regulatedAssumptionRowHead,
+  regulatedAssumptionRowVerdict,
+  type RegulatedAssumptionSelectWhere,
+} from "@/lib/calc/regulated-area-assumption-text";
 
 export function RegulatedAreaAssumptionLine({
   form,
   label,
+  selectWhere = "calculator",
 }: {
   form: (RegulatedFlagsForm & Pick<TransferFormData, "regionCode">) | null | undefined;
   /** 다건처럼 여러 건을 한 화면에 그릴 때 어느 건인지 밝힌다. */
   label?: string;
+  /** 「직접 선택」 칸이 있는 곳 — 판정 메뉴는 「② 양도 대상 주택」이다. */
+  selectWhere?: RegulatedAssumptionSelectWhere;
 }) {
   if (!form) return null;
   const rows = regulatedAddressAssumptions(form);
   if (rows.length === 0) return null;
   return (
     <div data-testid="regulated-area-assumption-line">
-      <ToneCard tone="amber" title={label ? `조정대상지역 판정 — 확인 필요 · ${label}` : "조정대상지역 판정 — 확인 필요"}>
+      <ToneCard tone="amber" title={label ? `${REGULATED_ASSUMPTION_TITLE} · ${label}` : REGULATED_ASSUMPTION_TITLE}>
         <ul className="space-y-1 text-sm leading-relaxed text-amber-800 dark:text-amber-200">
           {rows.map((r) => (
             <li key={r.which} data-testid={`regulated-area-assumption-${r.which}`}>
-              {WHICH_LABEL[r.which]}({r.date}): <b>{r.isRegulated ? "조정대상지역으로 보고 계산" : "조정대상지역 아님으로 계산"}</b> — {r.basis}
+              {regulatedAssumptionRowHead(r)}: <b>{regulatedAssumptionRowVerdict(r)}</b> — {r.basis}
             </li>
           ))}
         </ul>
         <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
-          소재지 주소만으로 판정했습니다. 주소검색으로 소재지를 고르면 법정동코드로 동 단위까지 판정합니다. 또는 「보유 상황」에서 조정대상지역 여부를
-          직접 선택하세요.
+          {regulatedAssumptionFooter(selectWhere)}
         </p>
       </ToneCard>
     </div>

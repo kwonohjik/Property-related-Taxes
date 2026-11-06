@@ -11,7 +11,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { answerPhrp154_10NoIfUnanswered } from "./_helpers/judgment-seed";
 
-async function seedGangnamText(page: Page) {
+async function seedGangnamText(page: Page, addressJibun = "서울특별시 강남구 역삼동 1") {
   await page.goto("/calc/one-house-exemption");
   await expect(page.getByTestId("one-house-household")).toBeVisible();
   await page.evaluate(
@@ -25,7 +25,7 @@ async function seedGangnamText(page: Page) {
             contractTotalPrice: "900000000",
             houses: [],
             presaleRights: [],
-            assets: [{ assetKind: "housing", acquisitionDate: "2018-06-01", addressJibun: "서울특별시 강남구 역삼동 1" }],
+            assets: [{ assetKind: "housing", acquisitionDate: "2018-06-01", addressJibun }],
           },
         },
         version: 0,
@@ -80,5 +80,25 @@ test.describe("판정 메뉴 — 주소 문자열 조정대상지역", () => {
       () => JSON.parse(sessionStorage.getItem("transfer-tax-wizard") ?? "{}").state?.formData?.wasRegulatedAtAcquisitionTouched,
     );
     expect(touched).toBe(true);
+  });
+
+  /**
+   * 결과 화면 고지(`regulated-area-notices-followup.plan.md` 4번) — 시·도를 알아볼 수 없는 주소는 조정대상지역(low)으로 보고 판정한다.
+   * 계산기 결과와 같은 줄이 판정 메뉴 결과에도 뜨고, 「직접 선택」은 판정 메뉴의 칸(② 양도 대상 주택)을 가리킨다.
+   */
+  test("[RA-3] 시·도 생략 주소 → 판정 결과에 「조정대상지역 판정 — 확인 필요」(② 양도 대상 주택에서 직접 선택)", async ({ page }) => {
+    await seedGangnamText(page, "강남구 테헤란로 1");
+    await judgmentStep(page, "판정 결과").click();
+    await expect(page.getByTestId("one-house-verdict")).toHaveText("과세");
+    const line = page.getByTestId("regulated-area-assumption-line");
+    await expect(line).toContainText("조정대상지역 판정 — 확인 필요");
+    await expect(line).toContainText("「② 양도 대상 주택」에서 조정대상지역 여부를 직접 선택하세요");
+  });
+
+  test("[RA-4] 정식 주소(신뢰도 high) → 결과에 고지 없음", async ({ page }) => {
+    await seedGangnamText(page);
+    await judgmentStep(page, "판정 결과").click();
+    await expect(page.getByTestId("one-house-verdict")).toHaveText("과세");
+    await expect(page.getByTestId("regulated-area-assumption-line")).toHaveCount(0);
   });
 });

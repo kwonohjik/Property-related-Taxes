@@ -8,6 +8,7 @@
  * ⚠️ **명시 필드 매핑**(spread 아님)이라 신규 엔진 필드는 여기 추가하지 않으면 **침묵 strip**된다
  *    (memory `feedback_explicit_prop_mapping_strip`). ⑫ Zod(`companionAssetSchema`)도 함께 넓힐 것.
  */
+import { inheritedPresalePayload } from "./unsold-98-inherited-presale";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { parseAmount } from "@/lib/calc/number-parse";
@@ -641,6 +642,8 @@ export function buildAssetPayload(
         : undefined,
     // 수유자 — 단건(`transfer-tax-api.ts`)과 같은 게이트
     nonHeirBequest: asset.acquisitionCause === "inheritance" && asset.nonHeirBequest ? true : undefined,
+    // ④ US-07 — 단건과 같은 leaf
+    inheritedPresaleCompletedByHeir: inheritedPresalePayload(asset),
     // §154⑧3호 상속주택 자체 양도 보유기간 통산
     decedentSameHouseholdBeforeInheritance:
       asset.acquisitionCause === "inheritance"

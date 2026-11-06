@@ -34,7 +34,7 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
       }
       // 레거시 신축·미분양 단순 감면도 같은 이유로 조문 ID로 이관한다(`legacy-housing-reduction.ts`).
       if (r && isLegacyHousingReductionType(r.type)) {
-        return legacyHousingReductionToForm(r.type, a.acquisitionDate);
+        return legacyHousingReductionToForm(r.type, a.acquisitionDate, a.assetContractDate);
       }
       if (r && typeof r.type === "string" && (r.type as string).startsWith("rental_97") && r.type !== "rental_97_3_legacy") {
         return {
@@ -294,6 +294,8 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
       }
       if (r && r.type === "unsold_98_5") {
         return {
+          // US-42 — 옛 기록에는 없다. 법문 기본값(거주자 등)으로 보정하지 않으면 undefined가 「적용 주체 아님」으로 읽힐 수 있다.
+          isEligibleSubject985: true,
           contractDate985: "",
           priceReductionRatePct985: "",
           isNonCapitalUnsoldAtCutoff985: false,
@@ -308,6 +310,7 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
       }
       if (r && r.type === "unsold_98_6") {
         return {
+          isEligibleSubject986: true, // US-42 — 옛 기록 보정(법문 기본값)
           hoType986: "seller_rented",
           stdPriceSumAtBase986: "",
           floorAreaSqm986: "",

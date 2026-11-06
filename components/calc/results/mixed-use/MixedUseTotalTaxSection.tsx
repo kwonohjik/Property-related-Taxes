@@ -219,8 +219,8 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
         카드가 없어** 「왜 안 붙었는지」가 화면에서 사라졌다. 엔진은 detail을 만들고도
         `computeMixedUsePostTax`에서 버리고 있었다 — 이제 echo로 받아 같은 공용 컴포넌트에 넘긴다.
 
-        ⚠️ 겸용은 **세액감면형만** 계산한다(차감형은 어느 파트에서 뺄지 정한 명문이 없어 고지만
-           한다) — 그래서 `calculatedTax`는 감면 차감 전 산출세액 `t.transferTax`다.
+        ⚠️ 겸용은 세액감면형과 §99·§99의3(주택분 양도소득금액 차감 — NH-33)을 계산한다. 나머지 차감형은 어느 파트에서 뺄지 정한
+           명문이 없어 고지만 한다. `calculatedTax`는 세액감면 차감 전 산출세액 `t.transferTax`(§99·§99의3 차감 후 값)다.
 
         🔴 조특법 주택 수 제외(§99의4·§98의9·감면주택)는 §89①3호 판정 축이라 결과 **최상위**에 실린다
            (D4-02 echo) — 종전에는 넘기지 않아 카드·사유·§99의4⑥ 경고가 사라졌다. `houses`는 「보유 주택 N」용.

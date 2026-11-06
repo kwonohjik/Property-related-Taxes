@@ -354,6 +354,16 @@ export function evaluateUnsold987(input: Unsold987Input): UnsoldHybridResult {
       message: "최초 매매계약일이 2012.9.24~2012.12.31 시한 외입니다 (법 §98의7①).",
       legalBasis,
     });
+  } else if (input.acquisitionDate.getTime() < input.contractDate.getTime()) {
+    /**
+     * 법 §98의7①은 「최초로 매매계약을 체결하거나 그 계약에 따라 취득한」 주택이다 — 계약보다 먼저
+     * 취득한 주택은 그 계약에 따른 취득일 수 없다(US-44 E4: 2005 취득 · 2012 계약이 적격으로 통과).
+     */
+    reasons.push({
+      code: "ACQUIRED_BEFORE_CONTRACT",
+      message: "취득일이 최초 매매계약일보다 앞섭니다 — 그 매매계약에 따라 취득한 주택이 아닙니다 (법 §98의7①).",
+      legalBasis,
+    });
   }
   if (input.acquisitionPrice === undefined || input.acquisitionPrice <= 0) {
     reasons.push({

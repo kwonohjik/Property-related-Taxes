@@ -16,6 +16,7 @@ import type {
 } from "@/lib/stores/calc-wizard-form.types";
 import { calcFinalHouseRestartInScope } from "./final-house-restart";
 import { isHousingLike, isOneHouseExemptionAsset } from "./housing-like-asset";
+import { regulatedAddressVerdicts } from "./effective-regulated-at-acquisition";
 import type { AssetRemovalPatch } from "./asset-removal";
 
 export interface FirstAssetFactGroup {
@@ -123,6 +124,8 @@ function isDeclared(v: unknown): boolean {
  *
  * 게이트는 ④가 같은 값을 본문에 싣는 조건과 맞춘다(3중 패턴):
  *  - `regulated` — ④는 소재지 코드(자산 → 폼 전역 폴백)가 있으면 저장된 토글이 아니라 주소 판정값을 싣는다 → 코드가 없을 때만.
+ *    코드 없이 주소 문자열이 있고 그 축을 직접 만지지 않았으면 ④는 새 첫 자산 주소로 다시 판정한다(`calcStoredRegulatedFlags`) — 그 축의 저장값은
+ *    새 첫 자산으로 새지 않으므로 묶음에서 뺀다(계획서 `regulated-area-notices-followup.plan.md` 8번).
  *    Step4가 §154① 판정 대상이 아닌 자산이면 이 토글을 지운다(`Step4.tsx:267-291`) → 판정 대상 자산일 때만.
  *  - `finalRestart` — `calcFinalHouseRestartInScope`(④·⑤·⑧ 공용).
  *  - 그 밖 — 주택류 자산(`isHousingLike`).
@@ -137,8 +140,11 @@ export function firstAssetFactGroups(
   const housing = isHousingLike(primary.assetKind);
   const exemptionAsset = isOneHouseExemptionAsset(primary.assetKind);
   const hasRegionCode = !!(primary.regionCode || form.regionCode);
+  const byAddress = regulatedAddressVerdicts(form);
+  const regulatedStoredInUse =
+    (form.isRegulatedArea === true && !byAddress.transfer) || (form.wasRegulatedAtAcquisition === true && !byAddress.acquisition);
   const scope: Record<FirstAssetFactGroupId, boolean> = {
-    regulated: exemptionAsset && !hasRegionCode,
+    regulated: exemptionAsset && !hasRegionCode && regulatedStoredInUse,
     proviso: exemptionAsset,
     finalRestart: exemptionAsset && calcFinalHouseRestartInScope(form),
     merge: housing,

@@ -110,6 +110,8 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
    * 취득가액 경로는 읽지 않는다(아래 `acquisitionBy*`·`use*` 플래그가 정한다).
    */
   acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
+  /** US-07 — 상속 자산 §98의3·§98의5·§98의7: 상속 당시 분양권 + 상속인 잔금 취득(중과 배제 선판정의 취득 원인 게이트만 읽는다). 컴패니언은 `undefined`. */
+  inheritedPresaleCompletedByHeir?: "yes" | "no" | "unknown";
 
   // ── 면적 (㎡, 건축물대장) ──
   /** 주택 연면적 (4·5층 단독주택 등 거주용 합계) */
@@ -992,8 +994,24 @@ export interface MixedUseTotalTax {
    *    양도소득금액을 차감하는 구조인데 겸용은 소득금액이 **주택분·상가분·비사토분**으로
    *    갈려 있어 어느 파트에서 빼야 하는지 정한 명문이 없다(§155⑳ 경로의 §161 안분과 같은
    *    성질의 미결). 그 사실은 `warnings`로 고지한다.
+   *    **예외 — §99·§99의3(NH-33)**: 주택분 양도소득금액에서 차감한다(`incomeDeduction` — 산출세액 `transferTax`가 이미 차감 후 값이다).
    */
   reductionAmount: number;
+  /**
+   * 조특법 §99·§99의3 주택분 양도소득금액 차감 결과(NH-33) — 적용된 때만. `transferTax`는 차감 후 산출세액이고
+   * 농특세(`ruralSurtax`)는 (차감 전 − 차감 후 산출세액) × 20%가 이미 들어 있다.
+   */
+  incomeDeduction?: {
+    appliedId: string;
+    /** 주택분 양도소득금액에서 실제로 뺀 금액(통산 안분 후) */
+    reducibleIncome: number;
+    /** 차감하지 않았을 때의 산출세액 */
+    taxBeforeDeduction: number;
+    /** 차감으로 줄어든 산출세액 = 농특세 기초(감면세액) */
+    taxReduction: number;
+    /** 차감분 농특세(세액감면형 농특세와 별개로 `ruralSurtax`에 합산됨) */
+    ruralSurtax: number;
+  };
   /** 채택된 감면 유형 라벨 (표시용). 감면 없으면 undefined. */
   reductionType?: string;
   /**

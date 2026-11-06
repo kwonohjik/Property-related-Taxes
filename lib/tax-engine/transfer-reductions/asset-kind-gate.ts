@@ -7,7 +7,9 @@
  *
  * 카테고리별 집합 차이 (사용자 확정 2026-06-29):
  *   - rental(§97): { housing, redevelopment_apt } — 입주권·분양권은 물리적 임대 불가로 배제.
- *   - new_housing(§99)·unsold(§98·§99의2): + 입주권·분양권 — 분양권 취득→완공 후 양도 흐름 포함.
+ *   - new_housing(§99)·unsold(§98의4·§98의8·§98의9·§99의2): + 입주권·분양권.
+ *   - §98·§98의2·§98의3·§98의5·§98의6·§98의7: 주택(housing)만 — 조문 단위 예외(`UNSOLD_98_SERIES_HOUSING_ONLY_IDS`, US-44).
+ *     완공 뒤 양도는 assetKind가 housing이다. presale_right는 완공 전 권리 자체의 양도다.
  *
  * ⚠ redevelopment_apt + §97 — **「시한 게이트가 이미 차단한다」는 서술은 사실이 아니었다** (CB-09).
  *   §97의3의 등록 시한은 `period-check.ts`가 `before(registrationDate, 2027-12-31)`로 판정해
@@ -77,26 +79,104 @@ const SELF_FARMING_KINDS = new Set<ReductionAssetKind>(["land"]);
  * ②(해제 후 협의매수·수용)는 공익사업법 경로라 「토지등」 그대로이므로 이 게이트 대상이 아니다.
  */
 /**
- * §98의2(지방 미분양주택) **조합원 경로 배제** — 결합이 구조적으로 성립하지 않는다.
- *
- * 조특법 §98의2①의 대상은 조특령이 정하는 「미분양주택」, 즉 **사업주체등이 공급했으나
- * 분양되지 않은 주택**이다. 그런데 재개발·재건축의 조합원 물량은 관리처분계획에 따라
- * **배정**되는 것이지 분양 대상이 아니므로, 조합원이 취득한 신축주택·입주권은 어떤
- * 경우에도 미분양주택에 해당할 수 없다.
- *
- * 반대 방향으로도 막힌다 — 미분양 일반분양분을 산 사람은 조합원이 아니라 취득일이
- * 잔금청산일 하나뿐이라, 소령 §166⑤의 인가전·인가후·청산금 3분기 구조 자체가 없다.
- * (승계조합원도 §166①의 「조합에 기존건물을 제공하고 취득한 조합원」이 아니라서
- *  `redevelopment-dispatch.ts`가 일반 분기로 내려보낸다.)
- *
- * ⚠️ 카테고리 게이트(`NEW_UNSOLD_HOUSING_KINDS`)는 이 두 자산종류를 허용한다 — §99 계열은
- *   조특령 §99①1호 단서가 **재개발 신축주택 변형을 명문으로 두고** 있어 정당하다.
- *   §98의2만 조문 단위로 뺀다.
+ * §98의2(지방 미분양주택) **조합원 경로 배제**(D5-05) — 아래 `UNSOLD_98_SERIES_HOUSING_ONLY_IDS`에 흡수됐다(US-44).
+ * 근거: 조합원 물량은 관리처분계획에 따라 **배정**되므로 미분양주택이 될 수 없고, 미분양 일반분양분을 산 사람은
+ * 조합원이 아니라 소령 §166⑤의 인가전·인가후·청산금 3분기 구조 자체가 없다.
+ * ⚠️ 카테고리 게이트(`NEW_UNSOLD_HOUSING_KINDS`)는 조합원 경로를 허용한다 — §99 계열은 조특령 §99①1호 단서가
+ *   재개발 신축주택 변형을 명문으로 두고 있어 정당하다. §98 시리즈만 조문 단위로 뺀다.
  */
-const UNSOLD_98_2_EXCLUDED_KINDS = new Set<ReductionAssetKind>([
+
+/**
+ * §98·§98의2·§98의3·§98의5·§98의6·§98의7 — **완공된 미분양주택 자체의 양도에만** (US-44 · 사용자 결정 2026-11-06 Q-4 「모두 막는다」).
+ *
+ * - 조합원 경로(재개발APT·조합원입주권): 대상은 「사업주체(등)와 최초로 매매계약을 체결하고 취득」한 미분양주택이다
+ *   (법 §98의3①·§98의5①·§98의6①·§98의7①, 조특령 §98①2호·§98의2①·§98의3①·§98의4①·§98의5②·§98의6①).
+ *   조합원 몫은 관리처분계획에 따라 배정되므로 미분양주택이 될 수 없고, 승계 입주권 취득자는 최초 계약자가 아니다
+ *   (재산세과-686, 서울고법 2018누71351). 종전주택이 이 조문의 미분양주택이었다가 재건축된 원조합원 사례는
+ *   감면 승계를 다룬 정면 해석이 없어 계산기 범위 밖으로 두고 안내만 한다(`assetKindGateReason`).
+ * - 분양권(presale_right): 조문은 「미분양주택을 … 양도」다. 완공 전 권리 양도는 소득세법 §94①2호가목 자산이라
+ *   주택 양도가 아니다(재재산46014-219·재일46014-1570). 이 차단으로 §98의2·§98의3·§98의5·§98의6 세율 특칙이
+ *   분양권 60%(§104①1호 괄호)를 지우던 경로(F-14)도 닫힌다.
+ * - 완공 뒤 양도는 assetKind가 housing이므로 영향이 없다.
+ *
+ * ⚠ §98의2의 조합원 경로 배제(`UNSOLD_98_2_EXCLUDED_KINDS`, D5-05)는 이 집합에 흡수된다.
+ *   §98의4·§98의8·§98의9·§99의2는 이번 결정 범위 밖이라 카테고리 게이트를 그대로 탄다.
+ */
+export const UNSOLD_98_SERIES_HOUSING_ONLY_IDS: ReadonlySet<string> = new Set([
+  "unsold_98",
+  "unsold_98_2",
+  "unsold_98_3",
+  "unsold_98_5",
+  "unsold_98_6",
+  "unsold_98_7",
+]);
+const UNSOLD_98_SERIES_ALLOWED_KINDS = new Set<ReductionAssetKind>(["housing"]);
+
+/** 엔진 propertyType 중 위 조문이 막히는 값 — API 직접 호출 방어용(`stripAssetKindGatedReductions`). */
+const UNSOLD_98_SERIES_BLOCKED_PROPERTY_TYPES: ReadonlySet<string> = new Set([
   "redevelopment_apt",
   "right_to_move_in",
+  "presale_right",
 ]);
+
+/**
+ * 조문마다 대상 주택의 문언이 다르다 — 사유 문구는 조문 원문 표현을 따른다(조특법 MST 284389 · 조특령 MST 288915).
+ * - §98: 조특령 §98①2호 「주택건설사업자로부터 최초로 분양받은 주택으로서 … 완공된 후 다른 자가 입주한 사실이 없는 주택」
+ * - §98의2: 법 ① 「취득…한 수도권 밖의 미분양주택」, 조특령 §98의2① — 1호 선착순 공급 · 2호 최초 매매계약
+ * - §98의3·§98의5·§98의6·§98의7: 「사업주체(등)와 최초로 매매계약을 체결하고(하거나 그 계약에 따라) 취득」
+ * 조합원 경로는 §98의3②1호가 자기건설 확장에서 「정비사업조합의 조합원이 해당 관리처분계획에 따라 취득하는 주택」을 명문으로 뺀다.
+ */
+const GATED_SUBJECT: Record<string, string> = {
+  unsold_98: "주택건설사업자로부터 최초로 분양받은 미분양 국민주택",
+  unsold_98_2: "사업주체가 공급한 수도권 밖의 미분양주택(선착순 공급분 또는 사업주체와 최초로 매매계약을 체결한 주택)",
+  unsold_98_3: "사업주체와 최초로 매매계약을 체결하고 취득한 미분양주택",
+  unsold_98_5: "사업주체 등과 최초로 매매계약을 체결하고 취득한 미분양주택",
+  unsold_98_6: "사업주체등과 최초로 매매계약을 체결하고 취득한 준공후미분양주택",
+  unsold_98_7: "사업주체 등과 최초로 매매계약을 체결하거나 그 계약에 따라 취득한 미분양주택",
+};
+
+/**
+ * 조문 게이트에 걸린 이유 — ⑤ 비활성 사유·⑧ 차단 메시지·엔진 고지가 같은 문구를 쓴다.
+ * **재개발APT·조합원입주권·분양권에서만** 값을 돌려준다. 토지·건물 등 비주택 자산은 카테고리 게이트의
+ * 「주택 양도에만 적용」 사유가 맞으므로 undefined다(⑤·⑧이 그 문구를 쓴다).
+ */
+export function assetKindGateReason(id: string, assetKind: ReductionAssetKind | string): string | undefined {
+  const subject = GATED_SUBJECT[id];
+  if (!subject || !UNSOLD_98_SERIES_BLOCKED_PROPERTY_TYPES.has(assetKind)) return undefined;
+  const label = REDUCTION_METADATA[id as TransferReductionId]?.uiLabel ?? id;
+  const kindNote =
+    assetKind === "presale_right"
+      ? "분양권 상태의 양도는 주택 양도가 아닙니다(소득세법 §94①2호가목)."
+      : "재개발·재건축 조합원 아파트·조합원입주권은 관리처분계획에 따라 배정·승계된 것이라 미분양주택이 아닙니다.";
+  return (
+    `${label}: ${subject}의 양도에만 적용됩니다. ${kindNote} ` +
+    "종전주택이 이 조문의 미분양주택이었다가 재건축된 경우는 이 계산기가 다루지 않으므로 별도 확인이 필요합니다."
+  );
+}
+
+/**
+ * 엔진 진입 방어 — ⑤·⑧ 게이트를 거치지 않은 입력(API 직접 호출·옛 이력)에서 위 조문을 걷어 내고 고지를 돌려준다.
+ * ⚠ 범위는 ⑤·⑧보다 좁다: 이 함수는 재개발APT·조합원입주권·분양권만 막는다. 토지·건물 등 비주택 자산 × 주택 감면은
+ *   ⑤·⑧의 카테고리 게이트만 막고 엔진은 막지 않는다(US-44 전부터 그랬다 — 이번 결정 범위 밖).
+ * 감면 효과(세액감면·소득차감·세율·장특 특칙)뿐 아니라 감면주택 중과 배제(STEP 0.45)도 이 감면 선택을 근거로 하므로
+ * **모든 STEP보다 먼저** 부른다.
+ */
+export function stripAssetKindGatedReductions<T extends { type: string }>(
+  propertyType: string,
+  reductions: readonly T[] | undefined,
+): { reductions: T[] | undefined; notices: string[] } {
+  if (!reductions || !UNSOLD_98_SERIES_BLOCKED_PROPERTY_TYPES.has(propertyType)) {
+    return { reductions: reductions ? [...reductions] : reductions, notices: [] };
+  }
+  const kept: T[] = [];
+  const notices: string[] = [];
+  for (const r of reductions) {
+    const reason = assetKindGateReason(r.type, propertyType);
+    if (!reason) kept.push(r);
+    else if (!notices.includes(`${reason} 이 계산에 반영하지 않았습니다.`)) notices.push(`${reason} 이 계산에 반영하지 않았습니다.`);
+  }
+  return { reductions: kept, notices };
+}
 
 const GB_CLAIM_ROUTE_KINDS = new Set<ReductionAssetKind>([
   "land",
@@ -156,8 +236,8 @@ export function isReductionAllowedForAssetKind(
 ): boolean {
   // 조문 단위 예외가 카테고리 판정보다 먼저다 — standalone은 카테고리로 묶이지만 §69만 토지 전용이다.
   if (id === "self_farming") return SELF_FARMING_KINDS.has(assetKind);
-  // §98의2 × 조합원 경로 — 미분양주택 정의상 성립 불가 (위 UNSOLD_98_2_EXCLUDED_KINDS 주석)
-  if (id === "unsold_98_2") return !UNSOLD_98_2_EXCLUDED_KINDS.has(assetKind);
+  // §98 시리즈 6조문 × 조합원 경로·분양권 — 미분양주택 정의상 성립 불가 (위 UNSOLD_98_SERIES_HOUSING_ONLY_IDS 주석)
+  if (UNSOLD_98_SERIES_HOUSING_ONLY_IDS.has(id)) return UNSOLD_98_SERIES_ALLOWED_KINDS.has(assetKind);
   const cat = REDUCTION_METADATA[id as TransferReductionId]?.category ?? LEGACY_REDUCTION_CATEGORY[id];
   if (!cat) return true; // 매핑 미존재 시 차단하지 않음 (방어적 — standalone·미지 타입)
   return isReductionCategoryAllowedForAssetKind(cat, assetKind);

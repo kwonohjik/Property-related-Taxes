@@ -46,6 +46,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
 import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
 import { RegulatedAreaAssumptionLine } from "@/components/calc/results/transfer/RegulatedAreaAssumptionLine";
+import { regulatedAssumptionPdfGroups } from "@/lib/calc/regulated-area-assumption-text";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
@@ -152,6 +153,8 @@ export function TransferTaxResultView({
           // PHD(§164⑦) 결과 이름 — 화면과 같은 단일 정의(`isPhdApartment`). 표시 전용, 엔진·API 무관
           phdApartment: isPhdApartment(resolvedAsset),
           filingHeadRows: buildSingleFilingHeadPdfRows({ result, formData, asset: resolvedAsset, transferPriceOverride }),
+          // 화면의 「조정대상지역 판정 — 확인 필요」 줄과 같은 leaf — PDF에도 항상 싣는다.
+          regulatedAreaAssumptions: regulatedAssumptionPdfGroups([{ form: formData }]),
         },
         filenamePrefix: "양도소득세_계산결과",
       },
