@@ -11,6 +11,7 @@
 
 import { DateInput } from "@/components/ui/date-input";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ThreePointStandardPriceInput } from "./ThreePointStandardPriceInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
@@ -44,6 +45,12 @@ interface Props {
    * (종류는 `isPhdApartment`가 방식에서 읽는다). 계획서: docs/00-pm/phd-residual-limits-fix.plan.md §3.3 (Q-3 (b))
    */
   housingTypeFixed?: boolean;
+  /**
+   * 토지(대지권) 면적 칸을 이 카드 안에 그린다 — **승계조합원 완공 APT의 보조 모드 전용**(`successorAptPhdAssistView`).
+   * 재개발 APT는 ① 기본정보에 면적 칸이 없어(`AssetAreaSection` 시나리오 표 밖) 「① 단일 위치」 계약의 입력 경로가 없다 — 그 면적은 이 계산에만 쓰인다
+   * (엔진 승계 분기는 읽지 않는다). 계획서 `redev-successor-apt-phd-assist.plan.md` Q-1 a. 그 밖에는 종전대로 ① 값을 읽어 보여 주기만 한다.
+   */
+  landAreaInput?: boolean;
 }
 
 // ─── 법령 배지 ─────────────────────────────────────────────────────
@@ -76,7 +83,7 @@ const PRICE_LABEL: Record<HousingType, { first: string; transfer: string }> = {
 
 // ─── 메인 패널 ────────────────────────────────────────────────
 
-export function PreHousingDisclosureSection({ asset, transferDate, onChange, mode = "phd", housingTypeFixed = false }: Props) {
+export function PreHousingDisclosureSection({ asset, transferDate, onChange, mode = "phd", housingTypeFixed = false, landAreaInput = false }: Props) {
   const assist = mode === "assist";
   // 🔴 폼-지속 상태다 — 로컬 `useState`면 단계 이동·새로고침에 「단독·다가구」로 되돌아가
   //    **저장된 공동주택가격에 개별주택가격 라벨**이 붙는다(R12). API 페이로드에는 싣지
@@ -156,15 +163,27 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange, mod
           (분리취득 시) `building`뿐이고(`CompanionAcqPurchaseBlock.tsx:115-116·417`)
           둘 다 축 A에 등재되어 있어(`AREA_SCENARIOS_BY_ASSET_KIND`) 입력 경로는 남는다.
           전용 블록 4종과 같은 처리다 — `GeneralBuildingBlock.tsx:299` 참조.
-          ⛔ 여기에 면적 칸을 다시 추가하지 말 것.
+          ⛔ 여기에 면적 칸을 다시 추가하지 말 것 — 예외는 `landAreaInput`(승계 APT 보조 모드 · ①에 면적 칸이 없는 자산) 하나뿐이다.
           anchor: `__tests__/components/asset-area-input-no-duplication.anchor.test.tsx`
                   ("공유 섹션" describe) */}
       <div className="grid gap-4 sm:grid-cols-2">
+        {landAreaInput ? (
+          <FieldCard
+            label="토지(대지권) 면적 (㎡)"
+            field="acquisitionArea"
+            required
+            stacked
+            hint="등기부의 대지권 면적입니다. 취득 당시·최초 고시 당시 토지 기준시가(㎡당 공시지가 × 면적)에 곱하며, 이 계산에만 쓰입니다."
+          >
+            <DecimalInput value={asset.acquisitionArea} onChange={(v) => onChange({ acquisitionArea: v })} />
+          </FieldCard>
+        ) : (
         <div className="rounded-md border border-border/60 bg-muted/20 p-2 text-caption text-muted-foreground">
           <b>토지 면적</b>은 ① 기본정보에서 입력합니다
           {asset.acquisitionArea ? ` — 현재 ${asset.acquisitionArea}㎡` : " (미입력)"}.
           이 패널의 3-시점 기준시가는 그 면적을 곱셈 인자로 씁니다.
         </div>
+        )}
 
         <FieldCard label="최초 고시일" field="phdFirstDisclosureDate" required stacked>
           <DateInput

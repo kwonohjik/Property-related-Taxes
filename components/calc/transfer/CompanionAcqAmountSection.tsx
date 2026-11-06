@@ -18,6 +18,7 @@ import { PartialAcqApportionSection } from "./PartialAcqApportionSection";
 import { SalesCaseSection } from "./SalesCaseSection";
 import { LUMP_SUM_DEDUCTION_BASE_HINT, PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
 import { PhdConvertedPriceFill } from "./PhdConvertedPriceFill";
+import { successorAptPhdAssistView } from "@/lib/calc/redev-successor-phd-assist";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 
 interface Props {
@@ -48,13 +49,16 @@ export function CompanionAcqAmountSection({
 
   /* «환산 …가격 계산해 채우기»(개별·공동주택) — 취득시 기준시가 칸(감정가액·매매사례가액) 곁 계산 보조. 보이는 조건은 `phdFillAssistVisible`(컴포넌트 내부 게이트).
      이 칸이 접히는 경우(`acqStdFieldInStdSection`)에는 칸을 그리는 두 자리(아래 감정 칸 블록·`SalesCaseSection`)가 보조도 함께 접는다. */
+  // 승계조합원 완공 APT는 사본(취득일 = 사용승인일 · 공동주택)으로 같은 도우미를 연다(계획서 redev-successor-apt-phd-assist) — patch는 원래 자산에 쓴다.
+  const successorPhdView = props.asset ? successorAptPhdAssistView(props.asset) : undefined;
   const phdFillAssist =
-    props.asset && props.onAssetChange && props.assetKind === "housing" ? (
+    props.asset && props.onAssetChange && (props.assetKind === "housing" || successorPhdView) ? (
       <PhdConvertedPriceFill
-        asset={props.asset}
+        asset={successorPhdView ?? props.asset}
         onAssetChange={props.onAssetChange}
         transferDate={props.transferDate ?? ""}
         onFill={props.onStandardPriceAtAcqChange}
+        successorApt={!!successorPhdView}
       />
     ) : null;
 

@@ -159,6 +159,20 @@ describe("E — 매매 승계 완공 APT 추계 3종 = 취득일이 사용승인
   });
 });
 
+describe("P — §164⑦ 계산 도우미 칸은 계산에 들어가지 않는다(계획서 redev-successor-apt-phd-assist §1 P4)", () => {
+  it("P-1 감정가액 · 도우미 칸(토지 40㎡ · 최초 고시·취득 당시 값) 저장 → ⑧ 이슈 0 · preHousingDisclosure 없음 · 461,000,000 그대로", async () => {
+    const PHD = {
+      acquisitionArea: "40", phdFirstDisclosureDate: "2023-04-28", phdFirstDisclosureHousingPrice: "320,000,000", phdLandPricePerSqmAtAcq: "5,000,000",
+      phdBuildingStdPriceAtAcq: "100,000,000", phdLandPricePerSqmAtFirst: "5,200,000", phdBuildingStdPriceAtFirst: "98,000,000", phdHousingType: "apartment",
+    };
+    const r = await run(single({ ...APPRAISAL, ...PHD }));
+    expect(r.fields).toEqual([]);
+    expect(r.body.preHousingDisclosure).toBeUndefined();
+    expect(r.body.standardPriceAtAcquisition).toBe(300_000_000);
+    expect(r.gain).toBe(461_000_000);
+  });
+});
+
 describe("V — ⑧ 추계 칸 필수 (화면에 있는 칸으로 점프)", () => {
   it("V-1 감정가액 · 취득시 기준시가 비움 → standardPriceAtAcq", async () => {
     expect((await run(single({ ...APPRAISAL, standardPriceAtAcq: "" }))).fields).toEqual(["standardPriceAtAcq"]);
