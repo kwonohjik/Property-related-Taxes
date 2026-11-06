@@ -39,6 +39,8 @@ test("[CCX-1] 행 편집 ⑥ 농어촌주택 → 배지 → 본문에 행 id →
   await dialog.getByTestId("house-row-count-exclusion-new_99_4_rural").click();
   await dialog.getByTestId("new994-stdprice-price-input").locator("input").fill("150000000");
   await dialog.getByRole("switch", { name: /소재지 요건 충족 확인/ }).click();
+  // NH-30 — 연접 여부는 기본값 없이 묻는다(⑧ 필수)
+  await dialog.getByTestId("new994-adjacent-no").click();
   await dialog.getByRole("button", { name: "완료" }).click();
   await expect(page.getByTestId("house-count-exclusion-badge-r")).toHaveText("주택 수 제외: 농어촌주택");
 
@@ -68,7 +70,7 @@ test("[CCX-2] 어느 주택인지 모르는 옛 선언 — 안내 카드에 나�
           ruralHouseStdPrice: "150000000",
           ruralHouseJibun: "",
           isRegisteredHanok: false,
-          isAdjacentArea: false,
+          adjacentArea994: "no",
           meetsLocationRequirement: true,
         },
       ],
@@ -98,7 +100,7 @@ test("[CCX-3] 겸용주택 — 행 ⑥ 농어촌주택이 본문에 행 id로 �
             ruralHouseStdPrice: "150000000",
             ruralHouseJibun: "",
             isRegisteredHanok: false,
-            isAdjacentArea: false,
+            adjacentArea994: "no",
             meetsLocationRequirement: true,
           },
         },
