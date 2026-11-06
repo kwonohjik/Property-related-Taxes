@@ -38,7 +38,7 @@ const RURAL = {
   ruralHouseAcquisitionDate: "2012-05-01",
   ruralHouseStdPrice: 100_000_000,
   isRegisteredHanok: false,
-  isAdjacentArea: false,
+  adjacentArea994: "no" as const,
   meetsLocationRequirement: true,
 };
 const H = (id: string, acquisitionDate: string, over: object = {}) => ({

@@ -86,7 +86,7 @@ describe("엔진 불적용 사유 문언", () => {
     ruralHouseAcquisitionDate: d("2015-03-01"),
     ruralHouseStdPrice: 200_000_000,
     isRegisteredHanok: false,
-    isAdjacentArea: false,
+    adjacentArea994: "no" as const,
     meetsLocationRequirement: true,
     ...o,
   });
@@ -94,13 +94,13 @@ describe("엔진 불적용 사유 문언", () => {
     r.isEligible ? undefined : r.ineligibleReasons.find((x) => x.code === code)?.message;
 
   it("ADJACENT_AREA — 2026 전 취득 농어촌은 「읍·면」으로 적고 「읍·면·동」이라 하지 않는다", () => {
-    const m = msg(evaluateNew994(base({ isAdjacentArea: true })), "ADJACENT_AREA");
+    const m = msg(evaluateNew994(base({ adjacentArea994: "yes" as const })), "ADJACENT_AREA");
     expect(m).toContain("같은 읍·면 또는 연접한 읍·면");
     expect(m).not.toContain("읍·면·동");
   });
   it("ADJACENT_AREA — 2026 이후 취득 농어촌은 「읍·면·동」", () => {
     const r = evaluateNew994(
-      base({ isAdjacentArea: true, ruralHouseAcquisitionDate: d("2026-02-01"), transferDate: d("2026-10-01") }),
+      base({ adjacentArea994: "yes" as const, ruralHouseAcquisitionDate: d("2026-02-01"), transferDate: d("2026-10-01") }),
     );
     expect(msg(r, "ADJACENT_AREA")).toContain("같은 읍·면·동 또는 연접한 읍·면·동");
   });
@@ -108,7 +108,7 @@ describe("엔진 불적용 사유 문언", () => {
     const r = evaluateNew994(
       base({
         id: "new_99_4_hometown",
-        isAdjacentArea: true,
+        adjacentArea994: "yes" as const,
         meetsHometownRequirement: true,
         ruralHouseAcquisitionDate: d("2010-03-01"),
         transferDate: d("2014-06-01"),

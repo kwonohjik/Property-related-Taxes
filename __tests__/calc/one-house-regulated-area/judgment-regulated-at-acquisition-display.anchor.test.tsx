@@ -16,6 +16,10 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 vi.mock("@/components/ui/address-search", () => ({ AddressSearch: () => null }));
 afterEach(cleanup);
 
+/**
+ * 「주소 없음」 짝은 주소 문자열도 비운다 — 코드 없이 주소 문자열만 있으면 판정 메뉴도 계산기와 같이 주소로 판정한다
+ * (`judgment-menu-regulated-area-address.plan.md`). 알아볼 수 없는 「주소 1」은 조정대상지역(low)으로 판정돼 저장값 짝이 성립하지 않는다.
+ */
 function base(kind: string, regionCode: string, was: boolean, extra: Record<string, unknown>): OneHouseJudgmentFormData {
   const f = createInitialOneHouseJudgmentForm();
   const a = makeDefaultAsset(1);
@@ -26,7 +30,7 @@ function base(kind: string, regionCode: string, was: boolean, extra: Record<stri
     contractTotalPrice: "1000000000",
     wasRegulatedAtAcquisition: was,
     houses: [],
-    assets: [{ ...a, assetKind: kind, acquisitionCause: "purchase", acquisitionDate: "2018-01-01", regionCode, addressJibun: "주소 1", ...extra }],
+    assets: [{ ...a, assetKind: kind, acquisitionCause: "purchase", acquisitionDate: "2018-01-01", regionCode, addressJibun: regionCode ? "주소 1" : "", ...extra }],
   } as unknown as OneHouseJudgmentFormData;
 }
 const rental = (code: string, was: boolean) =>

@@ -15,7 +15,7 @@ const D = (s: string) => new Date(s);
 const TRANSFER = D("2026-06-01");
 const PRICE = 1_000_000_000;
 const NO_FACTS = { generalHouseGiftedFromDecedentWithin2yr: undefined, generalHouseGiftDate: undefined, generalHouseRightAtInheritance: undefined };
-const RURAL994 = (houseId: string) => ({ type: "new_99_4_rural" as const, houseId, ruralHouseAcquisitionDate: D("2015-03-01"), ruralHouseStdPrice: 100_000_000, isRegisteredHanok: false, isAdjacentArea: false, meetsLocationRequirement: true });
+const RURAL994 = (houseId: string) => ({ type: "new_99_4_rural" as const, houseId, ruralHouseAcquisitionDate: D("2015-03-01"), ruralHouseStdPrice: 100_000_000, isRegisteredHanok: false, adjacentArea994: "no" as const, meetsLocationRequirement: true });
 const RURAL7 = (houseId?: string) => ({ ...(houseId ? { houseId } : {}), kind: "inherited" as const, isOutsideCapitalEupMyeon: true, decedentResidenceYears: 10, decedentSameHouseholdAtInheritance: false, parentalCareMergeInheritedHouse: false });
 
 const X = makeHouseInfo("x", { acquisitionDate: D("1995-01-01") });

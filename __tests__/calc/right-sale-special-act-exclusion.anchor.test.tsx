@@ -116,7 +116,7 @@ describe("X-5 해석례 미확보 조문은 빼지 않는다(음성)", () => {
       ruralHouseAcquisitionDate: "2015-06-15",
       ruralHouseStdPrice: "100000000",
       isRegisteredHanok: false,
-      isAdjacentArea: false,
+      adjacentArea994: "no" as const,
       meetsLocationRequirement: true,
       meetsHometownRequirement: false,
     },

@@ -11,7 +11,9 @@
  *   1채 취득(자기건설 포함) + 3년 이상 보유 + 취득 전부터 보유하던 일반주택 양도
  * - ①1호나목·2호다목: 취득 당시 주택+부속토지 기준시가 합계가 한도 이하 — 한도는 양도일·농어촌주택 취득일에 따라
  *   2억(2023.1.1. 전 양도) / 3억(2023.1.1. 이후 양도) / 등록 한옥 4억(2014.1.1. 이후 구입분부터) 등 (`resolveNew994StdPriceLimit`)
- * - ③: 일반주택과 같은/연접 행정구역 → 미적용. 비교 단위는 시기별(읍·면·시 / 읍·면 / 읍·면·동, 고향은 시) — `new-99-4-area.ts`
+ * - ③: 일반주택과 같은/연접 행정구역 → 미적용. 비교 단위는 시기별(읍·면·시 / 읍·면 / 읍·면·동, 고향은 시) — `new-99-4-area.ts`.
+ *   예/아니오/모름 3상태 — 「모름」·미입력은 불성립 + 확인 필요(리뷰 NH-30 · Q-13)
+ * - 종전 면적 요건(대지 660㎡ — 2021.1.1. 전 양도 / 주택 150㎡ — 2017.1.1. 전 양도) — `new-99-4-size.ts`
  * - ④: 3년 보유 충족 전 양도해도 적용 (선적용) → ⑥ 3년 미보유 확정 시 추징 (경고 echo)
  * - 소재지(①1호가목/2호나목)·고향(①2호가목·령⑥)은 사용자 확인 토글 (별표12 자동판정 범위 외)
  *
@@ -22,6 +24,7 @@
 import {
   NEW_99_4_HANOK_DECREE,
   NEW_99_4_STD_PRICE_ADDENDA,
+  NEW_HOUSING_SUB_ARTICLE,
   TRANSFER_REDUCTION_ARTICLE,
 } from "../legal-codes/transfer";
 import { calculateHoldingPeriod } from "../tax-utils";
@@ -30,6 +33,7 @@ import {
   new994OpportunityZoneApplies,
   new994RegulatedAreaLabel,
 } from "./new-99-4-area";
+import { evaluateNew994Size, new994InterpretationNotices } from "./new-99-4-size";
 import type {
   New994ArticleId,
   New994EvaluationInput,
@@ -191,9 +195,12 @@ interface New994ReductionLike {
   ruralHouseAcquisitionDate?: Date;
   ruralHouseStdPrice?: number;
   isRegisteredHanok?: boolean;
-  isAdjacentArea?: boolean;
+  adjacentArea994?: "yes" | "no" | "unknown";
   meetsLocationRequirement?: boolean;
   meetsHometownRequirement?: boolean;
+  ruralLandAreaSqm994?: number;
+  ruralHouseType994?: "multi_unit" | "other";
+  ruralHouseAreaSqm994?: number;
 }
 
 const isNew994Like = (x: { type: string }): x is New994ReductionLike =>
@@ -210,9 +217,12 @@ function evaluateNew994Declaration(
     ruralHouseAcquisitionDate: r.ruralHouseAcquisitionDate,
     ruralHouseStdPrice: r.ruralHouseStdPrice,
     isRegisteredHanok: r.isRegisteredHanok,
-    isAdjacentArea: r.isAdjacentArea,
+    adjacentArea994: r.adjacentArea994,
     meetsLocationRequirement: r.meetsLocationRequirement,
     meetsHometownRequirement: r.type === "new_99_4_hometown" ? r.meetsHometownRequirement : undefined,
+    ruralLandAreaSqm994: r.ruralLandAreaSqm994,
+    ruralHouseType994: r.ruralHouseType994,
+    ruralHouseAreaSqm994: r.ruralHouseAreaSqm994,
   });
 }
 
@@ -236,6 +246,8 @@ export function evaluateNew994FromReductions(
  *    보유하고 있는 농어촌주택 취득 전 보유 주택을 양도할 때 특례를 적용한다고 회신했다
  *    (재산세과-1096, 2009.06.02 · 부동산납세과-91, 2014.02.19).
  *    농어촌주택 1채 + 고향주택 1채의 조합은 직접 해석이 없어 법문(1호·2호를 합쳐 「1채」)대로 합산한다.
+ * 🔑 가액 한도를 넘는 선언(`STD_PRICE_EXCEEDED` — 확정 불성립)은 「농어촌주택등」이 아니므로 채 수에 넣지 않는다
+ *    (리뷰 NH-50 · Q-10). 소재지·연접 등 사용자가 답하는 요건의 미달은 종전대로 센다.
  */
 export function evaluateNew994Declarations(
   reductions: ReadonlyArray<{ type: string }>,
@@ -249,15 +261,18 @@ export function evaluateNew994Declarations(
     }),
     ...(r.houseId ? { houseId: r.houseId } : {}),
   }));
-  if (results.length < 2) return results;
-  return results.map((d) => ({
+  const isCounted = (d: (typeof results)[number]) =>
+    d.isEligible || !d.ineligibleReasons.some((x) => x.code === "STD_PRICE_EXCEEDED");
+  const counted = results.filter(isCounted).length;
+  if (counted < 2) return results;
+  return results.map((d) => (!isCounted(d) ? d : {
     id: d.id,
     isEligible: false as const,
     ineligibleReasons: [
       ...(d.isEligible ? [] : d.ineligibleReasons),
       {
         code: "MULTIPLE_HOUSES" as const,
-        message: `농어촌주택등을 ${results.length}채 보유하고 있습니다 — 1채를 양도한 뒤에 남은 1채에 적용됩니다 (재산세과-1096·부동산납세과-91).`,
+        message: `농어촌주택등을 ${counted}채 보유하고 있습니다 — 1채를 양도한 뒤에 남은 1채에 적용됩니다 (재산세과-1096·부동산납세과-91).`,
         legalBasis: d.legalBasis,
       },
     ],
@@ -323,8 +338,9 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
   }
 
   // 4) 가액 — 양도일·취득일별 한도 "초과하지 아니할 것" → 경계 포함 적용 (취득일 미입력이면 한도를 정할 수 없어 건너뜀 — 위 1)이 이미 불성립)
+  let cap: New994StdPriceLimit | undefined;
   if (input.ruralHouseStdPrice !== undefined && input.ruralHouseStdPrice > 0 && input.ruralHouseAcquisitionDate) {
-    const cap = resolveNew994StdPriceLimit({
+    cap = resolveNew994StdPriceLimit({
       transferDate: input.transferDate,
       ruralHouseAcquisitionDate: input.ruralHouseAcquisitionDate,
       isRegisteredHanok: input.isRegisteredHanok,
@@ -337,6 +353,19 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
       });
     }
   }
+
+  // 4') 종전 면적 요건 — 대지 660㎡(2021.1.1. 전 양도)·주택 150㎡(2017.1.1. 전 양도 · 2009.1.1. 이후 취득) (NH-05 PR-2b)
+  reasons.push(
+    ...evaluateNew994Size({
+      isHometown,
+      transferDate: input.transferDate,
+      ruralHouseAcquisitionDate: input.ruralHouseAcquisitionDate,
+      ruralLandAreaSqm994: input.ruralLandAreaSqm994,
+      ruralHouseType994: input.ruralHouseType994,
+      ruralHouseAreaSqm994: input.ruralHouseAreaSqm994,
+      legalBasis,
+    }),
+  );
 
   // 5) 소재지·연접·고향 토글 (사용자 확인 — 미확인 시 불적용 사유, 차단 아님). 문언은 취득일·양도일별(new-99-4-area)
   if (input.meetsLocationRequirement !== true) {
@@ -351,7 +380,7 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
       legalBasis,
     });
   }
-  if (input.isAdjacentArea === true) {
+  if (input.adjacentArea994 === "yes") {
     reasons.push({
       code: "ADJACENT_AREA",
       message: new994AdjacentMessage({
@@ -359,7 +388,18 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
         ruralHouseAcquisitionDate: input.ruralHouseAcquisitionDate,
         transferDate: input.transferDate,
       }),
-      legalBasis: "조특법 §99의4③",
+      legalBasis: NEW_HOUSING_SUB_ARTICLE.NEW_99_4_ADJACENT,
+    });
+  } else if (input.adjacentArea994 !== "no") {
+    // 「모름」·미입력(직접 API·옛 이력) — 불성립 + 확인 필요 (NH-30 · Q-13)
+    reasons.push({
+      code: "ADJACENT_UNCONFIRMED",
+      message: `확인 필요: ${isHometown ? "고향주택" : "농어촌주택"}과 일반주택이 행정구역상 같거나 연접한 지역에 있는지 확인되지 않아 적용하지 않았습니다 — ${new994AdjacentMessage({
+        isHometown,
+        ruralHouseAcquisitionDate: input.ruralHouseAcquisitionDate,
+        transferDate: input.transferDate,
+      })} 같거나 연접하지 않다면 「아니오」로 답하고 다시 계산하세요.`,
+      legalBasis: NEW_HOUSING_SUB_ARTICLE.NEW_99_4_ADJACENT,
     });
   }
   if (isHometown && input.meetsHometownRequirement !== true) {
@@ -367,7 +407,7 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
       code: "HOMETOWN_UNCONFIRMED",
       message:
         "고향 요건(가족관계등록부에 10년 이상 등재된 등록기준지이면서 10년 이상 거주한 사실이 있는 시 지역 — 이와 연접한 시 지역과 두 요건을 모두 충족한 군 지역에 연접한 시 지역 포함)이 확인되지 않았습니다 (§99의4①2호가목·령⑥).",
-      legalBasis: "조특령 §99의4⑥",
+      legalBasis: NEW_HOUSING_SUB_ARTICLE.NEW_99_4_HOMETOWN_DECREE,
     });
   }
 
@@ -385,6 +425,12 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
   const holding = calculateHoldingPeriod(input.ruralHouseAcquisitionDate!, input.transferDate);
   const ruralHoldingYears = holding.years;
   const clawbackWarning = ruralHoldingYears < NEW_99_4_MANDATORY_YEARS;
+  const notices = new994InterpretationNotices({
+    transferDate: input.transferDate,
+    ruralHouseAcquisitionDate: input.ruralHouseAcquisitionDate!,
+    ruralHouseStdPrice: input.ruralHouseStdPrice!,
+    isRegisteredHanok: input.isRegisteredHanok,
+  });
 
   return {
     id: input.id as New994ArticleId,
@@ -395,5 +441,7 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
     ruralHoldingYears,
     clawbackWarning,
     surchargeNotAffected: true,
+    ...(cap ? { appliedLimit: { limit: cap.limit, label: cap.label, legalBasis: cap.legalBasis } } : {}),
+    ...(notices.length > 0 ? { notices } : {}),
   };
 }

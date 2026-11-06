@@ -119,6 +119,9 @@ export function rowCountExclusionReductions(
         houseId: h.id,
         ruralHouseAcquisitionDate: h.acquisitionDate,
         ruralHouseJibun: h.addressJibun ?? "",
+        // NH-05 PR-2b — 공동주택 전용면적은 행 칸(§98의9 `unsoldHouseExclusiveArea`와 같은 행 값) · NH-20 — 수도권 모순 판정
+        ruralHouseExclusiveAreaSqm994: h.exclusiveArea ?? "",
+        ...(h.regionCode ? { ruralHouseRegionCode: h.regionCode } : {}),
       },
     ];
   });

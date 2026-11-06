@@ -137,7 +137,7 @@ const RURAL_ROW: HouseEntry = {
       ruralHouseAcquisitionDate: "",
       ruralHouseStdPrice: "250000000",
       isRegisteredHanok: false,
-      isAdjacentArea: false,
+      adjacentArea994: "no" as const,
       meetsLocationRequirement: true,
     } as RowCountExclusionReduction,
   },
