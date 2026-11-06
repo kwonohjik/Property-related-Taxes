@@ -68,10 +68,15 @@ describe("G3-4 ④ — payload", () => {
   it("토지 출자 원조합원: 준공일을 보낸다", () => {
     expect(buildRedevelopmentPayload(asset(LAND("2023-01-15"))).completionDate).toBe("2023-01-15");
   });
-  it("범위 밖이면 보내지 않는다 — 주택 출자에 남은 stale 준공일은 엔진에 닿지 않는다", () => {
+  /**
+   * 주택 출자 원조합원도 준공일을 싣는다(리뷰 NH-36 · Q-15) — 그 칸은 감면 패널 신축주택 카테고리에 보이고(숨은 값이 아니다),
+   * §99·§99의3 조합원 갈래 판정만 읽는다. 엔진의 다른 준공일 판정(비과세 보유 기산·§155 등)은 승계·토지 출자로 거른다 —
+   * 같은 입력의 감면 없는 세액이 수정 전과 같음은 `transfer.route.nh99-redev-member.anchor.test.ts` 「감면 없는 세액 불변」이 고정한다.
+   */
+  it("주택 출자 원조합원 — §99·§99의3 조합원 갈래용으로 보낸다(NH-36)", () => {
     expect(
       buildRedevelopmentPayload(asset({ redevOriginalAssetType: "housing", redevCompletionDate: "2023-01-15" })).completionDate,
-    ).toBeUndefined();
+    ).toBe("2023-01-15");
   });
   it("승계조합원은 종전대로 보낸다(회귀 가드)", () => {
     expect(

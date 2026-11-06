@@ -394,6 +394,33 @@ export function houseContributedOriginalApt(
   );
 }
 
+export interface RedevMemberFormScope {
+  /** 자산-수준 준공일(`redevCompletionDate`) — 비어 있을 수 있다 */
+  completionDate: string;
+  /** 주택 출자 원조합원 — 재개발 변형(분모 = 종전주택 취득 당시 기준시가)이 자산 사실에서 정해진다 */
+  houseContributed: boolean;
+  /** 준공일 칸을 감면 패널이 보이는가(주택 출자 원조합원 — 재개발 카드에 그 칸이 없다) */
+  completionFieldInPanel: boolean;
+}
+
+/**
+ * §99·§99의3 **조합원 갈래** 화면·④·⑧ 범위 — 완공APT(청산금 수령 단독신고 제외). 엔진 `redevMemberNewHouseOf`와 같은 술어 (NH-36).
+ *
+ * 조합원이 받은 신축주택은 「자기가 건설한 주택(조합원 취득 포함)」 갈래라 기간·고가주택 기준일·5년 기산일이 준공일(사용승인·사용검사일)이다
+ * (서면인터넷방문상담4팀-2145). 주택을 출자한 원조합원이면 재개발 변형이 자산 사실에서 정해진다(NH-32).
+ * `completionFieldInPanel` — 준공일 칸이 재개발 카드에 없는 축(주택 출자 원조합원)이라 감면 패널이 그 칸을 보인다.
+ */
+export function redevMemberNewHouseScope(
+  asset: Pick<
+    AssetForm,
+    "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "redevOriginalAssetType" | "redevReceiveOnlyMode" | "redevCompletionDate"
+  >,
+): RedevMemberFormScope | undefined {
+  if (asset.assetKind !== "redevelopment_apt" || resolveRedevSubject(asset) !== "apt" || asset.redevReceiveOnlyMode === "yes") return undefined;
+  const houseContributed = houseContributedOriginalApt(asset);
+  return { completionDate: asset.redevCompletionDate, houseContributed, completionFieldInPanel: houseContributed };
+}
+
 /**
  * 완공APT **준공일(사용승인서 교부일)** 입력(`redevCompletionDate`)이 의미를 갖는 축인가 — ⑤ · ④ · ⑧ 공용 (G3-4).
  *
