@@ -22,6 +22,8 @@ import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
 import type { MixedUseCompanionContext } from "./bundled-companion-types";
 import { SHARE_HOUSE_FACT_KEYS, type ShareHouseFacts } from "./bundled-companion-types";
+import { ROW_COUNT_EXCLUSION_TYPES } from "@/lib/calc/house-count-exclusion-rows";
+import { resolveHceGeneralHouseAcquisitionDate } from "@/lib/tax-engine/transfer-tax-precalc";
 import { buildGbCompanionItems, type GbBgCarryoverUnitDraft } from "./general-building-part-cards";
 import { withRedevCommonExpense } from "./engine-input";
 import { attachGbCarryoverUnits, toGbCarryoverUnits } from "./bundled-gb-carryover-units";
@@ -315,6 +317,10 @@ export function calculateBundledTransfer(
         ...(isFullFractionalBundle
           ? {
               shareHouseFacts: Object.fromEntries(SHARE_HOUSE_FACT_KEYS.map((k) => [k, engineInput[k]])) as ShareHouseFacts,
+              shareCountExclusion: {
+                reductions: engineInput.reductions.filter((r) => ROW_COUNT_EXCLUSION_TYPES.has(r.type)),
+                generalHouseAcquisitionDate: resolveHceGeneralHouseAcquisitionDate(engineInput),
+              },
               onShareMixedRentalNotices: (n: string[]) => mixedRentalNotices.push(...n),
               oneRightHouseholdFacts: {
                 householdRightCount: engineInput.householdRightCount,

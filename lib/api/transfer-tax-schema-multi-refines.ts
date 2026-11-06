@@ -27,6 +27,8 @@ import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-s
 import { MULTI_NON_RESIDENT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_DEMOLISHED_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_NEW_HOUSING_PRE_2016_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { isMultiSupportedNewHousingReduction } from "@/lib/calc/multi-transfer-support-messages";
 import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 
 const RATE_SPECIAL_REDUCTIONS: ReadonlySet<string> = new Set(ALL_INCOME_DEDUCTION_IDS);
@@ -37,7 +39,7 @@ const RATE_SPECIAL_REDUCTIONS: ReadonlySet<string> = new Set(ALL_INCOME_DEDUCTIO
  */
 const whenPresent = (message: string) => (v: unknown) => (v !== undefined && v !== null ? message : null);
 
-export const MULTI_REJECT_RULES: Record<string, (v: unknown) => string | null> = {
+export const MULTI_REJECT_RULES: Record<string, (v: unknown, data?: Record<string, unknown>) => string | null> = {
   // F-5 — 이월과세 자산의 취득가액은 서브객체에만 있다. 원인만 있어도(서브객체 없이 취득가액 0) 거부.
   carryoverTaxation: whenPresent(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE),
   acquisitionCause: (v) =>
@@ -79,10 +81,17 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown) => string | null> =
   familyBusinessInheritance: whenPresent(MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE),
   // ⑭는 감면을 매핑하지만 합산이 §98계 세율 특칙을 잃는다 — 단건 83,500,000 ↔ 다건 141,060,000
   // (anchor `multi-block-reason-rate-special`). ⑧과 같은 집합(ALL_INCOME_DEDUCTION_IDS)을 막는다.
-  reductions: (v) =>
-    Array.isArray(v) && v.some((r) => RATE_SPECIAL_REDUCTIONS.has((r as { type?: string })?.type ?? ""))
-      ? MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE
-      : null,
+  // §99·§99의3은 2016.1.1. 이후 양도분만 푼다(NH-72 · Q-16) — ⑧ `validateMultiSupportedMode`와 같은 술어. 2016 전은 사유 문구를 따로 둔다.
+  reductions: (v, data) => {
+    if (!Array.isArray(v)) return null;
+    const blocked = v
+      .map((r) => (r as { type?: string })?.type ?? "")
+      .find((type) => RATE_SPECIAL_REDUCTIONS.has(type) && !isMultiSupportedNewHousingReduction(type, data?.transferDate));
+    if (blocked === undefined) return null;
+    return blocked === "new_99" || blocked === "new_99_3"
+      ? MULTI_NEW_HOUSING_PRE_2016_UNSUPPORTED_MESSAGE
+      : MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE;
+  },
   // 단건 route의 일괄양도 분기는 컴패니언이 1건 이상일 때만 선다(`route.ts` `companions.length > 0`).
   companionAssets: (v) => (Array.isArray(v) && v.length > 0 ? MULTI_COMPANION_UNSUPPORTED_MESSAGE : null),
 };
@@ -117,7 +126,7 @@ export const MULTI_IGNORED_KEYS: Record<string, string> = {
 /** `propertyItemSchema` superRefine — 거부 규칙에 걸린 키마다 issue 1건. */
 export function refineMultiUnsupported(data: Record<string, unknown>, ctx: z.RefinementCtx): void {
   for (const [key, reasonOf] of Object.entries(MULTI_REJECT_RULES)) {
-    const message = reasonOf(data[key]);
+    const message = reasonOf(data[key], data);
     if (message) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [key], message });
   }
 }

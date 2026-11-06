@@ -218,3 +218,38 @@ describe("NH-05 PR-2b — 종전 면적 요건", () => {
     expect(multi.totalTax).toBe(0);
   });
 });
+
+describe("NH-50 확장 (a) — 종전 면적 초과 선언도 「1채」에서 빼고 일반 주택으로 남긴다", () => {
+  // 2019 양도(R4×C2 — 대지 660㎡ 요건) · 양도 주택 취득 2012-01-01 · 비수도권 · 두 선언 모두 가액 1.5억(한도 2억 이내)
+  const A = () => row("r1", EUMSEONG, "2015-03-01", DECL({ ruralLandAreaSqm994: "330" }));
+  const B = (land: string | undefined, acq: string) =>
+    row("r2", EUMSEONG, acq, DECL(land === undefined ? {} : { ruralLandAreaSqm994: land }));
+  const run = (land: string | undefined, acq: string) => {
+    TD = "2019-06-01";
+    return single(form([A(), B(land, acq)], "2012-01-01"));
+  };
+
+  it("[MH-3] A 적격 + B 대지 661㎡(LAND_AREA_EXCEEDED) → A는 MULTIPLE_HOUSES가 아니라 eligible · B는 일반 주택으로 남아 일시적 2주택(B 2018-03 취득 · 3년 내) 비과세 0", async () => {
+    const r = await run("661", "2018-03-01");
+    expect(r.new994).toBe("eligible");
+    expect(r.totalTax).toBe(0);
+  });
+
+  it("[MH-3+] 짝 — B가 2015-06 취득(양도 3년 초과)이면 일시적 2주택 불성립 → 과세 (B가 일반 주택으로 센다는 증거)", async () => {
+    const r = await run("661", "2015-06-01");
+    expect(r.new994).toBe("eligible");
+    expect(r.totalTax).toBe(160_160_000);
+  });
+
+  it("[MH-4] 660㎡ 짝 — B도 적격이면 2채 → A·B 모두 MULTIPLE_HOUSES (종전)", async () => {
+    const r = await run("660", "2018-03-01");
+    expect(r.new994).toBe("MULTIPLE_HOUSES");
+    expect(r.totalTax).toBe(160_160_000);
+  });
+
+  it("[MH-5] 빈 면적 짝 — B 대지면적 미입력(AREA_UNCONFIRMED)은 종전대로 세어 MULTIPLE_HOUSES", async () => {
+    const r = await run(undefined, "2018-03-01");
+    expect(r.new994).toBe("MULTIPLE_HOUSES");
+    expect(r.totalTax).toBe(160_160_000);
+  });
+});

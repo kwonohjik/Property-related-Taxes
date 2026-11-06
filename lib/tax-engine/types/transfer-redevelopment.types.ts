@@ -742,6 +742,18 @@ export interface RedevelopmentResult {
       | "1년 미만 70% (§104①3호 주택 본문)"
       | "1년 이상 2년 미만 60% (§104①2호 주택)"
       | "기본누진세율 (§55·§104①1호)";
+    /** 취득가액 산정 방식 — 매매 승계만 추계 3종(계획서 redev-successor-apt-estimate Q-1 a) */
+    acquisitionMethod?: "actual" | "appraisal" | "salesCase" | "converted";
+    /** 추계 — 개산공제(§163⑥ · 사용승인일 당시 기준시가 × 율 · 지분 축소 후) */
+    estimatedDeduction?: number;
+    /** 추계 — 감정가액·매매사례가액 또는 환산취득가액(단서 채택이어도 비교에 쓴 값) */
+    estimatedValue?: number;
+    /** 추계 — 사용승인일 당시 기준시가(물건 전체) */
+    standardPriceAtAcquisition?: number;
+    /** 환산 — §97②2호 단서 비교(가목 환산+개산공제 vs 나목 자본적지출·양도비 등) */
+    necessaryExpenseSwap?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
+    /** 감정가액·환산 · 사용승인일부터 5년 이내 — 일반 신축이면 §114의2 가산세 대상. 승계조합원에는 적용하지 않고 고지만 한다(Q-2 a) */
+    penalty114_2Unapplied?: boolean;
   };
 
   /**

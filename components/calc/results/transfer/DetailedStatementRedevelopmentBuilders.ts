@@ -327,9 +327,36 @@ export function buildRedevAcquisitionFormula(
     return `실제 취득가액 = ${fmt(redev.preApproval.apportionedAcquisition)} (실가 모드)`;
   }
   if (branch === "postApprovalExistingHouse") {
+    const est = successorEstimateFormulas(redev);
+    if (est) return est.acquisition;
     return `의제 = 권리가액 = ${fmt(redev.postApprovalExistingHouse.apportionedAcquisition)} (§166②1호 안분 분자)`;
   }
   return `의제 = 청산금 = ${fmt(redev.settlement.apportionedAcquisition)} (§166②1호 안분 분자)`;
+}
+
+/**
+ * 승계조합원 완공 APT 추계(감정가액·매매사례가액·환산) — 취득가액·필요경비 행 산식(계획서 redev-successor-apt-estimate Q-1 a).
+ * 값은 엔진 echo(`successorMemberDetail`·인가후 분기)라 적힌 산식이 적힌 값을 만든다. 실거래가·추계 아님이면 `undefined`(종전 표시).
+ */
+function successorEstimateFormulas(redev: RedevelopmentResult): { acquisition: string; expense: string } | undefined {
+  const d = redev.successorMemberDetail;
+  const method = d?.acquisitionMethod;
+  if (redev.successorMemberApplied !== true || !d || !method || method === "actual") return undefined;
+  const branch = redev.postApprovalExistingHouse;
+  const std = d.standardPriceAtAcquisition ?? 0;
+  const lump = `개산공제 = 사용승인일 당시 기준시가 ${fmt(std)} × 개산공제율 = ${fmt(d.estimatedDeduction ?? 0)} (소득세법 시행령 §163⑥ — 승계조합원 신축주택 취득일은 사용승인일 · §162①4호)`;
+  if (d.necessaryExpenseSwap?.chosen === "direct") {
+    const s = d.necessaryExpenseSwap;
+    return {
+      acquisition: `환산취득가액 차감 안 함 (소득세법 §97②2호 단서 — 환산취득가액 + 개산공제 ${fmt(s.estimatedSide)} < 자본적지출·양도비 등 ${fmt(s.directSide)})`,
+      expense: `자본적지출·양도비 등 ${fmt(branch.expenses ?? 0)} (소득세법 §97②2호 단서 — 환산취득가액 대신)`,
+    };
+  }
+  const acquisition =
+    method === "converted"
+      ? `환산취득가액 = 양도가액 ${fmt(branch.apportionedTransfer)} × (사용승인일 당시 기준시가 ${fmt(std)}를 양도 당시 기준시가로 나눈 비율) = ${fmt(branch.apportionedAcquisition)} (소득세법 시행령 §176의2②2호, 1원 미만 절사)`
+      : `${method === "appraisal" ? "감정가액" : "매매사례가액"} = ${fmt(branch.apportionedAcquisition)} (소득세법 시행령 §176의2③${method === "appraisal" ? "2" : "1"}호 — 사용승인일 전후 3개월 이내)`;
+  return { acquisition, expense: lump };
 }
 
 /** 필요경비(개산공제 §163⑥) 분할별 산식 */
@@ -388,6 +415,11 @@ export function buildRedevExpenseFormula(
     return amount > 0
       ? `인가전 분 필요경비 ${fmt(amount)} (실가 모드 — 개산공제 미적용)${giftNote}`
       : "필요경비 없음 (실가 모드)";
+  }
+  // 승계조합원 추계 — 인가후 분이 곧 신축주택 전체이고 필요경비는 개산공제(또는 §97②2호 단서의 자본적지출·양도비 등)다.
+  if (branch === "postApprovalExistingHouse") {
+    const est = successorEstimateFormulas(redev);
+    if (est) return est.expense;
   }
   // 인가후·청산금 분에는 개산공제(§163⑥)가 없다 — 다만 그 분할 몫의 필요경비는 있을 수 있다.
   return amount > 0

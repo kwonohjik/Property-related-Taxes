@@ -6,7 +6,8 @@
  * | SZ-1~6 | 종전 면적 요건 범위 — 대지 660㎡(2021.1.1. 전 양도) · 주택 150㎡/공동 116㎡(2017.1.1. 전 양도 × 2009.1.1. 이후 취득) · 경계 |
  * | SZ-7 | 2009.1.1. 전 취득분(R1·R2)의 주택 면적은 묻지 않는다(계획서 Q-4 (c) 현행 판정) — 대신 「확인 필요」 고지 |
  * | AD-1~4 | ③ 연접 3상태 — 예 = ADJACENT_AREA · 아니오 = 적격 · 모름/미입력 = ADJACENT_UNCONFIRMED(확인 필요) (NH-30 · Q-13) |
- * | MH-1·2 | 「1채」 판정에서 가액 초과(확정 불성립) 선언만 뺀다 (NH-50 · Q-10) — 소재지 미확인 선언은 그대로 센다(짝) |
+ * | MH-1·2 | 「1채」 판정에서 가액 초과(확정 불성립) 선언을 뺀다 (NH-50 · Q-10) — 소재지 미확인 선언은 그대로 센다(짝) |
+ * | MH-6 | 종전 면적 초과(대지·연면적)도 같이 뺀다 · 면적 미입력(모름)은 센다(짝) — 사용자 결정 확장 a |
  * | EC-1 | 적격 결과에 적용 한도 echo (계획서 Q-9 (a)) |
  * | NT-1·2 | 한옥 Q-5 고지 — 일반 한도를 넘을 때만(짝) |
  * | L4 | ③·⑥ 사유의 근거가 legal-codes 상수 값 |
@@ -116,6 +117,24 @@ describe("MH — 「1채」 판정 (NH-50)", () => {
     expect(d1.isEligible).toBe(false);
     if (!d1.isEligible) expect(d1.ineligibleReasons.map((x) => x.code)).toEqual(["MULTIPLE_HOUSES"]);
     if (!d2.isEligible) expect(d2.ineligibleReasons.map((x) => x.code)).toEqual(["LOCATION_UNCONFIRMED", "MULTIPLE_HOUSES"]);
+  });
+});
+
+describe("MH 확장 (a) — 종전 면적 초과 선언도 「1채」에서 뺀다 (NH-50 · 사용자 결정)", () => {
+  // 2016 양도(R4×C1 — 대지 660㎡ + 주택 150㎡/116㎡ 요건)
+  const ctx = { generalHouseAcquisitionDate: D("2008-01-01"), transferDate: D("2016-06-01"), mergeOrder: undefined };
+  const ok = { type: "new_99_4_rural", houseId: "r1", ruralHouseAcquisitionDate: D("2014-03-01"), ruralHouseStdPrice: 70_000_000, isRegisteredHanok: false, adjacentArea994: "no", meetsLocationRequirement: true, ruralLandAreaSqm994: 330, ruralHouseType994: "other", ruralHouseAreaSqm994: 100 };
+  const second = (over: object) => ({ ...ok, houseId: "r2", ruralHouseAcquisitionDate: D("2014-09-01"), ...over });
+  const resultCodes = (rs: ReturnType<typeof evaluateNew994Declarations>) =>
+    rs.map((d) => (d.isEligible ? "eligible" : d.ineligibleReasons.map((x) => x.code).join(",")));
+
+  it("[MH-6] 연면적 151㎡(HOUSE_AREA_EXCEEDED) · 대지 661㎡(LAND_AREA_EXCEEDED) → r1 적격, r2는 면적 초과 사유만", () => {
+    expect(resultCodes(evaluateNew994Declarations([ok, second({ ruralHouseAreaSqm994: 151 })], ctx))).toEqual(["eligible", "HOUSE_AREA_EXCEEDED"]);
+    expect(resultCodes(evaluateNew994Declarations([ok, second({ ruralLandAreaSqm994: 661 })], ctx))).toEqual(["eligible", "LAND_AREA_EXCEEDED"]);
+  });
+  it("[MH-6+] 짝 — 경계(660㎡·150㎡)는 적격이라 2채 → MULTIPLE_HOUSES · 면적 미입력(AREA_UNCONFIRMED)도 센다", () => {
+    expect(resultCodes(evaluateNew994Declarations([ok, second({ ruralLandAreaSqm994: 660, ruralHouseAreaSqm994: 150 })], ctx))).toEqual(["MULTIPLE_HOUSES", "MULTIPLE_HOUSES"]);
+    expect(resultCodes(evaluateNew994Declarations([ok, second({ ruralHouseAreaSqm994: undefined })], ctx))).toEqual(["MULTIPLE_HOUSES", "AREA_UNCONFIRMED,MULTIPLE_HOUSES"]);
   });
 });
 

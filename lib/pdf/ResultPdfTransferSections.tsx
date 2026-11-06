@@ -69,7 +69,8 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows 
   );
   // 소득금액 감면대상 = 소득금액차감방식(§90②) 11개 조문 합 — 화면 신고서 표 ⑳(`FilingFormTableHelpers`)와 같은 헬퍼.
   // 종전에는 `new993Detail`만 읽어 §99·§98의8·하이브리드 차감이 0으로 찍혔다(NH-53).
-  const incomeDeduction = incomeDeductionReducible(r as unknown as TransferTaxResult);
+  // 함께 양도·다건 어댑터(`aggregateToFilingResult`)는 단건 detail이 없어 합산 엔진 적용액 합을 따로 싣는다(NH-65) — 있으면 그 값이 정본.
+  const incomeDeduction = num(r.aggregateIncomeDeductionReducible) ?? incomeDeductionReducible(r as unknown as TransferTaxResult);
   // 「감면후 소득금액」에서 빼는 것은 **§90②(소득금액 차감방식)뿐**이다.
   // §90①(세액감면방식)은 세액을 감면할 뿐 소득금액을 줄이지 않는다
   // — 별지84호 본 서식 ⑧ 과세표준 = ④+⑤−⑥−⑦에서 차감 대상 ⑥은 「소득감면대상 소득금액」이고,

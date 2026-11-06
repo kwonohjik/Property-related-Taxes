@@ -23,7 +23,12 @@
  * 인가전·인가후 안분 미표시 — 단순 housing 양도와 동치 처리.
  */
 
+import { addYears } from "date-fns";
 import { calculateHoldingPeriod } from "./tax-utils";
+import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
+import { computeEstimatedDeduction } from "./tax-utils";
+import { estimatedDeductionRate } from "./legal-codes";
+import { buildingPenaltyMethodApplies } from "./transfer-tax-building-penalty";
 import { applyLthdToGain, computeLthdRateSplit } from "./redevelopment-lthd";
 import { resolveAptResidenceMonths, resolveSuccessorOwnResidenceMonths } from "./redevelopment-lthd";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
@@ -77,8 +82,11 @@ export function runSuccessorMember(
    * 그 값은 원조합원 종전자산의 관리처분 가격이지 승계인의 취득가액(§97①1호 가목 · 시행령 §163⑨)이 아니다. 대체가 있던 동안
    * 감정·매매사례 플래그가 취득가액을 0으로 만든 화면 경로가 숨은 칸 값으로 조용히 계산됐고, API로 임의 평가액을 보내면 세액이 0이 됐다.
    */
-  const successorAcquisitionPrice =
-    (input.actualAcquisitionPrice ?? 0) > 0
+  const estimate = input.successorEstimate;
+  const estimated = estimate ? resolveSuccessorEstimate(estimate, transferPrice, input) : undefined;
+  const successorAcquisitionPrice = estimated
+    ? estimated.acquisition
+    : (input.actualAcquisitionPrice ?? 0) > 0
       ? input.actualAcquisitionPrice!
       : (() => {
           throw new TaxCalculationError(
@@ -88,7 +96,8 @@ export function runSuccessorMember(
               "(소득세법 §97①1호 · 시행령 §163⑨)",
           );
         })();
-  const postApprovalExpenses = redevelopment.postApprovalExpenses ?? 0;
+  // 추계면 필요경비는 개산공제다(§97②2호 본문) — 환산이 단서(가목 < 나목)에 걸리면 자본적지출·양도비 등(인가 후 필요경비)이다.
+  const postApprovalExpenses = estimated ? estimated.expenses : (redevelopment.postApprovalExpenses ?? 0);
 
   // ─ Step 1: 단순 차감 양도차익 ─
   const gain = transferPrice - successorAcquisitionPrice - postApprovalExpenses;
@@ -219,6 +228,85 @@ export function runSuccessorMember(
         holdingPeriod.years * 365 + holdingPeriod.months * 30 + holdingPeriod.days, // approx
       shortTermRateApplied: totalMonthsForRate < 24,
       rateLabel,
+      acquisitionMethod: estimate?.method ?? "actual",
+      ...(estimated
+        ? {
+            estimatedDeduction: estimated.deduction,
+            estimatedValue: estimated.value,
+            standardPriceAtAcquisition: estimate!.standardPriceAtAcquisition,
+            ...(estimated.swap ? { necessaryExpenseSwap: estimated.swap } : {}),
+            ...(successorPenalty114_2Applies(estimate!.method, completionDate, transferDate) ? { penalty114_2Unapplied: true } : {}),
+          }
+        : {}),
     },
   };
+}
+
+/**
+ * 승계조합원 완공 APT 취득가액 추계(감정가액·매매사례가액·환산취득가액) — 매매 승계만 싣는다(계획서 `redev-successor-apt-estimate.plan.md` Q-1 a).
+ * 취득일은 사용승인일(시행령 §162①4호)이라 「취득 당시 기준시가」는 사용승인일 당시 값이다.
+ */
+export interface SuccessorEstimateInput {
+  method: "appraisal" | "salesCase" | "converted";
+  /** 감정가액·매매사례가액(④가 지분 스케일 적용) — 환산은 엔진이 구한다 */
+  value?: number;
+  /** 사용승인일 당시 기준시가(물건 전체 100%) — 환산 분자 · 개산공제 base(§163⑥ — 지분 축소는 `computeEstimatedDeduction`) */
+  standardPriceAtAcquisition: number;
+  /** 환산 분모 — 양도 당시 기준시가(§164⑧·⑨ 반영 후 · `resolveConversionDenominatorAtTransfer`) */
+  conversionDenominator?: number;
+}
+
+function resolveSuccessorEstimate(
+  estimate: SuccessorEstimateInput,
+  transferPrice: number,
+  input: RedevelopmentOrchestratorInput,
+): {
+  acquisition: number;
+  expenses: number;
+  deduction: number;
+  value: number;
+  swap?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
+} {
+  const value =
+    estimate.method === "converted"
+      ? calculateEstimatedAcquisitionPrice(transferPrice, estimate.standardPriceAtAcquisition, estimate.conversionDenominator ?? 0)
+      : (estimate.value ?? 0);
+  if (!(value > 0)) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "승계조합원 신축주택 취득가액 추계값을 확인할 수 없습니다 — 감정가액·매매사례가액 또는 환산에 쓰는 취득·양도 당시 기준시가가 필요합니다. " +
+        "(소득세법 시행령 §176의2③ · §162①4호)",
+    );
+  }
+  // 개산공제(§163⑥) — 승계 APT는 건물(2호)이라 3/100, 미등기 3/1000. base는 지분 기준시가(일반 경로 `calcTransferGain`과 같다).
+  const deduction = computeEstimatedDeduction(
+    estimate.standardPriceAtAcquisition,
+    estimatedDeductionRate(input.isUnregistered),
+    input.ownershipRatio,
+  );
+  // §97②2호 단서 — 환산취득가액에만 · 가목(환산 + 개산공제) < 나목(자본적지출·양도비 등)이면 나목만 필요경비(취득가액은 빼지 않는다).
+  //   나목은 이 분기의 인가 후 필요경비(양도비 안분 포함)다. 일반 경로 `calcNecessaryExpense`와 같은 비교식(동률은 본문).
+  const directSide = input.redevelopment.postApprovalExpenses ?? 0;
+  if (estimate.method === "converted" && directSide > 0) {
+    const estimatedSide = value + deduction;
+    if (directSide > estimatedSide)
+      return { acquisition: 0, expenses: directSide, deduction, value, swap: { estimatedSide, directSide, chosen: "direct" } };
+    return { acquisition: value, expenses: deduction, deduction, value, swap: { estimatedSide, directSide, chosen: "estimated" } };
+  }
+  return { acquisition: value, expenses: deduction, deduction, value };
+}
+
+/**
+ * 「소득세법」 §114의2① 가산세가 **일반 주택이라면** 걸렸을 조합인가 — 감정가액·환산취득가액 · 사용승인일부터 5년 이내(당일 포함).
+ * 승계조합원에게는 적용하지 않는다(법문 「거주자가 건물을 신축」 · 해석 미확보 — 계획서 Q-2 a). 결과에 「확인 필요」를 고지하는 게이트일 뿐이다.
+ */
+export const SUCCESSOR_PENALTY_114_2_NOTICE =
+  "확인 필요 — 「소득세법」 제114조의2(감정가액 또는 환산취득가액 적용에 따른 가산세): 건물을 신축하고 5년 이내에 감정가액·환산취득가액으로 양도하면 " +
+  "그 가액의 5%를 가산세로 더합니다. 승계조합원 신축주택은 조합이 지은 건물을 받은 것이라(취득시기만 사용승인일 — 시행령 제162조 제1항 제4호) " +
+  "이 가산세를 더하지 않았습니다. 적용 여부를 다룬 해석을 찾지 못했으니 신고 전에 관할 세무서나 세무사에게 확인하세요.";
+
+function successorPenalty114_2Applies(method: SuccessorEstimateInput["method"], completionDate: Date, transferDate: Date): boolean {
+  if (method === "salesCase") return false;
+  if (!buildingPenaltyMethodApplies(method === "converted" ? "estimated" : "appraisal", transferDate)) return false;
+  return transferDate.getTime() <= addYears(completionDate, 5).getTime();
 }

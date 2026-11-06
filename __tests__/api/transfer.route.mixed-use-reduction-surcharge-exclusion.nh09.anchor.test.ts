@@ -3,8 +3,8 @@
  * body → ⑫ Zod → ⑭ route(`buildMixedUseAssetInput`) → 겸용 엔진. 세율표는 mock(`makeMockRatesWithHouseEngine`)이라 정본 세액이 아니다.
  *
  * 기대값 = «같은 사실에서 양도 주택 행에 5호 수동 토글(`houses[].isTaxSpecialExemption`)을 켠 대조»(리뷰 probe f70v M2 · N2와 같은 사실).
- * ⚠️ NH-33(겸용 경로는 §99·§99의3 양도소득금액 차감 자체를 반영하지 않음 — Q-14 미결)은 이 PR 범위 밖이다 —
- *    그래서 단건 경로(차감 반영)의 값과 같아지지 않는 것이 정상이고, 이 anchor는 수동 토글·감면 미선택 대조만 쓴다.
+ * ⚠️ NH-33(Q-14 (a))으로 겸용 경로가 §99·§99의3 양도소득금액을 주택분에서 차감한다 — §99의3 3주택 값은 211,470,601에서
+ *    171,343,201로 갱신했다(중과 배제 + 차감). 수동 토글 대조·감면 미선택 대조 구조는 그대로다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -79,12 +79,12 @@ beforeEach(() => {
 });
 
 describe("NH-09 route — 겸용 × §99의3·§99 × 조정 다주택", () => {
-  it("§99의3 3주택: 현재 399,379,198 → 수동 토글 대조 211,470,601", async () => {
+  it("§99의3 3주택: 현재 399,379,198 → 수동 토글 대조 171,343,201(중과 배제 + 주택분 차감)", async () => {
     const control = await post(ACQ993, {});
     const selected = await post(ACQ993, { reductions: [r993] });
     const manual = await post(ACQ993, { reductions: [r993], houses: houses(ACQ993, 3, { isTaxSpecialExemption: true }) });
     expect(control.total.totalPayable).toBe(399_379_198);
-    expect(manual.total.totalPayable).toBe(211_470_601);
+    expect(manual.total.totalPayable).toBe(171_343_201);
     expect(selected.total.totalPayable).toBe(manual.total.totalPayable);
     expect(selected.multiHouseSurcharge?.surchargeType).toBe("none");
     expect(selected.steps.some((s) => s.id === "surcharge-exclusion-by-reduction")).toBe(true);
@@ -116,13 +116,16 @@ describe("NH-09 route — 겸용 × §99의3·§99 × 조정 다주택", () => {
     expect(selected.steps.some((s) => s.id === "surcharge-exclusion-by-reduction")).toBe(false);
   });
 
-  it("짝 — 비조정·1주택은 불변", async () => {
+  it("짝 — 비조정·1주택은 중과 판정 불변(차이는 주택분 차감뿐)", async () => {
     const nonReg = await post(ACQ993, { isRegulatedArea: false, reductions: [r993] });
     const nonRegCtl = await post(ACQ993, { isRegulatedArea: false });
-    expect(nonReg.total.totalPayable).toBe(nonRegCtl.total.totalPayable);
+    // 중과 판정은 같고(비조정), 차이는 주택분 차감(NH-33)뿐이다
+    expect(nonReg.multiHouseSurcharge?.surchargeType).toBe(nonRegCtl.multiHouseSurcharge?.surchargeType);
+    expect(nonReg.total.totalPayable).toBeLessThan(nonRegCtl.total.totalPayable);
     const one = { householdHousingCount: 1, houses: houses(ACQ993, 1) };
     const oneSel = await post(ACQ993, { ...one, reductions: [r993] });
     const oneCtl = await post(ACQ993, one);
-    expect(oneSel.total.totalPayable).toBe(oneCtl.total.totalPayable);
+    expect(oneSel.multiHouseSurcharge?.surchargeType).toBe(oneCtl.multiHouseSurcharge?.surchargeType);
+    expect(oneSel.total.totalPayable).toBeLessThan(oneCtl.total.totalPayable);
   });
 });
