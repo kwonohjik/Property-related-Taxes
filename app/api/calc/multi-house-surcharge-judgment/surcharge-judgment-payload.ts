@@ -30,6 +30,7 @@ import { resolveHceGeneralHouseAcquisitionDate } from "@/lib/tax-engine/transfer
 import { resolveSurchargeExclusionByReduction } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { reductionAcquisitionCauseOf } from "@/lib/tax-engine/transfer-reductions/new-99-acquisition-cause";
 import { isRedevelopmentActive } from "@/lib/tax-engine/redevelopment-dispatch";
+import { redevMemberNewHouseOf } from "@/lib/tax-engine/transfer-reductions/new-99-redev-member";
 import {
   resolveSurchargeApplication,
   SURCHARGE_SUBJECT_PROPERTY_TYPES,
@@ -246,6 +247,10 @@ export function buildSurchargeJudgmentPayload(
     isRedevSuccessorMember:
       isRedevelopmentActive(engineInput.propertyType, engineInput.redevelopment, engineInput.isSuccessorRightToMoveIn) &&
       engineInput.redevelopment?.isSuccessorMember === true,
+    // 완공 아파트 조합원 갈래 — 계산기 STEP 0.45와 같은 분기 조건·같은 인자 (NH-36 · L14 Q-4 a). 빠지면 판정 메뉴만 조합원이 아닌 갈래로 감면을 판정한다.
+    redevMemberNewHouse: isRedevelopmentActive(engineInput.propertyType, engineInput.redevelopment, engineInput.isSuccessorRightToMoveIn)
+      ? redevMemberNewHouseOf(engineInput.redevelopment, engineInput.acquisitionDate)
+      : undefined,
     // 조특법 §129② 미등기 게이트 (NH-58)
     isUnregistered: engineInput.isUnregistered,
   });

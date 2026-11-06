@@ -16,6 +16,8 @@ import { resolveHighValuePriceCheck } from "../one-house/threshold";
 import { evaluateNew993, type New993Result } from "./new-99-3";
 import { evaluateNew99, type New99Result } from "./new-99";
 import type { RedevMemberNewHouse } from "./new-99-redev-member";
+import { redevMemberGateCause } from "./new-99-redev-member";
+import { withRedevMemberGateNotice } from "./new-99-redev-member";
 import { evaluateUnsold988, type Unsold988Result } from "./unsold-98-8";
 import { type UnsoldHybridResult } from "./unsold-hybrid";
 import {
@@ -267,6 +269,8 @@ function evalNew993(
     const effectiveContractDate =
       coerceOptionalDate(r993.contractDate993 as Date | string | undefined) ?? ctx.assetContractDate;
     const member = ctx.redevMemberNewHouse;
+    // 종전주택을 상속·증여로 취득한 조합원 갈래는 신축주택 취득 원인 게이트를 면제한다 (L14 Q-1 a · Q-2 a)
+    const memberCause = redevMemberGateCause({ acquisitionCause: ctx.acquisitionCause, member });
     const detail = evaluateNew993({
       transferDate: ctx.transferDate,
       // 조합원 갈래 — 신축주택 취득일 = 사용검사필증 교부일(준공일) (NH-63 · 서면인터넷방문상담4팀-2145)
@@ -299,7 +303,7 @@ function evalNew993(
         stdPriceFloorMet: r993.stdPriceFloorMet993 as "yes" | "no" | "unknown" | undefined,
         luxuryFacility: r993.luxuryFacility993 as "yes" | "no" | "unknown" | undefined,
       },
-      acquisitionCause: ctx.acquisitionCause,
+      acquisitionCause: memberCause.acquisitionCause,
       firstContract: r993.firstContract993 as "yes" | "no" | "unknown" | undefined,
       isRedevSuccessorMember: ctx.isRedevSuccessorMember,
       redevMember: member
@@ -311,7 +315,7 @@ function evalNew993(
     });
     return buildResolution("new_99_3", detail.isEligible, detail.reducibleTransferIncome,
       detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
-      { new993Detail: detail });
+      { new993Detail: withRedevMemberGateNotice(detail, memberCause, "new_99_3") });
   }
   return null;
 }
@@ -324,6 +328,8 @@ function evalNew99(
   const r99 = reductions.find((x) => x.type === "new_99") as ReductionLike | undefined;
   if (r99) {
     const member = ctx.redevMemberNewHouse;
+    // 종전주택을 상속·증여로 취득한 조합원 갈래는 신축주택 취득 원인 게이트를 면제한다 (L14 Q-1 a · Q-2 a)
+    const memberCause = redevMemberGateCause({ acquisitionCause: ctx.acquisitionCause, member });
     const detail = evaluateNew99({
       transferDate: ctx.transferDate,
       // 조합원 갈래 — 신축주택 취득일 = 사용검사필증 교부일(준공일) (NH-63 · 서면인터넷방문상담4팀-2145)
@@ -343,7 +349,7 @@ function evalNew99(
       attachedLandAreaSqm: r99.attachedLandAreaSqm99 as number | undefined,
       stdPriceFloorMet: r99.stdPriceFloorMet99 as "yes" | "no" | "unknown" | undefined,
       luxuryFacility: r99.luxuryFacility99 as "yes" | "no" | "unknown" | undefined,
-      acquisitionCause: ctx.acquisitionCause,
+      acquisitionCause: memberCause.acquisitionCause,
       firstContract: r99.firstContract99 as "yes" | "no" | "unknown" | undefined,
       isResident: (r99.isResident99 as boolean | undefined) ?? true,
       isHousingConstructionBusiness: (r99.isHousingConstructionBusiness99 as boolean | undefined) ?? false,
@@ -361,7 +367,7 @@ function evalNew99(
     });
     return buildResolution("new_99", detail.isEligible, detail.reducibleTransferIncome,
       detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
-      { new99Detail: detail });
+      { new99Detail: withRedevMemberGateNotice(detail, memberCause, "new_99") });
   }
   return null;
 }
