@@ -81,8 +81,8 @@ const MODULES: ReadonlyArray<{
       "RENTAL_HOUSE_COUNT_EXCLUSION",
       // 2026-11-02 — 조특법 §97의4 임대기간 계산(조특령 §97의4② 기산일 · 조특령 §97⑤3호 상속 합산).
       "RENTAL_97_4_PERIOD",
-      // 2026-11-05 — 조특법 §99의4① 가액 한도 시기 분기 부칙 5건 · 조특령 §99의4⑭ 등록 한옥.
-      "NEW_99_4_STD_PRICE_ADDENDA", "NEW_99_4_HANOK_DECREE",
+      // 2026-11-05 — 조특법 §99의4① 가액 한도 시기 분기 부칙 5건 · 조특령 §99의4⑭ 등록 한옥 · ③ 연접·소재지 시기 부칙(NH-18·21).
+      "NEW_99_4_STD_PRICE_ADDENDA", "NEW_99_4_HANOK_DECREE", "NEW_99_4_AREA_ADDENDA",
       // 2026-11-05 — 조특법 §99·§99의3·§99의4 하위 법령 인용(NH-43·NH-48·NH-69).
       "NEW_HOUSING_SUB_ARTICLE",
       // 2026-11-05 — §99·§99의3 취득 원인 게이트 조문(NH-03·17·40·16) · 대통령령 제26959호 부칙 §16·§35(NH-49).
@@ -172,7 +172,7 @@ const MODULES: ReadonlyArray<{
     symbols: [
       "PENALTY", "PENALTY_CONST", "AMENDMENT_45", "AMENDMENT_48_1_2", "AMENDMENT_48_2",
       "AMENDMENT_REDUCTION_48_2", "CORRECTION_CLAIM_45_2", "REFUND_GAIN_52",
-      "REFUND_GAIN_RATE_ANNUAL", "CLAIM_PERIOD_ORDINARY_YEARS",
+      "REFUND_GAIN_RATE_ANNUAL", "CLAIM_PERIOD_ORDINARY_YEARS", "RURAL_SURTAX_FILING_7_1",
       "CLAIM_PERIOD_POSTERIOR_MONTHS",
       // 🔴 G-07 B1 — 기한후신고 무신고가산세 감면 (국세기본법 §48②2호·§48②3호라목)
       "LATE_FILING_45_3", "LATE_FILING_REDUCTION_48_2_2",

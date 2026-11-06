@@ -395,6 +395,8 @@ export interface PerPropertyBreakdown
   filingDelayedPenaltyTax: number;
   /** 건별 신고불성실·납부지연 가산세 상세 (입력 시) */
   penaltyDetail?: TransferTaxPenaltyResult;
+  /** NH-38 — 건별 농특세 미납분 납부지연가산세(소득세분과 별도 · 예정신고 농특세 base) */
+  ruralSurtaxDelayedPenalty?: import("../transfer-tax-rural-surtax-penalty").RuralSurtaxDelayedPenaltyDetail;
   /** 건별 세부 계산 steps (단건 엔진에서 생성) */
   steps: CalculationStep[];
   /**
@@ -639,6 +641,13 @@ export interface AggregateTransferResult {
    * 결과 화면이 「신고불성실 얼마 · 납부지연 얼마」를 풀어 쓰는 데 쓴다.
    */
   filingUnitPenaltyDetail?: TransferTaxPenaltyResult;
+  /**
+   * NH-38 — 농특세 미납분 납부지연가산세 합계(자산별 + 신고서 단위). `penaltyTax`(소득세분)와 별도이며
+   * `totalTax`에 포함된다(Q-22 — 세목 간 상계 안 함). 0이면 키가 없다.
+   */
+  ruralSurtaxDelayedPenalty?: number;
+  /** NH-38 — 신고서 단위 농특세 납부지연가산세 상세(입력 `delayedPaymentDetails`가 있을 때만) */
+  filingUnitRuralSurtaxDelayedPenalty?: import("../transfer-tax-rural-surtax-penalty").RuralSurtaxDelayedPenaltyDetail;
 
   /**
    * **부담부증여 × 배우자등 이월과세** 판정 명세 (F27 — 일반건물 §159 분기 전용).

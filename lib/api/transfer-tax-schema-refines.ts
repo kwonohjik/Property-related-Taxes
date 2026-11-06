@@ -11,6 +11,7 @@ import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-
 
 import { refineRedevelopment166_3Inputs } from "./transfer-tax-schema-redev-166-3-refines";
 import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
+import { refineNew994CapitalRegion } from "./transfer-tax-schema-reduction-refines";
 import { refineMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refines";
 import { refineMixedUseInheritedSplitDate } from "./transfer-tax-schema-mixed-bg-refines";
 import { refineDonorBuiltOuter, type DonorBuiltWire } from "./transfer-tax-schema-donor-built";
@@ -159,7 +160,10 @@ export function addPropertyRefines(
     });
   }
   refineUnregisteredSelfFarming(data.isUnregistered, data.reductions, ctx, ["reductions"]);
-  refineReductionRequiredInputs(data.reductions, data.assetContractDate, ctx, ["reductions"]);
+  // 재개발 완공 아파트 조합원 갈래는 준공일을 요구한다(NH-36) — 서브객체는 base 스키마가 모양을 보장한다
+  refineReductionRequiredInputs(data.reductions, data.assetContractDate, ctx, ["reductions"],
+    data.redevelopment as { subject?: string; receiveOnlyMode?: boolean; completionDate?: string } | null | undefined);
+  refineNew994CapitalRegion(data.reductions, data.transferDate, ctx, ["reductions"]);
   // §164⑦ PHD 경로: 3-시점 입력으로 기준시가 자동 도출되므로 standardPriceAt* 불요
   // 겸용주택 모드는 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회
   const hasPhd =

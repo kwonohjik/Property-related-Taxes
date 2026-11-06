@@ -141,6 +141,8 @@ export type AssetReductionForm =
       luxuryFacility993?: "" | "yes" | "no" | "unknown";
       /** (1호 · 매매 취득) 주택건설업자와 최초로 매매계약·계약금 납부한 사람이 본인인가 (NH-17). ""=미응답 */
       firstContract993?: "" | "yes" | "no" | "unknown";
+      /** (재개발 완공 아파트 조합원 · 준공일이 2003.6.30. 뒤) 조합이 기간 안에 조합원 외의 자와 잔여주택 매매계약을 직접 체결하고 계약금을 받았는가 — 조특령 §99의3③2호 단서 (NH-16). ""=미응답 */
+      remainderContract993?: "" | "yes" | "no" | "unknown";
       /** (1호만) 매매계약일 입주사실 있는 주택 — 적용 배제 */
       hasOccupancyAtContract?: boolean;
       /** 거주자 여부 — 비거주자는 §99의3 적용 배제 */
@@ -377,8 +379,23 @@ export type RentalReductionFormVariant =
       ruralHouseStdPrice: string;
       /** 령⑭ 지자체 등록 한옥 — 2014.1.1. 이후 구입분 한도 4억 */
       isRegisteredHanok: boolean;
-      /** ③ 일반주택과 같은/연접 읍·면·동 — ON이면 배제 */
-      isAdjacentArea: boolean;
+      /**
+       * ③ 일반주택과 같은/연접 행정구역 — 예(배제)/아니오/모름(불성립 + 확인 필요). ""=미응답(⑧ 필수 — 리뷰 NH-30 · Q-13).
+       * 읽기는 `new994AdjacentAnswer`로 — 옛 저장값 `isAdjacentArea`를 함께 읽는다.
+       */
+      adjacentArea994?: "" | "yes" | "no" | "unknown";
+      /** @deprecated 옛 저장값(토글, 기본 false). `true`만 「예」로 읽고 `false`는 미응답으로 강등한다(`new994AdjacentAnswer`) */
+      isAdjacentArea?: boolean;
+      /** 대지면적(㎡) — 2021.1.1. 전 양도분 660㎡ 이내(종전 ①1호나목·2호다목) */
+      ruralLandAreaSqm994?: string;
+      /** 주택 유형 — 2017.1.1. 전 양도분 면적 기준(공동주택 전용 116㎡ / 그 밖 연면적 150㎡). ""=미응답 */
+      ruralHouseType994?: "" | "multi_unit" | "other";
+      /** 그 밖의 주택 연면적(㎡) — 공동주택 전용면적은 명부 행 `exclusiveArea`(행 값으로 덮는다) */
+      ruralHouseFloorAreaSqm994?: string;
+      /** 공동주택 전용면적(㎡) — **행 값**(`house-count-exclusion-rows.ts`가 채운다). 폼 입력 칸 없음 */
+      ruralHouseExclusiveAreaSqm994?: string;
+      /** 명부 행 법정동코드 — **행 값**. ⑧·⑫ 수도권 모순 판정 전용(NH-20) */
+      ruralHouseRegionCode?: string;
       /** ①1호가목 소재지 요건 — 사용자 확인 */
       meetsLocationRequirement: boolean;
     }
@@ -391,8 +408,23 @@ export type RentalReductionFormVariant =
       ruralHouseJibun?: string;
       ruralHouseStdPrice: string;
       isRegisteredHanok: boolean;
-      /** ③ 일반주택과 같은/연접 시 — ON이면 배제 */
-      isAdjacentArea: boolean;
+      /**
+       * ③ 일반주택과 같은/연접 행정구역 — 예(배제)/아니오/모름(불성립 + 확인 필요). ""=미응답(⑧ 필수 — 리뷰 NH-30 · Q-13).
+       * 읽기는 `new994AdjacentAnswer`로 — 옛 저장값 `isAdjacentArea`를 함께 읽는다.
+       */
+      adjacentArea994?: "" | "yes" | "no" | "unknown";
+      /** @deprecated 옛 저장값(토글, 기본 false). `true`만 「예」로 읽고 `false`는 미응답으로 강등한다(`new994AdjacentAnswer`) */
+      isAdjacentArea?: boolean;
+      /** 대지면적(㎡) — 2021.1.1. 전 양도분 660㎡ 이내(종전 ①1호나목·2호다목) */
+      ruralLandAreaSqm994?: string;
+      /** 주택 유형 — 2017.1.1. 전 양도분 면적 기준(공동주택 전용 116㎡ / 그 밖 연면적 150㎡). ""=미응답 */
+      ruralHouseType994?: "" | "multi_unit" | "other";
+      /** 그 밖의 주택 연면적(㎡) — 공동주택 전용면적은 명부 행 `exclusiveArea`(행 값으로 덮는다) */
+      ruralHouseFloorAreaSqm994?: string;
+      /** 공동주택 전용면적(㎡) — **행 값**(`house-count-exclusion-rows.ts`가 채운다). 폼 입력 칸 없음 */
+      ruralHouseExclusiveAreaSqm994?: string;
+      /** 명부 행 법정동코드 — **행 값**. ⑧·⑫ 수도권 모순 판정 전용(NH-20) */
+      ruralHouseRegionCode?: string;
       /** ①2호나목 소재지 요건 — 사용자 확인 */
       meetsLocationRequirement: boolean;
       /** ①2호가목·령⑥ 고향 요건 (등록기준지/거주 10년) */
@@ -433,6 +465,8 @@ export type RentalReductionFormVariant =
       luxuryFacility99?: "" | "yes" | "no" | "unknown";
       /** (2호 · 매매 취득) 주택건설업자와 최초로 매매계약·계약금 납부한 사람이 본인인가 (NH-03). ""=미응답 */
       firstContract99?: "" | "yes" | "no" | "unknown";
+      /** (재개발 완공 아파트 조합원 · 준공일이 신축주택취득기간 뒤) 조합이 기간 안에 조합원 외의 자와 잔여주택 매매계약을 직접 체결하고 계약금을 받았는가 — 조특령 §99③2호 (NH-27). ""=미응답 */
+      remainderContract99?: "" | "yes" | "no" | "unknown";
       /** (2호) 매매계약일 현재 다른 자 입주 사실 — ON이면 배제 */
       hasOccupancyAtContract99: boolean;
       /** 령 §99② — 1998.5.21 이전 계약 해제 후 재계약·대체취득 — ON이면 배제 */

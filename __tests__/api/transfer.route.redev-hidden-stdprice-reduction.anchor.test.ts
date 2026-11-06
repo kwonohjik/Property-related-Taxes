@@ -172,6 +172,8 @@ describe("RH-2 컴패니언 완공APT × §97의3", () => {
 describe("RH-3 차감형 감면 — 5년 안분 양도시 기준시가", () => {
   const r993 = {
     type: "new_99_3", houseType993: "apartment", firstContract993: "yes", // NH-02·NH-17 ⑧ 필수 (#L1b)
+    // 원조합원 완공APT = 조합원 갈래(NH-36): 준공일(자산 칸) · 기간 경과 후 잔여주택 계약 사실 · 주택 출자 재개발 변형의 종전주택 기준시가 — ⑧이 먼저 묻는다
+    remainderContract993: "yes",
 
     contractDate993: "2002-01-01",
     usageApprovalDate993: "",
@@ -181,7 +183,7 @@ describe("RH-3 차감형 감면 — 5년 안분 양도시 기준시가", () => {
     isRecontractExcluded993: false,
     recontractUnavoidableCause993: false,
     isRedevelopedNewHouse993: false,
-    previousHouseStdPrice993: "",
+    previousHouseStdPrice993: "50000000",
     exclusiveAreaSqm993: "84",
     region993: "outside_speculation",
     acquisitionType993: "from_builder",
@@ -191,7 +193,7 @@ describe("RH-3 차감형 감면 — 5년 안분 양도시 기준시가", () => {
   };
   it("§99의3: 숨은 옛 값이 있어도 ⑧이 감면 카드 양도시 기준시가를 요구한다 (수정 전 311,248,320 · 418,023,870)", async () => {
     for (const stale of [{ standardPriceAtTransfer: "250000000" }, { standardPriceAtTransfer: "500000000" }]) {
-      const r = await runCalc(mainForm({ ...EST, ...stale, acquisitionDate: "2005-04-09", reductions: [r993] }));
+      const r = await runCalc(mainForm({ ...EST, ...stale, acquisitionDate: "2005-04-09", redevCompletionDate: "2019-06-01", reductions: [r993] }));
       expect(fields(r.issues)).toContain("reduction.new_99_3.standardPriceAtTransfer993");
       expect(r.body.standardPriceAtTransfer).toBeUndefined();
     }

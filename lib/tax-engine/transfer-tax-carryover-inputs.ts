@@ -85,6 +85,8 @@ export function buildInputB(
      * ⚠️ 이 줄을 `"carryover_gift"`로 바꾸면 배제 자산에 통산이 들어가 과소과세가 된다.
      */
     acquisitionCause: "purchase",
+    // 조특법 §99·§99의3 취득 원인 게이트는 실제 취득 원인(이월과세 증여)으로 판정한다 — 수증자는 최초 계약자가 아니다 (NH-34 시나리오 B · Q-3)
+    reductionAcquisitionCause: rawInput.reductionAcquisitionCause ?? rawInput.acquisitionCause,
     // §99의4·§98의9 취득순서 판정 축 — A/B 어느 쪽이 채택되든 세대 기준은 같다 (D4-05)
     houseCountExclusionAcquisitionDate: resolveHouseCountExclusionAcqDate(rawInput, ct),
     // §154① 보유 통산·「취득 당시」 — 증여자와 계속 같은 세대로 확인되면 세대 보유 시작일부터(결정 #34 G4-2). 장특·세율 보유기간은 증여일 그대로.

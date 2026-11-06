@@ -640,7 +640,7 @@ function calcMixedUseCore(
   // ⚠️ buildRejectionResult 경로에는 부착하지 않는다 — 계산 불가 상태이지 '세액 0'이라는 유효한 결과가 아니다
   //    (determinedTax=0으로 부착 시 refundTax = 당초 전액 오표시).
   const amendmentDetail = amendment
-    ? computeAmendment(amendment, total.transferTax)
+    ? computeAmendment(amendment, total.transferTax, total.ruralSurtax)
     : undefined;
 
   return {

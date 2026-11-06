@@ -168,6 +168,8 @@ export type TransferReductionStub =
       luxuryFacility99?: "yes" | "no" | "unknown";
       /** (2호 · 매매) 최초 매매계약·계약금 납부자 본인 여부 — 조특법 §99①2호 (NH-03) */
       firstContract99?: "yes" | "no" | "unknown";
+      /** 재개발 완공 아파트 조합원 — 기간 경과 후 사용승인 + 조합의 기간 내 잔여주택 직접 계약 사실 (조특령 §99③2호 · NH-27) */
+      remainderContract99?: "yes" | "no" | "unknown";
       _phase1Stub?: true }
   // §99의3 — Phase 2 본격 구현 (2026-05-06): 본 요건 필드 union 멤버
   | {
@@ -198,6 +200,8 @@ export type TransferReductionStub =
       luxuryFacility993?: "yes" | "no" | "unknown";
       /** (1호 · 매매) 최초 매매계약·계약금 납부자 본인 여부 — 조특법 §99의3①1호 (NH-17) */
       firstContract993?: "yes" | "no" | "unknown";
+      /** 재개발 완공 아파트 조합원 — 기간 경과 후 사용승인 + 조합의 기간 내 잔여주택 직접 계약 사실 (조특령 §99의3③2호 단서 · NH-16) */
+      remainderContract993?: "yes" | "no" | "unknown";
       hasOccupancyAtContract?: boolean;
       isResident993?: boolean;
       isHousingConstructionBusiness993?: boolean;
@@ -218,8 +222,15 @@ export type TransferReductionStub =
       ruralHouseAcquisitionDate?: Date;
       ruralHouseStdPrice?: number;
       isRegisteredHanok?: boolean;
-      isAdjacentArea?: boolean;
+      /** ③ 연접 — 예/아니오/모름 (미입력 = 모름, NH-30) */
+      adjacentArea994?: "yes" | "no" | "unknown";
       meetsLocationRequirement?: boolean;
+      /** 종전 면적 요건 (NH-05 PR-2b — `new-99-4-size.ts`) */
+      ruralLandAreaSqm994?: number;
+      ruralHouseType994?: "multi_unit" | "other";
+      ruralHouseAreaSqm994?: number;
+      /** 명부 행 법정동코드 — ⑫ 수도권 모순 판정 전용(NH-20). 엔진 평가에는 쓰지 않는다 */
+      ruralHouseRegionCode?: string;
       _phase1Stub?: true }
   | { type: "new_99_4_hometown";
       /** 판정 메뉴 명부 행 id — 「어느 주택인가」 */
@@ -227,8 +238,15 @@ export type TransferReductionStub =
       ruralHouseAcquisitionDate?: Date;
       ruralHouseStdPrice?: number;
       isRegisteredHanok?: boolean;
-      isAdjacentArea?: boolean;
+      /** ③ 연접 — 예/아니오/모름 (미입력 = 모름, NH-30) */
+      adjacentArea994?: "yes" | "no" | "unknown";
       meetsLocationRequirement?: boolean;
+      /** 종전 면적 요건 (NH-05 PR-2b — `new-99-4-size.ts`) */
+      ruralLandAreaSqm994?: number;
+      ruralHouseType994?: "multi_unit" | "other";
+      ruralHouseAreaSqm994?: number;
+      /** 명부 행 법정동코드 — ⑫ 수도권 모순 판정 전용(NH-20). 엔진 평가에는 쓰지 않는다 */
+      ruralHouseRegionCode?: string;
       meetsHometownRequirement?: boolean;
       _phase1Stub?: true }
   // 미분양 §98 시리즈 + §99의2

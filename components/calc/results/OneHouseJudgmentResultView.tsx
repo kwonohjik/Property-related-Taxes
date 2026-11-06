@@ -158,12 +158,22 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
         {houseCount.excluded.length > 0 && (
           <ul className="ml-4 list-disc space-y-1 text-sm">
             {houseCount.excluded.map((e, i) => (
-              <li key={i} data-testid="one-house-count-excluded">
-                {houseRef(e, houses)}
-                {e.label}
+              <li key={i}>
+                <span data-testid="one-house-count-excluded">
+                  {houseRef(e, houses)}
+                  {e.label}
+                </span>
                 <span className="ml-2">
                   <LawArticleModal legalBasis={e.legalBasis} />
                 </span>
+                {/* §99의4 적용 한도 echo·「확인 필요」(엔진 문장 그대로) */}
+                {e.notes && e.notes.length > 0 && (
+                  <ul className="ml-4 list-[circle] space-y-0.5 text-caption text-muted-foreground" data-testid="one-house-count-excluded-notes">
+                    {e.notes.map((n, j) => (
+                      <li key={j}>{n}</li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>

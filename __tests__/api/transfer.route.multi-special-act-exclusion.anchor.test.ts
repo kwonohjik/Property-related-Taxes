@@ -355,7 +355,7 @@ describe("MS-10 (회귀) §99의4 명부 행(reduction 종류) — 종전부터 
     ruralHouseAcquisitionDate: "",
     ruralHouseStdPrice: "150000000",
     isRegisteredHanok: false,
-    isAdjacentArea: false,
+    adjacentArea994: "no" as const,
     meetsLocationRequirement: true,
   };
   it("단건 = 다건", async () => {

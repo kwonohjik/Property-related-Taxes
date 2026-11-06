@@ -34,7 +34,7 @@ beforeEach(() => {
 
 const red993 = (over: Record<string, unknown> = {}) => ({
   ...getReductionDefault("new_99_3"),
-  acquisitionType993: "from_builder",
+  acquisitionType993: "from_builder", firstContract993: "yes" as const,
   standardPriceAtAcquisition993: "100,000,000",
   standardPriceAt5Years: "200,000,000",
   standardPriceAtTransfer993: "400,000,000",

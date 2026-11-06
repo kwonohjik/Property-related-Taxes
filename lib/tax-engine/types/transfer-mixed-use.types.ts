@@ -105,8 +105,9 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
    */
   burdenedGift?: import("./transfer-burdened-gift.types").BurdenedGiftInfo;
   /**
-   * 증여자의 취득원인 echo(route `data.acquisitionCause`) — 부담부증여 가드(MB-8 상속×K-5/6/7 · MB-9 이월과세 · MB-15 신축)만 읽는다.
-   * 겸용 일반 양도 경로는 읽지 않는다(취득 경로는 아래 `acquisitionBy*`·`use*` 플래그가 정한다).
+   * 증여자의 취득원인 echo(route `data.acquisitionCause`) — 부담부증여 가드(MB-8 상속×K-5/6/7 · MB-9 이월과세 · MB-15 신축)와
+   * 조특법 §99·§99의3 중과 배제 선판정의 취득 원인 게이트(`transfer-tax-mixed-use-reduction-surcharge.ts`)가 읽는다.
+   * 취득가액 경로는 읽지 않는다(아래 `acquisitionBy*`·`use*` 플래그가 정한다).
    */
   acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
 
@@ -1031,9 +1032,11 @@ export interface MixedUseTotalTax {
   penaltyDetail?: import("../transfer-tax-penalty").TransferTaxPenaltyResult;
   /** 농어촌특별세 = 감면세액 × 20% (농특세법 §5①1호 · 비과세는 시행령 §4 열거) */
   ruralSurtax: number;
+  /** NH-38 — 농특세 미납분 납부지연가산세(소득세분 `penaltyTax`와 별도 · Q-22). 납부지연 입력·미납 농특세가 있을 때만 */
+  ruralSurtaxDelayedPenalty?: import("../transfer-tax-rural-surtax-penalty").RuralSurtaxDelayedPenaltyDetail;
   /** 지방소득세 (결정세액 × 10%) */
   localTax: number;
-  /** 총 납부세액 = 결정세액 + 지방소득세 + 가산세 + 농특세 */
+  /** 총 납부세액 = 결정세액 + 지방소득세 + 가산세 + 농특세 + 농특세 납부지연가산세 */
   totalPayable: number;
 }
 

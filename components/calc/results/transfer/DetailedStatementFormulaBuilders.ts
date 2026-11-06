@@ -361,7 +361,7 @@ export interface IncomeDeductionFormulaSource {
   standardPriceAtAcquisition?: number;
   standardPriceAt5Years?: number;
   standardPriceAtTransfer?: number;
-  /** §99 재개발 변형 전용 — 분모의 기준시가(종전주택 취득시) */
+  /** §99·§99의3 재개발 변형 전용 — 분모의 기준시가(종전주택 취득시) */
   previousHouseStdPriceApplied?: number;
   /** 감면 0의 사유 판별용 — 부호 케이스 */
   signCase?: string;
@@ -395,11 +395,15 @@ export function buildIncomeDeductionReducibleFormula(
   const reducible = src.reducibleTransferIncome;
   const base = src.transferIncomeApplied ?? income;
   const article = src.articleLabel;
-  if (src.isWithin5Years) {
+  // 재개발·재건축 변형은 5년 이내 양도도 안분한다(조특령 §99①1호 단서 · §99의3②1호 단서 — NH-66). 변형이 아니면 전액.
+  const variant = src.previousHouseStdPriceApplied != null;
+  if (src.isWithin5Years && !variant) {
     return `양도소득금액 ${base.toLocaleString()} 전액 차감 (취득 후 5년 이내 양도 — ${article})`;
   }
   const acq = src.standardPriceAtAcquisition;
-  const y5 = src.standardPriceAt5Years;
+  // 5년 이내 변형은 분자가 「양도시 − 신축주택 취득시」다 — 5년시점 기준시가를 쓰지 않는다.
+  const y5 = src.isWithin5Years ? src.standardPriceAtTransfer : src.standardPriceAt5Years;
+  const y5Label = src.isWithin5Years ? "양도시 기준시가" : "5년시점 기준시가";
   const tr = src.standardPriceAtTransfer;
   // echo가 없는 구 저장 이력 — 값 없이 결과만 (graceful fallback)
   if (acq == null || y5 == null || tr == null) {
@@ -407,13 +411,13 @@ export function buildIncomeDeductionReducibleFormula(
       ? `양도소득금액 ${base.toLocaleString()} × 5년 안분비율 = ${reducible.toLocaleString()} (${article} §90② 소득금액차감)`
       : `감면 대상 없음 (${article} — 5년 안분 결과 0)`;
   }
-  // 분모는 조문별로 다르다 — §99 재개발 변형만 종전주택 취득시 기준시가
+  // 분모 — 재개발 변형(§99·§99의3)은 종전주택 취득시 기준시가 (NH-67)
   const denomBase = src.previousHouseStdPriceApplied ?? acq;
-  const denomLabel = src.previousHouseStdPriceApplied != null ? "종전주택 취득시" : "취득시";
+  const denomLabel = variant ? "종전주택 취득시" : "취득시";
   const numerator = y5 - acq;
   const denominator = tr - denomBase;
   const frac = createElement(Frac, {
-    top: `5년시점 기준시가 ${y5.toLocaleString()} − 취득시 ${acq.toLocaleString()} = ${numerator.toLocaleString()}`,
+    top: `${y5Label} ${y5.toLocaleString()} − 취득시 ${acq.toLocaleString()} = ${numerator.toLocaleString()}`,
     bottom: `양도시 기준시가 ${tr.toLocaleString()} − ${denomLabel} ${denomBase.toLocaleString()} = ${denominator.toLocaleString()}`,
   });
   // 감면 0 — 값은 그대로 보이고 사유를 덧붙인다
@@ -428,7 +432,7 @@ export function buildIncomeDeductionReducibleFormula(
   }
   // 전액 감면 — 분수 표기가 부적합(비율 ≥ 1)
   if (reducible >= base) {
-    return `양도소득금액 ${base.toLocaleString()} 전액 감면 (양도시 기준시가가 5년시점 이하 — ${article})`;
+    return `양도소득금액 ${base.toLocaleString()} 전액 감면 (${src.isWithin5Years ? "안분 비율 1 이상" : "양도시 기준시가가 5년시점 이하"} — ${article})`;
   }
   return createElement(
     Fragment,

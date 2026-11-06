@@ -129,7 +129,7 @@ describe("L leaf — 양도일 현재 보유 행만 도출·변환한다(경계:
     expect(r.culturalHeritageHouse).toBe(true);
     expect(r.fromLegacyOnly).toBe(true);
   });
-  const rural = { reduction: { type: "new_99_4_rural", ruralHouseAcquisitionDate: "", ruralHouseStdPrice: "150000000", isRegisteredHanok: false, isAdjacentArea: false, meetsLocationRequirement: true } } as const;
+  const rural = { reduction: { type: "new_99_4_rural", ruralHouseAcquisitionDate: "", ruralHouseStdPrice: "150000000", isRegisteredHanok: false, adjacentArea994: "no" as const, meetsLocationRequirement: true } } as const;
   const special = { special: { article: "unsold_98_6", houseContractDate: "", isNationalHousing: false, requirementsConfirmed: true } } as const;
   it("rowCountExclusionReductions·rowSpecialHouseExclusions — 선언 변환", () => {
     const rows = (acq: string) => [

@@ -14,6 +14,7 @@
  * | `totalPropertyTransferPrice` | 지분 물건 전체 가액 | **고가주택 판정 가액**(아래) — 라우터는 이 칸으로 «고가주택 가액»을 읽는다 |
  * | `burdenedGiftDenominator` | 증여가액(부담부증여) | 넘기지 않는다 — 부담부증여 겸용의 증여가액은 `asset.totalPropertyTransferPrice`(= C)로 이미 덮여 있다 |
  * | `selfOwns` | 토지·건물 소유자 분리 | 넘기지 않는다 — 겸용은 소유자 분리 축 밖이다(`lib/calc/self-owns-scope.ts` `selfOwnsSplitApplicable`) |
+ * | `acquisitionCause` | 자산 취득 원인 | 같다 — 취득 원인 echo(`asset.acquisitionCause`). 컴패니언 겸용은 비어 있다 |
  * | `standardPriceAtTransfer` | 자산 양도시 기준시가 | 넘기지 않는다 — 겸용은 3분할이라 단일 값이 없다. 감면 입력 자신의 칸(`standardPriceAtTransfer99` 등)이 쓰인다 |
  *
  * ## 고가주택 판정 가액 — 겸용 §89①3호 판정(`buildHousingPart` `highValueJudgmentBase ?? highValueBase`)과 같은 소스
@@ -61,6 +62,9 @@ export function resolveMixedReductionSurchargeExclusion(
     totalPropertyTransferPrice: mixedHighValueJudgmentPrice(asset, transferPrice, apportionment),
     // 조특법 §129② — 미등기면 «감면되는 주택»이 아니다(단건 STEP 0.45와 같은 게이트 · NH-58)
     isUnregistered: asset.isUnregistered,
+    // 취득 원인 게이트 — 상속·증여(지분 포함)로 받은 주택은 §99·§99의3 «감면되는 주택»이 아니다(단건 STEP 0.45와 같은 값 · L1c).
+    // 컴패니언 겸용은 이 echo가 비어 매매로 보고 최초 계약 여부(감면 입력 칸)로 판정한다.
+    acquisitionCause: asset.acquisitionCause,
   });
 }
 

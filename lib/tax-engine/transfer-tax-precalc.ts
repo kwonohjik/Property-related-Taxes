@@ -48,6 +48,9 @@ import { resolveHouseCountExclusionDate } from "./one-house/gift-household-basis
 import { pickRateBasisFacts } from "./transfer-rate-holding-basis";
 import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
 import { resolveSurchargeExclusionByReduction } from "./transfer-reductions/income-deduction-router";
+import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
+import { redevMemberNewHouseOf } from "./transfer-reductions/new-99-redev-member";
+import { isRedevelopmentActive } from "./redevelopment-dispatch";
 import {
   runMultiHouseSurchargeStep,
   runNonBusinessLandStep,
@@ -362,6 +365,17 @@ export function runSurchargeAndLandSteps(
     burdenedGiftDenominator: workingInput.burdenedGiftDenominator,
     selfOwns: input.selfOwns,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
+    // 취득 원인 게이트 — STEP 4.6 차감·재개발 Step C.5와 같은 값. 상속·증여(지분 포함)·이월과세 증여로 받은 주택은
+    // §99·§99의3 «감면되는 주택»이 아니라 소령 §167의3①5호 중과 배제도 없다 (NH-03 · NH-17 · NH-40 · L1c).
+    acquisitionCause: reductionAcquisitionCauseOf(input),
+    // 재개발 분기(Step C.5)만 승계조합원 사실을 읽는다 — 같은 분기 조건일 때만 넘긴다 (NH-16)
+    isRedevSuccessorMember:
+      isRedevelopmentActive(input.propertyType, input.redevelopment, input.isSuccessorRightToMoveIn) &&
+      input.redevelopment?.isSuccessorMember === true,
+    // 완공 아파트 조합원 갈래도 Step C.5와 같은 분기 조건일 때만 — 준공일 축 판정이 갈리지 않게 (NH-36)
+    redevMemberNewHouse: isRedevelopmentActive(input.propertyType, input.redevelopment, input.isSuccessorRightToMoveIn)
+      ? redevMemberNewHouseOf(input.redevelopment)
+      : undefined,
     // 조특법 §129② — 미등기면 STEP 4.6이 감면을 막는다. 같은 게이트로 «감면되는 주택»도 아니다 (NH-58).
     isUnregistered: input.isUnregistered,
   });

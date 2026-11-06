@@ -133,39 +133,50 @@ describe("E3-02 anchor — §166 재개발 분기의 조특법 감면", () => {
  * 한쪽만 배선하면 나머지 한쪽이 조용히 사라지므로 두 트랙을 함께 고정한다.
  */
 describe("E3-02 anchor — §166 재개발 분기의 차감형 감면 (§99의3)", () => {
-  /** 조특법 §99의3 신축주택 과세특례 — 계약 2002-01-01·기준시가 3점 */
+  /**
+   * 조특법 §99의3 신축주택 과세특례 — 기준시가 3점.
+   *
+   * 원조합원 완공 아파트는 조합원 갈래(준공일 축)다(리뷰 NH-36 · NH-16 ③2호): 준공 2012-06-01은 신축주택취득기간
+   * 경과 후라 조합의 기간 내 잔여주택 계약 사실(「예」)이 있어야 하고, 주택을 출자했으므로 재개발 변형(분모 = 종전주택
+   * 취득 당시 기준시가 80,000,000)이 자산 사실에서 정해진다(NH-32). 종전 시료(매매계약 2002-01-01 · 변형 없음 ·
+   * 산출세액 26,086,550)는 원조합원에게 성립하지 않는 1호 매매 갈래였다.
+   */
   const R993 = {
     type: "new_99_3" as const,
-    contractDate993: "2002-01-01",
     standardPriceAtAcquisition993: 100_000_000,
     standardPriceAt5Years: 160_000_000,
     standardPriceAtTransfer993: 250_000_000,
     region993: "outside_speculation" as const,
-    acquisitionType993: "from_builder" as const,
+    remainderContract993: "yes" as const,
+    previousHouseStdPrice993: 80_000_000,
   };
   const r = calculateTransferTax(
-    redevApt([R993] as unknown as TransferTaxInput["reductions"]),
+    {
+      ...redevApt([R993] as unknown as TransferTaxInput["reductions"]),
+      redevelopment: { ...case44RedevelopmentInfo(), completionDate: new Date("2012-06-01") },
+    },
     rates,
   );
 
-  it("양도소득금액이 차감된다 — 201,912,143 → 과세표준 118,647,286", () => {
+  it("양도소득금액이 차감된다 — 201,912,143 → 과세표준 128,149,034 (차감 71,263,109 = 201,912,143 × 60,000,000 ÷ 170,000,000)", () => {
     expect(r.steps.find((s) => s.label === "양도소득금액")?.amount).toBe(201_912_143);
     expect(r.steps.some((s) => s.label.startsWith("§99의3"))).toBe(true);
-    expect(r.steps.find((s) => s.label === "과세표준")?.amount).toBe(118_647_286);
+    expect(r.new993Detail?.reducibleTransferIncome).toBe(71_263_109);
+    expect(r.steps.find((s) => s.label === "과세표준")?.amount).toBe(128_149_034);
   });
 
-  it("산출세액 26,086,550 — 차감형은 산출세액 **앞**에서 적용된다", () => {
-    expect(r.calculatedTax).toBe(26_086_550);
+  it("산출세액 29,412,161 — 차감형은 산출세액 **앞**에서 적용된다", () => {
+    expect(r.calculatedTax).toBe(29_412_161);
   });
 
-  it("🔑 차감형 농특세 5,950,012 = (55,836,614 − 26,086,550) × 20%", () => {
+  it("🔑 차감형 농특세 5,284,890 = (55,836,614 − 29,412,161) × 20%", () => {
     const surtax = r.steps.find((s) => s.label === "차감형 감면 농어촌특별세 (감면세액 × 20%)");
-    expect(surtax?.amount).toBe(5_950_012);
+    expect(surtax?.amount).toBe(5_284_890);
   });
 
-  it("세액합계 34,645,217 = 결정세액 + 지방소득세 + 농특세", () => {
-    expect(r.totalTax).toBe(34_645_217);
-    expect(r.totalTax).toBe(r.determinedTax + r.localIncomeTax + 5_950_012);
+  it("세액합계 37,638,267 = 결정세액 + 지방소득세 + 농특세", () => {
+    expect(r.totalTax).toBe(37_638_267);
+    expect(r.totalTax).toBe(r.determinedTax + r.localIncomeTax + 5_284_890);
   });
 
   it("차감형은 세액감면형(reductionAmount)에 이중 계상되지 않는다", () => {

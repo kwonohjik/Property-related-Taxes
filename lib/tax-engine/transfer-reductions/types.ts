@@ -75,6 +75,12 @@ export interface PeriodCheckContext {
    * 조특법 §97의2①이 호마다 다른 시점을 지정하므로 한 fallback 체인으로 합칠 수 없다.
    */
   rental972Type?: "construction" | "purchase";
+  /**
+   * 재개발·재건축 완공 아파트 조합원(청산금 수령 단독신고 제외) — §99·§99의3 시한은 준공일(`usageApprovalDate`) 축이다 (NH-36).
+   * 준공일이 기간 경과 후여도 조합의 기간 내 잔여주택 계약 사실이 있으면 성립하므로(조특령 §99③2호 · §99의3③2호 단서) 상한은 막지 않는다.
+   * 준공일이 비어 있으면 막는다 — 칸은 감면 패널(주택 출자) 또는 재개발 카드(승계·토지 출자)에 있다.
+   */
+  redevMember?: boolean;
 }
 
 /** 시한 검증 결과 */
@@ -447,8 +453,17 @@ export interface New994EvaluationInput {
   ruralHouseStdPrice?: number;
   /** 령⑭ 지자체 등록 한옥 — 2014.1.1. 이후 구입분 한도 4억 전환 */
   isRegisteredHanok?: boolean;
-  /** ③ 일반주택과 같은/연접 읍·면·동(고향은 시) — true면 배제 */
-  isAdjacentArea?: boolean;
+  /**
+   * ③ 일반주택과 같은/연접 행정구역(비교 단위는 시기별 — `new-99-4-area.ts`) — 「예」면 배제.
+   * 「모름」·미입력(직접 API·옛 이력)은 불성립 + 확인 필요(리뷰 NH-30 · Q-13).
+   */
+  adjacentArea994?: "yes" | "no" | "unknown";
+  /** 대지면적(㎡) — 2021.1.1. 전 양도분 660㎡ 이내(종전 ①1호나목·2호다목). 범위 안에서 미입력이면 불성립 + 확인 필요 */
+  ruralLandAreaSqm994?: number;
+  /** 주택 유형 — 공동주택이면 전용면적 116㎡, 그 밖의 주택이면 연면적 150㎡(2017.1.1. 전 양도분 · 종전 령) */
+  ruralHouseType994?: "multi_unit" | "other";
+  /** 주택 면적(㎡) — 공동주택은 전용면적, 그 밖의 주택은 연면적 */
+  ruralHouseAreaSqm994?: number;
   /** ①1호가목/2호나목 소재지 요건 — 사용자 확인 토글 (별표12·배제지역 자동판정 범위 외) */
   meetsLocationRequirement?: boolean;
   /** ①2호가목·령⑥ 고향 요건 (등록기준지/거주 10년) — hometown 전용 */
@@ -467,7 +482,13 @@ export type New994IneligibleCode =
   // §98의9 검토 발견(2026-06-11): ① "취득한 후 … 양도" — 농어촌 취득 전 양도 배제
   | "TRANSFER_BEFORE_ACQUISITION"
   // ① 「1채의 주택」 — 2채 이상 보유 중에는 미적용(재산세과-1096·부동산납세과-91)
-  | "MULTIPLE_HOUSES";
+  | "MULTIPLE_HOUSES"
+  // ③ 연접 여부 「모름」·미입력 — 불성립 + 확인 필요(NH-30)
+  | "ADJACENT_UNCONFIRMED"
+  // 종전 ①1호나목·2호다목 면적 요건(대지 660㎡ — 2021.1.1. 전 양도 / 주택 150㎡·공동주택 전용 116㎡ — 2017.1.1. 전 양도)
+  | "LAND_AREA_EXCEEDED"
+  | "HOUSE_AREA_EXCEEDED"
+  | "AREA_UNCONFIRMED";
 
 export interface New994IneligibleReason {
   code: New994IneligibleCode;
@@ -496,6 +517,10 @@ export type New994Result =
       clawbackWarning: boolean;
       /** R-D: 다주택 중과 주택수에는 미반영 (소령 §167의3 별개 체계) */
       surchargeNotAffected: true;
+      /** 적용한 가액 한도(`resolveNew994StdPriceLimit`) — 결과 카드·판정 메뉴 echo(계획서 Q-9 (a)) */
+      appliedLimit?: { limit: number; label: string; legalBasis: string };
+      /** 해석례 없는 칸의 「확인 필요」 고지(계획서 Q-4·Q-5 (c)) — 결론을 가를 수 있을 때만 */
+      notices?: string[];
     };
 
 // ============================================================

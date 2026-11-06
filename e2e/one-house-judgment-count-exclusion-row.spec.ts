@@ -60,6 +60,8 @@ test("[CXR-1] 행 편집에서 농어촌주택 지정 → 「특례」 배지 �
   await expect(page.getByTestId("new994-row-acq-date")).toContainText("2019-10-21");
   await page.getByTestId("new994-stdprice-price-input").locator("input").fill("150000000");
   await page.getByRole("switch", { name: /소재지 요건 충족 확인/ }).click();
+  // NH-30 — 연접 여부는 기본값 없이 묻는다(⑧ 필수)
+  await page.getByTestId("new994-adjacent-no").click();
   await page.getByRole("button", { name: "완료" }).click();
 
   await expect(page.getByTestId("house-count-exclusion-badge-c")).toHaveText("주택 수 제외: 농어촌주택");

@@ -9,6 +9,7 @@
  */
 
 import type { New994Result } from "@/lib/tax-engine/types/transfer.types";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 interface Props {
   detail: New994Result;
@@ -67,9 +68,13 @@ export function New994DetailCard({ detail, houseRef }: Props) {
       )}
 
       {/* E-12 — 기준금액은 양도일 연혁(6억·9억·12억)이라 금액을 적지 않는다(§99의4 양도는 2021-12-08 전에도 있다). */}
+      {/* NH-70 — §99의4①의 효과는 소득세법 제89조제1항제3호(비과세) 적용이다. 고가주택 안분은 같은 법 제95조제3항,
+          표 2는 제95조제2항 표 외의 부분 단서(시행령 제159조의4 「그 밖의 규정에 따라 1세대 1주택으로 보는 주택」)라 나눠 적는다. */}
       <p className="text-xs text-violet-900 dark:text-violet-200/90">
-        {houseLabel} 1채를 소유주택에서 제외하여 1세대 1주택으로 보아 소득세법
-        제89조제1항제3호(비과세·고가주택 기준금액 초과분 안분·장기보유특별공제 표2)를 적용합니다.
+        {houseLabel} 1채를 해당 1세대의 소유주택이 아닌 것으로 보아 소득세법 제89조제1항제3호(1세대 1주택
+        비과세)를 적용합니다. 고가주택이면 기준금액 초과분의 양도차익·장기보유특별공제액은 같은 법
+        제95조제3항(같은 법 시행령 제160조)으로 계산하고, 장기보유특별공제 표 2 적용 여부는 같은 법 제95조제2항
+        표 외의 부분 단서(같은 법 시행령 제159조의4)에 따릅니다.
       </p>
 
       <div className="rounded bg-white/70 dark:bg-white/5 border border-violet-100 dark:border-violet-800/30 p-2.5 text-xs space-y-1.5">
@@ -79,7 +84,29 @@ export function New994DetailCard({ detail, houseRef }: Props) {
             {detail.ruralHoldingYears}년
           </span>
         </div>
+        {/* 계획서 Q-9 (a) — 적용한 가액 한도(양도일·취득일별, `resolveNew994StdPriceLimit`)와 근거 */}
+        {detail.appliedLimit && (
+          <div className="flex justify-between gap-3" data-testid="new994-applied-limit">
+            <span className="text-muted-foreground shrink-0">적용 한도</span>
+            <span className="text-right text-violet-900 dark:text-violet-200">
+              취득 당시 기준시가 합계 {detail.appliedLimit.label.split(" — ")[0]} 이하 ({detail.appliedLimit.legalBasis})
+            </span>
+          </div>
+        )}
       </div>
+
+      {/* 계획서 Q-4·Q-5 (c) — 해석례가 없는 칸의 「확인 필요」 */}
+      {detail.notices && detail.notices.length > 0 && (
+        <div data-testid="new994-notices">
+          <ToneCard tone="amber">
+            <ul className="text-caption space-y-0.5 pl-4 list-disc">
+              {detail.notices.map((n, i) => (
+                <li key={i}>{n}</li>
+              ))}
+            </ul>
+          </ToneCard>
+        </div>
+      )}
 
       {detail.clawbackWarning && (
         <div className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-950/30 px-3 py-2">
@@ -91,6 +118,10 @@ export function New994DetailCard({ detail, houseRef }: Props) {
         </div>
       )}
 
+      <p className="text-micro text-muted-foreground">
+        ※ 특례를 적용받으려면 과세특례신고서를 양도소득세 과세표준 신고기한(소득세법 §105·§110) 안에
+        제출해야 합니다 (조특법 §99의4⑦·조특령 §99의4⑩).
+      </p>
       <p className="text-micro text-muted-foreground">
         ※ 다주택 중과 판정의 주택 수에는 반영되지 않습니다 · 근거 조문: {detail.legalBasis}
       </p>

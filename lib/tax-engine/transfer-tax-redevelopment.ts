@@ -26,6 +26,9 @@
 
 import { SUCCESSOR_PENALTY_114_2_NOTICE } from "./redevelopment-successor";
 import { isRedevelopmentActive } from "./redevelopment";
+import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
+import { redevMemberNewHouseOf } from "./transfer-reductions/new-99-redev-member";
+import { newHouseDeductionBase, attachRightBaseNotice } from "./transfer-reductions/new-99-redev-right-base";
 import { settleCarryoverGiftTaxForRedevelopment } from "./redevelopment-burdened-gift";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import { runRedevelopmentGainSteps } from "./transfer-tax-redevelopment-steps";
@@ -53,6 +56,7 @@ import { REDEVELOPMENT, TRANSFER } from "./legal-codes";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { emitPenaltySteps } from "./transfer-tax-penalty-steps";
 import { computeAmendment } from "./transfer-tax-amendment";
+import { computeRuralSurtaxDelayedPenalty, ruralSurtaxDelayedPenaltyStep } from "./transfer-tax-rural-surtax-penalty";
 import type {
   TransferTaxInput,
   TransferTaxResult,
@@ -251,6 +255,8 @@ export function calculateRedevelopmentTax(
    * 정상 도달한 뒤 여기서 사라졌다.
    */
   let transferIncome = transferIncomeBefore993;
+  // 원조합원 입주권의 §99·§99의3 차감 기초는 「당초 취득한 신축주택에 대한 양도소득 범위」 = 인가 전 양도소득금액(NH-11 · Q-21 a)
+  const deductionBase = newHouseDeductionBase(input.redevelopment!, redevAfterRight, input.reductions);
   // 조특법 §129② — 미등기면 차감형도 적용하지 않는다(D15, `unregisteredReductionNotice`).
   const incomeDeduction = resolveIncomeDeduction(input.isUnregistered ? undefined : input.reductions, {
     transferDate: input.transferDate,
@@ -260,11 +266,14 @@ export function calculateRedevelopmentTax(
     // 고가주택 가액 요건은 물건 전체 기준 — Step A의 §95③ 12억 안분과 같은 소스를 쓴다.
     totalPropertyTransferPrice: input.totalPropertyTransferPrice,
     // 상속·증여 취득 · 관리처분계획 인가일 뒤 승계조합원은 §99의3 불성립 (NH-17 · NH-40 · NH-16 — 조특령 §99의3③2호·⑤)
-    acquisitionCause: input.acquisitionCause,
+    acquisitionCause: reductionAcquisitionCauseOf(input),
     isRedevSuccessorMember: input.redevelopment?.isSuccessorMember === true,
+    // 완공 아파트 조합원 — 준공일 축·재개발 변형 자산 사실 (NH-36 · NH-63 · NH-32)
+    redevMemberNewHouse: redevMemberNewHouseOf(input.redevelopment),
     standardPriceAtTransfer: input.standardPriceAtTransfer,
-    transferIncome: transferIncomeBefore993,
+    transferIncome: deductionBase?.base ?? transferIncomeBefore993,
   });
+  if (deductionBase) attachRightBaseNotice(incomeDeduction, deductionBase);
   if (incomeDeduction.appliedId) {
     transferIncome = Math.max(0, transferIncomeBefore993 - incomeDeduction.reducible);
   }
@@ -545,13 +554,18 @@ export function calculateRedevelopmentTax(
 
   // ─ Step H: 세액합계 ─ (농특세는 §5①1호 감면분 — 정상 경로 STEP 11과 동일하게 합산한다)
   const ruralSurtaxTotal = ruralSurtax + ruralSurtax993;
-  const totalTax = determinedTax + localIncomeTax + filingDelayedPenalty + ruralSurtaxTotal;
+  // NH-38 — 농특세 미납분 납부지연가산세(정상 경로 finalize와 같은 leaf · 소득세분과 별도 줄)
+  const ruralSurtaxDelayedPenalty = computeRuralSurtaxDelayedPenalty(input.delayedPaymentDetails, ruralSurtaxTotal);
+  const ruralPenalty = ruralSurtaxDelayedPenalty?.penalty ?? 0;
+  if (ruralSurtaxDelayedPenalty) steps.push(ruralSurtaxDelayedPenaltyStep(ruralSurtaxDelayedPenalty));
+  const totalTax = determinedTax + localIncomeTax + filingDelayedPenalty + ruralSurtaxTotal + ruralPenalty;
   steps.push({
     label: "세액합계",
     formula: (filingDelayedPenalty > 0
       ? `총결정세액 ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`
       : `${cappedReductionAmount > 0 ? "결정세액" : "산출세액"} ${determinedTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`)
-      + (ruralSurtaxTotal > 0 ? ` + 농특세 ${ruralSurtaxTotal.toLocaleString()}` : ""),
+      + (ruralSurtaxTotal > 0 ? ` + 농특세 ${ruralSurtaxTotal.toLocaleString()}` : "")
+      + (ruralPenalty > 0 ? ` + 농특세 납부지연가산세 ${ruralPenalty.toLocaleString()}` : ""),
     amount: totalTax,
     legalBasis: REDEVELOPMENT.GAIN_BASE,
   });
@@ -559,7 +573,7 @@ export function calculateRedevelopmentTax(
   // ─ Step H.5: 수정신고(경정) — 추가납부세액 + 선택적 가산세 (끝 append) ─
   // input.amendment 없으면 undefined → 무영향(additive). finalize STEP 12.5와 동일 패턴.
   const amendmentDetail = input.amendment
-    ? computeAmendment(input.amendment, determinedTax)
+    ? computeAmendment(input.amendment, determinedTax, ruralSurtaxTotal)
     : undefined;
   if (amendmentDetail) {
     for (const s of amendmentDetail.steps) steps.push({ ...s, sub: s.sub ?? true });
@@ -721,6 +735,7 @@ export function calculateRedevelopmentTax(
     // [echo] 농특세 총액(§99의3분 + 감면분). 종전에는 이 경로가 `ruralSurtax993`조차 싣지
     // 않아 재개발·입주권에서는 소득금액차감형 농특세까지 화면에서 0이 됐다 — `totalTax`엔 있다.
     ruralSurtax: ruralSurtaxTotal,
+    ...(ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty } : {}),
     totalTax,
     amendmentDetail,
     steps,

@@ -267,6 +267,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
     luxuryFacility99: z.enum(["yes", "no", "unknown"]).optional(),
     /** (2호 · 매매) 최초 매매계약·계약금 납부자 본인 여부 — 조특법 §99①2호 (NH-03) */
     firstContract99: z.enum(["yes", "no", "unknown"]).optional(),
+    /** 재개발 완공 아파트 조합원 — 기간 경과 후 사용승인이면 조합의 기간 내 잔여주택 직접 계약 사실 (조특령 §99③2호 · NH-27 — ⑫ 누락 시 침묵 strip) */
+    remainderContract99: z.enum(["yes", "no", "unknown"]).optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
   // §99의3 — Phase 2 본격 구현 (2026-05-06): 본 요건 필드 추가 + Phase 1 stub 호환
@@ -298,6 +300,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
     acquisitionType993: z.enum(["from_builder", "self_built"]).optional(),
     /** (2호 · 사용승인 2003.1.1.~6.30.만) 2003.1.1. 전 착공 여부 — 법률 제6762호 부칙 §29② (⑫ — 누락 시 침묵 strip) */
     constructionStartedBefore2003_993: z.enum(["yes", "no", "unknown"]).optional(),
+    /** 재개발 완공 아파트 조합원 — 기간 경과 후 사용승인이면 조합의 기간 내 잔여주택 직접 계약 사실 (조특령 §99의3③2호 단서 · NH-16 — ⑫ 누락 시 침묵 strip) */
+    remainderContract993: z.enum(["yes", "no", "unknown"]).optional(),
     /** 종전 고급주택(소득세법 시행령 §156 당시 시행본) 주택 유형·단독주택 사실 (NH-02 — ⑫ 누락 시 침묵 strip) */
     houseType993: z.enum(["apartment", "detached"]).optional(),
     grossFloorAreaSqm993: z.number().nonnegative().optional(),
@@ -329,8 +333,14 @@ export const reductionSchema = z.discriminatedUnion("type", [
     ruralHouseAcquisitionDate: z.string().date().optional(),
     ruralHouseStdPrice: z.number().int().nonnegative().optional(),
     isRegisteredHanok: z.boolean().optional(),
-    isAdjacentArea: z.boolean().optional(),
+    // NH-30 — 연접 3상태(미입력 = 모름 → 엔진 불성립 + 확인 필요). 옛 boolean `isAdjacentArea`는 받지 않는다(침묵 strip → 모름과 같은 결론)
+    adjacentArea994: z.enum(["yes", "no", "unknown"]).optional(),
     meetsLocationRequirement: z.boolean().optional(),
+    // NH-05 PR-2b — 종전 면적 요건(범위 안 미입력은 엔진 불성립 + 확인 필요) · NH-20 행 법정동코드(수도권 모순 refine 전용)
+    ruralLandAreaSqm994: z.number().positive().optional(),
+    ruralHouseType994: z.enum(["multi_unit", "other"]).optional(),
+    ruralHouseAreaSqm994: z.number().positive().optional(),
+    ruralHouseRegionCode: z.string().optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
   z.object({
@@ -339,8 +349,14 @@ export const reductionSchema = z.discriminatedUnion("type", [
     ruralHouseAcquisitionDate: z.string().date().optional(),
     ruralHouseStdPrice: z.number().int().nonnegative().optional(),
     isRegisteredHanok: z.boolean().optional(),
-    isAdjacentArea: z.boolean().optional(),
+    // NH-30 — 연접 3상태(미입력 = 모름 → 엔진 불성립 + 확인 필요). 옛 boolean `isAdjacentArea`는 받지 않는다(침묵 strip → 모름과 같은 결론)
+    adjacentArea994: z.enum(["yes", "no", "unknown"]).optional(),
     meetsLocationRequirement: z.boolean().optional(),
+    // NH-05 PR-2b — 종전 면적 요건(범위 안 미입력은 엔진 불성립 + 확인 필요) · NH-20 행 법정동코드(수도권 모순 refine 전용)
+    ruralLandAreaSqm994: z.number().positive().optional(),
+    ruralHouseType994: z.enum(["multi_unit", "other"]).optional(),
+    ruralHouseAreaSqm994: z.number().positive().optional(),
+    ruralHouseRegionCode: z.string().optional(),
     meetsHometownRequirement: z.boolean().optional(),
     _phase1Stub: z.literal(true).optional(),
   }),

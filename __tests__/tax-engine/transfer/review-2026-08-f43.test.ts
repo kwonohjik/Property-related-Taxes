@@ -29,7 +29,7 @@ const R993 = {
   standardPriceAt5Years: 160_000_000,
   standardPriceAtTransfer993: 250_000_000,
   region993: "outside_speculation" as const,
-  acquisitionType993: "from_builder" as const,
+  acquisitionType993: "from_builder" as const, firstContract993: "yes" as const,
 };
 
 /** 주택(§99의3 소득금액차감 감면) + 토지 — 일괄·다건 공용 집계 경로 */

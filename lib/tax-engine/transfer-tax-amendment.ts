@@ -7,6 +7,10 @@
  * 신고불성실(§47의3) — §48②1호 경과기간별 자동감면 대상.
  * 납부지연(§47의4)   — §48② 감면 미적용.
  * 소득세법 §110① 확정신고기한 기준.
+ *
+ * NH-39 — 농어촌특별세(「농어촌특별세법」 §7①: 본세와 함께 신고·납부)는 **별도 줄**로 정정한다(Q-22 —
+ * 세목 간 상계 안 함). 추가분에는 납부지연가산세만 붙고(§47의4① — 괄호가 빼는 국세는 인지세뿐)
+ * 과소신고가산세는 붙지 않는다(§47의3① 괄호 「「농어촌특별세법」에 따른 신고는 제외」).
  */
 
 import { addMonths, addYears, isAfter } from "date-fns";
@@ -19,6 +23,7 @@ import {
   CORRECTION_CLAIM_45_2,
   CLAIM_PERIOD_ORDINARY_YEARS,
   CLAIM_PERIOD_POSTERIOR_MONTHS,
+  RURAL_SURTAX_FILING_7_1,
 } from "./legal-codes";
 import { applyRate, applyRateFraction, truncateToWon } from "./tax-utils";
 import {
@@ -31,6 +36,7 @@ import type { CalculationStep } from "./types/transfer.types";
 import type {
   AmendmentInput,
   AmendmentDetail,
+  AmendmentRuralSurtaxDetail,
 } from "./types/transfer-amendment.types";
 
 /**
@@ -80,6 +86,113 @@ export function resolveClaimDeadline(
   if (reasonType === "posterior")
     return posteriorEventDate ? addMonths(posteriorEventDate, CLAIM_PERIOD_POSTERIOR_MONTHS) : undefined;
   return statutoryFilingDeadline ? addYears(statutoryFilingDeadline, CLAIM_PERIOD_ORDINARY_YEARS) : undefined;
+}
+
+/**
+ * NH-39 — 농어촌특별세 정정 줄. 당초·정정 후가 모두 0이면 없음(종전 결과 객체 불변).
+ *
+ * 납부지연가산세는 수정신고(amend)에서 「납부지연가산세 적용」을 켰을 때만 — 소득세분과 같은 기산·종기.
+ * 경정청구는 가산세 입력이 없다(④가 플래그를 false로 강제) — 농특세 추가분이 생겨도 금액만 낸다.
+ */
+function computeRuralSurtaxCorrection(
+  a: AmendmentInput,
+  ruralSurtax: number,
+  isRefundClaim: boolean,
+): { detail: AmendmentRuralSurtaxDetail; steps: CalculationStep[] } | undefined {
+  const original = a.originalRuralSurtax ?? 0;
+  if (original <= 0 && ruralSurtax <= 0) return undefined;
+  const additional = Math.max(0, ruralSurtax - original);
+  const refund = Math.max(0, original - ruralSurtax);
+  const amendedLabel = isRefundClaim ? "경정" : "수정";
+  const steps: CalculationStep[] = [
+    {
+      label: "당초 농어촌특별세",
+      formula: "당초 신고·납부한 농어촌특별세",
+      amount: original,
+      legalBasis: RURAL_SURTAX_FILING_7_1,
+    },
+    {
+      label: `${amendedLabel} 농어촌특별세`,
+      formula: "정정 후 재계산한 농어촌특별세",
+      amount: ruralSurtax,
+      legalBasis: RURAL_SURTAX_FILING_7_1,
+    },
+  ];
+  let latePaymentPenalty = 0;
+  if (additional > 0) {
+    steps.push({
+      label: "농어촌특별세 추가 납부",
+      formula: `${amendedLabel} 농어촌특별세 ${ruralSurtax.toLocaleString()} − 당초 농어촌특별세 ${original.toLocaleString()}`,
+      amount: additional,
+      legalBasis: RURAL_SURTAX_FILING_7_1,
+    });
+    if (!isRefundClaim && a.applyUnderReportingPenalty) {
+      steps.push({
+        label: "농어촌특별세 과소신고가산세 — 적용 제외",
+        formula: "「농어촌특별세법」에 따른 신고는 과소신고가산세 대상에서 제외",
+        amount: 0,
+        legalBasis: PENALTY.UNDER_FILING_RURAL_SURTAX_EXCLUDED,
+        sub: true,
+      });
+    }
+    if (!isRefundClaim && a.applyLatePaymentPenalty && a.statutoryFilingDeadline) {
+      const dp = calculateDelayedPaymentPenalty({
+        unpaidTax: additional,
+        paymentDeadline: a.statutoryFilingDeadline,
+        actualPaymentDate: a.amendedPaymentDate,
+      });
+      latePaymentPenalty = dp.delayedPaymentPenalty;
+      if (latePaymentPenalty > 0) {
+        steps.push({
+          label: `농어촌특별세 ${formatDelayedPaymentLabel(dp)}`,
+          formula: formatDelayedPaymentFormula(dp, "농어촌특별세 추가 납부"),
+          amount: latePaymentPenalty,
+          legalBasis: PENALTY.DELAYED_PAYMENT_RURAL_SURTAX,
+          sub: true,
+        });
+      }
+    }
+  }
+  if (refund > 0) {
+    steps.push({
+      label: "농어촌특별세 환급",
+      formula: `당초 농어촌특별세 ${original.toLocaleString()} − ${amendedLabel} 농어촌특별세 ${ruralSurtax.toLocaleString()} (양도소득세와 상계하지 않음)`,
+      amount: refund,
+      legalBasis: RURAL_SURTAX_FILING_7_1,
+    });
+  }
+  const totalPayable = additional + latePaymentPenalty;
+  if (totalPayable > 0) {
+    steps.push({
+      label: "농어촌특별세 납부세액",
+      formula: `추가 납부 ${additional.toLocaleString()}${latePaymentPenalty > 0 ? ` + 납부지연가산세 ${latePaymentPenalty.toLocaleString()}` : ""} (양도소득세와 별도 납부)`,
+      amount: totalPayable,
+      legalBasis: RURAL_SURTAX_FILING_7_1,
+    });
+  }
+  return {
+    detail: {
+      originalRuralSurtax: original,
+      amendedRuralSurtax: ruralSurtax,
+      additionalRuralSurtax: additional,
+      latePaymentPenalty,
+      refundRuralSurtax: refund,
+      totalPayable,
+    },
+    steps,
+  };
+}
+
+/** 소득세 정정 결과에 농특세 줄을 붙인다 — 소득세 필드(`totalPayable`·`refundTax`)는 건드리지 않는다. */
+function withRuralSurtax(
+  base: AmendmentDetail,
+  a: AmendmentInput,
+  ruralSurtax: number,
+  isRefundClaim: boolean,
+): AmendmentDetail {
+  const rural = computeRuralSurtaxCorrection(a, ruralSurtax, isRefundClaim);
+  if (!rural) return base;
+  return { ...base, ruralSurtax: rural.detail, steps: [...base.steps, ...rural.steps] };
 }
 
 /**
@@ -152,14 +265,23 @@ function computeRefundClaim(a: AmendmentInput, determinedTax: number): Amendment
  *
  * @param amendment    수정신고 입력
  * @param determinedTax 이번 계산(수정)의 결정세액
+ * @param ruralSurtax   이번 계산(수정)의 농어촌특별세 총액 — NH-39 별도 줄
  */
 export function computeAmendment(
   amendment: AmendmentInput,
   determinedTax: number,
+  ruralSurtax = 0,
 ): AmendmentDetail {
   // 경정청구(세액 감소·환급) — 방향 분기 (미지정=amend → 기존 경로 바이트 불변)
   if ((amendment.correctionKind ?? "amend") === "refund_claim")
-    return computeRefundClaim(amendment, determinedTax);
+    return withRuralSurtax(computeRefundClaim(amendment, determinedTax), amendment, ruralSurtax, true);
+  return withRuralSurtax(computeIncomeTaxAmendment(amendment, determinedTax), amendment, ruralSurtax, false);
+}
+
+function computeIncomeTaxAmendment(
+  amendment: AmendmentInput,
+  determinedTax: number,
+): AmendmentDetail {
 
   const steps: CalculationStep[] = [];
 

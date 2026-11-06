@@ -8,11 +8,14 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import { calcReductionAcquisitionStdPrice, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import { needsFirstContractAnswer } from "@/lib/tax-engine/transfer-reductions/new-99-acquisition-cause";
+import { redevMemberNeedsRemainderAnswerIso } from "@/lib/tax-engine/transfer-reductions/new-99-redev-member";
+import { redevMemberNewHouseScope } from "./redev-field-scope";
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { hasRentIncreaseRule } from "./rental-rent-increase-label";
 import { aptDeadlineExtensionPayload } from "./apt-deadline-extension-scope";
 import { rental974SaMokApplies } from "./apt-deadline-extension-scope";
+import { toNew994Payload } from "./new-99-4-form";
 
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
 /**
@@ -42,11 +45,26 @@ export function toEngineReductions(
    * 그 감면을 단 자산 — 취득원인·수유자 여부로 §66⑪·⑫ 피상속인 경작기간을 싣는지 정한다(`selfFarmingDecedentAggregable`).
    * 화면 경로는 자산을 넘긴다. 취득원인 문자열만 넘기면 수유자가 아닌 것으로 본다(종전 시그니처 호환).
    */
-  owner: AssetForm["acquisitionCause"] | Pick<AssetForm, "acquisitionCause" | "nonHeirBequest">,
+  owner:
+    | AssetForm["acquisitionCause"]
+    | (Pick<AssetForm, "acquisitionCause" | "nonHeirBequest"> &
+        Partial<Pick<AssetForm, "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "redevOriginalAssetType" | "redevReceiveOnlyMode" | "redevCompletionDate">>),
   // 파급C: 매퍼는 asset 컨텍스트 없음 → §77 고시일 fallback 소스를 명시 주입
   expropriationNoticeDate?: string,
 ) {
   const ownerAsset = typeof owner === "object" ? owner : { acquisitionCause: owner };
+  // §99·§99의3 조합원 갈래(NH-36) — 자산을 넘긴 화면 경로에서만 정해진다(취득원인 문자열만 넘기면 범위 밖)
+  const memberCompletion =
+    typeof owner === "object" && owner.assetKind
+      ? redevMemberNewHouseScope({
+          assetKind: owner.assetKind,
+          redevSubject: owner.redevSubject ?? "",
+          redevIsSuccessorMember: owner.redevIsSuccessorMember ?? "",
+          redevOriginalAssetType: owner.redevOriginalAssetType ?? "",
+          redevReceiveOnlyMode: owner.redevReceiveOnlyMode ?? "",
+          redevCompletionDate: owner.redevCompletionDate ?? "",
+        })?.completionDate
+      : undefined;
   return formReductions.map((r) => {
     if (r.type === "self_farming") {
       const decedentYears = parseInt(r.decedentFarmingYears ?? "0") || 0;
@@ -183,6 +201,11 @@ export function toEngineReductions(
         firstContract993:
           needsFirstContractAnswer(r.acquisitionType993, ownerAsset.acquisitionCause) && r.firstContract993
             ? r.firstContract993
+            : undefined,
+        // 조합원 갈래(NH-36·NH-16) — 준공일이 기간 경과 후일 때만 잔여주택 계약 사실을 싣는다(미응답 ""은 보내지 않음 — 엔진은 불성립 + 확인 필요)
+        remainderContract993:
+          redevMemberNeedsRemainderAnswerIso("new_99_3", memberCompletion) && r.remainderContract993
+            ? r.remainderContract993
             : undefined,
         hasOccupancyAtContract: r.hasOccupancyAtContract ?? false,
         isResident993: r.isResident993,
@@ -386,24 +409,7 @@ export function toEngineReductions(
     }
     // ── §99의4 농어촌·고향주택 (2026-06-11): 주택수 제외 본 변환 (④) ──
     // 날짜는 string 그대로 전달 — Route handler(⑭ route-reductions-mapper)에서 Date 변환.
-    if (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown") {
-      const common994 = {
-        ...(r.houseId ? { houseId: r.houseId } : {}),
-        ruralHouseAcquisitionDate: r.ruralHouseAcquisitionDate || undefined,
-        ruralHouseStdPrice: parseAmount(r.ruralHouseStdPrice || "0") || undefined,
-        isRegisteredHanok: r.isRegisteredHanok,
-        isAdjacentArea: r.isAdjacentArea,
-        meetsLocationRequirement: r.meetsLocationRequirement,
-      };
-      if (r.type === "new_99_4_hometown") {
-        return {
-          type: "new_99_4_hometown" as const,
-          ...common994,
-          meetsHometownRequirement: r.meetsHometownRequirement,
-        };
-      }
-      return { type: "new_99_4_rural" as const, ...common994 };
-    }
+    if (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown") return toNew994Payload(r);
     // ── P1 §99 신축주택 IMF 1차 (2026-06-11): 차감형 본 변환 (④) ──
     // 날짜는 string 그대로 — Route handler(⑭ route-reductions-mapper)에서 Date 변환.
     if (r.type === "new_99") {
@@ -446,6 +452,12 @@ export function toEngineReductions(
         firstContract99:
           needsFirstContractAnswer(r.acquisitionType99, ownerAsset.acquisitionCause) && r.firstContract99
             ? r.firstContract99
+            : undefined,
+        // 조합원 갈래(NH-36·NH-27) — 준공일이 기간 경과 후일 때만 잔여주택 계약 사실을 싣는다
+        remainderContract99:
+          redevMemberNeedsRemainderAnswerIso("new_99", memberCompletion, r.isNationalHousing99) &&
+          r.remainderContract99
+            ? r.remainderContract99
             : undefined,
         hasOccupancyAtContract99: r.hasOccupancyAtContract99,
         isRecontractExcluded99: r.isRecontractExcluded99,

@@ -51,7 +51,7 @@ const RURAL: RowCountExclusionReduction = {
   ruralHouseAcquisitionDate: "",
   ruralHouseStdPrice: "150000000",
   isRegisteredHanok: false,
-  isAdjacentArea: false,
+  adjacentArea994: "no",
   meetsLocationRequirement: true,
 };
 const RURAL_ROW: HouseEntry = {

@@ -12,7 +12,7 @@ function base(overrides?: Partial<New994EvaluationInput>): New994EvaluationInput
     ruralHouseAcquisitionDate: new Date("2015-03-01"),
     ruralHouseStdPrice: 200_000_000,
     isRegisteredHanok: false,
-    isAdjacentArea: false,
+    adjacentArea994: "no" as const,
     meetsLocationRequirement: true,
     ...overrides,
   };
@@ -44,7 +44,7 @@ describe("§99의4 evaluateNew994", () => {
   });
 
   it("A-3: 연접 토글 ON → 불적용 (③)", () => {
-    const r = evaluateNew994(base({ isAdjacentArea: true }));
+    const r = evaluateNew994(base({ adjacentArea994: "yes" as const }));
     expect(r.isEligible).toBe(false);
     expect(codesOf(r)).toContain("ADJACENT_AREA");
   });

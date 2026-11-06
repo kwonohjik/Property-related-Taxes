@@ -12,6 +12,8 @@
 import { z } from "zod";
 import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
+import { new994CapitalRegionConflict } from "@/lib/tax-engine/transfer-reductions/new-99-4-size";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 type ReductionLike = { type: string } & Record<string, unknown>;
 
@@ -20,16 +22,32 @@ export function refineReductionRequiredInputs(
   assetContractDate: string | undefined,
   ctx: z.RefinementCtx,
   path: (string | number)[],
+  /**
+   * 자산의 재개발 정보 — 완공 아파트(청산금 수령 단독신고 제외)면 §99·§99의3은 조합원 갈래라 매매계약일·사용승인일 대신
+   * 준공일(`redevelopment.completionDate`)을 요구한다 (엔진 `redevMemberNewHouseOf` · ⑧과 같은 술어 · NH-36).
+   */
+  redevelopment?: { subject?: string; receiveOnlyMode?: boolean; completionDate?: string } | null,
 ) {
+  const member = redevelopment?.subject === "apt" && redevelopment.receiveOnlyMode !== true;
+  const memberCompletion = member ? redevelopment?.completionDate : undefined;
   (reductions ?? []).forEach((r, i) => {
     const at = (key: string) => [...path, i, key];
     const issue = (key: string, message: string) =>
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: at(key), message });
     const positive = (v: unknown) => typeof v === "number" && v > 0;
+    const memberIssue = (label: string) => {
+      if (!memberCompletion)
+        issue(
+          "redevelopment.completionDate",
+          `${label} 적용: 재개발·재건축 조합원이 받은 신축주택은 준공일(사용승인·사용검사일 — redevelopment.completionDate)로 판정합니다.`,
+        );
+    };
 
     if (r.type === "new_99_3") {
       // 라우터 기본값이 from_builder다(`income-deduction-router.ts`) — 미지정도 1호로 본다.
-      if (r.acquisitionType993 === "self_built") {
+      if (member) {
+        memberIssue("§99의3");
+      } else if (r.acquisitionType993 === "self_built") {
         if (!r.usageApprovalDate993) issue("usageApprovalDate993", "§99의3 2호 적용: 사용승인일이 필요합니다.");
       } else if (!r.contractDate993 && !assetContractDate) {
         issue("contractDate993", "§99의3 1호 적용: 매매계약일(contractDate993 또는 assetContractDate)이 필요합니다.");
@@ -38,7 +56,9 @@ export function refineReductionRequiredInputs(
         issue("exclusiveAreaSqm993", "§99의3 적용: 전용면적(㎡)이 필요합니다(고가주택 판정).");
       // 법률 제6762호 부칙 §29② — 2호 사용승인 2003.1.1.~6.30.이면 2003.1.1. 전 착공 여부가 필요하다(자동 fallback 금지).
       if (
-        isAddenda29_2WindowIso(r.acquisitionType993 as string | undefined, r.usageApprovalDate993 as string | undefined) &&
+        (member
+          ? isAddenda29_2WindowIso("self_built", memberCompletion)
+          : isAddenda29_2WindowIso(r.acquisitionType993 as string | undefined, r.usageApprovalDate993 as string | undefined)) &&
         !r.constructionStartedBefore2003_993
       )
         issue(
@@ -49,7 +69,9 @@ export function refineReductionRequiredInputs(
     }
 
     if (r.type === "new_99") {
-      if (r.acquisitionType99 === "self_built") {
+      if (member) {
+        memberIssue("§99");
+      } else if (r.acquisitionType99 === "self_built") {
         if (!r.usageApprovalDate99) issue("usageApprovalDate99", "§99 적용: 자기건설 주택의 사용승인일이 필요합니다.");
       } else if (!r.contractDate99 && !assetContractDate) {
         // 조특법 §99①2호 — 「신축주택취득기간 중에 … 최초로 매매계약을 체결하고 계약금을 납부한 자」
@@ -89,4 +111,30 @@ function detachedFactsIssues(
     issue(`stdPriceFloorMet${suffix}`, `${label} 적용: 단독주택 시가표준액·기준시가 하한 충족 여부(예·아니오·모름)가 필요합니다.`);
   if (!r[`luxuryFacility${suffix}`])
     issue(`luxuryFacility${suffix}`, `${label} 적용: 엘리베이터·에스컬레이터·67㎡ 이상 수영장 설치 여부(예·아니오·모름)가 필요합니다.`);
+}
+
+/**
+ * §99의4 수도권 행 모순(리뷰 NH-20 · Q-7 (b)) — 명부 행 법정동코드(`ruralHouseRegionCode`)가 예외 아닌 수도권인데 소재지 요건을
+ * 「충족」으로 보낸 선언은 막는다. ⑧(`house-count-exclusion-reduction-validate.ts`)과 같은 함수(`new994CapitalRegionConflict`).
+ * 코드가 없으면(직접 API·수동 주소) 판정하지 않는다 — 소재지 토글은 종전대로 사용자 확인값이다.
+ */
+export function refineNew994CapitalRegion(
+  reductions: ReadonlyArray<ReductionLike> | undefined,
+  transferDate: string | undefined,
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+) {
+  (reductions ?? []).forEach((r, i) => {
+    if (r.type !== "new_99_4_rural" && r.type !== "new_99_4_hometown") return;
+    const conflict = new994CapitalRegionConflict({
+      isHometown: r.type === "new_99_4_hometown",
+      meetsLocationRequirement: r.meetsLocationRequirement as boolean | undefined,
+      regionCode: r.ruralHouseRegionCode as string | undefined,
+      transferDate: toOptionalDate(transferDate),
+      ruralHouseAcquisitionDate: toOptionalDate(r.ruralHouseAcquisitionDate as string | undefined),
+    });
+    if (conflict) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, i, "meetsLocationRequirement"], message: `§99의4 적용: ${conflict}` });
+    }
+  });
 }
