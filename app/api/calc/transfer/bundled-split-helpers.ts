@@ -285,6 +285,9 @@ export function buildCompanionEngineInputs(
    *    `satisfies`는 좁은 리터럴 키 집합을 보존하면서 대입 가능성·초과 키 검사는 그대로 한다.
    *    계획서: `docs/02-design/features/companion-derived-type-guard.plan.md` §1.4
    */
+  // 축 B 주택 지분 — 주 자산의 명부 행 ⑥ §99의4·§98의9 선언(NH-07). 토지·입주권 지분에는 싣지 않는다(아래 `shareHouseFacts`와 같은 게이트).
+  const isShareHouse = c.assetKind === "housing" || c.assetKind === "mixed_use_house" || c.redevelopment?.subject === "apt";
+  const shareCountExclusion = isShareHouse ? ctx.primaryEngineInput.shareCountExclusion : undefined;
   const companionEngine = {
     /**
      * ⑭ 토지·건물 **분리취득** 축 (N-6(A), 2026-08-23) — **키를 열거하지 않는다**.
@@ -303,7 +306,7 @@ export function buildCompanionEngineInputs(
     transferDate: ctx.transferDate,
     acquisitionPrice: acqPrice,
     acquisitionDate: acqDate,
-    assetContractDate: c.assetContractDate ? new Date(c.assetContractDate) : undefined,
+    assetContractDate: toOptionalDate(c.assetContractDate), // NH-81 — 정본 변환(`lib/api/date-coerce.ts`). 종전 `new Date` 직접 호출
     expenses: a.allocatedExpenses,
     capitalExpenditure: c.capitalExpenditure,
     transferExpense: c.transferExpense,
@@ -393,7 +396,7 @@ export function buildCompanionEngineInputs(
       ? ctx.primaryEngineInput.oneRightHouseholdFacts
       : {}),
     // ⑭ 축 B 주택 지분 — 위 타입 주석. 토지·입주권 지분에는 싣지 않는다.
-    ...(c.assetKind === "housing" || c.assetKind === "mixed_use_house" || c.redevelopment?.subject === "apt"
+    ...(isShareHouse
       ? withShareSellingAcquisitionDate(ctx.primaryEngineInput.shareHouseFacts, acqDate)
       : {}),
     // ⑭ §104①4호 단서(영 §167의6) — 컴패니언 분양권 전용(세대 단위 사실, 위 타입 주석 참조).
@@ -445,7 +448,9 @@ export function buildCompanionEngineInputs(
     //    전용 매퍼를 두면 variant가 늘 때마다 한쪽만 갱신되어 「같은 감면인데 자산1과 자산2의
     //    세액이 다르다」가 된다(F14 실측: §77의3 감면율 40%↔25%, §97 임대 전액 소실,
     //    §99의4·§98의9는 `.getTime is not a function` 500).
-    reductions: mapReductionsToEngine(c.reductions ?? []),
+    reductions: [...mapReductionsToEngine(c.reductions ?? []), ...(shareCountExclusion?.reductions ?? [])],
+    // §99의4·§98의9 「취득 전 보유」 순서 기준일 — 축 B 주택 지분이 주 자산 선언을 받을 때만 첫 지분 날짜(NH-07 · Q-27). 그 밖에는 엔진이 자기 취득일로 본다.
+    houseCountExclusionAcquisitionDate: shareCountExclusion?.reductions.length ? shareCountExclusion.generalHouseAcquisitionDate : undefined,
     // ⑭ §77 직접 경작 토지 — 농특세령 §4①1호 괄호 (D11-02).
     isSelfCultivatedExpropriatedLand: c.isSelfCultivatedExpropriatedLand,
     propertyId: c.assetId,

@@ -169,6 +169,12 @@ export interface CompanionBuildContext {
      * 함께 양도(다른 물건)는 싣지 않는다. 취득일·거주기간은 지분마다 자기 값을 쓴다.
      */
     shareHouseFacts?: ShareHouseFacts;
+    /**
+     * 축 B 주택 지분 — 명부 행 ⑥의 조세특례제한법 §99의4·§98의9 선언과 그 「취득 전에 보유하던 다른 주택」 순서 기준일(NH-07).
+     * 선언은 주 자산 감면(④ `primaryReductionsWithRows`)에만 실려 둘째 이후 지분은 같은 주택인데도 농어촌주택을 소유주택으로 셌다.
+     * 기준일은 주 자산(첫 지분) 판정일이다 — 늦게 취득한 지분도 첫 지분 날짜로 순서를 본다(Q-27 · 명부 양도 행 = 첫 지분, SH-81).
+     */
+    shareCountExclusion?: { reductions: TransferTaxItemInput["reductions"]; generalHouseAcquisitionDate: Date };
     /** 축 B 겸용 지분의 ⑳·0061 근거 문장 — 서브엔진 `warnings`가 버려지므로 route가 받아 싣는다. */
     onShareMixedRentalNotices?: (notices: string[]) => void;
     /**

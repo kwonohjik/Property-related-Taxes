@@ -9,6 +9,7 @@
  */
 
 import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { ReductionDetailWarnings } from "@/components/calc/results/transfer/ReductionDetailWarnings";
 import type {
   New99Result,
@@ -38,7 +39,14 @@ type Detail =
   | { kind: "unsold_98_4"; result: UnsoldHybridResult }
   | { kind: "unsold_98"; result: UnsoldHybridResult };
 
-type Props = Detail & CalculatedTaxProp;
+type Props = Detail &
+  CalculatedTaxProp & {
+    /**
+     * 함께 양도·다건 자산별 — 합산 엔진이 실제로 소득금액에서 뺀 금액(`PerPropertyBreakdown.incomeDeductionReducible`, NH-64).
+     * 넘기면 차감액 줄을 이 값으로 찍고, 단건 농어촌특별세 줄 대신 합산 산정 안내를 둔다. 단건은 넘기지 않는다.
+     */
+    aggregateApplied?: number;
+  };
 
 const TITLES: Record<Detail["kind"], string> = {
   new_99: "§99 — 신축주택 양도소득세 감면",
@@ -112,7 +120,7 @@ const SURCHARGE_NOTE: Record<Detail["kind"], string> = {
   unsold_98_2: SURCHARGE_5HO,
 };
 
-export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props) {
+export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggregateApplied }: Props) {
   const title = TITLES[kind];
   // P2·P3 하이브리드 — 5년 내 양도 = 세액감면 경로 (소득금액 차감 아님)
   const isHybrid = HYBRID_KINDS.includes(kind);
@@ -186,9 +194,12 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props
             <span className="text-sm font-bold text-emerald-900 dark:text-emerald-100 font-mono tabular-nums">
               {isTaxAmountMode
                 ? (result as UnsoldHybridResult).reductionAmount.toLocaleString()
-                : result.reducibleTransferIncome.toLocaleString()}
+                : (aggregateApplied ?? result.reducibleTransferIncome).toLocaleString()}
             </span>
           </div>
+        )}
+        {!isSpecialOnly && !isTaxAmountMode && (
+          <AggregateAppliedNote single={result.reducibleTransferIncome} applied={aggregateApplied} />
         )}
       </div>
 
@@ -204,7 +215,8 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props
         </div>
       )}
 
-      {result.ruralSurtax > 0 && (
+      {aggregateApplied !== undefined && result.ruralSurtax > 0 && <AggregateRuralSurtaxNote />}
+      {aggregateApplied === undefined && result.ruralSurtax > 0 && (
         <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
           <p className="text-caption text-sky-900 dark:text-sky-300">
             농어촌특별세: 감면세액 {result.taxReductionForRuralSurtax.toLocaleString()} × 20% ={" "}
@@ -224,6 +236,30 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props
       <p className="text-micro text-emerald-700 dark:text-emerald-400">
         근거 조문: {result.legalBasis}
         {SURCHARGE_NOTE[kind]}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * 함께 양도·다건 — 합산 엔진 적용액이 단건 산식 값과 다르면 그 이유를 한 줄로 적는다(NH-64).
+ * 받은 양도차손 중 감면소득 몫은 감면소득금액에서 뺀다(소득세법 시행령 §167의2②). 같으면 아무것도 그리지 않는다.
+ */
+export function AggregateAppliedNote({ single, applied }: { single: number; applied: number | undefined }) {
+  if (applied === undefined || applied === single) return null;
+  return (
+    <p data-testid="income-deduction-aggregate-applied" className="text-caption text-muted-foreground">
+      위 산식 값 {single.toLocaleString()}에서 함께 양도한 다른 자산의 양도차손 중 감면소득 몫을 뺀 금액입니다({TRANSFER.LOSS_OFFSET}).
+    </p>
+  );
+}
+
+/** 함께 양도·다건 — 농어촌특별세는 자산별 단건 값이 아니라 합산 과세 내역에서 감면 전·후 산출세액 차이로 정한다(NH-64). */
+export function AggregateRuralSurtaxNote() {
+  return (
+    <div data-testid="income-deduction-aggregate-rural" className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
+      <p className="text-caption text-sky-900 dark:text-sky-300">
+        농어촌특별세는 합산 과세 내역에서 함께 양도 전체의 감면 전·후 산출세액 차이로 산정합니다({TRANSFER.RURAL_SURTAX_993}).
       </p>
     </div>
   );

@@ -138,6 +138,7 @@ export function PropertyCard({
         longTermHoldingDeduction={breakdown.longTermHoldingDeduction}
         aggregatedContext
         appliedReductionType={breakdown.reductionType}
+        incomeDeductionApplied={breakdown.isExempt ? undefined : breakdown.incomeDeductionReducible}
         houses={houses}
       />
       {/*
