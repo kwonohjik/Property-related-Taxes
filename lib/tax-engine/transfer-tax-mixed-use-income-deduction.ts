@@ -32,7 +32,7 @@
  */
 import { buildIncomeDeductionStep, resolveIncomeDeduction } from "./transfer-reductions/income-deduction-router";
 import type { IncomeDeductionResolution } from "./transfer-reductions/income-deduction-router";
-import { reducibleShiftOf } from "./transfer-tax-aggregate-reducible-loss-share";
+import { reducibleShiftOf } from "./reducible-loss-share-core";
 import { MIXED_INCOME_DEDUCTION_COMPUTED_IDS, mixedHighValueJudgmentPrice } from "./transfer-tax-mixed-use-reduction-surcharge";
 import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
 import type { MixedUseApportionment, MixedUseAssetInput, MixedUseStep } from "./types/transfer-mixed-use.types";
