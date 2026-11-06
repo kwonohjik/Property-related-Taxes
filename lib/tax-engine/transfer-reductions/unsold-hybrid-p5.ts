@@ -15,6 +15,8 @@
  *   취득기간 판정 기준은 조문마다 다르다 — `ExclusionWindowBasis` 주석 참조.
  */
 
+import { unsold98AcquisitionCauseReason } from "./unsold-98-acquisition-cause";
+import { evaluateNew99AcquisitionGate } from "./new-99-acquisition-cause";
 import { addYears } from "date-fns";
 import { RENTAL_HOUSE_COUNT_EXCLUSION, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { NEW_99_PERIOD_START } from "./new-99";
@@ -253,6 +255,14 @@ export interface SpecialHouseExclusionInput {
   houseRentalStartDate?: Date;
   /** 해당 조문 본 요건 충족 확인 (상세 판정은 그 주택 양도 시 모드 1 입력) */
   requirementsConfirmed: boolean;
+  /**
+   * 명부 행이 상속주택인가(US-06). 상속받은 감면주택은 상속인의 소유주택에서 빠지지 않는다 — 조심 2017중1433(§98의3③ 주택 수 제외 청구 기각) ·
+   * 부동산거래관리과-337 · 대법원 2014두35126(구 §99). 예외는 `unsold-98-acquisition-cause.ts`와 같다(분양권 상속 후 상속인 잔금 취득 —
+   * §98의3·§98의5·§98의7). §98의6은 행에 1호/2호 구분이 없어 판정하지 않는다(2호 상속은 적용 — 조특령 §98의5⑤2호).
+   */
+  isInherited?: boolean;
+  /** 상속 당시 분양권이었고 상속인이 잔금을 내고 취득했는가 — `isInherited`이고 §98의3·§98의5·§98의7일 때만 읽는다 */
+  inheritedPresaleCompletedByHeir?: "yes" | "no" | "unknown";
 }
 
 /**
@@ -503,6 +513,17 @@ function evaluateSpecialHouseExclusion(
       };
     }
   }
+  const inheritedFail = e.isInherited === true ? inheritedSpecialHouseReason(e) : undefined;
+  if (inheritedFail) {
+    return {
+      article: e.article,
+      articleLabel: w.label,
+      eligible: false,
+      reason: inheritedFail.message,
+      legalBasis: w.legalBasis,
+      ...(inheritedFail.unconfirmed ? { unconfirmed: true } : {}),
+    };
+  }
   if (e.requirementsConfirmed !== true) {
     return {
       article: e.article,
@@ -513,6 +534,19 @@ function evaluateSpecialHouseExclusion(
     };
   }
   return { article: e.article, articleLabel: w.label, eligible: true, legalBasis: w.legalBasis };
+}
+
+/** 상속 행 — §98 시리즈(§98의6 제외)·§99·§99의3 감면주택은 상속인의 소유주택에서 빠지지 않는다(US-06). */
+function inheritedSpecialHouseReason(e: SpecialHouseExclusionInput): { message: string; unconfirmed?: boolean } | undefined {
+  if (e.article === "unsold_98_6") return undefined;
+  if (e.article === "new_99" || e.article === "new_99_3") {
+    const gate = evaluateNew99AcquisitionGate({ article: e.article, acquisitionType: "from_builder", acquisitionCause: "inheritance" });
+    return gate ? { message: gate.message } : undefined;
+  }
+  const r = unsold98AcquisitionCauseReason(e.article, "inheritance", {
+    inheritedPresaleCompletedByHeir: e.inheritedPresaleCompletedByHeir,
+  });
+  return r ? { message: r.message, ...(r.unconfirmed ? { unconfirmed: true } : {}) } : undefined;
 }
 
 /**

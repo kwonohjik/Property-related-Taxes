@@ -324,6 +324,8 @@ export const companionAssetSchema = z.object({
   decedentAcquisitionDate: z.string().date().optional(),
   /** 상속인이 아닌 수유자(유증·사인증여) — §104②1호 통산·§167의3①7호 미적용 */
   nonHeirBequest: z.boolean().optional(),
+  /** ⑫ US-07 — 상속 자산 §98의3·§98의5·§98의7: 상속 당시 분양권 + 상속인 잔금 취득(누락 시 침묵 strip → 엔진이 「확인 필요」로 불성립) */
+  inheritedPresaleCompletedByHeir: z.enum(["yes", "no", "unknown"]).optional(),
   /** §154⑧3호 상속주택 자체 양도 보유기간 통산 (동일세대 게이트 + 거주·보유 개시일) */
   decedentSameHouseholdBeforeInheritance: z.boolean().optional(),
   decedentCohabitationHoldingStartDate: z.string().date().optional(),

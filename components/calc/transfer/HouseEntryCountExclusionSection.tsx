@@ -25,6 +25,8 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { New994InputForm } from "@/components/calc/transfer/New994InputForm";
 import { Unsold989InputForm } from "@/components/calc/transfer/Unsold989InputForm";
 import { SpecialHouseExclusionItemFields } from "@/components/calc/transfer/SpecialHouseExclusionSection";
+import { InheritedPresaleQuestion } from "@/components/calc/transfer/InheritedPresaleQuestion";
+import { asksInheritedPresaleQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
 import { getReductionDefault } from "@/components/calc/transfer/UnifiedReductionPanel-defaults";
 import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
 import type {
@@ -215,6 +217,22 @@ export function HouseEntryCountExclusionSection({
                 })
               }
             />
+            {/* US-06 — 상속 행: §98의3·§98의5·§98의7만 분양권 상속 예외를 묻는다(⑧·⑬과 같은 술어). 그 밖의 조문은 엔진이 불성립 사유로 안내한다. */}
+            {house.isInherited === true && asksInheritedPresaleQuestion(current.special.article, "inheritance") && (
+              <InheritedPresaleQuestion
+                name={`house-row-inherited-presale-${house.id}`}
+                testIdPrefix="house-row-count-exclusion"
+                value={current.special.inheritedPresaleCompletedByHeir}
+                onChange={(v) =>
+                  onUpdate({
+                    countExclusion: {
+                      kind: "special",
+                      special: { ...current.special, inheritedPresaleCompletedByHeir: v },
+                    },
+                  })
+                }
+              />
+            )}
           </div>
         )}
       </ToneCard>

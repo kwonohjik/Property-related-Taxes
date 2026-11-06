@@ -533,6 +533,8 @@ export function buildMixedUseCompanionItems(
     // 컴패니언 겸용 × 부담부증여는 열지 않는다(MB-6 — ⑫ `refineCompanionMixedUseBurdenedGift`가 입구에서 막는다).
     burdenedGift: undefined,
     acquisitionCause: undefined,
+    // 컴패니언 겸용은 취득 원인 echo가 비어 있다(위) — 분양권 상속 답도 싣지 않는다(US-07).
+    inheritedPresaleCompletedByHeir: undefined,
   });
   asset.rentalResidence?.onNotices(resolveMixedUseRentalResidence(mixedAsset, parseRatesFromMap(ctx.mixedUseCtx.rates))?.notices ?? []);
   return buildMixedUsePartCards(

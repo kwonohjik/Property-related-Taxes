@@ -6,6 +6,7 @@
  * assets.length === 1 → single 엔드포인트, >= 2 → bundled 엔드포인트.
  */
 
+import { inheritedPresalePayload } from "./unsold-98-inherited-presale";
 import { buildPreDeemedPurchasePayload } from "./transfer-pre-deemed-purchase-form";
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { sellingHouseStdPricePayload } from "@/lib/calc/selling-std-price-scope";
@@ -546,6 +547,8 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
         : undefined,
     // 수유자(상속인 아닌 유증·사인증여) — §104②1호 통산 · §167의3①7호 미적용(계획서 non-heir-bequest-followups.plan.md)
     nonHeirBequest: primary.acquisitionCause === "inheritance" && primary.nonHeirBequest ? true : undefined,
+    // ④ US-07 — 상속 자산 §98의3·§98의5·§98의7 분양권 상속 답(⑤·⑧과 같은 술어로 게이트)
+    inheritedPresaleCompletedByHeir: inheritedPresalePayload(primary),
     // §104②1·2호를 **토지 파트**에 적용 (G-4) — 다건과 같은 leaf.
     ...buildLandPartCausePayload(primary),
     // 구주택 멸실·신축 통산(해석 (5)) — 유효 입력이 있을 때만 키를 싣는다(거짓이면 키 없음 — 기존 body 불변). 첫 자산 전용(컴패니언은 ⑫가 400).

@@ -789,6 +789,16 @@ export interface SpecialHouseExclusionFormItem {
   houseRentalStartDate?: string;
   /** 해당 조문 본 요건 충족 확인 */
   requirementsConfirmed: boolean;
+  /**
+   * 명부 행이 상속주택인가 — **행에서 도출**한다(`rowSpecialHouseExclusions`, 사용자 입력 칸 아님). 폼 전역 옛 선언에는 없다.
+   * 상속받은 §98 시리즈·§99·§99의3 감면주택은 소유주택에서 빠지지 않는다(US-06 — 조심 2017중1433).
+   */
+  isInherited?: boolean;
+  /**
+   * 상속 행 · §98의3·§98의5·§98의7 — 상속 당시 분양권이었고 상속인이 잔금을 내고 취득했는가(US-06 · 기획재정부 조세법령운용과-1103).
+   * ⑤ 행 ⑥이 3-state로 받고 ⑧이 답을 요구한다. 「모름」은 불성립 + 확인 필요.
+   */
+  inheritedPresaleCompletedByHeir?: "" | "yes" | "no" | "unknown";
 }
 
 /**
