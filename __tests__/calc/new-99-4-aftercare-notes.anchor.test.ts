@@ -55,6 +55,19 @@ const row = (reduction: AssetReductionForm, acquisitionDate: string) => ({
   countExclusion: { kind: "reduction", reduction },
 });
 
+const formOf = (houses: unknown[], transferDate = "2024-06-01") =>
+  ({
+    ...createInitialOneHouseJudgmentForm(),
+    assets: [asset()],
+    transferDate,
+    contractTotalPrice: "900000000",
+    isOneHousehold: true,
+    isRegulatedArea: false,
+    wasRegulatedAtAcquisition: false,
+    houses,
+    presaleRights: [],
+  }) as unknown as OneHouseJudgmentFormData;
+
 const form = (reduction: AssetReductionForm, acquisitionDate: string) =>
   ({
     ...createInitialOneHouseJudgmentForm(),
@@ -109,5 +122,34 @@ describe("NH-80 판정 메뉴 §99의4 보유기간·⑥ 사후관리 고지", (
   it("[A-4] 고향주택은 라벨이 바뀐다", async () => {
     const notes = await notesOf(form(HOMETOWN, "2022-09-01"));
     expect(notes).toContain("고향주택 보유기간 1년 (양도일 기준)");
+  });
+});
+
+describe("NH-50 확장 (a) — 판정 메뉴도 면적 초과 선언을 「1채」에서 빼고 주택 수에 남긴다", () => {
+  const land = (sqm: string) => ({ ...RURAL, ruralLandAreaSqm994: sqm, ruralHouseType994: "other", ruralHouseFloorAreaSqm994: "100" }) as unknown as AssetReductionForm;
+  async function detail(secondLand: string) {
+    const f = formOf([{ ...row(land("330"), "2015-03-01"), id: "r1" }, { ...row(land(secondLand), "2018-03-01"), id: "r2" }], "2019-06-01");
+    const res = await POST(
+      new NextRequest("http://localhost/api/calc/one-house-exemption", {
+        method: "POST",
+        headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
+        body: JSON.stringify(buildOneHouseExemptionApiBody(f)),
+      }),
+    );
+    const json = await res.json();
+    expect(res.status, JSON.stringify(json)).toBe(200);
+    return json.data.houseCount as { total: number; countedForExemption: number; excluded: { houseId?: string }[]; notApplied?: { houseId?: string; reasons: string[] }[] };
+  }
+  it("[MH-7] r2 대지 661㎡ → r1만 제외 · r2는 불성립 사유(대지 660㎡ 초과)와 함께 주택 수에 남는다 (3채 중 2채)", async () => {
+    const h = await detail("661");
+    expect(h.total).toBe(3);
+    expect(h.excluded.map((e) => e.houseId)).toEqual(["r1"]);
+    expect(h.notApplied?.find((n) => n.houseId === "r2")?.reasons.join(" ")).toContain("660㎡를 초과");
+    expect(h.countedForExemption).toBe(2);
+  });
+  it("[MH-7+] 짝 — r2 대지 660㎡면 2채로 세어 둘 다 불성립(MULTIPLE_HOUSES) → 3채 그대로", async () => {
+    const h = await detail("660");
+    expect(h.excluded).toEqual([]);
+    expect(h.countedForExemption).toBe(3);
   });
 });

@@ -246,8 +246,10 @@ export function evaluateNew994FromReductions(
  *    보유하고 있는 농어촌주택 취득 전 보유 주택을 양도할 때 특례를 적용한다고 회신했다
  *    (재산세과-1096, 2009.06.02 · 부동산납세과-91, 2014.02.19).
  *    농어촌주택 1채 + 고향주택 1채의 조합은 직접 해석이 없어 법문(1호·2호를 합쳐 「1채」)대로 합산한다.
- * 🔑 가액 한도를 넘는 선언(`STD_PRICE_EXCEEDED` — 확정 불성립)은 「농어촌주택등」이 아니므로 채 수에 넣지 않는다
- *    (리뷰 NH-50 · Q-10). 소재지·연접 등 사용자가 답하는 요건의 미달은 종전대로 센다.
+ * 🔑 요건 수치를 확정적으로 넘는 선언은 「농어촌주택등」이 아니므로 채 수에 넣지 않는다 — 가액 한도(`STD_PRICE_EXCEEDED`)와
+ *    종전 면적 요건의 초과(`LAND_AREA_EXCEEDED` 대지 660㎡ · `HOUSE_AREA_EXCEEDED` 연면적 150㎡·전용 116㎡)
+ *    (리뷰 NH-50 · Q-10 · 사용자 결정 확장 a). 빠진 선언 행은 일반 주택으로 세대 주택 수에 남는다.
+ *    면적 미입력(`AREA_UNCONFIRMED` — 모름)과 소재지·연접 등 사용자가 답하는 요건의 미달은 종전대로 센다.
  */
 export function evaluateNew994Declarations(
   reductions: ReadonlyArray<{ type: string }>,
@@ -262,7 +264,10 @@ export function evaluateNew994Declarations(
     ...(r.houseId ? { houseId: r.houseId } : {}),
   }));
   const isCounted = (d: (typeof results)[number]) =>
-    d.isEligible || !d.ineligibleReasons.some((x) => x.code === "STD_PRICE_EXCEEDED");
+    d.isEligible ||
+    !d.ineligibleReasons.some(
+      (x) => x.code === "STD_PRICE_EXCEEDED" || x.code === "LAND_AREA_EXCEEDED" || x.code === "HOUSE_AREA_EXCEEDED",
+    );
   const counted = results.filter(isCounted).length;
   if (counted < 2) return results;
   return results.map((d) => (!isCounted(d) ? d : {
