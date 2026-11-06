@@ -18,6 +18,7 @@
  */
 
 import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
+import { SuccessorEstimateFormula } from "./RedevSuccessorEstimateFormula";
 import type { LthdExclusionReason } from "@/lib/tax-engine/legal-codes/transfer";
 import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
@@ -65,6 +66,8 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
   const isRightSubject = subject === "right";
   // 완공APT 청산금 **수령** — 시행령 §166②2호(제1항제2호 가목·나목) 구조. 납부(§166②1호) 문구·행 이름을 쓰지 않는다 (G3-10).
   const isAptReceive = !isRightSubject && !successorMemberApplied && settlementDirection === "receive";
+  // 매매 승계 추계(감정가액·매매사례가액·환산) — 산식 행을 방식별 이름·개산공제로 그린다(계획서 redev-successor-apt-estimate Q-1 a)
+  const successorEstimate = !!successorMemberDetail?.acquisitionMethod && successorMemberDetail.acquisitionMethod !== "actual";
   // 사례 46 단독 신고 — §166②2호 수령 구조가 아니라 청산금 수령분 하나다(집행기준 100-166-10).
   const isReceiveOnly = isAptReceive && detail.receiveOnlyMode === true;
   // 이월과세 증여세 상당액(「소득세법」 §97의2①3호) — 엔진이 인가 전 분 필요경비에 택일 밖의 독립 항으로 싣는다(청산금 수령은 나목 안분 후 값).
@@ -278,12 +281,16 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </div>
           <div className="space-y-0.5 pt-1 border-t border-rose-200">
             <div className="font-semibold">단순 차감 산식 (§166 안분 우회)</div>
+            {successorEstimate ? (
+              <SuccessorEstimateFormula detail={successorMemberDetail} branch={postApprovalExistingHouse} />
+            ) : (
             <div>
               양도차익 = 양도가액 <span className="font-mono tabular-nums">{fmt(postApprovalExistingHouse.apportionedTransfer)}</span>{" "}
               − 권리가액(상속·증여 평가액) <span className="font-mono tabular-nums">{fmt(postApprovalExistingHouse.apportionedAcquisition)}</span>{" "}
               − 인가후 필요경비 <span className="font-mono tabular-nums">{fmt(postApprovalExistingHouse.expenses ?? 0)}</span>{" "}
               = <span className="font-mono tabular-nums font-bold">{fmt(postApprovalExistingHouse.gain)}</span>
             </div>
+            )}
           </div>
           <div className="pt-1 text-caption text-rose-700 dark:text-rose-300">
             ※ 근거: 사전-2019-법령해석재산-0649 (2020.02.11.) + 소득세법 시행령 §162①4호 (자가건설 의제 — 사용승인서 교부일)

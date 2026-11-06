@@ -15,6 +15,7 @@ import { MULTI_HOUSE } from "../legal-codes/transfer";
 import { resolveHighValuePriceCheck } from "../one-house/threshold";
 import { evaluateNew993, type New993Result } from "./new-99-3";
 import { evaluateNew99, type New99Result } from "./new-99";
+import type { RedevMemberNewHouse } from "./new-99-redev-member";
 import { evaluateUnsold988, type Unsold988Result } from "./unsold-98-8";
 import { type UnsoldHybridResult } from "./unsold-hybrid";
 import {
@@ -148,6 +149,12 @@ export interface IncomeDeductionContext {
   acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
   /** 재개발 자산의 승계조합원(관리처분계획 인가일 뒤 입주권 승계) — §99의3 불성립(조특령 §99의3③2호·⑤, NH-16) */
   isRedevSuccessorMember?: boolean;
+  /**
+   * 재개발·재건축 완공 아파트 조합원 갈래(`redevMemberNewHouseOf`) — §99·§99의3을 자기건설(조합원 취득 포함) 축으로 판정한다:
+   * 기간·고가주택 기준일·5년 기산일이 준공일이고(NH-36 · NH-63 · 서면인터넷방문상담4팀-2145), 주택을 출자한 원조합원이면 재개발 변형이
+   * 자산 사실에서 정해진다(NH-32). 재개발 Step C.5와 중과 배제 선판정 STEP 0.45가 같은 값을 넘긴다.
+   */
+  redevMemberNewHouse?: RedevMemberNewHouse;
   standardPriceAtTransfer?: number;
   /** 양도소득금액 (양도차익 − 장특공제). 중과 배제 선판정 시 0 전달 가능 (적격 판정에 무관) */
   transferIncome: number;
@@ -259,11 +266,13 @@ function evalNew993(
     // Round 9 정정 (2026-05-06): contractDate993 (legacy) → assetContractDate 우선순위
     const effectiveContractDate =
       coerceOptionalDate(r993.contractDate993 as Date | string | undefined) ?? ctx.assetContractDate;
+    const member = ctx.redevMemberNewHouse;
     const detail = evaluateNew993({
       transferDate: ctx.transferDate,
-      acquisitionDate: ctx.acquisitionDate,
-      contractDate: effectiveContractDate,
-      usageApprovalDate: coerceOptionalDate(r993.usageApprovalDate993 as Date | string | undefined),
+      // 조합원 갈래 — 신축주택 취득일 = 사용검사필증 교부일(준공일) (NH-63 · 서면인터넷방문상담4팀-2145)
+      acquisitionDate: member?.completionDate ?? ctx.acquisitionDate,
+      contractDate: member ? undefined : effectiveContractDate,
+      usageApprovalDate: member ? member.completionDate : coerceOptionalDate(r993.usageApprovalDate993 as Date | string | undefined),
       transferIncome: ctx.transferIncome,
       standardPriceAtAcquisition: (r993.standardPriceAtAcquisition993 as number | undefined) ?? 0,
       standardPriceAt5Years: (r993.standardPriceAt5Years as number | undefined) ?? 0,
@@ -271,7 +280,8 @@ function evalNew993(
         (r993.standardPriceAtTransfer993 as number | undefined) ?? ctx.standardPriceAtTransfer ?? 0,
       isRecontractExcluded: r993.isRecontractExcluded993 as boolean | undefined,
       recontractUnavoidableCause: r993.recontractUnavoidableCause993 as boolean | undefined,
-      isRedevelopedNewHouse: r993.isRedevelopedNewHouse993 as boolean | undefined,
+      // 조합원 갈래는 출자 자산 사실에서 정한다 — 주택 출자 원조합원만 재개발 변형 (NH-32)
+      isRedevelopedNewHouse: member ? member.houseContributed : (r993.isRedevelopedNewHouse993 as boolean | undefined),
       previousHouseStdPriceAtAcquisition: r993.previousHouseStdPrice993 as number | undefined,
       wholePropertyTransferPrice: resolveHighValuePriceCheck(ctx),
       isLandOnlyOwner: ctx.selfOwns === "land_only",
@@ -279,7 +289,7 @@ function evalNew993(
       region: (r993.region993 as "outside_speculation" | "speculation" | undefined) ?? "outside_speculation",
       isResident: (r993.isResident993 as boolean | undefined) ?? true,
       isHousingConstructionBusiness: (r993.isHousingConstructionBusiness993 as boolean | undefined) ?? false,
-      acquisitionType: (r993.acquisitionType993 as "from_builder" | "self_built" | undefined) ?? "from_builder",
+      acquisitionType: member ? "self_built" : ((r993.acquisitionType993 as "from_builder" | "self_built" | undefined) ?? "from_builder"),
       hasOccupancyAtContract: r993.hasOccupancyAtContract as boolean | undefined,
       constructionStartedBefore2003: r993.constructionStartedBefore2003_993 as "yes" | "no" | "unknown" | undefined,
       luxuryFacts: {
@@ -292,6 +302,9 @@ function evalNew993(
       acquisitionCause: ctx.acquisitionCause,
       firstContract: r993.firstContract993 as "yes" | "no" | "unknown" | undefined,
       isRedevSuccessorMember: ctx.isRedevSuccessorMember,
+      redevMember: member
+        ? { completionDate: member.completionDate, remainderContract: r993.remainderContract993 as "yes" | "no" | "unknown" | undefined }
+        : undefined,
       // 농특세는 finalize에서 2-pass 재계산 (placeholder 0)
       calculatedTaxBeforeReduction: 0,
       calculatedTaxAfterReduction: 0,
@@ -310,11 +323,13 @@ function evalNew99(
 ): IncomeDeductionResolution | null {
   const r99 = reductions.find((x) => x.type === "new_99") as ReductionLike | undefined;
   if (r99) {
+    const member = ctx.redevMemberNewHouse;
     const detail = evaluateNew99({
       transferDate: ctx.transferDate,
-      acquisitionDate: ctx.acquisitionDate,
-      contractDate: coerceOptionalDate(r99.contractDate99 as Date | string | undefined) ?? ctx.assetContractDate,
-      usageApprovalDate: coerceOptionalDate(r99.usageApprovalDate99 as Date | string | undefined),
+      // 조합원 갈래 — 신축주택 취득일 = 사용검사필증 교부일(준공일) (NH-63 · 서면인터넷방문상담4팀-2145)
+      acquisitionDate: member?.completionDate ?? ctx.acquisitionDate,
+      contractDate: member ? undefined : coerceOptionalDate(r99.contractDate99 as Date | string | undefined) ?? ctx.assetContractDate,
+      usageApprovalDate: member ? member.completionDate : coerceOptionalDate(r99.usageApprovalDate99 as Date | string | undefined),
       transferIncome: ctx.transferIncome,
       standardPriceAtAcquisition: r99.standardPriceAtAcquisition99 as number | undefined,
       standardPriceAt5Years: r99.standardPriceAt5Years99 as number | undefined,
@@ -332,13 +347,17 @@ function evalNew99(
       firstContract: r99.firstContract99 as "yes" | "no" | "unknown" | undefined,
       isResident: (r99.isResident99 as boolean | undefined) ?? true,
       isHousingConstructionBusiness: (r99.isHousingConstructionBusiness99 as boolean | undefined) ?? false,
-      acquisitionType: (r99.acquisitionType99 as "from_builder" | "self_built" | undefined) ?? "from_builder",
+      acquisitionType: member ? "self_built" : ((r99.acquisitionType99 as "from_builder" | "self_built" | undefined) ?? "from_builder"),
       isNationalHousing: (r99.isNationalHousing99 as boolean | undefined) ?? false,
       hasOccupancyAtContract: r99.hasOccupancyAtContract99 as boolean | undefined,
       isRecontractExcluded: r99.isRecontractExcluded99 as boolean | undefined,
       recontractUnavoidableCause: r99.recontractUnavoidableCause99 as boolean | undefined,
-      isRedevelopedNewHouse: r99.isRedevelopedNewHouse99 as boolean | undefined,
+      // 조합원 갈래는 출자 자산 사실에서 정한다 — 주택 출자 원조합원만 재개발 변형 (NH-32)
+      isRedevelopedNewHouse: member ? member.houseContributed : (r99.isRedevelopedNewHouse99 as boolean | undefined),
       previousHouseStdPriceAtAcquisition: r99.previousHouseStdPrice99 as number | undefined,
+      redevMember: member
+        ? { completionDate: member.completionDate, remainderContract: r99.remainderContract99 as "yes" | "no" | "unknown" | undefined }
+        : undefined,
     });
     return buildResolution("new_99", detail.isEligible, detail.reducibleTransferIncome,
       detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,

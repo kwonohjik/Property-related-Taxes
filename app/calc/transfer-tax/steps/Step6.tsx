@@ -265,6 +265,24 @@ export function Step6({
               </FieldCard>
             )}
 
+            {/*
+              NH-38 — 농어촌특별세 미납분에도 납부지연가산세가 붙는다(국세기본법 §2 1호 차목·§47의4①).
+              소득세 미납세액과 상계하지 않고 따로 계산한다(Q-22) — 미납 농특세 = 농특세 − 이 값.
+            */}
+            <FieldCard
+              label="기납부 농어촌특별세"
+              field="priorPaidRuralSurtax"
+              unit="원"
+              hint="감면으로 농어촌특별세가 생기는 경우 — 이미 납부한 농어촌특별세. 비워 두면 농어촌특별세 전액을 미납으로 보고 그 납부지연가산세를 따로 계산합니다 (국세기본법 §47의4①)"
+            >
+              <CurrencyInput
+                label=""
+                hideUnit
+                value={form.priorPaidRuralSurtax ?? ""}
+                onChange={(v) => onChange({ priorPaidRuralSurtax: v })}
+              />
+            </FieldCard>
+
             <FieldCard
               label="법정납부기한"
               hint="예정신고: 양도월 말일부터 2개월 / 확정신고: 다음해 5월 31일"

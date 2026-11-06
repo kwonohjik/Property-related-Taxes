@@ -5,6 +5,7 @@ import {
   expandToggleLabel,
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import type { AmendmentDetail } from "@/lib/tax-engine/types/transfer-amendment.types";
+import type { AmendmentRuralSurtaxDetail } from "@/lib/tax-engine/types/transfer-amendment.types";
 import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 
 /** 금액 행 — 라벨 좌 / 금액 우측정렬 고정폭(amount-column-align 정책). */
@@ -29,6 +30,42 @@ function Row({
       <span className={`font-mono tabular-nums whitespace-nowrap ${bold ? "font-bold" : ""}`}>
         {value}
       </span>
+    </div>
+  );
+}
+
+/**
+ * NH-39 — 농어촌특별세 정정 줄(Q-22: 양도소득세와 **별도 줄** · 세목 간 상계 안 함).
+ * 엔진 `AmendmentDetail.ruralSurtax`가 있을 때만 그린다(당초·정정 후 농특세가 모두 0이면 없음).
+ */
+function RuralSurtaxCorrectionRows({
+  rural,
+  amendedLabel,
+  borderClass,
+}: {
+  rural: AmendmentRuralSurtaxDetail;
+  amendedLabel: string;
+  borderClass: string;
+}) {
+  return (
+    <div data-testid="amendment-rural-surtax" className={`mt-3 space-y-1 border-t pt-2 ${borderClass}`}>
+      <p className="text-xs font-medium text-muted-foreground">
+        농어촌특별세 — 양도소득세와 상계하지 않고 따로 납부·환급합니다 (농어촌특별세법 §7①)
+      </p>
+      <Row label="당초 농어촌특별세" value={formatKRW(rural.originalRuralSurtax)} />
+      <Row label={`${amendedLabel} 농어촌특별세`} value={formatKRW(rural.amendedRuralSurtax)} />
+      {rural.additionalRuralSurtax > 0 && (
+        <Row label="농어촌특별세 추가 납부" value={formatKRW(rural.additionalRuralSurtax)} />
+      )}
+      {rural.latePaymentPenalty > 0 && (
+        <Row label="농어촌특별세 납부지연가산세" value={formatKRW(rural.latePaymentPenalty)} />
+      )}
+      {rural.totalPayable > 0 && (
+        <Row label="농어촌특별세 납부세액" value={formatKRW(rural.totalPayable)} bold />
+      )}
+      {rural.refundRuralSurtax > 0 && (
+        <Row label="농어촌특별세 환급세액" value={formatKRW(rural.refundRuralSurtax)} bold />
+      )}
     </div>
   );
 }
@@ -69,7 +106,7 @@ export function AmendmentResultCard({
         className="rounded-xl border-2 border-emerald-400 bg-emerald-50/40 p-5 dark:border-emerald-700 dark:bg-emerald-950/20"
       >
         <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300 mb-1">
-          환급 청구세액
+          환급 청구세액{detail.ruralSurtax ? " (양도소득세)" : ""}
         </p>
         <p className="text-3xl font-bold">{formatKRW(refund)}</p>
         {noRefund && (
@@ -85,6 +122,13 @@ export function AmendmentResultCard({
             <Row label="환급세액" value={formatKRW(refund)} bold />
           </div>
         </div>
+        {detail.ruralSurtax && (
+          <RuralSurtaxCorrectionRows
+            rural={detail.ruralSurtax}
+            amendedLabel="경정"
+            borderClass="border-emerald-300 dark:border-emerald-800"
+          />
+        )}
 
         {detail.claimDeadline && (
           <div className="mt-2">
@@ -140,7 +184,7 @@ export function AmendmentResultCard({
       className="rounded-xl border-2 border-amber-400 bg-amber-50/40 p-5 dark:border-amber-700 dark:bg-amber-950/20"
     >
       <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
-        수정신고 추가 납부세액
+        수정신고 추가 납부세액{detail.ruralSurtax ? " (양도소득세)" : ""}
       </p>
       <p className="text-3xl font-bold">{formatKRW(detail.totalPayable)}</p>
 
@@ -165,6 +209,13 @@ export function AmendmentResultCard({
           <Row label="수정신고 총 납부세액" value={formatKRW(detail.totalPayable)} bold />
         </div>
       </div>
+      {detail.ruralSurtax && (
+        <RuralSurtaxCorrectionRows
+          rural={detail.ruralSurtax}
+          amendedLabel="수정"
+          borderClass="border-amber-300 dark:border-amber-800"
+        />
+      )}
 
       <div className="mt-2 space-y-0.5">
         <Row

@@ -3,9 +3,12 @@
  *
  *   RS-1 (Q-1 a) 부담부증여 × 승계 × 매매 — 종전에는 ⑧이 화면에 없는 상단 취득가액 칸을 요구해 계산할 수 없었다.
  *        지금: 계산되고 §159 안분 양도차익 153,260,870 (300,000,000 − 450,000,000 × 300/920).
- *   RS-2 (Q-2 a) 주택에서 「감정가액」 → 자산 종류 「재개발/재건축 APT」 → 「승계조합원」 — 산정 방식 라디오가 없고 취득가액 칸이 보인다.
- *        종전에는 남은 감정가액 플래그로 취득가액 0 · appraisal이 실렸다. 지금: 취득가액 450,000,000 · actual · 산출세액 327,250,000.
- *   RS-3 같은 순서로 「매매사례가액」 — 종전에는 매매사례가액 칸만 보이고 엔진은 숨은 취득가액으로 계산했다. 지금: 매매사례가액 칸 없음 · 취득가액 칸.
+ *   RS-2 주택에서 「감정가액」 → 자산 종류 「재개발/재건축 APT」 → 「승계조합원」.
+ *        2026-11-06 반전(계획서 `redev-successor-apt-estimate.plan.md` Q-1 a): 매매 승계는 추계 3종을 계산한다 — 라디오 4종 · 감정가액 그대로 ·
+ *        사용승인일 안내 · 취득시 기준시가 300,000,000을 넣으면 920,000,000 − 450,000,000 − 개산공제 9,000,000 = 461,000,000.
+ *        (종전 Q-2 a: 라디오 없음 · 실거래가 450,000,000 · 327,250,000)
+ *   RS-3 같은 순서로 「매매사례가액」 — 매매사례가액 칸이 보이고 920,000,000 − 500,000,000 − 9,000,000 = 411,000,000.
+ *   RS-4 결과 화면 — 승계 추계 산식 행(감정가액 · 개산공제)과 §114의2 「확인 필요」 고지.
  * 사람이 브라우저로 직접 한 수동 확인은 아니다(headless Playwright). 워크트리는 `E2E_PORT=<포트> npx playwright test <spec>`.
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -65,11 +68,19 @@ async function switchToSuccessor(page: Page, flag: Record<string, unknown>) {
   await card.getByRole("button", { name: /재개발\/재건축 APT/ }).click();
   for (const n of [2, 3] as const) await expandAssetSection(page, n);
   await card.getByRole("radio", { name: /승계조합원/ }).first().click();
-  await expect(card.getByTestId("successor-apt-actual-only-note")).toBeVisible();
+  await expect(card.getByTestId("successor-apt-estimate-note")).toBeVisible();
   return card;
 }
 
-test.describe("승계조합원 완공 아파트 — 부담부증여 매매 · 실거래가 전용", () => {
+/** 「취득시 기준시가」 칸에 값을 넣는다 — `data-field`가 입력 자체이거나 감싼 요소다. */
+async function fillAcqStd(card: ReturnType<Page["locator"]>, value: string) {
+  const el = card.locator('[data-field="standardPriceAtAcq"]').first();
+  const input = (await el.evaluate((e) => e.tagName)) === "INPUT" ? el : el.locator("input").first();
+  await input.fill(value);
+  await input.blur();
+}
+
+test.describe("승계조합원 완공 아파트 — 부담부증여 매매 · 매매 승계 추계", () => {
   test("RS-1: 부담부증여 × 승계 × 매매 → 계산된다 · §159 안분 양도차익 153,260,870", async ({ page }) => {
     test.setTimeout(180_000);
     await seed(page, form({ ...SUCC, ...BG }));
@@ -77,24 +88,39 @@ test.describe("승계조합원 완공 아파트 — 부담부증여 매매 · �
     expect(result.transferGain).toBe(153_260_870);
   });
 
-  test("RS-2: 남은 감정가액 플래그 → 라디오 없음 · 취득가액 칸 · 본문 취득가액 450,000,000 · actual", async ({ page }) => {
+  test("RS-2: 남은 감정가액 플래그 → 라디오 4종 · 감정가액 그대로 · 기준시가 입력 → appraisal · 461,000,000", async ({ page }) => {
     test.setTimeout(180_000);
     const card = await switchToSuccessor(page, { isAppraisalAcquisition: true });
-    await expect(card.locator('input[type="radio"][name="acqBasisMode"]')).toHaveCount(0);
+    await expect(card.locator('input[type="radio"][name="acqBasisMode"]')).toHaveCount(4);
     await expect(card.locator('[data-field="fixedAcquisitionPrice"]')).toHaveCount(1);
+    await fillAcqStd(card, "300000000");
     const { sent, result } = await calculate(page);
-    expect(sent.acquisitionPrice).toBe(450_000_000);
-    expect(sent.acquisitionMethod).toBe("actual");
-    expect(result.calculatedTax).toBe(327_250_000);
+    expect(sent.acquisitionMethod).toBe("appraisal");
+    expect(sent.appraisalValue).toBe(450_000_000);
+    expect(result.transferGain).toBe(461_000_000);
   });
 
-  test("RS-3: 남은 매매사례가액 플래그 → 매매사례가액 칸 없음 · 취득가액 칸", async ({ page }) => {
+  test("RS-3: 남은 매매사례가액 플래그 → 매매사례가액 칸 · 기준시가 입력 → salesCase · 411,000,000", async ({ page }) => {
     test.setTimeout(180_000);
     const card = await switchToSuccessor(page, { isSalesCaseAcquisition: true, similarSalesValue: "500000000" });
-    await expect(card.locator('[data-field="similarSalesValue"]')).toHaveCount(0);
-    await expect(card.locator('[data-field="fixedAcquisitionPrice"]')).toHaveCount(1);
-    const { sent } = await calculate(page);
-    expect(sent.acquisitionPrice).toBe(450_000_000);
-    expect(sent.acquisitionMethod).toBe("actual");
+    await expect(card.locator('[data-field="similarSalesValue"]')).toHaveCount(1);
+    await fillAcqStd(card, "300000000");
+    const { sent, result } = await calculate(page);
+    expect(sent.acquisitionMethod).toBe("salesCase");
+    expect(result.transferGain).toBe(411_000_000);
+  });
+
+  test("RS-4: 결과 화면 — 승계 추계 산식(감정가액 · 개산공제 9,000,000)과 §114의2 「확인 필요」 고지", async ({ page }) => {
+    test.setTimeout(180_000);
+    await seed(page, form({ ...SUCC, isAppraisalAcquisition: true, standardPriceAtAcq: "300000000" }));
+    const { result } = await calculate(page);
+    expect(result.transferGain).toBe(461_000_000);
+    const formula = page.getByTestId("successor-estimate-formula").first();
+    await formula.waitFor({ state: "attached", timeout: 60_000 });
+    const text = (await formula.textContent()) ?? "";
+    expect(text).toContain("감정가액");
+    expect(text).toContain("9,000,000");
+    expect(text).toContain("461,000,000");
+    await expect(page.getByText(/제114조의2/).first()).toBeAttached();
   });
 });

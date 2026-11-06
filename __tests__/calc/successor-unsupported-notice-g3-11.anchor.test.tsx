@@ -123,14 +123,15 @@ async function runRoute(form: TransferFormData) {
 }
 
 describe("G3-11 · ⑤ 목록", () => {
-  it("G-1 「지원하지 않는 분기」 목록 — 청산금 분기(자동 차단) · 추계 3종(실지거래가액으로만 계산)", () => {
+  it("G-1 「지원하지 않는 분기」 목록 — 청산금 분기(자동 차단) · 상속·증여·부담부증여 승계의 추계 3종", () => {
     // 2026-10-26: 추계는 「자동 차단」이 아니라 선택지 자체가 없다(⑤ 라디오 숨김 · 계획서 redev-successor-bg-acq-method Q-2 a).
+    // 2026-11-06: 매매 승계는 추계 3종을 고른다 — 목록은 남은 범위(상속·증여·부담부증여)만 말한다(계획서 redev-successor-apt-estimate Q-1 a).
     const { container } = render(<SuccessorMemberSection asset={succ("2000000000").assets[0]} onChange={() => {}} />);
     const head = Array.from(container.querySelectorAll("div.font-semibold")).find((d) => d.textContent?.includes("지원하지 않는"));
     const items = Array.from(head!.parentElement!.querySelectorAll("li")).map((l) => l.textContent ?? "");
     expect(items).toEqual([
       "승계조합원 + 청산금 분기 (납부·수령) — 자동 차단",
-      "승계조합원 + 환산·감정가액·매매사례가액 — 실지거래가액(증여는 증여 신고가액)으로만 계산합니다",
+      "승계조합원(상속·증여·부담부증여) + 환산·감정가액·매매사례가액 — 상속개시일 평가액·증여 신고가액(부담부증여는 §159 산정액)으로만 계산합니다. 매매로 승계했다면 「취득가액 산정 방식」에서 고를 수 있습니다",
     ]);
     // 대조 — 같은 카드의 하늘색 박스는 표2 적용을 말한다
     expect(container.textContent).toMatch(/장특공제 표2/);
@@ -138,9 +139,12 @@ describe("G3-11 · ⑤ 목록", () => {
 });
 
 describe("G3-11 · ⑧ — 목록이 말하는 차단은 실재한다 (긍정 짝)", () => {
-  it("G-2 청산금 납부 1억 → ⑧ 「미지원」 차단 · 남은 환산 플래그는 차단하지 않는다(④가 무시 — 실거래가 전용)", () => {
+  it("G-2 청산금 납부 1억 → ⑧ 「미지원」 차단 · 환산은 「미지원」으로 막지 않는다(매매 승계는 추계 3종 계산 — 2026-11-06 Q-1 a · 증여 승계는 ④가 무시)", () => {
     expect(issues(succ("2000000000", { redevSettlementAmount: "100000000" })).some((m) => /청산금 분기.*미지원/.test(m))).toBe(true);
-    expect(issues(succ("2000000000", { useEstimatedAcquisition: true } as Partial<AssetForm>))).toEqual([]);
+    // 매매 · 환산 — 기준시가 칸을 요구할 뿐 「미지원」 차단은 없다
+    const converted = issues(succ("2000000000", { useEstimatedAcquisition: true } as Partial<AssetForm>));
+    expect(converted.some((m) => /미지원/.test(m))).toBe(false);
+    expect(issues(succ("2000000000", { useEstimatedAcquisition: true, standardPriceAtAcq: "300000000", standardPriceAtTransfer: "600000000" } as Partial<AssetForm>))).toEqual([]);
   });
 });
 

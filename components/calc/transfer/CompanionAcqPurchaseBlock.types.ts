@@ -83,6 +83,16 @@ export interface BlockProps {
    * 호출부는 추계 플래그도 false로 넘겨 칸이 감정가액·매매사례가액 칸으로 바뀌지 않게 한다(④·⑧과 같은 술어).
    */
   acqBasisActualOnly?: boolean;
+  /**
+   * 매매로 승계한 조합원 완공 APT(부담부증여 아님) — 산정 방식 라디오 아래에 「취득일 = 사용승인일」 안내를 붙인다
+   * (`isRedevSuccessorAptEstimable` · 계획서 redev-successor-apt-estimate Q-1 a). 추계 기준일·취득 당시 기준시가가 입주권 취득일이 아니다.
+   */
+  successorAptEstimateNote?: boolean;
+  /**
+   * 추계 기준일 — 「취득시 기준시가」 공시가격 조회·매매사례 조회 기준일. 비우면 `acquisitionDate`.
+   * 승계조합원 완공 APT는 취득일이 사용승인일(소득세법 시행령 §162①4호)이라 입주권 취득일(`acquisitionDate`) 대신 준공일을 넘긴다.
+   */
+  estimateReferenceDate?: string;
   /** 취득 당시 면적 (㎡) — 취득시 기준시가 자동계산, Pre1990 환산용 */
   acquisitionArea?: string;
   onAcquisitionAreaChange?: (v: string) => void;
@@ -191,5 +201,8 @@ export function toPropertyKind(
 ): "land" | "building_non_residential" | "house_individual" | "house_apart" {
   if (assetKind === "housing") return "house_individual";
   if (assetKind === "land") return "land";
+  // 재개발 완공 APT — 이 블록의 기준시가 칸은 매매 승계 추계에서만 열린다(원조합원은 영역이 숨는다 · `redevHidesGeneralAcqSection`).
+  //   공동주택가격(총액)이다 — ㎡당 단가 × 면적(비주거 건물) 위젯이 아니다(계획서 redev-successor-apt-estimate Playwright 실측).
+  if (assetKind === "redevelopment_apt") return "house_apart";
   return "building_non_residential";
 }

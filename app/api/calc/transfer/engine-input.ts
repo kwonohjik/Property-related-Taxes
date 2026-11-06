@@ -426,6 +426,10 @@ export function buildTransferEngineInput(
           ...(data.delayedPaymentDetails.unpaidTaxMode
             ? { unpaidTaxMode: data.delayedPaymentDetails.unpaidTaxMode }
             : {}),
+          // ⑭ NH-38 — 기납부 농특세(optional이라 TS가 누락을 못 잡는다 — 빠지면 농특세 전액 미납으로 계산)
+          ...(data.delayedPaymentDetails.paidRuralSurtax !== undefined
+            ? { paidRuralSurtax: data.delayedPaymentDetails.paidRuralSurtax }
+            : {}),
           paymentDeadline: new Date(data.delayedPaymentDetails.paymentDeadline),
           actualPaymentDate: data.delayedPaymentDetails.actualPaymentDate
             ? new Date(data.delayedPaymentDetails.actualPaymentDate)
@@ -436,6 +440,8 @@ export function buildTransferEngineInput(
     amendment: data.amendment
       ? {
           originalDeterminedTax: data.amendment.originalDeterminedTax,
+          // ⑭ NH-39 — 당초 농특세(optional — 빠지면 당초 0으로 읽혀 농특세 전액이 추가 납부로 나온다)
+          originalRuralSurtax: data.amendment.originalRuralSurtax,
           applyUnderReportingPenalty: data.amendment.applyUnderReportingPenalty,
           underReportingReason: data.amendment.underReportingReason,
           underReductionMode: data.amendment.underReductionMode,

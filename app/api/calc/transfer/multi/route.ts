@@ -525,6 +525,8 @@ export async function POST(request: NextRequest) {
         ? {
             unpaidTax: p.delayedPaymentDetails.unpaidTax,
             ...(p.delayedPaymentDetails.unpaidTaxMode ? { unpaidTaxMode: p.delayedPaymentDetails.unpaidTaxMode } : {}),
+            // ⑭ NH-38 — 기납부 농특세(단건 engine-input과 같은 키)
+            ...(p.delayedPaymentDetails.paidRuralSurtax !== undefined ? { paidRuralSurtax: p.delayedPaymentDetails.paidRuralSurtax } : {}),
             paymentDeadline: toDate(p.delayedPaymentDetails.paymentDeadline, "delayedPaymentDetails.paymentDeadline"),
             actualPaymentDate: toOptionalDate(p.delayedPaymentDetails.actualPaymentDate),
           }
@@ -607,6 +609,8 @@ export async function POST(request: NextRequest) {
     amendment: data.amendment
       ? {
           originalDeterminedTax: data.amendment.originalDeterminedTax,
+          // ⑭ NH-39 — 당초 농특세(단건 engine-input과 같은 키)
+          originalRuralSurtax: data.amendment.originalRuralSurtax,
           applyUnderReportingPenalty: data.amendment.applyUnderReportingPenalty,
           underReportingReason: data.amendment.underReportingReason,
           underReductionMode: data.amendment.underReductionMode,
@@ -664,6 +668,8 @@ export async function POST(request: NextRequest) {
         enriched.delayedPaymentDetails = {
           ...p.delayedPaymentDetails,
           unpaidTax: resolveUnpaidTax(p.delayedPaymentDetails, determinedTax),
+          // NH-38 — 농특세분 납부지연가산세 base도 예정신고 값(소득세분 F03과 같은 축)
+          ...(pre ? { ruralSurtaxForPenalty: pre.ruralSurtax } : {}),
         };
       }
       return enriched;

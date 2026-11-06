@@ -12,15 +12,16 @@ import { makeMockRates, makeMockRatesWithHouseEngine, baseTransferInput } from "
 import { case44RedevelopmentInfo } from "../transfer-tax/redevelopment/_helpers";
 
 const rates = makeMockRates();
+// 원조합원 완공 아파트는 조합원 갈래(준공일 축 — NH-36): 준공 2012-06-01은 기간 경과 후라 잔여주택 계약 사실 「예」,
+// 주택 출자라 재개발 변형(종전주택 취득 당시 기준시가)이 필요하다(NH-32). 승계조합원은 그 전에 취득 원인 게이트가 막는다.
 const R993 = {
   type: "new_99_3" as const,
-  contractDate993: "2002-01-01",
   standardPriceAtAcquisition993: 100_000_000,
   standardPriceAt5Years: 160_000_000,
   standardPriceAtTransfer993: 250_000_000,
   region993: "outside_speculation" as const,
-  acquisitionType993: "from_builder" as const,
-  firstContract993: "yes" as const,
+  remainderContract993: "yes" as const,
+  previousHouseStdPrice993: 80_000_000,
 };
 
 function redevApt(successor: boolean): TransferTaxInput {
@@ -38,7 +39,8 @@ function redevApt(successor: boolean): TransferTaxInput {
     residencePeriodMonths: 0,
     redevelopment: {
       ...case44RedevelopmentInfo(),
-      ...(successor ? { isSuccessorMember: true, completionDate: new Date("2012-06-01") } : {}),
+      completionDate: new Date("2012-06-01"),
+      ...(successor ? { isSuccessorMember: true } : {}),
     },
     reductions: [R993] as unknown as TransferTaxInput["reductions"],
   });

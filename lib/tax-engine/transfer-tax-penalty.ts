@@ -98,6 +98,16 @@ export interface DelayedPaymentInput {
   unpaidTax: number;
   /** PEN-C — 「자동(결정세액 전액)」·「직접 입력(0=완납 포함)」. 결정세액 주입은 `resolveUnpaidTax` */
   unpaidTaxMode?: import("./transfer-tax-unpaid-tax").UnpaidTaxMode;
+  /**
+   * NH-38 — 기납부 농어촌특별세. 농특세 미납세액 = 농특세 − 이 값(`transfer-tax-rural-surtax-penalty.ts`).
+   * 미제공 = 0(농특세 전액 미납). 소득세 미납세액(`unpaidTax`)과 상계하지 않는다(Q-22).
+   */
+  paidRuralSurtax?: number;
+  /**
+   * route 주입 전용(Zod에 없다) — 다건 자산별 **예정신고** 농특세. 소득세분 base(F03)와 같은 축이다.
+   * 미제공이면 그 계산의 농특세 총액을 쓴다.
+   */
+  ruralSurtaxForPenalty?: number;
   /** 납부기한 (이 날까지 납부해야 함) */
   paymentDeadline: Date;
   /** 실제 납부일 (미제공 시 계산 기준일 사용) */

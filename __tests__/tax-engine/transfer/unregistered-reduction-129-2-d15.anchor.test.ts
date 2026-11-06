@@ -162,7 +162,8 @@ describe("D15 조기반환·분기 경로", () => {
         residencePeriodMonths: 0,
         standardPriceAtAcquisition: 200_000_000,
         standardPriceAtTransfer: 400_000_000,
-        redevelopment: case44RedevelopmentInfo(),
+        // 원조합원 완공 아파트 준공일 — §99의3 조합원 갈래(NH-36)가 읽는다. §77 감면·세액 경로는 읽지 않는다.
+        redevelopment: { ...case44RedevelopmentInfo(), completionDate: D("2012-06-01T00:00:00") },
         isUnregistered: u,
         reductions,
       });
@@ -174,19 +175,20 @@ describe("D15 조기반환·분기 경로", () => {
     expect(rd(false, [E]).reductionAmount).toBe(8_375_491);
 
     // 차감형(§99의3) — 재개발 분기의 Step C.5는 STEP 4.6과 별도 호출부다.
+    //   원조합원 완공 아파트는 조합원 갈래 — 준공 2012-06-01(기간 경과 후) + 잔여주택 계약 사실 「예」 + 주택 출자 재개발 변형 (NH-36 · NH-16 · NH-32)
     const R993 = {
       type: "new_99_3",
-      contractDate993: "2002-01-01",
       standardPriceAtAcquisition993: 100_000_000,
       standardPriceAt5Years: 160_000_000,
       standardPriceAtTransfer993: 250_000_000,
       region993: "outside_speculation",
-      acquisitionType993: "from_builder", firstContract993: "yes" as const,
+      remainderContract993: "yes" as const,
+      previousHouseStdPrice993: 80_000_000,
     };
     const u993 = rd(true, [R993]);
     expect(u993.totalTax).toBe(rd(true, []).totalTax);
     expect(notices(u993)).toHaveLength(1);
-    expect(rd(false, [R993]).calculatedTax).toBe(26_086_550);
+    expect(rd(false, [R993]).calculatedTax).toBe(29_412_161);
     expect(rd(false, []).calculatedTax).toBe(55_836_614);
   });
 

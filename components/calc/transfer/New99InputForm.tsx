@@ -22,6 +22,8 @@ import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reductio
 import { New99LuxuryHouseFields } from "@/components/calc/transfer/New99LuxuryHouseFields";
 import { New99FirstContractField } from "@/components/calc/transfer/New99LuxuryHouseFields";
 import { needsFirstContractAnswer } from "@/lib/tax-engine/transfer-reductions/new-99-acquisition-cause";
+import type { RedevMemberFormScope } from "@/lib/calc/redev-field-scope";
+import { RedevMemberNewHouseFields } from "@/components/calc/transfer/RedevMemberNewHouseFields";
 
 type New99Form = Extract<AssetReductionForm, { type: "new_99" }>;
 
@@ -41,6 +43,8 @@ interface Props {
   assetPhdSnapshot?: ReductionPhdValue;
   /** 자산 취득 원인 — 매매 취득일 때만 최초 계약 여부를 묻는다(상속·증여는 엔진이 불성립, NH-03) */
   acquisitionCause?: string;
+  /** 재개발 완공 아파트 조합원 갈래(NH-36) — 취득 유형·매매계약일 대신 준공일로 판정하고, 주택 출자면 재개발 변형이 고정된다(NH-32) */
+  redevMember?: RedevMemberFormScope;
 }
 
 function SectionShell({
@@ -76,9 +80,24 @@ export function New99InputForm({
   assetId,
   assetPhdSnapshot,
   acquisitionCause,
+  redevMember,
 }: Props) {
-  const isFromBuilder = value.acquisitionType99 === "from_builder";
+  // 조합원 갈래 — 엔진(`income-deduction-router` evalNew99)·⑧·④와 같은 축: 자기건설·준공일·출자 자산 사실 변형
+  const isFromBuilder = !redevMember && value.acquisitionType99 === "from_builder";
+  /** 신축주택 취득일 — 조합원은 준공일(서면인터넷방문상담4팀-2145 · NH-63). 기준시가 조회 기준일도 이 날이다. */
+  const newHouseAcqDate = redevMember ? redevMember.completionDate || undefined : acquisitionDate;
   const periodEndLabel = value.isNationalHousing99 ? "1999.12.31" : "1999.6.30";
+  const previousHouseStdField = (
+        <div>
+          <label className="mb-1 block text-xs font-medium">종전주택 취득 당시 기준시가</label>
+          <CurrencyInput
+            data-field="reduction.new_99.previousHouseStdPrice99"
+            value={value.previousHouseStdPrice99}
+            onChange={(v) => onChange({ previousHouseStdPrice99: v })}
+            label=""
+          />
+        </div>
+  );
   return (
     <div className="mt-2 ml-4 space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -88,6 +107,15 @@ export function New99InputForm({
       </div>
 
       <SectionShell num="①" title="취득 유형·시기" tone="amber">
+        {redevMember ? (
+          <RedevMemberNewHouseFields
+            article="new_99"
+            member={redevMember}
+            remainderContract={value.remainderContract99 ?? ""}
+            onRemainderContractChange={(v) => onChange({ remainderContract99: v })}
+            isNationalHousing={value.isNationalHousing99}
+          />
+        ) : (
         <RadioCardGroup
           name="new99-acquisition-type"
           tone="amber"
@@ -99,6 +127,7 @@ export function New99InputForm({
             { value: "self_built", label: "자기건설 (조합원 취득 포함)", description: "사용승인·사용검사 기준 (1호)" },
           ]}
         />
+        )}
         <ToggleCard
           tone="amber"
           title="국민주택"
@@ -106,7 +135,7 @@ export function New99InputForm({
           checked={value.isNationalHousing99}
           onCheckedChange={(v) => onChange({ isNationalHousing99: v })}
         />
-        {isFromBuilder ? (
+        {redevMember ? null : isFromBuilder ? (
           <div>
             <label className="mb-1 block text-xs font-medium">최초 매매계약일 (비우면 자산 매매계약일 사용)</label>
             <DateInput data-field="reduction.new_99.contractDate99" value={value.contractDate99} onChange={(v) => onChange({ contractDate99: v })} />
@@ -118,7 +147,7 @@ export function New99InputForm({
           </div>
         )}
         {/* NH-03 — 2호 매매 취득은 최초 계약자인지 묻는다(분양권 승계 불성립). ⑧·④가 같은 술어. */}
-        {needsFirstContractAnswer(value.acquisitionType99, acquisitionCause) && (
+        {!redevMember && needsFirstContractAnswer(value.acquisitionType99, acquisitionCause) && (
           <div data-field="reduction.new_99.firstContract99">
             <New99FirstContractField
               testidPrefix="new99"
@@ -163,7 +192,7 @@ export function New99InputForm({
           onStdPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer99: v })}
           exclusiveArea={value.exclusiveAreaSqm99}
           onExclusiveAreaChange={(v) => onChange({ exclusiveAreaSqm99: v })}
-          acquisitionDate={acquisitionDate}
+          acquisitionDate={newHouseAcqDate}
           transferDate={transferDate}
           jibun={jibun}
           dong={dong}
@@ -199,7 +228,17 @@ export function New99InputForm({
         />
       </SectionShell>
 
+      {/* NH-32 — 재개발 완공 아파트 조합원은 출자 자산 사실이 정한다: 주택 출자면 항상 적용(토글 없음), 토지 출자·승계면 해당 없음(엔진·⑧과 같은 술어). */}
+      {(!redevMember || redevMember.houseContributed) && (
       <SectionShell num="③" title="재개발·재건축 신축주택 (해당 시)" tone="violet">
+        {redevMember ? (
+          <>
+            <p className="text-micro text-muted-foreground">
+              주택을 출자한 조합원의 신축주택이라 적용됩니다 — 5년 이내 양도도 안분하고 분모가 종전주택 취득 당시 기준시가입니다 (조특령 §99①1호 단서 · 법 §98의3②1호)
+            </p>
+            {previousHouseStdField}
+          </>
+        ) : (
         <ToggleCard
           tone="violet"
           title="종전주택을 재개발·재건축하여 취득한 신축주택"
@@ -207,17 +246,11 @@ export function New99InputForm({
           checked={value.isRedevelopedNewHouse99}
           onCheckedChange={(v) => onChange({ isRedevelopedNewHouse99: v })}
         >
-          <div>
-            <label className="mb-1 block text-xs font-medium">종전주택 취득 당시 기준시가</label>
-            <CurrencyInput
-              data-field="reduction.new_99.previousHouseStdPrice99"
-              value={value.previousHouseStdPrice99}
-              onChange={(v) => onChange({ previousHouseStdPrice99: v })}
-              label=""
-            />
-          </div>
+          {previousHouseStdField}
         </ToggleCard>
+        )}
       </SectionShell>
+      )}
 
       <SectionShell num="④" title="적용 배제 사유 (해당 시 선택)" tone="rose">
         {isFromBuilder && (
