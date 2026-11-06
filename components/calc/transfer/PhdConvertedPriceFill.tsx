@@ -39,11 +39,16 @@ interface Props {
   transferDate: string;
   /** 계산 결과를 «취득시 기준시가» 칸에 채운다 — 클릭 시 **한 번만** 호출한다. */
   onFill: (value: string) => void;
+  /**
+   * 승계조합원 완공 APT — `asset`이 `successorAptPhdAssistView` 사본이다(취득일 = 사용승인일 · 공동주택). 카드 안에 토지(대지권) 면적 칸을 두고
+   * 주택 유형 라디오를 숨긴다(계획서 redev-successor-apt-phd-assist Q-1·Q-3 a).
+   */
+  successorApt?: boolean;
 }
 
 const fmt = (n: number) => formatWithCommas(String(n));
 
-export function PhdConvertedPriceFill({ asset, onAssetChange, transferDate, onFill }: Props) {
+export function PhdConvertedPriceFill({ asset, onAssetChange, transferDate, onFill, successorApt = false }: Props) {
   // 초기 펼침만 입력 유무로 정한다(useState 초기화 함수 — 이후 사용자가 접고 펴는 것을 존중, effect 미러링 아님).
   const [open, setOpen] = useState(
     () => !!(asset.phdFirstDisclosureDate || asset.phdFirstDisclosureHousingPrice),
@@ -75,11 +80,18 @@ export function PhdConvertedPriceFill({ asset, onAssetChange, transferDate, onFi
               최초 고시 주택가격에 취득 당시와 최초 고시 당시의 토지·건물 기준시가 비율을 곱해 계산합니다. 결과는 위 «취득시 기준시가» 칸에
               채워지며, 채운 뒤에도 직접 고칠 수 있습니다.
             </p>
+            {successorApt && (
+              <p className="text-caption text-muted-foreground" data-testid="phd-fill-successor-note">
+                승계조합원 신축주택의 취득일은 사용승인일({asset.acquisitionDate})이라 «취득 당시» 값은 그날 기준입니다(소득세법 시행령 §162①4호).
+              </p>
+            )}
             <PreHousingDisclosureSection
               mode="assist"
               asset={asset}
               transferDate={transferDate}
               onChange={onAssetChange}
+              housingTypeFixed={successorApt}
+              landAreaInput={successorApt}
             />
             {calc.ok ? (
               <p className="text-xs" data-testid="phd-fill-formula">

@@ -58,14 +58,18 @@
 - (a) **공동주택으로 고정하고 라디오를 숨긴다**(권장) — 재개발 완공 APT는 공동주택이다. 이름도 「환산 공동주택가격」(§164⑦ 용어 규칙)이 된다.
 - (b) 라디오를 둔다 — 고를 이유가 없는 선택지가 남는다.
 
+### 결정 (2026-11-06)
+
+- **Q-1 = (a)** · **Q-2 = (a)** · **Q-3 = (a)** — 모두 권장안. #2940은 같은 날 머지됐다(8eef1d22e). 이 PR의 base는 자동으로 master로 바뀌었다.
+
 ## 4. 미검증 레지스터
 
 | ID | 항목 | 검증 | 상태 |
 |---|---|---|---|
-| V-1 | 사본의 날짜로 판정 셋이 달라지는 경계(최초 고시일이 입주권 취득일과 사용승인일 사이) | anchor | ⏳ 착수 시 |
-| V-2 | 도우미 안 공시가격 조회(토지 ㎡당 · 건물)가 사본 날짜(사용승인일)로 기본 연도를 잡는가 | 렌더 anchor | ⏳ 착수 시 — `PreHousingDisclosureSection.tsx:99·114·307`가 `acquisitionDate`를 읽는다 |
-| V-3 | 함께 양도(둘째 자산) 승계 APT 카드에서도 도우미가 보이는가 | 렌더 | ⏳ — 일반 주택 도우미는 첫 자산 게이트가 없다(`phdFillAssistVisible`) |
-| V-4 | 자산 종류를 주택으로 바꾸면 도우미 칸(`phd*`·`acquisitionArea`)이 일반 주택 카드에 그대로 남는다 — 같은 의미라 무해한가 | 코드 | ⏳ |
+| V-1 | 사본의 날짜로 판정 셋이 달라지는 경계(최초 고시일이 입주권 취득일과 사용승인일 사이) | anchor | ✅ L-4 — 최초 고시일 2021-04-29: 사본은 `not_eligible`로 거부하고, 원래 자산(입주권 취득일)으로 읽으면 계산했다 |
+| V-2 | 도우미 안 공시가격 조회(토지 ㎡당 · 건물)가 사본 날짜(사용승인일)로 기본 연도를 잡는가 | 코드 | ✅ 도우미 카드 전체가 사본을 받는다 — `PreHousingDisclosureSection`의 `acquisitionDate` 읽기(비교일 · 1990 전 판정 · `ThreePointStandardPriceInput` 기준일)가 모두 사본 값(준공일)이다. 조회 연도 값 자체는 단언하지 않았다(외부 조회) |
+| V-3 | 함께 양도(둘째 자산) 승계 APT 카드에서도 도우미가 보이는가 | 코드 | ✅ 게이트(`successorAptPhdAssistView` · `phdFillAssistVisible`)에 자산 순번 조건이 없다 — 일반 주택과 같다. 렌더 단언은 첫 자산만 했다 |
+| V-4 | 자산 종류를 주택으로 바꾸면 도우미 칸(`phd*`·`acquisitionArea`)이 일반 주택 카드에 그대로 남는다 — 같은 의미라 무해한가 | 코드 | ✅ 같은 칸·같은 뜻이다(일반 주택의 토지 면적 · §164⑦ 입력). 일반 주택 카드는 ① 기본정보에서 그 면적을 보여 주고 고칠 수 있다 — 숨은 값이 아니다 |
 
 ## 5. 테스트 계획
 
@@ -83,3 +87,29 @@
 - ④·⑧·엔진 — 변경 없음.
 - 일반 주택 도우미 — 변경 없음.
 - 원조합원 §166 화면 — 변경 없음.
+
+## 7. 구현 결과 (2026-11-06)
+
+### 7.1 바뀐 곳
+
+| 파일 | 내용 |
+|---|---|
+| `lib/calc/redev-successor-phd-assist.ts`(신규) | `successorAptPhdAssistView` — 매매 승계 완공 APT만 · 취득일 = 준공일 · `housing` · 공동주택 · 추계 플래그 끔 · 준공일이 비면 없음 |
+| `components/calc/transfer/CompanionAcqAmountSection.tsx` | 감정가액·매매사례가액 기준시가 칸 곁 도우미 — 승계 APT면 사본으로 연다 |
+| `components/calc/transfer/CompanionAcqStdPriceSection.tsx` | 환산 기준시가 칸 곁 도우미 — 승계 APT면 환산에서도 연다(Q-2 a) |
+| `components/calc/transfer/PhdConvertedPriceFill.tsx` | `successorApt` — 사용승인일 안내 · 주택 유형 라디오 숨김(Q-3 a) · 면적 칸 |
+| `components/calc/transfer/PreHousingDisclosureSection.tsx` | `landAreaInput` — 승계 APT 보조 모드 전용 「토지(대지권) 면적 (㎡)」 칸(Q-1 a). 기본 렌더는 종전대로 ① 값을 읽어 보여 준다(중복 방지 anchor 그대로 통과) |
+| `components/calc/transfer/CompanionAcqPurchaseBlock.tsx` | #2940 안내 문장 끝 「기준시가 칸 아래 계산 도우미로 채울 수 있습니다」 |
+
+④·⑧·⑫·엔진은 바꾸지 않았다.
+
+### 7.2 검증
+
+- **anchor** `__tests__/calc/redev-successor-apt-phd-assist.anchor.test.tsx` 13건
+  - 사본 leaf L-1~L-4: 계산값 313,725,490 · V-1 경계에서 거부.
+  - 렌더 R-1~R-3: 감정·매매사례·환산 모두 도우미 1 · 면적 칸 1 · 라디오 0 / 부담부증여 0 / 일반 주택은 종전.
+- **route anchor** `transfer.route.redev-successor-apt-estimate.anchor.test.ts` P-1 — 도우미 칸이 저장돼 있어도 ⑧ 이슈 0 · `preHousingDisclosure` 없음 · 461,000,000.
+- **E2E** `redev-successor-apt-phd-assist.spec.ts` 2건(워크트리 dev 서버 · headless — 사람이 직접 본 확인은 아니다)
+  - PA-1 감정가액: 채우기 → 313,725,490 → 본문 `standardPriceAtAcquisition` 313,725,490 → 양도차익 460,588,236(= 920,000,000 − 450,000,000 − 9,411,764).
+  - PA-2 환산: 기준시가 칸 곁에도 도우미가 뜨고, 채우기가 동작한다.
+- **뮤테이션** 9건 모두 잡힘: 사본 취득일 · 공동주택 · 추계 플래그 · 부담부증여 허용 · 면적 칸 · 라디오 · 환산 칸 곁 · 감정 칸 곁 · 사본 대신 원래 자산.
