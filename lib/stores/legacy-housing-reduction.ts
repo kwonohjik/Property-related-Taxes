@@ -7,7 +7,7 @@
  * 현행 UI는 이 타입을 만들지 않으므로 입구(구 세션 · ④ · ⑫)를 닫는다.
  *
  * 이관 원칙은 레거시 장기임대(`legacy-rental-reduction.ts`)와 같다:
- *   · 조문은 이력(IndexedDB) 이관과 **같은 규칙**(`reclassifiedLegacyHousingType` — 취득일로 §99의3/§98의3)
+ *   · 조문은 이력(IndexedDB) 이관과 **같은 규칙**(`reclassifiedLegacyHousingType` — 매매계약일 축으로 §99의3/§98의3, NH-73)
  *   · 폼은 패널에서 그 조문을 새로 고른 것과 같은 기본값이다. 계약일·사용승인일·기준시가 등은 비어 있어
  *     ⑧이 사용자에게 묻는다 — 조용히 감면을 주지도, 조용히 없애지도 않는다.
  *   · 구 폼의 소재지(수도권 여부)는 새 조문의 지역 요건과 축이 달라 옮기지 않는다.
@@ -25,7 +25,9 @@ export const isLegacyHousingReductionType = (t: unknown): t is "new_housing" | "
 export function legacyHousingReductionToForm(
   type: "new_housing" | "unsold_housing",
   acquisitionDate: unknown,
+  /** 자산-수준 매매계약일 — 옛 폼에는 칸이 없어 대개 비어 있다(비면 취득일로 가능한 조문만 고른다). */
+  contractDate?: unknown,
 ): Record<string, unknown> {
-  const d = typeof acquisitionDate === "string" && acquisitionDate !== "" ? acquisitionDate : undefined;
-  return { ...getReductionDefault(reclassifiedLegacyHousingType(type, d)) };
+  const str = (v: unknown) => (typeof v === "string" && v !== "" ? v : undefined);
+  return { ...getReductionDefault(reclassifiedLegacyHousingType(type, str(acquisitionDate), str(contractDate))) };
 }

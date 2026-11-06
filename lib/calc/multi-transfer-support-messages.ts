@@ -30,3 +30,21 @@ export const MULTI_DEMOLISHED_UNSUPPORTED_MESSAGE = "잔금 전 멸실 특약 �
 export const MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE =
   "미분양·신축주택 감면(조특법 §98·§98의2~§98의8·§99·§99의2·§99의3)은 단건 계산기에서만 지원됩니다. " +
   "합산 계산은 세율군을 다시 계산하는 과정에서 세율 특칙(§98① 20% 단일세율·§98의3계 단기세율 배제)을 반영하지 못합니다.";
+
+/**
+ * NH-72(Q-16) — 신축주택 감면(조특법 §99·§99의3)은 **2016.1.1. 이후 양도분만** 다건 합산이 단건과 같은 세액을 낸다.
+ * 두 조문은 소득금액 차감형이라 §98계 세율 특칙(위 {@link MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE}의 소실 사유)과 무관하다.
+ * 2016.1.1. 전 양도분은 단건과 합산의 세액이 갈릴 수 있어(리뷰 NH-72: −8,602,567) 계속 막는다.
+ * ⑧(`multi-transfer-tax-validate.ts`)과 ⑫(`transfer-tax-schema-multi-refines.ts`)가 같은 술어를 쓴다.
+ */
+export const MULTI_NEW_HOUSING_ERA_START = "2016-01-01";
+export const MULTI_NEW_HOUSING_PRE_2016_UNSUPPORTED_MESSAGE =
+  "신축주택 감면(조특법 §99·§99의3)은 양도일이 2016.1.1. 이후인 건만 합산 계산을 지원합니다. " +
+  "2016.1.1. 전 양도분은 단건 계산기에서 계산하세요.";
+
+/** 이 감면이 다건에서 지원되는가 — §99·§99의3이고 양도일(`YYYY-MM-DD`)이 2016.1.1. 이후. 양도일이 비었거나 형식이 다르면 지원하지 않는다(보수적). */
+export function isMultiSupportedNewHousingReduction(type: string, transferDate: unknown): boolean {
+  if (type !== "new_99" && type !== "new_99_3") return false;
+  if (typeof transferDate !== "string" || !/^\d{4}-\d{2}-\d{2}/.test(transferDate)) return false;
+  return transferDate.slice(0, 10) >= MULTI_NEW_HOUSING_ERA_START;
+}
