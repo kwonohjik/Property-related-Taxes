@@ -214,6 +214,12 @@ export const fmt = (n: number) => n.toLocaleString("ko-KR");
 // 산식 빌더 — 각 분할별
 // ──────────────────────────────────────────────────────────────────────────────
 
+/**
+ * 승계조합원 — 인가전·청산금 칸은 계산하지 않는다(§166 안분 우회). 값 0은 맞고, 산식 문구가 「권리가액」·「청산금 의제」라 안분처럼 읽혔다
+ * (계획서 redev-successor-actual-result-wording Q-3 a).
+ */
+const SUCCESSOR_NOT_APPLIED_FORMULA = "미적용 — 승계조합원은 §166 안분을 하지 않는다 (소득세법 시행령 §162①4호)";
+
 /** 양도가액 분할별 산식 */
 export function buildRedevTransferFormula(
   branch: RedevBranch,
@@ -221,6 +227,12 @@ export function buildRedevTransferFormula(
   totalTransferPrice: number,
   axis?: RedevAxis,
 ): string {
+  // 승계조합원 — 신축APT 양도가액 전액을 단순 차감한다(안분 없음).
+  if (redev.successorMemberApplied === true) {
+    return branch === "postApprovalExistingHouse"
+      ? `양도가액 = ${fmt(redev.postApprovalExistingHouse.apportionedTransfer)} (승계조합원 — 실지 양도가액 전액, 안분 없음 · 소득세법 시행령 §162①4호)`
+      : SUCCESSOR_NOT_APPLIED_FORMULA;
+  }
   // 완공APT 청산금 수령 동시신고 — §166②2호(제1항제2호 가목·나목). 납부 구조의 「분양가 안분」 산식을 쓰지 않는다 (G3-10).
   if (isAptReceiveSimultaneous(redev, axis)) {
     const { rights, settle, sale } = receiveRightsAndSettlement(redev);
@@ -276,6 +288,12 @@ export function buildRedevAcquisitionFormula(
   redev: RedevelopmentResult,
   axis?: RedevAxis,
 ): string {
+  // 승계조합원 — 승계 취득가액을 단순 차감한다(§166 안분 없음). 추계(감정가액·매매사례가액·환산)면 그 산식을 쓴다.
+  if (redev.successorMemberApplied === true) {
+    if (branch !== "postApprovalExistingHouse") return SUCCESSOR_NOT_APPLIED_FORMULA;
+    return successorEstimateFormulas(redev)?.acquisition
+      ?? `승계 취득가액 = ${fmt(redev.postApprovalExistingHouse.apportionedAcquisition)} (소득세법 §97①1호 · 시행령 §162①4호 — 안분 없음)`;
+  }
   // 완공APT 청산금 수령 동시신고 — 취득가액도 수령 구조다 (G3-10). 종전 취득가액은 입력값이라 곱 앞의 항을 문자로 둔다.
   if (isAptReceiveSimultaneous(redev, axis)) {
     const { rights, settle, sale } = receiveRightsAndSettlement(redev);

@@ -66,11 +66,23 @@
 - (a) **승계용 산식으로 교체**(권장) — 위 2.3.
 - (b) 행 이름만 두고 산식은 비운다 — 산식 없는 행이 생긴다.
 
+### 결정 (2026-11-06)
+
+- **Q-1 = (a)** · **Q-2 = (a)** · **Q-3 = (a)** — 모두 권장안.
+
 ## 4. 미검증 레지스터
 
 | ID | 항목 | 검증 | 상태 |
 |---|---|---|---|
-| V-1 | 명세서 합계 줄 설명(`DetailedStatementRedevOverrides.ts:304·326`)이 승계에서 화면에 그대로 나오는가 | 착수 시 `buildStatementItems` 끝까지 anchor | 미착수 (코드로는 승계 게이트 없음) |
+| V-1 | 명세서 합계 줄 설명(`DetailedStatementRedevOverrides.ts:304·326`)이 승계에서 화면에 그대로 나오는가 | `applyRedevelopmentOverrides`를 승계 시료로 호출해 합계 줄(양도가액·취득가액) 문구를 단언 | ✅ anchor ③ — 수정 전 5개 시료 모두 「§166 — 인가전(권리가액 의제)·인가후(분양가 안분)…」, 수정 후 「승계조합원 … 단순 차감」 |
 | V-2 | 같은 문구가 신고서 양식·PDF·요약 카드에 쓰이는가 | 역 grep(2026-11-06): 「안분 취득가액(=권리가액)」 · 「권리가액/분양가」 · 「권리가액(상속·증여 평가액)」 문자열은 `components`·`lib`·`app`에서 `RedevelopmentDetailCard.tsx`(+엔진 타입·분할 주석)뿐이다 | ✅ 카드 밖에서 이 세 문자열은 없다. 명세서의 「의제 = 권리가액」은 `DetailedStatementRedevelopmentBuilders.ts:332` · `DetailedStatementRedevOverrides.ts:119·121`(후자는 토지 출자 경로). 양식·PDF가 빌더 문자열을 가져다 쓰는지는 착수 시 확인 |
-| V-3 | 부담부증여 승계의 취득가액 줄 이름(채무비율 안분액) | 착수 시 실측 · Q-1 (a)면 중립 이름이라 해당 없음 | 미착수 |
+| V-3 | 부담부증여 승계의 취득가액 줄 이름(채무비율 안분액) | 부담부증여 매매 시료(153,260,870)를 5개 시료에 포함해 단언 | ✅ anchor — 중립 이름 「취득가액」이라 따로 가를 이름이 없다 |
 | V-4 | 기존 단언이 승계 시료의 옛 문구를 고정하는가 | grep(2026-11-06): 「의제 = 권리가액」 단언은 `DetailedStatementRedevelopmentBuilders.test.ts:185`(원조합원 §166 시료 — 승계 아님, 그대로 둔다) · `redev-apt-receive-display-g3-10.anchor.test.tsx:91`(`not.toContain`). 「권리가액(상속·증여 평가액)」을 단언하는 테스트는 없다 | ✅ 반전할 단언 없음. 승계 시료의 새 단언은 착수 시 anchor로 추가 |
+
+## 5. 구현 결과 (2026-11-06)
+
+- **수정 3파일**: `RedevelopmentDetailCard.tsx`(단순 차감 줄 「− 취득가액」 · 3분할 표의 승계 문구 · 734줄) · `DetailedStatementRedevelopmentBuilders.ts`(양도가액·취득가액 빌더의 승계 분기 · 인가전·청산금은 「미적용 — 승계조합원은 §166 안분을 하지 않는다」) · `DetailedStatementRedevOverrides.ts`(합계 줄 설명 승계 분기). 엔진·④·⑧·⑫·세액 불변.
+- **anchor** `__tests__/api/redev-successor-actual-wording.anchor.test.tsx` 16건(5개 취득 원인 × 카드·명세서 행·합계 줄 + 양도차익 값 고정). 수정 전 15건 실패(값 불변 1건만 통과), 수정 후 16/16.
+- **뮤테이션** 7곳(카드 3 · 빌더 2 · 합계 줄 2) 모두 anchor가 잡았고 원복해 16/16. 카드 단순 차감 줄 뮤테이션이 4건인 것은 감정가액 시료가 이미 승계 추계 산식을 쓰기 때문이다.
+- **회귀**(2026-11-06): components 738파일 6,819 · calc 804파일 11,328 · lib 262파일 3,353 · api 459파일 6,007 통과 · tsc 0 · eslint 오류 0.
+- **E2E**: 이 변경은 결과 카드·명세서의 문자열만 바꾸고 입력 경로가 없어, 결과 렌더를 직접 단언하는 anchor(jsdom, 실제 route 응답 사용)로 갈음했다. 브라우저 수동 확인은 하지 않았다.
