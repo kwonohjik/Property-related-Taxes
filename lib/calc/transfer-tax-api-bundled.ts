@@ -1,4 +1,6 @@
 import { laterShareResidenceMonths } from "./axis-b-share-residence";
+import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
+import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { householdFactsFormView } from "./household-facts-view";
 import { householdFactsCompanionAssetId } from "./household-facts-view";
 import { primaryReductionsWithRows } from "./house-count-exclusion-rows";
@@ -87,9 +89,13 @@ export function buildBundledPrimaryPayload(c: {
         // ⑬ 축 B에서 늦게 취득한 지분의 거주 — 그 지분을 보유한 동안의 구간만 센다(없으면 서버가 주 자산 값을 승계).
         const shareResidence = laterShareResidenceMonths(a, form);
         // ⑬ NH-14 후속 — 세대 기준 주택 카드는 명부 행 ⑥ 감면(§99의4·§98의9)까지 받는다(주택 먼저의 대표 자산 감면과 같은 leaf · 같은 게이트).
+        //   F-1 — 그 주택의 거주기간도 싣는다(② 섹션이 이 주택 카드에 저장한다 — 주 자산과 같은 클램프 leaf · 폼-전역 옛 값 폴백 없음).
         const hfReductions =
           a.assetId === householdFactsCompanionAssetId(form)
-            ? { reductions: toEngineReductions(primaryReductionsWithRows(householdFactsFormView(form)), a, a.expropriationNoticeDate) }
+            ? {
+                reductions: toEngineReductions(primaryReductionsWithRows(householdFactsFormView(form)), a, a.expropriationNoticeDate),
+                residencePeriodMonths: clampResidenceToHousingPeriod(a, form.transferDate, "", isUsageConversionActive(a) ? a.residentialUseStartDate : undefined).months,
+              }
             : {};
         return {
           ...payload,

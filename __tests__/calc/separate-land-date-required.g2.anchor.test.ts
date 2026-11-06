@@ -126,7 +126,11 @@ describe("격자 — 토글 × 토지 취득일 × 경로: 차단은 «토글 ON
     expect(required(mk({ hasSeperateLandAcquisitionDate: false, landAcquisitionDate: "" }))).toEqual([]);
   });
 
-  it("값 대조 — 단건 토글 ON·같은 날짜는 토글 OFF와 같은 값(4,801,500), 함께 양도 주택 카드는 138,270,000", async () => {
+  /**
+   * 🔄 2026-11-06 NH-14 후속 2(F-1) — 함께 양도 주택 카드 값 138,270,000 → 39,243,499. 종전에는 그 주택의 거주 120개월이 엔진에 가지 않아
+   *   거주 0개월(표2 거주분 없음)로 계산됐다. 기대값은 같은 사실을 「주택 먼저」 순서로 넣은 계산과 같다(실측 39,243,499 = 39,243,499).
+   */
+  it("값 대조 — 단건 토글 ON·같은 날짜는 토글 OFF와 같은 값(4,801,500), 함께 양도 주택 카드는 주택 먼저와 같은 39,243,499", async () => {
     const off = await runCalc(form({}));
     const same = await runCalc(form(SAME));
     expect(same.issues).toEqual([]);
@@ -134,7 +138,7 @@ describe("격자 — 토글 × 토지 취득일 × 경로: 차단은 «토글 ON
     expect(same.result.totalTax).toBe(4_801_500);
     const c = await runCalc(companion(SAME));
     expect(c.issues).toEqual([]);
-    expect(c.json.data.aggregated.totalTax).toBe(138_270_000);
+    expect(c.json.data.aggregated.totalTax).toBe(39_243_499);
   });
 });
 

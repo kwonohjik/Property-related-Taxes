@@ -102,12 +102,17 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   const householdOnChange = useMemo(() => householdViewOnChange(form, onChange), [form, onChange]);
   const primaryAcquisitionDate = form.assets?.[0]?.acquisitionDate ?? "";
   const primary = form.assets?.[0];
+  /**
+   * NH-14 후속(F-1) — ② 1세대1주택 비과세 판정(취득 당시 조정대상지역 · 거주기간 · §154① 단서)의 대상 주택. 첫 자산이 주택 계열이면
+   * 첫 자산, 토지·건물이 첫 자산이어도 함께 양도 주택이 세대 기준 자산이면 그 주택이다(④ · ⑧ · ⑭와 같은 세대 기준 폼 뷰).
+   */
+  const exemptPrimary = householdView.assets?.[0];
 
   // 거주요건 「주택 취득 당시」 기준일·라벨·자동 판정 — 엔진 `resolveResidenceJudgmentPlan`과 같은 순서·같은 사실(`useAcquisitionRegulatedContext`).
   const { conversionActive, successorCompletionActive, residenceJudgmentDate, judgmentDateLabel, acquisitionVerdict } =
-    useAcquisitionRegulatedContext(form);
+    useAcquisitionRegulatedContext(householdView);
   /** OH-48 — 재개발 카드의 분리 입력이 §154① 거주기간을 대신하는가(엔진 `resolveAptResidenceMonths`와 같은 조건). */
-  const redevSplitResidence = !!primary && redevSplitResidenceSupersedesStep4(primary);
+  const redevSplitResidence = !!exemptPrimary && redevSplitResidenceSupersedesStep4(exemptPrimary);
 
   /**
    * 토지만 출자한 조합원입주권 — §89①4호 비과세는 **같은 세대가 철거 대상 건물을 소유**한 경우에만 성립한다(#13).
@@ -127,13 +132,13 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   const isOneHouseholdEffective = form.isOneHousehold;
 
   const primaryAddress =
-    (form.assets?.[0]?.addressRoad || form.assets?.[0]?.addressJibun) ?? "";
+    (exemptPrimary?.addressRoad || exemptPrimary?.addressJibun) ?? "";
   // 법정동코드(주소검색 PNU 앞 10자리) — 있으면 동 단위 정밀 판정 경로
-  const primaryRegionCode = form.assets?.[0]?.regionCode ?? "";
+  const primaryRegionCode = exemptPrimary?.regionCode ?? "";
 
   // 메시지 ②: 조정대상지역 거주요건(2년) 미충족 — 엔진 §154① 판정과 단일 진실(useMemo 파생, store 미러링 금지).
   const residenceShortfall = useMemo(() => {
-    const p = form.assets?.[0];
+    const p = householdView.assets?.[0];
     const kind = p?.assetKind ?? "";
     if (kind !== "housing" || !form.isOneHousehold) return false;
     if (!form.transferDate || !p?.acquisitionDate) return false;
@@ -142,11 +147,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       (p.residencePeriods?.length ?? 0) > 0 || !!p.residencePeriodMonthsAsset;
     if (!hasResidenceInput) return false;
     try {
-      return !meetsOneHouseResidenceRequirement(buildResidenceReqInput(form), ONE_HOUSE_RESIDENCE);
+      return !meetsOneHouseResidenceRequirement(buildResidenceReqInput(householdView), ONE_HOUSE_RESIDENCE);
     } catch {
       return false;
     }
-  }, [form]);
+  }, [form, householdView]);
 
   // 다주택 중과 한시배제(§167의3·167의10 12의2): 양도일 ∈ [2022-05-10, 2026-05-09] AND 보유 2년 이상
   // → 중과 전면배제(일반세율)이므로 ④ 주택수·중과 판정 섹션을 숨기고 안내 카드로 대체.
@@ -160,7 +165,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   const highValueLabel = highValueThresholdForDisplay(form.transferDate).label;
 
   // §155① 두 날짜 · §154① 단서 맥락 — 세대 기준 폼 뷰로 도출(④⑧과 같은 leaf). 800줄 정책으로 훅 분리.
-  const { tempTwoHouseDates, proviso } = useStep4TempTwoHouseAndProviso(form, householdView, primaryKind);
+  const { tempTwoHouseDates, proviso } = useStep4TempTwoHouseAndProviso(householdView, householdView, householdKind);
 
   /**
    * Q-8 — ① 스칼라 버튼 잠금(주택 외 housing-like 3종 전용 — 아래 위젯 참조). 명부가 정본이고
@@ -206,9 +211,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   // 조정대상지역 자동 판별(주소·날짜 → API) + 안내 — 800줄 정책 분리(OH-22). 주택은 섹션② 취득일 조정
   // 토글 아래, 입주권·분양권은 최상단에 렌더.
   const regulatedAutoTip = useRegulatedAreaAutoTip({
-    form,
-    onChange,
-    primaryKind,
+    form: householdView,
+    onChange: householdOnChange,
+    primaryKind: householdKind,
     primaryAddress,
     primaryRegionCode,
     residenceJudgmentDate,
@@ -228,7 +233,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   //      effect가 서로 다른 술어로 같은 필드를 두고 다퉜다. 렌더 게이트와 같은 술어로 통일한다.
   useEffect(() => {
     const patch: Partial<TransferFormData> = {};
-    if (!isOneHouseExemptionAsset(primaryKind)) {
+    // NH-14 후속(F-1) — 취득 당시 조정대상지역은 ② 섹션(세대 기준 자산)의 값이다. 첫 자산이 토지여도 함께 양도 주택이 기준이면 지우지 않는다.
+    if (!isOneHouseExemptionAsset(householdKind)) {
       if (form.isRegulatedArea) patch.isRegulatedArea = false;
       if (form.wasRegulatedAtAcquisition) patch.wasRegulatedAtAcquisition = false;
       // 토글 자체가 리셋되므로 수동 조작 이력도 함께 초기화 — 재진입 시 자동판별 재개
@@ -250,7 +256,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     if (Object.keys(patch).length > 0) onChange(patch);
     // 의도적으로 onChange 의존성 제외 (안정적인 props 가정)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [primaryKind]);
+  }, [primaryKind, householdKind]);
 
   /**
    * §104①4호 단서(영 §167의6) 확인 2종 — 노출 범위(`presaleRightNoHouseExceptionVisible`)를
@@ -288,7 +294,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       />
 
       {/* 조정대상지역 자동 판별 안내 — 입주권·분양권(섹션② 미노출 자산)만 최상단 */}
-      {primaryKind !== "housing" && regulatedAutoTip}
+      {householdKind !== "housing" && regulatedAutoTip}
 
       {/* 주택·입주권·분양권: 1세대 여부 + 주택 수 + 거주기간 + 조정대상지역 */}
       {isHousingLike(householdKind) && (
@@ -414,7 +420,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
 
       {/* ② 1세대1주택 비과세 판정 — 취득일 조정지역·거주기간·§154① 면제사유 (비과세 트랙)
           재개발 신축주택도 §89①3호가목의 「주택」이라 같은 판정을 받는다(술어 JSDoc 참조). */}
-      {isOneHouseExemptionAsset(primaryKind) && (
+      {isOneHouseExemptionAsset(householdKind) && (
         <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
           <SectionHeader title="② 1세대1주택 비과세 판정" description="취득일 조정대상지역·거주기간·보유거주 요건 면제 사유를 입력하세요" />
           <div className="space-y-3">
@@ -432,9 +438,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   : "비과세 거주요건 판단 — 해당 시 거주 2년 이상 필요"
               }
               toggleSize="default"
-              checked={form.wasRegulatedAtAcquisition}
+              checked={householdView.wasRegulatedAtAcquisition}
               onCheckedChange={(v) =>
-                onChange({ wasRegulatedAtAcquisition: v, wasRegulatedAtAcquisitionTouched: true })
+                householdOnChange({ wasRegulatedAtAcquisition: v, wasRegulatedAtAcquisitionTouched: true })
               }
             />
 
@@ -445,19 +451,19 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               세대 보유 분양권·조합원입주권 — 「소득세법」 §89②.
               「1세대가 주택과 조합원입주권 또는 분양권을 보유하다가 **그 주택을 양도**하는 경우에는
               제1항에도 불구하고 같은 항 제3호를 적용하지 아니한다」 ⇒ 1세대1주택 비과세 판정의
-              **직접 입력**이다. 같은 값이 §104⑦ 중과 주택 수에도 쓰인다(`form.presaleRights` 공용).
+              **직접 입력**이다. 같은 값이 §104⑦ 중과 주택 수에도 쓰인다(`householdView.presaleRights` 공용).
 
               ⚠️ ④의 `HousesListSection`이 렌더 중이면(`houseRosterRendered`) 같은 배열이 두 벌이 되므로 열지 않는다.
             */}
-            {!houseRosterRendered(form, primaryKind) && (
+            {!houseRosterRendered(householdView, householdKind) && (
               <PresaleRightsSection
-                rights={form.presaleRights}
-                onChange={(presaleRights) => onChange(presaleRightsPatchWithConfirmClear(presaleRights))}
-                showSpouseOwned={spouseHoldingQuestionApplies(form)}
-                primaryKind={primaryKind}
-                confirmed={form.householdNoPresaleRightsConfirmed}
-                onConfirmedChange={(v) => onChange({ householdNoPresaleRightsConfirmed: v })}
-                transferDate={form.transferDate}
+                rights={householdView.presaleRights}
+                onChange={(presaleRights) => householdOnChange(presaleRightsPatchWithConfirmClear(presaleRights))}
+                showSpouseOwned={spouseHoldingQuestionApplies(householdView)}
+                primaryKind={householdKind}
+                confirmed={householdView.householdNoPresaleRightsConfirmed}
+                onConfirmedChange={(v) => householdOnChange({ householdNoPresaleRightsConfirmed: v })}
+                transferDate={householdView.transferDate}
               />
             )}
 
@@ -473,7 +479,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             */}
 
             {/* 1세대1주택 안내 배너 — 1세대 + 1채 선택 시 거주기간 입력 동기 부여 */}
-            {form.isOneHousehold && form.householdHousingCount === "1" && (
+            {householdView.isOneHousehold && householdView.householdHousingCount === "1" && (
               <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-4 py-3 text-sm text-violet-900 dark:text-violet-200 dark:bg-violet-950/40">
                 <p className="font-medium">1세대 1주택자 적용 효과</p>
                 <p className="mt-1 text-xs leading-relaxed text-violet-800 dark:text-violet-200">
@@ -487,7 +493,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   ) : (
                     " 거주 2년 이상이면 장기보유특별공제가 표2(보유 4%/년 + 거주 4%/년, 최대 80%)로 적용됩니다."
                   )}
-                  {primaryKind === "housing"
+                  {householdKind === "housing"
                     ? " 아래 거주기간 입력이 표2 판정에 사용됩니다. (겸용주택 포함)"
                     : ""}
                 </p>
@@ -499,20 +505,20 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 보내므로 이 게이트가 **유일한 입력 통제점**이다 — 조정대상지역 토글과 짝이라
                 한쪽만 열면 「거주 2년 필요」라 안내하고 채울 칸이 없는 dead-end가 된다. */}
             {/* OH-48 — 분리 입력이 있으면 엔진은 그것만 읽는다. 같은 질문을 두 번 받지 않도록 안내로 대체. */}
-            {form.isOneHousehold && isOneHouseExemptionAsset(primaryKind) && primary && redevSplitResidence && (
-              <RedevSplitResidenceNotice isSuccessor={primary.redevIsSuccessorMember === "yes"} isLandContributed={landContributedOriginalApt(primary)} giftCarry={successorGiftHouseholdApplies(primary)} />
+            {householdView.isOneHousehold && isOneHouseExemptionAsset(householdKind) && exemptPrimary && redevSplitResidence && (
+              <RedevSplitResidenceNotice isSuccessor={exemptPrimary.redevIsSuccessorMember === "yes"} isLandContributed={landContributedOriginalApt(exemptPrimary)} giftCarry={successorGiftHouseholdApplies(exemptPrimary)} />
             )}
-            {form.isOneHousehold && isOneHouseExemptionAsset(primaryKind) && primary && !redevSplitResidence && (
+            {householdView.isOneHousehold && isOneHouseExemptionAsset(householdKind) && exemptPrimary && !redevSplitResidence && (
               <ResidencePeriodSection
-                residenceInputMode={primary.residenceInputMode}
-                residencePeriods={primary.residencePeriods}
-                residencePeriodMonthsAsset={primary.residencePeriodMonthsAsset}
-                transferDate={form.transferDate}
-                mergeStartDate={landOnlyMergeResidenceStart(primary)}
-                appliesToOtherShares={isFullFractionalBundle(form.assets, form.assetSplitMode)}
+                residenceInputMode={exemptPrimary.residenceInputMode}
+                residencePeriods={exemptPrimary.residencePeriods}
+                residencePeriodMonthsAsset={exemptPrimary.residencePeriodMonthsAsset}
+                transferDate={householdView.transferDate}
+                mergeStartDate={landOnlyMergeResidenceStart(exemptPrimary)}
+                appliesToOtherShares={isFullFractionalBundle(householdView.assets, householdView.assetSplitMode)}
                 onChange={(patch) =>
-                  onChange({
-                    assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)),
+                  householdOnChange({
+                    assets: householdView.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)),
                   })
                 }
               />
@@ -521,15 +527,15 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             {/* C-10b — direct 모드는 거주기간이 스칼라라 주택 기간으로 자동 클램프할 수 없다.
                 자동 안분 fallback 금지 원칙에 따라 안내로만 처리한다. */}
             {conversionActive &&
-              form.isOneHousehold &&
-              primaryKind === "housing" &&
-              primary?.residenceInputMode === "direct" && (
+              householdView.isOneHousehold &&
+              householdKind === "housing" &&
+              exemptPrimary?.residenceInputMode === "direct" && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900 dark:text-amber-200 dark:bg-amber-950/40">
                   <p className="font-medium">⚠️ 주거용 사용 개시일 이후의 거주기간만 입력하세요</p>
                   <p className="mt-0.5 text-caption leading-relaxed text-amber-800 dark:text-amber-200">
                     거주기간을 개월 수로 직접 입력하셨습니다. 「소득세법」 제95조 제5항 제2호는
                     <strong> 주택으로 보유한 기간 중 거주한 기간</strong>만 산입하므로,
-                    주거용 사용 개시일({primary.residentialUseStartDate}) 이후의 거주기간만 입력해야 합니다.
+                    주거용 사용 개시일({exemptPrimary.residentialUseStartDate}) 이후의 거주기간만 입력해야 합니다.
                     입주일·퇴거일 구간으로 입력하면 자동으로 잘라 계산합니다.
                   </p>
                 </div>
@@ -537,13 +543,13 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
 
             {/* OH-50 — 승계조합원 개월 수 직접 입력 안내(구간 입력은 ⑧이 준공일과 비교해 막는다 · 개월 수는 준공일~양도일 상한만 ⑧ — I-8). */}
             {successorCompletionActive &&
-              form.isOneHousehold &&
+              householdView.isOneHousehold &&
               !redevSplitResidence &&
-              primary?.residenceInputMode === "direct" && (
+              exemptPrimary?.residenceInputMode === "direct" && (
                 <SuccessorResidenceDirectHint
                   completionDate={residenceJudgmentDate}
-                  isLandContributed={landContributedOriginalApt(primary)}
-                  giftCarry={successorGiftHouseholdApplies(primary)}
+                  isLandContributed={landContributedOriginalApt(exemptPrimary)}
+                  giftCarry={successorGiftHouseholdApplies(exemptPrimary)}
                 />
               )}
 
@@ -563,22 +569,22 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 일시적 2주택 맥락 카드는 판정 메뉴에 있다(P6-b). */}
             {proviso.visible && (proviso.mode === "one_house" || proviso.mode === "deemed_one_house" || proviso.mode === "rental_residence") && (
               <ExemptionProvisoSection
-                provisoReason={form.provisoReason}
-                provisoDepartureDate={form.provisoDepartureDate}
-                provisoDepartureOnlyHouse={form.provisoDepartureOnlyHouse}
-                provisoExpropriationDate={form.provisoExpropriationDate}
-                provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
-                provisoRentalLeaseResidenceMonths={form.provisoRentalLeaseResidenceMonths}
-                provisoPreContractNoHouse={form.provisoPreContractNoHouse}
-                rental4ho={form}
+                provisoReason={householdView.provisoReason}
+                provisoDepartureDate={householdView.provisoDepartureDate}
+                provisoDepartureOnlyHouse={householdView.provisoDepartureOnlyHouse}
+                provisoExpropriationDate={householdView.provisoExpropriationDate}
+                provisoBusinessApprovalDate={householdView.provisoBusinessApprovalDate}
+                provisoRentalLeaseResidenceMonths={householdView.provisoRentalLeaseResidenceMonths}
+                provisoPreContractNoHouse={householdView.provisoPreContractNoHouse}
+                rental4ho={householdView}
                 mode={proviso.mode}
-                onChange={onChange}
+                onChange={householdOnChange}
               />
             )}
 
             {/* OH-22 §154⑤ 단서 최종 1주택 재기산 — 2021.1.1.~2022.5.9. 양도 1주택만(④·⑧과 같은 술어) */}
-            {calcFinalHouseRestartInScope(form) && (
-              <FinalHouseRestartSection value={form} acquisitionDate={primary?.acquisitionDate} onChange={onChange} />
+            {calcFinalHouseRestartInScope(householdView) && (
+              <FinalHouseRestartSection value={householdView} acquisitionDate={exemptPrimary?.acquisitionDate} onChange={householdOnChange} />
             )}
           </div>
         </section>

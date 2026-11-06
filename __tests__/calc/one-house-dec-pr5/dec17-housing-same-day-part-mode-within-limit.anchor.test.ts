@@ -195,11 +195,13 @@ describe("검토 보정 — 함께 양도 주택 카드도 두 라디오가 함�
     expect(hit?.message).toContain("자산 2");
   });
 
+  // 🔄 2026-11-06 NH-14 후속 2(F-1) — 종전 138,270,000 · 117,716,592는 함께 양도 주택의 거주 120개월이 엔진에 실리지 않던 값이다.
+  //   새 값은 같은 입력을 「주택 먼저」(자산 순서만 바꿈)로 계산한 값과 같다(실측 39,243,499 = 39,243,499 · 34,247,880 = 34,247,880).
   it.each([
-    ["라디오 미선택 · 자산 단위 실가", {}, 500_000_000, 138_270_000],
-    ["라디오 미선택 · 자산 단위 환산", { ...EST }, 681_818_181, 117_716_592],
-    ["자산 단위 실가 = 토지·건물 실가 + 파트 1억·4억", { landAcqMode: "actual", buildingAcqMode: "actual", ...PARTS }, 500_000_000, 138_270_000],
-    ["자산 단위 환산 = 토지·건물 환산", { ...EST, landAcqMode: "estimated", buildingAcqMode: "estimated" }, 681_818_181, 117_716_592],
+    ["라디오 미선택 · 자산 단위 실가", {}, 500_000_000, 39_243_499],
+    ["라디오 미선택 · 자산 단위 환산", { ...EST }, 681_818_181, 34_247_880],
+    ["자산 단위 실가 = 토지·건물 실가 + 파트 1억·4억", { landAcqMode: "actual", buildingAcqMode: "actual", ...PARTS }, 500_000_000, 39_243_499],
+    ["자산 단위 환산 = 토지·건물 환산", { ...EST, landAcqMode: "estimated", buildingAcqMode: "estimated" }, 681_818_181, 34_247_880],
   ])("대조 — %s → 통과(화면 = 계산)", async (_n, over, acq, tax) => {
     const r = await runCalc(withCompanionHouse(over));
     expect(r.issues).toEqual([]);

@@ -509,7 +509,9 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     // 결정 #5(G7-6) 하위 1 — 주소(법정동코드)가 있으면 저장된 토글이 아니라 주소 판정값을 싣는다(⑤ 토글을 숨긴 화면과 같은 값).
     isRegulatedArea: calcEffectiveIsRegulatedAtTransfer(form),
     // 결정 #38-10 — 증여받은 주택은 엔진과 같은 세대 사실 basis로 「취득 당시」를 읽는다(단일 기준일이면 거울상·통산 시 엔진과 반대 값이 간다).
-    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(primary, calcStoredRegulatedFlags(form).wasRegulatedAtAcquisition, form.regionCode, GIFT_HOUSEHOLD_SCOPE_PRIMARY),
+    // NH-14 후속(F-1) — 취득 당시 조정대상지역은 1세대1주택 거주요건의 사실이라 세대 기준 자산(함께 양도 주택이면 그 주택)의 주소·취득일로 판정한다.
+    //   첫 자산이 주택이면 뷰 = 폼이라 종전과 같다. 토지는 이 값을 읽지 않는다(비과세는 주택 전용).
+    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(householdView.assets[0], calcStoredRegulatedFlags(form).wasRegulatedAtAcquisition, form.regionCode, GIFT_HOUSEHOLD_SCOPE_PRIMARY),
     // §104①4호 단서(영 §167의6 1·2호) — presale_right 전용. 그 밖의 자산은 보내지 않는다(3중 패턴).
     presaleRightNoOtherRight:
       primary.assetKind === "presale_right" ? form.presaleRightNoOtherRight : undefined,
@@ -623,9 +625,9 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
       : {}),
     // §154① 단서 reason 정규화 — 카드 숨김(mode=null)·temp-two-house 무효 reason(나·다목)은 미전송 (Part D 게이트, mirror).
     //   게이트 인자는 ⑤ Step4 거주 안내·⑧과 같은 leaf(`calcProvisoMode`) — 종전 이 자리의 인라인 복제본과 인자가 같다. 본문 조립은 증여세 부담부증여 경로와 공용 leaf(E-1 후속).
-    ...buildExemptionProvisoPayload(form, calcProvisoMode(form)),
+    ...buildExemptionProvisoPayload(householdView, calcProvisoMode(householdView)), // NH-14 후속 — ② 섹션과 같은 세대 기준 폼 뷰
     // ⑬ OH-22 §154⑤ 단서 처분 이력 — ⑤·⑧과 같은 노출 술어(범위 밖·미답이면 키 없음)
-    ...buildFinalHouseRestartPayload(form, calcFinalHouseRestartInScope(form)),
+    ...buildFinalHouseRestartPayload(householdView, calcFinalHouseRestartInScope(householdView)), // NH-14 후속 — ② 섹션과 같은 뷰
     // ⑬ 다주택 중과 한시 유예 — houses 제공 시에만 엔진이 소비 (form-global gracePeriod)
     // 술어는 ⑤ 위젯·⑧ validate와 **같은 함수**를 쓴다 (Q03) — 종전에는 셋이 갈라져
     // 「⑤는 열리고 ④는 보내는데 ⑧이 검증 안 함」·「창 안인데 stale 값이 전송됨」으로 400이 났다.
