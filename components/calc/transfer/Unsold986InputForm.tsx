@@ -75,6 +75,18 @@ export function Unsold986InputForm({
         <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
       </div>
 
+      {/* US-42 — 적용 주체(법 §98의6① 「거주자 또는 「소득세법」 제120조에 따른 국내사업장이 없는 비거주자」). D11-05와 같이 화면에 보이고 끌 수 있다. */}
+      <div className="flex flex-wrap gap-2 text-xs">
+        <ToggleCard
+          variant="chip"
+          tone="violet"
+          title="거주자 또는 국내사업장 없는 비거주자"
+          description="법 §98의6① — 국내사업장이 있는 비거주자는 해제(적용 배제)"
+          checked={value.isEligibleSubject986}
+          onCheckedChange={(v) => onChange({ isEligibleSubject986: v })}
+        />
+      </div>
+
       <SectionShell num="①" title="적용 유형" tone="sky">
         <RadioCardGroup<Unsold986Form["hoType986"]>
           name="unsold986-ho"

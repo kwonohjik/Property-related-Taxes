@@ -570,7 +570,8 @@ export type RentalReductionFormVariant =
   | {
       type: "unsold_98_3";
       /** 거주자 / 국내사업장 없는 비거주자 — 시한 시작일 분기 */
-      residencyType983: "resident" | "nonresident_no_pe";
+      /** US-42 — 국내사업장 있는 비거주자(`nonresident_with_pe`)는 적용 주체가 아니다(법 §98의3①) */
+      residencyType983: "resident" | "nonresident_no_pe" | "nonresident_with_pe";
       /** 사업주체 취득 / 자기건설 (법②) */
       houseType983: "purchased" | "self_built";
       /** 최초 매매계약일 (YYYY-MM-DD) — purchased */
@@ -608,6 +609,8 @@ export type RentalReductionFormVariant =
   // ── P3 (2026-06-12): §98의5 수도권 밖 미분양 — 인하율별 60/80/100% ──
   | {
       type: "unsold_98_5";
+      /** US-42 — 거주자 또는 국내사업장 없는 비거주자(법 §98의5①). 기본 true(D11-05 방식 — 화면에 보이고 끌 수 있다) */
+      isEligibleSubject985: boolean;
       /** 최초 매매계약일 (YYYY-MM-DD) — ~2011.4.30 */
       contractDate985: string;
       /** 분양가격 인하율 (%, DecimalInput) */
@@ -633,6 +636,8 @@ export type RentalReductionFormVariant =
   // ── P3 (2026-06-12): §98의6 준공후미분양 50% — 1호/2호 ──
   | {
       type: "unsold_98_6";
+      /** US-42 — 거주자 또는 국내사업장 없는 비거주자(법 §98의6①). 기본 true */
+      isEligibleSubject986: boolean;
       /** 1호 사업주체등 2년 임대 후 취득 / 2호 취득 후 5년 임대 */
       hoType986: "seller_rented" | "buyer_rented";
       /** 최초 매매계약일 (YYYY-MM-DD) */

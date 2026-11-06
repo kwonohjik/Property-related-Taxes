@@ -294,6 +294,8 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
       }
       if (r && r.type === "unsold_98_5") {
         return {
+          // US-42 — 옛 기록에는 없다. 법문 기본값(거주자 등)으로 보정하지 않으면 undefined가 「적용 주체 아님」으로 읽힐 수 있다.
+          isEligibleSubject985: true,
           contractDate985: "",
           priceReductionRatePct985: "",
           isNonCapitalUnsoldAtCutoff985: false,
@@ -308,6 +310,7 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
       }
       if (r && r.type === "unsold_98_6") {
         return {
+          isEligibleSubject986: true, // US-42 — 옛 기록 보정(법문 기본값)
           hoType986: "seller_rented",
           stdPriceSumAtBase986: "",
           floorAreaSqm986: "",
