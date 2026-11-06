@@ -27,6 +27,7 @@
 import { isRedevelopmentActive } from "./redevelopment";
 import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
 import { redevMemberNewHouseOf } from "./transfer-reductions/new-99-redev-member";
+import { newHouseDeductionBase, attachRightBaseNotice } from "./transfer-reductions/new-99-redev-right-base";
 import { settleCarryoverGiftTaxForRedevelopment } from "./redevelopment-burdened-gift";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import { runRedevelopmentGainSteps } from "./transfer-tax-redevelopment-steps";
@@ -252,6 +253,8 @@ export function calculateRedevelopmentTax(
    * 정상 도달한 뒤 여기서 사라졌다.
    */
   let transferIncome = transferIncomeBefore993;
+  // 원조합원 입주권의 §99·§99의3 차감 기초는 「당초 취득한 신축주택에 대한 양도소득 범위」 = 인가 전 양도소득금액(NH-11 · Q-21 a)
+  const deductionBase = newHouseDeductionBase(input.redevelopment!, redevAfterRight, input.reductions);
   // 조특법 §129② — 미등기면 차감형도 적용하지 않는다(D15, `unregisteredReductionNotice`).
   const incomeDeduction = resolveIncomeDeduction(input.isUnregistered ? undefined : input.reductions, {
     transferDate: input.transferDate,
@@ -266,8 +269,9 @@ export function calculateRedevelopmentTax(
     // 완공 아파트 조합원 — 준공일 축·재개발 변형 자산 사실 (NH-36 · NH-63 · NH-32)
     redevMemberNewHouse: redevMemberNewHouseOf(input.redevelopment),
     standardPriceAtTransfer: input.standardPriceAtTransfer,
-    transferIncome: transferIncomeBefore993,
+    transferIncome: deductionBase?.base ?? transferIncomeBefore993,
   });
+  if (deductionBase) attachRightBaseNotice(incomeDeduction, deductionBase);
   if (incomeDeduction.appliedId) {
     transferIncome = Math.max(0, transferIncomeBefore993 - incomeDeduction.reducible);
   }
