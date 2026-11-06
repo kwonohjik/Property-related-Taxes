@@ -376,7 +376,7 @@ export function runSurchargeAndLandSteps(
       input.redevelopment?.isSuccessorMember === true,
     // 완공 아파트 조합원 갈래도 Step C.5와 같은 분기 조건일 때만 — 준공일 축 판정이 갈리지 않게 (NH-36)
     redevMemberNewHouse: isRedevelopmentActive(input.propertyType, input.redevelopment, input.isSuccessorRightToMoveIn)
-      ? redevMemberNewHouseOf(input.redevelopment)
+      ? redevMemberNewHouseOf(input.redevelopment, input.acquisitionDate)
       : undefined,
     // 조특법 §129② — 미등기면 STEP 4.6이 감면을 막는다. 같은 게이트로 «감면되는 주택»도 아니다 (NH-58).
     isUnregistered: input.isUnregistered,

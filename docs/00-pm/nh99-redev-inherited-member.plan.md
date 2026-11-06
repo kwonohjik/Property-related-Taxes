@@ -1,7 +1,8 @@
 # 조특법 §99·§99의3 — 상속·증여로 받은 종전주택의 원조합원 조사·계획서 (L13 · 리뷰 L5-3 b)
 
 - 작성 2026-11-06 · 워크트리 `Property-related-Taxes-nhL4`(브랜치 `docs/nh99-redev-inherited-member-plan`, base `ada3e8b4a`)
-- 상태: **조사·계획만**. 소스는 고치지 않았다. 수치는 throwaway probe 실측(§6, 파일은 커밋하지 않았다). 사용자 결정(§10 Q)을 받기 전에는 착수하지 않는다.
+- 구현 현황 (L14, 브랜치 `fix/nh99-l14-inherited-redev-member`): Q-1 a · Q-2 a · Q-3 b · Q-4 a 구현. 변경 지점은 §8과 다르다 — `new-99.ts`·`new-99-3.ts`가 다른 레인 소유라 게이트 입력을 라우터(`income-deduction-router.ts`)에서 `redevMemberGateCause`(`new-99-redev-member.ts`)로 비운다. anchor `nh99-l14-redev-inherited-member.anchor.test.ts`(engine) · `transfer.route.nh99-l14-redev-inherited-member.anchor.test.ts`(route).
+- 상태(작성 시점): **조사·계획만**. 소스는 고치지 않았다. 수치는 throwaway probe 실측(§6, 파일은 커밋하지 않았다). 사용자 결정(§10 Q)을 받기 전에는 착수하지 않는다.
 - 세액은 route 폴백 세율(`loadFallbackTransferRates`)로 계산한 응답의 `totalTax`다. 중과 시료(§6-2)만 mock 세율이라 **정본 세액이 아니다**. 「세액이 늘어난다/줄어든다」는 현행 코드 대비 방향이다.
 - 인용 규칙: 법령명 + 법/령/규칙 + 조항호. 원문을 이 세션에서 직접 읽은 것과 요지·제목만 본 것을 §3 표에 구분했다.
 
