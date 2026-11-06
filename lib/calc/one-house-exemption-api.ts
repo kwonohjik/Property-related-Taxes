@@ -27,6 +27,7 @@ import { buildGiftHouseholdPayload, giftHouseholdFactErrors } from "@/lib/calc/g
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import {
   calcEffectiveWasRegulatedAtAcquisition,
+  calcStoredRegulatedFlags,
   effectiveIsRegulatedAtTransfer,
   GIFT_HOUSEHOLD_SCOPE_PRIMARY,
 } from "@/lib/calc/effective-regulated-at-acquisition";
@@ -152,14 +153,21 @@ export function buildOneHouseExemptionApiBody(
     isOneHousehold: form.isOneHousehold,
     isUnregistered: form.isUnregistered,
     // 결정 #5(G7-6) 하위 1 — 주소(법정동코드)가 있으면 저장된 토글이 아니라 주소 판정값을 싣는다(⑤가 토글을 숨기고 보이는 값과 같다).
+    // 코드 없이 주소 문자열만 있으면 계산기 ④와 같은 leaf(`calcStoredRegulatedFlags`) — 안 만진 토글은 주소 판정값이다
+    // (계획서 `judgment-menu-regulated-area-address.plan.md` Q-1 a). 저장값을 그대로 읽으면 핸드오프 뒤 계산기와 결론이 갈렸다.
     isRegulatedArea: effectiveIsRegulatedAtTransfer({
       regionCode: primary.regionCode,
       regionInDesignatedDistrict: primary.regionInDesignatedDistrict,
       transferDate: form.transferDate,
-      stored: form.isRegulatedArea,
+      stored: calcStoredRegulatedFlags(form).isRegulatedArea,
     }),
     // 결정 #38-10 — 증여받은 주택은 아래 `buildGiftHouseholdPayload`가 싣는 세대 사실과 같은 basis로 읽는다(⑤ 2-C·⑧과 한 값).
-    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, undefined, GIFT_HOUSEHOLD_SCOPE_PRIMARY),
+    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(
+      primary,
+      calcStoredRegulatedFlags(form).wasRegulatedAtAcquisition,
+      undefined,
+      GIFT_HOUSEHOLD_SCOPE_PRIMARY,
+    ),
     /**
      * ④ 양도 물건 법정동코드 — ② 화면의 소재지 검색(PNU 앞 10자리)이 세운다.
      *
