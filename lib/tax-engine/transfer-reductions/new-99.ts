@@ -25,9 +25,10 @@
 
 import { NEW_HOUSING_SUB_ARTICLE, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { LAND_ONLY_OWNER_CODE, landOnlyOwnerMessage } from "./new-99-land-only-owner";
-import { judgePriorLuxuryHouse, type New99HouseType, type TriStateAnswer } from "./new-99-luxury-house";
+import { judgePriorLuxuryHouse, isPriorLuxuryStandardDate, type New99HouseType, type TriStateAnswer } from "./new-99-luxury-house";
 import { evaluateNew99AcquisitionGate, type New99AcquisitionCause } from "./new-99-acquisition-cause";
-import { pre2016RuleNotice } from "./new-99-3-era";
+import { pre2016RuleNotice, isHighValueHouseAtDate } from "./new-99-3-era";
+import { judgeRedevMemberPeriod, type RedevMemberPeriodReason } from "./new-99-redev-member";
 import {
   calcSignedAllocation,
   resolveNew99BaseDate,
@@ -111,6 +112,12 @@ export interface New99Input {
   isRedevelopedNewHouse?: boolean;
   /** 종전주택 취득 당시 기준시가 — 변형 분모 (변형 ON 시 필수) */
   previousHouseStdPriceAtAcquisition?: number;
+  /**
+   * 재개발·재건축 완공 아파트 조합원 갈래 — 기간은 준공일(사용승인·사용검사일) 축이고, 기간 경과 후 사용승인이면
+   * 조합의 기간 내 잔여주택 직접 계약 사실(3-state)을 본다 (조특령 §99③2호 · `new-99-redev-member.ts` · NH-36 · NH-27).
+   * 호출자(라우터)가 이 갈래이면 `acquisitionType`을 자기건설·`usageApprovalDate`·`acquisitionDate`를 준공일로 넘긴다.
+   */
+  redevMember?: { completionDate?: Date; remainderContract?: TriStateAnswer };
 }
 
 export type New99IneligibleCode =
@@ -127,7 +134,8 @@ export type New99IneligibleCode =
   | "NOT_MEMBER_AT_APPROVAL"
   | "MISSING_STD_PRICE"
   | "MISSING_PREVIOUS_STD_PRICE"
-  | "TRANSFER_BEFORE_ACQUISITION";
+  | "TRANSFER_BEFORE_ACQUISITION"
+  | RedevMemberPeriodReason["code"];
 
 export interface New99IneligibleReason {
   code: New99IneligibleCode;
@@ -232,7 +240,21 @@ export function evaluateNew99(input: New99Input): New99Result {
       ? input.contractDate ?? input.acquisitionDate
       : input.usageApprovalDate ?? input.acquisitionDate;
   const periodEnd = input.isNationalHousing ? NEW_99_PERIOD_END_NATIONAL : NEW_99_PERIOD_END;
-  if (periodTarget.getTime() < NEW_99_PERIOD_START.getTime() || periodTarget.getTime() > periodEnd.getTime()) {
+  // 재개발 완공 아파트 조합원 — 준공일 축 + 조특령 §99③2호 잔여주택 계약 사실 (NH-36 · NH-27)
+  if (input.redevMember) {
+    const memberReason = judgeRedevMemberPeriod({
+      article: "new_99",
+      completionDate: input.redevMember.completionDate,
+      periodStart: NEW_99_PERIOD_START,
+      periodEnd,
+      periodLabel: input.isNationalHousing ? "1998.5.22.~1999.12.31. — 국민주택" : "1998.5.22.~1999.6.30.",
+      remainderContract: input.redevMember.remainderContract,
+    });
+    if (memberReason) {
+      reasons.push(memberReason);
+      return ineligible(reasons);
+    }
+  } else if (periodTarget.getTime() < NEW_99_PERIOD_START.getTime() || periodTarget.getTime() > periodEnd.getTime()) {
     const targetLabel = acquisitionType === "from_builder" ? "매매계약일" : "사용승인일";
     reasons.push({
       code: "OUT_OF_ACQUISITION_PERIOD",
@@ -277,18 +299,25 @@ export function evaluateNew99(input: New99Input): New99Result {
     input.acquisitionDate,
   );
   // 기준일이 모두 2002.12.31. 이전(종전 «고급주택») — 당시 소득세법 시행령 §156 공동·단독·시설 기준 (NH-02 · NH-15).
-  const luxury = judgePriorLuxuryHouse(hvBaseDate, input.wholePropertyTransferPrice, {
-    houseType: input.houseType,
-    exclusiveAreaSqm: input.exclusiveAreaSqm ?? 0,
-    grossFloorAreaSqm: input.grossFloorAreaSqm,
-    attachedLandAreaSqm: input.attachedLandAreaSqm,
-    stdPriceFloorMet: input.stdPriceFloorMet,
-    luxuryFacility: input.luxuryFacility,
-  });
+  // 조합원 주택이 기간 경과 후 2003.1.1. 이후 사용승인(조특령 §99③2호)이면 종전 «고급주택» 시기가 아니다 — 법률 제6762호 부칙 §29①의
+  //   종전 규정 대상(2003.1.1. 전 계약·사용승인)이 아니라 양도 당시 소득세법 §89①3호 고가주택으로 본다(§99의3 개정규정 축과 같다 · NH-27).
+  const priorEra = isPriorLuxuryStandardDate(hvBaseDate);
+  const luxury = priorEra
+    ? judgePriorLuxuryHouse(hvBaseDate, input.wholePropertyTransferPrice, {
+        houseType: input.houseType,
+        exclusiveAreaSqm: input.exclusiveAreaSqm ?? 0,
+        grossFloorAreaSqm: input.grossFloorAreaSqm,
+        attachedLandAreaSqm: input.attachedLandAreaSqm,
+        stdPriceFloorMet: input.stdPriceFloorMet,
+        luxuryFacility: input.luxuryFacility,
+      })
+    : { isLuxury: isHighValueHouseAtDate(input.transferDate, input.wholePropertyTransferPrice), confirmations: [] as string[] };
   if (luxury.isLuxury) {
     reasons.push({
       code: "HIGH_VALUE_HOUSE",
-      message: `고급주택(기준일 ${hvBaseDate.toISOString().split("T")[0]} 당시 소득세법 시행령 §156)은 §99 ① 단서로 적용 배제됩니다.`,
+      message: priorEra
+        ? `고급주택(기준일 ${hvBaseDate.toISOString().split("T")[0]} 당시 소득세법 시행령 §156)은 §99 ① 단서로 적용 배제됩니다.`
+        : `고가주택(양도일 ${input.transferDate.toISOString().split("T")[0]} 당시 소득세법 §89①3호)은 §99 ① 단서로 적용 배제됩니다.`,
       legalBasis,
     });
     return ineligible(reasons, luxury.confirmations);

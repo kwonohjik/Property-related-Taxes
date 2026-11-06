@@ -40,6 +40,26 @@ export const TRANSFER_NEW_HOUSING_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // ③2호 — 조합원 주택 기간 경과 후 사용승인 + 조합의 기간 내 잔여주택 직접 계약 사실(리뷰 NH-27 · `NEW_99_MEMBER_REMAINDER`)
+    id: "TRANSFER_DECREE.NEW_99_MEMBER_REMAINDER",
+    citation: "조특령 §99",
+    keywords: [
+      "조합원이 주택조합등으로부터 취득하는 주택으로서 신축주택취득기간 경과후에 사용승인 또는 사용검사를 받는 주택",
+      "주택조합등이 조합원외의 자와 신축주택취득기간내에 잔여주택에 대한 매매계약",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // ③2호 — 인가일 현재 조합원 주택 기간 경과 후 사용승인 + 조합의 기간 내 잔여주택 직접 계약 사실(리뷰 NH-16 · `NEW_99_3_MEMBER_REMAINDER`)
+    id: "TRANSFER_DECREE.NEW_99_3_MEMBER_REMAINDER",
+    citation: "조특령 §99의3",
+    keywords: [
+      "이 주택조합등으로부터 취득하는 주택으로서 신축주택취득기간 경과후에 사용승인 또는 사용검사를 받는 주택",
+      "주택조합등이 조합원외의 자와 신축주택취득기간내에 잔여주택에 대한 매매계약",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     // ② 「대통령령으로 정하는 동」(농어촌주택 소재지 — 2026.2.27. 개정) · ⑥ 「대통령령으로 정하는 고향」
     id: "TRANSFER_DECREE.NEW_99_4_DONG_AND_HOMETOWN",
     citation: "조특령 §99의4",

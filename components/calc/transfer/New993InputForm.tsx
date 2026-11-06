@@ -26,6 +26,8 @@ import { New99LuxuryHouseFields } from "@/components/calc/transfer/New99LuxuryHo
 import { New99FirstContractField } from "@/components/calc/transfer/New99LuxuryHouseFields";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-store";
+import type { RedevMemberFormScope } from "@/lib/calc/redev-field-scope";
+import { RedevMemberNewHouseFields } from "@/components/calc/transfer/RedevMemberNewHouseFields";
 
 /** YYYY-MM-DD 문자열의 연도에 n년 가산 (new Date 금지 정책 회피 — 5년 시점 referenceDate 파생). */
 function addYearsStr(dateStr: string | undefined, n: number): string | undefined {
@@ -74,6 +76,7 @@ export function New993InputForm({
   assetPhdSnapshot,
   acquisitionCause,
   assetContractDate,
+  redevMember,
 }: {
   value: Extract<AssetReductionForm, { type: "new_99_3" }>;
   onUpdate: <K extends keyof Extract<AssetReductionForm, { type: "new_99_3" }>>(
@@ -99,7 +102,16 @@ export function New993InputForm({
   acquisitionCause?: string;
   /** 자산-수준 매매계약일 — 1호 기준일(종전 규정 시기 판정, NH-02) */
   assetContractDate?: string;
+  /** 재개발 완공 아파트 조합원 갈래(NH-36) — 취득 유형·매매계약일 대신 준공일로 판정하고, 주택 출자면 재개발 변형이 고정된다(NH-32) */
+  redevMember?: RedevMemberFormScope;
 }) {
+  // 조합원 갈래 — 엔진(`income-deduction-router` evalNew993)·⑧·④와 같은 축: 자기건설·준공일·출자 자산 사실 변형
+  const memberCompletion = redevMember ? redevMember.completionDate || undefined : undefined;
+  const effType = redevMember ? ("self_built" as const) : value.acquisitionType993;
+  const effUsage = redevMember ? memberCompletion : value.usageApprovalDate993;
+  /** 신축주택 취득일 — 조합원은 준공일(서면인터넷방문상담4팀-2145 · NH-63). 기준시가 조회 기준일도 이 날이다. */
+  const newHouseAcqDate = redevMember ? memberCompletion : acquisitionDate;
+  const variantOn = redevMember ? redevMember.houseContributed : !!value.isRedevelopedNewHouse993;
   const [areaLoading, setAreaLoading] = useState(false);
   const [areaMsg, setAreaMsg] = useState<string | null>(null);
 
@@ -159,7 +171,7 @@ export function New993InputForm({
   // PHD 환산 위젯 (재사용) — 재배치 시 취득시 기준시가 직전, 미배치 시 하단.
   const phdSection = (
     <ReductionPhdInput
-      acquisitionDate={acquisitionDate}
+      acquisitionDate={newHouseAcqDate}
       jibun={jibun}
       snapshotKeyPrefix="red993"
       assetId={assetId}
@@ -235,12 +247,28 @@ export function New993InputForm({
         jibun={jibun}
         dong={dong}
         ho={ho}
-        referenceDate={acquisitionDate}
+        referenceDate={newHouseAcqDate}
         hint="최초공시 전 취득이면 위 「최초공시 전 환산」 토글을 켜세요"
         onExclusiveArea={(area) => onUpdate("exclusiveAreaSqm993", String(area))}
         testidPrefix="new993-stdprice-acq"
       />
     </div>
+  );
+
+  const previousHouseStdField = (
+        <div>
+          <label className="mb-1 block text-xs font-medium">종전주택 취득 당시 기준시가</label>
+          <CurrencyInput
+            data-field="reduction.new_99_3.previousHouseStdPrice993"
+            value={value.previousHouseStdPrice993}
+            onChange={(v) => onUpdate("previousHouseStdPrice993", v)}
+            label=""
+          />
+          <p className="mt-1 text-micro text-muted-foreground">
+            정비사업조합 조합원이 관리처분계획에 따라 취득했거나, 거주·보유 중 소실·붕괴·노후로
+            멸실되어 재건축한 경우에 해당합니다 (법 §98의3② 각 호)
+          </p>
+        </div>
   );
 
   return (
@@ -252,7 +280,7 @@ export function New993InputForm({
       </div>
 
       {/* Round 9 정정 (2026-05-06): 1호(주건업) 시한 기준은 상단 "매매계약일"을 재사용. 본 폼에서는 입력 X. */}
-      {value.acquisitionType993 === "from_builder" && (
+      {!redevMember && value.acquisitionType993 === "from_builder" && (
         <div className="rounded-md border border-dashed border-primary/40 bg-primary/10 px-2.5 py-1.5">
           <p className="text-micro text-primary leading-relaxed">
             ℹ️ 1호 매매계약일은 <strong>상단 펼침 영역의 &ldquo;매매계약일 (분양/매매)&rdquo;</strong>을 사용합니다.
@@ -262,7 +290,7 @@ export function New993InputForm({
       )}
 
       {/* NH-17 — 1호 매매 취득은 최초 계약자인지 묻는다(분양권 승계 불성립). ⑧·④가 같은 술어. */}
-      {needsFirstContractAnswer(value.acquisitionType993, acquisitionCause) && (
+      {!redevMember && needsFirstContractAnswer(value.acquisitionType993, acquisitionCause) && (
         <div data-field="reduction.new_99_3.firstContract993">
           <New99FirstContractField
             testidPrefix="new993"
@@ -277,6 +305,14 @@ export function New993InputForm({
           외곽 primary 래퍼는 저장소 관용구라 그대로 둔다 — 갈린 것은 번호 축뿐이었다. */}
       <ToneCard tone="sky" sectionNum="①" title="취득 유형 · 소재지" bodyClassName="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {redevMember ? (
+          <RedevMemberNewHouseFields
+            article="new_99_3"
+            member={redevMember}
+            remainderContract={value.remainderContract993 ?? ""}
+            onRemainderContractChange={(v) => onUpdate("remainderContract993", v)}
+          />
+        ) : (
         <div>
           <label className="mb-1 block text-xs font-medium">취득 유형</label>
           <Select
@@ -296,6 +332,7 @@ export function New993InputForm({
             </SelectContent>
           </Select>
         </div>
+        )}
 
         <div>
           <label className="mb-1 block text-xs font-medium">소재지</label>
@@ -320,7 +357,7 @@ export function New993InputForm({
           </p>
         </div>
 
-        {value.acquisitionType993 === "self_built" && (
+        {!redevMember && value.acquisitionType993 === "self_built" && (
           <div>
             <label className="mb-1 block text-xs font-medium">사용승인일</label>
             <DateInput data-field="reduction.new_99_3.usageApprovalDate993" value={value.usageApprovalDate993 ?? ""} onChange={(v) => onUpdate("usageApprovalDate993", v)} />
@@ -329,7 +366,7 @@ export function New993InputForm({
         )}
 
         {/* 부칙 §29② — 사용승인이 2003.1.1.~6.30.일 때만 묻는다. 모름도 선택지(= 개정규정 + 확인 필요)이며 미응답은 validate(⑧)가 막는다. */}
-        {isAddenda29_2WindowIso(value.acquisitionType993, value.usageApprovalDate993) && (
+        {isAddenda29_2WindowIso(effType, effUsage) && (
           <div className="space-y-1.5 sm:col-span-2" data-field="reduction.new_99_3.constructionStartedBefore2003_993">
             <p className="text-caption text-muted-foreground font-medium">2003.1.1. 전에 공사에 착수했나요?</p>
             <RadioCardGroup
@@ -367,7 +404,7 @@ export function New993InputForm({
             jibun={jibun}
             dong={dong}
             ho={ho}
-            referenceDate={addYearsStr(acquisitionDate, 5)}
+            referenceDate={addYearsStr(newHouseAcqDate, 5)}
             hint="취득일 + 5년 시점 인접 고시일 가격"
             onExclusiveArea={(area) => onUpdate("exclusiveAreaSqm993", String(area))}
             testidPrefix="new993-stdprice-5y"
@@ -381,7 +418,7 @@ export function New993InputForm({
              *    5년 **이내** 양도도 안분 경로라 이 값이 없으면 엔진이 감면 0을 낸다.
              */
             label={
-              value.isRedevelopedNewHouse993
+              variantOn
                 ? "양도시 기준시가 (필수 — 재개발 변형)"
                 : "양도시 기준시가 (5년 경과 양도 시 필수)"
             }
@@ -424,10 +461,10 @@ export function New993InputForm({
       </div>
       {/* NH-02 — 종전 규정 적용분은 당시 소득세법 시행령 §156(공동·단독·시설 — 3호는 단독만). ⑧·⑫와 같은 술어. 기준일이 모두 2001년 이후라 하한은 기준시가 4천만원. */}
       {isNew993PriorRuleEraIso(
-        value.acquisitionType993,
-        value.contractDate993 || assetContractDate,
-        value.usageApprovalDate993,
-        acquisitionDate,
+        effType,
+        redevMember ? undefined : value.contractDate993 || assetContractDate,
+        effUsage,
+        newHouseAcqDate,
         value.constructionStartedBefore2003_993,
       ) && (
         <New99LuxuryHouseFields
@@ -455,7 +492,7 @@ export function New993InputForm({
       </ToneCard>
 
       {/* 조특령 §99의3④는 법 §99의3①1호의 사유 — 2호(자기건설)에는 묻지 않는다 (리뷰 NH-57). ⑧·엔진과 같은 술어(2호가 아니면 1호). */}
-      {value.acquisitionType993 !== "self_built" && (
+      {!redevMember && value.acquisitionType993 !== "self_built" && (
         <ToggleCard
           tone="rose"
           title="2001.5.23 전 분양계약 해제 후 재계약·대체취득"
@@ -481,29 +518,29 @@ export function New993InputForm({
           1호 정비사업조합 조합원이 관리처분계획에 따라 취득하는 주택
           2호 거주·보유 중 소실·붕괴·노후 등으로 멸실되어 재건축한 주택
       */}
-      <ToggleCard
-        tone="violet"
-        title="종전주택을 재개발·재건축하여 취득한 신축주택"
-        description="5년 이내 양도도 안분 적용 — 분모가 종전주택 취득 당시 기준시가로 바뀝니다 (조특령 §99의3② 1호 단서·2호 괄호)"
-        checked={value.isRedevelopedNewHouse993}
-        onCheckedChange={(v) => onUpdate("isRedevelopedNewHouse993", v)}
-      >
-        <div>
-          <label className="mb-1 block text-xs font-medium">종전주택 취득 당시 기준시가</label>
-          <CurrencyInput
-            data-field="reduction.new_99_3.previousHouseStdPrice993"
-            value={value.previousHouseStdPrice993}
-            onChange={(v) => onUpdate("previousHouseStdPrice993", v)}
-            label=""
-          />
-          <p className="mt-1 text-micro text-muted-foreground">
-            정비사업조합 조합원이 관리처분계획에 따라 취득했거나, 거주·보유 중 소실·붕괴·노후로
-            멸실되어 재건축한 경우에 해당합니다 (법 §98의3② 각 호)
-          </p>
-        </div>
-      </ToggleCard>
+      {/* NH-32 — 재개발 완공 아파트 조합원은 출자 자산 사실이 정한다: 주택 출자면 항상 적용(토글 없음), 토지 출자·승계면 해당 없음(엔진·⑧과 같은 술어). */}
+      {redevMember ? (
+        redevMember.houseContributed && (
+          <ToneCard tone="violet" title="종전주택을 재개발·재건축하여 취득한 신축주택 — 적용" bodyClassName="space-y-2">
+            <p className="text-micro text-muted-foreground">
+              주택을 출자한 조합원의 신축주택이라 5년 이내 양도도 안분하고 분모가 종전주택 취득 당시 기준시가입니다 (조특령 §99의3② 1호 단서·2호 괄호 · 법 §98의3②1호)
+            </p>
+            {previousHouseStdField}
+          </ToneCard>
+        )
+      ) : (
+        <ToggleCard
+          tone="violet"
+          title="종전주택을 재개발·재건축하여 취득한 신축주택"
+          description="5년 이내 양도도 안분 적용 — 분모가 종전주택 취득 당시 기준시가로 바뀝니다 (조특령 §99의3② 1호 단서·2호 괄호)"
+          checked={value.isRedevelopedNewHouse993}
+          onCheckedChange={(v) => onUpdate("isRedevelopedNewHouse993", v)}
+        >
+          {previousHouseStdField}
+        </ToggleCard>
+      )}
 
-      {value.acquisitionType993 === "from_builder" && (
+      {!redevMember && value.acquisitionType993 === "from_builder" && (
         <ToggleCard
           variant="chip"
           checked={value.hasOccupancyAtContract ?? false}

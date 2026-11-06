@@ -24,6 +24,8 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
 import { landOnlyOwnerMessage } from "@/lib/tax-engine/transfer-reductions/new-99-land-only-owner";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
+import { redevMemberNewHouseScope } from "@/lib/calc/redev-field-scope";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import {
   isIncomeDeductionTrack,
   isTaxAmountTrack,
@@ -91,6 +93,8 @@ const ASSET_KIND_LABEL: Record<AssetForm["assetKind"], string> = {
  */
 export function buildPeriodContext(asset: AssetForm, transferDate: string): PeriodCheckContext {
   const acqDate = asset.acquisitionDate ? new Date(asset.acquisitionDate) : undefined;
+  // NH-36 — 재개발 완공 아파트 조합원은 §99·§99의3 시한을 준공일로 판정한다(종전주택 취득일·매매계약일이 아니다).
+  const member = redevMemberNewHouseScope(asset);
   const transDate = transferDate ? new Date(transferDate) : new Date();
   // Round 9 (2026-05-06): 자산-수준 매매계약일 주입.
   // 신축·미분양·임대 감면 13개 조문은 매매계약일 + 계약금 납부 기준으로 시한 판정.
@@ -114,7 +118,8 @@ export function buildPeriodContext(asset: AssetForm, transferDate: string): Peri
     // 입력 전 비활성이 합리적 (양도일 fallback 시 항상 시한 외 오탐).
     registrationDate: rentalReg ?? acqDate ?? transDate,
     rentalStartDate: rentalStart ?? acqDate,
-    usageApprovalDate: undefined,
+    usageApprovalDate: toOptionalDate(member?.completionDate),
+    ...(member ? { redevMember: true } : {}),
     /**
      * 🔴 §97의2 판정 축 (2026-09-06 UI 리뷰).
      *
@@ -427,6 +432,8 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           assetDong={asset.addressDong || undefined}
           assetHo={asset.addressHo || undefined}
           assetPhdSnapshot={assetPhdSnapshot}
+          redevMember={redevMemberNewHouseScope(asset)}
+          onRedevCompletionDateChange={(v) => onChange({ redevCompletionDate: v })}
         />
       ))}
 

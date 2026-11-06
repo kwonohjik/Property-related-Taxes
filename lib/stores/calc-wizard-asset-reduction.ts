@@ -141,6 +141,8 @@ export type AssetReductionForm =
       luxuryFacility993?: "" | "yes" | "no" | "unknown";
       /** (1호 · 매매 취득) 주택건설업자와 최초로 매매계약·계약금 납부한 사람이 본인인가 (NH-17). ""=미응답 */
       firstContract993?: "" | "yes" | "no" | "unknown";
+      /** (재개발 완공 아파트 조합원 · 준공일이 2003.6.30. 뒤) 조합이 기간 안에 조합원 외의 자와 잔여주택 매매계약을 직접 체결하고 계약금을 받았는가 — 조특령 §99의3③2호 단서 (NH-16). ""=미응답 */
+      remainderContract993?: "" | "yes" | "no" | "unknown";
       /** (1호만) 매매계약일 입주사실 있는 주택 — 적용 배제 */
       hasOccupancyAtContract?: boolean;
       /** 거주자 여부 — 비거주자는 §99의3 적용 배제 */
@@ -433,6 +435,8 @@ export type RentalReductionFormVariant =
       luxuryFacility99?: "" | "yes" | "no" | "unknown";
       /** (2호 · 매매 취득) 주택건설업자와 최초로 매매계약·계약금 납부한 사람이 본인인가 (NH-03). ""=미응답 */
       firstContract99?: "" | "yes" | "no" | "unknown";
+      /** (재개발 완공 아파트 조합원 · 준공일이 신축주택취득기간 뒤) 조합이 기간 안에 조합원 외의 자와 잔여주택 매매계약을 직접 체결하고 계약금을 받았는가 — 조특령 §99③2호 (NH-27). ""=미응답 */
+      remainderContract99?: "" | "yes" | "no" | "unknown";
       /** (2호) 매매계약일 현재 다른 자 입주 사실 — ON이면 배제 */
       hasOccupancyAtContract99: boolean;
       /** 령 §99② — 1998.5.21 이전 계약 해제 후 재계약·대체취득 — ON이면 배제 */

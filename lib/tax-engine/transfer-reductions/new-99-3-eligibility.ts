@@ -8,6 +8,7 @@ import { judgePriorLuxuryHouse, isPriorLuxuryStandardDate } from "./new-99-luxur
 import { evaluateNew99AcquisitionGate } from "./new-99-acquisition-cause";
 import { PRIOR_ADVANCED_HOUSE_STANDARD_DATE, isHighValueHouseAtDate, type New993Era } from "./new-99-3-era";
 import { isHighValueHouseUnder993, resolveNew99BaseDate } from "./new-99-3-base-date";
+import { judgeRedevMemberPeriod } from "./new-99-redev-member";
 import type { New993IneligibleReason, New993Input } from "./new-99-3";
 
 // UTC 자정 파싱 — API 경유 입력(new Date("YYYY-MM-DD") = UTC midnight)과 동일 기준.
@@ -73,14 +74,28 @@ export function checkNew993Ineligibility(input: New993Input, era: New993Era, war
     return reasons;
   }
 
-  // 4. 신축주택취득기간 외
+  // 4. 신축주택취득기간 외 — 재개발 완공 아파트 조합원은 준공일 축 + ③2호 잔여주택 계약 사실 (NH-36 · NH-16)
+  if (input.redevMember) {
+    const memberReason = judgeRedevMemberPeriod({
+      article: "new_99_3",
+      completionDate: input.redevMember.completionDate,
+      periodStart: PERIOD_START,
+      periodEnd: PERIOD_END,
+      periodLabel: "2001.5.23.~2003.6.30.",
+      remainderContract: input.redevMember.remainderContract,
+    });
+    if (memberReason) {
+      reasons.push(memberReason);
+      return reasons;
+    }
+  }
   const periodTarget = resolveNew99BaseDate(
     input.acquisitionType,
     input.contractDate,
     input.usageApprovalDate,
     input.acquisitionDate,
   );
-  if (periodTarget < PERIOD_START || periodTarget > PERIOD_END) {
+  if (!input.redevMember && (periodTarget < PERIOD_START || periodTarget > PERIOD_END)) {
     const targetLabel =
       input.acquisitionType === "from_builder" ? "매매계약일" : "사용승인일";
     reasons.push({

@@ -26,6 +26,7 @@
 
 import { isRedevelopmentActive } from "./redevelopment";
 import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
+import { redevMemberNewHouseOf } from "./transfer-reductions/new-99-redev-member";
 import { settleCarryoverGiftTaxForRedevelopment } from "./redevelopment-burdened-gift";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import { runRedevelopmentGainSteps } from "./transfer-tax-redevelopment-steps";
@@ -262,6 +263,8 @@ export function calculateRedevelopmentTax(
     // 상속·증여 취득 · 관리처분계획 인가일 뒤 승계조합원은 §99의3 불성립 (NH-17 · NH-40 · NH-16 — 조특령 §99의3③2호·⑤)
     acquisitionCause: reductionAcquisitionCauseOf(input),
     isRedevSuccessorMember: input.redevelopment?.isSuccessorMember === true,
+    // 완공 아파트 조합원 — 준공일 축·재개발 변형 자산 사실 (NH-36 · NH-63 · NH-32)
+    redevMemberNewHouse: redevMemberNewHouseOf(input.redevelopment),
     standardPriceAtTransfer: input.standardPriceAtTransfer,
     transferIncome: transferIncomeBefore993,
   });

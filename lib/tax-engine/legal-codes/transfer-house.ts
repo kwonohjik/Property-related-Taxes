@@ -565,6 +565,10 @@ export const NEW_HOUSING_ACQUISITION_ARTICLE = {
   NEW_99_3_SELF_BUILT: "조특법 §99의3①2호",
   /** 조특령 §99의3③2호·⑤ — 관리처분계획 인가일(사업계획 승인일) 현재의 조합원 */
   NEW_99_3_MEMBER_AT_APPROVAL: "조특령 §99의3 ③ 2호·⑤",
+  /** 조특령 §99③2호 — 조합원 주택 기간 경과 후 사용승인 + 조합의 기간 내 잔여주택 직접 계약 사실(NH-27) */
+  NEW_99_MEMBER_REMAINDER: "조특령 §99 ③ 2호",
+  /** 조특령 §99의3③2호 단서 — 조합원 주택 기간 경과 후 사용승인 + 조합의 기간 내 잔여주택 직접 계약 사실(NH-16) */
+  NEW_99_3_MEMBER_REMAINDER: "조특령 §99의3 ③ 2호",
 } as const;
 
 export const NEW_99_DECREE_ADDENDA_26959 = {

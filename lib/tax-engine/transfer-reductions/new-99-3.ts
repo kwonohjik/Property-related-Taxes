@@ -85,6 +85,12 @@ export interface New993Input {
   firstContract?: "yes" | "no" | "unknown";
   /** 재개발 자산의 승계조합원(관리처분계획 인가일 뒤 승계) — 조특령 §99의3③2호·⑤ 불성립 (NH-16) */
   isRedevSuccessorMember?: boolean;
+  /**
+   * 재개발·재건축 완공 아파트 조합원 갈래 — 기간은 준공일(사용승인·사용검사일) 축이고, 기간 경과 후 사용승인이면
+   * 조합의 기간 내 잔여주택 직접 계약 사실(3-state)을 본다 (`new-99-redev-member.ts` · NH-36 · NH-16 ③2호).
+   * 호출자(라우터)가 이 갈래이면 `acquisitionType`을 자기건설·`usageApprovalDate`·`acquisitionDate`를 준공일로 넘긴다.
+   */
+  redevMember?: { completionDate?: Date; remainderContract?: "yes" | "no" | "unknown" };
   /** 지역 — 가격 급등 지역(speculation) 내/외 */
   region: "outside_speculation" | "speculation";
   /**
