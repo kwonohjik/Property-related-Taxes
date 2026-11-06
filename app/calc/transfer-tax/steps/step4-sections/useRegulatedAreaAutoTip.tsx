@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { calcStoredRegulatedFlags, regulatedAddressVerdicts } from "@/lib/calc/effective-regulated-at-acquisition";
 import type { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 
 export function useRegulatedAreaAutoTip({
@@ -50,6 +51,14 @@ export function useRegulatedAreaAutoTip({
     acquisition: form.wasRegulatedAtAcquisitionTouched,
   };
   const primaryInDistrict = form.assets?.[0]?.regionInDesignatedDistrict;
+  // 주소 문자열만 있을 때 「취득 당시」 토글·안내는 ④가 읽는 leaf 값이다 — route는 기준일 하나만 받아 증여받은 주택의 세대 사실(후보일·결합 방식)을 못 본다
+  // (계획서 `docs/00-pm/gift-house-regulated-address-path.plan.md` Q-2 a). 코드가 있으면 route 값 그대로(토글은 숨고 엔진이 코드로 판정한다).
+  const addressAcquisition = primaryRegionCode ? undefined : regulatedAddressVerdicts(form);
+  const addressAcquisitionValue = primaryRegionCode
+    ? undefined
+    : calcStoredRegulatedFlags({ ...form, wasRegulatedAtAcquisitionTouched: false }).wasRegulatedAtAcquisition;
+  const addressAcquisitionRef = useRef(addressAcquisitionValue);
+  addressAcquisitionRef.current = addressAcquisitionValue;
   // ④가 싣는 코드와 같은 폴백(`primary.regionCode || form.regionCode`) — ②·④ 카드가 토글을 숨기는 조건과 같다.
   const hasRegionCode = !!(primaryRegionCode || form.regionCode);
   // 주소(또는 법정동코드)·날짜가 준비되면 조정대상지역 자동 판별
@@ -88,7 +97,7 @@ export function useRegulatedAreaAutoTip({
         const patch: Partial<TransferFormData> = {};
         if (!touchedRef.current.transfer) patch.isRegulatedArea = data.isRegulatedAtTransfer;
         if (!touchedRef.current.acquisition) {
-          patch.wasRegulatedAtAcquisition = data.wasRegulatedAtAcquisition;
+          patch.wasRegulatedAtAcquisition = addressAcquisitionRef.current ?? data.wasRegulatedAtAcquisition;
         }
         if (Object.keys(patch).length > 0) onChange(patch);
       })
@@ -105,7 +114,27 @@ export function useRegulatedAreaAutoTip({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [primaryAddress, primaryRegionCode, primaryInDistrict, form.transferDate, residenceJudgmentDate, primaryKind]);
+  }, [primaryAddress, primaryRegionCode, primaryInDistrict, form.transferDate, residenceJudgmentDate, primaryKind, addressAcquisitionValue]);
+
+  // 「취득 당시」 안내 줄 — 주소만 있고 ④가 주소 판정을 쓰면 그 판정(결론을 정한 날·근거)을, 아니면 route 값을 보인다.
+  const decided = addressAcquisition?.acquisitionDecided;
+  const acquisitionLine =
+    regulatedAuto?.acquisitionBasis && addressAcquisition?.acquisition && decided
+      ? {
+          label: decided.label ?? judgmentDateLabel,
+          date: decided.date,
+          regulated: addressAcquisition.acquisition.isRegulated,
+          basis: addressAcquisition.acquisition.basis,
+        }
+      : regulatedAuto?.acquisitionBasis &&
+          !(acquisitionVerdict && acquisitionVerdict.isRegulated !== regulatedAuto.wasRegulatedAtAcquisition)
+        ? {
+            label: judgmentDateLabel,
+            date: residenceJudgmentDate,
+            regulated: regulatedAuto.wasRegulatedAtAcquisition,
+            basis: regulatedAuto.acquisitionBasis,
+          }
+        : null;
 
   // 조정대상지역 자동 판별 안내 — 주택은 섹션② 취득일 조정 토글 아래, 입주권·분양권은 최상단에 렌더
   return isHousingLike(primaryKind) && primaryAddress && (
@@ -123,14 +152,13 @@ export function useRegulatedAreaAutoTip({
             </span>{" "}
             — {regulatedAuto.transferBasis}
           </p>
-          {regulatedAuto.acquisitionBasis &&
-            !(acquisitionVerdict && acquisitionVerdict.isRegulated !== regulatedAuto.wasRegulatedAtAcquisition) && (
+          {acquisitionLine && (
             <p className="text-muted-foreground">
-              {judgmentDateLabel}({residenceJudgmentDate}):{" "}
-              <span className={regulatedAuto.wasRegulatedAtAcquisition ? "font-semibold text-amber-700 dark:text-amber-400" : ""}>
-                {regulatedAuto.wasRegulatedAtAcquisition ? "조정대상지역 ✓" : "미지정"}
+              {acquisitionLine.label}({acquisitionLine.date}):{" "}
+              <span className={acquisitionLine.regulated ? "font-semibold text-amber-700 dark:text-amber-400" : ""}>
+                {acquisitionLine.regulated ? "조정대상지역 ✓" : "미지정"}
               </span>{" "}
-              — {regulatedAuto.acquisitionBasis}
+              — {acquisitionLine.basis}
             </p>
           )}
           {/*

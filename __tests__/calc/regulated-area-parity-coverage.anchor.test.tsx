@@ -11,13 +11,14 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 vi.mock("@/lib/api/rate-limit", () => ({
   checkRateLimit: vi.fn().mockReturnValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 }),
   getClientIp: vi.fn().mockReturnValue("127.0.0.1"),
   shouldBypassRateLimit: vi.fn().mockReturnValue(true),
 }));
 import { POST as regulatedAreaPOST } from "@/app/api/address/regulated-area/route";
+import { useRegulatedAreaAutoTip } from "@/app/calc/transfer-tax/steps/step4-sections/useRegulatedAreaAutoTip";
 import { useAcquisitionRegulatedContext } from "@/app/calc/transfer-tax/steps/step4-sections/useAcquisitionRegulatedContext";
 import { captureBody } from "./_helpers/redev-one-house-route";
 import { handoff } from "./_one-house-pr6a-routes";
@@ -71,28 +72,40 @@ const CARRYOVER = {
   carryover: { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2018-06-01", donorAcquisitionDate: "2010-01-01" },
 };
 
-/** Step4 훅이 하는 일 — 기준일은 Step4가 실제로 쓰는 출처(`useAcquisitionRegulatedContext`)에서, 판정은 훅이 부르는 route에서. */
+/**
+ * Step4 훅이 하는 일 — **실제 훅**(`useRegulatedAreaAutoTip`)을 렌더한다. 기준일·맥락은 Step4가 쓰는 출처(`useAcquisitionRegulatedContext`)에서,
+ * 훅이 부르는 `/api/address/regulated-area`는 실제 route로 연결하고, 훅이 토글에 쓴 값(onChange 패치)을 읽는다.
+ */
 async function visited(f: F): Promise<{ date: string; flags: { isRegulatedArea: boolean; wasRegulatedAtAcquisition: boolean } }> {
-  const { result } = renderHook(() => useAcquisitionRegulatedContext(f));
-  const date = result.current.residenceJudgmentDate;
+  const ctx = renderHook(() => useAcquisitionRegulatedContext(f)).result.current;
   const primary = f.assets[0];
-  const address = primary.addressRoad || primary.addressJibun || "";
-  const stored = { isRegulatedArea: f.isRegulatedArea === true, wasRegulatedAtAcquisition: f.wasRegulatedAtAcquisition === true };
-  if (!address || !f.transferDate || !isHousingLike(primary.assetKind)) return { date, flags: stored };
-  const res = await regulatedAreaPOST(
-    new NextRequest("http://localhost/api/address/regulated-area", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address, transferDate: f.transferDate, acquisitionDate: date || undefined }),
+  const patches: Partial<F> = {};
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (u: string, init?: RequestInit) =>
+      regulatedAreaPOST(new NextRequest(`http://localhost${u}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: String(init?.body) })),
+    ),
+  );
+  renderHook(() =>
+    useRegulatedAreaAutoTip({
+      form: f,
+      onChange: (d) => Object.assign(patches, d),
+      primaryKind: primary.assetKind,
+      primaryAddress: primary.addressRoad || primary.addressJibun || "",
+      primaryRegionCode: primary.regionCode || "",
+      residenceJudgmentDate: ctx.residenceJudgmentDate,
+      judgmentDateLabel: ctx.judgmentDateLabel,
+      acquisitionVerdict: ctx.acquisitionVerdict,
     }),
   );
-  const data = (await res.json()) as { error?: unknown; isRegulatedAtTransfer: boolean; wasRegulatedAtAcquisition: boolean };
-  if (data.error) return { date, flags: stored };
+  const address = primary.addressRoad || primary.addressJibun || "";
+  if (address && f.transferDate && isHousingLike(primary.assetKind)) await waitFor(() => expect(Object.keys(patches).length).toBeGreaterThan(0));
+  vi.unstubAllGlobals();
   return {
-    date,
+    date: ctx.residenceJudgmentDate,
     flags: {
-      isRegulatedArea: f.isRegulatedAreaTouched ? stored.isRegulatedArea : data.isRegulatedAtTransfer,
-      wasRegulatedAtAcquisition: f.wasRegulatedAtAcquisitionTouched ? stored.wasRegulatedAtAcquisition : data.wasRegulatedAtAcquisition,
+      isRegulatedArea: patches.isRegulatedArea ?? f.isRegulatedArea === true,
+      wasRegulatedAtAcquisition: patches.wasRegulatedAtAcquisition ?? f.wasRegulatedAtAcquisition === true,
     },
   };
 }
@@ -108,8 +121,9 @@ describe("10번 — 건너뛴 값 = 거친 값 (medium · 증여)", () => {
     [
       "P-2 일반 증여 · 세대 보유 2016-01-01 · 마포 주소 문자열",
       calcForm({ ...GIFT, addressJibun: "서울특별시 마포구 테스트동 1-1" }),
-      // 마포(시군구 매칭 high): 2018-06-01 지정 중(2017-08-03 고시) · 2025-06-02 미지정 — 주소 경로는 기준일 하나(증여일)만 본다.
-      { isRegulatedArea: false, wasRegulatedAtAcquisition: true },
+      // 마포(시군구 매칭 high): 세대 보유 시작일 2016-01-01 미지정 · 증여일 2018-06-01 지정 — 같은 세대 확인이라 둘 다 지정 중일 때만(`all`) → 아님.
+      // (이 계획서 이전에는 기준일 하나(증여일)만 봐 true였다 — `gift-house-regulated-address-path.plan.md`.)
+      { isRegulatedArea: false, wasRegulatedAtAcquisition: false },
     ],
     [
       "P-3 이월과세 증여 · 마포 주소 문자열",
@@ -138,7 +152,8 @@ describe("10번 — 건너뛴 값 = 거친 값 (medium · 증여)", () => {
     } as OneHouseJudgmentFormData;
     const menu = buildOneHouseExemptionApiBody(jf);
     const calc = await captureBody(handoff(jf, { assets: [{ ...handoff(jf).assets[0], fixedAcquisitionPrice: "500000000" }] } as Partial<F>));
-    expect([menu.isRegulatedArea, menu.wasRegulatedAtAcquisition]).toEqual([false, true]);
+    // 세대 보유 시작일 2016-01-01 미지정 · 증여일 2018-06-01 지정 → `all` → 아님 (P-2와 같은 사실).
+    expect([menu.isRegulatedArea, menu.wasRegulatedAtAcquisition]).toEqual([false, false]);
     expect([calc.isRegulatedArea, calc.wasRegulatedAtAcquisition]).toEqual([menu.isRegulatedArea, menu.wasRegulatedAtAcquisition]);
   });
 });
