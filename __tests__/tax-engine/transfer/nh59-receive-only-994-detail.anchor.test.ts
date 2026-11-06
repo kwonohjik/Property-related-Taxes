@@ -34,6 +34,7 @@ describe("NH-59 — 청산금 수령 단독신고 × §99의4 농어촌주택", 
             ruralHouseStdPrice: 200_000_000,
             isRegisteredHanok: false,
             isAdjacentArea: false,
+            adjacentArea994: "no", // L2b(#2943) 연접 3-state — 「아니오」
             meetsLocationRequirement: true,
           },
         ],
