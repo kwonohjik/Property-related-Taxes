@@ -13,12 +13,16 @@ import { computeOneHouseJudgmentSummary } from "@/lib/calc/one-house-exemption-v
 import { getSurchargeStepErrorCount, getSurchargeStepWarningCount } from "@/lib/calc/multi-house-surcharge-validate";
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
+import { regulatedAddressVerdicts } from "@/lib/calc/effective-regulated-at-acquisition";
 import type { MultiHouseSurchargeJudgmentResponse } from "@/app/api/calc/multi-house-surcharge-judgment/route";
 
 /** ⚠️ `MultiHouseSurchargeCalculator.tsx`의 `SURCHARGE_STEPS`와 같은 문자열이다 — 한쪽만 고치면 갈린다. */
 const STEP_LABELS = ["세대", "양도 대상 주택", "보유 주택·권리", "판정 결과", "세부담 시뮬레이션"] as const;
 
-/** 양도일 현재 조정대상지역 — 소재지 코드가 있으면 그 판정(엔진과 같은 함수), 없으면 ②의 직접 선택 */
+/**
+ * 양도일 현재 조정대상지역 — 소재지 코드가 있으면 그 판정(엔진과 같은 함수), 코드 없이 주소 문자열이고 안 만졌으면 주소 판정(④와 같은 leaf —
+ * 계획서 `judgment-menu-regulated-area-address.plan.md`), 그 밖에는 ②의 직접 선택.
+ */
 function transferRegulatedLabel(form: OneHouseJudgmentFormData): string | null {
   const primary = form.assets?.[0];
   if (!primary || !form.transferDate) return null;
@@ -26,6 +30,8 @@ function transferRegulatedLabel(form: OneHouseJudgmentFormData): string | null {
     const v = isRegulatedByBjdCode(primary.regionCode, form.transferDate, primary.regionInDesignatedDistrict);
     return v.isRegulated ? "예 (소재지 판정)" : "아니오 (소재지 판정)";
   }
+  const byAddress = regulatedAddressVerdicts(form).transfer;
+  if (byAddress) return byAddress.isRegulated ? "예 (주소 판정)" : "아니오 (주소 판정)";
   return form.isRegulatedArea ? "예 (직접 선택)" : "아니오 (직접 선택)";
 }
 

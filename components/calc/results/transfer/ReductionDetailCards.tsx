@@ -202,7 +202,9 @@ export function ReductionDetailCards({
           aggregatedContext={aggregatedContext}
         />
       )}
-      {result.rental97TaxDetail && excludedByOverlap("long_term_rental") && (
+      {/* §127⑦ 배너는 이 카드의 조문 id(`rental_97_main`·`rental_97_proviso`·`rental_97_2`·`rental_97_5`)로 판정한다 —
+          `calcReductions` 후보 type이 곧 `rental97TaxDetail.id`다. 종전 `"long_term_rental"` 비교는 §97이 승자여도 배너를 붙였다. */}
+      {result.rental97TaxDetail && excludedByOverlap(result.rental97TaxDetail.id) && (
         <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />
       )}
       {result.rental97TaxDetail && (
