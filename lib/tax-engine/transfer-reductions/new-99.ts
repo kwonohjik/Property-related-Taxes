@@ -30,6 +30,7 @@ import { evaluateNew99AcquisitionGate, type New99AcquisitionCause } from "./new-
 import { pre2016RuleNotice, isHighValueHouseAtDate } from "./new-99-3-era";
 import { judgeRedevMemberPeriod, type RedevMemberPeriodReason } from "./new-99-redev-member";
 import {
+  allocationDenominatorZeroMessage,
   calcSignedAllocation,
   resolveNew99BaseDate,
   isWithin5YearsCheck,
@@ -133,6 +134,7 @@ export type New99IneligibleCode =
   | "FIRST_CONTRACT_UNCONFIRMED"
   | "NOT_MEMBER_AT_APPROVAL"
   | "MISSING_STD_PRICE"
+  | "ALLOCATION_DENOMINATOR_ZERO"
   | "MISSING_PREVIOUS_STD_PRICE"
   | "TRANSFER_BEFORE_ACQUISITION"
   | RedevMemberPeriodReason["code"];
@@ -378,6 +380,14 @@ export function evaluateNew99(input: New99Input): New99Result {
     }
     const numerator = isWithin5Years ? stdAtTransfer - stdAtAcq : stdAt5Y - stdAtAcq;
     const denominator = variant ? stdAtTransfer - stdAtPrev : stdAtTransfer - stdAtAcq;
+    // NH-76 · Q-20 — 분모 0(양도시 = 취득시 기준시가): 안분 비율 미정의 → 계산 불가 + 확인 필요 (§99의3과 같은 문구)
+    if (denominator === 0) {
+      return ineligible([{
+        code: "ALLOCATION_DENOMINATOR_ZERO",
+        message: allocationDenominatorZeroMessage(variant ? "종전주택 취득 당시" : "신축주택 취득 당시"),
+        legalBasis: NEW_HOUSING_SUB_ARTICLE.NEW_99_INCOME,
+      }]);
+    }
     const allocation = calcSignedAllocation(input.transferIncome, numerator, denominator);
     reducible = allocation.reducibleIncome;
     fiveYearRatio = allocation.ratio;

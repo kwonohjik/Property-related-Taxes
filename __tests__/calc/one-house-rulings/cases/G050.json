@@ -26,6 +26,7 @@
       "kind": "special",
       "special": {
        "article": "new_99",
+       "housingKind": "self_built",
        "houseAcquisitionDate": "",
        "houseContractDate": "",
        "isNationalHousing": false,
@@ -70,6 +71,7 @@
       "kind": "special",
       "special": {
        "article": "new_99",
+       "housingKind": "self_built",
        "houseAcquisitionDate": "",
        "houseContractDate": "",
        "isNationalHousing": false,

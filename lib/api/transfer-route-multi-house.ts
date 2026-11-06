@@ -14,6 +14,7 @@ import type { HouseInfo, MultiHouseGracePeriodInput, PresaleRight } from "@/lib/
 import type { SpecialHouseExclusionInput } from "@/lib/api/transfer-tax-schema";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { isOwnedAtTransfer } from "@/lib/calc/household-house-count";
+import { newHousingKindFieldsOf } from "@/lib/tax-engine/transfer-reductions/special-house-exclusion-kind";
 
 type HouseInput = z.infer<typeof houseSchema>;
 type PresaleRightInput = z.infer<typeof presaleRightSchema>;
@@ -286,6 +287,7 @@ export function mapSpecialHouseExclusionsToEngine(
     houseContractDate: toOptionalDate(e.houseContractDate),
     isNationalHousing: e.isNationalHousing,
     houseRentalStartDate: toOptionalDate(e.houseRentalStartDate),
+    ...newHousingKindFieldsOf(e),
     requirementsConfirmed: e.requirementsConfirmed,
     ...(e.isInherited ? { isInherited: true } : {}),
     ...(e.inheritedPresaleCompletedByHeir ? { inheritedPresaleCompletedByHeir: e.inheritedPresaleCompletedByHeir } : {}),

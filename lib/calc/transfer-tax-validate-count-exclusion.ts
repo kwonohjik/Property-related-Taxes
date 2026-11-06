@@ -18,8 +18,10 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import {
   collectHouseCountExclusionReductionErrors,
   collectSpecialHouseExclusionRowErrors,
+  newHousingKindErrors,
 } from "./house-count-exclusion-reduction-validate";
 import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { usesNewHousingKind } from "@/lib/tax-engine/transfer-reductions/special-house-exclusion-kind";
 import { countedHouseRows, resolveHouseholdHousingCount } from "./household-house-count";
 import {
   countExclusionRowApplies,
@@ -61,6 +63,9 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
       }
       if (usesRentalStartDate(she[i].article)) {
         if (!she[i].houseRentalStartDate) messages.push(`보유 감면주택 ${i + 1}: 임대주택의 임대개시일을 입력하세요.`);
+      } else if (usesNewHousingKind(she[i].article)) {
+        // §99·§99의3 — 유형별 기준일 하나 (NH-23·NH-24 · 명부 행과 같은 leaf)
+        for (const m of newHousingKindErrors(she[i])) messages.push(`보유 감면주택 ${i + 1}: ${m}`);
       } else if (!she[i].houseAcquisitionDate && !she[i].houseContractDate)
         messages.push(`보유 감면주택 ${i + 1}: 감면주택의 취득일(또는 매매계약일)을 입력하세요.`);
     }

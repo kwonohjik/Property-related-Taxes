@@ -456,6 +456,43 @@ export const ONE_HOUSE_FIELD_CATALOG_HOUSES = [
     when: "houses[].countExclusion.special.article = new_99",
   },
   {
+    path: "houses[].countExclusion.special.housingKind",
+    kind: "enum",
+    values: [
+      { value: "purchase", label: "주택건설사업자로부터 매수 — 기준일은 최초 매매계약일" },
+      { value: "self_built", label: "자기가 건설 — 기준일은 사용승인일(취득일)" },
+      { value: "original_purchase", label: "종전(원시) §99의3 매수 — 2000.11.1.~ 최초 매매계약 · 2001.5.23. 전 취득" },
+      { value: "original_self_built", label: "종전(원시) §99의3 자기건설 — 2000.11.1.~ 사용승인 · 2001.5.23. 전 취득" },
+    ],
+    label: "감면주택 유형",
+    hint: "§99·§99의3은 호마다 기준일이 하나다 — 매수는 최초 매매계약일, 자기건설은 사용승인일만 취득기간과 비교한다. 종전(원시) 유형은 §99의3에서만 고른다(법률 제6501호 부칙 제13조).",
+    when: "houses[].countExclusion.special.article = new_99 또는 new_99_3",
+  },
+  {
+    path: "houses[].countExclusion.special.originalOutsideMetropolitan",
+    kind: "enum",
+    values: [
+      { value: "yes", label: "예" },
+      { value: "no", label: "아니오" },
+      { value: "unknown", label: "모름" },
+    ],
+    label: "대통령령이 정하는 수도권 밖 지역에 소재 (종전 §99의3)",
+    hint: "종전 §99의3은 수도권 밖 지역의 국민주택에 한한다. 「모름」은 요건 불성립으로 보며 확인이 필요하다.",
+    when: "houses[].countExclusion.special.housingKind = original_purchase 또는 original_self_built",
+  },
+  {
+    path: "houses[].countExclusion.special.originalNationalHousing",
+    kind: "enum",
+    values: [
+      { value: "yes", label: "예" },
+      { value: "no", label: "아니오" },
+      { value: "unknown", label: "모름" },
+    ],
+    label: "국민주택 (종전 §99의3)",
+    hint: "종전 §99의3은 국민주택에 한한다. 「모름」은 요건 불성립으로 보며 확인이 필요하다.",
+    when: "houses[].countExclusion.special.housingKind = original_purchase 또는 original_self_built",
+  },
+  {
     path: "houses[].countExclusion.special.requirementsConfirmed",
     kind: "boolean",
     label: "해당 조문 본 요건 충족 확인",

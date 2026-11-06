@@ -68,6 +68,7 @@ import {
 } from "@/lib/stores/one-house-judgment-form.types";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { newHousingKindFieldsOf } from "@/lib/tax-engine/transfer-reductions/special-house-exclusion-kind";
 import { specialHouseInheritancePayload } from "./house-count-exclusion-rows";
 import { formatFieldErrors } from "./transfer-tax-error-format";
 
@@ -284,6 +285,8 @@ export function buildOneHouseExemptionApiBody(
         ...(usesRentalStartDate(e.article) && e.houseRentalStartDate
           ? { houseRentalStartDate: e.houseRentalStartDate }
           : {}),
+        // §99·§99의3 유형 · 종전(원시) §99의3 3-state (NH-23·NH-24)
+        ...newHousingKindFieldsOf(e),
         requirementsConfirmed: e.requirementsConfirmed,
         ...specialHouseInheritancePayload(e),
       })),

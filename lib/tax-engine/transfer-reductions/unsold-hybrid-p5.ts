@@ -22,6 +22,7 @@ import { RENTAL_HOUSE_COUNT_EXCLUSION, TRANSFER_REDUCTION_ARTICLE } from "../leg
 import { NEW_99_PERIOD_START } from "./new-99";
 import { NEW_99_PERIOD_END } from "./new-99";
 import { NEW_99_PERIOD_END_NATIONAL } from "./new-99";
+import { evaluateNewHousingKind, usesNewHousingKind, type NewHousingKindFields } from "./special-house-exclusion-kind";
 import {
   ineligibleHybrid,
   toHybridDate,
@@ -234,7 +235,7 @@ export type SpecialHouseExclusionArticle =
   | "rental_97"
   | "rental_97_2";
 
-export interface SpecialHouseExclusionInput {
+export interface SpecialHouseExclusionInput extends NewHousingKindFields {
   article: SpecialHouseExclusionArticle;
   /** 판정 메뉴 명부 행 id — 「어느 주택인가」(평가에는 쓰지 않고 결과에 되돌려 준다) */
   houseId?: string;
@@ -272,8 +273,9 @@ export interface SpecialHouseExclusionInput {
  *
  * · `acquisition_or_contract` — 조문이 「기간 중에 취득(기간 내 매매계약 체결+계약금 납부
  *   포함)」 또는 「최초로 매매계약을 체결하거나 그 계약에 따라 취득」으로 두 날짜를 함께
- *   허용하는 경우 (§98 령②·⑥ · §98의2① · §98의3① · §98의5① · §98의7① · §99①1·2호 ·
- *   §99의3①1·2호).
+ *   허용하는 경우 (§98 령②·⑥ · §98의2① · §98의3① · §98의5① · §98의7①).
+ *   §99①·§99의3①은 호마다 기준일이 **하나**다 — 유형(매수 = 매매계약일 / 자기건설 = 사용승인일)별로
+ *   `special-house-exclusion-kind.ts`가 판정한다(NH-24). 이 값은 창 선택의 표지로만 남는다.
  * · `contract_only` — 조문의 기간이 **매매계약 체결**만 지배하는 경우.
  *   §98의8①「2015.1.1부터 2015.12.31까지 최초로 매매계약을 체결하고 5년 이상 임대한 주택」,
  *   §99의2①「2013.4.1부터 2013.12.31까지 … 최초로 매매계약을 체결하여 **그 계약에 따라**
@@ -485,8 +487,22 @@ function evaluateSpecialHouseExclusion(
     const fail = evaluateRentalStart(e, w, transferDate);
     if (fail) return { article: e.article, articleLabel: w.label, eligible: false, reason: fail, legalBasis: w.legalBasis };
   }
-  // 취득기간 창이 없는 조문(§98의6)은 날짜 판정을 건너뛴다 (D5-01) · 임대개시 조문은 위에서 판정했다
-  if (w.basis !== "none" && w.basis !== "rental_start") {
+  // §99·§99의3 — 호마다 기준일이 하나다(매수 = 최초 매매계약일 · 자기건설 = 사용승인일). «취득일 또는 계약일 중 하나만»은 NH-24 결함이었다.
+  if (usesNewHousingKind(e.article)) {
+    const fail = evaluateNewHousingKind(e, windows, w.legalBasis);
+    if (fail) {
+      return {
+        article: e.article,
+        articleLabel: w.label,
+        eligible: false,
+        reason: fail.reason,
+        legalBasis: fail.legalBasis ?? w.legalBasis,
+        ...(fail.unconfirmed ? { unconfirmed: true } : {}),
+      };
+    }
+  }
+  // 취득기간 창이 없는 조문(§98의6)은 날짜 판정을 건너뛴다 (D5-01) · 임대개시 조문은 위에서 판정했다 · §99·§99의3은 위에서 유형별로 판정했다
+  if (w.basis !== "none" && w.basis !== "rental_start" && !usesNewHousingKind(e.article)) {
     const contractOnly = w.basis === "contract_only";
     const required = contractOnly ? e.houseContractDate : (e.houseAcquisitionDate ?? e.houseContractDate);
     if (!required) {

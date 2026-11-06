@@ -140,7 +140,7 @@ describe("§99의3 — 5년 후 양도 안분 산식 (부호 4가지 케이스)"
     expect(r.fiveYearRatio).toBe(1);
   });
 
-  it("Case 5 (-,-) 분자·분모 동시 음수 → 감면 0 (재산 2014-2035)", () => {
+  it("Case 5 (-,-) 분자·분모 동시 음수 → 감면 0 (법규재산2014-2035)", () => {
     const input = makeBaseInput({
       standardPriceAtAcquisition: 1_000_000_000,
       standardPriceAt5Years: 900_000_000, // 분자 = -100M

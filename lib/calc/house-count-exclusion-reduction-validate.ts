@@ -19,6 +19,7 @@ import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset";
 import type { SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
 import { usesContractDateOnly, usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { isOriginalNewHousingKind, newHousingKindOptions, usesNewHousingKind } from "@/lib/tax-engine/transfer-reductions/special-house-exclusion-kind";
 import { new994CapitalRegionConflict } from "@/lib/tax-engine/transfer-reductions/new-99-4-size";
 import { resolveNew994SizeScope } from "@/lib/tax-engine/transfer-reductions/new-99-4-size";
 import { new994AdjacentAnswer } from "./new-99-4-form";
@@ -82,6 +83,7 @@ export function collectHouseCountExclusionReductionErrors(
  */
 export function collectSpecialHouseExclusionRowErrors(e: SpecialHouseExclusionFormItem): string[] {
   if (!e.article) return ["주택 수 제외 — 감면주택의 적용 조문을 선택하세요."];
+  if (usesNewHousingKind(e.article)) return newHousingKindErrors(e).map((m) => `주택 수 제외 — ${m}`);
   if (usesRentalStartDate(e.article) && !e.houseRentalStartDate) {
     return ["주택 수 제외 — 임대주택의 임대개시일을 입력하세요."];
   }
@@ -93,4 +95,32 @@ export function collectSpecialHouseExclusionRowErrors(e: SpecialHouseExclusionFo
     return ["주택 수 제외 — 상속받은 감면주택입니다. 상속 당시 분양권이었고 본인(상속인)이 잔금을 내고 취득했는지 선택하세요."];
   }
   return [];
+}
+
+/**
+ * §99·§99의3 감면주택의 유형 필수값 (NH-23 · NH-24) — 엔진(`evaluateNewHousingKind`)이 「미입력 = 불성립」으로 읽는 칸을 앞단에서 막는다.
+ * 유형별 기준일이 하나다: 매수 = 최초 매매계약일 · 자기건설 = 사용승인일(취득일). 종전(원시) §99의3은 두 일자와 3-state 두 칸이 모두 필요하다.
+ * 「모름」은 입력으로 인정한다(엔진이 불성립 + 확인 필요로 낸다) — 미선택(undefined)만 막는다.
+ * 계산기 전역 목록(`transfer-tax-validate-count-exclusion.ts`)·명부 행(`collectSpecialHouseExclusionRowErrors`)·판정 메뉴가 같은 leaf를 쓴다.
+ */
+export function newHousingKindErrors(e: SpecialHouseExclusionFormItem): string[] {
+  const kind = e.housingKind;
+  if (!kind || !newHousingKindOptions(e.article).includes(kind)) {
+    return ["감면주택의 유형(주택건설사업자로부터 매수 / 자기가 건설)을 선택하세요 — 호마다 기준일이 달라 유형 없이는 취득기간을 판정할 수 없습니다."];
+  }
+  const errors: string[] = [];
+  const purchase = kind === "purchase" || kind === "original_purchase";
+  if (purchase && !e.houseContractDate) errors.push("감면주택의 최초 매매계약일을 입력하세요 (이 유형은 매매계약일만을 기준으로 취득기간을 판정합니다).");
+  if ((!purchase || isOriginalNewHousingKind(kind)) && !e.houseAcquisitionDate) {
+    errors.push(
+      purchase
+        ? "감면주택의 취득일을 입력하세요 (종전 §99의3은 2001.5.23. 전에 취득한 주택에 한합니다)."
+        : "감면주택의 사용승인일(취득일)을 입력하세요 (이 유형은 사용승인일만을 기준으로 취득기간을 판정합니다).",
+    );
+  }
+  if (isOriginalNewHousingKind(kind)) {
+    if (!e.originalOutsideMetropolitan) errors.push("종전 §99의3: 대통령령이 정하는 수도권 밖 지역에 소재하는지(예·아니오·모름) 선택하세요.");
+    if (!e.originalNationalHousing) errors.push("종전 §99의3: 국민주택인지(예·아니오·모름) 선택하세요.");
+  }
+  return errors;
 }

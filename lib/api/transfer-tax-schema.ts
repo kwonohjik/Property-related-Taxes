@@ -93,6 +93,10 @@ const specialHouseExclusionItemsSchema = z.array(
     isNationalHousing: z.boolean().optional(),
     /** §97·§97의2 임대개시일 (⑫ — 누락 시 침묵 strip → 엔진은 「미입력」으로 불성립) */
     houseRentalStartDate: z.string().date().optional(),
+    /** §99·§99의3 유형 · 종전(원시) §99의3 수도권 밖·국민주택 3-state (⑫ — 누락 시 침묵 strip → 엔진은 「유형 미선택」으로 불성립) — NH-23·NH-24 */
+    housingKind: z.enum(["purchase", "self_built", "original_purchase", "original_self_built"]).optional(),
+    originalOutsideMetropolitan: z.enum(["yes", "no", "unknown"]).optional(),
+    originalNationalHousing: z.enum(["yes", "no", "unknown"]).optional(),
     requirementsConfirmed: z.boolean().default(false),
     /** US-06 — 명부 행이 상속주택(⑫ — 누락 시 침묵 strip → 상속 감면주택이 주택 수에서 빠진다) */
     isInherited: z.boolean().optional(),

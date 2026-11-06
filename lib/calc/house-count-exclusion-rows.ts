@@ -28,6 +28,7 @@ import { resolveSpecialHouseExclusions } from "@/lib/tax-engine/transfer-reducti
 import { rightSaleSpecialExclusionApplies } from "@/lib/tax-engine/one-house/right-sale-special-act-exclusion";
 import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 import { SPECIAL_HOUSE_EXCLUSION_WINDOWS } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { newHousingKindFieldsOf } from "@/lib/tax-engine/transfer-reductions/special-house-exclusion-kind";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
 import type { HouseEntry, RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
@@ -273,6 +274,7 @@ export function eligibleCountExcludedHouseIds(form: FormLike): ReadonlySet<strin
         houseContractDate: toOptionalDate(e.houseContractDate),
         isNationalHousing: e.isNationalHousing,
         houseRentalStartDate: usesRentalStartDate(e.article) ? toOptionalDate(e.houseRentalStartDate) : undefined,
+        ...newHousingKindFieldsOf(e),
         requirementsConfirmed: e.requirementsConfirmed,
         ...specialHouseInheritancePayload(e),
       })),
@@ -331,6 +333,8 @@ export function specialHouseExclusionsPayload(form: CalcFormLike) {
       ...(usesRentalStartDate(e.article) && e.houseRentalStartDate
         ? { houseRentalStartDate: e.houseRentalStartDate }
         : {}),
+      // §99·§99의3 유형 · 종전(원시) §99의3 3-state — ⑤·⑧·엔진과 같은 술어로 게이트(NH-23·NH-24)
+      ...newHousingKindFieldsOf(e),
       requirementsConfirmed: e.requirementsConfirmed,
       ...specialHouseInheritancePayload(e),
     }));

@@ -50,7 +50,7 @@ describe("⑥ → 5호 연결 leaf", () => {
     const houses = [SELLING, makeHouse("h2"), makeHouse("h3")];
     const decls = [
       decl({ article: "unsold_98_3", houseId: "h2", houseAcquisitionDate: new Date("2009-06-01"), houseContractDate: undefined }),
-      decl({ article: "new_99_3", houseId: "h3", houseAcquisitionDate: new Date("2002-06-01"), houseContractDate: undefined }),
+      decl({ article: "new_99_3", houseId: "h3", housingKind: "self_built" as const, houseAcquisitionDate: new Date("2002-06-01"), houseContractDate: undefined }),
     ];
     const r = linkedJudge(houses, decls);
     expect(r.surchargeApplicable).toBe(false);
@@ -82,7 +82,7 @@ describe("⑥ → 5호 연결 leaf", () => {
   it("§99 신축주택 — §99②의 2007.12.31. 양도시한은 5호 판정에 쓰지 않는다(감면 요건만)", () => {
     const out = linkTaxIncentiveHouse5ho(
       [SELLING, makeHouse("h2")],
-      [decl({ article: "new_99", houseAcquisitionDate: new Date("1999-03-01"), houseContractDate: new Date("1999-03-01"), isNationalHousing: true })],
+      [decl({ article: "new_99", housingKind: "self_built" as const, houseAcquisitionDate: new Date("1999-03-01"), houseContractDate: new Date("1999-03-01"), isNationalHousing: true })],
       TD,
       "h1",
     );
