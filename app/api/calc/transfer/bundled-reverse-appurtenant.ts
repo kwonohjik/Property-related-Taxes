@@ -155,10 +155,10 @@ export function asReverseUnitHouse(
 
 /**
  * NH-14 후속 — 첫 자산이 토지·건물이고 이 함께 양도 주택이 세대·주택 현황의 기준 자산인 카드(④ `householdFactsCompanionAssetId`).
- * 세대 단위 1주택 사실을 G1 짝 주택과 같은 목록으로 덮되, 소재지(`regionCode`·`regionInDesignatedDistrict` — 독립 토지는 주택과 소재지가 다르다)와
- * §154① 단서(`oneHouseExemptionProviso` — 첫 자산 거주 섹션 입력이라 이 카드의 사실이 아니다)는 덮지 않는다. 역할·거주기간도 건드리지 않는다.
+ * 세대 단위 1주택 사실을 G1 짝 주택과 같은 목록으로 덮되, 소재지(`regionCode`·`regionInDesignatedDistrict` — 독립 토지는 주택과 소재지가 다르다)는
+ * 덮지 않는다. §154① 단서는 ② 섹션이 이 주택 기준(세대 기준 폼 뷰)으로 받으므로 덮는다(F-1 후속). 거주기간은 ④가 이 카드에 직접 싣는다.
  */
-const HOUSEHOLD_FACTS_COMPANION_EXCLUDED_KEYS: ReadonlySet<string> = new Set(["regionCode", "regionInDesignatedDistrict", "oneHouseExemptionProviso"]);
+const HOUSEHOLD_FACTS_COMPANION_EXCLUDED_KEYS: ReadonlySet<string> = new Set(["regionCode", "regionInDesignatedDistrict"]);
 export function asHouseholdFactsCompanionHouse(
   item: TransferTaxItemInput,
   household: Pick<TransferTaxItemInput, (typeof HOUSEHOLD_ONE_HOUSE_FACT_KEYS)[number]>,

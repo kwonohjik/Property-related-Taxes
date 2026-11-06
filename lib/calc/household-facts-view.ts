@@ -5,7 +5,8 @@
  * 첫 자산이 토지·건물이고 함께 양도하는 주택이 세대·주택 현황의 기준 자산이면(`householdFactsAssetOf`), 그 주택을 **맨 앞으로 돌린 읽기 전용 폼**을
  * 넘겨 leaf를 고치지 않고 같은 결론을 얻는다. 첫 자산이 기준 자산이면 `form` 그대로다(종전 경로 불변).
  *
- * ⚠️ 뷰는 세대 축 판정에만 쓴다. 첫 자산 자신의 사실(비사업용 토지·거주기간·취득 당시 조정대상지역·§154① 단서)은 원래 폼으로 판정한다(계획서 §4).
+ * ⚠️ 뷰는 세대 축 판정과 ② 1세대1주택 비과세 판정 축(함께 양도 주택 자신의 거주기간·취득 당시 조정대상지역·§154① 단서 —
+ *   `docs/00-pm/nh14-companion-house-own-facts.plan.md`)에 쓴다. 첫 자산 자신의 사실(비사업용 토지 등)은 원래 폼으로 판정한다.
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { householdFactsAssetOf } from "./household-facts-asset";
