@@ -142,6 +142,8 @@ export interface MixedUseAssetInputSources {
   burdenedGift: MixedUseAssetInput["burdenedGift"];
   /** 증여자(양도인)의 취득원인 echo(`data.acquisitionCause`) — BG 가드(MB-8·9·15)만 읽는다. 컴패니언은 `undefined`. */
   acquisitionCause: MixedUseAssetInput["acquisitionCause"];
+  /** US-07 — 상속 자산의 분양권 상속 답(`data.inheritedPresaleCompletedByHeir`). 컴패니언은 `undefined`. */
+  inheritedPresaleCompletedByHeir: MixedUseAssetInput["inheritedPresaleCompletedByHeir"];
 }
 
 /** 겸용 엔진 입력 1건을 조립한다. 키 커버리지는 함수 안의 가드가 강제한다. */
@@ -284,6 +286,7 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     preHousingDisclosure: phdInput,
     burdenedGift: s.burdenedGift,
     acquisitionCause: s.acquisitionCause,
+    inheritedPresaleCompletedByHeir: s.inheritedPresaleCompletedByHeir,
     // 엔진 내부 전용(§163⑨ 자산 합계 비교가 후보로 다시 계산할 때만 켠다 — `mixed-use-sec163-9-compare.ts`). 요청으로는 받지 않는다.
     inheritedValuesAsIs: undefined,
     bgPreDeemedConverted: undefined,

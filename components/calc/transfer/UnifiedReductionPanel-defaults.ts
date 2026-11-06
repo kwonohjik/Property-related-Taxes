@@ -362,6 +362,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
   if (id === "unsold_98_5") {
     return {
       type: "unsold_98_5",
+      isEligibleSubject985: true,
       contractDate985: "",
       priceReductionRatePct985: "",
       isNonCapitalUnsoldAtCutoff985: false,
@@ -376,6 +377,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
   if (id === "unsold_98_6") {
     return {
       type: "unsold_98_6",
+      isEligibleSubject986: true,
       hoType986: "seller_rented",
       stdPriceSumAtBase986: "",
       floorAreaSqm986: "",

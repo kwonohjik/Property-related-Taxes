@@ -20,6 +20,8 @@
  * - `houseId`가 없는 옛 선언은 **어느 행도 빼지 않고** ⑧이 막는다(Q-1).
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { asksInheritedPresaleQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
+import { asksRowGiftQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
 import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
 import { resolveHouseCountExclusion } from "@/lib/tax-engine/transfer-reductions/unsold-98-9";
 import { resolveSpecialHouseExclusions } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
@@ -140,7 +142,13 @@ export function rowSpecialHouseExclusions(
 ): SpecialHouseExclusionFormItem[] {
   return housesOwnedAtTransfer(houses, transferDate, primaryKind).flatMap((h) =>
     h.countExclusion?.kind === "special"
-      ? [{ ...h.countExclusion.special, houseId: h.id, houseAcquisitionDate: h.acquisitionDate }]
+      ? [{
+          ...h.countExclusion.special,
+          houseId: h.id,
+          houseAcquisitionDate: h.acquisitionDate,
+          // US-06 — 상속 행은 행 사실에서 도출(사용자가 선언에 따로 적지 않는다)
+          ...(h.isInherited === true ? { isInherited: true } : {}),
+        }]
       : [],
   );
 }
@@ -268,6 +276,7 @@ export function eligibleCountExcludedHouseIds(form: FormLike): ReadonlySet<strin
         houseRentalStartDate: usesRentalStartDate(e.article) ? toOptionalDate(e.houseRentalStartDate) : undefined,
         ...newHousingKindFieldsOf(e),
         requirementsConfirmed: e.requirementsConfirmed,
+        ...specialHouseInheritancePayload(e),
       })),
       transfer,
     );
@@ -327,7 +336,24 @@ export function specialHouseExclusionsPayload(form: CalcFormLike) {
       // §99·§99의3 유형 · 종전(원시) §99의3 3-state — ⑤·⑧·엔진과 같은 술어로 게이트(NH-23·NH-24)
       ...newHousingKindFieldsOf(e),
       requirementsConfirmed: e.requirementsConfirmed,
+      ...specialHouseInheritancePayload(e),
     }));
+}
+
+/**
+ * US-06 — 상속 행의 판정 사실(⑬). 상속 행이 아니면 아무것도 싣지 않는다. 분양권 상속 답은 묻는 조문(§98의3·§98의5·§98의7)일 때만 싣는다 —
+ * 조문을 바꾼 뒤 남은 값은 보내지 않는다(⑤·⑧과 같은 술어 `asksInheritedPresaleQuestion`).
+ */
+export function specialHouseInheritancePayload(
+  e: Pick<SpecialHouseExclusionFormItem, "article" | "isInherited" | "inheritedPresaleCompletedByHeir" | "acquiredByGift">,
+): { isInherited?: true; inheritedPresaleCompletedByHeir?: "yes" | "no" | "unknown"; acquiredByGift?: true } {
+  // 증여 토글 — 상속 행이 아니고 취득 원인으로 갈리는 조문일 때만(조문을 바꾼 뒤 남은 값은 보내지 않는다 · ⑤와 같은 술어)
+  if (e.isInherited !== true) return e.acquiredByGift === true && asksRowGiftQuestion(e.article) ? { acquiredByGift: true } : {};
+  const a = e.inheritedPresaleCompletedByHeir;
+  return {
+    isInherited: true as const,
+    ...(asksInheritedPresaleQuestion(e.article, "inheritance") && a ? { inheritedPresaleCompletedByHeir: a } : {}),
+  };
 }
 
 /**

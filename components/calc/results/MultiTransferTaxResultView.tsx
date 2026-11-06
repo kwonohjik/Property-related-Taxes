@@ -27,6 +27,7 @@ import { aggregateToFilingResult } from "@/components/calc/results/BundledAlloca
 import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
 import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
 import { RegulatedAreaAssumptionLine } from "@/components/calc/results/transfer/RegulatedAreaAssumptionLine";
+import { regulatedAssumptionPdfGroups } from "@/lib/calc/regulated-area-assumption-text";
 import { hasJudgmentProvenance } from "@/lib/calc/one-house-judgment-provenance";
 import { FalseContractPriceNoticeForItems } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -490,7 +491,11 @@ export function MultiTransferTaxResultView({
         taxTypeLabel: "양도소득세 (다건)",
         resultData: result as unknown as Record<string, unknown>,
         // 건물 기준시가 계산서 PDF는 inputData.buildingStdSnapshots에서 재유도.
-        inputData: { buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: allAssets }) },
+        inputData: {
+          buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: allAssets }),
+          // 화면의 건별 「조정대상지역 판정 — 확인 필요」 줄과 같은 leaf — PDF에도 항상 싣는다.
+          regulatedAreaAssumptions: regulatedAssumptionPdfGroups(properties.map((p) => ({ form: p.form, label: p.propertyLabel }))),
+        },
         filenamePrefix: "양도소득세_계산결과",
       },
       pdfSections,

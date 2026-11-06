@@ -69,6 +69,7 @@ import {
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 import { newHousingKindFieldsOf } from "@/lib/tax-engine/transfer-reductions/special-house-exclusion-kind";
+import { specialHouseInheritancePayload } from "./house-count-exclusion-rows";
 import { formatFieldErrors } from "./transfer-tax-error-format";
 
 
@@ -287,6 +288,7 @@ export function buildOneHouseExemptionApiBody(
         // §99·§99의3 유형 · 종전(원시) §99의3 3-state (NH-23·NH-24)
         ...newHousingKindFieldsOf(e),
         requirementsConfirmed: e.requirementsConfirmed,
+        ...specialHouseInheritancePayload(e),
       })),
     // §154① 단서 — 계산기와 같은 두 단계 정규화(게이트 → 유효 사유).
     // 🔑 맥락은 ⑧과 **같은 함수**로 정한다(`judgmentProvisoMode` — OH-06).

@@ -572,7 +572,8 @@ export type RentalReductionFormVariant =
   | {
       type: "unsold_98_3";
       /** 거주자 / 국내사업장 없는 비거주자 — 시한 시작일 분기 */
-      residencyType983: "resident" | "nonresident_no_pe";
+      /** US-42 — 국내사업장 있는 비거주자(`nonresident_with_pe`)는 적용 주체가 아니다(법 §98의3①) */
+      residencyType983: "resident" | "nonresident_no_pe" | "nonresident_with_pe";
       /** 사업주체 취득 / 자기건설 (법②) */
       houseType983: "purchased" | "self_built";
       /** 최초 매매계약일 (YYYY-MM-DD) — purchased */
@@ -610,6 +611,8 @@ export type RentalReductionFormVariant =
   // ── P3 (2026-06-12): §98의5 수도권 밖 미분양 — 인하율별 60/80/100% ──
   | {
       type: "unsold_98_5";
+      /** US-42 — 거주자 또는 국내사업장 없는 비거주자(법 §98의5①). 기본 true(D11-05 방식 — 화면에 보이고 끌 수 있다) */
+      isEligibleSubject985: boolean;
       /** 최초 매매계약일 (YYYY-MM-DD) — ~2011.4.30 */
       contractDate985: string;
       /** 분양가격 인하율 (%, DecimalInput) */
@@ -635,6 +638,8 @@ export type RentalReductionFormVariant =
   // ── P3 (2026-06-12): §98의6 준공후미분양 50% — 1호/2호 ──
   | {
       type: "unsold_98_6";
+      /** US-42 — 거주자 또는 국내사업장 없는 비거주자(법 §98의6①). 기본 true */
+      isEligibleSubject986: boolean;
       /** 1호 사업주체등 2년 임대 후 취득 / 2호 취득 후 5년 임대 */
       hoType986: "seller_rented" | "buyer_rented";
       /** 최초 매매계약일 (YYYY-MM-DD) */
@@ -800,6 +805,21 @@ export interface SpecialHouseExclusionFormItem {
   originalNationalHousing?: TriStateAnswer;
   /** 해당 조문 본 요건 충족 확인 */
   requirementsConfirmed: boolean;
+  /**
+   * 명부 행이 상속주택인가 — **행에서 도출**한다(`rowSpecialHouseExclusions`, 사용자 입력 칸 아님). 폼 전역 옛 선언에는 없다.
+   * 상속받은 §98 시리즈·§99·§99의3 감면주택은 소유주택에서 빠지지 않는다(US-06 — 조심 2017중1433).
+   */
+  isInherited?: boolean;
+  /**
+   * 상속 행 · §98의3·§98의5·§98의7 — 상속 당시 분양권이었고 상속인이 잔금을 내고 취득했는가(US-06 · 기획재정부 조세법령운용과-1103).
+   * ⑤ 행 ⑥이 3-state로 받고 ⑧이 답을 요구한다. 「모름」은 불성립 + 확인 필요.
+   */
+  inheritedPresaleCompletedByHeir?: "" | "yes" | "no" | "unknown";
+  /**
+   * 증여(이월과세 대상 증여 포함)로 취득한 감면주택인가 — ⑤ 행 ⑥ 토글(상속 행이 아니고 `asksRowGiftQuestion(article)`일 때). 기본 꺼짐.
+   * 증여로 받은 §98 시리즈·§99·§99의3 주택은 주택 수에서 빠지지 않는다(US-06 후속 · 서면-2022-부동산-0888 · 서면인터넷방문상담4팀-1192).
+   */
+  acquiredByGift?: boolean;
 }
 
 /**

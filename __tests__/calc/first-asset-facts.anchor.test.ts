@@ -88,8 +88,9 @@ describe("묶음 leaf — 삭제 후 폼에서 값이 있는 묶음", () => {
     expect(firstAssetFactGroups(removed(base()))).toEqual([]);
   });
   const CASES: [string, Partial<F>, string][] = [
-    ["조정대상지역", { wasRegulatedAtAcquisition: true }, "regulated"],
-    ["조정대상지역(양도 당시)", { isRegulatedArea: true }, "regulated"],
+    // 직접 고른 토글(만짐 표지)이어야 새 첫 자산으로 샌다 — 안 만졌으면 ④가 새 첫 자산 주소로 다시 판정한다(L-8).
+    ["조정대상지역", { wasRegulatedAtAcquisition: true, wasRegulatedAtAcquisitionTouched: true }, "regulated"],
+    ["조정대상지역(양도 당시)", { isRegulatedArea: true, isRegulatedAreaTouched: true }, "regulated"],
     ["§154① 단서", { provisoReason: "expropriation", provisoExpropriationDate: "2025-01-01" }, "proviso"],
     ["합가(혼인)", { marriageDate: "2020-01-01" }, "merge"],
     ["합가(동거봉양)", { parentalCareMergeDate: "2020-01-01" }, "merge"],
@@ -124,6 +125,13 @@ describe("묶음 leaf — 삭제 후 폼에서 값이 있는 묶음", () => {
     const f = removed(base({ wasRegulatedAtAcquisition: true, marriageDate: "2020-01-01" }, A(), LAND("l1", 300)));
     expect(firstAssetFactGroups(f)).toEqual([]);
   });
+  it("L-8: 코드 없이 주소 문자열 · 토글을 안 만졌으면 조정대상지역 제외 — ④가 새 첫 자산 주소로 다시 판정한다(LEAK 실측과 같은 규약)", () => {
+    expect(firstAssetFactGroups(removed(base({ wasRegulatedAtAcquisition: true, isRegulatedArea: true })))).not.toContain("regulated");
+    // 한 축만 직접 고르면 그 축 때문에 묶음에 오른다
+    expect(firstAssetFactGroups(removed(base({ isRegulatedArea: true, isRegulatedAreaTouched: true, wasRegulatedAtAcquisition: true })))).toContain("regulated");
+    // 주소가 없으면 ④는 저장값을 읽는다 → 묶음에 오른다
+    expect(firstAssetFactGroups(removed(base({ wasRegulatedAtAcquisition: true }, A(), B({ addressJibun: "" }))))).toContain("regulated");
+  });
   it("L-7: gates.proviso=false면 단서 묶음을 뺀다(Step4 노출 맥락 밖)", () => {
     const f = removed(base({ provisoReason: "expropriation" }));
     expect(firstAssetFactGroups(f, { proviso: false })).not.toContain("proviso");
@@ -131,7 +139,7 @@ describe("묶음 leaf — 삭제 후 폼에서 값이 있는 묶음", () => {
 });
 
 describe("마커 — 삭제 시점 스냅샷", () => {
-  const f = base({ wasRegulatedAtAcquisition: true, marriageDate: "2020-01-01" });
+  const f = base({ wasRegulatedAtAcquisition: true, wasRegulatedAtAcquisitionTouched: true, marriageDate: "2020-01-01" });
   it("N-1: 첫 자산 삭제 + 선언 있음 → 마커(새 첫 자산 id·묶음)", () => {
     const patch = assetRemovalPatch(f, 0);
     expect(firstAssetChangeNoteOnRemoval(f, 0, patch)).toEqual({ newFirstAssetId: "b1", groups: ["regulated", "merge"] });
@@ -155,7 +163,7 @@ describe("마커 — 삭제 시점 스냅샷", () => {
 describe("카드가 그릴 묶음 — 스냅샷 ∩ 지금도 값이 있는 묶음", () => {
   const note = { newFirstAssetId: "b1", groups: ["regulated", "merge"] as const };
   const after = (over: Partial<F> = {}): F =>
-    ({ ...removed(base({ wasRegulatedAtAcquisition: true, marriageDate: "2020-01-01" })), firstAssetChangeNote: { ...note, groups: [...note.groups] }, ...over }) as F;
+    ({ ...removed(base({ wasRegulatedAtAcquisition: true, wasRegulatedAtAcquisitionTouched: true, marriageDate: "2020-01-01" })), firstAssetChangeNote: { ...note, groups: [...note.groups] }, ...over }) as F;
 
   it("V-1: 둘 다 남아 있으면 둘 다", () => {
     expect(visibleFirstAssetChangeGroups(after())?.groups).toEqual(["regulated", "merge"]);

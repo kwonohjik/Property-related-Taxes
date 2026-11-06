@@ -113,26 +113,27 @@ const r993 = (tr = "") => ({
   isResident993: true,
   isHousingConstructionBusiness993: false,
 });
-/** §98의3 — ⑧ 양도시 가드 없음(#2346 Q-3 a). */
-const r983 = () => ({
-  type: "unsold_98_3",
-  residencyType983: "resident",
-  houseType983: "purchased",
-  contractDate983: "2009-06-01",
-  constructionStartDate983: "",
-  usageApprovalDate983: "",
-  isOutsideSeoulNotDesignated983: true,
-  isOverconcentration983: false,
-  landAreaSqm983: "",
-  floorAreaSqm983: "",
-  isUnsoldConfirmed983: true,
-  isFirstContract983: true,
-  isNotOccupiedAtContract983: true,
-  isNotRecontract983: true,
-  isNotExcludedSelfBuilt983: true,
-  standardPriceAtAcquisition983: "300000000",
-  standardPriceAt5Years983: "400000000",
-  standardPriceAtTransfer983: "",
+/**
+ * §99의2 — ⑧ 양도시 가드 없음(#2346 Q-3 a). 같은 하이브리드 코어를 쓴다.
+ * 🔄 2026-11-06 US-44: §98의3은 조합원입주권에서 막혀(사용자 결정 Q-4) §99의2로 옮겼다 — 기준시가 세 칸·결정세액이 같다.
+ */
+const r992 = () => ({
+  type: "unsold_99_2",
+  houseType992: "new_or_unsold",
+  contractDate992: "2013-06-01",
+  usageApprovalDate992: "",
+  acquisitionPrice992: "500000000",
+  exclusiveAreaSqm992: "84",
+  meetsHouseTypeRequirement992: true,
+  isNotExcludedSelfBuilt992: false,
+  meetsOneHouseSellerRequirement992: false,
+  isOfficetel992: false,
+  meetsOfficetelRequirement992: false,
+  isNotRecontract992: true,
+  hasConfirmationSeal992: true,
+  standardPriceAtAcquisition992: "300000000",
+  standardPriceAt5Years992: "400000000",
+  standardPriceAtTransfer992: "",
 });
 const EST = { useEstimatedAcquisition: true };
 /** SR-1: 취득 후 5년 경과(§99의3②2호 안분) · 승계라 관리처분 인가가 취득보다 먼저다. */
@@ -178,9 +179,9 @@ describe("SR-1 주 자산 승계 입주권 × §99의3 — ⑧이 ④·엔진과
 });
 
 describe("SR-2 함께 양도 · 실가 거래 · 승계 입주권 실가 — 숨은 양도시 칸을 싣지 않는다 (D1)", () => {
-  it("§98의3: 옛 값과 무관하게 296,490,000 · 감면 0 (수정 전 7억 237,690,000 · 9억 257,290,000)", async () => {
+  it("§99의2: 옛 값과 무관하게 296,490,000 · 감면 0 (수정 전 7억 237,690,000 · 9억 257,290,000)", async () => {
     for (const stale of [NO_STALE, STALE_7, STALE_9]) {
-      const r = await runCalc(companion(successor({ ...stale, reductions: [r983()] })));
+      const r = await runCalc(companion(successor({ ...stale, reductions: [r992()] })));
       expect(r.status).toBe(200);
       expect(comp(r.body).standardPriceAtTransfer).toBeUndefined();
       expect(agg(r.json).determinedTax).toBe(296_490_000);
@@ -198,8 +199,8 @@ describe("SR-2 함께 양도 · 실가 거래 · 승계 입주권 실가 — 숨
 });
 
 describe("SR-3 함께 양도 · 안분 · 승계 입주권 실가 — 화면에 있는 안분 키는 계속 인정한다 (Q-3 a)", () => {
-  it("§98의3: 안분 키 700,000,000을 싣고 237,460,909 · §99의3 ⑧ 통과", async () => {
-    const r = await runCalc(companion(successor({ ...STALE_7, reductions: [r983()] }), "apportioned"));
+  it("§99의2: 안분 키 700,000,000을 싣고 237,460,909 · §99의3 ⑧ 통과", async () => {
+    const r = await runCalc(companion(successor({ ...STALE_7, reductions: [r992()] }), "apportioned"));
     expect(comp(r.body).standardPriceAtTransfer).toBe(700_000_000);
     expect(comp(r.body).standardPriceAtTransferForApportion).toBe(700_000_000);
     expect(agg(r.json).determinedTax).toBe(237_460_909);
@@ -209,9 +210,9 @@ describe("SR-3 함께 양도 · 안분 · 승계 입주권 실가 — 화면에 
 });
 
 describe("SR-4 함께 양도 · 실가 거래 · 승계 입주권 환산 — §165① 합계만 쓴다", () => {
-  it("§98의3: 옛 값과 무관하게 600,000,000을 싣고 200,450,000 · §99의3 ⑧ 통과 (수정 전 차단)", async () => {
+  it("§99의2: 옛 값과 무관하게 600,000,000을 싣고 200,450,000 · §99의3 ⑧ 통과 (수정 전 차단)", async () => {
     for (const stale of [NO_STALE, STALE_7, STALE_9]) {
-      const r = await runCalc(companion(successor({ ...EST, ...stale, reductions: [r983()] })));
+      const r = await runCalc(companion(successor({ ...EST, ...stale, reductions: [r992()] })));
       expect(comp(r.body).standardPriceAtTransfer).toBe(600_000_000);
       expect(agg(r.json).determinedTax).toBe(200_450_000);
       const v = await runCalc(companion(successor({ ...EST, ...stale, reductions: [r993()] })));

@@ -13,6 +13,7 @@
  * 🔑 계산기(`transfer-tax-validate-reductions.ts`)와 판정 메뉴(`one-house-exemption-validate.ts`)가
  *    **같은 함수**를 부른다 — 두 벌이면 한쪽만 개정 반영된다.
  */
+import { asksInheritedPresaleQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset";
@@ -88,6 +89,10 @@ export function collectSpecialHouseExclusionRowErrors(e: SpecialHouseExclusionFo
   }
   if (usesContractDateOnly(e.article) && !e.houseContractDate) {
     return ["주택 수 제외 — 이 조문은 감면주택의 최초 매매계약일로 판정합니다. 매매계약일을 입력하세요."];
+  }
+  // US-06 — 상속 행 · §98의3·§98의5·§98의7: 분양권 상속 후 상속인 잔금 취득만 주택 수에서 빠진다(조세법령운용과-1103). 「모름」은 통과(엔진이 불성립 + 확인 필요).
+  if (e.isInherited === true && asksInheritedPresaleQuestion(e.article, "inheritance") && !e.inheritedPresaleCompletedByHeir) {
+    return ["주택 수 제외 — 상속받은 감면주택입니다. 상속 당시 분양권이었고 본인(상속인)이 잔금을 내고 취득했는지 선택하세요."];
   }
   return [];
 }
