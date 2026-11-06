@@ -30,7 +30,7 @@ function step12Blocks(r: RowCountExclusionReduction, transferDate: string): bool
   const schema = z.object({ reductions: z.array(z.record(z.string(), z.unknown())), transferDate: z.string() }).superRefine((d, ctx) =>
     refineNew994CapitalRegion(d.reductions as never, d.transferDate, ctx, ["reductions"]),
   );
-  return !schema.safeParse({ reductions: [toNew994Payload(r)], transferDate }).success;
+  return !schema.safeParse({ reductions: [toNew994Payload(r as Parameters<typeof toNew994Payload>[0])], transferDate }).success;
 }
 
 const CELLS: { id: string; r: RowCountExclusionReduction; transfer: string; blocks: boolean }[] = [
