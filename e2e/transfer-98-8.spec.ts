@@ -1,5 +1,5 @@
 /**
- * P1 — §98의8 준공후미분양 50% + §99 신축주택(IMF 1차) UI E2E
+ * P1 — §98의8 준공후미분양 50% + §99 신축주택 UI E2E
  *
  * isFullyImplemented=true 전환 확인: 라디오 활성 → 폼 렌더 (hint 6억·135㎡ / 국민주택).
  *
@@ -34,7 +34,7 @@ test.describe("양도세 P1 차감형 감면 패널", () => {
 
     // ── §99: 신축주택 그룹 펼침 → 라디오 활성 + 폼 렌더 ──
     await expandReductionCategory(page, /신축주택/);
-    const item99 = page.getByText("§99 — 신축주택 양도세 감면 (IMF 1차)", { exact: false }).first();
+    const item99 = page.getByText("§99 — 신축주택의 취득자에 대한 양도소득세의 감면", { exact: false }).first();
     await expect(item99).toBeVisible();
     await item99.click();
     await expect(page.getByText("취득 유형·시기", { exact: false }).first()).toBeVisible();
