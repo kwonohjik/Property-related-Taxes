@@ -161,7 +161,7 @@ describe("D4-07 주택수 제외 step — 증분 체이닝 표기", () => {
           ruralHouseAcquisitionDate: new Date("2020-05-01"),
           ruralHouseStdPrice: 200_000_000,
           isRegisteredHanok: false,
-          isAdjacentArea: false,
+          adjacentArea994: "no" as const,
           meetsLocationRequirement: true,
         }],
         specialHouseExclusions: [{

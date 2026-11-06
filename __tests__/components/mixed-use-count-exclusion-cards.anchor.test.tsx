@@ -35,7 +35,7 @@ const RURAL = {
   ruralHouseAcquisitionDate: new Date("2020-05-01"),
   ruralHouseStdPrice: 200_000_000,
   isRegisteredHanok: false,
-  isAdjacentArea: false,
+  adjacentArea994: "no" as const,
   meetsLocationRequirement: true,
   houseId: "r",
 };

@@ -45,7 +45,9 @@ const RURAL: RowCountExclusionReduction = {
   // 2003-11-15 취득·2010-12-15 양도 = 2008.1.1. 전 취득분 한도 7천만원 이하(NH-05 PR-2a — 종전 1억원은 한도 초과)
   ruralHouseStdPrice: "60000000",
   isRegisteredHanok: false,
-  isAdjacentArea: false,
+  adjacentArea994: "no" as const,
+  // 2010-12-15 양도 = 2021.1.1. 전 양도분 대지 660㎡ 요건(NH-05 PR-2b) — 원문 전제 「요건을 갖춘 농어촌주택」
+  ruralLandAreaSqm994: "330",
   meetsLocationRequirement: true,
 };
 const row = (id: string, acquisitionDate: string, over: Partial<HouseEntry> = {}): HouseEntry =>
