@@ -394,6 +394,10 @@ export function buildTotalStep(t: ReturnType<typeof buildTotalTax>): MixedUseSte
       ...(t.ruralSurtax > 0
         ? [{ label: "농어촌특별세 (감면세액 × 20%)", value: t.ruralSurtax }]
         : []),
+      // NH-38 — 농특세 미납분 납부지연가산세(소득세분 가산세와 별도 줄)
+      ...(t.ruralSurtaxDelayedPenalty
+        ? [{ label: "농어촌특별세 납부지연가산세", value: t.ruralSurtaxDelayedPenalty.penalty }]
+        : []),
       { label: "총 납부세액", value: t.totalPayable, isResult: true },
     ],
   };

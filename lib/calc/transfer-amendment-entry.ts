@@ -103,6 +103,18 @@ export function extractOriginalDeterminedTax(record: CalculationRecord): number 
   return rd.result?.determinedTax ?? rd.result?.total?.transferTax ?? rd.aggregated?.determinedTax;
 }
 
+/**
+ * NH-39 — 당초 농어촌특별세 소스(위 결정세액과 같은 세 갈래). 엔진 총액 echo가 없는 옛 이력이면 undefined
+ * → 칸을 비워 두어 사용자가 입력한다(빈 값 = 0).
+ */
+export function extractOriginalRuralSurtax(record: CalculationRecord): number | undefined {
+  const rd = record.resultData as {
+    result?: { ruralSurtax?: number; total?: { ruralSurtax?: number } };
+    aggregated?: { ruralSurtax?: number };
+  };
+  return rd.result?.ruralSurtax ?? rd.result?.total?.ruralSurtax ?? rd.aggregated?.ruralSurtax;
+}
+
 /** 수정신고(경정) 진입 — 당초 결정세액 차감·추가 납부세액 (국세기본법 §45) */
 export function enterAmendment(record: CalculationRecord, router: AppRouter): void {
   const kind = classifyAmendableTransfer(record);
@@ -124,6 +136,7 @@ export function enterAmendment(record: CalculationRecord, router: AppRouter): vo
       correctionKind: "amend",
       amendmentSourceId: record.id,
       originalDeterminedTax: String(extractOriginalDeterminedTax(record) ?? ""),
+      originalRuralSurtax: String(extractOriginalRuralSurtax(record) ?? ""),
       statutoryFilingDeadline: deriveStatutoryDeadline(transferDate),
       // 당초 무신고/과소신고 가산세 입력은 수정신고와 상호배타 — 초기화
       enablePenalty: false,
@@ -159,6 +172,7 @@ export function enterRefundClaim(record: CalculationRecord, router: AppRouter): 
       applyLatePaymentPenalty: false,
       amendmentSourceId: record.id,
       originalDeterminedTax: String(extractOriginalDeterminedTax(record) ?? ""),
+      originalRuralSurtax: String(extractOriginalRuralSurtax(record) ?? ""),
       statutoryFilingDeadline: deriveStatutoryDeadline(transferDate),
       amendedFilingDate: todayISO(), // [F7] 경정청구일=오늘 → 도과 경고 활성
       enablePenalty: false,
@@ -182,13 +196,14 @@ export function enterMultiAmendment(record: CalculationRecord, router: AppRouter
   ]).then(([{ useMultiTransferStore, migrateMultiForm }, { deriveStatutoryDeadline }]) => {
     // 「편집」(`resumeTransferRecord`)과 같이 자산 폼을 마이그레이션한다 — 구 이력의 자산 없는 폼·후속 추가 필드.
     const input = migrateMultiForm(record.inputData as unknown as MultiTransferFormData);
-    const rd = record.resultData as { determinedTax?: number };
+    const rd = record.resultData as { determinedTax?: number; ruralSurtax?: number };
     useMultiTransferStore.getState().setForm({
       ...input,
       activeStep: "settings",
       amendmentMode: true,
       correctionKind: "amend",
       originalDeterminedTax: String(rd.determinedTax ?? ""),
+      originalRuralSurtax: String(rd.ruralSurtax ?? ""),
       statutoryFilingDeadline: deriveStatutoryDeadline(`${input.taxYear}-12-31`),
       applyUnderReportingPenalty: false,
       applyLatePaymentPenalty: false,
@@ -209,7 +224,7 @@ export function enterMultiRefundClaim(record: CalculationRecord, router: AppRout
   ]).then(([{ useMultiTransferStore, migrateMultiForm }, { deriveStatutoryDeadline }]) => {
     // 「편집」(`resumeTransferRecord`)과 같이 자산 폼을 마이그레이션한다 — 구 이력의 자산 없는 폼·후속 추가 필드.
     const input = migrateMultiForm(record.inputData as unknown as MultiTransferFormData);
-    const rd = record.resultData as { determinedTax?: number };
+    const rd = record.resultData as { determinedTax?: number; ruralSurtax?: number };
     useMultiTransferStore.getState().setForm({
       ...input,
       activeStep: "settings",
@@ -218,6 +233,7 @@ export function enterMultiRefundClaim(record: CalculationRecord, router: AppRout
       applyUnderReportingPenalty: false,
       applyLatePaymentPenalty: false,
       originalDeterminedTax: String(rd.determinedTax ?? ""),
+      originalRuralSurtax: String(rd.ruralSurtax ?? ""),
       statutoryFilingDeadline: deriveStatutoryDeadline(`${input.taxYear}-12-31`),
       amendedFilingDate: todayISO(),
     });

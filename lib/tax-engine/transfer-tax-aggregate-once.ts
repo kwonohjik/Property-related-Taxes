@@ -16,6 +16,7 @@ import {
 } from "./transfer-tax";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveUnpaidTax } from "./transfer-tax-unpaid-tax";
+import { computeRuralSurtaxDelayedPenalty, ruralSurtaxDelayedPenaltyStep } from "./transfer-tax-rural-surtax-penalty";
 import {
   calculateTransferTaxPenalty,
   formatDelayedPaymentFormula,
@@ -335,13 +336,6 @@ export function computeAggregateOnce(
 
   const determinedTaxBeforePenalty = Math.max(0, calculatedTax - reductionAmount);
 
-  // M-8.5: 신고서 단위 수정신고·경정청구 정정 (국세기본법 §45·§45의2).
-  // 집계 결정세액을 당초 결정세액과 비교 → 추가납부/환급. 단건 finalize STEP 12.5와 동형.
-  // correctionKind ?? "amend" 내부 분기(refund면 computeRefundClaim 자동 호출).
-  const amendmentDetail = input.amendment
-    ? computeAmendment(input.amendment, determinedTaxBeforePenalty)
-    : undefined;
-
   // M-9: 가산세 — 자산별 §114의2 + 자산별 신고불성실/납부지연 합산
   const perAssetBuildingPenalty = assetRecords.reduce(
     (s, r) => s + (r.result.isExempt ? 0 : r.result.penaltyTax ?? 0),
@@ -433,13 +427,34 @@ export function computeAggregateOnce(
 
   // 농특세는 지방소득세 base 아님(결정세액+건물가산세만) — totalTax에만 가산.
   const ruralSurtaxAll = ruralSurtax + ruralSurtaxCredit;
-  const totalTax = determinedTaxBeforePenalty + penaltyTax + localIncomeTax + ruralSurtaxAll;
+
+  /**
+   * NH-38 — 농특세 미납분 납부지연가산세(국세기본법 §2 1호 차목·§47의4①). 소득세분 `penaltyTax`와 **별도 줄**.
+   *   · 자산별: 단건 엔진이 자산 결과에 이미 산정했다(base = route가 주입한 예정신고 농특세).
+   *   · 신고서 단위: 집계 농특세 총액이 base — 소득세분 M-9b와 같은 축.
+   */
+  const perAssetRuralPenalty = assetRecords.reduce(
+    (s, r) => s + (r.result.isExempt ? 0 : r.result.ruralSurtaxDelayedPenalty?.penalty ?? 0),
+    0,
+  );
+  const filingUnitRuralSurtaxDelayedPenalty = computeRuralSurtaxDelayedPenalty(input.delayedPaymentDetails, ruralSurtaxAll);
+  if (filingUnitRuralSurtaxDelayedPenalty) steps.push(ruralSurtaxDelayedPenaltyStep(filingUnitRuralSurtaxDelayedPenalty));
+  const ruralPenaltyAll = perAssetRuralPenalty + (filingUnitRuralSurtaxDelayedPenalty?.penalty ?? 0);
+  const totalTax = determinedTaxBeforePenalty + penaltyTax + localIncomeTax + ruralSurtaxAll + ruralPenaltyAll;
 
   steps.push({
     label: "총 납부세액",
-    formula: `결정세액 ${determinedTaxBeforePenalty.toLocaleString()} + 가산세 ${penaltyTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtaxAll > 0 ? ` + 농특세 ${ruralSurtaxAll.toLocaleString()}` : ""}`,
+    formula: `결정세액 ${determinedTaxBeforePenalty.toLocaleString()} + 가산세 ${penaltyTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtaxAll > 0 ? ` + 농특세 ${ruralSurtaxAll.toLocaleString()}` : ""}${ruralPenaltyAll > 0 ? ` + 농특세 납부지연가산세 ${ruralPenaltyAll.toLocaleString()}` : ""}`,
     amount: totalTax,
   });
+
+  // M-8.5: 신고서 단위 수정신고·경정청구 정정 (국세기본법 §45·§45의2).
+  // 집계 결정세액을 당초 결정세액과 비교 → 추가납부/환급. 단건 finalize STEP 12.5와 동형.
+  // correctionKind ?? "amend" 내부 분기(refund면 computeRefundClaim 자동 호출).
+  // NH-39 — 농특세 총액이 확정된 뒤에 부른다(농특세 정정 별도 줄).
+  const amendmentDetail = input.amendment
+    ? computeAmendment(input.amendment, determinedTaxBeforePenalty, ruralSurtaxAll)
+    : undefined;
 
   // M-11: 예정신고 기납부세액 정산 (소득세법 §111③) — 항상 실행(P??0).
   // amendment 와 상호배타는 validate/UI 가드이며 엔진은 방어적으로 항상 처리한다.
@@ -571,6 +586,9 @@ export function computeAggregateOnce(
       penaltyBase: r.result.isExempt ? 0 : r.result.penaltyBase ?? 0,
       filingDelayedPenaltyTax: r.result.isExempt ? 0 : r.result.penaltyDetail?.totalPenalty ?? 0,
       penaltyDetail: r.result.penaltyDetail,
+      ...(!r.result.isExempt && r.result.ruralSurtaxDelayedPenalty
+        ? { ruralSurtaxDelayedPenalty: r.result.ruralSurtaxDelayedPenalty }
+        : {}),
       steps: r.result.steps,
       // 파트가 있는 자산의 문구는 1패스 단건 값이 아니라 통산·기본공제를 반영한 재계산 값이다.
       shortTermNote: partAssetTax ? partAssetTax.note : r.result.shortTermNote,
@@ -620,6 +638,8 @@ export function computeAggregateOnce(
     buildingPenaltyTax: perAssetBuildingPenalty,
     localIncomeTax,
     ruralSurtax: ruralSurtaxAll,
+    ...(ruralPenaltyAll > 0 ? { ruralSurtaxDelayedPenalty: ruralPenaltyAll } : {}),
+    ...(filingUnitRuralSurtaxDelayedPenalty ? { filingUnitRuralSurtaxDelayedPenalty } : {}),
     totalTax,
     steps,
     warnings,

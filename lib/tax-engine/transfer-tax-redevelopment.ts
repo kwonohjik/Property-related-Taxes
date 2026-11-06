@@ -55,6 +55,7 @@ import { REDEVELOPMENT, TRANSFER } from "./legal-codes";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { emitPenaltySteps } from "./transfer-tax-penalty-steps";
 import { computeAmendment } from "./transfer-tax-amendment";
+import { computeRuralSurtaxDelayedPenalty, ruralSurtaxDelayedPenaltyStep } from "./transfer-tax-rural-surtax-penalty";
 import type {
   TransferTaxInput,
   TransferTaxResult,
@@ -552,13 +553,18 @@ export function calculateRedevelopmentTax(
 
   // ─ Step H: 세액합계 ─ (농특세는 §5①1호 감면분 — 정상 경로 STEP 11과 동일하게 합산한다)
   const ruralSurtaxTotal = ruralSurtax + ruralSurtax993;
-  const totalTax = determinedTax + localIncomeTax + filingDelayedPenalty + ruralSurtaxTotal;
+  // NH-38 — 농특세 미납분 납부지연가산세(정상 경로 finalize와 같은 leaf · 소득세분과 별도 줄)
+  const ruralSurtaxDelayedPenalty = computeRuralSurtaxDelayedPenalty(input.delayedPaymentDetails, ruralSurtaxTotal);
+  const ruralPenalty = ruralSurtaxDelayedPenalty?.penalty ?? 0;
+  if (ruralSurtaxDelayedPenalty) steps.push(ruralSurtaxDelayedPenaltyStep(ruralSurtaxDelayedPenalty));
+  const totalTax = determinedTax + localIncomeTax + filingDelayedPenalty + ruralSurtaxTotal + ruralPenalty;
   steps.push({
     label: "세액합계",
     formula: (filingDelayedPenalty > 0
       ? `총결정세액 ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`
       : `${cappedReductionAmount > 0 ? "결정세액" : "산출세액"} ${determinedTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`)
-      + (ruralSurtaxTotal > 0 ? ` + 농특세 ${ruralSurtaxTotal.toLocaleString()}` : ""),
+      + (ruralSurtaxTotal > 0 ? ` + 농특세 ${ruralSurtaxTotal.toLocaleString()}` : "")
+      + (ruralPenalty > 0 ? ` + 농특세 납부지연가산세 ${ruralPenalty.toLocaleString()}` : ""),
     amount: totalTax,
     legalBasis: REDEVELOPMENT.GAIN_BASE,
   });
@@ -566,7 +572,7 @@ export function calculateRedevelopmentTax(
   // ─ Step H.5: 수정신고(경정) — 추가납부세액 + 선택적 가산세 (끝 append) ─
   // input.amendment 없으면 undefined → 무영향(additive). finalize STEP 12.5와 동일 패턴.
   const amendmentDetail = input.amendment
-    ? computeAmendment(input.amendment, determinedTax)
+    ? computeAmendment(input.amendment, determinedTax, ruralSurtaxTotal)
     : undefined;
   if (amendmentDetail) {
     for (const s of amendmentDetail.steps) steps.push({ ...s, sub: s.sub ?? true });
@@ -726,6 +732,7 @@ export function calculateRedevelopmentTax(
     // [echo] 농특세 총액(§99의3분 + 감면분). 종전에는 이 경로가 `ruralSurtax993`조차 싣지
     // 않아 재개발·입주권에서는 소득금액차감형 농특세까지 화면에서 0이 됐다 — `totalTax`엔 있다.
     ruralSurtax: ruralSurtaxTotal,
+    ...(ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty } : {}),
     totalTax,
     amendmentDetail,
     steps,

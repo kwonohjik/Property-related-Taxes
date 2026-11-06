@@ -26,3 +26,15 @@ export function unpaidTaxPayload(
   const mode = effectiveUnpaidTaxMode(form);
   return { unpaidTax: mode === "manual" ? parseAmount(form.unpaidTax ?? "0") : 0, unpaidTaxMode: mode };
 }
+
+/**
+ * NH-38·NH-39 — 농어촌특별세 금액 칸(기납부 농특세 · 당초 농특세)의 ④ 키. 빈 값·0이면 키를 싣지 않는다
+ * (엔진·⑫ 모두 부재 = 0). 단건·다건 ④ 공용.
+ */
+export function ruralSurtaxAmountPayload<K extends string>(
+  key: K,
+  raw: string | undefined,
+): Partial<Record<K, number>> {
+  const v = parseAmount(raw ?? "");
+  return v > 0 ? ({ [key]: v } as Partial<Record<K, number>>) : {};
+}

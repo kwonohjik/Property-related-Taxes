@@ -19,6 +19,7 @@ import { eraFormWithOriginDates } from "@/lib/calc/temporary-two-house-era-facts
 import { declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
 import { phdPayloadActive } from "./phd-toggle-scope";
 import { unpaidTaxPayload } from "./transfer-unpaid-tax-mode";
+import { ruralSurtaxAmountPayload } from "./transfer-unpaid-tax-mode";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { exemptionCountExcludedHouseIds } from "./temp-two-house-candidate-exclusion";
@@ -308,6 +309,8 @@ export function buildPenaltyAmendmentPayload(form: TransferFormData): object {
         delayedPaymentDetails: {
           // PEN-C — 모드를 함께 싣는다(auto는 값 0). 다건 ④와 같은 leaf.
           ...unpaidTaxPayload(form),
+          // NH-38 — 기납부 농특세(빈 값 = 0 → 키 생략)
+          ...ruralSurtaxAmountPayload("paidRuralSurtax", form.priorPaidRuralSurtax),
           paymentDeadline: form.paymentDeadline,
           actualPaymentDate: form.actualPaymentDate || undefined,
         },
@@ -319,6 +322,8 @@ export function buildPenaltyAmendmentPayload(form: TransferFormData): object {
         amendment: {
           correctionKind: form.correctionKind,
           originalDeterminedTax: parseAmount(form.originalDeterminedTax),
+          // NH-39 — 당초 농특세(빈 값 = 0 → 키 생략)
+          ...ruralSurtaxAmountPayload("originalRuralSurtax", form.originalRuralSurtax),
           // [F6] 경정청구(refund)는 가산세 없음 → 플래그 강제 false(stale 누출 차단)
           applyUnderReportingPenalty:
             form.correctionKind === "refund_claim" ? false : form.applyUnderReportingPenalty,
