@@ -799,6 +799,11 @@ export interface SpecialHouseExclusionFormItem {
    * ⑤ 행 ⑥이 3-state로 받고 ⑧이 답을 요구한다. 「모름」은 불성립 + 확인 필요.
    */
   inheritedPresaleCompletedByHeir?: "" | "yes" | "no" | "unknown";
+  /**
+   * 증여(이월과세 대상 증여 포함)로 취득한 감면주택인가 — ⑤ 행 ⑥ 토글(상속 행이 아니고 `asksRowGiftQuestion(article)`일 때). 기본 꺼짐.
+   * 증여로 받은 §98 시리즈·§99·§99의3 주택은 주택 수에서 빠지지 않는다(US-06 후속 · 서면-2022-부동산-0888 · 서면인터넷방문상담4팀-1192).
+   */
+  acquiredByGift?: boolean;
 }
 
 /**

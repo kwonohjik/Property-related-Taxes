@@ -155,6 +155,23 @@ describe("US-06 명부 행 — 상속 감면주택은 주택 수에서 빠지지
     expect(u.entries[0].unconfirmed).toBe(true);
   });
 
+  it("H-6: 🔴 증여 취득 행(토글) §98의3·§98의6·§99·§99의3 → 불성립 · 토글 꺼짐이면 제외 (사용자 결정 — 행에 증여 칸)", () => {
+    for (const a of ["unsold_98_3", "unsold_98_6"] as const) {
+      expect(resolveSpecialHouseExclusions([decl(a, { acquiredByGift: true })], T).excludedCount).toBe(0);
+      expect(resolveSpecialHouseExclusions([decl(a, { acquiredByGift: false })], T).excludedCount).toBe(1);
+    }
+    // §99②는 다른 주택을 2007.12.31까지 양도할 때만 — 그 안의 양도일로 본다
+    const T99 = new Date("2007-06-01");
+    expect(resolveSpecialHouseExclusions([decl("new_99", { acquiredByGift: true })], T99).excludedCount).toBe(0);
+    expect(resolveSpecialHouseExclusions([decl("new_99", { acquiredByGift: false })], T99).excludedCount).toBe(1);
+    const r993 = resolveSpecialHouseExclusions(
+      [{ article: "new_99_3", houseId: "h2", houseAcquisitionDate: new Date("2002-06-01"), requirementsConfirmed: true, acquiredByGift: true }],
+      new Date("2007-06-01"),
+    );
+    expect(r993.entries[0].eligible).toBe(false);
+    expect(r993.entries[0].reason).toContain("증여");
+  });
+
   it("H-4: §98의6 행은 1호/2호 구분이 없어 상속 여부로 판정하지 않는다", () => {
     expect(resolveSpecialHouseExclusions([decl("unsold_98_6", { isInherited: true })], T).excludedCount).toBe(1);
   });
@@ -202,6 +219,16 @@ describe("US-06 명부 행 — 상속 감면주택은 주택 수에서 빠지지
     ] as never;
     const changed = specialHouseExclusionsPayload({ houses: houses982, transferDate: "2018-07-22", assets: [{ assetKind: "housing", reductions: [] }] } as never);
     expect(changed[0].isInherited).toBe(true);
+    // 증여 토글 — 상속 행이 아니고 묻는 조문일 때만 싣는다
+    const giftRow = (article: string, isInherited = false) =>
+      specialHouseExclusionsPayload({
+        houses: [{ id: "h3", acquisitionDate: "2014-03-19", isInherited, countExclusion: { kind: "special", special: { article, houseAcquisitionDate: "", houseContractDate: "2009-02-12", isNationalHousing: false, requirementsConfirmed: true, acquiredByGift: true } } }],
+        transferDate: "2018-07-22",
+        assets: [{ assetKind: "housing", reductions: [] }],
+      } as never)[0] as Record<string, unknown>;
+    expect(giftRow("unsold_98_3").acquiredByGift).toBe(true);
+    expect("acquiredByGift" in giftRow("unsold_98_8")).toBe(false);
+    expect("acquiredByGift" in giftRow("unsold_98_3", true)).toBe(false);
     expect("inheritedPresaleCompletedByHeir" in changed[0]).toBe(false);
   });
 });

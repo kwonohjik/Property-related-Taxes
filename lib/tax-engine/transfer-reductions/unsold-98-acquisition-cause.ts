@@ -46,6 +46,17 @@ export function asksInheritedPresaleQuestion(id: string, acquisitionCause: strin
   return acquisitionCause === "inheritance" && PRESALE_INHERITANCE_ALLOWED.has(id);
 }
 
+/**
+ * 명부 행 ⑥ 감면주택 선언 중 취득 원인으로 갈리는 조문 — §98 시리즈 6조문 + §99·§99의3(US-06 후속, 사용자 결정 2026-11-06 「행에 증여 칸」).
+ * 증여(이월과세 대상 증여 포함)로 받은 이 조문의 주택은 주택 수에서 빠지지 않는다. ⑤ 토글·⑬·엔진이 같은 술어를 쓴다.
+ */
+const ROW_CAUSE_GATED_ARTICLES: ReadonlySet<string> = new Set([
+  "unsold_98", "unsold_98_2", "unsold_98_3", "unsold_98_5", "unsold_98_6", "unsold_98_7", "new_99", "new_99_3",
+]);
+export function asksRowGiftQuestion(article: string): boolean {
+  return ROW_CAUSE_GATED_ARTICLES.has(article);
+}
+
 export interface Unsold98AcquisitionCauseReason {
   code: "ACQUIRED_BY_GIFT" | "ACQUIRED_BY_INHERITANCE" | "INHERITED_PRESALE_UNCONFIRMED";
   message: string;

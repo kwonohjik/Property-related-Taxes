@@ -98,6 +98,8 @@ const specialHouseExclusionItemsSchema = z.array(
     isInherited: z.boolean().optional(),
     /** US-06 — 상속 당시 분양권 + 상속인 잔금 취득(§98의3·§98의5·§98의7만 읽는다) */
     inheritedPresaleCompletedByHeir: z.enum(["yes", "no", "unknown"]).optional(),
+    /** US-06 후속 — 증여(이월과세 대상 증여 포함)로 취득한 감면주택(⑫ — 누락 시 침묵 strip → 주택 수에서 빠진다) */
+    acquiredByGift: z.boolean().optional(),
   }),
 );
 const specialHouseExclusionSchema = specialHouseExclusionItemsSchema.default([]);
