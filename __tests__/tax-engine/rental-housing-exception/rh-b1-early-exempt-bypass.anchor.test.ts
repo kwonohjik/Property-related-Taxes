@@ -108,7 +108,7 @@ describe("P1~P3: 시나리오 B — STEP 1a 조기 반환 억제 (§161① 안�
     );
     // 침묵 비과세 소급 금지 — 특례 전제(주택수 1채) 무효 가능 → 과세 + 재확인 경고
     expect(r.isExempt).toBe(false);
-    expect(r.rentalHousingExceptionDetail).toBeUndefined();
+    expect(r.rentalHousingExceptionDetail?.applied).toBe(false);
     expect(r.determinedTax).toBeGreaterThan(0);
     expect(r.steps.some((s) => s.label.includes("장기임대주택 거주주택 비과세 특례"))).toBe(true);
     // X1-1: 불충족 B는 임대주택을 주택 수에 되돌린다 — 고지는 되돌림 문장(전에는 「주택수 재확인」 경고)
@@ -129,7 +129,7 @@ describe("P1~P3: 시나리오 B — STEP 1a 조기 반환 억제 (§161① 안�
     );
     // 수정 전 RED: STEP 1a가 eligibility 우회 조기반환 → isExempt=true, totalTax=0 (over-exemption)
     expect(r.isExempt).toBe(false);
-    expect(r.rentalHousingExceptionDetail).toBeUndefined();
+    expect(r.rentalHousingExceptionDetail?.applied).toBe(false);
     expect(r.determinedTax).toBeGreaterThan(0);
     // STEP 2.5가 "적용 불가" 사유를 steps에 기록 (침묵 실패 차단)
     expect(r.steps.some((s) => s.label.includes("적용 불가"))).toBe(true);

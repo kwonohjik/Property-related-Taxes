@@ -49,6 +49,8 @@ export interface NormalReturnArgs extends FinalizeArgs {
   specialHouseExclusionDetail: NonNullable<TransferTaxResult["specialHouseExclusionDetail"]>;
   transferBurdenedGiftBreakdown: TransferTaxResult["transferBurdenedGiftBreakdown"];
   steps: CalculationStep[];
+  /** ⑳ 호별·거주 요건 불성립 판정(`applied: false`) — 결과 카드가 「적용 불가 + 미충족 사유」를 보이게 싣는다(V-7 · 세액 불변). */
+  rentalHousingExceptionUnmetDetail?: TransferTaxResult["rentalHousingExceptionDetail"];
 }
 
 export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTaxResult {
@@ -93,6 +95,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     houseCountExclusionDetails,
     specialHouseExclusionDetail,
     transferBurdenedGiftBreakdown,
+    rentalHousingExceptionUnmetDetail,
   } = args;
   // STEP 7.5 ~ 11/12: 산출세액 이후 단계 통합 (transfer-tax-finalize.ts)
   const finalize = finalizeTransferTax(args);
@@ -241,5 +244,6 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     specialHouseExclusionDetail:
       specialHouseExclusionDetail.entries.length > 0 ? specialHouseExclusionDetail : undefined,
     transferBurdenedGiftBreakdown,
+    ...(rentalHousingExceptionUnmetDetail ? { rentalHousingExceptionDetail: rentalHousingExceptionUnmetDetail } : {}),
   };
 }
