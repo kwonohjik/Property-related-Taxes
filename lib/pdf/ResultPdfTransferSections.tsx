@@ -385,11 +385,13 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
       num(p.eligibleIncomeAfterLoss),
     );
     const np = p.new993Detail as { isEligible?: boolean; reducibleTransferIncome?: number; ruralSurtax?: number } | undefined;
-    if (np?.isEligible) {
-      aggNew993Reducible += np.reducibleTransferIncome ?? 0;
-      aggRuralSurtax += np.ruralSurtax ?? 0;
-    }
+    // 소득금액 감면대상 = 합산 엔진이 자산별로 실제 뺀 금액(`incomeDeductionReducible` — 화면 신고서 표 ⑳과 같은 정본).
+    // 종전에는 `new993Detail`만 읽어 §99·§98의8·하이브리드 차감이 0으로 찍혔다. echo가 없는 옛 저장 결과만 §99의3 detail로 후퇴한다.
+    aggNew993Reducible += num(p.incomeDeductionReducible) ?? (np?.isEligible ? np.reducibleTransferIncome ?? 0 : 0);
+    if (np?.isEligible) aggRuralSurtax += np.ruralSurtax ?? 0;
   }
+  // 농특세 총액 echo가 정본(화면 합산 신고서 표 총액 칸과 같다) — detail 합은 총액 echo가 없는 옛 저장 결과 전용 폴백.
+  aggRuralSurtax = num(r.ruralSurtax) ?? aggRuralSurtax;
   // G2-6 — 부분 비과세(고가주택·§155⑳)가 있으면 `totalTransferGain`은 안분 전 값이라 정본 leaf 합으로 3행을 낸다(요약 카드와 같은 규칙).
   const aggGains = sumAssetGains(
     props.map((p) => ({
@@ -492,7 +494,7 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
               (p.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
               num(p.eligibleIncomeAfterLoss),
             );
-            const propNew993Reducible = (np?.isEligible && np.reducibleTransferIncome) ? np.reducibleTransferIncome : 0;
+            const propNew993Reducible = num(p.incomeDeductionReducible) ?? ((np?.isEligible && np.reducibleTransferIncome) ? np.reducibleTransferIncome : 0);
             // 영 §163⑨ 단서 1호·2호 채택값 각주 — 화면 합산 신고서(`FilingFormTableAggregateHelpers` acqNotes)와 같은 leaf·문구(#11).
             const propSplit = p.splitDetail as SplitGainResult | undefined;
             const propAcqBasisNotes = propSplit

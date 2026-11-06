@@ -9,8 +9,8 @@
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
-import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
-import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { NEW_99_3_ADDENDA_6762, NEW_HOUSING_SUB_ARTICLE } from "@/lib/tax-engine/legal-codes/transfer-house";
+import { Frac, FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import { ReductionDetailWarnings } from "@/components/calc/results/transfer/ReductionDetailWarnings";
 import { ReductionStatutoryCapRow } from "@/components/calc/results/transfer/ReductionStatutoryCapRow";
 import { RATED_REDUCIBLE_INCOME_LABEL } from "@/components/calc/results/transfer/reduction-eligible-income";
@@ -43,6 +43,21 @@ function New993EraNotes({ detail: d }: { detail: NonNullable<TransferTaxResult["
       )}
     </div>
   );
+}
+
+/**
+ * 5년 기준 머리말 — 재개발·재건축 변형은 5년 이내 양도도 안분한다(조특령 §99의3② 1호 단서 · NH-66).
+ * 변형 여부는 엔진 echo(`previousHouseStdPriceApplied`)로 판별한다 — 엔진이 변형일 때만 세팅한다.
+ * 내부 부호 케이스(`signCase`)는 화면에 말하지 않는다(NH-68) — 부호별 해석은 산식 단계가 한국어로 적는다.
+ */
+function new993PeriodHeadline(d: NonNullable<TransferTaxResult["new993Detail"]>): string {
+  const variant = d.previousHouseStdPriceApplied != null;
+  if (d.isWithin5Years) {
+    return variant
+      ? `5년 이내 양도 — 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 분모에 써서 안분 (${NEW_HOUSING_SUB_ARTICLE.NEW_99_3_INCOME} 1호 단서)`
+      : "5년 이내 양도 — 양도소득금액 전액 차감";
+  }
+  return "5년 후 양도 — 5년간 발생분 안분 산식";
 }
 
 /** §99의3 신축주택 과세특례 상세 (적용/불가 양쪽) */
@@ -85,15 +100,13 @@ export function New993DetailCard({
       {/* 2015.12.31. 이전 양도 종전 규정 고지(NH-49) */}
       <ReductionDetailWarnings detail={d} />
       <p className="text-muted-foreground">
-        {d.isWithin5Years
-          ? "5년 이내 양도 — 양도소득금액 전액 차감"
-          : `5년 후 양도 — 5년 안분 산식 (부호 케이스: ${d.signCase})`}
+        {new993PeriodHeadline(d)}
       </p>
       <div className="space-y-0.5">
         {d.formulaSteps.map((s, i) => (
           <p key={i}>
             <span className="text-muted-foreground">{s.label}: </span>
-            {s.formula ?? formatKRW(typeof s.value === "number" ? s.value : 0)}
+            {s.formula ? <FormulaText value={s.formula} /> : formatKRW(typeof s.value === "number" ? s.value : 0)}
           </p>
         ))}
       </div>

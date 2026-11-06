@@ -23,7 +23,7 @@ test.describe("§99 3시점 기준시가 조회형 + PHD 환산", () => {
     await page.getByTestId("transfer-date").getByLabel("일").fill("01");
     await page.getByRole("button", { name: "감면·공제" }).click();
     await expandReductionCategory(page, /신축주택/);
-    await page.getByText("§99 — 신축주택 양도세 감면", { exact: false }).first().click();
+    await page.getByText("§99 — 신축주택의 취득자에 대한 양도소득세의 감면", { exact: false }).first().click();
 
     // ── ① 3시점 조회형 위젯(취득·5년·양도) 모두 렌더 ──
     // 각 시점이 순수 CurrencyInput이 아닌 "공시가격 조회" 버튼(HousingStdPriceLookupField)을 가진다.

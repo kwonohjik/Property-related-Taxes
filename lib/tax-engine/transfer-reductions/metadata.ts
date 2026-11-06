@@ -146,7 +146,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     article: TRANSFER_REDUCTION_ARTICLE.NEW_99,
     category: "new_housing",
     effectCategory: "capital_gain",
-    uiLabel: "§99 — 신축주택 양도세 감면 (IMF 1차)",
+    uiLabel: "§99 — 신축주택의 취득자에 대한 양도소득세의 감면",
     effectLabel: "5년 내 = 취득~양도 발생분 차감 / 5년 후 = 5년간 발생분 차감 (1998.5.22~1999.6.30, 국민주택 ~1999.12.31)",
     // P1 (2026-06-11): 본격 구현 — evaluateNew99 + income-deduction-router
     isFullyImplemented: true,
@@ -156,7 +156,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     article: TRANSFER_REDUCTION_ARTICLE.NEW_99_3,
     category: "new_housing",
     effectCategory: "capital_gain",
-    uiLabel: "§99의3 — 신축주택 과세특례 (IMF 2차)",
+    uiLabel: "§99의3 — 신축주택의 취득자에 대한 양도소득세의 과세특례",
     effectLabel: "5년 내 = 취득~양도 발생분 차감 / 5년 후 = 5년간 발생분 차감 (2001.5.23~2003.6.30, 2003.1.1. 이후 계약·승인분은 가격 급등 지역 외)",
     isFullyImplemented: true,
   },
