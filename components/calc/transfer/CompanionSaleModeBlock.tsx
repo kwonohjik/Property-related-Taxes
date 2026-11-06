@@ -61,7 +61,7 @@ export function BundledSaleModeToggle({ value, onChange }: ToggleProps) {
 
 interface BlockProps {
   bundledSaleMode: BundledSaleMode;
-  assetKind: "housing" | "land" | "building" | "right_to_move_in" | "presale_right";
+  assetKind: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "redevelopment_apt";
   // actual 모드용
   actualSalePrice: string;
   onActualSalePriceChange: (v: string) => void;
@@ -106,12 +106,18 @@ interface BlockProps {
  * ⚠️ **부담부증여 「취득시 기준시가」 칸(`AssetSectionTransfer`)이 같은 함수를 쓴다** —
  * 같은 물건의 취득·양도가 다른 모드(총액 vs 단가×면적)로 갈리지 않도록 단일 소스로 둔다.
  * 복제하지 말 것.
+ *
+ * ※ `CompanionAcqPurchaseBlock.types.ts`에 같은 이름의 함수가 하나 더 있다(재개발 APT의 «취득시 기준시가» 칸용). 두 함수는 재개발 APT를
+ *   같은 모양(공동주택가격 총액)으로 돌려줘야 한다 — 한쪽만 고치면 같은 물건의 취득·양도 칸이 갈린다
+ *   (계획서 redev-companion-apportion-key-std-widget).
  */
 export function toPropertyKind(
   assetKind: BlockProps["assetKind"],
 ): "land" | "building_non_residential" | "house_individual" | "house_apart" {
   if (assetKind === "housing") return "house_individual";
   if (assetKind === "land") return "land";
+  // 재개발 완공 APT는 공동주택이다 — 총액 칸 하나이고 공시가격 조회도 공동주택(동·호) 경로다. 엔진은 총액만 읽는다.
+  if (assetKind === "redevelopment_apt") return "house_apart";
   return "building_non_residential";
 }
 

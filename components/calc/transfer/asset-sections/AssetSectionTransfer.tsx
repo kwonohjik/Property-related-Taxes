@@ -162,7 +162,7 @@ export function AssetSectionTransfer({
       {!stdPriceAtTransferComesFromElsewhere(asset) && (
         <CompanionSaleModeBlock
           bundledSaleMode={saleBlockMode}
-          assetKind={(asset.assetKind === "commercial_building" || asset.assetKind === "general_building" || asset.assetKind === "redevelopment_apt") ? "building" : asset.assetKind}
+          assetKind={(asset.assetKind === "commercial_building" || asset.assetKind === "general_building") ? "building" : asset.assetKind}
           actualSalePrice={asset.actualSalePrice}
           onActualSalePriceChange={(v) => onChange({ actualSalePrice: v })}
           standardPriceAtTransfer={effTotal}
@@ -265,7 +265,7 @@ export function AssetSectionTransfer({
               // 위 양도시 칸과 **같은 매핑 함수**를 쓴다(모드 불일치 방지 — 그 함수 JSDoc 참조).
               // `CompanionSaleModeBlock`의 assetKind 축소 타입에 맞춰 좁힌다.
               propertyKind={toPropertyKind(
-                asset.assetKind === "housing" || asset.assetKind === "land"
+                asset.assetKind === "housing" || asset.assetKind === "land" || asset.assetKind === "redevelopment_apt"
                   ? asset.assetKind
                   : "building",
               )}

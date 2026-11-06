@@ -66,7 +66,7 @@ export function BurdenedGiftTrancheBasisBlock({ asset, primaryAsset, onChange }:
           </p>
           <StandardPriceInput
             propertyKind={toPropertyKind(
-              merged.assetKind === "housing" || merged.assetKind === "land" ? merged.assetKind : "building",
+              merged.assetKind === "housing" || merged.assetKind === "land" || merged.assetKind === "redevelopment_apt" ? merged.assetKind : "building",
             )}
             totalPrice={asset.standardPriceAtAcq}
             data-field="standardPriceAtAcq"

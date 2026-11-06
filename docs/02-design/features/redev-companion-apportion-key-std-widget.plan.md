@@ -51,11 +51,24 @@
 - (a) **그대로 둔다**(권장) — 재개발 APT에서 엔진·④·⑧이 단가·면적을 읽지 않는다. 총액은 이미 `standardPriceAtTransfer`에 저장돼 있다.
 - (b) 칸이 사라질 때 지운다 — 저장 구조를 건드리고, 지울 이유가 없다.
 
+### 결정 (2026-11-06)
+
+- **Q-1 = (a)** · **Q-2 = (a)** — 모두 권장안.
+
 ## 4. 미검증 레지스터
 
 | ID | 항목 | 검증 | 상태 |
 |---|---|---|---|
-| V-1 | 재개발 APT의 공시가격 조회가 지금 개별공시지가 경로로 가는가, 바꾸면 공동주택가격(동·호) 조회로 가는가 | 착수 시 `lookup` 호출 인자를 anchor로 단언(외부 호출은 mock) | 코드로만 확인(`propertyType "land"`) — 실측 미착수 |
-| V-2 | 재개발 APT에서 `standardPricePerSqmAtTransfer`·`transferArea`·`standardPricePerSqmAtAcq`·`acquisitionArea`를 읽는 곳이 ④⑧ 어디에도 없는가 | 전수 grep(`lib/calc`) — 지금까지 본 곳: `burdened-gift-acq-std-price.ts`(토지만) · `transfer-tax-api-burdened-gift.ts:518-530`(토지만) · `transfer-tax-api-helpers.ts:416`(수용 적격 종류만) · `transfer-tax-validate-bg-house-split.ts:37-49`(주택·토지 분리 경로) | 부분 확인 — `validate-bg-house-split`이 재개발 APT를 받는지는 착수 시 확인 |
-| V-3 | 승계 매매 추계의 「취득시 기준시가」(이미 총액 칸)와 이 칸들이 같은 모양이 되는가 | 렌더 anchor | 미착수 |
+| V-1 | 재개발 APT의 공시가격 조회가 지금 개별공시지가 경로로 가는가, 바꾸면 공동주택가격(동·호) 조회로 가는가 | 착수 시 `lookup` 호출 인자를 anchor로 단언(외부 호출은 mock) | ✅ 실측 — `__tests__/components/redev-apt-std-price-widget.anchor.test.tsx` ③: 수정 전 재개발 APT 조회 요청의 `propertyType=land`, 수정 후 `housing`(주택과 같다, 상업용 건물은 `land` 그대로) |
+| V-2 | 재개발 APT에서 `standardPricePerSqmAtTransfer`·`transferArea`·`standardPricePerSqmAtAcq`·`acquisitionArea`를 읽는 곳이 ④⑧ 어디에도 없는가 | 전수 grep(`lib/calc`) — 지금까지 본 곳: `burdened-gift-acq-std-price.ts`(토지만) · `transfer-tax-api-burdened-gift.ts:518-530`(토지만) · `transfer-tax-api-helpers.ts:416`(수용 적격 종류만) · `transfer-tax-validate-bg-house-split.ts:37-49`(주택·토지 분리 경로) | ✅ 읽는 곳이 모두 자산 종류로 게이트돼 재개발 APT를 받지 않는다 — `burdened-gift-acq-std-price`·`transfer-tax-api-burdened-gift`·`transfer-tax-validate-bg` 토지 분기(`assetKind === "land"`) · 주택·토지 분리 경로(`isLandBuildingSplitable` = housing·building만, `self-owns-scope.ts:22`) · 수용 적격 종류(`exprCompensationSendGates`) · 환지 증가분(`replot-increment-std-price.ts`는 `isReplotIncrement`만) · 분할 매각(`validate-split-sale-std`, 주택·건물·토지 분리 시료). 잔존 단가·면적 값은 무해(Q-2 a) |
+| V-3 | 승계 매매 추계의 「취득시 기준시가」(이미 총액 칸)와 이 칸들이 같은 모양이 되는가 | 렌더 anchor | ✅ 앵커 ①②④가 재개발 APT를 총액 칸 하나로 단언한다(취득시 칸은 `standardPriceAtAcq` 존재까지 확인) |
 | V-4 | 같은 물건의 취득·양도 칸이 서로 다른 모드로 갈린다는 기존 가드가 이 변경에 반응하는가 | `__tests__` grep(2026-11-06): `toPropertyKind`를 참조하는 테스트는 `basic-info-building-area.anchor.test.ts` 하나뿐이고, 그 안의 호출은 `CompanionAcqPurchaseBlock.types`의 함수(주택·토지 시료)다. 재개발 APT 시료로 `CompanionSaleModeBlock` 쪽을 고정하는 테스트는 없다 | ✅ 반전할 단언 없음. 새 단언은 착수 시 anchor |
+
+## 5. 구현 결과 (2026-11-06)
+
+- **수정 3파일**: `CompanionSaleModeBlock.tsx`(입력 종류 목록 + `toPropertyKind`가 재개발 APT를 `house_apart`로) · `asset-sections/AssetSectionTransfer.tsx`(양도시·취득시 호출부의 «building» 접힘에서 재개발 APT 제외) · `BurdenedGiftTrancheBasisBlock.tsx`(같은 접힘). 엔진·④·⑧·⑫는 그대로다.
+- **anchor** `__tests__/components/redev-apt-std-price-widget.anchor.test.tsx` 11건 — 수정 전 재개발 APT 4건 실패(안분 양도시 · 부담부증여 · 조회 `propertyType=land` · 지분 취득시), 대조군 7건 통과. 수정 후 11/11.
+  - 시료 정정: 부담부증여 평가 모드 값은 `sangjeungbeop_standard`(처음에 쓴 `standard_price`는 없는 값이었다).
+- **뮤테이션** 4건(매핑 제거 · 양도시 접힘 복원 · 취득시 접힘 복원 · 지분 접힘 복원) 모두 anchor가 잡았고 원복해 11/11.
+- **회귀**(2026-11-06): components 738파일 6,827 · calc 801파일 11,293 · lib 262파일 3,353 · api 458파일 5,990 통과 · tsc 0 · eslint 오류 0.
+- **E2E** `e2e/redev-apt-std-price-widget.spec.ts` 2건 통과(SW-1 재개발 APT 단가·면적 칸 0 · 조회 `housing` / SW-2 상업용 건물 대조). SW-1은 `toPropertyKind` 매핑을 빼면 실패한다. 사람이 브라우저로 직접 한 수동 확인은 아니다(headless Playwright).
