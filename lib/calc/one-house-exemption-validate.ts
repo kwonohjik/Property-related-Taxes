@@ -453,7 +453,7 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
    */
   const rowNo = (id: string | undefined) => (form.houses ?? []).findIndex((h) => h.id === id) + 1;
   for (const r of judgmentHouseCountExclusionReductions(form)) {
-    for (const message of collectHouseCountExclusionReductionErrors(r)) {
+    for (const message of collectHouseCountExclusionReductionErrors(r, form.transferDate)) {
       errors.push(err("houses", `보유 주택 ${rowNo(r.houseId)}: ${message}`));
     }
   }
