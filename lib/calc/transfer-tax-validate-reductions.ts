@@ -21,6 +21,7 @@ import {
 } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { axisBEffectiveAsset } from "./axis-b-effective-asset";
 import { isReductionAllowedForAssetKind, REDUCTION_METADATA, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
+import { assetKindGateReason } from "@/lib/tax-engine/transfer-reductions";
 import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -156,6 +157,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(
               "자경농지 감면(조특법 §69)은 토지 양도에만 적용됩니다. 자산 종류를 확인하거나 감면 선택을 해제하세요.",
             );
+          // §98 시리즈 6조문 × 조합원 경로·분양권은 「주택 양도」 문구가 사유와 맞지 않는다(US-44) — 엔진 고지와 같은 문구.
+          const articleReason = assetKindGateReason(r.type, asset.assetKind);
+          if (articleReason) return fail(`${articleReason} 감면 선택을 해제하세요.`);
           return fail(`${gateLabel} 감면은 주택 양도에만 적용됩니다. 자산 종류를 확인하거나 감면 선택을 해제하세요.`);
         }
         if (r.type === "public_expropriation") {
