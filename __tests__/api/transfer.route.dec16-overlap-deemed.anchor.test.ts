@@ -390,7 +390,7 @@ describe("#16-1 4호 가드 — ⑧ 주택이 중과 주택 수 2채 안에 있�
     expect(r.mhWarnings.some((w) => w.includes("§167의3①3호") && w.includes("확인이 필요합니다"))).toBe(false);
   });
   it("L9 §99 신축주택(1999) — ⑥의 2007.12.31. 양도시한(§99②)은 5호 판정에 쓰지 않는다: ⑥만 = 칩 + ⑥ (10호)", async () => {
-    const NEW99 = row6({ ...ROW, id: "h9", acquisitionDate: "1999-03-01" }, { article: "new_99", houseAcquisitionDate: "1999-03-01", houseContractDate: "1999-03-01", isNationalHousing: true });
+    const NEW99 = row6({ ...ROW, id: "h9", acquisitionDate: "1999-03-01" }, { article: "new_99", housingKind: "self_built", houseAcquisitionDate: "1999-03-01", houseContractDate: "1999-03-01", isNationalHousing: true });
     const only6 = await run(form([UNAV_OUT, NEW99], { transferDate: TD_2021 }));
     const chip = await run(form([UNAV_OUT, { ...NEW99, isUnsoldHousing: true }], { transferDate: TD_2021 }));
     // ⑥은 §89①3호 의제가 서지 않아(2007.12.31. 시한) 비과세 주택 수 3 — 수정 전 1,141,772,500 → 667,342,500(칩과 같음)

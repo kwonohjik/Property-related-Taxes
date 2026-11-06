@@ -11,7 +11,7 @@
  *   - (+,+): 안분 비율 적용
  *   - (-,+): 감면 0  (부동산-136, 2012.3.6.)
  *   - (+,-): 양도소득금액 전체 감면 (부동산-525, 2010.4.7.)
- *   - (-,-): 감면 0  (재산 2014-2035, 2014.11.20.)
+ *   - (-,-): 감면 0  (법규재산2014-2035, 2014.11.20.)
  *
  * 적용 배제 (우선순위 순):
  *   1. 거주자 아님
@@ -267,7 +267,7 @@ export interface FiveYearAllocation {
  * 기준시가 안분 공통 — 분자·분모를 직접 받는 저수준 형태 (P1 일반화, 2026-06-11).
  * §99의3 산식(분자 = 5년시점 − 취득시 / 분모 = 양도시 − 취득시)과
  * §99 재개발·재건축 변형(령 §99① — 분모 = 양도시 − 종전주택 취득시)이 공유.
- * 부호 4케이스 정책(부동산-136·525·재산2014-2035)은 동일 적용.
+ * 부호 4케이스 정책(부동산-136·525·법규재산2014-2035)은 동일 적용.
  */
 export function calcSignedAllocation(
   transferIncome: number,
@@ -310,6 +310,17 @@ export function calcSignedAllocation(
   return { ratio: 0, signCase: "all_negative", reducibleIncome: 0 };
 }
 
+
+/**
+ * 안분 산식의 분모가 0일 때의 «계산 불가 + 확인 필요» 문구 — §99(`new-99.ts`)·§99의3 공용 (NH-76 · Q-20).
+ * `basisLabel` = 분모에서 빼는 기준시가의 이름(신축주택 취득 당시 / 종전주택 취득 당시).
+ */
+export function allocationDenominatorZeroMessage(basisLabel: string): string {
+  return (
+    `양도 당시 기준시가와 ${basisLabel} 기준시가가 같아 안분 산식의 분모가 0이므로 감면대상 양도소득금액의 안분 비율을 정할 수 없습니다. ` +
+    "이 경우의 처리를 정한 규정을 확인하지 못해 감면을 계산하지 않았습니다 — 확인 필요: 기준시가(고시 시점·적용 가격)를 다시 확인하고 관할 세무서에 문의하세요."
+  );
+}
 
 // ============================================================================
 // 헬퍼: §99의3 ②항 판정 — 1세대1주택 신축 주택수 제외
@@ -451,6 +462,33 @@ export function evaluateNew993(input: New993Input): New993Result {
     const denominator = variant
       ? input.standardPriceAtTransfer - stdAtPrev
       : input.standardPriceAtTransfer - input.standardPriceAtAcquisition;
+    // NH-76 · Q-20 — 분모 0(양도시 = 취득시 기준시가). 안분 비율이 정의되지 않는다.
+    //   종전에는 `calcSignedAllocation`이 «그 외» 분기로 보내 근거 없이 감면 0으로 냈고, 분모가 1원만 달라져도
+    //   (+,+)·(+,-) 전액 쪽이라 1원 절벽이었다. 분모 0을 정한 조문·해석례를 확인하지 못해 계산하지 않고 확인 필요로 알린다.
+    if (denominator === 0) {
+      return {
+        isEligible: false,
+        ineligibleReasons: [
+          {
+            code: "ALLOCATION_DENOMINATOR_ZERO",
+            message: allocationDenominatorZeroMessage(variant ? "종전주택 취득 당시" : "신축주택 취득 당시"),
+            legalBasis: isWithin5Years
+              ? `${NEW_HOUSING_SUB_ARTICLE.NEW_99_3_INCOME} 1호 단서`
+              : NEW_HOUSING_SUB_ARTICLE.NEW_99_3_INCOME_AFTER_5Y,
+          },
+        ],
+        isWithin5Years: false,
+        reducibleTransferIncome: 0,
+        fiveYearRatio: 0,
+        signCase: "ineligible",
+        formulaSteps: [],
+        taxReductionForRuralSurtax: 0,
+        ruralSurtax: 0,
+        isExcludedFromHouseCountFor1H1H: false,
+        legalBasis,
+        ...eraEcho,
+      };
+    }
     const allocation = calcSignedAllocation(input.transferIncome, numerator, denominator);
     reducibleTransferIncome = allocation.reducibleIncome;
     fiveYearRatio = allocation.ratio;
@@ -511,7 +549,7 @@ export function evaluateNew993(input: New993Input): New993Result {
       formulaSteps.push({
         label: "감면 양도소득금액 = 0 (부호 음수/음수)",
         value: 0,
-        formula: "분자·분모 동시 음수(또는 0) — 재산 2014-2035(2014.11.20.) 해석으로 감면 0",
+        formula: "분자·분모 동시 음수 — 법규재산2014-2035(2014.11.20.) 해석으로 감면 0 (분자가 0이면 산식 값이 0)",
       });
     }
   }

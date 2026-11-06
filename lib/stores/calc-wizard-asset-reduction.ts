@@ -6,6 +6,8 @@
  */
 
 import type { AptDeadlineExtensionForm } from "./calc-wizard-asset-nbl-rental";
+import type { NewHousingKind } from "@/lib/tax-engine/transfer-reductions/special-house-exclusion-kind";
+import type { TriStateAnswer } from "@/lib/tax-engine/transfer-reductions/new-99-luxury-house";
 
 export type AssetReductionForm =
   | {
@@ -787,6 +789,15 @@ export interface SpecialHouseExclusionFormItem {
    * ⑤ 입력·④ 전송·⑧ 필수값은 `usesRentalStartDate(article)` 하나로 게이트한다.
    */
   houseRentalStartDate?: string;
+  /**
+   * §99·§99의3 전용 — 감면주택 유형(매수 = 최초 매매계약일 / 자기건설 = 사용승인일 / 종전(원시) §99의3). 선택 필드 — 이 칸이 생기기 전 기록에는 없다.
+   * ⑤ 입력·④ 전송·⑧ 필수값·엔진이 `usesNewHousingKind(article)` 하나로 게이트한다(NH-23·NH-24).
+   */
+  housingKind?: NewHousingKind;
+  /** 종전(원시) §99의3 전용 — 대통령령이 정하는 수도권 밖 지역 소재 (3-state: 「모름」·미답 = 불성립 + 확인 필요) */
+  originalOutsideMetropolitan?: TriStateAnswer;
+  /** 종전(원시) §99의3 전용 — 국민주택 (3-state) */
+  originalNationalHousing?: TriStateAnswer;
   /** 해당 조문 본 요건 충족 확인 */
   requirementsConfirmed: boolean;
 }

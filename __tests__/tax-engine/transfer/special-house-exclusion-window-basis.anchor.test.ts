@@ -95,6 +95,7 @@ describe("D3-08 §99 신축주택취득기간 — 국민주택 종기 연장", (
   it("D3-08-2: 비국민주택 1999-09-01 취득 → 불적격 (~1999.6.30)", () => {
     expect(count([{
       article: "new_99",
+      housingKind: "self_built" as const,
       houseAcquisitionDate: D("1999-09-01"),
       requirementsConfirmed: true,
     }], T_2007)).toBe(0);
@@ -103,6 +104,7 @@ describe("D3-08 §99 신축주택취득기간 — 국민주택 종기 연장", (
   it("D3-08-3: 같은 입력에 국민주택 선언 → 적격 (~1999.12.31)", () => {
     expect(count([{
       article: "new_99",
+      housingKind: "self_built" as const,
       houseAcquisitionDate: D("1999-09-01"),
       isNationalHousing: true,
       requirementsConfirmed: true,
@@ -111,7 +113,7 @@ describe("D3-08 §99 신축주택취득기간 — 국민주택 종기 연장", (
 
   it("D3-08-4 경계: 비국민주택 1999-06-30 적격 / 1999-07-01 불적격", () => {
     const at = (d: string) =>
-      count([{ article: "new_99", houseAcquisitionDate: D(d), requirementsConfirmed: true }], T_2007);
+      count([{ article: "new_99", housingKind: "self_built" as const, houseAcquisitionDate: D(d), requirementsConfirmed: true }], T_2007);
     expect(at("1999-06-30")).toBe(1);
     expect(at("1999-07-01")).toBe(0);
   });
@@ -119,6 +121,7 @@ describe("D3-08 §99 신축주택취득기간 — 국민주택 종기 연장", (
   it("D3-08-5: 국민주택이어도 양도시한(2007.12.31) 초과면 불적격", () => {
     expect(count([{
       article: "new_99",
+      housingKind: "self_built" as const,
       houseAcquisitionDate: D("1999-09-01"),
       isNationalHousing: true,
       requirementsConfirmed: true,
@@ -155,6 +158,7 @@ describe("D4-06 §99의3② — 모드 2 선택지 신설", () => {
   it("D4-06-1: 2002-08-01 취득 + 2007-11-30 양도 → 적격", () => {
     expect(count([{
       article: "new_99_3",
+      housingKind: "self_built" as const,
       houseAcquisitionDate: D("2002-08-01"),
       requirementsConfirmed: true,
     }], D("2007-11-30"))).toBe(1);
@@ -162,7 +166,7 @@ describe("D4-06 §99의3② — 모드 2 선택지 신설", () => {
 
   it("D4-06-2 경계: 2001-05-23 적격 / 2001-05-22 불적격 · 2003-06-30 적격 / 2003-07-01 불적격", () => {
     const at = (d: string) =>
-      count([{ article: "new_99_3", houseAcquisitionDate: D(d), requirementsConfirmed: true }], D("2007-11-30"));
+      count([{ article: "new_99_3", housingKind: "self_built" as const, houseAcquisitionDate: D(d), requirementsConfirmed: true }], D("2007-11-30"));
     expect(at("2001-05-23")).toBe(1);
     expect(at("2001-05-22")).toBe(0);
     expect(at("2003-06-30")).toBe(1);
@@ -170,7 +174,7 @@ describe("D4-06 §99의3② — 모드 2 선택지 신설", () => {
   });
 
   it("D4-06-3: 양도시한 2007.12.31 초과 → 불적격 + 사유에 §99의3②가 표시된다", () => {
-    const e = [{ article: "new_99_3", houseAcquisitionDate: D("2002-08-01"), requirementsConfirmed: true }];
+    const e = [{ article: "new_99_3", housingKind: "self_built" as const, houseAcquisitionDate: D("2002-08-01"), requirementsConfirmed: true }];
     expect(count(e, T)).toBe(0);
     // 종전에는 §99② 하드코딩이라 §99의3 선택 시 틀린 조문이 표시됐다
     expect(reason(e, T)).toContain("§99의3②");
@@ -178,7 +182,7 @@ describe("D4-06 §99의3② — 모드 2 선택지 신설", () => {
   });
 
   it("D4-06-4: §99 선택 시에는 사유가 §99②로 표시된다 (문구 일반화 회귀)", () => {
-    const e = [{ article: "new_99", houseAcquisitionDate: D("1999-06-01"), requirementsConfirmed: true }];
+    const e = [{ article: "new_99", housingKind: "self_built" as const, houseAcquisitionDate: D("1999-06-01"), requirementsConfirmed: true }];
     expect(reason(e, T)).toContain("§99②");
     expect(reason(e, T)).toContain("2007.12.31");
   });

@@ -11,6 +11,7 @@ import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
 import { LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
+import { RENTAL_HOUSING_INCOME_DEDUCTION_IDS } from "./transfer-tax-rental-housing-income-deduction";
 import { getReductionLegalBasis } from "./transfer-tax-helpers";
 import type { ParsedRates } from "./transfer-tax-helpers";
 
@@ -67,8 +68,11 @@ export function applyRentalHousingReductions(args: {
   const allReductions = input.reductions ?? [];
   const incomeDeductionIds = new Set<string>(ALL_INCOME_DEDUCTION_IDS);
   /** 차감형·하이브리드 — 이 경로가 계산하지 않는 축(§161 안분 위치 명문 부재). */
-  const deferredReductions = allReductions.filter((r) => incomeDeductionIds.has(r.type));
-  /** 세액감면형 — 일반 경로와 동일하게 계산한다. */
+  //   §99·§99의3은 제외한다 — `transfer-tax-rental-housing-income-deduction.ts`가 계산한다(NH-37 · Q-19).
+  const deferredReductions = allReductions.filter(
+    (r) => incomeDeductionIds.has(r.type) && !RENTAL_HOUSING_INCOME_DEDUCTION_IDS.includes(r.type),
+  );
+  /** 세액감면형 — 일반 경로와 동일하게 계산한다. (차감형은 위 두 갈래가 맡는다) */
   const taxCreditReductions = allReductions.filter((r) => !incomeDeductionIds.has(r.type));
   /**
    * **LTHD 계열 특례 고지** (CB-02·D5-05) — 감면 효과는 3종인데 위 이분법은 2종만 가른다.
@@ -136,7 +140,7 @@ export function applyRentalHousingReductions(args: {
 
   const reductionNotice =
     deferredReductions.length > 0
-      ? `선택한 감면 중 ${deferredReductions.length}건(양도소득금액 차감형)은 이 계산에 반영되지 않았습니다 — 거주주택 비과세 특례(소득세법 시행령 §155⑳)의 §161 안분과 차감 순서를 정한 규정이 없습니다. 「조세특례제한법」 §99·§99의3은 고가주택 배제 단서가 명문이므로 적용 대상이 아닙니다.`
+      ? `선택한 감면 중 ${deferredReductions.length}건(양도소득금액 차감형)은 이 계산에 반영되지 않았습니다 — 거주주택 비과세 특례(소득세법 시행령 §155⑳)의 §161 안분과 차감 순서를 정한 규정이 없습니다.`
       : undefined;
   if (reductionNotice) {
     steps.push({

@@ -84,13 +84,14 @@ describe("S-2 매매계약일만으로 판정하는 조문", () => {
     expect(collectSpecialHouseExclusionRowErrors(special("unsold_99_2"))).toHaveLength(1);
     expect(collectSpecialHouseExclusionRowErrors(special("unsold_98_8"))).toHaveLength(1);
     expect(collectSpecialHouseExclusionRowErrors(special("unsold_99_2", "2013-05-01"))).toEqual([]);
-    expect(collectSpecialHouseExclusionRowErrors(special("new_99"))).toEqual([]);
+    // 다른 조문은 계약일이 선택이다(대조) — §99는 NH-23·NH-24로 유형별 기준일을 요구한다(`nh23-24-new-housing-kind.anchor.test.ts`)
+    expect(collectSpecialHouseExclusionRowErrors(special("unsold_98_3"))).toEqual([]);
   });
   it("⑤ 라벨 — 해당 조문은 「(선택)」이 없다", () => {
     render(<SpecialHouseExclusionSection items={[special("unsold_99_2")]} onChange={() => {}} />);
     expect(screen.getByText(/^감면주택 매매계약일$/)).toBeTruthy();
     cleanup();
-    render(<SpecialHouseExclusionSection items={[special("new_99")]} onChange={() => {}} />);
+    render(<SpecialHouseExclusionSection items={[special("unsold_98_3")]} onChange={() => {}} />);
     expect(screen.getByText("감면주택 매매계약일 (선택)")).toBeTruthy();
   });
 });

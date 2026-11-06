@@ -9,12 +9,26 @@
  * 비과세 판정 주택수만 제외 — 다주택 중과세율 주택수는 불변.
  */
 
+import { useId } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
 import { usesContractDateOnly, usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import {
+  NEW_HOUSING_KIND_LABELS,
+  isOriginalNewHousingKind,
+  newHousingKindOptions,
+  usesNewHousingKind,
+} from "@/lib/tax-engine/transfer-reductions/special-house-exclusion-kind";
+
+const TRI_STATE_OPTIONS = [
+  { value: "yes" as const, label: "예" },
+  { value: "no" as const, label: "아니오" },
+  { value: "unknown" as const, label: "모름" },
+];
 
 const ARTICLE_OPTIONS: Array<{ value: SpecialHouseExclusionFormItem["article"]; label: string }> = [
   { value: "unsold_98", label: "§98 미분양 국민주택 (취득 1995.11.1~1997.12.31 / 1998.3.1~12.31)" },
@@ -120,6 +134,14 @@ export function SpecialHouseExclusionItemFields({
 }) {
   // §97·§97의2 — 판정 날짜는 임대개시일이다(취득일·매매계약일은 쓰지 않는다). 엔진과 같은 술어.
   const rental = usesRentalStartDate(item.article);
+  // §99·§99의3 — 유형(매수/자기건설/종전 §99의3)이 기준일을 정한다. ⑧·엔진과 같은 술어(`usesNewHousingKind`).
+  const kinded = usesNewHousingKind(item.article);
+  const kind = item.housingKind;
+  const original = isOriginalNewHousingKind(kind);
+  const purchase = kind === "purchase" || kind === "original_purchase";
+  const showAcquisition = !hideAcquisitionDate && !rental && (!kinded || (kind !== undefined && (!purchase || original)));
+  const showContract = !rental && (!kinded || (kind !== undefined && purchase));
+  const radioName = useId();
   return (
     <>
         <div>
@@ -166,6 +188,57 @@ export function SpecialHouseExclusionItemFields({
             </p>
           )}
         </div>
+        {kinded && (
+          <div data-field="special-house-exclusion.housingKind">
+            <label className="mb-1 block text-xs font-medium">감면주택 유형</label>
+            <RadioCardGroup
+              name={`${radioName}-kind`}
+              tone="violet"
+              value={kind ?? ""}
+              onChange={(v) => onChange({ housingKind: v })}
+              data-testid="special-house-exclusion-kind"
+              options={newHousingKindOptions(item.article).map((k) => ({
+                value: k,
+                label: NEW_HOUSING_KIND_LABELS[k],
+                testId: `special-house-exclusion-kind-${k}`,
+              }))}
+            />
+            <p className="mt-1 text-micro text-muted-foreground">
+              호마다 기준일이 하나입니다 — 매수는 최초 매매계약일, 자기건설은 사용승인일만 취득기간과 비교하며 다른 일자가 기간 안이어도 통과하지 않습니다.
+            </p>
+          </div>
+        )}
+        {kinded && original && (
+          <>
+            <div data-field="special-house-exclusion.originalOutsideMetropolitan">
+              <label className="mb-1 block text-xs font-medium">대통령령이 정하는 수도권 밖 지역에 소재 (종전 §99의3)</label>
+              <RadioCardGroup
+                name={`${radioName}-outside`}
+                tone="violet"
+                layout="inline"
+                value={item.originalOutsideMetropolitan ?? ""}
+                onChange={(v) => onChange({ originalOutsideMetropolitan: v })}
+                data-testid="special-house-exclusion-original-outside"
+                options={TRI_STATE_OPTIONS}
+              />
+            </div>
+            <div data-field="special-house-exclusion.originalNationalHousing">
+              <label className="mb-1 block text-xs font-medium">국민주택 (종전 §99의3)</label>
+              <RadioCardGroup
+                name={`${radioName}-national`}
+                tone="violet"
+                layout="inline"
+                value={item.originalNationalHousing ?? ""}
+                onChange={(v) => onChange({ originalNationalHousing: v })}
+                data-testid="special-house-exclusion-original-national"
+                options={TRI_STATE_OPTIONS}
+              />
+              <p className="mt-1 text-micro text-amber-700 dark:text-amber-300">
+                종전 §99의3은 수도권 밖의 국민주택에 한하고 2001.5.23. 전에 취득한 주택이 대상입니다(법률 제6501호 부칙 제13조). 「모름」은 요건 불성립으로 보며 확인이 필요합니다.
+              </p>
+            </div>
+          </>
+        )}
         {item.article === "new_99" && (
           <ToggleCard
             tone="violet"
@@ -190,28 +263,32 @@ export function SpecialHouseExclusionItemFields({
             </p>
           </div>
         )}
-        {!hideAcquisitionDate && !rental && (
+        {showAcquisition && (
           <div>
-            <label className="mb-1 block text-xs font-medium">감면주택 취득일</label>
+            <label className="mb-1 block text-xs font-medium">
+              {kinded && !purchase ? "감면주택 사용승인일(취득일)" : "감면주택 취득일"}
+            </label>
             <DateInput
               value={item.houseAcquisitionDate}
               onChange={(v) => onChange({ houseAcquisitionDate: v })}
             />
           </div>
         )}
-        {!rental && (
+        {showContract && (
           <div>
             <label className="mb-1 block text-xs font-medium">
-              감면주택 매매계약일{usesContractDateOnly(item.article) ? "" : " (선택)"}
+              {kinded ? "감면주택 최초 매매계약일" : `감면주택 매매계약일${usesContractDateOnly(item.article) ? "" : " (선택)"}`}
             </label>
             <DateInput
               value={item.houseContractDate}
               onChange={(v) => onChange({ houseContractDate: v })}
             />
             <p className="mt-1 text-micro text-muted-foreground">
-              {usesContractDateOnly(item.article)
-                ? "이 조문은 매매계약일이 판정 기준입니다 — 반드시 입력하세요"
-                : "취득일이 취득기간 외라도 시한 내 매매계약 + 계약금 납부분은 포함됩니다"}
+              {kinded
+                ? "이 유형은 최초 매매계약일(계약금 납부)이 판정 기준입니다 — 반드시 입력하세요"
+                : usesContractDateOnly(item.article)
+                  ? "이 조문은 매매계약일이 판정 기준입니다 — 반드시 입력하세요"
+                  : "취득일이 취득기간 외라도 시한 내 매매계약 + 계약금 납부분은 포함됩니다"}
             </p>
           </div>
         )}
