@@ -532,9 +532,9 @@ export function buildMixedUseCompanionItems(
     unavoidableOutsideCapitalHouse: g.unavoidableOutsideCapitalHouse,
     // 컴패니언 겸용 × 부담부증여는 열지 않는다(MB-6 — ⑫ `refineCompanionMixedUseBurdenedGift`가 입구에서 막는다).
     burdenedGift: undefined,
-    acquisitionCause: undefined,
-    // 컴패니언 겸용은 취득 원인 echo가 비어 있다(위) — 분양권 상속 답도 싣지 않는다(US-07).
-    inheritedPresaleCompletedByHeir: undefined,
+    acquisitionCause: companionEngine.acquisitionCause,
+    // US-07 — 분양권 상속 답도 그 자산의 것이다(컴패니언 item은 상속일 때만 싣는다 — `bundled-split-helpers.ts`). 취득 원인과 함께 있어야 STEP 0.45 게이트가 카드 판정과 갈리지 않는다.
+    inheritedPresaleCompletedByHeir: companionEngine.inheritedPresaleCompletedByHeir,
   });
   asset.rentalResidence?.onNotices(resolveMixedUseRentalResidence(mixedAsset, parseRatesFromMap(ctx.mixedUseCtx.rates))?.notices ?? []);
   return buildMixedUsePartCards(

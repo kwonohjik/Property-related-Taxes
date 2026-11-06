@@ -37,6 +37,8 @@ import { FirstAssetChangeNoticeCard } from "./step4-sections/FirstAssetChangeNot
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { householdFactsKindOfForm } from "@/lib/calc/household-facts-asset";
+import { householdFactsOpenedByCompanion } from "@/lib/calc/household-facts-asset";
 import { redevSplitResidenceSupersedesStep4, landContributedOriginalApt, successorGiftHouseholdApplies } from "@/lib/calc/redev-field-scope";
 import { RedevSplitResidenceNotice, SuccessorResidenceDirectHint } from "@/components/calc/transfer/RedevAptResidenceNotices";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
@@ -97,6 +99,9 @@ const allowsUnregisteredToggle = (assetKind: string) =>
 // ============================================================
 export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d: Partial<TransferFormData>) => void }) {
   const primaryKind = form.assets?.[0]?.assetKind ?? "";
+  // NH-14 — 세대·주택 현황(① · 세대 보유 주택 명부 · 분양권·입주권 목록)의 기준 자산 종류. 첫 자산이 주택 계열이면 `primaryKind`와 같고,
+  //   토지·건물이 첫 자산이어도 함께 양도하는 주택이 있으면 그 주택이다(④ `transfer-tax-api.ts` · ⑧ `transfer-tax-validate-step1.ts`와 같은 leaf).
+  const householdKind = householdFactsKindOfForm(form);
   const primaryAcquisitionDate = form.assets?.[0]?.acquisitionDate ?? "";
   const primary = form.assets?.[0];
 
@@ -216,12 +221,12 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   const houseCountLocked = useMemo(
     () =>
       houseCountScalarLocked(
-        primaryKind,
+        householdKind,
         form.houses,
         parseInt(form.householdHousingCount || "1", 10) || 0,
         form.transferDate,
       ),
-    [primaryKind, form.houses, form.householdHousingCount, form.transferDate],
+    [householdKind, form.houses, form.householdHousingCount, form.transferDate],
   );
 
   /**
@@ -231,13 +236,13 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   const derivedHouseholdHousingCount = useMemo(
     () =>
       resolveHouseholdHousingCount({
-        primaryKind,
+        primaryKind: householdKind,
         declared: parseInt(form.householdHousingCount || "1", 10) || 0,
         houses: form.houses,
         transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
       }),
-    [primaryKind, form.householdHousingCount, form.houses, form.transferDate, form.legacyHouseCountPrecedence],
+    [householdKind, form.householdHousingCount, form.houses, form.transferDate, form.legacyHouseCountPrecedence],
   );
 
   /**
@@ -245,8 +250,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
    * leaf(`resolveHouseholdRightCount`)를 쓴다(3중 패턴) — right_to_move_in 전용.
    */
   const derivedHouseholdRightCount = useMemo(
-    () => resolveHouseholdRightCount(primaryKind, form.presaleRights, form.transferDate),
-    [primaryKind, form.presaleRights, form.transferDate],
+    () => resolveHouseholdRightCount(householdKind, form.presaleRights, form.transferDate),
+    [householdKind, form.presaleRights, form.transferDate],
   );
 
   // 조정대상지역 자동 판별(주소·날짜 → API) + 안내 — 800줄 정책 분리(OH-22). 주택은 섹션② 취득일 조정
@@ -337,10 +342,19 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       {primaryKind !== "housing" && regulatedAutoTip}
 
       {/* 주택·입주권·분양권: 1세대 여부 + 주택 수 + 거주기간 + 조정대상지역 */}
-      {isHousingLike(primaryKind) && (
+      {isHousingLike(householdKind) && (
         <section className="rounded-xl border border-sky-200 bg-sky-50/30 p-4 dark:border-sky-900/50 dark:bg-sky-950/20">
         <SectionHeader title="① 세대·주택 현황" />
         <div className="space-y-3">
+          {/* NH-14 — 첫 자산이 주택이 아닌데 함께 양도하는 주택 때문에 이 칸이 열렸다. 그 주택이 세대 사실을 첫 자산의 폼 값으로 받는다. */}
+          {householdFactsOpenedByCompanion(form) && (
+            <ToneCard tone="sky" title="함께 양도하는 주택의 세대·주택 현황">
+              <p className="text-caption leading-relaxed text-sky-800 dark:text-sky-300" data-testid="household-facts-companion-notice">
+                첫 자산이 주택이 아니어도, 함께 양도하는 주택의 1세대1주택 비과세·다주택 중과 판정은 이 세대 현황(1세대 여부·세대 보유 주택·분양권·입주권)을 사용합니다.
+                양도일 현재 기준으로 입력하세요.
+              </p>
+            </ToneCard>
+          )}
           {/* 1세대 여부 */}
           <ToggleCard
             data-field="isOneHousehold"
@@ -372,7 +386,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           <HouseholdHousingCountSection
             form={form}
             onChange={onChange}
-            primaryKind={primaryKind}
+            primaryKind={householdKind}
             derivedHouseholdHousingCount={derivedHouseholdHousingCount}
             houseCountLocked={houseCountLocked}
           />
@@ -647,7 +661,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       )}
 
       {/* ④ 중과 한시배제 기간 → 중과 판정 섹션 대신 안내 카드 (침묵 숨김 금지) */}
-      {surchargeSuspended && isHousingLike(primaryKind) && (
+      {surchargeSuspended && isHousingLike(householdKind) && (
         <ToneCard
           tone="sky"
           title="다주택 중과 한시 배제기간 (일반세율 적용)"
@@ -689,7 +703,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           계속 검증해 지울 화면이 없는 dead-end가 됐다. ⑧의 skip은 D4-03에서 이미 걷어낸
           것이므로(무검증 통과 비대칭) 고칠 곳은 렌더 게이트다. */}
       <CalcCountExclusionLegacyNotice form={form} onChange={onChange} />
-      {surchargeSuspended && houseRosterRendered(form, primaryKind) && (
+      {surchargeSuspended && houseRosterRendered(form, householdKind) && (
         <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
           <SectionHeader
             title="④ 주택수 판정 (비과세)"
@@ -727,8 +741,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               form={form}
               onChange={onChange}
               hideGracePeriod
-              countExclusionEnabled={countExclusionRowsInScope(primaryKind)}
-              countExclusionApplies={(h) => countExclusionRowApplies(primaryKind, h)}
+              countExclusionEnabled={countExclusionRowsInScope(householdKind)}
+              countExclusionApplies={(h) => countExclusionRowApplies(householdKind, h)}
               // §155④⑤ 합가 전 소유 쪽 — 판정 메뉴와 같은 파생(합가일 없으면 undefined, PR-2).
               mergeContext={mergeContextOf(form)}
             />
@@ -738,11 +752,12 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
 
       {/* ④ 주택수·중과 판정 — 세대 주택 목록·감면주택 제외·양도일 조정대상지역 (중과 트랙).
           800줄 정책으로 `step4-sections/SurchargeJudgmentSection.tsx`로 분리(2026-09-02). */}
-      {!surchargeSuspended && houseCountInputsVisible(form, primaryKind) && (
+      {!surchargeSuspended && houseCountInputsVisible(form, householdKind) && (
         <SurchargeJudgmentSection
           form={form}
           onChange={onChange}
           primaryKind={primaryKind}
+          householdKind={householdKind}
           primaryAcquisitionDate={primaryAcquisitionDate}
         />
       )}

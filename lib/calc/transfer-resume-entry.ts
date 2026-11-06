@@ -29,6 +29,7 @@ import type { useRouter } from "next/navigation";
 import type { CalculationRecord } from "@/lib/storage/types";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { houseCountDivergedFromRoster } from "@/lib/calc/household-house-count";
+import { householdFactsKindOf } from "@/lib/calc/household-facts-asset";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
 import { moveLinkedCountExclusionsToRows } from "@/lib/calc/house-count-exclusion-rows";
@@ -150,7 +151,7 @@ export async function resumeTransferRecord(
    *    깨끗한 record를 이어서 열 때 **직전 폼의 표식이 그대로 남는다** ⇒ `false`도 함께 쓴다.
    */
   const legacyHouseCountPrecedence = houseCountDivergedFromRoster(
-    migrated?.assets?.[0]?.assetKind,
+    householdFactsKindOf(migrated?.assets, migrated?.assetSplitMode),
     migrated?.houses,
     parseInt(migrated?.householdHousingCount || "1", 10) || 0,
     migrated?.transferDate,

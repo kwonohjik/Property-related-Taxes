@@ -6,7 +6,7 @@
  * (토지 1983·건물 1990 → 토지의 ③ 누락 334,023,659 · 토지 1990·건물 1983 → 1990 토지에도 ③ 314,427,483).
  * 화면에서는 이 조합이 생기지 않는다 — 겸용 상속·증여에는 토지 취득일 칸이 없고, 매매에서 넣은 토지 날짜는 원인 전환·복원 때 비운다
  * (`CompanionAcquisitionCauseSection` · `calc-wizard-asset-migrate`). 그래서 차단은 API 직접 호출 방어선이다:
- * ⑫(`refineMixedUseInheritedSplitDate` — 주 자산·함께 양도 컴패니언) · 엔진(`calcMixedUseCore` — 단건. 컴패니언 겸용 엔진 입력에는 취득원인이 없어 닿지 않는다).
+ * ⑫(`refineMixedUseInheritedSplitDate` — 주 자산·함께 양도 컴패니언) · 엔진(`calcMixedUseCore` — 단건. 컴패니언 겸용 파트 카드의 서브엔진 입력에도 취득원인이 실려 닿는다 — ⑫가 먼저 막으므로 API 직접 호출 방어선이다).
  * 부담부증여는 prepare MB-16이 같은 조합을 막는다(증여자 문구).
  */
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
