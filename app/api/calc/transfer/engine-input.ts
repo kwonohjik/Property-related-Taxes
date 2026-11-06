@@ -98,6 +98,8 @@ export function buildTransferEngineInput(
     acquisitionCause: data.acquisitionCause,
     decedentAcquisitionDate: toOptionalDate(data.decedentAcquisitionDate),
     nonHeirBequest: data.nonHeirBequest,
+    // ⑭ US-07 — 상속일 때만 읽는다(엔진도 같은 게이트)
+    inheritedPresaleCompletedByHeir: data.acquisitionCause === "inheritance" ? data.inheritedPresaleCompletedByHeir : undefined,
     decedentSameHouseholdBeforeInheritance: data.decedentSameHouseholdBeforeInheritance,
     decedentCohabitationHoldingStartDate: toOptionalDate(data.decedentCohabitationHoldingStartDate),
     decedentCohabitationResidenceMonths: data.decedentCohabitationResidenceMonths,

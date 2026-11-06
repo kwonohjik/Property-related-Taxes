@@ -287,5 +287,8 @@ export function mapSpecialHouseExclusionsToEngine(
     isNationalHousing: e.isNationalHousing,
     houseRentalStartDate: toOptionalDate(e.houseRentalStartDate),
     requirementsConfirmed: e.requirementsConfirmed,
+    ...(e.isInherited ? { isInherited: true } : {}),
+    ...(e.inheritedPresaleCompletedByHeir ? { inheritedPresaleCompletedByHeir: e.inheritedPresaleCompletedByHeir } : {}),
+    ...(e.acquiredByGift ? { acquiredByGift: true } : {}),
   }));
 }

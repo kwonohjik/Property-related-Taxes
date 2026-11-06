@@ -81,6 +81,7 @@ export function Unsold983InputForm({
           options={[
             { value: "resident", label: "거주자", description: "매매계약 2009.2.12~2010.2.11" },
             { value: "nonresident_no_pe", label: "국내사업장 없는 비거주자", description: "매매계약 2009.3.16~2010.2.11 (소법 §120)" },
+            { value: "nonresident_with_pe", label: "국내사업장 있는 비거주자", description: "적용 주체가 아닙니다 (법 §98의3①)" },
           ]}
         />
         <RadioCardGroup<Unsold983Form["houseType983"]>

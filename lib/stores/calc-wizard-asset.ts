@@ -368,6 +368,12 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * 신규 데이터는 `transferType: "burdened_gift"` 사용. 레거시 데이터는 normalize에서 자동 변환.
    */
   acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
+  /**
+   * 상속 자산 · §98의3·§98의5·§98의7 감면 선택 시 — 상속 당시 분양권이었고 상속인(본인)이 잔금을 내고 취득했는가(US-07).
+   * 「예」만 감면 적용(기획재정부 조세법령운용과-1103), 「아니오」 불성립, 「모름」 불성립 + 확인 필요. 선택 필드 — 옛 기록에는 없다(빈 값 = 미답).
+   * ⑤ `UnifiedReductionGroupSection`·⑧ `transfer-tax-validate-reductions`·④ `transfer-tax-api`가 `asksInheritedPresaleQuestion` 하나로 게이트한다.
+   */
+  inheritedPresaleCompletedByHeir?: "" | "yes" | "no" | "unknown";
 
   /**
    * 양도 형태 (양도자 관점) — Phase 2(2026-05-12) 신규.

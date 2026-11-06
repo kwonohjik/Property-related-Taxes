@@ -29,6 +29,8 @@ export {
   isReductionCategoryAllowedForAssetKind,
   isReductionAllowedForAssetKind,
   isGbClaimRouteAllowedForAssetKind,
+  assetKindGateReason,
+  stripAssetKindGatedReductions,
   type ReductionAssetKind,
 } from "./asset-kind-gate";
 export type { ReductionMetadata, CategoryUiSchema } from "./metadata";
