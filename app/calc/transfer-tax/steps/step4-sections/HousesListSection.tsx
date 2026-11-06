@@ -642,7 +642,7 @@ export function HousesListSection({
         rights={form.presaleRights}
         onChange={(presaleRights) => onChange(presaleRightsPatchWithConfirmClear(presaleRights))}
         showSpouseOwned={spouseHoldingOpen}
-        primaryKind={form.assets?.[0]?.assetKind}
+        primaryKind={householdKind}
         confirmed={form.householdNoPresaleRightsConfirmed}
         // 판정 메뉴는 확인 토글을 두지 않는다 → 평문 「없음」(S10-9). 계산기는 ⑧ 관문이라 그대로 둔다.
         onConfirmedChange={judgmentMenu ? undefined : (v) => onChange({ householdNoPresaleRightsConfirmed: v })}

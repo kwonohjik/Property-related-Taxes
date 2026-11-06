@@ -45,6 +45,12 @@ describe("NH-14 ⑤ — 세대·주택 현황 칸의 표시 조건", () => {
     expect(screen.getByTestId(NOTICE)).toBeTruthy();
   });
 
+  it("🔑 ⑧이 요구하는 두 확인 토글이 모두 화면에 있다 — 다른 보유 주택 없음 · 분양권·조합원입주권 없음 (막다른 길 방지: ⑧↔⑤ 같은 기준 자산)", () => {
+    render(<Step4 form={form(["land", "housing"])} onChange={() => {}} />);
+    expect(screen.queryAllByText(NO_OTHER_TOGGLE)).toHaveLength(1);
+    expect(screen.queryAllByText("보유한 분양권·조합원입주권이 없습니다")).toHaveLength(1);
+  });
+
   it("첫 자산 일반건물 + 함께 양도 재개발 완공주택 → 칸이 열린다", () => {
     render(<Step4 form={form(["general_building", "redevelopment_apt"])} onChange={() => {}} />);
     expect(screen.queryAllByText(SECTION)).toHaveLength(1);

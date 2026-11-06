@@ -228,7 +228,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       issues.push({ step, field: `presaleRights.${i}.acquisitionDate`, message: `분양권·입주권 ${i + 1}: 취득일을 입력하세요.` });
   }
   // ⑧ 조합원입주권 취득 경위 — §89② 판정(주택 양도)에서만 결론을 가른다(판정 메뉴와 같은 leaf).
-  if (isOneHouseExemptionAsset(form.assets?.[0]?.assetKind)) {
+  if (isOneHouseExemptionAsset(primaryKind)) {
     for (const e of memberOriginErrors(presaleRights)) issues.push({ step, ...e });
     // 기존주택 원조합원 §155①2호 단서(기존 임차인) 모순 — ⑤와 같은 게이트(`originalMemberMoveInRelevant`)
     for (const e of originalMemberFactErrors(presaleRights, form.transferDate)) issues.push({ step, ...e });
