@@ -172,6 +172,21 @@ describe("US-06 명부 행 — 상속 감면주택은 주택 수에서 빠지지
     expect(r993.entries[0].reason).toContain("증여");
   });
 
+  it("H-7: 증여 토글 — §98 시리즈 6조문 전부(조문별 취득기간 안의 날짜) · 5호 중과 연결도 같은 결론", async () => {
+    const { SPECIAL_HOUSE_EXCLUSION_WINDOWS, meetsSpecialHouseReductionRequirements } = await import(
+      "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5"
+    );
+    for (const a of ["unsold_98", "unsold_98_2", "unsold_98_3", "unsold_98_5", "unsold_98_6", "unsold_98_7"] as const) {
+      const w = SPECIAL_HOUSE_EXCLUSION_WINDOWS[a].windows[0];
+      const inWindow = w ? w[0] : new Date("2012-01-01"); // §98의6은 취득기간 창이 없다(D5-01)
+      const e = { article: a, houseId: "h2", houseAcquisitionDate: inWindow, houseContractDate: inWindow, requirementsConfirmed: true };
+      expect(resolveSpecialHouseExclusions([e], T).excludedCount, a).toBe(1);
+      expect(resolveSpecialHouseExclusions([{ ...e, acquiredByGift: true }], T).excludedCount, a).toBe(0);
+      expect(meetsSpecialHouseReductionRequirements(e, T), a).toBe(true);
+      expect(meetsSpecialHouseReductionRequirements({ ...e, acquiredByGift: true }, T), a).toBe(false);
+    }
+  });
+
   it("H-4: §98의6 행은 1호/2호 구분이 없어 상속 여부로 판정하지 않는다", () => {
     expect(resolveSpecialHouseExclusions([decl("unsold_98_6", { isInherited: true })], T).excludedCount).toBe(1);
   });

@@ -82,7 +82,7 @@ export function Unsold986InputForm({
           tone="violet"
           title="거주자 또는 국내사업장 없는 비거주자"
           description="법 §98의6① — 국내사업장이 있는 비거주자는 해제(적용 배제)"
-          checked={value.isEligibleSubject986}
+          checked={value.isEligibleSubject986 ?? true}
           onCheckedChange={(v) => onChange({ isEligibleSubject986: v })}
         />
       </div>
