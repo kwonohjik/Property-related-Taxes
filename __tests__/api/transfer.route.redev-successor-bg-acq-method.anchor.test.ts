@@ -102,29 +102,34 @@ describe("A — 부담부증여 × 승계 × 매매: 종전 ⑧ 막다른 길(�
   });
 });
 
-describe("B — 승계 완공 APT 실거래가 전용: 남은 추계 플래그를 ④⑧이 무시", () => {
-  it("B-1 남은 감정가액 플래그(화면 E-2) → 본문 취득가액 450,000,000 · actual · 327,250,000 (종전: 취득가액 0 · appraisal · 평가액 대체)", async () => {
-    const r = await run(single({ isAppraisalAcquisition: true }));
+/**
+ * 2026-11-06 반전(계획서 `redev-successor-apt-estimate.plan.md` Q-1 a): **매매** 승계 완공 APT는 이제 추계 3종을 계산한다
+ * (anchor `transfer.route.redev-successor-apt-estimate.anchor.test.ts`). 「남은 추계 플래그를 무시한다」는 안전망은
+ * 산정 방식 라디오가 없는 **증여** 승계(상속·부담부증여도 같은 술어)로 옮겨 같은 단언을 유지한다.
+ */
+describe("B — 증여 승계 완공 APT 실거래가 고정: 남은 추계 플래그를 ④⑧이 무시", () => {
+  it("B-1 증여 · 남은 감정가액 플래그 → 본문 취득가액(증여 신고가액) 450,000,000 · actual · 327,250,000", async () => {
+    const r = await run(single({ acquisitionCause: "gift", isAppraisalAcquisition: true }));
     expect(r.fields).toEqual([]);
     expect(r.body.acquisitionPrice).toBe(450_000_000);
     expect(r.body.acquisitionMethod).toBe("actual");
     expect(r.tax).toBe(327_250_000);
   });
-  it("B-2 매매사례가액 500,000,000 · 취득가액 칸 450,000,000 → 취득가액 칸 값으로 계산(매매사례가액은 싣지 않는다)", async () => {
-    const r = await run(single({ isSalesCaseAcquisition: true, similarSalesValue: "500,000,000" }));
+  it("B-2 증여 · 남은 매매사례가액 500,000,000 · 신고가액 칸 450,000,000 → 신고가액으로 계산(매매사례가액은 싣지 않는다)", async () => {
+    const r = await run(single({ acquisitionCause: "gift", isSalesCaseAcquisition: true, similarSalesValue: "500,000,000" }));
     expect(r.fields).toEqual([]);
     expect(r.body.acquisitionPrice).toBe(450_000_000);
     expect(r.body.acquisitionMethod).toBe("actual");
     expect(r.body.similarSalesValue).toBeUndefined();
     expect(r.tax).toBe(327_250_000);
   });
-  it("B-3 매매사례 플래그 · 취득가액 비움 → ⑧ 취득가액 칸(이제 화면에 있다) · 400", async () => {
-    const r = await run(single({ isSalesCaseAcquisition: true, similarSalesValue: "500,000,000", fixedAcquisitionPrice: "" }));
+  it("B-3 증여 · 남은 매매사례 플래그 · 신고가액 비움 → ⑧ 신고가액 칸 · 400", async () => {
+    const r = await run(single({ acquisitionCause: "gift", isSalesCaseAcquisition: true, similarSalesValue: "500,000,000", fixedAcquisitionPrice: "" }));
     expect(r.fields).toEqual(["fixedAcquisitionPrice"]);
     expect(r.status).toBe(400);
   });
-  it("B-4 남은 환산 플래그 → ⑧ 이슈 0(종전 「환산 미지원」) · 본문 useEstimatedAcquisition false · 327,250,000", async () => {
-    const r = await run(single({ useEstimatedAcquisition: true }));
+  it("B-4 증여 · 남은 환산 플래그 → ⑧ 이슈 0 · 본문 useEstimatedAcquisition false · 327,250,000", async () => {
+    const r = await run(single({ acquisitionCause: "gift", useEstimatedAcquisition: true }));
     expect(r.fields).toEqual([]);
     expect(r.body.useEstimatedAcquisition).toBe(false);
     // 화면에 없는 기준시가 칸(환산 모드 전용)은 싣지 않는다
@@ -136,14 +141,15 @@ describe("B — 승계 완공 APT 실거래가 전용: 남은 추계 플래그�
     expect(r.status).toBe(400);
     expect(r.fieldErrors).toEqual(["acquisitionPrice"]);
   });
-  it("B-6 컴패니언 남은 감정·매매사례·환산 플래그 → ⑧ 이슈 0 · 실거래가와 같은 합산 결정세액", async () => {
-    const base = await run(bundle());
+  it("B-6 컴패니언 증여 · 남은 감정·매매사례·환산 플래그 → ⑧ 이슈 0 · 플래그 없을 때와 같은 합산 결정세액", async () => {
+    const base = await run(bundle({ acquisitionCause: "gift" }));
     expect(base.status).toBe(200);
     for (const flag of [{ isAppraisalAcquisition: true }, { isSalesCaseAcquisition: true, similarSalesValue: "500,000,000" }, { useEstimatedAcquisition: true }]) {
-      const r = await run(bundle(flag));
+      const r = await run(bundle({ acquisitionCause: "gift", ...flag }));
       expect(r.fields, JSON.stringify(flag)).toEqual([]);
       expect(r.body.companionAssets[0].acquisitionMethod, JSON.stringify(flag)).toBeUndefined();
-      expect(r.body.companionAssets[0].useEstimatedAcquisition, JSON.stringify(flag)).toBe(false);
+      // 증여 컴패니언은 키를 싣지 않는다(undefined) — 환산이 켜지지 않았다는 단언은 같다
+      expect(r.body.companionAssets[0].useEstimatedAcquisition ?? false, JSON.stringify(flag)).toBe(false);
       expect(r.total, JSON.stringify(flag)).toBe(base.total);
     }
   });
@@ -154,13 +160,13 @@ describe("B — 승계 완공 APT 실거래가 전용: 남은 추계 플래그�
     expect(r.body.acquisitionMethod).toBe("actual");
     expect(r.tax).toBe(327_250_000);
   });
-  it("B-9 ⑥ 사이드바 — 남은 감정가액 플래그로 필요경비를 「계산 후 표시」로 미루지 않는다(실거래가 승계와 같다)", () => {
-    const row = (over: Record<string, unknown>) => computeTransferPerAssetSummary(single(over), null).rows[0];
+  it("B-9 ⑥ 사이드바 — 증여 승계는 남은 감정가액 플래그로 필요경비를 「계산 후 표시」로 미루지 않는다", () => {
+    const row = (over: Record<string, unknown>) => computeTransferPerAssetSummary(single({ acquisitionCause: "gift", ...over }), null).rows[0];
     expect(row({ isAppraisalAcquisition: true }).expensePending).toBe(row({}).expensePending);
     expect(row({ isAppraisalAcquisition: true }).expensePending).toBe(false);
   });
-  it("B-7 컴패니언 실가 거래 모드 · 남은 환산 플래그 → 숨은 양도시 기준시가를 싣지 않는다(안분 키 칸도 없는 모드)", async () => {
-    const f = bundle({ useEstimatedAcquisition: true });
+  it("B-7 컴패니언 증여 · 실가 거래 모드 · 남은 환산 플래그 → 숨은 양도시 기준시가를 싣지 않는다(안분 키 칸도 없는 모드)", async () => {
+    const f = bundle({ acquisitionCause: "gift", useEstimatedAcquisition: true });
     f.bundledSaleMode = "actual";
     const r = await run(f);
     expect(r.fields).toEqual([]);

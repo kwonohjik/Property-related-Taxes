@@ -661,8 +661,9 @@ export function SuccessorMemberSection({
             <div className="font-semibold">현재 지원하지 않는 분기</div>
             <ul className="list-disc pl-4 space-y-0.5 mt-1">
               <li>승계조합원 + 청산금 분기 (납부·수령) — 자동 차단</li>
-              {/* 추계는 선택지 자체가 없다 — ⑤ 산정 방식 라디오를 숨기고 ④⑧이 남은 플래그를 무시한다(`isRedevSuccessorAptActualOnly`). */}
-              <li>승계조합원 + 환산·감정가액·매매사례가액 — 실지거래가액(증여는 증여 신고가액)으로만 계산합니다</li>
+              {/* 매매 승계는 추계 3종을 고른다(계획서 redev-successor-apt-estimate Q-1 a). 상속·증여·부담부증여 승계는 선택지 자체가 없다 —
+                  ⑤ 산정 방식 라디오를 숨기고 ④⑧이 남은 플래그를 무시한다(`isRedevSuccessorAptActualOnly`). */}
+              <li>승계조합원(상속·증여·부담부증여) + 환산·감정가액·매매사례가액 — 상속개시일 평가액·증여 신고가액(부담부증여는 §159 산정액)으로만 계산합니다. 매매로 승계했다면 「취득가액 산정 방식」에서 고를 수 있습니다</li>
             </ul>
           </div>
         </div>

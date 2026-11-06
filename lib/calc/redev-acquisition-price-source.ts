@@ -30,11 +30,28 @@ export function isRedevelopmentSec166Asset(
 }
 
 /**
- * 승계조합원 완공 APT — 취득가액은 **실거래가(승계취득가액) 전용**이다(계획서 `redev-successor-bg-acq-method.plan.md` Q-2 a).
- * 엔진 승계 산식(`redevelopment-successor.ts`)은 산정 방식을 읽지 않고 취득가액 하나만 쓴다 — 감정·매매사례·환산 플래그가
- * 남아 있으면 ④가 취득가액을 0으로 실었다. ⑤ 산정 방식 라디오 숨김 · ④ 추계 플래그 무시 · ⑧ 추계 차단 무시의 단일 술어.
+ * 승계조합원 완공 APT 중 **추계 플래그를 읽지 않는** 경우 — 상속·증여·부담부증여로 승계한 경우다.
+ *
+ * 매매로 승계한 완공 APT(부담부증여 아님)는 「취득가액 산정 방식」 4종을 고를 수 있다(계획서 `redev-successor-apt-estimate.plan.md` Q-1 a —
+ * 취득일 = 사용승인일 · 소득세법 시행령 §162①4호 · §176의2③). 그 밖의 승계는 취득가액이 평가액·증여 신고가액(§163⑨)이거나
+ * §159가 정해 매매 카드의 산정 방식 라디오가 없다 — 남은 플래그를 ④가 싣지 않고 ⑧이 요구하지 않는다(종전 Q-2 a 「실거래가 전용」의 남은 범위).
+ * ⑤ 라디오 숨김 · ④ 추계 플래그 무시 · ⑧ 추계 검증 제외의 단일 술어.
  */
-export function isRedevSuccessorAptActualOnly(asset: Pick<AssetForm, "assetKind" | "redevIsSuccessorMember">): boolean {
+export function isRedevSuccessorAptActualOnly(
+  asset: Pick<AssetForm, "assetKind" | "redevIsSuccessorMember" | "acquisitionCause" | "transferType">,
+): boolean {
+  return isRedevSuccessorApt(asset) && (asset.acquisitionCause !== "purchase" || asset.transferType === "burdened_gift");
+}
+
+/** 승계조합원 완공 APT — 매매로 승계했고 부담부증여가 아니면 추계 3종을 고를 수 있다(`isRedevSuccessorAptActualOnly`의 반대 쪽). */
+export function isRedevSuccessorAptEstimable(
+  asset: Pick<AssetForm, "assetKind" | "redevIsSuccessorMember" | "acquisitionCause" | "transferType">,
+): boolean {
+  return isRedevSuccessorApt(asset) && !isRedevSuccessorAptActualOnly(asset);
+}
+
+/** 승계조합원 완공 APT(취득원인 무관). */
+export function isRedevSuccessorApt(asset: Pick<AssetForm, "assetKind" | "redevIsSuccessorMember">): boolean {
   return asset.assetKind === "redevelopment_apt" && asset.redevIsSuccessorMember === "yes";
 }
 

@@ -353,11 +353,17 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
   //   검사가 없어 500이었다. ⑧ `validateRedevelopmentAsset` 승계 취득가액 분기와 같은 축(매매·증여 · 부담부증여 제외 — §159가 취득가액을 정한다).
   //   `inheritedAcquisition`이 있으면 STEP 0.45가 취득가액을 만든다 — 상속은 물론 매매·증여 본문도 엔진은 그 값으로 계산한다
   //   (리뷰 게이트 실측 · anchor S-1d). 원천 검사는 그 채널의 refine이 맡는다.
+  //   매매 승계 완공 APT의 추계 3종(감정가액·매매사례가액·환산)은 그 값이 취득가액이다 — 엔진 승계 분기가 산정 방식별로 읽는다
+  //   (계획서 redev-successor-apt-estimate Q-1 a). 그 값 자체는 일반 추계 refine(`appraisalValue`·`similarSalesValue`·환산 기준시가)이 본다.
+  const successorPurchaseEstimate =
+    data.acquisitionCause === "purchase" &&
+    (data.useEstimatedAcquisition === true || data.acquisitionMethod === "appraisal" || data.acquisitionMethod === "salesCase");
   if (
     data.redevelopment?.isSuccessorMember === true &&
     (data.acquisitionCause === "purchase" || data.acquisitionCause === "gift") &&
     data.transferType !== "burdened_gift" &&
     !data.inheritedAcquisition &&
+    !successorPurchaseEstimate &&
     !positive(data.acquisitionPrice)
   ) {
     issue(

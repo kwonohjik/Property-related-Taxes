@@ -8,6 +8,8 @@
  * ⚠️ `steps`는 **호출부 배열을 그대로 받아 push**한다(반환하지 않는다) — 종전 순서를 지키기 위함이다.
  */
 import { runRedevelopment } from "./redevelopment";
+import type { SuccessorEstimateInput } from "./redevelopment-successor";
+import { resolveConversionDenominatorAtTransfer } from "./transfer-tax-expropriation-valuation";
 import {
   resolveHighValueHouseThreshold,
   formatHighValueThresholdLabel,
@@ -90,6 +92,7 @@ export function runRedevelopmentGainSteps(
     priorHouseResidenceMonths: input.redevelopment!.priorHouseResidenceMonths,
     newHouseResidenceMonths: input.redevelopment!.newHouseResidenceMonths,
     isSuccessorRightToMoveIn: input.isSuccessorRightToMoveIn,
+    ...(burdenedGift ? {} : successorEstimateOf(input)),
     ownershipRatio: input.ownershipRatio,
     isUnregistered: input.isUnregistered,
     debtFraction: burdenedGift
@@ -550,4 +553,21 @@ export function runRedevelopmentGainSteps(
       ? LTHD_TABLE2_UNSUPPORTED_NOTICE
       : undefined;
   return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice, oneRightRequirementNotices, oneRightSharedNotice, surchargeFallbackNotice, lthdTable2UnsupportedNotice };
+}
+
+/**
+ * 승계조합원 완공 APT 취득가액 추계 입력(계획서 `redev-successor-apt-estimate.plan.md` Q-1 a) — **매매** 승계만. 상속·증여는 평가액·신고가액(§163⑨)이고
+ * 부담부증여는 §159가 취득가액을 정한다(호출부가 뺀다). 판정 순서는 일반 경로 `calcTransferGain`과 같다(환산 > 감정 > 매매사례).
+ * 환산 분모는 일반 경로와 같은 leaf(`resolveConversionDenominatorAtTransfer` — §164⑧·⑨ 반영)다.
+ */
+function successorEstimateOf(input: TransferTaxInput): { successorEstimate?: SuccessorEstimateInput } {
+  if (input.redevelopment?.isSuccessorMember !== true || input.acquisitionCause !== "purchase") return {};
+  const std = input.standardPriceAtAcquisition ?? 0;
+  if (input.useEstimatedAcquisition)
+    return { successorEstimate: { method: "converted", standardPriceAtAcquisition: std, conversionDenominator: resolveConversionDenominatorAtTransfer(input).denominator } };
+  if (input.acquisitionMethod === "appraisal")
+    return { successorEstimate: { method: "appraisal", value: input.appraisalValue ?? input.acquisitionPrice, standardPriceAtAcquisition: std } };
+  if (input.acquisitionMethod === "salesCase")
+    return { successorEstimate: { method: "salesCase", value: input.similarSalesValue ?? input.acquisitionPrice, standardPriceAtAcquisition: std } };
+  return {};
 }
