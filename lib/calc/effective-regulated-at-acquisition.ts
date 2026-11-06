@@ -233,7 +233,11 @@ export function calcStoredRegulatedFlags(form: RegulatedFlagsForm): { isRegulate
 }
 
 /** 두 숨은 토글의 값과, 그 값이 주소 판정에서 왔으면 그 판정(기준일·근거) — `calcStoredRegulatedFlags`·결과 고지가 같은 판정을 읽는다. */
-type StoredRegulatedJudgment = { value: boolean; judged?: { date: string; judgment: RegulatedAreaResult } };
+type StoredRegulatedJudgment = {
+  value: boolean;
+  /** `dateLabel` — 후보일이 둘 이상일 때만 「어느 날을 기준으로 정했는지」(세대 보유 시작일 · 증여일 · 증여자 취득일). */
+  judged?: { date: string; judgment: RegulatedAreaResult; dateLabel?: string };
+};
 
 function storedRegulatedJudgments(form: RegulatedFlagsForm): { transfer: StoredRegulatedJudgment; acquisition: StoredRegulatedJudgment } {
   const stored = {
@@ -264,13 +268,23 @@ function storedRegulatedJudgments(form: RegulatedFlagsForm): { transfer: StoredR
     const judgment = judgeRegulatedArea(loc, date);
     return { value: judgment.isRegulated, judged: { date, judgment } };
   };
+  // 증여받은 주택의 세대 사실이 있으면 코드 경로(엔진 `resolveWasRegulatedAtAcquisition`)와 같은 후보일·결합 방식으로 판정한다 — 기준일 하나만 보면
+  // 같은 주택이 코드 유무로 비과세↔과세가 갈렸다(계획서 `docs/00-pm/gift-house-regulated-address-path.plan.md`).
+  const giftBasis = calcGiftHouseholdBasis(primary, GIFT_HOUSEHOLD_SCOPE_PRIMARY);
+  const judgeAcquisition = (date: string): StoredRegulatedJudgment => {
+    if (!giftBasis) return judgeAt(date);
+    const plan = resolveResidenceJudgmentPlan({ acquisitionDate: giftBasis.giftDate, giftHouseholdBasis: giftBasis } as ResidenceReqInput);
+    const decided = judgeRegulatedAreaForPlan((d) => judgeRegulatedArea(loc, d), plan);
+    const dateLabel = decided.candidates ? giftCandidateDateLabel(giftBasis, decided.date) : undefined;
+    return { value: decided.judgment.isRegulated, judged: { date: decided.date, judgment: decided.judgment, dateLabel } };
+  };
   return {
     transfer: respectTouched && form.isRegulatedAreaTouched ? stored.transfer : judgeAt(form.transferDate),
     acquisition:
       respectTouched && form.wasRegulatedAtAcquisitionTouched
         ? stored.acquisition
         : acquisitionDate
-          ? judgeAt(acquisitionDate)
+          ? judgeAcquisition(acquisitionDate)
           : { value: false },
   };
 }
@@ -280,10 +294,29 @@ function storedRegulatedJudgments(form: RegulatedFlagsForm): { transfer: StoredR
  * 법정동코드가 있으면(코드 판정 — 화면은 읽기 전용 자동 판정을 따로 보인다) 또는 그 축을 직접 만졌거나 판정하지 않았으면 그 축은 없다.
  * 계획서 `docs/00-pm/judgment-menu-regulated-area-address.plan.md` Q-2 a.
  */
-export function regulatedAddressVerdicts(form: RegulatedFlagsForm): { transfer?: RegulatedAreaResult; acquisition?: RegulatedAreaResult } {
+export function regulatedAddressVerdicts(form: RegulatedFlagsForm): {
+  transfer?: RegulatedAreaResult;
+  acquisition?: RegulatedAreaResult;
+  /** 취득 당시 판정이 결론을 정한 날 — 후보일이 둘 이상(증여 세대 사실)이면 `label`이 어느 날인지 밝힌다. */
+  acquisitionDecided?: { date: string; label?: string };
+} {
   if (form.assets?.[0]?.regionCode) return {};
   const j = storedRegulatedJudgments(form);
-  return { transfer: j.transfer.judged?.judgment, acquisition: j.acquisition.judged?.judgment };
+  const a = j.acquisition.judged;
+  return {
+    transfer: j.transfer.judged?.judgment,
+    acquisition: a?.judgment,
+    ...(a ? { acquisitionDecided: { date: a.date, label: a.dateLabel } } : {}),
+  };
+}
+
+/** 증여 세대 사실의 후보일 중 결론을 정한 날이 어느 날인가 — 화면 문구용. */
+function giftCandidateDateLabel(b: GiftHouseholdBasis, date: string): string | undefined {
+  const is = (d: Date | undefined) => !!d && format(d, "yyyy-MM-dd") === date;
+  if (is(b.householdHoldingStartDate)) return "세대 보유 시작일";
+  if (is(b.giftDate)) return "증여일";
+  if (is(b.donorAcquisitionDate)) return "증여자 취득일";
+  return undefined;
 }
 
 /** 결과 화면 고지 한 줄 — 어느 값을 어느 날 기준으로 어떻게 판정했는가. */
@@ -291,6 +324,8 @@ export type RegulatedAddressAssumption = {
   which: "transfer" | "acquisition";
   /** YYYY-MM-DD */
   date: string;
+  /** 후보일이 둘 이상일 때 결론을 정한 날이 어느 날인지(증여 세대 사실) */
+  dateLabel?: string;
   isRegulated: boolean;
   confidence: "medium" | "low";
   basis: string;
@@ -313,7 +348,7 @@ export function regulatedAddressAssumptions(form: RegulatedFlagsForm & Pick<Tran
   for (const [which, v] of [["transfer", j.transfer], ["acquisition", j.acquisition]] as const) {
     const c = v.judged?.judgment.confidence;
     if (!v.judged || c === undefined || c === "high") continue;
-    out.push({ which, date: v.judged.date, isRegulated: v.value, confidence: c, basis: v.judged.judgment.basis });
+    out.push({ which, date: v.judged.date, dateLabel: v.judged.dateLabel, isRegulated: v.value, confidence: c, basis: v.judged.judgment.basis });
   }
   return out;
 }
@@ -363,7 +398,22 @@ export function regulatedVerdictForAcquisition(o: {
     acquisitionDate: o.giftHouseholdBasis.giftDate,
     giftHouseholdBasis: o.giftHouseholdBasis,
   } as ResidenceReqInput);
-  const verdicts = plan.dates.map((d) => isRegulatedByBjdCode(o.regionCode!, format(d, "yyyy-MM-dd"), o.regionInDesignatedDistrict));
-  const decided = verdicts.find((v) => v.isRegulated === (plan.mode === "any"));
-  return decided ?? verdicts[0];
+  return judgeRegulatedAreaForPlan((d) => isRegulatedByBjdCode(o.regionCode!, d, o.regionInDesignatedDistrict), plan).judgment;
+}
+
+/**
+ * 후보일(`resolveResidenceJudgmentPlan`)마다 판정해 결합 방식(`all` 모두 / `any` 하나라도)대로 합친다 — 코드 경로(`regulatedVerdictForAcquisition`)와
+ * 주소 문자열 경로(`storedRegulatedJudgments`)가 **같은 규칙**을 쓰는 단일 leaf. 돌려주는 판정(날짜·근거·신뢰도)은 **결론을 정한 후보일**의 것이다:
+ * `all`이 미해당이면 지정 중이 아닌 날, `any`가 해당이면 지정 중인 날, 그 밖에는 첫 후보. 결론(`judgment.isRegulated`)은 엔진
+ * `resolveWasRegulatedAtAcquisition`의 `every`/`some`과 같다. `date`는 YYYY-MM-DD, `dates`가 둘 이상일 때만 `candidates`가 채워진다.
+ */
+export function judgeRegulatedAreaForPlan<T extends { isRegulated: boolean }>(
+  judgeAt: (date: string) => T,
+  plan: { dates: Date[]; mode: "any" | "all" },
+): { date: string; judgment: T; candidates?: string[] } {
+  const dates = plan.dates.map((d) => format(d, "yyyy-MM-dd"));
+  const verdicts = dates.map((d) => judgeAt(d));
+  const idx = verdicts.findIndex((v) => v.isRegulated === (plan.mode === "any"));
+  const at = idx >= 0 ? idx : 0;
+  return { date: dates[at], judgment: verdicts[at], ...(dates.length > 1 ? { candidates: dates } : {}) };
 }

@@ -46,6 +46,10 @@ import {
   type PeriodCheckContext,
 } from "@/lib/tax-engine/transfer-reductions";
 import { assetKindGateReason } from "@/lib/tax-engine/transfer-reductions";
+import { unsold98AcquisitionCauseReason } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
+import { asksInheritedPresaleQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
+import { InheritedPresaleQuestion } from "@/components/calc/transfer/InheritedPresaleQuestion";
+import type { InheritedPresaleAnswer } from "@/components/calc/transfer/InheritedPresaleQuestion";
 import { ROW_COUNT_EXCLUSION_TYPES } from "@/lib/calc/house-count-exclusion-rows";
 
 // ============================================================================
@@ -108,6 +112,8 @@ export function GroupCategorySection({
   assetDong,
   assetHo,
   assetPhdSnapshot,
+  assetInheritedPresale,
+  onAssetInheritedPresaleChange,
   redevMember,
   onRedevCompletionDateChange,
 }: {
@@ -167,6 +173,9 @@ export function GroupCategorySection({
   assetHo?: string;
   /** Round 10 (2026-05-06): 자산-수준 PHD 데이터 스냅샷 — "자산 카드 PHD 가져오기" 버튼 */
   assetPhdSnapshot?: ReductionPhdValue;
+  /** US-07 — 상속 자산: 상속 당시 분양권 + 상속인 잔금 취득 여부(자산-수준 `inheritedPresaleCompletedByHeir`) */
+  assetInheritedPresale?: InheritedPresaleAnswer | "";
+  onAssetInheritedPresaleChange?: (v: InheritedPresaleAnswer) => void;
   /** 재개발 완공 아파트 조합원 갈래(`redevMemberNewHouseScope`) — §99·§99의3을 준공일 축으로 판정한다 (NH-36) */
   redevMember?: RedevMemberFormScope;
   /** 자산-수준 준공일(`redevCompletionDate`) 변경 — 주택 출자 원조합원은 이 패널이 그 칸을 보인다 */
@@ -282,15 +291,25 @@ export function GroupCategorySection({
              *   ⑧ `transfer-tax-validate-reductions.ts`와 **같은 술어·같은 사유 문구**를 쓴다.
              */
             const articleAllowed = isReductionAllowedForAssetKind(id, assetKind);
+            /**
+             * US-07 — 취득 원인 게이트(⑧·엔진과 같은 leaf). 예외가 열려 있는 조문(§98의3·§98의5·§98의7 분양권 상속, §98의6 2호 상속)은
+             * 선택을 막지 않고 카드 안의 답·호 선택으로 가른다 — 예외가 불가능한 조합(증여·이월과세 증여, §98·§98의2 상속)만 막는다.
+             */
+            const causeBlocked = unsold98AcquisitionCauseReason(id, assetAcquisitionCause, {
+              inheritedPresaleCompletedByHeir: "yes",
+              hoType986: "buyer_rented",
+            });
             const isDisabled =
               !isSelected &&
-              (!housingAllowed || !articleAllowed || !period.inPeriod || !isFullyImplemented);
+              (!housingAllowed || !articleAllowed || !!causeBlocked || !period.inPeriod || !isFullyImplemented);
 
             // 비활성 사유 (주택 게이트 > 조문 게이트 > 시한 외 > 미구현 — 가장 근본 차단 사유 우선)
             const disabledReason = !housingAllowed
               ? `🏠 주택 양도에만 적용되는 감면입니다 (현재 자산: ${assetKindLabel})`
               : !articleAllowed
               ? `🏠 ${assetKindGateReason(id, assetKind) ?? `이 조문은 현재 자산 종류(${assetKindLabel})에 적용되지 않습니다`}`
+              : causeBlocked
+              ? `🧾 ${causeBlocked.message}`
               : !period.inPeriod
                 ? `⚠ ${period.failReason ?? "시한 외"}`
                 : !isFullyImplemented
@@ -389,6 +408,17 @@ export function GroupCategorySection({
                         <New99InputForm value={form99} onChange={onUpdate99} {...reductionAssetProps} acquisitionCause={assetAcquisitionCause} redevMember={redevMember} />
                       ) : null;
                     })()}
+                  {/* US-07 — 상속 자산 §98의3·§98의5·§98의7: 분양권 상속 후 잔금 취득만 적용(⑧이 답을 요구한다) */}
+                  {isSelected && asksInheritedPresaleQuestion(id, assetAcquisitionCause) && onAssetInheritedPresaleChange && (
+                    <div className="mt-2 ml-4">
+                      <InheritedPresaleQuestion
+                        name={`reduction-inherited-presale-${assetId ?? "asset"}-${id}`}
+                        testIdPrefix={`reduction-${id}`}
+                        value={assetInheritedPresale}
+                        onChange={onAssetInheritedPresaleChange}
+                      />
+                    </div>
+                  )}
                   {/* P1 (2026-06-11): §98의8 준공후미분양 50% 입력 폼 */}
                   {id === "unsold_98_8" &&
                     (() => {

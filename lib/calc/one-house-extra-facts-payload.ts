@@ -20,6 +20,7 @@ import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import {
   isWinWinLeaseEndDateRequired,
+  qualifiesWinWinRental,
   winWinContractNotAfterAcquisition,
 } from "@/lib/tax-engine/transfer-tax-exemption-residence-waivers";
 
@@ -118,6 +119,26 @@ export function toWinWinRentalHouseFact(
     winWinContractDate: toDate(w.winWinContractDate, "winWinContractDate"),
     ...(toOptionalDate(winWinLeaseEndDate) ? { winWinLeaseEndDate: toOptionalDate(winWinLeaseEndDate) } : {}),
   };
+}
+
+/**
+ * §155⑳1호 거주요건 면제(상생임대주택 §155의3① — OH-42)를 판정 메뉴 **화면 쪽**(⑤ ⑳ 카드 · ⑧)에서 판정한다.
+ *
+ * 엔진(`judgeRentalHousingEligibility`)과 **같은 술어** `qualifiesWinWinRental`에 ④가 싣는 것과 같은 사실
+ * (상생임대 5필드 · 양도일 · 취득일 · 동일세대 상속)을 넣는다. 종전에는 이 값을 넘기지 않아 엔진은 ⑳ 성립·비과세인데
+ * 카드는 「✗ 미충족」을 띄웠다(V-8). 계산기는 `calcRentalResidenceFacts`가 같은 술어로 만든다.
+ */
+export function winWinResidenceExemptForJudgment(
+  f: WinWinRentalFields,
+  transferDate: string | undefined,
+  acquisition: { acquisitionDate?: string; sameHouseholdInheritance: boolean },
+): boolean {
+  return qualifiesWinWinRental({
+    winWinRentalHouse: toWinWinRentalHouseFact(f),
+    transferDate: toOptionalDate(transferDate),
+    acquisitionDate: toOptionalDate(acquisition.acquisitionDate),
+    decedentSameHouseholdBeforeInheritance: acquisition.sameHouseholdInheritance,
+  });
 }
 
 /**

@@ -27,6 +27,7 @@ import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.typ
 import { acqStdPriceBranch } from "./acq-std-price-branch";
 import { LUMP_SUM_DEDUCTION_BASE_HINT, PRE_DISCLOSURE_STD_PRICE_HINT } from "./pre-disclosure-std-hint";
 import { PhdConvertedPriceFill } from "./PhdConvertedPriceFill";
+import { successorAptPhdAssistView } from "@/lib/calc/redev-successor-phd-assist";
 import { isPhdApartment } from "@/lib/calc/phd-housing-term";
 import { phdClause } from "@/lib/calc/phd-housing-term";
 
@@ -65,6 +66,7 @@ export function CompanionAcqStdPriceSection({
   onTransferPricePerSqmChange,
 }: Props) {
   const propertyKind = toPropertyKind(props.assetKind);
+  const successorPhdView = props.asset ? successorAptPhdAssistView(props.asset) : undefined;
   const pre1990ForceYear = acqDatePre1990 ? "1990" : undefined;
   /**
    * 취득시 기준시가 위젯이 곱할 면적이 「양도분」인가 — ④와 **같은 술어**를 쓴다(§9-7).
@@ -206,13 +208,15 @@ export function CompanionAcqStdPriceSection({
                 보이는 조건은 컴포넌트 내부 게이트(`phdFillAssistVisible`).
                 감정가액·매매사례가액 + 토지·건물 분리(같은 취득일)에서는 «취득시 기준시가» 칸이 이 블록 한 곳에만 그려진다
                 (`acqStdFieldInStdSection` — `CompanionAcqAmountSection`·`SalesCaseSection`은 자기 칸을 접는다) → 보조 카드도 이 칸 곁에 하나다. */}
-            {!props.useEstimatedAcquisition
-              && propertyKind === "house_individual" && props.asset && props.onAssetChange && (
+            {/* 승계조합원 완공 APT — 사본(취득일 = 사용승인일 · 공동주택)으로 같은 보조를 연다. 환산에서도 연다(재개발 APT에는 3-시점 토글이 없다 · 계획서 redev-successor-apt-phd-assist Q-2 a). */}
+            {((!props.useEstimatedAcquisition && propertyKind === "house_individual") || successorPhdView)
+              && props.asset && props.onAssetChange && (
               <PhdConvertedPriceFill
-                asset={props.asset}
+                asset={successorPhdView ?? props.asset}
                 onAssetChange={props.onAssetChange}
                 transferDate={props.transferDate ?? ""}
                 onFill={props.onStandardPriceAtAcqChange}
+                successorApt={!!successorPhdView}
               />
             )}
             {/* 소유자 분리 — ⑧ V8의 ㎡당 개별공시지가(별건 B2). 주택은 위 위젯이 총액만 렌더하고, 면적은 ① 기본정보가 받는다. */}

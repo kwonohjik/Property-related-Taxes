@@ -94,6 +94,12 @@ const specialHouseExclusionItemsSchema = z.array(
     /** §97·§97의2 임대개시일 (⑫ — 누락 시 침묵 strip → 엔진은 「미입력」으로 불성립) */
     houseRentalStartDate: z.string().date().optional(),
     requirementsConfirmed: z.boolean().default(false),
+    /** US-06 — 명부 행이 상속주택(⑫ — 누락 시 침묵 strip → 상속 감면주택이 주택 수에서 빠진다) */
+    isInherited: z.boolean().optional(),
+    /** US-06 — 상속 당시 분양권 + 상속인 잔금 취득(§98의3·§98의5·§98의7만 읽는다) */
+    inheritedPresaleCompletedByHeir: z.enum(["yes", "no", "unknown"]).optional(),
+    /** US-06 후속 — 증여(이월과세 대상 증여 포함)로 취득한 감면주택(⑫ — 누락 시 침묵 strip → 주택 수에서 빠진다) */
+    acquiredByGift: z.boolean().optional(),
   }),
 );
 const specialHouseExclusionSchema = specialHouseExclusionItemsSchema.default([]);
