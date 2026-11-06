@@ -34,6 +34,7 @@ import {
 } from "@/lib/calc/one-house-exemption-validate";
 import { ValidationWarnings } from "@/components/calc/shared/ValidationWarnings";
 import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
+import { RegulatedAreaAssumptionLine } from "@/components/calc/results/transfer/RegulatedAreaAssumptionLine";
 import {
   OneHouseAiExtractDialog,
   type OneHouseAiReview,
@@ -382,6 +383,8 @@ export default function OneHouseJudgmentCalculator({ aiExtractEnabled = false }:
             {currentStep === 2 && <Step2 form={formData} onChange={updateFormData} />}
             {/* §154⑨ 같은 날 양도 순서 선택으로 주택 수에서 뺀 주택 — 판정의 근거 사실이다(결정 #40). */}
             {currentStep === RESULT_STEP && result && <SameDayOrderLine form={formData} />}
+            {/* 법정동코드 없이 주소 문자열로 판정했고 신뢰도가 높지 않으면 그 가정을 알린다(④와 같은 leaf — 계산기 결과와 같은 줄). */}
+            {currentStep === RESULT_STEP && result && <RegulatedAreaAssumptionLine form={formData} selectWhere="judgment" />}
             {currentStep === RESULT_STEP && (
               <Step4
                 result={result}
