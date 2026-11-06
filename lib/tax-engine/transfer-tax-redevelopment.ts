@@ -24,6 +24,7 @@
  *   산출세액 11,311,376 / 지방소득세 1,131,137 / 세액합계 12,442,514
  */
 
+import { SUCCESSOR_PENALTY_114_2_NOTICE } from "./redevelopment-successor";
 import { isRedevelopmentActive } from "./redevelopment";
 import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
 import { redevMemberNewHouseOf } from "./transfer-reductions/new-99-redev-member";
@@ -659,6 +660,8 @@ export function calculateRedevelopmentTax(
       ...(rightTable2Clause !== undefined && redevAfterRight.total.lthd <= 0 ? [] : rightTable2Notices(input, rightTable2Clause)),
       ...(surchargeFallbackNotice ? [surchargeFallbackNotice] : []),
       ...(lthdTable2UnsupportedNotice ? [lthdTable2UnsupportedNotice] : []),
+      // 승계조합원 신축주택 감정가액·환산 · 사용승인일부터 5년 이내 — §114의2를 더하지 않았다는 고지(계획서 redev-successor-apt-estimate Q-2 a)
+      ...(redevAfterRight.successorMemberDetail?.penalty114_2Unapplied ? [SUCCESSOR_PENALTY_114_2_NOTICE] : []),
     ],
     transferGain: redevAfterRight.total.gain,
     taxableGain: redevAfterRight.total.gain,

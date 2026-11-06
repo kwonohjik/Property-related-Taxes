@@ -48,7 +48,11 @@ describe("⑤ 일반 기준시가 칸 — ④⑧과 같은 술어", () => {
     expect(count(over as Partial<AssetForm>)).toEqual({ acq: 1, tr: 1 });
   });
 
-  it("승계조합원 완공APT — 실거래가 전용이라 남은 환산 플래그로 기준시가 칸이 열리지 않는다(계획서 redev-successor-bg-acq-method Q-2 a · ④ 미전송과 같은 술어)", () => {
-    expect(count({ assetKind: "redevelopment_apt", redevIsSuccessorMember: "yes" })).toEqual({ acq: 0, tr: 0 });
+  it("승계조합원 완공APT · 매매 — 환산이면 기준시가 두 칸이 열린다(2026-11-06 반전 — 계획서 redev-successor-apt-estimate Q-1 a · ④가 싣는 것과 같은 술어)", () => {
+    expect(count({ assetKind: "redevelopment_apt", redevIsSuccessorMember: "yes" })).toEqual({ acq: 1, tr: 1 });
+  });
+
+  it("승계조합원 완공APT · 부담부증여 — 남은 환산 플래그로 기준시가 칸이 열리지 않는다(실거래가 고정 범위 · 종전 단언 유지)", () => {
+    expect(count({ assetKind: "redevelopment_apt", redevIsSuccessorMember: "yes", transferType: "burdened_gift" })).toEqual({ acq: 0, tr: 0 });
   });
 });

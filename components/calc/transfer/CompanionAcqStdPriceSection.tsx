@@ -188,7 +188,7 @@ export function CompanionAcqStdPriceSection({
               jibun={props.jibun}
               dong={props.dong}
               ho={props.ho}
-              referenceDate={props.acquisitionDate}
+              referenceDate={props.estimateReferenceDate || props.acquisitionDate}
               hint={
                 props.useEstimatedAcquisition
                   ? "환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"

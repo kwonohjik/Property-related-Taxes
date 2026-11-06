@@ -17,6 +17,7 @@ import { computeEarliestDate } from "./NewConstructionDateBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 import { isRedevSuccessorAptActualOnly } from "@/lib/calc/redev-acquisition-price-source";
+import { isRedevSuccessorAptEstimable } from "@/lib/calc/redev-acquisition-price-source";
 import { GiftHouseStdPriceSection } from "./GiftHouseStdPriceSection";
 import { GiftLandStdPriceSection } from "./GiftLandStdPriceSection";
 import { GiftPreDeemedConversionSection } from "./GiftPreDeemedConversionSection";
@@ -89,7 +90,7 @@ export function CompanionAcquisitionCauseSection({
   // D2(건물 상속·증여 + 토지 매매) 유효 여부 — **1회 계산해 아래 마운트 조건·매매 블록에 주입**한다(재파생 금지, `landCause` 주입과 같은 규약).
   const buildingCauseMix = effectiveBuildingCauseMix(asset);
   const d2On = !!buildingCauseMix;
-  /** 승계조합원 완공 APT — 실거래가 전용(⑤ 라디오 없음 · 남은 추계 플래그는 칸 렌더에도 쓰지 않는다 · ④⑧ 같은 술어). */
+  /** 상속·증여·부담부증여로 승계한 조합원 완공 APT — 실거래가 고정(⑤ 라디오 없음 · 남은 추계 플래그는 칸 렌더에도 쓰지 않는다 · ④⑧ 같은 술어). 매매 승계는 추계 3종을 고른다. */
   const successorAptActualOnly = isRedevSuccessorAptActualOnly(asset);
   // P4 B(건물만 이월과세 + 토지 매매) — 매매 블록을 건물 원인 「이월과세(증여)」 모드로 열고 자산 전체 이월과세 블록을 대신한다(같은 1회 계산 주입 규약).
   const buildingCarryoverOn = effectiveBuildingCarryoverMix(asset);
@@ -232,6 +233,8 @@ export function CompanionAcquisitionCauseSection({
           onUseEstimatedChange={(v) => onChange({ useEstimatedAcquisition: v })}
           isAppraisalAcquisition={successorAptActualOnly ? false : asset.isAppraisalAcquisition}
           acqBasisActualOnly={successorAptActualOnly}
+          successorAptEstimateNote={isRedevSuccessorAptEstimable(asset)}
+          estimateReferenceDate={isRedevSuccessorAptEstimable(asset) ? asset.redevCompletionDate || undefined : undefined}
           onIsAppraisalAcquisitionChange={(v) => onChange({ isAppraisalAcquisition: v })}
           fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
           onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
