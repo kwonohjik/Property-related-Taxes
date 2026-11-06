@@ -34,7 +34,7 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
       }
       // 레거시 신축·미분양 단순 감면도 같은 이유로 조문 ID로 이관한다(`legacy-housing-reduction.ts`).
       if (r && isLegacyHousingReductionType(r.type)) {
-        return legacyHousingReductionToForm(r.type, a.acquisitionDate);
+        return legacyHousingReductionToForm(r.type, a.acquisitionDate, a.assetContractDate);
       }
       if (r && typeof r.type === "string" && (r.type as string).startsWith("rental_97") && r.type !== "rental_97_3_legacy") {
         return {

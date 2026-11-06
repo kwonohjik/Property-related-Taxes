@@ -48,7 +48,9 @@ describe("폼-전역 구버전 세션 (진입점 ①)", () => {
   it("LH-3: 이력 이관과 같은 규칙을 쓴다", () => {
     expect(reclassifiedLegacyHousingType("new_housing", "2009-06-01")).toBe("new_99");
     expect(reclassifiedLegacyHousingType("unsold_housing", "2003-06-30")).toBe("new_99_3");
-    expect(reclassifiedLegacyHousingType("unsold_housing", "2003-07-01")).toBe("unsold_98_3");
+    // NH-73 — 취득일이 2009.2.12. 전이면 §98의3은 불가능하다(계약일 ≤ 취득일). 종전에는 2003.7.1.도 §98의3으로 갔다.
+    expect(reclassifiedLegacyHousingType("unsold_housing", "2003-07-01")).toBe("new_99_3");
+    expect(reclassifiedLegacyHousingType("unsold_housing", "2009-02-12")).toBe("unsold_98_3");
     expect(reclassifiedLegacyHousingType("unsold_housing", undefined)).toBe("unsold_98_3");
   });
 });

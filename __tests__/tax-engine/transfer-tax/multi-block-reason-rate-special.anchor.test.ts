@@ -104,14 +104,22 @@ describe("D11-07 다건 미지원 사유 — 세율 특칙", () => {
   });
 
   it("D11-07-5: 차단 범위 표기가 실제 차단 집합을 담는다 (§99의3은 §99의2보다 뒤 조문)", () => {
+    // NH-72(Q-16): §99의3·§99는 2016.1.1. 이후 양도분부터 다건을 푼다 — 세율 특칙 사유 문구는 §98계 차단(여기서는 §98의3)에 남는다.
     const reason = validateMultiSupportedMode({
       assets: [
-        { assetKind: "housing", acquisitionDate: "2002-01-01", reductions: [{ type: "new_99_3" }] },
+        { assetKind: "housing", acquisitionDate: "2009-06-01", reductions: [{ type: "unsold_98_3" }] },
       ],
       transferDate: "2024-08-01",
     } as never);
     expect(reason).toContain("§99의3");
     // 종전 표기 「§98~§99의2 시리즈」는 §99의3·§99를 담지 못했다
     expect(reason).not.toContain("§98~§99의2 시리즈");
+  });
+
+  it("D11-07-6: NH-72 — §99의3은 2016.1.1. 이후 양도분이면 차단하지 않고, 전이면 2016.1.1. 사유로 막는다", () => {
+    const form = (transferDate: string) =>
+      ({ assets: [{ assetKind: "housing", acquisitionDate: "2002-01-01", reductions: [{ type: "new_99_3" }] }], transferDate }) as never;
+    expect(validateMultiSupportedMode(form("2024-08-01"))).toBeNull();
+    expect(validateMultiSupportedMode(form("2015-12-31"))).toContain("2016.1.1.");
   });
 });

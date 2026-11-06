@@ -202,7 +202,7 @@ describe("NH-01 route — 부칙 §29② 착공 3-state · ⑧↔⑫ 격자", ()
       },
     });
 
-  it("착공 예 → 종전 규정 → 41,198,500 (outside 대조와 같다), 다건 route는 §99의3 단건 전용 차단 유지", async () => {
+  it("착공 예 → 종전 규정 → 41,198,500 (outside 대조와 같다), 다건 route(양도 2023)도 단건과 같다(NH-72)", async () => {
     const f = s2("2003-05-01", "yes");
     expect(issues(f).filter(CSB_ISSUE)).toEqual([]);
     const r = await runSingle(f);
@@ -211,9 +211,10 @@ describe("NH-01 route — 부칙 §29② 착공 3-state · ⑧↔⑫ 격자", ()
     expect(r.totalTax).toBe(41_198_500);
     const out = await runSingle(s2("2003-05-01", "yes", "outside_speculation"));
     expect(out.totalTax).toBe(41_198_500);
-    // 다건(합산) route는 §99의3을 단건 전용으로 차단한다(세율 특칙을 반영하지 못함) — 이 필드의 다건 경로는 없다.
+    // NH-72(Q-16): 다건(합산) route는 §99의3을 양도 2016.1.1. 이후분부터 푼다 — 양도 2023-08-01인 이 시료는 단건과 같은 세액이다.
     const multi = await runMulti([f]);
-    expect(multi.status).toBe(400);
+    expect(multi.status).toBe(200);
+    expect(multi.totalTax).toBe(r.totalTax);
   });
 
   it("착공 아니오 → 개정규정 → 지역 제외 64,801,000", async () => {

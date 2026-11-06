@@ -162,11 +162,12 @@ export function computeAggregateOnce(
   const annualLimit = parsedRates.basicDeductionRules.annualLimit;
   const availableThisCalc = Math.max(0, annualLimit - input.annualBasicDeductionUsed);
 
-  const eligibleForBasic = assetRecords
+  /** 기본공제 배분 대상 행 — `incomes`는 배분 기준 소득(세액 계산은 감면 후, 농특세 감면 전 세액은 감면 전: NH-72). */
+  const eligibleRowsFor = (incomes: number[]) => assetRecords
     .map((r, idx) => ({
       idx,
       rateGroup: r.rateGroup,
-      income: taxableAfterReduction[idx],
+      income: incomes[idx],
       isExempt: r.result.isExempt,
       transferDate: r.item.transferDate,
       /**
@@ -182,6 +183,7 @@ export function computeAggregateOnce(
       rate: r.result.appliedRate,
     }))
     .filter((r) => !r.isExempt && r.rateGroup !== "unregistered" && r.income > 0);
+  const eligibleForBasic = eligibleRowsFor(taxableAfterReduction);
 
   /**
    * 배분 축은 **둘**이고 함수도 둘이다 — 한 함수가 겸용하면 다건 기본값이 법정 순서가 아닌 채로
@@ -312,7 +314,19 @@ export function computeAggregateOnce(
       const isExemptAsset = ruralSurtaxExemptReducibleOf(assetRecords[i].result) > 0;
       return Math.max(0, v - (isExemptAsset ? incomeDeductionReducible[i] : 0));
     });
-    const beforeTax = computeGroupsAndComparison(assetRecords, surtaxBaseline, allocatedBasic, rates, partBasic).calculatedTax;
+    // 감면 전 세액의 기본공제도 감면 전 소득으로 배분한다 — 감면 후 소득(5년 내 전액 차감이면 0)으로 배분한 값을 쓰면 기본공제가 빠져
+    // 단건(`transfer-tax-finalize.ts` STEP 7.5 — 감면 전 소득 기준 기본공제)보다 농특세가 커진다(NH-72: 5년 내 190,000).
+    const baselineEligible = eligibleRowsFor(surtaxBaseline);
+    const baselineUnits: BasicDeductionUnits =
+      allocationAxis === "EARLIEST_TRANSFER" && input.sameDayEqualTaxOrder === undefined
+        ? expandSplitBasicUnits(assetRecords, baselineEligible)
+        : { eligible: baselineEligible, partOf: new Map() };
+    const baselineAllocation =
+      allocationAxis === "PARTS_HIGHEST_RATE"
+        ? allocateBasicDeductionAcrossParts(baselineEligible, availableThisCalc)
+        : allocateBasicDeduction(baselineUnits.eligible, availableThisCalc, allocationAxis, tieRank, reducibleRank);
+    const baseline = foldBasicUnitAllocation(assetRecords, baselineUnits, baselineAllocation);
+    const beforeTax = computeGroupsAndComparison(assetRecords, surtaxBaseline, baseline.allocatedBasic, rates, baseline.partBasic).calculatedTax;
     ruralSurtax = applyRate(Math.max(0, beforeTax - calculatedTax), 0.2);
     if (ruralSurtax > 0) {
       steps.push({

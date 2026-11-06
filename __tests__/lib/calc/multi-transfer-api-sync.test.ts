@@ -239,13 +239,22 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     ["§98의7 미분양(차감/세액감면)", (f) => { f.assets[0] = { ...f.assets[0], reductions: [{ type: "unsold_98_7" } as never] }; }],
     ["§99의2 신축등(하이브리드)", (f) => { f.assets[0] = { ...f.assets[0], reductions: [{ type: "unsold_99_2" } as never] }; }],
     ["§98 미분양(세율 20% 특칙)", (f) => { f.assets[0] = { ...f.assets[0], reductions: [{ type: "unsold_98" } as never] }; }],
-    ["§99 신축주택(차감)", (f) => { f.assets[0] = { ...f.assets[0], reductions: [{ type: "new_99" } as never] }; }],
+    // §99·§99의3은 2016.1.1. 이후 양도분만 다건을 푼다(NH-72 · Q-16) — 이 폼은 양도 2026이라 아래 별도 테스트로 옮겼다.
+    ["§99 신축주택(차감) · 양도 2015.12.31.", (f) => { f.transferDate = "2015-12-31"; f.assets[0] = { ...f.assets[0], reductions: [{ type: "new_99" } as never] }; }],
   ];
 
   it.each(cases)("%s 자산은 validateMultiSupportedMode가 차단 사유 반환", (_label, mutate) => {
     const form = baseForm();
     mutate(form);
     expect(validateMultiSupportedMode(form)).not.toBeNull();
+  });
+
+  it("NH-72: §99·§99의3 + 양도 2016.1.1. 이후는 차단하지 않는다 (단건 = 합산은 transfer.route.multi-new-housing-99-993-nh72.anchor가 고정)", () => {
+    for (const type of ["new_99", "new_99_3"]) {
+      const form = baseForm();
+      form.assets[0] = { ...form.assets[0], reductions: [{ type } as never] };
+      expect(validateMultiSupportedMode(form), type).toBeNull();
+    }
   });
 
   it("PHD 플래그 잔재 + 환산이 아닌 취득가액(실거래가·감정·매매사례)은 차단하지 않는다 — 켠 적 없는 자동 ON 플래그로 다건이 막히지 않는다", () => {
