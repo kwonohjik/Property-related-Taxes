@@ -12,7 +12,7 @@
  * anchor는 mock 세율 시료라 세액은 같지 않다 — 세율과 무관한 값(감면 소득금액·안분 비율)과 문구를 대조한다.
  * 세율에 걸리는 S3은 anchor가 `loadFallbackTransferRates`로 쓴 값(단건 = 합산 고정값)을 그대로 쓴다.
  *
- * 🔴 `test.fixme` 2건(S2-B·C)은 **결함 발견** 표시다 — 고치지 않고 보고했다. 사유는 각 테스트 주석.
+ * S2-B·C는 최초 `test.fixme`(결함 발견 표시)였고, 합산 세액 섹션에 차감 행·농특세 base를 넣어 풀었다(`MixedUseTotalTaxSection`).
  *
  * 실행: E2E_PORT=3152 npx playwright test e2e/nh99-browser-verify-result.spec.ts --workers=1
  */
@@ -214,28 +214,29 @@ test.describe("S2 겸용주택 × §99의3 (NH-33)", () => {
     for (const re of FORBIDDEN_IN_CARD) expect(t).not.toMatch(re);
   });
 
-  // 🔴 결함 — 합산 세액 섹션이 주택분 차감을 보여주지 않는다 (엔진 값은 맞다, 표시 누락).
-  //   엔진은 주택분·상가분 소득금액을 그대로 두고 합산 소득만 109,300,000 줄인다(anchor A3).
-  //   그런데 `MixedUseTotalTaxSection`의 「합산 양도소득금액」 행은 차감 행 없이
-  //   「주택부분 327,900,001 + 상가부분 217,900,002」 = 436,500,003 으로만 적어 산식이 맞지 않는다(합이 545,800,003).
-  //   엔진 step(`income-deduction-new-housing`, 「§99의3 … 양도소득금액 차감 (주택분)」)은 어댑터가 `steps: []`로 비워 화면에 없다.
-  test.fixme("[S2-B] 겸용 + §99의3 → 합산 세액 섹션에 주택분 차감 행(109,300,000)이 있어 합산 양도소득금액 산식이 맞는다", async ({ page }) => {
+  // 합산 세액 섹션이 주택분 차감 행을 싣는다 — 엔진은 주택분·상가분 소득금액을 그대로 두고 합산 소득만 109,300,000 줄이므로(anchor A3),
+  // 차감 행이 없으면 「주택부분 327,900,001 + 상가부분 217,900,002」(합 545,800,003)가 합산 436,500,003과 맞지 않는다.
+  test("[S2-B] 겸용 + §99의3 → 합산 세액 섹션에 주택분 차감 행(109,300,000)이 있어 합산 양도소득금액 산식이 맞는다", async ({ page }) => {
     test.setTimeout(90_000);
     await calcMixed(page);
-    const sec = await mixedTotalSectionText(page);
-    expect(sec).toContain("합산 양도소득금액");
-    expect(sec).toContain("109,300,000"); // 차감 행 — 지금은 없다
+    const sec = (await mixedTotalSectionText(page)).replace(/\s+/g, " ");
+    expect(sec).toContain("양도소득금액 차감 (주택부분) △ 109,300,000");
+    expect(sec).toContain("조세특례제한법 §99의3 신축주택 과세특례");
+    expect(sec).toContain("합산 양도소득금액 436,500,003");
+    expect(sec).toContain("주택부분 327,900,001 + 상가부분 217,900,002 - 양도소득금액 차감 109,300,000");
   });
 
-  // 🔴 결함 — 같은 섹션의 농어촌특별세 행 산식이 「감면세액 0 × 20%」인데 값은 8,917,200.
-  //   `MixedUseTotalTaxSection.tsx`가 `t.reductionAmount`(세액감면 합계 = 0)로 산식을 적는다. §99·§99의3 차감 감면세액은
-  //   `t.incomeDeduction.taxReduction`(카드: 44,586,000 × 20% = 8,917,200)이라 산식과 값이 어긋난다.
-  test.fixme("[S2-C] 겸용 + §99의3 → 농어촌특별세 행 산식이 값(8,917,200)과 맞는다 (「감면세액 0 × 20%」가 아니다)", async ({ page }) => {
+  // 같은 섹션의 농어촌특별세 행 산식 — 값 8,917,200 = (차감 전 − 차감 후 양도소득세) 44,586,000 × 20%. 「감면세액 0 × 20%」가 아니다.
+  test("[S2-C] 겸용 + §99의3 → 농어촌특별세 행 산식이 값(8,917,200)과 맞는다 (「감면세액 0 × 20%」가 아니다)", async ({ page }) => {
     test.setTimeout(90_000);
     await calcMixed(page);
-    const sec = await mixedTotalSectionText(page);
-    expect(sec).toContain("8,917,200");
+    const sec = (await mixedTotalSectionText(page)).replace(/\s+/g, " ");
+    expect(sec).toContain("농어촌특별세 8,917,200");
     expect(sec).not.toContain("감면세액 0 × 20%");
+    const m = sec.match(/차감 전 양도소득세 ([\d,]+) - 차감 후 양도소득세 ([\d,]+)\) × 20%/);
+    expect(m, "농특세 산식의 차감 전·후 양도소득세").toBeTruthy();
+    expect(Math.floor((Number(m![1].replace(/,/g, "")) - Number(m![2].replace(/,/g, ""))) * 0.2)).toBe(8_917_200);
+    expect(Number(m![1].replace(/,/g, "")) - Number(m![2].replace(/,/g, ""))).toBe(44_586_000);
   });
 });
 
@@ -372,6 +373,12 @@ test.describe("S6 다건 PDF (소득금액 감면대상)", () => {
     // 합산 양식 1건 + 자산별 양식 2건(감면 있는 주택 · 없는 토지)
     expect(values).toEqual([applied, applied, 0].map((n) => n.toLocaleString("en-US")));
     expect(text).toContain(`농어촌특별세 ${d.ruralSurtax.toLocaleString("en-US")}`);
+    // 합산 PDF 「계산 단계」 — 세액감면 합산 재계산 행의 「감면 없음」은 사실(§99는 소득금액 차감형)이고, 농특세 base는 별도 단계 행이 싣는다
+    expect(text).toContain("감면 없음 (합산 재계산 대상·건별 감면세액 모두 0)");
+    const surtaxStep = text.match(/농어촌특별세 \(감면세액 × 20%\) (\(감면 전 산출세액 ([\d,]+) − 감면 후 산출세액 ([\d,]+)\) × 20% = ([\d,]+))/);
+    expect(surtaxStep, "PDF 계산 단계에 농특세 산식 행").toBeTruthy();
+    expect(Math.floor((Number(surtaxStep![2].replace(/,/g, "")) - Number(surtaxStep![3].replace(/,/g, ""))) * 0.2)).toBe(d.ruralSurtax);
+    expect(surtaxStep![4]).toBe(d.ruralSurtax.toLocaleString("en-US"));
   });
 });
 

@@ -39,8 +39,17 @@ const PART_LABEL = {
   non_business_land: "비사업용토지(배율 초과)",
 } as const;
 
+/** 겸용이 주택부분 양도소득금액에서 차감하는 조특법 조문(NH-33) — 엔진 `MIXED_INCOME_DEDUCTION_COMPUTED_IDS`와 같은 두 종류. */
+const INCOME_DEDUCTION_LABEL: Record<string, string> = {
+  new_99_3: "조세특례제한법 §99의3 신축주택 과세특례",
+  new_99: "조세특례제한법 §99 신축주택 감면",
+};
+
 export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }: Props) {
   const { housingPart: h, commercialPart: c, nonBusinessLandPart: nb, total: t } = breakdown;
+  // §99·§99의3 주택분 양도소득금액 차감(NH-33) — 엔진이 실제로 뺀 값(통산 안분 후). 0이면 차감 행을 두지 않는다.
+  const di = t.incomeDeduction && t.incomeDeduction.reducibleIncome > 0 ? t.incomeDeduction : undefined;
+  const diLabel = di ? INCOME_DEDUCTION_LABEL[di.appliedId] ?? "조세특례제한법 신축주택 특례" : "";
 
   return (
     <>
@@ -62,12 +71,19 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
             })`}
           />
         ))}
+        {di && (
+          <Row
+            label="양도소득금액 차감 (주택부분)"
+            value={`△ ${fmt(di.reducibleIncome)}`}
+            formula={`${diLabel} — 주택부분 양도소득금액에서 감면 양도소득금액을 차감 (상가부분·비사업용토지 부분은 차감하지 않음)`}
+          />
+        )}
         <Row
           label="합산 양도소득금액"
           value={fmt(t.aggregateIncome)}
           formula={`주택부분 ${fmtPlain(h.incomeAmount)} + 상가부분 ${fmtPlain(c.incomeAmount)}${
             nb ? ` + 비사업용토지 ${fmtPlain(nb.incomeAmount)}` : ""
-          }${t.partLossOffset ? " — 부분별 양도차손을 위와 같이 통산한 뒤의 합계(통산하지 못한 차손은 소멸)" : ""}`}
+          }${di ? ` - 양도소득금액 차감 ${fmtPlain(di.reducibleIncome)}` : ""}${t.partLossOffset ? " — 부분별 양도차손을 위와 같이 통산한 뒤의 합계(통산하지 못한 차손은 소멸)" : ""}`}
         />
         <Row
           label="기본공제"
@@ -174,7 +190,18 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
           <Row
             label="농어촌특별세"
             value={fmt(t.ruralSurtax)}
-            formula={`감면세액 ${fmtPlain(t.reductionAmount)} × 20% (농어촌특별세법 §5①1호)`}
+            formula={(() => {
+              // 농특세 = 세액감면형(감면세액 × 20%) + §99·§99의3 차감형((차감 전 − 차감 후 양도소득세) × 20%) — 엔진이 두 base를 합산한다(NH-33).
+              // 차감형 몫은 엔진 echo(`incomeDeduction.ruralSurtax`), 세액감면형 몫은 나머지다.
+              const deductionPart = di?.ruralSurtax ?? 0;
+              const creditPart = Math.max(0, t.ruralSurtax - deductionPart);
+              const terms: string[] = [];
+              if (di && deductionPart > 0) {
+                terms.push(`(차감 전 양도소득세 ${fmtPlain(di.taxBeforeDeduction)} - 차감 후 양도소득세 ${fmtPlain(di.taxBeforeDeduction - di.taxReduction)}) × 20%`);
+              }
+              if (creditPart > 0 || terms.length === 0) terms.push(`감면세액 ${fmtPlain(t.reductionAmount)} × 20%`);
+              return `${terms.join(" + ")} (농어촌특별세법 §5①1호)`;
+            })()}
           />
         )}
         {t.ruralSurtaxDelayedPenalty && t.ruralSurtaxDelayedPenalty.penalty > 0 && (
