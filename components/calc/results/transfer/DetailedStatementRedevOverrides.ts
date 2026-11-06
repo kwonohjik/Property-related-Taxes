@@ -295,6 +295,9 @@ export function applyRedevelopmentOverrides(
     } else if (isRightReceive) {
       transferItem.formula = "합계 = 실지 양도가액. 분할 표시는 §166①2호 — 인가전(권리가액−청산금 의제)·청산금 수령분(청산금 의제)이며 단계별 의제라 합계와 다르다";
       transferItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166④";
+    } else if (redev.successorMemberApplied === true) {
+      transferItem.formula = "합계 = 실지 양도가액. 승계조합원은 §166 안분을 하지 않아 「승계조합원 신축APT」 칸이 양도가액 전액이다 (단순 차감)";
+      transferItem.legalBasis = "소득세법 시행령 §162 ① 4호";
     } else {
       transferItem.formula = isRightSubject
         ? "합계 = 실지 양도가액. 분할 표시는 §166① — 인가전(권리가액 의제)·인가후·청산금(양도가액 − 권리가액 − 청산금 납부액)이며 단계별 의제라 합계와 다르다"
@@ -320,6 +323,9 @@ export function applyRedevelopmentOverrides(
     } else if (isRightReceive) {
       acqItem.formula = "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166①2호 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(실가 또는 환산 − 안분 취득가)·청산금 분(종전취득가 × 청산금/권리가)";
       acqItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166③";
+    } else if (redev.successorMemberApplied === true) {
+      acqItem.formula = "합계 취득가액 = 승계 취득가액. 승계조합원은 §166 안분을 하지 않아 「승계조합원 신축APT」 칸의 취득가액을 양도가액에서 단순 차감한다";
+      acqItem.legalBasis = "소득세법 시행령 §162 ① 4호";
     } else {
       acqItem.formula = isRightSubject
         ? "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(§166③ 환산 또는 실가)·인가후·청산금(권리가액+청산금 의제)"
