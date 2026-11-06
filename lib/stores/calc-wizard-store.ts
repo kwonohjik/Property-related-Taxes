@@ -178,10 +178,12 @@ const defaultFormData: TransferFormData = {
   fraudulentPortion: "",   // 빈값 = 전액 부정(종전 동작)
   lateFilingNotified: false, // 기본 = 감면 적용(§48②2호·3호라목). 배제는 예외다.
   unpaidTax: "0",
+  priorPaidRuralSurtax: "",
   paymentDeadline: "",
   actualPaymentDate: "",
   amendmentMode: false,
   originalDeterminedTax: "",
+  originalRuralSurtax: "",
   amendmentSourceId: "",
   statutoryFilingDeadline: "",
   amendedFilingDate: "",

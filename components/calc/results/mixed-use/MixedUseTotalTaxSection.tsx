@@ -10,6 +10,7 @@
  * ⚠️ 접기 상태는 **부모 소유**다(인쇄 전체펼침 토글이 함께 쓴다) — 값과 핸들러만 받는다.
  */
 
+import { formatDelayedPaymentFormula } from "@/lib/tax-engine/transfer-tax-penalty";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
@@ -176,6 +177,13 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
             formula={`감면세액 ${fmtPlain(t.reductionAmount)} × 20% (농어촌특별세법 §5①1호)`}
           />
         )}
+        {t.ruralSurtaxDelayedPenalty && t.ruralSurtaxDelayedPenalty.penalty > 0 && (
+          <Row
+            label="농어촌특별세 납부지연가산세"
+            value={fmt(t.ruralSurtaxDelayedPenalty.penalty)}
+            formula={`${formatDelayedPaymentFormula(t.ruralSurtaxDelayedPenalty.delayed, "미납 농어촌특별세")} (국세기본법 §2 1호 차목 · §47의4①)`}
+          />
+        )}
         <DivRow />
         <Row
           // 정정 모드에서는 AmendmentResultCard의 "참고 · 수정/경정 후 전체 세액"과 라벨을 맞춘다
@@ -198,6 +206,9 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
             `지방소득세 ${fmtPlain(t.localTax)}`,
             ...(t.penaltyTax > 0 ? [`가산세 ${fmtPlain(t.penaltyTax)}`] : []),
             ...(t.ruralSurtax > 0 ? [`농어촌특별세 ${fmtPlain(t.ruralSurtax)}`] : []),
+            ...(t.ruralSurtaxDelayedPenalty && t.ruralSurtaxDelayedPenalty.penalty > 0
+              ? [`농어촌특별세 납부지연가산세 ${fmtPlain(t.ruralSurtaxDelayedPenalty.penalty)}`]
+              : []),
           ].join(" + ") + (breakdown.burdenedGift ? " — 증여세는 수증자가 별도 신고·납부합니다 (아래 부담부증여 카드)" : "")}
         />
       </ResultSection>

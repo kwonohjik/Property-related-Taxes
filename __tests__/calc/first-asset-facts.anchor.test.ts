@@ -54,6 +54,8 @@ const EXCLUDED: Record<string, readonly string[]> = {
     "originalDeterminedTax", "amendmentSourceId", "statutoryFilingDeadline", "amendedFilingDate", "applyUnderReportingPenalty",
     "underReportingReason", "underReductionMode", "priorAssessmentNotified", "applyLatePaymentPenalty", "amendedPaymentDate",
     "correctionKind", "claimReasonType", "posteriorEventDate", "originalPaymentDate",
+    // NH-38·NH-39 — 기납부 농특세 · 당초 농특세
+    "priorPaidRuralSurtax", "originalRuralSurtax",
   ],
 };
 

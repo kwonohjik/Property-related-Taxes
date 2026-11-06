@@ -58,6 +58,7 @@ function makeMultiForm(props: PropertyItem[]): MultiTransferFormData {
     amendmentMode: false,
     correctionKind: "amend",
     originalDeterminedTax: "",
+    originalRuralSurtax: "",
     amendmentSourceId: "",
     statutoryFilingDeadline: "",
     amendedFilingDate: "",
