@@ -46,6 +46,7 @@ import { houseRowSurchargeAxisIssue } from "./transfer-tax-validate-surcharge-ax
 import { collectSellingHouseSurchargeIssues } from "./transfer-tax-validate-surcharge-axis";
 import { collectGracePeriodIssues } from "./transfer-tax-validate-surcharge-axis";
 import { deemedOneHouseContextDeclared, rentalResidenceContextDeclared } from "./deemed-one-house-context";
+import { householdFactsKindOfForm } from "./household-facts-asset";
 
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const step = 1;
@@ -63,7 +64,8 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
    * Q-7(PR-1)·PR-B·PR-C(계획서 §4-3) — 분양권은 ①의 의미 축 자체가 없어 범위 밖(§4-4).
    * 겸용주택은 `assetKind`가 항상 `"housing"`이라 이미 포함된다(별도 판정축 아님, §4-1).
    */
-  const primaryKind = form.assets?.[0]?.assetKind;
+  // NH-14 — 첫 자산이 주택 계열이 아니어도 함께 양도하는 주택이 있으면 그 주택이 기준이다(⑤ `Step4` · ④와 같은 leaf — 3중 패턴).
+  const primaryKind = householdFactsKindOfForm(form);
   if (
     usesHouseCountRoster(primaryKind) &&
     !form.legacyHouseCountPrecedence &&
@@ -218,7 +220,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   // 🔴 단, **주택 계열 자산일 때만** 요구한다. ⑤는 `isHousingLike` 안에서만 이 위젯을 열고
   //    (`Step4.tsx:409`), ④도 같은 술어로 전송을 막는다(`presale-rights-payload.ts:62`).
   //    자산 종류를 주택→토지로 바꾸면 행은 남는데 삭제 UI가 사라져 **막다른 길**이 됐다.
-  const presaleRights = isHousingLike(form.assets?.[0]?.assetKind ?? "")
+  const presaleRights = isHousingLike(householdFactsKindOfForm(form))
     ? (form.presaleRights ?? [])
     : [];
   for (let i = 0; i < presaleRights.length; i++) {

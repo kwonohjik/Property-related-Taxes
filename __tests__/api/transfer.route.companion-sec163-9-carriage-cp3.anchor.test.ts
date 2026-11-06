@@ -80,6 +80,9 @@ const form = (assets: AssetForm[], contractTotalPrice = "1600000000"): TransferF
     contractTotalPrice,
     totalTransferExpense: "0",
     householdHousingCount: "2",
+    // NH-14 — 첫 자산이 주택이 아니고 함께 양도 주택이 있으면 «세대·주택 현황» 칸이 열려 두 확인이 필요하다(주택 먼저 시료는 원래 필요했다). 세액은 불변.
+    householdNoOtherHousesConfirmed: true,
+    householdNoPresaleRightsConfirmed: true,
     isOneHousehold: false,
     bundledSaleMode: "apportioned",
   } as unknown as TransferFormData, CLAMP_N);

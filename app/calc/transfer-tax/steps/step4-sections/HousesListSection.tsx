@@ -51,6 +51,7 @@ import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import { HOUSE_REGION_LABEL } from "@/lib/calc/house-region";
 import { otherUocRowNumberOf } from "@/lib/calc/house-row-required-issues";
 import { computeHouseCountDivergence } from "@/lib/calc/house-count-divergence";
+import { householdFactsKindOfForm } from "@/lib/calc/household-facts-asset";
 import { housesPatchWithDerivedCount, presaleRightsPatchWithConfirmClear } from "@/lib/calc/household-house-count";
 import { isOwnedAtTransfer, sameDayOrderApplies } from "@/lib/calc/household-house-count";
 import { isSameDayFirstTransferred, isSameDayOrderUndecided } from "@/lib/calc/same-day-transfer-order";
@@ -325,7 +326,7 @@ export function HousesListSection({
   function patchHouses(next: HouseEntry[], base: TransferFormData = form) {
     return housesPatchWithDerivedCount(
       next,
-      base.assets?.[0]?.assetKind,
+      householdFactsKindOfForm(base), // NH-14 — 첫 자산이 주택이 아니어도 함께 양도 주택이 기준이다(Step4 ①·④·⑧과 같은 leaf)
       // OH-34: 레거시 표식이 켜져 있으면 스칼라를 덮지 않는다(전환 버튼만이 끈다).
       base.legacyHouseCountPrecedence ?? false,
       base.transferDate,
@@ -418,16 +419,17 @@ export function HousesListSection({
     ],
   );
 
+  const householdKind = householdFactsKindOfForm(form);
   const divergence = useMemo(
     () =>
       computeHouseCountDivergence({
-        primaryKind: form.assets?.[0]?.assetKind ?? "",
+        primaryKind: householdKind,
         householdHousingCount: form.householdHousingCount,
         houses: form.houses,
         presaleRights: form.presaleRights,
         transferDate: form.transferDate,
       }),
-    [form.assets, form.householdHousingCount, form.houses, form.presaleRights, form.transferDate],
+    [householdKind, form.householdHousingCount, form.houses, form.presaleRights, form.transferDate],
   );
 
   /**

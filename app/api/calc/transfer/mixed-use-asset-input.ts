@@ -140,7 +140,10 @@ export interface MixedUseAssetInputSources {
    * ⚠️ 컴패니언 겸용은 `undefined`(MB-6 — ⑫가 입구에서 막는다).
    */
   burdenedGift: MixedUseAssetInput["burdenedGift"];
-  /** 증여자(양도인)의 취득원인 echo(`data.acquisitionCause`) — BG 가드(MB-8·9·15)만 읽는다. 컴패니언은 `undefined`. */
+  /**
+   * 취득원인 echo — 주 자산은 증여자(양도인)의 `data.acquisitionCause`, 컴패니언은 그 자산의 취득 원인(`mixed-use-part-cards.ts` — NH-14 레인에서 연결).
+   * BG 가드(MB-8·9·15 · 컴패니언은 부담부증여를 열지 않아 닿지 않는다)와 STEP 0.45 감면주택 중과 배제의 취득 원인 게이트가 읽는다.
+   */
   acquisitionCause: MixedUseAssetInput["acquisitionCause"];
 }
 

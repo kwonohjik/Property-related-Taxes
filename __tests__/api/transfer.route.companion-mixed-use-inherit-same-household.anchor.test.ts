@@ -54,6 +54,8 @@ const form = (same: boolean, mixedFirst: boolean) => {
   return withIdentityHousingBuildingStdOnForm({
     ...createDefaultTransferFormData(), assets: mixedFirst ? [m, l] : [l, m],
     transferDate: "2023-09-18", filingDate: "2023-12-31", contractTotalPrice: "1200000000", householdHousingCount: "1", isOneHousehold: true, residencePeriodMonths: "0",
+    // NH-14 — 첫 자산이 토지이고 함께 양도 주택(겸용)이 있으면 «세대·주택 현황» 칸이 열려 두 확인이 필요하다. 세액은 불변.
+    householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
   } as unknown as TransferFormData);
 };
 type Agg = { totalTax: number; properties: { propertyId: string; isExempt?: boolean }[] };

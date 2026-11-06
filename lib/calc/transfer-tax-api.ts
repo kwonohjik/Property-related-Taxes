@@ -59,6 +59,7 @@ import { partCarryover } from "./transfer-land-part-cause";
 import { anyPartCarryover } from "./transfer-land-part-cause";
 import { legacyExpenseMovesToParts } from "./split-legacy-expense";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
+import { householdFactsAssetOf } from "./household-facts-asset";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { carryoverEventForm } from "./transfer-tax-api-carryover";
 import { withDonorBuilt } from "./transfer-tax-api-donor-built";
@@ -134,8 +135,11 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
 
   // ── 다른 보유 주택 목록 (④⑬ 헬퍼로 위임 — transfer-tax-api-houses.ts) ──
   // 분양권/입주권만 있고 다른 주택은 없는 경우(양도주택 + 분양권)도 정밀 판정되도록 게이트 확장.
+  // NH-14 — 첫 자산이 주택 계열이 아니어도 함께 양도 주택이 있으면 그 주택이 «세대·주택 현황»의 기준 자산이다(⑤ `Step4` 칸 · ⑧과 같은 leaf).
+  //   명부의 양도 주택 행(`sellingHouseId`)·세대 주택 수·분양권 목록이 모두 이 자산 종류로 갈린다.
+  const householdAsset = householdFactsAssetOf(form.assets, form.assetSplitMode) ?? primary;
   const housesPayload = buildHousesPayload(
-    primary,
+    householdAsset,
     form.houses,
     form.presaleRights.length,
     form.sellingHouseExclusion,
@@ -144,7 +148,7 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
 
   // ── 세대 보유 분양권·입주권 (취득일 입력분만 — §104⑦2호·4호 주택수 산입) ──
   // 다건 ⑬과 **같은 leaf**를 쓴다 — 종전에는 다건에 이 규칙이 아예 없어 침묵 소실했다(P1-02).
-  const presaleRightsPayload = buildPresaleRightsPayload(primary.assetKind, form.presaleRights);
+  const presaleRightsPayload = buildPresaleRightsPayload(householdAsset.assetKind, form.presaleRights);
 
   // 취득가 산정방식은 자산-수준 플래그에서 도출 (Step1↔Step3 통합 후).
   // 폼-전역 form.acquisitionMethod / form.appraisalValue 는 더 이상 사용하지 않음.
@@ -490,7 +494,7 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     // ⑬ 양도 주택의 양도 당시 기준시가 — 명부 없는 중과 판정 구성의 양도 주택 행(명부 양도 행 `officialPrice`와 같은 leaf)
     ...sellingHouseStdPricePayload(primary),
     householdHousingCount: resolveHouseholdHousingCount({
-      primaryKind: primary.assetKind,
+      primaryKind: householdAsset.assetKind,
       declared: parseInt(form.householdHousingCount) || 0,
       houses: form.houses,
       transferDate: form.transferDate,
@@ -498,7 +502,7 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     }),
     // 사례 36 §89①4호 가목·나목 — 조합원입주권 수 (양도일 현재). PR-D(2026-10-05) — 스칼라
     // 숫자 칸을 없애고 명부(`presaleRights`)에서 도출한다(판정 메뉴와 같은 leaf, 3중 패턴).
-    householdRightCount: resolveHouseholdRightCount(primary.assetKind, form.presaleRights, form.transferDate),
+    householdRightCount: resolveHouseholdRightCount(householdAsset.assetKind, form.presaleRights, form.transferDate),
     // 거주기간 — 공용 헬퍼 도출(interval 합산 / direct·form-global fallback). UI 메시지②와 단일 진실.
     // 용도변경 시에는 §95⑤2호 클램프가 적용된 값이다(위 `residence` 참조).
     residencePeriodMonths: residence.months,

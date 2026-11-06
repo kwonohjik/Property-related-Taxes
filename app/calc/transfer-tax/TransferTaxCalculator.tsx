@@ -20,6 +20,7 @@ import { jumpToIssueField } from "@/components/calc/transfer/validation-jump";
 import type { StepStatus } from "@/components/calc/StepIndicator";
 import { penaltyPatchOnFormChange } from "@/lib/calc/filing-deadline";
 import { derivedHouseCountPatch } from "@/lib/calc/household-house-count";
+import { householdFactsKindOf } from "@/lib/calc/household-facts-asset";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
@@ -192,7 +193,7 @@ export default function TransferTaxCalculator({
           "transferDate" in patch
             ? derivedHouseCountPatch(
                 patch.houses ?? formData.houses,
-                nextAssets?.[0]?.assetKind,
+                householdFactsKindOf(nextAssets, patch.assetSplitMode ?? formData.assetSplitMode),
                 patch.legacyHouseCountPrecedence ?? formData.legacyHouseCountPrecedence ?? false,
                 nextTransferDate,
               )

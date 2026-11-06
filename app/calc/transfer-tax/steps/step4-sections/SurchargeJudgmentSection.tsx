@@ -37,11 +37,17 @@ export function SurchargeJudgmentSection({
   form,
   onChange,
   primaryKind,
+  householdKind = primaryKind,
   primaryAcquisitionDate,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
   primaryKind: string;
+  /**
+   * NH-14 — 세대 보유 주택 명부(`HouseCountExemptionInputs`)의 기준 자산 종류. 첫 자산이 주택이 아니어도 함께 양도 주택이 있으면 그 주택이다.
+   * 양도일 조정대상지역 토글·안내는 첫 자산(주소 자동 판정의 기준)에 묶여 있어 `primaryKind`를 그대로 쓴다.
+   */
+  householdKind?: string;
   primaryAcquisitionDate: string;
 }) {
   const primary = form.assets?.[0];
@@ -69,12 +75,12 @@ export function SurchargeJudgmentSection({
 
         {/* 비과세 판정 주택수 입력 3종 (한시배제 분기와 공용 — 두 분기는 배타) */}
         {/* 목록 게이트 = 창 안 분기와 같은 술어(S1 후속 F-2 — 값이 남아 있으면 스칼라 < 2여도 보인다) */}
-        {houseRosterRendered(form, primaryKind) && (
+        {houseRosterRendered(form, householdKind) && (
           <HouseCountExemptionInputs
             form={form}
             onChange={onChange}
-            countExclusionEnabled={countExclusionRowsInScope(primaryKind)}
-            countExclusionApplies={(h) => countExclusionRowApplies(primaryKind, h)}
+            countExclusionEnabled={countExclusionRowsInScope(householdKind)}
+            countExclusionApplies={(h) => countExclusionRowApplies(householdKind, h)}
             // §155④⑤ 합가 전 소유 쪽 — 판정 메뉴와 같은 파생(합가일 없으면 undefined, PR-2).
             mergeContext={mergeContextOf(form)}
           />
