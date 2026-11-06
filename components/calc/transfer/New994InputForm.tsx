@@ -196,6 +196,11 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
             취득기간 {isHometown ? "2009.1.1" : "2003.8.1"}~2028.12.31 — 일반주택(양도 주택)을 먼저
             취득한 후 취득한 {houseLabel}이어야 합니다 (§99의4①)
           </p>
+          <p className="mt-1 text-micro text-muted-foreground" data-testid="new994-para5-hint">
+            양도일이 2019.1.1.~2020.12.31.이면 양도 뒤 예정신고기한(양도일이 속하는 달의 말일부터 2개월)까지 취득한 경우도 같은
+            칸에 입력하세요 — 수도권 조정대상지역 2주택(양도 시 개별주택가격·공동주택가격 합산 6억원 이하)이면 중과 배제·장기보유특별공제
+            적용을 판정합니다 (§99의4⑤, 2025.12.23. 삭제 · 양도일 시행본 적용)
+          </p>
         </div>
       </ToneCard>
 

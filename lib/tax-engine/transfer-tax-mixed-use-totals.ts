@@ -19,6 +19,15 @@ import {
   type TransferTaxPenaltyResult,
 } from "./transfer-tax-penalty";
 import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
+import type { IncomeDeductionResolution } from "./transfer-reductions/income-deduction-router";
+import {
+  applyIncomeDeductionSurtax,
+  pickIncomeDeductionDetails,
+  selectActiveIncomeDeduction,
+  type IncomeDeductionDetails,
+} from "./transfer-tax-income-deduction-details";
+import { applyHousingIncomeDeduction } from "./transfer-tax-mixed-use-income-deduction";
+import { MIXED_INCOME_DEDUCTION_COMPUTED_IDS } from "./transfer-tax-mixed-use-reduction-surcharge";
 import { LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
 import type { TransferReduction, TransferTaxInput } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -160,8 +169,14 @@ export function buildTotalTax(
    * 미전달이면 종전과 완전히 같은 값을 낸다(감면 0 · 가산세 0 · 지방소득세 base = 산출세액).
    */
   postTax?: MixedUsePostTaxInput,
+  /**
+   * NH-33 — 조특법 §99·§99의3 주택분 양도소득금액 차감(`transfer-tax-mixed-use-income-deduction.ts`). 라우터 결과를 받는다.
+   * 미전달이면 종전과 같다(차감 0). 차감은 파트 차손 통산 **뒤** 주택분에서 하고, 농특세는 차감 전·후 산출세액 차에서 구한다.
+   */
+  incomeDeduction?: IncomeDeductionResolution,
 ): MixedUseTotalTax {
   const BASIC_DEDUCTION = isUnregistered ? 0 : basicDeductionLimit;
+  const inputs = { housingIncome, commercialIncome, nonBizIncome, rateParts };
 
   // §167의2① — 파트(주택분 · 상가 토지 · 상가 건물 · 배율 초과분)의 차손을 1호(같은 세율) → 2호(다른 세율 안분) 순으로 다른 파트에서 공제한다
   //   (계획서 `transfer-split-part-loss-offset-p3.plan.md` §1 A안 — 함께 양도 파트 카드가 일반 합산 엔진에서 받는 통산과 같은 규칙).
@@ -174,6 +189,19 @@ export function buildTotalTax(
     housingIncome = sumOf(["housing"]);
     commercialIncome = sumOf(["commercial_land", "commercial_building"]);
     nonBizIncome = sumOf(["non_business_land"]);
+  }
+  // NH-33 — §99·§99의3 차감: 통산 뒤 주택분에서 뺀다(`reducibleShiftOf` 안분 포함). 감면 전 산출세액은 아래에서 같은 함수로 다시 구한다.
+  const deduction = incomeDeduction?.appliedId
+    ? applyHousingIncomeDeduction({
+        reducible: incomeDeduction.reducible,
+        housingBeforeOffset: inputs.housingIncome,
+        housingAfterOffset: housingIncome,
+        rateParts,
+      })
+    : undefined;
+  if (deduction && deduction.applied > 0) {
+    housingIncome = deduction.housingIncome;
+    rateParts = deduction.rateParts;
   }
   const aggregateIncome = Math.max(0, housingIncome + commercialIncome + nonBizIncome);
   const taxBase = Math.max(0, aggregateIncome - BASIC_DEDUCTION);
@@ -285,9 +313,24 @@ export function buildTotalTax(
   const transferTax = unregisteredTax ?? (usesClause2 ? clause2.tax : clause1);
 
   // ── 산출세액 이후 — 감면 · 농특세 · 가산세 (F17-B) ────────────────────────
+  // NH-33 — 차감 전 산출세액(= 차감 없이 같은 입력으로 다시 계산)과 농특세·상세. 차감이 0이면 종전과 같다.
+  const housingDeductionApplied = deduction?.applied ?? 0;
+  const taxBeforeDeduction =
+    housingDeductionApplied > 0
+      ? buildTotalTax(
+          inputs.housingIncome, inputs.commercialIncome, inputs.nonBizIncome, brackets, basicDeductionLimit, inputs.rateParts, isUnregistered,
+        ).transferTax
+      : transferTax;
+  const deductionEcho = incomeDeduction ? pickIncomeDeductionDetails(incomeDeduction) : undefined;
+  const activeDeduction = housingDeductionApplied > 0 && deductionEcho ? selectActiveIncomeDeduction(deductionEcho) : undefined;
+  const deductionSurtax =
+    activeDeduction && deductionEcho
+      ? applyIncomeDeductionSurtax(deductionEcho, activeDeduction, { before: taxBeforeDeduction, after: transferTax })
+      : undefined;
   const post = computeMixedUsePostTax(
     transferTax, aggregateIncome, BASIC_DEDUCTION, taxBase, postTax && { ...postTax, isUnregistered },
     Math.max(0, housingIncome),
+    deductionEcho && { details: deductionSurtax?.details ?? deductionEcho, ruralSurtax: deductionSurtax?.ruralSurtax ?? 0 },
   );
   const determinedTax = Math.max(0, transferTax - post.reductionAmount);
   // 지방소득세 base는 **결정세액**이다(지방세법 §103② 과세표준 × §103의3 세율 − §103의4 감면).
@@ -314,6 +357,17 @@ export function buildTotalTax(
     reducibleIncome: post.reducibleIncome,
     aggregateReductionRate: post.aggregateReductionRate,
     reductionDetails: post.reductionDetails,
+    ...(incomeDeduction?.appliedId
+      ? {
+          incomeDeduction: {
+            appliedId: incomeDeduction.appliedId,
+            reducibleIncome: housingDeductionApplied,
+            taxBeforeDeduction,
+            taxReduction: Math.max(0, taxBeforeDeduction - transferTax),
+            ruralSurtax: deductionSurtax?.ruralSurtax ?? 0,
+          },
+        }
+      : {}),
     determinedTax,
     penaltyTax: post.penaltyTax,
     // 🔴 G-43: 산출근거 echo — 어댑터가 결과뷰의 `penaltyDetail` 슬롯으로 승계한다.
@@ -414,6 +468,9 @@ export type MixedUseReductionDetails = Pick<
   | "selfFarmingReductionDetail"
   | "rental97TaxDetail"
   | "newHousingReductionDetail"
+  /** NH-33 — §99·§99의3 주택분 차감 상세 */
+  | "new99Detail"
+  | "new993Detail"
 >;
 
 const EMPTY_POST: MixedUsePostTaxResult = { reductionAmount: 0, ruralSurtax: 0, penaltyTax: 0 };
@@ -424,8 +481,10 @@ function computeMixedUsePostTax(
   basicDeduction: number,
   taxBase: number,
   input: MixedUsePostTaxInput | undefined,
-  /** 주택분 양도소득금액(통산 후) — §97의5 감면대상 소득을 주택분으로 한정한다 */
+  /** 주택분 양도소득금액(통산·차감 후) — §97의5 감면대상 소득을 주택분으로 한정한다 */
   housingIncome: number,
+  /** NH-33 — §99·§99의3 차감 상세(농특세 확정 포함)와 그 농특세. 농특세는 아래 세액감면형 농특세에 더한다. */
+  deduction?: { details: IncomeDeductionDetails; ruralSurtax: number },
 ): MixedUsePostTaxResult {
   if (!input) return EMPTY_POST;
 
@@ -440,7 +499,8 @@ function computeMixedUsePostTax(
    * 차감형은 **양도소득금액을 차감**하는데 겸용은 소득금액이 주택분·상가분·비사토분으로
    * 갈려 있어 **어느 파트에서 빼는지 정한 명문이 없다**. 추정으로 자리를 정하면 조용히 틀린다.
    */
-  const deferred = all.filter((r) => incomeDeductionIds.has(r.type));
+  // §99·§99의3은 주택분 차감으로 계산한다(NH-33 — `transfer-tax-mixed-use-income-deduction.ts`). 나머지 차감형만 고지한다.
+  const deferred = all.filter((r) => incomeDeductionIds.has(r.type) && !MIXED_INCOME_DEDUCTION_COMPUTED_IDS.has(r.type));
   const taxCredit = all.filter((r) => !incomeDeductionIds.has(r.type));
   /**
    * **LTHD 계열 특례 고지** (CB-02·D5-05) — 감면 효과는 3종인데 위 이분법은 2종만 가른다.
@@ -512,11 +572,13 @@ function computeMixedUsePostTax(
   const reductionAmount = Math.min(cap.cappedAmount, calculatedTax);
 
   // 농어촌특별세 — 세 경로 공용 판정표(농특세법 §5①1호 · 비과세는 시행령 §4 열거).
-  const surtax = resolveTaxCreditRuralSurtax({
+  const creditSurtax = resolveTaxCreditRuralSurtax({
     reductionTypeApplied: result.reductionTypeApplied,
     reductionAmount,
     isSelfCultivatedExpropriatedLand: input.isSelfCultivatedExpropriatedLand,
   });
+  // 농특세 = 세액감면형(농특세법 §5①1호) + §99·§99의3 차감 감면세액의 20%(NH-33 — 단건 STEP 7.5와 같은 leaf)
+  const surtax = { ...creditSurtax, surtax: creditSurtax.surtax + (deduction?.ruralSurtax ?? 0) };
 
   // 가산세 — base(결정세액·미납세액)는 **여기서 주입**한다(호출부가 미리 알 수 없는 값이다).
   const determinedTax = Math.max(0, calculatedTax - reductionAmount);
@@ -550,6 +612,8 @@ function computeMixedUsePostTax(
       selfFarmingReductionDetail: result.selfFarmingReductionDetail,
       rental97TaxDetail: result.rental97TaxDetail,
       newHousingReductionDetail: result.newHousingReductionDetail,
+      new99Detail: deduction?.details.new99Detail,
+      new993Detail: deduction?.details.new993Detail,
     },
     ruralSurtax: surtax.surtax,
     penaltyTax: penalty?.totalPenalty ?? 0,

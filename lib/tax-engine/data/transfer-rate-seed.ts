@@ -272,7 +272,7 @@ export const transferTaxSeeds = [
   //   code "99-4"      → 시기 2012.9.24~2013.4.1  = 실제 §98의7 (정확 시기는 ~2012.12.31)
   //   code "99-5-*"    → 시기 2013.4.1~2013.12.31 = 실제 §99의2
   //   code "99-6-*"    → 시기 2014.1.1~2014.12.31 = 실제 §98의8 (정확 시기는 2015.1.1~2015.12.31)
-  //   code "99-3-2"    → 시기 2013.4.1~2013.12.31 = 실제 §99의2 (위 99-5-*와 중복 가능)
+  //   code "99-3-2"·"99-3-10" → NH-74(Q-18)로 시드에서 제거됨 (조특법에 없는 항 라벨)
   //
   // 매핑 감사: docs/02-design/features/transfer-reduction-mapping-audit.md
   // 정정 정책: 사용자 결정사항 #3 — 자동 변환 (이력 마이그레이션은 lib/storage/migrations/)
@@ -482,38 +482,9 @@ export const transferTaxSeeds = [
           isExcludedFromHouseCount: false,
           isExcludedFromMultiHouseSurcharge: false,
         },
-        // §99의3 ② — 2013.4.1~2013.12.31 전국 미분양 6억 이하 60%
-        {
-          code: "99-3-2",
-          article: "§99의3 ②",
-          acquisitionPeriod: { start: "2013-04-01", end: "2013-12-31" },
-          region: "nationwide",
-          maxAcquisitionPrice: 600000000,
-          maxArea: null,
-          requiresFirstSale: false,
-          requiresUnsoldCertificate: true,
-          reductionScope: "capital_gain",
-          reductionRate: 0.6,
-          fiveYearWindowRule: true,
-          isExcludedFromHouseCount: false,
-          isExcludedFromMultiHouseSurcharge: false,
-        },
-        // §99의3 ⑩ — 2015.1.1~2015.12.31 전국 미분양 100%
-        {
-          code: "99-3-10",
-          article: "§99의3 ⑩",
-          acquisitionPeriod: { start: "2015-01-01", end: "2015-12-31" },
-          region: "nationwide",
-          maxAcquisitionPrice: null,
-          maxArea: null,
-          requiresFirstSale: false,
-          requiresUnsoldCertificate: true,
-          reductionScope: "capital_gain",
-          reductionRate: 1.0,
-          fiveYearWindowRule: true,
-          isExcludedFromHouseCount: false,
-          isExcludedFromMultiHouseSurcharge: false,
-        },
+        // NH-74(Q-18) — 레거시 시드 "99-3-2"(§99의3 ②·2013.4.1~2013.12.31 전국 미분양 60%)·"99-3-10"(§99의3 ⑩·2015 전국 미분양 100%)를 제거했다.
+        // 「§99의3 ②」「§99의3 ⑩」은 조특법에 없는 항(§99의3은 ① 이후가 신축주택 정의·주택수 제외 등이다)이라 직접 API(`newHousingDetails`)가
+        // 이 라벨로 감면을 계산하면 법에 없는 감면이 적용된다. 해당 시기의 정본은 `transfer-reductions/`(§98의3~§98의8·§99의2)다.
       ],
     },
     special_rules: null,

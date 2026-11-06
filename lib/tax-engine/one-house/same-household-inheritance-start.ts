@@ -8,6 +8,9 @@ import type { TransferTaxInput } from "../types/transfer.types";
  * 없음) · 서면-2024-부동산-2580(동일세대 피상속인이 지정 중 취득 → 해제 뒤 상속 → 거주요건 적용).
  * 보유 기산일(`resolveBaseHoldingStartDate`)과 같은 조건이다 — 두 벌로 두면 한쪽만 옮겨진다.
  * 판정 메뉴 ⑤(취득 당시 조정대상지역 자동 판정)도 이 함수로 기준일을 고른다.
+ *
+ * 조특법 §99의4①·§98의9①의 「취득 전에 보유하던 다른 주택」 순서도 이 날을 쓴다(`resolveHceGeneralHouseAcquisitionDate`) —
+ * 보유 주체가 1세대라 같은 세대원 간 이전은 이전한 사람의 취득시기로 본다(기준-2017-법령해석재산-0222 · 리뷰 NH-06).
  */
 export function sameHouseholdInheritanceHoldingStart(
   input: Pick<

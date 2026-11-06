@@ -3,7 +3,7 @@
  *
  * 소득세법 시행령 §167의3①5호(3주택 이상)·§167의10①2호(2주택 — ①5호 준용)는 「조세특례제한법」 §99·§99의3 등에 따라
  * 양도소득세가 «감면되는 주택»을 중과 대상에서 뺀다. 단건 경로는 STEP 0.45(`runSurchargeAndLandSteps`)가 감면 입력이 적격이면
- * 양도 주택 행에 `isTaxSpecialExemption`을 주입해 배제한다. 겸용은 감면 선택을 «차감형은 계산하지 않고 고지»(NH-33 — Q-14 미결)로만 다뤄
+ * 양도 주택 행에 `isTaxSpecialExemption`을 주입해 배제한다. 겸용은 감면 선택을 «차감형은 계산하지 않고 고지»로만 다뤄
  * 이 주입이 빠져 있었다. 이 파일이 **같은 leaf(`resolveSurchargeExclusionByReduction`)·같은 인자**로 겸용에서도 선판정한다.
  *
  * ## 단건과 같은 인자, 겸용에서 다른 것
@@ -27,12 +27,16 @@
  * 감면 불성립(고가·기간 밖 등)이면 소령 §167의3①5호 «감면되는 주택»이 아니므로 중과도 배제하지 않는다 —
  * 라우터가 `eligibleId`를 주지 않으면 `excluded=false`다(차감 선판정과 본판정이 갈라지지 않는다).
  *
- * 차감(양도소득금액 공제) 자체는 이 파일이 하지 않는다(NH-33 — 그대로 고지만).
+ * 차감(양도소득금액 공제) 자체는 이 파일이 하지 않는다 — §99·§99의3은 `transfer-tax-mixed-use-income-deduction.ts`(NH-33)가 주택분에서 계산하고,
+ * 나머지 차감형은 그대로 고지만 한다.
  */
 import { resolveSurchargeExclusionByReduction, buildSurchargeExclusionStep } from "./transfer-reductions";
 import { stripAcquisitionCauseGatedReductions } from "./transfer-reductions/unsold-98-acquisition-cause";
 import type { MixedUseApportionment, MixedUseAssetInput, MixedUseStep } from "./types/transfer-mixed-use.types";
 import type { HouseInfo } from "./types/multi-house-surcharge.types";
+
+/** 겸용에서 주택분 양도소득금액 차감으로 **계산하는** 차감형 조문(NH-33 — `transfer-tax-mixed-use-income-deduction.ts`). 나머지 차감형은 종전대로 고지만 한다. */
+export const MIXED_INCOME_DEDUCTION_COMPUTED_IDS: ReadonlySet<string> = new Set(["new_99_3", "new_99"]);
 
 export type MixedReductionSurchargeExclusion = ReturnType<typeof resolveSurchargeExclusionByReduction>;
 
@@ -98,11 +102,14 @@ export function buildMixedReductionSurchargeExclusionStep(exclusion: MixedReduct
   };
 }
 
-/** 차감 미반영 고지(`buildTotal`)와 별개 — 중과 배제만 반영했음을 알린다. */
+/** 중과 배제 반영 고지 — §99·§99의3은 주택분 차감도 함께 계산하므로(NH-33) «차감 미반영» 문구를 붙이지 않는다. 그 밖의 차감형은 종전 문구를 유지한다. */
 export function mixedReductionSurchargeExclusionNotice(exclusion: MixedReductionSurchargeExclusion): string {
   const s = buildSurchargeExclusionStep(exclusion);
+  const deductionComputed = exclusion.appliedId !== undefined && MIXED_INCOME_DEDUCTION_COMPUTED_IDS.has(exclusion.appliedId);
   return (
-    `다주택 중과 배제를 반영했습니다 — ${s.formula}(${s.legalBasis}). ` +
-    "겸용주택 계산은 감면의 양도소득금액 차감은 반영하지 않으므로 중과 배제만 적용된 결과입니다."
+    `다주택 중과 배제를 반영했습니다 — ${s.formula}(${s.legalBasis}).` +
+    (deductionComputed
+      ? ""
+      : " 겸용주택 계산은 감면의 양도소득금액 차감은 반영하지 않으므로 중과 배제만 적용된 결과입니다.")
   );
 }

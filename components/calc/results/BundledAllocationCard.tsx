@@ -40,6 +40,7 @@ import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transf
 import { FalseContractPriceNoticeForItems } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
 import { RegulatedAreaAssumptionLine } from "@/components/calc/results/transfer/RegulatedAreaAssumptionLine";
+import { regulatedAssumptionPdfGroups } from "@/lib/calc/regulated-area-assumption-text";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { CalculationWarningsCard } from "./shared/CalculationWarningsCard";
 import { allPropertiesReceiveOnly } from "@/components/calc/results/transfer/receive-only-display";
@@ -78,7 +79,7 @@ interface Props {
  *
  * MultiTransferTaxResultView·BundledAllocationCard·DetailedCalculationStatementCard에서 공유.
  */
-export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult {
+export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult & { aggregateIncomeDeductionReducible: number } {
   return {
     isExempt: false,
     transferGain: a.totalTransferGain,
@@ -132,6 +133,12 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     steps: a.steps,
     // UI 자산별 산식 인라인 표시용 — 사례 31·33 일반건물 일괄 모드만 채워짐.
     generalBuildingValuationDetail: a.generalBuildingValuationDetail,
+    /**
+     * 소득금액 감면대상(§90② 소득금액차감 감면) 합 — 합산 엔진 자산별 적용액(`incomeDeductionReducible`)의 합(NH-65).
+     * 어댑터는 단건 detail(`new99Detail` 등)을 담지 않아 PDF의 `incomeDeductionReducible(result)`가 항상 0이었다.
+     * 화면 신고서 표 합계(`FilingFormTableAggregateHelpers` 「소득금액 감면대상」)와 같은 합이다.
+     */
+    aggregateIncomeDeductionReducible: a.properties.reduce((s, p) => s + (p.incomeDeductionReducible ?? 0), 0),
   };
 }
 
@@ -183,6 +190,8 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
             formData,
             aggregate: { properties: aggregated.properties, aggregated, ownershipMap },
           }),
+          // 화면의 「조정대상지역 판정 — 확인 필요」 줄과 같은 leaf — PDF에도 항상 싣는다.
+          regulatedAreaAssumptions: regulatedAssumptionPdfGroups([{ form: formData }]),
         },
         filenamePrefix: "양도소득세_계산결과",
       },

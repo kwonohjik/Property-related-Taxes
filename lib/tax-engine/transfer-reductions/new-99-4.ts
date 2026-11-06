@@ -188,7 +188,7 @@ export function new994GeneralHouseAcquisitionDate(
 }
 
 /** TransferReduction의 §99의4 멤버 구조 (구조적 타이핑 — 순환 import 회피, rental-97-router 패턴) */
-interface New994ReductionLike {
+export interface New994ReductionLike {
   type: New994ArticleId;
   /** 판정 메뉴 명부 행 id — 「어느 주택인가」(평가에는 쓰지 않고 결과에 되돌려 준다) */
   houseId?: string;
@@ -203,7 +203,7 @@ interface New994ReductionLike {
   ruralHouseAreaSqm994?: number;
 }
 
-const isNew994Like = (x: { type: string }): x is New994ReductionLike =>
+export const isNew994Like = (x: { type: string }): x is New994ReductionLike =>
   x.type === "new_99_4_rural" || x.type === "new_99_4_hometown";
 
 function evaluateNew994Declaration(
@@ -246,8 +246,10 @@ export function evaluateNew994FromReductions(
  *    보유하고 있는 농어촌주택 취득 전 보유 주택을 양도할 때 특례를 적용한다고 회신했다
  *    (재산세과-1096, 2009.06.02 · 부동산납세과-91, 2014.02.19).
  *    농어촌주택 1채 + 고향주택 1채의 조합은 직접 해석이 없어 법문(1호·2호를 합쳐 「1채」)대로 합산한다.
- * 🔑 가액 한도를 넘는 선언(`STD_PRICE_EXCEEDED` — 확정 불성립)은 「농어촌주택등」이 아니므로 채 수에 넣지 않는다
- *    (리뷰 NH-50 · Q-10). 소재지·연접 등 사용자가 답하는 요건의 미달은 종전대로 센다.
+ * 🔑 요건 수치를 확정적으로 넘는 선언은 「농어촌주택등」이 아니므로 채 수에 넣지 않는다 — 가액 한도(`STD_PRICE_EXCEEDED`)와
+ *    종전 면적 요건의 초과(`LAND_AREA_EXCEEDED` 대지 660㎡ · `HOUSE_AREA_EXCEEDED` 연면적 150㎡·전용 116㎡)
+ *    (리뷰 NH-50 · Q-10 · 사용자 결정 확장 a). 빠진 선언 행은 일반 주택으로 세대 주택 수에 남는다.
+ *    면적 미입력(`AREA_UNCONFIRMED` — 모름)과 소재지·연접 등 사용자가 답하는 요건의 미달은 종전대로 센다.
  */
 export function evaluateNew994Declarations(
   reductions: ReadonlyArray<{ type: string }>,
@@ -262,7 +264,10 @@ export function evaluateNew994Declarations(
     ...(r.houseId ? { houseId: r.houseId } : {}),
   }));
   const isCounted = (d: (typeof results)[number]) =>
-    d.isEligible || !d.ineligibleReasons.some((x) => x.code === "STD_PRICE_EXCEEDED");
+    d.isEligible ||
+    !d.ineligibleReasons.some(
+      (x) => x.code === "STD_PRICE_EXCEEDED" || x.code === "LAND_AREA_EXCEEDED" || x.code === "HOUSE_AREA_EXCEEDED",
+    );
   const counted = results.filter(isCounted).length;
   if (counted < 2) return results;
   return results.map((d) => (!isCounted(d) ? d : {
@@ -282,7 +287,16 @@ export function evaluateNew994Declarations(
   }));
 }
 
-export function evaluateNew994(input: New994EvaluationInput): New994Result {
+/**
+ * §99의4⑤ 평가 옵션 — 농어촌주택등을 **일반주택 양도 뒤**(예정신고기한 안)에 취득하는 경우(`new-99-4-para5.ts`).
+ * ①의 「취득 전 보유」 순서·「취득 후 양도」·③ 연접 배제(제1항에 한정)는 이 경우 요건이 아니다. 취득기간 종기는 양도일 시행본의
+ * 종기(2020.12.31.)로 넘긴다.
+ */
+export interface New994AfterTransferOptions {
+  acquisitionPeriodTo: Date;
+}
+
+export function evaluateNew994(input: New994EvaluationInput, afterTransfer?: New994AfterTransferOptions): New994Result {
   const isHometown = input.id === "new_99_4_hometown";
   const legalBasis = isHometown
     ? TRANSFER_REDUCTION_ARTICLE.NEW_99_4_HOMETOWN
@@ -310,16 +324,17 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
     // 2) 시한 — 농어촌주택등 취득일 기준 (D-1: period-check 아닌 여기서 정확 판정)
     const from = isHometown ? NEW_99_4_HOMETOWN_FROM : NEW_99_4_RURAL_FROM;
     const acq = input.ruralHouseAcquisitionDate.getTime();
-    if (acq < from.getTime() || acq > NEW_99_4_PERIOD_TO.getTime()) {
+    const periodTo = afterTransfer?.acquisitionPeriodTo ?? NEW_99_4_PERIOD_TO;
+    if (acq < from.getTime() || acq > periodTo.getTime()) {
       reasons.push({
         code: "OUT_OF_PERIOD",
-        message: `${houseLabel} 취득일이 취득기간(${isHometown ? "2009.1.1" : "2003.8.1"}~2028.12.31) 외입니다 (§99의4①).`,
+        message: `${houseLabel} 취득일이 취득기간(${isHometown ? "2009.1.1" : "2003.8.1"}~${periodTo.toISOString().slice(0, 10).replace(/-0?/g, ".")}) 외입니다 (§99의4①).`,
         legalBasis,
       });
     }
 
     // 3) 취득순서 — ① "취득 전에 보유하던 다른 주택" (일반주택이 먼저)
-    if (acq <= input.generalHouseAcquisitionDate.getTime()) {
+    if (!afterTransfer && acq <= input.generalHouseAcquisitionDate.getTime()) {
       reasons.push({
         code: "ACQUISITION_ORDER",
         message: `일반주택(양도 주택)을 ${houseLabel}보다 먼저 취득한 경우에만 적용됩니다 (§99의4① — 취득 전 보유 요건).`,
@@ -328,7 +343,7 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
     }
     // 3') 양도 시점 — ① "취득하여 … 일반주택을 양도" (§98의9 검토에서 발견된 동일 갭 보강.
     //     기존에는 보유 0년 + 추징 경고로 eligible 통과하던 비정상 입력 차단)
-    if (input.transferDate.getTime() <= acq) {
+    if (!afterTransfer && input.transferDate.getTime() <= acq) {
       reasons.push({
         code: "TRANSFER_BEFORE_ACQUISITION",
         message: `${houseLabel}을 취득한 후에 일반주택을 양도하는 경우에만 적용됩니다 (§99의4①).`,
@@ -380,7 +395,9 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
       legalBasis,
     });
   }
-  if (input.adjacentArea994 === "yes") {
+  if (afterTransfer) {
+    // ③은 「제1항을 적용하지 아니한다」라 ⑤에는 적용 근거가 없다 — 판정하지 않는다(리뷰 NH-51).
+  } else if (input.adjacentArea994 === "yes") {
     reasons.push({
       code: "ADJACENT_AREA",
       message: new994AdjacentMessage({
@@ -422,8 +439,7 @@ export function evaluateNew994(input: New994EvaluationInput): New994Result {
   }
 
   // 6) 보유 3년 — 미만이어도 적용(④ 선적용), ⑥ 추징 경고 echo
-  const holding = calculateHoldingPeriod(input.ruralHouseAcquisitionDate!, input.transferDate);
-  const ruralHoldingYears = holding.years;
+  const ruralHoldingYears = afterTransfer ? 0 : calculateHoldingPeriod(input.ruralHouseAcquisitionDate!, input.transferDate).years;
   const clawbackWarning = ruralHoldingYears < NEW_99_4_MANDATORY_YEARS;
   const notices = new994InterpretationNotices({
     transferDate: input.transferDate,

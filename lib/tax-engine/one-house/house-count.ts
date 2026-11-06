@@ -28,6 +28,7 @@
  * 주택 수가 조용히 갈린다.
  */
 import { INHERITED_HOUSE, TRANSFER_RENTAL_HOUSING } from "../legal-codes";
+import { NEW_99_4_PARA5 } from "../legal-codes/transfer";
 import type { HouseInfo } from "../types/multi-house-surcharge.types";
 import type { InheritedHouseExclusionResult } from "../transfer-inheritance-exclusion";
 import type { SpecialHouseExclusionResolution } from "../transfer-reductions/unsold-hybrid-p5";
@@ -133,6 +134,26 @@ export function deriveHouseholdRightCount(
 }
 
 /**
+ * §99의4 적격 선언의 «보유기간»과 ⑥ 사후관리 고지 (리뷰 NH-80 · 사용자 결정 Q-23 — 결과 화면만).
+ *
+ * 값은 엔진 평가기가 낸 `ruralHoldingYears`·`clawbackWarning` 그대로다(재계산 금지). ④ 3년 보유 전 양도에도 특례가 적용되지만
+ * 그 뒤 3년 이상 보유하지 아니하게 되면 ⑥에 따라 납부해야 하므로, 판정 메뉴도 계산기 결과 카드(`New994DetailCard`)와 같은 고지를 낸다.
+ */
+function new994AftercareNotes(applied: { id: string; ruralHoldingYears?: number; clawbackWarning?: boolean }): string[] {
+  if (applied.ruralHoldingYears === undefined) return [];
+  const label = applied.id === "new_99_4_hometown" ? "고향주택" : "농어촌주택";
+  const notes = [`${label} 보유기간 ${applied.ruralHoldingYears}년 (양도일 기준)`];
+  notes.push(
+    applied.clawbackWarning
+      ? `${label} 보유 3년 미만 — 양도 후에도 특례는 적용되지만(${NEW_99_4_PARA5.PRE_3YEAR_TRANSFER}), 이후 3년 이상 보유하지 못하게 되면 ` +
+          `그 보유하지 아니하게 된 날이 속하는 달의 말일부터 2개월 이내에 특례를 받지 아니하였을 경우 납부하였을 세액(${NEW_99_4_PARA5.AFTERCARE_TAX_DECREE})을 ` +
+          `양도소득세로 납부해야 합니다 (${NEW_99_4_PARA5.AFTERCARE}. 수용·상속·멸실 등 부득이한 사유는 제외 — ${NEW_99_4_PARA5.AFTERCARE_EXCEPTION_DECREE})`
+      : `${label} 보유 3년 이상 — ${NEW_99_4_PARA5.PRE_3YEAR_TRANSFER}의 3년 보유 전 양도 특례를 적용한 경우가 아니라 ${NEW_99_4_PARA5.AFTERCARE} 사후관리 대상이 아닙니다`,
+  );
+  return notes;
+}
+
+/**
  * 제외 결과 3종 → 화면이 읽을 명세.
  *
  * 인자는 전부 `runHouseCountExclusionStep`이 이미 만든 값이다(재계산 금지 —
@@ -188,6 +209,7 @@ export function buildOneHouseCountBreakdown(p: {
               ? [`적용 한도: 취득 당시 기준시가 합계 ${applied.appliedLimit.label.split(" — ")[0]} 이하 (${applied.appliedLimit.legalBasis})`]
               : []),
             ...(applied.notices ?? []),
+            ...new994AftercareNotes(applied),
           ]
         : [];
     excluded.push({

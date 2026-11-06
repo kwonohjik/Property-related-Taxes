@@ -20,6 +20,8 @@ import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages
 import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_NEW_HOUSING_PRE_2016_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { isMultiSupportedNewHousingReduction } from "./multi-transfer-support-messages";
 import { multiRosterBlockMessage } from "./multi-roster-parity";
 
 /**
@@ -172,11 +174,14 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   // 토지·건물 취득일 분리·소유자 분리(§166⑥·§168②)는 차단하지 않는다 — ⑬·⑭가 단건과 같은 leaf로
   // 분리 축을 옮기고, 합산 엔진은 파트 단위로 §104⑤를 판정한다(F-12, 2026-09-19).
   // 차감형·세액감면형·세율특칙 감면 (§98~§99의2 미분양·신축 시리즈) — 다건 합산 미지원 (H-1)
-  const blockedReduction = (a.reductions ?? []).find((r) =>
-    MULTI_UNSUPPORTED_REDUCTION_TYPES.has(r.type),
+  // §99·§99의3은 2016.1.1. 이후 양도분만 푼다(NH-72 · Q-16 — `isMultiSupportedNewHousingReduction`). 2016 전은 사유 문구를 따로 둔다.
+  const blockedReduction = (a.reductions ?? []).find(
+    (r) => MULTI_UNSUPPORTED_REDUCTION_TYPES.has(r.type) && !isMultiSupportedNewHousingReduction(r.type, form.transferDate),
   );
   if (blockedReduction) {
-    return MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE;
+    return blockedReduction.type === "new_99" || blockedReduction.type === "new_99_3"
+      ? MULTI_NEW_HOUSING_PRE_2016_UNSUPPORTED_MESSAGE
+      : MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE;
   }
   // 모드 2 — 보유 감면주택 주택수 제외(§89①3호 의제)는 **막지 않는다**(Q4, 2026-10-04).
   //    종전 차단(`transfer-calc-count-exclusion-row-link.plan.md` Q-4)의 사유는 다건 ⑬이 싣지 않는다는 것뿐이었다.

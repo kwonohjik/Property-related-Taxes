@@ -4,10 +4,11 @@
  * `isTaxSpecialExemption`을 주입해 중과를 배제하는데, 겸용(`calcMixedUseTransferTax`)은 감면 선택을 «차감형은 계산하지 않고 고지»로만
  * 다뤄 중과가 그대로 걸렸다.
  *
- * 기대값은 «같은 사실에서 양도 주택에 5호 수동 토글(`isTaxSpecialExemption`)을 켠 대조»와 같아야 한다(리뷰 case14 222,176,600 계열).
+ * 기대값은 «같은 사실에서 양도 주택에 5호 수동 토글(`isTaxSpecialExemption`)을 켠 대조»와 같아야 한다.
  *
- * ⚠️ NH-33(겸용 경로는 §99·§99의3 양도소득금액 차감 자체를 반영하지 않음 — Q-14 미결)은 이 PR 범위 밖이라 그대로다.
- *    그래서 단건 경로 값(차감 반영)과는 같아지지 않는 것이 정상이다 — 이 anchor는 수동 토글 대조와 감면 미선택 대조만 쓴다.
+ * ⚠️ NH-33(Q-14 (a))으로 겸용 경로가 §99·§99의3 양도소득금액을 **주택분에서 차감**한다(`nh33-mixed-use-income-deduction-housing.anchor.test.ts`).
+ *    그래서 §99·§99의3을 선택한 값은 감면 미선택 대조보다 차감분(43,007,267)만큼 낮다 — 종전 기대값 222,176,600(= 중과 배제만 반영)은
+ *    179,169,333, 702,072,863은 547,624,779로 갱신했다. 중과 배제 자체의 검증(수동 토글 대조 일치·surchargeType)은 그대로다.
  *
  * 세율표는 mock(`makeMockRatesWithHouseEngine`) — 정본 세액이 아니다.
  */
@@ -21,6 +22,8 @@ const D = (s: string) => new Date(s);
 const rates = makeMockRatesWithHouseEngine();
 const TD = D("2026-06-01"); // 2026.5.9. 유예 종료 후
 const PRICE = 1_100_000_000;
+/** NH-33 — case14 §99의3 주택분 차감 효과(중과 없는 대조 222,176,600 → 179,169,333) */
+const DEDUCTION_EFFECT = 43_007_267;
 
 const mh = (n: number, sellingOver: Record<string, unknown> = {}, isRegulatedArea = true) => ({
   houses: [
@@ -83,12 +86,12 @@ function run(over: Record<string, unknown>, opts: { price?: number; date?: Date;
 const payable = (r: { total: { totalPayable: number } }) => r.total.totalPayable;
 
 describe("NH-09 겸용 × §99의3 — 3주택 조정: 중과 배제 자동 주입", () => {
-  it("A1 §99의3 선택 = 양도 주택 5호 수동 토글 대조 = 222,176,600 / 중과 없음 / 감면 미선택은 423,062,208", () => {
+  it("A1 §99의3 선택 = 양도 주택 5호 수동 토글 대조 = 179,169,333(중과 배제 + 주택분 차감) / 중과 없음 / 감면 미선택은 423,062,208", () => {
     const control = run({ multiHouse: mh(3) });
     const selected = run({ multiHouse: mh(3), reductions: [r993()] });
     const manual = run({ multiHouse: mh(3, { isTaxSpecialExemption: true }), reductions: [r993()] });
     expect(payable(control)).toBe(423_062_208);
-    expect(payable(manual)).toBe(222_176_600);
+    expect(payable(manual)).toBe(179_169_333);
     expect(payable(selected)).toBe(payable(manual));
     expect(selected.multiHouseSurcharge?.surchargeType).toBe("none");
     expect(selected.multiHouseSurcharge?.exclusionReasons.map((e) => e.type)).toContain("tax_special_exemption");
@@ -103,14 +106,14 @@ describe("NH-09 겸용 × §99의3 — 3주택 조정: 중과 배제 자동 주�
     expect(selected.multiHouseSurcharge?.surchargeType).toBe("none");
   });
 
-  it("A3 §99 + 양도가액 30억(F-46 사례, 1998 계약 84㎡ — 고가주택 면적 요건 미달): 수동 토글 대조 = 702,072,863", () => {
+  it("A3 §99 + 양도가액 30억(F-46 사례, 1998 계약 84㎡ — 고가주택 면적 요건 미달): 수동 토글 대조 = 547,624,779", () => {
     const base = { buildingAcquisitionDate: D("1999-01-01"), landAcquisitionDate: D("1999-01-01") };
     const selected = run({ ...base, multiHouse: mh(3), reductions: [r99()] }, { price: 3_000_000_000 });
     const manual = run(
       { ...base, multiHouse: mh(3, { isTaxSpecialExemption: true }), reductions: [r99()] },
       { price: 3_000_000_000 },
     );
-    expect(payable(manual)).toBe(702_072_863);
+    expect(payable(manual)).toBe(547_624_779);
     expect(payable(selected)).toBe(payable(manual));
     expect(selected.multiHouseSurcharge?.surchargeType).toBe("none");
   });
@@ -173,13 +176,15 @@ describe("NH-09 짝 — 감면 불성립이면 중과 유지(= 감면 미선택 
   it("C4 비조정지역: 감면을 선택해도 중과 판정은 없다 — step·고지도 없다(중과 배제할 중과가 없다)", () => {
     const selected = run({ multiHouse: mh(3, {}, false), reductions: [r993()] });
     const control = run({ multiHouse: mh(3, {}, false) });
-    expect(payable(selected)).toBe(payable(control));
+    // 중과 판정은 대조와 같고(비조정), 차이는 주택분 차감(NH-33)뿐이다
+    expect(selected.multiHouseSurcharge?.surchargeType).toBe(control.multiHouseSurcharge?.surchargeType);
+    expect(payable(selected)).toBe(payable(control) - DEDUCTION_EFFECT);
   });
 
   it("C5 1주택(다른 보유 주택 없음): 불변", () => {
     const selected = run({ multiHouse: mh(1), reductions: [r993()] });
     const control = run({ multiHouse: mh(1) });
-    expect(payable(selected)).toBe(payable(control));
+    expect(payable(selected)).toBe(payable(control) - DEDUCTION_EFFECT); // 중과는 원래 없다 — 차이는 주택분 차감(NH-33)뿐
   });
 
   it("C6 2022.5.10.~2026.5.9. 유예 구간 양도: 중과가 이미 유예라 감면 선택과 무관하게 같다", () => {
@@ -188,7 +193,7 @@ describe("NH-09 짝 — 감면 불성립이면 중과 유지(= 감면 미선택 
     const selected = run({ multiHouse: mh(3), reductions: [r993()] }, { date: d, rates: suspended });
     const control = run({ multiHouse: mh(3) }, { date: d, rates: suspended });
     expect(control.multiHouseSurcharge?.isSurchargeSuspended).toBe(true);
-    expect(payable(selected)).toBe(payable(control));
+    expect(payable(selected)).toBe(payable(control) - DEDUCTION_EFFECT); // 중과는 유예라 같고, 차이는 주택분 차감(NH-33)뿐
   });
 });
 

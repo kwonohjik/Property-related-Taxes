@@ -35,6 +35,13 @@ import { lossOffsetGiverText } from "@/lib/tax-engine/transfer-tax-split-display
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import { phdConvertedPriceName } from "@/components/calc/results/transfer/phd-housing-term";
 import {
+  REGULATED_ASSUMPTION_TITLE,
+  regulatedAssumptionFooter,
+  regulatedAssumptionRowHead,
+  regulatedAssumptionRowVerdict,
+  type RegulatedAssumptionPdfGroup,
+} from "@/lib/calc/regulated-area-assumption-text";
+import {
   splitCarryoverAcquisitionText,
   splitCarryoverApportionText,
   splitCarryoverEstimatedExpenseText,
@@ -69,7 +76,8 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows 
   );
   // 소득금액 감면대상 = 소득금액차감방식(§90②) 11개 조문 합 — 화면 신고서 표 ⑳(`FilingFormTableHelpers`)와 같은 헬퍼.
   // 종전에는 `new993Detail`만 읽어 §99·§98의8·하이브리드 차감이 0으로 찍혔다(NH-53).
-  const incomeDeduction = incomeDeductionReducible(r as unknown as TransferTaxResult);
+  // 함께 양도·다건 어댑터(`aggregateToFilingResult`)는 단건 detail이 없어 합산 엔진 적용액 합을 따로 싣는다(NH-65) — 있으면 그 값이 정본.
+  const incomeDeduction = num(r.aggregateIncomeDeductionReducible) ?? incomeDeductionReducible(r as unknown as TransferTaxResult);
   // 「감면후 소득금액」에서 빼는 것은 **§90②(소득금액 차감방식)뿐**이다.
   // §90①(세액감면방식)은 세액을 감면할 뿐 소득금액을 줄이지 않는다
   // — 별지84호 본 서식 ⑧ 과세표준 = ④+⑤−⑥−⑦에서 차감 대상 ⑥은 「소득감면대상 소득금액」이고,
@@ -536,5 +544,33 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
         </>
       )}
     </>
+  );
+}
+
+/**
+ * 「조정대상지역 판정 — 확인 필요」 — 결과 화면 줄(`RegulatedAreaAssumptionLine`)과 같은 문구·같은 leaf(결과뷰가 `inputData`로 넘긴다).
+ * 화면 줄이 `PrintSection` 밖이라 항상 인쇄되듯 항목 선택과 무관하게 그린다. 계획서 `docs/00-pm/regulated-area-notices-followup.plan.md` 5번.
+ */
+export function RegulatedAssumptionPdfNote({ groups }: { groups: RegulatedAssumptionPdfGroup[] | undefined }) {
+  if (!groups || groups.length === 0) return null;
+  return (
+    <View wrap={false}>
+      {groups.map((g, gi) => (
+        <View
+          key={`reg-${gi}`}
+          style={{ marginTop: 10, padding: 8, borderWidth: 1, borderStyle: "solid", borderColor: "#fcd34d", backgroundColor: "#fffbeb", borderRadius: 4 }}
+        >
+          <Text style={{ fontSize: 9, fontWeight: 700, color: "#92400e", marginBottom: 4 }}>
+            {g.label ? `${REGULATED_ASSUMPTION_TITLE} · ${g.label}` : REGULATED_ASSUMPTION_TITLE}
+          </Text>
+          {g.rows.map((r) => (
+            <Text key={r.which} style={{ fontSize: 8, color: "#92400e", marginBottom: 2 }}>
+              {`${regulatedAssumptionRowHead(r)}: ${regulatedAssumptionRowVerdict(r)} — ${r.basis}`}
+            </Text>
+          ))}
+          <Text style={{ fontSize: 7, color: "#92400e", marginTop: 3 }}>{regulatedAssumptionFooter("calculator")}</Text>
+        </View>
+      ))}
+    </View>
   );
 }

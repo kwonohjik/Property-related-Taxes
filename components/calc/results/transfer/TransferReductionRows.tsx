@@ -15,6 +15,8 @@ import { ReductionDetailWarnings } from "@/components/calc/results/transfer/Redu
 import { ReductionStatutoryCapRow } from "@/components/calc/results/transfer/ReductionStatutoryCapRow";
 import { RATED_REDUCIBLE_INCOME_LABEL } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { ELIGIBLE_INCOME_VS_FORM_NOTE } from "@/components/calc/results/transfer/reduction-eligible-income";
+import { AggregateAppliedNote } from "@/components/calc/results/transfer/IncomeDeductionDetailCard";
+import { AggregateRuralSurtaxNote } from "@/components/calc/results/transfer/IncomeDeductionDetailCard";
 
 /**
  * §99의3 시기 축 안내 — 종전 규정 적용 근거(부칙 §29①·②)와 착공 여부 확인 필요 (NH-01).
@@ -46,8 +48,11 @@ function New993EraNotes({ detail: d }: { detail: NonNullable<TransferTaxResult["
 /** §99의3 신축주택 과세특례 상세 (적용/불가 양쪽) */
 export function New993DetailCard({
   detail: d,
+  aggregateApplied,
 }: {
   detail: NonNullable<TransferTaxResult["new993Detail"]>;
+  /** 함께 양도·다건 자산별 — 합산 엔진이 실제로 뺀 금액(NH-64). 넘기면 감면 양도소득금액을 이 값으로 찍고 단건 감면세액·농특세 줄을 합산 안내로 바꾼다. */
+  aggregateApplied?: number;
 }) {
   if (!d.isEligible) {
     return (
@@ -93,10 +98,16 @@ export function New993DetailCard({
         ))}
       </div>
       <div className="border-t border-primary/20 pt-1.5 space-y-0.5">
-        <p>감면 양도소득금액 = {formatKRW(d.reducibleTransferIncome)}</p>
-        <p>양도세 감면세액 = {formatKRW(d.taxReductionForRuralSurtax)}</p>
-        <p className="font-medium">농어촌특별세 (20%) = {formatKRW(d.ruralSurtax)}</p>
+        <p>감면 양도소득금액 = {formatKRW(aggregateApplied ?? d.reducibleTransferIncome)}</p>
+        <AggregateAppliedNote single={d.reducibleTransferIncome} applied={aggregateApplied} />
+        {aggregateApplied === undefined && (
+          <>
+            <p>양도세 감면세액 = {formatKRW(d.taxReductionForRuralSurtax)}</p>
+            <p className="font-medium">농어촌특별세 (20%) = {formatKRW(d.ruralSurtax)}</p>
+          </>
+        )}
       </div>
+      {aggregateApplied !== undefined && d.ruralSurtax > 0 && <AggregateRuralSurtaxNote />}
     </div>
   );
 }
