@@ -33,6 +33,7 @@ import { toEngineReductions } from "./transfer-tax-api-reductions";
 import { housesOwnedAtTransfer } from "./household-house-count";
 import { REDUCTION_TYPE_LABELS } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import { resolveHouseCountExclusionDate } from "@/lib/tax-engine/one-house/gift-household-basis";
+import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house/same-household-inheritance-start";
 import { calcGiftHouseholdBasis } from "./effective-regulated-at-acquisition";
 import { GIFT_HOUSEHOLD_SCOPE_PRIMARY } from "./effective-regulated-at-acquisition";
 import { landContributedOriginalApt } from "./redev-field-scope";
@@ -192,6 +193,17 @@ function houseCountExclusionGeneralDate(primary: AssetForm | undefined): Date | 
   }
   const acquisition = toOptionalDate(primary?.acquisitionDate);
   if (!primary || !acquisition) return undefined;
+  // 동일세대 상속 — 엔진과 같이 피상속인과 동일세대로 보유하기 시작한 날(기준-2017-0222). 엔진은 이월과세 뒤, 증여 세대 통산 앞에서 본다(상속은 이월과세가 아니다).
+  const cohabitation = toOptionalDate(primary.decedentCohabitationHoldingStartDate);
+  const sameHouseholdStart = cohabitation
+    ? sameHouseholdInheritanceHoldingStart({
+        acquisitionCause: primary.acquisitionCause,
+        decedentSameHouseholdBeforeInheritance: primary.decedentSameHouseholdBeforeInheritance,
+        decedentCohabitationHoldingStartDate: cohabitation,
+        acquisitionDate: acquisition,
+      })
+    : undefined;
+  if (sameHouseholdStart) return sameHouseholdStart;
   return resolveHouseCountExclusionDate(
     acquisition,
     calcGiftHouseholdBasis({ ...primary, hasNonHousingConversion: false }, GIFT_HOUSEHOLD_SCOPE_PRIMARY),

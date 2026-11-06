@@ -13,6 +13,7 @@
 //    유일한 가드: `__tests__/lib/legal-codes-transfer-reexport.test.ts`
 export * from "./transfer-nbl";
 export * from "./transfer-house";
+export * from "./transfer-new-housing-994-para5";
 export * from "./transfer-one-house";
 import { ONE_HOUSEHOLD_DEF_CITATION } from "./transfer-house";
 
