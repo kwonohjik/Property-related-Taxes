@@ -45,6 +45,7 @@ import {
   type SplitCarryoverDetail,
 } from "./transfer-tax-split-carryover";
 import { resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
+import { sameHouseholdInheritanceHoldingStart } from "./one-house/same-household-inheritance-start";
 import { pickRateBasisFacts } from "./transfer-rate-holding-basis";
 import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
 import { resolveSurchargeExclusionByReduction } from "./transfer-reductions/income-deduction-router";
@@ -312,7 +313,8 @@ export function resolveHceGeneralHouseAcquisitionDate(input: TransferTaxInput): 
       ? (householdBuildingCarryover(input.redevelopment!)?.holdingStart ?? input.redevelopment!.completionDate!)
       : input.carryoverTaxation
         ? resolveHouseCountExclusionAcqDate(input, input.carryoverTaxation)
-        : resolveHouseCountExclusionDate(input.acquisitionDate, input.giftHouseholdBasis))
+        : // 동일세대 상속은 「1세대」가 보유한 날 — 피상속인과 동일세대로 보유하기 시작한 날(기준-2017-0222: 같은 세대원 간 이전은 이전한 사람의 취득일 기준).
+          (sameHouseholdInheritanceHoldingStart(input) ?? resolveHouseCountExclusionDate(input.acquisitionDate, input.giftHouseholdBasis)))
   );
 }
 

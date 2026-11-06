@@ -25,7 +25,9 @@ import {
   meetsOneHouseHoldingResidence,
   presaleRightStartDate,
 } from "./transfer-tax-helpers";
-import { meetsPublicInstitutionRelocationRegion } from "./transfer-tax-temporary-two-house-timing";
+import { meetsPublicInstitutionRelocationRegion, resolveIsRegulatedAtTransfer } from "./transfer-tax-temporary-two-house-timing";
+import { evaluateNew994Para5, type New994Para5Result } from "./transfer-reductions/new-99-4-para5";
+import { NEW_99_4_PARA5 } from "./legal-codes/transfer";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { clause2BlocksSurchargeDeeming, clause2SurchargeDeemed } from "./transfer-tax-89-2-consequences";
 import {
@@ -445,6 +447,37 @@ export function assembleSurchargeHouseSet(
   return rawHouses ? { rawHouses, fromTwoHouseDeeming: !!twoHouseDeemingHouses } : undefined;
 }
 
+/** §99의4⑤ 평가 결과 → 계산 과정 한 줄 (성립 · 불성립 사유 모두 남긴다 — 성공만 담으면 실패 사유가 사라진다) */
+function buildNew994Para5Step(r: New994Para5Result): CalculationStep {
+  return {
+    label: r.isEligible ? "농어촌주택등 §99의4⑤ — 중과 비적용 · 장기보유특별공제 허용" : "농어촌주택등 §99의4⑤ — 적용하지 않음",
+    formula: r.isEligible
+      ? `수도권 조정대상지역 2주택(양도 시 공시가격 합산 ${r.priceSum?.toLocaleString("ko-KR")}원) 중 1주택을 양도하고 ${r.acquisitionDeadline.toISOString().slice(0, 10)}까지 농어촌주택등을 취득 → 소득세법 제104조제7항 미적용`
+      : r.reasons.map((x) => x.message).join(" / "),
+    amount: 0,
+    legalBasis: r.legalBasis,
+  };
+}
+
+/** §99의4⑤ 결과를 중과 판정 결과에 싣는다 — 배제 사유 문구(성립) · 경고(⑥ 사후관리·확인 필요 / 불성립 사유) */
+function withNew994Para5(
+  result: MultiHouseSurchargeResult,
+  r: New994Para5Result,
+  alsoExcludedByReduction: boolean,
+): MultiHouseSurchargeResult {
+  const warnings = [...(result.warnings ?? []), ...(r.isEligible ? r.notices : r.reasons.map((x) => x.message))];
+  if (!r.isEligible || alsoExcludedByReduction) return { ...result, warnings };
+  return {
+    ...result,
+    warnings,
+    exclusionReasons: result.exclusionReasons.map((x) =>
+      x.type === "tax_special_exemption"
+        ? { ...x, detail: `${NEW_99_4_PARA5.PARAGRAPH} — 수도권 조정대상지역 2주택 중 1주택 양도 후 농어촌주택등 취득(2019.1.1.~2020.12.31. 양도분)` }
+        : x,
+    ),
+  };
+}
+
 /** ⑥ 주택 수 제외의 확인된 영 §167의3①5호 조문 → 10호 「일반주택」 판정의 5호 주택(결정 #16) — 양도 주택마다 다시 잇는다. */
 export function linkSurchargeHousesForSelling(
   rawHouses: NonNullable<TransferTaxInput["houses"]>,
@@ -475,9 +508,22 @@ export function runMultiHouseSurchargeStep(
     const sellingId = workingInput.sellingHouseId ?? rawHouses[0].id;
     // ⑥ 주택 수 제외의 확인된 영 §167의3①5호 조문 → 10호 「일반주택」 판정의 5호 주택(결정 #16 공백 · 겸용과 같은 leaf)
     const houses = linkSurchargeHousesForSelling(rawHouses, workingInput, sellingId);
-    const housesForSurcharge = surchargeExclusionByReduction.excluded
-      ? houses.map((h) => (h.id === sellingId ? { ...h, isTaxSpecialExemption: true } : h))
-      : houses;
+    // 조특법 §99의4⑤(2019.1.1.~2020.12.31. 양도) — 양도 뒤 예정신고기한 안에 농어촌주택등을 취득하면 §104⑦ 비적용·장특 허용(리뷰 NH-51).
+    //   중과 배제 선판정이라 감면주택(§167의3①5호)과 같은 경로(양도 주택 행의 특례 표지)로 닫는다 — 세율 가산·장특 배제 두 축이 함께 닫힌다.
+    const para5 = evaluateNew994Para5({
+      transferDate: workingInput.transferDate,
+      reductions: workingInput.reductions ?? [],
+      houses: workingInput.houses,
+      sellingHouseId: sellingId,
+      isOneHousehold: workingInput.isOneHousehold,
+      isSellingRegulated: resolveIsRegulatedAtTransfer(workingInput),
+      presaleRightCount: workingInput.presaleRights?.length ?? 0,
+    });
+    const para5Applied = para5?.isEligible === true;
+    const housesForSurcharge =
+      surchargeExclusionByReduction.excluded || para5Applied
+        ? houses.map((h) => (h.id === sellingId ? { ...h, isTaxSpecialExemption: true } : h))
+        : houses;
     const deemed = resolveSurchargeDeemedOneHouseDetail(workingInput, parsedRates, generalHouseAcquisitionDate);
     const mhInput: MultiHouseSurchargeInput = {
       houses: housesForSurcharge,
@@ -560,6 +606,10 @@ export function runMultiHouseSurchargeStep(
         housesForSurcharge.slice(1).some((_, i) => judge(housesForSurcharge.slice(0, i + 1)).surchargeType !== "none"))
     ) {
       return undefined;
+    }
+    if (para5) {
+      steps.push(buildNew994Para5Step(para5));
+      multiHouseSurchargeResult = withNew994Para5(multiHouseSurchargeResult, para5, surchargeExclusionByReduction.excluded);
     }
     // 근거는 세대 구성(산입 조합원입주권·분양권 유무)에 맞춘다 — NH-82
     if (surchargeExclusionByReduction.excluded) {
