@@ -37,6 +37,7 @@ import { burdenedGiftBundleKind } from "@/lib/calc/burdened-gift-transfer-price-
 import { shareWholePropertyPrice } from "./bundled-apportionment";
 import { appurtenantLimitShareOf } from "./bundled-companion-split";
 import { asReverseUnitHouse, resolveReverseAppurtenantUnit, reverseUnitHouseFacts, splitReversePrimaryLand } from "./bundled-reverse-appurtenant";
+import { asHouseholdFactsCompanionHouse } from "./bundled-reverse-appurtenant";
 import { aggregateWithSameDayRightWarning, withSameDayRightsHeldOnItems } from "@/lib/tax-engine/one-house/same-day-right";
 import type { GbBundledAssetDetail } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
@@ -363,9 +364,11 @@ export function calculateBundledTransfer(
       onGbDetail,
       onGbCarryoverUnit,
     });
-    return reverseUnit && c.assetId === reverseUnit.houseAssetId
-      ? built.map((it) => asReverseUnitHouse(it, reverseUnit, engineInput))
-      : built;
+    if (reverseUnit && c.assetId === reverseUnit.houseAssetId) return built.map((it) => asReverseUnitHouse(it, reverseUnit, engineInput));
+    // NH-14 후속 — 첫 자산이 주택이 아닌데 이 주택이 세대·주택 현황의 기준 자산이면(④가 id를 싣는다) 본문 최상위 세대 사실은 이 주택의 것이다.
+    //   G1 짝 주택과 같은 목록이되 소재지·§154① 단서는 뺀다(독립 토지와 소재지가 다르고, 단서는 첫 자산 거주 섹션 입력 — 계획서 §4).
+    if (!reverseUnit && data.householdFactsCompanionAssetId === c.assetId) return built.map((it) => asHouseholdFactsCompanionHouse(it, engineInput));
+    return built;
   });
 
   // 축 B(같은 물건 지분 분할 — 한 사람이 나눠 취득해 전부 양도)는 서버가 다자산 구성에서 도출해 표시한다(#11 — 공유와 구별).

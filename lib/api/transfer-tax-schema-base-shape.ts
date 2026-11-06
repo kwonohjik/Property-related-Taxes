@@ -85,6 +85,8 @@ export const propertyBaseShape = {
   decedentAcquisitionDate: z.string().date().optional(),
   /** ⑫ 상속인이 아닌 수유자(유증·사인증여) — §104②1호 통산·§167의3①7호 미적용 */
   nonHeirBequest: z.boolean().optional(),
+  /** ⑫ NH-14 후속 — 첫 자산이 주택이 아닐 때 세대·주택 현황의 기준이 된 함께 양도 주택 id(⑭가 그 카드에 세대 사실을 싣는다). 누락 시 침묵 strip */
+  householdFactsCompanionAssetId: z.string().optional(),
   /** ⑫ US-07 — 상속 자산 §98의3·§98의5·§98의7: 상속 당시 분양권 + 상속인 잔금 취득(누락 시 침묵 strip → 엔진이 「확인 필요」로 불성립) */
   inheritedPresaleCompletedByHeir: z.enum(["yes", "no", "unknown"]).optional(),
   decedentSameHouseholdBeforeInheritance: z.boolean().optional(),
