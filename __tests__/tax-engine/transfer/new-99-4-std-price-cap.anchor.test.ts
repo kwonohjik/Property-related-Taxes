@@ -93,7 +93,11 @@ function declOf(c: Cell, locationConfirmed = true) {
     ruralHouseAcquisitionDate: D(c.ruralAcq),
     ruralHouseStdPrice: c.std,
     isRegisteredHanok: !!c.hanok,
-    isAdjacentArea: false,
+    adjacentArea994: "no" as const,
+    // PR-2b 면적 요건(대지 2021.1.1. 전 · 주택 2017.1.1. 전 양도)은 요건 안 값으로 둔다 — 이 격자는 가액 한도만 본다
+    ruralLandAreaSqm994: 330,
+    ruralHouseType994: "other" as const,
+    ruralHouseAreaSqm994: 99,
     meetsLocationRequirement: locationConfirmed,
     ...(c.hometown ? { meetsHometownRequirement: true } : {}),
   };
@@ -130,7 +134,10 @@ function evaluate(c: Cell) {
     ruralHouseAcquisitionDate: D(c.ruralAcq),
     ruralHouseStdPrice: c.std,
     isRegisteredHanok: !!c.hanok,
-    isAdjacentArea: false,
+    adjacentArea994: "no" as const,
+    ruralLandAreaSqm994: 330,
+    ruralHouseType994: "other",
+    ruralHouseAreaSqm994: 99,
     meetsLocationRequirement: true,
     meetsHometownRequirement: c.hometown ? true : undefined,
   });
@@ -232,7 +239,7 @@ describe("§99의4 가액 한도 — 메시지·미입력", () => {
       ruralHouseAcquisitionDate: undefined,
       ruralHouseStdPrice: 5 * EOK,
       isRegisteredHanok: false,
-      isAdjacentArea: false,
+      adjacentArea994: "no" as const,
       meetsLocationRequirement: true,
     });
     expect(r.isEligible).toBe(false);
@@ -271,7 +278,7 @@ describe("§99의4 가액 한도 — 메시지·미입력", () => {
       ruralHouseAcquisitionDate: D("2015-03-01"),
       ruralHouseStdPrice: 350_000_000,
       isRegisteredHanok: false,
-      isAdjacentArea: false,
+      adjacentArea994: "no" as const,
       meetsLocationRequirement: true,
     });
     expect(r.isEligible).toBe(false);

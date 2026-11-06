@@ -98,7 +98,7 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
   // 선언은 행 값(취득일·가액·면적)으로 채워져 온다 — 그 칸이 비면 행 기본 정보가 빈 것이다.
   const rowNo = (id: string | undefined) => (form.houses ?? []).findIndex((h) => h.id === id) + 1;
   for (const r of rowCountExclusionReductions(usedRows, form.transferDate, kind)) {
-    for (const m of collectHouseCountExclusionReductionErrors(r)) messages.push(`보유 주택 ${rowNo(r.houseId)}: ${m}`);
+    for (const m of collectHouseCountExclusionReductionErrors(r, form.transferDate)) messages.push(`보유 주택 ${rowNo(r.houseId)}: ${m}`);
   }
   for (const e of rowSpecialHouseExclusions(usedRows, form.transferDate, kind)) {
     for (const m of collectSpecialHouseExclusionRowErrors(e)) messages.push(`보유 주택 ${rowNo(e.houseId)}: ${m}`);

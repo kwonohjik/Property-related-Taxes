@@ -333,8 +333,14 @@ export const reductionSchema = z.discriminatedUnion("type", [
     ruralHouseAcquisitionDate: z.string().date().optional(),
     ruralHouseStdPrice: z.number().int().nonnegative().optional(),
     isRegisteredHanok: z.boolean().optional(),
-    isAdjacentArea: z.boolean().optional(),
+    // NH-30 — 연접 3상태(미입력 = 모름 → 엔진 불성립 + 확인 필요). 옛 boolean `isAdjacentArea`는 받지 않는다(침묵 strip → 모름과 같은 결론)
+    adjacentArea994: z.enum(["yes", "no", "unknown"]).optional(),
     meetsLocationRequirement: z.boolean().optional(),
+    // NH-05 PR-2b — 종전 면적 요건(범위 안 미입력은 엔진 불성립 + 확인 필요) · NH-20 행 법정동코드(수도권 모순 refine 전용)
+    ruralLandAreaSqm994: z.number().positive().optional(),
+    ruralHouseType994: z.enum(["multi_unit", "other"]).optional(),
+    ruralHouseAreaSqm994: z.number().positive().optional(),
+    ruralHouseRegionCode: z.string().optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
   z.object({
@@ -343,8 +349,14 @@ export const reductionSchema = z.discriminatedUnion("type", [
     ruralHouseAcquisitionDate: z.string().date().optional(),
     ruralHouseStdPrice: z.number().int().nonnegative().optional(),
     isRegisteredHanok: z.boolean().optional(),
-    isAdjacentArea: z.boolean().optional(),
+    // NH-30 — 연접 3상태(미입력 = 모름 → 엔진 불성립 + 확인 필요). 옛 boolean `isAdjacentArea`는 받지 않는다(침묵 strip → 모름과 같은 결론)
+    adjacentArea994: z.enum(["yes", "no", "unknown"]).optional(),
     meetsLocationRequirement: z.boolean().optional(),
+    // NH-05 PR-2b — 종전 면적 요건(범위 안 미입력은 엔진 불성립 + 확인 필요) · NH-20 행 법정동코드(수도권 모순 refine 전용)
+    ruralLandAreaSqm994: z.number().positive().optional(),
+    ruralHouseType994: z.enum(["multi_unit", "other"]).optional(),
+    ruralHouseAreaSqm994: z.number().positive().optional(),
+    ruralHouseRegionCode: z.string().optional(),
     meetsHometownRequirement: z.boolean().optional(),
     _phase1Stub: z.literal(true).optional(),
   }),

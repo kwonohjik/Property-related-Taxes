@@ -3,7 +3,7 @@
  * NH-46(과세특례신고서)·NH-47(추징 「달의 말일」·부득이한 사유)·NH-70(§89①3호 효과와 §95③·§95② 단서 분리)
  */
 import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, cleanup } from "@testing-library/react";
 import { New994InputForm } from "@/components/calc/transfer/New994InputForm";
 import { New994DetailCard } from "@/components/calc/results/transfer/New994DetailCard";
 
@@ -18,7 +18,7 @@ const view = (type: "new_99_4_rural" | "new_99_4_hometown", acq: string, transfe
           ruralHouseAcquisitionDate: acq,
           ruralHouseStdPrice: "",
           isRegisteredHanok: false,
-          isAdjacentArea: false,
+          adjacentArea994: "no" as const,
           meetsLocationRequirement: false,
           meetsHometownRequirement: false,
         } as never
@@ -33,21 +33,22 @@ const text = () => document.body.textContent ?? "";
 describe("§99의4 폼 — ③ 비교 단위", () => {
   it("2026.1.1. 전 취득 농어촌: 「같은·연접 읍·면」을 묻고 읍·면·동이라 하지 않는다", () => {
     view("new_99_4_rural", "2015-03-01", "2024-06-01");
-    expect(screen.getByText("일반주택과 같은·연접 읍·면")).toBeTruthy();
+    expect(text()).toContain("행정구역상 같은 읍·면 또는 연접한 읍·면에 있나요?");
     expect(text()).not.toContain("읍·면·동");
     expect(text()).toContain("조특법 법률 제21223호 부칙 제42조");
   });
   it("2026.1.1. 이후 취득 농어촌: 「같은·연접 읍·면·동」", () => {
     view("new_99_4_rural", "2026-02-01", "2026-10-01");
-    expect(screen.getByText("일반주택과 같은·연접 읍·면·동")).toBeTruthy();
+    expect(text()).toContain("행정구역상 같은 읍·면·동 또는 연접한 읍·면·동에 있나요?");
   });
   it("2015.1.1. 전 양도: 「같은·연접 읍·면·시」", () => {
     view("new_99_4_rural", "2010-03-01", "2014-06-01");
-    expect(screen.getByText("일반주택과 같은·연접 읍·면·시")).toBeTruthy();
+    expect(text()).toContain("행정구역상 같은 읍·면·시 또는 연접한 읍·면·시에 있나요?");
   });
   it("양도일 미입력(2009~2025 취득): 단위를 정하지 않고 안내만", () => {
     view("new_99_4_rural", "2015-03-01", undefined);
-    expect(screen.getByText("일반주택과 같은·연접 행정구역")).toBeTruthy();
+    expect(text()).toContain("행정구역상 같은 행정구역 또는 연접한 행정구역에 있나요?");
+    expect(text()).toContain("날짜를 먼저 입력하세요");
   });
 });
 

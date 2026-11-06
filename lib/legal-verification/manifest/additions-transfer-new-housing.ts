@@ -2,7 +2,7 @@
  * 검증 매니페스트 추가분 — 조특법 §99·§99의3·§99의4(신축주택·농어촌주택등)의 **하위 법령·같은 조 다른 항**
  *
  * 리뷰 NH-43·NH-48·NH-69(`docs/reviews/new-housing-99-review-2026-11.md`): 감면 판정 사유가 인용하는
- * 조특령 §99①②·§99의3②④·§99의4②⑥·조특칙 §44의4·조특법 §99의4③이 `transfer-reductions/` 리터럴로만 있어
+ * 조특령 §99①②·§99의3②④·§99의4②③⑥·조특칙 §44의4·§45①·조특법 §99의4③이 `transfer-reductions/` 리터럴로만 있어
  * 커버리지 모수와 `npm run verify:legal` 밖이었다. 상수는 `legal-codes/transfer-house.ts`
  * `NEW_HOUSING_SUB_ARTICLE`.
  *
@@ -78,6 +78,13 @@ export const TRANSFER_NEW_HOUSING_ADDITIONS: VerificationRule[] = [
       "영 제99조제2항 단서 및 영 제99조의3제4항 단서",
       "「소득세법 시행규칙」 제71조제3항의 규정에 의한 사유로 당해주택건설업자로부터 다른 주택을 분양받아 취득하는 경우의 주택",
     ],
+    keywordMode: "ALL",
+  },
+  {
+    // 령 §99의4③(①1호가목1) 단서 수도권 제외지역의 예외)이 위임한 지역 — 리뷰 NH-20 (⑧·⑫ 수도권 행 차단의 예외 군)
+    id: "TRANSFER_RULE.NEW_99_4_CAPITAL_EXCEPTION_AREAS",
+    citation: "조특칙 §45",
+    keywords: ["영 제99조의4제3항 각 호 외의 부분에서", "경기도 연천군 및 가평군", "인천광역시 강화군 및 옹진군"],
     keywordMode: "ALL",
   },
   {

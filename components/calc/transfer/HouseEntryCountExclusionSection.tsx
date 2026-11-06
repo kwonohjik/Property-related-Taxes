@@ -74,7 +74,7 @@ export function HouseEntryCountExclusionSection({
       });
     }
     const fresh = getReductionDefault(next) as RowCountExclusionReduction;
-    // 농어촌 ↔ 고향 전환 — 주택 자체의 사실(취득 당시 기준시가·등록 한옥)만 옮긴다. 소재·연접 확인은
+    // 농어촌 ↔ 고향 전환 — 주택 자체의 사실(취득 당시 기준시가·등록 한옥·대지면적·주택 유형·연면적)만 옮긴다. 소재·연접 확인은
     // 두 유형의 요건 단위(읍·면·동 ↔ 시)가 달라 새로 묻는다(조특법 §99의4①1호가목·2호나목·③).
     const carried =
       current?.kind === "reduction" &&
@@ -83,6 +83,9 @@ export function HouseEntryCountExclusionSection({
         ? {
             ruralHouseStdPrice: current.reduction.ruralHouseStdPrice,
             isRegisteredHanok: current.reduction.isRegisteredHanok,
+            ruralLandAreaSqm994: current.reduction.ruralLandAreaSqm994 ?? "",
+            ruralHouseType994: current.reduction.ruralHouseType994 ?? "",
+            ruralHouseFloorAreaSqm994: current.reduction.ruralHouseFloorAreaSqm994 ?? "",
           }
         : {};
     onUpdate({
@@ -180,6 +183,8 @@ export function HouseEntryCountExclusionSection({
               rowFacts={{
                 acquisitionDate: house.acquisitionDate,
                 jibun: house.addressJibun ?? "",
+                exclusiveArea: house.exclusiveArea ?? "",
+                regionCode: house.regionCode,
               }}
             />
           )}

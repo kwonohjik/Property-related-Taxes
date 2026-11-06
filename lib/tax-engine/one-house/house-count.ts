@@ -47,6 +47,8 @@ export type OneHouseCountExclusion = {
   label: string;
   /** 근거 조문 — `legal-codes` 상수값 */
   legalBasis: string;
+  /** §99의4 — 적용 한도 echo·「확인 필요」 고지(계획서 Q-9 (a)·Q-4·Q-5 (c)). 엔진 결과를 그대로 옮긴다 */
+  notes?: string[];
 };
 
 /**
@@ -179,6 +181,15 @@ export function buildOneHouseCountBreakdown(p: {
 
   // §99의4 · §98의9 — 각 1채. 판정 메뉴는 선언에 명부 행 id를 싣는다.
   for (const applied of p.houseCountExclusion.appliedList) {
+    const notes =
+      applied.id !== "unsold_98_9" && applied.isEligible
+        ? [
+            ...(applied.appliedLimit
+              ? [`적용 한도: 취득 당시 기준시가 합계 ${applied.appliedLimit.label.split(" — ")[0]} 이하 (${applied.appliedLimit.legalBasis})`]
+              : []),
+            ...(applied.notices ?? []),
+          ]
+        : [];
     excluded.push({
       ...(applied.houseId ? { houseId: applied.houseId } : {}),
       label:
@@ -186,6 +197,7 @@ export function buildOneHouseCountBreakdown(p: {
           ? "준공후미분양주택 — 소유주택으로 보지 않음"
           : "농어촌주택등 — 소유주택으로 보지 않음") + alsoInherited(applied.houseId),
       legalBasis: applied.legalBasis,
+      ...(notes.length > 0 ? { notes } : {}),
     });
   }
 
