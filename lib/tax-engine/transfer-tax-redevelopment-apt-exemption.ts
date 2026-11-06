@@ -104,8 +104,8 @@ export function judgeRedevAptOneHouseExemption(
    * 부동산거래관리과-631(2012.11.20): 청산금을 교부받기 전에 다른 주택을 취득해 「소득세법 시행령」 제155조제1항
    * 일시적 2주택이 된 경우 교부받은 청산금은 같은 영 제154조제1항을 적용받을 수 있다. 단독신고는 ④가 양도일을
    * 청산금분 양도일로 맞추므로 이 입력(`transferDate`·`temporaryTwoHouse`)이 곧 그 날의 사실이다.
-   * 그래서 판정 **부산물**(의제 여부 · 주택 수 제외 후 주택 수)만 꺼내고, 단독신고의 steps·주택수 제외 상세는
-   * 종전대로 남기지 않는다(양도 대상이 신축주택이 아니라 그 산출물이 근거가 되지 않는다).
+   * 그래서 판정 **부산물**(의제 여부 · 주택 수 제외 후 주택 수)만 꺼내고, 단독신고의 steps는 종전대로 남기지 않는다
+   * (양도 대상이 신축주택이 아니라 그 산출물이 근거가 되지 않는다). 주택 수 제외 상세는 청산금분 판정의 근거라 싣는다(NH-59).
    */
   const scratchSteps: CalculationStep[] = [];
   const {
@@ -179,6 +179,8 @@ export function judgeRedevAptOneHouseExemption(
   }
   // 증여 승계의 종전주택 거주 통산(사전-2020-법령해석재산-0691) 고지 — 통산 적용(비과세 쪽 정면 해석 없음) · 미확인.
   if (warnings && !isReceiveOnly) warnings.push(...redevSuccessorGiftNotices(exemptionJudgeInput));
-  if (isReceiveOnly) return { exemptionResult: undefined, houseCountExclusion: undefined, oneHouseTable2Axis };
+  // NH-59 — 단독신고도 주택 수 제외(§99의4·§98의9 등)는 청산금분 비과세의 「1세대1주택」 판정(위 `oneHouseTable2Axis`)을 바꾼다.
+  //   그 근거(상세·§99의4⑥ 사후관리 추징 경고)는 결과에 싣는다. 계산 단계(steps)는 종전대로 남기지 않는다.
+  if (isReceiveOnly) return { exemptionResult: undefined, houseCountExclusion, oneHouseTable2Axis };
   return { exemptionResult, houseCountExclusion, oneHouseTable2Axis, judgeInput: translatedJudgeInput };
 }

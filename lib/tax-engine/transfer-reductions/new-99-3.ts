@@ -193,6 +193,11 @@ export interface New993Result {
   standardPriceAtAcquisition?: number;
   standardPriceAt5Years?: number;
   standardPriceAtTransfer?: number;
+  /**
+   * [echo] 재개발·재건축 변형 전용 — 분모가 「양도시 − **종전주택** 취득시」다(§99 `New99Result`와 같은 이름 · NH-66·NH-67 표시).
+   * 변형일 때만 세팅.
+   */
+  previousHouseStdPriceApplied?: number;
   /** 부호 케이스 분류 */
   signCase: New993SignCase;
   /** 산식 단계 (UI 표시용) */
@@ -549,6 +554,7 @@ export function evaluateNew993(input: New993Input): New993Result {
     standardPriceAtAcquisition: input.standardPriceAtAcquisition,
     standardPriceAt5Years: input.standardPriceAt5Years,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
+    ...(variant ? { previousHouseStdPriceApplied: stdAtPrev } : {}),
     signCase,
     formulaSteps,
     taxReductionForRuralSurtax,
