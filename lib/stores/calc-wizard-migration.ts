@@ -187,7 +187,7 @@ export function migrateLegacyForm(
     } else if (isLegacyHousingReductionType(legacyReductionType)) {
       // 레거시 신축·미분양 단순 감면은 폼 union·④·⑫에서 제거됐다 — 조문 ID로 이관한다(`legacy-housing-reduction.ts`).
       primaryAsset.reductions = [
-        legacyHousingReductionToForm(legacyReductionType, primaryAsset.acquisitionDate) as AssetReductionForm,
+        legacyHousingReductionToForm(legacyReductionType, primaryAsset.acquisitionDate, primaryAsset.assetContractDate) as AssetReductionForm,
       ];
     } else if (legacyReductionType === "public_expropriation") {
       primaryAsset.reductions = [{
