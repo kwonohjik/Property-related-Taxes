@@ -1,8 +1,11 @@
 import { useEffect, useMemo } from "react";
+import { useStep4TempTwoHouseAndProviso } from "./step4-sections/useStep4TempTwoHouseAndProviso";
+import { householdFactsFormView } from "@/lib/calc/household-facts-view";
+import { householdViewOnChange } from "@/lib/calc/household-facts-view";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax-exemption";
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
-import { isMultiHouseSurchargeSuppressed, provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
+import { isMultiHouseSurchargeSuppressed } from "@/lib/calc/transfer-tax-api-helpers";
 import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes";
@@ -28,7 +31,6 @@ import { ImportedOneHouseFactsCard } from "@/components/calc/transfer/ImportedOn
 import { calcReplacementHouseApplies } from "@/lib/calc/replacement-house-scope";
 import { JudgmentHandoffNoticeCard } from "@/components/calc/transfer/JudgmentHandoffNoticeCard";
 import { DeclaredNewHouseOriginBlock } from "@/components/calc/transfer/DeclaredNewHouseOriginBlock";
-import { declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
 import { presaleRightNoHouseExceptionVisible } from "@/lib/calc/presale-right-no-house-exception-scope";
 import { HouseholdHousingCountSection } from "./step4-sections/HouseholdHousingCountSection";
 import { FirstAssetChangeNoticeCard } from "./step4-sections/FirstAssetChangeNoticeCard";
@@ -48,19 +50,12 @@ import {
   resolveHouseholdRightCount,
   presaleRightsPatchWithConfirmClear,
   houseCountScalarLocked,
-  resolveTemporaryTwoHouse,
 } from "@/lib/calc/household-house-count";
-import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
-import { temporaryTwoHouseCandidateExcludedIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
-import { rentalResidenceCandidateHouseIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
-import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
-import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { countExclusionRowApplies, countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { spouseHoldingQuestionApplies } from "@/lib/calc/spouse-holding-scope";
-import { deemedOneHouseContextDeclared, rentalResidenceContextDeclared } from "@/lib/calc/deemed-one-house-context";
 
 /**
  * 미등기 양도(「소득세법」 제104조 제3항) 토글을 **띄우지 않는** 자산 종류.
@@ -102,6 +97,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   // NH-14 — 세대·주택 현황(① · 세대 보유 주택 명부 · 분양권·입주권 목록)의 기준 자산 종류. 첫 자산이 주택 계열이면 `primaryKind`와 같고,
   //   토지·건물이 첫 자산이어도 함께 양도하는 주택이 있으면 그 주택이다(④ `transfer-tax-api.ts` · ⑧ `transfer-tax-validate-step1.ts`와 같은 leaf).
   const householdKind = householdFactsKindOfForm(form);
+  // NH-14 후속 — 세대 축 섹션(일시적 2주택 · 세대 명부)은 세대 기준 폼 뷰로 그린다. 뷰의 자산 patch는 원래 순서로 저장된다(`household-facts-view.ts`).
+  const householdView = useMemo(() => householdFactsFormView(form), [form]);
+  const householdOnChange = useMemo(() => householdViewOnChange(form, onChange), [form, onChange]);
   const primaryAcquisitionDate = form.assets?.[0]?.acquisitionDate ?? "";
   const primary = form.assets?.[0];
 
@@ -161,57 +159,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   // 1세대1주택 안내 배너의 고가주택 기준금액 — 양도일 기준 6억·9억·12억 (OH-65, 안내 전용)
   const highValueLabel = highValueThresholdForDisplay(form.transferDate).label;
 
-  // §155① 두 날짜 — ④(`buildHouseholdSpecialPayload`)와 같은 leaf·인자. §154① 단서 맥락과 넘겨받은
-  // 사실 카드(⑯·⑱ — OH-36, 토글로 가르면 명부 도출분이 숨는다)가 함께 쓴다.
-  const tempTwoHouseDates = useMemo(
-    () =>
-      resolveTemporaryTwoHouse({
-        primaryKind: form.assets?.[0]?.assetKind,
-        primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
-        houses: form.houses,
-        transferDate: form.transferDate,
-        legacyPrecedence: form.legacyHouseCountPrecedence === true,
-        declaredSpecial: form.temporaryTwoHouseSpecial === true,
-        declaredNewHouseDate: form.newHouseAcquisitionDate,
-        declaredNewHouseOrigin: declaredNewHouseOriginOf(form), // 결정 #43-3 — ④와 같은 leaf
-        // D1 — 조특법 제외 행 + §155②③ 상속주택 제외 행(엔진 정본 판정) — ④와 같은 leaf.
-        mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
-        excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
-        rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
-      }),
-    // 후보 제외가 양도일·감면주택 선언·상속 관련 세대 사실(증여·권리)까지 읽는다.
-    [form],
-  );
-
-  // §154① 단서 카드 노출·맥락 — one_house(1주택)/temporary_two_house(2주택+일시적특례)/미노출 (Part B 단일 파생, store 미러링 금지)
-  const proviso = useMemo(
-    () =>
-      provisoGate({
-        isOneHousehold: form.isOneHousehold,
-        // OH-20 — 재개발 완공APT도 §154① 단서 대상이다(④ · ⑧과 같은 술어). 시행령 §154① 단서는
-        //   자산 종류를 가리지 않고 「1세대가 양도일 현재 국내에 1주택을 보유」한 경우에 걸린다.
-        isHousing: isOneHouseExemptionAsset(primaryKind),
-        // Q-8 — ④·⑧과 **같은 leaf**로 주택 수를 얻는다(3중 패턴). §155②③·조특법 제외 **후** 수다(S03-4).
-        householdHousingCount: resolveExemptionHousingCount(form),
-        temporaryTwoHouseApplies: tempTwoHouseDates !== undefined,
-        // V-F4 — §155 의제(합가·⑥⑦⑧) 입력이면 2주택 이상에서도 단서 카드를 연다(④·⑧과 같은 leaf)
-        deemedOneHouseContextDeclared: deemedOneHouseContextDeclared(form),
-        // §155⑳ 거주주택 특례 선언이면 2주택 이상에서도 단서 카드(1호·2호가목·3호)를 연다(④·⑧과 같은 leaf)
-        rentalResidenceDeclared: rentalResidenceContextDeclared(form.assets?.[0]?.rentalHousingException),
-      }),
-    /**
-     * ⚠️ `form.houses`가 빠지면 명부를 고쳐도 이 카드가 갱신되지 않는다.
-     *
-     * §155① 의존(양도주택 취득일 · 신규주택 취득일 · OH-34 표식)은 `tempTwoHouseDates`가 싣는다.
-     *
-     * `temporary_two_house` 모드는 넘겨받은 사실 카드의 §154① 단서 행이 소비한다(OH-36).
-     * 판정 메뉴 `Step2.tsx` 쪽 안전망은 `__tests__/calc/proviso-gate-roster-deps.ui.test.tsx`(PGD).
-     *
-     * 제외 후 주택 수(`resolveExemptionHousingCount`)는 양도일·감면주택 선언·상속 관련 세대 사실까지 읽으므로
-     * 폼 전체를 의존으로 건다(`tempTwoHouseDates`와 같은 이유).
-     */
-    [form, primaryKind, tempTwoHouseDates],
-  );
+  // §155① 두 날짜 · §154① 단서 맥락 — 세대 기준 폼 뷰로 도출(④⑧과 같은 leaf). 800줄 정책으로 훅 분리.
+  const { tempTwoHouseDates, proviso } = useStep4TempTwoHouseAndProviso(form, householdView, primaryKind);
 
   /**
    * Q-8 — ① 스칼라 버튼 잠금(주택 외 housing-like 3종 전용 — 아래 위젯 참조). 명부가 정본이고
@@ -643,11 +592,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
              15호는 §154① 충족을 요구하므로 비과세 판정을 경유하고, 4호·§167의3⑨는 요구하지
              않아 비과세를 주장할 수 없는 세대도 입력이 필요하다(`TemporaryTwoHouseSection` 상단 표). */}
       {temporaryTwoHouseSectionVisible({
-        primaryAssetKind: primaryKind,
+        primaryAssetKind: householdKind, // NH-14 후속 — ④⑧과 같은 세대 기준 자산
         householdHousingCount: form.householdHousingCount,
       }) && (
         <>
-          <TemporaryTwoHouseSection form={form} onChange={onChange} mode="calc" />
+          <TemporaryTwoHouseSection form={householdView} onChange={householdOnChange} mode="calc" />
           {/* 결정 #43-3 — 신규 주택 취득일을 직접 선언한 경로(명부 행 없음)의 취득 경위. 게이트·판정은 ④⑧과 같은 `tempTwoHouseDates`다. */}
           {tempTwoHouseDates?.source === "declared" && (
             <DeclaredNewHouseOriginBlock
@@ -738,8 +687,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   ⑧ validate도 같은 조건으로 건너뛴다(보이지 않는 필드 차단 방지).
             */}
             <HouseCountExemptionInputs
-              form={form}
-              onChange={onChange}
+              form={householdView}
+              onChange={householdOnChange}
               hideGracePeriod
               countExclusionEnabled={countExclusionRowsInScope(householdKind)}
               countExclusionApplies={(h) => countExclusionRowApplies(householdKind, h)}
@@ -759,6 +708,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           primaryKind={primaryKind}
           householdKind={householdKind}
           primaryAcquisitionDate={primaryAcquisitionDate}
+          householdForm={householdView}
+          onHouseholdChange={householdOnChange}
         />
       )}
 

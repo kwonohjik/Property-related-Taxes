@@ -8,7 +8,6 @@
 
 import { inheritedPresalePayload } from "./unsold-98-inherited-presale";
 import { buildPreDeemedPurchasePayload } from "./transfer-pre-deemed-purchase-form";
-import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { sellingHouseStdPricePayload } from "@/lib/calc/selling-std-price-scope";
 import { buildExemptionProvisoPayload } from "./exemption-proviso-payload";
 import { depreciationSupport } from "./depreciation-scope";
@@ -20,8 +19,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
-import { resolveHouseholdHousingCount, resolveHouseholdRightCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
-import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
+import { resolveHouseholdHousingCount, resolveHouseholdRightCount } from "@/lib/calc/household-house-count";
 import { primaryEngineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import {
@@ -41,7 +39,7 @@ import {
   buildPreHousingDisclosurePayload,
   buildNewConstructionPayload,
 } from "./transfer-tax-api-body-blocks";
-import { toEngineReductions, toSelfCultivatedExpropriatedLand, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildExpropriationInput, buildReplacementHousePayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload, buildPre1990LandPayload, buildSameHouseholdInheritancePayload, provisoGate, isFullFractionalBundle } from "./transfer-tax-api-helpers";
+import { toEngineReductions, toSelfCultivatedExpropriatedLand, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildExpropriationInput, buildReplacementHousePayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload, buildPre1990LandPayload, buildSameHouseholdInheritancePayload, isFullFractionalBundle } from "./transfer-tax-api-helpers";
 // ⚠️ 신규 import는 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import 정리 시
 //    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
 import { buildPrimaryContext } from "./transfer-tax-api-primary-context";
@@ -61,11 +59,13 @@ import { anyPartCarryover } from "./transfer-land-part-cause";
 import { legacyExpenseMovesToParts } from "./split-legacy-expense";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { householdFactsAssetOf } from "./household-facts-asset";
+import { householdFactsFormView } from "./household-facts-view";
+import { householdFactsCompanionAssetId } from "./household-facts-view";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { carryoverEventForm } from "./transfer-tax-api-carryover";
 import { withDonorBuilt } from "./transfer-tax-api-donor-built";
 import { withHiddenSuccessorRightModeActual } from "./transfer-successor-right";
-import { carryoverAcquisitionDateFallback, primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
+import { carryoverAcquisitionDateFallback } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
 import { buildBurdenedGiftInfo, burdenedGiftBundleTotalSalePrice } from "./transfer-tax-api-burdened-gift";
@@ -90,19 +90,15 @@ import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload"
 import { calcReplacementHouseApplies } from "./replacement-house-scope";
 import { buildCalcGiftHouseholdPayload } from "./gift-household-payload";
 import { buildSuccessorGiftHouseholdPayload } from "./gift-household-payload";
-import { isOneHouseExemptionAsset } from "./housing-like-asset";
-import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
-import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
-import { mergeContextOf } from "@/lib/calc/merge-house-origin";
+import { calcProvisoMode } from "./transfer-tax-api-residence";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { redevActualAcquisitionPriceRaw } from "./redev-acquisition-price-source";
 import { withRedevCarryoverAcqMode } from "./redev-carryover-acq-mode";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
-import { deemedOneHouseContextDeclared, rentalResidenceContextDeclared } from "./deemed-one-house-context";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -129,7 +125,10 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
   const fractionalBundleMerge = isFullFractionalBundle(form.assets, form.assetSplitMode);
 
   // ── 대표 자산 감면 (자산별 reductions 배열 + 명부 행 ⑥의 §99의4·§98의9 — 게이트는 공용 술어) ──
-  const reductions = toEngineReductions(primaryReductionsWithRows(form), primary, primary.expropriationNoticeDate);
+  // NH-14 후속 — 함께 양도 주택이 세대 기준 자산이면 명부 행 ⑥ 감면(§99의4·§98의9)은 그 주택 카드가 받는다(`transfer-tax-api-bundled.ts`).
+  const hfCompanionId = householdFactsCompanionAssetId(form);
+  const householdView = householdFactsFormView(form);
+  const reductions = toEngineReductions(hfCompanionId ? (primary.reductions ?? []) : primaryReductionsWithRows(form), primary, primary.expropriationNoticeDate);
 
   // ── ④⑬ 비사업용 토지 정밀판정 raw 페이로드 (서버 buildNblEngineInput이 nested+Date 변환) ──
   const nblRaw = buildNonBusinessLandRaw(primary, form.transferDate);
@@ -583,9 +582,11 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     // ⑬ §133 5년 누적 한도 — 과거 4개 과세연도 감면 이력 (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
     priorReductionUsage: form.priorReductionUsage ?? [],
     // ⑬ P5 모드 2 — 보유 감면주택 주택수 제외 (폼 전역 + 명부 행 ⑥ · article 입력분만) — 다건 ⑬과 같은 leaf
-    specialHouseExclusions: specialHouseExclusionsPayload(form),
+    specialHouseExclusions: specialHouseExclusionsPayload(householdView), // NH-14 후속 — 세대 기준 폼 뷰(명부 행 ⑥ 게이트)
     // ④⑬ §155⑤ 일시적 2주택 · §155⑧ 수도권 밖 부득이 · §155⑦ 농어촌주택 (body-blocks로 분리)
-    ...buildHouseholdSpecialPayload(form, primary),
+    ...buildHouseholdSpecialPayload(householdView, householdView.assets[0]), // NH-14 후속 — 양도 주택 = 세대 기준 자산
+    // ⑬ NH-14 후속 — 함께 양도 주택이 세대 기준 자산이면 그 id(⑭가 그 카드에 세대 사실을 싣는다)
+    ...(hfCompanionId ? { householdFactsCompanionAssetId: hfCompanionId } : {}),
     // ④⑬ §156의2⑤ 대체주택 비과세 특례 FLAT → nested (helpers로 분리, 800줄 정책)
     // 🔴 판정 메뉴와 **같은 조건**으로 게이트한다(OH-05 계산기 경로) — 넘겨받은 stale 토글이
     //    입주권 없는 1주택을 비과세로 만들었다(엔진 대체주택 분기는 주택 수를 보지 않는다).
@@ -620,34 +621,9 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     ...(form.inheritedRightChoiceWhenBothHeld
       ? { inheritedRightChoiceWhenBothHeld: form.inheritedRightChoiceWhenBothHeld }
       : {}),
-    ...(() => {
-      // §154① 단서 reason 정규화 — 카드 숨김(mode=null)·temp-two-house 무효 reason(나·다목)은 미전송 (Part D 게이트, mirror)
-      const provisoMode = provisoGate({
-        isOneHousehold: form.isOneHousehold,
-        // OH-20 — 재개발 완공APT도 §154① 단서 대상(⑤ Step4 · ⑧과 같은 술어).
-        isHousing: isOneHouseExemptionAsset(primary.assetKind),
-        // §154① 단서는 §155②③·조특법 제외 **후** 주택 수로 본다 — 엔진과 같은 leaf(⑤·⑧·Step4 안내와 공용, S03-4).
-        householdHousingCount: resolveExemptionHousingCount(form),
-        // V-F4 — §155 의제(합가·⑥⑦⑧) 입력이면 2주택 이상에서도 단서 카드를 연다(⑤·④·⑧ 같은 leaf)
-        deemedOneHouseContextDeclared: deemedOneHouseContextDeclared(form),
-        // §155⑳ 거주주택 특례 선언이면 2주택 이상에서도 단서 카드(1호·2호가목·3호)를 연다(⑤·④·⑧ 같은 leaf)
-        rentalResidenceDeclared: rentalResidenceContextDeclared(form.assets?.[0]?.rentalHousingException),
-        temporaryTwoHouseApplies: temporaryTwoHouseApplies({
-        primaryKind: form.assets?.[0]?.assetKind,
-        primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
-        houses: form.houses,
-        transferDate: form.transferDate,
-        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
-        declaredSpecial: form.temporaryTwoHouseSpecial === true,
-        declaredNewHouseDate: form.newHouseAcquisitionDate,
-        mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
-        excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
-        rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
-      }),
-      }).mode;
-      // 본문 조립은 증여세 부담부증여 경로와 공용 leaf(E-1 후속)
-      return buildExemptionProvisoPayload(form, provisoMode);
-    })(),
+    // §154① 단서 reason 정규화 — 카드 숨김(mode=null)·temp-two-house 무효 reason(나·다목)은 미전송 (Part D 게이트, mirror).
+    //   게이트 인자는 ⑤ Step4 거주 안내·⑧과 같은 leaf(`calcProvisoMode`) — 종전 이 자리의 인라인 복제본과 인자가 같다. 본문 조립은 증여세 부담부증여 경로와 공용 leaf(E-1 후속).
+    ...buildExemptionProvisoPayload(form, calcProvisoMode(form)),
     // ⑬ OH-22 §154⑤ 단서 처분 이력 — ⑤·⑧과 같은 노출 술어(범위 밖·미답이면 키 없음)
     ...buildFinalHouseRestartPayload(form, calcFinalHouseRestartInScope(form)),
     // ⑬ 다주택 중과 한시 유예 — houses 제공 시에만 엔진이 소비 (form-global gracePeriod)

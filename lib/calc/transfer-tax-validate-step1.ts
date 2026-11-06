@@ -21,6 +21,7 @@ import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { calcGiftPriorResidenceAsked } from "./gift-household-payload";
 import { directResidenceMonthsOverflowError } from "./residence-interval-validate";
 import { isOneHouseExemptionAsset, usesHouseCountRoster, requiresPresaleRightsConfirmation } from "./housing-like-asset";
+import { householdFactsFormView } from "./household-facts-view";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
@@ -99,7 +100,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   }
 
   // ⑧ 조특법 주택 수 제외 — 명부 행 ⑥ · 옛 선언 차단 · 게이트 밖 감면주택 섹션(D4-03)
-  for (const message of collectCountExclusionIssues(form)) issues.push({ step, message });
+  // NH-14 후속 — 세대 축 판정은 세대 기준 폼 뷰로(함께 양도 주택이 기준 자산이면 그 주택이 「양도 주택」 — ④·⑤와 같은 leaf).
+  const householdView = householdFactsFormView(form);
+  for (const message of collectCountExclusionIssues(householdView)) issues.push({ step, message });
 
   /**
    * ⑧ 세대 보유 주택 목록 — 행별 첫 오류 1건씩 (자동 안분 fallback 금지: 미입력=차단)
@@ -116,7 +119,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   // 동거봉양 합가일을 넣었는데 직계존속 연령을 고르지 않음 — 차단(결정 #9 하위 1 가). 칸(`MergeDateSection`)과 같은 게이트.
   if (
     temporaryTwoHouseSectionVisible({
-      primaryAssetKind: form.assets?.[0]?.assetKind,
+      primaryAssetKind: householdView.assets?.[0]?.assetKind,
       householdHousingCount: form.householdHousingCount,
     }) &&
     parentalCareParentAgeMissing(form)
@@ -130,14 +133,14 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   //   (merge-composition-unknown-unfavorable.plan.md §3-3 · memory `feedback_unknown_fact_applies_unfavorably`).
   const mergeCtx = mergeContextOf(form);
   // §155① 신규 주택으로 도출된 행 — 그 행의 취득 경위를 답하게 한다(④ 전송·⑤ 노출과 같은 도출 `deriveCalcTemporaryTwoHouse`).
-  const derivedTempTwoHouse = deriveCalcTemporaryTwoHouse(form, form.assets?.[0]);
+  const derivedTempTwoHouse = deriveCalcTemporaryTwoHouse(householdView, householdView.assets?.[0]);
   const newHouseRowId = derivedTempTwoHouse?.newHouseRowId;
   // 결정 #43-3 — 신규 주택 취득일을 직접 선언한 경로(명부 행 없음)의 경위 답이 앞뒤가 맞지 않으면 막는다. 미답은 막지 않는다(not_collected).
   //   게이트는 ⑤ 마운트(`Step4`: 섹션 노출 + `source === "declared"`)와 같다 — 칸이 없는 화면에서 막지 않는다.
   if (
     derivedTempTwoHouse?.source === "declared" &&
     temporaryTwoHouseSectionVisible({
-      primaryAssetKind: form.assets?.[0]?.assetKind,
+      primaryAssetKind: householdView.assets?.[0]?.assetKind,
       householdHousingCount: form.householdHousingCount,
     })
   ) {

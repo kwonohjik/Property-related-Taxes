@@ -99,3 +99,24 @@ describe("NH-14 ⑤ — 세대·주택 현황 칸의 표시 조건", () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ householdNoOtherHousesConfirmed: false, householdHousingCount: "2" }));
   });
 });
+
+describe("NH-14 후속 ⑤ — 세대 축 섹션은 함께 양도 주택을 「양도 주택」으로 읽는다 (계획서 nh14-companion-household-followups)", () => {
+  it("🔴 첫 자산 토지 + 함께 양도 주택 + 명부 1행 → 양도 주택 취득 경위를 묻고, 답은 **주택 카드**에 저장된다 (종전: 토지 카드)", () => {
+    const onChange = vi.fn();
+    render(<Step4 form={form(["land", "housing"], { houses: [houseRow("o1", "2024-06-01")], householdHousingCount: "2" })} onChange={onChange} />);
+    fireEvent.click(screen.getByTestId("selling-house-origin-self_rebuild"));
+    const patch = onChange.mock.calls.map((c) => c[0]).find((p: Partial<TransferFormData>) => p.assets) as Partial<TransferFormData>;
+    expect(patch.assets?.map((a) => a.assetId)).toEqual(["a1", "a2"]);
+    expect((patch.assets?.[1] as unknown as { sellingHouseRebuildKind?: string }).sellingHouseRebuildKind).toBe("self_rebuild");
+    expect((patch.assets?.[0] as unknown as { sellingHouseRebuildKind?: string }).sellingHouseRebuildKind).toBeUndefined();
+  });
+
+  it("대조군 — 주택 먼저는 첫 카드에 저장된다(종전과 같다)", () => {
+    const onChange = vi.fn();
+    render(<Step4 form={form(["housing", "land"], { houses: [houseRow("o1", "2024-06-01")], householdHousingCount: "2" })} onChange={onChange} />);
+    fireEvent.click(screen.getByTestId("selling-house-origin-self_rebuild"));
+    const patch = onChange.mock.calls.map((c) => c[0]).find((p: Partial<TransferFormData>) => p.assets) as Partial<TransferFormData>;
+    expect((patch.assets?.[0] as unknown as { sellingHouseRebuildKind?: string }).sellingHouseRebuildKind).toBe("self_rebuild");
+  });
+});
+
