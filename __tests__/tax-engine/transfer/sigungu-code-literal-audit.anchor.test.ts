@@ -40,6 +40,8 @@ const AUDITED_FILES = [
   "lib/tax-engine/multi-house-surcharge-count.ts",
   "lib/tax-engine/legal-codes/surcharge-transition.ts",
   "lib/tax-engine/data/one-house-holding-residence-era.ts",
+  // 조특법 §99의4①1호가목1) 단서 수도권 예외 군(연천·가평·강화·옹진) — 리뷰 NH-20
+  "lib/tax-engine/transfer-reductions/new-99-4-size.ts",
 ] as const;
 
 /**

@@ -238,7 +238,7 @@ const RURAL_994_DECL = {
   ruralHouseAcquisitionDate: "2016-01-01",
   ruralHouseStdPrice: "150000000",
   isRegisteredHanok: false,
-  isAdjacentArea: false,
+  adjacentArea994: "no" as const,
   meetsLocationRequirement: true,
 };
 /** 조특법 §98의9 준공후미분양 — 수도권 밖 · 2024-06-01 취득 · 5억 · 84㎡ */

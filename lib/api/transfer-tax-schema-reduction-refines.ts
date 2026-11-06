@@ -12,6 +12,8 @@
 import { z } from "zod";
 import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
+import { new994CapitalRegionConflict } from "@/lib/tax-engine/transfer-reductions/new-99-4-size";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 type ReductionLike = { type: string } & Record<string, unknown>;
 
@@ -89,4 +91,30 @@ function detachedFactsIssues(
     issue(`stdPriceFloorMet${suffix}`, `${label} 적용: 단독주택 시가표준액·기준시가 하한 충족 여부(예·아니오·모름)가 필요합니다.`);
   if (!r[`luxuryFacility${suffix}`])
     issue(`luxuryFacility${suffix}`, `${label} 적용: 엘리베이터·에스컬레이터·67㎡ 이상 수영장 설치 여부(예·아니오·모름)가 필요합니다.`);
+}
+
+/**
+ * §99의4 수도권 행 모순(리뷰 NH-20 · Q-7 (b)) — 명부 행 법정동코드(`ruralHouseRegionCode`)가 예외 아닌 수도권인데 소재지 요건을
+ * 「충족」으로 보낸 선언은 막는다. ⑧(`house-count-exclusion-reduction-validate.ts`)과 같은 함수(`new994CapitalRegionConflict`).
+ * 코드가 없으면(직접 API·수동 주소) 판정하지 않는다 — 소재지 토글은 종전대로 사용자 확인값이다.
+ */
+export function refineNew994CapitalRegion(
+  reductions: ReadonlyArray<ReductionLike> | undefined,
+  transferDate: string | undefined,
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+) {
+  (reductions ?? []).forEach((r, i) => {
+    if (r.type !== "new_99_4_rural" && r.type !== "new_99_4_hometown") return;
+    const conflict = new994CapitalRegionConflict({
+      isHometown: r.type === "new_99_4_hometown",
+      meetsLocationRequirement: r.meetsLocationRequirement as boolean | undefined,
+      regionCode: r.ruralHouseRegionCode as string | undefined,
+      transferDate: toOptionalDate(transferDate),
+      ruralHouseAcquisitionDate: toOptionalDate(r.ruralHouseAcquisitionDate as string | undefined),
+    });
+    if (conflict) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, i, "meetsLocationRequirement"], message: `§99의4 적용: ${conflict}` });
+    }
+  });
 }

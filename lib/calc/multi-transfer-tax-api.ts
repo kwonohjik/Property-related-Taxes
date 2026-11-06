@@ -53,6 +53,7 @@ import { buildOneHouseExtraFactsPayload } from "@/lib/calc/one-house-extra-facts
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 import { unpaidTaxPayload } from "./transfer-unpaid-tax-mode";
+import { ruralSurtaxAmountPayload } from "./transfer-unpaid-tax-mode";
 
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
@@ -525,6 +526,8 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
           delayedPaymentDetails: {
             // PEN-C — 단건 ④와 같은 leaf(모드 + auto면 값 0).
             ...unpaidTaxPayload(form),
+            // NH-38 — 기납부 농특세(단건 ④와 같은 leaf)
+            ...ruralSurtaxAmountPayload("paidRuralSurtax", form.priorPaidRuralSurtax),
             paymentDeadline: form.paymentDeadline,
             actualPaymentDate: form.actualPaymentDate || undefined,
           },
@@ -603,6 +606,8 @@ export async function callMultiTransferTaxAPI(
           amendment: {
             correctionKind: multiForm.correctionKind,
             originalDeterminedTax: parseAmount(multiForm.originalDeterminedTax),
+            // NH-39 — 당초 농특세(단건 ④와 같은 leaf)
+            ...ruralSurtaxAmountPayload("originalRuralSurtax", multiForm.originalRuralSurtax),
             // [F6] 경정청구(refund)는 가산세 없음 → 플래그 강제 false(stale 누출 차단)
             applyUnderReportingPenalty:
               multiForm.correctionKind === "refund_claim" ? false : multiForm.applyUnderReportingPenalty,

@@ -37,7 +37,8 @@
               "ruralHouseAcquisitionDate": "",
               "ruralHouseStdPrice": "60000000",
               "isRegisteredHanok": false,
-              "isAdjacentArea": false,
+              "adjacentArea994": "no",
+              "ruralLandAreaSqm994": "330",
               "meetsLocationRequirement": true
             }
           }
@@ -90,7 +91,7 @@
               "ruralHouseAcquisitionDate": "",
               "ruralHouseStdPrice": "100000000",
               "isRegisteredHanok": false,
-              "isAdjacentArea": false,
+              "adjacentArea994": "no",
               "meetsLocationRequirement": true
             }
           }
@@ -144,7 +145,8 @@
               "ruralHouseAcquisitionDate": "",
               "ruralHouseStdPrice": "60000000",
               "isRegisteredHanok": false,
-              "isAdjacentArea": false,
+              "adjacentArea994": "no",
+              "ruralLandAreaSqm994": "330",
               "meetsLocationRequirement": true
             }
           },

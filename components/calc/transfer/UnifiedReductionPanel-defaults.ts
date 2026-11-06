@@ -234,7 +234,11 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       ruralHouseAcquisitionDate: "",
       ruralHouseStdPrice: "",
       isRegisteredHanok: false,
-      isAdjacentArea: false,
+      // NH-30 — 연접 여부는 미응답으로 시작한다(⑧ 필수 · 모름 = 불성립 + 확인 필요). 기본 「아니오」로 미리 답하지 않는다.
+      adjacentArea994: "",
+      ruralLandAreaSqm994: "",
+      ruralHouseType994: "",
+      ruralHouseFloorAreaSqm994: "",
       meetsLocationRequirement: false,
     };
   }
@@ -244,7 +248,11 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       ruralHouseAcquisitionDate: "",
       ruralHouseStdPrice: "",
       isRegisteredHanok: false,
-      isAdjacentArea: false,
+      // NH-30 — 연접 여부는 미응답으로 시작한다(⑧ 필수 · 모름 = 불성립 + 확인 필요). 기본 「아니오」로 미리 답하지 않는다.
+      adjacentArea994: "",
+      ruralLandAreaSqm994: "",
+      ruralHouseType994: "",
+      ruralHouseFloorAreaSqm994: "",
       meetsLocationRequirement: false,
       meetsHometownRequirement: false,
     };

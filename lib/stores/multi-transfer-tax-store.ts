@@ -86,6 +86,8 @@ export interface MultiTransferFormData {
   amendmentMode: boolean;
   correctionKind: "amend" | "refund_claim";
   originalDeterminedTax: string;
+  /** NH-39 — 당초 농어촌특별세(단건 TransferFormData와 같은 필드명 — AmendmentBlock 재사용) */
+  originalRuralSurtax: string;
   amendmentSourceId: string;
   statutoryFilingDeadline: string;
   amendedFilingDate: string;
@@ -131,6 +133,7 @@ const defaultFormData: MultiTransferFormData = {
   amendmentMode: false,
   correctionKind: "amend",
   originalDeterminedTax: "",
+  originalRuralSurtax: "",
   amendmentSourceId: "",
   statutoryFilingDeadline: "",
   amendedFilingDate: "",

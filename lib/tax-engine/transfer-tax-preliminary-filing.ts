@@ -40,13 +40,22 @@ import { ratesForTransferDate, type RatesByTransferDate } from "./transfer-tax-i
 import type { TransferTaxInput } from "./types/transfer.types";
 
 /** 자산 index → 그 자산의 예정신고 결정세액(§107① 산출세액 − 감면세액). */
-export type PreliminaryFilingTaxes = Map<number, { determinedTax: number; reductionAmount: number }>;
+export type PreliminaryFilingTaxes = Map<
+  number,
+  {
+    determinedTax: number;
+    reductionAmount: number;
+    /** NH-38 — 예정신고 농어촌특별세(농특세분 납부지연가산세 base · 소득세분과 같은 축) */
+    ruralSurtax: number;
+  }
+>;
 
 interface CalcFn {
   (input: TransferTaxInput, rates: TaxRatesMap): {
     determinedTax: number;
     reductionAmount?: number;
     basicDeduction?: number;
+    ruralSurtax?: number;
   };
 }
 
@@ -94,6 +103,7 @@ export function computePreliminaryFilingTaxes(
     result.set(index, {
       determinedTax: r.determinedTax,
       reductionAmount: r.reductionAmount ?? 0,
+      ruralSurtax: r.ruralSurtax ?? 0,
     });
     used += r.basicDeduction ?? 0;
   }

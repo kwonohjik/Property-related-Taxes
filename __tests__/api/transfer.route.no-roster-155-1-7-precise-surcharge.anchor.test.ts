@@ -223,7 +223,7 @@ const RURAL_994 = {
   ruralHouseAcquisitionDate: "2016-01-01",
   ruralHouseStdPrice: "150000000",
   isRegisteredHanok: false,
-  isAdjacentArea: false,
+  adjacentArea994: "no" as const,
   meetsLocationRequirement: true,
 };
 

@@ -35,6 +35,14 @@ export function fmtRatePct(appliedRate: number | null | undefined): string | nul
 
 // ── rowOrder 빌더 ────────────────────────────────────────────
 
+/** NH-38 — 「농어촌특별세 가산세」 행. 값이 있을 때만 행을 낸다(단건·다건 표 공용). */
+export function ruralPenaltyRow(
+  v: Record<string, Record<ColumnKey, number | string | null>>,
+): [string, string] | undefined {
+  const total = v.ruralSurtaxPenalty?.total;
+  return typeof total === "number" && total > 0 ? ["ruralSurtaxPenalty", "농어촌특별세 가산세 (납부지연)"] : undefined;
+}
+
 /**
  * buildRows()의 rowOrder 배열 + values/roseNotes 매핑 로직을 담당.
  * FilingFormTableHelpers.ts 에서 호출됨.
@@ -86,6 +94,8 @@ export function buildRowsFromOrder(
     ["penaltyTax", "가산세액"],
     ["totalDeterminedTax", "총결정세액", { highlight: true, separatorAfter: true }],
     ["ruralSurtax", "농어촌특별세"],
+    // NH-38 — 농특세 미납분 납부지연가산세(별지 제84호서식 농어촌특별세 납부계산서의 가산세 칸 · 소득세 가산세와 별도). 있을 때만.
+    ...(ruralPenaltyRow(v) ? [ruralPenaltyRow(v)!] : []),
     ["localCalculatedTax", "지방소득세 산출세액"],
     ["localReduction", "지방세 감면세액"],
     ["localDeterminedTax", "지방세 결정세액", { highlight: true }],
