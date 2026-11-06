@@ -60,6 +60,7 @@ import { temporaryTwoHouseEraIssues } from "./temporary-two-house-era-facts";
 import { eraFormWithOriginDates } from "./temporary-two-house-era-facts";
 import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
 import { winWinRentalFieldErrors } from "./one-house-extra-facts-payload";
+import { winWinResidenceExemptForJudgment } from "./one-house-extra-facts-payload";
 import { collectHouseCountExclusionReductionErrors } from "./house-count-exclusion-reduction-validate";
 import { collectSpecialHouseExclusionRowErrors } from "./house-count-exclusion-reduction-validate";
 import { mergeContextOf, mergeHouseSideOf } from "./merge-house-origin";
@@ -706,7 +707,12 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
       "장기임대주택 특례",
       form.transferDate,
       "facts",
-      false, // winWinResidenceExempt — 이 화면은 종전대로 미전달(별도 관심사, 이번 수정 범위 밖)
+      // OH-42 — 상생임대주택이면 §155⑳1호 거주요건 면제. ⑤ 카드·엔진과 같은 술어·같은 사실(V-8).
+      winWinResidenceExemptForJudgment(form, form.transferDate, {
+        acquisitionDate: primary.acquisitionDate,
+        sameHouseholdInheritance:
+          primary.acquisitionCause === "inheritance" && primary.decedentSameHouseholdBeforeInheritance === true,
+      }),
       // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건 판정에 쓰인다(facts 모드는
       // 이 값을 쓰는 검증 이전에 반환하므로 지금은 no-op이지만, 계산기(`full`)와 같은 소스를
       // 유지해 향후 facts 모드가 이 축을 쓰게 되어도 3중 패턴이 깨지지 않게 한다).

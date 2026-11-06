@@ -38,6 +38,7 @@ import { InheritedSameHouseholdField } from "@/components/calc/transfer/Inherite
 import { GiftedSameHouseholdField } from "@/components/calc/transfer/GiftedSameHouseholdField";
 import { giftHouseholdConsolidationStart } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRentalSpecialField";
+import { winWinResidenceExemptForJudgment } from "@/lib/calc/one-house-extra-facts-payload";
 import { UsageConversionField } from "./UsageConversionField";
 import { judgmentUsageConversionStart } from "@/lib/calc/one-house-judgment-section-scope";
 import { judgmentDemolishedDeclared, judgmentDemolishedVisible } from "@/lib/calc/one-house-demolished";
@@ -152,6 +153,14 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
       ? { judgmentDate: primary.acquisitionDate, giftHouseholdBasis: giftBasis }
       : {}),
   });
+
+  /** ⑳ 카드 ③ 거주요건 표시용 상생임대 면제 — ⑧(`validateStep3`)과 같은 leaf·같은 사실. 카드 useMemo 의존성이라 객체를 메모한다. */
+  const winWinResidenceExempt = winWinResidenceExemptForJudgment(form, form.transferDate, {
+    acquisitionDate: primary.acquisitionDate,
+    sameHouseholdInheritance:
+      primary.acquisitionCause === "inheritance" && primary.decedentSameHouseholdBeforeInheritance === true,
+  });
+  const winWinResidenceFacts = useMemo(() => ({ winWinResidenceExempt }), [winWinResidenceExempt]);
 
   /**
    * 「양도 **당시**」 — 취득 당시와 **같은 규약**이다(F-3, 2026-09-25).
@@ -632,6 +641,8 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
         mergeRental={mergeRentalState(form)}
         // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건 실시간 표시(③)에 쓴다.
         wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
+        // OH-42 — 상생임대주택이면 거주요건 면제. ⑧·엔진과 같은 술어·같은 사실(V-8 — 빠지면 엔진 비과세인데 카드 「✗ 미충족」).
+        residenceFacts={winWinResidenceFacts}
       />
       )}
 
