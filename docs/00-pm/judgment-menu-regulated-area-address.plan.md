@@ -131,3 +131,8 @@ parity: J-1~J-4·J-7·J-9에서 ⑤ 표시값 = ④ 본문 값 = ⑧이 쓰는 �
   (알아볼 수 없는 주소 → #2919 B 규칙으로 조정대상지역 low)이었다. 코드가 없는 짝은 주소도 비우도록 시료만 고쳤다(단언 그대로).
 - E2E 관련 기존 스펙(`one-house-judgment-designated-district` · `one-house-judgment-handoff` · `transfer-regulated-auto`) 통과. 첫 실행의 핸드오프 4건 실패는 새 워크트리 개발 서버가
   `/calc/transfer-tax`를 처음 컴파일하는 중(화면에 「Compiling…」)이라 30초 안에 이동하지 못한 것 — 페이지를 미리 컴파일한 뒤 같은 7건 통과.
+
+## 후속 — V-5 (2026-11-06)
+
+일반 증여 세대 basis + 주소 문자열 · 안 만짐 → 판정 메뉴 본문 = 핸드오프 뒤 계산기 ④ 본문 `[아니오, 조정]`(`regulated-area-parity-coverage.anchor.test.tsx` P-4).
+⑧(§155⑳ facts 인자)은 facts 모드에서 결과에 닿지 않는다(T-1 full은 갈림 · T-2 facts는 같음) — facts 모드가 이 값을 쓰기 시작하면 T-2가 깨진다.
