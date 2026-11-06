@@ -9,6 +9,7 @@
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
+import type { RegulatedAreaResult } from "@/lib/regulated-area";
 
 /**
  * 조정대상지역 한 축 — **주소가 있으면 자동 판정(읽기전용) · 없으면 토글**.
@@ -29,6 +30,7 @@ export function RegulatedAreaField({
   onCheckedChange,
   toggleDescription = "소재지를 입력하면 읍·면·동·택지지구 예외까지 자동 판정합니다",
   toggleSize = "sm",
+  addressVerdict,
 }: {
   verdict: ReturnType<typeof isRegulatedByBjdCode> | null;
   autoLabel: string;
@@ -40,18 +42,34 @@ export function RegulatedAreaField({
   /** 주소가 없어 토글을 보일 때의 설명 — 호출 화면마다 다르다(계산기는 거주요건 안내) */
   toggleDescription?: string;
   toggleSize?: "default" | "sm";
+  /**
+   * 법정동코드 없이 **주소 문자열로 판정한 값**(판정 메뉴 — 계획서 `judgment-menu-regulated-area-address.plan.md` Q-2 a).
+   * 있으면 토글은 그대로 두고(`checked`가 이 판정값이다) 근거를 보인다 — 문자열 판정은 동·읍·면 예외를 못 보므로 고칠 길을 남긴다.
+   */
+  addressVerdict?: RegulatedAreaResult;
 }) {
   if (!verdict) {
     return (
-      <ToggleCard
-        data-testid={toggleTestId}
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        title={toggleTitle}
-        description={toggleDescription}
-        tone="rose"
-        size={toggleSize}
-      />
+      <div className="space-y-2">
+        <ToggleCard
+          data-testid={toggleTestId}
+          checked={checked}
+          onCheckedChange={onCheckedChange}
+          title={toggleTitle}
+          description={addressVerdict ? `주소로 판정 — ${addressVerdict.basis}` : toggleDescription}
+          tone="rose"
+          size={toggleSize}
+        />
+        {addressVerdict && addressVerdict.confidence !== "high" && (
+          <div data-testid={`${toggleTestId}-address-uncertain`}>
+            <ToneCard tone="amber" bodyClassName="" className="px-3 py-2">
+              <p className="text-xs leading-relaxed">
+                주소만으로는 정확히 판정하지 못했습니다. 위 <b>소재지</b>를 검색해 고르거나, 이 토글로 직접 선택하세요.
+              </p>
+            </ToneCard>
+          </div>
+        )}
+      </div>
     );
   }
   return (

@@ -45,8 +45,10 @@ import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 import { highValueThresholdForDisplay, oneRightHighValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import {
   calcGiftHouseholdBasis,
+  calcStoredRegulatedFlags,
   effectiveWasRegulatedAtAcquisition,
   GIFT_HOUSEHOLD_SCOPE_PRIMARY,
+  regulatedAddressVerdicts,
   regulatedVerdictForAcquisition,
 } from "@/lib/calc/effective-regulated-at-acquisition";
 import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house/same-household-inheritance-start";
@@ -134,11 +136,17 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
    * (엔진은 코드가 있으면 숨은 토글 `form.wasRegulatedAtAcquisition`을 읽지 않는다). 원시 토글을 넘기면 같은 화면에서
    * 「조정대상지역 해당」과 반대로 「거주요건이 없습니다」가 뜨고 권고 경고가 사라진다(S10-6·S13-14).
    */
+  /**
+   * 법정동코드 없이 주소 문자열만 있으면 두 토글의 값은 **계산기 ④와 같은 leaf**다 — 안 만진 토글은 주소 판정값, 만진 토글은 그 값
+   * (계획서 `judgment-menu-regulated-area-address.plan.md` Q-1·Q-2 a). ④·⑧도 같은 함수를 부른다. 저장값을 바꾸지 않고 화면이 파생한다.
+   */
+  const storedRegulated = calcStoredRegulatedFlags(form);
+  const addressVerdicts = regulatedAddressVerdicts(form);
   const wasRegulatedAtAcquisition = effectiveWasRegulatedAtAcquisition({
     regionCode: primary.regionCode,
     regionInDesignatedDistrict: primary.regionInDesignatedDistrict,
     judgmentDate: primary.acquisitionDate ? residenceJudgmentDate : undefined,
-    stored: form.wasRegulatedAtAcquisition,
+    stored: storedRegulated.wasRegulatedAtAcquisition,
     // 증여받은 주택은 증여일을 기준일(acquisitionDate)로 두고 basis가 세대 보유 시작일·증여자 취득일과의 결합을 정한다.
     ...(giftBasis && !conversionStart && !sameHouseholdStart
       ? { judgmentDate: primary.acquisitionDate, giftHouseholdBasis: giftBasis }
@@ -354,8 +362,13 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
           </p>
         )}
 
+        {/*
+          입주권 양도는 계산기 leaf가 「직접 만짐」 표지를 보지 않는다(§154① 판정 대상 아님) — 토글을 두면 판정 메뉴에서만 반영되고
+          계산기로 넘기면 버려진다. 그래서 주소 문자열 판정도 코드 판정처럼 읽기 전용으로 보인다(Q-3 a).
+        */}
         <RegulatedAreaField
-          verdict={regulatedVerdict}
+          verdict={regulatedVerdict ?? (isRightSale ? (addressVerdicts.acquisition ?? null) : null)}
+          addressVerdict={addressVerdicts.acquisition}
           autoLabel={
             conversionStart
               ? "주거용 사용 개시 당시 조정대상지역"
@@ -372,18 +385,21 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
                 ? "피상속인과 동일세대로 보유하기 시작한 당시 조정대상지역이었습니다"
                 : "취득 당시 조정대상지역이었습니다"
           }
-          checked={form.wasRegulatedAtAcquisition}
-          onCheckedChange={(wasRegulatedAtAcquisition) => onChange({ wasRegulatedAtAcquisition })}
+          checked={storedRegulated.wasRegulatedAtAcquisition}
+          onCheckedChange={(wasRegulatedAtAcquisition) =>
+            onChange({ wasRegulatedAtAcquisition, wasRegulatedAtAcquisitionTouched: true })
+          }
         />
 
         <RegulatedAreaField
-          verdict={transferRegulatedVerdict}
+          verdict={transferRegulatedVerdict ?? (isRightSale ? (addressVerdicts.transfer ?? null) : null)}
+          addressVerdict={addressVerdicts.transfer}
           autoLabel="양도 당시 조정대상지역"
           autoTestId="one-house-transfer-regulated-auto"
           toggleTestId="one-house-is-regulated"
           toggleTitle="양도 당시 조정대상지역입니다"
-          checked={form.isRegulatedArea}
-          onCheckedChange={(isRegulatedArea) => onChange({ isRegulatedArea })}
+          checked={storedRegulated.isRegulatedArea}
+          onCheckedChange={(isRegulatedArea) => onChange({ isRegulatedArea, isRegulatedAreaTouched: true })}
         />
 
         {/*

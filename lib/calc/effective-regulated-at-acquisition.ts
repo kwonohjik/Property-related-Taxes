@@ -275,6 +275,17 @@ function storedRegulatedJudgments(form: RegulatedFlagsForm): { transfer: StoredR
   };
 }
 
+/**
+ * 판정 메뉴 ⑤ 2-C — 법정동코드 없이 **주소 문자열로 판정한** 두 축의 판정(근거·신뢰도 포함). ④가 실은 값과 같은 판정 호출이다.
+ * 법정동코드가 있으면(코드 판정 — 화면은 읽기 전용 자동 판정을 따로 보인다) 또는 그 축을 직접 만졌거나 판정하지 않았으면 그 축은 없다.
+ * 계획서 `docs/00-pm/judgment-menu-regulated-area-address.plan.md` Q-2 a.
+ */
+export function regulatedAddressVerdicts(form: RegulatedFlagsForm): { transfer?: RegulatedAreaResult; acquisition?: RegulatedAreaResult } {
+  if (form.assets?.[0]?.regionCode) return {};
+  const j = storedRegulatedJudgments(form);
+  return { transfer: j.transfer.judged?.judgment, acquisition: j.acquisition.judged?.judgment };
+}
+
 /** 결과 화면 고지 한 줄 — 어느 값을 어느 날 기준으로 어떻게 판정했는가. */
 export type RegulatedAddressAssumption = {
   which: "transfer" | "acquisition";
