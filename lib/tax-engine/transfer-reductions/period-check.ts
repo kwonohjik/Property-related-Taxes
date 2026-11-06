@@ -20,7 +20,19 @@ interface PeriodRule {
   check: (ctx: PeriodCheckContext) => boolean;
   /** 미충족 시 사유 문구 */
   failReason: string;
+  /** 컨텍스트에 따라 사유가 달라지는 조문 — 있으면 `failReason`보다 우선한다 */
+  failReasonFor?: (ctx: PeriodCheckContext) => string | undefined;
 }
+
+/** 재개발 완공 아파트 조합원 — 준공일 축(NH-36). 준공일 없으면 막고, 기간 시작 이후면 연다(경과 후는 잔여주택 계약 사실로 엔진이 판정). */
+const memberCheck = (c: PeriodCheckContext, start: Date): boolean =>
+  c.usageApprovalDate !== undefined && c.usageApprovalDate >= start;
+const memberFailReason = (c: PeriodCheckContext, periodLabel: string): string | undefined => {
+  if (!c.redevMember) return undefined;
+  return c.usageApprovalDate === undefined
+    ? "재개발·재건축 조합원이 받은 신축주택은 준공일(사용승인·사용검사일)로 시한을 판정합니다 — 준공일을 먼저 입력하세요"
+    : `준공일(사용승인·사용검사일)이 신축주택취득기간(${periodLabel}) 시작 전 — 조합원 주택 시한 외`;
+};
 
 // YYYY-MM-DD 문자열 → Date. UTC 자정 파싱 — API 경유 입력(new Date("YYYY-MM-DD") = UTC midnight)과
 // 동일 기준. "T00:00:00" 로컬 자정은 KST 서버에서 9시간 어긋나 경계일 오판 (unsold-hybrid-p5 D()와 통일).
@@ -173,19 +185,23 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
       // 조특법 §99 ① 1호(자기건설): 사용승인일 / ① 2호(주건업): 매매계약일 + 계약금 납부
       // 본 헬퍼는 넓은 범위로 통과 — 본 요건(자기건설 vs 주건업 분기)은 evaluateNew99에서 재검증.
       // P1 (2026-06-11): 일자 전부 미입력 시 낙관 통과 (라디오 활성) — 정확 판정은 evaluator (D-1' 완화).
+      if (c.redevMember) return memberCheck(c, D("1998-05-22"));
       const target = c.contractDate ?? c.usageApprovalDate ?? c.acquisitionDate;
       return target === undefined || within(target, D("1998-05-22"), D("1999-12-31"));
     },
     failReason: "매매계약/사용승인일이 1998.5.22~1999.6.30(국민주택 ~1999.12.31) 시한 외 — 조특법 §99",
+    failReasonFor: (c) => memberFailReason(c, "1998.5.22.~"),
   },
   new_99_3: {
     label: "매매계약/사용승인 2001.5.23~2003.6.30",
     check: (c) => {
       // 조특법 §99의3 ① 1호(주건업): 매매계약일 / 2호(자기건설): 사용승인일
+      if (c.redevMember) return memberCheck(c, D("2001-05-23"));
       const target = c.contractDate ?? c.usageApprovalDate ?? c.acquisitionDate;
       return within(target, D("2001-05-23"), D("2003-06-30"));
     },
     failReason: "매매계약/사용승인일이 2001.5.23~2003.6.30 시한 외 — 조특법 §99의3",
+    failReasonFor: (c) => memberFailReason(c, "2001.5.23.~"),
   },
   // D-1 (2026-06-11): §99의4 시한 기준은 "농어촌주택등 취득일"인데 PeriodCheckContext는
   // 자산(양도하는 일반주택) 취득일만 보유 → 라디오 사전판정은 낙관 통과.
@@ -341,7 +357,7 @@ export function checkReductionPeriod(
   const inPeriod = rule.check(ctx);
   return {
     inPeriod,
-    failReason: inPeriod ? undefined : rule.failReason,
+    failReason: inPeriod ? undefined : (rule.failReasonFor?.(ctx) ?? rule.failReason),
     periodLabel: rule.label,
   };
 }

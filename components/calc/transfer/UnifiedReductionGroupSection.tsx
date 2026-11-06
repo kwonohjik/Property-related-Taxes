@@ -12,6 +12,8 @@ import type { RentalReductionFormVariant } from "@/lib/stores/calc-wizard-asset-
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import type { RedevMemberFormScope } from "@/lib/calc/redev-field-scope";
 import {
   expandToggleClass,
   expandToggleLabel,
@@ -105,6 +107,8 @@ export function GroupCategorySection({
   assetDong,
   assetHo,
   assetPhdSnapshot,
+  redevMember,
+  onRedevCompletionDateChange,
 }: {
   category: ReductionCategory;
   isOpen: boolean;
@@ -162,6 +166,10 @@ export function GroupCategorySection({
   assetHo?: string;
   /** Round 10 (2026-05-06): 자산-수준 PHD 데이터 스냅샷 — "자산 카드 PHD 가져오기" 버튼 */
   assetPhdSnapshot?: ReductionPhdValue;
+  /** 재개발 완공 아파트 조합원 갈래(`redevMemberNewHouseScope`) — §99·§99의3을 준공일 축으로 판정한다 (NH-36) */
+  redevMember?: RedevMemberFormScope;
+  /** 자산-수준 준공일(`redevCompletionDate`) 변경 — 주택 출자 원조합원은 이 패널이 그 칸을 보인다 */
+  onRedevCompletionDateChange?: (v: string) => void;
 }) {
   const schema = CATEGORY_UI_SCHEMA[category];
   // §99의4·§98의9는 이 목록이 아니라 명부 행 ⑥에서 받는다(`transfer-calc-count-exclusion-row-link.plan.md` Q-3).
@@ -217,6 +225,18 @@ export function GroupCategorySection({
             <p className="text-caption text-muted-foreground leading-relaxed" data-testid={`reduction-row-count-exclusion-hint-${category}`}>
               {rowHint} 보유 주택 목록(② 보유 상황)에서 그 주택의 「편집」 → <b>⑥ 주택 수 제외(조특법)</b>로 지정하세요.
             </p>
+          )}
+          {/* NH-36 — 주택을 출자한 원조합원의 완공 아파트: §99·§99의3 시한·5년을 준공일로 판정한다. 그 칸이 재개발 카드에 없어 여기서 받는다
+              (승계조합원·토지 출자는 재개발 카드의 준공일 칸을 같이 쓴다). 같은 자산-수준 값(`redevCompletionDate`)이다. */}
+          {category === "new_housing" && redevMember?.completionFieldInPanel && onRedevCompletionDateChange && (
+            <FieldCard
+              label="준공일 (사용승인·사용검사일 — 사용 검사 전 사실상 사용·임시사용승인이면 그중 빠른 날)"
+              field="redevCompletionDate"
+              hint="조합원이 받은 신축주택은 이 날로 신축주택취득기간과 「취득일부터 5년」을 판정합니다. 신축주택 감면(§99·§99의3)을 적용할 때만 씁니다."
+              trailing={<LawArticleModal legalBasis="소득세법 시행령 §162 ① 4호" label="시행령 §162①4호" />}
+            >
+              <DateInput value={redevMember.completionDate} onChange={onRedevCompletionDateChange} />
+            </FieldCard>
           )}
           {/* Round 9 (2026-05-06): 매매계약일 입력 — 펼침 활성화 시에만 노출.
               3개 그룹(장기임대·신축·미분양) 펼침 영역 상단에 표시되며, 자산-수준 단일 필드를 공유.
@@ -311,6 +331,7 @@ export function GroupCategorySection({
                       {...reductionAssetProps}
                       acquisitionCause={assetAcquisitionCause}
                       assetContractDate={assetContractDate}
+                      redevMember={redevMember}
                     />
                   )}
                   {/* §97의3 입력 폼 */}
@@ -364,7 +385,7 @@ export function GroupCategorySection({
                     (() => {
                       const form99 = reductions.find((r) => r.type === "new_99");
                       return form99 && form99.type === "new_99" ? (
-                        <New99InputForm value={form99} onChange={onUpdate99} {...reductionAssetProps} acquisitionCause={assetAcquisitionCause} />
+                        <New99InputForm value={form99} onChange={onUpdate99} {...reductionAssetProps} acquisitionCause={assetAcquisitionCause} redevMember={redevMember} />
                       ) : null;
                     })()}
                   {/* P1 (2026-06-11): §98의8 준공후미분양 50% 입력 폼 */}
