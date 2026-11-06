@@ -139,10 +139,12 @@ describe("D5-05 · CB-02 재개발 경로 — LTHD 특례 미반영 고지", () 
         { type: "unsold_98_2", contractDate982: new Date("2009-06-01") },
       ] as unknown as TransferTaxInput["reductions"],
     });
+    // 🔄 2026-11-06 US-44 — 고지는 재개발 분기 step이 아니라 엔진 진입부(`stripAssetKindGatedReductions`)가 싣는다.
     expect(
-      r.steps.some((st) => st.label === "조특법 §98의2 — 적용 대상 아님 (조합원 취득 자산)"),
+      r.warnings?.some(
+        (w) => w.includes("§98의2") && w.includes("미분양주택") && w.includes("이 계산에 반영하지 않았습니다"),
+      ),
     ).toBe(true);
-    expect(r.warnings?.some((w) => w.includes("적용되지 않습니다"))).toBe(true);
     // 종전 문구는 「아직 반영하지 않았다」로 읽혀 받을 수 있는 특례를 놓쳤다고 오해시켰다
     expect(r.warnings?.some((w) => w.includes("미반영"))).toBe(false);
   });

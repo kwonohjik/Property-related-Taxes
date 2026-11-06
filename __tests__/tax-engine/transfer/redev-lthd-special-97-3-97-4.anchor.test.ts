@@ -240,9 +240,10 @@ describe("§98의2 × 조합원 경로 — 자산종류 게이트", () => {
     expect(isReductionAllowedForAssetKind("unsold_98_2", "right_to_move_in")).toBe(false);
   });
 
-  it("G982-2: 대조군 — 주택·분양권에서는 그대로 허용된다", () => {
+  // 🔄 2026-11-06 US-44(사용자 결정 Q-4 「모두 막는다」) — 분양권 상태의 양도는 주택 양도가 아니라 이제 막힌다.
+  it("G982-2: 대조군 — 주택에서는 허용, 분양권은 US-44로 차단", () => {
     expect(isReductionAllowedForAssetKind("unsold_98_2", "housing")).toBe(true);
-    expect(isReductionAllowedForAssetKind("unsold_98_2", "presale_right")).toBe(true);
+    expect(isReductionAllowedForAssetKind("unsold_98_2", "presale_right")).toBe(false);
   });
 
   it("G982-3: 🔑 형제 조문은 막지 않는다 — §99는 조특령 §99①1호 단서가 재개발 변형을 명문화한다", () => {

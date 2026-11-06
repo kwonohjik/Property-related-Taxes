@@ -89,8 +89,8 @@ export const RATE_SPECIAL_REDUCTION_IDS: ReadonlyArray<string> = [
 export interface Unsold983Input {
   transferDate: Date;
   acquisitionDate: Date;
-  /** 거주자 / 국내사업장 없는 비거주자 (소법 §120) — 시한 시작일 분기 */
-  residencyType?: "resident" | "nonresident_no_pe";
+  /** 거주자 / 국내사업장 없는 비거주자 (소법 §120) — 시한 시작일 분기. 국내사업장 있는 비거주자는 적용 주체가 아니다(US-42) */
+  residencyType?: "resident" | "nonresident_no_pe" | "nonresident_with_pe";
   /** 사업주체 취득(법①) / 자기건설(법②) */
   houseType?: "purchased" | "self_built";
   /** 최초 매매계약일 — purchased (시한: 거주자 2009.2.12~ / 비거주자 2009.3.16~ ~2010.2.11) */
@@ -134,6 +134,14 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
       ? UNSOLD_98_3_PERIOD_FROM_NONRESIDENT
       : UNSOLD_98_3_PERIOD_FROM_RESIDENT;
 
+  // 0) 주체 — 법 ①「거주자 또는 「소득세법」 제120조에 따른 국내사업장이 없는 비거주자」(US-42)
+  if (input.residencyType === "nonresident_with_pe") {
+    reasons.push({
+      code: "NOT_ELIGIBLE_SUBJECT",
+      message: "국내사업장이 있는 비거주자는 적용되지 않습니다 — 적용 주체는 거주자 또는 「소득세법」 제120조에 따른 국내사업장이 없는 비거주자입니다 (법 §98의3①).",
+      legalBasis,
+    });
+  }
   // 1) 시한 — purchased: 매매계약일 / self_built: 착공일 AND 사용승인일 (법②)
   if (houseType === "self_built") {
     if (!input.constructionStartDate || !input.usageApprovalDate) {
@@ -292,6 +300,8 @@ export interface Unsold985Input {
   isNotOccupiedAtContract?: boolean;
   /** 해제 후 재계약·대체취득 아님 (령②2·3호) */
   isNotRecontract?: boolean;
+  /** 거주자 또는 국내사업장 없는 비거주자(법 ① — US-42). false면 적용 주체 아님. 미제공은 true(D11-05와 같은 기본값) */
+  isEligibleSubject?: boolean;
   transferIncome: number;
   standardPriceAtAcquisition?: number;
   standardPriceAt5Years?: number;
@@ -308,6 +318,13 @@ export function resolve985Rate(priceReductionRatePct: number): number {
 export function evaluateUnsold985(input: Unsold985Input): UnsoldHybridResult {
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_5;
   const reasons: UnsoldHybridIneligibleReason[] = [];
+  if (input.isEligibleSubject === false) {
+    reasons.push({
+      code: "NOT_ELIGIBLE_SUBJECT",
+      message: "국내사업장이 있는 비거주자는 적용되지 않습니다 — 적용 주체는 거주자 또는 「소득세법」 제120조에 따른 국내사업장이 없는 비거주자입니다 (법 §98의5①).",
+      legalBasis,
+    });
+  }
   /**
    * D5-02 — 인하율 **0%도 감면 대상**이다.
    *
@@ -422,6 +439,8 @@ export interface Unsold986Input {
   acquisitionDate: Date;
   /** 1호: 사업주체등 2년 임대 후 취득 / 2호: 취득 후 5년 임대 */
   hoType?: "seller_rented" | "buyer_rented";
+  /** 거주자 또는 국내사업장 없는 비거주자(법 ① — US-42). false면 적용 주체 아님. 미제공은 true */
+  isEligibleSubject?: boolean;
   /** 최초 매매계약일 */
   contractDate?: Date;
   /** 주택+부수토지 기준시가 합계 (원) — 취득 당시 (1호는 최초 임대개시 당시). 6억 초과 제외 */
@@ -457,6 +476,13 @@ export function evaluateUnsold986(input: Unsold986Input): UnsoldHybridResult {
   const reasons: UnsoldHybridIneligibleReason[] = [];
   const hoType = input.hoType ?? "seller_rented";
   const rate = UNSOLD_98_6_RATE;
+  if (input.isEligibleSubject === false) {
+    reasons.push({
+      code: "NOT_ELIGIBLE_SUBJECT",
+      message: "국내사업장이 있는 비거주자는 적용되지 않습니다 — 적용 주체는 거주자 또는 「소득세법」 제120조에 따른 국내사업장이 없는 비거주자입니다 (법 §98의6①).",
+      legalBasis,
+    });
+  }
 
   // 1) 기준시가 합계 6억 + 연면적 149 (초과 시 제외 — OR, 령② 단서)
   if (input.stdPriceSumAtBase === undefined || input.stdPriceSumAtBase <= 0) {
@@ -678,6 +704,7 @@ export function evaluateAnyHybridFromReduction(
       priceReductionRatePct: r.priceReductionRatePct985 as number | undefined,
       isNonCapitalUnsoldAtCutoff: r.isNonCapitalUnsoldAtCutoff985 as boolean | undefined,
       isFirstContract: r.isFirstContract985 as boolean | undefined,
+      isEligibleSubject: (r.isEligibleSubject985 as boolean | undefined) ?? true,
       isNotOccupiedAtContract: r.isNotOccupiedAtContract985 as boolean | undefined,
       isNotRecontract: r.isNotRecontract985 as boolean | undefined,
       transferIncome: ctx.transferIncome,
@@ -692,6 +719,7 @@ export function evaluateAnyHybridFromReduction(
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
       hoType: r.hoType986 as Unsold986Input["hoType"],
+      isEligibleSubject: (r.isEligibleSubject986 as boolean | undefined) ?? true,
       stdPriceSumAtBase: r.stdPriceSumAtBase986 as number | undefined,
       floorAreaSqm: r.floorAreaSqm986 as number | undefined,
       isUnsoldAfterCompletion: r.isUnsoldAfterCompletion986 as boolean | undefined,

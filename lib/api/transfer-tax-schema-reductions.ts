@@ -388,7 +388,7 @@ export const reductionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("unsold_98_3"),
     region: z.enum(["metropolitan", "non_metropolitan"]).optional(),
-    residencyType983: z.enum(["resident", "nonresident_no_pe"]).optional(),
+    residencyType983: z.enum(["resident", "nonresident_no_pe", "nonresident_with_pe"]).optional(),
     houseType983: z.enum(["purchased", "self_built"]).optional(),
     contractDate983: z.string().date().optional(),
     constructionStartDate983: z.string().date().optional(),
@@ -418,6 +418,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
   // §98의5 — P3 본격 구현 (2026-06-12)
   z.object({
     type: z.literal("unsold_98_5"),
+    /** ⑫ US-42 — 적용 주체(거주자 또는 국내사업장 없는 비거주자). 누락 시 침묵 strip → 엔진 기본 true */
+    isEligibleSubject985: z.boolean().optional(),
     priceReductionRate: z.number().min(0).max(1).optional(),
     contractDate985: z.string().date().optional(),
     priceReductionRatePct985: z.number().nonnegative().optional(),
@@ -433,6 +435,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
   // §98의6 — P3 본격 구현 (2026-06-12)
   z.object({
     type: z.literal("unsold_98_6"),
+    /** ⑫ US-42 — 적용 주체 */
+    isEligibleSubject986: z.boolean().optional(),
     hoType986: z.enum(["seller_rented", "buyer_rented"]).optional(),
     stdPriceSumAtBase986: z.number().int().nonnegative().optional(),
     floorAreaSqm986: z.number().nonnegative().optional(),

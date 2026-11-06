@@ -37,6 +37,7 @@ import {
 } from "@/lib/calc/multi-house-surcharge-validate";
 import { surchargeSimulationInputError } from "@/lib/calc/surcharge-simulation-input";
 import { swapSellingHouse } from "@/lib/calc/swap-selling-house";
+import { RegulatedAreaAssumptionLine } from "@/components/calc/results/transfer/RegulatedAreaAssumptionLine";
 
 /** ⚠️ 사이드바 `STEP_LABELS`와 같은 문자열 — 파일명 Step3(양도 대상)이 2번째, Step2(보유 주택)가 3번째다(1주택 메뉴와 같은 이유). */
 const SURCHARGE_STEPS = ["세대", "양도 대상 주택", "보유 주택·권리", "판정 결과", "세부담 시뮬레이션"] as const;
@@ -299,6 +300,10 @@ export default function MultiHouseSurchargeCalculator() {
             {currentStep === 0 && <Step1 form={formData} onChange={updateFormData} />}
             {currentStep === 1 && <Step3 form={formData} onChange={updateFormData} menu="surcharge" />}
             {currentStep === 2 && <Step2 form={formData} onChange={updateFormData} menu="surcharge" />}
+            {/* 양도일 조정대상지역 여부가 중과를 가른다 — 주소 문자열 판정의 가정을 1주택 메뉴·계산기와 같은 줄로 알린다. */}
+            {currentStep === RESULT_STEP && result !== null && (
+              <RegulatedAreaAssumptionLine form={formData} selectWhere="judgment" />
+            )}
             {currentStep === RESULT_STEP && (
               <StepResult
                 result={result}

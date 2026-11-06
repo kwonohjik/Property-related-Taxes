@@ -32,6 +32,9 @@ import { rentalNoticesForEarlyReturn } from "./transfer-tax-rental-housing-step"
 import {
   RATE_SPECIAL_REDUCTION_IDS,
 } from "./transfer-reductions/income-deduction-router";
+import { stripAssetKindGatedReductions } from "./transfer-reductions/asset-kind-gate";
+import { stripAcquisitionCauseGatedReductions } from "./transfer-reductions/unsold-98-acquisition-cause";
+import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
 import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step";
 import { mergeRentalCarveoutSurchargeNotice, withMergeRentalCarveout } from "./one-house/merge-rental-carveout";
 import { runIncomeAndBaseSteps } from "./transfer-tax-income-steps";
@@ -97,9 +100,15 @@ function calculateTransferTaxCore(
 
   // STEP 0 ~ 0.48: 취득가액·입력 정규화 전처리 — 별도 파일로 분리 (800줄 정책, CB-08).
   //   순서가 곧 규약이라 한 덩어리로 옮겼다. `steps`·`warnings`는 참조로 넘겨 그대로 push된다.
-  const pre = runPreCalculationSteps(withMergeRentalCarveout(rawInput), rates, options, steps, warnings, calculateTransferTax);
+  // US-44: §98 시리즈 6조문 × 조합원 경로·분양권 — ⑤⑧ 게이트를 거치지 않은 입력(API 직접 호출·옛 이력) 방어.
+  //   감면주택 중과 배제(STEP 0.45)도 감면 선택을 근거로 하므로 모든 STEP보다 먼저 걷어 낸다.
+  //   US-07: 상속·증여·이월과세 증여 취득도 같은 자리에서 걷어 낸다(실제 취득 원인 — `reductionAcquisitionCauseOf`).
+  const assetGate = stripUnsold98GatedReductions(rawInput);
+  const gatedInput = assetGate.notices.length > 0 ? { ...rawInput, reductions: assetGate.reductions ?? [] } : rawInput;
+  warnings.push(...assetGate.notices);
+  const pre = runPreCalculationSteps(withMergeRentalCarveout(gatedInput), rates, options, steps, warnings, calculateTransferTax);
   echo.preDeemedPurchaseDetail = pre.preDeemedPurchaseDetail;
-  if (pre.earlyReturn) return pre.earlyReturn;
+  if (pre.earlyReturn) return withNotices(pre.earlyReturn, assetGate.notices);
   const {
     parsedRates,
     input,
@@ -126,7 +135,7 @@ function calculateTransferTaxCore(
     sd?.nonBusinessLandPart ? { ...inp, isNonBusinessLand: true } : inp;
   const withUnregisteredNotice = (r: TransferTaxResult, inp: TransferTaxInput): TransferTaxResult => {
     const extra = [unregisteredNotice, nblDeferralNoticeOf(r, inp)].filter((n): n is string => !!n);
-    return extra.length > 0 ? { ...r, warnings: [...(r.warnings ?? []), ...extra] } : r;
+    return withNotices(r, [...assetGate.notices, ...extra]);
   };
 
 
@@ -718,4 +727,21 @@ function calculateTransferTaxCore(
     specialHouseExclusionDetail,
     transferBurdenedGiftBreakdown,
   });
+}
+
+/** 조기 반환 결과에 고지를 덧붙인다 — 이미 실린 문구는 다시 싣지 않는다. */
+function withNotices(r: TransferTaxResult, notices: readonly string[]): TransferTaxResult {
+  const fresh = notices.filter((n) => !(r.warnings ?? []).includes(n));
+  return fresh.length > 0 ? { ...r, warnings: [...(r.warnings ?? []), ...fresh] } : r;
+}
+
+/** §98 시리즈 6조문 진입 방어 — 자산 종류(US-44) → 취득 원인(US-07) 순으로 걷어 내고 고지를 모은다. */
+function stripUnsold98GatedReductions(input: TransferTaxInput): { reductions: TransferTaxInput["reductions"] | undefined; notices: string[] } {
+  const byKind = stripAssetKindGatedReductions(input.propertyType, input.reductions);
+  const byCause = stripAcquisitionCauseGatedReductions(
+    byKind.reductions,
+    reductionAcquisitionCauseOf(input),
+    input.inheritedPresaleCompletedByHeir,
+  );
+  return { reductions: byCause.reductions, notices: [...byKind.notices, ...byCause.notices] };
 }
