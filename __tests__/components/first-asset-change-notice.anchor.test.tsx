@@ -40,7 +40,7 @@ const deleteCard = (idx: number) => {
 
 describe("Step1 삭제 → 마커", () => {
   it("W-1: 첫 자산 삭제 + 폼 전역 선언 있음 → 마커(새 첫 자산 · 묶음)", () => {
-    render(<Host show="step1" init={{ ...(form(A(), B(), C()) as F), wasRegulatedAtAcquisition: true, marriageDate: "2020-01-01" }} />);
+    render(<Host show="step1" init={{ ...(form(A(), B(), C()) as F), wasRegulatedAtAcquisition: true, wasRegulatedAtAcquisitionTouched: true, marriageDate: "2020-01-01" }} />);
     deleteCard(0);
     expect(latest?.assets.map((a) => a.assetId)).toEqual(["b1", "c1"]);
     expect(latest?.firstAssetChangeNote).toEqual({ newFirstAssetId: "b1", groups: ["regulated", "merge"] });
@@ -67,7 +67,9 @@ describe("Step4 카드", () => {
   const withNote = (over: Partial<F> = {}): F =>
     ({
       ...(form(B(), C()) as F),
+      // 직접 고른 토글 — 안 만졌으면 ④가 새 첫 자산 주소로 다시 판정해 이 묶음이 아니다(`first-asset-facts.anchor.test.ts` L-8).
       wasRegulatedAtAcquisition: true,
+      wasRegulatedAtAcquisitionTouched: true,
       marriageDate: "2020-01-01",
       firstAssetChangeNote: { newFirstAssetId: "b1", groups: ["regulated", "merge"] },
       ...over,

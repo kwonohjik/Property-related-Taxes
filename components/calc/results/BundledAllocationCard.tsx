@@ -40,6 +40,7 @@ import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transf
 import { FalseContractPriceNoticeForItems } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
 import { RegulatedAreaAssumptionLine } from "@/components/calc/results/transfer/RegulatedAreaAssumptionLine";
+import { regulatedAssumptionPdfGroups } from "@/lib/calc/regulated-area-assumption-text";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { CalculationWarningsCard } from "./shared/CalculationWarningsCard";
 import { allPropertiesReceiveOnly } from "@/components/calc/results/transfer/receive-only-display";
@@ -181,6 +182,8 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
             formData,
             aggregate: { properties: aggregated.properties, aggregated, ownershipMap },
           }),
+          // 화면의 「조정대상지역 판정 — 확인 필요」 줄과 같은 leaf — PDF에도 항상 싣는다.
+          regulatedAreaAssumptions: regulatedAssumptionPdfGroups([{ form: formData }]),
         },
         filenamePrefix: "양도소득세_계산결과",
       },

@@ -61,7 +61,8 @@ function getTotalTax(taxType: string, r: R): number | undefined {
   return num(r.totalTax);
 }
 // ─── 양도세 섹션 3종 — ResultPdfTransferSections.tsx로 분리 (800줄 정책) ───
-import { TransferSection, TransferMultiSection } from "./ResultPdfTransferSections";
+import { TransferSection, TransferMultiSection, RegulatedAssumptionPdfNote } from "./ResultPdfTransferSections";
+import type { RegulatedAssumptionPdfGroup } from "@/lib/calc/regulated-area-assumption-text";
 import type { FilingHeadPdfRow } from "@/components/calc/results/transfer/filing-head-pdf-rows";
 
 
@@ -393,6 +394,10 @@ export function ResultPdfDocument({
         {/* 세금 유형별 상세 섹션 */}
         {taxType === "transfer" && <TransferSection r={r} selectedSectionIds={selectedSectionIds} phdApartment={inputData?.phdApartment === true} headRows={inputData?.filingHeadRows as FilingHeadPdfRow[] | undefined} />}
         {taxType === "transfer_multi" && <TransferMultiSection r={r} selectedSectionIds={selectedSectionIds} />}
+        {/* 조정대상지역 주소 문자열 판정 가정 — 화면 줄처럼 항목 선택과 무관하게 싣는다(결과뷰가 같은 leaf로 만든 값). */}
+        {(taxType === "transfer" || taxType === "transfer_multi") && (
+          <RegulatedAssumptionPdfNote groups={inputData?.regulatedAreaAssumptions as RegulatedAssumptionPdfGroup[] | undefined} />
+        )}
         {taxType === "acquisition" && <AcquisitionSection r={r} selectedSectionIds={selectedSectionIds} />}
         {(taxType === "inheritance" || taxType === "gift") && <InheritanceGiftSection r={r} taxType={taxType} inputData={inputData} selectedSectionIds={selectedSectionIds} />}
         {taxType === "property" && <PropertySection r={r} selectedSectionIds={selectedSectionIds} />}
