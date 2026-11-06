@@ -73,13 +73,29 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
   {
     id: "NTBL.UNDER_FILING_PENALTY",
     citation: "국세기본법 §47의3",
-    keywords: ["과소신고", "초과신고", "과소신고납부세액등", "100분의 10"],
+    // NH-39 — 「농어촌특별세법」에 따른 신고 제외 괄호가 빠지면 농특세 추가분에 과소신고가산세를 붙이지 않는 근거가 사라진다.
+    keywords: ["과소신고", "초과신고", "과소신고납부세액등", "100분의 10", "「농어촌특별세법」에 따른 신고는 제외한다"],
     keywordMode: "ALL",
   },
   {
     id: "NTBL.LATE_PAYMENT_PENALTY",
     citation: "국세기본법 §47의4",
-    keywords: ["납부지연가산세", "과소납부", "초과환급", "100분의 3"],
+    // NH-38 — 괄호가 빼는 국세는 인지세뿐이다(농어촌특별세 미납분에도 붙는 근거).
+    keywords: ["납부지연가산세", "과소납부", "초과환급", "100분의 3", "「인지세법」 제8조제1항에 따른 인지세는 제외한다"],
+    keywordMode: "ALL",
+  },
+  {
+    // common.ts PENALTY.DELAYED_PAYMENT_RURAL_SURTAX — 「국세」의 정의에 농어촌특별세 포함(NH-38)
+    id: "NTBL.DEFINITION_NATIONAL_TAX",
+    citation: "국세기본법 §2",
+    keywords: ["국가가 부과하는 조세 중 다음 각 목의 것을 말한다", "농어촌특별세"],
+    keywordMode: "ALL",
+  },
+  {
+    // common.ts RURAL_SURTAX_FILING_7_1 — 본세와 함께 신고·납부(NH-39)
+    id: "SURTAX.FILING_AND_PAYMENT",
+    citation: "농어촌특별세법 §7",
+    keywords: ["해당 본세를 신고ㆍ납부(중간예납은 제외한다)하는 때에 그에 대한 농어촌특별세도 함께 신고ㆍ납부하여야 하며"],
     keywordMode: "ALL",
   },
   {

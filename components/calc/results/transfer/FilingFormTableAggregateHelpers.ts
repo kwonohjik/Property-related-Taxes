@@ -30,6 +30,7 @@ import {
 } from "./FilingFormTableHelpers";
 import { gbCarryoverAcqDateOverride, purchasedPartAcqDateOverride } from "./FilingFormTableDateHelpers";
 import { fmtRatePct } from "./FilingFormTableRowDefs";
+import { ruralPenaltyRow } from "./FilingFormTableRowDefs";
 import { resolveFilingRateCode } from "./filing-rate-code";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
 import { selectPriorFiledIndices } from "@/lib/calc/multi-prior-filed";
@@ -495,6 +496,9 @@ export function buildAggregateRows(
    * 자산별로 나누어지지 않는다.
    */
   setNum("ruralSurtax", "total", aggregated.ruralSurtax ?? 0);
+  // NH-38 — 농특세 미납분 납부지연가산세(엔진 합계 · totalTax에 포함). 0이면 행을 내지 않는다.
+  if ((aggregated.ruralSurtaxDelayedPenalty ?? 0) > 0)
+    setNum("ruralSurtaxPenalty", "total", aggregated.ruralSurtaxDelayedPenalty ?? 0);
   /**
    * 지방소득세 산출세액 — 엔진 값을 그대로 싣는다(재계산 금지).
    * 종전에는 `aggregated.penaltyTax`로 base를 재현했는데 그 필드는 **국기법 신고불성실·
@@ -575,6 +579,7 @@ export function buildAggregateRows(
     ["priorPaidTax", "기납부세액 (예정신고, §111③)"],
     ["deductedPayable", "차감납부할세액(환급세액)", { highlight: true, separatorAfter: true }],
     ["ruralSurtax", "농어촌특별세"],
+    ...(ruralPenaltyRow(v) ? [ruralPenaltyRow(v)!] : []),
     ["localCalculatedTax", "지방소득세 산출세액"],
     ["localReduction", "지방세 감면세액"],
     ["localDeterminedTax", "지방세 결정세액", { highlight: true }],

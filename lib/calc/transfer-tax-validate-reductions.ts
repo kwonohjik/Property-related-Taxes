@@ -12,6 +12,8 @@ import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99
 import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
 import { isNew993PriorRuleEraIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
 import { needsFirstContractAnswer } from "@/lib/tax-engine/transfer-reductions/new-99-acquisition-cause";
+import { redevMemberNewHouseScope } from "./redev-field-scope";
+import { redevMemberNewHouseIssue } from "./transfer-tax-validate-new99-member";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import {
   isIncomeDeductionTrack,
@@ -243,7 +245,12 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // §4.3(2026-09-30): ⑫(`transfer-tax-schema-reduction-refines.ts`)·라우터(`income-deduction-router.ts`
           // 기본값 from_builder)와 같은 술어 — 2호(self_built)가 아니면 1호다. 화면(`New993InputForm`)도 미선택을
           // 「1호」로 표시하고, 1호 매매계약일은 자산-수준 칸이라 항상 열려 있다(막다른 길 아님).
-          if (r.acquisitionType993 === "self_built") {
+          // 재개발 완공 아파트 조합원 갈래(NH-36 · NH-16) — 준공일·잔여주택 계약 사실로 판정한다. 엔진·④·⑫와 같은 술어.
+          const member993 = redevMemberNewHouseScope(asset);
+          if (member993) {
+            const memberIssue = redevMemberNewHouseIssue(asset, r);
+            if (memberIssue) return fail(memberIssue);
+          } else if (r.acquisitionType993 === "self_built") {
             if (!r.usageApprovalDate993) return fail(fieldError("reduction.new_99_3.usageApprovalDate993", "§99의3 2호 적용: 사용승인일을 선택하세요."));
             // 법률 제6762호 부칙 §29② — 사용승인 2003.1.1.~6.30.이면 2003.1.1. 전 착공 여부 필수 (⑫ refine과 같은 술어 — 자동 fallback 금지).
             if (isAddenda29_2WindowIso(r.acquisitionType993, r.usageApprovalDate993) && !r.constructionStartedBefore2003_993)
@@ -276,13 +283,15 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // NH-02 — 종전 규정 적용분(2003.1.1. 전 계약·승인 등)은 당시 소득세법 시행령 §156 고급주택 기준(공동·단독·시설)이라 주택 유형을 묻는다.
           //   UI(`New993InputForm`)·⑫와 같은 술어(`isNew993PriorRuleEraIso`).
           if (
-            isNew993PriorRuleEraIso(r.acquisitionType993, r.contractDate993 || asset.assetContractDate, r.usageApprovalDate993, asset.acquisitionDate, r.constructionStartedBefore2003_993)
+            member993
+              ? isNew993PriorRuleEraIso("self_built", undefined, member993.completionDate, member993.completionDate, r.constructionStartedBefore2003_993)
+              : isNew993PriorRuleEraIso(r.acquisitionType993, r.contractDate993 || asset.assetContractDate, r.usageApprovalDate993, asset.acquisitionDate, r.constructionStartedBefore2003_993)
           ) {
             const luxuryIssue = luxuryFactsIssue("new_99_3", "993", "§99의3", r.houseType993, r.grossFloorAreaSqm993, r.attachedLandAreaSqm993, r.stdPriceFloorMet993, r.luxuryFacility993);
             if (luxuryIssue) return fail(luxuryIssue);
           }
           // NH-17 — 1호 매매 취득은 «최초로 매매계약을 체결하고 계약금을 납부한 자»인지 묻는다(분양권 승계는 불성립). 상속·증여는 엔진이 불성립으로 판정한다.
-          if (needsFirstContractAnswer(r.acquisitionType993, asset.acquisitionCause) && !r.firstContract993)
+          if (!member993 && needsFirstContractAnswer(r.acquisitionType993, asset.acquisitionCause) && !r.firstContract993)
             return fail(fieldError("reduction.new_99_3.firstContract993", "§99의3 1호 적용: 주택건설업자와 최초로 매매계약을 체결하고 계약금을 납부한 사람이 본인인지(예·아니오·모름) 선택하세요 (조세특례제한법 §99의3①1호)."));
           // 5년 시점 기준시가 필수 (5년 후 양도인 경우 안분 산식에 사용)
           if (parseAmount(r.standardPriceAt5Years || "0") <= 0) {
@@ -301,7 +310,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           //    값을 그대로 인정해, 실가 모드처럼 ④가 싣지 않는 경우 여기서는 통과하고 엔진이 `MISSING_STD_PRICE`로 감면을 뺐다
           //    (2026-08-31 의도 설계를 2026-10-21 사용자 결정 Q-1 a로 바꿨다 — 계획서 `burdened-gift-bundle-hidden-stdprice.plan.md`).
           // 재개발·재건축 변형 ON 시 종전주택 기준시가 필수 (§99 선례 — 자동 안분 fallback 금지)
-          if (r.isRedevelopedNewHouse993 && parseAmount(r.previousHouseStdPrice993 || "0") <= 0)
+          // 조합원 갈래는 재개발 변형을 출자 자산 사실에서 정한다 — 주택 출자 원조합원만(NH-32 · 엔진 `redevMemberNewHouseOf`)
+          const variant993 = member993 ? member993.houseContributed : !!r.isRedevelopedNewHouse993;
+          if (variant993 && parseAmount(r.previousHouseStdPrice993 || "0") <= 0)
             return fail(fieldError("reduction.new_99_3.previousHouseStdPrice993", "§99의3 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요 (조특령 §99의3② 1호 단서·2호 괄호).",
             ));
           // 승계조합원 입주권 환산의 §165① 합계(#2351 Q-2 a)·원조합원 §166 숨은 칸(#2346)도 그 leaf 안에 있다.
@@ -316,13 +327,15 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
            * `MISSING_STD_PRICE`로 **감면 0**을 반환한다(:531~537). 종전 ⑧은 `!isWithin5Years`만
            * 봐서, 재개발 토글을 켠 5년 이내 양도는 **경고 없이 감면이 통째로 사라졌다**.
            */
+          // 5년 기산 — 조합원 갈래는 준공일(서면인터넷방문상담4팀-2145 · NH-63), 아니면 취득일
+          const newHouseAcq993 = member993 ? member993.completionDate : asset.acquisitionDate;
           const needsStdPriceAtTransfer =
-            !!r.isRedevelopedNewHouse993 ||
-            (!!asset.acquisitionDate &&
+            variant993 ||
+            (!!newHouseAcq993 &&
               !!form.transferDate &&
-              !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate)));
+              !isWithin5YearsCheck(new Date(newHouseAcq993), new Date(form.transferDate)));
           if (needsStdPriceAtTransfer && !hasStdPriceAtTransfer993) {
-            return fail(fieldError("reduction.new_99_3.standardPriceAtTransfer993", r.isRedevelopedNewHouse993
+            return fail(fieldError("reduction.new_99_3.standardPriceAtTransfer993", variant993
                 ? "§99의3 적용: 재개발·재건축 신축주택 변형은 5년 이내 양도에도 양도시 기준시가가 필요합니다 (조특령 §99의3②1호 단서 안분)."
                 : "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액·기준시가 안분 모드가 아니거나 재개발·재건축 원조합원 자산이면 자산값이 전달되지 않습니다).",
             ));
@@ -334,11 +347,17 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         // P1 §99 신축주택 IMF 1차 (2026-06-11): 유형별 기준일·기준시가·면적 필수 (⑧).
         // 배제 토글은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
         if (r.type === "new_99") {
-          if (r.acquisitionType99 === "self_built" && !r.usageApprovalDate99)
+          // 재개발 완공 아파트 조합원 갈래(NH-36 · NH-27) — 준공일·잔여주택 계약 사실로 판정한다. 엔진·④·⑫와 같은 술어.
+          const member99 = redevMemberNewHouseScope(asset);
+          if (member99) {
+            const memberIssue = redevMemberNewHouseIssue(asset, r);
+            if (memberIssue) return fail(memberIssue);
+          }
+          if (!member99 && r.acquisitionType99 === "self_built" && !r.usageApprovalDate99)
             return fail(fieldError("reduction.new_99.usageApprovalDate99", "§99 적용: 자기건설 주택의 사용승인일을 입력하세요."));
           // 조특법 §99①2호 — 「최초로 매매계약을 체결하고 계약금을 납부한 자」. 비우면 엔진이 취득일로
           // 대신 읽어 기간 판정이 바뀌었다. §99의3(위)과 같은 자산-수준 fallback 규약.
-          if (r.acquisitionType99 !== "self_built" && !(r.contractDate99 || asset.assetContractDate))
+          if (!member99 && r.acquisitionType99 !== "self_built" && !(r.contractDate99 || asset.assetContractDate))
             return fail(fieldError("reduction.new_99.contractDate99", "§99 적용: 매매계약일을 입력하세요 (자산 매매계약일도 비어 있습니다)."));
           // 취득시 기준시가 필수 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API source ternary·UI echo와 동일 소스, ⑧ 3중 미러).
           if (r.phdMode99) {
@@ -361,10 +380,11 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           const luxuryIssue99 = luxuryFactsIssue("new_99", "99", "§99", r.houseType99, r.grossFloorAreaSqm99, r.attachedLandAreaSqm99, r.stdPriceFloorMet99, r.luxuryFacility99);
           if (luxuryIssue99) return fail(luxuryIssue99);
           // NH-03 — 2호 매매 취득은 «최초로 매매계약을 체결하고 계약금을 납부한 자»인지 묻는다.
-          if (needsFirstContractAnswer(r.acquisitionType99, asset.acquisitionCause) && !r.firstContract99)
+          if (!member99 && needsFirstContractAnswer(r.acquisitionType99, asset.acquisitionCause) && !r.firstContract99)
             return fail(fieldError("reduction.new_99.firstContract99", "§99 2호 적용: 주택건설업자와 최초로 매매계약을 체결하고 계약금을 납부한 사람이 본인인지(예·아니오·모름) 선택하세요 (조세특례제한법 §99①2호)."));
           // 재개발·재건축 변형 ON 시 종전주택 기준시가 필수 (B-11 — 자동 안분 fallback 금지)
-          if (r.isRedevelopedNewHouse99 && parseAmount(r.previousHouseStdPrice99 || "0") <= 0)
+          const variant99 = member99 ? member99.houseContributed : !!r.isRedevelopedNewHouse99;
+          if (variant99 && parseAmount(r.previousHouseStdPrice99 || "0") <= 0)
             return fail(fieldError("reduction.new_99.previousHouseStdPrice99", "§99 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요."));
           /**
            * 안분 기준시가 — 엔진(`new-99.ts` MISSING_STD_PRICE)과 **같은 조건**으로 앞단에서 막는다 (리뷰 NH-25).
@@ -373,16 +393,17 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
            *   - 양도시: 5년 후 양도 또는 재개발 변형(①1호 단서 분자·분모). 라우터가 자산값으로 대신하므로 ④가 싣는 값만 인정(§99의3과 같은 leaf).
            * 일자 미입력이면 5년 판정을 하지 않는다(변형만 본다) — 일자는 step0 영역.
            */
-          const hasDates99 = !!asset.acquisitionDate && !!form.transferDate;
+          const newHouseAcq99 = member99 ? member99.completionDate : asset.acquisitionDate;
+          const hasDates99 = !!newHouseAcq99 && !!form.transferDate;
           const over5Y99 =
-            hasDates99 && !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate));
+            hasDates99 && !isWithin5YearsCheck(new Date(newHouseAcq99), new Date(form.transferDate));
           if (over5Y99 && parseAmount(r.standardPriceAt5Years99 || "0") <= 0)
             return fail(fieldError(`reduction.${r.type}.standardPriceAt5Years`, "§99 적용: 취득 후 5년 경과 양도는 취득일부터 5년이 되는 날의 기준시가를 입력하세요 (조특령 §99①2호 — 미입력 시 감면이 적용되지 않습니다)."));
           if (
-            (over5Y99 || !!r.isRedevelopedNewHouse99) &&
+            (over5Y99 || variant99) &&
             !(parseAmount(r.standardPriceAtTransfer99 || "0") > 0 || engineStdPriceAtTransfer(form, ai) > 0)
           )
-            return fail(fieldError(`reduction.${r.type}.standardPriceAtTransfer`, r.isRedevelopedNewHouse99
+            return fail(fieldError(`reduction.${r.type}.standardPriceAtTransfer`, variant99
               ? "§99 적용: 재개발·재건축 신축주택은 5년 이내 양도에도 양도시 기준시가가 필요합니다 (조특령 §99①1호 단서)."
               : "§99 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (조특령 §99①2호 안분의 분모 — 환산취득가액·기준시가 안분 모드가 아니면 자산값이 전달되지 않습니다)."));
         }

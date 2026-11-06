@@ -137,13 +137,16 @@ const r993 = () => ({
   isRecontractExcluded993: false,
   recontractUnavoidableCause993: false,
   isRedevelopedNewHouse993: false,
-  previousHouseStdPrice993: "",
+  previousHouseStdPrice993: "100000000",
   exclusiveAreaSqm993: "84",
   region993: "outside_speculation",
   acquisitionType993: "from_builder", firstContract993: "yes" as const,
   hasOccupancyAtContract: false,
   isResident993: true,
   isHousingConstructionBusiness993: false,
+  // 완공APT(원조합원)는 조합원 갈래 — 준공 2021-09-01은 기간 경과 후라 잔여주택 계약 사실 「예」, 주택 출자라 재개발 변형의
+  // 종전주택 기준시가가 필요하다(NH-36 · NH-16 · NH-32). 입주권(조합원 갈래 아님)은 이 두 칸을 읽지 않는다.
+  remainderContract993: "yes",
 });
 
 /**
@@ -181,9 +184,10 @@ describe("RD-1 함께 양도 — §166 자산의 차감형 감면이 합산 세�
     ["입주권", "actual", "§99의2", 174_410_000, 11_312_000, 134_666_666],
     ["입주권", "actual", "§99의3", 174_410_000, 11_312_000, 134_666_666],
     ["완공APT", "apportioned", "§99의2", 157_030_370, 5_678_592, 69_629_629],
-    ["완공APT", "apportioned", "§99의3", 157_030_370, 5_678_592, 69_629_629],
+    // 완공APT §99의3 — 조합원 갈래(NH-36·NH-63·NH-32): 준공 2021-09-01부터 5년 이내 · 재개발 변형 (600−300)/(600−100) = 0.6
+    ["완공APT", "apportioned", "§99의3", 134_748_889, 10_134_888, 125_333_333],
     ["완공APT", "actual", "§99의2", 151_993_333, 8_739_333, 106_666_666],
-    ["완공APT", "actual", "§99의3", 151_993_333, 8_739_333, 106_666_666],
+    ["완공APT", "actual", "§99의3", 117_860_000, 15_566_000, 192_000_000],
   ] as const)("%s · %s · %s → 결정세액 %i · 농특세 %i", async (kind, mode, red, det, rural, reducible) => {
     const mk = kind === "입주권" ? right : apt;
     const reductions = [red === "§99의2" ? r992() : r993()];
@@ -204,7 +208,7 @@ describe("RD-1 함께 양도 — §166 자산의 차감형 감면이 합산 세�
     const s1 = await runCalc(single(right({ reductions: [r992()] })));
     expect(incomeDeductionReducible(s1.result)).toBe(134_666_666);
     const s2 = await runCalc(single(apt({ reductions: [r993()] })));
-    expect(incomeDeductionReducible(s2.result)).toBe(106_666_666);
+    expect(incomeDeductionReducible(s2.result)).toBe(192_000_000);
   });
 });
 
@@ -232,7 +236,8 @@ describe("RD-3 단건 §166 — 세액 불변 · 감면대상 소득금액과 �
     ["입주권", "§99의2", 100_242_998, 10_640_666, 134_666_666],
     ["입주권", "§99의3", 100_242_998, 10_640_666, 134_666_666],
     ["완공APT", "§99의2", 74_370_998, 8_176_666, 106_666_666],
-    ["완공APT", "§99의3", 74_370_998, 8_176_666, 106_666_666],
+    // 완공APT §99의3은 조합원 갈래 수정(NH-36·NH-63·NH-32)으로 세액이 바뀐다 — 준공일부터 5년 이내 · 재개발 변형 0.6
+    ["완공APT", "§99의3", 45_848_500, 14_515_000, 192_000_000],
   ] as const)("%s · %s → 총세액 %i · 농특세 %i · 감면대상 소득금액 %i (수정 전 0)", async (kind, red, total, rural, reducible) => {
     const mk = kind === "입주권" ? right : apt;
     const r = await runCalc(single(mk({ reductions: [red === "§99의2" ? r992() : r993()] })));
@@ -248,7 +253,8 @@ describe("RD-3 단건 §166 — 세액 불변 · 감면대상 소득금액과 �
 
   it("두 감면(§99의3 부적격 + §99의2 적격)이면 §99의2만 확정된다", async () => {
     const r = await runCalc(
-      single(apt({ reductions: [{ ...r993(), exclusiveAreaSqm993: "200", contractDate993: "2005-01-01" }, r992()] })),
+      // §99의3 부적격 — 조합원 갈래의 잔여주택 계약 사실 「아니오」(NH-16)
+      single(apt({ reductions: [{ ...r993(), remainderContract993: "no" }, r992()] })),
     );
     expect(r.result.totalTax).toBe(74_370_998);
     expect(r.result.unsold992Detail.reducibleTransferIncome).toBe(106_666_666);

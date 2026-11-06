@@ -86,7 +86,7 @@ export function CompanionAcqAmountSection({
         acquisitionAddress={props.asset?.addressJibun || props.asset?.addressRoad}
         acquisitionArea={props.acquisitionArea}
         onAcquisitionAreaChange={props.onAcquisitionAreaChange}
-        acquisitionDate={props.acquisitionDate}
+        acquisitionDate={props.estimateReferenceDate || props.acquisitionDate}
         buildingName={props.asset?.buildingName}
         standardPriceAtAcq={props.standardPriceAtAcq}
         onStandardPriceAtAcqChange={props.onStandardPriceAtAcqChange}

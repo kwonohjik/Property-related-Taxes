@@ -704,6 +704,9 @@ export function buildRows(
   // 농특세는 **총액 echo가 정본**이다 — 종전 `incomeDeductionRuralSurtax`는 소득금액차감형
   // detail 11종만 훑어 §77·§77의2·§77의3·§97 계열이 통째로 빠졌다(`resolveRuralSurtax` 주석).
   setNum("ruralSurtax", "total", resolveRuralSurtax(result));
+  // NH-38 — 농특세 미납분 납부지연가산세(엔진 echo · totalTax에 포함). 0이면 행을 내지 않는다.
+  if ((result.ruralSurtaxDelayedPenalty?.penalty ?? 0) > 0)
+    setNum("ruralSurtaxPenalty", "total", result.ruralSurtaxDelayedPenalty?.penalty ?? 0);
   /**
    * 지방소득세 산출세액 — **다시 계산하지 않는다**.
    *

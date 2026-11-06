@@ -428,6 +428,16 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           value={acqBasisValue}
           onChange={handleAcqBasisChange}
         />
+        {props.successorAptEstimateNote && (
+          <p className="text-caption text-muted-foreground" data-testid="successor-apt-estimate-note">
+            승계조합원 신축주택의 취득일은 입주권을 산 날이 아니라 사용승인일입니다{" "}
+            <LawArticleModal legalBasis="소득세법 시행령 §162 ① 4호" label="시행령 §162①4호" />. 감정가액·매매사례가액은 사용승인일
+            전후 3개월 이내 값이고 <LawArticleModal legalBasis="소득세법 시행령 §176의2" label="시행령 §176의2③" />, 취득 당시
+            기준시가는 사용승인일 당시 공동주택가격입니다. 그때 공동주택가격이 아직 공시되지 않았으면 최초 공시가격에 「사용승인일 당시 토지·건물
+            기준시가 합계를 최초 공시 당시 합계로 나눈 비율」을 곱한 값을 넣으세요{" "}
+            <LawArticleModal legalBasis="소득세법 시행령 §164 ⑦" label="시행령 §164⑦" />. 실지거래가액은 입주권 매입가에 추가로 낸 분담금을 더한 금액입니다.
+          </p>
+        )}
       </div>
       )}
 

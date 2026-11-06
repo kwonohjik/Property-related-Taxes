@@ -42,6 +42,7 @@ import type { ParsedRates } from "./transfer-tax-helpers";
 import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { computeAmendment } from "./transfer-tax-amendment";
+import { computeRuralSurtaxDelayedPenalty, ruralSurtaxDelayedPenaltyStep } from "./transfer-tax-rural-surtax-penalty";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 import { highValueExcessRulingNoticeText, laterLandExemptNotice } from "./transfer-tax-appurtenant-land";
 import { splitAppurtenantExcess, splitLaterAcquiredLand, buildRentalPartRateDetail, toNonBusinessLandPart, resolveClause5Tax, buildRentalHighValueExcessRuling } from "./transfer-tax-rental-housing-nbl-split";
@@ -596,11 +597,14 @@ export function runRentalHousingExceptionStep(
   // 인자 축은 finalize와 동일한 「감면 전 결정세액」 — 이 경로는 감면이 없어 산출세액과 같다.
   // `amendmentDetail`은 totalTax에 반영되지 않는 echo이므로 세액은 불변이다.
   const amendmentDetail = input.amendment
-    ? computeAmendment(input.amendment, rheDeterminedTax)
+    ? computeAmendment(input.amendment, rheDeterminedTax, rheSurtaxVerdict.surtax)
     : undefined;
   if (amendmentDetail) {
     for (const s of amendmentDetail.steps) steps.push({ ...s, sub: s.sub ?? true });
   }
+  // NH-38 — 농특세 미납분 납부지연가산세(정상 경로 finalize와 같은 leaf · 소득세분과 별도 줄)
+  const ruralSurtaxDelayedPenalty = computeRuralSurtaxDelayedPenalty(input.delayedPaymentDetails, rheSurtaxVerdict.surtax);
+  if (ruralSurtaxDelayedPenalty) steps.push(ruralSurtaxDelayedPenaltyStep(ruralSurtaxDelayedPenalty));
 
   // 해석 (5) 구주택 멸실·신축 통산 — 이 경로는 파트별 세율 판정을 거치지 않으므로(`partRateBasisApplied !== true`) 통산이 세율에 반영되지 않았다는 확인 필요를 낸다(세액 불변).
   const rebuildNotice = landRebuildNoticeOf(effectiveInput, splitDetail) ?? undefined;
@@ -716,7 +720,9 @@ export function runRentalHousingExceptionStep(
      * 형제 경로 `transfer-tax-redevelopment.ts`가 같은 결함을 이미 고쳤다.
      */
     ruralSurtax: rheSurtaxVerdict.surtax,
-    totalTax: rheDeterminedTax + rheLocalIncomeTax + filingDelayedPenalty + rheSurtaxVerdict.surtax,
+    ...(ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty } : {}),
+    totalTax:
+      rheDeterminedTax + rheLocalIncomeTax + filingDelayedPenalty + rheSurtaxVerdict.surtax + (ruralSurtaxDelayedPenalty?.penalty ?? 0),
     steps,
     rentalHousingExceptionDetail: rhe,
     penaltyDetail,

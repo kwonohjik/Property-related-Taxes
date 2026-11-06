@@ -39,6 +39,7 @@ import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
 import { REDEV_RECEIVE_SETTLEMENT_LIMIT_MESSAGE } from "./redev-receive-settlement-limit";
 import { redevReceiveSettlementReachesValue } from "./redev-receive-settlement-limit";
 import { REDEV_RIGHTS_VALUE_REQUIRED_MESSAGE } from "./redev-rights-value-required";
+import { successorAptAcquisitionIssue } from "./redev-successor-estimate";
 import { redevRightsValueMissing } from "./redev-rights-value-required";
 const SETTLEMENT_SALE_DATE_BASIS = `${REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_DECREE} · ${REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_GUIDELINE}`;
 
@@ -343,8 +344,8 @@ export function validateRedevelopmentAsset(
     if (asset.redevReceiveOnlyMode === "yes") {
       return `${label}: 승계조합원 모드에서 청산금 수령 단독 신고는 본 PR에서 미지원입니다. (후속 PR)`;
     }
-    // 환산 플래그는 차단하지 않는다 — 승계조합원 완공 APT는 실거래가 전용이라 ⑤에 산정 방식 라디오가 없고 ④가 남은 추계 플래그를
-    //   무시한다(`isRedevSuccessorAptActualOnly`). 종전 「환산 미지원」 차단은 라디오가 보일 때의 안내였다(칸 지정 없음).
+    // 추계 플래그는 차단하지 않는다 — 매매 승계는 추계 3종을 계산하고(아래 `successorAptAcquisitionIssue`), 상속·증여·부담부증여 승계는
+    //   ⑤에 산정 방식 라디오가 없어 ④가 남은 플래그를 무시한다(`isRedevSuccessorAptActualOnly`).
     // P9 — 승계조합원은 정의상 상속·증여·매매 중 하나. 신축자가건축 등 비현실적 조합 차단.
     const validCauses = ["purchase", "gift", "inheritance"];
     if (asset.acquisitionCause && !validCauses.includes(asset.acquisitionCause)) {
@@ -373,15 +374,15 @@ export function validateRedevelopmentAsset(
    *
    * 근거: 「소득세법」 §97①1호 가목(실지거래가액) · 시행령 §162①4호(승계조합원 신축주택 취득시기).
    */
-  if (
-    isSuccessor &&
-    asset.acquisitionCause === "purchase" &&
-    // 부담부증여는 §159가 취득가액(`bgActualAcquisitionTotal` 등)을 정하고 상단 취득가액 칸을 렌더하지 않는다
-    //   (`CompanionAcqPurchaseBlock.tsx` 부담부증여 게이트) — 요구하면 막다른 길이었다(계획서 redev-successor-bg-acq-method Q-1 a).
-    asset.transferType !== "burdened_gift" &&
-    parseAmount(asset.fixedAcquisitionPrice) <= 0
-  ) {
-    return fieldError("fixedAcquisitionPrice", `${label}: 승계조합원 — 입주권을 매매로 승계취득한 취득가액(실지거래가액)을 입력하세요. (소득세법 §97①1호 가목)`);
+  // 매매 — 산정 방식(실거래가·감정가액·매매사례가액·환산)마다 화면에 있는 칸을 요구한다(계획서 redev-successor-apt-estimate Q-1 a).
+  //   부담부증여는 §159가 취득가액(`bgActualAcquisitionTotal` 등)을 정하고 상단 취득가액 칸을 렌더하지 않는다
+  //   (`CompanionAcqPurchaseBlock.tsx` 부담부증여 게이트) — 요구하면 막다른 길이었다(계획서 redev-successor-bg-acq-method Q-1 a). 술어가 제외한다.
+  if (isSuccessor) {
+    const purchaseIssue = successorAptAcquisitionIssue(asset, label);
+    if (purchaseIssue) return purchaseIssue;
+    // 완공 APT가 아닌 승계 표시(양도 대상 입주권 등)는 종전 규칙 그대로 — 실지거래가액 칸.
+    if (purchaseIssue === undefined && asset.acquisitionCause === "purchase" && asset.transferType !== "burdened_gift" && parseAmount(asset.fixedAcquisitionPrice) <= 0)
+      return fieldError("fixedAcquisitionPrice", `${label}: 승계조합원 — 입주권을 매매로 승계취득한 취득가액(실지거래가액)을 입력하세요. (소득세법 §97①1호 가목)`);
   }
   // 증여도 같다 — 증여 신고가액(`CompanionAcqGiftBlock` 「증여 신고가액」 칸 = `fixedAcquisitionPrice`)이 취득가액이다(§163⑨).
   //   비우면 ⑧을 통과해 엔진이 계산을 중단했다(화면 경로 500). 부담부증여는 §159가 취득가액을 정하고 그 칸을 렌더하지 않는다 — 제외.
