@@ -194,6 +194,8 @@ export interface RedevelopmentOrchestratorInput extends RedevelopmentSplitInput 
    * 사례 45 — 청산금납부분 LTHD 표2 진입 가드 (해석례 2020-386).
    */
   newHouseResidenceMonths?: number;
+  /** 승계조합원 완공 APT 취득가액 추계 — 매매 승계만(`transfer-tax-redevelopment-steps.ts`). 없으면 실지거래가액(종전). */
+  successorEstimate?: import("./redevelopment-successor").SuccessorEstimateInput;
 }
 
 // 800줄 분리 — 분기 실행부 3개 + 전용 헬퍼 2개는 `redevelopment-branches.ts` 로 이동했다.

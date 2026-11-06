@@ -8,7 +8,7 @@
 1. **화면**: 승계조합원 완공 APT는 「취득가액 산정 방식」 라디오가 없다. 실거래가 칸 하나뿐이다(#2582 · anchor `__tests__/calc/redev-successor-apt-actual-only-render.anchor.test.tsx`). 계약서를 잃은 사람은 계산할 수 없다.
 2. **API**: 감정가액 방식을 직접 보내면 200이 나온다. 하지만 엔진 승계 분기가 산정 방식을 읽지 않아 **개산공제(§163⑥)가 빠진다**(S1 — 양도차익 470,000,000 · 일반 주택이라면 461,000,000). 매매사례·환산은 ⑫가 400으로 막는다(S2·S3).
 3. **법령**: 승계조합원 신축주택의 취득일은 사용승인일이다(소령 §162①4호 · 사전-2021-법령해석재산-1236 · 서면4팀-2072 · 조심2020서7932). 추계 기준일(§176의2③ 「취득일 전후 각 3개월」)과 환산·개산공제의 「취득 당시 기준시가」도 **사용승인일**이 된다. 승계조합원 추계를 직접 다룬 해석은 찾지 못했다(2.2). 인접 해석 2건(재산세제과-702 · 서면법규과-448)은 조특법 감면 계산의 「취득 당시 기준시가」를 같은 방향(신축주택 취득 당시)으로 봤다.
-4. **권장**: Q-1 (a) 3종 모두 지원. 계산은 「취득일 = 사용승인일인 일반 주택」과 같다(대조 H1~H3 값이 목표치). Q-2 (a) §114의2 가산세는 적용하지 않고 결과에 「확인 필요」를 고지한다. Q-3 (a) 사용승인일 당시 공동주택가격이 없으면 직접 입력과 §164⑦ 환산 도우미 중 고른다.
+4. **권장**: Q-1 (a) 3종 모두 지원. 계산은 「취득일 = 사용승인일인 일반 주택」과 같다(대조 H1~H3 값이 목표치). Q-2 (a) §114의2 가산세는 적용하지 않고 결과에 「확인 필요」를 고지한다. Q-3 (a) 사용승인일 당시 공동주택가격이 없으면 직접 입력과 §164⑦ 환산 도우미 중 고른다. (→ 구현 중 (b)로 재결정 — §4 결정)
 5. **작업량**: 결정 후 구현 약 1일. 엔진 승계 분기 1곳 + ④⑤⑧⑫ + 결과 산식 + anchor·E2E.
 
 ## 1. 실측 (route probe · 세율 mock)
@@ -90,6 +90,12 @@
 - (a) **직접 입력 + §164⑦ 환산 도우미를 보인다**(권장) — 일반 주택 카드에 이미 있는 도우미(`PhdConvertedPriceFill` · 「환산 공동주택가격」)를 승계 APT에도 연다. 자동 안분 fallback은 쓰지 않는다 — 미입력은 ⑧이 막는다.
 - (b) 직접 입력만 — 안내 문구로 §164⑦을 알려 준다. 작업이 작지만 사용자가 계산을 직접 해야 한다.
 
+### 결정 (2026-11-06)
+
+- **Q-1 = (a)** — 매매 승계 완공 APT(부담부증여 아님)는 추계 3종을 계산한다.
+- **Q-2 = (a)** — §114의2는 더하지 않고 결과에 「확인 필요」를 고지한다.
+- **Q-3 = (b)** — 구현 중 재결정(처음 (a) → (b)). §164⑦ 도우미는 ① 기본정보의 「토지 면적」 칸과 취득일(입주권 취득일)을 읽는데, 재개발 APT 카드에는 그 칸이 없고 기준일도 사용승인일로 바꿔 읽어야 했다. 계획서 (a)의 「이미 있는 도우미를 연다」는 실측 전 추정이었다(정정). 안내 문구로 §164⑦ 산식을 알린다. 도우미는 별건으로 남긴다(§8 V-7).
+
 ## 5. 미검증 레지스터
 
 | ID | 항목 | 검증 | 상태 |
@@ -99,7 +105,7 @@
 | V-3 | 서면4팀-939(늘어난 부수토지 = 청산금 잔금일)를 추계에도 반영해야 하는가 | KoreanLaw | ⏳ 지금 실거래가 경로도 주택 전체를 준공일 하나로 본다(보유기간 · 기준시가). 이 PR은 그 축을 바꾸지 않는다 — 별건 |
 | V-4 | 부담부증여 × 승계 APT × 추계(`bgAcquisitionMethod` 감정·매매사례·환산) | route probe | ⏳ 착수 시 실측. 부담부증여는 §159 경로가 따로 추계를 처리한다(#2582 A-3은 기준시가 평가만 확인) |
 | V-5 | 함께 양도(컴패니언) 승계 APT 추계 | route probe | ⏳ 착수 시 실측 — ④ 컴패니언 payload가 같은 술어를 쓴다 |
-| V-6 | §164⑦ 도우미가 승계 APT 카드에서 렌더되는가 | Playwright | ⏳ Q-3 (a)일 때만 |
+| V-6 | §164⑦ 도우미가 승계 APT 카드에서 렌더되는가 | Playwright · 코드 | ✅ 렌더되지 않는다 — `phdFillAssistVisible`이 `assetKind === "housing"`만 받고, 재개발 APT에는 토지 면적 칸이 없다(`AssetAreaSection` 시나리오 표에 없음). Q-3 (b)로 재결정 |
 
 ## 6. 테스트 계획
 
@@ -113,3 +119,53 @@
 - 상속·증여로 받은 승계 APT — 취득가액은 평가액(§163⑨)이고 추계가 아니다. 변경 없음.
 - 승계 **입주권** 양도 — §165① 기준시가로 추계 3종을 이미 지원한다. 변경 없음.
 - 원조합원 §166 경로의 §114의2 — 지금도 적용하지 않는다. Q-2 (a)면 같은 축으로 함께 기록만 한다.
+
+## 8. 구현 결과 (2026-11-06)
+
+### 8.1 바뀐 곳
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| 술어 | `lib/calc/redev-acquisition-price-source.ts` | `isRedevSuccessorAptActualOnly`를 상속·증여·부담부증여 승계로 좁혔다. 반대 쪽 `isRedevSuccessorAptEstimable` · 공통 `isRedevSuccessorApt`를 새로 만들었다. ④(주 자산 `primaryAcquisitionModeFlags` · 컴패니언 payload) · ⑤ · ⑥ 사이드바 · `engine-std-price-at-transfer`가 같은 술어를 쓴다(호출부 변경 없음) |
+| ⑧ | `lib/calc/redev-successor-estimate.ts`(신규) · `transfer-tax-validate-redev.ts` | 매매 승계 산정 방식별 필수 칸 — 실거래가·감정가액 `fixedAcquisitionPrice`, 매매사례가액 `similarSalesValue`, 추계 3종 `standardPriceAtAcq`, 환산 `standardPriceAtTransfer`. 완공 APT가 아닌 승계 표시는 종전 규칙 그대로 |
+| ⑫ | `transfer-tax-schema-required-refines.ts` | 매매 승계 + 추계 방식이면 `acquisitionPrice > 0`을 요구하지 않는다(값 자체는 일반 추계 refine) |
+| 엔진 | `redevelopment-successor.ts` · `transfer-tax-redevelopment-steps.ts` · `redevelopment.ts` | `successorEstimate` 입력(매매 승계만 · 부담부증여 제외). 취득가액 = 감정가액·매매사례가액·환산취득가액(분모는 일반 경로 `resolveConversionDenominatorAtTransfer`), 필요경비 = 개산공제(`computeEstimatedDeduction` · §163⑥ 율). 환산은 §97②2호 단서(가목 < 나목이면 나목만). 인가 후 필요경비는 추계에서 빼지 않는다 |
+| §114의2 고지 | `redevelopment-successor.ts` · `transfer-tax-redevelopment.ts` | 감정가액·환산 · 사용승인일부터 5년 이내(당일 포함 · 시행일 게이트는 `buildingPenaltyMethodApplies`)면 `warnings`에 「확인 필요」 · 가산세 0 |
+| 결과 타입 | `types/transfer-redevelopment.types.ts` | `successorMemberDetail`에 `acquisitionMethod` · `estimatedDeduction` · `estimatedValue` · `standardPriceAtAcquisition` · `necessaryExpenseSwap` · `penalty114_2Unapplied` |
+| ⑤ | `CompanionAcquisitionCauseSection.tsx` · `CompanionAcqPurchaseBlock(.types).tsx` · `CompanionAcqStdPriceSection.tsx` · `CompanionAcqAmountSection.tsx` · `RedevelopmentBlockCards.tsx` | 라디오 4종 · 사용승인일 안내(`successor-apt-estimate-note` · §164⑦ 산식 안내 포함 — Q-3 b) · 재개발 APT 기준시가 칸을 공동주택가격(총액)으로(`toPropertyKind` — 종전 ㎡당 단가 × 면적) · 공시가격·매매사례 조회 기준일을 준공일로(`estimateReferenceDate`) · 「지원하지 않는 분기」 목록을 남은 범위로 |
+| ⑦ | `RedevSuccessorEstimateFormula.tsx`(신규) · `RedevelopmentDetailCard.tsx` · `DetailedStatementRedevelopmentBuilders.ts` | 결과 카드 산식(방식 이름 · 개산공제 · 단서) · 계산명세서 취득가액·필요경비 행 산식. 카드 파일이 750줄을 넘어 산식 컴포넌트를 분리했다(726줄) |
+
+### 8.2 실측 (anchor `transfer.route.redev-successor-apt-estimate.anchor.test.ts` 23건)
+
+| 행 | 입력 | 결과 |
+|---|---|---|
+| E-0 | 실거래가 450,000,000 | 470,000,000 · 327,250,000(불변) |
+| E-1 | 감정가액 450,000,000 · 기준시가 300,000,000 | **461,000,000 · 320,950,000** (= H1) |
+| E-2 | 매매사례가액 500,000,000 | **411,000,000 · 285,950,000** (= H2) |
+| E-3 | 환산 300/600 | **451,000,000 · 313,950,000** (= H3) |
+| E-4 | 추계 + 인가 후 필요경비 50,000,000 | 감정 461,000,000 · 매매사례 411,000,000(빼지 않는다) · 실거래가 420,000,000(뺀다) |
+| E-5 | 환산 + 자본적지출 등 500,000,000 | 420,000,000 (§97②2호 단서 — 취득가액 0 · 필요경비 500,000,000) |
+| E-6 | API 감정가액 방식(§1.1 S1) | 461,000,000 (종전 470,000,000) |
+| C-1 | 함께 양도 둘째 자산 감정가액 | 456,000,000 (= 안분 양도가액 915,000,000 − 450,000,000 − 9,000,000 · 실거래가 대조 465,000,000) |
+| K-1~3 | §114의2 | 감정·환산 5년 안 고지 · 가산세 0 / 매매사례·실거래가·5년 뒤 고지 없음 |
+| U-1~3 | 증여 · 부담부증여 · 상속(API 감정가액) | 종전 값 그대로(327,250,000 · 153,260,870 · 470,000,000) |
+
+### 8.3 반전한 기존 테스트 (형제 안전망은 남은 범위로 옮겼다)
+
+- `transfer.route.redev-successor-bg-acq-method.anchor.test.ts` B-1~B-4 · B-6 · B-7 · B-9 — 매매 → **증여** 승계로 옮겨 「남은 추계 플래그를 무시한다」 단언 유지(B-6 증여 컴패니언은 키를 싣지 않아 `?? false`).
+- `redev-successor-apt-actual-only-render.anchor.test.tsx` — 매매 = 라디오 4 · 안내 · 고른 칸 / 부담부증여 = 라디오 0. 기준시가 칸 면적 0 · 조회 연도 = 준공일 기준 단언 추가.
+- `redev-hidden-general-std-price-render.anchor.test.tsx` — 매매 환산 칸 열림 + 부담부증여 칸 닫힘(종전 단언 유지).
+- `successor-unsupported-notice-g3-11.anchor.test.tsx` G-1(목록 문구) · G-2(환산은 「미지원」이 아니라 기준시가 칸 요구).
+- E2E `redev-successor-bg-acq-method.spec.ts` RS-2 · RS-3 반전(461,000,000 · 411,000,000) · RS-4 신규(결과 화면 산식 · §114의2 고지). 4건 통과(워크트리 dev 서버 · headless — 사람이 직접 본 확인은 아니다).
+
+### 8.4 뮤테이션 (15건)
+
+M1 엔진 추계 무시 11 · M2 개산공제 0 7 · M3 단서 끔 2 · M4 추계에도 인가후 필요경비 3 · M6 술어 종전 20 · M7 부담부증여 제외 삭제 4 · M8 ⑧ 기준시가 필수 삭제 3 · M9 ⑫ 예외 삭제 10 · M10 5년 게이트 삭제 1 · M11 매매사례 제외 삭제 1 · M12 ⑤ 안내 끔 4 · M13 공동주택가격 위젯 삭제 1 · M14 조회 기준일 삭제 1 · M15 명세서 산식 삭제 3 — 모두 실패로 잡혔다.
+**M5(엔진 「매매 승계만」 게이트 제거)는 생존** — 도달 경로가 없다: 증여는 ⑫ 「증여 취득 자산은 추계 불가」가 막고, 상속은 상속 평가 단계가 산정 방식을 실거래가로 정리한다(U-3 실측 470,000,000). 방어선으로 남긴다.
+
+### 8.5 남긴 것
+
+- V-7 §164⑦ 도우미(재개발 APT 토지 면적 칸 · 기준일 사용승인일) — Q-3 (b)로 미룬 별건.
+- 실거래가 승계의 결과 카드·명세서 문구 「권리가액(상속·증여 평가액)」·「의제 = 권리가액(§166②1호 안분 분자)」는 승계 매매 실거래가에도 그대로 나온다(종전부터 · 이 PR은 추계 행만 고쳤다) — 별건.
+- 함께 양도 안분 모드의 안분 키(양도시 기준시가) 칸은 `CompanionSaleModeBlock.toPropertyKind`를 써서 재개발 APT가 여전히 ㎡당 단가 × 면적 위젯이다(원조합원 포함 · 종전부터) — 별건.
+- V-3(서면4팀-939 면적별 취득시기) · V-4(부담부증여 × 추계) 변경 없음 — U-2가 부담부증여 값 불변을 고정한다.
