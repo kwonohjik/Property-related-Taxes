@@ -1,0 +1,36 @@
+{
+ "id": "S10-11",
+ "status": "CONFIRMED",
+ "severity": "low",
+ "title": "사이드바 「선언한 특례」가 화면에서 켤 수 없는 레거시 스칼라(§155⑥⑦⑧)를 읽고, 정본인 명부 행 선언은 빠뜨린다",
+ "file": "lib/calc/one-house-exemption-validate.ts",
+ "line": 698,
+ "relatedLocations": [
+  "components/calc/one-house/OneHouseJudgmentSidebar.tsx:34",
+  "app/calc/transfer-tax/steps/step4-sections/TemporaryTwoHouseSection.tsx:290",
+  "lib/calc/one-house-exemption-validate.ts:698"
+ ],
+ "category": "display",
+ "description": "`computeOneHouseJudgmentSummary`의 「선언한 특례」는 `culturalHeritageHouseSpecial`·`ruralHouseSpecial`·`unavoidableOutsideCapitalSpecial`(:698-700)을 읽는다. 판정 메뉴에는 이 셋을 켜는 입력이 없다(정본은 명부 행 — TemporaryTwoHouseSection.tsx:290-315·365-377 주석). 같은 함수가 `temporaryTwoHouseSpecial` 행을 「항상 죽은 조건」이라 지운 근거(:694-696)와 같은 상태다. 반대로 명부 행으로 선언한 §155⑥·⑦·⑧(`oneHouseCulturalHeritage` 등)은 읽는 줄이 없어(:697-715 — 조특법 행 선언만 읽음) 행에 국가유산·농어촌·부득이 주택을 표시해도 사이드바에 나오지 않는다.",
+ "failureScenario": "판정 메뉴 ③ 명부 행에 §155⑥ 국가유산주택(또는 §155⑦ 농어촌주택) 표시 → 사이드바 「선언한 특례」에 해당 항목 없음(코드 경로상 행 사실을 읽지 않음). 기대: 정본(행) 선언을 보여 주고 레거시 스칼라 줄은 없앤다.",
+ "legalBasis": "해당 없음(표시) — 소득세법 시행령 §155⑥·⑦·⑧",
+ "repro": {
+  "result": "reproduced",
+  "method": "판정 메뉴 ⑥ 순수 함수 computeOneHouseJudgmentSummary, ④ buildOneHouseExemptionApiBody, route POST /api/calc/one-house-exemption를 node probe(__tests__/zz-review-probe/v-s10-11-1.test.ts)로, OneHouseJudgmentSidebar RTL 렌더를 jsdom probe(v-s10-11-2.test.tsx)로 각각 실측했다. 공통 입력은 1세대, 주택 양도(2012-01-10 취득, 2024-06-01 양도, 예상가 8억), 명부 1행(2005-03-01 취득, 비수도권)이다. 이 행 위에 판정 메뉴 ③ 행 편집 모달 ⑤(HouseEntryEditor.tsx:601 → HouseEntryOneHouseFactsSection, 무조건 렌더)의 선언을 하나씩 얹었다. 해석례 평가셋 observeCase는 쓰지 않았다(표시 결함이라 사이드바 leaf와 렌더가 직접 경로).",
+  "observed": "[P1] 행 oneHouseCulturalHeritage:true: 「선언한 특례」 항목 없음(summary 4줄 = 1세대 해당·세대 보유 주택 수 2채·양도 예정일·예상 양도가액). ④ body.culturalHeritageHouse=true. route 200, isExempt=true, appliedExceptions=[{id:\"155-6-1ho-cultural-heritage\",label:\"문화유산 주택\",legalBasis:\"소득세법 시행령 §155⑥1호\"}].\n[P2b] 행 oneHouseRuralHouse:true + ruralHouseKind:\"inherited\": 「선언한 특례」 없음. ④ ruralHouse={kind:\"inherited\",isOutsideCapitalEupMyeon:true,decedentResidenceYears:10,...}. route isExempt=true, applied=[155-7-rural:inherited 「농어촌주택 (1호 상속)」]. 첫 시도 P2는 같은 행에 isInherited:true를 넣어 Zod 400(houses.1.inheritedDate 누락)이 났다. 픽스처 문제이고 사이드바 관측은 그때도 undefined로 같았다.\n[P3] 행 oneHouseUnavoidableOutsideCapital:true + reason \"work\": 「선언한 특례」 없음. ④ unavoidableOutsideCapitalHouse={reason:\"work\"}. route isExempt=true.\n[UI 렌더] 위 세 행 선언 모두 사이드바 DOM에 「선언한 특례」 텍스트 자체가 없다.\n즉 엔진은 행 선언 특례를 적용해 비과세를 내는데, 사이드바는 그 선언을 적지 않는다.",
+  "control": "[P1c] 같은 2주택에서 행 표시만 없음: 「선언한 특례」 없음, ④ culturalHeritageHouse 미전송, route isExempt=false. 행 선언이 결론을 가른다는 뜻이다.\n[P1L] 레거시 스칼라 culturalHeritageHouseSpecial:true(행 표시 없음): 「선언한 특례」=\"문화유산주택\", ④ true, route isExempt=true.\n[P2L] ruralHouseSpecial+kind는 \"농어촌주택\", [P3L] unavoidableOutsideCapitalSpecial은 \"수도권 밖 부득이\"를 표시한다.\n[UI 렌더] 레거시 스칼라는 \"문화유산주택\", winWinRentalSpecial은 \"상생임대주택\"을 표시한다.\n[P4 형제 축] 조특법 §99의4 행 선언(countExclusion reduction): 「선언한 특례」=\"농어촌·고향주택(조특법)\". 사이드바가 조특법 행 선언은 읽는다.\n[P5] 행과 레거시를 함께 두면 \"문화유산주택\"이 나오는데, 레거시 쪽에서 나온 것이다.\n[P6 부수] 레거시 ruralHouseSpecial:true + ruralHouseKind \"\": 사이드바는 \"농어촌주택\"을 적지만 ④는 ruralHouse를 보내지 않는다.",
+  "notes": "쓰기 경로: 세 레거시 스칼라를 쓰는(onChange) 코드는 app·lib·components에 0건이다. 읽기만 있다: HousesListSection.tsx:341-368(OH-30 fromLegacyOnly 신호), transfer-tax-api-body-blocks.ts:162-200(④ 레거시 폴백), ImportedOneHouseFactsCard.tsx:176-177, validate.ts:698-700.\n「항상 죽은 조건」은 아니다: 판정 메뉴 화면은 09f5b370b(2026-09-20 23:16, P4-2b-2)에 생겼고, D-6 행 이관은 450e305f0·ae626b516·86c3ea088(2026-09-22 06:47~07:55)이다. 약 31시간 동안 세대 단위 토글이 판정 메뉴에 있었으므로, 그 기간의 이력·세션에는 true가 남을 수 있다. 재개 경로는 history-resume-entry.ts:130과 one-house-judgment-store.ts:92(normalizeOneHouseJudgmentForm)이고, ④가 지금도 레거시 폴백으로 이 값을 소비한다(OH-21, P1L 실측).\n가시성: 명부 표 배지(resolveHouseBadges, HousesListSection.tsx:74-82)도 §155⑥⑦⑧ 행 사실을 표시하지 않는다. 그래서 결과 화면 전에는 모달 밖 어디에도 이 선언이 보이지 않는다. 조특법 행은 countExclusionBadgeLabel 배지와 사이드바 줄이 둘 다 있다.\n정리: 내 probe 파일 2개를 rm으로 지웠고 ls에서 v-s10-11 0건을 확인했다. 다른 에이전트의 probe는 손대지 않았다.",
+  "probeDeleted": true
+ },
+ "skeptic": {
+  "verdict": "upheld",
+  "refutationType": "none",
+  "legalEvidence": "법령 무관. 사이드바 요약의 표시 결함이고 판정 결론·세액에는 영향이 없다. 엔진이 각각 「소득세법 시행령 §155⑥1호」·「소득세법 시행령 §155⑦」을 근거로 특례를 적용하는 것은 route 응답(appliedExceptions.legalBasis)으로만 확인했다. 조문 해석 쟁점이 없어 KoreanLaw 원문 대조는 하지 않았다.",
+  "designEvidence": "(1) 도입 이력: 「선언한 특례」의 §155⑥⑦⑧ 세 줄(one-house-exemption-validate.ts:698-700)은 76ca45d5c(P4-2b-1, 2026-09-20)에서 세대 단위 스칼라를 읽도록 들어왔다. D-6 행 이관 커밋 3건(450e305f0 P7-3, ae626b516 P7-4, 86c3ea088 P7-5)의 변경 파일 목록에 이 validate 파일이 없다. 계획서 docs/00-pm/one-house-exemption-automation.plan.md §5.10에도 ⑥ 사이드바 동기화 언급이 없다.\n(2) 형제 축 선례: docs/00-pm/one-house-judgment-count-exclusion-row-link.plan.md §4-4 4번이 「사이드바 「선언한 특례」 줄을 행 기반으로」를 명시했고, 그대로 구현돼 있다(validate.ts:710-714, judgmentHouseCountExclusionReductions·judgmentSpecialHouseExclusions → form.houses). 사실을 행으로 옮기면 사이드바도 행을 읽는 것이 이 저장소에서 이미 정한 패턴이다.\n(3) D-2 선례: 68109a209(#1905)는 「쓰는 화면이 없다」는 같은 이유로 temporaryTwoHouseSpecial 줄만 지웠다. SB-2 D-2 테스트(__tests__/calc/one-house-exemption-api.anchor.test.ts:403-411)는 그 비표시를 고정한다.\n(4) 옹호 근거 없음: §155⑥⑦⑧ 레거시 줄을 고정하거나 행 선언을 일부러 빼는 테스트·주석은 없다. 저장소 전체 「선언한 특례」 grep 결과는 SB-2·SB-2 D-2·G1E-6/7뿐이다.\n(5) 보고 금지 1~17 중 해당 항목이 없다.",
+  "reasoning": "판정 메뉴 ③ 행 편집 모달에서 §155⑥1호·⑦·⑧을 켜면 ④가 culturalHeritageHouse·ruralHouse·unavoidableOutsideCapitalHouse를 보낸다. 엔진은 그 특례로 결론을 과세에서 비과세로 바꾼다(P1과 P1c 대조). 그런데 사이드바 「선언한 특례」는 레거시 스칼라만 읽어서 이 선언을 적지 않는다. 같은 함수가 조특법 행 선언은 읽으므로(P4) 형제 축과도 어긋난다. D-6 이관 때 14지점 중 ⑥만 따라오지 않은 누락으로 판단한다.\n다만 발견 문서의 부수 주장 「레거시 줄은 D-2와 같은 죽은 조건이니 없앤다」는 정확하지 않다. 레거시 스칼라는 ④의 폴백(OH-21)으로 지금도 소비되고, 2026-09-20~22 판정 메뉴 이력에 true가 남을 수 있다(P1L에서 레거시만으로 isExempt=true). 레거시 줄만 지우면 그런 옛 기록에서 사이드바는 침묵하는데 ④는 특례를 적용하는 새 불일치가 생긴다. 맞는 수정 방향은 ④·OH-30과 같은 leaf인 deriveOneHouseFactsFromHouses(form.houses, legacy)의 결과(행 우선, 레거시 폴백)로 줄을 만드는 것이다. 그렇게 하면 P6의 부수 불일치(레거시 rural 토글은 켜져 있고 kind가 빈 값이면 사이드바만 \"농어촌주택\")도 함께 사라진다.\n결론·세액에는 영향이 없고 결과 화면 appliedExceptions에는 특례가 표시되므로 심각도는 low가 맞다.",
+  "severityAssessment": "low"
+ },
+ "duplicates": [
+  "S13-11"
+ ]
+}

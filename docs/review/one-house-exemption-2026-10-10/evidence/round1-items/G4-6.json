@@ -1,0 +1,37 @@
+{
+ "title": "엔진 계산 과정 step에 이월과세 적용배제 사유가 내부 id(one_house_exemption 등)로 노출",
+ "file": "lib/tax-engine/transfer-tax-precalc.ts",
+ "line": 182,
+ "category": "display",
+ "severity": "low",
+ "description": "STEP 0.475 계산 과정 문구가 `이월과세 적용배제 (사유: ${detail.exclusionReason})`로 enum 값을 그대로 넣는다. 이 steps는 계산결과 상세명세서의 「전체 엔진 계산 과정 보기」(DetailedCalculationStatementCard.tsx:193-219)에서 사용자에게 그대로 보인다. 그래서 ②2호 자동 배제 시 「사유: one_house_exemption」이 표시되고, period_exceeded·relation_invalid·expropriation·family_business도 마찬가지다. 같은 사유를 카드는 한국어 라벨(CarryoverComparisonCard.tsx:182-193 EXCLUSION_REASON_LABELS)로 이미 갖고 있다.",
+ "failureScenario": "OH-1 픽스처(②2호 자동 배제)의 result.steps에서 「배우자등 이월과세 판정 | 이월과세 적용배제 (사유: one_house_exemption)」가 상세명세서 「전체 엔진 계산 과정」에 그대로 노출된다. 기대: 「§97조의2 ② 2호 — 이월과세 적용 시 1세대1주택 비과세 해당」 같은 한국어 사유.",
+ "legalBasis": "법령 문제가 아니다. 프로젝트 UI 규칙 「내부 id 노출 금지」(MEMORY feedback_no_internal_id_in_result) 위반이다.",
+ "confidence": "high",
+ "probeIdea": "OH-1 입력의 result.steps 중 label에 「이월과세」가 들어간 항목의 formula 출력 (probe find-g4-r2-4)",
+ "probeConfirmed": true,
+ "probeObserved": "[\"배우자등 이월과세 판정 | 이월과세 적용배제 (사유: one_house_exemption)\"]",
+ "relatedLocations": [
+  "components/calc/results/transfer/DetailedCalculationStatementCard.tsx:193-219",
+  "components/calc/results/transfer/CarryoverComparisonCard.tsx:182-193"
+ ],
+ "id": "G4-6",
+ "slice": "G4",
+ "repro": {
+  "result": "reproduced",
+  "method": "계산기 경로 + UI 렌더. 임시 probe 파일 __tests__/zz-review-probe/v-g4-6-1.test.tsx로 두 가지를 확인했다. (1) 엔진: makeMockRates·baseTransferInput 위에서 calculateTransferTax를 돌리고, label에 「이월과세」가 들어간 step의 label | formula를 출력했다. 입력은 OH-1 픽스처(carryover-exclusion-one-house-auto.test.ts 원본 복사) 하나와, 나머지 배제 사유 4종을 만드는 기존 픽스처다: C-03 기간 초과(carryover-period-boundary), DD-01 배우자 사별(carryover-donor-death), C-07 수용 선언(carryover-exclusion-expropriation), C-15 가업상속(carryover-family-business-block). (2) UI: RTL로 OH-1 결과를 DetailedCalculationStatementCard에 넣어 렌더하고, 「전체 엔진 계산 과정 보기」 버튼을 클릭한 뒤 queryAllByText(/사유: one_house_exemption/)로 찾았다. 같은 detail로 CarryoverComparisonCard도 렌더해 대조했다. 실행은 vitest 단일 파일(--silent=false)로 2/2 통과했다.",
+  "observed": "엔진 step formula: OH-1 → [\"배우자등 이월과세 판정 | 이월과세 적용배제 (사유: one_house_exemption)\"] · 기간 초과 → \"이월과세 적용배제 (사유: period_exceeded)\" · 사별 → \"(사유: relation_invalid)\" · 수용 → \"(사유: expropriation)\" · 가업상속 → \"(사유: family_business)\". 배제 사유 5종 모두 enum이 그대로 들어간다. UI(DetailedCalculationStatementCard): 클릭 후 aria-expanded=\"true\", enumHits=[\"이월과세 적용배제 (사유: one_house_exemption)\"], 「배우자등 이월과세 판정」 라벨 1건. 사용자 화면 DOM에 enum 원문이 그대로 출력된다.",
+  "control": "(a) 긍정 짝 OH-2(증여 등기일을 2023-06-01로 옮겨 이월과세가 성립하는 경우, isEligible=true): formula = \"Scenario A(결정세액 58,378,000) vs B(0) → A 채택\". 내부 코드가 없다. (b) 같은 OH-1 detail로 렌더한 CarryoverComparisonCard: koreanHits=[\"§97조의2 ② 2호 — 이월과세 적용 시 1세대1주택 비과세 해당 (고가주택 포함)\"], enumInCard=0. 결과 카드는 한국어 라벨로 바꿔 보여 주고, 엔진 step만 enum을 그대로 낸다.",
+  "notes": "도달 경로: 단건 결과뷰가 상세명세서 카드를 조건 없이 렌더한다(TransferTaxResultView.tsx:361-362, PrintSection id=\"detailed-statement\"). step formula는 FormulaText→renderFormula를 거치는데, 이 함수는 분수 치환만 하고 번역은 하지 않는다(FormulaParts.tsx:56-74). 엔진 단계 패널은 화면에서는 접혀 있지만 `open ? \"block\" : \"hidden print:block\"`(DetailedCalculationStatementCard.tsx:216)이라, 해당 섹션을 인쇄하면 항상 펼쳐진 채 찍힌다. 실제 결과 페이지에 이 step 라벨이 존재한다는 것은 기존 E2E e2e/non-housing-to-housing-conversion.spec.ts:310이 단언하고 있다(Playwright 금지라 직접 실행하지 않음). UI 입력 경로: 기간 초과는 ⑧에 기간 검사가 없어 그대로 도달한다(transfer-tax-validate-acquisition.ts:248-285). relation_invalid는 사망 토글로 도달한다(CarryoverGiftExclusionSection.tsx:115, 관계 'other'는 ⑧ :267에서 차단). 수용은 선언 토글로 도달한다(CarryoverGiftExclusionSection.tsx:144). family_business는 ⑧ :252에서 막혀 엔진 방어코드로만 남는다. tax_comparison은 isEligible=true라 이 분기를 타지 않는다. 이 문자열을 파싱하는 소비자는 없다(components·lib/calc·app grep 0건). 단언하는 테스트도 없다(「적용배제 (사유」 grep 결과 precalc.ts:182 1건). 참고(별건, 판정과 무관): 수정 때 카드 라벨을 재사용하면 period_exceeded 라벨이 「§97조의2 ③」을 인용하는데, 10년 기간 요건은 ① 본문에 있고 ③은 연수 계산 방식이다.",
+  "probeDeleted": true
+ },
+ "skeptic": {
+  "verdict": "upheld",
+  "refutationType": "none",
+  "legalEvidence": "법령 무관(표시 결함). 대체 문구가 법적으로 맞는지만 원문으로 확인했다. 「소득세법」(법률, MST 280405, 2026.1.1. 시행본) 제97조의2 ②: 「1. 사업인정고시일부터 소급하여 2년 이전에 증여받은 경우로서 … 협의매수 또는 수용된 경우 2. 제1항을 적용할 경우 제89조제1항제3호 각 목의 주택[같은 호에 따라 양도소득의 비과세대상에서 제외되는 고가주택(이에 딸린 토지를 포함한다)을 포함한다]의 양도에 해당하게 되는 경우」. 같은 조 ① 본문 괄호는 「사망으로 혼인관계가 소멸된 경우는 제외」 「양도 당시 사망한 경우는 제외」, ④는 가업상속공제 자산이다. CarryoverComparisonCard.tsx:182-193의 한국어 라벨(②1호·②2호·①·④)은 이 원문과 맞으므로, 그 라벨을 재사용하는 수정은 법령상 문제가 없다.",
+  "designEvidence": "git log -S'이월과세 적용배제 (사유:' 결과는 두 건이다. aa61b336b(2026-05-04)는 메시지가 「fix: eliminate setState in effect anti-pattern across components」이지만 실제로는 이월과세 엔진·테스트를 함께 넣은 커밋이고, 표시 방식 결정은 언급하지 않는다. fe5017f83(CB-08)은 파일 분리 리팩터로 줄을 옮기기만 했다. 계획서 docs/00-pm/transfer-tax-carryover-taxation.plan.md:211은 exclusionReason 타입만 정의하고 step 표시 결정은 없다. 이 문자열을 단언하는 테스트·E2E는 0건이다(e2e :310은 라벨 존재만 본다). 형제 step formula(농특세 `— ${verdict.reason}` 등)는 한국어 문자열을 넣고, enum을 그대로 보간하는 곳은 이 줄 하나뿐이다. 같은 enum의 한국어 매핑이 CarryoverComparisonCard.tsx:182-193에 이미 있고 :281에서 쓰인다. EngineStepsSubToggle 주석(:186-191)의 「result.steps[]를 그대로 노출 — 검증용」은 중간 step을 보여 준다는 뜻이지 내부 코드를 노출하기로 한 결정이 아니다. 보고 금지 목록 1~17에도 해당하지 않는다.",
+  "reasoning": "재현됐다. 사용자가 보는 결과 화면(접힌 패널, 인쇄 시 항상 펼침)에 one_house_exemption·period_exceeded·relation_invalid·expropriation 같은 snake_case 코드가 「사유:」로 그대로 찍히고, 이 네 사유는 모두 UI 입력으로 도달할 수 있다. 의도된 설계라는 근거는 찾지 못했다. 도입 커밋에 결정 기록이 없고, 단언하는 테스트도 없으며, 같은 화면의 비교 카드는 같은 값을 한국어 조문 라벨로 바꿔 보여 준다. 엔진 step 중 enum을 그대로 넣는 곳도 이 한 줄뿐이다. 정정할 점이 하나 있다. 발견이 인용한 MEMORY feedback_no_internal_id_in_result는 원래 자동 생성 레코드 id(prop-… 등) 규칙이라 근거로는 다소 넓게 썼다. 직접 걸리는 규칙은 CLAUDE.md의 「결과 산식은 한국어 풀어쓰기(변수 약어 금지)」와 memory feedback_result_view_korean_formula다. 취지(사용자가 알 수 없는 문자열 출력 금지)는 같으므로 결론은 유지한다. 덧붙여 성립 분기 문구에도 「Scenario A … vs B」라는 영문이 있지만 코드 식별자는 아니라 이번 판정 범위 밖이다.",
+  "severityAssessment": "low"
+ },
+ "status": "CONFIRMED"
+}

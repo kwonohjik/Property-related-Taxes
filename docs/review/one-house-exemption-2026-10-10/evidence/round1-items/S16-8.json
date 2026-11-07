@@ -1,0 +1,34 @@
+{
+ "id": "S16-8",
+ "status": "CONFIRMED",
+ "severity": "low",
+ "title": "임대주택 카드 「판정 기준」 배지가 라목(미분양)에 「규모요건 없음」을 표시함 — 라목에는 대지 298㎡·연면적 149㎡ 요건이 있고 같은 카드가 그 값을 입력받음",
+ "file": "components/calc/transfer/RentalUnitCard.tsx",
+ "line": 282,
+ "relatedLocations": [
+  "components/calc/transfer/RentalUnitCard.tsx:136",
+  "components/calc/transfer/RentalUnitCard.tsx:540",
+  "lib/calc/transfer-tax-validate-rental-exception.ts:154"
+ ],
+ "category": "display",
+ "description": "배지 문구가 `isConstruction ? \" · 규모 대지298㎡·연면적149㎡\" : \" · 규모요건 없음\"`(:282)이라 라목에서도 「규모요건 없음」이 나온다. 그런데 같은 카드는 라목에 「미분양 규모요건」 입력칸을 띄우고(:136·540-560), ⑧과 엔진도 라목 면적을 요구한다(validate:154-157, check.ts GATES의 라목 size:true). 사용자가 배지를 보고 면적은 넣지 않아도 된다고 오인할 수 있다. ⑧이 막기 때문에 결론이 바뀌지는 않는다.",
+ "failureScenario": "임대 구분을 「미분양(라목)」으로 고르면 배지에 「라목 · 미분양 매입(5년) · 의무임대기간 5년 · 기준시가 상한 3억(취득당시) · 규모요건 없음」이 나오고, 그 아래에는 「미분양 규모요건(대지면적·연면적)」 필수 입력칸이 뜬다. 올바른 표시는 「규모 대지298㎡·연면적149㎡」이다.",
+ "legalBasis": "소득세법 시행령 §167의3①2호 라목 1)(대지면적 298㎡ 이하, 주택 연면적 149㎡ 이하) — MST 290841 원문 확인.",
+ "repro": {
+  "result": "reproduced",
+  "method": "(1) UI 렌더: RTL(jsdom) throwaway probe __tests__/zz-review-probe/v-s16-8-1.test.tsx. RentalUnitCard에 makeDefaultRentalUnit()과 목별 덮어쓰기를 넣어 렌더하고, rental-verdict-badge-0의 textContent와 「미분양 규모요건」/「건설임대 규모요건」 블록 수를 셌다. 입력: 라목 = unsold_08_09·purchase·등록일 2009-03-01·non-metro / 다목 = long_general·construction·2017-01-01 / 마목 = long_general·purchase·2020-08-18 / 나목 = existing_business·2003-01-01. (2) 엔진 leaf: 같은 probe에서 checkRentalArticle(\"라\", …)를 면적 미입력·300/100·200/100으로 호출하고, 대조로 마목을 면적 없이 호출했다. (3) ⑧: validateRentalHousingException(rh{applyException:true, scenario:\"A\", 라목 1호}, makeDefaultAsset(1), 0, \"자산1\", \"2024-01-01\", \"facts\")를 면적 없음/있음으로 호출했다. (4) 형제 관측: v-s16-8-2.test.ts에서 checkEligibility([라목 대지 300·연면적 100·5호 false], 5, 5, false)의 failReasons를 확인했다. (5) 법령 원문: KoreanLaw get_law_text로 소득세법 시행령 MST 290841(2026.10.1. 시행) 제167조의3·제155조를 읽었다.",
+  "observed": "라목 배지 textContent는 「라목 · 미분양 매입(5년)의무임대기간 5년 · 기준시가 상한 3억(취득당시) · 규모요건 없음등록기준일 2009-03-01 · 아파트 허용」이다. 같은 카드에 「미분양 규모요건」 블록이 1개(laSizeBlock=1), 「대지면적」 라벨이 1개 렌더된다(RentalUnitCard.tsx:136·540-560). 엔진 leaf 라목: 면적 미입력이면 [\"SIZE_REQUIRED\"], 300/100이면 [\"SIZE_EXCEEDED\"], 200/100이면 []. ⑧ 라목 면적 미입력이면 「자산1 임대주택 #1: 라목은 대지면적·연면적(㎡)을 입력하세요 (대지 298㎡·연면적 149㎡ 이하).」, 면적을 넣으면 null. 결론적으로 배지만 「규모요건 없음」이고 입력칸·⑧·엔진은 모두 라목 면적을 요구한다.",
+  "control": "긍정 짝인 다목 배지는 「다목 · 건설 장기(5년)의무임대기간 5년 · 기준시가 상한 6억 · 규모 대지298㎡·연면적149㎡…」이고 「건설임대 규모요건」 블록이 1개다. 부정 짝인 마목 배지는 「…기준시가 상한 6억(수도권) · 규모요건 없음…」이고 규모 블록이 0개다. 마목 leaf를 면적 없이 호출하면 failCodes가 []다(SIZE_REQUIRED 없음). 마목에는 법령상 대지·연면적 요건이 없으므로 마목 표시는 맞고, 이 짝으로 배지 분기 자체는 동작함을 확인했다. 오류는 라목이 isConstruction에 들지 않아 생긴다.",
+  "notes": "형제 관측(이 발견의 범위 밖, 판단은 별건). (a) 나목 배지도 「규모요건 없음」이다(probe 실측). 나목에는 「주택법」 제2조제6호 국민주택규모 요건이 있고 카드는 이를 별도 토글로 받는다(:423-433). 배지의 「규모」가 298/149만 가리키는지는 해석 여지가 있다. (b) 엔진의 호별 미충족 메시지(lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts:279-284)가 목을 구분하지 않는다. 라목에 대지 300㎡를 넣으면 「1호: 건설임대 규모요건 초과 (대지 300㎡·연면적 100㎡ — 각 298㎡·149㎡ 이하 필요).」가 나온다(probe 실측). 이 메시지는 rental-housing-verdict.ts:72를 거쳐 판정 메뉴 결과 OneHouseJudgmentResultView.tsx:248이 렌더한다. ⑧은 라목 면적이 >0인지만 보므로(validate:154-157) UI로 도달할 수 있다. MIN_UNITS_NOT_MET도 라목에 「건설임대는 2호 이상…」을 내지만, ⑧(:151-153)이 5호 미확인을 막아 UI 경로로는 도달하지 않는다. (c) perUnitVerdict.sizeRequired(eligibility.ts:614)도 isConstructionArticle 기준(건설만)이지만 소비처가 없어(grep 0건) 화면 영향은 없다. 소스 파일은 수정하지 않았다(git status상 미추적 probe 디렉터리만 있음).",
+  "probeDeleted": true
+ },
+ "skeptic": {
+  "verdict": "upheld",
+  "refutationType": "none",
+  "legalEvidence": "「소득세법 시행령」(대통령령, MST 290841, 2026.10.1. 시행) 제167조의3제1항제2호 라목: 「…민간매입임대주택[미분양주택…]으로서 다음의 요건을 모두 갖춘 주택. … 1) 대지면적이 298제곱미터 이하이고 주택의 연면적(제154조제3항 본문에 따라 주택으로 보는 부분과 주거전용으로 사용되는 지하실부분의 면적을 포함하고, 공동주택의 경우에는 전용면적을 말한다)이 149제곱미터 이하일 것 2) 5년 이상 임대한 것일 것 3) 취득 당시 … 기준시가의 합계액이 3억원 이하일 것 4) 수도권 밖의 지역에 소재할 것 5) … 같은 시ㆍ군에서 5호 이상일 것…」. 같은 영 제155조제20항: 「제167조의3제1항제2호에 따른 주택{같은 호 가목에 해당하는 주택의 경우에는 같은 목 1)에서 정하는 기한의 제한을, 같은 호 다목에 해당하는 주택의 경우에는 같은 목 단서에서 정하는 기한의 제한을 각각 적용하지 않되, … 같은 호 마목에 해당하는 주택의 경우에는 같은 목 1)에 따른 주택[…]을 포함한다. 이하 이 조에서 \"장기임대주택\"이라 한다}」. 이 괄호에 라목 1)을 빼는 문언이 없으므로 §155⑳ 경로에서도 라목 규모요건이 적용된다. 대조: 같은 항 마목 본문에는 대지·연면적 요건 문언이 없다(마목 「규모요건 없음」은 정당).",
+  "designEvidence": "git blame: :282 배지 줄과 :136 `const showSize = isConstruction || isLa`는 둘 다 커밋 9675b01c2(2026-07-26 「✨ feat(§155⑳ Phase3): 라목(미분양) 편입 + §155⑳㉓ 말소 후 5년 특례」)에서 작성됐다. 이 커밋은 라목 편입 전 709e4cbc4가 RentalHousingExceptionSection에 만든 배지 줄(`isConstruction ? \" · 규모 대지298㎡·연면적149㎡\" : \" · 규모요건 없음\"`)을 그대로 옮겼고, showSize만 `|| isLa`로 넓혔다. 커밋 메시지의 UI 목록(계약일·5호·취득당시 기준시가 스왑·말소특례 토글·소재지역)에 배지는 없다. 설계 문서 rental-housing-155-20-active-ui.plan.md:163·ui.design.md:17의 「규모요건 없음」 예시는 마목이고, phase2-unification.plan.md:150·:204의 라목 편입 기록에도 배지 지정이 없다. 이 동작을 단언하는 테스트도 없다. E2E one-house-judgment-rental-155-20-active-ui.spec.ts:162-168은 라목 배지에 toContainText(\"라목\")만 단언한다. 보고 금지 목록 1~17에 해당하지 않는다. 도달성: 판정 메뉴 Step3.tsx:527이 RentalHousingExceptionSection을 mode=\"facts\"로 렌더하고, showJudgmentFacts(:124)를 거쳐 RentalUnitCard(:216)가 그려진다. deriveCategoryAvailability는 unsold_08_09를 등록일과 무관하게 항상 available로 둔다(eligibility.ts:200). 계산기(mode=\"calc\")에서는 이 카드가 숨겨진다.",
+  "reasoning": "재현됐다. 라목을 고르면 배지는 「규모요건 없음」을 표시하는데, 바로 아래 같은 카드가 「미분양 규모요건」 필수 입력칸(298㎡·149㎡ 이하 hint)을 띄운다. ⑧(validate:154-157)과 엔진(check.ts GATES 라 size:true → :302-305 SIZE_REQUIRED/EXCEEDED)도 라목 면적을 요구한다. 법령 원문(영 §167의3①2호 라목 1)·§155⑳)에도 라목 규모요건이 명시돼 있다. 의도된 설계라는 근거는 없다. 커밋 9675b01c2가 입력칸 게이트만 라목으로 넓히고 배지 줄은 라목 편입 전 문구 그대로 옮긴 누락이다. 사용자 결정·보고 금지 항목에도 해당하지 않고, 판정 메뉴에서 등록일과 무관하게 도달한다. 다만 결론은 바뀌지 않는다. 면적을 비우면 ⑧이 정확한 기준(대지 298㎡·연면적 149㎡ 이하)을 적은 메시지로 막고, 입력하면 엔진이 상한을 판정한다. 그래서 피해는 같은 카드 안의 모순 표시로 생기는 혼란에 그친다. 수정은 배지 분기를 showSize(isConstruction || isLa) 기준으로 맞추면 된다. 나목 배지와 엔진 메시지 「건설임대 규모요건 초과」의 라목 오표기는 notes에 형제 관측으로 남겼다.",
+  "severityAssessment": "low"
+ },
+ "duplicates": []
+}

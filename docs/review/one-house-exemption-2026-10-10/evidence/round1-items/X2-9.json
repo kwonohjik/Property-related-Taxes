@@ -1,0 +1,33 @@
+{
+ "id": "X2-9",
+ "status": "CONFIRMED",
+ "severity": "low",
+ "title": "§154⑩ 경로 거주주택 보유기간 미충족 사유가 「소령 §154⑤·§95④」 — 법 §95④를 시행령으로 표기(영 §95는 재고자산 평가방법)",
+ "file": "lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts",
+ "line": 713,
+ "relatedLocations": [
+  "lib/tax-engine/transfer-tax/rental-housing-exception/eligibility.ts:710",
+  "components/calc/results/OneHouseJudgmentResultView.tsx:241"
+ ],
+ "category": "citation",
+ "description": "판정 메뉴 ② §155⑳ 카드에서 시나리오 B + 공동보유 임대주택 0호(§154⑩ 표준 경로)면 checkPhrp154_10Eligibility가 「거주주택 보유기간 2년 미충족 (현재: N년, 소령 §154⑤·§95④)」를 residenceFailReasons로 내고, 결과 화면이 그대로 그린다(OneHouseJudgmentResultView.tsx:241-243). 「소령」이 두 조문 모두에 걸려 §95④를 시행령 조문으로 읽게 되는데, 소득세법 시행령 §95는 「재고자산등의 평가방법을 신고하지 아니한 경우의 평가방법」이고 보유기간 규정은 소득세법(법) §95④다(영 §154⑤ 본문이 「법 제95조제4항에 따른다」). 법↔시행령 층위 혼동.",
+ "failureScenario": "② §155⑳ 특례에서 시나리오 B를 고르고 임대주택 행을 모두 지운 뒤(§154⑩ 표준 경로) 거주주택 보유 1년으로 판정 → 「장기임대주택 보유자 거주주택 특례 — 요건 미충족」 아래 「거주주택 보유기간 2년 미충족 (현재: 1년, 소령 §154⑤·§95④)」. 올바른 표기: 「소령 §154⑤·법 §95④」.",
+ "legalBasis": "소득세법 §95④ · 소득세법 시행령 §154⑤ · 시행령 §95(현행 MST 280405·290841 원문 확인)",
+ "repro": {
+  "result": "reproduced",
+  "method": "(1) 엔진 leaf 직접 호출: checkEligibility([], 1, 3, false, ctx{scenario:\"B\", transferDate 2023-03-03, residenceAcquisitionDate 2009-08-12, priorResidenceTransferDate 2016-08-25, wasRegisteredRentalOrChildcare true, wasRegulatedAtAcquisition false}). (2) 판정 메뉴 전 경로: harness buildCaseForm으로 E191 referenceForm 사실관계(B·rentalUnits []·등록 사실 true·직전거주주택 양도 2011-12-20·등록 후 거주 60개월)를 쓰되 취득 2016-03-16·양도 2017-03-15·거주 11개월로 바꿈 → validateAllSteps(⑧) → buildOneHouseExemptionApiBody(④) → POST /api/calc/one-house-exemption(⑫⑭, today 2017-03-16 고정). (3) 응답 data를 OneHouseJudgmentResultView에 RTL로 렌더해 <li> 텍스트 확인. (4) KoreanLaw MCP로 소득세법 시행령 §154·§95, 소득세법 §95 원문(현행 + 2017.3.15. 시행본) 대조. probe 파일: __tests__/zz-review-probe/v-x2-9-1.test.tsx (실행 후 삭제).",
+  "observed": "엔진: residenceFailReasons = [\"거주주택 보유기간 2년 미충족 (현재: 1년, 소령 §154⑤·§95④)\"], laws = [\"소득세법 시행령 §154⑩\"], passed = false. route: status 200, ⑧ validationErrors [] (UI가 결과 단계까지 도달 가능), rentalHousingException = {scenario:\"B\", passed:false, residenceFailReasons:[\"거주주택 보유기간 2년 미충족 (현재: 1년, 소령 §154⑤·§95④)\"], legalBasis:\"소득세법 시행령 §155⑳\"}. 화면: OneHouseJudgmentResultView의 <li> = [\"거주주택 보유기간 2년 미충족 (현재: 1년, 소령 §154⑤·§95④)\"] — 「장기임대주택 보유자 거주주택 특례 — 요건 미충족」 카드 아래에 그대로 표시된다.",
+  "control": "엔진 대조군: 같은 ctx에서 보유 2년이면 residenceFailReasons [] · passed true. route 대조군: E191 원래 취득일 2005-03-15(보유 12년)이면 passed true · residenceFailReasons []. 덧붙여 첫 시도에서 거주 100개월(보유 12개월 초과)을 넣었더니 ⑧ 오류 문구가 「(소령 §154①·법 §95⑤)」로 나왔다. 같은 제품의 다른 표시 문구는 층위가 바뀔 때 「법」을 명시한다는 실측이다.",
+  "notes": "도달 경로: 판정 메뉴 Step3.tsx:527이 RentalHousingExceptionSection을 쓰고, B 시나리오는 임대주택 행을 모두 지울 수 있다(RentalHousingExceptionSection.tsx:230 canRemove={rh.scenario === \"B\" || ...}). ⑧ facts 모드는 보유·거주 검증 전에 반환하므로(transfer-tax-validate-rental-exception.ts:315) 엔진이 낸 사유가 결과 화면(OneHouseJudgmentResultView.tsx:241-243)에 그대로 나온다. 계산기(full 모드)에서는 ⑧이 보유 730일 미만을 먼저 막는다(같은 파일 :350). 그래서 계산기 화면(RentalHousingExceptionDetailCard.tsx:124-127, transfer-tax-rental-housing-step.ts:385 steps 문구)에는 보통 나타나지 않는다. 같은 층위 혼동이 eligibility.ts:710 코드 주석 「(소령 §154⑤ → §95④)」과 테스트 헤더 __tests__/tax-engine/rental-housing-exception/rh-154-10-standalone-phrp.test.ts:29 「소득세법 시행령 … §154⑤ · §95④」에도 있지만, 둘 다 화면에는 나오지 않는다. 결론(요건 미충족)과 수치에는 영향이 없고 인용 문자열만 틀렸다. 다른 에이전트의 probe 파일(v-x2-3-1, v-x2-7-1)은 건드리지 않았다.",
+  "probeDeleted": true
+ },
+ "skeptic": {
+  "verdict": "upheld",
+  "refutationType": "none",
+  "legalEvidence": "「소득세법 시행령」 제154조 제5항(현행 MST 290841, 2026.10.1. 시행): 「제1항에 따른 보유기간의 계산은 법 제95조제4항에 따른다.」 「소득세법 시행령」 제95조(현행 MST 290841): 제목 「재고자산등의 평가방법을 신고하지 아니한 경우의 평가방법」, 제1항·제2항뿐이고 제4항은 없다. 「소득세법」 제95조 제4항(MST 280405): 「제2항에서 규정하는 자산의 보유기간은 그 자산의 취득일부터 양도일까지로 한다. 다만, …」. 연혁 확인: 2017.3.15. 시행본(MST 191522, 2017.2.4. 시행)에서도 영 §154⑤는 「제1항의 규정에 의한 보유기간의 계산은 법 제95조제4항의 규정에 의하고…」이고, 영 §95는 같은 제목(제1·2항)이다. 따라서 「소령 §95④」는 어느 시점에도 존재하지 않는 조항이고, 올바른 표기는 「소득세법 시행령 §154⑤·소득세법 §95④」(축약 시 「소령 §154⑤·법 §95④」)다.",
+  "designEvidence": "이 줄은 커밋 77de318e4(🐛 §154⑩ 경로 교정 — I-5 correction)에서 들어왔다. 커밋 메시지는 보유기간 재기산 제거와 거주요건 분기만 다루고, 인용 층위에 관한 결정은 없다. 같은 파일 주석 :33 「§154⑤→§95④」와 :710 「소령 §154⑤ → §95④」를 보면 영→법 위임 체인을 가리키려던 의도는 분명하고, 「법」 표기만 빠졌다. 이 동작을 단언하는 테스트 rh-154-10-standalone-phrp.test.ts:116은 「보유기간 2년 미충족」 포함 여부만 보고 인용부는 단언하지 않는다. 보고 금지 1~17 가운데 해당 항목은 없다(17의 알려진 사항과도 무관). 프로젝트 자체 표시 문구 관례는 층위가 바뀌면 「법」을 명시한다: lib/calc/residence-interval-validate.ts:42·:99 「(소령 §154①·법 §95⑤)」, lib/calc/multi-transfer-tax-validate.ts:168 「소득세법 §95⑤·⑥·영 §154⑤ 단서」. 사용자 메모리 정책 feedback_law_citation_must_name_statute_and_tier도 법/시행령 구분 명시를 요구한다.",
+  "reasoning": "재현됨: 판정 메뉴에서 B 시나리오로 임대주택 0호(§154⑩ 표준 경로)에 보유 1년을 넣으면 ⑧ 오류 없이 결과 화면까지 가고, 「거주주택 보유기간 2년 미충족 (현재: 1년, 소령 §154⑤·§95④)」가 그대로 렌더된다. 반박 시도는 넷 다 실패했다. (1) 의도된 설계가 아니다. 도입 커밋·주석이 영→법 위임 체인을 뜻하고, 층위 표기를 일부러 생략했다는 근거는 없다. (2) 법령상 정당하지 않다. 「소령」이 가운뎃점으로 이어진 두 조문 모두에 걸려 읽히는데, 영 §95는 재고자산 평가 조문이고 제4항이 없다. 영 §154⑤ 본문도 스스로 「법 제95조제4항」이라고 쓴다. (3) 다른 곳에서 바로잡지 않는다. 결과 뷰가 문자열을 가공 없이 출력한다. (4) 도달 불가능하지 않다. 판정 메뉴 facts 모드에서 실제로 노출된다. 다만 결론(요건 미충족)·세액·판정에는 영향이 없고, 정확한 조문으로 가는 링크도 아닌 평문 인용 오기라 심각도는 low가 맞다. 고칠 범위는 eligibility.ts:713 문자열 하나(「소령 §154⑤·법 §95④」)이고, :710 주석과 테스트 헤더 :29도 함께 정정하면 좋다.",
+  "severityAssessment": "low"
+ },
+ "duplicates": []
+}

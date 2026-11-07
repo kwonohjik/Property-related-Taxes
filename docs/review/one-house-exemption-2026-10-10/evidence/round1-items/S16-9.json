@@ -1,0 +1,34 @@
+{
+ "id": "S16-9",
+ "status": "CONFIRMED",
+ "severity": "low",
+ "title": "§97의3·§97의5 감면 폼의 「임대 종료 시점」 카드 섹션 번호가 「④1」로 표시됨 — 원문자 문자열에 숫자 1을 더함",
+ "file": "components/calc/transfer/rental/RentalCommonFields.tsx",
+ "line": 289,
+ "relatedLocations": [
+  "components/calc/transfer/rental/RentalCommonFields.tsx:119",
+  "components/calc/transfer/rental/Rental973InputForm.tsx:189",
+  "components/calc/transfer/rental/Rental975InputForm.tsx:183"
+ ],
+ "category": "display",
+ "description": "24393990c에서 sec3과 sec4를 원문자 문자열로 바꿨는데(:119-121), f199d694d가 넣은 `sectionNum={sec4 + 1}`(:289)은 그대로 남았다. 그래서 숫자 덧셈이 문자열 연결이 되어 「④1」이 된다. hasGainProration을 쓰는 화면(Rental973InputForm:189, Rental975InputForm:183)에서 이 배지가 뜬다.",
+ "failureScenario": "§97의3 감면 폼(sectionOffset 3)에서 ③ 임대료 증액 제한, ④ 공실 기간 다음 카드의 배지가 「④1 임대 종료 시점」으로 나온다. 올바른 표시는 「⑤」다.",
+ "legalBasis": "해당 없음(표시 결함).",
+ "repro": {
+  "result": "reproduced",
+  "method": "RTL 렌더 probe(__tests__/zz-review-probe/v-s16-9-1.test.tsx, jsdom, 단일 파일 실행)로 세 화면을 렌더하고, ToneCard 번호 배지(span.rounded-full.select-none)를 렌더 순서대로 「배지|제목」 쌍으로 모았다. (a) RentalCommonFields(hasGainProration, sectionOffset=3, vacancyGraceMonths=3) 단독, (b) Rental973InputForm 전체(type rental_97_3), (c) Rental975InputForm 전체(type rental_97_5). 원문자 문자열에 1을 더했을 때 JS가 어떻게 계산하는지도 함께 찍었다('④' + 1과 4 + 1).",
+  "observed": "(a) [\"③|임대료 증액 제한 (§97의3①2호)\",\"④|공실 기간\",\"④1|임대 종료 시점\"]. textContent 발췌는 「…택 시 계산 불가)④1임대 종료 시점」이다. (b) 973 화면은 [\"①|등록·신분\",\"②|임대 개시 정보\",\"③|임대료 증액 제한 (§97의3①2호)\",\"④|공실 기간\",\"④1|임대 종료 시점\"]이다. (c) 975 화면도 (b)와 똑같다. JS 의미는 '④' + 1 = \"④1\", 4 + 1 = 5다. 같은 화면에서 ①②③④ 다음에 와야 할 「⑤」 대신 「④1」이 렌더된다.",
+  "control": "(1) hasGainProration 없이 렌더한 대조군은 [\"③|임대료 증액 제한 (§97의3①2호)\",\"④|공실 기간\"]이다. 세 번째 카드가 없고 「④1」도 나오지 않는다. 결함은 hasGainProration 축에만 있다. (2) 원문자로 바꾸기 전인 f199d694d 시점에는 sec4 = sectionOffset + 1이 숫자였다(f199d694d:components/calc/transfer/rental/RentalCommonFields.tsx:98). 그래서 sec4 + 1은 숫자 덧셈 4 + 1 = 5였고, 이 값은 실측으로 확인했다. 당시에는 의도대로 「5」가 찍혔다.",
+  "notes": "도달 경로: UnifiedReductionGroupSection.tsx:313(§97의3)·:321(§97의5)에서 해당 감면을 고르면 폼이 마운트된다. 두 폼 모두 hasGainProration과 sectionOffset={3}을 넘긴다(Rental973InputForm.tsx:187-194, Rental975InputForm.tsx:181-188). 세 번째 카드는 hasGainProration이 켜져 있으면 rentalContinuesToTransfer 값과 상관없이 항상 렌더된다(RentalCommonFields.tsx:286). 즉 두 감면 폼을 열면 매번 보인다.\n\n게이트가 못 잡은 이유: tsc는 ToneCard의 sectionNum 타입이 string | number(ToneCard.tsx:33)라서 string + number의 결과를 그대로 통과시킨다. eslint.config.mjs에는 type-checked 규칙(restrict-plus-operands 등)이 없다.\n\n안전망: evidence-gone-sweep.test.tsx E-1(:149-160)은 hasGainProration 없이 렌더해 ③·④만 단언한다. 세 번째 카드 축은 테스트가 하나도 없다. ui-review-remaining-med2.test.tsx B-3은 hasGainProration을 넘기지 않는 Rental97MainInputForm 대상이라 무관하다. __tests__·e2e·docs에서 「④1」·「sec4 + 1」·「임대 종료 시점」을 grep하면 0건이다.\n\n현행성: 28695a03e..origin/master(1c10b0d6d) 사이에 components/calc/transfer/rental/을 건드린 커밋이 없다. 현재 master에도 그대로 남아 있다.\n\n계산 영향: 배지는 h-5 w-5 원형(ToneCard.tsx:54)이라 두 글자가 좁게 들어간다. 계산, 검증, data-field 앵커(reduction.${fieldType}.rentalContinuesToTransfer 등)에는 영향이 없다.",
+  "probeDeleted": true
+ },
+ "skeptic": {
+  "verdict": "upheld",
+  "refutationType": "none",
+  "legalEvidence": "법령 무관(섹션 번호 배지 표시 결함). 조특령 §97의3⑤·§97의5② 산식이나 입력 의미와는 관계가 없다.",
+  "designEvidence": "1) f199d694d(2026-08-31, D2-03·D2-06)가 sectionNum={sec4 + 1}을 넣을 때 sec4는 숫자였다(const sec4 = sectionOffset + 1, 당시 파일 :98). 따라서 의도한 값은 다음 번호 5다.\n2) 24393990c(2026-09-07)의 커밋 메시지 「섹션 배지가 한 화면에서 원문자(①②)와 아라비아 숫자(3·4)로 갈렸다」와 코드 주석 RentalCommonFields.tsx:114-118 「표기를 호출부와 통일한다」를 보면 원문자 통일이 목적이었다. 그런데 이 커밋은 sec3·sec4만 circled()로 바꾸고(:119-121) :289는 고치지 않았다.\n3) 같은 커밋의 anchor E-1(evidence-gone-sweep.test.tsx:149-160)은 hasGainProration 없이 렌더해, 세 번째 카드 축은 검증 범위에서 빠져 있었다.\n4) 「④1」을 단언하거나 허용하는 테스트, 계획서, 결정 기록이 없다(grep 0건).\n5) 보고 금지 목록 1~17은 모두 1세대1주택 판정 축이라 이 항목과 겹치지 않는다.",
+  "reasoning": "두 커밋이 서로 맞물려 생긴 회귀다. f199d694d는 숫자 sec4에 1을 더해 다음 번호를 만들도록 짰고, 24393990c는 sec4를 원문자 문자열로 바꾸면서 그 덧셈 지점을 놓쳤다. JS의 string + number는 문자열 연결이므로 「④1」이 된다. 실측으로도 확인했다('④' + 1 = \"④1\", 대조 4 + 1 = 5).\n\n두 커밋 모두 연속 번호를 의도했다. 이 화면의 ①~④가 원문자로 이어지므로 올바른 표시는 「⑤」, 즉 circled(sectionOffset + 2)다. 의도된 설계나 사용자 결정으로 볼 근거가 없다.\n\n도달도 가능하다. 양도세 계산기에서 §97의3·§97의5 감면을 고르면 항상 보인다. 타입과 lint 게이트를 통과하고 기존 anchor도 이 축을 다루지 않아, 지금까지 잡히지 않았다.\n\n영향은 표시뿐이다. 세액, 검증 차단, 오류에서 입력칸으로 이동하는 앵커는 바뀌지 않는다. 다만 같은 화면에서 번호 체계가 깨지고 20px 원형 배지에 두 글자가 들어간다. 그래서 심각도는 low가 맞다.",
+  "severityAssessment": "low"
+ },
+ "duplicates": []
+}

@@ -1,0 +1,36 @@
+{
+ "id": "S16-10",
+ "status": "CONFIRMED",
+ "severity": "low",
+ "title": "§97 본문·단서 입력 폼의 자동 번호가 렌더 순서와 어긋남(단서 나목과 1985년 이전 신축이 함께 뜨면 ①②④③⑤), §97의2 폼은 ②가 두 번 나옴",
+ "file": "components/calc/transfer/rental/Rental97MainInputForm.tsx",
+ "line": 48,
+ "relatedLocations": [
+  "components/calc/transfer/rental/Rental97MainInputForm.tsx:141",
+  "components/calc/transfer/rental/Rental97MainInputForm.tsx:189",
+  "components/calc/transfer/rental/Rental972InputForm.tsx:49",
+  "components/calc/transfer/rental/Rental972InputForm.tsx:90",
+  "components/calc/transfer/rental/Rental972InputForm.tsx:139"
+ ],
+ "category": "display",
+ "description": "sectionOrder 배열은 [①, 단서 분기, 단서 나목, §97①2호, 임대 호수] 순서다(:48-54). 그런데 JSX는 §97①2호 카드(:139-141, num(3))를 단서 나목 카드(:188-189, num(2))보다 먼저 그린다. 두 카드가 함께 뜨면 화면 순서가 ④ → ③이 된다. 주석(:37-44)은 「렌더 순서대로 자동 부여」를 의도했다고 적고 있다. 형제 폼 Rental972InputForm은 이 수정이 적용되지 않아 「임대 유형」(:49)과 「1호 나목 요건」(:90) 또는 「2호 요건」(:139)이 모두 ②로 표시된다. 이는 위 주석이 고쳤다고 적은 것과 같은 결함이다.",
+ "failureScenario": "§97 단서(rental_97_proviso)에서 단서 (나) 매입임대를 고르고 신축 연도를 1984로 입력하면 카드 번호가 ① ② ④(§97①2호) ③(단서 나목) ⑤ 순으로 나온다. §97의2 1호(건설)를 고르면 「② 임대 유형」과 「② 1호 나목 요건」이 연달아 나온다.",
+ "legalBasis": "해당 없음(표시 결함).",
+ "repro": {
+  "result": "reproduced",
+  "method": "RTL 렌더 probe(jsdom, __tests__/zz-review-probe/v-s16-10-1.test.tsx). 입력값은 기본값 팩토리 getReductionDefault(\"rental_97_proviso\" | \"rental_97_main\" | \"rental_97_2\")(components/calc/transfer/UnifiedReductionPanel-defaults.ts:108)에 패치를 얹어 만들었다. 이 값으로 Rental97MainInputForm·Rental972InputForm을 렌더하고, ToneCard 번호 배지 span(rounded-full h-5)과 바로 뒤 제목 p를 DOM 순서대로 모았다. 형제 관찰용 v-s16-10-2.test.tsx도 같은 방식으로 Rental973InputForm·Rental975InputForm의 기본값을 렌더했다.",
+  "observed": "[결함 1] §97 단서 (나) b_purchase + constructionYear \"1984\" → [\"① 등록·신분\",\"② 단서 분기 — 100% 감면 요건\",\"④ §97①2호 요건\",\"③ 단서 나목 요건\",\"⑤ 임대 호수 요건\",\"⑥ 임대료 증액 제한 (§97의3①2호)\",\"⑦ 공실 기간\"]. 보고된 대로 ①②④③⑤ 순서로 나온다.\n[결함 2] §97의2 rental972Type=\"construction\" → [\"① 등록·신분\",\"② 임대 유형 (§97의2①)\",\"② 1호 나목 요건\",\"③ 임대 호수 요건\",\"④ 임대료 증액 제한 (§97의3①2호)\",\"⑤ 공실 기간\"]\n[결함 3] §97의2 rental972Type=\"purchase\" → [\"① 등록·신분\",\"② 임대 유형 (§97의2①)\",\"② 2호 요건 — 취득 당시 미입주\",\"③ 임대 호수 요건\",\"④ …\",\"⑤ 공실 기간\"]. 두 경우 모두 ②가 두 번 나온다.",
+  "control": "대조 1: §97 단서 (나) + 1990 신축(§97①2호 카드 없음) → ① ② ③(단서 나목) ④(임대 호수) ⑤ ⑥으로 순서가 맞다.\n대조 2: §97 본문 + 1984 신축(단서 카드 없음) → ① ②(§97①2호) ③(임대 호수) ④ ⑤로 순서가 맞다.\n대조 3: §97 단서 (가) + 1984 신축(나목 카드 없음) → ① ② ③(§97①2호) ④ ⑤ ⑥으로 순서가 맞다.\n대조 4: §97의2 유형 미선택(기본값 rental972Type \"\", UnifiedReductionPanel-defaults.ts:194) → ① ② ③ ④ ⑤로 중복이 없다.\n정리: 순서 역전은 조건부 카드 두 개(단서 나목, §97①2호)가 함께 뜰 때만 생긴다. ② 중복은 §97의2 유형을 고를 때만 생긴다.",
+  "notes": "[원인: Rental97MainInputForm]\n- sectionOrder(Rental97MainInputForm.tsx:48-54)는 인덱스 2 = 단서 나목, 인덱스 3 = §97①2호 순서다.\n- 그런데 JSX는 §97①2호 카드(:139-141, num(3))를 단서 나목 카드(:188-189, num(2))보다 먼저 그린다.\n- 이 역전은 자동 번호를 도입한 커밋 5dedbc693(2026-09-07, 대장 #35)에서 생겼다. 그 diff는 JSX 순서를 그대로 두고 번호만 num(3)·num(2)로 바꿨다.\n\n[기존 안전망의 공백]\n- ui-review-remaining-med2.test.tsx의 B-1(비-단서 + 1984)과 B-2(단서 나목 + constructionYear \"\")는 조건부 카드를 하나씩만 띄운다. 두 카드가 함께 뜨는 조합은 검증하지 않는다.\n- 단언 방식도 개수(getAllByText(...).toHaveLength(1))뿐이다. 결함 시나리오에서도 ①~⑦은 각각 한 번씩만 나오므로, 그 조합을 추가해도 개수 단언으로는 순서 역전을 잡지 못한다. 순서 단언이 필요하다.\n\n[원인: Rental972InputForm]\n- 번호가 하드코딩돼 있다: \"②\"(:49·:90·:139), \"③\"(:168), sectionOffset={4}(:209).\n- 엔진은 rental972Type이 비어 있으면 부적격으로 처리한다. 그래서 계산하려는 사용자는 반드시 유형을 고르고, 고르는 순간 ②가 두 번 나온다.\n\n[도달 범위]\n- 두 폼은 양도세 계산기 Step5 감면 영역(UnifiedReductionGroupSection.tsx:330-349)에만 마운트된다.\n- 판정 메뉴(app/calc/one-house-exemption)에서는 UnifiedReduction을 쓰지 않는다(grep 0건). 즉 1세대1주택 판정 메뉴 밖의 계산기 화면 결함이다.\n- metadata.ts:95-111에서 rental_97_proviso·rental_97_2 모두 isFullyImplemented: true인 선택 가능 항목이다.\n\n[별건 관찰 — 같은 번호 축, 이 발견의 범위 밖]\n- RentalCommonFields.tsx:289 `sectionNum={sec4 + 1}`은 문자열에 1을 이어 붙인다.\n- 그래서 §97의3·§97의5 폼(hasGainProration을 넘기는 Rental973InputForm.tsx:189·Rental975InputForm.tsx:183)에서 「④1 임대 종료 시점」이 표시된다. 두 폼 기본값 모두 [\"① 등록·신분\",\"② 임대 개시 정보\",\"③ 임대료 증액 제한 (§97의3①2호)\",\"④ 공실 기간\",\"④1 임대 종료 시점\"]으로 실측했다.\n- 연원: f199d694d(2026-08-31)가 `sec4 + 1`을 넣었을 때는 sec4가 숫자라 「5」로 찍혔다. 24393990c(2026-09-07)가 sec3·sec4를 원문자 문자열로 바꾸면서 이 세 번째 사용처를 놓쳤다.\n\n[정리]\nprobe 2개를 rm으로 삭제했고 잔존 0건을 확인했다. 소스 파일은 수정하지 않았다(git status에는 다른 에이전트의 untracked probe 디렉터리만 있다).",
+  "probeDeleted": true
+ },
+ "skeptic": {
+  "verdict": "upheld",
+  "refutationType": "none",
+  "legalEvidence": "표시 결함이라 판정 자체는 법령과 무관하다. 다만 결함 조합이 법령상 실제로 나올 수 있는 입력인지 원문으로 확인했다.\n\n조세특례제한법(법률, MST 284389, 시행 2026.9.18.) 제97조제1항\n- 본문: 「대통령령으로 정하는 거주자가 다음 각 호의 어느 하나에 해당하는 국민주택…」\n- 단서: 「…매입임대주택 중 1995년 1월 1일 이후 취득 및 임대를 개시하여 5년 이상 임대한 임대주택(취득 당시 입주된 사실이 없는 주택만 해당한다)…의 경우에는 양도소득세를 면제한다」\n- 제2호: 「1985년 12월 31일 이전에 신축된 공동주택으로서 1986년 1월 1일 현재 입주된 사실이 없는 주택」\n⇒ 단서도 각 호의 국민주택 전체에 걸린다. 따라서 「단서 매입임대 + 1985년 이전 신축」 조합에서는 두 요건 카드가 모두 필요하다.\n\n같은 법 제97조의2제1항\n- 제1호 나목: 「1999년 8월 19일 이전에 신축된 공동주택으로서 1999년 8월 20일 현재 입주된 사실이 없는 주택」\n- 제2호: 「…(취득 당시 입주된 사실이 없는 주택만 해당한다)」\n⇒ 유형을 고르면 그에 딸린 별개 요건 카드가 뜨는 구조가 법문과 맞다.",
+  "designEvidence": "[주석이 밝힌 의도와 실제 렌더가 어긋난다]\n- Rental97MainInputForm.tsx:36-44 주석: 「섹션 번호는 렌더 순서대로 자동 부여한다」, 「번호가 위치를 가리키는 표지 구실을 못 한다」. 실제 렌더는 ④ 다음에 ③이 온다.\n\n[같은 유형을 이미 결함으로 규정한 커밋이 있다]\n- 커밋 5dedbc693(2026-09-07, 대장 #35)은 「단서 분기(②) + 단서 나목(②)」처럼 하위 요건 카드가 상위 선택 카드와 같은 ②를 갖는 것을 결함으로 규정하고 고쳤다. §97의2의 「② 임대 유형 → ② 1호 나목 요건 / ② 2호 요건」은 그와 구조가 같다.\n- 그 커밋은 Rental97MainInputForm만 고쳤고, 메시지·diff 어디에도 Rental972InputForm 언급이 없다.\n- 두 하위 카드의 ②는 d575a46d7·18becdb3c(2026-08-31)에서, Rental97Main의 결함 카드들과 같은 배치·같은 하드코딩 패턴으로 들어왔다. 후속 24393990c도 Rental972InputForm을 건드리지 않았다.\n- 「하위 카드라 ②를 공유한다」는 의도를 남긴 주석·커밋·계획서·테스트는 없다. ToneCard는 \"1-A\" 같은 하위 표기 문자열을 지원하지만 쓰지 않았다.\n\n[저장소 규칙도 순차 번호를 요구한다]\n- components/calc/CLAUDE.md 「다-섹션 입력 폼 — 색상 카드 + 섹션 번호 패턴(강제 규칙)」\n- 메모리 feedback_section_card_numbering: 「카드 헤더에 원형 배지로 순서 번호 표시. 번호는 섹션 단위」\n\n[현재 동작을 고정하는 테스트는 없다]\n- ui-review-remaining-med2.test.tsx B-1·B-2·B-3은 단일 조건부 카드의 개수만 단언한다.\n- rental-forms-tonecard.test.tsx:38은 ToneCard 단독 렌더라 폼의 번호를 보지 않는다.\n\n[보고 금지 목록]\n1~17 어디에도 해당하지 않는다.",
+  "reasoning": "재현은 보고와 정확히 일치했다.\n- 결함 1: §97 단서 (나) + 1984 신축에서 번호가 ①②④③⑤⑥⑦로 나온다.\n- 결함 2: §97의2에서 1호·2호 중 어느 쪽을 골라도 ②가 두 번 나온다.\n- 대조군 4건(조건부 카드가 하나뿐이거나 유형 미선택)은 모두 순서대로 나오고 중복도 없다. 따라서 결함은 「두 조건부 카드 동시 노출」과 「§97의2 유형 선택」에만 생긴다.\n\n반박 축은 모두 실패했다.\n- 의도된 설계: 아니다. 주석이 렌더 순서 자동 부여를 명시했고, 5dedbc693이 같은 구조의 ② 중복을 결함으로 규정했다.\n- 사용자 결정: 보고 금지 목록과 커밋 기록에 해당 사항이 없다.\n- 도달 불가: 아니다. 두 항목 모두 isFullyImplemented인 선택 가능 감면이고, 결함 조합은 조특법 §97① 단서 + 제2호로 법령상 성립한다. §97의2는 계산하려면 유형 선택이 필수라(엔진이 미선택을 부적격 처리) 계산 사용자는 사실상 항상 이 화면을 본다.\n- 다른 곳에서 처리: 아니다. 번호를 바로잡는 다른 경로가 없다.\n\n원인도 확인했다. Rental97Main 쪽은 5dedbc693이 sectionOrder 인덱스를 JSX 렌더 순서와 반대로 배정해서 생겼다. 자동 번호가 정확하려면 sectionOrder 순서와 JSX 순서가 같아야 한다.\n\n범위 주의: 이 폼은 양도세 계산기 Step5 감면 영역에만 있고, 1세대1주택 판정 메뉴에는 마운트되지 않는다.\n\n별건으로 같은 번호 축에서 RentalCommonFields.tsx:289의 「④1」 문자열 결합 결함을 실측했다(§97의3·§97의5). 24393990c의 원문자 전환이 사용처 하나를 놓친 것이며, 이 발견과는 별도로 다룰 대상이다.",
+  "severityAssessment": "low"
+ },
+ "duplicates": []
+}
