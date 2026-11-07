@@ -6,7 +6,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
-import { makeMockRatesWithHouseEngine, baseTransferInput, makeHouseInfo } from "../_helpers/mock-rates";
+import { makeMockRates, makeMockRatesWithHouseEngine, baseTransferInput, makeHouseInfo } from "../_helpers/mock-rates";
 
 const rates = makeMockRatesWithHouseEngine();
 const UNSOLD_983 = {
@@ -143,5 +143,35 @@ describe("US-19 — 5호 자기 선언 + §98 계열 감면 부적격은 계산�
     const r = calc(input("2010-05-01", 2, true, { sellingSelfDeclared5ho: true }));
     expect(detailOf(r)).toContain("선언으로 적용");
     expect(warned(r)).toBe(false);
+  });
+});
+
+/**
+ * 12의2 한시배제의 보유 2년 요건 — fallback도 본다(계획서 `carryover-surcharge-suspension-holding.plan.md`).
+ * 종전 fallback은 양도일 창만 봐 보유 1~2년 양도에도 한시배제를 켜 §104⑦ 비교과세(단기 60% ↔ 기본+20%p)가 빠졌다.
+ * 실측(수정 전): 2025-01-01 취득 · 15억/1억 · 양도 2026-03-01 — fallback 838,500,000(0.60) ↔ 명부 842,435,000(0.65).
+ * §95④ 보유기간은 초일 산입이다(`meetsSurchargeSuspensionHolding` — 2024-03-02 취득 → 2026-03-01 양도 = 2년).
+ */
+describe("12의2 보유 2년 — fallback = 명부", () => {
+  const rates12 = makeMockRatesWithHouseEngine();
+  (rates12 as Map<string, unknown>).set("transfer:surcharge:_default", makeMockRates().get("transfer:surcharge:_default" as never)); // 한시배제(~2026-05-09) 있는 세율표
+  const holdInput = (acq: string, roster: boolean): TransferTaxInput => ({
+    ...input(acq, 2, roster),
+    transferPrice: 1_500_000_000,
+    acquisitionPrice: 100_000_000,
+    transferDate: new Date("2026-03-01"),
+  });
+  const calc12 = (i: TransferTaxInput) => calculateTransferTax(i, rates12);
+
+  it.each([
+    ["2025-01-01", 842_435_000, false],
+    ["2024-03-03", 842_435_000, false],
+    ["2024-03-02", 562_935_000, true], // 보유 2년(초일 산입) — 한시배제 · 3년 미만이라 장특 0,
+    ["2023-01-01", 525_135_000, true],
+  ] as const)("F-4: %s 취득 → fallback = 명부 %i (한시배제 %s)", (acq, tax, suspended) => {
+    const roster = calc12(holdInput(acq, true));
+    const fb = calc12(holdInput(acq, false));
+    expect([roster.determinedTax, roster.isSurchargeSuspended === true]).toEqual([tax, suspended]);
+    expect([fb.determinedTax, fb.isSurchargeSuspended === true]).toEqual([tax, suspended]);
   });
 });
