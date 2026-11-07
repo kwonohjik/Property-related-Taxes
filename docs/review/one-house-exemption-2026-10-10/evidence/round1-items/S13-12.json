@@ -1,0 +1,33 @@
+{
+ "id": "S13-12",
+ "status": "CONFIRMED",
+ "severity": "low",
+ "title": "결과 단계에서 판정 API 오류가 난 뒤 StepIndicator·사이드바의 현재 단계(④)를 누르면 오류·재시도 버튼이 사라지고 「판정을 준비하고 있습니다…」에 고정된다",
+ "file": "app/calc/one-house-exemption/steps/Step4.tsx",
+ "line": 28,
+ "relatedLocations": [
+  "app/calc/one-house-exemption/OneHouseJudgmentCalculator.tsx:178",
+  "app/calc/one-house-exemption/steps/Step4.tsx:60"
+ ],
+ "category": "dead-end",
+ "description": "onStepClick(target==currentStep)은 setError(null)만 한다(OneHouseJudgmentCalculator.tsx:176-183). Step4는 마운트된 채라 triggered.current가 true로 남고, 효과(:27-31)는 triggered면 판정을 다시 부르지 않으며 result=null·error=null이라 :59-61의 준비 문구만 그린다 — 「다시 판정하기」 버튼(:45-54)도 사라진다. 다른 단계로 갔다 와야 풀린다. 현재 단계 원은 버튼으로 렌더된다(StepIndicator.tsx:103-111).",
+ "failureScenario": "④에서 429(분당 30회 초과) 또는 500 → 「다시 판정하기」가 보이는 상태에서 ④ 원 클릭. 관측: 준비 문구 1, 재시도 버튼 0, API 재호출 0. 올바른 동작: 오류 유지 또는 재판정.",
+ "legalBasis": "해당 없음(UI)",
+ "repro": {
+  "result": "reproduced",
+  "method": "RTL 렌더 probe(__tests__/zz-review-probe/v-s13-12-1.test.tsx, jsdom). OneHouseJudgmentCalculator 전체를 렌더하고, judgment-step-jump-bypass.predo.anchor.test.tsx와 같은 mock(next/navigation·useAutoSaveCalculation·AddressSearch)을 썼다. callOneHouseExemptionAPI는 vi.mock으로 reject(Error(\"요청이 너무 많습니다. 잠시 후 다시 시도하세요\"))하게 했다 — route.ts:107의 429 실제 문구다. store는 currentStep=3에 유효 폼(①②③ 오류 0, 명부 주택 취득일 2020-01-01)으로 세웠다. Step4 마운트 effect가 판정을 1회 호출하고 오류와 「다시 판정하기」가 뜬 뒤 세 경로를 눌렀다: (A) StepIndicator 버튼 「판정 결과 단계로 이동」, (A') StepIndicator 라벨 span(StepIndicator.tsx:116-125 onClick), (B) 사이드바 nav[aria-label=진행 단계]의 「판정 결과」 버튼. 각 시점에 준비 문구 수, 재시도 버튼 수, 오류문 수, API 호출 수, store 상태를 기록했다.",
+  "observed": "클릭 전: {preparing:0, retry:1, errorShown:1, calls:1, storeError:\"요청이 너무 많습니다…\", step:3}. (A) StepIndicator ④ 클릭 후: {preparing:1, retry:0, errorShown:0, calls:1, storeError:null, step:3, isLoading:false, result:null}. 500ms를 더 기다려도 같았다(재호출 0). (B) 사이드바 「판정 결과」 클릭 후: {preparing:1, retry:0, errorShown:0, calls:1, storeError:null}. (A') 라벨 span 클릭 후도 {preparing:1, retry:0, calls:1}. 세 경로 모두 오류문과 재시도 버튼이 사라지고 「판정을 준비하고 있습니다…」만 남는다. API 재호출은 없다.",
+  "control": "대조1: 오류 상태에서 「다시 판정하기」를 누르면 calls 2, 오류·재시도가 다시 뜬다(Step4.tsx:48-51이 triggered를 되돌림). 대조2: ③으로 갔다가 ④로 돌아오면 Step4가 다시 마운트되어 calls 2, 오류·재시도가 다시 뜬다. 즉 「다른 단계를 거쳐야 풀린다」가 실측으로 맞다. 대조3(기전 분리): store.setStep(3)만 부르면(F-2 전 onStepClick 형태) {retry:1, errorShown:1, preparing:0}으로 유지되고, 이어서 setError(null)만 부르면 {retry:0, preparing:1}이 된다. 원인은 onStepClick의 setError(null) 한 줄이다(OneHouseJudgmentCalculator.tsx:179). 대조4: 실제 POST 200 응답으로 결과뷰가 떠 있을 때 ④를 누르면 result가 유지되고 preparing은 0이다. 오류 상태에서만 갈린다.",
+  "notes": "도입 시점: 9a32eb857(2026-09-25, F-2 수정). 그 전에는 onStepClick이 `useMemo(() => (i: number) => setStep(i), [setStep])`이라 같은 클릭이 아무 일도 하지 않았다(git show 9a32eb857). F-2가 점프 시 묵은 오류 배너를 지우려고 setError(null)을 넣으면서, ④ 제자리 클릭 때 Step4의 1회 가드(triggered ref, Step4.tsx:25-31)와 충돌하게 됐다. 도달 경로: 429(분당 30회, route.ts:100-109), 400(INVALID_JSON·Zod INVALID_INPUT), 500(CALCULATION_FAILED), 네트워크 실패. 모두 callOneHouseExemptionAPI(one-house-exemption-api.ts:348-351)가 throw하고 handleJudge의 catch에서 store.error에 들어간다(:148-149). 현재 단계는 클릭 가능한 버튼이다: StepIndicator.tsx:103-111(aria-current=step), WizardSidebar.tsx:85-99(OneHouseJudgmentSidebar.tsx:58 onClick). 참고: 주식 마법사도 구조가 비슷하다(StockTransferTaxCalculator.tsx:251 setError(null) 뒤 visitStep, steps/Step4.tsx:106-111 ref 가드). 다만 probe하지 않았으므로 같은 증상인지는 확인 필요다.",
+  "probeDeleted": true
+ },
+ "skeptic": {
+  "verdict": "upheld",
+  "refutationType": "none",
+  "legalEvidence": "법령 무관(UI 상태 전이 결함)",
+  "designEvidence": "(1) 9a32eb857 커밋 메시지는 「뒤로·제자리는 언제나 허용 — 고치러 가는 길을 막으면 사용자가 갇힌다」고 적었다. 여기서 제자리 허용은 «차단하지 않는다»는 뜻이고, ④에서 오류와 재시도를 지우는 동작을 의도한 기록은 없다. 같은 커밋 전에는 onStepClick이 setStep만 불러 이 증상이 없었다. (2) OneHouseJudgmentCalculator.tsx:253 주석은 「결과 단계의 오류는 Step4가 직접 띄운다(재시도 버튼과 함께)」이다. 설계 의도는 ④의 오류를 재시도와 함께 유지하는 것이다. (3) Step4.tsx 머리 주석의 「1회 가드」는 이중 호출 방지용이고, 재시도 버튼만 가드를 해제한다(:48-51). 오류가 외부에서 지워지는 경로는 고려되지 않았다. (4) __tests__·e2e에서 「다시 판정하기」「판정을 준비하고 있습니다」를 단언하는 테스트는 0건이다(grep). judgment-step-jump-bypass.predo.anchor.test.tsx는 앞뒤 점프만 다루고, 오류 뒤 제자리 클릭은 다루지 않는다. (5) docs/00-pm/validation-warnings-display.plan.md §F-2와 one-house 계획서에도 관련 결정이 없다. 보고 금지 목록 1~17과도 무관하다.",
+  "reasoning": "기전과 증상을 RTL 실측으로 재현했다. StepIndicator 버튼, 라벨 span, 사이드바 세 경로 모두 재현됐다. 대조3으로 원인을 onStepClick의 setError(null)로 좁혔다(OneHouseJudgmentCalculator.tsx:179). Step4는 같은 단계라 다시 마운트되지 않고, triggered.current=true인 채 effect가 즉시 반환한다(Step4.tsx:28). 그래서 result=null·error=null·isLoading=false가 되어 :59-61 준비 문구만 남는다. 의도된 설계라는 근거는 찾지 못했다. 오히려 F-2 수정이 낳은 부작용이다. 도달 가능성도 있다: 429·400·500·네트워크 실패는 모두 실제 경로이고, 현재 단계 원과 사이드바 활성 행은 버튼으로 렌더된다. 반대로 심각도를 낮추는 사실도 있다. 판정 결과가 틀려지지 않고(세액·판정 오답 없음), 「이전」 버튼, 다른 단계를 거쳐 오기, 「판정 결과 보기」 CTA로 복구된다(대조2). 다만 「준비하고 있습니다」 문구가 진행 중인 것처럼 읽혀 사용자가 무한정 기다릴 수 있고, 오류 사유도 사라진다. 그래서 low가 적정하다.",
+  "severityAssessment": "low"
+ },
+ "duplicates": []
+}

@@ -1,0 +1,33 @@
+{
+ "id": "S12-7",
+ "status": "CONFIRMED",
+ "severity": "low",
+ "title": "거주 구간 겹침 검사가 「앞 구간 퇴거일 = 다음 구간 입주일」을 허용해 같은 주택의 경계일을 두 번 세고, 합산 개월이 실제보다 1개월 많아질 수 있다",
+ "file": "lib/calc/residence-interval-validate.ts",
+ "line": 60,
+ "relatedLocations": [
+  "lib/stores/calc-wizard-asset-residence.ts:100",
+  "lib/stores/calc-wizard-asset-residence.ts:82"
+ ],
+ "category": "date-boundary",
+ "description": "겹침은 `prev.moveOutDate > cur.moveInDate`만 막는다(:52-60, 주석 「퇴거일 = 다음 입주일(이사 당일)은 겹침이 아니다」). 그런데 구간은 모두 같은 자산(양도 주택)의 거주이고, 각 구간은 §154⑥ 초일 산입(completedMonthsInclusive)으로 세어 단순 합산된다(sumResidenceMonths) — 경계일이 두 구간에 모두 들어가 하루가 중복된다. 「이사 당일」 근거는 서로 다른 주택 사이에서나 성립한다. 2년 경계에서 거주요건 결론이 갈릴 수 있다. 같은 날 전출·재전입 구간을 다룬 해석례는 확인하지 못했다(확인 필요).",
+ "failureScenario": "구간 2020-01-01~2020-06-30(6개월) + 2020-06-30~2021-12-29(18개월) → 합 24개월, ⑧ 오류 0 / 실제 거주 2020-01-01~2021-12-29는 23개월 → 취득 당시 조정대상지역 주택이면 거주 2년 충족(비과세)↔미충족(과세)이 갈린다.",
+ "legalBasis": "「소득세법 시행령」 제154조제6항 「거주기간은 주민등록표 등본에 따른 전입일부터 전출일까지의 기간」(MST 290841 원문 확인)",
+ "repro": {
+  "result": "reproduced",
+  "method": "probe __tests__/zz-review-probe/v-s12-7-1.test.ts(실행 후 삭제). 네 경로로 실측했다. (1) leaf — residenceIntervalMonths·sumResidenceMonths·collectResidenceIntervalErrors, 그리고 도입 당시 셈법인 diffMonthsClamped. (2) 판정 메뉴 — harness observeCase로 ⑧ validateAllSteps → ④ buildOneHouseExemptionApiBody → ⑫ Zod → route ⑭ → 엔진. 평가셋 F187-current 틀을 썼다(취득 2019-11-01, 취득 당시 조정대상지역 선언, 양도 2026-03-20, 8억, today 2026-10-07). 거주 구간은 SHARED [2019-11-09~2020-05-08]+[2020-05-08~2021-11-07]이다. (3) 발견서 원형 — 취득 2019-12-01, 양도 2022-01-15, [2020-01-01~2020-06-30]+[2020-06-30~2021-12-29]. (4) 계산기 — ⑧ collectStepIssues(1, form)과 ④ 경로의 deriveResidencePeriodMonths.",
+  "observed": "leaf: SHARED는 구간별 [6,18], 합 24, ⑧ 오류 []이다. 발견서 원형도 [6,18], 합 24, 오류 []이고 합집합은 23이다(발견서 관측 그대로). 판정 메뉴: SHARED는 status 200, isExempt=true, validationErrors [], undetermined []이다. 발견서 원형 F_SHARED도 isExempt=true이고, undetermined는 154-5-final-one-house-restart-unverified 1건뿐이다. 계산기: SHARED는 거주 구간 오류 [], 거주 개월 24이다. 화면 합계(ResidencePeriodSection.tsx:52-54, sumResidenceMonths)도 24개월로 나온다.",
+  "control": "(a) UNION — 같은 실제 거주를 한 구간 [2019-11-09~2021-11-07]으로 넣으면 23개월, isExempt=false다. 평가셋 match 케이스 N-F187-one-day-short와 같은 사실관계이고, 발견서 원형의 합집합 F_UNION도 23개월, isExempt=false다. (b) NEXTDAY — 둘째 구간 입주를 2020-05-09로 하면 구간별 [6,17], 합 23, isExempt=false, 계산기 거주 개월 23이다. (c) OVERLAP1 — 둘째 입주를 2020-05-07로 해 이틀 겹치면 판정 메뉴·계산기 ⑧ 모두 「겹칩니다」 오류로 막힌다. (d) 도입 당시 반개구간 셈 diffMonthsClamped로는 SHARED가 [5,17]=22로 합집합 23 이하라 이중 계산이 없었다. (e) 기준선 — RULINGS_FILES=F187.json 평가셋 통과(F187-current 24개월 비과세, N-F187-one-day-short 23개월 과세), transfer-validate-date-cross-rules.test.ts 21건 통과(T-03 포함).",
+  "notes": "이력: 겹침 규칙은 4c73e864b(2026-06-12, 「거주 구간 겹침(이중계산 차단)」)에서 들어왔고, 그때 합산은 diffMonthsClamped였다. 7d3f9d005(2026-09-26, OH-45)가 sumResidenceMonths를 residenceIntervalMonths로 바꿨고, 이 셈은 completedMonthsInclusive라 양 끝 날짜를 모두 넣는다. 8f1de0e8e(2026-09-26)는 규칙을 leaf로 옮기면서 「이사 당일」 주석을 그대로 가져왔다. 계획서 one-house-exemption-fix.plan.md §1 유형 D와 §1.1, 리뷰 문서 OH-45에는 겹침 규칙을 다시 보았다는 언급이 없다. T-03(:53)은 겹침 오류가 없다는 것만 단언한다. 그 픽스처는 12+12=24로 합집합 24와 같아 이중 계산이 드러나지 않는다. UI 경로는 판정 메뉴 Step3.tsx:402와 계산기 Step4.tsx:510(ResidencePeriodSection)이다. addPeriod는 빈 행만 만들고 앞 행 날짜를 미리 채우지 않으므로, 경계일 공유는 사용자가 직접 같은 날짜를 넣을 때만 생긴다. 다른 에이전트의 probe 파일(v-s11-7-*, v-s13-13-1)은 건드리지 않았다.",
+  "probeDeleted": true
+ },
+ "skeptic": {
+  "verdict": "upheld",
+  "refutationType": "none",
+  "legalEvidence": "「소득세법 시행령」 제154조제6항(현행 MST 290841, 시행 2026.10.1., 원문 확인): 「제1항에 따른 거주기간은 주민등록표 등본에 따른 전입일부터 전출일까지의 기간으로 한다.」 같은 조 제1항 괄호: 「…해당 주택의 보유기간이 2년 … 이상이고 그 보유기간 중 거주기간이 2년 이상인 것」. 엔진은 서면인터넷방문상담4팀-82(초일 산입)를 따라 전입일과 전출일을 모두 넣어 센다(civil-period.ts:204-216). 평가셋 match인 F187-current와 N-F187-one-day-short가 이 셈법을 단언한다. 이 셈법에서 퇴거일과 다음 입주일이 같으면 그 하루가 두 구간에 모두 들어간다. 제6항은 개별 구간의 시작과 끝만 정하고, 제1항은 거주한 기간의 길이를 묻는다. 같은 하루를 이틀로 셀 근거는 문언에 없다. 같은 날 전출과 재전입을 다룬 해석례는 KoreanLaw nts 검색 목록(「거주기간 통산」 52건, 「거주기간 계산」 210건)의 제목에서 찾지 못했다. MCP가 국세청 해석 본문을 주지 않아 본문은 읽지 못했으므로, 해석례 존부는 확인 필요다.",
+  "designEvidence": "residence-interval-validate.ts:52 주석 「퇴거일 = 다음 입주일(이사 당일)은 겹침이 아니다(초과만 차단)」과 :60 `if (prev.moveOutDate > cur.moveInDate)`가 문제의 규칙이다. 같은 파일 :65 오류 문구 「구간이 겹치면 거주기간이 이중 계산」이 보여 주듯 규칙의 목적은 이중 계산 차단이다. 도입 커밋 4c73e864b(2026-06-12) 당시 합산은 diffMonthsClamped(반개구간)였고, 실측으로 SHARED 22 ≤ 합집합 23이라 그때는 「이사 당일」 예외가 맞았다. 7d3f9d005(2026-09-26, OH-45)가 합산을 초일 산입 residenceIntervalMonths로 바꿔 그 전제가 사라졌다. 계획서 §1과 §1.1, 리뷰 OH-45, 커밋 메시지 어디에도 겹침 규칙을 다시 본 흔적이 없다. T-03(transfer-validate-date-cross-rules.test.ts:53)은 오류가 없다는 것만 단언하고, 개월 수가 달라지지 않는 픽스처다. 보고 금지 1~17 중 해당 항목이 없다(16번은 취득·양도 동일자 규칙이라 무관). 다른 층의 보정도 없다. sumResidenceMonths(:100)는 합집합을 내지 않고, 판정 메뉴 ④와 계산기 ④는 같은 clampResidenceToHousingPeriod를 쓴다.",
+  "reasoning": "재현됐다. 현행 합산은 각 구간을 양 끝 날짜 포함으로 센 뒤 단순 합산한다. 같은 주택의 두 구간이 경계일을 공유하면 그 하루가 두 번 들어가는데, ⑧은 이틀 이상 겹침만 막고 하루 겹침은 통과시킨다. 평가셋 N-F187-one-day-short(match, 23개월 과세)와 같은 실제 거주를 2020-05-08에서 나눠 넣으면 ⑧ 오류 없이 24개월이 되고 비과세로 뒤집힌다. 판정 메뉴 route에서 실측했고, 계산기도 같은 ⑧ leaf와 ④ leaf로 24를 보낸다. 대조군인 합집합 한 구간과 다음 날 입주는 23개월, 과세다. 「의도된 설계」라는 반박은 성립하지 않는다. 그 예외는 반개구간 셈일 때만 맞았고, OH-45의 초일 산입 전환이 전제를 지웠다. 규칙의 목적(이중 계산 차단)과도 어긋난다. 도달성은 낮다. 두 화면 모두 날짜를 자유 입력하지만, 같은 날 전출·재전입이나 연속 거주를 같은 날짜로 끊어 넣는 입력에서만 생긴다. 예를 들어 초본의 세대 변동 행을 따라 구간을 나누는 경우다. 결론까지 바뀌려면 합집합이 개월 경계에 하루 못 미쳐야 하는데, 이 창은 좁다(거주요건 24개월, 표2 거주연차 12개월 단위 등). 걸리면 방향은 과세에서 비과세로, 근거 없는 혜택이다. 그래서 심각도 low를 유지한다. 고치는 방향은 둘이고 결정이 필요하다. (a) ⑧을 `>=`로 바꾸고 「합쳐서 입력」을 안내한다(T-03 반전). (b) 합산을 구간 합집합으로 계산한다.",
+  "severityAssessment": "low"
+ },
+ "duplicates": []
+}

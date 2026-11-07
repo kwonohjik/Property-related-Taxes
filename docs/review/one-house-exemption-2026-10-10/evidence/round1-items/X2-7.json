@@ -1,0 +1,34 @@
+{
+ "id": "X2-7",
+ "status": "CONFIRMED",
+ "severity": "low",
+ "title": "「영 §154⑤ 단서」(최종 1주택 재기산) 조문 링크가 현행 §154⑤를 열어 다른 단서(용도변경, 2024.2.29.)를 강조 — 삭제(2022.5.31.)된 단서라는 표시가 없음",
+ "file": "components/calc/results/OneHouseJudgmentResultView.tsx",
+ "line": 214,
+ "relatedLocations": [
+  "lib/tax-engine/one-house/final-house-restart.ts:143",
+  "components/ui/law-article-modal.tsx:139",
+  "lib/tax-engine/legal-codes/transfer-house.ts:313"
+ ],
+ "category": "citation",
+ "description": "결과 카드 「최종 1주택 보유기간 재기산」의 조문 배지는 legalBasis 「소득세법 시행령 §154⑤」(final-house-restart.ts:143)·label 「영 §154⑤ 단서」다. LawArticleModal은 시점 인자 없이 현행 조문만 조회하고(law-article-modal.tsx:139-141) label의 ⑤를 강조한다. 재기산 단서는 2021.6.1. 시행본(MST 229391) §154⑤ 단서였고 2022.5.31. 삭제돼 2023.1.1.본(MST 247489) ⑤에는 단서가 없으며, 현행(MST 290841) ⑤ 단서는 2024.2.29. 신설된 「주택이 아닌 건물을 사실상 주거용으로 사용하거나 … 용도변경하는 경우 그 보유기간은 …」다. 그래서 배지를 누르면 재기산과 무관한 단서가 강조된다. 저장소의 삭제 조문 관례(RENTAL_REGISTRATION_4HO.PRE_DELETION_ARTICLE 「(2020.2.11. 삭제 전)」, MULTI_HOUSE *_OLD 「(2023.2.28. 개정 전)」)와 달리 시점 표시가 없다. 본문 설명 문장은 「2021년 1월 1일~2022년 5월 9일 양도분」을 밝혀 결론 오인은 제한적이라 low.",
+ "failureScenario": "2021-08-01 양도 1주택, 처분 이력(다른 주택 2021-03-01 양도) 입력 → 결과 카드 「…보유기간을 2021-03-01부터 다시 셉니다(소득세법 시행령 §154⑤ 단서)」 + 배지 「영 §154⑤ 단서 ↗」 → 모달은 현행 §154⑤ 「다만, 주택이 아닌 건물을 사실상 주거용으로 사용하거나…」를 강조. 올바른 표기: 「영 §154⑤ 단서(2022.5.31. 삭제 전)」 등 시점 명시.",
+ "legalBasis": "소득세법 시행령 §154⑤ — 2021.6.1. 시행본(MST 229391) 단서 원문 확인, 2023.1.1. 시행본(MST 247489) 단서 없음 확인, 현행(MST 290841) 단서(용도변경) 확인",
+ "repro": {
+  "result": "reproduced",
+  "method": "(1) 판정 메뉴 실제 route: buildOneHouseExemptionApiBody → POST /api/calc/one-house-exemption. 입력은 2015-03-01 취득 1주택, 2021-08-01 양도, 처분 이력 「있음·양도 2021-03-01」(일시적 2주택 아님)이고 judgment.finalOneHouseRestart를 관측했다. (2) 모달 파서 parseLawRef / extractClauseMarkers. (3) 실제 GET /api/law/article?law=소득세법 시행령&articleNum=154를 live로 호출했다(법제처 DRF, .env.local 키 사용). CACHE_DIR이 cwd 기준이라 scratch 디렉터리로 chdir해 워크트리에 캐시가 쓰이지 않게 했다. (4) jsdom RTL: (1)의 실제 응답으로 OneHouseJudgmentResultView를 렌더하고, fetch를 (3)의 live 응답으로 stub한 뒤 「영 §154⑤ 단서」 배지를 클릭해 pre[data-highlighted]를 관측했다. (5) 법령 원문은 KoreanLaw MCP로 대조했다: get_law_text 현행(MST 290841), efYd 20210801(→MST 231965), MST 229391, efYd 20230101(→MST 247489), efYd 20240229(→MST 260889), applicable_law(소득세법 시행령, 2021-08-01, 제154조). probe 파일은 __tests__/zz-review-probe/v-x2-7-1.test.ts, v-x2-7-2.test.tsx.",
+  "observed": "route: isExempt=false, finalOneHouseRestart.applied=true, legalBasis=\"소득세법 시행령 §154⑤\". description=\"2021년 1월 1일~2022년 5월 9일 양도분으로, … 2021-03-01부터 다시 셉니다(소득세법 시행령 §154⑤ 단서). …\". parseLawRef('소득세법 시행령 §154⑤')={lawName:'소득세법 시행령', articleNum:'154'}, extractClauseMarkers('영 §154⑤ 단서')=['⑤']. UI 관측: 배지 텍스트 \"영 §154⑤ 단서 ↗\". fetch URL \"/api/law/article?law=소득세법+시행령&articleNum=154\"로 시점 인자가 없다. 모달 제목 \"소득세법 시행령 제154조\". 강조 블록은 1건이고 내용은 \"⑤ 제1항에 따른 보유기간의 계산은 법 제95조제4항에 따른다. 다만, 주택이 아닌 건물을 사실상 주거용으로 사용하거나 공부상의 용도를 주택으로 변경하는 경우 그 보유기간은 … 양도한 날까지로 한다. <개정 2022.5.31, 2024.2.29>\"이다(live API status 200, title '1세대1주택의 범위'). 강조 블록의 용도변경 단서 포함=true, 재기산 단서(\"처분 후 1주택을 보유하게 된 날\") 포함=false. 배지·카드 어디에도 「삭제」 표시 없음(false/false).",
+  "control": "(a) 같은 폼에서 처분 「없음」: isExempt=true, echo applied=false, legalBasis는 같은 \"소득세법 시행령 §154⑤\". description \"이 주택을 보유하는 동안 다른 주택을 처분하지 않았으므로 보유기간은 취득일부터 셉니다.\"에는 기간 언급조차 없는데 같은 배지가 붙는다. (b) 모달에 2021.7.1. 시행본(MST 231965) ⑤ 원문을 주면 강조 블록에 재기산 단서가 나온다(true). 강조 기구는 정상이고 문제는 조회 시점뿐이다. (c) 같은 결과 뷰의 삭제 조문 관례: rental4hoLegalBasis(2020-06-01)로 만든 4호 배지 텍스트는 \"소득세법 시행령 §154 ① 4호(2020.2.11. 삭제 전) · 대통령령 제30395호 부칙 제38조 ② ↗\"이다. (d) 현행 유효 조문의 짝: 「영 §154⑧3호」 배지의 강조 블록에는 3호 상속 통산 문언이 있다(true). 현행 본문 모달은 유효 조문에서는 맞게 동작한다.",
+  "notes": "클릭 가능한 배지는 OneHouseJudgmentResultView.tsx:214 한 곳뿐이다(판정 메뉴 결과와 같은 뷰를 쓰는 이력 상세 포함). 계산기 경로의 같은 문장(transfer-tax.ts:279 warnings)은 CalculationWarningsCard가 평문으로 렌더해 링크가 없다. 입력 카드 FinalHouseRestartSection에도 배지가 없다. 발견의 「2021.6.1. 시행본(MST 229391)」 표기는 부정확하다. MST 229391은 2021.2.17. 공포·시행본(제31442호)이고, 2021.8.1. 시행 중이던 것은 MST 231965(시행 2021.7.1., 제31659호)다. 둘 다 ⑤ 단서가 재기산 단서라 결론에는 영향이 없다. live 호출 캐시는 scratch에만 쓰였고 함께 삭제했다. 워크트리에 .legal-cache가 생기지 않았음을 확인했다.",
+  "probeDeleted": true
+ },
+ "skeptic": {
+  "verdict": "upheld",
+  "refutationType": "none",
+  "legalEvidence": "「소득세법 시행령」 제154조제5항 2021.2.17. 시행본(MST 229391) 및 2021.7.1. 시행본(MST 231965 — applicable_law 2021-08-01 기준 시행본): 「⑤ 제1항에 따른 보유기간의 계산은 법 제95조제4항에 따른다. 다만, 2주택 이상(…)을 보유한 1세대가 1주택 외의 주택을 모두 처분한 경우에는 처분 후 1주택을 보유하게 된 날부터 보유기간을 기산한다. <개정 2019.2.12, 2021.2.17>」. 2023.1.1. 시행본(MST 247489) 같은 항: 「⑤ 제1항에 따른 보유기간의 계산은 법 제95조제4항에 따른다. <개정 2022.5.31>」 — 단서가 없다. 2024.2.29. 시행본(MST 260889, 대통령령 제34265호)과 현행(MST 290841, 시행 2026.10.1.) 같은 항: 「… 다만, 주택이 아닌 건물을 사실상 주거용으로 사용하거나 공부상의 용도를 주택으로 변경하는 경우 그 보유기간은 해당 자산을 사실상 주거용으로 사용한 날(…)부터 양도한 날까지로 한다. <개정 2022.5.31, 2024.2.29>」. KoreanLaw applicable_law(소득세법 시행령 제154조, 2021-08-01): 「현행과 비교: △ 변경됨 — 현행 본문과 다릅니다. 인용 시 반드시 기준일 버전을 사용하세요.」 대통령령 제32654호 부칙 제2조 원문은 이번에 직접 조회하지 않았다(엔진 주석 final-house-restart.ts:16-17 인용분). 판정 결론과는 무관하다.",
+  "designEvidence": "이 줄을 도입한 커밋 4d2d66f3c(2026-09-28, OH-22·I-1) 메시지와 계획서 docs/00-pm/one-house-exemption-fix.plan.md §3.4(96-115행) 어디에도 배지 표기나 시점 표시에 관한 결정이 없다. 이 동작을 단언하는 테스트도 없다. __tests__/calc/final-house-restart.ui.test.tsx:144-166은 description 문구만 보고, e2e/one-house-judgment-final-house-restart.spec.ts는 배지·모달을 보지 않는다. 모달이 현행 본문만 여는 것 자체는 의도된 설계다: docs/00-pm/multi-tax-law-citation-link.plan.md:113 「행위시법 … 자동 전환 — 현행 조문 링크가 기본」, :226 「현행 조문 링크 기본 … '구법'·폐지 조문은 본문 검증으로 가부 판정」. 그런데 같은 계획서 :236은 「'구법'·폐지 조문 — 현행 팝업 부정확/부재 → … 부재 시 링크 보류/연혁 안내」를 완화책으로 정했고, 종부세에서는 구§9①3호·구§10② 링크를 실제로 보류했다(memory project_comprehensive_law_citation_link). 같은 결과 뷰에도 선례가 있다: transfer-tax-exemption.ts:632-637 주석 「삭제된 4호는 현행 §154①이 아니라 종전 규정 + 경과조치 부칙이 근거다(OH-38)」, legal-codes/transfer-house.ts:313 「(2020.2.11. 삭제 전)」, :96~171 *_OLD 「(2023.2.28. 개정 전)」. 저장소 안에서도 TRANSFER.CONVERSION_EXEMPTION_HOLDING(legal-codes/transfer.ts:166) 「소득세법 시행령 §154 ⑤ 단서」가 용도변경 단서를 가리켜, 같은 이름이 두 규정을 뜻한다. 보고 금지 3번은 재기산을 2주택 세대로 확장하는 문제이고, 17번 알려진 사항에도 이 건은 없다. 도달성: 2021.1.1.~2022.5.9. 양도, 1주택, 처분 이력에 답한 경우 applied·no_restart 모두 렌더된다.",
+  "reasoning": "반박을 시도했지만 성립하지 않았다. (1) 의도된 설계인가: 의도된 것은 모달이 현행 본문만 연다는 기구까지다. 그 기구로 폐지·구법 조문을 링크할 때 「연혁 안내 또는 링크 보류」를 하라는 것이 이 프로젝트가 직접 정한 완화책이다. 같은 화면의 삭제된 4호 배지는 그 관례대로 「(2020.2.11. 삭제 전)」을 달고 있다. 재기산 배지만 시점 표시가 없어, 클릭하면 현행 ⑤의 전혀 다른 단서(2024.2.29. 신설 비주택→주택 용도변경 기산)가 강조된다. 실측으로 확인했다. (2) 법령상 정당인가: 「소득세법 시행령 §154⑤ 단서」라는 인용 문자열 자체는 2021~2022 시행본 기준으로 맞다. 결함은 링크 표시 층의 오귀속이다. (3) 다른 곳에서 처리되는가: 적용 문장에는 「2021년 1월 1일~2022년 5월 9일 양도분」이 있어 오인이 일부 완화된다. 그러나 미적용(no_restart) 문장에는 기간 언급이 없고 같은 배지가 붙는다. 특히 not_a_disposal 문장은 「처분(… 증여·용도변경)」을 말하는데, 모달은 반대 방향 용도변경에 관한 단서를 강조해 혼동을 부른다. (4) 판정·기산일·세액에는 영향이 없다(표시 전용). 그래서 심각도는 low가 맞다. 고치는 방향은 4호 관례대로 label/legalBasis에 「(2022.5.31. 삭제 전)」과 부칙<제32654호> 제2조를 명시하거나, 계획서 :236대로 링크를 보류하는 것이다. 발견의 MST·시행일 표기(「2021.6.1. 시행본(MST 229391)」)는 부정확하지만 결론에는 영향이 없다.",
+  "severityAssessment": "low"
+ },
+ "duplicates": []
+}

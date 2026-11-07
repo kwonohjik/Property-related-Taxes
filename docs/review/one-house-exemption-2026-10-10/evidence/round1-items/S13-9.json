@@ -1,0 +1,40 @@
+{
+ "id": "S13-9",
+ "status": "CONFIRMED",
+ "severity": "low",
+ "title": "판정 메뉴 전용 1세대1입주권 카드가 재배치 전 단계 번호(「② 보유 주택·권리」)를 그대로 쓰고, 고가 초과 안내는 판정 메뉴가 쓰지 않는 asset.actualSalePrice를 읽어 절대 뜨지 않는다",
+ "file": "components/calc/transfer/RedevelopmentRightExemptionSection.tsx",
+ "line": 222,
+ "relatedLocations": [
+  "components/calc/transfer/RedevelopmentRightExemptionSection.tsx:133",
+  "components/calc/transfer/RedevelopmentRightExemptionSection.tsx:145",
+  "app/calc/one-house-exemption/steps/Step3.tsx:332",
+  "app/calc/transfer-tax/steps/step4-sections/TemporaryTwoHouseSection.tsx:155",
+  "components/calc/transfer/RedevelopmentRightExemptionSection.tsx:222",
+  "components/calc/transfer/RedevelopmentRightExemptionSection.tsx:133"
+ ],
+ "category": "display",
+ "description": "이 카드는 판정 메뉴 ② 양도 대상 화면(Step3.tsx:384-391)에만 마운트된다(머리 주석 P6-c-1). 안내 박스(:219-241)는 「② 보유 주택·권리 입력 필요」 「② 「보유 주택」 명부를 비워 둘 것(0채)」 「② 명부에 주택 1채」라고 쓰는데, 2026-09-23 재배치(08c261bad)로 ②는 양도 대상이고 보유 주택·권리는 ③이다 — 같은 재배치 때 TemporaryTwoHouseSection의 「② 보유 주택 목록」은 사용자 제보로 고쳤으나(그 파일 :155-157 주석) 이 카드(문구 도입 d9d5b1b81, 2026-09-21)는 빠졌다. 또 고가 기준 초과 안내(:131-135·:244-256)는 parseAmount(asset.actualSalePrice)를 보는데 판정 메뉴는 예상 양도가액을 form.contractTotalPrice에만 쓴다(Step3.tsx:327-334) — 이 화면에서는 분기가 항상 거짓이다. 카드 제목도 「(§89①4호 가목)」이지만 나목까지 받는다.",
+ "failureScenario": "입주권 양도, 예상 양도가액 15억, 인가일 요건 자기선언 ON. 관측: 화면 머리 「② 양도 대상 주택」 안에 「② 보유 주택·권리 입력 필요」 문구, 12억 초과 안내 0개. 올바른 출력: 「③ 보유 주택·권리」로 안내, 12억 초과 안내 표시.",
+ "legalBasis": "해당 없음(표시)",
+ "repro": {
+  "result": "reproduced",
+  "method": "RTL .test.tsx 렌더(probe v-s13-9-1·v-s13-9-2, jsdom). 판정 메뉴 Step3(화면 ② 양도 대상 주택)를 useState 하네스로 감싸 실제 위젯을 조작했다. 「조합원입주권」 라디오 클릭 → 「인가일 현재…」 스위치 ON → 예상 양도가액 CurrencyInput(testid one-house-sale-price)에 1,500,000,000 입력. transferDate는 2026-06-01, 초기 폼은 createInitialOneHouseJudgmentForm(). 이후 화면 텍스트·폼 상태·buildOneHouseExemptionApiBody(latest)를 관측했다. 대조군으로 Step2(③ 화면) 머리 문구와 같은 화면의 slate 안내(testid one-house-right-sale-rental-notice)를 관측하고, 기존 anchor __tests__/components/redev-right-exemption-prop-wiring.anchor.test.tsx도 실행했다.",
+  "observed": "[P1 실제 입력 경로] 화면 머리 h = ['② 양도 대상 주택']. 카드 문구 「② 보유 주택·권리 입력 필요」·「② 「보유 주택」 명부를」·「② 명부에 주택 1채」 셋 다 true, 「③ 보유 주택·권리」는 false. 고가 초과 안내(…초과 → §89①4호 각 목 외의 부분 단서 안분과세 적용) 0개. 폼 상태: contractTotalPrice='1500000000', assets[0].actualSalePrice='', assetKind=right_to_move_in, redevExemptionEligibleAtApproval='yes'. API 본문 transferPrice=1500000000(엔진은 15억을 받는다). 카드 제목 「1세대1입주권 비과세 요건 (§89①4호 가목)」이 「세대 보유 1주택의 취득일 (나목)」 입력칸과 함께 렌더된다. [v-s13-9-2] 같은 ② 화면에 slate 안내의 「다음 「보유 주택·권리」 단계」(true)와 카드의 「② 보유 주택·권리 입력 필요」(true)가 동시에 뜬다. 한 화면 안에서 번호 체계가 서로 다르다.",
+  "control": "(C1) 같은 사용자 흐름에 assets[0].actualSalePrice=15억만 직접 심으면 안내가 1개 뜬다(「양도가액 12억 초과 → …」 true). 분기 자체는 살아 있고 asset.actualSalePrice에만 반응한다. (C2) 2021-06-01 양도(9억 시기)에서 contractTotalPrice 10억만 있으면 「9억 초과」 안내가 false이고, asset.actualSalePrice에 10억을 심으면 true다. (C3) Step2 화면 머리는 ['③ 보유 주택·권리']다. 기존 anchor redev-right-exemption-prop-wiring은 11/11 통과한다. rightAsset()이 a.actualSalePrice=HIGH_VALUE(:72)를 심고 renderStep1이 contractTotalPrice도 함께 채우므로, U1-03-01·E3-UI-01이 결함을 가린 채 green이다.",
+  "notes": "① 단계 번호: 문구는 d9d5b1b81(2026-09-21)에 들어왔다. 그때 STEPS는 [세대, 보유 주택·권리, 양도 예정, 판정 결과]였고 카드는 당시 Step3 머리 「③ 양도 예정」 화면에 있었으므로 「②」가 맞았다. 08c261bad(2026-09-23)가 순서를 ①세대→②양도 대상 주택→③보유 주택·권리로 바꿨다(OneHouseJudgmentCalculator.tsx:49, OneHouseJudgmentSidebar.tsx:22, Step2.tsx:158). 계획서 D-4의 스테일 문구 표(one-house-judgment-step-reorder.plan.md:147-157)는 TemporaryTwoHouseSection :134·:141, Step2 :186-188, HousesListSection :593-595 네 곳만 열거하고 이 카드는 빠뜨렸다. ② 고가 안내: asset.actualSalePrice를 읽게 한 것은 계산기용 U1-03 수정(f309e429b, 2026-08-26)이다. P6-c-1(d724aee79)로 판정 메뉴 전용이 된 뒤에는 그 값을 쓰는 곳이 없다. one-house-judgment-handoff.ts:140이 「판정 메뉴는 예상 양도가액을 폼-전역 contractTotalPrice에만 쓴다」고 적고 있고, app/calc/one-house-exemption/ 경로에 대한 git log -S actualSalePrice도 0건이다. 즉 같은 U1-03 계열 결함(안내가 영원히 안 뜸)이 재발했다. 세액·판정 영향은 없다. API transferPrice는 contractTotalPrice에서 오고, 결과뷰 OneHouseJudgmentResultView.tsx:307-308은 「초과분만 과세」를 표시한다. ③ 발견 서술의 작은 부정확: TemporaryTwoHouseSection :155-157 주석은 재배치 번호 어긋남을 적은 것이고, 「사용자 제보」 주석은 :141-146(「1단계에서 입력」)이다. 결론에는 영향이 없다. 덧붙여 OneHouseJudgmentCalculator.tsx:4 머리 주석도 옛 순서(② 보유 주택·권리 → ③ 양도 예정)지만 화면에 나오지 않는 주석이다. probe v-s13-9-1·v-s13-9-2는 실행 후 rm으로 지웠고 ls 확인 결과 0건이다(다른 에이전트의 probe 파일은 건드리지 않았다).",
+  "probeDeleted": true
+ },
+ "skeptic": {
+  "verdict": "upheld",
+  "refutationType": "none",
+  "legalEvidence": "결함 본체(단계 번호 오기, 고가 안내 미표시)는 표시 문제라 법령 판단과 관계없다. 보조 주장(카드 제목이 가목만 적음)은 KoreanLaw MCP로 「소득세법」 제89조제1항제4호(현행 MST 280405, 조회기준일 2026-10-10)를 확인했다. 본문은 「…다음 각 목의 어느 하나의 요건을 충족하여 양도하는 경우 해당 조합원입주권을 양도하여 발생하는 소득. 다만, 해당 조합원입주권의 양도 당시 실지거래가액이 12억원을 초과하는 경우에는 양도소득세를 과세한다. 가. 양도일 현재 다른 주택 또는 분양권을 보유하지 아니할 것 나. 양도일 현재 1조합원입주권 외에 1주택을 보유한 경우(분양권을 보유하지 아니하는 경우로 한정한다)로서 해당 1주택을 취득한 날부터 3년 이내에 해당 조합원입주권을 양도할 것…」이다. 4호에는 가목과 나목이 모두 있다. 카드는 나목 입력(redevOtherHouseAcquisitionDate, :209-217)과 「가목·나목 중 하나」 안내(:225)까지 받는데, 제목(:145)과 조문 링크 라벨(:147)은 「§89①4호 가목」만 적어 실제 범위보다 좁다.",
+  "designEvidence": "(1) 08c261bad 커밋 메시지와 계획서 D-2·D-4(one-house-judgment-step-reorder.plan.md:110-157)에 재배치와 스테일 문구 정정 목록이 있다. 이 카드는 목록에 없고, 「②」를 유지하라는 결정 기록도 없다. (2) 형제 지점은 이미 고쳤다. TemporaryTwoHouseSection.tsx:155-157은 「종전 「② 보유 주택 목록」도 재배치로 번호가 어긋났다」며 위치 독립 표현으로 바꿨고, 같은 화면 Step3.tsx:520-523(M10)도 「다음 「보유 주택·권리」 단계」를 쓴다. E2E one-house-judgment-one-right.spec.ts:25·36도 「② 양도 대상 주택」·「③ 보유 주택·권리」로 갱신됐다. (3) d9d5b1b81 diff의 isFactsOnly ? '② 보유 주택·권리 입력 필요' : 'Step 2 보유 상황 입력 필요'는 옛 순서를 기준으로 쓴 문구다. (4) 고가 안내는 화면에 떠야 하는 것이 의도다. 컴포넌트 주석 :116-130(U1-03), 리뷰 문서 transfer-redev-rights-review-2026-08.md:994-1000, 자동화 계획서 §33.4(prop-wiring anchor를 판정 메뉴 Step3로 옮겨 U1-03 재발을 지킨다고 명시), P6-c-1 이후의 E-3 커밋 2085584e1(2026-09-28)이 양도일 연혁 기준금액 안내와 anchor E3-UI-01/02를 추가한 것이 모두 그 근거다. 그런데 그 anchor의 픽스처가 판정 메뉴가 절대 쓰지 않는 asset.actualSalePrice를 심어 결함을 가린다(feedback_fixture_default_masks_gate_defect 유형). 「②」 문구를 단언하는 테스트는 없다(grep 0건). 보고 금지 1~17항, 특히 17항의 알려진 사항에도 해당하지 않는다.",
+  "reasoning": "재현된 사실은 셋이다. ① 판정 메뉴 ② 화면(머리 「② 양도 대상 주택」)에 뜨는 카드가 「② 보유 주택·권리 입력 필요」, 「② 「보유 주택」 명부를 비워 둘 것」, 「② 명부에 주택 1채」라고 안내한다. 그러나 명부는 ③ 화면(Step2, 머리 「③ 보유 주택·권리」)에 있고 「② 보유 주택·권리」라는 단계는 없다. 같은 화면의 slate 안내는 「다음 「보유 주택·권리」 단계」라고 맞게 쓰고 있어 화면 안에서 서로 어긋난다. ② 고가 기준 초과 안내는 asset.actualSalePrice만 읽는데, 판정 메뉴의 유일한 가격 입력은 form.contractTotalPrice에 쓴다(Step3.tsx:327-334). 그래서 실제 입력 경로에서는 12억 시기든 9억 시기든 안내가 0개다. 같은 흐름에 asset 값만 심으면 뜨므로 분기 자체는 살아 있다. 이것은 계산기에서 고쳤던 U1-03(안내가 절대 안 뜸)이 P6-c-1 이관 후 재발한 것이고, 재발을 지키려고 옮겨 둔 anchor는 픽스처가 asset.actualSalePrice를 심어 11/11 green으로 결함을 가린다. ③ 카드 제목은 「(§89①4호 가목)」인데 나목까지 받는다. 반박 축도 점검했다. 의도된 설계라는 근거는 없다(계획서 D-4 누락이고, 형제 지점은 고쳤다). 사용자 결정·보고 금지 목록에도 없다. 도달 불가도 아니다(실제 위젯 조작으로 재현했다). 다른 곳에서 처리하는지 보면 결과 화면이 「초과분만 과세」를 보여 주므로 판정 결론은 사용자에게 전달된다. 다만 입력 단계 안내가 의도대로 동작하지 않는다는 결함은 그대로 남는다.",
+  "severityAssessment": "low"
+ },
+ "duplicates": [
+  "S15-17",
+  "X3-7"
+ ]
+}
