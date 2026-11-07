@@ -47,6 +47,7 @@
  */
 
 import { isSurchargeSuspended } from "./tax-utils";
+import { meetsSurchargeSuspensionHolding } from "./tax-utils";
 import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
 import { MULTI_HOUSE } from "./legal-codes";
 import { isCrisisAcqExempt } from "./legal-codes";
@@ -109,6 +110,7 @@ export interface SurchargeApplicationInput {
   /**
    * 양도 자산 취득일 — **fallback 전용**. 부칙 제9270호 §14① 위기취득(2009.3.16~2012.12.31) 세율 배제를 정밀 경로
    * (`multi-house-surcharge.ts` — 양도 주택 행 취득일)와 같게 판정한다(리뷰 US-08). 정밀 판정이 있으면 읽지 않는다.
+   * 12의2 한시배제의 보유 2년 요건(§95④ 기산 — 이월과세 시나리오 A는 증여자 취득일)도 이 날짜로 본다.
    */
   acquisitionDate?: Date;
   /**
@@ -237,7 +239,10 @@ export function resolveSurchargeApplication(
   const isSuspended = multiHouseSurchargeResult
     ? multiHouseSurchargeResult.isSurchargeSuspended
     : isSurchargeCase
-      ? isSurchargeSuspended(surchargeSpecialRules, input.transferDate, surchargeTypeKey)
+      ? // 12의2 본문 「법 제95조제4항에 따른 보유기간이 2년 이상인 주택」 — 정밀 경로(`multi-house-surcharge-exclusion.ts`)와 같은 요건.
+        //   종전 fallback은 양도일 창만 봐 보유 1~2년 양도도 한시배제해 §104⑦ 비교과세가 빠졌다. 취득일이 없는 호출(겸용 자산별 fallback)은 종전 그대로다.
+        (!input.acquisitionDate || meetsSurchargeSuspensionHolding(input.acquisitionDate, input.transferDate)) &&
+        isSurchargeSuspended(surchargeSpecialRules, input.transferDate, surchargeTypeKey)
       : false;
 
   return {

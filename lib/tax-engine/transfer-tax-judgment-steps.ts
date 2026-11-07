@@ -488,6 +488,16 @@ export function linkSurchargeHousesForSelling(
   return linkTaxIncentiveHouse5ho(rawHouses, workingInput.specialHouseExclusions, workingInput.transferDate, sellingId);
 }
 
+/** 이월과세 시나리오 A — 양도 행의 §95④ 단서 보유 기산일(증여자 취득일)을 싣는다. 행 취득일은 그대로다. */
+function withCarryoverHoldingStart(
+  houses: NonNullable<TransferTaxInput["houses"]>,
+  workingInput: TransferTaxInput,
+  sellingId: string,
+): NonNullable<TransferTaxInput["houses"]> {
+  const start = workingInput.carryoverHoldingStartDate;
+  return start ? houses.map((h) => (h.id === sellingId ? { ...h, holdingPeriodStartDate: start } : h)) : houses;
+}
+
 /**
  * STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정.
  * §155⑳ 불성립이면 카드의 임대 호를 명부에 더한다(`unmetRentalSurchargeHouses`). 명부가 없어도 §155⑳ 거주주택 의제(`noRosterRentalResidenceHouses`)·§155①⑦ 의제와 조특법 제외만의 1주택 의제
@@ -508,7 +518,7 @@ export function runMultiHouseSurchargeStep(
     const { rawHouses } = houseSet;
     const sellingId = workingInput.sellingHouseId ?? rawHouses[0].id;
     // ⑥ 주택 수 제외의 확인된 영 §167의3①5호 조문 → 10호 「일반주택」 판정의 5호 주택(결정 #16 공백 · 겸용과 같은 leaf)
-    const houses = linkSurchargeHousesForSelling(rawHouses, workingInput, sellingId);
+    const houses = withCarryoverHoldingStart(linkSurchargeHousesForSelling(rawHouses, workingInput, sellingId), workingInput, sellingId);
     // 조특법 §99의4⑤(2019.1.1.~2020.12.31. 양도) — 양도 뒤 예정신고기한 안에 농어촌주택등을 취득하면 §104⑦ 비적용·장특 허용(리뷰 NH-51).
     //   중과 배제 선판정이라 감면주택(§167의3①5호)과 같은 경로(양도 주택 행의 특례 표지)로 닫는다 — 세율 가산·장특 배제 두 축이 함께 닫힌다.
     const para5 = evaluateNew994Para5({
