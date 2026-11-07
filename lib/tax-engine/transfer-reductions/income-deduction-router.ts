@@ -17,7 +17,7 @@ import { evaluateNew993, type New993Result } from "./new-99-3";
 import { evaluateNew99, type New99Result } from "./new-99";
 import type { RedevMemberNewHouse } from "./new-99-redev-member";
 import { redevMemberGateCause } from "./new-99-redev-member";
-import { withRedevMemberGateNotice } from "./new-99-redev-member";
+import { isLandOnlyOriginalMember, withRedevMemberGateNotice } from "./new-99-redev-member";
 import { evaluateUnsold988, type Unsold988Result } from "./unsold-98-8";
 import { type UnsoldHybridResult } from "./unsold-hybrid";
 import {
@@ -311,7 +311,8 @@ function evalNew993(
       },
       acquisitionCause: memberCause.acquisitionCause,
       firstContract: r993.firstContract993 as "yes" | "no" | "unknown" | undefined,
-      isRedevSuccessorMember: ctx.isRedevSuccessorMember,
+      // 2001.12.31. 이전 승계조합원은 종전 규정이라 «인가일 현재 조합원» 게이트(NOT_MEMBER_AT_APPROVAL)를 건너뛴다 (L16 — 조특령 대통령령 제17458호 부칙 제11조)
+      isRedevSuccessorMember: ctx.isRedevSuccessorMember === true && !memberCause.priorRuleSuccessor,
       redevMember: member
         ? { completionDate: member.completionDate, remainderContract: r993.remainderContract993 as "yes" | "no" | "unknown" | undefined }
         : undefined,
@@ -321,7 +322,7 @@ function evalNew993(
     });
     return buildResolution("new_99_3", detail.isEligible, detail.reducibleTransferIncome,
       detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
-      { new993Detail: withRedevMemberGateNotice(detail, memberCause, "new_99_3") });
+      { new993Detail: withRedevMemberGateNotice(detail, memberCause, "new_99_3", isLandOnlyOriginalMember(member)) });
   }
   return null;
 }
@@ -373,7 +374,7 @@ function evalNew99(
     });
     return buildResolution("new_99", detail.isEligible, detail.reducibleTransferIncome,
       detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
-      { new99Detail: withRedevMemberGateNotice(detail, memberCause, "new_99") });
+      { new99Detail: withRedevMemberGateNotice(detail, memberCause, "new_99", isLandOnlyOriginalMember(member)) });
   }
   return null;
 }
