@@ -302,7 +302,7 @@ export const transferTaxSeeds = [
         // 자체 식별자였으며 실제 조특법 §98의2(미분양)와 무관. 실제 조문은 §99 ①항.
         {
           code: "99-main",
-          article: "§99 (IMF 1차)",
+          article: "§99",
           acquisitionPeriod: { start: "1998-05-22", end: "2001-12-31" },
           region: "nationwide",
           maxAcquisitionPrice: null,

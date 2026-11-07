@@ -58,3 +58,28 @@ describe("다건 PDF — 소득금액차감 감면(§99·§99의3)", () => {
     expect(allAfter(t, "농어촌특별세")[0]).toBe(a.ruralSurtax.toLocaleString());
   });
 });
+
+/**
+ * L15 — 자산별 양식의 농어촌특별세 행. 종전에는 `new993Detail`만 읽어 §99 등 다른 소득금액차감 감면의 농특세가 빠졌다(합산 양식은 #2959가 고침).
+ * 값은 그 자산 엔진의 detail 값(화면 신고서 표와 같은 헬퍼 `incomeDeductionRuralSurtax`)이고 합산 총액·세액은 그대로다.
+ * 전(前) 실측: §99 → 자산별 행 없음(합산 10,290,000만) · §99의3 → 15,656,000(이미 있음).
+ */
+const N987 = {
+  type: "unsold_98_7", contractDate987: D("2012-10-15"), acquisitionPrice987: 550_000_000, isUnsoldAtCutoff987: true, isFirstContract987: true,
+  isNotOccupiedAtContract987: true, isNotRecontract987: true, standardPriceAtAcquisition987: 100_000_000, standardPriceAt5Years987: 150_000_000, standardPriceAtTransfer987: 300_000_000,
+};
+describe("다건 PDF — 자산별 양식 농어촌특별세 행 (L15)", () => {
+  it.each([
+    ["§99", () => agg(house("H", [N99], "1999-06-01"), land), "new99Detail", 9_800_000],
+    ["§99의3", () => agg(house("H", [N993], "2002-03-01"), land), "new993Detail", 15_656_000],
+    ["§98의7(하이브리드 5년 후)", () => agg(house("H", [N987], "2013-01-15"), land), "unsold987Detail", undefined],
+  ])("%s — 자산별 행 = 그 자산 엔진 detail 농특세 · 감면 없는 자산에는 행 없음 · 합산 총액 불변", (_n, mk, key, expected) => {
+    const a = mk();
+    const detail = (a.properties[0] as unknown as Record<string, { ruralSurtax: number } | undefined>)[key];
+    expect(detail?.ruralSurtax).toBeGreaterThan(0);
+    if (expected !== undefined) expect(detail!.ruralSurtax).toBe(expected);
+    const rows = allAfter(collect(TransferMultiSection({ r: a as unknown as Record<string, unknown> })), "농어촌특별세");
+    // [합산 양식 총액, 자산 H, (자산 L은 감면 없음 — 행 없음)]
+    expect(rows).toEqual([a.ruralSurtax.toLocaleString(), detail!.ruralSurtax.toLocaleString()]);
+  });
+});

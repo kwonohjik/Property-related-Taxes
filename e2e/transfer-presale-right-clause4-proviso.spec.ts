@@ -28,21 +28,19 @@ const ASSET = {
   standardPriceAtAcq: "200000000",
 };
 
-function seedForm() {
+function seedForm(address = ASSET.addressJibun) {
   return {
     state: {
       formData: {
-        assets: [ASSET],
+        assets: [{ ...ASSET, addressJibun: address }],
         transferDate: "2020-06-01",
         filingDate: "2020-08-31",
         contractTotalPrice: "900000000",
         householdHousingCount: "1",
         isOneHousehold: false,
-        // 분양권은 수동 토글이 없다(주택 전용 화면, §104⑦ 중과 판정과 공용 — 이번 작업 범위
-        // 밖). 실제로 조정대상지역이 되는 유일한 경로는 주소 기반 자동판별이고, 그 리셋
-        // effect(`!isOneHouseExemptionAsset` — presale_right 제외)가 **마운트 시 이 시드값을
-        // 즉시 덮어쓴다** — 그래서 아래 주소를 실제 지정 구(서울특별시 강남구, 2017.8.3.~
-        // 상시 지정)로 두고 자동판별이 완료되길 기다린다(seedAndOpen).
+        // 분양권의 «양도일 기준 조정대상지역» 칸은 §104①4호 구간(2018.1.1~2021.5.31 양도)에서만 있다(A-3).
+        // 이 시드는 값을 false로 두고 주소(서울특별시 강남구, 2017.8.3.~ 상시 지정)의 자동판별이 완료되길
+        // 기다린다(seedAndOpen) — 사용자가 칸을 만지지 않았으면 판정값이 저장값을 이긴다.
         isRegulatedArea: false,
         wasRegulatedAtAcquisition: false,
         isUnregistered: false,
@@ -55,12 +53,12 @@ function seedForm() {
   };
 }
 
-async function seedAndOpen(page: Page) {
+async function seedAndOpen(page: Page, address?: string) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(),
+    seedForm(address),
   );
   const regulatedResp = page.waitForResponse((r) => r.url().includes("/api/address/regulated-area"));
   await page.reload();
@@ -69,7 +67,8 @@ async function seedAndOpen(page: Page) {
   // 조정대상지역 자동판별(주소 기반)이 완료될 때까지 기다린다 — 끝나기 전에 진행하면
   // 리셋 effect가 세팅한 false가 그대로 전송된다.
   await regulatedResp;
-  await expect(page.getByText(/조정대상지역 ✓/)).toBeVisible();
+  if (address) await expect(page.getByText(/양도일\(2020-06-01\):/)).toBeVisible();
+  else await expect(page.getByText(/조정대상지역 ✓/)).toBeVisible();
 }
 
 async function calculate(page: Page) {
@@ -140,5 +139,34 @@ test.describe("분양권 §104①4호 단서(영 §167의6) — 별건 5", () =>
     const body = await resp.json();
     expect(body.data.result.appliedRate).not.toBe(0.5);
     expect(body.data.result.rateClause).not.toBe("104-1-4");
+  });
+});
+
+test.describe("분양권 «양도일 기준 조정대상지역» 칸 — A-3 (§104①4호 구간)", () => {
+  /** 춘천 — 전 기간 미지정이라 자동판별은 «아님»이다. 칸을 켜야 4호가 성립한다. */
+  const UNDESIGNATED = "강원특별자치도 춘천시 테스트동 1";
+
+  test("주소 판정이 «아님»이어도 칸으로 «지정»을 고르면 4호 50% — 보유 상황을 나갔다 돌아와도 선택이 유지된다", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedAndOpen(page, UNDESIGNATED);
+
+    // testid는 ToggleCard 래퍼에 붙으므로 스위치는 role로 잡는다(e2e/CLAUDE.md — 공용 카드 testid 미전달).
+    const toggle = page.getByRole("switch", { name: "양도일 기준 조정대상지역" });
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+    await expect(toggle).toBeChecked();
+
+    // 단계를 나갔다 돌아온다 — Step4 마운트 리셋 effect가 선택을 지우면 안 된다(자동판별 «아님»으로 되돌아가는 것이 종전 동작).
+    await page.getByRole("button", { name: "감면·공제" }).first().click();
+    await page.getByRole("button", { name: "보유 상황" }).click();
+    await expect(page.getByRole("switch", { name: "양도일 기준 조정대상지역" })).toBeChecked();
+
+    const resp = await calculate(page);
+    expect(resp.ok(), `계산 API 비정상 응답 ${resp.status()}`).toBe(true);
+    const sent = resp.request().postDataJSON() as Record<string, unknown>;
+    expect(sent.isRegulatedArea).toBe(true);
+    const body = await resp.json();
+    expect(body.data.result.appliedRate).toBe(0.5);
+    expect(body.data.result.rateClause).toBe("104-1-4");
   });
 });

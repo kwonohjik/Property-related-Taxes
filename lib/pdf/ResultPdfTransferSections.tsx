@@ -510,6 +510,8 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
                   return basis && !part.swapApplied ? [`${splitAcqBasisFormula(basis)} (${basis.legalBasis})`] : [];
                 })
               : [];
+            // 자산별 농특세 = 그 자산 엔진의 소득금액차감 감면 detail 합(§99의3·§99·§98의8·하이브리드 — 화면 신고서 표와 같은 헬퍼). 종전에는 `new993Detail`만 읽어 §99 등이 빠졌다.
+            const propRuralSurtax = incomeDeductionRuralSurtax(p as unknown as TransferTaxResult);
             // D-14 — 세액감면분은 소득금액에서 빼지 않는다(§90①은 세액만 감면)
             const propIncomeAfter = Math.max(0, propIncome - propNew993Reducible);
             return (
@@ -537,7 +539,7 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
                     <View style={s.rowBg}><Text style={s.lbl}>과세표준 기여분</Text><Text style={s.valAccent}>{fmt(p.taxBaseShare)}</Text></View>
                     {num(p.calculatedTax) !== undefined && (<View style={s.row}><Text style={s.lblSub}>산출세액 기여분 (참고)</Text><Text style={s.val}>{fmt(p.calculatedTax)}</Text></View>)}
                     {num(p.determinedTax) !== undefined && (<View style={s.row}><Text style={s.lblSub}>결정세액 기여분 (참고)</Text><Text style={s.val}>{fmt(p.determinedTax)}</Text></View>)}
-                    {(np?.ruralSurtax ?? 0) > 0 && (<View style={s.rowLast}><Text style={s.lbl}>농어촌특별세</Text><Text style={s.val}>{fmt(np?.ruralSurtax)}</Text></View>)}
+                    {propRuralSurtax > 0 && (<View style={s.rowLast}><Text style={s.lbl}>농어촌특별세</Text><Text style={s.val}>{fmt(propRuralSurtax)}</Text></View>)}
                   </View>
                 )}
               </View>
@@ -570,7 +572,7 @@ export function RegulatedAssumptionPdfNote({ groups }: { groups: RegulatedAssump
               {`${regulatedAssumptionRowHead(r)}: ${regulatedAssumptionRowVerdict(r)} — ${r.basis}`}
             </Text>
           ))}
-          <Text style={{ fontSize: 7, color: "#92400e", marginTop: 3 }}>{regulatedAssumptionFooter("calculator")}</Text>
+          <Text style={{ fontSize: 7, color: "#92400e", marginTop: 3 }}>{regulatedAssumptionFooter("calculator", g.rows)}</Text>
         </View>
       ))}
     </View>

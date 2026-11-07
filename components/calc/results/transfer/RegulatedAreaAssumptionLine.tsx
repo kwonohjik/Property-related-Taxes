@@ -47,7 +47,7 @@ export function RegulatedAreaAssumptionLine({
           ))}
         </ul>
         <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
-          {regulatedAssumptionFooter(selectWhere)}
+          {regulatedAssumptionFooter(selectWhere, rows)}
         </p>
       </ToneCard>
     </div>
