@@ -102,6 +102,32 @@ describe("NH-14 ⑤ — 세대·주택 현황 칸의 표시 조건", () => {
   });
 });
 
+describe("NH-14 후속 ⑤ — ② 비과세 판정 칸이 대상 주택을 밝힌다", () => {
+  const EX_NOTICE = "exemption-companion-notice";
+  const labeled = (kinds: Kind[], over: Partial<TransferFormData> = {}) => {
+    const f = form(kinds, over);
+    return { ...f, assets: f.assets.map((a, i) => ({ ...a, assetLabel: `자산 ${i + 1}`, ...(i === 1 ? { addressJibun: "서울 마포구 테스트동 2-2" } : {}) })) };
+  };
+
+  it("🔑 첫 자산 토지 + 함께 양도 주택 → ② 칸 첫머리에 「자산 2」(주소) 기준이라는 안내", () => {
+    render(<Step4 form={labeled(["land", "housing"])} onChange={() => {}} />);
+    const n = screen.getByTestId(EX_NOTICE);
+    expect(n.textContent).toContain("「자산 2」(서울 마포구 테스트동 2-2) 기준입니다");
+    expect(screen.getByText("함께 양도하는 주택 「자산 2」의 비과세 판정")).toBeTruthy();
+  });
+
+  it("짝 — 첫 자산이 주택이면 안내 없음(② 칸은 첫 자산 기준 · 종전과 같다)", () => {
+    render(<Step4 form={labeled(["housing", "land"])} onChange={() => {}} />);
+    expect(screen.queryAllByText("② 1세대1주택 비과세 판정")).toHaveLength(1);
+    expect(screen.queryByTestId(EX_NOTICE)).toBeNull();
+  });
+
+  it("짝 — 토지만이면 ② 칸 자체가 없다", () => {
+    render(<Step4 form={labeled(["land", "land"])} onChange={() => {}} />);
+    expect(screen.queryByTestId(EX_NOTICE)).toBeNull();
+  });
+});
+
 describe("NH-14 후속 ⑤ — 세대 축 섹션은 함께 양도 주택을 「양도 주택」으로 읽는다 (계획서 nh14-companion-household-followups)", () => {
   it("🔴 첫 자산 토지 + 함께 양도 주택 + 명부 1행 → 양도 주택 취득 경위를 묻고, 답은 **주택 카드**에 저장된다 (종전: 토지 카드)", () => {
     const onChange = vi.fn();

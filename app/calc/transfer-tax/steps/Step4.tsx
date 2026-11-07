@@ -428,6 +428,16 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
           <SectionHeader title="② 1세대1주택 비과세 판정" description="취득일 조정대상지역·거주기간·보유거주 요건 면제 사유를 입력하세요" />
           <div className="space-y-3">
+            {/* NH-14 후속 — 첫 자산이 주택이 아니면 이 칸의 값은 함께 양도 주택(`exemptPrimary`) 카드에 저장된다. 첫 자산의 거주기간으로 오해하지 않게 대상 주택을 밝힌다. */}
+            {householdFactsOpenedByCompanion(form) && exemptPrimary && (
+              <ToneCard tone="violet" title={`함께 양도하는 주택 「${exemptPrimary.assetLabel}」의 비과세 판정`}>
+                <p className="text-caption leading-relaxed text-violet-800 dark:text-violet-300" data-testid="exemption-companion-notice">
+                  아래 취득 당시 조정대상지역·거주기간·보유·거주 요건 면제 사유는 첫 자산이 아니라 「{exemptPrimary.assetLabel}」
+                  {exemptPrimary.addressRoad || exemptPrimary.addressJibun ? `(${exemptPrimary.addressRoad || exemptPrimary.addressJibun})` : ""} 기준입니다.
+                  그 주택의 사실을 입력하세요.
+                </p>
+              </ToneCard>
+            )}
             {/* 취득일 기준 조정대상지역 — 비과세 거주요건 판단(거주기간 입력의 전제, 원인→결과 순서) */}
             {/* 결정 #5(G7-6) — 주소(법정동코드)가 있으면 토글을 숨기고 엔진과 같은 자동 판정을 읽기 전용으로 보인다(없으면 토글). */}
             <RegulatedAreaField
