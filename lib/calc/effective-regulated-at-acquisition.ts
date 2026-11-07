@@ -239,7 +239,10 @@ type StoredRegulatedJudgment = {
   judged?: { date: string; judgment: RegulatedAreaResult; dateLabel?: string };
 };
 
-function storedRegulatedJudgments(form: RegulatedFlagsForm): { transfer: StoredRegulatedJudgment; acquisition: StoredRegulatedJudgment } {
+function storedRegulatedJudgments(
+  form: RegulatedFlagsForm,
+  giftScope: GiftHouseholdScope = GIFT_HOUSEHOLD_SCOPE_PRIMARY,
+): { transfer: StoredRegulatedJudgment; acquisition: StoredRegulatedJudgment } {
   const stored = {
     transfer: { value: form.isRegulatedArea === true },
     acquisition: { value: form.wasRegulatedAtAcquisition === true },
@@ -270,7 +273,7 @@ function storedRegulatedJudgments(form: RegulatedFlagsForm): { transfer: StoredR
   };
   // 증여받은 주택의 세대 사실이 있으면 코드 경로(엔진 `resolveWasRegulatedAtAcquisition`)와 같은 후보일·결합 방식으로 판정한다 — 기준일 하나만 보면
   // 같은 주택이 코드 유무로 비과세↔과세가 갈렸다(계획서 `docs/00-pm/gift-house-regulated-address-path.plan.md`).
-  const giftBasis = calcGiftHouseholdBasis(primary, GIFT_HOUSEHOLD_SCOPE_PRIMARY);
+  const giftBasis = calcGiftHouseholdBasis(primary, giftScope);
   const judgeAcquisition = (date: string): StoredRegulatedJudgment => {
     if (!giftBasis) return judgeAt(date);
     const plan = resolveResidenceJudgmentPlan({ acquisitionDate: giftBasis.giftDate, giftHouseholdBasis: giftBasis } as ResidenceReqInput);
@@ -286,6 +289,25 @@ function storedRegulatedJudgments(form: RegulatedFlagsForm): { transfer: StoredR
         : acquisitionDate
           ? judgeAcquisition(acquisitionDate)
           : { value: false },
+  };
+}
+
+/**
+ * 함께 양도 **컴패니언 주택**의 두 값 — 자기 소재지·자기 날짜로 판정한 것만 낸다(계획서 `docs/00-pm/regulated-companion-house-address.plan.md` Q-1 b).
+ *
+ * 컴패니언은 엔진 입력의 두 값을 주 자산 값으로 받았다(⑭ `bundled-split-helpers.ts`) — 소재지가 다른 두 주택이 한 요청에 있으면 한쪽이 틀린 세율이었다.
+ * 주 자산과 **같은 leaf**(`storedRegulatedJudgments`)이고 다른 점은 둘: 컴패니언에는 두 토글(직접 만짐)이 없어 항상 판정값이고,
+ * 증여 세대 사실은 묻지 않는 위치라(`GiftHouseholdScope.isPrimary: false`) 이월과세 외에는 증여일 하나로 읽는다(엔진도 그렇게 읽는다).
+ * 소재지(주소·법정동코드)나 날짜가 없어 판정하지 못한 축은 **싣지 않는다** — ⑭가 주 자산 값으로 대신한다(종전과 같다).
+ */
+export function companionRegulatedFlags(
+  asset: AssetForm,
+  transferDate: string,
+): { isRegulatedArea?: boolean; wasRegulatedAtAcquisition?: boolean } {
+  const j = storedRegulatedJudgments({ assets: [asset], transferDate } as RegulatedFlagsForm, { isPrimary: false });
+  return {
+    ...(j.transfer.judged ? { isRegulatedArea: j.transfer.value } : {}),
+    ...(j.acquisition.judged ? { wasRegulatedAtAcquisition: j.acquisition.value } : {}),
   };
 }
 

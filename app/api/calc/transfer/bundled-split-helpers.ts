@@ -419,8 +419,9 @@ export function buildCompanionEngineInputs(
       (c.landNature === "appurtenant_to_housing"
         ? ctx.primaryEngineInput.residencePeriodMonths
         : 0),
-    isRegulatedArea: ctx.primaryEngineInput.isRegulatedArea,
-    wasRegulatedAtAcquisition: ctx.primaryEngineInput.wasRegulatedAtAcquisition,
+    // 물건 단위 사실 — ④가 이 컴패니언의 소재지로 판정해 보냈으면 그 값, 없으면(소재지 미입력·옛 호출) 주 자산 값.
+    isRegulatedArea: c.isRegulatedArea ?? ctx.primaryEngineInput.isRegulatedArea,
+    wasRegulatedAtAcquisition: c.wasRegulatedAtAcquisition ?? ctx.primaryEngineInput.wasRegulatedAtAcquisition,
     isUnregistered: c.isUnregistered ?? false,
     isNonBusinessLand: c.isNonBusinessLand ?? false,
     nonBusinessLandDetails: buildNblEngineInput(c.nonBusinessLandRaw), // ⑭ 축 B 토지 지분 정밀판정 — 주 자산과 같은 함수(engine-input.ts)
