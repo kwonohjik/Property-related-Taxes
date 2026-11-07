@@ -19,6 +19,7 @@ import { judgeMixedUseOneHouseExemption } from "./transfer-tax-mixed-use-exempti
 import { mergeRentalCarveoutSurchargeNotice } from "./one-house/merge-rental-carveout";
 import { resolveMixedUseRentalResidence } from "./transfer-tax-mixed-use-rental-residence";
 import { judgeMixedUseMultiHouseSurcharge } from "./transfer-tax-mixed-use-surcharge-judge";
+import { mixedSurchargeFallbackFacts } from "./transfer-tax-mixed-use-surcharge-judge";
 import {
   buildMixedReductionSurchargeExclusionStep,
   mixedReductionSurchargeExclusionNotice,
@@ -238,14 +239,9 @@ function calcMixedUseCore(
    *    반영하지 못한다. 그래서 정밀 판정이 있으면 leaf가 **그것을 우선**하고(재판정 없음),
    *    fallback으로 계산했을 때는 아래에서 경고를 남긴다.
    */
+  //   fallback도 양도 주택 자신의 사실(건물 취득일 · 감면주택 선판정)은 본다 — 단건과 같은 술어 입력(리뷰 US-08 · US-38 · 12의2 보유 2년).
   const surchargeApplication = resolveSurchargeApplication(
-    {
-      propertyType: "housing",
-      isRegulatedArea:
-        asset.surchargeFallback?.isRegulatedArea ?? asset.multiHouse?.isRegulatedArea ?? false,
-      householdHousingCount: asset.surchargeFallback?.householdHousingCount ?? 0,
-      transferDate,
-    },
+    { ...mixedSurchargeFallbackFacts(asset), transferDate, surchargeExcludedByReduction: reductionExclusion?.excluded === true },
     multiHouseSurcharge,
     surchargeSpecialRules,
   );

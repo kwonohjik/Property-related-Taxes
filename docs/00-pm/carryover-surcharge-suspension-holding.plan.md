@@ -52,3 +52,4 @@
 - 화면 게이트(④ 중과 섹션 숨김 `isMultiHouseSurchargeSuppressed` · `GracePeriodSection` · `spouse-holding-scope`)는 이월과세 자산에서 증여 등기일(또는 빈 값)을 읽는다.
   엔진은 §97의2②3호 비교(이월과세 적용 여부)를 계산 뒤에 정하므로 화면이 미리 증여자 취득일로 숨길 수 없다 — 질문이 더 보일 뿐 세액에는 닿지 않는다(이번에는 바꾸지 않음).
 - E2E `carryover-gift-debt-purchased-part`의 「비조정」 고정(PR #2977)은 사례 머리말 조건이라 그대로 둔다.
+- 겸용주택 자산별 fallback은 취득일을 넘기지 않아 보유 2년 요건을 보지 않았다(위 「종전 그대로」) — `docs/00-pm/surcharge-oos-remaining.plan.md` A에서 건물 취득일로 고쳤다.
