@@ -64,6 +64,12 @@ export interface HouseInfo {
    * (계획서 `axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` A). 없으면 `acquisitionDate`.
    */
   shareAcquisitionDate?: Date;
+  /**
+   * 양도 행의 「법 제95조제4항에 따른 보유기간」 기산일이 행 취득일과 다를 때 — §97의2① 이월과세 자산은 §95④ 단서로 **증여자 취득일**부터 센다.
+   * 영 §167의3①12의2·§167의10①12의2(한시배제 2년)와 12호(10년)의 보유 요건만 이 날짜를 읽는다(`surchargeHoldingStartDate`).
+   * 행 취득일(주택 수 선후·제9270호 부칙 §14① 「취득한」 등)은 바꾸지 않는다. 엔진 내부 값(STEP 0.5가 이월과세 시나리오 A에서 싣는다).
+   */
+  holdingPeriodStartDate?: Date;
   /** 공시가격 (원) — 취득 시 기준 */
   officialPrice: number;
   /**
