@@ -47,7 +47,6 @@ import { landOnlyAppurtenantHouseYears } from "./land-only-owner-household";
 import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
 import type { Rental97Result } from "./transfer-reductions/types";
-import type { LongTermRentalRuleSet } from "./schemas/rate-table.schema";
 import type { TransferTaxInput, SplitGainResult } from "./types/transfer.types";
 import type { SplitPartResult } from "./types/transfer-split-gain.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
@@ -120,11 +119,6 @@ export function calcLongTermHoldingDeduction(
   rules: ParsedRates["longTermHoldingRules"],
   isSurcharge: boolean,
   isSuspended: boolean,
-  /**
-   * ⚠️ **읽지 않는다** (V-6, 2026-11-05). 레거시 `rentalReductionDetails` 경로의 §97의3·§97의4 장특 특례(L-1c)를 닫았다 —
-   * 정본은 감면 목록(`reductions` — `rental_97_3`·`rental_97_4`)이다. 13개 호출부가 위치 인자로 넘겨 시그니처는 유지한다(위 `rules`와 같은 처리).
-   */
-  longTermRentalRules?: LongTermRentalRuleSet,
   splitDetail?: SplitGainResult,
   /**
    * 「소득세법 시행령」 §159의4 — 표2 대상 「1주택」에는 **§155 각 항에 따라 1세대1주택으로 보는

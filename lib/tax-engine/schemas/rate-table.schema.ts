@@ -319,18 +319,6 @@ export const longTermRentalRuleSetSchema = z.object({
   jeonseConversionRate: z.number().positive().optional(),
 });
 
-export type LongTermRentalRuleSet = z.infer<typeof longTermRentalRuleSetSchema>;
-
-export function parseLongTermRentalRuleSet(raw: unknown): LongTermRentalRuleSet {
-  const result = longTermRentalRuleSetSchema.safeParse(raw);
-  if (!result.success) {
-    throw new TaxRateValidationError(
-      `장기임대 감면 규칙 구조 오류: ${result.error.message}`,
-    );
-  }
-  return result.data;
-}
-
 // ============================================================
 // 비사업용 토지 판정 기준 스키마 (transfer:special:non_business_land_judgment)
 // ============================================================
