@@ -264,6 +264,12 @@ export const companionAssetSchema = z.object({
   isSelfCultivatedExpropriatedLand: z.boolean().optional(),
   /** 자산별 1세대 1주택 여부 (주택 자산에 적용) */
   isOneHousehold: z.boolean().optional(),
+  /**
+   * ⑫ 이 컴패니언 주택 자기 소재지의 양도 당시·취득 당시 조정대상지역 — 없으면 ⑭가 주 자산 값을 쓴다(계획서 `regulated-companion-house-address.plan.md`).
+   * 세대 단위 사실(주택 수·1세대 여부)과 달리 **물건 단위** 사실이라 소재지가 다른 주택이 묶이면 값이 갈린다.
+   */
+  isRegulatedArea: z.boolean().optional(),
+  wasRegulatedAtAcquisition: z.boolean().optional(),
   /** 자산별 거주기간(월) — 주택의 1세대1주택 판정용 */
   residencePeriodMonths: z.number().int().nonnegative().optional(),
   /** 자산별 미등기 여부 */

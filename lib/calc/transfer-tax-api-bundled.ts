@@ -13,6 +13,7 @@ import { neutralizeCarryoverDonorSplitForCompanion } from "./transfer-land-part-
 import type { buildPrimaryContext } from "./transfer-tax-api-primary-context";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildFractionalShareNblRecord } from "./non-business-land-request";
+import { companionRegulatedFlags } from "./effective-regulated-at-acquisition";
 
 /**
  * ④⑬ 일괄양도(assets 2건 이상) 신고 단위 페이로드 — `transfer-tax-api.ts`에서 800줄 정책으로 분리했다(결정 #38-10 작업 중 776줄).
@@ -84,6 +85,8 @@ export function buildBundledPrimaryPayload(c: {
         const shareResidence = laterShareResidenceMonths(a, form);
         return {
           ...payload,
+          // ⑬ 컴패니언 주택은 자기 소재지·날짜로 조정대상지역을 판정한다(없으면 ⑭가 주 자산 값) — 같은 물건 지분(축 B)은 소재지가 주 자산과 같다.
+          ...(fractionalBundleMerge ? {} : companionRegulatedFlags(a, form.transferDate)),
           ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
           ...(shareResidence !== undefined ? { residencePeriodMonths: shareResidence } : {}),
         };

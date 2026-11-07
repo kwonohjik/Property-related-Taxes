@@ -182,10 +182,13 @@ describe("컴패니언 겸용주택 1세대1주택 — 주택 토지 카드 비�
     expect(a.totalTax).toBe(183_076_140);
   }, 60_000);
 
-  it("토지 먼저(2015)·건물 2021-09(주택 보유 2년 이상) → 주택 카드 둘 다 비과세(불변)", async () => {
+  it("토지 먼저(2015)·건물 2021-09(주택 보유 2년 이상) → 주택 토지 카드 비과세 · 건물 카드는 취득 당시 조정대상지역 거주요건(자기 소재지로 판정)", async () => {
     const { a, card } = await calc(SEP("2021-09-01", "2015-03-01"));
     expect(card("mu-house-land").isExempt).toBe(true);
-    expect(card("mu-house-bld").isExempt).toBe(true);
-    expect(a.totalTax).toBe(126_927_428);
+    // 종전: 컴패니언이 주 자산(토지 · 판정 없음)의 「취득 당시 비조정」을 복사받아 둘 다 비과세(126,927,428)였다.
+    // 지금: 컴패니언 겸용주택 자기 소재지(강남)·자기 취득일(2021-09-01 지정 중)로 판정 → 거주 0이라 건물 카드 과세 — 같은 사실의 단건 겸용주택(housingPart.isExempt false)과 같다.
+    // 계획서 `docs/00-pm/regulated-companion-house-address.plan.md` §9.
+    expect(card("mu-house-bld").isExempt).toBe(false);
+    expect(a.totalTax).toBe(136_356_000);
   }, 60_000);
 });
