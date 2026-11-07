@@ -11,9 +11,7 @@ import { isHousingLike } from "@/lib/calc/housing-like-asset";
 import { memberOriginErrors } from "./right-member-origin-scope";
 import { originalMemberFactErrors } from "./right-member-origin-scope";
 import { inheritedPresaleRightFactErrors } from "./inherited-presale-right-facts";
-import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
-import { temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
-import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
+import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { calcFinalHouseRestartInScope, collectFinalHouseRestartErrors } from "./final-house-restart";
 import { shareResidenceNeedsIntervals } from "./axis-b-share-residence";
@@ -21,14 +19,13 @@ import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { calcGiftPriorResidenceAsked } from "./gift-household-payload";
 import { directResidenceMonthsOverflowError } from "./residence-interval-validate";
 import { isOneHouseExemptionAsset, usesHouseCountRoster, requiresPresaleRightsConfirmation } from "./housing-like-asset";
+import { householdFactsFormView } from "./household-facts-view";
+import { calcProvisoMode } from "./transfer-tax-api-residence";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
 import { residenceStartWithMerge } from "./self-owns-scope";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
-import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
-import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
-import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { collectCountExclusionIssues } from "./transfer-tax-validate-count-exclusion";
 import { mergeContextOf, mergeHouseSideOf } from "./merge-house-origin";
 import { PARENTAL_CARE_PARENT_AGE_REQUIRED_MESSAGE, parentalCareParentAgeMissing } from "./parental-care-age-issue";
@@ -40,12 +37,11 @@ import type { ValidationIssue } from "./transfer-tax-validate";
 import { houseRowFactIssues } from "./house-row-fact-issues";
 import { declaredNewHouseOriginIssue } from "./declared-new-house-origin";
 import { deriveCalcTemporaryTwoHouse } from "./transfer-tax-api-body-blocks";
-import { sellingHouseOriginIssue, sellingHousePreviousDateOverride } from "./selling-house-origin-scope";
+import { sellingHouseOriginIssue } from "./selling-house-origin-scope";
 import { duplicateOwnedUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
 import { houseRowSurchargeAxisIssue } from "./transfer-tax-validate-surcharge-axis";
 import { collectSellingHouseSurchargeIssues } from "./transfer-tax-validate-surcharge-axis";
 import { collectGracePeriodIssues } from "./transfer-tax-validate-surcharge-axis";
-import { deemedOneHouseContextDeclared, rentalResidenceContextDeclared } from "./deemed-one-house-context";
 import { householdFactsKindOfForm } from "./household-facts-asset";
 
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
@@ -99,7 +95,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   }
 
   // ⑧ 조특법 주택 수 제외 — 명부 행 ⑥ · 옛 선언 차단 · 게이트 밖 감면주택 섹션(D4-03)
-  for (const message of collectCountExclusionIssues(form)) issues.push({ step, message });
+  // NH-14 후속 — 세대 축 판정은 세대 기준 폼 뷰로(함께 양도 주택이 기준 자산이면 그 주택이 「양도 주택」 — ④·⑤와 같은 leaf).
+  const householdView = householdFactsFormView(form);
+  for (const message of collectCountExclusionIssues(householdView)) issues.push({ step, message });
 
   /**
    * ⑧ 세대 보유 주택 목록 — 행별 첫 오류 1건씩 (자동 안분 fallback 금지: 미입력=차단)
@@ -116,7 +114,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   // 동거봉양 합가일을 넣었는데 직계존속 연령을 고르지 않음 — 차단(결정 #9 하위 1 가). 칸(`MergeDateSection`)과 같은 게이트.
   if (
     temporaryTwoHouseSectionVisible({
-      primaryAssetKind: form.assets?.[0]?.assetKind,
+      primaryAssetKind: householdView.assets?.[0]?.assetKind,
       householdHousingCount: form.householdHousingCount,
     }) &&
     parentalCareParentAgeMissing(form)
@@ -130,14 +128,14 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   //   (merge-composition-unknown-unfavorable.plan.md §3-3 · memory `feedback_unknown_fact_applies_unfavorably`).
   const mergeCtx = mergeContextOf(form);
   // §155① 신규 주택으로 도출된 행 — 그 행의 취득 경위를 답하게 한다(④ 전송·⑤ 노출과 같은 도출 `deriveCalcTemporaryTwoHouse`).
-  const derivedTempTwoHouse = deriveCalcTemporaryTwoHouse(form, form.assets?.[0]);
+  const derivedTempTwoHouse = deriveCalcTemporaryTwoHouse(householdView, householdView.assets?.[0]);
   const newHouseRowId = derivedTempTwoHouse?.newHouseRowId;
   // 결정 #43-3 — 신규 주택 취득일을 직접 선언한 경로(명부 행 없음)의 경위 답이 앞뒤가 맞지 않으면 막는다. 미답은 막지 않는다(not_collected).
   //   게이트는 ⑤ 마운트(`Step4`: 섹션 노출 + `source === "declared"`)와 같다 — 칸이 없는 화면에서 막지 않는다.
   if (
     derivedTempTwoHouse?.source === "declared" &&
     temporaryTwoHouseSectionVisible({
-      primaryAssetKind: form.assets?.[0]?.assetKind,
+      primaryAssetKind: householdView.assets?.[0]?.assetKind,
       householdHousingCount: form.householdHousingCount,
     })
   ) {
@@ -148,7 +146,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const spouseHoldingUnanswered = new Set(spouseHoldingUnansweredIndexes(form));
   // §155⑧ 「각각 1개씩」 — 양도일 현재 보유 행 중 둘째 ⑧ 행부터 막는다(판정 메뉴 ⑧·⑫와 같은 leaf). 행의 「편집」으로 가서 끄면 풀린다.
   const uocDuplicateOf = new Map(
-    duplicateOwnedUnavoidableOutsideCapitalRows(houses, form.transferDate, form.assets?.[0]?.assetKind).map((d) => [d.index, d.firstIndex]),
+    duplicateOwnedUnavoidableOutsideCapitalRows(houses, form.transferDate, householdView.assets?.[0]?.assetKind).map((d) => [d.index, d.firstIndex]),
   );
   for (let i = 0; i < houses.length; i++) {
     const h = houses[i];
@@ -185,7 +183,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   }
 
   // ⑧ 양도 주택이 기존주택의 연장이면 헐기 전 주택 취득일 필수 — ⑤ `HousesListSection`·④ `deriveCalcTemporaryTwoHouse`와 같은 leaf(결정 #43 하위 2).
-  const sellingOrigin = sellingHouseOriginIssue(form.assets?.[0], houses.length);
+  const sellingOrigin = sellingHouseOriginIssue(householdView.assets?.[0], houses.length); // NH-14 후속 — 양도 주택 = 세대 기준 자산
   if (sellingOrigin) issues.push({ step, field: sellingOrigin.field as "sellingHouseExistingAcquisitionDate", message: sellingOrigin.message });
 
   // ⑧ 양도 주택 자체 중과배제 특례·공고 전 매매계약 — 다주택 중과 판정 메뉴 ⑧과 같은 leaf.
@@ -275,29 +273,8 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
 
   // ⑧ §154① 단서 — 사유별 필수 입력. effectiveProvisoReason로 정규화
   // (카드 숨김·temp-two-house 무효 reason(나·다목)은 검증 skip — Part B/D mirror·데드락 차단)
-  const provisoMode = provisoGate({
-    isOneHousehold: form.isOneHousehold,
-    // OH-20 — 재개발 완공APT도 §89①3호가목 「주택」이다(⑤ Step4 · ④와 같은 술어).
-    isHousing: isOneHouseExemptionAsset(form.assets?.[0]?.assetKind),
-    // §154① 단서는 제외 **후** 주택 수로 본다 — ④·⑤·Step4 안내와 같은 leaf(S03-4).
-    householdHousingCount: resolveExemptionHousingCount(form),
-    // V-F4 — §155 의제(합가·⑥⑦⑧) 입력이면 2주택 이상에서도 단서 카드를 연다(⑤·④·⑧ 같은 leaf)
-    deemedOneHouseContextDeclared: deemedOneHouseContextDeclared(form),
-    // §155⑳ 거주주택 특례 선언이면 2주택 이상에서도 단서 카드(1호·2호가목·3호)를 연다(⑤·④·⑧ 같은 leaf)
-    rentalResidenceDeclared: rentalResidenceContextDeclared(form.assets?.[0]?.rentalHousingException),
-    temporaryTwoHouseApplies: temporaryTwoHouseApplies({
-      primaryKind: form.assets?.[0]?.assetKind,
-      primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
-      houses: form.houses,
-      transferDate: form.transferDate,
-      legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
-      declaredSpecial: form.temporaryTwoHouseSpecial === true,
-      declaredNewHouseDate: form.newHouseAcquisitionDate,
-      mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
-      excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
-      rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
-    }),
-  }).mode;
+  // NH-14 후속 — ⑤ ② 섹션·④와 같은 leaf·같은 세대 기준 폼 뷰(종전 이 자리의 인라인 복제본과 인자가 같다).
+  const provisoMode = calcProvisoMode(householdView);
   /**
    * ⑧ 일시적 2주택 특례 — 입력존재만 차단. 요건 미달(1년 미경과·3년 초과)은 정상 통과(특례만 미적용).
    *
@@ -342,7 +319,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   //    대신하면(OH-48) ⑤가 입력을 숨기므로 여기서도 건너뛴다.
   // 🔴 OH-50 — 승계조합원의 기산일은 준공일이다(시행령 §162①4호). 입주권 취득일과 비교하면
   //    멸실 전 종전주택 거주가 통과한다(서면-2019-부동산-4508 「멸실 전 거주기간을 통산하지 아니함」).
-  const primary = form.assets?.[0];
+  const primary = householdView.assets?.[0]; // NH-14 후속(F-1) — 거주기간 검증은 ② 섹션과 같은 세대 기준 자산
   // 토지만 본인 × 같은 세대 합가는 합가일 이후 거주만 통산(기준-2025-법규재산-0040) — 거주 산입 기준일이 합가일로 늦춰진다. 그 밖은 취득일 그대로.
   const residenceStart = primary ? residenceStartWithMerge(redevAptHoldingStartDate(primary), primary) : undefined;
   if (form.isOneHousehold && primary && residenceStart && isOneHouseExemptionAsset(primary.assetKind)

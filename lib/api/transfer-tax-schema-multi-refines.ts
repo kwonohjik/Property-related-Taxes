@@ -109,6 +109,7 @@ export const MULTI_IGNORED_KEYS: Record<string, string> = {
   primaryInheritanceValuation: "일괄양도 분기 전용",
   commonTransferExpense: "일괄양도 분기 전용(§100② 후단 공통 양도비)",
   fractionalSplitBundle: "일괄양도 분기 전용(route.ts 축 B 판정 — 컴패니언이 있을 때만 읽는다)",
+  householdFactsCompanionAssetId: "일괄양도 분기 전용(bundled-route.ts — NH-14 후속 세대 기준 함께 양도 주택 카드)",
   apportionmentMethod: "단건 route·엔진 어디에서도 읽지 않는다",
   landSplitMode: "단건 ⑭는 매핑하지만 엔진이 읽지 않는다(types 선언뿐)",
   // 신축 4-시점 — 화면이 가장 이른 날을 `acquisitionDate`로 이미 반영한다. 단건 ⑭도 매핑하지 않는다.

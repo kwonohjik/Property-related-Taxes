@@ -5,7 +5,7 @@
  * 계산 경로(④·⑧)는 `nh14-household-facts-companion.anchor.test.ts`.
  *
  * 열리는 것: ① 세대·주택 현황(1세대 여부 · 세대 보유 주택 수 · «다른 보유 주택이 없습니다» 확인) + 세대 보유 주택 목록(분양권·입주권 포함).
- * 열리지 않는 것: ② 1세대1주택 비과세 판정(취득일 조정대상지역·거주기간 — 첫 자산 주소·거주 입력에 묶여 있다).
+ * ② 1세대1주택 비과세 판정도 함께 양도 주택 기준으로 열린다(NH-14 후속 2 — `docs/00-pm/nh14-companion-house-own-facts.plan.md`).
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
@@ -76,9 +76,11 @@ describe("NH-14 ⑤ — 세대·주택 현황 칸의 표시 조건", () => {
     expect(screen.queryByTestId(NOTICE)).toBeNull();
   });
 
-  it("② 1세대1주택 비과세 판정(거주기간 등)은 첫 자산 기준이라 열리지 않는다 — 첫 자산 거주 입력으로 함께 양도 주택을 판정하지 않는다", () => {
+  // 🔄 2026-11-06 NH-14 후속 2(F-1) — 종전 「② 섹션은 첫 자산 기준이라 열리지 않는다」를 뒤집었다. ② 섹션은 이제 세대 기준 폼 뷰로
+  //   함께 양도 주택 자신의 사실(취득 당시 조정대상지역 · 거주기간 · §154① 단서)을 받는다 — 첫 자산 거주 입력으로 판정하지 않는 것은 같다.
+  it("② 1세대1주택 비과세 판정은 함께 양도 주택 기준으로 열린다 (F-1 — 아래 describe가 저장 위치를 확인)", () => {
     render(<Step4 form={form(["land", "housing"])} onChange={() => {}} />);
-    expect(screen.queryAllByText("② 1세대1주택 비과세 판정")).toHaveLength(0);
+    expect(screen.queryAllByText("② 1세대1주택 비과세 판정")).toHaveLength(1);
   });
 
   it("명부 행이 있으면 세대 보유 주택 수는 명부에서 도출(1 + 행 수) · «없음» 토글은 숨는다", () => {
@@ -99,3 +101,46 @@ describe("NH-14 ⑤ — 세대·주택 현황 칸의 표시 조건", () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ householdNoOtherHousesConfirmed: false, householdHousingCount: "2" }));
   });
 });
+
+describe("NH-14 후속 ⑤ — 세대 축 섹션은 함께 양도 주택을 「양도 주택」으로 읽는다 (계획서 nh14-companion-household-followups)", () => {
+  it("🔴 첫 자산 토지 + 함께 양도 주택 + 명부 1행 → 양도 주택 취득 경위를 묻고, 답은 **주택 카드**에 저장된다 (종전: 토지 카드)", () => {
+    const onChange = vi.fn();
+    render(<Step4 form={form(["land", "housing"], { houses: [houseRow("o1", "2024-06-01")], householdHousingCount: "2" })} onChange={onChange} />);
+    fireEvent.click(screen.getByTestId("selling-house-origin-self_rebuild"));
+    const patch = onChange.mock.calls.map((c) => c[0]).find((p: Partial<TransferFormData>) => p.assets) as Partial<TransferFormData>;
+    expect(patch.assets?.map((a) => a.assetId)).toEqual(["a1", "a2"]);
+    expect((patch.assets?.[1] as unknown as { sellingHouseRebuildKind?: string }).sellingHouseRebuildKind).toBe("self_rebuild");
+    expect((patch.assets?.[0] as unknown as { sellingHouseRebuildKind?: string }).sellingHouseRebuildKind).toBeUndefined();
+  });
+
+  it("대조군 — 주택 먼저는 첫 카드에 저장된다(종전과 같다)", () => {
+    const onChange = vi.fn();
+    render(<Step4 form={form(["housing", "land"], { houses: [houseRow("o1", "2024-06-01")], householdHousingCount: "2" })} onChange={onChange} />);
+    fireEvent.click(screen.getByTestId("selling-house-origin-self_rebuild"));
+    const patch = onChange.mock.calls.map((c) => c[0]).find((p: Partial<TransferFormData>) => p.assets) as Partial<TransferFormData>;
+    expect((patch.assets?.[0] as unknown as { sellingHouseRebuildKind?: string }).sellingHouseRebuildKind).toBe("self_rebuild");
+  });
+});
+
+describe("NH-14 후속 2(F-1) ⑤ — ② 1세대1주택 비과세 판정 섹션은 함께 양도 주택 기준으로 열린다", () => {
+  const SECTION2 = "② 1세대1주택 비과세 판정";
+  it("🔴 첫 자산 토지 + 함께 양도 주택 → ② 섹션이 열리고, 거주기간은 **주택 카드**에 저장된다 (종전: 섹션 없음)", () => {
+    const onChange = vi.fn();
+    const f = form(["land", "housing"], { isOneHousehold: true });
+    f.assets = f.assets.map((a, i) => (i === 1 ? { ...a, residenceInputMode: "direct" as const, residencePeriodMonthsAsset: "" } : a));
+    const { container } = render(<Step4 form={f} onChange={onChange} />);
+    expect(screen.queryAllByText(SECTION2)).toHaveLength(1);
+    const input = container.querySelector('[data-field="residencePeriodMonthsAsset"] input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "24" } });
+    const patch = onChange.mock.calls.map((c) => c[0]).find((p: Partial<TransferFormData>) => p.assets) as Partial<TransferFormData>;
+    expect(patch.assets?.map((a) => a.assetId)).toEqual(["a1", "a2"]);
+    expect(patch.assets?.[1].residencePeriodMonthsAsset).toBe("24");
+    expect(patch.assets?.[0].residencePeriodMonthsAsset).not.toBe("24");
+  });
+
+  it("짝 — 첫 자산 토지 + 함께 양도 토지는 ② 섹션 없음(종전과 같다)", () => {
+    render(<Step4 form={form(["land", "land"])} onChange={() => {}} />);
+    expect(screen.queryAllByText(SECTION2)).toHaveLength(0);
+  });
+});
+

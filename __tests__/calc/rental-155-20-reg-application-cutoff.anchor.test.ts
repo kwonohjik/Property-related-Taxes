@@ -41,7 +41,7 @@ function form(biz: string, rent: string, isApartment: boolean, price = "1,000,00
   return f;
 }
 
-type Detail = { scenarioId?: string; eligibility?: { periodPendingUnitIndexes?: number[]; perUnitVerdicts?: { article?: string }[] } };
+type Detail = { applied?: boolean; scenarioId?: string; eligibility?: { periodPendingUnitIndexes?: number[]; perUnitVerdicts?: { article?: string }[] } };
 const detail = (r: { result: unknown }) => (r.result as { rentalHousingExceptionDetail?: Detail }).rentalHousingExceptionDetail;
 
 describe("§155⑳ 2020.7.10. 컷오프 — 지자체 등록 신청일 기준 (D-1)", () => {
@@ -64,7 +64,7 @@ describe("§155⑳ 2020.7.10. 컷오프 — 지자체 등록 신청일 기준 (D
 
   it("C-3 [짝] 신청 2020-07-11 · 세무서 2020-07-09 아파트 → 마목 2) 아파트 제한으로 ⑳ 불성립", async () => {
     const r = await runCalc(form("2020-07-09", "2020-07-11", true));
-    expect(detail(r)?.scenarioId).toBeUndefined();
+    expect(detail(r)?.applied).toBe(false);
     expect(r.result.totalTax).toBeGreaterThan(0);
   });
 

@@ -123,8 +123,8 @@ describe("Step4 안내 — 증여 승계는 통산한다고 말한다", () => {
 });
 
 describe("Step4 호출부 — 두 안내 모두에 같은 술어를 넘긴다 (정적 가드)", () => {
-  it("RedevSplitResidenceNotice · SuccessorResidenceDirectHint 둘 다 giftCarry={successorGiftHouseholdApplies(primary)}", () => {
+  it("RedevSplitResidenceNotice · SuccessorResidenceDirectHint 둘 다 giftCarry={successorGiftHouseholdApplies(exemptPrimary)} (② 섹션 기준 자산 — NH-14 후속 2)", () => {
     const src = readFileSync(join(process.cwd(), "app/calc/transfer-tax/steps/Step4.tsx"), "utf8");
-    expect(src.match(/giftCarry=\{successorGiftHouseholdApplies\(primary\)\}/g)).toHaveLength(2);
+    expect(src.match(/giftCarry=\{successorGiftHouseholdApplies\(exemptPrimary\)\}/g)).toHaveLength(2);
   });
 });

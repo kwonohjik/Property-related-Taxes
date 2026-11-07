@@ -105,11 +105,11 @@ test.describe("역방향 «주택을 첫 자산으로 바꾸기» (G1)", () => {
     await expect(page.getByTestId(BTN)).toBeVisible();
     await expect(page.locator('[data-asset-card-index="0"]').getByText("주 자산", { exact: true })).toBeVisible();
 
-    // 토지가 첫 자산이어도 함께 양도하는 주택이 있으면 세대·주택 수 입력(① 세대·주택 현황)은 열린다(NH-14). 그러나 취득 당시 조정대상지역·거주기간(② 비과세 판정)은
-    // 첫 자산이 주택일 때만 열려 이 구성은 여전히 ⑧이 막고 주택을 첫 자산으로 바꾸게 한다.
+    // 토지가 첫 자산이어도 함께 양도하는 주택이 있으면 세대·주택 수 입력(① 세대·주택 현황, NH-14)과 취득 당시 조정대상지역·거주기간(② 비과세 판정,
+    // NH-14 후속 2)이 함께 양도 주택 기준으로 열린다. 부수토지 + 주택(G1) 구성은 그래도 ⑧이 막고 주택을 첫 자산으로 바꾸게 한다.
     await page.getByRole("button", { name: "보유 상황" }).first().click();
     await expect(page.getByTestId(HOUSE_COUNT)).toBeVisible();
-    await expect(page.getByTestId("transfer-was-regulated")).toHaveCount(0);
+    await expect(page.getByTestId("transfer-was-regulated")).toBeVisible();
     await page.getByRole("button", { name: "자산 목록" }).first().click();
 
     await page.screenshot({ path: "e2e/_artifacts/g1-swap-before.png", fullPage: true });
@@ -132,7 +132,7 @@ test.describe("역방향 «주택을 첫 자산으로 바꾸기» (G1)", () => {
     await page.getByRole("button", { name: "보유 상황" }).first().click();
     await expect(page.getByTestId(HOUSE_COUNT)).toBeVisible();
     await expect(page.getByTestId("transfer-was-regulated")).toBeVisible();
-    // 토지가 첫 자산인 동안 이 입력은 숨어 있어 기본값(미해당)으로 돌아가 있다 — 열린 입력에 사용자가 사실(조정대상지역 취득)을 입력한다.
+    // 열린 입력에 사용자가 사실(조정대상지역 취득)을 입력한다 — 이미 켜져 있으면 그대로 둔다.
     const regulated = page.getByTestId("transfer-was-regulated").getByRole("switch");
     if ((await regulated.getAttribute("aria-checked")) !== "true") await regulated.click();
     await expect(regulated).toHaveAttribute("aria-checked", "true");

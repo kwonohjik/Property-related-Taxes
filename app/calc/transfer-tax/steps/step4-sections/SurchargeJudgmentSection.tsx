@@ -39,6 +39,8 @@ export function SurchargeJudgmentSection({
   primaryKind,
   householdKind = primaryKind,
   primaryAcquisitionDate,
+  householdForm = form,
+  onHouseholdChange = onChange,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -49,6 +51,9 @@ export function SurchargeJudgmentSection({
    */
   householdKind?: string;
   primaryAcquisitionDate: string;
+  /** NH-14 후속 — 세대 명부를 그리는 세대 기준 폼 뷰와 그 patch 경로(`household-facts-view.ts`). 미지정이면 `form`·`onChange`. */
+  householdForm?: TransferFormData;
+  onHouseholdChange?: (d: Partial<TransferFormData>) => void;
 }) {
   const primary = form.assets?.[0];
   // ④가 싣는 값과 같은 실효값 — 주소가 있으면 주소 판정(저장된 토글이 아니다), 없으면 토글.
@@ -77,8 +82,8 @@ export function SurchargeJudgmentSection({
         {/* 목록 게이트 = 창 안 분기와 같은 술어(S1 후속 F-2 — 값이 남아 있으면 스칼라 < 2여도 보인다) */}
         {houseRosterRendered(form, householdKind) && (
           <HouseCountExemptionInputs
-            form={form}
-            onChange={onChange}
+            form={householdForm}
+            onChange={onHouseholdChange}
             countExclusionEnabled={countExclusionRowsInScope(householdKind)}
             countExclusionApplies={(h) => countExclusionRowApplies(householdKind, h)}
             // §155④⑤ 합가 전 소유 쪽 — 판정 메뉴와 같은 파생(합가일 없으면 undefined, PR-2).

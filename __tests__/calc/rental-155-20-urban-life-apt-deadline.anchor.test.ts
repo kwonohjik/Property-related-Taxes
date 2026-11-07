@@ -83,7 +83,7 @@ function form(transferDate: string, patch: Partial<Unit> = {}) {
   return f;
 }
 
-type Detail = { scenarioId?: string; eligibility?: { failReasons?: { code: string }[] } };
+type Detail = { applied?: boolean; scenarioId?: string; eligibility?: { failReasons?: { code: string }[] } };
 const detail = (r: { result: unknown }) => (r.result as { rentalHousingExceptionDetail?: Detail }).rentalHousingExceptionDetail;
 const unitPayload = (f: ReturnType<typeof form>) =>
   (toRentalHousingExceptionApi(f.assets[0]) as { rentalUnits: Record<string, unknown>[] }).rentalUnits[0];
@@ -91,7 +91,7 @@ const unitPayload = (f: ReturnType<typeof form>) =>
 describe("§155⑳ 도시형 생활주택인 아파트 — 가목2) 괄호는 양도기한에만 (V-10)", () => {
   it("U-1 도시형 아님 · 2028-06-01 양도 → 양도기한 경과로 ⑳ 불성립 299,816,000", async () => {
     const r = await runCalc(form("2028-06-01"));
-    expect(detail(r)?.scenarioId).toBeUndefined();
+    expect(detail(r)?.applied).toBe(false);
     expect(r.result.totalTax).toBe(299_816_000);
   });
 
@@ -115,7 +115,7 @@ describe("§155⑳ 도시형 생활주택인 아파트 — 가목2) 괄호는 �
         isUrbanLifeHousingApartment: true,
       }),
     );
-    expect(detail(r)?.scenarioId).toBeUndefined();
+    expect(detail(r)?.applied).toBe(false);
     expect(r.result.totalTax).toBe(299_816_000);
     const steps = (r.result.steps ?? []) as { label: string; formula: string }[];
     expect(steps.find((s) => s.label.includes("적용 불가"))?.formula).toMatch(/마목\)에서 아파트는/);

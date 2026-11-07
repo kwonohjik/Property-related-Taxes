@@ -141,10 +141,16 @@ const ONE = {
   residencePeriodMonths: "0",
 };
 
+/**
+ * 함께 양도 주택(겸용) 자신의 거주기간 — NH-14 후속 2(F-1)부터 ② 섹션이 함께 양도 주택 기준으로 열려 ⑧이 그 카드의 거주를 묻는다.
+ * 종전 엔진값(컴패니언 거주 미전송 = 0개월)과 같은 사실을 직접 입력으로 넣는다 — 기대 세액 불변.
+ */
+const COMPANION_RESIDENCE_NONE = { residenceInputMode: "direct", residencePeriodMonthsAsset: "0" };
+
 async function calc(over: Record<string, unknown>) {
   const base = bundledForm();
   const land = { ...base.assets[0], assetKind: "land", landType: "building_site", isNonBusinessLand: false, landNature: "standalone" };
-  const f = { ...base, ...ONE, assets: [land, { ...base.assets[1], ...over }] } as TransferFormData;
+  const f = { ...base, ...ONE, assets: [land, { ...base.assets[1], ...COMPANION_RESIDENCE_NONE, ...over }] } as TransferFormData;
   expect([0, 1, 2, 3].flatMap((s) => collectStepIssues(s, f).map((i) => i.message))).toEqual([]);
   const r = await pipeline(f);
   expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);

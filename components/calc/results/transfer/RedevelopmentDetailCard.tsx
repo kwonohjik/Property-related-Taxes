@@ -286,7 +286,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             ) : (
             <div>
               양도차익 = 양도가액 <span className="font-mono tabular-nums">{fmt(postApprovalExistingHouse.apportionedTransfer)}</span>{" "}
-              − 권리가액(상속·증여 평가액) <span className="font-mono tabular-nums">{fmt(postApprovalExistingHouse.apportionedAcquisition)}</span>{" "}
+              − 취득가액 <span className="font-mono tabular-nums">{fmt(postApprovalExistingHouse.apportionedAcquisition)}</span>{" "}
               − 인가후 필요경비 <span className="font-mono tabular-nums">{fmt(postApprovalExistingHouse.expenses ?? 0)}</span>{" "}
               = <span className="font-mono tabular-nums font-bold">{fmt(postApprovalExistingHouse.gain)}</span>
             </div>
@@ -565,7 +565,9 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         <div className="rounded-md bg-white dark:bg-gray-900 border border-violet-200 p-3 space-y-1.5">
           <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">① 인가전 분</p>
           <p className="text-micro text-violet-700 dark:text-violet-400">
-            {isRightSubject
+            {successorMemberApplied
+              ? "미적용 — 승계조합원은 §166 안분을 하지 않습니다"
+              : isRightSubject
               ? "§166①1호 · §166⑤1호 (취득일 → 관리처분 인가일 기산)"
               : isReceiveOnly
                 ? "미신고 — 청산금 수령분 단독 신고"
@@ -573,7 +575,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
                 ? "§166②2호 · §166①2호 나목 (수령 안분)"
                 : "§166①1호 · §166⑤2호나목 (취득일 기산)"}
           </p>
-          <Row label={isAptReceive ? "의제 양도가액(=권리가액 − 청산금)" : "의제 양도가액(=권리가액)"} value={preApproval.apportionedTransfer} />
+          <Row label={successorMemberApplied ? "양도가액" : isAptReceive ? "의제 양도가액(=권리가액 − 청산금)" : "의제 양도가액(=권리가액)"} value={preApproval.apportionedTransfer} />
           <Row label="취득가액" value={preApproval.apportionedAcquisition} />
           {/* 🔴 「라목값」 하드코딩이었다 — 토지 종전자산 분기의 base는 **가목(개별공시지가)**이다
               (2026-09-07 대장 재대조 · #32). 어느 분기인지는 echo 필드가 말해 준다. */}
@@ -596,15 +598,17 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         <div className="rounded-md bg-white dark:bg-gray-900 border border-violet-200 p-3 space-y-1.5">
           <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">② 인가후 기존건물분</p>
           <p className="text-micro text-violet-700 dark:text-violet-400">
-            {isReceiveOnly
+            {successorMemberApplied
+              ? "소득세법 시행령 §162①4호 (안분 없음 — 단순 차감)"
+              : isReceiveOnly
               ? "미신고 — 청산금 수령분 단독 신고"
               : isAptReceive
               ? "§166②2호 · §166①2호 가목 (양도가액 − (평가액 − 지급받은 청산금))"
               : "§166②1호 안분 (권리가액/분양가) · §166⑤2호나목"}
           </p>
-          <Row label={isAptReceive ? "양도가액" : "안분 양도가액"} value={postApprovalExistingHouse.apportionedTransfer} />
+          <Row label={isAptReceive || successorMemberApplied ? "양도가액" : "안분 양도가액"} value={postApprovalExistingHouse.apportionedTransfer} />
           <Row
-            label={isAptReceive ? "분양가(=권리가액 − 청산금)" : "안분 취득가액(=권리가액)"}
+            label={successorMemberApplied ? "취득가액" : isAptReceive ? "분양가(=권리가액 − 청산금)" : "안분 취득가액(=권리가액)"}
             value={postApprovalExistingHouse.apportionedAcquisition}
           />
           <Row label="양도차익" value={postApprovalExistingHouse.gain} highlight />
@@ -628,7 +632,9 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               : `③ 청산금 분${detail.settlementExemptionApplied ? " (1세대1주택 비과세)" : ""}`}
           </p>
           <p className="text-micro text-violet-700 dark:text-violet-400">
-            {isRightSubject && settlementDirection === "receive"
+            {successorMemberApplied
+              ? "미적용 — 승계조합원은 §166 안분을 하지 않습니다"
+              : isRightSubject && settlementDirection === "receive"
               ? "§166①2호 가목 · §94①2호 (청산금 분 — 장기보유특별공제 대상 외)"
               : isRightSubject
               ? "§166①1호 · §166⑤1호 (인가일 기산 — 장기보유특별공제 대상 외)"
@@ -636,10 +642,12 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               ? "종전주택 일부의 분할양도 (법규재산2012-358) — 취득일 → 청산금분 양도일 기산"
               : "§166②1호 안분 (청산금/분양가) · §166⑤2호가목 (인가일 기산)"}
           </p>
-          <Row label={isAptReceive ? "양도가액(=청산금)" : "안분 양도가액"} value={settlement.apportionedTransfer} />
+          <Row label={successorMemberApplied ? "양도가액" : isAptReceive ? "양도가액(=청산금)" : "안분 양도가액"} value={settlement.apportionedTransfer} />
           <Row
             label={
-              (isRightSubject || isAptReceive) && settlementDirection === "receive"
+              successorMemberApplied
+                ? "취득가액"
+                : (isRightSubject || isAptReceive) && settlementDirection === "receive"
                 ? <>안분 취득가액(=종전취득가 × <Frac top="청산금" bottom="권리가액" />)</>
                 : "안분 취득가액(=청산금)"
             }

@@ -223,7 +223,7 @@ describe("다건 §155⑳ — 특례 선택(applyException)만 하고 요건 미
   for (const c of cells) {
     it(`${c.S / 1e8}억 · ${c.T} · 건물 ${c.B}년 · 토지 ${c.L}년 · 면적 ${c.area} — 다건 = 단건`, () => {
       const single = calculateTransferTax(notApplied(c), rates);
-      expect(single.rentalHousingExceptionDetail).toBeUndefined(); // 전제: 특례 미적용 — 상세가 없다
+      expect(single.rentalHousingExceptionDetail?.applied).toBe(false); // 전제: 특례 미적용 — 불성립 상세(applied=false)만 있다(V-7)
       const agg = aggOf(c.T, [asItem(notApplied(c), "p1")]);
       expect(agg.totalTax).toBe(single.totalTax);
     });

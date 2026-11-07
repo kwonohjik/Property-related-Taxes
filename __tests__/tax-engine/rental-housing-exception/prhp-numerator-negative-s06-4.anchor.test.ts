@@ -99,7 +99,7 @@ describe("S06-4 §161①·②1호 분자 음수(취득 뒤 하락) → 0585 대�
   });
   it("N-6 ★ B2 15억 · 3/2.5/5억은 계산기 미지원 — 엔진 직접 호출도 특례 없이 일반 과세한다(전 −93,500,000 음수 과세분)", () => {
     const r = run(1_500_000_000, [300e6, 250e6, 500e6]);
-    expect(r.rentalHousingExceptionDetail).toBeUndefined();
+    expect(r.rentalHousingExceptionDetail?.applied).toBe(false);
     expect(r.steps.some((s) => s.formula.includes("계산기 미지원"))).toBe(true);
     expect(r.totalTax).toBeGreaterThan(0);
   });
@@ -115,7 +115,7 @@ describe("S06-4 분모 음수(현 양도 당시 < 취득 당시) → 계산기 �
   });
   it("N-8 엔진 직접 호출 3/4/2억 → 특례 미적용 일반 과세 (전 과세분 −296,000,000 · 총세액 0)", () => {
     const r = run(800_000_000, [300e6, 400e6, 200e6]);
-    expect(r.rentalHousingExceptionDetail).toBeUndefined();
+    expect(r.rentalHousingExceptionDetail?.applied).toBe(false);
     expect(r.totalTax).toBe(43_901_000);
   });
 });

@@ -94,7 +94,7 @@ describe("#20 성립 B 중과 — 확인 필요 고지", () => {
 
   it("N-3b [짝] B가 불성립(등록 후 거주 2년 미만)이면 특례 고지가 아니므로 이 고지가 없다", async () => {
     const r = await runCalc(form("2", true, "B", "0"));
-    expect(r.result.rentalHousingExceptionDetail?.scenarioId).toBeUndefined();
+    expect(r.result.rentalHousingExceptionDetail?.applied).toBe(false);
     expect(warns(r)).not.toContain(PRHP_SURCHARGE_UNVERIFIED_NOTICE);
   });
 });
