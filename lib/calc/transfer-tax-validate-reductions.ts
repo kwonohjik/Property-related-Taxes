@@ -60,7 +60,7 @@ function phdField(
 }
 
 /**
- * 하이브리드 4조문(§99의2·§98의3·§98의5·§98의6·§98의7) 공용 — 취득 후 5년 경과 양도 시 5년 발생분
+ * 하이브리드 4조문(§99의2·§98의3·§98의5·§98의6·§98의7)과 §98의8 공용 — 취득 후 5년 경과 양도 시 5년 발생분
  * 기준시가 안분(조특령 §40① 준용)에 필요한 취득시·5년시점 기준시가(자산-수준 fallback 없음) 필수 (F-1).
  *
  * ⚠ §99의3(:44·50)·§99(:103)의 **무조건 필수**와 다르다 — 그 둘은 차감(income_deduction) 전용이라
@@ -448,6 +448,24 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(fieldError("reduction.unsold_98_8.rentalContractDate988", "§98의8 적용: 임대계약 체결일을 입력하세요 (2015.12.31 이전 체결에 한정 — 법 §98의8① 괄호)."));
           if (!r.rentalStartDate988)
             return fail(fieldError("reduction.unsold_98_8.rentalStartDate988", "§98의8 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날)."));
+          // 5년 후 양도 안분 기준시가 — ⑤ 제목이 「필수」인데 ⑧이 묻지 않아 엔진이 `MISSING_STD_PRICE`로 차감을 0으로 냈다(하이브리드와 같은 헬퍼 · 리뷰 Q-3 (A)).
+          //   PHD 환산 ON이면 취득시 기준시가는 환산 입력 충분성으로 검증한다(④ `transfer-tax-api-reductions.ts`와 같은 leaf · §98의7과 같은 규칙).
+          let phdOk988 = false;
+          if (r.phdMode988) {
+            const phdInput = {
+              firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice988 || "0"),
+              landAreaSqm: parseDecimal(r.phdLandAreaSqm988 || "0"),
+              landPricePerSqmAtAcquisition: parseAmount(r.phdLandPricePerSqmAtAcq988 || "0"),
+              landPricePerSqmAtFirstDisclosure: parseAmount(r.phdLandPricePerSqmAtFirst988 || "0"),
+              buildingStdPriceAtAcquisition: parseAmount(r.phdBuildingStdAtAcq988 || "0"),
+              buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst988 || "0"),
+            };
+            if (!canCalcReductionPhd(phdInput))
+              return fail(fieldError(phdField(r.type, phdInput), "§98의8 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요."));
+            phdOk988 = true;
+          }
+          const i988 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition988, r.standardPriceAt5Years988, "§98의8", phdOk988, r.type, r.standardPriceAtTransfer988, engineStdPriceAtTransfer(form, ai));
+          if (i988) return i988;
         }
         // P3 §98의3 (2026-06-12): 분기별 일자 + 과밀 면적 필수 (⑧). 토글은 낙관 — 엔진 사유.
         if (r.type === "unsold_98_3") {
