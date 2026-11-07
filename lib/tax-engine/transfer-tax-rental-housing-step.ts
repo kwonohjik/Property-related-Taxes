@@ -37,6 +37,7 @@ import type {
 } from "./types/transfer.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { RentalHousingExceptionResult } from "./transfer-tax/rental-housing-exception/types";
+import { buildGateUnmetDetail, withGateUnmet } from "./transfer-tax/rental-housing-exception/gate-unmet";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { calcTax } from "./transfer-tax-rate-calc";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -182,6 +183,7 @@ export function runRentalHousingExceptionStep(
    *    적용 불가로 돌려 일반 과세 경로(미등기 70%·장특·기본공제 배제)로 넘긴다.
    */
   if (effectiveInput.isUnregistered) {
+    if (args.unmetOut) args.unmetOut.detail = buildGateUnmetDetail(effectiveInput.rentalHousingException!, ["미등기양도자산에는 비과세 규정을 적용하지 않습니다 (소득세법 §91①)."]);
     steps.push({
       label: "장기임대주택 거주주택 비과세 특례 — 적용 불가",
       formula: "미등기양도자산에는 비과세 규정을 적용하지 않습니다",
@@ -199,6 +201,7 @@ export function runRentalHousingExceptionStep(
    * ⑤ 거주기간 카드(③)는 게이트하지 않는다 — 1세대 OFF에서 그 카드가 거주기간의 유일한 입력 경로다.
    */
   if (!effectiveInput.isOneHousehold) {
+    if (args.unmetOut) args.unmetOut.detail = buildGateUnmetDetail(effectiveInput.rentalHousingException!, ["1세대 요건을 충족하지 않습니다 — 장기임대주택 거주주택 특례는 1세대가 거주주택을 양도하는 경우에 적용합니다."]);
     steps.push({
       label: "장기임대주택 거주주택 비과세 특례 — 적용 불가",
       formula: "1세대 요건을 충족하지 않아 적용하지 않습니다 — 장기임대주택 거주주택 특례는 1세대가 거주주택을 양도하는 경우에 적용합니다",
@@ -305,6 +308,7 @@ export function runRentalHousingExceptionStep(
   let phrpUnmetReason: string | undefined;
 
   if (composition.status === "exceeded") {
+    if (args.unmetOut) args.unmetOut.detail = withGateUnmet(rhe, composition.reason);
     steps.push({
       label: "장기임대주택 거주주택 비과세 특례 — 적용 불가",
       formula: composition.reason,

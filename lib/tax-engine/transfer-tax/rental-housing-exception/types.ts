@@ -271,6 +271,11 @@ export type EligibilityResult = {
   failReasons: RentalUnitFailReason[];
   /** 거주주택 요건 미충족 사유 (보유 2년/거주 2년) */
   residenceFailReasons: string[];
+  /**
+   * 특례 **적용 전제**(미등기 · 1세대 아님 · 세대 구성 초과) 미충족 사유 — 계산기 결과 카드의 「적용 불가」가 읽는다.
+   * 호별·거주 요건 판정 전에 막히는 경로만 채운다(`gate-unmet.ts`). 판정 메뉴 판정은 쓰지 않는다.
+   */
+  gateFailReasons?: string[];
   /** 인용된 법령 조문 코드 */
   laws: string[];
   /** 호별 판정기준 echo (결과카드 표시용) */

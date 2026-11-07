@@ -58,6 +58,8 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
   if (!detail.applied) {
     const residenceFails = detail.eligibility.residenceFailReasons;
     const unitFails = detail.eligibility.failReasons;
+    // 적용 전제(미등기 · 1세대 아님 · 세대 구성 초과) 미충족 — 호별·거주 요건 판정 전에 막힌 경로(`gate-unmet.ts`)
+    const gateFails = detail.eligibility.gateFailReasons ?? [];
     return (
       <div className="rounded-lg border border-amber-300 bg-amber-50/80 dark:border-amber-700/50 dark:bg-amber-950/30 p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
@@ -73,6 +75,13 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
             미충족 사유
           </p>
+          {gateFails.length > 0 && (
+            <ul className="text-xs text-amber-900 dark:text-amber-200 space-y-0.5 pl-4 list-disc" data-testid="rental-exception-gate-fail-reasons">
+              {gateFails.map((r, i) => (
+                <li key={`gate-${i}`}>{r}</li>
+              ))}
+            </ul>
+          )}
           {residenceFails.length > 0 && (
             <ul className="text-xs text-amber-900 dark:text-amber-200 space-y-0.5 pl-4 list-disc">
               {residenceFails.map((r, i) => (
@@ -87,7 +96,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
               ))}
             </ul>
           )}
-          {residenceFails.length === 0 && unitFails.length === 0 && (
+          {gateFails.length === 0 && residenceFails.length === 0 && unitFails.length === 0 && (
             <p className="text-xs text-amber-900 dark:text-amber-200">
               특례 적용 요건이 충족되지 않았습니다.
             </p>
@@ -96,7 +105,9 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
         </div>
 
         <p className="text-xs text-amber-800 dark:text-amber-300">
-          특례가 적용되지 않아 일반 양도소득세 산식으로 계산되었습니다. 요건을 충족하려면 보유 상황 단계에서 거주주택의 거주기간(2년 이상)과 임대주택 정보를 정확히 입력해 주세요.
+          {gateFails.length > 0
+            ? "특례가 적용되지 않아 일반 양도소득세 산식으로 계산되었습니다. 위 전제가 충족되지 않으면 임대주택·거주기간 요건을 갖춰도 특례를 적용할 수 없습니다."
+            : "특례가 적용되지 않아 일반 양도소득세 산식으로 계산되었습니다. 요건을 충족하려면 보유 상황 단계에서 거주주택의 거주기간(2년 이상)과 임대주택 정보를 정확히 입력해 주세요."}
         </p>
       </div>
     );

@@ -224,7 +224,7 @@ describe("E-14c §155⑳ 거주주택 — 15호(구 14호)·13호 (종전: 2호 
       rentalHousingException: rhe(RENTAL_UNIT),
     });
     expect(resolveSurchargeDeemedOneHouse(i, parseRatesFromMap(loadFallbackTransferRates(D("2026-09-18"))))).toBeUndefined();
-    expect(calculateTransferTax(i, loadFallbackTransferRates(i.transferDate)).rentalHousingExceptionDetail).toBeUndefined();
+    expect(calculateTransferTax(i, loadFallbackTransferRates(i.transferDate)).rentalHousingExceptionDetail?.applied).toBe(false);
     const r = calc(i);
     expect(r.totalTax).toBe(1_327_903_500);
     expect(r.appliedRate).toBe(0.75);
