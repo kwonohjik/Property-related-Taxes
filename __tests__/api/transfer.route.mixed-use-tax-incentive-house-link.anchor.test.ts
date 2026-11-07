@@ -139,4 +139,26 @@ describe("겸용주택 × ⑥ 확인된 5호 조문 → 10호", () => {
     expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(true);
     expect((r.multiHouseSurcharge?.warnings ?? []).some((w) => w.includes("§167의3①3호") && w.includes("확인이 필요합니다"))).toBe(true);
   });
+  it("MX-4 종전(원시) §99의3 ⑥ 국민주택 「모름」 → 5호 불성립 = 중과 + 확인 필요 고지(L15 C-4) · 「예」면 10호 배제", async () => {
+    const orig = {
+      article: "new_99_3",
+      houseId: "h2",
+      housingKind: "original_purchase",
+      houseContractDate: "2001-03-01",
+      houseAcquisitionDate: "2001-05-01",
+      originalOutsideMetropolitan: "yes",
+      requirementsConfirmed: true,
+    };
+    const houses = HOUSES;
+    const unknown = await call({ houses, specialHouseExclusions: [{ ...orig, originalNationalHousing: "unknown" }] });
+    const none = await call({ houses });
+    expect(unknown.total.determinedTax, "세액 불변 — 선언 없는 대조와 같다").toBe(none.total.determinedTax);
+    expect(none.total.determinedTax).toBe(484_365_648);
+    expect(unknown.multiHouseSurcharge?.surchargeApplicable).toBe(true);
+    expect((none.multiHouseSurcharge?.warnings ?? []).some((w) => w.startsWith("확인 필요:"))).toBe(false);
+    expect((unknown.multiHouseSurcharge?.warnings ?? []).some((w) => w.startsWith("확인 필요:") && w.includes("§167의3①5호") && w.includes("국민주택(모름·미답)"))).toBe(true);
+    const yes = await call({ houses, specialHouseExclusions: [{ ...orig, originalNationalHousing: "yes" }] });
+    expect(yes.total.determinedTax).toBe(409_284_688);
+    expect(yes.multiHouseSurcharge?.surchargeApplicable).toBe(false);
+  });
 });

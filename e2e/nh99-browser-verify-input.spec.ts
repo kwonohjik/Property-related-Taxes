@@ -523,7 +523,7 @@ async function chooseNew993Article(page: Page) {
   // 「적용 조문」 Select — 같은 모달에 공시가격 연도 Select도 있으므로 라벨 옆 combobox로 한정
   await dialog.locator('div:has(> label:has-text("적용 조문"))').getByRole("combobox").click();
   await expect(page.getByRole("listbox")).toBeVisible();
-  await page.getByRole("listbox").getByRole("option", { name: /§99의3 신축주택 IMF 2차/ }).click();
+  await page.getByRole("listbox").getByRole("option", { name: /§99의3 — 신축주택의 취득자에 대한 양도소득세의 과세특례/ }).click();
   await expect(dialog.getByTestId("special-house-exclusion-kind")).toBeVisible();
   return dialog;
 }
@@ -651,14 +651,13 @@ test.describe("보유 감면주택 §99·§99의3 유형 (PR #2951) — 명부 �
     const { body, json } = await calculate(page);
     expect(body.specialHouseExclusions).toEqual([expect.objectContaining({ originalNationalHousing: "unknown" })]);
     expect(json.data!.result.totalTax).toBe(SURCHARGED);
-    // 결과 화면 — 보유 감면주택 카드(§89①3호 축)는 «2007.12.31까지 양도» 시한 사유를 보인다.
-    // ⚠️ 관찰(결함 여부 확인 필요): 소령 §167의3①5호 축에서 「모름」이 불성립 + 확인 필요라는 문구(`resolveSpecialHouseExclusions` entries[].reason)는
-    //    이 결과 화면·응답(`multiHouseSurchargeEvaluation`·`specialHouseExclusionDetail`)에 나오지 않는다 — anchor는 leaf만 고정한다.
+    // 결과 화면 — 소령 §167의3①5호 축 「모름」: 불성립이지만 「확인 필요」가 중과 판정 고지(응답 `multiHouseSurchargeEvaluation.warnings` · 화면 중과 상세)에 나온다 (L15 C-4).
+    const evaluation = json.data!.result.multiHouseSurchargeEvaluation as { surchargeApplicable: boolean; warnings?: string[] };
+    expect(evaluation.surchargeApplicable).toBe(true);
+    const notice = (evaluation.warnings ?? []).find((w) => w.startsWith("확인 필요: 주택 수 제외로 선언한 감면주택이 소득세법 시행령 §167의3①5호에 해당하는지"));
+    expect(notice, "응답 warnings에 5호 확인 필요").toContain("국민주택(모름·미답)");
     await expect(page.getByTestId("special-house-exclusion-card")).toBeVisible();
-    test.info().annotations.push({
-      type: "observation",
-      description: "5호 축 「모름」 확인 필요 문구가 결과 화면·응답에 없음 (leaf resolveSpecialHouseExclusions에는 있음)",
-    });
+    await expect(page.getByText("확인 필요: 주택 수 제외로 선언한 감면주택이 소득세법 시행령 §167의3①5호에 해당하는지", { exact: false }).first()).toBeVisible();
     await page.screenshot({ path: "e2e/_artifacts/nh99-b1-c4-unknown-result.png", fullPage: true });
   });
 });

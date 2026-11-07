@@ -416,9 +416,13 @@ function evalUnsold988(
       standardPriceAtTransfer:
         (r988.standardPriceAtTransfer988 as number | undefined) ?? ctx.standardPriceAtTransfer,
     });
-    return buildResolution("unsold_98_8", detail.isEligible, detail.reducibleTransferIncome,
+    const resolution = buildResolution("unsold_98_8", detail.isEligible, detail.reducibleTransferIncome,
       detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
       { unsold988Detail: detail });
+    // 안분 분모 0(NH-76)은 공제액 계산 인자라 요건 판정이 아니다 — 소령 §167의3①5호 「감면되는 주택」 여부는 요건으로 정해진다(하이브리드와 같은 독법).
+    return !detail.isEligible && detail.ineligibleReasons.length > 0 && detail.ineligibleReasons.every((x) => x.code === "ALLOCATION_DENOMINATOR_ZERO")
+      ? { ...resolution, requirementsMetId: "unsold_98_8" }
+      : resolution;
   }
   return null;
 }
@@ -450,11 +454,11 @@ function evalHybrid(
         // 5년 내(tax_amount)는 appliedId 미설정 — STEP 4.6 차감 없음 (calcReductions 경로와 이중 혜택 차단)
         appliedId: isIncomeDeduction ? id : undefined,
         eligibleId: detail.isEligible ? id : undefined,
-        // 하이브리드는 요건 판정을 모두 마친 뒤 안분 단계(`computeHybridEffect`)에서만 MISSING_STD_PRICE를 낸다 — 그 하나뿐이면 요건 충족이다.
+        // 하이브리드는 요건 판정을 모두 마친 뒤 안분 단계(`computeHybridEffect`)에서만 MISSING_STD_PRICE·ALLOCATION_DENOMINATOR_ZERO(NH-76)를 낸다 — 그 사유뿐이면 요건 충족이다.
         requirementsMetId:
           !detail.isEligible &&
           detail.ineligibleReasons.length > 0 &&
-          detail.ineligibleReasons.every((x) => x.code === "MISSING_STD_PRICE")
+          detail.ineligibleReasons.every((x) => x.code === "MISSING_STD_PRICE" || x.code === "ALLOCATION_DENOMINATOR_ZERO")
             ? id
             : undefined,
         reducible: isIncomeDeduction ? detail.reducibleTransferIncome : 0,

@@ -23,6 +23,7 @@
 import { applyRate } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import {
+  allocationDenominatorZeroMessage,
   calcSignedAllocation,
   isWithin5YearsCheck,
   type New993FormulaStep,
@@ -276,6 +277,21 @@ export function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResul
       [{
         code: "MISSING_STD_PRICE",
         message: "5년 후 양도 안분에 필요한 기준시가(취득시·5년시점·양도시)가 입력되지 않았습니다 (조특령 §40① 준용 — 자동 안분 불가).",
+        legalBasis: input.allocationLegalBasis,
+      }],
+      input.legalBasis,
+      rate,
+      ruralSurtaxExempt,
+    );
+  }
+  // NH-76 · Q-20 — 분모 0(양도시 = 취득시 기준시가): 안분 비율 미정의 → 계산 불가 + 확인 필요 (§99·§99의3과 같은 규칙).
+  //   종전에는 `calcSignedAllocation`이 «그 외» 분기로 보내 근거 없이 공제 0을 냈고 분모가 1원만 달라져도 (+,+)·(+,-) 쪽이라 1원 절벽이었다.
+  if (stdAtTransfer - stdAtAcq === 0) {
+    return ineligible(
+      input.id,
+      [{
+        code: "ALLOCATION_DENOMINATOR_ZERO",
+        message: allocationDenominatorZeroMessage("해당 주택 취득 당시"),
         legalBasis: input.allocationLegalBasis,
       }],
       input.legalBasis,

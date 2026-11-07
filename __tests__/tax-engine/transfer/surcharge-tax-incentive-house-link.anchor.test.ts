@@ -9,6 +9,8 @@ import { determineMultiHouseSurcharge } from "@/lib/tax-engine/multi-house-surch
 import {
   linkTaxIncentiveHouse5ho,
   withTaxIncentiveRental3hoNotice,
+  withTaxIncentiveHouse5hoUnconfirmedNotice,
+  withTaxIncentiveHouseNotices,
   TAX_INCENTIVE_RENTAL_3HO_UNCONFIRMED_NOTICE,
 } from "@/lib/tax-engine/surcharge-tax-incentive-house-link";
 import type { SpecialHouseExclusionInput } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
@@ -110,5 +112,66 @@ describe("3호 ⑥ 확인 필요 고지 — 결론을 가를 때만", () => {
   it("임대개시일 공란(⑥ 불성립) → 고지 없음", () => {
     const r = withTaxIncentiveRental3hoNotice(judge(houses), houses, [{ ...rentalDecl, houseRentalStartDate: undefined }], TD, "h1", judge);
     expect(r.warnings).not.toContain(TAX_INCENTIVE_RENTAL_3HO_UNCONFIRMED_NOTICE);
+  });
+});
+
+describe("5호 ⑥ 「모름」 확인 필요 고지 — 결론을 가를 때만 (L15 C-4)", () => {
+  const houses = [SELLING, makeHouse("h2")];
+  const notice = (r: ReturnType<typeof judge>) => r.warnings.filter((w) => w.startsWith("확인 필요: 주택 수 제외로 선언한 감면주택이"));
+  /** 상속 당시 분양권이었는지 모름 — 5호 조문 §98의3 · 상속 행 (`INHERITED_PRESALE_UNCONFIRMED`) */
+  const inheritedUnknown = decl({
+    article: "unsold_98_3",
+    houseAcquisitionDate: new Date("2009-06-01"),
+    houseContractDate: undefined,
+    isInherited: true,
+    inheritedPresaleCompletedByHeir: "unknown",
+  });
+  it("상속 분양권 「모름」 → 고지(사유 = leaf 사유) · 세대 판정은 그대로 중과", () => {
+    const r = withTaxIncentiveHouse5hoUnconfirmedNotice(judge(houses), houses, [inheritedUnknown], TD, "h1", judge);
+    expect(r.surchargeApplicable).toBe(true);
+    expect(notice(r)).toHaveLength(1);
+    expect(notice(r)[0]).toContain("상속 당시 분양권이었고 상속인이 잔금을 내고 취득했는지 확인되지 않아");
+  });
+  it("「아니오」(완공된 주택 상속) → 모르는 것이 아니라 아닌 것 — 고지 없음", () => {
+    const r = withTaxIncentiveHouse5hoUnconfirmedNotice(judge(houses), houses, [{ ...inheritedUnknown, inheritedPresaleCompletedByHeir: "no" }], TD, "h1", judge);
+    expect(notice(r)).toEqual([]);
+  });
+  it("3주택 → 5호로 봐도 중과 → 고지 없음", () => {
+    const three = [...houses, makeHouse("h3")];
+    const r = withTaxIncentiveHouse5hoUnconfirmedNotice(judge(three), three, [inheritedUnknown], TD, "h1", judge);
+    expect(notice(r)).toEqual([]);
+  });
+  it("행 id 없음 · 양도 주택을 가리킴 · 3호 조문 → 고지 없음", () => {
+    for (const d of [{ ...inheritedUnknown, houseId: undefined }, { ...inheritedUnknown, houseId: "h1" }, decl({ article: "rental_97", houseRentalStartDate: new Date("1999-06-01") })]) {
+      expect(notice(withTaxIncentiveHouse5hoUnconfirmedNotice(judge(houses), houses, [d], TD, "h1", judge))).toEqual([]);
+    }
+  });
+  it("이미 중과가 꺼진 판정 · 5호 표시가 이미 켜진 행 → 같은 결과 객체(바꿀 것 없음)", () => {
+    const excluded = judge([SELLING, makeHouse("h2", { isUnsoldHousing: true })]);
+    expect(withTaxIncentiveHouse5hoUnconfirmedNotice(excluded, houses, [inheritedUnknown], TD, "h1", judge)).toBe(excluded);
+    const chipped = [SELLING, makeHouse("h2", { isUnsoldHousing: true })];
+    const surcharged = judge(houses);
+    expect(withTaxIncentiveHouse5hoUnconfirmedNotice(surcharged, chipped, [inheritedUnknown], TD, "h1", judge)).toBe(surcharged);
+  });
+  it("3주택 · 다른 두 주택이 모두 「모름」 → 함께 5호로 보면 배제되므로 고지 한 번(사유 둘)", () => {
+    const three = [SELLING, makeHouse("h2"), makeHouse("h3")];
+    const r = withTaxIncentiveHouse5hoUnconfirmedNotice(
+      judge(three),
+      three,
+      [inheritedUnknown, { ...inheritedUnknown, houseId: "h3" }],
+      TD,
+      "h1",
+      judge,
+    );
+    expect(notice(r)).toHaveLength(1);
+  });
+  it("합성 `withTaxIncentiveHouseNotices` — 3호 임대 ⑥만 있으면 3호 고지 한 번 · 5호 고지 없음, 5호 「모름」만 있으면 반대", () => {
+    const rental = decl({ article: "rental_97", houseContractDate: undefined, houseRentalStartDate: new Date("1999-06-01") });
+    const a = withTaxIncentiveHouseNotices(judge(houses), houses, [rental], TD, "h1", judge);
+    expect(a.warnings.filter((w) => w === TAX_INCENTIVE_RENTAL_3HO_UNCONFIRMED_NOTICE)).toHaveLength(1);
+    expect(notice(a)).toEqual([]);
+    const b = withTaxIncentiveHouseNotices(judge(houses), houses, [inheritedUnknown], TD, "h1", judge);
+    expect(b.warnings).not.toContain(TAX_INCENTIVE_RENTAL_3HO_UNCONFIRMED_NOTICE);
+    expect(notice(b)).toHaveLength(1);
   });
 });
