@@ -572,7 +572,7 @@ export function RegulatedAssumptionPdfNote({ groups }: { groups: RegulatedAssump
               {`${regulatedAssumptionRowHead(r)}: ${regulatedAssumptionRowVerdict(r)} — ${r.basis}`}
             </Text>
           ))}
-          <Text style={{ fontSize: 7, color: "#92400e", marginTop: 3 }}>{regulatedAssumptionFooter("calculator")}</Text>
+          <Text style={{ fontSize: 7, color: "#92400e", marginTop: 3 }}>{regulatedAssumptionFooter("calculator", g.rows)}</Text>
         </View>
       ))}
     </View>

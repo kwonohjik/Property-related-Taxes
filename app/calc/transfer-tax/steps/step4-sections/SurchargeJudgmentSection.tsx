@@ -15,7 +15,8 @@
 
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { RegulatedAreaField } from "@/components/calc/transfer/RegulatedAreaField";
-import { calcEffectiveIsRegulatedAtTransfer, regulatedVerdictForDisplay } from "@/lib/calc/effective-regulated-at-acquisition";
+import { calcEffectiveIsRegulatedAtTransfer, calcTransferRegulatedVerdict } from "@/lib/calc/effective-regulated-at-acquisition";
+import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { HouseCountExemptionInputs } from "./HouseCountExemptionInputs";
 import { houseRosterRendered } from "@/lib/calc/house-count-inputs-scope";
 import {
@@ -55,13 +56,8 @@ export function SurchargeJudgmentSection({
   householdForm?: TransferFormData;
   onHouseholdChange?: (d: Partial<TransferFormData>) => void;
 }) {
-  const primary = form.assets?.[0];
   // ④가 싣는 값과 같은 실효값 — 주소가 있으면 주소 판정(저장된 토글이 아니다), 없으면 토글.
-  const transferVerdict = regulatedVerdictForDisplay({
-    regionCode: primary?.regionCode || form.regionCode || undefined,
-    regionInDesignatedDistrict: primary?.regionCode ? primary.regionInDesignatedDistrict : undefined,
-    date: form.transferDate,
-  });
+  const transferVerdict = calcTransferRegulatedVerdict(form);
   const regulatedAtTransfer = calcEffectiveIsRegulatedAtTransfer(form);
   return (
     <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
@@ -91,9 +87,11 @@ export function SurchargeJudgmentSection({
           />
         )}
 
-        {/* 양도일 기준 조정대상지역 — 중과세 판단 기준 (주택 전용) */}
+        {/* 양도일 기준 조정대상지역 — 중과세 판단 기준 (주택·재개발 완공 APT).
+            분양권의 양도일 칸은 여기가 아니라 «세대 보유 주택 수» 곁에 있다(`HouseholdHousingCountSection`) — 이 섹션은 분양권에서 열리지 않을 수 있다.
+            계획서 `docs/00-pm/regulated-rights-transfer-toggle.plan.md` Q-1 a. */}
         {/* 결정 #5(G7-6) — 주소(법정동코드)가 있으면 토글을 숨기고 엔진과 같은 자동 판정을 읽기 전용으로 보인다(없으면 토글). */}
-        {primaryKind === "housing" && (
+        {isOneHouseExemptionAsset(primaryKind) && (
           <RegulatedAreaField
             verdict={transferVerdict}
             autoLabel="양도일 기준 조정대상지역"
@@ -111,7 +109,7 @@ export function SurchargeJudgmentSection({
             한시배제 충족(B1: surchargeSuspended)이면 ④ 섹션 자체가 sky 안내 카드로 대체되어 이 팁은
             미도달 — 여기서는 B2(윈도우 내·보유 2년 미만)·B3(종료일 이후)의 혼선만 보강.
             (plan: step4-regulated-tip-surcharge-suspension) */}
-        {primaryKind === "housing" && regulatedAtTransfer && (
+        {isOneHouseExemptionAsset(primaryKind) && regulatedAtTransfer && (
           <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900 dark:text-amber-200 dark:bg-amber-950/40">
             <p className="font-medium">⚠️ 양도일 현재 조정대상지역</p>
             <p className="mt-0.5 text-caption leading-relaxed text-amber-800 dark:text-amber-200">
