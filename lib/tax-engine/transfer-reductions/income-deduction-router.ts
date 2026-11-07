@@ -320,9 +320,9 @@ function evalNew993(
       calculatedTaxBeforeReduction: 0,
       calculatedTaxAfterReduction: 0,
     });
-    return buildResolution("new_99_3", detail.isEligible, detail.reducibleTransferIncome,
+    return withAllocationOnlyRequirementsMet("new_99_3", detail, buildResolution("new_99_3", detail.isEligible, detail.reducibleTransferIncome,
       detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
-      { new993Detail: withRedevMemberGateNotice(detail, memberCause, "new_99_3", isLandOnlyOriginalMember(member)) });
+      { new993Detail: withRedevMemberGateNotice(detail, memberCause, "new_99_3", isLandOnlyOriginalMember(member)) }));
   }
   return null;
 }
@@ -372,9 +372,9 @@ function evalNew99(
         ? { completionDate: member.completionDate, remainderContract: r99.remainderContract99 as "yes" | "no" | "unknown" | undefined }
         : undefined,
     });
-    return buildResolution("new_99", detail.isEligible, detail.reducibleTransferIncome,
+    return withAllocationOnlyRequirementsMet("new_99", detail, buildResolution("new_99", detail.isEligible, detail.reducibleTransferIncome,
       detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
-      { new99Detail: withRedevMemberGateNotice(detail, memberCause, "new_99", isLandOnlyOriginalMember(member)) });
+      { new99Detail: withRedevMemberGateNotice(detail, memberCause, "new_99", isLandOnlyOriginalMember(member)) }));
   }
   return null;
 }
@@ -477,6 +477,22 @@ function evalHybrid(
     }
   }
   return null;
+}
+
+/**
+ * §99·§99의3 — 요건 판정을 모두 마친 뒤 안분 단계에서만 나는 사유(기준시가 미입력·분모 0, NH-76)뿐이면 요건 충족이다.
+ * 차감은 0 + 사유로 남기고, 소령 §167의3①5호 「감면되는 주택」 중과 배제 선판정만 `requirementsMetId`를 읽는다(§98의8·하이브리드와 같은 독법).
+ */
+function withAllocationOnlyRequirementsMet(
+  id: "new_99" | "new_99_3",
+  detail: { isEligible: boolean; ineligibleReasons: ReadonlyArray<{ code: string }> },
+  resolution: IncomeDeductionResolution,
+): IncomeDeductionResolution {
+  return !detail.isEligible &&
+    detail.ineligibleReasons.length > 0 &&
+    detail.ineligibleReasons.every((x) => x.code === "MISSING_STD_PRICE" || x.code === "ALLOCATION_DENOMINATOR_ZERO")
+    ? { ...resolution, requirementsMetId: id }
+    : resolution;
 }
 
 function buildResolution(
