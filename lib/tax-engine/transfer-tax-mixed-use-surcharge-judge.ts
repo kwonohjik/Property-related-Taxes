@@ -5,7 +5,7 @@
  * NH-09로 감면주택(§99·§99의3 등) 중과 배제 선판정(`transfer-tax-mixed-use-reduction-surcharge.ts`)이 여기서 얹힌다.
  */
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
-import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
+import { linkTaxIncentiveHouse5ho, withTaxIncentiveHouseNotices } from "./surcharge-tax-incentive-house-link";
 import { surchargeHouseholdCountsRights } from "./surcharge-tax-incentive-house-link";
 import { withSurchargeExclusionRegime } from "./transfer-reductions";
 import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
@@ -106,7 +106,7 @@ export function judgeMixedUseMultiHouseSurcharge(args: MixedSurchargeJudgeArgs) 
     : undefined;
   const multiHouseSurcharge =
     multiHouse && mixedHouses && houseCountExclusionRules
-      ? withTaxIncentiveRental3hoNotice(
+      ? withTaxIncentiveHouseNotices(
           judgeMixedSurcharge(mixedHouses),
           mixedHouses,
           asset.specialHouseExclusions,

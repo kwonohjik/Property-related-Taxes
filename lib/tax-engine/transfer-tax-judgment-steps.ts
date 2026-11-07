@@ -10,7 +10,7 @@ import { NBL } from "./legal-codes";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
-import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
+import { linkTaxIncentiveHouse5ho, withTaxIncentiveHouseNotices } from "./surcharge-tax-incentive-house-link";
 import { surchargeHouseholdCountsRights } from "./surcharge-tax-incentive-house-link";
 import {
   determineMultiHouseSurcharge,
@@ -597,7 +597,7 @@ export function runMultiHouseSurchargeStep(
         workingInput.isRegulatedArea,
       );
     // 3호 조문(§97·§97의2·§98) ⑥은 잇지 않는다(5년 임대·국민주택 사실 없음 — 모름 = 불성립) — 결론을 가르면 확인 필요
-    multiHouseSurchargeResult = withTaxIncentiveRental3hoNotice(
+    multiHouseSurchargeResult = withTaxIncentiveHouseNotices(
       judge(housesForSurcharge),
       housesForSurcharge,
       workingInput.specialHouseExclusions,

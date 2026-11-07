@@ -38,7 +38,7 @@ const NEW_HOUSING_MATRIX_MOCK = {
       articles: [
         {
           code: "99-main",
-          article: "§99 (IMF 1차)",
+          article: "§99",
           acquisitionPeriod: { start: "1998-05-22", end: "2001-12-31" },
           region: "nationwide",
           maxAcquisitionPrice: null,
