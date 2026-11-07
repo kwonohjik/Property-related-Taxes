@@ -38,7 +38,6 @@ import {
   parseSurchargeRate,
   parseHouseCountExclusion,
   parseNonBusinessLandJudgment,
-  parseLongTermRentalRuleSet,
   parseNewHousingMatrix,
   type DeductionRulesData,
   type OneHouseSpecialRulesData,
@@ -46,7 +45,6 @@ import {
   type SurchargeSpecialRulesData,
   type HouseCountExclusionData,
   type RegulatedAreaHistoryData,
-  type LongTermRentalRuleSet,
   type NewHousingMatrixData,
 } from "./schemas/rate-table.schema";
 import { toRegulatedAreaHistory } from "./data/regulated-areas";
@@ -78,7 +76,6 @@ export interface ParsedRates {
   houseCountExclusionRules?: HouseCountExclusionData;
   regulatedAreaHistory?: RegulatedAreaHistoryData;
   nonBusinessLandJudgmentRules?: NonBusinessLandJudgmentRules;
-  longTermRentalRules?: LongTermRentalRuleSet;
   newHousingMatrix?: NewHousingMatrixData;
 }
 
@@ -161,12 +158,6 @@ export function parseRatesFromMap(rates: TaxRatesMap): ParsedRates {
     };
   }
 
-  const longTermRentalRecord = getRate(rates, "transfer", "deduction", "long_term_rental_v2");
-  let longTermRentalRules: LongTermRentalRuleSet | undefined;
-  if (longTermRentalRecord?.deductionRules) {
-    longTermRentalRules = parseLongTermRentalRuleSet(longTermRentalRecord.deductionRules);
-  }
-
   const newHousingRecord = getRate(rates, "transfer", "deduction", "new_housing_matrix");
   let newHousingMatrix: NewHousingMatrixData | undefined;
   if (newHousingRecord?.deductionRules) {
@@ -184,7 +175,6 @@ export function parseRatesFromMap(rates: TaxRatesMap): ParsedRates {
     houseCountExclusionRules,
     regulatedAreaHistory,
     nonBusinessLandJudgmentRules,
-    longTermRentalRules,
     newHousingMatrix,
   };
 }

@@ -206,7 +206,7 @@ describe("D2 — split 12억 초과분 안분 BigInt 가드 (P0-2/P0-4)", () => 
       steps: [],
     });
     expect(split.building.taxableGainAfterProration).toBe(exactProrated);
-    calcLongTermHoldingDeduction(0, input, RULES, false, false, undefined, split);
+    calcLongTermHoldingDeduction(0, input, RULES, false, false, split);
 
     expect(split.building.longTermRate).toBeCloseTo(0.20, 10);
     expect(split.building.longTermDeduction).toBe(expectedBuildingDed);
