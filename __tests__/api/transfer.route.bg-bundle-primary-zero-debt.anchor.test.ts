@@ -24,6 +24,7 @@ import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { allIssues, captureBody } from "../calc/_one-house-pr3a-calc-route";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -39,7 +40,7 @@ const house = (id: number, ...over: Partial<AssetForm>[]) => Object.assign({ ...
 }), ...over) as AssetForm;
 const FORM = { transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", isOneHousehold: false, householdHousingCount: "2", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true };
 const bundle = (assets: AssetForm[], extra: Record<string, unknown> = {}): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), FORM, { assets, contractTotalPrice: "", assetSplitMode: "companion", bundledSaleMode: "actual" }, extra) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, { assets, contractTotalPrice: "", assetSplitMode: "companion", bundledSaleMode: "actual" }, extra)) as TransferFormData;
 async function post(f: TransferFormData) {
   const body = await captureBody(f);
   const res = await POST(new NextRequest("http://localhost/api/calc/transfer", { method: "POST", headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" }, body: JSON.stringify(body) }));
@@ -98,7 +99,7 @@ describe("PZ-2 주 자산 transferPrice placeholder", () => {
     for (const tp of [1, 5_000_000_000]) expect(JSON.stringify((await raw({ ...body, transferPrice: tp })).j.data)).toBe(ref);
   });
   it("placeholder — 단건은 자기 채무 · 묶음은 신고 단위 합계(주 자산에 채무가 있어도 자산 합계로 바뀐다 — 응답에는 영향 없음)", async () => {
-    const single = (await captureBody(Object.assign(createDefaultTransferFormData(), FORM, { assets: [house(1, DEBT("200000000"))] }) as TransferFormData)) as { transferPrice: number };
+    const single = (await captureBody(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, { assets: [house(1, DEBT("200000000"))] })) as TransferFormData)) as { transferPrice: number };
     expect(single.transferPrice).toBe(200_000_000);
     const both = (await captureBody(bundle([house(1, DEBT("200000000")), house(2, DEBT("100000000"))]))) as { transferPrice: number };
     expect(both.transferPrice).toBe(300_000_000);
@@ -110,6 +111,6 @@ describe("PZ-3 대조 — 채무가 하나도 없으면 종전대로 막는다",
     expect(allIssues(bundle([house(1, NONE), house(2, NONE)])).length).toBeGreaterThan(0);
   });
   it("단건 채무 0 — ⑧ 차단", () => {
-    expect(allIssues(Object.assign(createDefaultTransferFormData(), FORM, { assets: [house(1, NONE)] }) as TransferFormData).length).toBeGreaterThan(0);
+    expect(allIssues(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, { assets: [house(1, NONE)] })) as TransferFormData).length).toBeGreaterThan(0);
   });
 });

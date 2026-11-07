@@ -31,6 +31,7 @@ import { AssetSectionExpense } from "@/components/calc/transfer/asset-sections/A
 import { RedevelopmentBlock } from "@/components/calc/transfer/RedevelopmentBlock";
 import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -42,7 +43,7 @@ const BASE = {
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
 };
 const single = (a: AssetForm, f: Record<string, unknown> = {}) =>
-  Object.assign(createDefaultTransferFormData(), BASE, f, { assets: [a] }) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), BASE, f, { assets: [a] })) as TransferFormData;
 
 /** 주택 · 시가 5억 · 실지(K-4) 2억 · 채무 2억 → 채무비율 40%. */
 const k4 = (over: Record<string, unknown> = {}) =>

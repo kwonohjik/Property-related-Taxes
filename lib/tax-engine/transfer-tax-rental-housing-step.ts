@@ -717,8 +717,7 @@ export function runRentalHousingExceptionStep(
     // 비사업용 토지(배율 초과 파트) 8호 중과 배제 사유 echo — 일반 경로(`transfer-tax-normal-return.ts`)와 같은 필드(F-2). 세액 불변.
     nblSurchargeExcluded: rheTaxResult.nblSurchargeExcluded,
     nblSurchargeExcludedBy: rheTaxResult.nblSurchargeExcludedBy,
-    rateSurchargeStatutoryExcluded: multiHouseSurchargeResult?.rateSurchargeStatutoryExcluded ?? surchargeForLthd.rateSurchargeStatutoryExcluded,
-    ...(effectiveInput.surchargeExcludedByReduction ? { surchargeExcludedByReduction: true } : {}),
+    rateSurchargeStatutoryExcluded: multiHouseSurchargeResult?.rateSurchargeStatutoryExcluded ?? surchargeForLthd.rateSurchargeStatutoryExcluded, ...(effectiveInput.surchargeExcludedByReduction ? { surchargeExcludedByReduction: true } : {}),
     multiHouseSurchargeEvaluation: multiHouseSurchargeResult,
     /**
      * 감면 fan-out — **다건(aggregate) 전파**까지 포함한다(F08).

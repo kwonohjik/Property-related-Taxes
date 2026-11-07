@@ -32,6 +32,7 @@ import { redevSubjectPatchForAssetKind } from "@/components/calc/transfer/asset-
 import { housingFlagResetPatchForAssetKind } from "@/components/calc/transfer/asset-sections/housing-flag-reset";
 import { genericScopeEntryClearPatch } from "@/lib/calc/transfer-generic-scope-entry";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -61,9 +62,9 @@ const CONTROL = 280_530_000;
 
 const asset = (a: Loose) => ({ ...makeDefaultAsset(1), ...a }) as AssetForm;
 const form = (a: Loose): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     ...HH, contractTotalPrice: String(a.actualSalePrice).replace(/,/g, ""), assets: [asset(a)],
-  }) as TransferFormData;
+  })) as TransferFormData;
 
 /** 자산 종류 버튼과 같은 합성(`AssetSectionBasic.tsx`) — `fix`면 진입 정리까지 */
 function kindSwitch(start: Loose, kind: AssetForm["assetKind"], fix: boolean): Loose {

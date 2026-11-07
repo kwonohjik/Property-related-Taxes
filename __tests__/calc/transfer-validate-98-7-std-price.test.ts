@@ -52,8 +52,14 @@ describe("[M-4] §98의7 5년 경과 기준시가 validate", () => {
     expect(msg).toContain("5년 시점 기준시가");
   });
 
-  it("M4-3: 5년 초과 양도 + 취득시·5년시점 기준시가 입력 → 통과 (양도시는 fallback)", () => {
+  // 🔄 2026-11-07 리뷰 US-35 — 종전 「양도시는 fallback」은 실가 모드에서 사실이 아니었다(④가 자산값을 싣지 않아 엔진이 MISSING_STD_PRICE로 차감 0).
+  it("M4-3: 🔴 5년 초과 양도 + 취득시·5년시점만 입력(실가 모드 — 엔진에 실리는 자산값 없음) → 차단(양도시)", () => {
     const form = makeForm("2014-06-01", "2022-08-01", make987({ acq: "200,000,000", y5: "300,000,000" }));
+    expect(validateStep(2, form)).toContain("양도시 기준시가");
+  });
+
+  it("M4-3b: 5년 초과 양도 + 3시점 모두 입력 → 통과", () => {
+    const form = makeForm("2014-06-01", "2022-08-01", make987({ acq: "200,000,000", y5: "300,000,000", transfer: "400,000,000" }));
     expect(validateStep(2, form)).toBeNull();
   });
 

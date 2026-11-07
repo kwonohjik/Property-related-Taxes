@@ -54,6 +54,7 @@ import { classifyRegionCriteriaByCode } from "./multi-house-surcharge-count";
 import type { IncomeDeductionId } from "./transfer-reductions";
 import { translateRedevAptForHousingJudgment } from "./one-house/redev-apt-judgment-input";
 import { hasNoMergeRosterInputPath } from "./one-house/roster-input-path";
+import { selfDeclaredReductionHouseNotice } from "./surcharge-self-declared-reduction-notice";
 
 /** `resolveSurchargeExclusionByReduction` 반환형 (조특법 감면주택 중과 배제 선판정) */
 type SurchargeExclusionByReduction = { excluded: boolean; appliedId?: IncomeDeductionId; legalBasis?: string };
@@ -522,7 +523,16 @@ export function runMultiHouseSurchargeStep(
     const para5Applied = para5?.isEligible === true;
     const housesForSurcharge =
       surchargeExclusionByReduction.excluded || para5Applied
-        ? houses.map((h) => (h.id === sellingId ? { ...h, isTaxSpecialExemption: true } : h))
+        ? houses.map((h) =>
+            h.id === sellingId
+              ? {
+                  ...h,
+                  isTaxSpecialExemption: true,
+                  // 사용자가 이미 선언했으면 자기 선언 문구를 유지한다 — 자동 판정만 표지를 단다(US-19)
+                  ...(h.isTaxSpecialExemption ? {} : { taxSpecialExemptionAutoId: surchargeExclusionByReduction.appliedId ?? "new_99_4_para5" }),
+                }
+              : h,
+          )
         : houses;
     const deemed = resolveSurchargeDeemedOneHouseDetail(workingInput, parsedRates, generalHouseAcquisitionDate);
     const mhInput: MultiHouseSurchargeInput = {
@@ -611,6 +621,9 @@ export function runMultiHouseSurchargeStep(
       steps.push(buildNew994Para5Step(para5));
       multiHouseSurchargeResult = withNew994Para5(multiHouseSurchargeResult, para5, surchargeExclusionByReduction.excluded);
     }
+    // US-19 — 5호 자기 선언이 중과를 뺐는데 입력한 §98 계열 감면은 엔진이 부적격으로 판정했다(다른 조문 근거가 있을 때만 유효 — 고지만)
+    const declaredNotice = selfDeclaredReductionHouseNotice(houses, sellingId, workingInput.reductions, surchargeExclusionByReduction, multiHouseSurchargeResult);
+    if (declaredNotice) multiHouseSurchargeResult = { ...multiHouseSurchargeResult, warnings: [...(multiHouseSurchargeResult.warnings ?? []), declaredNotice] };
     // 근거는 세대 구성(산입 조합원입주권·분양권 유무)에 맞춘다 — NH-82
     if (surchargeExclusionByReduction.excluded) {
       const countsRights = surchargeHouseholdCountsRights(mhInput.presaleRights, parsedRates.houseCountExclusionRules, multiHouseSurchargeResult);

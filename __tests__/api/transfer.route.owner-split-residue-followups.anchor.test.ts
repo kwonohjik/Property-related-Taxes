@@ -35,6 +35,7 @@ import { newConstructionLandOnly } from "@/lib/calc/transfer-land-part-cause";
 import { newConstructionLandOnlyIssue } from "@/lib/api/transfer-tax-schema-household-refines";
 import { buildRows } from "@/components/calc/results/transfer/FilingFormTableHelpers";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -67,9 +68,9 @@ const CARRY: Loose = {
 const CARRY_HH = { transferDate: "2025-06-30", filingDate: "2025-08-31" };
 
 const form = (a: Loose, hh: Loose = {}): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     ...HH, ...hh, contractTotalPrice: String(a.actualSalePrice).replace(/,/g, ""), assets: [{ ...makeDefaultAsset(1), ...a } as AssetForm],
-  }) as TransferFormData;
+  })) as TransferFormData;
 
 async function run(a: Loose, hh: Loose = {}) {
   const f = form(a, hh);
@@ -144,13 +145,13 @@ describe("C-2 신축 소유자 분리", () => {
   });
 
   it("함께 양도 자산(컴패니언) 토지만 본인도 ⑧·⑫가 같은 칸으로 막는다(리뷰 게이트 F-2)", async () => {
-    const f = Object.assign(createDefaultTransferFormData(), {
+    const f = rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
       ...HH, contractTotalPrice: "1700000000",
       assets: [
         { ...makeDefaultAsset(1), ...INH, actualSalePrice: "500,000,000", acquisitionArea: "", transferArea: "" } as AssetForm,
         { ...makeDefaultAsset(2), ...NEWC, selfOwns: "land_only" } as AssetForm,
       ],
-    }) as TransferFormData;
+    })) as TransferFormData;
     const r = await postTransfer((await captureBody(f)) as Loose);
     expect(allIssues(f).map((i) => i.field)).toContain("selfOwns");
     expect(r.status).toBe(400);
@@ -204,13 +205,13 @@ describe("V-7 취득 당시 감정평가가액 안분(부가령 §64①1호 단�
 
   it("함께 양도 자산(컴패니언) 소유자 분리도 같은 payload — 감정가액이 총세액에 닿는다", async () => {
     const two = (c: Loose) =>
-      Object.assign(createDefaultTransferFormData(), {
+      rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
         ...HH, contractTotalPrice: "1700000000",
         assets: [
           { ...makeDefaultAsset(1), ...INH, actualSalePrice: "500,000,000", acquisitionArea: "", transferArea: "" } as AssetForm,
           { ...makeDefaultAsset(2), ...INH, selfOwns: "land_only", ...c } as AssetForm,
         ],
-      }) as TransferFormData;
+      })) as TransferFormData;
     const total = async (c: Loose) => {
       const f = two(c);
       const r = await postTransfer((await captureBody(f)) as Loose);

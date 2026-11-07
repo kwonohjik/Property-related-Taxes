@@ -79,6 +79,10 @@ function failIfStdPriceMissingOver5Y(
   phdSatisfiesAcq: boolean | undefined,
   /** 입력칸 이동 앵커의 조문 타입 — `ReductionStdPriceSection`이 `reduction.${fieldType}.standardPriceAt…`로 단다 */
   fieldType: string,
+  /** 감면 카드의 양도시 기준시가 */
+  stdTransfer: string | undefined,
+  /** ④가 엔진에 싣는 자산 양도시 기준시가(`engineStdPriceAtTransfer` — 엔진 `?? ctx.standardPriceAtTransfer` 폴백과 같은 값) */
+  engineStdTransfer: number,
 ): ValidationIssue | null {
   if (!asset.acquisitionDate || !form.transferDate) return null;
   if (isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate))) return null;
@@ -86,6 +90,12 @@ function failIfStdPriceMissingOver5Y(
     return fail(fieldError(`reduction.${fieldType}.standardPriceAtAcquisition`, `${articleLabel} 적용: 취득 후 5년 경과 양도는 취득시 기준시가를 입력하세요 (5년 발생분 안분 — 미입력 시 감면이 적용되지 않습니다).`));
   if (parseAmount(std5Y || "0") <= 0)
     return fail(fieldError(`reduction.${fieldType}.standardPriceAt5Years`, `${articleLabel} 적용: 취득 후 5년 경과 양도는 취득 5년 시점 기준시가를 입력하세요.`));
+  /**
+   * 양도시 기준시가도 안분의 분모라 필수다(리뷰 US-35). 종전에는 이 칸을 보지 않아, 실가 모드처럼 ④가 자산값을 싣지 않으면 ⑧은 통과하고
+   * 엔진이 `MISSING_STD_PRICE`로 차감을 0으로 냈다(⑤ hint는 이미 「필수」라 ⑤↔⑧ 모순). §99의3 블록과 같은 leaf·같은 규칙이다.
+   */
+  if (!(parseAmount(stdTransfer || "0") > 0 || engineStdTransfer > 0))
+    return fail(fieldError(`reduction.${fieldType}.standardPriceAtTransfer`, `${articleLabel} 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액·기준시가 안분 모드가 아니면 자산값이 전달되지 않습니다).`));
   return null;
 }
 
@@ -470,7 +480,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             phdOk983 = true;
           }
           // 5년 경과 양도 시 안분용 기준시가 필수 (F-1). PHD ON이면 취득시 검증 skip.
-          const i983 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition983, r.standardPriceAt5Years983, "§98의3", phdOk983, r.type);
+          const i983 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition983, r.standardPriceAt5Years983, "§98의3", phdOk983, r.type, r.standardPriceAtTransfer983, engineStdPriceAtTransfer(form, ai));
           if (i983) return i983;
         }
         // P3 §98의5 (2026-06-12): 계약일·인하율 필수 (⑧).
@@ -501,7 +511,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             phdOk985 = true;
           }
           // 5년 경과 양도 시 안분용 기준시가 필수 (F-1). PHD ON이면 취득시 검증 skip.
-          const i985 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition985, r.standardPriceAt5Years985, "§98의5", phdOk985, r.type);
+          const i985 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition985, r.standardPriceAt5Years985, "§98의5", phdOk985, r.type, r.standardPriceAtTransfer985, engineStdPriceAtTransfer(form, ai));
           if (i985) return i985;
         }
         // P3 §98의6 (2026-06-12): 계약일·기준시가 합계·면적 + 2호 임대 일자 필수 (⑧).
@@ -532,7 +542,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             phdOk986 = true;
           }
           // 5년 경과 양도 시 안분용 기준시가 필수 (안분용 — stdPriceSumAtBase986과 별개 — F-1). PHD ON이면 취득시 검증 skip.
-          const i986 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition986, r.standardPriceAt5Years986, "§98의6", phdOk986, r.type);
+          const i986 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition986, r.standardPriceAt5Years986, "§98의6", phdOk986, r.type, r.standardPriceAtTransfer986, engineStdPriceAtTransfer(form, ai));
           if (i986) return i986;
         }
         // P2 §98의7 9억↓ 미분양 (2026-06-11): 계약일·취득가 필수 (⑧).
@@ -558,7 +568,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             phdOk987 = true;
           }
           // 취득 후 5년 경과 양도 시 안분용 기준시가 필수 (M-4 → F-1 헬퍼 단일화). PHD ON이면 취득시 검증 skip.
-          const i987 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition987, r.standardPriceAt5Years987, "§98의7", phdOk987, r.type);
+          const i987 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition987, r.standardPriceAt5Years987, "§98의7", phdOk987, r.type, r.standardPriceAtTransfer987, engineStdPriceAtTransfer(form, ai));
           if (i987) return i987;
         }
         // P2 §99의2 신축·미분양·1세대1주택 (2026-06-11): 유형별 일자 + 취득가·면적 필수 (⑧).
@@ -590,7 +600,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             phdOk992 = true;
           }
           // 5년 경과 양도 시 안분용 기준시가 필수 (5년 분기는 houseType 무관 공통 — F-1). PHD ON이면 취득시 검증 skip.
-          const i992 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition992, r.standardPriceAt5Years992, "§99의2", phdOk992, r.type);
+          const i992 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition992, r.standardPriceAt5Years992, "§99의2", phdOk992, r.type, r.standardPriceAtTransfer992, engineStdPriceAtTransfer(form, ai));
           if (i992) return i992;
         }
       }

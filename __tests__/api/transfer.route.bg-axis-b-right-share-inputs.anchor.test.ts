@@ -29,6 +29,7 @@ import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stor
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { successorRightTogglePatch } from "@/lib/calc/transfer-successor-right";
 import { mergePrimaryBasic } from "@/lib/calc/transfer-tax-api-helpers";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -58,9 +59,9 @@ const ORIG: A = {
   isSuccessorRightToMoveIn: false, acquisitionDate: "2009-07-01", redevOriginalAssetType: "housing", redevRightsValue: "900,000,000",
   redevSettlementDirection: "pay", redevSettlementAmount: "100,000,000", redevPreApprovalExpenses: "0", redevApprovalLawBasis: "urban_renovation_art_74",
 };
-const one = (a: AssetForm, over: A = {}) => Object.assign(createDefaultTransferFormData(), BASE, { assets: [a] }, over) as TransferFormData;
+const one = (a: AssetForm, over: A = {}) => rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), BASE, { assets: [a] }, over)) as TransferFormData;
 const frac = (p: AssetForm, s: AssetForm) =>
-  Object.assign(createDefaultTransferFormData(), BASE, { assetSplitMode: "fractional", contractTotalPrice: "1500000000", assets: [p, s] }) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), BASE, { assetSplitMode: "fractional", contractTotalPrice: "1500000000", assets: [p, s] })) as TransferFormData;
 
 async function run(f: TransferFormData) {
   const r = await runCalc(f);

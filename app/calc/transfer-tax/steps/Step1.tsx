@@ -40,6 +40,8 @@ import {
 import { assetRemovalPatch } from "@/lib/calc/asset-removal";
 import { firstAssetChangeNoteOnRemoval } from "@/lib/calc/first-asset-facts";
 import { formTotalTransferExpenseInScope } from "@/lib/calc/transfer-expense-in-scope";
+import { householdFactsKindOfForm } from "@/lib/calc/household-facts-asset";
+import { confirmClearPatchOnKindChange } from "@/lib/calc/household-house-count";
 
 /**
  * 자산 목록 + 저장된 사용자 선택 → Step1 화면 모드. 마운트(세션 복원) 때와 「판정 불러오기」 인계 직후에만 쓴다 —
@@ -181,7 +183,16 @@ export function Step1({
     onChange(patch);
   }
 
-  function updateAssets(assets: AssetForm[], extra: Partial<TransferFormData> = {}) {
+  function updateAssets(assets: AssetForm[], extraIn: Partial<TransferFormData> = {}) {
+    // US-31 — 자산 종류 전환으로 「다른 보유 주택이 없습니다」 확정의 의미(명부 축·자기 몫)가 바뀌면 확정을 해제한다(⑧이 다시 묻는다).
+    const extra: Partial<TransferFormData> = {
+      ...confirmClearPatchOnKindChange(
+        householdFactsKindOfForm(form),
+        householdFactsKindOfForm({ assets, assetSplitMode: form.assetSplitMode }),
+        form.householdNoOtherHousesConfirmed,
+      ),
+      ...extraIn,
+    };
     // 외부 자산 추가(증환지 등)로 2개 이상이 되고 모드 미설정이면 companion 자동 승격.
     // fractional은 명시 토글로만 진입 — derive 재계산 없음(자기소멸 차단).
     if (splitMode === "none" && assets.length > 1) {

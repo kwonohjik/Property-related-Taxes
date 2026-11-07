@@ -3,6 +3,7 @@
  * 시드 수치는 엔진 anchor(`transfer.route.split-part-carryover.p1.test.ts` C_NEW)와 같다 — 토지 증여자 1995-03-01 5천만 · 건물 2015-06-01 5천만 ·
  * 증여세 산출 3천만 / 과세가액 9억(토지 2.4억 + 건물 6.6억) · 양도 12억(토지 7억 + 건물 5억) · 양도일 2025-06-30.
  */
+import { rosterForDeclaredCount } from "./roster-for-declared-count";
 import { vi } from "vitest";
 import { NextRequest } from "next/server";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
@@ -48,7 +49,8 @@ export function cAsset(over: Record<string, unknown> = {}): AssetForm {
 }
 
 export function cForm(over: Partial<TransferFormData> = {}, asset: AssetForm = cAsset()): TransferFormData {
-  return {
+  // ⑧ US-31 — 「다른 보유 주택 없음 ✓ + 주택 수 N」 모순 대신 같은 주택 수의 명부로(`roster-for-declared-count.ts`)
+  return rosterForDeclaredCount({
     ...createDefaultTransferFormData(),
     transferDate: "2025-06-30",
     filingDate: "2025-08-31",
@@ -62,7 +64,7 @@ export function cForm(over: Partial<TransferFormData> = {}, asset: AssetForm = c
     householdNoPresaleRightsConfirmed: true,
     isOneHousehold: false,
     ...over,
-  } as unknown as TransferFormData;
+  } as unknown as TransferFormData);
 }
 
 /** ④ — `callTransferTaxAPI`가 fetch로 보내는 body를 캡처한다(서버 호출 없음). */

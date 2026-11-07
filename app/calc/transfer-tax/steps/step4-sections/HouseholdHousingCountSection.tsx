@@ -98,7 +98,8 @@ export function HouseholdHousingCountSection({
                 key={v}
                 type="button"
                 disabled={houseCountLocked}
-                onClick={() => onChange({ householdHousingCount: v === "3+" ? "3" : v })}
+                // US-31 — 폼 전역 주택 수를 바꾸므로 주택 종류에서 켠 「다른 보유 주택이 없습니다」 확정도 해제한다(종류를 되돌리면 ⑧이 다시 묻는다).
+                onClick={() => onChange({ householdHousingCount: v === "3+" ? "3" : v, householdNoOtherHousesConfirmed: false })}
                 className={cn(
                   "flex-1 rounded-md border py-2 text-sm font-medium transition-colors",
                   (v === "3+" ? parseInt(form.householdHousingCount) >= 3 : form.householdHousingCount === v)

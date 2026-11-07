@@ -165,7 +165,8 @@ describe("완공APT × §155⑳ — 화면 경로", () => {
 
   it("RR-8 조합원입주권 양도 — 카드를 닫아 ④가 싣지 않는다", async () => {
     const r = await runCalc(
-      redevAptForm({ price: "1000000000", assetOver: { assetKind: "right_to_move_in", redevSubject: "right", rentalHousingException: rhe() } }),
+      // 입주권의 자기 몫은 0 — 「다른 보유 주택 없음」 확정과 맞는 주택 수(US-31 ⑧ 정합 검사)
+      redevAptForm({ price: "1000000000", count: "0", assetOver: { assetKind: "right_to_move_in", redevSubject: "right", rentalHousingException: rhe() } }),
     );
     expect(r.issues).toEqual([]);
     expect(r.body.rentalHousingException).toBeUndefined();

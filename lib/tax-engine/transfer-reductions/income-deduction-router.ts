@@ -537,6 +537,11 @@ export function buildIncomeDeductionStep(
 }
 
 /** STEP 0.45 중과 배제 단계 표시 */
+/** 중과 배제 근거 조문 라벨 — 배제 단계와 5호 자기 선언 고지(`surcharge-self-declared-reduction-notice.ts`)가 같은 표를 쓴다. */
+export function exclusionArticleLabel(id: IncomeDeductionId): string {
+  return EXCLUSION_ARTICLE_LABELS[id];
+}
+
 const EXCLUSION_ARTICLE_LABELS: Record<IncomeDeductionId, string> = {
   new_99_3: "조특법 §99의3",
   new_99: "조특법 §99",

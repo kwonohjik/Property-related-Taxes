@@ -32,6 +32,7 @@ import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 /**
  * S3-2 — (폼 경유 테스트: 나목을 body shim이 아니라 폼 필드에 넣는다 — ④가 폼 값을 실제로 싣는지가 검증 대상)
@@ -112,7 +113,7 @@ function mixedForm(over: Record<string, unknown> = {}): Form {
     residencePeriodMonths: "0",
   });
   // S3-2 ④ — 나목은 폼 필드(`mixedAcqHousingBuildingStdPrice`·`mixedTransferHousingBuildingStdPrice`)에서 실려 간다(body shim 아님).
-  return withIdentityHousingBuildingStdOnForm(f, CLAMP_N);
+  return rosterForDeclaredCount(withIdentityHousingBuildingStdOnForm(f, CLAMP_N));
 }
 const detTax = (json: { data: { result: { total: { determinedTax: number } } } }) =>
   json.data.result.total.determinedTax;

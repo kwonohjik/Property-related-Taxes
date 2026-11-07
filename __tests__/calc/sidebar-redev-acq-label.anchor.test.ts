@@ -29,6 +29,7 @@ import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 type L = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -47,7 +48,7 @@ function form(assets: L[], over: L = {}) {
   const f = createDefaultTransferFormData() as L;
   Object.assign(f, { transferDate: "2024-06-01", filingDate: "2024-08-31", contractTotalPrice: "3000000000", isOneHousehold: false, householdHousingCount: "2", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true }, over);
   f.assets = assets.map((a, k) => ({ ...makeDefaultAsset(k + 1), assetId: `a${k}`, ...a }));
-  return f as never;
+  return rosterForDeclaredCount(f) as never;
 }
 function noIssues(f: never) {
   const out: string[] = [];

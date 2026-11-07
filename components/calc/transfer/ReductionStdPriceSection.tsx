@@ -37,7 +37,7 @@ export interface ReductionStdPriceSectionProps {
   /** 취득일+5년 시점 기준시가 */
   stdPriceAt5Years: string;
   onStdPriceAt5YearsChange: (v: string) => void;
-  /** 양도시 기준시가 (선택 — 미입력 시 자산값 fallback) */
+  /** 양도시 기준시가 — 5년 후 양도면 필수. 비우면 ④가 엔진에 싣는 자산값(`engineStdPriceAtTransfer` — 환산·기준시가 안분 모드 등)만 대신한다(⑧ US-35) */
   stdPriceAtTransfer: string;
   onStdPriceAtTransferChange: (v: string) => void;
 

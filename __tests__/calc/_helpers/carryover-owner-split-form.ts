@@ -10,6 +10,7 @@ import { cAsset } from "./split-carryover-c-form";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 type Loose = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -40,7 +41,7 @@ const HH = {
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
 };
 export const ownerSplitForm = (a: Loose): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), { ...HH, contractTotalPrice: "1200000000", assets: [{ ...makeDefaultAsset(1), ...a } as AssetForm] }) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), { ...HH, contractTotalPrice: "1200000000", assets: [{ ...makeDefaultAsset(1), ...a } as AssetForm] })) as TransferFormData;
 
 /** 폼 → ④ → route → 엔진. */
 export async function runOwnerSplit(a: Loose) {

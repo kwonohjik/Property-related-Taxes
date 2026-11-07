@@ -23,6 +23,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -30,13 +31,13 @@ type A = Record<string, unknown>;
 type L = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /** 상속 주택 · 2000-06-01 · ① 3억 · 양도 2026-02-16 13억 */
-const mk = (a: A) => Object.assign(createDefaultTransferFormData(), {
+const mk = (a: A) => rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
   transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false,
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, contractTotalPrice: "1300000000",
   assets: [{ ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 9-1", assetKind: "housing", actualSalePrice: "1,300,000,000", fixedSalePrice: "1,300,000,000",
     acquisitionCause: "inheritance", acquisitionDate: "2000-06-01", inheritanceStartDate: "2000-06-01", publishedValueAtInheritance: "300000000",
     inheritanceValuationMethod: "supplementary", decedentAcquisitionDate: "1980-01-01", standardPriceAtTransfer: "900000000", ...a } as AssetForm],
-}) as TransferFormData;
+})) as TransferFormData;
 /** ② 주택 §164⑤ — 720,000,000 */
 const IND: A = { inheritanceAssetKind: "house_individual", inhHouseValLandArea: "100", inhHouseValLandPricePerSqmAtTransfer: "3000000", inhHouseValLandPricePerSqmAtFirst: "1000000",
   inhHouseValHousePriceAtFirst: "900000000", inhHouseValLandPricePerSqmAtInheritance: "800000" };

@@ -18,6 +18,7 @@ import { companionRegulatedFlags } from "@/lib/calc/effective-regulated-at-acqui
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -48,7 +49,7 @@ const house = (n: number, addr: string, acq = "2018-06-01", over: Record<string,
 
 function form(primary: AssetForm, companion: AssetForm, oneHousehold = false) {
   const f = createDefaultTransferFormData();
-  return {
+  return rosterForDeclaredCount({
     ...f,
     transferDate: "2026-06-01",
     contractTotalPrice: "1800000000",
@@ -58,7 +59,7 @@ function form(primary: AssetForm, companion: AssetForm, oneHousehold = false) {
     householdNoPresaleRightsConfirmed: true,
     residencePeriodMonths: "0",
     assets: [primary, companion],
-  } as never;
+  } as never);
 }
 
 type Prop = { tax: number; rate: string };

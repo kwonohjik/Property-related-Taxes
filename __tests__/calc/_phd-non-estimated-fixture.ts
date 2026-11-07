@@ -17,6 +17,7 @@ import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildMultiBody, postMulti } from "./_helpers/single-multi-route-parity";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 export type PhdPath = "single" | "companion" | "multi";
 
@@ -88,7 +89,7 @@ export function phdForm(assetOver: Partial<AssetForm> = {}, formOver: Partial<Tr
   f.householdNoPresaleRightsConfirmed = true;
   Object.assign(f.assets[0], PHD_BASE_ASSET, assetOver);
   Object.assign(f, formOver);
-  return f;
+  return rosterForDeclaredCount(f);
 }
 
 /** 함께 양도 — 첫 자산이 PHD 호스트, 둘째 자산은 환산(기본) 또는 `secondOver` */
@@ -103,7 +104,7 @@ export function phdBundledForm(firstOver: Partial<AssetForm> = {}, secondOver: P
       standardPriceAtTransfer: "1000000001",
       ...over,
     }) as AssetForm;
-  return {
+  return rosterForDeclaredCount({
     transferDate: "2024-03-01",
     filingDate: "2024-05-31",
     assets: [base(1, firstOver), base(2, { acquisitionDate: "2021-06-01", ...secondOver })],
@@ -115,7 +116,7 @@ export function phdBundledForm(firstOver: Partial<AssetForm> = {}, secondOver: P
     isOneHousehold: false,
     householdNoOtherHousesConfirmed: true,
     householdNoPresaleRightsConfirmed: true,
-  } as unknown as TransferFormData;
+  } as unknown as TransferFormData);
 }
 
 export function allPhdIssues(form: TransferFormData) {

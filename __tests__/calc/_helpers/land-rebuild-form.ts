@@ -4,6 +4,7 @@
  * 토지 2022-01-01 취득(상속개시일) · 양도 10억(토지 7억 + 건물 3억) · 토지 취득가 2억 + 신축비용 2.5억.
  * 호스트 = 건물 신축 + 「토지는 다른 원인으로 취득」(상속, 피상속인 취득일 2010-01-01) — UI에서 토지 취득일 칸이 열리는 유일한 경로.
  */
+import { rosterForDeclaredCount } from "./roster-for-declared-count";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -60,7 +61,8 @@ export function purchaseRebuildAsset(over: Record<string, unknown> = {}): AssetF
 }
 
 export function rebuildForm(over: Partial<TransferFormData> = {}, asset: AssetForm = rebuildAsset()): TransferFormData {
-  return {
+  // ⑧ US-31 — 「다른 보유 주택 없음 ✓ + 주택 수 N」 모순 대신 같은 주택 수의 명부로(`roster-for-declared-count.ts`)
+  return rosterForDeclaredCount({
     ...createDefaultTransferFormData(),
     transferDate: "2025-09-01",
     filingDate: "2025-11-30",
@@ -74,5 +76,5 @@ export function rebuildForm(over: Partial<TransferFormData> = {}, asset: AssetFo
     householdNoPresaleRightsConfirmed: true,
     isOneHousehold: false,
     ...over,
-  } as unknown as TransferFormData;
+  } as unknown as TransferFormData);
 }

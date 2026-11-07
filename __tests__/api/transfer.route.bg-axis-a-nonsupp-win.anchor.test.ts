@@ -36,6 +36,7 @@ import { createDefaultTransferFormData, type AssetForm, type TransferFormData } 
 import { bgCollateralForcesStdAcq, bgNonSupplementaryWinnerUnsupported, bgUnsupportedWinnerCause } from "@/lib/calc/burdened-gift-collateral-win";
 import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
 import { bgExpenseInputsUnused } from "@/lib/calc/burdened-gift-expense-scope";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -57,7 +58,7 @@ const HALF = x({ ownershipNumerator: "50", ownershipDenominator: "100", ownershi
 const FORM = { transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", isOneHousehold: false, householdHousingCount: "2", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true };
 
 const mkForm = (assets: AssetForm[], over: Record<string, unknown> = {}) =>
-  Object.assign(createDefaultTransferFormData(), FORM, over, { assets }) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, over, { assets })) as TransferFormData;
 const companionForm = (assets: AssetForm[]) => mkForm(assets, { assetSplitMode: "companion", bundledSaleMode: "actual", contractTotalPrice: "2000000000" });
 
 /** 화면과 같은 ⑧ 전체 메시지(`allIssues`는 80자로 자른다). */

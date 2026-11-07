@@ -118,3 +118,30 @@ describe("US-35 엔진 — 하이브리드 5년 후 양도에서 양도시 기�
     expect(hasExclusionStep(r)).toBe(false);
   });
 });
+
+describe("US-19 — 5호 자기 선언 + §98 계열 감면 부적격은 계산은 그대로 두고 알린다 · 배제 사유 문구가 출처를 구분한다", () => {
+  const BAD = { ...UNSOLD_983, contractDate983: new Date("2010-03-01") }; // 거주자 계약 창(2009.2.12~2010.2.11) 밖
+  const NOTICE = "조특법 감면주택」으로 선언해 다주택 중과에서 뺐지만";
+  const detailOf = (r: ReturnType<typeof calc>) => r.multiHouseSurchargeDetail?.exclusionReasons.find((x) => x.type === "tax_special_exemption")?.detail;
+  const warned = (r: ReturnType<typeof calc>) => (r.multiHouseSurchargeDetail?.warnings ?? []).some((w) => w.includes(NOTICE));
+
+  it("N-1: 🔴 부적격 §98의3 + 5호 선언 → 고지 · 선언 문구 · 세액은 선언만 한 경우와 같다(계산 불변)", () => {
+    const r = calc(input("2010-05-01", 2, true, { reductions: [BAD], sellingSelfDeclared5ho: true }));
+    expect(r.unsold983Detail?.isEligible).toBe(false);
+    expect(warned(r)).toBe(true);
+    expect(detailOf(r)).toContain("선언으로 적용");
+    expect(r.totalTax).toBe(calc(input("2010-05-01", 2, true, { sellingSelfDeclared5ho: true })).totalTax);
+  });
+
+  it("N-2: 짝 — 적격 §98의3이면 자동 판정 문구 · 고지 없음", () => {
+    const r = calc(input("2010-01-15", 2, true, { reductions: [UNSOLD_983] }));
+    expect(detailOf(r)).toContain("요건 판정으로 적용");
+    expect(warned(r)).toBe(false);
+  });
+
+  it("N-3: 짝 — 감면 입력 없이 선언만(판정 메뉴에서 넘어온 형태 · §77 등 다른 근거)은 고지 없음", () => {
+    const r = calc(input("2010-05-01", 2, true, { sellingSelfDeclared5ho: true }));
+    expect(detailOf(r)).toContain("선언으로 적용");
+    expect(warned(r)).toBe(false);
+  });
+});

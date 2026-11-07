@@ -25,6 +25,7 @@ import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRatesWithHouseEngine() as never);
@@ -96,7 +97,7 @@ function form(a: AssetForm, arr: "companion" | "fractional"): TransferFormData {
     f.assets = [{ ...a, ownershipNumerator: "60", ownershipDenominator: "100" } as AssetForm, { ...second, ownershipNumerator: "40", ownershipDenominator: "100" } as AssetForm];
     Object.assign(f, { assetSplitMode: "fractional", bundledSaleMode: "apportioned", contractTotalPrice: String(T) });
   }
-  return f;
+  return rosterForDeclaredCount(f);
 }
 async function run(f: TransferFormData) {
   let body: Record<string, unknown> = {};

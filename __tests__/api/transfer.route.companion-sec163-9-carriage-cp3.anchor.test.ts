@@ -41,6 +41,7 @@ import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 /**
  * S3-2 — 이 파일의 겸용 fixture는 **취득시 개별주택가격(300M) < 가목(공시지가 1.0M × 주택부수토지 360㎡ = 360M)** 이다.
@@ -72,7 +73,7 @@ const asset = (id: number, over: Record<string, unknown> = {}): AssetForm =>
   }) as AssetForm;
 // S3-2 ④ — 나목은 폼 필드에서 실려 간다(body shim 아님). 겸용이 아닌 자산은 그대로.
 const form = (assets: AssetForm[], contractTotalPrice = "1600000000"): TransferFormData =>
-  withIdentityHousingBuildingStdOnForm({
+  withIdentityHousingBuildingStdOnForm(rosterForDeclaredCount({
     ...createDefaultTransferFormData(),
     transferDate: "2024-03-01",
     filingDate: "2024-05-31",
@@ -85,7 +86,7 @@ const form = (assets: AssetForm[], contractTotalPrice = "1600000000"): TransferF
     householdNoPresaleRightsConfirmed: true,
     isOneHousehold: false,
     bundledSaleMode: "apportioned",
-  } as unknown as TransferFormData, CLAMP_N);
+  } as unknown as TransferFormData), CLAMP_N);
 const issues = (f: TransferFormData) => [0, 1, 2, 3].flatMap((s) => collectStepIssues(s, f).map((i) => i.message));
 
 async function run(f: TransferFormData) {
