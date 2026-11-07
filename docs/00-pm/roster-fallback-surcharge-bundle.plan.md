@@ -65,6 +65,7 @@
   - 소령 §167의10①12의2는 「법 제95조제4항에 따른 보유기간」을 쓰고, 소득세법 §95④ 단서는 §97의2① 자산을 증여자 취득일부터 센다
     → 증여분은 한시배제(가목) 대상이다(KoreanLaw MCP 본문 확인).
   - 엔진 어느 줄이 행 취득일로 판정하는지는 확인 필요. E2E 시료는 사례대로 「비조정」을 직접 고른 값(`*Touched`)으로 고정했다.
+  - → 후속 수정: `docs/00-pm/carryover-surcharge-suspension-holding.plan.md`(원인 `multi-house-surcharge-exclusion.ts` 12의2 보유 판정 · fallback 보유 2년 요건 누락 함께).
 - `transfer-tax.ts`(751줄)·`transfer-tax-rental-housing-step.ts`(762줄)는 변경 전부터 750줄 이상이었다 — 이번에는 분리하지 않고 증가를 1줄 이하로 맞췄다.
 
 ## 5. anchor (선작성)
