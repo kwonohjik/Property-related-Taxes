@@ -31,12 +31,17 @@ export function regulatedAssumptionRowVerdict(r: RegulatedAddressAssumption): st
   return r.isRegulated ? "조정대상지역으로 보고 계산" : "조정대상지역 아님으로 계산";
 }
 
-/** 끝 줄(할 일) */
-export function regulatedAssumptionFooter(where: RegulatedAssumptionSelectWhere = "calculator"): string {
-  return (
-    "소재지 주소만으로 판정했습니다. 주소검색으로 소재지를 고르면 법정동코드로 동 단위까지 판정합니다. 또는 " +
-    `${SELECT_WHERE_LABEL[where]}에서 조정대상지역 여부를 직접 선택하세요.`
-  );
+/**
+ * 끝 줄(할 일) — 줄을 넘기면, 직접 선택할 칸이 없는 줄(`selectable: false` — 입주권)뿐일 때 존재하지 않는 칸을 가리키지 않는다.
+ * `selectable`이 없는 줄(이 필드가 생기기 전 이력 데이터)은 종전대로 칸이 있는 것으로 읽는다.
+ */
+export function regulatedAssumptionFooter(
+  where: RegulatedAssumptionSelectWhere = "calculator",
+  rows?: readonly Pick<RegulatedAddressAssumption, "selectable">[],
+): string {
+  const lookup = "소재지 주소만으로 판정했습니다. 주소검색으로 소재지를 고르면 법정동코드로 동 단위까지 판정합니다.";
+  if (rows && rows.length > 0 && rows.every((r) => r.selectable === false)) return lookup;
+  return `${lookup} 또는 ${SELECT_WHERE_LABEL[where]}에서 조정대상지역 여부를 직접 선택하세요.`;
 }
 
 /** PDF에 싣는 고지 묶음 — 건(다건은 건마다 label)별 줄. 화면 줄과 같은 leaf다. */

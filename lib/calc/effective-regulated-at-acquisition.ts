@@ -35,6 +35,7 @@ import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house
 import { resolveIsRegulatedAtTransfer } from "@/lib/tax-engine/transfer-tax-temporary-two-house-timing";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { regulatedAtTransferToggleApplies } from "@/lib/calc/regulated-transfer-toggle-scope";
 import { judgeRegulatedArea, type RegulatedAreaResult } from "@/lib/regulated-area";
 
 export function effectiveWasRegulatedAtAcquisition(o: {
@@ -222,7 +223,8 @@ const ymd = z.string().date();
  *
  * 훅과 **같은 조건·같은 판정 함수**(`judgeRegulatedArea` — route와 공용)다. 저장값을 바꾸지 않고 읽는 쪽이 파생한다(useEffect → store 미러링 금지).
  * - 주 자산이 주택 계열(`isHousingLike`)이고 주소 또는 법정동코드, 양도일이 있을 때만 판정한다. 아니면 저장값이다(훅도 쓰지 않는다).
- * - 사용자가 직접 만진 토글(`*Touched`)은 저장값이다. 단 §154① 판정 대상이 아닌 자산(입주권·분양권)은 Step4가 마운트 때 만짐 표지를
+ * - 사용자가 직접 만진 토글(`*Touched`)은 저장값이다. 칸이 있는 자산에서만 표지를 본다 — 취득 당시는 §154① 판정 대상(주택·재개발APT),
+ *   양도일은 거기에 §104①4호 구간의 분양권을 더한 `regulatedAtTransferToggleApplies`. 칸이 없는 자산은 Step4가 마운트 때 만짐 표지를
  *   지우므로(`Step4.tsx` 자산 종류 리셋 effect) 훅이 판정값을 쓴다 — 여기서도 표지를 보지 않는다.
  * - 취득 당시 기준일은 훅에 넘기는 `residenceJudgmentDate`와 같은 leaf(`calcResidenceJudgmentDate`)다. 없으면 route처럼 「아님」이다.
  * - 판정 신뢰도(medium·low)는 보지 않는다 — 훅도 신뢰도와 무관하게 쓴다(계획서 Q-3 a).
@@ -266,7 +268,8 @@ function storedRegulatedJudgments(
     regionCode: regionCode || undefined,
     inDistrict: regionCode ? primary.regionInDesignatedDistrict : undefined,
   };
-  const respectTouched = isOneHouseExemptionAsset(primary.assetKind);
+  const respectTouchedAcquisition = isOneHouseExemptionAsset(primary.assetKind);
+  const respectTouchedTransfer = regulatedAtTransferToggleApplies(primary.assetKind, form.transferDate);
   const judgeAt = (date: string): StoredRegulatedJudgment => {
     const judgment = judgeRegulatedArea(loc, date);
     return { value: judgment.isRegulated, judged: { date, judgment } };
@@ -282,9 +285,9 @@ function storedRegulatedJudgments(
     return { value: decided.judgment.isRegulated, judged: { date: decided.date, judgment: decided.judgment, dateLabel } };
   };
   return {
-    transfer: respectTouched && form.isRegulatedAreaTouched ? stored.transfer : judgeAt(form.transferDate),
+    transfer: respectTouchedTransfer && form.isRegulatedAreaTouched ? stored.transfer : judgeAt(form.transferDate),
     acquisition:
-      respectTouched && form.wasRegulatedAtAcquisitionTouched
+      respectTouchedAcquisition && form.wasRegulatedAtAcquisitionTouched
         ? stored.acquisition
         : acquisitionDate
           ? judgeAcquisition(acquisitionDate)
@@ -351,6 +354,8 @@ export type RegulatedAddressAssumption = {
   isRegulated: boolean;
   confidence: "medium" | "low";
   basis: string;
+  /** 「직접 선택」할 칸이 화면에 있는 값인가 — 없으면 고지 끝 줄이 「보유 상황에서 선택」을 말하지 않는다(입주권). */
+  selectable: boolean;
 };
 
 /**
@@ -360,19 +365,36 @@ export type RegulatedAddressAssumption = {
  * 시군구 단위 매칭이라 동·읍·면 예외를 못 본 경우(medium), 데이터에 없는 시·도(low · 아님) 모두. 판정은 `calcStoredRegulatedFlags`와
  * 같은 함수 호출이다(별도 판정식 금지).
  * - 법정동코드(자산 → 폼 전역)가 있으면 ④는 코드로 판정한다 → 빈 배열.
- * - 직접 만진 토글은 사용자가 정한 값이다 → 그 값은 내지 않는다(입주권·분양권은 표지를 보지 않는다 — `calcStoredRegulatedFlags`와 같다).
+ * - 직접 만진 토글은 사용자가 정한 값이다 → 그 값은 내지 않는다(칸이 있는 자산만 표지를 본다 — `calcStoredRegulatedFlags`와 같다).
+ * - 분양권은 세액에 쓰이는 값만 낸다: 양도일은 §104①4호 구간 안에서만, 취득 당시는 쓰는 곳이 없어 내지 않는다
+ *   (계획서 `docs/00-pm/regulated-rights-transfer-toggle.plan.md` Q-3 a). 입주권은 단건 세액을 바꾸지 않지만 다른 경로 미확인이라 그대로 둔다.
  */
 export function regulatedAddressAssumptions(form: RegulatedFlagsForm & Pick<TransferFormData, "regionCode">): RegulatedAddressAssumption[] {
   const primary = form.assets?.[0];
   if (!primary || primary.regionCode || form.regionCode) return [];
   const j = storedRegulatedJudgments(form);
   const out: RegulatedAddressAssumption[] = [];
+  const kind = primary.assetKind;
+  const transferSelectable = regulatedAtTransferToggleApplies(kind, form.transferDate);
   for (const [which, v] of [["transfer", j.transfer], ["acquisition", j.acquisition]] as const) {
     const c = v.judged?.judgment.confidence;
     if (!v.judged || c === undefined || c === "high") continue;
-    out.push({ which, date: v.judged.date, dateLabel: v.judged.dateLabel, isRegulated: v.value, confidence: c, basis: v.judged.judgment.basis });
+    // 분양권: 세액에 쓰는 값은 §104①4호 구간의 양도일뿐이다.
+    if (kind === "presale_right" && (which === "acquisition" || !transferSelectable)) continue;
+    const selectable = which === "transfer" ? transferSelectable : isOneHouseExemptionAsset(kind);
+    out.push({ which, date: v.judged.date, dateLabel: v.judged.dateLabel, isRegulated: v.value, confidence: c, basis: v.judged.judgment.basis, selectable });
   }
   return out;
+}
+
+/** 양도일 조정대상지역 칸이 보이는 화면용 자동 판정 — ④(주택·재개발APT)와 분양권 칸이 같은 코드 폴백(`primary.regionCode || form.regionCode`)을 쓴다. 코드가 없으면 `null`(토글). */
+export function calcTransferRegulatedVerdict(form: Pick<TransferFormData, "assets" | "regionCode" | "transferDate">): ReturnType<typeof regulatedVerdictForDisplay> {
+  const primary = form.assets?.[0];
+  return regulatedVerdictForDisplay({
+    regionCode: primary?.regionCode || form.regionCode || undefined,
+    regionInDesignatedDistrict: primary?.regionCode ? primary.regionInDesignatedDistrict : undefined,
+    date: form.transferDate,
+  });
 }
 
 /** 양도세 계산기 폼에서 위 실효값을 낸다 — ④와 같은 코드 폴백(`primary.regionCode || form.regionCode`)·지구 선언 규약. */

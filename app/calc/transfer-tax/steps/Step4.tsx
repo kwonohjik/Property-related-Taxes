@@ -44,6 +44,7 @@ import { householdFactsOpenedByCompanion } from "@/lib/calc/household-facts-asse
 import { redevSplitResidenceSupersedesStep4, landContributedOriginalApt, successorGiftHouseholdApplies } from "@/lib/calc/redev-field-scope";
 import { RedevSplitResidenceNotice, SuccessorResidenceDirectHint } from "@/components/calc/transfer/RedevAptResidenceNotices";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
+import { regulatedAtTransferToggleApplies } from "@/lib/calc/regulated-transfer-toggle-scope";
 import { houseRosterRendered } from "@/lib/calc/house-count-inputs-scope";
 import {
   resolveHouseholdHousingCount,
@@ -235,11 +236,14 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     const patch: Partial<TransferFormData> = {};
     // NH-14 후속(F-1) — 취득 당시 조정대상지역은 ② 섹션(세대 기준 자산)의 값이다. 첫 자산이 토지여도 함께 양도 주택이 기준이면 지우지 않는다.
     if (!isOneHouseExemptionAsset(householdKind)) {
-      if (form.isRegulatedArea) patch.isRegulatedArea = false;
       if (form.wasRegulatedAtAcquisition) patch.wasRegulatedAtAcquisition = false;
       // 토글 자체가 리셋되므로 수동 조작 이력도 함께 초기화 — 재진입 시 자동판별 재개
-      if (form.isRegulatedAreaTouched) patch.isRegulatedAreaTouched = false;
       if (form.wasRegulatedAtAcquisitionTouched) patch.wasRegulatedAtAcquisitionTouched = false;
+      // 양도일 쪽은 §104①4호 구간의 분양권이면 칸이 있다(`HouseholdHousingCountSection`) — 지우면 재진입 때 사용자 선택이 자동 판정으로 되돌아간다.
+      if (!regulatedAtTransferToggleApplies(primaryKind, form.transferDate)) {
+        if (form.isRegulatedArea) patch.isRegulatedArea = false;
+        if (form.isRegulatedAreaTouched) patch.isRegulatedAreaTouched = false;
+      }
     }
     // 렌더 조건과 **같은 술어**를 쓴다 — 따로 정의하면 화면에 없는 값이 엔진에 도달한다.
     if (!allowsUnregisteredToggle(primaryKind) && form.isUnregistered) {

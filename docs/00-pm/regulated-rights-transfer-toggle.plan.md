@@ -1,0 +1,123 @@
+# 계획서 — 계산기 재개발APT·분양권의 「양도일 조정대상지역」: 고칠 칸이 없다 (A-3)
+
+> 2026-11-07 · 기준 master `52cf4b231`(#2972 포함) · 선행: #2909(주소 문자열 판정 leaf) · #2946(안내·표시) · #2961(증여 주택) · #2970(컴패니언)
+> 상태: **구현 완료(미커밋)** — Q-1 a · Q-2 a · Q-3 a(2026-11-07 「모두 권장안으로」). 결과는 §9.
+
+## 0. 한 줄 요약
+
+「조정대상지역 토글이 입주권·분양권에 없다」로 알고 있던 항목을 실측했더니 **입주권은 두 값 모두 세액에 영향이 없고**, 문제는 **재개발 완공 APT와 분양권의 «양도일» 값 하나**다.
+이 둘은 주소에서 자동 판정된 값을 사용자가 고칠 칸이 없는데, 값이 바뀌면 세액이 크게 갈린다(재개발APT 중과 +262,660,000 · 분양권 +83,200,000). 결과 화면 고지는 「보유 상황에서 직접 선택하세요」라고 안내하지만 그 자리에 칸이 없다.
+
+## 1. 구조 (인용은 이 브랜치)
+
+- 양도일 칸은 `primaryKind === "housing"`에서만 그린다: `app/calc/transfer-tax/steps/step4-sections/SurchargeJudgmentSection.tsx:96`(칸) · `:114`(⚠️ 안내).
+- 취득 당시 칸(② 1세대1주택 비과세 판정)은 `isOneHouseExemptionAsset`(주택·재개발APT)에서만 그린다: `Step4.tsx` ② 섹션 · 술어 `lib/calc/housing-like-asset.ts:74-84`.
+- 주소 자동 판정은 주택 계열 4종(`isHousingLike`)에 값을 쓴다: `useRegulatedAreaAutoTip.tsx` · leaf `storedRegulatedJudgments`(`effective-regulated-at-acquisition.ts:230-` `isHousingLike` 게이트).
+  그러나 **직접 만짐 표지는 `isOneHouseExemptionAsset`에서만 본다**(`:269` `respectTouched`). 입주권·분양권은 표지를 보지 않는다.
+- Step4 자산 종류 리셋 effect(`Step4.tsx:230-275`)는 `isOneHouseExemptionAsset`이 아니면 두 값과 만짐 표지를 마운트 때 `false`로 지운다 → 그 뒤 훅이 판정값을 다시 쓴다.
+- 분양권 §104①4호는 양도 당시 값을 쓴다: `lib/tax-engine/data/short-term-rate-history.ts:201` `clause4RegulatedArea = presale_right && tier.regulatedPresaleRight !== null && isRegulatedArea === true`. tier는 2018-01-01~2021-05-31(`:108-112` 0.5 / 2021-06-01 이후와 2018-01-01 이전은 `null`).
+- 분양권 단서 확인 2종 토글은 `presaleRightNoHouseExceptionVisible`(양도일 2018.2.13~2021.5.31 + `form.isRegulatedArea === true` + 세대 주택 0채)에서만 열린다: `lib/calc/presale-right-no-house-exception-scope.ts:36-44`.
+- 결과 화면 고지의 끝 줄은 「또는 「보유 상황」에서 조정대상지역 여부를 직접 선택하세요」: `lib/calc/regulated-area-assumption-text.ts` `regulatedAssumptionFooter`.
+- 고지 행은 자산 종류를 가리지 않고 `transfer`·`acquisition` 둘 다 낸다: `effective-regulated-at-acquisition.ts` `regulatedAddressAssumptions`(`:365-376`).
+
+## 2. 실측 (2026-11-07 · 이 브랜치 · throwaway probe — 폼 → ④ → route 실제 호출 후 삭제)
+
+공통: 양도가 9억 · 취득가 3억 · 거주 0. 값은 폼의 두 토글을 직접 켜고 끈 것(주소 없음)과 주소만 넣은 것(마포 지정·포항 미지정)으로 ④ 본문에 실린 값을 확인했다.
+
+| # | 자산 | 조건 | 양도일 값 끔 → 켬 | 취득 당시 값 끔 → 켬 |
+|---|---|---|---|---|
+| M-1 | **분양권** | 취득 2018-03-01 · 양도 2020-06-01 (2년 이상) | **215,550,000 (§104①1호) → 298,750,000 (§104①4호 50%)** | 불변 |
+| M-2 | 분양권 | 취득 2018-09-01 · 양도 2020-06-01 (1~2년) | **239,000,000 (②호 40%) → 298,750,000 (④호 50%)** | — |
+| M-3 | 분양권 | 취득 2019-09-01 · 양도 2020-06-01 (1년 미만) | 불변 298,750,000 (③호 50%) | 불변 |
+| M-4 | 분양권 | 양도 2021-05-31 (경계 안) | 215,550,000 → 298,750,000 | — |
+| M-5 | 분양권 | 양도 2021-06-01 · 2017-12-31 · 2026-08-01 | **불변** (각각 358,500,000 · 213,600,000 · 358,500,000) | 불변 |
+| M-6 | **재개발 완공 APT** | 취득 2015-03-01 · 양도 2026-08-01 · 세대 주택 2 | **257,850,000 (일반 42%) → 520,510,000 (중과 62%)** | 불변 |
+| M-7 | 재개발APT | 같은 조건 · 세대 주택 1 | 불변 (비과세 · 세액 0) | 불변 |
+| M-8 | 조합원입주권 | 위 세 시기 × 세대 주택 1·2 | **불변** (341,010,000 · 341,550,000 · 359,000,000) | **불변** |
+
+고지 행(`regulatedAddressAssumptions`) — 주소만 있고 법정동코드 없음 · 남양주 화도읍(medium), 양도 2020-06-01 · 취득 2018-03-01:
+
+| 자산 | 낸 행 | 세액에 쓰이는 행 |
+|---|---|---|
+| 주택 · 재개발APT | 양도일 · 취득 당시 둘 | 둘 (취득 당시는 거주요건) |
+| 조합원입주권 | 양도일 · 취득 당시 둘 | **없음** (M-8) |
+| 분양권 | 양도일 · 취득 당시 둘 | 양도일만 (구간 안에서) |
+
+같은 주소로 양도 2026-08-01이면 네 자산 모두 두 값이 아님으로 판정되고 행은 0이다(실측).
+
+## 3. 영향 범위
+
+- **칸이 필요한 값**: 재개발APT 양도일(M-6) · 분양권 양도일(M-1·M-2·M-4). 둘 다 자동 판정이 틀렸을 때(medium·low — 동·읍·면 예외 · 택지지구 · 약칭 주소) 고칠 수 없다.
+- **칸이 필요 없는 값**: 입주권 두 값(M-8) · 분양권 취득 당시(M-1~M-5 불변). 지금도 고지만 나가고 칸은 없는데, 고지가 쓸모없는 행까지 포함한다.
+- 법정동코드가 있으면 지금도 코드로 판정하고 칸이 없어도 틀리지 않는다(주소검색 경로). 영향은 **주소 문자열만 입력한 경우**다.
+- 다건: 건마다 첫 자산 기준(A-10과 같다) — 이번 칸도 같은 규칙. 컴패니언 재개발APT·분양권은 #2970이 컴패니언 값을 자기 소재지로 싣는다. 컴패니언 카드에는 `RegulatedAreaField`가 없다(grep 0건 — 별건 V-4).
+
+## 4. 선택지 (Q)
+
+| Q | 질문 | 선택지 | 권장 |
+|---|---|---|---|
+| Q-1 | 재개발APT 양도일 칸 | **a** 주택과 같은 칸(+⚠️ 안내) 노출 — 게이트를 `isOneHouseExemptionAsset`으로. 만짐 표지는 이미 존중 · **b** 안 만든다(고지만) | **a** — 주택에서 허용하는 정정 수단과 같게. 표지 존중 범위가 이미 재개발APT까지라 리프 변경 0 |
+| Q-2 | 분양권 양도일 칸 | **a** 양도일이 §104①4호 구간(2018-01-01~2021-05-31)일 때만 노출 + 그 구간에서 만짐 표지 존중·리셋 면제 · **b** 분양권이면 항상 · **c** 안 만든다 | **a** — 구간 밖에서는 값이 세액을 바꾸지 않는다(M-5). b는 영향 없는 칸을 연다 |
+| Q-3 | 소비처 없는 고지 행 | **a** 분양권 취득 당시 행과 구간 밖 분양권 양도일 행을 뺀다(입주권은 V-1 후) · **b** 그대로 | **a** — 지금은 직접 선택할 곳이 없는 행도 「직접 선택하세요」로 끝난다 |
+
+## 5. 권장 설계 (Q-1 a · Q-2 a · Q-3 a 기준)
+
+1. **칸 노출 술어 하나**: `lib/calc/regulated-transfer-toggle-scope.ts`(신규, 작은 leaf) `regulatedAtTransferToggleApplies(kind, transferDate)` — 주택 · 재개발APT · (분양권 ∧ 양도일 ∈ 4호 구간). 구간은 `short-term-rate-history.ts`의 tier에서 읽는다(상수 복제 금지).
+2. `SurchargeJudgmentSection.tsx:96,114`가 위 술어를 쓴다(⑤). 칸 위치는 지금 자리 — 분양권은 ④ 섹션이 열리지 않으면(`houseCountInputsVisible`) 칸이 없으므로 **분양권 칸의 자리**는 V-2에서 확인.
+3. **만짐 표지 존중**: `storedRegulatedJudgments`의 `respectTouched`에 같은 술어를 쓴다(양도일 쪽만 — 취득 당시는 분양권에 소비처가 없다).
+4. **Step4 리셋 effect**(`:230-275`): 분양권이 칸 노출 구간이면 `isRegulatedArea`·표지를 지우지 않는다. 안 그러면 Step4 재진입 때 사용자 선택이 훅의 자동 판정으로 되돌아간다.
+5. **고지**: `regulatedAddressAssumptions`가 같은 술어로 양도일 행을 거르고, 분양권 취득 당시 행을 내지 않는다. 끝 줄은 칸이 있는 경우에만 「보유 상황」을 말한다.
+6. 엔진·④·⑫·⑭: 변경 없음(저장값이 이미 ④에 실린다). 14지점 중 ⑤(화면)·리프·고지 문구만.
+
+## 6. 케이스 매트릭스 (Do anchor)
+
+| 코드 | 자산 · 시기 | 기대 |
+|---|---|---|
+| K-1 | 재개발APT · 세대 주택 2 · 주소 문자열만 · 양도일 칸 보임 | 칸 있음. 켬 → ④ `isRegulatedArea:true` · 520,510,000 |
+| K-2 | K-1 후 Step4 나갔다 재진입 | 선택 유지(만짐 표지 존중) |
+| K-3 | 재개발APT · 법정동코드 있음 | 칸 대신 읽기 전용 자동 판정(`RegulatedAreaField`) |
+| K-4 | 분양권 · 양도 2020-06-01 · 보유 2년 이상 | 칸 있음. 켬 → 298,750,000(4호) · 끔 → 215,550,000 |
+| K-5 | 분양권 · 양도 2021-06-01 · 2017-12-31 | 칸 없음 · 세액 불변 |
+| K-6 | 분양권 · 1~2년 · 구간 안 | 켬 → 298,750,000 · 끔 → 239,000,000 |
+| K-7 | 분양권 4호 단서(2018-02-13~2021-05-31, 세대 주택 0) | 양도일 칸을 켜면 단서 확인 2종 토글이 열린다 · 끄면 닫힘 |
+| K-8 | 주택 | 기존과 동일 |
+| K-9 | 입주권 | 칸 없음(유지) |
+| K-10 | 고지 · 분양권 취득 당시 행 | 안 나옴. 양도일 행은 구간 안에서만 |
+
+## 7. 미검증 (V)
+
+- **V-1 입주권 소비처 전수** — M-8은 단건 양도 세액 6시기×4조합만 쟀다. 입주권 비과세(§89①4호)·일시적 2주택 처분기한·합산 §104⑤ 경로가 이 두 값을 읽는지는 **확인 필요**. 읽는다면 입주권도 칸이 필요하다. 그래서 Q-3 a는 입주권을 건드리지 않는다.
+- **V-2 분양권 칸 자리** — 분양권 양도 시 ④ 섹션(`SurchargeJudgmentSection`)이 열리는 조건을 화면에서 확인해야 한다(`houseCountInputsVisible` · 세대 주택 0채 선언 후). 안 열리면 칸은 HouseholdHousingCountSection(단서 토글 옆)으로 둔다.
+- **V-3 브라우저** — 칸 노출·재진입·네트워크 본문은 아직 안 봤다(Playwright로 확인 예정).
+- **V-4 컴패니언 재개발APT·분양권** — 컴패니언 카드에는 칸이 없다. #2970이 자기 소재지 판정을 실을 뿐이다. 이번 범위 밖(측정만).
+- **V-5 증여·상속으로 취득한 분양권·재개발APT** — 양도일 값은 취득 경로와 무관해 보이나 실측 전.
+
+## 8. Do 범위 (예상)
+
+| 파일 | 변경 |
+|---|---|
+| `lib/calc/regulated-transfer-toggle-scope.ts` (신규) | 노출 술어 + 분양권 구간(단일 소스) |
+| `lib/calc/effective-regulated-at-acquisition.ts` | `respectTouched` 양도일 쪽 · 고지 행 거름 |
+| `app/calc/transfer-tax/steps/step4-sections/SurchargeJudgmentSection.tsx` | 게이트 교체 2곳 |
+| `app/calc/transfer-tax/steps/Step4.tsx` | 리셋 effect 면제 |
+| `lib/calc/regulated-area-assumption-text.ts` | 끝 줄 조건 |
+| 테스트 | `__tests__/calc/regulated-rights-transfer-toggle.anchor.test.tsx`(K-1~K-10 · 훅 실제 렌더) · 뮤테이션 · E2E 1건 |
+
+예상: 계획 확정 후 구현 약 1.5시간(칸 위치 V-2 확인 포함), 기존 시료 변동은 고지 관련 테스트 몇 건 예상(확인 필요).
+
+## 9. 구현 결과 (2026-11-07)
+
+| 파일 | 변경 |
+|---|---|
+| `lib/calc/regulated-transfer-toggle-scope.ts` (신규) | `presaleRightClause4Era`(엔진 단계표 `SHORT_TERM_RATE_HISTORY`의 `regulatedPresaleRight`에서 구간을 읽음 — 상수 복제 없음) · `regulatedAtTransferToggleApplies` |
+| `lib/calc/effective-regulated-at-acquisition.ts` | `respectTouched`를 양도일/취득 당시로 분리(양도일은 위 술어) · 고지 행: 분양권은 구간 안 양도일만 · `selectable` 필드 · `calcTransferRegulatedVerdict`(④·분양권 칸 공용) |
+| `SurchargeJudgmentSection.tsx` | 칸·⚠️ 안내 게이트 `housing` → `isOneHouseExemptionAsset`(재개발APT 포함) |
+| `HouseholdHousingCountSection.tsx` | 분양권 구간 안 양도일 칸(단서 확인 바로 위) — V-2 결과: ④ 섹션은 분양권에서 `houseCountInputsVisible`이 거짓이라 열리지 않아 여기에 둠 |
+| `Step4.tsx` | 리셋 effect: 양도일 쪽은 칸이 있는 자산이면 지우지 않음(취득 당시 쪽은 종전대로) |
+| `regulated-area-assumption-text.ts` · 결과 화면 · PDF | 끝 줄: 모든 줄이 `selectable: false`(입주권)이면 「보유 상황」을 말하지 않음. `selectable`이 없는 이력 데이터는 종전 문구 |
+
+검증: anchor `__tests__/calc/regulated-rights-transfer-toggle.anchor.test.tsx` 23건(세액은 결정세액 — 분양권 215,550,000 ↔ 298,750,000 · 239,000,000 ↔ 298,750,000 · 재개발APT 460,335,000 ↔ 907,435,000) · 뮤테이션 9/9 사망(M9는 첫 시료가 약해 강화 후 사망) · 회귀 `calc·lib·components·api` 2278파일 통과 · E2E(`transfer-presale-right-clause4-proviso`) 4건 통과 — 칸 노출·단계 이탈 후 재진입 유지·요청 본문 `isRegulatedArea:true`·`rateClause:104-1-4`.
+
+미수행: 재개발APT 칸의 **브라우저** 확인(렌더 단위 테스트만) · V-1 입주권 소비처 전수 · V-4 컴패니언 · V-5 상속·증여 취득.
+알려진 한계: 자산 종류를 주택 → 분양권(구간 안)으로 바꾸면 주택에서 만진 값이 칸에 그대로 보인다(칸이 보이므로 눈에 띄고 고칠 수 있음).
+
