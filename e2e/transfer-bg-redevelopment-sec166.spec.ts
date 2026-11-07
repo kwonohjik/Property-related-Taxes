@@ -9,6 +9,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 function seed(over: Record<string, unknown> = {}) {
   return {
@@ -45,7 +46,7 @@ async function seedAndOpen(page: Page, asset: Record<string, unknown>) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    {
+    seedWithDeclaredRoster({
       state: {
         formData: {
           assets: [asset],
@@ -63,7 +64,7 @@ async function seedAndOpen(page: Page, asset: Record<string, unknown>) {
         pendingMigration: false,
       },
       version: 0,
-    },
+    }),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

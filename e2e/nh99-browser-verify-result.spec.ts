@@ -24,6 +24,7 @@ import { MULTI_NEW_HOUSING_PRE_2016_UNSUPPORTED_MESSAGE } from "../lib/calc/mult
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { gotoJudgmentHoldingsStep } from "./_helpers/judgment-seed";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 type Seed = Record<string, unknown>;
 
@@ -39,10 +40,10 @@ async function waitHydrated(page: Page, selector: string) {
 async function seedAndCalc(page: Page, formData: Seed, opts: { onReductionStep?: () => Promise<void> } = {}) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), {
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster({
     state: { formData, pendingMigration: false },
     version: 0,
-  });
+  }));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await waitHydrated(page, "h1");
@@ -263,7 +264,7 @@ const multiLand = () => ({
   ...makeDefaultAsset(2), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 2-2", assetKind: "land", acquisitionCause: "purchase", acquisitionDate: "2010-01-01",
   acquisitionArea: "1000", fixedAcquisitionPrice: "100000000", actualSalePrice: "300000000", reductions: [],
 });
-const multiForm = (assets: Seed[], transferDate: string, price: string): Seed => ({
+const multiForm = (assets: Seed[], transferDate: string, price: string): Seed => seedWithDeclaredRoster({
   assets, transferDate, filingDate: "", contractTotalPrice: price, householdHousingCount: "2", isRegulatedArea: false, wasRegulatedAtAcquisition: false,
   isUnregistered: false, isOneHousehold: false, householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, houses: [], presaleRights: [],
 });

@@ -10,6 +10,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 /** 양도시 기준시가 = 토지 300,000,000(1,500,000 × 200㎡) + 건물 200,000,000 = 500,000,000. */
 const GB = {
@@ -83,7 +84,7 @@ async function seedAndOpen(page: Page, list: Record<string, unknown>[]) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(list),
+    seedWithDeclaredRoster(seedForm(list)),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

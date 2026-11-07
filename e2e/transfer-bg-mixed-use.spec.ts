@@ -16,6 +16,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 function bgMixedAsset(over: Record<string, unknown> = {}) {
   return withMixedHousingStd({
@@ -76,7 +77,7 @@ async function seedAndOpen(page: Page, assetOver: Record<string, unknown>) {
   };
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    { state: { formData, currentStep: 0, pendingMigration: false }, version: 0 },
+    seedWithDeclaredRoster({ state: { formData, currentStep: 0, pendingMigration: false }, version: 0 }),
   );
   await page.reload();
   await ready(page);

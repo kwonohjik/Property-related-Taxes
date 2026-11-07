@@ -48,6 +48,8 @@
 - **US-19 배제 사유 문구** — 자동 판정 「입력한 감면의 요건 판정으로 적용」 · 자기 선언 「「조특법 감면주택」 선언으로 적용」(`taxSpecialExemptionAutoId`).
 - **US-31 시료** — 공용 헬퍼 5개·인라인 시료 다수가 「확정 ✓ + 주택 수 2」 모순으로 ⑧을 통과해 왔다. `__tests__/calc/_helpers/roster-for-declared-count.ts`가
   같은 주택 수의 명부(1950 취득 일반 주택 행)로 바꾼다 — `makeMockRates`에는 주택 수 산정 규칙이 없어 계산 경로·기대값은 그대로다(변경 0건).
+- **US-31 E2E 시드** — 후보 196 spec 로컬 실행에서 255건(109 spec)이 모두 같은 ⑧ 메시지로 막혔다. sessionStorage 시드 지점에
+  `seedWithDeclaredRoster`(`e2e/_helpers/roster-for-declared-count.ts`, vitest 헬퍼와 같은 규칙)를 씌웠다 — 공용 `seedWizard`·`gotoTransferHoldingsStep` 포함.
 
 ## 4. 범위 밖 · 확인 필요
 
@@ -56,6 +58,13 @@
 - US-19 「토글에 근거 조문 선택」 대안 — 사용자 결정으로 하지 않는다.
 - 상속 컴패니언 겸용 파트 카드의 세율군 표시 — 세액은 정밀 경로와 같지만 결과에 위기취득 표지가 실리지 않아 「중과」 세율군으로 남는다(종전과 같은 표시). 결과 조립 경로 확인 필요.
 - 재개발 결과(`transfer-tax-redevelopment.ts`)는 `rateSurchargeStatutoryExcluded`를 싣지 않는다(종전과 같음) — 다건 세율군 분류만 영향, 미측정.
+- 🔴 **정밀(명부) 경로 — 이월과세 주택의 한시배제 보유기간(종전부터 · 이번 범위 밖)**. E2E `carryover-gift-debt-purchased-part` CDPP-5 사실
+  (서울 강남구 주소 자동 판정 = 조정 · 2주택 · 당초 증여 2025-06-01 · 증여자 취득 2000-06-01 · 양도 2026-03-01)로 origin/master `ed8368716`에서 실측했다.
+  fallback은 349,270,000(증여분 0.42)이고, 같은 입력에 명부를 넣으면 623,110,000(증여분 `multi_house_surcharge` 0.62)이다.
+  - ④가 싣는 양도 주택 행 `acquisitionDate`는 증여 등기일(2025-06-01)이다.
+  - 소령 §167의10①12의2는 「법 제95조제4항에 따른 보유기간」을 쓰고, 소득세법 §95④ 단서는 §97의2① 자산을 증여자 취득일부터 센다
+    → 증여분은 한시배제(가목) 대상이다(KoreanLaw MCP 본문 확인).
+  - 엔진 어느 줄이 행 취득일로 판정하는지는 확인 필요. E2E 시료는 사례대로 「비조정」을 직접 고른 값(`*Touched`)으로 고정했다.
 - `transfer-tax.ts`(751줄)·`transfer-tax-rental-housing-step.ts`(762줄)는 변경 전부터 750줄 이상이었다 — 이번에는 분리하지 않고 증가를 1줄 이하로 맞췄다.
 
 ## 5. anchor (선작성)

@@ -10,6 +10,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 /** 승계 입주권(인가 2018-06-01 · 취득 2020-01-01) · 부담부증여 입력(직계비속 · 채무 6억 · 기준시가 평가 3항)을 미리 채워 둔다. */
 const RIGHT = {
@@ -37,7 +38,7 @@ const form = (asset: unknown) => ({
 async function seed(page: Page, asset: Record<string, unknown>) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
-  await page.evaluate((x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)), form(asset));
+  await page.evaluate((x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)), seedWithDeclaredRoster(form(asset)));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   for (const n of [1, 2, 3] as const) await expandAssetSection(page, n);

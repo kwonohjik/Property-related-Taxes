@@ -22,6 +22,7 @@ import { giftHandoffAsset } from "../lib/calc/gift-household-handoff";
 import { landStandalone, multiForm } from "./_helpers/split-acq-display";
 import { openHistoryModal } from "./_helpers/navigation";
 import { putCalculationRecord } from "./_helpers/history-seed";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 type Over = Record<string, unknown>;
 
@@ -79,7 +80,7 @@ export const cSeed = (assets: Over[] = [cAsset()], formOver: Over = {}) => ({
 async function seedWizard(page: Page, seed: unknown) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seed);
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster(seed));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 }
@@ -450,7 +451,7 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
       userId: "local-user",
       taxType: "transfer",
       title: "파트 이월과세 C (E2E 복원)",
-      inputData: cSeed().state.formData,
+      inputData: seedWithDeclaredRoster(cSeed()).state.formData,
       resultData: { mode: "single", result: { determinedTax: 300_018_000, localIncomeTax: 30_001_800 } },
       taxLawVersion: "2025",
       linkedCalculationId: null,
@@ -498,7 +499,7 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
       userId: "local-user",
       taxType: "transfer",
       title: "자산 전체 이월과세 구 이력 (E2E)",
-      inputData: cSeed([legacyAsset]).state.formData,
+      inputData: seedWithDeclaredRoster(cSeed([legacyAsset])).state.formData,
       resultData: { mode: "single", result: { determinedTax: 1, localIncomeTax: 0 } },
       taxLawVersion: "2025",
       linkedCalculationId: null,

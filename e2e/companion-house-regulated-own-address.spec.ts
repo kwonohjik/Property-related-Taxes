@@ -6,6 +6,7 @@
  */
 import { test, expect } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const house = (n: number, addr: string) => ({
   ...makeDefaultAsset(n),
@@ -46,7 +47,7 @@ test("[RC-1] ★ 비1세대 · 주 자산 포항 + 컴패니언 마포 → 컴�
   };
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seed);
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster(seed));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   for (const step of ["감면·공제", "가산세"]) await page.getByRole("button", { name: step }).first().click();

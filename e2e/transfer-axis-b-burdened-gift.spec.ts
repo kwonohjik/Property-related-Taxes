@@ -12,6 +12,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 /** 물건 전체 채무 6억 · 기준시가 10억/5억. 60% + 40% 2회 취득(취득일 동일 — 단건과 대조 가능). */
 function seedForm() {
@@ -71,7 +72,7 @@ async function seedAndOpen(page: Page) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(),
+    seedWithDeclaredRoster(seedForm()),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
