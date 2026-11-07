@@ -28,6 +28,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => { vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never); });
 afterEach(() => vi.unstubAllGlobals());
@@ -158,7 +159,7 @@ const p3Asset = (lc: Record<string, unknown> = {}): AssetForm =>
       donorAcquisitionPrice: "100,000,000", giftTaxCalculated: "20,000,000", giftTaxBase: "400,000,000", ...lc },
   }) as unknown as AssetForm;
 const p3Form = (lc: Record<string, unknown> = {}) =>
-  ({ transferDate: "2025-06-30", filingDate: "2025-08-31", assets: [p3Asset(lc)], houses: [], presaleRights: [], contractTotalPrice: "1,200,000,000", totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false, householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true }) as unknown as TransferFormData;
+  (rosterForDeclaredCount({ transferDate: "2025-06-30", filingDate: "2025-08-31", assets: [p3Asset(lc)], houses: [], presaleRights: [], contractTotalPrice: "1,200,000,000", totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false, householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true })) as unknown as TransferFormData;
 
 describe("경로 1 — 부담부증여 일반건물 · 둘 다 이월과세 (④가 상당액을 만든다)", () => {
   /**

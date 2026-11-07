@@ -27,6 +27,7 @@ import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 type Form = ReturnType<typeof createDefaultTransferFormData>;
 beforeEach(() => { vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates()); });
 const issues = (f: Form) => [0, 1, 2, 3].flatMap((s) => collectStepIssues(s, f).map((i) => i.message));
@@ -49,7 +50,7 @@ function mixedForm(over: Record<string, unknown> = {}): Form {
   f.assets[0] = { ...f.assets[0], residenceInputMode: "direct", residencePeriods: [], ...MIXED, ...over } as Form["assets"][number];
   Object.assign(f, { transferDate: "2024-06-01", filingDate: "2024-08-31", contractTotalPrice: "1,200,000,000", householdHousingCount: "2",
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, residencePeriodMonths: "0" });
-  return withIdentityHousingBuildingStdOnForm(f, { acqN: 90_000_000 });
+  return rosterForDeclaredCount(withIdentityHousingBuildingStdOnForm(f, { acqN: 90_000_000 }));
 }
 const INH = { acquisitionCause: "inheritance", acquisitionDate: "2023-09-01", useEstimatedAcquisition: false,
   mixedHousingInheritedValueOverride: "400000000", mixedCommercialInheritedValueOverride: "200000000" };

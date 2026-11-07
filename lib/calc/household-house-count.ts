@@ -62,6 +62,7 @@
 import { isOneHouseExemptionAsset, usesHouseCountRoster, houseCountSelfOffset } from "@/lib/calc/housing-like-asset";
 import { deriveHouseholdRightCount } from "@/lib/tax-engine/one-house/house-count";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { mergeHouseSideOf } from "@/lib/calc/merge-house-origin";
 import type { MergeContext } from "@/lib/calc/merge-house-origin";
 import type { MergeOrigin } from "@/lib/tax-engine/types/multi-house-surcharge.types";
@@ -274,13 +275,55 @@ export function housesPatchWithDerivedCount<T extends HouseRowForCount>(
   primaryKind: string | undefined,
   legacyPrecedence: boolean,
   transferDate: string | undefined,
-): { houses: T[]; householdHousingCount?: string; householdNoOtherHousesConfirmed?: false } {
+): { houses: T[]; householdHousingCount?: string; householdNoOtherHousesConfirmed?: false; legacyHouseCountPrecedence?: false } {
   // OH-34: 레거시 표식이 켜져 있으면 **스칼라를 건드리지 않는다**. 명부를 보완하는 도중에
   // 저장 당시 값이 덮여 사라지면 「전환할 때만 명부로 센다」는 약속이 깨진다.
-  if (legacyPrecedence) return { houses };
+  //
+  // 🔴 단, 명부 행을 **모두 지우면** 표식을 끄고 「다른 보유 주택 없음」 확정을 다시 요구한다(리뷰 US-30).
+  //    복원은 날짜 있는 행이 있어야 표식을 붙이므로(`houseCountDivergedFromRoster`) 「레거시 + 0행」은 복원 뒤 행 삭제로만 생긴다 —
+  //    그 상태가 ⑧ 면제와 저장 스칼라를 그대로 남겨 명부 없는 fallback 중과로 갔다(실측 §98의3 감면주택 247,016,000 ↔ 명부 99,913,000).
+  //    표식을 끄면 ⑧이 「다른 보유 주택이 없는지 확인하세요」로 묻고, 행을 다시 넣거나 확정 토글로 주택 수를 맞추게 된다.
+  //    행이 남아 있으면(날짜 없는 새 행 포함) 명부가 전송되거나 ⑧이 행 취득일을 묻는다 — 표식은 그대로 둔다(HR-7c).
+  if (legacyPrecedence) {
+    return houses.length > 0 ? { houses } : { houses, legacyHouseCountPrecedence: false, householdNoOtherHousesConfirmed: false };
+  }
   const isRosterKind = usesHouseCountRoster(primaryKind);
   const clearConfirm = isRosterKind && houses.length > 0 ? { householdNoOtherHousesConfirmed: false as const } : {};
   return { houses, ...derivedHouseCountPatch(houses, primaryKind, legacyPrecedence, transferDate), ...clearConfirm };
+}
+
+/**
+ * 「다른 보유 주택이 없습니다」 확정이 **저장된 주택 수와 어긋났는가** — ⑧ 정합 검사(리뷰 US-31).
+ *
+ * 확정 토글은 켤 때 스칼라를 자기 몫(`houseCountSelfOffset` — 주택 1 · 입주권 0)으로 맞춘다. 그 뒤 자산 종류를 바꿔 분양권 화면의
+ * 주택 수 버튼을 누르고 돌아오면 확정 ✓ 와 「2채」가 함께 남아, ⑧을 통과한 계산이 명부 없는 fallback 중과로 갔다
+ * (실측 확정 사실 0원 ↔ 247,016,000). 값을 몰래 고치지 않는다 — 사용자가 확정을 다시 하게 막는다.
+ * 명부가 정본(날짜 있는 행)이거나 레거시 표식이면 스칼라가 확정의 결과가 아니라 대상이 아니다.
+ */
+export function confirmedNoOtherHousesDiverges(
+  form: Pick<TransferFormData, "houses" | "householdHousingCount" | "householdNoOtherHousesConfirmed" | "legacyHouseCountPrecedence">,
+  primaryKind: string | undefined,
+): boolean {
+  if (!form.householdNoOtherHousesConfirmed || form.legacyHouseCountPrecedence) return false;
+  if (!usesHouseCountRoster(primaryKind) || (form.houses?.length ?? 0) > 0) return false;
+  return parseInt(form.householdHousingCount ?? "", 10) !== houseCountSelfOffset(primaryKind);
+}
+
+/**
+ * 자산 종류를 바꿔 「다른 보유 주택이 없습니다」 확정의 의미가 달라지면 확정을 해제한다(리뷰 US-31) — 명부 축 대상 여부나
+ * 자기 몫 오프셋(주택 1 · 입주권 0)이 바뀌는 전환. 해제되면 ⑧이 다시 묻고, 다시 켜면 스칼라가 새 오프셋으로 맞춰진다.
+ * housing ↔ redevelopment_apt는 둘 다 명부 축 · 오프셋 1이라 그대로 둔다. Step1 자산 갱신 핸들러가 부른다(effect 미러링 아님).
+ */
+export function confirmClearPatchOnKindChange(
+  prevKind: string | undefined,
+  nextKind: string | undefined,
+  confirmed: boolean | undefined,
+): { householdNoOtherHousesConfirmed?: false } {
+  if (!confirmed || prevKind === nextKind) return {};
+  const changed =
+    usesHouseCountRoster(prevKind) !== usesHouseCountRoster(nextKind) ||
+    houseCountSelfOffset(prevKind) !== houseCountSelfOffset(nextKind);
+  return changed ? { householdNoOtherHousesConfirmed: false } : {};
 }
 
 /**

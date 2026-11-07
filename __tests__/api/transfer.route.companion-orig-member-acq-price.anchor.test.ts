@@ -31,6 +31,7 @@ import { runCalc } from "../calc/_helpers/redev-one-house-route";
 import { createDefaultTransferFormData, makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
 import { withTestAddress } from "@/__tests__/fixtures/transfer-test-address";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -107,7 +108,7 @@ function mkForm(assets: Partial<AssetForm>[], extra: Partial<TransferFormData>):
       }) as AssetForm,
   );
   Object.assign(form, extra);
-  return form;
+  return rosterForDeclaredCount(form);
 }
 
 /** 축 B 둘째 카드 = 화면이 만드는 카드(makeDefaultAsset + ③ 이하 입력). 판정 선언·승계 표지는 미입력. */

@@ -31,6 +31,7 @@ import { bgAsset, bgForm } from "@/__tests__/calc/_helpers/carryover-donor-built
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -53,7 +54,7 @@ const KIND: Record<string, Record<string, unknown>> = {
 };
 const BLANK = { bgActualAcquisitionTotal: "", bgActualAcquisitionLand: "", bgActualAcquisitionBuilding: "" };
 const a = (kind: string, id: string, ...over: Record<string, unknown>[]) => Object.assign({ ...makeDefaultAsset(1) }, x({ assetId: id, ...COMMON, ...KIND[kind] }), ...over) as AssetForm;
-const form = (assets: AssetForm[], over: Record<string, unknown> = {}) => Object.assign(createDefaultTransferFormData(), FORM, { transferDate: "2026-02-16", assets, contractTotalPrice: "" }, over) as TransferFormData;
+const form = (assets: AssetForm[], over: Record<string, unknown> = {}) => rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, { transferDate: "2026-02-16", assets, contractTotalPrice: "" }, over)) as TransferFormData;
 const SH = { ownershipNumerator: "50", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes", bgMortgageDebtAmount: "200000000", bgMortgageSetAmount: "200000000" };
 const pct = (n: string) => ({ ownershipNumerator: n, ownershipDenominator: "100" });
 const AB = { assetSplitMode: "fractional", contractTotalPrice: "400000000" };

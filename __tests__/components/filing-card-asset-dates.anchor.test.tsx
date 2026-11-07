@@ -26,6 +26,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { buildRows, getAcqDateForCard, type RowDef } from "@/components/calc/results/transfer/FilingFormTableHelpers";
 import { buildStatementItems } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => { vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never); });
 
@@ -33,11 +34,11 @@ type A = Record<string, unknown>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Body = Record<string, any>;
 const mk = (assets: A[], extra: A = {}) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "0", isOneHousehold: false,
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
     assets: assets.map((a, i) => ({ ...makeDefaultAsset(i + 1), ...a }) as AssetForm), ...extra,
-  }) as TransferFormData;
+  })) as TransferFormData;
 
 async function run(f: TransferFormData) {
   const issue = [0, 1, 2, 3].map((st) => validateStepDetailed(st, f)).find(Boolean) ?? null;

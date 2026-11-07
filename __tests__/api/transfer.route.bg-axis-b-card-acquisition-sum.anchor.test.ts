@@ -27,6 +27,7 @@ import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stor
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { successorRightTogglePatch } from "@/lib/calc/transfer-successor-right";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -59,7 +60,7 @@ const ORIG: A = {
 };
 const ACQ3 = { bgActualAcquisitionTotal: "300,000,000" };
 const rights = (p: AssetForm, s: AssetForm) =>
-  Object.assign(createDefaultTransferFormData(), RBASE, { assetSplitMode: "fractional", contractTotalPrice: "1500000000", assets: [p, s] }) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), RBASE, { assetSplitMode: "fractional", contractTotalPrice: "1500000000", assets: [p, s] })) as TransferFormData;
 
 // ── 주택 ──
 const PRES: A = { bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1000000000", bgAcquisitionMethod: "appraisal" };
@@ -71,11 +72,11 @@ const house = (id: number, num: string, acq: string, over: A) =>
     standardPriceAtAcq: "500000001", ...over,
   }) as AssetForm;
 const houses = (a: A, b: A) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2024-03-01", filingDate: "2024-05-31", contractTotalPrice: "1000000000", totalTransferExpense: "0", householdHousingCount: "2",
     isOneHousehold: false, householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
     assets: [house(1, "60", "2009-03-01", a), house(2, "40", "2012-03-01", b)],
-  }) as TransferFormData;
+  }))) as TransferFormData;
 
 async function run(f: TransferFormData) {
   const r = await runCalc(f);

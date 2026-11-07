@@ -238,9 +238,16 @@ export interface TransferTaxResult {
   surchargeSuspensionDeadline?: Date;
   /**
    * 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 주택 세율 중과배제(조정지역 다주택이어도 기본세율).
-   * 세율만 배제·§95² 장기보유특별공제 배제는 유지(서울행정법원 2024구단72950). echo(MultiHouseSurchargeResult 전파).
+   * 세율만 배제·§95② 장기보유특별공제 배제는 유지(서울고법 2024누55534 → 대법원 2025두33460 심리불속행 · 서울행정법원 2024구단68630).
+   * echo(MultiHouseSurchargeResult 전파 · 명부 없으면 fallback 술어의 같은 판정 — 리뷰 US-08).
    */
   rateSurchargeStatutoryExcluded?: boolean;
+  /**
+   * 명부 없는 fallback에서 양도 주택이 감면주택(영 §167의3①5호·3호)이라 중과를 배제했다(STEP 0.45 — 리뷰 US-38). echo.
+   * 다건 집계가 그룹 세액을 다시 구할 때 입력을 교정하고(`transfer-tax-aggregate-asset-records.ts`) 세율군을 progressive로 분류한다.
+   * 정밀 판정이 있으면 싣지 않는다(그 판정 echo `multiHouseSurchargeEvaluation`가 같은 결론을 나른다).
+   */
+  surchargeExcludedByReduction?: boolean;
   /**
    * 비사업용 토지 +10%p 중과배제(기본세율). 장특 표1 유지. echo. 사유는 `nblSurchargeExcludedBy`.
    */

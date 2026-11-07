@@ -14,6 +14,7 @@ import { redevLegacyExpenseUnused } from "@/lib/calc/redev-legacy-expense-unused
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 afterEach(cleanup);
 
@@ -23,7 +24,7 @@ const BASE = {
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, bundledSaleMode: "actual",
 };
 const form = (assets: Over[], contract: string, over: Over = {}) =>
-  Object.assign(createDefaultTransferFormData(), BASE, { contractTotalPrice: contract, totalTransferExpense: "", assets, ...over }) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), BASE, { contractTotalPrice: contract, totalTransferExpense: "", assets, ...over })) as TransferFormData;
 const redev = (i: number, kind: string, subject: string, o: Over = {}) => ({
   ...makeDefaultAsset(i), addressJibun: `서울 강남구 테스트동 ${i}-1`, assetKind: kind, acquisitionCause: "purchase", acquisitionDate: "2010-01-01",
   redevSubject: subject, redevOriginalAssetType: "housing", redevApprovalLawBasis: "urban_renovation_art_74", redevExemptionEligibleAtApproval: "no",

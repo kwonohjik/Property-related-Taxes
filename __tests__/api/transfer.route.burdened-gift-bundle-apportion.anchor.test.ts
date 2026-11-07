@@ -26,6 +26,7 @@ import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { runCalc, captureBody, postTransfer } from "../calc/_helpers/redev-one-house-route";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -69,7 +70,7 @@ const BASE = {
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
 };
 const bundle = (assets: AssetForm[], bundledSaleMode: "actual" | "apportioned", contractTotalPrice = "") =>
-  Object.assign(createDefaultTransferFormData(), BASE, { assets, contractTotalPrice, assetSplitMode: "companion", bundledSaleMode }) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), BASE, { assets, contractTotalPrice, assetSplitMode: "companion", bundledSaleMode })) as TransferFormData;
 
 const MIXED_MESSAGE = "일반 양도 자산과 부담부증여 자산은 함께 양도로 계산할 수 없습니다";
 

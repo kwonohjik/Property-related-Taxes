@@ -12,6 +12,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 /** 겸용주택 — 주택 60㎡ · 상가 40㎡ · 정착 50㎡ · 대지 600㎡(주거지역 3배 → 배율초과 발생). */
 const MIXED = withMixedHousingStd({
@@ -91,7 +92,7 @@ async function seedAndOpen(page: Page, assets: Record<string, unknown>[] = ASSET
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(assets),
+    seedWithDeclaredRoster(seedForm(assets)),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

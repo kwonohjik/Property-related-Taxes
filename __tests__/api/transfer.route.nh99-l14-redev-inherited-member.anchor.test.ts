@@ -29,6 +29,7 @@ import { createDefaultTransferFormData, type AssetForm, type TransferFormData } 
 import { getReductionDefault } from "@/components/calc/transfer/UnifiedReductionPanel-defaults";
 import { POST as JUDGMENT_POST } from "@/app/api/calc/multi-house-surcharge-judgment/route";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 const mock = () => vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 beforeEach(mock);
@@ -54,10 +55,10 @@ const GIFT = {
 /** 인가일 뒤 입주권 승계 — 승계 매매는 취득가액(fixedAcquisitionPrice)이 필수, 청산금 분기는 미지원이라 0 */
 const SUCC = { redevIsSuccessorMember: "yes", redevSettlementAmount: "0", redevActualAcquisitionPrice: "", fixedAcquisitionPrice: "100000000" };
 const form = (assets: AssetForm[], transferDate: string, contract = assets[0].actualSalePrice) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate, filingDate: transferDate, totalTransferExpense: "0", isOneHousehold: false, householdHousingCount: "2",
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, assets, contractTotalPrice: contract,
-  }) as TransferFormData;
+  }))) as TransferFormData;
 const r993 = (over: Record<string, unknown> = {}) => ({
   ...getReductionDefault("new_99_3"), acquisitionType993: "self_built", standardPriceAtAcquisition993: "100000000", standardPriceAt5Years: "160000000",
   standardPriceAtTransfer993: "250000000", exclusiveAreaSqm993: "84", region993: "outside_speculation", isResident993: true,

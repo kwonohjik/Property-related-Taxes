@@ -27,6 +27,7 @@ import { buildBurdenedGiftInfo } from "@/lib/calc/transfer-tax-api-burdened-gift
 import { companionBurdenedGiftValuations } from "@/lib/calc/transfer-tax-api-burdened-gift";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -44,7 +45,7 @@ const house = (id: number, ...over: Partial<AssetForm>[]) => Object.assign({ ...
 const HM = x({ bgLendingDepositTotal: "0", bgMortgageDebtAmount: "1,500,000,000", bgMortgageSetAmount: "1,500,000,000" });
 const FORM = { transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", isOneHousehold: false, householdHousingCount: "2", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true };
 const bundle = (assets: AssetForm[], extra: Record<string, unknown> = {}): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), FORM, { assets, contractTotalPrice: "", assetSplitMode: "companion", bundledSaleMode: "actual" }, extra) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, { assets, contractTotalPrice: "", assetSplitMode: "companion", bundledSaleMode: "actual" }, extra)) as TransferFormData;
 async function post(f: TransferFormData) {
   const body = await captureBody(f);
   const res = await POST(new NextRequest("http://localhost/api/calc/transfer", { method: "POST", headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" }, body: JSON.stringify(body) }));
@@ -71,7 +72,7 @@ async function probe(assets: AssetForm[]) {
   return { modes: v.map((q) => q.selectedMode[0]).join(""), sumA: v.reduce((s, q) => s + q.value, 0), issues, status: r.status, giftValue: g?.burdenedGift?.giftValuation?.max as number | undefined, gain: g?.totalTransferGain as number | undefined };
 }
 async function singleGain(a: AssetForm): Promise<number> {
-  const r = await post(Object.assign(createDefaultTransferFormData(), FORM, { assets: [a] }) as TransferFormData);
+  const r = await post(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, { assets: [a] })) as TransferFormData);
   expect(r.status).toBe(200);
   return (r.j.data.aggregated?.totalTransferGain ?? r.j.data.result.transferGain) as number;
 }

@@ -12,6 +12,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 /** 상업지역 3배 · 대지 1,200㎡ · 바닥 200㎡ → 기준면적 600㎡ · 초과 600㎡. */
 const CB = {
@@ -91,7 +92,7 @@ async function seedAndOpen(page: Page, assets: Record<string, unknown>[]) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(assets),
+    seedWithDeclaredRoster(seedForm(assets)),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

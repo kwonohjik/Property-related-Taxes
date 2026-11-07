@@ -32,6 +32,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
 import { buildRedevAcquisitionFormula } from "@/components/calc/results/transfer/DetailedStatementRedevelopmentBuilders";
 import { buildRedevExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementRedevelopmentBuilders";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -60,14 +61,14 @@ const HH = {
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
 };
 const single = (a: Record<string, unknown> = {}): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     ...HH, contractTotalPrice: "920000000", assets: [{ ...makeDefaultAsset(1), ...SUCC, ...a } as AssetForm],
-  }) as TransferFormData;
+  })) as TransferFormData;
 const bundle = (a: Record<string, unknown> = {}): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     ...HH, contractTotalPrice: "1220000000",
     assets: [{ ...makeDefaultAsset(1), ...HOUSE } as AssetForm, { ...makeDefaultAsset(2), ...SUCC, ...a } as AssetForm],
-  }) as TransferFormData;
+  })) as TransferFormData;
 
 async function run(f: TransferFormData, mutate?: (body: Loose) => void) {
   const issues = allIssues(f);

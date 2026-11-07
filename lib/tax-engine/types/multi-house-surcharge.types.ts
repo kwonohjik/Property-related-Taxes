@@ -328,6 +328,11 @@ export interface HouseInfo {
   freeProvisionYears?: number;
   /** 조특법상 특례 적용 주택 여부 (⑤) */
   isTaxSpecialExemption?: boolean;
+  /**
+   * 엔진 내부 — `isTaxSpecialExemption`을 사용자 선언이 아니라 STEP 0.45 감면 적격 판정이 붙였다(그 조문 id).
+   * 배제 사유 문구가 자동 판정과 자기 선언을 구분하게 한다(리뷰 US-19). 클라이언트가 보내지 않는다.
+   */
+  taxSpecialExemptionAutoId?: string;
   /** 국가유산(문화재) 주택 여부 (⑥) */
   isCulturalHeritage?: boolean;
   /**

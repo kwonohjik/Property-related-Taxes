@@ -27,6 +27,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { makeMockRates, baseTransferInput } from "../tax-engine/_helpers/mock-rates";
 import type { RedevelopmentInfo } from "@/lib/tax-engine/types/transfer-redevelopment.types";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 function form(over: Partial<TransferFormData> = {}): TransferFormData {
   const f = createDefaultTransferFormData();
@@ -36,7 +37,7 @@ function form(over: Partial<TransferFormData> = {}): TransferFormData {
     acquisitionCause: "purchase",
     acquisitionDate: "2002-04-09",
   };
-  return { ...f, transferDate: "2024-06-01", filingDate: "2024-08-31", houses: [], presaleRights: [], ...over };
+  return rosterForDeclaredCount({ ...f, transferDate: "2024-06-01", filingDate: "2024-08-31", houses: [], presaleRights: [], ...over });
 }
 
 function fieldsOf(f: TransferFormData, field: string): string[] {

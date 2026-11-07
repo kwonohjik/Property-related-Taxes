@@ -20,6 +20,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const SEED = {
   state: {
@@ -76,7 +77,7 @@ test.describe("§97②2호 단서 — 두 카드가 같은 취득가액을 보�
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
     await page.evaluate(
       (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-      SEED,
+      seedWithDeclaredRoster(SEED),
     );
     await page.reload();
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

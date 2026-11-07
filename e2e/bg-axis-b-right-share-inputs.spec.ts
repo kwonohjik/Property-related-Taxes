@@ -10,6 +10,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const HALF = { ownershipNumerator: "50", ownershipDenominator: "100" };
 const FIRST = {
@@ -41,7 +42,7 @@ const form = {
 async function seed(page: Page) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
-  await page.evaluate((x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)), form);
+  await page.evaluate((x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)), seedWithDeclaredRoster(form));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   for (const n of [1, 2, 3] as const) await expandAssetSection(page, n);
@@ -82,7 +83,7 @@ test("AB-E2: 둘째 지분 권리가액이 첫 카드 권리가액과 다르면 
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
   await page.evaluate(
     (x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)),
-    { ...form, state: { ...form.state, formData: { ...form.state.formData, assets: [ORIG_FIRST, { ...SHARE, redevRightsValue: "800000000" }] } } },
+    seedWithDeclaredRoster({ ...form, state: { ...form.state, formData: { ...form.state.formData, assets: [ORIG_FIRST, { ...SHARE, redevRightsValue: "800000000" }] } } }),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -116,7 +117,7 @@ test("AB-E3: 결과 명세 취득가액이 지분 카드 합이다", async ({ pa
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
   await page.evaluate(
     (x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)),
-    { ...form, state: { ...form.state, formData: { ...form.state.formData, assets: [{ ...FIRST, bgActualAcquisitionTotal: "300000000" }, SHARE] } } },
+    seedWithDeclaredRoster({ ...form, state: { ...form.state, formData: { ...form.state.formData, assets: [{ ...FIRST, bgActualAcquisitionTotal: "300000000" }, SHARE] } } }),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

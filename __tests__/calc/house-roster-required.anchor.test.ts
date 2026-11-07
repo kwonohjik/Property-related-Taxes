@@ -77,10 +77,21 @@ describe("HR-1~4 ⑧ 명부 필수화 차단", () => {
     ).toEqual([]);
   });
 
-  it("[HR-4] legacy 표식 → 0행 + 미확정도 통과(구 이력 세액 보존)", () => {
+  // 🔄 2026-11-07 리뷰 US-30 — 「legacy + 0행」은 복원으로 생기지 않고(날짜 있는 행이 있어야 표식이 붙는다) 복원 뒤 행 삭제로만 생긴다.
+  //   그 면제가 명부 없는 fallback 중과로 이어졌다(§98의3 감면주택 247,016,000 ↔ 명부 99,913,000) → 0행이면 legacy여도 확정을 요구한다.
+  it("[HR-4] legacy 표식이어도 0행 + 미확정이면 차단한다(US-30 — 종전 통과)", () => {
     expect(
       step1FieldsOf(
         form({ houses: [], householdNoOtherHousesConfirmed: false, legacyHouseCountPrecedence: true }),
+      ),
+    ).toEqual(["다른 보유 주택이 없는지 확인하세요."]);
+  });
+
+  it("[HR-4b] legacy 표식 + 날짜 있는 명부 행 → 통과(구 이력 세액 보존은 그대로)", () => {
+    const row = { id: "o1", region: "capital", acquisitionDate: "2015-01-01", officialPrice: "300000000", isInherited: false, isLongTermRental: false, isApartment: true, isOfficetel: false, isUnsoldHousing: false };
+    expect(
+      step1FieldsOf(
+        form({ houses: [row] as unknown as TransferFormData["houses"], householdNoOtherHousesConfirmed: false, legacyHouseCountPrecedence: true }),
       ),
     ).toEqual([]);
   });
@@ -107,7 +118,8 @@ describe("HR-5c PR-C — 입주권은 housing과 같이 차단된다", () => {
   });
 
   it("[HR-5c-2] 0행 + 확정 → 통과", () => {
-    const f = form({ houses: [], householdNoOtherHousesConfirmed: true });
+    // 확정 토글은 켤 때 주택 수를 자기 몫(입주권 0)으로 맞춘다 — 그 상태를 그대로 둔다(US-31 ⑧ 정합 검사)
+    const f = form({ houses: [], householdNoOtherHousesConfirmed: true, householdHousingCount: "0" });
     f.assets[0] = { ...f.assets[0], assetKind: "right_to_move_in" };
     expect(step1FieldsOf(f)).toEqual([]);
   });
@@ -204,6 +216,11 @@ describe("HR-7 housesPatchWithDerivedCount — 행이 생기면 확정을 해제
     );
     expect(patch).not.toHaveProperty("householdNoOtherHousesConfirmed");
     expect(patch).not.toHaveProperty("householdHousingCount");
+  });
+
+  it("[HR-7e] 🔴 legacy 표식에서 명부 행을 모두 지우면 표식을 끄고 확정을 다시 요구한다(US-30 — 종전 {houses}만 · 표식·면제 잔존)", () => {
+    const patch = housesPatchWithDerivedCount([], "housing", true, "2026-07-01");
+    expect(patch).toEqual({ houses: [], legacyHouseCountPrecedence: false, householdNoOtherHousesConfirmed: false });
   });
 
   it("[HR-7d] 분양권(F1 범위 밖)은 행이 생겨도 확정을 건드리지 않는다", () => {

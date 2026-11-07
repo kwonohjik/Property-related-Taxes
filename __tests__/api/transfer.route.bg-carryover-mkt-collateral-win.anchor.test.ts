@@ -31,6 +31,7 @@ import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import { bgCollateralForcesStdAcq } from "@/lib/calc/burdened-gift-collateral-win";
 import { bgCoDonorNeedsStdPrice } from "@/lib/calc/burdened-gift-acq-std-price";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -70,8 +71,8 @@ const asset = (kind: Kind, id: number, carry: boolean, ...over: Partial<AssetFor
 };
 
 const bundle = (assets: AssetForm[]): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), FORM, { assets, contractTotalPrice: "", assetSplitMode: "companion", bundledSaleMode: "actual" }) as TransferFormData;
-const single = (a: AssetForm): TransferFormData => Object.assign(createDefaultTransferFormData(), FORM, { assets: [a], contractTotalPrice: "" }) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, { assets, contractTotalPrice: "", assetSplitMode: "companion", bundledSaleMode: "actual" })) as TransferFormData;
+const single = (a: AssetForm): TransferFormData => rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, { assets: [a], contractTotalPrice: "" })) as TransferFormData;
 async function post(f: TransferFormData) {
   const body = await captureBody(f);
   const res = await POST(new NextRequest("http://localhost/api/calc/transfer", { method: "POST", headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" }, body: JSON.stringify(body) }));

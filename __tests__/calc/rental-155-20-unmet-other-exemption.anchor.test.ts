@@ -136,7 +136,9 @@ describe("§155⑳ 불성립 × 일시적 2주택(§155①) — 계산기 화면
   it("UO-4 명부 없음 → 과세 124,366,000 불변 — 주택 수 1은 STEP 0.96이 되돌리고, 2는 일시적 2주택 사실이 없다(과다 비과세 미부활)", async () => {
     for (const count of ["1", "2"]) {
       const r = await runCalc(form({ count, houses: [] }));
-      expect(r.issues).toEqual([]);
+      // 🔄 2026-11-07 US-31 — 「다른 보유 주택 없음」 확정 + 주택 수 2는 화면에서 ⑧이 막는다(명부 없는 2주택은 API 직접 경로에서만 닿는다).
+      //   엔진 결론(과다 비과세 미부활)은 그 경로에서도 같아야 하므로 세액 단정은 그대로 둔다.
+      expect(r.issues.map((i: { field?: string }) => i.field)).toEqual(count === "2" ? ["householdNoOtherHousesConfirmed"] : []);
       expect(r.result.isExempt).toBe(false);
       expect(r.result.totalTax).toBe(124_366_000);
       expect(unmetNotices(r.result.warnings)).toEqual([]);

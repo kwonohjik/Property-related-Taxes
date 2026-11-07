@@ -32,6 +32,7 @@ import { GeneralBuildingBlock } from "@/components/calc/transfer/GeneralBuilding
 import { bgCollateralForcesStdAcq, bgWholeGiftValuation } from "@/lib/calc/burdened-gift-collateral-win";
 import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
 import { redevPreApprovalAcqMode, redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -43,7 +44,7 @@ const BASE = {
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
 };
 const form = (assets: AssetForm[], f: Record<string, unknown> = {}) =>
-  Object.assign(createDefaultTransferFormData(), BASE, f, { assets }) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), BASE, f, { assets })) as TransferFormData;
 
 /** 주택 · 시가 5억 · 실지 2억 · 취득시 기준시가 1억 · 양도시 기준시가 4억 · 담보채무 6억 · 채권최고액 7.2억 → 담보평가 6억 = 채무 → 채무비율 1. */
 const house = (o: Record<string, unknown> = {}) =>

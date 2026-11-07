@@ -33,6 +33,7 @@ import { redevPreApprovalExpensesScenarioDependent } from "@/lib/calc/redev-pre-
 import { REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { redevLegacyExpenseUnusedMessage } from "@/lib/calc/redev-legacy-expense-unused";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -49,7 +50,7 @@ const BASE = {
   isRegulatedArea: false, wasRegulatedAtAcquisition: false, isUnregistered: false,
 };
 const form = (assets: Over[], contract: string) =>
-  Object.assign(createDefaultTransferFormData(), BASE, { contractTotalPrice: contract, totalTransferExpense: "", assets }) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), BASE, { contractTotalPrice: contract, totalTransferExpense: "", assets })) as TransferFormData;
 const CAR = {
   giftRegistryDate: "2023-06-01", donorAcquisitionDate: "2012-01-01", donorAcquisitionCause: "purchase", donorAcquisitionPrice: "100000000",
   useEstimatedAcquisition: false, estimationMode: "", giftTaxAmount: "4000000", donorCapitalExpenditure: "0", giftDateValuation: "300000000",

@@ -14,6 +14,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const PHD_ELEVEN = {
   phdFirstDisclosureDate: "2005-04-30",
@@ -78,7 +79,7 @@ async function seedForm(page: Page, formData: Record<string, unknown>) {
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
     await page.evaluate(
       (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-      { state: { formData, currentStep: 0, pendingMigration: false }, version: 0 },
+      seedWithDeclaredRoster({ state: { formData, currentStep: 0, pendingMigration: false }, version: 0 }),
     );
     await page.reload();
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -259,7 +260,7 @@ async function seedMulti(page: Page, form: Record<string, unknown>) {
       parsed.state.form.activeStep = "settings";
       sessionStorage.setItem("multi-transfer-tax-wizard", JSON.stringify(parsed));
     },
-    [form],
+    [seedWithDeclaredRoster(form)],
   );
   await page.reload();
   await page.waitForTimeout(1500);

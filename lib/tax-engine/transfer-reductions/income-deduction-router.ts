@@ -171,6 +171,12 @@ export interface IncomeDeductionResolution {
    * 기존 차감 3조문은 eligibleId === appliedId.
    */
   eligibleId?: IncomeDeductionId;
+  /**
+   * 요건은 모두 충족했고 5년 후 안분 기준시가만 없어 부적격인 하이브리드 조문(리뷰 US-35).
+   * 차감은 0 + 사유(`MISSING_STD_PRICE`)로 남기지만, 소령 §167의3①5호 「감면되는 주택」 여부는 요건으로 정해진다 —
+   * 중과 배제 선판정(`resolveSurchargeExclusionByReduction`)만 읽는다. 기준시가는 요건이 아니라 공제액 계산 인자다(조특령 §40① 준용).
+   */
+  requirementsMetId?: IncomeDeductionId;
   /** 차감액 (적용 조문의 reducibleTransferIncome) */
   reducible: number;
   new993Detail?: New993Result;
@@ -444,6 +450,13 @@ function evalHybrid(
         // 5년 내(tax_amount)는 appliedId 미설정 — STEP 4.6 차감 없음 (calcReductions 경로와 이중 혜택 차단)
         appliedId: isIncomeDeduction ? id : undefined,
         eligibleId: detail.isEligible ? id : undefined,
+        // 하이브리드는 요건 판정을 모두 마친 뒤 안분 단계(`computeHybridEffect`)에서만 MISSING_STD_PRICE를 낸다 — 그 하나뿐이면 요건 충족이다.
+        requirementsMetId:
+          !detail.isEligible &&
+          detail.ineligibleReasons.length > 0 &&
+          detail.ineligibleReasons.every((x) => x.code === "MISSING_STD_PRICE")
+            ? id
+            : undefined,
         reducible: isIncomeDeduction ? detail.reducibleTransferIncome : 0,
         stepLabel: STEP_LABELS[id],
         legalBasis: detail.legalBasis,
@@ -524,6 +537,11 @@ export function buildIncomeDeductionStep(
 }
 
 /** STEP 0.45 중과 배제 단계 표시 */
+/** 중과 배제 근거 조문 라벨 — 배제 단계와 5호 자기 선언 고지(`surcharge-self-declared-reduction-notice.ts`)가 같은 표를 쓴다. */
+export function exclusionArticleLabel(id: IncomeDeductionId): string {
+  return EXCLUSION_ARTICLE_LABELS[id];
+}
+
 const EXCLUSION_ARTICLE_LABELS: Record<IncomeDeductionId, string> = {
   new_99_3: "조특법 §99의3",
   new_99: "조특법 §99",
@@ -574,13 +592,15 @@ export function resolveSurchargeExclusionByReduction(
   const resolution = resolveIncomeDeduction(reductions, { ...deductionCtx, transferIncome: 0 });
   // P2: appliedId → eligibleId 기준 — 하이브리드 5년 내(세액감면 경로)도 §167의3①5호
   // "감면되는 주택"에 해당하므로 효과 경로 무관 적격이면 배제.
-  if (resolution.eligibleId && SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS.includes(resolution.eligibleId)) {
+  // US-35 — 5년 후 안분 기준시가만 없는 하이브리드도 요건을 갖춘 「감면되는 주택」이다(차감 0은 STEP 4.6이 따로 남긴다).
+  const surchargeId = resolution.eligibleId ?? resolution.requirementsMetId;
+  if (surchargeId && SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS.includes(surchargeId)) {
     return {
       excluded: true,
-      appliedId: resolution.eligibleId,
+      appliedId: surchargeId,
       // §98은 3호 (감면대상장기임대주택 — 5년+ 임대 국민주택), 나머지는 5호 열거
       legalBasis:
-        resolution.eligibleId === "unsold_98"
+        surchargeId === "unsold_98"
           ? "소령 §167의3①3호·§167의10①2호"
           : "소령 §167의3①5호·§167의10①2호",
     };

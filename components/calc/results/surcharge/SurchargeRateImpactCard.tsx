@@ -20,7 +20,14 @@ function suspensionLine(s: NonNullable<SurchargeRateImpact["suspension"]>): stri
   return `${mok} — ${s.deadline ? `${s.deadline}까지 양도` : "양도 기한 확인 필요"}`;
 }
 
-export function SurchargeRateImpactCard({ rateImpact }: { rateImpact: SurchargeRateImpact }) {
+export function SurchargeRateImpactCard({
+  rateImpact,
+  incentiveHouseDeclared = false,
+}: {
+  rateImpact: SurchargeRateImpact;
+  /** 양도 예정 주택이 5호(조특법 감면주택)·3호(감면 임대주택) 선언으로 중과에서 빠졌다 — 특례세율·감면은 이 판정 밖이다(리뷰 US-70) */
+  incentiveHouseDeclared?: boolean;
+}) {
   return (
     <dl data-testid="surcharge-rate-impact" className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
       <dt className="text-muted-foreground">중과 유형</dt>
@@ -31,6 +38,14 @@ export function SurchargeRateImpactCard({ rateImpact }: { rateImpact: SurchargeR
       <dd data-testid="surcharge-rate-lthd">
         {rateImpact.lthdExcluded ? "적용하지 않습니다(소득세법 §95② — 중과 대상 주택)" : "일반 요건대로 적용합니다"}
       </dd>
+      {incentiveHouseDeclared && (
+        <>
+          <dt className="text-muted-foreground">조특법 특례</dt>
+          <dd data-testid="surcharge-rate-incentive-note">
+            이 판정은 다주택 중과 배제만 봅니다 — 조세특례제한법 특례세율(§98①1호 20%)·감면(§98의3 등 양도소득금액 차감)을 받는지는 양도소득세 계산기에서 감면을 입력해 확인하세요.
+          </dd>
+        </>
+      )}
       {rateImpact.suspension && (
         <>
           <dt className="text-muted-foreground">한시 유예 근거</dt>

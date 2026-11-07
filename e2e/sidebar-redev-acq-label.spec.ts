@@ -8,6 +8,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const asset = (over: Record<string, unknown> = {}) => ({
   ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 9-9", assetKind: "redevelopment_apt", redevSubject: "apt",
@@ -20,7 +21,7 @@ const asset = (over: Record<string, unknown> = {}) => ({
 async function seed(page: Page, a: unknown, over: Record<string, unknown> = {}) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), {
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster({
     state: {
       formData: {
         assets: [a], transferDate: "2024-06-01", filingDate: "2024-08-31", totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false,
@@ -29,7 +30,7 @@ async function seed(page: Page, a: unknown, over: Record<string, unknown> = {}) 
       pendingMigration: false,
     },
     version: 0,
-  });
+  }));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   for (const n of [1, 2, 3] as const) if ((await page.locator(`[data-asset-card-index="0"] [data-asset-section="${n}"]`).count()) > 0) await expandAssetSection(page, n, 0);

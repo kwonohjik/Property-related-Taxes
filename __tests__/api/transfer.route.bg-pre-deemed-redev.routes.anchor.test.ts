@@ -32,6 +32,7 @@ import { postTransfer } from "../calc/_helpers/redev-one-house-route";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -66,7 +67,7 @@ const EXPENSES = { redevPreApprovalExpenses: "30,000,000", redevPostApprovalExpe
 const NO_166_3 = { redevAcquisitionHousingPrice: "", redevManagementDisposalHousingPrice: "" };
 
 const form = (a: Record<string, unknown>): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2026-02-16",
     filingDate: "2026-04-30",
     totalTransferExpense: "0",
@@ -76,7 +77,7 @@ const form = (a: Record<string, unknown>): TransferFormData =>
     householdNoPresaleRightsConfirmed: true,
     contractTotalPrice: "525000000",
     assets: [{ ...makeDefaultAsset(1), ...REDEV, ...a } as AssetForm],
-  }) as TransferFormData;
+  }))) as TransferFormData;
 
 async function run(a: Record<string, unknown>) {
   const f = form(a);
@@ -228,14 +229,14 @@ describe("PR-7b-4 · 리뷰 게이트 반영 (F-1 컴패니언 · F-2 입주권 
     bgMortgageDebtAmount: "120,000,000", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "100,000,000", standardPriceAtTransfer: "200,000,000",
   };
   async function bundle(rd: Record<string, unknown>) {
-    const f = Object.assign(createDefaultTransferFormData(), {
+    const f = rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
       transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "0", isOneHousehold: false,
       householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, contractTotalPrice: "825000000",
       assets: [
         { ...makeDefaultAsset(1), ...HOUSING } as AssetForm,
         { ...makeDefaultAsset(2), ...REDEV, ...MARKET, addressJibun: "제주특별자치도 B 2", ...rd } as AssetForm,
       ],
-    }) as TransferFormData;
+    }))) as TransferFormData;
     const fields = allIssues(f).map((i: { field?: string }) => i.field);
     const body = (await captureBody(f)) as Loose;
     const r = await postTransfer(body);

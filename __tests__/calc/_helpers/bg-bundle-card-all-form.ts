@@ -5,6 +5,7 @@
  * `companion-burdened-gift-plumbing.anchor.test.ts`의 픽스처와 같은 구조다. 호출하는 테스트 파일이 `@/lib/db/tax-rates`를 mock하고
  * `preloadTaxRates`에 `makeMockRates()`를 넣어야 한다(수치는 mock 세율표 실측값).
  */
+import { rosterForDeclaredCount } from "./roster-for-declared-count";
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/calc/transfer/route";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
@@ -75,11 +76,12 @@ const housing = (id: number, over: Record<string, unknown>): AssetForm =>
     ownershipNumerator: "100", ownershipDenominator: "100", ...over,
   }) as AssetForm;
 function companionForm(assets: AssetForm[]): TransferFormData {
-  return {
+  // ⑧ US-31 — 「다른 보유 주택 없음 ✓ + 주택 수 N」 모순 대신 같은 주택 수의 명부로(`roster-for-declared-count.ts`)
+  return rosterForDeclaredCount({
     transferDate: "2024-03-01", filingDate: "2024-05-31", assets, houses: [], presaleRights: [], contractTotalPrice: "1600000000",
     totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false,
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
-  } as unknown as TransferFormData;
+  } as unknown as TransferFormData);
 }
 /** 물건1 평가 10억(취득 5억) · 채무 4억 / 물건2 평가 6억(취득 3억) · 채무 0 → 채무비율 25%. */
 const p1 = (over: Record<string, unknown>) => housing(1, BG_MK("1000000000", "400000000", { standardPriceAtAcq: "300000000", ...over }));

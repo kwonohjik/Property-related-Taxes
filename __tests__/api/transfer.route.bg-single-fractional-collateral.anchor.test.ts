@@ -24,6 +24,7 @@ import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { allIssues, captureBody } from "../calc/_one-house-pr3a-calc-route";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -41,7 +42,7 @@ const house = (...over: Partial<AssetForm>[]) => Object.assign({ ...makeDefaultA
 const HALF = x({ ownershipNumerator: "50", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes" });
 const FORM = { transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", isOneHousehold: false, householdHousingCount: "2", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true };
 async function run(a: AssetForm) {
-  const f = Object.assign(createDefaultTransferFormData(), FORM, { assets: [a] }) as TransferFormData;
+  const f = rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, { assets: [a] })) as TransferFormData;
   const issues = allIssues(f).map(String);
   const res = await POST(new NextRequest("http://localhost/api/calc/transfer", { method: "POST", headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" }, body: JSON.stringify(await captureBody(f)) }));
   return { issues, status: res.status };

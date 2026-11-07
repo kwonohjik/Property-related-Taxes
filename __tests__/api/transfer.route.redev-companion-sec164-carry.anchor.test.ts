@@ -27,6 +27,7 @@ import { validateStepDetailed } from "@/lib/calc/transfer-tax-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -67,11 +68,11 @@ async function check(f: TransferFormData) {
 
 // ── 원조합원(종전 자산 상속) — `original-member-163-9` · `original-member-land-164-4` anchor와 같은 시료 ──
 const mkO = (assets: A[]) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "1", isOneHousehold: false,
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, contractTotalPrice: "1300000000", bundledSaleMode: "actual",
     assets: assets.map((a, i) => ({ ...makeDefaultAsset(i + 1), ...a }) as AssetForm),
-  }) as TransferFormData;
+  }))) as TransferFormData;
 const LAND: A = { addressJibun: "제주특별자치도 강남구 테스트동 1-1", assetKind: "land", landNature: "standalone", acquisitionCause: "purchase", acquisitionDate: "2015-01-01", fixedAcquisitionPrice: "100000000", actualSalePrice: "200,000,000", fixedSalePrice: "200,000,000" };
 const OM = (over: A): A => ({
   addressJibun: "제주특별자치도 강남구 테스트동 7-1", assetKind: "right_to_move_in", redevSubject: "right", redevApprovalLawBasis: "urban_renovation_art_74", redevOriginalAssetType: "housing",
@@ -159,11 +160,11 @@ const BEFORE: A = { ...SUCC, redevApprovalDate: "2003-02-20", redevCompletionDat
 const NO_SEC164: A = { inhHouseValLandArea: "", inhHouseValLandPricePerSqmAtTransfer: "", inhHouseValLandPricePerSqmAtFirst: "", inhHouseValHousePriceAtFirst: "", inhHouseValLandPricePerSqmAtInheritance: "" };
 const HOUSE: A = { addressJibun: "제주특별자치도 강남구 테스트동 2-2", assetKind: "housing", actualSalePrice: "300,000,000", acquisitionCause: "purchase", acquisitionDate: "2000-01-01", fixedAcquisitionPrice: "100,000,000", standardPriceAtTransfer: "200,000,000" };
 const bundleS = (a: A) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2023-02-16", filingDate: "2023-04-30", totalTransferExpense: "0", householdHousingCount: "0", isOneHousehold: false,
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, contractTotalPrice: "1220000000",
     assets: [{ ...makeDefaultAsset(1), ...HOUSE } as AssetForm, { ...makeDefaultAsset(2), ...a } as AssetForm],
-  }) as TransferFormData;
+  }))) as TransferFormData;
 
 describe("CC-3 승계 완공 아파트 — 준공 뒤 받음만 운반 · 준공 전 받음은 ①만(#2876)", () => {
   it("준공 뒤 · ① 1억 + ② 2.5억 → 컴패니언 취득가액 250,000,000 · 합산 218,790,000(= ① 2.5억 · 종전 262,890,000)", async () => {

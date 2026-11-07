@@ -25,6 +25,7 @@ import { ESTIMATED, KNOWN, withGift } from "../calc/_helpers/carryover-owner-spl
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -36,13 +37,13 @@ const HH = {
 };
 /** 1번 자산 = 이월과세 소유자 같음(5억) · 2번 자산 = 시료. 일괄 17억 → 2번 자산 일괄 양도가액 850,000,000 */
 async function second(a: Loose) {
-  const f = Object.assign(createDefaultTransferFormData(), {
+  const f = rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     ...HH, contractTotalPrice: "1700000000",
     assets: [
       { ...makeDefaultAsset(1), ...KNOWN, selfOwns: "both", actualSalePrice: "500,000,000", carryover: { ...KNOWN.carryover, donorAcquisitionPrice: "100,000,000" } } as AssetForm,
       { ...makeDefaultAsset(2), ...a } as AssetForm,
     ],
-  }) as TransferFormData;
+  })) as TransferFormData;
   const r = await postTransfer((await captureBody(f)) as Loose);
   const p = (r.json as Loose)?.data?.aggregated?.properties?.[1] as Loose | undefined;
   return { issues: allIssues(f).map((i) => i.field), status: r.status, p };

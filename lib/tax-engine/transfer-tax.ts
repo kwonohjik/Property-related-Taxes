@@ -555,12 +555,13 @@ function calculateTransferTaxCore(
     isRegulatedArea: effectiveInput.isRegulatedArea,
     householdHousingCount: effectiveInput.householdHousingCount,
     transferDate: input.transferDate,
-    // 리터럴이라 반사실 플래그·소유 사실을 명시 전달한다 — 빠지면 장특 축만 중과로 남는다(MH-P9).
+    // 리터럴이라 반사실 플래그·소유 사실·fallback 사실을 명시 전달한다 — 빠지면 장특 축만 중과로 남는다(MH-P9).
     forceNoMultiHouseSurcharge: effectiveInput.forceNoMultiHouseSurcharge,
     selfOwns: effectiveInput.selfOwns,
     buildingOwnerSameHousehold: effectiveInput.buildingOwnerSameHousehold,
     oneHouseUnitRole: effectiveInput.oneHouseUnitRole,
     appurtenantHouseVerdict: effectiveInput.appurtenantHouseVerdict,
+    acquisitionDate: effectiveInput.acquisitionDate, surchargeExcludedByReduction: effectiveInput.surchargeExcludedByReduction, // fallback 전용 — US-08 위기취득 · US-38 감면주택
   };
   const surchargeApplication = resolveSurchargeApplication(surchargeArgs, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules);
   const { isSurchargeCase, isSuspended: suspendedResult } = surchargeApplication;

@@ -28,6 +28,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { summarizeAssetSections } from "@/components/calc/transfer/asset-section-summary";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -63,10 +64,10 @@ const SALES = { isSalesCaseAcquisition: true };
 const HH = { householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true };
 
 function form(a: A, extra: A = {}): TransferFormData {
-  return Object.assign(createDefaultTransferFormData(), {
+  return rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2023-02-16", filingDate: "2023-04-30", totalTransferExpense: "0", householdHousingCount: "0", isOneHousehold: false, ...HH, ...extra,
     assets: [{ ...makeDefaultAsset(1), ...a } as AssetForm],
-  }) as TransferFormData;
+  })) as TransferFormData;
 }
 async function run(f: TransferFormData) {
   const body = (await captureBody(f)) as A;
@@ -121,7 +122,7 @@ describe("의제취득일 전 상속 토지 × 부담부증여(V-5)", () => {
 
 describe("축 B 지분 분할 컴패니언(V-1) — F41이 부담부증여의 남은 매매사례를 막지 않는다", () => {
   const frac = (second: A) =>
-    Object.assign(createDefaultTransferFormData(), {
+    rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
       transferDate: "2024-03-01", filingDate: "2024-05-31", totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false, ...HH,
       contractTotalPrice: "1000000000", assetSplitMode: "fractional",
       assets: [1, 2].map((id) => ({
@@ -129,7 +130,7 @@ describe("축 B 지분 분할 컴패니언(V-1) — F41이 부담부증여의 �
         bgLendingDepositTotal: "300000000", bgMortgageDebtAmount: "300000000", standardPriceAtTransfer: "1000000001", standardPriceAtAcq: "500000001",
         ...(id === 2 ? second : {}),
       }) as AssetForm),
-    }) as TransferFormData;
+    })) as TransferFormData;
   it("남은 매매사례 → ⑧ 통과 · 200 · 플래그 없음과 같은 62,167,600", async () => {
     expect((await run(frac({}))).tax).toBe(62_167_600);
     expect(await run(frac(SALES))).toMatchObject({ messages: [], status: 200, tax: 62_167_600 });

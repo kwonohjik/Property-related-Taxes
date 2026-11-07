@@ -8,7 +8,7 @@ import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
-type Std = { acq?: string; y5?: string };
+type Std = { acq?: string; y5?: string; transfer?: string };
 
 function make992(houseType992: "new_or_unsold" | "self_built" | "existing_one_house", std: Std): AssetReductionForm {
   return {
@@ -20,6 +20,7 @@ function make992(houseType992: "new_or_unsold" | "self_built" | "existing_one_ho
     exclusiveAreaSqm992: "84",
     standardPriceAtAcquisition992: std.acq ?? "",
     standardPriceAt5Years992: std.y5 ?? "",
+    standardPriceAtTransfer992: std.transfer ?? "",
   } as AssetReductionForm;
 }
 
@@ -32,6 +33,7 @@ function make983(std: Std): AssetReductionForm {
     isOverconcentration983: false,
     standardPriceAtAcquisition983: std.acq ?? "",
     standardPriceAt5Years983: std.y5 ?? "",
+    standardPriceAtTransfer983: std.transfer ?? "",
   } as AssetReductionForm;
 }
 
@@ -42,6 +44,7 @@ function make985(std: Std): AssetReductionForm {
     priceReductionRatePct985: "15",
     standardPriceAtAcquisition985: std.acq ?? "",
     standardPriceAt5Years985: std.y5 ?? "",
+    standardPriceAtTransfer985: std.transfer ?? "",
   } as AssetReductionForm;
 }
 
@@ -55,6 +58,7 @@ function make986(hoType986: "seller_rented" | "buyer_rented", std: Std): AssetRe
     rentalStartDate986: hoType986 === "buyer_rented" ? "2011-09-01" : "",
     standardPriceAtAcquisition986: std.acq ?? "",
     standardPriceAt5Years986: std.y5 ?? "",
+    standardPriceAtTransfer986: std.transfer ?? "",
   } as AssetReductionForm;
 }
 
@@ -67,7 +71,8 @@ function makeForm(acqDate: string, transferDate: string, reduction: AssetReducti
 
 const OVER5Y = ["2014-06-01", "2022-08-01"] as const; // 약 8년
 const WITHIN5Y = ["2019-06-01", "2022-08-01"] as const; // 약 3년
-const FULL = { acq: "200,000,000", y5: "300,000,000" };
+// 🔄 2026-11-07 US-35 — 5년 경과 양도는 양도시 기준시가도 필수(실가 모드는 ④가 자산값을 싣지 않는다)
+const FULL = { acq: "200,000,000", y5: "300,000,000", transfer: "400,000,000" };
 
 describe("[F-1] 하이브리드 4조문 5년 경과 기준시가 validate", () => {
   it("C1: §99의2 new_or_unsold 5년 초과 + 미입력 → 차단(취득시)", () => {
@@ -77,6 +82,11 @@ describe("[F-1] 하이브리드 4조문 5년 경과 기준시가 validate", () =
 
   it("C2: §99의2 self_built 5년 초과 + 입력 → 통과", () => {
     expect(validateStep(2, makeForm(...OVER5Y, make992("self_built", FULL)))).toBeNull();
+  });
+
+  it("C2b: 🔴 §99의2 self_built 5년 초과 + 양도시만 비움(실가 모드) → 차단(양도시 — US-35)", () => {
+    const msg = validateStep(2, makeForm(...OVER5Y, make992("self_built", { acq: "200,000,000", y5: "300,000,000" })));
+    expect(msg).toContain("양도시 기준시가");
   });
 
   it("C3: §99의2 existing_one_house 5년 이내 + 미입력 → 통과 (세액감면 경로)", () => {

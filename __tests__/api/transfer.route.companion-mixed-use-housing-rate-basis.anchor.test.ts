@@ -33,6 +33,7 @@ import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -135,13 +136,13 @@ const SEP = (building: string, land: string) => ({
 
 async function calc(over: Record<string, unknown>) {
   const base = bundledForm();
-  const f = {
+  const f = rosterForDeclaredCount({
     ...base,
     assets: [base.assets[0], { ...base.assets[1], ...over }],
     isOneHousehold: false,
     householdNoOtherHousesConfirmed: true,
     householdNoPresaleRightsConfirmed: true,
-  } as TransferFormData;
+  } as TransferFormData);
   expect([0, 1, 2, 3].flatMap((s) => collectStepIssues(s, f).map((i) => i.message))).toEqual([]);
   const r = await pipeline(f);
   expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);

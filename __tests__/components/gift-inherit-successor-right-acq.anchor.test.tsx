@@ -34,6 +34,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { SuccessorRightAcquisitionBlock } from "@/components/calc/transfer/SuccessorRightAcquisitionBlock";
 import { isDeemedValueSuccessorRight, successorRightEstimationMode } from "@/lib/calc/transfer-successor-right";
 import { directAcqRaw } from "@/lib/stores/transfer-per-asset-direct";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -41,11 +42,11 @@ beforeEach(() => {
 
 type A = Record<string, unknown>;
 const mk = (assets: A[], extra: A = {}) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "1", isOneHousehold: false,
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, contractTotalPrice: "1300000000", ...extra,
     assets: assets.map((a, i) => ({ ...makeDefaultAsset(i + 1), ...a }) as AssetForm),
-  }) as TransferFormData;
+  })) as TransferFormData;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function postBody(body: Record<string, any>): Promise<{ status: number; data: any; error?: any }> {

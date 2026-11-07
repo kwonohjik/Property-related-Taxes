@@ -36,6 +36,7 @@ import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 /**
  * S3-2 — 이 파일의 겸용 fixture는 **취득시 개별주택가격(300M) < 가목(공시지가 1.0M × 주택부수토지 360㎡ = 360M)** 이다.
@@ -111,7 +112,7 @@ function form(asset: Record<string, unknown>, top: Record<string, unknown>): For
   f.assets[0] = { ...f.assets[0], residenceInputMode: "direct", residencePeriods: [], ...asset } as Form["assets"][number];
   Object.assign(f, top);
   // S3-2 ④ — 나목은 폼 필드에서 실려 간다(body shim 아님). 겸용이 아닌 자산은 그대로.
-  return withIdentityHousingBuildingStdOnForm(f, CLAMP_N);
+  return rosterForDeclaredCount(withIdentityHousingBuildingStdOnForm(f, CLAMP_N));
 }
 
 const BASE = {

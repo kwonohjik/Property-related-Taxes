@@ -26,6 +26,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { ownerSplitDonorEstimated } from "@/lib/calc/transfer-land-part-cause";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -50,7 +51,7 @@ const HH = {
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
 };
 const form = (a: Loose): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), { ...HH, contractTotalPrice: "1200000000", assets: [{ ...makeDefaultAsset(1), ...a } as AssetForm] }) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), { ...HH, contractTotalPrice: "1200000000", assets: [{ ...makeDefaultAsset(1), ...a } as AssetForm] })) as TransferFormData;
 
 async function run(a: Loose) {
   const f = form(a);
@@ -117,13 +118,13 @@ describe("비주택 건물 — 비례 안분이 없어 본인 파트 분모만 �
 
 describe("함께 양도 자산(컴패니언)", () => {
   it("이월과세 환산 소유자 분리도 같은 엔진 경로 — 파트 환산·개산공제(취득가액 0이 아니다)", async () => {
-    const f = Object.assign(createDefaultTransferFormData(), {
+    const f = rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
       ...HH, contractTotalPrice: "1700000000",
       assets: [
         { ...makeDefaultAsset(1), ...CARRY, selfOwns: "both", actualSalePrice: "500,000,000", carryover: { ...CARRY.carryover, useEstimatedAcquisition: false, estimationMode: null, donorAcquisitionPrice: "100,000,000" } } as AssetForm,
         { ...makeDefaultAsset(2), ...CARRY, selfOwns: "building_only" } as AssetForm,
       ],
-    }) as TransferFormData;
+    })) as TransferFormData;
     const r = await postTransfer((await captureBody(f)) as Loose);
     const sd = (r.json as Loose)?.data?.aggregated?.properties?.[1]?.splitDetail as Loose | undefined;
     expect([allIssues(f), r.status]).toEqual([[], 200]);

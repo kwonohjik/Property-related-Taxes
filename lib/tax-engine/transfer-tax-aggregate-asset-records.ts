@@ -245,12 +245,18 @@ export function buildAssetRecords(
     const landOnlyOverride = landOnlyRate === singleInput
       ? undefined
       : { acquisitionDate: landOnlyRate.acquisitionDate, ...(landOnlyRate.nonHousingForRate ? { nonHousingForRate: true } : {}) };
-    const hasOverride = nblOverride !== undefined || rateBasisOverride !== undefined || landOnlyOverride !== undefined;
+    /**
+     * 명부 없는 fallback 감면주택 중과 배제(STEP 0.45 — 리뷰 US-38)도 단건 엔진 안에서만 파생 주입된다.
+     * 원 입력으로 그룹 세액을 다시 구하면 `calcTax`가 원시 플래그로 중과를 되살린다(실측: 컴패니언 겸용 §99의3 매매 284,205,000 ↔ 겸용 먼저 242,772,000).
+     */
+    const reductionExclOverride = result.surchargeExcludedByReduction ? { surchargeExcludedByReduction: true } : undefined;
+    const hasOverride =
+      nblOverride !== undefined || rateBasisOverride !== undefined || landOnlyOverride !== undefined || reductionExclOverride !== undefined;
     const correctedItem: TransferTaxItemInput = hasOverride
-      ? { ...item, ...landOnlyOverride, ...nblOverride, ...rateBasisOverride }
+      ? { ...item, ...landOnlyOverride, ...nblOverride, ...rateBasisOverride, ...reductionExclOverride }
       : item;
     const correctedSingleInput: TransferTaxInput = hasOverride
-      ? { ...singleInput, ...landOnlyOverride, ...nblOverride, ...rateBasisOverride }
+      ? { ...singleInput, ...landOnlyOverride, ...nblOverride, ...rateBasisOverride, ...reductionExclOverride }
       : singleInput;
     return { item, correctedItem, correctedSingleInput, singleInput, result, rates: itemRates };
   };

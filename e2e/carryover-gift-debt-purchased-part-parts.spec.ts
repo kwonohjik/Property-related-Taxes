@@ -21,6 +21,7 @@ import { formRow } from "./_helpers/split-acq-display";
 import { stmtRow } from "./_helpers/split-acq-display";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { putCalculationRecord } from "./_helpers/history-seed";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const TOGGLE = "당초 증여 때 채무를 인수했다";
 const DEBT = '[data-field="carryover.giftAssumedDebt"]';
@@ -87,7 +88,7 @@ async function seedAndOpen(page: Page, asset: Record<string, unknown> | Record<s
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
   const formData = formDataOf(asset, formOver);
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), { state: { formData, currentStep: 0, pendingMigration: false }, version: 0 });
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster({ state: { formData, currentStep: 0, pendingMigration: false }, version: 0 }));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   // dev 서버 Next.js 표시기 배지가 하단 버튼을 덮는다

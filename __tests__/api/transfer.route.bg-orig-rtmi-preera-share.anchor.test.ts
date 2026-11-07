@@ -37,6 +37,7 @@ import { bgRtmiAxisBWinnerComputable } from "@/lib/calc/bg-rtmi-std-acq";
 import { bgRtmiBundleWinnerComputable } from "@/lib/calc/bg-rtmi-std-acq";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -72,7 +73,7 @@ const house = () => Object.assign({ ...makeDefaultAsset(1) }, x({
 })) as AssetForm;
 
 const form = (assets: AssetForm[], transferDate: string, over: Record<string, unknown> = {}) =>
-  Object.assign(createDefaultTransferFormData(), FORM, { transferDate, assets, contractTotalPrice: "" }, over) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, { transferDate, assets, contractTotalPrice: "" }, over)) as TransferFormData;
 const axisB = (assets: AssetForm[], date: string) => form(assets, date, { assetSplitMode: "fractional", contractTotalPrice: "3000000000" });
 const bundle = (assets: AssetForm[], date: string) => form(assets, date, { assetSplitMode: "companion", bundledSaleMode: "actual", contractTotalPrice: "9000000000" });
 const full = (f: TransferFormData) => { const out: string[] = []; for (let i = 0; i <= 5; i++) for (const m of collectStepIssues(i, f)) out.push(m.message); return out; };

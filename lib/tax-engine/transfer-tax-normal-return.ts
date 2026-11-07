@@ -175,7 +175,9 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     surchargeType: taxResult.surchargeType,
     surchargeRate: taxResult.surchargeRate,
     isSurchargeSuspended: taxResult.surchargeSuspended,
-    rateSurchargeStatutoryExcluded: multiHouseSurchargeResult?.rateSurchargeStatutoryExcluded,
+    // 정밀 판정이 없으면 fallback 술어의 같은 판정(부칙 제9270호 §14① — US-08) — 다건 §104⑤ 그룹 분류가 읽는다.
+    rateSurchargeStatutoryExcluded: multiHouseSurchargeResult?.rateSurchargeStatutoryExcluded ?? surchargeEcho.rateSurchargeStatutoryExcluded,
+    ...(effectiveInput.surchargeExcludedByReduction ? { surchargeExcludedByReduction: true } : {}),
     // houses[] 정밀 판정 원본 echo — 다건 집계가 자산별 세액을 다시 구할 때 **같은 판정**을
     // 쓰도록 그대로 싣는다(표시용 multiHouseSurchargeDetail에는 surchargeApplicable·
     // surchargeType·isSurchargeSuspended가 없어 재사용할 수 없다). 세액 로직 불변 — F01.

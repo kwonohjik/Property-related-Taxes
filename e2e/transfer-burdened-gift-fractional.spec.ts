@@ -32,6 +32,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 /** 단건 부담부증여 — 엔진 anchor B3와 동일 수치(판별력). */
 const burdenedGift = {
@@ -76,7 +77,7 @@ async function seedAndOpen(page: Page, assets: unknown[]) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedState(assets),
+    seedWithDeclaredRoster(seedState(assets)),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

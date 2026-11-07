@@ -11,6 +11,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const asset = (over: Record<string, unknown> = {}) => ({
   ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 9-9", assetKind: "right_to_move_in", redevSubject: "right",
@@ -47,7 +48,7 @@ const second = (over: Record<string, unknown> = {}) => ({
 async function seedAxisB(page: Page, assets: unknown[], transferDate = "2026-02-16") {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), {
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster({
     state: {
       formData: {
         assets, assetSplitMode: "fractional", contractTotalPrice: "3000000000", transferDate, filingDate: "2026-04-30", totalTransferExpense: "0",
@@ -57,7 +58,7 @@ async function seedAxisB(page: Page, assets: unknown[], transferDate = "2026-02-
       pendingMigration: false,
     },
     version: 0,
-  });
+  }));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   // 지분 카드(둘째)는 ① 기본정보·② 양도정보가 숨겨져 있어 있는 섹션만 펼친다.
