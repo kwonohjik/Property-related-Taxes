@@ -135,7 +135,9 @@ export function classifyRateGroup(
     result.multiHouseSurchargeEvaluation === undefined &&
     isHousingLike &&
     item.isRegulatedArea &&
-    item.householdHousingCount >= 2;
+    item.householdHousingCount >= 2 &&
+    // 명부 없는 fallback도 감면주택(영 §167의3①5호·3호)이면 중과 대상이 아니다 — 단건 술어와 같은 판정(리뷰 US-38)
+    !result.surchargeExcludedByReduction;
   // 부칙 §9270호 §14①(rateSurchargeStatutoryExcluded): surchargeType은 유지하나 세율 중과 미적용 →
   // §104⑤ 그룹은 progressive로 분류(기존 배제/유예 분류는 불변 — 이 케이스만 좁게 제외).
   if ((multiHouseByResult || multiHouseByInput) && !result.isSurchargeSuspended && !result.rateSurchargeStatutoryExcluded) {

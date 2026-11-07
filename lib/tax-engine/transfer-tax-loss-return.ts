@@ -211,6 +211,8 @@ export function buildLossTransferTaxResult({
     // 다건 집계도 차손 자산을 이 경로에 태운 뒤 세율을 다시 구한다 —
     // 정상 경로와 같은 정밀 판정을 쓰도록 여기서도 echo한다 (F01).
     multiHouseSurchargeEvaluation: multiHouseSurchargeResult,
+    // 명부 없는 fallback 감면주택 배제(US-38) — 같은 이유로 echo
+    ...(effectiveInput.surchargeExcludedByReduction ? { surchargeExcludedByReduction: true } : {}),
     ...buildTransferResultDetails({
       multiHouseSurchargeResult,
       nonBusinessLandJudgment,

@@ -8,7 +8,7 @@
  *
  * | # | 주장 |
  * |---|---|
- * | U-1 | 가목 아파트 · 거주주택 양도 2028-06-01 · 도시형 아님 → 양도기한 경과 ⑳ 불성립 299,816,000 (종전과 같음) |
+ * | U-1 | 가목 아파트 · 거주주택 양도 2028-06-01 · 도시형 아님 → 양도기한 경과 ⑳ 불성립 190,366,000 (2026-11-07 — 2012 취득은 부칙 제9270호 §14① 위기취득 창 안이라 세율 중과 배제 · 명부 경로와 같은 값, 종전 299,816,000) |
  * | U-2 | 같은 입력 + 도시형 생활주택인 아파트 → ⑳ 성립 RH-A1 · 0 |
  * | U-3 | [짝] 2020.7.11. 이후 신청 아파트(마목2)) + 도시형 → 아파트 배제 그대로(불성립) |
  * | U-4 | ④ — 묻는 범위 밖(아파트 아님)이면 남은 값을 싣지 않고, 도시형이면 ⑪ 연장 사실을 싣지 않는다 |
@@ -89,10 +89,10 @@ const unitPayload = (f: ReturnType<typeof form>) =>
   (toRentalHousingExceptionApi(f.assets[0]) as { rentalUnits: Record<string, unknown>[] }).rentalUnits[0];
 
 describe("§155⑳ 도시형 생활주택인 아파트 — 가목2) 괄호는 양도기한에만 (V-10)", () => {
-  it("U-1 도시형 아님 · 2028-06-01 양도 → 양도기한 경과로 ⑳ 불성립 299,816,000", async () => {
+  it("U-1 도시형 아님 · 2028-06-01 양도 → 양도기한 경과로 ⑳ 불성립 190,366,000", async () => {
     const r = await runCalc(form("2028-06-01"));
     expect(detail(r)?.applied).toBe(false);
-    expect(r.result.totalTax).toBe(299_816_000);
+    expect(r.result.totalTax).toBe(190_366_000);
   });
 
   it("U-2 도시형 생활주택인 아파트 → 양도기한 비적용 · ⑳ 성립 RH-A1 · 0", async () => {
@@ -116,7 +116,7 @@ describe("§155⑳ 도시형 생활주택인 아파트 — 가목2) 괄호는 �
       }),
     );
     expect(detail(r)?.applied).toBe(false);
-    expect(r.result.totalTax).toBe(299_816_000);
+    expect(r.result.totalTax).toBe(190_366_000);
     const steps = (r.result.steps ?? []) as { label: string; formula: string }[];
     expect(steps.find((s) => s.label.includes("적용 불가"))?.formula).toMatch(/마목\)에서 아파트는/);
     // 짝 — 같은 입력의 비아파트는 0(아파트 배제만이 결론을 가른다)
@@ -141,7 +141,7 @@ describe("§155⑳ 도시형 생활주택인 아파트 — 가목2) 괄호는 �
     expect(nonApt.isUrbanLifeHousingApartment).toBeUndefined();
   });
 
-  it("U-5 다건 route = 단건 — 도시형 아파트 0 · 도시형 아님 299,816,000", async () => {
+  it("U-5 다건 route = 단건 — 도시형 아파트 0 · 도시형 아님 190,366,000", async () => {
     const multi = async (f: ReturnType<typeof form>) => {
       const cap: { body?: unknown } = {};
       vi.stubGlobal(
@@ -166,7 +166,7 @@ describe("§155⑳ 도시형 생활주택인 아파트 — 가목2) 괄호는 �
       return json.data.totalTax;
     };
     expect(await multi(form("2028-06-01", { isUrbanLifeHousingApartment: true }))).toBe(0);
-    expect(await multi(form("2028-06-01"))).toBe(299_816_000);
+    expect(await multi(form("2028-06-01"))).toBe(190_366_000);
   });
 });
 

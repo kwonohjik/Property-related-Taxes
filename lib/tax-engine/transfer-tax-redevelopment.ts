@@ -668,6 +668,8 @@ export function calculateRedevelopmentTax(
      * 그 위험을 새로 활성화**한다(memory `feedback_ui_gate_expansion_activates_latent_defect`).
      */
     multiHouseSurchargeEvaluation: multiHouseSurchargeResult,
+    // 명부 없는 fallback 감면주택 배제(US-38) — 다건 재계산이 원 입력으로 중과를 되살리지 않게 echo
+    ...(input.surchargeExcludedByReduction ? { surchargeExcludedByReduction: true } : {}),
     /**
      * 🔑 **배제한 이유를 화면까지 보낸다** — 일반 경로(`transfer-tax-lthd.ts`)는 이 필드를
      * 채우는데 재개발 경로만 비어 있었다. 그러면 상세명세서·결과 카드가 「양도차익 × **0%**」로만

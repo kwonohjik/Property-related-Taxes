@@ -561,6 +561,9 @@ function calculateTransferTaxCore(
     buildingOwnerSameHousehold: effectiveInput.buildingOwnerSameHousehold,
     oneHouseUnitRole: effectiveInput.oneHouseUnitRole,
     appurtenantHouseVerdict: effectiveInput.appurtenantHouseVerdict,
+    // fallback 전용 — 위기취득 세율 배제(US-08) · STEP 0.45 감면주택 배제(US-38). 리터럴이라 명시 전달한다(빠지면 fallback만 중과로 남는다).
+    acquisitionDate: effectiveInput.acquisitionDate,
+    surchargeExcludedByReduction: effectiveInput.surchargeExcludedByReduction,
   };
   const surchargeApplication = resolveSurchargeApplication(surchargeArgs, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules);
   const { isSurchargeCase, isSuspended: suspendedResult } = surchargeApplication;

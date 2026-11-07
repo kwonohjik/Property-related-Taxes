@@ -49,6 +49,8 @@ import { sameHouseholdInheritanceHoldingStart } from "./one-house/same-household
 import { pickRateBasisFacts } from "./transfer-rate-holding-basis";
 import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
 import { resolveSurchargeExclusionByReduction } from "./transfer-reductions/income-deduction-router";
+import { buildSurchargeExclusionStep } from "./transfer-reductions/income-deduction-router";
+import { isFallbackSurchargeCandidate } from "./transfer-tax-surcharge-predicate";
 import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
 import { redevMemberNewHouseOf } from "./transfer-reductions/new-99-redev-member";
 import { isRedevelopmentActive } from "./redevelopment-dispatch";
@@ -390,9 +392,18 @@ export function runSurchargeAndLandSteps(
     hceGeneralHouseAcquisitionDate,
   );
 
+  /**
+   * 명부 없는 fallback — 정밀 경로는 양도 주택 행에 감면주택 표지를 주입해 중과를 닫는다(`runMultiHouseSurchargeStep`).
+   * 행이 없으면 그 주입이 닿지 않아 §98 계열 적격 주택에 중과세율과 장특 0이 함께 붙었다(리뷰 US-38 · 실측 2주택 247,016,000 ↔ 99,913,000).
+   * 파생 입력 표지로 fallback 술어(`resolveSurchargeApplication`)가 두 축을 함께 닫게 하고, 같은 배제 단계를 남긴다.
+   */
+  const fallbackExcludedByReduction =
+    !multiHouseSurchargeResult && surchargeExclusionByReduction.excluded && isFallbackSurchargeCandidate(workingInput);
+  if (fallbackExcludedByReduction) steps.push(buildSurchargeExclusionStep(surchargeExclusionByReduction));
+
   // eslint-disable-next-line prefer-const -- effectiveInput은 후속 STEP에서 파생 입력으로 재할당
   let { nonBusinessLandJudgment, effectiveInput } = runNonBusinessLandStep(
-    workingInput,
+    fallbackExcludedByReduction ? { ...workingInput, surchargeExcludedByReduction: true } : workingInput,
     parsedRates,
     steps,
   );

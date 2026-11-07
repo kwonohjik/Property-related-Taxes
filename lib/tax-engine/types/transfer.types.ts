@@ -1266,6 +1266,11 @@ export interface TransferTaxInput {
    * 서버 route만 주입한다(Zod 스키마에 없다 — 클라이언트가 보낼 수 없다). 술어 `resolveSurchargeApplication` 최상단에서 닫는다.
    */
   forceNoMultiHouseSurcharge?: boolean;
+  /**
+   * 엔진 내부 주입(STEP 0.45 · `transfer-tax-precalc.ts`) — 명부 없는 fallback에서 양도 주택이 감면주택(영 §167의3①5호·3호)으로
+   * 중과 배제된다. 술어 `resolveSurchargeApplication`의 fallback 분기가 읽는다(리뷰 US-38). Zod 스키마에 없다 — 클라이언트가 보낼 수 없다.
+   */
+  surchargeExcludedByReduction?: boolean;
   /** P5 모드 2 — 보유 감면주택 §89①3호 주택수 제외 (7개 조문 ②·§98 령②·§99②). */
   specialHouseExclusions?: import("../transfer-reductions/unsold-hybrid-p5").SpecialHouseExclusionInput[];
   /**

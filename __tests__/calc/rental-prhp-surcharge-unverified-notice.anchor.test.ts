@@ -52,13 +52,27 @@ function form(count: string, regulated: boolean, scenario: "A" | "B", postRegMon
 const warns = (r: { result: { warnings?: unknown } }) => ((r.result.warnings ?? []) as string[]);
 
 describe("#20 성립 B 중과 — 확인 필요 고지", () => {
+  // 🔄 2026-11-07 — 중과가 붙는 경우를 보려면 거주주택이 부칙 제9270호 §14① 위기취득 창(2009.3.16~2012.12.31) **밖** 취득이어야 한다
+  //   (명부 없는 fallback도 이제 세율 배제를 본다 · 리뷰 US-08). 종전 시료(2009-08-12)는 아래 N-1c로 옮겼다. 2013-08-12도 RH-B2 · 같은 세액.
   it("N-1 B 성립 + 주택 수 2 + 조정 → 중과 2주택(+20%p)이 붙고 장기보유특별공제를 배제한다(종전 장특 303,300,000 · 338,676,602)", async () => {
-    const r = await runCalc(form("2", true, "B"));
+    const f = form("2", true, "B");
+    f.assets[0].acquisitionDate = "2013-08-12";
+    const r = await runCalc(f);
     expect(r.result.rentalHousingExceptionDetail.scenarioId).toBe("RH-B2");
     expect(r.result.surchargeType).toBe("multi_house_2");
     expect(r.result.longTermHoldingDeduction).toBe(0);
     expect(r.result.totalTax).toBe(510_362_600);
     expect(warns(r)).toContain(PRHP_SURCHARGE_UNVERIFIED_NOTICE);
+    expect(warns(r)).toContain(RENTAL_SURCHARGE_LTHD_EXCLUDED_NOTICE);
+  });
+
+  it("N-1c 🔴 위기취득 창 안(2009-08-12) — 세율 중과는 빠지고(기본세율) 장특 배제는 남는다 · 중과세율 확인 필요 고지 없음 (US-08 · 종전 510,362,600)", async () => {
+    const r = await runCalc(form("2", true, "B"));
+    expect(r.result.rentalHousingExceptionDetail.scenarioId).toBe("RH-B2");
+    expect(r.result.surchargeType).toBeUndefined();
+    expect(r.result.longTermHoldingDeduction).toBe(0);
+    expect(r.result.totalTax).toBe(332_976_600);
+    expect(warns(r)).not.toContain(PRHP_SURCHARGE_UNVERIFIED_NOTICE);
     expect(warns(r)).toContain(RENTAL_SURCHARGE_LTHD_EXCLUDED_NOTICE);
   });
 
