@@ -117,13 +117,16 @@ const NEW_99 = table("new_99", hybrid("new_99"), n99Ok, {}, [
 ]);
 
 // ── §98의8 ────────────────────────────────────────────────────────────────
-const u988Ok = { contractDate988: "2014-01-01", acquisitionPrice988: "300000000", exclusiveAreaSqm988: "84", rentalContractDate988: "2015-06-01", rentalStartDate988: "2015-07-01" };
+const u988Ok = { contractDate988: "2014-01-01", acquisitionPrice988: "300000000", exclusiveAreaSqm988: "84", rentalContractDate988: "2015-06-01", rentalStartDate988: "2015-07-01", ...std5("988") };
 const UNSOLD_98_8 = table("unsold_98_8", hybrid("unsold_98_8"), u988Ok, {}, [
   { name: "매매계약일(자산 입력칸)", prop: "assetContractDate", message: /^§98의8 적용: 최초 매매계약일/, patch: { contractDate988: "" } },
   { name: "취득가액", prop: "acquisitionPrice988", message: /^§98의8 적용: 취득가액/, patch: { acquisitionPrice988: "" } },
   { name: "연면적", prop: "exclusiveAreaSqm988", message: /^§98의8 적용: 연면적/, patch: { exclusiveAreaSqm988: "" } },
   { name: "임대계약 체결일", prop: "rentalContractDate988", message: /^§98의8 적용: 임대계약 체결일/, patch: { rentalContractDate988: "" } },
   { name: "임대개시일", prop: "rentalStartDate988", message: /^§98의8 적용: 임대개시일/, patch: { rentalStartDate988: "" } },
+  phdRow("§98의8", "phdMode988"),
+  { name: "취득시 기준시가(5년 경과)", prop: "standardPriceAtAcquisition", message: /^§98의8 적용: 취득 후 5년 경과 양도는 취득시 기준시가/, patch: { standardPriceAtAcquisition988: "" } },
+  { name: "5년 시점 기준시가", prop: "standardPriceAt5Years", message: /^§98의8 적용: 취득 후 5년 경과 양도는 취득 5년 시점/, patch: { standardPriceAt5Years988: "" } },
 ]);
 
 // ── §98의3 ────────────────────────────────────────────────────────────────

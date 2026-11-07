@@ -3,6 +3,7 @@
  *
  * 화면 입력 경로(폼 → ⑧ → ④ → route)로 분모 0(양도시 기준시가 = 취득시 기준시가)에 도달한다 — ⑧이 막지 않는다.
  * 단건 route(STEP 0.45)와 다주택 중과 판정 메뉴 route(`surcharge-judgment-payload.ts`)가 같은 선판정을 쓴다.
+ * 수정은 #2984(`income-deduction-router.ts` `onlyCalcFactorReasons`) — 여기는 route 두 곳과 ⑧ 통과를 고정한다.
  * 세율: 프로덕션 fallback(양도 2021-09-01).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";

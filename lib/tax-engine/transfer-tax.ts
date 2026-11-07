@@ -481,7 +481,9 @@ function calculateTransferTaxCore(
        */
       rateEcho: (() => {
         const tr = calcTax(0, parsedRates, landOnlyRateInput(effectiveInput), multiHouseSurchargeResult);
-        return { appliedRate: tr.appliedRate, rateClause: tr.rateClause };
+        // 위기취득 세율 배제 표지 — 정상 반환과 같은 술어(다건 세율군 분류가 읽는다 · 계획서 `surcharge-oos-remaining.plan.md` C)
+        const { rateSurchargeStatutoryExcluded } = resolveSurchargeApplication(effectiveInput, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules);
+        return { appliedRate: tr.appliedRate, rateClause: tr.rateClause, rateSurchargeStatutoryExcluded };
       })(),
     });
   }

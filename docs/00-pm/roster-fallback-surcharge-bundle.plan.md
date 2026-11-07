@@ -68,6 +68,8 @@
   - → 후속 수정: `docs/00-pm/carryover-surcharge-suspension-holding.plan.md`(원인 `multi-house-surcharge-exclusion.ts` 12의2 보유 판정 · fallback 보유 2년 요건 누락 함께).
 - `transfer-tax.ts`(751줄)·`transfer-tax-rental-housing-step.ts`(762줄)는 변경 전부터 750줄 이상이었다 — 이번에는 분리하지 않고 증가를 1줄 이하로 맞췄다.
 
+> 후속(2026-11-08): 위 범위 밖 항목의 실측·처리는 `docs/00-pm/surcharge-oos-remaining.plan.md` — 겸용 fallback·§99 계열 기준시가 미입력·상속 컴패니언 세율군은 고쳤고, 재개발 echo는 영향 없음으로 닫았다.
+
 ## 5. anchor (선작성)
 
 `__tests__/tax-engine/transfer/roster-fallback-surcharge-parity.anchor.test.ts`

@@ -172,7 +172,7 @@ export interface IncomeDeductionResolution {
    */
   eligibleId?: IncomeDeductionId;
   /**
-   * 요건은 모두 충족했고 5년 후 안분 기준시가만 없어 부적격인 하이브리드 조문(리뷰 US-35).
+   * 요건은 모두 충족했고 5년 후 안분 기준시가만 없거나 분모가 0이라 부적격인 조문(리뷰 US-35 — 하이브리드 · §99 · §99의3 · §98의8).
    * 차감은 0 + 사유(`MISSING_STD_PRICE`)로 남기지만, 소령 §167의3①5호 「감면되는 주택」 여부는 요건으로 정해진다 —
    * 중과 배제 선판정(`resolveSurchargeExclusionByReduction`)만 읽는다. 기준시가는 요건이 아니라 공제액 계산 인자다(조특령 §40① 준용).
    */
@@ -320,9 +320,9 @@ function evalNew993(
       calculatedTaxBeforeReduction: 0,
       calculatedTaxAfterReduction: 0,
     });
-    return withAllocationOnlyRequirementsMet("new_99_3", detail, buildResolution("new_99_3", detail.isEligible, detail.reducibleTransferIncome,
-      detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
-      { new993Detail: withRedevMemberGateNotice(detail, memberCause, "new_99_3", isLandOnlyOriginalMember(member)) }));
+    return buildResolution("new_99_3", detail.isEligible, detail.reducibleTransferIncome,
+      detail.ineligibleReasons, detail.legalBasis,
+      { new993Detail: withRedevMemberGateNotice(detail, memberCause, "new_99_3", isLandOnlyOriginalMember(member)) });
   }
   return null;
 }
@@ -372,9 +372,9 @@ function evalNew99(
         ? { completionDate: member.completionDate, remainderContract: r99.remainderContract99 as "yes" | "no" | "unknown" | undefined }
         : undefined,
     });
-    return withAllocationOnlyRequirementsMet("new_99", detail, buildResolution("new_99", detail.isEligible, detail.reducibleTransferIncome,
-      detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
-      { new99Detail: withRedevMemberGateNotice(detail, memberCause, "new_99", isLandOnlyOriginalMember(member)) }));
+    return buildResolution("new_99", detail.isEligible, detail.reducibleTransferIncome,
+      detail.ineligibleReasons, detail.legalBasis,
+      { new99Detail: withRedevMemberGateNotice(detail, memberCause, "new_99", isLandOnlyOriginalMember(member)) });
   }
   return null;
 }
@@ -417,13 +417,9 @@ function evalUnsold988(
       standardPriceAtTransfer:
         (r988.standardPriceAtTransfer988 as number | undefined) ?? ctx.standardPriceAtTransfer,
     });
-    const resolution = buildResolution("unsold_98_8", detail.isEligible, detail.reducibleTransferIncome,
-      detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
+    return buildResolution("unsold_98_8", detail.isEligible, detail.reducibleTransferIncome,
+      detail.ineligibleReasons, detail.legalBasis,
       { unsold988Detail: detail });
-    // 안분 분모 0(NH-76)은 공제액 계산 인자라 요건 판정이 아니다 — 소령 §167의3①5호 「감면되는 주택」 여부는 요건으로 정해진다(하이브리드와 같은 독법).
-    return !detail.isEligible && detail.ineligibleReasons.length > 0 && detail.ineligibleReasons.every((x) => x.code === "ALLOCATION_DENOMINATOR_ZERO")
-      ? { ...resolution, requirementsMetId: "unsold_98_8" }
-      : resolution;
   }
   return null;
 }
@@ -455,13 +451,8 @@ function evalHybrid(
         // 5년 내(tax_amount)는 appliedId 미설정 — STEP 4.6 차감 없음 (calcReductions 경로와 이중 혜택 차단)
         appliedId: isIncomeDeduction ? id : undefined,
         eligibleId: detail.isEligible ? id : undefined,
-        // 하이브리드는 요건 판정을 모두 마친 뒤 안분 단계(`computeHybridEffect`)에서만 MISSING_STD_PRICE·ALLOCATION_DENOMINATOR_ZERO(NH-76)를 낸다 — 그 사유뿐이면 요건 충족이다.
-        requirementsMetId:
-          !detail.isEligible &&
-          detail.ineligibleReasons.length > 0 &&
-          detail.ineligibleReasons.every((x) => x.code === "MISSING_STD_PRICE" || x.code === "ALLOCATION_DENOMINATOR_ZERO")
-            ? id
-            : undefined,
+        // 하이브리드는 요건 판정을 모두 마친 뒤 안분 단계(`computeHybridEffect`)에서만 계산 인자 사유를 낸다 — 그 사유뿐이면 요건 충족이다.
+        requirementsMetId: onlyCalcFactorReasons(detail.isEligible, detail.ineligibleReasons) ? id : undefined,
         reducible: isIncomeDeduction ? detail.reducibleTransferIncome : 0,
         stepLabel: STEP_LABELS[id],
         legalBasis: detail.legalBasis,
@@ -480,36 +471,34 @@ function evalHybrid(
 }
 
 /**
- * §99·§99의3 — 요건 판정을 모두 마친 뒤 안분 단계에서만 나는 사유(기준시가 미입력·분모 0, NH-76)뿐이면 요건 충족이다.
- * 차감은 0 + 사유로 남기고, 소령 §167의3①5호 「감면되는 주택」 중과 배제 선판정만 `requirementsMetId`를 읽는다(§98의8·하이브리드와 같은 독법).
+ * 공제액 **계산 인자** 사유 — 요건 판정이 아니다(리뷰 US-35 · NH-76). 기준시가는 조특령 §40① 준용 산식의 인자이고
+ * 소령 §167의3①5호 「…에 따라 양도소득세가 감면되는 주택」 여부는 요건으로 정해진다. 각 조문은 요건 판정을 모두 마친 뒤
+ * 안분 단계에서만 이 사유를 낸다(`new-99.ts` 7단계 · `new-99-3.ts` STEP 3 · `unsold-98-8.ts` · `unsold-hybrid.ts` `computeHybridEffect`).
+ * `MISSING_PREVIOUS_STD_PRICE`(§99 재개발 변형)는 넣지 않는다 — ⑧이 막고 리뷰 결정 범위 밖이다(계획서 `surcharge-oos-remaining.plan.md` B).
  */
-function withAllocationOnlyRequirementsMet(
-  id: "new_99" | "new_99_3",
-  detail: { isEligible: boolean; ineligibleReasons: ReadonlyArray<{ code: string }> },
-  resolution: IncomeDeductionResolution,
-): IncomeDeductionResolution {
-  return !detail.isEligible &&
-    detail.ineligibleReasons.length > 0 &&
-    detail.ineligibleReasons.every((x) => x.code === "MISSING_STD_PRICE" || x.code === "ALLOCATION_DENOMINATOR_ZERO")
-    ? { ...resolution, requirementsMetId: id }
-    : resolution;
+const CALC_FACTOR_REASON_CODES: ReadonlySet<string> = new Set(["MISSING_STD_PRICE", "ALLOCATION_DENOMINATOR_ZERO"]);
+
+function onlyCalcFactorReasons(isEligible: boolean, reasons: ReadonlyArray<{ code: string }>): boolean {
+  return !isEligible && reasons.length > 0 && reasons.every((x) => CALC_FACTOR_REASON_CODES.has(x.code));
 }
 
 function buildResolution(
   id: IncomeDeductionId,
   isEligible: boolean,
   reducible: number,
-  ineligibleMessages: string,
+  ineligibleReasons: ReadonlyArray<{ code: string; message: string }>,
   legalBasis: string,
   details: Pick<IncomeDeductionResolution, "new993Detail" | "new99Detail" | "unsold988Detail">,
 ): IncomeDeductionResolution {
   return {
     appliedId: isEligible ? id : undefined,
     eligibleId: isEligible ? id : undefined,
+    // 요건은 갖췄고 계산 인자만 없다 — 차감은 0이지만 중과 배제 선판정은 「감면되는 주택」으로 본다
+    requirementsMetId: onlyCalcFactorReasons(isEligible, ineligibleReasons) ? id : undefined,
     reducible: isEligible ? reducible : 0,
     stepLabel: STEP_LABELS[id],
     legalBasis,
-    ineligibleMessages: isEligible ? undefined : ineligibleMessages,
+    ineligibleMessages: isEligible ? undefined : ineligibleReasons.map((x) => x.message).join(" · "),
     ...details,
   };
 }

@@ -4,6 +4,8 @@
  * 결함: #2951이 §99·§99의3 분모 0(양도시 = 취득시 기준시가)을 «계산 불가 + 확인 필요»(불성립)로 바꾼 뒤, 중과 배제 선판정
  *   (`resolveSurchargeExclusionByReduction`)이 eligibleId만 읽어 3주택 조정지역 중과 30%가 붙었다. L15(#2979)는 §98의8·하이브리드에
  *   `requirementsMetId`를 붙여 막았지만 §99·§99의3(`evalNew99`·`evalNew993`)은 빠져 있었다.
+ *   수정은 #2984(`buildResolution` 공용 `onlyCalcFactorReasons`)에 들어갔다 — 그 PR의 anchor(`surcharge-oos-std-price-requirements`)는
+ *   기준시가 미입력만 고정하므로, 여기는 화면에서 도달하는 분모 0과 겸용 경로를 고정한다.
  * 근거: 「감면되는 주택」 여부는 요건으로 정해진다 — 두 evaluator 모두 요건 검사를 마친 뒤 안분 단계에서만 분모 0·기준시가 미입력을 낸다.
  *   기준시가는 요건이 아니라 공제액 계산 인자다(US-35와 같은 독법). 분모 0은 ⑧이 막지 않아 화면에서 도달한다.
  *
