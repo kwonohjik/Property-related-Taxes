@@ -158,6 +158,14 @@ export function computeBracketBreakdown(
  * 않았는지 결과 화면에 덧붙인다 — 「불성립 사유」가 안 보이면 사용자가 50%를 결함으로 오인한다
  * (DoD "결과 화면에 단서 적용/불성립 사유가 보이는지 확인").
  */
+/** US-81 고지의 조문 — 배제한 특칙 조문만 밝힌다. 주입 조문을 모르면(직접 호출 등) 세 조문을 함께 적는다. */
+function suppressedShortTermArticle(by: TransferTaxInput["suppressShortTermRateBy"]): string {
+  if (by === "unsold_98_3") return TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_3;
+  if (by === "unsold_98_5") return TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_5;
+  if (by === "unsold_98_6") return TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_6;
+  return `${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_3}·${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_5}·${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_6}`;
+}
+
 function presaleRightClause4UnmetNote(input: TransferTaxInput): string {
   if (input.propertyType !== "presale_right") return "";
   const unmet: string[] = [];
@@ -547,7 +555,7 @@ export function calcTax(
   const suppressedShortTermNote =
     input.suppressShortTermRate &&
     resolveShortTermRate(input.transferDate, holdingMonthsTotal, shortTermAssetClass, shortTermOpts)?.rate != null
-      ? `${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_3}·${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_5}·${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_6} 세율 특칙 — 단기보유 세율 대신 기본세율 적용 (${TRANSFER.TAX_RATE})`
+      ? `${suppressedShortTermArticle(input.suppressShortTermRateBy)} 세율 특칙 — 단기보유 세율 대신 기본세율 적용 (${TRANSFER.TAX_RATE})`
       : undefined;
   /**
    * 수유자(상속인 아닌 유증·사인증여) — §104②1호 통산을 하지 않아 단기세율이 갈렸을 때만 밝힌다

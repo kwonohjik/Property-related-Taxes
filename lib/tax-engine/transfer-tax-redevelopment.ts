@@ -326,7 +326,7 @@ export function calculateRedevelopmentTax(
   const taxRateInput = flatRate20Active
     ? { ...input, forceFlatRate20: true }
     : rateSpecialActive
-      ? { ...input, suppressShortTermRate: true }
+      ? { ...input, suppressShortTermRate: true, suppressShortTermRateBy: incomeDeduction.eligibleId as TransferTaxInput["suppressShortTermRateBy"] }
       : input;
   const taxResult = calcTax(taxBase, parsedRates, taxRateInput, multiHouseSurchargeResult);
   const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
