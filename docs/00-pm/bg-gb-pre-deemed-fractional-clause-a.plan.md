@@ -1,6 +1,6 @@
 # 부담부증여 × 일반건물 의제취득일 전 파트 × 지분 — ①②(상증법 평가액·§164 가액)가 지분 몫으로 줄지 않는 값 결함 (V-G1)
 
-- 상태: **측정 결과 + 결정 게이트(코드 변경 없음)**. 작성 2026-11-08, 기준 master `bad7b5b4a`.
+- 상태: **구현 완료(결정 Q-1~3 모두 a, 2026-11-09)** — 결과는 §7. 측정은 2026-11-08, 기준 master `bad7b5b4a`.
 - 선행: `bg-gb-fractional-gate.plan.md` §3.4(첫 발견 −18,000,000)·Q-2 a(의제전 파트는 ⑧ 게이트가 계속 막음) · `gb-axis-a-bg-ownership-ratio.plan.md`(#2990 — 일반건물 축 A·함께 양도에 지분율 전달).
 - 표기: **[직접]** = 이 문서 작성 중 직접 실행·대조. **[코드]** = 코드 읽기만. **확인 필요** = 미측정·미해명.
 
@@ -78,7 +78,7 @@
 | 토지 · 주택 8칸 | 축 A·B × ① 채택(win1) · ② 채택(win2): **diff 0** (⑧ 0건 · ⑫ 200) |
 | 상가 · 건물(토지 제외) · 재개발 · 함께 양도의 토지·주택 카드 | 측정하지 않았다 — **확인 필요**. 기존 anchor `bg-pre-deemed-commercial` W-1 주석은 「상가 지분 단독은 ⑧이 다른 이유로 막는다」고 적었다(이 문서에서 재확인하지 않았다) |
 
-## 4. 결정 (사용자 결정 대기)
+## 4. 결정 (2026-11-09 사용자 결정: Q-1 a · Q-2 a · Q-3 a — 「모두 권장안으로」)
 
 **Q-1. ①② 지분 축소 (권장 a)**
 - (a) **고친다.** 호출처 둘의 `keepPreDeemedClauseA`를 없애고(옵션 자체를 삭제 — 켜는 곳이 없어진다) `applyShareScale` 주석·`resolvePartwiseBgAcquisition` 주석의 «① ② 미축소» 서술을 정정한다. 기존 anchor S-7·S-9는 «지분 몫으로 줄여 싣는다»로 **반전**한다(삭제하지 않는다). 신규 anchor: 72칸 격자(앞 측정과 같은 칸 — 승패 4종 × 파트 3종 × 모양 3 × 모드 2) 값 대조 + 고정값 237,000,000 · 와이어 ①② 축소. 규모: 소(코드 2줄 + 옵션 삭제 + 주석, 테스트 중심). 약 1.5시간.
@@ -109,3 +109,20 @@
 
 - 측정 코드는 저장소에 두지 않았다(throwaway). 로컬 보관: 작성 세션 scratchpad `keep44/probe-44.test.ts`(명세 비교 · 72칸 격자 · 건물 파트 사유 · 시료 문제 확인 · 토지·주택). 결과 원본: `probe44/diag.json` · `grid.json` · `grid2.json` · `grid-proto.json` · `art.json` · `kinds.json` · `msg.json`.
 - 실행은 `__tests__/api/`에 임시 복사 후 `vitest run`. 프로토타입 복원: `cp` 백업 + `cmp`.
+
+## 7. 구현 결과 (2026-11-09 · Q-1 a · Q-2 a · Q-3 a)
+
+| 항목 | 결과 |
+|---|---|
+| 코드 | `applyShareScale`의 `keepPreDeemedClauseA` 옵션 삭제(`transfer-tax-api-gb-shares.ts`) · 호출처 2곳(`transfer-tax-api-primary-context.ts` · `transfer-tax-api-companion-payload.ts`)의 옵션 인자 삭제. 이 옵션이 켜지던 경우는 부담부증여뿐이었으므로 **일반 양도·이월과세의 동작은 바뀌지 않는다** [코드 — 삭제 전 호출처가 `transferType === "burdened_gift"` 한 조건뿐] |
+| 신규 anchor | `__tests__/api/transfer.route.bg-gb-pre-deemed-fractional.anchor.test.ts` 6건 — GF-1 고정값 237,000,000(수정 전 219,000,000) · GF-2 와이어 ①②(축 A 50% → 3,000만/1,500만 · 함께 양도 카드 50%) · GF-3 격자 72칸(파트 3종 × 승패 4종 × 모양 3종 × 모드 2종, 함께 양도 × win4 × 시가 보충 3칸은 오라클 부적합으로 값 대조 제외하되 ⑧ 0건·⑫ 200은 확인). **수정 전 6건 모두 실패**(격자 불일치는 칸마다 −18,000,000 · −6,480,000 · −1,080,000, 둘 다 파트면 2배 — §3.1과 같다) → 수정 후 6건 통과 |
+| 반전한 기존 anchor | `bg-pre-deemed-gb-market-ui` S-7(지분 60%: 토지 ① 360,000,000/② 18,000,000 · 건물 6,000,000/18,000,000) · S-9(함께 양도 50%: 300,000,000/15,000,000). S-1(단독 100%)은 그대로. 삭제 없음 |
+| 뮤테이션 6종 | M1 토지 축소 제거 · M2 건물 축소 제거 · M3 ①만 축소 · M4 ②만 축소 · M5 축 A 단건 비율 1 · M6 함께 양도 카드 비율 1 — **6/6 KILLED**(실패 9·5·9·10·6·5건), 매번 `cp` 백업 → 복원 → `cmp` 일치 |
+| 회귀 | `__tests__/api` 481파일 6383건 · `__tests__/lib` 262파일 3356건 · `__tests__/components` 748파일 6881건 · `__tests__/calc` 822파일 11547건 · `__tests__/tax-engine` 1498파일 18913건 — **전부 통과, 실패 0** |
+| 정적 검사 | `tsc --noEmit` 0건 · eslint 0건(신규 anchor 파일 포함) |
+| Playwright | 신규 `e2e/bg-gb-pre-deemed-fractional.spec.ts` GF-E1(축 A 지분 50% · 토지 의제전 상속 · 시가 보충 승 → 200 · 화면에 237,000,000, 219,000,000 없음) + 이웃 4개 스펙(`bg-gb-fractional-win` · `general-building-pre-deemed-3way-max` · `general-building-fractional-share` · `gb-burdened-gift-shares`) — **15/15 통과**. GF-E1을 수정 전 코드로 돌려 실패를 확인하지는 않았다(수정 전 실패는 위 anchor로 확인) |
+
+- Q-2 a대로 #3012의 게이트(의제취득일 전 파트가 있으면 담보·임대 승을 닫아 둠)는 **풀지 않았다.** `bg-gb-fractional-win` GB-E3가 계속 통과한다. 풀지 여부는 V-P5로 별건.
+- Q-3 a대로 일반건물만 고쳤다. 상가·건물(토지 제외)·재개발·함께 양도의 토지·주택 카드(V-P1·V-P2)는 **측정하지 않았다 — 확인 필요**. 이 PR은 `applyShareScale`(일반건물 전용 빌더)만 건드려 다른 종류의 payload 빌더는 변하지 않는다 [코드].
+- 이번에도 측정하지 않은 것: 자본적지출·양도비 입력이 있는 칸(V-P3) · 이월과세 × 의제전(V-P4) · 함께 양도 묶음 총액 안분 오라클(V-P6). 사람이 브라우저로 직접 한 수동 확인은 아니다(headless Playwright·jsdom).
+- 교훈: 원인은 «그 경로는 X를 하지 않는다»는 주석(전제)이 뒤 PR(#2990)로 깨진 것이었다. 같은 교훈을 memory에 저장했다(`feedback_comment_asserting_absence_is_premise_for_later_pr`).

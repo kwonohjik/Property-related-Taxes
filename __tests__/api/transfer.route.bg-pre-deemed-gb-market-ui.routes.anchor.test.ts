@@ -1,7 +1,8 @@
 /**
  * PR-7b-6b — 의제취득일(1985.1.1.) 전 상속·증여 일반건물 × 부담부증여 × 시가 평가 — **화면 경로**(폼 → ⑧ → ④ body → route ⑫⑭ → 엔진).
  * 계획서 `docs/02-design/features/inheritance-pre-deemed-bg-pr7b.plan.md` §6 PR-7b-6 · 사용자 결정 Q-28(파트별) · Q-29(상속 ① 필수) · G-5(증여 ① 필수) ·
- * L-1 (a)(2026-10-24 — 공유 단건·함께 양도 카드는 ①②를 지분으로 줄이지 않는다).
+ * L-1 (a)(2026-10-24 — 공유 단건·함께 양도 카드는 ①②를 지분으로 줄이지 않는다)는 #2990이 §159에 지분율을 넘기면서 전제가 깨져 **폐기**했다 —
+ * 계획서 `docs/00-pm/bg-gb-pre-deemed-fractional-clause-a.plan.md` Q-1 (a) · S-7·S-9는 «지분 몫으로 줄여 싣는다»로 반전.
  *
  * 시료: 1983-07-26 상속 · 2023-02-16 부담부증여 · 시가 10억 · 채무 5억(β 0.5) · 양도시 토지 2억(100㎡ × 2,000,000) · 건물 2억 ·
  * 취득시(의제취득일) 토지 3천만 · 건물 3천만 → ③ = 7,500만씩. 세율은 mock.
@@ -169,10 +170,10 @@ describe("PR-7b-6b 일반건물 부담부증여 · 시가 평가 · 의제취득
     expect(r.tax).toBe(95_756_000);
   });
 
-  it("S-7 공유 단건(지분 60%) — ①②는 물건 전체 금액 그대로 싣는다(L-1 (a) · §159가 지분 축소를 하지 않는 경로)", async () => {
+  it("S-7 공유 단건(지분 60%) — ①②를 지분 몫으로 줄여 싣는다(축 B S-8·단건 대조와 같은 단위 · 계획서 Q-1 (a))", async () => {
     const r = await run(form({ ...REPORTED, ownershipNumerator: "60", ownershipDenominator: "100" }));
-    expect(r.body.generalBuildingValuation.landPreDeemedClauseA).toEqual({ reported: 600_000_000, sec164: 30_000_000 });
-    expect(r.body.generalBuildingValuation.buildingPreDeemedClauseA).toEqual({ reported: 10_000_000, sec164: 30_000_000 });
+    expect(r.body.generalBuildingValuation.landPreDeemedClauseA).toEqual({ reported: 360_000_000, sec164: 18_000_000 });
+    expect(r.body.generalBuildingValuation.buildingPreDeemedClauseA).toEqual({ reported: 6_000_000, sec164: 18_000_000 });
   });
 
   it("S-8 축 B 60/40 — 지분 몫으로 줄여 실어 단건과 같은 세액(18,137,250)", async () => {
@@ -231,7 +232,7 @@ describe("PR-7b-6b 일반건물 부담부증여 · 시가 평가 · 의제취득
     expect(shares[1].burdenedGiftInfo.actualLandAcquisitionPrice).toBe(50_000_000);
   });
 
-  it("S-9 함께 양도 카드 일반건물(지분 50%) — 카드 ①②도 물건 전체 금액(L-1 (a))", async () => {
+  it("S-9 함께 양도 카드 일반건물(지분 50%) — 카드 ①②도 지분 몫으로 줄여 싣는다(계획서 Q-1 (a))", async () => {
     const land = {
       ...makeDefaultAsset(1),
       addressJibun: "서울 강남구 테스트동 2-2",
@@ -254,7 +255,7 @@ describe("PR-7b-6b 일반건물 부담부증여 · 시가 평가 · 의제취득
     const gb = { ...makeDefaultAsset(2), ...GB, ...REPORTED, ownershipNumerator: "1", ownershipDenominator: "2" } as unknown as AssetForm;
     const body = (await captureBody(form({}, [land, gb]))) as Loose;
     const c = (body.companionAssets as Loose[]).find((x) => x.assetKind === "general_building")!;
-    expect(c.generalBuildingValuation.landPreDeemedClauseA).toEqual({ reported: 600_000_000, sec164: 30_000_000 });
+    expect(c.generalBuildingValuation.landPreDeemedClauseA).toEqual({ reported: 300_000_000, sec164: 15_000_000 });
     expect(c.burdenedGiftInfo.acquisitionMethod).toBeUndefined();
   });
 
