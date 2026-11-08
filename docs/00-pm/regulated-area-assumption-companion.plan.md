@@ -1,7 +1,7 @@
 # 계획서 — 결과 화면 「조정대상지역 판정 — 확인 필요」 고지를 함께 양도 컴패니언까지
 
 > 2026-11-08 · 기준 master `a4c2ea0f9` · 선행: #2926(결과 화면 고지) · #2942 · #2946 · #2980(A-3) · 측정 `regulated-rights-transfer-toggle.plan.md` §14-1
-> 상태: **계획(Plan)** — 코드 변경 없음. 사용자 결정 Q-1~Q-4 대기. 미검증은 「확인 필요」로 표기.
+> 상태: **구현(Do) 완료** — 2026-11-08 사용자 결정 Q-1 a · Q-2 a · Q-3 a · Q-4 a(권장안). §8 구현 기록. 미검증은 「확인 필요」로 표기.
 
 ## 0. 한 줄 요약
 
@@ -101,3 +101,19 @@
 4. 회귀·tsc·lint·리뷰 게이트 (30분)
 
 합계 약 2시간 20분.
+
+## 8. 구현 기록 (2026-11-08)
+
+| 변경 | 파일 |
+|---|---|
+| 고지 leaf가 컴패니언을 읽는다 — `companionStoredJudgments`(④ `companionRegulatedFlags`와 같은 호출 공유) · 축 B는 제외 · 폼 전역 코드는 첫 자산 행만 막음 · 행에 `assetIndex`·`assetLabel` · 컴패니언 행 `selectable:false` | `lib/calc/effective-regulated-at-acquisition.ts` |
+| 행 testid(`regulatedAssumptionRowTestId`) · 자산별 묶음(`groupRowsByAsset`) · PDF 묶음이 자산마다 한 그룹 | `lib/calc/regulated-area-assumption-text.ts` |
+| 자산마다 카드(컴패니언 제목 「… · {assetLabel}」, testid `…-line-{i}`·`…-{which}-{i}`) | `components/calc/results/transfer/RegulatedAreaAssumptionLine.tsx` |
+| PDF 줄 키 `{assetIndex}-{which}` | `lib/pdf/ResultPdfTransferSections.tsx` |
+
+검증:
+- 신규 `__tests__/calc/regulated-area-assumption-companion.anchor.test.tsx` 15건(C-1~C-14 · parity). 뮤테이션 6/6 KILLED — 축 B 가드 · 컴패니언 `selectable` · 폼 전역 코드 차단 · 컴패니언 testid · 자산 묶음 · 분양권 구간 게이트(첫 실행에서 폼 전역 코드 변형이 살아남았다 — `[].every`가 빈 배열에서 참이라 단언이 비어 있었다 → 줄 키 전체 `toEqual`로 고정).
+- 신규 E2E `e2e/regulated-area-assumption-companion.spec.ts` RAC-1(함께 양도 · 컴패니언 화도읍 → 요청 `wasRegulatedAtAcquisition:true` + 컴패니언 카드) · 컴패니언 순회 제거 변형으로 실패 확인. 기존 `regulated-area-assumption-notice`·`judgment-menu-regulated-address` 포함 7건 통과.
+- 회귀: `__tests__/calc/` 819파일 11,520건 · `__tests__/lib`·`api`·`components`·`pdf` 1,486파일 16,518건 · tsc 0건 · 변경 파일 lint 0건.
+- 미검증 V-1(폼 전역 `regionCode`가 함께 양도 흐름에 설정되는가) · V-2(컴패니언 입주권) · V-4(다건 건마다 컴패니언)는 그대로 — 코드는 세 경우 모두 컴패니언 행을 첫 자산과 독립으로 낸다. V-5: 판정 메뉴 두 계산기에는 자산 추가 UI가 없다(`app/calc/one-house-exemption`·`multi-house-surcharge`에서 `assets.push`·`addAsset` grep 0건).
+- 브라우저 수동 확인은 E2E RAC-1로 갈음(Playwright 실제 화면·실제 API).

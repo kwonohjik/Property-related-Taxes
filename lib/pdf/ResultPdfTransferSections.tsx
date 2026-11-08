@@ -568,7 +568,7 @@ export function RegulatedAssumptionPdfNote({ groups }: { groups: RegulatedAssump
             {g.label ? `${REGULATED_ASSUMPTION_TITLE} · ${g.label}` : REGULATED_ASSUMPTION_TITLE}
           </Text>
           {g.rows.map((r) => (
-            <Text key={r.which} style={{ fontSize: 8, color: "#92400e", marginBottom: 2 }}>
+            <Text key={`${r.assetIndex}-${r.which}`} style={{ fontSize: 8, color: "#92400e", marginBottom: 2 }}>
               {`${regulatedAssumptionRowHead(r)}: ${regulatedAssumptionRowVerdict(r)} — ${r.basis}`}
             </Text>
           ))}

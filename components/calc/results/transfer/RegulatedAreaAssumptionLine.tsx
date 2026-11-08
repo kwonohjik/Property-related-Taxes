@@ -16,8 +16,10 @@ import {
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import {
   REGULATED_ASSUMPTION_TITLE,
+  groupRowsByAsset,
   regulatedAssumptionFooter,
   regulatedAssumptionRowHead,
+  regulatedAssumptionRowTestId,
   regulatedAssumptionRowVerdict,
   type RegulatedAssumptionSelectWhere,
 } from "@/lib/calc/regulated-area-assumption-text";
@@ -27,7 +29,7 @@ export function RegulatedAreaAssumptionLine({
   label,
   selectWhere = "calculator",
 }: {
-  form: (RegulatedFlagsForm & Pick<TransferFormData, "regionCode">) | null | undefined;
+  form: (RegulatedFlagsForm & Pick<TransferFormData, "regionCode" | "assetSplitMode">) | null | undefined;
   /** 다건처럼 여러 건을 한 화면에 그릴 때 어느 건인지 밝힌다. */
   label?: string;
   /** 「직접 선택」 칸이 있는 곳 — 판정 메뉴는 「② 양도 대상 주택」이다. */
@@ -36,20 +38,31 @@ export function RegulatedAreaAssumptionLine({
   if (!form) return null;
   const rows = regulatedAddressAssumptions(form);
   if (rows.length === 0) return null;
+  // 자산마다 카드를 따로 — 끝 줄(직접 선택 가능 여부)이 자산마다 달라 한 카드에 섞으면 문구가 거짓이 된다.
+  // 첫 자산 카드의 제목·testid는 컴패니언이 없던 때와 같다.
+  const groups = groupRowsByAsset(rows);
   return (
-    <div data-testid="regulated-area-assumption-line">
-      <ToneCard tone="amber" title={label ? `${REGULATED_ASSUMPTION_TITLE} · ${label}` : REGULATED_ASSUMPTION_TITLE}>
-        <ul className="space-y-1 text-sm leading-relaxed text-amber-800 dark:text-amber-200">
-          {rows.map((r) => (
-            <li key={r.which} data-testid={`regulated-area-assumption-${r.which}`}>
-              {regulatedAssumptionRowHead(r)}: <b>{regulatedAssumptionRowVerdict(r)}</b> — {r.basis}
-            </li>
-          ))}
-        </ul>
-        <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
-          {regulatedAssumptionFooter(selectWhere, rows)}
-        </p>
-      </ToneCard>
+    <div data-testid="regulated-area-assumption-line" className="space-y-3">
+      {groups.map((g) => {
+        const first = g.assetIndex === 0;
+        const suffix = [label, first ? undefined : g.rows[0].assetLabel].filter(Boolean).join(" · ");
+        return (
+          <div key={g.assetIndex} data-testid={first ? undefined : `regulated-area-assumption-line-${g.assetIndex}`}>
+            <ToneCard tone="amber" title={suffix ? `${REGULATED_ASSUMPTION_TITLE} · ${suffix}` : REGULATED_ASSUMPTION_TITLE}>
+              <ul className="space-y-1 text-sm leading-relaxed text-amber-800 dark:text-amber-200">
+                {g.rows.map((r) => (
+                  <li key={r.which} data-testid={regulatedAssumptionRowTestId(r)}>
+                    {regulatedAssumptionRowHead(r)}: <b>{regulatedAssumptionRowVerdict(r)}</b> — {r.basis}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
+                {regulatedAssumptionFooter(selectWhere, g.rows)}
+              </p>
+            </ToneCard>
+          </div>
+        );
+      })}
     </div>
   );
 }

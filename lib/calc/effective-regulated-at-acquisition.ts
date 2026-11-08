@@ -36,6 +36,7 @@ import { resolveIsRegulatedAtTransfer } from "@/lib/tax-engine/transfer-tax-temp
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { regulatedAtTransferToggleApplies } from "@/lib/calc/regulated-transfer-toggle-scope";
+import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { judgeRegulatedArea, type RegulatedAreaResult } from "@/lib/regulated-area";
 
 export function effectiveWasRegulatedAtAcquisition(o: {
@@ -307,11 +308,16 @@ export function companionRegulatedFlags(
   asset: AssetForm,
   transferDate: string,
 ): { isRegulatedArea?: boolean; wasRegulatedAtAcquisition?: boolean } {
-  const j = storedRegulatedJudgments({ assets: [asset], transferDate } as RegulatedFlagsForm, { isPrimary: false });
+  const j = companionStoredJudgments(asset, transferDate);
   return {
     ...(j.transfer.judged ? { isRegulatedArea: j.transfer.value } : {}),
     ...(j.acquisition.judged ? { wasRegulatedAtAcquisition: j.acquisition.value } : {}),
   };
+}
+
+/** 컴패니언 한 자산의 두 축 판정 — ④(`companionRegulatedFlags`)와 결과 화면 고지(`regulatedAddressAssumptions`)가 같은 호출을 읽는다. */
+function companionStoredJudgments(asset: AssetForm, transferDate: string) {
+  return storedRegulatedJudgments({ assets: [asset], transferDate } as RegulatedFlagsForm, { isPrimary: false });
 }
 
 /**
@@ -354,8 +360,12 @@ export type RegulatedAddressAssumption = {
   isRegulated: boolean;
   confidence: "medium" | "low";
   basis: string;
-  /** 「직접 선택」할 칸이 화면에 있는 값인가 — 없으면 고지 끝 줄이 「보유 상황에서 선택」을 말하지 않는다(입주권). */
+  /** 「직접 선택」할 칸이 화면에 있는 값인가 — 없으면 고지 끝 줄이 「보유 상황에서 선택」을 말하지 않는다(입주권 · 함께 양도 컴패니언). */
   selectable: boolean;
+  /** `form.assets` 안의 위치 — 0이 첫 자산, 1 이상이 함께 양도 컴패니언(화면·PDF 키와 카드 구분). */
+  assetIndex: number;
+  /** 그 자산의 `assetLabel`(기본 「자산 N」) — 컴패니언 카드 제목에 쓴다. */
+  assetLabel: string;
 };
 
 /**
@@ -368,23 +378,53 @@ export type RegulatedAddressAssumption = {
  * - 직접 만진 토글은 사용자가 정한 값이다 → 그 값은 내지 않는다(칸이 있는 자산만 표지를 본다 — `calcStoredRegulatedFlags`와 같다).
  * - 분양권은 세액에 쓰이는 값만 낸다: 양도일은 §104①4호 구간 안에서만, 취득 당시는 쓰는 곳이 없어 내지 않는다
  *   (계획서 `docs/00-pm/regulated-rights-transfer-toggle.plan.md` Q-3 a). 입주권은 단건 세액을 바꾸지 않지만 다른 경로 미확인이라 그대로 둔다.
+ * - 함께 양도 컴패니언도 읽는다(계획서 `docs/00-pm/regulated-area-assumption-companion.plan.md` Q-1~Q-4 a) — ④가 컴패니언에 싣는 값과 같은 호출이고,
+ *   컴패니언 줄은 `selectable: false`(두 토글이 없다)·`assetIndex ≥ 1`이다.
  */
-export function regulatedAddressAssumptions(form: RegulatedFlagsForm & Pick<TransferFormData, "regionCode">): RegulatedAddressAssumption[] {
+export function regulatedAddressAssumptions(
+  form: RegulatedFlagsForm & Pick<TransferFormData, "regionCode"> & Partial<Pick<TransferFormData, "assetSplitMode">>,
+): RegulatedAddressAssumption[] {
   const primary = form.assets?.[0];
-  if (!primary || primary.regionCode || form.regionCode) return [];
-  const j = storedRegulatedJudgments(form);
+  if (!primary) return [];
   const out: RegulatedAddressAssumption[] = [];
-  const kind = primary.assetKind;
-  const transferSelectable = regulatedAtTransferToggleApplies(kind, form.transferDate);
+  // 첫 자산 — 법정동코드(자산 → 폼 전역)가 있으면 ④는 코드로 판정한다.
+  if (!primary.regionCode && !form.regionCode) {
+    out.push(...assumptionRows(storedRegulatedJudgments(form), primary, form.transferDate, 0, false));
+  }
+  // 함께 양도 컴패니언 — ④(`companionRegulatedFlags`)가 자기 소재지로 판정해 싣는 자산만. 같은 물건 지분 분할(축 B)은 ④가 싣지 않는다(⑭가 주 자산 값).
+  // 폼 전역 코드는 보지 않는다 — 컴패니언 판정은 자기 자산의 코드·주소만 읽는다.
+  if (!isFullFractionalBundle(form.assets, form.assetSplitMode)) {
+    form.assets.slice(1).forEach((a, i) => {
+      if (a.regionCode) return;
+      out.push(...assumptionRows(companionStoredJudgments(a, form.transferDate), a, form.transferDate, i + 1, true));
+    });
+  }
+  return out;
+}
+
+/** 한 자산의 두 축 판정에서 고지 줄을 고른다 — 신뢰도 high 제외 · 분양권은 세액에 쓰는 값만. 컴패니언은 직접 선택 칸이 없다. */
+function assumptionRows(
+  j: ReturnType<typeof storedRegulatedJudgments>,
+  asset: AssetForm,
+  transferDate: string,
+  assetIndex: number,
+  companion: boolean,
+): RegulatedAddressAssumption[] {
+  const kind = asset.assetKind;
+  const transferApplies = regulatedAtTransferToggleApplies(kind, transferDate);
+  const rows: RegulatedAddressAssumption[] = [];
   for (const [which, v] of [["transfer", j.transfer], ["acquisition", j.acquisition]] as const) {
     const c = v.judged?.judgment.confidence;
     if (!v.judged || c === undefined || c === "high") continue;
     // 분양권: 세액에 쓰는 값은 §104①4호 구간의 양도일뿐이다.
-    if (kind === "presale_right" && (which === "acquisition" || !transferSelectable)) continue;
-    const selectable = which === "transfer" ? transferSelectable : isOneHouseExemptionAsset(kind);
-    out.push({ which, date: v.judged.date, dateLabel: v.judged.dateLabel, isRegulated: v.value, confidence: c, basis: v.judged.judgment.basis, selectable });
+    if (kind === "presale_right" && (which === "acquisition" || !transferApplies)) continue;
+    const selectable = !companion && (which === "transfer" ? transferApplies : isOneHouseExemptionAsset(kind));
+    rows.push({
+      which, date: v.judged.date, dateLabel: v.judged.dateLabel, isRegulated: v.value, confidence: c, basis: v.judged.judgment.basis,
+      selectable, assetIndex, assetLabel: asset.assetLabel,
+    });
   }
-  return out;
+  return rows;
 }
 
 /** 양도일 조정대상지역 칸이 보이는 화면용 자동 판정 — ④(주택·재개발APT)와 분양권 칸이 같은 코드 폴백(`primary.regionCode || form.regionCode`)을 쓴다. 코드가 없으면 `null`(토글). */
