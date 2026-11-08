@@ -29,6 +29,8 @@ import {
 import { applyHousingIncomeDeduction } from "./transfer-tax-mixed-use-income-deduction";
 import { MIXED_INCOME_DEDUCTION_COMPUTED_IDS } from "./transfer-tax-mixed-use-reduction-surcharge";
 import { LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
+import { REDUCTION_METADATA } from "./transfer-reductions/metadata";
+import type { TransferReductionId } from "./transfer-reductions/types";
 import type { TransferReduction, TransferTaxInput } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import type { TransferReductionDetailSource } from "./types/transfer-result.types";
@@ -471,6 +473,12 @@ export type MixedUseReductionDetails = Pick<
   /** NH-33 — §99·§99의3 주택분 차감 상세 */
   | "new99Detail"
   | "new993Detail"
+  /** US-13 — §98의3·§98의5·§98의6·§98의7·§98의8 주택분 차감 상세 */
+  | "unsold983Detail"
+  | "unsold985Detail"
+  | "unsold986Detail"
+  | "unsold987Detail"
+  | "unsold988Detail"
 >;
 
 const EMPTY_POST: MixedUsePostTaxResult = { reductionAmount: 0, ruralSurtax: 0, penaltyTax: 0 };
@@ -499,8 +507,16 @@ function computeMixedUsePostTax(
    * 차감형은 **양도소득금액을 차감**하는데 겸용은 소득금액이 주택분·상가분·비사토분으로
    * 갈려 있어 **어느 파트에서 빼는지 정한 명문이 없다**. 추정으로 자리를 정하면 조용히 틀린다.
    */
-  // §99·§99의3은 주택분 차감으로 계산한다(NH-33 — `transfer-tax-mixed-use-income-deduction.ts`). 나머지 차감형만 고지한다.
-  const deferred = all.filter((r) => incomeDeductionIds.has(r.type) && !MIXED_INCOME_DEDUCTION_COMPUTED_IDS.has(r.type));
+  // §99·§99의3·§98의3~§98의8은 주택분 차감으로 계산한다(NH-33 · US-13 — `transfer-tax-mixed-use-income-deduction.ts`). 나머지는 고지만 한다.
+  // §98(세율 특칙)·§98의2(장특 특칙)는 소득금액 차감형이 아니다 — 각자의 고지로 보낸다(US-71).
+  const deferred = all.filter(
+    (r) =>
+      incomeDeductionIds.has(r.type) &&
+      !MIXED_INCOME_DEDUCTION_COMPUTED_IDS.has(r.type) &&
+      !LTHD_SPECIAL_REDUCTION_IDS.includes(r.type) &&
+      r.type !== "unsold_98",
+  );
+  const flatRate98 = all.some((r) => r.type === "unsold_98");
   const taxCredit = all.filter((r) => !incomeDeductionIds.has(r.type));
   /**
    * **LTHD 계열 특례 고지** (CB-02·D5-05) — 감면 효과는 3종인데 위 이분법은 2종만 가른다.
@@ -518,11 +534,18 @@ function computeMixedUsePostTax(
         "나누어 산정하는데, 특례 공제율을 어느 부분에 어떻게 적용할지 정한 명문 규정이 없습니다.",
     );
   }
+  if (flatRate98 && input.warnings) {
+    input.warnings.push(
+      "선택하신 조특법 §98(미분양 국민주택 — 세율 100분의 20 특례)은 겸용주택 계산에 반영되지 않았습니다. " +
+        "특례는 주택부분(부수토지 포함)에만 적용되는데(재산세과-1174), 겸용 분리계산에서 주택분에만 세율 20%를 적용하는 계산은 " +
+        "아직 하지 않습니다(확인 필요).",
+    );
+  }
   if (deferred.length > 0 && input.warnings) {
     input.warnings.push(
-      `선택하신 감면 ${deferred.length}건(소득금액 차감형)은 이 계산에 반영되지 않았습니다 — ` +
-        "겸용주택은 양도소득금액이 주택분·상가분·비사업용토지분으로 나뉘는데, " +
-        "차감형 감면을 어느 부분에서 차감할지 정한 명문 규정이 없습니다.",
+      `선택하신 감면 ${deferred.length}건(${deferred.map((r) => REDUCTION_METADATA[r.type as TransferReductionId]?.article ?? r.type).join(" · ")})은 ` +
+        "이 계산에 반영되지 않았습니다 — 겸용주택은 주택부분(부수토지 포함)에만 특례를 적용하는데(재산세과-1174 · 법령해석과-103), " +
+        "이 조문의 주택분 계산은 아직 하지 않습니다(확인 필요).",
     );
   }
 
@@ -577,7 +600,7 @@ function computeMixedUsePostTax(
     reductionAmount,
     isSelfCultivatedExpropriatedLand: input.isSelfCultivatedExpropriatedLand,
   });
-  // 농특세 = 세액감면형(농특세법 §5①1호) + §99·§99의3 차감 감면세액의 20%(NH-33 — 단건 STEP 7.5와 같은 leaf)
+  // 농특세 = 세액감면형(농특세법 §5①1호) + 주택분 차감형(§99·§99의3·§98의3~§98의8) 감면세액의 20%(NH-33 · US-13 — 단건 STEP 7.5와 같은 leaf)
   const surtax = { ...creditSurtax, surtax: creditSurtax.surtax + (deduction?.ruralSurtax ?? 0) };
 
   // 가산세 — base(결정세액·미납세액)는 **여기서 주입**한다(호출부가 미리 알 수 없는 값이다).
@@ -614,6 +637,12 @@ function computeMixedUsePostTax(
       newHousingReductionDetail: result.newHousingReductionDetail,
       new99Detail: deduction?.details.new99Detail,
       new993Detail: deduction?.details.new993Detail,
+      // US-13 — §98 시리즈 주택분 차감 상세
+      unsold983Detail: deduction?.details.unsold983Detail,
+      unsold985Detail: deduction?.details.unsold985Detail,
+      unsold986Detail: deduction?.details.unsold986Detail,
+      unsold987Detail: deduction?.details.unsold987Detail,
+      unsold988Detail: deduction?.details.unsold988Detail,
     },
     ruralSurtax: surtax.surtax,
     penaltyTax: penalty?.totalPenalty ?? 0,

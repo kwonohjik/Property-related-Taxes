@@ -66,7 +66,7 @@ import {
 } from "./transfer-tax-mixed-use-helpers";
 import { isMixedUseSplitTransfer } from "./data/mixed-use-split-era";
 import { calcMixedSec163_9Compare } from "./mixed-use-sec163-9-compare";
-import { buildMixedIncomeDeductionStep, resolveMixedIncomeDeduction } from "./transfer-tax-mixed-use-income-deduction";
+import { buildMixedIncomeDeductionStep, mixedLandPriorNotice, resolveMixedIncomeDeduction } from "./transfer-tax-mixed-use-income-deduction";
 import { assertMixedInheritedSplitDateSupported } from "./mixed-use-inherited-split-date";
 import { buildingDirectShare, hasMixedBuildingExtras, isConversionAcq, prepareMixedSaleSplit, salePartsFor } from "./mixed-use-sale-split";
 
@@ -577,10 +577,12 @@ function calcMixedUseCore(
 
   // P6(계획서 D-8) — 배율초과 비사업용 토지도 §104⑤2호 파트로 들어가므로 종전의
   // 「중과 세율 가산 미적용」 경고는 더 이상 사실이 아니다. 삭제했다.
-  // NH-33 — 조특법 §99·§99의3 주택분 양도소득금액 차감(Q-14 (a)) — 라우터가 주택분 소득을 기초로 차감액을 정한다. 적용·불가 사유 모두 step으로 싣는다.
+  // NH-33 · US-13 — 조특법 §99·§99의3·§98의3~§98의8 주택분 양도소득금액 차감(Q-14 (a)) — 라우터가 주택분 소득을 기초로 차감액을 정한다. 적용·불가 사유 모두 step으로 싣는다.
   const incomeDeduction = resolveMixedIncomeDeduction({
     asset, transferDate, transferPrice, apportionment, housingIncome: housingPart.incomeAmount, isUnregistered,
   });
+  const landPriorNotice = mixedLandPriorNotice(incomeDeduction, asset); // US-13 · Q-7 (b) — 세액 불변
+  if (landPriorNotice) warnings.push(landPriorNotice);
   const rateParts = buildMixedRateParts({
     housingPart, housingGainSplit, commercialGainSplit, commercialPart, nonBusinessLandPart,
     landRateYears, buildingRateYears, surchargeAddon,

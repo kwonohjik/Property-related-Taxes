@@ -56,7 +56,8 @@ const RED_77 = [
   },
 ];
 /** 차감형 대표 — 조특법 §98의3(양도소득금액 차감). */
-const RED_DEFERRED = [{ type: "unsold_98_3", region: "metropolitan" }];
+// 계산하지 않는 조문 — §98의3 등 §98 시리즈는 주택분 차감으로 계산한다(US-13). 남은 예시는 §99의2.
+const RED_DEFERRED = [{ type: "unsold_99_2" }];
 
 const PENALTY_NONE = {
   determinedTax: 0,
@@ -187,15 +188,14 @@ describe("F17-B · 겸용주택 감면", () => {
     expect(selfCultivated.total.totalPayable).toBe(52_672_257);
   });
 
-  it("MU-05: 🔑 차감형은 계산하지 않고 **고지**한다 (침묵 금지)", async () => {
+  it("MU-05: 🔑 계산하지 않는 차감형(§99의2)은 **고지**한다 (침묵 금지)", async () => {
     const deferred = await post({ reductions: RED_DEFERRED });
     expect(deferred.total.reductionAmount).toBe(0);
     expect(deferred.total.totalPayable).toBe(58_524_730);
-    expect(deferred.warnings.some((w) => /차감형\)은 이 계산에 반영되지 않았습니다/.test(w))).toBe(
-      true,
-    );
-    // 「왜」가 남아야 한다 — 「전부 안 된다」로 읽히면 오해다.
-    expect(deferred.warnings.some((w) => /명문 규정이 없습니다/.test(w))).toBe(true);
+    expect(deferred.warnings.some((w) => /§99의2\)은 이 계산에 반영되지 않았습니다/.test(w))).toBe(true);
+    // 「왜」가 남아야 한다 — 주택부분에만 적용된다는 근거와 미반영 사실(US-13: 종전 「명문 규정이 없습니다」는 사실과 달랐다).
+    expect(deferred.warnings.some((w) => /주택부분\(부수토지 포함\)에만 특례를 적용/.test(w) && /확인 필요/.test(w))).toBe(true);
+    expect(deferred.warnings.some((w) => /명문 규정이 없습니다/.test(w))).toBe(false);
   });
 
   it("MU-06: 대조군 — 감면을 안 고르면 종전 값 그대로다 (회귀 0)", async () => {

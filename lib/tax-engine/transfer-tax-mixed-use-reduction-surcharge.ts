@@ -35,8 +35,9 @@ import { stripAcquisitionCauseGatedReductions } from "./transfer-reductions/unso
 import type { MixedUseApportionment, MixedUseAssetInput, MixedUseStep } from "./types/transfer-mixed-use.types";
 import type { HouseInfo } from "./types/multi-house-surcharge.types";
 
-/** 겸용에서 주택분 양도소득금액 차감으로 **계산하는** 차감형 조문(NH-33 — `transfer-tax-mixed-use-income-deduction.ts`). 나머지 차감형은 종전대로 고지만 한다. */
-export const MIXED_INCOME_DEDUCTION_COMPUTED_IDS: ReadonlySet<string> = new Set(["new_99_3", "new_99"]);
+/** 겸용 주택분 차감 계산 조문 — 정본은 의존성 없는 leaf(감면 패널 안내도 같은 집합을 본다). */
+export { MIXED_INCOME_DEDUCTION_COMPUTED_IDS } from "./transfer-reductions/mixed-use-computed-ids";
+import { MIXED_INCOME_DEDUCTION_COMPUTED_IDS } from "./transfer-reductions/mixed-use-computed-ids";
 
 export type MixedReductionSurchargeExclusion = ReturnType<typeof resolveSurchargeExclusionByReduction>;
 
@@ -102,7 +103,7 @@ export function buildMixedReductionSurchargeExclusionStep(exclusion: MixedReduct
   };
 }
 
-/** 중과 배제 반영 고지 — §99·§99의3은 주택분 차감도 함께 계산하므로(NH-33) «차감 미반영» 문구를 붙이지 않는다. 그 밖의 차감형은 종전 문구를 유지한다. */
+/** 중과 배제 반영 고지 — §99·§99의3·§98의3~§98의8은 주택분 차감도 함께 계산하므로(NH-33 · US-13) «차감 미반영» 문구를 붙이지 않는다. 그 밖의 차감형은 종전 문구를 유지한다. */
 export function mixedReductionSurchargeExclusionNotice(exclusion: MixedReductionSurchargeExclusion): string {
   const s = buildSurchargeExclusionStep(exclusion);
   const deductionComputed = exclusion.appliedId !== undefined && MIXED_INCOME_DEDUCTION_COMPUTED_IDS.has(exclusion.appliedId);

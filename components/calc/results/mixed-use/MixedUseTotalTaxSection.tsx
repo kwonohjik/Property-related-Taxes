@@ -39,17 +39,22 @@ const PART_LABEL = {
   non_business_land: "비사업용토지(배율 초과)",
 } as const;
 
-/** 겸용이 주택부분 양도소득금액에서 차감하는 조특법 조문(NH-33) — 엔진 `MIXED_INCOME_DEDUCTION_COMPUTED_IDS`와 같은 두 종류. */
+/** 겸용이 주택부분 양도소득금액에서 차감하는 조특법 조문(NH-33 · US-13) — 엔진 `MIXED_INCOME_DEDUCTION_COMPUTED_IDS`와 같은 집합. */
 const INCOME_DEDUCTION_LABEL: Record<string, string> = {
   new_99_3: "조세특례제한법 §99의3 신축주택 과세특례",
   new_99: "조세특례제한법 §99 신축주택 감면",
+  unsold_98_3: "조세특례제한법 §98의3 미분양주택 과세특례",
+  unsold_98_5: "조세특례제한법 §98의5 수도권 밖 미분양주택 과세특례",
+  unsold_98_6: "조세특례제한법 §98의6 준공후미분양주택 과세특례",
+  unsold_98_7: "조세특례제한법 §98의7 미분양주택 과세특례",
+  unsold_98_8: "조세특례제한법 §98의8 준공후미분양주택 과세특례",
 };
 
 export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }: Props) {
   const { housingPart: h, commercialPart: c, nonBusinessLandPart: nb, total: t } = breakdown;
-  // §99·§99의3 주택분 양도소득금액 차감(NH-33) — 엔진이 실제로 뺀 값(통산 안분 후). 0이면 차감 행을 두지 않는다.
+  // 주택분 양도소득금액 차감(§99·§99의3 NH-33 · §98의3~§98의8 US-13) — 엔진이 실제로 뺀 값(통산 안분 후). 0이면 차감 행을 두지 않는다.
   const di = t.incomeDeduction && t.incomeDeduction.reducibleIncome > 0 ? t.incomeDeduction : undefined;
-  const diLabel = di ? INCOME_DEDUCTION_LABEL[di.appliedId] ?? "조세특례제한법 신축주택 특례" : "";
+  const diLabel = di ? INCOME_DEDUCTION_LABEL[di.appliedId] ?? "조세특례제한법 주택 특례" : "";
 
   return (
     <>
@@ -191,7 +196,7 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
             label="농어촌특별세"
             value={fmt(t.ruralSurtax)}
             formula={(() => {
-              // 농특세 = 세액감면형(감면세액 × 20%) + §99·§99의3 차감형((차감 전 − 차감 후 양도소득세) × 20%) — 엔진이 두 base를 합산한다(NH-33).
+              // 농특세 = 세액감면형(감면세액 × 20%) + 주택분 차감형((차감 전 − 차감 후 양도소득세) × 20%) — 엔진이 두 base를 합산한다(NH-33 · US-13).
               // 차감형 몫은 엔진 echo(`incomeDeduction.ruralSurtax`), 세액감면형 몫은 나머지다.
               const deductionPart = di?.ruralSurtax ?? 0;
               const creditPart = Math.max(0, t.ruralSurtax - deductionPart);
@@ -246,8 +251,8 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
         카드가 없어** 「왜 안 붙었는지」가 화면에서 사라졌다. 엔진은 detail을 만들고도
         `computeMixedUsePostTax`에서 버리고 있었다 — 이제 echo로 받아 같은 공용 컴포넌트에 넘긴다.
 
-        ⚠️ 겸용은 세액감면형과 §99·§99의3(주택분 양도소득금액 차감 — NH-33)을 계산한다. 나머지 차감형은 어느 파트에서 뺄지 정한
-           명문이 없어 고지만 한다. `calculatedTax`는 세액감면 차감 전 산출세액 `t.transferTax`(§99·§99의3 차감 후 값)다.
+        ⚠️ 겸용은 세액감면형과 주택분 양도소득금액 차감(§99·§99의3 NH-33 · §98의3~§98의8 US-13)을 계산한다. 나머지(§98·§98의2·§99의2·§98의4)는
+           고지만 한다. `calculatedTax`는 세액감면 차감 전 산출세액 `t.transferTax`(주택분 차감 후 값)다.
 
         🔴 조특법 주택 수 제외(§99의4·§98의9·감면주택)는 §89①3호 판정 축이라 결과 **최상위**에 실린다
            (D4-02 echo) — 종전에는 넘기지 않아 카드·사유·§99의4⑥ 경고가 사라졌다. `houses`는 「보유 주택 N」용.

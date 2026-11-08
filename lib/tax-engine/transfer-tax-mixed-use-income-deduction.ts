@@ -1,5 +1,5 @@
 /**
- * 겸용주택 × 조특법 §99(신축주택 감면)·§99의3(신축주택 과세특례) 양도소득금액 차감 (리뷰 NH-33 · Q-14 (a) · NH-75).
+ * 겸용주택 × 조특법 §99·§99의3·§98의3~§98의8 양도소득금액 차감 (§99 리뷰 NH-33 · Q-14 (a) · NH-75 / §98 시리즈 리뷰 US-13 · Q-14 (a)).
  *
  * ## 종전 결함
  *
@@ -25,11 +25,35 @@
  * · 농특세: 단건 STEP 7.5와 같은 leaf(`applyIncomeDeductionSurtax`) — (차감 전 산출세액 − 차감 후 산출세액) × 20%.
  * · 중과 배제: 별도(`transfer-tax-mixed-use-reduction-surcharge.ts` — NH-09)가 같은 조문으로 선판정한다.
  *
+ * ## §98 시리즈 (리뷰 US-13 · Q-14 (a) 사용자 결정 2026-11-08)
+ *
+ * §98의3·§98의5·§98의6·§98의7·§98의8도 같은 라우터·같은 주택분 소득으로 계산한다(`MIXED_INCOME_DEDUCTION_COMPUTED_IDS`).
+ *   · 기준시가 축은 A1 — 감면 카드의 취득시·5년 시점·양도시 기준시가를 「주택부분 + 부수토지」 가격으로 받는다(NH-33과 같은 규약,
+ *     감면 패널이 겸용 자산에 안내한다). 겸용 경로는 2022.1.1. 이후 양도만 받아 5년 이내(세액감면형) 분기는 닿지 않는다.
+ *   · 토지 선보유분: 산식은 확정 판결 노선(전체 양도소득금액 · 신축주택 취득당시 기준시가)을 유지하고 안내만 한다(Q-7 (b)).
+ *
  * ## 이 파일이 다루지 않는 것
  *
- * §98~§98의8 하이브리드·§98의8 준공후미분양 50% 차감(`ALL_INCOME_DEDUCTION_IDS`의 나머지 9종)은 사용자 결정 범위 밖이라 종전대로
- * «계산하지 않고 고지»한다(`computeMixedUsePostTax`).
+ * §98(세율 특칙)·§98의2(장특 특칙)·§99의2·§98의4는 «계산하지 않고 고지»한다(`computeMixedUsePostTax`).
  */
+
+/**
+ * Q-7 (b) 안내 — 토지를 신축주택보다 먼저 취득한 §98의3 겸용(자기건설 등). 세액 불변. 유리·불리 표현은 쓰지 않는다.
+ * 리뷰 `unsold-98-series-review-2026-11.md` §3 Q-7 결정(2026-11-06): 엔진 산식은 현행을 유지하고 두 노선을 함께 적는다.
+ */
+export const UNSOLD_983_LAND_PRIOR_NOTICE =
+  "조특법 §98의3 차감은 주택부분 양도소득금액 전체(토지를 신축주택보다 먼저 취득한 기간의 토지 양도소득 포함)와 신축주택 취득 당시 " +
+  "기준시가로 계산했습니다(서울행정법원 2017구단61723 → 서울고법 2019누38627 → 대법원 2019두58353 심리불속행). 국세청·조세심판원은 " +
+  "토지 취득일부터 신축주택 취득일 전일까지 발생한 토지의 양도소득금액을 감면에서 제외하고 5년 후 산식의 취득 당시 기준시가를 토지 " +
+  "취득 당시 값으로 봅니다(재산세과-1450 · 조심2011전1378 · 재산세과-514).";
+
+export function mixedLandPriorNotice(
+  resolution: IncomeDeductionResolution | undefined,
+  asset: Pick<MixedUseAssetInput, "landAcquisitionDate" | "buildingAcquisitionDate">,
+): string | undefined {
+  if (resolution?.appliedId !== "unsold_98_3" || resolution.reducible <= 0) return undefined;
+  return asset.landAcquisitionDate.getTime() < asset.buildingAcquisitionDate.getTime() ? UNSOLD_983_LAND_PRIOR_NOTICE : undefined;
+}
 import { buildIncomeDeductionStep, resolveIncomeDeduction } from "./transfer-reductions/income-deduction-router";
 import type { IncomeDeductionResolution } from "./transfer-reductions/income-deduction-router";
 import { reducibleShiftOf } from "./reducible-loss-share-core";
