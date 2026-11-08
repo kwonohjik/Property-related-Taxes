@@ -33,7 +33,8 @@ function form(regionCode: string, over: Partial<OneHouseJudgmentFormData> = {}):
     ...over,
   } as OneHouseJudgmentFormData;
 }
-const m1 = (c: HTMLElement) => c.querySelector('[data-field="standardPriceAtTransfer"]');
+// 위젯 루트 — 입력칸 이동 앵커(`data-field`)는 금액 칸에만 있다(오류를 누르면 금액 칸에 커서 · `housing-std-price-jump-focus.test.tsx`)
+const m1 = (c: HTMLElement) => c.querySelector('[data-testid="surcharge-selling-std-price-root"]');
 
 describe("SM-1 — M1 양도 당시 기준시가 칸", () => {
   it("1주택 메뉴(기본값)에는 없다", () => {
@@ -45,6 +46,11 @@ describe("SM-1 — M1 양도 당시 기준시가 칸", () => {
     expect(m1(container)).not.toBeNull();
     expect(m1(container)!.textContent).toMatch(/\*/);
     expect(m1(container)!.textContent).toMatch(/3억원 이하면 주택 수에 넣지 않습니다/);
+    // ⑧ 오류 앵커는 위젯 안 금액 칸 하나다
+    const anchors = container.querySelectorAll('[data-field="standardPriceAtTransfer"]');
+    expect(anchors).toHaveLength(1);
+    expect(m1(container)!.contains(anchors[0])).toBe(true);
+    expect(anchors[0].querySelector("input")).not.toBeNull();
   });
   it("중과 메뉴 · 지역기준 → 칸은 있되 선택 입력", () => {
     const { container } = render(<Step3 form={form(GANGNAM)} onChange={() => {}} menu="surcharge" />);

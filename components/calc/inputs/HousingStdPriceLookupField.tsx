@@ -45,7 +45,7 @@ export interface HousingStdPriceLookupFieldProps {
   onExclusiveArea?: (areaSqm: number) => void;
   /** E2E 셀렉터 prefix */
   testidPrefix: string;
-  /** 검증 오류 → 입력칸 이동 앵커(`data-field`) — 루트에 단다. 검증의 `ValidationIssue.field`와 같은 값 */
+  /** 검증 오류 → 입력칸 이동 앵커(`data-field`) — 기준시가 금액 칸에 단다(오류를 누르면 금액 칸에 커서). 검증의 `ValidationIssue.field`와 같은 값 */
   "data-field"?: string;
 }
 
@@ -136,7 +136,7 @@ export function HousingStdPriceLookupField({
   ) : null;
 
   return (
-    <div className="space-y-1.5" data-field={dataField}>
+    <div className="space-y-1.5" data-testid={`${testidPrefix}-root`}>
       {/* 묶음 라벨 — 두 필드(공시가격 연도 + 기준시가) 공통 헤더 */}
       <div className="flex items-start gap-1 text-sm font-medium">
         {required && (
@@ -203,7 +203,8 @@ export function HousingStdPriceLookupField({
         stacked
       >
         <div data-testid={`${testidPrefix}-price-input`}>
-          <CurrencyInput label="" value={value} onChange={onChange} hideUnit />
+          {/* 앵커는 금액 칸에 단다 — 묶음 루트에 달면 입력칸 이동이 첫 포커스 요소(공시가격 연도 선택)로 간다. `LandPriceLookupField`와 같은 규약 */}
+          <CurrencyInput label="" value={value} onChange={onChange} hideUnit data-field={dataField} />
         </div>
       </FieldCard>
       </div>
