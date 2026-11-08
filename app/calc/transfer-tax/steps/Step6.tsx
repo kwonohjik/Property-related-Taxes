@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/LocalIncomePenaltyNotice";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -70,6 +71,9 @@ export function Step6({
         tone="amber"
       >
         <div className="space-y-5">
+
+          {/* US-29 — 입력 단계 고지: 아래 가산세는 국세기본법 분만이다. */}
+          <LocalIncomePenaltyNotice />
 
           {/*
             🔴 **기납부세액은 신고 유형과 무관하게 받는다** (2026-09-07 UI 리뷰 보통).

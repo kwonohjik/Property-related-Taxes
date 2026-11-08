@@ -144,6 +144,7 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
       "결정세액",
       "총결정세액",
       "지방세기본법",
+      "제53조부터 제55조까지",
     ],
     keywordMode: "ALL",
   },
