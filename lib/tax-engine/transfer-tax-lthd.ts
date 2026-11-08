@@ -50,7 +50,6 @@ import type { Rental97Result } from "./transfer-reductions/types";
 import type { TransferTaxInput, SplitGainResult } from "./types/transfer.types";
 import type { SplitPartResult } from "./types/transfer-split-gain.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
-import type { ParsedRates } from "./transfer-tax-helpers";
 import { applyRental97Lthd } from "./transfer-tax-lthd-rental97";
 
 interface LongTermHoldingResult {
@@ -109,14 +108,6 @@ const applyLthdRate = applyFairMarketRatio;
 export function calcLongTermHoldingDeduction(
   taxableGain: number,
   input: TransferTaxInput,
-  /**
-   * ⚠️ **읽지 않는다** (E6-03, 2026-09-02 코드리뷰). DB `deduction:long_term_holding` 규칙은
-   * 이 함수 어디에서도 참조되지 않는다 — 표1·표2 공제율의 정본은 `calcLongTermRate`
-   * (`transfer-tax-mixed-year-inheritance.ts`)이고, 배제 판정은 전부 아래 코드 분기(L-0~L-1)다.
-   * 12개 호출부가 위치 인자로 넘기고 있어 시그니처는 유지하되, 이 값을 근거로 삼는
-   * 후속 작업을 막기 위해 dead임을 명시한다.
-   */
-  rules: ParsedRates["longTermHoldingRules"],
   isSurcharge: boolean,
   isSuspended: boolean,
   splitDetail?: SplitGainResult,
