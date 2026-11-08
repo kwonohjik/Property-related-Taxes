@@ -7,17 +7,28 @@
  * ⑧만 막고 ⑫ 거울이 없어 API 직접 호출이 원조합원 산식으로 200이었다.
  *
  * 승계 입주권(`isSuccessorRightToMoveIn`)은 ⑧도 별도 검증(`validateSuccessorRightAsset`)이라 제외한다.
- * 취득일은 ④가 싣는 자산 취득일(이월과세는 `carryoverAcquisitionDateFallback`)이라 ⑧이 읽는 `primaryAcquisitionDateOf`와 같은 값이다.
+ * 취득일은 ④가 싣는 자산 취득일이라 ⑧이 읽는 `primaryAcquisitionDateOf`와 같은 값이다 — 이월과세는 와이어 `acquisitionDate`가 아니라 증여 등기접수일(`acquisitionDateOf`).
  */
 import { z } from "zod";
 import { redevOriginalMemberAcquiredAfterApproval } from "@/lib/calc/redev-original-member-order";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
+
+/**
+ * 이월과세 자산의 취득일은 증여 등기접수일이다 — ⑧(`primaryAcquisitionDateOf`)·④(`carryoverAcquisitionDateFallback`)와 같은 값.
+ * API 직접 호출이 와이어 `acquisitionDate`를 다르게 보내도 순서 판정은 등기접수일로 한다(엔진 세액도 등기접수일을 읽는다 — L21 실측).
+ * 증여 정보(`carryoverTaxation`)가 없으면 비교하지 않는다 — 그 누락은 `refineCarryoverTaxation`이 막는다.
+ */
+function acquisitionDateOf(d: { acquisitionDate?: string; acquisitionCause?: string; carryoverTaxation?: { giftRegistryDate?: string } | null }): string | undefined {
+  return d.acquisitionCause === "carryover_gift" ? d.carryoverTaxation?.giftRegistryDate : d.acquisitionDate;
+}
 
 export function refineRedevOriginalMemberOrder(
   d: {
     redevelopment?: { isSuccessorMember?: boolean; approvalDate?: string } | null;
     isSuccessorRightToMoveIn?: boolean;
     acquisitionDate?: string;
+    acquisitionCause?: string;
+    carryoverTaxation?: { giftRegistryDate?: string } | null;
   },
   ctx: z.RefinementCtx,
   /** 자산 객체의 경로 — 주 자산 `[]` · 컴패니언 `["companionAssets", i]` */
@@ -28,7 +39,7 @@ export function refineRedevOriginalMemberOrder(
     d.isSuccessorRightToMoveIn === true ||
     !redevOriginalMemberAcquiredAfterApproval({
       isSuccessorMember: d.redevelopment.isSuccessorMember,
-      acquisitionDate: d.acquisitionDate,
+      acquisitionDate: acquisitionDateOf(d),
       approvalDate: d.redevelopment.approvalDate,
     })
   )

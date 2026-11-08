@@ -138,7 +138,7 @@ for (const pos of ["companion", "main"] as const) {
   });
 }
 
-describe("이월과세(carryover_gift) 원조합원 — ⑧이 읽는 취득일 = ⑫ 와이어 취득일 (④ 공용 leaf `carryoverAcquisitionDateFallback`)", () => {
+describe("이월과세(carryover_gift) 원조합원 — ⑧이 읽는 취득일 = ⑫ 와이어 취득일 = 증여 등기접수일 (④ 공용 leaf `carryoverAcquisitionDateFallback`)", () => {
   const CAR = (giftRegistryDate: string) => ({
     giftRegistryDate, donorAcquisitionDate: "2000-01-01", donorAcquisitionCause: "purchase", donorAcquisitionPrice: "100000000", useEstimatedAcquisition: false,
     estimationMode: "", giftTaxAmount: "0", donorCapitalExpenditure: "0", giftDateValuation: "100000000", exclusionDeclared: {}, donorHouseholdHoldingStartDate: "2000-01-01",
@@ -163,11 +163,14 @@ describe("이월과세(carryover_gift) 원조합원 — ⑧이 읽는 취득일 
       expect(r.issues).toEqual([]);
       expect(r.status).toBe(200);
     });
-    it(`${pos} · 취득일 칸 값 인가 뒤(2017-03-01) + 등기접수일 인가 전 → 본문 취득일이 이긴다(⑧·⑫ 같은 값): ⑧ 차단 · ⑫ 400`, async () => {
+    // L21(2026-11-08 결정): 이월과세 취득일은 증여 등기접수일 하나다 — 화면에 칸이 없는 옛 취득일 잔재는 읽지 않는다.
+    //   종전(L20)에는 «본문 취득일이 이긴다»로 이 셀이 ⑧ 차단 · ⑫ 400이었다(잔재 2017-03-01 인가 뒤). 이제 등기접수일(2012-03-01 인가 전)이 이겨 통과한다.
+    it(`${pos} · 취득일 잔재 인가 뒤(2017-03-01) + 등기접수일 인가 전 → 등기접수일이 이긴다(L21 반전): ⑧ 통과 · ⑫ 200 353,859,000`, async () => {
       const r = await runCalc(place(carry("2017-03-01", "2012-03-01"), pos));
-      expect(wire(r.body, pos)).toBe("2017-03-01");
-      expect(r.issues.filter((i) => /인가일은 취득일 이후여야 합니다/.test(i.message))).toHaveLength(1);
-      expect(r.status).toBe(400);
+      expect(wire(r.body, pos)).toBe("2012-03-01");
+      expect(r.issues).toEqual([]);
+      expect(r.status).toBe(200);
+      expect((r.json?.data?.aggregated as { totalTax: number }).totalTax).toBe(353_859_000);
     });
   }
 });

@@ -78,9 +78,10 @@ describe("정규화 사본 · 별개취득 · 세대 사실 · 취득일 (3중 �
     expect(carryoverHouseholdFactVisible(cAsset({ carryoverDonorSplit: false, carryover: { ...CARRYOVER_DEFAULTS, donorDeceased: true } }))).toBe(false);
   });
 
-  it("carryoverAcquisitionDateFallback: C는 증여 등기접수일(남은 acquisitionDate 잔재가 이기지 않는다), 아니면 종전 우선순위", () => {
+  it("carryoverAcquisitionDateFallback: C는 증여 등기접수일(남은 acquisitionDate 잔재가 이기지 않는다) — L21(2026-11-08)부터 C가 아닌 이월과세도 같다", () => {
     expect(carryoverAcquisitionDateFallback(cAsset({ acquisitionDate: "2019-05-05" }))).toBe("2023-03-01");
-    expect(carryoverAcquisitionDateFallback(cAsset({ carryoverDonorSplit: false, acquisitionDate: "2019-05-05" }))).toBe("2019-05-05");
+    // L21 반전: 종전에는 C가 아니면 «acquisitionDate → 등기접수일» 우선순위라 잔재(2019-05-05)가 이겼다. 이제 비-일반건물 이월과세는 등기접수일만 읽는다.
+    expect(carryoverAcquisitionDateFallback(cAsset({ carryoverDonorSplit: false, acquisitionDate: "2019-05-05" }))).toBe("2023-03-01");
   });
 });
 
