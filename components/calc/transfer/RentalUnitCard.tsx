@@ -12,12 +12,8 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
-import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { PeriodRangeEditor } from "./PeriodRangeEditor";
-import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { deriveRentalRegionFromCode } from "@/lib/calc/house-region";
 import { TONE } from "@/components/calc/shared/tones";
@@ -31,14 +27,13 @@ import {
   deriveRequiredYears,
   deriveStdPriceCap,
   isApartmentRestricted,
-  terminationDeadline,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
-import { deadlineEndNote } from "@/lib/tax-engine/civil-period";
 import { isMa1IncludedIn15520 } from "@/lib/tax-engine/data/rental-155-20-era";
 import { rentalUnitAptDeadlineInScope } from "@/lib/calc/apt-deadline-extension-scope";
 import { rentalUnitUrbanLifeQuestionInScope } from "@/lib/calc/apt-deadline-extension-scope";
 import { AptDeadlineExtensionFields } from "./AptDeadlineExtensionFields";
-import { rentalUnitLowPriceInScope } from "@/lib/calc/rental-unit-low-price-scope";
+import { RentalTerminationBlock } from "./RentalTerminationBlock";
+import { RentalUnitPeriodPriceBlock } from "./RentalUnitPeriodPriceBlock";
 import { rentalUnitApartmentInScope } from "@/lib/calc/rental-unit-apartment-scope";
 
 /** 도출 목 → 사람이 읽는 라벨 */
@@ -152,13 +147,6 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
   const show2Units = isConstruction || isNa;
   // §155⑳㉓ 말소 특례(가·다·라·마목): 자진·자동 말소 후 5년내 거주주택 양도
   const showTermination = article === "가" || article === "다" || isLa || article === "마";
-  // I-4 — 이 호 말소일 기준 5년 기한(엔진 `terminationDeadline` — 민법 §161 연장 포함). 표시 전용 파생.
-  const cancellationTs = unit.registrationCancellationDate ? new Date(unit.registrationCancellationDate).getTime() : NaN;
-  const unitDeadline =
-    unit.rentalAutoTermination && !Number.isNaN(cancellationTs)
-      ? terminationDeadline(new Date(unit.registrationCancellationDate))
-      : null;
-  const transferTs = transferDate ? new Date(transferDate).getTime() : NaN;
   // F6: 다·바(건설 장기)도 일반 아파트 허용. 나·라목도 허용. 아·자(단기)만 아파트 제외.
   // 아·자(단기 6년)만 묻지 않는다 — ④와 같은 술어(`rentalUnitApartmentInScope`).
   const showApartment = rentalUnitApartmentInScope(unit);
@@ -482,89 +470,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
 
       {/* §155⑳㉓ 말소 특례 (가·다·라·마목) */}
       {showTermination && (
-        <ToggleCard
-          variant="card"
-          size="sm"
-          tone="violet"
-          title="자진말소 또는 자동말소로 임대사업자 등록이 말소된 임대주택입니다."
-          description="말소일(2호 이상이면 최초 말소일)부터 5년 이내에 거주주택을 양도하면 임대기간요건을 충족한 것으로 봅니다. 자진말소는 민특법 임대의무기간(단기 4년·장기일반 8년)의 1/2 이상 임대한 경우에 한합니다(소령 §155㉓)."
-          checked={unit.rentalAutoTermination}
-          // 끄면 등록 유형·말소일도 함께 비운다 — 같은 onChange 한 번(useEffect 미러링 금지)
-          onCheckedChange={(v) =>
-            onChange({
-              ...unit,
-              rentalAutoTermination: v,
-              ...(v ? {} : { terminatedRegistrationType: "", registrationCancellationDate: "", terminationReason: "" }),
-            })
-          }
-        >
-          {/*
-            말소 사유 — ⑳㉓ 판정은 자진·자동을 가르지 않지만, ⑳이 불성립해 이 호를 다주택 중과 주택 수에 넣을 때는
-            자동말소만 「소득세법 시행령」 §167의3①2호 단서로 임대기간요건을 갖춘 것으로 본다(미선택 = 자동말소로 보지 않음).
-          */}
-          <FieldCard label="말소 사유" hint="다주택 중과 판정용 — 자동말소면 임대기간요건을 갖춘 것으로 봅니다 (소령 §167의3①2호 단서)">
-            <RadioCardGroup
-              name={`rental-termination-reason-${index}`}
-              data-testid={`rental-termination-reason-${index}`}
-              tone="violet"
-              layout="inline"
-              options={[
-                { value: "auto", label: "자동말소", description: "임대의무기간 종료일 말소 (민특법 §6⑤)", testId: `rental-termination-reason-auto-${index}` },
-                { value: "voluntary", label: "자진말소", description: "임대의무기간 내 말소 신청 (민특법 §6①11호)", testId: `rental-termination-reason-voluntary-${index}` },
-              ]}
-              value={unit.terminationReason ?? ""}
-              onChange={(v) => set("terminationReason", v)}
-            />
-          </FieldCard>
-          {/*
-            OH-39 — ㉓1호 「같은 법 제43조에 따른 임대의무기간의 2분의 1」은 소득세법 목별 임대기간요건
-            (가목 5년 등)이 아니라 말소 전 민특법 등록 유형의 임대의무기간이다(종전 §2 5호 8년 · 6호 4년).
-          */}
-          <FieldCard label="말소 전 민간임대주택 등록 유형" required hint="자진말소 1/2 판정 기준 (소령 §155㉓1호)">
-            <RadioCardGroup
-              name={`rental-terminated-type-${index}`}
-              data-testid={`rental-terminated-type-${index}`}
-              tone="violet"
-              layout="inline"
-              options={[
-                { value: "short_term", label: "단기민간임대(4년)", description: "1/2 = 24개월", testId: `rental-terminated-type-short-${index}` },
-                { value: "long_term_general", label: "장기일반민간임대(8년)", description: "1/2 = 48개월", testId: `rental-terminated-type-long-${index}` },
-              ]}
-              value={unit.terminatedRegistrationType ?? ""}
-              onChange={(v) => set("terminatedRegistrationType", v)}
-            />
-          </FieldCard>
-          {/*
-            I-4 — ㉓ 「말소 이후 5년 이내」는 선언이 아니라 말소일로 판정한다. 2호 이상이면 엔진이 입력한 말소 호 중
-            가장 이른 말소일로 기한을 정한다(기획재정부 재산세제과-1308). 여기 표시는 이 호 기준이다.
-          */}
-          <FieldCard label="등록 말소일" required hint="말소 이후 5년 이내 양도 판정 기준일 (소령 §155㉓)">
-            <DateInput
-              data-testid={`rental-cancellation-date-${index}`}
-              value={unit.registrationCancellationDate ?? ""}
-              onChange={(v) => set("registrationCancellationDate", v)}
-            />
-          </FieldCard>
-          {unitDeadline && (
-            <div data-testid={`rental-cancellation-deadline-${index}`} className="px-1 space-y-0.5 text-caption">
-              <p>
-                이 호 말소일 기준 양도 기한: <b>{unitDeadline.end.toISOString().slice(0, 10)}</b>까지
-                {!Number.isNaN(transferTs) &&
-                  (transferTs <= unitDeadline.end.getTime() ? " — 양도일이 기한 안입니다." : " — 양도일이 기한을 지났습니다.")}
-              </p>
-              {deadlineEndNote(unitDeadline) && <p className="text-muted-foreground">{deadlineEndNote(unitDeadline)}</p>}
-              {cancellationTs < Date.UTC(2020, 7, 18) && (
-                <p className="text-rose-700 dark:text-rose-300">
-                  2020.8.18. 전 말소는 §155㉓ 말소 특례 대상이 아닙니다(대통령령 제31083호 부칙 제3조②).
-                </p>
-              )}
-              <p className="text-muted-foreground">
-                장기임대주택이 2호 이상이면 가장 먼저 말소된 주택의 말소일부터 5년입니다 — 이미 양도했거나 거주주택으로
-                전환한 주택이 먼저 말소됐다면 그 날이 기준입니다.
-              </p>
-            </div>
-          )}
-        </ToggleCard>
+        <RentalTerminationBlock unit={unit} index={index} set={set} onChange={onChange} transferDate={transferDate} />
       )}
 
       {/* §167의3①2호 가목2) 괄호 — 도시형 생활주택인 아파트는 아래 양도기한만 비적용(마목2) 아파트 배제는 그대로). ④와 같은 술어 */}
@@ -657,117 +563,18 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
         </div>
       )}
 
-      {/* 실제 임대 기간 (시작~종료일 다중 구간) — 임대개시일 기준시가 조회연도의 소스라 먼저 배치 */}
-      <div className="space-y-1">
-        <p className="text-sm font-medium">
-          실제 임대 기간 <span className="text-rose-700 dark:text-rose-400">*</span>
-        </p>
-        <PeriodRangeEditor
-          tone="emerald"
-          startLabel="임대 시작일"
-          endLabel="임대 종료일"
-          endHint="계속 임대 중이면 양도일을 종료일로 입력"
-          rowLabel="임대 구간"
-          totalLabel="합계 임대기간"
-          testidPrefix={`rental-period-${index}`}
-          periods={unit.rentalPeriods ?? []}
-          onChange={(patch) =>
-            onChange({ ...unit, rentalInputMode: "interval", rentalPeriods: patch.periods })
-          }
-        />
-        <p className="text-xs text-muted-foreground px-1">
-          의무임대기간 {reqYears}년({reqYears * 12}개월) — 채우기 전에 거주주택을 양도해도 특례를 적용하며,
-          이후 채우지 못하면 특례가 없었을 경우의 세액과의 차액을 신고·납부합니다(소령 §155㉑·㉒).
-        </p>
-      </div>
-
-      {/* 기준시가 — 나·라목은 취득당시(3억), 그 외는 임대개시일(Vworld 자동조회) */}
-      {showAcqPrice ? (
-        <FieldCard
-          label="취득 당시 기준시가"
-          required
-          unit="원"
-          hint={`상한 ${capLabel} 이하 요건 (소령 §155⑳)`}
-        >
-          <CurrencyInput
-            label=""
-            value={unit.acquisitionOfficialPrice}
-            onChange={(v) => set("acquisitionOfficialPrice", v)}
-            hideUnit
-          />
-        </FieldCard>
-      ) : (
-        // 지번 주소는 상단(소재지 칸)으로 이동 — jibun은 state 공유라 조회 정상
-        <HousingStdPriceLookupField
-          label="임대개시일 기준시가"
-          required
-          hint={`상한 ${capLabel} 이하 요건 (소령 §155⑳)`}
-          value={unit.standardPriceAtRentalStart}
-          onChange={(v) => set("standardPriceAtRentalStart", v)}
-          jibun={unit.rentalAddressJibun || undefined}
-          dong={unit.rentalDong || undefined}
-          ho={unit.rentalHo || undefined}
-          referenceDate={rentalStartDate}
-          testidPrefix={`rental-stdprice-${index}`}
-        />
-      )}
-
-      {/*
-        기타 요건 자기확인 — §155⑳2호(양도일 현재 사업자등록·민간임대주택 등록·임대 중·임대료등 증가율 5% 이내)는
-        목을 가리지 않는 ⑳ 고유 요건이다(OH-41). 종전에는 §167의3 나·라목 문언에 5% 규정이 없다는 이유로 이 토글을
-        숨겨 나·라목에서는 ⑳2호가 통째로 빠졌다. 엔진·⑧과 같이 전 목에 띄운다.
-      */}
-      <ToggleCard
-        variant="card"
-        size="sm"
-        tone="violet"
-        data-testid={`rental-requirements-confirmed-${index}`}
-        title={
-          /**
-           * U2 — 말소된 호는 양도일 현재 등록·임대 중일 수 없다. ㉓은 말소 전까지 요건을 갖췄으면 말소 후 임대 중단·
-           * 5% 미준수·사업자등록 미유지여도 적용된다(기획재정부 재산세제과-151, 2022.1.24.) — 확인 대상은 말소 전까지다.
-           */
-          showTermination && unit.rentalAutoTermination
-            ? "등록 말소 전까지 임대료 5% 상한, 임대사업자 등록 유지(등록·임대 중), 임대료 증액 후 1년 이내 재증액 금지 요건을 모두 충족했습니다."
-            : "임대료 5% 상한, 임대사업자 등록 유지(양도일 현재 등록·임대 중), 임대료 증액 후 1년 이내 재증액 금지 요건을 모두 충족합니다."
-        }
-        description={
-          unit.requirementsConfirmed
-            ? undefined
-            : (showTermination && unit.rentalAutoTermination
-                ? "말소 후 임대를 중단했거나 임대료·사업자등록 요건을 지키지 않았어도 말소 전까지 충족했으면 체크하세요 " +
-                  "(소령 §155㉓ · 기획재정부 재산세제과-151). "
-                : "") +
-              "특례 적용을 위해 위 요건을 확인하고 체크하세요 (소령 §155⑳2호). 5% 상한은 2019년 2월 12일 이후, " +
-              "1년 이내 재증액 금지는 2020년 2월 11일 이후 체결·갱신한 임대차계약분부터 적용됩니다(대통령령 제29523호 " +
-              "부칙 제6조 · 제30395호 부칙 제16조) — 그 전 계약에서 올린 것은 보지 않고, 2019년 2월 12일 이후 처음 " +
-              "체결·갱신한 표준임대차계약이 비교 기준입니다(서면-2020-부동산-3300)."
-        }
-        trailing={
-          <LawArticleModal legalBasis="소득세법 시행령 §155" label="§155⑳" />
-        }
-        checked={unit.requirementsConfirmed}
-        onCheckedChange={(v) => set("requirementsConfirmed", v)}
+      <RentalUnitPeriodPriceBlock
+        unit={unit}
+        index={index}
+        set={set}
+        onChange={onChange}
+        transferDate={transferDate}
+        reqYears={reqYears}
+        showAcqPrice={showAcqPrice}
+        capLabel={capLabel}
+        rentalStartDate={rentalStartDate}
+        showTermination={showTermination}
       />
-
-      {/*
-        영 §167의3①1호 — ⑳이 불성립하면 이 호도 다주택 중과 주택 수에 들어간다(결정 #20 C). 지방 3억 이하면 빠진다.
-        계산기(`mode="calc"`)는 이 카드를 그리지 않고 판정 메뉴(`facts`)에서 입력한 호를 넘겨받는다(`one-house-judgment-handoff.ts`
-        — `assets` 통째 복사). 그래서 판정 메뉴에서도 묻는다.
-      */}
-      {rentalUnitLowPriceInScope(unit) && (
-        <HousingStdPriceLookupField
-          label="거주주택 양도일 현재 이 임대주택의 기준시가"
-          hint="특례 요건을 갖추지 못하면 양도세 계산기가 다주택 중과를 판정할 때 씁니다 — 지방 주택은 3억원 이하면 주택 수에서 빠집니다(소령 §167의3①1호). 비우면 주택 수에 넣습니다."
-          value={unit.officialPriceAtResidenceTransfer ?? ""}
-          onChange={(v) => set("officialPriceAtResidenceTransfer", v)}
-          jibun={unit.rentalAddressJibun || undefined}
-          dong={unit.rentalDong || undefined}
-          ho={unit.rentalHo || undefined}
-          referenceDate={transferDate}
-          testidPrefix={`rental-transfer-stdprice-${index}`}
-        />
-      )}
     </div>
   );
 }
