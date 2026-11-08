@@ -15,6 +15,7 @@
  *   취득기간 판정 기준은 조문마다 다르다 — `ExclusionWindowBasis` 주석 참조.
  */
 
+import { UNSOLD_98_5_CONTRACT_FROM, specialHouseExclusionGateReason } from "./unsold-98-period-gates";
 import { unsold98AcquisitionCauseReason } from "./unsold-98-acquisition-cause";
 import { evaluateNew99AcquisitionGate } from "./new-99-acquisition-cause";
 import { addYears } from "date-fns";
@@ -270,7 +271,7 @@ export interface SpecialHouseExclusionInput extends NewHousingKindFields {
  *   §99①·§99의3①은 호마다 기준일이 **하나**다 — 유형(매수 = 매매계약일 / 자기건설 = 사용승인일)별로
  *   `special-house-exclusion-kind.ts`가 판정한다(NH-24). 이 값은 창 선택의 표지로만 남는다.
  * · `contract_only` — 조문의 기간이 **매매계약 체결**만 지배하는 경우.
- *   §98의8①「2015.1.1부터 2015.12.31까지 최초로 매매계약을 체결하고 5년 이상 임대한 주택」,
+ *   §98의5①(2010.5.14. 이후 최초 계약 — 법률 제10285호 부칙 제2조, US-05)·§98의8①「2015.1.1부터 2015.12.31까지 최초로 매매계약을 체결하고 5년 이상 임대한 주택」,
  *   §99의2①「2013.4.1부터 2013.12.31까지 … 최초로 매매계약을 체결하여 **그 계약에 따라**
  *   취득」 — 둘 다 취득일 기준 창이 없다.
  * · `none` — 조문에 매수자 취득기간 자체가 없는 경우. §98의6①의 유일한 기한은 **임대계약
@@ -323,8 +324,9 @@ export const SPECIAL_HOUSE_EXCLUSION_WINDOWS: Record<SpecialHouseExclusionArticl
   },
   unsold_98_5: {
     label: "§98의5 수도권 밖 미분양주택",
-    windows: [[D("2010-02-12"), D("2011-04-30")]],
-    basis: "acquisition_or_contract",
+    // 시작일 = 법률 제10285호 부칙 제2조(2010.5.14. 이후 최초 계약, US-05). 계약일만 기준 — 취득일만 창 안인 통과 차단.
+    windows: [[UNSOLD_98_5_CONTRACT_FROM, D("2011-04-30")]],
+    basis: "contract_only",
     legalBasis: "조특법 §98의5②",
   },
   unsold_98_6: {
@@ -487,6 +489,13 @@ function evaluateSpecialHouseExclusion(
       legalBasis: w.legalBasis,
     };
   }
+  // 시행일·「현재 미분양」 경계 게이트(US-17·US-22·US-75) — ignoreTransferDeadline(영 §167의3①5호 판정)에서도 무시하지 않는다
+  const gateReason = specialHouseExclusionGateReason(e.article, {
+    transferDate,
+    houseContractDate: e.houseContractDate,
+    houseAcquisitionDate: e.houseAcquisitionDate,
+  });
+  if (gateReason) return { article: e.article, articleLabel: w.label, eligible: false, reason: gateReason, legalBasis: w.legalBasis };
   if (w.basis === "rental_start") {
     const fail = evaluateRentalStart(e, w, transferDate);
     if (fail) return { article: e.article, articleLabel: w.label, eligible: false, reason: fail, legalBasis: w.legalBasis };

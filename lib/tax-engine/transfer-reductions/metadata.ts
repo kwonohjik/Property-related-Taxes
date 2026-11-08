@@ -229,7 +229,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     effectCategory: "tax_amount",
     uiLabel: "§98의5 — 분양가 인하율 60/80/100%",
     // P3 (2026-06-12): 농특세 비과세 (농특세령 §4⑦1호)
-    effectLabel: "5년 내 인하율별 세액감면 / 5년 후 5년간 발생분 인하율 비율 차감 (2010.2.11 현재 수도권 밖 미분양, ~2011.4.30 계약) — 농특세 비과세",
+    effectLabel: "5년 내 인하율별 세액감면 / 5년 후 5년간 발생분 인하율 비율 차감 (2010.2.11 현재 수도권 밖 미분양, 2010.5.14~2011.4.30 계약) — 농특세 비과세",
     isFullyImplemented: true,
   },
   unsold_98_6: {

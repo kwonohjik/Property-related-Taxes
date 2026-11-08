@@ -34,8 +34,8 @@ const ARTICLE_OPTIONS: Array<{ value: SpecialHouseExclusionFormItem["article"]; 
   { value: "unsold_98", label: "§98 미분양 국민주택 (취득 1995.11.1~1997.12.31 / 1998.3.1~12.31)" },
   { value: "unsold_98_2", label: "§98의2 지방 미분양주택 (취득 2008.11.3~2010.12.31)" },
   { value: "unsold_98_3", label: "§98의3 미분양주택 (취득 2009.2.12~2010.2.11)" },
-  { value: "unsold_98_5", label: "§98의5 수도권 밖 미분양주택 (계약 ~2011.4.30)" },
-  { value: "unsold_98_6", label: "§98의6 준공후미분양주택 (취득기간 제한 없음)" },
+  { value: "unsold_98_5", label: "§98의5 수도권 밖 미분양주택 (계약 2010.5.14~2011.4.30)" },
+  { value: "unsold_98_6", label: "§98의6 준공후미분양주택 (최초 매매계약·취득 2011.3.29. 이후)" },
   { value: "unsold_98_7", label: "§98의7 미분양주택 9억 이하 (계약 2012.9.24~12.31)" },
   { value: "unsold_98_8", label: "§98의8 준공후미분양주택 (계약 2015.1.1~12.31)" },
   { value: "unsold_99_2", label: "§99의2 신축주택등 (계약 2013.4.1~12.31)" },
@@ -170,8 +170,8 @@ export function SpecialHouseExclusionItemFields({
           {item.article === "unsold_98_6" && (
             <p className="mt-1 text-micro text-emerald-700 dark:text-emerald-300">
               §98의6①의 기한은 <b>임대계약 체결일</b>(1호는 사업주체등이 2011.12.31까지, 2호는
-              본인이 2011.12.31 이전)이고 매수자의 취득일·매매계약일에는 기한이 없습니다 — 아래
-              일자는 참고용으로만 기록됩니다.
+              본인이 2011.12.31 이전)이고 매수자의 취득일·매매계약일에는 종기가 없습니다. 다만
+              「2011년 3월 29일 현재 준공후미분양」이므로 최초 매매계약일(없으면 취득일)이 2011.3.29. 이후여야 합니다.
             </p>
           )}
           {usesContractDateOnly(item.article) && (

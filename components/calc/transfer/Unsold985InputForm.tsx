@@ -87,7 +87,7 @@ export function Unsold985InputForm({
           <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
           <DateInput data-field="reduction.unsold_98_5.contractDate985" value={value.contractDate985} onChange={(v) => onChange({ contractDate985: v })} />
           <p className="mt-1 text-micro text-muted-foreground">
-            2010.2.11 현재 수도권 밖 미분양주택을 2011.4.30까지 사업주체등과 최초 매매계약
+            2010.2.11 현재 수도권 밖 미분양주택을 2010.5.14부터 2011.4.30까지 사업주체등과 최초 매매계약(법률 제10285호 부칙 제2조 — 2010.5.14. 전 계약분은 제외)
             (계약금 납부 포함 — 법 §98의5①)
           </p>
         </div>
