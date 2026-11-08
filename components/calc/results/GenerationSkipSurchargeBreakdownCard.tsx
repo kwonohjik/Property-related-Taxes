@@ -249,7 +249,7 @@ function Row({ number, label, amount, highlight, muted, formula }: RowProps) {
             className={`text-xs font-bold ${
               highlight
                 ? "text-rose-800 dark:text-rose-200"
-                : "text-rose-700 dark:text-rose-400/80"
+                : "text-rose-700 dark:text-rose-300/80"
             }`}
           >
             {number}
