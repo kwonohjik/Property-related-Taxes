@@ -219,6 +219,8 @@ describe("US-81 — 단기보유 세율 배제 특칙을 산출세액 단계에 
           residencyType983: "resident" as const,
           houseType983: "purchased" as const,
           contractDate983: new Date("2009-06-15"),
+          // 취득일이 2010.2.11. 이후라 계약금 전액 완납일이 필요하다(#3029 US-21)
+          downPaymentCompletedDate983: new Date("2009-06-15"),
           isOutsideSeoulNotDesignated983: true,
           isOverconcentration983: false,
           isUnsoldConfirmed983: true,
