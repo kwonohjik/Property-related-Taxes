@@ -133,3 +133,17 @@
 - 측정 코드(저장소 밖): scratchpad `keep/probe-vs1b.test.ts`(격자) · `keep/probe-vs1d.test.ts`(승자 갈림 + 초과부담부) — 이 PR에는 넣지 않는다. 프로토타입 diff: scratchpad `gbA-prototype.diff`.
 - 실행: 측정 코드를 `__tests__/probe/`에 두고 `PROBE_OUT=<경로> npx vitest run __tests__/probe/<파일>`. 격자 틀은 `__tests__/api/transfer.route.bg-axis-a-nonsupp-win.anchor.test.ts`.
 - 부하가 40~60이면 pre-push가 무관한 파일에서 시간 초과로 실패한다 — 푸시 전 `sysctl -n vm.loadavg` 확인.
+
+## 9. 구현 결과 (2026-11-08, 결정 Q-1~Q-4 모두 a)
+
+| 항목 | 결과 |
+|---|---|
+| 코드 | `general-building-route-helper.ts` 단건 실가 분기에 `burdenedGiftOwnershipRatio: ownershipRatio`(부담부증여일 때만) · `general-building-part-cards.ts` 컴패니언 `bgInfo ? src.ownershipRatio : undefined` — 2줄 + 주석 |
+| anchor | `__tests__/api/transfer.route.gb-axis-a-bg-ratio.anchor.test.ts` 13건. **수정 전 10 실패 · 3 통과**(불변 대조 3건), 실패값이 §2와 같다(339,500,000 · 62,545,456 · 525,000,000 · 218,250,000 · 291,000,000 · 488,000,000 · 1,527,500,000 · 225,090,912 · 1,713,000,000). 수정 후 13/13 |
+| 뮤테이션 | M1 단건 줄 제거 → 7건 사망(GA-1 3 · GA-2 4) · M2 컴패니언 줄 제거 → 3건(GA-3) · M3 컴패니언 비율 1 → 3건(GA-3). 단건·컴패니언 경로가 서로 분리되어 죽는다. 매번 `cmp`로 복원 확인 |
+| 회귀 | api 467파일/6,073 · lib 262/3,356 · components 743/6,848 · calc 815/11,437 · tax-engine 1,495/18,889 — 전부 통과(`__tests__/lib` 포함) |
+| 정적 검사 | `tsc` 0건 · eslint 오류 0건(경고 4건은 이번에 건드리지 않은 `general-building-route-helper.ts`의 기존 미사용 import) |
+| Playwright | `e2e/gb-axis-a-bg-ownership-ratio.spec.ts` 2건 통과. 단건 줄을 뺀 뮤테이션에서 GA-E1 사망(화면에 339,500,000 · 증여세 4,850,000 블록). 수정 후 스크린샷: 채무비율 100% · 취득가액 2억 · 개산공제 600만 · 양도차익 494,000,000 · 무상이전분 0 · **증여세 블록 없음** |
+| 문서 정정 | `gb-burdened-gift-silent-drop.plan.md` 서술 3곳(축 A 한계 · §10 V-5 · §14.7)을 «값이 바뀐다, 수정함»으로 정정 |
+
+**남은 것(이 PR 범위 밖):** Q-2 이월과세·의제취득일 전·분리 취득일 × 축 A 측정(V-1·V-2·V-4) · Q-3 ⑧ 게이트에 일반건물 열기(별도 계획) · Q-4 ⑫ 초과부담부 가드(별도 계획).
