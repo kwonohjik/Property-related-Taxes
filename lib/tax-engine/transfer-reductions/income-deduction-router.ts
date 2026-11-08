@@ -251,6 +251,10 @@ export interface IncomeDeductionResolution {
   ineligibleMessages?: string;
   /** 하이브리드 5년 내 — 세액감면 경로 안내 step용 (P2) */
   taxAmountMode?: boolean;
+  /** taxAmountMode 감면율(%) echo — step 문구용(US-76). §98의3 과밀 60 · §98의5 60/80 · §98의6 50 · §98의4 10 · 그 외 100 */
+  taxAmountRatePct?: number;
+  /** taxAmountMode 가 «5년 이내»가 아닌 5년 구분 없는 조문(§98의4)인지 — step 라벨용 */
+  taxAmountNoFiveYearSplit?: boolean;
   /** §98의2 특칙 전용 — 장특 표2·기본세율 안내 step용 (P4) */
   specialOnlyMode?: boolean;
 }
@@ -515,6 +519,8 @@ function evalHybrid(
           ? undefined
           : detail.ineligibleReasons.map((x) => x.message).join(" · "),
         taxAmountMode: detail.isEligible && detail.effectCategory === "tax_amount",
+        taxAmountRatePct: Math.round(detail.taxReductionRate * 100),
+        taxAmountNoFiveYearSplit: id === "unsold_98_4",
         specialOnlyMode:
           detail.isEligible &&
           (detail.effectCategory === "lthd_rate_special" || detail.effectCategory === "flat_rate_20"),
@@ -582,8 +588,10 @@ export function buildIncomeDeductionStep(
   // 하이브리드 5년 내 — 차감 없음, 세액감면 경로 안내 (P2)
   if (resolution.taxAmountMode) {
     return {
-      label: `${resolution.stepLabel} — 5년 이내 양도 (세액감면 경로)`,
-      formula: "취득일부터 5년 이내 양도 — 감면세액 단계에서 양도소득세 100% 세액감면 적용",
+      label: resolution.taxAmountNoFiveYearSplit
+        ? `${resolution.stepLabel} — 세액감면 (5년 구분 없음)`
+        : `${resolution.stepLabel} — 5년 이내 양도 (세액감면 경로)`,
+      formula: `${resolution.taxAmountNoFiveYearSplit ? "" : "취득일부터 5년 이내 양도 — "}감면세액 단계에서 양도소득세 ${resolution.taxAmountRatePct ?? 100}% 세액감면 적용`,
       amount: 0,
       legalBasis: resolution.legalBasis ?? "",
     };

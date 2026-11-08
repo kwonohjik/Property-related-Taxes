@@ -656,7 +656,7 @@ function calculateTransferTaxCore(
   const taxRateInput = flatRate20Active
     ? { ...taxRateInputBase, forceFlatRate20: true }
     : rateSpecialActive
-      ? { ...taxRateInputBase, suppressShortTermRate: true }
+      ? { ...taxRateInputBase, suppressShortTermRate: true, suppressShortTermRateBy: incomeDeduction.eligibleId as TransferTaxInput["suppressShortTermRateBy"] }
       : taxRateInputBase;
   // 토지·건물 취득일이 다른 split 자산은 파트별 세율 + §104⑤ 비교과세 (transfer-tax-split-rate.ts)
   const taxResult = resolveSplitAwareTax({

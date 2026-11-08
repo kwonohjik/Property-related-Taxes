@@ -41,6 +41,7 @@ import { isPhdApartment } from "@/components/calc/results/transfer/phd-housing-t
 import { Pre1990LandValuationDetailCard } from "@/components/calc/results/transfer/Pre1990LandValuationDetailCard";
 import { PreDeemedPurchaseResultCard } from "@/components/calc/results/transfer/PreDeemedPurchaseResultCard";
 import { resolveRuralSurtax } from "@/components/calc/results/transfer/reduction-eligible-income";
+import { incomeDeductionReducible } from "@/components/calc/results/transfer/reduction-eligible-income";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
@@ -433,6 +434,7 @@ export function TransferTaxResultView({
             isExempt={result.isExempt}
             isPartialExempt={result.isPartialExempt}
             reductionAmount={result.reductionAmount}
+            incomeDeductionReducible={incomeDeductionReducible(result)}
           />
         )}
 

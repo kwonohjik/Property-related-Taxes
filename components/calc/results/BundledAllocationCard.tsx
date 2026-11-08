@@ -448,6 +448,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           isExempt: p.isExempt,
           isPartialExempt: p.isPartialExempt,
           reductionAmount: p.reductionAmount,
+          incomeDeductionReducible: p.incomeDeductionReducible,
         }))}
       />
 

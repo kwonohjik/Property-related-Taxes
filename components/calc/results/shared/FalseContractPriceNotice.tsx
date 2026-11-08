@@ -38,12 +38,13 @@ export function FalseContractPriceNotice({
   isExempt,
   isPartialExempt,
   reductionAmount,
+  incomeDeductionReducible,
   className,
 }: FalseContractPriceExposure & {
   transferDate?: string | Date | null | undefined;
   className?: string;
 }) {
-  if (!shouldShowFalseContractPriceNotice({ transferDate, isExempt, isPartialExempt, reductionAmount })) {
+  if (!shouldShowFalseContractPriceNotice({ transferDate, isExempt, isPartialExempt, reductionAmount, incomeDeductionReducible })) {
     return null;
   }
   return <NoticeText className={className} />;
@@ -66,6 +67,7 @@ export function FalseContractPriceNoticeForItems({
       isExempt: it.isExempt,
       isPartialExempt: it.isPartialExempt,
       reductionAmount: it.reductionAmount,
+      incomeDeductionReducible: it.incomeDeductionReducible,
     }),
   );
   if (hit.length === 0) return null;

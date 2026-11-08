@@ -34,6 +34,11 @@ export interface FalseContractPriceExposure {
   isPartialExempt?: boolean | undefined;
   /** 감면세액(원). 0이면 감면을 받지 않은 결과다. */
   reductionAmount?: number | undefined;
+  /**
+   * 소득금액 차감형 감면(§98의3·§98의5·§98의6·§98의7의 5년 후 양도 등)의 공제 양도소득금액(원). 0이면 차감형 감면이 없다.
+   * 차감형은 reductionAmount가 0으로 남으므로(소득세법 §90②: 차감 방식도 감면이다) 이 값을 따로 읽는다(US-68).
+   */
+  incomeDeductionReducible?: number | undefined;
 }
 
 function ymdOf(d: string | Date | null | undefined): string | null {
@@ -50,7 +55,12 @@ function ymdOf(d: string | Date | null | undefined): string | null {
 
 /** 이 결과가 §91②의 「비과세 또는 감면받았거나 받을 세액」을 가졌는가. */
 export function hasBenefitSubjectToFalseContractPrice(r: FalseContractPriceExposure): boolean {
-  return r.isExempt === true || r.isPartialExempt === true || (r.reductionAmount ?? 0) > 0;
+  return (
+    r.isExempt === true ||
+    r.isPartialExempt === true ||
+    (r.reductionAmount ?? 0) > 0 ||
+    (r.incomeDeductionReducible ?? 0) > 0
+  );
 }
 
 /**

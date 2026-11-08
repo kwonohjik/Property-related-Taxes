@@ -1264,6 +1264,8 @@ export interface TransferTaxInput {
   skipBasicDeduction?: boolean;
   /** P3 특칙 — §98의3④·§98의5③·§98의6③ 단기세율(§104①2·3호) 배제. 엔진 내부 주입 (STEP 7). */
   suppressShortTermRate?: boolean;
+  /** 단기세율을 배제한 세율 특칙 조문 — 산출세액 단계 고지(US-81)가 적용 조문만 밝히도록. 엔진 내부 주입 (STEP 7). */
+  suppressShortTermRateBy?: "unsold_98_3" | "unsold_98_5" | "unsold_98_6";
   /** P5 특례 — §98①1호 세율 20% 단일 (§104① 불구). 엔진 내부 주입 (STEP 7). */
   forceFlatRate20?: boolean;
   /**
