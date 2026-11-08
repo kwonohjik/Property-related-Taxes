@@ -23,6 +23,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
 import { landOnlyOwnerMessage } from "@/lib/tax-engine/transfer-reductions/new-99-land-only-owner";
+import { MIXED_INCOME_DEDUCTION_COMPUTED_IDS } from "@/lib/tax-engine/transfer-reductions/mixed-use-computed-ids";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { redevMemberNewHouseScope } from "@/lib/calc/redev-field-scope";
 import { toOptionalDate } from "@/lib/api/date-coerce";
@@ -361,8 +362,20 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     [asset],
   );
 
+  // 겸용주택 — 주택분 차감 조문(§99·§99의3·§98의3~§98의8)은 감면 카드 기준시가를 「주택부분 + 부수토지」 가격으로 받는다(A1 · NH-33 · US-13).
+  const mixedHousingOnly = asset.isMixedUseHouse && (asset.reductions ?? []).some((r) => MIXED_INCOME_DEDUCTION_COMPUTED_IDS.has(r.type));
+
   return (
     <div className="space-y-3">
+      {mixedHousingOnly && (
+        <ToneCard tone="sky" title="겸용주택 — 감면은 주택부분(부수토지 포함)에만 적용합니다" bodyClassName="space-y-1">
+          <p className="text-xs" data-testid="mixed-use-reduction-housing-only-notice">
+            선택한 감면 카드의 기준시가(취득시·5년 시점·양도시)는 건물 전체가 아니라 <b>주택부분과 그 부수토지</b>의
+            기준시가로 입력하세요. 계산은 주택부분 양도소득금액에서만 차감하고, 상가부분에서는 차감하지 않습니다
+            (재산세과-1174 · 법령해석과-103).
+          </p>
+        </ToneCard>
+      )}
       {landOnlyNewHousing.length > 0 && (
         <ToneCard tone="amber" title="토지만 본인 소유 — 신축주택 감면은 적용되지 않습니다" bodyClassName="space-y-1">
           {landOnlyNewHousing.map((t) => (

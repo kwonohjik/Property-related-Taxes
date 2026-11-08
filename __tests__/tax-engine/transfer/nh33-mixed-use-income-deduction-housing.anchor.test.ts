@@ -157,14 +157,15 @@ describe("NH-33 짝 — 차감이 없어야 하는 경우는 감면 미선택 �
     expect(r.total.ruralSurtax).toBe(0);
   });
 
-  it("C4 §98의3 등 나머지 차감형은 종전대로 «반영되지 않았습니다» 고지만 — 총부담 = 대조", () => {
-    const r = run({ reductions: [{ type: "unsold_98_3" }] });
+  // §98의3~§98의8은 US-13(Q-14 (a))로 주택분 차감을 계산한다 — 계산하지 않는 예시는 §99의2.
+  it("C4 계산하지 않는 차감형(§99의2)은 «반영되지 않았습니다» 고지만 — 총부담 = 대조", () => {
+    const r = run({ reductions: [{ type: "unsold_99_2" }] });
     expect(payable(r)).toBe(payable(control));
     expect(notReflected(r)).toHaveLength(1);
   });
 
-  it("C5 §99의3 + §98의3 동시 선택: §99의3은 계산하고 §98의3만 고지한다", () => {
-    const r = run({ reductions: [r993(), { type: "unsold_98_3" }] });
+  it("C5 §99의3 + §99의2 동시 선택: §99의3은 계산하고 §99의2만 고지한다", () => {
+    const r = run({ reductions: [r993(), { type: "unsold_99_2" }] });
     expect(payable(r)).toBe(179_169_333);
     expect(notReflected(r)).toHaveLength(1);
     expect(notReflected(r)[0]).toContain("1건");
