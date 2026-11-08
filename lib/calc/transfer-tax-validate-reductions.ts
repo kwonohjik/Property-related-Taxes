@@ -61,6 +61,17 @@ function phdField(
 }
 
 /**
+ * 하이브리드 조문(§99의2·§98의3·§98의5·§98의6·§98의7·§98의8)의 PHD 환산 입력 충분성 검사를 **5년 이내 양도에서는 건너뛴다** (리뷰 US-72).
+ * 기준시가 안분은 취득일부터 5년이 지난 뒤 양도할 때만 필요하다(5년 이내는 세액감면 경로 — 엔진이 취득시 기준시가를 쓰지 않는다).
+ * 화면 제목도 「기준시가 (취득일부터 5년이 지난 후 양도 시 필수)」다. 일자 미입력이면 건너뛰지 않는다(종전 동작 유지).
+ */
+function phdIrrelevantWithin5Y(asset: AssetForm, form: TransferFormData): boolean {
+  const acquisitionDate = primaryAcquisitionDateOf(asset);
+  if (!acquisitionDate || !form.transferDate) return false;
+  return isWithin5YearsCheck(new Date(acquisitionDate), new Date(form.transferDate));
+}
+
+/**
  * 하이브리드 4조문(§99의2·§98의3·§98의5·§98의6·§98의7)과 §98의8 공용 — 취득 후 5년 경과 양도 시 5년 발생분
  * 기준시가 안분(조특령 §40① 준용)에 필요한 취득시·5년시점 기준시가(자산-수준 fallback 없음) 필수 (F-1).
  *
@@ -455,7 +466,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // 5년 후 양도 안분 기준시가 — ⑤ 제목이 「필수」인데 ⑧이 묻지 않아 엔진이 `MISSING_STD_PRICE`로 차감을 0으로 냈다(하이브리드와 같은 헬퍼 · 리뷰 Q-3 (A)).
           //   PHD 환산 ON이면 취득시 기준시가는 환산 입력 충분성으로 검증한다(④ `transfer-tax-api-reductions.ts`와 같은 leaf · §98의7과 같은 규칙).
           let phdOk988 = false;
-          if (r.phdMode988) {
+          if (r.phdMode988 && !phdIrrelevantWithin5Y(asset, form)) {
             const phdInput = {
               firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice988 || "0"),
               landAreaSqm: parseDecimal(r.phdLandAreaSqm988 || "0"),
@@ -488,7 +499,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           }
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API·UI echo와 동일 소스, ⑧ 3중 미러).
           let phdOk983 = false;
-          if (r.phdMode983) {
+          if (r.phdMode983 && !phdIrrelevantWithin5Y(asset, form)) {
             const phdInput = {
               firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice983 || "0"),
               landAreaSqm: parseDecimal(r.phdLandAreaSqm983 || "0"),
@@ -519,7 +530,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(fieldError("reduction.unsold_98_5.priceReductionRatePct985", "§98의5 적용: 분양가격 인하율은 음수일 수 없습니다."));
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
           let phdOk985 = false;
-          if (r.phdMode985) {
+          if (r.phdMode985 && !phdIrrelevantWithin5Y(asset, form)) {
             const phdInput = {
               firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice985 || "0"),
               landAreaSqm: parseDecimal(r.phdLandAreaSqm985 || "0"),
@@ -550,7 +561,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           }
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
           let phdOk986 = false;
-          if (r.phdMode986) {
+          if (r.phdMode986 && !phdIrrelevantWithin5Y(asset, form)) {
             const phdInput = {
               firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice986 || "0"),
               landAreaSqm: parseDecimal(r.phdLandAreaSqm986 || "0"),
@@ -576,7 +587,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(fieldError("reduction.unsold_98_7.acquisitionPrice987", "§98의7 적용: 취득가액을 입력하세요 (9억원 이하 — 취득세·부대비용 제외)."));
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
           let phdOk987 = false;
-          if (r.phdMode987) {
+          if (r.phdMode987 && !phdIrrelevantWithin5Y(asset, form)) {
             const phdInput = {
               firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice987 || "0"),
               landAreaSqm: parseDecimal(r.phdLandAreaSqm987 || "0"),
@@ -608,7 +619,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(fieldError("reduction.unsold_99_2.exclusiveAreaSqm992", "§99의2 적용: 연면적(공동주택·오피스텔은 전용면적, ㎡)을 입력하세요."));
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API source ternary·UI echo와 동일 소스, ⑧ 3중 미러).
           let phdOk992 = false;
-          if (r.phdMode992) {
+          if (r.phdMode992 && !phdIrrelevantWithin5Y(asset, form)) {
             const phdInput = {
               firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice992 || "0"),
               landAreaSqm: parseDecimal(r.phdLandAreaSqm992 || "0"),

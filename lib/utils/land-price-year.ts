@@ -66,3 +66,32 @@ export function landPriceYearOptions(
 
   return result;
 }
+
+/**
+ * 기준일 기준 **주택가격**(공동주택가격·개별주택가격) 추천 연도 (리뷰 US-32).
+ *
+ * 주택가격은 매년 4월 30일까지 공시한다(부동산 가격공시에 관한 법률 시행령 §38①·§43①). 토지(5/31)와 기준일이 달라
+ * 토지용 `recommendLandPriceYear`를 쓰면 5월 기준일에 전년도 주택가격이 「자동」으로 선택된다.
+ *
+ *   - 5/1 이후 → 당해 연도 (법정 공시기한 경과)
+ *   - 4/30 이전 → 전년도 (공시일 당일은 토지와 같은 관례로 미공시 취급 — 4/30 실제 공시일은 확인 필요, 수동 변경 가능)
+ *
+ * 1/1~5/31 건축·분할 주택의 6/1 기준 별도 공시는 최초공시 전 환산(PHD) 경로가 맡는다.
+ */
+export function recommendHousingPriceYear(referenceDate: string | Date): number {
+  const d = typeof referenceDate === "string" ? new Date(referenceDate) : referenceDate;
+  const year = d.getFullYear();
+  return d.getMonth() + 1 >= 5 ? year : year - 1;
+}
+
+/** 주택가격 연도 선택 옵션 (추천 연도 ±2) */
+export function housingPriceYearOptions(
+  referenceDate: string | Date,
+): { year: number; label: string; isRecommended: boolean }[] {
+  const recommended = recommendHousingPriceYear(referenceDate);
+  const result: { year: number; label: string; isRecommended: boolean }[] = [];
+  for (let y = recommended - 2; y <= recommended + 2; y++) {
+    result.push({ year: y, label: y === recommended ? `${y}년 (자동)` : `${y}년`, isRecommended: y === recommended });
+  }
+  return result;
+}
