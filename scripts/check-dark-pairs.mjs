@@ -26,7 +26,13 @@
 //     ③ `text-{톤}-400~600` — 옅은 톤 바탕 위에서 4.5 미만(✓ `emerald-600` 3.77 등) → 같은 톤 700
 //     ④ `text-{무채색}-300~500` — 3 미만 글자의 대부분 → 같은 계열 600
 //     ⑤ `text-{톤}-N/NN` — 톤 글자를 반투명하게 깔면 바탕과 섞인다 → 불투명(400~600이면 700)
-//     `dark:`·`hover:`·`disabled:`·`placeholder:` 등 접두 토큰은 보지 않는다.
+//     `dark:`·`hover:`·`disabled:`·`placeholder:` 등 접두 토큰은 보지 않는다(⑥만 예외).
+//   · 다크 hover 글자색 대비(⑥ — #3005 사고: 라이트 대비 codemod가 `dark:hover:text-red-300`을 `-800`으로 바꿔
+//     다크 바탕 위 hover 글자가 2.37:1이 됐는데 ①~⑤가 접두 토큰을 안 봐서 통과했다):
+//     ⑥ `dark:hover:text-{톤}-N`(`group-`·`peer-` hover 포함)이 다크 바탕(`--background` oklch(0.145 0 0) = rgb 10,10,10)
+//        위에서 4.5 미만이면 금지 → 같은 톤 300~400. 표는 Tailwind v4 색값을 캔버스로 변환해 대비를 계산한 값이다:
+//        700 이상은 전 톤이 미달, 600은 red·rose·violet·purple·blue·indigo·pink·fuchsia·무채색, 500은 indigo·무채색이 미달, 400 이하는 전 톤 통과.
+//        카드(rgb 23)·muted(rgb 38) 위에서는 더 높아지므로 가장 어두운 바탕 기준이 보수적인 하한이다.
 //
 // 사용법: node scripts/check-dark-pairs.mjs [경로...]   # 기본 범위: app components lib
 // 하드블록: .husky/pre-push (폰트·톤 게이트와 같은 층위)
@@ -60,6 +66,13 @@ export const WHITE_FORM = [
 
 const MUTED_ALPHA = /^(?:[a-z-]+:)*text-muted-foreground\/\d+$/;
 const LIGHT_LOW = new RegExp(`^text-((${TONES})-(400|500|600)(/\\d+)?|(${NEU})-(300|400|500)(/\\d+)?|(${TONES})-\\d+/\\d+)$`);
+// ⑥ 다크 hover 글자색 — 다크 바탕(rgb 10,10,10) 위 대비 4.5 미만 (측정 근거는 머리말)
+const DARK_HOVER = new RegExp(`^dark:(?:group-|peer-)?hover:text-(${TONES}|${NEU})-(500|600|700|800|900|950)(/\\d+)?$`);
+const LOW_ON_DARK = {
+  500: new Set(["indigo", ...NEU.split("|")]),
+  600: new Set(["red", "rose", "violet", "purple", "blue", "indigo", "pink", "fuchsia", ...NEU.split("|")]),
+};
+const darkHoverLow = (t) => { const m = t.match(DARK_HOVER); return !!m && (+m[2] >= 700 || LOW_ON_DARK[+m[2]].has(m[1])); };
 // 흰 글자 대비 4.5 미만인 톤 배경(Tailwind v4 색값으로 계산): 400 전부 · 500(indigo 제외) · 600 일부
 const WHITE_OK_600 = new Set(["rose", "violet", "blue", "red", "purple", "fuchsia", "pink", "indigo"]);
 const WHITE_BG = new RegExp(`^(?:dark:)?bg-(${TONES})-(400|500|600)$`);
@@ -77,7 +90,7 @@ export function unpaired(classList, { neutral = true } = {}) {
   const useNeutral = neutral && !fixedWhite;
   const texts = toks.filter((t) => TEXT.test(t) || (useNeutral && NTEXT.test(t)));
   const bgs = toks.filter((t) => BG.test(t) || (useNeutral && NBG.test(t)));
-  const low = [...toks.filter((t) => MUTED_ALPHA.test(t) || LIGHT_LOW.test(t)), ...(toks.includes("text-white") ? toks.filter(whiteFails) : [])];
+  const low = [...toks.filter((t) => MUTED_ALPHA.test(t) || LIGHT_LOW.test(t) || darkHoverLow(t)), ...(toks.includes("text-white") ? toks.filter(whiteFails) : [])];
   if (texts.length && bgs.some((t) => !t.includes("/")) && isPill(toks)) return low;
   const out = [...low];
   if (!toks.some((t) => t.startsWith("dark:text-"))) out.push(...texts);
@@ -85,7 +98,7 @@ export function unpaired(classList, { neutral = true } = {}) {
   return out;
 }
 
-const hasTone = (s) => s.split(/\s+/).some((t) => TEXT.test(t) || BG.test(t) || NTEXT.test(t) || NBG.test(t) || MUTED_ALPHA.test(t) || LIGHT_LOW.test(t) || WHITE_BG.test(t));
+const hasTone = (s) => s.split(/\s+/).some((t) => TEXT.test(t) || BG.test(t) || NTEXT.test(t) || NBG.test(t) || MUTED_ALPHA.test(t) || LIGHT_LOW.test(t) || WHITE_BG.test(t) || darkHoverLow(t));
 
 /** 소스 하나의 위반 — 문자열 리터럴마다, 템플릿은 `${}` 바깥 조각과 안쪽 리터럴을 따로 본다 */
 export function scan(src, opts) {
@@ -134,7 +147,19 @@ const SELF = [
   ['"text-gray-500 dark:text-gray-400"', 1], // 연한 무채색 글자
   ['"text-gray-600 dark:text-gray-400"', 0],
   ['"text-amber-800/80 dark:text-amber-200"', 1], // 톤 글자 투명도
-  ['"text-sky-700 hover:text-sky-600 disabled:text-gray-400 dark:text-sky-300"', 0], // 접두 토큰은 보지 않는다
+  ['"text-sky-700 hover:text-sky-600 disabled:text-gray-400 dark:text-sky-300"', 0], // 접두 토큰은 보지 않는다(⑥ 제외)
+  ['"text-red-700 hover:text-red-800 dark:text-red-400 dark:hover:text-red-800"', 1], // ⑥ #3005 사고 — 다크 hover 2.37
+  ['"text-red-700 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"', 0],
+  ['"text-gray-600 dark:text-gray-400 dark:hover:text-gray-700"', 1], // 무채색 700
+  ['"text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"', 0],
+  ['"text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-500"', 1], // 500은 indigo만 미달
+  ['"text-red-700 dark:text-red-400 dark:hover:text-red-500"', 0],
+  ['"text-blue-700 dark:text-blue-400 dark:hover:text-blue-600"', 1], // 600은 블루 미달
+  ['"text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-600"', 0], // emerald 600은 통과
+  ['"text-slate-700 dark:text-slate-300 dark:group-hover:text-slate-800"', 1], // group-hover도 본다
+  ['"text-slate-700 dark:text-slate-300 dark:group-hover:text-slate-300"', 0],
+  ['"dark:hover:text-rose-800/80"', 1], // 투명도 붙어도 본다
+  ['"hover:text-red-800"', 0], // 라이트 hover는 ⑥ 대상 아님
 ];
 for (const [src, n] of SELF) {
   if (scan(src).length !== n) {
@@ -169,7 +194,7 @@ for (const base of paths.length ? paths : ["app", "components", "lib"]) {
 }
 
 if (violations.length) {
-  console.error(`✗ 다크 짝 없는 톤 클래스·낮은 대비 조합 ${violations.length}곳 — 같은 클래스 목록에 dark:text-·dark:bg- 짝을 넣거나, 투명도 회색 글자는 불투명으로·흰 글자 배경은 같은 톤 700으로:`);
+  console.error(`✗ 다크 짝 없는 톤 클래스·낮은 대비 조합 ${violations.length}곳 — 같은 클래스 목록에 dark:text-·dark:bg- 짝을 넣거나, 투명도 회색 글자는 불투명으로·흰 글자 배경은 같은 톤 700으로·다크 hover 글자색은 300~400으로:`);
   console.error(violations.join("\n"));
   process.exitCode = 1; // exit()는 파이프로 넘긴 긴 출력을 자른다
 } else {

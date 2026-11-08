@@ -100,6 +100,8 @@ Calculator가 800줄 초과 + Step이 3개 이상이면 각 Step을 별도 파�
 
 **라이트 옅은 글자 금지(2026-10-20)**: 접두 없는 라이트 글자색으로 `text-{tone}-{400~600}`·`text-{무채색}-{300~500}`·투명도 톤 글자 `text-{tone}-N/NN`을 쓰지 않는다 — 톤은 700, 무채색은 600부터. 회색 안내 글자는 `text-muted-foreground`. → 같은 `check-dark-pairs.mjs`. 근거: `docs/00-pm/ui-light-contrast-and-dark-print.plan.md`.
 
+**다크 hover 글자색 대비(2026-11-08)**: `dark:hover:text-{톤}-N`(`group-`·`peer-` hover 포함)은 다크 바탕(rgb 10,10,10) 위 4.5 미만인 값을 쓰지 않는다 — 700 이상 전부·600(red·rose·violet·purple·blue·indigo·pink·fuchsia·무채색)·500(indigo·무채색) 금지, 톤은 300~400. → 같은 `check-dark-pairs.mjs` ⑥. 근거: 라이트 대비 codemod가 `dark:hover:` 접두 토큰까지 진하게 바꿔 15곳이 2.37:1이 된 사고(#3005).
+
 | 상황 | 사용 |
 |---|---|
 | 안내·섹션 카드 | `<ToneCard tone [title] [sectionNum]>` (`components/calc/shared/ToneCard.tsx`) — 인라인 톤 하드코딩 금지. `sectionNum`(`string`·`number`) 有=번호배지+제목 |
