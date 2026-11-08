@@ -169,8 +169,8 @@ describe("AB-4 범위 밖 종류는 «채무액 초과»가 아니라 정확한 
   const UNSUPPORTED = "지분 분할 취득(같은 물건)에서 담보평가액";
   const base = { ...MKT, ...W.mortgage };
   const check = (a: AssetForm) => validateBurdenedGiftAsset(a, "자산 1", undefined, "2026-02-16", true) ?? "";
+  // 토지는 V-S1 Q-1 a로 열렸다 — `transfer.route.bg-land-fractional-win.anchor.test.ts`가 축 B 포함 값을 고정한다.
   it.each([
-    ["토지", { assetKind: "land" }],
     ["일반건물", { assetKind: "general_building" }],
   ] as const)("%s", (_n, o) => {
     const m = check(house(1, "60", "2009-03-01", { ...base, ...o }));
