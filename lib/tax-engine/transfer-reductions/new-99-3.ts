@@ -27,7 +27,7 @@
  * anchor: docs/02-design/features/anchors/reduction-99-3-case-2023.md
  */
 
-import { addYears } from "date-fns";
+import { addYearsUtc } from "../civil-period";
 import { NEW_HOUSING_SUB_ARTICLE, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import type { PriorLuxuryHouseFacts } from "./new-99-luxury-house";
@@ -247,9 +247,9 @@ const D = (s: string) => new Date(s);
  * 동일 일자는 "5년 내" (취득일 + 5년 = 양도일).
  */
 export function isWithin5YearsCheck(acquisitionDate: Date, transferDate: Date): boolean {
-  // date-fns addYears — 윤년(2/29 취득) 응당일 없으면 말일(2/28)로 만료(민법 §160③).
-  // setFullYear는 2/29+5년을 3/1로 롤오버해 1일 밀림 → 코드베이스 date-fns 관례로 통일.
-  const fiveYearMark = addYears(acquisitionDate, 5);
+  // 윤년(2/29 취득) 응당일 없으면 말일(2/28)로 만료(민법 §160③). setFullYear는 2/29+5년을 3/1로 롤오버해 1일 밀림.
+  // UTC 고정 addYearsUtc — date-fns addYears는 로컬 시간대 기준이라 UTC 자정 Date에서 브라우저 시간대별로 하루 어긋났다(US-37).
+  const fiveYearMark = addYearsUtc(acquisitionDate, 5);
   return transferDate <= fiveYearMark;
 }
 

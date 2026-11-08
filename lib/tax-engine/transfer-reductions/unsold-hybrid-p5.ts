@@ -4,7 +4,7 @@
  * - §98 (모드 1): 거주자 · 미분양 국민주택 (국민주택규모 이하 + 서울 밖 + 시장 확인 + 최초 분양 +
  *   완공 후 타인 입주사실 없음 — 령 §98①·⑤) · 취득 ① 1995.11.1~1997.12.31 / ③ 1998.3.1~12.31
  *   (계약+계약금 포함, 2-트랙 자동) · 5년 이상 보유·임대 후 양도.
- *   효과 = ①1호 선택: 양도소득세 세율 20% 단일 (§104① 불구 — 누진·단기·중과 대체).
+ *   효과 = ①1호 선택: 양도소득세 세율 20% 단일 (§104① 불구 — 누진·단기세율 대체. 중과(§104⑦)는 대체하지 않음 — Q-11 (b)).
  *   ①2호 종합소득 합산은 범위 외 (UI 안내). 농특세 대상 아님 (농특세법 §2①2호 비열거).
  *   중과 배제 근거 = 소령 §167의3①**3호** (감면대상장기임대주택 — 5호 아님).
  * - 모드 2: 7개 조문 ②항(§98의2④·§98의3③·§98의5②·§98의6②·§98의7②·§98의8②·§99의2②) +
@@ -18,7 +18,8 @@
 import { UNSOLD_98_5_CONTRACT_FROM, specialHouseExclusionGateReason } from "./unsold-98-period-gates";
 import { unsold98AcquisitionCauseReason } from "./unsold-98-acquisition-cause";
 import { evaluateNew99AcquisitionGate } from "./new-99-acquisition-cause";
-import { addYears } from "date-fns";
+import { completedMonthsInclusive } from "../civil-period";
+import { UNSOLD_98_FLAT_RATE, UNSOLD_98_FLAT_RATE_LABEL, UNSOLD_98_HOLDING_YEARS } from "./unsold-98-constants";
 import { RENTAL_HOUSE_COUNT_EXCLUSION, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { NEW_99_PERIOD_START } from "./new-99";
 import { NEW_99_PERIOD_END } from "./new-99";
@@ -38,10 +39,7 @@ export const UNSOLD_98_TRACK1_FROM = new Date("1995-11-01");
 export const UNSOLD_98_TRACK1_TO = new Date("1997-12-31");
 export const UNSOLD_98_TRACK3_FROM = new Date("1998-03-01");
 export const UNSOLD_98_TRACK3_TO = new Date("1998-12-31");
-/** 법 §98①1호 — 양도소득세 세율 (§104① 불구) */
-export const UNSOLD_98_FLAT_RATE = 0.2;
-/** 5년 이상 보유·임대 */
-export const UNSOLD_98_HOLDING_YEARS_MS = 5;
+export { UNSOLD_98_FLAT_RATE, UNSOLD_98_HOLDING_YEARS } from "./unsold-98-constants";
 
 // ─────────────────────────────────────────────────────────────────
 // §98 모드 1 evaluator
@@ -86,15 +84,15 @@ function withinTrack(d: Date | undefined): boolean {
   );
 }
 
-/** 만 5년 보유 여부 — 취득일 + 5년 당일 포함 (§99의3 isWithin5YearsCheck 경계 해석과 정합) */
+/**
+ * 「5년 이상 보유ㆍ임대」 — 보유기간은 취득일~양도일 **양끝 포함**(초일 산입, 법 §98① → 령 §98③ → 소득세법 §95④,
+ * 대법원 91누8548·재산46014-205). 따라서 만 5년이 되는 날(취득일 + 5년 − 1일)의 양도가 이미 5년 이상이다 (US-14).
+ *
+ * 「취득일부터 5년 이내」(B 유형, §99의3 `isWithin5YearsCheck` — 초일 불산입)와 경계가 다르다. 함께 바꾸지 않는다.
+ * 응당일이 없는 달은 말일 만료(민법 §160③ — 1996-02-29 취득 → 2001-02-28). UTC 달력일 계산이라 브라우저 시간대와 무관하다(US-37).
+ */
 function heldAtLeast5Years(acquisitionDate: Date, transferDate: Date): boolean {
-  // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): `setFullYear`는 2/29 취득일에서
-  //   존재하지 않는 날짜(2001-02-29)를 만들어 **3/1로 롤오버**시킨다. 그 결과 만료일이
-  //   하루 뒤로 밀려 2001-02-28 양도가 부당하게 5년 미달로 거부됐다.
-  //   민법 §160③ — 응당일이 없는 달은 **그 달의 말일**에 만료한다.
-  //   date-fns `addYears`가 이 규칙대로 1996-02-29 + 5년 = 2001-02-28을 준다
-  //   (코드베이스 관례 — `new-99-3`의 5년 판정도 date-fns를 쓴다).
-  return transferDate.getTime() >= addYears(acquisitionDate, 5).getTime();
+  return completedMonthsInclusive(acquisitionDate, transferDate) >= UNSOLD_98_HOLDING_YEARS * 12;
 }
 
 export function evaluateUnsold98(input: Unsold98Input): UnsoldHybridResult {
@@ -179,9 +177,9 @@ export function evaluateUnsold98(input: Unsold98Input): UnsoldHybridResult {
     signCase: "within_5_years",
     formulaSteps: [
       {
-        label: "세율 특례 — 양도소득세 세율 20% (§104① 불구)",
+        label: `세율 특례 — 양도소득세 세율 ${UNSOLD_98_FLAT_RATE_LABEL} (§104① 불구)`,
         value: 0,
-        formula: "과세표준 × 20% 단일세율 (§104① 누진·단기세율 대체 — 법 §98①1호). 다주택 중과(§104⑦) 대상이면 중과세율을 적용합니다. 종합소득 합산 방식(①2호) 선택은 종합소득세 신고에서 별도 검토",
+        formula: `과세표준 × ${UNSOLD_98_FLAT_RATE_LABEL} 단일세율 (§104① 누진·단기세율 대체 — 법 §98①1호). 다주택 중과(§104⑦) 대상이면 중과세율을 적용합니다. 종합소득 합산 방식(①2호) 선택은 종합소득세 신고에서 별도 검토`,
       },
     ],
     taxReductionForRuralSurtax: 0,
