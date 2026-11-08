@@ -25,7 +25,6 @@ const baseInput = (transferDate: Date): Unsold98Input => ({
   isUnsoldConfirmed: true,
   isNotRentalHousing: true, // 령 §98①1호 괄호 — 민간·공공임대주택 제외 (CA-06)
   isFirstBuyerNoOccupancy: true,
-  rentedFor5Years: true,
 });
 
 describe("[audit unsold-hybrid-p5:71] §98 heldAtLeast5Years 윤년 경계 (민법 §160③)", () => {

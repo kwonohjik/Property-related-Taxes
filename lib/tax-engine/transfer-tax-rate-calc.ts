@@ -380,9 +380,13 @@ export function calcTax(
 
   const roundRate = (r: number) => Math.round(r * 10000) / 10000;
 
-  // P5 특례 (조특법 §98①1호): 세율 20% 단일 — §104①에도 불구하고 누진·단기·중과세율 전체 대체.
+  // P5 특례 (조특법 §98①1호): 세율 20% 단일 — 「같은 법 **제104조제1항**에도 불구하고」 누진·단기세율을 대체한다.
   // STEP 7에서 eligible 시 forceFlatRate20 주입 (엔진 내부 플래그).
-  if (input.forceFlatRate20) {
+  // 🔑 중과(§104⑦)는 대체하지 않는다 — Q-11 (b) 사용자 결정 2026-11-08. §104⑦은 「제1항에도 불구하고」로 시작하지 않는 별개 항이고,
+  //   소령 §167의3①3호가 §98 주택 중 「5년 이상 임대한」 것만 중과에서 빼는 것은 20%가 중과를 덮지 않는다는 구조적 근거다.
+  //   임대 확인(3호)이 있으면 `surchargeApplicable`이 이미 false다. 정면 해석례는 없다 — 결과에 확인 필요를 고지한다
+  //   (`transfer-tax-unsold98-rate-notice.ts`).
+  if (input.forceFlatRate20 && !surchargeApplicable) {
     return {
       calculatedTax: applyRate(taxBase, 0.2),
       appliedRate: 0.2,

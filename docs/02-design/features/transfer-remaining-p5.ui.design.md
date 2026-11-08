@@ -5,7 +5,7 @@
 ## 1. §98 폼 — `Unsold98InputForm.tsx` (Step5 감면 패널)
 
 ① sky 취득 시기 — contractDate98 DateInput (선택 — 자산 취득일 fallback, hint: ① 1995.11.1~1997.12.31 / ③ 1998.3.1~12.31 2-트랙 자동 판정)
-② rose 자격 — isNationalScale98(국민주택규모 이하)·isOutsideSeoul98(서울 밖)·isUnsoldConfirmed98(시장·군수·구청장 미분양 확인 — 1995.10.31/1998.2.28 현재)·isFirstBuyerNoOccupancy98(최초 분양 + 완공 후 타인 입주사실 없음)·rentedFor5Years98(5년 이상 보유·임대)
+② rose 자격 — isNationalScale98(국민주택규모 이하)·isOutsideSeoul98(서울 밖)·isUnsoldConfirmed98(시장·군수·구청장 미분양 확인 — 1995.10.31/1998.2.28 현재)·isFirstBuyerNoOccupancy98(최초 분양 + 완공 후 타인 입주사실 없음)·rentedFor5Years98(5년 이상 임대 — §98 적용 요건 아님, 소령 §167의3①3호 중과 배제 판정용 · 2026-11-08 US-01 정정)
 emerald 안내 — "세율 20% 단일 (§104① 불구 — 누진·단기·중과 대체). 장특공제는 일반 규칙. 농특세 없음. 종합소득 합산 방식(①2호)은 본 계산기 범위 외 — 종합소득세 신고 시 별도 검토. 중과 배제 (소령 §167의3①3호)"
 
 ## 2. 모드 2 — `SpecialHouseExclusionSection.tsx` (Step4 보유 상황, 주택 수 입력 직후)

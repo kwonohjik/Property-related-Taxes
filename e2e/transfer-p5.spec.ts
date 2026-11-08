@@ -31,7 +31,7 @@ test.describe("양도세 P5", () => {
     await expect(item98).toBeVisible();
     await item98.click();
     await expect(page.getByText(/국민주택규모 이하/).first()).toBeVisible();
-    await expect(page.getByText(/5년 이상 보유·임대/).first()).toBeVisible();
+    await expect(page.getByText(/5년 이상 임대 \(다주택 중과 배제 판정\)/).first()).toBeVisible();
     await expect(page.getByText(/100분의 20 단일세율/).first()).toBeVisible();
   });
 });

@@ -34,7 +34,6 @@ describe("P5 단위 anchor", () => {
       isUnsoldConfirmed: true,
       isNotRentalHousing: true, // 령 §98①1호 괄호 (CA-06)
       isFirstBuyerNoOccupancy: true,
-      rentedFor5Years: true,
     };
     const r = evaluateUnsold98(base);
     expect(r.isEligible).toBe(true);

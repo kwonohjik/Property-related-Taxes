@@ -70,8 +70,10 @@ export interface Unsold98Input {
   isNotRentalHousing?: boolean;
   /** 주택건설사업자로부터 최초 분양 + 완공 후 타인 입주사실 없음 (령①2호·⑤2호) */
   isFirstBuyerNoOccupancy?: boolean;
-  /** 5년 이상 보유하면서 임대한 사실 확인 (법① — 임대 사실은 확인 토글, 보유는 일자 검증) */
-  rentedFor5Years?: boolean;
+  // 「5년 이상 보유ㆍ임대」(법 §98①)는 **보유 또는 임대**다 — 적용 요건은 보유 5년(일자 검증) 하나이고 임대 사실은
+  // 여기서 묻지 않는다(리뷰 US-01: 재일46014-2551·서면4팀-1122·서면5팀-1134, 조특령 §98③은 보유기간 계산만 위임하고
+  // ④ 첨부서류에 임대 증빙이 없다). 임대 사실(`rentedFor5Years98`)은 소령 §167의3①3호 중과 배제 판정에만 쓴다
+  // (`income-deduction-router.ts` resolveSurchargeExclusionByReduction).
 }
 
 function withinTrack(d: Date | undefined): boolean {
@@ -161,14 +163,6 @@ export function evaluateUnsold98(input: Unsold98Input): UnsoldHybridResult {
       legalBasis: "조특령 §98①2호",
     });
   }
-  if (input.rentedFor5Years !== true) {
-    reasons.push({
-      code: "RENTAL_NOT_CONFIRMED",
-      message: "5년 이상 보유하면서 임대한 사실이 확인되지 않았습니다 (법 §98① — 보유·임대 요건).",
-      legalBasis,
-    });
-  }
-
   if (reasons.length > 0) return ineligibleHybrid("unsold_98", reasons, legalBasis, UNSOLD_98_FLAT_RATE, true);
 
   return {
@@ -186,7 +180,7 @@ export function evaluateUnsold98(input: Unsold98Input): UnsoldHybridResult {
       {
         label: "세율 특례 — 양도소득세 세율 20% (§104① 불구)",
         value: 0,
-        formula: "과세표준 × 20% 단일세율 (누진·단기·중과세율 대체 — 법 §98①1호). 종합소득 합산 방식(①2호) 선택은 종합소득세 신고에서 별도 검토",
+        formula: "과세표준 × 20% 단일세율 (§104① 누진·단기세율 대체 — 법 §98①1호). 다주택 중과(§104⑦) 대상이면 중과세율을 적용합니다. 종합소득 합산 방식(①2호) 선택은 종합소득세 신고에서 별도 검토",
       },
     ],
     taxReductionForRuralSurtax: 0,
@@ -211,7 +205,6 @@ export function evaluateP5FromReduction(
       isUnsoldConfirmed: r.isUnsoldConfirmed98 as boolean | undefined,
       isNotRentalHousing: r.isNotRentalHousing98 as boolean | undefined,
       isFirstBuyerNoOccupancy: r.isFirstBuyerNoOccupancy98 as boolean | undefined,
-      rentedFor5Years: r.rentedFor5Years98 as boolean | undefined,
     });
   }
   return undefined;

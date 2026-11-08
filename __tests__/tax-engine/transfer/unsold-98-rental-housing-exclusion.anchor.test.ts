@@ -33,7 +33,6 @@ function base98(overrides: Partial<Unsold98Input> = {}): Unsold98Input {
     isUnsoldConfirmed: true,
     isNotRentalHousing: true,
     isFirstBuyerNoOccupancy: true,
-    rentedFor5Years: true,
     ...overrides,
   };
 }
