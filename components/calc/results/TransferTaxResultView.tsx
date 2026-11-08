@@ -65,6 +65,8 @@ import {
 } from "@/lib/print/transfer-print-sections";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { FalseContractPriceNotice } from "@/components/calc/results/shared/FalseContractPriceNotice";
+import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/LocalIncomePenaltyNotice";
+import { shouldShowLocalIncomePenaltyNotice } from "@/lib/calc/local-income-penalty-notice";
 
 // ── 중과 유예 근거(basis) 표시용 기한 포맷 — API JSON 왕복 후 string 도달 가능(Date 직렬화) ──
 /** 이월과세 서식 부제의 취득가액 — 소유자 분리면 본인 파트 값(엔진 echo `ownerSplitPart` · 계획서 V-4). 자산 전체 값은 본문 서식과 어긋난다. */
@@ -397,6 +399,8 @@ export function TransferTaxResultView({
                 );
               })()}
             </div>
+            {/* US-29 — 지방세기본법 §53~§55 가산세 미포함 고지 (세액 불변) */}
+            {shouldShowLocalIncomePenaltyNotice(result) && <LocalIncomePenaltyNotice className="mt-3" />}
           </div>
         )}
 

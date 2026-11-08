@@ -7,6 +7,7 @@ import {
 import type { AmendmentDetail } from "@/lib/tax-engine/types/transfer-amendment.types";
 import type { AmendmentRuralSurtaxDetail } from "@/lib/tax-engine/types/transfer-amendment.types";
 import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
+import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/LocalIncomePenaltyNotice";
 
 /** 금액 행 — 라벨 좌 / 금액 우측정렬 고정폭(amount-column-align 정책). */
 function Row({
@@ -225,6 +226,8 @@ export function AmendmentResultCard({
         />
         <Row label={`참고 · 수정 후 전체 세액${totalScope}`} value={formatKRW(fullTotalTax)} muted />
       </div>
+      {/* US-29 — 추가 지방소득세에는 지방세기본법 §53~§55 가산세(§54·§55·§57②)가 없다 */}
+      <LocalIncomePenaltyNotice className="mt-2" />
 
       {detail.steps.length > 0 && (
         <div className="mt-3">
