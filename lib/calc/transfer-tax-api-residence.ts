@@ -106,7 +106,8 @@ export function buildResidenceReqInput(
   // 취득일로 남아 엔진 결론과 갈린다(재검증 S12-5 [B]·F252).
   const sameHouseholdInheritance = primary ? buildSameHouseholdInheritancePayload(primary) : undefined;
   return {
-    acquisitionDate: toDate(primary?.acquisitionDate, "acquisitionDate"),
+    // 이월과세는 증여 등기접수일 — ④ 와이어(`transfer-tax-api.ts`)와 같은 leaf. 칸 없는 `acquisitionDate` 잔재·빈 값을 읽지 않는다 (L24).
+    acquisitionDate: toDate(primaryAcquisitionDateOf(primary), "acquisitionDate"),
     transferDate: toDate(form.transferDate, "transferDate"),
     residencePeriodMonths: residence.months,
     regionCode: primary?.regionCode || form.regionCode || undefined,
