@@ -109,6 +109,23 @@ export function withTaxIncentiveRental3hoNotice(
   judge: (houses: HouseInfo[]) => MultiHouseSurchargeResult,
 ): MultiHouseSurchargeResult {
   if (!result.surchargeApplicable) return result;
+  const targets = rental3hoTargets(houses, declarations, transferDate, sellingHouseId);
+  if (targets.length === 0) return result;
+  if (judge(flipToUnsold(houses, targets)).surchargeApplicable) return result;
+  return { ...result, warnings: [...result.warnings, TAX_INCENTIVE_RENTAL_3HO_UNCONFIRMED_NOTICE] };
+}
+
+/** 대상 행만 5호 표시로 세운 명부 — 반사실 재판정용(`isGroupExcludable`에서 3호·5호 모두 무조건 배제). */
+const flipToUnsold = (houses: HouseInfo[], targets: HouseInfo[]): HouseInfo[] =>
+  houses.map((h) => (targets.includes(h) ? { ...h, isUnsoldHousing: true } : h));
+
+/** 3호 조문 ⑥ 선언(§89①3호 의제가 선 것)이 있는 행 중 3호·5호 표시가 없는 행. */
+function rental3hoTargets(
+  houses: HouseInfo[],
+  declarations: SpecialHouseExclusionInput[] | undefined,
+  transferDate: Date,
+  sellingHouseId: string,
+): HouseInfo[] {
   const ids = new Set(
     resolveSpecialHouseExclusions(
       (declarations ?? []).filter((d) => d.houseId && d.houseId !== sellingHouseId && clauseOf(d.article) === "3"),
@@ -117,11 +134,7 @@ export function withTaxIncentiveRental3hoNotice(
       .entries.filter((e) => e.eligible && e.houseId)
       .map((e) => e.houseId!),
   );
-  const targets = houses.filter((h) => ids.has(h.id) && !h.isUnsoldHousing && !h.isTaxIncentiveRental);
-  if (targets.length === 0) return result;
-  const alt = judge(houses.map((h) => (targets.includes(h) ? { ...h, isUnsoldHousing: true } : h)));
-  if (alt.surchargeApplicable) return result;
-  return { ...result, warnings: [...result.warnings, TAX_INCENTIVE_RENTAL_3HO_UNCONFIRMED_NOTICE] };
+  return houses.filter((h) => ids.has(h.id) && !h.isUnsoldHousing && !h.isTaxIncentiveRental);
 }
 
 /**
@@ -154,27 +167,44 @@ export function withTaxIncentiveHouse5hoUnconfirmedNotice(
   judge: (houses: HouseInfo[]) => MultiHouseSurchargeResult,
 ): MultiHouseSurchargeResult {
   if (!result.surchargeApplicable) return result;
+  const { targets, reasons } = unconfirmed5hoTargets(houses, declarations, transferDate, sellingHouseId);
+  if (targets.length === 0) return result;
+  if (judge(flipToUnsold(houses, targets)).surchargeApplicable) return result;
+  return { ...result, warnings: [...result.warnings, house5hoUnconfirmedNotice(reasons)] };
+}
+
+/** 「모름」·미답으로 5호로 잇지 못한 행과 그 사유(leaf `evaluateSpecialHouseExclusion`이 쓴 문구 그대로). */
+function unconfirmed5hoTargets(
+  houses: HouseInfo[],
+  declarations: SpecialHouseExclusionInput[] | undefined,
+  transferDate: Date,
+  sellingHouseId: string,
+): { targets: HouseInfo[]; reasons: string[] } {
   const unconfirmed = (declarations ?? [])
     .filter((d) => d.houseId && d.houseId !== sellingHouseId && clauseOf(d.article) === "5" && d.requirementsConfirmed === true)
     .map((d) => ({ d, entry: evaluateSpecialHouseReductionRequirements(d, transferDate) }))
     .filter(({ entry }) => !entry.eligible && entry.unconfirmed === true);
   const ids = new Set(unconfirmed.map(({ d }) => d.houseId!));
   const targets = houses.filter((h) => ids.has(h.id) && !h.isUnsoldHousing);
-  if (targets.length === 0) return result;
-  const alt = judge(houses.map((h) => (targets.includes(h) ? { ...h, isUnsoldHousing: true } : h)));
-  if (alt.surchargeApplicable) return result;
   const reasons = [...new Set(unconfirmed.filter(({ d }) => targets.some((h) => h.id === d.houseId)).map(({ entry }) => entry.reason ?? ""))];
-  return {
-    ...result,
-    warnings: [
-      ...result.warnings,
-      `확인 필요: 주택 수 제외로 선언한 감면주택이 ${MULTI_HOUSE.TAX_INCENTIVE_HOUSE_5_BASIS}에 해당하는지 확인되지 않아 해당하지 않는 것으로 보고 중과로 판정했습니다 — ${reasons.join(" / ")} ` +
-        `해당하면 ${MULTI_HOUSE.TWO_HOUSE_ONLY_GENERAL}(3주택 이상은 ${MULTI_HOUSE.THREE_HOUSE_EXCLUSION_SOLE})로 중과가 배제될 수 있습니다.`,
-    ],
-  };
+  return { targets, reasons };
 }
 
-/** 감면주택 ⑥ 선언이 영 §167의3① 3호·5호로 잇지 못한 행의 확인 필요 고지 둘 — 단건·겸용·판정 메뉴가 같은 leaf를 부른다. */
+const house5hoUnconfirmedNotice = (reasons: string[]): string =>
+  `확인 필요: 주택 수 제외로 선언한 감면주택이 ${MULTI_HOUSE.TAX_INCENTIVE_HOUSE_5_BASIS}에 해당하는지 확인되지 않아 해당하지 않는 것으로 보고 중과로 판정했습니다 — ${reasons.join(" / ")} ` +
+  `해당하면 ${MULTI_HOUSE.TWO_HOUSE_ONLY_GENERAL}(3주택 이상은 ${MULTI_HOUSE.THREE_HOUSE_EXCLUSION_SOLE})로 중과가 배제될 수 있습니다.`;
+
+/** 3호·5호 고지가 함께 실릴 때의 보충 — 둘 중 하나만 해당하면 중과가 유지된다는 점. */
+export const TAX_INCENTIVE_HOUSE_3HO_5HO_COMBINED_NOTICE =
+  "확인 필요: 위 3호 임대주택 확인과 5호 감면주택 확인은 둘 다 해당할 때에만 중과 배제 결론이 바뀌고, 하나만 해당하면 중과가 유지됩니다.";
+
+/**
+ * 감면주택 ⑥ 선언이 영 §167의3① 3호·5호로 잇지 못한 행의 확인 필요 고지 — 단건·겸용·판정 메뉴가 같은 leaf를 부른다.
+ *
+ * 3호 고지·5호 고지는 각자의 행만 뒤집어 재판정한다. 3호 미확인 행과 5호 「모름」 행이 함께 있고 **둘 다** 뒤집어야
+ * 중과가 꺼지는 세대는 어느 쪽 단독 재판정도 결론을 가르지 못해 고지가 하나도 안 실렸다(「모름 = 혜택 불성립 + 확인 필요」 위반).
+ * 두 고지가 모두 안 실린 채 양쪽 대상이 다 있으면 합쳐 뒤집어 한 번 더 재판정하고, 꺼지면 두 고지와 보충 고지를 싣는다.
+ */
 export function withTaxIncentiveHouseNotices(
   result: MultiHouseSurchargeResult,
   houses: HouseInfo[],
@@ -183,7 +213,7 @@ export function withTaxIncentiveHouseNotices(
   sellingHouseId: string,
   judge: (houses: HouseInfo[]) => MultiHouseSurchargeResult,
 ): MultiHouseSurchargeResult {
-  return withTaxIncentiveHouse5hoUnconfirmedNotice(
+  const single = withTaxIncentiveHouse5hoUnconfirmedNotice(
     withTaxIncentiveRental3hoNotice(result, houses, declarations, transferDate, sellingHouseId, judge),
     houses,
     declarations,
@@ -191,4 +221,18 @@ export function withTaxIncentiveHouseNotices(
     sellingHouseId,
     judge,
   );
+  if (!result.surchargeApplicable || single.warnings.length !== result.warnings.length) return single;
+  const rental = rental3hoTargets(houses, declarations, transferDate, sellingHouseId);
+  const { targets: unsold, reasons } = unconfirmed5hoTargets(houses, declarations, transferDate, sellingHouseId);
+  if (rental.length === 0 || unsold.length === 0) return single;
+  if (judge(flipToUnsold(houses, [...rental, ...unsold])).surchargeApplicable) return single;
+  return {
+    ...single,
+    warnings: [
+      ...single.warnings,
+      TAX_INCENTIVE_RENTAL_3HO_UNCONFIRMED_NOTICE,
+      house5hoUnconfirmedNotice(reasons),
+      TAX_INCENTIVE_HOUSE_3HO_5HO_COMBINED_NOTICE,
+    ],
+  };
 }
