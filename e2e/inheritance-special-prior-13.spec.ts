@@ -158,8 +158,8 @@ test.describe("조특법 특례 사전증여 상속 UI (§30의5⑨·§30의6⑤
     // §30의5⑧ 기간무관 가산 라벨 확인
     await expect(page.getByText("§30의5⑧ 기간무관 가산")).toBeVisible();
 
-    // 다크 대비 — 포함 행 명세표(드리프트 방지). ⚠️ gray-500 → 400으로 고친 「§13 합산 기간 도과」 참고 행은
-    // 이 흐름에 나오지 않는다(특례 사전증여는 기간 무관 가산) — 그 행은 브라우저로 확인하지 않았다.
+    // 다크 대비 — 포함 행 명세표(드리프트 방지). 「§13 합산 기간 도과」 참고 행은 이 흐름에 나오지 않는다
+    // (특례 사전증여는 기간 무관 가산) — `inheritance-prior-13-excluded-row-dark-contrast.spec.ts`가 잰다.
     await expectDarkContrast(
       page,
       page
