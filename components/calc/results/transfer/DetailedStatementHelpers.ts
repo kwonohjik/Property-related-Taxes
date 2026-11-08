@@ -743,7 +743,7 @@ export function buildStatementItems(
   const incomeAfterValue = isAggregate
     ? properties.reduce((s, p) => s + Math.max(0, p.incomeAfterOffset - (p.incomeDeductionReducible ?? 0)), 0)
     : isRH
-      ? result.taxableGain
+      ? Math.max(0, result.taxableGain - singleIncomeDeduction) // §155⑳ 경로 차감(NH-37 · US-43)도 안분 후 과세분에서 뺀다
       : Math.max(0, singleIncome - singleIncomeDeduction);
   items.set("incomeAmountAfter", {
     label: "감면후 소득금액",
@@ -751,7 +751,9 @@ export function buildStatementItems(
     formula: isAggregate
       ? `자산별 (양도소득금액 − 소득금액 감면대상) 합계 = ${incomeAfterValue.toLocaleString()}`
       : isRH
-        ? `과세대상 양도소득금액 ${result.taxableGain.toLocaleString()} (§161 안분 후 — 세액감면방식 소득금액 미차감)`
+        ? singleIncomeDeduction > 0
+          ? `과세대상 양도소득금액 ${result.taxableGain.toLocaleString()} (§161 안분 후) − 소득금액 감면대상 ${singleIncomeDeduction.toLocaleString()} = ${incomeAfterValue.toLocaleString()}`
+          : `과세대상 양도소득금액 ${result.taxableGain.toLocaleString()} (§161 안분 후 — 세액감면방식 소득금액 미차감)`
         : `양도소득금액 ${singleIncome.toLocaleString()} − 소득금액 감면대상 ${singleIncomeDeduction.toLocaleString()} = ${incomeAfterValue.toLocaleString()}`,
     legalBasis: "소득세법 §95·§90②",
     note: "소득금액차감 감면 반영 후 소득금액 (세액감면방식은 소득금액 미차감)",
