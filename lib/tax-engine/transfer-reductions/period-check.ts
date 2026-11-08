@@ -299,7 +299,7 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     check: (c) =>
       unsold987TransferGateReasons(c.transferDate).length === 0 &&
       (c.contractDate === undefined || within(c.contractDate, D("2012-09-24"), D("2012-12-31"))),
-    failReason: "9억 이하 미분양 매매계약 시한(2012.9.24~2012.12.31) 외 — 조특법 §98의7",
+    failReason: "9억 이하 미분양 매매계약 시한(2012.9.24~2012.12.31) 외이거나 양도일이 시행일(2012.10.2.) 전 — 조특법 §98의7",
   },
   unsold_98_8: {
     label: "매매계약 2015.1.1~2015.12.31",

@@ -120,6 +120,8 @@ describe("US-22 §98의6 2011.3.29. 현재 준공후미분양", () => {
 describe("US-75 §98의7 시행일 2012.10.2. (+ 주택 수 제외 §98의2④·§98의3③·§98의7②)", () => {
   it("UI 사전판정·주택 수 제외", () => {
     expect(checkReductionPeriod("unsold_98_7", { transferDate: D("2012-10-01"), contractDate: D("2012-09-25") }).inPeriod).toBe(false);
+    // 사유 문구도 시행일을 밝힌다 — 계약일이 창 안이라 「계약 시한 외」만으로는 원인이 드러나지 않는다(브라우저 확인 2026-11-09)
+    expect(checkReductionPeriod("unsold_98_7", { transferDate: D("2012-10-01"), contractDate: D("2012-09-25") }).failReason).toContain("양도일이 시행일(2012.10.2.) 전");
     expect(checkReductionPeriod("unsold_98_7", { transferDate: D("2012-10-02"), contractDate: D("2012-09-25") }).inPeriod).toBe(true);
     expect(excluded("unsold_98_7", "2012-10-01", { houseAcquisitionDate: D("2012-09-25") })).toBe(0);
     expect(excluded("unsold_98_7", "2012-10-02", { houseAcquisitionDate: D("2012-09-25") })).toBe(1);
