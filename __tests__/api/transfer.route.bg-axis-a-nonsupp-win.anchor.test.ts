@@ -172,24 +172,25 @@ describe("AA-3 컴패니언(서로 다른 물건) 묶음 — 균일 승자는 �
 
 describe("AA-4 범위 밖 — 주택 외·이월과세는 정확한 사유로 막고, 축 미지정은 확정하지 않는다", () => {
   const redev = (id: number) => house(id, HALF, debt("700000000"), x({ assetKind: "redevelopment_apt" }));
-  it("단건 재개발 APT 지분 담보 승: «주택(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다»", () => {
+  it("단건 재개발 APT 지분 담보 승: «주택·토지(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다»", () => {
     const m = issues(mkForm([redev(1)])).map((i) => i.message).filter((t) => t.includes(FRAC_WIN));
     expect(m.length).toBe(1);
-    expect(m[0]).toContain("주택(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다");
+    expect(m[0]).toContain("주택·토지(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다");
   });
   it("묶음 지분 재개발 APT 담보 승: 묶음 게이트가 «지분 보유 자산은 … 주택 … 만 계산합니다»", () => {
     const m = issues(companionForm([house(1, debt("1200000000")), redev(2)])).map((i) => i.message).filter((t) => t.includes(GATE));
     expect(m.length).toBe(1);
     expect(m[0]).toContain("지분 보유 자산은");
-    expect(m[0]).toContain("주택(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다");
+    expect(m[0]).toContain("주택·토지(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다");
     expect(m[0]).not.toContain("단건으로 계산하세요");
   });
-  it("술어 — 주택 지분은 풀리고 입주권·겸용은 지분 여부와 무관하게 막힌다", () => {
+  it("술어 — 주택·토지 지분은 풀리고 일반건물·입주권·겸용은 지분 여부와 무관하게 막힌다", () => {
     const base = (over: Partial<AssetForm>) => house(1, HALF, debt("700000000"), over);
     expect(bgNonSupplementaryWinnerUnsupported(base(x({})))).toBe(false);
     expect(bgNonSupplementaryWinnerUnsupported(base(x({ assetKind: "right_to_move_in" })))).toBe(true);
     expect(bgNonSupplementaryWinnerUnsupported(base(x({ isMixedUseHouse: true })))).toBe(true);
-    expect(bgNonSupplementaryWinnerUnsupported(base(x({ assetKind: "land" })))).toBe(true);
+    expect(bgNonSupplementaryWinnerUnsupported(base(x({ assetKind: "land" })))).toBe(false); // 토지는 V-S1 Q-1 a로 열렸다(transfer.route.bg-land-fractional-win.anchor)
+    expect(bgNonSupplementaryWinnerUnsupported(base(x({ assetKind: "general_building" })))).toBe(true);
     expect(bgUnsupportedWinnerCause(base(x({ assetKind: "right_to_move_in" })))).toContain("원조합원 입주권의 기준시가");
   });
   it("축 미지정(undefined)은 종전처럼 지분 자산의 담보 승을 확정하지 않는다 — 미전환 호출처의 fail-closed", () => {

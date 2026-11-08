@@ -316,7 +316,7 @@ export function validateBurdenedGiftAsset(
     if (splitAxis && bgSplitAxisCollateralWinUnsupported(asset) && !bgRtmiAxisBWinnerComputable(asset, formTransferDate)) {
       return fieldError(
         "bgMortgageDebtAmount",
-        `${label}: 지분 분할 취득(같은 물건)에서 담보평가액(「상속세 및 증여세법」 제66조)이 시가보다 커서 증여가액이 담보평가액이 됩니다. 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 주택(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다. 시가·채무액·채권최고액을 재확인하거나 다른 평가 유형으로 입력하세요.`,
+        `${label}: 지분 분할 취득(같은 물건)에서 담보평가액(「상속세 및 증여세법」 제66조)이 시가보다 커서 증여가액이 담보평가액이 됩니다. 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 주택·토지(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다. 시가·채무액·채권최고액을 재확인하거나 다른 평가 유형으로 입력하세요.`,
       );
     }
     // 담보 승이면 취득가액은 산정방식과 무관하게 취득시 기준시가 × 채무비율이다(엔진 `acqStdPriceForced`) — 방식별 금액 칸은 쓰이지 않아
@@ -493,7 +493,7 @@ export function validateBurdenedGiftAsset(
     // 지분 자산(축 A)의 담보 승 — 채무 합계가 시가 해당분보다 커서 아래 「초과」 검사에 걸리지만 그 사유가 아니다. 주택은 계산하고(취득시 기준시가 × 지분 × 채무비율 — ⑤ 칸·(5-c)·⑫),
     // 취득가액 처리를 확인하지 못한 종류만 이 사유로 막는다(`bgFractionalCollateralWin` · `bgFractionalCollateralKindSupported`).
     if (!isFractionalSplitAxis && bgFractionalCollateralWin(asset) && !bgFractionalCollateralKindSupported(asset) && !bgRtmiShareWinnerComputable(asset, formTransferDate)) {
-      return `${label}: 지분 ${formatOwnershipPercent(asset.ownershipNumerator, asset.ownershipDenominator)}를 가진 자산에서 담보평가액(「상속세 및 증여세법」 제66조)이 시가 해당분보다 커서 증여가액이 담보평가액이 됩니다. 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 주택(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다. 단독 소유라면 지분율을 100%로 입력하고, 시가·채무액·채권최고액을 재확인하세요.`;
+      return `${label}: 지분 ${formatOwnershipPercent(asset.ownershipNumerator, asset.ownershipDenominator)}를 가진 자산에서 담보평가액(「상속세 및 증여세법」 제66조)이 시가 해당분보다 커서 증여가액이 담보평가액이 됩니다. 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 주택·토지(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다. 단독 소유라면 지분율을 100%로 입력하고, 시가·채무액·채권최고액을 재확인하세요.`;
     }
     if (giftValuation > 0 && assumedDebt > giftValuation) {
       const scaleNote =

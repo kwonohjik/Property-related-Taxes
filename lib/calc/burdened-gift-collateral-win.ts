@@ -45,11 +45,13 @@ export function bgWholeGiftValuation(asset: AssetForm, isFractionalSplit?: boole
 
 /**
  * 지분 자산(축 A·B)에서 담보·임대 승의 취득가액 처리(취득시 기준시가 × 채무비율 — ⑤ 칸·⑧ 요구·⑫ 요구)를 **확인한 범위**.
- * 주택(`housing`)만이다 — 이월과세·의제취득일 전 상속·증여는 교차를 측정하지 않았고, 토지·일반건물·재개발·입주권·겸용은 종류별 격자를 측정하지 않았다
- * (계획서 `bg-nonsupp-winner-support.plan.md` V-S1·V-S4). 범위 밖은 ⑧이 막는다(`bgSplitAxisCollateralWinUnsupported` · `bgFractionalCollateralWin`).
+ * 주택(`housing`)과 토지(`land`)다 — 토지는 15칸 격자(축 A 단건·축 B·함께 양도 × 기준시가 담보·임대·보충, 시가 담보·보충)가 같은 종류 단건 기준과 일치하고
+ * ⑤ 칸·필요경비·⑧ 요구가 이 술어 하나로 따라옴을 측정했다(계획서 `bg-fractional-winner-kinds-grid.plan.md` §3.1·§3.1.1, 결정 Q-1 a).
+ * 이월과세·의제취득일 전 상속·증여는 교차를 측정하지 않았고, 일반건물(축 A 값 결함 → #2990 수정, 열기는 Q-3 별도)·재개발(⑤ 블록 V-S1g)·입주권·겸용은 격자 측정이 끝나지 않았다
+ * (`bg-nonsupp-winner-support.plan.md` V-S1·V-S4). 범위 밖은 ⑧이 막는다(`bgSplitAxisCollateralWinUnsupported` · `bgFractionalCollateralWin`).
  */
 export function bgFractionalCollateralKindSupported(asset: AssetForm): boolean {
-  return asset.assetKind === "housing" && !isBgPreDeemedAsset(asset) && !bgAnyCarryover(asset) && !isMixedBurdenedGift(asset);
+  return (asset.assetKind === "housing" || asset.assetKind === "land") && !isBgPreDeemedAsset(asset) && !bgAnyCarryover(asset) && !isMixedBurdenedGift(asset);
 }
 
 /** 축 B 카드에서 시가 모드 담보평가(§66)가 이기는데 취득가액 처리를 확인하지 못한 종류인가 — ⑧ 차단용(거짓 사유 「채무액 초과」 대체). */
@@ -62,7 +64,7 @@ export function bgSplitAxisCollateralWinUnsupported(asset: AssetForm): boolean {
 /**
  * 지분을 가진 자산(축 A 공유 소유 — 채무는 본인 인수분)에서 시가 모드 담보평가(§66)가 이기는가. 이기면 그 증여가액 C는 담보평가액이다.
  * 지분 자산의 담보 승은 채무 합계가 항상 시가 해당분보다 커서 ⑧의 「채무액이 증여가액 초과」 검사에 걸리므로, 확인하지 못한 종류(`bgFractionalCollateralKindSupported`가 false)는
- * 그 틀린 사유 대신 이 판정으로 정확히 막는다. 주택은 계산한다 — 취득가액 = 취득시 기준시가 × 지분 × 채무비율(엔진 `resolveBgAcquisitionBasis`)을 ⑤ 칸·⑧·⑫가 같은 술어로 다룬다.
+ * 그 틀린 사유 대신 이 판정으로 정확히 막는다. 주택·토지는 계산한다 — 취득가액 = 취득시 기준시가 × 지분 × 채무비율(엔진 `resolveBgAcquisitionBasis`)을 ⑤ 칸·⑧·⑫가 같은 술어로 다룬다.
  * 축 B(지분 분할 취득)는 호출자가 거른다 — 물건 전체 입력이라 이 승자 판정이 맞지 않는다.
  */
 export function bgFractionalCollateralWin(asset: AssetForm): boolean {
@@ -79,7 +81,7 @@ export function bgFractionalCollateralWin(asset: AssetForm): boolean {
  *
  * 화면이 이 경우를 다루지 않는 자산은 `false`다 — ⑧이 따로 막는다:
  * - 겸용주택: 엔진 MB-7(담보평가를 주택·상가로 나눌 법정 기준 없음).
- * - 지분 보유: **주택**만(`bgFractionalCollateralKindSupported`). 축을 `isFractionalSplit`로 넘겨야 한다 — 축 B `true`(물건 전체 판정) · 축 A `false`(지분분 판정) ·
+ * - 지분 보유: **주택·토지**만(`bgFractionalCollateralKindSupported`). 축을 `isFractionalSplit`로 넘겨야 한다 — 축 B `true`(물건 전체 판정) · 축 A `false`(지분분 판정) ·
  *   미지정 `undefined`면 지분 자산은 `false`(종전 — 승자를 확정하지 않는다).
  */
 export function bgCollateralForcesStdAcq(asset: AssetForm, isFractionalSplit?: boolean): boolean {
@@ -131,7 +133,7 @@ export function bgUnsupportedWinnerCause(asset: AssetForm): string {
   if (asset.assetKind === "right_to_move_in") return asset.isSuccessorRightToMoveIn === true ? BG_RTMI_SUCCESSOR_DATE_CAUSE : BG_RTMI_ORIGINAL_CAUSE;
   if (isMixedBurdenedGift(asset))
     return "겸용주택 부담부증여는 단독 소유 단건만 계산하며, 담보·임대로 평가되는 경우 증여가액을 주택과 상가로 나눌 법정 기준이 없어 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
-  return "지분을 가진 자산의 담보·임대 평가에서 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 주택(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
+  return "지분을 가진 자산의 담보·임대 평가에서 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 주택·토지(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
 }
 
 /**
