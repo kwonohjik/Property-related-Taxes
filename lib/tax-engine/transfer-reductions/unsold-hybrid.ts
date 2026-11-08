@@ -20,8 +20,9 @@
  *   가격급등지역(법③)은 령 위임 규정 부재 실측 — 지정 지역 없음.
  */
 
-import { applyRate } from "../tax-utils";
+import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import { unsold987TransferGateReasons } from "./unsold-98-period-gates";
+import { describeAllocationFormula } from "./unsold-allocation-display";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import type { Unsold982LthdEcho } from "./unsold-hybrid-p4";
 import {
@@ -304,21 +305,44 @@ export function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResul
     );
   }
   const allocation = calcSignedAllocation(input.transferIncome, stdAt5Y - stdAtAcq, stdAtTransfer - stdAtAcq);
-  const allocated = Math.min(allocation.reducibleIncome, Math.max(0, input.transferIncome));
-  const reducible = Math.min(applyRate(allocated, rate), Math.max(0, input.transferIncome));
+  const incomeCap = Math.max(0, input.transferIncome);
+  // US-12 — 5년간 발생분은 령 §40① 산식 값 그대로(양도소득금액 상한 없음) 두고, 감면·공제율을 곱한 «공제액»에만
+  //   법 §98의3·§98의5·§98의6 후단 «공제하는 금액이 과세대상소득금액을 초과하는 경우 그 초과금액은 없는 것»(양도소득금액 한도)을 건다
+  //   (국세청 서면-2021-법규재산-8218). calcSignedAllocation은 (+,+)에서 율 곱하기 전에 상한을 걸어 §99·§99의3(100%) 경로와
+  //   공유하므로 그대로 두고, 여기서는 상한 전 원값(raw)을 따로 구한다. 율 100%인 조문은 결과가 같다.
+  const stdNumerator = stdAt5Y - stdAtAcq;
+  const stdDenominator = stdAtTransfer - stdAtAcq;
+  const allocated =
+    allocation.signCase === "all_positive"
+      ? Math.max(0, safeMultiplyThenDivide(input.transferIncome, stdNumerator, stdDenominator))
+      : allocation.reducibleIncome;
+  const applied = applyRate(allocated, rate);
+  const reducible = Math.min(applied, incomeCap);
+  const isCappedByIncome = applied > incomeCap;
+  const incomeText = input.transferIncome.toLocaleString();
+  const allocationFormula = describeAllocationFormula({
+    signCase: allocation.signCase,
+    transferIncome: input.transferIncome,
+    stdAtAcq,
+    stdAt5Y,
+    stdAtTransfer,
+  });
   formulaSteps.push({
     label: "5년간 발생 양도소득금액 (기준시가 안분)",
     value: allocated,
-    formula: `양도소득금액 ${input.transferIncome.toLocaleString()} × (5년시점 기준시가 ${stdAt5Y.toLocaleString()} − 취득시 기준시가 ${stdAtAcq.toLocaleString()}) ÷ (양도시 기준시가 ${stdAtTransfer.toLocaleString()} − 취득시 기준시가 ${stdAtAcq.toLocaleString()})`,
+    formula: allocationFormula,
   });
+  const capText = isCappedByIncome
+    ? `이나 공제하는 금액이 양도소득금액 ${incomeText}을 넘으므로 그 초과금액은 없는 것으로 하여 ${reducible.toLocaleString()}을 과세대상소득금액에서 공제`
+    : `을 과세대상소득금액에서 공제`;
   formulaSteps.push({
     label: rate === 1
       ? "과세대상소득금액에서 공제 (초과금액은 없는 것)"
       : `과세대상소득금액에서 공제 (5년간 발생분 × ${ratePct}%, 초과금액은 없는 것)`,
     value: reducible,
     formula: rate === 1
-      ? `5년간 발생분 ${allocated.toLocaleString()}을 과세대상소득금액에서 공제`
-      : `5년간 발생분 ${allocated.toLocaleString()} × ${ratePct}% = ${reducible.toLocaleString()}을 과세대상소득금액에서 공제`,
+      ? `5년간 발생분 ${allocated.toLocaleString()}${isCappedByIncome ? `이 양도소득금액 ${incomeText}을 넘으므로 그 초과금액은 없는 것으로 하여 ${reducible.toLocaleString()}을 과세대상소득금액에서 공제` : "을 과세대상소득금액에서 공제"}`
+      : `5년간 발생분 ${allocated.toLocaleString()} × ${ratePct}% = ${applied.toLocaleString()}${capText}`,
   });
   return {
     id: input.id,

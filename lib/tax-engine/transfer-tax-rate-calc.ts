@@ -543,6 +543,12 @@ export function calcTax(
     ? null
     : resolveShortTermRate(input.transferDate, holdingMonthsTotal, shortTermAssetClass, shortTermOpts);
   const shortTermFlatRate = shortTermResolution?.rate ?? null;
+  // US-81 — 조특법 §98의3④2호·§98의5③2호·§98의6③2호가 단기보유 세율을 배제한 경우, 배제하지 않았다면 단기세율이 걸렸을 때만 그 사실을 밝힌다.
+  const suppressedShortTermNote =
+    input.suppressShortTermRate &&
+    resolveShortTermRate(input.transferDate, holdingMonthsTotal, shortTermAssetClass, shortTermOpts)?.rate != null
+      ? "조특법 §98의3④2호·§98의5③2호·§98의6③2호 — 단기보유 세율 대신 소득세법 §104①1호 세율 적용"
+      : undefined;
   /**
    * 수유자(상속인 아닌 유증·사인증여) — §104②1호 통산을 하지 않아 단기세율이 갈렸을 때만 밝힌다
    * (계획서 `docs/00-pm/non-heir-bequest-followups.plan.md` §4-3 B). 사인증여는 서면4팀-3304가 직접 근거, 유증은 확인 필요.
@@ -670,6 +676,7 @@ export function calcTax(
         progressiveDeduction: deduction,
         surchargeSuspended: false,
         rateClause: surchargeClause(effectiveSurchargeType),
+        shortTermNote: suppressedShortTermNote,
         // 2년 이상이라 §104⑦ 후단(단기 비교)이 없다 — 해당 호가 하나뿐이다.
         // ※ **1호**와도 비교하지 않는다 — ⑦ 세액은 「§55① 누진 + 가산(≥0)」이라 항등식으로 1호 이상이다.
         candidateClauses: clauseSet(surchargeClause(effectiveSurchargeType)),
@@ -686,6 +693,7 @@ export function calcTax(
     progressiveDeduction: deduction,
     surchargeSuspended: suspended,
     rateClause: "104-1-1",
+    shortTermNote: suppressedShortTermNote,
     candidateClauses: clauseSet("104-1-1"),
   };
 }

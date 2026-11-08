@@ -18,6 +18,7 @@
  * 5년 발생분 산식 = 령 §40① 준용 (령 §98의7④) — §99의3 calcSignedAllocation 재사용.
  */
 
+import { describeAllocationFormula } from "./unsold-allocation-display";
 import { applyRate } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import {
@@ -351,7 +352,7 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
     formulaSteps.push({
       label: "5년간 발생 양도소득금액 (기준시가 안분)",
       value: base,
-      formula: `양도소득금액 ${input.transferIncome.toLocaleString()} × (5년시점 기준시가 ${stdAt5Y.toLocaleString()} − 취득시 기준시가 ${stdAtAcq.toLocaleString()}) ÷ (양도시 기준시가 ${stdAtTransfer.toLocaleString()} − 취득시 기준시가 ${stdAtAcq.toLocaleString()})`,
+      formula: describeAllocationFormula({ signCase: allocation.signCase, transferIncome: input.transferIncome, stdAtAcq, stdAt5Y, stdAtTransfer }),
     });
   }
 
