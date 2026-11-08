@@ -394,7 +394,8 @@ export function buildGbCompanionItems(
       (gbv.bundledAcquisitionPrice as number | undefined) ?? engine.acquisitionPrice ?? 0,
       capex.legacyExpenses,
       bgInfo,
-      undefined,
+      // 축 A 지분 자산도 §159 증여가액·취득가액을 지분분으로 환산한다(단건 경로와 같은 값).
+      bgInfo ? src.ownershipRatio : undefined,
       // 공유지분 — 그 물건 전체(100%) 양도가액. 모르면(안분 모드) 한쪽 기재 계약서만 종전 지분 판정으로 남는다.
       src.totalPropertyTransferPrice,
     );
