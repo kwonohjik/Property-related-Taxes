@@ -52,7 +52,7 @@ export {
   PROGRESSIVE_RATE_CLAUSES,
   clauseBucketKey,
 } from "./transfer-tax-rate-clause";
-import { isCrisisAcqExempt } from "./legal-codes";
+import { isCrisisAcqExempt, TRANSFER, TRANSFER_REDUCTION_ARTICLE } from "./legal-codes";
 import { UNSOLD_98_FLAT_RATE, UNSOLD_98_FLAT_RATE_LABEL } from "./transfer-reductions/unsold-98-constants";
 import { judgeNblRateDeferral } from "./data/nbl-rate-deferral-era";
 import type { NblSurchargeExclusionReason } from "./types/transfer-result.types";
@@ -543,11 +543,11 @@ export function calcTax(
     ? null
     : resolveShortTermRate(input.transferDate, holdingMonthsTotal, shortTermAssetClass, shortTermOpts);
   const shortTermFlatRate = shortTermResolution?.rate ?? null;
-  // US-81 — 조특법 §98의3④2호·§98의5③2호·§98의6③2호가 단기보유 세율을 배제한 경우, 배제하지 않았다면 단기세율이 걸렸을 때만 그 사실을 밝힌다.
+  // US-81 — §98의3④2호·§98의5③2호·§98의6③2호(세율 특칙)가 단기보유 세율을 배제한 경우, 배제하지 않았다면 단기세율이 걸렸을 때만 그 사실을 밝힌다.
   const suppressedShortTermNote =
     input.suppressShortTermRate &&
     resolveShortTermRate(input.transferDate, holdingMonthsTotal, shortTermAssetClass, shortTermOpts)?.rate != null
-      ? "조특법 §98의3④2호·§98의5③2호·§98의6③2호 — 단기보유 세율 대신 소득세법 §104①1호 세율 적용"
+      ? `${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_3}·${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_5}·${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_6} 세율 특칙 — 단기보유 세율 대신 기본세율 적용 (${TRANSFER.TAX_RATE})`
       : undefined;
   /**
    * 수유자(상속인 아닌 유증·사인증여) — §104②1호 통산을 하지 않아 단기세율이 갈렸을 때만 밝힌다

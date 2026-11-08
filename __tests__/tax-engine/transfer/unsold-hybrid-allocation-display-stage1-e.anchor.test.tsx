@@ -234,7 +234,7 @@ describe("US-81 — 단기보유 세율 배제 특칙을 산출세액 단계에 
     );
     expect(r.calculatedTax).toBe(93_110_000);
     const step = r.steps.find((s) => s.label.includes("산출세액"));
-    expect(step?.formula).toContain("단기보유 세율 대신 소득세법 §104①1호 세율");
+    expect(step?.formula).toContain("단기보유 세율 대신 기본세율 적용 (소득세법 §104 ①)");
   });
 });
 
