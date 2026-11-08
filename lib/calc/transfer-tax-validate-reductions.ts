@@ -16,8 +16,8 @@ import { redevMemberNewHouseScope } from "./redev-field-scope";
 import { redevMemberNewHouseIssue } from "./transfer-tax-validate-new99-member";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import {
-  isIncomeDeductionTrack,
-  isTaxAmountTrack,
+  findTrack127_7Conflict,
+  track127_7EffectLabel,
 } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { axisBEffectiveAsset } from "./axis-b-effective-asset";
 import { isReductionAllowedForAssetKind, REDUCTION_METADATA, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
@@ -124,8 +124,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
        * §127⑦은 「…**그 거주자가 선택하는** 하나의 감면규정만을 적용한다」로 납세자에게
        * 선택권을 준다 ⇒ 엔진이 임의로 고르지 않고 여기서 차단해 사용자가 택하게 한다.
        *
-       * 트랙 판정은 엔진 단일 소스(`isIncomeDeductionTrack`/`isTaxAmountTrack`)를 **재사용**한다.
+       * 트랙 판정은 엔진 단일 소스(`findTrack127_7Conflict`)를 **재사용**한다.
        * 하이브리드 8종은 5년 이내면 세액감면형이라 §127⑦ max에 합류하므로 차단 대상이 아니다.
+       * 단 §98·§98의2(세율·장특 특례)는 Q-8 (a)(US-45)로 보유연수와 무관하게 다른 감면과 병용을 막는다(`findTrack127_7Conflict`).
        * anchor: `__tests__/tax-engine/transfer/reduction-track-crossing-127-7.anchor.test.ts`
        */
       const trackAcquisitionDate = primaryAcquisitionDateOf(asset);
@@ -135,14 +136,14 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           new Date(form.transferDate),
         );
         const selected = (asset.reductions ?? []).map((x) => x.type);
-        const deduction = selected.filter((t) => isIncomeDeductionTrack(t, within5));
-        const taxAmount = selected.filter((t) => isTaxAmountTrack(t, within5));
-        if (deduction.length > 0 && taxAmount.length > 0) {
+        const conflict = findTrack127_7Conflict(selected, within5);
+        if (conflict) {
           const label = (t: string) =>
             REDUCTION_METADATA[t as keyof typeof REDUCTION_METADATA]?.uiLabel ?? t;
+          const { first, second } = conflict;
           return fail(
-            `조특법 §127⑦ 중복배제: 「${label(deduction[0])}」(양도소득금액 차감)과 ` +
-              `「${label(taxAmount[0])}」(산출세액 감면)은 동시에 적용받을 수 없습니다. ` +
+            `조특법 §127⑦ 중복배제: 「${label(first.type)}」(${track127_7EffectLabel(first.type, first.kind)})과 ` +
+              `「${label(second.type)}」(${track127_7EffectLabel(second.type, second.kind)})은 동시에 적용받을 수 없습니다. ` +
               "둘 중 하나만 선택하세요 — 어느 쪽이 유리한지는 각각 선택해 계산한 뒤 총 납부세액을 비교하면 됩니다.",
           );
         }

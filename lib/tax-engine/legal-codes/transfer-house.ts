@@ -641,8 +641,8 @@ export const TRANSFER_REDUCTION_ARTICLE = {
  * - long_term_holding_special: 장기보유특별공제율 대체 특례 (§97의3 — 70% 단일율로 대체)
  * - long_term_holding_additional: 장기보유특별공제 추가율 가산 (§97의4 — 보유기간 공제율 + 임대기간 추가율)
  * - house_count_exclusion: 1세대1주택 비과세 시 주택수 제외 (§99의4, §98의9, §99의2 등)
- * - separated_taxation: 분리과세 선택 (§98)
- * - cgt_with_normal_rate_and_ltsd: 누진세율 + 표1 장특공제 (§98의2)
+ * - separated_taxation: 양도소득세 세율 20% 선택 (§98①1호) — 분리과세 아님
+ * - cgt_with_normal_rate_and_ltsd: 일반 누진세율 + 소득세법 §95② 표2 장특공제 (§98의2①)
  */
 export type ReductionEffectCategory =
   | "tax_amount"

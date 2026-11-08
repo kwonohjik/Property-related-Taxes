@@ -75,6 +75,60 @@ export function isTaxAmountTrack(type: string, isWithin5Years: boolean): boolean
   return TAX_AMOUNT_TRACK_IDS.includes(type);
 }
 
+/**
+ * **세율·장특 특례** 조문 — §98(양도소득세 세율 20% 선택, ①1호)·§98의2(장특 표2 + 일반세율 특칙, ①1·2호).
+ * 감면세액도, 소득금액 차감도 만들지 않는다(metadata `separated_taxation`·`cgt_with_normal_rate_and_ltsd`).
+ *
+ * 🔴 리뷰 US-45 Q-8 (a)(2026-11-06 결정): 이 둘도 조특법 §127⑦ 「둘 이상의 양도소득세의 감면규정」에 든다고 보아
+ * **보유연수(5년 분기)와 무관하게** 다른 감면과의 병용을 ⑧·⑤가 막는다. 엔진의 `isIncomeDeductionTrack`/`isTaxAmountTrack`은
+ * 계산 경로 판정이라 이 둘을 5년 분기로 나눈다 — §127⑦ 교차 판정은 반드시 `findTrack127_7Conflict`를 쓴다.
+ */
+const RATE_LTHD_SPECIAL_TRACK_IDS: ReadonlyArray<string> = ["unsold_98", "unsold_98_2"];
+
+export type Track127_7Kind = "income_deduction" | "tax_amount" | "rate_lthd_special";
+
+/** §127⑦ 교차 판정용 분류 — 세율·장특 특례를 5년 분기보다 먼저 가른다. 어느 트랙도 아니면 null. */
+export function classifyTrack127_7(type: string, isWithin5Years: boolean): Track127_7Kind | null {
+  if (RATE_LTHD_SPECIAL_TRACK_IDS.includes(type)) return "rate_lthd_special";
+  if (isIncomeDeductionTrack(type, isWithin5Years)) return "income_deduction";
+  if (isTaxAmountTrack(type, isWithin5Years)) return "tax_amount";
+  return null;
+}
+
+/** 효과 유형 표기 — ⑧ 메시지·⑤ 배너 공용. 「양도소득금액 차감」은 차감형에만 쓴다(US-84). */
+export function track127_7EffectLabel(type: string, kind: Track127_7Kind): string {
+  if (kind === "income_deduction") return "양도소득금액 차감";
+  if (kind === "tax_amount") return "산출세액 감면";
+  return type === "unsold_98" ? "세율 20% 특례" : "장기보유특별공제 표2·일반세율 특례";
+}
+
+export interface Track127_7Conflict {
+  first: { type: string; kind: Track127_7Kind };
+  second: { type: string; kind: Track127_7Kind };
+}
+
+/**
+ * §127⑦ 트랙 교차 단일 소스 — ⑧ validate·⑤ 패널이 공유한다.
+ * 충돌: (a) 차감형 + 세액감면형 (D10-01), (b) 세율·장특 특례 + 다른 어떤 트랙 조문(US-45 Q-8 (a) — §98+§99 동시 충족 포함).
+ * 차감형끼리·세액감면형끼리는 각자 경로(`resolveIncomeDeduction` 1건·`calcReductions` max)가 하나만 고른다.
+ */
+export function findTrack127_7Conflict(
+  types: ReadonlyArray<string>,
+  isWithin5Years: boolean,
+): Track127_7Conflict | null {
+  const classified = types
+    .map((type) => ({ type, kind: classifyTrack127_7(type, isWithin5Years) }))
+    .filter((x): x is { type: string; kind: Track127_7Kind } => x.kind !== null);
+  const special = classified.find((x) => x.kind === "rate_lthd_special");
+  if (special) {
+    const other = classified.find((x) => x.type !== special.type);
+    return other ? { first: special, second: other } : null;
+  }
+  const ded = classified.find((x) => x.kind === "income_deduction");
+  const tax = classified.find((x) => x.kind === "tax_amount");
+  return ded && tax ? { first: ded, second: tax } : null;
+}
+
 /** 세액감면형 조문 (metadata `effectCategory: "tax_amount"` + legacy id) */
 const TAX_AMOUNT_TRACK_IDS: ReadonlyArray<string> = [
   // §97 시리즈 (§97의3은 장특공제 대체라 세액감면 트랙이 아니다)
