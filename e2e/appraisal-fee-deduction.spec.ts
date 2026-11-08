@@ -50,6 +50,11 @@ test.describe("감정평가수수료 공제 — UI", () => {
     await expect(page.getByText("3호 · 서화·골동품 등 유형재산")).toBeVisible();
     // CurrencyInput label은 <label> 텍스트 (htmlFor 미연결) → getByText로 확인
     await expect(page.getByText("유형재산 감정수수료")).toBeVisible();
+    // 다크 대비 — 감정평가수수료 섹션 안내문(드리프트 방지. 실제 바탕에서는 수정 전 400/80도 통과 — 게이트 ⑦의 최악 바탕 가정에서만 4.45)
+    await expectDarkContrast(
+      page,
+      page.getByText("감정평가수수료 공제 (§25①2호·시행령 §20의3)").locator("xpath=ancestor::div[contains(@class,'rounded-lg')][1]"),
+    );
     // 다크 대비 — 완료 단계 원 「✓」(흰 글자 + emerald-500/600 이었다)
     await expectDarkContrast(page, page.locator('[data-testid^="step-circle-"]'));
   });
