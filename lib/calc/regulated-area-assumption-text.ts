@@ -26,6 +26,22 @@ export function regulatedAssumptionRowHead(r: RegulatedAddressAssumption): strin
   return `${WHICH_LABEL[r.which]}(${r.dateLabel ? `${r.dateLabel} ` : ""}${r.date})`;
 }
 
+/** 줄 testid — 첫 자산은 종전 그대로(`…-transfer`), 컴패니언은 자산 위치를 붙인다(`…-transfer-1`). */
+export function regulatedAssumptionRowTestId(r: RegulatedAddressAssumption): string {
+  return r.assetIndex === 0 ? `regulated-area-assumption-${r.which}` : `regulated-area-assumption-${r.which}-${r.assetIndex}`;
+}
+
+/** 줄을 자산 위치별로 묶는다 — 화면 카드 하나·PDF 묶음 하나가 자산 하나다(입력 순서 유지). */
+export function groupRowsByAsset(rows: readonly RegulatedAddressAssumption[]): { assetIndex: number; rows: RegulatedAddressAssumption[] }[] {
+  const out: { assetIndex: number; rows: RegulatedAddressAssumption[] }[] = [];
+  for (const r of rows) {
+    const g = out.find((x) => x.assetIndex === r.assetIndex);
+    if (g) g.rows.push(r);
+    else out.push({ assetIndex: r.assetIndex, rows: [r] });
+  }
+  return out;
+}
+
 /** 줄 판정 부분 — 「조정대상지역으로 보고 계산」 */
 export function regulatedAssumptionRowVerdict(r: RegulatedAddressAssumption): string {
   return r.isRegulated ? "조정대상지역으로 보고 계산" : "조정대상지역 아님으로 계산";
@@ -52,9 +68,13 @@ export type RegulatedAssumptionPdfGroup = { label?: string; rows: RegulatedAddre
  * PDF도 항목 선택과 무관하게 싣는다.
  */
 export function regulatedAssumptionPdfGroups(
-  items: { form: (RegulatedFlagsForm & Pick<TransferFormData, "regionCode">) | null | undefined; label?: string }[],
+  items: { form: (RegulatedFlagsForm & Pick<TransferFormData, "regionCode" | "assetSplitMode">) | null | undefined; label?: string }[],
 ): RegulatedAssumptionPdfGroup[] {
-  return items
-    .map(({ form, label }) => ({ label, rows: form ? regulatedAddressAssumptions(form) : [] }))
-    .filter((g) => g.rows.length > 0);
+  // 화면 카드와 같은 묶음 — 자산마다 한 그룹, 컴패니언은 제목에 그 자산의 라벨을 붙인다.
+  return items.flatMap(({ form, label }) =>
+    groupRowsByAsset(form ? regulatedAddressAssumptions(form) : []).map((g) => ({
+      label: [label, g.assetIndex === 0 ? undefined : g.rows[0].assetLabel].filter(Boolean).join(" · ") || undefined,
+      rows: g.rows,
+    })),
+  );
 }
