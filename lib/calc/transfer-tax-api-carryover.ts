@@ -176,27 +176,35 @@ export function buildCarryoverPayload(
 }
 
 /**
- * ④ 이월과세(`carryover_gift`) 자산의 `acquisitionDate` — 자산 카드에 취득일 칸이 따로 없으면 **증여 등기접수일**.
+ * ④ 이월과세(`carryover_gift`) 자산의 `acquisitionDate` — **증여 등기접수일** (수증자 취득시기: 소득세법 시행령 §162①5호 «증여를 받은 날», 등기접수일로 본다).
  *
  * 주 자산·컴패니언이 **같은 규칙**을 쓴다(2026-09-30 CP-5). 종전에는 주 자산만 이 fallback을 두고, 컴패니언은
  * 빈 값을 보내 ⑭가 **주 자산 취득일**로 대신 채웠다(다른 물건의 날짜). ⑧은 등기접수일을 필수로 요구한다.
+ *
+ * 🔑 **등기접수일만 읽는다**(2026-11-08 결정 · L21). 화면에 취득일 칸이 없는 이월과세 자산에 남아 있는 옛 `acquisitionDate`
+ *    (매매로 입력했다가 취득원인을 바꾼 잔재)가 등기접수일을 이기지 않는다 — 읽는 쪽 정규화이며 폼 값은 쓰지 않는다.
+ *    등기접수일이 비면 "" — ⑧(`validateCarryoverEventHead`)·⑫(`refineCarryoverTaxation`)가 막는다(잔재로 대신 채우지 않는다).
+ *    예외 — 일반건물(`general_building`): 분리 ON이면 「건물 취득일」 칸이 화면에 있고 파트 취득일(`partAcquisitionDates`)도
+ *    원시 `acquisitionDate`를 읽는 자체 경로라 종전대로 둔다(별건 — 보고서 «열린 질문»).
  */
 export function carryoverAcquisitionDateFallback(asset: AssetForm): string {
+  const giftRegistryDate = asset.carryover?.giftRegistryDate || "";
   // P2 C — 두 파트의 취득일은 증여 등기접수일 한 곳이다(엔진 S5 — 어긋나면 400). 화면에 취득일 칸이 없어 남은 `acquisitionDate` 잔재가 이기면 안 된다.
   // P4 B(건물만 이월과세 + 토지 매매)도 건물 취득일은 증여 등기접수일이다 — 매매 블록의 건물 날짜 칸은 읽기 전용(`normalizeBuildingCauseInputs`와 같은 값).
-  if (partCarryover(asset).building) return asset.carryover?.giftRegistryDate || "";
-  return asset.acquisitionDate || asset.carryover?.giftRegistryDate || "";
+  if (partCarryover(asset).building) return giftRegistryDate;
+  if (asset.assetKind === "general_building") return asset.acquisitionDate || giftRegistryDate;
+  return giftRegistryDate;
 }
 
 /**
  * 양도 대표 자산의 **④ 취득일** — 본문 `acquisitionDate`·명부 양도 행·§155① 종전주택 취득일이 모두 이 한 값을 읽는다 (G4-3).
  *
- * 이월과세(`carryover_gift`)는 자산 카드에 취득일 칸이 없어 `acquisitionDate`가 비어 있을 수 있다. 본문만 위 fallback을 쓰고 명부 양도
+ * 이월과세(`carryover_gift`)는 자산 카드에 취득일 칸이 없어 `acquisitionDate`가 비어 있거나 옛 잔재일 수 있다. 본문만 위 leaf를 쓰고 명부 양도
  * 행·§155① 인자가 원시값을 쓰면 ⑧을 통과한 입력을 ⑫가 400(`houses.0.acquisitionDate` Invalid ISO date)으로 막고, 양도 행만 고치면
  * §155① 도출(`!prev`)이 조용히 빠진다.
  *
- * 🔑 **우선순위는 본문과 같다**(`acquisitionDate` → 증여 등기접수일). 이월과세 주택이 §155①의 「종전의 주택을 취득한 날」을 증여일로 볼지
- *    증여자 취득일로 볼지는 결정 대기 축이라 여기서 정하지 않는다 — 빈 값만 본문과 같은 값으로 채운다.
+ * 🔑 **이월과세의 값은 본문과 같다**(증여 등기접수일 — 위 leaf). 이월과세 주택이 §155①의 「종전의 주택을 취득한 날」을 증여일로 볼지
+ *    증여자 취득일로 볼지는 결정 대기 축이라 여기서 정하지 않는다 — 수증자 취득일(등기접수일)만 정한다.
  */
 export function primaryAcquisitionDateOf(asset: AssetForm | undefined): string | undefined {
   if (!asset) return undefined;
