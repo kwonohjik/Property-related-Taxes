@@ -39,7 +39,7 @@ import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
 import { landContributedOriginalApt } from "@/lib/calc/redev-field-scope";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { isRedevCarryoverDonorBasis } from "@/lib/calc/redev-carryover-acq-mode";
-import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { redevPreApprovalExpensesUnused, redevPreApprovalExpensesWinnerDependent, REDEV_PRE_APPROVAL_WINNER_DEPENDENT_NOTE } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { redevPreApprovalExpensesScenarioDependent } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
@@ -453,7 +453,9 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
                   ? "의제취득일(1985.1.1.) 전 상속·증여 종전자산 — ①·②가 채택되면 채무비율을 곱해 공제하고, ③(§166③ 환산)이 채택되면 개산공제(시행령 §163⑥)를 적용해 이 금액은 쓰이지 않습니다 (소득세법 시행령 §166①1호)."
                   : redevPreApprovalExpensesScenarioDependent(asset)
                     ? REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE
-                    : undefined
+                    : redevPreApprovalExpensesWinnerDependent(asset)
+                      ? REDEV_PRE_APPROVAL_WINNER_DEPENDENT_NOTE
+                      : undefined
               }
             >
               <CurrencyInput label=""

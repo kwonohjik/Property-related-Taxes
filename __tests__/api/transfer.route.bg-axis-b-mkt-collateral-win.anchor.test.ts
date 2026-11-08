@@ -200,17 +200,17 @@ describe("AB-4 범위 밖 종류는 «채무액 초과»가 아니라 정확한 
 });
 
 describe("AB-5 축 A의 주택 외 종류는 여전히 막힌다 (주택은 S-2가 열었다)", () => {
-  it("단건 지분 50% 시가 담보 승(축 A) 재개발 APT는 종전처럼 FRAC_WIN으로 막는다", () => {
-    const a = house(1, "50", "2012-03-01", { assetKind: "redevelopment_apt", ...MKT, bgMortgageDebtAmount: "700000000", bgMortgageSetAmount: "700000000", bgLendingDepositTotal: "0", ownershipRemainderThirdParty: "yes" });
+  it("단건 지분 50% 시가 담보 승(축 A) 재개발 APT(K-5 환산취득가액)는 종전처럼 FRAC_WIN으로 막는다 — K-4는 열렸다(bg-redev-fractional-win)", () => {
+    const a = house(1, "50", "2012-03-01", { assetKind: "redevelopment_apt", ...MKT, bgAcquisitionMethod: "converted", bgMortgageDebtAmount: "700000000", bgMortgageSetAmount: "700000000", bgLendingDepositTotal: "0", ownershipRemainderThirdParty: "yes" });
     const f = rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
       transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false,
       householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, assets: [a],
     }))) as TransferFormData;
     expect(issues(f).some((i) => i.message.includes("담보평가액") && i.message.includes("시가 해당분보다 커서"))).toBe(true);
   });
-  it("컴패니언(다른 물건) 묶음의 지분 재개발 APT 담보 승은 비보충 승자 게이트로 막는다", () => {
+  it("컴패니언(다른 물건) 묶음의 지분 재개발 APT(K-5) 담보 승은 비보충 승자 게이트로 막는다", () => {
     const whole = (id: number, over: A) => house(id, "100", "2015-01-01", { ...MKT, ...over });
-    const share = house(2, "50", "2012-03-01", { assetKind: "redevelopment_apt", ...MKT, ...W.mortgage });
+    const share = house(2, "50", "2012-03-01", { assetKind: "redevelopment_apt", ...MKT, ...W.mortgage, bgAcquisitionMethod: "converted" });
     const f = Object.assign(form({}, {}, { assets: [whole(1, W.mortgage), share] }), { assetSplitMode: "companion" }) as TransferFormData;
     expect(issues(f).some((i) => i.message.includes("함께 양도와 같이 계산하지 않습니다"))).toBe(true);
   });
