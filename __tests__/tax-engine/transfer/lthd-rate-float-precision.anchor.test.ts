@@ -24,8 +24,7 @@
 import { describe, it, expect } from "vitest";
 import { applyRate, applyFairMarketRatio } from "@/lib/tax-engine/tax-utils";
 import { calcLongTermHoldingDeduction } from "@/lib/tax-engine/transfer-tax-helpers";
-import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
-import { makeMockRates, baseTransferInput } from "@/__tests__/tax-engine/_helpers/mock-rates";
+import { baseTransferInput } from "@/__tests__/tax-engine/_helpers/mock-rates";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
 
@@ -84,7 +83,6 @@ describe("🔴 정수 분수연산은 정확값을 낸다", () => {
 });
 
 describe("🔴 엔진 — 표2 일반 경로에서 실제 공제액이 1원 회복된다", () => {
-  const rates = parseRatesFromMap(makeMockRates());
   const D = (x: string) => new Date(`${x}T00:00:00`);
 
   /**
@@ -107,7 +105,6 @@ describe("🔴 엔진 — 표2 일반 경로에서 실제 공제액이 1원 회�
     return calcLongTermHoldingDeduction(
       1_000_000_000,
       input as Any,
-      rates.longTermHoldingRules,
       false,
       false,
     );
