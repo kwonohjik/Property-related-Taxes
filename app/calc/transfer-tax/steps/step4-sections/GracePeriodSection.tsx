@@ -21,6 +21,7 @@ import {
   transitionExemptionMonths,
 } from "@/lib/tax-engine/multi-house-surcharge-exclusion";
 import { SURCHARGE_TRANSITION } from "@/lib/tax-engine/legal-codes";
+import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 
 // ============================================================
 // gracePeriod 섹션 (중과세 한시 유예 2022.5.10~2026.5.9)
@@ -98,7 +99,8 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
      *    취득일을 아직 안 넣은 사용자에게 「보유 2년 미만」이라고 단정하면 그것대로 거짓이다.
      *    그 경우는 종전처럼 나·다목 조건만 미리 보여 준다.
      */
-    const sellingAcqDate = form.assets?.[0]?.acquisitionDate;
+    // 이월과세는 증여 등기접수일(칸 없는 `acquisitionDate` 잔재가 아니다) — ④ 와이어 `sellingHouse.acquisitionDate`와 같은 leaf (L25).
+    const sellingAcqDate = primaryAcquisitionDateOf(form.assets?.[0]);
     const sellingAcq = sellingAcqDate ? new Date(sellingAcqDate) : null;
     if (
       sellingAcq &&
