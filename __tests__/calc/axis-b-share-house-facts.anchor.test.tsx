@@ -249,7 +249,9 @@ describe("늦게 취득한 지분 × 중과 배제 — 그 지분 취득일로 �
     ["겸용", MIXED],
     ["완공APT", APT],
   ] as const)("SH-81 🔑 %s — 명부 양도 행 지분 취득일만 카드 취득일이고 행 취득일·나머지 키는 첫 지분과 같다", async (_n, kind) => {
-    const r = await postTransfer(await captureBody(shares(kind, R30, [R], {}, { acquisitionDate: "2021-05-01" })));
+    // 완공APT 지분은 원조합원이라 늦은 지분(2021-05-01) 취득이 인가일(2018-05-01) 뒤면 ⑫가 막는다(L20 · 소득세법 §88 9호) — 인가일을 늦은 지분 취득일로 둔다.
+    const kindWithApproval = _n === "완공APT" ? { ...kind, redevApprovalDate: "2021-05-01" } : kind;
+    const r = await postTransfer(await captureBody(shares(kindWithApproval, R30, [R], {}, { acquisitionDate: "2021-05-01" })));
     expect(r.status, JSON.stringify(r.json?.error)).toBe(200);
     // 겸용은 지분마다 파트 카드 4장이다 — 카드 전부에서 본다.
     const cards = seen.properties.filter((p) => Array.isArray(p.houses));
