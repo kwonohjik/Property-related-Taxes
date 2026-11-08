@@ -105,6 +105,11 @@ interface Props {
    * (`isGbFirstDisclosureApplicableForProperty`). 생략하면 이 자산의 산정방식으로만 판단한다(종전).
    */
   fractionalShares?: readonly AssetForm[];
+  /**
+   * 지분 분할(축 B) 여부 — 부담부증여 취득가액 안내가 담보·임대 승을 판정하는 축이다. 지분 보유 자산은 축을 알아야 «취득시 기준시가 × 채무비율» 안내가 맞게 나온다
+   * (생략하면 지분 자산의 담보 승을 확정하지 않고 종전 안내를 낸다 — `gbBgStdUseOf`).
+   */
+  isFractionalSplit?: boolean;
 }
 
 export function GeneralBuildingBlock({
@@ -113,6 +118,7 @@ export function GeneralBuildingBlock({
   transferDate,
   shareAcquisitionOnly = false,
   fractionalShares,
+  isFractionalSplit,
 }: Props) {
   const isEstimated = asset.useEstimatedAcquisition;
 
@@ -418,7 +424,7 @@ export function GeneralBuildingBlock({
           titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />}
         >
           <p className="text-caption text-slate-600 dark:text-slate-400">
-            {gbBgLandStdNote(asset, transferDate) ??
+            {gbBgLandStdNote(asset, transferDate, isFractionalSplit) ??
               (isEstimated
                 ? "① 토지 · ② 건물 기준시가가 환산취득가 분모와 양도가액 안분 기준을 구성합니다 (§166⑥)."
                 : "① 토지 · ② 건물 기준시가가 실거래가 합계를 토지·건물로 안분하는 기준입니다 (§166⑥). 취득가액도 같은 비율로 안분됩니다.")}
@@ -588,7 +594,7 @@ export function GeneralBuildingBlock({
                   label={gbExtOn ? "취득시 원건물 기준시가" : "취득시 건물기준시가"}
                   unit="원"
                   hint={
-                    gbBgAcqBuildingHint(asset) ??
+                    gbBgAcqBuildingHint(asset, isFractionalSplit) ??
                     (gbBuildingPreDeemed(asset)
                               ? GB_PRE_DEEMED_BUILDING_HINT
                             : gbExtOn
@@ -683,7 +689,7 @@ export function GeneralBuildingBlock({
           */}
 
           {/* 부담부증여 취득가액 안내 — 평가 모드·산정방식별로 실제 엔진 산식을 적는다(`GbBgAcquisitionNotice`) */}
-          {isBurdenedGift && <GbBgAcquisitionNotice asset={asset} transferDate={transferDate} />}
+          {isBurdenedGift && <GbBgAcquisitionNotice asset={asset} transferDate={transferDate} isFractionalSplit={isFractionalSplit} />}
         </ToneCard>
 
         {/* ⑤ 증축 정보 — `GeneralBuildingExtensionSection`으로 분리(2026-08-12, 800줄 정책).
