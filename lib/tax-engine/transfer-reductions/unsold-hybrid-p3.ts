@@ -160,6 +160,7 @@ export function evaluateAnyHybridFromReduction(
       residencyType: r.residencyType983 as Unsold983Input["residencyType"],
       houseType: r.houseType983 as Unsold983Input["houseType"],
       contractDate: toHybridDate(r.contractDate983) ?? ctx.assetContractDate,
+      downPaymentCompletedDate: toHybridDate(r.downPaymentCompletedDate983),
       constructionStartDate: toHybridDate(r.constructionStartDate983),
       usageApprovalDate: toHybridDate(r.usageApprovalDate983),
       isOutsideSeoulNotDesignated: r.isOutsideSeoulNotDesignated983 as boolean | undefined,

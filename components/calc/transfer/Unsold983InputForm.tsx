@@ -4,13 +4,15 @@
  * §98의3 서울 밖 미분양 — 하이브리드 입력 폼 (P3, 2026-06-12)
  *
  * 5년 내 = 세액 100% 감면 (수도권과밀억제권역 60%) / 5년 후 = 5년 발생분 (과밀 60%) 공제.
- * 농특세 비과세 (농특세령 §4⑦1호). 장특 표1 + 기본세율 강제 (법 ④). 중과 배제 자동.
+ * 농특세 비과세 (농특세령 §4⑦1호). 장특 표1(§95②단서 해당 시 표2) + 기본세율 강제 (법 ④). 중과 배제 자동.
  */
 
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
 import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
@@ -64,6 +66,8 @@ export function Unsold983InputForm({
   assetPhdSnapshot,
 }: Props) {
   const isSelfBuilt = value.houseType983 === "self_built";
+  // US-21 — 취득일이 2010.2.11 이후인 사업주체 취득만 계약금 완납일을 묻는다 (ISO 문자열 사전순 비교)
+  const needsDownPaymentDate = !isSelfBuilt && !!acquisitionDate && acquisitionDate > "2010-02-11";
   return (
     <div className="mt-2 ml-4 space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -117,6 +121,17 @@ export function Unsold983InputForm({
             </p>
           </div>
         )}
+        {needsDownPaymentDate && (
+          <div>
+            <label className="mb-1 block text-xs font-medium">계약서상 계약금 전액 완납일</label>
+            <DateInput data-field="reduction.unsold_98_3.downPaymentCompletedDate983" value={value.downPaymentCompletedDate983} onChange={(v) => onChange({ downPaymentCompletedDate983: v })} />
+            <p className="mt-1 text-micro text-muted-foreground">
+              취득일이 2010.2.11 이후라 「2010.2.11까지 매매계약을 체결하고 계약금을 납부한 경우」(법 §98의3①)에 해당해야 합니다.
+              국세청은 「납부」를 계약금 완납으로 해석하며(부동산거래관리과-262, 2010.2.18) 계약금 일부를 2010.2.12 이후 납부하면 적용하지 않습니다.
+              「계약금」은 계약서상 약정 계약금 기준입니다.
+            </p>
+          </div>
+        )}
       </SectionShell>
 
       <SectionShell num="②" title="지역 정보" tone="rose">
@@ -132,13 +147,13 @@ export function Unsold983InputForm({
           title="수도권과밀억제권역 소재"
           description={
             isSelfBuilt
-              ? "과밀억제권역이면 감면율이 60%로 낮아집니다 (법 §98의3① — 자기건설 신축주택에는 령 §98의3①단서의 면적 한정이 적용되지 않습니다)"
+              ? "과밀억제권역이면 감면율이 60%로 낮아지고, 대지면적 660㎡ 이내 + 연면적(전용) 149㎡ 이내인 주택에 한정됩니다 (령 §98의3①단서 — 자기건설 신축주택에도 같은 한정을 적용합니다: 재산세과-1450·1537)"
               : "과밀억제권역이면 감면율이 60%로 낮아지고, 대지면적 660㎡ 이내 + 연면적(전용) 149㎡ 이내인 주택에 한정됩니다 (령 §98의3①단서 — 매매계약일 현재 기준 령④)"
           }
           checked={value.isOverconcentration983}
           onCheckedChange={(v) => onChange({ isOverconcentration983: v })}
         >
-          {!isSelfBuilt && (
+          {(
             <div className="space-y-2">
               <div>
                 <label className="mb-1 block text-xs font-medium">대지면적 (㎡)</label>
@@ -159,14 +174,21 @@ export function Unsold983InputForm({
             <ToggleCard
               tone="rose"
               title="미분양주택 확인"
-              description="2009.2.11까지 분양계약이 체결되지 않아 2009.2.12 이후 선착순으로 공급된 주택 등 (조특령 §98의3①)"
+              description="령 §98의3①1~8호의 미분양주택 — 선착순 공급분·2009.2.12 이후 계약일 도래 신규 공급분 등 (조특령 §98의3①)"
               checked={value.isUnsoldConfirmed983}
               onCheckedChange={(v) => onChange({ isUnsoldConfirmed983: v })}
             />
+            <CollapsibleHintCard tone="rose" summary="미분양주택의 범위 (령 §98의3①1~8호)">
+              <p>
+                2009.2.11까지 분양계약이 체결되지 않아 2009.2.12 이후 선착순으로 공급된 주택, 2009.2.12 이후 입주자 계약일이 도래하는
+                신규 공급 주택, 주택건설사업자(20호 미만)·주택도시보증공사·시공자·기업구조조정리츠·건축주·신탁업자가 공급하는 주택이
+                포함됩니다. 시장·군수·구청장이 미분양주택임을 확인해 날인한 매매계약서가 있으면 켜세요.
+              </p>
+            </CollapsibleHintCard>
             <ToggleCard
               tone="rose"
               title="사업주체와 최초 매매계약"
-              description="사업주체(20호 미만 주택건설사업자 포함)·주택도시보증공사·시공자·기업구조조정리츠·신탁업자와 최초 계약"
+              description="사업주체(20호 미만 주택건설사업자 포함)·주택도시보증공사·시공자·기업구조조정리츠·건축주(령 §98의3①7호)·신탁업자와 최초 계약"
               checked={value.isFirstContract983}
               onCheckedChange={(v) => onChange({ isFirstContract983: v })}
             />
@@ -185,6 +207,20 @@ export function Unsold983InputForm({
               onCheckedChange={(v) => onChange({ isNotRecontract983: v })}
             />
           </>
+        )}
+        {isSelfBuilt && (
+          <ToneCard tone="amber" title="토지를 신축주택보다 먼저 보유한 경우 — 해석과 판결의 차이" bodyClassName="space-y-1">
+            <p className="text-caption">
+              국세청과 조세심판원은 자기건설 신축주택에서 토지의 취득일부터 신축주택 취득일 전일까지 발생한 토지의 양도소득금액에는
+              §98의3 과세특례를 적용하지 않고, 5년이 지난 후 양도 시 산식 분모의 취득당시 기준시가도 토지 취득당시 기준시가로 본다는 입장입니다
+              (재산세과-1450, 2009.7.15. · 조심2011전1378, 2011.6.3. 등).
+            </p>
+            <p className="text-caption">
+              한편 서울행정법원 2017구단61723(2019.2.12.)은 신축주택 취득 전 발생한 양도소득을 포함해 취득일부터 5년간 발생한 양도소득금액을 차감해야 한다고 판단했고,
+              이 사건은 대법원 2019두58353(2020.3.12.)에서 확정된 것으로 알려져 있습니다(대법원 판결 번호는 법제처 조회로 확인하지 못했습니다).
+              이 계산기는 토지 선보유분을 구분하지 않고 신축주택의 취득일을 기준으로 계산합니다. 신고 전에 관할 세무서·세무전문가와 확인하세요.
+            </p>
+          </ToneCard>
         )}
         {isSelfBuilt && (
           <ToggleCard
@@ -247,7 +283,7 @@ export function Unsold983InputForm({
           양도 시 5년간 발생 양도소득금액(과밀은 그 60%)을 공제합니다 (법 §98의3①).
         </p>
         <p>· 농어촌특별세가 부과되지 않습니다 (농어촌특별세법 시행령 §4⑦1호).</p>
-        <p>· 장기보유특별공제는 표1을 적용하고 단기보유 세율 대신 기본세율을 적용합니다 (법 §98의3④).</p>
+        <p>· 장기보유특별공제는 표1(1세대1주택 고가주택 등 소득세법 §95②단서에 해당하면 표2)을 적용하고 단기보유 세율 대신 기본세율을 적용합니다 (법 §98의3④).</p>
         <p>· 다주택 중과세율이 적용되지 않습니다 (소득세법 시행령 §167의3①5호).</p>
       </div>
     </div>

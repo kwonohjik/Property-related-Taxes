@@ -16,6 +16,7 @@
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { round2 } from "../area-utils";
 import { computeHybridEffect } from "./unsold-hybrid";
 import { ineligibleHybrid } from "./unsold-hybrid";
 import type { UnsoldHybridIneligibleReason } from "./unsold-hybrid";
@@ -55,7 +56,13 @@ export interface Unsold983Input {
   landAreaSqm?: number;
   /** 주택 연면적(공동주택 전용, ㎡) — 과밀 시 149 이내 한정 */
   floorAreaSqm?: number;
-  /** 미분양 확인 (령① — 2009.2.11까지 미계약·선착순 등) */
+  /**
+   * 계약서상 계약금 전액 완납일 — purchased + 취득일이 2010.2.11 이후일 때만 필수 (US-21).
+   * 법 §98의3① 「2010년 2월 11일까지 매매계약을 체결하고 계약금을 납부한 경우를 포함」을
+   * 국세청이 「계약금을 완납한 경우」로 해석(부동산거래관리과-262, 2010.2.18).
+   */
+  downPaymentCompletedDate?: Date;
+  /** 미분양 확인 (령①1~8호 — 2009.2.11까지 미계약 선착순 공급분·2009.2.12 이후 입주자 계약일 도래분·건축주·신탁업자 공급분 등) */
   isUnsoldConfirmed?: boolean;
   /** 사업주체(20호 미만 주택건설사업자 포함)와 최초 매매계약 */
   isFirstContract?: boolean;
@@ -132,6 +139,27 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
     }
   }
 
+  // 1-2) 계약금 완납 — 취득일이 2010.2.11 이후면 「2010.2.11까지 계약 체결 + 계약금 납부」 확장 사유에 의존한다.
+  //      국세청은 「납부」를 「완납」으로 본다(부동산거래관리과-262, 2010.2.18) → 완납일이 2010.2.11 이내여야 한다 (US-21).
+  if (
+    houseType === "purchased" &&
+    input.acquisitionDate.getTime() > UNSOLD_98_3_PERIOD_TO.getTime()
+  ) {
+    if (!input.downPaymentCompletedDate) {
+      reasons.push({
+        code: "MISSING_DOWN_PAYMENT_DATE",
+        message: "취득일이 2010.2.11 이후이므로 계약서상 계약금 전액 완납일이 필요합니다 (법 §98의3① 「2010년 2월 11일까지 매매계약을 체결하고 계약금을 납부한 경우」 — 계약금 완납으로 해석).",
+        legalBasis,
+      });
+    } else if (input.downPaymentCompletedDate.getTime() > UNSOLD_98_3_PERIOD_TO.getTime()) {
+      reasons.push({
+        code: "DOWN_PAYMENT_AFTER_DEADLINE",
+        message: "계약금 전액 완납일이 2010.2.11 이후입니다 — 계약금 일부를 2010.2.12 이후 납부한 경우 적용되지 않습니다 (법 §98의3①, 부동산거래관리과-262).",
+        legalBasis,
+      });
+    }
+  }
+
   // 2) 지역 — 서울 밖 + 지정지역 아님
   if (input.isOutsideSeoulNotDesignated !== true) {
     reasons.push({
@@ -141,11 +169,11 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
     });
   }
   // 3) 과밀억제권역 — 면적 한정 (대지 660 이내 AND 연면적 149 이내)
-  //    령 §98의3① 단서는 「다음 각 호의 어느 하나에 해당하는 주택」을 한정하는 문언이고,
-  //    각 호는 전부 사업주체 등이 「공급하는」 주택이다. 자기건설 신축주택은 법 §98의3②가
-  //    직접 포함시키는 주택이라 각 호를 거치지 않으므로 이 단서의 적용 대상이 없다
-  //    (령 §98의3⑤ 단서도 ②주택의 증빙을 착공신고서·사용승인서류로 따로 정한다).
-  if (isOvercon && houseType === "purchased") {
+  //    령 §98의3① 단서: 「수도권과밀억제권역 안의 지역인 경우에는 대지면적이 660제곱미터 이내이고,
+  //    주택의 연면적이 149제곱미터(공동주택의 경우에는 전용면적 149제곱미터) 이내인 주택에 한정한다」.
+  //    자기건설(법②)도 같은 면적 한정을 받는다 — 국세청 재산세과-1450(2009.7.15)·재산세과-1537(2009.7.27)
+  //    회신 3항(2026-11 US-03). 령⑤ 단서는 ②주택의 제출서류만 대체한다. 면적 비교는 round2() 후.
+  if (isOvercon) {
     if (!(input.landAreaSqm !== undefined && input.landAreaSqm > 0) ||
         !(input.floorAreaSqm !== undefined && input.floorAreaSqm > 0)) {
       reasons.push({
@@ -154,8 +182,8 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
         legalBasis: "조특령 §98의3①단서",
       });
     } else if (
-      input.landAreaSqm > UNSOLD_98_3_OVERCON_LAND_LIMIT ||
-      input.floorAreaSqm > UNSOLD_98_3_OVERCON_FLOOR_LIMIT
+      round2(input.landAreaSqm) > UNSOLD_98_3_OVERCON_LAND_LIMIT ||
+      round2(input.floorAreaSqm) > UNSOLD_98_3_OVERCON_FLOOR_LIMIT
     ) {
       reasons.push({
         code: "AREA_LIMIT_EXCEEDED",
@@ -178,14 +206,14 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
   if (houseType === "purchased" && input.isUnsoldConfirmed !== true) {
     reasons.push({
       code: "NOT_UNSOLD_CONFIRMED",
-      message: "미분양주택 요건(2009.2.11까지 분양계약 미체결 + 2009.2.12 이후 선착순 공급 등)이 확인되지 않았습니다 (조특령 §98의3①).",
+      message: "미분양주택 요건(령 §98의3①1~8호 — 2009.2.11까지 분양계약 미체결 후 선착순 공급분, 2009.2.12 이후 입주자 계약일 도래분, 주택건설사업자·주택도시보증공사·시공자·기업구조조정리츠·건축주·신탁업자 공급분 등)이 확인되지 않았습니다 (조특령 §98의3①).",
       legalBasis: "조특령 §98의3①",
     });
   }
   if (houseType === "purchased" && input.isFirstContract !== true) {
     reasons.push({
       code: "NOT_FIRST_CONTRACT",
-      message: "사업주체(20호 미만 주택건설사업자 포함)와 최초로 매매계약을 체결한 요건이 확인되지 않았습니다 (법 §98의3①).",
+      message: "사업주체(20호 미만 주택건설사업자·시공자·기업구조조정리츠·건축주·신탁업자 포함)와 최초로 매매계약을 체결한 요건이 확인되지 않았습니다 (법 §98의3①).",
       legalBasis,
     });
   }

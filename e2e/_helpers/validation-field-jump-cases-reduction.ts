@@ -130,11 +130,12 @@ const UNSOLD_98_8 = table("unsold_98_8", hybrid("unsold_98_8"), u988Ok, {}, [
 ]);
 
 // ── §98의3 ────────────────────────────────────────────────────────────────
-const u983Ok = { houseType983: "purchased", contractDate983: "2010-01-01", ...std5("983") };
+const u983Ok = { houseType983: "purchased", contractDate983: "2010-01-01", downPaymentCompletedDate983: "2010-01-01", ...std5("983") };
 const UNSOLD_98_3 = table("unsold_98_3", hybrid("unsold_98_3"), u983Ok, {}, [
   { name: "착공일", prop: "constructionStartDate983", message: /^§98의3 적용: 자기건설 주택의 착공일과 사용승인일/, patch: { houseType983: "self_built", constructionStartDate983: "", usageApprovalDate983: "" } },
   { name: "사용승인일", prop: "usageApprovalDate983", message: /^§98의3 적용: 자기건설 주택의 착공일과 사용승인일/, patch: { houseType983: "self_built", constructionStartDate983: "2009-06-01", usageApprovalDate983: "" } },
   { name: "매매계약일", prop: "contractDate983", message: /^§98의3 적용: 최초 매매계약일/, patch: { contractDate983: "" } },
+  { name: "계약금 완납일", prop: "downPaymentCompletedDate983", message: /^§98의3 적용: 취득일이 2010\.2\.11 이후이므로 계약서상 계약금 전액 완납일/, patch: { downPaymentCompletedDate983: "" } },
   { name: "대지면적", prop: "landAreaSqm983", message: /^§98의3 적용: 수도권과밀억제권역 주택은 대지면적/, patch: { isOverconcentration983: true, landAreaSqm983: "", floorAreaSqm983: "100" } },
   { name: "연면적", prop: "floorAreaSqm983", message: /^§98의3 적용: 수도권과밀억제권역 주택은 연면적/, patch: { isOverconcentration983: true, landAreaSqm983: "500", floorAreaSqm983: "" } },
   phdRow("§98의3", "phdMode983"),

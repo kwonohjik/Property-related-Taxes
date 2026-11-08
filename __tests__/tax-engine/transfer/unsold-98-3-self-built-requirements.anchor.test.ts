@@ -3,8 +3,9 @@
 // 법 §98의3②: 「제1항을 적용할 때 자기가 건설한 신축주택으로서 2009.2.12~2010.2.11 기간 중에
 //   공사에 착공하고 사용승인·사용검사를 받은 주택을 포함한다」 — 미분양 확인 요건 없음.
 // 령 §98의3①: 「대통령령으로 정하는 미분양주택」 = 1~8호(전부 사업주체 등이 「공급하는」 주택).
-//   자기건설 주택은 어느 호에도 해당할 수 없다. 같은 항 단서(과밀 660㎡·149㎡ 한정)도
-//   「다음 각 호의 어느 하나에 해당하는 주택」을 한정하는 문언이므로 ②주택에는 적용 대상이 없다.
+//   자기건설 주택은 어느 호에도 해당할 수 없다 → 미분양 확인 요건은 ②주택에 적용되지 않는다.
+//   단서(과밀 660㎡·149㎡ 한정)는 다르다: 국세청 재산세과-1450(2009.7.15)·재산세과-1537(2009.7.27)
+//   회신 3항이 자기건설 사안에서 과밀억제권역 안이면 면적 한정이 적용된다고 회신했다 (2026-11 US-03).
 // 령 §98의3⑤ 단서: 「법 제98조의3제2항의 주택에 대하여는 … 건축착공신고서 사본과 사용검사 또는
 //   사용승인 사실을 확인할 수 있는 서류를 제출하여야 한다」 — 본문의 「미분양주택임을 확인하는
 //   날인을 받은 매매계약서」를 ②주택에 대해 명시적으로 대체한다.
@@ -99,20 +100,43 @@ describe("D5-03 §98의3② 자기건설 신축주택 — 미분양 확인 요�
   });
 });
 
-describe("D5-03 령 §98의3① 단서(과밀 660㎡·149㎡) — 각 호 주택에만 적용", () => {
-  it("D5-03-6: 자기건설 + 과밀 + 면적 미입력 → 적격 (MISSING_AREA 없음), 감면율 60%", () => {
+describe("D5-03·US-03 령 §98의3① 단서(과밀 660㎡·149㎡) — 자기건설도 적용 (재산세과-1450·1537)", () => {
+  it("D5-03-6: 자기건설 + 과밀 + 면적 미입력 → MISSING_AREA", () => {
     const r = evaluateUnsold983(selfBuilt({ isOverconcentration: true }));
-    expect(r.ineligibleReasons?.map((x) => x.code) ?? []).not.toContain("MISSING_AREA");
+    expect(r.isEligible).toBe(false);
+    expect(r.ineligibleReasons?.map((x) => x.code)).toContain("MISSING_AREA");
+  });
+
+  it("D5-03-7: 자기건설 + 과밀 + 대지 1,000㎡·연면적 200㎡ → AREA_LIMIT_EXCEEDED", () => {
+    const r = evaluateUnsold983(
+      selfBuilt({ isOverconcentration: true, landAreaSqm: 1000, floorAreaSqm: 200 }),
+    );
+    expect(r.isEligible).toBe(false);
+    expect(r.ineligibleReasons?.map((x) => x.code)).toContain("AREA_LIMIT_EXCEEDED");
+  });
+
+  it("US-03-a: 자기건설 + 과밀 + 경계값 660/149 → 적격, 감면율 60%", () => {
+    const r = evaluateUnsold983(selfBuilt({ isOverconcentration: true, landAreaSqm: 660, floorAreaSqm: 149 }));
     expect(r.isEligible).toBe(true);
     expect(r.taxReductionRate).toBe(0.6);
   });
 
-  it("D5-03-7: 자기건설 + 과밀 + 대지 1,000㎡·연면적 200㎡ → 적격 (AREA_LIMIT_EXCEEDED 없음)", () => {
-    const r = evaluateUnsold983(
-      selfBuilt({ isOverconcentration: true, landAreaSqm: 1000, floorAreaSqm: 200 }),
-    );
-    expect(r.ineligibleReasons?.map((x) => x.code) ?? []).not.toContain("AREA_LIMIT_EXCEEDED");
+  it("US-03-b: 자기건설 + 과밀 + 한도 초과 1㎡ 단위(661/149, 660/150) → 불적격", () => {
+    for (const [l, f] of [[661, 149], [660, 150]] as const) {
+      const r = evaluateUnsold983(selfBuilt({ isOverconcentration: true, landAreaSqm: l, floorAreaSqm: f }));
+      expect(r.isEligible).toBe(false);
+    }
+  });
+
+  it("US-03-c: round2 — 660.004/149.004(소수 3째 자리 반올림 후 660.00/149.00) → 적격, 660.005 → 불적격", () => {
+    expect(evaluateUnsold983(selfBuilt({ isOverconcentration: true, landAreaSqm: 660.004, floorAreaSqm: 149.004 })).isEligible).toBe(true);
+    expect(evaluateUnsold983(selfBuilt({ isOverconcentration: true, landAreaSqm: 660.005, floorAreaSqm: 149 })).isEligible).toBe(false);
+  });
+
+  it("US-03-d: 자기건설 + 비과밀 → 면적 무관 적격 (재산세과-1450 회신 3항 전단)", () => {
+    const r = evaluateUnsold983(selfBuilt({ isOverconcentration: false, landAreaSqm: 5000, floorAreaSqm: 900 }));
     expect(r.isEligible).toBe(true);
+    expect(r.taxReductionRate).toBe(1.0);
   });
 
   it("D5-03-8 대조군: 사업주체 취득 + 과밀 + 면적 초과 → AREA_LIMIT_EXCEEDED", () => {
@@ -127,6 +151,35 @@ describe("D5-03 령 §98의3① 단서(과밀 660㎡·149㎡) — 각 호 주택
     const r = evaluateUnsold983(purchased({ isOverconcentration: true }));
     expect(r.isEligible).toBe(false);
     expect(r.ineligibleReasons?.map((x) => x.code)).toContain("MISSING_AREA");
+  });
+});
+
+describe("US-21 §98의3 계약금 완납 요건 (부동산거래관리과-262)", () => {
+  const late = (o: Partial<Unsold983Input> = {}) =>
+    purchased({ contractDate: D("2010-01-20"), acquisitionDate: D("2012-06-01"), transferDate: D("2016-06-01"), ...o });
+
+  it("US-21-a: 취득일 > 2010.2.11 + 완납일 미입력 → MISSING_DOWN_PAYMENT_DATE", () => {
+    const r = evaluateUnsold983(late());
+    expect(r.isEligible).toBe(false);
+    expect(r.ineligibleReasons?.map((x) => x.code)).toContain("MISSING_DOWN_PAYMENT_DATE");
+  });
+
+  it("US-21-b: 완납일 2010-02-25(기한 후) → DOWN_PAYMENT_AFTER_DEADLINE", () => {
+    const r = evaluateUnsold983(late({ downPaymentCompletedDate: D("2010-02-25") }));
+    expect(r.isEligible).toBe(false);
+    expect(r.ineligibleReasons?.map((x) => x.code)).toContain("DOWN_PAYMENT_AFTER_DEADLINE");
+  });
+
+  it("US-21-c: 완납일 2010-02-11(경계) → 적격", () => {
+    expect(evaluateUnsold983(late({ downPaymentCompletedDate: D("2010-02-11") })).isEligible).toBe(true);
+  });
+
+  it("US-21-d: 취득일 ≤ 2010.2.11이면 완납일을 묻지 않는다 (경계 2010-02-11 취득)", () => {
+    expect(evaluateUnsold983(purchased({ acquisitionDate: D("2010-02-11") })).isEligible).toBe(true);
+  });
+
+  it("US-21-e: 자기건설은 계약금 개념이 없어 제외", () => {
+    expect(evaluateUnsold983(selfBuilt({ acquisitionDate: D("2010-02-11") })).isEligible).toBe(true);
   });
 });
 
@@ -202,7 +255,7 @@ describe("D5-03 ⑧ validate — 면적 필수 규칙도 사업주체 취득분�
     return { assets: [asset], transferDate: "2013-06-01" } as unknown as TransferFormData;
   };
 
-  it("D5-03-12: 자기건설 + 과밀 + 면적 미입력 → validate 통과 (엔진과 대칭)", () => {
+  it("D5-03-12: 자기건설 + 과밀 + 면적 미입력 → validate 차단 (US-03, 엔진과 대칭)", () => {
     const issue = validateStep2Reductions(
       2,
       form({
@@ -212,7 +265,26 @@ describe("D5-03 ⑧ validate — 면적 필수 규칙도 사업주체 취득분�
         isNotExcludedSelfBuilt983: true,
       }),
     );
-    expect(issue?.message ?? "").not.toContain("대지면적");
+    expect(issue?.message).toContain("대지면적");
+  });
+
+  it("US-21 ⑧: 사업주체 취득 + 취득일 > 2010.2.11 + 완납일 미입력 → 차단, 입력 시 통과", () => {
+    const f = (over: Record<string, unknown>) => {
+      const x = form({
+        houseType983: "purchased",
+        contractDate983: "2010-01-20",
+        isOverconcentration983: false,
+        isUnsoldConfirmed983: true,
+        isFirstContract983: true,
+        isNotOccupiedAtContract983: true,
+        isNotRecontract983: true,
+        ...over,
+      });
+      (x.assets[0] as { acquisitionDate: string }).acquisitionDate = "2012-06-01";
+      return x;
+    };
+    expect(validateStep2Reductions(2, f({}))?.message).toContain("계약금");
+    expect(validateStep2Reductions(2, f({ downPaymentCompletedDate983: "2010-02-11" }))?.message ?? "").not.toContain("계약금");
   });
 
   it("D5-03-13 대조군: 사업주체 취득 + 과밀 + 면적 미입력 → validate 차단", () => {

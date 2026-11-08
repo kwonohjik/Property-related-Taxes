@@ -276,6 +276,8 @@ export type TransferReductionStub =
       residencyType983?: "resident" | "nonresident_no_pe" | "nonresident_with_pe";
       houseType983?: "purchased" | "self_built";
       contractDate983?: Date;
+      /** US-21 — 계약서상 계약금 전액 완납일 (취득일 > 2010.2.11인 purchased만) */
+      downPaymentCompletedDate983?: Date;
       constructionStartDate983?: Date;
       usageApprovalDate983?: Date;
       isOutsideSeoulNotDesignated983?: boolean;
