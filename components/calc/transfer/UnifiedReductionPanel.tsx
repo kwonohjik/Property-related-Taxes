@@ -27,6 +27,7 @@ import { MIXED_INCOME_DEDUCTION_COMPUTED_IDS } from "@/lib/tax-engine/transfer-r
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { redevMemberNewHouseScope } from "@/lib/calc/redev-field-scope";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import {
   isIncomeDeductionTrack,
   isTaxAmountTrack,
@@ -93,7 +94,9 @@ const ASSET_KIND_LABEL: Record<AssetForm["assetKind"], string> = {
  * 실제로 그 키가 빠져 §97의2 1호 나목이 영구 비활성이었다.
  */
 export function buildPeriodContext(asset: AssetForm, transferDate: string): PeriodCheckContext {
-  const acqDate = asset.acquisitionDate ? new Date(asset.acquisitionDate) : undefined;
+  // 이월과세는 증여 등기접수일(④·⑧과 같은 leaf) — 카드에 취득일 칸이 없어 남은 잔재를 읽지 않는다 (L23).
+  const acquisitionDateStr = primaryAcquisitionDateOf(asset);
+  const acqDate = acquisitionDateStr ? new Date(acquisitionDateStr) : undefined;
   // NH-36 — 재개발 완공 아파트 조합원은 §99·§99의3 시한을 준공일로 판정한다(종전주택 취득일·매매계약일이 아니다).
   const member = redevMemberNewHouseScope(asset);
   const transDate = transferDate ? new Date(transferDate) : new Date();
@@ -168,6 +171,8 @@ export function buildAssetPhdSnapshot(asset: AssetForm): ReductionPhdValue | und
 
 export function UnifiedReductionPanel({ asset, transferDate, onChange }: UnifiedReductionPanelProps) {
   const reductions = asset.reductions ?? [];
+  // 서브폼·§127⑦ 트랙 안내가 읽는 기준일 — 이월과세는 증여 등기접수일(④·⑧과 같은 leaf · L23).
+  const acquisitionDate = primaryAcquisitionDateOf(asset) ?? "";
   /**
    * 🔴 **이미 고른 조문이 든 카테고리는 열린 채로 시작한다** (2026-09-07 UI 리뷰).
    *
@@ -342,8 +347,8 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
    * 판정은 엔진 단일 소스(`isIncomeDeductionTrack`/`isTaxAmountTrack`)를 재사용한다.
    */
   const trackConflict = useMemo(() => {
-    if (!asset.acquisitionDate || !transferDate) return null;
-    const within5 = isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(transferDate));
+    if (!acquisitionDate || !transferDate) return null;
+    const within5 = isWithin5YearsCheck(new Date(acquisitionDate), new Date(transferDate));
     const types = reductions.map((r) => r.type);
     const ded = types.find((t) => isIncomeDeductionTrack(t, within5));
     const tax = types.find((t) => isTaxAmountTrack(t, within5));
@@ -351,7 +356,7 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     const label = (t: string) =>
       REDUCTION_METADATA[t as keyof typeof REDUCTION_METADATA]?.uiLabel ?? t;
     return { ded: label(ded), tax: label(tax) };
-  }, [asset.acquisitionDate, transferDate, reductions]);
+  }, [acquisitionDate, transferDate, reductions]);
 
   /**
    * 토지만 본인 소유(소유자 분리) 카드에서 §99·§99의3을 골랐으면 계산 전에 알린다 — 엔진이 신축주택 취득자가 아니라 적용 배제한다(NH-08 · Q-28).
@@ -438,7 +443,7 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           assetContractDate={asset.assetContractDate ?? ""}
           onAssetContractDateChange={(v) => onChange({ assetContractDate: v })}
           assetId={asset.assetId}
-          acquisitionDate={asset.acquisitionDate}
+          acquisitionDate={acquisitionDate}
           transferDate={transferDate}
           assetJibun={asset.addressJibun || undefined}
           assetAcquisitionCause={asset.acquisitionCause}

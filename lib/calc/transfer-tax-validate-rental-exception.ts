@@ -32,6 +32,7 @@ import {
 import { aptDeadlineExtensionIncomplete, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import { rentalResidenceRequirementStatus } from "./rental-residence-requirement-status";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { MIXED_USE_RENTAL_B_UNSUPPORTED } from "@/lib/tax-engine/transfer-tax-mixed-use-rental-residence-message";
 import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "@/lib/tax-engine/one-house/threshold";
 
@@ -272,10 +273,16 @@ export function validateRentalHousingException(
    * D11 — 경과조치를 켰으면 사유를 묻는다(⑤가 체크 아래에 띄운다 · 구간 안에서만). 2호 계약금 경로는 2019.2.12. 전
    * 등록 임대주택 소유 여부까지가 사유다 — 엔진 `isAddendumTransitionEffective`와 같은 leaf.
    */
+  // 거주주택 취득일 — 이월과세는 증여 등기접수일(④ 와이어 · ⑤ 카드 · `rentalResidenceRequirementStatus`와 같은 leaf · L23). 칸 없는 `acquisitionDate` 잔재를 읽지 않는다.
+  const acquisitionDate = primaryAcquisitionDateOf(asset);
+  // 오류가 지목할 칸·문구 — 이월과세(일반건물 제외)는 증여 등기접수일 칸이다. 취득일 칸이 없는 카드에서 막다른 길을 만들지 않는다.
+  const readsGiftRegistry = asset.acquisitionCause === "carryover_gift" && asset.assetKind !== "general_building";
+  const acquisitionDateField = readsGiftRegistry ? "carryover.giftRegistryDate" : "acquisitionDate";
+  const acquisitionDateLabel = readsGiftRegistry ? "증여 등기접수일" : "취득일";
   const inLifetimeEraBase =
-    !!asset.acquisitionDate &&
+    !!acquisitionDate &&
     !!formTransferDate &&
-    isLifetimeLimitEra155_20(new Date(asset.acquisitionDate), new Date(formTransferDate), false);
+    isLifetimeLimitEra155_20(new Date(acquisitionDate), new Date(formTransferDate), false);
   /**
    * 경과조치 사유 필수 범위 — 사유 칸(⑤ `RentalLifetimeLimitBlock`)이 화면에 있는 경로와 같다(3중 패턴).
    *  · §155⑳(A·임대 1호 이상 B): 양도일 구간(2019.2.12. 이후 취득 · 2025.2.27. 이전 양도) 안.
@@ -286,7 +293,7 @@ export function validateRentalHousingException(
   const asksTransitionBasis = mode === "facts" || requirePriorHistory;
   const isStandalone154_10Path = rh.scenario === "B" && rh.rentalUnits.length === 0;
   const transitionDeclarable = isStandalone154_10Path
-    ? !!asset.acquisitionDate && !isPreLifetimeLimitRegime(new Date(asset.acquisitionDate), false, "")
+    ? !!acquisitionDate && !isPreLifetimeLimitRegime(new Date(acquisitionDate), false, "")
     : inLifetimeEraBase;
   if (asksTransitionBasis && transitionDeclarable && rh.residenceTransitionUnderAddendum === true && !rh.residenceTransitionBasis) {
     return `${label}: 2019.2.12 부칙 경과조치의 사유(당시 거주 · 그 전 계약금 지급과 임대주택 등록 여부)를 선택하세요 (대통령령 제29523호 부칙 제7조②).`;
@@ -407,8 +414,8 @@ export function validateRentalHousingException(
    */
   if (mode === "facts") return null;
 
-  if (!asset.acquisitionDate) {
-    return fieldError("acquisitionDate", `${label}: 장기임대주택 특례 — 거주주택 취득일을 입력하세요.`);
+  if (!acquisitionDate) {
+    return fieldError(acquisitionDateField, `${label}: 장기임대주택 특례 — 거주주택 ${acquisitionDateLabel}을 입력하세요.`);
   }
 
   const requirementText = st.priorMonths > 0 ? `${st.residenceMonths}개월 — 같은 세대 거주 통산 ${st.priorMonths}개월 포함` : `${st.residenceMonths}개월`;
@@ -441,7 +448,7 @@ export function validateRentalHousingException(
   // 초일 산입)다. 일수(730일)로 세면 응당일 전날 양도에서 엔진은 충족인데 여기서만 차단됐다.
   if (blockRequirementShortfall && formTransferDate && st.holding && !st.holdingMet) {
     const hp = st.holding;
-    return fieldError("acquisitionDate", `${label}: 장기임대주택 특례 — 거주주택 보유기간 2년 이상이 필요합니다. (취득일~양도일: ${hp.years}년 ${hp.months}개월 ${hp.days}일)`);
+    return fieldError(acquisitionDateField, `${label}: 장기임대주택 특례 — 거주주택 보유기간 2년 이상이 필요합니다. (${acquisitionDateLabel}~양도일: ${hp.years}년 ${hp.months}개월 ${hp.days}일)`);
   }
 
   return null;

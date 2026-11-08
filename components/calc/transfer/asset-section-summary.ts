@@ -10,6 +10,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ASSET_KIND_LABELS, ACQUISITION_CAUSE_LABELS, TRANSFER_TYPE_LABELS } from "./asset-labels";
 import { bgExpenseInputsUnused } from "@/lib/calc/burdened-gift-expense-scope";
 import { bgIgnoresAssetAppraisalSalesCase } from "@/lib/calc/bg-asset-acq-mode-scope";
+import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import { canDeclareRentalHousingException } from "@/lib/calc/rental-housing-exception-scope";
 
 export type AssetSectionKey = "basic" | "transfer" | "acquisition" | "expense" | "extras";
@@ -123,7 +124,8 @@ export function summarizeAssetSections(
     label: isSpecialAsset(asset.assetKind)
       ? causeLabel
       : `${causeLabel} · ${acquisitionMethodLabel(asset)}`,
-    filled: hasText(asset.acquisitionDate),
+    // 이월과세는 취득일 칸이 없다 — 증여 등기접수일로 판정한다(④·⑧과 같은 leaf · L23). 남은 `acquisitionDate` 잔재로 ✓가 켜지지 않고, 등기접수일을 넣으면 ✓가 켜진다.
+    filled: hasText(primaryAcquisitionDateOf(asset)),
   };
 
   // ④ 필요경비 — 자산-수준 금액(>0) 또는 폼-전역 일괄 양도비 활성

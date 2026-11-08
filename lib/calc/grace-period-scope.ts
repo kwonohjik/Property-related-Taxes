@@ -30,6 +30,7 @@
 
 import { isMultiHouseSurchargeSuppressed } from "./transfer-tax-api-helpers";
 import { isHousingLike } from "./housing-like-asset";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 export function gracePeriodInScope(
@@ -43,7 +44,8 @@ export function gracePeriodInScope(
   // ④가 `housesPayload`로 이미 요구하던 조건 — 양도 물건이 주택 계열이 아니면 중과 축 자체가 없다.
   if (!isHousingLike(primary.assetKind)) return false;
   // 한시배제 창 안 = 증명 가능한 no-op (위 ⚠️).
-  if (isMultiHouseSurchargeSuppressed(form.transferDate, primary.acquisitionDate)) return false;
+  //   이월과세는 증여 등기접수일(④ 와이어 `acquisitionDate` · Step4 한시배제 카드와 같은 leaf · L23).
+  if (isMultiHouseSurchargeSuppressed(form.transferDate, primaryAcquisitionDateOf(primary))) return false;
   if (!form.isOneHousehold) return false;
   if ((parseInt(form.householdHousingCount || "1", 10) || 0) < 2) return false;
   return (form.houses?.length ?? 0) > 0 || (form.presaleRights?.length ?? 0) > 0;
