@@ -581,6 +581,7 @@ export function MultiTransferTaxResultView({
           isExempt: p.isExempt,
           isPartialExempt: p.isPartialExempt,
           reductionAmount: p.reductionAmount,
+          incomeDeductionReducible: p.incomeDeductionReducible,
         }))}
       />
       </PrintSection>

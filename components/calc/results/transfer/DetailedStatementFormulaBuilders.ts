@@ -17,6 +17,7 @@
 
 import { separateAcqExpenseText, separateAcqFormulaText } from "@/components/calc/results/mixed-use/mixed-use-separate-acq-text";
 import { createElement, Fragment, type ReactNode } from "react";
+import { applyRate, safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { selfBuiltPenaltyBasisFormula } from "@/lib/tax-engine/transfer-tax-self-built-display";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
@@ -366,6 +367,14 @@ export interface IncomeDeductionFormulaSource {
   previousHouseStdPriceApplied?: number;
   /** 감면 0의 사유 판별용 — 부호 케이스 */
   signCase?: string;
+  /** 하이브리드 전용 echo — 5년 이내 세액감면(tax_amount)·특칙형(lthd_rate_special·flat_rate_20)은 소득금액 차감이 없다 */
+  effectCategory?: "tax_amount" | "income_deduction" | "lthd_rate_special" | "flat_rate_20";
+  /** 적격 여부 echo — false면 감면 자체가 적용되지 않는다 */
+  isEligible?: boolean;
+  /** 하이브리드 감면·공제율 echo (§98의3 과밀 0.6 · §98의5 0.6/0.8 · §98의6 0.5 등). 없으면 100% */
+  taxReductionRate?: number;
+  /** §98의8 공제율 echo (같은 의미 — 필드명만 다르다) */
+  deductionRate?: number;
 }
 
 /** 감면 0인 이유를 부호 케이스로 풀어쓴다(사용자 요청: 세액이 없어도 과정을 보인다). */
@@ -398,6 +407,16 @@ export function buildIncomeDeductionReducibleFormula(
   const article = src.articleLabel;
   // 재개발·재건축 변형은 5년 이내 양도도 안분한다(조특령 §99①1호 단서 · §99의3②1호 단서 — NH-66). 변형이 아니면 전액.
   const variant = src.previousHouseStdPriceApplied != null;
+  // US-77 — 하이브리드 5년 이내(세액감면)·특칙형·부적격은 소득금액 차감이 없다. 「전액 차감」「5년 안분 결과 0」으로 적지 않는다.
+  if (src.effectCategory != null && src.isEligible === false) {
+    return `해당 없음 (${article} — 감면 요건을 갖추지 못해 적용하지 않음)`;
+  }
+  if (src.effectCategory === "tax_amount") {
+    return `해당 없음 (${article} — 취득일부터 5년 이내 양도는 세액감면 방식이라 소득금액에서 차감하지 않음)`;
+  }
+  if (src.effectCategory === "lthd_rate_special" || src.effectCategory === "flat_rate_20") {
+    return `해당 없음 (${article} — 장기보유특별공제·세율 특칙으로 5년간 발생분을 소득금액에서 차감하지 않음)`;
+  }
   if (src.isWithin5Years && !variant) {
     return `양도소득금액 ${base.toLocaleString()} 전액 차감 (취득 후 5년 이내 양도 — ${article})`;
   }
@@ -429,6 +448,33 @@ export function buildIncomeDeductionReducibleFormula(
       `양도소득금액 ${base.toLocaleString()} × `,
       frac,
       ` = 0 (${article} — ${describeZeroReason(src)})`,
+    );
+  }
+  // US-78 — 감면·공제율 100% 미만(§98의3 과밀·§98의5·§98의6·§98의8): 「5년간 발생분 × 율 = 공제액」 2단으로 적는다.
+  const rate = src.taxReductionRate ?? src.deductionRate ?? 1;
+  if (rate < 1 && !src.isWithin5Years) {
+    const ratePct = Math.round(rate * 100);
+    // 5년간 발생분 = 령 §40① 산식 값(양도소득금액 한도 전) — 엔진이 쓴 부호 정책과 같다.
+    const fiveYear =
+      src.signCase === "pos_neg"
+        ? Math.max(0, base)
+        : src.signCase === "all_positive"
+          ? Math.max(0, safeMultiplyThenDivide(base, numerator, denominator))
+          : 0;
+    const applied = applyRate(fiveYear, rate);
+    const tail =
+      applied > base
+        ? ` = ${applied.toLocaleString()}이나 양도소득금액 ${base.toLocaleString()}을 넘는 초과금액은 없는 것으로 하여 ${reducible.toLocaleString()} (${article} §90② 소득금액차감)`
+        : ` = ${reducible.toLocaleString()} (${article} §90② 소득금액차감)`;
+    if (src.signCase === "pos_neg") {
+      return `양도시 기준시가가 취득시 기준시가보다 낮아 양도소득금액 ${base.toLocaleString()} 전액이 5년간 발생분 × ${ratePct}%${tail}`;
+    }
+    return createElement(
+      Fragment,
+      null,
+      `양도소득금액 ${base.toLocaleString()} × `,
+      frac,
+      ` = 5년간 발생분 ${fiveYear.toLocaleString()} × ${ratePct}%${tail}`,
     );
   }
   // 전액 감면 — 분수 표기가 부적합(비율 ≥ 1)

@@ -52,7 +52,7 @@ export {
   PROGRESSIVE_RATE_CLAUSES,
   clauseBucketKey,
 } from "./transfer-tax-rate-clause";
-import { isCrisisAcqExempt } from "./legal-codes";
+import { isCrisisAcqExempt, TRANSFER, TRANSFER_REDUCTION_ARTICLE } from "./legal-codes";
 import { UNSOLD_98_FLAT_RATE, UNSOLD_98_FLAT_RATE_LABEL } from "./transfer-reductions/unsold-98-constants";
 import { judgeNblRateDeferral } from "./data/nbl-rate-deferral-era";
 import type { NblSurchargeExclusionReason } from "./types/transfer-result.types";
@@ -158,6 +158,14 @@ export function computeBracketBreakdown(
  * 않았는지 결과 화면에 덧붙인다 — 「불성립 사유」가 안 보이면 사용자가 50%를 결함으로 오인한다
  * (DoD "결과 화면에 단서 적용/불성립 사유가 보이는지 확인").
  */
+/** US-81 고지의 조문 — 배제한 특칙 조문만 밝힌다. 주입 조문을 모르면(직접 호출 등) 세 조문을 함께 적는다. */
+function suppressedShortTermArticle(by: TransferTaxInput["suppressShortTermRateBy"]): string {
+  if (by === "unsold_98_3") return TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_3;
+  if (by === "unsold_98_5") return TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_5;
+  if (by === "unsold_98_6") return TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_6;
+  return `${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_3}·${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_5}·${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_6}`;
+}
+
 function presaleRightClause4UnmetNote(input: TransferTaxInput): string {
   if (input.propertyType !== "presale_right") return "";
   const unmet: string[] = [];
@@ -543,6 +551,12 @@ export function calcTax(
     ? null
     : resolveShortTermRate(input.transferDate, holdingMonthsTotal, shortTermAssetClass, shortTermOpts);
   const shortTermFlatRate = shortTermResolution?.rate ?? null;
+  // US-81 — §98의3④2호·§98의5③2호·§98의6③2호(세율 특칙)가 단기보유 세율을 배제한 경우, 배제하지 않았다면 단기세율이 걸렸을 때만 그 사실을 밝힌다.
+  const suppressedShortTermNote =
+    input.suppressShortTermRate &&
+    resolveShortTermRate(input.transferDate, holdingMonthsTotal, shortTermAssetClass, shortTermOpts)?.rate != null
+      ? `${suppressedShortTermArticle(input.suppressShortTermRateBy)} 세율 특칙 — 단기보유 세율 대신 기본세율 적용 (${TRANSFER.TAX_RATE})`
+      : undefined;
   /**
    * 수유자(상속인 아닌 유증·사인증여) — §104②1호 통산을 하지 않아 단기세율이 갈렸을 때만 밝힌다
    * (계획서 `docs/00-pm/non-heir-bequest-followups.plan.md` §4-3 B). 사인증여는 서면4팀-3304가 직접 근거, 유증은 확인 필요.
@@ -670,6 +684,7 @@ export function calcTax(
         progressiveDeduction: deduction,
         surchargeSuspended: false,
         rateClause: surchargeClause(effectiveSurchargeType),
+        shortTermNote: suppressedShortTermNote,
         // 2년 이상이라 §104⑦ 후단(단기 비교)이 없다 — 해당 호가 하나뿐이다.
         // ※ **1호**와도 비교하지 않는다 — ⑦ 세액은 「§55① 누진 + 가산(≥0)」이라 항등식으로 1호 이상이다.
         candidateClauses: clauseSet(surchargeClause(effectiveSurchargeType)),
@@ -686,6 +701,7 @@ export function calcTax(
     progressiveDeduction: deduction,
     surchargeSuspended: suspended,
     rateClause: "104-1-1",
+    shortTermNote: suppressedShortTermNote,
     candidateClauses: clauseSet("104-1-1"),
   };
 }
