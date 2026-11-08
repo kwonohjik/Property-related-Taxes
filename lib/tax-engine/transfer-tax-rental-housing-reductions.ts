@@ -10,7 +10,11 @@ import { expropriationAcquisitionDate } from "./public-expropriation-reduction";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
-import { LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
+import { ALL_HYBRID_IDS, LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
+import { isTaxAmountTrack } from "./transfer-reductions/income-deduction-router";
+import { isWithin5YearsCheck } from "./transfer-reductions/new-99-3";
+import { REDUCTION_METADATA } from "./transfer-reductions/metadata";
+import type { TransferReductionId } from "./transfer-reductions/types";
 import { RENTAL_HOUSING_INCOME_DEDUCTION_IDS } from "./transfer-tax-rental-housing-income-deduction";
 import { getReductionLegalBasis } from "./transfer-tax-helpers";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -54,9 +58,9 @@ export function applyRentalHousingReductions(args: {
    *   감면세액을 빼는 구조라 이 경로에도 **그대로 적용된다**. 일반 경로와 **같은 함수**
    *   (`calcReductions`)와 **같은 한도 규칙**(`applyReductionStatutoryCap`)을 쓴다.
    * · **차감형·하이브리드**({@link ALL_INCOME_DEDUCTION_IDS} 11종 — §99의3·§99·§98 시리즈) —
-   *   **양도소득금액을 차감**하는 구조인데, 그것을 「소득세법 시행령」 §161 안분의 **앞/뒤
-   *   어디에 얹을지 정한 명문이 없다**. 추정으로 자리를 정하면 조용히 틀린다.
-   *   ⇒ 계산에 넣지 않고 **넣지 않았다는 사실을 표시**한다(종전 고지 유지).
+   *   §99·§99의3(NH-37)·§98의3~§98의8(US-43 · Q-15 (a))은 일반 경로와 같은 순서(고가주택 안분·장특 후 차감)로
+   *   `transfer-tax-rental-housing-income-deduction.ts`가 계산하고, 5년 이내 하이브리드는 세액감면형으로 아래 `calcReductions`가 계산한다.
+   *   나머지(§99의2 5년 후·§98의4)·§98 세율 특칙·§98의2 장특 특칙은 계산하지 않고 고지한다.
    *
    * ✅ **농특세는 붙는다**(2026-08-23 `0b8aa295`로 별건 해소). 「농어촌특별세법」 §5①1호가
    *    조특법 감면세액 × 20%를 정하고 비과세는 시행령 §4가 **열거**한 것뿐이다.
@@ -69,11 +73,23 @@ export function applyRentalHousingReductions(args: {
   const incomeDeductionIds = new Set<string>(ALL_INCOME_DEDUCTION_IDS);
   /** 차감형·하이브리드 — 이 경로가 계산하지 않는 축(§161 안분 위치 명문 부재). */
   //   §99·§99의3은 제외한다 — `transfer-tax-rental-housing-income-deduction.ts`가 계산한다(NH-37 · Q-19).
+  //   §98의3·§98의5·§98의6·§98의7·§98의8도 같은 파일이 계산한다(US-43 · Q-15 (a)).
+  //   5년 이내 하이브리드는 세액감면형이다 — 일반 경로처럼 `calcReductions`에 넘긴다(US-43 수정 방향 3 · 같은 트랙 술어).
+  //   §98(세율 특칙)·§98의2(장특 특칙)는 소득금액 차감형이 아니다 — 각자의 고지로 보낸다(US-71).
+  const within5 = isWithin5YearsCheck(effectiveInput.acquisitionDate, effectiveInput.transferDate);
+  const isHybridTaxAmount = (type: string) =>
+    !LTHD_SPECIAL_REDUCTION_IDS.includes(type) && ALL_HYBRID_IDS.includes(type) && isTaxAmountTrack(type, within5);
   const deferredReductions = allReductions.filter(
-    (r) => incomeDeductionIds.has(r.type) && !RENTAL_HOUSING_INCOME_DEDUCTION_IDS.includes(r.type),
+    (r) =>
+      incomeDeductionIds.has(r.type) &&
+      !RENTAL_HOUSING_INCOME_DEDUCTION_IDS.includes(r.type) &&
+      !isHybridTaxAmount(r.type) &&
+      !LTHD_SPECIAL_REDUCTION_IDS.includes(r.type) &&
+      r.type !== "unsold_98",
   );
+  const flatRate98 = allReductions.some((r) => r.type === "unsold_98");
   /** 세액감면형 — 일반 경로와 동일하게 계산한다. (차감형은 위 두 갈래가 맡는다) */
-  const taxCreditReductions = allReductions.filter((r) => !incomeDeductionIds.has(r.type));
+  const taxCreditReductions = allReductions.filter((r) => !incomeDeductionIds.has(r.type) || isHybridTaxAmount(r.type));
   /**
    * **LTHD 계열 특례 고지** (CB-02·D5-05) — 감면 효과는 3종인데 위 이분법은 2종만 가른다.
    *
@@ -140,19 +156,32 @@ export function applyRentalHousingReductions(args: {
 
   const reductionNotice =
     deferredReductions.length > 0
-      ? `선택한 감면 중 ${deferredReductions.length}건(양도소득금액 차감형)은 이 계산에 반영되지 않았습니다 — 거주주택 비과세 특례(소득세법 시행령 §155⑳)의 §161 안분과 차감 순서를 정한 규정이 없습니다.`
-      : undefined;
+      ? `선택한 감면 중 ${deferredReductions.length}건(${deferredReductions.map((r) => REDUCTION_METADATA[r.type as TransferReductionId]?.article ?? r.type).join(" · ")})은 ` +
+        "이 계산에 반영되지 않았습니다 — 거주주택 비과세 특례(소득세법 시행령 §155⑳) 경로에서 이 조문은 아직 계산하지 않습니다(확인 필요)."
+      : flatRate98
+        ? "선택한 조특법 §98(미분양 국민주택 — 세율 100분의 20 특례)은 거주주택 비과세 특례(소득세법 시행령 §155⑳) 경로의 계산에 반영되지 않았습니다 — 확인 필요."
+        : undefined;
   if (reductionNotice) {
     steps.push({
-      label: "조특법 감면 — 미반영 (차감형)",
+      label: deferredReductions.length > 0 ? "조특법 감면 — 미반영" : "조특법 감면 — 미반영 (세율 특례)",
       formula: reductionNotice,
       amount: 0,
       legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
     });
   }
+  // US-71 — §97의3·§97의4(임대주택 특례 — 선택 재확인)와 §98의2(장특 표2 특칙 — 미반영)는 사유가 다르다.
+  const rentalLthd = lthdSpecialReductions.filter((r) => r.type !== "unsold_98_2");
+  const has982 = lthdSpecialReductions.some((r) => r.type === "unsold_98_2");
   const lthdNotice =
     lthdSpecialReductions.length > 0
-      ? `선택한 감면 중 ${lthdSpecialReductions.length}건(장기보유특별공제 특례 — 조세특례제한법 §97의3①·§97의4①·§98의2①1호)은 이 계산에 반영되지 않았습니다. 이 경로가 양도하는 자산은 «거주주택»이고 §97의3·§97의4는 «임대주택»에 붙는 특례이므로 선택 자체를 재확인하시기 바랍니다.`
+      ? [
+          rentalLthd.length > 0
+            ? `선택한 감면 중 ${rentalLthd.length}건(장기보유특별공제 특례 — 조세특례제한법 §97의3①·§97의4①)은 이 계산에 반영되지 않았습니다. 이 경로가 양도하는 자산은 «거주주택»이고 §97의3·§97의4는 «임대주택»에 붙는 특례이므로 선택 자체를 재확인하시기 바랍니다.`
+            : "",
+          has982
+            ? "선택한 조세특례제한법 §98의2①1호(장기보유특별공제 표2 특례)는 거주주택 비과세 특례(소득세법 시행령 §155⑳) 경로의 장기보유특별공제에 반영되지 않았습니다 — 확인 필요."
+            : "",
+        ].filter(Boolean).join(" ")
       : undefined;
   if (lthdNotice) {
     steps.push({

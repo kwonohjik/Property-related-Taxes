@@ -657,9 +657,10 @@ export function buildRows(
   setNum("reductionTargetIncome2", "total", incomeDeductionAmount);
   // 감면후 소득금액 = 양도소득금액 − 소득금액 감면대상(⑳ §90② 소득금액차감방식)
   // §90①(세액감면방식·§77 등)은 소득금액 미차감 → ⑲(세액감면대상)은 빼지 않는다 (다건·상세명세서와 일치).
-  // §161 (장기임대 거주주택 비과세) 케이스는 result.taxableGain이 이미 안분 후 값이므로 별도 처리.
+  // §161 (장기임대 거주주택 비과세) 케이스는 result.taxableGain이 이미 안분 후 값이므로 그 값에서 차감한다.
+  //   §155⑳ 경로의 차감(§99·§99의3 NH-37 · §98 시리즈 US-43)은 엔진이 `taxableGain`(차감 전)에서 뺀다 — 빼지 않으면 과세표준 + 기본공제와 어긋난다.
   const incomeAmountAfter = isRH
-    ? result.taxableGain
+    ? Math.max(0, result.taxableGain - incomeDeductionAmount)
     : Math.max(0, incomeAmount - incomeDeductionAmount);
   setNum("incomeAmountAfter", "total", incomeAmountAfter);
   setNum("priorIncomeAmount", "total", 0);

@@ -74,7 +74,8 @@ const EXPROPRIATION = [
   },
 ];
 /** 차감형·하이브리드 대표 — 조특법 §98의3 */
-const DEFERRED = [{ type: "unsold_98_3" as const, region: "metropolitan" as const }];
+// §98의3 등 §98 시리즈는 이 경로에서도 계산한다(US-43 · Q-15 (a)) — 계산하지 않는 예시는 §99의2.
+const DEFERRED = [{ type: "unsold_99_2" as const }];
 
 function fixture(o: Partial<TransferTaxInput>): TransferTaxInput {
   return baseTransferInput({
@@ -93,7 +94,7 @@ function fixture(o: Partial<TransferTaxInput>): TransferTaxInput {
   } as Partial<TransferTaxInput>);
 }
 
-const DEFERRED_NOTICE = /차감형\)은 이 계산에 반영되지 않았습니다/;
+const DEFERRED_NOTICE = /§99의2\)은 이 계산에 반영되지 않았습니다/;
 
 describe("F08 · §155⑳ × 조특법 감면", () => {
   it("F08-01: 🔴 세액감면형(§77)은 **실제로 계산된다**", () => {
@@ -110,7 +111,7 @@ describe("F08 · §155⑳ × 조특법 감면", () => {
     expect(r.steps.some((s) => s.label === "감면세액")).toBe(true);
   });
 
-  it("F08-02: 차감형(§98의3)은 계산하지 않고 **고지**한다", () => {
+  it("F08-02: 계산하지 않는 차감형(§99의2)은 **고지**한다", () => {
     const r = calculateTransferTax(
       fixture({ rentalHousingException: rheA, reductions: DEFERRED }),
       rates,
@@ -118,8 +119,10 @@ describe("F08 · §155⑳ × 조특법 감면", () => {
     expect(r.reductionAmount ?? 0).toBe(0);
     expect(r.determinedTax).toBe(116_420_000);
     expect((r.warnings ?? [])[0]).toMatch(DEFERRED_NOTICE);
-    // 「왜 안 되는지」가 §161 안분 문제임을 남긴다 — 「전부 안 된다」로 읽히면 오해다
-    expect((r.warnings ?? [])[0]).toMatch(/§161/);
+    // US-43 — 종전 사유 「§161 안분과 차감 순서를 정한 규정이 없습니다」는 Q-15 (a)로 해소됐다. 이제는 미계산 사실과 확인 필요를 남긴다.
+    expect((r.warnings ?? [])[0]).toMatch(/§155⑳/);
+    expect((r.warnings ?? [])[0]).toMatch(/확인 필요/);
+    expect((r.warnings ?? [])[0]).not.toMatch(/순서를 정한 규정이 없습니다/);
   });
 
   it("F08-03: 두 축이 섞이면 세액감면형은 반영하고 차감형만 고지한다", () => {

@@ -11,11 +11,12 @@
  *   이 경로의 과세대상 양도소득금액(`rhe.taxableGain` — 고가주택 안분·장기보유특별공제·§161 반영 후)에서 감면대상 양도소득금액을 뺀다.
  *   §161 안분과 차감 사이의 순서를 직접 다룬 해석은 확인하지 못했다 — 위 회신의 «고가주택 안분 후 감면»을 §161 결과에도 같게 적용한다(확인 필요 고지).
  *
- * 범위: **§99·§99의3만**. 그 밖의 차감형·하이브리드(§98의2~§99의2 등)는 종전대로 미반영 고지한다(`transfer-tax-rental-housing-reductions.ts`).
+ * 범위: §99·§99의3(NH-37)과 §98의3·§98의5·§98의6·§98의7·§98의8(US-43 · Q-15 (a)). 그 밖의 조문(§99의2 5년 후·§98의4)은 미반영 고지하고,
+ * §98(세율 특칙)·§98의2(장특 특칙)는 각자의 고지로 보낸다(`transfer-tax-rental-housing-reductions.ts`).
  * 순수 함수 — `steps`에 단계를 push하는 부수효과만 있다.
  */
 import { TRANSFER } from "./legal-codes";
-import { TRANSFER_REDUCTION_ARTICLE } from "./legal-codes/transfer";
+import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
 import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
 import { buildIncomeDeductionStep, resolveIncomeDeduction } from "./transfer-reductions/income-deduction-router";
 import type { IncomeDeductionResolution } from "./transfer-reductions/income-deduction-router";
@@ -27,13 +28,26 @@ import {
 import type { IncomeDeductionDetails } from "./transfer-tax-income-deduction-details";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
 
-/** 이 경로가 계산하는 차감형 — §99·§99의3. */
-export const RENTAL_HOUSING_INCOME_DEDUCTION_IDS: ReadonlyArray<string> = ["new_99_3", "new_99"];
+/**
+ * 이 경로가 계산하는 차감형.
+ *   · §99·§99의3 — §99 리뷰 NH-37 · Q-19
+ *   · §98의3·§98의5·§98의6·§98의7·§98의8 — §98 시리즈 리뷰 US-43 · Q-15 (a) 사용자 결정 2026-11-08(일반 경로와 같은 순서: 고가주택 안분·장특 후 차감).
+ *     겸용 경로와 같은 집합이다(`transfer-reductions/mixed-use-computed-ids.ts`). 5년 이내 양도분(세액감면형)은 `calcReductions`가 맡는다.
+ */
+export const RENTAL_HOUSING_INCOME_DEDUCTION_IDS: ReadonlyArray<string> = [
+  "new_99_3",
+  "new_99",
+  "unsold_98_3",
+  "unsold_98_5",
+  "unsold_98_6",
+  "unsold_98_7",
+  "unsold_98_8",
+];
 
 export const RENTAL_HOUSING_INCOME_DEDUCTION_ORDER_NOTICE =
-  "조특법 §99·§99의3 양도소득금액 차감을 거주주택 비과세 특례(소득세법 시행령 §155⑳)의 과세대상 양도소득금액(고가주택 안분·장기보유특별공제·§161 반영 후)에서 뺐습니다 — " +
-  "고가주택이면서 1세대 1주택인 신축주택은 소득세법 §95③·시행령 §160을 적용한 후 조특법 §99·§99의3을 적용한다는 회신(서면인터넷방문상담4팀-3614, 재산세제과-1114)을 따른 것이고, " +
-  "§161 안분과 차감 사이의 순서를 직접 다룬 해석은 확인하지 못했습니다 — 확인 필요";
+  "조특법 감면(양도소득금액 차감)을 거주주택 비과세 특례(소득세법 시행령 §155⑳)의 과세대상 양도소득금액(고가주택 안분·장기보유특별공제·§161 반영 후)에서 뺐습니다 — " +
+  "고가주택이면서 1세대 1주택인 신축주택은 소득세법 §95③·시행령 §160을 적용한 후 조특법 §99·§99의3을 적용한다는 회신(서면인터넷방문상담4팀-3614, 재산세제과-1114)을 " +
+  "같은 차감 구조의 조문에 함께 따른 것이고, §161 안분과 차감 사이의 순서를 직접 다룬 해석은 확인하지 못했습니다 — 확인 필요";
 
 export interface RentalHousingIncomeDeduction {
   /** 라우터 평가 결과 — 해당 조문을 고르지 않았으면 `reducible: 0`뿐이다 */
@@ -77,10 +91,10 @@ export function resolveRentalHousingIncomeDeduction(args: {
   }
   if (applied > 0) {
     steps.push({
-      label: "조특법 §99·§99의3 — 거주주택 특례 경로 적용 순서 (확인 필요)",
+      label: "조특법 양도소득금액 차감 — 거주주택 특례 경로 적용 순서 (확인 필요)",
       formula: RENTAL_HOUSING_INCOME_DEDUCTION_ORDER_NOTICE,
       amount: 0,
-      legalBasis: TRANSFER_REDUCTION_ARTICLE.NEW_99_3,
+      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
     });
   }
   return { resolution, applied, evaluated: true };
