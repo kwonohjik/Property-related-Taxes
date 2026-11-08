@@ -13,6 +13,7 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { setupAddress } from "./_helpers/fill-address";
+import { expectDarkContrast } from "./_helpers/dark-contrast";
 
 /** FieldCard/CurrencyInput 라벨 → 내부 input (scope 한정 가능) */
 function inputByLabel(scope: Page | Locator, labelText: string): Locator {
@@ -154,6 +155,12 @@ test.describe("비사업용 토지 무조건 의제 — UI가 엔진 판정 반�
     // 결과: 비사업용토지 판정 카드(사업용/무조건 의제) 표시 + 지목 오류 없음
     await expect(page.getByText("비사업용토지 판정 결과")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/지목을 선택하세요/)).toHaveCount(0);
+
+    // 다크 대비 — 무조건 사업용 의제 블록(드리프트 방지. 실제 바탕에서는 수정 전 blue-500도 통과 — 게이트 ⑦의 최악 바탕 가정에서만 미달)
+    await expectDarkContrast(
+      page,
+      page.getByText("무조건 사업용 — 소득세법 시행령 §168의14③").locator("xpath=.."),
+    );
 
     console.log("✅ NBL 무조건 의제 — 지목 미선택이어도 계산 통과 + 결과 판정 표시 확인");
   });

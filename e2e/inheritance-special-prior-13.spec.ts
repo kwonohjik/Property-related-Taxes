@@ -11,6 +11,7 @@
  * 정책: [[feedback_browser_verify_with_playwright]] · [[feedback_e2e_worktree_port_isolation]]
  */
 import { test, expect, type Page } from "@playwright/test";
+import { expectDarkContrast } from "./_helpers/dark-contrast";
 import {
   addHeir,
   addLandAsset,
@@ -156,5 +157,15 @@ test.describe("조특법 특례 사전증여 상속 UI (§30의5⑨·§30의6⑤
 
     // §30의5⑧ 기간무관 가산 라벨 확인
     await expect(page.getByText("§30의5⑧ 기간무관 가산")).toBeVisible();
+
+    // 다크 대비 — 포함 행 명세표(드리프트 방지). ⚠️ gray-500 → 400으로 고친 「§13 합산 기간 도과」 참고 행은
+    // 이 흐름에 나오지 않는다(특례 사전증여는 기간 무관 가산) — 그 행은 브라우저로 확인하지 않았다.
+    await expectDarkContrast(
+      page,
+      page
+        .getByText("사전증여재산 명세 (상증법 §13)")
+        .first()
+        .locator("xpath=ancestor::div[contains(@class,'rounded-lg')][1]"),
+    );
   });
 });

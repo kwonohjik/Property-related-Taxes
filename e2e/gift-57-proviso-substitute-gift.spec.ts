@@ -16,6 +16,7 @@ import {
   fillDateAndVerify,
   nextSteps,
 } from "./_helpers/tax-flow";
+import { expectDarkContrast } from "./_helpers/dark-contrast";
 
 test.describe("§57① 단서 — 조부모 증여 + 할증 배제 토글", () => {
   test.beforeEach(async ({ page }) => {
@@ -86,5 +87,34 @@ test.describe("§57① 단서 — 조부모 증여 + 할증 배제 토글", () =
     await expect(
       page.getByText(/세대생략 할증과세 산출근거/),
     ).not.toBeVisible();
+  });
+
+  test("[E2E-G57-4] 조부모 + 단서 토글 OFF → 할증 산출근거 카드 다크 대비", async ({ page }) => {
+    test.setTimeout(90_000);
+
+    await fillDateAndVerify(page, { year: "2025", month: "6", day: "1" });
+    await page.locator("select").first().selectOption("grandparent");
+    await page.getByRole("button", { name: /^다음/ }).click();
+
+    await addLandAsset(page, {
+      area: "300",
+      unitPrice: "1000000",
+      addButtonName: /증여재산 추가/,
+      keepModalOpen: true,
+    });
+    await page.getByPlaceholder(/본가 토지/).fill("본가 토지");
+    await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+    await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
+
+    await nextSteps(page, 2);
+    await calcAndWaitResult(page, { taxType: "gift" });
+
+    // 다크 대비 — 할증 산출근거 카드(드리프트 방지. 실제 바탕에서는 수정 전 400/80도 통과 — 게이트 ⑦의 최악 바탕 가정에서만 4.42)
+    const heading = page.getByText(/세대생략 할증과세 산출근거/).first();
+    await expect(heading).toBeVisible({ timeout: 10_000 });
+    await expectDarkContrast(
+      page,
+      heading.locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]"),
+    );
   });
 });
