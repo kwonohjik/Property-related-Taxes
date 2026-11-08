@@ -50,7 +50,7 @@ describe("US-05·US-57 §98의5 계약 시작일 2010.5.14.", () => {
 
 describe("US-17 §98의2 매매계약일 하한 2008.11.3.", () => {
   const e982 = (c: string | undefined) =>
-    evaluateUnsold982({ transferDate: D("2024-06-03"), acquisitionDate: D("2009-03-02"), contractDate: c ? D(c) : undefined, isNonCapitalUnsold: true, isFirstOrFcfsContract: true });
+    evaluateUnsold982({ transferDate: D("2024-06-03"), acquisitionDate: D("2009-03-02"), contractDate: c ? D(c) : undefined, isNonCapitalUnsold: true, isFirstOrFcfsContract: true, occupiedAtContract: "no" });
   it.each([["2008-06-02", false], ["2008-11-02", false], ["2008-11-03", true], [undefined, true]])("계약 %s → %s", (c, ok) => {
     expect(e982(c as string | undefined).isEligible).toBe(ok);
   });
@@ -65,7 +65,7 @@ describe("US-17 §98의2 매매계약일 하한 2008.11.3.", () => {
 });
 
 describe("US-18 §98의2 시행일 2009.1.1.", () => {
-  const e = (t: string) => evaluateUnsold982({ transferDate: D(t), acquisitionDate: D("2008-11-15"), isNonCapitalUnsold: true, isFirstOrFcfsContract: true });
+  const e = (t: string) => evaluateUnsold982({ transferDate: D(t), acquisitionDate: D("2008-11-15"), isNonCapitalUnsold: true, isFirstOrFcfsContract: true, occupiedAtContract: "no" });
   it.each([["2008-12-20", false], ["2008-12-31", false], ["2009-01-01", true], ["2009-01-02", true]])("양도 %s → %s", (t, ok) => {
     expect(e(t).isEligible).toBe(ok);
     if (!ok) expect(codes(e(t))).toContain("TRANSFER_BEFORE_EFFECTIVE");
