@@ -22,6 +22,7 @@ import { giftHouseholdPriorResidenceMonths } from "@/lib/tax-engine/one-house/gi
 import { calcGiftHouseholdBasis } from "./effective-regulated-at-acquisition";
 import { buildSameHouseholdInheritancePayload } from "./transfer-tax-api-helpers";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 
 export interface RentalResidenceRequirementFacts {
   /** §155의3① 상생임대주택 — ⑧과 같은 술어(`qualifiesWinWinRental`) 결과. 모르면 false. */
@@ -114,7 +115,9 @@ export function rentalResidenceRequirementStatus(
    * `checkPhrp154_10Eligibility`와 같은 leaf). 2019.2.12 전 취득(「종전규정」)이면 §155⑳1호
    * 괄호를 쓰지 않고 §154① 원칙(조정대상지역 취득 시에만 거주 2년, 일반 거주기간)을 쓴다.
    */
-  const acq = asset.acquisitionDate ? new Date(asset.acquisitionDate) : undefined;
+  // 이월과세는 증여 등기접수일(④ 와이어와 같은 leaf · L23) — 칸 없는 `acquisitionDate` 잔재로 보유·종전규정 분기를 세지 않는다.
+  const acquisitionDateStr = primaryAcquisitionDateOf(asset);
+  const acq = acquisitionDateStr ? new Date(acquisitionDateStr) : undefined;
   const preRegime154_10 =
     isStandalone154_10 && acq && !Number.isNaN(acq.getTime())
       ? isPreLifetimeLimitRegime(acq, rh.residenceTransitionUnderAddendum === true, rh.residenceTransitionBasis)

@@ -32,6 +32,7 @@ import { isRowReduction } from "./house-count-exclusion-rows";
 import { selfFarmingOwnYearsSufficient } from "./self-farming-own-years";
 import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { engineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import { rental97SeriesIssue } from "./transfer-tax-validate-rental-97";
@@ -84,8 +85,10 @@ function failIfStdPriceMissingOver5Y(
   /** ④가 엔진에 싣는 자산 양도시 기준시가(`engineStdPriceAtTransfer` — 엔진 `?? ctx.standardPriceAtTransfer` 폴백과 같은 값) */
   engineStdTransfer: number,
 ): ValidationIssue | null {
-  if (!asset.acquisitionDate || !form.transferDate) return null;
-  if (isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate))) return null;
+  // 이월과세는 증여 등기접수일 — 화면(⑤ 패널)·④와 같은 leaf (L23). 칸 없는 `acquisitionDate` 잔재를 읽지 않는다.
+  const acquisitionDate = primaryAcquisitionDateOf(asset);
+  if (!acquisitionDate || !form.transferDate) return null;
+  if (isWithin5YearsCheck(new Date(acquisitionDate), new Date(form.transferDate))) return null;
   if (!phdSatisfiesAcq && parseAmount(stdAcq || "0") <= 0)
     return fail(fieldError(`reduction.${fieldType}.standardPriceAtAcquisition`, `${articleLabel} 적용: 취득 후 5년 경과 양도는 취득시 기준시가를 입력하세요 (5년 발생분 안분 — 미입력 시 감면이 적용되지 않습니다).`));
   if (parseAmount(std5Y || "0") <= 0)
@@ -125,9 +128,10 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
        * 하이브리드 8종은 5년 이내면 세액감면형이라 §127⑦ max에 합류하므로 차단 대상이 아니다.
        * anchor: `__tests__/tax-engine/transfer/reduction-track-crossing-127-7.anchor.test.ts`
        */
-      if (asset.acquisitionDate && form.transferDate) {
+      const trackAcquisitionDate = primaryAcquisitionDateOf(asset);
+      if (trackAcquisitionDate && form.transferDate) {
         const within5 = isWithin5YearsCheck(
-          new Date(asset.acquisitionDate),
+          new Date(trackAcquisitionDate),
           new Date(form.transferDate),
         );
         const selected = (asset.reductions ?? []).map((x) => x.type);
@@ -310,7 +314,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (
             member993
               ? isNew993PriorRuleEraIso("self_built", undefined, member993.completionDate, member993.completionDate, r.constructionStartedBefore2003_993)
-              : isNew993PriorRuleEraIso(r.acquisitionType993, r.contractDate993 || asset.assetContractDate, r.usageApprovalDate993, asset.acquisitionDate, r.constructionStartedBefore2003_993)
+              : isNew993PriorRuleEraIso(r.acquisitionType993, r.contractDate993 || asset.assetContractDate, r.usageApprovalDate993, primaryAcquisitionDateOf(asset), r.constructionStartedBefore2003_993)
           ) {
             const luxuryIssue = luxuryFactsIssue("new_99_3", "993", "§99의3", r.houseType993, r.grossFloorAreaSqm993, r.attachedLandAreaSqm993, r.stdPriceFloorMet993, r.luxuryFacility993);
             if (luxuryIssue) return fail(luxuryIssue);
@@ -353,7 +357,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
            * 봐서, 재개발 토글을 켠 5년 이내 양도는 **경고 없이 감면이 통째로 사라졌다**.
            */
           // 5년 기산 — 조합원 갈래는 준공일(서면인터넷방문상담4팀-2145 · NH-63), 아니면 취득일
-          const newHouseAcq993 = member993 ? member993.completionDate : asset.acquisitionDate;
+          const newHouseAcq993 = member993 ? member993.completionDate : primaryAcquisitionDateOf(asset);
           const needsStdPriceAtTransfer =
             variant993 ||
             (!!newHouseAcq993 &&
@@ -418,7 +422,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
            *   - 양도시: 5년 후 양도 또는 재개발 변형(①1호 단서 분자·분모). 라우터가 자산값으로 대신하므로 ④가 싣는 값만 인정(§99의3과 같은 leaf).
            * 일자 미입력이면 5년 판정을 하지 않는다(변형만 본다) — 일자는 step0 영역.
            */
-          const newHouseAcq99 = member99 ? member99.completionDate : asset.acquisitionDate;
+          const newHouseAcq99 = member99 ? member99.completionDate : primaryAcquisitionDateOf(asset);
           const hasDates99 = !!newHouseAcq99 && !!form.transferDate;
           const over5Y99 =
             hasDates99 && !isWithin5YearsCheck(new Date(newHouseAcq99), new Date(form.transferDate));

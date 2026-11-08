@@ -25,6 +25,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
+import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import { useMemo } from "react";
 import { addDays, subDays, isValid, parseISO, format } from "date-fns";
 import { SettlementExemptionGuideCard } from "./SettlementExemptionGuideCard";
@@ -224,6 +225,8 @@ export function ExemptionAtApprovalCard({
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
 }) {
+  // 이월과세는 증여 등기접수일(④·⑧과 같은 leaf) — 카드에 취득일 칸이 없어 남은 `acquisitionDate` 잔재를 읽지 않는다 (L23).
+  const acquisitionDate = primaryAcquisitionDateOf(asset);
   /**
    * 자동 산정 — 취득일 ~ **기간 종료일** ≥ 24개월.
    *
@@ -234,8 +237,8 @@ export function ExemptionAtApprovalCard({
    * ⚠️ 「양도일까지」가 아니다 — 철거 후 기간은 합산 대상이 아니다.
    */
   const auto = useMemo(() => {
-    if (!asset.acquisitionDate || !asset.redevApprovalDate) return null;
-    const acq = new Date(asset.acquisitionDate);
+    if (!acquisitionDate || !asset.redevApprovalDate) return null;
+    const acq = new Date(acquisitionDate);
     const app = new Date(asset.redevApprovalDate);
     if (Number.isNaN(acq.getTime()) || Number.isNaN(app.getTime())) return null;
     if (acq.getTime() > app.getTime()) return null;
@@ -252,7 +255,7 @@ export function ExemptionAtApprovalCard({
     const months = y * 12 + m - (d < 0 ? 1 : 0);
     return { months, eligible: months >= 24, extended };
   }, [
-    asset.acquisitionDate,
+    acquisitionDate,
     asset.redevApprovalDate,
     asset.redevPostApprovalHousingUse,
     asset.redevPostApprovalHousingUseEndDate,
@@ -488,17 +491,19 @@ export function SuccessorMemberSection({
   /** 양도일 — 표2 안내 문구를 연혁대로 말한다(비면 현행 식). */
   transferDate?: string;
 }) {
+  // 이월과세는 증여 등기접수일 — 칸 없는 `acquisitionDate` 잔재를 읽지 않는다 (L23 · ④·⑧과 같은 leaf).
+  const acquisitionDate = primaryAcquisitionDateOf(asset);
   // 자동 추정 힌트 3-state (silent 분기 금지 — 안내만)
   const autoSuggestionState = useMemo<"hidden" | "recommend" | "ambiguous">(() => {
     if (asset.redevIsSuccessorMember === "yes") return "hidden"; // 이미 ON
-    if (!asset.acquisitionDate || !asset.redevApprovalDate) return "hidden";
-    const acq = new Date(asset.acquisitionDate).getTime();
+    if (!acquisitionDate || !asset.redevApprovalDate) return "hidden";
+    const acq = new Date(acquisitionDate).getTime();
     const apv = new Date(asset.redevApprovalDate).getTime();
     if (isNaN(acq) || isNaN(apv)) return "hidden";
     if (acq > apv) return "recommend"; // 인가 후 취득 → 승계조합원 권장
     if (acq === apv) return "ambiguous"; // 경계값 — 회색지대 경고
     return "hidden";
-  }, [asset.acquisitionDate, asset.redevApprovalDate, asset.redevIsSuccessorMember]);
+  }, [acquisitionDate, asset.redevApprovalDate, asset.redevIsSuccessorMember]);
 
   const isSuccessor = asset.redevIsSuccessorMember === "yes";
 

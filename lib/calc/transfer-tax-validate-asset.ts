@@ -70,6 +70,7 @@ export function todayLocalISO(): string {
 export { validateAssetAcquisition } from "./transfer-tax-validate-acquisition";
 import { validateAssetAcquisition } from "./transfer-tax-validate-acquisition";
 import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { decedentOrderBasisDate } from "./decedent-order-basis";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import { calcRentalResidenceFacts } from "./rental-residence-form-facts";
@@ -85,8 +86,12 @@ export function getAssetDateOrderIssue(
   transferDate: string | undefined,
 ): { message: string; field: IssueField } | null {
   // 취득일-양도일 순서 (다필지 모드 외)
-  if (!a.parcelMode && a.acquisitionDate && transferDate && a.acquisitionDate >= transferDate)
-    return { message: "취득일은 양도일보다 이전이어야 합니다.", field: "acquisitionDate" };
+  // 이월과세는 증여 등기접수일을 읽는다(④·⑧ 사건 머리와 같은 leaf · L23) — 취득일 칸이 없어 남은 `acquisitionDate` 잔재로 막다른 길을 만들지 않는다.
+  const acquisitionDate = primaryAcquisitionDateOf(a);
+  if (!a.parcelMode && acquisitionDate && transferDate && acquisitionDate >= transferDate)
+    return a.acquisitionCause === "carryover_gift" && a.assetKind !== "general_building"
+      ? { message: "증여 등기접수일은 양도일보다 이전이어야 합니다.", field: "carryover.giftRegistryDate" }
+      : { message: "취득일은 양도일보다 이전이어야 합니다.", field: "acquisitionDate" };
   // 상속·증여자 취득일 순서
   // 상속개시일 = 일반건물 분리 ON이면 토지 상속개시일(`decedentOrderBasisDate` — ⑫와 같은 기준)
   const inheritedOn = decedentOrderBasisDate(
@@ -211,8 +216,15 @@ export function validateAssetEntry(
   // ── 양도일·취득일 정합 검증 (모든 자산 공통, 분기 진입 전) ──
   // YYYY-MM-DD 사전식 비교 = 날짜 비교 동치. 빈 값이면 skip(존재성은 분기별 검증). strict > → 당일(==) 통과.
   const today = todayLocalISO();
-  if (a.acquisitionDate && form.transferDate && a.acquisitionDate > form.transferDate) {
-    return fieldError("acquisitionDate", `${label}: 양도일(${form.transferDate})이 취득일(${a.acquisitionDate})보다 빠릅니다. 취득 후에만 양도할 수 있습니다.`);
+  // 이월과세는 증여 등기접수일(칸: `carryover.giftRegistryDate`) — 칸 없는 `acquisitionDate` 잔재로 막지 않는다 (L23).
+  const acquisitionDate = primaryAcquisitionDateOf(a);
+  //   일반건물은 예외다 — 건물 취득일 칸이 화면에 있고 leaf도 그 값을 먼저 읽는다.
+  const readsGiftRegistry = a.acquisitionCause === "carryover_gift" && a.assetKind !== "general_building";
+  const acquisitionDateField = readsGiftRegistry ? "carryover.giftRegistryDate" : "acquisitionDate";
+  const acquisitionDateLabel = readsGiftRegistry ? "증여 등기접수일" : "취득일";
+  //   등기접수일 ≥ 양도일은 이월과세 사건 머리(`validateCarryoverEventHead`)가 같은 칸을 지목해 막는다 — 문구를 하나로 둔다.
+  if (!readsGiftRegistry && acquisitionDate && form.transferDate && acquisitionDate > form.transferDate) {
+    return fieldError("acquisitionDate", `${label}: 양도일(${form.transferDate})이 취득일(${acquisitionDate})보다 빠릅니다. 취득 후에만 양도할 수 있습니다.`);
   }
   // 토지 취득일 칸이 화면에 있는 분리만 본다 — ④·⑧ 분리 검증과 같은 사본(stale 분리 입력·상속·증여 소유자 분리는 분리 없음).
   const sepEffective = normalizeBuildingCauseInputs(a).hasSeperateLandAcquisitionDate;
@@ -223,8 +235,8 @@ export function validateAssetEntry(
     return fieldError("landAcquisitionDate", `${label}: 양도일(${form.transferDate})이 토지 취득일(${a.landAcquisitionDate})보다 빠릅니다.`);
   }
   // 취득일 미래 차단 (미래 취득은 입력 오류). 양도일<취득일 다음에 둠 — 둘 다 미래여도 모순이 먼저 잡히게.
-  if (a.acquisitionDate && a.acquisitionDate > today) {
-    return fieldError("acquisitionDate", `${label}: 취득일(${a.acquisitionDate})이 오늘 이후입니다. 미래 날짜는 입력할 수 없습니다.`);
+  if (acquisitionDate && acquisitionDate > today) {
+    return fieldError(acquisitionDateField, `${label}: ${acquisitionDateLabel}(${acquisitionDate})이 오늘 이후입니다. 미래 날짜는 입력할 수 없습니다.`);
   }
   if (sepEffective && a.landAcquisitionDate && a.landAcquisitionDate > today) {
     return fieldError("landAcquisitionDate", `${label}: 토지 취득일(${a.landAcquisitionDate})이 오늘 이후입니다.`);

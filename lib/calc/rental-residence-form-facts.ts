@@ -14,6 +14,7 @@ import { buildResidenceReqInput } from "./transfer-tax-api-residence";
 import { resolveExemptionProviso } from "@/lib/tax-engine/transfer-tax-exemption-holding";
 import { calcEffectiveWasRegulatedAtAcquisition, calcStoredRegulatedFlags } from "@/lib/calc/effective-regulated-at-acquisition";
 import type { RentalResidenceRequirementFacts } from "./rental-residence-requirement-status";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 
 export function calcRentalResidenceFacts(form: TransferFormData, a: AssetForm, index: number): RentalResidenceRequirementFacts {
   const provisoReason = index === 0 ? effectiveProvisoReason(calcProvisoMode(form), form.provisoReason) : undefined;
@@ -25,7 +26,7 @@ export function calcRentalResidenceFacts(form: TransferFormData, a: AssetForm, i
       // 빠지면 술어가 기한을 보지 않아 카드는 「거주 충족」, 엔진은 불성립으로 갈린다(SYNC-1).
       transferDate: toOptionalDate(form.transferDate),
       // ①1호 「취득한 후 체결」 날짜 하한 — 엔진과 같은 취득일·동일세대 상속 사실(④가 primary에서 싣는 값).
-      acquisitionDate: toOptionalDate(a.acquisitionDate),
+      acquisitionDate: toOptionalDate(primaryAcquisitionDateOf(a)), // 이월과세는 증여 등기접수일 — ④ 와이어와 같은 leaf (L23)
       decedentSameHouseholdBeforeInheritance:
         a.acquisitionCause === "inheritance" ? a.decedentSameHouseholdBeforeInheritance : undefined,
     }),

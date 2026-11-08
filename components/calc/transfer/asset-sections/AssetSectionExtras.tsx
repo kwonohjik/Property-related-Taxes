@@ -13,6 +13,7 @@ import { NblDesignatedAreaQuestion } from "../nbl/NblDesignatedAreaQuestion";
 import { RentalHousingExceptionSection } from "../RentalHousingExceptionSection";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
 import { canDeclareRentalHousingException } from "@/lib/calc/rental-housing-exception-scope";
+import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import { calcEffectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
 
 interface Props {
@@ -107,7 +108,7 @@ export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange
         <RentalHousingExceptionSection
           rh={asset.rentalHousingException ?? { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS }}
           asset={asset}
-          acquisitionDate={asset.acquisitionDate}
+          acquisitionDate={primaryAcquisitionDateOf(asset) ?? ""}
           transferDate={transferDate ?? ""}
           mode="calc"
           judgmentLoaded={judgmentLoaded}

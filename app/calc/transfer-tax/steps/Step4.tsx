@@ -6,6 +6,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax-exemption";
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { isMultiHouseSurchargeSuppressed } from "@/lib/calc/transfer-tax-api-helpers";
+import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes";
@@ -101,7 +102,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   // NH-14 후속 — 세대 축 섹션(일시적 2주택 · 세대 명부)은 세대 기준 폼 뷰로 그린다. 뷰의 자산 patch는 원래 순서로 저장된다(`household-facts-view.ts`).
   const householdView = useMemo(() => householdFactsFormView(form), [form]);
   const householdOnChange = useMemo(() => householdViewOnChange(form, onChange), [form, onChange]);
-  const primaryAcquisitionDate = form.assets?.[0]?.acquisitionDate ?? "";
+  // 이월과세는 증여 등기접수일 — 한시배제 카드(`surchargeSuspended`)·⑧·④가 같은 leaf를 읽는다 (L23). 칸 없는 `acquisitionDate` 잔재로 카드가 엔진과 반대로 뜨지 않는다.
+  const primaryAcquisitionDate = primaryAcquisitionDateOf(form.assets?.[0]) ?? "";
   const primary = form.assets?.[0];
   /**
    * NH-14 후속(F-1) — ② 1세대1주택 비과세 판정(취득 당시 조정대상지역 · 거주기간 · §154① 단서)의 대상 주택. 첫 자산이 주택 계열이면
