@@ -117,3 +117,15 @@
 - 회귀: `__tests__/calc/` 819파일 11,520건 · `__tests__/lib`·`api`·`components`·`pdf` 1,486파일 16,518건 · tsc 0건 · 변경 파일 lint 0건.
 - 미검증 V-1(폼 전역 `regionCode`가 함께 양도 흐름에 설정되는가) · V-2(컴패니언 입주권) · V-4(다건 건마다 컴패니언)는 그대로 — 코드는 세 경우 모두 컴패니언 행을 첫 자산과 독립으로 낸다. V-5: 판정 메뉴 두 계산기에는 자산 추가 UI가 없다(`app/calc/one-house-exemption`·`multi-house-surcharge`에서 `assets.push`·`addAsset` grep 0건).
 - 브라우저 수동 확인은 E2E RAC-1로 갈음(Playwright 실제 화면·실제 API).
+
+## 9. 미검증 V-1·V-2·V-4 측정 (2026-11-09 · 워크트리 `-m1` · throwaway probe, 삭제함 — 결과 원본 `scratchpad/m1-probe.json`)
+
+변경 코드 없음. 측정 시료: 첫 자산 `서울특별시 강남구 테헤란로 1`(high) 또는 `강남구 테헤란로 1`(시·도 생략 · low), 양도일 2026-02-16, 취득일 2018-03-02.
+
+| V | 결론 | 근거 |
+|---|---|---|
+| V-1 | **현행 UI에서 폼 전역 `form.regionCode`를 쓰는 경로를 찾지 못했다** — 읽는 곳만 있다 | `grep`: 쓰기는 자산 카드의 자산-수준 `regionCode`(`AssetSectionBasic.tsx:345-347`)뿐이고, 판정 메뉴 핸드오프는 `regionCode: undefined`로 비운다(`one-house-judgment-handoff.ts:156`). 폼 전역 값이 남을 수 있는 경로는 옛 저장 세션 복원뿐이다(**복원 경로 실측은 안 함 — 확인 필요**). 도달 시 동작은 측정: 코드 있음 → 첫 자산 줄 둘 사라지고 컴패니언 줄 둘(`1:transfer`·`1:acquisition`)만 남는다. ④의 컴패니언 값(`companionRegulatedFlags`)은 자기 자산만 읽어 폼 코드와 무관 → 고지와 ④가 일치(C-9·parity가 고정) |
+| V-2 | **컴패니언 입주권은 함께 양도에서 허용되고(⑫ enum `transfer-tax-schema-companion.ts:107` · ⑭ `bundled-split-helpers.ts:216`), 고지는 주 자산 입주권과 똑같이 두 줄(양도·취득 당시)을 낸다 — 둘 다 `selectable:false`** | 컴패니언 입주권 `["1:transfer/low/true/sel=false","1:acquisition/low/true/sel=false"]` = 주 자산 입주권 `["0:…sel=false" ×2]`. `companionRegulatedFlags`는 `{isRegulatedArea:true, wasRegulatedAtAcquisition:true}`를 싣는다. 세액 영향은 앞선 측정(§11 `regulated-rights-transfer-toggle.plan.md`: 컴패니언 입주권 두 값 불변)을 그대로 따른다 — 이번에 다시 재지 않았다 |
+| V-4 | **다건에서는 건마다 컴패니언이 있을 수 없다 → 컴패니언 고지는 다건에 도달하지 않는다** | ⑧ `validateMultiSupportedMode`가 `assets.length > 1`을 막는다(`multi-transfer-tax-validate.ts` · 문구 「한 건 내 다자산 일괄양도는 단건 계산기에서만 지원됩니다.」 — 프로브가 이 문구를 반환). ⑫도 `companionAssets`를 거부한다(`transfer-tax-schema-multi-refines.ts:96`) |
+
+미해결로 남는 것: ① V-1 옛 세션 복원 경로(폼 전역 `regionCode`가 실제로 복원되는지) ② V-2 컴패니언 입주권 고지 줄의 «세액 영향 없음»을 이 브랜치에서 재측정하지 않음.
