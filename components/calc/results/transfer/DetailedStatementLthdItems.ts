@@ -17,6 +17,7 @@ import { mixedPartLthdRates } from "@/lib/tax-engine/transfer-tax-mixed-use-inhe
 import type { MixedPartLthdEcho } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { sumSplitLthdAmounts } from "@/lib/tax-engine/transfer-tax-split-display";
 import { buildLthdFallbackFormulas } from "./DetailedStatementLthdFormulas";
+import { TRANSFER_REDUCTION_ARTICLE } from "@/lib/tax-engine/legal-codes/transfer";
 import {
   holdingMonthsFromDates,
   splitLtDeduction,
@@ -162,12 +163,18 @@ export function setLongTermDeductionItems(
   //   (splitLtDeduction: 표2는 거주분 직접 산정 후 보유분에 잔액 귀속, 표1은 보유분 전액·거주분 0).
   const lthHoldingStep = findStepByLabel(result.steps, "보유 기간분 장특");
   const lthResidenceStep = findStepByLabel(result.steps, "거주 기간분 장특");
+  // 조특법 §98의2 특칙(표2 보유기간별 공제율 단독) — 엔진이 보유·거주 sub-step을 내지 않아 아래 fallback이 「표1」 문구로 떨어졌다.
+  // 단건만 본다(다건은 자산별 합계 행 경로). 1세대1주택 표2 유지·§97의3 유지 결과는 특칙 공제율을 쓰지 않으므로 제외한다.
+  const lthd982Echo = isAggregate ? undefined : result.unsold982Detail?.lthd982Echo;
+  const lthd982RatePct = lthd982Echo?.outcome === "table2_holding" ? lthd982Echo.holdingRatePct : undefined;
+  const lthd982Basis = `${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_2}① · 소득세법 §95② 표2`;
   const {
     exclusionLabel: lthdExclusionLabel,
     holdingFormula: lthHoldingFallbackFormula,
     residenceFormula: lthResidenceFallbackFormula,
   } = buildLthdFallbackFormulas({
     result, isAggregate, totalHoldingMs, residenceMs, useTable2, totalLth, lthSplit,
+    lthd982HoldingRatePct: lthd982RatePct,
   });
 
   if (mu) {
@@ -296,9 +303,11 @@ export function setLongTermDeductionItems(
       label: " 보유 기간분 장특",
       value: aggLthdTotals?.holdingAmount ?? lthHoldingStep?.amount ?? lthSplit.holdingAmount,
       formula: aggLthdTotals ? aggSumFormula((s) => s.holdingAmount) : (lthHoldingStep?.formula ?? lthHoldingFallbackFormula),
-      legalBasis: lthHoldingStep?.legalBasis ?? (useTable2 ? "소득세법 §95② 표2" : "소득세법 §95② 표1"),
+      legalBasis: lthHoldingStep?.legalBasis ?? (lthd982RatePct !== undefined ? lthd982Basis : useTable2 ? "소득세법 §95② 표2" : "소득세법 §95② 표1"),
       note: lthdExclusionLabel
         ? lthdExclusionLabel
+        : lthd982RatePct !== undefined && !lthHoldingStep
+          ? `${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_2}① 특칙 — 표2 보유기간별 공제율 ${lthd982RatePct}% (거주분 0)`
         : result.usageConversionDetail
           // §95⑤ — 보유분이 표2 단독이 아니라 「비주택 기간 표1 + 주택 기간 표2」다.
           ? `비주택 → 주택 용도변경 (§95⑤) — 비주택 ${result.usageConversionDetail.nonHousingYears}년 표1 ${result.usageConversionDetail.table1Pct}% + 주택 ${result.usageConversionDetail.housingYears}년 표2 ${result.usageConversionDetail.table2HoldingPct}%`
@@ -311,7 +320,7 @@ export function setLongTermDeductionItems(
       label: " 거주 기간분 장특",
       value: aggLthdTotals?.residenceAmount ?? lthResidenceStep?.amount ?? lthSplit.residenceAmount,
       formula: aggLthdTotals ? aggSumFormula((s) => s.residenceAmount) : (lthResidenceStep?.formula ?? lthResidenceFallbackFormula),
-      legalBasis: lthResidenceStep?.legalBasis ?? (useTable2 ? "소득세법 §95② 표2" : "소득세법 §95② 표1"),
+      legalBasis: lthResidenceStep?.legalBasis ?? (lthd982RatePct !== undefined ? lthd982Basis : useTable2 ? "소득세법 §95② 표2" : "소득세법 §95② 표1"),
       perAsset: ltResidencePerAsset,
     });
   }

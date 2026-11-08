@@ -398,8 +398,8 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
       {trackConflict && (
         <ToneCard tone="rose" title="조특법 §127⑦ — 두 감면은 택일입니다">
           <p className="text-xs">
-            「{trackConflict.first}」는 <b>{trackConflict.firstEffect}</b>,{" "}
-            「{trackConflict.second}」는 <b>{trackConflict.secondEffect}</b> 방식입니다. 조특법 §127⑦은 둘 이상의
+            「{trackConflict.first}」은(는) <b>{trackConflict.firstEffect}</b>,{" "}
+            「{trackConflict.second}」은(는) <b>{trackConflict.secondEffect}</b> 방식입니다. 조특법 §127⑦은 둘 이상의
             감면규정을 동시에 적용받는 경우 <b>거주자가 선택하는 하나만</b> 적용하도록 정하므로,
             둘 중 하나를 해제해야 계산을 진행할 수 있습니다.
           </p>
