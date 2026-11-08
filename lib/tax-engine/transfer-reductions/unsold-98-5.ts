@@ -19,11 +19,12 @@ import { computeHybridEffect } from "./unsold-hybrid";
 import { ineligibleHybrid } from "./unsold-hybrid";
 import type { UnsoldHybridIneligibleReason } from "./unsold-hybrid";
 import type { UnsoldHybridResult } from "./unsold-hybrid";
+import { UNSOLD_98_5_CONTRACT_FROM } from "./unsold-98-period-gates";
 
 // UTC 자정 파싱 (T suffix 금지)
 export const UNSOLD_98_5_CONTRACT_TO = new Date("2011-04-30");
-/** 사실상 시작 경계 — 2010.2.11 현재 미분양 컷오프 (그 이전 본인 계약은 미분양 모순, D-8) */
-export const UNSOLD_98_5_CONTRACT_FROM = new Date("2010-02-12");
+/** 시작 경계 — 법률 제10285호 부칙 제2조(2010.5.14. 이후 최초 계약). 상수 정본은 `unsold-98-period-gates.ts`(US-05·US-57) */
+export { UNSOLD_98_5_CONTRACT_FROM };
 
 // ─────────────────────────────────────────────────────────────────
 // §98의5
@@ -101,7 +102,7 @@ export function evaluateUnsold985(input: Unsold985Input): UnsoldHybridResult {
   ) {
     reasons.push({
       code: "OUT_OF_CONTRACT_PERIOD",
-      message: "최초 매매계약일이 적용기간(2010.2.11 현재 미분양 ~ 2011.4.30 계약) 외입니다 (법 §98의5①).",
+      message: "최초 매매계약일이 적용기간(2010.5.14.~2011.4.30. 최초 계약 — 2010.2.11 현재 미분양) 외입니다 (법 §98의5①, 법률 제10285호 부칙 제2조).",
       legalBasis,
     });
   }

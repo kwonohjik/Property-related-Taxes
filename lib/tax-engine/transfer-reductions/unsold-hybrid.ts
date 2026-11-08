@@ -21,6 +21,7 @@
  */
 
 import { applyRate } from "../tax-utils";
+import { unsold987TransferGateReasons } from "./unsold-98-period-gates";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import type { Unsold982LthdEcho } from "./unsold-hybrid-p4";
 import {
@@ -358,6 +359,7 @@ export function evaluateUnsold987(input: Unsold987Input): UnsoldHybridResult {
       legalBasis,
     });
   }
+  reasons.push(...unsold987TransferGateReasons(input.transferDate)); // 시행일 게이트(US-75: 2012.10.2. 이후 양도)
   if (!input.contractDate) {
     reasons.push({
       code: "MISSING_CONTRACT_DATE",

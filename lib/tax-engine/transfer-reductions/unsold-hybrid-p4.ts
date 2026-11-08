@@ -14,6 +14,7 @@
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { unsold982PeriodGateReasons } from "./unsold-98-period-gates";
 import {
   ineligibleHybrid,
   toHybridDate,
@@ -140,6 +141,7 @@ export function evaluateUnsold982(input: Unsold982Input): UnsoldHybridResult {
       legalBasis,
     });
   }
+  reasons.push(...unsold982PeriodGateReasons(input.contractDate, input.transferDate)); // US-17 계약일 하한 · US-18 시행일(2009.1.1.)
   if (input.transferDate.getTime() <= input.acquisitionDate.getTime()) {
     reasons.push({
       code: "TRANSFER_BEFORE_ACQUISITION",

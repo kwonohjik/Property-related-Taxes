@@ -21,6 +21,7 @@ import { computeHybridEffect } from "./unsold-hybrid";
 import { ineligibleHybrid } from "./unsold-hybrid";
 import type { UnsoldHybridIneligibleReason } from "./unsold-hybrid";
 import type { UnsoldHybridResult } from "./unsold-hybrid";
+import { unsold983TransferGateReasons } from "./unsold-98-period-gates";
 
 // UTC 자정 파싱 (T suffix 금지)
 export const UNSOLD_98_3_PERIOD_FROM_RESIDENT = new Date("2009-02-12");
@@ -192,7 +193,8 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
       });
     }
   }
-  // 4) 양도 시점
+  // 4) 양도 시점 — 시행일 게이트(US-20: 거주자 2009.3.25. / 비거주자 2009.5.21. 이후 양도)
+  reasons.push(...unsold983TransferGateReasons(input.transferDate, input.residencyType));
   if (input.transferDate.getTime() <= input.acquisitionDate.getTime()) {
     reasons.push({
       code: "TRANSFER_BEFORE_ACQUISITION",

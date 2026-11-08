@@ -22,6 +22,7 @@ import { ineligibleHybrid } from "./unsold-hybrid";
 import type { UnsoldHybridIneligibleReason } from "./unsold-hybrid";
 import type { UnsoldHybridResult } from "./unsold-hybrid";
 import { fullMonthsBetween } from "./unsold-98-8";
+import { unsold986AcquisitionGateReasons } from "./unsold-98-period-gates";
 
 // UTC 자정 파싱 (T suffix 금지)
 export const UNSOLD_98_6_RENTAL_CONTRACT_TO = new Date("2011-12-31");
@@ -112,7 +113,8 @@ export function evaluateUnsold986(input: Unsold986Input): UnsoldHybridResult {
       legalBasis: "조특령 §98의5②",
     });
   }
-  // 2) 양도 시점
+  // 2) 양도 시점 · 「2011.3.29. 현재 준공후미분양」 취득일 하한(US-22)
+  reasons.push(...unsold986AcquisitionGateReasons(input.acquisitionDate));
   if (input.transferDate.getTime() <= input.acquisitionDate.getTime()) {
     reasons.push({
       code: "TRANSFER_BEFORE_ACQUISITION",

@@ -617,7 +617,7 @@ export type RentalReductionFormVariant =
       type: "unsold_98_5";
       /** US-42 — 거주자 또는 국내사업장 없는 비거주자(법 §98의5①). 기본 true(D11-05 방식 — 화면에 보이고 끌 수 있다) */
       isEligibleSubject985: boolean;
-      /** 최초 매매계약일 (YYYY-MM-DD) — ~2011.4.30 */
+      /** 최초 매매계약일 (YYYY-MM-DD) — 2010.5.14~2011.4.30 */
       contractDate985: string;
       /** 분양가격 인하율 (%, DecimalInput) */
       priceReductionRatePct985: string;
