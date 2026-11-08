@@ -14,7 +14,7 @@
  * · BL-4 입력 요구 정합 — 취득시 기준시가를 총액 / 단가×면적으로 넣으면 같은 값, 비우면 ⑧ 차단(칸 standardPriceAtAcq) ∧ ⑫ 400 (⑧ ⊇ ⑫).
  * · BL-5 ⑤ 술어 — 축 A 토지 담보 승: 취득가액 강제 ∧ 취득시 기준시가 칸 ∧ 필요경비 «개산공제만». 보충 승은 강제하지 않는다.
  * · BL-6 숨은 필요경비(자본적지출·양도비)가 세액으로 새지 않는다.
- * · BL-7 범위 밖 — 일반건물·재개발 APT 지분 담보 승은 종전 사유로 계속 막는다.
+ * · BL-7 범위 밖 — 일반건물·입주권 지분 담보 승은 종전 사유로 계속 막는다(재개발 APT는 V-S1g로 K-4가 열렸다 — `transfer.route.bg-redev-fractional-win.anchor.test.ts`).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -169,12 +169,14 @@ describe("BL-6 숨은 필요경비(자본적지출 5,000만 · 양도비 2,000�
   });
 });
 
-describe("BL-7 범위 밖 — 일반건물·재개발 APT·입주권·겸용은 계속 막는다 (종류 게이트)", () => {
+describe("BL-7 범위 밖 — 일반건물·재개발 APT(시가·K-5)·입주권·겸용은 계속 막는다 (종류 게이트)", () => {
   const kind = (k: string, ...over: Record<string, unknown>[]) => land("a", 1, HALF, debt("700000000"), x({ assetKind: k }), ...over);
-  it("토지·주택은 열리고 일반건물·재개발 APT·입주권은 닫힌다", () => {
+  it("토지·주택은 열리고 일반건물·입주권은 닫힌다 — 재개발 APT는 K-4만 열리고 시가·K-5는 닫힌다", () => {
     expect(bgFractionalCollateralKindSupported(kind("land"))).toBe(true);
     expect(bgFractionalCollateralKindSupported(kind("housing"))).toBe(true);
-    for (const k of ["general_building", "redevelopment_apt", "right_to_move_in"]) expect(bgFractionalCollateralKindSupported(kind(k)), k).toBe(false);
+    for (const k of ["general_building", "right_to_move_in"]) expect(bgFractionalCollateralKindSupported(kind(k)), k).toBe(false);
+    expect(bgFractionalCollateralKindSupported(kind("redevelopment_apt"))).toBe(true);
+    expect(bgFractionalCollateralKindSupported(kind("redevelopment_apt", x({ bgAcquisitionMethod: "converted" })))).toBe(false);
   });
   it("겸용 주택·이월과세 토지는 닫힌다", () => {
     expect(bgFractionalCollateralKindSupported(kind("housing", x({ isMixedUseHouse: true })))).toBe(false);

@@ -18,6 +18,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { isRedevCarryoverDonorBasis } from "./redev-carryover-acq-mode";
+import { isFractionalOwnership } from "./transfer-tax-api-asset-basics";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-redevelopment";
 
@@ -124,6 +125,23 @@ export function redevPreApprovalExpensesUnused(asset: RedevPreApprovalAcqModeFie
 export function redevPreApprovalExpensesScenarioDependent(asset: RedevPreApprovalAcqModeFields): boolean {
   return isRedevCarryoverDonorBasis(asset as AssetForm) && asset.carryover?.useEstimatedAcquisition === true;
 }
+
+/**
+ * 원조합원 재개발 × 부담부증여 × 시가 모드 × 실지취득가액(K-4) × **지분 보유** — 「인가전 분 필요경비」(실비) 칸이 쓰이는지는 증여재산 평가의 승자가 정한다.
+ * 보충 승이면 실비를 공제하고, 담보(§66)·임대(§61⑤) 승이면 취득가액이 취득시 기준시가 × 채무비율로 강제되어 개산공제라 실비가 쓰이지 않는다.
+ * 지분 자산은 승자를 축(공유 소유 / 지분 분할) 없이 알 수 없어 이 leaf가 칸을 숨기지 못한다(`redevPreApprovalExpensesUnused`는 지분 자산의 담보 승을 `false`로 읽는다) —
+ * 칸을 두고 안내한다(계획서 `bg-redev-fractional-collateral-win.plan.md` §3.4·Q-2 b). 승계조합원은 실비를 쓴다(안내 없음).
+ */
+export function redevPreApprovalExpensesWinnerDependent(asset: RedevPreApprovalAcqModeFields & { ownershipNumerator?: string; ownershipDenominator?: string }): boolean {
+  if (asset.transferType !== "burdened_gift" || asset.assetKind !== "redevelopment_apt" || asset.redevIsSuccessorMember === "yes") return false;
+  if (asset.bgValuationMode !== "sangjeungbeop_market" || redevPreApprovalAcqMode(asset) !== "burdened_gift") return false;
+  return isFractionalOwnership(asset as AssetForm);
+}
+
+/** 위 술어가 참일 때 칸 안내 문장. */
+export const REDEV_PRE_APPROVAL_WINNER_DEPENDENT_NOTE =
+  "시가 모드에서 담보평가(「상속세 및 증여세법」 제66조)나 임대평가가 증여재산 평가액으로 정해지면 이 금액은 쓰이지 않고 개산공제(「소득세법 시행령」 제163조 제6항)로 계산합니다. " +
+  "보충적평가(기준시가)나 시가가 정해지면 이 금액을 공제합니다 (「소득세법 시행령」 제166조 제1항 제1호).";
 
 /** ③ 「인가전 분 필요경비」 칸 안내 · ④ 보라 안내가 함께 쓰는 문장(`redevPreApprovalExpensesScenarioDependent`일 때). */
 export const REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE =
