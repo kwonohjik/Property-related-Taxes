@@ -160,8 +160,12 @@ function ApportionedPriceBlock({
   }
 
   return (
-    <div data-field="standardPriceAtTransfer">
+    <div data-testid="sale-std-price-transfer">
+      {/* 입력칸 이동 앵커는 입력 칸에 단다 — 감싸는 div에 달면 첫 포커스 요소인 연도 선택으로 커서가 간다.
+          단가 × 면적 모드(토지·비주거 건물)는 사용자가 넣는 칸이 ㎡당 단가라 그 칸에도 단다(DOM 순서상 먼저라 이동이 단가 칸으로 간다). */}
       <StandardPriceInput
+        data-field="standardPriceAtTransfer"
+        fieldPricePerSqm="standardPriceAtTransfer"
         propertyKind={propertyKind}
         totalPrice={standardPriceAtTransfer}
         onTotalPriceChange={onStandardPriceAtTransferChange}
