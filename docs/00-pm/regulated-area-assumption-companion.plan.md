@@ -137,11 +137,23 @@
 | 새 스키마 폼 `migratePersistedTransferForm` | 남음 |
 | sessionStorage 복원 `mergePersistedWizard` | 남음 |
 | 옛 스키마(`assets` 없음) `migratePersistedTransferForm` → `migrateLegacyForm` | 남음 |
-| 단건 이력 재개가 쓰는 `updateFormData`(단순 merge) | 남음 — **`resumeTransferRecord` 전체를 돌린 것은 아니다**(그 함수 안의 `migrateAsset`·`clearInheritedStaleAcqInputs`·`moveLinkedCountExclusionsToRows`는 자산·행만 만진다고 읽었을 뿐 실행 측정 아님 — 확인 필요) |
+| 단건 이력 재개 — **`resumeTransferRecord` 전체 실행으로 재측정(9-2)** | 남음 |
 | 다건 `migrateMultiForm`의 건별 폼 | 남음 |
 
 복원 뒤 고지(자산 2개 모두 시·도 생략 주소): 컴패니언 줄만 남는다(`["1:transfer","1:acquisition"]`) — §9 V-1 도달 시 동작과 같다.
 
 **결론**: 복원 경로는 값을 지우지 않는다 — 저장물에 있으면 되살아난다. 그러나 **새로 저장되는 폼에는 생기지 않는다**: 이 저장소 이력에서 운영 코드가 폼 전역 `regionCode`를 쓴 흔적을 찾지 못했다(`git log -G` 두 패턴 — `updateFormData({…regionCode…})`는 테스트 `handoff-patch-keys-s11-7.anchor.test.ts`에서만, 자산 카드 쪽 `regionCode: v.pnu` 계열은 자산-수준). 도입 커밋 `2046d3f06`(2026-06-17)도 store·API 배선만 추가했다. 따라서 옛 저장물에 이 값이 들어 있을 가능성은 낮고, 있어도 영향은 «첫 자산은 코드로 판정, 고지는 컴패니언만»이며 ④와 일치한다. **검색한 패턴 밖의 쓰기 경로는 배제하지 못했다**(`-G` 두 패턴에 한정).
 
-미해결로 남는 것: ① ~~V-1 옛 세션 복원 경로~~ → 위 9-1로 측정(복원은 되살림 · 쓰기 경로는 패턴 한정으로 못 찾음) ② V-2 컴패니언 입주권 고지 줄의 «세액 영향 없음»을 이 브랜치에서 재측정하지 않음.
+### 9-2. `resumeTransferRecord` 전체 실행 측정 (2026-11-09 · 워크트리 `-m3` · throwaway probe, 삭제함 — 결과 원본 `scratchpad/m3-probe.json`)
+
+jsdom에서 `resumeTransferRecord(record, router)`를 그대로 호출(스토어는 실물, 라우터만 `push` 기록). 시료: 자산 2개(둘 다 `강남구 테헤란로 1`) + 최상위 `regionCode "1168010100"`.
+
+| 시료 | 결과 |
+|---|---|
+| 단건 record, 직전 세션에 다른 코드 `9999999999`가 있던 스토어 | 반환 `null` · 재개 후 `form.regionCode = "1168010100"`(record 값) · 고지 줄 `["1:transfer","1:acquisition"]` · `push("/calc/transfer-tax")` |
+| 단건 record에 `regionCode` 없음 + 직전 세션 `9999999999` | 재개 후 `regionCode` 없음(`reset()`이 직전 값을 지움 — 새지 않는다) |
+| 다건 record(`properties[0].form.regionCode`) | 반환 `null` · 재개 후 `properties[0].form.regionCode = "1168010100"` · `push("/calc/transfer-tax/multi")` |
+
+**결론**: 9-1의 «이력 재개는 남음»이 함수 전체 실행으로 확인됐다 — record에 있으면 그 값이, 없으면 비어 있다(직전 세션 값은 새지 않는다). 쓰기 경로 검색이 두 패턴에 한정된다는 9-1의 한계는 그대로다.
+
+미해결로 남는 것: ① ~~V-1 옛 세션 복원 경로~~ → 9-1·9-2로 측정(복원은 되살림 · 쓰기 경로는 패턴 한정으로 못 찾음) ② V-2 컴패니언 입주권 고지 줄의 «세액 영향 없음»을 이 브랜치에서 재측정하지 않음.
