@@ -11,6 +11,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
@@ -173,10 +174,17 @@ export function Unsold983InputForm({
             <ToggleCard
               tone="rose"
               title="미분양주택 확인"
-              description="령 §98의3①1~8호의 미분양주택 — 2009.2.11까지 분양계약이 체결되지 않아 2009.2.12 이후 선착순으로 공급된 주택, 2009.2.12 이후 입주자 계약일이 도래하는 신규 공급 주택, 주택건설사업자(20호 미만)·주택도시보증공사·시공자·기업구조조정리츠·건축주·신탁업자가 공급하는 주택 (조특령 §98의3①). 시장·군수·구청장이 미분양주택임을 확인해 날인한 매매계약서가 있으면 켜세요"
+              description="령 §98의3①1~8호의 미분양주택 — 선착순 공급분·2009.2.12 이후 계약일 도래 신규 공급분 등 (조특령 §98의3①)"
               checked={value.isUnsoldConfirmed983}
               onCheckedChange={(v) => onChange({ isUnsoldConfirmed983: v })}
             />
+            <CollapsibleHintCard tone="rose" summary="미분양주택의 범위 (령 §98의3①1~8호)">
+              <p>
+                2009.2.11까지 분양계약이 체결되지 않아 2009.2.12 이후 선착순으로 공급된 주택, 2009.2.12 이후 입주자 계약일이 도래하는
+                신규 공급 주택, 주택건설사업자(20호 미만)·주택도시보증공사·시공자·기업구조조정리츠·건축주·신탁업자가 공급하는 주택이
+                포함됩니다. 시장·군수·구청장이 미분양주택임을 확인해 날인한 매매계약서가 있으면 켜세요.
+              </p>
+            </CollapsibleHintCard>
             <ToggleCard
               tone="rose"
               title="사업주체와 최초 매매계약"

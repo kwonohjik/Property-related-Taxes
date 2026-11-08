@@ -13,6 +13,8 @@ const UNSOLD_983_REDUCTION = {
   residencyType983: "resident" as const,
   houseType983: "purchased" as const,
   contractDate983: new Date("2009-06-15"),
+  // 취득(2023)이 2010.2.11 이후 — 계약금 전액 완납일 요건(US-21) 충족
+  downPaymentCompletedDate983: new Date("2009-06-15"),
   isOutsideSeoulNotDesignated983: true,
   isOverconcentration983: false,
   isUnsoldConfirmed983: true,
