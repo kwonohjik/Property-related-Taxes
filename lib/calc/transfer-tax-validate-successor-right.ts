@@ -56,6 +56,9 @@ export function validateSuccessorRightAsset(
   // ── 취득일 ── 이월과세는 취득일 칸이 화면에 없다 — ④와 같은 leaf(원값 → 증여 등기일)로 읽는다(계획서 `successor-right-carryover-validation.plan.md` Q-1 a).
   const acqDate = primaryAcquisitionDateOf(asset);
   if (!acqDate) {
+    // 이월과세의 취득일은 증여 등기접수일 하나다(L21) — 화면에 취득일 칸이 없으니 칸 없는 `acquisitionDate`가 아니라 등기접수일 칸을 지목한다(막다른 길 방지).
+    if (asset.acquisitionCause === "carryover_gift")
+      return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일을 입력하세요.`);
     return fieldError("acquisitionDate", `${label}: 조합원입주권 승계취득일을 입력하세요.`);
   }
 
