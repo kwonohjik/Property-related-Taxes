@@ -95,6 +95,62 @@
   - #2977 (US-19·US-31·US-35): US-19 「결과 고지」 · US-31 「확정 해제 + ⑧ 정합 검사」 · US-35 「⑧ 차단 + 엔진 분리」 → Q-23~Q-25 관련
 - 미결: Q-9 · Q-16 · Q-18~Q-22 · Q-26~Q-30.
 
+### 0-4. 수정 실행 그룹 (동시 처리 묶음 · 2026-11-08)
+
+열린 66건(US-36 ◐ 제외)을 **같은 단계 안의 그룹끼리는 주로 고치는 파일이 겹치지 않도록** 묶었다. 한 그룹 = PR 1개 = worktree 1개다. 같은 단계의 그룹은 동시에 진행하고, 단계 사이에는 앞 단계 머지를 기다린다. 파일은 각 항목 「위치」·「수정 방향」 인용 기준이다.
+
+**공용 파일 주의 (줄 수는 master `d00599c02` 실측)**
+- `TR/unsold-hybrid-p3.ts` 747줄: §98의3·§98의5·§98의6 평가 함수가 한 파일에 있다. 그대로 두면 B·C·D2·K 그룹이 같은 파일을 동시에 고치고 800줄을 넘는다.
+- `LC/transfer-tax-api-reductions.ts` 755줄 · `CR/DetailedStatementHelpers.ts` 793줄: 입력 필드를 추가하는 그룹(A·B)과 표시 그룹(E)이 각각 늘린다.
+- 입력 필드 추가 그룹(A US-15 · B US-03·US-21 · H US-72)은 ⑫ `lib/api/transfer-tax-schema-reductions.ts` · ⑭ `AT/route-reductions-mapper.ts` · ⑧ `LC/transfer-tax-validate-reductions.ts`(657줄)에 추가만 한다. 서로 다른 블록이라 충돌은 작지만 머지 순서대로 rebase한다.
+- 폼 9개(`CT/Unsold98*InputForm.tsx`)를 통째로 건드리는 그룹(J US-86·US-87 등)은 폼에 필드를 넣는 그룹이 모두 머지된 뒤 마지막에 한다.
+
+**0단계 — 코드 수정 없음, 모두 동시**
+
+| 그룹 | 항목 | 할 일 |
+|---|---|---|
+| 0-A 덮였는지 확인 | US-27(NH-38) · US-28(NH-39) · US-57(NH-60) · US-66(NH-53) · US-67(NH-65) · US-73(NH-55) · US-77(NH-66) · US-79(NH-68) · US-85(NH-82) | §99 리뷰의 같은 원인 수정이 §98 시리즈에도 닿는지 probe로 실측한다. 닿으면 ※ 해결로 기록하고, 아니면 아래 그룹으로 넘긴다 |
+| 0-B 법령 확인 | US-10 · US-11 (V-3) | 2009~2018 누진세율표·장특 표1 연혁을 원문으로 확인한다 |
+| 0-C 사용자 결정 | Q-9(US-39) · Q-12(US-33) · Q-16(US-52) · Q-18(US-58) · Q-19(US-41·US-46) · Q-22(US-24·US-25·US-60) · Q-26·Q-30(US-27·US-28) · Q-27(US-51·US-66·US-67) | 한 번에 묻는다. 답이 오면 2단계 그룹이 열린다 |
+| 0-D 선행 분리 PR | — | 위 세 공용 파일을 동작 변경 없이 나눈다(`unsold-hybrid-p3.ts` → §98의3 / §98의5 / §98의6). **1단계보다 먼저 머지**한다 |
+
+**1단계 — 결정이 끝났거나 필요 없는 것, 0-D 머지 후 동시 8그룹**
+
+| 그룹 | 항목 | 주로 고치는 파일 |
+|---|---|---|
+| A §98의2 장특·입주 사실 | US-02(High) · US-16(Q-2) · US-54 · US-55 · US-15(Q-1) | `TE/transfer-tax-lthd-982-step.ts` · `TE/transfer-tax-lthd-steps.ts` · `TE/data/lthd-table2-era.ts` · `TR/unsold-hybrid-p4.ts` · `CT/Unsold982InputForm.tsx` |
+| B §98의3 자기건설 | US-03(High) · US-04(High, Q-7 안내) · US-21 · US-56 | §98의3 평가 파일(0-D 분리 후) · `CT/Unsold983InputForm.tsx` |
+| C 경계·시행일 게이트 | US-05(High) · US-17 · US-18 · US-20 · US-22 · US-75 (· US-57은 0-A 결과에 따라) | `TR/period-check.ts` · 각 조문 기간 상수 · `TR/metadata.ts` 라벨 |
+| D1 §98 5년 경계·상수 | US-14 · US-37 · US-49 · US-50 · US-53 | `TE/tax-utils.ts` · `TE/civil-period.ts` · `TR/unsold-hybrid-p5.ts` · `TE/transfer-tax-rate-calc.ts` · `CT/Unsold98InputForm.tsx` |
+| E 하이브리드 안분·표시 | US-12(High) · US-76 · US-78 · US-81 · US-63 · US-68 (· US-77·US-79는 0-A 결과에 따라) | `TR/unsold-hybrid.ts` `computeHybridEffect` · `CR/DetailedStatement*` · `CR/IncomeDeductionDetailCard.tsx` |
+| F ID 재분류 §127⑦ | US-45(Q-8) · US-84 | `TR/income-deduction-router.ts` · `CT/UnifiedReductionPanel.tsx` · `CT/reduction-short-labels.ts` · `TE/transfer-reduction-type-labels.ts` |
+| G 지방소득세 가산세 | US-29 | `TE/transfer-tax-penalty.ts` · `TE/transfer-tax-amendment.ts` · `CR/local-income-tax-display.ts` |
+| H 기준시가 조회·PHD | US-32 · US-72 | `lib/hooks/useStandardPriceLookup.ts` · `lib/utils/land-price-year.ts` · `CT/ReductionPhdInput.tsx` · `CT/ReductionStdPriceSection.tsx` |
+
+- 겹침: C와 B·D2는 기간 상수 한 줄씩만 닿는다(US-05의 `UNSOLD_98_5_CONTRACT_FROM` 등). F와 C는 `TR/metadata.ts`의 다른 필드를 고친다.
+
+**2단계 — 0-B·0-C 결과와 1단계 머지 후, 동시 7그룹**
+
+| 그룹 | 항목 | 전제 |
+|---|---|---|
+| D2 §98의5 인하율 | US-58 · US-59(Q-5) | Q-18 |
+| K §98의6 2호 임대기간 | US-24 · US-25 · US-60 | Q-22 |
+| L 매매계약일 칸 | US-41 · US-46 | Q-19 |
+| M 가산세·수정신고 | US-27 · US-28 | Q-26·Q-30 · 0-A · G 머지(같은 `transfer-tax-amendment.ts`) |
+| N 결과 PDF·신고서 | US-51 · US-66 · US-67 | Q-27 · 0-A |
+| O 집계·이월과세·15호 | US-39(Q-9) · US-33(Q-12) · US-52(Q-16) | 각 결정. 서로 파일이 달라 결정 순서대로 따로 PR로 내도 된다 |
+| P 세율표·표1 연혁 | US-10(High) · US-11(High) | 0-B · A 머지(같은 장특 파일) |
+
+**3단계 — 마지막, 동시 3그룹 (기계적 정리)**
+
+| 그룹 | 항목 | 이유 |
+|---|---|---|
+| I 법령 인용 | US-82 · US-83 · US-62 · US-69 (· US-85는 0-A 결과에 따라) | `TE/legal-codes/` 상수와 manifest 등록 후 엔진 여러 파일의 인용 문자열을 바꾼다. 앞 그룹의 엔진 수정이 끝난 뒤 한 번에 한다 |
+| J 입력 폼 정비 | US-23 · US-26 · US-61 · US-80(Q-6) · US-86 · US-87 | 폼 9개의 안내 문구와 ToneCard·라벨 규칙을 함께 고친다. 폼에 필드를 넣는 A·B·D2·K·L 머지 후 |
+| Q 정리 | US-64 · US-65 · US-74 (· US-73은 0-A 결과에 따라) | 주석·stub·anchor 보강. ⑫·⑭ 정리가 필드 추가 그룹과 겹치므로 마지막 |
+
+- 단계별 최대 동시 PR: 0단계 4(0-D만 PR) · 1단계 8 · 2단계 7 · 3단계 3. High 7건은 모두 1·2단계에 있다(US-02 A · US-03·US-04 B · US-05 C · US-12 E · US-10·US-11 P).
+
 ### 0-3. 항목별
 
 상태: ✅ 해결 · ◐ 다른 결론 · 열림. 비고의 「결정·미반영」은 §3 결정이 났지만 수정 PR이 없는 것, 「NH-n 수정이 덮는지 확인 필요」는 본문이 §99 리뷰의 같은 원인 결함으로 적었고 그 NH가 고쳐졌으나 §98 시리즈까지 닿는지 확인하지 않은 것이다.
