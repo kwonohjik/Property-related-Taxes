@@ -45,7 +45,7 @@ export const REDUCTION_TYPE_LABELS: Record<string, string> = {
   new_99_3: "신축주택 과세특례 (§99의3)",
   new_99_4_rural: "농어촌주택 (§99의4)",
   new_99_4_hometown: "고향주택 (§99의4)",
-  unsold_98: "미분양 분리과세 (§98)",
+  unsold_98: "미분양 국민주택 세율 20% 특례 (§98)",
   unsold_98_2: "지방 미분양 (§98의2)",
   unsold_98_3: "서울 외 미분양 (§98의3)",
   unsold_98_4: "비거주자 일반주택 (§98의4)",

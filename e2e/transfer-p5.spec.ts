@@ -27,7 +27,7 @@ test.describe("양도세 P5", () => {
     // ── Step5 감면: §98 폼 ──
     await page.getByRole("button", { name: "감면·공제" }).first().click();
     await expandReductionCategory(page, /미분양주택/);
-    const item98 = page.getByText("§98 — 미분양 분리과세 20%", { exact: false }).first();
+    const item98 = page.getByText("§98 — 미분양 국민주택 세율 20% 특례", { exact: false }).first();
     await expect(item98).toBeVisible();
     await item98.click();
     await expect(page.getByText(/국민주택규모 이하/).first()).toBeVisible();

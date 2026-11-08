@@ -29,8 +29,8 @@ import { redevMemberNewHouseScope } from "@/lib/calc/redev-field-scope";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import {
-  isIncomeDeductionTrack,
-  isTaxAmountTrack,
+  findTrack127_7Conflict,
+  track127_7EffectLabel,
 } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import {
 } from "@/components/calc/results/shared/ExpandToggleButton";
@@ -344,18 +344,23 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
    * 된다(코드리뷰 D10-01). 조문이 「그 거주자가 **선택하는** 하나」라고 정하므로 자동으로
    * 고르지 않고 사용자가 택하게 한다 — 여기서 사유와 비교 방법을 안내한다.
    *
-   * 판정은 엔진 단일 소스(`isIncomeDeductionTrack`/`isTaxAmountTrack`)를 재사용한다.
+   * 판정은 엔진 단일 소스(`findTrack127_7Conflict`)를 재사용한다. §98·§98의2(세율·장특 특례)는 보유연수와 무관하게 다른 감면과 택일이다(US-45 Q-8 (a)).
    */
   const trackConflict = useMemo(() => {
     if (!acquisitionDate || !transferDate) return null;
     const within5 = isWithin5YearsCheck(new Date(acquisitionDate), new Date(transferDate));
     const types = reductions.map((r) => r.type);
-    const ded = types.find((t) => isIncomeDeductionTrack(t, within5));
-    const tax = types.find((t) => isTaxAmountTrack(t, within5));
-    if (!ded || !tax) return null;
+    const conflict = findTrack127_7Conflict(types, within5);
+    if (!conflict) return null;
     const label = (t: string) =>
       REDUCTION_METADATA[t as keyof typeof REDUCTION_METADATA]?.uiLabel ?? t;
-    return { ded: label(ded), tax: label(tax) };
+    const { first, second } = conflict;
+    return {
+      first: label(first.type),
+      firstEffect: track127_7EffectLabel(first.type, first.kind),
+      second: label(second.type),
+      secondEffect: track127_7EffectLabel(second.type, second.kind),
+    };
   }, [acquisitionDate, transferDate, reductions]);
 
   /**
@@ -393,8 +398,8 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
       {trackConflict && (
         <ToneCard tone="rose" title="조특법 §127⑦ — 두 감면은 택일입니다">
           <p className="text-xs">
-            「{trackConflict.ded}」는 <b>양도소득금액을 차감</b>하고,{" "}
-            「{trackConflict.tax}」는 <b>산출세액을 감면</b>합니다. 조특법 §127⑦은 둘 이상의
+            「{trackConflict.first}」는 <b>{trackConflict.firstEffect}</b>,{" "}
+            「{trackConflict.second}」는 <b>{trackConflict.secondEffect}</b> 방식입니다. 조특법 §127⑦은 둘 이상의
             감면규정을 동시에 적용받는 경우 <b>거주자가 선택하는 하나만</b> 적용하도록 정하므로,
             둘 중 하나를 해제해야 계산을 진행할 수 있습니다.
           </p>

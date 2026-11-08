@@ -186,7 +186,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     article: TRANSFER_REDUCTION_ARTICLE.UNSOLD_98,
     category: "unsold_housing",
     effectCategory: "separated_taxation",
-    uiLabel: "§98 — 미분양 분리과세 20%",
+    uiLabel: "§98 — 미분양 국민주택 세율 20% 특례",
     effectLabel: "양도세 세율 20% 단일 (§104① 불구) OR 종합소득 합산 선택 — 미분양 국민주택 (취득 1995.11.1~1997.12.31 / 1998.3.1~12.31, 5년+ 보유·임대)",
     // P5 (2026-06-12): 본격 구현 — evaluateUnsold98 + forceFlatRate20 (1호 경로. 2호 종합소득은 범위 외)
     isFullyImplemented: true,
