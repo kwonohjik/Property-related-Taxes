@@ -13,8 +13,6 @@ import { successorGiftHouseholdStartIssue } from "@/lib/tax-engine/one-house/red
 import { z } from "zod";
 import { successorAptMaxResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
 import { toDate } from "./date-coerce";
-import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
-import { redevOriginalMemberAcquiredAfterApproval } from "@/lib/calc/redev-original-member-order";
 import { refineBgDonorBuilt } from "./transfer-tax-schema-donor-built";
 import { refineGbBgCarryoverBundled } from "./transfer-tax-schema-donor-built";
 import { refineGbBgCarryoverParts } from "./transfer-tax-schema-donor-built";
@@ -22,6 +20,7 @@ import { refineBgMarketValueByPart } from "./transfer-tax-schema-donor-built";
 import { collateralForcesStdAcquisition } from "./transfer-tax-schema-collateral-win";
 import { bgActualAcquisitionMissing } from "./transfer-tax-schema-collateral-win";
 import { refineCarryoverTaxation } from "./transfer-tax-schema-companion-refines";
+import { refineRedevOriginalMemberOrder } from "./transfer-tax-schema-redev-order-refine";
 import { carryoverDebtPiecesUnsupportedReason } from "@/lib/tax-engine/carryover-debt-pieces-scope";
 import { refineMixedUsePresence } from "./transfer-tax-schema-mixed-use";
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
@@ -352,21 +351,8 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
 
   // 원조합원 — 종전 부동산(주택·토지)을 인가일 뒤에 취득했으면 조합원으로부터 취득한 승계조합원이다(소득세법 §88 9호). 승계조합원 모드를 켜지 않고 보내면 원조합원 산식
   //   (출자 자산 기준 §166 · 조특법 §99·§99의3 조합원 갈래)으로 계산됐다. ⑧ `validateRedevelopmentAsset`(주택 출자·토지만 출자 모두)과 같은 술어 —
-  //   함께 양도 컴패니언은 이 단건 refine 밖이다. 승계 입주권(`isSuccessorRightToMoveIn`)은 ⑧도 별도 검증(`validateSuccessorRightAsset`)이라 제외한다.
-  if (
-    data.redevelopment &&
-    data.isSuccessorRightToMoveIn !== true &&
-    redevOriginalMemberAcquiredAfterApproval({
-      isSuccessorMember: data.redevelopment.isSuccessorMember,
-      acquisitionDate: data.acquisitionDate,
-      approvalDate: data.redevelopment.approvalDate,
-    })
-  ) {
-    issue(
-      ["redevelopment", "approvalDate"],
-      `관리처분계획 인가일은 종전 부동산 취득일 이후일 수 없습니다 — 인가 뒤에 취득했으면 승계조합원(redevelopment.isSuccessorMember)으로 보내세요 (${REDEVELOPMENT.RIGHT_DEFINITION} · 사전-2019-법령해석재산-0649)`,
-    );
-  }
+  //   함께 양도 컴패니언도 같은 leaf를 부른다(`transfer-tax-schema.ts` 컴패니언 루프).
+  refineRedevOriginalMemberOrder(data, ctx, []);
 
   // 승계조합원 — 취득가액은 승계취득가액(매매 실지거래가액 · 증여 신고가액)이고, 없으면 엔진이 계산을 중단한다(`redevelopment-successor.ts` —
   //   §166④1호 평가액 `rightsValue`로 대신하지 않는다 · 계획서 redev-successor-bg-acq-method Q-2 a) — 컴패니언 arm은 `fixedAcquisitionPrice`로 이미 막는데 주 자산은
