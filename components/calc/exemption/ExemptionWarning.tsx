@@ -34,7 +34,7 @@ function WarningModal({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700 ml-4 mt-0.5"
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-4 mt-0.5"
             aria-label="닫기"
           >
             ✕

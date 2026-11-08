@@ -576,7 +576,7 @@ export function RtmsSimilarSalesModal({
                 <button
                   type="button"
                   onClick={handleSelectAll}
-                  className="text-caption text-indigo-700 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-800 underline underline-offset-2"
+                  className="text-caption text-indigo-700 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 underline underline-offset-2"
                 >
                   {allSelected ? "전체 해제" : "전체 선택"}
                 </button>

@@ -299,7 +299,7 @@ export function StockValuationForm({
           <button
             type="button"
             onClick={() => setShowAddPanel(false)}
-            className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700"
+            className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
           >
             취소
           </button>

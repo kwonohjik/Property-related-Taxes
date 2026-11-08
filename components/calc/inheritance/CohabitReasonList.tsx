@@ -114,7 +114,7 @@ function ReasonRow({ reason, index, onUpdate, onRemove }: ReasonRowProps) {
         <button
           type="button"
           onClick={onRemove}
-          className="ml-auto text-micro text-rose-700 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-800 font-medium"
+          className="ml-auto text-micro text-rose-700 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-200 font-medium"
           data-testid={`cohabit-reason-remove-${index}`}
           aria-label={`${index + 1}번 사유 삭제`}
         >
