@@ -45,6 +45,10 @@ const precise = {
   isRegulatedArea: true,
 } as NonNullable<MixedUseAssetInput["multiHouse"]>;
 
+/** 「전체 엔진 계산 과정」 표(산식 문장이 같은 문구를 되풀이한다) 밖의 카드 라벨만 센다 */
+const cardLabels = (re: RegExp) =>
+  screen.queryAllByText(re).filter((el) => !el.closest("section")?.textContent?.includes("전체 엔진 계산 과정 ("));
+
 describe("겸용 결과 카드 — §95② 배제 표시", () => {
   it("MC-01: 🔴 **fallback 경로**에서도 「장기보유공제 (배제)」가 뜬다 (종전 「표1, 0.0%」)", () => {
     const b = run({ surchargeFallback: { isRegulatedArea: true, householdHousingCount: 2 } });
@@ -62,7 +66,7 @@ describe("겸용 결과 카드 — §95② 배제 표시", () => {
     render(<MixedUseResultCard breakdown={b} />);
     // 「배제」는 1개(주택분), 「표N」 라벨도 1개(상가분) — 둘이 공존하는 것이 정상이다.
     expect(screen.getAllByText("장기보유공제 (배제)")).toHaveLength(1);
-    expect(screen.getAllByText(/장기보유공제 \(표\d/)).toHaveLength(1);
+    expect(cardLabels(/장기보유공제 \(표\d/)).toHaveLength(1);
   });
 
   it("MC-02: 🔑 근사임을 **함께 말한다** — 목록 미입력 안내", () => {
@@ -87,7 +91,7 @@ describe("겸용 결과 카드 — §95② 배제 표시", () => {
     render(<MixedUseResultCard breakdown={b} />);
     expect(screen.queryByText("장기보유공제 (배제)")).not.toBeInTheDocument();
     // 주택분 + 상가분 = 2개 (배제 시 1개로 줄어드는 것이 MC-01b)
-    expect(screen.getAllByText(/장기보유공제 \(표\d/)).toHaveLength(2);
+    expect(cardLabels(/장기보유공제 \(표\d/)).toHaveLength(2);
   });
 
   it("MC-05: 🔑 주택 수 표시는 **엔진이 확정한 값**이다 (카드가 세지 않는다)", () => {
