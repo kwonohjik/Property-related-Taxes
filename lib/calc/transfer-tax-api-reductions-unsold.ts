@@ -84,6 +84,8 @@ export function toUnsold982Payload(r: Extract<AssetReductionForm, { type: "unsol
     contractDate982: r.contractDate982 || undefined,
     isNonCapitalUnsold982: r.isNonCapitalUnsold982,
     isFirstOrFcfsContract982: r.isFirstOrFcfsContract982,
+    // 미선택("") = 모름 — 엔진은 "no"만 적용한다(⑧도 미선택을 차단)
+    occupiedAtContract982: r.occupiedAtContract982 || undefined,
   };
 }
 

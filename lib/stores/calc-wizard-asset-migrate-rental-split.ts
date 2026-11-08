@@ -258,6 +258,7 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           contractDate982: "",
           isNonCapitalUnsold982: false,
           isFirstOrFcfsContract982: false,
+          occupiedAtContract982: "",
           ...r,
         };
       }

@@ -20,6 +20,7 @@ import { redevMemberGateCause } from "./new-99-redev-member";
 import { isLandOnlyOriginalMember, withRedevMemberGateNotice } from "./new-99-redev-member";
 import { evaluateUnsold988, type Unsold988Result } from "./unsold-98-8";
 import { type UnsoldHybridResult } from "./unsold-hybrid";
+import { unsold982FormulaStepsOf, unsold982OutcomeLabel } from "./unsold-hybrid-p4";
 import {
   evaluateAnyHybridFromReduction,
   ALL_HYBRID_IDS,
@@ -512,11 +513,14 @@ export function buildIncomeDeductionStep(
   // 특칙 전용 (§98의2 장특 표2·기본세율 / §98 세율 20%) — 차감·감면 없음, 안내 (P4·P5)
   if (resolution.specialOnlyMode) {
     const is98 = resolution.stepLabel?.startsWith("§98 ");
+    const echo982 = resolution.unsold982Detail?.lthd982Echo;
     return {
-      label: `${resolution.stepLabel} — ${is98 ? "세율 20% 특례 적용" : "특칙 적용 (장특 표2·기본세율)"}`,
+      label: `${resolution.stepLabel} — ${is98 ? "세율 20% 특례 적용" : echo982 ? unsold982OutcomeLabel(echo982.outcome) : "특칙 적용 (장특 표2·기본세율)"}`,
       formula: is98
         ? "감면세액 없음 — 양도소득세 세율 20% 단일 적용 (§104① 불구, 법 §98①1호)"
-        : "감면세액 없음 — 장기보유특별공제 표2 보유기간별 공제율 + §104①1호 기본세율 적용 (법 §98의2①)",
+        : echo982
+          ? (unsold982FormulaStepsOf(echo982)[0].formula ?? "")
+          : "감면세액 없음 — 장기보유특별공제 표2 보유기간별 공제율 + §104①1호 기본세율 적용 (법 §98의2①)",
       amount: 0,
       legalBasis: resolution.legalBasis ?? "",
     };

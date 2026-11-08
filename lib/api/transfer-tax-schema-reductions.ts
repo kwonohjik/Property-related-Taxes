@@ -382,6 +382,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
     contractDate982: z.string().date().optional(),
     isNonCapitalUnsold982: z.boolean().optional(),
     isFirstOrFcfsContract982: z.boolean().optional(),
+    /** US-15 · Q-1 (A) — 매매계약일 현재 입주 사실 3상태(미전송 = 모름 → 엔진 불성립). ⑫에 없으면 침묵 stripping된다. */
+    occupiedAtContract982: z.enum(["yes", "no", "unknown"]).optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
   // §98의3 — P3 본격 구현 (2026-06-12): 하이브리드 본 필드 (⑫ — 누락 시 침묵 strip)

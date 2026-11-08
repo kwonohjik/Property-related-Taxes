@@ -198,7 +198,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     effectCategory: "cgt_with_normal_rate_and_ltsd",
     uiLabel: "§98의2 — 지방 미분양 일반세율",
     // M-1 (2026-06-12): 법 ①1호 원문 "표2에 따른 보유기간별 공제율" — 표 1 오기 정정
-    effectLabel: "장특공제(표2 보유기간별, 연 4%·최대 40%) + 기본 누진세율 — 감면세액 없음 (취득 2008.11.3~2010.12.31, 중과 배제)",
+    effectLabel: "장특공제(표2 보유기간별 — 양도일 시행 표2: ~2020.12.31. 연 8%·최대 80% / 2021.1.1.~ 연 4%·최대 40%) + 기본 누진세율 — 감면세액 없음 (취득 2008.11.3~2010.12.31, 중과 배제)",
     // P4 (2026-06-12): 본격 구현 — evaluateUnsold982 + STEP 4.05 표2 override
     isFullyImplemented: true,
   },

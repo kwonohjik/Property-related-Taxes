@@ -638,10 +638,11 @@ function calculateTransferTaxCore(
   });
   longTermHoldingDeduction = lthd982.longTermHoldingDeduction;
   longTermHoldingRate = lthd982.longTermHoldingRate;
+  rental97LthdDetail = lthd982.rental97LthdDetail; // §98의2가 §97의3 공제액을 대체했으면 엔진 공제액과 맞춘 사본
 
   // STEP 4.5~6: 양도소득금액 · 차감형 감면 · 기본공제 · 과세표준 — transfer-tax-income-steps.ts (800줄 정책 분리).
   const { transferIncome, incomeDeduction, new993PreliminaryResult, basicDeduction, taxBase, transferIncomeBefore993 } =
-    runIncomeAndBaseSteps({ input, effectiveInput, parsedRates, taxableGain, longTermHoldingDeduction, steps });
+    runIncomeAndBaseSteps({ input, effectiveInput, parsedRates, taxableGain, longTermHoldingDeduction, steps, lthd982Echo: lthd982.lthd982Echo });
 
   // STEP 7: 산출세액
   // selfOwns="land_only" 시 단기/장기 세율 판정은 토지 취득일 기준 (소령 §166⑥)

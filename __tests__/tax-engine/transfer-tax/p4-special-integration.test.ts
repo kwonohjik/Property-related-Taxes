@@ -1,10 +1,10 @@
 // P4 — §98의2 (특칙 전용) + §98의4 (비거주자 10%) 단위 + 통합 anchor
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { table2HoldingRateAt } from "@/lib/tax-engine/data/lthd-table2-era";
 import {
   evaluateUnsold982,
   evaluateUnsold984,
-  table2HoldingRate,
 } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p4";
 import {
   makeMockRates,
@@ -19,6 +19,7 @@ const R982 = {
   type: "unsold_98_2" as const,
   isNonCapitalUnsold982: true,
   isFirstOrFcfsContract982: true,
+  occupiedAtContract982: "no" as const,
 };
 const R984 = {
   type: "unsold_98_4" as const,
@@ -27,12 +28,22 @@ const R984 = {
 };
 
 describe("P4 단위 anchor", () => {
-  it("표2 보유기간별 공제율 — 2년 0% / 3년 12% / 7년 28% / 10년+ 40%", () => {
-    expect(table2HoldingRate(2)).toBe(0);
-    expect(table2HoldingRate(3)).toBeCloseTo(0.12, 10);
-    expect(table2HoldingRate(7)).toBeCloseTo(0.28, 10);
-    expect(table2HoldingRate(10)).toBe(0.4);
-    expect(table2HoldingRate(15)).toBe(0.4);
+  it("표2 보유기간별 공제율(2021.1.1.~ 보유 열) — 2년 0% / 3년 12% / 7년 28% / 10년+ 40% (운영 헬퍼 직접 검증)", () => {
+    const t = D("2024-06-03");
+    expect(table2HoldingRateAt(t, 2)).toBe(0);
+    expect(table2HoldingRateAt(t, 3)).toBeCloseTo(0.12, 10);
+    expect(table2HoldingRateAt(t, 7)).toBeCloseTo(0.28, 10);
+    expect(table2HoldingRateAt(t, 10)).toBe(0.4);
+    expect(table2HoldingRateAt(t, 15)).toBe(0.4);
+  });
+
+  it("표2 보유기간별 공제율(~2020.12.31. 단일 열) — 3년 24% / 7년 56% / 10년+ 80%, 경계 2020-12-31 vs 2021-01-01 (US-02)", () => {
+    expect(table2HoldingRateAt(D("2020-12-31"), 3)).toBeCloseTo(0.24, 10);
+    expect(table2HoldingRateAt(D("2020-12-31"), 7)).toBeCloseTo(0.56, 10);
+    expect(table2HoldingRateAt(D("2020-12-31"), 10)).toBe(0.8);
+    expect(table2HoldingRateAt(D("2020-12-31"), 13)).toBe(0.8);
+    expect(table2HoldingRateAt(D("2021-01-01"), 10)).toBe(0.4);
+    expect(table2HoldingRateAt(D("2016-08-01"), 2)).toBe(0);
   });
 
   it("§98의2 — 특칙 전용 (lthd_rate_special) + 시한 (취득 OR 계약)", () => {
@@ -41,6 +52,7 @@ describe("P4 단위 anchor", () => {
       acquisitionDate: D("2009-06-15"),
       isNonCapitalUnsold: true,
       isFirstOrFcfsContract: true,
+      occupiedAtContract: "no" as const,
     };
     const r = evaluateUnsold982(base);
     expect(r.isEligible).toBe(true);
@@ -79,7 +91,7 @@ describe("P4 단위 anchor", () => {
 });
 
 describe("P4 통합 anchor", () => {
-  it("P4-1: §98의2 보유 7년 — 장특 표2 28% (84M)·감면세액 0·농특세 0·결정세액 61,190,000", () => {
+  it("P4-1: §98의2 2016-08-01 양도 보유 7년 — 양도일 시행 표2 56% (168M)·감면세액 0·농특세 0·결정세액 29,885,000", () => {
     const rates = makeMockRates();
     const r = calculateTransferTax(
       baseTransferInput({
@@ -92,15 +104,15 @@ describe("P4 통합 anchor", () => {
       }),
       rates,
     );
-    // 표2 보유 7년 × 4% = 28% → 표1 14% 대신 강제
-    expect(r.longTermHoldingRate).toBeCloseTo(0.28, 10);
-    expect(r.longTermHoldingDeduction).toBe(84_000_000);
-    // 216M − 2.5M = 213.5M → ×38% − 19.94M = 61,190,000
-    expect(r.taxBase).toBe(213_500_000);
-    expect(r.calculatedTax).toBe(61_190_000);
+    // US-02 — 2016-08-01 양도 시행 표2(MST 177202): 보유 7년 = 100분의 56 → 표1 대신 강제
+    expect(r.longTermHoldingRate).toBeCloseTo(0.56, 10);
+    expect(r.longTermHoldingDeduction).toBe(168_000_000);
+    // 300M − 168M − 2.5M = 129.5M → mock 2024 누진표 35% − 15.44M
+    expect(r.taxBase).toBe(129_500_000);
+    expect(r.calculatedTax).toBe(29_885_000);
     // 감면세액 없음 (특칙 전용)
     expect(r.reductionAmount).toBe(0);
-    expect(r.determinedTax).toBe(61_190_000);
+    expect(r.determinedTax).toBe(29_885_000);
     expect(r.unsold982Detail?.isEligible).toBe(true);
     expect(r.unsold982Detail?.effectCategory).toBe("lthd_rate_special");
     expect(r.steps.some((s) => s.label.includes("특칙 적용"))).toBe(true);

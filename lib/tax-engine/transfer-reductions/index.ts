@@ -206,7 +206,7 @@ export {
 export {
   evaluateUnsold982,
   evaluateUnsold984,
-  table2HoldingRate,
+  table2HoldingRateAt,
   UNSOLD_98_4_RATE,
   type Unsold982Input,
   type Unsold984Input,
