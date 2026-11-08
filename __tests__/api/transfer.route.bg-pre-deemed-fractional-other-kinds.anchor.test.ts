@@ -9,8 +9,8 @@
  * 대조: 축 A = 지분 50% 단건 ↔ 반 크기 단건(채무는 본인 인수분이라 그대로) · 축 B = 60/40 두 카드 ↔ 100% 단건.
  * 화면 경로 그대로 — 폼 → ⑧(`collectStepIssues`) → ④(`captureBody`) → ⑫~⑭(route POST).
  * ⚠️ 재개발의 청산금 칸은 지분분을 직접 입력하는 칸이다(지분 카드에 전체 금액을 넣으면 차이가 난다 — 시료 오류).
- * ⚠️ 축 B는 카드별 floor 때문에 단건보다 1원 크게 나오는 칸이 3개 있다(계획서 §3.2 · 원인 확인 필요 — Q-2 a 별건).
- *    그래서 축 B는 «0~1원»으로 단언하고, 2원 이상 벌어지면 깨진다.
+ * ⚠️ 축 B는 카드마다 따로 계산해 합산하므로 카드별 floor의 합이 단건보다 작아 양도차익이 0~수 원 크게 나온다(V-P1b 계획서
+ *    `bg-fractional-axis-b-one-won-vp1b.plan.md` — 값 결함 아님으로 종결). 60/40은 «0~1원», 분할 비율 스윕은 «음수 금지 · 2(n−1) 이하»로 고정한다.
  */
 import { describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -150,11 +150,37 @@ describe.each(KINDS)("V-P1 %s × 의제전 × 지분 × 보충 승 — 단건 �
   });
 });
 
+/** V-P1b — 분할 비율 스윕. 카드별 floor의 합 ≤ 전체의 floor 이므로 양도차익은 단건보다 **작아지지 않는다**(음수 금지). 상한 2(n−1)은 78칸 관측치다. */
+const SPLITS: number[][] = [[50, 50], [60, 40], [70, 30], [90, 10], [25, 75], [34, 33, 33]];
+describe.each(KINDS)("V-P1b %s × 분할 비율 6종 — 카드별 절사 합산은 단건보다 작아지지 않는다", (kind) => {
+  it("⑧ 0건 · ⑫ 200 · 양도차익 차이 0 이상 2(n−1) 이하 · 취득가액 차이 0 이상 n−1 이하", async () => {
+    for (const v of VARIANTS.filter((c) => c.kind === kind)) {
+      const total = v.mkt > 0 ? v.mkt : 400000000;
+      const ref = await post(form([asset(v, 1, "z", debtOf(v, 1))], total));
+      expect(ref.status, `${v.id} 대조 ${ref.err}`).toBe(200);
+      for (const sp of SPLITS) {
+        const f = form(sp.map((n, i) => asset(v, 1, `c${i}`, pct(String(n)), debtOf(v, 1), settle(v, n / 100))), total, { assetSplitMode: "fractional" });
+        const r = await post(f);
+        const tag = `${v.id} ${sp.join("/")}`;
+        expect(issuesOf(f), `${tag} ⑧`).toEqual([]);
+        expect(r.status, `${tag} ⑫ ${r.err}`).toBe(200);
+        const gainDiff = (r.gain as number) - (ref.gain as number);
+        const acqDiff = (ref.acq as number) - (r.acq as number);
+        expect(gainDiff, `${tag} 양도차익 차`).toBeGreaterThanOrEqual(0);
+        expect(gainDiff, `${tag} 양도차익 차`).toBeLessThanOrEqual(2 * (sp.length - 1));
+        expect(acqDiff, `${tag} 취득가액 차`).toBeGreaterThanOrEqual(0);
+        expect(acqDiff, `${tag} 취득가액 차`).toBeLessThanOrEqual(sp.length - 1);
+      }
+    }
+  });
+});
+
 describe("V-P1 격자 규모", () => {
-  it("13변형 × 2모양 = 26칸이다(상가 6 · 건물 4 · 재개발 3)", () => {
+  it("13변형 × 2모양 = 26칸이다(상가 6 · 건물 4 · 재개발 3) · 스윕은 13변형 × 6분할 = 78칸이다", () => {
     expect(VARIANTS.length).toBe(13);
     expect(VARIANTS.filter((c) => c.kind === "commercial_building").length).toBe(6);
     expect(VARIANTS.filter((c) => c.kind === "building").length).toBe(4);
     expect(VARIANTS.filter((c) => c.kind === "redevelopment_apt").length).toBe(3);
+    expect(SPLITS.length).toBe(6);
   });
 });
