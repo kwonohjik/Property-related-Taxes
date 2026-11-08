@@ -100,7 +100,7 @@ Calculator가 800줄 초과 + Step이 3개 이상이면 각 Step을 별도 파�
 
 **라이트 옅은 글자 금지(2026-10-20)**: 접두 없는 라이트 글자색으로 `text-{tone}-{400~600}`·`text-{무채색}-{300~500}`·투명도 톤 글자 `text-{tone}-N/NN`을 쓰지 않는다 — 톤은 700, 무채색은 600부터. 회색 안내 글자는 `text-muted-foreground`. → 같은 `check-dark-pairs.mjs`. 근거: `docs/00-pm/ui-light-contrast-and-dark-print.plan.md`.
 
-**다크 hover 글자색 대비(2026-11-08)**: `dark:hover:text-{톤}-N`(`group-`·`peer-` hover 포함)은 다크 바탕(rgb 10,10,10) 위 4.5 미만인 값을 쓰지 않는다 — 700 이상 전부·600(red·rose·violet·purple·blue·indigo·pink·fuchsia·무채색)·500(indigo·무채색) 금지, 톤은 300~400. → 같은 `check-dark-pairs.mjs` ⑥. 근거: 라이트 대비 codemod가 `dark:hover:` 접두 토큰까지 진하게 바꿔 15곳이 2.37:1이 된 사고(#3005).
+**글자색 대비 4.5(2026-11-08~09)**: 다크 `dark:text-*`·`dark:hover:text-*`(`group-`·`peer-` 포함)와 라이트 `hover:text-*`는 글자가 놓인 바탕 위에서 4.5 미만인 값을 쓰지 않는다 — 바탕은 같은 클래스 목록의 `dark:bg-*`(hover는 `hover:bg-*`) → `bg-*`, 없으면 가장 불리한 바탕(다크 `--muted` rgb 38 · 라이트 `--muted` rgb 245; `--background` 10은 가장 어두워 기준이 못 된다). 다크 글자는 **300~400**(500은 red·rose·violet·purple·blue·indigo·pink·fuchsia·무채색 미달), 라이트 hover는 **700 이상**(600은 amber·orange·red·rose·sky·emerald·green·teal·cyan·yellow·lime·pink·fuchsia 미달). 알약(`bg-*-100`에 `dark:bg-` 없음)은 다크에서도 밝으니 `dark:text-*`를 달지 말고 라이트 글자색을 그대로 둔다. → `check-dark-pairs.mjs` ⑥⑦⑧. 근거: 라이트 대비 codemod가 `dark:hover:` 접두 토큰까지 진하게 바꿔 15곳이 2.37:1이 된 사고(#3005), 플레인 `dark:text-gray-500`(머리글·흐림 행)·알약 `dark:text-rose-600`(3.77)이 같은 게이트를 통과해 온 것.
 
 | 상황 | 사용 |
 |---|---|

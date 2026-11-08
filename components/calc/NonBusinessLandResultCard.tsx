@@ -87,7 +87,7 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">
             무조건 사업용 — 소득세법 시행령 §168의14③
           </p>
-          <p className="text-xs text-blue-700 dark:text-blue-500 mt-0.5">{exemption.detail}</p>
+          <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5">{exemption.detail}</p>
         </div>
       )}
 

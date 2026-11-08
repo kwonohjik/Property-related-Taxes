@@ -582,7 +582,7 @@ export function StockTransferTaxResultView({
           {result.holdingPeriodMonths % 12}개월 ({result.holdingPeriodDays}일)
         </strong>
         {result.isShortTermHolding && (
-          <span className="ml-2 px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 dark:text-rose-600 text-xs">단기보유</span>
+          <span className="ml-2 px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-xs">단기보유</span>
         )}
         {result.lotMatchingDetail && (
           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">

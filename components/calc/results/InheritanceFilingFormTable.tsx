@@ -148,7 +148,7 @@ export function InheritanceFilingFormTable({
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="bg-gray-50/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-500">
+              <thead className="bg-gray-50/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400">
                 <tr className="border-b border-gray-200 dark:border-gray-700">
                   <th className="px-3 py-2 text-left font-medium">증여일</th>
                   <th className="px-3 py-2 text-left font-medium">수증자</th>
@@ -203,7 +203,7 @@ function renderGiftRow(
     : gift.computedTax ?? 0;
 
   const baseClass = dimmed
-    ? "border-b border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-500"
+    ? "border-b border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-400"
     : "border-b border-gray-100 dark:border-gray-800";
   const corporateBg =
     isCorporate && !dimmed
