@@ -18,6 +18,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { SigunguSelect } from "./shared/SigunguSelect";
 import { extractSidoSigunguName } from "@/lib/calc/address-sigungu-name";
 import { UnconditionalExemptionSection } from "./UnconditionalExemptionSection";
+import { CarryoverOwnershipPeriodNotice } from "./shared/CarryoverOwnershipPeriodNotice";
 import { ResidenceHistorySection } from "./ResidenceHistorySection";
 import { GracePeriodSection } from "./GracePeriodSection";
 import { nblResidenceHistoryApplies } from "@/lib/calc/nbl-period-rows-scope";
@@ -129,6 +130,9 @@ export function NblSectionContainer({
           접기
         </button>
       </div>
+
+      {/* 이월과세 — 소유기간 기산일 = 증여자 취득일 (비사업용 토지 판정 전반에 걸리므로 맨 위) */}
+      <CarryoverOwnershipPeriodNotice asset={asset} />
 
       {/* 1. 무조건 면제 (§168의14③) — 최우선 */}
       <UnconditionalExemptionSection

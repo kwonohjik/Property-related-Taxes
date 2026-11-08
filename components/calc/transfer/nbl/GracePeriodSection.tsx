@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { AssetForm, NblGracePeriodInput } from "@/lib/stores/calc-wizard-store";
+import { nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
 import {
   GRACE_REASON_SPECS,
   resolveGraceIntervals,
@@ -85,7 +86,7 @@ export function GracePeriodSection({
       toDate(p.secondaryDate),
       {
         transferDate: toDate(transferDate) ?? new Date(),
-        acquisitionDate: toDate(asset.acquisitionDate) ?? new Date(),
+        acquisitionDate: toDate(nblAcquisitionDateOf(asset)) ?? new Date(),
         isRealEstateDealerMatter: dealer,
       },
     );

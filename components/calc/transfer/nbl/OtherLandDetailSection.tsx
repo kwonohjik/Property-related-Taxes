@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 export interface OtherLandDetailSectionProps {
@@ -168,12 +169,13 @@ export function OtherLandDetailSection({
   const sportsBasis = SPORTS_CATEGORY_BASIS[sportsCategory];
 
   // §168의11③3호 당해 연환산 preview — 엔진 헬퍼 단일 진실 (재구현 금지)
+  const nblAcq = nblAcquisitionDateOf(asset); // 이월과세는 증여자 취득일 — 판정(④)과 같은 값
   const revenuePreview = useMemo(() => {
-    if (!asset.nblRevenueBusinessType || !transferDate || !asset.acquisitionDate) return undefined;
+    if (!asset.nblRevenueBusinessType || !transferDate || !nblAcq) return undefined;
     const rawCurrent = parseFloat((asset.nblRevenueCurrentRevenue || "0").replace(/,/g, "")) || 0;
     if (rawCurrent <= 0) return undefined;
     const transferObj = parseISO(transferDate);
-    const acqObj = parseISO(asset.acquisitionDate);
+    const acqObj = parseISO(nblAcq);
     if (Number.isNaN(transferObj.getTime()) || Number.isNaN(acqObj.getTime())) return undefined;
     const startOverride = asset.nblRevenueCurrentBusinessStartDate
       ? parseISO(asset.nblRevenueCurrentBusinessStartDate)
@@ -202,7 +204,7 @@ export function OtherLandDetailSection({
     asset.nblRevenueCurrentRevenue,
     asset.nblRevenueCurrentLandValue,
     asset.nblRevenueCurrentBusinessStartDate,
-    asset.acquisitionDate,
+    nblAcq,
     transferDate,
   ]);
 

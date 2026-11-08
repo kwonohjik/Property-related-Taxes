@@ -10,7 +10,7 @@
  *   ④ 개별 지목별 사업용 기간 판정
  */
 
-import { NBL } from "../legal-codes";
+import { NBL, TRANSFER } from "../legal-codes";
 import type {
   CategoryJudgeResult,
   JudgmentStep,
@@ -43,6 +43,16 @@ export function judgeNonBusinessLand(
   const judgmentSteps: JudgmentStep[] = [];
   const appliedLawArticles: string[] = [NBL.MAIN, NBL.CRITERIA];
   const warnings: string[] = [];
+
+  // 이월과세 — 소유기간 기산일이 증여자 취득일임을 밝힌다(판정식은 그대로). 법문에 명문이 없어 해석례를 따랐다.
+  if (input.carryoverOwnership) {
+    warnings.push(
+      `이월과세(${TRANSFER.CARRYOVER_TAXATION}①) 자산이라 소유기간을 증여자 취득일(${input.acquisitionDate.toISOString().slice(0, 10)})부터 셌습니다 — ` +
+        `${NBL.CRITERIA}은 「토지의 소유기간」만 정하고 이월과세 기산일을 따로 정하지 않아, 비사업용 토지 판정의 취득시기를 증여한 배우자 또는 ` +
+        "직계존비속이 해당 자산을 취득한 날로 본 국세청 해석(서면인터넷방문상담4팀-2622 · 부동산거래관리과-1112 · 부동산납세과-539)을 따랐습니다. " +
+        "자경·재촌 등 사용기간은 입력된 구간을 소유기간 안에서 그대로 셌고, 증여자 보유기간의 사용 사실을 이어서 세는 것에 대한 직접 해석은 확인하지 못했습니다 — 확인이 필요합니다.",
+    );
+  }
 
   // ── Step 1: 사실상 지목 판정 (§168-7) ────────────────────────────
   const category = classifyLandCategory(input);
