@@ -391,6 +391,7 @@ export const reductionSchema = z.discriminatedUnion("type", [
     residencyType983: z.enum(["resident", "nonresident_no_pe", "nonresident_with_pe"]).optional(),
     houseType983: z.enum(["purchased", "self_built"]).optional(),
     contractDate983: z.string().date().optional(),
+    downPaymentCompletedDate983: z.string().date().optional(),
     constructionStartDate983: z.string().date().optional(),
     usageApprovalDate983: z.string().date().optional(),
     isOutsideSeoulNotDesignated983: z.boolean().optional(),

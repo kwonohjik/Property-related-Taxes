@@ -578,6 +578,8 @@ export type RentalReductionFormVariant =
       houseType983: "purchased" | "self_built";
       /** 최초 매매계약일 (YYYY-MM-DD) — purchased */
       contractDate983: string;
+      /** 계약서상 계약금 전액 완납일 (YYYY-MM-DD) — purchased + 취득일 > 2010.2.11 (US-21) */
+      downPaymentCompletedDate983: string;
       /** 착공일 (YYYY-MM-DD) — self_built */
       constructionStartDate983: string;
       /** 사용승인·사용검사일 (YYYY-MM-DD) — self_built */

@@ -275,6 +275,7 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           residencyType983: "resident",
           houseType983: "purchased",
           contractDate983: "",
+          downPaymentCompletedDate983: "",
           constructionStartDate983: "",
           usageApprovalDate983: "",
           isOutsideSeoulNotDesignated983: false,

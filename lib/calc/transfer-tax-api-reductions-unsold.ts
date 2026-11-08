@@ -120,6 +120,8 @@ export function toUnsold983Payload(r: Extract<AssetReductionForm, { type: "unsol
       r.houseType983 === "self_built" ? r.constructionStartDate983 || undefined : undefined,
     usageApprovalDate983:
       r.houseType983 === "self_built" ? r.usageApprovalDate983 || undefined : undefined,
+    downPaymentCompletedDate983:
+      r.houseType983 !== "self_built" ? r.downPaymentCompletedDate983 || undefined : undefined,
     isOutsideSeoulNotDesignated983: r.isOutsideSeoulNotDesignated983,
     isOverconcentration983: r.isOverconcentration983,
     landAreaSqm983: r.isOverconcentration983 ? parseDecimal(r.landAreaSqm983 || "") || undefined : undefined,

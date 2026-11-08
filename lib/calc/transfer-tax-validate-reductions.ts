@@ -479,8 +479,16 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           } else if (!r.contractDate983) {
             return fail(fieldError("reduction.unsold_98_3.contractDate983", "§98의3 적용: 최초 매매계약일을 입력하세요 (거주자 2009.2.12~ / 비거주자 2009.3.16~2010.2.11)."));
           }
-          // 면적 한정(령 §98의3① 단서)은 각 호 주택 = 사업주체 취득분에만 적용된다 (D5-03).
-          if (r.isOverconcentration983 && r.houseType983 !== "self_built") {
+          // US-21 — 취득일이 2010.2.11 이후인 사업주체 취득은 계약금 전액 완납일 필수 (엔진과 같은 게이트).
+          if (r.houseType983 !== "self_built") {
+            const acq983 = primaryAcquisitionDateOf(asset);
+            if (acq983 && acq983 > "2010-02-11") {
+              if (!r.downPaymentCompletedDate983)
+                return fail(fieldError("reduction.unsold_98_3.downPaymentCompletedDate983", "§98의3 적용: 취득일이 2010.2.11 이후이므로 계약서상 계약금 전액 완납일을 입력하세요 (법 §98의3① — 계약금을 2010.2.11까지 완납한 경우 포함)."));
+            }
+          }
+          // 면적 한정(령 §98의3① 단서) — 자기건설(법②)도 동일 (US-03, 재산세과-1450·1537).
+          if (r.isOverconcentration983) {
             if (!(parseDecimal(r.landAreaSqm983 || "") > 0))
               return fail(fieldError("reduction.unsold_98_3.landAreaSqm983", "§98의3 적용: 수도권과밀억제권역 주택은 대지면적(㎡)을 입력하세요 (660㎡ 이내 한정)."));
             if (!(parseDecimal(r.floorAreaSqm983 || "") > 0))

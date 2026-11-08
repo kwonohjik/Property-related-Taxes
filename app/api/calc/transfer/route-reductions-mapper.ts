@@ -172,6 +172,7 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
       return {
         ...r,
         contractDate983: r.contractDate983 ? new Date(r.contractDate983) : undefined,
+        downPaymentCompletedDate983: r.downPaymentCompletedDate983 ? new Date(r.downPaymentCompletedDate983) : undefined,
         constructionStartDate983: r.constructionStartDate983 ? new Date(r.constructionStartDate983) : undefined,
         usageApprovalDate983: r.usageApprovalDate983 ? new Date(r.usageApprovalDate983) : undefined,
       } as TransferReduction;
