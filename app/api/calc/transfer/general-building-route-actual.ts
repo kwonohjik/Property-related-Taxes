@@ -24,6 +24,7 @@ import type {
   GeneralBuildingOutput,
 } from "@/lib/tax-engine/general-building-valuation";
 import { buildBurdenedGiftBreakdown } from "@/lib/tax-engine/burdened-gift-apportionment";
+import { assertBurdenedGiftEligible } from "@/lib/tax-engine/burdened-gift-eligibility";
 import { attachBuildingDepreciation } from "@/lib/tax-engine/general-building-depreciation";
 import {
   buildProperties,
@@ -280,13 +281,16 @@ export function buildActualGeneralBuildingCards(
         "일반건물 부담부증여(§159①1호): 취득시 토지·건물 기준시가가 필요합니다.",
       );
     }
+    // 초과부담부(B > C) fail-fast — 공용 단계(`transfer-tax-burdened-gift-step.ts`)를 지나지 않는 경로라 여기서 같은 가드를 부른다.
+    // 지분은 breakdown과 같은 `burdenedGiftOwnershipRatio`로 C를 줄여 비교한다(계획서 `gb-excess-burdened-gift-guard.plan.md`).
+    assertBurdenedGiftEligible({ propertyType: "general_building", info: burdenedGiftInfo, ownershipRatio: burdenedGiftOwnershipRatio });
     const breakdown = buildBurdenedGiftBreakdown({
       landStdPriceAtTransfer: landStdAtTransfer,
       buildingStdPriceAtTransfer: transferBuildingStdPrice,
       landStdPriceAtAcquisition: acquisitionLandPricePerSqm * landArea,
       buildingStdPriceAtAcquisition: acquisitionBuildingStdPrice,
       info: burdenedGiftInfo,
-      ownershipRatio: burdenedGiftOwnershipRatio, // 축 B 지분 카드만 — A·C 지분 축소(단건·컴패니언은 undefined = 종전)
+      ownershipRatio: burdenedGiftOwnershipRatio, // 지분 자산(축 A·B) — A·C를 지분분으로 축소. 공유 아님이면 undefined
       giftDate: transferDate, // 증여일 = 양도일 (의제)
       // 의제취득일(1985.1.1.) 전 상속·증여 파트 — 시가 평가면 그 파트만 3자 max(사용자 결정 Q-28 · PR-7b-6). 괄호(기준시가)면 §159가 쓰지 않는다.
       ...(landPreDeemedClauseA || buildingPreDeemedClauseA
