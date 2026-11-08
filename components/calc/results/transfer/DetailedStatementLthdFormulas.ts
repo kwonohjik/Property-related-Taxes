@@ -7,9 +7,12 @@
  *    엔진 sub-step("보유 기간분 장특"·"거주 기간분 장특")이 있으면 그쪽 `formula`가 우선이며,
  *    §95⑤ 용도변경 케이스는 항상 sub-step을 낳으므로 이 fallback에 도달하지 않는다.
  *    도달하는 것은 표1 단독·차손 자산·겸용 합산·이력에서 불러온 과거 결과다.
+ *    조특법 §98의2 특칙(표2 보유기간별 공제율 단독)도 sub-step이 없어 여기에 도달한다 — 그때는 표1 문구가 아니라
+ *    특칙 문구를 쓴다(`lthd982HoldingRatePct`).
  */
 
 import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
+import { TRANSFER_REDUCTION_ARTICLE } from "@/lib/tax-engine/legal-codes/transfer";
 import { table2ResidencePct } from "@/lib/tax-engine/data/lthd-table2-era";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 
@@ -24,7 +27,18 @@ interface LthdFallbackArgs {
   useTable2: boolean;
   totalLth: number;
   lthSplit: { holdingAmount: number; residenceAmount: number };
+  /**
+   * 조특법 §98의2① 특칙으로 표2 보유기간별 공제율만 적용한 단건 결과의 공제율(정수 %) —
+   * 엔진 echo `unsold982Detail.lthd982Echo`(outcome `table2_holding`)의 `holdingRatePct`. 아니면 undefined.
+   */
+  lthd982HoldingRatePct?: number;
 }
+
+/** §98의2 특칙 보유분·거주분 문구 — 공제율은 엔진 echo 값이다(양도일 시행 표2: 2020.12.31.까지 연 8%, 이후 연 4%) */
+export function lthd982HoldingFormula(totalLth: number, holdingAmount: number, ratePct: number): string {
+  return `총 장특공제 ${totalLth.toLocaleString()} = 보유 기간분 전액 ${holdingAmount.toLocaleString()} (${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_2}① 특칙 — §95② 표2 보유기간별 공제율 ${ratePct}%만 적용, 거주기간분 없음)`;
+}
+export const LTHD_982_RESIDENCE_FORMULA = `0 (${TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_2}① 특칙 — 표2 보유기간별 공제율만 적용, 거주기간 공제 대상 아님)`;
 
 export interface LthdFallbackFormulas {
   /** 배제 사유 라벨 — 미등기·분양권·승계입주권·중과 등. 없으면 undefined */
@@ -34,7 +48,16 @@ export interface LthdFallbackFormulas {
 }
 
 export function buildLthdFallbackFormulas(args: LthdFallbackArgs): LthdFallbackFormulas {
-  const { result, isAggregate, totalHoldingMs, residenceMs, useTable2, totalLth, lthSplit } = args;
+  const { result, isAggregate, totalHoldingMs, residenceMs, useTable2, totalLth, lthSplit, lthd982HoldingRatePct } = args;
+
+  // §98의2 특칙 — 엔진 표시 step도 특칙 적용 시 장특 배제로 보지 않는다(`transfer-tax-lthd-steps.ts` lthdExcluded 술어). 배제 문구보다 먼저 본다.
+  if (lthd982HoldingRatePct !== undefined) {
+    return {
+      exclusionLabel: undefined,
+      holdingFormula: lthd982HoldingFormula(totalLth, lthSplit.holdingAmount, lthd982HoldingRatePct),
+      residenceFormula: LTHD_982_RESIDENCE_FORMULA,
+    };
+  }
 
   const holdingYears = Math.floor(totalHoldingMs / 12);
   const residenceYears = Math.floor(residenceMs / 12);
