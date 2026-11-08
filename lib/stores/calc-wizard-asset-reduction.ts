@@ -555,6 +555,8 @@ export type RentalReductionFormVariant =
       isNonCapitalUnsold982: boolean;
       /** 선착순 공급 취득 또는 사업주체 최초 매매계약 (령①1·2호) */
       isFirstOrFcfsContract982: boolean;
+      /** 매매계약일 현재 입주 사실 3-state — ""(미선택) | yes(있음) | no(없음) | unknown(모름). "no"만 적용 (국세청 법규과-1582·부동산거래관리과-1012) */
+      occupiedAtContract982?: "" | "yes" | "no" | "unknown";
       /** 법 §98의2① 「**거주자가** 2008년 11월 3일부터 …」 — 비거주자는 적용 배제 (D11-05) */
       isResident982: boolean;
     }

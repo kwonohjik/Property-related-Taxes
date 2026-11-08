@@ -471,6 +471,11 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           const i988 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition988, r.standardPriceAt5Years988, "§98의8", phdOk988, r.type, r.standardPriceAtTransfer988, engineStdPriceAtTransfer(form, ai));
           if (i988) return i988;
         }
+        // US-15 · Q-1 (A) — §98의2 매매계약일 현재 입주 사실 3-state(없음/있음/모름). 모름은 통과(엔진이 불성립 처리),
+        // 미선택만 차단한다 — ④가 미선택을 undefined(=모름)로 보내므로 UI 통과 ↔ 엔진 결과가 어긋나지 않는다.
+        if (r.type === "unsold_98_2" && !r.occupiedAtContract982) {
+          return fail(fieldError("reduction.unsold_98_2.occupiedAtContract982", "§98의2 적용: 매매계약일 현재 입주한 사실이 있는지(없음·있음·모름) 선택하세요 (국세청 법규과-1582·부동산거래관리과-1012 — 입주 사실이 있거나 모르면 적용하지 않습니다)."));
+        }
         // P3 §98의3 (2026-06-12): 분기별 일자 + 과밀 면적 필수 (⑧). 토글은 낙관 — 엔진 사유.
         if (r.type === "unsold_98_3") {
           if (r.houseType983 === "self_built") {

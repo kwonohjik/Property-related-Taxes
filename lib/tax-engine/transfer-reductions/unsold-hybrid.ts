@@ -22,6 +22,7 @@
 
 import { applyRate } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import type { Unsold982LthdEcho } from "./unsold-hybrid-p4";
 import {
   allocationDenominatorZeroMessage,
   calcSignedAllocation,
@@ -90,6 +91,8 @@ export interface UnsoldHybridResult {
   /** 농특세 비과세 (농특세령 §4⑦1호 — §98의3·§98의5만 true, P3) */
   ruralSurtaxExempt: boolean;
   legalBasis: string;
+  /** §98의2 특칙 장특 결과 echo (STEP 4.05가 채움 — 표시 전용) */
+  lthd982Echo?: Unsold982LthdEcho;
 }
 
 // ─────────────────────────────────────────────────────────────────

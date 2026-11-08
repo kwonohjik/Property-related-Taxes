@@ -267,6 +267,8 @@ export type TransferReductionStub =
       isResident982?: boolean;
       isNonCapitalUnsold982?: boolean;
       isFirstOrFcfsContract982?: boolean;
+      /** 매매계약일 현재 입주 사실 3-state — "no"만 적용(US-15 · Q-1 (A)) */
+      occupiedAtContract982?: "yes" | "no" | "unknown";
       _phase1Stub?: true }
   // §98의3 — P3 본격 구현 (2026-06-12): 하이브리드 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "unsold_98_3";

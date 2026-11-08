@@ -152,6 +152,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     !appurtenantTable1Applied;
   // 2009~2020 양도분 표2 — 보유 연 8% 단일축(OH-31). 계산 축(`calcLongTermRate`)과 같은 leaf로 가른다.
   const era = transferDate ? resolveLthdTable2Era(transferDate) : undefined;
+  const table2Era982 = era;
   const singleAxisTable2 =
     isOneHouseSpecial && !conv && (era === "holding_8pct" || era === "holding_8pct_residence_2y");
   // 보유분 공제율 — §95⑤이면 표1(비주택 기간) + 표2(주택 기간)의 합(40% 한도)이고,
@@ -178,7 +179,9 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
   const lthdFormulaRate = fbLthdFormula
     ? `${fbLthdFormula} (소득세법 §95④ 후단)`
     : lthd982Applied
-    ? `§98의2 특칙 — 표2 보유 ${holdingPeriod.years}년×4% = ${pctOf(longTermHoldingRate)}% (40% 한도, 법 §98의2①1호)`
+    ? table2Era982 === "holding_8pct" || table2Era982 === "holding_8pct_residence_2y"
+      ? `§98의2 특칙 — 표2 보유 ${holdingPeriod.years}년×8% = ${pctOf(longTermHoldingRate)}% (80% 한도 — 2020.12.31. 이전 양도분, 법 §98의2①1호)`
+      : `§98의2 특칙 — 표2 보유 ${holdingPeriod.years}년×4% = ${pctOf(longTermHoldingRate)}% (40% 한도, 법 §98의2①1호)`
     : conv
     ? `비주택 보유 ${conv.nonHousingYears}년 표1 ${conv.table1Pct}% + 주택 보유 ${conv.housingYears}년 표2 ${conv.table2HoldingPct}%`
       + ` = 보유분 ${holdingPct}%${conv.holdingRateCapped ? " (40% 한도 적용)" : ""}`

@@ -41,6 +41,26 @@ export function table2HoldingOnlyRate(holdingYears: number): number {
   return Math.min(holdingYears * 8, 80) / 100;
 }
 
+/** 2021.1.1. 이후 표2 보유 열 — 보유 3년 이상 연 4%, 40% 한도(정수 %로 계산). */
+export function table2HoldingColumnRate(holdingYears: number): number {
+  if (holdingYears < 3) return 0;
+  return Math.min(holdingYears * 4, 40) / 100;
+}
+
+/**
+ * 조특법 §98의2①1호가 지정한 「소득세법 §95② 표2 보유기간별 공제율」 — **양도일 시행본** 기준(US-02).
+ *
+ * - ~2020.12.31. 양도: 표2는 보유기간 단일 열(연 8%, 10년 이상 80%) — 시행본 MST 109450·115237·177202·212777 원문 확인.
+ *   §98의2①1호는 공제율 표를 직접 인용하므로 표2 대상 거주 2년 요건(§159의3)은 붙이지 않는다.
+ * - 2021.1.1. 이후 양도: 보유 열(연 4%, 40% 한도). 거주 열은 포함하지 않는다.
+ * - 2009.1.1. 전 양도: §98의2 취득(2008.11.3. 이후)이 보유 3년에 못 미쳐 공제율이 0이다 — 현행 보유 열로 둔다.
+ */
+export function table2HoldingRateAt(transferDate: Date, holdingYears: number): number {
+  const era = resolveLthdTable2Era(transferDate);
+  if (era === "holding_8pct" || era === "holding_8pct_residence_2y") return table2HoldingOnlyRate(holdingYears);
+  return table2HoldingColumnRate(holdingYears);
+}
+
 /**
  * 표2 **거주기간 열**의 첫 칸 — 「소득세법」 §95② 표2(2021.1.1. 시행본 MST 224837·현행 MST 280405 원문 확인)는
  * 거주기간 열이 「2년 이상 3년 미만(보유기간 3년 이상에 한정함) 100분의 8」에서 시작하고 **2년 미만 칸이 없다.**

@@ -102,6 +102,8 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
       specialApplied?: boolean;
       deductionWithSpecial?: number;
       deductionWithoutSpecial?: number;
+      // [echo] §98의2 특칙 장특이 이 조문의 공제액을 대체한 경우 엔진이 실제 공제한 §98의2 공제액 (US-16 · Q-2). 구 이력은 없다.
+      replacedBy982Deduction?: number;
       // [echo] §97의4 임대기간 구간(조특령 §97의4② 기산 · §97⑤3호 상속 합산 · 자동말소 종점). 구 이력은 없다.
       rentalPeriod974?: {
         heir?: { start: string; end: string };
@@ -122,12 +124,15 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
       lthdEffect.deductionApplied !== undefined &&
       lthdEffect.baseLthdRate !== undefined;
     // 요건은 충족했으나 일반 공제액이 더 커 특례를 적용하지 않은 경우 — 비교 echo가 모두 있을 때만
+    const replacedBy982 = lthdEffect.replacedBy982Deduction !== undefined;
     const specialNotApplied =
       lthdEffect.specialApplied === false &&
+      !replacedBy982 &&
       lthdEffect.deductionWithSpecial !== undefined &&
       lthdEffect.deductionWithoutSpecial !== undefined;
     // 특례 산식의 우변 — 미적용이면 「특례를 적용했다면」의 값이다(실제 적용값은 일반 공제액)
-    const specialDeduction = specialNotApplied ? lthdEffect.deductionWithSpecial! : lthdEffect.deductionApplied!;
+    const specialHypothetical = specialNotApplied || (replacedBy982 && lthdEffect.deductionWithSpecial !== undefined);
+    const specialDeduction = specialHypothetical ? lthdEffect.deductionWithSpecial! : lthdEffect.deductionApplied!;
     const isPartialRental =
       lthdEffect.rentalGainRatio < 1 &&
       lthdEffect.rentalGainApplied !== undefined &&
@@ -143,6 +148,15 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
           </span>
         </div>
 
+        {replacedBy982 && (
+          <p className="text-xs text-violet-900 dark:text-violet-200" data-testid="rental973-replaced-by-982">
+            조특법 §98의2 표2 보유기간별 공제율 장기보유특별공제액({formatN(lthdEffect.replacedBy982Deduction!)})을 적용했습니다.
+            {lthdEffect.deductionWithSpecial !== undefined && (
+              <> 이 조문의 특례를 적용했다면 장기보유특별공제액은 {formatN(lthdEffect.deductionWithSpecial)}입니다.</>
+            )}{" "}
+            두 조문의 적용 순서를 정한 규정은 확인되지 않아 확인 필요합니다.
+          </p>
+        )}
         {specialNotApplied && (
           <p className="text-xs text-violet-900 dark:text-violet-200" data-testid="rental973-special-not-applied">
             일반 장기보유특별공제액({formatN(lthdEffect.deductionWithoutSpecial!)})이 특례 적용 공제액(
@@ -238,7 +252,7 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
               isPartialRental ? (
                 <>
                   <p className="text-muted-foreground">
-                    {specialNotApplied ? "특례 적용 시 " : ""}장기보유특별공제 = 임대기간 분 양도차익 × 특례 공제율 + 비임대 분 양도차익 × 일반 공제율
+                    {specialHypothetical ? "특례 적용 시 " : ""}장기보유특별공제 = 임대기간 분 양도차익 × 특례 공제율 + 비임대 분 양도차익 × 일반 공제율
                   </p>
                   <p className="text-muted-foreground">
                     임대기간 분 양도차익 = 양도차익{" "}
@@ -255,7 +269,7 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
               ) : (
                 <>
                   <p className="text-muted-foreground">
-                    {specialNotApplied ? "특례 적용 시 " : ""}장기보유특별공제 = 양도차익 × 특례 공제율
+                    {specialHypothetical ? "특례 적용 시 " : ""}장기보유특별공제 = 양도차익 × 특례 공제율
                   </p>
                   <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
                     {formatN(lthdEffect.gainApplied!)} × {formatRate(lthdEffect.overrideRate)} ={" "}

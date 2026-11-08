@@ -3,11 +3,12 @@
 /**
  * §98의2 지방 미분양주택 — 특칙 전용 입력 폼 (P4, 2026-06-12)
  *
- * 감면세액 없음 — 장특 표2 보유기간별 공제율(연 4%, 최대 40%) + 기본세율 강제 (법 ①).
+ * 감면세액 없음 — 장특 표2 보유기간별 공제율(양도일 시행 표2) + 기본세율 강제 (법 ①).
  * 농특세 없음. 중과 배제 (소령 §167의3①5호).
  */
 
 import { DateInput } from "@/components/ui/date-input";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -43,17 +44,35 @@ export function Unsold982InputForm({ value, onChange }: Props) {
         <ToggleCard
           tone="rose"
           title="수도권 밖 미분양주택 확인"
-          description="2008.11.2까지 분양계약이 체결되지 않아 선착순으로 공급되거나, 2008.11.3까지 사업계획승인(신청)한 사업주체가 공급하는 주택 (조특령 §98의2①)"
+          description="2008.11.2까지 분양계약이 체결되지 않아 선착순으로 공급되거나, 2008.11.3까지 사업계획승인(신청)한 사업주체가 공급하는 주택 (조특령 §98의2①). 분양전환된 임대주택은 대상이 아닙니다 (국세청 부동산거래관리과-340·-43)"
           checked={value.isNonCapitalUnsold982}
           onCheckedChange={(v) => onChange({ isNonCapitalUnsold982: v })}
         />
         <ToggleCard
           tone="rose"
           title="선착순 공급 취득 또는 사업주체와 최초 매매계약"
-          description="령 §98의2①1호(선착순) 또는 2호(사업주체 최초 매매계약) 요건"
+          description="령 §98의2①1호(선착순) 또는 2호(사업주체 최초 매매계약 — 2008.11.3 현재 입주자모집공고에 따른 입주자의 계약일이 지나지 아니한 주택에 한정) 요건"
           checked={value.isFirstOrFcfsContract982}
           onCheckedChange={(v) => onChange({ isFirstOrFcfsContract982: v })}
         />
+        <div data-field="reduction.unsold_98_2.occupiedAtContract982" className="space-y-1">
+          <p className="text-sm font-medium">매매계약일 현재 입주한 사실</p>
+          <RadioCardGroup
+            name="occupiedAtContract982"
+            tone="rose"
+            layout="inline"
+            value={value.occupiedAtContract982 ?? ""}
+            onChange={(v) => onChange({ occupiedAtContract982: v as Unsold982Form["occupiedAtContract982"] })}
+            options={[
+              { value: "no", label: "입주 사실 없음" },
+              { value: "yes", label: "입주 사실 있음" },
+              { value: "unknown", label: "모름" },
+            ]}
+          />
+          <p className="text-micro text-muted-foreground">
+            입주 사실이 있거나 모르면 적용하지 않습니다 — 조특법·시행령 문언에는 제외 규정이 없고 국세청 해석례(법규과-1582·부동산거래관리과-1012)에 따른 것입니다 (확인 필요).
+          </p>
+        </div>
       </ToneCard>
 
       {/*
@@ -76,8 +95,13 @@ export function Unsold982InputForm({ value, onChange }: Props) {
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
         <p>
           · 적용 효과 (특칙 — 감면세액이 아님): 장기보유특별공제는 양도차익 × 소득세법 §95② 표2
-          보유기간별 공제율(연 4%, 최대 40%)을 적용하고, 세율은 단기보유 여부와 관계없이 기본
+          보유기간별 공제율을 양도일 당시 시행 표2로 적용하고(2020.12.31. 이전 양도분은 연 8%·최대 80%,
+          2021.1.1. 이후 양도분은 보유 열 연 4%·최대 40%), 세율은 단기보유 여부와 관계없이 기본
           누진세율(§104①1호)을 적용합니다 (법 §98의2①).
+        </p>
+        <p>
+          · 1세대1주택 표2(보유+거주 합산) 요건을 충족하면 그 공제율이 유지됩니다(특칙이 적용되지 않음). §97의3 특례와 함께 선택하면
+          두 조문의 장기보유특별공제액 중 큰 금액 하나를 적용하고 적용하지 않은 금액을 결과에 표시합니다 (적용 순서 규정은 확인 필요).
         </p>
         <p>· 농어촌특별세는 부과되지 않습니다 (감면세액이 없는 특칙).</p>
         <p>· 다주택 중과세율이 적용되지 않습니다 (소득세법 시행령 §167의3①5호).</p>

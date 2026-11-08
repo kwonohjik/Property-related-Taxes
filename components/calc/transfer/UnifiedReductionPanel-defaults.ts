@@ -326,6 +326,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       contractDate982: "",
       isNonCapitalUnsold982: false,
       isFirstOrFcfsContract982: false,
+      occupiedAtContract982: "",
     };
   }
   if (id === "unsold_98_4") {

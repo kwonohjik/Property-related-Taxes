@@ -9,6 +9,7 @@ import type { ParsedRates } from "./transfer-tax-helpers";
 import { buildIncomeDeductionStep, resolveIncomeDeduction } from "./transfer-reductions/income-deduction-router";
 import type { New993Result } from "./transfer-reductions/new-99-3";
 import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
+import { withUnsold982LthdEcho, type Unsold982LthdEcho } from "./transfer-reductions/unsold-hybrid-p4";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
 
 export function runIncomeAndBaseSteps(args: {
@@ -18,6 +19,8 @@ export function runIncomeAndBaseSteps(args: {
   taxableGain: number;
   longTermHoldingDeduction: number;
   steps: CalculationStep[];
+  /** STEP 4.05 §98의2 특칙 장특 결과 — 4.6 라벨·결과 카드가 엔진이 실제 적용한 공제와 같은 값을 쓰게 한다(표시 전용). */
+  lthd982Echo?: Unsold982LthdEcho;
 }) {
   const { input, effectiveInput, parsedRates, taxableGain, longTermHoldingDeduction, steps } = args;
   // STEP 4.5: 양도소득금액 = 양도차익 − 장기보유특별공제 (소득세법 §95 ①)
@@ -33,7 +36,7 @@ export function runIncomeAndBaseSteps(args: {
   // 5년 내 = 발생분 전액(§98의8은 50%) / 5년 후 = 기준시가 안분. 농특세는 finalize 2-pass.
   let transferIncome = transferIncomeBefore993;
   // 조특법 §129② — 미등기면 차감형도 적용하지 않는다(D15, `unregisteredReductionNotice`).
-  const incomeDeduction = resolveIncomeDeduction(input.isUnregistered ? undefined : input.reductions, {
+  const incomeDeductionRaw = resolveIncomeDeduction(input.isUnregistered ? undefined : input.reductions, {
     transferDate: input.transferDate,
     acquisitionDate: input.acquisitionDate,
     assetContractDate: input.assetContractDate,
@@ -49,6 +52,10 @@ export function runIncomeAndBaseSteps(args: {
     standardPriceAtTransfer: input.standardPriceAtTransfer,
     transferIncome: transferIncomeBefore993,
   });
+  const incomeDeduction =
+    args.lthd982Echo && incomeDeductionRaw.unsold982Detail
+      ? { ...incomeDeductionRaw, unsold982Detail: withUnsold982LthdEcho(incomeDeductionRaw.unsold982Detail, args.lthd982Echo) }
+      : incomeDeductionRaw;
   const new993PreliminaryResult: New993Result | undefined = incomeDeduction.new993Detail;
   if (incomeDeduction.appliedId) {
     transferIncome = Math.max(0, transferIncomeBefore993 - incomeDeduction.reducible);

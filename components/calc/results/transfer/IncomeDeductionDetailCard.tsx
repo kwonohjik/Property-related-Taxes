@@ -10,6 +10,7 @@
 
 import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
+import { unsold982OutcomeLabel } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p4";
 import { ReductionDetailWarnings } from "@/components/calc/results/transfer/ReductionDetailWarnings";
 import type {
   New99Result,
@@ -161,7 +162,9 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
           {isSpecialOnly
             ? hybridEffect === "flat_rate_20"
               ? "세율 20% 특례 적용"
-              : "특칙 적용 — 장특 표2·기본세율"
+              : (result as UnsoldHybridResult).lthd982Echo
+                ? unsold982OutcomeLabel((result as UnsoldHybridResult).lthd982Echo!.outcome)
+                : "특칙 적용 — 장특 표2·기본세율"
             : kind === "unsold_98_4"
               ? "10% 세액감면 (5년 구분 없음)"
               : result.isWithin5Years
