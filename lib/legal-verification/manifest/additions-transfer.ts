@@ -21,6 +21,17 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** 조합원입주권 = 인가로 취득한 입주자 선정 지위 + «그 조합원으로부터 취득한 것» 포함(원조합원 vs 승계조합원 — `REDEVELOPMENT.RIGHT_DEFINITION`) · KoreanLaw 현행 본문 실측(2026-11-08). */
+    id: "TRANSFER.REDEV_RIGHT_DEFINITION",
+    citation: "소득세법 §88",
+    keywords: [
+      "관리처분계획의 인가",
+      "취득한 입주자로 선정된 지위를 말한다",
+      "그 조합원으로부터 취득한 것을 포함한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     /** 이월과세 × 당초 증여 채무 부분(매입분) — 「양도로 보는 부분」만 법문이 정한다(KoreanLaw 현행 본문 2026-10-27). */
     id: "TRANSFER.CARRYOVER_DEBT_PURCHASED_PART",
     citation: "소득세법 §88",

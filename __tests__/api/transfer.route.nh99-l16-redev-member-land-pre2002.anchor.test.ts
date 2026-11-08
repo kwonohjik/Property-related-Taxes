@@ -106,11 +106,10 @@ describe("L14-1 — 토지만 출자 원조합원 · §99의3 (준공 2002-05-25
     expect(h.tax).toBe(25_815_247);
     expect(h.warnings.some((w) => w.includes("종전주택을 상속·증여로 취득했으나"))).toBe(true);
   });
-  it("짝 — 종전 토지 취득이 인가일(2000-09-01) 뒤인 상속은 면제하지 않는다: 불성립 유지 112,640,000 (토지만 출자는 ⑧ 인가일 가드가 없어 엔진 날짜 가드가 막는다)", async () => {
-    const x = await go(apt({ ...A, acquisitionDate: "2001-03-01", reductions: [r993()] }), "2005-03-01");
-    expect(x.eligible).toBe(false);
-    expect(x.codes).toEqual(["ACQUIRED_BY_INHERITANCE_OR_GIFT"]);
-    expect(x.tax).toBe(112_640_000);
+  it("짝 — 종전 토지 취득이 인가일(2000-09-01) 뒤인 상속은 면제하지 않는다 — L19부터 ⑧(인가일 순서)·⑫가 먼저 막는다(수정 전 ⑧ 통과 · 엔진 날짜 가드 불성립 112,640,000)", async () => {
+    const r = await runCalc(form([apt({ ...A, acquisitionDate: "2001-03-01", reductions: [r993()] })], "2005-03-01"));
+    expect(r.issues.some((i) => i.field === "redevApprovalDate" && /인가일은 취득일 이후여야 합니다/.test(i.message))).toBe(true);
+    expect(r.status).toBe(400);
   });
 });
 
