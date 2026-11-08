@@ -7,7 +7,8 @@
  * 지금: 게이트에 `general_building`을 더하되 **선결 2건**을 함께 한다 —
  *  ① ⑫ Zod가 축 B 카드의 지분율을 `s.valuation?.ownershipRatio`(와이어에 없음)에서 읽어 담보 승인데 실지취득가액을 요구하던 막다른 길(⑧ 0건 → ⑫ 400) → `?? s.ownershipRatio`.
  *  ② 취득 안내 3곳이 담보 승을 축 없이 읽어 «실지취득가액 × 채무비율»이라 말하던 정반대 안내 → 축을 읽는다(components 쪽 anchor).
- * 의제취득일(1985.1.1.) 전 상속·증여 파트(`gbBgMarketPreDeemedParts`)가 있으면 열지 않는다(Q-2 a) — 같은 파트의 보충 승이 단건과 18,000,000 어긋나는 영역(V-S4)이다.
+ * 의제취득일(1985.1.1.) 전 상속·증여 파트(`gbBgMarketPreDeemedParts`)는 당초 열지 않았다(Q-2 a — 같은 파트의 보충 승이 단건과 18,000,000 어긋났다). #3021이 그 값을 고친 뒤
+ * V-P5로 열었다(격자는 `transfer.route.bg-gb-pre-deemed-collateral-win.anchor.test.ts`).
  *
  * 오라클 = 같은 시나리오의 단건(축 A 단건 = 반 크기 단건 · 축 B = 단건 100% · 함께 양도 = 단건 합) + 손계산 고정값(494,000,000 · 988,000,000 · 1,682,000,000).
  *
@@ -15,7 +16,7 @@
  * · GB-2 고정값 — 시가 담보 K-4 세 모양.
  * · GB-3 축 B 실지 비움 — 담보 승이면 칸이 없으므로 ⑧ 0건 ∧ ⑫ 200 (막다른 길 해소) · 보충 승이면 ⑧ ≥ 1 ∧ ⑫ 400 (⑧ ⊇ ⑫).
  * · GB-4 필수 입력(취득시 기준시가)을 비우면 ⑧ 차단 ∧ ⑫ 400 (⑧ ⊇ ⑫).
- * · GB-5 의제취득일 전 토지 파트 × 지분 × 담보 승은 ⑧이 계속 막는다 (Q-2 a) · 술어.
+ * · GB-5 의제취득일 전 토지·건물 파트 × 지분 × 담보 승도 연다 (V-P5) · 술어.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -189,21 +190,22 @@ describe("GB-4 취득시 기준시가를 비우면 ⑧ 차단 ∧ ⑫ 400 (⑧ �
   }
 });
 
-describe("GB-5 의제취득일 전 토지 파트 × 지분 × 담보 승 — 열지 않는다 (Q-2 a) · 술어", () => {
+describe("GB-5 의제취득일 전 파트 × 지분 × 담보 승 — V-P5로 연다 (종전 Q-2 a 차단) · 술어", () => {
   /** 토지 파트만 1980-01-01 상속(의제취득일 1985.1.1. 전) · 건물은 2015 매매 — 상증법 평가액 6천만 · 취득시 단가 300,000. */
   const PRE = (sc: number) => ({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "1980-01-01", acquisitionCause: "inheritance", inheritanceStartDate: "1980-01-01",
     decedentAcquisitionDate: "1970-01-01", publishedValueAtInheritance: S(60_000_000, sc), gbAcqLandPricePerSqm: S(300_000, sc), acquisitionDate: "2015-01-01", gbBuildingAcquisitionCause: "purchase" });
 
-  it("축 A 시가 담보 승: ⑧이 차단한다 — 사유 문구는 계산하는 종류에 일반건물을 든다", () => {
-    const got = issues(form([asset(1, "base", "a", HALF, debt("700000000"), PRE(1))]));
-    expect(got.length).toBeGreaterThan(0);
-    expect(got.map((m) => m.message).join("\n")).toContain("주택·토지·일반건물·재개발 완공 아파트(이월과세·의제취득일 전 상속·증여 제외)만 계산합니다");
+  it("축 A 시가 담보 승: ⑧ 0건 ∧ ⑫ 200 · 581,550,000 (종전 ⑧ 차단 — 기준시가 모드와 같은 값)", async () => {
+    const f = form([asset(1, "base", "a", HALF, debt("700000000"), PRE(1))]);
+    expect(issues(f)).toEqual([]);
+    expect(ok(await post(f))).toBe(581_550_000);
   });
-  it("축 B 시가 담보 승: ⑧이 차단한다", () => {
+  it("축 B 시가 담보 승: ⑧ 0건 ∧ ⑫ 200 · 1,163,100,000", async () => {
     const f = form([asset(1, "base", "p", pct("60"), debt("1400000000"), PRE(1)), asset(1, "base", "s", pct("40"), debt("1400000000"), PRE(1))], AB("1600000000"));
-    expect(issues(f).length).toBeGreaterThan(0);
+    expect(issues(f)).toEqual([]);
+    expect(ok(await post(f))).toBe(1_163_100_000);
   });
-  it("같은 입력에서 의제취득일 전 파트만 없애면(토지 2015 매매) 연다 — 차단 사유가 파트다", () => {
+  it("의제취득일 전 파트가 없는 같은 입력(토지 2015 매매)도 연다 (Q-3)", () => {
     expect(issues(form([asset(1, "base", "a", HALF, debt("700000000"))]))).toEqual([]);
   });
   it("기준시가 모드 담보 승은 종전처럼 통과한다(게이트와 무관 — 값 581,550,000)", async () => {
@@ -211,22 +213,23 @@ describe("GB-5 의제취득일 전 토지 파트 × 지분 × 담보 승 — 열
     expect(issues(f)).toEqual([]);
     expect(ok(await post(f))).toBe(581_550_000);
   });
-  it("건물 파트만 의제취득일 전 상속(토지는 2015 매매)이어도 같다 — 게이트 술어·⑧ 사유", () => {
+  it("건물 파트만 의제취득일 전 상속(토지는 2015 매매)이어도 같다 — 게이트 술어 · ⑧ 0건 · 581,550,000", async () => {
     /** 건물 취득일 = acquisitionDate(1980-01-01 상속) · 토지는 별도 취득일 2015-01-01 매매. */
     const PRE_B = { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2015-01-01", acquisitionDate: "1980-01-01", gbBuildingAcquisitionCause: "inheritance",
-      inheritanceStartDate: "1980-01-01", decedentAcquisitionDate: "1970-01-01", gbBuildingInheritedValue: "60000000" };
+      inheritanceStartDate: "1980-01-01", decedentAcquisitionDate: "1970-01-01", gbBuildingDecedentAcquisitionDate: "1970-01-01", gbBuildingInheritedValue: "60000000", gbAcqBuildingValue: "30000000" };
     const a = asset(1, "base", "a", HALF, debt("700000000"), PRE_B);
-    expect(bgFractionalCollateralKindSupported(a)).toBe(false);
-    expect(bgCollateralForcesStdAcq(a, false)).toBe(false);
-    expect(issues(form([a])).map((m) => m.message).join("\n")).toContain("만 계산합니다");
+    expect(bgFractionalCollateralKindSupported(a)).toBe(true);
+    expect(bgCollateralForcesStdAcq(a, false)).toBe(true);
+    expect(issues(form([a]))).toEqual([]);
+    expect(ok(await post(form([a])))).toBe(581_550_000);
   });
   it("술어: 게이트 · 강제", () => {
     const plain = asset(1, "base", "a", HALF, debt("700000000"));
     const pre = asset(1, "base", "a", HALF, debt("700000000"), PRE(1));
     expect(bgFractionalCollateralKindSupported(plain)).toBe(true);
     expect(bgCollateralForcesStdAcq(plain, false)).toBe(true);
-    expect(bgFractionalCollateralKindSupported(pre)).toBe(false);
-    expect(bgCollateralForcesStdAcq(pre, false)).toBe(false);
+    expect(bgFractionalCollateralKindSupported(pre)).toBe(true);
+    expect(bgCollateralForcesStdAcq(pre, false)).toBe(true);
     // 축 인자 없이는 지분 자산을 확정하지 않는다(종전 fail-closed 유지)
     expect(bgCollateralForcesStdAcq(plain)).toBe(false);
   });

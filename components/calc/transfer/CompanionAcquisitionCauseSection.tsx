@@ -64,6 +64,8 @@ interface Props {
   isNonPrimaryAsset?: boolean;
   /** 함께 양도하는 다른 자산이 있다(assets.length>1) — 파트 이월과세(C) 안내용 */
   hasCompanions?: boolean;
+  /** 지분 자산의 축 — 부담부증여 담보 승 판정(`gbBgThreeWayParts`)에 넘긴다(`bgCollateralForcesStdAcq`와 같은 세 상태). */
+  isFractionalSplit?: boolean;
 }
 
 export function CompanionAcquisitionCauseSection({
@@ -74,6 +76,7 @@ export function CompanionAcquisitionCauseSection({
   shareAcquisitionOnly,
   isNonPrimaryAsset,
   hasCompanions,
+  isFractionalSplit,
 }: Props) {
   // 일반건물(토지+건물 일괄) — 토지/건물 2카드로 분리 표시
   if (asset.assetKind === "general_building") {
@@ -83,6 +86,7 @@ export function CompanionAcquisitionCauseSection({
         onChange={onChange}
         transferDate={transferDate}
         shareAcquisitionOnly={shareAcquisitionOnly}
+        isFractionalSplit={isFractionalSplit}
       />
     );
   }

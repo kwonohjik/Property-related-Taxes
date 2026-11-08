@@ -42,7 +42,7 @@ export function bgFractionalHasOriginalRightShare(shares: readonly AssetForm[] |
 export function gbBgFractionalHasPartialShare(shares: readonly AssetForm[] | undefined): boolean {
   if (!shares) return false;
   const form = { assets: [...shares], assetSplitMode: "fractional" as const };
-  return shares.some((_, i) => !gbBgThreeWayParts(axisBEffectiveAsset(form, i)).all);
+  return shares.some((_, i) => !gbBgThreeWayParts(axisBEffectiveAsset(form, i), true).all);
 }
 
 /**
@@ -51,7 +51,7 @@ export function gbBgFractionalHasPartialShare(shares: readonly AssetForm[] | und
  */
 export function gbBgFractionalPreDeemedPartsAll(shares: readonly AssetForm[]): { land: boolean; building: boolean } {
   const form = { assets: [...shares], assetSplitMode: "fractional" as const };
-  const parts = shares.map((_, i) => gbBgThreeWayParts(axisBEffectiveAsset(form, i)));
+  const parts = shares.map((_, i) => gbBgThreeWayParts(axisBEffectiveAsset(form, i), true));
   return { land: parts.every((p) => p.land), building: parts.every((p) => p.building) };
 }
 
@@ -64,7 +64,7 @@ export function gbBgFractionalPreDeemedPartsAll(shares: readonly AssetForm[]): {
 export function bgPreDeemedShareJudgmentFields(share: AssetForm, primary: AssetForm): Partial<AssetForm> {
   const merged = mergePrimaryBasic(share, primary);
   // 일반건물은 파트별 3자 max(시가 평가 · PR-7b-6b)일 때 — 지분 카드의 ① 칸·안내가 같은 병합값으로 판정한다
-  if (!isBgPreDeemedAsset(merged) && !gbBgThreeWayParts(merged).any) return {};
+  if (!isBgPreDeemedAsset(merged) && !gbBgThreeWayParts(merged, true).any) return {};
   return Object.fromEntries(
     Object.entries(merged).filter(([k]) => k === "transferType" || k.startsWith("bg")),
   ) as Partial<AssetForm>;

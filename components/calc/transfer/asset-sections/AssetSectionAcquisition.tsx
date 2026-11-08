@@ -205,6 +205,7 @@ export function AssetSectionAcquisition({
         isNonPrimaryAsset={!isFirst}
         /* 파트 이월과세(C)는 함께 양도 자산이 있으면 계산하지 못한다 — 첫 자산 카드의 안내(N8) 근거. */
         hasCompanions={hasSiblings}
+        isFractionalSplit={splitMode === "fractional"}
       />
 
       {/* 신축주택 — 부수토지 한도 산정 섹션 (영 §154⑦) */}

@@ -120,6 +120,8 @@ interface Props {
    * `GeneralBuildingBlock`의 같은 이름 prop과 한 축이다).
    */
   shareAcquisitionOnly?: boolean;
+  /** 지분 자산의 축 — 부담부증여 담보 승 판정(`gbBgThreeWayParts`)에 넘긴다(`bgCollateralForcesStdAcq`와 같은 세 상태). */
+  isFractionalSplit?: boolean;
 }
 
 import {
@@ -138,6 +140,7 @@ export function GeneralBuildingAcquisitionCards({
   onChange,
   transferDate,
   shareAcquisitionOnly = false,
+  isFractionalSplit,
 }: Props) {
   /**
    * §114조의2 가산세 안내 배지 — 신축 + 5년 이내 + **환산 또는 감정**(엔진 게이트 leaf 공유 — `gbPenaltyBadgeMethod`).
@@ -155,7 +158,7 @@ export function GeneralBuildingAcquisitionCards({
    */
   const isSeparate = !!asset.hasSeperateLandAcquisitionDate;
   /** 부담부증여 · 시가 평가(담보 패) — 의제취득일 전 상속·증여 파트(그 파트만 3자 max · Q-28 · PR-7b-6b). ① 칸·안내가 같은 술어를 쓴다. */
-  const gbBgParts = gbBgThreeWayParts(asset);
+  const gbBgParts = gbBgThreeWayParts(asset, isFractionalSplit);
   const setLandAcqDate = (v: string) =>
     onChange(isSeparate ? { landAcquisitionDate: v } : { acquisitionDate: v, landAcquisitionDate: v });
   const setBuildingAcqDate = (v: string) =>
@@ -474,6 +477,7 @@ export function GeneralBuildingAcquisitionCards({
             onChange={landCardOnChange}
             transferDate={transferDate}
             fieldAcquisitionDate={isSeparate ? "landAcquisitionDate" : "acquisitionDate"}
+            isFractionalSplit={isFractionalSplit}
           />
         )}
 
@@ -493,7 +497,7 @@ export function GeneralBuildingAcquisitionCards({
               <p data-testid="gb-bg-pre1990-land-note" className="text-xs text-amber-800 dark:text-amber-200">
                 {gbBgPre1990LandNote(
                   asset,
-                  gbBgParts.land ? "three_way" : !gbBgUsesStdAcq(asset) ? "market" : asset.bgValuationMode === "sangjeungbeop_market" ? "collateral" : "standard",
+                  gbBgParts.land ? "three_way" : !gbBgUsesStdAcq(asset, isFractionalSplit) ? "market" : asset.bgValuationMode === "sangjeungbeop_market" ? "collateral" : "standard",
                   bgCollateralParenEraUncertain(transferDate) ? BG_COLLATERAL_PAREN_ERA_SUFFIX : "",
                 )}
               </p>

@@ -45,7 +45,7 @@ const partsLabel = (p: { land: boolean; building: boolean }) => (p.land && p.bui
 export function gbBgLandStdNote(asset: AssetForm, transferDate: string | undefined, isFractionalSplit?: boolean): string | null {
   const use = gbBgStdUseOf(asset, isFractionalSplit);
   if (!use) return null;
-  const parts = gbBgThreeWayParts(asset);
+  const parts = gbBgThreeWayParts(asset, isFractionalSplit);
   if (parts.any) {
     return (
       `부담부증여(시가 모드 · 의제취득일 전 ${partsLabel(parts)}) — 양도시 비율로 증여가액(시가)을 토지·건물로 나눕니다. 의제취득일(1985.1.1.) 전에 상속·증여받은 파트의 취득가액은 ① 상증법 평가액, ② 취득시(의제취득일) 기준시가, ③ 그 파트 증여가액에 「취득시 기준시가를 양도시 기준시가로 나눈 비율」을 곱한 환산취득가액 중 큰 금액 × 채무비율입니다(소령 §159①1호·§176조의2④).` +
@@ -73,7 +73,7 @@ export function gbBgAcqBuildingHint(asset: AssetForm, isFractionalSplit?: boolea
   const use = gbBgStdUseOf(asset, isFractionalSplit);
   if (!use) return null;
   const basis = gbBgAcqStdBasis(gbBuildingPreDeemed(asset));
-  if (gbBgThreeWayParts(asset).building) {
+  if (gbBgThreeWayParts(asset, isFractionalSplit).building) {
     return `${basis} 건물기준시가 총액. 의제취득일 전 건물은 이 금액이 ②(§164⑤ 가액)이자 ③(환산취득가액)의 분자이고, ③이 채택되면 이 금액 × 채무비율이 개산공제(§163⑥) 기준액입니다.`;
   }
   switch (use) {
