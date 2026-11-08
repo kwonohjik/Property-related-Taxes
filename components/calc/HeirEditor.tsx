@@ -286,14 +286,14 @@ export function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemov
             aria-expanded={changingRelation}
             aria-label="관계 변경"
             data-testid={`heir-change-relation-${index}`}
-            className="text-xs text-indigo-700 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-800 px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+            className="text-xs text-indigo-700 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
           >
             관계 변경
           </button>
           <button
             type="button"
             onClick={onRemove}
-            className="text-xs text-red-700 hover:text-red-800 dark:hover:text-red-800 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
+            className="text-xs text-red-700 hover:text-red-800 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
           >
             삭제
           </button>

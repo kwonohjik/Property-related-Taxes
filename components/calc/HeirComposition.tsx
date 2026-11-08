@@ -272,7 +272,7 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
                   setAddStep(null);
                   setPendingKind(null);
                 }}
-                className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700"
+                className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               >
                 취소
               </button>
@@ -291,7 +291,7 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
                   setAddStep("kind");
                   setPendingKind(null);
                 }}
-                className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700"
+                className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               >
                 ← 종류 선택으로
               </button>
