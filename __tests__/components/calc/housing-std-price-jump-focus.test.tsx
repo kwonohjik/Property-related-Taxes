@@ -9,6 +9,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { afterEach, beforeAll, describe, it, expect } from "vitest";
 import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import { jumpToIssueField } from "@/components/calc/transfer/validation-jump";
+import { CompanionSaleModeBlock } from "@/components/calc/transfer/CompanionSaleModeBlock";
 
 beforeAll(() => {
   // jsdom에는 레이아웃이 없다 — 보이는 후보로 치고 스크롤은 무시한다
@@ -44,5 +45,43 @@ describe("HousingStdPriceLookupField — 입력칸 이동", () => {
       <HousingStdPriceLookupField label="양도시 기준시가" data-field={KEY} value="" onChange={() => {}} referenceDate="2026-07-01" testidPrefix="t" />,
     );
     expect(container.querySelectorAll(`[data-field="${KEY}"]`)).toHaveLength(1);
+  });
+});
+
+/**
+ * 자산 카드 ② 양도정보의 「양도시 기준시가」(`CompanionSaleModeBlock` — `StandardPriceInput`)도 같은 결함이었다:
+ * 블록이 위젯 전체를 `<div data-field="standardPriceAtTransfer">`로 감싸 오류를 누르면 연도 선택(native select)으로 커서가 갔다
+ * (2026-11-08 브라우저 확인). 앵커를 `StandardPriceInput`의 `data-field`(금액 칸)로 넘긴다.
+ */
+describe("CompanionSaleModeBlock 양도시 기준시가 — 입력칸 이동", () => {
+  const noop = () => {};
+  const renderBlock = (assetKind: "housing" | "land") =>
+    render(
+      <CompanionSaleModeBlock
+        assetKind={assetKind}
+        bundledSaleMode="apportioned"
+        actualSalePrice="" onActualSalePriceChange={noop}
+        standardPriceAtTransfer="" onStandardPriceAtTransferChange={noop}
+        transferDate="2024-03-01" contractTotalPrice="1000000000"
+        standardPricePerSqmAtTransfer="" onStandardPricePerSqmAtTransferChange={noop} transferArea="" onTransferAreaChange={noop}
+      />,
+    );
+  const jump = () => jumpToIssueField({ field: "standardPriceAtTransfer", message: "양도시 기준시가를 입력하세요" } as never);
+  const focusedLabel = () => (document.activeElement?.closest("[data-field]")?.querySelector("label")?.textContent ?? "").trim();
+
+  it("주택(총액 입력): 연도 선택이 아니라 기준시가 총액 칸에 커서 · 앵커 1개", () => {
+    const { container } = renderBlock("housing");
+    expect(container.querySelectorAll('[data-field="standardPriceAtTransfer"]')).toHaveLength(1);
+    expect(jump()).toBe(true);
+    expect((document.activeElement as HTMLElement).tagName).toBe("INPUT");
+    expect(container.querySelector("select")?.contains(document.activeElement) ?? false).toBe(false);
+  });
+
+  it("토지(단가 × 면적): 사용자가 넣는 ㎡당 단가 칸에 커서(총액은 자동 계산)", () => {
+    const { container } = renderBlock("land");
+    expect(jump()).toBe(true);
+    expect((document.activeElement as HTMLElement).tagName).toBe("INPUT");
+    expect(focusedLabel()).toMatch(/㎡당 단가/);
+    expect(container.querySelector("select")?.contains(document.activeElement) ?? false).toBe(false);
   });
 });

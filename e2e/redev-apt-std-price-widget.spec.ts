@@ -36,9 +36,13 @@ async function open(page: Page, asset: unknown) {
   return page.locator('[data-asset-card-index="0"]');
 }
 
-/** 양도시 기준시가 칸(`data-field="standardPriceAtTransfer"`)의 라벨 중 단가·면적 칸 수 */
+/**
+ * 양도시 기준시가 위젯(`data-testid="sale-std-price-transfer"`)의 라벨 중 단가·면적 칸 수.
+ * ⚠️ 입력칸 이동 앵커(`data-field="standardPriceAtTransfer"`)는 금액 칸에만 있다 — 위젯 전체를 찾는 데 쓰지 않는다.
+ */
+const saleStdWidget = (card: ReturnType<Page["locator"]>) => card.getByTestId("sale-std-price-transfer").first();
 async function areaModeCells(card: ReturnType<Page["locator"]>) {
-  const wrap = card.locator('[data-field="standardPriceAtTransfer"]').first();
+  const wrap = saleStdWidget(card);
   await expect(wrap).toHaveCount(1);
   const labels = await wrap.locator("label").allTextContents();
   return { unit: labels.filter((t) => t.includes("㎡당 단가")).length, area: labels.filter((t) => /^면적 \(㎡\)/.test(t.trim())).length };
@@ -50,7 +54,7 @@ async function lookupPropertyType(page: Page, card: ReturnType<Page["locator"]>)
     type = new URL(route.request().url()).searchParams.get("propertyType");
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, price: 1, data: { price: 1 } }) });
   });
-  await card.locator('[data-field="standardPriceAtTransfer"]').first().getByRole("button", { name: /공시가격 조회/ }).click();
+  await saleStdWidget(card).getByRole("button", { name: /공시가격 조회/ }).click();
   await expect.poll(() => type, { timeout: 15_000 }).not.toBeNull();
   return type;
 }
