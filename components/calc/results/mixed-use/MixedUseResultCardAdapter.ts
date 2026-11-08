@@ -8,10 +8,69 @@
 
 import type {
   MixedUseGainBreakdown,
+  MixedUseStep,
   MixedUseTotalTax,
 } from "@/lib/tax-engine/types/transfer-mixed-use.types";
-import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import type { CalculationStep, TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { mixedUseDisplayedAcqPrice } from "@/lib/calc/mixed-use-part-acq-split";
+
+const stepValueText = (v: number | string) => (typeof v === "number" ? v.toLocaleString("ko-KR") : v);
+
+/**
+ * 「전체 엔진 계산 과정」 표에 싣는 겸용 step id (허용 목록).
+ * **보류(미렌더)**: `step-5-housing`(주택부분) · `step-7-commercial`(상가부분) · `step-6-non-business-land`(비사업용토지 부분) —
+ * 별개 취득(`separateAcquisition`)에서도 「환산취득가액」 라벨이 붙고 장기보유 율 문구가 4부분 가중과 다르다.
+ * 설계서 `transfer-split-acq-result-display.engine.design.md` §6(Q-C6). anchor T-5가 보류 step 미렌더를 지킨다.
+ */
+export const MIXED_USE_RENDERED_STEP_IDS: ReadonlySet<string> = new Set([
+  "step-0-burdened-gift",
+  "step-2-apportionment",
+  "income-deduction-new-housing",
+  "surcharge-exclusion-by-reduction",
+  "step-9-total",
+]);
+
+/**
+ * 겸용 엔진 step(`MixedUseStep` — id/title/legalBasis/values) → 단건 `CalculationStep`(label/formula/amount) 변환.
+ * 「전체 엔진 계산 과정」 표(명세서 카드 `EngineStepsSubToggle`)가 겸용에서도 엔진 step을 그대로 싣도록 한다. 표시 전용 — 세액 불변.
+ *
+ * 허용 목록(`MIXED_USE_RENDERED_STEP_IDS`) 밖의 step은 싣지 않는다.
+ *
+ * `amount` 규칙은 단건 관례를 따른다(`buildIncomeDeductionStep` · `buildSurchargeExclusionStep`):
+ *  · 숫자 결과 행(`isResult`)이 하나면 그 값 — `formula`는 결과가 아닌 행을 「라벨 값」으로 이은 문장
+ *    (행이 하나뿐인 step은 그 행의 라벨이 곧 산식이다 — 예: 「양도소득금액 A - 감면 양도소득금액 B = C」).
+ *  · 숫자 결과 행이 없거나 문자열 결과(「중과 배제」)면 `amount` 0 — 단건의 안내·배제 step(`amount: 0`)과 같다. 설명은 `formula`에 싣는다.
+ *  · 숫자 결과 행이 둘 이상이면(양도가액 안분의 주택·상가 양도가액) 결과 행마다 step 하나(`제목 — 행 라벨`)로 나눈다 —
+ *    `CalculationStep`은 금액이 하나라서다. 입력 행 산식은 첫 step에만 싣는다.
+ */
+export function mixedUseStepsToCalculationSteps(steps: readonly MixedUseStep[]): CalculationStep[] {
+  const out: CalculationStep[] = [];
+  for (const st of steps) {
+    if (!MIXED_USE_RENDERED_STEP_IDS.has(st.id)) continue;
+    const numericResults = st.values.filter((v) => v.isResult && typeof v.value === "number");
+    const inputs = st.values.filter((v) => !numericResults.includes(v));
+    const inputText = inputs.map((v) => `${v.label} ${stepValueText(v.value)}`).join(", ");
+    if (numericResults.length >= 2) {
+      numericResults.forEach((r, i) => {
+        out.push({
+          label: `${st.title} — ${r.label}`,
+          formula: i === 0 ? inputText : "",
+          amount: r.value as number,
+          legalBasis: st.legalBasis,
+        });
+      });
+      continue;
+    }
+    const only = numericResults[0];
+    out.push({
+      label: st.title,
+      formula: st.values.length === 1 ? st.values[0].label : inputText,
+      amount: only ? (only.value as number) : 0,
+      legalBasis: st.legalBasis,
+    });
+  }
+  return out;
+}
 
 /** MixedUseGainBreakdown → TransferTaxResult 어댑터 (FilingFormTable 호환) */
 export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
@@ -121,10 +180,11 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
     // NH-38 — 농특세 미납분 납부지연가산세(totalPayable에 이미 포함) — 승계하지 않으면 신고서 칸·요약이 0이 된다.
     ...(t.ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty: t.ruralSurtaxDelayedPenalty } : {}),
     totalTax: t.totalPayable,
-    // b.steps는 MixedUseStep[] (id/title/legalBasis/values 구조)로 CalculationStep[]과
-    // 형태가 달라 재사용 불가. 명세서 카드는 mixedUseDetail·result 필드로 값을 뽑고
-    // formula는 fallback을 쓰므로 빈 배열로 전달 (findStepByLabel 매칭 자연 실패).
-    steps: [],
+    // b.steps는 MixedUseStep[] (id/title/legalBasis/values 구조)라 형태를 변환해 싣는다 — 명세서 카드의
+    // 「전체 엔진 계산 과정」 표가 겸용에서도 §99·§99의3 차감 step을 포함해 보인다(표시 전용).
+    // 라벨은 step 제목(「주택부분」·「합산 세액」…)이라 명세서의 `findStepByLabel` 키워드(과세표준·산출세액 등)와
+    // 겹치지 않는다. 겹치는 키워드는 「양도소득금액」뿐이라 그 호출부가 차감 step을 걸러낸다(`DetailedStatementHelpers.ts`).
+    steps: mixedUseStepsToCalculationSteps(b.steps),
     mixedUseDetail: b,
   };
 }

@@ -16,6 +16,10 @@
  * 기대값은 `_helpers/split-acq-display-fixture.ts`의 독립 산식(BigInt 정수 나눗셈)이다 — 엔진 출력 복사가 아니다.
  */
 import { readFileSync } from "node:fs";
+import {
+  MIXED_USE_RENDERED_STEP_IDS,
+  mixedUseStepsToCalculationSteps,
+} from "@/components/calc/results/mixed-use/MixedUseResultCardAdapter";
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import {
@@ -312,10 +316,29 @@ describe("T-4b 새 문구는 `/`·`÷`를 쓰지 않는다 — FormulaText가 `�
 // ═══════════════════════════════════════════════════════════════════════
 // T-5 — 겸용 MixedUseStep 미렌더(정적 확인)
 // ═══════════════════════════════════════════════════════════════════════
-describe("T-5 겸용 MixedUseStep은 어떤 결과뷰도 렌더하지 않는다 (Q-C6 — 보류의 전제)", () => {
-  it("어댑터가 steps: []를 내려 보낸다 — 렌더하기 시작하면 라벨·율 문구를 같은 규격으로 정정해야 한다", () => {
+describe("T-5 겸용 MixedUseStep은 허용 목록 step만 렌더한다 — 라벨 문제가 있는 3종은 보류 (Q-C6 유지)", () => {
+  const stub = (id: string) => ({ id, title: `t-${id}`, legalBasis: "근거", values: [{ label: "라벨", value: 1, isResult: true }] });
+  const DEFERRED = ["step-5-housing", "step-7-commercial", "step-6-non-business-land"];
+
+  it("허용 목록은 안분·차감·합산 세액·중과 배제·부담부증여 5종이고 주택부분·상가부분·비사업용 step은 없다", () => {
+    expect([...MIXED_USE_RENDERED_STEP_IDS].sort()).toEqual([
+      "income-deduction-new-housing",
+      "step-0-burdened-gift",
+      "step-2-apportionment",
+      "step-9-total",
+      "surcharge-exclusion-by-reduction",
+    ]);
+    for (const id of DEFERRED) expect(MIXED_USE_RENDERED_STEP_IDS.has(id)).toBe(false);
+  });
+
+  it("어댑터 변환은 보류 step을 내려 보내지 않는다 — 렌더하기 시작하면 라벨·율 문구를 같은 규격으로 정정한 뒤 허용 목록에 넣는다", () => {
+    const out = mixedUseStepsToCalculationSteps([...DEFERRED, "step-9-total"].map(stub));
+    expect(out.map((o) => o.label)).toEqual(["t-step-9-total"]);
+  });
+
+  it("어댑터가 steps를 변환 함수로 내린다(`steps: []` 아님)", () => {
     const src = readFileSync("components/calc/results/mixed-use/MixedUseResultCardAdapter.ts", "utf8");
-    expect(src).toMatch(/^\s*steps:\s*\[\],/m);
+    expect(src).toMatch(/^\s*steps:\s*mixedUseStepsToCalculationSteps\(b\.steps\),/m);
   });
 });
 

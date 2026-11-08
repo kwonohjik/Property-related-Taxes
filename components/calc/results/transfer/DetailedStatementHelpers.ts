@@ -607,7 +607,7 @@ export function buildStatementItems(
    * 비과세 행과 같은 산식이 두 번 찍혔다. 비과세 라벨을 먼저 걸러낸다.
    */
   const incomeStep = findStepByLabel(
-    result.steps?.filter((s) => !s.label?.includes("비과세")),
+    result.steps?.filter((s) => !s.label?.includes("비과세") && !s.label?.includes("양도소득금액 차감")),
     "양도소득금액",
   );
   const sumIncome = isAggregate
