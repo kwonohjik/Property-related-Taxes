@@ -10,6 +10,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const redev = (over: Record<string, unknown>, car: Record<string, unknown>) => ({
   ...makeDefaultAsset(1),
@@ -30,7 +31,7 @@ async function seed(page: Page, assets: unknown[], extra: Record<string, unknown
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    {
+    seedWithDeclaredRoster({
       state: {
         formData: {
           assets, contractTotalPrice: "1300000000", transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "1", isOneHousehold: false,
@@ -39,7 +40,7 @@ async function seed(page: Page, assets: unknown[], extra: Record<string, unknown
         pendingMigration: false,
       },
       version: 0,
-    },
+    }),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

@@ -36,6 +36,7 @@ import { GiftLandStdPriceSection } from "@/components/calc/transfer/GiftLandStdP
 import { isSec163_9HouseAsset } from "@/lib/calc/transfer-163-9-base-date";
 import { isSec163_9LandAsset } from "@/lib/calc/transfer-163-9-base-date";
 import { sec164LandFieldsAlwaysOpen } from "@/lib/calc/transfer-163-9-base-date";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -45,11 +46,11 @@ type A = Record<string, unknown>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Body = Record<string, any>;
 const mk = (assets: A[]) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "1", isOneHousehold: false,
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, contractTotalPrice: "1300000000",
     assets: assets.map((a, i) => ({ ...makeDefaultAsset(i + 1), ...a }) as AssetForm),
-  }) as TransferFormData;
+  })) as TransferFormData;
 
 async function postBody(body: Body): Promise<{ status: number; data: Body; error?: Body }> {
   const res = await POST(new NextRequest("http://localhost/api/calc/transfer", {

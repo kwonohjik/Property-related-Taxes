@@ -773,6 +773,11 @@ export interface TransferTaxInput {
   /** §154① 거주요건 경과규정(2017.8.3) 판정용 실제 취득일 — 이월과세 시 수증자 취득일(보유기산일과 별개). 미지정 시 acquisitionDate */
   residenceTransitionAcquisitionDate?: Date;
   /**
+   * 이월과세 시나리오 A의 §95④ 단서 보유 기산일(증여자 취득일) — STEP 0.5가 명부 양도 행의 `holdingPeriodStartDate`로 옮긴다.
+   * 명부 양도 행 취득일(④ — 증여 등기일)은 그대로 둔다. 엔진 내부 값(`transfer-tax-carryover.ts`) — 폼·Zod 입력이 아니다.
+   */
+  carryoverHoldingStartDate?: Date;
+  /**
    * §154① 거주요건 **입주권 전환 시점 예외** 판정일 (#12) — 토지만 출자한 원조합원 완공APT에서 입주권 전환일
    * (= 관리처분계획 인가일 — 그날 보유 부동산이 입주권으로 바뀐다). 그 날 현재 조정대상지역이 아니었으면 사용승인일에 조정대상지역이어도 거주요건이 없다
    * (재산세제과-584). 판정 입력 번역(`translateRedevAptForHousingJudgment`)이 싣는 **엔진 내부** 값이다 — 폼·Zod 입력이 아니다.
@@ -1266,6 +1271,11 @@ export interface TransferTaxInput {
    * 서버 route만 주입한다(Zod 스키마에 없다 — 클라이언트가 보낼 수 없다). 술어 `resolveSurchargeApplication` 최상단에서 닫는다.
    */
   forceNoMultiHouseSurcharge?: boolean;
+  /**
+   * 엔진 내부 주입(STEP 0.45 · `transfer-tax-precalc.ts`) — 명부 없는 fallback에서 양도 주택이 감면주택(영 §167의3①5호·3호)으로
+   * 중과 배제된다. 술어 `resolveSurchargeApplication`의 fallback 분기가 읽는다(리뷰 US-38). Zod 스키마에 없다 — 클라이언트가 보낼 수 없다.
+   */
+  surchargeExcludedByReduction?: boolean;
   /** P5 모드 2 — 보유 감면주택 §89①3호 주택수 제외 (7개 조문 ②·§98 령②·§99②). */
   specialHouseExclusions?: import("../transfer-reductions/unsold-hybrid-p5").SpecialHouseExclusionInput[];
   /**

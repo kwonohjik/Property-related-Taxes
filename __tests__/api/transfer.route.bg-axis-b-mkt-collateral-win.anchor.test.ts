@@ -42,6 +42,7 @@ import { bgSplitAxisCollateralWinUnsupported } from "@/lib/calc/burdened-gift-co
 import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
 import { bgExpenseInputsUnused } from "@/lib/calc/burdened-gift-expense-scope";
 import { collateralForcesStdAcquisition } from "@/lib/api/transfer-tax-schema-collateral-win";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -57,11 +58,11 @@ const house = (id: number, num: string, acq: string, over: A = {}) =>
     bgDonorRelation: "lineal_descendant", standardPriceAtTransfer: "1000000000", standardPriceAtAcq: "500000000", ...over,
   }) as AssetForm;
 const form = (a: A, b: A = {}, shape?: { assets?: AssetForm[] }) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2026-02-16", filingDate: "2026-04-30", contractTotalPrice: "1000000000", totalTransferExpense: "0", householdHousingCount: "2",
     isOneHousehold: false, householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, assetSplitMode: "fractional",
     assets: shape?.assets ?? [house(1, "60", "2009-03-01", a), house(2, "40", "2012-03-01", b)],
-  }) as TransferFormData;
+  }))) as TransferFormData;
 
 const STD: A = { bgValuationMode: "sangjeungbeop_standard" };
 const MKT: A = { bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1000000000", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "400000000" };
@@ -201,10 +202,10 @@ describe("AB-4 범위 밖 종류는 «채무액 초과»가 아니라 정확한 
 describe("AB-5 축 A의 주택 외 종류는 여전히 막힌다 (주택은 S-2가 열었다)", () => {
   it("단건 지분 50% 시가 담보 승(축 A) 재개발 APT는 종전처럼 FRAC_WIN으로 막는다", () => {
     const a = house(1, "50", "2012-03-01", { assetKind: "redevelopment_apt", ...MKT, bgMortgageDebtAmount: "700000000", bgMortgageSetAmount: "700000000", bgLendingDepositTotal: "0", ownershipRemainderThirdParty: "yes" });
-    const f = Object.assign(createDefaultTransferFormData(), {
+    const f = rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
       transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false,
       householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, assets: [a],
-    }) as TransferFormData;
+    }))) as TransferFormData;
     expect(issues(f).some((i) => i.message.includes("담보평가액") && i.message.includes("시가 해당분보다 커서"))).toBe(true);
   });
   it("컴패니언(다른 물건) 묶음의 지분 재개발 APT 담보 승은 비보충 승자 게이트로 막는다", () => {

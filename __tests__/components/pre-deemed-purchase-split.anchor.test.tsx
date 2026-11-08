@@ -36,6 +36,7 @@ import { baseTransferInput } from "../tax-engine/_helpers/mock-rates";
 import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
 import { PreDeemedPurchaseCard } from "@/components/calc/transfer/PreDeemedPurchaseCard";
 import { isPreDeemedPurchaseAsset, preDeemedPurchaseNotCompared } from "@/lib/calc/transfer-pre-deemed-purchase-form";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -46,12 +47,12 @@ type A = Record<string, unknown>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Body = Record<string, any>;
 const mk = (assets: A[], extra: A = {}) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "0", isOneHousehold: false,
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, contractTotalPrice: "1000000000",
     assets: assets.map((a, i) => ({ ...makeDefaultAsset(i + 1), ...a }) as AssetForm),
     ...extra,
-  }) as TransferFormData;
+  })) as TransferFormData;
 
 async function check(f: TransferFormData) {
   const issue = [0, 1, 2, 3].map((st) => validateStepDetailed(st, f)).find(Boolean) ?? null;

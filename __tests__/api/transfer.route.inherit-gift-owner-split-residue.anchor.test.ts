@@ -37,6 +37,7 @@ import { ownerSplitHousingNeedsBuildingStd } from "@/lib/calc/transfer-tax-split
 import { validateUsageConversion } from "@/lib/calc/transfer-tax-validate-usage-conversion";
 import { buildRows } from "@/components/calc/results/transfer/FilingFormTableHelpers";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -63,9 +64,9 @@ const GIFT: Loose = {
 const CONTROL = { building_only: 154_500_000, land_only: 94_022_000 } as const;
 
 const form = (a: Loose): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     ...HH, contractTotalPrice: String(a.actualSalePrice).replace(/,/g, ""), assets: [{ ...makeDefaultAsset(1), ...a } as AssetForm],
-  }) as TransferFormData;
+  })) as TransferFormData;
 const restored = (a: Loose): Loose => migratePersistedTransferForm(form(a)).assets[0] as unknown as Loose;
 
 async function run(a: Loose) {
@@ -185,13 +186,13 @@ describe("OS — 정규화 범위", () => {
 
   it("함께 양도 자산(컴패니언)도 같은 분리 payload를 거친다 — 남은 토지 금액·옛 토지 취득일이 총세액을 바꾸지 않는다", async () => {
     const two = (c: Loose) =>
-      Object.assign(createDefaultTransferFormData(), {
+      rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
         ...HH, contractTotalPrice: "1700000000",
         assets: [
           { ...makeDefaultAsset(1), ...INH, actualSalePrice: "500,000,000", acquisitionArea: "", transferArea: "" } as AssetForm,
           { ...makeDefaultAsset(2), ...INH, selfOwns: "land_only", ...c } as AssetForm,
         ],
-      }) as TransferFormData;
+      })) as TransferFormData;
     const total = async (c: Loose) => {
       const f = two(c);
       const r = await postTransfer((await captureBody(f)) as Loose);

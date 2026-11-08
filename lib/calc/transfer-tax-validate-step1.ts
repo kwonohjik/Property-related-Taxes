@@ -35,6 +35,7 @@ import { fieldError } from "./transfer-tax-validate-field";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 import { houseRowFactIssues } from "./house-row-fact-issues";
+import { confirmedNoOtherHousesDiverges } from "./household-house-count";
 import { declaredNewHouseOriginIssue } from "./declared-new-house-origin";
 import { deriveCalcTemporaryTwoHouse } from "./transfer-tax-api-body-blocks";
 import { sellingHouseOriginIssue } from "./selling-house-origin-scope";
@@ -54,17 +55,18 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
    * ⑧ 명부 필수화(PR-1·PR-B·PR-C) — 세대 보유 주택 수를 명부에서 도출하는 자산 양도
    * (`usesHouseCountRoster` — housing·redevelopment_apt·right_to_move_in) + 명부 0행이면
    * 「다른 보유 주택이 없습니다」 확정이 있어야 통과한다. legacy 표식(OH-34 — 저장 당시
-   * 스칼라가 명부와 어긋난 구 이력)이 붙은 레코드는 제외한다 — 그 레코드는 이미 유효한
-   * 세액을 보존 중이라 재확인을 요구하지 않는다.
+   * 스칼라가 명부와 어긋난 구 이력)도 명부가 0행이면 예외가 아니다(US-30 — 아래 주석).
    *
    * Q-7(PR-1)·PR-B·PR-C(계획서 §4-3) — 분양권은 ①의 의미 축 자체가 없어 범위 밖(§4-4).
    * 겸용주택은 `assetKind`가 항상 `"housing"`이라 이미 포함된다(별도 판정축 아님, §4-1).
    */
   // NH-14 — 첫 자산이 주택 계열이 아니어도 함께 양도하는 주택이 있으면 그 주택이 기준이다(⑤ `Step4` · ④와 같은 leaf — 3중 패턴).
   const primaryKind = householdFactsKindOfForm(form);
+  // 🔴 레거시 면제는 명부 행이 있을 때만이다(리뷰 US-30) — 복원은 날짜 있는 행이 있어야 표식을 붙이므로(`houseCountDivergedFromRoster`)
+  //   「레거시 + 0행」은 복원 뒤 행을 모두 지워야만 생기고, 그 상태의 면제는 보존할 세액이 없이 fallback 중과로 이어졌다.
+  //   명부 편집 patch(`housesPatchWithDerivedCount`)도 그때 표식을 끈다 — 이 검사는 이미 그 상태로 저장된 폼을 막는다.
   if (
     usesHouseCountRoster(primaryKind) &&
-    !form.legacyHouseCountPrecedence &&
     (form.houses?.length ?? 0) === 0 &&
     !form.householdNoOtherHousesConfirmed
   ) {
@@ -72,6 +74,15 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       step,
       field: "householdNoOtherHousesConfirmed",
       message: "다른 보유 주택이 없는지 확인하세요.",
+    });
+  }
+
+  // US-31 — 확정과 저장 주택 수가 어긋나면(자산 종류 전환 뒤 분양권 주택 수 버튼 등) 확정을 다시 하게 막는다(값을 몰래 고치지 않는다).
+  if (confirmedNoOtherHousesDiverges(form, primaryKind)) {
+    issues.push({
+      step,
+      field: "householdNoOtherHousesConfirmed",
+      message: `「다른 보유 주택이 없습니다」 확인과 세대 보유 주택 수(${form.householdHousingCount}채)가 어긋납니다 — 확인을 껐다가 다시 켜거나, 다른 보유 주택이 있으면 「다른 보유 주택 목록」에 추가하세요.`,
     });
   }
 

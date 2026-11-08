@@ -106,7 +106,12 @@ export function MultiHouseSurchargeResultView({
 
       {rateImpact && (
         <ToneCard tone="amber" sectionNum={next()} title="세율 영향">
-          <SurchargeRateImpactCard rateImpact={rateImpact} />
+          <SurchargeRateImpactCard
+            rateImpact={rateImpact}
+            incentiveHouseDeclared={
+              headline?.result.exclusionReasons.some((r) => r.type === "tax_special_exemption" || r.type === "tax_incentive_rental") ?? false
+            }
+          />
         </ToneCard>
       )}
 

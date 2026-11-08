@@ -7,6 +7,7 @@
 import type { Page } from "@playwright/test";
 import { makeDefaultAsset } from "../../lib/stores/calc-wizard-asset-factory";
 import { DIRECT_RESIDENCE } from "./residence-direct";
+import { seedWithDeclaredRoster } from "./roster-for-declared-count";
 
 export const otherHouse = (id: string, acquisitionDate: string, over: Record<string, unknown> = {}) => ({
   id,
@@ -67,7 +68,7 @@ export async function gotoTransferHoldingsStep(
   };
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seed);
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster(seed));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.getByRole("button", { name: "보유 상황" }).first().click();

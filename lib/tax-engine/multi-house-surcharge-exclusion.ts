@@ -303,6 +303,14 @@ function resolvePreDesignationContractExclusion(
 }
 
 /**
+ * 12호·12의2호의 「법 제95조제4항에 따른 보유기간」 기산일 — 이월과세 행(`holdingPeriodStartDate` · §95④ 단서 증여자 취득일) →
+ * 축 B 지분 행(`shareAcquisitionDate`) → 행 취득일 순.
+ */
+function surchargeHoldingStartDate(h: HouseInfo): Date {
+  return h.holdingPeriodStartDate ?? h.shareAcquisitionDate ?? h.acquisitionDate;
+}
+
+/**
  * 「법 제95조제4항에 따른 보유기간이 10년 … 이상인 주택을 2020년 6월 30일까지 양도하는 경우 그 해당 주택」 —
  * 영 §167의3①12호 · §167의4③6호 · §167의10①12호 · §167의11①11호(2020.2.11. 신설 · 2019.12.17. 이후 양도분 —
  * 제30395호 부칙 제18조). 네 호의 문언이 같고, 세대의 주택·권리 수로 호만 갈린다.
@@ -319,7 +327,7 @@ function resolveLongHoldingTemporaryExclusion(
   const w = LONG_HOLDING_TEMPORARY_EXCLUSION;
   if (!sellingHouse || input.transferDate < w.FROM || input.transferDate > w.UNTIL) return undefined;
   // 「법 제95조제4항에 따른 보유기간」 — 초일(취득일) 산입(유형 C · MST 214261 실독 · E-11).
-  const years = calculateHoldingPeriod(sellingHouse.shareAcquisitionDate ?? sellingHouse.acquisitionDate, input.transferDate).years;
+  const years = calculateHoldingPeriod(surchargeHoldingStartDate(sellingHouse), input.transferDate).years;
   if (years < w.MIN_HOLDING_YEARS) return undefined;
   const basis =
     countedRightCount > 0
@@ -459,9 +467,13 @@ export function determineSurchargeExclusion(
     if (sellingHouse.isTaxSpecialExemption || sellingHouse.isUnsoldHousing) {
       exclusionReasons.push({
         type: "tax_special_exemption",
+        // 자동 판정(STEP 0.45 감면 적격)과 자기 선언(5호 토글)을 문구로 구분한다 — 둘이 같은 글자라 감면 「적용 불가」 카드와
+        //   「조특법 특례」 배제가 함께 나와도 출처를 알 수 없었다(리뷰 US-19).
         detail: sellingHouse.isUnsoldHousing && !sellingHouse.isTaxSpecialExemption
           ? `조특법 감면 미분양·신축주택 (${MULTI_HOUSE.TAX_INCENTIVE_HOUSE_5_BASIS})`
-          : "조세특례제한법 특례 적용 주택",
+          : sellingHouse.taxSpecialExemptionAutoId
+            ? "조세특례제한법 특례 적용 주택 — 입력한 감면의 요건 판정으로 적용"
+            : "조세특례제한법 특례 적용 주택 — 「조특법 감면주택」 선언으로 적용",
       });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
@@ -638,7 +650,7 @@ export function determineSurchargeExclusion(
   //   sellingHouse.acquisitionDate가 그 기산일을 담는다는 전제 — 기존 §167의3 3년 판정 L213과 동일 관례.)
   //   E-11 — §95④ 보유기간은 초일 산입(`meetsSurchargeSuspensionHolding` — ⑤ 화면 게이트와 같은 함수).
   const meetsSuspensionHolding = sellingHouse
-    ? meetsSurchargeSuspensionHolding(sellingHouse.shareAcquisitionDate ?? sellingHouse.acquisitionDate, input.transferDate)
+    ? meetsSurchargeSuspensionHolding(surchargeHoldingStartDate(sellingHouse), input.transferDate)
     : false;
 
   // 2022.5.10. 전 양도분에는 12의2(가·나·다목 모두)가 없다 — 제32654호 부칙 제4조(E-14k).

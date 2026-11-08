@@ -29,6 +29,7 @@ import { createDefaultTransferFormData, type AssetForm, type TransferFormData } 
 import { getReductionDefault } from "@/components/calc/transfer/UnifiedReductionPanel-defaults";
 import { POST as JUDGMENT_POST } from "@/app/api/calc/multi-house-surcharge-judgment/route";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 const mock = () => vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 beforeEach(mock);
@@ -54,10 +55,10 @@ const GIFT = {
 /** 인가일 뒤 입주권 승계 — 승계 매매는 취득가액(fixedAcquisitionPrice)이 필수, 청산금 분기는 미지원이라 0 */
 const SUCC = { redevIsSuccessorMember: "yes", redevSettlementAmount: "0", redevActualAcquisitionPrice: "", fixedAcquisitionPrice: "100000000" };
 const form = (assets: AssetForm[], transferDate: string, contract = assets[0].actualSalePrice) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate, filingDate: transferDate, totalTransferExpense: "0", isOneHousehold: false, householdHousingCount: "2",
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, assets, contractTotalPrice: contract,
-  }) as TransferFormData;
+  }))) as TransferFormData;
 const r993 = (over: Record<string, unknown> = {}) => ({
   ...getReductionDefault("new_99_3"), acquisitionType993: "self_built", standardPriceAtAcquisition993: "100000000", standardPriceAt5Years: "160000000",
   standardPriceAtTransfer993: "250000000", exclusiveAreaSqm993: "84", region993: "outside_speculation", isResident993: true,
@@ -166,13 +167,7 @@ describe("Q-2 a — 인가일 뒤 상속 승계 (승계조합원)", () => {
   });
 });
 
-describe("불성립 유지 — 토지만 출자 원조합원(종전주택 없음)", () => {
-  it("L 토지만 출자 · 상속 → 98,476,714 ACQUIRED_BY_INHERITANCE_OR_GIFT 그대로 (매매 대조는 적용 17,904,857)", async () => {
-    const x = await go(apt({ redevOriginalAssetType: "land", redevCompletionDate: "2002-05-25", reductions: [r993()] }), "2005-03-01");
-    expect(x.codes).toEqual(["ACQUIRED_BY_INHERITANCE_OR_GIFT"]);
-    expect(x.tax).toBe(98_476_714);
-    expect((await go(apt({ redevOriginalAssetType: "land", ...PURCHASE, redevCompletionDate: "2002-05-25", reductions: [r993()] }), "2005-03-01")).tax).toBe(17_904_857);
-  });
+describe("불성립 유지 — 입력 모순 (토지만 출자 원조합원의 상속은 L16에서 면제로 바뀜 — transfer.route.nh99-l16-redev-member-land-pre2002.anchor)", () => {
   it("⑧ — 인가일 뒤 취득인데 승계 표시가 없으면 막는다(엔진 날짜 가드의 입력단 짝)", async () => {
     const x = await go(apt({ acquisitionDate: "2001-03-01", redevCompletionDate: "2002-05-25", reductions: [r993()] }), "2005-03-01");
     expect(x.issues.some((i) => i.field === "redevApprovalDate")).toBe(true);

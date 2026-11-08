@@ -29,6 +29,7 @@ import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 type Obj = Record<string, unknown>;
 
@@ -98,7 +99,7 @@ afterEach(() => vi.unstubAllGlobals());
 const PRE = { landAcquisitionDate: "1980-05-01", landStandardPriceAtTransfer: "400,000,000", buildingStandardPriceAtTransfer: "300,000,000" } as Partial<AssetForm>;
 /** ⑧ — 자산 단계(0)·세대 단계(1)를 함께 본다. 세대 확인 칸 두 개는 이 시드와 무관하므로 채운다. */
 const issues8 = (a: AssetForm) => {
-  const f = { ...form(a), householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true } as ReturnType<typeof form>;
+  const f = rosterForDeclaredCount({ ...form(a), householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true }) as ReturnType<typeof form>;
   return [...collectStepIssues(0, f), ...collectStepIssues(1, f)];
 };
 

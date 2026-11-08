@@ -77,6 +77,8 @@ function redev(over: Partial<AssetForm> = {}): AssetForm {
     redevSettlementDirection: "pay",
     acquisitionCause: "gift",
     acquisitionDate: "2015-06-01",
+    // 토지 출자 분기도 인가일을 요구한다(L19) — 비우면 아래 단언들이 «인가일을 입력하세요»에 가려진다
+    redevApprovalDate: "2016-06-01",
     useEstimatedAcquisition: true,
     redevIsSuccessorMember: "no",
     redevActualAcquisitionPrice: "200000000",

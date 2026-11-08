@@ -17,6 +17,9 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { usesHouseCountRoster, houseCountSelfOffset } from "@/lib/calc/housing-like-asset";
 import { presaleRightNoHouseExceptionVisible } from "@/lib/calc/presale-right-no-house-exception-scope";
+import { RegulatedAreaField } from "@/components/calc/transfer/RegulatedAreaField";
+import { calcTransferRegulatedVerdict } from "@/lib/calc/effective-regulated-at-acquisition";
+import { regulatedAtTransferToggleApplies } from "@/lib/calc/regulated-transfer-toggle-scope";
 
 export function HouseholdHousingCountSection({
   form,
@@ -98,7 +101,8 @@ export function HouseholdHousingCountSection({
                 key={v}
                 type="button"
                 disabled={houseCountLocked}
-                onClick={() => onChange({ householdHousingCount: v === "3+" ? "3" : v })}
+                // US-31 — 폼 전역 주택 수를 바꾸므로 주택 종류에서 켠 「다른 보유 주택이 없습니다」 확정도 해제한다(종류를 되돌리면 ⑧이 다시 묻는다).
+                onClick={() => onChange({ householdHousingCount: v === "3+" ? "3" : v, householdNoOtherHousesConfirmed: false })}
                 className={cn(
                   "flex-1 rounded-md border py-2 text-sm font-medium transition-colors",
                   (v === "3+" ? parseInt(form.householdHousingCount) >= 3 : form.householdHousingCount === v)
@@ -134,6 +138,25 @@ export function HouseholdHousingCountSection({
             </div>
           )}
         </div>
+      )}
+
+      {/*
+        분양권 «양도일 기준 조정대상지역» — §104①4호(조정대상지역 주택분양권 50%)가 있는 양도일 구간(2018.1.1~2021.5.31)에서만 세액을 바꾼다
+        (계획서 `docs/00-pm/regulated-rights-transfer-toggle.plan.md` §2 M-1~M-5). ④ 섹션은 분양권에서 열리지 않을 수 있어 칸을 여기에 둔다 —
+        아래 단서 확인이 이 값을 읽으므로 UI 순서 = 판정 순서다. 주택·재개발APT의 칸은 ④(`SurchargeJudgmentSection`)가 그린다.
+      */}
+      {primaryKind === "presale_right" && regulatedAtTransferToggleApplies(primaryKind, form.transferDate) && (
+        <RegulatedAreaField
+          verdict={calcTransferRegulatedVerdict(form)}
+          autoLabel="양도일 기준 조정대상지역"
+          autoTestId="transfer-regulated-transfer-auto"
+          toggleTestId="transfer-is-regulated"
+          toggleTitle="양도일 기준 조정대상지역"
+          toggleSize="default"
+          checked={form.isRegulatedArea}
+          onCheckedChange={(v) => onChange({ isRegulatedArea: v, isRegulatedAreaTouched: true })}
+          toggleDescription="이 양도일에는 조정대상지역 주택분양권 세율(§104①4호 50%)이 있어 지정 여부가 세율을 정합니다. 소재지를 입력하면 읍·면·동·택지지구 예외까지 자동 판정합니다"
+        />
       )}
 
       {/*

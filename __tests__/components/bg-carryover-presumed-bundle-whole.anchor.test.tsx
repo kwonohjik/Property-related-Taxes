@@ -30,6 +30,7 @@ import { BundledAllocationCard } from "@/components/calc/results/BundledAllocati
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -61,11 +62,11 @@ const HOUSE: A = {
 };
 const HALF: A = { ownershipNumerator: "50", ownershipDenominator: "100", addressJibun: "서울 강남구 테스트동 1-1" };
 const mk = (assets: A[], extra: A = {}) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "1", isOneHousehold: false,
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, ...extra,
     assets: assets.map((a, i) => ({ ...makeDefaultAsset(i + 1), ...a }) as AssetForm),
-  }) as TransferFormData;
+  })) as TransferFormData;
 const together = (a: A, b: A) => mk([land(1, a), land(2, b)]);
 const halves = (over: A = {}, extra: A = {}) =>
   mk([land(1, { ...HALF, ...over }), land(2, { ...HALF, ...over })], { assetSplitMode: "fractional", contractTotalPrice: "800000000", ...extra });

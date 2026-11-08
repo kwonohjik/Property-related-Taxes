@@ -10,6 +10,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const HALF = { ownershipNumerator: "50", ownershipDenominator: "100" };
 const ORIG = {
@@ -38,7 +39,7 @@ const seedForm = (exp: string) => ({
 async function calc(page: Page, exp: string) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
-  await page.evaluate((x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)), seedForm(exp));
+  await page.evaluate((x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)), seedWithDeclaredRoster(seedForm(exp)));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   const res = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", { timeout: 60_000 });

@@ -64,6 +64,12 @@ export interface HouseInfo {
    * (계획서 `axis-b-late-share-surcharge-and-rhe-dead-end.plan.md` A). 없으면 `acquisitionDate`.
    */
   shareAcquisitionDate?: Date;
+  /**
+   * 양도 행의 「법 제95조제4항에 따른 보유기간」 기산일이 행 취득일과 다를 때 — §97의2① 이월과세 자산은 §95④ 단서로 **증여자 취득일**부터 센다.
+   * 영 §167의3①12의2·§167의10①12의2(한시배제 2년)와 12호(10년)의 보유 요건만 이 날짜를 읽는다(`surchargeHoldingStartDate`).
+   * 행 취득일(주택 수 선후·제9270호 부칙 §14① 「취득한」 등)은 바꾸지 않는다. 엔진 내부 값(STEP 0.5가 이월과세 시나리오 A에서 싣는다).
+   */
+  holdingPeriodStartDate?: Date;
   /** 공시가격 (원) — 취득 시 기준 */
   officialPrice: number;
   /**
@@ -328,6 +334,11 @@ export interface HouseInfo {
   freeProvisionYears?: number;
   /** 조특법상 특례 적용 주택 여부 (⑤) */
   isTaxSpecialExemption?: boolean;
+  /**
+   * 엔진 내부 — `isTaxSpecialExemption`을 사용자 선언이 아니라 STEP 0.45 감면 적격 판정이 붙였다(그 조문 id).
+   * 배제 사유 문구가 자동 판정과 자기 선언을 구분하게 한다(리뷰 US-19). 클라이언트가 보내지 않는다.
+   */
+  taxSpecialExemptionAutoId?: string;
   /** 국가유산(문화재) 주택 여부 (⑥) */
   isCulturalHeritage?: boolean;
   /**

@@ -362,7 +362,7 @@ export const SPECIAL_HOUSE_EXCLUSION_WINDOWS: Record<SpecialHouseExclusionArticl
     legalBasis: "조특법 §99의2②",
   },
   new_99: {
-    label: "§99 신축주택 (IMF 1차)",
+    label: "§99 — 신축주택의 취득자에 대한 양도소득세의 감면",
     // 신축주택취득기간 — 비국민주택 ~1999.6.30 / 국민주택 ~1999.12.31 (법 §99①1호 괄호).
     // 감면 본판정 new-99.ts와 상수를 공유한다 (D3-08 — 두 소비 지점의 기준 분열 해소).
     windows: [[NEW_99_PERIOD_START, NEW_99_PERIOD_END]],
@@ -372,7 +372,7 @@ export const SPECIAL_HOUSE_EXCLUSION_WINDOWS: Record<SpecialHouseExclusionArticl
     transferDeadline: D("2007-12-31"), // 다른 주택을 2007.12.31까지 양도하는 경우만
   },
   new_99_3: {
-    label: "§99의3 신축주택 (IMF 2차)",
+    label: "§99의3 — 신축주택의 취득자에 대한 양도소득세의 과세특례",
     // 법 §99의3①「2001년 5월 23일부터 2003년 6월 30일까지의 기간」 —
     // 1호=매매계약+계약금 / 2호=사용승인. ②의 문언·양도시한은 §99②와 동일 (D4-06).
     windows: [[D("2001-05-23"), D("2003-06-30")]],
@@ -461,7 +461,18 @@ export function resolveSpecialHouseExclusions(
  * (`surcharge-tax-incentive-house-link.ts`).
  */
 export function meetsSpecialHouseReductionRequirements(e: SpecialHouseExclusionInput, transferDate: Date): boolean {
-  return evaluateSpecialHouseExclusion(e, transferDate, { ignoreTransferDeadline: true }).eligible;
+  return evaluateSpecialHouseReductionRequirements(e, transferDate).eligible;
+}
+
+/**
+ * `meetsSpecialHouseReductionRequirements`의 항목 전체 — 불성립 사유와 「모름」·미답 때문인지(`unconfirmed`)를 함께 돌려준다.
+ * 영 §167의3①5호 판정이 「모름」으로 불성립일 때 확인 필요를 알리는 재료다(`surcharge-tax-incentive-house-link.ts`).
+ */
+export function evaluateSpecialHouseReductionRequirements(
+  e: SpecialHouseExclusionInput,
+  transferDate: Date,
+): SpecialHouseExclusionEntryResult {
+  return evaluateSpecialHouseExclusion(e, transferDate, { ignoreTransferDeadline: true });
 }
 
 function evaluateSpecialHouseExclusion(

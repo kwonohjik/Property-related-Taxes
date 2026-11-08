@@ -10,7 +10,7 @@ import { NBL } from "./legal-codes";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
-import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
+import { linkTaxIncentiveHouse5ho, withTaxIncentiveHouseNotices } from "./surcharge-tax-incentive-house-link";
 import { surchargeHouseholdCountsRights } from "./surcharge-tax-incentive-house-link";
 import {
   determineMultiHouseSurcharge,
@@ -54,6 +54,7 @@ import { classifyRegionCriteriaByCode } from "./multi-house-surcharge-count";
 import type { IncomeDeductionId } from "./transfer-reductions";
 import { translateRedevAptForHousingJudgment } from "./one-house/redev-apt-judgment-input";
 import { hasNoMergeRosterInputPath } from "./one-house/roster-input-path";
+import { selfDeclaredReductionHouseNotice } from "./surcharge-self-declared-reduction-notice";
 
 /** `resolveSurchargeExclusionByReduction` 반환형 (조특법 감면주택 중과 배제 선판정) */
 type SurchargeExclusionByReduction = { excluded: boolean; appliedId?: IncomeDeductionId; legalBasis?: string };
@@ -487,6 +488,16 @@ export function linkSurchargeHousesForSelling(
   return linkTaxIncentiveHouse5ho(rawHouses, workingInput.specialHouseExclusions, workingInput.transferDate, sellingId);
 }
 
+/** 이월과세 시나리오 A — 양도 행의 §95④ 단서 보유 기산일(증여자 취득일)을 싣는다. 행 취득일은 그대로다. */
+function withCarryoverHoldingStart(
+  houses: NonNullable<TransferTaxInput["houses"]>,
+  workingInput: TransferTaxInput,
+  sellingId: string,
+): NonNullable<TransferTaxInput["houses"]> {
+  const start = workingInput.carryoverHoldingStartDate;
+  return start ? houses.map((h) => (h.id === sellingId ? { ...h, holdingPeriodStartDate: start } : h)) : houses;
+}
+
 /**
  * STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정.
  * §155⑳ 불성립이면 카드의 임대 호를 명부에 더한다(`unmetRentalSurchargeHouses`). 명부가 없어도 §155⑳ 거주주택 의제(`noRosterRentalResidenceHouses`)·§155①⑦ 의제와 조특법 제외만의 1주택 의제
@@ -507,7 +518,7 @@ export function runMultiHouseSurchargeStep(
     const { rawHouses } = houseSet;
     const sellingId = workingInput.sellingHouseId ?? rawHouses[0].id;
     // ⑥ 주택 수 제외의 확인된 영 §167의3①5호 조문 → 10호 「일반주택」 판정의 5호 주택(결정 #16 공백 · 겸용과 같은 leaf)
-    const houses = linkSurchargeHousesForSelling(rawHouses, workingInput, sellingId);
+    const houses = withCarryoverHoldingStart(linkSurchargeHousesForSelling(rawHouses, workingInput, sellingId), workingInput, sellingId);
     // 조특법 §99의4⑤(2019.1.1.~2020.12.31. 양도) — 양도 뒤 예정신고기한 안에 농어촌주택등을 취득하면 §104⑦ 비적용·장특 허용(리뷰 NH-51).
     //   중과 배제 선판정이라 감면주택(§167의3①5호)과 같은 경로(양도 주택 행의 특례 표지)로 닫는다 — 세율 가산·장특 배제 두 축이 함께 닫힌다.
     const para5 = evaluateNew994Para5({
@@ -522,7 +533,16 @@ export function runMultiHouseSurchargeStep(
     const para5Applied = para5?.isEligible === true;
     const housesForSurcharge =
       surchargeExclusionByReduction.excluded || para5Applied
-        ? houses.map((h) => (h.id === sellingId ? { ...h, isTaxSpecialExemption: true } : h))
+        ? houses.map((h) =>
+            h.id === sellingId
+              ? {
+                  ...h,
+                  isTaxSpecialExemption: true,
+                  // 사용자가 이미 선언했으면 자기 선언 문구를 유지한다 — 자동 판정만 표지를 단다(US-19)
+                  ...(h.isTaxSpecialExemption ? {} : { taxSpecialExemptionAutoId: surchargeExclusionByReduction.appliedId ?? "new_99_4_para5" }),
+                }
+              : h,
+          )
         : houses;
     const deemed = resolveSurchargeDeemedOneHouseDetail(workingInput, parsedRates, generalHouseAcquisitionDate);
     const mhInput: MultiHouseSurchargeInput = {
@@ -577,7 +597,7 @@ export function runMultiHouseSurchargeStep(
         workingInput.isRegulatedArea,
       );
     // 3호 조문(§97·§97의2·§98) ⑥은 잇지 않는다(5년 임대·국민주택 사실 없음 — 모름 = 불성립) — 결론을 가르면 확인 필요
-    multiHouseSurchargeResult = withTaxIncentiveRental3hoNotice(
+    multiHouseSurchargeResult = withTaxIncentiveHouseNotices(
       judge(housesForSurcharge),
       housesForSurcharge,
       workingInput.specialHouseExclusions,
@@ -611,6 +631,9 @@ export function runMultiHouseSurchargeStep(
       steps.push(buildNew994Para5Step(para5));
       multiHouseSurchargeResult = withNew994Para5(multiHouseSurchargeResult, para5, surchargeExclusionByReduction.excluded);
     }
+    // US-19 — 5호 자기 선언이 중과를 뺐는데 입력한 §98 계열 감면은 엔진이 부적격으로 판정했다(다른 조문 근거가 있을 때만 유효 — 고지만)
+    const declaredNotice = selfDeclaredReductionHouseNotice(houses, sellingId, workingInput.reductions, surchargeExclusionByReduction, multiHouseSurchargeResult);
+    if (declaredNotice) multiHouseSurchargeResult = { ...multiHouseSurchargeResult, warnings: [...(multiHouseSurchargeResult.warnings ?? []), declaredNotice] };
     // 근거는 세대 구성(산입 조합원입주권·분양권 유무)에 맞춘다 — NH-82
     if (surchargeExclusionByReduction.excluded) {
       const countsRights = surchargeHouseholdCountsRights(mhInput.presaleRights, parsedRates.houseCountExclusionRules, multiHouseSurchargeResult);

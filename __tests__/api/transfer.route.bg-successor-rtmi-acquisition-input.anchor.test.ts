@@ -26,6 +26,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { successorRightTogglePatch } from "@/lib/calc/transfer-successor-right";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -54,8 +55,8 @@ const H = {
   transferType: "burdened_gift", bgDonorRelation: "lineal_descendant", bgValuationMode: "sangjeungbeop_standard",
   bgMortgageDebtAmount: "200000000", bgLendingDepositTotal: "0", standardPriceAtTransfer: "400000000", standardPriceAtAcq: "200000000",
 } as AssetForm;
-const one = (a: AssetForm) => Object.assign(createDefaultTransferFormData(), BASE, { assets: [a] }) as TransferFormData;
-const two = (a: AssetForm) => Object.assign(createDefaultTransferFormData(), BASE, { assetSplitMode: "companion", assets: [H, a] }) as TransferFormData;
+const one = (a: AssetForm) => rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), BASE, { assets: [a] })) as TransferFormData;
+const two = (a: AssetForm) => rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), BASE, { assetSplitMode: "companion", assets: [H, a] })) as TransferFormData;
 const MKT: A = { bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,500,000,000", bgAcquisitionMethod: "actual" };
 const STD: A = {
   successorRightStdPaidAtAcq: "250,000,000", successorRightStdPremiumAtAcq: "50,000,000",

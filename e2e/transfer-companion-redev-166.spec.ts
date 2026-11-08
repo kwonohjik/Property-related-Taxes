@@ -9,6 +9,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 /** §166 필수입력 전건 — 원조합원 실가 모드 · 청산금 납부 · 종전자산 주택. */
 const REDEV_166 = {
@@ -80,7 +81,7 @@ async function seedAndOpen(page: Page, list: Record<string, unknown>[]) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(list),
+    seedWithDeclaredRoster(seedForm(list)),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

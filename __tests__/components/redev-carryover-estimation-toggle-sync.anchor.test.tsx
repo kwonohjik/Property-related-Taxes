@@ -37,6 +37,7 @@ import { isHousingContribEstimatedBranch } from "@/components/calc/transfer/asse
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -51,11 +52,11 @@ const CARRYOVER: A = {
   useEstimatedAcquisition: false, estimationMode: "", giftTaxAmount: "4000000", donorCapitalExpenditure: "0", giftDateValuation: "300000000", exclusionDeclared: {},
 };
 const mk = (assets: A[], extra: A = {}) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "1", isOneHousehold: false,
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, ...extra,
     assets: assets.map((a, i) => ({ ...makeDefaultAsset(i + 1), ...a }) as AssetForm),
-  }) as TransferFormData;
+  })) as TransferFormData;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function post(f: TransferFormData): Promise<{ status: number; data: any; error?: { message?: string } }> {

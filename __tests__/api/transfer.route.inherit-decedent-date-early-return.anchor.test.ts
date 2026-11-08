@@ -25,6 +25,7 @@ import { postTransfer } from "../calc/_helpers/redev-one-house-route";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -101,7 +102,7 @@ function form(a: Loose, companion?: boolean): TransferFormData {
     ? [{ ...makeDefaultAsset(1), ...host }, { ...makeDefaultAsset(2), ...a }]
     : [{ ...makeDefaultAsset(1), ...a }];
   const sum = assets.reduce((t, x) => t + Number(String((x as Loose).actualSalePrice ?? "0").replace(/,/g, "")), 0);
-  return Object.assign(createDefaultTransferFormData(), { ...HH, contractTotalPrice: String(sum), assets: assets as AssetForm[] }) as TransferFormData;
+  return rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), { ...HH, contractTotalPrice: String(sum), assets: assets as AssetForm[] })) as TransferFormData;
 }
 
 async function run(f: TransferFormData) {

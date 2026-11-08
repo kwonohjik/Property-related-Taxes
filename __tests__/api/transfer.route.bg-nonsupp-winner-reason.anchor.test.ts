@@ -27,6 +27,7 @@ import { captureBody } from "../calc/_one-house-pr3a-calc-route";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -75,8 +76,8 @@ const rtmi = (mode: Mode, win: Win | "supp", ...over: Partial<AssetForm>[]): Ass
   }), w, ...over) as AssetForm;
 };
 const bundle = (assets: AssetForm[]): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), FORM, { assets, contractTotalPrice: "", assetSplitMode: "companion", bundledSaleMode: "actual" }) as TransferFormData;
-const single = (a: AssetForm): TransferFormData => Object.assign(createDefaultTransferFormData(), FORM, { assets: [a], contractTotalPrice: "" }) as TransferFormData;
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, { assets, contractTotalPrice: "", assetSplitMode: "companion", bundledSaleMode: "actual" })) as TransferFormData;
+const single = (a: AssetForm): TransferFormData => rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, { assets: [a], contractTotalPrice: "" })) as TransferFormData;
 async function post(f: TransferFormData) {
   const body = await captureBody(f);
   const res = await POST(new NextRequest("http://localhost/api/calc/transfer", { method: "POST", headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" }, body: JSON.stringify(body) }));

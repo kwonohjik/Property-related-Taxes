@@ -17,7 +17,7 @@ import { evaluateNew993, type New993Result } from "./new-99-3";
 import { evaluateNew99, type New99Result } from "./new-99";
 import type { RedevMemberNewHouse } from "./new-99-redev-member";
 import { redevMemberGateCause } from "./new-99-redev-member";
-import { withRedevMemberGateNotice } from "./new-99-redev-member";
+import { isLandOnlyOriginalMember, withRedevMemberGateNotice } from "./new-99-redev-member";
 import { evaluateUnsold988, type Unsold988Result } from "./unsold-98-8";
 import { type UnsoldHybridResult } from "./unsold-hybrid";
 import {
@@ -171,6 +171,12 @@ export interface IncomeDeductionResolution {
    * 기존 차감 3조문은 eligibleId === appliedId.
    */
   eligibleId?: IncomeDeductionId;
+  /**
+   * 요건은 모두 충족했고 5년 후 안분 기준시가만 없거나 분모가 0이라 부적격인 조문(리뷰 US-35 — 하이브리드 · §99 · §99의3 · §98의8).
+   * 차감은 0 + 사유(`MISSING_STD_PRICE`)로 남기지만, 소령 §167의3①5호 「감면되는 주택」 여부는 요건으로 정해진다 —
+   * 중과 배제 선판정(`resolveSurchargeExclusionByReduction`)만 읽는다. 기준시가는 요건이 아니라 공제액 계산 인자다(조특령 §40① 준용).
+   */
+  requirementsMetId?: IncomeDeductionId;
   /** 차감액 (적용 조문의 reducibleTransferIncome) */
   reducible: number;
   new993Detail?: New993Result;
@@ -305,7 +311,8 @@ function evalNew993(
       },
       acquisitionCause: memberCause.acquisitionCause,
       firstContract: r993.firstContract993 as "yes" | "no" | "unknown" | undefined,
-      isRedevSuccessorMember: ctx.isRedevSuccessorMember,
+      // 2001.12.31. 이전 승계조합원은 종전 규정이라 «인가일 현재 조합원» 게이트(NOT_MEMBER_AT_APPROVAL)를 건너뛴다 (L16 — 조특령 대통령령 제17458호 부칙 제11조)
+      isRedevSuccessorMember: ctx.isRedevSuccessorMember === true && !memberCause.priorRuleSuccessor,
       redevMember: member
         ? { completionDate: member.completionDate, remainderContract: r993.remainderContract993 as "yes" | "no" | "unknown" | undefined }
         : undefined,
@@ -314,8 +321,8 @@ function evalNew993(
       calculatedTaxAfterReduction: 0,
     });
     return buildResolution("new_99_3", detail.isEligible, detail.reducibleTransferIncome,
-      detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
-      { new993Detail: withRedevMemberGateNotice(detail, memberCause, "new_99_3") });
+      detail.ineligibleReasons, detail.legalBasis,
+      { new993Detail: withRedevMemberGateNotice(detail, memberCause, "new_99_3", isLandOnlyOriginalMember(member)) });
   }
   return null;
 }
@@ -366,8 +373,8 @@ function evalNew99(
         : undefined,
     });
     return buildResolution("new_99", detail.isEligible, detail.reducibleTransferIncome,
-      detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
-      { new99Detail: withRedevMemberGateNotice(detail, memberCause, "new_99") });
+      detail.ineligibleReasons, detail.legalBasis,
+      { new99Detail: withRedevMemberGateNotice(detail, memberCause, "new_99", isLandOnlyOriginalMember(member)) });
   }
   return null;
 }
@@ -411,7 +418,7 @@ function evalUnsold988(
         (r988.standardPriceAtTransfer988 as number | undefined) ?? ctx.standardPriceAtTransfer,
     });
     return buildResolution("unsold_98_8", detail.isEligible, detail.reducibleTransferIncome,
-      detail.ineligibleReasons.map((x) => x.message).join(" · "), detail.legalBasis,
+      detail.ineligibleReasons, detail.legalBasis,
       { unsold988Detail: detail });
   }
   return null;
@@ -444,6 +451,8 @@ function evalHybrid(
         // 5년 내(tax_amount)는 appliedId 미설정 — STEP 4.6 차감 없음 (calcReductions 경로와 이중 혜택 차단)
         appliedId: isIncomeDeduction ? id : undefined,
         eligibleId: detail.isEligible ? id : undefined,
+        // 하이브리드는 요건 판정을 모두 마친 뒤 안분 단계(`computeHybridEffect`)에서만 계산 인자 사유를 낸다 — 그 사유뿐이면 요건 충족이다.
+        requirementsMetId: onlyCalcFactorReasons(detail.isEligible, detail.ineligibleReasons) ? id : undefined,
         reducible: isIncomeDeduction ? detail.reducibleTransferIncome : 0,
         stepLabel: STEP_LABELS[id],
         legalBasis: detail.legalBasis,
@@ -461,21 +470,35 @@ function evalHybrid(
   return null;
 }
 
+/**
+ * 공제액 **계산 인자** 사유 — 요건 판정이 아니다(리뷰 US-35 · NH-76). 기준시가는 조특령 §40① 준용 산식의 인자이고
+ * 소령 §167의3①5호 「…에 따라 양도소득세가 감면되는 주택」 여부는 요건으로 정해진다. 각 조문은 요건 판정을 모두 마친 뒤
+ * 안분 단계에서만 이 사유를 낸다(`new-99.ts` 7단계 · `new-99-3.ts` STEP 3 · `unsold-98-8.ts` · `unsold-hybrid.ts` `computeHybridEffect`).
+ * `MISSING_PREVIOUS_STD_PRICE`(§99 재개발 변형)는 넣지 않는다 — ⑧이 막고 리뷰 결정 범위 밖이다(계획서 `surcharge-oos-remaining.plan.md` B).
+ */
+const CALC_FACTOR_REASON_CODES: ReadonlySet<string> = new Set(["MISSING_STD_PRICE", "ALLOCATION_DENOMINATOR_ZERO"]);
+
+function onlyCalcFactorReasons(isEligible: boolean, reasons: ReadonlyArray<{ code: string }>): boolean {
+  return !isEligible && reasons.length > 0 && reasons.every((x) => CALC_FACTOR_REASON_CODES.has(x.code));
+}
+
 function buildResolution(
   id: IncomeDeductionId,
   isEligible: boolean,
   reducible: number,
-  ineligibleMessages: string,
+  ineligibleReasons: ReadonlyArray<{ code: string; message: string }>,
   legalBasis: string,
   details: Pick<IncomeDeductionResolution, "new993Detail" | "new99Detail" | "unsold988Detail">,
 ): IncomeDeductionResolution {
   return {
     appliedId: isEligible ? id : undefined,
     eligibleId: isEligible ? id : undefined,
+    // 요건은 갖췄고 계산 인자만 없다 — 차감은 0이지만 중과 배제 선판정은 「감면되는 주택」으로 본다
+    requirementsMetId: onlyCalcFactorReasons(isEligible, ineligibleReasons) ? id : undefined,
     reducible: isEligible ? reducible : 0,
     stepLabel: STEP_LABELS[id],
     legalBasis,
-    ineligibleMessages: isEligible ? undefined : ineligibleMessages,
+    ineligibleMessages: isEligible ? undefined : ineligibleReasons.map((x) => x.message).join(" · "),
     ...details,
   };
 }
@@ -524,6 +547,11 @@ export function buildIncomeDeductionStep(
 }
 
 /** STEP 0.45 중과 배제 단계 표시 */
+/** 중과 배제 근거 조문 라벨 — 배제 단계와 5호 자기 선언 고지(`surcharge-self-declared-reduction-notice.ts`)가 같은 표를 쓴다. */
+export function exclusionArticleLabel(id: IncomeDeductionId): string {
+  return EXCLUSION_ARTICLE_LABELS[id];
+}
+
 const EXCLUSION_ARTICLE_LABELS: Record<IncomeDeductionId, string> = {
   new_99_3: "조특법 §99의3",
   new_99: "조특법 §99",
@@ -574,13 +602,15 @@ export function resolveSurchargeExclusionByReduction(
   const resolution = resolveIncomeDeduction(reductions, { ...deductionCtx, transferIncome: 0 });
   // P2: appliedId → eligibleId 기준 — 하이브리드 5년 내(세액감면 경로)도 §167의3①5호
   // "감면되는 주택"에 해당하므로 효과 경로 무관 적격이면 배제.
-  if (resolution.eligibleId && SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS.includes(resolution.eligibleId)) {
+  // US-35 — 5년 후 안분 기준시가만 없는 하이브리드도 요건을 갖춘 「감면되는 주택」이다(차감 0은 STEP 4.6이 따로 남긴다).
+  const surchargeId = resolution.eligibleId ?? resolution.requirementsMetId;
+  if (surchargeId && SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS.includes(surchargeId)) {
     return {
       excluded: true,
-      appliedId: resolution.eligibleId,
+      appliedId: surchargeId,
       // §98은 3호 (감면대상장기임대주택 — 5년+ 임대 국민주택), 나머지는 5호 열거
       legalBasis:
-        resolution.eligibleId === "unsold_98"
+        surchargeId === "unsold_98"
           ? "소령 §167의3①3호·§167의10①2호"
           : "소령 §167의3①5호·§167의10①2호",
     };

@@ -21,6 +21,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { getReductionDefault } from "@/components/calc/transfer/UnifiedReductionPanel-defaults";
 import { captureBody, postTransfer } from "@/__tests__/calc/_helpers/redev-one-house-route";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => { vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never); });
 
@@ -33,10 +34,10 @@ const apt = (over: Record<string, unknown>) => ({
   ...over,
 }) as unknown as AssetForm;
 const form = (a: AssetForm, transferDate: string) =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate, filingDate: transferDate, totalTransferExpense: "0", isOneHousehold: false, householdHousingCount: "2",
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, assets: [a], contractTotalPrice: a.actualSalePrice,
-  }) as TransferFormData;
+  }))) as TransferFormData;
 const r993 = (over: Record<string, unknown>) => ({
   ...getReductionDefault("new_99_3"), acquisitionType993: "self_built", standardPriceAtAcquisition993: "200000000", standardPriceAt5Years: "300000000",
   standardPriceAtTransfer993: "350000000", exclusiveAreaSqm993: "84", region993: "outside_speculation", isResident993: true,

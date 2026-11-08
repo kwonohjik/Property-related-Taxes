@@ -13,6 +13,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "../lib/stores/calc-wizard-asset-carryover";
 import { calculate } from "./_helpers/split-acq-display";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const TOGGLE = "당초 증여 때 채무를 인수했다";
 const DEBT = '[data-field="carryover.giftAssumedDebt"]';
@@ -45,9 +46,13 @@ async function seedAndOpen(page: Page, co: Record<string, unknown>, assetOver: R
     isOneHousehold: false,
     isRegulatedArea: false,
     wasRegulatedAtAcquisition: false,
+    // 사례는 「비조정」(머리말) — 시료 주소(서울 강남구)의 자동 판정이 조정으로 뒤집지 않게 직접 고른 값으로 둔다.
+    // 명부 시드(`seedWithDeclaredRoster`)로 정밀 판정을 타면 그 자동 판정이 중과 판정에 닿는다(리뷰 US-31 · 계획서 §4).
+    isRegulatedAreaTouched: true,
+    wasRegulatedAtAcquisitionTouched: true,
     isUnregistered: false,
   };
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), { state: { formData, currentStep: 0, pendingMigration: false }, version: 0 });
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster({ state: { formData, currentStep: 0, pendingMigration: false }, version: 0 }));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   // dev 서버 Next.js 표시기 배지가 하단 버튼을 덮는다

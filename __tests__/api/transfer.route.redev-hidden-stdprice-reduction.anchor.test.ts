@@ -33,6 +33,7 @@ import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { runCalc, redevAptForm } from "../calc/_helpers/redev-one-house-route";
 import { makeDefaultAsset, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { redevHiddenGeneralStdPrice } from "@/lib/calc/redev-acquisition-price-source";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -74,7 +75,7 @@ const STALE_B = { standardPriceAtAcq: "400000000", standardPriceAtTransfer: "500
 const DATES = { transferDate: "2026-02-16", filingDate: "2026-04-30" } as Partial<TransferFormData>;
 
 function mainForm(over: Record<string, unknown>) {
-  const f = redevAptForm({ count: "2", assetOver: over, formOver: DATES });
+  const f = rosterForDeclaredCount(redevAptForm({ count: "2", assetOver: over, formOver: DATES }));
   f.isOneHousehold = false;
   return f;
 }

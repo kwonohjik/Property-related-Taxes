@@ -75,7 +75,7 @@ const MODULES: ReadonlyArray<{
       // transfer-house.ts (재수출)
       "MULTI_HOUSE", "INHERITED_HOUSE", "MIXED_USE", "TRANSFER_RENTAL_HOUSING",
       "TRANSFER_REDUCTION_ARTICLE", "REDEVELOPMENT", "LTHD_EXCLUSION_LABEL",
-      "NEW_99_3_ADDENDA_6762",
+      "NEW_99_3_ADDENDA_6762", "NEW_99_3_DECREE_ADDENDA_17458",
       "NEW_99_3_ORIGINAL_6501",
       "RENTAL_REGISTRATION_4HO",
       // 2026-10-02 — 조특법 §97②·§97의2② 임대주택 소유주택 의제(비과세 주택 수 제외).

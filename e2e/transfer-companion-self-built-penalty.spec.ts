@@ -13,6 +13,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const SB = { isSelfBuilt: true, buildingType: "new", constructionDate: "2021-06-01" };
 /** 일체 주택 본인 신축 × 환산의 건물분 입력(Q-12 PR-2) — 취득 당시 토지 1억·건물 6천만, 양도 당시 토지 6억(㎡당 600만 × 100㎡)·건물 4억 */
@@ -60,7 +61,7 @@ async function seedAndOpen(page: Page, assets: unknown[]) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    {
+    seedWithDeclaredRoster({
       state: {
         formData: {
           assets,
@@ -78,7 +79,7 @@ async function seedAndOpen(page: Page, assets: unknown[]) {
         pendingMigration: false,
       },
       version: 0,
-    },
+    }),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

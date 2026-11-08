@@ -587,6 +587,15 @@ export const NEW_HOUSING_ACQUISITION_ARTICLE = {
   NEW_99_3_MEMBER_REMAINDER: "조특령 §99의3 ③ 2호",
 } as const;
 
+/**
+ * 조세특례제한법 시행령(대통령령 제17458호, 2001.12.31. 공포 · 2002.1.1. 시행) 부칙 — §99의3③2호 괄호·⑤ 「관리처분계획 인가일 현재의 조합원」
+ * 개정규정의 적용례 (MST 57897 부칙단위 실독 2026-11-07).
+ */
+export const NEW_99_3_DECREE_ADDENDA_17458 = {
+  /** 제11조 — 제99조의3제3항제2호 및 제5항의 개정규정은 이 영 시행 후 최초로 조합원의 지위를 취득하는 분부터 적용 */
+  MEMBER_STATUS_APPLICATION: "조특령 대통령령 제17458호 부칙 제11조",
+} as const;
+
 export const NEW_99_DECREE_ADDENDA_26959 = {
   /** 제16조 — 개정규정은 법률 제13560호 시행 이후 양도하는 분부터 적용 */
   APPLICATION: "대통령령 제26959호 부칙 제16조",

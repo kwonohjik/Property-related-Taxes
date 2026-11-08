@@ -9,7 +9,7 @@
 import { format } from "date-fns";
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
 import { transitionExemptionMonths } from "./multi-house-surcharge-exclusion";
-import { withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
+import { withTaxIncentiveHouseNotices } from "./surcharge-tax-incentive-house-link";
 import { assembleSurchargeHouseSet, linkSurchargeHousesForSelling } from "./transfer-tax-judgment-steps";
 import { SURCHARGE_TRANSITION } from "./legal-codes";
 import { buildNarrativeSteps, SELLING_RIGHT_ROW_ID, type SurchargeNarrative } from "./multi-house-surcharge-narrative-steps";
@@ -113,7 +113,7 @@ export function judgeSurchargeRowSimplified(
       parsedRates.surchargeSpecialRules,
       true,
     );
-  const result = withTaxIncentiveRental3hoNotice(
+  const result = withTaxIncentiveHouseNotices(
     judge(houses),
     houses,
     workingInput.specialHouseExclusions,

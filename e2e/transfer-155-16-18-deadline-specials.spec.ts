@@ -20,6 +20,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { gotoJudgmentStep2 } from "./_helpers/judgment-seed";
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 /** 판정 메뉴는 주택 수를 **명부**에서 센다 — `householdHousingCount`는 덮어써진다. */
 function gotoHolding(page: Page, over: Record<string, unknown> = {}) {
@@ -59,7 +60,7 @@ async function gotoCalcHolding(page: Page, over: Record<string, unknown> = {}) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    {
+    seedWithDeclaredRoster({
       state: {
         formData: {
           householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
@@ -90,7 +91,7 @@ async function gotoCalcHolding(page: Page, over: Record<string, unknown> = {}) {
         pendingMigration: false,
       },
       version: 0,
-    },
+    }),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

@@ -12,6 +12,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const SEVEN = {
   phdFirstDisclosureDate: "2005-04-30",
@@ -65,7 +66,7 @@ async function seedForm(page: Page, formData: Record<string, unknown>) {
   for (let attempt = 0; attempt < 3; attempt++) {
     await page.goto("/calc/transfer-tax");
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-    await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), { state: { formData, currentStep: 0, pendingMigration: false }, version: 0 });
+    await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster({ state: { formData, currentStep: 0, pendingMigration: false }, version: 0 }));
     await page.reload();
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
     const n = await page.evaluate(() => JSON.parse(sessionStorage.getItem("transfer-tax-wizard") ?? "{}")?.state?.formData?.assets?.length ?? 0);

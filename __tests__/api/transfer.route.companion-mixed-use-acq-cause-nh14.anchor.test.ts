@@ -95,10 +95,13 @@ const bundled = (cause: "purchase" | "inheritance" | "gift") => {
 };
 
 describe("컴패니언 겸용 — 서브엔진 입력의 취득 원인", () => {
+  // 🔄 2026-11-07 리뷰 US-08 · US-38 — 컴패니언 겸용의 주택 파트 카드는 명부 없는 fallback이라 위기취득 세율 배제(상속·증여 2010-06-01)와
+  //   §99의3 감면주택 중과 배제(매매)를 보지 못해 중과세율이 붙었다(종전 316,604,997 · 183,219,140 · 413,794,855). 새 값은 같은 입력에서
+  //   겸용주택을 첫 자산으로 둔(명부 정밀 경로) 계산과 원 단위까지 같다(실측 242,772,000 · 208,214,285 · 327,319,142).
   it.each([
-    ["purchase", 316_604_997],
-    ["inheritance", 183_219_140],
-    ["gift", 413_794_855],
+    ["purchase", 242_772_000],
+    ["inheritance", 208_214_285],
+    ["gift", 327_319_142],
   ] as const)("%s: 서브엔진에 취득 원인이 실린다 · 총세액 %i (연결 전후 동일)", async (cause, total) => {
     const r = await post(bundled(cause));
     expect(r.status).toBe(200);
@@ -106,6 +109,19 @@ describe("컴패니언 겸용 — 서브엔진 입력의 취득 원인", () => {
     expect(causes.length).toBeGreaterThan(0);
     expect(new Set(causes)).toEqual(new Set([cause]));
     expect(r.json.data?.aggregated?.totalTax).toBe(total);
+  }, 60_000);
+
+  // 계획서 `surcharge-oos-remaining.plan.md` C — 상속 셀의 주택 파트 카드는 양도차익이 0 이하라 차손 조기반환을 탄다. 그 반환이 위기취득 표지를 싣지 않아
+  //   기본세율(104-1-1)인데 세율군이 「중과」로 표시됐다(세액 208,214,285 불변). 매매(§99의3 배제)·증여(위기취득)는 종전에도 progressive였다.
+  it.each(["purchase", "inheritance", "gift"] as const)("%s: 주택 파트 카드 세율군 = progressive (기본세율 호와 일치)", async (cause) => {
+    const r = await post(bundled(cause));
+    const props = (r.json.data?.aggregated as unknown as { properties: { propertyId: string; rateGroup: string; rateClause?: string }[] }).properties;
+    const housingParts = props.filter((p) => p.propertyId.startsWith("mu-house-"));
+    expect(housingParts).toHaveLength(2);
+    for (const p of housingParts) {
+      expect(p.rateGroup).toBe("progressive");
+      expect(p.rateClause).toBe("104-1-1");
+    }
   }, 60_000);
 
   it("US-07 분양권 상속 답도 그 자산의 것이 서브엔진에 실린다(취득 원인과 함께여야 STEP 0.45 게이트가 카드 판정과 갈리지 않는다)", async () => {

@@ -60,6 +60,17 @@ export const TRANSFER_NEW_HOUSING_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // ⑤ 법 §99의3①2호 「대통령령으로 정하는 조합원」 = 관리처분계획 인가일 또는 사업계획 승인일 현재의 조합원 (L16 — 이 ⑤의 적용 개시는
+    //    대통령령 제17458호 부칙 제11조: 2002.1.1. 이후 최초로 조합원 지위를 취득하는 분부터 · 그 전 승계는 종전 규정). 상수 `NEW_HOUSING_ACQUISITION_ARTICLE.NEW_99_3_MEMBER_AT_APPROVAL`
+    id: "TRANSFER_DECREE.NEW_99_3_MEMBER_AT_APPROVAL",
+    citation: "조특령 §99의3",
+    keywords: [
+      '법 제99조의3제1항제2호에서 "대통령령으로 정하는 조합원"이란',
+      "관리처분계획의 인가일 또는 「주택법」 제15조에 따른 사업계획의 승인일 현재의 조합원을 말한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     // ② 「대통령령으로 정하는 동」(농어촌주택 소재지 — 2026.2.27. 개정) · ⑥ 「대통령령으로 정하는 고향」
     id: "TRANSFER_DECREE.NEW_99_4_DONG_AND_HOMETOWN",
     citation: "조특령 §99의4",

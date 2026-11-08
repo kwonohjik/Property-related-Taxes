@@ -13,6 +13,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const ACQ_CARD = "mixed-acq-housing-building-std-card";
 const TR_CARD = "mixed-transfer-housing-building-std-card";
@@ -79,7 +80,7 @@ async function seedForm(page: Page, formData: Record<string, unknown>) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    { state: { formData, currentStep: 0, pendingMigration: false }, version: 0 },
+    seedWithDeclaredRoster({ state: { formData, currentStep: 0, pendingMigration: false }, version: 0 }),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

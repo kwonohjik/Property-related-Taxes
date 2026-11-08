@@ -11,6 +11,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const card = (id: number, num: string, acq: string, over: Record<string, unknown> = {}) => ({
   ...makeDefaultAsset(id),
@@ -25,7 +26,7 @@ const SUPP = { bgLendingDepositTotal: "300000000", bgMortgageDebtAmount: "300000
 async function seedAndOpen(page: Page, assets: unknown[]) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), {
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster({
     state: {
       formData: {
         assets, assetSplitMode: "fractional", contractTotalPrice: "1000000000", transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0",
@@ -35,7 +36,7 @@ async function seedAndOpen(page: Page, assets: unknown[]) {
       pendingMigration: false,
     },
     version: 0,
-  });
+  }));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 }

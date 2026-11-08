@@ -47,8 +47,10 @@
  */
 
 import { isSurchargeSuspended } from "./tax-utils";
+import { meetsSurchargeSuspensionHolding } from "./tax-utils";
 import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
 import { MULTI_HOUSE } from "./legal-codes";
+import { isCrisisAcqExempt } from "./legal-codes";
 import { appurtenantCardHouseSurcharge } from "./appurtenant-card-surcharge";
 import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -105,6 +107,17 @@ export interface SurchargeApplicationInput {
   /** 부수토지 카드 — 짝 주택이 푼 중과 판정을 그대로 따른다(`appurtenant-card-surcharge.ts`) */
   oneHouseUnitRole?: TransferTaxInput["oneHouseUnitRole"];
   appurtenantHouseVerdict?: TransferTaxInput["appurtenantHouseVerdict"];
+  /**
+   * 양도 자산 취득일 — **fallback 전용**. 부칙 제9270호 §14① 위기취득(2009.3.16~2012.12.31) 세율 배제를 정밀 경로
+   * (`multi-house-surcharge.ts` — 양도 주택 행 취득일)와 같게 판정한다(리뷰 US-08). 정밀 판정이 있으면 읽지 않는다.
+   * 12의2 한시배제의 보유 2년 요건(§95④ 기산 — 이월과세 시나리오 A는 증여자 취득일)도 이 날짜로 본다.
+   */
+  acquisitionDate?: Date;
+  /**
+   * STEP 0.45 감면주택 중과 배제(영 §167의3①5호·3호 · §167의10①2호)가 적격 — **fallback 전용**(리뷰 US-38).
+   * 정밀 경로는 양도 주택 행에 `isTaxSpecialExemption`을 주입해 같은 결론을 낸다(`transfer-tax-judgment-steps.ts`).
+   */
+  surchargeExcludedByReduction?: boolean;
 }
 
 export interface SurchargeApplication {
@@ -123,10 +136,25 @@ export interface SurchargeApplication {
    * **자기 안에서 따로 만들어** leaf를 우회했고, 자산 게이트가 세율 축에 닿지 못했다.
    */
   isRateSurchargeApplied: boolean;
+  /**
+   * 부칙 제9270호 §14① 위기취득 세율 배제 — 정밀 판정의 같은 이름 필드와 같은 뜻(세율만 배제 · 장특 배제 유지).
+   * fallback에서도 싣는다 — 다건 §104⑤ 그룹 분류(`transfer-tax-aggregate-helpers.ts`)가 읽는다.
+   */
+  rateSurchargeStatutoryExcluded?: boolean;
   /** 세율 가산에 쓸 중과 유형. 양도 대상 자산이 아니면 `"none"`. */
   effectiveSurchargeType: "none" | "multi_house_2" | "multi_house_3plus";
   effectiveHouseCount: number;
   surchargeTypeKey: "multi_house_2" | "multi_house_3plus";
+}
+
+/**
+ * fallback(명부 없음)이 원시 플래그로 중과를 **걸 수 있는** 입력인가 — 감면주택 배제·위기취득 판정 전의 후보 축.
+ * STEP 0.45 배제 단계를 fallback에서도 남길지 가르는 데 쓴다(정밀 경로는 `houseSet`이 있을 때 남긴다 — 리뷰 US-38).
+ */
+export function isFallbackSurchargeCandidate(
+  input: Pick<SurchargeApplicationInput, "propertyType" | "isRegulatedArea" | "householdHousingCount">,
+): boolean {
+  return SURCHARGE_FALLBACK_PROPERTY_TYPES.has(input.propertyType) && input.isRegulatedArea === true && input.householdHousingCount >= 2;
 }
 
 /**
@@ -183,13 +211,24 @@ export function resolveSurchargeApplication(
     };
   }
 
+  // fallback도 정밀 경로가 반영하는 양도 주택 자신의 사실 둘은 본다(리뷰 US-38 · US-08) — 다른 주택의 각 호 해당 여부(모름 = 불리)와 달리
+  //   양도 자산의 입력(감면 판정·취득일)만으로 정해진다(사용자 결정 2026-10-04의 「모르는 사실」 대상이 아니다).
   const isSurchargeCase =
     isSubjectAsset &&
     (multiHouseSurchargeResult
       ? multiHouseSurchargeResult.surchargeType !== "none"
       : SURCHARGE_FALLBACK_PROPERTY_TYPES.has(input.propertyType) &&
         input.isRegulatedArea === true &&
-        input.householdHousingCount >= 2);
+        input.householdHousingCount >= 2 &&
+        // 감면주택(영 §167의3①5호·3호)은 §104⑦ 각 호 주택이 아니다 — 세율 축·장특 축이 함께 닫힌다(정밀 경로 `tax_special_exemption`과 같다).
+        input.surchargeExcludedByReduction !== true);
+  // 부칙 제9270호 §14① — 세율만 기본세율(§104①1호). `isSurchargeCase`(§95② 장특 배제)는 유지한다(정밀 경로 `multi-house-surcharge.ts`와 같다).
+  const fallbackRateStatutoryExcluded =
+    !multiHouseSurchargeResult &&
+    isSurchargeCase &&
+    input.isRegulatedArea === true &&
+    !!input.acquisitionDate &&
+    isCrisisAcqExempt(input.acquisitionDate);
 
   const effectiveHouseCount = multiHouseSurchargeResult
     ? multiHouseSurchargeResult.effectiveHouseCount
@@ -200,7 +239,10 @@ export function resolveSurchargeApplication(
   const isSuspended = multiHouseSurchargeResult
     ? multiHouseSurchargeResult.isSurchargeSuspended
     : isSurchargeCase
-      ? isSurchargeSuspended(surchargeSpecialRules, input.transferDate, surchargeTypeKey)
+      ? // 12의2 본문 「법 제95조제4항에 따른 보유기간이 2년 이상인 주택」 — 정밀 경로(`multi-house-surcharge-exclusion.ts`)와 같은 요건.
+        //   종전 fallback은 양도일 창만 봐 보유 1~2년 양도도 한시배제해 §104⑦ 비교과세가 빠졌다. 취득일이 없는 호출(겸용 자산별 fallback)은 종전 그대로다.
+        (!input.acquisitionDate || meetsSurchargeSuspensionHolding(input.acquisitionDate, input.transferDate)) &&
+        isSurchargeSuspended(surchargeSpecialRules, input.transferDate, surchargeTypeKey)
       : false;
 
   return {
@@ -211,7 +253,14 @@ export function resolveSurchargeApplication(
       isSubjectAsset &&
       (multiHouseSurchargeResult
         ? multiHouseSurchargeResult.surchargeApplicable
-        : isSurchargeCase && !isSuspended),
+        : isSurchargeCase && !isSuspended && !fallbackRateStatutoryExcluded),
+    ...(multiHouseSurchargeResult
+      ? multiHouseSurchargeResult.rateSurchargeStatutoryExcluded
+        ? { rateSurchargeStatutoryExcluded: true }
+        : {}
+      : fallbackRateStatutoryExcluded
+        ? { rateSurchargeStatutoryExcluded: true }
+        : {}),
     // fallback은 **원시 주택수**(`effectiveHouseCount` 아님)를 쓴다 — 종전 `calcTax` 동작 보존.
     effectiveSurchargeType: !isSubjectAsset
       ? "none"

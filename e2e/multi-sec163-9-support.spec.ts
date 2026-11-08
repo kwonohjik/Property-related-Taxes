@@ -9,6 +9,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const HOUSE = {
   ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 9-1", assetKind: "housing", actualSalePrice: "1300000000", fixedSalePrice: "1300000000",
@@ -38,7 +39,7 @@ async function seedMulti(page: Page, form: Record<string, unknown>) {
       parsed.state.form.activeStep = "settings";
       sessionStorage.setItem("multi-transfer-tax-wizard", JSON.stringify(parsed));
     },
-    [form],
+    [seedWithDeclaredRoster(form)],
   );
   await page.reload();
   await page.waitForTimeout(1500);

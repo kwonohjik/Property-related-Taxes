@@ -13,6 +13,7 @@ import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 export const SB_TRANSFER_DATE = "2026-03-01";
 
@@ -59,7 +60,7 @@ export function sbForm(assetOver: Partial<AssetForm> = {}, formOver: Partial<Tra
   f.householdNoPresaleRightsConfirmed = true;
   Object.assign(f.assets[0], SB_ASSET, assetOver);
   Object.assign(f, formOver);
-  return f;
+  return rosterForDeclaredCount(f);
 }
 
 export function allIssues(form: TransferFormData) {
@@ -126,7 +127,7 @@ export const SB_BUNDLE_INPUTS: Partial<AssetForm> = {
 
 
 export function bundledAsset(id: number, over: Partial<AssetForm> = {}): AssetForm {
-  return {
+  return rosterForDeclaredCount({
     ...makeDefaultAsset(id),
     addressJibun: "서울 강남구 테스트동 1-1",
     assetKind: "housing",
@@ -138,12 +139,12 @@ export function bundledAsset(id: number, over: Partial<AssetForm> = {}): AssetFo
     standardPriceAtAcq: "200000000",
     standardPriceAtTransfer: "1000000001",
     ...over,
-  } as AssetForm;
+  } as AssetForm);
 }
 
 /** 두 번째 자산이 본인 신축 일체 주택(환산) — `secondOver` 로 변주 */
 export function bundledForm(secondOver: Partial<AssetForm> = {}, firstOver: Partial<AssetForm> = {}): TransferFormData {
-  return {
+  return rosterForDeclaredCount({
     transferDate: SB_BUNDLE_DATE,
     filingDate: "2024-05-31",
     assets: [
@@ -158,7 +159,7 @@ export function bundledForm(secondOver: Partial<AssetForm> = {}, firstOver: Part
     isOneHousehold: false,
     householdNoOtherHousesConfirmed: true,
     householdNoPresaleRightsConfirmed: true,
-  } as unknown as TransferFormData;
+  } as unknown as TransferFormData);
 }
 
 export interface BundledProp {

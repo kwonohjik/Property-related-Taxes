@@ -33,25 +33,25 @@ describe("redevMemberGateCause — 조합원 갈래 취득 원인 게이트 면�
 
   it("원조합원(주택 출자) · 인가일 전 상속·증여·이월과세 증여 → 면제(취득 원인 비움)", () => {
     for (const c of ["inheritance", "gift", "carryover_gift"] as const) {
-      expect(ex(c, original)).toEqual({ acquisitionCause: undefined, exempted: true, successor: false });
+      expect(ex(c, original)).toEqual({ acquisitionCause: undefined, exempted: true, successor: false, priorRuleSuccessor: false });
     }
   });
   it("인가일 당일 취득도 인가일 현재 조합원 — 면제", () => {
     expect(ex("inheritance", { ...original, rightAcquisitionDate: D("2000-09-01") }).exempted).toBe(true);
   });
   it("매매 등 다른 취득 원인 · 조합원 갈래가 아닌 자산 → 입력을 그대로 돌려준다(면제 아님)", () => {
-    expect(ex("purchase", original)).toEqual({ acquisitionCause: "purchase", exempted: false, successor: false });
+    expect(ex("purchase", original)).toEqual({ acquisitionCause: "purchase", exempted: false, successor: false, priorRuleSuccessor: false });
     expect(ex(undefined, original).exempted).toBe(false);
-    expect(ex("inheritance", undefined)).toEqual({ acquisitionCause: "inheritance", exempted: false, successor: false });
+    expect(ex("inheritance", undefined)).toEqual({ acquisitionCause: "inheritance", exempted: false, successor: false, priorRuleSuccessor: false });
   });
-  it("불성립 유지 — 인가일 뒤 취득인데 승계 표시가 없는 모순 · 토지만 출자 · 취득일 없음(「모름」=불성립)", () => {
+  it("불성립 유지 — 인가일 뒤 취득인데 승계 표시가 없는 모순 · 취득일 없음(「모름」=불성립) (토지만 출자는 L16에서 면제로 바뀜 — nh99-l16 anchor)", () => {
     expect(ex("inheritance", { ...original, rightAcquisitionDate: D("2000-09-02") }).exempted).toBe(false);
-    expect(ex("inheritance", { ...original, houseContributed: false }).exempted).toBe(false);
     expect(ex("inheritance", { ...original, rightAcquisitionDate: undefined }).exempted).toBe(false);
     expect(ex("inheritance", { ...original, approvalDate: undefined }).exempted).toBe(false);
   });
   it("승계조합원 — 준공일(사용승인일) 이전 상속·증여는 면제 · 이후는 완성된 신축주택을 받은 것이라 불성립 유지(서일46014-11107)", () => {
-    expect(ex("inheritance", successor)).toEqual({ acquisitionCause: undefined, exempted: true, successor: true });
+    // 승계일 1998-08-01 ≤ 2001-12-31 → priorRuleSuccessor는 §99의3 소비자용 사실(§99는 읽지 않는다 · L16)
+    expect(ex("inheritance", successor)).toEqual({ acquisitionCause: undefined, exempted: true, successor: true, priorRuleSuccessor: true });
     expect(ex("gift", { ...successor, rightAcquisitionDate: D("1999-03-01") }).exempted).toBe(true);
     expect(ex("inheritance", { ...successor, rightAcquisitionDate: D("1999-03-02") }).exempted).toBe(false);
     expect(ex("inheritance", { ...successor, completionDate: undefined }).exempted).toBe(false);
@@ -67,7 +67,7 @@ describe("redevMemberNewHouseOf — 조합원 지위 시점 사실을 싣는다"
 });
 
 describe("withRedevMemberGateNotice — 「확인 필요」 고지는 면제로 적용된 결과에만", () => {
-  const gate = { acquisitionCause: undefined, exempted: true, successor: false } as const;
+  const gate = { acquisitionCause: undefined, exempted: true, successor: false, priorRuleSuccessor: false } as const;
   const d = (isEligible: boolean, warnings?: string[]): { isEligible: boolean; warnings?: string[] } => ({ isEligible, warnings });
   it("적격이면 붙인다 · 정면 해석례 없음 · 기존 warnings 보존", () => {
     const r = withRedevMemberGateNotice(d(true, ["기존"]), gate, "new_99_3");

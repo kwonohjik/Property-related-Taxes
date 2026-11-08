@@ -21,6 +21,8 @@
  *   실제 취득 원인이 우선이다 — `reductionAcquisitionCauseOf`(차감 STEP 4.6 · 중과 배제 선판정 STEP 0.45 · 재개발 Step C.5 · 판정 메뉴 공용).
  * - §99의3의 조합원은 관리처분계획 인가일(사업계획 승인일) 현재의 조합원이다(조특령 §99의3③2호·⑤). 재개발 자산의 승계조합원
  *   (인가일 뒤 입주권 승계 — `redevelopment.isSuccessorMember`, 인가일은 자산의 관리처분계획 인가일)은 어느 갈래에도 해당하지 않는다.
+ *   단 2001.12.31. 이전 승계는 종전 규정이다(대통령령 제17458호 부칙 제11조) — 라우터가 `isRedevSuccessorMember`를 비워 이 게이트를 건너뛴다
+ *   (`isPriorRuleSuccessor993`, L16).
  *   §99 조합원 갈래(§99①1호 괄호)에는 인가일 요건이 없다.
  */
 import type { TriStateAnswer } from "./new-99-luxury-house";
@@ -105,7 +107,7 @@ export function evaluateNew99AcquisitionGate(input: New99AcquisitionGateInput): 
     return {
       code: "NOT_MEMBER_AT_APPROVAL",
       message:
-        `관리처분계획 인가일 뒤에 입주권을 승계한 조합원은 «관리처분계획 인가일(사업계획 승인일) 현재의 조합원»이 아니라 §99의3이 적용되지 않습니다 (${ART.NEW_99_3_MEMBER_AT_APPROVAL}). ` +
+        `관리처분계획 인가일 뒤에 입주권을 승계한 조합원은(2002.1.1. 이후 조합원 지위를 취득한 경우) «관리처분계획 인가일(사업계획 승인일) 현재의 조합원»이 아니라 §99의3이 적용되지 않습니다 (${ART.NEW_99_3_MEMBER_AT_APPROVAL}). ` +
         `주택건설업자와 최초로 매매계약을 체결한 자도 아닙니다(${ART.NEW_99_3_FROM_BUILDER}).`,
       legalBasis: ART.NEW_99_3_MEMBER_AT_APPROVAL,
     };

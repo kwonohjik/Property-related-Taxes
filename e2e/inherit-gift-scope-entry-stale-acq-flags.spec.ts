@@ -10,6 +10,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 /** 2015 상속 주택 · 평가액 3억 · 양도 12억 — 취득 당시 기준시가 칸은 비운다(상속 일반 카드에 그 칸이 없다) */
 const INH = {
@@ -33,7 +34,7 @@ const form = (asset: unknown) => ({
 async function seed(page: Page, asset: Record<string, unknown>) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
-  await page.evaluate((x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)), form(asset));
+  await page.evaluate((x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)), seedWithDeclaredRoster(form(asset)));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   for (const n of [1, 2, 3] as const) await expandAssetSection(page, n);

@@ -81,6 +81,9 @@ const mh3 = (id: string, gross: number) =>
     transferPrice: gross,
     isRegulatedArea: true,
     householdHousingCount: 3,
+    // 🔄 2026-11-07 — 위기취득 창 **밖** 취득이어야 중과 자산이다(창 안이면 부칙 제9270호 §14①로 세율이 기본세율 — 명부 없는
+    //   fallback도 이제 본다 · 리뷰 US-08). 중과 주택은 장특 0이라 과세표준은 취득일과 무관하게 같다.
+    acquisitionDate: D("2013-01-02"),
   });
 
 /** 2015 취득 비사업용 토지 — 위기취득 윈도 **밖** → 종전대로 §104①8호 */

@@ -25,6 +25,7 @@ import { postTransfer } from "../calc/_helpers/redev-one-house-route";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -36,11 +37,11 @@ const EXPR = {
   reductions: [{ type: "public_expropriation", expropriationCash: TOTAL, expropriationBond: "0", expropriationBondHoldingYears: "none", expropriationApprovalDate: "2025-06-01" }],
 };
 const form = (a: Loose): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2026-06-30", filingDate: "2026-08-31", contractTotalPrice: TOTAL, totalTransferExpense: "0", householdHousingCount: "0",
     householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, isOneHousehold: false,
     assets: [{ ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1", actualSalePrice: TOTAL, ...EXPR, ...a }] as AssetForm[],
-  }) as TransferFormData;
+  }))) as TransferFormData;
 
 const GB: Loose = {
   assetKind: "general_building", gbLandArea: "200", gbBuildingArea: "300", gbBuildingFootprintArea: "100", gbZoneType: "general_residential",

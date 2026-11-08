@@ -5,7 +5,7 @@
  * NH-09로 감면주택(§99·§99의3 등) 중과 배제 선판정(`transfer-tax-mixed-use-reduction-surcharge.ts`)이 여기서 얹힌다.
  */
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
-import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
+import { linkTaxIncentiveHouse5ho, withTaxIncentiveHouseNotices } from "./surcharge-tax-incentive-house-link";
 import { surchargeHouseholdCountsRights } from "./surcharge-tax-incentive-house-link";
 import { withSurchargeExclusionRegime } from "./transfer-reductions";
 import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
@@ -14,6 +14,7 @@ import {
   resolveMixedReductionSurchargeExclusion,
   withReductionExcludedSellingHouse,
 } from "./transfer-tax-mixed-use-reduction-surcharge";
+import { isFallbackSurchargeCandidate } from "./transfer-tax-surcharge-predicate";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import type { judgeMixedUseOneHouseExemption } from "./transfer-tax-mixed-use-exemption";
 import type { MixedUseApportionment, MixedUseAssetInput } from "./types/transfer-mixed-use.types";
@@ -37,6 +38,21 @@ export interface MixedSurchargeJudgeArgs {
     | "surchargeUnavoidableOutsideCapitalSlot"
     | "rightDeemingCitedByOldClause1"
   >;
+}
+
+/**
+ * 명부 없는 fallback의 양도 주택 사실 — 단건 술어(`resolveSurchargeApplication`)에 넘기는 값이다.
+ * 중과가 미치는 것은 주택분이라 `propertyType`은 `"housing"`이다(`transfer-tax-mixed-use.ts` fallback 헤더).
+ * 취득일은 **건물 취득일** — ④가 명부 양도 행에 싣는 값(`transfer-tax-api-mixed-use.ts`)과 같아, 위기취득(부칙 제9270호 §14①)·
+ * 12의2 보유 2년(§95④)을 명부 경로와 같은 날로 본다(계획서 `surcharge-oos-remaining.plan.md` A).
+ */
+export function mixedSurchargeFallbackFacts(asset: MixedUseAssetInput) {
+  return {
+    propertyType: "housing" as const,
+    isRegulatedArea: asset.surchargeFallback?.isRegulatedArea ?? asset.multiHouse?.isRegulatedArea ?? false,
+    householdHousingCount: asset.surchargeFallback?.householdHousingCount ?? 0,
+    acquisitionDate: asset.buildingAcquisitionDate,
+  };
 }
 
 export function judgeMixedUseMultiHouseSurcharge(args: MixedSurchargeJudgeArgs) {
@@ -93,8 +109,9 @@ export function judgeMixedUseMultiHouseSurcharge(args: MixedSurchargeJudgeArgs) 
       multiHouse!.isRegulatedArea,
     );
   // NH-09 — 단건 STEP 0.45와 같은 leaf·인자로 감면주택(§99·§99의3 등) 중과 배제를 선판정해 양도 주택 행에 얹는다(소령 §167의3①5호·§167의10①2호).
+  //   명부가 없어도 fallback이 중과를 걸 수 있으면 같은 선판정을 돌린다 — 단건 STEP 0.45(`transfer-tax-precalc.ts` `isFallbackSurchargeCandidate`)와 같은 게이트.
   const reductionExclusion =
-    multiHouse && houseCountExclusionRules
+    (multiHouse && houseCountExclusionRules) || (!multiHouse && isFallbackSurchargeCandidate(mixedSurchargeFallbackFacts(asset)))
       ? resolveMixedReductionSurchargeExclusion(asset, transferDate, transferPrice, apportionment)
       : undefined;
   const mixedHouses = multiHouse
@@ -106,7 +123,7 @@ export function judgeMixedUseMultiHouseSurcharge(args: MixedSurchargeJudgeArgs) 
     : undefined;
   const multiHouseSurcharge =
     multiHouse && mixedHouses && houseCountExclusionRules
-      ? withTaxIncentiveRental3hoNotice(
+      ? withTaxIncentiveHouseNotices(
           judgeMixedSurcharge(mixedHouses),
           mixedHouses,
           asset.specialHouseExclusions,

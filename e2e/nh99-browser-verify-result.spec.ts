@@ -24,6 +24,7 @@ import { MULTI_NEW_HOUSING_PRE_2016_UNSUPPORTED_MESSAGE } from "../lib/calc/mult
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
 import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { gotoJudgmentHoldingsStep } from "./_helpers/judgment-seed";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 type Seed = Record<string, unknown>;
 
@@ -39,10 +40,10 @@ async function waitHydrated(page: Page, selector: string) {
 async function seedAndCalc(page: Page, formData: Seed, opts: { onReductionStep?: () => Promise<void> } = {}) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), {
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster({
     state: { formData, pendingMigration: false },
     version: 0,
-  });
+  }));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await waitHydrated(page, "h1");
@@ -238,6 +239,27 @@ test.describe("S2 겸용주택 × §99의3 (NH-33)", () => {
     expect(Math.floor((Number(m![1].replace(/,/g, "")) - Number(m![2].replace(/,/g, ""))) * 0.2)).toBe(8_917_200);
     expect(Number(m![1].replace(/,/g, "")) - Number(m![2].replace(/,/g, ""))).toBe(44_586_000);
   });
+
+  // L18 — 인쇄(브라우저 PDF 저장) 경로의 「전체 엔진 계산 과정」 표. 종전에는 겸용 결과의 steps가 비어 표 자체가 없었다.
+  // 「전체 선택」을 먼저 눌러야 print 미디어에서 섹션이 보인다(미선택 섹션은 print:hidden — e2e/CLAUDE.md).
+  test("[S2-D] 겸용 + §99의3 → 인쇄 시 「전체 엔진 계산 과정」 표에 주택분 차감 step(218,600,001)이 합산 세액 앞에 있다", async ({ page }) => {
+    test.setTimeout(90_000);
+    const { json } = await calcMixed(page);
+    await page.getByRole("button", { name: "전체 선택" }).first().click();
+    await page.emulateMedia({ media: "print" });
+    const table = page.locator('[data-print-id="detailed-statement"] section', { hasText: "전체 엔진 계산 과정 (" });
+    await expect(table).toBeVisible();
+    const t = (await table.innerText()).replace(/\s+/g, " ");
+    // 시료 실측: 주택부분 양도소득금액 327,900,001 − 감면 양도소득금액 109,300,000 = 218,600,001
+    expect(t).toContain("§99의3 신축주택 과세특례 — 양도소득금액 차감 (주택분)");
+    expect(t).toContain("양도소득금액 327,900,001 - 감면 양도소득금액 109,300,000 = 218,600,001");
+    expect(t.indexOf("양도가액 안분")).toBeLessThan(t.indexOf("양도소득금액 차감 (주택분)"));
+    expect(t.indexOf("양도소득금액 차감 (주택분)")).toBeLessThan(t.indexOf("합산 세액"));
+    // 세액 불변 — 표의 합산 세액 행 금액이 엔진 총 납부세액이다
+    const totalPayable = ((json.data.result as Seed).total as { totalPayable: number }).totalPayable;
+    expect(t).toContain(`${totalPayable.toLocaleString("ko-KR")}`);
+    await page.emulateMedia({ media: "screen" });
+  });
 });
 
 // ───────────────────────── S3·S6 다건 (NH-72 · PDF) ─────────────────────────
@@ -263,7 +285,7 @@ const multiLand = () => ({
   ...makeDefaultAsset(2), ...DIRECT_RESIDENCE, addressJibun: "서울 강남구 테스트동 2-2", assetKind: "land", acquisitionCause: "purchase", acquisitionDate: "2010-01-01",
   acquisitionArea: "1000", fixedAcquisitionPrice: "100000000", actualSalePrice: "300000000", reductions: [],
 });
-const multiForm = (assets: Seed[], transferDate: string, price: string): Seed => ({
+const multiForm = (assets: Seed[], transferDate: string, price: string): Seed => seedWithDeclaredRoster({
   assets, transferDate, filingDate: "", contractTotalPrice: price, householdHousingCount: "2", isRegulatedArea: false, wasRegulatedAtAcquisition: false,
   isUnregistered: false, isOneHousehold: false, householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, houses: [], presaleRights: [],
 });

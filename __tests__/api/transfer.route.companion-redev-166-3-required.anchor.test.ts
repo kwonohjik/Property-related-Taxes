@@ -28,6 +28,7 @@ import { postTransfer } from "../calc/_helpers/redev-one-house-route";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -78,14 +79,14 @@ const HOUSEHOLD = {
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
 };
 const single = (a: Record<string, unknown>): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     ...HOUSEHOLD, contractTotalPrice: "525000000", assets: [{ ...makeDefaultAsset(1), ...REDEV, ...MARKET, addressJibun: "제주특별자치도 강남구 테스트동 1-1", ...a } as AssetForm],
-  }) as TransferFormData;
+  })) as TransferFormData;
 const bundle = (rd: Record<string, unknown>, host: Record<string, unknown> = HOUSING): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     ...HOUSEHOLD, contractTotalPrice: "825000000",
     assets: [{ ...makeDefaultAsset(1), ...host } as AssetForm, { ...makeDefaultAsset(2), ...REDEV, ...MARKET, ...rd } as AssetForm],
-  }) as TransferFormData;
+  })) as TransferFormData;
 
 async function run(f: TransferFormData, mutate?: (body: Loose) => void) {
   const fields = allIssues(f).map((i: { field?: string }) => i.field);

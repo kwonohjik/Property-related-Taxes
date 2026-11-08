@@ -19,6 +19,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 function mixedUseAsset() {
   return {
@@ -103,7 +104,7 @@ async function seedAndCalc(page: Page, withHouses: boolean, over: Record<string,
   });
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedForm(withHouses, over));
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster(seedForm(withHouses, over)));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.getByRole("button", { name: "가산세", exact: true }).first().click();
@@ -118,8 +119,9 @@ test.describe("겸용주택 §104⑦ — 목록 미입력 fallback", () => {
     test.setTimeout(90_000);
     const r = await seedAndCalc(page, false);
 
-    // 정밀 판정 없이 fallback으로 걸렸다.
-    expect(r.multiHouseSurcharge).toBeUndefined();
+    // 리뷰 US-31(`roster-fallback-surcharge-bundle.plan.md`) — 화면은 더 이상 명부 없는 fallback에 닿지 않는다(「없음」 확정 ✓ + 2채는 ⑧ 차단).
+    // 시드는 `seedWithDeclaredRoster`가 같은 주택 수의 명부로 바꾸므로 정밀 판정이다. fallback 자체는 API 호출자 경로로 남는다(엔진·route anchor).
+    expect(r.multiHouseSurcharge?.surchargeType).toBe("multi_house_2");
     expect(r.total.surchargeAddon).toBe(0.2);
     expect(r.housingPart.longTermDeductionAmount).toBe(0);
 

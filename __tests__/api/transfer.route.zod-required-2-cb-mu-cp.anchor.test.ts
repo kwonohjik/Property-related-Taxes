@@ -35,6 +35,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 /**
  * S3-2 — 이 파일의 겸용 fixture는 **취득시 개별주택가격(300M) < 가목(공시지가 1.0M × 주택부수토지 360㎡ = 360M)** 이다.
@@ -185,7 +186,7 @@ function mixedForm(over: Record<string, unknown> = {}): TransferFormData {
     residencePeriodMonths: "0",
   });
   // S3-2 ④ — 나목은 폼 필드에서 실려 간다(body shim 아님).
-  return withIdentityHousingBuildingStdOnForm(f, CLAMP_N);
+  return rosterForDeclaredCount(withIdentityHousingBuildingStdOnForm(f, CLAMP_N));
 }
 const ACTUAL = { useEstimatedAcquisition: false, fixedAcquisitionPrice: "500000000" };
 const APPRAISAL = { useEstimatedAcquisition: false, isAppraisalAcquisition: true, fixedAcquisitionPrice: "500000000" };

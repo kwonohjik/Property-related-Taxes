@@ -87,6 +87,10 @@ export function StepSimulation({ form, result, input, onInputChange, onSimulate,
           <li>연간 기본공제는 이 양도에 처음 쓰는 것으로 보았습니다.</li>
           <li>보유 2년 미만이면 엔진이 단기 보유 세율과 중과세율 중 큰 세액으로 계산합니다.</li>
           <li>지방소득세를 포함한 금액입니다.</li>
+          {/* 리뷰 US-70 — 시뮬레이션은 취득가액·경비만 바꿔 계산한다. 감면 입력을 받지 않으므로 반영하지 않는다는 사실을 알린다 */}
+          <li data-testid="surcharge-simulation-no-reduction-notice">
+            조세특례제한법 감면·특례세율(예: §98①1호 세율 20%, §98의3 등의 양도소득금액 차감)은 반영하지 않았습니다 — 감면주택이면 양도소득세 계산기에서 감면을 입력해 계산하세요.
+          </li>
         </ul>
         {error && (
           <div className="rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">

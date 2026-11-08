@@ -65,6 +65,8 @@ test.describe("NH-14 — 함께 양도 주택의 세대·주택 현황", () => {
     await expect(page.getByTestId(COMPANION_NOTICE)).toBeVisible();
     // 취득 당시 조정대상지역·거주기간(② 비과세 판정)도 함께 양도 주택 기준으로 열린다(NH-14 후속 2 — 종전: 첫 자산 기준이라 숨김)
     await expect(page.getByTestId("transfer-was-regulated")).toBeVisible();
+    // ② 칸이 대상 주택(자산 2)을 밝힌다 — 첫 자산(토지)의 거주기간으로 오해하지 않게
+    await expect(page.getByTestId("exemption-companion-notice")).toContainText("「자산 2」(제주특별자치도 테스트동 1) 기준입니다");
     await page.screenshot({ path: "e2e/_artifacts/nh14-household-facts-step4.png", fullPage: true });
 
     // 미답 → 계산 전에 ⑧이 막는다(주택 먼저와 같은 문구)
@@ -90,5 +92,6 @@ test.describe("NH-14 — 함께 양도 주택의 세대·주택 현황", () => {
     await page.getByRole("button", { name: "보유 상황" }).first().click();
     await expect(page.getByTestId(HOUSE_COUNT)).toHaveCount(0);
     await expect(page.getByTestId(COMPANION_NOTICE)).toHaveCount(0);
+    await expect(page.getByTestId("exemption-companion-notice")).toHaveCount(0);
   });
 });

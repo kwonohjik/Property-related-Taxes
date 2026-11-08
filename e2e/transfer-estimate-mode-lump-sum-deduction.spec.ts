@@ -16,6 +16,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 /**
  * 양도가 2억 · 추계 취득가 1억 · 취득시 기준시가 1억 · 2017-03-09 취득 → 2026-02-16 양도.
@@ -59,7 +60,7 @@ async function calculate(page: Page, mode: "appraisal" | "salesCase", isUnregist
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(mode, isUnregistered),
+    seedWithDeclaredRoster(seedForm(mode, isUnregistered)),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

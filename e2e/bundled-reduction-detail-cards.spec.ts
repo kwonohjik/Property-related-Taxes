@@ -15,6 +15,7 @@
 import { test, expect } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 /** 주택 1건 + 자경농지(조특법 §69 감면) 1건 함께양도. */
 const house = {
@@ -46,7 +47,7 @@ test.describe("함께양도 — 감면 산출근거 카드", () => {
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
     await page.evaluate(
       (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-      {
+      seedWithDeclaredRoster({
         state: {
           formData: {
             householdNoOtherHousesConfirmed: true, // roster-required PR-1: preserve scalar-declared fallback (D-4, Q-8)
@@ -62,7 +63,7 @@ test.describe("함께양도 — 감면 산출근거 카드", () => {
           pendingMigration: false,
         },
         version: 0,
-      },
+      }),
     );
     await page.reload();
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

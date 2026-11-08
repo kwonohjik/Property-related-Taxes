@@ -28,6 +28,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { migratePersistedTransferForm } from "@/lib/stores/calc-wizard-store";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -53,9 +54,9 @@ const EST = { useEstimatedAcquisition: true };
 const SALES = { isSalesCaseAcquisition: true };
 
 const form = (a: Loose): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), {
+  rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     ...HH, contractTotalPrice: String(a.actualSalePrice).replace(/,/g, ""), assets: [{ ...makeDefaultAsset(1), ...a } as AssetForm],
-  }) as TransferFormData;
+  })) as TransferFormData;
 /** 저장된 폼 복원 — store의 `migratePersistedTransferForm`(자산 `migrateAsset` + 폼 단위 상속 정리)을 거친 단건 자산 */
 const restored = (a: Loose): Loose =>
   migratePersistedTransferForm({ ...form(a), assets: [{ ...makeDefaultAsset(1), ...a }] }).assets[0] as unknown as Loose;
@@ -220,13 +221,13 @@ describe("IS — 상속 + 남은 산정 방식 플래그", () => {
         buildingAcquisitionPrice: "120,000,000", gbAcqLandPricePerSqm: "1,000,000", decedentAcquisitionDate: "2000-01-01",
         publishedValueAtInheritance: "300,000,000", inheritanceValuationMethod: "supplementary",
       };
-      const saved = Object.assign(createDefaultTransferFormData(), {
+      const saved = rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
         ...HH, transferDate: "2024-03-01", contractTotalPrice: "1000000000", assetSplitMode: "fractional",
         assets: [
           { ...makeDefaultAsset(1), ...GB, ...parts, ownershipNumerator: "60", ownershipDenominator: "100" },
           { ...makeDefaultAsset(2), ...parts, ownershipNumerator: "40", ownershipDenominator: "100" },
         ],
-      }) as TransferFormData;
+      })) as TransferFormData;
       const after = migratePersistedTransferForm(saved);
       const pick = (x: Loose) => [x.assetKind, x.buildingAcqMode, x.buildingAcquisitionPrice, x.landAcqMode];
       expect(pick(after.assets[1] as unknown as Loose)).toEqual(["housing", "actual", "120,000,000", "actual"]);

@@ -262,6 +262,7 @@ UI는 import해서 쓰는 것을 권장(Q-C4). **이 leaf를 쓰지 않아도 §
 - **그러나 렌더되지 않는다**: 어댑터 `MixedUseResultCardAdapter.ts:121-122`가 `steps: []`로 내리고, `MixedUseStep`을 읽는 컴포넌트·인쇄 섹션이 없다(grep 0건). 다건은 겸용을 차단한다(`multi-transfer-tax-validate.ts:136`).
 - **판정**: 같은 부류의 결함이 **존재하되 사용자에게 도달하지 않는다** → **수정 보류**(Q-C6). 결과 카드가 쓰는 echo(`separateAcquisition`·`housingPart.holdingDeductionAmount` 등)는 B1에서 정합 확인됨(UI 설계 §0.1).
 - 만약 후일 `MixedUseStep`을 렌더하게 되면 라벨 3개·율 문구를 같은 규격으로 정정해야 한다 — anchor T-5(todo)가 그 가드다.
+- **A-2 현황 (조특법 §99·§99의3 리뷰 L18)**: 허용 목록 5종(`step-0-burdened-gift`·`step-2-apportionment`·`income-deduction-new-housing`·`surcharge-exclusion-by-reduction`·`step-9-total`)만 「전체 엔진 계산 과정」 표로 렌더한다(`MIXED_USE_RENDERED_STEP_IDS`, `MixedUseResultCardAdapter.ts`). **보류 유지(Q-C6)**: `step-5-housing`·`step-7-commercial`·`step-6-non-business-land` — 위 라벨·율 문구를 정정하기 전에는 허용 목록에 넣지 않는다. anchor T-5는 「허용 목록만 렌더 · 보류 step 미렌더」를 지킨다.
 
 ---
 

@@ -18,6 +18,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { setupAddress } from "./_helpers/fill-address";
 import { DIRECT_RESIDENCE } from "./_helpers/residence-direct";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 /** 24억 물건의 40% 지분 · 1세대1주택 — 12억 문턱을 가로지르는 픽스처(anchor H1과 같은 축). */
 function seedForm(declared: boolean) {
@@ -62,7 +63,7 @@ async function seedAndOpen(page: Page, declared: boolean) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(declared),
+    seedWithDeclaredRoster(seedForm(declared)),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -197,7 +198,7 @@ test.describe("재개발 × 공유지분 — 청산금 입력 규약 (R4 후속)
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
     await page.evaluate(
       (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-      redevSeed(),
+      seedWithDeclaredRoster(redevSeed()),
     );
     await page.reload();
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -218,7 +219,7 @@ test.describe("재개발 × 공유지분 — 청산금 입력 규약 (R4 후속)
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
     await page.evaluate(
       (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-      redevSeed(),
+      seedWithDeclaredRoster(redevSeed()),
     );
     await page.reload();
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

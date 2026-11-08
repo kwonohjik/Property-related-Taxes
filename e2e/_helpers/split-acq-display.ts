@@ -9,6 +9,7 @@ import { createDefaultTransferFormData } from "../../lib/stores/calc-wizard-stor
 import { putCalculationRecord } from "./history-seed";
 import { openHistoryModal } from "./navigation";
 import { DIRECT_RESIDENCE } from "./residence-direct";
+import { seedWithDeclaredRoster } from "./roster-for-declared-count";
 
 export type Over = Record<string, unknown>;
 export const won = (n: number) => n.toLocaleString("en-US");
@@ -71,7 +72,7 @@ export function singleSeed(assets: Over[], formOver: Over = {}) {
 export async function seedWizard(page: Page, seed: unknown) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seed);
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster(seed));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 }
