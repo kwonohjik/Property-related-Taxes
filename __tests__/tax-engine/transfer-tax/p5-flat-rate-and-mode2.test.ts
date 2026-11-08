@@ -46,10 +46,11 @@ describe("P5 단위 anchor", () => {
     expect(
       evaluateUnsold98({ ...base, acquisitionDate: D("1998-01-15") }).ineligibleReasons.map((x) => x.code),
     ).toContain("OUT_OF_CONTRACT_PERIOD");
-    // 보유 5년 경계 — 1996-06-15 취득: 2001-06-15 적격 / 2001-06-14 배제
+    // 보유 5년 경계(초일 산입, US-14) — 1996-06-15 취득: 2001-06-14(만 5년 당일) 적격 / 2001-06-13 배제
+    expect(evaluateUnsold98({ ...base, transferDate: D("2001-06-14") }).isEligible).toBe(true);
     expect(evaluateUnsold98({ ...base, transferDate: D("2001-06-15") }).isEligible).toBe(true);
     expect(
-      evaluateUnsold98({ ...base, transferDate: D("2001-06-14") }).ineligibleReasons.map((x) => x.code),
+      evaluateUnsold98({ ...base, transferDate: D("2001-06-13") }).ineligibleReasons.map((x) => x.code),
     ).toContain("HOLDING_PERIOD_SHORT");
   });
 

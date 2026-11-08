@@ -46,6 +46,21 @@ function civilPeriodEnd(start: Date, months: number): Date {
     : new Date(Date.UTC(year, month, day - 1));
 }
 
+/**
+ * UTC 달력일 기준 연 단위 가감 — date-fns `addYears`와 같은 규칙(없는 날은 그 달 말일, 2/29 → 2/28)이되
+ * 로컬 시간대에 의존하지 않는다. 입력이 UTC 자정이면 date-fns `addYears`는 UTC 음수 오프셋 시간대(미주 등)에서
+ * 로컬 달력일이 하루 앞서 하루 어긋난다(US-37). 브라우저 ⑧과 서버가 같은 값을 내도록 UTC로 고정한다.
+ * (반환은 UTC 자정이 아니라 입력의 UTC 시각 성분을 유지한다.)
+ */
+export function addYearsUtc(d: Date, years: number): Date {
+  const y = d.getUTCFullYear() + years;
+  const m = d.getUTCMonth();
+  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  return new Date(
+    Date.UTC(y, m, Math.min(d.getUTCDate(), lastDay), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds()),
+  );
+}
+
 /** 「`event`한 날부터 `years`년」의 만료일(초일불산입) — B 유형 기한 「이 날짜까지」 */
 export function periodEndFrom(event: Date, years: number): Date {
   return civilPeriodEnd(new Date(dayKey(event) + DAY_MS), years * 12);

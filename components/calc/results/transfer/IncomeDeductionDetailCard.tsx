@@ -11,6 +11,7 @@
 import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { unsold982OutcomeLabel } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p4";
+import { UNSOLD_98_FLAT_RATE_LABEL } from "@/lib/tax-engine/transfer-reductions/unsold-98-constants";
 import { ReductionDetailWarnings } from "@/components/calc/results/transfer/ReductionDetailWarnings";
 import type {
   New99Result,
@@ -59,7 +60,7 @@ const TITLES: Record<Detail["kind"], string> = {
   unsold_98_6: "§98의6 — 준공후미분양주택 과세특례 (50%)",
   unsold_98_2: "§98의2 — 지방 미분양주택 과세특례 (장특 표2·기본세율)",
   unsold_98_4: "§98의4 — 비거주자 주택취득 과세특례 (10%)",
-  unsold_98: "§98 — 미분양 국민주택 과세특례 (세율 20%)",
+  unsold_98: `§98 — 미분양 국민주택 과세특례 (세율 ${UNSOLD_98_FLAT_RATE_LABEL})`,
 };
 
 const HYBRID_KINDS: ReadonlyArray<string> = [
@@ -161,7 +162,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
         <span className="text-xs rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 font-medium">
           {isSpecialOnly
             ? hybridEffect === "flat_rate_20"
-              ? "세율 20% 특례 적용"
+              ? `세율 ${UNSOLD_98_FLAT_RATE_LABEL} 특례 적용`
               : (result as UnsoldHybridResult).lthd982Echo
                 ? unsold982OutcomeLabel((result as UnsoldHybridResult).lthd982Echo!.outcome)
                 : "특칙 적용 — 장특 표2·기본세율"

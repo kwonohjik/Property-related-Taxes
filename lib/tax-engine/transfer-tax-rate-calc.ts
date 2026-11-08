@@ -53,6 +53,7 @@ export {
   clauseBucketKey,
 } from "./transfer-tax-rate-clause";
 import { isCrisisAcqExempt } from "./legal-codes";
+import { UNSOLD_98_FLAT_RATE, UNSOLD_98_FLAT_RATE_LABEL } from "./transfer-reductions/unsold-98-constants";
 import { judgeNblRateDeferral } from "./data/nbl-rate-deferral-era";
 import type { NblSurchargeExclusionReason } from "./types/transfer-result.types";
 // re-export — §114조의2 가산세 축은 별 파일로 옮겼으나 기존 import 경로를 유지한다.
@@ -388,11 +389,11 @@ export function calcTax(
   //   (`transfer-tax-unsold98-rate-notice.ts`).
   if (input.forceFlatRate20 && !surchargeApplicable) {
     return {
-      calculatedTax: applyRate(taxBase, 0.2),
-      appliedRate: 0.2,
+      calculatedTax: applyRate(taxBase, UNSOLD_98_FLAT_RATE),
+      appliedRate: UNSOLD_98_FLAT_RATE,
       progressiveDeduction: 0,
       surchargeSuspended: false,
-      shortTermNote: "조특법 §98①1호 — 양도소득세 세율 20% (§104① 불구)",
+      shortTermNote: `조특법 §98①1호 — 양도소득세 세율 ${UNSOLD_98_FLAT_RATE_LABEL} (§104① 불구)`,
     };
   }
 
