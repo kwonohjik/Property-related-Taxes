@@ -108,17 +108,18 @@ describe("NH-37 §99 — 같은 규칙 (1998.5.22~1999.6.30. 신축주택취득�
   });
 });
 
-describe("NH-37 형제 안전망 — 다른 차감형은 종전대로 미반영 고지 (F08-02 유지)", () => {
-  it("§98의3은 계산하지 않고 고지하며, 고지 문구에서 «§99·§99의3 적용 대상 아님» 단정이 빠졌다", () => {
-    const r = rhe([{ type: "unsold_98_3" as const, region: "metropolitan" as const }]);
+describe("NH-37 형제 안전망 — 계산하지 않는 차감형은 미반영 고지 (F08-02 유지)", () => {
+  // §98의3 등 §98 시리즈는 US-43(Q-15 (a))로 계산한다 — 계산하지 않는 예시는 §99의2.
+  it("§99의2는 계산하지 않고 고지하며, 고지 문구에서 «§99·§99의3 적용 대상 아님» 단정이 빠졌다", () => {
+    const r = rhe([{ type: "unsold_99_2" as const }]);
     expect(r.totalTax).toBe(NO_RED.tot);
     const w = (r.warnings ?? [])[0] ?? "";
-    expect(w).toMatch(/차감형\)은 이 계산에 반영되지 않았습니다/);
+    expect(w).toMatch(/§99의2\)은 이 계산에 반영되지 않았습니다/);
     expect(w).not.toContain("고가주택 배제 단서가 명문");
   });
-  it("§99의3 + §98의3 동시 선택: §99의3만 계산하고 §98의3은 고지한다", () => {
-    const r = rhe([R993(), { type: "unsold_98_3" as const, region: "metropolitan" as const }]);
+  it("§99의3 + §99의2 동시 선택: §99의3만 계산하고 §99의2는 고지한다", () => {
+    const r = rhe([R993(), { type: "unsold_99_2" as const }]);
     expect(r.calculatedTax).toBe(43_963_333);
-    expect((r.warnings ?? []).some((w) => /차감형\)은 이 계산에 반영되지 않았습니다/.test(w))).toBe(true);
+    expect((r.warnings ?? []).some((w) => /§99의2\)은 이 계산에 반영되지 않았습니다/.test(w))).toBe(true);
   });
 });
