@@ -144,7 +144,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     const p = householdView.assets?.[0];
     const kind = p?.assetKind ?? "";
     if (kind !== "housing" || !form.isOneHousehold) return false;
-    if (!form.transferDate || !p?.acquisitionDate) return false;
+    // 이월과세는 증여 등기접수일 — 칸 없는 `acquisitionDate`가 비어 있어도 경고 게이트를 막지 않는다. 빌더(`buildResidenceReqInput`)와 같은 leaf (L24).
+    if (!form.transferDate || !primaryAcquisitionDateOf(p)) return false;
     // 거주기간 입력 흔적이 있을 때만 — 미입력 초기 상태의 성급한 경고 방지
     const hasResidenceInput =
       (p.residencePeriods?.length ?? 0) > 0 || !!p.residencePeriodMonthsAsset;
