@@ -1,6 +1,6 @@
 # 일반건물 부담부증여 — 초과부담부(채무 > 증여가액) 가드 부재 계획서 (Q-4)
 
-> 상태: **계획서 — 결정 대기** (문서만, 코드 변경 없음). 상위: `gb-axis-a-bg-ownership-ratio.plan.md` §0 별건 · §6 Q-4(결정 a: 별건으로 올린다).
+> 상태: **구현 완료(결정 Q-1~Q-4 모두 a, 2026-11-08) — §9 결과**. 상위: `gb-axis-a-bg-ownership-ratio.plan.md` §0 별건 · §6 Q-4(결정 a: 별건으로 올린다).
 > 작성 근거: 종류 4 × 모양 5 × 모드 2 = 40칸 실측(throwaway probe, 저장소에 없음) + 프로토타입 1줄(임시 적용 후 복원) + 회귀 5배치.
 
 ## 0. 결론
@@ -76,27 +76,29 @@
 
 1. **anchor 선작성(수정 전 실패):** `__tests__/api/transfer.route.gb-excess-burdened-gift.anchor.test.ts` — 일반건물 5모양 × 2모드 B > C 8칸 → 400 + 본문 `[EXCESS_BURDENED_GIFT]` · B = C 2칸 200 + 값 고정(388,000,000 · 750,000,000) · 비교군 주택 단독 B > C 400(같은 코드·같은 문구 골격). 수정 전 실행값(460,750,000 등)이 실패 메시지로 나오는지 확인.
 2. **수정:** 가드 1줄 + import 1줄 + `:289` 주석 정정.
-3. **뮤테이션(cp 백업/복원):** (M1) 가드 줄 제거 → 8칸 사망 (M2) `ownershipRatio` 인자 제거 → 축 A·함께 양도 50% 칸만 사망(물건 전체 C로 비교돼 통과) (M3) `propertyType`를 지원 외 값으로 → 전 칸 다른 사유로 사망.
+3. **뮤테이션(cp 백업/복원):** (M1) 가드 줄 제거 → 8칸 사망 (M2) `ownershipRatio` 인자 제거 → 지분 칸(축 A·축 B·함께 양도의 50% 자산)이 사망(물건 전체 C로 비교돼 통과). **함께 양도는 100% 자산이 B > C이면 지분율과 무관하게 먼저 걸리므로, 100% 자산은 B = C · 50% 자산만 초과인 칸을 따로 둔다**(구현 중 확인 — 처음 계획은 이 칸이 없었다) (M3) `propertyType`를 지원 외 값으로 → 전 칸 다른 사유로 사망.
 4. **회귀(배치, `__tests__/lib` 포함):** api · lib · components · calc · tax-engine.
 5. `tsc` · `eslint`.
-6. **Playwright: 불필요하다고 판단** — 화면(⑧)은 이미 일반건물 B > C를 막고 UI 변화가 없다(§2 ⑧ 열 — 일반건물 B > C 8칸 전부 «차단», B = C 2칸은 통과). API 400 응답만 바뀐다. (⑧ 차단 화면 자체는 기존 E2E가 다룬다 — 확인 필요: 일반건물 B > C 화면 차단을 고정한 E2E가 있는지, 없으면 구현 때 anchor `collectStepIssues` 단언으로 갈음.)
+6. **Playwright:** 화면(⑧)은 이미 일반건물 B > C를 막고 UI 변화가 없다(§2 ⑧ 열 — 일반건물 B > C 8칸 전부 «차단», B = C 2칸은 통과). 기존 E2E에 일반건물 B > C 차단이 없어(V-5) **화면이 바뀌지 않았다는 사실을 E2E 2건으로 고정**했다(§9).
 7. 결과 섹션 추가 · PR 제목·본문 갱신 · pre-push 통과 · CI 대기.
 
-## 6. 결정 대기
+## 6. 결정 (2026-11-08 사용자: Q-1~Q-4 모두 권장안 a)
 
-**Q-1. 가드 위치 (권장 a)**
+> 아래 각 항목의 권장안(a)이 채택됐다. 선택지 원문은 결정 근거로 남긴다.
+
+**Q-1. 가드 위치 ✅ 채택 a**
 - (a) `general-building-route-actual.ts`의 `buildBurdenedGiftBreakdown` 호출 직전 **한 곳**. 5모양이 모두 이 호출을 거친다(§2.1 · 프로토타입 8칸 전부 400).
 - (b) 모양별 호출처(`general-building-route-helper.ts` · `general-building-part-cards.ts` · 축 B)에 각각 — 한 곳이 빠지면 그 모양이 조용히 열린다.
 
-**Q-2. 오류 형식 (권장 a)**
+**Q-2. 오류 형식 ✅ 채택 a**
 - (a) `assertBurdenedGiftEligible` 재사용 — 주택·토지·재개발과 같은 `INVALID_INPUT` · `[EXCESS_BURDENED_GIFT]` 문구 · 400. 종류 간 응답이 같아진다.
 - (b) 일반건물 전용 문구 신설 — 종류마다 문구가 갈라지고 ⑧의 `debtExceedsGiftValueMessage`와도 어긋난다.
 
-**Q-3. 낡은 주석 `:289` 정정을 같은 PR에 넣는다 (권장 a)**
+**Q-3. 낡은 주석 `:289` 정정을 같은 PR에 넣는다 ✅ 채택 a**
 - (a) 넣는다 — #2990이 만든 거짓 주석이라 «내 변경이 만든 낡은 것»이다.
 - (b) 넣지 않는다 — 거짓 주석이 남는다.
 
-**Q-4. 이월과세 시나리오(A·B) × 초과부담부 (권장 a)**
+**Q-4. 이월과세 시나리오(A·B) × 초과부담부 ✅ 채택 a**
 - (a) 구현 PR 첫 단계로 측정(V-1)해 결과를 anchor로 고정한다. 시나리오 하나만 B > C일 때 채택 시나리오와 무관하게 400이 되는지(과차단) 확인한다.
 - (b) 측정 없이 가드만 넣는다 — 이월과세 과차단 가능성을 모른 채 간다.
 
@@ -104,14 +106,30 @@
 
 | 번호 | 항목 | 상태 |
 |---|---|---|
-| V-1 | 이월과세 × 일반건물 BG: `route-carryover.ts`가 시나리오 A·B를 각각 `run`(`:172` `toTransferorBasisInfo` · `:184` `applyCarryoverDonorBasis`)하므로 가드가 시나리오마다 돈다. 둘의 C가 같은지(양도시 기준시가·시가는 같다고 읽히나 **실측 안 함**) | **확인 필요** — 구현 PR 첫 단계(Q-4) |
+| V-1 | 이월과세 × 일반건물 BG: `route-carryover.ts`가 시나리오 A·B를 각각 `run`(`:172` `toTransferorBasisInfo` · `:184` `applyCarryoverDonorBasis`)하므로 가드가 시나리오마다 돈다. 둘의 C가 같은지 | ✅ **해소(§9)** — 코드(`applyCarryoverDonorBasis` 주석: 양도시 기준시가·채무액·평가 모드는 그대로)와 실측(B > C → 400, B = C → 200) |
 | V-2 | 입주권·상업용·건물(`building`)·분양권: 코드 읽기로는 모두 `runBurdenedGiftStep` 단일 호출처(`transfer-tax-precalc.ts:269`)를 지난다 | **확인 필요** — 코드 읽기만, 격자 실측은 주택·토지·재개발·일반건물 4종류 |
-| V-3 | 일반건물 층별 가감율(`giftBuildingStdPriceAtTransfer`)·의제취득일 전 파트에서 가드의 C가 `buildBurdenedGiftBreakdown`의 C와 같은지. 회귀 통과는 오탐이 없다는 간접 증거일 뿐 직접 대조가 아님 | **확인 필요** — 구현 PR anchor로 B = C 경계 칸(층별 가감율 입력)을 추가 |
+| V-3 | 일반건물 층별 가감율(`giftBuildingStdPriceAtTransfer`)에서 가드의 C가 `buildBurdenedGiftBreakdown`의 C와 같은지 | ✅ **해소(§9)** — 층별 가감율 칸 입력으로 B = C(7.5억)에서 breakdown 채무비율 정확히 1 · B = 7.6억 → 400. **의제취득일 전 파트는 측정하지 않았다**(C 쪽 칸이 아니라 취득 쪽이라 영향 없다고 읽히나 **확인 필요**) |
 | V-4 | B > C일 때 일반건물 응답의 증여세 블록(`gratuitousPortion` −150,000,000 → 무상이전분 ≤ 0이라 증여세 블록 생략으로 읽힘) 표시 | 수정 뒤 400이라 해당 없음 — 측정하지 않음 |
-| V-5 | 일반건물 B > C를 고정한 기존 E2E(화면 차단) 유무 | **확인 필요** — §5-6 |
+| V-5 | 일반건물 B > C를 고정한 기존 E2E(화면 차단) 유무 | ✅ **해소(§9)** — 없었다(주택 축 B만 있음). 신규 E2E 2건으로 고정 |
 
 ## 8. 재현
 
 - probe는 저장소에 없다(throwaway). 격자: 4종류 × 5모양 × 2모드 + B = C 경계 — 시료 구성은 `bg-fractional-winner-kinds-grid.plan.md` §2와 같고 채무만 `bgMortgageSetAmount: "0"`(담보평가액 0)으로 C를 보충적평가/시가에 고정했다.
 - 프로토타입: §3의 diff 2줄. 복원 후 `git diff` 0 확인.
 - 회귀: `npx vitest run __tests__/api`, `__tests__/lib`, `__tests__/components`, `__tests__/calc`, `__tests__/tax-engine`.
+
+## 9. 구현 결과 (2026-11-08, 결정 Q-1~Q-4 모두 a)
+
+| 항목 | 결과 |
+|---|---|
+| 코드 | `general-building-route-actual.ts` — `assertBurdenedGiftEligible` import 1줄 + `buildBurdenedGiftBreakdown` 호출 직전 가드 호출 1줄(Q-1 a · Q-2 a 재사용) + `ownershipRatio` 주석을 #2990 이후 사실에 맞게 정정(Q-3 a) |
+| anchor | 신규 `__tests__/api/transfer.route.gb-excess-burdened-gift.anchor.test.ts` 20건 — **수정 전 11 실패 · 9 통과**(실패: GE-1 B > C 8칸 · GE-1b 함께 양도 50% 자산만 초과 · GE-5 이월과세 B > C · GE-6 B = 7.6억 — 전부 200으로 계산됨. 통과: 경계 B = C · 담보 = 채무 · 주택 비교군 · ⑧ 차단 등 불변 대조). 수정 후 20/20. (가드를 뺀 상태로 20건 재측정한 값) |
+| 뮤테이션 | M1 가드 줄 제거 → 11건 사망 · M2 `ownershipRatio` 인자 제거 → 5건(축 A 2 · 축 B 2 · 함께 양도 50% 자산 1) · M3 `propertyType`을 지원 외 값 → 16건(전 칸이 다른 사유로 사망). 매번 `cmp` 복원 확인 |
+| M2 정정 | 처음 계획(§5-3)은 «M2 → 축 A·함께 양도 50% 칸»이었으나, 함께 양도는 100% 자산이 B > C이면 지분율과 무관하게 먼저 걸려 M2가 죽이지 못했다(실측). **100% 자산 B = C · 50% 자산만 초과** 칸(GE-1b)을 추가해 함께 양도에서도 지분율 전달을 판별한다 |
+| V-1 이월과세 | 일반건물 K-5 이월과세 단독(토지·건물 둘 다): B > C(11억 > 10억) → 400 · B = C(10억) → 200. 시나리오 A·B가 C 쪽 칸을 바꾸지 않는다 |
+| V-3 층별 가감율 | `bgGiftBuildingStdPriceAtTransfer` 1.5억: C = 토지 6억 + 1.5억 = 7.5억 — B = 7.5억 → 200 · breakdown 채무비율 정확히 1 · B = 7.6억 → 400. 가드의 C = breakdown의 C |
+| 회귀 | api 471파일/6,159 · lib 262/3,356 · components 744/6,861 · calc 815/11,437 · tax-engine 1,495/18,891 — 전부 통과(`__tests__/lib` 포함) |
+| 정적 검사 | `tsc` 0건 · eslint 오류 0건(경고 1건 `effectiveExpenses`는 이번에 건드리지 않은 기존 코드) |
+| Playwright | `e2e/gb-excess-burdened-gift-screen.spec.ts` 2건 통과 — GX-E1 B 9.5억 > C 8억: 화면 «증여가액 … 초과합니다» 차단 ∧ 계산 요청 0회 · GX-E2 B = 8억: 200 |
+
+**범위 밖(그대로):** 일반건물 ⑧ 게이트 열기(Q-3 별도 계획) · V-2 입주권·상업용·건물·분양권(코드 읽기만 — 모두 `runBurdenedGiftStep` 한 호출처, 격자 실측은 4종류) · `legal-codes/burdened-gift.ts:82` 주석의 함수 위치 오기재(언급만).
