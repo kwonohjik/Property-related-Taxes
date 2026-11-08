@@ -155,7 +155,28 @@ export function buildUncondSourceRecord(asset: AssetForm): Record<string, unknow
     ...(asset as unknown as Record<string, unknown>),
     // §168의14③3호나목 취득일 소급 — 상속=피상속인 취득일(평면) / 이월과세=증여자 취득일(중첩)
     donorAcquisitionDate: asset.carryover?.donorAcquisitionDate ?? "",
+    // 소유기간 기산일 — 이월과세는 증여자 취득일(`nblAcquisitionDateOf`). 서버 매퍼가 읽는 `acquisitionDate`와 같은 값이어야 한다.
+    acquisitionDate: nblAcquisitionDateOf(asset),
   };
+}
+
+/**
+ * 비사업용 토지 판정의 **취득일(소유기간 기산일)** 단일 소스 — ④ raw 빌더·⑧ 검증·⑤ 미리보기·무조건 의제 어댑터가 모두 이 한 값을 읽는다.
+ *
+ * 🔑 이월과세(`carryover_gift`)는 **증여자가 해당 자산을 취득한 날**부터 센다(`carryover.donorAcquisitionDate`).
+ *    화면에 취득일 칸이 없는 이월과세 자산의 원시 `acquisitionDate`는 매매 때 입력한 옛 잔재이거나 비어 있다 — 읽지 않는다.
+ *    증여자 취득일이 비면 "" — 잔재·등기접수일로 대신 채우지 않는다(자동 fallback 금지). ⑧(`validateCarryoverEventHead`)이 증여자 취득일을 필수로 막는다.
+ *
+ * 근거 — 소득세법 시행령 §168조의6은 «토지의 소유기간»만 말하고 §97의2를 적용받는 경우의 기산일 명문이 없다(§168조의14③3호나목 괄호만
+ *   «법 제97조의2제1항을 적용받는 경우에는 증여한 배우자 또는 직계존비속이 해당 자산을 취득한 날»). 국세청 해석이 일관되게
+ *   «비사업용 토지 해당 여부 판정 시 취득시기는 증여한 배우자 또는 직계존비속이 해당 자산을 취득한 날»이라 한다: 서면4팀-2622(2007.9.10.) ·
+ *   서면5팀-2520(2007.9.10.) · 부동산거래관리과-1112(2010.8.31.) · 부동산거래관리과-258(2012.5.9.) · 부동산납세과-539(2014.7.29., 제97조의2 기준).
+ *   반대로 수원지법 2011구합5576(2011.10.19.)은 §168의14③3호의 피상속인 취득일 의제를 증여받은 배우자에게 확장할 수 없다고 봤다(사안·시기가
+ *   달라 직접 충돌은 아님) — 사용자 결정(2026-11-08)으로 국세청 해석을 따른다. 법문에 명문이 없으므로 «확인 필요» 사항이다.
+ *   장기보유특별공제·세율의 보유기간(§95④·§104②2호)과 와이어 `acquisitionDate`(증여 등기접수일, L21)는 이 함수와 무관하다.
+ */
+export function nblAcquisitionDateOf(asset: AssetForm): string {
+  return asset.acquisitionCause === "carryover_gift" ? asset.carryover?.donorAcquisitionDate ?? "" : asset.acquisitionDate;
 }
 
 /**
@@ -226,7 +247,7 @@ export function evaluateUnconditionalExemption(
 
   const categoryGroup = getLandCategoryGroup((asset.nblLandType ?? "") as LandType);
   const transfer = toOptionalDate(transferDate) ?? INVALID_DATE;
-  const acquisition = toOptionalDate(asset.acquisitionDate) ?? INVALID_DATE;
+  const acquisition = toOptionalDate(nblAcquisitionDateOf(asset)) ?? INVALID_DATE;
   const zoneType = asset.nblZoneType || "undesignated";
 
   // 전체 판정 — 배너 matched + isExempt

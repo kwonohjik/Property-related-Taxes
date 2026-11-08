@@ -344,6 +344,12 @@ export interface NonBusinessLandInput {
    */
   nonHeirBequest?: boolean;
 
+  /**
+   * 이월과세(`carryover_gift`, 소득세법 §97의2①) 자산 — 이 입력의 `acquisitionDate`는 증여자 취득일이다(④ `nblAcquisitionDateOf`).
+   * 엔진은 그 사실과 근거(해석례)를 결과 안내(`warnings`)로만 밝힌다 — 판정식은 바꾸지 않는다.
+   */
+  carryoverOwnership?: boolean;
+
   // 농지
   farmingSelf?: boolean;
   /**

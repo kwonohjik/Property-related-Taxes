@@ -16,7 +16,7 @@ import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land/ty
 import type { nonBusinessLandRawSchema } from "@/lib/api/transfer-tax-schema-sub";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { evaluateUnconditionalExemption } from "@/lib/calc/nbl-unconditional-exemption-status";
-import { buildUncondSourceRecord } from "@/lib/calc/nbl-unconditional-exemption-status";
+import { buildUncondSourceRecord, nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { nblLandSigunguCodeOf } from "./nbl-land-sigungu";
 
 /** Zod 검증 후 출력(z.infer = z.output) — 빌더의 z.input과 구분 */
@@ -93,7 +93,7 @@ export function buildNonBusinessLandRaw(
     asset.assetKind !== "land" ||
     !asset.nblUseDetailedJudgment ||
     !asset.acquisitionArea ||
-    !asset.acquisitionDate ||
+    !nblAcquisitionDateOf(asset) ||
     (!isExempt && (!asset.nblLandType || !asset.nblZoneType))
   ) {
     return undefined;
@@ -135,7 +135,8 @@ export function buildNonBusinessLandRaw(
     nonHeirBequest: asset.acquisitionCause === "inheritance" && asset.nonHeirBequest ? true : undefined,
     donorAcquisitionDate: buildUncondSourceRecord(asset).donorAcquisitionDate,
     acquisitionArea: asset.acquisitionArea,
-    acquisitionDate: asset.acquisitionDate,
+    // 소유기간 기산일 — 이월과세는 증여자 취득일(단일 소스 `nblAcquisitionDateOf`). 와이어 `acquisitionDate`(증여 등기접수일)와 다른 값이다.
+    acquisitionDate: nblAcquisitionDateOf(asset),
     transferDate,
   };
 }
@@ -170,7 +171,7 @@ export const NBL_ACQUISITION_DEPENDENT_EXEMPT_FLAGS = [
  */
 export function buildFractionalShareNblRecord(share: AssetForm, primary: AssetForm): AssetForm {
   const sameAcquisition =
-    share.acquisitionCause === primary.acquisitionCause && share.acquisitionDate === primary.acquisitionDate;
+    share.acquisitionCause === primary.acquisitionCause && nblAcquisitionDateOf(share) === nblAcquisitionDateOf(primary);
   return {
     ...primary,
     acquisitionDate: share.acquisitionDate,

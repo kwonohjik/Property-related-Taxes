@@ -11,7 +11,7 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { GRACE_REASON_SPECS } from "@/lib/tax-engine/non-business-land/grace-reason-period";
-import { evaluateUnconditionalExemption } from "@/lib/calc/nbl-unconditional-exemption-status";
+import { evaluateUnconditionalExemption, nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { isUrbanResidentialCommercialIndustrial } from "@/lib/tax-engine/non-business-land/urban-area";
 import { isUrbanForFarmland } from "@/lib/tax-engine/non-business-land/urban-area";
 import { isUrbanForPasture } from "@/lib/tax-engine/non-business-land/urban-area";
@@ -126,8 +126,9 @@ export function validateNblDetailedJudgment(
       return fieldError("nblExemptInongDate", `${label}: 이농 농지를 선택했습니다. 이농일을 입력하세요.`);
     if (formTransferDate && inong > formTransferDate)
       return fieldError("nblExemptInongDate", `${label}: 이농일(${inong})이 양도일(${formTransferDate})보다 늦습니다.`);
-    if (asset.acquisitionDate && inong < asset.acquisitionDate)
-      return fieldError("nblExemptInongDate", `${label}: 이농일(${inong})이 취득일(${asset.acquisitionDate})보다 빠릅니다 — 이농 당시 소유하고 있던 농지여야 합니다.`);
+    const nblAcq = nblAcquisitionDateOf(asset);
+    if (nblAcq && inong < nblAcq)
+      return fieldError("nblExemptInongDate", `${label}: 이농일(${inong})이 ${asset.acquisitionCause === "carryover_gift" ? "증여자 취득일" : "취득일"}(${nblAcq})보다 빠릅니다 — 이농 당시 소유하고 있던 농지여야 합니다.`);
   }
 
   // 무조건 의제 성립 시 아래 기간기준 상세 입력은 엔진이 무시 + UI 비활성 → 검증 스킵
@@ -152,7 +153,7 @@ export function validateNblDetailedJudgment(
     const { years, invalid } = parseTaxPeriodYears(asset.nblDisqualifiedTaxPeriods);
     if (invalid.length > 0)
       return fieldError("nblDisqualifiedTaxPeriods", `${label}: 결격 과세기간(조특령 §66⑭)은 4자리 연도를 쉼표로 구분해 입력하세요 (예: 2019, 2020). 인식할 수 없는 값: ${invalid.join(", ")}`);
-    const acqYear = yearOf(asset.acquisitionDate);
+    const acqYear = yearOf(nblAcquisitionDateOf(asset));
     const trfYear = yearOf(formTransferDate);
     if (acqYear !== undefined && trfYear !== undefined) {
       const outOfRange = years.filter((y) => y < acqYear || y > trfYear);
