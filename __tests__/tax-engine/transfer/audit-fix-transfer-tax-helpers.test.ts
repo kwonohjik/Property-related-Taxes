@@ -14,17 +14,12 @@
  * 기대값은 조문(§95²)·정수정의(BigInt exact)에서 독립 도출. 수정 코드 출력 복사 아님.
  */
 import { describe, it, expect } from "vitest";
-import {
-  calcLongTermHoldingDeduction,
-  parseRatesFromMap,
-} from "@/lib/tax-engine/transfer-tax-helpers";
+import { calcLongTermHoldingDeduction } from "@/lib/tax-engine/transfer-tax-helpers";
 import { calculateProration, applyRate } from "@/lib/tax-engine/tax-utils";
-import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { baseTransferInput } from "../_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer.types";
 import { resolveTaxableGain } from "@/lib/tax-engine/transfer-tax-taxable-gain";
-
-const RULES = parseRatesFromMap(makeMockRates()).longTermHoldingRules;
 
 /** 부수토지 일체과세(L-1b) 진입 입력 — primaryContextForCompanionRate 주입 */
 function appurtenantLandInput(over: Partial<TransferTaxInput>, holdingMonths: number): TransferTaxInput {
@@ -67,7 +62,7 @@ describe("D1 — 부수토지 일체과세 LTHD 3년 게이트 (§95②)", () =>
       { isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0 },
       30,
     );
-    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, RULES, false, false);
+    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, false, false);
     expect(res.rate).toBeCloseTo(0.06, 10);
     expect(res.deduction).toBe(6_000_000);
   });
@@ -92,7 +87,7 @@ describe("D1 — 부수토지 일체과세 LTHD 3년 게이트 (§95②)", () =>
       { isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: 30 },
       30,
     );
-    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, RULES, false, false);
+    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, false, false);
     expect(res.rate).toBeCloseTo(0.06, 10);
     expect(res.deduction).toBe(6_000_000);
   });
@@ -104,7 +99,7 @@ describe("D1 — 부수토지 일체과세 LTHD 3년 게이트 (§95②)", () =>
       { isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0 },
       35,
     );
-    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, RULES, false, false);
+    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, false, false);
     expect(res.rate).toBeCloseTo(0.06, 10);
     expect(res.deduction).toBe(6_000_000);
   });
@@ -121,7 +116,7 @@ describe("D1 — 부수토지 일체과세 LTHD 3년 게이트 (§95②)", () =>
       },
       168,
     );
-    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, RULES, false, false);
+    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, false, false);
     expect(res.deduction).toBe(0);
     expect(res.rate).toBe(0);
   });
@@ -133,7 +128,7 @@ describe("D1 — 부수토지 일체과세 LTHD 3년 게이트 (§95②)", () =>
       { isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0 },
       36,
     );
-    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, RULES, false, false);
+    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, false, false);
     expect(res.rate).toBeCloseTo(0.06, 10);
     expect(res.deduction).toBe(6_000_000);
   });
@@ -144,7 +139,7 @@ describe("D1 — 부수토지 일체과세 LTHD 3년 게이트 (§95②)", () =>
       { isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: 36 },
       36,
     );
-    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, RULES, false, false);
+    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, false, false);
     expect(res.rate).toBeCloseTo(0.24, 10);
     expect(res.deduction).toBe(24_000_000);
   });
@@ -206,7 +201,7 @@ describe("D2 — split 12억 초과분 안분 BigInt 가드 (P0-2/P0-4)", () => 
       steps: [],
     });
     expect(split.building.taxableGainAfterProration).toBe(exactProrated);
-    calcLongTermHoldingDeduction(0, input, RULES, false, false, split);
+    calcLongTermHoldingDeduction(0, input, false, false, split);
 
     expect(split.building.longTermRate).toBeCloseTo(0.20, 10);
     expect(split.building.longTermDeduction).toBe(expectedBuildingDed);

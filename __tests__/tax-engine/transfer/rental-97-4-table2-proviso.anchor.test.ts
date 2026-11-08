@@ -29,12 +29,10 @@
  */
 import { describe, it, expect } from "vitest";
 import { calcLongTermHoldingDeduction } from "@/lib/tax-engine/transfer-tax-helpers";
-import { makeMockRates, baseTransferInput } from "@/__tests__/tax-engine/_helpers/mock-rates";
-import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
+import { baseTransferInput } from "@/__tests__/tax-engine/_helpers/mock-rates";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
 
-const rates = parseRatesFromMap(makeMockRates());
 const D = (s: string) => new Date(`${s}T00:00:00`);
 
 const R974 = {
@@ -68,7 +66,6 @@ function run(opts: { table2: boolean; withRental: boolean; residenceMonths?: num
   return calcLongTermHoldingDeduction(
     1_000_000_000,
     input as Any,
-    rates.longTermHoldingRules,
     false,
     false,
   );

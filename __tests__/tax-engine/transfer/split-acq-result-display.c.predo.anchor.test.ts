@@ -25,7 +25,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
-import { calcLongTermHoldingDeduction, parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
+import { calcLongTermHoldingDeduction } from "@/lib/tax-engine/transfer-tax-helpers";
 import type { TransferTaxInput, TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 import {
@@ -488,7 +488,6 @@ describe("F-1 LTHD 「공제율 → 공제액」의 부동소수 1원 과소 —
     expect(r.longTermHoldingDeduction).toBe(1_101_600_000);
   });
 
-  const rateTable = parseRatesFromMap(makeMockRates());
   it("F-1b 가업상속 §95④ 후단 — 거주분 율(율 − 보유분 율의 double 뺄셈 0.07999999999999999)도 정확값", () => {
     // 상속인 보유 4년(16%) + 거주 2년(8%) · 피상속인 취득일 기산 26년(40%) · 가업상속공제적용률 50%
     const input = baseTransferInput({
@@ -496,7 +495,7 @@ describe("F-1 LTHD 「공제율 → 공제액」의 부동소수 1원 과소 —
       acquisitionDate: D("2022-03-01"), isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: 24,
       fbLthdLatter: { appliedRate: 0.5, decedentAcquisitionDate: D("2000-01-01") },
     } as Partial<TransferTaxInput>);
-    const r = calcLongTermHoldingDeduction(1_000_000_000, input, rateTable.longTermHoldingRules, false, false);
+    const r = calcLongTermHoldingDeduction(1_000_000_000, input, false, false);
     // 피상속인분 5억 × 40% + 상속인분 5억 × 16% + 전체 10억 × 8% = 2억 + 0.8억 + 0.8억
     expect(200_000_000 + 80_000_000 + 80_000_000).toBe(360_000_000);
     expect(r.deduction).toBe(360_000_000);
@@ -513,7 +512,7 @@ describe("F-1 LTHD 「공제율 → 공제액」의 부동소수 1원 과소 —
         isPrivateConstructionRental: true, rentalContinuesToTransfer: true,
       }],
     } as Partial<TransferTaxInput>);
-    const r = calcLongTermHoldingDeduction(167_796_000, input, rateTable.longTermHoldingRules, false, false);
+    const r = calcLongTermHoldingDeduction(167_796_000, input, false, false);
     expect((r.rental97LthdDetail as { rentalGainRatio?: number } | undefined)?.rentalGainRatio, "임대분 비율 1 — 전액 70%").toBe(1);
     expect(mulDiv(167_796_000, 70, 100)).toBe(117_457_200);
     expect(r.deduction).toBe(117_457_200);
