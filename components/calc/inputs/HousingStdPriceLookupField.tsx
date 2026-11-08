@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
+import { housingPriceYearOptions, recommendHousingPriceYear } from "@/lib/utils/land-price-year";
 
 export interface HousingStdPriceLookupFieldProps {
   /** 기준시가 필드 라벨 */
@@ -69,8 +69,9 @@ export function HousingStdPriceLookupField({
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [priceType, setPriceType] = useState<string | null>(null);
 
-  const options = referenceDate ? landPriceYearOptions(referenceDate) : [];
-  const recommendedYear = referenceDate ? String(recommendLandPriceYear(referenceDate)) : "";
+  // 주택가격은 4/30까지 공시 — 토지용(5/31) 추천을 쓰면 5월 기준일에 전년도가 「자동」으로 잡힌다 (US-32)
+  const options = referenceDate ? housingPriceYearOptions(referenceDate) : [];
+  const recommendedYear = referenceDate ? String(recommendHousingPriceYear(referenceDate)) : "";
   const effectiveYear = selectedYear || recommendedYear;
   const canLookup = !!jibun && !!effectiveYear;
 
