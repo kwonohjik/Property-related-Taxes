@@ -28,6 +28,8 @@ import type { IssueField } from "./transfer-tax-validate-field";
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
+import { redevOriginalMemberAcquiredAfterApproval } from "./redev-original-member-order";
+import { redevOriginalMemberAfterApprovalMessage } from "./redev-original-member-order";
 import { isRedevCarryoverDonorBasis } from "@/lib/calc/redev-carryover-acq-mode";
 import { successorTypeToggleSectionLabel } from "@/lib/calc/transfer-successor-right";
 import { isSec164ClauseAFilled } from "./transfer-tax-validate-clause-a";
@@ -60,6 +62,10 @@ export function validateRedevelopmentAsset(
   const subject = asset.redevSubject || subjectDefault;
   const approvalLawBasis = asset.redevApprovalLawBasis || "urban_renovation_art_74";
   const originalAssetType = asset.redevOriginalAssetType || "housing";
+  // 사례 48 — 승계조합원 모드 분기. 승계조합원은 «출자 자산» 구분이 없다(엔진도 승계 분기가 먼저다) — 토지만 출자 분기(`land`)를 타지 않는다.
+  const isSuccessor = asset.redevIsSuccessorMember === "yes";
+  // 이월과세는 취득일 칸이 없다 — ④와 같은 leaf(원값 → 증여 등기일)로 비교한다(계획서 `redev-carryover-validation-scope.plan.md` Q-1 a).
+  const acqDate = primaryAcquisitionDateOf(asset);
   const settlementDirection = asset.redevSettlementDirection || "pay";
   // ⑤ 「인가전 분 종전 부동산 취득가액」 방식 — ⑤·④·PHD 트리거와 같은 leaf. 부담부증여는 ⑤ 라디오가 아니라 K-4/K-5가 정한다
   //   (`burdened_gift`면 이 블록의 실가·환산 칸을 요구하지 않는다 — 엔진이 §159 안분값을 쓴다).
@@ -210,7 +216,18 @@ export function validateRedevelopmentAsset(
     ? fieldError("redevSettlementAmount", `${label}: ${REDEV_RECEIVE_SETTLEMENT_LIMIT_MESSAGE}`)
     : null;
 
-  if (originalAssetType === "land") {
+  if (originalAssetType === "land" && !isSuccessor) {
+    /**
+     * 토지만 출자한 원조합원도 인가일 현재 조합원이어야 한다 — 종전 토지를 인가일 뒤에 취득했으면 조합원으로부터 취득한 승계조합원이다
+     * (주택 출자 분기와 같은 검사 · 같은 술어 `redevOriginalMemberAcquiredAfterApproval` · ⑫ 거울). 이 분기는 인가일 입력도 요구하지 않아
+     * 비우면 ⑧을 통과해 ⑫ 400이었다.
+     */
+    if (!asset.redevApprovalDate) {
+      return fieldError("redevApprovalDate", `${label}: 관리처분/사업시행계획 인가일을 입력하세요.`);
+    }
+    if (redevOriginalMemberAcquiredAfterApproval({ isSuccessorMember: false, acquisitionDate: acqDate, approvalDate: asset.redevApprovalDate })) {
+      return fieldError("redevApprovalDate", redevOriginalMemberAfterApprovalMessage(label, asset.assetKind, typeToggleSection));
+    }
     /**
      * ✅ 2026-08-27 — land + **apt** + receive + 환산(사례 43) 차단을 해제했다.
      *
@@ -290,7 +307,7 @@ export function validateRedevelopmentAsset(
     return null;
   }
 
-  if (originalAssetType !== "housing") {
+  if (originalAssetType !== "housing" && !isSuccessor) {
     return `${label}: 출자 자산 종류가 올바르지 않습니다. (housing 또는 land만 지원)`;
   }
   // 사례 47 — 신축APT 양도 + 청산금 수령 동시 신고 지원 (receiveOnlyMode !== "yes" 허용).
@@ -304,11 +321,8 @@ export function validateRedevelopmentAsset(
   if (!asset.redevApprovalDate) {
     return fieldError("redevApprovalDate", `${label}: 관리처분/사업시행계획 인가일을 입력하세요.`);
   }
-  // 사례 48 — 승계조합원 모드 분기. 인가일 < 취득일 차단을 명시 토글로 우회.
-  const isSuccessor = asset.redevIsSuccessorMember === "yes";
-  // 이월과세는 취득일 칸이 없다 — ④와 같은 leaf(원값 → 증여 등기일)로 비교한다(계획서 `redev-carryover-validation-scope.plan.md` Q-1 a).
-  const acqDate = primaryAcquisitionDateOf(asset);
-  if (!isSuccessor && acqDate && new Date(asset.redevApprovalDate) < new Date(acqDate)) {
+  // 인가일 < 취득일 차단을 «승계조합원 모드» 토글로 우회한다(`isSuccessor` · `acqDate`는 함수 앞머리).
+  if (redevOriginalMemberAcquiredAfterApproval({ isSuccessorMember: isSuccessor, acquisitionDate: acqDate, approvalDate: asset.redevApprovalDate })) {
     /**
      * 🔴 2026-08-26 정정(P2-05): 안내 문구가 **자산 종류에 따라 갈린다**.
      *    ②-a 「승계조합원 모드」(`redevIsSuccessorMember`) 카드는 `RedevelopmentBlock`이
@@ -318,11 +332,7 @@ export function validateRedevelopmentAsset(
      *    그 화면에 존재하지 않는 이름의 토글을 찾게 했다.
      *    반대 방향 문구는 `validateSuccessorRightAsset`이 이미 쓰고 있다(짝을 맞춘다).
      */
-    const remedy =
-      asset.assetKind === "right_to_move_in"
-        ? `${typeToggleSection}의 「조합원 유형」을 "승계조합원"으로 바꾸세요.`
-        : `②-a "승계조합원 모드"를 ON 하세요.`;
-    return fieldError("redevApprovalDate", `${label}: 인가일은 취득일 이후여야 합니다. 관리처분 인가 후 입주권을 승계 취득한 경우 ${remedy} (사전-2019-법령해석재산-0649)`);
+    return fieldError("redevApprovalDate", redevOriginalMemberAfterApprovalMessage(label, asset.assetKind, typeToggleSection));
   }
   if (isSuccessor) {
     // 사례 48 — 승계조합원 신축APT 양도 — 본 PR 5건 가드.
