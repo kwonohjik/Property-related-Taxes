@@ -121,3 +121,19 @@
 미수행: 재개발APT 칸의 **브라우저** 확인(렌더 단위 테스트만) · V-1 입주권 소비처 전수 · V-4 컴패니언 · V-5 상속·증여 취득.
 알려진 한계: 자산 종류를 주택 → 분양권(구간 안)으로 바꾸면 주택에서 만진 값이 칸에 그대로 보인다(칸이 보이므로 눈에 띄고 고칠 수 있음).
 
+
+## 10. V-1 측정 — 조합원입주권이 «양도일 조정대상지역»·«취득 당시 조정대상지역»을 읽는가 (2026-11-08)
+
+**결론: 읽는 경로가 없다 → 입주권에 칸을 달 필요 없음(K-9 유지).** 측정은 throwaway probe(저장소에 남기지 않음)로 했다.
+
+| 경로 | 측정 | 결과 |
+|---|---|---|
+| 단건 양도 세액 | 입주권 · 세대 주택 0/1/2 · 거주 0/36개월 · 종전주택 2012/2019 취득 × 두 값 4조합(`captureBody` → body 두 값 덮어쓰기 → route) | 결정세액 **불변**(153,060,000 · 2012 취득은 125,060,000 — 4조합 모두 같음) |
+| §89①4호 입주권 비과세 | 코드: 비과세 판정 `checkExemption`은 `propertyType !== "housing"`이면 즉시 반환(`transfer-tax-exemption.ts:345`). 입주권 비과세는 `applyOneRightExemption` 쪽이고, 그 모듈들(`redevelopment-dispatch` · `transfer-tax-redevelopment(-steps/-transforms/-apt-exemption)` · `one-house/one-right-verdict` · `one-house/threshold` · `lthd-table2-subject`)에 두 값 참조 **0건**(grep) | 두 값을 읽지 않음 |
+| 일시적 2주택 처분기한 | 처분기한 계산 `resolveTemporaryTwoHouseDeadlineYears`는 위 `checkExemption`(housing 전용) 안에서만 양도일 조정대상지역을 읽음. 입주권 양도 경로에는 닿지 않음 | 해당 없음 |
+| §104⑤ 다건 합산 그룹 | `classifyRateGroup`은 입주권 + 양도일 조정지역 참 + 세대 주택 2 이상 + 정밀 판정 없음이면 `multi_house_surcharge`로 분류한다(합성 입력 실측). **그러나** 다건 route가 입주권을 거부한다 — `properties.0.propertyType: 조합원입주권은 단건 계산기에서만 지원됩니다` | 운영 경로에서 도달 불가 |
+
+한계(정직하게):
+- 비과세가 켜지는(`isExempt: true`) 입주권 시료는 만들지 못했다 — probe 시료는 전부 `isExempt:false`였다. 그래서 «불변»의 근거는 (1) 과세로 떨어지는 시료의 세액 불변 + (2) 비과세 모듈 참조 0건(grep)이다. 양성 대조군 없음.
+- `classifyRateGroup`의 입주권 분기는 지금 도달 불가지만, 다건이 입주권을 허용하게 되면 단건(progressive)과 갈린다 — 그때 다시 측정할 것.
+- 컴패니언(일괄양도)에서 입주권(`bundled-split-helpers.ts`가 `right_to_move_in`을 다룬다)은 V-4 범위로 측정하지 않았다.
