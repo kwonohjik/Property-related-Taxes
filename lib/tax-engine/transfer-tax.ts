@@ -78,6 +78,7 @@ import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-o
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calcTax } from "./transfer-tax-rate-calc";
+import { unsold98RateNotices } from "./transfer-tax-unsold98-rate-notice";
 import { unregisteredReductionNotice } from "./transfer-tax-reductions-calc";
 import type { PreDeemedPurchaseDetail } from "./types/transfer-pre-deemed-purchase.types";
 export { calcTax };
@@ -662,6 +663,11 @@ function calculateTransferTaxCore(
     reducedPart: publicExpropriationReducedPart(input, splitDetail), // §103② — 감면 제외 파트에 기본공제 먼저
   });
   if (splitDetail) splitDetail.partRateBasisApplied = taxResult.partRateBasisApplied; // D1-3 「세율 기산일」 표시 게이트
+  // §98①1호 — 중과 우선(Q-11 (b)) 또는 기본세율 비교(Q-10 (b)) 고지. 비교값은 같은 경로·같은 과세표준에서 20% 강제만 뺀 산출세액이다.
+  warnings.push(...unsold98RateNotices({
+    flatRate20Active, taxRateInput, multiHouseSurchargeResult, surchargeSpecialRules: parsedRates.surchargeSpecialRules, flatRateTax: taxResult.calculatedTax,
+    generalRateTax: () => resolveSplitAwareTax({ taxBase, transferIncome, basicDeduction, splitDetail, parsedRates, taxRateInput: taxRateInputBase, multiHouseSurchargeResult, reducedPart: publicExpropriationReducedPart(input, splitDetail) }).calculatedTax,
+  }));
   const nblDeferralNotice = nblDeferralNoticeOf(taxResult, nblNoticeInputOf(effectiveInput, splitDetail));
   if (nblDeferralNotice) warnings.push(nblDeferralNotice);
   // D2(계획서 §12 D2-Q1) — 건물 상속·증여 전에 취득한 토지의 세율 기산이 건물 취득일로 정해져 구간이 갈린 사실 고지(세액 불변).

@@ -587,6 +587,12 @@ export function buildSurchargeExclusionStep(exclusion: {
  * eligible이면 양도 주택(sellingHouse)에 isTaxSpecialExemption을 주입해
  * 기존 중과 엔진 경로(multi-house-surcharge-helpers — "조세특례제한법 특례 적용 주택")로 배제.
  */
+/** §98 감면 카드의 「5년 이상 임대」 확인 — 소령 §167의3①3호 판정 입력(§98 적용 요건 아님). */
+function unsold98RentedFor5Years(reductions: ReadonlyArray<{ type: string }> | undefined): boolean {
+  const r = reductions?.find((x) => x.type === "unsold_98") as { rentedFor5Years98?: unknown } | undefined;
+  return r?.rentedFor5Years98 === true;
+}
+
 export function resolveSurchargeExclusionByReduction(
   reductions: ReadonlyArray<{ type: string }> | undefined,
   ctx: Omit<IncomeDeductionContext, "transferIncome"> & {
@@ -604,6 +610,10 @@ export function resolveSurchargeExclusionByReduction(
   // "감면되는 주택"에 해당하므로 효과 경로 무관 적격이면 배제.
   // US-35 — 5년 후 안분 기준시가만 없는 하이브리드도 요건을 갖춘 「감면되는 주택」이다(차감 0은 STEP 4.6이 따로 남긴다).
   const surchargeId = resolution.eligibleId ?? resolution.requirementsMetId;
+  // §98 주택의 배제 근거는 5호가 아니라 3호 「…감면되는 임대주택으로서 **5년 이상 임대한** 국민주택」이다. §98 적용 요건은
+  // 보유 5년뿐이므로(리뷰 US-01) 임대 확인이 없으면 감면은 성립해도 중과 배제는 없다 — 그때 세율은 중과가 우선한다
+  // (Q-11 (b) 사용자 결정 2026-11-08: 법 §98①1호는 §104①만 지목하고 §104⑦은 별개 항이다. `transfer-tax-rate-calc.ts`).
+  if (surchargeId === "unsold_98" && !unsold98RentedFor5Years(reductions)) return { excluded: false };
   if (surchargeId && SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS.includes(surchargeId)) {
     return {
       excluded: true,
