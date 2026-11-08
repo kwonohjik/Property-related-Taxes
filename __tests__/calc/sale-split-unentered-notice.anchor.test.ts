@@ -155,7 +155,8 @@ describe("일반건물 (aggregate 경로)", () => {
 
 describe("컴패니언·다건", () => {
   it("C-1 함께 양도: split 컴패니언 actual + 빈칸 → 그 자산 라벨을 붙여 한 줄", async () => {
-    const plain = { ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 9-9", assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2008-03-02", fixedAcquisitionPrice: "300,000,000", actualSalePrice: "400,000,000" } as never;
+    // 두 자산을 같은 밀리초에 만들면 makeDefaultAsset의 assetId(`asset-${Date.now()}-1`)가 같아져 표시 판정이 엉뚱한 자산을 본다 — id를 따로 준다
+    const plain = { ...makeDefaultAsset(1), assetId: "asset-c1-plain", addressJibun: "서울 강남구 테스트동 9-9", assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2008-03-02", fixedAcquisitionPrice: "300,000,000", actualSalePrice: "400,000,000" } as never;
     const comp = splitAsset({ saleSplitMode: "actual", fixedAcquisitionPrice: "550,000,000" });
     const form = cForm({ transferDate: TD, filingDate: FIL, assets: [plain, comp], contractTotalPrice: "1900000000", bundledSaleMode: "actual" } as never, plain);
     const lines = await aggNotices(form as never);

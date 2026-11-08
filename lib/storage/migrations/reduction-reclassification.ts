@@ -40,7 +40,7 @@ const D = (s: string) => new Date(s + "T00:00:00");
 
 const NEW_99_3_START = D("2001-05-23");
 const NEW_99_3_END = D("2003-06-30");
-/** 조특법 §98의3① 계약 체결 기간(거주자) — `transfer-reductions/unsold-hybrid-p3.ts` `UNSOLD_98_3_PERIOD_FROM_RESIDENT`·`UNSOLD_98_3_PERIOD_TO`와 같다. */
+/** 조특법 §98의3① 계약 체결 기간(거주자) — `transfer-reductions/unsold-98-3.ts` `UNSOLD_98_3_PERIOD_FROM_RESIDENT`·`UNSOLD_98_3_PERIOD_TO`와 같다. */
 const UNSOLD_98_3_START = D("2009-02-12");
 const UNSOLD_98_3_END = D("2010-02-11");
 

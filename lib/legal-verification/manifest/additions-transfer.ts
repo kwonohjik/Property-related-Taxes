@@ -71,7 +71,7 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
   {
     /**
      * 결과탭 상세명세서 「세액감면대상금액」·「소득금액 감면대상」 행의 근거
-     * (`DetailedStatementHelpers.ts` · `reduction-eligible-income.ts`).
+     * (`DetailedStatementIncomeItems.ts` · `reduction-eligible-income.ts`).
      * ①이 세액감면방식(감면액 = 산출세액 × (감면대상 양도소득금액 − 기본공제) ÷ 과세표준 × 감면율),
      * ②가 소득금액 차감방식이다.
      */
@@ -94,7 +94,7 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
   },
   {
     /**
-     * 결과탭 「기신고 양도소득금액」 행의 근거 (`DetailedStatementHelpers.ts`).
+     * 결과탭 「기신고 양도소득금액」 행의 근거 (`DetailedStatementIncomeItems.ts`).
      * ②가 「이미 신고한 양도소득금액과 합산하여 신고」를 규정한다.
      */
     id: "TRANSFER.PRELIMINARY_RETURN_TAX",

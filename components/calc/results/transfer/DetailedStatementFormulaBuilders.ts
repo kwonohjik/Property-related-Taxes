@@ -207,7 +207,8 @@ export function buildPenaltyFormula(p: PerPropertyBreakdown): string {
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { StatementItem } from "./DetailedStatementHelpers";
-import { findStepByLabel } from "./DetailedStatementHelpers";
+// 순환 차단 — `DetailedStatementIncomeItems.ts`(원본에서 분리)가 이 파일을 import하므로 원본 재수출이 아니라 leaf에서 가져온다.
+import { findStepByLabel } from "./DetailedStatementLeaf";
 import { resolveRuralSurtax } from "./reduction-eligible-income";
 import {
   localCalculatedTaxFormula,
