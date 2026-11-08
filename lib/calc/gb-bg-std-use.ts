@@ -25,10 +25,14 @@ export type GbBgStdUse =
   | "market_presumed"
   | "market_unset";
 
-export function gbBgStdUseOf(asset: AssetForm): GbBgStdUse | null {
+/**
+ * `isFractionalSplit` — 지분 보유 자산의 축(`bgCollateralForcesStdAcq`와 같은 세 상태): 축 B `true` · 축 A `false` · 미지정 `undefined`(지분 자산의 담보 승을 확정하지 않는다).
+ * 단독 소유(지분 100%)는 축과 무관하다. 지분 자산은 호출자가 축을 넘겨야 담보 승 안내(«취득시 기준시가 × 채무비율»)가 맞게 나온다.
+ */
+export function gbBgStdUseOf(asset: AssetForm, isFractionalSplit?: boolean): GbBgStdUse | null {
   if (asset.transferType !== "burdened_gift") return null;
   if (asset.bgValuationMode !== "sangjeungbeop_market") return "standard";
-  if (bgCollateralForcesStdAcq(asset)) return "market_collateral";
+  if (bgCollateralForcesStdAcq(asset, isFractionalSplit)) return "market_collateral";
   if (asset.bgAcquisitionMethod === "actual") return "market_actual";
   if (asset.bgAcquisitionMethod === "converted") return "market_converted";
   if (isBgPresumedMethod(asset.bgAcquisitionMethod)) return "market_presumed";
@@ -38,8 +42,8 @@ export function gbBgStdUseOf(asset: AssetForm): GbBgStdUse | null {
 const partsLabel = (p: { land: boolean; building: boolean }) => (p.land && p.building ? "토지·건물" : p.land ? "토지" : "건물");
 
 /** ① 토지 공시지가 카드 머리 문구. 부담부증여가 아니면 null(호출부가 일반 문구를 쓴다). */
-export function gbBgLandStdNote(asset: AssetForm, transferDate: string | undefined): string | null {
-  const use = gbBgStdUseOf(asset);
+export function gbBgLandStdNote(asset: AssetForm, transferDate: string | undefined, isFractionalSplit?: boolean): string | null {
+  const use = gbBgStdUseOf(asset, isFractionalSplit);
   if (!use) return null;
   const parts = gbBgThreeWayParts(asset);
   if (parts.any) {
@@ -65,8 +69,8 @@ export function gbBgLandStdNote(asset: AssetForm, transferDate: string | undefin
 }
 
 /** 취득시 건물기준시가 칸 hint. 부담부증여가 아니면 null(호출부가 일반 hint를 쓴다). */
-export function gbBgAcqBuildingHint(asset: AssetForm): string | null {
-  const use = gbBgStdUseOf(asset);
+export function gbBgAcqBuildingHint(asset: AssetForm, isFractionalSplit?: boolean): string | null {
+  const use = gbBgStdUseOf(asset, isFractionalSplit);
   if (!use) return null;
   const basis = gbBgAcqStdBasis(gbBuildingPreDeemed(asset));
   if (gbBgThreeWayParts(asset).building) {

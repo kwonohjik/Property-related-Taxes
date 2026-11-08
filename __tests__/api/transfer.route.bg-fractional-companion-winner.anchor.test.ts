@@ -150,10 +150,10 @@ describe("FC-4 주 자산·컴패니언이 모두 지분 — 혼합은 400 · �
     const a = await frac("300,000,000", "25");
     expect([a.gate > 0, a.status]).toEqual([true, 400]);
   }, 120_000);
-  it("D=6억 · 50/50, 50/25: 둘 다 담보 승(균일)이라 ⑧ 게이트 · ⑫ 200 (수정 전 400 거짓 차단)", async () => {
+  it("D=6억 · 50/50, 50/25: 둘 다 담보 승(균일)이라 ⑧ 통과(일반건물 지분 담보 승은 Q-3로 연다) · ⑫ 200 (수정 전 400 거짓 차단)", async () => {
     for (const rc of ["50", "25"]) {
       const a = await frac("600,000,000", rc);
-      expect([rc, a.gate > 0, a.status]).toEqual([rc, true, 200]);
+      expect([rc, a.gate > 0, a.status]).toEqual([rc, false, 200]);
     }
   }, 120_000);
 });

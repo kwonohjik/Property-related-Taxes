@@ -49,7 +49,7 @@ interface Subject {
   fractionalSplitBundle?: boolean;
   burdenedGiftInfo?: unknown;
   generalBuildingValuation?: Gbv;
-  generalBuildingShares?: { valuation?: Gbv; burdenedGiftInfo?: unknown }[];
+  generalBuildingShares?: { valuation?: Gbv; burdenedGiftInfo?: unknown; ownershipRatio?: number }[];
   companionAssets?: { assetKind?: string; acquisitionCause?: string; acquisitionDate?: string; ownershipRatio?: number; burdenedGiftInfo?: unknown; generalBuildingValuation?: Gbv }[];
 }
 
@@ -204,14 +204,14 @@ export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementC
   // 지분(축 B) — 부담부증여면 **모든 지분**이 info 를 가져야 한다. 누락 지분은 일반 양도로 계산된다(침묵 무시 금지).
   if (data.propertyType === "general_building" && data.transferType === "burdened_gift") {
     requireStd(data.burdenedGiftInfo, []);
-    // 축 B는 지분마다 본다(지분 비율로 담보 승을 판정해야 한다).
+    // 축 B는 지분마다 본다(지분 비율로 담보 승을 판정해야 한다). 와이어의 지분율은 카드 바로 아래 `ownershipRatio`에 있다 — `valuation.ownershipRatio`는 실리지 않는다.
     if ((data.generalBuildingShares?.length ?? 0) < 2) requireBgAcquisitionParts(data.burdenedGiftInfo, data.generalBuildingValuation, data.ownershipRatio, [], ctx);
     (data.generalBuildingShares ?? []).forEach((s, i) => {
       if (!s.burdenedGiftInfo) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["generalBuildingShares", i, "burdenedGiftInfo"], message: GB_BG_SHARE_INFO_REQUIRED_MESSAGE });
       }
       requireStd(s.burdenedGiftInfo, ["generalBuildingShares", i]);
-      if ((data.generalBuildingShares?.length ?? 0) >= 2) requireBgAcquisitionParts(s.burdenedGiftInfo, s.valuation, s.valuation?.ownershipRatio, ["generalBuildingShares", i], ctx);
+      if ((data.generalBuildingShares?.length ?? 0) >= 2) requireBgAcquisitionParts(s.burdenedGiftInfo, s.valuation, s.valuation?.ownershipRatio ?? s.ownershipRatio, ["generalBuildingShares", i], ctx);
     });
   }
   // 컴패니언 — `burdenedGiftInfo` 존재가 부담부증여 표지다(`bundled-route.ts` · `transfer-tax-schema-companion-refines.ts`와 같은 규율).

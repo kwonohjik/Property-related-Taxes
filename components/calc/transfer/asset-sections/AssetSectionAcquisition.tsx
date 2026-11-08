@@ -340,6 +340,7 @@ export function AssetSectionAcquisition({
            */
           shareAcquisitionOnly={splitMode === "fractional" && !isFirst}
           fractionalShares={gbFractionalShares}
+          isFractionalSplit={splitMode === "fractional"}
         />
       )}
 

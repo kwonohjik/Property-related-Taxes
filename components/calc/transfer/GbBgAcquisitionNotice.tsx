@@ -9,8 +9,8 @@ import { BG_COLLATERAL_PAREN_ERA_SUFFIX } from "@/lib/calc/burdened-gift-collate
 import { bgCollateralParenEraUncertain } from "@/lib/calc/burdened-gift-collateral-win";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
-export function GbBgAcquisitionNotice({ asset, transferDate }: { asset: AssetForm; transferDate: string | undefined }) {
-  const use = gbBgStdUseOf(asset);
+export function GbBgAcquisitionNotice({ asset, transferDate, isFractionalSplit }: { asset: AssetForm; transferDate: string | undefined; isFractionalSplit?: boolean }) {
+  const use = gbBgStdUseOf(asset, isFractionalSplit);
   if (!use) return null;
   const parts = gbBgThreeWayParts(asset);
   const partLabel = parts.all ? "토지·건물" : parts.land ? "토지" : "건물";
