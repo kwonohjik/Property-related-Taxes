@@ -128,4 +128,20 @@
 | V-2 | **컴패니언 입주권은 함께 양도에서 허용되고(⑫ enum `transfer-tax-schema-companion.ts:107` · ⑭ `bundled-split-helpers.ts:216`), 고지는 주 자산 입주권과 똑같이 두 줄(양도·취득 당시)을 낸다 — 둘 다 `selectable:false`** | 컴패니언 입주권 `["1:transfer/low/true/sel=false","1:acquisition/low/true/sel=false"]` = 주 자산 입주권 `["0:…sel=false" ×2]`. `companionRegulatedFlags`는 `{isRegulatedArea:true, wasRegulatedAtAcquisition:true}`를 싣는다. 세액 영향은 앞선 측정(§11 `regulated-rights-transfer-toggle.plan.md`: 컴패니언 입주권 두 값 불변)을 그대로 따른다 — 이번에 다시 재지 않았다 |
 | V-4 | **다건에서는 건마다 컴패니언이 있을 수 없다 → 컴패니언 고지는 다건에 도달하지 않는다** | ⑧ `validateMultiSupportedMode`가 `assets.length > 1`을 막는다(`multi-transfer-tax-validate.ts` · 문구 「한 건 내 다자산 일괄양도는 단건 계산기에서만 지원됩니다.」 — 프로브가 이 문구를 반환). ⑫도 `companionAssets`를 거부한다(`transfer-tax-schema-multi-refines.ts:96`) |
 
-미해결로 남는 것: ① V-1 옛 세션 복원 경로(폼 전역 `regionCode`가 실제로 복원되는지) ② V-2 컴패니언 입주권 고지 줄의 «세액 영향 없음»을 이 브랜치에서 재측정하지 않음.
+### 9-1. V-1 복원 경로 측정 (2026-11-09 · 워크트리 `-m2` · throwaway probe, 삭제함 — 결과 원본 `scratchpad/m2-probe.json`)
+
+저장물에 최상위 `regionCode: "1168010100"`이 있을 때 복원 경로가 그 값을 남기는가:
+
+| 경로 | 폼 전역 `regionCode` |
+|---|---|
+| 새 스키마 폼 `migratePersistedTransferForm` | 남음 |
+| sessionStorage 복원 `mergePersistedWizard` | 남음 |
+| 옛 스키마(`assets` 없음) `migratePersistedTransferForm` → `migrateLegacyForm` | 남음 |
+| 단건 이력 재개가 쓰는 `updateFormData`(단순 merge) | 남음 — **`resumeTransferRecord` 전체를 돌린 것은 아니다**(그 함수 안의 `migrateAsset`·`clearInheritedStaleAcqInputs`·`moveLinkedCountExclusionsToRows`는 자산·행만 만진다고 읽었을 뿐 실행 측정 아님 — 확인 필요) |
+| 다건 `migrateMultiForm`의 건별 폼 | 남음 |
+
+복원 뒤 고지(자산 2개 모두 시·도 생략 주소): 컴패니언 줄만 남는다(`["1:transfer","1:acquisition"]`) — §9 V-1 도달 시 동작과 같다.
+
+**결론**: 복원 경로는 값을 지우지 않는다 — 저장물에 있으면 되살아난다. 그러나 **새로 저장되는 폼에는 생기지 않는다**: 이 저장소 이력에서 운영 코드가 폼 전역 `regionCode`를 쓴 흔적을 찾지 못했다(`git log -G` 두 패턴 — `updateFormData({…regionCode…})`는 테스트 `handoff-patch-keys-s11-7.anchor.test.ts`에서만, 자산 카드 쪽 `regionCode: v.pnu` 계열은 자산-수준). 도입 커밋 `2046d3f06`(2026-06-17)도 store·API 배선만 추가했다. 따라서 옛 저장물에 이 값이 들어 있을 가능성은 낮고, 있어도 영향은 «첫 자산은 코드로 판정, 고지는 컴패니언만»이며 ④와 일치한다. **검색한 패턴 밖의 쓰기 경로는 배제하지 못했다**(`-G` 두 패턴에 한정).
+
+미해결로 남는 것: ① ~~V-1 옛 세션 복원 경로~~ → 위 9-1로 측정(복원은 되살림 · 쓰기 경로는 패턴 한정으로 못 찾음) ② V-2 컴패니언 입주권 고지 줄의 «세액 영향 없음»을 이 브랜치에서 재측정하지 않음.
