@@ -131,7 +131,8 @@ describe("US-06 명부 행 — 상속 감면주택은 주택 수에서 빠지지
   const decl = (article: "unsold_98_3" | "unsold_98_2" | "unsold_98_6" | "new_99", extra: Record<string, unknown> = {}) => ({
     article,
     houseId: "h2",
-    houseAcquisitionDate: article === "new_99" ? new Date("1999-03-01") : new Date("2009-06-01"),
+    // §98의6은 「2011.3.29. 현재 준공후미분양」이라 취득일 ≥ 2011-03-29여야 한다(US-22) — 상속·증여 판정이 이 테스트의 의도다
+    houseAcquisitionDate: article === "new_99" ? new Date("1999-03-01") : article === "unsold_98_6" ? new Date("2011-06-01") : new Date("2009-06-01"),
     // #2951(NH-24) 이후 §99·§99의3 행은 유형 필수 — 자기건설(사용승인일=취득일 축)
     ...(article === "new_99" ? { housingKind: "self_built" as const } : {}),
     requirementsConfirmed: true,
