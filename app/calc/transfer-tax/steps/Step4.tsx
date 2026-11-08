@@ -601,7 +601,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
 
             {/* OH-22 §154⑤ 단서 최종 1주택 재기산 — 2021.1.1.~2022.5.9. 양도 1주택만(④·⑧과 같은 술어) */}
             {calcFinalHouseRestartInScope(householdView) && (
-              <FinalHouseRestartSection value={householdView} acquisitionDate={exemptPrimary?.acquisitionDate} onChange={householdOnChange} />
+              <FinalHouseRestartSection value={householdView} acquisitionDate={primaryAcquisitionDateOf(exemptPrimary)} onChange={householdOnChange} />
             )}
           </div>
         </section>
