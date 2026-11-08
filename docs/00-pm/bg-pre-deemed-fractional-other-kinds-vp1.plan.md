@@ -1,6 +1,6 @@
 # 부담부증여 × 의제취득일 전 × 지분 — 상가 · 건물(토지 제외) · 재개발 완공 아파트 값 측정 (V-P1)
 
-- 상태: **측정 완료 · 결정 대기(2026-11-09)** — 기준 master `9a1520c2e`.
+- 상태: **구현 완료(결정 Q-1~3 모두 a, 2026-11-09)** — 결과는 §7. 기준 master `9a1520c2e`.
 - 선행: `bg-gb-pre-deemed-fractional-clause-a.plan.md`(#3021) §5 V-P1 — 그 문서는 일반건물만 고쳤고 이 세 종류는 «측정하지 않았다 — 확인 필요»로 남겼다.
 - 표기: **[직접]** = 이 문서 작성 중 직접 실행·대조. **[코드]** = 코드 읽기만. **확인 필요** = 미측정·미해명.
 
@@ -12,7 +12,7 @@
 | 왜 다른가 | 이 세 종류는 일반건물의 파트별 ①② 쌍(`landPreDeemedClauseA`·`buildingPreDeemedClauseA`)을 쓰지 않고 **단일 자산 `inheritedAcquisition`(pre-deemed)** 을 싣는다. `burdened-gift-apportionment.ts:368` 주석도 «파트 ①②는 일반건물 route만 싣는다»고 적는다 [코드]. 이 경로의 지분 축소가 어디서 되는지 파일:줄은 **확인 필요** — 값은 [직접] 일치 |
 | 화면에서 도달하는가 | 도달한다. 26칸 모두 ⑧ 0건 → ⑫ 200 [직접]. 따라서 «값이 맞다»는 화면 값이 맞다는 뜻이다 |
 | 기존 안내와 어긋나는 것 | `bg-pre-deemed-commercial` W-1 제목은 «지분 단독은 ⑧이 다른 이유로 막는다»고 적었지만 거의 같은 입력(상가 · 기준시가 · §164⑥ 8칸 · 지분 50% · 채무 1억)이 현행 ⑧을 통과한다 [직접: `com-std-CB8` A ⑧ 0건]. 당시 이유가 무엇이었는지는 **확인 필요** |
-| 판정 | 사용자 결정 필요 — §4. 권장은 **Q-1 a(안전망 anchor 추가) · Q-2 a(1원은 별건 유지) · Q-3 a(W-1 제목 정정)** |
+| 판정 | 사용자 결정 **Q-1 a(안전망 anchor 추가) · Q-2 a(1원은 별건 유지) · Q-3 a(W-1 제목 정정)** — §4 |
 
 ## 1. 범위
 
@@ -47,7 +47,7 @@
 
 축 B 60/40 두 카드의 취득가액이 단건보다 1원 작다(예: 상가 CB8 기준시가 254,545,453 ↔ 254,545,454 → 양도차익 +1). 카드별로 `floor`한 합이 단건 `floor`보다 작을 수 있는 구조로 보이나 **원인은 확인 필요**. 기존 «축 B 임대 +4원(V-G2)»과 같은 계열인지도 확인 필요. 값 결함으로 단정하지 않는다.
 
-## 4. 결정
+## 4. 결정 (2026-11-09 사용자 결정: Q-1 a · Q-2 a · Q-3 a — 「모두 권장안으로」)
 
 | Q | 내용 | 권장 |
 |---|---|---|
@@ -59,7 +59,7 @@
 
 | 번호 | 내용 |
 |---|---|
-| V-P1a | 단일 자산 pre-deemed 경로의 지분 축소가 일어나는 파일:줄 [코드로 미확인] |
+| V-P1a | ~~지분 축소 위치~~ → 해소 [코드+뮤테이션]: 지분을 줄이는 곳은 ① ④ `transfer-tax-api-inheritance.ts:91`(① 상증법 평가액) ② `inheritance-acquisition-helpers.ts:83`(증여가액 C) ③ 같은 파일 `:429·435·441`(평가 기준시가) ④ `burdened-gift-apportionment.ts:127`(§159 몫) ⑤ `transfer-tax-api-primary-context.ts:214`(재개발 payload). 하나씩 끄면 anchor가 깨진다(§7) |
 | V-P1b | 축 B +1원의 원인과 V-G2와의 관계 |
 | V-P1c | W-1이 적은 «다른 이유»의 정체 — 과거 어느 시점에 ⑧이 막았는지 |
 | V-P2 | 함께 양도 컴패니언의 상가·건물·재개발·토지·주택 카드(별도 payload 코드 `companion-payload.ts`) |
@@ -69,3 +69,23 @@
 ## 6. 재현
 
 `PROBE_OUT=<경로> npx vitest run __tests__/api/zz-vp1-probe.test.ts` — 13변형 × 2모양 = 26칸이 JSON으로 나온다. 시료 규모 배율 `sc`(0.5 = 반 크기)와 지분분 직접 입력 칸(재개발 청산금)을 함께 바꾼다.
+
+## 7. 구현 결과 (2026-11-09 · Q-1 a · Q-2 a · Q-3 a)
+
+코드(`lib/**`·`app/**`) 변경은 없다. 테스트 1건 추가 · 1건 제목 정정.
+
+| 항목 | 결과 |
+|---|---|
+| Q-1 안전망 anchor | 신규 `__tests__/api/transfer.route.bg-pre-deemed-fractional-other-kinds.anchor.test.ts` 4건 — 종류 3(`describe.each`) 안에서 13변형 × 축 A·B 26칸을 각각 ⑧ 0건 · ⑫ 200 · 축 A 취득가액·양도차익 일치 · 축 A 고정값 13개 · 채택 후보(`reported`/`converted`/`sec164`/`deemed_std`) · 축 B는 0~1원 단언. 코드를 안 바꾸므로 «수정 전 실패»는 없다 — 대신 아래 뮤테이션으로 검증 |
+| 뮤테이션 5/5 KILLED | 각각 cp 백업 → 변형 → 신규 anchor → 복원 → `cmp`(복원 확인 5/5). M1 `transfer-tax-api-inheritance.ts:91` ①의 `applyRatio` 제거 → 3건 실패 · M2 `inheritance-acquisition-helpers.ts:83` 증여가액 C의 지분 비율 제거 → 2건 · M3 `burdened-gift-apportionment.ts:127` `scaleBurdenedGiftInfo(…, undefined)` → 3건 · M4 같은 파일 `ownershipRatio ?? 1` 3곳 → 1건 · M5 `transfer-tax-api-primary-context.ts:214` 재개발 payload 지분 비율 1 → 1건. `git status`는 의도한 두 파일만 |
+| Q-2 | 축 B +1원 3칸은 손대지 않았다 — anchor가 «0~1원»으로만 고정하고 2원 이상 벌어지면 깨진다. 원인(V-P1b)은 별건 |
+| Q-3 | `bg-pre-deemed-commercial` W-1 제목을 «화면에서 지분 50%로 넣어도 ⑧은 통과한다: V-P1 anchor가 고정»으로 정정. 단언은 그대로 |
+| 회귀 | api 482파일 6387 · lib 262파일 3356 · components 748파일 6881 · calc 823파일 11562 · tax-engine 1498파일 18913 — 전부 통과(실패 0) |
+| 정적 검사 | `tsc --noEmit` 0건 · 변경 테스트 2파일 eslint 0건 |
+| Playwright | **돌리지 않았다** — 화면·코드 변경이 없다(테스트·문서만) |
+
+### 7.1 이번에 확인하지 않은 것
+
+- 뮤테이션은 pre-deemed(1985 전) 분기만 건드렸다. post-deemed ①(`transfer-tax-api-inheritance.ts:136`)은 이 anchor의 범위 밖이라 변형하지 않았다.
+- 사람이 직접 한 브라우저 수동 확인은 하지 않았다.
+- V-P1b(축 B +1원 원인) · V-P1c(W-1의 «다른 이유»가 과거 어느 시점의 무엇이었는지) · V-P2 · V-P5는 그대로 **확인 필요**.

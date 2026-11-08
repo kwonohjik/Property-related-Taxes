@@ -183,7 +183,7 @@ describe("증여 · 건물(토지 제외)", () => {
 });
 
 describe("지분 · 함께 양도", () => {
-  it("W-1 공유지분 1/2 · 기준시가 · §164⑥ 8칸 — 안분 전 509,090,909을 의제취득일 기준시가로 넣고 지분 축소 → 127,272,727 (API 직접 — 지분 단독은 ⑧이 다른 이유로 막는다)", async () => {
+  it("W-1 공유지분 1/2 · 기준시가 · §164⑥ 8칸 — 안분 전 509,090,909을 의제취득일 기준시가로 넣고 지분 축소 → 127,272,727 (API 직접 — 화면에서 지분 50%로 넣어도 ⑧은 통과한다: V-P1 anchor `bg-pre-deemed-fractional-other-kinds`가 고정)", async () => {
     const body = await captureBody(form({ ...STANDARD, ...CB8, bgMortgageDebtAmount: "100000000" }));
     const r = await postTransfer({ ...body, ownershipRatio: 0.5 });
     expect(r.status).toBe(200);
