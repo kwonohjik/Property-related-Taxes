@@ -359,10 +359,10 @@ const dateOf = (iso: string) => {
 };
 
 test.describe("재개발 원조합원 §99의3·§99 (PR #2944) — 준공일 칸 · 잔여주택 계약", () => {
-  // B: 인가 2004-01-01 · 준공 2008-06-30(신축주택취득기간 2003.6.30. 뒤) · 양도 2016-06-01 — anchor B: 예 74,084,999 · 아니오/모름 110,502,857
+  // B: 인가 2004-01-01 · 준공 2008-06-30(신축주택취득기간 2003.6.30. 뒤) · 양도 2016-06-01 — anchor B: 예 73,375,000 · 아니오/모름 109,285,000
   const B = { redevApprovalDate: "2004-01-01" };
 
-  test("[B-1] §99의3: 준공일 칸 표시·미입력 차단 → 입력하면 잔여주택 계약 질문 → 미응답 차단 → 「예」 body → 74,084,999", async ({ page }) => {
+  test("[B-1] §99의3: 준공일 칸 표시·미입력 차단 → 입력하면 잔여주택 계약 질문 → 미응답 차단 → 「예」 body → 73,375,000", async ({ page }) => {
     test.setTimeout(120_000);
     const posts = trackPosts(page);
     await openRedev(page, {
@@ -405,13 +405,13 @@ test.describe("재개발 원조합원 §99의3·§99 (PR #2944) — 준공일 �
     expect(body.reductions).toEqual([expect.objectContaining({ type: "new_99_3", remainderContract993: "yes" })]);
     const d = json.data!.result.new993Detail as { isEligible: boolean };
     expect(d.isEligible).toBe(true);
-    expect(json.data!.result.totalTax).toBe(74_084_999);
+    expect(json.data!.result.totalTax).toBe(73_375_000);
     await page.screenshot({ path: "e2e/_artifacts/nh99-b1-b1-result.png", fullPage: true });
   });
 
   for (const [answer, code, tax] of [
-    ["no", "NO_REMAINDER_CONTRACT", 110_502_857],
-    ["unknown", "REMAINDER_CONTRACT_UNCONFIRMED", 110_502_857],
+    ["no", "NO_REMAINDER_CONTRACT", 109_285_000],
+    ["unknown", "REMAINDER_CONTRACT_UNCONFIRMED", 109_285_000],
   ] as const) {
     test(`[B-2] §99의3 잔여주택 계약 「${answer === "no" ? "아니오" : "모름"}」 → body ${answer} · 불성립 ${code} · ${tax.toLocaleString("en-US")}`, async ({ page }) => {
       test.setTimeout(120_000);
@@ -448,7 +448,7 @@ test.describe("재개발 원조합원 §99의3·§99 (PR #2944) — 준공일 �
     expect(json.data!.result.totalTax).toBe(53_417_071);
   });
 
-  test("[B-4] §99: 준공 2000-06-30(기간 뒤) → 잔여주택 질문(new99) 「예」 body remainderContract99 → 73,425,000", async ({ page }) => {
+  test("[B-4] §99: 준공 2000-06-30(기간 뒤) → 잔여주택 질문(new99) 「예」 body remainderContract99 → 73,375,000", async ({ page }) => {
     test.setTimeout(120_000);
     const posts = trackPosts(page);
     await openRedev(page, {
@@ -469,7 +469,7 @@ test.describe("재개발 원조합원 §99의3·§99 (PR #2944) — 준공일 �
     const { body, json } = await calculate(page);
     expect(body.reductions).toEqual([expect.objectContaining({ type: "new_99", remainderContract99: "yes" })]);
     expect(body.redevelopment).toEqual(expect.objectContaining({ completionDate: "2000-06-30" }));
-    expect(json.data!.result.totalTax).toBe(73_425_000);
+    expect(json.data!.result.totalTax).toBe(73_375_000);
   });
 });
 
