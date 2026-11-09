@@ -130,9 +130,29 @@
 - 원인 [코드]: 축 B는 결과 최상위 `generalBuildingValuationDetail` 하나뿐이고 그것이 **첫 지분의 `detailBase`**다(`general-building-fractional.ts:424` `if (detailBase === undefined) detailBase = built.detailBase` — `gb-fractional-result-blocks.plan.md` §1이 블록 쪽으로 같은 사실을 적었다). 명세서 `gbOf`(`DetailedStatementHelpers.ts:169`) → `gbFormulaInputsOf`(`DetailedStatementGbAsset.ts:30`)가 `single`이 있으면 지분을 가리지 않고 그것을 모든 카드에 준다. 실가 경로 필요경비만 지분별 `shareActualExpenseEcho`로 덮어 읽는다(`DetailedStatementGbFormulas.ts:573`) — 환산 경로 `estimatedDeduction` · 양도가액 합계에는 지분별 echo가 없다.
 - 신고서 표 · PDF · 인쇄본의 같은 문구는 측정하지 않았다 — 확인 필요.
 
-### 7.3 결정 대기
+### 7.3 결정 (2026-11-09 사용자 결정: Q-4 a · Q-5 (가))
 
 | Q | 내용 | 권장 |
 |---|---|---|
 | Q-4 | D-1을 고칠까 | **a 고친다** — 산식이 자기 값을 못 만드는 표시 결함(F-20 증축 base와 같은 종류) / b 문서만 |
 | Q-5 | 방식 | **(가) 지분별 echo 확장** — `shareActualExpenseEcho`처럼 환산 경로도 지분별 `estimatedDeduction`·양도가액 합계를 싣고 빌더가 카드 지분 값으로 덮어 읽는다 / (나) 빌더가 카드 값에서 역산(dual-truth라 비권장) |
+
+### 7.4 구현 결과 (Q-4 a · Q-5 (가))
+
+| 층 | 파일 | 내용 |
+|---|---|---|
+| 타입 | `lib/tax-engine/types/transfer-aggregate-gb.types.ts` | `GbShareFormulaEcho`(지분 양도가액 `shareTransferPrice` · 환산 개산공제 `estimatedDeduction`) + `GbValuationDetail.shareFormulaEcho` |
+| route | `app/api/calc/transfer/general-building-fractional.ts` | 지분 양도가액(잔액 흡수 후)을 모아 채택 시나리오 카드의 `detailBase.estimatedDeduction`과 함께 지분 인덱스로 싣는다 |
+| 표시 | `components/calc/results/transfer/DetailedStatementGbAsset.ts` `gbFormulaInputsOf` | 결과 상세가 한 벌이면 카드 지분(`shareIndexOf`)의 echo로 양도가액 총액 · 개산공제 base를 덮는다. echo가 없는 단건 · 옛 이력은 종전 그대로 |
+
+엔진 계산 · 세액은 바뀌지 않는다(표시 재료 echo만 추가).
+
+### 7.5 검증 [직접]
+
+| 항목 | 결과 |
+|---|---|
+| 격자 — 6시료(매매 환산 · 건물/토지 이월과세 환산 · 두 파트 실가 · 증축 3-way 매매 · 증축 3-way 이월과세) × 지분 60/40 · 20/30/50 | 카드 210칸의 값 · 산식 문구가 같은 지분율 축 A 단건과 글자 그대로 같다(수정 전 69칸 불일치 — 실가 경로 양도가액 포함) |
+| 안전망 anchor | 신규 `__tests__/api/transfer.route.gb-axis-b-share-statement-formula.anchor.test.ts` 14건 — 위 격자 12건 + 고정 문구 2건(지분 2 「400,000,000 × …」 · 「40,000,000 × 3%」 · 증축 「12,000,000 × 3%」) |
+| 뮤테이션 6/6 KILLED | cp 백업 → 변형 → anchor → 복원 후 `cmp`. M1 route echo 미부착 14 실패 · M2 echo에서 개산공제 제외 12 · M3 지분 양도가액 대신 계약 총액 14 · M4 표시가 echo 무시 14 · M5 개산공제 덮기 제거 12 · M6 양도가액 덮기 제거 14 (M2 · M5의 통과 2건은 실가 경로 — 필요경비가 `shareActualExpenseEcho` 경로라 무관) |
+| 회귀 | 명세서 · 축 B · 일반건물 상세를 참조하는 테스트 338파일 4,802건 통과 · `tsc --noEmit` 0건 · 변경 파일 eslint 오류 0건 |
+| 미확인 | 신고서 표 · PDF는 이 산식 빌더를 쓰지 않는다(grep — `gbFormulaInputsOf` · `buildGb*Formula` 호출처는 상세명세서뿐). 사람이 직접 한 브라우저 확인은 하지 않았다 |

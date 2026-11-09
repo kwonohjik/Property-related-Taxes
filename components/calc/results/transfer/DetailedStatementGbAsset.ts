@@ -1,7 +1,7 @@
 /**
  * 상세명세서 — 카드별 일반건물 산식 재료 선택 (`gb-bundled-result-formulas.plan.md` D-2).
  *
- * 단건·지분 분할은 결과 상세가 하나(`generalBuildingValuationDetail`)라 종전대로 그것을 쓴다.
+ * 단건·지분 분할은 결과 상세가 하나(`generalBuildingValuationDetail`)라 그것을 쓴다 — 지분 분할은 카드 지분의 `shareFormulaEcho`로 양도가액·개산공제 base를 덮는다.
  * 함께 양도는 일반건물 자산마다 상세가 따로 있다(`generalBuildingDetailsByAsset` — 키 = 카드 id 접미사):
  *  - 일반건물 자산의 카드에만 상세를 건넨다 — 함께 양도 토지 카드에 건네면 그 카드 산식이 바뀐다(C-3).
  *  - 양도가액 산식의 총액은 그 일반건물의 양도가액(같은 접미사 카드 합)이다 — 계약 총액이면 거짓 등식(C-4).
@@ -12,6 +12,8 @@ import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggre
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
+import { shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
+import type { GbValuationDetail } from "@/lib/tax-engine/types/transfer-aggregate-gb.types";
 
 export interface GbFormulaInputs {
   gb: GeneralBuildingOutput | undefined;
@@ -29,7 +31,17 @@ export function gbFormulaInputsOf(
   /** 다건 합산 — 카드 id → 그 양도건의 폼 자산(`propertyFormMap`). 접미사가 폼 항목 id라 `formData.assets`에서 찾을 수 없다. */
   assetOfCard?: (propertyId: string) => AssetForm | undefined,
 ): GbFormulaInputs {
-  if (single) return { gb: single, ...fallback };
+  if (single) {
+    // 지분 분할(축 B) — 결과 상세 한 벌은 첫 지분 것이다. 그 카드 지분의 양도가액 · 개산공제 base로 덮어 읽는다(계획서 §7 D-1).
+    const idx = shareIndexOf(p.propertyId);
+    const echo = idx !== undefined ? (single as GbValuationDetail).shareFormulaEcho?.[String(idx)] : undefined;
+    if (!echo) return { gb: single, ...fallback };
+    return {
+      gb: echo.estimatedDeduction ? { ...single, estimatedDeduction: echo.estimatedDeduction } : single,
+      totalTransferPrice: echo.shareTransferPrice,
+      asset: fallback.asset,
+    };
+  }
   const suffix = cardSuffixOf(p.propertyId);
   const gb = suffix !== undefined ? byAsset?.[suffix] : undefined;
   if (!gb) return { gb: undefined, ...fallback };
