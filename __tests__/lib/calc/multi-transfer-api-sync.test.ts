@@ -228,7 +228,7 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     ["입주권(원조합원)", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "right_to_move_in" }; }],
     ["입주권(승계조합원)", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "right_to_move_in", isSuccessorRightToMoveIn: true }; }],
     ["겸용주택", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "housing", isMixedUseHouse: true }; }],
-    ["일반건물", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "general_building" }; }],
+    // "일반건물"은 2026-11-09 지원 전환(트랙 G) — 단건 = 다건은 `__tests__/calc/multi-general-building-parity.anchor.test.ts`가 고정한다.
     ["이월과세", (f) => { f.assets[0] = { ...f.assets[0], acquisitionCause: "carryover_gift" }; }],
     // PHD(§164⑦)는 환산에서만 성립한다 — 비환산 + 플래그 잔재는 차단하지 않는다(아래 별도 테스트·phd-non-estimated-method-axis.anchor).
     ["PHD(환산)", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "housing", useEstimatedAcquisition: true, usePreHousingDisclosure: true }; }],

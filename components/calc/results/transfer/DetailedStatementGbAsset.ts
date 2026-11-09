@@ -26,6 +26,8 @@ export function gbFormulaInputsOf(
   properties: PerPropertyBreakdown[],
   formData: TransferFormData | undefined,
   fallback: { totalTransferPrice: number; asset: AssetForm | undefined },
+  /** 다건 합산 — 카드 id → 그 양도건의 폼 자산(`propertyFormMap`). 접미사가 폼 항목 id라 `formData.assets`에서 찾을 수 없다. */
+  assetOfCard?: (propertyId: string) => AssetForm | undefined,
 ): GbFormulaInputs {
   if (single) return { gb: single, ...fallback };
   const suffix = cardSuffixOf(p.propertyId);
@@ -36,6 +38,9 @@ export function gbFormulaInputsOf(
     totalTransferPrice: properties
       .filter((q) => cardSuffixOf(q.propertyId) === suffix)
       .reduce((s, q) => s + q.transferPrice, 0),
-    asset: (suffix === "primary" ? formData?.assets[0] : formData?.assets.find((a) => a.assetId === suffix)) ?? fallback.asset,
+    asset:
+      (suffix === "primary" ? formData?.assets[0] : formData?.assets.find((a) => a.assetId === suffix)) ??
+      assetOfCard?.(p.propertyId) ??
+      fallback.asset,
   };
 }

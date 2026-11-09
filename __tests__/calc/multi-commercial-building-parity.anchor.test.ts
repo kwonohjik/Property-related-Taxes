@@ -100,9 +100,8 @@ async function expectParity(form: TransferFormData) {
 }
 
 describe("다건 — 상업용건물·오피스텔이 단건과 같은 세액이다", () => {
-  it("[MC-0] ⑧ — 상업용건물은 막지 않는다 · 일반건물은 계속 막는다(트랙 G 전)", () => {
+  it("[MC-0] ⑧ — 상업용건물은 막지 않는다(일반건물도 트랙 G에서 풀렸다 — `multi-general-building-parity`)", () => {
     expect(validateMultiSupportedMode(cbForm(POST_DISCLOSURE))).toBeNull();
-    expect(validateMultiSupportedMode(cbForm({ assetKind: "general_building" }))).toContain("일반건물");
   });
 
   it("[MC-0b] ⑧ V-C1 — 건별 validateStep이 환산 필수값 공란을 막는다(④가 undefined를 돌려 환산 없이 계산되지 않게)", () => {

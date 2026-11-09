@@ -113,6 +113,23 @@ export function mergeGbPropertyLevel(asset: AssetForm, primary: AssetForm): Asse
 }
 
 /**
+ * ④ 주 자산 일반건물 서브객체 — 공유 지분(축 A)은 100% 기준 입력 금액을 지분 몫으로({@link applyShareScale}).
+ * 축 B(전 자산 지분 묶음 — `fractionalBundleMerge`)는 최상위 값을 종전 그대로 둔다.
+ * 단건 ④(`transfer-tax-api-primary-context.ts`)와 다건 ④(`multi-transfer-tax-api.ts`)가 **같은 leaf**를 쓴다.
+ */
+export function buildPrimaryGeneralBuildingValuation(
+  primary: AssetForm,
+  transferDate: string,
+  fractionalBundleMerge: boolean,
+): object | undefined {
+  if (primary.assetKind !== "general_building") return undefined;
+  const raw = buildGeneralBuildingValuation(primary, transferDate);
+  return raw && fractionalBundleMerge === false
+    ? applyShareScale(raw as Record<string, unknown>, getOwnershipRatio(primary))
+    : raw;
+}
+
+/**
  * D3 — 지분율 스케일. **100% 기준으로 입력받은 금액만** × r 한다.
  *
  * 🔴 **기준시가·면적은 절대 스케일하지 않는다.** 환산 산식에서 분자·분모로 함께 나타나 약분되고,

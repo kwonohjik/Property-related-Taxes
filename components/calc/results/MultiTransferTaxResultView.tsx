@@ -38,6 +38,9 @@ import {
   RATE_GROUP_LABELS,
   RATE_GROUP_COLORS,
 } from "./MultiTransferPropertyBreakdown";
+import { MultiGbAssetGroup } from "@/components/calc/results/MultiGbAssetGroup";
+import { groupMultiResultRows } from "@/components/calc/results/transfer/multi-result-groups";
+import { multiFormPropertyIdOf } from "@/components/calc/results/transfer/multi-result-groups";
 import { lossOffsetGiverText } from "@/lib/tax-engine/transfer-tax-split-display";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
@@ -577,7 +580,7 @@ export function MultiTransferTaxResultView({
         className="mt-3"
         items={result.properties.map((p) => ({
           label: p.propertyLabel,
-          transferDate: properties.find((x) => x.propertyId === p.propertyId)?.form?.transferDate,
+          transferDate: properties.find((x) => x.propertyId === multiFormPropertyIdOf(p.propertyId))?.form?.transferDate,
           isExempt: p.isExempt,
           isPartialExempt: p.isPartialExempt,
           reductionAmount: p.reductionAmount,
@@ -627,13 +630,26 @@ export function MultiTransferTaxResultView({
       <PrintSection id="per-property" selectedIds={selectedPrintIds}>
       <div className="space-y-2">
         <h3 className="font-medium text-sm text-muted-foreground">건별 상세</h3>
-        {result.properties.map((p) => (
-          <PropertyBreakdownAccordion
-            key={p.propertyId}
-            breakdown={p}
-            property={properties.find((x) => x.propertyId === p.propertyId)}
-          />
-        ))}
+        {/* 일반건물은 토지·건물 카드를 자산 1행으로 묶는다(Q-2 a · `multi-result-groups.ts`). */}
+        {groupMultiResultRows(result.properties).map((g) =>
+          g.isCardGroup ? (
+            <MultiGbAssetGroup
+              key={g.formPropertyId}
+              result={result}
+              formPropertyId={g.formPropertyId}
+              cards={g.rows}
+              property={properties.find((x) => x.propertyId === g.formPropertyId)}
+            />
+          ) : (
+            g.rows.map((p) => (
+              <PropertyBreakdownAccordion
+                key={p.propertyId}
+                breakdown={p}
+                property={properties.find((x) => x.propertyId === g.formPropertyId)}
+              />
+            ))
+          ),
+        )}
       </div>
       </PrintSection>
 
