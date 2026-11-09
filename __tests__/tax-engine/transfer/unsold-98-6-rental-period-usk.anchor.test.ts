@@ -183,13 +183,14 @@ describe("K-3 세액 anchor — 리뷰 US-24 시나리오(취득 2011-11-01 · �
   const vacancy = run([UNSOLD_986_2({ rentalVacancyPeriods986: [{ startDate: D("2014-01-01"), endDate: D("2014-12-31") }] })]);
 
   it("감면 없음(법령상 값) = 공실 12개월을 입력한 값 — 51개월 불적격", () => {
-    expect(none.totalTax).toBe(52_261_000); // 리뷰 US-24 mock 값
+    // 리뷰 US-24 mock 값 52,261,000은 #3068(장특 표1 연혁) 전 값 — 2017 양도 보유 5년 표1이 연 2% 10% → 단계표 15%로 바뀌어 48,081,000
+    expect(none.totalTax).toBe(48_081_000);
     expect(vacancy.totalTax).toBe(none.totalTax);
   });
 
-  it("공실 미입력(종전과 같은 63개월 적격) = 리뷰의 현재값 37,343,500 → 14,917,500 과소", () => {
-    expect(noVacancy.totalTax).toBe(37_343_500);
-    expect(none.totalTax - noVacancy.totalTax).toBe(14_917_500);
+  it("공실 미입력(종전과 같은 63개월 적격) = 34,221,000 → 공실 반영 시 13,860,000 많다 (리뷰 값 37,343,500·14,917,500은 #3068 표1 연혁 전)", () => {
+    expect(noVacancy.totalTax).toBe(34_221_000);
+    expect(none.totalTax - noVacancy.totalTax).toBe(13_860_000);
   });
 });
 
