@@ -6,7 +6,9 @@
  *
  * 그 줄을 끄면 최종 취득가액·양도차익은 그대로인데 안분 echo `apportionment.apportioned[].allocatedAcquisitionPrice`만 두 배가 된다
  * (100,000,000 → 200,000,000). 최종 값 단언만으로는 이 줄을 못 잡아서 echo를 직접 단언한다.
- * ⚠️ `adjustedAcqPrice`가 이 값을 덮는 정확한 경로는 확인하지 못했다(계획서 V-P2c-1) — 덮이지 않는 조건이 있으면 이 줄이 최종 값을 바꾼다.
+ * 최종 값을 덮는 쪽은 `adjustedAcqPrice`(매매 환산 전용)가 아니라 엔진 STEP 0.45다. ④가 같은 지분 축소를 따로 한 `inheritedAcquisition.reportedValue`
+ * (`transfer-tax-api-inheritance.ts`)로 취득가액을 다시 쓴다. 그 운반이 없는 상속 컴패니언(`ownsAcquisitionSubobject` 참 — 승계 입주권 ·
+ * 준공 전 받은 승계 완공 APT)은 이 줄이 최종 값이 된다(계획서 §7). 지분 규약을 바꾸면 두 곳을 함께 볼 것.
  *
  * 화면 경로 그대로 — 폼 → ⑧(`collectStepIssues`) → ④(`captureBody`) → ⑫~⑭(route POST). 대조는 단건 합(주 자산 단건 + 반 크기 컴패니언 단건).
  * 시료: 주 자산 토지 매매 100%(취득가액 3억 · 기준시가 5억 · 양도 8억) + 컴패니언 상속 지분 50%(평가액 2억 · 기준시가 6억 · 양도 10억 — 물건 전체 기준).
