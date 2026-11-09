@@ -4,12 +4,13 @@
  * §98의5 수도권 밖 미분양 — 인하율별 하이브리드 입력 폼 (P3, 2026-06-12)
  *
  * 감면율 = 분양가 인하율별 (≤10% 60% / ≤20% 80% / >20% 100% — 법 ①각호).
- * 농특세 비과세 (농특세령 §4⑦1호). 장특 표1 + 기본세율 강제 (법 ③).
+ * 농특세 비과세 (농특세령 §4⑦1호). 장특 표1(단서 1세대1주택은 표2) + 기본세율 강제 (법 ③).
  */
 
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
 import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
@@ -28,28 +29,6 @@ interface Props {
   ho?: string;
   assetId?: string;
   assetPhdSnapshot?: ReductionPhdValue;
-}
-
-function SectionShell({
-  num, title, tone, children,
-}: { num: string; title: string; tone: "sky" | "amber" | "rose"; children: React.ReactNode }) {
-  const toneMap = {
-    sky: { box: "border-sky-200 bg-sky-50/40 dark:bg-sky-950/40", badge: "bg-sky-200 text-sky-800", title: "text-sky-700 dark:text-sky-300" },
-    amber: { box: "border-amber-200 bg-amber-50/40 dark:bg-amber-950/40", badge: "bg-amber-200 text-amber-800", title: "text-amber-700 dark:text-amber-300" },
-    rose: { box: "border-rose-200 bg-rose-50/40 dark:bg-rose-950/40", badge: "bg-rose-200 text-rose-800", title: "text-rose-700 dark:text-rose-300" },
-  } as const;
-  const t = toneMap[tone];
-  return (
-    <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
-      <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
-          {num}
-        </span>
-        <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
-      </div>
-      {children}
-    </div>
-  );
 }
 
 export function Unsold985InputForm({
@@ -82,21 +61,21 @@ export function Unsold985InputForm({
         />
       </div>
 
-      <SectionShell num="①" title="최초 매매계약 정보" tone="sky">
+      <ToneCard tone="sky" sectionNum="①" title="최초 매매계약 정보">
         <div>
-          <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
+          <label className="mb-1 block text-sm font-medium">최초 매매계약일</label>
           <DateInput data-field="reduction.unsold_98_5.contractDate985" value={value.contractDate985} onChange={(v) => onChange({ contractDate985: v })} />
-          <p className="mt-1 text-micro text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             2010.2.11 현재 수도권 밖 미분양주택을 2010.5.14부터 2011.4.30까지 사업주체등과 최초 매매계약(법률 제10285호 부칙 제2조 — 2010.5.14. 전 계약분은 제외)
             (계약금 납부 포함 — 법 §98의5①)
           </p>
         </div>
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="②" title="분양가격 인하율" tone="sky">
+      <ToneCard tone="sky" sectionNum="②" title="분양가격 인하율">
         <div className="grid gap-2 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-medium">입주자 모집공고안에 공시된 분양가격 (원)</label>
+            <label className="mb-1 block text-sm font-medium">입주자 모집공고안에 공시된 분양가격 (원)</label>
             <CurrencyInput
               label=""
               hideLabel
@@ -107,7 +86,7 @@ export function Unsold985InputForm({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium">매매계약서상의 매매가격 (원)</label>
+            <label className="mb-1 block text-sm font-medium">매매계약서상의 매매가격 (원)</label>
             <CurrencyInput
               label=""
               hideLabel
@@ -118,18 +97,18 @@ export function Unsold985InputForm({
             />
           </div>
         </div>
-        <p className="mt-1 text-micro text-muted-foreground">
+        <p className="mt-1 text-xs text-muted-foreground">
           분양가격 인하율 = <Frac top="입주자 모집공고안에 공시된 분양가격 − 매매계약서상의 매매가격" bottom="입주자 모집공고안에 공시된 분양가격" /> × 100 (조특령 §98의4④).
           인하율 10% 이하 = 감면율 60% / 10% 초과 20% 이하 = 80% / 20% 초과 = 100% (법 §98의5①각호). 두 금액으로 계산하므로 인하율을 반올림해 넣을 필요가 없습니다.
         </p>
-        <p className="text-micro text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           확인 필요: 공고가 여러 번 나온 단지에서 어느 공고안의 분양가격을 쓰는지, 잔금 선납할인·계약 외 할인을 매매가격에서 빼는지는 해석례·심판례가 갈리거나 원문을 확인하지 못했습니다
           (국세청 부동산거래관리과-802·989는 선납할인을 제외, 조심2014중2849·2014부2333은 실질 인하로 판단). 별지 제63호의5서식 날인의 「분양가격 인하율」 기재와도 대조하세요.
           매매가격이 공시 분양가격보다 크면 인하율이 음수여서 감면율 0%(감면 없음)로 처리합니다.
         </p>
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="③" title="자격 요건 확인" tone="rose">
+      <ToneCard tone="rose" sectionNum="③" title="자격 요건 확인">
         <ToggleCard
           tone="rose"
           title="2010.2.11 현재 수도권 밖 미분양주택 확인"
@@ -158,9 +137,9 @@ export function Unsold985InputForm({
           checked={value.isNotRecontract985}
           onCheckedChange={(v) => onChange({ isNotRecontract985: v })}
         />
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="④" title="기준시가 (취득일부터 5년이 지난 후 양도 시 필수)" tone="amber">
+      <ToneCard tone="amber" sectionNum="④" title="기준시가 (취득일부터 5년이 지난 후 양도 시 필수)">
         <ReductionStdPriceSection
           phd={{
             phdMode: value.phdMode985,
@@ -202,17 +181,25 @@ export function Unsold985InputForm({
           fieldType="unsold_98_5"
           snapshotKeyPrefix="red985"
         />
-      </SectionShell>
+      </ToneCard>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
+      <ToneCard tone="emerald" bodyClassName="space-y-1" className="text-caption text-emerald-900 dark:text-emerald-200">
         <p>
           · 적용 효과: 5년 이내 양도 시 양도소득세 × 인하율별 감면율을 감면하고, 5년 후 양도 시
           5년간 발생 양도소득금액 × 감면율을 공제합니다 (법 §98의5①).
         </p>
         <p>· 농어촌특별세가 부과되지 않습니다 (농어촌특별세법 시행령 §4⑦1호).</p>
-        <p>· 장기보유특별공제는 표1(1세대1주택 고가주택 등 소득세법 §95②단서에 해당하면 표2)을 적용하고 단기보유 세율 대신 기본세율을 적용합니다 (법 §98의5③).</p>
+        <p>
+          · 장기보유특별공제는 소득세법 §95② 표1(같은 항 단서의 1세대1주택에 해당하면 표2)에 따른 보유기간별 공제율을 적용하고
+          단기보유 세율 대신 기본세율을 적용합니다 (법 §98의5③). 표2에는 보유기간별 공제율과 함께 거주기간별 공제율이 있으며, 이 계산기는
+          1세대1주택에 표2의 보유기간별·거주기간별 공제율을 합산해 적용합니다.
+        </p>
+        <p>
+          · 확인 필요: 이 특례 조문의 「표2에 따른 보유기간별 공제율」에 거주기간별 공제율이 포함되는지를 직접 다룬 해석례는 확인하지 못했습니다.
+          국세청 법규과-742(2025.4.9.)는 §98의2에 대한 회신에서 같은 문구를 개정 표2의 보유기간별 공제율로 산정하도록 안내했습니다(거주기간별 공제율은 언급 없음).
+        </p>
         <p>· 다주택 중과세율이 적용되지 않습니다 (소득세법 시행령 §167의3①5호).</p>
-      </div>
+      </ToneCard>
     </div>
   );
 }

@@ -30,9 +30,9 @@ export function Unsold98InputForm({ value, onChange }: Props) {
 
       <ToneCard tone="sky" title="① 취득·계약 시기">
         <div>
-          <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
+          <label className="mb-1 block text-sm font-medium">최초 매매계약일</label>
           <DateInput data-field="reduction.unsold_98.contractDate98" value={value.contractDate98} onChange={(v) => onChange({ contractDate98: v })} />
-          <p className="mt-1 text-micro text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             취득기간 ① 1995.11.1~1997.12.31 / ③ 1998.3.1~1998.12.31 — 취득일 또는 시한 내 계약 + 계약금
             납부 중 하나가 기간 내이면 됩니다 (법 §98①·③) — 계약일은 반드시 입력하세요 (자산의 매매계약일 칸은 읽지 않습니다)
           </p>
@@ -101,7 +101,7 @@ export function Unsold98InputForm({ value, onChange }: Props) {
         />
       </div>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
+      <ToneCard tone="emerald" bodyClassName="space-y-1" className="text-caption text-emerald-900 dark:text-emerald-200">
         <p>
           · 적용 효과 (①1호 양도소득세 방식): 세율을 소득세법 §104①에도 불구하고 100분의 20 단일세율로
           적용합니다 — 누진·단기보유세율을 대체합니다 (법 §98①1호).
@@ -120,7 +120,7 @@ export function Unsold98InputForm({ value, onChange }: Props) {
           적용됩니다 (소득세법 시행령 §167의3①3호·§167의10①2호 — 감면대상장기임대주택). 20% 특례와 중과의 적용 순서를 정면으로 다룬
           해석례는 확인하지 못했습니다.
         </p>
-      </div>
+      </ToneCard>
     </div>
   );
 }

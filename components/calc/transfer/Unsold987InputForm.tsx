@@ -16,6 +16,8 @@
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
 import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
@@ -33,28 +35,6 @@ interface Props {
   ho?: string;
   assetId?: string;
   assetPhdSnapshot?: ReductionPhdValue;
-}
-
-function SectionShell({
-  num, title, tone, children,
-}: { num: string; title: string; tone: "sky" | "amber" | "rose"; children: React.ReactNode }) {
-  const toneMap = {
-    sky: { box: "border-sky-200 bg-sky-50/40 dark:bg-sky-950/40", badge: "bg-sky-200 text-sky-800", title: "text-sky-700 dark:text-sky-300" },
-    amber: { box: "border-amber-200 bg-amber-50/40 dark:bg-amber-950/40", badge: "bg-amber-200 text-amber-800", title: "text-amber-700 dark:text-amber-300" },
-    rose: { box: "border-rose-200 bg-rose-50/40 dark:bg-rose-950/40", badge: "bg-rose-200 text-rose-800", title: "text-rose-700 dark:text-rose-300" },
-  } as const;
-  const t = toneMap[tone];
-  return (
-    <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
-      <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
-          {num}
-        </span>
-        <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
-      </div>
-      {children}
-    </div>
-  );
 }
 
 export function Unsold987InputForm({
@@ -76,34 +56,34 @@ export function Unsold987InputForm({
         <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
       </div>
 
-      <SectionShell num="①" title="최초 매매계약 정보" tone="sky">
+      <ToneCard tone="sky" sectionNum="①" title="최초 매매계약 정보">
         <div>
-          <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
+          <label className="mb-1 block text-sm font-medium">최초 매매계약일</label>
           <DateInput data-field="reduction.unsold_98_7.contractDate987" value={value.contractDate987} onChange={(v) => onChange({ contractDate987: v })} />
-          <p className="mt-1 text-micro text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             2012.9.24~2012.12.31 중 사업주체등과 최초로 체결한 매매계약 — 계약금을 납부한
             경우에 한정합니다 (법 §98의7①). 취득일·양도일은 자산 기본 입력을 사용합니다
           </p>
         </div>
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="②" title="취득가액 요건" tone="sky">
+      <ToneCard tone="sky" sectionNum="②" title="취득가액 요건">
         <div>
-          <label className="mb-1 block text-xs font-medium">취득가액</label>
+          <label className="mb-1 block text-sm font-medium">취득가액</label>
           <CurrencyInput
             data-field="reduction.unsold_98_7.acquisitionPrice987"
             value={value.acquisitionPrice987}
             onChange={(v) => onChange({ acquisitionPrice987: v })}
             label=""
           />
-          <p className="mt-1 text-micro text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             9억원 이하 — 사업주체등과 실제 거래한 가액 (취득세 및 그 밖의 부대비용 제외,
             조특령 §98의6②1호)
           </p>
         </div>
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="③" title="자격 요건 확인" tone="rose">
+      <ToneCard tone="rose" sectionNum="③" title="자격 요건 확인">
         <ToggleCard
           tone="rose"
           title="2012.9.24 현재 미분양주택 확인"
@@ -111,6 +91,12 @@ export function Unsold987InputForm({
           checked={value.isUnsoldAtCutoff987}
           onCheckedChange={(v) => onChange({ isUnsoldAtCutoff987: v })}
         />
+        <CollapsibleHintCard tone="rose" summary="계약 후 해제된 주택의 미분양주택 해당 여부 (부동산거래관리과-570)">
+          <p>
+            2012.9.23 이전에 사업주체등과 체결한 매매계약이 2012.9.23 이전에 해제된 주택도 미분양주택에 해당한다고 회신한 해석례가 있습니다
+            (부동산거래관리과-570, 2012.10.25.) — 해당하면 위 항목을 켜세요. 2012.9.24~12.31 중 해제된 계약의 주택은 아래 재계약 항목에서 제외됩니다.
+          </p>
+        </CollapsibleHintCard>
         <ToggleCard
           tone="rose"
           title="사업주체등과 최초 매매계약"
@@ -127,14 +113,22 @@ export function Unsold987InputForm({
         />
         <ToggleCard
           tone="rose"
-          title="계약 해제 후 재계약 아님"
-          description="2012.9.23 이전 계약을 해제한 본인·배우자(직계존비속·형제자매 포함)가 다시 계약한 주택이 아님 (조특령 §98의6②3·4호)"
+          title="계약 해제 주택·해제자의 재계약 아님"
+          description="아래 ①~③에 모두 해당하지 않을 때 켜세요 (조특령 §98의6②3·4호)"
           checked={value.isNotRecontract987}
           onCheckedChange={(v) => onChange({ isNotRecontract987: v })}
         />
-      </SectionShell>
+        <CollapsibleHintCard tone="rose" summary="재계약 제외 대상 ①~③ (조특령 §98의6②3·4호)">
+          <p>① 2012.9.23 이전에 사업주체등과 체결한 매매계약이 2012.9.24~12.31 중 해제된 주택 자체</p>
+          <p>② 그 계약을 해제한 매매계약자가 2012.9.24~12.31 중 계약을 체결하여 취득한 미분양주택 (사업주체·주택 불문)</p>
+          <p>
+            ③ 해제자의 배우자(해제자 또는 그 배우자의 직계존비속(그 배우자 포함)·형제자매 포함)가 같은 기간 중 원래 계약을 체결하였던 사업주체등과
+            계약을 체결하여 취득한 미분양주택
+          </p>
+        </CollapsibleHintCard>
+      </ToneCard>
 
-      <SectionShell num="④" title="기준시가 (취득일부터 5년이 지난 후 양도 시 필수)" tone="amber">
+      <ToneCard tone="amber" sectionNum="④" title="기준시가 (취득일부터 5년이 지난 후 양도 시 필수)">
         <ReductionStdPriceSection
           phd={{
             phdMode: value.phdMode987,
@@ -176,10 +170,10 @@ export function Unsold987InputForm({
           fieldType="unsold_98_7"
           snapshotKeyPrefix="red987"
         />
-        <p className="mt-1 text-micro text-muted-foreground">
+        <p className="mt-1 text-caption text-muted-foreground">
           새로운 기준시가가 고시되기 전이면 직전 기준시가를 적용합니다 (조특령 §40①)
         </p>
-      </SectionShell>
+      </ToneCard>
 
       {/*
         D11-05 — 적용 주체 요건. 엔진에는 게이트가 있었으나(`unsold-hybrid.ts:332`) ①④⑤⑫ 어디에도
@@ -198,7 +192,7 @@ export function Unsold987InputForm({
         />
       </div>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
+      <ToneCard tone="emerald" bodyClassName="space-y-1" className="text-caption text-emerald-900 dark:text-emerald-200">
         <p>
           · 적용 효과: 취득일부터 5년 이내 양도 시 양도소득세 100%를 감면하고, 5년이 지난 후
           양도 시 취득일부터 5년간 발생한 양도소득금액을 과세대상소득금액에서 공제합니다 (법 §98의7①).
@@ -215,7 +209,7 @@ export function Unsold987InputForm({
           · 다주택 중과: 본 특례 적용 주택 양도 시 중과세율이 적용되지 않습니다
           (소득세법 시행령 §167의3①5호).
         </p>
-      </div>
+      </ToneCard>
     </div>
   );
 }

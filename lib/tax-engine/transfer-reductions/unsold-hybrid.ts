@@ -140,7 +140,7 @@ export interface Unsold987Input {
   isFirstContract?: boolean;
   /** 매매계약일 현재 입주 사실 없는 주택 (령 §98의6②2호) — true = 입주사실 없음(적격) */
   isNotOccupiedAtContract?: boolean;
-  /** 계약 해제 후 본인·배우자(직계존비속·형제자매 포함) 재계약 아님 (령 §98의6②3·4호) */
+  /** 령 §98의6②3·4호 제외 대상이 아님 — 9.23 이전 계약이 9.24~12.31 중 해제된 주택 자체(3호), 그 해제자·해제자의 배우자(직계존비속·형제자매 포함)가 취득한 미분양주택(4호) */
   isNotRecontract?: boolean;
   /** 양도소득금액 (양도차익 − 장특공제) */
   transferIncome: number;
@@ -471,7 +471,7 @@ export function evaluateUnsold987(input: Unsold987Input): UnsoldHybridResult {
   if (input.isNotRecontract !== true) {
     reasons.push({
       code: "RECONTRACT_EXCLUDED",
-      message: "계약 해제 후 본인·배우자(직계존비속·형제자매 포함)가 다시 계약한 주택이 아님이 확인되지 않았습니다 (조특령 §98의6②3·4호).",
+      message: "2012.9.23 이전 체결 계약이 2012.9.24~12.31 중 해제된 주택이 아니고, 그 계약 해제자(배우자·직계존비속·형제자매 포함)가 같은 기간 중 계약해 취득한 미분양주택이 아님이 확인되지 않았습니다 (조특령 §98의6②3·4호).",
       legalBasis: UNSOLD_98_DECREE.D98_7_REBUY,
     });
   }

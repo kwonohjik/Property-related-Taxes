@@ -31,9 +31,9 @@ export function Unsold982InputForm({ value, onChange }: Props) {
 
       <ToneCard tone="sky" title="① 취득·계약 시기">
         <div>
-          <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
+          <label className="mb-1 block text-sm font-medium">최초 매매계약일</label>
           <DateInput data-field="reduction.unsold_98_2.contractDate982" value={value.contractDate982} onChange={(v) => onChange({ contractDate982: v })} />
-          <p className="mt-1 text-micro text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             취득기간 2008.11.3~2010.12.31 — 계약일은 반드시 입력하세요 (자산의 매매계약일 칸은 읽지 않습니다).
             취득일이 기간 외라도 2010.12.31까지 매매계약 체결 + 계약금 납부한 경우 포함됩니다 (법 §98의2①)
           </p>
@@ -69,7 +69,7 @@ export function Unsold982InputForm({ value, onChange }: Props) {
               { value: "unknown", label: "모름" },
             ]}
           />
-          <p className="text-micro text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             입주 사실이 있거나 모르면 적용하지 않습니다 — 조특법·시행령 문언에는 제외 규정이 없고 국세청 해석례(법규과-1582·부동산거래관리과-1012)에 따른 것입니다 (확인 필요).
           </p>
         </div>
@@ -92,7 +92,7 @@ export function Unsold982InputForm({ value, onChange }: Props) {
         />
       </div>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
+      <ToneCard tone="emerald" bodyClassName="space-y-1" className="text-caption text-emerald-900 dark:text-emerald-200">
         <p>
           · 적용 효과 (특칙 — 감면세액이 아님): 장기보유특별공제는 양도차익 × 소득세법 §95② 표2
           보유기간별 공제율을 양도일 당시 시행 표2로 적용하고(2020.12.31. 이전 양도분은 연 8%·최대 80%,
@@ -105,7 +105,7 @@ export function Unsold982InputForm({ value, onChange }: Props) {
         </p>
         <p>· 농어촌특별세는 부과되지 않습니다 (감면세액이 없는 특칙).</p>
         <p>· 다주택 중과세율이 적용되지 않습니다 (소득세법 시행령 §167의3①5호).</p>
-      </div>
+      </ToneCard>
     </div>
   );
 }

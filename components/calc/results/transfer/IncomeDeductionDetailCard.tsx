@@ -9,6 +9,9 @@
  */
 
 import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { TONE } from "@/components/calc/shared/tones";
+import { cn } from "@/lib/utils";
 import { MULTI_HOUSE, TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { unsold982OutcomeLabel } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p4";
 import { UNSOLD_98_FLAT_RATE_LABEL } from "@/lib/tax-engine/transfer-reductions/unsold-98-constants";
@@ -151,7 +154,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
     : 100;
   if (!result.isEligible) {
     return (
-      <div className="rounded-lg border border-rose-300 bg-rose-50/80 dark:border-rose-700/50 dark:bg-rose-950/30 p-4 space-y-3">
+      <ToneCard tone="rose" className="p-4" bodyClassName="space-y-3">
         <p className="text-sm font-semibold text-rose-900 dark:text-rose-200">{title} — 적용 불가</p>
         {result.ineligibleReasons.length > 0 && (
           <div className="rounded border border-rose-200 bg-white/70 dark:border-rose-800/40 dark:bg-rose-950/40 p-2.5 space-y-1">
@@ -166,16 +169,16 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
         {kind === "unsold_98_6" && <Unsold986RentalPeriodLine echo={(result as UnsoldHybridResult).rentalPeriodEcho} />}
         {/* §99 확인 필요 고지 — 「모름」으로 고급주택 처리(NH-02) */}
         {kind === "new_99" && <ReductionDetailWarnings detail={result as New99Result} />}
-        <p className="text-micro text-rose-700 dark:text-rose-400">근거 조문: {result.legalBasis}</p>
-      </div>
+        <p className="text-caption text-rose-700 dark:text-rose-400">근거 조문: {result.legalBasis}</p>
+      </ToneCard>
     );
   }
 
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 dark:border-emerald-800/40 dark:bg-emerald-950/20 p-4 space-y-3">
+    <ToneCard tone="emerald" className="p-4" bodyClassName="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
         <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">{title}</p>
-        <span className="text-xs rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 font-medium">
+        <span className={cn("text-xs rounded-full px-2 py-0.5 font-medium", TONE.emerald.chip)}>
           {isSpecialOnly
             ? hybridEffect === "flat_rate_20"
               ? `세율 ${UNSOLD_98_FLAT_RATE_LABEL} 특례 적용`
@@ -191,7 +194,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
                 : "취득 후 5년 경과 양도"}
         </span>
         {kind === "new_99" && (result as New99Result).redevelopedVariantApplied && (
-          <span className="text-xs rounded-full bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300 px-2 py-0.5 font-medium">
+          <span className={cn("text-xs rounded-full px-2 py-0.5 font-medium", TONE.violet.chip)}>
             재개발·재건축 신축주택 안분
           </span>
         )}
@@ -237,7 +240,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
 
       {aggregateApplied !== undefined && result.ruralSurtax > 0 && <AggregateRuralSurtaxNote />}
       {aggregateApplied === undefined && result.ruralSurtax > 0 && (
-        <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
+        <div className={cn("rounded-md border px-3 py-2", TONE.sky.card)}>
           <p className="text-caption text-sky-900 dark:text-sky-300">
             농어촌특별세: 감면세액 {result.taxReductionForRuralSurtax.toLocaleString()} × 20% ={" "}
             {result.ruralSurtax.toLocaleString()} ({isTaxAmountMode ? TRANSFER.RURAL_SURTAX_REDUCTION : TRANSFER.RURAL_SURTAX_DEDUCTION} — 총 납부세액에 합산)
@@ -245,7 +248,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
         </div>
       )}
       {isRuralExempt && RURAL_EXEMPT_NOTE[kind] && (
-        <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
+        <div className={cn("rounded-md border px-3 py-2", TONE.sky.card)}>
           <p className="text-caption text-sky-900 dark:text-sky-300">{RURAL_EXEMPT_NOTE[kind]}</p>
         </div>
       )}
@@ -254,11 +257,11 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
       {/* §99 확인 필요 고지 — 2015.12.31. 이전 양도 종전 규정(NH-49) */}
       {kind === "new_99" && <ReductionDetailWarnings detail={result as New99Result} />}
 
-      <p className="text-micro text-emerald-700 dark:text-emerald-400">
+      <p className="text-caption text-emerald-700 dark:text-emerald-400">
         근거 조문: {result.legalBasis}
         {surchargeNote(kind, surchargeExclusionBasis)}
       </p>
-    </div>
+    </ToneCard>
   );
 }
 
@@ -278,7 +281,7 @@ export function AggregateAppliedNote({ single, applied }: { single: number; appl
 /** 함께 양도·다건 — 농어촌특별세는 자산별 단건 값이 아니라 합산 과세 내역에서 감면 전·후 산출세액 차이로 정한다(NH-64). */
 export function AggregateRuralSurtaxNote() {
   return (
-    <div data-testid="income-deduction-aggregate-rural" className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
+    <div data-testid="income-deduction-aggregate-rural" className={cn("rounded-md border px-3 py-2", TONE.sky.card)}>
       <p className="text-caption text-sky-900 dark:text-sky-300">
         농어촌특별세는 합산 과세 내역에서 함께 양도 전체의 감면 전·후 산출세액 차이로 산정합니다({TRANSFER.RURAL_SURTAX_DEDUCTION}).
       </p>
