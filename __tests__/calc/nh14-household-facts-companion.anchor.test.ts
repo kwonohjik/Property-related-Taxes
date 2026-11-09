@@ -58,12 +58,23 @@ describe("NH-14 술어 — 현황 칸의 기준 자산", () => {
     expect(householdFactsKindOf([a({ assetKind: "presale_right" }), a(HOUSE(0))])).toBe("presale_right");
   });
 
-  it("짝 — 함께 양도 주택이 없으면(토지·건물만 · 입주권·분양권 컴패니언) 첫 자산 종류 그대로 = 칸 숨김 유지", () => {
+  it("짝 — 함께 양도 주택·입주권이 없으면(토지·건물만 · 분양권 컴패니언) 첫 자산 종류 그대로 = 칸 숨김 유지", () => {
     expect(householdFactsKindOf([a(SL("l1")), a(SL("l2"))])).toBe("land");
     expect(householdFactsKindOf([a(SL("l1"))])).toBe("land");
-    expect(householdFactsKindOf([a(SL("l1")), a({ assetKind: "right_to_move_in" })])).toBe("land");
     expect(householdFactsKindOf([a(SL("l1")), a({ assetKind: "presale_right" })])).toBe("land");
     expect(householdFactsKindOf([])).toBe("");
+  });
+
+  // 🔄 2026-11-09 컴패니언 입주권 4호 열기 PR-3 — 종전 «토지 + 입주권 컴패니언 = 칸 숨김»(`"land"`)을 뒤집었다.
+  //   §89①4호 가목이 요구하는 세대 사실(다른 주택·분양권 미보유)을 입력할 칸이 없어 컴패니언 입주권의 4호가 화면에서 열리지 않았다.
+  it("🔑 함께 양도 주택이 없고 조합원입주권이 있으면 그 입주권이 기준 자산 — 칸이 열린다", () => {
+    expect(householdFactsKindOf([a(SL("l1")), a({ assetKind: "right_to_move_in" })])).toBe("right_to_move_in");
+    expect(householdFactsKindOf([a(SL("l1")), a({ assetKind: "presale_right" }), a({ assetKind: "right_to_move_in" })])).toBe("right_to_move_in");
+  });
+
+  it("짝 — 주택과 입주권이 함께 있으면 주택이 기준(입주권은 후순위) · 지분 분할(축 B)은 입주권이어도 첫 자산 그대로", () => {
+    expect(householdFactsKindOf([a(SL("l1")), a({ assetKind: "right_to_move_in" }), a(HOUSE(0))])).toBe("housing");
+    expect(householdFactsKindOf([a(SL("l1")), a({ assetKind: "right_to_move_in" })], "fractional")).toBe("land");
   });
 
   it("지분 분할(축 B) 묶음은 같은 물건의 다른 지분이라 함께 양도 주택이 아니다", () => {

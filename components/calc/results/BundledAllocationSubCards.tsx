@@ -10,6 +10,7 @@ import { penaltyMethodSums } from "@/lib/tax-engine/penalty-method-of-properties
 import { cn } from "@/lib/utils";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
+import { CompanionRightExemptionNote } from "@/components/calc/results/transfer/CompanionRightExemptionNote";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
@@ -131,6 +132,8 @@ export function PropertyCard({
            실제 적용 71,156,446. 게다가 분자·분모는 집계 참고값인데 결과값은 단건 엔진 값이라
            **카드가 찍는 등식 자체가 성립하지 않았다**.
       */}
+      {/* 컴패니언 조합원입주권 §89①4호 — 비과세·고가 안분 근거(단건은 RedevelopmentDetailCard가 설명한다) */}
+      <CompanionRightExemptionNote detail={breakdown.redevelopmentDetail} transferPrice={breakdown.transferPrice} />
       <ReductionDetailCards
         result={breakdown}
         calculatedTax={breakdown.refCalculatedTax}

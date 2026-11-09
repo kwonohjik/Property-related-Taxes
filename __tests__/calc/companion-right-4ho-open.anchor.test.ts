@@ -264,7 +264,7 @@ describe("[V-8] 나목 · [V-2] 분양권 없음 확인", () => {
     expect(without.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 55_110_000 });
   });
 
-  it("CR-18 (PR-3 과제 고정) 주 자산 토지 + 컴패니언 입주권에서 «분양권·입주권 없음» 확인이 없으면 4호 불성립 — 현재 ⑤ 확인 칸·⑧ 차단이 세대 기준 자산(토지)이라 이 구성에 열리지 않는다", async () => {
+  it("CR-18 주 자산 토지 + 컴패니언 입주권에서 «분양권·입주권 없음» 확인이 없으면 4호 불성립(엔진) — 확인 칸·⑧ 차단은 PR-3에서 열렸다(`companion-right-4ho-open-pr3.*.test`)", async () => {
     const f = mainPlusCompanionRight({ main: "land", hh: "0", elig: "yes", price: "500000000" });
     f.householdNoPresaleRightsConfirmed = false as never;
     const r = await run(f);
