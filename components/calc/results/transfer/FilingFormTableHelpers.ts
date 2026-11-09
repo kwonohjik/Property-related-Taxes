@@ -132,6 +132,8 @@ export interface RowDef {
    * 예: { "postApproval": "§95② 본문 괄호 배제" }
    */
   roseNotes?: Record<ColumnKey, string>;
+  /** 표 아래 「※」 안내 한 줄 — 이 행의 값 해석이 칸마다 다를 때(합산 표 자산별 세액 칸 등). */
+  footnote?: string;
 }
 
 // ── 분할 모드 판정 ─────────────────────────────────────────────
