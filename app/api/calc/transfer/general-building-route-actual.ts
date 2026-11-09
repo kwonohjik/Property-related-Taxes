@@ -66,7 +66,7 @@ export function buildActualGeneralBuildingCards(
     zoneType, unapprovedBuilding = false, isDesignatedArea,
     actualAcquisitionPrice, actualExpenses,
     acquisitionLandPricePerSqm, acquisitionBuildingStdPrice,
-    burdenedGiftInfo, burdenedGiftOwnershipRatio, donorBuiltPenalty,
+    burdenedGiftInfo, burdenedGiftOwnershipRatio, lumpSumDeductionOwnershipRatio, donorBuiltPenalty,
     landPreDeemedClauseA, buildingPreDeemedClauseA,
     houseToCommercialConversion, conversionDate, wasMultiHouseAtConversion,
     acquisitionByInheritance, buildingAcquisitionByInheritance,
@@ -552,7 +552,7 @@ export function buildActualGeneralBuildingCards(
    * 않으므로(`splitLandCarryover`는 금액 4칸만 자른다) 분자·분모가 같은 기준을 유지한다.
    * 환산 경로가 넘기는 값과 같은 축이다.
    */
-  applyCarryoverEstimationBasis(cards, landStdAtTransfer, transferBuildingStdPrice);
+  applyCarryoverEstimationBasis(cards, landStdAtTransfer, transferBuildingStdPrice, lumpSumDeductionOwnershipRatio);
 
   // 사례 35: 주택→상가 용도변경 — 모든 자산 카드에 일괄 propagate
   if (houseToCommercialConversion) {

@@ -295,6 +295,10 @@ export function buildProperties(
         ? {
             standardPriceAtAcquisition: card.carryoverDonorStandardPriceAtAcquisition,
             standardPriceAtTransfer: card.standardPriceAtTransferForCarryover,
+            // 지분 카드 — 개산공제 base만 지분분으로(전용 키 · `ownershipRatio`는 싣지 않는다 — 계획서 Q-2 (다))
+            ...(card.carryoverLumpSumOwnershipRatio !== undefined
+              ? { lumpSumDeductionOwnershipRatio: card.carryoverLumpSumOwnershipRatio }
+              : {}),
           }
         : {}),
       // 사례 35: 주택→상가 용도변경 — 자산 공통 속성, 단건 엔진 LTHD 기산일 분기
