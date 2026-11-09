@@ -1,6 +1,6 @@
 # 농어촌주택 가액·면적 칸에 «양도일까지의 증축·부수토지 추가 취득분 포함» 안내가 없다 (NH-52)
 
-- 상태: **결정 대기** — 코드 변경 없음(문서만). 기준 master `7a7f777c2`.
+- 상태: **구현 완료**(Q-1 a · Q-2 a · Q-3 a — 사용자 «모두 권장안으로») — 결과는 §7. 기준 master `7a7f777c2`.
 - 출처: 리뷰 `docs/reviews/new-housing-99-review-2026-11.md` NH-52(F-42, 1인 c·low) · Q-12 · 계획서 `new-housing-99-review-fixes.plan.md` V-9·V-10(PR-2b로 이월된 채 미착수).
 
 ## 0. 결론
@@ -72,3 +72,32 @@
 4. 뮤테이션: 문구 제거 · 범위 밖에서 면적 안내가 뜨는 변형 → 해당 칸 실패.
 5. 회귀 5배치(api · tax-engine · calc · lib · components) · tsc · eslint · Playwright 1건(화면 확인).
 6. 이 문서 §7(구현 결과) 추가.
+
+## 7. 구현 결과 [직접]
+
+**코드(계산 불변, 안내 문구만)**
+- `New994InputForm.tsx`: 가액 칸 아래 `new994-expansion-price-hint`(늘어난 건물·토지의 기준시가도 합계에 포함 · ⑪ 인용 · «평가 시점은 조문에 적혀 있지 않아 확인이 필요»), 면적 칸 `new994-expansion-area-hint`(종전 면적 요건 범위 `sizeScope`일 때만), 취득일 칸 `new994-expansion-date-hint`(당초 취득일 기준 · ⑫·⑬1호 인용).
+- `lib/tax-engine/legal-codes/transfer-house.ts`: `NEW_HOUSING_SUB_ARTICLE`에 `NEW_99_4_EXPANSION_DECREE`(«조특령 §99의4⑪») · `NEW_99_4_EXPANSION_HOLDING_DECREE`(«조특령 §99의4⑫·⑬»).
+- **§6 1항과 다른 점**: manifest 등록 위치를 `additions-transfer-decree.ts`가 아니라 기존 §99의4 하위 조문 상수(`NEW_99_4_HOMETOWN_DECREE` 등)가 등록된 `additions-transfer-new-housing.ts`로 했다. id `TRANSFER_DECREE.NEW_99_4_EXPANSION`, 원문 MST 288915 실독 2026-11-09.
+
+| 항목 | 결과 |
+|---|---|
+| UI anchor `__tests__/components/new-99-4-input-form-expansion-notice-nh52.anchor.test.tsx` | **6 통과** — 농어촌/고향 × 가액 안내 · 취득일 안내 · 면적 안내(범위 안 표시 / 범위 밖 없음 대조) · 양도일 미입력 |
+| 종전 폼(origin/master)으로 같은 anchor | **6 전부 실패** |
+| 뮤테이션 M1 (가액 안내 제거) | 4 실패 → 잡힘 |
+| M2 (면적 칸을 범위 밖에서도 표시) | 1 실패 → 잡힘 |
+| M3 (취득일 안내 인용을 ⑪로 바꿈) | 2 실패 → 잡힘 |
+| M4 (가액 안내의 평가 시점 «확인 필요» 문구 삭제) | 2 실패 → 잡힘 |
+| route anchor `transfer.route.new-99-4-std-price-boundary-nh52.anchor.test.ts` (계산 불변) | **4 통과** — 290,000,000·300,000,000 → 적용·세액 0 / 300,000,001·330,000,000 → 미적용·204,090,000 (§3.2와 같음) |
+| `npm run verify:legal` | 통과 446 / 실패 0 — `TRANSFER_DECREE.NEW_99_4_EXPANSION` 포함 |
+| 회귀 5배치 | api 6563 · tax-engine 19056 · calc 11607 · lib 3356 · components 6918 — **전부 통과, 실패 0** |
+| tsc · eslint | 0건 · 0건 |
+| Playwright `e2e/nh52-99-4-expansion-notice.spec.ts` | 수정본 **2 통과**(2025 양도: 가액·취득일 안내 보임 + 면적 안내 없음 / 2016 양도: 면적 안내 보임). 종전 폼에서는 **최소 1건 실패**(가액 칸 안내 단언 — 건수 집계 줄은 출력 필터로 잘려 확인 못 함) |
+
+**한계 · 확인 필요**
+- V-1 증축·추가 취득분의 평가 시점 — 해석례를 못 찾아 구현하지 않았고, 화면에도 «확인이 필요»라고 적었다.
+- V-2 리뷰 수치 146,366,000 — 이 시료에서 재현하지 않았다(인용).
+- V-3 시행령 ⑪의 «제2호다목ㆍ라목» 인용과 현행 법 조문 구성 — 개정 이력 대조 안 함.
+- V-5 같은 안내가 필요한 다른 입력 경로 — `New994InputForm`이 명부 행 선언과 자산 선언 모두에서 쓰이는지는 코드로 전수하지 않았다(Playwright는 명부 행 선언 경로 1곳).
+- 사람이 직접 한 브라우저 확인은 하지 않았다(Playwright로 갈음).
+
