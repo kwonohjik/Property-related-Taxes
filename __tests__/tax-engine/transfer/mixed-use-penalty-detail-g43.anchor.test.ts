@@ -112,12 +112,13 @@ describe("G-43 겸용주택 가산세 산출근거", () => {
 
   it("MP-4: ⛔ 세액은 바뀌지 않는다 — 상세는 표시 전용 echo", () => {
     const { breakdown } = run(true);
-    // 총 납부세액 = 결정세액 + 지방소득세 + 가산세 + 농특세 (상세를 다시 더하지 않는다)
+    // 총 납부세액 = 결정세액 + 지방소득세 + 가산세 + 농특세 + 지방소득세 가산세(US-29 — 별도 축) (상세를 다시 더하지 않는다)
     expect(breakdown.total.totalPayable).toBe(
       breakdown.total.determinedTax +
         breakdown.total.localTax +
         breakdown.total.penaltyTax +
-        breakdown.total.ruralSurtax,
+        breakdown.total.ruralSurtax +
+        (breakdown.total.localIncomePenalty?.total ?? 0),
     );
   });
 });

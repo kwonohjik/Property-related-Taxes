@@ -139,6 +139,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     // 농특세 총액 — 구조분해에서 빠뜨리면 조용히 소실된다(위 §77의3·§77의2와 같은 사고).
     ruralSurtax,
     ruralSurtaxDelayedPenalty,
+    localIncomePenalty,
     totalTax,
     amendmentDetail,
   } = finalize;
@@ -214,6 +215,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     localIncomeTax,
     ruralSurtax,
     ...(ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty } : {}),
+    ...(localIncomePenalty ? { localIncomePenalty } : {}),
     totalTax,
     steps,
     ...buildTransferResultDetails({

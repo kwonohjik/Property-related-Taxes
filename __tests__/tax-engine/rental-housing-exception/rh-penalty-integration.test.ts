@@ -75,7 +75,9 @@ describe("L-2: 장기임대 거주주택 특례 경로 가산세 반영", () => 
     // 가산세 반영 (수정 전: penaltyDetail undefined, totalTax = 본세 + 지방소득세만)
     expect(r.penaltyDetail).toBeDefined();
     expect(r.penaltyDetail!.filingPenalty?.filingPenalty).toBe(2_000_000);
-    expect(r.totalTax).toBe(5_481_500); // 3,165,000 + 316,500 + 2,000,000
+    // US-29 — 지방소득세 무신고가산세: 10,000,000 × 10% = 1,000,000 × 20% = 200,000 (별도 축)
+    expect(r.localIncomePenalty?.total).toBe(200_000);
+    expect(r.totalTax).toBe(5_681_500); // 3,165,000 + 316,500 + 2,000,000 + 200,000
   });
 
   it("특례 + 가산세 미입력 — 기존 동작 보존 (penaltyDetail 없음)", () => {

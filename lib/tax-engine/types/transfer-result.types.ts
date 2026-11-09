@@ -383,6 +383,12 @@ export interface TransferTaxResult {
    * 납부지연 입력이 있고 미납 농특세가 있을 때만 존재한다.
    */
   ruralSurtaxDelayedPenalty?: import("../transfer-tax-rural-surtax-penalty").RuralSurtaxDelayedPenaltyDetail;
+  /**
+   * US-29 — 양도소득분 지방소득세의 가산세(지방세기본법 §53 무신고 · §54 과소신고 · §55 납부지연 · §57② 감면).
+   * 국세 가산세(`penaltyDetail`)와 **별도**이며 `totalTax`에 포함된다(지방세법 §103의2 3호). `localIncomeTax`(본세)에는 넣지 않는다.
+   * 가산세 입력(`filingPenaltyDetails`·`delayedPaymentDetails`)이 없으면 존재하지 않는다.
+   */
+  localIncomePenalty?: import("../transfer-tax-local-income-penalty").LocalIncomePenaltyDetail;
   /** 총 납부세액 */
   totalTax: number;
   /** 계산 과정 steps */

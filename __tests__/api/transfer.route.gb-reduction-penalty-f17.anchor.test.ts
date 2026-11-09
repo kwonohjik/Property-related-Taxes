@@ -138,6 +138,7 @@ interface Agg {
   totalTax: number;
   properties: { propertyId: string; reductionAggregated?: number }[];
   filingUnitPenaltyDetail?: { totalPenalty: number };
+  localIncomePenalty?: number;
   steps: { label: string }[];
 }
 
@@ -285,8 +286,10 @@ describe("F17-A · 일반건물 가산세 배관", () => {
 
     expect(base.penaltyTax).toBe(0);
     expect(pen.penaltyTax).toBe(39_642_000);
-    expect(pen.totalTax).toBe(257_673_000);
-    expect(pen.totalTax - base.totalTax).toBe(39_642_000);
+    // US-29 — 지방소득세 무신고가산세: 198,210,000 × 10% = 19,821,000 × 20% = 3,964,200 (별도 축)
+    expect(pen.localIncomePenalty).toBe(3_964_200);
+    expect(pen.totalTax).toBe(257_673_000 + 3_964_200);
+    expect(pen.totalTax - base.totalTax).toBe(39_642_000 + 3_964_200);
   });
 
   it("GBP-02: 🔴 **신고 1건 = 가산세 1회** — 카드 수만큼 배가되지 않는다", async () => {

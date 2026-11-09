@@ -171,6 +171,8 @@ const MODULES: ReadonlyArray<{
     ns: common,
     minCitations: 14,
     symbols: [
+      // US-29 — 양도소득분 지방소득세 가산세(지방세기본법 §53~§55·§57②)
+      "LOCAL_PENALTY",
       "PENALTY", "PENALTY_CONST", "AMENDMENT_45", "AMENDMENT_48_1_2", "AMENDMENT_48_2",
       "AMENDMENT_REDUCTION_48_2", "CORRECTION_CLAIM_45_2", "REFUND_GAIN_52",
       "REFUND_GAIN_RATE_ANNUAL", "CLAIM_PERIOD_ORDINARY_YEARS", "RURAL_SURTAX_FILING_7_1",

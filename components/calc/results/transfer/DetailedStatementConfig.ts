@@ -127,6 +127,7 @@ export const STATEMENT_GROUPS: GroupDef[] = [
       "localCalculatedTax",
       "localReduction",
       "localDeterminedTax",
+      "localIncomePenalty",
     ],
   },
 ];

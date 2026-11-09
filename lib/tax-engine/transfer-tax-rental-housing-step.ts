@@ -45,6 +45,11 @@ import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { computeRuralSurtaxDelayedPenalty, ruralSurtaxDelayedPenaltyStep } from "./transfer-tax-rural-surtax-penalty";
+import {
+  computeLocalIncomePenalty,
+  localIncomePenaltySteps,
+  localIncomePenaltyTotalSuffix,
+} from "./transfer-tax-local-income-penalty";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 import { highValueExcessRulingNoticeText, laterLandExemptNotice } from "./transfer-tax-appurtenant-land";
 import { splitAppurtenantExcess, splitLaterAcquiredLand, buildRentalPartRateDetail, toNonBusinessLandPart, resolveClause5Tax, buildRentalHighValueExcessRuling } from "./transfer-tax-rental-housing-nbl-split";
@@ -635,6 +640,9 @@ export function runRentalHousingExceptionStep(
   // NH-38 — 농특세 미납분 납부지연가산세(정상 경로 finalize와 같은 leaf · 소득세분과 별도 줄)
   const ruralSurtaxDelayedPenalty = computeRuralSurtaxDelayedPenalty(input.delayedPaymentDetails, ruralSurtaxTotal);
   if (ruralSurtaxDelayedPenalty) steps.push(ruralSurtaxDelayedPenaltyStep(ruralSurtaxDelayedPenalty));
+  // US-29 — 지방소득세 가산세(지방세기본법 §53~§55) — 정상 경로 finalize와 같은 leaf
+  const localIncomePenalty = computeLocalIncomePenalty(input.filingPenaltyDetails, penaltyDetail);
+  if (localIncomePenalty) steps.push(...localIncomePenaltySteps(localIncomePenalty));
 
   // 해석 (5) 구주택 멸실·신축 통산 — 이 경로는 파트별 세율 판정을 거치지 않으므로(`partRateBasisApplied !== true`) 통산이 세율에 반영되지 않았다는 확인 필요를 낸다(세액 불변).
   const rebuildNotice = landRebuildNoticeOf(effectiveInput, splitDetail) ?? undefined;
@@ -753,8 +761,9 @@ export function runRentalHousingExceptionStep(
     ruralSurtax: ruralSurtaxTotal,
     ...(incomeDeduction.evaluated ? deductionFinal.details : {}),
     ...(ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty } : {}),
+    ...(localIncomePenalty ? { localIncomePenalty } : {}),
     totalTax:
-      rheDeterminedTax + rheLocalIncomeTax + filingDelayedPenalty + ruralSurtaxTotal + (ruralSurtaxDelayedPenalty?.penalty ?? 0),
+      rheDeterminedTax + rheLocalIncomeTax + filingDelayedPenalty + ruralSurtaxTotal + (ruralSurtaxDelayedPenalty?.penalty ?? 0) + (localIncomePenalty?.total ?? 0),
     steps,
     rentalHousingExceptionDetail: rhe,
     penaltyDetail,

@@ -309,6 +309,59 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywords: ["출자자의 제2차 납세의무", "무한책임사원", "과점주주", "100분의 50을 초과"],
     keywordMode: "ALL",
   },
+  // ── 양도소득분 개인지방소득세 가산세 (US-29 · common.ts LOCAL_PENALTY) ──────────────
+  // 키워드는 KoreanLaw 원문 verbatim(지방세기본법 MST 290139 · 시행령 MST 290497, 2026-11-10 실독).
+  {
+    id: "LOCAL_BASIC.DEADLINE_SPECIAL",
+    citation: "지방세기본법 §24",
+    keywords: ["토요일 및 일요일", "공휴일에 관한 법률", "그 다음 날을 기한으로 한다"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "LOCAL_BASIC.NON_FILING_PENALTY",
+    citation: "지방세기본법 §53",
+    keywords: ["무신고납부세액", "100분의 20에 상당하는 금액을 가산세로 부과한다", "100분의 40에 상당하는 금액"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "LOCAL_BASIC.UNDER_FILING_PENALTY",
+    citation: "지방세기본법 §54",
+    keywords: ["과소신고납부세액등", "100분의 10에 상당하는 금액을 가산세로 부과한다", "부정과소신고납부세액등"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "LOCAL_BASIC.DELAYED_PAYMENT_PENALTY",
+    citation: "지방세기본법 §55",
+    keywords: [
+      "납부지연가산세",
+      "100분의 75에 해당하는 금액을 한도로 하고",
+      "법정납부기한의 다음 날부터 자진납부일 또는 납세고지일까지의 일수",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "LOCAL_BASIC.PENALTY_REDUCTION",
+    citation: "지방세기본법 §57",
+    keywords: [
+      "가산세의 감면 등",
+      "법정신고기한이 지난 후 1개월 이내에 수정신고한 경우",
+      "법정신고기한이 지난 후 1개월 이내에 기한 후 신고를 한 경우",
+      "예정신고기한 이후 확정신고기한까지 과세표준 신고 및 수정신고를 한 경우",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "LOCAL_BASIC.ROUNDING",
+    citation: "지방세기본법 §59",
+    keywords: ["끝수 계산", "「국고금 관리법」 제47조를 준용한다"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "LOCAL_BASIC_DECREE.DAILY_RATE",
+    citation: "지방세기본법 시행령 §34",
+    keywords: ["납부지연가산세의 이자율", "1일 10만분의 22"],
+    keywordMode: "ALL",
+  },
   {
     // 지방소득세 등 원 미만 절사의 근거
     id: "TREASURY.ROUNDING",

@@ -57,6 +57,11 @@ import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { emitPenaltySteps } from "./transfer-tax-penalty-steps";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { computeRuralSurtaxDelayedPenalty, ruralSurtaxDelayedPenaltyStep } from "./transfer-tax-rural-surtax-penalty";
+import {
+  computeLocalIncomePenalty,
+  localIncomePenaltySteps,
+  localIncomePenaltyTotalSuffix,
+} from "./transfer-tax-local-income-penalty";
 import type {
   TransferTaxInput,
   TransferTaxResult,
@@ -531,14 +536,18 @@ export function calculateRedevelopmentTax(
   const ruralSurtaxDelayedPenalty = computeRuralSurtaxDelayedPenalty(input.delayedPaymentDetails, ruralSurtaxTotal);
   const ruralPenalty = ruralSurtaxDelayedPenalty?.penalty ?? 0;
   if (ruralSurtaxDelayedPenalty) steps.push(ruralSurtaxDelayedPenaltyStep(ruralSurtaxDelayedPenalty));
-  const totalTax = determinedTax + localIncomeTax + filingDelayedPenalty + ruralSurtaxTotal + ruralPenalty;
+  // US-29 — 지방소득세 가산세(지방세기본법 §53~§55) — 정상 경로 finalize와 같은 leaf
+  const localIncomePenalty = computeLocalIncomePenalty(input.filingPenaltyDetails, penaltyDetail);
+  if (localIncomePenalty) steps.push(...localIncomePenaltySteps(localIncomePenalty));
+  const totalTax = determinedTax + localIncomeTax + filingDelayedPenalty + ruralSurtaxTotal + ruralPenalty + (localIncomePenalty?.total ?? 0);
   steps.push({
     label: "세액합계",
     formula: (filingDelayedPenalty > 0
       ? `총결정세액 ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`
       : `${cappedReductionAmount > 0 ? "결정세액" : "산출세액"} ${determinedTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`)
       + (ruralSurtaxTotal > 0 ? ` + 농특세 ${ruralSurtaxTotal.toLocaleString()}` : "")
-      + (ruralPenalty > 0 ? ` + 농특세 납부지연가산세 ${ruralPenalty.toLocaleString()}` : ""),
+      + (ruralPenalty > 0 ? ` + 농특세 납부지연가산세 ${ruralPenalty.toLocaleString()}` : "")
+      + localIncomePenaltyTotalSuffix(localIncomePenalty),
     amount: totalTax,
     legalBasis: REDEVELOPMENT.GAIN_BASE,
   });
@@ -712,6 +721,7 @@ export function calculateRedevelopmentTax(
     // 않아 재개발·입주권에서는 소득금액차감형 농특세까지 화면에서 0이 됐다 — `totalTax`엔 있다.
     ruralSurtax: ruralSurtaxTotal,
     ...(ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty } : {}),
+    ...(localIncomePenalty ? { localIncomePenalty } : {}),
     totalTax,
     amendmentDetail,
     steps,

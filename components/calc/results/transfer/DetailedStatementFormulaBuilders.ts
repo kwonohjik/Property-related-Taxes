@@ -216,6 +216,7 @@ import {
   localCalculatedTaxFormula,
   localTaxablePenaltyOf,
 } from "@/components/calc/results/transfer/local-income-tax-display";
+import { localIncomePenaltyStatementItem } from "./local-income-penalty-display";
 
 /**
  * 다건 합산 절차 3개 항목(차손통산·기본공제 배분·비교과세)을 Map에 추가.
@@ -349,6 +350,9 @@ export function buildSurtaxAndLocalTaxItems(
     legalBasis: "지방세법 §103의3·§103의4",
     summaryOnly: true,
   });
+  // US-29 — 지방소득세 가산세(지방세기본법 §53~§55). 본세(위 결정세액)와 별도 행이며 총 납부세액에 포함된다.
+  const localPenaltyItem = localIncomePenaltyStatementItem(result.localIncomePenalty);
+  if (localPenaltyItem) items.set("localIncomePenalty", localPenaltyItem);
 }
 
 /**

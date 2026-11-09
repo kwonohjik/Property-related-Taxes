@@ -228,10 +228,17 @@ export function AmendmentResultCard({
           value={formatKRW(detail.additionalLocalIncomeTax)}
           muted
         />
+        {detail.localIncomePenalty && detail.localIncomePenalty.total > 0 && (
+          <Row
+            label="참고 · 추가 지방소득세 가산세 (지방세기본법 §54·§55·§57②)"
+            value={formatKRW(detail.localIncomePenalty.total)}
+            muted
+          />
+        )}
         <Row label={`참고 · 수정 후 전체 세액${totalScope}`} value={formatKRW(fullTotalTax)} muted />
       </div>
-      {/* US-29 — 추가 지방소득세에는 지방세기본법 §53~§55 가산세(§54·§55·§57②)가 없다 */}
-      <LocalIncomePenaltyNotice className="mt-2" />
+      {/* US-29 — 추가 지방소득세의 가산세는 국세 합계 밖의 참고 줄이다(가정·확인 필요 고지) */}
+      {detail.localIncomePenalty && <LocalIncomePenaltyNotice variant="amendment" className="mt-2" />}
 
       {detail.steps.length > 0 && (
         <div className="mt-3">

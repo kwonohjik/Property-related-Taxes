@@ -397,6 +397,8 @@ export interface PerPropertyBreakdown
   penaltyDetail?: TransferTaxPenaltyResult;
   /** NH-38 — 건별 농특세 미납분 납부지연가산세(소득세분과 별도 · 예정신고 농특세 base) */
   ruralSurtaxDelayedPenalty?: import("../transfer-tax-rural-surtax-penalty").RuralSurtaxDelayedPenaltyDetail;
+  /** US-29 — 건별 지방소득세 가산세(지방세기본법 §53~§55). 단건 엔진이 자산 결과에 산정한 값 */
+  localIncomePenalty?: import("../transfer-tax-local-income-penalty").LocalIncomePenaltyDetail;
   /** 건별 세부 계산 steps (단건 엔진에서 생성) */
   steps: CalculationStep[];
   /**
@@ -648,6 +650,12 @@ export interface AggregateTransferResult {
   ruralSurtaxDelayedPenalty?: number;
   /** NH-38 — 신고서 단위 농특세 납부지연가산세 상세(입력 `delayedPaymentDetails`가 있을 때만) */
   filingUnitRuralSurtaxDelayedPenalty?: import("../transfer-tax-rural-surtax-penalty").RuralSurtaxDelayedPenaltyDetail;
+  /**
+   * US-29 — 지방소득세 가산세 합계(자산별 + 신고서 단위 · 지방세기본법 §53~§55). `localIncomeTax`(본세)와 별도이며 `totalTax`에 포함된다. 0이면 키가 없다.
+   */
+  localIncomePenalty?: number;
+  /** US-29 — 신고서 단위 지방소득세 가산세 상세(입력 `filingPenaltyDetails`·`delayedPaymentDetails`가 있을 때만) */
+  filingUnitLocalIncomePenalty?: import("../transfer-tax-local-income-penalty").LocalIncomePenaltyDetail;
 
   /**
    * **부담부증여 × 배우자등 이월과세** 판정 명세 (F27 — 일반건물 §159 분기 전용).

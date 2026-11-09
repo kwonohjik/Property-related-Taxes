@@ -72,8 +72,8 @@ export function Step6({
       >
         <div className="space-y-5">
 
-          {/* US-29 — 입력 단계 고지: 아래 가산세는 국세기본법 분만이다. */}
-          <LocalIncomePenaltyNotice />
+          {/* US-29 — 입력 단계 고지: 같은 입력으로 지방세기본법 §53~§55 지방소득세 가산세도 함께 산정된다. */}
+          <LocalIncomePenaltyNotice variant="input" />
 
           {/*
             🔴 **기납부세액은 신고 유형과 무관하게 받는다** (2026-09-07 UI 리뷰 보통).

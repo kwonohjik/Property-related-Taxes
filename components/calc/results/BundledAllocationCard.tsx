@@ -131,6 +131,8 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     ruralSurtax: a.ruralSurtax,
     // NH-38 — 일괄·일반건물은 가산세가 신고서 단위다(자산별 입력 없음) — 그 농특세분 납부지연가산세 상세를 승계한다.
     ...(a.filingUnitRuralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty: a.filingUnitRuralSurtaxDelayedPenalty } : {}),
+    // US-29 — 신고서 단위 지방소득세 가산세(지방세기본법 §53~§55 · totalTax에 포함) — 승계하지 않으면 명세서·결과 안내가 합계와 어긋난다.
+    ...(a.filingUnitLocalIncomePenalty ? { localIncomePenalty: a.filingUnitLocalIncomePenalty } : {}),
     totalTax: a.totalTax,
     steps: a.steps,
     // UI 자산별 산식 인라인 표시용 — 사례 31·33 일반건물 일괄 모드만 채워짐.

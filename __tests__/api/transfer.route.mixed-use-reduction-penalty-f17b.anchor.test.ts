@@ -214,7 +214,9 @@ describe("F17-B · 겸용주택 가산세", () => {
 
     // 국세기본법 §47의2①1호 — 무신고 20% × 결정세액 53,204,300.
     expect(pen.total.penaltyTax).toBe(10_640_860);
-    expect(pen.total.totalPayable - base.total.totalPayable).toBe(10_640_860);
+    // US-29 — 지방소득세 무신고가산세: 53,204,300 × 10% = 5,320,430 × 20% = 1,064,086 (별도 축)
+    expect((pen.total as { localIncomePenalty?: { total: number } }).localIncomePenalty?.total).toBe(1_064_086);
+    expect(pen.total.totalPayable - base.total.totalPayable).toBe(10_640_860 + 1_064_086);
   });
 
   it("MU-11: 가산세는 **지방소득세 base가 아니다**", async () => {

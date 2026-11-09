@@ -54,6 +54,12 @@ import type { ReducibleIncomeBucket } from "./types/transfer-result.types";
 import type { TransferTaxPenaltyResult } from "./transfer-tax-penalty";
 import { computeAmendment } from "./transfer-tax-amendment";
 import {
+  computeLocalIncomePenalty,
+  localIncomePenaltySteps,
+  localIncomePenaltyTotalSuffix,
+  type LocalIncomePenaltyDetail,
+} from "./transfer-tax-local-income-penalty";
+import {
   computeRuralSurtaxDelayedPenalty,
   ruralSurtaxDelayedPenaltyStep,
   type RuralSurtaxDelayedPenaltyDetail,
@@ -142,6 +148,8 @@ export interface FinalizeResult {
   totalAllPenalty: number;
   /** NH-38 — 농특세 미납분 납부지연가산세(소득세분과 별도 줄). 납부지연 입력·미납 농특세가 있을 때만 */
   ruralSurtaxDelayedPenalty?: RuralSurtaxDelayedPenaltyDetail;
+  /** US-29 — 지방소득세 가산세(지방세기본법 §53~§55). 가산세 입력이 있을 때만 */
+  localIncomePenalty?: LocalIncomePenaltyDetail;
   // 총 납부세액
   totalTax: number;
   // 수정신고 (input.amendment 제공 시)
@@ -431,10 +439,14 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   const ruralSurtaxDelayedPenalty = computeRuralSurtaxDelayedPenalty(input.delayedPaymentDetails, ruralSurtaxTotal);
   const ruralPenalty = ruralSurtaxDelayedPenalty?.penalty ?? 0;
   if (ruralSurtaxDelayedPenalty) steps.push(ruralSurtaxDelayedPenaltyStep(ruralSurtaxDelayedPenalty));
-  const totalTax = determinedTaxWithPenalty + localIncomeTax + filingDelayedPenalty + ruralSurtaxTotal + ruralPenalty;
+  // US-29 — 지방소득세 가산세(지방세기본법 §53~§55). 지방 법정기한으로 따로 산정하며 localIncomeTax(본세)에는 넣지 않는다.
+  const localIncomePenalty = computeLocalIncomePenalty(input.filingPenaltyDetails, penaltyDetail);
+  if (localIncomePenalty) steps.push(...localIncomePenaltySteps(localIncomePenalty));
+  const totalTax =
+    determinedTaxWithPenalty + localIncomeTax + filingDelayedPenalty + ruralSurtaxTotal + ruralPenalty + (localIncomePenalty?.total ?? 0);
   steps.push({
     label: "총 납부세액",
-    formula: `${totalAllPenalty > 0 ? "총결정세액" : "결정세액"} ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtaxTotal > 0 ? ` + 농특세 ${ruralSurtaxTotal.toLocaleString()}` : ""}${ruralPenalty > 0 ? ` + 농특세 납부지연가산세 ${ruralPenalty.toLocaleString()}` : ""}`,
+    formula: `${totalAllPenalty > 0 ? "총결정세액" : "결정세액"} ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtaxTotal > 0 ? ` + 농특세 ${ruralSurtaxTotal.toLocaleString()}` : ""}${ruralPenalty > 0 ? ` + 농특세 납부지연가산세 ${ruralPenalty.toLocaleString()}` : ""}${localIncomePenaltyTotalSuffix(localIncomePenalty)}`,
     amount: totalTax,
     legalBasis: `${TRANSFER.FINAL_TAX} + ${TRANSFER.LOCAL_INCOME_TAX}`,
   });
@@ -487,6 +499,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     filingDelayedPenalty,
     totalAllPenalty,
     ...(ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty } : {}),
+    ...(localIncomePenalty ? { localIncomePenalty } : {}),
     totalTax,
     amendmentDetail,
   };

@@ -94,6 +94,8 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
   const ruralSurtax = (num(r.ruralSurtax) ?? incomeDeductionRuralSurtax(r as unknown as TransferTaxResult)) as number;
   // NH-38 — 농특세 미납분 납부지연가산세(엔진 echo · 소득세 가산세와 별도 줄)
   const ruralPenalty = (r as unknown as TransferTaxResult).ruralSurtaxDelayedPenalty?.penalty ?? 0;
+  // US-29 — 지방소득세 가산세(지방세기본법 §53~§55 · 엔진 totalTax에 포함)
+  const localPenalty = (r as unknown as TransferTaxResult).localIncomePenalty?.total ?? 0;
   /**
    * ㉘ 가산세액 — **두 축의 합**이다(「소득세법」 제92조 제3항 제3호).
    *   · `r.penaltyTax`    : 「소득세법」 제114조의2 환산가액적용가산세
@@ -171,6 +173,7 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
         {codeLines("소득세 감면세액")}
         {/* NH-38 — 농특세 미납분 납부지연가산세(소득세 가산세와 별도 줄) */}
         {ruralPenalty > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세 납부지연가산세</Text><Text style={s.val}>{fmt(ruralPenalty)}</Text></View>)}
+        {localPenalty > 0 && (<View style={s.row}><Text style={s.lbl}>지방소득세 가산세 (지방세기본법 §53~§55)</Text><Text style={s.val}>{fmt(localPenalty)}</Text></View>)}
         {num(r.localIncomeTax) !== undefined && (<View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>)}
       </View>
     </>
