@@ -1,0 +1,103 @@
+# 기준시가 자동조회가 전용면적을 함께 받으면 조회한 기준시가가 버려진다 (NH-28)
+
+- 상태: **구현 완료**(Q-1 a · Q-2 a · Q-3 a — 사용자 «모두 권장안으로») — 결과는 §7. 기준 master `2ba758323`.
+- 출처: `docs/reviews/new-housing-99-review-2026-11.md` NH-28(F-54) — 「기준시가 자동조회가 전용면적을 함께 받으면 조회값이 이전 값으로 되돌아간다(다중키 stale spread)」. 2026-11-09 코드 대조에서 «재현 안 함»으로 남겼던 열린 항목.
+- 표기: **[직접]** = 이 문서 작성 중 직접 실행·대조. **[코드]** = 코드 읽기만. **확인 필요** = 미측정·미해명.
+
+## 0. 결론
+
+| 질문 | 답 |
+|---|---|
+| 재현되는가 | **된다.** 실제 `UnifiedReductionPanel`을 상태 있는 부모로 감싸 «조회» 버튼을 누르면, 응답에 전용면적이 있을 때 **조회한 기준시가는 버려지고 전용면적만 반영된다**. §99의3 · §99 · §98의8 · §99의2 × 3시점(취득시 · 5년 · 양도시) = **12칸 전부** [직접] |
+| 응답에 전용면적이 없으면 | 기준시가가 정상 반영된다(대조 12칸) [직접] — 하네스 자체의 결함이 아니다 |
+| 사용자에게 보이는 증상 | 「조회」를 눌러도 기준시가 칸이 **옛 값 그대로**이고 전용면적만 바뀐다. 조회가 실패한 것도 오류 문구도 없다 |
+| 세액 영향 | 리뷰 수치: 5년 시점 옛 값이 남으면 +16,672,500 과대, 취득시 옛 값 80,000,000 · 조회값 100,000,000이면 −2,067,188 과소(양도시는 자산 값으로 폴백돼 측정 안 됨). **이 문서에서 세액은 재현하지 않았다**(확인 필요) |
+| 원인 | 조회 필드가 `onChange(가격)` → `onExclusiveArea(면적)`을 **같은 틱에 연달아** 부르고, 패널의 갱신 함수(`update993` 등)는 각자 **그 렌더 시점의 `reductions` 배열**을 펼쳐 `onChange({reductions})`를 부른다 → 둘째 호출이 첫째 변경이 없는 옛 배열 위에 면적만 얹어 덮어쓴다 [코드: `HousingStdPriceLookupField.tsx:103-109` · `UnifiedReductionPanel.tsx:228-249`] |
+| 이미 아는 증상 | 패널은 같은 함정을 «여러 필드 동시 갱신» 한 곳(`update993Many`, :240-247)에서만 배치로 피했다 — 주석이 «개별 update993 연속 호출은 stale reductions spread로 서로를 덮어씀»이라고 적고 있다 [코드]. 조회 경로는 피하지 못했다 |
+| 권장 | **패널의 갱신 함수가 «최신 reductions»(ref)를 쓰게 한다**(Q-1 a) — 연속 호출이 서로를 덮어쓰지 않는다. 폼 4개·조회 필드의 API는 그대로 |
+
+## 1. 범위
+
+- 측정: §99의3(`new_99_3`) · §99(`new_99`) · §98의8(`unsold_98_8`) · §99의2(`unsold_99_2`) 폼의 3시점 기준시가 «조회» 버튼 12개. 모의 응답 `{ price: 300,000,000, exclusiveArea: 84.96 }`.
+- §98의3 · 5 · 6 · 7 폼은 전용면적 콜백을 쓰지 않아 해당 없음(리뷰 `unsold-98-series-review-2026-11.md` 서술 — 이번에는 재확인 안 함).
+- 측정하지 않은 것: 실제 zustand 스토어 경유(하네스는 같은 모양의 «얕은 병합» 부모를 썼다) · 브라우저 수동 확인 · 세액 · 다른 감면 폼(§97 계열 등)의 연속 갱신 호출.
+
+## 2. 측정 방법 [직접]
+
+throwaway probe(미커밋, `.test.tsx` jsdom): `makeDefaultAsset` + 해당 감면 기본값 + 3시점 기준시가를 옛 값(80,000,000 · 150,000,000 · 200,000,000)·면적 59로 채운 자산을 `useState`로 들고 `onChange={(patch) => setAsset((a) => ({ ...a, ...patch }))}`로 `UnifiedReductionPanel`을 렌더 → `fetch`를 모의 → 3시점 조회 버튼을 눌러 조회 후 `asset.reductions[0]`을 읽었다. 대조: 응답에서 `exclusiveArea`를 뺐다.
+
+## 3. 측정 결과 [직접]
+
+### 3.1 전용면적이 있는 응답 (조회 후 기준시가가 300,000,000이어야 한다)
+
+| 감면 폼 | 취득시 | 5년 시점 | 양도시 |
+|---|---|---|---|
+| §99의3 | 80,000,000 · 면적 59 → 84.96 | 150,000,000 | 200,000,000 |
+| §99 | 80,000,000 · 면적 59 → 84.96 | 150,000,000 | 200,000,000 |
+| §98의8 | 80,000,000 · 면적 59 → 84.96 | 150,000,000 | 200,000,000 |
+| §99의2 | 80,000,000 · 면적 59 → 84.96 | 150,000,000 | 200,000,000 |
+
+12칸 전부 **기준시가가 조회 전 값 그대로**다(면적은 취득시 칸만 59 → 84.96, 나머지는 이미 84.96이라 변화 없음 — 그래도 가격은 덮어써졌다).
+
+### 3.2 전용면적이 없는 응답 (대조)
+
+12칸 전부 기준시가가 300,000,000으로 바뀐다 · 면적 59 그대로.
+
+### 3.3 코드 경로
+
+- 가격 → 면적 순으로 두 번 부른다: `onChange(String(json.price))` 바로 뒤 `onExclusiveArea?.(json.exclusiveArea)` [코드: `HousingStdPriceLookupField.tsx:103-109`].
+- 폼은 각각 한 키씩 갱신하는 함수를 넘긴다: §99의3 `onUpdate("standardPriceAtAcquisition993", v)` / `onUpdate("exclusiveAreaSqm993", …)` (`New993InputForm.tsx:246 · 252 · 403 · 409 · 427 · 433`), §99 · §98의8 · §99의2는 `ReductionStdPriceSection`을 통해 `onChange({ standardPriceAtX: v })` / `onChange({ exclusiveAreaSqmX: v })` [코드: `ReductionStdPriceSection.tsx:219-252` · 각 폼 `onExclusiveAreaChange`].
+- 패널의 갱신 경로는 `reductions.map(…)`을 펼치는 곳 13군데와 `filter`·추가·`toggleGroupRadio` 3군데(합 16)가 모두 렌더 시점의 `reductions`를 읽어 `onChange({ reductions })`를 부른다 [코드: `UnifiedReductionPanel.tsx:215-331` — grep 건수].
+
+## 4. 결정 대기
+
+| 번호 | 질문 | 선택지 | 권장 |
+|---|---|---|---|
+| Q-1 | 어디서 고칠까 | **a** 패널의 갱신 함수가 «최신 reductions»(렌더마다 맞추는 `ref` + 갱신 때 즉시 반영)를 쓴다 — 연속 호출이 안전해지고 폼·조회 필드는 그대로 · **b** 조회 필드가 «가격+면적»을 한 콜백으로 주도록 API를 바꾸고 폼 4개를 고친다(`update993Many`처럼 배치) · **c** 현행 유지 | **a** (근본 원인이 «연속 호출 시 stale 배열»이라 한 곳에서 닫힌다. b는 조회 경로만 닫고 다음 연속 호출이 생기면 다시 샌다) |
+| Q-2 | 안전망 | **a** 통합 anchor(`.test.tsx`) — 상태 있는 부모 + 실제 패널로 4폼 × 3시점 12칸(가격·면적 둘 다 반영) + 대조 12칸(면적 없는 응답) | **a** (기존 `new993-stdprice-autolookup` 테스트는 `onUpdate`를 `vi.fn()`으로 모의해서 이 덮어쓰기를 구조적으로 못 본다 [코드]) |
+| Q-3 | 세액 재현 | **a** 이 PR에서 하지 않는다(리뷰 수치 인용, 확인 필요 표기) · **b** 수정 전후 route 세액을 재현한다 | **a** (결함은 UI 상태 소실로 확정됐고 세액은 «옛 값이 남는 만큼»의 결과다) |
+
+## 5. 미검증 · 확인 필요
+
+| 번호 | 내용 |
+|---|---|
+| V-1 | 실제 zustand 스토어 경유에서도 같은지 — 부모가 `updateAsset(id, patch)`로 `reductions`를 통째로 교체하는 얕은 병합이면 같은 덮어쓰기다. 스토어가 reductions를 깊게 병합하면 증상이 다를 수 있다 |
+| V-2 | 브라우저 수동 확인(Playwright) — 이 문서의 재현은 jsdom 하네스다 |
+| V-3 | 세액 영향(리뷰 수치 +16,672,500 / −2,067,188은 인용) |
+| V-4 | 패널 밖·다른 감면 폼(§97 계열 등)의 «한 이벤트에 갱신 두 번» 호출이 더 있는지 — 전수 안 함 |
+| V-5 | 패널 갱신 경로 16군데 중 `ref` 방식으로 바꿔도 되는 곳(`toggleGroup`처럼 «현재 선택 상태를 읽어 판단»하는 함수는 같은 ref를 쓰게 할지) |
+| — | 사람이 직접 한 브라우저 수동 확인은 하지 않았다 |
+
+## 6. 구현 계획 (Q-1 a · Q-2 a · Q-3 a일 때, 결정 후 같은 PR)
+
+1. `UnifiedReductionPanel.tsx`: `reductionsRef`(렌더마다 `= asset.reductions ?? []`)와 `commitReductions(next)`(`ref` 갱신 + `onChange({ reductions: next })`) 한 곳을 두고, 갱신 경로 16군데가 `reductionsRef.current`를 읽어 `commitReductions`를 부르게 한다. `useEffect`로 스토어에 미러링하지 않는다(렌더 중 ref 대입).
+2. anchor: 통합 `.test.tsx` — 4폼 × 3시점(가격 300,000,000 · 면적 84.96 둘 다 반영) + 대조(면적 없는 응답) + 연속 두 번 갱신 단위 칸.
+3. 뮤테이션: `commitReductions`가 ref를 갱신하지 않게 · 일부 갱신 함수만 옛 배열을 읽게 → 해당 칸 실패.
+4. 회귀 5배치(api · lib · components · calc · tax-engine) · tsc · eslint. 화면 변경이 있으므로 **Playwright 해당 spec 1건**(조회 → 기준시가 칸 값 확인)을 돌린다.
+5. 이 문서 §7(구현 결과) 추가.
+
+## 7. 구현 결과 [직접]
+
+**코드** — `components/calc/transfer/UnifiedReductionPanel.tsx`: `reductionsRef` + `commitReductions(next)`(ref 갱신 후 `onChange({ reductions: next })`) 한 곳을 두고, 갱신 경로 16군데가 모두 `reductionsRef.current`를 읽어 `commitReductions`를 부른다. 스토어 미러링(`useEffect → store`)은 쓰지 않았다.
+
+**§6 1항과 다른 점(이유 있는 변경)**: 계획서는 «렌더마다 `reductionsRef.current = …`»였으나, eslint `react-hooks/refs`가 렌더 중 ref 접근을 오류로 막는다. 그래서 ref 동기화는 `useLayoutEffect(…, [asset.reductions])`로 했다. 커밋마다 ref를 즉시 갱신하므로 한 이벤트 안의 연속 호출은 최신 배열을 보고, 부모가 밖에서 asset을 바꾸면 레이아웃 효과가 다시 맞춘다(anchor 1칸).
+
+| 항목 | 결과 |
+|---|---|
+| anchor `__tests__/components/calc/reduction-panel-std-price-lookup-stale-spread-nh28.anchor.test.tsx` | **26 통과** — 4폼 × 3시점 12칸(가격+면적 둘 다 반영) · 세 시점 연속 조회 1 · 면적 없는 응답 대조 12 · 밖에서 asset이 바뀐 뒤 재동기화 1 |
+| 수정 전 패널(origin/master)로 같은 anchor | **13 실패 · 13 통과** — 실패는 조회 12칸 + 연속 조회 1, 통과는 대조 12 + 재동기화 1 (대조는 종전에도 정상이므로 기대대로) |
+| 뮤테이션 M1 (`commitReductions`의 ref 즉시 갱신 제거) | 13 실패 → 잡힘 |
+| M2 (props 재동기화 효과 제거) | 1 실패 → 잡힘 |
+| M3 (`update993`만 렌더 시점 `reductions` 사용) | 4 실패 → 잡힘 |
+| M4 (`toggleStandalone`만 렌더 시점 `reductions` 사용) | **26 통과 → 못 잡음(생존)** — 아래 «한계» |
+| 회귀 5배치 | api 6528 · tax-engine 19034 · calc 11598 · lib 3357 · components 6927 — **전부 통과, 실패 0** |
+| tsc · eslint | tsc 0건 · eslint 오류 0(경고 2건은 origin/master 패널에도 동일하게 있던 것 — `ReductionAssetKind` 미사용, `reductions` useMemo 의존성) |
+| Playwright `e2e/nh28-std-price-lookup-stale-spread.spec.ts` (§99의3 취득시 조회, 외부 API 모의) | 수정본 **통과**(기준시가 칸 300,000,000 · 전용면적 84.96) / 종전 패널 **실패**(기준시가 칸이 80,000,000 그대로) |
+
+**한계 · 확인 필요**
+- M4 생존: `toggleStandalone`/`toggleGroup`은 한 이벤트에서 두 번 부르는 경로가 없어 단일 호출에서는 옛 배열과 ref가 같다. 이 anchor의 범위(기준시가 조회 → 가격·면적 연속 갱신)에서는 동치 변형이라 막을 칸이 없다. 토글 연속 호출을 만드는 화면 경로가 생기면 그때 칸을 더한다.
+- V-1 실제 zustand 스토어 경유 — 하네스는 상태 있는 부모이며 스토어 자체는 거치지 않았다. **확인 필요**.
+- V-3 세액 영향 — 재현하지 않았다(Q-3 a). 리뷰 수치 +16,672,500 / −2,067,188은 인용이며 **확인 필요**.
+- V-4 다른 감면 폼의 «한 이벤트 갱신 두 번» — 전수하지 않았다. **확인 필요**.
+- 사람이 직접 한 브라우저 수동 확인은 하지 않았다(Playwright 1건으로 갈음).
+
