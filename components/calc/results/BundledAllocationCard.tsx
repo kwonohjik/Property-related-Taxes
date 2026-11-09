@@ -81,7 +81,7 @@ interface Props {
  *
  * MultiTransferTaxResultView·BundledAllocationCard·DetailedCalculationStatementCard에서 공유.
  */
-export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult & { aggregateIncomeDeductionReducible: number; aggregateReductionEligibleIncome: number } {
+export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult & { aggregateIncomeDeductionReducible: number; aggregateReductionEligibleIncome: number; aggregateTaxableGain: number } {
   return {
     isExempt: false,
     transferGain: a.totalTransferGain,
@@ -146,6 +146,13 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
      * 어댑터는 `reductionTypeApplied`·`reducibleIncome`을 싣지 않아 PDF의 단건식 `reductionEligibleIncome(r…)`가 0으로 찍혔다.
      */
     aggregateReductionEligibleIncome: sumReductionEligibleIncome(a.properties),
+    /**
+     * 과세대상 양도차익 합 = 자산별 양도소득금액 합 + 장특 합 — 화면 신고서 표 합계 열의 「과세대상 양도차익」과 같은 축이다.
+     * `transferGain`/`taxableGain`은 `totalTransferGain`(자산별 단건 `transferGain`의 합)이라 뜻이 경로마다 다르다 —
+     * 12억 초과 고가주택은 전체 차익, 비과세는 0, 입주권 4호 안분은 과세분. PDF가 이 합에서 양도소득금액을 다시 계산하면
+     * 고가주택이 섞인 일괄에서 과세표준과 어긋났다(1,038,000,000 ↔ 158,000,000). 다른 소비처는 건드리지 않도록 별도 필드로 싣는다(NH-65 방식).
+     */
+    aggregateTaxableGain: a.totalIncomeBeforeOffset + a.totalLongTermHoldingDeduction,
   };
 }
 
