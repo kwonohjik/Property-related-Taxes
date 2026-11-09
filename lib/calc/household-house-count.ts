@@ -681,8 +681,31 @@ export function resolveHouseholdRightCount(
   presaleRights: readonly Pick<PresaleRightEntry, "type" | "acquisitionDate">[] | undefined,
   /** 양도일 — 그날 이후(같은 날 포함) 취득한 권리는 세지 않는다(`rightsOwnedAtTransfer`). 필수: 빠뜨린 호출부를 컴파일러가 찾는다. */
   transferDate: string | undefined,
+  /**
+   * 이 양도(함께 양도 묶음)에서 양도하는 조합원입주권 수 — `bundleRightAssetCount`. 주면 «양도 대상 입주권 자신»을
+   * `primaryKind` 대신 이 수로 센다(묶음 안 입주권 모두 양도일 현재 보유 — 계획서 `companion-right-4ho-open.plan.md` Q-1).
+   * 안 주면 종전과 같다(세대 기준 자산이 입주권이면 1).
+   */
+  bundleRightCount?: number,
 ): number {
-  return deriveHouseholdRightCount(rightsOwnedAtTransfer(presaleRights, transferDate), primaryKind === "right_to_move_in");
+  const listed = deriveHouseholdRightCount(rightsOwnedAtTransfer(presaleRights, transferDate), false);
+  return listed + (bundleRightCount ?? (primaryKind === "right_to_move_in" ? 1 : 0));
+}
+
+/**
+ * 이 양도에서 양도하는 조합원입주권 «물건» 수 — 세대 보유 입주권 수(`resolveHouseholdRightCount`)에 더한다.
+ *
+ * - 같은 물건 지분 분할(축 B)은 지분 카드가 여럿이어도 입주권 1개다.
+ * - 함께 양도(다른 물건)는 입주권 자산마다 1개다 — 같은 날 함께 양도하는 입주권도 양도일 현재 보유로 센다(Q-1).
+ * - 입주권이 없으면 0이다.
+ */
+export function bundleRightAssetCount(
+  assets: readonly { assetKind: string }[] | undefined,
+  /** 축 B 판정 결과(`isFullFractionalBundle`) — 호출부가 계산해서 넘긴다(순환 import 회피). */
+  isFractionalBundle: boolean,
+): number {
+  const rights = (assets ?? []).filter((a) => a.assetKind === "right_to_move_in").length;
+  return isFractionalBundle ? Math.min(rights, 1) : rights;
 }
 
 /**

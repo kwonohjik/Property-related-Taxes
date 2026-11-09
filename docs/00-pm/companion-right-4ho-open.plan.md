@@ -115,3 +115,44 @@
 - 프로토타입은 두 키만 실었다(§2 한계) — V-1 전에는 나머지 키의 효과를 모른다.
 - 브라우저로 컴패니언 입주권 카드의 선언 위젯 노출 여부를 확인하지 않았다(§16-10).
 - 법령은 양도일 2026-06-01 시행본으로 조회했다. 과거 양도일(2022-01-01 취득 입주권 연혁 `oneRightPresaleGate` 등)은 기존 게이트를 그대로 쓰며 이번에 재조회하지 않았다.
+
+## 9. PR-2 결과 (2026-11-09 · 워크트리 `-m17` · 엔진·④·고지 구현)
+
+### 9-1. 구현
+
+| 지점 | 변경 |
+|---|---|
+| leaf `household-house-count.ts` | `bundleRightAssetCount(assets, isFractionalBundle)` 신설(축 B는 물건 1개, 함께 양도는 입주권 자산마다 1) · `resolveHouseholdRightCount`에 선택 4번째 인자 `bundleRightCount`(안 주면 종전과 같음 → 다건·판정 메뉴 불변) |
+| ④ `transfer-tax-api.ts` | 세대 입주권 수에 묶음 입주권 수를 넣는다 |
+| ⑤ 표시 `Step4.tsx` | 같은 식(3중 패턴). 표시 블록은 첫 자산이 입주권일 때만 렌더되므로 **주 자산 입주권 + 컴패니언 입주권 묶음에서 «1개»가 «2개»로 바뀐다** — 그 칸의 안내 문구(«양도하는 입주권 1개 + 아래 목록의 …»)가 이 구성에서 어긋난다(**PR-3 문구 점검 과제 · 브라우저 미확인**) |
+| ⑭ `bundled-route.ts` | `oneRightHouseholdFacts`를 축 B 조건 밖으로 꺼내 입주권 컴패니언 전반에 싣는다(주입 조건 `c.redevelopment?.subject === "right"`는 그대로) |
+| 고지 `bundled-right-4ho-notices.ts` 신설 | Q-1 보유 고지 · Q-2 12억 기준 고지 — 축 B는 제외, 결과 경고로 실린다 |
+| ⑫ Zod · ⑬ body | **변경 없음** — 새 필드 없음, 컴패니언 payload에 새 키 없음(V-10) |
+
+### 9-2. 검증 결과 (V)
+
+| V | 결과 |
+|---|---|
+| V-1 | 9키 중 결론을 가르는 것은 **3개**(`householdRightCount` · `householdNoPresaleRightsConfirmed` · `transferorNonResidentAtTransfer`) — 뮤테이션으로 확인(앞 둘은 CR-1 등 7건, 셋째는 본문 직접 주입으로 CR-15). 나머지 6키(`houses`·`sellingHouseId`·`marriageMerge`·`parentalCareMerge`·`isFirstTransferredInMerge`·`contestedRightSaleParentalCareMergeApply`)는 지워도 결론이 같다: ④는 세대 기준 자산이 토지일 때 `houses`를 본문에 싣지 않고(실측), 주택일 때는 양도 주택이 «다른 주택»으로 세어져 가목이 성립하지 않는다(CR-6). **합가 제외가 결론을 바꾸는 구성은 만들지 못했다(확인 필요)**. 주 카드·축 B와 같은 객체를 싣는다. 계산기 ④는 `transferorNonResidentAtTransfer`를 보내지 않는다(판정 메뉴 전용 — 사용자 결정 2026-10-08) |
+| V-2 | **막다른 길 발견**: 주 자산 토지·건물 + 컴패니언 입주권에서는 세대 기준 자산이 토지라 «분양권·입주권 없음» 확인 칸(⑤ `PresaleRightsSection`)과 ⑧ 차단(`requiresPresaleRightsConfirmation(primaryKind)`)이 열리지 않는다 → `householdNoPresaleRightsConfirmed`를 못 켜 분양권 게이트가 «판정 불가»로 4호 불성립(CR-18로 고정). 주 자산이 주택이면 확인 칸이 열린다. **PR-3 과제** |
+| V-3 | `resolveHouseholdRightCount` 호출처 3곳: ④(변경) · Step4(변경) · 다건 `multi-transfer-tax-api.ts:370`(4번째 인자 없음 → 불변). 판정 메뉴는 `deriveHouseholdRightCount`를 직접 쓴다(불변) |
+| V-4 | 다건은 컴패니언 입주권을 막아 해당 없음. 회귀 `__tests__/calc`·`api`·`lib`·`components` 2,339파일 28,477건 통과 |
+| V-5 | 결과 카드·PDF 표시는 **PR-3** |
+| V-6 | 축 B 지분 카드 + 다른 물건 입주권이 섞인 구성은 `isFullFractionalBundle`이 거짓이라 지분 카드를 각각 센다 — **미측정(확인 필요)** |
+| V-7 | 컴패니언 payload 자체 `isOneHousehold:false` 변형은 **미측정** |
+| V-8 | 나목 성립(CR-17): 세대 주택 1채 + 컴패니언 입주권 선언 «예» + 그 주택 취득일 2024-01-01 → `clause:"na"` 비과세. 취득일 미입력이면 불성립 |
+| V-9 | 12억 기준: 입주권 몫 양도가액(CR-3: 15억 → 안분과세 70,310,000 · CR-3b: 주 자산 15억 + 입주권 5억이어도 입주권은 전액 비과세 0) |
+| V-10 | 컴패니언 payload에 새 키 없음(`git diff` — ⑫⑬ 변경 0) |
+
+### 9-3. 실측 세액 (anchor로 고정)
+
+| 구성 | 열기 전 | 열린 뒤 |
+|---|---|---|
+| 토지 3억 + 입주권 5억 · 세대 주택 0 · 선언 예 | 합계 109,060,000 (컴패니언 55,110,000) | 합계 32,685,000 (컴패니언 0 · 가목) |
+| 같은 구성 입주권 15억 | 합계 535,935,000 (컴패니언 472,935,000) | 합계 125,060,000 (컴패니언 70,310,000 · 안분) |
+| 주 자산 입주권 + 컴패니언 입주권 · 선언 예 | 주 자산 비과세 0 · 컴패니언 55,110,000 · 합계 55,110,000 | 세대 입주권 수 2 → **두 카드 모두 과세 55,110,000** (주 자산 세액 증가) |
+| 세대 주택 1채 이상(나목 취득일 없음) · 선언 «아니오» · 단건 · 축 B | — | 불변 |
+
+### 9-4. 뮤테이션 (anchor 19건)
+
+`householdRightCount`/분양권 확인 키 삭제 → 7건 실패 · `transferorNonResidentAtTransfer` 삭제 → CR-15 · ④ 묶음 입주권 수 제거 → 9건 · 축 B `min` 제거 → CR-10 · ⑭ 확장 되돌림 → 8건 · Q-2 고지 끄기 → CR-11·12. 6키는 위 V-1대로 생존(관측 불가).

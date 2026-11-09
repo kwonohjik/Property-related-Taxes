@@ -49,6 +49,7 @@ import { regulatedAtTransferToggleApplies } from "@/lib/calc/regulated-transfer-
 import { houseRosterRendered } from "@/lib/calc/house-count-inputs-scope";
 import {
   resolveHouseholdHousingCount,
+  bundleRightAssetCount,
   resolveHouseholdRightCount,
   presaleRightsPatchWithConfirmClear,
   houseCountScalarLocked,
@@ -208,8 +209,15 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
    * leaf(`resolveHouseholdRightCount`)를 쓴다(3중 패턴) — right_to_move_in 전용.
    */
   const derivedHouseholdRightCount = useMemo(
-    () => resolveHouseholdRightCount(householdKind, form.presaleRights, form.transferDate),
-    [householdKind, form.presaleRights, form.transferDate],
+    () =>
+      resolveHouseholdRightCount(
+        householdKind,
+        form.presaleRights,
+        form.transferDate,
+        // ④(`transfer-tax-api.ts`)와 같은 식 — 함께 양도 묶음 안 입주권도 양도일 현재 보유로 센다.
+        bundleRightAssetCount(form.assets, isFullFractionalBundle(form.assets, form.assetSplitMode)),
+      ),
+    [householdKind, form.presaleRights, form.transferDate, form.assets, form.assetSplitMode],
   );
 
   // 조정대상지역 자동 판별(주소·날짜 → API) + 안내 — 800줄 정책 분리(OH-22). 주택은 섹션② 취득일 조정

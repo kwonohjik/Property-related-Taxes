@@ -10,6 +10,7 @@
 import { inheritedShareResidenceMonths } from "@/lib/api/transfer-tax-schema-household-refines";
 import { shareStartsLaterThanPrimary } from "@/lib/api/transfer-tax-schema-household-refines";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { bundledRightExemptionNotices } from "./bundled-right-4ho-notices";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import type { PropertySchemaInput } from "@/lib/api/transfer-tax-schema";
@@ -314,7 +315,7 @@ export function calculateBundledTransfer(
         // 세대 단위 — 컴패니언 주택도 §89②·§104⑦ 판정을 받아야 한다(R-5).
         presaleRights: engineInput.presaleRights,
         rightThreeYearException: engineInput.rightThreeYearException,
-        // 축 B 입주권 카드의 §89①4호 판정 사실(세대 단위) — 같은 물건이라 주 카드와 같은 사실이다(#11 별건).
+        // 축 B 지분 카드 전용 사실(주택 지분 판정 사실·세는 대상 제외) — 같은 물건이라 주 카드와 같은 사실이다(#11 별건).
         ...(isFullFractionalBundle
           ? {
               shareHouseFacts: Object.fromEntries(SHARE_HOUSE_FACT_KEYS.map((k) => [k, engineInput[k]])) as ShareHouseFacts,
@@ -323,19 +324,21 @@ export function calculateBundledTransfer(
                 generalHouseAcquisitionDate: resolveHceGeneralHouseAcquisitionDate(engineInput),
               },
               onShareMixedRentalNotices: (n: string[]) => mixedRentalNotices.push(...n),
-              oneRightHouseholdFacts: {
-                householdRightCount: engineInput.householdRightCount,
-                householdNoPresaleRightsConfirmed: engineInput.householdNoPresaleRightsConfirmed,
-                transferorNonResidentAtTransfer: engineInput.transferorNonResidentAtTransfer,
-                houses: engineInput.houses,
-                sellingHouseId: engineInput.sellingHouseId,
-                marriageMerge: engineInput.marriageMerge,
-                parentalCareMerge: engineInput.parentalCareMerge,
-                isFirstTransferredInMerge: engineInput.isFirstTransferredInMerge,
-                contestedRightSaleParentalCareMergeApply: engineInput.contestedRightSaleParentalCareMergeApply,
-              },
             }
           : {}),
+        // 입주권 컴패니언 카드의 §89①4호 판정 사실(세대 단위) — 축 B(같은 물건)뿐 아니라 함께 양도(다른 물건)에도 싣는다.
+        //   같은 세대·같은 양도일이라 주 카드와 같은 사실을 본다(`companion-right-4ho-open.plan.md` §4). 입주권이 아닌 컴패니언은 주입 쪽이 거른다.
+        oneRightHouseholdFacts: {
+          householdRightCount: engineInput.householdRightCount,
+          householdNoPresaleRightsConfirmed: engineInput.householdNoPresaleRightsConfirmed,
+          transferorNonResidentAtTransfer: engineInput.transferorNonResidentAtTransfer,
+          houses: engineInput.houses,
+          sellingHouseId: engineInput.sellingHouseId,
+          marriageMerge: engineInput.marriageMerge,
+          parentalCareMerge: engineInput.parentalCareMerge,
+          isFirstTransferredInMerge: engineInput.isFirstTransferredInMerge,
+          contestedRightSaleParentalCareMergeApply: engineInput.contestedRightSaleParentalCareMergeApply,
+        },
         isRegulatedArea: engineInput.isRegulatedArea,
         wasRegulatedAtAcquisition: engineInput.wasRegulatedAtAcquisition,
         // §104①4호 단서(영 §167의6) — 세대 단위, 컴패니언 분양권도 같은 사실을 본다.
@@ -437,6 +440,26 @@ export function calculateBundledTransfer(
   //   전 자산 부담부증여 묶음에서 카드의 `penaltyAxis`는 GB 부담부증여 카드만 싣는다(일반 양도 GB 카드의 감정 신호는 혼합 묶음이라 ⑧이 막는다).
   if (isAllBurdenedGift && items.some((it) => it.penaltyAxis) && !aggregated.warnings.includes(GB_BG_SELF_BUILT_NOTICE)) {
     aggregated.warnings.push(GB_BG_SELF_BUILT_NOTICE);
+  }
+  // 함께 양도(다른 물건) 묶음 안 조합원입주권의 §89①4호 — 정면 해석례 없는 판단(보유 해당 여부 · 12억 기준)을 쓴 사실을 고지한다. 축 B는 제외.
+  if (!isFullFractionalBundle) {
+    const primaryIsRight = engineInput.redevelopment?.subject === "right";
+    const rightNotices = bundledRightExemptionNotices(
+      [
+        {
+          isRight: primaryIsRight,
+          declaredEligible: primaryIsRight && engineInput.redevelopment?.exemptionEligibleAtApproval === true,
+          isOtherHouse: !primaryIsRight && (isOneHouseExemptionAsset(engineInput.propertyType) || engineInput.propertyType === "mixed-use-house"),
+        },
+        ...companions.map((c) => ({
+          isRight: c.assetKind === "right_to_move_in",
+          declaredEligible: c.assetKind === "right_to_move_in" && c.redevelopment?.exemptionEligibleAtApproval === true,
+          isOtherHouse: isOneHouseExemptionAsset(c.assetKind),
+        })),
+      ],
+      aggregated,
+    );
+    for (const n of rightNotices) if (!aggregated.warnings.includes(n)) aggregated.warnings.push(n);
   }
   // 늦게 취득한 지분 — 거주를 지분별 보유기간으로 판정했다. 매매 추가 취득은 정면 해석을 확인하지 못해 고지한다(`axis-b-share-residence-overcount.plan.md` Q-3 a).
   if (

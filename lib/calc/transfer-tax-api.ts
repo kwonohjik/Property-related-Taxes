@@ -19,7 +19,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
-import { resolveHouseholdHousingCount, resolveHouseholdRightCount } from "@/lib/calc/household-house-count";
+import { bundleRightAssetCount, resolveHouseholdHousingCount, resolveHouseholdRightCount } from "@/lib/calc/household-house-count";
 import { primaryEngineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import {
@@ -502,7 +502,13 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     }),
     // 사례 36 §89①4호 가목·나목 — 조합원입주권 수 (양도일 현재). PR-D(2026-10-05) — 스칼라
     // 숫자 칸을 없애고 명부(`presaleRights`)에서 도출한다(판정 메뉴와 같은 leaf, 3중 패턴).
-    householdRightCount: resolveHouseholdRightCount(householdAsset.assetKind, form.presaleRights, form.transferDate),
+    // 함께 양도 묶음 안 입주권도 양도일 현재 보유로 센다(`companion-right-4ho-open.plan.md` Q-1) — Step4 표시와 같은 식(3중 패턴).
+    householdRightCount: resolveHouseholdRightCount(
+      householdAsset.assetKind,
+      form.presaleRights,
+      form.transferDate,
+      bundleRightAssetCount(form.assets, fractionalBundleMerge),
+    ),
     // 거주기간 — 공용 헬퍼 도출(interval 합산 / direct·form-global fallback). UI 메시지②와 단일 진실.
     // 용도변경 시에는 §95⑤2호 클램프가 적용된 값이다(위 `residence` 참조).
     residencePeriodMonths: residence.months,
