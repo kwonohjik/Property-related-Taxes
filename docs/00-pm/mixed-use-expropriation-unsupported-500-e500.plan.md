@@ -1,6 +1,6 @@
 # 겸용 × 공익수용 등 «미지원 조합» — ⑧은 막는데 직접 API는 400이 아니라 500 (E-500)
 
-- 상태: **결정 대기** — 코드 변경 없음(문서만). 기준 master `fd7361e4f`.
+- 상태: **구현 완료(2026-11-09)** — 사용자 결정 Q-1 a · Q-2 a · Q-3 a(「모두 권장안으로」). 단 Q-2는 **5곳 중 4곳**만 바꿨다(§7). 결과는 §7. 기준 master `fd7361e4f`.
 - 출처: `mixed-use-companion-commercial-card-reductions-vn1.plan.md` §8 — «§77 미지원 조합이 직접 API에서 400이 아니라 500으로 나는 점».
 - 표기: **[직접]** = 이 문서 작성 중 직접 실행·대조. **[코드]** = 코드 읽기만. **확인 필요** = 미측정·미해명.
 
@@ -51,7 +51,7 @@ throwaway probe(미커밋): 기존 route anchor(`mixed-use-inheritance-decedent-
 
 기존 테스트 중 이 메시지를 단언하는 곳은 엔진 직접 호출의 `toThrow(정규식)`이다(`mixed-use-inheritance-acquisition.anchor` 등) — `TaxCalculationError`도 `Error`의 하위 클래스이고 메시지가 같으면 그대로 통과한다 [코드: 단언 방식만 읽음 — 실행은 구현 때].
 
-## 4. 결정 대기
+## 4. 결정 (Q-1 a · Q-2 a · Q-3 a — 2026-11-09 「모두 권장안으로」)
 
 | 번호 | 질문 | 선택지 | 권장 |
 |---|---|---|---|
@@ -76,3 +76,20 @@ throwaway probe(미커밋): 기존 route anchor(`mixed-use-inheritance-decedent-
 3. 뮤테이션: 한 곳씩 `Error`로 되돌림(5곳) → 해당 칸 실패.
 4. 회귀 5배치 · tsc · eslint. 화면 변경 없음 → Playwright 불필요.
 5. 이 문서 §7(구현 결과) 추가.
+
+## 7. 구현 결과
+
+| 항목 | 결과 |
+|---|---|
+| 코드 | 겸용 throw **4곳**을 `TaxCalculationError(TaxErrorCode.INVALID_INPUT, 같은 메시지)`로 교체 — `transfer-tax-mixed-use-commercial.ts`(상속·증여·매매실가·감정 + 공익수용) · `transfer-tax-mixed-use-housing-acq.ts`(실거래가·감정 + 공익수용 / 실거래가·감정 + 미공시(PHD)·보유 중 용도변경 / 상속·증여 + 보유 중 용도변경). route는 기존 `taxCalculationErrorResponse`(400)를 그대로 탄다 — ⑧·⑫에 조건식을 복제하지 않았다. **`housing-acq.ts`의 «상속·증여 + PHD 4부분 안분» 1곳(§3.2 `:169`)은 바꾸지 않았다**: 직접 API로 도달하는 입력을 만들지 못해(최초 고시일·용도변경일을 바꿔도 200) 500→400을 측정할 수 없었고, 측정하지 못한 곳은 바꾸지 않는 원칙을 따랐다 |
+| 안전망 anchor | `transfer.route.mixed-use-expropriation-unsupported-400-e500.anchor.test.ts` 12건 — 겸용 공익수용 × 4취득 방식 **단건 4칸 + 컴패니언 4칸**(⑧이 같은 사유로 먼저 막음 + 직접 API 400 · `error.code=INVALID_INPUT` · 메시지 일치) · 대조 환산 취득(⑧ 지원 안 함 사유 0건 · 200) · 용도변경·PHD 3칸(본문 수준 트리거: 매매 실거래가 + 용도변경 / 매매 실거래가 + PHD / 상속 + 용도변경 — 각각 ⑧ 선차단 확인 + 400) |
+| 뮤테이션 4/4 KILLED | cp 백업 → 한 곳씩 `Error`로 되돌림 → 이 anchor + `mixed-use-inheritance-acquisition.anchor`(엔진 `toThrow`) → 복원 → `cmp`. 공익수용 2곳 각 4실패 · 용도변경·PHD 1곳 2실패 · 상속 용도변경 1곳 1실패. 기존 엔진 `toThrow(정규식)` 단언은 변경 없이 통과 |
+| 회귀 | api 488파일 6487 · tax-engine 1502파일 19001 · calc 827파일 11588 · lib 262파일 3357 · components 750파일 6896 — **전부 통과(실패 0)** |
+| 정적 검사 | `tsc --noEmit` 0건 · eslint 에러 0건(경고 2건은 `commercial.ts`의 기존 미사용 import — 변경과 무관) |
+| Playwright | **돌리지 않았다** — 화면 변경 없음 |
+
+### 남은 확인 필요
+- `housing-acq.ts:169`(상속·증여 + PHD 4부분 안분) · `redevelopment.ts:107` · `burdened-gift-eligibility.ts:77` — 500 재현과 ⑧ 선차단(V-1).
+- 같은 두 파일의 **입력 누락 throw 3곳**(`housing-acq.ts` 용도변경(상가→주택) 취득시 상가 기준시가 0 · `commercial.ts` 취득시 상가건물 기준시가·개별공시지가 미입력 2곳)도 일반 `Error`다 — «미지원 조합»이 아니라 ⑧/⑫가 요구해야 할 입력이라 이 PR 범위 밖. 직접 API 500 여부는 확인 필요.
+- V-2(다건 route) · V-3(클라이언트가 400/500을 달리 보여 주는지) · V-4(운영 5xx 집계).
+- 사람이 직접 한 브라우저 수동 확인은 하지 않았다.

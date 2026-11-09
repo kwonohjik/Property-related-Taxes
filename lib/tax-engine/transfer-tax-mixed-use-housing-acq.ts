@@ -19,6 +19,7 @@ import type { PreHousingDisclosureResult } from "./types/transfer.types";
 import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
 import { acqHousingStdNumerator } from "./mixed-use-housing-std";
 import { multiplyByArea } from "./area-utils";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 
 // ──────────────────────────────────────────────────────────────
 // 3. 주택부분 환산취득가액 (STEP 3, §97 또는 §164⑦ PHD)
@@ -82,12 +83,14 @@ export function calcHousingEstimatedAcq(
   if (asset.useActualAcquisition || asset.useAppraisalSalesAcquisition) {
     const kind = asset.useActualAcquisition ? "취득 실거래가" : "감정가액·매매사례가액";
     if (asset.usePreHousingDisclosure || asset.partialUsageChange) {
-      throw new Error(
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
         `겸용 ${kind} + 미공시(PHD)·보유 중 용도변경 조합은 아직 지원하지 않습니다. 환산취득가 모드로 입력하세요.`,
       );
     }
     if (asset.transferCause === "public_expropriation") {
-      throw new Error(
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
         `겸용 ${kind} + 공익수용 특례 조합은 아직 지원하지 않습니다.`,
       );
     }
@@ -200,7 +203,8 @@ export function calcHousingEstimatedAcq(
   // 분모 계산에도 도달하지 않으므로 상속+공익수용 조합은 이 지점에서 자연 차단.
   if (asset.acquisitionByInheritance || asset.acquisitionByGift) {
     if (asset.partialUsageChange) {
-      throw new Error(
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
         "상속·증여 취득 + 보유 중 용도변경 조합은 아직 지원하지 않습니다 (Phase 2 예정).",
       );
     }
