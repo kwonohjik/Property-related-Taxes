@@ -28,6 +28,33 @@
 /** 지분 인덱스 접미사 구분자. 카드 id에 이 문자가 있으면 지분 분할 결과다. */
 export const SHARE_ID_SEPARATOR = "#";
 
+/**
+ * 연간 합산(다건) × 지분 분할 — 복합 접미사 `<자산id>.<지분번호>`의 구분자(계획서 `multi-carryover-bg-gb-shares.plan.md` Q-2 a).
+ *
+ * 다건 카드는 **자산 id**(결과 행 묶음·폼 조회)와 **지분 번호**(지분 짝·지분 echo 키)를 둘 다 가져야 한다 — `land#prop-…-1.0`.
+ * `cardSuffixOf`는 앞부분(자산 id), `shareIndexOf`는 뒷부분(지분 번호)을 돌려준다. 단건 축 B(`land#0`)·함께 양도(`land#asset-…`)는
+ * 점이 없어 종전 그대로다. 자산 id 형식(`prop-<시각>-<n>`·`asset-<시각>-<n>`)에는 점이 없다.
+ */
+export const SHARE_INDEX_SEPARATOR = ".";
+
+/** 다건 지분 카드 접미사 — `shareCardSuffix("prop-1", 0)` → `prop-1.0`. */
+export function shareCardSuffix(assetId: string, shareIndex: number): string {
+  return `${assetId}${SHARE_INDEX_SEPARATOR}${shareIndex}`;
+}
+
+/**
+ * 접미사 → [자산 부분, 지분 번호 부분]. 복합이 아니면 지분 번호 부분은 `undefined`.
+ * 마지막 점 뒤가 숫자이고 **앞부분이 숫자만이 아닐 때만**(자산 id) 복합으로 읽는다 — `1.5` 같은 깨진 지분 접미사를
+ * 「자산 1의 지분 5」로 읽어 `assets[5]`를 집지 않게 한다.
+ */
+function splitSuffix(suffix: string): [string, string | undefined] {
+  const j = suffix.lastIndexOf(SHARE_INDEX_SEPARATOR);
+  if (j <= 0) return [suffix, undefined];
+  const head = suffix.slice(0, j);
+  const tail = suffix.slice(j + SHARE_INDEX_SEPARATOR.length);
+  return /^\d+$/.test(tail) && !/^\d+$/.test(head) ? [head, tail] : [suffix, undefined];
+}
+
 /** `land_business#0` → `land_business`. 접미사가 없으면 그대로 돌려준다(단건 회귀 0). */
 export function baseCardId(propertyId: string): string {
   const i = propertyId.indexOf(SHARE_ID_SEPARATOR);
@@ -44,7 +71,9 @@ export function baseCardId(propertyId: string): string {
 export function shareIndexOf(propertyId: string): number | undefined {
   const i = propertyId.indexOf(SHARE_ID_SEPARATOR);
   if (i < 0) return undefined;
-  const raw = propertyId.slice(i + SHARE_ID_SEPARATOR.length);
+  const suffix = propertyId.slice(i + SHARE_ID_SEPARATOR.length);
+  // 다건 복합 접미사(`prop-1.0`)는 뒷부분이 지분 번호다(Q-2 a).
+  const raw = splitSuffix(suffix)[1] ?? suffix;
   // ⚠️ `Number("")`는 **0**이다 — 빈 문자열을 거르지 않으면 `land#`가 「지분 0」이 되어
   //    `assets[0]`을 집는다(2026-08-10 anchor가 잡음). 숫자만으로 이뤄졌는지 먼저 본다.
   if (!/^\d+$/.test(raw)) return undefined;
@@ -62,12 +91,12 @@ export function isSameShare(a: string, b: string): boolean {
 }
 
 /**
- * `land#asset-1` → `asset-1` · `land#0` → `0`. 접미사가 없으면 `undefined`.
- * 지분 인덱스(숫자)와 함께 양도 자산 id를 가리지 않는다 — 함께 양도 결과 상세(`generalBuildingDetailsByAsset`)의 키가 이 값이다.
+ * `land#asset-1` → `asset-1` · `land#0` → `0` · `land#prop-1.0` → `prop-1`(다건 지분 — 자산 부분). 접미사가 없으면 `undefined`.
+ * 지분 인덱스(숫자)와 함께 양도 자산 id를 가리지 않는다 — 함께 양도·연간 합산 결과 상세(`generalBuildingDetailsByAsset`)의 키가 이 값이다.
  */
 export function cardSuffixOf(propertyId: string): string | undefined {
   const i = propertyId.indexOf(SHARE_ID_SEPARATOR);
-  return i < 0 ? undefined : propertyId.slice(i + SHARE_ID_SEPARATOR.length);
+  return i < 0 ? undefined : splitSuffix(propertyId.slice(i + SHARE_ID_SEPARATOR.length))[0];
 }
 
 /** 매입분 카드 id 접미사 — 한도 초과 분리 카드(`__appurtenant`/`__excess`)와 같은 `__` 규약. */

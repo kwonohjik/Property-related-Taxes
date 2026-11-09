@@ -79,7 +79,7 @@ describe("G2-1 다건 ⑭ — §154① 단서 1호 임차 거주 개월 도달",
 
   it("정적 가드 — 두 route가 같은 leaf(toEngineOneHouseExemptionProviso)로 proviso를 옮긴다", () => {
     const single = readFileSync("app/api/calc/transfer/engine-input.ts", "utf8");
-    const multi = readFileSync("app/api/calc/transfer/multi/route.ts", "utf8");
+    const multi = readFileSync("app/api/calc/transfer/multi/route-property-input.ts", "utf8") /* ⑭ 건별 매핑 — route.ts에서 분리 */;
     expect(single).toContain("toEngineOneHouseExemptionProviso(");
     expect(multi).toContain("toEngineOneHouseExemptionProviso(");
     // 인라인 키 열거가 되살아나면 한쪽만 키를 빠뜨리는 같은 결함이 재발한다

@@ -13,6 +13,7 @@
  */
 
 import { redevInverseTransferPrice } from "@/lib/tax-engine/burdened-gift-totals";
+import { multiFormAssetOf } from "./multi-result-groups";
 import type { ReactNode } from "react";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import {
@@ -170,7 +171,7 @@ export function buildStatementItems(
     gbFormulaInputsOf(p, gbDetail, aggregate?.aggregated.generalBuildingDetailsByAsset, properties, formData, {
       totalTransferPrice: fallbackTotal,
       asset: primary,
-    }, (pid) => aggregate?.propertyFormMap?.get(pid)?.assets[0]);
+    }, (pid) => multiFormAssetOf(aggregate?.propertyFormMap?.get(pid), pid));
   // 부담부증여 모드 — 자산별 §159 산식 빌더에 전달할 분모/분자 변수 (perAsset.{land,building}).
   // 비-부담부증여 모드에서는 undefined → 빌더가 일반건물·기본 분기로 진행.
   const burdenedGift = (result as unknown as {

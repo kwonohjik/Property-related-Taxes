@@ -219,13 +219,23 @@ describe("다건 — 일반건물이 단건 일반건물 route와 같은 세액�
     expect(m.penaltyTax).toBe(landNoBd.penaltyTax);
   });
 
-  it("[MG-8] ⑫ 지분 분할 취득(`generalBuildingShares`)은 계속 거부한다", async () => {
+  /** 단건 ④가 만드는 모양(시가 10억 · 채무 3억 · 실지) — 유효한 info여야 공용 스키마를 지나 ⑫ 거부 규칙에 닿는다. */
+  const BG_INFO = {
+    valuationMode: "sangjeungbeop_market", lendingDepositTotal: 0, mortgageDebtAmount: 300_000_000, annualRentTotal: 0, marketValueAtTransfer: 1_000_000_000,
+    acquisitionMethod: "actual", actualAcquisitionTotal: 200_000_000, donorRelation: "lineal_descendant",
+    landStdPriceAtTransfer: 0, buildingStdPriceAtTransfer: 0, landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 0,
+  };
+  // 지분 분할 취득은 2026-11-10 지원 전환(트랙 GS) — 폼 경로 parity는 `__tests__/calc/multi-gb-shares-parity.anchor.test.ts`가 고정한다.
+  //   직접 API도 단건 지분 route와 같은 세액이어야 하고, 부담부증여 지분만 계속 거부한다(조용히 일반 양도로 계산되지 않게).
+  it("[MG-8] ⑫ 지분 분할 취득(`generalBuildingShares`) — 단건 지분 route와 같은 세액 · 부담부증여 지분만 거부", async () => {
+    const { m } = await expectParity({ ...gbBody(gbAsset()), generalBuildingShares: SHARES });
+    expect(m.totalTax).toBeGreaterThan(0);
     const r = await post(MULTI, "http://l/api/calc/transfer/multi", {
       taxYear: 2024,
       annualBasicDeductionUsed: 0,
-      properties: [{ propertyId: "p1", propertyLabel: "p1", ...gbBody(gbAsset()), generalBuildingShares: SHARES }],
+      properties: [{ propertyId: "p1", propertyLabel: "p1", ...gbBody(gbAsset()), generalBuildingShares: SHARES.map((sh) => ({ ...sh, burdenedGiftInfo: BG_INFO })) }],
     });
     expect(r.status).toBe(400);
-    expect(JSON.stringify(r.json)).toContain("일반건물");
+    expect(JSON.stringify(r.json)).toContain("일반건물 지분 분할 취득 × 부담부증여");
   });
 });

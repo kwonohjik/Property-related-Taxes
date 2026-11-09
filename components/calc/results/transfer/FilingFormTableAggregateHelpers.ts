@@ -7,6 +7,7 @@
  */
 
 import { receiveOnlyTransferDateOf } from "./receive-only-display";
+import { multiFormAssetOf } from "./multi-result-groups";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import {
   effectiveGrossGain,
@@ -113,7 +114,7 @@ export function buildAggregateRows(
     // NOTE: 이 함수 결과로 반환된 AssetForm의 landNature로
     // 컬럼 라벨 suffix "(부수토지)" / "(독립 나대지)"를 표시할 수 있음 — buildAggregateRows 호출부에서 사용.
     // 다건 multi: 각 property가 자기 form을 가짐 → propertyFormMap 우선 (bundled는 미주입 → 아래 formData 폴백)
-    const fromPropertyForm = aggregate.propertyFormMap?.get(pid)?.assets[0];
+    const fromPropertyForm = multiFormAssetOf(aggregate.propertyFormMap?.get(pid), pid);
     if (fromPropertyForm) return fromPropertyForm;
     if (!formData) return undefined;
     if (pid === "primary") return formData.assets[0];

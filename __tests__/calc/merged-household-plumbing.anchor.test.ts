@@ -122,7 +122,7 @@ describe("⑫ Zod discriminatedUnion", () => {
  * (memory `feedback_leaf_anchor_skips_zod_layer`).
  */
 describe("⑭ 다건 route가 §89② 축을 버리지 않는다", () => {
-  const src = readFileSync("app/api/calc/transfer/multi/route.ts", "utf8");
+  const src = readFileSync("app/api/calc/transfer/multi/route-property-input.ts", "utf8") /* ⑭ 건별 매핑 — route.ts에서 분리 */;
 
   it("★ Phase 3·4 필드가 그대로 엔진 입력으로 매핑된다", () => {
     for (const field of [

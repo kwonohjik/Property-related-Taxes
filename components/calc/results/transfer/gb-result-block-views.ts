@@ -18,6 +18,7 @@ import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-a
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
+import { shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
 import { cardAcquisitionPriceWithPieces } from "@/lib/tax-engine/general-building-purchased-pieces";
 
 export interface GbBlockView {
@@ -50,6 +51,33 @@ const isPartCard = (c: GeneralBuildingOutput["assetCards"][number], kind: "land"
     ? c.propertyType === "land"
     : c.propertyType === "general_building_unit" && !c.propertyId.includes("building2");
 
+/**
+ * 지분별 블록 뷰 — 지분 echo(키 = 지분 번호) + 그 지분의 파트 카드. 단건 축 B(`land#0`)와 연간 합산 지분(`land#<자산id>.0` · Q-2 a)이 같은 조립을 쓴다.
+ * 카드는 접미사의 **지분 번호**로 고른다(`shareIndexOf`) — 연간 합산 복합 접미사의 자산 부분(`cardSuffixOf`)은 지분을 가리지 못한다.
+ */
+function shareBlockViews(
+  shareEcho: Record<string, GbShareBlockEcho>,
+  assetCards: GeneralBuildingOutput["assetCards"],
+  properties: PerPropertyBreakdown[],
+): GbShareBlockView[] {
+  return Object.keys(shareEcho)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((key) => {
+      const partCard = (kind: "land" | "building") =>
+        assetCards.find((c) => String(shareIndexOf(c.propertyId)) === key && isPartCard(c, kind));
+      return {
+        ...shareEcho[key],
+        key,
+        partAcquisitionPrice: (kind) => {
+          const card = partCard(kind);
+          // 채무 부분(매입분) 꼬리가 있으면 증여분 + 매입분 — 꼬리를 합치지 않으면 파트 취득가액이 증여분뿐이다.
+          return card ? cardAcquisitionPriceWithPieces(properties, card.propertyId) : undefined;
+        },
+        partConverted: (kind) => !!partCard(kind)?.usedEstimatedAcquisition,
+      } satisfies GbShareBlockView;
+    });
+}
+
 export function gbBlockViewsOf(
   aggregated: AggregateTransferResult,
   apportionment: BundledApportionmentResult,
@@ -65,26 +93,7 @@ export function gbBlockViewsOf(
         partAcquisitionPrice: (kind) =>
           apportionment.apportioned.find((a) => a.assetKind === kind)?.allocatedAcquisitionPrice,
         ...(aggregated.swapApplied && aggregated.swapComparison ? { swapComparison: aggregated.swapComparison } : {}),
-        ...(shareEcho
-          ? {
-              shares: Object.keys(shareEcho)
-                .sort((a, b) => Number(a) - Number(b))
-                .map((key) => {
-                  const partCard = (kind: "land" | "building") =>
-                    single.assetCards.find((c) => cardSuffixOf(c.propertyId) === key && isPartCard(c, kind));
-                  return {
-                    ...shareEcho[key],
-                    key,
-                    partAcquisitionPrice: (kind) => {
-                      const card = partCard(kind);
-                      // 채무 부분(매입분) 꼬리가 있으면 증여분 + 매입분 — 꼬리를 합치지 않으면 파트 취득가액이 증여분뿐이다.
-                      return card ? cardAcquisitionPriceWithPieces(aggregated.properties, card.propertyId) : undefined;
-                    },
-                    partConverted: (kind) => !!partCard(kind)?.usedEstimatedAcquisition,
-                  } satisfies GbShareBlockView;
-                }),
-            }
-          : {}),
+        ...(shareEcho ? { shares: shareBlockViews(shareEcho, single.assetCards, aggregated.properties) } : {}),
       },
     ];
   }
@@ -124,8 +133,13 @@ export function gbAssetBlockView(
       return card ? acqOf(card.propertyId) : undefined;
     },
     ...(detail.swapComparison ? { swapComparison: detail.swapComparison } : {}),
+    // 연간 합산 지분 분할(트랙 GS) — 자산 상세에 지분 echo가 있으면 단건 축 B와 같은 지분별 블록을 그린다.
+    ...(shareEchoOf(detail) ? { shares: shareBlockViews(shareEchoOf(detail)!, detail.assetCards, cards) } : {}),
   };
 }
+
+const shareEchoOf = (detail: GeneralBuildingOutput): Record<string, GbShareBlockEcho> | undefined =>
+  (detail as { shareBlockEcho?: Record<string, GbShareBlockEcho> }).shareBlockEcho;
 
 /** 3-way 표가 읽는 그 일반건물의 파트 카드 결과 — 단건은 전 카드, 함께 양도는 같은 접미사 카드만. */
 export function gbViewProperties(aggregated: AggregateTransferResult, view: GbBlockView): PerPropertyBreakdown[] {

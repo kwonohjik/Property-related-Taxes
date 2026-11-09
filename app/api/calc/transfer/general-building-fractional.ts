@@ -125,6 +125,249 @@ function buildingAcqDateOf(share: GeneralBuildingSharePayload): Date {
   );
 }
 
+/** `buildSharePiece`가 지분마다 같이 쓰는 물건·신고 단위 값. */
+export interface SharePieceContext {
+  transferDate: Date;
+  /** 물건 전체(100%) 양도가액 — §100③ 계약서 판정이 쓴다. */
+  totalTransferPrice: number;
+  /** 첫 지분의 조특법 감면(⑭ 변환 완료본). 둘째 지분부터는 `share.reductions`. */
+  primaryReductions?: TransferReduction[];
+  /** 부담부증여 묶음 여부 — 있으면 지분율로 §159 A·C를 줄인다. */
+  burdened?: { wholeInfo?: BurdenedGiftInfo; date: Date };
+}
+
+/**
+ * 지분 하나의 한 시나리오 — 카드·표시 재료. `carryoverApplied`가 정해지면 카드에 지분 §159 명세를 싣는다.
+ * `suffix`는 카드 id 접미사다 — 단건 축 B는 지분 번호(`"0"`), 연간 합산은 복합 접미사(`shareCardSuffix(자산id, 지분번호)` · Q-2 a).
+ * 단건(`calculateGeneralBuildingFractional`)과 연간 합산 펼침(`multi-gb-expansion.ts`)이 같은 함수로 카드를 만든다.
+ */
+export function buildSharePiece(
+  ctx: SharePieceContext,
+  share: GeneralBuildingSharePayload,
+  idx: number,
+  suffix: string,
+  sharePrice: number,
+  coerced: Record<string, unknown>,
+  info: BurdenedGiftInfo | undefined,
+  dates: { building: Date; land?: Date } | undefined,
+  carryoverApplied: boolean | undefined,
+  /** 시나리오 A만 — 당초 증여자 자본적지출(§97의2①2호 · `carryoverDonorCapex`). */
+  donorCapex = 0,
+) {
+  const { transferDate, totalTransferPrice, primaryReductions, burdened } = ctx;
+  // (2-b) 물건 사건 게이팅 — 증축·용도변경 前/後 판정 (D4). A는 당초 증여자 취득일 기준이다(V-1 — 보유기간이 그날부터라 사건 前/後도 그날로 가른다).
+  const buildingAcqDate = dates?.building ?? buildingAcqDateOf({ ...share, valuation: coerced });
+  const gated = gateShareEvents(
+    coerced as never,
+    buildingAcqDate,
+  ) as unknown as Record<string, unknown>;
+
+  // (3) 카드 조립 — swap도 이 안에서 결정된다 ⇒ 판정 단위 = 지분 × 파트
+  const landAcqDate =
+    dates?.land ??
+    toOptionalDate(gated.landAcquisitionDate) ??
+    toDate(share.acquisitionDate, "generalBuildingShares[].acquisitionDate");
+  // 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축 — 증축 일괄값이 있으면 그것, 없으면 지분 값.
+  const capex = withCarryoverDonorCapex(gated, (gated.bundledExpenses as number | undefined) ?? share.expenses ?? 0, donorCapex);
+  const built = buildGbPartCards(
+    capex.gbv,
+    sharePrice,
+    transferDate,
+    buildingAcqDate,
+    landAcqDate,
+    share.ownershipRatio,
+    (gated.bundledAcquisitionPrice as number | undefined) ?? share.acquisitionPrice ?? 0,
+    capex.legacyExpenses,
+    // 부담부증여 — 그 지분의 §159 정보 + 지분율(A·C 지분 축소). 비부담부증여면 둘 다 undefined(종전 경로 그대로).
+    info,
+    burdened ? share.ownershipRatio : undefined,
+    // 계약 총액(100%) — 전 지분이 같은 계약서로 §100③을 판정한다(지분끼리 결론이 갈리지 않는다).
+    totalTransferPrice,
+  );
+
+  // (4) 접미사 — 카드와 swap Map을 **같은 시점에** 태깅한다
+  // 접미사는 문자열이다 — 컴패니언 축이 `assetId`를 쓰므로 leaf가 일반화됐다.
+  const tagged = tagGbCards(built.cards, suffix, share.shareLabel);
+  const swap = built.swap ? remapGbSwap(built.swap, suffix) : undefined;
+
+  // §104③ 미등기 — 지분 경로도 토지·건물 축을 싣는다. 여기서 빠뜨리면 **지분 모드에서만**
+  // 미등기가 조용히 무시된다(단독 모드는 정상이라 발견이 늦다).
+  const items = buildProperties(tagged, built.nonBusinessRatio, swap, {
+    land: gated.unregisteredLand as boolean | undefined,
+    building: gated.unregisteredBuilding as boolean | undefined,
+  }, idx === 0 ? primaryReductions : mapReductionsToEngine(share.reductions ?? []), gated.nonHeirBequest as boolean | undefined);
+  const bd = built.burdenedGiftBreakdown;
+  const gbAssetBurdenedGift =
+    carryoverApplied !== undefined && bd
+      ? {
+          assetId: String(idx),
+          label: carryoverApplied ? `${share.shareLabel} · 이월과세 적용(당초 증여자 기준)` : share.shareLabel,
+          breakdown: bd,
+          carryoverApplied,
+        }
+      : undefined;
+  const ap = buildApportionment(
+    tagged,
+    built.totalStd,
+    built.nonBusinessRatio,
+    built.landStdAtTransfer,
+    built.landStdAtAcq,
+    built.buildingStdAtTransfer,
+    built.buildingStdAtAcq,
+    built.usedEstimated,
+    built.legalBasis,
+    swap,
+    built.extensionStdAtTransfer,
+    built.extensionStdAtAcq,
+  );
+  return {
+    built,
+    tagged,
+    swap,
+    ap,
+    items: gbAssetBurdenedGift ? items.map((it) => ({ ...it, gbAssetBurdenedGift })) : items,
+    holdingStart: { land: landAcqDate, building: buildingAcqDate },
+  };
+}
+export type SharePiece = ReturnType<typeof buildSharePiece>;
+
+/**
+ * 지분 양도가액 — **마지막 지분이 잔액을 흡수**해 `Σ = 총양도가` 불변식을 지킨다
+ * (1/3 × 3 = 999,999,999 방지 · 메모리 `feedback_floor_residual_absorption`).
+ *
+ * 순서는 **지분 먼저, 그다음 §166⑥**이다(설계 D5-1) — 지분이 확정되고 그 안에서
+ * 토지·건물 안분이 일어나는 것이 법 구조에 맞고, floor 절사 위치도 그렇게 고정된다.
+ */
+export function shareTransferPrices(shares: ReadonlyArray<Pick<GeneralBuildingSharePayload, "ownershipRatio">>, totalTransferPrice: number): number[] {
+  let allocatedSum = 0;
+  return shares.map((share, idx) => {
+    const sharePrice =
+      idx === shares.length - 1
+        ? totalTransferPrice - allocatedSum
+        : applyRatio(totalTransferPrice, share.ownershipRatio);
+    allocatedSum += sharePrice;
+    return sharePrice;
+  });
+}
+
+/**
+ * 채택된 지분 조각 → 물건 결과 상세(`generalBuildingValuationDetail` 모양)·안분 표·§97②2호 단서 표시.
+ * 단건(축 B)은 집계 결과 상세에, 연간 합산은 자산별 상세(`generalBuildingDetailsByAsset[자산]`)에 싣는다 — 같은 조립.
+ */
+export function assembleShareDetail(
+  shares: ReadonlyArray<GeneralBuildingSharePayload>,
+  adopted: ReadonlyArray<SharePiece>,
+  sharePrices: ReadonlyArray<number>,
+) {
+  const allApportioned: BundledLikeApportionmentResult["apportioned"] = [];
+  const allCards: AssetCardForAggregate[] = [];
+  let totalStandardAtTransfer = 0;
+  let residualAbsorbedBy: string | null = null;
+  /** §166⑥ 안분 분모·NBL 명세 — 물건-수준이라 **첫 지분 것으로 충분**하다(superRefine이 동일성 강제). */
+  let detailBase: Record<string, unknown> | undefined;
+  let lastLandStdTotal: number | undefined;
+  let lastBuildingStdTotal: number | undefined;
+
+  // §97②2호 단서 표시 — **발동한 (지분 × 파트)만** 합산한다(설계 D5-3-1).
+  //   미발동분까지 더하면 「이 금액을 나목으로 채택했다」는 표시가 실제 채택액과 어긋난다
+  //   (메모리 `feedback_engine_result_display_drift`).
+  let anySwapApplied = false;
+  let swapEstimatedSide = 0;
+  let swapDirectSide = 0;
+  // §97②1호 가산분 결과 산식 echo — 단건 경로(`general-building-route-helper.ts`)와 같은 키를 지분 접미사 카드 id로 모은다.
+  //   없으면 산식이 가산분을 「자산별 양도비」·「사용자 직접 입력」으로 적는다(`gb-extension-capex-residuals.plan.md` L1).
+  const partDirectAddition: Record<string, number> = {};
+  const partBeforeExtensionCapex: Record<string, number> = {};
+  // 실가 분기 필요경비 산식 echo — 지분마다 금액이 달라 지분 인덱스로 싣는다(단건은 결과 상세에 그대로 · `actualExpenseEcho`).
+  const shareActualExpenseEcho: Record<string, unknown> = {};
+  // 결과 카드 블록 재료 — 지분마다 취득원인·평가액이 달라 지분 인덱스로 싣는다(`gb-fractional-result-blocks.plan.md` D-1).
+  const shareBlockEcho: Record<string, GbShareBlockEcho> = {};
+  // 상세명세서 산식 재료 — 지분 양도가액 · 환산 개산공제 base가 지분마다 다르다(계획서 `gb-carryover-estimated-share-lump-deduction.plan.md` §7 D-1).
+  const shareFormulaEcho: Record<string, GbShareFormulaEcho> = {};
+
+  shares.forEach((share, idx) => {
+    const { built, tagged, swap, ap } = adopted[idx];
+    if (swap) {
+      Object.assign(partDirectAddition, Object.fromEntries(swap.addition));
+      Object.assign(partBeforeExtensionCapex, Object.fromEntries(swap.beforeExtensionAddition ?? []));
+    }
+    if (built.actualExpenseEcho) shareActualExpenseEcho[String(idx)] = built.actualExpenseEcho;
+    const shareDeduction = (built.detailBase as { estimatedDeduction?: GbShareFormulaEcho["estimatedDeduction"] } | undefined)?.estimatedDeduction;
+    shareFormulaEcho[String(idx)] = { shareTransferPrice: sharePrices[idx], ...(shareDeduction ? { estimatedDeduction: shareDeduction } : {}) };
+    // 실가 분기는 판정·상속 표지가 `actualBlockEcho`에, 환산 분기는 `detailBase`(`gbOut`)에 있다. ①②③은 두 분기 모두 `detailBase`.
+    const blockSrc = { ...built.detailBase, ...built.actualBlockEcho } as GbShareBlockEcho;
+    shareBlockEcho[String(idx)] = {
+      label: share.shareLabel,
+      ownershipRatio: share.ownershipRatio,
+      ...(blockSrc.saleSplitJudgment ? { saleSplitJudgment: blockSrc.saleSplitJudgment } : {}),
+      ...(blockSrc.acquisitionByInheritance ? { acquisitionByInheritance: true } : {}),
+      ...(blockSrc.buildingAcquisitionByInheritance ? { buildingAcquisitionByInheritance: true } : {}),
+      ...(blockSrc.preDeemedAcquisition ? { preDeemedAcquisition: blockSrc.preDeemedAcquisition } : {}),
+      ...(blockSrc.preDeemedPurchase ? { preDeemedPurchase: blockSrc.preDeemedPurchase } : {}),
+    };
+    allApportioned.push(...ap.apportioned);
+    totalStandardAtTransfer += ap.totalStandardAtTransfer;
+    residualAbsorbedBy = ap.residualAbsorbedBy ?? residualAbsorbedBy;
+
+    if (swap?.swapApplied) {
+      anySwapApplied = true;
+      const applied = swap.perPart
+        ? Object.values(swap.perPart).filter((p) => p?.swapApplied)
+        : undefined;
+      swapEstimatedSide += applied
+        ? applied.reduce((s, p) => s + (p?.estimatedSide ?? 0), 0)
+        : swap.estimatedSideTotal;
+      swapDirectSide += applied
+        ? applied.reduce((s, p) => s + (p?.directSide ?? 0), 0)
+        : swap.directSide;
+    }
+
+    allCards.push(...tagged);
+    if (detailBase === undefined) detailBase = built.detailBase;
+    lastLandStdTotal = built.landStdAtTransfer;
+    lastBuildingStdTotal = built.buildingStdAtTransfer;
+  });
+
+  /**
+   * UI 자산별 산식 인라인 표시용 — 단건 경로와 **같은 키**를 채운다.
+   * 미설정 시 결과 화면의 §166⑥ 안분 산식 빌더가 통째로 죽는다.
+   * `assetCards`는 전 지분 concat이라 카드 라벨에 지분 이름이 들어 있다.
+   */
+  const detail = {
+    ...(detailBase ?? {}),
+    // §100③ 판정 — 물건 전체(계약서 기재액) 한 번. 지분 판정이 갈리면 비우고 지분별 판정만 남긴다(D-2).
+    saleSplitJudgment: propertySaleSplitJudgment(shares.map((_, idx) => shareBlockEcho[String(idx)]?.saleSplitJudgment)),
+    // §163⑨ 상속 표지·의제취득일 전 ①②③ 비교는 **지분마다** 다르다 — 첫 지분 값을 물건 전체로 싣지 않고 `shareBlockEcho`로만 싣는다(D-1).
+    acquisitionByInheritance: undefined,
+    buildingAcquisitionByInheritance: undefined,
+    preDeemedAcquisition: undefined,
+    preDeemedPurchase: undefined,
+    shareBlockEcho,
+    shareFormulaEcho,
+    // 카드는 **전 지분 concat** — 라벨에 지분 이름이 들어 있다.
+    assetCards: allCards,
+    ...(lastLandStdTotal !== undefined ? { landStdTotal: lastLandStdTotal } : {}),
+    ...(lastBuildingStdTotal !== undefined ? { buildingStdTotal: lastBuildingStdTotal } : {}),
+    ...(Object.keys(partDirectAddition).length > 0 ? { partDirectAddition } : {}),
+    ...(Object.keys(partBeforeExtensionCapex).length > 0 ? { partBeforeExtensionCapex } : {}),
+    ...(Object.keys(shareActualExpenseEcho).length > 0 ? { shareActualExpenseEcho } : {}),
+  };
+  return {
+    detail,
+    allCards,
+    apportionment: {
+      apportioned: allApportioned,
+      totalStandardAtTransfer,
+      residualAbsorbedBy,
+      legalBasis: "소득세법 시행령 §166⑥ · 지분별 취득 (법 §98 · 영 §162①)",
+      warnings: [] as string[],
+    },
+    swapComparison: anySwapApplied
+      ? { estimatedSide: swapEstimatedSide, directSide: swapDirectSide, chosen: "direct" as const }
+      : undefined,
+  };
+}
+
 /**
  * 지분 분할 일반건물 계산.
  *
@@ -171,33 +414,8 @@ export function calculateGeneralBuildingFractional(
   burdened?: { wholeInfo?: BurdenedGiftInfo; date: Date },
 ): GeneralBuildingRouteResult {
   const allProperties: TransferTaxItemInput[] = [];
-  const allApportioned: BundledLikeApportionmentResult["apportioned"] = [];
-  const allCards: AssetCardForAggregate[] = [];
-  let totalStandardAtTransfer = 0;
-  let residualAbsorbedBy: string | null = null;
-  let allocatedSum = 0;
-  /** §166⑥ 안분 분모·NBL 명세 — 물건-수준이라 **첫 지분 것으로 충분**하다(superRefine이 동일성 강제). */
-  let detailBase: Record<string, unknown> | undefined;
-  let lastLandStdTotal: number | undefined;
-  let lastBuildingStdTotal: number | undefined;
-
-  // §97②2호 단서 표시 — **발동한 (지분 × 파트)만** 합산한다(설계 D5-3-1).
-  //   미발동분까지 더하면 「이 금액을 나목으로 채택했다」는 표시가 실제 채택액과 어긋난다
-  //   (메모리 `feedback_engine_result_display_drift`).
-  let anySwapApplied = false;
-  let swapEstimatedSide = 0;
-  let swapDirectSide = 0;
-  // §97②1호 가산분 결과 산식 echo — 단건 경로(`general-building-route-helper.ts`)와 같은 키를 지분 접미사 카드 id로 모은다.
-  //   없으면 산식이 가산분을 「자산별 양도비」·「사용자 직접 입력」으로 적는다(`gb-extension-capex-residuals.plan.md` L1).
-  const partDirectAddition: Record<string, number> = {};
-  const partBeforeExtensionCapex: Record<string, number> = {};
-  // 실가 분기 필요경비 산식 echo — 지분마다 금액이 달라 지분 인덱스로 싣는다(단건은 결과 상세에 그대로 · `actualExpenseEcho`).
-  const shareActualExpenseEcho: Record<string, unknown> = {};
-  // 결과 카드 블록 재료 — 지분마다 취득원인·평가액이 달라 지분 인덱스로 싣는다(`gb-fractional-result-blocks.plan.md` D-1).
-  const shareBlockEcho: Record<string, GbShareBlockEcho> = {};
-  // 상세명세서 산식 재료 — 지분 양도가액 · 환산 개산공제 base가 지분마다 다르다(계획서 `gb-carryover-estimated-share-lump-deduction.plan.md` §7 D-1).
-  const shareFormulaEcho: Record<string, GbShareFormulaEcho> = {};
-  const sharePrices: number[] = [];
+  // (1) 지분 양도가액 — 마지막 지분이 잔액 흡수(`shareTransferPrices`).
+  const sharePrices = shareTransferPrices(shares, totalTransferPrice);
 
   /**
    * 부담부증여 × 이월과세(§97의2) 지분 — 요건(①괄호·②1·2호·③)을 충족하면 그 지분이 **비교 단위 하나**다(Q-1 a).
@@ -213,112 +431,14 @@ export function calculateGeneralBuildingFractional(
     return { ct, applicablePeriodYears: eligibility.applicablePeriodYears };
   });
 
-  /** 지분 하나의 한 시나리오 — 카드·표시 재료. `carryoverApplied`가 정해지면 카드에 지분 §159 명세를 싣는다. */
-  const buildPiece = (
-    share: GeneralBuildingSharePayload,
-    idx: number,
-    sharePrice: number,
-    coerced: Record<string, unknown>,
-    info: BurdenedGiftInfo | undefined,
-    dates: { building: Date; land?: Date } | undefined,
-    carryoverApplied: boolean | undefined,
-    /** 시나리오 A만 — 당초 증여자 자본적지출(§97의2①2호 · `carryoverDonorCapex`). */
-    donorCapex = 0,
-  ) => {
-    // (2-b) 물건 사건 게이팅 — 증축·용도변경 前/後 판정 (D4). A는 당초 증여자 취득일 기준이다(V-1 — 보유기간이 그날부터라 사건 前/後도 그날로 가른다).
-    const buildingAcqDate = dates?.building ?? buildingAcqDateOf({ ...share, valuation: coerced });
-    const gated = gateShareEvents(
-      coerced as never,
-      buildingAcqDate,
-    ) as unknown as Record<string, unknown>;
 
-    // (3) 카드 조립 — swap도 이 안에서 결정된다 ⇒ 판정 단위 = 지분 × 파트
-    const landAcqDate =
-      dates?.land ??
-      toOptionalDate(gated.landAcquisitionDate) ??
-      toDate(share.acquisitionDate, "generalBuildingShares[].acquisitionDate");
-    // 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축 — 증축 일괄값이 있으면 그것, 없으면 지분 값.
-    const capex = withCarryoverDonorCapex(gated, (gated.bundledExpenses as number | undefined) ?? share.expenses ?? 0, donorCapex);
-    const built = buildGbPartCards(
-      capex.gbv,
-      sharePrice,
-      transferDate,
-      buildingAcqDate,
-      landAcqDate,
-      share.ownershipRatio,
-      (gated.bundledAcquisitionPrice as number | undefined) ?? share.acquisitionPrice ?? 0,
-      capex.legacyExpenses,
-      // 부담부증여 — 그 지분의 §159 정보 + 지분율(A·C 지분 축소). 비부담부증여면 둘 다 undefined(종전 경로 그대로).
-      info,
-      burdened ? share.ownershipRatio : undefined,
-      // 계약 총액(100%) — 전 지분이 같은 계약서로 §100③을 판정한다(지분끼리 결론이 갈리지 않는다).
-      totalTransferPrice,
-    );
-
-    // (4) 접미사 — 카드와 swap Map을 **같은 시점에** 태깅한다
-    // 접미사는 문자열이다 — 컴패니언 축이 `assetId`를 쓰므로 leaf가 일반화됐다.
-    const tagged = tagGbCards(built.cards, String(idx), share.shareLabel);
-    const swap = built.swap ? remapGbSwap(built.swap, String(idx)) : undefined;
-
-    // §104③ 미등기 — 지분 경로도 토지·건물 축을 싣는다. 여기서 빠뜨리면 **지분 모드에서만**
-    // 미등기가 조용히 무시된다(단독 모드는 정상이라 발견이 늦다).
-    const items = buildProperties(tagged, built.nonBusinessRatio, swap, {
-      land: gated.unregisteredLand as boolean | undefined,
-      building: gated.unregisteredBuilding as boolean | undefined,
-    }, idx === 0 ? primaryReductions : mapReductionsToEngine(share.reductions ?? []), gated.nonHeirBequest as boolean | undefined);
-    const bd = built.burdenedGiftBreakdown;
-    const gbAssetBurdenedGift =
-      carryoverApplied !== undefined && bd
-        ? {
-            assetId: String(idx),
-            label: carryoverApplied ? `${share.shareLabel} · 이월과세 적용(당초 증여자 기준)` : share.shareLabel,
-            breakdown: bd,
-            carryoverApplied,
-          }
-        : undefined;
-    const ap = buildApportionment(
-      tagged,
-      built.totalStd,
-      built.nonBusinessRatio,
-      built.landStdAtTransfer,
-      built.landStdAtAcq,
-      built.buildingStdAtTransfer,
-      built.buildingStdAtAcq,
-      built.usedEstimated,
-      built.legalBasis,
-      swap,
-      built.extensionStdAtTransfer,
-      built.extensionStdAtAcq,
-    );
-    return {
-      built,
-      tagged,
-      swap,
-      ap,
-      items: gbAssetBurdenedGift ? items.map((it) => ({ ...it, gbAssetBurdenedGift })) : items,
-      holdingStart: { land: landAcqDate, building: buildingAcqDate },
-    };
-  };
-  type SharePiece = ReturnType<typeof buildPiece>;
-
+  const pieceCtx: SharePieceContext = { transferDate, totalTransferPrice, primaryReductions, burdened };
   const piecesB: SharePiece[] = [];
   const piecesA: Array<SharePiece | undefined> = [];
   const drafts: GbBgCarryoverUnitDraft[] = [];
 
   shares.forEach((share, idx) => {
-    /**
-     * (1) 지분 양도가액 — **마지막 지분이 잔액을 흡수**해 `Σ = 총양도가` 불변식을 지킨다
-     *     (1/3 × 3 = 999,999,999 방지 · 메모리 `feedback_floor_residual_absorption`).
-     *
-     * 순서는 **지분 먼저, 그다음 §166⑥**이다(설계 D5-1) — 지분이 확정되고 그 안에서
-     * 토지·건물 안분이 일어나는 것이 법 구조에 맞고, floor 절사 위치도 그렇게 고정된다.
-     */
-    const sharePrice =
-      idx === shares.length - 1
-        ? totalTransferPrice - allocatedSum
-        : applyRatio(totalTransferPrice, share.ownershipRatio);
-    allocatedSum += sharePrice;
-    sharePrices[idx] = sharePrice;
+    const sharePrice = sharePrices[idx];
 
     /**
      * (2) ⑭ **Date 변환 먼저** — 단건과 **같은 함수**를 쓴다.
@@ -331,17 +451,17 @@ export function calculateGeneralBuildingFractional(
     const info = burdened ? share.burdenedGiftInfo : undefined;
     const co = carryoverOf[idx];
     if (!co || !info) {
-      piecesB.push(buildPiece(share, idx, sharePrice, coerced, info, undefined, info ? false : undefined));
+      piecesB.push(buildSharePiece(pieceCtx, share, idx, String(idx), sharePrice, coerced, info, undefined, info ? false : undefined));
       piecesA.push(undefined);
       return;
     }
     // B = 양도인(증여받은 사람) 기준 — K-6/K-7은 증여일 평가액(`actual*`)을 실지거래가액으로 읽는다(소령 §163⑨).
-    const b = buildPiece(share, idx, sharePrice, coerced, toTransferorBasisInfo(info), undefined, false);
+    const b = buildSharePiece(pieceCtx, share, idx, String(idx), sharePrice, coerced, toTransferorBasisInfo(info), undefined, false);
     // A = ①1호 취득가액 치환 + ①3호 증여세 상당액(§159 안분 단계가 소비) · §95④ 단서 — 증여받은 파트의 기산일만 당초 증여자 취득일부터.
     const donor = co.ct.donorAcquisitionDate;
     const startA = carryoverHoldingStartsA(info, donor, b.holdingStart);
     const donorCapex = carryoverDonorCapex(co.ct, transferDate);
-    const a = buildPiece(share, idx, sharePrice, coerced, applyCarryoverDonorBasis(info, co.ct.giftTaxAmount, donorCapex), startA, true, donorCapex);
+    const a = buildSharePiece(pieceCtx, share, idx, String(idx), sharePrice, coerced, applyCarryoverDonorBasis(info, co.ct.giftTaxAmount, donorCapex), startA, true, donorCapex);
     piecesB.push(b);
     piecesA.push(a);
     drafts.push({
@@ -389,98 +509,24 @@ export function calculateGeneralBuildingFractional(
   const aggregated = calc.result;
 
   // 결과 표시 재료는 **채택된 시나리오**의 카드로 모은다 — 결정세액(A)과 산식·안분 표가 갈리지 않게 한다.
-  shares.forEach((share, idx) => {
-    const adoptedA = piecesA[idx] && calc.units[String(idx)]?.adoptedScenario === "A";
-    const { built, tagged, swap, ap } = adoptedA ? piecesA[idx]! : piecesB[idx];
-    if (swap) {
-      Object.assign(partDirectAddition, Object.fromEntries(swap.addition));
-      Object.assign(partBeforeExtensionCapex, Object.fromEntries(swap.beforeExtensionAddition ?? []));
-    }
-    if (built.actualExpenseEcho) shareActualExpenseEcho[String(idx)] = built.actualExpenseEcho;
-    const shareDeduction = (built.detailBase as { estimatedDeduction?: GbShareFormulaEcho["estimatedDeduction"] } | undefined)?.estimatedDeduction;
-    shareFormulaEcho[String(idx)] = { shareTransferPrice: sharePrices[idx], ...(shareDeduction ? { estimatedDeduction: shareDeduction } : {}) };
-    // 실가 분기는 판정·상속 표지가 `actualBlockEcho`에, 환산 분기는 `detailBase`(`gbOut`)에 있다. ①②③은 두 분기 모두 `detailBase`.
-    const blockSrc = { ...built.detailBase, ...built.actualBlockEcho } as GbShareBlockEcho;
-    shareBlockEcho[String(idx)] = {
-      label: share.shareLabel,
-      ownershipRatio: share.ownershipRatio,
-      ...(blockSrc.saleSplitJudgment ? { saleSplitJudgment: blockSrc.saleSplitJudgment } : {}),
-      ...(blockSrc.acquisitionByInheritance ? { acquisitionByInheritance: true } : {}),
-      ...(blockSrc.buildingAcquisitionByInheritance ? { buildingAcquisitionByInheritance: true } : {}),
-      ...(blockSrc.preDeemedAcquisition ? { preDeemedAcquisition: blockSrc.preDeemedAcquisition } : {}),
-      ...(blockSrc.preDeemedPurchase ? { preDeemedPurchase: blockSrc.preDeemedPurchase } : {}),
-    };
-    allApportioned.push(...ap.apportioned);
-    totalStandardAtTransfer += ap.totalStandardAtTransfer;
-    residualAbsorbedBy = ap.residualAbsorbedBy ?? residualAbsorbedBy;
-
-    if (swap?.swapApplied) {
-      anySwapApplied = true;
-      const applied = swap.perPart
-        ? Object.values(swap.perPart).filter((p) => p?.swapApplied)
-        : undefined;
-      swapEstimatedSide += applied
-        ? applied.reduce((s, p) => s + (p?.estimatedSide ?? 0), 0)
-        : swap.estimatedSideTotal;
-      swapDirectSide += applied
-        ? applied.reduce((s, p) => s + (p?.directSide ?? 0), 0)
-        : swap.directSide;
-    }
-
-    allCards.push(...tagged);
-    if (detailBase === undefined) detailBase = built.detailBase;
-    lastLandStdTotal = built.landStdAtTransfer;
-    lastBuildingStdTotal = built.buildingStdAtTransfer;
-  });
+  const adopted = shares.map((_, idx) =>
+    piecesA[idx] && calc.units[String(idx)]?.adoptedScenario === "A" ? piecesA[idx]! : piecesB[idx]);
+  const asm = assembleShareDetail(shares, adopted, sharePrices);
   // 지분별 [A]/[B] 비교 echo(키 = 카드 접미사) — 결과 카드·신고서 취득일이 읽는다.
   attachGbCarryoverUnits(calc, aggregated, drafts, units);
   // 본인 신축 §114조의2 가산세(K-5/K-7)가 붙었으면 «확인 필요» 고지 — 단건·컴패니언과 같은 문구·같은 조건.
-  if (burdened && allCards.some((c) => c.penaltyAxis) && !aggregated.warnings.includes(GB_BG_SELF_BUILT_NOTICE)) {
+  if (burdened && asm.allCards.some((c) => c.penaltyAxis) && !aggregated.warnings.includes(GB_BG_SELF_BUILT_NOTICE)) {
     aggregated.warnings.push(GB_BG_SELF_BUILT_NOTICE);
   }
 
-  if (anySwapApplied) {
+  if (asm.swapComparison) {
     aggregated.swapApplied = true;
-    aggregated.swapComparison = {
-      estimatedSide: swapEstimatedSide,
-      directSide: swapDirectSide,
-      chosen: "direct",
-    };
+    aggregated.swapComparison = asm.swapComparison;
   }
-
-  /**
-   * UI 자산별 산식 인라인 표시용 — 단건 경로와 **같은 키**를 채운다.
-   * 미설정 시 결과 화면의 §166⑥ 안분 산식 빌더가 통째로 죽는다.
-   * `assetCards`는 전 지분 concat이라 카드 라벨에 지분 이름이 들어 있다.
-   */
-  aggregated.generalBuildingValuationDetail = {
-    ...(detailBase ?? {}),
-    // §100③ 판정 — 물건 전체(계약서 기재액) 한 번. 지분 판정이 갈리면 비우고 지분별 판정만 남긴다(D-2).
-    saleSplitJudgment: propertySaleSplitJudgment(shares.map((_, idx) => shareBlockEcho[String(idx)]?.saleSplitJudgment)),
-    // §163⑨ 상속 표지·의제취득일 전 ①②③ 비교는 **지분마다** 다르다 — 첫 지분 값을 물건 전체로 싣지 않고 `shareBlockEcho`로만 싣는다(D-1).
-    acquisitionByInheritance: undefined,
-    buildingAcquisitionByInheritance: undefined,
-    preDeemedAcquisition: undefined,
-    preDeemedPurchase: undefined,
-    shareBlockEcho,
-    shareFormulaEcho,
-    // 카드는 **전 지분 concat** — 라벨에 지분 이름이 들어 있다.
-    assetCards: allCards,
-    ...(lastLandStdTotal !== undefined ? { landStdTotal: lastLandStdTotal } : {}),
-    ...(lastBuildingStdTotal !== undefined ? { buildingStdTotal: lastBuildingStdTotal } : {}),
-    ...(Object.keys(partDirectAddition).length > 0 ? { partDirectAddition } : {}),
-    ...(Object.keys(partBeforeExtensionCapex).length > 0 ? { partBeforeExtensionCapex } : {}),
-    ...(Object.keys(shareActualExpenseEcho).length > 0 ? { shareActualExpenseEcho } : {}),
-  } as never;
+  aggregated.generalBuildingValuationDetail = asm.detail as never;
 
   return {
-    apportionment: {
-      apportioned: allApportioned,
-      totalStandardAtTransfer,
-      residualAbsorbedBy,
-      legalBasis: "소득세법 시행령 §166⑥ · 지분별 취득 (법 §98 · 영 §162①)",
-      warnings: [],
-    },
+    apportionment: asm.apportionment,
     aggregated,
     // 결과뷰의 «부담부증여 평가 명세»·증여세 신고서 슬롯 — 컴패니언(`bundled-route.ts`)·단건과 같은 키.
     ...(aggregated.burdenedGift ? { transferBurdenedGiftBreakdown: aggregated.burdenedGift } : {}),

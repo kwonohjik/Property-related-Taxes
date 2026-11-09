@@ -8,6 +8,8 @@
 import type { PreDeemedPurchaseDetail } from "@/lib/tax-engine/types/transfer-pre-deemed-purchase.types";
 import type { AggregateTransferResult } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { baseCardId, SHARE_ID_SEPARATOR } from "@/lib/tax-engine/general-building-share-id";
+import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
+import { shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 
 export function preDeemedAcqDateNote(d: PreDeemedPurchaseDetail): string {
@@ -36,8 +38,11 @@ export function preDeemedDetailOfCard(
   const kind = base.startsWith("land") ? "land" : base.startsWith("building") ? "building" : undefined;
   if (!kind) return undefined;
   const detail = aggregated.generalBuildingValuationDetail;
-  // 접미사 = 지분 인덱스(지분 분할) 또는 자산 id(함께 양도 일반건물)
+  // 접미사 = 지분 인덱스(지분 분할) 또는 자산 id(함께 양도 일반건물) 또는 `<자산id>.<지분번호>`(연간 합산 지분 — 트랙 GS)
   const suffix = propertyId.slice(base.length + SHARE_ID_SEPARATOR.length);
-  const d = (detail?.shareBlockEcho?.[suffix] ?? aggregated.generalBuildingDetailsByAsset?.[suffix] ?? detail)?.preDeemedPurchase;
+  const assetDetail = aggregated.generalBuildingDetailsByAsset?.[cardSuffixOf(propertyId) ?? suffix];
+  const idx = shareIndexOf(propertyId);
+  const assetShare = idx !== undefined ? (assetDetail as { shareBlockEcho?: Record<string, { preDeemedPurchase?: PreDeemedPurchaseDetail }> } | undefined)?.shareBlockEcho?.[String(idx)] : undefined;
+  const d = (detail?.shareBlockEcho?.[suffix] ?? assetShare ?? assetDetail ?? detail)?.preDeemedPurchase;
   return d && (!d.part || d.part === kind) ? d : undefined;
 }

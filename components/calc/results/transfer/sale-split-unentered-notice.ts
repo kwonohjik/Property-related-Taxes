@@ -13,6 +13,7 @@
  * 결과 카드·신고서 양식 표 각주·상세명세서 «양도가액» note가 **같은 함수**를 불러 문장이 갈라지지 않는다.
  */
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
+import { multiFormAssetOf } from "./multi-result-groups";
 import type { ApportionBasisKind } from "@/lib/tax-engine/sale-split-apportion-basis";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -59,7 +60,7 @@ export function assetOfProperty(
   formData: TransferFormData | undefined,
   propertyFormMap: AggregateMeta["propertyFormMap"],
 ): AssetForm | undefined {
-  const fromPropertyForm = propertyFormMap?.get(propertyId)?.assets[0];
+  const fromPropertyForm = multiFormAssetOf(propertyFormMap?.get(propertyId), propertyId);
   if (fromPropertyForm) return fromPropertyForm;
   const assets = formData?.assets;
   if (!assets) return undefined;

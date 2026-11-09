@@ -16,7 +16,9 @@ import {
   refineMultiUnsupported,
 } from "@/lib/api/transfer-tax-schema-multi-refines";
 
-const route = readFileSync("app/api/calc/transfer/multi/route.ts", "utf8");
+// ⑭ 매핑은 두 파일에 있다 — 건별 엔진 입력(`route-property-input.ts` · route.ts에서 분리)과 일반건물 펼침 진입(`route.ts`의 `p.generalBuildingValuation`·`p.generalBuildingShares`).
+const route =
+  readFileSync("app/api/calc/transfer/multi/route.ts", "utf8") + readFileSync("app/api/calc/transfer/multi/route-property-input.ts", "utf8");
 const mapped = new Set([...route.matchAll(/\bp\.([A-Za-z0-9_]+)/g)].map((m) => m[1]));
 
 // zod v4의 superRefine은 객체 스키마를 그대로 돌려준다(래퍼 없음) — `.shape`로 키를 읽는다.
@@ -67,6 +69,10 @@ describe("F-12 다건 키 분류", () => {
     // 일반건물 부담부증여 × 이월과세만 거부(⑧ 같은 모드) — 묶음 명세는 값이 있으면 거부
     expect(issues({ transferType: "burdened_gift", burdenedGiftInfo: {}, generalBuildingValuation: {}, carryoverTaxation: {} })).toEqual(["burdenedGiftInfo"]);
     expect(issues({ burdenedGiftWholeInfo: {} })).toEqual(["burdenedGiftWholeInfo"]);
+    // 일반건물 지분 분할 취득(트랙 GS) — 지분 배열은 ⑭가 펼친다. 부담부증여 지분만 거부(⑧ 같은 모드)
+    expect(issues({ generalBuildingShares: [{}, {}] })).toEqual([]);
+    expect(issues({ generalBuildingShares: [{ burdenedGiftInfo: {} }, {}] })).toEqual(["generalBuildingShares"]);
+    expect(issues({ generalBuildingShares: [{}, {}], transferType: "burdened_gift" })).toEqual(["generalBuildingShares"]);
     expect(issues({ companionAssets: [{}] })).toEqual(["companionAssets"]);
     expect(issues({ reductions: [{ type: "self_farming" }] })).toEqual([]);
     expect(issues({ reductions: [{ type: "unsold_98" }] })).toEqual(["reductions"]);
@@ -78,7 +84,7 @@ describe("F-12 다건 키 분류", () => {
     expect(issues({ carryoverTaxation: { giftAssumedDebt: 0 } })).toEqual([]);
     expect(issues({ carryoverTaxation: { giftAssumedDebt: 100_000_000 } })).toEqual(["carryoverTaxation"]);
     expect(issues({ acquisitionCause: "carryover_gift" })).toEqual([]);
-    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType", "carryoverTaxation", "burdenedGiftInfo"]);
+    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType", "carryoverTaxation", "burdenedGiftInfo", "generalBuildingShares"]);
     for (const k of rejected) {
       if (scalar.has(k)) continue;
       expect(issues({ [k]: {} })).toEqual([k]);
