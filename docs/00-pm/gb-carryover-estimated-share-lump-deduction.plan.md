@@ -67,7 +67,7 @@
 | V-1 | (나)안 전용 — (다)안을 골라 해당 없음 |
 | V-2 | ✅ 같은 결함이었다(축 A 50% −280,800 · 축 B 60/40 −889,200) → §6에서 함께 고침 |
 | V-3 | ✅ 같은 결함이었다. 실가 경로는 **두 파트 모두 실가 모드**일 때만 탄다(`actualPriceMode`) — 「토지 실가 + 건물 환산 모드」는 환산 경로다. 두 파트 실가 시료: 축 A 50% −444,600 · 축 B 60/40 −936,000 → §6에서 고침 |
-| V-4 | 표시 echo(`transfer-tax-carryover-finish.ts` `lumpDeductionBase`)도 같은 leaf(`lumpSumDeductionRatioOf`)로 바꿨다 [코드]. 화면에 보이는 값은 실측하지 않았다 — 확인 필요 |
+| V-4 | ✅ 실측(§7) — 상세명세서 필요경비 칸의 이월과세 카드 산식 「개산공제 X = 취득시 기준시가 B × 3%」가 26칸 모두 B × 3% = X다. 측정 중 **별개 표시 결함 D-1**(축 B 둘째 지분부터 매매 환산 파트 산식이 첫 지분 재료) 발견 |
 | — | 사람이 직접 한 브라우저 수동 확인은 하지 않았다 |
 
 ## 6. 구현 결과 (Q-1 a · Q-2 (다) · Q-3 a)
@@ -99,3 +99,40 @@
 | 기존 anchor 단언 반전 1건 | `transfer.route.gb-carryover-legacy-estimated.anchor.test.ts` GBLE-05(지분 40% legacy 이월과세 × 환산): 결정세액 111,960,800 → **112,464,800**. 종전 값은 개산공제 100% 기준 3,000,000을 스냅샷으로 고정한 것이었다(지분 미축소 결함). 차이 504,000 = 개산공제 차이 1,800,000 × 28%. 같은 테스트의 환산 취득가액 100,000,000 단언(기준시가 미축소 계약)은 그대로 통과 — pre-push 전체 실행(3931파일)에서 이 1건만 실패했다 |
 
 - 측정 중 내 오류: 처음 「실가 경로」라 부른 시료(토지 실가 + 건물 환산 모드)는 환산 경로였다. M3가 살아남아 알았다. 두 파트 실가 시료로 바꾸자 컴패니언 · 축 B 실가 분기(`general-building-part-cards.ts`)도 같은 결함이었고, 함께 고쳤다.
+
+## 7. V-4 실측 — 결과 화면 개산공제 base 표시 (2026-11-09)
+
+화면 경로 그대로: 폼 → ⑧ → ④ → route POST → `aggregateToFilingResult` → `buildStatementItems`(`DetailedCalculationStatementCard`가 부르는 것과 같은 인자 — `BundledAllocationCard.tsx:339`의 `aggregateMeta`에서 헤더 전용 `ownershipMap`·`landNatureMap`만 뺐다). §6 anchor의 시료(건물 · 토지 파트 이월과세 환산 · 두 파트 실가 · 증축 3-way × 100% · 축 A 50 · 30% · 대조 50% · 함께 양도 50% · 축 B 60/40)를 그대로 썼다. probe는 지웠다.
+
+### 7.1 이월과세 카드 — 결함 없음 [직접]
+
+- 읽는 곳: `components/calc/results/transfer/DetailedStatementGbCarryoverFormulas.ts:52` `a.lumpDeductionBase ?? a.estimatedStdPriceAtAcquisition` → 「개산공제 {칸 값} = 취득시 기준시가 {base} × 3% — 시행령 §163⑥」.
+- 26칸(4시료 × 6경로 + 축 B 둘째 카드 2) 모두 base × 3% = 칸 값 = 엔진 `necessaryExpense`.
+  - 축 A 50%: base 50,000,000 → 1,500,000 · 30%: 30,000,000 → 900,000 · 함께 양도 50%: 50,000,000 → 1,500,000 · 축 B: 60,000,000 → 1,800,000 / 40,000,000 → 1,200,000.
+  - 같은 몫 100% 대조와 문구가 같다(대조는 기준시가 자체가 50,000,000).
+- echo `estimatedStdPriceAtAcquisition`·`estimatedStdPriceAtTransfer`는 지분 카드에서 100% 값(100,000,000 · 200,000,000)이다. 이 값을 쓰는 화면 문구는 환산 비율(분자/분모)뿐이라 지분과 무관하다.
+- 이월과세 비교 카드(`CarryoverComparisonCard`·`CarryoverScenarioAFilingCard`)에는 개산공제 base 표시가 없다(grep 0건).
+
+### 7.2 D-1 — 축 B(지분 분할) 둘째 지분부터 매매 환산 파트 산식이 첫 지분 재료 [직접 · 기존 결함]
+
+이월과세와 무관하다 — 순수 매매 환산 축 B에서도 같다. **값 · 세액은 맞고** 상세명세서의 산식 문구만 자기 값을 못 만든다.
+
+| 시료(일반건물 10억 · 토지 · 건물 매매 환산) | 칸 | 화면 산식 | 맞는 산식 |
+|---|---|---|---|
+| 축 B 60/40 · 지분 2 | 필요경비 토지 · 건물 | 취득시 토지기준시가 **60,000,000** × 3% = 1,200,000 | 40,000,000 × 3% |
+| 축 B 60/40 · 지분 2 | 양도가액 토지 · 건물 | **600,000,000** × 200,000,000 / (200,000,000+200,000,000) = 200,000,000 | 400,000,000 × … |
+| 축 B 20/30/50 · 지분 2 · 3 | 양도가액 · 필요경비 | 지분 1의 200,000,000 · 20,000,000을 그대로 쓴다(값 150,000,000 · 250,000,000 / 900,000 · 1,500,000) | 지분별 300,000,000 · 500,000,000 / 30,000,000 · 50,000,000 |
+| 증축 3-way 축 B 60/40 · 지분 2 | 증축건물 양도가액(잔액) | 600,000,000 − 토지 272,727,272 − 건물 272,727,272 = 36,363,638 | 400,000,000 − 181,818,181 − 181,818,181 |
+| 증축 3-way 축 B 60/40 · 지분 2 | 증축건물 필요경비 | 취득시 증축건물기준시가 18,000,000 × 3% = 360,000 | 12,000,000 × 3% |
+
+- 취득가액 칸 산식은 맞다(카드 자기 양도가액 × 기준시가 비율).
+- 지분 1 카드와 이월과세 카드(§7.1)는 맞다 — 이월과세 카드는 카드 자기 echo(`carryoverTaxationDetail`)를 읽는다.
+- 원인 [코드]: 축 B는 결과 최상위 `generalBuildingValuationDetail` 하나뿐이고 그것이 **첫 지분의 `detailBase`**다(`general-building-fractional.ts:424` `if (detailBase === undefined) detailBase = built.detailBase` — `gb-fractional-result-blocks.plan.md` §1이 블록 쪽으로 같은 사실을 적었다). 명세서 `gbOf`(`DetailedStatementHelpers.ts:169`) → `gbFormulaInputsOf`(`DetailedStatementGbAsset.ts:30`)가 `single`이 있으면 지분을 가리지 않고 그것을 모든 카드에 준다. 실가 경로 필요경비만 지분별 `shareActualExpenseEcho`로 덮어 읽는다(`DetailedStatementGbFormulas.ts:573`) — 환산 경로 `estimatedDeduction` · 양도가액 합계에는 지분별 echo가 없다.
+- 신고서 표 · PDF · 인쇄본의 같은 문구는 측정하지 않았다 — 확인 필요.
+
+### 7.3 결정 대기
+
+| Q | 내용 | 권장 |
+|---|---|---|
+| Q-4 | D-1을 고칠까 | **a 고친다** — 산식이 자기 값을 못 만드는 표시 결함(F-20 증축 base와 같은 종류) / b 문서만 |
+| Q-5 | 방식 | **(가) 지분별 echo 확장** — `shareActualExpenseEcho`처럼 환산 경로도 지분별 `estimatedDeduction`·양도가액 합계를 싣고 빌더가 카드 지분 값으로 덮어 읽는다 / (나) 빌더가 카드 값에서 역산(dual-truth라 비권장) |
