@@ -20,8 +20,8 @@ import {
   track127_7EffectLabel,
 } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { axisBEffectiveAsset } from "./axis-b-effective-asset";
-import { isReductionAllowedForAssetKind, REDUCTION_METADATA, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
-import { assetKindGateReason } from "@/lib/tax-engine/transfer-reductions";
+import { REDUCTION_METADATA, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
+import { assetKindGateMessage } from "@/lib/tax-engine/transfer-reductions";
 import { asksInheritedPresaleQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
 import { unsold98AcquisitionCauseReason } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
 import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
@@ -177,19 +177,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         }
         // 주택 게이트 (2026-06-29): 비주택 자산에 stale 선택된 주택 감면(§97·§99·§98 시리즈) 차단.
         // UI disabled와 동일 판정 (단일 소스 isReductionAllowedForAssetKind). field별 검증보다 먼저.
-        if (!isReductionAllowedForAssetKind(r.type, asset.assetKind)) {
-          const gateLabel =
-            REDUCTION_METADATA[r.type as keyof typeof REDUCTION_METADATA]?.uiLabel ?? "이 감면";
-          // §69는 반대 방향 게이트다 — 「토지 전용」이라 주택 문구를 쓰면 사유가 거꾸로 안내된다.
-          if (r.type === "self_farming")
-            return fail(
-              "자경농지 감면(조특법 §69)은 토지 양도에만 적용됩니다. 자산 종류를 확인하거나 감면 선택을 해제하세요.",
-            );
-          // §98 시리즈 6조문 × 조합원 경로·분양권은 「주택 양도」 문구가 사유와 맞지 않는다(US-44) — 엔진 고지와 같은 문구.
-          const articleReason = assetKindGateReason(r.type, asset.assetKind);
-          if (articleReason) return fail(`${articleReason} 감면 선택을 해제하세요.`);
-          return fail(`${gateLabel} 감면은 주택 양도에만 적용됩니다. 자산 종류를 확인하거나 감면 선택을 해제하세요.`);
-        }
+        const gateMessage = assetKindGateMessage(r.type, asset.assetKind);
+        if (gateMessage) return fail(gateMessage);
         // US-07 — §98 시리즈 취득 원인 게이트(⑤·엔진과 같은 leaf). 답이 비면 묻고, 불성립이 확정되면 막는다. 「모름」은 엔진이 확인 필요로 안내한다.
         if (asksInheritedPresaleQuestion(r.type, asset.acquisitionCause) && !asset.inheritedPresaleCompletedByHeir) {
           return fail("상속받은 주택입니다. 상속 당시 분양권이었고 본인(상속인)이 잔금을 내고 취득했는지 선택하세요.");

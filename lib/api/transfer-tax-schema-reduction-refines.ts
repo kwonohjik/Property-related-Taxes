@@ -14,8 +14,30 @@ import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { new994CapitalRegionConflict } from "@/lib/tax-engine/transfer-reductions/new-99-4-size";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { assetKindGateMessage, reductionAssetKindFromWire } from "@/lib/tax-engine/transfer-reductions/asset-kind-gate";
 
 type ReductionLike = { type: string } & Record<string, unknown>;
+
+/**
+ * 감면 × 자산 종류 게이트 — ⑧(`validateStep2Reductions`)과 같은 단일 소스 술어·문구(`assetKindGateMessage`).
+ * ⑧을 거치지 않는 직접 호출은 200 + 감면 적용이었다(§99의3 × 토지·건물·상가건물 40,755,002 과소 — NH-54).
+ * 엔진 진입이 아니라 여기(쪼개기 전 원본 본문)에서 거른다: 다건 집계가 겸용 컴패니언을 상가 land·building 카드로
+ * 쪼개 감면을 싣기 때문에 엔진 `propertyType`로는 ⑧의 `assetKind`를 복원할 수 없다.
+ * `kind`는 주 자산 `propertyType` · 컴패니언 `assetKind`(겸용 `mixed_use_house` 포함). 모르는 값은 막지 않는다.
+ */
+export function refineReductionAssetKindGate(
+  reductions: ReadonlyArray<ReductionLike> | undefined,
+  kind: string | undefined,
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+) {
+  const assetKind = reductionAssetKindFromWire(kind);
+  if (!assetKind) return;
+  (reductions ?? []).forEach((r, i) => {
+    const message = assetKindGateMessage(r.type, assetKind);
+    if (message) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, i, "type"], message });
+  });
+}
 
 export function refineReductionRequiredInputs(
   reductions: ReadonlyArray<ReductionLike> | undefined,

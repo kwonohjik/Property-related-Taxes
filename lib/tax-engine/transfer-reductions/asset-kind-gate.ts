@@ -178,6 +178,47 @@ export function stripAssetKindGatedReductions<T extends { type: string }>(
   return { reductions: kept, notices };
 }
 
+/**
+ * ⑫ 와이어의 자산 종류 → 게이트 종류. 주 자산은 `propertyType`, 컴패니언은 `assetKind`를 쓰고 겸용주택은 둘 다 «주택» 갈래다
+ * (⑧은 `housing` + `isMixedUseHouse`). 모르는 값은 `undefined` — 막지 않는다(⑧과 같은 «매핑 미존재 시 차단하지 않음»).
+ * ⚠ 엔진 내부에서 `propertyType`로 걸지 말 것 — 다건 집계가 겸용 컴패니언을 상가 land·building 카드로 쪼개 §99의3을 싣는다
+ *   (`transfer-tax-aggregate-asset-records.ts` `computeOne`) — 계획서 `sec99-asset-kind-gate-engine-nh54.plan.md` §3.3.
+ */
+export function reductionAssetKindFromWire(kind: string | undefined): ReductionAssetKind | undefined {
+  switch (kind) {
+    case "housing":
+    case "mixed-use-house":
+    case "mixed_use_house":
+      return "housing";
+    case "land":
+    case "building":
+    case "right_to_move_in":
+    case "presale_right":
+    case "commercial_building":
+    case "general_building":
+    case "redevelopment_apt":
+      return kind;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * 조문 id 게이트에 걸렸을 때의 사유 문구(걸리지 않으면 `undefined`) — ⑧ validate와 ⑫ Zod가 같은 문구를 쓴다(단일 소스).
+ * 문구는 조문마다 다르다: §69는 반대 방향(토지 전용), §98 시리즈 × 조합원·분양권은 조문 원문, 그 밖은 「주택 양도에만」.
+ */
+export function assetKindGateMessage(id: string, assetKind: ReductionAssetKind): string | undefined {
+  if (isReductionAllowedForAssetKind(id, assetKind)) return undefined;
+  // §69는 반대 방향 게이트다 — 「토지 전용」이라 주택 문구를 쓰면 사유가 거꾸로 안내된다.
+  if (id === "self_farming")
+    return "자경농지 감면(조특법 §69)은 토지 양도에만 적용됩니다. 자산 종류를 확인하거나 감면 선택을 해제하세요.";
+  // §98 시리즈 6조문 × 조합원 경로·분양권은 「주택 양도」 문구가 사유와 맞지 않는다(US-44) — 엔진 고지와 같은 문구.
+  const articleReason = assetKindGateReason(id, assetKind);
+  if (articleReason) return `${articleReason} 감면 선택을 해제하세요.`;
+  const label = REDUCTION_METADATA[id as TransferReductionId]?.uiLabel ?? "이 감면";
+  return `${label} 감면은 주택 양도에만 적용됩니다. 자산 종류를 확인하거나 감면 선택을 해제하세요.`;
+}
+
 const GB_CLAIM_ROUTE_KINDS = new Set<ReductionAssetKind>([
   "land",
   "general_building",
