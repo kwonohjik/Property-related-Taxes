@@ -13,7 +13,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
 /** 가목 윈도우 밖(2026-05-10 이후) 양도 + 1세대 2주택(보유주택 1건) → gracePeriod 섹션 노출 조건 충족 seed */
-function seedForm(transferDate: string) {
+function seedForm(transferDate: string, gracePeriod?: Record<string, unknown>) {
   return {
     state: {
       formData: {
@@ -30,6 +30,7 @@ function seedForm(transferDate: string) {
         householdHousingCount: "2", // 2주택 (gracePeriod 노출 조건)
         isOneHousehold: true, // 1세대 (gracePeriod 노출 조건)
         isRegulatedArea: true,
+        ...(gracePeriod ? { gracePeriod } : {}),
         houses: [
           {
             id: "house_other_1",
@@ -58,12 +59,12 @@ function seedForm(transferDate: string) {
   };
 }
 
-async function gotoHolding(page: Page, transferDate: string) {
+async function gotoHolding(page: Page, transferDate: string, gracePeriod?: Record<string, unknown>) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(transferDate),
+    seedForm(transferDate, gracePeriod),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -105,6 +106,24 @@ test.describe("다주택 중과 경과조치(나·다목) Step4 UI", () => {
     // 매매계약일·계약금 증빙은 노출
     await expect(page.getByText("매매계약일", { exact: false })).toBeVisible();
     await expect(page.getByText("계약금 수령 증빙 확인", { exact: false })).toBeVisible();
+  });
+
+  test("나목 허가 수령 미확인 → 헤드라인 아래 「나목2)」 사유, 토글 ON 시 사유가 사라지고 충족", async ({ page }) => {
+    // 계획서 surcharge-grace-period-unmet-reason §4 G-2(사용자 사례)의 강남(4개월) 판.
+    await gotoHolding(page, "2026-08-01", {
+      contractDate: "2026-05-01",
+      isLandPermitTarget: true,
+      permitApplicationDate: "2026-04-17",
+      permitGranted: false,
+      depositReceiptConfirmed: true,
+    });
+    const reasons = page.getByTestId("grace-period-unmet-reasons");
+    await expect(page.getByText("미충족 — 현재 입력 기준 경과조치 배제 미해당")).toBeVisible();
+    await expect(reasons).toHaveText(/나목2\) 「토지거래허가 수령」이 확인되지 않았습니다/);
+
+    await page.getByRole("switch", { name: /토지거래허가 수령/ }).click();
+    await expect(reasons).toHaveCount(0);
+    await expect(page.getByText("충족 — 중과 경과조치 배제 대상")).toBeVisible();
   });
 
   test("가목 윈도우 내(2026-05-01) → 경과조치 입력 미도달 (가목 우선 게이트로 no-op)", async ({
