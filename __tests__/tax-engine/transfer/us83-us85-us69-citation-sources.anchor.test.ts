@@ -52,7 +52,7 @@ describe("US-83 농특세 단계 근거 — 경로별 상수", () => {
     const r = run("2022-08-01");
     const step = r.steps.find((s) => s.label.includes("농어촌특별세"));
     expect(step?.legalBasis).toBe(TRANSFER.RURAL_SURTAX_DEDUCTION);
-    expect(TRANSFER.RURAL_SURTAX_DEDUCTION).toBe("농어촌특별세법 §5①1호·③, 같은 법 시행령 §5②");
+    expect(TRANSFER.RURAL_SURTAX_DEDUCTION).toBe("농어촌특별세법 §5①1호·③, 농어촌특별세법 시행령 §5②");
     expect(r.unsold987Detail?.ruralSurtax).toBe(9_171_000); // 세액 불변(p2-hybrid CH-2)
   });
   it("5년 이내(세액감면형) → 법 §5①1호", () => {
