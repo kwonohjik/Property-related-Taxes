@@ -126,7 +126,7 @@ export function buildGbPartCards(
   contractTotal?: number,
   /**
    * §164⑨ 1호 공익수용 특례(토지 환산 분모) — 최상위 특례 필드. 단건 `dispatchCoercedGeneralBuilding`과 같은 주입이다.
-   * 다건 합산(`multi/route.ts`)이 넘긴다. 함께 양도 컴패니언은 넘기지 않는다(종전 그대로 — 계획서 multi-building-valuation-support §3.6 V-G3).
+   * 다건 합산(`multi-gb-expansion.ts`)·함께 양도(`bundled-route.ts` 주 자산 · `bundled-split-helpers.ts` 컴패니언)가 넘긴다 — 빠지면 특례가 조용히 사라진다.
    */
   expropriation?: GbExpropriationInput,
 ): GbPartCards {
@@ -370,7 +370,7 @@ export function buildGbCompanionItems(
     ownershipRatio?: number; assetId: string; assetLabel: string; totalPropertyTransferPrice?: number;
     /** 신고 단위 공통 양도비 중 이 자산 몫(`allocatedCommonExpense`) — 선언 채널에 합산한다(`withBundledCommonExpense`). */
     commonExpense?: number;
-    /** §164⑨ 1호 공익수용 — 다건 합산만 넘긴다(`buildGbPartCards` 같은 인자 주석). */
+    /** §164⑨ 1호 공익수용 — `buildGbPartCards` 같은 인자 주석. */
     expropriation?: GbExpropriationInput;
   },
   /**
