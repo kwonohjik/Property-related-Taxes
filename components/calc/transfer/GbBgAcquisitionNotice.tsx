@@ -8,10 +8,17 @@ import { gbBgThreeWayParts } from "@/lib/calc/bg-pre-deemed-mode";
 import { BG_COLLATERAL_PAREN_ERA_SUFFIX } from "@/lib/calc/burdened-gift-collateral-win";
 import { bgCollateralParenEraUncertain } from "@/lib/calc/burdened-gift-collateral-win";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { bgShareOwnAcquisitionApplies } from "@/lib/calc/bg-share-own-acquisition";
 
-export function GbBgAcquisitionNotice({ asset, transferDate, isFractionalSplit }: { asset: AssetForm; transferDate: string | undefined; isFractionalSplit?: boolean }) {
+/**
+ * @param shareCard 축 B 지분 카드(자산 2~N) — ② 양도정보를 숨기므로 「② 양도정보에 입력한」 대신 실제 입력 위치를 가리킨다
+ *   (자산 1의 ② · 이 카드의 「이 지분의 취득가액을 자산 1과 따로 입력」 · 이 카드의 매매사례가액 칸 — D-2).
+ */
+export function GbBgAcquisitionNotice({ asset, transferDate, isFractionalSplit, shareCard }: { asset: AssetForm; transferDate: string | undefined; isFractionalSplit?: boolean; shareCard?: boolean }) {
   const use = gbBgStdUseOf(asset, isFractionalSplit);
   if (!use) return null;
+  const ownAcq = shareCard === true && asset.bgShareOwnAcquisition === true && bgShareOwnAcquisitionApplies(asset);
+  const methodSource = !shareCard ? "② 양도정보" : ownAcq ? "이 카드 위 「이 지분의 취득가액을 자산 1과 따로 입력」" : "자산 1의 ② 양도정보";
   const parts = gbBgThreeWayParts(asset, isFractionalSplit);
   const partLabel = parts.all ? "토지·건물" : parts.land ? "토지" : "건물";
   return (
@@ -25,7 +32,7 @@ export function GbBgAcquisitionNotice({ asset, transferDate, isFractionalSplit }
           의제취득일(1985.1.1.) 전에 상속·증여받은 {partLabel}의 취득가액 = <b>① 상증법 평가액 · ② 취득시(의제취득일) 기준시가 · ③ 환산취득가액 중 큰 금액 × 채무비율</b>입니다
           (소령 §159①1호·§163⑨·§176조의2④ — ③의 양도가액은 그 파트의 증여가액). ①은 취득 정보의 「① 상증법 평가액」 칸에 입력합니다.
           ①② 채택 파트는 자본적지출·양도비를, ③ 채택 파트는 개산공제를 필요경비로 씁니다.
-          {!parts.all && " 다른 파트는 ② 양도정보에서 고른 취득가액 산정방식을 따릅니다."}
+          {!parts.all && ` 다른 파트는 ${methodSource}에서 고른 취득가액 산정방식을 따릅니다.`}
         </p>
       ) : (
         <>
@@ -43,7 +50,7 @@ export function GbBgAcquisitionNotice({ asset, transferDate, isFractionalSplit }
           )}
           {use === "market_actual" && (
             <p>
-              취득가액 = ② 양도정보에 입력한 <b>토지·건물 실지취득가액 × 채무비율</b>입니다.
+              취득가액 = {methodSource}에 입력한 <b>토지·건물 실지취득가액 × 채무비율</b>입니다.
               위 취득시 기준시가는 취득가액에 쓰이지 않고 자본적지출을 토지·건물로 나누는 비율로만 쓰입니다.
             </p>
           )}
@@ -55,11 +62,11 @@ export function GbBgAcquisitionNotice({ asset, transferDate, isFractionalSplit }
           )}
           {use === "market_presumed" && (
             <p>
-              취득가액 = ② 양도정보에 입력한 <b>토지·건물 매매사례가액(또는 감정가액) × 채무비율</b>입니다.
+              취득가액 = {shareCard ? "이 카드 위 부담부증여 칸에 입력한 이 지분의" : "② 양도정보에 입력한"} <b>토지·건물 매매사례가액(또는 감정가액) × 채무비율</b>입니다.
               위 취득시 기준시가는 취득가액에 쓰이지 않고 <b>개산공제(§163⑥)의 기준액</b>(취득시 기준시가 × 채무비율)으로만 쓰입니다.
             </p>
           )}
-          {use === "market_unset" && <p>② 양도정보의 부담부증여 카드에서 취득가액 산정방식을 선택하세요.</p>}
+          {use === "market_unset" && <p>{methodSource}{shareCard ? "" : "의 부담부증여 카드"}에서 취득가액 산정방식을 선택하세요.</p>}
         </>
       )}
     </div>

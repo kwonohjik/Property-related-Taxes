@@ -58,6 +58,12 @@ export interface BurdenedGiftFormSlice {
   /** [신설] K-4 실지취득가액 — 단일자산 (housing·building·commercial_building). 원, string. */
   bgActualAcquisitionTotal: string;
   /**
+   * 축 B(지분 분할) 지분 카드(자산 2~N) — 이 지분의 취득가액 산정방식 · 실지취득가액을 **자산 1과 따로** 받는다(소령 §159①1호 A = 그 지분 취득가액).
+   * 꺼짐(기본) = 자산 1 값 승계(`mergePrimaryBasic`). 켜짐은 `bgShareOwnAcquisitionActive`가 참일 때만 쓰인다
+   * (계획서 `companion-inherit-valuation-share-vp2c.plan.md` §14 D-2 · Q-6 a).
+   */
+  bgShareOwnAcquisition?: boolean;
+  /**
    * [K-6/K-7] 매매사례가액·감정가액(취득 당시) — 토지 (general_building·land). 원, string.
    * 두 방식이 칸을 **공유**한다 — `bgAcquisitionMethod`가 `salesCase`↔`appraisal`로 바뀌면 onChange 핸들러가 비운다
    * (의미가 달라 stale 값을 다른 방식의 금액으로 읽을 위험). `bgActualAcquisition*`와 별개 필드다(재사용 금지).

@@ -689,7 +689,7 @@ export function GeneralBuildingBlock({
           */}
 
           {/* 부담부증여 취득가액 안내 — 평가 모드·산정방식별로 실제 엔진 산식을 적는다(`GbBgAcquisitionNotice`) */}
-          {isBurdenedGift && <GbBgAcquisitionNotice asset={asset} transferDate={transferDate} isFractionalSplit={isFractionalSplit} />}
+          {isBurdenedGift && <GbBgAcquisitionNotice asset={asset} transferDate={transferDate} isFractionalSplit={isFractionalSplit} shareCard={shareAcquisitionOnly} />}
         </ToneCard>
 
         {/* ⑤ 증축 정보 — `GeneralBuildingExtensionSection`으로 분리(2026-08-12, 800줄 정책).

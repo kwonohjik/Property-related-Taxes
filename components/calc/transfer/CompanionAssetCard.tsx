@@ -373,7 +373,7 @@ export function CompanionAssetCard({
         </ToneCard>
       ) : null}
       {hideInheritedSections ? (
-        <BurdenedGiftTrancheBasisBlock asset={asset} primaryAsset={primaryAsset} onChange={onChange} />
+        <BurdenedGiftTrancheBasisBlock asset={asset} primaryAsset={primaryAsset} onChange={onChange} transferDate={transferDate} />
       ) : (
         <AssetSection
           num={1}
