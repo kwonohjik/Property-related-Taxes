@@ -439,7 +439,7 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
       if (r.url().includes("/api/calc/transfer/multi") && r.method() === "POST") multiPosts++;
     });
     await page.getByRole("button", { name: "세액 계산" }).click();
-    await expect(page.getByText("배우자등 이월과세(§97의2)는 단건 계산기에서만 지원됩니다.").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("토지·건물을 나눈 이월과세(§97의2)는 단건 계산기에서만 지원됩니다.").first()).toBeVisible({ timeout: 30_000 });
     expect(multiPosts).toBe(0);
   });
 

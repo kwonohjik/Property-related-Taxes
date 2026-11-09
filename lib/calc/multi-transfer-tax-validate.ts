@@ -6,9 +6,11 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { validateStep } from "./transfer-tax-validate";
-import { effectiveLandCarryover } from "./transfer-land-part-cause";
+import { partCarryover } from "./transfer-land-part-cause";
+import { carryoverPurchasedPartDebt } from "./carryover-gift-assumed-debt";
 import { phdFlagEffective } from "./phd-toggle-scope";
-import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
@@ -153,10 +155,14 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   // 상업용건물·오피스텔·일반건물은 막지 않는다(계획서 multi-building-valuation-support 트랙 C·G).
   //   상업용은 단건 엔진이 서브객체를 직접 읽고, 일반건물은 ⑭가 단건과 같은 토지·건물 카드로 펼친다(`multi-gb-expansion.ts`).
   //   일반건물 지분 분할 취득은 자산 2건 이상이라 아래 「한 건 내 다자산」 차단이 막는다(⑫는 `generalBuildingShares` 거부).
-  // P3 A — 토지만 이월과세도 같다(⑫ `MULTI_REJECT_RULES`가 파트 키를 거부한다 — ⑧이 먼저 막는다).
-  if (a.acquisitionCause === "carryover_gift" || effectiveLandCarryover(a)) {
-    return MULTI_CARRYOVER_UNSUPPORTED_MESSAGE;
-  }
+  // 배우자등 이월과세(§97의2) — 자산 단위 사건(`carryoverTaxation`)은 ④⑭가 단건과 같은 leaf로 옮긴다
+  //   (계획서 multi-carryover-bg-gb-shares 트랙 CO). 연간 합산은 확정신고 1건이라 §97의2②3호 비교가 그 해 전체 결정세액으로 한다.
+  //   계속 막는 하위 모드 — ⑫ `MULTI_REJECT_RULES`와 같은 문구:
+  //   · 파트 이월과세(P3 A 토지만 · P4 B 건물만 · C 증여자 분리) — ④가 파트 키를 싣고 ⑫가 거부한다(⑧이 먼저 막는다).
+  //   · 당초 증여 때 인수한 채무 부분(매입분) — 예정신고 세액 계산이 자산마다 단건 엔진을 불러 채무 키에서 멈춘다.
+  const carryoverParts = partCarryover(a);
+  if (carryoverParts.land || carryoverParts.building) return MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE;
+  if (carryoverPurchasedPartDebt(a) > 0) return MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE;
   // 상속·증여 §163⑨ 취득가액(① 평가액 · ② §164 기준시가 · 의제 전 ③ 환산)은 다건도 단건과 같은 빌더로 싣는다
   //   (`buildPropertyPayload` — 계획서 multi-sec163-9-support.plan.md Q-1 a). ① 공란·② 부분 입력은 건별 ⑧(`validateStep` —
   //   `postDeemedClauseARequiredError` 등)이 단건과 같이 짚는다(Q-2 a). 종전 다건 전용 「상속 ① 공란」 가드와 #2888의 ② 입력 차단은 지웠다.

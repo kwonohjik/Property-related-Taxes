@@ -4,8 +4,19 @@
  * (validate 파일은 클라이언트 컴포넌트·스토어를 끌고 온다).
  */
 
-/** 다건 route(⑭)는 `carryoverTaxation`을 매핑하지 않는다 — 이월과세는 단건 전용(F-5). */
-export const MULTI_CARRYOVER_UNSUPPORTED_MESSAGE = "배우자등 이월과세(§97의2)는 단건 계산기에서만 지원됩니다.";
+/**
+ * 배우자등 이월과세(§97의2) — 자산 단위 사건(`carryoverTaxation`)은 다건도 단건과 같이 계산한다
+ * (계획서 `docs/00-pm/multi-carryover-bg-gb-shares.plan.md` 트랙 CO). 아래 두 하위 모드만 계속 막는다.
+ */
+/** 토지·건물을 나눈 이월과세(파트 — 토지만·건물만·증여자 분리) — 다건 ⑭가 파트 키를 옮기지 않는다(V-CO3). */
+export const MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE =
+  "토지·건물을 나눈 이월과세(§97의2)는 단건 계산기에서만 지원됩니다.";
+/**
+ * 당초 증여 때 인수한 채무 부분(매입분) — 집계가 증여분·매입분 조각으로 나누는데, 예정신고 세액 계산
+ * (`computePreliminaryFilingTaxes`)이 자산마다 단건 엔진을 불러 채무 키에서 멈춘다(V-CO2).
+ */
+export const MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE =
+  "이월과세(§97의2) 자산의 당초 증여 때 인수한 채무 부분은 단건 계산기에서만 지원됩니다.";
 
 /**
  * F-12 — 합산 경로가 처리하지 못하는 서브객체 모드. ⑧(`validateMultiSupportedMode`)은 화면 폼으로,

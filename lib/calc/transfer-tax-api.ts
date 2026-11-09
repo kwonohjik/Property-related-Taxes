@@ -54,16 +54,13 @@ import { buildSplitPayload, makeRatioed, isSplitPayloadActive } from "./transfer
 import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { buildLandPartCausePayload } from "./transfer-tax-api-split";
 import { buildLandRebuildPayload } from "./transfer-land-rebuild";
-import { partCarryover } from "./transfer-land-part-cause";
 import { anyPartCarryover } from "./transfer-land-part-cause";
 import { legacyExpenseMovesToParts } from "./split-legacy-expense";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { householdFactsAssetOf } from "./household-facts-asset";
 import { householdFactsFormView } from "./household-facts-view";
 import { householdFactsCompanionAssetId } from "./household-facts-view";
-import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
-import { carryoverEventForm } from "./transfer-tax-api-carryover";
-import { withDonorBuilt } from "./transfer-tax-api-donor-built";
+import { primaryCarryoverTaxationPayload } from "./transfer-tax-api-carryover-primary";
 import { withHiddenSuccessorRightModeActual } from "./transfer-successor-right";
 import { carryoverAcquisitionDateFallback } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
@@ -723,18 +720,9 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     ...buildPreDeemedPurchasePayload(primary, ratioed),
     // 겸용주택 분리계산 입력
     ...(mixedUsePayload ? { mixedUse: mixedUsePayload } : {}),
-    // 배우자등 이월과세 (§97조의2)
-    // P2 C·P4 B(파트 이월과세)는 자산 단위 서브객체와 상호배제다(R-1) — 사건 1벌 + 파트(`buildLandPartCausePayload`)가 대신한다.
+    // 배우자등 이월과세 (§97조의2) — 조건·빌더는 다건과 공용 leaf(`transfer-tax-api-carryover-primary.ts`).
     // 부담부증여 지분 분할(축 B)은 지분마다 싣는다(`generalBuildingShares[].carryoverTaxation`) — 최상위는 보내지 않는다(⑫가 거부).
-    // 부담부증여 일반건물은 건물만 이월과세여도 싣는다(사건 = 건물 블록 · `carryoverEventForm`).
-    ...(carryoverEventForm(primary) && !partCarryover(primary).building && !(gbShares !== undefined && isBurdenedGift)
-      ? (() => {
-          const payload = buildCarryoverPayload(primary, form.transferDate, primaryRatio);
-          return payload
-            ? { carryoverTaxation: withDonorBuilt(payload.carryoverTaxation, primary, { transferDate: form.transferDate }, primaryRatio) }
-            : {};
-        })()
-      : {}),
+    ...(!(gbShares !== undefined && isBurdenedGift) ? primaryCarryoverTaxationPayload(primary, form.transferDate, primaryRatio) : {}),
     // ⑬ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 토글 OFF 시 undefined, body에서 제외
     ...((() => {
       const rhPayload = toRentalHousingExceptionApi(primary);

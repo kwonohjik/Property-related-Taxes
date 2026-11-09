@@ -39,7 +39,7 @@ import {
   PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE,
   LAND_CAUSE_ABSENT_MESSAGE,
 } from "@/lib/tax-engine/transfer-split-part-cause";
-import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 
 const BASE = {
   propertyType: "housing",
@@ -609,7 +609,7 @@ describe("SPCO-T 목표 — 차단 게이트 (Q-5·Q-6·Q-7, 설계서 §6·§8)
     const a = await postMulti({ ...A_NEW });
     expect(a.status).toBe(400);
     expect(Object.keys(fieldErrors(a))).toEqual(expect.arrayContaining(["properties.0.landCarryoverPart", "properties.0.carryoverGiftEvent"]));
-    expect(fieldErrors(a)["properties.0.landCarryoverPart"]).toContain(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE);
+    expect(fieldErrors(a)["properties.0.landCarryoverPart"]).toContain(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE);
     const b = await postMulti({ ...A_FIELDS, landAcquisitionCause: "gift", carryoverGiftEvent: EVENT(), landCarryoverPart: LAND_PART() });
     expect(b.status).toBe(400);
     expect(Object.keys(fieldErrors(b))).toEqual(expect.arrayContaining(["properties.0.carryoverGiftEvent"]));

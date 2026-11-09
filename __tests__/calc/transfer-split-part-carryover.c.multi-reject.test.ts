@@ -23,7 +23,7 @@ import { POST } from "@/app/api/calc/transfer/multi/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { buildPropertyPayload } from "@/lib/calc/multi-transfer-tax-api";
 import { validateMultiSupportedMode } from "@/lib/calc/multi-transfer-tax-validate";
-import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { cAsset, cForm } from "./_helpers/split-carryover-c-form";
 
 beforeEach(() => {
@@ -31,9 +31,10 @@ beforeEach(() => {
 });
 
 describe("다건 × C", () => {
-  it("⑧: C를 켠 자산(이월과세 호스트)은 다건 지원 모드가 아니다 — 토글 OFF 이월과세도 같다(종전 규칙 불변)", () => {
-    expect(validateMultiSupportedMode(cForm() as never)).toBe(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE);
-    expect(validateMultiSupportedMode(cForm({}, cAsset({ carryoverDonorSplit: false })) as never)).toBe(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE);
+  it("⑧: C를 켠 자산(이월과세 호스트)은 다건 지원 모드가 아니다 — 토글 OFF면 자산 단위 이월과세라 막지 않는다(트랙 CO)", () => {
+    expect(validateMultiSupportedMode(cForm() as never)).toBe(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE);
+    // 2026-11-09 트랙 CO — 토글 OFF 이월과세는 자산 단위 사건이라 다건이 단건과 같이 계산한다(`multi-carryover-parity.anchor.test.ts`).
+    expect(validateMultiSupportedMode(cForm({}, cAsset({ carryoverDonorSplit: false })) as never)).toBeNull();
   });
 
   it("④⑫: 다건 body는 C 키를 싣고(첫 자산 자격), multi route는 strip 없이 400으로 거부한다", async () => {
