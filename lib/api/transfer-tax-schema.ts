@@ -31,7 +31,7 @@ import { refineUnregisteredSelfFarming } from "./transfer-tax-schema-refines";
 import { refineCompanionGbUnregisteredAxis } from "./transfer-tax-schema-refines";
 import { refineRedevelopment166_3Inputs } from "./transfer-tax-schema-redev-166-3-refines";
 import { refineRedevOriginalMemberOrder } from "./transfer-tax-schema-redev-order-refine";
-import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
+import { refineReductionRequiredInputs, refineReductionTrack127_7 } from "./transfer-tax-schema-reduction-refines";
 import { refineReductionAssetKindGate } from "./transfer-tax-schema-reduction-refines";
 import { refinePropertyRequiredInputs, refineAmendmentInputs } from "./transfer-tax-schema-required-refines";
 import { refineCompanionPreDeemedAcquisitionSource } from "./transfer-tax-schema-required-refines-2a";
@@ -199,6 +199,7 @@ export const propertySchema = z
       refineMixedSaleSplitSingleOnly(c.mixedUse ?? undefined, ctx, ["companionAssets", i, "mixedUse"]);
       refineUnregisteredSelfFarming(c.isUnregistered, c.reductions, ctx, ["companionAssets", i, "reductions"]);
       refineReductionAssetKindGate(c.reductions, c.assetKind, ctx, ["companionAssets", i, "reductions"]);
+      refineReductionTrack127_7(c.reductions, c.acquisitionDate, data.transferDate, ctx, ["companionAssets", i, "reductions"]);
       refineReductionRequiredInputs(c.reductions, c.assetContractDate, ctx, ["companionAssets", i, "reductions"], c.redevelopment);
       refineCompanionGbUnregisteredAxis(c, ctx, ["companionAssets", i, "isUnregistered"]);
       // PD-1 — 의제 전 상속·증여 취득가액 원천(주 자산과 같은 규칙 · CP-3로 열린 운반 경로)
