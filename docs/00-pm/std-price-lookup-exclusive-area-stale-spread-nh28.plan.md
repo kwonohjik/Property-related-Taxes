@@ -1,6 +1,6 @@
 # 기준시가 자동조회가 전용면적을 함께 받으면 조회한 기준시가가 버려진다 (NH-28)
 
-- 상태: **결정 대기** — 코드 변경 없음(문서만). 기준 master `2ba758323`.
+- 상태: **구현 완료**(Q-1 a · Q-2 a · Q-3 a — 사용자 «모두 권장안으로») — 결과는 §7. 기준 master `2ba758323`.
 - 출처: `docs/reviews/new-housing-99-review-2026-11.md` NH-28(F-54) — 「기준시가 자동조회가 전용면적을 함께 받으면 조회값이 이전 값으로 되돌아간다(다중키 stale spread)」. 2026-11-09 코드 대조에서 «재현 안 함»으로 남겼던 열린 항목.
 - 표기: **[직접]** = 이 문서 작성 중 직접 실행·대조. **[코드]** = 코드 읽기만. **확인 필요** = 미측정·미해명.
 
@@ -75,3 +75,29 @@ throwaway probe(미커밋, `.test.tsx` jsdom): `makeDefaultAsset` + 해당 감�
 3. 뮤테이션: `commitReductions`가 ref를 갱신하지 않게 · 일부 갱신 함수만 옛 배열을 읽게 → 해당 칸 실패.
 4. 회귀 5배치(api · lib · components · calc · tax-engine) · tsc · eslint. 화면 변경이 있으므로 **Playwright 해당 spec 1건**(조회 → 기준시가 칸 값 확인)을 돌린다.
 5. 이 문서 §7(구현 결과) 추가.
+
+## 7. 구현 결과 [직접]
+
+**코드** — `components/calc/transfer/UnifiedReductionPanel.tsx`: `reductionsRef` + `commitReductions(next)`(ref 갱신 후 `onChange({ reductions: next })`) 한 곳을 두고, 갱신 경로 16군데가 모두 `reductionsRef.current`를 읽어 `commitReductions`를 부른다. 스토어 미러링(`useEffect → store`)은 쓰지 않았다.
+
+**§6 1항과 다른 점(이유 있는 변경)**: 계획서는 «렌더마다 `reductionsRef.current = …`»였으나, eslint `react-hooks/refs`가 렌더 중 ref 접근을 오류로 막는다. 그래서 ref 동기화는 `useLayoutEffect(…, [asset.reductions])`로 했다. 커밋마다 ref를 즉시 갱신하므로 한 이벤트 안의 연속 호출은 최신 배열을 보고, 부모가 밖에서 asset을 바꾸면 레이아웃 효과가 다시 맞춘다(anchor 1칸).
+
+| 항목 | 결과 |
+|---|---|
+| anchor `__tests__/components/calc/reduction-panel-std-price-lookup-stale-spread-nh28.anchor.test.tsx` | **26 통과** — 4폼 × 3시점 12칸(가격+면적 둘 다 반영) · 세 시점 연속 조회 1 · 면적 없는 응답 대조 12 · 밖에서 asset이 바뀐 뒤 재동기화 1 |
+| 수정 전 패널(origin/master)로 같은 anchor | **13 실패 · 13 통과** — 실패는 조회 12칸 + 연속 조회 1, 통과는 대조 12 + 재동기화 1 (대조는 종전에도 정상이므로 기대대로) |
+| 뮤테이션 M1 (`commitReductions`의 ref 즉시 갱신 제거) | 13 실패 → 잡힘 |
+| M2 (props 재동기화 효과 제거) | 1 실패 → 잡힘 |
+| M3 (`update993`만 렌더 시점 `reductions` 사용) | 4 실패 → 잡힘 |
+| M4 (`toggleStandalone`만 렌더 시점 `reductions` 사용) | **26 통과 → 못 잡음(생존)** — 아래 «한계» |
+| 회귀 5배치 | api 6528 · tax-engine 19034 · calc 11598 · lib 3357 · components 6927 — **전부 통과, 실패 0** |
+| tsc · eslint | tsc 0건 · eslint 오류 0(경고 2건은 origin/master 패널에도 동일하게 있던 것 — `ReductionAssetKind` 미사용, `reductions` useMemo 의존성) |
+| Playwright `e2e/nh28-std-price-lookup-stale-spread.spec.ts` (§99의3 취득시 조회, 외부 API 모의) | 수정본 **통과**(기준시가 칸 300,000,000 · 전용면적 84.96) / 종전 패널 **실패**(기준시가 칸이 80,000,000 그대로) |
+
+**한계 · 확인 필요**
+- M4 생존: `toggleStandalone`/`toggleGroup`은 한 이벤트에서 두 번 부르는 경로가 없어 단일 호출에서는 옛 배열과 ref가 같다. 이 anchor의 범위(기준시가 조회 → 가격·면적 연속 갱신)에서는 동치 변형이라 막을 칸이 없다. 토글 연속 호출을 만드는 화면 경로가 생기면 그때 칸을 더한다.
+- V-1 실제 zustand 스토어 경유 — 하네스는 상태 있는 부모이며 스토어 자체는 거치지 않았다. **확인 필요**.
+- V-3 세액 영향 — 재현하지 않았다(Q-3 a). 리뷰 수치 +16,672,500 / −2,067,188은 인용이며 **확인 필요**.
+- V-4 다른 감면 폼의 «한 이벤트 갱신 두 번» — 전수하지 않았다. **확인 필요**.
+- 사람이 직접 한 브라우저 수동 확인은 하지 않았다(Playwright 1건으로 갈음).
+

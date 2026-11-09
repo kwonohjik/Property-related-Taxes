@@ -16,7 +16,7 @@
  *   - native checkbox/radio 신규 작성 금지 (RadioCardGroup 정책)
  */
 
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 import type { RentalReductionFormVariant } from "@/lib/stores/calc-wizard-asset-reduction";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -171,6 +171,22 @@ export function buildAssetPhdSnapshot(asset: AssetForm): ReductionPhdValue | und
 
 export function UnifiedReductionPanel({ asset, transferDate, onChange }: UnifiedReductionPanelProps) {
   const reductions = asset.reductions ?? [];
+  /**
+   * 🔴 갱신 함수는 **렌더 시점의 `reductions`가 아니라 이 ref**를 읽는다 (NH-28).
+   *
+   * 한 이벤트에서 갱신 함수를 두 번 부르는 곳(기준시가 조회가 `가격` → `전용면적`을 연달아 부른다)에서 둘째 호출이 옛 배열 위에 자기 키만
+   * 얹어 첫째 변경을 덮어썼다 — 조회한 기준시가가 버려지고 전용면적만 반영됐다. `commitReductions`가 보내는 즉시 ref를 갱신하므로
+   * 같은 틱의 다음 갱신이 직전 결과 위에 쌓인다. 커밋마다 props로 다시 맞춘다 — 스토어 미러링이 아니라 이벤트 핸들러가 읽는 «최신값 보관»이다
+   * (렌더 중 ref 접근은 `react-hooks/refs`가 막아 레이아웃 효과로 맞춘다. 이벤트는 커밋 뒤에만 오므로 어긋나는 창이 없다).
+   */
+  const reductionsRef = useRef(reductions);
+  useLayoutEffect(() => {
+    reductionsRef.current = asset.reductions ?? [];
+  }, [asset.reductions]);
+  function commitReductions(next: AssetReductionForm[]) {
+    reductionsRef.current = next;
+    onChange({ reductions: next });
+  }
   // 서브폼·§127⑦ 트랙 안내가 읽는 기준일 — 이월과세는 증여 등기접수일(④·⑧과 같은 leaf · L23).
   const acquisitionDate = primaryAcquisitionDateOf(asset) ?? "";
   /**
@@ -210,18 +226,18 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
 
   // ── standalone 토글(자경·공익) ──
   function toggleStandalone(type: "self_farming" | "public_expropriation" | "gb_designated_land" | "replacement_land_comp") {
-    const has = reductions.some((r) => r.type === type);
+    const has = reductionsRef.current.some((r) => r.type === type);
     if (has) {
-      onChange({ reductions: reductions.filter((r) => r.type !== type) });
+      commitReductions(reductionsRef.current.filter((r) => r.type !== type));
     } else {
-      onChange({ reductions: [...reductions, getStandaloneDefault(type)] });
+      commitReductions([...reductionsRef.current, getStandaloneDefault(type)]);
     }
   }
 
   // ── 그룹 라디오 토글 ──
   function toggleGroup(category: ReductionCategory, id: TransferReductionId) {
-    const alreadySelected = reductions.some((r) => r.type === id);
-    onChange({ reductions: toggleGroupRadio(reductions, category, id, alreadySelected) });
+    const alreadySelected = reductionsRef.current.some((r) => r.type === id);
+    commitReductions(toggleGroupRadio(reductionsRef.current, category, id, alreadySelected));
   }
 
   // ── §99의3 본 요건 필드 업데이트 ──
@@ -229,21 +245,21 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     key: K,
     value: Extract<AssetReductionForm, { type: "new_99_3" }>[K],
   ) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === "new_99_3" ? ({ ...r, [key]: value } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
 
   // 여러 필드 동시 갱신(단일 onChange) — 건물 기준시가 "취득·최초고시 모두 적용"처럼 한 이벤트에서
   // 2개 이상 필드를 바꿀 때 개별 update993 연속 호출은 stale reductions spread로 서로를 덮어씀. 배치 필수.
   function update993Many(patch: Partial<Extract<AssetReductionForm, { type: "new_99_3" }>>) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === "new_99_3" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
 
   // ── §97 시리즈 폼 필드 업데이트 ──
@@ -251,87 +267,87 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     id: RentalReductionFormVariant["type"],
     patch: Partial<RentalReductionFormVariant>,
   ) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === id ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
 
   // ── P1 (2026-06-11): §99 신축주택 IMF 1차 / §98의8 준공후미분양 50% ──
   function update99(patch: Partial<Extract<AssetReductionForm, { type: "new_99" }>>) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === "new_99" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
   function update988(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_8" }>>) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === "unsold_98_8" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
   // ── P2 (2026-06-11): §98의7 9억↓ 미분양 / §99의2 신축·미분양·1세대1주택 ──
   function update987(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_7" }>>) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === "unsold_98_7" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
   function update992(patch: Partial<Extract<AssetReductionForm, { type: "unsold_99_2" }>>) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === "unsold_99_2" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
   // ── P3 (2026-06-12): §98의3 / §98의5 / §98의6 ──
   function update983(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_3" }>>) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === "unsold_98_3" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
   function update985(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_5" }>>) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === "unsold_98_5" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
   function update986(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_6" }>>) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === "unsold_98_6" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
   // ── P5 (2026-06-12): §98 ──
   function update98(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98" }>>) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === "unsold_98" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
   // ── P4 (2026-06-12): §98의2 / §98의4 ──
   function update982(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_2" }>>) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === "unsold_98_2" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
   function update984(patch: Partial<Extract<AssetReductionForm, { type: "unsold_98_4" }>>) {
-    onChange({
-      reductions: reductions.map((r) =>
+    commitReductions(
+      reductionsRef.current.map((r) =>
         r.type === "unsold_98_4" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
-    });
+    );
   }
 
   const new993 = reductions.find((r) => r.type === "new_99_3");
