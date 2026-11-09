@@ -177,7 +177,16 @@ export function resolveDisplayAcquisitionAndExpense(r: {
       : // §97③ 감가상각비는 취득가액에서 공제된 뒤의 값이 「엔진이 차감한 취득가액」이다 — swap(위)·이월과세(위)는
         // 공제하지 않으므로 `depreciationAmount` echo가 비어 있다. 이 값을 빼지 않으면 아래 필요경비 역산이
         // `필요경비 − 감가상각비`로 오염된다.
-        (r.result.usedEstimatedAcquisition
+        /**
+         * 🔴 상가·오피스텔 §164⑥ 환산 — 엔진(STEP 0.35)이 환산취득가를 실가처럼 주입해 `estimatedBase`가 없다. 아래 환산 분기는
+         *    화면에 없는 일반 기준시가 칸으로 재환산해 다건 0 · 함께 양도 엉뚱한 비율값이 됐고, 역산 필요경비가 그 차이를 떠안았다
+         *    (2026-11-09 실측: 오피스텔 + 아파트 합산 — 취득 0 · 필요경비 246,256,800 / 정본 240,000,000 · 6,256,800).
+         *    정본은 엔진 상세다 — 신고서 표(`FilingFormTableAggregateHelpers` `aggregateEstimatedDisplay`)와 같은 값. swap은 위에서 0.
+         *    anchor `aggregate-commercial-acq-display.anchor.test.ts`.
+         */
+        (r.result.commercialBuildingValuationDetail
+          ? r.result.commercialBuildingValuationDetail.estimatedAcquisitionTotal
+          : r.result.usedEstimatedAcquisition
           ? (r.result.estimatedBase ??
               (tsfStd > 0
                 ? safeMultiplyThenDivide(r.singleInput.transferPrice, r.singleInput.standardPriceAtAcquisition ?? 0, tsfStd)
