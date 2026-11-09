@@ -35,7 +35,7 @@ function landK5(over: Partial<AssetForm> = {}): AssetForm {
 
 const V = (a: AssetForm) => validateBurdenedGiftAsset(a, "자산");
 
-describe("근거 — 비우면 엔진이 토지 취득가액을 0으로 낸다", () => {
+describe("근거 — 비우면 엔진이 막는다(종전: 토지 취득가액 0 · 계획서 vp2c §21)", () => {
   const landAcq = (a: AssetForm) => {
     const info = buildBurdenedGiftInfo(a) as unknown as BurdenedGiftInfo;
     return buildBurdenedGiftBreakdown({
@@ -47,8 +47,8 @@ describe("근거 — 비우면 엔진이 토지 취득가액을 0으로 낸다",
     }).perAsset.land.acquisitionPrice;
   };
 
-  it("양도시 기준시가 공란 → 취득가액 0", () => {
-    expect(landAcq(landK5())).toBe(0);
+  it("양도시 기준시가 공란 → 엔진 fail-fast(종전에는 취득가액 0으로 통과)", () => {
+    expect(() => landAcq(landK5())).toThrow(/환산취득가액으로 취득가액을 산정하는데 양도시 기준시가가 없습니다/);
   });
 
   it("양도시 기준시가 입력 → 취득가액이 생긴다 (대조)", () => {
