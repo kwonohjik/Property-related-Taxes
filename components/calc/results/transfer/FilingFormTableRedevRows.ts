@@ -50,7 +50,8 @@ const toIsoSlice = (d?: Date | string): string | undefined =>
   d ? (typeof d === "string" ? d.slice(0, 10) : new Date(d).toISOString().slice(0, 10)) : undefined;
 
 /**
- * 분기 열의 보유기간 — **그 열에 표시된 취득일자·양도일자의 연·월 차이**(2026-07-29 확정 규약).
+ * 분기 열의 보유기간 — **그 열에 표시된 취득일자·양도일자의 만 기간(초일 산입, 소득세법 §95④)**
+ * (2026-11-09 사용자 결정 — 종전 2026-07-29 「연·월 차이」 규약 대체, `holdingPeriodFromDates`).
  * 신고서 양식 전 표(합계·토지·건물·겸용 4열·자산 합산) 단일 규약이다.
  *
  * 엔진 `holdingMonths`(LTHD 산정용 만-개월 절사)를 그대로 쓰지 않는다 — 표시 일자와 어긋난다

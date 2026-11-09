@@ -41,18 +41,22 @@ export function fmtPeriod(months?: number): string {
   return `${y}년 ${m}월`;
 }
 
+/**
+ * 신고서 양식·상세명세서 「보유기간」 — 「소득세법」 §95④ 「취득일부터 양도일까지」의 **만 기간(초일 산입)**.
+ *
+ * 2026-11-09 사용자 결정으로 종전 규약(2026-07-29 「연·월 숫자 차이 — 일 무시」)을 대체한다. 종전 규약은
+ * 1996-06-15 → 2001-06-13을 「5년 0월」로 적어, 같은 화면의 장기보유특별공제 「4년 11개월」·§98 「5년 미만」 판정과
+ * 어긋났다. 이제 엔진 정본 `calculateHoldingPeriod`(`holdingMonthsFromDates`)와 같은 값이다 — 2025-01-08 → 2026-03-06 = 1년 1월.
+ * 합계·토지·건물·겸용·자산 합산·재개발 분기·파트 이월과세 열이 모두 이 함수 하나를 쓴다.
+ */
 export function holdingPeriodFromDates(acq?: string, transfer?: string): string {
   if (!acq || !transfer) return "-";
   const a = new Date(acq);
   const t = new Date(transfer);
   if (isNaN(a.getTime()) || isNaN(t.getTime())) return "-";
-  // 신고서 표시 규약(2026-07-29 사용자 확정): **연·월 숫자 차이만** 센다(일 무시).
-  //   2025-01-08 → 2026-03-06 = 1년 2월 (일 절사 방식의 1년 1월 아님)
-  // 만-개월 절사(일 borrow)는 적용하지 않는다 — 합계·토지·건물 전 열 동일 규약.
-  const months =
-    (t.getFullYear() - a.getFullYear()) * 12 + (t.getMonth() - a.getMonth());
-  if (months < 0) return "-";
-  // 같은 달 취득·양도(0개월)도 "-"가 아니라 명시적으로 표시한다.
+  if (t < a) return "-";
+  const months = holdingMonthsFromDates(acq, transfer);
+  // 1개월 미만(0개월)도 "-"가 아니라 명시적으로 표시한다.
   if (months === 0) return "0년 0월";
   return fmtPeriod(months);
 }
