@@ -15,6 +15,9 @@ import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-hou
 import { new994CapitalRegionConflict } from "@/lib/tax-engine/transfer-reductions/new-99-4-size";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { assetKindGateMessage, reductionAssetKindFromWire } from "@/lib/tax-engine/transfer-reductions/asset-kind-gate";
+import { findTrack127_7Conflict } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
+import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
+import { track127_7ConflictMessage } from "@/lib/tax-engine/transfer-reductions/track-127-7-message";
 
 type ReductionLike = { type: string } & Record<string, unknown>;
 
@@ -37,6 +40,32 @@ export function refineReductionAssetKindGate(
     const message = assetKindGateMessage(r.type, assetKind);
     if (message) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, i, "type"], message });
   });
+}
+
+/**
+ * 조특법 §127⑦ **트랙 교차** 차단 — ⑧(`validateStep2Reductions`)과 같은 단일 소스 술어(`findTrack127_7Conflict`)·문구(`track127_7ConflictMessage`).
+ * 같은 카드(자산)에 차감형 + 세액감면형(또는 §98·§98의2 + 다른 감면)을 함께 실으면 엔진이 둘 다 적용해 이중 혜택이 된다
+ * (§99의3 + §77 총세액이 낮은 쪽 단독보다 14,745,605 적음 — NH-41). 카드가 다르면 «일부에 한 감면, 남은 부분에 다른 감면»(단서)이라 막지 않는다.
+ * 하이브리드 8종은 5년 분기로 트랙이 갈린다 — 취득일·양도일 중 하나라도 비면 분기를 알 수 없어 두 경우 모두 충돌일 때만 막는다.
+ */
+export function refineReductionTrack127_7(
+  reductions: ReadonlyArray<ReductionLike> | undefined,
+  acquisitionDate: unknown,
+  transferDate: unknown,
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+) {
+  const list = reductions ?? [];
+  if (list.length < 2) return;
+  const types = list.map((r) => r.type);
+  const acq = toOptionalDate(acquisitionDate);
+  const tr = toOptionalDate(transferDate);
+  const within5s = acq && tr ? [isWithin5YearsCheck(acq, tr)] : [true, false];
+  const conflicts = within5s.map((w) => findTrack127_7Conflict(types, w));
+  const conflict = conflicts[0];
+  if (!conflict || conflicts.some((c) => !c)) return;
+  const at = list.findIndex((r) => r.type === conflict.second.type);
+  ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, Math.max(at, 0), "type"], message: track127_7ConflictMessage(conflict) });
 }
 
 export function refineReductionRequiredInputs(

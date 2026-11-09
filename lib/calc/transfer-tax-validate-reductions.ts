@@ -15,12 +15,10 @@ import { needsFirstContractAnswer } from "@/lib/tax-engine/transfer-reductions/n
 import { redevMemberNewHouseScope } from "./redev-field-scope";
 import { redevMemberNewHouseIssue } from "./transfer-tax-validate-new99-member";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
-import {
-  findTrack127_7Conflict,
-  track127_7EffectLabel,
-} from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
+import { findTrack127_7Conflict } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
+import { track127_7ConflictMessage } from "@/lib/tax-engine/transfer-reductions/track-127-7-message";
 import { axisBEffectiveAsset } from "./axis-b-effective-asset";
-import { REDUCTION_METADATA, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
+import { canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import { assetKindGateMessage } from "@/lib/tax-engine/transfer-reductions";
 import { asksInheritedPresaleQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
 import { unsold98AcquisitionCauseReason } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
@@ -149,16 +147,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         );
         const selected = (asset.reductions ?? []).map((x) => x.type);
         const conflict = findTrack127_7Conflict(selected, within5);
-        if (conflict) {
-          const label = (t: string) =>
-            REDUCTION_METADATA[t as keyof typeof REDUCTION_METADATA]?.uiLabel ?? t;
-          const { first, second } = conflict;
-          return fail(
-            `조특법 §127⑦ 중복배제: 「${label(first.type)}」(${track127_7EffectLabel(first.type, first.kind)})과(와) ` +
-              `「${label(second.type)}」(${track127_7EffectLabel(second.type, second.kind)})은(는) 동시에 적용받을 수 없습니다. ` +
-              "둘 중 하나만 선택하세요 — 어느 쪽이 유리한지는 각각 선택해 계산한 뒤 총 납부세액을 비교하면 됩니다.",
-          );
-        }
+        if (conflict) return fail(track127_7ConflictMessage(conflict));
       }
 
       for (const r of asset.reductions ?? []) {

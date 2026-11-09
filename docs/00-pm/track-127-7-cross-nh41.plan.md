@@ -1,6 +1,6 @@
 # §127⑦ 트랙 교차 차단이 ⑧에만 있다 — ⑫·route·엔진은 차감형과 세액감면형을 함께 적용한다 (NH-41)
 
-- 상태: **계획서 — 결정 대기**(§4 Q-1~Q-2). 기준 master `ba1982cf8`. 구현 없음.
+- 상태: **구현 완료**(Q-1 a · Q-2 b — 사용자 «모두 권장안으로») — 결과는 §7. 기준 master `ba1982cf8`.
 - 출처: 리뷰 `docs/reviews/new-housing-99-review-2026-11.md` NH-41(F-116) · Q-25. 같은 계열 관찰이 `docs/reviews/unsold-98-series-review-2026-11.md`에도 있다(엔진은 보유기간과 무관하게 병용, 차단은 ⑧·⑤에만).
 
 ## 0. 결론
@@ -86,6 +86,28 @@ D의 카드별 값은 각 단독 대조(F의 주택 카드 · E의 토지 카드
 4. 뮤테이션: 호출 제거(주 자산 · 컴패니언 각각) · 5년 분기 반전 · «카드별»을 «요청 전체»로 넓히기(단서 파괴).
 5. 회귀 5배치 → tsc/eslint. Playwright는 UI 변경이 없어 생략(⑧ 문구 동일 · ⑤ 패널 불변)을 §7에 적는다.
 
-## 7. 구현 결과
+## 7. 구현 결과 [직접]
 
-미착수 — 결정 대기.
+변경 파일(소스 6 + 테스트 1 + 문서 1):
+- 신규 `lib/tax-engine/transfer-reductions/track-127-7-message.ts` — ⑧·⑫ 공용 문구 `track127_7ConflictMessage`(문구는 ⑧ 기존 인라인과 글자까지 같다).
+- ⑧ `lib/calc/transfer-tax-validate-reductions.ts` — 인라인 문구를 위 leaf 호출로 교체(미사용이 된 `track127_7EffectLabel`·`REDUCTION_METADATA` import 제거).
+- ⑫ `lib/api/transfer-tax-schema-reduction-refines.ts` — `refineReductionTrack127_7`. 호출 2곳: `transfer-tax-schema-refines.ts`(주 자산, `addPropertyRefines`) · `transfer-tax-schema.ts`(컴패니언 루프).
+- 오류 경로는 충돌 상대 감면의 `type` 칸(`reductions.N.type`, `companionAssets.N.reductions.M.type`). 하이브리드 5년 분기는 취득일·양도일이 모두 있으면 `isWithin5YearsCheck`, 하나라도 비면 두 경우가 모두 충돌일 때만 막는다.
+- anchor `__tests__/api/transfer.route.track-127-7-cross-nh41.anchor.test.ts` 14건: 같은 카드 400(문구 = ⑧) · 단독 200 · 순서 무관 · 카드 분리(D) 200 + 카드별 값이 단독 대조와 같음 · 컴패니언 400 · 주 자산만 400 · refine 단위(하이브리드 5년 경계 · §98/§98의2 · 날짜 누락 · 트랙 밖 §97의3 통과 · 경로).
+- 구현 전 anchor 실행: 6건 중 4건 실패(200 반환) — 결함 재현 확인.
+
+뮤테이션(적용 → anchor → `cp` 복원 → `cmp` 일치):
+
+| 뮤턴트 | 결과 |
+|---|---|
+| M1 주 자산 호출 제거 | 3건 실패 |
+| M2 컴패니언 호출 제거 | 1건 실패 |
+| M3 5년 분기 반전 | 4건 실패 |
+| M4 날짜 누락 시 한쪽만 충돌해도 차단 | 처음 생존 → 분기가 갈리는 «§98의3 + §99의3» 케이스 추가 후 1건 실패 |
+| M5 첫 감면만 본다 | 9건 실패 |
+
+M4 생존 원인: 날짜 누락 케이스를 첫 분기가 null인 조합만 시험했다. 생존을 없앴고 원본은 `cmp`로 복원 확인했다. 첫 시도는 BSD `sed -i` 문법 오류로 뮤테이션이 적용되지 않아 «13 passed»가 무효였고, python으로 다시 적용했다.
+
+회귀: `__tests__/api` 499파일 6608 · `tax-engine` 1510파일 19121 · `calc` 834파일 11669 · `lib` 263파일 3366 · `components` 755파일 6946 전부 통과. `tsc --noEmit` 0건 · 변경 파일 eslint 0건.
+
+생략·제외: Playwright 생략(UI 변경 없음 — ⑤ 패널 불변, ⑧ 문구 글자 동일). `verify:legal` 불필요(새 조문 상수·manifest 없음). V-1(§98·§98의2 병용 금액)은 anchor에서 «막힌다»만 확인했고 병용 세액은 측정하지 않았다. V-2(⑧의 이월과세 대체 취득일 ↔ ⑫ 본문 취득일 차이 범위)·V-6(다건 `properties[]` 도달)은 **확인 필요**로 남는다 — 이 PR의 route anchor는 단건 본문(주 자산 + 컴패니언)만 닫는다.
