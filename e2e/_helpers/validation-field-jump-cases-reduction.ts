@@ -155,12 +155,15 @@ const UNSOLD_98_5 = table("unsold_98_5", hybrid("unsold_98_5"), u985Ok, {}, [
 ]);
 
 // ── §98의6 ────────────────────────────────────────────────────────────────
-const u986Ok = { hoType986: "seller_rented", stdPriceSumAtBase986: "400000000", floorAreaSqm986: "84", rentalContractDate986: "2011-06-01", rentalStartDate986: "2011-07-01", ...std5("986") };
+const u986Ok = { hoType986: "seller_rented", stdPriceSumAtBase986: "400000000", floorAreaSqm986: "84", rentalContractDate986: "2011-06-01", rentalStartDate986: "2011-07-01", businessRegistrationDate986: "2011-06-15", rentalRegistrationDate986: "2011-06-20", rentalVacancyPeriods986: [], ...std5("986") };
 const UNSOLD_98_6 = table("unsold_98_6", hybrid("unsold_98_6"), u986Ok, {}, [
   { name: "기준시가 합계", prop: "stdPriceSumAtBase986", message: /^§98의6 적용: 주택과 부수토지의 기준시가 합계/, patch: { stdPriceSumAtBase986: "" } },
   { name: "연면적", prop: "floorAreaSqm986", message: /^§98의6 적용: 연면적/, patch: { floorAreaSqm986: "" } },
   { name: "임대계약 체결일", prop: "rentalContractDate986", message: /^§98의6 2호 적용: 임대계약 체결일/, patch: { hoType986: "buyer_rented", rentalContractDate986: "" } },
   { name: "임대개시일", prop: "rentalStartDate986", message: /^§98의6 2호 적용: 임대개시일/, patch: { hoType986: "buyer_rented", rentalStartDate986: "" } },
+  { name: "사업자등록일", prop: "businessRegistrationDate986", message: /^§98의6 2호 적용: 사업자등록일/, patch: { hoType986: "buyer_rented", businessRegistrationDate986: "" } },
+  { name: "임대사업자등록일", prop: "rentalRegistrationDate986", message: /^§98의6 2호 적용: 임대사업자등록일/, patch: { hoType986: "buyer_rented", rentalRegistrationDate986: "" } },
+  { name: "공실 구간 미완성", prop: "rentalVacancyPeriods986", message: /^§98의6 2호 적용: 공실 구간의 시작일/, patch: { hoType986: "buyer_rented", rentalVacancyPeriods986: [{ startDate: "2012-01-01", endDate: "" }] } },
   phdRow("§98의6", "phdMode986"),
   { name: "취득시 기준시가(5년 경과)", prop: "standardPriceAtAcquisition", message: /^§98의6 적용: 취득 후 5년 경과 양도는 취득시 기준시가/, patch: { standardPriceAtAcquisition986: "" } },
   { name: "5년 시점 기준시가", prop: "standardPriceAt5Years", message: /^§98의6 적용: 취득 후 5년 경과 양도는 취득 5년 시점/, patch: { standardPriceAt5Years986: "" } },

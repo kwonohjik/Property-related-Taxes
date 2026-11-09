@@ -205,7 +205,12 @@ export function toUnsold986Payload(r: Extract<AssetReductionForm, { type: "unsol
     rentalContractDate986: isBuyerRented ? r.rentalContractDate986 || undefined : undefined,
     rentalStartDate986: isBuyerRented ? r.rentalStartDate986 || undefined : undefined,
     rentalEndDate986: isBuyerRented ? r.rentalEndDate986 || undefined : undefined,
-    inheritedRentalMonths986: isBuyerRented ? parseInt(r.inheritedRentalMonths986 || "") || undefined : undefined,
+    businessRegistrationDate986: isBuyerRented ? r.businessRegistrationDate986 || undefined : undefined,
+    rentalRegistrationDate986: isBuyerRented ? r.rentalRegistrationDate986 || undefined : undefined,
+    // 완성된 행만 싣는다(미완성 행은 ⑧이 막는다). 빈 배열은 키째 뺀다.
+    rentalVacancyPeriods986: isBuyerRented ? toVacancyPeriods986(r.rentalVacancyPeriods986) : undefined,
+    // 정수 문자열만 싣는다 — parseInt 절사(5.9→5)·1 미만 값 소거(0.5→undefined)를 하지 않는다(US-25). 정수가 아니면 ⑧이 막는다.
+    inheritedRentalMonths986: isBuyerRented ? toInheritedMonths986(r.inheritedRentalMonths986) : undefined,
     standardPriceAtAcquisition986: acqStdPrice986 || undefined,
     standardPriceAt5Years986: parseAmount(r.standardPriceAt5Years986 || "0") || undefined,
     standardPriceAtTransfer986: parseAmount(r.standardPriceAtTransfer986 || "0") || undefined,
@@ -294,4 +299,14 @@ export function toUnsold989Payload(r: Extract<AssetReductionForm, { type: "unsol
     wasOneHouseholdAtAcquisition: r.wasOneHouseholdAtAcquisition,
     meetsSellerAndContractRequirement: r.meetsSellerAndContractRequirement,
   };
+}
+
+function toVacancyPeriods986(rows: Array<{ startDate: string; endDate: string }> | undefined) {
+  const done = (rows ?? []).filter((v) => v.startDate && v.endDate).map((v) => ({ startDate: v.startDate, endDate: v.endDate }));
+  return done.length > 0 ? done : undefined;
+}
+
+function toInheritedMonths986(v: string | undefined): number | undefined {
+  const t = (v ?? "").trim();
+  return t === "" ? undefined : Number(t);
 }

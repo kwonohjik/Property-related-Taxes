@@ -170,6 +170,8 @@ describe("§98의6 — evaluateUnsold986", () => {
       hoType: "buyer_rented",
       rentalContractDate: D("2011-10-01"),
       rentalStartDate: D("2011-11-01"), // ~2014-01-01 = 26개월
+      businessRegistrationDate: D("2011-10-15"),
+      rentalRegistrationDate: D("2011-10-20"),
       inheritedRentalMonths: 40, // 합산 66개월 — 임대 요건 충족
     });
     expect(ho2.isEligible).toBe(false);
@@ -197,6 +199,8 @@ describe("§98의6 — evaluateUnsold986", () => {
       sellerRented2Years: undefined,
       rentalContractDate: D("2011-10-01"),
       rentalStartDate: D("2011-11-01"), // ~양도일 2022-08-01 = 129개월
+      businessRegistrationDate: D("2011-10-15"),
+      rentalRegistrationDate: D("2011-10-20"),
     });
     const r = evaluateUnsold986(ho2);
     expect(r.isEligible).toBe(true);

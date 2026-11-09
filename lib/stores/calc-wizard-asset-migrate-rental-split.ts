@@ -328,6 +328,10 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           sellerRented2Years986: false,
           rentalContractDate986: "",
           rentalStartDate986: "",
+          // US-60·US-24 — 옛 기록에는 등록일·공실 구간이 없다. 등록일은 비워 둔다(⑧이 2호에서 입력을 요구 — 임대개시일로 대신 채우지 않는다).
+          businessRegistrationDate986: "",
+          rentalRegistrationDate986: "",
+          rentalVacancyPeriods986: [],
           rentalEndDate986: "",
           inheritedRentalMonths986: "",
           standardPriceAtAcquisition986: "",

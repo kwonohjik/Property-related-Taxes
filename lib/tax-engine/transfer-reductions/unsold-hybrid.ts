@@ -95,6 +95,22 @@ export interface UnsoldHybridResult {
   legalBasis: string;
   /** §98의2 특칙 장특 결과 echo (STEP 4.05가 채움 — 표시 전용) */
   lthd982Echo?: Unsold982LthdEcho;
+  /**
+   * [echo] §98의6 2호 — 엔진이 계산한 인정 임대기간(표시 전용, 판정 불변). 기산일은 max(사업자등록일, 임대사업자등록일, 실제 임대개시일),
+   * 공실 구간 제외·상속 합산 반영. 2호이고 일자가 갖춰져 계산이 이뤄졌을 때만 채운다.
+   */
+  rentalPeriodEcho?: Unsold986RentalPeriodEcho;
+}
+
+export interface Unsold986RentalPeriodEcho {
+  /** 기산일 YYYY-MM-DD (UTC 달력일) */
+  basisDate: string;
+  /** 인정 임대기간 (개월 — 공실 제외 · 상속 합산 포함) */
+  rentalMonths: number;
+  /** 공실 구간 때문에 빠진 개월 수 (공실 없으면 0) */
+  vacancyMonths: number;
+  /** 합산한 피상속인 임대기간 (개월) */
+  inheritedMonths: number;
 }
 
 // ─────────────────────────────────────────────────────────────────

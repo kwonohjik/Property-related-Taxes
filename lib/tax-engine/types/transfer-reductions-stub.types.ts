@@ -333,6 +333,9 @@ export type TransferReductionStub =
       sellerRented2Years986?: boolean;
       rentalContractDate986?: Date;
       rentalStartDate986?: Date;
+      businessRegistrationDate986?: Date;
+      rentalRegistrationDate986?: Date;
+      rentalVacancyPeriods986?: Array<{ startDate: Date; endDate: Date }>;
       rentalEndDate986?: Date;
       inheritedRentalMonths986?: number;
       standardPriceAtAcquisition986?: number;

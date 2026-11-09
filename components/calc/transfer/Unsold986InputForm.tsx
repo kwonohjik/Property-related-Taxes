@@ -11,6 +11,7 @@
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -67,6 +68,14 @@ export function Unsold986InputForm({
   assetPhdSnapshot,
 }: Props) {
   const isBuyerRented = value.hoType986 === "buyer_rented";
+  function updateVacancy(idx: number, patch: Partial<{ startDate: string; endDate: string }>) {
+    onChange({
+      rentalVacancyPeriods986: value.rentalVacancyPeriods986.map((p, i) => (i === idx ? { ...p, ...patch } : p)),
+    });
+  }
+  function removeVacancy(idx: number) {
+    onChange({ rentalVacancyPeriods986: value.rentalVacancyPeriods986.filter((_, i) => i !== idx) });
+  }
   return (
     <div className="mt-2 ml-4 space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -140,23 +149,60 @@ export function Unsold986InputForm({
               <p className="mt-1 text-micro text-muted-foreground">2011.12.31 이전 체결에 한정 (법 §98의6①2호)</p>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium">임대개시일</label>
+              <label className="mb-1 block text-xs font-medium">사업자등록일</label>
+              <DateInput data-field="reduction.unsold_98_6.businessRegistrationDate986" value={value.businessRegistrationDate986} onChange={(v) => onChange({ businessRegistrationDate986: v })} />
+              <p className="mt-1 text-micro text-muted-foreground">소득세법 §168에 따른 사업자등록일 (법 §98의6①2호 괄호)</p>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">임대사업자등록일</label>
+              <DateInput data-field="reduction.unsold_98_6.rentalRegistrationDate986" value={value.rentalRegistrationDate986} onChange={(v) => onChange({ rentalRegistrationDate986: v })} />
+              <p className="mt-1 text-micro text-muted-foreground">
+                민간임대주택에 관한 특별법 §5에 따른 임대사업자등록일. 임대기간은 두 등록을 한 후 임대를 개시하는 날부터 기산합니다 (조특령 §98의5⑤1호)
+              </p>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">실제 임대개시일</label>
               <DateInput data-field="reduction.unsold_98_6.rentalStartDate986" value={value.rentalStartDate986} onChange={(v) => onChange({ rentalStartDate986: v })} />
               <p className="mt-1 text-micro text-muted-foreground">
-                사업자등록(소법 §168)과 임대사업자등록(민특법 §5) 후 임대를 개시한 날부터 기산 (조특령 §98의5⑤1호)
+                실제로 임대를 개시한 날. 등록일이 이보다 늦으면 등록일부터, 아니면 이 날부터 셉니다 (개시하는 날 당일 포함 — 조특령 §98의5⑤1호)
               </p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium">임대종료일 (비우면 양도일까지 임대 계속)</label>
-              <DateInput value={value.rentalEndDate986} onChange={(v) => onChange({ rentalEndDate986: v })} />
+              <DateInput data-field="reduction.unsold_98_6.rentalEndDate986" value={value.rentalEndDate986} onChange={(v) => onChange({ rentalEndDate986: v })} />
+              <p className="mt-1 text-micro text-muted-foreground">양도일을 넘길 수 없습니다 (양도 후의 임대는 양도인의 임대기간이 아님)</p>
             </div>
-            <div>
+            <div data-field="reduction.unsold_98_6.rentalVacancyPeriods986" className="space-y-2">
+              <label className="block text-xs font-medium">공실 구간 (임대하지 않은 기간)</label>
+              <p className="text-micro text-muted-foreground">
+                조특령 §98의5⑤에는 공실을 임대기간에 넣는 규정이 없어, 임차인 교체 사이의 짧은 공백도 임대기간에서 뺍니다. 시작일·종료일 모두 공실에 포함됩니다.
+              </p>
+              {value.rentalVacancyPeriods986.map((period, idx) => (
+                <div key={idx} className="flex flex-wrap items-center gap-2">
+                  <DateInput value={period.startDate} onChange={(v) => updateVacancy(idx, { startDate: v })} />
+                  <span className="text-xs text-muted-foreground">~</span>
+                  <DateInput value={period.endDate} onChange={(v) => updateVacancy(idx, { endDate: v })} />
+                  <button type="button" onClick={() => removeVacancy(idx)} className="text-micro text-rose-700 hover:underline dark:text-rose-400">
+                    삭제
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => onChange({ rentalVacancyPeriods986: [...value.rentalVacancyPeriods986, { startDate: "", endDate: "" }] })}
+                className="text-xs font-medium text-violet-700 hover:underline dark:text-violet-300"
+              >
+                + 공실 구간 추가
+              </button>
+            </div>
+            <div data-field="reduction.unsold_98_6.inheritedRentalMonths986">
               <label className="mb-1 block text-xs font-medium">상속 합산 임대기간 (개월, 해당 시)</label>
-              <DecimalInput
-                value={value.inheritedRentalMonths986}
-                onChange={(v) => onChange({ inheritedRentalMonths986: v })}
+              <IntegerInput
+                allowEmpty
+                value={value.inheritedRentalMonths986 === "" ? undefined : Number(value.inheritedRentalMonths986)}
+                onChange={(v) => onChange({ inheritedRentalMonths986: v === undefined ? "" : String(v) })}
               />
-              <p className="mt-1 text-micro text-muted-foreground">피상속인의 임대기간 합산 (조특령 §98의5⑤2호)</p>
+              <p className="mt-1 text-micro text-muted-foreground">피상속인의 임대기간을 정수 개월로 합산 (조특령 §98의5⑤2호)</p>
             </div>
           </>
         ) : (

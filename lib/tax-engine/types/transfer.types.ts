@@ -39,7 +39,7 @@ export type { New994Result } from "../transfer-reductions/types";
 export type { Unsold989Result } from "../transfer-reductions/types";
 export type { New99Result } from "../transfer-reductions/new-99";
 export type { Unsold988Result } from "../transfer-reductions/unsold-98-8";
-export type { UnsoldHybridResult } from "../transfer-reductions/unsold-hybrid";
+export type { UnsoldHybridResult, Unsold986RentalPeriodEcho } from "../transfer-reductions/unsold-hybrid";
 import type { InheritanceHouseValuationInput } from "./inheritance-house-valuation.types";
 import type { MixedUseAssetInput } from "./transfer-mixed-use.types";
 import type { CarryoverTaxationInput } from "./transfer-carryover.types";
