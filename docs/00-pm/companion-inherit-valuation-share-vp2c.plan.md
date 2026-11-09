@@ -1,6 +1,6 @@
 # 매매 함께 양도 × 컴패니언 상속 × 지분 — `inheritanceValuation` 지분 축소를 지키는 테스트가 없다 (V-P2c)
 
-- 상태: **측정 완료 · 결정 대기(2026-11-09)** — 기준 master `df6be3f15`.
+- 상태: **구현 완료(결정 Q-1 a, 2026-11-09)** — 결과는 §5. 기준 master `df6be3f15`.
 - 선행: `bg-pre-deemed-fractional-companion-vp2.plan.md`(#3041) §5 V-P2c — 부담부증여 뮤테이션 중 `companion-payload.ts:205`만 `__tests__/api`·`__tests__/calc` 전체를 통과했다.
 - 표기: **[직접]** = 이 문서 작성 중 직접 실행·대조. **[코드]** = 코드 읽기만. **확인 필요** = 미측정·미해명.
 
@@ -13,7 +13,7 @@
 | 그런데 왜 문제인가 | 줄을 끄면(지분 미축소) **최종 값은 그대로인데 안분 echo가 두 배**가 된다: 8칸 전부 `apportionment.apportioned[컴패니언].allocatedAcquisitionPrice` 100,000,000 → **200,000,000**, 최종 `properties[].acquisitionPrice`는 100,000,000 그대로, 양도차익 900,000,000 그대로 [직접, 뮤테이션 적용 상태에서 측정 후 `cmp` 복원]. 즉 이 줄은 **맞고, 아무 테스트도 지키지 않는다** |
 | 왜 최종 값은 안 변하는가 | 컴패니언의 최종 취득가액은 `ctx.adjustedAcqPrice ?? a.allocatedAcquisitionPrice`(`bundled-split-helpers.ts:177`)이고 상속 컴패니언은 `adjustedAcqPrice`가 채워지는 것으로 보인다 — 이 줄의 값은 거기서 덮이는 것으로 보이나 **원인 추적은 하지 않았다(확인 필요)** |
 | 화면에 닿는가 | 사이드바 자산별 요약은 `bundledEcho?.acq ?? bundledMatch.allocatedAcquisitionPrice`(`transfer-per-asset-summary.ts:378`)로 엔진 echo를 먼저 읽는다 [코드]. 안분 echo가 직접 보이는 화면·`allocatedAcquisitionPrice`의 나머지 소비처(`transfer-per-asset-debt-pieces.ts:28` · `gb-result-block-views.ts:66` 등)는 **전수 확인하지 않았다 — 확인 필요** |
-| 판정 | 사용자 결정 필요 — §3. 권장은 **Q-1 a(8칸 안전망 anchor 추가 · 안분 echo 단언 포함 · 코드 변경 없음)** |
+| 판정 | 사용자 결정 **Q-1 a(8칸 안전망 anchor 추가 · 안분 echo 단언 포함 · 코드 변경 없음)** — §3 |
 
 ## 1. 범위
 
@@ -32,7 +32,7 @@
 | 1 | 8칸 기본 측정 — 전부 ⑧ 0건 · ⑫ 200 · diff 0 |
 | 2 | 줄 `:205`를 `applyRatio` 없이 `parseAmount(...)`만 쓰도록 변형(cp 백업) → 같은 8칸 재측정 → 안분 echo 비교 → 복원 후 `cmp` |
 
-## 3. 결정
+## 3. 결정 (2026-11-09 사용자 결정: Q-1 a)
 
 | Q | 내용 | 권장 |
 |---|---|---|
@@ -46,3 +46,21 @@
 | V-P2c-2 | 안분 echo `allocatedAcquisitionPrice`가 화면에 그대로 나오는 곳(소비처 전수) |
 | V-P2c-3 | 상가 · 건물 · 재개발 · 분양권 컴패니언 · 3건 묶음 · 50% 외 지분의 값 |
 | — | 사람이 직접 한 브라우저 수동 확인은 하지 않았다 |
+
+## 5. 구현 결과 (Q-1 a)
+
+`lib/**`·`app/**` 코드 변경은 없다.
+
+| 항목 | 결과 |
+|---|---|
+| 안전망 anchor | 신규 `__tests__/api/transfer.route.companion-inherit-valuation-share.anchor.test.ts` 8건(종류·상속일 4 × 모드 2). 각 칸 ⑧ 0건 · ⑫ 200 · 양도차익 = 단건 합 = 900,000,000 · 안분 echo(주 자산 300,000,000 · 컴패니언 100,000,000) · 자산별 최종 취득가액 · 자산별 양도가액(actual 8억/5억 · apportioned 812,500,000/487,500,000) |
+| 뮤테이션 3/3 KILLED | cp 백업 → 변형 → 신규 anchor → 복원 → `cmp`(복원 확인 3/3). **Mc1** `companion-payload.ts:205` 평가액 지분 제거 → **8건 전부 실패**(이 줄을 지키는 첫 테스트) · **Mc5** `:407` 기준시가 안분 지분 제거 → 4건(apportioned 모드) · **Mb** `bundled-apportionment.ts:114` 소비처의 컴패니언 평가액 2배 → 8건 |
+| 회귀 | api 483파일 6403 · lib 262파일 3357 · components 750파일 6895 · calc 827파일 11588 · tax-engine 1502파일 19001 — 전부 통과(실패 0) |
+| 정적 검사 | `tsc --noEmit` 0건 · 신규 테스트 1파일 eslint 0건 |
+| Playwright | **돌리지 않았다** — 화면·코드 변경이 없다 |
+
+### 5.1 이번에 확인하지 않은 것
+
+- V-P2c-1~3 그대로 **확인 필요**(`adjustedAcqPrice`가 덮는 경로 · echo 화면 소비처 · 상가 등 다른 종류와 50% 외 지분).
+- 사람이 직접 한 브라우저 수동 확인.
+
