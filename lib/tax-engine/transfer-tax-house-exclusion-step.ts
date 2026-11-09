@@ -214,13 +214,15 @@ export function specialActHouseExclusionBasis(p: {
  *     §98의9뿐). §99의4가 소유주택에서 빠진다는 해석은 서면-2016-법령해석재산-3686(「소유주택에서 제외되므로」) 등.
  *     1호·2호(농어촌·고향)는 같은 항의 한 문장으로 효과를 받는다.
  *
- * ⚠️ **넣지 않은 것**(확인 필요 — 종전 동작 유지):
+ * ⚠️ **직접 해석 없이 넣은 것**(확인 필요 고지 동반 — {@link SPECIAL_ACT_15HO_INTERPRETATION_PENDING_ARTICLES}):
  * - `unsold_98` — 근거가 법률이 아니라 조특법 **시행령** §98②·⑥(「…다른 주택만을 기준으로 하여 「소득세법」
- *   제89조제1항제3호를 적용한다」)이다. 15호는 「「조세특례제한법」에 따라」라고만 한다.
+ *   제89조제1항제3호를 적용한다」)이다. 15호는 「「조세특례제한법」에 따라」라고만 한다. 직접 해석을 찾지 못했다.
+ *   사용자 결정 Q-16 (a)(2026-11-08, 리뷰 US-52) — 든다고 보고 계산하되 결과에 「확인 필요」를 고지한다.
  *
  * §155⑳ 거주주택 구성 축(`RENTAL_RESIDENCE_VERIFIED_SPECIAL_ACT`)은 별도 목록이다 — 이 목록을 펼쳐 쓴다.
  */
 export const SPECIAL_ACT_15HO_VERIFIED_ARTICLES: ReadonlySet<string> = new Set([
+  "unsold_98",
   "unsold_98_2",
   "unsold_98_3",
   "unsold_98_5",
@@ -239,6 +241,23 @@ export const SPECIAL_ACT_15HO_VERIFIED_ARTICLES: ReadonlySet<string> = new Set([
   //   이 조문에 13호·15호를 적용한 직접 해석은 찾지 못했다. 비과세는 1주택, 중과는 2주택으로 세는 고지 없는 과다과세를 피하려는 선택이다.
   "pop_decline_71_2",
 ]);
+
+/**
+ * 위 목록 중 **직접 해석 없이** 포함한 조문 — 결과에 「확인 필요」를 고지한다(Q-16 a · 리뷰 US-52).
+ * 목록 소속(계산)과 고지(표시)를 한 곳에서 갈라 카드·엔진 경고가 같은 술어를 쓴다.
+ */
+export const SPECIAL_ACT_15HO_INTERPRETATION_PENDING_ARTICLES: ReadonlySet<string> = new Set(["unsold_98"]);
+
+/** 15호·13호 해당 여부가 해석으로 확정되지 않은 조문을 계산에 넣었다는 고지 — 해당 항목이 없으면 undefined. 세액 불변. */
+export function special15HoPendingNotice(detail: SpecialHouseExclusionResolution | undefined): string | undefined {
+  const pending = (detail?.entries ?? []).filter((e) => e.eligible && SPECIAL_ACT_15HO_INTERPRETATION_PENDING_ARTICLES.has(e.article));
+  if (pending.length === 0) return undefined;
+  return (
+    `확인 필요: ${[...new Set(pending.map((e) => e.articleLabel))].join("·")} 감면주택(조세특례제한법 시행령 §98②·⑥)이 ` +
+    "소득세법 시행령 §167의10①15호·§167의3①13호의 「「조세특례제한법」에 따라 1세대가 국내에 1개의 주택을 소유하고 있는 것으로 보거나 …」에 " +
+    "드는 것으로 보고 중과 판정을 했습니다. 법은 소유주택 제외를 시행령에 위임했고 이 조문에 15호·13호를 직접 적용한 해석을 확인하지 못했습니다."
+  );
+}
 
 /**
  * 영 §167의10①15호(·§167의3①13호) **① 요소** 판정용 세대 주택 수 (E-14).
