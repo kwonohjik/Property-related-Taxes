@@ -122,15 +122,22 @@ describe("S-7 — 1983 상속 · 숨은 ① 값이 남은 기준시가 평가", 
   });
 });
 
-describe("S-8 — 축 B 둘째 지분만 비움", () => {
+describe("S-8 — 축 B 둘째 지분의 양도시 기준시가는 자산 1 값(vp2c §17 D-3d · Q-11 (가))", () => {
+  // 종전: 둘째 지분 칸을 비우면 ⑧이 「자산 2: 「② 양도정보」의 …」로 막았는데 지분 카드에는 ②도 그 칸도 없었다(막다른 길).
+  // 양도시 기준시가는 같은 물건 · 같은 양도일의 물건 단위 값이라 `mergePrimaryBasic`이 자산 1 값을 쓴다.
   const HALF: A = { ownershipNumerator: "50", ownershipDenominator: "100", addressJibun: "서울 A 1" };
   const second: A = { ...H, ...HALF, acquisitionDate: "2012-03-15" };
   const ex = { assetSplitMode: "fractional", contractTotalPrice: "" };
-  it("채우면 11,798,400 · 둘째만 비우면 ⑧이 자산 2를 짚는다", async () => {
+  it("채우면 11,798,400 · 둘째만 비워도 같은 세액(자산 1 값)", async () => {
     expect((await route(form([{ ...H, ...HALF }, second], ex))).tax).toBe(11_798_400);
     const f = form([{ ...H, ...HALF }, { ...second, standardPriceAtTransfer: "" }], ex);
+    expect(issues(f).filter((i) => FE8.test(i.message))).toEqual([]);
+    expect((await route(f)).tax).toBe(11_798_400);
+  });
+  it("자산 1을 비우면 ⑧이 자산 1을 짚는다 ∧ ⑫ 400 (형제 안전망)", async () => {
+    const f = form([{ ...H, ...HALF, standardPriceAtTransfer: "" }, second], ex);
     const hit = issues(f).find((i) => FE8.test(i.message));
-    expect(hit?.message).toMatch(/^자산 2:/);
+    expect(hit?.message).toMatch(/^자산 1:/);
     expect((await route(f)).status).toBe(400);
   });
 });

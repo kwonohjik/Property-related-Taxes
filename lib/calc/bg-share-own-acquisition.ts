@@ -18,6 +18,12 @@ import { gbBgThreeWayParts } from "./bg-pre-deemed-mode";
 /** 토글을 여는 자산 종류 — 측정한 종류만(§14 일반건물 · §15 주택 · 토지 · 상가 · 건물). */
 const SHARE_OWN_ACQ_KINDS: ReadonlySet<string> = new Set(["general_building", "housing", "land", "commercial_building", "building"]);
 
+/**
+ * 축 B × 부담부증여 지분 카드를 부담부증여로 다루는 자산 종류(일반건물 제외 — 일반건물은 `mergeGbPropertyLevel`이 물건 수준 값을 따로 병합한다).
+ * 지분 카드 ③ 판정값(`bgShareCardJudgmentFields` · D-3c)과 양도시 기준시가 병합(`mergePrimaryBasic` · D-3d)이 같이 쓴다. 측정한 종류만(vp2c §15 · §17).
+ */
+export const BG_SHARE_CARD_KINDS: ReadonlySet<string> = new Set(["housing", "land", "commercial_building", "building"]);
+
 /** 지분 카드가 따로 받을 수 있는 칸 — 그 밖의 §159 하위필드는 물건 단위 값이라 계속 자산 1을 승계한다. */
 export const BG_SHARE_OWN_ACQ_FIELDS = ["bgAcquisitionMethod", "bgActualAcquisitionLand", "bgActualAcquisitionBuilding", "bgActualAcquisitionTotal"] as const;
 
