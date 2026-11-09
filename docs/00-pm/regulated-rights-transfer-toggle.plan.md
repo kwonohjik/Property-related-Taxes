@@ -435,3 +435,32 @@
 - 컴패니언 카드가 두 값을 받는 경로(`bundled-route.ts`의 `primaryEngineInput.isRegulatedArea`·`wasRegulatedAtAcquisition`)는 **코드 읽기**다. 입주권은 불변이라 이 시료로는 «두 값이 둘째 카드에 실제로 닿았는가»를 보일 수 없다 — 주택 카드를 같은 방식으로 덮어쓴 대조는 하지 않았다. 컴패니언 payload 자체에는 두 값 키가 없어(`regulated` 포함 키 0개) 덮어쓴 것은 최상위 두 값뿐이다.
 - 50/50만 쟀다(60/40 등 비대칭 · 3분할 · 지분 중 일부만 양도 미측정). 나목 · 승계 · 인가 전 양도 · 출자 토지 변형은 이 축에서 재지 않았다.
 - 결과 파일이 총 양도가별로 나뉘어 저장돼 있다(20억·30억은 `m13-probe.json`, 10억은 `m13-probe-1b.json`).
+
+### 16-9. §16-5의 전달 경로 — 폼 전역 5호가 컴패니언 주택에 닿는 길 (2026-11-09 · 워크트리 `-m14` · throwaway probe·뮤테이션, 삭제·원복함 — 결과 원본 `scratchpad/m14-probe.jsonl`)
+
+§16-5가 «전달 경로 미추적»으로 남긴 것을 추적했다. **경로: ④가 `householdFactsCompanionAssetId`를 싣고 → ⑭ `bundled-route.ts:370`이 그 id의 컴패니언 카드에 `asHouseholdFactsCompanionHouse`(`bundled-reverse-appurtenant.ts:162`)로 세대 사실을 덮는다 — 그 목록(`HOUSEHOLD_ONE_HOUSE_FACT_KEYS`)에 `oneHouseExemptionProviso`가 들어 있다.**
+
+**코드 읽기**
+- ④: 첫 자산이 토지·건물이고 함께 양도 주택이 세대·주택 현황의 기준 자산이면 `householdFactsCompanionAssetId(form)`이 그 주택의 `assetId`를 낸다(`household-facts-view.ts:31` · 본문에 실림 `transfer-tax-api.ts:591`).
+- ⑭: `data.householdFactsCompanionAssetId === c.assetId`인 컴패니언 카드에 본문 최상위 세대 사실을 덮는다. 덮는 목록에서 빠지는 키는 소재지 둘(`regionCode`·`regionInDesignatedDistrict`)뿐이다(`HOUSEHOLD_FACTS_COMPANION_EXCLUDED_KEYS`) — §154① 단서(`oneHouseExemptionProviso`)는 **덮는다**.
+- 근거 계획서: `nh14-companion-house-own-facts.plan.md`(NH-14 후속 2 · 2026-11-06) — 첫 자산이 토지면 ② 섹션이 열리지 않아 함께 양도 주택의 거주·단서를 입력할 곳이 없었으므로, ②를 그 주택 기준으로 열고(⑤ 섹션 게이트) §154① 단서 키를 그 주택 카드에 덮는다(⑭ «제외 키를 소재지만으로 줄여»). 선행 계획서 `nh14-companion-household-followups.plan.md`는 «§154① 단서 — 범위 밖»으로 남겼고, 후속 2가 이를 바꿨다.
+- ⚠️ **낡은 주석**: `bundled-route.ts:368-369`는 «소재지·§154① 단서는 뺀다»고 적지만 함수(`asHouseholdFactsCompanionHouse`)는 단서를 덮는다. 후속 2 이전 계획서의 문구가 남은 것으로 보인다(**주석만 낡음 — 코드 결함으로 단정하지 않는다**, 이번에 고치지 않았다).
+
+**실측 (주 자산 토지 · 컴패니언 마포 주택 · 양도 2026-06-01 · 거주 0 · 세대 주택 1) — 뮤테이션 2건으로 경로를 확인**
+
+| 시료 | 컴패니언 취득 2017-07-01 (5호 없음) | 2017-09-01 (5호 없음) | 2017-09-01 + 5호 + 무주택 확인 |
+|---|---|---|---|
+| 기준 | 비과세 · 합계 32,685,000 | 과세 75,820,000 · 합계 129,860,000 | **비과세 · 합계 32,685,000** (본문 최상위에 `oneHouseExemptionProviso`, 컴패니언 payload에는 단서 키 0) |
+| M2: 본문에서 `householdFactsCompanionAssetId` 제거 | 같음 | 같음 | **과세 75,820,000 · 합계 129,860,000** (5호 효과 소멸) |
+| M1: 덮기 제외 키에 `oneHouseExemptionProviso` 추가(코드 원복함) | 같음 | 같음 | **과세 75,820,000 · 합계 129,860,000** (5호 효과 소멸) |
+
+- 두 뮤테이션 모두 5호 행만 뒤집고 나머지 두 행은 그대로다 — 경로가 ④의 id 전달 + ⑭의 덮기 두 지점이라는 뜻이다. 원복 후 `app/` 변경 0건 확인.
+- 본문 최상위에는 `householdFactsCompanionAssetId: "companion-fixed"`가 실렸다.
+
+**§16-5의 «법적 타당성 미판단»에 대해 알게 된 것 (판단은 여전히 하지 않음)**
+- 한 선언이 «다른 주택»에 그대로 얹히는 것이 아니라, **② 섹션을 세대 기준 주택(함께 양도 주택) 기준으로 열어 거기서 입력받는 설계**다(계획서 근거). 즉 컴패니언 주택 자신의 계약·무주택 사실을 묻는 칸이 별도로 없는 것이 아니라, 폼 전역 단서 칸이 그 주택 기준으로 열린다. 이 화면 동작은 **브라우저로 확인하지 않았다**(계획서·코드 읽기).
+- 이 덮기는 «세대 기준 주택 1건»에만 걸린다. 주 자산이 주택이면 컴패니언 주택에는 싣지 않는다는 규약이 코드 주석에 있으나(`bundled-reverse-appurtenant.ts` 상단 «별개 주택 컴패니언에 이 값을 싣지 않는다»), 그 구성은 이번에 쟀다고 하지 못한다(**확인 필요**).
+
+**한계**
+- 주 자산이 주택인 시료 · 컴패니언 주택이 둘 이상인 시료 · 입주권/분양권 컴패니언 · 브라우저 화면 확인은 하지 않았다.
+- 5호 선언이 컴패니언 주택 자신의 계약·계약금 지급일 사실과 맞는지(법적 타당성)는 조회하지 않았다.
