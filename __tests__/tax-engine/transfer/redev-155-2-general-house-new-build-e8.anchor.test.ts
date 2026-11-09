@@ -109,7 +109,7 @@ describe("E-8 승계조합원 — 일반주택 취득일 = 준공일 · 상속�
     const r = calculateTransferTax(late, rates);
     expect(r.isExempt).toBe(false);
     // 종전 비과세 0 (입주권 승계일 2012-06-01을 주택 취득일로 읽어 부칙 제20조 한정을 벗어남)
-    expect(r.determinedTax).toBe(123_460_000);
+    expect(r.determinedTax).toBe(117_060_000);
   });
 
   it("긍정 짝 — 상속개시 전 승계한 입주권(상속개시 당시 보유)의 신축주택 → 제외 1 → 비과세", () => {

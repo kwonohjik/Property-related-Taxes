@@ -112,8 +112,8 @@ describe("D15 차감형 — STEP 4.6 (resolveIncomeDeduction)", () => {
     expect(notices(u)).toHaveLength(1);
 
     const reg = h(false, [N99]);
-    expect(reg.totalTax).toBe(134_166_000);
-    expect(h(false, []).totalTax).toBe(176_286_000);
+    expect(reg.totalTax).toBe(117_366_000);
+    expect(h(false, []).totalTax).toBe(155_166_000);
   });
 });
 

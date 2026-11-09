@@ -117,12 +117,12 @@ describe("증환지 이중계상 세액영향 회귀 (PR#473)", () => {
     expect(a - b).toBe(0);
   });
 
-  it("실지 모드·증가분 단기: 세율군 상이 → 경미(−0.18%, 이중계상이 오히려 과소)", () => {
+  it("실지 모드·증가분 단기: 세율군 상이 → 경미(−0.30%, 이중계상이 오히려 과소)", () => {
     const a = taxActual(DATE_SHORT, true);
     const b = taxActual(DATE_SHORT, false);
-    expect(a).toBe(197_861_760);
-    expect(b).toBe(198_213_916);
-    expect(a - b).toBe(-352_156);
+    expect(a).toBe(176_687_640);
+    expect(b).toBe(177_215_874);
+    expect(a - b).toBe(-528_234);
   });
 
   it("환산 모드·증가분 장기: 이중계상 시 +3.33% 과대 (A>B, B가 올바름)", () => {
@@ -133,11 +133,11 @@ describe("증환지 이중계상 세액영향 회귀 (PR#473)", () => {
     expect(a - b).toBe(5_424_507);
   });
 
-  it("환산 모드·증가분 단기: 이중계상 시 +3.16% 과대 (A>B)", () => {
+  it("환산 모드·증가분 단기: 이중계상 시 +3.09% 과대 (A>B)", () => {
     const a = taxEstimated(DATE_SHORT, true);
     const b = taxEstimated(DATE_SHORT, false);
-    expect(a).toBe(211_380_887); // 수정 전(이중계상) — 과대
-    expect(b).toBe(204_898_164); // PR#473 이후(올바름) — 정답
-    expect(a - b).toBe(6_482_723);
+    expect(a).toBe(188_919_232); // 수정 전(이중계상) — 과대
+    expect(b).toBe(183_263_528); // PR#473 이후(올바름) — 정답
+    expect(a - b).toBe(5_655_704);
   });
 });

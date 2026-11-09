@@ -72,32 +72,32 @@ describe("단건 — 폼 → ④ → Zod → route → 엔진", () => {
     const r = await runCalc(form([commercial(1)]));
     expect(r.issues).toEqual([]);
     expect(r.body.isDesignatedArea).toBeUndefined();
-    expect(r.result.totalTax).toBe(297_385_000);
+    expect(r.result.totalTax).toBe(285_560_000);
     expect(notices(r.result.warnings)).toBe(1);
   });
   it("🔑 «아님» → 값이 엔진에 닿아 유예 278,960,000 · 사유 transfer_deferral · 고지 없음 (수정 전: ④에서 사라져 중과 유지)", async () => {
     const r = await runCalc(form([commercial(1, { isDesignatedArea: false })]));
     expect(r.body.isDesignatedArea).toBe(false);
-    expect(r.result.totalTax).toBe(278_960_000);
+    expect(r.result.totalTax).toBe(265_265_000);
     expect(r.result.nblSurchargeExcludedBy).toBe("transfer_deferral");
     expect(notices(r.result.warnings)).toBe(0);
   });
   it("독립 도출 — 과세표준 697,500,000 · 미선언은 §104⑤ 2호(파트별 합) · «아님»은 가산이 빠져 1호(합산 누진)가 이긴다", async () => {
-    // mock 표: 40% 구간 누진공제 25,400,000 · 38% 구간 19,400,000. 초과 비율 600/1,000 = 60%.
+    // 양도일 2012-09-01 시행 §55① 표(US-10): 3억 초과 38% 누진공제 23,900,000 · 8,800만~3억 35% 누진공제 14,900,000. 초과 비율 600/1,000 = 60%.
     //   소득 700,000,000 → 파트 420,000,000 · 280,000,000. 기본공제 250만은 세율 높은 비사업용 파트에서.
-    //   비사업용 파트 417,500,000 × 50%(40% + 10%p) − 25,400,000 = 183,350,000 · 나머지 280,000,000 × 38% − 19,400,000 = 87,000,000
-    //   미선언: 2호 270,350,000 ≥ 1호 697,500,000 × 40% − 25,400,000 = 253,600,000 → 270,470,000
-    //   «아님»: 비사업용 파트도 40% → 2호 < 1호 → 253,600,000
+    //   비사업용 파트 417,500,000 × 48%(38% + 10%p) − 23,900,000 = 176,500,000 · 나머지 280,000,000 × 35% − 14,900,000 = 83,100,000
+    //   미선언: 2호 259,600,000 ≥ 1호 697,500,000 × 38% − 23,900,000 = 241,150,000
+    //   «아님»: 비사업용 파트도 38% → 2호 < 1호 → 241,150,000
     const und = await runCalc(form([commercial(1)]));
     const no = await runCalc(form([commercial(1, { isDesignatedArea: false })]));
     expect(und.result.taxBase).toBe(697_500_000);
-    expect(und.result.calculatedTax).toBe(417_500_000 * 0.5 - 25_400_000 + (280_000_000 * 0.38 - 19_400_000));
-    expect(no.result.calculatedTax).toBe(697_500_000 * 0.4 - 25_400_000);
+    expect(und.result.calculatedTax).toBe(417_500_000 * 0.48 - 23_900_000 + (280_000_000 * 0.35 - 14_900_000));
+    expect(no.result.calculatedTax).toBe(697_500_000 * 0.38 - 23_900_000);
   });
   it("«지정지역» → 중과 유지 · 미선언과 같은 세액 · 고지 없음", async () => {
     const r = await runCalc(form([commercial(1, { isDesignatedArea: true })]));
     expect(r.body.isDesignatedArea).toBe(true);
-    expect(r.result.totalTax).toBe(297_385_000);
+    expect(r.result.totalTax).toBe(285_560_000);
     expect(notices(r.result.warnings)).toBe(0);
   });
   it("🔑 무허가 단서(부속토지 전체 비사업용)도 «아님»이 닿는다", async () => {
@@ -132,11 +132,11 @@ describe("함께 양도 — 상업용건물이 컴패니언", () => {
   it("🔑 미선언 330,750,000 + 고지 1건 / «아님» → 314,400,000 · 사유 transfer_deferral (수정 전: 컴패니언 값이 사라져 중과 유지)", async () => {
     const und = await run({});
     expect(und.issues).toEqual([]);
-    expect(und.json.data.aggregated.determinedTax).toBe(330_750_000);
+    expect(und.json.data.aggregated.determinedTax).toBe(312_200_000);
     expect(notices(und.json.data.aggregated.warnings)).toBe(1);
     const no = await run({ isDesignatedArea: false });
     expect(comp(no).isDesignatedArea).toBe(false);
-    expect(no.json.data.aggregated.determinedTax).toBe(314_400_000);
+    expect(no.json.data.aggregated.determinedTax).toBe(294_350_000);
     expect((no.json.data.aggregated.properties as Row[])[1].nblSurchargeExcludedBy).toBe("transfer_deferral");
   });
 });
@@ -147,7 +147,7 @@ describe("지분 분할(축 B) — 한 상가를 60:40 지분으로 나눠 입�
       useEstimatedAcquisition: false, ownershipNumerator: num, ownershipDenominator: "100", ...over }) as unknown as AssetForm;
   const run = (ida?: boolean) =>
     runCalc(form([commercial(1, { ownershipNumerator: "60", ownershipDenominator: "100", ...(ida !== undefined ? { isDesignatedArea: ida } : {}) }), tranche(2, "40")]));
-  it("🔑 주 자산의 «아님»이 지분 카드에도 실려 두 지분 모두 유예된다 · 미선언은 고지 1건", async () => {
+  it("🔑 주 자산의 «아님»이 지분 카드에도 실려 두 지분 모두 유예된다 · 미선언은 지분마다 고지 1건씩 2건", async () => {
     const und = await run();
     const no = await run(false);
     expect(und.issues).toEqual([]);
@@ -159,7 +159,7 @@ describe("지분 분할(축 B) — 한 상가를 60:40 지분으로 나눠 입�
     type Row = { nblSurchargeExcludedBy?: string };
     const rows = no.json.data.aggregated.properties as Row[];
     expect(rows.map((p) => p.nblSurchargeExcludedBy)).toEqual(["transfer_deferral", "transfer_deferral"]);
-    expect(notices(und.json.data.aggregated.warnings)).toBe(1); // 실측 1건(지분 카드마다 중복되지 않는다)
+    expect(notices(und.json.data.aggregated.warnings)).toBe(2); // 실측 2건([주 자산]·[자산 2] 각 1건) — 2012-09-01 법정표(US-10)에서 두 지분 모두 중과가 걸려 지분마다 1건씩
     expect(no.json.data.aggregated.determinedTax).toBeLessThan(und.json.data.aggregated.determinedTax);
   });
 });

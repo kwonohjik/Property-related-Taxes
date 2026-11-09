@@ -82,22 +82,22 @@ describe("§155⑳ 특례 + 배율 초과 파트 — 8호 유예 고지·사유 
     expect(r.rentalHousingExceptionDetail?.scenarioId).toBe("RH-A1");
     expect(r.splitDetail?.nonBusinessLandPart?.excessArea).toBe(900);
   });
-  it("🔑 미선언 → 중과 유지(82,683,920) + «확인 필요» 고지 1건 (수정 전: 0건)", () => {
+  it("🔑 미선언 → 중과 유지(74,320,400) + «확인 필요» 고지 1건 (수정 전: 0건)", () => {
     const r = calculateTransferTax(house({ rhe: true }), rates);
-    expect(r.totalTax).toBe(82_683_920);
+    expect(r.totalTax).toBe(74_320_400);
     expect(r.surchargeType).toBe("non_business_land");
     expect(notices(r)).toBe(1);
   });
-  it("🔑 «아님» → 유예(60,888,520) · 사유 transfer_deferral · nblSurchargeExcluded (수정 전: 사유 없음) · 고지 없음", () => {
+  it("🔑 «아님» → 유예(54,267,400) · 사유 transfer_deferral · nblSurchargeExcluded (수정 전: 사유 없음) · 고지 없음", () => {
     const r = calculateTransferTax(house({ rhe: true, ida: false }), rates);
-    expect(r.totalTax).toBe(60_888_520);
+    expect(r.totalTax).toBe(54_267_400);
     expect(r.nblSurchargeExcluded).toBe(true);
     expect(r.nblSurchargeExcludedBy).toBe("transfer_deferral");
     expect(notices(r)).toBe(0);
   });
   it("«지정지역» → 중과 유지 · 고지 없음 · 사유 없음", () => {
     const r = calculateTransferTax(house({ rhe: true, ida: true }), rates);
-    expect(r.totalTax).toBe(82_683_920);
+    expect(r.totalTax).toBe(74_320_400);
     expect(r.nblSurchargeExcludedBy).toBeUndefined();
     expect(notices(r)).toBe(0);
   });
@@ -148,7 +148,7 @@ describe("다건 — §155⑳ 특례 주택(RH-A1) + 같은 해 토지 1건", ()
     expect(p1(a).rateGroup).toBe("progressive");
     expect(aggNotices(a)).toBe(0);
   });
-  it("세액 불변 — 총세액 134,327,600은 수정 전과 같다(echo·고지만 추가). 이 시료는 선언값과 무관하게 같다", () => {
-    for (const ida of [undefined, false, true] as const) expect(agg(ida).totalTax).toBe(134_327_600);
+  it("세액 불변 — 총세액 121,198,000은 수정 전과 같다(echo·고지만 추가). 이 시료는 선언값과 무관하게 같다", () => {
+    for (const ida of [undefined, false, true] as const) expect(agg(ida).totalTax).toBe(121_198_000);
   });
 });

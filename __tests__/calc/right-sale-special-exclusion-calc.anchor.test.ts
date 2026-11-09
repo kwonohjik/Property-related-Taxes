@@ -136,7 +136,7 @@ describe("RS-1 단건 — 판정 메뉴 결론이 계산기에도 같다", () =>
   it("[RS-1b+] 짝 — 선언을 지우면 과세 138,160,000", async () => {
     const r = await calc(calcFormFrom(withoutDeclaration(G065)));
     expect(r.isExempt).toBe(false);
-    expect(r.totalTax).toBe(138_160_000);
+    expect(r.totalTax).toBe(122_760_000);
   });
 });
 
@@ -149,7 +149,7 @@ describe("RS-2 해석례 미확보 조문은 계산기도 빼지 않는다", () 
     expect(body.specialHouseExclusions ?? []).toEqual([]);
     const r = await post(body);
     expect(r.isExempt).toBe(false);
-    expect(r.totalTax).toBe(138_160_000);
+    expect(r.totalTax).toBe(122_760_000);
   });
 });
 
@@ -164,7 +164,7 @@ describe("RS-3 ⑭ 행 id 없는 선언은 엔진도 빼지 않는다", () => {
     void _drop;
     const r = await post({ ...body, specialHouseExclusions: [unlinked] });
     expect(r.isExempt).toBe(false);
-    expect(r.totalTax).toBe(138_160_000);
+    expect(r.totalTax).toBe(122_760_000);
   });
 });
 

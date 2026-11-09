@@ -57,6 +57,7 @@ import {
   landOnlyOtherHouseholdAppurtenantCardRateNotice,
 } from "./land-only-appurtenant-card-notice";
 import { LAND_ONLY_OTHER_HOUSEHOLD_SURCHARGE_NOTICE } from "./land-only-owner-household";
+import { transferRateEraNotices } from "./transfer-tax-rate-era-notice";
 import { landOnlyOtherHouseholdRateNotice } from "./land-only-owner-household";
 import { landOnlyMergeDateAppliedNotice } from "./land-only-owner-household";
 import { nblDeferralAreaNotice } from "./transfer-tax-nbl-deferral-notice";
@@ -668,6 +669,13 @@ function calculateTransferTaxCore(
   warnings.push(...unsold98RateNotices({
     flatRate20Active, taxRateInput, multiHouseSurchargeResult, surchargeSpecialRules: parsedRates.surchargeSpecialRules, flatRateTax: taxResult.calculatedTax,
     generalRateTax: () => resolveSplitAwareTax({ taxBase, transferIncome, basicDeduction, splitDetail, parsedRates, taxRateInput: taxRateInputBase, multiHouseSurchargeResult, reducedPart: publicExpropriationReducedPart(input, splitDetail) }).calculatedTax,
+  }));
+  // US-10·US-11·Q-30 (b) — 세율표·표1 연혁 미지원 고지(세액 불변). 장특은 실제 공제가 걸렸을 때만.
+  warnings.push(...transferRateEraNotices({
+    transferDate: effectiveInput.transferDate,
+    propertyType: effectiveInput.propertyType,
+    householdHousingCount: effectiveInput.householdHousingCount,
+    hasLongTermDeduction: longTermHoldingDeduction > 0,
   }));
   const nblDeferralNotice = nblDeferralNoticeOf(taxResult, nblNoticeInputOf(effectiveInput, splitDetail));
   if (nblDeferralNotice) warnings.push(nblDeferralNotice);

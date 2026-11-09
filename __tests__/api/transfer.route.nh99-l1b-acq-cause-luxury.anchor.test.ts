@@ -147,6 +147,6 @@ describe("NH-49 route — 2015.12.31. 이전 양도 종전 규정 고지(세액 
     expect(det(r.r).isEligible).toBe(true);
     expect(det(r.r).warnings.join(" ")).toContain("대통령령 제26959호 부칙 제35조");
     expect(r.totalTax).toBeLessThan(c.totalTax);
-    expect(r.totalTax).toMatchInlineSnapshot(`62089000`);
+    expect(r.totalTax).toMatchInlineSnapshot(`53425000`);
   });
 });

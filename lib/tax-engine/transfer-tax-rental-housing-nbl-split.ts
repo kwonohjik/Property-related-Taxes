@@ -73,7 +73,7 @@ export function splitAppurtenantExcess(
   if (gain === 0) return null;
 
   const holdingYears = splitDetail.land.holdingYears;
-  const longTermRate = calcTable1Rate(holdingYears);
+  const longTermRate = calcTable1Rate(holdingYears, input.transferDate);
   const longTermDeduction = applyRate(Math.max(0, gain), longTermRate);
 
   return {
@@ -136,7 +136,7 @@ export function splitLaterAcquiredLand(
   if (!isLaterAcquiredLandExemptExcluded(input)) return null;
   const gain = Math.max(0, splitDetail.land.gain) - nonBusinessGain;
   const holdingYears = splitDetail.land.holdingYears;
-  const longTermRate = calcTable1Rate(holdingYears);
+  const longTermRate = calcTable1Rate(holdingYears, input.transferDate);
   const longTermDeduction = applyRate(gain, longTermRate);
   // 토지만 본인은 건물분이 본인 자산이 아니다 — 특례 대상 주택분이 남지 않는다(일반 경로 `applyHousingLandExclusions`와 같다).
   const housingGain =

@@ -12,6 +12,7 @@
  */
 
 import { applyFairMarketRatio, applyRate } from "../../tax-utils";
+import { table1RateAt } from "../../data/lthd-table1-era";
 import { calcLongTermRate } from "../../transfer-tax-mixed-use-inheritance";
 import { resolveAppurtenantLandLthdRate, resolveAppurtenantLthdNoticeBasis } from "../../appurtenant-land-lthd-rate";
 
@@ -21,11 +22,10 @@ import { resolveAppurtenantLandLthdRate, resolveAppurtenantLthdNoticeBasis } fro
 
 /**
  * 표1 — 일반 장기보유공제율
- * 보유연수 × 2%, 최대 30%, 최소 보유기간 3년
+ * 양도일 시행본(2019-01-01 전 단계표, 이후 보유연수 × 2%·최대 30%), 최소 보유기간 3년
  */
-export function calcTable1Rate(holdYears: number): number {
-  if (holdYears < 3) return 0;
-  return Math.min(holdYears * 0.02, 0.30);
+export function calcTable1Rate(holdYears: number, transferDate?: Date): number {
+  return table1RateAt(holdYears, transferDate);
 }
 
 // ============================================================
@@ -74,7 +74,7 @@ export function calculateGain95BothTables(
   liveYears: number,
   transferDate?: Date,
 ): Gain95BothTables {
-  const rateTable1 = calcTable1Rate(holdYears);
+  const rateTable1 = calcTable1Rate(holdYears, transferDate);
   const rateTable2 = calcLongTermRate(holdYears, liveYears, true, false, transferDate);
 
   // applyRate = Math.floor(gain * rate) — 세율×금액은 반드시 이 함수 사용
@@ -166,11 +166,11 @@ export function calculateGain95BothTablesByParts(
         })
       : undefined;
   const land = {
-    rate1: calcTable1Rate(parts.land.holdYears),
+    rate1: calcTable1Rate(parts.land.holdYears, transferDate),
     rate2: appurtenant ? appurtenant.rate : landOwnRate2,
   };
   const building = {
-    rate1: calcTable1Rate(parts.building.holdYears),
+    rate1: calcTable1Rate(parts.building.holdYears, transferDate),
     rate2: calcLongTermRate(parts.building.holdYears, liveYears, true, false, transferDate),
   };
 

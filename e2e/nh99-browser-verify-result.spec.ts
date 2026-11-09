@@ -114,10 +114,10 @@ test.describe("S1 §99의3 결과 카드", () => {
     expect(body.reductions).toEqual([
       expect.objectContaining({ type: "new_99_3", isRedevelopedNewHouse993: true, previousHouseStdPrice993: 100_000_000, standardPriceAtTransfer993: 350_000_000 }),
     ]);
-    // 엔진 값 — 양도소득금액 184,000,000 × (350M−200M)/(350M−100M) = 110,400,000 (표시만 바뀐 수정이라 세액 불변)
+    // 엔진 값 — 양도소득금액 176,000,000 × (350M−200M)/(350M−100M) = 105,600,000 (표시만 바뀐 수정이라 세액 불변)
     const detail = (json.data.result as Seed).new993Detail as Seed;
     expect(detail.isWithin5Years).toBe(true);
-    expect(detail.reducibleTransferIncome).toBe(110_400_000);
+    expect(detail.reducibleTransferIncome).toBe(105_600_000);
 
     const card = page.getByText(NEW_993_CARD).locator("xpath=..");
     await expect(card).toBeVisible();
@@ -127,7 +127,7 @@ test.describe("S1 §99의3 결과 카드", () => {
     expect(t).toContain("조특령 §99의3 ② 1호 단서");
     expect(t).toContain("350,000,000 − 200,000,000 = 150,000,000");
     expect(t).toContain("350,000,000 − 100,000,000 = 250,000,000");
-    expect(t).toContain("감면 양도소득금액 = 110,400,000");
+    expect(t).toContain("감면 양도소득금액 = 105,600,000");
     // 안분 비율은 「/」 글자가 아니라 세로 분수
     expect(t).not.toMatch(/\d\s\/\s\d/);
     await expect(card.locator("span.inline-flex.flex-col")).not.toHaveCount(0);
@@ -331,11 +331,11 @@ test.describe("S3 다건 §99·§99의3 (NH-72)", () => {
     expect(d.properties[0].incomeDeductionReducible ?? 0).toBeGreaterThan(0);
   });
 
-  test("[S3-B] §99의3 · 2018.6.1. 양도 → 차단 없이 계산 (anchor 38,972,500)", async ({ page }) => {
+  test("[S3-B] §99의3 · 2018.6.1. 양도 → 차단 없이 계산 (anchor 37,382,500)", async ({ page }) => {
     test.setTimeout(90_000);
     await seedMulti(page, [multiForm([multiHouse("2003-09-01", "2002-03-01", [r993()])], "2018-06-01", "800000000")], 2018);
     const d = await calcMulti(page);
-    expect(d.totalTax).toBe(38_972_500);
+    expect(d.totalTax).toBe(37_382_500);
     expect(d.properties[0].incomeDeductionReducible ?? 0).toBeGreaterThan(0);
   });
 

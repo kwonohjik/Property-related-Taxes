@@ -92,7 +92,7 @@ describe("수유자 토글 — 상속인(끔)은 종전 값, 수유자(켬)는 �
     // [이름, 상속인 시료, 수유자 시료, 매매 대조 시료, 상속인 (nbl, 세액), 수유자 (nbl, 세액)]
     ["P1 ③1호 · 비도시 농지 · 2000 상속 · 2009-06-01 양도",
       form(T09, FARM, RURAL, INH("2000-01-01")), form(T09, FARM, RURAL, INH("2000-01-01"), NON_HEIR), form(T09, FARM, RURAL, BUY("2000-01-01")),
-      [false, 187_440_000], [true, 300_685_000]],
+      [false, 152_113_500], [true, 280_208_500]],
     ["P2 ③4호 나목 · 도시 농지 · 2022 상속",
       form(T, FARM, URBAN, INH("2022-01-01")), form(T, FARM, URBAN, INH("2022-01-01"), NON_HEIR), form(T, FARM, URBAN, BUY("2022-01-01")),
       [false, 236_511_000], [true, 302_236_000]],

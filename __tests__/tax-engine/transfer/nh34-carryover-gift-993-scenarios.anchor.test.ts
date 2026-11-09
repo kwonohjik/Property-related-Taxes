@@ -53,35 +53,35 @@ describe("NH-34 — 이월과세 증여 × §99의3 (시나리오 A·본 계산)
   const r = calculateTransferTax(mk([R993]), rates);
   const ctl = calculateTransferTax(mk([]), rates);
 
-  it("본 계산 — 증여 취득이라 불성립 · 세액 = 감면 없는 대조 155,166,000 (수정 전 결정세액 0 + 농특세 28,212,000)", () => {
+  it("본 계산 — 증여 취득이라 불성립 · 세액 = 감면 없는 대조 137,566,000 (수정 전 결정세액 0 + 농특세 28,212,000)", () => {
     expect(r.new993Detail?.isEligible).toBe(false);
     expect(r.new993Detail?.ineligibleReasons.map((x) => x.code)).toEqual(["ACQUIRED_BY_INHERITANCE_OR_GIFT"]);
     expect(r.totalTax).toBe(ctl.totalTax);
-    expect(r.totalTax).toBe(155_166_000);
+    expect(r.totalTax).toBe(137_566_000);
   });
 
   it("시나리오 A — 결정세액이 감면 없는 대조와 같다 (수정 전 85,510,000) · 채택 A", () => {
     expect(r.carryoverTaxationDetail?.adoptedScenario).toBe("A");
     expect(r.carryoverTaxationDetail?.scenarioA?.determinedTax).toBe(ctl.carryoverTaxationDetail?.scenarioA?.determinedTax);
-    expect(r.carryoverTaxationDetail?.scenarioA?.determinedTax).toBe(141_060_000);
+    expect(r.carryoverTaxationDetail?.scenarioA?.determinedTax).toBe(125_060_000);
   });
 });
 
 /**
  * 시나리오 B — §104②2호 세율 보유기간 때문에 B 입력은 `acquisitionCause: "purchase"`(일반 취득)로 바뀐다(`buildInputB`).
  * 감면 판정은 실제 취득 원인(이월과세 증여)을 엔진 내부 필드 `reductionAcquisitionCause`로 따로 읽는다(L1c · Q-3).
- * 수정 전: B 결정세액 0(매매 + 최초 계약 빈 값 = 종전 적용 · 「예」도 적용) — 수정 후 감면 없는 대조 B 49,030,000.
+ * 수정 전: B 결정세액 0(매매 + 최초 계약 빈 값 = 종전 적용 · 「예」도 적용) — 수정 후 감면 없는 대조 B 45,990,000.
  */
 describe("NH-34 — 이월과세 증여 × §99의3 (시나리오 B)", () => {
   const ctlB = calculateTransferTax(mk([]), rates).carryoverTaxationDetail?.scenarioB?.determinedTax;
   it.each([
     ["최초 계약 빈 값", R993],
     ["최초 계약 「예」(화면은 묻지 않는 범위의 옛 답)", { ...R993, firstContract993: "yes" as const }],
-  ])("%s — B 결정세액 = 감면 없는 대조 49,030,000 (수정 전 0) · 채택 A · 본 계산 세액 불변 155,166,000", (_l, red) => {
+  ])("%s — B 결정세액 = 감면 없는 대조 45,990,000 (수정 전 0) · 채택 A · 본 계산 세액 불변 137,566,000", (_l, red) => {
     const r = calculateTransferTax(mk([red]), rates);
-    expect(ctlB).toBe(49_030_000);
+    expect(ctlB).toBe(45_990_000);
     expect(r.carryoverTaxationDetail?.scenarioB?.determinedTax).toBe(ctlB);
     expect(r.carryoverTaxationDetail?.adoptedScenario).toBe("A");
-    expect(r.totalTax).toBe(155_166_000);
+    expect(r.totalTax).toBe(137_566_000);
   });
 });

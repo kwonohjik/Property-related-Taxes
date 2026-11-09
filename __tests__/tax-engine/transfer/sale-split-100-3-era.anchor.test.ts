@@ -14,7 +14,7 @@
  *
  * ## 현행 실패 지점 (계획서 §2.2 probe 실측)
  *
- * - 2015-12-31 · 14억/1억: 의제 발동 → 9억/6억 · 241,131,000 (기대: 구분 기재 그대로 · 218,031,000)
+ * - 2015-12-31 · 14억/1억: 의제 발동 → 9억/6억 · 220,341,000 (기대: 구분 기재 그대로 · 185,966,000)
  * - 2024-12-31 · 14억/1억 + 예외: 예외 인정 → 14억/1억 · 146,366,000 (기대: 의제 발동 · 187,726,000)
  *
  * 세액은 `makeMockRates` 기준이며 **같은 양도일끼리** 비교한 값이다(mock 세율이 날짜 의존).
@@ -85,8 +85,8 @@ describe("E-1 — 양도일 ≤ 2015-12-31: 30% 판정이 없다 (법률 제1355
     expect(r.judgment?.deemedUnclear).toBe(false);
   });
 
-  it("🔴 세액 218,031,000 (현행 241,131,000은 의제 안분 결과)", () => {
-    expect(runHousing("2015-12-31", SKEW).tax).toBe(218_031_000);
+  it("🔴 세액 185,966,000 (현행 220,341,000은 의제 안분 결과)", () => {
+    expect(runHousing("2015-12-31", SKEW).tax).toBe(185_966_000);
   });
 
   it("판정 흔적에 era가 실린다 — 표시 계층이 읽는 값", () => {
@@ -95,18 +95,18 @@ describe("E-1 — 양도일 ≤ 2015-12-31: 30% 판정이 없다 (법률 제1355
 
   it("예외를 입력해도 결과가 같다 — 판정 자체가 없으므로 예외는 무관", () => {
     const withEx = runHousing("2015-12-31", { ...SKEW, saleSplitExemption: "other_law" });
-    expect(withEx.tax).toBe(218_031_000);
+    expect(withEx.tax).toBe(185_966_000);
     expect(withEx.land).toBe(DECLARED.land);
   });
 });
 
 describe("E-2 — 2016-01-01 ~ 2024-12-31: 본문만 적용, 단서(예외)는 없다", () => {
-  it("2016-01-01(경계 첫날): 의제 발동 — 안분값 9억/6억 · 241,131,000", () => {
+  it("2016-01-01(경계 첫날): 의제 발동 — 안분값 9억/6억 · 220,341,000", () => {
     const r = runHousing("2016-01-01", SKEW);
     expect(r.land).toBe(APPORTIONED.land);
     expect(r.building).toBe(APPORTIONED.building);
     expect(r.judgment?.deemedUnclear).toBe(true);
-    expect(r.tax).toBe(241_131_000);
+    expect(r.tax).toBe(220_341_000);
   });
 
   it("🔴 2024-12-31(경계 막날) + other_law: 예외가 **인정되지 않는다** — 의제 발동 · 187,726,000", () => {

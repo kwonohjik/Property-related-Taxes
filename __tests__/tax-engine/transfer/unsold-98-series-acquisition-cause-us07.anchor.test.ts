@@ -19,7 +19,7 @@ import { mixedUseCase14 } from "../_helpers/mixed-use-fixture";
 const rates = makeMockRates();
 type Reductions = TransferTaxInput["reductions"];
 
-/** P3-8 사실관계(§98의5 5년 이내 80%) — 매매 취득이면 감면 67,192,000 · 총부담 18,477,800 */
+/** P3-8 사실관계(§98의5 5년 이내 80%) — 매매 취득이면 감면 63,544,000 · 총부담 17,474,600 */
 const UNSOLD_985 = {
   type: "unsold_98_5" as const,
   contractDate985: new Date("2010-06-15"),
@@ -101,8 +101,8 @@ describe("US-07 엔진 — 진입부에서 걷어 내고 고지한다", () => {
 
   it("E-3: 상속 + 「예」(분양권 상속 후 잔금 취득) → 매매 취득과 같은 감면 (P3-8 값)", () => {
     const r = run985({ acquisitionCause: "inheritance", inheritedPresaleCompletedByHeir: "yes" });
-    expect(r.reductionAmount).toBe(67_192_000);
-    expect(r.totalTax).toBe(18_477_800);
+    expect(r.reductionAmount).toBe(63_544_000);
+    expect(r.totalTax).toBe(17_474_600);
   });
 
   it("E-4: 🔴 증여 · 이월과세 증여 → 감면 없음 = 미선택 세액", () => {
@@ -116,13 +116,13 @@ describe("US-07 엔진 — 진입부에서 걷어 내고 고지한다", () => {
 
   it("E-5: 대조군 — 매매 취득은 그대로 (P3-8)", () => {
     const r = run985({ acquisitionCause: "purchase" });
-    expect(r.reductionAmount).toBe(67_192_000);
-    expect(r.totalTax).toBe(18_477_800);
+    expect(r.reductionAmount).toBe(63_544_000);
+    expect(r.totalTax).toBe(17_474_600);
   });
 
   it("E-6: 「예」여도 상속 아닌 자산에는 의미가 없다(매매 + 「아니오」 잔재 → 그대로 적용)", () => {
     const r = run985({ acquisitionCause: "purchase", inheritedPresaleCompletedByHeir: "no" });
-    expect(r.reductionAmount).toBe(67_192_000);
+    expect(r.reductionAmount).toBe(63_544_000);
   });
 });
 

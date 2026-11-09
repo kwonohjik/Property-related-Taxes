@@ -16,7 +16,7 @@ import { toEngineReductions } from "@/lib/calc/transfer-tax-api-reductions";
 const rates = makeMockRates();
 type Reductions = TransferTaxInput["reductions"];
 
-/** P3-8 사실관계 — 적격이면 감면 67,192,000 · 총부담 18,477,800 */
+/** P3-8 사실관계 — 적격이면 감면 63,544,000 · 총부담 17,474,600 */
 const UNSOLD_985 = {
   type: "unsold_98_5" as const,
   contractDate985: new Date("2010-06-15"),
@@ -53,8 +53,8 @@ describe("US-42 엔진", () => {
   it("S-2: 대조군 — 토글 켜짐·미제공(옛 직접 API)은 P3-8 그대로", () => {
     for (const red of [{ ...UNSOLD_985, isEligibleSubject985: true }, UNSOLD_985]) {
       const r = run([red] as Reductions);
-      expect(r.reductionAmount).toBe(67_192_000);
-      expect(r.totalTax).toBe(18_477_800);
+      expect(r.reductionAmount).toBe(63_544_000);
+      expect(r.totalTax).toBe(17_474_600);
     }
   });
 

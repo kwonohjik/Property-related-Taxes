@@ -114,11 +114,11 @@ describe("Q-1 a — §99의3 · 원조합원 · 종전주택 상속 (준공 2002
     expect(x.tax).toBe(25_815_247);
     expect(noticed(x.warnings)).toBe(true);
   });
-  it("S3 양도 2010-06-30(5년 경과) · 양도 당시 기준시가 4억 → 68,508,445 (수정 전 83,846,714)", async () => {
+  it("S3 양도 2010-06-30(5년 경과) · 양도 당시 기준시가 4억 → 63,565,146 (수정 전 83,846,714)", async () => {
     const x = await go(apt({ ...A, reductions: [r993({ standardPriceAtTransfer993: "400000000" })] }), "2010-06-30");
     expect(x.issues).toEqual([]);
-    expect(x.tax).toBe(68_508_445);
-    expect((await go(apt({ ...A, ...PURCHASE, reductions: [r993({ standardPriceAtTransfer993: "400000000" })] }), "2010-06-30")).tax).toBe(68_508_445);
+    expect(x.tax).toBe(63_565_146);
+    expect((await go(apt({ ...A, ...PURCHASE, reductions: [r993({ standardPriceAtTransfer993: "400000000" })] }), "2010-06-30")).tax).toBe(63_565_146);
   });
 });
 

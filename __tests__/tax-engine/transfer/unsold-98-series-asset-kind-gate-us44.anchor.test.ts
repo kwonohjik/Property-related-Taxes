@@ -127,8 +127,8 @@ describe("US-44 엔진 진입 방어 — ⑤⑧을 거치지 않은 입력", () 
       }),
       rates,
     );
-    expect(r.reductionAmount).toBe(67_192_000);
-    expect(r.totalTax).toBe(18_477_800);
+    expect(r.reductionAmount).toBe(63_544_000);
+    expect(r.totalTax).toBe(17_474_600);
     expect((r.warnings ?? []).some((w) => w.includes("이 계산에 반영하지 않았습니다"))).toBe(false);
   });
 

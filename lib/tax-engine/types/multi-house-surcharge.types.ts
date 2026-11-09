@@ -908,6 +908,8 @@ export interface TaxSimulationInput {
   expenses: number;
   /** 보유기간 (년) */
   holdingYears: number;
+  /** 양도일 — 표1 연혁(2019-01-01 전 단계표). 생략하면 현행(연 2%). */
+  transferDate?: Date;
   /** 다주택 중과 유형 */
   surchargeType: "multi_house_2" | "multi_house_3plus";
 }
