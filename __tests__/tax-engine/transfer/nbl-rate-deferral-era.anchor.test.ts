@@ -144,7 +144,7 @@ describe("N-2: 단건 엔진 — 지정지역 «아님»을 선언했을 때만 
   });
   it("비사업용 토지가 아니면 선언이 있어도 아무 일도 없다 · 고지도 없다", () => {
     const r = calc("2012-06-01", { isNonBusinessLand: false, isDesignatedArea: false });
-    expect(r.calculatedTax).toBe(155_460_000);
+    expect(r.calculatedTax).toBe(141_060_000);
     expect(r.nblSurchargeExcluded).toBeUndefined();
     expect(areaNotices(r)).toHaveLength(0);
   });
@@ -199,19 +199,19 @@ describe("N-4: 다건 합산 — 유예된 비사업용 토지는 §104①1호 �
   const agg = (props: object[]) =>
     calculateTransferTaxAggregate({ taxYear: 2012, annualBasicDeductionUsed: 0, properties: props } as never, rates) as unknown as Agg;
 
-  it("유예 비사토 + 사업용 토지 → 둘 다 1호, 합산 한 번(세율군별 = 전체 누진) 184,770,000", () => {
+  it("유예 비사토 + 사업용 토지 → 둘 다 1호, 합산 한 번(세율군별 = 전체 누진) 177,210,000", () => {
     const r = agg([mk("N", { isDesignatedArea: false }), mk("B", { isNonBusinessLand: false })]);
     expect(r.properties.map((p) => p.rateClause)).toEqual(["104-1-1", "104-1-1"]);
     expect(r.properties[0].nblSurchargeExcluded).toBe(true);
     expect(r.properties[0].nblSurchargeExcludedBy).toBe("transfer_deferral");
-    expect(r.calculatedTax).toBe(184_770_000);
+    expect(r.calculatedTax).toBe(177_210_000);
     expect(r.calculatedTaxByGroups).toBe(r.calculatedTaxByGeneral);
     expect(r.comparedTaxApplied).toBe("none");
   });
-  it("미선언 비사토 + 사업용 토지 → 8호 버킷이 따로 서서 세율군별이 더 크다 189,560,000 · 고지 1건", () => {
+  it("미선언 비사토 + 사업용 토지 → 8호 버킷이 따로 서서 세율군별이 더 크다 182,720,000 · 고지 1건", () => {
     const r = agg([mk("N", {}), mk("B", { isNonBusinessLand: false })]);
     expect(r.properties.map((p) => p.rateClause)).toEqual(["104-1-8", "104-1-1"]);
-    expect(r.calculatedTax).toBe(189_560_000);
+    expect(r.calculatedTax).toBe(182_720_000);
     expect(r.comparedTaxApplied).toBe("groups");
     expect((r.warnings ?? []).filter((w) => /지정지역/.test(w))).toHaveLength(1);
   });

@@ -42,7 +42,7 @@ const UNSOLD_987_REDUCTION = {
 };
 
 describe("P2 하이브리드 통합 anchor", () => {
-  it("CH-1: §99의2 5년 내 — 감면 86,270,000·결정세액 0·농특세 17,254,000·총 17,254,000", () => {
+  it("CH-1: §99의2 5년 내 — 감면 81,710,000·결정세액 0·농특세 16,342,000·총 16,342,000", () => {
     const rates = makeMockRates();
     const r = calculateTransferTax(
       baseTransferInput({
@@ -55,26 +55,26 @@ describe("P2 하이브리드 통합 anchor", () => {
       }),
       rates,
     );
-    // 차익 300M − 표1 LTHD 3년 6% 18M = 282M (STEP 4.6 차감 없음 — tax_amount 모드)
+    // 차익 300M − 표1 LTHD 3년 10% 30M(2016 양도 — 소득세법 §95② 표1 단계표, US-11) = 270M (STEP 4.6 차감 없음 — tax_amount 모드)
     expect(r.taxableGain).toBe(300_000_000);
-    expect(r.longTermHoldingDeduction).toBe(18_000_000);
-    expect(r.taxBase).toBe(279_500_000);
-    // §55 mock: 279.5M × 38% − 19,940,000 = 86,270,000
-    expect(r.calculatedTax).toBe(86_270_000);
+    expect(r.longTermHoldingDeduction).toBe(30_000_000);
+    expect(r.taxBase).toBe(267_500_000);
+    // §55 mock: 267.5M × 38% − 19,940,000 = 81,710,000
+    expect(r.calculatedTax).toBe(81_710_000);
     // STEP 8: 100% 세액감면
-    expect(r.reductionAmount).toBe(86_270_000);
+    expect(r.reductionAmount).toBe(81_710_000);
     expect(r.reductionTypeApplied).toBe("unsold_99_2");
     expect(r.determinedTax).toBe(0);
     // STEP 8.7: 농특세 = 감면세액 × 20%
     expect(r.unsold992Detail?.isEligible).toBe(true);
     expect(r.unsold992Detail?.effectCategory).toBe("tax_amount");
-    expect(r.unsold992Detail?.reductionAmount).toBe(86_270_000);
-    expect(r.unsold992Detail?.ruralSurtax).toBe(17_254_000);
+    expect(r.unsold992Detail?.reductionAmount).toBe(81_710_000);
+    expect(r.unsold992Detail?.ruralSurtax).toBe(16_342_000);
     expect(r.steps.some((s) => s.label.includes("§99의2 농어촌특별세"))).toBe(true);
     // STEP 4.6 안내 step — 세액감면 경로
     expect(r.steps.some((s) => s.label.includes("세액감면 경로"))).toBe(true);
     expect(r.localIncomeTax).toBe(0);
-    expect(r.totalTax).toBe(17_254_000);
+    expect(r.totalTax).toBe(16_342_000);
   });
 
   it("CH-2: §98의7 5년 후 — 차감 123,000,000·산출 26,735,000·농특세 9,171,000·총 38,579,500", () => {

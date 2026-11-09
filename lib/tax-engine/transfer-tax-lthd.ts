@@ -463,7 +463,7 @@ export function calcLongTermHoldingDeduction(
     let nbDed = 0;
     if (nb) {
       const nbTaxableGain = nb.taxableGainAfterProration ?? nb.gain;
-      const nbRate = calcLongTermRate(nb.holdingYears, 0, false); // 표1 — 정본 위임(3년 가드 내장)
+      const nbRate = calcLongTermRate(nb.holdingYears, 0, false, false, input.transferDate); // 표1 — 정본 위임(3년 가드 내장)
       nbDed = applyRate(Math.max(nbTaxableGain, 0), nbRate);
       nb.taxableGainAfterProration = nbTaxableGain;
       nb.longTermRate = nbRate;

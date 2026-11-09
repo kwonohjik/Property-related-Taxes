@@ -52,7 +52,7 @@ export interface AppurtenantLandLthdRate {
 
 export function resolveAppurtenantLandLthdRate(p: AppurtenantLandLthdRateInput): AppurtenantLandLthdRate {
   // 표1(일반 보유 × 2%, 30% 캡)은 토지 자신의 보유연수다. 3년 진입요건은 `calcLongTermRate` 정본에 내장돼 있다.
-  const table1Rate = calcLongTermRate(p.landHoldingYears, p.residenceYears, false);
+  const table1Rate = calcLongTermRate(p.landHoldingYears, p.residenceYears, false, false, p.transferDate);
   // 표2(1세대1주택 — 보유분 4% + 실거주분 4%, 각 40% 캡)는 주택 부수토지로서의 보유연수(= 주택 보유연수).
   const table2Rate = p.useTable2
     ? calcLongTermRate(p.houseHoldingYears, p.residenceYears, true, false, p.transferDate)

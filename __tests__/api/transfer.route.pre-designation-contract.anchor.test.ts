@@ -133,15 +133,15 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("공고 전 매매계약 — 폼부터 route까지 (단건 = 다건)", () => {
-  it("RC-1 강남 10자리 · 2018-09-01 양도 · 양도계약 2017-07-01 · 계약금 수령 → 666,765,000 (종전 932,030,000)", async () => {
+  it("RC-1 강남 10자리 · 2018-09-01 양도 · 양도계약 2017-07-01 · 계약금 수령 → 627,495,000 (종전 932,030,000)", async () => {
     const f = form(GANGNAM, "2018-09-01", saleFacts("2017-07-01"));
     const body = await bodyOf(() => callTransferTaxAPI(f));
     // ④ 본문에 실린다 — 양도 주택 행에만
     const houses = body.houses as Obj[];
     expect(houses[0]).toMatchObject({ id: "selling", contractDate: "2017-07-01", saleDepositReceived: true });
     expect(houses[1].contractDate).toBeUndefined();
-    expect(await singleBody(body)).toMatchObject({ totalTax: 666_765_000, reasons: "pre_designation_contract" });
-    expect(await multiTotal(f)).toBe(666_765_000);
+    expect(await singleBody(body)).toMatchObject({ totalTax: 627_495_000, reasons: "pre_designation_contract" });
+    expect(await multiTotal(f)).toBe(627_495_000);
   });
 
   it("RC-1n [짝] 같은 계약일 · 계약금 수령 ❌ → 932,030,000 (④가 계약일도 싣지 않는다)", async () => {

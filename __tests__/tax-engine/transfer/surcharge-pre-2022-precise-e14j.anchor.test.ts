@@ -248,16 +248,16 @@ describe("E-14j 그 기간의 호 게이트 — 공고 전 매매계약(2018.8.2
   const contract = (t: string, contractDate: string) =>
     calc(pair("2013-06-01", OTHER, t, { contractDate: D(contractDate), saleDepositReceived: true }));
 
-  it("P-1 2018-08-27 양도 → 호 없음 · 중과 932,030,000 (종전 값과 같다) · 2018-08-28 → 배제 666,765,000 (종전 932,030,000)", () => {
+  it("P-1 2018-08-27 양도 → 호 없음 · 중과 932,030,000 (종전 값과 같다) · 2018-08-28 → 배제 627,495,000 (종전 932,030,000)", () => {
     expect(contract("2018-08-27", "2017-07-01")).toMatchObject({ totalTax: RAW_2HOUSE, reasons: "", surchargeType: "multi_house_2" });
-    expect(contract("2018-08-28", "2017-07-01")).toMatchObject({ totalTax: 666_765_000, reasons: "pre_designation_contract" });
+    expect(contract("2018-08-28", "2017-07-01")).toMatchObject({ totalTax: 627_495_000, reasons: "pre_designation_contract" });
   });
 
   // 반전: 종전 P-1p는 2017-09-01 계약을 「지정일(2017-08-03) 뒤」라 배제 없음으로 고정했다. 11호의 「공고가 있은 날」은
   //   2017년 차수에서 **2017.11.10.**이다(재산세제과-73) — 2017-09-01은 그 전이라 배제가 맞다. 짝의 의도(공고 뒤 계약 →
   //   배제 없음)는 공고일 다음 날 2017-11-11로 옮겨 보존한다.
-  it("P-1p 계약 2017-09-01(지정 효력 뒤 · 공고일 2017-11-10 전) → 배제 666,765,000 · [짝] 2017-11-11 → 배제 없음 932,030,000", () => {
-    expect(contract("2018-09-01", "2017-09-01")).toMatchObject({ totalTax: 666_765_000, reasons: "pre_designation_contract" });
+  it("P-1p 계약 2017-09-01(지정 효력 뒤 · 공고일 2017-11-10 전) → 배제 627,495,000 · [짝] 2017-11-11 → 배제 없음 932,030,000", () => {
+    expect(contract("2018-09-01", "2017-09-01")).toMatchObject({ totalTax: 627_495_000, reasons: "pre_designation_contract" });
     expect(contract("2018-09-01", "2017-11-11")).toMatchObject({ totalTax: RAW_2HOUSE, reasons: "" });
   });
 });

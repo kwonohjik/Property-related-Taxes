@@ -279,13 +279,13 @@ describe("RD-4 5년 이내 하이브리드 세액감면 농특세 — 정상 경
     expect(house5.result.ruralSurtax).toBe(0);
   });
 
-  it("§99의2(비과세 열거 없음): 완공APT 농특세 31,840,000 그대로 · 상세가 실린다", async () => {
+  it("§99의2(비과세 열거 없음): 완공APT 농특세 29,370,000 그대로 · 상세가 실린다", async () => {
     const r = await runCalc(
       single(apt({ acquisitionDate: "2013-01-01", redevApprovalDate: "2014-01-01", redevCompletionDate: "2015-06-01", reductions: [r992("")] }), W5b),
     );
-    expect(r.result.reductionAmount).toBe(159_200_000);
-    expect(r.result.ruralSurtax).toBe(31_840_000);
-    expect(r.result.unsold992Detail).toMatchObject({ reductionAmount: 159_200_000, ruralSurtax: 31_840_000 });
+    expect(r.result.reductionAmount).toBe(146_850_000);
+    expect(r.result.ruralSurtax).toBe(29_370_000);
+    expect(r.result.unsold992Detail).toMatchObject({ reductionAmount: 146_850_000, ruralSurtax: 29_370_000 });
   });
 });
 

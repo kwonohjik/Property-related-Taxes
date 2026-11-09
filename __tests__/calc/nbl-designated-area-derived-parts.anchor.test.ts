@@ -86,8 +86,8 @@ describe("H — 주택 배율초과 부수토지 파트 (단건)", () => {
   it("🔑 미선언 = 중과 유지 + «확인 필요» 고지 1건 (수정 전: 중과가 걸려도 고지 0건)", async () => {
     const r = await runCalc(form([house(1)]));
     expect(r.issues).toEqual([]);
-    expect(r.result.totalTax).toBe(60_202_055);
-    expect(r.result.appliedRate).toBe(0.48);
+    expect(r.result.totalTax).toBe(53_965_528);
+    expect(r.result.appliedRate).toBe(0.45);
     expect(r.result.nblSurchargeExcludedBy).toBeUndefined();
     expect(noticesOf(r.result.warnings)).toBe(1);
     expect(r.body.isDesignatedArea).toBeUndefined();
@@ -95,16 +95,16 @@ describe("H — 주택 배율초과 부수토지 파트 (단건)", () => {
   it("🔑 지정지역 «아님» 선언 → 유예(8호 중과 해제) · 총세액 −15,253,227 · 사유 transfer_deferral · 고지 없음 (수정 전: 값이 ④에서 사라져 도달 못 함)", async () => {
     const r = await runCalc(form([house(1, { isDesignatedArea: false })]));
     expect(r.body.isDesignatedArea).toBe(false);
-    expect(r.result.totalTax).toBe(44_948_828);
-    expect(60_202_055 - r.result.totalTax).toBe(15_253_227);
-    expect(r.result.appliedRate).toBe(0.38);
+    expect(r.result.totalTax).toBe(39_913_498);
+    expect(60_202_055 - r.result.totalTax).toBe(20_288_557);
+    expect(r.result.appliedRate).toBe(0.35);
     expect(r.result.nblSurchargeExcludedBy).toBe("transfer_deferral");
     expect(noticesOf(r.result.warnings)).toBe(0);
   });
   it("«지정지역» 선언 → 지정지역은 유예 제외라 중과 유지 · 미선언과 같은 세액 · 고지 없음", async () => {
     const r = await runCalc(form([house(1, { isDesignatedArea: true })]));
     expect(r.body.isDesignatedArea).toBe(true);
-    expect(r.result.totalTax).toBe(60_202_055);
+    expect(r.result.totalTax).toBe(53_965_528);
     expect(r.result.nblSurchargeExcludedBy).toBeUndefined();
     expect(noticesOf(r.result.warnings)).toBe(0);
   });
@@ -131,18 +131,18 @@ describe("C-H — 함께 양도 컴패니언 주택의 배율초과 파트", () 
   it("미선언 → 중과 유지 55,929,141 + 고지 1건 / «아님» → 41,812,571 · transfer_deferral · 고지 없음 / «지정지역» → 55,929,141", async () => {
     const und = await run({});
     expect(exceptSameDay(und)).toEqual([]);
-    expect((aggOf(und).properties as Props)[1].determinedTax).toBe(55_929_141);
+    expect((aggOf(und).properties as Props)[1].determinedTax).toBe(50_184_571);
     expect(noticesOf(aggOf(und).warnings)).toBe(1);
     expect((und.body.companionAssets as { isDesignatedArea?: boolean }[])[0].isDesignatedArea).toBeUndefined();
 
     const no = await run({ isDesignatedArea: false });
     expect((no.body.companionAssets as { isDesignatedArea?: boolean }[])[0].isDesignatedArea).toBe(false);
-    expect((aggOf(no).properties as Props)[1].determinedTax).toBe(41_812_571);
+    expect((aggOf(no).properties as Props)[1].determinedTax).toBe(37_159_999);
     expect((aggOf(no).properties as Props)[1].nblSurchargeExcludedBy).toBe("transfer_deferral");
     expect(noticesOf(aggOf(no).warnings)).toBe(0);
 
     const yes = await run({ isDesignatedArea: true });
-    expect((aggOf(yes).properties as Props)[1].determinedTax).toBe(55_929_141);
+    expect((aggOf(yes).properties as Props)[1].determinedTax).toBe(50_184_571);
     expect(noticesOf(aggOf(yes).warnings)).toBe(0);
   });
 });
@@ -209,8 +209,8 @@ const single = { isOneHousehold: false, householdHousingCount: "0" };
 describe("G — 일반건물 배율초과 토지 카드(land_nbl)", () => {
   // [경로, 폼 필드, 미선언 세율, 유예 세율]
   for (const [mode, extra, base, deferred] of [
-    ["환산", gbEstimated, 0.48, 0.38],
-    ["실가", gbActual, 0.5, 0.4],
+    ["환산", gbEstimated, 0.45, 0.35],
+    ["실가", gbActual, 0.48, 0.38],
   ] as const) {
     it(`🔑 단건 ${mode} — 미선언 ${base}(중과 유지 + 고지 1건) / «아님» ${deferred}(transfer_deferral · 고지 없음) / «지정지역» ${base} (수정 전: payload 어디에 넣어도 무시)`, async () => {
       const und = await runCalc(form([gb(1, extra, {})], single));
@@ -250,18 +250,18 @@ describe("G — 일반건물 배율초과 토지 카드(land_nbl)", () => {
       expect(pick(no, id).nblSurchargeExcludedBy).toBeUndefined();
     }
   });
-  it("함께 양도 컴패니언(환산) — 미선언 0.48 + 고지 1건 / «아님» 0.38 · transfer_deferral / «지정지역» 0.48", async () => {
+  it("함께 양도 컴패니언(환산) — 미선언 0.45 + 고지 1건 / «아님» 0.35 · transfer_deferral / «지정지역» 0.45", async () => {
     const run = (over: Record<string, unknown>) => runCalc(form([house(1, { acquisitionArea: "400", transferArea: "400" }), gb(2, gbEstimated, over)], { contractTotalPrice: "2200000000" }));
     const und = await run({});
     expect(und.issues).toEqual([]);
-    expect(nblCard(und).appliedRate).toBe(0.48);
+    expect(nblCard(und).appliedRate).toBe(0.45);
     expect(noticesOf(aggOf(und).warnings)).toBe(1);
     const no = await run({ isDesignatedArea: false });
-    expect(nblCard(no).appliedRate).toBe(0.38);
+    expect(nblCard(no).appliedRate).toBe(0.35);
     expect(nblCard(no).nblSurchargeExcludedBy).toBe("transfer_deferral");
     expect(noticesOf(aggOf(no).warnings)).toBe(0);
     const yes = await run({ isDesignatedArea: true });
-    expect(nblCard(yes).appliedRate).toBe(0.48);
+    expect(nblCard(yes).appliedRate).toBe(0.45);
     expect(noticesOf(aggOf(yes).warnings)).toBe(0);
   });
 });
@@ -305,19 +305,19 @@ describe("⑫ 일반건물 지분(%) 분할 — 물건-수준이라 전 지분�
 describe("G-증축 — 증축 경로(환산, building1·building2)의 land_nbl 카드", () => {
   const EXT = { gbHasExtension: true, gbExtensionDate: "2010-05-01", gbExtensionAcquisitionCause: "newConstruction", gbExtensionAcquisitionMode: "estimated",
     gbExtensionArea: "50", gbTransferExtensionBuildingStdPrice: "5000000", gbAcquisitionExtensionBuildingStdPrice: "4000000" };
-  it("카드 빌더가 3곳(환산 2·증축 1)이라 증축도 따로 고정한다 — 미선언 0.48 + 고지 1건 / «아님» 0.38 · transfer_deferral / «지정지역» 0.48", async () => {
+  it("카드 빌더가 3곳(환산 2·증축 1)이라 증축도 따로 고정한다 — 미선언 0.45 + 고지 1건 / «아님» 0.35 · transfer_deferral / «지정지역» 0.45", async () => {
     const run = (over: Record<string, unknown>) => runCalc(form([gb(1, { ...gbEstimated, ...EXT }, over)], single));
     const und = await run({});
     expect(und.issues).toEqual([]);
     expect((aggOf(und).properties as Props).map((p) => p.propertyId)).toEqual(["land_business", "land_nbl", "building1", "building2"]);
-    expect(nblCard(und).appliedRate).toBe(0.48);
+    expect(nblCard(und).appliedRate).toBe(0.45);
     expect(noticesOf(aggOf(und).warnings)).toBe(1);
     const no = await run({ isDesignatedArea: false });
-    expect(nblCard(no).appliedRate).toBe(0.38);
+    expect(nblCard(no).appliedRate).toBe(0.35);
     expect(nblCard(no).nblSurchargeExcludedBy).toBe("transfer_deferral");
     expect(noticesOf(aggOf(no).warnings)).toBe(0);
     const yes = await run({ isDesignatedArea: true });
-    expect(nblCard(yes).appliedRate).toBe(0.48);
+    expect(nblCard(yes).appliedRate).toBe(0.45);
     expect(noticesOf(aggOf(yes).warnings)).toBe(0);
   });
 });

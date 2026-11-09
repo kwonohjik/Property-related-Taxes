@@ -79,7 +79,7 @@ describe("P3 하이브리드 통합 anchor", () => {
     expect(r.appliedRate).toBe(0.6);
   });
 
-  it("P3-8: §98의5 5년 내 인하율 15% — 감면 80% 67,192,000·농특세 0·총 18,477,800", () => {
+  it("P3-8: §98의5 5년 내 인하율 15% — 감면 80% 63,544,000·농특세 0·총 17,474,600", () => {
     const rates = makeMockRates();
     const r = calculateTransferTax(
       baseTransferInput({
@@ -103,16 +103,16 @@ describe("P3 하이브리드 통합 anchor", () => {
       }),
       rates,
     );
-    // LTHD 4년 8% = 24M → transferIncome 276M → taxBase 273.5M → 83,990,000
-    expect(r.longTermHoldingDeduction).toBe(24_000_000);
-    expect(r.calculatedTax).toBe(83_990_000);
-    // 80% 세액감면 = 67,192,000
-    expect(r.reductionAmount).toBe(67_192_000);
-    expect(r.determinedTax).toBe(16_798_000);
+    // LTHD 4년 12% = 36M(표1 단계표 — 2016 양도, US-11) → transferIncome 264M → taxBase 261.5M → 79,430,000
+    expect(r.longTermHoldingDeduction).toBe(36_000_000);
+    expect(r.calculatedTax).toBe(79_430_000);
+    // 80% 세액감면 = 63,544,000
+    expect(r.reductionAmount).toBe(63_544_000);
+    expect(r.determinedTax).toBe(15_886_000);
     // 농특세 비과세
     expect(r.unsold985Detail?.ruralSurtaxExempt).toBe(true);
-    expect(r.localIncomeTax).toBe(1_679_800);
-    expect(r.totalTax).toBe(18_477_800);
+    expect(r.localIncomeTax).toBe(1_588_600);
+    expect(r.totalTax).toBe(17_474_600);
   });
 
   it("P3-9: §98의6 1호 5년 내 — 감면 50% 46,555,000·농특세 9,311,000·총 60,521,500", () => {

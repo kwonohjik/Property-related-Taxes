@@ -398,7 +398,7 @@ export function landContributedExistingLthdRate(p: {
     const residencePct = totalYears < 3 ? 0 : table2ResidencePct(p.residenceYears);
     // 유추 적용이 표1(토지 전체 보유기간)보다 낮아지면 표1 — 1세대1주택이 아닌 사람보다 불리해질 근거가 없다
     // (구간마다 「3년 이상」 하한이 따로 걸리는 단기 사례 · 기본통칙 95-0…1 「큰 공제율」).
-    const wholeTable1 = computeLthdRateSplit(totalYears, false, 0);
+    const wholeTable1 = computeLthdRateSplit(totalYears, false, 0, 0, p.transferDate);
     if (wholeTable1.total * 100 > holdingPct + residencePct) {
       return {
         ...wholeTable1,
@@ -416,7 +416,7 @@ export function landContributedExistingLthdRate(p: {
         ` = 보유 ${holdingPct}%${capped ? "(한도 40%)" : ""} + 거주 ${residencePct}% (소득세법 §95⑤ 유추)`,
     };
   }
-  const table1 = computeLthdRateSplit(totalYears, false, 0);
+  const table1 = computeLthdRateSplit(totalYears, false, 0, 0, p.transferDate);
   const table2 = computeLthdRateSplit(info.t2HoldingYears, true, p.residenceYears, p.residenceYears, p.transferDate);
   const pick = table2.total > table1.total ? table2 : table1;
   return {

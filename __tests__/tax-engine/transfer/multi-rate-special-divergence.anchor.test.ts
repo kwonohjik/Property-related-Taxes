@@ -126,8 +126,8 @@ describe("§98의5(60% 감면) — 단기 구간에서 총부담이 갈린다", 
 
   it("R3: 장기(보유 4년)는 **산출세액이 같다** — 세율 특칙 축이 아니다", () => {
     const { single, multi } = bothWays({ ...BASE_985, transferDate: D("2014-06-01") });
-    expect(single.calculatedTax).toBe(199_890_000);
-    expect(multi.calculatedTax).toBe(199_890_000);
+    expect(single.calculatedTax).toBe(189_810_000);
+    expect(multi.calculatedTax).toBe(189_810_000);
     /**
      * 🔁 **2026-09-02 갱신** — 종전에는 총부담이 587,388원 갈렸고(다건 감면 120,467,989),
      * 그것을 「**감면액 산정 축**의 별개 divergence · 차단 덕에 도달 불가 · 관측만 고정」으로
@@ -135,8 +135,8 @@ describe("§98의5(60% 감면) — 단기 구간에서 총부담이 갈린다", 
      * (`transfer-tax-aggregate-reduction-step.ts` · anchor `aggregate-reduction-90-1-basic-deduction`).
      * ⇒ 이제 **감면액도 단건과 일치**하고, 남는 divergence는 **세율 축뿐**이다.
      */
-    expect(single.reductionAmount).toBe(119_934_000); // = 199,890,000 × 60%
-    expect(multi.reductionAmount).toBe(119_934_000);
+    expect(single.reductionAmount).toBe(113_886_000); // = 199,890,000 × 60%
+    expect(multi.reductionAmount).toBe(113_886_000);
     expect((multi.totalTax ?? 0) - (single.totalTax ?? 0)).toBe(0);
   });
 });
@@ -166,8 +166,8 @@ describe("§98의3(5년 내 100% 감면) — 산출세액만 갈리고 총부담
     //    6년 12%: 3억 × 88% = 264,000,000 − 5년간 발생분 132,000,000(= 264,000,000 × 1억/2억)
     //    − 2,500,000 = 129,500,000 × 35% − 15,440,000 = 29,885,000 + 지방 2,988,500.
     //    anchor: `__tests__/tax-engine/holding-period-first-day-inclusion.anchor.test.ts`.
-    expect(single.totalTax).toBe(32_873_500);
-    expect(multi.totalTax).toBe(32_873_500);
+    expect(single.totalTax).toBe(29_408_500);
+    expect(multi.totalTax).toBe(29_408_500);
   });
 });
 

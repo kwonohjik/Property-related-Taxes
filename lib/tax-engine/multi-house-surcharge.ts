@@ -141,6 +141,7 @@ import {
 } from "./multi-house-surcharge-helpers";
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes";
 import { aptDeadlineConfirmNotice } from "./rental-article/rules";
+import { table1RateAt } from "./data/lthd-table1-era";
 import type { AptDeadlinePendingReason } from "./rental-article/rules";
 
 /**
@@ -578,9 +579,8 @@ const SURCHARGE_ADDON_RATES: Record<"multi_house_2" | "multi_house_3plus", numbe
   multi_house_3plus: 0.30,
 };
 
-function calcLtscGeneral(holdingYears: number): number {
-  if (holdingYears < 3) return 0;
-  return Math.min(Math.floor(holdingYears) * 0.02, 0.30);
+function calcLtscGeneral(holdingYears: number, transferDate?: Date): number {
+  return table1RateAt(Math.floor(holdingYears), transferDate);
 }
 
 function calcSimTax(taxableIncome: number, addonRate: number): number {
@@ -605,7 +605,7 @@ export function buildMultiHouseTaxSimulation(
 ): MultiHouseTaxSimulation {
   const capitalGain = Math.max(0, input.salePrice - input.acquisitionPrice - input.expenses);
 
-  const ltscRate = calcLtscGeneral(input.holdingYears);
+  const ltscRate = calcLtscGeneral(input.holdingYears, input.transferDate);
   const ltscAmount = Math.floor(capitalGain * ltscRate);
   const basicTaxableIncome = Math.max(0, capitalGain - ltscAmount);
   const basicTax = calcSimTax(basicTaxableIncome, 0);

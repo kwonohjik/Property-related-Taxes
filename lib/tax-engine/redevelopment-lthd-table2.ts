@@ -14,6 +14,7 @@ import {
   resolveLthdTable2Era,
   table2HoldingOnlyRate,
 } from "./data/lthd-table2-era";
+import { table1RateAt } from "./data/lthd-table1-era";
 
 export interface LthdRateSplit {
   holding: number;
@@ -80,6 +81,6 @@ export function computeLthdRateSplit(
     return { holding, residence, total: holding + residence };
   }
 
-  const holding = Math.min(years * 0.02, 0.30);
+  const holding = table1RateAt(years, transferDate);
   return { holding, residence: 0, total: holding };
 }

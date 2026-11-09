@@ -162,21 +162,21 @@ async function post(over: Record<string, unknown>) {
 describe("R-4: ⑫ Zod 통과 → ⑭ 라우트 매핑 → 엔진 도달", () => {
   it("선언 없음(모름) — 중과 유지 273,350,000 + «확인 필요» 고지가 응답에 실린다", async () => {
     const r = await post({});
-    expect(r.calculatedTax).toBe(273_350_000);
+    expect(r.calculatedTax).toBe(262_900_000);
     expect(((r.warnings ?? []) as string[]).some((w) => /지정지역/.test(w) && /확인 필요/.test(w))).toBe(true);
   });
   it("⭐ 지정지역 «아님» — ⑫가 strip하지 않고 ⑭가 엔진까지 넘겨 213,600,000", async () => {
     const r = await post({ isDesignatedArea: false });
-    expect(r.calculatedTax).toBe(213_600_000);
+    expect(r.calculatedTax).toBe(203_150_000);
     expect(r.nblSurchargeExcludedBy).toBe("transfer_deferral");
   });
   it("지정지역 — 중과 유지", async () => {
     const r = await post({ isDesignatedArea: true });
-    expect(r.calculatedTax).toBe(273_350_000);
+    expect(r.calculatedTax).toBe(262_900_000);
   });
   it("양도일이 유예 기간 밖이면 «아님» 선언도 효과가 없다(2016-01-01)", async () => {
     const r = await post({ isDesignatedArea: false, transferDate: "2016-01-01" });
-    expect(r.calculatedTax).toBe(273_350_000);
+    expect(r.calculatedTax).toBe(267_400_000);
   });
 });
 

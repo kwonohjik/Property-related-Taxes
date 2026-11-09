@@ -31,9 +31,10 @@ describe("computeLthdRateSplit — 양도일별 표2 모양", () => {
     expect(computeLthdRateSplit(2, true, 0, 0, D("2018-06-01")).total).toBe(0);
   });
 
-  it("2009~2019 양도: 1세대1주택이 아니면 표1", () => {
+  it("2009~2019 양도: 1세대1주택이 아니면 표1 — 2018 양도는 표1 단계표(10년 이상 30%, US-11)", () => {
     const s = computeLthdRateSplit(10, false, 5, 5, D("2018-06-01"));
-    expect(s.total).toBe(0.2);
+    expect(s.total).toBe(0.3);
+    expect(computeLthdRateSplit(10, false, 5, 5, D("2019-01-01")).total).toBe(0.2); // 2019.1.1 양도부터 연 2%
     expect(s.holdingOnly).toBeUndefined();
   });
 
@@ -52,7 +53,8 @@ describe("computeLthdRateSplit — 양도일별 표2 모양", () => {
   });
 
   it("2009-01-01 전 양도(미지원 시기): 현행 식 그대로 — 거주 2년 요건 유지", () => {
-    expect(computeLthdRateSplit(10, true, 0, 0, D("2008-12-31")).total).toBe(0.2);
+    // 표2는 현행 식 그대로, 표1로 떨어지는 값은 2008 양도 표1 단계표(10년 이상 30%, US-11).
+    expect(computeLthdRateSplit(10, true, 0, 0, D("2008-12-31")).total).toBe(0.3);
     const s = computeLthdRateSplit(10, true, 3, 3, D("2008-12-31"));
     expect(s.holding).toBe(0.4);
     expect(s.holdingOnly).toBeUndefined();

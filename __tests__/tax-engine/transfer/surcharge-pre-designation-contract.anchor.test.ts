@@ -16,10 +16,10 @@
  * 시료: 양도가액 20억 · 취득가액 3억 · 2013-06-01 취득 · 2주택(다른 주택 강남 2014) · 세율 = 양도일 기준 프로덕션 fallback.
  * 「종전」 = 이 수정 전 엔진 실측(계획서 §2.2 · §6.2 「현행」).
  *
- * ⚠️ 계획서 §6.2의 RC-6 기대 582,598,500 · RC-7 기대 666,765,000은 **정정**했다 — 계획서가 쓴 대체 입력
+ * ⚠️ 계획서 §6.2의 RC-6 기대 582,598,500 · RC-7 기대 627,495,000은 **정정**했다 — 계획서가 쓴 대체 입력
  *    (5자리 `41290` 계약 2017-07-01 · 5자리 `41117` 계약 2018-01-01)을 **수정 전 엔진**에 그대로 넣으면
  *    548,938,500 · 635,349,000이 나온다(2026-09-29 origin/master `25a12d99` 실측). 2020-07-01 양도는 보유 7년
- *    (장특 14%)이라 5년(10%)인 RC-1의 666,765,000과 같을 수 없다. 배제 여부 판정은 계획서와 같다.
+ *    (장특 14%)이라 5년(10%)인 RC-1의 627,495,000과 같을 수 없다. 배제 여부 판정은 계획서와 같다.
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
@@ -123,14 +123,14 @@ describe("재지정·동 단위 편입 — 양도일에 효력이 있는 지정 
 });
 
 describe("호 시행 전 · 계약금 사실 부재", () => {
-  it("RC-8 2018-08-27 양도(호 시행 전 — 제29242호 부칙 제5조) → 중과 932,030,000 · 2018-08-28 → 배제 666,765,000", () => {
+  it("RC-8 2018-08-27 양도(호 시행 전 — 제29242호 부칙 제5조) → 중과 932,030,000 · 2018-08-28 → 배제 627,495,000", () => {
     expect(calc(GN, "2018-08-27", sale("2017-07-01"))).toMatchObject({ totalTax: RAW_2019, reasons: "" });
-    expect(calc(GN, "2018-08-28", sale("2017-07-01"))).toMatchObject({ totalTax: 666_765_000, reasons: "pre_designation_contract" });
+    expect(calc(GN, "2018-08-28", sale("2017-07-01"))).toMatchObject({ totalTax: 627_495_000, reasons: "pre_designation_contract" });
   });
 
   it("RC-1n [짝] 계약일만 있고 계약금 수령 사실 없음 → 중과 932,030,000", () => {
     expect(calc(GN, "2018-09-01", { contractDate: D("2017-07-01") })).toMatchObject({ totalTax: RAW_2019, reasons: "" });
-    expect(calc(GN, "2018-09-01", sale("2017-07-01"))).toMatchObject({ totalTax: 666_765_000, reasons: "pre_designation_contract" });
+    expect(calc(GN, "2018-09-01", sale("2017-07-01"))).toMatchObject({ totalTax: 627_495_000, reasons: "pre_designation_contract" });
   });
 
   it("RC-3e [두 축 분리 — D-3] 장기임대 아목 「계약금 지급 증빙」(hasContractDepositProof)은 11호 사실이 아니다 → 중과 932,030,000", () => {

@@ -19,6 +19,7 @@ import {
   table2HoldingOnlyRate,
 } from "./data/lthd-table2-era";
 import { multiplyByArea } from "./area-utils";
+import { table1RateAt } from "./data/lthd-table1-era";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { applyRatio } from "./tax-utils";
 import type {
@@ -34,7 +35,7 @@ import type { PreHousingDisclosureResult } from "./types/transfer.types";
  * 장기보유공제율 (§95② 별표, mixed-use 공용 — helpers.ts에서 re-export).
  *   표2: 1세대1주택 거주 2년+ → min(holdYears×4%,40%) + min(resYears×4%,40%) (합계 최대 80%).
  *        2009~2020 양도분은 min(holdYears×8%, 80%) — `transferDate`로 연혁을 가른다(OH-31).
- *   표1: 그 외 → min(holdYears×2%, 30%). 보유 3년 미만은 0.
+ *   표1: 그 외 → `table1RateAt` — 양도일 2019-01-01 전은 단계표(10/12/15/18/21/24/27/30), 이후·양도일 생략은 min(holdYears×2%, 30%). 보유 3년 미만은 0.
  * 보유분·거주분 각각 40% 상한 후 합산(합산 후 80% 상한만 적용하면 과대 공제 — H-7 회귀).
  */
 export function calcLongTermRate(
@@ -72,7 +73,7 @@ export function calcLongTermRate(
       residenceYears >= LTHD_TABLE2_RESIDENCE_MIN_YEARS ? Math.min(residenceYears * 0.04, 0.40) : 0;
     return holdingPart + residencePart;
   }
-  return Math.min(holdingYears * 0.02, 0.30);
+  return table1RateAt(holdingYears, transferDate);
 }
 
 /**

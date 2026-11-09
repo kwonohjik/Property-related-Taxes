@@ -49,9 +49,9 @@ const surchargeRateTable = {
 export const historicalSeeds = [
   // ── progressive_rate ────────────────────────────────────────
 
-  // 1-A. 누진세율 fallback (effective ~2017.12.31: 6구간, 5억 초과 40%)
-  //   소득세법 §104①1호 2014.1.1 시행 표 (3억~5억 40% 구간 추가)
-  //   1990년대 초~2013년과 다소 다르지만 fallback으로 사용 (가장 유리한 쪽).
+  // 1-A. 누진세율 fallback (effective 1990-01-01) — **2008-03-21 전 양도는 미지원**(US-10 · Q-30 (b)).
+  //   2008-03-21 전 시행본 세율표는 원문을 읽지 않았다(확인 필요). 이 행은 어느 연도 법정표와도 맞지 않는 근사값이라
+  //   그 양도분 결과에는 `TRANSFER_RATE_ERA_UNSUPPORTED_NOTICE`가 붙는다. 2008-03-21 이후 양도는 아래 1-A1~1-A7 행이 잡힌다.
   {
     tax_type: "transfer",
     category: "progressive_rate",
@@ -61,6 +61,119 @@ export const historicalSeeds = [
       brackets: [
         ...brackets_common_1_to_5,
         { min: 300000001, rate: 0.40, deduction: 25400000 },
+      ],
+    },
+    deduction_rules: null,
+    special_rules: null,
+    is_active: true,
+  },
+
+  // 1-A1~1-A6. 연도별 법정 누진세율표 (소득세법 §104①1호 → §55①, 2026-11-09 KoreanLaw 시행본 원문 대조).
+  //   적용례는 각 개정 부칙 「시행 후 (최초로) 양도하는 분부터」 — effective_date = 시행일.
+  //   누진공제는 법령 정액(구간 누적세액)에서 역산한 값이다.
+  //   · 2008-03-21 9/18/27/36 (1천만·4천만·8천만) — 법률 제8911호 부칙 · MST 84761
+  //   · 2009-01-01 6/16/25/35 (1,200만·4,600만·8,800만) — 제9270호 부칙 §1·§2② · MST 94271
+  //   · 2010-01-01 6/15/24/35 — 제9897호 부칙 §1·§2② · MST 98343
+  //   · 2012-01-01 8,800만~3억 35, 3억 초과 38 — 제11146호 부칙 §1·§2② · MST 131369(2013.1.1 시행본 본문 확인)
+  //   · 2014-01-01 1.5억 초과 38 — 제12169호 부칙 §2②·§5 · MST 149361
+  //   · 2017-01-01 1.5억~5억 38, 5억 초과 40 — 제14389호 부칙 §1·§2② · MST 188354
+  {
+    tax_type: "transfer",
+    category: "progressive_rate",
+    sub_category: "_default",
+    effective_date: "2008-03-21",
+    rate_table: {
+      brackets: [
+        { min: 0, max: 10000000, rate: 0.09, deduction: 0 },
+        { min: 10000001, max: 40000000, rate: 0.18, deduction: 900000 },
+        { min: 40000001, max: 80000000, rate: 0.27, deduction: 4500000 },
+        { min: 80000001, rate: 0.36, deduction: 11700000 },
+      ],
+    },
+    deduction_rules: null,
+    special_rules: null,
+    is_active: true,
+  },
+  {
+    tax_type: "transfer",
+    category: "progressive_rate",
+    sub_category: "_default",
+    effective_date: "2009-01-01",
+    rate_table: {
+      brackets: [
+        { min: 0, max: 12000000, rate: 0.06, deduction: 0 },
+        { min: 12000001, max: 46000000, rate: 0.16, deduction: 1200000 },
+        { min: 46000001, max: 88000000, rate: 0.25, deduction: 5340000 },
+        { min: 88000001, rate: 0.35, deduction: 14140000 },
+      ],
+    },
+    deduction_rules: null,
+    special_rules: null,
+    is_active: true,
+  },
+  {
+    tax_type: "transfer",
+    category: "progressive_rate",
+    sub_category: "_default",
+    effective_date: "2010-01-01",
+    rate_table: {
+      brackets: [
+        { min: 0, max: 12000000, rate: 0.06, deduction: 0 },
+        { min: 12000001, max: 46000000, rate: 0.15, deduction: 1080000 },
+        { min: 46000001, max: 88000000, rate: 0.24, deduction: 5220000 },
+        { min: 88000001, rate: 0.35, deduction: 14900000 },
+      ],
+    },
+    deduction_rules: null,
+    special_rules: null,
+    is_active: true,
+  },
+  {
+    tax_type: "transfer",
+    category: "progressive_rate",
+    sub_category: "_default",
+    effective_date: "2012-01-01",
+    rate_table: {
+      brackets: [
+        { min: 0, max: 12000000, rate: 0.06, deduction: 0 },
+        { min: 12000001, max: 46000000, rate: 0.15, deduction: 1080000 },
+        { min: 46000001, max: 88000000, rate: 0.24, deduction: 5220000 },
+        { min: 88000001, max: 300000000, rate: 0.35, deduction: 14900000 },
+        { min: 300000001, rate: 0.38, deduction: 23900000 },
+      ],
+    },
+    deduction_rules: null,
+    special_rules: null,
+    is_active: true,
+  },
+  {
+    tax_type: "transfer",
+    category: "progressive_rate",
+    sub_category: "_default",
+    effective_date: "2014-01-01",
+    rate_table: {
+      brackets: [
+        { min: 0, max: 12000000, rate: 0.06, deduction: 0 },
+        { min: 12000001, max: 46000000, rate: 0.15, deduction: 1080000 },
+        { min: 46000001, max: 88000000, rate: 0.24, deduction: 5220000 },
+        { min: 88000001, max: 150000000, rate: 0.35, deduction: 14900000 },
+        { min: 150000001, rate: 0.38, deduction: 19400000 },
+      ],
+    },
+    deduction_rules: null,
+    special_rules: null,
+    is_active: true,
+  },
+  {
+    tax_type: "transfer",
+    category: "progressive_rate",
+    sub_category: "_default",
+    effective_date: "2017-01-01",
+    rate_table: {
+      brackets: [
+        ...brackets_common_1_to_5.slice(0, 4),
+        { min: 150000001, max: 500000000, rate: 0.38, deduction: 19400000 },
+        { min: 500000001, rate: 0.40, deduction: 29400000 },
       ],
     },
     deduction_rules: null,

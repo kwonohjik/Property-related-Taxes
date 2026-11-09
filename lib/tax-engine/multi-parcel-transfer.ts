@@ -27,6 +27,7 @@ import type { TransferTaxInput } from "./types/transfer.types";
 import type { ExpropriationValuationDetail } from "./transfer-tax-expropriation-valuation";
 import { estimatedDeductionRate } from "./legal-codes/transfer-nbl";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { table1RateAt } from "./data/lthd-table1-era";
 
 // ============================================================
 // 타입 정의
@@ -235,13 +236,12 @@ function resolveEffectiveAcquisitionDate(parcel: ParcelInput): {
 
 /**
  * 일반 토지 장기보유특별공제율 계산.
- * 보유 연수 × 2%, 30% 한도. 3년 미만이면 0%.
+ * 표1 — 양도일 시행본(2019-01-01 전 단계표, 이후 연 2%·30% 한도). 3년 미만이면 0%.
  * 미등기이면 항상 0%.
  */
-function calcLandLongTermRate(holdingYears: number, isUnregistered: boolean): number {
+function calcLandLongTermRate(holdingYears: number, isUnregistered: boolean, transferDate?: Date): number {
   if (isUnregistered) return 0;
-  if (holdingYears < 3) return 0;
-  return Math.min(holdingYears * 0.02, 0.30);
+  return table1RateAt(holdingYears, transferDate);
 }
 
 // ============================================================
@@ -435,7 +435,7 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
     // (차손에 공제율을 곱하면 손실이 줄어 통산액이 왜곡된다.)
     const holding = calculateHoldingPeriod(effectiveAcquisitionDate, transferDate);
     const holdingYears = holding.years;
-    const longTermHoldingRate = calcLandLongTermRate(holdingYears, parcel.isUnregistered ?? false);
+    const longTermHoldingRate = calcLandLongTermRate(holdingYears, parcel.isUnregistered ?? false, transferDate);
     const longTermHoldingDeduction = rawGain > 0 ? applyRate(rawGain, longTermHoldingRate) : 0;
 
     // 양도소득금액 — 차손 필지는 음수 그대로 넘겨 합산 단계에서 통산된다.
