@@ -16,6 +16,8 @@ import {
 } from "@/lib/tax-engine/expropriation-scope";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { soleSplitRightJudgmentFacts } from "./sole-split-right-judgment-facts";
+import { BG_SHARE_OWN_ACQ_FIELDS } from "./bg-share-own-acquisition";
+import { bgShareOwnAcquisitionActive } from "./bg-share-own-acquisition";
 import { deriveMemberRightsValue } from "./burdened-gift-right-valuation";
 import { meetsSurchargeSuspensionHolding } from "@/lib/tax-engine/tax-utils";
 import {
@@ -160,6 +162,15 @@ export { isHousingLike } from "./housing-like-asset";
  * 취득측(취득원인·취득일·취득가액·지분율·필요경비)은 지분별 상이 → 병합 안 함.
  */
 export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
+  const merged = mergePrimaryBasicAll(a, primary);
+  // 축 B × 부담부증여 — 지분 카드가 자기 산정방식 · 실지취득가액을 받기로 했으면 그 네 칸만 되돌린다(D-2 · `bg-share-own-acquisition.ts`).
+  if (a !== primary && bgShareOwnAcquisitionActive(a, merged)) {
+    for (const k of BG_SHARE_OWN_ACQ_FIELDS) (merged as unknown as Record<string, unknown>)[k] = a[k];
+  }
+  return merged;
+}
+
+function mergePrimaryBasicAll(a: AssetForm, primary: AssetForm): AssetForm {
   return {
     ...a,
     assetKind: primary.assetKind,

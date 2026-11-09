@@ -29,14 +29,17 @@ import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
 import { bgCoDonorNeedsStdPrice } from "@/lib/calc/burdened-gift-acq-std-price";
 import { BurdenedGiftCarryoverBlock } from "./BurdenedGiftCarryoverBlock";
 import { bgAnyCarryover } from "@/lib/calc/bg-carryover-parts";
+import { bgShareOwnAcquisitionApplies } from "@/lib/calc/bg-share-own-acquisition";
+import { BurdenedGiftShareOwnAcquisitionBlock } from "./BurdenedGiftShareOwnAcquisitionBlock";
 
 interface Props {
   asset: AssetForm;
   primaryAsset: AssetForm | undefined;
   onChange: (patch: Partial<AssetForm>) => void;
+  transferDate?: string;
 }
 
-export function BurdenedGiftTrancheBasisBlock({ asset, primaryAsset, onChange }: Props) {
+export function BurdenedGiftTrancheBasisBlock({ asset, primaryAsset, onChange, transferDate }: Props) {
   if (!primaryAsset || primaryAsset.transferType !== "burdened_gift") return null;
   const merged = mergePrimaryBasic(asset, primaryAsset);
   // 의제취득일 전 상속·증여 지분은 산정방식을 쓰지 않는다(3자 max · ④도 싣지 않는다 — PR-7b-5 D-3). 취득시 기준시가 칸은 `needsBgAcqStdPriceInput`이 같은 술어로 닫는다
@@ -46,10 +49,13 @@ export function BurdenedGiftTrancheBasisBlock({ asset, primaryAsset, onChange }:
       ? merged.bgAcquisitionMethod
       : undefined;
   const needsStd = needsBgAcqStdPriceInput(merged, true);
-  if (!presumedMethod && !needsStd && !isCarryover) return null;
+  const ownAcq = bgShareOwnAcquisitionApplies(merged);
+  if (!presumedMethod && !needsStd && !isCarryover && !ownAcq) return null;
 
   return (
     <div className="space-y-2" data-testid="bg-tranche-basis">
+      {/* 이 지분의 산정방식 · 실지취득가액 — 자산 1과 따로(D-2). 켜면 아래 매매사례가액 · 감정가액 칸도 이 지분의 산정방식을 따른다 */}
+      <BurdenedGiftShareOwnAcquisitionBlock asset={asset} merged={merged} primaryAsset={primaryAsset} onChange={onChange} transferDate={transferDate} />
       {presumedMethod && (
         <BurdenedGiftPresumedAcquisitionSection
           asset={merged}

@@ -529,6 +529,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     bgActualAcquisitionLand: "",
     bgActualAcquisitionBuilding: "",
     bgActualAcquisitionTotal: "",
+    bgShareOwnAcquisition: false,
     bgPresumedAcquisitionLand: "",
     bgPresumedAcquisitionBuilding: "",
     bgPresumedAcquisitionTotal: "",

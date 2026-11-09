@@ -115,6 +115,9 @@ function bgBundleMixedWinner(data: Subject): boolean {
   return bgBundleWinnersMixed(entries);
 }
 
+export const GB_BG_SHARE_METHOD_REQUIRED_MESSAGE =
+  "부담부증여 시가 모드는 지분마다 취득가액 산정방식(actual·salesCase·appraisal·converted)이 필요합니다 (소득세법 §100①)";
+
 export const BG_ACQ_PART_REQUIRED_MESSAGE =
   "부담부증여 취득가액은 토지·건물 칸이 모두 필요합니다 — 비운 쪽은 취득가액 0으로 계산되어 양도차익이 과대해집니다.";
 
@@ -211,7 +214,15 @@ export function refineGbBurdenedGiftActualPath(data: Subject, ctx: z.RefinementC
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["generalBuildingShares", i, "burdenedGiftInfo"], message: GB_BG_SHARE_INFO_REQUIRED_MESSAGE });
       }
       requireStd(s.burdenedGiftInfo, ["generalBuildingShares", i]);
-      if ((data.generalBuildingShares?.length ?? 0) >= 2) requireBgAcquisitionParts(s.burdenedGiftInfo, s.valuation, s.valuation?.ownershipRatio ?? s.ownershipRatio, ["generalBuildingShares", i], ctx);
+      if ((data.generalBuildingShares?.length ?? 0) >= 2) {
+        // 지분마다 산정방식을 받는다(D-2 · `bgShareOwnAcquisition`) — 시가 모드인데 비면 최상위 규칙(`refineBurdenedGiftInputs`)처럼 막는다.
+        // 의제취득일 전 두 파트(①②③ 3자 max)는 산정방식을 쓰지 않는다. 비어 있으면 종전에는 아무것도 요구하지 않고 통과했다.
+        const sbg = s.burdenedGiftInfo as { valuationMode?: string; acquisitionMethod?: string } | undefined;
+        if (sbg?.valuationMode === "sangjeungbeop_market" && !sbg.acquisitionMethod && !(s.valuation?.landPreDeemedClauseA && s.valuation?.buildingPreDeemedClauseA)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["generalBuildingShares", i, "burdenedGiftInfo", "acquisitionMethod"], message: GB_BG_SHARE_METHOD_REQUIRED_MESSAGE });
+        }
+        requireBgAcquisitionParts(s.burdenedGiftInfo, s.valuation, s.valuation?.ownershipRatio ?? s.ownershipRatio, ["generalBuildingShares", i], ctx);
+      }
     });
   }
   // 컴패니언 — `burdenedGiftInfo` 존재가 부담부증여 표지다(`bundled-route.ts` · `transfer-tax-schema-companion-refines.ts`와 같은 규율).
