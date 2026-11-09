@@ -587,6 +587,8 @@ export function computeAggregateOnce(
       },
       // [echo] §166 분할 열 게이트용 (표시 전용 — 세액 불변). 결과탭 코드리뷰 #080 ③.
       redevelopmentDetail: r.result.redevelopmentDetail,
+      // [echo] 자산별 부담부증여 §159 명세 — 연간 합산만. 묶음(`burdenedGiftWholeInfo`)은 물건 전체 1건(`burdenedGift`)이 맡는다(타입 주석 · V-BG1).
+      ...(input.burdenedGiftWholeInfo || !r.result.transferBurdenedGiftBreakdown ? {} : { transferBurdenedGiftBreakdown: r.result.transferBurdenedGiftBreakdown }),
       refDeterminedTax,
       reductionAmount: standalone,
       reductionType,

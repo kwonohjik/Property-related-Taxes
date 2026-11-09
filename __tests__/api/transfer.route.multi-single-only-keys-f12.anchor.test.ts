@@ -283,10 +283,12 @@ describe("F-12 API 직접 호출 — 합산 미지원 서브객체 모드는 ⑫
     return { status: res.status, text: JSON.stringify(await res.json()) };
   };
 
-  it("F12-R1 부담부증여(transferType) → 400 · ⑧과 같은 문구", async () => {
+  // 부담부증여는 2026-11-10 지원 전환(트랙 BG) — 단건 = 다건은 `__tests__/calc/multi-burdened-gift-parity.anchor.test.ts`가 고정한다.
+  // 표지만 있고 §159 정보가 없는 입력은 여전히 400이다 — 일반 양도로 조용히 계산되지 않게 공용 refine이 막는다(안전망 유지).
+  it("F12-R1 부담부증여 표지만(burdenedGiftInfo 없음) → 400 · 일반 양도로 계산하지 않는다", async () => {
     const r = await call({ transferType: "burdened_gift" });
     expect(r.status).toBe(400);
-    expect(r.text).toContain("부담부증여(소령 §159)는 단건 계산기에서만 지원됩니다.");
+    expect(r.text).toContain("burdenedGiftInfo가 필요합니다");
   });
 
   it("F12-R2 PHD(영 §164⑦) 서브객체 → 400", async () => {

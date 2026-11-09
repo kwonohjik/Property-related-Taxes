@@ -11,7 +11,9 @@ import { carryoverPurchasedPartDebt } from "./carryover-gift-assumed-debt";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
-import { MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { isGbBurdenedGift } from "./gb-bg-gift-tax-return";
+import { carryoverEventForm } from "./transfer-tax-api-carryover";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
@@ -129,9 +131,6 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   const a = form.assets?.[0];
   if (!a) return null;
 
-  if (a.transferType === "burdened_gift" || a.acquisitionCause === "burdened_gift") {
-    return MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE;
-  }
   if (a.assetKind === "redevelopment_apt") {
     return MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE;
   }
@@ -163,6 +162,9 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   const carryoverParts = partCarryover(a);
   if (carryoverParts.land || carryoverParts.building) return MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE;
   if (carryoverPurchasedPartDebt(a) > 0) return MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE;
+  // 부담부증여(소령 §159) — 자산 단위 info·`transferType`은 ④⑭가 단건과 같은 leaf로 옮긴다(트랙 BG · 자산별 §159 명세 echo).
+  //   일반건물 부담부증여 × 이월과세만 막는다 — 단건은 카드 세트 A·B를 신고 단위로 비교하는데 연간 합산 펼침은 그 단위를 받지 않는다(⑫ 같은 문구).
+  if (isGbBurdenedGift(a) && carryoverEventForm(a)) return MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE;
   // 상속·증여 §163⑨ 취득가액(① 평가액 · ② §164 기준시가 · 의제 전 ③ 환산)은 다건도 단건과 같은 빌더로 싣는다
   //   (`buildPropertyPayload` — 계획서 multi-sec163-9-support.plan.md Q-1 a). ① 공란·② 부분 입력은 건별 ⑧(`validateStep` —
   //   `postDeemedClauseARequiredError` 등)이 단건과 같이 짚는다(Q-2 a). 종전 다건 전용 「상속 ① 공란」 가드와 #2888의 ② 입력 차단은 지웠다.

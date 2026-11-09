@@ -294,6 +294,9 @@ export async function POST(request: NextRequest) {
       acquisitionCause: p.acquisitionCause,
       // ⑭ 배우자등 이월과세(§97의2) — 단건 정본(`engine-input.ts` `toEngineCarryoverTaxation`)과 같은 Date 변환(트랙 CO).
       carryoverTaxation: toEngineCarryoverTaxation(p.carryoverTaxation, "carryoverTaxation"),
+      // ⑭ 부담부증여(소령 §159) — 단건 정본(`engine-input.ts` `burdenedGiftInfo`·`transferType`)과 같은 패스스루(Date 변환 없음 · 트랙 BG).
+      burdenedGiftInfo: p.burdenedGiftInfo,
+      transferType: p.transferType,
       decedentAcquisitionDate: toOptionalDate(p.decedentAcquisitionDate),
       nonHeirBequest: p.nonHeirBequest,
       // ⑭ US-07 — 단건 정본(`engine-input.ts`)과 같다

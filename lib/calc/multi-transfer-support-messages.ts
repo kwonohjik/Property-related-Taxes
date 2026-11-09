@@ -22,7 +22,15 @@ export const MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE =
  * F-12 — 합산 경로가 처리하지 못하는 서브객체 모드. ⑧(`validateMultiSupportedMode`)은 화면 폼으로,
  * ⑫(`transfer-tax-schema-multi-refines.ts`)는 API 본문으로 같은 모드를 막는다.
  */
-export const MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE = "부담부증여(소령 §159)는 단건 계산기에서만 지원됩니다.";
+/**
+ * 일반건물 부담부증여 × 배우자등 이월과세(§97의2) — 단건 route는 카드 세트 A·B를 신고 단위로 비교한다(`general-building-route-carryover.ts`).
+ * 연간 합산 펼침(`multi-gb-expansion.ts`)은 그 비교 단위를 받지 않아 카드 빌더가 멈춘다(트랙 BG 실측 — 단건 71,321,800 · 다건 예외).
+ */
+export const MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE =
+  "일반건물 부담부증여 × 배우자등 이월과세(§97의2)는 단건 계산기에서만 지원됩니다.";
+/** API 전용 — 연간 합산 자산은 각자 다른 증여다. 물건·증여계약 전체 §159 명세는 단건(축 B·함께 양도)에서만 받는다(트랙 BG). */
+export const MULTI_BURDENED_GIFT_WHOLE_UNSUPPORTED_MESSAGE =
+  "부담부증여 물건 전체 명세(지분 묶음·함께 양도)는 단건 계산기에서만 지원됩니다.";
 export const MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE = "재개발·재건축(시행령 §166)은 단건 계산기에서만 지원됩니다.";
 export const MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE =
   "조합원입주권(시행령 §166① / 승계취득분 §97①1호)은 단건 계산기에서만 지원됩니다.";

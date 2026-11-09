@@ -51,6 +51,23 @@
 - ⑦ 자산별 §159·증여세 명세 — 엔진 pickers에 자산별 명세 echo를 더하고 자산 행 펼침에 단건과 같은 카드(Q-3).
 - 일반건물 부담부증여는 트랙 G 펼침(`multi-gb-expansion.ts`)이 `burdenedGift`를 넘겨야 한다 — 단건 `route.ts:337-347`. **확인 필요**(V-BG2).
 
+**구현 결과(트랙 BG · 2026-11-10)** — anchor `__tests__/calc/multi-burdened-gift-parity.anchor.test.ts`.
+- ④는 단건과 같은 세 키를 싣는다: `transferType`, `burdenedGiftInfo`(`buildBurdenedGiftInfo`), 양도가액 placeholder. placeholder는 인수 채무 합계(`burdenedGiftAssumedDebtOf`)이고, 다건은 종전에 0을 보냈다. 실측에서 단건 본문과 다른 키는 이 셋뿐이었다.
+- 단건 = 연간 합산 1건:
+  - 주택(시가 10억 · 채무 3억 · 실지 4억): 38,879,500
+  - 토지(감정가액): 2,591,556
+  - 일반건물(실지): 47,245,000
+  - 주택 × 이월과세: 47,746,600
+- 아파트와 함께: 주택 151,470,000 · 일반건물 160,446,000. 부담부증여 자산의 양도차익은 그대로다.
+- ⑦ 자산별 §159·증여세 명세(Q-3 a):
+  - 엔진 echo `PerPropertyBreakdown.transferBurdenedGiftBreakdown`을 자산 행 펼침의 `BurdenedGiftDetailCard`가 그린다.
+  - 일반건물은 다건 펼침이 카드의 자산 명세(`gbAssetBurdenedGift`)를 `generalBuildingDetailsByAsset[자산].burdenedGiftBreakdown`에 1회 옮긴다. 카드에는 싣지 않는다.
+  - 두 경로 모두 단건 명세와 같은 값이다.
+- **V-BG1 해소**: `burdenedGiftWholeInfo`(축 B·함께 양도)가 있으면 자산별 echo를 싣지 않는다. 물건 전체 1건(`burdenedGift`)과 같은 자리에 겹치지 않는다. 연간 합산 ⑫는 이 키를 거부한다.
+- **V-BG2 해소**: 트랙 G 펼침(`buildGbCompanionItems`)이 엔진 입력의 `transferType`·`burdenedGiftInfo`를 그대로 읽어 세액이 같았다.
+  - 단, **일반건물 부담부증여 × 이월과세**는 카드 세트 A·B 비교 단위(`onCarryoverUnit`)를 펼침이 받지 않아 카드 빌더가 멈춘다(단건 71,321,800 · 다건 예외).
+  - 그래서 ⑧·⑫에서 같은 문구로 계속 막는다(별건).
+
 ### 트랙 GS — 일반건물 지분 분할 취득 (PR-3)
 
 - ④ 단건 공용 leaf `buildGeneralBuildingShares`(`lib/calc/transfer-tax-api-gb-shares.ts:250`).
@@ -80,8 +97,8 @@
 | V-CO3 | 토지·건물 파트 이월과세(`landCarryoverPart` 등) — 이번 범위 밖으로 계속 거부. 필요하면 별도 계획 |
 | V-CO4 | 일반건물 이월과세(`general-building-route-carryover.ts`) — 트랙 G 펼침이 이월과세를 넘기는지 |
 | V-CO5 | 연간 합산 결과 화면이 이월과세 A/B 카드·신고단위 비교 근거를 그리는지(브라우저) |
-| V-BG1 | 자산별 §159 명세 echo — 함께 양도의 묶음 전체 명세와 키가 겹치지 않게 |
-| V-BG2 | 일반건물 부담부증여 × 트랙 G 펼침 — `burdenedGift` 전달 여부 |
+| V-BG1 | ✅ 해소(트랙 BG) — 묶음 명세 입력이 있으면 자산별 echo를 싣지 않는다 |
+| V-BG2 | ✅ 해소(트랙 BG) — 세액 단건과 같음. 일반건물 부담부증여 × 이월과세만 ⑧·⑫ 계속 차단(별건) |
 | V-GS1 | 카드 접미사를 읽는 곳 전수 조사(`cardSuffixOf`·`assetOfCardSuffix`·`multiFormPropertyIdOf` 등) |
 | V-GS2 | 지분 분할 × 부담부증여·이월과세(지분별 `externalUnits`) 조합 — 위치 이동 후 단건과 같은지 |
 

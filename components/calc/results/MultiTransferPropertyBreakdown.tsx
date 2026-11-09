@@ -32,6 +32,7 @@ import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTa
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import { getRefDeterminedTax } from "@/components/calc/results/MultiTransferTaxSummaryCard";
 import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
+import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import { isSaleSplitActual } from "@/components/calc/results/transfer/sale-split-unentered-notice";
 import { isPhdApartment } from "@/components/calc/results/transfer/phd-housing-term";
 import { nblExclusionBadgeText } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
@@ -84,6 +85,8 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     depreciationAmount: b.depreciationAmount,
     swapApplied: b.filingDisplay?.swapApplied,
     carryoverTaxationDetail: b.carryoverTaxationDetail,
+    // 부담부증여 §159 echo — 자산별 신고서 머리의 「§159 채무비율 안분」 배지가 단건과 같게 읽는다(트랙 BG · 표시 전용).
+    transferBurdenedGiftBreakdown: b.transferBurdenedGiftBreakdown,
     /*
      * 🔴 종전에는 `Math.max(0, b.transferGain)` — 12억 초과 고가주택에서 **안분 전** 값이라
      *   과세대상·양도소득금액이 부풀었다(#019). 같은 화면의 합산 서식은 정확히 역산하고
@@ -509,6 +512,16 @@ export function PropertyBreakdownAccordion({
             {...(isSaleSplitActual(property?.form?.assets?.[0]) ? { saleSplitActual: true } : {})}
             phdApartment={isPhdApartment(property?.form?.assets?.[0])}
           />
+          {/* 부담부증여 §159·증여세 명세 — 단건(`SingleDetailCards`)과 같은 카드. 연간 합산은 자산마다 다른 증여라 자산 행에 그린다(트랙 BG · Q-3 a).
+              경고 배너는 합산 결과 화면이 한 번 그리므로 넘기지 않는다. */}
+          {breakdown.transferBurdenedGiftBreakdown && (
+            <div className="mt-3">
+              <BurdenedGiftDetailCard
+                breakdown={breakdown.transferBurdenedGiftBreakdown}
+                propertyType={property?.form?.assets?.[0]?.assetKind}
+              />
+            </div>
+          )}
 
           {/* 신고서 양식 표 — 자산별 (PR-F2: printScoped 버튼 제거, 패널 per-property로 통일) */}
           <div className="mt-2">

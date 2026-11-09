@@ -16,7 +16,8 @@
 import { z } from "zod";
 import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
-import { MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_BURDENED_GIFT_WHOLE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
@@ -46,14 +47,18 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown, data?: Record<strin
   //   당초 증여 때 인수한 채무 부분(매입분)만 거부한다 — 예정신고 세액 계산이 자산마다 단건 엔진을 불러 채무 키에서 멈춘다(⑧ 같은 문구).
   carryoverTaxation: (v) =>
     ((v as { giftAssumedDebt?: number } | null | undefined)?.giftAssumedDebt ?? 0) > 0 ? MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE : null,
-  acquisitionCause: (v) => (v === "burdened_gift" ? MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE : null),
-  transferType: (v) => (v === "burdened_gift" ? MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE : null),
   // 주택 split 파트 이월과세(P1) — 다건 ⑭는 이 키를 옮기지 않고, ②3호 비교는 신고 전체 결정세액이 필요하다(N-1). 키가 오면 strip(200 + 이월과세 없는 세액) 대신 400. 토지 원인 `carryover_gift`만 있는(서브객체 없는) 입력은 공용 leaf(S1)가 종전 G-1처럼 막는다.
   carryoverGiftEvent: whenPresent(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE),
   landCarryoverPart: whenPresent(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE),
   buildingCarryoverPart: whenPresent(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE),
-  burdenedGiftInfo: whenPresent(MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE),
-  burdenedGiftWholeInfo: whenPresent(MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE),
+  // 부담부증여(소령 §159) 자산 단위 `burdenedGiftInfo`·`transferType`은 ⑭가 단건과 같이 옮긴다(트랙 BG). 물건·증여계약 전체 명세(`burdenedGiftWholeInfo`)는
+  //   축 B·함께 양도 전용이라 연간 합산 ④는 만들지 않는다 — 직접 API로 오면 합산 결과 명세가 다른 자산 증여와 섞이므로 거부한다.
+  burdenedGiftWholeInfo: whenPresent(MULTI_BURDENED_GIFT_WHOLE_UNSUPPORTED_MESSAGE),
+  // 일반건물 부담부증여 × 이월과세 — 카드 세트 A·B 비교 단위를 연간 합산 펼침이 받지 않는다(⑧ `isGbBurdenedGift && carryoverEventForm` 같은 모드·같은 문구).
+  burdenedGiftInfo: (v, data) =>
+    v != null && data?.transferType === "burdened_gift" && data?.generalBuildingValuation != null && data?.carryoverTaxation != null
+      ? MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE
+      : null,
   redevelopment: whenPresent(MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE),
   // 다건 ④는 §166 서브객체(`redevelopment`)를 만들지 않고 propertyType만 싣는다 — 서브객체 거부만으로는
   // 완공APT·입주권이 일반 양도로 계산돼 새어 나온다(G2-2). ⑧(`validateMultiSupportedMode`)의 assetKind 차단과 같은 모드·같은 문구.
