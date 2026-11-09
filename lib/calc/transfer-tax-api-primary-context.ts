@@ -17,9 +17,9 @@ import { sec164LandStatus } from "./sec164-required-fields";
 import { representativeParcelAcquisitionDate } from "./transfer-tax-api-parcels";
 import { isSuccessorRightTransfer } from "./transfer-successor-right";
 import { isBgSuccessorRight } from "./transfer-successor-right";
+import { buildPrimaryCommercialBuildingValuation } from "./transfer-tax-api-commercial";
 import {
   buildCommercialAppurtenantLand,
-  buildCommercialBuildingValuation,
   buildGeneralBuildingValuation,
   buildRedevelopmentPayload,
   getOwnershipRatio,
@@ -161,10 +161,8 @@ export function buildPrimaryContext(
 
   // ⑬ 상업용건물·오피스텔 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)
   const isCommercialBuilding = primary.assetKind === "commercial_building";
-  // §163⑨: 상속 취득 상가는 상속개시일 평가액 직접(환산 아님) → 환산 payload 미빌드.
-  const cbValuation = isCommercialBuilding && primary.useEstimatedAcquisition && primary.acquisitionCause !== "inheritance"
-    ? buildCommercialBuildingValuation(primary, form.transferDate)
-    : undefined;
+  // §163⑨: 상속 취득 상가는 상속개시일 평가액 직접(환산 아님) → 환산 payload 미빌드(다건 ④와 같은 leaf).
+  const cbValuation = buildPrimaryCommercialBuildingValuation(primary, form.transferDate);
   // ⑬ 부수토지 초과분 판정 payload — 위 환산과 달리 **취득방법 무관**(상속 포함)이라 게이트가 없다.
   const cbAppurtenantLand = buildCommercialAppurtenantLand(primary);
 
