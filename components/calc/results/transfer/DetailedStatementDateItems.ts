@@ -100,8 +100,8 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
     label: "보유기간",
     value: splitHoldingValue ?? holdingPeriodFromDates(displayAcqDate, transferDate),
     formula: splitCarryover
-      ? `양도일 ${fmtDate(transferDate)} − 파트별 장기보유특별공제 기산일 (${splitCarryoverDateText(splitDetail)}) (연·월 차이) — 장기보유특별공제 보유기간이며 세율 기산일과 다를 수 있습니다`
-      : `양도일 ${fmtDate(transferDate)} − 취득일 ${fmtDate(displayAcqDate)} = ${holdingPeriodFromDates(displayAcqDate, transferDate)} (연·월 차이)`,
+      ? `양도일 ${fmtDate(transferDate)} − 파트별 장기보유특별공제 기산일 (${splitCarryoverDateText(splitDetail)}) (만 기간 · 초일 산입) — 장기보유특별공제 보유기간이며 세율 기산일과 다를 수 있습니다`
+      : `양도일 ${fmtDate(transferDate)} − 취득일 ${fmtDate(displayAcqDate)} = ${holdingPeriodFromDates(displayAcqDate, transferDate)} (만 기간 · 초일 산입, 소득세법 §95④)`,
     legalBasis: splitCarryover ? "소득세법 §95④ 단서·§97조의2" : "소득세법 §95②",
     perAsset: isAggregate
       ? properties.map((p) => ({

@@ -10,11 +10,12 @@
  * → 토지 열의 보유기간이 그 열의 취득일자와 정합하지 않았다.
  *
  * 불변식: 각 열의 보유기간 = 그 열의 취득일자 → 양도일.
- * 표시 규약(2026-07-29 사용자 확정) = **연·월 숫자 차이만**(일 무시).
- * 합계 열(`holdingPeriodFromDates`)·겸용 4열 모드(:482-487)와 동일 규약.
+ * 표시 규약 = **만 기간(초일 산입 — 소득세법 §95④)** — 2026-11-09 사용자 결정으로 종전 2026-07-29 「연·월 숫자 차이(일 무시)」를 대체.
+ * 합계 열(`holdingPeriodFromDates`)·겸용 4열 모드와 동일 규약이고, 엔진 정본 `calculateHoldingPeriod`와 같은 값이다.
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import {
   buildRows,
   deriveColumns,
@@ -92,11 +93,11 @@ describe("신고서 양식 split-2col — 보유기간·취득일자 (Pre-Do anc
   });
 
   it("🔴 건물 보유기간이 표시된다 (종전: 만-연수 0 → \"-\")", () => {
-    expect(cell(rows, "보유기간", "building")).toBe("0년 7월");
+    expect(cell(rows, "보유기간", "building")).toBe("0년 6월");
   });
 
-  it("토지 보유기간 = 토지 취득일 기산 (연·월 차이)", () => {
-    expect(cell(rows, "보유기간", "land")).toBe("1년 2월");
+  it("토지 보유기간 = 토지 취득일 기산 (만 기간)", () => {
+    expect(cell(rows, "보유기간", "land")).toBe("1년 1월");
   });
 
   it("🔴 취득일자는 열별 자기 취득일 (종전: 두 열 모두 건물 취득일)", () => {
@@ -106,19 +107,27 @@ describe("신고서 양식 split-2col — 보유기간·취득일자 (Pre-Do anc
 
   it("각 열의 보유기간은 그 열의 취득일자와 정합한다", () => {
     expect(cell(rows, "보유기간", "land")).toBe(
-      cell(rows, "취득일자", "land") === LAND_ACQ ? "1년 2월" : "불일치",
+      cell(rows, "취득일자", "land") === LAND_ACQ ? "1년 1월" : "불일치",
     );
     // 합계 열은 종전대로 자산 취득일(건물) 기산
-    expect(cell(rows, "보유기간", "total")).toBe("0년 7월");
+    expect(cell(rows, "보유기간", "total")).toBe("0년 6월");
   });
 });
 
 // 신고서 양식 전 표(합계·토지·건물·겸용 4열·자산 합산·재개발 분기)가 공유하는 단일 규약.
-describe("보유기간 표시 규약 — 연·월 차이 (일 무시)", () => {
-  it("일수가 남아도 절사하지 않는다", () => {
-    // 1년 1개월 28일 — 만-개월 절사 방식이면 "1년 1월"
-    expect(holdingPeriodFromDates("2025-01-08", "2026-03-06")).toBe("1년 2월");
-    expect(holdingPeriodFromDates("2025-08-29", "2026-03-06")).toBe("0년 7월");
+describe("보유기간 표시 규약 — 만 기간 (초일 산입, 소득세법 §95④ · 2026-11-09 변경)", () => {
+  it("일 단위로 차지 않은 달은 세지 않는다 (종전 연·월 차이 규약은 1년 2월 · 0년 7월)", () => {
+    expect(holdingPeriodFromDates("2025-01-08", "2026-03-06")).toBe("1년 1월");
+    expect(holdingPeriodFromDates("2025-08-29", "2026-03-06")).toBe("0년 6월");
+  });
+
+  it("🔴 장특·§98 5년 판정과 같은 값 — 1996-06-15 취득: 2001-06-13 양도 4년 11월 / 06-14 5년 0월 (종전: 둘 다 5년 0월)", () => {
+    expect(holdingPeriodFromDates("1996-06-15", "2001-06-13")).toBe("4년 11월");
+    expect(holdingPeriodFromDates("1996-06-15", "2001-06-14")).toBe("5년 0월");
+    for (const t of ["2001-06-13", "2001-06-14", "2001-06-15"]) {
+      const h = calculateHoldingPeriod(new Date("1996-06-15"), new Date(t));
+      expect(holdingPeriodFromDates("1996-06-15", t)).toBe(`${h.years}년 ${h.months}월`);
+    }
   });
 
   it("같은 달 취득·양도는 \"0년 0월\" (\"-\" 아님)", () => {
@@ -139,8 +148,8 @@ describe("split-2col — 취득일 동일(비-별개취득) 무회귀", () => {
     const form = makeFormData();
     form.assets[0] = { ...form.assets[0], landAcquisitionDate: BUILDING_ACQ };
     const rows = buildRows(result, "split-2col", form, form.assets[0], 500_000_000);
-    expect(cell(rows, "보유기간", "land")).toBe("0년 7월");
-    expect(cell(rows, "보유기간", "building")).toBe("0년 7월");
+    expect(cell(rows, "보유기간", "land")).toBe("0년 6월");
+    expect(cell(rows, "보유기간", "building")).toBe("0년 6월");
     expect(cell(rows, "취득일자", "land")).toBe(BUILDING_ACQ);
   });
 });
