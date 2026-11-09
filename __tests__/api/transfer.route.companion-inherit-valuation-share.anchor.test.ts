@@ -1,6 +1,8 @@
 /**
  * V-P2c — 매매 함께 양도 × 컴패니언 상속 × 지분: `companion-payload.ts`의 `inheritanceValuation`(상증법 평가액) 지분 축소.
  * 계획서 `docs/00-pm/companion-inherit-valuation-share-vp2c.plan.md` (측정 8칸 · 값 결함 0건 · 결정 Q-1 a).
+ * V-P2d — 같은 묶음에서 **주 자산**이 상속 지분인 반대 방향: `transfer-tax-api-bundled.ts`의 `primaryInheritanceValuation` 지분 축소.
+ * 계획서 `docs/00-pm/bundled-primary-inherit-valuation-share-vp2d.plan.md` (측정 8칸 · 값 결함 0건).
  *
  * 그 줄을 끄면 최종 취득가액·양도차익은 그대로인데 안분 echo `apportionment.apportioned[].allocatedAcquisitionPrice`만 두 배가 된다
  * (100,000,000 → 200,000,000). 최종 값 단언만으로는 이 줄을 못 잡아서 echo를 직접 단언한다.
@@ -100,3 +102,32 @@ describe.each(KINDS)("V-P2c %s — 매매 함께 양도 × 컴패니언 지분 5
     });
   }
 });
+
+/** V-P2d — 주 자산이 상속 지분 50%, 컴패니언은 매매 토지 100%. 대조는 단건 합(반 크기 주 자산 단건 + 컴패니언 단건). */
+describe.each(KINDS)("V-P2d %s — 매매 함께 양도 × 주 자산 상속 지분 50%", (_name, base) => {
+  for (const mode of ["actual", "apportioned"] as const) {
+    it(`${mode}: ⑧ 0건 · ⑫ 200 · 양도차익 = 단건 합 900,000,000 · 주 자산 안분 취득가액(echo)·최종 취득가액 = 평가액 × 50% = 100,000,000`, async () => {
+      const prim = (sc: number, id: string, ...o: Record<string, unknown>[]) => Object.assign({ assetId: id }, x(base(sc)), ...o.map(x)) as Partial<AssetForm>;
+      const other = (id: string): Partial<AssetForm> => ({ ...PRIMARY(id), addressJibun: "서울 강남구 테스트동 9" });
+      const f = form([prim(1, "p", HALF), other("c")], { assetSplitMode: "companion", bundledSaleMode: mode, contractTotalPrice: "1300000000" });
+      const z1 = await post(form([prim(0.5, "z1")], { contractTotalPrice: "500000000" }));
+      const z2 = await post(form([other("z2")], { contractTotalPrice: "800000000" }));
+      expect([z1.status, z2.status], `대조 ${z1.err}${z2.err}`).toEqual([200, 200]);
+      const r = await post(f);
+
+      expect(issuesOf(f), "⑧").toEqual([]);
+      expect(r.status, `⑫ ${r.err}`).toBe(200);
+      expect(r.gain, "양도차익").toBe((z1.gain as number) + (z2.gain as number));
+      expect(r.gain, "양도차익 고정값").toBe(900_000_000);
+
+      // 안분 echo — `primaryInheritanceValuation` 지분 축소를 지키는 유일한 단언(끄면 100,000,000 → 200,000,000)
+      const ap = Object.fromEntries(r.apportioned.map((a) => [a.assetId, a]));
+      expect(ap.primary.allocatedAcquisitionPrice, "주 자산 안분 취득가액(echo)").toBe(100_000_000);
+      expect(ap.c.allocatedAcquisitionPrice, "컴패니언 안분 취득가액").toBe(300_000_000);
+      expect(r.props.map((p) => p.acquisitionPrice), "자산별 최종 취득가액").toEqual([100_000_000, 300_000_000]);
+      // 양도가액: actual = 구분기재(주 자산 지분분 5억 · 컴패니언 8억), apportioned = 총 13억을 양도시 기준시가 3억(= 6억 × 50%) : 5억으로 안분
+      expect(r.props.map((p) => p.transferPrice), "자산별 양도가액").toEqual(mode === "actual" ? [500_000_000, 800_000_000] : [487_500_000, 812_500_000]);
+    });
+  }
+});
+
