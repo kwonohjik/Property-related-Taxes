@@ -15,7 +15,6 @@ import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "./multi-transfer-sup
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { isPreDeemedPurchaseAsset } from "./transfer-pre-deemed-purchase-form";
-import { MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
@@ -145,12 +144,9 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   if (a.assetKind === "housing" && a.isMixedUseHouse) {
     return MULTI_MIXED_USE_UNSUPPORTED_MESSAGE;
   }
-  // 상업용건물·오피스텔은 막지 않는다 — 단건 엔진이 서브객체를 직접 읽고 ④⑫⑭가 단건과 같은 leaf로 옮긴다
-  //   (계획서 multi-building-valuation-support 트랙 C · anchor `multi-commercial-building-parity`).
-  //   일반건물은 단건 route가 토지·건물 카드로 펼쳐 합산하는 별도 경로라 아직 막는다(트랙 G).
-  if (a.assetKind === "general_building") {
-    return MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE;
-  }
+  // 상업용건물·오피스텔·일반건물은 막지 않는다(계획서 multi-building-valuation-support 트랙 C·G).
+  //   상업용은 단건 엔진이 서브객체를 직접 읽고, 일반건물은 ⑭가 단건과 같은 토지·건물 카드로 펼친다(`multi-gb-expansion.ts`).
+  //   일반건물 지분 분할 취득은 자산 2건 이상이라 아래 「한 건 내 다자산」 차단이 막는다(⑫는 `generalBuildingShares` 거부).
   // P3 A — 토지만 이월과세도 같다(⑫ `MULTI_REJECT_RULES`가 파트 키를 거부한다 — ⑧이 먼저 막는다).
   if (a.acquisitionCause === "carryover_gift" || effectiveLandCarryover(a)) {
     return MULTI_CARRYOVER_UNSUPPORTED_MESSAGE;

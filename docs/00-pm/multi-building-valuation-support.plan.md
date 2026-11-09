@@ -130,7 +130,7 @@ throwaway probe(`calculateTransferTax` ↔ `calculateTransferTaxAggregate`, mock
 | G-1 | `multi/route.ts:164` `data.properties.map` | 1:1 변환 | GB면 `buildGbCompanionItems`로 `flatMap` |
 | G-2 | `multi/route.ts:645-676` 예정신고 세액(`computePreliminaryFilingTaxes`)·가산세 enrich가 **인덱스**로 맞춘다 | 카드마다 별개 신고로 계산된다 → GB 예정신고 base 오류 · 가산세를 카드마다 실으면 **배가** | GB 1건 단위로 예정신고 세액을 구하고(카드 묶음을 합산 엔진 1회) 가산세는 카드 한 장(토지)에만 싣는다 — **V-G2**에서 단건 GB의 가산세 처리(`transfer-tax-aggregate-once.ts:377-390`)와 대조 |
 | G-3 | 기본공제 축 — 다건 `EARLIEST_TRANSFER`(`:597`), 단건 GB `PARTS_HIGHEST_RATE` | 같은 날 파트 사이 순서가 다를 수 있다 | §3.2 probe에서는 같았다. 세율 구간이 갈리는 물건(토지 비사업용 중과 + 건물 일반)으로 **V-G1** 재측정 |
-| G-4 | 화면이 결과를 **propertyId로** 폼에 붙인다(`MultiTransferTaxResultView.tsx:94·268` · `build-aggregate-meta.ts` · `MultiTransferFilingFormSection.tsx`) | `land#gb1`로는 라벨·양도일·지분이 조회되지 않는다 | `baseCardId`(`general-building-share-id.ts`)로 부모 id를 되찾는다 — 표시 방식은 **Q-2** |
+| G-4 | 화면이 결과를 **propertyId로** 폼에 붙인다(`MultiTransferTaxResultView.tsx:94·268` · `build-aggregate-meta.ts` · `MultiTransferFilingFormSection.tsx`) | `land#gb1`로는 라벨·양도일·지분이 조회되지 않는다 | `cardSuffixOf`(`general-building-share-id.ts`)로 부모 id를 되찾는다(⚠️ `baseCardId`는 카드 종류 `land`를 돌려준다 — 착수 중 정정) — 표시 방식은 **Q-2** |
 | G-5 | 단건 전용 결과 슬롯(`generalBuildingValuationDetail`·`swapComparison`) | GB가 2건 이상이면 덮어쓴다 | 일괄양도 선례 `generalBuildingDetailsByAsset`(`bundled-route.ts:460`)를 다건 결과에도 싣는다 |
 | G-6 | `buildGbCompanionItems`의 `engine` 인자 `Pick`에 `transferCause`가 없고 `estimatedPayloadOf`에 §164⑨ 주입이 없다 | 공익수용 GB가 단건과 갈릴 수 있다(의도 여부 확인 못 함) | **V-G3** — 단건 공익수용 GB ↔ 카드 함수 결과 대조. 갈리면 함수에 추가하거나 다건에서 공익수용 GB만 계속 막는다 |
 | G-7 | `resolveGbPreDeemedRoute`(의제취득일 전 상속·증여 ①②③)가 `dispatchGeneralBuilding`에는 있고 카드 함수에는 있는지 확인 못 함 | — | **V-G4** |
@@ -164,6 +164,17 @@ PR-2를 먼저 머지해도 화면은 ⑧이 막고 있어 사용자 경로에 �
 - **V-G3** 공익수용 §164⑨ GB — 단건 route ↔ 카드 함수.
 - **V-G4** 의제취득일 전 상속·증여 GB(①②③ 재선택) — 단건 route ↔ 카드 함수.
 
+### 3.7 구현 결과 (2026-11-09)
+
+| 항목 | 결과 |
+|---|---|
+| V-G1 | ✅ 토지 누진 38% · 건물 단기 50%로 세율이 갈려도 배분 축(EARLIEST·PARTS)과 무관하게 단건과 같다 — 실가 285,210,000 · 환산 168,012,000. **Q-3 불필요** |
+| V-G2 | ✅ 예정신고 세액을 카드 묶음 단위로 계산(`PreliminaryCardUnit`) · 가산세는 첫 카드에만 — 단건 39,642,000 = 다건 · 앞뒤 자산의 기본공제 사용이 GB base에 반영(MG-7·MG-7b) |
+| V-G3 | 🔴→✅ 카드 함수가 공익수용(§164⑨1호)을 받지 않아 단건 66,180,666 ↔ 카드 111,380,000(45,199,334 과대). 다건은 선택 인자로 전달해 해소. **함께 양도 컴패니언 GB는 같은 함수라 같은 누락이 있을 수 있다 — 미측정 별건** |
+| V-G4 | ✅ 의제취득일 전 재선택(`resolveGbPreDeemedRoute`)은 `buildGbPartCards` 안에도 있다(코드 확인) |
+| PR-2 서버 | #3082 — `multi-gb-expansion.ts` · anchor `transfer.route.multi-general-building` 9건 · 뮤테이션 6종 kill |
+| PR-3 화면 | ④ 공용 leaf `buildPrimaryGeneralBuildingValuation`(지분 축 A 축소 포함) · ⑧ 해제 · ⑦ `MultiGbAssetGroup`(자산 1행 + 일반건물 블록 + 카드 아코디언) · 신고서·명세서 폼 연결(`multi-result-groups.ts`) · anchor `multi-general-building-parity` 5건(뮤테이션 2종 kill) · E2E `multi-general-building.spec.ts` |
+
 ## 4. 사용자 결정(Q)
 
 - **Q-1 순서** — (a) 트랙 C만 먼저 PR-1로 내고 트랙 G는 PR-2·PR-3 **(권장: 사용자 사례가 PR-1만으로 풀리고, 트랙 C는 엔진 변경이 없다)** ·
@@ -176,5 +187,5 @@ PR-2를 먼저 머지해도 화면은 ⑧이 막고 있어 사용자 경로에 �
 ## 5. 완료 기준
 
 - [x] 트랙 C: parity anchor 6건 + 사용자 사례 anchor 통과 · 키 분류 가드 통과 · E2E 1건(headless) — PR #3076 머지 a7027de37. 사람이 브라우저로 직접 본 확인은 미수행
-- [ ] 트랙 G: V-G1~V-G4 실측 후 anchor · 가산세 1회 anchor · E2E 1건 · 브라우저 확인
+- [x] 트랙 G: V-G1~V-G4 실측 후 anchor · 가산세 1회 anchor · E2E 1건(headless) — PR #3082(서버) · PR-3(화면). 사람이 브라우저로 직접 본 확인은 미수행
 - [ ] `npx tsc --noEmit` 0건 · `npx vitest run __tests__/calc/ __tests__/api/` 통과

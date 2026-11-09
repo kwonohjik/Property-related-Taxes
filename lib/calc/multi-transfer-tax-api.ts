@@ -65,6 +65,8 @@ import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-i
 import { buildPrimaryCommercialBuildingValuation } from "./transfer-tax-api-commercial";
 import { buildCommercialAppurtenantLand } from "./transfer-tax-api-commercial";
 import { isInheritedCommercialBuilding } from "./transfer-tax-api-commercial";
+import { buildPrimaryGeneralBuildingValuation } from "./transfer-tax-api-gb-shares";
+import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import { selfBuiltActive } from "./self-built-scope";
 import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
 import { withSelfBuiltHousing } from "./transfer-tax-api-self-built-housing";
@@ -459,6 +461,13 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     ...(primary ? optionalKey("commercialBuildingValuation", buildPrimaryCommercialBuildingValuation(primary, form.transferDate)) : {}),
     ...(primary ? optionalKey("commercialAppurtenantLand", buildCommercialAppurtenantLand(primary)) : {}),
     ...(primary ? buildCommercialInheritanceValuationPayload(primary) : {}),
+    // ⑬ 일반건물 — 단건 ④와 같은 leaf(공유 지분 축 A 축소 포함). route ⑭가 단건과 같은 토지·건물 카드로 펼친다(`multi-gb-expansion.ts`).
+    ...(primary
+      ? optionalKey(
+          "generalBuildingValuation",
+          buildPrimaryGeneralBuildingValuation(primary, form.transferDate, isFullFractionalBundle(form.assets, form.assetSplitMode)),
+        )
+      : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
     // ⑬ §89①4호 가·나목 분양권 게이트 — 단건(`transfer-tax-api.ts`)과 같은 echo(roster-required-other-assets §4-6).

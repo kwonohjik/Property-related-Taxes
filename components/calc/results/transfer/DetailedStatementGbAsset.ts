@@ -28,6 +28,8 @@ export function gbFormulaInputsOf(
   properties: PerPropertyBreakdown[],
   formData: TransferFormData | undefined,
   fallback: { totalTransferPrice: number; asset: AssetForm | undefined },
+  /** 다건 합산 — 카드 id → 그 양도건의 폼 자산(`propertyFormMap`). 접미사가 폼 항목 id라 `formData.assets`에서 찾을 수 없다. */
+  assetOfCard?: (propertyId: string) => AssetForm | undefined,
 ): GbFormulaInputs {
   if (single) {
     // 지분 분할(축 B) — 결과 상세 한 벌은 첫 지분 것이다. 그 카드 지분의 양도가액 · 개산공제 base로 덮어 읽는다(계획서 §7 D-1).
@@ -48,6 +50,9 @@ export function gbFormulaInputsOf(
     totalTransferPrice: properties
       .filter((q) => cardSuffixOf(q.propertyId) === suffix)
       .reduce((s, q) => s + q.transferPrice, 0),
-    asset: (suffix === "primary" ? formData?.assets[0] : formData?.assets.find((a) => a.assetId === suffix)) ?? fallback.asset,
+    asset:
+      (suffix === "primary" ? formData?.assets[0] : formData?.assets.find((a) => a.assetId === suffix)) ??
+      assetOfCard?.(p.propertyId) ??
+      fallback.asset,
   };
 }

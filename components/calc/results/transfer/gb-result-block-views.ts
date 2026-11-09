@@ -92,22 +92,39 @@ export function gbBlockViewsOf(
   const order = (id: string) => (id === "primary" ? 0 : 1 + formData.assets.findIndex((a) => a.assetId === id));
   return Object.keys(byAsset)
     .sort((a, b) => order(a) - order(b))
-    .map((assetId) => {
-      const detail = byAsset[assetId];
-      const cards = aggregated.properties.filter((p) => cardSuffixOf(p.propertyId) === assetId);
-      const acqOf = (id: string): number | undefined => cardAcquisitionPriceWithPieces(cards, id);
-      return {
+    .map((assetId) =>
+      gbAssetBlockView(
+        aggregated,
         assetId,
-        label: apportionment.apportioned.find((a) => a.assetId === assetId)?.assetLabel ?? assetId,
-        detail,
-        asset: assetId === "primary" ? formData.assets[0] : formData.assets.find((a) => a.assetId === assetId),
-        partAcquisitionPrice: (kind) => {
-          const card = detail.assetCards.find((c) => isPartCard(c, kind));
-          return card ? acqOf(card.propertyId) : undefined;
-        },
-        ...(detail.swapComparison ? { swapComparison: detail.swapComparison } : {}),
-      };
-    });
+        apportionment.apportioned.find((a) => a.assetId === assetId)?.assetLabel ?? assetId,
+        assetId === "primary" ? formData.assets[0] : formData.assets.find((a) => a.assetId === assetId),
+      ),
+    );
+}
+
+/**
+ * 자산별 상세(`generalBuildingDetailsByAsset`)의 한 일반건물 → 블록 뷰. 함께 양도(위)와 다건 합산(`MultiGbAssetGroup`)이 같은 leaf를 쓴다.
+ */
+export function gbAssetBlockView(
+  aggregated: AggregateTransferResult,
+  assetId: string,
+  label: string,
+  asset: AssetForm | undefined,
+): GbBlockView {
+  const detail = (aggregated.generalBuildingDetailsByAsset ?? {})[assetId];
+  const cards = aggregated.properties.filter((p) => cardSuffixOf(p.propertyId) === assetId);
+  const acqOf = (id: string): number | undefined => cardAcquisitionPriceWithPieces(cards, id);
+  return {
+    assetId,
+    label,
+    detail,
+    asset,
+    partAcquisitionPrice: (kind) => {
+      const card = detail.assetCards.find((c) => isPartCard(c, kind));
+      return card ? acqOf(card.propertyId) : undefined;
+    },
+    ...(detail.swapComparison ? { swapComparison: detail.swapComparison } : {}),
+  };
 }
 
 /** 3-way 표가 읽는 그 일반건물의 파트 카드 결과 — 단건은 전 카드, 함께 양도는 같은 접미사 카드만. */

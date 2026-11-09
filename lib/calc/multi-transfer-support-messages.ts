@@ -19,7 +19,7 @@ export const MULTI_MIXED_USE_UNSUPPORTED_MESSAGE = "겸용주택 분리계산은
 export const MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE =
   "의제취득일(1985.1.1.) 전 매수 자산의 취득가액 비교(소득세법 시행령 §176조의2④)는 단건 계산기에서만 지원됩니다.";
 export const MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE =
-  "일반건물(토지·건물 일괄/환산취득가)은 단건 계산기에서만 지원됩니다.";
+  "일반건물 지분별 분할 취득은 단건 계산기에서만 지원됩니다.";
 export const MULTI_PHD_UNSUPPORTED_MESSAGE = "개별주택가격 미공시 환산취득가(영 §164⑦)는 단건 계산기에서만 지원됩니다.";
 export const MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE = "가업상속공제(§97의2④) 의제 취득가액은 단건 계산기에서만 지원됩니다.";
 export const MULTI_COMPANION_UNSUPPORTED_MESSAGE = "한 건 내 다자산 일괄양도는 단건 계산기에서만 지원됩니다.";

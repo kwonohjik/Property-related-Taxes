@@ -20,6 +20,7 @@
  */
 import type { AggregateTransferResult } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { multiFormPropertyIdOf } from "./multi-result-groups";
 
 /** 다건 결과탭이 다루는 「양도건」 — `form`이 그 건의 폼 전체다. */
 export interface AggregatePropertyItem {
@@ -37,10 +38,13 @@ export function buildAggregateMeta(
   const propertyFormMap = new Map<string, TransferFormData>();
 
   for (const p of result.properties) {
-    const prop = properties.find((x) => x.propertyId === p.propertyId);
+    // 일반건물 카드(`land#<폼 id>`)는 접미사가 폼 항목 id다(`multi-result-groups.ts`).
+    const prop = properties.find((x) => x.propertyId === multiFormPropertyIdOf(p.propertyId));
     if (prop?.form) propertyFormMap.set(p.propertyId, prop.form);
     const asset = prop?.form?.assets[0];
     if (!asset) continue;
+    // 일반건물 카드에는 지분 배지·토지 성격을 달지 않는다 — 단건 일반건물의 파트 카드 열과 같다(지분은 카드 값에 이미 반영).
+    if (p.propertyId !== prop?.propertyId) continue;
     const numerator = parseInt(asset.ownershipNumerator ?? "100", 10);
     const denominator = parseInt(asset.ownershipDenominator ?? "100", 10);
     if (
