@@ -130,9 +130,10 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
    *    토지 출자의 불성립은 1세대 문제가 아니라 §89①4호 본문(기존주택 소유) 문제이고, 판정 메뉴의 「세대원 건물 소유」 선언과
    *    결과 고지가 말한다. subject fallback은 API 변환·validate와 동일(미입력 시 입주권 자산 → "right").
    */
+  // 대상은 세대 기준 자산이다 — 첫 자산이 토지여도 함께 양도하는 입주권이 기준이면 그 입주권(`exemptPrimary` = 세대 기준 폼 뷰의 첫 자산).
   const isLandContributedRight =
-    primary?.redevOriginalAssetType === "land" &&
-    (primary?.redevSubject || (primaryKind === "right_to_move_in" ? "right" : "apt")) === "right";
+    exemptPrimary?.redevOriginalAssetType === "land" &&
+    (exemptPrimary?.redevSubject || (householdKind === "right_to_move_in" ? "right" : "apt")) === "right";
   const isOneHouseholdEffective = form.isOneHousehold;
 
   const primaryAddress =
@@ -208,16 +209,14 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
    * 세대 보유 조합원입주권 수 — PR-D(2026-10-05) 표시용 도출값. ④·⑧과 같은
    * leaf(`resolveHouseholdRightCount`)를 쓴다(3중 패턴) — right_to_move_in 전용.
    */
+  // ④(`transfer-tax-api.ts`)와 같은 식 — 함께 양도 묶음 안 입주권도 양도일 현재 보유로 센다.
+  const soldRightCount = useMemo(
+    () => bundleRightAssetCount(form.assets, isFullFractionalBundle(form.assets, form.assetSplitMode)),
+    [form.assets, form.assetSplitMode],
+  );
   const derivedHouseholdRightCount = useMemo(
-    () =>
-      resolveHouseholdRightCount(
-        householdKind,
-        form.presaleRights,
-        form.transferDate,
-        // ④(`transfer-tax-api.ts`)와 같은 식 — 함께 양도 묶음 안 입주권도 양도일 현재 보유로 센다.
-        bundleRightAssetCount(form.assets, isFullFractionalBundle(form.assets, form.assetSplitMode)),
-      ),
-    [householdKind, form.presaleRights, form.transferDate, form.assets, form.assetSplitMode],
+    () => resolveHouseholdRightCount(householdKind, form.presaleRights, form.transferDate, soldRightCount),
+    [householdKind, form.presaleRights, form.transferDate, soldRightCount],
   );
 
   // 조정대상지역 자동 판별(주소·날짜 → API) + 안내 — 800줄 정책 분리(OH-22). 주택은 섹션② 취득일 조정
@@ -318,9 +317,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         <div className="space-y-3">
           {/* NH-14 — 첫 자산이 주택이 아닌데 함께 양도하는 주택 때문에 이 칸이 열렸다. 그 주택이 세대 사실을 첫 자산의 폼 값으로 받는다. */}
           {householdFactsOpenedByCompanion(form) && (
-            <ToneCard tone="sky" title="함께 양도하는 주택의 세대·주택 현황">
+            <ToneCard tone="sky" title={`함께 양도하는 ${householdKind === "right_to_move_in" ? "조합원입주권" : "주택"}의 세대·주택 현황`}>
               <p className="text-caption leading-relaxed text-sky-800 dark:text-sky-300" data-testid="household-facts-companion-notice">
-                첫 자산이 주택이 아니어도, 함께 양도하는 주택의 1세대1주택 비과세·다주택 중과 판정은 이 세대 현황(1세대 여부·세대 보유 주택·분양권·입주권)을 사용합니다.
+                {householdKind === "right_to_move_in"
+                  ? "첫 자산이 주택이 아니어도, 함께 양도하는 조합원입주권의 §89①4호 비과세 판정은 이 세대 현황(1세대 여부·세대 보유 주택·분양권·입주권)을 사용합니다."
+                  : "첫 자산이 주택이 아니어도, 함께 양도하는 주택의 1세대1주택 비과세·다주택 중과 판정은 이 세대 현황(1세대 여부·세대 보유 주택·분양권·입주권)을 사용합니다."}
                 양도일 현재 기준으로 입력하세요.
               </p>
             </ToneCard>
@@ -343,9 +344,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               <p className="mt-0.5">
                 §89①4호 비과세는 관리처분계획 인가일과 양도일 현재 <b>같은 세대가 철거 대상 건물(기존주택)을 소유</b>한 경우에만 성립합니다
                 (소득세법 §89①4호 본문 · 재산세과-1748). 그 선언은 판정 메뉴 §89①4호 카드에서 받습니다
-                {primary?.redevLandHouseholdOwnedBuilding === "yes"
+                {exemptPrimary?.redevLandHouseholdOwnedBuilding === "yes"
                   ? " — 「예」로 선언되어 있습니다."
-                  : primary?.redevLandHouseholdOwnedBuilding === "no"
+                  : exemptPrimary?.redevLandHouseholdOwnedBuilding === "no"
                     ? " — 「아니오」로 선언되어 비과세·고가 안분을 적용하지 않습니다."
                     : " — 선언이 없어 비과세·고가 안분을 적용하지 않습니다(확인 필요)."}
                 {" "}장기보유특별공제 표2(1세대1주택 우대)도 「예」로 선언해 비과세 요건이 성립할 때만 적용합니다(§95② 단서).
@@ -368,13 +369,13 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             조합원입주권(`type: "redevelopment_right"`) 항목 수로 도출한다 — ④ 단건·다건과 같은
             leaf(`resolveHouseholdRightCount`, 3중 패턴).
           */}
-          {primaryKind === "right_to_move_in" && (
+          {householdKind === "right_to_move_in" && (
             <div className="space-y-1.5">
               <label className="block text-sm font-medium">세대 보유 조합원입주권 수</label>
               <p className="text-sm" data-testid="household-right-count-derived">
                 {derivedHouseholdRightCount}개
                 <span className="ml-1.5 text-xs text-muted-foreground">
-                  (양도하는 입주권 1개 + 아래 목록의 조합원입주권 항목 수로 자동 산정됩니다)
+                  (이번에 양도하는 입주권 {soldRightCount}개 + 아래 목록의 조합원입주권 항목 수로 자동 산정됩니다)
                 </span>
               </p>
               {/*

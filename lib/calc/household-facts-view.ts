@@ -10,6 +10,7 @@
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { householdFactsAssetOf } from "./household-facts-asset";
+import { isOneHouseExemptionAsset } from "./housing-like-asset";
 
 type ViewForm = Pick<TransferFormData, "assets" | "assetSplitMode">;
 
@@ -27,10 +28,15 @@ export function householdFactsFormView<T extends ViewForm>(form: T): T {
   return { ...form, assets: [assets[k], ...assets.filter((_, i) => i !== k)] };
 }
 
-/** ④⑫⑭ — 함께 양도 주택이 세대 기준 자산이면 그 주택의 `assetId`, 아니면 undefined. */
+/**
+ * ④⑫⑭ — 함께 양도 **주택**이 세대 기준 자산이면 그 주택의 `assetId`, 아니면 undefined.
+ *
+ * 세대 기준 자산이 함께 양도 조합원입주권이면(주택이 없는 구성 — `householdFactsAssetOf`) undefined다: 이 id는 주택 카드에 «세대 단위 1주택 사실»을 덮고
+ * 명부 행 감면·거주기간을 싣는 용도라 입주권 카드에는 맞지 않는다. 입주권 카드의 §89①4호 세대 사실은 `oneRightHouseholdFacts`(⑭)가 싣는다.
+ */
 export function householdFactsCompanionAssetId(form: ViewForm): string | undefined {
   const k = householdIndexOf(form);
-  return k > 0 ? form.assets[k].assetId : undefined;
+  return k > 0 && isOneHouseExemptionAsset(form.assets[k].assetKind) ? form.assets[k].assetId : undefined;
 }
 
 /**

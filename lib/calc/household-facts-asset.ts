@@ -42,7 +42,13 @@ export function householdFactsAssetOf<T extends HouseholdFactsAsset>(
   const [primary, ...companions] = assets ?? [];
   if (!primary || isHousingLike(primary.assetKind)) return primary;
   if (isFractionalSplitBundle(assets ?? [], declaredMode)) return primary;
-  return companions.find((a) => isOneHouseExemptionAsset(a.assetKind)) ?? primary;
+  return (
+    companions.find((a) => isOneHouseExemptionAsset(a.assetKind)) ??
+    // 함께 양도하는 주택이 없고 조합원입주권이 있으면 그 입주권이 기준이다 — §89①4호 가목은 «다른 주택·분양권 미보유»(세대 사실)를 요구하는데,
+    // 기준 자산이 토지면 그 사실을 입력할 칸이 없어 컴패니언 입주권의 4호가 화면에서 열리지 않았다(`companion-right-4ho-open.plan.md` §9 V-2).
+    companions.find((a) => a.assetKind === "right_to_move_in") ??
+    primary
+  );
 }
 
 /** 세대·주택 현황의 기준 자산 종류 — 기준 자산이 없으면 빈 문자열(`Step4`의 `primaryKind` 규약). */
