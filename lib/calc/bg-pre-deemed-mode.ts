@@ -17,19 +17,22 @@ export function bgPreDeemedUsesThreeWay(asset: AssetForm): boolean {
  * 일반건물 부담부증여의 취득가액이 GB 취득시 기준시가 칸 × 채무비율인가 — 기준시가 평가 또는 시가 평가·담보 승(§159①1호 괄호 · Q-25).
  * 1985.1.1. 전 상속·증여 파트면 그 칸이 의제취득일 기준시가라 ①③이 후보가 아니다 — ⑧ E-1 면제(G-1)·⑤ 등급 카드 문구(G-4)가 같은 술어를 쓴다(PR-7b-2).
  * 시가 평가(파트별 3자 max · Q-28·Q-29)는 PR-7b-6.
+ * `isFractionalSplit` — 지분 자산의 축(`bgCollateralForcesStdAcq`와 같은 세 상태). 지분 자산은 축을 넘겨야 담보 승을 확정한다(미지정이면 종전처럼 담보 패로 읽는다).
  */
-export function gbBgUsesStdAcq(asset: AssetForm): boolean {
+export function gbBgUsesStdAcq(asset: AssetForm, isFractionalSplit?: boolean): boolean {
   if (asset.assetKind !== "general_building" || asset.transferType !== "burdened_gift") return false;
-  return asset.bgValuationMode !== "sangjeungbeop_market" || bgCollateralForcesStdAcq(asset);
+  return asset.bgValuationMode !== "sangjeungbeop_market" || bgCollateralForcesStdAcq(asset, isFractionalSplit);
 }
 
 /**
  * 일반건물 부담부증여 · 시가 평가(담보 패) — 의제취득일 전 상속·증여 파트는 그 파트만 3자 max다(사용자 결정 Q-28 · PR-7b-6).
  * ⑤(① 칸·산정방식 라디오·방식별 금액 칸)와 ⑧(① 필수 Q-29·G-5 · E-1 면제 · 산정방식 요구)이 같은 술어를 쓴다. 두 파트가 모두면 산정방식이 없다.
+ * `isFractionalSplit` — 지분 자산의 축(위 `gbBgUsesStdAcq`와 같다). 축 없이 읽으면 지분 자산의 담보 승을 담보 패로 읽어 3자 max로 판정한다 —
+ * 그러면 담보 승인데도 쓰이지 않는 ①을 요구하고 3자 max 안내를 띄운다(지분 단건 50%·축 B 60% 실측 · 계획서 `bg-gb-pre-deemed-fractional-clause-a.plan.md` V-P5).
  */
-export function gbBgThreeWayParts(asset: AssetForm): { land: boolean; building: boolean; all: boolean; any: boolean } {
+export function gbBgThreeWayParts(asset: AssetForm, isFractionalSplit?: boolean): { land: boolean; building: boolean; all: boolean; any: boolean } {
   const m = gbBgMarketPreDeemedParts(asset);
-  const on = (m.land || m.building) && !bgCollateralForcesStdAcq(asset);
+  const on = (m.land || m.building) && !bgCollateralForcesStdAcq(asset, isFractionalSplit);
   const land = on && m.land;
   const building = on && m.building;
   return { land, building, all: land && building, any: land || building };

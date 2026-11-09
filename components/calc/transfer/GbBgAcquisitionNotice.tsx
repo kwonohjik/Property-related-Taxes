@@ -12,7 +12,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 export function GbBgAcquisitionNotice({ asset, transferDate, isFractionalSplit }: { asset: AssetForm; transferDate: string | undefined; isFractionalSplit?: boolean }) {
   const use = gbBgStdUseOf(asset, isFractionalSplit);
   if (!use) return null;
-  const parts = gbBgThreeWayParts(asset);
+  const parts = gbBgThreeWayParts(asset, isFractionalSplit);
   const partLabel = parts.all ? "토지·건물" : parts.land ? "토지" : "건물";
   return (
     <div className="rounded bg-fuchsia-50/60 border border-fuchsia-200 px-3 py-2 text-xs text-fuchsia-800 space-y-0.5 dark:text-fuchsia-200 dark:bg-fuchsia-950/40">

@@ -193,7 +193,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
    * 일반건물 · 시가 평가(담보 패) — 의제취득일 전 상속·증여 파트만 3자 max(사용자 결정 Q-28 · PR-7b-6b). 두 파트 다면 산정방식이 없고(라디오·방식별 칸을 숨긴다),
    * 한 파트면 라디오는 남고 그 파트의 방식별 금액 칸만 숨긴다. 축 B에서 이 카드가 두 파트 다여도 그렇지 않은 지분이 있으면 그 지분용으로 라디오를 남긴다(Q-34와 같다).
    */
-  const gbParts = gbBgThreeWayParts(asset);
+  const gbParts = gbBgThreeWayParts(asset, isFractionalSplit === true);
   const gbMethodForOtherShares = gbParts.all && isFractionalSplit === true && gbBgFractionalHasPartialShare(fractionalShares);
   const gbNoMethod = gbParts.all && !gbMethodForOtherShares;
   /** 겸용주택 · 시가 평가 · 증여자 상속·증여 취득 — 주택분·상가분 평가액이 취득가액(소령 §163⑨)이라 산정방식이 없다(PR-7b-7a · ④·⑧과 같은 술어). */

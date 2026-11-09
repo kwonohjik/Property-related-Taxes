@@ -323,7 +323,7 @@ export function validateBurdenedGiftAsset(
     // 요구하지 않는다(⑤가 그 칸을 숨긴다). 산정방식 선택 자체는 ⑫가 요구하므로 아래 「미지정」 검사는 남긴다. 취득시 기준시가는 (5-c)가 요구한다.
     const collateralForced = bgCollateralForcesStdAcq(asset, splitAxis);
     // 일반건물 — 의제취득일 전 상속·증여 파트만 3자 max(Q-28 · PR-7b-6). 두 파트 다면 산정방식이 없고, 한 파트면 다른 파트의 금액만 요구한다.
-    const gbParts = gbBgThreeWayParts(asset);
+    const gbParts = gbBgThreeWayParts(asset, splitAxis);
     if (isBgPreDeemedAsset(asset) || gbParts.all || isMixedBgDeemedPath(asset)) {
       // 의제취득일 전 상속·증여 토지·주택·상가·건물 — 산정방식 대신 엔진이 ①②③ 중 큰 금액(담보 승이면 의제취득일 기준시가)을 쓴다.
       //   ⑤가 라디오를 숨기고 ⑫도 요구하지 않는다. ①②③ 입력은 아래 `bgPreDeemedError`·E-1·PD-1이 본다(계획서 §18).

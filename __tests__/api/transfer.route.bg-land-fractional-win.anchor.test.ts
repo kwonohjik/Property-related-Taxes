@@ -169,14 +169,16 @@ describe("BL-6 숨은 필요경비(자본적지출 5,000만 · 양도비 2,000�
   });
 });
 
-describe("BL-7 범위 밖 — 일반건물(의제취득일 전 파트)·재개발 APT(시가·K-5)·입주권·겸용은 계속 막는다 (종류 게이트)", () => {
+describe("BL-7 범위 밖 — 재개발 APT(시가·K-5)·입주권·겸용·주택 의제취득일 전 상속은 계속 막는다 (종류 게이트)", () => {
   const kind = (k: string, ...over: Record<string, unknown>[]) => land("a", 1, HALF, debt("700000000"), x({ assetKind: k }), ...over);
-  it("토지·주택·일반건물은 열리고 입주권은 닫힌다 — 일반건물은 의제취득일 전 파트가 있으면 닫힌다 · 재개발 APT는 K-4만 열리고 시가·K-5는 닫힌다", () => {
+  it("토지·주택·일반건물은 열리고 입주권은 닫힌다 — 일반건물은 의제취득일 전 파트가 있어도 열린다(V-P5) · 재개발 APT는 K-4만 열리고 시가·K-5는 닫힌다", () => {
     expect(bgFractionalCollateralKindSupported(kind("land"))).toBe(true);
     expect(bgFractionalCollateralKindSupported(kind("housing"))).toBe(true);
     expect(bgFractionalCollateralKindSupported(kind("general_building"))).toBe(true);
     expect(bgFractionalCollateralKindSupported(kind("right_to_move_in"))).toBe(false);
-    expect(bgFractionalCollateralKindSupported(kind("general_building", x({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "1980-01-01", acquisitionCause: "inheritance" })))).toBe(false);
+    expect(bgFractionalCollateralKindSupported(kind("general_building", x({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "1980-01-01", acquisitionCause: "inheritance" })))).toBe(true);
+    // 주택의 의제취득일 전 상속(`isBgPreDeemedAsset`)은 측정하지 않아 계속 닫힌다 — 일반건물 개방이 이 차단까지 지우지 않는지 지킨다.
+    expect(bgFractionalCollateralKindSupported(kind("housing", x({ acquisitionCause: "inheritance", acquisitionDate: "1980-01-01", inheritanceStartDate: "1980-01-01", decedentAcquisitionDate: "1970-01-01" })))).toBe(false);
     expect(bgFractionalCollateralKindSupported(kind("redevelopment_apt"))).toBe(true);
     expect(bgFractionalCollateralKindSupported(kind("redevelopment_apt", x({ bgAcquisitionMethod: "converted" })))).toBe(false);
   });
@@ -187,7 +189,8 @@ describe("BL-7 범위 밖 — 일반건물(의제취득일 전 파트)·재개�
   it("닫힌 종류의 지분 담보 승은 ⑧ 술어가 막는다(bgSplitAxisCollateralWinUnsupported · bgFractionalCollateralWin)", () => {
     // 축 B 판정은 물건 전체 — 채무 14억 > 시가 10억이어야 담보 승이다.
     const big = (k: string, ...o: Record<string, unknown>[]) => kind(k, debt("1400000000"), ...o);
-    expect(bgSplitAxisCollateralWinUnsupported(big("general_building", x({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "1980-01-01", acquisitionCause: "inheritance" })))).toBe(true);
+    expect(bgSplitAxisCollateralWinUnsupported(big("housing", x({ acquisitionCause: "inheritance", acquisitionDate: "1980-01-01", inheritanceStartDate: "1980-01-01", decedentAcquisitionDate: "1970-01-01" })))).toBe(true);
+    expect(bgSplitAxisCollateralWinUnsupported(big("general_building", x({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "1980-01-01", acquisitionCause: "inheritance" })))).toBe(false); // V-P5로 열렸다
     expect(bgSplitAxisCollateralWinUnsupported(big("general_building"))).toBe(false);
     expect(bgSplitAxisCollateralWinUnsupported(big("land"))).toBe(false);
     expect(bgFractionalCollateralWin(kind("land"))).toBe(true);

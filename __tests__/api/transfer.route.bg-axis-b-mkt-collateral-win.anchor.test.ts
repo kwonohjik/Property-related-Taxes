@@ -171,7 +171,8 @@ describe("AB-4 범위 밖 종류는 «채무액 초과»가 아니라 정확한 
   const check = (a: AssetForm) => validateBurdenedGiftAsset(a, "자산 1", undefined, "2026-02-16", true) ?? "";
   // 토지는 V-S1 Q-1 a로 열렸다 — `transfer.route.bg-land-fractional-win.anchor.test.ts`가 축 B 포함 값을 고정한다.
   it.each([
-    ["일반건물(토지 파트 의제취득일 전 상속 — 일반건물은 Q-3로 열렸다)", { assetKind: "general_building", hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "1980-01-01", acquisitionCause: "inheritance" }],
+    // 일반건물은 의제취득일 전 파트까지 열렸다(Q-3 · V-P5 — transfer.route.bg-gb-pre-deemed-collateral-win.anchor). 주택의 의제취득일 전 상속은 계속 막는다.
+    ["주택 의제취득일 전 상속(1980)", { acquisitionCause: "inheritance", acquisitionDate: "1980-01-01", inheritanceStartDate: "1980-01-01", decedentAcquisitionDate: "1970-01-01" }],
   ] as const)("%s", (_n, o) => {
     const m = check(house(1, "60", "2009-03-01", { ...base, ...o }));
     expect(m).toContain(UNSUPPORTED);

@@ -97,13 +97,13 @@
 
 | ID | 내용 | 비고 |
 |---|---|---|
-| V-P1 | 상가 · 건물(토지 제외) · 재개발 완공 아파트 × 의제전 × 지분 × 시가 보충 승 값 | 토지·주택은 일치 [직접]. 상가 지분 단독은 ⑧이 막는다고 기존 anchor가 적었으나 재확인하지 않았다 |
+| V-P1 | 상가 · 건물(토지 제외) · 재개발 완공 아파트 × 의제전 × 지분 × 시가 보충 승 값 | ✅ 결함 없음 — #3033(계획서 `bg-pre-deemed-fractional-other-kinds-vp1.plan.md`) · 축 B +1원은 #3037(`bg-fractional-axis-b-one-won-vp1b.plan.md`) |
 | V-P2 | 함께 양도 컴패니언의 토지·주택 카드 × 의제전 × 지분 | 컴패니언 payload는 별도 코드(`companion-payload.ts:205` `applyRatio`)다 — 미측정 |
-| V-P3 | 자본적지출·양도비 입력이 있는 칸(① 채택 시 실제 경비 몫) | 이번 격자는 경비를 넣지 않았다. 수정 뒤 재측정 대상 |
-| V-P4 | 이월과세 × 의제전 일반건물 × 지분 | 게이트가 이월과세를 계속 제외한다(`bgAnyCarryover`). `applyGbCarryoverShareScale`과 `keepPreDeemedClauseA`의 상호작용은 읽지 않았다 |
-| V-P5 | 수정 뒤 «담보·임대 승 × 의제전 파트 × 지분»을 열어도 되는가 | Q-2 a의 후속. 담보 승은 ①②를 읽지 않아 앞 문서(§3.4)에서 4칸 일치 |
+| V-P3 | 자본적지출·양도비 입력이 있는 칸(① 채택 시 실제 경비 몫) | ✅ 결함 없음(2026-11-09 측정) — 시가 보충 108칸 중 101칸 단건과 일치. 나머지 7칸 = 함께 양도 win4 3칸(V-P6 시료) + 축 B 자본적지출 ±1원 4칸(수정 전부터 · 원인 확인 필요). #3021을 되돌리면 60칸이 틀린다 = 경비 칸도 #3021이 고쳤다 [직접] |
+| V-P4 | 이월과세 × 의제전 일반건물 × 지분 | ✅ 결함 없음(2026-11-09 측정) — 한 파트 1980 상속 + 다른 파트 이월과세 2조합 × 승패 4 × 3모양 × 경비 유무 48칸 중 43칸 일치, 파트 값은 전부 단건과 같다. 나머지 = V-P6 3칸 · ±1원 2칸 · 함께 양도 1칸 +15,000,000(§97의2②3호 비교를 신고 전체 결정세액으로 해 채택 시나리오가 단건과 갈림 — 설계 `transfer-aggregate.types.ts:652-664`). #3021을 되돌리면 28칸이 바뀐다 [직접] |
+| V-P5 | 수정 뒤 «담보·임대 승 × 의제전 파트 × 지분»을 열어도 되는가 | ✅ 열었다 — §8 |
 | V-P6 | 함께 양도 묶음 총액 안분(자산 시가 비율)이 단건 합 대조와 어긋나는 시료의 값 | win4 시료에서 발견. 결함 여부 미판정 — 의제전과 무관 |
-| V-S4 | 이월과세·의제전 × 지분 전체 | 종전부터 미측정(앞 문서와 같다) |
+| V-S4 | 이월과세·의제전 × 지분 전체 | ✅ 결함 없음(2026-11-09 측정) — 당초 증여자 1980·2010 매수 × 분리 OFF·토지만·건물만 이월과세 × 3모양 × 시가·기준시가 보충 × 경비 유무 72칸 중 68칸 일치, 파트 값은 전부 단건과 같다. 나머지 4칸 = 함께 양도 기준시가 +90,125,000(V-P4와 같은 신고 전체 비교 · 설계). 당초 증여자의 1985 전 매수는 §176조의2④ 비교 범위 밖 안내(`preDeemedPurchaseOutOfScopeKind` = "carryover")만 내고 값은 입력대로(#2798 Q-12 a 설계) — 1980·2010 값이 같다. 안내 표시는 확인하지 않았다 |
 
 ## 6. 재현
 
@@ -126,3 +126,18 @@
 - Q-3 a대로 일반건물만 고쳤다. 상가·건물(토지 제외)·재개발·함께 양도의 토지·주택 카드(V-P1·V-P2)는 **측정하지 않았다 — 확인 필요**. 이 PR은 `applyShareScale`(일반건물 전용 빌더)만 건드려 다른 종류의 payload 빌더는 변하지 않는다 [코드].
 - 이번에도 측정하지 않은 것: 자본적지출·양도비 입력이 있는 칸(V-P3) · 이월과세 × 의제전(V-P4) · 함께 양도 묶음 총액 안분 오라클(V-P6). 사람이 브라우저로 직접 한 수동 확인은 아니다(headless Playwright·jsdom).
 - 교훈: 원인은 «그 경로는 X를 하지 않는다»는 주석(전제)이 뒤 PR(#2990)로 깨진 것이었다. 같은 교훈을 memory에 저장했다(`feedback_comment_asserting_absence_is_premise_for_later_pr`).
+
+## 8. V-P5 구현 결과 (2026-11-09 · 권장안 「연다」)
+
+| 항목 | 결과 |
+|---|---|
+| 측정(수정 전) | 게이트(`burdened-gift-collateral-win.ts` `bgFractionalCollateralKindSupported`)의 의제전 파트 제외만 지운 프로토타입으로 90칸(파트 3 × 10칸 × 3모양) — ⑧ 0건 · ⑫ 200 · 단건 오라클 일치(축 B 기준시가 임대 3칸 +2~3원 = 종전 V-G2). 닫힌 상태에서도 ⑫는 200·같은 값이었고 ⑧만 막았다(함께 양도는 기준시가 모드 담보·임대 승도 ⑧이 막았다) [직접] |
+| 게이트만 열면 생기는 결함 | 3자 max 술어 `gbBgThreeWayParts`·`gbBgUsesStdAcq`(`bg-pre-deemed-mode.ts`)가 담보 승을 **축 없이** 읽는다 — 지분 자산은 축 미지정이면 담보 승을 확정하지 않으므로(`bgCollateralForcesStdAcq` fail-closed) 담보 승인데 3자 max로 판정했다. 지분 50%(축 A)·60%(축 B)에서 ⑧이 쓰이지 않는 ①(상증법 평가액)을 요구했고(«①을 입력하세요»), 100%는 «취득시 토지 ㎡당 공시지가»를 요구했다 [직접] |
+| 코드 | ① 게이트에서 일반건물의 의제전 파트 제외 삭제 ② 두 술어에 축 인자(`isFractionalSplit?`) — 미지정은 종전 그대로 ③ 축을 아는 호출처가 넘긴다: `gb-bg-std-use.ts` 2곳 · `transfer-tax-validate-bg.ts`(⑧) · `bg-pre-deemed-shares.ts` 3곳(축 B) · `BurdenedGiftBlock` · `GbBgAcquisitionNotice` · `GeneralBuildingAcquisitionCards`(2곳) · `CompanionAcqInheritanceBlock` — 축은 `AssetSectionAcquisition`의 `splitMode === "fractional"` → `CompanionAcquisitionCauseSection` → 위 두 카드로 내려간다 ④ ⑧ 문구 `BG_FRACTIONAL_SCOPE_TEXT`를 «주택·토지·일반건물·재개발 완공 아파트(이월과세 제외 · 일반건물이 아니면 의제취득일 전 상속·증여도 제외)»로 — 주택·토지의 의제전 상속(`isBgPreDeemedAsset`)은 계속 닫혀 있다 |
+| 바꾸지 않은 것 | `needsClauseADeclaration`(`transfer-tax-validate-clause-a.ts:116·118`)은 축 없이 둔다 — 지분 담보 승에서 두 술어 중 어느 쪽이 참이어도 결과가 `false`로 같다. ④ `gbBgMarketPreDeemedParts`는 시가 모드면 ①②를 싣는다(담보 승이면 엔진이 읽지 않는다 — 종전 설계) |
+| 신규 anchor | `__tests__/api/transfer.route.bg-gb-pre-deemed-collateral-win.anchor.test.ts` 14건 — PC-1 90칸 · PC-2 담보·임대 승에서 ① 비움(7칸 × 파트 3 × 3모양 63칸 — ⑧ 0건 ∧ ⑫ 200 ∧ ① 넣은 칸과 같은 값) · PC-3 고정값(토지·건물 의제전 50% 581,550,000 · 축 B 1,163,100,000 · 함께 양도 1,944,650,000 · 두 파트 669,100,000 · 1,338,200,000 · 2,207,300,000) · PC-4 술어(축 · 미지정 fail-closed · 100% · 보충 승은 계속 ① 요구 · 주택 의제전 상속은 계속 닫힘) · PC-5 ⑤ 도우미(토지 공시지가 카드 문구 · 건물 칸 안내 · 축 B 지분 카드 판정) — 16건 |
+| 반전한 기존 단언 | vitest 8건 — `bg-gb-fractional-win` GB-5 4건(차단 → ⑧ 0건·⑫ 200·값, 건물만 시료에 피상속인 취득일 보충) · `bg-land-fractional-win` BL-7 2건 · `bg-axis-a-nonsupp-win` AA-4 1건 · `bg-axis-b-mkt-collateral-win` AB-4 1건. 막던 자리에는 주택 의제전 상속(계속 닫힘)을 형제 단언으로 넣었다. AA-4 문구 2곳은 새 문구로. E2E `bg-gb-fractional-win` GB-E3(차단 → 200 · 581,550,000 · 담보 승 안내만 · 3자 max 안내와 ① 칸 없음) + GB-E4(축 B 60/40 · 1,163,100,000) |
+| 뮤테이션 8종 | vitest(신규 + 반전 4파일): M1 게이트 의제전 제외 복원 · M2 `gbBgThreeWayParts` 축 무시 · M3 `gbBgUsesStdAcq` 축 무시 · M4 ⑧(`transfer-tax-validate-bg.ts`) 축 빼기 · M5 축 B 지분 도우미 축 빼기 · M6 문구 도우미 축 빼기 — **6/6 KILLED**(실패 16·6·1·3·1·1건). E2E(GB-E3·GB-E4): M7 `GbBgAcquisitionNotice` 축 빼기 · M8 `GeneralBuildingAcquisitionCards` 축 빼기 — **2/2 KILLED**. 매번 `cp` 백업 → 복원 → `cmp` 일치 |
+| Playwright | `bg-gb-fractional-win` 4/4 통과(GB-E1·E2 그대로 · GB-E3·E4 신규). 축 B 60/40 첫 카드 취득정보를 기준시가 모드와 담보 승으로 열어 비교 — 칸(data-testid)은 담보 승 안내 2개(`bg-collateral-forced-notice` · `gb-bg-collateral-acq-notice`)가 더해지고 `bg-gift-building-std`가 빠질 뿐 3자 max 칸·① 칸은 없다. **둘째 지분 카드의 취득정보는 열어 보지 않았다 — 확인 필요**(⑧·⑫ 값 경로는 PC-1·PC-2가 본다). 사람이 브라우저로 직접 한 수동 확인은 아니다(headless) |
+| 정적 검사 | `tsc --noEmit` 0건 · eslint 0건(변경·신규 파일) |
+| 회귀 | `__tests__/{api,lib,components,calc}` 2,322파일 28,246건 — **전부 통과, 실패 0** (`tax-engine`은 변경 없음 — pre-push가 범위를 판정) |

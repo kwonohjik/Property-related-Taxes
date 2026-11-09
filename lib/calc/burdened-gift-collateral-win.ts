@@ -25,7 +25,6 @@ import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { bgAnyCarryover } from "./bg-carryover-parts";
-import { gbBuildingPreDeemed, gbLandPreDeemed } from "./gb-pre-deemed";
 import { BG_PAREN_MORTGAGE_66_FROM } from "@/lib/tax-engine/burdened-gift-valuation";
 
 /**
@@ -50,8 +49,9 @@ export function bgWholeGiftValuation(asset: AssetForm, isFractionalSplit?: boole
  * 토지는 15칸 격자(축 A 단건·축 B·함께 양도 × 기준시가 담보·임대·보충, 시가 담보·보충)가 같은 종류 단건 기준과 일치하고 ⑤ 칸·필요경비·⑧ 요구가 이 술어 하나로 따라옴을 측정했다
  * (계획서 `bg-fractional-winner-kinds-grid.plan.md` §3.1·§3.1.1, 결정 Q-1 a). 일반건물은 60칸 격자(2 시나리오 × 3모양 × 10칸) 중 58칸이 일치하고 나머지 2칸은 게이트 무관 +4원(축 B 임대)이다
  * — 열려면 ⑫ Zod의 축 B 지분율 전달(`transfer-tax-schema-gb-bg-refines.ts`)과 취득 안내 3곳의 축 인자(`gbBgStdUseOf`)가 함께 필요했다(계획서 `bg-gb-fractional-gate.plan.md` §3.2·§3.3, 결정 Q-1 a).
- * 일반건물의 의제취득일 전 파트(토지 또는 건물)는 평가 모드와 무관하게 열지 않는다 — 같은 파트의 시가 모드 보충 승이 단건과 어긋난다(§3.4 · Q-2 a).
- * 이월과세·의제취득일 전 상속·증여는 교차를 측정하지 않았고, 입주권·겸용은 격자 측정이 끝나지 않았다
+ * 일반건물의 의제취득일 전 파트(토지 또는 건물)도 연다 — 종전에는 같은 파트의 시가 모드 보충 승이 단건과 어긋나 닫았는데(§3.4 · Q-2 a) #3021이 그 값을 고쳤고,
+ * 파트 3 × 10칸 × 3모양 90칸이 단건 기준과 일치함을 측정했다(계획서 `bg-gb-pre-deemed-fractional-clause-a.plan.md` V-P5). 지분 자산은 3자 max 술어(`gbBgThreeWayParts`)에도
+ * 축을 넘겨야 담보 승을 3자 max로 오판하지 않는다. 주택·토지 등 그 밖의 의제취득일 전 상속·증여(`isBgPreDeemedAsset`)·이월과세는 교차를 측정하지 않았고, 입주권·겸용은 격자 측정이 끝나지 않았다
  * (`bg-nonsupp-winner-support.plan.md` V-S1·V-S4). 범위 밖은 ⑧이 막는다(`bgSplitAxisCollateralWinUnsupported` · `bgFractionalCollateralWin`).
  */
 export function bgFractionalCollateralKindSupported(asset: AssetForm): boolean {
@@ -59,7 +59,7 @@ export function bgFractionalCollateralKindSupported(asset: AssetForm): boolean {
     asset.assetKind === "housing" ||
     asset.assetKind === "land" ||
     (asset.assetKind === "redevelopment_apt" && !bgRedevMarketConvertedFractional(asset)) ||
-    (asset.assetKind === "general_building" && !gbLandPreDeemed(asset) && !gbBuildingPreDeemed(asset));
+    asset.assetKind === "general_building";
   return kindOk && !isBgPreDeemedAsset(asset) && !bgAnyCarryover(asset) && !isMixedBurdenedGift(asset);
 }
 
@@ -75,7 +75,7 @@ export function bgRedevMarketConvertedFractional(asset: AssetForm): boolean {
 }
 
 /** ⑧ 차단 문구의 «계산하는 종류» — 3곳(`bgUnsupportedWinnerCause` · 축 B · 축 A)이 같은 말을 한다. */
-export const BG_FRACTIONAL_SCOPE_TEXT = "주택·토지·일반건물·재개발 완공 아파트(이월과세·의제취득일 전 상속·증여 제외)";
+export const BG_FRACTIONAL_SCOPE_TEXT = "주택·토지·일반건물·재개발 완공 아파트(이월과세 제외 · 일반건물이 아니면 의제취득일 전 상속·증여도 제외)";
 
 /** 재개발 K-5(시가 모드)라서 막힌 경우 사용자가 할 일 — 그 밖의 사유에는 붙이지 않는다. */
 export function bgRedevConvertedBlockNote(asset: AssetForm): string {
@@ -123,7 +123,7 @@ export function bgCollateralForcesStdAcq(asset: AssetForm, isFractionalSplit?: b
 
 /**
  * 함께 부담부증여 묶음에서 **비보충 승자(담보 §66·임대 §61⑤)를 계산하지 않는** 자산인가 — 화면·엔진의 취득가액 처리를 확인하지 못한 범위다.
- * · 지분 보유: `bgFractionalCollateralKindSupported`의 종류(주택·토지·일반건물·재개발 — 이월과세·의제취득일 전 상속·증여·겸용 제외)만 계산한다 — 기준시가 모드는 임대·담보, 시가 모드는 담보 승이 모두 취득가액 = 취득시 기준시가 × 지분 × 채무비율이다
+ * · 지분 보유: `bgFractionalCollateralKindSupported`의 종류(주택·토지·일반건물·재개발 — 이월과세·겸용 제외 · 일반건물이 아니면 의제취득일 전 상속·증여도 제외)만 계산한다 — 기준시가 모드는 임대·담보, 시가 모드는 담보 승이 모두 취득가액 = 취득시 기준시가 × 지분 × 채무비율이다
  *   (균일 승자 묶음의 ⑫ 값은 자산별 단건 지분 실행의 합과 ±0 — `bg-axis-a-nonsupp-win.plan.md`). 그 밖의 종류는 확인하지 못해 막는다.
  * · 조합원입주권 · 겸용주택: 위 `bgCollateralForcesStdAcq` 주석과 같다. 단 묶음 게이트는 입주권을 `bgRtmiBundleWinnerComputable`로 걸러 푼다(이 함수는 «입주권이면 true»로 둔다).
  * · 이월과세는 막지 않는다 — 기준시가 모드는 임대·담보 승(1단계), 시가 모드는 담보 승(2단계)이 모두 취득가액 = 취득시 기준시가 × 채무비율이라

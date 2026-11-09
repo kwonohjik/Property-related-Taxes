@@ -5,7 +5,9 @@
  *
  *   GB-E1. 축 A 지분 50% — 200 · 양도차익 494,000,000 · 차단 문구 없음 · 취득 안내가 «취득시 기준시가 × 채무비율» (정반대 «실지취득가액 × 채무비율» 없음)
  *   GB-E2. 축 B 60/40 · 실지취득가액 비움 — 200 · 988,000,000 (종전 ⑫ 400 «토지·건물 칸이 모두 필요합니다» 막다른 길)
- *   GB-E3. 토지 파트가 의제취득일 전 상속 + 지분 + 담보 승 — 계속 막는다 («주택·토지·일반건물·재개발 완공 아파트 …만 계산합니다») · 요청이 나가지 않는다
+ *   GB-E3. 토지 파트가 의제취득일 전 상속 + 지분 50% + 담보 승 · ① 비움 — 200 · 581,550,000 · 담보 승 안내가 뜨고 3자 max 안내·① 칸은 없다
+ *          (종전 «… 만 계산합니다» 차단 → V-P5 개방 · `bg-gb-pre-deemed-fractional-clause-a.plan.md`)
+ *   GB-E4. 같은 파트 · 축 B 60/40 · ① 비움 — 200 · 1,163,100,000 · 첫 카드 담보 승 안내
  * 사람이 브라우저로 직접 한 수동 확인은 아니다(headless Playwright). 워크트리는 `E2E_PORT=<포트> npx playwright test <spec>`.
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -83,13 +85,37 @@ test("GB-E2: 축 B 60/40 일반건물 담보 승 · 실지취득가액 비움 �
   await expect(page.locator("body")).toContainText("988,000,000");
 });
 
-test("GB-E3: 토지 파트가 의제취득일 전 상속 + 지분 + 담보 승 — 계속 막는다 · 요청이 나가지 않는다", async ({ page }) => {
+/** 토지 파트만 1980 상속(의제취득일 전) · 의제취득일 토지 단가 300,000 · ①(상증법 평가액)은 비운다 — 담보 승이면 쓰이지 않는다. */
+const PRE_LAND = { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "1980-01-01", acquisitionCause: "inheritance", inheritanceStartDate: "1980-01-01",
+  decedentAcquisitionDate: "1970-01-01", publishedValueAtInheritance: "", gbAcqLandPricePerSqm: "300000" };
+
+async function expectCollateralNoticeOnly(page: Page) {
+  await openAcquisitionSection(page);
+  await expect(page.getByTestId("gb-bg-collateral-acq-notice").first()).toBeVisible();
+  await expect(page.getByTestId("gb-bg-three-way-acq-notice")).toHaveCount(0);
+  await expect(page.getByTestId("gb-bg-pre-deemed-reported-land")).toHaveCount(0);
+}
+
+test("GB-E3: 토지 파트가 의제취득일 전 상속 + 지분 50% + 담보 승 · ① 비움 — 200 · 581,550,000 · 담보 승 안내만", async ({ page }) => {
   test.setTimeout(240_000);
-  await seedAndOpen(page, [gb({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "1980-01-01", acquisitionCause: "inheritance", inheritanceStartDate: "1980-01-01",
-    decedentAcquisitionDate: "1970-01-01", publishedValueAtInheritance: "60000000", gbAcqLandPricePerSqm: "300000" })]);
-  let posted = false;
-  page.on("request", (q) => { if (q.url().includes("/api/calc/transfer") && q.method() === "POST") posted = true; });
-  await clickToCalc(page);
-  await expect(page.getByText(/주택·토지·일반건물·재개발 완공 아파트\(이월과세·의제취득일 전 상속·증여 제외\)만 계산합니다/).first()).toBeVisible({ timeout: 20_000 });
-  expect(posted).toBe(false);
+  await seedAndOpen(page, [gb(PRE_LAND)]);
+  await expectCollateralNoticeOnly(page);
+  const r = await calculate(page);
+  expect(r.status(), await r.text()).toBe(200);
+  await expect(page.locator("body")).not.toContainText("만 계산합니다");
+  await expect(page.locator("body")).toContainText("581,550,000");
+});
+
+test("GB-E4: 같은 파트 · 축 B 60/40 · ① 비움 — 200 · 1,163,100,000 · 첫 카드 담보 승 안내", async ({ page }) => {
+  test.setTimeout(240_000);
+  const share = { ...PRE_LAND, bgMortgageDebtAmount: "1400000000", bgMortgageSetAmount: "1400000000", ownershipRemainderThirdParty: "" };
+  await seedAndOpen(
+    page,
+    [gb({ assetId: "p", ownershipNumerator: "60", ownershipDenominator: "100", ...share }), gb({ assetId: "s", ownershipNumerator: "40", ownershipDenominator: "100", ...share })],
+    { assetSplitMode: "fractional", contractTotalPrice: "1600000000" },
+  );
+  await expectCollateralNoticeOnly(page);
+  const r = await calculate(page);
+  expect(r.status(), await r.text()).toBe(200);
+  await expect(page.locator("body")).toContainText("1,163,100,000");
 });
