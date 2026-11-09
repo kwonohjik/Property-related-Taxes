@@ -18,7 +18,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { soleSplitRightJudgmentFacts } from "./sole-split-right-judgment-facts";
 import { BG_SHARE_OWN_ACQ_FIELDS } from "./bg-share-own-acquisition";
 import { bgShareOwnAcquisitionActive } from "./bg-share-own-acquisition";
-import { BG_SHARE_CARD_KINDS } from "./bg-share-own-acquisition";
+import { BG_SHARE_STD_TRANSFER_KINDS } from "./bg-share-own-acquisition";
 import { deriveMemberRightsValue } from "./burdened-gift-right-valuation";
 import { meetsSurchargeSuspensionHolding } from "@/lib/tax-engine/tax-utils";
 import {
@@ -170,7 +170,7 @@ export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
   }
   // 축 B × 부담부증여 — 양도시 기준시가는 같은 물건 · 같은 양도일의 물건 단위 값이다. 지분 카드에는 칸이 없다(②가 숨고 ③은 부담부증여로 판정한다).
   // 병합하지 않으면 기준시가 평가 · 환산(K-5)에서 ⑧이 숨은 ②를 요구해 막다른 길이었다(계획서 vp2c §17 D-3d · Q-11 (가)). 일반 양도 지분은 ③에 자기 칸이 있어 그대로 둔다.
-  if (a !== primary && merged.transferType === "burdened_gift" && BG_SHARE_CARD_KINDS.has(primary.assetKind)) {
+  if (a !== primary && merged.transferType === "burdened_gift" && BG_SHARE_STD_TRANSFER_KINDS.has(primary.assetKind)) {
     merged.standardPriceAtTransfer = primary.standardPriceAtTransfer;
     merged.standardPricePerSqmAtTransfer = primary.standardPricePerSqmAtTransfer;
   }

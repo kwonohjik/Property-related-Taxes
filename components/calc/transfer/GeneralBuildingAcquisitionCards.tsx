@@ -462,6 +462,8 @@ export function GeneralBuildingAcquisitionCards({
             asset={asset}
             onAssetChange={onChange}
             hideAssetAcqAxis={isSeparate}
+            // 지분 카드 부담부증여 안내가 숨은 「위 ‘부담부증여’ 카드」 대신 실제 입력 위치를 가리킨다(D-3b · vp2c §19.3 D-3e)
+            shareAcquisitionOnly={shareAcquisitionOnly}
           />
         )}
 
