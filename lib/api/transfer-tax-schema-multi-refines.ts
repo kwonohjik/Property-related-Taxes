@@ -69,9 +69,8 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown, data?: Record<strin
   preDeemedPurchase: whenPresent(MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE),
   generalBuildingValuation: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
   generalBuildingShares: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
-  commercialBuildingValuation: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
-  commercialAppurtenantLand: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
-  commercialInheritanceValuation: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
+  // 상업용건물·오피스텔 3키(`commercialBuildingValuation`·`commercialAppurtenantLand`·`commercialInheritanceValuation`)는
+  // ⑭가 단건과 같이 옮긴다 — 단건 엔진이 직접 읽는 서브객체라 합산도 같은 세액이다(계획서 multi-building-valuation-support 트랙 C).
   preHousingDisclosure: whenPresent(MULTI_PHD_UNSUPPORTED_MESSAGE),
   // 비거주자(판정 메뉴 전용) — 단건 route는 판정 메뉴 경로(`buildTransferEngineInput` 공용)로 엔진에 넘긴다.
   transferorNonResidentAtTransfer: whenPresent(MULTI_NON_RESIDENT_UNSUPPORTED_MESSAGE),

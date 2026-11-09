@@ -61,6 +61,10 @@ import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { primaryAcquisitionModeFlags } from "./transfer-tax-api-primary-context";
 import { buildInheritedAcquisitionPayload } from "./transfer-tax-api-inheritance";
 import { buildInheritedHouseValuationPayload } from "./transfer-tax-api-inheritance";
+import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-inheritance";
+import { buildPrimaryCommercialBuildingValuation } from "./transfer-tax-api-commercial";
+import { buildCommercialAppurtenantLand } from "./transfer-tax-api-commercial";
+import { isInheritedCommercialBuilding } from "./transfer-tax-api-commercial";
 import { selfBuiltActive } from "./self-built-scope";
 import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
 import { withSelfBuiltHousing } from "./transfer-tax-api-self-built-housing";
@@ -77,6 +81,11 @@ import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 import { deemedOneHouseContextDeclared, rentalResidenceContextDeclared } from "./deemed-one-house-context";
 import { withRedevCarryoverAcqMode } from "./redev-carryover-acq-mode";
+
+/** 값이 있을 때만 키를 싣는다 — undefined 키를 보내지 않는다(Zod optional · 단건 ④와 같은 형태). */
+function optionalKey<K extends string>(key: K, value: object | undefined): Partial<Record<K, object>> {
+  return value === undefined ? {} : ({ [key]: value } as Record<K, object>);
+}
 
 /**
  * TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용)
@@ -278,7 +287,8 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
         ? applyRatio(parseAmount(primary?.depreciationAmount ?? ""), primaryRatio) || undefined
         : parseAmount(primary?.depreciationAmount ?? "")
       : undefined,
-    useEstimatedAcquisition: isSalesCase ? false : isEstimated,
+    // §163⑨ 상속 상가는 환산 미적용 — 단건 ④(`transfer-tax-api.ts` `useEstimatedAcquisition`)와 같이 false(숨은 토글의 stale 값이 ⑫ 기준시가 필수를 일으키지 않게).
+    useEstimatedAcquisition: isSalesCase || (primary !== undefined && isInheritedCommercialBuilding(primary)) ? false : isEstimated,
     // 🔴 감정·매매사례도 개산공제(§163⑥) base로 쓴다 — 단건 ④(`transfer-tax-api.ts`)와 **같은 규칙**.
     //    ⚠️ `|| undefined`가 **필수**다. 종전 형태는 미입력 시 `0`을 보내는데 ⑫ 스키마가
     //       `.positive()`라 400이 된다. 환산은 ⑧이 기준시가를 먼저 막아 도달하지 않았을 뿐이다.
@@ -287,7 +297,9 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
       isEstimated || isSplitActive || isAppraisal || isSalesCase
         ? parseAmount(primary?.standardPriceAtAcq ?? "") || undefined
         : undefined,
-    standardPriceAtTransfer: isEstimated ? parseAmount(primary?.standardPriceAtTransfer ?? "") : undefined,
+    // 공란이면 싣지 않는다(`|| undefined`) — 단건 ④ `primaryEngineStdPriceAtTransfer`와 같은 형태. 상업용건물 환산은 이 칸이 아니라
+    //   `commercialBuildingValuation`의 호별고시가로 환산하므로 공란이다 — 0을 보내면 ⑫ `.positive()`가 400을 낸다.
+    standardPriceAtTransfer: isEstimated ? parseAmount(primary?.standardPriceAtTransfer ?? "") || undefined : undefined,
     // ⑬ §164⑧ 동일조정기간 환산 — 단건과 같은 빌더(단일 소스)
     // 🔴 ⑬ 법정동코드 10자리 — 단건 ④(`transfer-tax-api.ts:421`)에만 있었다.
     //    없으면 엔진이 `isRegulatedArea` boolean fallback으로 떨어져 조정대상지역 **정밀 판정**
@@ -441,6 +453,12 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     ...((hasPre1990 || (primary ? primaryAcquisitionModeFlags(primary).hasPre1990ForSec164 : false)) && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     ...(primary ? buildInheritedAcquisitionPayload(primary, primaryRatio, primaryFractional) : {}),
     ...(primary ? buildInheritedHouseValuationPayload(primary, form.transferDate) : {}),
+    // ⑬ 상업용건물·오피스텔 — 단건 ④(`transfer-tax-api-primary-context.ts`·`transfer-tax-api.ts`)와 **같은 leaf** 3개
+    //    (§164⑥ 환산 · 「지방세법 시행령」 §101① 부수토지 초과분 · §163⑨2호 상속 상가 보조 입력). 하나라도 빠지면 엔진이
+    //    그 판정을 조용히 건너뛴다(환산 소실 시 양도차익 = 양도가액 전액 — 계획서 multi-building-valuation-support §2.2).
+    ...(primary ? optionalKey("commercialBuildingValuation", buildPrimaryCommercialBuildingValuation(primary, form.transferDate)) : {}),
+    ...(primary ? optionalKey("commercialAppurtenantLand", buildCommercialAppurtenantLand(primary)) : {}),
+    ...(primary ? buildCommercialInheritanceValuationPayload(primary) : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
     // ⑬ §89①4호 가·나목 분양권 게이트 — 단건(`transfer-tax-api.ts`)과 같은 echo(roster-required-other-assets §4-6).
