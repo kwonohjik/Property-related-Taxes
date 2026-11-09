@@ -169,9 +169,9 @@ describe("GBR-3 주택 지분 카드 — 화면에 없는 양도시 기준시가
     expect(
       engineStdPriceAtTransfer(shares([house(1), house(2, { useEstimatedAcquisition: true, standardPriceAtTransfer: "900000000" })]), 1),
     ).toBe(900_000_000);
-    // 부담부증여 지분은 종전대로 싣는다(② 양도정보가 첫 카드 값 — 범위 밖). 시가 모드는 함께 양도에서는 공용 칸이 없는 자산이다.
+    // 부담부증여 지분은 싣는다 — 값은 자산 1의 양도시 기준시가다(물건 단위 값 · 지분 카드에는 칸이 없다 · vp2c §17 D-3d). 시가 모드는 함께 양도에서는 공용 칸이 없는 자산이다.
     const bg = { transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgDonorRelation: "lineal_descendant", bgMortgageDebtAmount: "200000000" };
-    expect(engineStdPriceAtTransfer(shares([house(1, bg), house(2, { standardPriceAtTransfer: "900000000" })]), 1)).toBe(900_000_000);
+    expect(engineStdPriceAtTransfer(shares([house(1, { ...bg, standardPriceAtTransfer: "800000000" }), house(2, { standardPriceAtTransfer: "900000000" })]), 1)).toBe(800_000_000);
     // 축 B는 안분 키가 없다 — 폼 모드가 안분이어도 실가 지분 카드는 0.
     expect(engineStdPriceAtTransfer(Object.assign(shares([house(1), house(2, { standardPriceAtTransfer: "900000000" })]), { bundledSaleMode: "apportioned" }), 1)).toBe(0);
   });
