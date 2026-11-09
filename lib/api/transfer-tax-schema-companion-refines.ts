@@ -94,14 +94,18 @@ export function addCompanionAcquisitionCauseRefines(
         // 재개발 §166 서브객체가 있으면 환산 기준시가는 `redevelopment`(취득시·관리처분일)가 정한다 — 주 자산 refine
         // (`transfer-tax-schema-refines.ts` `isRedevelopmentEstimated`)과 같은 면제. ⑧도 이 칸을 요구하지 않아
         // 면제하지 않으면 「⑧ 통과 ↔ ⑩ 400」 모순이다.
-        if (c.redevelopment === undefined && (!c.standardPriceAtAcquisition || c.standardPriceAtAcquisition <= 0)) {
+        // 상가·오피스텔도 같다 — 환산 기준시가는 `commercialBuildingValuation`(호별 고시가·공시지가)이 정하고 엔진 STEP 0.35가
+        // 환산취득가를 주입한다. 주 자산 refine(`isCommercialBuildingEstimated`)과 같은 면제 · 화면엔 이 두 칸이 없다
+        // (`CompanionAcqStdPriceSection.tsx` 상가 분기). 계획서 `companion-commercial-estimated-std-exemption.plan.md` Q-1 a.
+        const stdFromSubObject = c.redevelopment !== undefined || c.commercialBuildingValuation !== undefined;
+        if (!stdFromSubObject && (!c.standardPriceAtAcquisition || c.standardPriceAtAcquisition <= 0)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["companionAssets", i, "standardPriceAtAcquisition"],
             message: "매매(환산) 시 취득시 기준시가 필수",
           });
         }
-        if (c.redevelopment === undefined && (!c.standardPriceAtTransfer || c.standardPriceAtTransfer <= 0)) {
+        if (!stdFromSubObject && (!c.standardPriceAtTransfer || c.standardPriceAtTransfer <= 0)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["companionAssets", i, "standardPriceAtTransfer"],
