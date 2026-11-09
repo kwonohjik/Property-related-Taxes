@@ -32,28 +32,6 @@ interface Props {
   assetPhdSnapshot?: ReductionPhdValue;
 }
 
-function SectionShell({
-  num, title, tone, children,
-}: { num: string; title: string; tone: "sky" | "amber" | "rose"; children: React.ReactNode }) {
-  const toneMap = {
-    sky: { box: "border-sky-200 bg-sky-50/40 dark:bg-sky-950/40", badge: "bg-sky-200 text-sky-800", title: "text-sky-700 dark:text-sky-300" },
-    amber: { box: "border-amber-200 bg-amber-50/40 dark:bg-amber-950/40", badge: "bg-amber-200 text-amber-800", title: "text-amber-700 dark:text-amber-300" },
-    rose: { box: "border-rose-200 bg-rose-50/40 dark:bg-rose-950/40", badge: "bg-rose-200 text-rose-800", title: "text-rose-700 dark:text-rose-300" },
-  } as const;
-  const t = toneMap[tone];
-  return (
-    <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
-      <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
-          {num}
-        </span>
-        <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
-      </div>
-      {children}
-    </div>
-  );
-}
-
 export function Unsold983InputForm({
   value,
   onChange,
@@ -75,7 +53,7 @@ export function Unsold983InputForm({
         <LawArticleModal legalBasis="조세특례제한법 시행령 §98의3" label="조특령 §98의3" />
       </div>
 
-      <SectionShell num="①" title="주체·취득 유형·시기" tone="sky">
+      <ToneCard tone="sky" sectionNum="①" title="주체·취득 유형·시기">
         <RadioCardGroup<Unsold983Form["residencyType983"]>
           name="unsold983-residency"
           tone="sky"
@@ -102,39 +80,39 @@ export function Unsold983InputForm({
         {isSelfBuilt ? (
           <>
             <div>
-              <label className="mb-1 block text-xs font-medium">착공일</label>
+              <label className="mb-1 block text-sm font-medium">착공일</label>
               <DateInput data-field="reduction.unsold_98_3.constructionStartDate983" value={value.constructionStartDate983} onChange={(v) => onChange({ constructionStartDate983: v })} />
-              <p className="mt-1 text-micro text-muted-foreground">착공일이 불분명하면 착공신고서 제출일 (법 §98의3②)</p>
+              <p className="mt-1 text-xs text-muted-foreground">착공일이 불분명하면 착공신고서 제출일 (법 §98의3②)</p>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium">사용승인·사용검사일 (임시사용승인 포함)</label>
+              <label className="mb-1 block text-sm font-medium">사용승인·사용검사일 (임시사용승인 포함)</label>
               <DateInput data-field="reduction.unsold_98_3.usageApprovalDate983" value={value.usageApprovalDate983} onChange={(v) => onChange({ usageApprovalDate983: v })} />
-              <p className="mt-1 text-micro text-muted-foreground">착공일과 사용승인일 모두 2009.2.12~2010.2.11 기간 내</p>
+              <p className="mt-1 text-xs text-muted-foreground">착공일과 사용승인일 모두 2009.2.12~2010.2.11 기간 내</p>
             </div>
           </>
         ) : (
           <div>
-            <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
+            <label className="mb-1 block text-sm font-medium">최초 매매계약일</label>
             <DateInput data-field="reduction.unsold_98_3.contractDate983" value={value.contractDate983} onChange={(v) => onChange({ contractDate983: v })} />
-            <p className="mt-1 text-micro text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               2010.2.11까지 매매계약 체결 + 계약금 납부한 경우 포함 (법 §98의3①)
             </p>
           </div>
         )}
         {needsDownPaymentDate && (
           <div>
-            <label className="mb-1 block text-xs font-medium">계약서상 계약금 전액 완납일</label>
+            <label className="mb-1 block text-sm font-medium">계약서상 계약금 전액 완납일</label>
             <DateInput data-field="reduction.unsold_98_3.downPaymentCompletedDate983" value={value.downPaymentCompletedDate983} onChange={(v) => onChange({ downPaymentCompletedDate983: v })} />
-            <p className="mt-1 text-micro text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               취득일이 2010.2.11 이후라 「2010.2.11까지 매매계약을 체결하고 계약금을 납부한 경우」(법 §98의3①)에 해당해야 합니다.
               국세청은 「납부」를 계약금 완납으로 해석하며(부동산거래관리과-262, 2010.2.18) 계약금 일부를 2010.2.12 이후 납부하면 적용하지 않습니다.
               「계약금」은 계약서상 약정 계약금 기준입니다.
             </p>
           </div>
         )}
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="②" title="지역 정보" tone="rose">
+      <ToneCard tone="rose" sectionNum="②" title="지역 정보">
         <ToggleCard
           tone="rose"
           title="서울특별시 밖 + 지정지역 아님"
@@ -156,19 +134,19 @@ export function Unsold983InputForm({
           {(
             <div className="space-y-2">
               <div>
-                <label className="mb-1 block text-xs font-medium">대지면적 (㎡)</label>
+                <label className="mb-1 block text-sm font-medium">대지면적 (㎡)</label>
                 <DecimalInput data-field="reduction.unsold_98_3.landAreaSqm983" value={value.landAreaSqm983} onChange={(v) => onChange({ landAreaSqm983: v })} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium">연면적 (공동주택은 전용면적, ㎡)</label>
+                <label className="mb-1 block text-sm font-medium">연면적 (공동주택은 전용면적, ㎡)</label>
                 <DecimalInput data-field="reduction.unsold_98_3.floorAreaSqm983" value={value.floorAreaSqm983} onChange={(v) => onChange({ floorAreaSqm983: v })} />
               </div>
             </div>
           )}
         </ToggleCard>
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="③" title="자격 요건 확인" tone="rose">
+      <ToneCard tone="rose" sectionNum="③" title="자격 요건 확인">
         {!isSelfBuilt && (
           <>
             <ToggleCard
@@ -231,9 +209,9 @@ export function Unsold983InputForm({
             onCheckedChange={(v) => onChange({ isNotExcludedSelfBuilt983: v })}
           />
         )}
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="④" title="기준시가 (취득일부터 5년이 지난 후 양도 시 필수)" tone="amber">
+      <ToneCard tone="amber" sectionNum="④" title="기준시가 (취득일부터 5년이 지난 후 양도 시 필수)">
         <ReductionStdPriceSection
           phd={{
             phdMode: value.phdMode983,
@@ -275,17 +253,25 @@ export function Unsold983InputForm({
           fieldType="unsold_98_3"
           snapshotKeyPrefix="red983"
         />
-      </SectionShell>
+      </ToneCard>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
+      <ToneCard tone="emerald" bodyClassName="space-y-1" className="text-caption text-emerald-900 dark:text-emerald-200">
         <p>
           · 적용 효과: 5년 이내 양도 시 양도소득세 100%(수도권과밀억제권역 60%)를 감면하고, 5년 후
           양도 시 5년간 발생 양도소득금액(과밀은 그 60%)을 공제합니다 (법 §98의3①).
         </p>
         <p>· 농어촌특별세가 부과되지 않습니다 (농어촌특별세법 시행령 §4⑦1호).</p>
-        <p>· 장기보유특별공제는 표1(1세대1주택 고가주택 등 소득세법 §95②단서에 해당하면 표2)을 적용하고 단기보유 세율 대신 기본세율을 적용합니다 (법 §98의3④).</p>
+        <p>
+          · 장기보유특별공제는 소득세법 §95② 표1(같은 항 단서의 1세대1주택에 해당하면 표2)에 따른 보유기간별 공제율을 적용하고
+          단기보유 세율 대신 기본세율을 적용합니다 (법 §98의3④). 표2에는 보유기간별 공제율과 함께 거주기간별 공제율이 있으며, 이 계산기는
+          1세대1주택에 표2의 보유기간별·거주기간별 공제율을 합산해 적용합니다.
+        </p>
+        <p>
+          · 확인 필요: 이 특례 조문의 「표2에 따른 보유기간별 공제율」에 거주기간별 공제율이 포함되는지를 직접 다룬 해석례는 확인하지 못했습니다.
+          국세청 법규과-742(2025.4.9.)는 §98의2에 대한 회신에서 같은 문구를 개정 표2의 보유기간별 공제율로 산정하도록 안내했습니다(거주기간별 공제율은 언급 없음).
+        </p>
         <p>· 다주택 중과세율이 적용되지 않습니다 (소득세법 시행령 §167의3①5호).</p>
-      </div>
+      </ToneCard>
     </div>
   );
 }

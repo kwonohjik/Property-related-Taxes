@@ -208,7 +208,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     category: "unsold_housing",
     effectCategory: "tax_amount",
     uiLabel: "§98의3 — 서울 외 미분양 100%(과밀 60%)",
-    // P3 (2026-06-12): 농특세 비과세 (농특세령 §4⑦1호) + 장특 표1·기본세율 특칙 (법 ④)
+    // P3 (2026-06-12): 농특세 비과세 (농특세령 §4⑦1호) + 장특(표1, 단서 1세대1주택은 표2)·기본세율 특칙 (법 ④)
     effectLabel: "5년 내 세액 100% 감면 (수도권과밀 60%·660/149㎡ 한정) / 5년 후 5년간 발생분 차감 — 농특세 비과세",
     isFullyImplemented: true,
   },

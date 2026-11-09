@@ -698,7 +698,7 @@ export type RentalReductionFormVariant =
       isFirstContract987: boolean;
       /** 매매계약일 현재 입주 사실 없음 (령 §98의6②2호) */
       isNotOccupiedAtContract987: boolean;
-      /** 계약 해제 후 본인·배우자 등 재계약 아님 (령 §98의6②3·4호) */
+      /** 령 §98의6②3·4호 제외 대상이 아님 — 해제된 주택 자체(3호) · 해제자·배우자 등의 취득 주택(4호) */
       isNotRecontract987: boolean;
       /**
        * 법 §98의7① 「**내국인이** 2012년 9월 24일 현재 …」 (D11-05).
