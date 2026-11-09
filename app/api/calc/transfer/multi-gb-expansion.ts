@@ -67,6 +67,10 @@ export function expandMultiGeneralBuildings(
         detailsByAsset[assetId] = detail;
       },
     );
+    // 부담부증여(소령 §159) — 카드마다 같은 자산 명세(`gbAssetBurdenedGift`)가 실린다. 자산 상세에 1회 옮겨 결과 행이 단건과 같은 명세 카드를 그린다(트랙 BG · V-BG2).
+    const bg = cards[0]?.gbAssetBurdenedGift?.breakdown;
+    const assetId = item.propertyId ?? `property-${index + 1}`;
+    if (bg && detailsByAsset[assetId]) detailsByAsset[assetId] = { ...detailsByAsset[assetId], burdenedGiftBreakdown: bg };
     const start = properties.length;
     cards.forEach((card, i) =>
       properties.push(

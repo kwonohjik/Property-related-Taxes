@@ -59,8 +59,14 @@ describe("F-12 다건 키 분류", () => {
     };
     expect(issues({})).toEqual([]);
     expect(issues({ transferType: "regular", acquisitionCause: "purchase", companionAssets: [] })).toEqual([]);
-    expect(issues({ transferType: "burdened_gift" })).toEqual(["transferType"]);
-    expect(issues({ acquisitionCause: "burdened_gift" })).toEqual(["acquisitionCause"]);
+    // 부담부증여(소령 §159) — 자산 단위 info·표지는 ⑭가 옮긴다(트랙 BG). info 없는 표지는 공용 refine이 막는다(F12-R1).
+    expect(issues({ transferType: "burdened_gift" })).toEqual([]);
+    expect(issues({ acquisitionCause: "burdened_gift" })).toEqual([]);
+    expect(issues({ transferType: "burdened_gift", burdenedGiftInfo: {} })).toEqual([]);
+    expect(issues({ transferType: "burdened_gift", burdenedGiftInfo: {}, generalBuildingValuation: {} })).toEqual([]);
+    // 일반건물 부담부증여 × 이월과세만 거부(⑧ 같은 모드) — 묶음 명세는 값이 있으면 거부
+    expect(issues({ transferType: "burdened_gift", burdenedGiftInfo: {}, generalBuildingValuation: {}, carryoverTaxation: {} })).toEqual(["burdenedGiftInfo"]);
+    expect(issues({ burdenedGiftWholeInfo: {} })).toEqual(["burdenedGiftWholeInfo"]);
     expect(issues({ companionAssets: [{}] })).toEqual(["companionAssets"]);
     expect(issues({ reductions: [{ type: "self_farming" }] })).toEqual([]);
     expect(issues({ reductions: [{ type: "unsold_98" }] })).toEqual(["reductions"]);
@@ -72,7 +78,7 @@ describe("F-12 다건 키 분류", () => {
     expect(issues({ carryoverTaxation: { giftAssumedDebt: 0 } })).toEqual([]);
     expect(issues({ carryoverTaxation: { giftAssumedDebt: 100_000_000 } })).toEqual(["carryoverTaxation"]);
     expect(issues({ acquisitionCause: "carryover_gift" })).toEqual([]);
-    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType", "carryoverTaxation"]);
+    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType", "carryoverTaxation", "burdenedGiftInfo"]);
     for (const k of rejected) {
       if (scalar.has(k)) continue;
       expect(issues({ [k]: {} })).toEqual([k]);

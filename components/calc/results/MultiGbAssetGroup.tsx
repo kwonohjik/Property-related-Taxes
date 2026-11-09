@@ -16,6 +16,7 @@ import { PropertyBreakdownAccordion, formatKRW } from "@/components/calc/results
 import { GbResultBlocks } from "@/components/calc/results/transfer/GbResultBlocks";
 import { GeneralBuilding3WayTable } from "@/components/calc/results/transfer/GeneralBuilding3WayTable";
 import { gbAssetBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
+import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 
@@ -34,6 +35,7 @@ export function MultiGbAssetGroup({
   const label = property?.propertyLabel ?? formPropertyId;
   const hasDetail = !!result.generalBuildingDetailsByAsset?.[formPropertyId];
   const view = hasDetail ? gbAssetBlockView(result, formPropertyId, label, property?.form?.assets[0]) : undefined;
+  const bgBreakdown = result.generalBuildingDetailsByAsset?.[formPropertyId]?.burdenedGiftBreakdown;
   const taxBaseShare = cards.reduce((s, c) => s + (c.isExempt ? 0 : c.taxBaseShare), 0);
 
   return (
@@ -54,6 +56,12 @@ export function MultiGbAssetGroup({
           <div className="pt-3 space-y-2">
             <GbResultBlocks view={{ ...view, label: undefined }} />
             <GeneralBuilding3WayTable aggregated={result} view={view} />
+          </div>
+        )}
+        {/* 일반건물 부담부증여 §159·증여세 명세 — 다건 펼침이 자산 상세에 1회 옮긴 값(단건 `transferBurdenedGiftBreakdown`과 같다 · 트랙 BG). */}
+        {bgBreakdown && (
+          <div className="pt-3">
+            <BurdenedGiftDetailCard breakdown={bgBreakdown} propertyType="general_building" />
           </div>
         )}
         <div className="pt-3 space-y-2">

@@ -84,6 +84,8 @@ import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 import { deemedOneHouseContextDeclared, rentalResidenceContextDeclared } from "./deemed-one-house-context";
 import { withRedevCarryoverAcqMode } from "./redev-carryover-acq-mode";
 import { primaryCarryoverTaxationPayload } from "./transfer-tax-api-carryover-primary";
+import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
+import { burdenedGiftAssumedDebtOf } from "./burdened-gift-assumed-debt";
 
 /** 값이 있을 때만 키를 싣는다 — undefined 키를 보내지 않는다(Zod optional · 단건 ④와 같은 형태). */
 function optionalKey<K extends string>(key: K, value: object | undefined): Partial<Record<K, object>> {
@@ -181,7 +183,7 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
   const ratioed = makeRatioed(primaryRatio, primaryFractional);
   /**
    * ④⑬ 토지·건물 분리 축(소령 §166⑥·§168②) — 단건 ④와 **같은 게이트·같은 빌더**(F-12).
-   * 부담부증여·PHD는 ⑧이 막으므로 도달하지 않지만, 게이트 값은 단건과 같은 식으로 둔다.
+   * PHD는 ⑧이 막아 도달하지 않는다. 부담부증여는 도달한다(트랙 BG) — 게이트 값이 단건과 같은 식이라 분리 축도 단건과 같이 꺼진다.
    */
   const isBurdenedGift =
     primary?.transferType === "burdened_gift" || primary?.acquisitionCause === "burdened_gift";
@@ -242,20 +244,23 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     ? ""
     : provisoCandidate;
 
-  // 주의: 부담부증여·재개발(§166)·겸용주택·이월과세(§97의2)·일반건물/상업용 환산·PHD(영 §164⑦)·
-  // 다필지·가업상속(§97의2④)·건별 다자산(companion)은 다건 합산 route(⑭)가 매핑하지 않으므로 여기서
-  // 전송하지 않는다 — ⑧(validateMultiSupportedMode)이 화면에서, ⑫(transfer-tax-schema-multi-refines)가
-  // API에서 막는다. (1990 환산·토지/건물 분리·§164⑨는 단건과 같은 leaf로 전송 — F-12.)
+  // 주의: 재개발(§166)·겸용주택·PHD(영 §164⑦)·다필지·가업상속(§97의2④)·건별 다자산(companion)은 다건 합산 route(⑭)가
+  // 매핑하지 않으므로 여기서 전송하지 않는다 — ⑧(validateMultiSupportedMode)이 화면에서, ⑫(transfer-tax-schema-multi-refines)가
+  // API에서 막는다. (1990 환산·토지/건물 분리·§164⑨는 단건과 같은 leaf로 전송 — F-12. 상업용·일반건물 환산·이월과세(§97의2)·
+  // 부담부증여(소령 §159)도 단건과 같은 leaf로 아래에서 싣는다 — 계획서 multi-building-valuation-support · multi-carryover-bg-gb-shares.)
   return {
     propertyType: primaryKind,
     // ⑬ §77 직접 경작 토지 — 농특세령 §4①1호 괄호. 단건 ④와 **같은 leaf**를 쓴다 (D11-01).
     //    ⑭(multi/route.ts)도 함께 실어야 도달한다 — 한쪽만 고치면 세액이 1원도 안 움직인다.
     isSelfCultivatedExpropriatedLand: toSelfCultivatedExpropriatedLand(primary?.reductions),
-    transferPrice: primaryFractional
-      ? applyRatio(parseAmount(form.contractTotalPrice), primaryRatio)
-      : parseAmount(form.contractTotalPrice),
-    /** ⑬ 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미전송) */
-    totalPropertyTransferPrice: primaryFractional
+    // 부담부증여(소령 §159)는 엔진 STEP 0.48이 채무 안분으로 양도가액을 다시 정한다 — 단건 ④와 같은 placeholder(인수 채무 합계 · Zod 양수 요구).
+    transferPrice: isBurdenedGift && primary
+      ? burdenedGiftAssumedDebtOf(primary)
+      : primaryFractional
+        ? applyRatio(parseAmount(form.contractTotalPrice), primaryRatio)
+        : parseAmount(form.contractTotalPrice),
+    /** ⑬ 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미전송). 부담부증여는 단건 ④처럼 싣지 않는다(엔진이 보충적평가액을 분모로 쓴다). */
+    totalPropertyTransferPrice: primaryFractional && !isBurdenedGift
       ? parseAmount(form.contractTotalPrice)
       : undefined,
     transferDate: form.transferDate,
@@ -459,6 +464,18 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     // ⑬ 배우자등 이월과세(§97의2) — 단건 ④와 **같은 leaf**(계획서 multi-carryover-bg-gb-shares 트랙 CO). 종전에는 이 키를 만들지 않았다(⑧·⑫가 막았다).
     //    파트 이월과세·채무 인수분은 ⑧이 막는다(⑫ 같은 문구). 지분 묶음(축 B)은 다건 범위 밖이라 단건의 부담부증여 지분 예외가 필요 없다.
     ...(primary ? primaryCarryoverTaxationPayload(primary, form.transferDate, primaryRatio) : {}),
+    // ⑬ 부담부증여(소령 §159) — 단건 ④와 같은 leaf·같은 두 키(트랙 BG). 연간 합산 자산은 각자 다른 증여라 축 B·함께 양도 전용
+    //    `burdenedGiftWholeInfo`는 싣지 않는다. 레거시 `acquisitionCause = burdened_gift`도 단건처럼 info를 싣고 `transferType`은 폼 값 그대로.
+    ...(isBurdenedGift && primary
+      ? {
+          transferType: primary.transferType || undefined,
+          burdenedGiftInfo: buildBurdenedGiftInfo(
+            primary,
+            isFullFractionalBundle(form.assets, form.assetSplitMode) ? primaryRatio : undefined,
+            form.transferDate,
+          ),
+        }
+      : {}),
     // ⑬ 상업용건물·오피스텔 — 단건 ④(`transfer-tax-api-primary-context.ts`·`transfer-tax-api.ts`)와 **같은 leaf** 3개
     //    (§164⑥ 환산 · 「지방세법 시행령」 §101① 부수토지 초과분 · §163⑨2호 상속 상가 보조 입력). 하나라도 빠지면 엔진이
     //    그 판정을 조용히 건너뛴다(환산 소실 시 양도차익 = 양도가액 전액 — 계획서 multi-building-valuation-support §2.2).

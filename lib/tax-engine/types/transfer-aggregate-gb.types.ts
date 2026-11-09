@@ -69,6 +69,12 @@ export interface GbSwapComparison { estimatedSide: number; directSide: number; c
  */
 export type GbBundledAssetDetail = import("../general-building-valuation").GeneralBuildingOutput & {
   swapComparison?: GbSwapComparison;
+  /**
+   * 연간 합산(다건) 전용 — 이 일반건물의 부담부증여 §159·증여세 명세(표시 전용 · 단건 결과의 `transferBurdenedGiftBreakdown`과 같은 값).
+   * 카드에 실린 자산 명세(`gbAssetBurdenedGift`)를 다건 펼침(`multi-gb-expansion.ts`)이 옮긴다. 함께 양도는 싣지 않는다 — 묶음 명세는
+   * 증여계약 전체 1건(`AggregateTransferResult.burdenedGift`)이다(계획서 `multi-carryover-bg-gb-shares.plan.md` 트랙 BG · V-BG1·V-BG2).
+   */
+  burdenedGiftBreakdown?: import("./transfer-burdened-gift.types").TransferBurdenedGiftBreakdown;
 };
 
 /**

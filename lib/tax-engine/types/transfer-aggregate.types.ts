@@ -354,6 +354,14 @@ export interface PerPropertyBreakdown
    */
   redevelopmentDetail?: import("./transfer-redevelopment.types").RedevelopmentResult;
   /**
+   * [echo] 이 자산의 부담부증여 §159·증여세 명세(**표시 전용** — 세액 불변). 단건 결과의 같은 이름 필드와 같은 값이다.
+   *
+   * 연간 합산은 자산마다 **다른 증여**라 자산별로 싣는다(계획서 `multi-carryover-bg-gb-shares.plan.md` 트랙 BG · Q-3 a).
+   * 묶음(축 B·함께 양도 — `burdenedGiftWholeInfo` 입력)은 카드 info의 채무가 안분돼 있어 카드별 명세가 물건 단위 증여세가 아니다 —
+   * 그때는 싣지 않고 물건 전체 1건(`AggregateTransferResult.burdenedGift`)이 맡는다(V-BG1 · 두 축이 같은 자리에 겹치지 않는다).
+   */
+  transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
+  /**
    * 자산별 결정세액 (다건 컨텍스트, 참고).
    * = max(0, refCalculatedTax - reductionAmount)
    * 기납부세액 자동 계산(앞 자산들의 결정세액 합) 등에 사용된다.
