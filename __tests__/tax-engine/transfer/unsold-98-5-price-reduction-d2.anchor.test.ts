@@ -119,8 +119,8 @@ describe("⑧ validate — 엔진과 같은 판정", () => {
   it("매매가 미입력 → 차단", () => {
     expect(msgFor("100000000", "")).toContain("매매가격(원)을 입력");
   });
-  it("매매가 > 공시 → 차단(인하율 음수, 감면율 0%)", () => {
-    expect(msgFor("100000000", "100000001")).toContain("인하율이 음수");
+  it("매매가 > 공시(인하율 음수)는 ⑧이 막지 않는다 — 계산 진행, 엔진이 감면 없음 사유를 보인다 (사용자 결정)", () => {
+    expect(msgFor("100000000", "100000001")).toBeNull();
   });
   it("인하 없음(같은 금액)은 인하율 검증을 통과한다", () => {
     const m = msgFor("100000000", "100000000");
@@ -129,7 +129,7 @@ describe("⑧ validate — 엔진과 같은 판정", () => {
 });
 
 describe("풀 파이프라인 총부담(원 단위) — 리뷰 US-58·US-59 mock 사안 (양도 8억·취득 5억·2주택, 취득 2011-06-15, 양도 2016-01-01)", () => {
-  const total = (extra: Record<string, unknown>) =>
+  const run = (extra: Record<string, unknown>) =>
     calculateTransferTax(
       baseTransferInput({
         transferPrice: 800_000_000, acquisitionPrice: 500_000_000,
@@ -142,7 +142,8 @@ describe("풀 파이프라인 총부담(원 단위) — 리뷰 US-58·US-59 mock
         }],
       }),
       makeMockRates(),
-    ).totalTax;
+    );
+  const total = (extra: Record<string, unknown>) => run(extra).totalTax;
   it("US-58: 공시 300,010,000 · 매매 270,000,000(10.002999…%) → 80% 총부담 18,477,800 (종전 「10.0」 입력은 60% 36,955,600)", () => {
     expect(total({ announcedPrice985: 300_010_000, contractPrice985: 270_000_000 })).toBe(18_477_800);
     expect(total({ priceReductionRatePct985: 10 })).toBe(36_955_600);
@@ -152,5 +153,13 @@ describe("풀 파이프라인 총부담(원 단위) — 리뷰 US-58·US-59 mock
   });
   it("US-59: 매매가 > 공시(음수) → 감면 없음 92,389,000 (Q-5 정책 — 엔진 동작 유지)", () => {
     expect(total({ announcedPrice985: 100_000_000, contractPrice985: 102_000_000 })).toBe(92_389_000);
+  });
+  it("US-59: 음수는 결과(unsold985Detail)에 적용 불가 사유로 실려 결과 카드가 보인다 — 감면액 0", () => {
+    const r = run({ announcedPrice985: 100_000_000, contractPrice985: 102_000_000 });
+    expect(r.reductionAmount).toBe(0);
+    expect(r.unsold985Detail?.isEligible).toBe(false);
+    const reason = r.unsold985Detail?.ineligibleReasons.find((x) => x.code === "NEGATIVE_PRICE_REDUCTION_RATE");
+    expect(reason?.message).toContain("감면율 0%(감면 없음)");
+    expect(reason?.message).toContain("부동산거래관리과-1295");
   });
 });

@@ -531,10 +531,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(fieldError("reduction.unsold_98_5.announcedPrice985", "§98의5 적용: 입주자 모집공고안에 공시된 분양가격(원)을 입력하세요 — 분양가격 인하율 = (공시된 분양가격 − 매매계약서상의 매매가격) ÷ 공시된 분양가격 × 100 (조특령 §98의4④)."));
           if ((r.contractPrice985 ?? "").trim() === "")
             return fail(fieldError("reduction.unsold_98_5.contractPrice985", "§98의5 적용: 매매계약서상의 매매가격(원)을 입력하세요. 인하가 없으면 공시된 분양가격과 같은 금액을 입력합니다."));
-          // Q-5(2026-11-06) 정책 결정 — 매매가 > 공시 분양가(인하율 음수)는 감면율 0%(감면 없음). 엔진도 같은 사유로 적용 불가.
-          // 법 §98의5①1호에 하한 문언이 없고 부동산거래관리과-1295가 인하율 0에 60%를 준 점은 반대 근거(확인 필요).
-          if (parseAmount(r.contractPrice985) > parseAmount(r.announcedPrice985))
-            return fail(fieldError("reduction.unsold_98_5.contractPrice985", "§98의5 적용: 매매계약서상의 매매가격이 공시된 분양가격보다 커서 분양가격 인하율이 음수입니다 — 정책상 감면율 0%(감면 없음)로 처리하므로 이 감면은 적용되지 않습니다. 금액을 확인하거나 이 감면 선택을 해제하세요."));
+          // Q-5(2026-11-06) 정책 결정 + 사용자 결정(D2): 매매가 > 공시 분양가(인하율 음수)는 ⑧에서 막지 않는다.
+          // 계산을 진행하고 엔진이 NEGATIVE_PRICE_REDUCTION_RATE(감면율 0%, 감면 없음)를 결과 카드에 보인다.
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
           let phdOk985 = false;
           if (r.phdMode985 && !phdIrrelevantWithin5Y(asset, form)) {

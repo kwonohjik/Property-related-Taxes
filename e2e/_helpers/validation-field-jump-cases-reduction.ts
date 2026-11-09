@@ -149,7 +149,6 @@ const UNSOLD_98_5 = table("unsold_98_5", hybrid("unsold_98_5"), u985Ok, {}, [
   { name: "매매계약일", prop: "contractDate985", message: /^§98의5 적용: 최초 매매계약일/, patch: { contractDate985: "" } },
   { name: "공시 분양가격", prop: "announcedPrice985", message: /^§98의5 적용: 입주자 모집공고안에 공시된 분양가격\(원\)을 입력하세요/, patch: { announcedPrice985: "" } },
   { name: "매매가격", prop: "contractPrice985", message: /^§98의5 적용: 매매계약서상의 매매가격\(원\)을 입력하세요/, patch: { contractPrice985: "" } },
-  { name: "매매가격 > 공시 분양가격(인하율 음수)", prop: "contractPrice985", message: /^§98의5 적용: 매매계약서상의 매매가격이 공시된 분양가격보다 커서/, patch: { contractPrice985: "100000001" } },
   phdRow("§98의5", "phdMode985"),
   { name: "취득시 기준시가(5년 경과)", prop: "standardPriceAtAcquisition", message: /^§98의5 적용: 취득 후 5년 경과 양도는 취득시 기준시가/, patch: { standardPriceAtAcquisition985: "" } },
   { name: "5년 시점 기준시가", prop: "standardPriceAt5Years", message: /^§98의5 적용: 취득 후 5년 경과 양도는 취득 5년 시점/, patch: { standardPriceAt5Years985: "" } },
