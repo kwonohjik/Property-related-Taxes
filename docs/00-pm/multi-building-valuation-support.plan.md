@@ -77,14 +77,18 @@ throwaway probe(`calculateTransferTax` ↔ `calculateTransferTaxAggregate`, mock
   상업용 3키 기대값을 「400」→「200 + 단건 일치」로 바꾼다. 일반건물 2키 거부는 그대로 둔다.
 - E2E: 다건 화면에서 오피스텔 환산 + 아파트 → 계산 → 결과(환산 상세 카드) 1건.
 
-### 2.5 미검증(V)
+### 2.5 미검증(V) → 해소 (PR #3076 · 머지 a7027de37)
 
-- **V-C1** 건별 ⑧이 상업용 환산 필수값(`cb*`)을 단건과 같이 막는가 — 다건은 건마다 단건과 같은 `validateStep(0~2)`을 부른다
-  (`multi-transfer-tax-validate.ts:203-211`). 필수값 검사는 `transfer-tax-validate-commercial-asset.ts:151-156`에 있다.
-  남은 확인: 그 검사가 `validateStep` 경로에서 실제로 불리는지 — ④ 빌더는 필수값이 비면 `undefined`를 돌려주므로
-  (`transfer-tax-api-commercial.ts:93-96`) 못 막으면 **환산 없이 계산**된다. PR-1 첫 anchor로 고정한다.
-- **V-C2** 다건 ⑭ base 객체가 상업용 환산이 쓰는 나머지 최상위 키(`transferCause`·`compensationPerSqm`·`compensationBasisStdPrice`·`capitalExpenditure` 등)를 이미 옮기는가 — §2.4 parity 6건이 답한다.
-- **V-C3** 다건 결과 화면에 환산 상세 카드가 뜨는가(브라우저).
+- ✅ **V-C1** 건별 ⑧(`validateStep(0~2)`)이 환산 필수값 공란을 막는다 — anchor `multi-commercial-building-parity` MC-0b(전용면적 공란 → 차단 문구).
+- ✅ **V-C2** 다건 ⑭가 나머지 최상위 키를 이미 옮긴다 — parity 6건(환산 공시 후·공시 전·실가·부수토지 초과·상속·공익수용) 모두 단건 = 다건.
+- ✅ **V-C3** 결과 화면 환산 근거 카드 — E2E `multi-commercial-building.spec.ts`에서 DOM 존재 확인(headless · 접힘 여부는 미확인).
+
+### 2.6 구현 중 추가로 나온 것 (PR #3076에 포함)
+
+- 다건 ④ `standardPriceAtTransfer`가 환산 + 공란일 때 `0`을 보냈다 → ⑫ `.positive()` 400. 단건(`primaryEngineStdPriceAtTransfer`)과 같이 `|| undefined`로 맞췄다(0은 원래 거부되던 값이라 종전 통과 요청은 불변).
+- 상속 상가에 숨은 환산 토글이 남아 있으면 다건이 `useEstimatedAcquisition: true`를 보냈다 → 단건과 같은 술어 `isInheritedCommercialBuilding`로 false.
+- 구현 전 실측: 실가 상가 + 부수토지 입력을 API로 직접 보내면 다건이 부수토지를 빠뜨려 단건 31,872,500 ↔ 다건 28,253,500(과소). 화면은 ⑧이 막아 도달 불가였다. 이 PR로 해소.
+- 뮤테이션 9종(④ 5 · ⑭ 3 · 상속 플래그 1) 전부 anchor가 잡는다.
 
 ## 3. 트랙 G — 일반건물
 
@@ -171,6 +175,6 @@ PR-2를 먼저 머지해도 화면은 ⑧이 막고 있어 사용자 경로에 �
 
 ## 5. 완료 기준
 
-- [ ] 트랙 C: parity anchor 6건 + 사용자 사례 anchor 통과 · 키 분류 가드 통과 · E2E 1건 · 브라우저 확인(V-C3)
+- [x] 트랙 C: parity anchor 6건 + 사용자 사례 anchor 통과 · 키 분류 가드 통과 · E2E 1건(headless) — PR #3076 머지 a7027de37. 사람이 브라우저로 직접 본 확인은 미수행
 - [ ] 트랙 G: V-G1~V-G4 실측 후 anchor · 가산세 1회 anchor · E2E 1건 · 브라우저 확인
 - [ ] `npx tsc --noEmit` 0건 · `npx vitest run __tests__/calc/ __tests__/api/` 통과
