@@ -36,6 +36,7 @@ import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { engineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import { rental97SeriesIssue } from "./transfer-tax-validate-rental-97";
+import { unsold986RentalIssue } from "./transfer-tax-validate-unsold-986-rental";
 
 /**
  * 「PHD 환산 모드」 메시지가 가리킬 입력칸 — 메시지는 5칸을 한꺼번에 묻지만(`canCalcReductionPhd`)
@@ -559,10 +560,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (!(parseDecimal(r.floorAreaSqm986 || "") > 0))
             return fail(fieldError("reduction.unsold_98_6.floorAreaSqm986", "§98의6 적용: 연면적(공동주택은 전용면적, ㎡)을 입력하세요 (149㎡ 한도)."));
           if (r.hoType986 === "buyer_rented") {
-            if (!r.rentalContractDate986)
-              return fail(fieldError("reduction.unsold_98_6.rentalContractDate986", "§98의6 2호 적용: 임대계약 체결일을 입력하세요 (2011.12.31 이전 한정)."));
-            if (!r.rentalStartDate986)
-              return fail(fieldError("reduction.unsold_98_6.rentalStartDate986", "§98의6 2호 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날)."));
+            const i986Rental = unsold986RentalIssue({ fail, r, form });
+            if (i986Rental) return i986Rental;
           }
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
           let phdOk986 = false;

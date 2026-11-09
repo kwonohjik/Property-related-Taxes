@@ -749,4 +749,14 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  {
+    // §98의6 임대기간 계산 ⑤1호 기산일·2호 상속 합산(`TRANSFER.UNSOLD_98_6_DECREE_RENTAL_PERIOD`). 원문 MST 288915 실독 2026-11-09.
+    id: "TRANSFER_DECREE.UNSOLD_98_6_RENTAL_PERIOD",
+    citation: "조특령 §98의5",
+    keywords: [
+      "임대를 개시하는 날부터 기산할 것",
+      "피상속인의 임대기간을 상속인의 임대기간에 합산할 것",
+    ],
+    keywordMode: "ALL",
+  },
 ];

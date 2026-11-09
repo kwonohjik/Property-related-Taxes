@@ -16,12 +16,16 @@
  * evaluateAnyHybridTaxAmount)는 `unsold-hybrid-p3.ts`에 남아 있다.
  */
 
-import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { TRANSFER, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { computeHybridEffect } from "./unsold-hybrid";
 import { ineligibleHybrid } from "./unsold-hybrid";
 import type { UnsoldHybridIneligibleReason } from "./unsold-hybrid";
 import type { UnsoldHybridResult } from "./unsold-hybrid";
-import { fullMonthsBetween } from "./unsold-98-8";
+import {
+  unsold986RentalBasisDate,
+  unsold986RentalMonthsExcludingVacancy,
+} from "./unsold-98-6-rental-period";
+import type { Unsold986VacancyDates } from "./unsold-98-6-rental-period";
 import { unsold986AcquisitionGateReasons } from "./unsold-98-period-gates";
 
 // UTC 자정 파싱 (T suffix 금지)
@@ -61,8 +65,14 @@ export interface Unsold986Input {
   sellerRented2Years?: boolean;
   /** (2호) 임대계약 체결일 (~2011.12.31 한정) */
   rentalContractDate?: Date;
-  /** (2호) 임대개시일 — 사업자등록+임대사업자등록 후 (령⑤1호 기산) */
+  /** (2호) 실제 임대개시일 — 기산일은 max(사업자등록일, 임대사업자등록일, 이 날짜)다 (령⑤1호) */
   rentalStartDate?: Date;
+  /** (2호) 사업자등록일 (소득세법 §168 — 법 ①2호 괄호 요건 · 령⑤1호 기산) */
+  businessRegistrationDate?: Date;
+  /** (2호) 임대사업자등록일 (민특법 §5 — 법 ①2호 괄호 요건 · 령⑤1호 기산) */
+  rentalRegistrationDate?: Date;
+  /** (2호) 공실 구간(양 끝 포함) — 임대기간에서 뺀다 (령⑤에 공실 산입 규정 없음, US-24) */
+  rentalVacancies?: Unsold986VacancyDates[];
   /** (2호) 임대종료일 — 미입력 시 양도일까지 계속 */
   rentalEndDate?: Date;
   /** (2호) 상속 합산 피상속인 임대기간 (개월 — 령⑤2호) */
@@ -174,24 +184,7 @@ export function evaluateUnsold986(input: Unsold986Input): UnsoldHybridResult {
         legalBasis,
       });
     }
-    let rentalMonths = 0;
-    if (!input.rentalStartDate) {
-      reasons.push({
-        code: "MISSING_RENTAL_START",
-        message: "임대개시일이 입력되지 않았습니다 (사업자등록과 임대사업자등록 후 임대를 개시한 날부터 기산 — 조특령 §98의5⑤1호).",
-        legalBasis: "조특령 §98의5⑤",
-      });
-    } else {
-      const rentalEnd = input.rentalEndDate ?? input.transferDate;
-      rentalMonths = fullMonthsBetween(input.rentalStartDate, rentalEnd) + (input.inheritedRentalMonths ?? 0);
-      if (rentalMonths < UNSOLD_98_6_RENTAL_MONTHS) {
-        reasons.push({
-          code: "RENTAL_PERIOD_SHORT",
-          message: `임대기간이 5년(60개월) 미만입니다 (인정 임대기간 ${rentalMonths}개월 — 등록 후 임대개시일부터 기산${input.inheritedRentalMonths ? `, 피상속인 ${input.inheritedRentalMonths}개월 합산` : ""}).`,
-          legalBasis: "조특령 §98의5⑤",
-        });
-      }
-    }
+    reasons.push(...evaluate986RentalPeriod(input));
   }
 
   if (reasons.length > 0) return ineligibleHybrid("unsold_98_6", reasons, legalBasis, rate, false);
@@ -217,4 +210,76 @@ export function evaluateUnsold986(input: Unsold986Input): UnsoldHybridResult {
       legalBasis,
     },
   });
+}
+
+/**
+ * 2호 임대기간 5년 판정(US-24·US-25·US-60). 일자 모순·미입력은 사유로 막고(조용히 보정하지 않는다),
+ * 임대종료일이 양도일을 넘는 경우만 법정 상한(양도일)으로 자른다 — 화면 ⑧은 이 입력을 차단한다.
+ */
+function evaluate986RentalPeriod(input: Unsold986Input): UnsoldHybridIneligibleReason[] {
+  const out: UnsoldHybridIneligibleReason[] = [];
+  const basis = TRANSFER.UNSOLD_98_6_DECREE_RENTAL_PERIOD;
+  if (!input.rentalStartDate) {
+    out.push({
+      code: "MISSING_RENTAL_START",
+      message: "실제 임대개시일이 입력되지 않았습니다 (사업자등록과 임대사업자등록 후 임대를 개시하는 날부터 기산 — 조특령 §98의5⑤1호).",
+      legalBasis: basis,
+    });
+  }
+  if (!input.businessRegistrationDate || !input.rentalRegistrationDate) {
+    out.push({
+      code: "MISSING_RENTAL_REGISTRATION",
+      message: "사업자등록일·임대사업자등록일이 입력되지 않았습니다 (법 §98의6①2호 괄호 — 사업자등록과 임대사업자등록, 기산일은 조특령 §98의5⑤1호).",
+      legalBasis: basis,
+    });
+  }
+  if (!input.rentalStartDate || !input.businessRegistrationDate || !input.rentalRegistrationDate) return out;
+
+  const start = input.rentalStartDate;
+  const t = (d: Date) => d.getTime();
+  if (input.rentalContractDate && t(input.rentalContractDate) > t(start)) {
+    out.push({
+      code: "RENTAL_DATE_ORDER",
+      message: "임대계약 체결일이 실제 임대개시일보다 늦습니다 — 임대계약 체결일 ≤ 임대개시일이어야 합니다 (법 §98의6①2호).",
+      legalBasis: TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_6,
+    });
+  }
+  if (input.rentalEndDate && t(input.rentalEndDate) < t(start)) {
+    out.push({
+      code: "RENTAL_DATE_ORDER",
+      message: "임대종료일이 실제 임대개시일보다 앞섭니다 — 임대개시일 ≤ 임대종료일이어야 합니다 (조특령 §98의5⑤).",
+      legalBasis: basis,
+    });
+  }
+  const badVacancy = (input.rentalVacancies ?? []).some((v) => t(v.endDate) < t(v.startDate));
+  if (badVacancy) {
+    out.push({
+      code: "RENTAL_VACANCY_ORDER",
+      message: "공실 구간의 종료일이 시작일보다 앞섭니다.",
+      legalBasis: basis,
+    });
+  }
+  const inherited = input.inheritedRentalMonths ?? 0;
+  if (!Number.isInteger(inherited) || inherited < 0) {
+    out.push({
+      code: "INVALID_INHERITED_RENTAL_MONTHS",
+      message: "상속 합산 임대기간(개월)은 0 이상의 정수여야 합니다 (조특령 §98의5⑤2호).",
+      legalBasis: basis,
+    });
+  }
+  if (out.length > 0) return out;
+
+  const basisDate = unsold986RentalBasisDate(start, input.businessRegistrationDate, input.rentalRegistrationDate);
+  const rentalEnd = input.rentalEndDate && t(input.rentalEndDate) < t(input.transferDate) ? input.rentalEndDate : input.transferDate;
+  const ownMonths = unsold986RentalMonthsExcludingVacancy(basisDate, rentalEnd, input.rentalVacancies ?? []);
+  const rentalMonths = ownMonths + inherited;
+  if (rentalMonths < UNSOLD_98_6_RENTAL_MONTHS) {
+    const vacancyNote = (input.rentalVacancies ?? []).length > 0 ? ", 공실 구간 제외" : "";
+    out.push({
+      code: "RENTAL_PERIOD_SHORT",
+      message: `임대기간이 5년(60개월) 미만입니다 (인정 임대기간 ${rentalMonths}개월 — 등록 후 임대를 개시한 날(초일 산입)부터 기산${vacancyNote}${inherited ? `, 피상속인 ${inherited}개월 합산` : ""}).`,
+      legalBasis: basis,
+    });
+  }
+  return out;
 }

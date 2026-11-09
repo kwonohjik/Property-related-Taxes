@@ -58,10 +58,13 @@ function make986(hoType986: "seller_rented" | "buyer_rented", std: Std): AssetRe
     floorAreaSqm986: "100",
     rentalContractDate986: hoType986 === "buyer_rented" ? "2011-08-01" : "",
     rentalStartDate986: hoType986 === "buyer_rented" ? "2011-09-01" : "",
+    businessRegistrationDate986: hoType986 === "buyer_rented" ? "2011-08-15" : "",
+    rentalRegistrationDate986: hoType986 === "buyer_rented" ? "2011-08-20" : "",
+    rentalVacancyPeriods986: [],
     standardPriceAtAcquisition986: std.acq ?? "",
     standardPriceAt5Years986: std.y5 ?? "",
     standardPriceAtTransfer986: std.transfer ?? "",
-  } as AssetReductionForm;
+  } as unknown as AssetReductionForm;
 }
 
 function makeForm(acqDate: string, transferDate: string, reduction: AssetReductionForm) {

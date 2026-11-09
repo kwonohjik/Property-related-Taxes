@@ -188,6 +188,12 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
         ...r,
         rentalContractDate986: r.rentalContractDate986 ? new Date(r.rentalContractDate986) : undefined,
         rentalStartDate986: r.rentalStartDate986 ? new Date(r.rentalStartDate986) : undefined,
+        businessRegistrationDate986: toOptionalDate(r.businessRegistrationDate986),
+        rentalRegistrationDate986: toOptionalDate(r.rentalRegistrationDate986),
+        rentalVacancyPeriods986: r.rentalVacancyPeriods986?.map((v, i) => ({
+          startDate: toDate(v.startDate, `rentalVacancyPeriods986[${i}].startDate`),
+          endDate: toDate(v.endDate, `rentalVacancyPeriods986[${i}].endDate`),
+        })),
         rentalEndDate986: r.rentalEndDate986 ? new Date(r.rentalEndDate986) : undefined,
       } as TransferReduction;
     }
