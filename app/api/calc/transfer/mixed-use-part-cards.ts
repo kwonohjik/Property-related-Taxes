@@ -57,12 +57,24 @@ import { pickArticle89Clause2Facts } from "@/lib/tax-engine/transfer-tax-89-2-co
 import type { MixedUseZodPayload } from "./mixed-use-asset-input";
 import type { MixedUseCompanionContext } from "./bundled-companion-types";
 import { reductionsForCard } from "./general-building-route-cards";
+import { isReductionAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
+import { reductionAssetKindFromWire } from "@/lib/tax-engine/transfer-reductions";
 import { resolveRateBasisAcquisitionDate } from "@/lib/tax-engine/transfer-rate-holding-basis";
 import { resolveBaseHoldingStartDate } from "@/lib/tax-engine/transfer-tax-exemption-holding";
 import { giftHouseholdHoldingStart } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { resolveMixedUseRentalResidence } from "@/lib/tax-engine/transfer-tax-mixed-use-rental-residence";
 import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
+
+/** 상가분이 주택에서 갈라진 카드(land·building)에서 그 종류에 허용되지 않는 감면을 뺀다. 주택 카드·모르는 종류는 그대로. */
+function reductionsForCommercialCard(
+  reductions: TransferTaxInput["reductions"],
+  propertyType: TransferTaxInput["propertyType"],
+): TransferTaxInput["reductions"] {
+  if (propertyType !== "land" && propertyType !== "building") return reductions;
+  const kind = reductionAssetKindFromWire(propertyType);
+  return kind ? reductions?.filter((r) => isReductionAllowedForAssetKind(r.type, kind)) : reductions;
+}
 
 /** 파트 카드 id 접미사 — 결과뷰·신고서가 자산을 되짚을 수 있게 `#<assetId>`를 붙인다. */
 export const MIXED_USE_PART_IDS = {
@@ -271,7 +283,10 @@ export function buildMixedUsePartCards(
     transferDate,
     // 감면은 **카드마다 같은 배열**을 싣는다 — §133② 한도는 집계 단계에서 1회 적용된다
     // (GB와 같은 규칙·같은 함수). §77의3 건물 제외 축도 그대로 따라온다.
-    reductions: reductionsForCard(companionEngine.reductions, isBuilding),
+    // 단, 상가분이 주택에서 갈라진 카드(land·building)에는 **주택 전용 감면을 싣지 않는다** — 겸용 엔진도 «상가분은 일반 건물·토지라
+    //   주택 감면 대상이 아니다»(`transfer-tax-mixed-use-income-deduction.ts`)이고, 싣으면 §99의3 소득 차감이 상가분까지 갔다(V-N1 · 단건 45,000,000 ↔ 70,000,000).
+    //   술어는 ⑧·⑫와 같은 `isReductionAllowedForAssetKind`(단일 소스). 상가가 주택에 흡수된 카드(`housing`)는 그대로 싣는다.
+    reductions: reductionsForCommercialCard(reductionsForCard(companionEngine.reductions, isBuilding), propertyType),
     displayAcquisitionMode: modeOf(isBuilding ? "building" : "land"),
     ...(isBuilding ? {} : landOwnDate),
     ...landDateNeutral,
