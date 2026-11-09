@@ -374,7 +374,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           이 토글이 「취득일 다름」을 강제로 켜므로, 아래에 두면 아래를 눌렀는데 위가 펼쳐지는
           역방향 인과였다. 계획서: transfer-self-owns-toggle-relocation.plan.md §1.1 */}
 
-      <CompanionAcqSpecialAssetNotices asset={props.asset} />
+      <CompanionAcqSpecialAssetNotices asset={props.asset} shareCard={props.shareAcquisitionOnly} />
       {props.asset?.transferType !== "burdened_gift" &&
         // 🔴 승계조합원 완공APT는 **상단 취득가액이 유일한 입력 경로**다 (2026-08-25 — E2-01).
         //    §166 안분을 우회하는 단순 차감 산식(`runSuccessorMember`)이 이 값을 그대로 쓰는데,

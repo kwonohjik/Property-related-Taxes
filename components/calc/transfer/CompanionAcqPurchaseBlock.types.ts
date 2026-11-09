@@ -181,6 +181,8 @@ export interface BlockProps {
    *    채우면 통째로 버려졌다.
    */
   isNonPrimaryAsset?: boolean;
+  /** 축 B 지분 카드(자산 2~N) — ② 양도정보가 숨어 부담부증여 안내가 실제 입력 위치를 가리킨다(`CompanionAcqSpecialAssetNotices` · D-3b). */
+  shareAcquisitionOnly?: boolean;
   /**
    * 취득일 칸의 검증 오류 이동 앵커 키(기본 `acquisitionDate`). 일반건물 분리 모드의 토지 카드는
    * 이 칸이 **토지** 취득일이라 `landAcquisitionDate`를 넘긴다 — 건물 취득일 오류가 이 칸으로 오지 않게.

@@ -121,7 +121,7 @@ describe("D2-4 숨은 토글은 새지 않는다 — 기준시가 평가면 토�
   });
 });
 
-describe("D2-5 범위 밖 종류(토지)는 토글이 켜져 있어도 자산 1 값을 쓴다 — 주택 · 토지 · 상가는 이번 범위 밖(확인 필요)", () => {
+describe("D2-5 토지도 토글을 따른다(vp2c §15 D-3 · Q-8 a — 종전 범위 밖) · 4종 격자는 `transfer.route.bg-axis-b-share-own-acquisition-other-kinds.anchor.test.ts`", () => {
   /** `transfer.route.bg-land-fractional-win.anchor.test.ts`와 같은 토지 시료(시가 10억 · 실지 2.5억). */
   const land = (id: string, ...over: Record<string, unknown>[]) =>
     Object.assign({ ...makeDefaultAsset(1) }, x({
@@ -132,9 +132,10 @@ describe("D2-5 범위 밖 종류(토지)는 토글이 켜져 있어도 자산 1 
     }), ...over.map(x)) as AssetForm;
   const fb = (...own: Record<string, unknown>[]) =>
     form([land("p", pct(60)), land("s", pct(40), ...own)], { assetSplitMode: "fractional", contractTotalPrice: "1000000000" });
-  it("토지 축 B 시가 보충 승 · 지분 2 토글 켬 + 실지 3억: 토글 끔과 같은 값", async () => {
+  it("토지 축 B 시가 보충 승 · 지분 2 토글 켬 + 실지 3억: 이 지분 값(438,000,000) · 토글 끔은 자산 1 값(450,000,000)", async () => {
     const off = await gainOk(fb({ bgActualAcquisitionLand: "300000000" }));
     const on = await gainOk(fb(OWN, { bgActualAcquisitionLand: "300000000" }));
-    expect(on).toBe(off);
+    expect(off).toBe(450_000_000);
+    expect(on).toBe(438_000_000);
   });
 });
