@@ -144,15 +144,15 @@ describe("풀 파이프라인 총부담(원 단위) — 리뷰 US-58·US-59 mock
       makeMockRates(),
     );
   const total = (extra: Record<string, unknown>) => run(extra).totalTax;
-  it("US-58: 공시 300,010,000 · 매매 270,000,000(10.002999…%) → 80% 총부담 18,477,800 (종전 「10.0」 입력은 60% 36,955,600)", () => {
-    expect(total({ announcedPrice985: 300_010_000, contractPrice985: 270_000_000 })).toBe(18_477_800);
-    expect(total({ priceReductionRatePct985: 10 })).toBe(36_955_600);
+  it("US-58: 공시 300,010,000 · 매매 270,000,000(10.002999…%) → 80% 총부담 17,474,600 (종전 「10.0」 입력은 60% 34,949,200)", () => {
+    expect(total({ announcedPrice985: 300_010_000, contractPrice985: 270_000_000 })).toBe(17_474_600);
+    expect(total({ priceReductionRatePct985: 10 })).toBe(34_949_200);
   });
-  it("정확히 10% → 60% 36,955,600", () => {
-    expect(total({ announcedPrice985: 300_000_000, contractPrice985: 270_000_000 })).toBe(36_955_600);
+  it("정확히 10% → 60% 34,949,200", () => {
+    expect(total({ announcedPrice985: 300_000_000, contractPrice985: 270_000_000 })).toBe(34_949_200);
   });
-  it("US-59: 매매가 > 공시(음수) → 감면 없음 92,389,000 (Q-5 정책 — 엔진 동작 유지)", () => {
-    expect(total({ announcedPrice985: 100_000_000, contractPrice985: 102_000_000 })).toBe(92_389_000);
+  it("US-59: 매매가 > 공시(음수) → 감면 없음 87,373,000 (Q-5 정책 — 엔진 동작 유지)", () => {
+    expect(total({ announcedPrice985: 100_000_000, contractPrice985: 102_000_000 })).toBe(87_373_000);
   });
   it("US-59: 음수는 결과(unsold985Detail)에 적용 불가 사유로 실려 결과 카드가 보인다 — 감면액 0", () => {
     const r = run({ announcedPrice985: 100_000_000, contractPrice985: 102_000_000 });
