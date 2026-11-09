@@ -14,6 +14,7 @@
  */
 
 import { TRANSFER } from "../legal-codes/transfer";
+import { UNSOLD_98_DECREE } from "../legal-codes/transfer-house";
 import type { UnsoldHybridIneligibleReason } from "./unsold-hybrid";
 
 // ── 날짜 상수 ──
@@ -88,7 +89,7 @@ export function unsold986AcquisitionGateReasons(acquisitionDate: Date | undefine
   return [{
     code: "ACQUISITION_BEFORE_COMPLETED_UNSOLD_CUTOFF",
     message: "취득일이 2011.3.29. 전이면 「2011년 3월 29일 현재 준공후미분양주택」에 해당할 수 없습니다 — 령 §98의5②·③2·3호 (매수자의 최초 매매계약은 2011.3.29. 이후).",
-    legalBasis: "조특령 §98의5②",
+    legalBasis: UNSOLD_98_DECREE.D98_6_PRICE_AREA,
   }];
 }
 

@@ -14,6 +14,7 @@
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { UNSOLD_98_DECREE } from "../legal-codes/transfer-house";
 import { unsold982PeriodGateReasons } from "./unsold-98-period-gates";
 import {
   ineligibleHybrid,
@@ -153,14 +154,14 @@ export function evaluateUnsold982(input: Unsold982Input): UnsoldHybridResult {
     reasons.push({
       code: "NOT_NONCAPITAL_UNSOLD",
       message: "수도권 밖에 있는 미분양주택 요건(2008.11.2까지 분양계약 미체결 + 선착순 공급 등)이 확인되지 않았습니다 (조특령 §98의2①). 사업주체 최초 매매계약은 2008.11.3 현재 입주자모집공고에 따른 입주자의 계약일이 지나지 아니한 주택에 한정하며, 분양전환된 임대주택은 대상이 아닙니다 (조특령 §98의2①2호 괄호 · 국세청 부동산거래관리과-340·-43).",
-      legalBasis: "조특령 §98의2①",
+      legalBasis: UNSOLD_98_DECREE.D98_2_REQ,
     });
   }
   if (input.isFirstOrFcfsContract !== true) {
     reasons.push({
       code: "NOT_FIRST_CONTRACT",
       message: "선착순 공급으로 취득하거나 사업주체와 최초로 매매계약을 체결한 요건이 확인되지 않았습니다 (조특령 §98의2①1·2호).",
-      legalBasis: "조특령 §98의2①",
+      legalBasis: UNSOLD_98_DECREE.D98_2_REQ,
     });
   }
   if (input.occupiedAtContract !== "no") {

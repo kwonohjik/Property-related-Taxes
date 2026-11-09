@@ -121,3 +121,30 @@ describe("C-2 다주택 중과 배제 근거 호가 조문별로 갈린다 (#033
     expect(text("unsold_98_4", { id: "unsold_98_4" })).toContain("중과 배제 대상이 아닙니다");
   });
 });
+
+// ── US-85 세대 구성별 근거 — 엔진 STEP 0.45 근거를 카드가 그대로 읽는다 ─────────────
+describe("US-85 중과 배제 근거는 엔진 단계에서 받는다", () => {
+  const withBasis = (kind: string, basis?: string) => {
+    const { container } = render(
+      <IncomeDeductionDetailCard
+        kind={kind as never}
+        result={hybrid({ id: kind }) as never}
+        calculatedTax={100_000_000}
+        surchargeExclusionBasis={basis}
+      />,
+    );
+    return container.textContent ?? "";
+  };
+  it("받은 근거를 그대로 적고 2주택 전용 §167의10①2호를 덧붙이지 않는다", () => {
+    const t = withBasis("unsold_98_3", "소득세법 시행령 §167의3①5호");
+    expect(t).toContain("(소득세법 시행령 §167의3①5호)");
+    expect(t).not.toContain("§167의10①2호");
+  });
+  it("주택+권리 세대 근거(§167의11①2호)를 적는다", () => {
+    expect(withBasis("unsold_98_3", "소득세법 시행령 §167의3①5호·§167의11①2호")).toContain("§167의11①2호");
+  });
+  it("근거를 못 받으면(합산·겸용) 세대 구성별 준용 조항을 모두 안내한다", () => {
+    const t = withBasis("unsold_98_3");
+    for (const c of ["§167의10①2호", "§167의11①2호", "§167의4③2호"]) expect(t).toContain(c);
+  });
+});

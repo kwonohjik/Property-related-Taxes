@@ -324,4 +324,24 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  // US-69 — 양도소득 개인지방소득세 경정청구 환급 단계 근거(`TRANSFER.LOCAL_INCOME_TAX_CLAIM`).
+  //   §103의9① → §96① → 지방세기본법 §50. 원문 지방세법 MST 282559 · 지방세기본법 MST 290139 실독 2026-11-09.
+  {
+    id: "LOCAL_TAX.TRANSFER_CLAIM_103_9_1",
+    citation: "지방세법 §103의9",
+    keywords: ["양도소득에 대한 개인지방소득세의 수정신고ㆍ결정ㆍ경정ㆍ수시부과ㆍ징수 및 환급에 관하여는 제96조부터 제98조까지 및 제100조의 규정을 준용한다"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "LOCAL_TAX.AMENDMENT_CLAIM_96",
+    citation: "지방세법 §96",
+    keywords: ["「국세기본법」 제45조 및 제45조의2에 따라", "납세지를 관할하는 지방자치단체의 장에게", "제49조 및 제50조에 따른 수정신고 또는 경정 등의 청구를 하여야 한다"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "LOCAL_TAX.CORRECTION_CLAIM_BASIC_50",
+    citation: "지방세기본법 §50",
+    keywords: ["법정신고기한이 지난 후 5년 이내", "결정 또는 경정을 지방자치단체의 장에게 청구할 수 있다"],
+    keywordMode: "ALL",
+  },
 ];

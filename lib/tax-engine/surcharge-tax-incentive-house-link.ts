@@ -29,6 +29,7 @@
  * 단건(`runMultiHouseSurchargeStep` — 다건·컴패니언·판정 메뉴 경유 포함)과 겸용(`calcMixedUseTransferTax`)이 이 함수를 부른다.
  */
 import { MULTI_HOUSE } from "./legal-codes";
+import type { SurchargeHousehold } from "./surcharge-exclusion-basis";
 import {
   evaluateSpecialHouseReductionRequirements,
   meetsSpecialHouseReductionRequirements,
@@ -138,18 +139,22 @@ function rental3hoTargets(
 }
 
 /**
- * 중과 판정이 산입한 조합원입주권·분양권이 있는가 — STEP 0.45 배제 근거의 세대 구성 축(NH-82 · `withSurchargeExclusionRegime`).
- * 산식은 정본(`determineMultiHouseSurcharge`의 `countedRightCount`)과 같다: 산입 술어(`isPresaleRightCounted`)를 통과한 권리 수 −
- * 혼인 합가 배우자 보유 차감분(영 §167의4⑤ — `excludedPresaleRights`). 판정 결과가 없으면(명부 없음) 주택만의 세대로 둔다.
+ * 중과 판정이 확정한 세대 구성 — STEP 0.45 배제 근거의 두 축(NH-82 · US-85 · `withSurchargeExclusionRegime`).
+ * 권리 수 산식은 정본(`determineMultiHouseSurcharge`의 `countedRightCount`)과 같다: 산입 술어(`isPresaleRightCounted`)를 통과한 권리 수 −
+ * 혼인 합가 배우자 보유 차감분(영 §167의4⑤ — `excludedPresaleRights`). 판정 결과가 없으면(명부 없음) undefined(기본 근거).
  */
-export function surchargeHouseholdCountsRights(
+export function surchargeHousehold(
   presaleRights: readonly PresaleRight[],
   rules: Pick<HouseCountExclusionRules, "presaleRightStartDate">,
-  result: Pick<MultiHouseSurchargeResult, "excludedPresaleRights"> | undefined,
-): boolean {
-  if (!result) return false;
+  result: Pick<MultiHouseSurchargeResult, "excludedPresaleRights" | "effectiveHouseCount"> | undefined,
+): SurchargeHousehold | undefined {
+  if (!result) return undefined;
   const start = new Date(rules.presaleRightStartDate);
-  return presaleRights.filter((r) => isPresaleRightCounted(r, start)).length - (result.excludedPresaleRights?.length ?? 0) > 0;
+  const countedRightCount = Math.max(
+    0,
+    presaleRights.filter((r) => isPresaleRightCounted(r, start)).length - (result.excludedPresaleRights?.length ?? 0),
+  );
+  return { countedRightCount, effectiveHouseCount: result.effectiveHouseCount };
 }
 
 /**

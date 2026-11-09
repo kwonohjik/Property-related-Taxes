@@ -9,7 +9,7 @@
  */
 
 import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
-import { TRANSFER } from "@/lib/tax-engine/legal-codes";
+import { MULTI_HOUSE, TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { unsold982OutcomeLabel } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p4";
 import { UNSOLD_98_FLAT_RATE_LABEL } from "@/lib/tax-engine/transfer-reductions/unsold-98-constants";
 import { ReductionDetailWarnings } from "@/components/calc/results/transfer/ReductionDetailWarnings";
@@ -49,6 +49,8 @@ type Props = Detail &
      * 넘기면 차감액 줄을 이 값으로 찍고, 단건 농어촌특별세 줄 대신 합산 산정 안내를 둔다. 단건은 넘기지 않는다.
      */
     aggregateApplied?: number;
+    /** STEP 0.45 중과 배제 근거(엔진 단계 `legalBasis`) — 단건 결과만 넘긴다(US-85). */
+    surchargeExclusionBasis?: string;
   };
 
 const TITLES: Record<Detail["kind"], string> = {
@@ -107,21 +109,21 @@ const RURAL_EXEMPT_NOTE: Partial<Record<Detail["kind"], string>> = {
  *
  * §98의4(비거주자 10%)는 5호에 열거되지 않아 중과가 **정상 적용**된다.
  */
-const SURCHARGE_5HO =
-  " · 본 감면 주택 양도 시 다주택 중과세율은 적용되지 않습니다 (소득세법 시행령 §167의3①5호·§167의10①2호)";
-const SURCHARGE_NOTE: Record<Detail["kind"], string> = {
-  unsold_98:
-    " · 5년 이상 임대한 국민주택이면 다주택 중과세율이 적용되지 않습니다 (소득세법 시행령 §167의3①3호·§167의10①2호)",
-  unsold_98_4: " · 다주택 중과 배제 대상이 아닙니다 (소득세법 시행령 §167의3①5호 비열거)",
-  new_99: SURCHARGE_5HO,
-  unsold_98_8: SURCHARGE_5HO,
-  unsold_98_7: SURCHARGE_5HO,
-  unsold_99_2: SURCHARGE_5HO,
-  unsold_98_3: SURCHARGE_5HO,
-  unsold_98_5: SURCHARGE_5HO,
-  unsold_98_6: SURCHARGE_5HO,
-  unsold_98_2: SURCHARGE_5HO,
-};
+/**
+ * 세대 구성별 근거(US-85) — 배제 단계(STEP 0.45)가 정한 조문을 `surchargeExclusionBasis`로 받아 그대로 적는다.
+ * 받지 못하면(합산·겸용 경로 등) 세대 구성을 모르므로 정의 조항만 적고 세대 구성별 준용 조항을 안내한다.
+ */
+function surchargeBasisText(kind: Detail["kind"], basis: string | undefined): string {
+  if (basis) return basis;
+  const def = kind === "unsold_98" ? MULTI_HOUSE.TAX_INCENTIVE_RENTAL_3_BASIS : MULTI_HOUSE.TAX_INCENTIVE_HOUSE_5_BASIS;
+  return `${def} — 세대 구성에 따라 같은 시행령 §167의10①2호(2주택)·§167의11①2호(주택·권리 각 1)·§167의4③2호(합 3 이상)가 준용`;
+}
+function surchargeNote(kind: Detail["kind"], basis: string | undefined): string {
+  const b = surchargeBasisText(kind, basis);
+  if (kind === "unsold_98") return ` · 5년 이상 임대한 국민주택이면 다주택 중과세율이 적용되지 않습니다 (${b})`;
+  if (kind === "unsold_98_4") return " · 다주택 중과 배제 대상이 아닙니다 (소득세법 시행령 §167의3①5호 비열거)";
+  return ` · 본 감면 주택 양도 시 다주택 중과세율은 적용되지 않습니다 (${b})`;
+}
 
 /** §98의6 2호 — 엔진이 센 인정 임대기간(echo 표시 전용) */
 function Unsold986RentalPeriodLine({ echo }: { echo?: Unsold986RentalPeriodEcho }) {
@@ -135,7 +137,7 @@ function Unsold986RentalPeriodLine({ echo }: { echo?: Unsold986RentalPeriodEcho 
   );
 }
 
-export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggregateApplied }: Props) {
+export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggregateApplied, surchargeExclusionBasis }: Props) {
   const title = TITLES[kind];
   // P2·P3 하이브리드 — 5년 내 양도 = 세액감면 경로 (소득금액 차감 아님)
   const isHybrid = HYBRID_KINDS.includes(kind);
@@ -238,7 +240,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
         <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
           <p className="text-caption text-sky-900 dark:text-sky-300">
             농어촌특별세: 감면세액 {result.taxReductionForRuralSurtax.toLocaleString()} × 20% ={" "}
-            {result.ruralSurtax.toLocaleString()} (농어촌특별세법 §5 — 총 납부세액에 합산)
+            {result.ruralSurtax.toLocaleString()} ({isTaxAmountMode ? TRANSFER.RURAL_SURTAX_REDUCTION : TRANSFER.RURAL_SURTAX_DEDUCTION} — 총 납부세액에 합산)
           </p>
         </div>
       )}
@@ -254,7 +256,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
 
       <p className="text-micro text-emerald-700 dark:text-emerald-400">
         근거 조문: {result.legalBasis}
-        {SURCHARGE_NOTE[kind]}
+        {surchargeNote(kind, surchargeExclusionBasis)}
       </p>
     </div>
   );
@@ -278,7 +280,7 @@ export function AggregateRuralSurtaxNote() {
   return (
     <div data-testid="income-deduction-aggregate-rural" className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
       <p className="text-caption text-sky-900 dark:text-sky-300">
-        농어촌특별세는 합산 과세 내역에서 함께 양도 전체의 감면 전·후 산출세액 차이로 산정합니다({TRANSFER.RURAL_SURTAX_993}).
+        농어촌특별세는 합산 과세 내역에서 함께 양도 전체의 감면 전·후 산출세액 차이로 산정합니다({TRANSFER.RURAL_SURTAX_DEDUCTION}).
       </p>
     </div>
   );

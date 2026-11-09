@@ -593,7 +593,7 @@ export function computeAggregateTaxCreditRuralSurtax(
       label: "농어촌특별세 (감면세액 × 20%)",
       formula: `과세 대상 감면세액 ${taxableReduction.toLocaleString()} × 20% = ${ruralSurtaxCredit.toLocaleString()} (농어촌특별세법 §5①1호 · 시행령 §4 비과세 열거 제외분)`,
       amount: ruralSurtaxCredit,
-      legalBasis: "농어촌특별세법 §5①1호",
+      legalBasis: TRANSFER.RURAL_SURTAX_REDUCTION,
     });
   }
   return ruralSurtaxCredit;

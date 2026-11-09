@@ -17,6 +17,7 @@
 
 import { separateAcqExpenseText, separateAcqFormulaText } from "@/components/calc/results/mixed-use/mixed-use-separate-acq-text";
 import { createElement, Fragment, type ReactNode } from "react";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { selfBuiltPenaltyBasisFormula } from "@/lib/tax-engine/transfer-tax-self-built-display";
@@ -299,7 +300,10 @@ export function buildSurtaxAndLocalTaxItems(
     label: "농어촌특별세",
     value: ruralSurtaxValue,
     formula: `(감면 전 산출세액 − 감면 후 산출세액) × 20% = ${ruralSurtaxValue.toLocaleString()} (§99의3·§99·§98의8 등 소득금액차감 감면 적용 시)`,
-    legalBasis: "농어촌특별세법 §3·§5",
+    // 근거는 엔진 농특세 단계(세액감면형 §5①1호 / 차감형 §5①1호·③·시행령 §5②)를 그대로 읽는다 — 단계가 없으면 차감형(US-83)
+    legalBasis:
+      result.steps?.find((st) => st.legalBasis === TRANSFER.RURAL_SURTAX_REDUCTION || st.legalBasis === TRANSFER.RURAL_SURTAX_DEDUCTION)?.legalBasis ??
+      TRANSFER.RURAL_SURTAX_DEDUCTION,
     summaryOnly: true,
   });
 

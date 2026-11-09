@@ -24,6 +24,7 @@ import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import { unsold987TransferGateReasons } from "./unsold-98-period-gates";
 import { describeAllocationFormula } from "./unsold-allocation-display";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { UNSOLD_98_DECREE } from "../legal-codes/transfer-house";
 import type { Unsold982LthdEcho } from "./unsold-hybrid-p4";
 import {
   allocationDenominatorZeroMessage,
@@ -297,7 +298,7 @@ export function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResul
       input.id,
       [{
         code: "MISSING_STD_PRICE",
-        message: "5년 후 양도 안분에 필요한 기준시가(취득시·5년시점·양도시)가 입력되지 않았습니다 (조특령 §40① 준용 — 자동 안분 불가).",
+        message: `5년 후 양도 안분에 필요한 기준시가(취득시·5년시점·양도시)가 입력되지 않았습니다 (${UNSOLD_98_DECREE.CALC_40} 준용 — 자동 안분 불가).`,
         legalBasis: input.allocationLegalBasis,
       }],
       input.legalBasis,
@@ -436,7 +437,7 @@ export function evaluateUnsold987(input: Unsold987Input): UnsoldHybridResult {
     reasons.push({
       code: "PRICE_LIMIT_EXCEEDED",
       message: "취득가액이 9억원을 초과합니다 (법 §98의7① · 령 §98의6②1호).",
-      legalBasis: "조특령 §98의6②1호",
+      legalBasis: UNSOLD_98_DECREE.D98_7_PRICE_CAP,
     });
   }
   if (input.transferDate.getTime() <= input.acquisitionDate.getTime()) {
@@ -450,7 +451,7 @@ export function evaluateUnsold987(input: Unsold987Input): UnsoldHybridResult {
     reasons.push({
       code: "NOT_UNSOLD_AT_CUTOFF",
       message: "2012.9.24 현재 미분양 요건(입주자 계약일 경과 단지에서 2012.9.23까지 분양계약 미체결 + 선착순 공급)이 확인되지 않았습니다 (조특령 §98의6①).",
-      legalBasis: "조특령 §98의6①",
+      legalBasis: UNSOLD_98_DECREE.D98_7_REQ,
     });
   }
   if (input.isFirstContract !== true) {
@@ -464,14 +465,14 @@ export function evaluateUnsold987(input: Unsold987Input): UnsoldHybridResult {
     reasons.push({
       code: "OCCUPIED_AT_CONTRACT",
       message: "매매계약일 현재 입주한 사실이 없는 주택임이 확인되지 않았습니다 (조특령 §98의6②2호).",
-      legalBasis: "조특령 §98의6②2호",
+      legalBasis: UNSOLD_98_DECREE.D98_7_NO_OCCUPANCY,
     });
   }
   if (input.isNotRecontract !== true) {
     reasons.push({
       code: "RECONTRACT_EXCLUDED",
       message: "계약 해제 후 본인·배우자(직계존비속·형제자매 포함)가 다시 계약한 주택이 아님이 확인되지 않았습니다 (조특령 §98의6②3·4호).",
-      legalBasis: "조특령 §98의6②3·4호",
+      legalBasis: UNSOLD_98_DECREE.D98_7_REBUY,
     });
   }
   if (reasons.length > 0) return ineligible("unsold_98_7", reasons, legalBasis);
@@ -486,7 +487,7 @@ export function evaluateUnsold987(input: Unsold987Input): UnsoldHybridResult {
     standardPriceAtAcquisition: input.standardPriceAtAcquisition,
     standardPriceAt5Years: input.standardPriceAt5Years,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
-    allocationLegalBasis: "조특령 §98의6④",
+    allocationLegalBasis: UNSOLD_98_DECREE.D98_7_ALLOC,
   });
 }
 

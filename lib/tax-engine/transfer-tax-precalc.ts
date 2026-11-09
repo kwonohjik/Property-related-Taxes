@@ -49,6 +49,7 @@ import { sameHouseholdInheritanceHoldingStart } from "./one-house/same-household
 import { pickRateBasisFacts } from "./transfer-rate-holding-basis";
 import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
 import { resolveSurchargeExclusionByReduction } from "./transfer-reductions/income-deduction-router";
+import { withSurchargeExclusionRegime } from "./transfer-reductions/income-deduction-router";
 import { buildSurchargeExclusionStep } from "./transfer-reductions/income-deduction-router";
 import { isFallbackSurchargeCandidate } from "./transfer-tax-surcharge-predicate";
 import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
@@ -399,7 +400,13 @@ export function runSurchargeAndLandSteps(
    */
   const fallbackExcludedByReduction =
     !multiHouseSurchargeResult && surchargeExclusionByReduction.excluded && isFallbackSurchargeCandidate(workingInput);
-  if (fallbackExcludedByReduction) steps.push(buildSurchargeExclusionStep(surchargeExclusionByReduction));
+  // 명부가 없으면 세대 구성은 입력 주택 수뿐이다(권리 없음) — 3주택 이상은 §167의3① 직접, 2주택은 §167의10①2호 준용(US-85)
+  if (fallbackExcludedByReduction) {
+    steps.push(buildSurchargeExclusionStep(withSurchargeExclusionRegime(
+      surchargeExclusionByReduction,
+      { countedRightCount: 0, effectiveHouseCount: workingInput.householdHousingCount },
+    )));
+  }
 
   // eslint-disable-next-line prefer-const -- effectiveInput은 후속 STEP에서 파생 입력으로 재할당
   let { nonBusinessLandJudgment, effectiveInput } = runNonBusinessLandStep(

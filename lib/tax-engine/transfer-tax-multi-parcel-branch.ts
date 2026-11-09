@@ -209,7 +209,7 @@ export function handleMultiParcelBranch(
         label: `${HYBRID_ARTICLE[mpReductionTypeApplied]} 농어촌특별세 (감면세액 × 20%)`,
         formula: `감면세액 ${mpCappedReduction.toLocaleString()} × 20% = ${mpRuralSurtax.toLocaleString()}`,
         amount: mpRuralSurtax,
-        legalBasis: TRANSFER.RURAL_SURTAX_993,
+        legalBasis: TRANSFER.RURAL_SURTAX_DEDUCTION,
       });
     }
     if (mpHybridTaxDetail && mpHybridTaxDetail.id === mpReductionTypeApplied) {

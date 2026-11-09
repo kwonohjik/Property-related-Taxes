@@ -97,6 +97,8 @@ interface Props {
    * 카드가 적용되지 않은 금액과 단건 농어촌특별세를 찍는다. 단건은 넘기지 않는다.
    */
   incomeDeductionApplied?: number;
+  /** STEP 0.45 중과 배제 근거(세대 구성별 조문) — 단건 결과만 넘긴다. 없으면 카드가 세대 구성 무관 안내를 쓴다(US-85). */
+  surchargeExclusionBasis?: string;
 }
 
 /** 자경농지 감면의 식별자 3종 — 상속인 합산·편입일 부분감면 변형까지 **같은 감면**이다. */
@@ -152,6 +154,7 @@ export function ReductionDetailCards({
   appliedReductionAmount,
   houses,
   incomeDeductionApplied,
+  surchargeExclusionBasis,
 }: Props) {
   /**
    * 이 카드가 §127⑦로 **배제된 후보인가** — 승자 식별자가 자기 것이 아니면 배제다.
@@ -260,37 +263,37 @@ export function ReductionDetailCards({
         </>
       )}
       {/* P1 차감형 (2026-06-11): §99 신축주택 IMF 1차 · §98의8 준공후미분양 50% */}
-      {result.new99Detail && <IncomeDeductionDetailCard kind="new_99" result={result.new99Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.new99Detail)} />}
+      {result.new99Detail && <IncomeDeductionDetailCard kind="new_99" result={result.new99Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.new99Detail)} surchargeExclusionBasis={surchargeExclusionBasis} />}
       {result.unsold988Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_8" result={result.unsold988Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold988Detail)} />
+        <IncomeDeductionDetailCard kind="unsold_98_8" result={result.unsold988Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold988Detail)} surchargeExclusionBasis={surchargeExclusionBasis} />
       )}
       {/* P2 하이브리드 (2026-06-11): §98의7 9억↓ 미분양 · §99의2 신축·미분양·1세대1주택 */}
       {result.unsold987Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_7" result={result.unsold987Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold987Detail)} />
+        <IncomeDeductionDetailCard kind="unsold_98_7" result={result.unsold987Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold987Detail)} surchargeExclusionBasis={surchargeExclusionBasis} />
       )}
       {result.unsold992Detail && (
-        <IncomeDeductionDetailCard kind="unsold_99_2" result={result.unsold992Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold992Detail)} />
+        <IncomeDeductionDetailCard kind="unsold_99_2" result={result.unsold992Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold992Detail)} surchargeExclusionBasis={surchargeExclusionBasis} />
       )}
       {/* P3 하이브리드 (2026-06-12) */}
       {result.unsold983Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_3" result={result.unsold983Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold983Detail)} />
+        <IncomeDeductionDetailCard kind="unsold_98_3" result={result.unsold983Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold983Detail)} surchargeExclusionBasis={surchargeExclusionBasis} />
       )}
       {result.unsold985Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_5" result={result.unsold985Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold985Detail)} />
+        <IncomeDeductionDetailCard kind="unsold_98_5" result={result.unsold985Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold985Detail)} surchargeExclusionBasis={surchargeExclusionBasis} />
       )}
       {result.unsold986Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_6" result={result.unsold986Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold986Detail)} />
+        <IncomeDeductionDetailCard kind="unsold_98_6" result={result.unsold986Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold986Detail)} surchargeExclusionBasis={surchargeExclusionBasis} />
       )}
       {/* P4 (2026-06-12) */}
       {result.unsold982Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_2" result={result.unsold982Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold982Detail)} />
+        <IncomeDeductionDetailCard kind="unsold_98_2" result={result.unsold982Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold982Detail)} surchargeExclusionBasis={surchargeExclusionBasis} />
       )}
       {result.unsold984Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_4" result={result.unsold984Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold984Detail)} />
+        <IncomeDeductionDetailCard kind="unsold_98_4" result={result.unsold984Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold984Detail)} surchargeExclusionBasis={surchargeExclusionBasis} />
       )}
       {/* P5 (2026-06-12) */}
       {result.unsold98Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98" result={result.unsold98Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold98Detail)} />
+        <IncomeDeductionDetailCard kind="unsold_98" result={result.unsold98Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold98Detail)} surchargeExclusionBasis={surchargeExclusionBasis} />
       )}
       {/* §99의3 신축주택 과세특례 — 양도소득금액 차감 방식 5년 안분 산식 */}
       {result.new993Detail && <New993DetailCard detail={result.new993Detail} aggregateApplied={appliedOf(result.new993Detail)} />}

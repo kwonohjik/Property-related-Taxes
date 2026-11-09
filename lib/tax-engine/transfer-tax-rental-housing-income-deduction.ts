@@ -121,7 +121,7 @@ export function finalizeRentalHousingIncomeDeduction(args: {
       label: `${active.articleLabel} 농어촌특별세 (감면세액 × 20%)`,
       formula: `(감면 전 산출세액 ${taxBefore.toLocaleString()} − 감면 후 산출세액 ${taxAfter.toLocaleString()}) × 20% = ${surtax.ruralSurtax.toLocaleString()}`,
       amount: surtax.ruralSurtax,
-      legalBasis: TRANSFER.RURAL_SURTAX_993,
+      legalBasis: TRANSFER.RURAL_SURTAX_DEDUCTION,
     });
   }
   return { details, ruralSurtax: surtax.ruralSurtax };
