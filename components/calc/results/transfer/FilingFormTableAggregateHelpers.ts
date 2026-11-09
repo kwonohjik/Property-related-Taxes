@@ -80,6 +80,10 @@ function aggregateEstimatedDisplay(
   return null;
 }
 
+/** 합산 표 자산별 세액 칸 안내 — 자산 단독 누진 참고값이라 합이 합계와 다를 수 있다. */
+export const REF_TAX_FOOTNOTE =
+  "산출세액부터 총결정세액까지의 자산별 칸(참고)은 각 자산을 따로 계산한 값입니다. 합계 칸은 과세표준을 모두 더한 뒤 세율을 적용하므로 자산별 칸을 더한 값과 다를 수 있습니다.";
+
 export function buildAggregateRows(
   _result: TransferTaxResult,
   aggregate: AggregateMeta,
@@ -454,6 +458,17 @@ export function buildAggregateRows(
   const totalRate = fmtRatePct(uniformRate);
   if (totalRate) setStr("taxRate", "total", totalRate);
   setNum("calculatedTax", "total", aggregated.calculatedTax);
+  /**
+   * 자산별 세액 칸 「(참고)」 표기 + 표 아래 안내 (2026-11-09 사용자 결정 a).
+   * 자산 칸은 자산 단독 누진 참고값(`refCalculatedTax`)이라 합이 합계와 다르다 — 함께 양도 주택 2채 실측
+   * 74,870,000 + 27,610,000 = 102,480,000 vs 합계 123,060,000(합산 과세표준 40% 구간). 값은 바꾸지 않는다(위 ❌역안분).
+   * 자산 세액 칸이 2개 이상일 때만 붙인다 — 1개면 그 값이 곧 합계 문맥이다(GB 파트 열은 위에서 비운다).
+   */
+  const refTaxCols = properties.map((p) => p.propertyId).filter((c) => typeof v.calculatedTax?.[c] === "number");
+  const showRefTaxNotice = refTaxCols.length >= 2;
+  if (showRefTaxNotice) {
+    for (const c of refTaxCols) taxNotes[c] = taxNotes[c] ? `(참고) ${taxNotes[c]}` : "(참고)";
+  }
   setNum("reductionTax", "total", aggregated.reductionAmount);
   setNum("determinedTax", "total", aggregated.determinedTax);
   setNum("penaltyTax", "total", aggregated.penaltyTax);
@@ -557,7 +572,14 @@ export function buildAggregateRows(
     //    ⑧과세표준 → ⑨세율 → ⑩산출세액 순서를 따른다.
     ["rateCode", "세율구분 코드"],
     ["taxRate", "세율"],
-    ["calculatedTax", "산출세액", Object.keys(taxNotes).length > 0 ? { notes: taxNotes } : undefined],
+    [
+      "calculatedTax",
+      "산출세액",
+      {
+        ...(Object.keys(taxNotes).length > 0 ? { notes: taxNotes } : {}),
+        ...(showRefTaxNotice ? { footnote: REF_TAX_FOOTNOTE } : {}),
+      },
+    ],
     ["reductionTax", "감면세액"],
     ["determinedTax", "결정세액", { highlight: true }],
     ["penaltyTax", "가산세액", Object.keys(penaltyRoseNotes).length > 0 ? { roseNotes: penaltyRoseNotes } : undefined],
