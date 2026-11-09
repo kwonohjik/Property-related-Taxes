@@ -649,7 +649,8 @@ export interface ReductionLike {
 
 export function toHybridDate(v: unknown): Date | undefined {
   if (v === undefined || v === null || v === "") return undefined;
-  if (v instanceof Date) return v;
+  // Invalid Date 인스턴스는 미입력(undefined)으로 — 기간 비교가 NaN으로 침묵 통과(과소 과세)하는 것을 막는다
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? undefined : v;
   if (typeof v === "string") {
     const d = new Date(v);
     return Number.isNaN(d.getTime()) ? undefined : d;

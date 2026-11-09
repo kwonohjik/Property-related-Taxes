@@ -389,7 +389,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
   // §98의3 — P3 본격 구현 (2026-06-12): 하이브리드 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
     type: z.literal("unsold_98_3"),
-    region: z.enum(["metropolitan", "non_metropolitan"]).optional(),
     residencyType983: z.enum(["resident", "nonresident_no_pe", "nonresident_with_pe"]).optional(),
     houseType983: z.enum(["purchased", "self_built"]).optional(),
     contractDate983: z.string().date().optional(),
@@ -423,7 +422,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     type: z.literal("unsold_98_5"),
     /** ⑫ US-42 — 적용 주체(거주자 또는 국내사업장 없는 비거주자). 누락 시 침묵 strip → 엔진 기본 true */
     isEligibleSubject985: z.boolean().optional(),
-    priceReductionRate: z.number().min(0).max(1).optional(),
     contractDate985: z.string().date().optional(),
     /** ⑫ D2(US-58) 입주자 모집공고안에 공시된 분양가격(원) — 령 §98의4④. 누락 시 침묵 strip → 엔진 미도달 */
     announcedPrice985: z.number().int().positive().optional(),

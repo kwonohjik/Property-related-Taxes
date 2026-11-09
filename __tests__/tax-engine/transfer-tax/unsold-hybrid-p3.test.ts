@@ -57,7 +57,6 @@ function base986(overrides: Partial<Unsold986Input> = {}): Unsold986Input {
     transferDate: D("2022-08-01"),
     acquisitionDate: D("2011-09-01"),
     hoType: "seller_rented",
-    contractDate: D("2011-08-01"),
     stdPriceSumAtBase: 550_000_000,
     floorAreaSqm: 84.5,
     isUnsoldAfterCompletion: true,
