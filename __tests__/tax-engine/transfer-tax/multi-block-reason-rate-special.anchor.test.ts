@@ -78,16 +78,17 @@ describe("D11-07 다건 미지원 사유 — 세율 특칙", () => {
     expect(single98.calculatedTax).toBe(83_500_000);
   });
 
-  it("D11-07-2: 🔴 다건은 그 세율을 적용하지 못한다 — 감면 미선택 값과 원 단위까지 같다", () => {
-    expect(agg98.determinedTax).toBe(141_060_000);
-    expect(agg98.determinedTax).toBe(singleNone.determinedTax);
+  it("D11-07-2: 🔁 (리뷰 US-39 이후) 집계도 §98 20%를 적용한다 — 단건과 원 단위까지 같고 감면 미선택 값과는 다르다", () => {
+    // 종전: 집계는 20% 특칙을 잃어 141,060,000(= 감면 미선택 값)이었다. 지금은 단건 83,500,000과 같다.
+    expect(agg98.determinedTax).toBe(83_500_000);
+    expect(agg98.determinedTax).toBe(single98.determinedTax);
+    expect(agg98.determinedTax).not.toBe(singleNone.determinedTax);
   });
 
-  it("D11-07-3: 🔑 출처 판별 — **과세표준은 동일**하다 ⇒ 차감이 아니라 세율이 원인이다", () => {
+  it("D11-07-3: 🔁 과세표준도 결정세액도 단건과 같다 (세율 특칙을 집계 그룹 세액에 되살렸다)", () => {
     expect(agg98.taxBase).toBe(single98.taxBase);
     expect(agg98.taxBase).toBe(417_500_000);
-    // 차감이 소실됐다면 과세표준부터 벌어졌을 것이다
-    expect(agg98.determinedTax).not.toBe(single98.determinedTax);
+    expect(agg98.determinedTax).toBe(single98.determinedTax);
   });
 
   it("D11-07-4: 🔴 차단 문구가 「차감·세액감면 미반영」이라고 말하지 않는다", () => {

@@ -35,7 +35,7 @@ import {
 import { stripAssetKindGatedReductions } from "./transfer-reductions/asset-kind-gate";
 import { stripAcquisitionCauseGatedReductions } from "./transfer-reductions/unsold-98-acquisition-cause";
 import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
-import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step";
+import { runHouseCountExclusionStep, special15HoPendingNotice } from "./transfer-tax-house-exclusion-step";
 import { mergeRentalCarveoutSurchargeNotice, withMergeRentalCarveout } from "./one-house/merge-rental-carveout";
 import { runIncomeAndBaseSteps } from "./transfer-tax-income-steps";
 import { runOneHouseJudgmentStep } from "./transfer-tax-one-house-judgment-step";
@@ -280,6 +280,9 @@ function calculateTransferTaxCore(
     houseCountExclusionDetails,
     specialHouseExclusionDetail,
   } = runHouseCountExclusionStep(effectiveInput, steps, hceGeneralHouseAcquisitionDate);
+  // Q-16 (a) — §98 감면주택을 15호·13호에 드는 것으로 본 계산에는 해석 미확정 고지를 붙인다(세액 불변, 리뷰 US-52).
+  const special15HoNotice = special15HoPendingNotice(specialHouseExclusionDetail);
+  if (special15HoNotice) warnings.push(special15HoNotice);
   // STEP 0.96 + STEP 1: 임대 전제 되돌림 → 공유 판정 엔진 → 임대·토지 세대 고지 — transfer-tax-one-house-judgment-step.ts (800줄 정책 분리).
   const { exemptionJudgeInput, exemptionResult, prhpUnmet } = runOneHouseJudgmentStep({
     judgeInputBeforeRental,

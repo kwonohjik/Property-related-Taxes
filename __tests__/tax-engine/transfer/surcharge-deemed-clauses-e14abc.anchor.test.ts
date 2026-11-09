@@ -367,11 +367,11 @@ describe("E-14a 조특법 감면주택 — 해석이 확인된 조문만 15호(�
     expect(r.detail).toContain("조특법 §99의2②");
   });
 
-  it("A-1n 조특법 **시행령** §98②·⑥(미분양 국민주택) → 확인 필요 · 종전 동작(2주택 중과 422,521,000)", () => {
+  it("A-1n 🔁 조특법 **시행령** §98②·⑥(미분양 국민주택) → 사용자 결정 Q-16 (a) 15호에 든 것으로 봄 · 15호 배제 204,355,800 (종전: 확인 필요·2주택 중과 422,521,000, 리뷰 US-52)", () => {
     const r = calc(
       input({ householdHousingCount: 2, houses: [SELLING, h("s", "1996-06-01")], specialHouseExclusions: special("unsold_98", "1996-06-01") }),
     );
-    expect(r).toMatchObject({ totalTax: 422_521_000, reasons: "", surchargeType: "multi_house_2" });
+    expect(r).toMatchObject({ totalTax: DEEMED_EXCLUDED_20, reasons: "special_act_house_exclusion", surchargeType: "none" });
   });
 });
 
@@ -600,14 +600,14 @@ describe("겸용주택 — 같은 호 판정·같은 조특법 술어 (E-14a·b)
     expect(r.multiHouseSurcharge?.exclusionReasons[0]?.detail).toContain("조특법 §99의2②");
   });
 
-  it("MX-2n 조특법 **시행령** §98②·⑥ → 확인 필요 · 2주택 중과 그대로", () => {
+  it("MX-2n 🔁 조특법 **시행령** §98②·⑥ → Q-16 (a) 15호 조특법 경로 배제 (종전: 확인 필요·2주택 중과 그대로, 리뷰 US-52)", () => {
     const r = mixed([sellingMixed, makeHouseInfoMock("s", { acquisitionDate: D("1996-06-01") })], {
       specialHouseExclusions: [
         { article: "unsold_98", houseAcquisitionDate: D("1996-06-01"), requirementsConfirmed: true },
       ] as MixedUseAssetInput["specialHouseExclusions"],
     });
-    expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(true);
-    expect(r.multiHouseSurcharge?.surchargeType).toBe("multi_house_2");
+    expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(false);
+    expect(r.multiHouseSurcharge?.exclusionReasons.map((x) => x.type)).toEqual(["special_act_house_exclusion"]);
   });
 
   /** §98의9(STEP 0.9 `hceApplied`)도 같은 leaf로 대조한다 — 사용자 결정 2026-10-04 (route 관측은 `transfer.route.special-act-15ho-hce-verified`). */

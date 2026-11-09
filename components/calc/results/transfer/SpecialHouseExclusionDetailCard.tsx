@@ -19,6 +19,7 @@
 import type { SpecialHouseExclusionResolution } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 import { POP_DECLINE_71_2_ARTICLE } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
 import { SPECIAL_ACT_15HO_VERIFIED_ARTICLES } from "@/lib/tax-engine/transfer-tax-house-exclusion-step";
+import { SPECIAL_ACT_15HO_INTERPRETATION_PENDING_ARTICLES } from "@/lib/tax-engine/transfer-tax-house-exclusion-step";
 import { MULTI_HOUSE } from "@/lib/tax-engine/legal-codes";
 import { countExclusionHouseRef, type HouseRefRow } from "./count-exclusion-house-ref";
 
@@ -43,6 +44,12 @@ export function SpecialHouseExclusionDetailCard({ detail, houses }: Props) {
   const unverified15Labels = eligibleEntries
     .filter((e) => !SPECIAL_ACT_15HO_VERIFIED_ARTICLES.has(e.article))
     .map((e) => e.articleLabel);
+  // Q-16 (a) — 15호·13호에 든 것으로 보고 계산했지만 직접 해석이 없는 조문(§98): 「확인 필요」를 함께 띄운다.
+  const pending15Labels = [
+    ...new Set(
+      eligibleEntries.filter((e) => SPECIAL_ACT_15HO_INTERPRETATION_PENDING_ARTICLES.has(e.article)).map((e) => e.articleLabel),
+    ),
+  ];
   const surchargeCountLead = hasPopDecline
     ? "※ 이 주택 수 제외(의제) 자체는 다주택 중과세율 판정의 주택 수를 바꾸지 않습니다"
     : "※ 다주택 중과세율 판정의 주택 수에는 반영되지 않습니다";
@@ -122,6 +129,12 @@ export function SpecialHouseExclusionDetailCard({ detail, houses }: Props) {
         <p className="text-micro text-muted-foreground">
           ※ {unverified15Labels.join("·")}은(는) 위 중과 배제 사유에 드는지 확인되지 않아 그 판정에서는 빼지
           않습니다(확인 필요)
+        </p>
+      )}
+      {pending15Labels.length > 0 && (
+        <p data-testid="special-house-exclusion-15ho-pending-notice" className="text-micro text-muted-foreground">
+          ※ {pending15Labels.join("·")}은(는) 조세특례제한법 시행령 §98②·⑥에 근거한 제외라, 위 중과 배제 사유(15호·13호)에 드는 것으로
+          보고 계산했습니다. 이 조문에 직접 적용한 해석은 확인하지 못했습니다(확인 필요)
         </p>
       )}
       {hasPopDecline && (

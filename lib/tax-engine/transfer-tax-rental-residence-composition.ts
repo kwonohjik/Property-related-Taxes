@@ -113,14 +113,15 @@ export type RentalResidenceComposition =
  * - §98 — 법률 ①·③ 본문에 소유주택 제외 문언이 없고 시행령 §98②·⑥에 위임한다(문형이 다르다). 효과는 시행령 §98②
  *   「…해당 미분양주택 외의 다른 주택만을 기준으로 하여 「소득세법」제89조제1항제3호를 적용한다」로 §99의2·§99의4와 같아
  *   넣는다(사용자 결정 Q-4 (c) 2026-10-24 · 직접 해석 없음). 13호·15호 단독 축(`SPECIAL_ACT_15HO_VERIFIED_ARTICLES`)에는
- *   넣지 않았다 — 그 축의 결정(「「조세특례제한법」에 따라」 문언)은 따로다.
+ *   종전에 넣지 않았으나 사용자 결정 Q-16 (a)(2026-11-08, 리뷰 US-52)로 두 축 모두 §98을 확인 목록에 둔다 — 15호·13호 쪽은 직접 해석이 없어
+ *   「확인 필요」 고지를 동반한다(`SPECIAL_ACT_15HO_INTERPRETATION_PENDING_ARTICLES`).
  */
 const RENTAL_RESIDENCE_VERIFIED_SPECIAL_ACT: ReadonlySet<string> = new Set([
   ...SPECIAL_ACT_15HO_VERIFIED_ARTICLES,
   "new_99_4_rural",
   "new_99_4_hometown",
   "unsold_98_9",
-  "unsold_98",
+  "unsold_98", // 15호·13호 목록에도 들어 있다(Q-16 a) — 합집합이라 중복이어도 무해하다
 ]);
 
 const sameDay = (a: Date, b: Date) =>

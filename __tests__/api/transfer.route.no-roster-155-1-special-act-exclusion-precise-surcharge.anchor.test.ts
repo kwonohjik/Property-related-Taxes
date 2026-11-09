@@ -352,18 +352,17 @@ describe("명부 없음 · 확인된 조특법 제외 + §155①⑦ 의제 → �
 });
 
 describe("음성 짝 — 열지 않는다(원시 플래그 + #1955 고지 · 세액 불변)", () => {
-  const PARTIAL_EXEMPT_3HOUSE = 497_046_000;
-
-  it("N-1 목록 밖 조문(조특령 §98②·⑥ 미분양) 1채 제외 · 3채 → 497,046,000 + 고지", async () => {
+  // 🔁 US-52 · Q-16 (a) — 조특령 §98②·⑥은 더 이상 목록 밖이 아니다(종전 N-1·N-2 497,046,000 + 고지). 열리고 「확인 필요」 고지가 붙는다.
+  it("N-1 🔁 조특령 §98②·⑥ 미분양 1채 제외 · 3채 → Q-16 (a)로 열린다 · 102,086,600 (종전 497,046,000 + 고지)", async () => {
     const s = await single(withSpecials(temporaryTwoHouse(form({ count: 3 })), [special("unsold_98", "1997-06-01")]));
-    expect(s).toMatchObject({ totalTax: PARTIAL_EXEMPT_3HOUSE, evaluated: false });
-    expect(s.warnings).toContain(notice(3));
+    expect(s).toMatchObject({ totalTax: EXCLUDED_15, evaluated: true });
+    expect(s.warnings.some((w) => w.startsWith("확인 필요") && w.includes("조세특례제한법 시행령 §98②·⑥"))).toBe(true);
   });
 
-  it("N-2 §99의4(확인) + 조특령 §98(목록 밖) · 3채 → 497,046,000 + 고지 (확인 수만 맞아도 열지 않는다)", async () => {
+  it("N-2 🔁 §99의4 + 조특령 §98 · 3채 → 확인 수가 맞아 열린다 · 102,086,600 (종전 497,046,000 + 고지)", async () => {
     const s = await single(withSpecials(N3(), [special("unsold_98", "1997-06-01")]));
-    expect(s).toMatchObject({ totalTax: PARTIAL_EXEMPT_3HOUSE, evaluated: false });
-    expect(s.warnings).toContain(notice(3));
+    expect(s).toMatchObject({ totalTax: EXCLUDED_15, evaluated: true });
+    expect(s.warnings.some((w) => w.startsWith("확인 필요") && w.includes("조세특례제한법 시행령 §98②·⑥"))).toBe(true);
   });
 
   it("N-3 §99의4 1채 제외해도 3채 남음(그 밖의 주택) · 4채 → 1,327,903,500 + 고지", async () => {

@@ -133,10 +133,10 @@ describe("resolveSurchargeDeemedOneHouse — §155② 경로 시행일(구 13호
     expect(resolveSurchargeDeemedOneHouse(i, parsed)).toBe("special_act_house_exclusion");
   });
 
-  it("확인되지 않은 조특법 제외(조특법 시행령 §98②·⑥)만으로 1주택 + 명부 도출 §155① → 종전 동작(temporary_two_house) · 확인 필요", () => {
+  it("🔁 조특법 시행령 §98②·⑥ 제외만으로 1주택 → 사용자 결정 Q-16 (a)로 조특법 경로(special_act_house_exclusion) — 종전: temporary_two_house · 확인 필요 (리뷰 US-52)", () => {
     const i = specialSample("unsold_98", "1996-06-01");
     expect(resolveExemptionHouseCountExclusions(i).specialActExcludedCount).toBe(1);
-    expect(resolveSurchargeDeemedOneHouse(i, parsed)).toBe("temporary_two_house");
+    expect(resolveSurchargeDeemedOneHouse(i, parsed)).toBe("special_act_house_exclusion");
   });
 });
 

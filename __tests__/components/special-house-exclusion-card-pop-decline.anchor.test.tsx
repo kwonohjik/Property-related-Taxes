@@ -99,19 +99,23 @@ describe("SC 감면주택 판정 카드 — §71의2 표제·중과 안내", () 
     expect(secondHome()).toHaveTextContent("요건을 갖추면 주택 수에 산입하지 않습니다");
   });
 
-  it("SC-2 §98 미분양(확인 목록 밖) — 종전 표제·종전 안내 그대로", () => {
+  it("SC-2 🔁 §98 미분양 — Q-16 (a)로 15호·13호 안내가 나오고 「확인 필요」 고지가 함께 붙는다 (종전: 확인 목록 밖 · 안내 없음, 리뷰 US-52)", () => {
     render(<SpecialHouseExclusionDetailCard detail={declared("unsold_98", "1997-06-01")} />);
     expect(card()).toHaveTextContent("조특법 감면주택 보유 — 주택수 제외");
-    expect(card()).toHaveTextContent(OLD_NOTICE);
-    expect(notice15()).toBeNull();
+    expect(notice15()).toHaveTextContent("소득세법 시행령 §167의10①15호·§167의3①13호");
+    expect(card()).not.toHaveTextContent(OLD_NOTICE);
+    const pending = screen.getByTestId("special-house-exclusion-15ho-pending-notice");
+    expect(pending).toHaveTextContent("조세특례제한법 시행령 §98②·⑥");
+    expect(pending).toHaveTextContent("직접 적용한 해석은 확인하지 못했습니다(확인 필요)");
     expect(secondHome()).toBeNull();
   });
 
-  it("SC-3 §71의2 + §98 미분양 — 두 표제를 함께, §98 미분양은 15호 판정에서 빼지 않는다(확인 필요)", () => {
+  it("SC-3 §71의2 + §98 미분양 — 두 표제를 함께, §98 미분양은 15호 판정에 넣되 확인 필요를 고지한다(Q-16 a)", () => {
     render(<SpecialHouseExclusionDetailCard detail={merge(declared("unsold_98", "1997-06-01"), pop("yes"))} />);
     expect(card()).toHaveTextContent("조특법 감면주택·인구감소지역주택 보유 — 주택수 제외");
     expect(notice15()).not.toBeNull();
-    expect(card()).toHaveTextContent("§98 미분양 국민주택은(는) 위 중과 배제 사유에 드는지 확인되지 않아");
+    expect(card()).not.toHaveTextContent("확인되지 않아");
+    expect(screen.getByTestId("special-house-exclusion-15ho-pending-notice")).toHaveTextContent("§98 미분양 국민주택");
     expect(notice15()).toHaveTextContent(POP_LEAD);
     expect(secondHome()).not.toBeNull();
   });
@@ -130,6 +134,7 @@ describe("SC 감면주택 판정 카드 — §71의2 표제·중과 안내", () 
     expect(card()).toHaveTextContent("조특법 감면주택 보유 — 주택수 제외");
     expect(notice15()).not.toBeNull();
     expect(card()).not.toHaveTextContent("확인되지 않아");
+    expect(screen.queryByTestId("special-house-exclusion-15ho-pending-notice")).toBeNull(); // 고지는 §98 한정
     expect(notice15()).toHaveTextContent(PLAIN_LEAD);
     expect(secondHome()).toBeNull();
   });

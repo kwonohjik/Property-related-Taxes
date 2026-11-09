@@ -11,6 +11,7 @@
 import { finalizeTransferTax, buildTransferResultDetails } from "./transfer-tax-finalize";
 import { publicExpropriationPartWiseNotice } from "./public-expropriation-reduction";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
+import { UNSOLD_98_FLAT_RATE } from "./transfer-reductions/unsold-98-constants";
 import type { SurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 
@@ -178,6 +179,13 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     // 정밀 판정이 없으면 fallback 술어의 같은 판정(부칙 제9270호 §14① — US-08) — 다건 §104⑤ 그룹 분류가 읽는다.
     rateSurchargeStatutoryExcluded: multiHouseSurchargeResult?.rateSurchargeStatutoryExcluded ?? surchargeEcho.rateSurchargeStatutoryExcluded,
     ...(effectiveInput.surchargeExcludedByReduction ? { surchargeExcludedByReduction: true } : {}),
+    // 조특법 세율 특칙(§98①1호 20% · §98의3④·§98의5③·§98의6③) 주입 echo — 다건 집계가 그룹 세액에서 되살린다(리뷰 US-39)
+    // 20%는 중과(§104⑦)가 우선(Q-11 b)이라 실제로 20%가 적용된 경우에만 싣는다.
+    ...(args.taxRateInput.forceFlatRate20 && taxResult.appliedRate === UNSOLD_98_FLAT_RATE && !taxResult.surchargeRate && taxResult.progressiveDeduction === 0
+      ? { rateSpecialInjected: { kind: "flat_rate_20" as const } }
+      : args.taxRateInput.suppressShortTermRate
+        ? { rateSpecialInjected: { kind: "suppress_short_term" as const, by: args.taxRateInput.suppressShortTermRateBy } }
+        : {}),
     // houses[] 정밀 판정 원본 echo — 다건 집계가 자산별 세액을 다시 구할 때 **같은 판정**을
     // 쓰도록 그대로 싣는다(표시용 multiHouseSurchargeDetail에는 surchargeApplicable·
     // surchargeType·isSurchargeSuspended가 없어 재사용할 수 없다). 세액 로직 불변 — F01.

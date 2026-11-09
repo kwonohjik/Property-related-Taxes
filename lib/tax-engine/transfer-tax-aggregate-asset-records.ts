@@ -250,13 +250,26 @@ export function buildAssetRecords(
      * 원 입력으로 그룹 세액을 다시 구하면 `calcTax`가 원시 플래그로 중과를 되살린다(실측: 컴패니언 겸용 §99의3 매매 284,205,000 ↔ 겸용 먼저 242,772,000).
      */
     const reductionExclOverride = result.surchargeExcludedByReduction ? { surchargeExcludedByReduction: true } : undefined;
+    /**
+     * 조특법 세율 특칙(§98①1호 20% · §98의3④·§98의5③·§98의6③) — 단건 STEP 7이 세율 입력에만 주입하는 내부 플래그라
+     * 원 입력으로 그룹 세액을 다시 구하면 소실된다(리뷰 US-39). 결과 echo로 같은 입력을 되살린다.
+     * 감면 자체는 별개 축이라 감면 입력은 건드리지 않는다.
+     */
+    const special = result.rateSpecialInjected;
+    const rateSpecialOverride: Partial<TransferTaxInput> | undefined =
+      special?.kind === "flat_rate_20"
+        ? { forceFlatRate20: true }
+        : special?.kind === "suppress_short_term"
+          ? { suppressShortTermRate: true, ...(special.by ? { suppressShortTermRateBy: special.by } : {}) }
+          : undefined;
     const hasOverride =
-      nblOverride !== undefined || rateBasisOverride !== undefined || landOnlyOverride !== undefined || reductionExclOverride !== undefined;
+      nblOverride !== undefined || rateBasisOverride !== undefined || landOnlyOverride !== undefined || reductionExclOverride !== undefined ||
+      rateSpecialOverride !== undefined;
     const correctedItem: TransferTaxItemInput = hasOverride
-      ? { ...item, ...landOnlyOverride, ...nblOverride, ...rateBasisOverride, ...reductionExclOverride }
+      ? { ...item, ...landOnlyOverride, ...nblOverride, ...rateBasisOverride, ...reductionExclOverride, ...rateSpecialOverride }
       : item;
     const correctedSingleInput: TransferTaxInput = hasOverride
-      ? { ...singleInput, ...landOnlyOverride, ...nblOverride, ...rateBasisOverride, ...reductionExclOverride }
+      ? { ...singleInput, ...landOnlyOverride, ...nblOverride, ...rateBasisOverride, ...reductionExclOverride, ...rateSpecialOverride }
       : singleInput;
     return { item, correctedItem, correctedSingleInput, singleInput, result, rates: itemRates };
   };
