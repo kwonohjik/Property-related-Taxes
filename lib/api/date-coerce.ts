@@ -51,7 +51,7 @@ export function toDate(value: unknown, fieldName: string): Date {
   throw new Error(`Expected Date|string|number for "${fieldName}", got ${typeof value}`);
 }
 
-/** 옵션 변환 — null/undefined/빈문자열 → undefined. invalid 문자열은 에러. */
+/** 옵션 변환 — null/undefined/빈문자열 → undefined. invalid 문자열도 throw하지 않고 undefined를 돌려준다(fail-fast 아님). */
 export function toOptionalDate(value: unknown): Date | undefined {
   if (value === null || value === undefined || value === "") return undefined;
   if (value instanceof Date) {

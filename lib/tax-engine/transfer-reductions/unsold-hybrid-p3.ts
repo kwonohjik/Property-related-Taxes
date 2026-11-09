@@ -76,13 +76,15 @@ export {
  * 감면 효과는 실제로 3종이다 — 차감형(소득금액 차감) · 세액감면형(산출세액 차감) · **LTHD 계열**.
  * 그런데 겸용주택·§155⑳ 경로는 `!ALL_INCOME_DEDUCTION_IDS.has(type)`라는 **이분법**으로만
  * 갈라서, 세 번째가 자리를 못 찾고 세액감면형 버킷으로 흘러 `calcReductions`에서 **조용히
- * 사라진다**. 재개발 경로는 아예 `calcLongTermHoldingDeduction`을 부르지 않는다
- * (`transfer-tax.ts`의 유일한 호출부에 도달하지 못함 — 조기반환).
+ * 사라진다**.
  *
- * ⚠️ **세액 반영은 아직 하지 않는다.** §97의3⑤(임대기간분 안분)·§98의2①1호(표2)를 소령 §166⑤의
- *   3분기 LTHD 구조(인가전·인가후 기존건물·청산금)와 어떻게 결합할지는 **별도 법적 판단**이
- *   필요하다 — 전체 양도차익 기준인지 파트별인지가 조문에서 곧바로 나오지 않는다.
- *   그때까지는 **침묵을 없애는 것**이 최소 조치다: 세 경로가 이 집합을 보고 경고를 남긴다.
+ * 재개발 경로는 이 집합을 쓰지 않는다. `unsold_98_2`는 조합원 취득 자산이라 「적용 대상 아님」으로
+ * 고지하고(`transfer-tax-redevelopment.ts`), `rental_97_3`·`rental_97_4`는 Step A.8b
+ * (`transfer-tax-redevelopment-steps.ts`·`transfer-tax-redevelopment-lthd.ts`)가 계산한다.
+ *
+ * ⚠️ **겸용주택·§155⑳ 두 경로는 세액 반영을 아직 하지 않는다.** 이 집합을 보고 미반영 경고만 남긴다
+ *   (`transfer-tax-mixed-use-totals.ts`·`transfer-tax-rental-housing-reductions.ts`).
+ *   그때까지는 **침묵을 없애는 것**이 최소 조치다.
  */
 export const LTHD_SPECIAL_REDUCTION_IDS: ReadonlyArray<string> = [
   "rental_97_3", // 조특법 §97의3① — 임대기간분 70%(8년) / 조특령 §97의3② 후단이 재개발 임대의제를 명문화
@@ -114,11 +116,8 @@ export const ALL_HYBRID_IDS: ReadonlyArray<string> = [
 ];
 
 /**
- * calcReductions 진입점 (P2+P3 통합) — 5년 내 세액감면 후보 (§127⑦ max 패턴).
+ * ⚠️ `calcReductions`의 **유일한** 하이브리드 세액감면 진입점이다 (D5-07) — 5년 내 세액감면 후보 (§127⑦ max 패턴).
  * eligible && tax_amount일 때만 reductionAmount = 산출세액 × rate 채움.
- */
-/**
- * ⚠️ `calcReductions`의 **유일한** 하이브리드 세액감면 진입점이다 (D5-07).
  * 종전에는 `unsold-hybrid.ts`에 §98의7·§99의2 2조문만 찾는 동명이형 래퍼
  * `evaluateHybridTaxAmountFromReductions`가 남아 자신도 「calcReductions 진입점」이라고
  * 주석으로 단언했다 — 배럴에서 그쪽을 import하면 나머지 6조문이 조용히 감면 0이 됐다.

@@ -14,7 +14,7 @@ calculation-repository.ts # createCalculationRepository(uid)
 title-generator.ts        # 세목별 자동 title 생성
 use-auto-save-calculation.ts  # 결과 화면 마운트 시 자동 저장 훅
 migrations/
-  reduction-reclassification.ts  # 기존 이력의 §99의3 'unsold_housing' → 'new_99_3' 재분류
+  reduction-reclassification.ts  # 기존 이력 재분류: 'unsold_housing' → 'new_99_3' 또는 'unsold_98_3'(계약일·취득일 분기), 'long_term_rental' → 'rental_97_3', 'new_housing' → 'new_99'
                                  # db.ts v4 upgrade에서 migrateReductionReclassification() 호출로 배선 완료
   nbl-sigungu-code-recovery.ts   # NBL 재촌 시·군·구 코드를 **저장된 이름 기준**으로 현행에 재정렬
                                  # db.ts v7 upgrade 배선. 코드는 체계 판별이 불가(11680이 구·신 양쪽에

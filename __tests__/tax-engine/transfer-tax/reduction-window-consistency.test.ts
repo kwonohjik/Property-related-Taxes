@@ -4,7 +4,8 @@
 // SPECIAL_HOUSE_EXCLUSION_WINDOWS 두 곳에 정의된다. 한쪽만 수정하면 단건 감면 판정과 모드2
 // 주택수 제외 판정이 어긋난다 — 본 anchor가 일치를 고정해 드리프트를 즉시 탐지한다.
 //
-// ※ §98의6(임대계약 기준 vs WINDOWS 취득기준)·§98의3 비거주자 2-트랙은 의미가 달라 제외.
+// ※ §98의6은 WINDOWS가 창 없음(windows: [], basis "none")이라 비교할 취득기간이 없어 제외(법 §98의6①·②에 취득기간 문언 없음).
+//   §98의3 비거주자 2-트랙은 의미가 달라 제외.
 //   period-check RULES의 D() 리터럴은 비-export라 본 anchor 범위 외(별도 변경 드뭄).
 import { describe, it, expect } from "vitest";
 import {

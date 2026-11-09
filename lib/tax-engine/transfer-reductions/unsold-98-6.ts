@@ -48,8 +48,6 @@ export interface Unsold986Input {
   hoType?: "seller_rented" | "buyer_rented";
   /** 거주자 또는 국내사업장 없는 비거주자(법 ① — US-42). false면 적용 주체 아님. 미제공은 true */
   isEligibleSubject?: boolean;
-  /** 최초 매매계약일 */
-  contractDate?: Date;
   /** 주택+부수토지 기준시가 합계 (원) — 취득 당시 (1호는 최초 임대개시 당시). 6억 초과 제외 */
   stdPriceSumAtBase?: number;
   /** 연면적 (공동주택 전용, ㎡) — 149 초과 제외 */

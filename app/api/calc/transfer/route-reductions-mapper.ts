@@ -141,67 +141,67 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
     if (r.type === "unsold_98_8") {
       return {
         ...r,
-        contractDate988: r.contractDate988 ? new Date(r.contractDate988) : undefined,
-        rentalContractDate988: r.rentalContractDate988 ? new Date(r.rentalContractDate988) : undefined,
-        rentalStartDate988: r.rentalStartDate988 ? new Date(r.rentalStartDate988) : undefined,
-        rentalEndDate988: r.rentalEndDate988 ? new Date(r.rentalEndDate988) : undefined,
+        contractDate988: toOptionalDate(r.contractDate988),
+        rentalContractDate988: toOptionalDate(r.rentalContractDate988),
+        rentalStartDate988: toOptionalDate(r.rentalStartDate988),
+        rentalEndDate988: toOptionalDate(r.rentalEndDate988),
       } as TransferReduction;
     }
     // P5 §98 (2026-06-12): string 일자 → Date 변환 (⑭)
     if (r.type === "unsold_98") {
       return {
         ...r,
-        contractDate98: r.contractDate98 ? new Date(r.contractDate98) : undefined,
+        contractDate98: toOptionalDate(r.contractDate98),
       } as TransferReduction;
     }
     // P4 §98의2·§98의4 (2026-06-12): string 일자 → Date 변환 (⑭)
     if (r.type === "unsold_98_2") {
       return {
         ...r,
-        contractDate982: r.contractDate982 ? new Date(r.contractDate982) : undefined,
+        contractDate982: toOptionalDate(r.contractDate982),
       } as TransferReduction;
     }
     if (r.type === "unsold_98_4") {
       return {
         ...r,
-        contractDate984: r.contractDate984 ? new Date(r.contractDate984) : undefined,
+        contractDate984: toOptionalDate(r.contractDate984),
       } as TransferReduction;
     }
     // P3 §98의3·§98의5·§98의6 (2026-06-12): string 일자 → Date 변환 (⑭)
     if (r.type === "unsold_98_3") {
       return {
         ...r,
-        contractDate983: r.contractDate983 ? new Date(r.contractDate983) : undefined,
-        downPaymentCompletedDate983: r.downPaymentCompletedDate983 ? new Date(r.downPaymentCompletedDate983) : undefined,
-        constructionStartDate983: r.constructionStartDate983 ? new Date(r.constructionStartDate983) : undefined,
-        usageApprovalDate983: r.usageApprovalDate983 ? new Date(r.usageApprovalDate983) : undefined,
+        contractDate983: toOptionalDate(r.contractDate983),
+        downPaymentCompletedDate983: toOptionalDate(r.downPaymentCompletedDate983),
+        constructionStartDate983: toOptionalDate(r.constructionStartDate983),
+        usageApprovalDate983: toOptionalDate(r.usageApprovalDate983),
       } as TransferReduction;
     }
     if (r.type === "unsold_98_5") {
       return {
         ...r,
-        contractDate985: r.contractDate985 ? new Date(r.contractDate985) : undefined,
+        contractDate985: toOptionalDate(r.contractDate985),
       } as TransferReduction;
     }
     if (r.type === "unsold_98_6") {
       return {
         ...r,
-        rentalContractDate986: r.rentalContractDate986 ? new Date(r.rentalContractDate986) : undefined,
-        rentalStartDate986: r.rentalStartDate986 ? new Date(r.rentalStartDate986) : undefined,
+        rentalContractDate986: toOptionalDate(r.rentalContractDate986),
+        rentalStartDate986: toOptionalDate(r.rentalStartDate986),
         businessRegistrationDate986: toOptionalDate(r.businessRegistrationDate986),
         rentalRegistrationDate986: toOptionalDate(r.rentalRegistrationDate986),
         rentalVacancyPeriods986: r.rentalVacancyPeriods986?.map((v, i) => ({
           startDate: toDate(v.startDate, `rentalVacancyPeriods986[${i}].startDate`),
           endDate: toDate(v.endDate, `rentalVacancyPeriods986[${i}].endDate`),
         })),
-        rentalEndDate986: r.rentalEndDate986 ? new Date(r.rentalEndDate986) : undefined,
+        rentalEndDate986: toOptionalDate(r.rentalEndDate986),
       } as TransferReduction;
     }
     // P2 §98의7 9억↓ 미분양 (2026-06-11): string 일자 → Date 변환 (⑭)
     if (r.type === "unsold_98_7") {
       return {
         ...r,
-        contractDate987: r.contractDate987 ? new Date(r.contractDate987) : undefined,
+        contractDate987: toOptionalDate(r.contractDate987),
       } as TransferReduction;
     }
     // P2 §99의2 신축·미분양·1세대1주택 (2026-06-11): string 일자 → Date 변환 (⑭)
@@ -216,9 +216,7 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
     if (r.type === "unsold_98_9") {
       return {
         ...r,
-        unsoldHouseAcquisitionDate: r.unsoldHouseAcquisitionDate
-          ? new Date(r.unsoldHouseAcquisitionDate)
-          : undefined,
+        unsoldHouseAcquisitionDate: toOptionalDate(r.unsoldHouseAcquisitionDate),
       } as TransferReduction;
     }
     // §99의3 (Phase 2): string 일자 → Date 변환 (⑭ 경로 일원화 — F-5).

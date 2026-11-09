@@ -19,8 +19,9 @@
  *   (축 일원화 #1245 이후 입주권은 `right_to_move_in`이라 `RENTAL_HOUSING_KINDS`에서 이미 빠진다.)
  *
  *   게이트는 그대로 두되(조문상 허용되는 조합이므로), 재개발 경로가 §97의3·§97의4의 **장기보유
- *   특별공제 특례를 계산하지 않는다**는 사실은 그 경로가 경고로 고지한다
- *   (`transfer-tax-redevelopment.ts` — `LTHD_SPECIAL_REDUCTION_IDS`).
+ *   특별공제 특례는 재개발 경로의 Step A.8b가 계산한다**
+ *   (`transfer-tax-redevelopment-steps.ts`·`transfer-tax-redevelopment-lthd.ts`).
+ *   §98의2는 조합원 취득 자산이라 「적용 대상 아님」으로 고지한다(`transfer-tax-redevelopment.ts`).
  */
 
 import { REDUCTION_METADATA } from "./metadata";
