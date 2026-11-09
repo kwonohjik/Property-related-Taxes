@@ -259,6 +259,11 @@ export interface TransferTaxResult {
    * §104① 후단·§104⑦ 후단 비교의 **승자**이므로 「해당 호 집합」은 표현하지 않는다.
    */
   rateClause?: RateClause;
+  /**
+   * §104 밖 세율 특례 표지(조특법 §98①1호 20%) — 신고서 ③ 세율구분 코드(1-92) 표시 전용.
+   * `rateClause`(§104 호 축)에 섞지 않는다 — 그룹핑 키가 그 값을 읽는다.
+   */
+  specialRateBasis?: import("../transfer-tax-rate-clause").SpecialRateBasis;
   /** 총 감면세액 */
   reductionAmount: number;
   /** 감면 유형 (표시용 한글 라벨 — "자경농지", "장기임대주택" 등) */

@@ -156,6 +156,8 @@ export function TransferTaxResultView({
           // PHD(§164⑦) 결과 이름 — 화면과 같은 단일 정의(`isPhdApartment`). 표시 전용, 엔진·API 무관
           phdApartment: isPhdApartment(resolvedAsset),
           filingHeadRows: buildSingleFilingHeadPdfRows({ result, formData, asset: resolvedAsset, transferPriceOverride }),
+          // ③ 세율구분 코드 · ⑯ 장특 코드 · ㉑ 감면종류·감면율 · ㉒ 소득세 감면세액 — 화면 신고서 표와 같은 행(Q-27)
+          filingCodeRows: buildSingleFilingHeadPdfRows({ result, formData, asset: resolvedAsset, transferPriceOverride }, "code"),
           // 화면의 「조정대상지역 판정 — 확인 필요」 줄과 같은 leaf — PDF에도 항상 싣는다.
           regulatedAreaAssumptions: regulatedAssumptionPdfGroups([{ form: formData }]),
         },

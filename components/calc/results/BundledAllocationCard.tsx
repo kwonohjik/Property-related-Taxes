@@ -52,6 +52,8 @@ import {
 } from "@/lib/print/transfer-print-sections";
 import { downloadSelectedPdf } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
 import { buildFilingHeadPdfRows } from "@/components/calc/results/transfer/filing-head-pdf-rows";
+import { buildFilingCodePdfRows } from "@/components/calc/results/transfer/filing-head-pdf-rows";
+import { sumReductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { extractRelevantBuildingStdSnapshots } from "@/lib/storage/use-auto-save-calculation";
 import { useMemo, useState } from "react";
 
@@ -79,7 +81,7 @@ interface Props {
  *
  * MultiTransferTaxResultView·BundledAllocationCard·DetailedCalculationStatementCard에서 공유.
  */
-export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult & { aggregateIncomeDeductionReducible: number } {
+export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult & { aggregateIncomeDeductionReducible: number; aggregateReductionEligibleIncome: number } {
   return {
     isExempt: false,
     transferGain: a.totalTransferGain,
@@ -139,6 +141,11 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
      * 화면 신고서 표 합계(`FilingFormTableAggregateHelpers` 「소득금액 감면대상」)와 같은 합이다.
      */
     aggregateIncomeDeductionReducible: a.properties.reduce((s, p) => s + (p.incomeDeductionReducible ?? 0), 0),
+    /**
+     * ⑲ 세액감면대상 합 — 화면 신고서 표 합계 열과 **같은 함수**(`sumReductionEligibleIncome`)다(US-67).
+     * 어댑터는 `reductionTypeApplied`·`reducibleIncome`을 싣지 않아 PDF의 단건식 `reductionEligibleIncome(r…)`가 0으로 찍혔다.
+     */
+    aggregateReductionEligibleIncome: sumReductionEligibleIncome(a.properties),
   };
 }
 
@@ -186,6 +193,12 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
         inputData: {
           buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: formData.assets }),
           filingHeadRows: buildFilingHeadPdfRows({
+            result: aggregateToFilingResult(aggregated),
+            formData,
+            aggregate: { properties: aggregated.properties, aggregated, ownershipMap },
+          }),
+          // ③ 세율구분 코드 등 — 화면 신고서 표(집계 열)와 같은 행(Q-27)
+          filingCodeRows: buildFilingCodePdfRows({
             result: aggregateToFilingResult(aggregated),
             formData,
             aggregate: { properties: aggregated.properties, aggregated, ownershipMap },

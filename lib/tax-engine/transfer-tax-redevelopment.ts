@@ -651,6 +651,7 @@ export function calculateRedevelopmentTax(
     basicDeduction,
     taxBase,
     appliedRate: taxResult.appliedRate,
+    ...(taxResult.specialRateBasis ? { specialRateBasis: taxResult.specialRateBasis } : {}),
     progressiveDeduction: taxResult.progressiveDeduction,
     calculatedTax: taxResult.calculatedTax,
     isSurchargeSuspended: taxResult.surchargeSuspended,
