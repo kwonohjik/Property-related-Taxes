@@ -115,7 +115,7 @@ describe("US-39 §98 20% (Q-9 b) — 주택분은 20%로 따로, 나머지만 §
 });
 
 describe("US-39 단기세율 배제 — 감면율 100% 미만(과대)과 100%(과소) 두 방향", () => {
-  it("U39-5: 🔁 §98의5 60% (보유 10개월) + 토지 — 세율 특칙이 살아 총부담 57,170,053 (종전 71,296,500 과대)", () => {
+  it("U39-5: 🔁 §98의5 60% (보유 10개월) + 토지 — 세율 특칙이 살아 총부담 55,786,712 (종전 71,296,500 과대 — 종전값은 #3068 표1 연혁 전 측정)", () => {
     const h = prop("H", {
       transferPrice: 800_000_000,
       acquisitionPrice: 500_000_000,
@@ -124,15 +124,16 @@ describe("US-39 단기세율 배제 — 감면율 100% 미만(과대)과 100%(�
       reductions: [RED_985],
     });
     const r = agg(2012, [h, landOf("2012-01-20")]);
-    // 주택 단기 군이 아니라 §104①1호 누진 — 합산 누진세액 110,260,000(= 세율군별 = 전체누진)
-    expect(r.calculatedTaxByGroups).toBe(110_260_000);
-    expect(r.calculatedTax).toBe(110_260_000);
+    // 주택 단기 군이 아니라 §104①1호 누진 — 합산 누진세액 108,860,000(= 세율군별 = 전체누진)
+    // 토지(2005 취득 · 보유 7년)는 #3068 표1 연혁으로 2012 양도 21%(종전 연 2% 14%) — mock 누진표는 2024 시행본이다.
+    expect(r.calculatedTaxByGroups).toBe(108_860_000);
+    expect(r.calculatedTax).toBe(108_860_000);
     expect(r.groupTaxes.map((g) => g.group)).toEqual(["progressive"]); // 종전: short_term + progressive 두 군
-    expect(r.determinedTax).toBe(51_972_776);
-    expect(r.totalTax).toBe(57_170_053);
+    expect(r.determinedTax).toBe(50_715_193);
+    expect(r.totalTax).toBe(55_786_712);
   });
 
-  it("U39-6: 🔁 §98의3 100% (5년 내) + 토지 — 총부담 15,159,284 (종전 5,626,500 과소: 주택만 단기 군으로 전액 감면되고 토지만 낮은 구간)", () => {
+  it("U39-6: 🔁 §98의3 100% (5년 내) + 토지 — 총부담 14,243,059 (종전 5,626,500 과소 — 종전값은 #3068 표1 연혁 전 측정: 주택만 단기 군으로 전액 감면되고 토지만 낮은 구간)", () => {
     const h = prop("H", {
       transferPrice: 800_000_000,
       acquisitionPrice: 500_000_000,
@@ -141,8 +142,9 @@ describe("US-39 단기세율 배제 — 감면율 100% 미만(과대)과 100%(�
       reductions: [RED_983],
     });
     const r = agg(2010, [h, landOf("2010-06-01")]);
-    expect(r.calculatedTax).toBe(111_060_000);
-    expect(r.determinedTax).toBe(13_781_168);
-    expect(r.totalTax).toBe(15_159_284);
+    // 토지(보유 5년)는 #3068 표1 연혁으로 2010 양도 15%(종전 10%)
+    expect(r.calculatedTax).toBe(110_060_000);
+    expect(r.determinedTax).toBe(12_948_236);
+    expect(r.totalTax).toBe(14_243_059);
   });
 });
