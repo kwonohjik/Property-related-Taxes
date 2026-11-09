@@ -4,6 +4,7 @@
  *
  *   RC-1 토지(매매) + 원조합원 입주권(종전 주택 · 2000 상속 · ① 3억 · ② 7.2억)을 함께 양도 — 둘째 카드에 ② 칸이 보이고,
  *        계산하면 본문 `companionAssets[0].inheritedHouseValuation`이 실리고 합산 결정세액 116,260,000(종전 266,250,000 = ① 단독).
+ * 시드 주택 수 "0" — 함께 양도 입주권이 세대 기준 자산이라 ① 칸이 열리고, ⑧(US-31)은 «다른 보유 주택 없음» 확인과 주택 수가 어긋나면 막는다(종전 "1"은 ① 칸이 숨어 통과했다). 세액은 같다.
  * 사람이 브라우저로 직접 한 수동 확인은 아니다(headless Playwright). 워크트리는 `E2E_PORT=<포트> npx playwright test <spec>`.
  */
 import { test, expect } from "@playwright/test";
@@ -30,7 +31,7 @@ const seed = {
   state: {
     formData: {
       assets: [LAND, OM], transferDate: "2026-02-16", filingDate: "2026-04-30", contractTotalPrice: "1300000000", bundledSaleMode: "actual",
-      householdHousingCount: "1", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, isOneHousehold: false,
+      householdHousingCount: "0", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, isOneHousehold: false,
       isRegulatedArea: false, wasRegulatedAtAcquisition: false, isUnregistered: false, totalTransferExpense: "0",
     },
     pendingMigration: false,
