@@ -156,10 +156,9 @@ describe("NH-41 — refine 단위: 하이브리드 5년 분기 · 세율·장특
     expect(await run(["unsold_98_3", "new_99_3"], "2022-01-01", "2024-01-01"), "5년 이내로 확정되면 막는다").toHaveLength(1);
     expect(await run(["unsold_98_3", "new_99_3"], "2015-01-01", "2024-01-01"), "5년 후로 확정되면 둘 다 차감형").toHaveLength(0);
   });
-  it("감면 1건 · 같은 트랙끼리 · 트랙 밖(§97의3)은 막지 않는다", async () => {
+  it("감면 1건 · 같은 트랙끼리는 막지 않는다 (§97의3·§97의4 병용은 transfer.route.rental-97-3-4-track-127-7.anchor 가 고정)", async () => {
     expect(await run(["new_99_3"], "2003-03-01", "2024-08-01")).toHaveLength(0);
     expect(await run(["rental_97_main", "public_expropriation"], "2003-03-01", "2024-08-01")).toHaveLength(0);
-    expect(await run(["rental_97_3", "new_99_3"], "2003-03-01", "2024-08-01"), "Q-2 b: §97의3은 별건").toHaveLength(0);
   });
   it("오류 경로는 충돌 상대 감면의 type 칸을 가리킨다", async () => {
     const i = await run(["new_99_3", "public_expropriation"], "2003-03-01", "2024-08-01");

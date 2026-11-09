@@ -87,11 +87,27 @@ export function isTaxAmountTrack(type: string, isWithin5Years: boolean): boolean
  */
 const RATE_LTHD_SPECIAL_TRACK_IDS: ReadonlyArray<string> = ["unsold_98", "unsold_98_2"];
 
-export type Track127_7Kind = "income_deduction" | "tax_amount" | "rate_lthd_special";
+/**
+ * **임대 장특 특례** 조문 — §97의3①(임대기간분 공제율 70%)·§97의4①(보유기간별 공제율에 추가공제율 가산).
+ * 감면세액도 소득금액 차감도 만들지 않고 장기보유특별공제율만 바꾼다(metadata `long_term_holding_special`·`long_term_holding_additional`).
+ *
+ * 조심 2024서2915(2024.12.12., 기각)가 §97의4를 §127⑦의 «감면규정»으로 보아 §99의3과 병용 불가로 판단했다.
+ * §97의3은 직접 재결이 없다 — §97의4와 같은 구조(공제율을 달리 적용)라 같게 둔다(계획서 `rental-97-3-4-track-127-7.plan.md` Q-1 a · V-1: 유추).
+ * 임대 범주 **밖** 분류 조문과 보유연수와 무관하게 택일이다. 임대 범주 **안** 쌍은 법이 따로 정하므로(§97의3②·§97의5②) 여기서 다루지 않는다(Q-3 a).
+ */
+const RENTAL_LTHD_TRACK_IDS: ReadonlyArray<string> = ["rental_97_3", "rental_97_4"];
+
+/** 임대 범주(§97 시리즈 + legacy) — §97의3/4와의 쌍은 §127⑦이 아니라 §97의3②·§97의5②·패널 라디오·⑧ D2-05가 맡는다. */
+const RENTAL_97_SERIES_IDS: ReadonlyArray<string> = [
+  "rental_97_main", "rental_97_proviso", "rental_97_2", "rental_97_3", "rental_97_4", "rental_97_5", "long_term_rental",
+];
+
+export type Track127_7Kind = "income_deduction" | "tax_amount" | "rate_lthd_special" | "rental_lthd";
 
 /** §127⑦ 교차 판정용 분류 — 세율·장특 특례를 5년 분기보다 먼저 가른다. 어느 트랙도 아니면 null. */
 export function classifyTrack127_7(type: string, isWithin5Years: boolean): Track127_7Kind | null {
   if (RATE_LTHD_SPECIAL_TRACK_IDS.includes(type)) return "rate_lthd_special";
+  if (RENTAL_LTHD_TRACK_IDS.includes(type)) return "rental_lthd";
   if (isIncomeDeductionTrack(type, isWithin5Years)) return "income_deduction";
   if (isTaxAmountTrack(type, isWithin5Years)) return "tax_amount";
   return null;
@@ -101,6 +117,7 @@ export function classifyTrack127_7(type: string, isWithin5Years: boolean): Track
 export function track127_7EffectLabel(type: string, kind: Track127_7Kind): string {
   if (kind === "income_deduction") return "양도소득금액 차감";
   if (kind === "tax_amount") return "산출세액 감면";
+  if (kind === "rental_lthd") return type === "rental_97_3" ? "장기보유특별공제율 70% 특례" : "장기보유특별공제 추가공제율 특례";
   return type === "unsold_98" ? "세율 20% 특례" : "장기보유특별공제 표2·일반세율 특례";
 }
 
@@ -112,6 +129,7 @@ export interface Track127_7Conflict {
 /**
  * §127⑦ 트랙 교차 단일 소스 — ⑧ validate·⑤ 패널이 공유한다.
  * 충돌: (a) 차감형 + 세액감면형 (D10-01), (b) 세율·장특 특례 + 다른 어떤 트랙 조문(US-45 Q-8 (a) — §98+§99 동시 충족 포함).
+ * (c) 임대 장특 특례(§97의3·§97의4) + 임대 범주 밖 어떤 분류 조문(조심 2024서2915 · 계획서 `rental-97-3-4-track-127-7.plan.md`).
  * 차감형끼리·세액감면형끼리는 각자 경로(`resolveIncomeDeduction` 1건·`calcReductions` max)가 하나만 고른다.
  */
 export function findTrack127_7Conflict(
@@ -125,6 +143,11 @@ export function findTrack127_7Conflict(
   if (special) {
     const other = classified.find((x) => x.type !== special.type);
     return other ? { first: special, second: other } : null;
+  }
+  const rentalLthd = classified.find((x) => x.kind === "rental_lthd");
+  if (rentalLthd) {
+    const other = classified.find((x) => !RENTAL_97_SERIES_IDS.includes(x.type));
+    return other ? { first: rentalLthd, second: other } : null;
   }
   const ded = classified.find((x) => x.kind === "income_deduction");
   const tax = classified.find((x) => x.kind === "tax_amount");
