@@ -27,7 +27,7 @@ import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { buildPropertyPayload } from "@/lib/calc/multi-transfer-tax-api";
 import { validateMultiSupportedMode } from "@/lib/calc/multi-transfer-tax-validate";
-import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { effectiveLandAcquisitionCause, effectiveLandCarryover, landCauseDisplay } from "@/lib/calc/transfer-land-part-cause";
 import { landRebuildHost } from "@/lib/calc/transfer-land-rebuild";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
@@ -175,7 +175,7 @@ for (const host of ["purchase", "newConstruction"] as const) {
     });
 
     it("다건 — ⑧ 지원 모드 아님(단건 전용 문구) · 우회 시 multi route가 400(strip 금지)", async () => {
-      expect(validateMultiSupportedMode(aForm(host) as never)).toBe(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE);
+      expect(validateMultiSupportedMode(aForm(host) as never)).toBe(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE);
       const payload = buildPropertyPayload(aForm(host) as never) as Record<string, unknown>;
       expect(payload.landCarryoverPart).toBeTruthy();
       const res = await POST_MULTI(

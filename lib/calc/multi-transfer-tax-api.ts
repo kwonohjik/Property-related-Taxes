@@ -83,6 +83,7 @@ import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 import { deemedOneHouseContextDeclared, rentalResidenceContextDeclared } from "./deemed-one-house-context";
 import { withRedevCarryoverAcqMode } from "./redev-carryover-acq-mode";
+import { primaryCarryoverTaxationPayload } from "./transfer-tax-api-carryover-primary";
 
 /** 값이 있을 때만 키를 싣는다 — undefined 키를 보내지 않는다(Zod optional · 단건 ④와 같은 형태). */
 function optionalKey<K extends string>(key: K, value: object | undefined): Partial<Record<K, object>> {
@@ -455,6 +456,9 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     ...((hasPre1990 || (primary ? primaryAcquisitionModeFlags(primary).hasPre1990ForSec164 : false)) && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     ...(primary ? buildInheritedAcquisitionPayload(primary, primaryRatio, primaryFractional) : {}),
     ...(primary ? buildInheritedHouseValuationPayload(primary, form.transferDate) : {}),
+    // ⑬ 배우자등 이월과세(§97의2) — 단건 ④와 **같은 leaf**(계획서 multi-carryover-bg-gb-shares 트랙 CO). 종전에는 이 키를 만들지 않았다(⑧·⑫가 막았다).
+    //    파트 이월과세·채무 인수분은 ⑧이 막는다(⑫ 같은 문구). 지분 묶음(축 B)은 다건 범위 밖이라 단건의 부담부증여 지분 예외가 필요 없다.
+    ...(primary ? primaryCarryoverTaxationPayload(primary, form.transferDate, primaryRatio) : {}),
     // ⑬ 상업용건물·오피스텔 — 단건 ④(`transfer-tax-api-primary-context.ts`·`transfer-tax-api.ts`)와 **같은 leaf** 3개
     //    (§164⑥ 환산 · 「지방세법 시행령」 §101① 부수토지 초과분 · §163⑨2호 상속 상가 보조 입력). 하나라도 빠지면 엔진이
     //    그 판정을 조용히 건너뛴다(환산 소실 시 양도차익 = 양도가액 전액 — 계획서 multi-building-valuation-support §2.2).

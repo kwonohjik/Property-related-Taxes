@@ -14,7 +14,8 @@
  * 문구는 ⑧과 같은 상수를 쓴다. 이 파일은 서버 스키마가 import하므로 클라이언트 모듈을 끌어오지 않는다.
  */
 import { z } from "zod";
-import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
@@ -40,19 +41,17 @@ const RATE_SPECIAL_REDUCTIONS: ReadonlySet<string> = new Set(ALL_INCOME_DEDUCTIO
 const whenPresent = (message: string) => (v: unknown) => (v !== undefined && v !== null ? message : null);
 
 export const MULTI_REJECT_RULES: Record<string, (v: unknown, data?: Record<string, unknown>) => string | null> = {
-  // F-5 — 이월과세 자산의 취득가액은 서브객체에만 있다. 원인만 있어도(서브객체 없이 취득가액 0) 거부.
-  carryoverTaxation: whenPresent(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE),
-  acquisitionCause: (v) =>
-    v === "carryover_gift"
-      ? MULTI_CARRYOVER_UNSUPPORTED_MESSAGE
-      : v === "burdened_gift"
-        ? MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE
-        : null,
+  // 배우자등 이월과세(§97의2) — 자산 단위 사건은 ⑭가 단건과 같이 옮긴다(계획서 multi-carryover-bg-gb-shares 트랙 CO).
+  //   원인만 있고 서브객체가 없는 입력은 공용 refine(`refinePrimaryAcquisitionInputs` — 「증여 정보가 필요합니다」)이 막는다.
+  //   당초 증여 때 인수한 채무 부분(매입분)만 거부한다 — 예정신고 세액 계산이 자산마다 단건 엔진을 불러 채무 키에서 멈춘다(⑧ 같은 문구).
+  carryoverTaxation: (v) =>
+    ((v as { giftAssumedDebt?: number } | null | undefined)?.giftAssumedDebt ?? 0) > 0 ? MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE : null,
+  acquisitionCause: (v) => (v === "burdened_gift" ? MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE : null),
   transferType: (v) => (v === "burdened_gift" ? MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE : null),
   // 주택 split 파트 이월과세(P1) — 다건 ⑭는 이 키를 옮기지 않고, ②3호 비교는 신고 전체 결정세액이 필요하다(N-1). 키가 오면 strip(200 + 이월과세 없는 세액) 대신 400. 토지 원인 `carryover_gift`만 있는(서브객체 없는) 입력은 공용 leaf(S1)가 종전 G-1처럼 막는다.
-  carryoverGiftEvent: whenPresent(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE),
-  landCarryoverPart: whenPresent(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE),
-  buildingCarryoverPart: whenPresent(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE),
+  carryoverGiftEvent: whenPresent(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE),
+  landCarryoverPart: whenPresent(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE),
+  buildingCarryoverPart: whenPresent(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE),
   burdenedGiftInfo: whenPresent(MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE),
   burdenedGiftWholeInfo: whenPresent(MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE),
   redevelopment: whenPresent(MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE),

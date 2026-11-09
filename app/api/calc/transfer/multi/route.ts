@@ -49,6 +49,7 @@ import { computePreliminaryFilingTaxes } from "@/lib/tax-engine/transfer-tax-pre
 import { expandMultiGeneralBuildings } from "../multi-gb-expansion";
 import { gbPreliminaryUnits } from "../multi-gb-expansion";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { toEngineCarryoverTaxation } from "@/lib/api/carryover-engine-input";
 import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
 import { ratesForTransferDate } from "@/lib/tax-engine/transfer-tax-item-rates";
 import { anySameDayRightChangesConclusion, SAME_DAY_RIGHT_NOTICE } from "@/lib/tax-engine/one-house/same-day-right";
@@ -291,6 +292,8 @@ export async function POST(request: NextRequest) {
       isDesignatedArea: p.isDesignatedArea,
       isSuccessorRightToMoveIn: p.isSuccessorRightToMoveIn,
       acquisitionCause: p.acquisitionCause,
+      // ⑭ 배우자등 이월과세(§97의2) — 단건 정본(`engine-input.ts` `toEngineCarryoverTaxation`)과 같은 Date 변환(트랙 CO).
+      carryoverTaxation: toEngineCarryoverTaxation(p.carryoverTaxation, "carryoverTaxation"),
       decedentAcquisitionDate: toOptionalDate(p.decedentAcquisitionDate),
       nonHeirBequest: p.nonHeirBequest,
       // ⑭ US-07 — 단건 정본(`engine-input.ts`)과 같다

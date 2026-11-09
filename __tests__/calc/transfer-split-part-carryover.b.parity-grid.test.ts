@@ -26,7 +26,7 @@ import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { buildPropertyPayload } from "@/lib/calc/multi-transfer-tax-api";
 import { validateMultiSupportedMode } from "@/lib/calc/multi-transfer-tax-validate";
-import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { effectiveBuildingCarryoverMix, effectiveBuildingCauseMix, effectiveCarryoverDonorSplit } from "@/lib/calc/transfer-land-part-cause";
 import { isSeparateAcquisition } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { carryoverResidenceJudgmentDate } from "@/lib/calc/transfer-tax-api-carryover";
@@ -192,7 +192,7 @@ describe("P4 B — ⑧≡⑫ 격자", () => {
   });
 
   it("다건 — ⑧ 지원 모드 아님(단건 전용 문구) · 우회 시 multi route가 400(strip 금지)", async () => {
-    expect(validateMultiSupportedMode(bForm() as never)).toBe(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE);
+    expect(validateMultiSupportedMode(bForm() as never)).toBe(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE);
     const payload = buildPropertyPayload(bForm() as never) as Record<string, unknown>;
     expect(payload.buildingCarryoverPart).toBeTruthy();
     const res = await POST_MULTI(

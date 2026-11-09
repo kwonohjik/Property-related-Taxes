@@ -67,7 +67,12 @@ describe("F-12 다건 키 분류", () => {
     expect(issues({ propertyType: "housing" })).toEqual([]);
     expect(issues({ propertyType: "redevelopment_apt" })).toEqual(["propertyType"]);
     expect(issues({ propertyType: "right_to_move_in" })).toEqual(["propertyType"]);
-    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType"]);
+    // 이월과세(§97의2) — 자산 단위 사건은 ⑭가 옮긴다(트랙 CO). 당초 증여 때 인수한 채무 부분만 거부한다.
+    expect(issues({ carryoverTaxation: {} })).toEqual([]);
+    expect(issues({ carryoverTaxation: { giftAssumedDebt: 0 } })).toEqual([]);
+    expect(issues({ carryoverTaxation: { giftAssumedDebt: 100_000_000 } })).toEqual(["carryoverTaxation"]);
+    expect(issues({ acquisitionCause: "carryover_gift" })).toEqual([]);
+    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType", "carryoverTaxation"]);
     for (const k of rejected) {
       if (scalar.has(k)) continue;
       expect(issues({ [k]: {} })).toEqual([k]);
