@@ -622,7 +622,7 @@ export function buildGeneralBuildingAssetCards(
    * 분모는 **그 파트의 양도 당시 기준시가** — 엔진이 아는 값을 쓴다. 사용자에게 받으면
    * 화면의 §166⑥ 안분 산식과 계산이 갈린다.
    */
-  applyCarryoverEstimationBasis(assetCards, landStdTotalForFormula, input.transferBuildingStdPrice);
+  applyCarryoverEstimationBasis(assetCards, landStdTotalForFormula, input.transferBuildingStdPrice, input.ownershipRatio);
 
   // 사례 35: 주택→상가 용도변경 3필드를 모든 자산 카드에 일괄 propagate
   if (input.houseToCommercialConversion) {

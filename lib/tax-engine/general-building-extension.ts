@@ -655,7 +655,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
    * 분모는 그 파트의 양도 당시 기준시가: 토지 `landStdTotal`, 건물1 `buildingStdTotal`(**증축 부분 제외** — 2-way 가 `input.transferBuildingStdPrice`를 넘기는 것과 같다).
    * 건물2 카드는 `carryoverTaxation`이 없어(위 주석·GX-3) 건너뛴다.
    */
-  applyCarryoverEstimationBasis(assetCards, landStdTotal, buildingStdTotal);
+  applyCarryoverEstimationBasis(assetCards, landStdTotal, buildingStdTotal, input.ownershipRatio);
 
   // allocation·acquisition·estimatedDeduction 출력 구조는 2-way 기준 호환.
   // 증축 경로에서는 토지·건물1 값으로 채움 (건물2는 assetCards에 직접 포함).

@@ -21,6 +21,7 @@ import {
   calculateEstimatedAcquisitionPrice,
   calculateProration,
 } from "./tax-utils";
+import { lumpSumDeductionRatioOf } from "./tax-utils";
 import { TaxRateNotFoundError } from "./tax-errors";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { TRANSFER } from "./legal-codes";
@@ -354,7 +355,7 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     const deduction = computeEstimatedDeduction(
       input.standardPriceAtAcquisition ?? 0,
       estimatedDeductionRate,
-      input.ownershipRatio,
+      lumpSumDeductionRatioOf(input),
     );
     acquisitionCostBase = estimated;
     estimatedBase = estimated;
@@ -366,7 +367,7 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     const deduction = computeEstimatedDeduction(
       input.standardPriceAtAcquisition ?? 0,
       estimatedDeductionRate,
-      input.ownershipRatio,
+      lumpSumDeductionRatioOf(input),
     );
     acquisitionCostBase = appraisal;
     estimatedBase = appraisal;
@@ -380,7 +381,7 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     const deduction = computeEstimatedDeduction(
       input.standardPriceAtAcquisition ?? 0,
       estimatedDeductionRate,
-      input.ownershipRatio,
+      lumpSumDeductionRatioOf(input),
     );
     acquisitionCostBase = salesCase;
     estimatedBase = salesCase;

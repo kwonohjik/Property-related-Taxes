@@ -1,6 +1,6 @@
 # 일반건물 이월과세(증여자 취득가액 환산) × 지분 — 카드 개산공제가 지분만큼 줄지 않는다
 
-- 상태: **계획(사용자 결정 대기 Q-1~Q-3)** — 2026-11-09. 기준 master `fbe78a017`. 코드 변경 없음.
+- 상태: **구현 완료(2026-11-09 사용자 결정: Q-1 a · Q-2 (다) · Q-3 a)** — 결과는 §6. 기준 master `fbe78a017`.
 - 발견 경위: 「증여자 신축 · 증축 × 지분」 측정(`companion-inherit-valuation-share-vp2c.plan.md` §13) 중 가산세는 맞는데 산출세액이 대조와 어긋났다.
 - 표기: **[직접]** = 이 문서 작성 중 실행 · 대조. **[코드]** = 코드 읽기만. **확인 필요** = 미측정.
 
@@ -52,7 +52,7 @@
 | (나) route 카드 입력에 `ownershipRatio`를 싣는다 — 이월과세 환산 카드에만 | 엔진 규약(「개산공제 지점에서만 지분율」)을 그대로 쓴다 | 지분율을 `buildProperties`까지 넘겨야 한다(호출처 4곳: `general-building-route-helper.ts:299` · `-route-actual.ts:668` · `-part-cards.ts:422` · `-fractional.ts:261`). 단건 엔진에서 `ownershipRatio`를 읽는 다른 지점(부담부증여 축소 · 분리 양도가액 · 가산세 `transfer-tax-carryover-donor-penalty.ts:162` 등)이 카드 값을 이중 축소할 위험이 있다 — **확인 필요**(V-1) |
 | (다) 개산공제 전용 지분율 키를 새로 둔다(엔진 입력 내부 키 · route → 엔진만, ⑫ 변경 없음) | 영향 범위가 개산공제 하나로 좁다 | 새 키 1개 + 시나리오 A 개산공제 · 표시 echo(`transfer-tax-carryover-finish.ts:100`) 두 지점 |
 
-## 4. 결정
+## 4. 결정 (2026-11-09 사용자 결정: Q-1 a · Q-2 (다) · Q-3 a)
 
 | Q | 내용 | 권장 |
 |---|---|---|
@@ -64,8 +64,37 @@
 
 | 번호 | 내용 |
 |---|---|
-| V-1 | (나)안에서 카드 입력 `ownershipRatio`를 읽는 단건 엔진 지점 전수와 이중 축소 여부 |
-| V-2 | 증축(3-way) 일반건물의 이월과세 환산 × 지분(`general-building-extension.ts:658`이 같은 함수를 부른다 — 같은 결함 예상이나 미측정) |
-| V-3 | 실가 경로(`general-building-route-actual.ts:555` — 토지 실가 + 건물 이월과세 환산 등)의 같은 조합(미측정) |
-| V-4 | 결과 화면 · 명세서의 개산공제 표시(`lumpDeductionBase` echo)가 같은 100% 값을 보이는지(미확인) |
+| V-1 | (나)안 전용 — (다)안을 골라 해당 없음 |
+| V-2 | ✅ 같은 결함이었다(축 A 50% −280,800 · 축 B 60/40 −889,200) → §6에서 함께 고침 |
+| V-3 | ✅ 같은 결함이었다. 실가 경로는 **두 파트 모두 실가 모드**일 때만 탄다(`actualPriceMode`) — 「토지 실가 + 건물 환산 모드」는 환산 경로다. 두 파트 실가 시료: 축 A 50% −444,600 · 축 B 60/40 −936,000 → §6에서 고침 |
+| V-4 | 표시 echo(`transfer-tax-carryover-finish.ts` `lumpDeductionBase`)도 같은 leaf(`lumpSumDeductionRatioOf`)로 바꿨다 [코드]. 화면에 보이는 값은 실측하지 않았다 — 확인 필요 |
 | — | 사람이 직접 한 브라우저 수동 확인은 하지 않았다 |
+
+## 6. 구현 결과 (Q-1 a · Q-2 (다) · Q-3 a)
+
+### 6.1 변경
+
+| 층 | 파일 | 내용 |
+|---|---|---|
+| 엔진 입력 | `lib/tax-engine/types/transfer.types.ts` | 내부 키 `lumpSumDeductionOwnershipRatio` — 개산공제 base 전용 지분율. route가 엔진에 직접 넘긴다(⑫ Zod 없음) |
+| 엔진 leaf | `lib/tax-engine/tax-utils.ts` `lumpSumDeductionRatioOf` | 전용 키 → 없으면 `ownershipRatio` |
+| 엔진 | `transfer-tax-helpers.ts`(환산 · 감정 · 매매사례 개산공제 3곳) · `transfer-tax-carryover-finish.ts`(표시 echo) | 위 leaf로 읽는다 |
+| 일반건물 엔진 | `general-building-carryover-basis.ts` `applyCarryoverEstimationBasis(…, ownershipRatio)` | 환산 이월과세 카드에 `carryoverLumpSumOwnershipRatio`를 싣는다. 분자 · 분모는 100% 그대로(주석에 (가)안 기각 사유) |
+| 호출처 | `general-building-valuation.ts`(2-way) · `general-building-extension.ts`(3-way) · `general-building-route-actual.ts`(실가) | 지분율을 넘긴다 |
+| route | `general-building-route-helper.ts`(축 A 단건 실가) · `general-building-part-cards.ts`(컴패니언 · 축 B 실가) | 실가 경로에 `lumpSumDeductionOwnershipRatio` 전달 |
+| route | `general-building-route-cards.ts` `buildProperties` | 카드 값 → 카드 input `lumpSumDeductionOwnershipRatio`(`ownershipRatio`는 싣지 않는다) |
+
+`ownershipRatio`를 카드 input에 싣지 않으므로 그 키를 읽는 다른 지점(가산세 · 부담부증여 축소 등)은 바뀌지 않는다.
+
+### 6.2 검증 [직접]
+
+| 항목 | 결과 |
+|---|---|
+| 결함 격자(§2 · 신축 · 증축 · 토글 OFF · 실지거래가 × 5경로) | 20/20 세액 · 양도차익 · 가산세 = 대조 |
+| 3경로(2-way · 증축 3-way · 두 파트 실가) × 축 A · 함께 양도 · 축 B | 전부 세액 = 대조. 증축 3-way 축 B 60/40만 양도차익 +1원(카드별 절사 — V-G2 구조 · 수정 전에도 있던 1원) |
+| 100% 단건 | 수정 전과 같다(신축 151,070,800 / 가산세 12,500,000 · 증축 151,070,800 / 6,250,000) |
+| 안전망 anchor | 신규 `__tests__/api/transfer.route.gb-carryover-estimated-share-lump.anchor.test.ts` 12건 — 건물 · 토지 파트 × 축 A 50 · 30% · 함께 양도 50% · 축 B 60/40(세액 · 양도차익 = 대조 · 카드 개산공제) + 고정값(2-way · 두 파트 실가 3경로 · 증축 3-way) + P-1 증여자 증축 가산세 회귀 |
+| 뮤테이션 7/7 KILLED | cp 백업 → 변형 → anchor → 복원 후 `cmp`. M1 route 카드 키 제거 11건 실패 · M2 엔진 leaf가 전용 키 무시 11건 · M3 축 A 실가 전달 제거 1건 · M4 증축 3-way 전달 제거 1건 · M5 (가)안(분자 · 분모 축소) 1건(P-1) · M6 컴패니언 · 축 B 실가 전달 제거 1건 · M7 2-way 전달 제거 9건 |
+| 정적 검사 | `tsc --noEmit` 0건 · 변경 파일 eslint 오류 0건 |
+
+- 측정 중 내 오류: 처음 「실가 경로」라 부른 시료(토지 실가 + 건물 환산 모드)는 환산 경로였다. M3가 살아남아 알았다. 두 파트 실가 시료로 바꾸자 컴패니언 · 축 B 실가 분기(`general-building-part-cards.ts`)도 같은 결함이었고, 함께 고쳤다.

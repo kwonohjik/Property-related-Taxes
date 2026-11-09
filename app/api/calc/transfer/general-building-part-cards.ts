@@ -166,6 +166,8 @@ export function buildGbPartCards(
       actualAcquisitionPrice,
       actualExpenses,
       ...(burdenedGiftInfo ? { burdenedGiftInfo, burdenedGiftOwnershipRatio } : {}),
+      // 이월과세 환산 카드의 개산공제 base 축소 전용 — 축 B 지분 · 컴패니언 모두(환산 분기는 아래 `ownershipRatio`가 같은 일을 한다)
+      lumpSumDeductionOwnershipRatio: ownershipRatio,
     });
     return {
       cards: built.cards,

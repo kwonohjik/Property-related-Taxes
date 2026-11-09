@@ -233,6 +233,8 @@ function dispatchCoercedGeneralBuilding(
         burdenedGiftInfo,
         // 축 A 지분: §159 증여가액 C·취득가액을 지분분으로 환산한다(물건 전체 입력 → 엔진 환산 — 축 B와 같은 인자). 부담부증여가 아니면 비운다.
         ...(burdenedGiftInfo ? { burdenedGiftOwnershipRatio: ownershipRatio } : {}),
+        // 이월과세 환산 카드의 개산공제 base 축소 전용(환산 경로는 `estimatedPayloadOf`의 `ownershipRatio`가 같은 일을 한다)
+        lumpSumDeductionOwnershipRatio: ownershipRatio,
         // M-1a 파트 취득일 — 토지 카드/건물 카드가 각자 자기 날짜로 보유기간을 잡는다.
         landAcquisitionDate: landAcqDateCoerced,
         buildingAcquisitionDate: buildingAcqDate,
