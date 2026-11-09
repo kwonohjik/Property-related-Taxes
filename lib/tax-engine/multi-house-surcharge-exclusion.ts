@@ -187,12 +187,24 @@ export function transitionExemptionMonths(
  *   (2026-05-10 이후 계약 시 절대기한 2026-09-09/11-09로 한정).
  * 다목(isLandPermitTarget === false): 계약(≤5-09)+계약금증빙 + 계약일부터 4/6개월(절대기한 자동충족).
  * 조건C(토지허가구역+임차인 무기한 배제)는 확정 시행령 원문에 근거 없어 제거(G3).
+ *
+ * 나·다목은 요건을 **전부** 평가해 미충족 요건을 `unmet`에 모은다(계획서 surcharge-grace-period-unmet-reason Q-2).
+ * `suspended = unmet 없음`. 미충족이어도 기한이 계산되면 `basis`·`deadline`을 돌려준다 — 결과 echo는
+ * `isSuspended`일 때만 싣는다(`multi-house-surcharge.ts` `surchargeSuspensionBasis`·`surchargeSuspensionDeadline`).
  */
+export type GraceUnmetCode =
+  | "region" // 소재지가 나·다목 대상 지역(강남4구·2025-10-16 지정) 아님
+  | "na1_application" // 나목1) 허가 신청일 없음 또는 2026-05-09 뒤
+  | "na2_permit" // 나목2) 허가 받지 않음
+  | "deposit" // 나목3)·다목1) 계약금 지급받은 사실 증빙 미확인
+  | "da1_contract_late" // 다목1) 매매계약일이 2026-05-09 뒤
+  | "deadline"; // 나목4)·다목2) 양도일이 기한 뒤
+
 export function checkGracePeriodExemption(
   transferDate: Date,
   gracePeriod: NonNullable<MultiHouseSurchargeInput["gracePeriod"]>,
   sellingRegionCode?: string,
-): { suspended: boolean; basis?: "a" | "na" | "da"; deadline?: Date } {
+): { suspended: boolean; basis?: "a" | "na" | "da"; deadline?: Date; unmet?: GraceUnmetCode[] } {
   // ★ 가목 우선 게이트 (G3′)
   if (transferDate <= GRACE_PERIOD_A_DEADLINE) {
     return { suspended: true, basis: "a" };
@@ -206,47 +218,44 @@ export function checkGracePeriodExemption(
     depositReceiptConfirmed,
   } = gracePeriod;
 
-  const deadlineOfMonths = SURCHARGE_TRANSITION.DEADLINE;
+  // isLandPermitTarget 미제공 — 나·다목 어느 쪽도 판정 불가(허가 대상 여부 필수 입력)
+  if (isLandPermitTarget === undefined) return { suspended: false };
+
+  const cutoff = new Date(SURCHARGE_TRANSITION.DEADLINE);
   const months = transitionExemptionMonths(sellingRegionCode);
+  const contractAfter0510 = contractDate > cutoff;
+  const unmet: GraceUnmetCode[] = [];
+
   // 소재지가 나·다목 경과조치 대상 지역(강남4구 또는 2025-10-16 지정)이 아니면 부적용.
   // 미확보·2026-07-01 지정(용인기흥·구리 등)은 2026-05-09 기준 조정대상이 아니므로 나·다목 성립 불가.
-  if (months === null) return { suspended: false };
-  const contractAfter0510 = contractDate > new Date(deadlineOfMonths);
-
-  if (isLandPermitTarget === true) {
-    // 나목
-    if (!permitApplicationDate || permitApplicationDate > new Date(deadlineOfMonths)) {
-      return { suspended: false };
-    }
-    if (!permitGranted || !depositReceiptConfirmed) return { suspended: false };
-
-    // 「매매계약 체결일부터 4개월(6개월) 이내에 양도할 것」 — B 유형 말일이 토요일·공휴일이면 익일(민법 §161 · L-1 · E-11).
-    let deadline = deadlineEnd(civilMonthsDeadline(contractDate, months)).end;
-    if (contractAfter0510) {
-      const absolute = new Date(
-        months === SURCHARGE_TRANSITION.MONTHS_TABLE_REGION
-          ? SURCHARGE_TRANSITION.ABSOLUTE_DEADLINE_6M
-          : SURCHARGE_TRANSITION.ABSOLUTE_DEADLINE_4M,
-      );
-      if (absolute < deadline) deadline = absolute;
-    }
-    return transferDate <= deadline
-      ? { suspended: true, basis: "na", deadline }
-      : { suspended: false, basis: "na", deadline };
+  if (months === null) unmet.push("region");
+  if (isLandPermitTarget) {
+    if (!permitApplicationDate || permitApplicationDate > cutoff) unmet.push("na1_application");
+    if (!permitGranted) unmet.push("na2_permit");
+  } else if (contractAfter0510) {
+    unmet.push("da1_contract_late");
   }
+  if (!depositReceiptConfirmed) unmet.push("deposit");
+  // 개월 수를 모르면 기한을 셀 수 없다.
+  if (months === null) return { suspended: false, unmet };
 
-  if (isLandPermitTarget === false) {
-    // 다목
-    if (contractAfter0510 || !depositReceiptConfirmed) return { suspended: false };
-    // 다목2) 「매매계약 체결일부터 4개월 … 이내에 양도할 것」 — 민법 §161(L-1 · E-11).
-    const deadline = deadlineEnd(civilMonthsDeadline(contractDate, months)).end;
-    return transferDate <= deadline
-      ? { suspended: true, basis: "da", deadline }
-      : { suspended: false, basis: "da", deadline };
+  // 「매매계약 체결일부터 4개월(6개월) 이내에 양도할 것」 — B 유형 말일이 토요일·공휴일이면 익일(민법 §161 · L-1 · E-11).
+  let deadline = deadlineEnd(civilMonthsDeadline(contractDate, months)).end;
+  // 나목4) 단서 — 2026-05-10 이후 계약은 절대기한까지. 다목은 계약이 05-09까지라 해당 없음.
+  if (isLandPermitTarget && contractAfter0510) {
+    const absolute = new Date(
+      months === SURCHARGE_TRANSITION.MONTHS_TABLE_REGION
+        ? SURCHARGE_TRANSITION.ABSOLUTE_DEADLINE_6M
+        : SURCHARGE_TRANSITION.ABSOLUTE_DEADLINE_4M,
+    );
+    if (absolute < deadline) deadline = absolute;
   }
+  if (transferDate > deadline) unmet.push("deadline");
 
-  // isLandPermitTarget 미제공 — 나·다목 어느 쪽도 판정 불가(허가 대상 여부 필수 입력)
-  return { suspended: false };
+  const basis = isLandPermitTarget ? "na" : "da";
+  return unmet.length === 0
+    ? { suspended: true, basis, deadline }
+    : { suspended: false, basis, deadline, unmet };
 }
 
 /**

@@ -20,6 +20,7 @@ import {
   checkGracePeriodExemption,
   transitionExemptionMonths,
 } from "@/lib/tax-engine/multi-house-surcharge-exclusion";
+import type { GraceUnmetCode } from "@/lib/tax-engine/multi-house-surcharge-exclusion";
 import { SURCHARGE_TRANSITION } from "@/lib/tax-engine/legal-codes";
 import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 
@@ -31,6 +32,15 @@ interface GracePeriodSectionProps {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
 }
+
+/** 엔진 `checkGracePeriodExemption`의 미충족 요건 코드 → 문구 (`deadline`은 날짜를 넣어 렌더에서 만든다). */
+const UNMET_LABEL: Record<Exclude<GraceUnmetCode, "deadline">, string> = {
+  region: "소재지 — 나·다목 대상 지역이 아닙니다(위 안내)",
+  na1_application: `나목1) 토지거래허가 신청일이 없거나 ${SURCHARGE_TRANSITION.DEADLINE} 뒤입니다`,
+  na2_permit: "나목2) 「토지거래허가 수령」이 확인되지 않았습니다",
+  deposit: "나목3)·다목1) 「계약금 수령 증빙 확인」이 꺼져 있습니다",
+  da1_contract_late: `다목1) 매매계약일이 ${SURCHARGE_TRANSITION.DEADLINE} 뒤입니다`,
+};
 
 /** YYYY-MM-DD 표시 헬퍼 (Date → 문자열) */
 function fmtYmd(d: Date): string {
@@ -279,6 +289,18 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
                         ? `미충족 — 양도 주택 보유기간이 ${MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS}년 미만입니다 (§167의3①12의2 본문)`
                         : "미충족 — 현재 입력 기준 경과조치 배제 미해당"}
                   </p>
+                )}
+                {preview && "unmet" in preview && preview.unmet && preview.unmet.length > 0 && (
+                  <ul
+                    className="list-disc pl-4 text-caption text-rose-700 dark:text-rose-300"
+                    data-testid="grace-period-unmet-reasons"
+                  >
+                    {preview.unmet.map((code) => (
+                      <li key={code}>
+                        {code === "deadline" ? `양도일이 양도 기한(${preview.deadline ? fmtYmd(preview.deadline) : "—"}) 뒤입니다` : UNMET_LABEL[code]}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
             )}
