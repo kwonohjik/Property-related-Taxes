@@ -28,10 +28,11 @@ test.describe("양도세 P3 하이브리드 감면 패널", () => {
     await expect(page.getByText(/국내사업장 없는 비거주자/).first()).toBeVisible();
     await expect(page.getByText(/수도권과밀억제권역/).first()).toBeVisible();
 
-    // §98의5 — 인하율 입력
+    // §98의5 — 인하율은 공시 분양가격·매매가격 두 금액으로 계산한다(US-58 · Q-18 (a))
     const item985 = page.getByText("§98의5 — 분양가 인하율 60/80/100%", { exact: false }).first();
     await item985.click();
-    await expect(page.getByText("분양가격 인하율 (%)", { exact: false }).first()).toBeVisible();
+    await expect(page.getByText("입주자 모집공고안에 공시된 분양가격 (원)", { exact: false }).first()).toBeVisible();
+    await expect(page.getByText("매매계약서상의 매매가격 (원)", { exact: false }).first()).toBeVisible();
     await expect(page.getByText(/10% 이하 = 감면율 60%/).first()).toBeVisible();
 
     // §98의6 — 1호/2호 라디오
