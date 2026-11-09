@@ -30,6 +30,8 @@ export {
   isReductionAllowedForAssetKind,
   isGbClaimRouteAllowedForAssetKind,
   assetKindGateReason,
+  assetKindGateMessage,
+  reductionAssetKindFromWire,
   stripAssetKindGatedReductions,
   type ReductionAssetKind,
 } from "./asset-kind-gate";

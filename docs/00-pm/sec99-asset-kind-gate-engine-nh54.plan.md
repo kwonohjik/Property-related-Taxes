@@ -1,6 +1,6 @@
 # §99 계열 × 비주택 자산 — 직접 API로 감면이 그대로 적용된다 (NH-54)
 
-- 상태: **결정 대기** — 코드 변경 없음(문서만). 기준 master `35936240e`.
+- 상태: **구현 완료(2026-11-09)** — 사용자 결정 Q-1 a · Q-2 a · Q-3 a(「모두 권장안으로」). 결과는 §7. 기준 master `35936240e`.
 - 출처: `project_99_993_994_review_2026_11` 리뷰 NH-54 — 「§99 자산 종류 게이트가 ⑤⑧에만 있고 ⑫·엔진에는 없다」. 2026-11-09 코드 대조에서 열린 7건 중 하나로 확인했다.
 - 표기: **[직접]** = 이 문서 작성 중 직접 실행·대조. **[코드]** = 코드 읽기만. **확인 필요** = 미측정·미해명.
 
@@ -53,7 +53,7 @@ throwaway probe(미커밋): 폼 → ④(`captureBody`) → 본문 `propertyType`
 - api 1건의 원인 [직접: 걷힌 호출의 스택]: `transfer-tax-aggregate-asset-records.ts:140`(`computeOne`)이 겸용 컴패니언을 주택 파트(`mu-house-*`) · 상가 land · building 카드로 쪼개 각 카드를 `calculateTransferTax`에 넣는다. 상가 카드 `propertyType`은 land · building인데 컴패니언의 §99의3이 그대로 실려 있어, 게이트가 걷으면 값이 바뀐다. **「엔진 `propertyType` = ⑧의 `assetKind`」가 성립하지 않는 경로가 있다.**
 - 이 기존 값(242,772,000)이 법령상 맞는지는 **이 PR 범위 밖이다** — 겸용 컴패니언의 상가 파트 카드에 §99의3(감면주택 중과 배제 · 소득 차감)이 실리는 것이 의도인지는 **확인 필요**(별건 V-N1).
 
-## 4. 결정 대기
+## 4. 결정 (Q-1 a · Q-2 a · Q-3 a — 2026-11-09 「모두 권장안으로」)
 
 | 번호 | 질문 | 선택지 | 권장 |
 |---|---|---|---|
@@ -80,3 +80,19 @@ throwaway probe(미커밋): 폼 → ④(`captureBody`) → 본문 `propertyType`
 3. 뮤테이션: 술어 제거 · 종류 사상 한 칸 누락 · 컴패니언 호출 제거.
 4. 회귀 5배치(api · lib · components · calc · tax-engine) · tsc · eslint. 화면 변경 없음 → Playwright 불필요.
 5. 이 문서 §7(구현 결과) 추가.
+
+## 7. 구현 결과
+
+| 항목 | 결과 |
+|---|---|
+| 코드 | ⑫ `refineReductionAssetKindGate`(`lib/api/transfer-tax-schema-reduction-refines.ts`) 신설 — 주 자산 `transfer-tax-schema-refines.ts`(`propertyType`) · 컴패니언 `transfer-tax-schema.ts`(`assetKind`) 두 곳에서 호출, 400 · 경로 `…reductions.N.type`. 와이어 종류 → 게이트 종류 사상 `reductionAssetKindFromWire`(겸용 `mixed-use-house`·`mixed_use_house` → 주택, 모르는 값은 막지 않음)와 문구 `assetKindGateMessage`를 `asset-kind-gate.ts`에 두고, ⑧(`transfer-tax-validate-reductions.ts`)도 같은 함수를 쓰게 바꿨다(문구 불변 — 단일 소스). 엔진은 건드리지 않았다 |
+| 안전망 anchor | `transfer.route.reduction-asset-kind-gate-nh54.anchor.test.ts` 38건 — 감면 4종 × 종류 7 = 28칸 ⑧↔⑫ 격자(⑧이 막는 칸은 ⑫도 같은 문구 400, 허용 칸은 게이트 문구 없음) · §99의3 × 토지·건물·상가건물 고정값(주택 83,610,998 → 400) · 입주권·재개발APT·분양권 200 유지 · 자경 반대 방향 문구 · 컴패니언 3종 400 + 주택 통과 |
+| 뮤테이션 5/5 KILLED | cp 백업 → 변형 → 이 anchor + `companion-mixed-use-acq-cause-nh14` → 복원 → `cmp`(5/5). M1 주 자산 호출 제거 21실패 · M2 컴패니언 호출 제거 3실패 · M3 사상에서 land 누락 5실패 · M4 `mixed_use_house`를 land로 사상 16실패(겸용 컴패니언 anchor 포함) · M5 문구 함수가 항상 undefined 8실패(고정값 셀이 잡는다 — 격자는 ⑧·⑫가 같은 함수라 함께 통과하므로 고정값이 필요하다) |
+| 회귀 | api 485파일 6465 · tax-engine 1502파일 19001 · calc 827파일 11588 · lib 262파일 3357 · components 750파일 6895 — **전부 통과(실패 0)**. §3.3 엔진 시험 적용 때의 api 1건·tax-engine 3건 실패는 ⑫ 방식에서 나오지 않았다 |
+| 정적 검사 | `tsc --noEmit` 0건 · 변경 파일 eslint 0건 |
+| Playwright | **돌리지 않았다** — 화면 변경 없음(⑧ 문구는 그대로) |
+
+### 남은 확인 필요
+- V-2 다건 route 직접 호출은 anchor에 넣지 않았다(같은 `addPropertyRefines`를 타는 것은 코드로만 확인).
+- V-4 · V-5 · V-N1은 그대로다(§5).
+- 사람이 직접 한 브라우저 수동 확인은 하지 않았다.
