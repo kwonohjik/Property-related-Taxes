@@ -69,11 +69,14 @@ export function classifyRateGroup(
     item.propertyType === "housing" ||
     item.propertyType === "right_to_move_in" ||
     item.propertyType === "presale_right";
-  if (holdingMonths < 24 && (isHousingLike || holdingMonths < 24)) {
+  // 조특법 §98의3④·§98의5③·§98의6③ — 단기세율(§104①2·3호)을 배제해 §104①1호 기본세율을 적용받는 자산은 단기 세율군이 아니다(리뷰 US-39).
+  // 이 플래그는 단건 엔진 결과 echo(`rateSpecialInjected`)로 교정 입력에 되살린 것이다.
+  const shortTermSuppressed = item.suppressShortTermRate === true;
+  if (!shortTermSuppressed && holdingMonths < 24 && (isHousingLike || holdingMonths < 24)) {
     return "short_term";
   }
   // 부수토지 카드 일체과세(§104①2호 괄호·영 §167의5): 카드 자기 취득일이 2년 이상이어도 엔진은 짝 주택의 단기 호(§104①2·3호)를 적용한다 — 군 이름도 엔진이 정한 호를 따른다(O-20).
-  if (result.rateClause === "104-1-2" || result.rateClause === "104-1-3") {
+  if (!shortTermSuppressed && (result.rateClause === "104-1-2" || result.rateClause === "104-1-3")) {
     return "short_term";
   }
 

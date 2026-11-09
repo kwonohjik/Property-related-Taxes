@@ -249,6 +249,14 @@ export interface TransferTaxResult {
    */
   surchargeExcludedByReduction?: boolean;
   /**
+   * STEP 7이 세율 입력에 주입한 조특법 세율 특칙 echo(리뷰 US-39) — §98①1호 20%(`flat_rate_20`) 또는
+   * §98의3④·§98의5③·§98의6③ 단기세율 배제(`suppress_short_term` + 조문). 다건·일괄양도 집계가 그룹 세액을
+   * 다시 구할 때 **같은 입력**으로 되돌리는 재료다(단건 엔진 안에서만 주입되는 내부 플래그라 밖에서는 재현되지 않는다).
+   */
+  rateSpecialInjected?:
+    | { kind: "flat_rate_20" }
+    | { kind: "suppress_short_term"; by?: "unsold_98_3" | "unsold_98_5" | "unsold_98_6" };
+  /**
    * 비사업용 토지 +10%p 중과배제(기본세율). 장특 표1 유지. echo. 사유는 `nblSurchargeExcludedBy`.
    */
   nblSurchargeExcluded?: boolean;

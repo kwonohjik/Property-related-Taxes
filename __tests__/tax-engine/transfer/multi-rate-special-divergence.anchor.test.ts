@@ -105,23 +105,22 @@ const BASE_985 = {
 };
 
 describe("§98의5(60% 감면) — 단기 구간에서 총부담이 갈린다", () => {
-  it("R1: 🔴 보유 7개월(단기 70%) — 다건이 36,020,600원 과대", () => {
+  it("R1: 🔁 보유 7개월(단기 70%) — 리뷰 US-39 이후 다건 = 단건 (종전 다건 +36,845,600 과대)", () => {
     const { single, multi } = bothWays({ ...BASE_985, transferDate: D("2011-02-01") });
     expect(single.unsold985Detail?.isEligible).toBe(true);
     // 단건은 §98의5③으로 단기세율이 배제돼 §104①1호 누진을 탄다.
     expect(single.calculatedTax).toBe(215_010_000);
     expect(single.totalTax).toBe(94_604_400);
-    // 집계는 플래그가 실리지 않아 단기 70%가 되살아난다.
-    expect(multi.calculatedTax).toBe(298_750_000);
-    expect(multi.totalTax).toBe(131_450_000);
-    expect((multi.totalTax ?? 0) - (single.totalTax ?? 0)).toBe(36_845_600);
+    // 종전: 집계는 플래그가 실리지 않아 단기 70%가 되살아났다(산출 298,750,000 · 총부담 131,450,000). 지금은 단건과 같다.
+    expect(multi.calculatedTax).toBe(215_010_000);
+    expect(multi.totalTax).toBe(94_604_400);
   });
 
-  it("R2: 🔴 보유 18개월(단기 60%) — 다건이 9,895,600원 과대", () => {
+  it("R2: 🔁 보유 18개월(단기 60%) — 리뷰 US-39 이후 다건 = 단건 (종전 다건 +10,555,600 과대)", () => {
     const { single, multi } = bothWays({ ...BASE_985, transferDate: D("2012-01-01") });
     expect(single.totalTax).toBe(94_604_400);
-    expect(multi.totalTax).toBe(105_160_000);
-    expect((multi.totalTax ?? 0) - (single.totalTax ?? 0)).toBe(10_555_600);
+    // 종전 105,160,000
+    expect(multi.totalTax).toBe(94_604_400);
   });
 
   it("R3: 장기(보유 4년)는 **산출세액이 같다** — 세율 특칙 축이 아니다", () => {
@@ -149,11 +148,11 @@ describe("§98의3(5년 내 100% 감면) — 산출세액만 갈리고 총부담
     reductions: [RED_983],
   };
 
-  it("R4: 🔑 보유 7개월 — 산출세액은 크게 갈리는데(93,110,000 ↔ 148,750,000) 총부담은 둘 다 0", () => {
+  it("R4: 🔁 보유 7개월 — 산출세액이 단건과 같고(93,110,000; 종전 다건 148,750,000) 총부담은 둘 다 0", () => {
     const { single, multi } = bothWays({ ...BASE_983, transferDate: D("2010-06-01") });
     expect(single.unsold983Detail?.isEligible).toBe(true);
     expect(single.calculatedTax).toBe(93_110_000);
-    expect(multi.calculatedTax).toBe(148_750_000);
+    expect(multi.calculatedTax).toBe(93_110_000);
     // 100% 세액감면 + 농특세 비과세 ⇒ 차이가 소멸한다. 종전 격자가 재현에 실패한 이유다.
     expect(single.totalTax).toBe(0);
     expect(multi.totalTax).toBe(0);

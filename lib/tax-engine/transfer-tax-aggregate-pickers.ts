@@ -141,10 +141,22 @@ export function computeGroupsAndComparison(
     clauseTaxes, assetClauseKeys, assetPartClauseKeys, assetPartBasic, assetPartIncome,
   } = aggregateByGroup(records, incomeArray, allocatedBasic, partBasic);
   const calculatedTaxByGroups = groupTaxes.reduce((s, g) => s + g.groupCalculatedTax, 0);
-  const totalIncome = incomeArray.reduce((s, v) => s + v, 0);
-  const totalBasic = allocatedBasic.reduce((s, v) => s + v, 0);
+  /**
+   * §98①1호 20% 자산은 §104⑤ 비교과세의 「전체 누진」 쪽에서 뺀다 — 사용자 결정 Q-9 (b)(2026-11-08, 리뷰 US-39):
+   * 「제104조제1항에도 불구하고 100분의 20」을 적용받는 자산은 §104⑤ 비교과세가 미치지 않는 것으로 보아 20%로 따로 계산한다.
+   * 20% 자산의 세액은 호 버킷(solo)에 이미 실려 `calculatedTaxByGroups`에 들어 있다. 전체 누진 쪽에는 같은 20% 세액을 더하고
+   * 과세표준 합계에서는 그 자산 몫을 뺀다 ⇒ MAX가 20% 자산을 누진으로 되돌리지 못한다.
+   */
+  const flatIdx = records.flatMap((r, i) => (!r.result.isExempt && r.result.rateSpecialInjected?.kind === "flat_rate_20" ? [i] : []));
+  const flat20Tax = flatIdx.reduce(
+    (s, i) => s + assetClauseKeys[i].reduce((t, id) => t + (clauseTaxes.get(id)?.tax ?? 0), 0),
+    0,
+  );
+  const isFlat = (i: number) => flatIdx.includes(i);
+  const totalIncome = incomeArray.reduce((s, v, i) => s + (isFlat(i) ? 0 : v), 0);
+  const totalBasic = allocatedBasic.reduce((s, v, i) => s + (isFlat(i) ? 0 : v), 0);
   const generalTaxBase = Math.max(0, totalIncome - totalBasic);
-  const calculatedTaxByGeneral = applyGeneralProgressive(generalTaxBase, rates);
+  const calculatedTaxByGeneral = applyGeneralProgressive(generalTaxBase, rates) + flat20Tax;
   /**
    * ⚠️ **`hasSurchargeGroup`은 §104⑤의 적용 요건이 아니라 「표시」 판정이다.**
    *
