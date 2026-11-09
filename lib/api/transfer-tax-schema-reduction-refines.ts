@@ -104,6 +104,15 @@ export function refineReductionRequiredInputs(
       detachedFactsIssues(r, "99", "§99", issue, positive);
     }
 
+    // Q-19 (US-41) — §98의3(매수)·§98의5·§98의7은 조문 칸 「최초 매매계약일」이 정본이다. 엔진은 자산-수준 `assetContractDate`로
+    // 대신하지 않고 MISSING_CONTRACT_DATE로 부적격을 낸다 → 200 + 감면 0 대신 400으로 막는다 (⑧ 거울).
+    if (r.type === "unsold_98_3" && r.houseType983 !== "self_built" && !r.contractDate983)
+      issue("contractDate983", "§98의3 적용: 최초 매매계약일(contractDate983)이 필요합니다 (자산 매매계약일로 대신하지 않습니다).");
+    if (r.type === "unsold_98_5" && !r.contractDate985)
+      issue("contractDate985", "§98의5 적용: 최초 매매계약일(contractDate985)이 필요합니다 (자산 매매계약일로 대신하지 않습니다).");
+    if (r.type === "unsold_98_7" && !r.contractDate987)
+      issue("contractDate987", "§98의7 적용: 최초 매매계약일(contractDate987)이 필요합니다 (자산 매매계약일로 대신하지 않습니다).");
+
     if ((r.type === "rental_97_3" || r.type === "rental_97_5") && r.rentalContinuesToTransfer === undefined) {
       issue(
         "rentalContinuesToTransfer",

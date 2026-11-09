@@ -18,7 +18,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset";
 import type { SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
-import { usesContractDateOnly, usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { requiresRowContractDate, usesContractDateOnly, usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 import { isOriginalNewHousingKind, newHousingKindOptions, usesNewHousingKind } from "@/lib/tax-engine/transfer-reductions/special-house-exclusion-kind";
 import { new994CapitalRegionConflict } from "@/lib/tax-engine/transfer-reductions/new-99-4-size";
 import { resolveNew994SizeScope } from "@/lib/tax-engine/transfer-reductions/new-99-4-size";
@@ -77,7 +77,7 @@ export function collectHouseCountExclusionReductionErrors(
 /**
  * 명부 행 ⑥ 「감면주택」(`special`) 선언의 필수값 — 계산기·판정 메뉴 공용 leaf.
  *
- * 조문 미선택 · §97·§97의2 임대개시일 미입력 · §98의8·§99의2 매매계약일 미입력(엔진이 「미입력 = 불성립」으로
+ * 조문 미선택 · §97·§97의2 임대개시일 미입력 · §98의8·§99의2 및 §98·§98의2·§98의3·§98의5·§98의7 매매계약일 미입력(엔진이 「미입력 = 불성립」으로
  * 읽는다 — 비워 두면 조용히 다른 경로(일시적 2주택 등)로 판정된다). 본 요건 확인 토글은
  * 막지 않는다 — 엔진이 불성립 사유로 안내한다(낙관 입력 패턴).
  */
@@ -89,6 +89,10 @@ export function collectSpecialHouseExclusionRowErrors(e: SpecialHouseExclusionFo
   }
   if (usesContractDateOnly(e.article) && !e.houseContractDate) {
     return ["주택 수 제외 — 이 조문은 감면주택의 최초 매매계약일로 판정합니다. 매매계약일을 입력하세요."];
+  }
+  // Q-19 · US-46 — 「취득일 또는 계약일」 조문(§98·§98의2·§98의3·§98의7)도 계약일을 필수로 받는다(취득일이 기간 밖일 때 계약일 미입력만으로 불성립하던 결함).
+  if (requiresRowContractDate(e.article) && !e.houseContractDate) {
+    return ["주택 수 제외 — 감면주택의 최초 매매계약일을 입력하세요 (취득기간은 취득일 또는 시한 내 매매계약 + 계약금 납부 중 하나로 판정합니다)."];
   }
   // US-06 — 상속 행 · §98의3·§98의5·§98의7: 분양권 상속 후 상속인 잔금 취득만 주택 수에서 빠진다(조세법령운용과-1103). 「모름」은 통과(엔진이 불성립 + 확인 필요).
   if (e.isInherited === true && asksInheritedPresaleQuestion(e.article, "inheritance") && !e.inheritedPresaleCompletedByHeir) {

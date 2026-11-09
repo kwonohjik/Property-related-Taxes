@@ -88,6 +88,19 @@ const ASSET_KIND_LABEL: Record<AssetForm["assetKind"], string> = {
 // 시한 검증 컨텍스트
 // ============================================================================
 
+/** 조문 칸 「최초 매매계약일」(Q-19 정본) 값 — 선택된 조문만 담긴다. */
+function articleContractDatesOf(asset: AssetForm): Record<string, Date | undefined> {
+  const out: Record<string, Date | undefined> = {};
+  for (const r of asset.reductions ?? []) {
+    const raw = (
+      { unsold_98: "contractDate98", unsold_98_2: "contractDate982", unsold_98_3: "contractDate983", unsold_98_5: "contractDate985", unsold_98_7: "contractDate987" } as Record<string, string>
+    )[r.type];
+    const v = raw ? (r as unknown as Record<string, string | undefined>)[raw] : undefined;
+    if (raw) out[r.type] = toOptionalDate(v || undefined);
+  }
+  return out;
+}
+
 /**
  * 시한 검증 ctx 조립. **export는 anchor가 키 누락을 값으로 고정하기 위한 것**이다 —
  * `rental972Type` 같은 optional 키는 빠져도 tsc가 잡지 못하고(⑫⑬⑭와 같은 층위),
@@ -117,6 +130,8 @@ export function buildPeriodContext(asset: AssetForm, transferDate: string): Peri
     transferDate: transDate,
     acquisitionDate: acqDate,
     contractDate: assetContract,
+    // Q-19 — §98·§98의2·§98의3·§98의5·§98의7은 조문 칸 「최초 매매계약일」이 정본이다(자산 칸 미사용·칸이 비면 낙관 통과).
+    articleContractDates: articleContractDatesOf(asset),
     // 등록일 미입력 = "모름" → 양도일까지 낙관 fallback (§97의3 등록 ~2027.12.31 — 빈 폼에서
     // disabled로 단정하지 않음). 임대개시일은 acqDate까지만 — 구법(§97 ~2000.12.31)은 취득일
     // 입력 전 비활성이 합리적 (양도일 fallback 시 항상 시한 외 오탐).

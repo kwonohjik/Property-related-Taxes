@@ -31,10 +31,10 @@ export function Unsold982InputForm({ value, onChange }: Props) {
 
       <ToneCard tone="sky" title="① 취득·계약 시기">
         <div>
-          <label className="mb-1 block text-xs font-medium">매매계약일 (선택)</label>
-          <DateInput value={value.contractDate982} onChange={(v) => onChange({ contractDate982: v })} />
+          <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
+          <DateInput data-field="reduction.unsold_98_2.contractDate982" value={value.contractDate982} onChange={(v) => onChange({ contractDate982: v })} />
           <p className="mt-1 text-micro text-muted-foreground">
-            취득기간 2008.11.3~2010.12.31 — 자산의 취득일이 기간 내이면 비워 두어도 됩니다.
+            취득기간 2008.11.3~2010.12.31 — 계약일은 반드시 입력하세요 (자산의 매매계약일 칸은 읽지 않습니다).
             취득일이 기간 외라도 2010.12.31까지 매매계약 체결 + 계약금 납부한 경우 포함됩니다 (법 §98의2①)
           </p>
         </div>

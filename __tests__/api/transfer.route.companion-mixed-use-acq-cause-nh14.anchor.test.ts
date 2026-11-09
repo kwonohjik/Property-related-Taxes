@@ -129,7 +129,7 @@ describe("컴패니언 겸용 — 서브엔진 입력의 취득 원인", () => {
   it("US-07 분양권 상속 답도 그 자산의 것이 서브엔진에 실린다(취득 원인과 함께여야 STEP 0.45 게이트가 카드 판정과 갈리지 않는다)", async () => {
     const f = bundled("inheritance") as unknown as { assets: Record<string, unknown>[] };
     const companion = f.assets[1];
-    f.assets[1] = { ...companion, inheritedPresaleCompletedByHeir: "yes", reductions: [{ ...getReductionDefault("unsold_98_3") }] };
+    f.assets[1] = { ...companion, inheritedPresaleCompletedByHeir: "yes", reductions: [{ ...getReductionDefault("unsold_98_3"), contractDate983: "2009-06-01" }] }; // Q-19 — 조문 칸 「최초 매매계약일」 필수(⑫)
     const r = await post(f);
     expect(r.status).toBeLessThan(500);
     const answers = vi.mocked(calcMixedUseTransferTax).mock.calls.map((c) => (c[2] as { inheritedPresaleCompletedByHeir?: string }).inheritedPresaleCompletedByHeir);
