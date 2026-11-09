@@ -23,6 +23,7 @@ import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new
 import { isNew993PriorRuleEraIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
 import { needsFirstContractAnswer } from "@/lib/tax-engine/transfer-reductions/new-99-acquisition-cause";
 import { New99LuxuryHouseFields } from "@/components/calc/transfer/New99LuxuryHouseFields";
+import { New99AppurtenantLandFields } from "@/components/calc/transfer/New99LuxuryHouseFields";
 import { New99FirstContractField } from "@/components/calc/transfer/New99LuxuryHouseFields";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-store";
@@ -466,7 +467,7 @@ export function New993InputForm({
         effUsage,
         newHouseAcqDate,
         value.constructionStartedBefore2003_993,
-      ) && (
+      ) ? (
         <New99LuxuryHouseFields
           reductionType="new_99_3"
           testidPrefix="993"
@@ -485,6 +486,20 @@ export function New993InputForm({
               ...(p.attachedLandAreaSqm !== undefined ? { attachedLandAreaSqm993: p.attachedLandAreaSqm } : {}),
               ...(p.stdPriceFloorMet !== undefined ? { stdPriceFloorMet993: p.stdPriceFloorMet } : {}),
               ...(p.luxuryFacility !== undefined ? { luxuryFacility993: p.luxuryFacility } : {}),
+            })
+          }
+        />
+      ) : (
+        // NH-22 — 종전 고급주택 판정 구간 밖에서도 딸린 토지 «연면적 2배 이내» 확인용 선택 입력을 받는다 (같은 필드 키 재사용, 계산 불변).
+        <New99AppurtenantLandFields
+          reductionType="new_99_3"
+          testidPrefix="993"
+          grossFloorAreaSqm={value.grossFloorAreaSqm993 ?? ""}
+          attachedLandAreaSqm={value.attachedLandAreaSqm993 ?? ""}
+          onChange={(p) =>
+            onUpdateMany({
+              ...(p.grossFloorAreaSqm !== undefined ? { grossFloorAreaSqm993: p.grossFloorAreaSqm } : {}),
+              ...(p.attachedLandAreaSqm !== undefined ? { attachedLandAreaSqm993: p.attachedLandAreaSqm } : {}),
             })
           }
         />
