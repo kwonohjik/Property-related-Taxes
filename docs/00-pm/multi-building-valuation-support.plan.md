@@ -56,7 +56,7 @@ throwaway probe(`calculateTransferTax` ↔ `calculateTransferTaxAggregate`, mock
 - 서브객체가 빠지면 환산이 사라져 결정세액이 73,860,200 늘어난다 ⇒ 현행 차단은 「침묵 오산 방지」였고,
   배관(④⑭) 없이 차단만 풀면 안 된다.
 - 결과 화면: `MultiTransferPropertyBreakdown.tsx:498`이 `ValuationDetailCards`를 그리고, 합산 결과의 자산별 breakdown은
-  `transfer-tax-aggregate-pickers.ts:38`이 `commercialBuildingValuationDetail`을 싣는다. 환산 상세 카드가 다건에서 뜨는지는 **V-C3(브라우저 확인 필요)**.
+  `transfer-tax-aggregate-pickers.ts:38`이 `commercialBuildingValuationDetail`을 싣는다. 환산 상세 카드가 다건에서 뜨는지는 **V-C3** → 아래 결과 ✅(DOM 존재 · 접힘 여부는 미확인).
 
 ### 2.3 변경 (PR-1)
 
@@ -170,10 +170,25 @@ PR-2를 먼저 머지해도 화면은 ⑧이 막고 있어 사용자 경로에 �
 |---|---|
 | V-G1 | ✅ 토지 누진 38% · 건물 단기 50%로 세율이 갈려도 배분 축(EARLIEST·PARTS)과 무관하게 단건과 같다 — 실가 285,210,000 · 환산 168,012,000. **Q-3 불필요** |
 | V-G2 | ✅ 예정신고 세액을 카드 묶음 단위로 계산(`PreliminaryCardUnit`) · 가산세는 첫 카드에만 — 단건 39,642,000 = 다건 · 앞뒤 자산의 기본공제 사용이 GB base에 반영(MG-7·MG-7b) |
-| V-G3 | 🔴→✅ 카드 함수가 공익수용(§164⑨1호)을 받지 않아 단건 66,180,666 ↔ 카드 111,380,000(45,199,334 과대). 다건은 선택 인자로 전달해 해소. **함께 양도 컴패니언 GB는 같은 함수라 같은 누락이 있을 수 있다 — 미측정 별건** |
+| V-G3 | 🔴→✅ 카드 함수가 공익수용(§164⑨1호)을 받지 않아 단건 66,180,666 ↔ 카드 111,380,000(45,199,334 과대). 다건은 선택 인자로 전달해 해소. 함께 양도 GB(주 자산·컴패니언)도 같은 누락이었다 — 실측 184,140,000 → 140,844,000(43,296,000 과대) · **#3092(c42c1d37e)로 해소**(§3.8) |
 | V-G4 | ✅ 의제취득일 전 재선택(`resolveGbPreDeemedRoute`)은 `buildGbPartCards` 안에도 있다(코드 확인) |
 | PR-2 서버 | #3082 — `multi-gb-expansion.ts` · anchor `transfer.route.multi-general-building` 9건 · 뮤테이션 6종 kill |
-| PR-3 화면 | ④ 공용 leaf `buildPrimaryGeneralBuildingValuation`(지분 축 A 축소 포함) · ⑧ 해제 · ⑦ `MultiGbAssetGroup`(자산 1행 + 일반건물 블록 + 카드 아코디언) · 신고서·명세서 폼 연결(`multi-result-groups.ts`) · anchor `multi-general-building-parity` 5건(뮤테이션 2종 kill) · E2E `multi-general-building.spec.ts` |
+| PR-3 화면 | ④ 공용 leaf `buildPrimaryGeneralBuildingValuation`(지분 축 A 축소 포함) · ⑧ 해제 · ⑦ `MultiGbAssetGroup`(자산 1행 + 일반건물 블록 + 카드 아코디언) · 신고서·명세서 폼 연결(`multi-result-groups.ts`) · anchor `multi-general-building-parity` 5건(뮤테이션 2종 kill) · E2E `multi-general-building.spec.ts` · #3085 머지 0955820d5 |
+
+### 3.8 후속 (2026-11-09 · 머지 뒤 브라우저 확인에서 나온 것)
+
+모든 확인은 headless Playwright 또는 throwaway probe다(사람이 직접 본 확인 아님).
+
+| PR | 내용 | 실측 |
+|---|---|---|
+| #3092 | 함께 양도 GB(주 자산·컴패니언) 공익수용 §164⑨1호 누락 — 두 호출부가 카드 함수에 `expropriation` 전달 | 184,140,000 → 140,844,000 · 토지 차익 175,500,000 → 55,500,000(= 단건) |
+| #3097 | 합산 결과 카드·상세명세서가 상가 환산취득가를 필요경비로 표시 — echo가 `commercialBuildingValuationDetail`을 읽는다 | 취득 0 · 필요경비 246,256,800 → 240,000,000 · 6,256,800(= 신고서 표) · 세액 불변 |
+| #3099 · #3101 | 함께 양도·축 B 컴패니언 오피스텔(환산) ⑧ 통과 ↔ ⑩ 400 — 컴패니언 refine에 상가 서브객체 면제(계획서 `docs/02-design/features/companion-commercial-estimated-std-exemption.plan.md`) | 135,363,606(= 주 자산 자리) · 축 B = 단건 29,406,405 · 공익수용 114,243,606 |
+| #3103 | 합산 신고서 표 자산별 세액 칸 「(참고)」 + 표 아래 안내(값은 설계상 자산 단독 참고값 — 역안분 안 함) | 주택 2채 74,870,000 + 27,610,000 ≠ 합계 123,060,000 |
+| #3107 | 합산 상세명세서 장특 머리 산식이 혼합 비율을 공제율처럼 표시(「× 7%」·「× 17%」) → 자산 2건 이상이면 「자산별 … 합계」 | 오피스텔 20% + 아파트 0% → 「× 7%」였다 |
+
+- **V-2(측정만 · 결함 없음)**: 상속(공시 전·후)·증여 취득 오피스텔 × 컴패니언·주 자산·축 B — 전부 200, 컴패니언 = 주 자산, 축 B = 단건(예: 상속 공시 전 167,606,942 / 단건 59,063,896).
+  관찰: 상속 평가액 공란이면 ⑧·컴패니언 ⑩은 막지만 주 자산 ⑫는 200(취득가액 0) — 화면에선 ⑧이 막아 도달 불가, 직접 API만.
 
 ## 4. 사용자 결정(Q)
 
@@ -187,5 +202,5 @@ PR-2를 먼저 머지해도 화면은 ⑧이 막고 있어 사용자 경로에 �
 ## 5. 완료 기준
 
 - [x] 트랙 C: parity anchor 6건 + 사용자 사례 anchor 통과 · 키 분류 가드 통과 · E2E 1건(headless) — PR #3076 머지 a7027de37. 사람이 브라우저로 직접 본 확인은 미수행
-- [x] 트랙 G: V-G1~V-G4 실측 후 anchor · 가산세 1회 anchor · E2E 1건(headless) — PR #3082(서버) · PR-3(화면). 사람이 브라우저로 직접 본 확인은 미수행
-- [ ] `npx tsc --noEmit` 0건 · `npx vitest run __tests__/calc/ __tests__/api/` 통과
+- [x] 트랙 G: V-G1~V-G4 실측 후 anchor · 가산세 1회 anchor · E2E 1건(headless) — PR #3082(서버) b26c8bf38 · PR #3085(화면) 0955820d5. 사람이 브라우저로 직접 본 확인은 미수행
+- [x] `npx tsc --noEmit` 0건 · vitest 통과 — 각 PR CI(typecheck + lint · vitest 4샤드 · E2E 12샤드) 전건 SUCCESS 후 머지
