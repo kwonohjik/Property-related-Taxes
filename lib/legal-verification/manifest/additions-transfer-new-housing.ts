@@ -121,4 +121,18 @@ export const TRANSFER_NEW_HOUSING_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  {
+    // §99① 본문 «이에 딸린 해당 건물 연면적의 2배 이내의 토지를 포함한다» (`NEW_99_APPURTENANT_LAND`, 리뷰 NH-22·31). 원문 MST 284389 실독 2026-11-09.
+    id: "SPECIAL.NEW_HOUSING_99_APPURTENANT_LAND",
+    citation: "조특법 §99",
+    keywords: ["이에 딸린 해당 건물 연면적의 2배 이내의 토지를 포함한다"],
+    keywordMode: "ALL",
+  },
+  {
+    // §99의3① 본문 «그 주택에 딸린 토지로서 해당 건물 연면적의 2배 이내의 것을 포함한다» (`NEW_99_3_APPURTENANT_LAND`, 리뷰 NH-22·31). 원문 MST 284389 실독 2026-11-09.
+    id: "SPECIAL.NEW_HOUSING_99_3_APPURTENANT_LAND",
+    citation: "조특법 §99의3",
+    keywords: ["그 주택에 딸린 토지로서 해당 건물 연면적의 2배 이내의 것을 포함한다"],
+    keywordMode: "ALL",
+  },
 ];

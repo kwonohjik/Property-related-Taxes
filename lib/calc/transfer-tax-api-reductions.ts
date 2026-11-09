@@ -521,10 +521,13 @@ function luxuryFacts(
   luxuryFacility: TriFormAnswer,
 ) {
   const detached = houseType === "detached";
+  // 연면적·딸린 토지 면적은 공동주택이 아니면 보낸다 — 종전 고급주택 구간 밖에서는 주택 유형을 묻지 않아("") 단독만 보내면 NH-22(딸린 토지 2배 확인)의
+  // 선택 입력이 서버에 닿지 않는다. 공동주택은 판정하지 않으므로(계획서 V-2) 보내지 않는다. 고급주택 판정은 houseType이 정해진 단독만 읽는다.
+  const sendsAreas = houseType !== "apartment";
   return {
     houseType: houseType || undefined,
-    grossFloorAreaSqm: detached ? parseDecimal(grossFloorArea || "") || undefined : undefined,
-    attachedLandAreaSqm: detached ? parseDecimal(attachedLandArea || "") || undefined : undefined,
+    grossFloorAreaSqm: sendsAreas ? parseDecimal(grossFloorArea || "") || undefined : undefined,
+    attachedLandAreaSqm: sendsAreas ? parseDecimal(attachedLandArea || "") || undefined : undefined,
     stdPriceFloorMet: detached ? stdPriceFloorMet || undefined : undefined,
     luxuryFacility: detached ? luxuryFacility || undefined : undefined,
   };

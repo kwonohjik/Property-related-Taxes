@@ -47,6 +47,7 @@ import {
   applyCommercialBuildingStep,
 } from "./transfer-tax-helpers";
 import { oneHouseJudgmentWarnings } from "./transfer-tax-one-house-warnings";
+import { appurtenantLand2xNotice } from "./transfer-reductions/new-housing-appurtenant-land-2x";
 import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
 import { resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { landOnlyRateInput } from "./land-only-owner-household";
@@ -673,6 +674,9 @@ function calculateTransferTaxCore(
     flatRate20Active, taxRateInput, multiHouseSurchargeResult, surchargeSpecialRules: parsedRates.surchargeSpecialRules, flatRateTax: taxResult.calculatedTax,
     generalRateTax: () => resolveSplitAwareTax({ taxBase, transferIncome, basicDeduction, splitDetail, parsedRates, taxRateInput: taxRateInputBase, multiHouseSurchargeResult, reducedPart: publicExpropriationReducedPart(input, splitDetail) }).calculatedTax,
   }));
+  // NH-22 — §99·§99의3 딸린 토지가 연면적의 2배를 확정적으로 넘으면 확인 필요 고지(세액 불변 — 안분 방법이 법령에 없다).
+  const land2xNotice = appurtenantLand2xNotice(input.reductions, incomeDeduction.appliedId);
+  if (land2xNotice) warnings.push(land2xNotice);
   // US-10·US-11·Q-30 (b) — 세율표·표1 연혁 미지원 고지(세액 불변). 장특은 실제 공제가 걸렸을 때만.
   warnings.push(...transferRateEraNotices({
     transferDate: effectiveInput.transferDate,

@@ -1,6 +1,6 @@
 # 신축주택 «딸린 토지 — 건물 연면적의 2배 이내» 범위를 엔진이 구분하지 않는다 (NH-22·NH-31)
 
-- 상태: **결정 대기** — 코드 변경 없음(문서만). 기준 master `99e8a1ee5`.
+- 상태: **구현 완료**(Q-1 b · Q-2 a · Q-3 b · Q-4 a — 사용자 «모두 권장안으로») — 결과는 §7. 기준 master `99e8a1ee5`.
 - 출처: 리뷰 `docs/reviews/new-housing-99-review-2026-11.md` NH-22(F-31) · NH-31(F-72) · Q-8 · V-19. (계획서 `new-housing-99-review-fixes.plan.md`의 «Q-8»은 §99의4 면적 입력 설계로 **다른 질문**이다 — 이 문서의 Q는 아래 §4의 Q-1~Q-4로 새로 매긴다.)
 
 ## 0. 결론
@@ -76,3 +76,31 @@ NH-22 단독 측정(토지 면적을 바꿔 세액이 같은지)은 **입력 칸
 3. 입력: 칸 노출 조건을 고급주택 구간 밖 단독주택으로 확장(선택 입력), 라벨에 «연면적(전체 층 합계)» 명시. ⑫ refine은 필수화하지 않는다.
 4. NH-31: 일괄양도에서 별도 토지 카드가 있고 주택 카드에 §99/§99의3이 선택된 경우 고지(⑧ 경고 또는 결과 고지 중 택 1 — 구현 때 기존 고지 경로를 grep으로 확인).
 5. anchor(UI + route) · 뮤테이션 · 회귀 5배치 · tsc · eslint · Playwright 1건 · 이 문서 §7.
+
+## 7. 구현 결과 [직접]
+
+**코드 — 계산 불변(고지만)**
+- `lib/tax-engine/transfer-reductions/new-housing-appurtenant-land-2x.ts`(신규 leaf): `judgeAppurtenantLand2x`(연면적·토지 면적이 둘 다 양수일 때만 판정, 공동주택은 `unknown`, `round2` 비교, 경계 포함 «이내») · `appurtenantLand2xNotice`(적용된 §99의3·§99 선언이 확정 초과일 때 확인 필요 고지) · `separateLandCardReductionNotice`(NH-31).
+- `transfer-tax.ts`: 고지 push 3줄(`incomeDeduction.appliedId` 기준) · `transfer-tax-aggregate-asset-records.ts`: 일괄양도 고지 push 3줄(카드별 `incomeDeductionReducibleOf > 0` + `propertyType === "land"` 카드).
+- `transfer-tax-api-reductions.ts`(④): 연면적·딸린 토지 면적을 **공동주택이 아니면** 보낸다(종전: 단독만). 구간 밖에서는 주택 유형을 묻지 않아 단독만 보내면 선택 입력이 서버에 닿지 않는다. 고급주택 판정은 `houseType === "detached"`일 때만 두 값을 읽어 세액은 불변이다.
+- `New99LuxuryHouseFields.tsx`: `New99AppurtenantLandFields`(선택 입력) 신설 · 연면적 힌트에 «2배 초과 시 고지» 문구. `New993InputForm.tsx`: 종전 고급주택 구간 밖에서 선택 입력을 보인다(구간 안은 기존 고급주택 블록이 같은 키를 쓴다). §99는 이미 항상 단독주택 칸이 보이므로 문구만.
+- 상수 `NEW_99_APPURTENANT_LAND`(«조특법 §99①»)·`NEW_99_3_APPURTENANT_LAND`(«조특법 §99의3①») + manifest 2건(MST 284389 실독 2026-11-09). **V-3 해소**: 현행 §99의3① 본문은 «그 주택에 딸린 토지로서 해당 건물 연면적의 2배 이내의 것을 포함한다»로 §99①(«이에 딸린 해당 건물 연면적의 2배 이내의 토지를 포함한다»)과 문언이 달라 키워드를 따로 잡았다.
+
+| 항목 | 결과 |
+|---|---|
+| route anchor `transfer.route.new-housing-appurtenant-land-2x-nh22.anchor.test.ts` | **9 통과** — §99의3 구간 밖 연면적 100 · 토지 400 → 고지 + 세액 = 면적 미입력 대조 · 경계 200(고지 없음)/200.01(고지) · 한쪽만 입력 · 공동주택 · 신축주택취득기간 밖 불성립 · §99 단독 · 일괄양도 별도 토지 카드(고지 / 감면 없는 대조 없음) |
+| 단위·UI anchor `__tests__/calc/new-housing-appurtenant-land-2x-nh22.anchor.test.tsx` | **16 통과** — 판정 8 · 고지 3 · NH-31 3 · 폼 노출 2(구간 밖 선택 입력 / 구간 안 고급주택 블록) |
+| 뮤테이션 6종 | M1 단건 고지 push 제거(3 실패) · M2 경계 `>` → `>=`(4) · M3 ④ 면적 전달을 단독만으로 되돌림(2) · M4 NH-31 조건에서 차감 유무 제거(2) · M5 집계 고지 push 제거(1) · M6 공동주택 제외 제거(1) — **전부 잡힘**, `cmp` 원복 확인 |
+| `npm run verify:legal` | 통과 449 / 실패 0 — `SPECIAL.NEW_HOUSING_99_APPURTENANT_LAND`·`SPECIAL.NEW_HOUSING_99_3_APPURTENANT_LAND` 포함 |
+| 회귀 5배치 | api 6572 · tax-engine 19095 · calc 11623 · lib 3356 · components 6944 — **전부 통과, 실패 0** |
+| tsc · eslint | 0건 · 0건 |
+| Playwright `e2e/nh22-appurtenant-land-2x-notice.spec.ts` | 수정본 **통과**(구간 밖 §99의3: 선택 입력 칸 보임 · 요청 body에 연면적 100·토지 400 · 응답 고지 · 화면에 고지 표시). 종전 코드(폼·④ 변환을 master로)는 **실패**(`new993-appurtenant-land-fields` 칸 없음). 처음 시료는 1세대1주택 비과세로 감면이 평가되지 않아 `isOneHousehold: false`·다주택 시료로 바꿨다 |
+
+**한계 · 확인 필요**
+- V-1 초과 토지분 안분 키 — 법령·해석례 없음. **계산에 반영하지 않았다**(Q-1 b). 지난 결정 «Q-8 = C1 배율 초과 파트 제외»는 근거가 생기면 올린다.
+- V-2 공동주택 «연면적의 2배» 판정 단위 — 판정하지 않는다(입력 안내문도 «공동주택은 입력하지 마세요»).
+- V-4 서면인터넷방문상담5팀-1432 본문 미독 · V-5 단건과 합산 경로의 세액 차 분해 · V-6 리뷰 수치 — 그대로 미해결.
+- NH-31은 **고지만** 했다. 별도 토지 카드를 주택 카드 감면에 연결하는 기능은 만들지 않았다(Q-3 b).
+- 고지는 결과 화면 경고 영역(`result.warnings`)에만 뜬다. 감면 상세 카드(`new993Detail.warnings`) 쪽에는 싣지 않았다.
+- 사람이 직접 한 브라우저 확인은 하지 않았다(Playwright로 갈음).
+

@@ -81,7 +81,7 @@ export function New99LuxuryHouseFields({
               value={value.grossFloorAreaSqm}
               onChange={(v) => onChange({ grossFloorAreaSqm: v })}
             />
-            <p className="mt-1 text-micro text-muted-foreground">주택으로 보는 부분과 주거전용 지하실을 포함합니다 — 264㎡ 이상이면 면적 기준 충족</p>
+            <p className="mt-1 text-micro text-muted-foreground">주택으로 보는 부분과 주거전용 지하실을 포함합니다 — 264㎡ 이상이면 면적 기준 충족 · 딸린 토지가 이 연면적의 2배를 넘으면 결과에 확인 필요 고지가 나옵니다 (조특법 §99①·§99의3①)</p>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium">딸린 토지 면적 (㎡)</label>
@@ -116,6 +116,56 @@ export function New99LuxuryHouseFields({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * 딸린 토지 «건물 연면적의 2배 이내» 확인용 선택 입력 — 종전 고급주택 판정 구간 밖(위 `New99LuxuryHouseFields`가 안 보이는 경우)의 §99의3에서 쓴다
+ * (리뷰 NH-22 · 계획서 Q-2 a · Q-4 a). 같은 필드 키(`grossFloorAreaSqm`·`attachedLandAreaSqm`)를 재사용하므로 고급주택 구간 안팎에서 한 값이다.
+ * 입력은 선택이다 — 한쪽이라도 비면 판정하지 않고, 계산은 어느 쪽이든 바뀌지 않는다(안분 방법이 법령에 없다).
+ */
+export function New99AppurtenantLandFields({
+  reductionType,
+  testidPrefix,
+  grossFloorAreaSqm,
+  attachedLandAreaSqm,
+  onChange,
+}: {
+  reductionType: "new_99" | "new_99_3";
+  testidPrefix: string;
+  grossFloorAreaSqm: string;
+  attachedLandAreaSqm: string;
+  onChange: (patch: { grossFloorAreaSqm?: string; attachedLandAreaSqm?: string }) => void;
+}) {
+  const suffix = testidPrefix;
+  return (
+    <div className="space-y-2" data-testid={`new${suffix}-appurtenant-land-fields`}>
+      <p className="text-xs font-medium">딸린 토지 범위 확인 (선택 · 단독주택만)</p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-xs font-medium">건물 연면적 (㎡)</label>
+          <DecimalInput
+            data-field={`reduction.${reductionType}.grossFloorAreaSqm${suffix}`}
+            value={grossFloorAreaSqm}
+            onChange={(v) => onChange({ grossFloorAreaSqm: v })}
+          />
+          <p className="mt-1 text-micro text-muted-foreground">전체 층의 합계입니다</p>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium">딸린 토지 면적 (㎡)</label>
+          <DecimalInput
+            data-field={`reduction.${reductionType}.attachedLandAreaSqm${suffix}`}
+            value={attachedLandAreaSqm}
+            onChange={(v) => onChange({ attachedLandAreaSqm: v })}
+          />
+          <p className="mt-1 text-micro text-muted-foreground">주택에 부수되는 토지 전체 면적</p>
+        </div>
+      </div>
+      <p className="text-micro text-muted-foreground" data-testid={`new${suffix}-appurtenant-land-hint`}>
+        신축주택에는 건물 연면적의 2배 이내의 딸린 토지만 포함됩니다 (조특법 §99의3①). 토지가 2배를 넘으면 결과에 확인 필요 고지가 나옵니다 —
+        초과분을 안분하는 방법이 법령에 없어 계산에는 반영하지 않습니다. 공동주택은 입력하지 마세요.
+      </p>
     </div>
   );
 }
