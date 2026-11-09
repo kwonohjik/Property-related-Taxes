@@ -175,6 +175,7 @@ export type New993SignCase =
   | "all_positive"     // (+,+) 안분 적용
   | "neg_pos"          // (-,+) 감면 0
   | "pos_neg"          // (+,-) 전액 감면
+  | "pos_zero"         // (+,0) 분모 0 — 전액 감면 (US-36 · 부동산납세과-412 요지 문언, 직접 해석례 없음)
   | "all_negative"     // (-,-) 감면 0
   | "within_5_years"   // 5년 내 — 부호 분기 없음
   | "ineligible";      // 적용 배제
@@ -306,21 +307,27 @@ export function calcSignedAllocation(
       reducibleIncome: Math.max(0, transferIncome),
     };
   }
-  // 그 외: 분자/분모 동시 음수, 분자 0, 분모 0 등 → 감면 0
+  if (numerator > 0 && denominator === 0) {
+    // (+,0) 분모 0(양도시 = 취득시 기준시가) — 전액 (US-36, 2026-11-10 사용자 결정).
+    //   양도시 = 취득시 < 5년시점이라 부동산납세과-412 요지(양도시 < 5년시점이면 양도소득금액 전체)의 문언이 그대로 성립하고,
+    //   분모 ±1원 양쪽이 모두 전액((+,+) 상한·(+,-))이라 0원 절벽을 만들지 않는다. 분모 0을 직접 다룬 해석례는 없다 — 결과에 확인 필요를 고지한다.
+    return {
+      ratio: 1,
+      signCase: "pos_zero",
+      reducibleIncome: Math.max(0, transferIncome),
+    };
+  }
+  // 그 외: (-,-)·(-,0)·분자 0 → 감면 0 (분자 ≤ 0은 5년간 발생분이 없다 — 부동산거래관리과-136·재산세제과-274)
   return { ratio: 0, signCase: "all_negative", reducibleIncome: 0 };
 }
 
 
 /**
- * 안분 산식의 분모가 0일 때의 «계산 불가 + 확인 필요» 문구 — §99(`new-99.ts`)·§99의3 공용 (NH-76 · Q-20).
- * `basisLabel` = 분모에서 빼는 기준시가의 이름(신축주택 취득 당시 / 종전주택 취득 당시).
+ * 안분 산식의 분모가 0(양도시 = 취득시 기준시가)이고 분자가 양수일 때의 «전액 + 확인 필요» 고지 — 전 조문 공용 (US-36 · 종전 NH-76/Q-20 대체).
+ * 분모 0을 직접 다룬 해석례는 없다 — 부동산납세과-412(2014.06.10.) 요지 문언(양도시 기준시가 < 5년시점 기준시가이면 양도소득금액 전체)을 적용했다.
  */
-export function allocationDenominatorZeroMessage(basisLabel: string): string {
-  return (
-    `양도 당시 기준시가와 ${basisLabel} 기준시가가 같아 안분 산식의 분모가 0이므로 감면대상 양도소득금액의 안분 비율을 정할 수 없습니다. ` +
-    "이 경우의 처리를 정한 규정을 확인하지 못해 감면을 계산하지 않았습니다 — 확인 필요: 기준시가(고시 시점·적용 가격)를 다시 확인하고 관할 세무서에 문의하세요."
-  );
-}
+export const ALLOCATION_DENOMINATOR_ZERO_FULL_NOTICE =
+  "분모 0(양도시 = 취득시 기준시가) — 부동산납세과-412 요지 문언에 따라 전액 감면대상(분모 0을 직접 다룬 해석례 없음 — 확인 필요)";
 
 // ============================================================================
 // 헬퍼: §99의3 ②항 판정 — 1세대1주택 신축 주택수 제외
@@ -462,33 +469,6 @@ export function evaluateNew993(input: New993Input): New993Result {
     const denominator = variant
       ? input.standardPriceAtTransfer - stdAtPrev
       : input.standardPriceAtTransfer - input.standardPriceAtAcquisition;
-    // NH-76 · Q-20 — 분모 0(양도시 = 취득시 기준시가). 안분 비율이 정의되지 않는다.
-    //   종전에는 `calcSignedAllocation`이 «그 외» 분기로 보내 근거 없이 감면 0으로 냈고, 분모가 1원만 달라져도
-    //   (+,+)·(+,-) 전액 쪽이라 1원 절벽이었다. 분모 0을 정한 조문·해석례를 확인하지 못해 계산하지 않고 확인 필요로 알린다.
-    if (denominator === 0) {
-      return {
-        isEligible: false,
-        ineligibleReasons: [
-          {
-            code: "ALLOCATION_DENOMINATOR_ZERO",
-            message: allocationDenominatorZeroMessage(variant ? "종전주택 취득 당시" : "신축주택 취득 당시"),
-            legalBasis: isWithin5Years
-              ? `${NEW_HOUSING_SUB_ARTICLE.NEW_99_3_INCOME} 1호 단서`
-              : NEW_HOUSING_SUB_ARTICLE.NEW_99_3_INCOME_AFTER_5Y,
-          },
-        ],
-        isWithin5Years: false,
-        reducibleTransferIncome: 0,
-        fiveYearRatio: 0,
-        signCase: "ineligible",
-        formulaSteps: [],
-        taxReductionForRuralSurtax: 0,
-        ruralSurtax: 0,
-        isExcludedFromHouseCountFor1H1H: false,
-        legalBasis,
-        ...eraEcho,
-      };
-    }
     const allocation = calcSignedAllocation(input.transferIncome, numerator, denominator);
     reducibleTransferIncome = allocation.reducibleIncome;
     fiveYearRatio = allocation.ratio;
@@ -532,6 +512,12 @@ export function evaluateNew993(input: New993Input): New993Result {
         label: "감면 양도소득금액",
         value: reducibleTransferIncome,
         formula: `${input.transferIncome.toLocaleString()} × ${(fiveYearRatio * 100).toFixed(4)}% = ${reducibleTransferIncome.toLocaleString()}`,
+      });
+    } else if (signCase === "pos_zero") {
+      formulaSteps.push({
+        label: "감면 양도소득금액 = 양도소득금액 전액 (분모 0)",
+        value: reducibleTransferIncome,
+        formula: ALLOCATION_DENOMINATOR_ZERO_FULL_NOTICE,
       });
     } else if (signCase === "neg_pos") {
       formulaSteps.push({
@@ -602,5 +588,9 @@ export function evaluateNew993(input: New993Input): New993Result {
     ...eraEcho,
     // 2015.12.31. 이전 양도 — 종전 규정 적용 대상 고지(계산 불변, NH-49 · 대통령령 제26959호 부칙 §35)
     ...(pre2016Notice ? { warnings: [pre2016Notice] } : {}),
+    // US-36 — 분모 0 전액 고지(확인 필요). 앞선 warnings가 있으면 이어 붙인다.
+    ...(signCase === "pos_zero"
+      ? { warnings: [...(pre2016Notice ? [pre2016Notice] : eraEcho.warnings ?? []), ALLOCATION_DENOMINATOR_ZERO_FULL_NOTICE] }
+      : {}),
   };
 }

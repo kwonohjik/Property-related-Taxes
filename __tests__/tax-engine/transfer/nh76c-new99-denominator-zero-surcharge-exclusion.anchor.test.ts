@@ -9,6 +9,9 @@
  * 근거: 「감면되는 주택」 여부는 요건으로 정해진다 — 두 evaluator 모두 요건 검사를 마친 뒤 안분 단계에서만 분모 0·기준시가 미입력을 낸다.
  *   기준시가는 요건이 아니라 공제액 계산 인자다(US-35와 같은 독법). 분모 0은 ⑧이 막지 않아 화면에서 도달한다.
  *
+ * US-36 (2026-11-10): 분모 0 규칙이 «계산 불가»에서 «전액 + 확인 필요»로 바뀌었다 — 분모 0은 이제 적격(eligibleId)이라 중과 배제는
+ *   요건 경로(`requirementsMetId`)가 아니라 eligibleId 경로로 유지된다. 분모 ±1과 같은 전액이므로 세액도 22,612,000이다.
+ *
  * 전(前) 실측(mock 세율, 3주택 조정지역, 같은 시료): 분모 0 → 중과 30% · 총 354,541,000(= 감면 없음 대조) / 분모 ±1 → 배제 · 22,612,000.
  * 세율표는 mock(정본 세액 아님).
  */
@@ -50,18 +53,17 @@ const mk = (reductions: unknown[], acq: string, manualExemption = false, houseCo
   );
 const hasExclusion = (r: ReturnType<typeof calculateTransferTax>) => r.steps.some((s) => s.label === EXCLUSION_STEP);
 
-describe("§99의3 분모 0 — 중과 배제 유지 · 공제는 계산 불가 그대로", () => {
-  it("분모 0: 불성립 · 공제 0 · 확인 필요 사유 유지 · 중과 배제 step · 중과 0 · 세액 = 5호 수동 토글 대조", () => {
+describe("§99의3 분모 0 — 전액 감면 + 중과 배제 유지", () => {
+  it("분모 0: 적격 · 전액 · 확인 필요 고지 · 중과 배제 step · 중과 0 · 세액 22,612,000 (분모 ±1과 같다)", () => {
     const r = mk([R993(100_000_000, 100_000_000)], ACQ993);
     const d = r.new993Detail!;
-    expect(d.isEligible).toBe(false);
-    expect(d.reducibleTransferIncome).toBe(0);
-    expect(d.ineligibleReasons.map((x) => x.code)).toEqual(["ALLOCATION_DENOMINATOR_ZERO"]);
-    expect(d.ineligibleReasons[0].message).toContain("확인 필요");
+    expect(d.isEligible).toBe(true);
+    expect(d.signCase).toBe("pos_zero");
+    expect(d.reducibleTransferIncome).toBeGreaterThan(0);
+    expect(d.warnings?.some((w) => w.includes("확인 필요"))).toBe(true);
     expect(hasExclusion(r)).toBe(true);
     expect(r.surchargeRate ?? 0).toBe(0);
-    expect(r.totalTax).toBe(mk([], ACQ993, true).totalTax);
-    expect(r.totalTax).toBe(124_366_000);
+    expect(r.totalTax).toBe(22_612_000);
   });
   it("대조: 감면 미선택은 중과 30% · 354,541,000 (전 결함값과 같다)", () => {
     const r = mk([], ACQ993);
@@ -77,11 +79,14 @@ describe("§99의3 분모 0 — 중과 배제 유지 · 공제는 계산 불가 
       expect(r.totalTax, String(tr)).toBe(22_612_000);
     }
   });
-  it("재개발 변형 분모 0(양도시 = 종전주택 취득시)도 배제 유지", () => {
-    const r = mk([R993(100_000_000, 400_000_000, { isRedevelopedNewHouse993: true, previousHouseStdPrice993: 400_000_000 })], ACQ993);
-    expect(r.new993Detail!.ineligibleReasons.map((x) => x.code)).toEqual(["ALLOCATION_DENOMINATOR_ZERO"]);
+  it("재개발 변형 분모 0(양도시 = 종전주택 취득시)도 전액 · 배제 유지 · 분모 +1과 같은 세액", () => {
+    const v = { isRedevelopedNewHouse993: true, previousHouseStdPrice993: 400_000_000 };
+    const r = mk([R993(100_000_000, 400_000_000, v)], ACQ993);
+    expect(r.new993Detail!.isEligible).toBe(true);
+    expect(r.new993Detail!.signCase).toBe("pos_zero");
     expect(hasExclusion(r)).toBe(true);
     expect(r.surchargeRate ?? 0).toBe(0);
+    expect(r.totalTax).toBe(mk([R993(100_000_000, 400_000_001, v)], ACQ993).totalTax);
   });
   it("5년 시점 기준시가 미입력(MISSING_STD_PRICE)도 요건 뒤 사유라 배제 유지 (⑧이 화면에서는 막는다)", () => {
     const r = mk([R993(100_000_000, 100_000_001, { standardPriceAt5Years: undefined })], ACQ993);
@@ -90,32 +95,31 @@ describe("§99의3 분모 0 — 중과 배제 유지 · 공제는 계산 불가 
   });
   it("짝: 요건 불성립(계약일 2005 — 감면 기간 밖)은 분모 0이어도 중과 유지 = 감면 미선택", () => {
     const r = mk([R993(100_000_000, 100_000_000, { contractDate993: D("2005-03-01") })], ACQ993);
-    expect(r.new993Detail!.ineligibleReasons.map((x) => x.code)).not.toContain("ALLOCATION_DENOMINATOR_ZERO");
+    expect(r.new993Detail!.isEligible).toBe(false);
     expect(hasExclusion(r)).toBe(false);
     expect(r.totalTax).toBe(mk([], ACQ993).totalTax);
   });
-  it("2주택 조정(소령 §167의10①2호)도 같다 — 분모 0에도 배제", () => {
+  it("2주택 조정(소령 §167의10①2호)도 같다 — 분모 0에도 배제 · 분모 +1과 같은 세액", () => {
     const r = mk([R993(100_000_000, 100_000_000)], ACQ993, false, 2);
     expect(hasExclusion(r)).toBe(true);
-    expect(r.totalTax).toBe(mk([], ACQ993, true, 2).totalTax);
+    expect(r.totalTax).toBe(mk([R993(100_000_000, 100_000_001)], ACQ993, false, 2).totalTax);
   });
 });
 
-describe("§99 분모 0 — 같은 규칙", () => {
-  it("분모 0: 불성립 · 확인 필요 · 배제 step · 세액 = 5호 수동 토글 대조", () => {
+describe("§99 분모 0 — 같은 규칙(전액)", () => {
+  it("분모 0: 적격 · 전액 · 확인 필요 · 배제 step · 세액 22,612,000", () => {
     const r = mk([R99(100_000_000, 100_000_000)], ACQ99);
-    expect(r.new99Detail!.isEligible).toBe(false);
-    expect(r.new99Detail!.ineligibleReasons.map((x) => x.code)).toEqual(["ALLOCATION_DENOMINATOR_ZERO"]);
-    expect(r.new99Detail!.ineligibleReasons[0].message).toContain("확인 필요");
+    expect(r.new99Detail!.isEligible).toBe(true);
+    expect(r.new99Detail!.signCase).toBe("pos_zero");
+    expect(r.new99Detail!.warnings?.some((w) => w.includes("확인 필요"))).toBe(true);
     expect(hasExclusion(r)).toBe(true);
     expect(r.surchargeRate ?? 0).toBe(0);
-    expect(r.totalTax).toBe(mk([], ACQ99, true).totalTax);
-    expect(r.totalTax).toBe(124_366_000);
+    expect(r.totalTax).toBe(22_612_000);
   });
   it("짝: 분모 +1은 종전대로 22,612,000 · 요건 불성립(고가주택 170㎡)은 중과 유지", () => {
     expect(mk([R99(100_000_000, 100_000_001)], ACQ99).totalTax).toBe(22_612_000);
     const big = mk([R99(100_000_000, 100_000_000, { exclusiveAreaSqm99: 170 })], ACQ99);
-    expect(big.new99Detail!.ineligibleReasons.map((x) => x.code)).not.toContain("ALLOCATION_DENOMINATOR_ZERO");
+    expect(big.new99Detail!.isEligible).toBe(false);
     expect(hasExclusion(big)).toBe(false);
   });
 });
@@ -133,14 +137,14 @@ describe("겸용 경로(NH-09 선판정) — 같은 함수라 같다", () => {
     calcMixed(1_100_000_000, D("2026-06-01"), {
       ...mixedUseCase14(), isOneHouseExempt: false, buildingAcquisitionDate: D("2003-09-01"), landAcquisitionDate: D("2003-09-01"), ...over,
     } as unknown as MixedUseAssetInput, rates);
-  it("§99의3 분모 0 선택 → 중과 없음 · 배제 step · 5호 수동 토글 대조와 같은 세액", () => {
+  it("§99의3 분모 0 선택 → 중과 없음 · 배제 step (전액 감면이라 5호 수동 토글보다 세액이 낮다)", () => {
     const sel = run({ multiHouse: mh(), reductions: [r993z] });
     const manual = run({ multiHouse: mh({ isTaxSpecialExemption: true }), reductions: [r993z] });
     const control = run({ multiHouse: mh() });
     expect(control.multiHouseSurcharge?.surchargeType).toBe("multi_house_3plus");
     expect(sel.multiHouseSurcharge?.surchargeType).toBe("none");
     expect(sel.steps.some((s) => s.id === "surcharge-exclusion-by-reduction")).toBe(true);
-    expect(sel.total.totalPayable).toBe(manual.total.totalPayable);
+    expect(sel.total.totalPayable).toBeLessThanOrEqual(manual.total.totalPayable);
     expect(sel.total.totalPayable).toBeLessThan(control.total.totalPayable);
   });
 });

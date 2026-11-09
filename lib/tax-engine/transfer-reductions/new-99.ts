@@ -30,7 +30,7 @@ import { evaluateNew99AcquisitionGate, type New99AcquisitionCause } from "./new-
 import { pre2016RuleNotice, isHighValueHouseAtDate } from "./new-99-3-era";
 import { judgeRedevMemberPeriod, type RedevMemberPeriodReason } from "./new-99-redev-member";
 import {
-  allocationDenominatorZeroMessage,
+  ALLOCATION_DENOMINATOR_ZERO_FULL_NOTICE,
   calcSignedAllocation,
   resolveNew99BaseDate,
   isWithin5YearsCheck,
@@ -134,7 +134,6 @@ export type New99IneligibleCode =
   | "FIRST_CONTRACT_UNCONFIRMED"
   | "NOT_MEMBER_AT_APPROVAL"
   | "MISSING_STD_PRICE"
-  | "ALLOCATION_DENOMINATOR_ZERO"
   | "MISSING_PREVIOUS_STD_PRICE"
   | "TRANSFER_BEFORE_ACQUISITION"
   | RedevMemberPeriodReason["code"];
@@ -380,14 +379,6 @@ export function evaluateNew99(input: New99Input): New99Result {
     }
     const numerator = isWithin5Years ? stdAtTransfer - stdAtAcq : stdAt5Y - stdAtAcq;
     const denominator = variant ? stdAtTransfer - stdAtPrev : stdAtTransfer - stdAtAcq;
-    // NH-76 · Q-20 — 분모 0(양도시 = 취득시 기준시가): 안분 비율 미정의 → 계산 불가 + 확인 필요 (§99의3과 같은 문구)
-    if (denominator === 0) {
-      return ineligible([{
-        code: "ALLOCATION_DENOMINATOR_ZERO",
-        message: allocationDenominatorZeroMessage(variant ? "종전주택 취득 당시" : "신축주택 취득 당시"),
-        legalBasis: NEW_HOUSING_SUB_ARTICLE.NEW_99_INCOME,
-      }]);
-    }
     const allocation = calcSignedAllocation(input.transferIncome, numerator, denominator);
     reducible = allocation.reducibleIncome;
     fiveYearRatio = allocation.ratio;
@@ -403,6 +394,15 @@ export function evaluateNew99(input: New99Input): New99Result {
 
   // "초과금액 없는 것" 정합 — 차감액은 양도소득금액 한도
   reducible = Math.min(reducible, Math.max(0, input.transferIncome));
+
+  // US-36 — 분모 0 전액 고지(확인 필요)
+  if (signCase === "pos_zero") {
+    formulaSteps.push({
+      label: "분모 0 — 양도소득금액 전액 (확인 필요)",
+      value: reducible,
+      formula: ALLOCATION_DENOMINATOR_ZERO_FULL_NOTICE,
+    });
+  }
 
   return {
     id: "new_99",
@@ -424,12 +424,13 @@ export function evaluateNew99(input: New99Input): New99Result {
     taxReductionForRuralSurtax: 0,
     ruralSurtax: 0,
     legalBasis,
-    ...withPre2016Notice(input.transferDate),
+    ...withPre2016Notice(input.transferDate, signCase === "pos_zero" ? [ALLOCATION_DENOMINATOR_ZERO_FULL_NOTICE] : []),
   };
 }
 
 /** 2015.12.31. 이전 양도 — 종전 규정 적용 대상 고지(계산 불변, NH-49) */
-function withPre2016Notice(transferDate: Date): { warnings?: string[] } {
+function withPre2016Notice(transferDate: Date, extra: string[] = []): { warnings?: string[] } {
   const notice = pre2016RuleNotice(transferDate, "new_99");
-  return notice ? { warnings: [notice] } : {};
+  const warnings = [...(notice ? [notice] : []), ...extra];
+  return warnings.length > 0 ? { warnings } : {};
 }

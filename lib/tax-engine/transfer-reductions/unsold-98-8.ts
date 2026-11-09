@@ -22,7 +22,6 @@ import { describeAllocationFormula } from "./unsold-allocation-display";
 import { applyRate } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import {
-  allocationDenominatorZeroMessage,
   calcSignedAllocation,
   isWithin5YearsCheck,
   type New993FormulaStep,
@@ -102,7 +101,6 @@ export type Unsold988IneligibleCode =
   | "MISSING_RENTAL_START"
   | "RENTAL_PERIOD_SHORT"
   | "MISSING_STD_PRICE"
-  | "ALLOCATION_DENOMINATOR_ZERO"
   | "TRANSFER_BEFORE_ACQUISITION";
 
 export interface Unsold988IneligibleReason {
@@ -326,17 +324,6 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
         [{
           code: "MISSING_STD_PRICE",
           message: "5년 후 양도 안분에 필요한 기준시가(취득시·5년시점·양도시)가 입력되지 않았습니다 (조특령 §40① 준용 — 자동 안분 불가).",
-          legalBasis: "조특령 §98의7④",
-        }],
-        rentalMonths,
-      );
-    }
-    // NH-76 · Q-20 — 분모 0(양도시 = 취득시 기준시가): 계산 불가 + 확인 필요 (§99·§99의3·하이브리드 공통 문구)
-    if (stdAtTransfer - stdAtAcq === 0) {
-      return ineligible(
-        [{
-          code: "ALLOCATION_DENOMINATOR_ZERO",
-          message: allocationDenominatorZeroMessage("해당 주택 취득 당시"),
           legalBasis: "조특령 §98의7④",
         }],
         rentalMonths,

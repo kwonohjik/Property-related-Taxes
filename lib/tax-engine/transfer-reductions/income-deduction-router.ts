@@ -538,7 +538,7 @@ function evalHybrid(
  * 안분 단계에서만 이 사유를 낸다(`new-99.ts` 7단계 · `new-99-3.ts` STEP 3 · `unsold-98-8.ts` · `unsold-hybrid.ts` `computeHybridEffect`).
  * `MISSING_PREVIOUS_STD_PRICE`(§99 재개발 변형)는 넣지 않는다 — ⑧이 막고 리뷰 결정 범위 밖이다(계획서 `surcharge-oos-remaining.plan.md` B).
  */
-const CALC_FACTOR_REASON_CODES: ReadonlySet<string> = new Set(["MISSING_STD_PRICE", "ALLOCATION_DENOMINATOR_ZERO"]);
+const CALC_FACTOR_REASON_CODES: ReadonlySet<string> = new Set(["MISSING_STD_PRICE"]);
 
 function onlyCalcFactorReasons(isEligible: boolean, reasons: ReadonlyArray<{ code: string }>): boolean {
   return !isEligible && reasons.length > 0 && reasons.every((x) => CALC_FACTOR_REASON_CODES.has(x.code));
