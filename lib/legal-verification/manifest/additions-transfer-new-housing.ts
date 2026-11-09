@@ -82,6 +82,19 @@ export const TRANSFER_NEW_HOUSING_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // ⑪ 증축·부수토지 추가 취득분의 면적·가액 포함 · ⑫ 보유기간 당초 취득일 기산 · ⑬1호 취득기간·소재지 판정 당초 취득일 기준
+    // (`NEW_99_4_EXPANSION_DECREE`·`NEW_99_4_EXPANSION_HOLDING_DECREE`, 리뷰 NH-52). 원문 MST 288915 실독 2026-11-09.
+    id: "TRANSFER_DECREE.NEW_99_4_EXPANSION",
+    citation: "조특령 §99의4",
+    keywords: [
+      "증축 또는 그 부수토지의 추가 취득이 있는 경우",
+      "증가된 건물ㆍ토지의 면적 및 가액을 포함하여 계산한다",
+      "당초 농어촌주택등의 취득일부터 기산하여 계산한다",
+      "당초 농어촌주택등의 취득일을 기준으로 한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     // 령 §99② 단서·§99의3④ 단서의 제외 사유 — 소득세법 시행규칙 §71③ 사유로 다른 주택 분양
     id: "TRANSFER_RULE.NEW_HOUSING_RECONTRACT_EXCEPTION",
     citation: "조특칙 §44의4",

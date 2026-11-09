@@ -24,6 +24,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import {
   NEW_99_4_HANOK_DECREE,
   NEW_99_4_STD_PRICE_ADDENDA,
+  NEW_HOUSING_SUB_ARTICLE,
 } from "@/lib/tax-engine/legal-codes/transfer";
 import { resolveNew994StdPriceLimit } from "@/lib/tax-engine/transfer-reductions/new-99-4";
 import {
@@ -196,6 +197,10 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
             취득기간 {isHometown ? "2009.1.1" : "2003.8.1"}~2028.12.31 — 일반주택(양도 주택)을 먼저
             취득한 후 취득한 {houseLabel}이어야 합니다 (§99의4①)
           </p>
+          <p className="mt-1 text-micro text-muted-foreground" data-testid="new994-expansion-date-hint">
+            증축 또는 부수토지 추가 취득이 있어도 보유기간·취득기간 이내 취득 여부·소재지 판정은 당초 취득일 기준입니다 — 이 칸에는 당초 취득일을
+            입력하세요 ({NEW_HOUSING_SUB_ARTICLE.NEW_99_4_EXPANSION_HOLDING_DECREE}1호)
+          </p>
           <p className="mt-1 text-micro text-muted-foreground" data-testid="new994-para5-hint">
             양도일이 2019.1.1.~2020.12.31.이면 양도 뒤 예정신고기한(양도일이 속하는 달의 말일부터 2개월)까지 취득한 경우도 같은
             칸에 입력하세요 — 수도권 조정대상지역 2주택(양도 시 개별주택가격·공동주택가격 합산 6억원 이하)이면 중과 배제·장기보유특별공제
@@ -241,6 +246,10 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
           hint={stdPriceHint}
           testidPrefix="new994-stdprice"
         />
+        <p className="text-micro text-muted-foreground" data-testid="new994-expansion-price-hint">
+          일반주택 양도일까지 {houseLabel}을 증축했거나 그 부수토지를 더 취득했다면, 늘어난 건물·토지의 기준시가도 이 합계에 포함해 입력하세요
+          ({NEW_HOUSING_SUB_ARTICLE.NEW_99_4_EXPANSION_DECREE}). 늘어난 부분을 어느 시점 기준으로 평가하는지는 조문에 적혀 있지 않아 확인이 필요합니다.
+        </p>
         <ToggleCard
           variant="chip"
           checked={value.isRegisteredHanok}
@@ -252,6 +261,9 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
         {(sizeScope.land || sizeScope.house) && (
           <div className="space-y-2" data-testid="new994-size-fields">
             <p className="text-xs font-medium">면적 요건 (양도일 기준 — 종전 조특법 §99의4①{isHometown ? "2호다목" : "1호나목"})</p>
+            <p className="text-micro text-muted-foreground" data-testid="new994-expansion-area-hint">
+              일반주택 양도일까지 증축 또는 부수토지 추가 취득이 있으면 늘어난 면적도 포함해 입력하세요 ({NEW_HOUSING_SUB_ARTICLE.NEW_99_4_EXPANSION_DECREE})
+            </p>
             {sizeScope.land && (
               <div>
                 <label className="mb-1 block text-xs font-medium">대지면적 (㎡)</label>

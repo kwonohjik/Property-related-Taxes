@@ -734,6 +734,10 @@ export const NEW_HOUSING_SUB_ARTICLE = {
   NEW_99_4_CAPITAL_EXCEPTION_DECREE: "조특령 §99의4③",
   /** 조특칙 §45① — 령③의 지역(경기도 연천군·가평군, 인천광역시 강화군·옹진군) */
   NEW_99_4_CAPITAL_EXCEPTION_RULE: "조특칙 §45①",
+  /** 조특령 §99의4⑪ — 일반주택 양도일까지의 증축·부수토지 추가 취득분을 면적·가액에 포함(리뷰 NH-52) */
+  NEW_99_4_EXPANSION_DECREE: "조특령 §99의4⑪",
+  /** 조특령 §99의4⑫·⑬1호 — 증축·추가 취득이 있어도 보유기간·취득기간·소재지 판정은 당초 취득일 기준(리뷰 NH-52) */
+  NEW_99_4_EXPANSION_HOLDING_DECREE: "조특령 §99의4⑫·⑬",
 } as const;
 
 /** 장특공제 배제 사유 (§95② 본문 괄호 — 미등기·§104⑦ 중과 자산 등). UI 표시 전용 echo. */
