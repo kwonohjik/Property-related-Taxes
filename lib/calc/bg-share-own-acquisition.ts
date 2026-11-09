@@ -19,10 +19,18 @@ import { gbBgThreeWayParts } from "./bg-pre-deemed-mode";
 const SHARE_OWN_ACQ_KINDS: ReadonlySet<string> = new Set(["general_building", "housing", "land", "commercial_building", "building"]);
 
 /**
- * 축 B × 부담부증여 지분 카드를 부담부증여로 다루는 자산 종류(일반건물 제외 — 일반건물은 `mergeGbPropertyLevel`이 물건 수준 값을 따로 병합한다).
- * 지분 카드 ③ 판정값(`bgShareCardJudgmentFields` · D-3c)과 양도시 기준시가 병합(`mergePrimaryBasic` · D-3d)이 같이 쓴다. 측정한 종류만(vp2c §15 · §17).
+ * 축 B × 부담부증여 지분 카드 ③을 병합값(부담부증여)으로 판정하는 자산 종류(`bgShareCardJudgmentFields` · D-3c · vp2c §16).
+ * 일반건물(D-3e · vp2c §19.3 · Q-12 a) — 저장값 「일반 양도」로 판정하면 취득시 기준시가 칸(`gbShowsAcqStdPrice`)이 숨어 ⑧이 그 값을 요구하는 채 막혔다.
+ * 재개발 · 입주권은 측정상 ③ 판정이 막다른 길을 만들지 않아 넣지 않았다(§19.2 · §19.4).
  */
-export const BG_SHARE_CARD_KINDS: ReadonlySet<string> = new Set(["housing", "land", "commercial_building", "building"]);
+export const BG_SHARE_CARD_KINDS: ReadonlySet<string> = new Set(["housing", "land", "commercial_building", "building", "general_building"]);
+
+/**
+ * 축 B × 부담부증여 지분 카드의 양도시 기준시가를 자산 1 값으로 병합하는 자산 종류(`mergePrimaryBasic` · D-3d · vp2c §17).
+ * 재개발 APT(D-3f · vp2c §19.4 · Q-13 a) — 지분 카드에 칸이 없어 기준시가 평가 · 환산(K-5)이 막다른 길이었다.
+ * 일반건물은 `mergeGbPropertyLevel`이 물건 수준 값을 따로 병합한다. 입주권은 이 값을 쓰지 않는다(평가 3항).
+ */
+export const BG_SHARE_STD_TRANSFER_KINDS: ReadonlySet<string> = new Set(["housing", "land", "commercial_building", "building", "redevelopment_apt"]);
 
 /** 지분 카드가 따로 받을 수 있는 칸 — 그 밖의 §159 하위필드는 물건 단위 값이라 계속 자산 1을 승계한다. */
 export const BG_SHARE_OWN_ACQ_FIELDS = ["bgAcquisitionMethod", "bgActualAcquisitionLand", "bgActualAcquisitionBuilding", "bgActualAcquisitionTotal"] as const;

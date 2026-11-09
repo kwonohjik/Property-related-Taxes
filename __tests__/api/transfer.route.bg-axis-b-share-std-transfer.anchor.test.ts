@@ -109,8 +109,11 @@ describe("SD-3 병합 범위", () => {
   it("일반 양도 지분 → 그 지분 칸 값 그대로(③에 자기 칸이 있다)", () => {
     expect(mergePrimaryBasic(s, p({ transferType: "regular" })).standardPriceAtTransfer).toBe("123000000");
   });
-  it("측정하지 않은 종류(재개발 · 입주권 · 일반건물) → 종전 그대로", () => {
-    for (const assetKind of ["redevelopment_apt", "right_to_move_in", "general_building"]) expect(mergePrimaryBasic(s, p({ assetKind })).standardPriceAtTransfer).toBe("123000000");
+  it("재개발 APT(D-3f · vp2c §19.4 · Q-13 a) → 자산 1 값", () => {
+    expect(mergePrimaryBasic(s, p({ assetKind: "redevelopment_apt" })).standardPriceAtTransfer).toBe("800000000");
+  });
+  it("입주권(평가 3항 — 이 값을 쓰지 않는다) · 일반건물(`mergeGbPropertyLevel`) → 종전 그대로", () => {
+    for (const assetKind of ["right_to_move_in", "general_building"]) expect(mergePrimaryBasic(s, p({ assetKind })).standardPriceAtTransfer).toBe("123000000");
   });
   it("자산 1 자신은 그대로", () => {
     const a = p();

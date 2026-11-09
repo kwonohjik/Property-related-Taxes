@@ -150,8 +150,11 @@ describe("OK-6 지분 카드 ③ 판정값(D-3c) — 저장값 「일반 양도�
   it("토글 켬 — 산정방식은 이 지분 값", () => {
     expect(bgShareCardJudgmentFields(share(OWN, { bgAcquisitionMethod: "salesCase" }), primary("housing")).bgAcquisitionMethod).toBe("salesCase");
   });
-  it("일반 양도 · 일반건물(측정 안 함)은 빈 객체 — 종전 그대로", () => {
+  it("일반 양도 · 재개발 · 입주권 · 분양권은 빈 객체 — 종전 그대로", () => {
     expect(bgShareCardJudgmentFields(share(), primary("housing", { transferType: "regular" }))).toEqual({});
-    expect(bgShareCardJudgmentFields(share(), primary("housing", { assetKind: "general_building" }))).toEqual({});
+    for (const assetKind of ["redevelopment_apt", "right_to_move_in", "presale_right"]) expect(bgShareCardJudgmentFields(share(), primary("housing", { assetKind }))).toEqual({});
+  });
+  it("일반건물(D-3e · vp2c §19.3 · Q-12 a) → 병합값 — 종전에는 빈 객체라 취득시 기준시가 칸이 숨었다", () => {
+    expect(bgShareCardJudgmentFields(share(), primary("housing", { assetKind: "general_building" })).transferType).toBe("burdened_gift");
   });
 });
