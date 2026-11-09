@@ -47,7 +47,7 @@ throwaway probe(미커밋, `.test.tsx` jsdom): `makeDefaultAsset` + 해당 감�
 
 - 가격 → 면적 순으로 두 번 부른다: `onChange(String(json.price))` 바로 뒤 `onExclusiveArea?.(json.exclusiveArea)` [코드: `HousingStdPriceLookupField.tsx:103-109`].
 - 폼은 각각 한 키씩 갱신하는 함수를 넘긴다: §99의3 `onUpdate("standardPriceAtAcquisition993", v)` / `onUpdate("exclusiveAreaSqm993", …)` (`New993InputForm.tsx:246 · 252 · 403 · 409 · 427 · 433`), §99 · §98의8 · §99의2는 `ReductionStdPriceSection`을 통해 `onChange({ standardPriceAtX: v })` / `onChange({ exclusiveAreaSqmX: v })` [코드: `ReductionStdPriceSection.tsx:219-252` · 각 폼 `onExclusiveAreaChange`].
-- 패널의 갱신 함수 14개가 모두 `onChange({ reductions: reductions.map(…) })` 형태다 [코드: `UnifiedReductionPanel.tsx:215-331`].
+- 패널의 갱신 경로는 `reductions.map(…)`을 펼치는 곳 13군데와 `filter`·추가·`toggleGroupRadio` 3군데(합 16)가 모두 렌더 시점의 `reductions`를 읽어 `onChange({ reductions })`를 부른다 [코드: `UnifiedReductionPanel.tsx:215-331` — grep 건수].
 
 ## 4. 결정 대기
 
@@ -65,12 +65,12 @@ throwaway probe(미커밋, `.test.tsx` jsdom): `makeDefaultAsset` + 해당 감�
 | V-2 | 브라우저 수동 확인(Playwright) — 이 문서의 재현은 jsdom 하네스다 |
 | V-3 | 세액 영향(리뷰 수치 +16,672,500 / −2,067,188은 인용) |
 | V-4 | 패널 밖·다른 감면 폼(§97 계열 등)의 «한 이벤트에 갱신 두 번» 호출이 더 있는지 — 전수 안 함 |
-| V-5 | 패널 갱신 함수 14개 중 `ref` 방식으로 바꿔도 되는 곳(`toggleGroup`처럼 «현재 선택 상태를 읽어 판단»하는 함수는 같은 ref를 쓰게 할지) |
+| V-5 | 패널 갱신 경로 16군데 중 `ref` 방식으로 바꿔도 되는 곳(`toggleGroup`처럼 «현재 선택 상태를 읽어 판단»하는 함수는 같은 ref를 쓰게 할지) |
 | — | 사람이 직접 한 브라우저 수동 확인은 하지 않았다 |
 
 ## 6. 구현 계획 (Q-1 a · Q-2 a · Q-3 a일 때, 결정 후 같은 PR)
 
-1. `UnifiedReductionPanel.tsx`: `reductionsRef`(렌더마다 `= asset.reductions ?? []`)와 `commitReductions(next)`(`ref` 갱신 + `onChange({ reductions: next })`) 한 곳을 두고, 14개 갱신 함수가 `reductionsRef.current`를 읽어 `commitReductions`를 부르게 한다. `useEffect`로 스토어에 미러링하지 않는다(렌더 중 ref 대입).
+1. `UnifiedReductionPanel.tsx`: `reductionsRef`(렌더마다 `= asset.reductions ?? []`)와 `commitReductions(next)`(`ref` 갱신 + `onChange({ reductions: next })`) 한 곳을 두고, 갱신 경로 16군데가 `reductionsRef.current`를 읽어 `commitReductions`를 부르게 한다. `useEffect`로 스토어에 미러링하지 않는다(렌더 중 ref 대입).
 2. anchor: 통합 `.test.tsx` — 4폼 × 3시점(가격 300,000,000 · 면적 84.96 둘 다 반영) + 대조(면적 없는 응답) + 연속 두 번 갱신 단위 칸.
 3. 뮤테이션: `commitReductions`가 ref를 갱신하지 않게 · 일부 갱신 함수만 옛 배열을 읽게 → 해당 칸 실패.
 4. 회귀 5배치(api · lib · components · calc · tax-engine) · tsc · eslint. 화면 변경이 있으므로 **Playwright 해당 spec 1건**(조회 → 기준시가 칸 값 확인)을 돌린다.
