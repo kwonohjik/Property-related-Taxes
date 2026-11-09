@@ -583,6 +583,8 @@ export function buildExemptEarlyResult(p: {
   return {
     isExempt: true,
     // [F1] 경정 결과 비과세 → refund면 전액환급 산출(determinedTax=0)
+    // US-28 — 농특세 인자(3번째)를 넘기지 않는 것이 정답: 이 조기반환은 감면 산출 전에 반환해 정정 후 농특세가 항상 0이다.
+    //   당초 농특세가 있었다면 기본값 0으로 환급 줄이 나온다(anchor transfer.route.amendment-rural-surtax-exempt-loss.us28).
     amendmentDetail: p.input.amendment ? computeAmendment(p.input.amendment, 0) : undefined,
     exemptReason: p.exemptReason,
     new994Detail: p.new994Detail,

@@ -8,6 +8,8 @@ import type { AmendmentDetail } from "@/lib/tax-engine/types/transfer-amendment.
 import type { AmendmentRuralSurtaxDetail } from "@/lib/tax-engine/types/transfer-amendment.types";
 import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/LocalIncomePenaltyNotice";
+import { AmendmentRuralSurtaxNotice } from "@/components/calc/results/shared/AmendmentRuralSurtaxNotice";
+import { shouldShowAmendmentRuralSurtaxNotice } from "@/lib/calc/amendment-rural-surtax-notice";
 
 /** 금액 행 — 라벨 좌 / 금액 우측정렬 고정폭(amount-column-align 정책). */
 function Row({
@@ -130,6 +132,7 @@ export function AmendmentResultCard({
             borderClass="border-emerald-300 dark:border-emerald-800"
           />
         )}
+        {shouldShowAmendmentRuralSurtaxNotice(detail) && <AmendmentRuralSurtaxNotice className="mt-2" />}
 
         {detail.claimDeadline && (
           <div className="mt-2">
@@ -217,6 +220,7 @@ export function AmendmentResultCard({
           borderClass="border-amber-300 dark:border-amber-800"
         />
       )}
+      {shouldShowAmendmentRuralSurtaxNotice(detail) && <AmendmentRuralSurtaxNotice className="mt-2" />}
 
       <div className="mt-2 space-y-0.5">
         <Row
