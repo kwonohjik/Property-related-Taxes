@@ -93,7 +93,7 @@ D의 카드별 값은 각 단독 대조(F의 주택 카드 · E의 토지 카드
 - ⑧ `lib/calc/transfer-tax-validate-reductions.ts` — 인라인 문구를 위 leaf 호출로 교체(미사용이 된 `track127_7EffectLabel`·`REDUCTION_METADATA` import 제거).
 - ⑫ `lib/api/transfer-tax-schema-reduction-refines.ts` — `refineReductionTrack127_7`. 호출 2곳: `transfer-tax-schema-refines.ts`(주 자산, `addPropertyRefines`) · `transfer-tax-schema.ts`(컴패니언 루프).
 - 오류 경로는 충돌 상대 감면의 `type` 칸(`reductions.N.type`, `companionAssets.N.reductions.M.type`). 하이브리드 5년 분기는 취득일·양도일이 모두 있으면 `isWithin5YearsCheck`, 하나라도 비면 두 경우가 모두 충돌일 때만 막는다.
-- anchor `__tests__/api/transfer.route.track-127-7-cross-nh41.anchor.test.ts` 14건: 같은 카드 400(문구 = ⑧) · 단독 200 · 순서 무관 · 카드 분리(D) 200 + 카드별 값이 단독 대조와 같음 · 컴패니언 400 · 주 자산만 400 · refine 단위(하이브리드 5년 경계 · §98/§98의2 · 날짜 누락 · 트랙 밖 §97의3 통과 · 경로).
+- anchor `__tests__/api/transfer.route.track-127-7-cross-nh41.anchor.test.ts` 13건: 같은 카드 400(문구 = ⑧) · 단독 200 · 순서 무관 · 카드 분리(D) 200 + 카드별 값이 단독 대조와 같음 · 컴패니언 400 · 주 자산만 400 · refine 단위(하이브리드 5년 경계 · §98/§98의2 · 날짜 누락 · 트랙 밖 §97의3 통과 · 경로).
 - 구현 전 anchor 실행: 6건 중 4건 실패(200 반환) — 결함 재현 확인.
 
 뮤테이션(적용 → anchor → `cp` 복원 → `cmp` 일치):
