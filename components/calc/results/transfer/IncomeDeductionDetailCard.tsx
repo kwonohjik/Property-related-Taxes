@@ -17,6 +17,7 @@ import type {
   New99Result,
   Unsold988Result,
   UnsoldHybridResult,
+  Unsold986RentalPeriodEcho,
 } from "@/lib/tax-engine/types/transfer.types";
 
 /**
@@ -122,6 +123,18 @@ const SURCHARGE_NOTE: Record<Detail["kind"], string> = {
   unsold_98_2: SURCHARGE_5HO,
 };
 
+/** §98의6 2호 — 엔진이 센 인정 임대기간(echo 표시 전용) */
+function Unsold986RentalPeriodLine({ echo }: { echo?: Unsold986RentalPeriodEcho }) {
+  if (!echo) return null;
+  return (
+    <p className="text-caption text-foreground" data-testid="unsold986-rental-period">
+      임대기간 {echo.rentalMonths}개월(기산일 {echo.basisDate}
+      {echo.vacancyMonths > 0 ? `, 공실 ${echo.vacancyMonths}개월 제외` : ""}
+      {echo.inheritedMonths > 0 ? `, 피상속인 ${echo.inheritedMonths}개월 합산` : ""})
+    </p>
+  );
+}
+
 export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggregateApplied }: Props) {
   const title = TITLES[kind];
   // P2·P3 하이브리드 — 5년 내 양도 = 세액감면 경로 (소득금액 차감 아님)
@@ -148,6 +161,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
             </ul>
           </div>
         )}
+        {kind === "unsold_98_6" && <Unsold986RentalPeriodLine echo={(result as UnsoldHybridResult).rentalPeriodEcho} />}
         {/* §99 확인 필요 고지 — 「모름」으로 고급주택 처리(NH-02) */}
         {kind === "new_99" && <ReductionDetailWarnings detail={result as New99Result} />}
         <p className="text-micro text-rose-700 dark:text-rose-400">근거 조문: {result.legalBasis}</p>
@@ -234,6 +248,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
         </div>
       )}
 
+      {kind === "unsold_98_6" && <Unsold986RentalPeriodLine echo={(result as UnsoldHybridResult).rentalPeriodEcho} />}
       {/* §99 확인 필요 고지 — 2015.12.31. 이전 양도 종전 규정(NH-49) */}
       {kind === "new_99" && <ReductionDetailWarnings detail={result as New99Result} />}
 

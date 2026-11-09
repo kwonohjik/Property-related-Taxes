@@ -21,6 +21,7 @@ import { computeHybridEffect } from "./unsold-hybrid";
 import { ineligibleHybrid } from "./unsold-hybrid";
 import type { UnsoldHybridIneligibleReason } from "./unsold-hybrid";
 import type { UnsoldHybridResult } from "./unsold-hybrid";
+import type { Unsold986RentalPeriodEcho } from "./unsold-hybrid";
 import {
   unsold986RentalBasisDate,
   unsold986RentalMonthsExcludingVacancy,
@@ -88,6 +89,7 @@ export function evaluateUnsold986(input: Unsold986Input): UnsoldHybridResult {
   const reasons: UnsoldHybridIneligibleReason[] = [];
   const hoType = input.hoType ?? "seller_rented";
   const rate = UNSOLD_98_6_RATE;
+  let rentalPeriodEcho: Unsold986RentalPeriodEcho | undefined;
   if (input.isEligibleSubject === false) {
     reasons.push({
       code: "NOT_ELIGIBLE_SUBJECT",
@@ -184,12 +186,16 @@ export function evaluateUnsold986(input: Unsold986Input): UnsoldHybridResult {
         legalBasis,
       });
     }
-    reasons.push(...evaluate986RentalPeriod(input));
+    const rental = evaluate986RentalPeriod(input);
+    reasons.push(...rental.reasons);
+    rentalPeriodEcho = rental.echo;
   }
 
-  if (reasons.length > 0) return ineligibleHybrid("unsold_98_6", reasons, legalBasis, rate, false);
+  if (reasons.length > 0) {
+    return { ...ineligibleHybrid("unsold_98_6", reasons, legalBasis, rate, false), ...(rentalPeriodEcho ? { rentalPeriodEcho } : {}) };
+  }
 
-  return computeHybridEffect({
+  const result = computeHybridEffect({
     id: "unsold_98_6",
     legalBasis,
     articleLabel: hoType === "seller_rented" ? "조특법 §98의6①1호" : "조특법 §98의6①2호",
@@ -210,13 +216,19 @@ export function evaluateUnsold986(input: Unsold986Input): UnsoldHybridResult {
       legalBasis,
     },
   });
+  return rentalPeriodEcho ? { ...result, rentalPeriodEcho } : result;
 }
 
 /**
  * 2호 임대기간 5년 판정(US-24·US-25·US-60). 일자 모순·미입력은 사유로 막고(조용히 보정하지 않는다),
  * 임대종료일이 양도일을 넘는 경우만 법정 상한(양도일)으로 자른다 — 화면 ⑧은 이 입력을 차단한다.
+ *
+ * 🔴 사용자 결정(2026-11-09, 해석례 없음 — 확인 필요): 사업자등록일 또는 임대사업자등록일이 2012.1.1. 이후(당일 포함)이면 2호 부적격(2011.12.31. 등록은 적격)
+ * (법 §98의6①2호 괄호 「…사업자등록과 …임대사업자등록을 하고 2011년 12월 31일 이전에 임대계약을 체결한 경우에 한정」을
+ * 등록도 2011.12.31.까지로 읽는다). 등록이 임대계약보다 늦은 것 자체는 사유가 아니다(2011년 안이면 기산만 늦춘다).
+ * 이 사유는 임대기간 계산을 막지 않는다 — 5년 사유와 함께 낸다.
  */
-function evaluate986RentalPeriod(input: Unsold986Input): UnsoldHybridIneligibleReason[] {
+function evaluate986RentalPeriod(input: Unsold986Input): { reasons: UnsoldHybridIneligibleReason[]; echo?: Unsold986RentalPeriodEcho } {
   const out: UnsoldHybridIneligibleReason[] = [];
   const basis = TRANSFER.UNSOLD_98_6_DECREE_RENTAL_PERIOD;
   if (!input.rentalStartDate) {
@@ -233,10 +245,22 @@ function evaluate986RentalPeriod(input: Unsold986Input): UnsoldHybridIneligibleR
       legalBasis: basis,
     });
   }
-  if (!input.rentalStartDate || !input.businessRegistrationDate || !input.rentalRegistrationDate) return out;
+  if (!input.rentalStartDate || !input.businessRegistrationDate || !input.rentalRegistrationDate) return { reasons: out };
 
   const start = input.rentalStartDate;
   const t = (d: Date) => d.getTime();
+  const deadlineReasons: UnsoldHybridIneligibleReason[] = [];
+  const lateRegistrations = [
+    t(input.businessRegistrationDate) > t(UNSOLD_98_6_RENTAL_CONTRACT_TO) ? "사업자등록" : undefined,
+    t(input.rentalRegistrationDate) > t(UNSOLD_98_6_RENTAL_CONTRACT_TO) ? "임대사업자등록" : undefined,
+  ].filter((x): x is string => x !== undefined);
+  if (lateRegistrations.length > 0) {
+    deadlineReasons.push({
+      code: "REGISTRATION_AFTER_DEADLINE",
+      message: `${lateRegistrations.join("·")}이 2012.1.1. 이후에 이뤄졌습니다 — 법 §98의6①2호 괄호는 「사업자등록과 임대사업자등록을 하고 2011년 12월 31일 이전에 임대계약을 체결한 경우에 한정」한다고 정합니다. 등록도 2011.12.31.까지(2012.1.1. 이후 등록은 부적격) 해야 하는 것으로 처리했습니다 (사용자 결정 — 해석례 없음, 확인 필요).`,
+      legalBasis: TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_6,
+    });
+  }
   if (input.rentalContractDate && t(input.rentalContractDate) > t(start)) {
     out.push({
       code: "RENTAL_DATE_ORDER",
@@ -267,19 +291,26 @@ function evaluate986RentalPeriod(input: Unsold986Input): UnsoldHybridIneligibleR
       legalBasis: basis,
     });
   }
-  if (out.length > 0) return out;
+  if (out.length > 0) return { reasons: [...out, ...deadlineReasons] };
 
   const basisDate = unsold986RentalBasisDate(start, input.businessRegistrationDate, input.rentalRegistrationDate);
   const rentalEnd = input.rentalEndDate && t(input.rentalEndDate) < t(input.transferDate) ? input.rentalEndDate : input.transferDate;
-  const ownMonths = unsold986RentalMonthsExcludingVacancy(basisDate, rentalEnd, input.rentalVacancies ?? []);
+  const vacancies = input.rentalVacancies ?? [];
+  const ownMonths = unsold986RentalMonthsExcludingVacancy(basisDate, rentalEnd, vacancies);
   const rentalMonths = ownMonths + inherited;
+  const echo: Unsold986RentalPeriodEcho = {
+    basisDate: basisDate.toISOString().slice(0, 10),
+    rentalMonths,
+    vacancyMonths: Math.max(0, unsold986RentalMonthsExcludingVacancy(basisDate, rentalEnd, []) - ownMonths),
+    inheritedMonths: inherited,
+  };
   if (rentalMonths < UNSOLD_98_6_RENTAL_MONTHS) {
-    const vacancyNote = (input.rentalVacancies ?? []).length > 0 ? ", 공실 구간 제외" : "";
+    const vacancyNote = vacancies.length > 0 ? ", 공실 구간 제외" : "";
     out.push({
       code: "RENTAL_PERIOD_SHORT",
       message: `임대기간이 5년(60개월) 미만입니다 (인정 임대기간 ${rentalMonths}개월 — 등록 후 임대를 개시한 날(초일 산입)부터 기산${vacancyNote}${inherited ? `, 피상속인 ${inherited}개월 합산` : ""}).`,
       legalBasis: basis,
     });
   }
-  return out;
+  return { reasons: [...out, ...deadlineReasons], echo };
 }

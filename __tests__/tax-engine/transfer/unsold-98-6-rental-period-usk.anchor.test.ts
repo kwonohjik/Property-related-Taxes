@@ -82,8 +82,31 @@ describe("K-2 엔진 — 2호 임대기간 5년", () => {
   it("US-60: 등록 2012-06-01(실제 개시 2011-12-01) → 기산 2012-06-01, 양도 2016-12-15 = 54개월 불적격 / 등록 전 개시면 60개월 적격", () => {
     const late = base986({ businessRegistrationDate: D("2012-05-01"), rentalRegistrationDate: D("2012-06-01") });
     expect(codes(late)).toContain("RENTAL_PERIOD_SHORT");
+    expect(codes(late)).toContain("REGISTRATION_AFTER_DEADLINE"); // 2012.1.1. 이후 등록 — 사용자 결정 2026-11-09
     expect(evaluateUnsold986(late).ineligibleReasons.find((x) => x.code === "RENTAL_PERIOD_SHORT")?.message).toContain("54개월");
     expect(codes(base986())).not.toContain("RENTAL_PERIOD_SHORT");
+  });
+
+  it("사용자 결정 2026-11-09: 등록 2011-12-31 적격 / 2012-01-01 부적격 — 사업자등록·임대사업자등록 각각", () => {
+    const ok = (o: Partial<Unsold986Input>) => codes(base986({ transferDate: D("2017-12-31"), ...o }));
+    expect(ok({ businessRegistrationDate: D("2011-12-31") })).not.toContain("REGISTRATION_AFTER_DEADLINE");
+    expect(ok({ rentalRegistrationDate: D("2011-12-31") })).not.toContain("REGISTRATION_AFTER_DEADLINE");
+    expect(ok({ businessRegistrationDate: D("2012-01-01") })).toContain("REGISTRATION_AFTER_DEADLINE");
+    expect(ok({ rentalRegistrationDate: D("2012-01-01") })).toContain("REGISTRATION_AFTER_DEADLINE");
+    // 등록이 계약(2011-11-15)보다 늦지만 2011년 안 — 사유 아님, 기산만 늦춘다(등록 2011-12-31 → 기산 2011-12-31)
+    const r = evaluateUnsold986(base986({ transferDate: D("2017-12-31"), rentalRegistrationDate: D("2011-12-31") }));
+    expect(r.isEligible).toBe(true);
+    expect(r.rentalPeriodEcho?.basisDate).toBe("2011-12-31");
+    expect(r.rentalPeriodEcho?.rentalMonths).toBe(72);
+  });
+
+  it("⑦ echo: 적격이어도 인정 임대기간·기산일·공실 개월을 싣는다 (엔진 판정 불변)", () => {
+    const r = evaluateUnsold986(
+      base986({ transferDate: D("2018-12-31"), rentalVacancies: [{ startDate: D("2014-01-01"), endDate: D("2014-12-31") }] }),
+    );
+    expect(r.isEligible).toBe(true);
+    // 2011-12-01~2018-12-31 = 85개월, 공실 12개월 제외 → 구간 25 + 48 = 73개월
+    expect(r.rentalPeriodEcho).toEqual({ basisDate: "2011-12-01", rentalMonths: 73, vacancyMonths: 12, inheritedMonths: 0 });
   });
 
   it("Q-22 (a): 기산 2011-12-01 — 양도 2016-11-30 적격(60) / 2016-11-29 불적격(59)", () => {
