@@ -12,10 +12,18 @@ type HybridDetails = Pick<
   | "unsold986Detail" | "unsold982Detail" | "unsold984Detail" | "unsold98Detail"
 >;
 
+const hybridDetailsOf = (r: HybridDetails) => [
+  r.unsold987Detail, r.unsold992Detail, r.unsold983Detail, r.unsold985Detail,
+  r.unsold986Detail, r.unsold982Detail, r.unsold984Detail, r.unsold98Detail,
+];
+
 /** effectCategory === "income_deduction"인 하이브리드 detail 탐색(§98의3·§98의5·§98의6·§98의7 등 5년후). */
 export function activeIncomeDeductionHybrid(r: HybridDetails) {
-  return [
-    r.unsold987Detail, r.unsold992Detail, r.unsold983Detail, r.unsold985Detail,
-    r.unsold986Detail, r.unsold982Detail, r.unsold984Detail, r.unsold98Detail,
-  ].find((d) => d?.isEligible && d.effectCategory === "income_deduction");
+  return hybridDetailsOf(r).find((d) => d?.isEligible && d.effectCategory === "income_deduction");
+}
+
+/** 감면 id(`reductionTypeApplied`)가 가리키는 하이브리드 detail — 5년 이내 세액감면 농특세 판정용. 없으면 undefined. */
+export function hybridDetailById(r: HybridDetails, id: string | undefined) {
+  if (!id) return undefined;
+  return hybridDetailsOf(r).find((d) => d?.id === id);
 }
