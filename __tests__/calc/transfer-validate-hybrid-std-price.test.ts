@@ -43,7 +43,7 @@ function make985(std: Std): AssetReductionForm {
   return {
     type: "unsold_98_5",
     contractDate985: "2011-03-01",
-    priceReductionRatePct985: "15",
+    announcedPrice985: "100000000", contractPrice985: "85000000",
     standardPriceAtAcquisition985: std.acq ?? "",
     standardPriceAt5Years985: std.y5 ?? "",
     standardPriceAtTransfer985: std.transfer ?? "",

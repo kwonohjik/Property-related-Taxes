@@ -8,7 +8,7 @@
  */
 
 import { DateInput } from "@/components/ui/date-input";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
@@ -94,18 +94,39 @@ export function Unsold985InputForm({
       </SectionShell>
 
       <SectionShell num="②" title="분양가격 인하율" tone="sky">
-        <div>
-          <label className="mb-1 block text-xs font-medium">분양가격 인하율 (%)</label>
-          <DecimalInput
-            data-field="reduction.unsold_98_5.priceReductionRatePct985"
-            value={value.priceReductionRatePct985}
-            onChange={(v) => onChange({ priceReductionRatePct985: v })}
-          />
-          <p className="mt-1 text-micro text-muted-foreground">
-            <Frac top="최초 입주자 모집공고에 공시된 분양가격 − 실제 매매가격" bottom="최초 공시 분양가격" /> × 100.
-            10% 이하 = 감면율 60% / 10% 초과 20% 이하 = 80% / 20% 초과 = 100% (법 §98의5①각호)
-          </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium">입주자 모집공고안에 공시된 분양가격 (원)</label>
+            <CurrencyInput
+              label=""
+              hideLabel
+              hideUnit
+              data-field="reduction.unsold_98_5.announcedPrice985"
+              value={value.announcedPrice985}
+              onChange={(v) => onChange({ announcedPrice985: v })}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium">매매계약서상의 매매가격 (원)</label>
+            <CurrencyInput
+              label=""
+              hideLabel
+              hideUnit
+              data-field="reduction.unsold_98_5.contractPrice985"
+              value={value.contractPrice985}
+              onChange={(v) => onChange({ contractPrice985: v })}
+            />
+          </div>
         </div>
+        <p className="mt-1 text-micro text-muted-foreground">
+          분양가격 인하율 = <Frac top="입주자 모집공고안에 공시된 분양가격 − 매매계약서상의 매매가격" bottom="입주자 모집공고안에 공시된 분양가격" /> × 100 (조특령 §98의4④).
+          인하율 10% 이하 = 감면율 60% / 10% 초과 20% 이하 = 80% / 20% 초과 = 100% (법 §98의5①각호). 두 금액으로 계산하므로 인하율을 반올림해 넣을 필요가 없습니다.
+        </p>
+        <p className="text-micro text-muted-foreground">
+          확인 필요: 공고가 여러 번 나온 단지에서 어느 공고안의 분양가격을 쓰는지, 잔금 선납할인·계약 외 할인을 매매가격에서 빼는지는 해석례·심판례가 갈리거나 원문을 확인하지 못했습니다
+          (국세청 부동산거래관리과-802·989는 선납할인을 제외, 조심2014중2849·2014부2333은 실질 인하로 판단). 별지 제63호의5서식 날인의 「분양가격 인하율」 기재와도 대조하세요.
+          매매가격이 공시 분양가격보다 크면 인하율이 음수여서 감면율 0%(감면 없음)로 처리합니다.
+        </p>
       </SectionShell>
 
       <SectionShell num="③" title="자격 요건 확인" tone="rose">

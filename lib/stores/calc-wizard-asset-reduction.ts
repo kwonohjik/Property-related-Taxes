@@ -619,8 +619,10 @@ export type RentalReductionFormVariant =
       isEligibleSubject985: boolean;
       /** 최초 매매계약일 (YYYY-MM-DD) — 2010.5.14~2011.4.30 */
       contractDate985: string;
-      /** 분양가격 인하율 (%, DecimalInput) */
-      priceReductionRatePct985: string;
+      /** 입주자 모집공고안에 공시된 분양가격 (원, CurrencyInput) — 령 §98의4④ (D2 US-58, 인하율 % 직접 입력 대체) */
+      announcedPrice985: string;
+      /** 매매계약서상의 매매가격 (원, CurrencyInput) — 령 §98의4④ */
+      contractPrice985: string;
       /** 2010.2.11 현재 수도권 밖 미분양 확인 */
       isNonCapitalUnsoldAtCutoff985: boolean;
       isFirstContract985: boolean;

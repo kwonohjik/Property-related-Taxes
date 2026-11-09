@@ -162,10 +162,10 @@ export function toUnsold985Payload(r: Extract<AssetReductionForm, { type: "unsol
      * 「인하율 100분의 10 **이하**」라 0%도 60% 감면 대상인데, 그 값이 여기서 사라지면
      * 엔진이 「미입력」으로 판정해 감면이 통째로 날아간다(엔진·⑧을 고쳐도 no-op).
      */
-    priceReductionRatePct985:
-      (r.priceReductionRatePct985 ?? "").trim() === ""
-        ? undefined
-        : parseDecimal(r.priceReductionRatePct985),
+    // D2(US-58) 인하율(%)은 보내지 않는다 — 두 금액을 보내고 엔진이 령 §98의4④로 계산한다.
+    // ⚠️ `|| undefined`는 0원을 undefined로 만든다. 공시 분양가는 0이 무효라 상관없지만 매매가 0은 「입력됨」으로 보내야 한다(빈 문자열만 undefined).
+    announcedPrice985: parseAmount(r.announcedPrice985 || "0") || undefined,
+    contractPrice985: (r.contractPrice985 ?? "").trim() === "" ? undefined : parseAmount(r.contractPrice985),
     isNonCapitalUnsoldAtCutoff985: r.isNonCapitalUnsoldAtCutoff985,
     isFirstContract985: r.isFirstContract985,
     isNotOccupiedAtContract985: r.isNotOccupiedAtContract985,

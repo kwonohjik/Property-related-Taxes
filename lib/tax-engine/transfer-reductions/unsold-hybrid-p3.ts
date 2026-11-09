@@ -184,6 +184,8 @@ export function evaluateAnyHybridFromReduction(
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
       contractDate: toHybridDate(r.contractDate985) ?? ctx.assetContractDate,
+      announcedPrice: r.announcedPrice985 as number | undefined,
+      contractPrice: r.contractPrice985 as number | undefined,
       priceReductionRatePct: r.priceReductionRatePct985 as number | undefined,
       isNonCapitalUnsoldAtCutoff: r.isNonCapitalUnsoldAtCutoff985 as boolean | undefined,
       isFirstContract: r.isFirstContract985 as boolean | undefined,

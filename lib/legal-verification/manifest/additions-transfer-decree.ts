@@ -738,4 +738,15 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  {
+    // ④ 분양가격 인하율 산식(`UNSOLD_98_5_DECREE.PRICE_REDUCTION_RATE`). `unsold-98-5.ts` `resolve985Reduction`. 원문 MST 288915 실독 2026-11-09.
+    id: "TRANSFER_DECREE.UNSOLD_98_5_PRICE_REDUCTION",
+    citation: "조특령 §98의4",
+    keywords: [
+      "법 제98조의5제1항에 따른 분양가격 인하율은 다음의 계산식에 따라 산정한다",
+      "입주자 모집공고안에 공시된 분양가격",
+      "매매계약서상의 매매가격",
+    ],
+    keywordMode: "ALL",
+  },
 ];
