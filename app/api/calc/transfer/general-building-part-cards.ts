@@ -83,6 +83,13 @@ export interface GbPartCards {
   burdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
 }
 
+/** §164⑨ 1호 공익수용 특례 입력 — 단건 route가 `dispatchGeneralBuilding`에 넘기는 최상위 3필드와 같다. */
+export interface GbExpropriationInput {
+  transferCause?: "general" | "public_expropriation";
+  compensationPerSqm?: number;
+  compensationBasisStdPrice?: number;
+}
+
 /**
  * 한 자산(또는 한 지분)의 파트 카드를 만든다 — 경로 A(환산) / 경로 B(실가) 분기는 `actualPriceMode`가 정한다.
  * `dispatchGeneralBuilding`(단건 진입점)과 **같은 축**이다.
@@ -117,6 +124,11 @@ export function buildGbPartCards(
   burdenedGiftOwnershipRatio?: number,
   /** 공유지분 — 그 물건의 계약 총액(100%). 계약서 구분 기재로 §100③을 판정한다(`scaleDeclaredSaleSplitToShare`). */
   contractTotal?: number,
+  /**
+   * §164⑨ 1호 공익수용 특례(토지 환산 분모) — 최상위 특례 필드. 단건 `dispatchCoercedGeneralBuilding`과 같은 주입이다.
+   * 다건 합산(`multi/route.ts`)이 넘긴다. 함께 양도 컴패니언은 넘기지 않는다(종전 그대로 — 계획서 multi-building-valuation-support §3.6 V-G3).
+   */
+  expropriation?: GbExpropriationInput,
 ): GbPartCards {
   const estimatedPayloadOf = (raw: Record<string, unknown>): GeneralBuildingValuationPayload => ({
     ...(raw as unknown as GeneralBuildingValuationPayload),
@@ -127,6 +139,12 @@ export function buildGbPartCards(
     landAcquisitionDate,
     // 개산공제(영 §163⑥) base 축소 전용 — 기준시가·면적은 100% 유지가 정확성의 근거다.
     ownershipRatio,
+    // §164⑨ 1호 — 환산 경로 엔진이 게이트(수용·환산·보상 후보)를 판정한다. 없으면 무영향.
+    ...(expropriation?.transferCause ? { transferCause: expropriation.transferCause } : {}),
+    ...(expropriation?.compensationPerSqm !== undefined ? { compensationPerSqm: expropriation.compensationPerSqm } : {}),
+    ...(expropriation?.compensationBasisStdPrice !== undefined
+      ? { compensationBasisStdPrice: expropriation.compensationBasisStdPrice }
+      : {}),
     // 증축 원건물 일괄 실가 — 단건과 같은 주입(엔진이 키의 존재로 원건물 모드를 고른다).
     ...extensionBundledInjection(raw, actualAcquisitionPrice, actualExpenses),
   });
@@ -352,6 +370,8 @@ export function buildGbCompanionItems(
     ownershipRatio?: number; assetId: string; assetLabel: string; totalPropertyTransferPrice?: number;
     /** 신고 단위 공통 양도비 중 이 자산 몫(`allocatedCommonExpense`) — 선언 채널에 합산한다(`withBundledCommonExpense`). */
     commonExpense?: number;
+    /** §164⑨ 1호 공익수용 — 다건 합산만 넘긴다(`buildGbPartCards` 같은 인자 주석). */
+    expropriation?: GbExpropriationInput;
   },
   /**
    * 그 자산의 결과 상세(산식 재료)를 받는 곳 — 함께 양도는 일반건물이 여럿일 수 있어 자산 id별로 모은다(`bundled-route.ts`).
@@ -400,6 +420,7 @@ export function buildGbCompanionItems(
       bgInfo ? src.ownershipRatio : undefined,
       // 공유지분 — 그 물건 전체(100%) 양도가액. 모르면(안분 모드) 한쪽 기재 계약서만 종전 지분 판정으로 남는다.
       src.totalPropertyTransferPrice,
+      src.expropriation,
     );
     const tagged = tagGbCards(built.cards, src.assetId, src.assetLabel);
     const swap = built.swap ? remapGbSwap(built.swap, src.assetId) : undefined;
