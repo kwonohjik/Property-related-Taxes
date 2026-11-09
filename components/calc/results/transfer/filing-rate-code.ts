@@ -18,13 +18,18 @@
  * · 주식(`1-6x`·`1-70`)·파생상품(`1-80`·`1-81`)·신탁(`1-95`)·국외전출세(`1-94`)·
  *   국외자산(`2-10`) — 이 표는 **부동산 신고서**용이라 대상이 아니다.
  *   주식양도세는 별도 결과뷰가 같은 서식을 재현한다.
- * · 조특법 §98 미분양주택 과세특례(`1-92`) — 세율 특례라 감면 축과 별개이며 미구현.
+ *
+ * ## §98 미분양주택 과세특례 (`1-92`)
+ *
+ * 세율 특례라 §104 호(`rateClause`)에 섞지 않고 엔진의 별도 표지 `specialRateBasis`로 받는다
+ * (별지 제84호서식 작성방법 국내자산 6. — 코드표: `filing-form-codes.ts` `SPECIAL_RATE_BASIS_CODE`).
  *
  * 코드를 단정할 수 없으면 **`undefined`를 돌려 「-」로 비운다** — 틀린 코드를 적는 것보다
  * 비우는 편이 낫다(자동 추정 금지).
  */
 
-import type { RateClause } from "@/lib/tax-engine/transfer-tax-rate-clause";
+import type { RateClause, SpecialRateBasis } from "@/lib/tax-engine/transfer-tax-rate-clause";
+import { SPECIAL_RATE_BASIS_CODE } from "./filing-form-codes";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 「'21.6.1. 이후 양도분」 — 주택·조합원입주권·분양권 단기세율 개편 시행일 */
@@ -54,6 +59,8 @@ function landTakingHousingShortRate(input: FilingRateCodeInput, after20210601: b
 export interface FilingRateCodeInput {
   /** 엔진이 적용한 §104① 호 */
   rateClause: RateClause | undefined;
+  /** 엔진이 정한 §104 밖 세율 특례 표지(조특법 §98 20%) — 있으면 `rateClause`보다 우선한다(§104① 불구). */
+  specialRateBasis?: SpecialRateBasis;
   assetKind: AssetForm["assetKind"] | undefined;
   /** 양도일 (YYYY-MM-DD) — 시기 경계 판정 */
   transferDate: string | undefined;
@@ -84,7 +91,8 @@ export interface FilingRateCodeInput {
  *   ㉗ 1-47 / ㉝ 1-49 같은 취지(’21.6.1.~ — +20%p / +30%p)
  */
 export function resolveFilingRateCode(input: FilingRateCodeInput): string | undefined {
-  const { rateClause, assetKind, transferDate, nblSurchargeExcluded } = input;
+  const { rateClause, assetKind, transferDate, nblSurchargeExcluded, specialRateBasis } = input;
+  if (specialRateBasis) return SPECIAL_RATE_BASIS_CODE[specialRateBasis];
   if (!rateClause) return undefined;
 
   const after20210601 = !!transferDate && transferDate >= RATE_2021_06_01;

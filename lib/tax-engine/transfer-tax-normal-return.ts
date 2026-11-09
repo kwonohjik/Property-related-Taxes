@@ -191,6 +191,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
      * §104① 후단·§104⑦ 후단 비교의 승자는 엔진만 알기 때문이다.
      */
     rateClause: taxResult.rateClause,
+    ...(taxResult.specialRateBasis ? { specialRateBasis: taxResult.specialRateBasis } : {}),
     shortTermNote: taxResult.shortTermNote,
     reductionAmount,
     reductionType,

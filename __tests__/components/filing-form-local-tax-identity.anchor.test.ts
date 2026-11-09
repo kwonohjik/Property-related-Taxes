@@ -206,8 +206,18 @@ describe("L-2 별지 제84호서식 — 두 빌더의 행 구성이 같다", () 
     "차감납부할 지방소득세(환급세액)",
   ];
 
-  it("집계 라벨에서 집계 전용 4행을 빼면 단건 라벨과 순서까지 같다", () => {
-    const single = singleRows().rows.map((r) => r.label);
+  /**
+   * 단건 전용 선택 행(값이 있을 때만) — 부표1 ⑯ 장특 코드 · ㉑ 감면종류·감면율 · 농특세 납부계산서 ㉒ (Q-27, 2단계 N).
+   * 집계 breakdown에는 장특 종류·농특세 환산 echo가 없어 집계 표에는 아직 없다(집계 엔진은 O 그룹 소관 — PR 본문 「남은 확인 필요」).
+   */
+  const SINGLE_ONLY_OPTIONAL = [
+    "장기보유특별공제 코드 (부표1 ⑯)",
+    "감면종류·감면율 (부표1 ㉑)",
+    "소득세 감면세액 (농어촌특별세 납부계산서 ㉒)",
+  ];
+
+  it("집계 라벨에서 집계 전용 4행을 빼면 단건 라벨(단건 전용 선택 행 제외)과 순서까지 같다", () => {
+    const single = singleRows().rows.map((r) => r.label).filter((l) => !SINGLE_ONLY_OPTIONAL.includes(l));
     const agg = aggregateRows()
       .rows.map((r) => r.label)
       .filter((l) => !AGGREGATE_ONLY.includes(l));

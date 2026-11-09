@@ -172,6 +172,9 @@ import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightR
 import { buildRowsFromOrder, fmtRatePct } from "./FilingFormTableRowDefs";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 import { resolveFilingRateCode } from "./filing-rate-code";
+import { resolveLthdFilingCode } from "./filing-form-codes";
+import { resolveFilingReductionKind } from "./filing-form-codes";
+import { resolveRuralSurtaxReductionBase } from "./filing-form-codes";
 import {
   reductionEligibleIncome,
   incomeDeductionReducible,
@@ -669,6 +672,7 @@ export function buildRows(
   // ③ 세율구분 코드 · ⑨ 세율 — 실효세율(중과 포함). 단정 불가·0이면 「-」.
   const rateCode = resolveFilingRateCode({
     rateClause: result.rateClause,
+    specialRateBasis: result.specialRateBasis,
     assetKind: primary?.assetKind,
     transferDate,
     nblSurchargeExcluded: result.nblSurchargeExcluded,
@@ -705,6 +709,13 @@ export function buildRows(
   // 농특세는 **총액 echo가 정본**이다 — 종전 `incomeDeductionRuralSurtax`는 소득금액차감형
   // detail 11종만 훑어 §77·§77의2·§77의3·§97 계열이 통째로 빠졌다(`resolveRuralSurtax` 주석).
   setNum("ruralSurtax", "total", resolveRuralSurtax(result));
+  // 부표1 ⑯ 장기보유특별공제 코드 · ㉑ 감면종류·감면율 · 농특세 납부계산서 ㉒ — 단일 소스 `filing-form-codes.ts`(별지 제84호서식 작성방법 원문). 단정 불가면 행을 내지 않는다.
+  const lthdCode = resolveLthdFilingCode(result, !!(mu || sp || isRedevMode));
+  if (lthdCode) setStr("lthdCode", "total", lthdCode);
+  const reductionKind = resolveFilingReductionKind(result);
+  if (reductionKind) setStr("reductionKind", "total", reductionKind);
+  const ruralReductionBase = resolveRuralSurtaxReductionBase(result);
+  if (ruralReductionBase !== undefined) setNum("ruralReductionBase", "total", ruralReductionBase);
   // NH-38 — 농특세 미납분 납부지연가산세(엔진 echo · totalTax에 포함). 0이면 행을 내지 않는다.
   if ((result.ruralSurtaxDelayedPenalty?.penalty ?? 0) > 0)
     setNum("ruralSurtaxPenalty", "total", result.ruralSurtaxDelayedPenalty?.penalty ?? 0);

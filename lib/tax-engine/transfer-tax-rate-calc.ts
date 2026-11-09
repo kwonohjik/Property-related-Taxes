@@ -41,6 +41,7 @@ export {
 import type { TransferTaxInput } from "./types/transfer.types";
 import {
   type RateClause,
+  type SpecialRateBasis,
   shortTermClause,
   unifiedShortTermClause,
   surchargeClause,
@@ -78,6 +79,8 @@ interface CalcTaxResult {
   nblSurchargeExcludedBy?: NblSurchargeExclusionReason;
   /** 적용된 §104 호 — §104⑤2호 단서(동일 호 합산) 판정용. 조특법 특칙 등 §104 밖이면 undefined. */
   rateClause?: RateClause;
+  /** §104 밖 세율 특례 표지(조특법 §98 20%) — 신고서 ③ 코드 표시 전용. 그룹핑·세액에는 쓰지 않는다. */
+  specialRateBasis?: SpecialRateBasis;
   /**
    * 이 자산이 **해당**하는 §104 호 **전부**(문자열 오름차순 정렬).
    *
@@ -402,6 +405,7 @@ export function calcTax(
       progressiveDeduction: 0,
       surchargeSuspended: false,
       shortTermNote: `조특법 §98①1호 — 양도소득세 세율 ${UNSOLD_98_FLAT_RATE_LABEL} (§104① 불구)`,
+      specialRateBasis: "unsold_98",
     };
   }
 

@@ -54,6 +54,32 @@ export function reductionEligibleIncome(
 }
 
 /**
+ * 자산 목록의 ⑲ 세액감면대상 합 — 집계 신고서 표 합계 열과 집계 결과 PDF(어댑터 echo)가 **같은 함수**를 쓴다(US-67).
+ * 자산별 `reductionEligibleIncome`의 합이다.
+ */
+export function sumReductionEligibleIncome(
+  properties: ReadonlyArray<
+    Pick<
+      import("@/lib/tax-engine/types/transfer-aggregate.types").PerPropertyBreakdown,
+      "reductionType" | "income" | "reducibleIncome" | "replacementLandDetail" | "eligibleIncomeAfterLoss"
+    >
+  >,
+): number {
+  return properties.reduce(
+    (s, p) =>
+      s +
+      reductionEligibleIncome(
+        p.reductionType,
+        p.income,
+        p.reducibleIncome ?? 0,
+        p.replacementLandDetail?.eligibleTransferIncome,
+        p.eligibleIncomeAfterLoss,
+      ),
+    0,
+  );
+}
+
+/**
  * 소득금액차감방식(§90② — 5년 안분) 감면 detail 목록.
  * §99의3·§99(IMF 1차)·§98의8·하이브리드(§98의7·§99의2·§98의3/5/6·§98의2/4·§98) 공용.
  * 조특법 §127⑦로 실제 적용은 1건이나, 부적격 detail의 값은 0이므로 합산해도 안전(과다집계 없음).

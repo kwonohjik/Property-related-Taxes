@@ -44,6 +44,25 @@ export function ruralPenaltyRow(
 }
 
 /**
+ * 값이 있을 때만 내는 신고서 코드·감면 칸 행 — 부표1 ⑯ 장기보유특별공제 코드 · ㉑ 감면종류·감면율 · 농특세 납부계산서 ㉒ 소득세 감면세액.
+ * 라벨은 PDF(`filing-head-pdf-rows.ts`)가 같은 문자열로 행을 찾는다 — 한 곳(`FILING_CODE_ROW_LABEL`)에서만 정의한다.
+ */
+export const FILING_CODE_ROW_LABEL = {
+  lthdCode: "장기보유특별공제 코드 (부표1 ⑯)",
+  reductionKind: "감면종류·감면율 (부표1 ㉑)",
+  ruralReductionBase: "소득세 감면세액 (농어촌특별세 납부계산서 ㉒)",
+} as const;
+
+function optionalRow(
+  v: Record<string, Record<ColumnKey, number | string | null>>,
+  key: keyof typeof FILING_CODE_ROW_LABEL,
+  opts?: Partial<RowDef>,
+): Array<[string, string, Partial<RowDef>?]> {
+  const total = v[key]?.total;
+  return total === null || total === undefined || total === "" ? [] : [[key, FILING_CODE_ROW_LABEL[key], opts]];
+}
+
+/**
  * buildRows()의 rowOrder 배열 + values/roseNotes 매핑 로직을 담당.
  * FilingFormTableHelpers.ts 에서 호출됨.
  */
@@ -74,11 +93,13 @@ export function buildRowsFromOrder(
     ["taxableGain", "과세대상 양도차익", { separatorAfter: true }],
     ["ltDeduction", "장기보유특별공제"],
     ["ltHoldingPart", " 보유 기간분 장특", { indent: true }],
-    ["ltResidencePart", " 거주 기간분 장특", { indent: true, separatorAfter: true }],
+    ["ltResidencePart", " 거주 기간분 장특", { indent: true, separatorAfter: !v.lthdCode?.total }],
+    ...optionalRow(v, "lthdCode", { separatorAfter: true }),
     ["incomeAmount", "양도소득금액"],
     ["nontaxableIncome", nontaxableIncomeRowLabel, { indent: true }],
     ["reductionTargetIncome", "세액감면대상금액"],
     ["reductionTargetIncome2", "소득금액 감면대상"],
+    ...optionalRow(v, "reductionKind"),
     ["incomeAmountAfter", "감면후 소득금액"],
     ["priorIncomeAmount", "기신고 양도소득금액"],
     ["basicDeduction", "기본공제", { separatorAfter: true }],
@@ -94,6 +115,7 @@ export function buildRowsFromOrder(
     ["penaltyTax", "가산세액"],
     ["totalDeterminedTax", "총결정세액", { highlight: true, separatorAfter: true }],
     ["ruralSurtax", "농어촌특별세"],
+    ...optionalRow(v, "ruralReductionBase", { indent: true }),
     // NH-38 — 농특세 미납분 납부지연가산세(별지 제84호서식 농어촌특별세 납부계산서의 가산세 칸 · 소득세 가산세와 별도). 있을 때만.
     ...(ruralPenaltyRow(v) ? [ruralPenaltyRow(v)!] : []),
     ["localCalculatedTax", "지방소득세 산출세액"],

@@ -33,6 +33,7 @@ import { fmtRatePct } from "./FilingFormTableRowDefs";
 import { ruralPenaltyRow } from "./FilingFormTableRowDefs";
 import { resolveFilingRateCode } from "./filing-rate-code";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
+import { sumReductionEligibleIncome } from "./reduction-eligible-income";
 import { selectPriorFiledIndices } from "@/lib/calc/multi-prior-filed";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { assetOfCardSuffix } from "./sale-split-unentered-notice";
@@ -413,22 +414,7 @@ export function buildAggregateRows(
   setNum("lossOffset", "total", sumLossOffset);
   setNum("lossExpired", "total", sumLossExpired);
   setNum("nontaxableIncome", "total", 0);
-  setNum(
-    "reductionTargetIncome",
-    "total",
-    properties.reduce(
-      (s, p) =>
-        s +
-        reductionEligibleIncome(
-          p.reductionType,
-          p.income,
-          p.reducibleIncome ?? 0,
-          p.replacementLandDetail?.eligibleTransferIncome,
-          p.eligibleIncomeAfterLoss,
-        ),
-      0,
-    ),
-  );
+  setNum("reductionTargetIncome", "total", sumReductionEligibleIncome(properties));
   setNum(
     "reductionTargetIncome2",
     "total",

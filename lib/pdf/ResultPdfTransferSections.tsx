@@ -53,7 +53,7 @@ import {
 
 // ─── 세금 유형별 상세 섹션 ────────────────────────────────────────
 
-export function TransferSection({ r, selectedSectionIds, phdApartment, headRows }: { r: R; selectedSectionIds?: string[]; phdApartment?: boolean; headRows?: { label: string; value: string; note?: string }[] }) {
+export function TransferSection({ r, selectedSectionIds, phdApartment, headRows, codeRows }: { r: R; selectedSectionIds?: string[]; phdApartment?: boolean; headRows?: { label: string; value: string; note?: string }[]; codeRows?: { label: string; value: string; note?: string }[] }) {
   if (bool(r.isExempt)) return null;
   // calculation 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (계산 내역, 검토 U1)
   if (selectedSectionIds !== undefined && !selectedSectionIds.includes("calculation")) return null;
@@ -67,13 +67,19 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows 
   const taxableGain = (isRH ? transferGain : (num(r.taxableGain) ?? transferGain)) as number;
   const incomeAmount = isRH ? transferGain - ltdAmount : Math.max(0, taxableGain - ltdAmount);
   const reducibleIncome = (num(r.reducibleIncome) ?? 0) as number;
-  const eligible19 = reductionEligibleIncome(
+  // 함께 양도·다건 어댑터(`aggregateToFilingResult`)는 자산별 ⑲의 합을 따로 싣는다(US-67) — 있으면 그 값이 정본(화면 신고서 표 합계 열과 같은 함수).
+  const eligible19 = num(r.aggregateReductionEligibleIncome) ?? reductionEligibleIncome(
     r.reductionTypeApplied as string | undefined,
     incomeAmount,
     reducibleIncome,
     (r.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
     num(r.eligibleIncomeAfterLoss),
   );
+  // 신고서 코드 칸(③·⑯·㉑·㉒) — 화면 신고서 표 행과 같은 라벨·값(`buildFilingCodePdfRows`). PDF가 다시 계산하지 않는다.
+  const codeRowsOf = (prefix: string) => (codeRows ?? []).filter((row) => row.label === prefix || row.label.startsWith(`${prefix} `));
+  const codeLines = (prefix: string) => codeRowsOf(prefix).map((row, i) => (
+    <View key={`cr-${prefix}-${i}`} style={s.row}><Text style={s.lbl}>{row.label}</Text><Text style={s.val}>{row.value}</Text></View>
+  ));
   // 소득금액 감면대상 = 소득금액차감방식(§90②) 11개 조문 합 — 화면 신고서 표 ⑳(`FilingFormTableHelpers`)와 같은 헬퍼.
   // 종전에는 `new993Detail`만 읽어 §99·§98의8·하이브리드 차감이 0으로 찍혔다(NH-53).
   // 함께 양도·다건 어댑터(`aggregateToFilingResult`)는 단건 detail이 없어 합산 엔진 적용액 합을 따로 싣는다(NH-65) — 있으면 그 값이 정본.
@@ -132,13 +138,16 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows 
         <View style={s.row}><Text style={s.lbl}>전체 양도차익</Text><Text style={s.val}>{fmt(transferGain)}</Text></View>
         {taxableGain !== transferGain && (<View style={s.row}><Text style={s.lblSub}>과세대상 양도차익</Text><Text style={s.val}>{fmt(taxableGain)}</Text></View>)}
         {num(r.longTermHoldingRate) !== undefined && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제 ({fmtRate(r.longTermHoldingRate)})</Text><Text style={s.val}>{ltdAmount > 0 ? `- ${fmt(ltdAmount)}` : "해당없음"}</Text></View>)}
+        {codeLines("장기보유특별공제 코드")}
         <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(incomeAmount)}</Text></View>
         {num(r.nontaxableGainAmount) !== undefined && (r.nontaxableGainAmount as number) > 0 && (<View style={s.row}><Text style={s.lblSub}>{nontaxableIncomeLabel(rhDetail?.scenarioId)}</Text><Text style={s.val}>- {fmt(r.nontaxableGainAmount)}</Text></View>)}
         <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{eligible19 > 0 ? fmt(eligible19) : "0"}</Text></View>
         <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{incomeDeduction > 0 ? fmt(incomeDeduction) : "0"}</Text></View>
+        {codeLines("감면종류·감면율")}
         <View style={s.row}><Text style={s.lbl}>감면후 소득금액</Text><Text style={s.val}>{fmt(incomeAmountAfter)}</Text></View>
         {num(r.basicDeduction) !== undefined && (<View style={s.row}><Text style={s.lbl}>기본공제</Text><Text style={s.val}>{(r.basicDeduction as number) > 0 ? `- ${fmt(r.basicDeduction)}` : "0"}</Text></View>)}
         {num(r.taxBase) !== undefined && (<View style={s.rowBg}><Text style={s.lbl}>과세표준</Text><Text style={s.valAccent}>{fmt(r.taxBase)}</Text></View>)}
+        {codeLines("세율구분 코드")}
         {num(r.calculatedTax) !== undefined && (<View style={s.row}><Text style={s.lbl}>산출세액 ({fmtRate(r.appliedRate)}{num(r.surchargeRate) ? ` + 중과 ${fmtRate(r.surchargeRate)}` : ""})</Text><Text style={s.val}>{fmt(r.calculatedTax)}</Text></View>)}
         {num(r.reductionAmount) !== undefined && (r.reductionAmount as number) > 0 && (<View style={s.row}><Text style={s.lbl}>감면세액 ({str(r.reductionType) ?? ""})</Text><Text style={s.val}>- {fmt(r.reductionAmount)}</Text></View>)}
         <View style={s.rowBg}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(determinedTax)}</Text></View>
@@ -159,6 +168,7 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows 
         ))}
         <View style={s.rowBg}><Text style={s.lbl}>총결정세액</Text><Text style={s.valAccent}>{fmt(totalDeterminedTax)}</Text></View>
         {ruralSurtax > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세</Text><Text style={s.val}>{fmt(ruralSurtax)}</Text></View>)}
+        {codeLines("소득세 감면세액")}
         {/* NH-38 — 농특세 미납분 납부지연가산세(소득세 가산세와 별도 줄) */}
         {ruralPenalty > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세 납부지연가산세</Text><Text style={s.val}>{fmt(ruralPenalty)}</Text></View>)}
         {num(r.localIncomeTax) !== undefined && (<View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>)}
