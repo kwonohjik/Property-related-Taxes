@@ -530,7 +530,15 @@ export function buildCompanionEngineInputs(
     return buildGbCompanionItems(
       c.generalBuildingValuation as unknown as Record<string, unknown>,
       companionEngine,
-      { ownershipRatio: c.ownershipRatio, assetId: c.assetId, assetLabel: c.assetLabel ?? "", totalPropertyTransferPrice: c.totalPropertyTransferPrice, commonExpense: a.allocatedCommonExpense },
+      {
+        ownershipRatio: c.ownershipRatio, assetId: c.assetId, assetLabel: c.assetLabel ?? "", totalPropertyTransferPrice: c.totalPropertyTransferPrice, commonExpense: a.allocatedCommonExpense,
+        // §164⑨1호 공익수용 — 단건 `dispatchGeneralBuilding`과 같은 3필드(빠지면 특례가 조용히 사라진다 · anchor `bundled-gb-expropriation`)
+        expropriation: {
+          transferCause: companionEngine.transferCause,
+          compensationPerSqm: companionEngine.compensationPerSqm,
+          compensationBasisStdPrice: companionEngine.compensationBasisStdPrice,
+        },
+      },
       ctx.onGbDetail,
       ctx.onGbCarryoverUnit,
     );

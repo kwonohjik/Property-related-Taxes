@@ -286,6 +286,12 @@ export function calculateBundledTransfer(
         return buildGbCompanionItems(data.generalBuildingValuation as Record<string, unknown>, primaryItem, {
           ownershipRatio: data.ownershipRatio, assetId: "primary", assetLabel: a.assetLabel ?? "", totalPropertyTransferPrice: data.totalPropertyTransferPrice,
           commonExpense: a.allocatedCommonExpense,
+          // §164⑨1호 공익수용 — 단건 `dispatchGeneralBuilding`과 같은 최상위 3필드(빠지면 특례가 조용히 사라진다 · anchor `bundled-gb-expropriation`)
+          expropriation: {
+            transferCause: primaryItem.transferCause,
+            compensationPerSqm: primaryItem.compensationPerSqm,
+            compensationBasisStdPrice: primaryItem.compensationBasisStdPrice,
+          },
         }, onGbDetail, onGbCarryoverUnit);
       }
       return reverseUnit ? splitReversePrimaryLand(primaryItem, reverseUnit, transferDate) : [primaryItem];
