@@ -62,6 +62,7 @@ import {
 import { carryoverDonorCapex } from "@/lib/tax-engine/transfer-tax-carryover";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import type { GbShareBlockEcho } from "@/lib/tax-engine/types/transfer-aggregate.types";
+import type { GbShareFormulaEcho } from "@/lib/tax-engine/types/transfer-aggregate-gb.types";
 
 /**
  * 지분 판정을 **물건 전체(계약서 한 장)** 판정 하나로 싣는다 — `gb-fractional-result-blocks.plan.md` D-2(Q-1 a).
@@ -194,6 +195,9 @@ export function calculateGeneralBuildingFractional(
   const shareActualExpenseEcho: Record<string, unknown> = {};
   // 결과 카드 블록 재료 — 지분마다 취득원인·평가액이 달라 지분 인덱스로 싣는다(`gb-fractional-result-blocks.plan.md` D-1).
   const shareBlockEcho: Record<string, GbShareBlockEcho> = {};
+  // 상세명세서 산식 재료 — 지분 양도가액 · 환산 개산공제 base가 지분마다 다르다(계획서 `gb-carryover-estimated-share-lump-deduction.plan.md` §7 D-1).
+  const shareFormulaEcho: Record<string, GbShareFormulaEcho> = {};
+  const sharePrices: number[] = [];
 
   /**
    * 부담부증여 × 이월과세(§97의2) 지분 — 요건(①괄호·②1·2호·③)을 충족하면 그 지분이 **비교 단위 하나**다(Q-1 a).
@@ -314,6 +318,7 @@ export function calculateGeneralBuildingFractional(
         ? totalTransferPrice - allocatedSum
         : applyRatio(totalTransferPrice, share.ownershipRatio);
     allocatedSum += sharePrice;
+    sharePrices[idx] = sharePrice;
 
     /**
      * (2) ⑭ **Date 변환 먼저** — 단건과 **같은 함수**를 쓴다.
@@ -392,6 +397,8 @@ export function calculateGeneralBuildingFractional(
       Object.assign(partBeforeExtensionCapex, Object.fromEntries(swap.beforeExtensionAddition ?? []));
     }
     if (built.actualExpenseEcho) shareActualExpenseEcho[String(idx)] = built.actualExpenseEcho;
+    const shareDeduction = (built.detailBase as { estimatedDeduction?: GbShareFormulaEcho["estimatedDeduction"] } | undefined)?.estimatedDeduction;
+    shareFormulaEcho[String(idx)] = { shareTransferPrice: sharePrices[idx], ...(shareDeduction ? { estimatedDeduction: shareDeduction } : {}) };
     // 실가 분기는 판정·상속 표지가 `actualBlockEcho`에, 환산 분기는 `detailBase`(`gbOut`)에 있다. ①②③은 두 분기 모두 `detailBase`.
     const blockSrc = { ...built.detailBase, ...built.actualBlockEcho } as GbShareBlockEcho;
     shareBlockEcho[String(idx)] = {
@@ -456,6 +463,7 @@ export function calculateGeneralBuildingFractional(
     preDeemedAcquisition: undefined,
     preDeemedPurchase: undefined,
     shareBlockEcho,
+    shareFormulaEcho,
     // 카드는 **전 지분 concat** — 라벨에 지분 이름이 들어 있다.
     assetCards: allCards,
     ...(lastLandStdTotal !== undefined ? { landStdTotal: lastLandStdTotal } : {}),

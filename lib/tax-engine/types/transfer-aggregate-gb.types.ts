@@ -84,7 +84,17 @@ export type GbShareBlockEcho = Pick<
   ownershipRatio: number;
 };
 
+/**
+ * 지분 분할(축 B) 지분 하나의 상세명세서 산식 재료 — 그 지분 양도가액(§166⑥ 안분 분자) · 환산 경로 개산공제 base·율.
+ * 물건 상세 한 벌은 첫 지분 것이라 둘째 지분부터 산식이 자기 값을 못 만들었다(`gb-carryover-estimated-share-lump-deduction.plan.md` §7 D-1).
+ */
+export interface GbShareFormulaEcho {
+  shareTransferPrice: number;
+  estimatedDeduction?: import("../general-building-valuation").GeneralBuildingOutput["estimatedDeduction"];
+}
+
 /** 일반건물 결과 상세 슬롯 — 지분 분할이면 지분별 블록 재료가 붙는다(키 = 지분 인덱스 = 카드 id 접미사). */
 export type GbValuationDetail = import("../general-building-valuation").GeneralBuildingOutput & {
   shareBlockEcho?: Record<string, GbShareBlockEcho>;
+  shareFormulaEcho?: Record<string, GbShareFormulaEcho>;
 };
