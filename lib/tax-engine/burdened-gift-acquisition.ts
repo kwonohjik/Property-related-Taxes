@@ -246,6 +246,16 @@ export function resolveWholeBgAcquisition(ctx: BgAcquisitionContext): BgAcquisit
     //   부담부증여 맥락: 자산별 양도가액(채무액 안분분)을 "양도당시 실지거래가액"으로 본다.
     //   자산별 독립 환산이라 합산이 처분청 일괄총액과 ±1원 차이 가능(§176의2②2호 자산별 적용, 법적 허용).
     acquisitionMethodUsed = "converted";
+    // 기준시가 합이 0 — 환산 분모·분자가 없어 취득가액이 0이 되고 양도차익이 통째로 부풀지만 막히지 않는 오답이다(실측 292,800,000 → 592,800,000 · 600,000,000).
+    //   기준시가 모드 가드(`burdened-gift-apportionment.ts`)와 같은 요구다(자동 fallback 금지). ⑧이 화면에서 먼저 막고(`transfer-tax-validate-bg.ts` K-5),
+    //   여기는 API 직접 호출 · 컴패니언(축 B 지분 · 함께 양도)을 한 곳에서 막는다(계획서 vp2c §21).
+    if (landStdPriceAtTransfer + buildingStdPriceAtTransfer <= 0) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        "[burdened_gift] 환산취득가액으로 취득가액을 산정하는데 양도시 기준시가가 없습니다. 환산취득가액의 분모이므로 " +
+          "(「소득세법 시행령」 제176조의2 제2항 제2호) 양도시 기준시가를 입력하세요.",
+      );
+    }
     landAcquisitionPrice =
       landStdPriceAtTransfer === 0
         ? 0
