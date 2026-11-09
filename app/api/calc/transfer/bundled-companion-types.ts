@@ -144,12 +144,15 @@ export interface CompanionBuildContext {
      */
     rightThreeYearException?: TransferTaxItemInput["rightThreeYearException"];
     /**
-     * §89①4호 가·나목 판정 사실(세대 단위) — **축 B(같은 물건 지분 분할 취득)에서만** 실린다(#11 별건).
+     * §89①4호 가·나목 판정 사실(세대 단위) — **입주권 컴패니언**(축 B 지분 카드 · 함께 양도 입주권)에 실린다.
      *
      * 🔴 컴패니언 엔진 input에는 이 사실이 없어 입주권 둘째 카드는 `resolveOneRightExemptionClause`가 항상 불성립이었다 —
-     *    50%+50% 20억 입주권에서 앞 카드는 전액 비과세, 뒤 카드는 전액 과세(단건 224,831,640 vs 291,211,800).
-     *    같은 물건의 지분 카드는 같은 세대·같은 입주권이라 주 카드와 같은 사실을 본다. 함께 양도(다른 물건)는 싣지 않는다 —
-     *    그쪽 입주권 카드의 4호 판정은 별개 축이다.
+     *    50%+50% 20억 입주권에서 앞 카드는 전액 비과세, 뒤 카드는 전액 과세(단건 224,831,640 vs 291,211,800, #11 별건).
+     *    같은 물건의 지분 카드는 같은 세대·같은 입주권이라 주 카드와 같은 사실을 본다.
+     *
+     * 함께 양도(다른 물건) 입주권도 싣는다(`companion-right-4ho-open.plan.md` · 2026-11-09 사용자 결정 «열기»): 문언(소득세법 §89①4호)이
+     * 일괄양도를 제외하지 않고, 입주권 몫의 양도가액은 법 §100② 안분으로 따로 정해진다. 세대 입주권 수(`householdRightCount`)는
+     * 묶음 안 입주권을 모두 양도일 현재 보유로 센 값이다(④ `bundleRightAssetCount`) — 이 값이 1일 때만 «1개 보유».
      */
     oneRightHouseholdFacts?: Pick<
       TransferTaxItemInput,
