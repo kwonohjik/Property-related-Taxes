@@ -79,8 +79,14 @@ export function setLongTermDeductionItems(
     value: isAggregate
       ? properties.reduce((s, p) => s + p.longTermHoldingDeduction, 0)
       : result.longTermHoldingDeduction,
-    formula:
-      lthStep?.formula ??
+    /**
+     * 🔴 합산 자산 2건 이상 — 율 하나로 쓰지 않는다. `result`의 율·step은 대표 자산 것이거나 공제액 합 ÷ 차익 합의 혼합 비율이라
+     *    어느 자산의 공제율도 아니다(실측: 연간 합산 오피스텔 20% + 아파트 0% → 「× 7%」 · 함께 양도 주택 16% + 18% → 「× 17%」).
+     *    자산별 율은 아래 `perAsset`(`buildLthFormula`)이 낸다. anchor `aggregate-lthd-blended-rate-label.anchor.test.ts`.
+     */
+    formula: isAggregate && properties.length >= 2
+      ? "자산별 장기보유특별공제 합계 (공제율은 자산마다 다름 — 자산별 펼침 참고)"
+      : lthStep?.formula ??
       (mu
         ? `주택분 ${mu.housingPart.longTermDeductionAmount.toLocaleString()} + 비주택분(상가) ${mu.commercialPart.longTermDeductionAmount.toLocaleString()}${mu.nonBusinessLandPart ? ` + 배율초과 부수토지(비사업용) ${mu.nonBusinessLandPart.longTermDeductionAmount.toLocaleString()}` : ""} = ${(mu.housingPart.longTermDeductionAmount + mu.commercialPart.longTermDeductionAmount + (mu.nonBusinessLandPart?.longTermDeductionAmount ?? 0)).toLocaleString()} (부분별 공제율 상이 — 아래 부분별 분리)`
         : `과세대상 양도차익 × ${(result.longTermHoldingRate * 100).toFixed(0)}% (보유 + 거주)`),
