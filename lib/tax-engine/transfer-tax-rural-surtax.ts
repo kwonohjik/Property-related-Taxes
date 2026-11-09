@@ -34,6 +34,7 @@
  * @see docs/00-pm/transfer-review-2026-08-open-items.plan.md §F08 「별건 발견」
  */
 import { applyRate } from "./tax-utils";
+import { TRANSFER } from "./legal-codes";
 
 /** 「농어촌특별세법」 §5①1호 — 조특법 감면세액에 대한 세율. */
 export const RURAL_SURTAX_RATE = 0.2;
@@ -167,6 +168,6 @@ export function resolveTaxCreditRuralSurtax(args: RuralSurtaxArgs): RuralSurtaxR
       rule === "self_cultivated_only"
         ? "공익수용 감면 — 직접 경작한 토지가 아니므로 농어촌특별세가 부과됩니다"
         : "농어촌특별세 비과세 대상으로 열거되지 않은 감면입니다",
-    legalBasis: "농어촌특별세법 §5①1호",
+    legalBasis: TRANSFER.RURAL_SURTAX_REDUCTION,
   };
 }

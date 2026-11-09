@@ -24,6 +24,25 @@ const SURCHARGE_SUSPENSION_KEYWORDS = [
 
 export const TRANSFER_DECREE_SURCHARGE_ADDITIONS: VerificationRule[] = [
   {
+    // US-82 · US-85 — 감면주택 중과 배제의 정의 조항: ①3호(조특법 §97·§97의2·§98 감면 임대주택 5년 이상 임대 국민주택) ·
+    // ①5호(조특법 §77·§98의2~§98의8·§99~§99의3 감면주택). 엔진 `surchargeExclusionBasis` · `SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS`.
+    // 원문 MST 290841 실독 2026-11-09.
+    id: "TRANSFER_DECREE.TAX_INCENTIVE_HOUSE_167_3",
+    citation: "소득세법 시행령 §167의3",
+    keywords: [
+      "제97조ㆍ제97조의2 및 제98조에 따라 양도소득세가 감면되는 임대주택으로서 5년 이상 임대한 국민주택",
+      "제77조, 제98조의2, 제98조의3, 제98조의5부터 제98조의8까지, 제99조, 제99조의2 및 제99조의3에 따라 양도소득세가 감면되는 주택",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // US-85 — 2주택 세대는 §167의10①2호가 §167의3①2호~8호의2 주택을 준용한다. 원문 MST 290841 실독 2026-11-09.
+    id: "TRANSFER_DECREE.TWO_HOUSE_167_10_REFERENCE",
+    citation: "소득세법 시행령 §167의10",
+    keywords: ["제167조의3제1항제2호부터 제8호까지 및 제8호의2 중 어느 하나에 해당하는 주택"],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER_DECREE.THREE_HOUSE_SCOPE",
     citation: "소득세법 시행령 §167의3",
     keywords: [
@@ -68,6 +87,8 @@ export const TRANSFER_DECREE_SURCHARGE_ADDITIONS: VerificationRule[] = [
     keywords: [
       "주택과 조합원입주권 또는 분양권을 각각 1개씩 소유하고 있는 1세대",
       "제156조의2, 제156조의3 또는",
+      // ①2호 — 감면주택 등 §167의3①2호~8호의2 주택을 준용(US-85 · 엔진 `surchargeExclusionBasis`)
+      "제167조의3제1항제2호부터 제8호까지 및 제8호의2 중 어느 하나에 해당하는 주택",
       "같은 항의 요건을 모두 충족하는 주택",
     ],
     keywordMode: "ALL",
@@ -79,6 +100,8 @@ export const TRANSFER_DECREE_SURCHARGE_ADDITIONS: VerificationRule[] = [
     keywords: [
       "주택과 조합원입주권 또는 분양권 수의 합이 3개 이상인 1세대",
       "제155조, 제156조의2, 제156조의3 또는",
+      // ③2호 — 문언이 §167의11①2호와 다르다(「내지」) — US-85
+      "제167조의3제1항제2호 내지 제8호 및 제8호의2 중 어느 하나에 해당하는 주택",
       "같은 항의 요건을 모두 충족하는 주택",
     ],
     keywordMode: "ALL",

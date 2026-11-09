@@ -248,7 +248,7 @@ export const REDUCTION_METADATA: Record<TransferReductionId, ReductionMetadata> 
     category: "unsold_housing",
     effectCategory: "tax_amount",
     uiLabel: "§98의7 — 9억↓ 미분양 100%",
-    // M-3 (2026-06-11): 적용 주체 내국인 (거주자 아님 — 법 §98의7①)
+    // M-3 (2026-06-11): 적용 주체 「내국인」(법 §98의7①) — 조특법 §2①1호상 개인은 거주자·법인은 내국법인이다. 개인 양도소득세에서는 거주자(법 §98의7② 「해당 거주자의 소유주택」)
     effectLabel: "5년 내 세액 100% 감면 / 5년 후 5년간 발생분 차감 (내국인, 2012.9.24~2012.12.31 최초 매매계약)",
     // P2 (2026-06-11): 본격 구현 — evaluateUnsold987 + 하이브리드 2-경로
     isFullyImplemented: true,

@@ -359,13 +359,13 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
   {
     id: "SPECIAL.LOCAL_UNSOLD_HOUSE_2008",
     citation: "조특법 §98의2",
-    keywords: ["지방 미분양주택", "수도권 밖에 있는", "장기보유특별공제액"],
+    keywords: ["지방 미분양주택", "수도권 밖에 있는", "장기보유특별공제액", "해당 거주자의 소유주택으로 보지 아니한다"],
     keywordMode: "ALL",
   },
   {
     id: "SPECIAL.UNSOLD_HOUSE_2009_BUYER",
     citation: "조특법 §98의3",
-    keywords: ["서울특별시 밖의 지역", "5년 이내에 양도함으로써 발생하는 소득에 대해서는 양도소득세의 100분의 100", "수도권과밀억제권역인 경우에는 100분의 60"],
+    keywords: ["서울특별시 밖의 지역", "5년 이내에 양도함으로써 발생하는 소득에 대해서는 양도소득세의 100분의 100", "수도권과밀억제권역인 경우에는 100분의 60", "해당 거주자의 소유주택으로 보지 아니한다"],
     keywordMode: "ALL",
   },
   {
@@ -377,19 +377,19 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
   {
     id: "SPECIAL.LOCAL_UNSOLD_HOUSE_2010_PRICEDROP",
     citation: "조특법 §98의5",
-    keywords: ["수도권 밖의 지역", "분양가격 인하율", "100분의 60"],
+    keywords: ["수도권 밖의 지역", "분양가격 인하율", "100분의 60", "해당 거주자의 소유주택으로 보지 아니한다"],
     keywordMode: "ALL",
   },
   {
     id: "SPECIAL.COMPLETED_UNSOLD_RENTAL_2011",
     citation: "조특법 §98의6",
-    keywords: ["준공후미분양주택", "2년 이상 임대한 주택", "양도소득세의 100분의 50에 상당하는 세액을 감면"],
+    keywords: ["준공후미분양주택", "2년 이상 임대한 주택", "양도소득세의 100분의 50에 상당하는 세액을 감면", "해당 거주자의 소유주택으로 보지 아니한다"],
     keywordMode: "ALL",
   },
   {
     id: "SPECIAL.UNSOLD_HOUSE_2012",
     citation: "조특법 §98의7",
-    keywords: ["취득가액이 9억원 이하인 주택", "2012년 9월 24일", "양도소득세의 100분의 100에 상당하는 세액을 감면"],
+    keywords: ["취득가액이 9억원 이하인 주택", "2012년 9월 24일", "양도소득세의 100분의 100에 상당하는 세액을 감면", "해당 거주자의 소유주택으로 보지 아니한다"],
     keywordMode: "ALL",
   },
   {

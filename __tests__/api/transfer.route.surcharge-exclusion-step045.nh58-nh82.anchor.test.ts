@@ -42,7 +42,11 @@ vi.mock("@/lib/api/rate-limit", async (importOriginal) => {
 });
 
 const TD = "2021-09-01";
-const HOUSE_BASIS = "소령 §167의3①5호·§167의10①2호";
+// US-85 — 세대 구성별 근거(소득세법 시행령): 2주택 §167의10①2호 준용 · 3주택 이상 §167의3① 직접 · 주택+권리 1:1 §167의11①2호 · 합 3 이상 §167의4③2호
+const HOUSE_BASIS = "소득세법 시행령 §167의3①5호·§167의10①2호";
+const THREE_HOUSE_BASIS = "소득세법 시행령 §167의3①5호";
+const ONE_EACH_BASIS = "소득세법 시행령 §167의3①5호·§167의11①2호";
+const THREE_PLUS_RIGHT_BASIS = "소득세법 시행령 §167의3①5호·§167의4③2호";
 const STEP = "감면주택 다주택 중과 배제";
 
 const red993 = () => ({
@@ -142,13 +146,17 @@ describe("NH-82 단건 — 산입 조합원입주권이 있는 세대의 STEP 0.
     vi.mocked(preloadTaxRates).mockImplementation(async () => loadFallbackTransferRates(new Date(TD)) as Awaited<ReturnType<typeof preloadTaxRates>>);
   });
   it.each([
-    ["주택 1 + 입주권 1(§104⑦2호)", 0],
-    ["주택 2 + 입주권 1(§104⑦4호)", 1],
-  ])("%s → 근거 「소득세법 시행령 §167의4③2호·§167의11①2호」 · 세액 불변(84,204,998)", async (_l, n) => {
+    ["주택 1 + 입주권 1(§104⑦2호) → §167의11①2호", 0, ONE_EACH_BASIS],
+    ["주택 2 + 입주권 1(§104⑦4호) → §167의4③2호", 1, THREE_PLUS_RIGHT_BASIS],
+  ])("%s · 세액 불변(84,204,998)", async (_l, n, basis) => {
     const r = await single(form({ price: "800,000,000", otherHouses: n, rights: 1 }));
-    expect(r.step).toEqual([MULTI_HOUSE.TAX_INCENTIVE_HOUSE_RIGHT_REFERENCE_BASIS]);
-    expect(MULTI_HOUSE.TAX_INCENTIVE_HOUSE_RIGHT_REFERENCE_BASIS).toBe("소득세법 시행령 §167의4③2호·§167의11①2호");
+    expect(r.step).toEqual([basis]);
+    expect(MULTI_HOUSE.HOUSE_RIGHT_ONE_EACH_REFERENCE_BASIS).toBe("소득세법 시행령 §167의11①2호");
+    expect(MULTI_HOUSE.HOUSE_RIGHT_3PLUS_REFERENCE_BASIS).toBe("소득세법 시행령 §167의4③2호");
     expect(r.tax).toBe(84_204_998);
+  });
+  it("3주택(권리 없음) → §167의3① 직접 · §167의10①2호(2주택 전용)를 붙이지 않는다", async () => {
+    expect((await single(form({ otherHouses: 2 }))).step).toEqual([THREE_HOUSE_BASIS]);
   });
   it("짝 — 입주권이 지방 3억 이하(§167의4②1호·§167의11②1호 불산입)면 주택만의 세대 근거", async () => {
     const f = form({ price: "800,000,000", otherHouses: 1, rights: 1 });
@@ -215,15 +223,15 @@ describe("겸용 route — NH-58 · NH-82", () => {
     expect(sel.multiHouseSurcharge?.exclusionReasons.map((e) => e.type)).not.toContain("tax_special_exemption");
     expect(sel.total.totalPayable).toBe(ctl.total.totalPayable);
   });
-  it("짝 — 등기 3주택은 종전대로 배제 · 근거 「§167의3①5호·§167의10①2호」", async () => {
-    expect(exclusionStep(await mixed({}))).toEqual([HOUSE_BASIS]);
+  it("짝 — 등기 3주택은 종전대로 배제 · 근거 「§167의3①5호」 직접(§167의10①2호는 2주택 전용 — US-85)", async () => {
+    expect(exclusionStep(await mixed({}))).toEqual([THREE_HOUSE_BASIS]);
   });
-  it("NH-82 주택 2 + 입주권 1 → 근거 「소득세법 시행령 §167의4③2호·§167의11①2호」", async () => {
+  it("NH-82 주택 2 + 입주권 1(합 3) → 근거 「§167의4③2호」", async () => {
     const m = await mixed({
       householdHousingCount: 2,
       houses: [mixedHouse("selling", ACQ), mixedHouse("h2", "2015-03-01")],
       presaleRights: [{ id: "r0", type: "redevelopment_right", acquisitionDate: "2019-01-01", region: "capital", regionCriteria: "REGION", rightValue: 500_000_000 }],
     });
-    expect(exclusionStep(m)).toEqual([MULTI_HOUSE.TAX_INCENTIVE_HOUSE_RIGHT_REFERENCE_BASIS]);
+    expect(exclusionStep(m)).toEqual([THREE_PLUS_RIGHT_BASIS]);
   });
 });

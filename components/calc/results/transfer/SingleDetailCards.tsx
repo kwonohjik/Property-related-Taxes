@@ -15,6 +15,7 @@ import { RedevelopmentDetailCard } from "@/components/calc/results/transfer/Rede
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import { RentalHousingExceptionDetailCard } from "@/components/calc/results/transfer/RentalHousingExceptionDetailCard";
 import { ReductionDetailCards, hasReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
+import { findSurchargeExclusionBasis } from "@/lib/tax-engine/surcharge-exclusion-basis";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -156,6 +157,8 @@ export function SingleDetailCards({
         appliedReductionType={result.reductionTypeApplied}
         appliedReductionAmount={result.reductionAmount}
         houses={formData?.houses}
+        // STEP 0.45 중과 배제 근거 — 세대 구성별 조문을 엔진 단계에서 그대로 읽는다(US-85)
+        surchargeExclusionBasis={findSurchargeExclusionBasis(result.steps)}
       />
     </>
   );

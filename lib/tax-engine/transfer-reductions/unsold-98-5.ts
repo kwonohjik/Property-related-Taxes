@@ -15,7 +15,7 @@
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
-import { UNSOLD_98_5_DECREE } from "../legal-codes/transfer-house";
+import { UNSOLD_98_5_DECREE, UNSOLD_98_DECREE } from "../legal-codes/transfer-house";
 import { computeHybridEffect } from "./unsold-hybrid";
 import { ineligibleHybrid } from "./unsold-hybrid";
 import type { UnsoldHybridIneligibleReason } from "./unsold-hybrid";
@@ -194,7 +194,7 @@ export function evaluateUnsold985(input: Unsold985Input): UnsoldHybridResult {
     reasons.push({
       code: "NOT_NONCAPITAL_UNSOLD",
       message: "2010.2.11 현재 수도권 밖의 지역에 있는 미분양주택(입주자 계약일 경과 단지 선착순 공급 등) 요건이 확인되지 않았습니다 (법 §98의5① · 령 §98의4①).",
-      legalBasis: "조특령 §98의4①",
+      legalBasis: UNSOLD_98_DECREE.D98_5_REQ,
     });
   }
   if (input.isFirstContract !== true) {
@@ -208,14 +208,14 @@ export function evaluateUnsold985(input: Unsold985Input): UnsoldHybridResult {
     reasons.push({
       code: "OCCUPIED_AT_CONTRACT",
       message: "매매계약일 현재 입주한 사실이 없는 주택임이 확인되지 않았습니다 (조특령 §98의4②1호).",
-      legalBasis: "조특령 §98의4②1호",
+      legalBasis: UNSOLD_98_DECREE.D98_5_NO_OCCUPANCY,
     });
   }
   if (input.isNotRecontract !== true) {
     reasons.push({
       code: "RECONTRACT_EXCLUDED",
       message: "계약 해제 후 본인·배우자(직계존비속·형제자매 포함) 재계약 또는 대체취득 주택이 아님이 확인되지 않았습니다 (조특령 §98의4②2·3호).",
-      legalBasis: "조특령 §98의4②2·3호",
+      legalBasis: UNSOLD_98_DECREE.D98_5_REBUY,
     });
   }
 
@@ -231,7 +231,7 @@ export function evaluateUnsold985(input: Unsold985Input): UnsoldHybridResult {
     standardPriceAtAcquisition: input.standardPriceAtAcquisition,
     standardPriceAt5Years: input.standardPriceAt5Years,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
-    allocationLegalBasis: "조특령 §98의4③",
+    allocationLegalBasis: UNSOLD_98_DECREE.D98_5_ALLOC,
     rate,
     ruralSurtaxExempt: true, // 농특세령 §4⑦1호
   });

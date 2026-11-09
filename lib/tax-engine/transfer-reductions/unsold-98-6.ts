@@ -17,6 +17,7 @@
  */
 
 import { TRANSFER, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { UNSOLD_98_DECREE } from "../legal-codes/transfer-house";
 import { computeHybridEffect } from "./unsold-hybrid";
 import { ineligibleHybrid } from "./unsold-hybrid";
 import type { UnsoldHybridIneligibleReason } from "./unsold-hybrid";
@@ -101,26 +102,26 @@ export function evaluateUnsold986(input: Unsold986Input): UnsoldHybridResult {
     reasons.push({
       code: "MISSING_STD_SUM",
       message: `주택과 부수토지의 기준시가 합계(${hoType === "seller_rented" ? "최초 임대개시 당시" : "취득 당시"})가 입력되지 않았습니다 (조특령 §98의5② 단서 — 6억 한도).`,
-      legalBasis: "조특령 §98의5②",
+      legalBasis: UNSOLD_98_DECREE.D98_6_PRICE_AREA,
     });
   } else if (input.stdPriceSumAtBase > UNSOLD_98_6_STD_SUM_LIMIT) {
     reasons.push({
       code: "STD_SUM_LIMIT_EXCEEDED",
       message: "주택과 부수토지의 기준시가 합계가 6억원을 초과합니다 (조특령 §98의5② 단서).",
-      legalBasis: "조특령 §98의5②",
+      legalBasis: UNSOLD_98_DECREE.D98_6_PRICE_AREA,
     });
   }
   if (input.floorAreaSqm === undefined || input.floorAreaSqm <= 0) {
     reasons.push({
       code: "MISSING_AREA",
       message: "연면적(공동주택은 전용면적)이 입력되지 않았습니다 (149㎡ 한도 검증).",
-      legalBasis: "조특령 §98의5②",
+      legalBasis: UNSOLD_98_DECREE.D98_6_PRICE_AREA,
     });
   } else if (input.floorAreaSqm > UNSOLD_98_6_FLOOR_LIMIT) {
     reasons.push({
       code: "AREA_LIMIT_EXCEEDED",
       message: "연면적(전용면적)이 149㎡를 초과합니다 (조특령 §98의5② 단서).",
-      legalBasis: "조특령 §98의5②",
+      legalBasis: UNSOLD_98_DECREE.D98_6_PRICE_AREA,
     });
   }
   // 2) 양도 시점 · 「2011.3.29. 현재 준공후미분양」 취득일 하한(US-22)
@@ -137,7 +138,7 @@ export function evaluateUnsold986(input: Unsold986Input): UnsoldHybridResult {
     reasons.push({
       code: "NOT_UNSOLD_AFTER_COMPLETION",
       message: "준공후미분양 요건(사용검사·사용승인 후 2011.3.29 현재 분양계약 미체결 + 선착순 공급)이 확인되지 않았습니다 (조특령 §98의5②).",
-      legalBasis: "조특령 §98의5②",
+      legalBasis: UNSOLD_98_DECREE.D98_6_PRICE_AREA,
     });
   }
   if (input.isFirstContract !== true) {
@@ -151,14 +152,14 @@ export function evaluateUnsold986(input: Unsold986Input): UnsoldHybridResult {
     reasons.push({
       code: "OCCUPIED_AFTER_COMPLETION",
       message: "준공 후 입주한 사실이 없는 주택임이 확인되지 않았습니다 (조특령 §98의5③1호).",
-      legalBasis: "조특령 §98의5③1호",
+      legalBasis: UNSOLD_98_DECREE.D98_6_NO_OCCUPANCY,
     });
   }
   if (input.isNotRecontract !== true) {
     reasons.push({
       code: "RECONTRACT_EXCLUDED",
       message: "계약 해제 후 본인·배우자(직계존비속·형제자매 포함) 재계약 또는 대체취득 주택이 아님이 확인되지 않았습니다 (조특령 §98의5③2·3호).",
-      legalBasis: "조특령 §98의5③2·3호",
+      legalBasis: UNSOLD_98_DECREE.D98_6_REBUY,
     });
   }
   // 4) 호별 임대 요건
@@ -203,7 +204,7 @@ export function evaluateUnsold986(input: Unsold986Input): UnsoldHybridResult {
     standardPriceAtAcquisition: input.standardPriceAtAcquisition,
     standardPriceAt5Years: input.standardPriceAt5Years,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
-    allocationLegalBasis: "조특령 §98의5④",
+    allocationLegalBasis: UNSOLD_98_DECREE.D98_6_ALLOC,
     rate,
     ruralSurtaxExempt: false,
     // 5년 내 세액감면은 1호 한정 (법 ① "제1호의 요건을 갖춘 주택에 한정한다")

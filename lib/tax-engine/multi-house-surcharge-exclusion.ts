@@ -17,6 +17,7 @@ import {
   meetsSurchargeSuspensionHolding,
 } from "./tax-utils";
 import { deadlineEnd, isWithinDeadline } from "./civil-period";
+import { surchargeExclusionBasis } from "./surcharge-exclusion-basis";
 import { isHeirInheritedHouse } from "./transfer-inheritance-exclusion";
 import {
   MULTI_HOUSE,
@@ -479,7 +480,7 @@ export function determineSurchargeExclusion(
         // 자동 판정(STEP 0.45 감면 적격)과 자기 선언(5호 토글)을 문구로 구분한다 — 둘이 같은 글자라 감면 「적용 불가」 카드와
         //   「조특법 특례」 배제가 함께 나와도 출처를 알 수 없었다(리뷰 US-19).
         detail: sellingHouse.isUnsoldHousing && !sellingHouse.isTaxSpecialExemption
-          ? `조특법 감면 미분양·신축주택 (${MULTI_HOUSE.TAX_INCENTIVE_HOUSE_5_BASIS})`
+          ? `조특법 감면 미분양·신축주택 (${surchargeExclusionBasis(undefined, { countedRightCount, effectiveHouseCount })})`
           : sellingHouse.taxSpecialExemptionAutoId
             ? "조세특례제한법 특례 적용 주택 — 입력한 감면의 요건 판정으로 적용"
             : "조세특례제한법 특례 적용 주택 — 「조특법 감면주택」 선언으로 적용",

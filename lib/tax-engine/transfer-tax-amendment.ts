@@ -24,6 +24,7 @@ import {
   CLAIM_PERIOD_ORDINARY_YEARS,
   CLAIM_PERIOD_POSTERIOR_MONTHS,
   RURAL_SURTAX_FILING_7_1,
+  TRANSFER,
 } from "./legal-codes";
 import { applyRate, applyRateFraction, truncateToWon } from "./tax-utils";
 import {
@@ -234,7 +235,7 @@ function computeRefundClaim(a: AmendmentInput, determinedTax: number): Amendment
       label: "참고 · 지방소득세 환급 (지자체 별도 경정청구)",
       formula: `환급세액 ${refundTax.toLocaleString()} × 10%`,
       amount: refundLocalIncomeTax,
-      legalBasis: "지방세법 제103조의",
+      legalBasis: TRANSFER.LOCAL_INCOME_TAX_CLAIM,
       sub: true,
     },
   ];

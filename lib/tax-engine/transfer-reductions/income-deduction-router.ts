@@ -11,6 +11,7 @@
  */
 
 import { coerceOptionalDate } from "../tax-utils";
+import { surchargeExclusionBasis, SURCHARGE_EXCLUSION_STEP_LABEL, type SurchargeHousehold } from "../surcharge-exclusion-basis";
 import { MULTI_HOUSE } from "../legal-codes/transfer";
 import { resolveHighValuePriceCheck } from "../one-house/threshold";
 import { evaluateNew993, type New993Result } from "./new-99-3";
@@ -640,7 +641,7 @@ export function buildSurchargeExclusionStep(exclusion: {
   // 하드코딩("§99의3") 대신 중립 표현으로 오표시 방지 (리뷰 Low #3 방어).
   const article = exclusion.appliedId ? EXCLUSION_ARTICLE_LABELS[exclusion.appliedId] : "조특법 감면주택";
   return {
-    label: "감면주택 다주택 중과 배제",
+    label: SURCHARGE_EXCLUSION_STEP_LABEL,
     formula: `${article} 감면주택 양도 — 중과세율 적용 제외`,
     amount: 0,
     legalBasis: exclusion.legalBasis ?? "",
@@ -684,11 +685,8 @@ export function resolveSurchargeExclusionByReduction(
     return {
       excluded: true,
       appliedId: surchargeId,
-      // §98은 3호 (감면대상장기임대주택 — 5년+ 임대 국민주택), 나머지는 5호 열거
-      legalBasis:
-        surchargeId === "unsold_98"
-          ? "소령 §167의3①3호·§167의10①2호"
-          : "소령 §167의3①5호·§167의10①2호",
+      // 세대 구성을 모르는 시점의 기본 근거(2주택 형) — 중과 판정 뒤 `withSurchargeExclusionRegime`이 세대 구성에 맞춘다
+      legalBasis: surchargeExclusionBasis(surchargeId),
     };
   }
   return { excluded: false };
@@ -697,15 +695,14 @@ export function resolveSurchargeExclusionByReduction(
 export type SurchargeExclusionByReduction = { excluded: boolean; appliedId?: IncomeDeductionId; legalBasis?: string };
 
 /**
- * 배제 근거를 세대 구성에 맞춘다(NH-82). 위 근거(§167의3①·§167의10①2호)는 주택만 가진 세대(법 §104⑦1호·3호)의 것이다 —
- * 산입되는 조합원입주권·분양권이 있는 세대(같은 항 2호·4호)는 소령 §167의11①2호·§167의4③2호가 같은 §167의3①2호~8호를 준용한다.
- * 판정 결과는 바꾸지 않는다(세액 불변). 산입 여부는 중과 판정 뒤에야 알므로 호출부가 그 결과로 넘긴다(`surchargeHouseholdCountsRights`).
+ * 배제 근거를 세대 구성에 맞춘다(NH-82 · US-85). 판정 결과는 바꾸지 않는다(세액 불변). 세대 구성은 중과 판정 뒤에야 알므로
+ * 호출부가 그 결과(`surchargeHousehold`)를 넘긴다.
  */
 export function withSurchargeExclusionRegime(
   exclusion: SurchargeExclusionByReduction,
-  householdCountsRights: boolean,
+  household: SurchargeHousehold | undefined,
 ): SurchargeExclusionByReduction {
-  return exclusion.excluded && householdCountsRights
-    ? { ...exclusion, legalBasis: MULTI_HOUSE.TAX_INCENTIVE_HOUSE_RIGHT_REFERENCE_BASIS }
+  return exclusion.excluded && household
+    ? { ...exclusion, legalBasis: surchargeExclusionBasis(exclusion.appliedId, household) }
     : exclusion;
 }

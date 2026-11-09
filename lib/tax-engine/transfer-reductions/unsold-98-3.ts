@@ -16,6 +16,7 @@
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { UNSOLD_98_DECREE } from "../legal-codes/transfer-house";
 import { round2 } from "../area-utils";
 import { computeHybridEffect } from "./unsold-hybrid";
 import { ineligibleHybrid } from "./unsold-hybrid";
@@ -180,7 +181,7 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
       reasons.push({
         code: "MISSING_AREA",
         message: "수도권과밀억제권역 주택은 대지면적과 연면적(공동주택은 전용면적)을 입력해야 합니다 (조특령 §98의3①단서 — 660㎡·149㎡ 이내 한정).",
-        legalBasis: "조특령 §98의3①단서",
+        legalBasis: UNSOLD_98_DECREE.D98_3_AREA,
       });
     } else if (
       round2(input.landAreaSqm) > UNSOLD_98_3_OVERCON_LAND_LIMIT ||
@@ -189,7 +190,7 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
       reasons.push({
         code: "AREA_LIMIT_EXCEEDED",
         message: "수도권과밀억제권역 주택은 대지면적 660㎡ 이내이고 연면적(전용면적) 149㎡ 이내인 경우에 한정됩니다 (조특령 §98의3①단서).",
-        legalBasis: "조특령 §98의3①단서",
+        legalBasis: UNSOLD_98_DECREE.D98_3_AREA,
       });
     }
   }
@@ -209,7 +210,7 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
     reasons.push({
       code: "NOT_UNSOLD_CONFIRMED",
       message: "미분양주택 요건(령 §98의3①1~8호 — 2009.2.11까지 분양계약 미체결 후 선착순 공급분, 2009.2.12 이후 입주자 계약일 도래분, 주택건설사업자·주택도시보증공사·시공자·기업구조조정리츠·건축주·신탁업자 공급분 등)이 확인되지 않았습니다 (조특령 §98의3①).",
-      legalBasis: "조특령 §98의3①",
+      legalBasis: UNSOLD_98_DECREE.D98_3_REQ,
     });
   }
   if (houseType === "purchased" && input.isFirstContract !== true) {
@@ -223,14 +224,14 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
     reasons.push({
       code: "OCCUPIED_AT_CONTRACT",
       message: "매매계약일 현재 입주한 사실이 없는 주택임이 확인되지 않았습니다 (조특령 §98의3②1호).",
-      legalBasis: "조특령 §98의3②1호",
+      legalBasis: UNSOLD_98_DECREE.D98_3_NO_OCCUPANCY,
     });
   }
   if (houseType === "purchased" && input.isNotRecontract !== true) {
     reasons.push({
       code: "RECONTRACT_EXCLUDED",
       message: "계약 해제 후 본인·배우자(직계존비속·형제자매 포함) 재계약 또는 대체취득 주택이 아님이 확인되지 않았습니다 (조특령 §98의3②2·3호).",
-      legalBasis: "조특령 §98의3②2·3호",
+      legalBasis: UNSOLD_98_DECREE.D98_3_REBUY,
     });
   }
   if (houseType === "self_built" && input.isNotExcludedSelfBuilt !== true) {
@@ -253,7 +254,7 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
     standardPriceAtAcquisition: input.standardPriceAtAcquisition,
     standardPriceAt5Years: input.standardPriceAt5Years,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
-    allocationLegalBasis: "조특령 §98의3③",
+    allocationLegalBasis: UNSOLD_98_DECREE.D98_3_ALLOC,
     rate,
     ruralSurtaxExempt: true, // 농특세령 §4⑦1호
   });

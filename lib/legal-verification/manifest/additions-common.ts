@@ -442,7 +442,29 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     // 농특세법 §4 7호 단서가 위임하는 비과세 감면 열거
     id: "SURTAX_DECREE.NON_TAXABLE",
     citation: "농어촌특별세법 시행령 §4",
-    keywords: ["「조세특례제한법」 제66조부터 제70조까지", "「지방세특례제한법」"],
+    keywords: [
+      "「조세특례제한법」 제66조부터 제70조까지",
+      "「지방세특례제한법」",
+      // ⑦1호(법 §4 12호 위임) 열거 — §98의3·§98의5는 있고 §98의6·§98의7은 없다(US-82/83 · 엔진 `ruralSurtaxExempt`)
+      "제95조의2, 제98조의3, 제98조의5, 제99조의9",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // 차감형 감면(소득공제 방식)의 농특세 근거 — `TRANSFER.RURAL_SURTAX_DEDUCTION`. 원문 MST 285905 실독 2026-11-09.
+    id: "SURTAX.DEDUCTION_METHOD",
+    citation: "농어촌특별세법 §5",
+    keywords: [
+      "비과세 및 소득공제를 받는 경우에는 대통령령으로 정하는 계산방법에 의하여 계산한 금액을 감면을 받는 세액으로 보아 제1항제1호를 적용한다",
+      "감면세액(제2호의 경우는 제외한다)",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // 위 ③의 위임 계산방법 — 법 §5③ 인용이 가리키는 시행령 항. 원문 MST 280835 실독 2026-11-09.
+    id: "SURTAX_DECREE.DEDUCTION_COMPUTATION",
+    citation: "농어촌특별세법 시행령 §5",
+    keywords: ["비과세소득 및 소득공제액을 과세표준에 산입하여 계산한 세액", "비과세소득ㆍ소득공제액을 과세표준에서 제외하고 계산한 세액"],
     keywordMode: "ALL",
   },
   {

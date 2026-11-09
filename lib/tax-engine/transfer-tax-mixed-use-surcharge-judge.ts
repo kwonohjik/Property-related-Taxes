@@ -6,7 +6,7 @@
  */
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
 import { linkTaxIncentiveHouse5ho, withTaxIncentiveHouseNotices } from "./surcharge-tax-incentive-house-link";
-import { surchargeHouseholdCountsRights } from "./surcharge-tax-incentive-house-link";
+import { surchargeHousehold } from "./surcharge-tax-incentive-house-link";
 import { withSurchargeExclusionRegime } from "./transfer-reductions";
 import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
 import { withRentalResidenceSurchargeHouses, type resolveMixedUseRentalResidence } from "./transfer-tax-mixed-use-rental-residence";
@@ -139,7 +139,7 @@ export function judgeMixedUseMultiHouseSurcharge(args: MixedSurchargeJudgeArgs) 
       reductionExclusion && multiHouse && houseCountExclusionRules
         ? withSurchargeExclusionRegime(
             reductionExclusion,
-            surchargeHouseholdCountsRights(multiHouse.presaleRights ?? [], houseCountExclusionRules, multiHouseSurcharge),
+            surchargeHousehold(multiHouse.presaleRights ?? [], houseCountExclusionRules, multiHouseSurcharge),
           )
         : reductionExclusion,
   };

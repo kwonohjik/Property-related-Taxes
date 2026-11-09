@@ -21,6 +21,7 @@ import { evaluateNew99AcquisitionGate } from "./new-99-acquisition-cause";
 import { completedMonthsInclusive } from "../civil-period";
 import { UNSOLD_98_FLAT_RATE, UNSOLD_98_FLAT_RATE_LABEL, UNSOLD_98_HOLDING_YEARS } from "./unsold-98-constants";
 import { RENTAL_HOUSE_COUNT_EXCLUSION, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { UNSOLD_98_DECREE } from "../legal-codes/transfer-house";
 import { NEW_99_PERIOD_START } from "./new-99";
 import { NEW_99_PERIOD_END } from "./new-99";
 import { NEW_99_PERIOD_END_NATIONAL } from "./new-99";
@@ -130,21 +131,21 @@ export function evaluateUnsold98(input: Unsold98Input): UnsoldHybridResult {
     reasons.push({
       code: "NOT_NATIONAL_SCALE",
       message: "국민주택규모 이하의 주택임이 확인되지 않았습니다 (조특령 §98①·⑤).",
-      legalBasis: "조특령 §98①",
+      legalBasis: UNSOLD_98_DECREE.D98_REQ,
     });
   }
   if (input.isOutsideSeoul !== true) {
     reasons.push({
       code: "NOT_OUTSIDE_SEOUL",
       message: "서울특별시 외의 지역에 소재하는 주택임이 확인되지 않았습니다 (조특령 §98①·⑤).",
-      legalBasis: "조특령 §98①",
+      legalBasis: UNSOLD_98_DECREE.D98_REQ,
     });
   }
   if (input.isUnsoldConfirmed !== true) {
     reasons.push({
       code: "NOT_UNSOLD_CONFIRMED",
       message: "시장·군수·구청장이 1995.10.31(1998.3.1 이후 취득분은 1998.2.28) 현재 미분양주택임을 확인한 주택이 아닙니다 (조특령 §98①1호·⑤1호).",
-      legalBasis: "조특령 §98①1호",
+      legalBasis: UNSOLD_98_DECREE.D98_REQ_1HO,
     });
   }
   if (input.isNotRentalHousing !== true) {
@@ -152,14 +153,14 @@ export function evaluateUnsold98(input: Unsold98Input): UnsoldHybridResult {
       code: "RENTAL_HOUSING_EXCLUDED",
       message:
         "민간임대주택(민간임대주택에 관한 특별법 §2)·공공임대주택(공공주택 특별법 §2 1호 가목)이 아님이 확인되지 않았습니다 (조특령 §98①1호 괄호 — 이하 이 조에서 같다).",
-      legalBasis: "조특령 §98①1호",
+      legalBasis: UNSOLD_98_DECREE.D98_REQ_1HO,
     });
   }
   if (input.isFirstBuyerNoOccupancy !== true) {
     reasons.push({
       code: "NOT_FIRST_BUYER",
       message: "주택건설사업자로부터 최초로 분양받고 완공 후 다른 자가 입주한 사실이 없는 주택임이 확인되지 않았습니다 (조특령 §98①2호·⑤2호).",
-      legalBasis: "조특령 §98①2호",
+      legalBasis: UNSOLD_98_DECREE.D98_REQ_2HO,
     });
   }
   if (reasons.length > 0) return ineligibleHybrid("unsold_98", reasons, legalBasis, UNSOLD_98_FLAT_RATE, true);
@@ -306,7 +307,7 @@ export const SPECIAL_HOUSE_EXCLUSION_WINDOWS: Record<SpecialHouseExclusionArticl
     label: "§98 미분양 국민주택",
     windows: [[D("1995-11-01"), D("1997-12-31")], [D("1998-03-01"), D("1998-12-31")]],
     basis: "acquisition_or_contract",
-    legalBasis: "조특령 §98②·⑥",
+    legalBasis: UNSOLD_98_DECREE.D98_HOUSE_COUNT,
   },
   unsold_98_2: {
     label: "§98의2 지방 미분양주택",
