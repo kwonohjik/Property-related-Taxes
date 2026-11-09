@@ -204,7 +204,7 @@ describe("④⑫⑭ §155⑥ 배관", () => {
     expect(readFileSync("app/api/calc/transfer/engine-input.ts", "utf8")).toContain(
       "culturalHeritageHouse: data.culturalHeritageHouse",
     );
-    expect(readFileSync("app/api/calc/transfer/multi/route.ts", "utf8")).toContain(
+    expect(readFileSync("app/api/calc/transfer/multi/route-property-input.ts", "utf8") /* ⑭ 건별 매핑 — route.ts에서 분리 */).toContain(
       "culturalHeritageHouse: p.culturalHeritageHouse",
     );
   });

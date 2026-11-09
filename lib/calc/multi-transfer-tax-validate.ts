@@ -12,8 +12,10 @@ import { phdFlagEffective } from "./phd-toggle-scope";
 import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { isGbBurdenedGift } from "./gb-bg-gift-tax-return";
 import { carryoverEventForm } from "./transfer-tax-api-carryover";
+import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
@@ -202,9 +204,25 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   //    건별 전송하고, 건별 ⑧(`validateStep` — 옛 선언·행 필수값)도 단건과 같다. 단건 = 다건은
   //    `transfer.route.multi-special-act-exclusion.anchor.test.ts`가 고정한다.
   if ((form.assets?.length ?? 0) > 1) {
-    return MULTI_COMPANION_UNSUPPORTED_MESSAGE;
+    // 일반건물 지분 분할 취득(같은 물건의 전 지분)만 연다 — ④가 단건과 같은 빌더(`buildGeneralBuildingShares`)로 지분 배열을 만들고 ⑭가 지분 카드로 펼친다(트랙 GS).
+    //   그 밖의 한 건 내 다자산(함께 양도)은 계속 막는다.
+    if (!isMultiGbSharesForm(form)) return MULTI_COMPANION_UNSUPPORTED_MESSAGE;
+    // 부담부증여 지분은 막는다 — 펼침이 지분 §159 정보를 넘기지 않는다(⑫ `generalBuildingShares` 같은 문구 · V-GS2).
+    if (form.assets.some((s) => s.transferType === "burdened_gift" || s.acquisitionCause === "burdened_gift")) {
+      return MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE;
+    }
+    // 위 차단은 첫 자산만 봤다 — 둘째 지분부터도 같은 규칙을 지분마다 적용한다(지분마다 취득원인·감면이 다를 수 있다).
+    for (const share of form.assets.slice(1)) {
+      const reason = validateMultiSupportedMode({ ...form, assets: [share] });
+      if (reason) return reason;
+    }
   }
   return null;
+}
+
+/** 일반건물 전 지분 묶음 — ④ `buildGeneralBuildingShares`가 지분 배열을 만드는 조건과 같은 술어(첫 자산 일반건물 + 전 자산 같은 물건 지분). */
+function isMultiGbSharesForm(form: PropertyItem["form"]): boolean {
+  return form.assets[0]?.assetKind === "general_building" && isFullFractionalBundle(form.assets, form.assetSplitMode);
 }
 
 /** 건별 편집이 최소 조건을 충족하는지 (다음 단계 이동 가능 여부) */

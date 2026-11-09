@@ -37,8 +37,12 @@ export const MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE =
 export const MULTI_MIXED_USE_UNSUPPORTED_MESSAGE = "겸용주택 분리계산은 단건 계산기에서만 지원됩니다.";
 export const MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE =
   "의제취득일(1985.1.1.) 전 매수 자산의 취득가액 비교(소득세법 시행령 §176조의2④)는 단건 계산기에서만 지원됩니다.";
-export const MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE =
-  "일반건물 지분별 분할 취득은 단건 계산기에서만 지원됩니다.";
+/**
+ * 일반건물 지분 분할 취득 × 부담부증여(소령 §159) — 단건은 지분마다 §159 정보를 카드에 싣고 물건 전체 명세를 1회 계산한다.
+ * 연간 합산 펼침(`multi-gb-expansion.ts`)은 지분 §159 정보를 넘기지 않아 일반 양도로 계산되므로 막는다(트랙 GS · V-GS2).
+ */
+export const MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE =
+  "일반건물 지분 분할 취득 × 부담부증여(소령 §159)는 단건 계산기에서만 지원됩니다.";
 export const MULTI_PHD_UNSUPPORTED_MESSAGE = "개별주택가격 미공시 환산취득가(영 §164⑦)는 단건 계산기에서만 지원됩니다.";
 export const MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE = "가업상속공제(§97의2④) 의제 취득가액은 단건 계산기에서만 지원됩니다.";
 export const MULTI_COMPANION_UNSUPPORTED_MESSAGE = "한 건 내 다자산 일괄양도는 단건 계산기에서만 지원됩니다.";

@@ -76,6 +76,28 @@
 - ⑭ 지분 카드 빌더를 `calculateGeneralBuildingFractional`에서 카드 목록 함수로 꺼내 트랙 G 펼침처럼 끼운다(예정신고 단위 = 그 물건의 전 지분 카드 · 이월과세 외부 단위 `externalUnits` 위치 이동).
 - 카드 id 규약 — Q-2.
 
+**V-GS1 조사(2026-11-10)** — 꼬리를 읽는 곳은 두 계열이다(모두 `general-building-share-id.ts` 정본 함수를 거치거나 `#` 뒤를 직접 자른다).
+
+| 계열 | 읽는 곳 |
+|---|---|
+| 지분 번호 | `shareIndexOf` 3곳 · `isSameShare` 5곳(전부 자산 상세의 `assetCards` 안에서 짝을 찾는다) · 사이드바 `#${i}` 조립 1곳 · 지분 echo 키(`shareBlockEcho`·`shareFormulaEcho`·`shareActualExpenseEcho`) |
+| 자산 id | `cardSuffixOf` 11곳 · 연간 합산 행 묶기 `multiFormPropertyIdOf` 2곳 |
+| 둘 다 시도 | `assetOfCardSuffix` · `pre-deemed-purchase-filing-note.ts` · `cardBg`(직접 자름) |
+
+- (b)는 두 지분 카드가 같은 id(`land#p1`)가 된다. 그래서 `isSameShare`가 지분을 가리지 못하고, 카드를 id로 찾는 곳(`transfer-tax-aggregate-debt-units.ts:76` 등)과 React key가 겹친다.
+- ✅ **결정(2026-11-10 사용자): Q-2 a.**
+
+**구현 결과(트랙 GS · 2026-11-10)** — anchor `__tests__/calc/multi-gb-shares-parity.anchor.test.ts`.
+- 정본 함수: 복합 접미사 `<자산id>.<지분번호>`(`shareCardSuffix`)를 읽는다. `cardSuffixOf`는 점 앞, `shareIndexOf`는 점 뒤를 돌려준다. 단건 축 B·함께 양도는 점이 없어 종전 그대로다.
+- ⑭: 단건 지분 경로에서 세 함수를 꺼냈다. 지분 조각 `buildSharePiece`, 지분 양도가액 `shareTransferPrices`, 결과 상세 조립 `assembleShareDetail`이다. 다건 펼침이 같은 함수로 지분 카드를 만들고, 자산 상세(`generalBuildingDetailsByAsset[자산]`)에 지분 echo를 싣는다.
+- ④는 단건과 같은 빌더(`buildGeneralBuildingShares`)를 쓴다. ⑧은 「한 건 내 다자산」에서 일반건물 전 지분 묶음만 뺀다. 둘째 지분부터도 같은 차단 규칙을 지분마다 적용한다.
+- ⑦ 자산 블록 뷰에 지분별 블록(`shareBlockViews` — 단건 축 B와 같은 조립)을 붙였다. 명세서 산식은 지분 양도가액·개산공제 base를 쓴다. 폼 조회(`multiFormAssetOf`)는 그 지분의 자산을 읽는다(종전 `assets[0]`).
+- 단건 = 연간 합산:
+  - 지분 분할: 132,951,280
+  - 지분 × 이월과세: 지분 전체 182,393,200 · 건물만 157,672,240
+  - 아파트와 함께: 251,993,544
+- **V-GS2**: 지분 × 부담부증여는 펼침이 지분 §159 정보를 넘기지 않아 일반 양도로 계산된다. 그래서 ⑧·⑫에서 같은 문구로 계속 막는다(단건 59,564,296 · 별건). 지분 × 이월과세(부담부증여 아님)는 단건과 같아 연다.
+
 ### 공통
 
 - 파일 크기: `lib/calc/multi-transfer-tax-api.ts` 722줄 · `app/api/calc/transfer/multi/route.ts` 738줄. 세 트랙 배관을 더하면 800 트리거를 넘을 수 있다 — 첫 PR에서 기회주의적 분리(≤700 착지)를 함께 한다.
@@ -84,7 +106,7 @@
 ## 4. 사용자 결정(Q)
 
 - **Q-1 순서** — (a) CO → BG → GS 각각 PR **(권장: CO·BG는 엔진 그대로·배관 위주, GS는 카드 id 규약과 빌더 분리가 필요해 마지막)** · (b) 세 트랙 한 PR.
-- **Q-2 지분 카드 id(GS)** — (a) 복합 접미사 `land#<자산id>.<지분번호>`(자산 묶음은 앞부분, 지분 구분은 뒷부분) · (b) 연간 합산에서만 접미사를 자산 id로 바꾸고 지분 번호는 라벨·별도 필드로. **결정 전 V-GS1(접미사 파서 전수 조사) 필요** — 어느 쪽이든 결과 묶음·신고서·명세서·폼 조회가 접미사를 읽는다.
+- **Q-2 지분 카드 id(GS)** — ✅ a 결정(2026-11-10) · (a) 복합 접미사 `land#<자산id>.<지분번호>`(자산 묶음은 앞부분, 지분 구분은 뒷부분) · (b) 연간 합산에서만 접미사를 자산 id로 바꾸고 지분 번호는 라벨·별도 필드로. **결정 전 V-GS1(접미사 파서 전수 조사) 필요** — 어느 쪽이든 결과 묶음·신고서·명세서·폼 조회가 접미사를 읽는다.
 - **Q-3 부담부증여 표시(BG)** — (a) 자산 행 펼침에 그 자산의 §159·증여세 명세 카드(단건과 같은 카드) **(권장: 세액 근거가 화면에 남는다)** · (b) 세액만(명세 없음 — 숨은 계산이라 비권장).
 - ✅ **결정(2026-11-09 사용자)**: Q-1 **a**(CO → BG → GS 각각 PR) · Q-2 **V-GS1 조사 후 결정**(트랙 GS 착수 전) · Q-3 **a**(자산 행 펼침에 §159·증여세 명세 카드).
 
@@ -99,8 +121,8 @@
 | V-CO5 | 연간 합산 결과 화면이 이월과세 A/B 카드·신고단위 비교 근거를 그리는지(브라우저) |
 | V-BG1 | ✅ 해소(트랙 BG) — 묶음 명세 입력이 있으면 자산별 echo를 싣지 않는다 |
 | V-BG2 | ✅ 해소(트랙 BG) — 세액 단건과 같음. 일반건물 부담부증여 × 이월과세만 ⑧·⑫ 계속 차단(별건) |
-| V-GS1 | 카드 접미사를 읽는 곳 전수 조사(`cardSuffixOf`·`assetOfCardSuffix`·`multiFormPropertyIdOf` 등) |
-| V-GS2 | 지분 분할 × 부담부증여·이월과세(지분별 `externalUnits`) 조합 — 위치 이동 후 단건과 같은지 |
+| V-GS1 | ✅ 조사 완료(트랙 GS 절) — Q-2 a |
+| V-GS2 | ✅ 이월과세는 단건과 같음 · 부담부증여는 ⑧·⑫ 계속 차단(별건) |
 
 ## 6. 완료 기준
 

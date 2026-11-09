@@ -12,6 +12,10 @@
  * - 예정신고 세액(가산세 base)은 카드 묶음을 한 번에 계산하는 단위(`cardUnits`)로 넘긴다.
  */
 import { buildGbCompanionItems } from "./general-building-part-cards";
+import { assembleShareDetail, buildSharePiece, shareTransferPrices } from "./general-building-fractional";
+import type { GeneralBuildingSharePayload } from "./general-building-fractional";
+import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
+import { shareCardSuffix } from "@/lib/tax-engine/general-building-share-id";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -20,7 +24,13 @@ import type { PreliminaryCardUnit } from "@/lib/tax-engine/transfer-tax-prelimin
 import type { GbBundledAssetDetail } from "@/lib/tax-engine/types/transfer-aggregate.types";
 
 export interface MultiGbSource {
-  valuation: Record<string, unknown>;
+  valuation?: Record<string, unknown>;
+  /**
+   * 지분 분할 취득(트랙 GS) — 있으면 `valuation` 대신 지분 카드로 펼친다. 단건 `calculateGeneralBuildingFractional`과 같은 지분 조각
+   * (`buildSharePiece`)·같은 양도가액 분할(`shareTransferPrices`)·같은 결과 상세 조립(`assembleShareDetail`)을 쓴다.
+   * 카드 id 접미사는 복합 `<자산id>.<지분번호>`다(계획서 `multi-carryover-bg-gb-shares.plan.md` Q-2 a).
+   */
+  shares?: { list: GeneralBuildingSharePayload[]; totalTransferPrice: number };
   ownershipRatio?: number;
   /** 공유지분 — 그 물건 전체(100%) 양도가액(§100③ 계약서 구분 기재 판정 · 단건 `contractTotalPrice`와 같은 값) */
   totalPropertyTransferPrice?: number;
@@ -43,13 +53,36 @@ export function expandMultiGeneralBuildings(
   const detailsByAsset: Record<string, GbBundledAssetDetail> = {};
 
   items.forEach((item, index) => {
+    /** 펼친 카드 묶음 1건 — 가산세 입력은 첫 카드에만 · 예정신고 단위는 그 묶음 전체. */
+    const pushCards = (cards: TransferTaxItemInput[]) => {
+      const start = properties.length;
+      cards.forEach((card, i) =>
+        properties.push(
+          i === 0
+            ? { ...card, filingPenaltyDetails: item.filingPenaltyDetails, delayedPaymentDetails: item.delayedPaymentDetails }
+            : card,
+        ),
+      );
+      cardUnits.push(cards.map((_, i) => start + i));
+    };
     const gb = gbOf(index);
     if (!gb) {
       properties.push(item);
       return;
     }
+    if (gb.shares) {
+      const assetId = item.propertyId ?? `property-${index + 1}`;
+      const { list, totalTransferPrice } = gb.shares;
+      const prices = shareTransferPrices(list, totalTransferPrice);
+      const ctx = { transferDate: item.transferDate, totalTransferPrice, primaryReductions: item.reductions };
+      const pieces = list.map((share, i) =>
+        buildSharePiece(ctx, share, i, shareCardSuffix(assetId, i), prices[i], coerceGeneralBuildingPayload(share.valuation), undefined, undefined, undefined));
+      detailsByAsset[assetId] = assembleShareDetail(list, pieces, prices).detail as unknown as GbBundledAssetDetail;
+      pushCards(pieces.flatMap((p) => p.items));
+      return;
+    }
     const cards = buildGbCompanionItems(
-      gb.valuation,
+      gb.valuation ?? {},
       item,
       {
         ownershipRatio: gb.ownershipRatio,
@@ -71,15 +104,7 @@ export function expandMultiGeneralBuildings(
     const bg = cards[0]?.gbAssetBurdenedGift?.breakdown;
     const assetId = item.propertyId ?? `property-${index + 1}`;
     if (bg && detailsByAsset[assetId]) detailsByAsset[assetId] = { ...detailsByAsset[assetId], burdenedGiftBreakdown: bg };
-    const start = properties.length;
-    cards.forEach((card, i) =>
-      properties.push(
-        i === 0
-          ? { ...card, filingPenaltyDetails: item.filingPenaltyDetails, delayedPaymentDetails: item.delayedPaymentDetails }
-          : card,
-      ),
-    );
-    cardUnits.push(cards.map((_, i) => start + i));
+    pushCards(cards);
   });
 
   return { properties, cardUnits, detailsByAsset };

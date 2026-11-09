@@ -1,0 +1,195 @@
+/**
+ * anchor(④·⑧·⑫·⑭·⑦ 다건) — 일반건물 지분 분할 취득을 연간 합산에 넣을 수 있다
+ * (계획서 `docs/00-pm/multi-carryover-bg-gb-shares.plan.md` 트랙 GS · Q-1 a · Q-2 a).
+ *
+ * 단건은 지분마다 토지·건물 카드를 만들어 합산 엔진을 1회 부른다(`calculateGeneralBuildingFractional`). 연간 합산 펼침은 같은 지분 조각
+ * (`buildSharePiece`)·같은 지분 양도가액(`shareTransferPrices`)·같은 결과 상세 조립(`assembleShareDetail`)으로 카드를 만든다.
+ * 카드 id 접미사는 복합 `<자산id>.<지분번호>`다(Q-2 a) — `cardSuffixOf`는 자산 부분(결과 행 묶음·자산 상세 키),
+ * `shareIndexOf`는 지분 번호(지분 짝·지분 echo 키)를 돌려준다. 단건 축 B(`land#0`)·함께 양도(`land#asset-…`)는 점이 없어 종전 그대로다.
+ *
+ * 계속 막는 하위 모드(GS-5): 지분 × 부담부증여 — 펼침이 지분 §159 정보를 넘기지 않아 일반 양도로 계산된다(V-GS2).
+ * 지분 × 이월과세(지분 자산 단위·건물만)는 단건과 같아 막지 않는다(GS-3).
+ */
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
+
+vi.mock("@/lib/db/tax-rates", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/db/tax-rates")>();
+  return { ...actual, preloadTaxRates: vi.fn() };
+});
+vi.mock("@/lib/api/rate-limit", () => ({
+  checkRateLimit: vi.fn().mockReturnValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 }),
+  getClientIp: vi.fn().mockReturnValue("127.0.0.1"),
+  shouldBypassRateLimit: vi.fn().mockReturnValue(false),
+}));
+import { preloadTaxRates } from "@/lib/db/tax-rates";
+import { validateMultiSupportedMode } from "@/lib/calc/multi-transfer-tax-validate";
+import { buildPropertyPayload } from "@/lib/calc/multi-transfer-tax-api";
+import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
+import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { cardSuffixOf, shareIndexOf, isSameShare, shareCardSuffix, baseCardId } from "@/lib/tax-engine/general-building-share-id";
+import { gbAssetBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
+import { multiFormAssetOf, multiFormPropertyIdOf } from "@/components/calc/results/transfer/multi-result-groups";
+import { gbFormulaInputsOf } from "@/components/calc/results/transfer/DetailedStatementGbAsset";
+import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { runSingle, buildMultiBody, postMulti } from "./_helpers/single-multi-route-parity";
+
+beforeEach(() => {
+  vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
+});
+
+type Obj = Record<string, unknown>;
+
+/** 일반건물 10억 · 토지 100㎡ · 건물 200㎡ · 환산 — 지분 60%(2009 취득) + 40%(2015 취득). 단건 132,951,280. */
+const GB: Partial<AssetForm> = {
+  assetKind: "general_building", acquisitionCause: "purchase", gbBuildingAcquisitionCause: "purchase", useEstimatedAcquisition: true,
+  landAcqMode: "estimated", buildingAcqMode: "estimated", gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50",
+  gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
+  gbZoneType: "general_residential", addressJibun: "테스트 9", regionCode: "2826010100", actualSalePrice: "1000000000",
+};
+
+function sharesForm(share2: Partial<AssetForm> = {}, share1: Partial<AssetForm> = {}): TransferFormData {
+  const f = createDefaultTransferFormData();
+  Object.assign(f, {
+    transferDate: "2024-06-01", isOneHousehold: false, residencePeriodMonths: "0", contractTotalPrice: "1000000000",
+    householdNoPresaleRightsConfirmed: true, householdNoOtherHousesConfirmed: true, assetSplitMode: "fractional",
+  });
+  f.assets = [
+    { ...makeDefaultAsset(1), ...GB, acquisitionDate: "2009-03-01", ownershipNumerator: "60", ownershipDenominator: "100", ...share1 } as AssetForm,
+    { ...makeDefaultAsset(2), ...GB, acquisitionDate: "2015-03-01", ownershipNumerator: "40", ownershipDenominator: "100", ...share2 } as AssetForm,
+  ];
+  return f;
+}
+
+/** 같은 해 나중에 양도한 아파트(단건 87,373,000). */
+const APT = (() => {
+  const f = createDefaultTransferFormData();
+  Object.assign(f, {
+    transferDate: "2024-09-01", isOneHousehold: false, residencePeriodMonths: "0", contractTotalPrice: "900000000",
+    householdNoPresaleRightsConfirmed: true, householdNoOtherHousesConfirmed: true,
+  });
+  f.assets = [{ ...makeDefaultAsset(1), assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2018-02-01", actualSalePrice: "900000000", fixedAcquisitionPrice: "600000000", addressJibun: "테스트 2", regionCode: "2826010100" } as AssetForm];
+  return f;
+})();
+
+const CO = {
+  ...CARRYOVER_DEFAULTS, giftRegistryDate: "2021-06-01", donorAcquisitionDate: "2005-01-01", donorAcquisitionPrice: "10000000",
+  useEstimatedAcquisition: false, giftTaxAmount: "0", donorCapitalExpenditure: "", giftDateValuation: "300000000",
+  donorRelation: "spouse" as const, donorSameHousehold: "no" as const,
+};
+
+async function single(f: TransferFormData) {
+  const s = await runSingle(f);
+  expect(s.status, JSON.stringify(s.json).slice(0, 400)).toBe(200);
+  return { ...s, aggregated: (s.json.data as Obj).aggregated as Obj };
+}
+async function multi(forms: TransferFormData[]) {
+  const m = await postMulti(await buildMultiBody(forms));
+  expect(m.status, JSON.stringify(m.json).slice(0, 400)).toBe(200);
+  return m;
+}
+const gainsOf = (rows: Obj[]) => rows.map((p) => p.transferGain);
+
+describe("다건 — 일반건물 지분 분할 취득", () => {
+  it("[GS-0] 카드 접미사 정본 — 복합 `<자산id>.<지분번호>`는 자산·지분을 따로 읽고, 단건 축 B·함께 양도는 종전 그대로", () => {
+    const id = `land#${shareCardSuffix("prop-1700000000-3", 1)}`;
+    expect(id).toBe("land#prop-1700000000-3.1");
+    expect(cardSuffixOf(id)).toBe("prop-1700000000-3");
+    expect(shareIndexOf(id)).toBe(1);
+    expect(baseCardId(id)).toBe("land");
+    expect(isSameShare(id, "building#prop-1700000000-3.1")).toBe(true);
+    expect(isSameShare(id, "building#prop-1700000000-3.0")).toBe(false);
+    expect(multiFormPropertyIdOf(id)).toBe("prop-1700000000-3");
+    // 종전 규약
+    expect([cardSuffixOf("land#0"), shareIndexOf("land#0")]).toEqual(["0", 0]);
+    expect([cardSuffixOf("land#asset-1700000000-2"), shareIndexOf("land#asset-1700000000-2")]).toEqual(["asset-1700000000-2", undefined]);
+    expect([cardSuffixOf("land"), shareIndexOf("land")]).toEqual([undefined, undefined]);
+  });
+
+  it("[GS-1] ⑧ — 일반건물 전 지분 묶음은 막지 않는다 · 그 밖의 한 건 내 다자산은 계속 막는다", () => {
+    expect(validateMultiSupportedMode(sharesForm())).toBeNull();
+    const companion = sharesForm();
+    companion.assetSplitMode = "companion";
+    expect(validateMultiSupportedMode(companion)).toBe(MULTI_COMPANION_UNSUPPORTED_MESSAGE);
+    // 둘째 지분에만 있는 차단 사유도 그 지분 규칙으로 막는다(첫 자산만 보면 새어 나간다).
+    const share2Reduction = sharesForm({ reductions: [{ type: "unsold_98" } as never] });
+    expect(validateMultiSupportedMode(share2Reduction)).toBe(MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE);
+  });
+
+  it("[GS-2] ④ — 다건 페이로드의 `generalBuildingShares`가 단건 ④와 같다", async () => {
+    const f = sharesForm();
+    const s = await single(f);
+    const m = buildPropertyPayload(f) as Obj;
+    expect(m.generalBuildingShares).toEqual(s.body.generalBuildingShares);
+    expect((m.generalBuildingShares as unknown[]).length).toBe(2);
+  });
+
+  it("[GS-3] 🔴 1건 — 단건과 같은 세액·같은 카드 양도차익(132,951,280) · 카드 id는 복합 접미사", async () => {
+    const f = sharesForm();
+    const s = await single(f);
+    const m = await multi([f]);
+    expect(s.aggregated.totalTax).toBe(132_951_280);
+    expect(m.totalTax).toBe(132_951_280);
+    expect(gainsOf(m.props)).toEqual(gainsOf(s.aggregated.properties as Obj[]));
+    expect(m.props.map((p) => p.propertyId)).toEqual(["land#p1.0", "building#p1.0", "land#p1.1", "building#p1.1"]);
+  }, 60_000);
+
+  it("[GS-4] 🔴 아파트와 함께 — 지분 카드 양도차익 그대로(251,993,544)", async () => {
+    const m = await multi([sharesForm(), APT]);
+    expect(m.totalTax).toBe(251_993_544);
+    expect(gainsOf(m.props)).toEqual([148_200_000, 148_200_000, 98_800_000, 98_800_000, 300_000_000]);
+  }, 60_000);
+
+  it("[GS-5] 지분 × 이월과세 — 단건과 같은 세액(지분 전체 182,393,200 · 건물만 157,672,240)", async () => {
+    const cases: [Partial<AssetForm>, number][] = [
+      [{ acquisitionCause: "carryover_gift", gbBuildingAcquisitionCause: "carryover_gift", acquisitionDate: "2021-06-01", carryover: CO }, 182_393_200],
+      [{ gbBuildingAcquisitionCause: "carryover_gift", buildingCarryover: CO }, 157_672_240],
+    ];
+    for (const [share2, tax] of cases) {
+      const f = sharesForm(share2);
+      expect(validateMultiSupportedMode(f)).toBeNull();
+      const s = await single(f);
+      const m = await multi([f]);
+      expect(s.aggregated.totalTax).toBe(tax);
+      expect(m.totalTax).toBe(tax);
+    }
+  }, 60_000);
+
+  it("[GS-6] ⑧↔⑫ — 지분 × 부담부증여는 계속 막는다(같은 문구)", async () => {
+    const BG = {
+      transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgMortgageDebtAmount: "300,000,000",
+      bgDonorRelation: "lineal_descendant", bgAcquisitionMethod: "actual", landAcqMode: "actual", buildingAcqMode: "actual", useEstimatedAcquisition: false,
+      bgActualAcquisitionLand: "60,000,000", bgActualAcquisitionBuilding: "60,000,000",
+    } as Partial<AssetForm>;
+    const f = sharesForm({ transferType: "burdened_gift" }, BG);
+    expect(validateMultiSupportedMode(f)).toBe(MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE);
+    expect((await single(f)).aggregated.totalTax).toBe(59_564_296);
+    const res = await postMulti(await buildMultiBody([f]));
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.json)).toContain(MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE);
+  }, 60_000);
+
+  it("[GS-7] ⑦ — 자산 블록 뷰는 지분별 블록을 그리고, 명세서·폼 조회는 그 카드 지분의 값을 읽는다", async () => {
+    const f = sharesForm();
+    const m = await multi([f]);
+    const aggregated = m.json.data as unknown as AggregateTransferResult;
+    const view = gbAssetBlockView(aggregated, "p1", "p1", f.assets[0]);
+    expect(view.shares?.map((sh) => [sh.key, sh.label, sh.ownershipRatio])).toEqual([["0", "자산 1", 0.6], ["1", "자산 2", 0.4]]);
+    expect(view.shares?.map((sh) => sh.partConverted("land"))).toEqual([true, true]);
+
+    const props = aggregated.properties as PerPropertyBreakdown[];
+    const share1Land = props.find((p) => p.propertyId === "land#p1.1")!;
+    expect(multiFormAssetOf(f, share1Land.propertyId)).toBe(f.assets[1]);
+    expect(multiFormAssetOf(f, "land#p1.0")).toBe(f.assets[0]);
+    const inputs = gbFormulaInputsOf(share1Land, undefined, aggregated.generalBuildingDetailsByAsset, props, undefined, { totalTransferPrice: 0, asset: undefined });
+    expect(inputs.totalTransferPrice).toBe(400_000_000);
+    const inputs0 = gbFormulaInputsOf(props[0], undefined, aggregated.generalBuildingDetailsByAsset, props, undefined, { totalTransferPrice: 0, asset: undefined });
+    expect(inputs0.totalTransferPrice).toBe(600_000_000);
+  }, 60_000);
+});

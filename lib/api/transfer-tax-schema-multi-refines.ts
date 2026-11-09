@@ -22,7 +22,7 @@ import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transf
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
-import { MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
@@ -72,8 +72,14 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown, data?: Record<strin
   // 의제취득일 전 매수 §176조의2④ — 다건 ④·⑭는 이 입력을 옮기지 않는다(계획서 realestate-pre-deemed-purchase Q-11 b).
   preDeemedPurchase: whenPresent(MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE),
   // 일반건물(`generalBuildingValuation`)은 ⑭가 단건과 같은 카드로 펼친다(`multi-gb-expansion.ts` · 트랙 G).
-  // 지분 분할 취득은 한 건 내 다자산이라 계속 거부한다.
-  generalBuildingShares: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
+  // 지분 분할 취득(`generalBuildingShares`)도 단건 지분 경로와 같은 지분 조각으로 펼친다(트랙 GS). 부담부증여 지분만 거부한다 —
+  //   펼침이 지분 §159 정보를 넘기지 않아 일반 양도로 계산된다(⑧ 같은 모드·같은 문구).
+  generalBuildingShares: (v, data) =>
+    Array.isArray(v) &&
+    (data?.transferType === "burdened_gift" ||
+      v.some((s) => (s as { burdenedGiftInfo?: unknown } | null)?.burdenedGiftInfo != null))
+      ? MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE
+      : null,
   // 상업용건물·오피스텔 3키(`commercialBuildingValuation`·`commercialAppurtenantLand`·`commercialInheritanceValuation`)는
   // ⑭가 단건과 같이 옮긴다 — 단건 엔진이 직접 읽는 서브객체라 합산도 같은 세액이다(계획서 multi-building-valuation-support 트랙 C).
   preHousingDisclosure: whenPresent(MULTI_PHD_UNSUPPORTED_MESSAGE),

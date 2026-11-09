@@ -6,7 +6,7 @@
  *   · RN-1 ⑧ 통과 ⇒ 서브객체 있음 — 입력 비움 9종 × 취득원인 5 × 분리(OFF·ON·ON+빈 파트 모드=이력 복원/이전 상태) × 취득방식 4 × 증축 × 위치 3(컴패니언·주 자산·단건) = 3,240셀.
  *     #2722 의 격자는 ④ 가 서브객체를 생략하는 다른 조건(양도시 기준시가·면적 누락, 건물면적)을 움직이지 않았다 — 여기서 그 축을 채웠다.
  *   · RN-2 축 B 지분: 2건은 최상위 서브객체 없이도 200(면제), 1건·0건은 수정 전부터 Zod `.min(2)` 가 400 (`transfer-tax-building-share-schemas.ts:172`) — 「길이 1 지분」은 도달하지 않는 입력이다.
- *   · RN-3 다건 라우트의 일반건물 항목 — 화면은 `MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE` 로 차단하고, API 직접 호출은 수정 전 200(일반 경로 오산)이었고 지금은 400.
+ *   · RN-3 다건 라우트의 일반건물 항목 — 서브객체 없는 API 직접 호출은 수정 전 200(일반 경로 오산)이었고 지금은 400. (화면 쪽 종전 차단 문구는 트랙 G·GS에서 해제·삭제됐다 — 다건 ④가 단건과 같은 서브객체를 싣는다.)
  * 폼 밖 경로 전수(코드 확인): 양도세 본문을 POST 하는 클라이언트는 `transfer-tax-api-post.ts`(④ 경유) · `gift-burdened-transfer-api.ts`(land·housing·building 만 — 일반건물 없음) ·
  * `multi-transfer-tax-api.ts`(일반건물은 `generalBuildingValuation`을 싣는다 — 트랙 G). `propertySchema` 를 재사용하는 `one-house-exemption`·`multi-house-surcharge-judgment`·`one-house-ai` 는 주택·입주권·분양권만 만든다.
  * 이력 복원(`transfer-resume-entry.ts`)은 저장된 본문을 재전송하지 않고 폼 스토어를 되살린 뒤 ⑧→④ 를 다시 거친다.

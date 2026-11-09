@@ -85,6 +85,7 @@ import { deemedOneHouseContextDeclared, rentalResidenceContextDeclared } from ".
 import { withRedevCarryoverAcqMode } from "./redev-carryover-acq-mode";
 import { primaryCarryoverTaxationPayload } from "./transfer-tax-api-carryover-primary";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
+import { buildGeneralBuildingShares } from "./transfer-tax-api-gb-shares";
 import { burdenedGiftAssumedDebtOf } from "./burdened-gift-assumed-debt";
 
 /** 값이 있을 때만 키를 싣는다 — undefined 키를 보내지 않는다(Zod optional · 단건 ④와 같은 형태). */
@@ -487,6 +488,14 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
       ? optionalKey(
           "generalBuildingValuation",
           buildPrimaryGeneralBuildingValuation(primary, form.transferDate, isFullFractionalBundle(form.assets, form.assetSplitMode)),
+        )
+      : {}),
+    // ⑬ 일반건물 지분 분할 취득 — 단건 ④(`transfer-tax-api-primary-context.ts` `gbShares`)와 **같은 빌더·같은 인자**(트랙 GS).
+    //    전 자산이 같은 물건의 지분일 때만 배열이 생긴다(`isFullFractionalBundle`) — ⑭가 지분 카드로 펼친다.
+    ...(primaryKind === "general_building"
+      ? optionalKey(
+          "generalBuildingShares",
+          buildGeneralBuildingShares(form.assets, form.transferDate, form.assetSplitMode, parseAmount(form.totalTransferExpense || "0")),
         )
       : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),

@@ -8,10 +8,20 @@
  * 화면은 일반건물을 **자산 1행 + 펼치면 토지·건물 카드**로 보인다(계획서 multi-building-valuation-support Q-2 a).
  */
 import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
+import { shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
 
 /** 결과 행 id → 그 행을 만든 폼 항목 id. 접미사가 없으면(일반건물 외) 그대로. */
 export function multiFormPropertyIdOf(resultPropertyId: string): string {
   return cardSuffixOf(resultPropertyId) ?? resultPropertyId;
+}
+
+/**
+ * 결과 행 id → 그 행의 폼 자산. 일반건물 지분 카드(`land#<폼 항목 id>.<지분번호>` · 트랙 GS Q-2 a)는 그 지분의 자산이고, 그 밖은 첫 자산이다.
+ * 종전처럼 `assets[0]`만 읽으면 둘째 지분 카드의 취득일·구분 기재 선택이 첫 지분 것으로 바뀐다.
+ */
+export function multiFormAssetOf<A>(form: { assets: A[] } | undefined, resultPropertyId: string): A | undefined {
+  if (!form) return undefined;
+  return form.assets[shareIndexOf(resultPropertyId) ?? 0] ?? form.assets[0];
 }
 
 export interface MultiResultGroup<T> {

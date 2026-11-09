@@ -45,11 +45,16 @@ export function gbFormulaInputsOf(
   const suffix = cardSuffixOf(p.propertyId);
   const gb = suffix !== undefined ? byAsset?.[suffix] : undefined;
   if (!gb) return { gb: undefined, ...fallback };
+  // 연간 합산 지분 분할(트랙 GS · 복합 접미사 `<자산id>.<지분번호>`) — 자산 상세의 지분 echo로 그 지분의 양도가액·개산공제 base를 덮는다(위 단건 축 B와 같은 축).
+  const idx = shareIndexOf(p.propertyId);
+  const shareEcho = idx !== undefined ? (gb as GbValuationDetail).shareFormulaEcho?.[String(idx)] : undefined;
   return {
-    gb,
-    totalTransferPrice: properties
-      .filter((q) => cardSuffixOf(q.propertyId) === suffix)
-      .reduce((s, q) => s + q.transferPrice, 0),
+    gb: shareEcho?.estimatedDeduction ? { ...gb, estimatedDeduction: shareEcho.estimatedDeduction } : gb,
+    totalTransferPrice: shareEcho
+      ? shareEcho.shareTransferPrice
+      : properties
+          .filter((q) => cardSuffixOf(q.propertyId) === suffix)
+          .reduce((s, q) => s + q.transferPrice, 0),
     asset:
       (suffix === "primary" ? formData?.assets[0] : formData?.assets.find((a) => a.assetId === suffix)) ??
       assetOfCard?.(p.propertyId) ??
