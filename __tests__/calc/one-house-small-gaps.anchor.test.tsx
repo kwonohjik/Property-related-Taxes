@@ -80,19 +80,22 @@ const special = (article: SpecialHouseExclusionFormItem["article"], houseContrac
   ({ article, houseAcquisitionDate: "2013-06-01", houseContractDate, isNationalHousing: false, requirementsConfirmed: true }) as SpecialHouseExclusionFormItem;
 
 describe("S-2 매매계약일만으로 판정하는 조문", () => {
-  it("⑧ 미입력 차단 — §99의2·§98의8만", () => {
+  it("⑧ 미입력 차단 — 계약일 필수 조문", () => {
     expect(collectSpecialHouseExclusionRowErrors(special("unsold_99_2"))).toHaveLength(1);
     expect(collectSpecialHouseExclusionRowErrors(special("unsold_98_8"))).toHaveLength(1);
     expect(collectSpecialHouseExclusionRowErrors(special("unsold_99_2", "2013-05-01"))).toEqual([]);
-    // 다른 조문은 계약일이 선택이다(대조) — §99는 NH-23·NH-24로 유형별 기준일을 요구한다(`nh23-24-new-housing-kind.anchor.test.ts`)
-    expect(collectSpecialHouseExclusionRowErrors(special("unsold_98_3"))).toEqual([]);
+    // Q-19 · US-46 — §98·§98의2·§98의3·§98의5·§98의7도 계약일 필수 (`unsold-98-contract-date-q19.anchor.test.ts`)
+    expect(collectSpecialHouseExclusionRowErrors(special("unsold_98_3"))).toHaveLength(1);
+    expect(collectSpecialHouseExclusionRowErrors(special("unsold_98_3", "2009-05-01"))).toEqual([]);
+    // 대조: §98의6(기간 창 없음)은 계약일을 묻지 않는다 — §99는 NH-23·NH-24로 유형별 기준일을 요구한다(`nh23-24-new-housing-kind.anchor.test.ts`)
+    expect(collectSpecialHouseExclusionRowErrors(special("unsold_98_6"))).toEqual([]);
   });
   it("⑤ 라벨 — 해당 조문은 「(선택)」이 없다", () => {
     render(<SpecialHouseExclusionSection items={[special("unsold_99_2")]} onChange={() => {}} />);
     expect(screen.getByText(/^감면주택 매매계약일$/)).toBeTruthy();
     cleanup();
     render(<SpecialHouseExclusionSection items={[special("unsold_98_3")]} onChange={() => {}} />);
-    expect(screen.getByText("감면주택 매매계약일 (선택)")).toBeTruthy();
+    expect(screen.getByText(/^감면주택 매매계약일$/)).toBeTruthy();
   });
 });
 

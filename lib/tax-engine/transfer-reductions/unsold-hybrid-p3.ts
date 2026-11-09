@@ -159,7 +159,7 @@ export function evaluateAnyHybridFromReduction(
       acquisitionDate: ctx.acquisitionDate,
       residencyType: r.residencyType983 as Unsold983Input["residencyType"],
       houseType: r.houseType983 as Unsold983Input["houseType"],
-      contractDate: toHybridDate(r.contractDate983) ?? ctx.assetContractDate,
+      contractDate: toHybridDate(r.contractDate983), // Q-19 — 조문 칸이 정본 (자산-수준 매매계약일 대체 제거)
       downPaymentCompletedDate: toHybridDate(r.downPaymentCompletedDate983),
       constructionStartDate: toHybridDate(r.constructionStartDate983),
       usageApprovalDate: toHybridDate(r.usageApprovalDate983),
@@ -183,7 +183,7 @@ export function evaluateAnyHybridFromReduction(
     return evaluateUnsold985({
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
-      contractDate: toHybridDate(r.contractDate985) ?? ctx.assetContractDate,
+      contractDate: toHybridDate(r.contractDate985), // Q-19 — 조문 칸이 정본 (자산-수준 매매계약일 대체 제거)
       announcedPrice: r.announcedPrice985 as number | undefined,
       contractPrice: r.contractPrice985 as number | undefined,
       priceReductionRatePct: r.priceReductionRatePct985 as number | undefined,

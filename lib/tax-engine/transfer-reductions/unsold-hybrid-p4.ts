@@ -292,7 +292,7 @@ export function evaluateP4FromReduction(
     return evaluateUnsold982({
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
-      contractDate: toHybridDate(r.contractDate982) ?? ctx.assetContractDate,
+      contractDate: toHybridDate(r.contractDate982), // Q-19 — 조문 칸이 정본 (자산-수준 매매계약일 대체 제거)
       isResident: (r.isResident982 as boolean | undefined) ?? true,
       isNonCapitalUnsold: r.isNonCapitalUnsold982 as boolean | undefined,
       isFirstOrFcfsContract: r.isFirstOrFcfsContract982 as boolean | undefined,

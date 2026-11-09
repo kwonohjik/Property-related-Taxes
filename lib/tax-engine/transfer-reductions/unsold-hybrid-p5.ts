@@ -197,7 +197,7 @@ export function evaluateP5FromReduction(
     return evaluateUnsold98({
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
-      contractDate: toHybridDate(r.contractDate98) ?? ctx.assetContractDate,
+      contractDate: toHybridDate(r.contractDate98), // Q-19 — 조문 칸이 정본 (자산-수준 매매계약일 대체 제거)
       isResident: (r.isResident98 as boolean | undefined) ?? true,
       isNationalScale: r.isNationalScale98 as boolean | undefined,
       isOutsideSeoul: r.isOutsideSeoul98 as boolean | undefined,
@@ -399,6 +399,17 @@ export const SPECIAL_HOUSE_EXCLUSION_WINDOWS: Record<SpecialHouseExclusionArticl
 /** 임대개시일로 판정하는 조문(§97·§97의2) — ⑤ 입력 칸·④ 전송·⑧ 필수값이 같은 술어를 쓴다. */
 export function usesRentalStartDate(article: string): boolean {
   return (SPECIAL_HOUSE_EXCLUSION_WINDOWS as Record<string, ExclusionWindow | undefined>)[article]?.basis === "rental_start";
+}
+
+/**
+ * 명부 행 ⑥ 감면주택의 「최초 매매계약일」을 **필수**로 받는 조문인가(Q-19 · US-46) — ⑤ 라벨·⑧ 필수값이 같은 술어.
+ * 계약일만 기준(§98의5·§98의8·§99의2)에 더해 「취득일 또는 계약일」 조문(§98·§98의2·§98의3·§98의7)도 포함한다.
+ * §99·§99의3(유형별 기준일)·임대개시일 조문·기간 창 없는 §98의6은 각자 다른 칸이 정본이라 제외한다.
+ */
+export function requiresRowContractDate(article: string): boolean {
+  const w = (SPECIAL_HOUSE_EXCLUSION_WINDOWS as Record<string, ExclusionWindow | undefined>)[article];
+  if (!w) return false;
+  return w.basis === "contract_only" || (w.basis === "acquisition_or_contract" && !usesNewHousingKind(article));
 }
 
 /** 취득기간을 **최초 매매계약일만**으로 판정하는 조문인가(§98의8·§99의2) — ⑤ 라벨·⑧ 필수값이 같은 술어. */

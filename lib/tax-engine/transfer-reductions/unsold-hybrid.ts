@@ -674,7 +674,7 @@ export function evaluateHybridFromReduction(
     return evaluateUnsold987({
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
-      contractDate: toHybridDate(r.contractDate987) ?? ctx.assetContractDate,
+      contractDate: toHybridDate(r.contractDate987), // Q-19 — 조문 칸이 정본 (자산-수준 매매계약일 대체 제거)
       acquisitionPrice: r.acquisitionPrice987 as number | undefined,
       isDomestic: (r.isDomestic987 as boolean | undefined) ?? true,
       isUnsoldAtCutoff: r.isUnsoldAtCutoff987 as boolean | undefined,

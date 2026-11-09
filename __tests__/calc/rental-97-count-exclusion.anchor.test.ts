@@ -223,7 +223,7 @@ describe("R97-5 축 분리 — 3호 칩은 비과세 주택 수를 바꾸지 않
 describe("R97-6 기존 special 조문 회귀 없음", () => {
   it("[R97-6] §98의2(취득 2009-06-01 · 요건 확인) → 비과세 / 취득 2011-01-01 → 과세", async () => {
     const s982 = (acq: string) =>
-      row("r", acq, { countExclusion: { kind: "special", special: special({ article: "unsold_98_2", houseRentalStartDate: undefined }) } });
+      row("r", acq, { countExclusion: { kind: "special", special: special({ article: "unsold_98_2", houseRentalStartDate: undefined, houseContractDate: acq }) } });
     expect((await runCalc([s982("2009-06-01")])).totalTax).toBe(0);
     expect((await runCalc([s982("2011-01-01")])).totalTax).toBe(TAXED);
   });

@@ -49,6 +49,13 @@ const D = (s: string) => new Date(s);
 const within = (d: Date | undefined, start: Date, end: Date): boolean =>
   d !== undefined && d >= start && d <= end;
 
+/**
+ * §98·§98의2·§98의3·§98의5·§98의7의 「최초 매매계약일」 — 조문 칸이 정본이다(Q-19).
+ * `articleContractDates`가 있으면(UI) 자산-수준 `contractDate`를 읽지 않는다. 없으면(직접 호출) 종전대로 `contractDate`.
+ */
+const articleContract = (c: PeriodCheckContext, id: string): Date | undefined =>
+  c.articleContractDates ? c.articleContractDates[id] : c.contractDate;
+
 /** 일자가 end 일자 이전(또는 같음) */
 const before = (d: Date | undefined, end: Date): boolean =>
   d !== undefined && d <= end;
@@ -229,11 +236,14 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     label: "취득 1995.11.1~1997.12.31 (③항 1998.3.1~1998.12.31)",
     // P5 (2026-06-12): 일자 미입력 시 낙관 통과 — 본 판정은 evaluateUnsold98 (취득 OR 계약 2-트랙)
     check: (c) => {
-      const t = c.contractDate ?? c.acquisitionDate;
+      const contract = articleContract(c, "unsold_98");
+      // Q-19 — 조문 칸이 정본이라 UI에서 칸이 비면 계약 트랙을 배제할 수 없다(낙관 통과)
+      if (c.articleContractDates && contract === undefined) return true;
+      const t = contract ?? c.acquisitionDate;
       if (t === undefined) return true;
       const inTrack = (d: Date | undefined) =>
         within(d, D("1995-11-01"), D("1997-12-31")) || within(d, D("1998-03-01"), D("1998-12-31"));
-      return inTrack(c.acquisitionDate) || inTrack(c.contractDate);
+      return inTrack(c.acquisitionDate) || inTrack(contract);
     },
     failReason: "미분양 국민주택 취득기간 시한 외 — 조특법 §98 ①·③",
   },
@@ -242,12 +252,15 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     // P4 (2026-06-12): 일자 미입력 시 낙관 통과 (라디오 활성) — 본 판정은 evaluateUnsold982
     // (취득일 OR 계약일 — 계약+계약금 케이스는 취득일이 기간 외여도 적격).
     check: (c) => {
-      const t = c.contractDate ?? c.acquisitionDate;
+      const contract = articleContract(c, "unsold_98_2");
+      const t = contract ?? c.acquisitionDate;
       // US-17(계약일 2008.11.3. 하한)·US-18(양도일 2009.1.1. 시행일) 게이트는 unsold-98-period-gates.ts 공유
-      if (unsold982PeriodGateReasons(c.contractDate, c.transferDate).length > 0) return false;
+      if (unsold982PeriodGateReasons(contract, c.transferDate).length > 0) return false;
+      // Q-19 — 조문 칸이 정본이라 UI에서 칸이 비면 계약 트랙을 배제할 수 없다(낙관 통과)
+      if (c.articleContractDates && contract === undefined) return true;
       return t === undefined ||
         within(c.acquisitionDate, D("2008-11-03"), D("2010-12-31")) ||
-        within(c.contractDate, D("2008-11-03"), D("2010-12-31"));
+        within(contract, D("2008-11-03"), D("2010-12-31"));
     },
     failReason: "지방 미분양 취득기간(2008.11.3~2010.12.31) 시한 외, 매매계약일이 2008.11.3. 전이거나 양도일이 시행일(2009.1.1.) 전 — 조특법 §98의2",
   },
@@ -258,7 +271,7 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     // US-20: 양도일 시행일 게이트(거주자 2009.3.25. / 비거주자 2009.5.21.) — 거주 구분이 컨텍스트에 없어 거주자 기준(낙관). 본 판정은 evaluateUnsold983.
     check: (c) =>
       unsold983TransferGateReasons(c.transferDate, "resident").length === 0 &&
-      (c.contractDate === undefined || within(c.contractDate, D("2009-02-12"), D("2010-02-11"))),
+      (articleContract(c, "unsold_98_3") === undefined || within(articleContract(c, "unsold_98_3"), D("2009-02-12"), D("2010-02-11"))),
     failReason: "미분양 취득기간(거주자 2009.2.12~2010.2.11 / 비거주자 2009.3.16~2010.2.11) 시한 외 또는 양도일이 시행일(2009.3.25.) 전 — 조특법 §98의3",
   },
   unsold_98_4: {
@@ -278,8 +291,8 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     // 2010.5.14.) — 종전 D-8의 「법문에 시작 경계 없음 → 2010.2.12.」는 부칙을 확인하지 않은 판단이었다(US-05).
     // 본 판정은 evaluateUnsold985.
     check: (c) =>
-      c.contractDate === undefined ||
-      within(c.contractDate, UNSOLD_98_5_CONTRACT_FROM, D("2011-04-30")),
+      articleContract(c, "unsold_98_5") === undefined ||
+      within(articleContract(c, "unsold_98_5"), UNSOLD_98_5_CONTRACT_FROM, D("2011-04-30")),
     failReason: "수도권 외 미분양 매매계약 시한(2010.5.14~2011.4.30) 외 — 조특법 §98의5, 법률 제10285호 부칙 제2조",
   },
   unsold_98_6: {
@@ -298,7 +311,7 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     // US-75: 양도일 시행일 게이트(2012.10.2.)
     check: (c) =>
       unsold987TransferGateReasons(c.transferDate).length === 0 &&
-      (c.contractDate === undefined || within(c.contractDate, D("2012-09-24"), D("2012-12-31"))),
+      (articleContract(c, "unsold_98_7") === undefined || within(articleContract(c, "unsold_98_7"), D("2012-09-24"), D("2012-12-31"))),
     failReason: "9억 이하 미분양 매매계약 시한(2012.9.24~2012.12.31) 외이거나 양도일이 시행일(2012.10.2.) 전 — 조특법 §98의7",
   },
   unsold_98_8: {

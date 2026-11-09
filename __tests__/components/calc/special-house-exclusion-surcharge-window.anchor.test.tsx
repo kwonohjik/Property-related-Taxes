@@ -160,13 +160,13 @@ describe("D4-03 한시배제 창 × 감면주택 주택수 제외", () => {
     expect(issues.some((i) => i.message.includes("적용 조문을 선택하세요"))).toBe(true);
   });
 
-  it("D4-03-7: ⑧ — 조문만 있고 날짜가 없으면 취득일·매매계약일을 요구한다 (창 안 · 폼 전역 섹션)", () => {
+  it("D4-03-7: ⑧ — 조문만 있고 날짜가 없으면 매매계약일을 요구한다(Q-19 · US-46) (창 안 · 폼 전역 섹션)", () => {
     const form = makeForm(IN_WINDOW, "presale_right");
     form.specialHouseExclusions = [
       { article: "unsold_98_3", houseAcquisitionDate: "", houseContractDate: "", isNationalHousing: false, requirementsConfirmed: false },
     ] as never;
     const issues = collectStepIssues(1, form);
-    expect(issues.some((i) => i.message.includes("취득일(또는 매매계약일)"))).toBe(true);
+    expect(issues.some((i) => i.message.includes("최초 매매계약일"))).toBe(true);
   });
 
   it("D4-03-8: 세액 스테이크 — 선언하면 비과세, 못 하면 141,966,000원", () => {

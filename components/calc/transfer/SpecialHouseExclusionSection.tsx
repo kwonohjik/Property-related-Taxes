@@ -16,7 +16,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
-import { usesContractDateOnly, usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { requiresRowContractDate, usesContractDateOnly, usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 import {
   NEW_HOUSING_KIND_LABELS,
   isOriginalNewHousingKind,
@@ -277,7 +277,7 @@ export function SpecialHouseExclusionItemFields({
         {showContract && (
           <div>
             <label className="mb-1 block text-xs font-medium">
-              {kinded ? "감면주택 최초 매매계약일" : `감면주택 매매계약일${usesContractDateOnly(item.article) ? "" : " (선택)"}`}
+              {kinded ? "감면주택 최초 매매계약일" : `감면주택 매매계약일${requiresRowContractDate(item.article) ? "" : " (선택)"}`}
             </label>
             <DateInput
               value={item.houseContractDate}
@@ -288,7 +288,9 @@ export function SpecialHouseExclusionItemFields({
                 ? "이 유형은 최초 매매계약일(계약금 납부)이 판정 기준입니다 — 반드시 입력하세요"
                 : usesContractDateOnly(item.article)
                   ? "이 조문은 매매계약일이 판정 기준입니다 — 반드시 입력하세요"
-                  : "취득일이 취득기간 외라도 시한 내 매매계약 + 계약금 납부분은 포함됩니다"}
+                  : requiresRowContractDate(item.article)
+                    ? "취득일이 취득기간 외라도 시한 내 매매계약 + 계약금 납부분은 포함됩니다 — 계약일을 반드시 입력하세요"
+                    : "취득일이 취득기간 외라도 시한 내 매매계약 + 계약금 납부분은 포함됩니다"}
             </p>
           </div>
         )}
