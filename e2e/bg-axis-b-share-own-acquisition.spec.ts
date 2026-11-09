@@ -22,7 +22,9 @@ const COMMON = {
 async function seed(page: Page) {
   const assets = [
     { ...makeDefaultAsset(1), assetId: "p", ...COMMON, ownershipNumerator: "60", ownershipDenominator: "100" },
-    { ...makeDefaultAsset(2), assetId: "s", ...COMMON, ownershipNumerator: "40", ownershipDenominator: "100" },
+    // 지분 2는 실지취득가액 칸을 비워 둔다 — 산정방식이 이미 있으면 토글을 켜도 자산 1 값을 복사하지 않으므로 빈 칸에 입력하게 된다.
+    // (값이 있는 칸에 `fill()`하면 느린 러너에서 전체 선택(SelectOnFocusProvider RAF)과 엇갈려 뒤에 이어 붙는다 — CI 실측 18자리 → ⑫ 400)
+    { ...makeDefaultAsset(2), assetId: "s", ...COMMON, bgActualAcquisitionLand: "", bgActualAcquisitionBuilding: "", ownershipNumerator: "40", ownershipDenominator: "100" },
   ];
   const s = {
     state: {
@@ -39,13 +41,18 @@ async function seed(page: Page) {
   await page.evaluate((x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)), s);
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  // hydration 대기(e2e/CLAUDE.md §6) — 그 전 클릭·입력은 React 상태에 닿지 않는다
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-testid="bg-share-own-acquisition"] [role="switch"]');
+    return !!el && Object.keys(el).some((k) => k.startsWith("__react"));
+  });
 }
 async function calc(page: Page) {
   for (const step of ["보유 상황", "감면·공제", "가산세"]) await page.getByRole("button", { name: step }).first().click();
   const resp = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", { timeout: 60_000 });
   await page.getByRole("button", { name: /계산하기/ }).click();
   const r = await resp;
-  expect(r.status()).toBe(200);
+  expect(r.status(), await r.text()).toBe(200);
   return (await r.json()) as { data: { aggregated: { totalTransferGain: number } } };
 }
 
@@ -55,11 +62,17 @@ test.describe("축 B × 부담부증여 — 지분 카드 취득가액 따로 �
     await seed(page);
     const block = page.getByTestId("bg-share-own-acquisition");
     await expect(block).toHaveCount(1);
-    await block.getByRole("switch", { name: /이 지분의 취득가액을 자산 1과 따로 입력/ }).click();
-    // 산정방식은 자산 1 값(실지취득가액)으로 시작한다
+    const sw = block.getByRole("switch", { name: /이 지분의 취득가액을 자산 1과 따로 입력/ });
+    await sw.click();
+    await expect(sw).toHaveAttribute("aria-checked", "true");
+    // 산정방식은 이 카드 값(실지취득가액)이다
     await expect(block.getByRole("radio", { name: /실지취득가액 안분/ })).toBeChecked();
-    await block.locator('[data-field="bgActualAcquisitionLand"] input, input[data-field="bgActualAcquisitionLand"]').first().fill("120000000");
-    await block.locator('[data-field="bgActualAcquisitionBuilding"] input, input[data-field="bgActualAcquisitionBuilding"]').first().fill("180000000");
+    const land = block.locator('[data-field="bgActualAcquisitionLand"] input, input[data-field="bgActualAcquisitionLand"]').first();
+    const bldg = block.locator('[data-field="bgActualAcquisitionBuilding"] input, input[data-field="bgActualAcquisitionBuilding"]').first();
+    await land.fill("120000000");
+    await expect(land).toHaveValue(/^120,?000,?000$/);
+    await bldg.fill("180000000");
+    await expect(bldg).toHaveValue(/^180,?000,?000$/);
     // 지분 카드 일반건물 안내 — 숨은 ② 대신 이 카드의 토글 위치
     const shareCardNotice = page.getByText("이 카드 위 「이 지분의 취득가액을 자산 1과 따로 입력」에 입력한");
     await page.getByRole("button", { name: "취득정보 매매" }).last().click();
