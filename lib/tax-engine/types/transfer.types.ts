@@ -1419,6 +1419,16 @@ export interface TransferTaxInput {
    */
   ownershipRatio?: number;
   /**
+   * **개산공제(소득령 §163⑥) base 축소 전용 지분율** — `ownershipRatio`보다 먼저 읽는다(`lumpSumDeductionRatioOf`).
+   *
+   * 일반건물 이월과세(§97의2) 환산 카드만 싣는다(`general-building-carryover-basis.ts` → `buildProperties`). 그 카드 입력에는
+   * `ownershipRatio`를 싣지 않는다 — 카드 금액은 이미 지분분이라, 같은 키를 실으면 그 키를 읽는 다른 지점(가산세 · 부담부증여 축소 등)이
+   * 이중 축소할 수 있다. 종전에는 이 카드의 개산공제가 물건 전체 기준시가 × 3% 그대로였다
+   * (계획서 `docs/00-pm/gb-carryover-estimated-share-lump-deduction.plan.md` · Q-2 (다)).
+   * route가 엔진에 직접 넘기는 내부 키다(⑫ Zod 없음).
+   */
+  lumpSumDeductionOwnershipRatio?: number;
+  /**
    * **건물분 취득 당시 기준시가** (소득세법 §99①1호 나목 — 국세청장 산정·고시).
    * 기준일은 `acquisitionDate`(건물 취득일)의 직전 고시분(소득령 §164③).
    *

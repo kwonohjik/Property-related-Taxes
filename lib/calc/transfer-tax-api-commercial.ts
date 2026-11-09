@@ -67,6 +67,19 @@ export function commercialAppurtenantNblAreaOfAsset(asset: AssetForm): number {
 }
 
 /**
+ * §163⑨ — 상속 취득 상가는 환산이 아니라 상속개시일 평가액을 쓴다 ⇒ 환산 플래그·환산 서브객체를 싣지 않는다.
+ * 단건 ④(`transfer-tax-api-primary-context.ts`)와 다건 ④(`multi-transfer-tax-api.ts`)가 **같은 술어**를 쓴다.
+ */
+export function isInheritedCommercialBuilding(asset: AssetForm): boolean {
+  return asset.assetKind === "commercial_building" && asset.acquisitionCause === "inheritance";
+}
+
+/** ④ 주 자산 환산 서브객체 — 상속 상가를 뺀 {@link buildCommercialBuildingValuation}(단건·다건 공용). */
+export function buildPrimaryCommercialBuildingValuation(asset: AssetForm, transferDate: string): object | undefined {
+  return isInheritedCommercialBuilding(asset) ? undefined : buildCommercialBuildingValuation(asset, transferDate);
+}
+
+/**
  * AssetForm cb* 필드 → commercialBuildingValuation 서브객체 변환.
  * 필수 필드 미입력 시 undefined 반환 — validate에서 먼저 차단되므로 silent 처리.
  * ⑧ 주의: validate와 동일 조건으로 undefined 반환. UI 통과 → 여기서 undefined → 엔진 미도달 방지.

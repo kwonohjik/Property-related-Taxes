@@ -227,7 +227,8 @@ export function calcHousingEstimatedAcq(
       ? safeMultiplyThenDivide(acqCommTotal, Math.round(asset.residentialFloorArea * 100), Math.round(totalFloor * 100))
       : 0;
     if (stdAtAcq === 0) {
-      throw new Error(
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
         "용도변경(상가→주택): 취득시 상가 기준시가(건물+토지)가 0이거나 미입력. " +
           "취득시 상가건물 기준시가와 공시지가를 입력하세요.",
       );

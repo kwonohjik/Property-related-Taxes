@@ -625,6 +625,8 @@ export type AssetCardForAggregate = {
    *    건물 `transferBuildingStdPrice`). 받으면 화면 안분 산식과 계산이 갈린다.
    */
   standardPriceAtTransferForCarryover?: number;
+  /** 환산 이월과세 카드의 개산공제 base 지분율(0<r<1) → 카드 input `lumpSumDeductionOwnershipRatio`. 분자·분모는 100% 그대로. */
+  carryoverLumpSumOwnershipRatio?: number;
   /**
    * 증축 건물 카드 여부 (사례 33 — building2 카드에만 true).
    * 결과 카드 배지 표시용. 산식에는 미사용.

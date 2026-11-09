@@ -506,11 +506,21 @@ export async function POST(request: NextRequest) {
       extensionAppraisalValue: p.extensionAppraisalValue,
       // ⑭ 일체 주택 본인 신축 × §114조의2 가산세 base 건물분(Q-12) — ⑫(단건 shape 공유)를 통과한 값이 여기서 빠지면 침묵 strip. 중첩 객체에 Date 없음.
       selfBuiltHousing: p.selfBuiltHousing,
+      // ⑭ 상업용건물·오피스텔 서브객체 — 단건 `engine-input.ts`와 같은 형태(Date 없음 · TypeScript 미감지라 명시 매핑).
+      //    빠지면 엔진 STEP 0.35(§164⑥ 환산)·STEP 0.62(부수토지 초과분)가 조용히 건너뛴다.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(p.commercialBuildingValuation ? { commercialBuildingValuation: p.commercialBuildingValuation as any } : {}),
+      ...(p.commercialAppurtenantLand ? { commercialAppurtenantLand: p.commercialAppurtenantLand } : {}),
       // ⑭ §163⑨ 4키(`pre1990Land`·`inheritedAcquisition`·`inheritedHouseValuation`·`commercialInheritanceValuation`) — 단건·컴패니언과 **같은 leaf**
-      //    (Date 변환 포함 · 계획서 multi-sec163-9-support.plan.md). 상가 키는 ⑫ `MULTI_REJECT_RULES`가 거절해 여기 오지 않는다.
+      //    (Date 변환 포함 · 계획서 multi-sec163-9-support.plan.md). 상가 키(§163⑨2호)도 싣는다(계획서 multi-building-valuation-support 트랙 C).
       //    키를 명시해 넘긴다 — F-12 키 분류 가드(`transfer.route.multi-key-coverage-f12`)가 `p.<키>`로 매핑을 읽는다.
       ...toEngineSec163_9Inputs(
-        { pre1990Land: p.pre1990Land, inheritedAcquisition: p.inheritedAcquisition, inheritedHouseValuation: p.inheritedHouseValuation },
+        {
+          pre1990Land: p.pre1990Land,
+          inheritedAcquisition: p.inheritedAcquisition,
+          inheritedHouseValuation: p.inheritedHouseValuation,
+          commercialInheritanceValuation: p.commercialInheritanceValuation,
+        },
         toDate(p.transferDate, "transferDate"),
         p.transferPrice,
       ),

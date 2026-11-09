@@ -166,6 +166,11 @@ export function computeEstimatedDeduction(
  * 개산공제 base = **지분 기준시가**. 결과 표시 산식(「지분 기준시가 × 3%」)의 base로 echo된다.
  * 100% 값을 표시하면 산식이 자기 값을 만들지 못한다(feedback_engine_result_display_drift).
  */
+/** 개산공제 base 지분율 — 전용 키(`lumpSumDeductionOwnershipRatio`)가 있으면 그것, 없으면 `ownershipRatio`. */
+export function lumpSumDeductionRatioOf(input: { ownershipRatio?: number; lumpSumDeductionOwnershipRatio?: number }): number | undefined {
+  return input.lumpSumDeductionOwnershipRatio ?? input.ownershipRatio;
+}
+
 export function computeLumpSumDeductionBase(
   standardPriceAtAcq: number,
   ownershipRatio = 1,

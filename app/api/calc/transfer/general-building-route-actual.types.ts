@@ -48,6 +48,11 @@ export interface GeneralBuildingActualPricePayload {
    */
   burdenedGiftOwnershipRatio?: number;
   /**
+   * 공유지분율(0 < r < 1) — **이월과세 환산 카드의 개산공제(소령 §163⑥) base 축소 전용**(`applyCarryoverEstimationBasis`).
+   * 실가 카드 금액은 ④가 이미 지분분으로 보낸다 — 이 값은 금액을 다시 줄이지 않는다. route 공통 함수가 축 A · 컴패니언 · 축 B 모두 싣는다.
+   */
+  lumpSumDeductionOwnershipRatio?: number;
+  /**
    * 의제취득일(1985.1.1.) 전 상속·증여 파트의 ①② — ④가 싣는다(`gb-pre-deemed.ts`). 부담부증여 시가 평가에서 §159가 파트별 3자 max로 쓴다
    * (사용자 결정 Q-28 · PR-7b-6). 비부담부증여는 dispatch 직전에 `resolveGbPreDeemedRoute`가 읽는다.
    */

@@ -12,12 +12,18 @@ import type { AssetCardForAggregate } from "./types/general-building.types";
  * 분자는 `composeGbCarryover`가 서브객체에 담아 보낸 사용자 입력(증여자 취득 당시),
  * 분모는 **그 파트의 양도 당시 기준시가**(엔진이 아는 값).
  * 환산 모드가 아니거나 분자가 없으면 아무것도 하지 않는다 — 회귀 0.
+ *
+ * `ownershipRatio`(지분 0 < r < 1)는 **개산공제 base 축소에만** 쓴다 — 카드에 따로 싣는다(`carryoverLumpSumOwnershipRatio`).
+ * 분자 · 분모를 줄이면 안 된다: 환산은 약분돼 같지만, 증여자 증축 가산세(§114의2) base가 「양도가액 × 증축 부분 기준시가 ÷ 이 분모」라
+ * 분모만 줄면 가산세가 1/r배가 된다(실측: 50% 3,125,000 → 6,250,000 · 계획서 `gb-carryover-estimated-share-lump-deduction.plan.md` §3 (가)).
  */
 export function applyCarryoverEstimationBasis(
   cards: AssetCardForAggregate[],
   landStdAtTransfer: number,
   buildingStdAtTransfer: number,
+  ownershipRatio: number | undefined,
 ): void {
+  const shareRatio = ownershipRatio !== undefined && ownershipRatio > 0 && ownershipRatio < 1 ? ownershipRatio : undefined;
   for (const c of cards) {
     const ct = c.carryoverTaxation;
     if (!ct?.useEstimatedAcquisition) continue;
@@ -26,5 +32,6 @@ export function applyCarryoverEstimationBasis(
     c.carryoverDonorStandardPriceAtAcquisition = numerator;
     c.standardPriceAtTransferForCarryover =
       c.propertyType === "land" ? landStdAtTransfer : buildingStdAtTransfer;
+    if (shareRatio !== undefined) c.carryoverLumpSumOwnershipRatio = shareRatio;
   }
 }

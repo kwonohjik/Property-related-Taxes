@@ -5,6 +5,7 @@
  * Scenario B 계산 · §97의2②3호 비교 · 반환을 일반 양도·부담부증여 경로가 한 지점에서 쓴다.
  */
 import { calculateHoldingPeriod, computeLumpSumDeductionBase } from "./tax-utils";
+import { lumpSumDeductionRatioOf } from "./tax-utils";
 import { isBurdenedGiftCarryover } from "./transfer-tax-carryover-burdened-gift";
 import { buildInputB, ownerSplitPartEcho } from "./transfer-tax-carryover-inputs";
 import { burdenedGiftPerAssetTotals, bgRedevFilingAcquisition } from "./burdened-gift-totals";
@@ -97,7 +98,7 @@ export function finishScenarios(args: {
     necessaryExpenseIsLumpDeduction: args.necessaryExpenseIsLumpDeduction,
     lumpDeductionBase:
       echoStdAtAcq != null
-        ? computeLumpSumDeductionBase(echoStdAtAcq, rawInput.ownershipRatio)
+        ? computeLumpSumDeductionBase(echoStdAtAcq, lumpSumDeductionRatioOf(rawInput))
         : undefined,
     estimatedStdPriceAtAcquisition: echoStdAtAcq,
     estimatedStdPriceAtTransfer: echoStdAtTransfer,

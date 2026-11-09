@@ -294,7 +294,7 @@ describe("GBLE — GB × legacy 이월과세 × 환산: ⑫ 기준시가 침묵 
    * 기준시가는 **미스케일**이 계약이다(`ENGINE_SHAPED_SCALE`) — 100,000,000이 그대로 분자가 된다.
    * 🔴 strip 재발 시 실측: land#1 취득가 0 · 결정세액 141,063,200.
    */
-  it("GBLE-05: 지분 40% legacy × 환산 — land#1 취득가 100,000,000 · 결정세액 111,960,800 (PR-0b: 개산공제 반영)", async () => {
+  it("GBLE-05: 지분 40% legacy × 환산 — land#1 취득가 100,000,000 · 결정세액 112,464,800 (개산공제 = 1억 × 40% × 3%)", async () => {
     const r = await postShares([
       share("share-a", "60"),
       share("share-b", "40", {
@@ -310,6 +310,8 @@ describe("GBLE — GB × legacy 이월과세 × 환산: ⑫ 기준시가 침묵 
     const land1 = prop(r, "land#1");
     expect(land1?.carryoverTaxationDetail?.scenarioA.acquisitionPrice).toBe(100_000_000);
     expect(land1?.acquisitionPrice).toBe(100_000_000);
-    expect(r.determinedTax).toBe(111_960_800); // 종전 112,800,800 (개산공제 소실)
+    // 개산공제(소령 §163⑥) base는 지분분 — 1억 × 40% × 3% = 1,200,000(`lumpSumDeductionOwnershipRatio` · 계획서 gb-carryover-estimated-share-lump-deduction.plan.md).
+    // 종전 111,960,800은 100% 기준 3,000,000이 들어간 값(지분 미축소 결함) · 그 전 112,800,800은 개산공제 소실(PR-0b 전).
+    expect(r.determinedTax).toBe(112_464_800);
   });
 });
