@@ -84,7 +84,14 @@ export function sumReductionEligibleIncome(
  * §99의3·§99(IMF 1차)·§98의8·하이브리드(§98의7·§99의2·§98의3/5/6·§98의2/4·§98) 공용.
  * 조특법 §127⑦로 실제 적용은 1건이나, 부적격 detail의 값은 0이므로 합산해도 안전(과다집계 없음).
  */
-function incomeDeductionDetails(result: import("@/lib/tax-engine/transfer-tax").TransferTaxResult) {
+/** 차감형 detail 11종만 읽는 슬라이스 — 단건 결과뿐 아니라 겸용 `total.reductionDetails`(US-68)도 같은 헬퍼로 읽는다. */
+export type IncomeDeductionDetailSource = Pick<
+  import("@/lib/tax-engine/transfer-tax").TransferTaxResult,
+  | "new993Detail" | "new99Detail" | "unsold988Detail" | "unsold987Detail" | "unsold992Detail" | "unsold983Detail"
+  | "unsold985Detail" | "unsold986Detail" | "unsold982Detail" | "unsold984Detail" | "unsold98Detail"
+>;
+
+function incomeDeductionDetails(result: IncomeDeductionDetailSource) {
   return [
     result.new993Detail,
     result.new99Detail,
@@ -104,9 +111,7 @@ function incomeDeductionDetails(result: import("@/lib/tax-engine/transfer-tax").
  * 소득금액 감면대상 = 소득금액차감방식 감면의 감면 양도소득금액 합계 (§90②).
  * 종전 `new993Detail`만 참조하던 신고서·상세명세서·요약을 전 소득금액차감 조문으로 일반화.
  */
-export function incomeDeductionReducible(
-  result: import("@/lib/tax-engine/transfer-tax").TransferTaxResult,
-): number {
+export function incomeDeductionReducible(result: IncomeDeductionDetailSource): number {
   return incomeDeductionDetails(result).reduce((s, d) => s + (d?.reducibleTransferIncome ?? 0), 0);
 }
 
