@@ -526,11 +526,13 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // D5-02 — **0%도 유효한 값**이다. 조특법 §98의5①1호는 「인하율이 100분의 10 **이하**」로
           //          하한 문언이 없다. 종전의 `> 0`은 정가 매입 사안을 부당 차단했다.
           //          ⑧과 엔진이 같은 게이트를 복제하고 있으므로 **함께** 고쳐야 no-op가 아니다.
-          if ((r.priceReductionRatePct985 ?? "").trim() === "")
-            return fail(fieldError("reduction.unsold_98_5.priceReductionRatePct985", "§98의5 적용: 분양가격 인하율(%)을 입력하세요 — (최초 공시 분양가 − 매매가) ÷ 최초 분양가 × 100. 인하가 없으면 0을 입력하세요.",
-            ));
-          if (parseDecimal(r.priceReductionRatePct985 || "") < 0)
-            return fail(fieldError("reduction.unsold_98_5.priceReductionRatePct985", "§98의5 적용: 분양가격 인하율은 음수일 수 없습니다."));
+          // D2(US-58·US-59) — 인하율(%)은 공시 분양가·매매가 두 금액으로 받는다(령 §98의4④). 엔진 `resolve985Reduction`과 같은 판정.
+          if (parseAmount(r.announcedPrice985 || "0") <= 0)
+            return fail(fieldError("reduction.unsold_98_5.announcedPrice985", "§98의5 적용: 입주자 모집공고안에 공시된 분양가격(원)을 입력하세요 — 분양가격 인하율 = (공시된 분양가격 − 매매계약서상의 매매가격) ÷ 공시된 분양가격 × 100 (조특령 §98의4④)."));
+          if ((r.contractPrice985 ?? "").trim() === "")
+            return fail(fieldError("reduction.unsold_98_5.contractPrice985", "§98의5 적용: 매매계약서상의 매매가격(원)을 입력하세요. 인하가 없으면 공시된 분양가격과 같은 금액을 입력합니다."));
+          // Q-5(2026-11-06) 정책 결정 + 사용자 결정(D2): 매매가 > 공시 분양가(인하율 음수)는 ⑧에서 막지 않는다.
+          // 계산을 진행하고 엔진이 NEGATIVE_PRICE_REDUCTION_RATE(감면율 0%, 감면 없음)를 결과 카드에 보인다.
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
           let phdOk985 = false;
           if (r.phdMode985 && !phdIrrelevantWithin5Y(asset, form)) {

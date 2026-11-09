@@ -15,6 +15,7 @@
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { UNSOLD_98_5_DECREE } from "../legal-codes/transfer-house";
 import { computeHybridEffect } from "./unsold-hybrid";
 import { ineligibleHybrid } from "./unsold-hybrid";
 import type { UnsoldHybridIneligibleReason } from "./unsold-hybrid";
@@ -35,7 +36,18 @@ export interface Unsold985Input {
   acquisitionDate: Date;
   /** 최초 매매계약일 (~2011.4.30 + 계약금) */
   contractDate?: Date;
-  /** 분양가격 인하율 (%) — (최초 공시 분양가 − 매매가) ÷ 최초 공시 분양가 × 100 */
+  /**
+   * 입주자 모집공고안에 공시된 분양가격(원) — 령 §98의4④ 산식의 분자·분모.
+   * 공시 분양가·매매가 두 금액이 있으면 인하율은 엔진이 정수 교차곱으로 계산한다(반올림 없음).
+   * 기준 공고(변경·재공고)·선납할인 포함 여부는 해석례 원문 미확인 — 확인 필요.
+   */
+  announcedPrice?: number;
+  /** 매매계약서상의 매매가격(원) — 령 §98의4④ */
+  contractPrice?: number;
+  /**
+   * [직접 API 호환] 분양가격 인하율(%) — 화면은 보내지 않는다. 두 금액이 하나라도 있으면 무시한다.
+   * 0~100만 허용(매매가 ≥ 0이면 인하율은 100을 넘을 수 없다).
+   */
   priceReductionRatePct?: number;
   /** 2010.2.11 현재 수도권 밖 미분양 확인 (령 §98의4①) */
   isNonCapitalUnsoldAtCutoff?: boolean;
@@ -60,6 +72,63 @@ export function resolve985Rate(priceReductionRatePct: number): number {
   return 1.0;
 }
 
+/** 인하율 구간 문구 (법 §98의5①각호) */
+function tierLabel985(rate: number): string {
+  if (rate === 0.6) return "10% 이하";
+  if (rate === 0.8) return "10% 초과 20% 이하";
+  return "20% 초과";
+}
+
+/** 소수 6자리까지 절사한 % 문자열 (끝의 0 제거) — 반올림하면 10.0000004가 「10」으로 보여 구간과 어긋난다 */
+function formatPct985(diff: bigint, announced: bigint): string {
+  const scaled = (diff * 100_000_000n) / announced; // 10^-6 % 단위, 0 방향 절사
+  const neg = scaled < 0n;
+  const abs = neg ? -scaled : scaled;
+  const int = abs / 1_000_000n;
+  const frac = (abs % 1_000_000n).toString().padStart(6, "0").replace(/0+$/, "");
+  return `${neg ? "-" : ""}${int}${frac ? "." + frac : ""}`;
+}
+
+export type Resolved985Reduction =
+  | { kind: "missing"; reason: "announced_invalid" | "contract_invalid" | "rate_invalid" | "none" }
+  | { kind: "negative" }
+  | { kind: "over_100" }
+  | { kind: "ok"; rate: number; label: string };
+
+/**
+ * 령 §98의4④ 「분양가격 인하율 = (공시된 분양가격 − 매매계약서상의 매매가격) ÷ 공시된 분양가격 × 100」로
+ * 법 §98의5①각호 감면율을 정한다. 구간은 정수 교차곱으로 판정한다(부동소수·사용자 반올림 배제):
+ * (공시 − 매매) × 10 ≤ 공시 → 60% / (공시 − 매매) × 5 ≤ 공시 → 80% / 그 밖 → 100%.
+ * 매매가 > 공시 분양가(음수)는 정책 결정(Q-5, 2026-11-06)으로 감면율 0%(감면 없음) — `negative`.
+ * 반대 근거: 법 §98의5①1호에 하한 문언이 없고, 부동산거래관리과-1295(2010.10.26)가 인하율 0에 60%를 적용했다.
+ */
+export function resolve985Reduction(input: {
+  announcedPrice?: number;
+  contractPrice?: number;
+  priceReductionRatePct?: number;
+}): Resolved985Reduction {
+  const { announcedPrice: a, contractPrice: c, priceReductionRatePct: pct } = input;
+  if (a !== undefined || c !== undefined) {
+    if (a === undefined || !Number.isSafeInteger(a) || a <= 0) return { kind: "missing", reason: "announced_invalid" };
+    if (c === undefined || !Number.isSafeInteger(c) || c < 0) return { kind: "missing", reason: "contract_invalid" };
+    const A = BigInt(a);
+    const diff = A - BigInt(c);
+    if (diff < 0n) return { kind: "negative" };
+    const rate = diff * 10n <= A ? 0.6 : diff * 5n <= A ? 0.8 : 1.0;
+    return {
+      kind: "ok",
+      rate,
+      label: `분양가격 인하율 = (입주자 모집공고안에 공시된 분양가격 ${a.toLocaleString()}원 − 매매계약서상의 매매가격 ${c.toLocaleString()}원) ÷ (공시된 분양가격) × 100 = ${formatPct985(diff, A)}% (${tierLabel985(rate)}) → 감면율 ${Math.round(rate * 100)}%`,
+    };
+  }
+  if (pct === undefined) return { kind: "missing", reason: "none" };
+  if (!Number.isFinite(pct)) return { kind: "missing", reason: "rate_invalid" };
+  if (pct < 0) return { kind: "negative" };
+  if (pct > 100) return { kind: "over_100" };
+  const rate = resolve985Rate(pct);
+  return { kind: "ok", rate, label: `분양가격 인하율 ${pct}% (${tierLabel985(rate)}) → 감면율 ${Math.round(rate * 100)}%` };
+}
+
 export function evaluateUnsold985(input: Unsold985Input): UnsoldHybridResult {
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_5;
   const reasons: UnsoldHybridIneligibleReason[] = [];
@@ -71,24 +140,11 @@ export function evaluateUnsold985(input: Unsold985Input): UnsoldHybridResult {
     });
   }
   /**
-   * D5-02 — 인하율 **0%도 감면 대상**이다.
-   *
-   * 조특법 §98의5① 각 호(법제처 `target=eflaw` 실측 2026-08-31):
-   *   1. 분양가격 인하율이 100분의 10 **이하**인 경우: 100분의 60
-   *   2. 100분의 10을 초과하고 100분의 20 이하: 100분의 80
-   *   3. 100분의 20을 초과: 100분의 100
-   *
-   * 🔴 1호에 **하한 문언이 없다**. 종전에는 `> 0`을 요구해 0%를 「미입력」으로 차단했고,
-   *    정가 매입(인하 없음) 사안이 감면을 전혀 못 받았다 — **납세자 불리**.
-   *    조특령 §98의4④의 산정식
-   *    「(입주자 모집공고안에 공시된 분양가격 − 매매계약서상의 매매가격) ÷ 공시 분양가격 × 100」도
-   *    정가 매입 시 값이 정확히 0이 된다.
-   *
-   * ⇒ 판정 기준을 「값이 있는가」로 바꾼다(0은 유효한 값). 음수는 조문에 없는 구간이라
-   *   별도 사유로 막는다.
+   * D5-02 — 인하율 **0%도 감면 대상**이다(법 §98의5①1호 「100분의 10 이하」에 하한 문언 없음).
+   * D2(US-58·US-59) — 인하율은 공시 분양가·매매가 두 금액으로 받아 `resolve985Reduction`이 계산한다.
    */
-  const hasRate = input.priceReductionRatePct !== undefined;
-  const rate = hasRate ? resolve985Rate(input.priceReductionRatePct!) : 0.6;
+  const resolved = resolve985Reduction(input);
+  const rate = resolved.kind === "ok" ? resolved.rate : 0.6;
 
   if (!input.contractDate) {
     reasons.push({
@@ -106,19 +162,25 @@ export function evaluateUnsold985(input: Unsold985Input): UnsoldHybridResult {
       legalBasis,
     });
   }
-  if (!hasRate) {
+  if (resolved.kind === "missing") {
     reasons.push({
       code: "MISSING_PRICE_REDUCTION_RATE",
-      message: "분양가격 인하율(%)이 입력되지 않았습니다 — (최초 입주자 모집공고 분양가 − 실제 매매가) ÷ 최초 분양가 × 100 (법 §98의5①각호 감면율 산정). 인하가 없으면 0을 입력하세요.",
-      legalBasis: "조특령 §98의4④",
+      message: "분양가격 인하율을 계산할 금액이 입력되지 않았습니다 — 입주자 모집공고안에 공시된 분양가격과 매매계약서상의 매매가격을 입력하세요 (분양가격 인하율 = (공시된 분양가격 − 매매계약서상의 매매가격) ÷ 공시된 분양가격 × 100, 조특령 §98의4④).",
+      legalBasis: UNSOLD_98_5_DECREE.PRICE_REDUCTION_RATE,
     });
-  } else if (input.priceReductionRatePct! < 0) {
-    // 조문의 구간은 「10 이하 / 10 초과 20 이하 / 20 초과」로 음수 구간이 없다.
-    // 매매가가 공시 분양가를 넘은 경우이므로 인하율이 아니라 입력 오류로 본다.
+  } else if (resolved.kind === "negative") {
+    // 정책 결정(Q-5, 2026-11-06): 매매가 > 공시 분양가(인하율 음수)는 감면율 0%(감면 없음)로 처리한다.
+    // 법 §98의5①1호에 하한 문언이 없고 부동산거래관리과-1295가 인하율 0에 60%를 준 점은 반대 근거다(조문상 배제 규정은 없음).
     reasons.push({
       code: "NEGATIVE_PRICE_REDUCTION_RATE",
-      message: "분양가격 인하율은 음수일 수 없습니다 (조특령 §98의4④ 산정식).",
-      legalBasis: "조특령 §98의4④",
+      message: "매매계약서상의 매매가격이 공시된 분양가격을 초과해 분양가격 인하율이 음수입니다 — 감면율 0%(감면 없음)로 처리합니다 (정책 결정: 법 §98의5①1호에 하한 문언은 없으나 부동산거래관리과-1295는 인하율 0에 60%를 적용 — 확인 필요).",
+      legalBasis: UNSOLD_98_5_DECREE.PRICE_REDUCTION_RATE,
+    });
+  } else if (resolved.kind === "over_100") {
+    reasons.push({
+      code: "PRICE_REDUCTION_RATE_OVER_100",
+      message: "분양가격 인하율은 100%를 넘을 수 없습니다 (매매계약서상의 매매가격이 0 이상이면 100% 이하).",
+      legalBasis: UNSOLD_98_5_DECREE.PRICE_REDUCTION_RATE,
     });
   }
   if (input.transferDate.getTime() <= input.acquisitionDate.getTime()) {
@@ -162,7 +224,7 @@ export function evaluateUnsold985(input: Unsold985Input): UnsoldHybridResult {
   return computeHybridEffect({
     id: "unsold_98_5",
     legalBasis,
-    articleLabel: `조특법 §98의5① (분양가 인하율 ${input.priceReductionRatePct}% → 감면율 ${Math.round(rate * 100)}%)`,
+    articleLabel: `조특법 §98의5① (${(resolved as Extract<Resolved985Reduction, { kind: "ok" }>).label})`,
     transferDate: input.transferDate,
     acquisitionDate: input.acquisitionDate,
     transferIncome: input.transferIncome,

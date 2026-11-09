@@ -295,11 +295,16 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
         };
       }
       if (r && r.type === "unsold_98_5") {
+        // D2(US-58·US-59) — 옛 기록의 인하율(%) 문자열은 두 금액(공시 분양가·매매가)으로 되돌릴 수 없고, 그 %를 그대로 쓰면
+        // 입력 방식이 바뀐 뒤에도 옛 값이 조용히 감면율을 정한다. 버리고 두 금액을 비운다 → ⑧이 재입력을 요구한다.
+        const { priceReductionRatePct985: _legacyRatePct, ...rest985 } = r as Record<string, unknown>;
+        void _legacyRatePct;
         return {
           // US-42 — 옛 기록에는 없다. 법문 기본값(거주자 등)으로 보정하지 않으면 undefined가 「적용 주체 아님」으로 읽힐 수 있다.
           isEligibleSubject985: true,
           contractDate985: "",
-          priceReductionRatePct985: "",
+          announcedPrice985: "",
+          contractPrice985: "",
           isNonCapitalUnsoldAtCutoff985: false,
           isFirstContract985: false,
           isNotOccupiedAtContract985: false,
@@ -307,7 +312,7 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           standardPriceAtAcquisition985: "",
           standardPriceAt5Years985: "",
           standardPriceAtTransfer985: "",
-          ...r,
+          ...rest985,
         };
       }
       if (r && r.type === "unsold_98_6") {

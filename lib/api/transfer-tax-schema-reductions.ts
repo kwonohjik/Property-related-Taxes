@@ -425,7 +425,12 @@ export const reductionSchema = z.discriminatedUnion("type", [
     isEligibleSubject985: z.boolean().optional(),
     priceReductionRate: z.number().min(0).max(1).optional(),
     contractDate985: z.string().date().optional(),
-    priceReductionRatePct985: z.number().nonnegative().optional(),
+    /** ⑫ D2(US-58) 입주자 모집공고안에 공시된 분양가격(원) — 령 §98의4④. 누락 시 침묵 strip → 엔진 미도달 */
+    announcedPrice985: z.number().int().positive().optional(),
+    /** ⑫ D2(US-58) 매매계약서상의 매매가격(원) — 령 §98의4④ */
+    contractPrice985: z.number().int().nonnegative().optional(),
+    /** 직접 API 호환(%). 상한 100 — 매매가 ≥ 0이면 인하율은 100을 넘을 수 없다(US-59). 두 금액이 있으면 엔진이 무시 */
+    priceReductionRatePct985: z.number().nonnegative().max(100).optional(),
     isNonCapitalUnsoldAtCutoff985: z.boolean().optional(),
     isFirstContract985: z.boolean().optional(),
     isNotOccupiedAtContract985: z.boolean().optional(),

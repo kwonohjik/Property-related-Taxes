@@ -82,37 +82,31 @@ describe("엔진 — 인하율 0%", () => {
     expect(codesOf(r)).toContain("MISSING_PRICE_REDUCTION_RATE");
   });
 
-  it("음수는 조문에 없는 구간이라 별도 사유로 막는다", () => {
+  it("음수는 정책 결정(Q-5, 2026-11-06)으로 감면율 0% — 적용 불가 사유로 막는다(조문상 배제 규정은 없음)", () => {
     const r = evaluateUnsold985({ ...BASE, priceReductionRatePct: -5 } as Any);
     expect(codesOf(r)).toContain("NEGATIVE_PRICE_REDUCTION_RATE");
   });
 });
 
-describe("④ API 변환 — 0이 undefined로 바뀌지 않는다", () => {
-  function convert(pct: string) {
+describe("④ API 변환 — 매매가 0원은 입력됨으로 보낸다 (D2: 인하율 % 대신 두 금액)", () => {
+  function convert(announced: string, contract: string) {
     const [out] = toEngineReductions(
-      [
-        {
-          type: "unsold_98_5",
-          contractDate985: "2010-06-01",
-          priceReductionRatePct985: pct,
-        } as Any,
-      ],
+      [{ type: "unsold_98_5", contractDate985: "2010-06-01", announcedPrice985: announced, contractPrice985: contract } as Any],
       "purchase",
-    );
-    return (out as Record<string, unknown>).priceReductionRatePct985;
+    ) as Record<string, unknown>[];
+    return out;
   }
 
-  it("🔴 \"0\" → 0 (⚠️ `|| undefined`는 0을 버린다)", () => {
-    expect(convert("0"), "④에서 0이 사라지면 엔진·⑧을 고쳐도 no-op다").toBe(0);
+  it("🔴 공시가 = 매매가(인하 없음)는 두 금액 모두 전달되어 인하율 0%로 계산된다", () => {
+    const out = convert("100,000,000", "100,000,000");
+    expect(out.announcedPrice985).toBe(100_000_000);
+    expect(out.contractPrice985).toBe(100_000_000);
+    expect(out.priceReductionRatePct985).toBeUndefined();
   });
 
   it("빈 문자열 → undefined (진짜 미입력)", () => {
-    expect(convert("")).toBeUndefined();
-  });
-
-  it("\"12.5\" → 12.5", () => {
-    expect(convert("12.5")).toBe(12.5);
+    const out = convert("100,000,000", "");
+    expect(out.contractPrice985).toBeUndefined();
   });
 });
 

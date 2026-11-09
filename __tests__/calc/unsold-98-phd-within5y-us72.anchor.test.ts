@@ -6,7 +6,7 @@ import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reductio
 
 const CASES: { name: string; acq: string; reduction: Record<string, unknown> }[] = [
   { name: "§98의3", acq: "2009-06-01", reduction: { type: "unsold_98_3", residencyType983: "resident", houseType983: "purchased", contractDate983: "2009-06-01", isOverconcentration983: false, phdMode983: true } },
-  { name: "§98의5", acq: "2010-06-01", reduction: { type: "unsold_98_5", contractDate985: "2010-03-01", priceReductionRatePct985: "15", phdMode985: true } },
+  { name: "§98의5", acq: "2010-06-01", reduction: { type: "unsold_98_5", contractDate985: "2010-03-01", announcedPrice985: "100000000", contractPrice985: "85000000", phdMode985: true } },
   { name: "§98의6", acq: "2011-06-01", reduction: { type: "unsold_98_6", hoType986: "seller_rented", stdPriceSumAtBase986: "500,000,000", floorAreaSqm986: "100", phdMode986: true } },
 ];
 

@@ -305,6 +305,11 @@ export type TransferReductionStub =
       /** US-42 — 거주자 또는 국내사업장 없는 비거주자. 미제공 = true */
       isEligibleSubject985?: boolean;
       contractDate985?: Date;
+      /** D2(US-58) 입주자 모집공고안에 공시된 분양가격(원) — 령 §98의4④. 화면 입력 */
+      announcedPrice985?: number;
+      /** D2(US-58) 매매계약서상의 매매가격(원) — 령 §98의4④. 화면 입력 */
+      contractPrice985?: number;
+      /** 직접 API 호환(0~100%) — 두 금액이 있으면 무시 */
       priceReductionRatePct985?: number;
       isNonCapitalUnsoldAtCutoff985?: boolean;
       isFirstContract985?: boolean;

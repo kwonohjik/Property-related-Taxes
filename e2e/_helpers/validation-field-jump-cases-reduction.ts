@@ -144,14 +144,11 @@ const UNSOLD_98_3 = table("unsold_98_3", hybrid("unsold_98_3"), u983Ok, {}, [
 ]);
 
 // ── §98의5 ────────────────────────────────────────────────────────────────
-const u985Ok = { contractDate985: "2010-06-01", priceReductionRatePct985: "5", ...std5("985") };
+const u985Ok = { contractDate985: "2010-06-01", announcedPrice985: "100000000", contractPrice985: "95000000", ...std5("985") };
 const UNSOLD_98_5 = table("unsold_98_5", hybrid("unsold_98_5"), u985Ok, {}, [
   { name: "매매계약일", prop: "contractDate985", message: /^§98의5 적용: 최초 매매계약일/, patch: { contractDate985: "" } },
-  { name: "인하율", prop: "priceReductionRatePct985", message: /^§98의5 적용: 분양가격 인하율\(%\)을 입력하세요/, patch: { priceReductionRatePct985: "" } },
-  {
-    name: "인하율 음수", prop: "priceReductionRatePct985", message: /^§98의5 적용: 분양가격 인하율은 음수일 수 없습니다/, patch: { priceReductionRatePct985: "-1" },
-    unreachableInUi: "`DecimalInput`이 「-」를 지운다(음수를 입력할 수 없다) — 화면에서 도달 불가, vitest만",
-  },
+  { name: "공시 분양가격", prop: "announcedPrice985", message: /^§98의5 적용: 입주자 모집공고안에 공시된 분양가격\(원\)을 입력하세요/, patch: { announcedPrice985: "" } },
+  { name: "매매가격", prop: "contractPrice985", message: /^§98의5 적용: 매매계약서상의 매매가격\(원\)을 입력하세요/, patch: { contractPrice985: "" } },
   phdRow("§98의5", "phdMode985"),
   { name: "취득시 기준시가(5년 경과)", prop: "standardPriceAtAcquisition", message: /^§98의5 적용: 취득 후 5년 경과 양도는 취득시 기준시가/, patch: { standardPriceAtAcquisition985: "" } },
   { name: "5년 시점 기준시가", prop: "standardPriceAt5Years", message: /^§98의5 적용: 취득 후 5년 경과 양도는 취득 5년 시점/, patch: { standardPriceAt5Years985: "" } },
