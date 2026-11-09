@@ -27,6 +27,7 @@ import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-
 import type { HousingEstimatedAcqResult } from "./transfer-tax-mixed-use-helpers";
 import { apportionAcquisitionPrice, apportionTransferPrice } from "./transfer-tax-mixed-use-helpers";
 import { inheritedCapexStdOverride } from "./transfer-tax-mixed-use-inheritance";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 
 // ──────────────────────────────────────────────────────────────
 // 상가부분 환산취득가액 + 양도차익 분리 (STEP 7)
@@ -160,7 +161,8 @@ export function calcCommercialGainSplit(
       asset.useAppraisalSalesAcquisition) &&
     asset.transferCause === "public_expropriation"
   ) {
-    throw new Error(
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
       "상속·증여·매매 실거래가·감정/매매사례 취득 + 공익수용 특례 조합은 아직 지원하지 않습니다.",
     );
   }
