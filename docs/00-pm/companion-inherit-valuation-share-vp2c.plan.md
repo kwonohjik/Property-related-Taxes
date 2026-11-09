@@ -1,6 +1,6 @@
 # 매매 함께 양도 × 컴패니언 상속 × 지분 — `inheritanceValuation` 지분 축소를 지키는 테스트가 없다 (V-P2c)
 
-- 상태: **구현 완료(결정 Q-1 a, 2026-11-09)** — 결과는 §5. 기준 master `df6be3f15`.
+- 상태: **구현 완료(결정 Q-1 a, 2026-11-09)** — 결과는 §5. V-P2c-1~3 모두 해소(§7 · §8). 기준 master `df6be3f15`.
 - 선행: `bg-pre-deemed-fractional-companion-vp2.plan.md`(#3041) §5 V-P2c — 부담부증여 뮤테이션 중 `companion-payload.ts:205`만 `__tests__/api`·`__tests__/calc` 전체를 통과했다.
 - 표기: **[직접]** = 이 문서 작성 중 직접 실행·대조. **[코드]** = 코드 읽기만. **확인 필요** = 미측정·미해명.
 
@@ -43,8 +43,8 @@
 | 번호 | 내용 |
 |---|---|
 | V-P2c-1 | ✅ 해명(§7) — 덮는 쪽은 `adjustedAcqPrice`가 아니라 STEP 0.45. 덮이지 않는 조건은 `ownsAcquisitionSubobject`가 참인 상속 컴패니언(승계 입주권 · 준공 전 받은 승계 완공 APT) |
-| V-P2c-2 | 안분 echo `allocatedAcquisitionPrice`가 화면에 그대로 나오는 곳(소비처 전수) |
-| V-P2c-3 | 상가 · 건물 · 재개발 · 분양권 컴패니언 · 3건 묶음 · 50% 외 지분의 값 — **재개발 · 분양권은 §6에서 측정(결함 없음)**. 상가 · 건물 · 3건 묶음은 이 문서에 기록 없음 |
+| V-P2c-2 | ✅ 해소(§8.1) — 상속 컴패니언의 안분 echo를 그대로 보여 주는 화면은 없다. 사이드바 폴백은 엔진 행이 없을 때만 쓰이고, 컴패니언은 엔진 행이 늘 있다 |
+| V-P2c-3 | ✅ 해소 — 재개발 · 분양권 60칸(§6) + 상가 · 건물(토지 제외) · 지분 30 · 70 · 25% · 3건 묶음 22칸(§8.2). 모두 결함 없음 |
 | — | 사람이 직접 한 브라우저 수동 확인은 하지 않았다 |
 
 ## 5. 구현 결과 (Q-1 a)
@@ -152,3 +152,41 @@
 - 각 줄이 최종 값을 정하는 종류에서 둘 다 뮤테이션이 잡힌다.
 - 코드 변경은 필요 없다.
 - 남는 위험: 한쪽만 고치면 종류에 따라 결과가 갈린다. 지분 규약을 바꾸는 PR은 두 곳(L1 · L2)을 함께 봐야 한다. anchor 머리 주석에 이 사실을 적었다.
+
+## 8. V-P2c-2 · V-P2c-3 종결 확인 (2026-11-09)
+
+### 8.1 V-P2c-2 — 안분 echo 소비처 전수 [코드]
+
+- `lib` · `components` · `app`에서 `allocatedAcquisitionPrice`를 읽는 곳을 전부 grep했다.
+- 결과 화면 컴포넌트는 `apportionment.apportioned` 행을 직접 보여 주지 않는다. 예외는 아래 표의 `BundledAllocationCard`와 `gb-result-block-views` 두 곳이다.
+
+| 위치 | 상속 컴패니언 echo가 보이는가 | 근거 |
+|---|---|---|
+| `lib/stores/transfer-per-asset-summary.ts:378` 사이드바 자산별 취득가액 | 아니다 — 폴백 | `bundledEcho?.acq ?? bundledMatch.allocatedAcquisitionPrice`. `bundledEcho`는 엔진 행(`propertyId === assetId`) 또는 그 자산의 카드 합(`:206-213`)이다. 컴패니언 엔진 입력은 `propertyId: c.assetId`다(`bundled-split-helpers.ts:459`). 그래서 계산 결과가 있으면 엔진 행이 늘 있다. 폴백은 엔진 행이 빈 합성 결과에서만 탄다(`sidebar-bundled-engine-acq.anchor.test.ts` 「엔진 값이 없으면 안분 행」) |
+| 같은 파일 `:231` `apportionedCards` | 아니다 | `isSingle && !bundledMatch`(단건 일반건물 카드 합) 전용 |
+| `lib/stores/transfer-per-asset-debt-pieces.ts:28` | 아니다 | `${id}__purchased`(이월과세 매입분) 행 전용 |
+| `components/calc/results/transfer/gb-result-block-views.ts:66` | 아니다 | 단건 일반건물 파트 카드 전용. 그 행 값은 엔진 카드 값이다(`general-building-route-cards.ts:395` `card.acquisitionPrice − 감가상각`) |
+| `components/calc/results/BundledAllocationCard.tsx:288` | 아니다 | 행에 기준시가 · 비율 · 안분 양도가액만 그린다(취득가액 없음) |
+| `app/api/calc/transfer/bundled-route.ts:228` · `bundled-split-helpers.ts:177` | 화면 아님 | 엔진 입력 |
+
+- 판단: echo와 최종 값이 다른 종류가 있다. 예를 들어 원조합원 ① 50%는 echo 150,000,000, 최종 250,000,000이다(청산금 포함 · §7.2).
+- 그래도 화면은 엔진 값을 읽으므로 사용자에게 echo가 보이지 않는다. 화면 수동 확인은 하지 않았다.
+
+### 8.2 V-P2c-3 남은 칸 [직접] — 기준 master `35936240e`
+
+- 시료 · 경로 · 대조는 §1 · §2와 같다. 대조는 지분 단건이고, 단건 양도가액 칸은 물건 전체 값이다(§6.5).
+- 이 칸들은 다른 세션이 앞서 throwaway probe로 쟀다. 그 기록이 저장소에 없어 같은 칸을 다시 쟀다. 결과는 그때와 같다.
+
+| 묶음 | 칸 | ⑧ · ⑫ | 양도차익 = 단건 합 | 컴패니언 취득가액(= echo) |
+|---|---|---|---|---|
+| 상가(`commercial_building`) · 건물 토지 제외(`building`) × 상속 1995 · 1983 × actual · apportioned | 8 | 0건 · 200 | 8/8 | 100,000,000 |
+| 토지 · 주택 상속 1995 × 지분 30 · 70 · 25% × 두 모드 | 12 | 0건 · 200 | 12/12 | 60,000,000 · 140,000,000 · 50,000,000 |
+| 3건 묶음(주 자산 토지 100% + 토지 50% + 주택 50%, 총 18억) × 두 모드 | 2 | 0건 · 200 | 2/2(1,300,000,000) | [300,000,000, 100,000,000, 100,000,000] |
+
+- `actual` 칸은 컴패니언 양도차익도 단건과 같다. `apportioned` 칸은 기준시가 비율 재안분으로 자산별 값이 다르고(설계), 합계는 같다.
+
+### 8.3 남는 것 (V-P2c 범위 밖)
+
+- 일반건물 컴패니언 × 상속 × 지분: 취득가액을 자기 서브객체가 만든다(`ownsAcquisitionSubobject`). V-P2c-3 목록에 없었고 이번에도 재지 않았다.
+- 증여 컴패니언 · 축 B · 부담부증여 · 세액(세율 mock).
+- 사람이 직접 한 브라우저 수동 확인.
