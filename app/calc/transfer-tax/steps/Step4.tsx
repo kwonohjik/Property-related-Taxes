@@ -416,15 +416,15 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 가목이 요구하는 상태는 「주택 0채」라 **분양권을 선언할 경로가 전무했다**(L1-03).
                 ④ 목록이 렌더 중이면 중복이므로 그 술어(`houseRosterRendered`)의 부정일 때만 연다 — 값은 같은 `form.presaleRights`다.
               */}
-              {!houseRosterRendered(form, primaryKind) && (
+              {!houseRosterRendered(householdView, householdKind) && (
                 <PresaleRightsSection
-                  rights={form.presaleRights}
-                  onChange={(presaleRights) => onChange(presaleRightsPatchWithConfirmClear(presaleRights))}
-                  showSpouseOwned={spouseHoldingQuestionApplies(form)}
-                  primaryKind={primaryKind}
-                  confirmed={form.householdNoPresaleRightsConfirmed}
-                  onConfirmedChange={(v) => onChange({ householdNoPresaleRightsConfirmed: v })}
-                  transferDate={form.transferDate}
+                  rights={householdView.presaleRights}
+                  onChange={(presaleRights) => householdOnChange(presaleRightsPatchWithConfirmClear(presaleRights))}
+                  showSpouseOwned={spouseHoldingQuestionApplies(householdView)}
+                  primaryKind={householdKind}
+                  confirmed={householdView.householdNoPresaleRightsConfirmed}
+                  onConfirmedChange={(v) => householdOnChange({ householdNoPresaleRightsConfirmed: v })}
+                  transferDate={householdView.transferDate}
                 />
               )}
             </div>

@@ -48,6 +48,15 @@ describe("컴패니언 입주권 PR-3 ⑤ — 세대·주택 현황 칸의 표�
     expect(screen.getByTestId(COUNT).textContent).toContain("양도하는 입주권 2개");
   });
 
+  it("🔑 «분양권·입주권» 카드는 한 벌이다 — 입주권 수 안내 블록 안쪽 목록이 ④ 명부와 중복 렌더되지 않는다 (브라우저 확인에서 발견: 토지 + 입주권에서 ① 안에 토글 없는 카드가 하나 더 떴다)", () => {
+    for (const kinds of [["land", "right_to_move_in"], ["right_to_move_in"], ["right_to_move_in", "right_to_move_in"], ["land", "housing", "right_to_move_in"]]) {
+      render(<Step4 form={form(kinds)} onChange={() => {}} />);
+      expect(screen.queryAllByText("분양권·입주권"), kinds.join("+")).toHaveLength(1);
+      expect(screen.queryAllByText(NO_PRESALE), kinds.join("+")).toHaveLength(1);
+      cleanup();
+    }
+  });
+
   it("짝 — 토지 + 주택(입주권 없음)은 종전과 같다 — 입주권 수 안내 없음 · 고지는 «주택»", () => {
     render(<Step4 form={form(["land", "housing"])} onChange={() => {}} />);
     expect(screen.queryByTestId(COUNT)).toBeNull();
