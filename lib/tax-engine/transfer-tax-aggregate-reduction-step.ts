@@ -22,6 +22,9 @@ import {
 } from "./aggregate-reduction-limits";
 import { resolveTypeLegalBasis } from "./transfer-tax-aggregate-pickers";
 import { RURAL_SURTAX_RATE, resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
+import { HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
+import { isHybridRuralSurtaxExempt } from "./transfer-tax-rural-surtax";
+import { hybridDetailById } from "./income-deduction-hybrid-pick";
 import type { CalculationStep } from "./transfer-tax";
 import type { ReducibleIncomeBucket } from "./types/transfer-result.types";
 import type { ReductionBreakdownEntry, ReductionClauseRow } from "./types/transfer-aggregate.types";
@@ -565,6 +568,17 @@ export function computeAggregateTaxCreditRuralSurtax(
   for (const [idx, allocated] of reductionAllocations) {
     if (allocated <= 0) continue;
     const rec = assetRecords[idx];
+    /**
+     * 🔴 하이브리드(§98의3·§98의5·§98의6·§98의7·§99의2·§98의4) 5년 이내 세액감면은 `RURAL_SURTAX_TABLE`에 없다 —
+     *    단건은 STEP 8.7(`mergeHybridTaxDetail`)이 따로 계산하기 때문이다. 집계가 이 표로만 판정하면 「미판정 → 0」이 되어
+     *    §98의6·§98의7 등 과세 조문의 농특세가 통째로 빠졌다(2026-11-09 실측: §98의7 100% 단건 농특세 16,342,000 → 집계 0).
+     *    단건과 같은 술어 — evaluator의 `ruralSurtaxExempt`(농특세령 §4⑦1호 §98의3·§98의5)만 비과세, 그 밖은 과세.
+     */
+    const appliedType = rec.result.reductionTypeApplied;
+    if (appliedType !== undefined && HYBRID_ARTICLE[appliedType] !== undefined) {
+      if (!isHybridRuralSurtaxExempt(hybridDetailById(rec.result, appliedType))) taxableReduction += allocated;
+      continue;
+    }
     const verdict = resolveTaxCreditRuralSurtax({
       reductionTypeApplied: rec.result.reductionTypeApplied,
       reductionAmount: allocated,

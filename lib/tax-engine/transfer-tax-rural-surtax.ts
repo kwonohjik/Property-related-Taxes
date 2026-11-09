@@ -55,6 +55,16 @@ export const HYBRID_ARTICLE: Record<string, string> = {
   unsold_98_4: "§98의4",
 };
 
+/**
+ * 하이브리드 5년 이내 세액감면의 농특세 비과세 여부 — **evaluator의 `ruralSurtaxExempt` 단일 진실**
+ * (농특세령 §4⑦1호 — §98의3·§98의5 비과세. §98의6·§98의7·§99의2 등은 열거가 없어 과세).
+ * 단건 STEP 8.7(`mergeHybridTaxDetail`)과 일괄양도 집계(`computeAggregateTaxCreditRuralSurtax`)가 같은 술어를 쓴다 —
+ * 집계가 하이브리드를 `RURAL_SURTAX_TABLE`(하이브리드 미수록)로 판정해 「미판정 → 0」이 되던 결함(2026-11-09) 재발 방지.
+ */
+export function isHybridRuralSurtaxExempt(detail: { ruralSurtaxExempt?: boolean } | undefined): boolean {
+  return detail?.ruralSurtaxExempt === true;
+}
+
 export type RuralSurtaxVerdict =
   /** 조문이 비과세로 열거한 감면 */
   | "exempt"

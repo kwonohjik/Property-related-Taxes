@@ -16,6 +16,7 @@
 
 import { applyRate } from "./tax-utils";
 import { HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
+import { isHybridRuralSurtaxExempt } from "./transfer-tax-rural-surtax";
 import type { New993Result } from "./transfer-reductions/new-99-3";
 import type { New99Result } from "./transfer-reductions/new-99";
 import type { Unsold988Result } from "./transfer-reductions/unsold-98-8";
@@ -161,7 +162,7 @@ export function mergeHybridTaxDetail(
     return { applies: false, details: d, ruralSurtax: 0, isExempt: false };
   }
   // 농특세 비과세 (농특세령 §4⑦1호): §98의3·§98의5 — evaluator의 exempt 플래그 단일 진실
-  const isExempt = hybridTaxDetail?.ruralSurtaxExempt === true;
+  const isExempt = isHybridRuralSurtaxExempt(hybridTaxDetail);
   const ruralSurtax = isExempt ? 0 : applyRate(cappedReductionAmount, 0.2);
   const details = { ...d };
   // 최종 detail에 감면액·농특세 echo (calcReductions 평가본 우선 — reductionAmount 보유)
