@@ -67,7 +67,8 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown, data?: Record<strin
   mixedUse: whenPresent(MULTI_MIXED_USE_UNSUPPORTED_MESSAGE),
   // 의제취득일 전 매수 §176조의2④ — 다건 ④·⑭는 이 입력을 옮기지 않는다(계획서 realestate-pre-deemed-purchase Q-11 b).
   preDeemedPurchase: whenPresent(MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE),
-  generalBuildingValuation: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
+  // 일반건물(`generalBuildingValuation`)은 ⑭가 단건과 같은 카드로 펼친다(`multi-gb-expansion.ts` · 트랙 G).
+  // 지분 분할 취득은 한 건 내 다자산이라 계속 거부한다.
   generalBuildingShares: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
   // 상업용건물·오피스텔 3키(`commercialBuildingValuation`·`commercialAppurtenantLand`·`commercialInheritanceValuation`)는
   // ⑭가 단건과 같이 옮긴다 — 단건 엔진이 직접 읽는 서브객체라 합산도 같은 세액이다(계획서 multi-building-valuation-support 트랙 C).

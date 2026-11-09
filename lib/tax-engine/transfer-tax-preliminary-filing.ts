@@ -66,6 +66,24 @@ interface CalcFn {
  * @param annualBasicDeductionUsed 이 신고 이전에 이미 사용한 기본공제(폼 입력)
  * @param calculateTransferTax 단건 엔진(주입 — 순환 import 회피)
  */
+/**
+ * 신고 1건이 엔진 항목 **여러 장**인 단위 — 일반건물 토지·건물 카드(`buildGbCompanionItems`).
+ *
+ * 카드마다 단건 엔진을 부르면 같은 예정신고 1건이 카드 수만큼의 신고로 계산되고 기본공제도 카드마다 들어간다.
+ * 그래서 그 카드 묶음을 **한 번에** 계산하는 함수를 호출부가 넘긴다(단건 route의 일반건물 경로와 같은 계산).
+ * 결과는 묶음의 **첫 인덱스**에만 싣는다 — 가산세 입력도 그 카드 한 장에만 있다(`multi/route.ts`).
+ */
+export interface PreliminaryCardUnit {
+  /** 묶음 카드의 인덱스(`properties` 기준, 오름차순 연속이 아니어도 된다) */
+  indices: number[];
+  calculate: (cards: TransferTaxInput[], annualBasicDeductionUsed: number) => {
+    determinedTax: number;
+    reductionAmount: number;
+    ruralSurtax: number;
+    basicDeduction: number;
+  };
+}
+
 export function computePreliminaryFilingTaxes(
   properties: readonly TransferTaxInput[],
   rates: TaxRatesMap,
@@ -73,16 +91,34 @@ export function computePreliminaryFilingTaxes(
   calculateTransferTax: CalcFn,
   /** E-14n — 자산별 양도일 세율. 예정신고는 그 건만의 신고라 양도일 세율이 곧 단건 세율이다. */
   ratesByTransferDate?: RatesByTransferDate,
+  /** 카드 여러 장 = 신고 1건인 단위(일반건물). 없으면 항목 1건 = 신고 1건(종전). */
+  cardUnits: readonly PreliminaryCardUnit[] = [],
 ): PreliminaryFilingTaxes {
-  // §103② — 「먼저 양도한 자산」부터. 같은 날이면 입력 순서를 유지한다(안정 정렬).
+  const unitOf = new Map<number, PreliminaryCardUnit>();
+  for (const u of cardUnits) for (const i of u.indices) unitOf.set(i, u);
+  // §103② — 「먼저 양도한 자산」부터. 같은 날이면 입력 순서를 유지한다(안정 정렬). 카드 묶음은 첫 카드 자리 1번만 센다.
   const order = properties
     .map((p, index) => ({ index, at: p.transferDate?.getTime?.() ?? 0 }))
+    .filter(({ index }) => !unitOf.has(index) || unitOf.get(index)!.indices[0] === index)
     .sort((a, b) => (a.at === b.at ? a.index - b.index : a.at - b.at));
 
   const result: PreliminaryFilingTaxes = new Map();
   let used = annualBasicDeductionUsed;
 
   for (const { index } of order) {
+    const unit = unitOf.get(index);
+    if (unit) {
+      const cards = unit.indices.map((i) => ({
+        ...properties[i],
+        amendment: undefined,
+        filingPenaltyDetails: undefined,
+        delayedPaymentDetails: undefined,
+      }));
+      const r = unit.calculate(cards, used);
+      result.set(index, { determinedTax: r.determinedTax, reductionAmount: r.reductionAmount, ruralSurtax: r.ruralSurtax });
+      used += r.basicDeduction;
+      continue;
+    }
     const asset = properties[index];
     /**
      * ⚠️ **집계 컨텍스트를 빼고 부른다.** 예정신고는 그 건만의 신고이므로

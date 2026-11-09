@@ -46,6 +46,8 @@ import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "../route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { computePreliminaryFilingTaxes } from "@/lib/tax-engine/transfer-tax-preliminary-filing";
+import { expandMultiGeneralBuildings } from "../multi-gb-expansion";
+import { gbPreliminaryUnits } from "../multi-gb-expansion";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
 import { ratesForTransferDate } from "@/lib/tax-engine/transfer-tax-item-rates";
@@ -599,10 +601,23 @@ export async function POST(request: NextRequest) {
     };
   });
 
+  // ⑭ 일반건물 — 단건 route처럼 토지·건물 카드로 펼친다(`multi-gb-expansion.ts` · 계획서 multi-building-valuation-support 트랙 G).
+  //    지분 분할 취득(`generalBuildingShares`)은 ⑫가 계속 거부한다.
+  const gbExpansion = expandMultiGeneralBuildings(properties, (i) => {
+    const p = data.properties[i];
+    return p.propertyType === "general_building" && p.generalBuildingValuation
+      ? {
+          valuation: p.generalBuildingValuation as Record<string, unknown>,
+          ownershipRatio: p.ownershipRatio,
+          totalPropertyTransferPrice: p.totalPropertyTransferPrice,
+        }
+      : undefined;
+  });
+
   // 엔진 입력 구성 (가산세 제외 1차)
   const engineInput: AggregateTransferInput = {
     taxYear: data.taxYear,
-    properties,
+    properties: gbExpansion.properties,
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,
     basicDeductionAllocation: data.basicDeductionAllocation,
     // 확정신고 기납부세액 정산 (§111③) — filing-level. finalInput 스프레드로 2-pass 모두 반영.
@@ -658,6 +673,8 @@ export async function POST(request: NextRequest) {
       engineInput.annualBasicDeductionUsed,
       calculateTransferTax,
       ratesByTransferDate,
+      // 일반건물 1건 = 예정신고 1건 — 카드 묶음을 한 번에 계산한다(`multi-gb-expansion.ts`).
+      gbPreliminaryUnits(gbExpansion.cardUnits, data.taxYear, rates, ratesByTransferDate),
     );
 
     // 자산별 결정세액·미납세액 주입 후 2차 계산 (가산세 자산별 합산 반영).
@@ -706,6 +723,7 @@ export async function POST(request: NextRequest) {
     ) {
       result.warnings = [...result.warnings, SAME_DAY_RIGHT_NOTICE];
     }
+    if (Object.keys(gbExpansion.detailsByAsset).length > 0) result.generalBuildingDetailsByAsset = gbExpansion.detailsByAsset;
     // NaN·Infinity는 JSON에서 null이 되어 200으로 나간다 — 반환 전에 끊는다(E-14l).
     assertFiniteResponse(result);
     return NextResponse.json({ data: result }, { status: 200 });
