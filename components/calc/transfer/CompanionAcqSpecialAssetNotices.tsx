@@ -11,8 +11,22 @@
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
+import { bgShareOwnAcquisitionApplies } from "@/lib/calc/bg-share-own-acquisition";
 
-export function CompanionAcqSpecialAssetNotices({ asset }: { asset?: AssetForm }) {
+/**
+ * @param shareCard 축 B 지분 카드(자산 2~N) — ② 양도정보가 숨으므로 「위 ‘부담부증여’ 카드」 · 「위 ② 양도정보」 대신 실제 입력 위치를 가리킨다
+ *   (자산 1의 ② · 이 카드 위 「이 지분의 취득가액을 자산 1과 따로 입력」 · 「이 지분의 취득시 기준시가」 — 계획서 vp2c §15 D-3b · Q-9 a).
+ *   `asset`은 지분 카드 ③이 읽는 병합 판정값(`CompanionAssetCard` `acquisitionAsset`)이다.
+ */
+export function CompanionAcqSpecialAssetNotices({ asset, shareCard }: { asset?: AssetForm; shareCard?: boolean }) {
+  const ownAcqApplies = !!asset && shareCard === true && bgShareOwnAcquisitionApplies(asset);
+  const methodSource = !shareCard
+    ? "위 ‘부담부증여’ 카드의 취득가액 산정방식에서 선택"
+    : ownAcqApplies && asset?.bgShareOwnAcquisition === true
+      ? "이 카드 위 「이 지분의 취득가액을 자산 1과 따로 입력」에서 선택"
+      : ownAcqApplies
+        ? "자산 1의 ② 양도정보 ‘부담부증여’ 카드에서 선택 — 이 지분을 자산 1과 다른 가액으로 취득했으면 이 카드 위 「이 지분의 취득가액을 자산 1과 따로 입력」을 켜세요"
+        : "자산 1의 ② 양도정보 ‘부담부증여’ 카드에서 선택";
   return (
     <>
       {/* 부담부증여 모드 — 취득가액 산정 방식·실거래가 입력 숨김 (§159 자동 산정).
@@ -25,9 +39,8 @@ export function CompanionAcqSpecialAssetNotices({ asset }: { asset?: AssetForm }
           </p>
           <p className="text-xs text-fuchsia-800 dark:text-fuchsia-200">
             부담부증여(소득세법 시행령 §159)는 취득가액을 <b>증여재산 평가방식</b>에 따라 엔진이 자동 산정합니다
-            — 기준시가 평가 시 취득기준시가 × 채무비율, 시가 평가 시 실지취득가액 또는 환산취득가액(위
-            &lsquo;부담부증여&rsquo; 카드의 <b>취득가액 산정방식</b>에서 선택). 따라서 일반 취득가액 산정 방식·실거래가
-            입력은 여기서 표시하지 않습니다.
+            — 기준시가 평가 시 취득기준시가 × 채무비율, 시가 평가 시 실지취득가액 또는 환산취득가액(<span data-testid="bg-acq-method-source">{methodSource}</span>).
+            따라서 일반 취득가액 산정 방식·실거래가 입력은 여기서 표시하지 않습니다.
           </p>
           {/*
             🔴 **자산별로 문구가 갈린다** (2026-08-12 — O-1 결함 수정).
@@ -49,6 +62,10 @@ export function CompanionAcqSpecialAssetNotices({ asset }: { asset?: AssetForm }
               <>
                 ※ 겸용주택의 <b>취득시·양도시 기준시가</b>(주택·상가 4부분)는 아래 <b>겸용주택 기준시가</b>에서 한 번만 입력합니다.
                 ② 양도정보의 증여재산 평가는 그 값의 합계를 읽기 전용으로 보여 줍니다.
+              </>
+            ) : shareCard ? (
+              <>
+                ※ 기준시가 평가 시 산식에 필요한 <b>취득시 기준시가</b>는 이 카드 위 &lsquo;이 지분의 취득시 기준시가 (물건 전체)&rsquo; 칸에서 입력하세요.
               </>
             ) : (
               <>

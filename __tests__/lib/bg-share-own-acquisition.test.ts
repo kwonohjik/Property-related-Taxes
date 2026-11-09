@@ -17,9 +17,11 @@ const base = (over: Partial<AssetForm> = {}) =>
 describe("bgShareOwnAcquisitionApplies — 범위", () => {
   it("일반건물 · 시가 평가 · 매매 지분 → 연다", () => expect(bgShareOwnAcquisitionApplies(base())).toBe(true));
   it("기준시가 평가 → 닫는다(산정방식이 쓰이지 않는다)", () => expect(bgShareOwnAcquisitionApplies(base({ bgValuationMode: "sangjeungbeop_standard" }))).toBe(false));
-  it("토지 · 주택 → 닫는다(이번 범위 밖)", () => {
-    expect(bgShareOwnAcquisitionApplies(base({ assetKind: "land" }))).toBe(false);
-    expect(bgShareOwnAcquisitionApplies(base({ assetKind: "housing" }))).toBe(false);
+  it("토지 · 주택 · 상가 · 건물 → 연다(vp2c §15 D-3 · Q-8 a)", () => {
+    for (const assetKind of ["land", "housing", "commercial_building", "building"] as const) expect(bgShareOwnAcquisitionApplies(base({ assetKind }))).toBe(true);
+  });
+  it("재개발 · 입주권 · 분양권 → 닫는다(측정 안 함)", () => {
+    for (const assetKind of ["redevelopment_apt", "right_to_move_in", "presale_right"] as const) expect(bgShareOwnAcquisitionApplies(base({ assetKind }))).toBe(false);
   });
   it("이월과세 지분 → 닫는다(당초 증여자 재료 규칙)", () =>
     expect(bgShareOwnAcquisitionApplies(base({ acquisitionCause: "carryover_gift", gbBuildingAcquisitionCause: "carryover_gift" }))).toBe(false));

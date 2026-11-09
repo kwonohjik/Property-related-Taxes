@@ -526,3 +526,39 @@ Q-8 a의 착수 전 확인 필요: ⑫ 「지분 2장 이상 · 시가 모드 �
 - 실세율(mock 세율만).
 - 겸용주택 · 재개발 APT · 입주권의 축 B × 부담부증여(입주권은 `bgRightMemberRightsValue` 등 별도 규약 — `bg-axis-b-right-share-inputs.plan.md`).
 - 지분 3장 이상.
+
+## 16. D-3 · D-3b · D-3c 수정 (2026-11-09 사용자 결정: Q-8 a · Q-9 a · D-3c 함께 고침)
+
+### 16.1 착수 전 발견 — D-3c [직접]
+
+§15.2 화면 probe는 지분 2 카드를 `transferType: "burdened_gift"`로 시드했다. 실제 「+ 지분 추가」(`CompanionAssetsSection.tsx` `addAsset` → `makeDefaultAsset`)로 만든 카드의 저장값은 `transferType: "regular"`다(`calc-wizard-asset-factory.ts`).
+- 그 상태의 주택 지분 2 카드(Playwright): ③에 일반 「취득가액 산정 방식(실거래가 · 환산 · 감정 · 매매사례) · 취득가액 (원) *」 칸과 감가상각비 칸이 뜨고, 부담부증여 안내는 없다.
+- 거기 3억을 넣어도(`fixedAcquisitionPrice`) 주택 · 토지 · 상가 · 건물 모두 양도차익 450,000,000 그대로 · ⑧ 0건 · ⑫ 200. 계산에 쓰이지 않는 칸이다.
+- 원인: 지분 카드 ③은 저장값으로 판정한다(`CompanionAssetCard.tsx` `acquisitionAsset` — 자산 종류만 덮고, 양도 형태 · 부담부증여 값은 의제취득일 전 지분에만 덮었다 `bgPreDeemedShareJudgmentFields`). ④ · ⑧은 병합값(부담부증여)이다.
+
+### 16.2 구현
+
+| 층 | 파일 | 내용 |
+|---|---|---|
+| leaf | `lib/calc/bg-share-own-acquisition.ts` | 토글을 여는 종류 = 일반건물 · 주택 · 토지 · 상가(`commercial_building`) · 건물(`building`). 재개발 · 입주권 · 분양권은 측정하지 않아 닫는다. 겸용 × 축 B × 부담부증여는 ⑧ · 엔진 MB-6이 막는다 |
+| ③ 판정값(D-3c) | `lib/calc/bg-pre-deemed-shares.ts` `bgShareCardJudgmentFields` · `CompanionAssetCard.tsx` | 첫 카드가 부담부증여면 지분 카드 ③이 양도 형태 · `bg*`를 병합값으로 판정(주택 · 토지 · 상가 · 건물). 일반 취득가액 칸이 숨고 부담부증여 안내가 뜬다. 일반건물은 측정하지 않아 종전 그대로 |
+| ⑤ 안내(D-3b) | `CompanionAcqSpecialAssetNotices.tsx` · `CompanionAcqPurchaseBlock(.types).ts(x)` · `CompanionAcquisitionCauseSection.tsx` | 지분 카드(`shareAcquisitionOnly`)에서 산정방식 출처 = 「자산 1의 ② 양도정보 ‘부담부증여’ 카드 — 다르면 이 카드 위 토글을 켜세요」 / 토글 켬이면 「이 카드 위 토글」. 기준시가 문장 = 「이 카드 위 ‘이 지분의 취득시 기준시가 (물건 전체)’ 칸」 |
+| ④ · ⑧ | 무변경 | #3093의 `mergePrimaryBasic` 되돌리기 · ⑧ 병합 검증이 넓어진 leaf를 그대로 따른다 |
+
+⑫: 컴패니언 경로(`transfer-tax-schema-companion-refines.ts`)에는 「시가 모드 산정방식 누락」 규칙이 없다(주 자산 `refineBurdenedGiftInputs`에만 있다). 빈 산정방식은 엔진의 옛 분기(`burdened-gift-acquisition.ts` legacy — `marketValueAtAcquisition`)로 간다. 이번 변경 전에도 모든 컴패니언(함께 양도 포함)에서 직접 API로 같았고, 의제취득일 전 지분은 산정방식이 없는 것이 정상이라 ⑫에서 그 판정(엔진 STEP 0.45)을 재현해야 한다 — 이번에 넣지 않았다(§16.4). 화면 경로는 ⑧이 막는다(OK-3).
+
+### 16.3 검증 [직접]
+
+| 항목 | 결과 |
+|---|---|
+| anchor `transfer.route.bg-axis-b-share-own-acquisition-other-kinds.anchor.test.ts` 46건 | OK-1 4종 × (실지 3억 · K-6) × 60/40 · 30/70 = 16칸 축 B = 축 A 단건 합(438,000,000 · 429,000,000 · 435,120,000 · 423,960,000) · OK-2 토글 끔 450,000,000 · OK-3 칸 비움 ⑧ ≥ 1(실지 비움은 ⑫ 400) · OK-4 기준시가 평가 194,000,000 · OK-5 leaf 종류 · OK-6 ③ 판정값 |
+| E2E `e2e/bg-axis-b-share-own-acquisition-other-kinds.spec.ts` 4건 | 「+ 지분 추가」 기본값 지분 카드 — 일반 취득가액 칸 없음 · 안내 출처 · 토글 켬 → 이 지분 실지 3억 → 438,000,000(토지 · 상가) · 토글 끔 450,000,000(토지) · 주택 화면 |
+| 기존 E2E | `bg-axis-b-share-own-acquisition.spec.ts` · `gb-share-statement-formula.spec.ts` 5건 통과 |
+
+### 16.4 남은 것 · 확인하지 않은 것
+
+- **D-3d(별건 · 측정만)**: 기준시가 평가 축 B × 부담부증여의 주택 · 토지 · 상가 · 건물 지분 카드는 ⑧이 「자산 2: … 「② 양도정보」의 양도시 기준시가를 입력하세요」로 막는다. 지분 카드에는 ②도, 양도시 기준시가 칸도 없다(화면 probe — 「이 지분의 취득시 기준시가」만 있다). 양도시 기준시가는 같은 물건 · 같은 양도일이라 물건 단위 값인데 `mergePrimaryBasic`이 병합하지 않는다(일반건물은 `mergeGbPropertyLevel`). anchor OK-4는 지분 카드에 값을 직접 넣었다. 막다른 길 여부 브라우저 확인 · 수정 방식 결정 필요.
+- ⑧ 문구 「② 양도정보의 취득시 기준시가」(K-6 · 지분 카드) — 지분 카드에서는 「이 지분의 취득시 기준시가」 칸이다(표시만 · `transfer-tax-validate-bg.ts`).
+- ⑫ 컴패니언 시가 모드 산정방식 누락 규칙(§16.2).
+- 일반건물 지분 카드의 실제 상태(`transferType: "regular"`) ③ 화면 — 측정하지 않았다(#3093 E2E는 부담부증여로 시드).
+- 실세율 · 지분 3장 이상.

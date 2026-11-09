@@ -219,6 +219,7 @@ export function CompanionAcquisitionCauseSection({
       {(asset.acquisitionCause === "purchase" || d2On || buildingCarryoverOn) && (
         <CompanionAcqPurchaseBlock
           isNonPrimaryAsset={isNonPrimaryAsset}
+          shareAcquisitionOnly={shareAcquisitionOnly}
           buildingCause={buildingCauseMix || (buildingCarryoverOn ? "carryover_gift" : "")}
           acquisitionDate={asset.acquisitionDate}
           // D2 상속 호스트는 상속개시일 3키를 한 patch로 쓴다(상속 블록과 같은 leaf) — 한쪽만 쓰면 다른 키가 stale로 남는다.

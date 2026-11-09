@@ -69,3 +69,21 @@ export function bgPreDeemedShareJudgmentFields(share: AssetForm, primary: AssetF
     Object.entries(merged).filter(([k]) => k === "transferType" || k.startsWith("bg")),
   ) as Partial<AssetForm>;
 }
+
+/** 지분 카드 ③이 부담부증여로 판정해야 하는 자산 종류 — 측정한 종류만(계획서 `companion-inherit-valuation-share-vp2c.plan.md` §15 D-3c). */
+const SHARE_CARD_BG_KINDS: ReadonlySet<string> = new Set(["housing", "land", "commercial_building", "building"]);
+
+/**
+ * 축 B 지분 카드의 ③ 취득정보가 부담부증여 술어를 판정할 값 — 첫 카드가 부담부증여면 양도 형태 · 부담부증여 값을 병합값으로 준다
+ * (`bgPreDeemedShareJudgmentFields`와 같은 방식 · 의제취득일 전이 아니어도).
+ * 종전에는 「+ 지분 추가」로 만든 카드의 저장값(`transferType` "regular")으로 판정해, 주택 · 토지 · 상가 · 건물 지분 카드에 일반 「취득가액 산정 방식 · 취득가액」
+ * 칸이 떴다 — ④ · ⑧은 병합값(부담부증여)이라 그 칸 값을 읽지 않았다(3억을 넣어도 양도차익 그대로 · D-3c). 이 지분의 취득가액은
+ * 「이 지분의 취득가액을 자산 1과 따로 입력」(`BurdenedGiftShareOwnAcquisitionBlock`)이 받는다.
+ */
+export function bgShareCardJudgmentFields(share: AssetForm, primary: AssetForm): Partial<AssetForm> {
+  const merged = mergePrimaryBasic(share, primary);
+  if (merged.transferType !== "burdened_gift" || !SHARE_CARD_BG_KINDS.has(merged.assetKind)) return {};
+  return Object.fromEntries(
+    Object.entries(merged).filter(([k]) => k === "transferType" || k.startsWith("bg")),
+  ) as Partial<AssetForm>;
+}
