@@ -293,6 +293,8 @@ export interface PerPropertyBreakdown
   surchargeRate?: number;
   /** 엔진이 적용한 §104① 호 — 신고서 ③ 세율구분 코드의 단일 소스. */
   rateClause?: RateClause;
+  /** [echo] 엔진이 정한 §104 밖 세율 특례 표지(조특법 §98 20%) — 신고서 ③ 1-92의 단일 소스. 표시 전용(세액 불변). */
+  specialRateBasis?: import("../transfer-tax-rate-clause").SpecialRateBasis;
   /** 비사업용 +10%p 배제(부칙 <제9270호> §14① 또는 양도일 유예) — 정본 ⑮가 일반세율 코드로 분류한다. */
   nblSurchargeExcluded?: boolean;
   /** `nblSurchargeExcluded`의 사유 */
@@ -700,6 +702,11 @@ export interface AggregateTransferResult {
   localIncomeTax: number;
   /** 농어촌특별세 = §99의3 등 소득금액차감 감면세액 × 20% (농특세법 §3·§5). 감면 없으면 0. */
   ruralSurtax: number;
+  /**
+   * [echo] 별지 84호 농어촌특별세 납부계산서 ㉒ 소득세 감면세액 = 농특세 과세 대상 감면세액 합(차감형 몫 + 세액감면형 몫).
+   * 합 × 20%가 `ruralSurtax`와 맞을 때만 싣는다(맞지 않으면 없음 → 신고서 칸 비움). 표시 전용 — 세액 불변.
+   */
+  ruralSurtaxReductionBase?: number;
   totalTax: number;
   /**
    * 🔴 축 B × 부담부증여 — **물건 전체 기준 §159 breakdown 1건**. 표시 전용.

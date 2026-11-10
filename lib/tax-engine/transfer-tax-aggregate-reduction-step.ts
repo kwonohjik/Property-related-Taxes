@@ -24,6 +24,7 @@ import { resolveTypeLegalBasis } from "./transfer-tax-aggregate-pickers";
 import { RURAL_SURTAX_RATE, resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import { HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
 import { isHybridRuralSurtaxExempt } from "./transfer-tax-rural-surtax";
+import { ruralSurtaxUnknownStep } from "./transfer-tax-rural-surtax";
 import { hybridDetailById } from "./income-deduction-hybrid-pick";
 import type { CalculationStep } from "./transfer-tax";
 import type { ReducibleIncomeBucket } from "./types/transfer-result.types";
@@ -550,7 +551,7 @@ export function computeAggregateTaxCreditRuralSurtax(
   reductionAllocations: Map<number, number>,
   /** 부수효과 대상 — 농특세가 붙으면 근거 step을 남긴다(침묵 금지). */
   steps: CalculationStep[],
-): number {
+): { surtax: number; taxableReduction: number } {
   /**
    * 세액감면형 감면의 **농어촌특별세** — 단건 경로(STEP 8.8)와 **같은 판정표**를 쓴다.
    *
@@ -586,6 +587,8 @@ export function computeAggregateTaxCreditRuralSurtax(
         .isSelfCultivatedExpropriatedLand,
     });
     if (verdict.verdict === "taxable") taxableReduction += allocated;
+    // 판정표에 없는 유형 — 단건(STEP 8.8)과 같은 단일 소스 step으로 「미판정」을 남긴다(세액 0 · 계산 불변). 자산마다 한 번씩 남는다.
+    else if (verdict.verdict === "unknown") steps.push(ruralSurtaxUnknownStep(verdict));
   }
   const ruralSurtaxCredit = applyRate(taxableReduction, RURAL_SURTAX_RATE);
   if (ruralSurtaxCredit > 0) {
@@ -596,5 +599,5 @@ export function computeAggregateTaxCreditRuralSurtax(
       legalBasis: TRANSFER.RURAL_SURTAX_REDUCTION,
     });
   }
-  return ruralSurtaxCredit;
+  return { surtax: ruralSurtaxCredit, taxableReduction };
 }

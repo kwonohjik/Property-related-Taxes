@@ -31,4 +31,5 @@ export const REDUCTION_SHORT_LABELS: Record<ReductionType, string> = {
   unsold_98_8: "준공후미분양 (§98의8)",
   unsold_98_9: "수도권 밖 준공후미분양 (§98의9)",
   unsold_99_2: "신축·미분양 1세대1주택 (§99의2)",
+  unsold_housing_unresolved: "미분양주택 감면 (조문 미정)",
 };

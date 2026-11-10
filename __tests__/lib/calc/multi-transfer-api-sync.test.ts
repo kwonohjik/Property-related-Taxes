@@ -238,8 +238,7 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     ["겸용주택", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "housing", isMixedUseHouse: true }; }],
     // "일반건물"은 2026-11-09 지원 전환(트랙 G) — 단건 = 다건은 `__tests__/calc/multi-general-building-parity.anchor.test.ts`가 고정한다.
     // "이월과세"(자산 단위)는 2026-11-09 지원 전환(트랙 CO) — 단건 = 다건은 `__tests__/calc/multi-carryover-parity.anchor.test.ts`가 고정한다.
-    //   채무 인수분·파트 이월과세는 계속 막는다(같은 파일 CO-4 · `transfer-split-part-carryover.*`).
-    ["이월과세 × 당초 증여 인수 채무", (f) => { f.assets[0] = { ...f.assets[0], acquisitionCause: "carryover_gift", carryover: { ...(f.assets[0].carryover ?? {}), giftDebtAssumed: true, giftAssumedDebt: "100000000" } as never }; }],
+    //   채무 인수분은 2026-11-10 지원 전환(같은 파일 CO-4a · 트랙 CO-DEBT). 파트 이월과세는 계속 막는다(CO-4c · `transfer-split-part-carryover.*`).
     // PHD(§164⑦)는 환산에서만 성립한다 — 비환산 + 플래그 잔재는 차단하지 않는다(아래 별도 테스트·phd-non-estimated-method-axis.anchor).
     ["PHD(환산)", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "housing", useEstimatedAcquisition: true, usePreHousingDisclosure: true }; }],
     // "1990토지"는 2026-07-06 지원 전환 — 아래 별도 통과 테스트로 이동.

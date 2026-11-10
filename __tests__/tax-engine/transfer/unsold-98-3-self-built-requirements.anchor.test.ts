@@ -240,7 +240,7 @@ describe("D5-03 ⑧ validate — 면적 필수 규칙도 사업주체 취득분�
       ...getReductionDefault("unsold_98_3"),
       residencyType983: "resident",
       isOutsideSeoulNotDesignated983: true,
-      isOverconcentration983: true,
+      isOverconcentration983: "yes",
       standardPriceAtAcquisition983: "200000000",
       standardPriceAt5Years983: "300000000",
       standardPriceAtTransfer983: "400000000",
@@ -273,7 +273,7 @@ describe("D5-03 ⑧ validate — 면적 필수 규칙도 사업주체 취득분�
       const x = form({
         houseType983: "purchased",
         contractDate983: "2010-01-20",
-        isOverconcentration983: false,
+        isOverconcentration983: "no",
         isUnsoldConfirmed983: true,
         isFirstContract983: true,
         isNotOccupiedAtContract983: true,

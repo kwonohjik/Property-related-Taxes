@@ -33,7 +33,7 @@ const r988 = (over: Record<string, unknown> = {}) => [
     acquisitionPrice988: 500_000_000,
     exclusiveAreaSqm988: 84,
     rentalContractDate988: D("2015-06-10"),
-    rentalStartDate988: D("2015-07-01"),
+    rentalStartDate988: D("2015-07-01"), businessRegistrationDate988: D("2015-07-01"), rentalRegistrationDate988: D("2015-07-01"),
     rentalEndDate988: D("2021-07-01"),
     isResident988: true,
     isUnsoldAfterCompletion988: true,

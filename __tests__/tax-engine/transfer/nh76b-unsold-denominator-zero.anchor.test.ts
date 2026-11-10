@@ -37,7 +37,7 @@ const R992 = (tr: number, y5 = 300_000_000) => ({
 });
 const R988 = (tr: number, y5 = 300_000_000) => ({
   type: "unsold_98_8" as const, contractDate988: D("2015-06-01"), acquisitionPrice988: 550_000_000, exclusiveAreaSqm988: 84.5,
-  rentalContractDate988: D("2015-12-20"), rentalStartDate988: D("2016-01-01"),
+  rentalContractDate988: D("2015-12-20"), rentalStartDate988: D("2016-01-01"), businessRegistrationDate988: D("2015-12-10"), rentalRegistrationDate988: D("2015-12-10"),
   isUnsoldAfterCompletion988: true, isFirstContract988: true, isNotRecontract988: true,
   standardPriceAtAcquisition988: 200_000_000, standardPriceAt5Years988: y5, standardPriceAtTransfer988: tr,
 });
@@ -135,7 +135,7 @@ describe("US-36 §98의8 — 같은 규칙", () => {
   it("evaluator 단위: 5년 내 양도는 기준시가를 보지 않는다 — 분모 0이어도 전액 기준", () => {
     const r = evaluateUnsold988({
       transferDate: D("2020-07-01"), acquisitionDate: D("2015-07-01"), contractDate: D("2015-06-01"), acquisitionPrice: 550_000_000,
-      exclusiveAreaSqm: 84.5, rentalContractDate: D("2015-12-20"), rentalStartDate: D("2016-01-01"), inheritedRentalMonths: 6,
+      exclusiveAreaSqm: 84.5, rentalContractDate: D("2015-12-20"), rentalStartDate: D("2016-01-01"), businessRegistrationDate: D("2015-12-10"), rentalRegistrationDate: D("2015-12-10"), inheritedRentalMonths: 6,
       isUnsoldAfterCompletion: true, isFirstContract: true, isNotRecontract: true, transferIncome: 200_000_000,
       standardPriceAtAcquisition: 200_000_000, standardPriceAt5Years: 300_000_000, standardPriceAtTransfer: 200_000_000,
     });

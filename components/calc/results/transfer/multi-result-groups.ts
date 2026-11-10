@@ -9,10 +9,12 @@
  */
 import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
 import { shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
+import { purchasedPartParentIdOf } from "@/lib/tax-engine/general-building-share-id";
 
 /** 결과 행 id → 그 행을 만든 폼 항목 id. 접미사가 없으면(일반건물 외) 그대로. */
 export function multiFormPropertyIdOf(resultPropertyId: string): string {
-  return cardSuffixOf(resultPropertyId) ?? resultPropertyId;
+  // 이월과세 × 채무 인수분 매입분 꼬리 카드(`p1__purchased`)는 그 자산의 조각이다 — 부모 자산 id로 돌린다(트랙 CO-DEBT).
+  return cardSuffixOf(resultPropertyId) ?? purchasedPartParentIdOf(resultPropertyId);
 }
 
 /**

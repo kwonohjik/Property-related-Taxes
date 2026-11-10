@@ -23,7 +23,7 @@ const CASES: Array<[string, string[]]> = [
   ["unsold_98_5", ["contractDate985"]],
   ["unsold_98_6", ["rentalContractDate986", "rentalStartDate986", "businessRegistrationDate986", "rentalRegistrationDate986", "rentalEndDate986"]],
   ["unsold_98_7", ["contractDate987"]],
-  ["unsold_98_8", ["contractDate988", "rentalContractDate988", "rentalStartDate988", "rentalEndDate988"]],
+  ["unsold_98_8", ["contractDate988", "rentalContractDate988", "rentalStartDate988", "businessRegistrationDate988", "rentalRegistrationDate988", "rentalEndDate988"]],
   ["unsold_98_9", ["unsoldHouseAcquisitionDate"]],
 ];
 

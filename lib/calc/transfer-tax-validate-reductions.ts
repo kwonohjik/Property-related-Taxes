@@ -35,6 +35,7 @@ import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { engineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import { rental97SeriesIssue } from "./transfer-tax-validate-rental-97";
 import { unsold986RentalIssue } from "./transfer-tax-validate-unsold-986-rental";
+import { unsold988RentalIssue } from "./transfer-tax-validate-unsold-988-rental";
 
 /**
  * 「PHD 환산 모드」 메시지가 가리킬 입력칸 — 메시지는 5칸을 한꺼번에 묻지만(`canCalcReductionPhd`)
@@ -154,6 +155,11 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         // 조특법 주택 수 제외 3유형은 ③ 패널에 입력 칸이 없다 — 명부 행 ⑥이 받고 ② 단계가 검증한다.
         //   남은 옛 선언도 ② 단계가 막는다(`transfer-tax-validate-count-exclusion.ts`, 계획서 Q-3).
         if (isRowReduction(r)) continue;
+        // Q-28 — 구 «미분양주택» 이력·세션의 취득일이 §98의3 기간(2009.2.12~2010.2.11) 밖이라 조문을 정하지 못한 항목.
+        //   §98의3 등으로 임의 이관하지 않는다 — 항목을 해제하고 해당 조문(§98의5·§98의7·§98의8 등)을 직접 고르게 막는다.
+        if (r.type === "unsold_housing_unresolved") {
+          return fail(fieldError("reduction.unsold_housing_unresolved", "미분양주택 감면: 이전 기록의 취득일이 §98의3 적용 기간(2009.2.12~2010.2.11) 밖이라 적용 조문을 정하지 못했습니다. 이 항목을 해제하고 해당 조문(§98의5·§98의7·§98의8 등)을 직접 선택하세요."));
+        }
         /**
          * Q-1(D15): 조특법 §129②는 미등기양도자산의 감면을 끄지만, 자경농지(조특법 §69①) 토지는
          * 애초에 미등기양도자산이 아니다(소득세법 시행령 §168①3호). 둘이 함께 오면 모순 입력이라
@@ -439,10 +445,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(fieldError("reduction.unsold_98_8.acquisitionPrice988", "§98의8 적용: 취득가액을 입력하세요."));
           if (!(parseDecimal(r.exclusiveAreaSqm988 || "") > 0))
             return fail(fieldError("reduction.unsold_98_8.exclusiveAreaSqm988", "§98의8 적용: 연면적(공동주택은 전용면적, ㎡)을 입력하세요."));
-          if (!r.rentalContractDate988)
-            return fail(fieldError("reduction.unsold_98_8.rentalContractDate988", "§98의8 적용: 임대계약 체결일을 입력하세요 (2015.12.31 이전 체결에 한정 — 법 §98의8① 괄호)."));
-          if (!r.rentalStartDate988)
-            return fail(fieldError("reduction.unsold_98_8.rentalStartDate988", "§98의8 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날)."));
+          const i988Rental = unsold988RentalIssue({ fail, r, form });
+          if (i988Rental) return i988Rental;
           // 5년 후 양도 안분 기준시가 — ⑤ 제목이 「필수」인데 ⑧이 묻지 않아 엔진이 `MISSING_STD_PRICE`로 차감을 0으로 냈다(하이브리드와 같은 헬퍼 · 리뷰 Q-3 (A)).
           //   PHD 환산 ON이면 취득시 기준시가는 환산 입력 충분성으로 검증한다(④ `transfer-tax-api-reductions.ts`와 같은 leaf · §98의7과 같은 규칙).
           let phdOk988 = false;
@@ -488,8 +492,11 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
                 return fail(fieldError("reduction.unsold_98_3.downPaymentCompletedDate983", "§98의3 적용: 취득일이 2010.2.11 이후이므로 계약서상 계약금 전액 완납일을 입력하세요 (법 §98의3① — 계약금을 2010.2.11까지 완납한 경우 포함)."));
             }
           }
+          // Q-20 — 수도권과밀억제권역 여부는 3-state다. 미선택이면 100%(비과밀)로 가지 않도록 막는다(UI 기본 "" · ④는 undefined).
+          if (r.isOverconcentration983 !== "yes" && r.isOverconcentration983 !== "no")
+            return fail(fieldError("reduction.unsold_98_3.isOverconcentration983", "§98의3 적용: 주택이 수도권과밀억제권역에 있는지(예·아니오) 선택하세요 (과밀억제권역이면 감면율 60%·면적 한정, 아니면 100% — 령 §98의3①단서)."));
           // 면적 한정(령 §98의3① 단서) — 자기건설(법②)도 동일 (US-03, 재산세과-1450·1537).
-          if (r.isOverconcentration983) {
+          if (r.isOverconcentration983 === "yes") {
             if (!(parseDecimal(r.landAreaSqm983 || "") > 0))
               return fail(fieldError("reduction.unsold_98_3.landAreaSqm983", "§98의3 적용: 수도권과밀억제권역 주택은 대지면적(㎡)을 입력하세요 (660㎡ 이내 한정)."));
             if (!(parseDecimal(r.floorAreaSqm983 || "") > 0))

@@ -69,8 +69,8 @@ function form(elig: "yes" | "no", price: string): TransferFormData {
   return f;
 }
 
-/** 상세명세서 「과세대상 양도차익」 자산별 행의 산식 문자열들. */
-async function taxableGainRows(elig: "yes" | "no", price: string) {
+/** 상세명세서 항목의 자산별 행 산식 문자열들. */
+async function perAssetRows(key: string, elig: "yes" | "no", price: string) {
   const f = form(elig, price);
   const r = await runCalc(f);
   expect(r.status).toBe(200);
@@ -82,9 +82,11 @@ async function taxableGainRows(elig: "yes" | "no", price: string) {
     { properties: agg.properties, aggregated: agg },
     undefined,
   );
-  const rows = items.get("taxableGain")?.perAsset ?? [];
+  const rows = items.get(key)?.perAsset ?? [];
   return rows.map((row) => String(row.formula));
 }
+
+const taxableGainRows = (elig: "yes" | "no", price: string) => perAssetRows("taxableGain", elig, price);
 
 describe("상세명세서 — 컴패니언 입주권 §89①4호 근거", () => {
   it("🔑 15억(>12억) → 입주권 행에 12억 초과 안분 근거(몫 양도가액·20.00%·비과세/과세 차익·확인 필요)가 붙는다", async () => {
@@ -110,5 +112,11 @@ describe("상세명세서 — 컴패니언 입주권 §89①4호 근거", () => 
   it("짝 — 선언 «아니오»(과세) 입주권은 근거 문구가 없다", async () => {
     const rows = await taxableGainRows("no", "500000000");
     expect(rows.some((x) => x.includes("§89①4호"))).toBe(false);
+  });
+
+  it("🔑 5억 비과세 입주권의 장기보유특별공제 행은 «비과세 자산»이다 («차손 자산» 아님)", async () => {
+    const rows = await perAssetRows("ltDeduction", "yes", "500000000");
+    expect(rows.some((x) => x.includes("비과세 자산 — 장특공제 미적용"))).toBe(true);
+    expect(rows.some((x) => x.includes("차손"))).toBe(false);
   });
 });

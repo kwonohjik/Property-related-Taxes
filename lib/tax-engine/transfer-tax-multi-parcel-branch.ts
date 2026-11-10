@@ -26,6 +26,7 @@ import { expropriationAcquisitionDate } from "./public-expropriation-reduction";
 import { calculateBuildingPenalty } from "./transfer-tax-building-penalty";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
+import { ruralSurtaxUnknownStep } from "./transfer-tax-rural-surtax";
 
 // ============================================================
 // H-MP: handleMultiParcelBranch — 다필지 분리 계산 (소령 §166)
@@ -247,12 +248,7 @@ export function handleMultiParcelBranch(
         legalBasis: verdict.legalBasis,
       });
     } else if (verdict.verdict === "unknown") {
-      steps.push({
-        label: "농어촌특별세 — 미판정",
-        formula: verdict.reason,
-        amount: 0,
-        legalBasis: verdict.legalBasis,
-      });
+      steps.push(ruralSurtaxUnknownStep(verdict));
     }
   }
   const mpPenaltyBase = effectiveInput.acquisitionMethod === "appraisal"

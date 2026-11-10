@@ -365,6 +365,7 @@ export function AssetSectionAcquisition({
             judgmentLoaded={judgmentLoaded}
             transferDate={transferDate}
             firstCardRedevRightsValue={firstCardRedevRightsValue}
+            shareCard={splitMode === "fractional" && !isFirst}
           />
         )
       )}

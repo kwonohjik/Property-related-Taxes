@@ -7,6 +7,7 @@
  * - 사용자 결정사항 #3: 기존 이력 자동변환
  *
  * 변환 규칙:
+ * - (Q-28) 취득일이 §98의3 기간 끝 뒤이고 계약일이 두 시한 밖이면 `unsold_housing_unresolved`(조문 미정 — 재선택 요구).
  * - `type: "unsold_housing"` 인 reduction 항목을 (NH-73 · Q-17 — **계약일 축**, 조특법 §99의3①·§98의3①은 둘 다 «계약 체결일» 기준이다):
  *   - 자산 매매계약일(`assetContractDate`)이 2001.5.23~2003.6.30 → `type: "new_99_3"` (실제는 §99의3 신축)
  *   - 자산 매매계약일이 2009.2.12~2010.2.11 → `type: "unsold_98_3"` (정확한 §98의3 미분양)
@@ -22,6 +23,10 @@
  */
 
 import type { Transaction } from "dexie";
+import {
+  UNSOLD_98_3_PERIOD_FROM_RESIDENT,
+  UNSOLD_98_3_PERIOD_TO,
+} from "@/lib/tax-engine/transfer-reductions/unsold-98-3";
 
 interface CalcRecordPartial {
   inputData?: {
@@ -40,9 +45,15 @@ const D = (s: string) => new Date(s + "T00:00:00");
 
 const NEW_99_3_START = D("2001-05-23");
 const NEW_99_3_END = D("2003-06-30");
-/** 조특법 §98의3① 계약 체결 기간(거주자) — `transfer-reductions/unsold-98-3.ts` `UNSOLD_98_3_PERIOD_FROM_RESIDENT`·`UNSOLD_98_3_PERIOD_TO`와 같다. */
-const UNSOLD_98_3_START = D("2009-02-12");
-const UNSOLD_98_3_END = D("2010-02-11");
+/**
+ * 조특법 §98의3① 계약 체결 기간(거주자) — 엔진 상수 단일 소스(`UNSOLD_98_3_PERIOD_FROM_RESIDENT`·`UNSOLD_98_3_PERIOD_TO`).
+ * 엔진 상수는 UTC 자정 `Date`라 로컬 자정 비교(`D`)에 그대로 쓰면 KST에서 시작일 당일이 밀린다 → 달력 날짜(ISO)로 뽑아 쓴다.
+ */
+const isoOf = (d: Date) => d.toISOString().slice(0, 10);
+const UNSOLD_98_3_START_ISO = isoOf(UNSOLD_98_3_PERIOD_FROM_RESIDENT);
+const UNSOLD_98_3_END_ISO = isoOf(UNSOLD_98_3_PERIOD_TO);
+const UNSOLD_98_3_START = D(UNSOLD_98_3_START_ISO);
+const UNSOLD_98_3_END = D(UNSOLD_98_3_END_ISO);
 
 /** 문자열은 기준일(`D` — 로컬 자정)과 같은 축으로 읽는다. `new Date("2003-06-30")`은 UTC 자정이라 UTC보다 빠른 시간대(KST)에서 종료일 당일분이 기간 밖으로 갈렸다. */
 function toLocalDate(value: string | Date | undefined): Date | undefined {
@@ -57,13 +68,18 @@ function toLocalDate(value: string | Date | undefined): Date | undefined {
  *
  * `unsold_housing`은 **계약일 축**으로 가른다(NH-73): 계약일이 §99의3 기간이면 `new_99_3`, §98의3 기간이면 `unsold_98_3`.
  * 계약일이 없거나 두 기간 밖이면 취득일로 가능한 조문만 고른다 — 계약일은 취득일을 넘을 수 없으므로 취득일이 2009.2.12. 전이면
- * §98의3은 불가능해 `new_99_3`, 그 이후(또는 취득일 없음)면 `unsold_98_3`이다. 이 경우 계약일은 ⑧이 묻는다.
+ * §98의3은 불가능해 `new_99_3`, §98의3 기간(2009.2.12.~2010.2.11.) 안(또는 취득일 없음)이면 `unsold_98_3`이다. 이 경우 계약일은 ⑧이 묻는다.
+ *
+ * 🔴 취득일이 §98의3 기간 **끝(2010.2.11.) 뒤**이면 `"unresolved"`(조문 미정, 리뷰 Q-28 · 2026-11-10 결정)다 —
+ * §98의7·§98의8 등 다른 조문의 시기라 §98의3으로 열면 맞지 않는 폼을 조용히 채운다. 호출부가 조문 재선택을 요구하는
+ * 「미정」 항목(`unsold_housing_unresolved`)으로 옮기고 ⑧이 막는다. (계약일이 §98의3 기간이면 위 계약일 축이 먼저 §98의3으로 가른다 —
+ * 취득일이 기간 뒤여도 「2010.2.11.까지 계약 + 계약금 납부」 확장 경로이며 완납일은 ⑧이 묻는다.)
  */
 export function reclassifiedLegacyHousingType(
   type: "new_housing" | "unsold_housing",
   acquisitionDate: string | Date | undefined,
   contractDate?: string | Date,
-): "new_99" | "new_99_3" | "unsold_98_3" {
+): "new_99" | "new_99_3" | "unsold_98_3" | "unresolved" {
   if (type === "new_housing") return "new_99";
   const contract = toLocalDate(contractDate);
   if (contract) {
@@ -71,8 +87,14 @@ export function reclassifiedLegacyHousingType(
     if (contract >= UNSOLD_98_3_START && contract <= UNSOLD_98_3_END) return "unsold_98_3";
   }
   const acquisition = toLocalDate(acquisitionDate);
-  return acquisition && acquisition < UNSOLD_98_3_START ? "new_99_3" : "unsold_98_3";
+  if (!acquisition) return "unsold_98_3";
+  if (acquisition < UNSOLD_98_3_START) return "new_99_3";
+  if (acquisition > UNSOLD_98_3_END) return "unresolved";
+  return "unsold_98_3";
 }
+
+/** 「조문 미정」 항목의 type — 구 `unsold_housing`의 취득일이 §98의3 기간 밖일 때 (리뷰 Q-28). */
+export const UNSOLD_HOUSING_UNRESOLVED_TYPE = "unsold_housing_unresolved" as const;
 
 /**
  * Dexie upgrade 트랜잭션에서 호출하여 calculations 테이블의 reduction type을 정정.
@@ -91,7 +113,8 @@ export async function migrateReductionReclassification(tx: Transaction): Promise
         if (!Array.isArray(reductions)) continue;
         for (const red of reductions) {
           if (red.type === "unsold_housing") {
-            red.type = reclassifiedLegacyHousingType("unsold_housing", asset.acquisitionDate, asset.assetContractDate);
+            const target = reclassifiedLegacyHousingType("unsold_housing", asset.acquisitionDate, asset.assetContractDate);
+            red.type = target === "unresolved" ? UNSOLD_HOUSING_UNRESOLVED_TYPE : target;
             transformed += 1;
           } else if (red.type === "long_term_rental") {
             red.type = "rental_97_3";
@@ -106,12 +129,6 @@ export async function migrateReductionReclassification(tx: Transaction): Promise
   return transformed;
 }
 
-/**
- * 변환 사유 안내 메시지 (UI 토스트).
- */
-export const MIGRATION_NOTICE_MESSAGE =
-  "감면 조문 매핑 정정 (2026-05-06): §99의3은 신축주택 감면이며 미분양주택 감면이 아닙니다. 기존 이력은 매매계약일(없으면 취득일로 가능한 조문)을 기준으로 §99의3(신축) 또는 §98의3(미분양)으로 자동 분류되었습니다.";
-
 // ============================================================================
 // P2-1: 사용자 이력 영향 카운트 도구
 // ============================================================================
@@ -123,6 +140,7 @@ export interface ReductionReclassificationImpact {
   byType: {
     unsold_housing_to_new_99_3: number;   // §99의3 신축으로 자동 분류
     unsold_housing_to_unsold_98_3: number; // §98의3 미분양으로 자동 분류
+    unsold_housing_to_unresolved: number;  // 취득일이 §98의3 기간 밖 — 조문 미정(재선택 요구, Q-28)
     long_term_rental_to_rental_97_3: number;
     new_housing_to_new_99: number;
   };
@@ -148,6 +166,7 @@ export async function analyzeReductionReclassificationImpact(
     byType: {
       unsold_housing_to_new_99_3: 0,
       unsold_housing_to_unsold_98_3: 0,
+      unsold_housing_to_unresolved: 0,
       long_term_rental_to_rental_97_3: 0,
       new_housing_to_new_99: 0,
     },
@@ -163,11 +182,10 @@ export async function analyzeReductionReclassificationImpact(
       if (!Array.isArray(reductions)) continue;
       for (const red of reductions) {
         if (red.type === "unsold_housing") {
-          if (reclassifiedLegacyHousingType("unsold_housing", asset.acquisitionDate, asset.assetContractDate) === "new_99_3") {
-            impact.byType.unsold_housing_to_new_99_3 += 1;
-          } else {
-            impact.byType.unsold_housing_to_unsold_98_3 += 1;
-          }
+          const target = reclassifiedLegacyHousingType("unsold_housing", asset.acquisitionDate, asset.assetContractDate);
+          if (target === "new_99_3") impact.byType.unsold_housing_to_new_99_3 += 1;
+          else if (target === "unresolved") impact.byType.unsold_housing_to_unresolved += 1;
+          else impact.byType.unsold_housing_to_unsold_98_3 += 1;
           impact.totalTransformed += 1;
           recordAffected = true;
         } else if (red.type === "long_term_rental") {

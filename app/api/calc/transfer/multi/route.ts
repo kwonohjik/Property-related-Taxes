@@ -33,6 +33,7 @@ import { computePreliminaryFilingTaxes } from "@/lib/tax-engine/transfer-tax-pre
 import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
 import { expandMultiGeneralBuildings } from "../multi-gb-expansion";
 import { gbPreliminaryUnits } from "../multi-gb-expansion";
+import { aggregateCarryoverDebtAlone, carryoverDebtPreliminaryUnits, isCarryoverDebtItem } from "../multi-carryover-debt-units";
 import { toGbCarryoverUnits } from "../bundled-gb-carryover-units";
 import { attachGbCarryoverUnits } from "../bundled-gb-carryover-units";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
@@ -239,7 +240,12 @@ export async function POST(request: NextRequest) {
       calculateTransferTax,
       ratesByTransferDate,
       // 일반건물 1건 = 예정신고 1건 — 카드 묶음을 한 번에 계산한다(`multi-gb-expansion.ts`).
-      gbPreliminaryUnits(gbExpansion.cardUnits, data.taxYear, rates, ratesByTransferDate, gbCarryoverUnits),
+      // 이월과세 × 채무 인수분 자산은 카드 1장짜리 신고 단위 집계로(단건 `carryover-debt-route.ts`와 같은 계산 · 단건 엔진은 채무 키에서 멈춘다).
+      [
+        ...gbPreliminaryUnits(gbExpansion.cardUnits, data.taxYear, rates, ratesByTransferDate, gbCarryoverUnits),
+        // 일반건물 카드(채무가 파트 카드에 실린다)는 위 물건 단위가 이미 계산한다 — 카드 하나만 따로 세면 그 물건의 신고가 쪼개진다.
+        ...carryoverDebtPreliminaryUnits(engineInput.properties as unknown as TransferTaxInput[], data.taxYear, rates, ratesByTransferDate, new Set(gbExpansion.cardUnits.flat())),
+      ],
     );
 
     // 자산별 결정세액·미납세액 주입 후 2차 계산 (가산세 자산별 합산 반영).
@@ -280,20 +286,25 @@ export async function POST(request: NextRequest) {
     const result = calc.result;
     // 양도일과 같은 날 취득한 권리를 보유로 세면 어느 자산의 결론이 달라질 때만 확인 필요를 싣는다(코드 리뷰 결정 #1) — 단건과 같은 고지.
     if (
-      anySameDayRightChangesConclusion(finalInput.properties as unknown as TransferTaxInput[], (i) =>
+      anySameDayRightChangesConclusion(finalInput.properties as unknown as TransferTaxInput[], (i) => {
         // 자산 하나만의 단독 계산 — 예정신고 세액 계산(`computePreliminaryFilingTaxes`)과 같은 모양으로 집계 컨텍스트를 뺀다.
-        calculateTransferTax(
-          {
-            ...i,
-            annualBasicDeductionUsed: finalInput.annualBasicDeductionUsed,
-            skipBasicDeduction: false,
-            amendment: undefined,
-            filingPenaltyDetails: undefined,
-            delayedPaymentDetails: undefined,
-          },
-          ratesForTransferDate(i.transferDate, rates, ratesByTransferDate),
-        ),
-      )
+        const alone = {
+          ...i,
+          annualBasicDeductionUsed: finalInput.annualBasicDeductionUsed,
+          skipBasicDeduction: false,
+          amendment: undefined,
+          filingPenaltyDetails: undefined,
+          delayedPaymentDetails: undefined,
+        };
+        if (!isCarryoverDebtItem(alone)) return calculateTransferTax(alone, ratesForTransferDate(i.transferDate, rates, ratesByTransferDate));
+        // 채무 인수분 이월과세 — 카드 1장짜리 신고 단위 집계(단건 route와 같은 계산)의 결론 세 값으로 비교한다.
+        const r = aggregateCarryoverDebtAlone(alone, data.taxYear, finalInput.annualBasicDeductionUsed, rates, ratesByTransferDate);
+        return {
+          isExempt: r.properties.every((p) => p.isExempt),
+          isPartialExempt: r.properties.some((p) => p.isPartialExempt),
+          totalTax: r.totalTax,
+        } as ReturnType<typeof calculateTransferTax>;
+      })
     ) {
       result.warnings = [...result.warnings, SAME_DAY_RIGHT_NOTICE];
     }

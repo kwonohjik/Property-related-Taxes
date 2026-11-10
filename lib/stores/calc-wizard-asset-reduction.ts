@@ -11,6 +11,13 @@ import type { TriStateAnswer } from "@/lib/tax-engine/transfer-reductions/new-99
 
 export type AssetReductionForm =
   | {
+      /**
+       * 「조문 미정」 — 구 `unsold_housing` 이력·세션의 취득일이 §98의3 기간(2009.2.12~2010.2.11) 밖이라
+       * 조문을 정하지 못한 항목 (리뷰 Q-28, 2026-11-10). 엔진·API로 가지 않는다 — ⑧이 막고 사용자가 항목을 해제한 뒤 조문을 다시 고른다.
+       */
+      type: "unsold_housing_unresolved";
+    }
+  | {
       type: "self_farming";
       /** 본인 자경기간(년) */
       farmingYears: string;
@@ -502,7 +509,14 @@ export type RentalReductionFormVariant =
       /** 임대개시일 (YYYY-MM-DD) — 사업자등록+임대사업자등록 후 개시일 기산 (령 §98의5⑤1호 준용) */
       /** 임대계약 체결일 (YYYY-MM-DD) — 2015.12.31 이전 한정 (법 §98의8① 괄호) */
       rentalContractDate988: string;
+      /** 실제 임대개시일 — 기산일은 max(사업자등록일, 임대사업자등록일, 이 날짜) (령 §98의7⑤ → §98의5⑤1호) */
       rentalStartDate988: string;
+      /** 사업자등록일 (소법 §168) */
+      businessRegistrationDate988: string;
+      /** 임대사업자등록일 (민특법 §5) */
+      rentalRegistrationDate988: string;
+      /** 공실 구간(양 끝 포함) — 임대기간에서 제외. 옛 기록은 migrate가 [] 로 채운다 */
+      rentalVacancyPeriods988: VacancyPeriodFormItem[];
       /** 임대종료일 (YYYY-MM-DD) — 빈값 = 양도일까지 계속 */
       rentalEndDate988: string;
       /** 상속 합산 피상속인 임대기간 (개월) */
@@ -588,8 +602,12 @@ export type RentalReductionFormVariant =
       usageApprovalDate983: string;
       /** 서울 밖 + 지정지역 아님 확인 */
       isOutsideSeoulNotDesignated983: boolean;
-      /** 수도권과밀억제권역 (60% + 면적 한정) */
-      isOverconcentration983: boolean;
+      /**
+       * 수도권과밀억제권역 (60% + 면적 한정) — 3-state: "" 미선택(⑧ 차단) | "yes" 예 | "no" 아니오.
+       * 종전 boolean(기본 false)은 기본값과 사용자 선택을 구분할 수 없어 미확인 과밀 사안이 100% 감면으로 갔다 (리뷰 Q-20).
+       * 엔진 입력은 boolean이다 — ④가 "yes"→true·"no"→false로 옮기고 미선택은 ⑧이 막아 엔진에 닿지 않는다.
+       */
+      isOverconcentration983: "" | "yes" | "no";
       /** 대지면적 (㎡, DecimalInput) — 과밀 시 660 이내 */
       landAreaSqm983: string;
       /** 연면적 (공동주택 전용, ㎡) — 과밀 시 149 이내 */

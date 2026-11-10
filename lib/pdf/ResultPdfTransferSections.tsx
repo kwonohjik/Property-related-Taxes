@@ -381,7 +381,7 @@ export function TransferSplitSection({ r, phdApartment }: { r: R; phdApartment?:
   );
 }
 
-export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
+export function TransferMultiSection({ r, selectedSectionIds, codeRows }: { r: R; selectedSectionIds?: string[]; codeRows?: { label: string; value: string; note?: string }[] }) {
   // form-table(1차 소유)·summary(회귀호환 별칭) 대표 노드 — 둘 다 미포함일 때만 null (단일 렌더, 중복 없음)
   if (
     selectedSectionIds !== undefined &&
@@ -390,6 +390,10 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
   )
     return null;
   const props = Array.isArray(r.properties) ? (r.properties as R[]) : [];
+  // 신고서 코드 칸(③·⑯·㉑·㉒) — 화면 합산 신고서 표 행과 같은 라벨·값(`buildFilingCodePdfRows`). 자산별 칸은 「라벨 — 자산」으로 나뉜다. PDF가 다시 계산하지 않는다.
+  const codeLines = (prefix: string) => (codeRows ?? [])
+    .filter((row) => row.label === prefix || row.label.startsWith(`${prefix} `))
+    .map((row, i) => (<View key={`mcr-${prefix}-${i}`} style={s.row}><Text style={s.lbl}>{row.label}</Text><Text style={s.val}>{row.value}</Text></View>));
   const lossTable = Array.isArray(r.lossOffsetTable) ? (r.lossOffsetTable as R[]) : [];
   const comparedTax = str(r.comparedTaxApplied) ?? "none";
 
@@ -450,13 +454,16 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
           <View style={s.row}><Text style={s.lbl}>총 양도차익</Text><Text style={s.val}>{fmt(r.totalTransferGain)}</Text></View>
         )}
         {num(r.totalLongTermHoldingDeduction) !== undefined && (r.totalLongTermHoldingDeduction as number) > 0 && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제</Text><Text style={s.val}>- {fmt(r.totalLongTermHoldingDeduction)}</Text></View>)}
+        {codeLines("장기보유특별공제 코드")}
         <View style={s.row}><Text style={s.lbl}>통산 후 양도소득금액</Text><Text style={s.val}>{fmt(totalIncomeAfterOffset)}</Text></View>
         {(num(r.unusedLoss) ?? 0) > 0 && (<View style={s.row}><Text style={s.lblSub}>소멸 차손 (이월 불인정)</Text><Text style={s.val}>- {fmt(r.unusedLoss)}</Text></View>)}
         <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{aggReducibleIncome > 0 ? fmt(aggReducibleIncome) : "0"}</Text></View>
         <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{aggNew993Reducible > 0 ? fmt(aggNew993Reducible) : "0"}</Text></View>
+        {codeLines("감면종류·감면율")}
         <View style={s.row}><Text style={s.lbl}>감면후 소득금액</Text><Text style={s.val}>{fmt(incomeAmountAfter)}</Text></View>
         <View style={s.row}><Text style={s.lbl}>기본공제 (§103)</Text><Text style={s.val}>- {fmt(r.basicDeduction)}</Text></View>
         <View style={s.rowBg}><Text style={s.lbl}>과세표준</Text><Text style={s.valAccent}>{fmt(r.taxBase)}</Text></View>
+        {codeLines("세율구분 코드")}
         {comparedTax !== "none" && (<><View style={s.row}><Text style={s.lblSub}>방법 A — 전체 누진</Text><Text style={s.val}>{fmt(r.calculatedTaxByGeneral)}</Text></View><View style={s.row}><Text style={s.lblSub}>방법 B — 세율군별 (§104의2)</Text><Text style={s.val}>{fmt(r.calculatedTaxByGroups)}</Text></View></>)}
         <View style={s.row}><Text style={s.lbl}>산출세액{comparedTax !== "none" ? ` (${comparedTax === "groups" ? "방법 B" : "방법 A"} 적용)` : ""}</Text><Text style={s.val}>{fmt(r.calculatedTax)}</Text></View>
         {(num(r.reductionAmount) ?? 0) > 0 && (<View style={s.row}><Text style={s.lbl}>감면세액 합계</Text><Text style={s.val}>- {fmt(r.reductionAmount)}</Text></View>)}
@@ -470,6 +477,7 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
         ))}
         <View style={s.rowBg}><Text style={s.lbl}>총결정세액</Text><Text style={s.valAccent}>{fmt(totalDeterminedTax)}</Text></View>
         {aggRuralSurtax > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세</Text><Text style={s.val}>{fmt(aggRuralSurtax)}</Text></View>)}
+        {codeLines("소득세 감면세액")}
         <View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>
       </View>
 

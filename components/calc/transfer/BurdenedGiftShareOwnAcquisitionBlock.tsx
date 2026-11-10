@@ -7,6 +7,7 @@
  * 노출 · ④ · ⑧이 같은 leaf(`bgShareOwnAcquisitionApplies`)로 판정한다. 계획서 `companion-inherit-valuation-share-vp2c.plan.md` §14 D-2 (Q-6 a).
  *
  * 매매사례가액 · 감정가액(K-6/K-7) 금액 칸은 종전부터 지분 카드가 받는다(`BurdenedGiftTrancheBasisBlock`) — 여기서는 산정방식과 실지취득가액만 연다.
+ * 재개발 APT · 조합원입주권(원조합원)은 실지취득가액 한 칸만 연다 — 산정방식은 자산 1을 따른다(`bgShareOwnAcquisitionFields` · vp2c §25 D-3g).
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -14,7 +15,9 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { BurdenedGiftAcquisitionMethodField } from "./BurdenedGiftPresumedAcquisitionSection";
 import { bgShareOwnAcquisitionApplies } from "@/lib/calc/bg-share-own-acquisition";
-import { BG_SHARE_OWN_ACQ_FIELDS } from "@/lib/calc/bg-share-own-acquisition";
+import { bgShareOwnAcquisitionFields } from "@/lib/calc/bg-share-own-acquisition";
+import { bgActualFieldSec163_9Cause } from "@/lib/calc/bg-share-own-acquisition";
+import { sec163_9Hint } from "@/lib/calc/bg-share-own-acquisition";
 import { bgCollateralForcesStdAcq } from "@/lib/calc/burdened-gift-collateral-win";
 import { bgHouseSplitActive } from "@/lib/calc/bg-house-split";
 
@@ -31,10 +34,15 @@ interface Props {
 export function BurdenedGiftShareOwnAcquisitionBlock({ asset, merged, primaryAsset, onChange, transferDate }: Props) {
   if (!bgShareOwnAcquisitionApplies(merged)) return null;
   const on = asset.bgShareOwnAcquisition === true;
-  const showActual = on && merged.bgAcquisitionMethod === "actual" && !bgCollateralForcesStdAcq(merged, true);
+  const fields = bgShareOwnAcquisitionFields(merged);
+  // 재개발 · 입주권 — 산정방식은 자산 1이고, 실지가 쓰일 때만 이 블록이 뜬다(leaf가 판정)
+  const actualOnly = fields.length === 1;
+  const showActual = on && (actualOnly || (merged.bgAcquisitionMethod === "actual" && !bgCollateralForcesStdAcq(merged, true)));
   const twoParts = merged.assetKind === "general_building" || bgHouseSplitActive(merged, { isNonPrimary: true });
+  // 재개발 · 입주권 상속 · 증여 지분 — 그 칸에 넣을 값은 §163⑨ 평가액이다(vp2c §27 D-3l)
+  const sec163_9 = actualOnly ? sec163_9Hint(bgActualFieldSec163_9Cause(merged)) : undefined;
   const actualField = (key: "bgActualAcquisitionLand" | "bgActualAcquisitionBuilding" | "bgActualAcquisitionTotal", label: string) => (
-    <FieldCard label={label} hint="물건 전체(100%) 기준 — 이 지분 취득 당시 가액을 물건 전체로 환산해 입력하세요(지분율은 시스템이 곱합니다).">
+    <FieldCard label={label} hint={`물건 전체(100%) 기준 — 이 지분 취득 당시 가액을 물건 전체로 환산해 입력하세요(지분율은 시스템이 곱합니다).${sec163_9 ? ` ${sec163_9}` : ""}`}>
       <CurrencyInput label="" hideUnit value={asset[key]} data-field={key} onChange={(v) => onChange({ [key]: v })} />
     </FieldCard>
   );
@@ -44,7 +52,11 @@ export function BurdenedGiftShareOwnAcquisitionBlock({ asset, merged, primaryAss
       <ToggleCard
         tone="violet"
         title="이 지분의 취득가액을 자산 1과 따로 입력"
-        description="부담부증여 취득가액은 양도인이 그 지분을 취득할 때의 가액에 채무비율을 곱합니다(소득세법 시행령 §159①1호). 이 지분을 자산 1과 다른 때·다른 가액으로 취득했으면 켜고 이 지분의 산정방식·실지취득가액을 입력하세요. 끄면 자산 1의 값을 씁니다."
+        description={
+          actualOnly
+            ? "부담부증여 취득가액은 양도인이 그 지분을 취득할 때의 가액에 채무비율을 곱합니다(소득세법 시행령 §159①1호). 이 지분을 자산 1과 다른 가액으로 취득했으면 켜고 이 지분의 실지취득가액을 입력하세요. 산정방식은 자산 1을 따릅니다. 끄면 자산 1의 값을 씁니다."
+            : "부담부증여 취득가액은 양도인이 그 지분을 취득할 때의 가액에 채무비율을 곱합니다(소득세법 시행령 §159①1호). 이 지분을 자산 1과 다른 때·다른 가액으로 취득했으면 켜고 이 지분의 산정방식·실지취득가액을 입력하세요. 끄면 자산 1의 값을 씁니다."
+        }
         checked={on}
         onCheckedChange={(v) =>
           onChange(
@@ -52,16 +64,18 @@ export function BurdenedGiftShareOwnAcquisitionBlock({ asset, merged, primaryAss
               ? {
                   bgShareOwnAcquisition: true,
                   // 처음 켤 때만 자산 1 값으로 시작한다 — 이미 이 카드에 넣어 둔 값은 덮지 않는다.
-                  ...(asset.bgAcquisitionMethod ? {} : Object.fromEntries(BG_SHARE_OWN_ACQ_FIELDS.map((k) => [k, primaryAsset[k]]))),
+                  ...((actualOnly ? asset.bgActualAcquisitionTotal : asset.bgAcquisitionMethod) ? {} : Object.fromEntries(fields.map((k) => [k, primaryAsset[k]]))),
                 }
               : { bgShareOwnAcquisition: false },
           )
         }
       >
         <div className="space-y-2">
-          <BurdenedGiftAcquisitionMethodField asset={merged} onChange={onChange} transferDate={transferDate} fractionalSplit />
+          {!actualOnly && <BurdenedGiftAcquisitionMethodField asset={merged} onChange={onChange} transferDate={transferDate} fractionalSplit />}
           {showActual &&
-            (twoParts ? (
+            (actualOnly ? (
+              actualField("bgActualAcquisitionTotal", merged.assetKind === "right_to_move_in" ? "이 지분 종전 부동산 실지취득가액" : "이 지분 실지취득가액")
+            ) : twoParts ? (
               <>
                 {actualField("bgActualAcquisitionLand", "이 지분 토지 실지취득가액")}
                 {actualField("bgActualAcquisitionBuilding", "이 지분 건물 실지취득가액")}

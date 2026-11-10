@@ -31,6 +31,9 @@ import {
 } from "./FilingFormTableHelpers";
 import { gbCarryoverAcqDateOverride, purchasedPartAcqDateOverride } from "./FilingFormTableDateHelpers";
 import { fmtRatePct } from "./FilingFormTableRowDefs";
+import { FILING_CODE_ROW_LABEL } from "./FilingFormTableRowDefs";
+import { resolveBreakdownLthdFilingCode } from "./filing-form-codes";
+import { resolveBreakdownReductionKind } from "./filing-form-codes";
 import { ruralPenaltyRow } from "./FilingFormTableRowDefs";
 import { resolveFilingRateCode } from "./filing-rate-code";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
@@ -84,6 +87,11 @@ function aggregateEstimatedDisplay(
 /** 합산 표 자산별 세액 칸 안내 — 자산 단독 누진 참고값이라 합이 합계와 다를 수 있다. */
 export const REF_TAX_FOOTNOTE =
   "산출세액부터 총결정세액까지의 자산별 칸(참고)은 각 자산을 따로 계산한 값입니다. 합계 칸은 과세표준을 모두 더한 뒤 세율을 적용하므로 자산별 칸을 더한 값과 다를 수 있습니다.";
+
+/** 신고서 코드 칸 행은 어느 열에든 값이 있을 때만 낸다(없으면 행 자체를 만들지 않는다 — 단건 `optionalRow`와 같은 정책). */
+function hasAnyValue(v: Record<string, Record<ColumnKey, number | string | null>>, key: string): boolean {
+  return Object.values(v[key] ?? {}).some((x) => x !== null && x !== undefined && x !== "");
+}
 
 export function buildAggregateRows(
   _result: TransferTaxResult,
@@ -336,6 +344,7 @@ export function buildAggregateRows(
     // ③ 세율구분 코드 — 자산별. 집계 breakdown에는 `rateClause`가 없어 그룹 분류를 쓴다.
     const assetCode = resolveFilingRateCode({
       rateClause: p.rateClause,
+      specialRateBasis: p.specialRateBasis,
       assetKind: a?.assetKind,
       appliedRate: p.appliedRate,
       transferDate: colTransferDate,
@@ -374,6 +383,13 @@ export function buildAggregateRows(
       acqDateNotes[col] = preDeemedAcqDateNote(preDeemed);
       acqNotes[col] = [acqNotes[col], preDeemedAcqPriceNote(preDeemed)].filter(Boolean).join(" / ");
     }
+
+    // 부표1 ⑯ 장기보유특별공제 코드 · ㉑ 감면종류·감면율 — 단건과 같은 해석 함수(`filing-form-codes.ts`). 단정 불가면 칸을 비운다.
+    // GB 파트 열은 ㉑을 내지 않는다(감면은 자산 단위로 배분돼 파트별 값이 없다 — 세액 행과 같은 규칙).
+    const assetLthdCode = resolveBreakdownLthdFilingCode(p);
+    if (assetLthdCode) setStr("lthdCode", col, assetLthdCode);
+    const assetReductionKind = isGbPartColumn ? undefined : resolveBreakdownReductionKind(p);
+    if (assetReductionKind) setStr("reductionKind", col, assetReductionKind);
 
     // 농어촌특별세·지방세 — 합산-only
     setNum("ruralSurtax", col, null);
@@ -498,6 +514,8 @@ export function buildAggregateRows(
    * 자산별로 나누어지지 않는다.
    */
   setNum("ruralSurtax", "total", aggregated.ruralSurtax ?? 0);
+  // 농특세 납부계산서 ㉒ 소득세 감면세액 — 집계 엔진 echo(과세 대상 감면세액 합 · 합 × 20% = 농특세일 때만). 신고서 단위라 합계 열에만.
+  if (aggregated.ruralSurtaxReductionBase !== undefined) setNum("ruralReductionBase", "total", aggregated.ruralSurtaxReductionBase);
   // NH-38 — 농특세 미납분 납부지연가산세(엔진 합계 · totalTax에 포함). 0이면 행을 내지 않는다.
   if ((aggregated.ruralSurtaxDelayedPenalty ?? 0) > 0)
     setNum("ruralSurtaxPenalty", "total", aggregated.ruralSurtaxDelayedPenalty ?? 0);
@@ -553,7 +571,8 @@ export function buildAggregateRows(
     ["taxableGain", "과세대상 양도차익", { separatorAfter: true }],
     ["ltDeduction", "장기보유특별공제"],
     ["ltHoldingPart", " 보유 기간분 장특", { indent: true }],
-    ["ltResidencePart", " 거주 기간분 장특", { indent: true, separatorAfter: true }],
+    ["ltResidencePart", " 거주 기간분 장특", { indent: true, separatorAfter: !hasAnyValue(v, "lthdCode") }],
+    ...(hasAnyValue(v, "lthdCode") ? ([["lthdCode", FILING_CODE_ROW_LABEL.lthdCode, { separatorAfter: true }]] as Array<[string, string, Partial<RowDef>]>) : []),
     ["incomeAmount", "양도소득금액"],
     ...(hasLossOffsetRow
       ? ([["lossOffset", "양도차손 통산 (§102②·영 §167의2)"]] as Array<[string, string]>)
@@ -564,6 +583,7 @@ export function buildAggregateRows(
     ["nontaxableIncome", "비과세 양도소득금액 (소령 §161①)", { indent: true }],
     ["reductionTargetIncome", "세액감면대상금액"],
     ["reductionTargetIncome2", "소득금액 감면대상"],
+    ...(hasAnyValue(v, "reductionKind") ? ([["reductionKind", FILING_CODE_ROW_LABEL.reductionKind]] as Array<[string, string]>) : []),
     ["incomeAmountAfter", "감면후 소득금액"],
     ["priorIncomeAmount", "기신고 양도소득금액"],
     ["basicDeduction", "기본공제", { separatorAfter: true }],
@@ -588,6 +608,7 @@ export function buildAggregateRows(
     ["priorPaidTax", "기납부세액 (예정신고, §111③)"],
     ["deductedPayable", "차감납부할세액(환급세액)", { highlight: true, separatorAfter: true }],
     ["ruralSurtax", "농어촌특별세"],
+    ...(hasAnyValue(v, "ruralReductionBase") ? ([["ruralReductionBase", FILING_CODE_ROW_LABEL.ruralReductionBase, { indent: true }]] as Array<[string, string, Partial<RowDef>]>) : []),
     ...(ruralPenaltyRow(v) ? [ruralPenaltyRow(v)!] : []),
     ["localCalculatedTax", "지방소득세 산출세액"],
     ["localReduction", "지방세 감면세액"],

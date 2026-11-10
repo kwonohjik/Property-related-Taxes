@@ -36,6 +36,8 @@ function base988(overrides: Partial<Unsold988Input> = {}): Unsold988Input {
     exclusiveAreaSqm: 84.5,
     rentalContractDate: D("2015-12-20"),
     rentalStartDate: D("2016-01-01"),
+    businessRegistrationDate: D("2015-12-10"),
+    rentalRegistrationDate: D("2015-12-10"),
     isUnsoldAfterCompletion: true,
     isFirstContract: true,
     isNotRecontract: true,
@@ -107,7 +109,7 @@ describe("D6-01 풀 파이프라인 — 세액 영향", () => {
     contractDate988: new Date("2015-11-01"),
     acquisitionPrice988: 500_000_000,
     exclusiveAreaSqm988: 84,
-    rentalStartDate988: new Date("2016-03-01"),
+    rentalStartDate988: new Date("2016-03-01"), businessRegistrationDate988: new Date("2015-12-10"), rentalRegistrationDate988: new Date("2015-12-10"),
     isUnsoldAfterCompletion988: true,
     isFirstContract988: true,
     isNotRecontract988: true,
@@ -153,7 +155,7 @@ describe("D6-01 ④⑧⑫ 배관", () => {
       acquisitionPrice988: "500000000",
       exclusiveAreaSqm988: "84",
       rentalContractDate988: v,
-      rentalStartDate988: "2016-03-01",
+      rentalStartDate988: "2016-03-01", businessRegistrationDate988: "2015-12-10", rentalRegistrationDate988: "2015-12-10",
       isUnsoldAfterCompletion988: true,
       isFirstContract988: true,
       isNotRecontract988: true,
@@ -174,7 +176,7 @@ describe("D6-01 ④⑧⑫ 배관", () => {
       type: "unsold_98_8",
       contractDate988: "2015-11-01",
       rentalContractDate988: "2015-12-20",
-      rentalStartDate988: "2016-03-01",
+      rentalStartDate988: "2016-03-01", businessRegistrationDate988: "2015-12-10", rentalRegistrationDate988: "2015-12-10",
     }) as Record<string, unknown>;
     expect(parsed.rentalContractDate988).toBe("2015-12-20");
   });

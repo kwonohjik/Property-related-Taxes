@@ -12,6 +12,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { bgShareOwnAcquisitionApplies } from "@/lib/calc/bg-share-own-acquisition";
+import { bgShareOwnAcquisitionFields } from "@/lib/calc/bg-share-own-acquisition";
 
 /**
  * @param shareCard 축 B 지분 카드(자산 2~N) — ② 양도정보가 숨으므로 「위 ‘부담부증여’ 카드」 · 「위 ② 양도정보」 대신 실제 입력 위치를 가리킨다
@@ -20,9 +21,13 @@ import { bgShareOwnAcquisitionApplies } from "@/lib/calc/bg-share-own-acquisitio
  */
 export function CompanionAcqSpecialAssetNotices({ asset, shareCard }: { asset?: AssetForm; shareCard?: boolean }) {
   const ownAcqApplies = !!asset && shareCard === true && bgShareOwnAcquisitionApplies(asset);
+  // 재개발 · 입주권 지분은 토글이 실지취득가액 한 칸만 받는다 — 산정방식은 자산 1(vp2c §25 D-3g)
+  const ownAcqActualOnly = ownAcqApplies && !!asset && bgShareOwnAcquisitionFields(asset).length === 1;
   const methodSource = !shareCard
     ? "위 ‘부담부증여’ 카드의 취득가액 산정방식에서 선택"
-    : ownAcqApplies && asset?.bgShareOwnAcquisition === true
+    : ownAcqActualOnly && asset?.bgShareOwnAcquisition === true
+      ? "산정방식은 자산 1의 ② 양도정보 ‘부담부증여’ 카드에서 선택 · 이 지분의 실지취득가액은 이 카드 위 「이 지분의 취득가액을 자산 1과 따로 입력」에서 입력"
+      : ownAcqApplies && asset?.bgShareOwnAcquisition === true
       ? "이 카드 위 「이 지분의 취득가액을 자산 1과 따로 입력」에서 선택"
       : ownAcqApplies
         ? "자산 1의 ② 양도정보 ‘부담부증여’ 카드에서 선택 — 이 지분을 자산 1과 다른 가액으로 취득했으면 이 카드 위 「이 지분의 취득가액을 자산 1과 따로 입력」을 켜세요"
@@ -100,7 +105,15 @@ export function CompanionAcqSpecialAssetNotices({ asset, shareCard }: { asset?: 
             따라서 상단 일반 &ldquo;취득가액 산정 방식·취득가액&rdquo; 입력은 표시하지 않습니다.
           </p>
           <p className="text-caption text-violet-700 dark:text-violet-300">
-            ※ 인가전 분의 <b>환산취득가</b>(시행령 §166③ + §164⑦ 본문)는 아래 §166 섹션 내 환산취득가 토글에서 입력합니다.
+            {asset?.transferType === "burdened_gift" ? (
+              // 부담부증여는 ⑤ 라디오가 없다 — 산정방식(K-4 실지 · K-5 환산)이 정한다(`redevPreApprovalAcqMode` · vp2c §25 D-3h)
+              <>
+                ※ 부담부증여에서 인가전 분 <b>환산취득가</b>(시행령 §166③)는 {shareCard ? "자산 1의 ② 양도정보" : "위 ② 양도정보"} ‘부담부증여’ 카드의 산정방식에서
+                「환산취득가액」을 고르면 아래 §166 섹션에 입력칸이 열립니다.
+              </>
+            ) : (
+              <>※ 인가전 분의 <b>환산취득가</b>(시행령 §166③ + §164⑦ 본문)는 아래 §166 섹션 내 환산취득가 토글에서 입력합니다.</>
+            )}
           </p>
         </div>
       )}
@@ -139,8 +152,22 @@ export function CompanionAcqSpecialAssetNotices({ asset, shareCard }: { asset?: 
               </div>
               <p className="text-xs text-violet-800 dark:text-violet-200">
                 조합원입주권 양도차익은 인가전 분(권리가액 − 종전 부동산 취득가액)과 인가후 분으로 나누어
-                계산합니다. 종전 부동산의 취득가액은 아래 <b>⑤ 인가전 분 종전 부동산 취득가액</b>에서
-                입력하므로, 상단 일반 &ldquo;취득가액 산정 방식·취득가액&rdquo; 입력은 표시하지 않습니다.
+                계산합니다.{" "}
+                {asset?.transferType === "burdened_gift" ? (
+                  // 부담부증여는 ⑤ 섹션을 숨기고 ‘부담부증여’ 카드의 「종전 부동산 실지취득가액」을 쓴다(vp2c §25 D-3h)
+                  <>
+                    부담부증여에서는 종전 부동산의 실지취득가액을{" "}
+                    {shareCard
+                      ? "자산 1의 ② 양도정보 ‘부담부증여’ 카드에서 입력합니다 — 이 지분을 다른 가액으로 취득했으면 이 카드 위 「이 지분의 취득가액을 자산 1과 따로 입력」을 켜세요"
+                      : "위 ② 양도정보 ‘부담부증여’ 카드에서 입력합니다"}
+                    . 상단 일반 &ldquo;취득가액 산정 방식·취득가액&rdquo; 입력은 표시하지 않습니다.
+                  </>
+                ) : (
+                  <>
+                    종전 부동산의 취득가액은 아래 <b>⑤ 인가전 분 종전 부동산 취득가액</b>에서
+                    입력하므로, 상단 일반 &ldquo;취득가액 산정 방식·취득가액&rdquo; 입력은 표시하지 않습니다.
+                  </>
+                )}
               </p>
               <p className="text-caption text-violet-700 dark:text-violet-300">
                 ※ 취득가액을 확인할 수 없는 경우의 대체수단은 §166③ <b>환산</b>입니다(감정가액·매매사례가액 아님).

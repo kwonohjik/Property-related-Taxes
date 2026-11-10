@@ -32,7 +32,7 @@ function make983(std: Std): AssetReductionForm {
     contractDate983: "2009-06-01",
     // 취득일이 2010.2.11 이후인 fixture — 계약금 완납일 요건(US-21)은 충족시킨다
     downPaymentCompletedDate983: "2009-06-01",
-    isOverconcentration983: false,
+    isOverconcentration983: "no",
     standardPriceAtAcquisition983: std.acq ?? "",
     standardPriceAt5Years983: std.y5 ?? "",
     standardPriceAtTransfer983: std.transfer ?? "",

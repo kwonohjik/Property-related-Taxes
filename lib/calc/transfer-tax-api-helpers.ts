@@ -16,7 +16,7 @@ import {
 } from "@/lib/tax-engine/expropriation-scope";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { soleSplitRightJudgmentFacts } from "./sole-split-right-judgment-facts";
-import { BG_SHARE_OWN_ACQ_FIELDS } from "./bg-share-own-acquisition";
+import { bgShareOwnAcquisitionFields } from "./bg-share-own-acquisition";
 import { bgShareOwnAcquisitionActive } from "./bg-share-own-acquisition";
 import { BG_SHARE_STD_TRANSFER_KINDS } from "./bg-share-own-acquisition";
 import { deriveMemberRightsValue } from "./burdened-gift-right-valuation";
@@ -164,9 +164,9 @@ export { isHousingLike } from "./housing-like-asset";
  */
 export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
   const merged = mergePrimaryBasicAll(a, primary);
-  // 축 B × 부담부증여 — 지분 카드가 자기 산정방식 · 실지취득가액을 받기로 했으면 그 네 칸만 되돌린다(D-2 · `bg-share-own-acquisition.ts`).
+  // 축 B × 부담부증여 — 지분 카드가 자기 산정방식 · 실지취득가액을 받기로 했으면 그 칸만 되돌린다(D-2 · 재개발 · 입주권은 실지 한 칸 — D-3g · `bg-share-own-acquisition.ts`).
   if (a !== primary && bgShareOwnAcquisitionActive(a, merged)) {
-    for (const k of BG_SHARE_OWN_ACQ_FIELDS) (merged as unknown as Record<string, unknown>)[k] = a[k];
+    for (const k of bgShareOwnAcquisitionFields(merged)) (merged as unknown as Record<string, unknown>)[k] = a[k];
   }
   // 축 B × 부담부증여 — 양도시 기준시가는 같은 물건 · 같은 양도일의 물건 단위 값이다. 지분 카드에는 칸이 없다(②가 숨고 ③은 부담부증여로 판정한다).
   // 병합하지 않으면 기준시가 평가 · 환산(K-5)에서 ⑧이 숨은 ②를 요구해 막다른 길이었다(계획서 vp2c §17 D-3d · Q-11 (가)). 일반 양도 지분은 ③에 자기 칸이 있어 그대로 둔다.
