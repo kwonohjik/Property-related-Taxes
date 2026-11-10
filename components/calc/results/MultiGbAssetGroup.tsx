@@ -83,7 +83,7 @@ export function MultiGbAssetGroup({
         )}
         <div className="pt-3 space-y-2">
           {cards.map((c) => (
-            <PropertyBreakdownAccordion key={c.propertyId} breakdown={c} property={property} />
+            <PropertyBreakdownAccordion key={c.propertyId} breakdown={c} property={property} hideRefTax />
           ))}
         </div>
       </CardContent>

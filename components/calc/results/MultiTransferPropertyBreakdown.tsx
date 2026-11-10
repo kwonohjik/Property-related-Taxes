@@ -209,9 +209,16 @@ export const RATE_GROUP_COLORS: Record<RateGroup, string> = {
 export function PropertyBreakdownAccordion({
   breakdown,
   property,
+  hideRefTax = false,
 }: {
   breakdown: PerPropertyBreakdown;
   property?: PropertyItem;
+  /**
+   * «산출세액 (참고)»·«결정세액 (참고)» 행을 숨긴다 — 일반건물이 쪼갠 계산 파트(토지·건물) 카드용.
+   * 파트별 참고 세액은 합이 합계와 맞지 않아 신고서 건별 열·PDF와 같이 싣지 않는다(`transfer/gb-part-card.ts`).
+   * «감면세액»은 파트 배분 감면의 합이 합산 감면과 같아 그대로 둔다. 호출부(`MultiGbAssetGroup`)가 그룹 단위로 정한다.
+   */
+  hideRefTax?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -234,7 +241,7 @@ export function PropertyBreakdownAccordion({
   const incomeBase = hasProration ? taxableGain : breakdown.transferGain;
 
   // 자산별 산출세액·결정세액(참고) — 엔진이 다건 컨텍스트로 미리 계산한 값 사용.
-  // 자산이 1건일 때 합산 산출세액과 일치. 같은 세율군(일반 누진) 자산이 2건 이상이면 비교과세 유무와 무관하게 자산별 합 ≠ 합산 산출세액이라 "(참고)" 표기.
+  // 자산이 1건일 때 합산 산출세액과 일치. 누진 세율을 쓰는 군(일반 누진·비사업용 중과)에 같은 군 자산이 2건 이상이면 비교과세 유무와 무관하게 자산별 합 ≠ 합산 산출세액이라 "(참고)" 표기.
   // 옛 데이터·HMR 부분 적용 등 누락 시 fallback은 `resolveRefCalculatedTax`가 담당(단일 소스).
   // 🔴 중과는 `appliedRate`에 이미 들어 있다 — 더하면 이중 계상이다(위 `resolveRefCalculatedTax` 주석).
   const effectiveRate = breakdown.appliedRate ?? 0;
@@ -390,7 +397,7 @@ export function PropertyBreakdownAccordion({
                   단, 토지·건물 분리취득이나 한 필지 중 일부만 비사업용인 자산은 **파트별**로
                   세율이 갈리므로(§104⑤) 그 자산의 파트 내역을 그대로 싣는다. 그 경우
                   「기여분 × 세율」 산식은 성립하지 않는다(계획서 §4.12). */}
-              {!breakdown.isExempt && breakdown.taxBaseShare > 0 && (
+              {!hideRefTax && !breakdown.isExempt && breakdown.taxBaseShare > 0 && (
                 <DetailRow
                   label="산출세액 (참고)"
                   formula={
@@ -421,7 +428,7 @@ export function PropertyBreakdownAccordion({
               )}
 
               {/* 결정세액 참고 — 산출세액(참고) - 감면세액으로 직접 재계산 */}
-              {!breakdown.isExempt && breakdown.taxBaseShare > 0 && (
+              {!hideRefTax && !breakdown.isExempt && breakdown.taxBaseShare > 0 && (
                 <DetailRow
                   label="결정세액 (참고)"
                   formula={
