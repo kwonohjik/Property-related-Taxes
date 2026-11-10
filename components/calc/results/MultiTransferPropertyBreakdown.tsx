@@ -234,7 +234,7 @@ export function PropertyBreakdownAccordion({
   const incomeBase = hasProration ? taxableGain : breakdown.transferGain;
 
   // 자산별 산출세액·결정세액(참고) — 엔진이 다건 컨텍스트로 미리 계산한 값 사용.
-  // 자산이 1건일 때 합산 산출세액과 일치. 비교과세 적용 시 자산별 합 ≠ 합산 산출세액일 수 있어 "(참고)" 표기.
+  // 자산이 1건일 때 합산 산출세액과 일치. 같은 세율군(일반 누진) 자산이 2건 이상이면 비교과세 유무와 무관하게 자산별 합 ≠ 합산 산출세액이라 "(참고)" 표기.
   // 옛 데이터·HMR 부분 적용 등 누락 시 fallback은 `resolveRefCalculatedTax`가 담당(단일 소스).
   // 🔴 중과는 `appliedRate`에 이미 들어 있다 — 더하면 이중 계상이다(위 `resolveRefCalculatedTax` 주석).
   const effectiveRate = breakdown.appliedRate ?? 0;
