@@ -16,7 +16,9 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { SpecialRateBasis } from "@/lib/tax-engine/transfer-tax-rate-clause";
 import { REDUCTION_TYPE_LABELS, UNKNOWN_REDUCTION_LABEL } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import { applyRate } from "@/lib/tax-engine/tax-utils";
-import { isTable2Applied } from "./lthd-split-display";
+import { isTable2Applied, withLthdPartSteps } from "./lthd-split-display";
+import { assetTaxableGain } from "./exempt-gross-gain";
+import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { incomeDeductionReducible, pickIncomeDeductionFormulaSource } from "./reduction-eligible-income";
 
 // ─── ③ 세율구분 코드 — §104 밖 특례 ────────────────────────────
@@ -126,4 +128,30 @@ export function resolveRuralSurtaxReductionBase(result: TransferTaxResult): numb
   // 어느 조합이 엔진 농특세와 맞는지 검산해 맞는 것만 쓴다(후보 순서: ⑪ 단독 → 차감형 환산액 단독 → 합).
   const candidates = [result.reductionAmount, incomeDeductionTax, result.reductionAmount + incomeDeductionTax];
   return candidates.find((c) => c > 0 && applyRate(c, 0.2) === surtax);
+}
+
+// ─── 다건·일괄(집계) 자산별 열 ──────────────────────────────────
+
+/**
+ * 집계 자산(`PerPropertyBreakdown`)을 위 단건 해석 함수(`resolveLthdFilingKind` · `resolveFilingReductionKind`)가 읽는 형태로 바꾼다.
+ * 해석 규칙을 복제하지 않고 같은 함수를 부르기 위한 얇은 어댑터다(single-source) — 자산 breakdown은 감면 detail 24종·steps·장특·감면세액을 이미 싣는다
+ * (`pickReductionDetails`). 감면세액은 합산 재계산 후 배분액(`reductionAggregated`)이다(`breakdownToFilingResult`와 같다).
+ */
+export function breakdownFilingCodeSource(p: PerPropertyBreakdown): TransferTaxResult {
+  return {
+    ...p,
+    taxableGain: assetTaxableGain(p),
+    reductionAmount: p.reductionAggregated,
+    steps: withLthdPartSteps(p),
+  } as unknown as TransferTaxResult;
+}
+
+/** 집계 자산 열의 ⑯ 장특 코드 — 한 자산에 표1·표2가 섞일 수 있는 토지·건물 분리·재개발은 단건처럼 01/02를 단정하지 않는다. */
+export function resolveBreakdownLthdFilingCode(p: PerPropertyBreakdown): string | undefined {
+  return resolveLthdFilingCode(breakdownFilingCodeSource(p), !!(p.splitDetail || p.redevelopmentDetail));
+}
+
+/** 집계 자산 열의 ㉑ 감면종류·감면율 — 단건과 같은 규칙(율 echo가 있는 조문만 율을 적는다). */
+export function resolveBreakdownReductionKind(p: PerPropertyBreakdown): string | undefined {
+  return resolveFilingReductionKind(breakdownFilingCodeSource(p));
 }

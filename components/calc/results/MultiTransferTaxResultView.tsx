@@ -48,6 +48,7 @@ import {
   hasBuildingStdReport,
 } from "@/components/calc/results/BuildingStdPriceReportSection";
 import { extractRelevantBuildingStdSnapshots } from "@/lib/storage/use-auto-save-calculation";
+import { buildFilingCodePdfRows } from "@/components/calc/results/transfer/filing-head-pdf-rows";
 import { downloadSelectedPdf } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
 import { CrossEngine1045Notice } from "@/components/calc/shared/CrossEngine1045Notice";
 import {
@@ -496,6 +497,12 @@ export function MultiTransferTaxResultView({
         // 건물 기준시가 계산서 PDF는 inputData.buildingStdSnapshots에서 재유도.
         inputData: {
           buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: allAssets }),
+          // ③ 세율구분 코드 · ⑯ · ㉑ · ㉒ — 화면 합산 신고서 표(`MultiTransferFilingFormSection`)와 같은 어댑터·메타로 만든 같은 행(Q-27)
+          filingCodeRows: buildFilingCodePdfRows({
+            result: aggregateToFilingResult(result),
+            formData: properties[0]?.form,
+            aggregate: buildAggregateMeta(result, properties),
+          }),
           // 화면의 건별 「조정대상지역 판정 — 확인 필요」 줄과 같은 leaf — PDF에도 항상 싣는다.
           regulatedAreaAssumptions: regulatedAssumptionPdfGroups(properties.map((p) => ({ form: p.form, label: p.propertyLabel }))),
         },

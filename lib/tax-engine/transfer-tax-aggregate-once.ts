@@ -309,6 +309,8 @@ export function computeAggregateOnce(
   // 농어촌특별세 (§99의3 등 소득금액차감 감면세액 × 20%, 농특세법 §3·§5) — 집계 2-pass.
   // 감면 前 산출세액 = 비과세분(§98의3·§98의5 ruralSurtaxExempt)만 그대로 둔 income으로 재산출.
   let ruralSurtax = 0;
+  /** [echo] ㉒ 소득금액 차감형 몫의 소득세 감면세액 = 감면 전 − 감면 후 산출세액(농특세 과세표준). 표시 전용. */
+  let ruralDeductionBase = 0;
   if (hasIncomeDeduction) {
     // 비과세(§98의3·§98의5) 감면분은 baseline에 그대로 둔다(농특세 미발생). §167의2② 축소 후 값(=조정 감면소득금액) 사용.
     const surtaxBaseline = incomeAfterOffset.map((v, i) => {
@@ -328,7 +330,8 @@ export function computeAggregateOnce(
         : allocateBasicDeduction(baselineUnits.eligible, availableThisCalc, allocationAxis, tieRank, reducibleRank);
     const baseline = foldBasicUnitAllocation(assetRecords, baselineUnits, baselineAllocation);
     const beforeTax = computeGroupsAndComparison(assetRecords, surtaxBaseline, baseline.allocatedBasic, rates, baseline.partBasic).calculatedTax;
-    ruralSurtax = applyRate(Math.max(0, beforeTax - calculatedTax), 0.2);
+    ruralDeductionBase = Math.max(0, beforeTax - calculatedTax);
+    ruralSurtax = applyRate(ruralDeductionBase, 0.2);
     if (ruralSurtax > 0) {
       steps.push({
         label: "농어촌특별세 (감면세액 × 20%)",
@@ -412,7 +415,7 @@ export function computeAggregateOnce(
    * 위 `ruralSurtax`는 소득금액 차감형(§99의3 등) 전용이라 §77 계열에는 한 원도 붙지 않았다.
    * 판정·근거는 `transfer-tax-aggregate-reduction-step.ts` ③ 참조.
    */
-  const ruralSurtaxCredit = computeAggregateTaxCreditRuralSurtax(
+  const { surtax: ruralSurtaxCredit, taxableReduction: ruralCreditBase } = computeAggregateTaxCreditRuralSurtax(
     assetRecords,
     reductionAllocations,
     steps,
@@ -442,6 +445,10 @@ export function computeAggregateOnce(
 
   // 농특세는 지방소득세 base 아님(결정세액+건물가산세만) — totalTax에만 가산.
   const ruralSurtaxAll = ruralSurtax + ruralSurtaxCredit;
+  // [echo] ㉒ 농특세 납부계산서 소득세 감면세액 — 두 몫의 합 × 20%가 집계 농특세와 맞을 때만(단건 `resolveRuralSurtaxReductionBase`와 같은 규칙).
+  const ruralReductionBaseSum = ruralDeductionBase + ruralCreditBase;
+  const ruralSurtaxReductionBase =
+    ruralSurtaxAll > 0 && applyRate(ruralReductionBaseSum, 0.2) === ruralSurtaxAll ? ruralReductionBaseSum : undefined;
 
   /**
    * NH-38 — 농특세 미납분 납부지연가산세(국세기본법 §2 1호 차목·§47의4①). 소득세분 `penaltyTax`와 **별도 줄**.
@@ -580,6 +587,7 @@ export function computeAggregateOnce(
       appliedRate: r.result.appliedRate,
       // 신고서 ③ 세율구분 코드의 단일 소스 — 자산 열도 엔진이 정한 호를 그대로 쓴다.
       rateClause: r.result.rateClause,
+      ...(r.result.specialRateBasis ? { specialRateBasis: r.result.specialRateBasis } : {}),
       nblSurchargeExcluded: r.result.nblSurchargeExcluded,
       nblSurchargeExcludedBy: r.result.nblSurchargeExcludedBy,
       progressiveDeduction: r.result.progressiveDeduction,
@@ -669,6 +677,7 @@ export function computeAggregateOnce(
     buildingPenaltyTax: perAssetBuildingPenalty,
     localIncomeTax,
     ruralSurtax: ruralSurtaxAll,
+    ...(ruralSurtaxReductionBase !== undefined ? { ruralSurtaxReductionBase } : {}),
     ...(ruralPenaltyAll > 0 ? { ruralSurtaxDelayedPenalty: ruralPenaltyAll } : {}),
     ...(filingUnitRuralSurtaxDelayedPenalty ? { filingUnitRuralSurtaxDelayedPenalty } : {}),
     ...(localPenaltyAll > 0 ? { localIncomePenalty: localPenaltyAll } : {}),

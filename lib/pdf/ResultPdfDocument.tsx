@@ -393,7 +393,7 @@ export function ResultPdfDocument({
 
         {/* 세금 유형별 상세 섹션 */}
         {taxType === "transfer" && <TransferSection r={r} selectedSectionIds={selectedSectionIds} phdApartment={inputData?.phdApartment === true} headRows={inputData?.filingHeadRows as FilingHeadPdfRow[] | undefined} codeRows={inputData?.filingCodeRows as FilingHeadPdfRow[] | undefined} />}
-        {taxType === "transfer_multi" && <TransferMultiSection r={r} selectedSectionIds={selectedSectionIds} />}
+        {taxType === "transfer_multi" && <TransferMultiSection r={r} selectedSectionIds={selectedSectionIds} codeRows={inputData?.filingCodeRows as FilingHeadPdfRow[] | undefined} />}
         {/* 조정대상지역 주소 문자열 판정 가정 — 화면 줄처럼 항목 선택과 무관하게 싣는다(결과뷰가 같은 leaf로 만든 값). */}
         {(taxType === "transfer" || taxType === "transfer_multi") && (
           <RegulatedAssumptionPdfNote groups={inputData?.regulatedAreaAssumptions as RegulatedAssumptionPdfGroup[] | undefined} />
