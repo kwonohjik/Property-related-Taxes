@@ -101,6 +101,9 @@ export function buildTaxableGainFormula(p: PerPropertyBreakdown): string {
 /** 장특공제 = 과세대상양도차익 × 율 */
 export function buildLthFormula(p: PerPropertyBreakdown): string {
   if (p.longTermHoldingDeduction === 0) {
+    // 🔴 비과세 자산은 엔진 `transferGain`이 0이라 `<= 0` 하나로 가르면 「차손 자산」으로 찍혔다(비과세와 차손은 전혀 다른 사실 —
+    //   위 `buildTaxableGainFormula`와 같은 이유). 비과세 여부를 먼저 본다.
+    if (p.isExempt) return "비과세 자산 — 장특공제 미적용";
     return p.transferGain <= 0 ? "차손 자산 — 장특공제 미적용" : "보유 3년 미만 또는 비적용 자산";
   }
   // 과세대상양도차익 추정 (다건은 정확값 노출 없음 — taxable = min(tg, income+lth))
