@@ -68,6 +68,11 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
   // 어댑터의 `taxableGain`은 자산별 `transferGain`의 합이라 고가주택(전체 차익)·비과세(0)·입주권 안분(과세분)이 섞여 양도소득금액이 틀어졌다.
   const taxableGain = (isRH ? transferGain : (num(r.aggregateTaxableGain) ?? num(r.taxableGain) ?? transferGain)) as number;
   const incomeAmount = isRH ? transferGain - ltdAmount : Math.max(0, taxableGain - ltdAmount);
+  // «전체 양도차익» — 합산 어댑터는 비과세·입주권 안분분을 뺀 `transferGain` 대신 자산별 leaf 합(`aggregateGrossGain`)을 싣는다(화면 합계 열과 같은 축). 없으면(단건·구 이력) 종전 값.
+  const grossGain = (isRH ? transferGain : (num(r.aggregateGrossGain) ?? transferGain)) as number;
+  // 장특 «율» — 합산이면 공제액 ÷ 과세대상 양도차익(실효율). 어댑터 율은 ÷ `totalTransferGain`이라 분모가 섞여 비과세·고가주택이 낀 일괄에서 17%처럼 어느 자산의 율도 아닌 값이었다.
+  const aggTaxable = num(r.aggregateTaxableGain);
+  const lthRate = !isRH && aggTaxable !== undefined && aggTaxable > 0 ? ltdAmount / aggTaxable : r.longTermHoldingRate;
   const reducibleIncome = (num(r.reducibleIncome) ?? 0) as number;
   // 함께 양도·다건 어댑터(`aggregateToFilingResult`)는 자산별 ⑲의 합을 따로 싣는다(US-67) — 있으면 그 값이 정본(화면 신고서 표 합계 열과 같은 함수).
   const eligible19 = num(r.aggregateReductionEligibleIncome) ?? reductionEligibleIncome(
@@ -139,9 +144,9 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
             {row.note && <Text style={{ fontSize: 7, color: C.muted, paddingLeft: 8, marginBottom: 2 }}>※ {row.note}</Text>}
           </Fragment>
         ))}
-        <View style={s.row}><Text style={s.lbl}>전체 양도차익</Text><Text style={s.val}>{fmt(transferGain)}</Text></View>
-        {taxableGain !== transferGain && (<View style={s.row}><Text style={s.lblSub}>과세대상 양도차익</Text><Text style={s.val}>{fmt(taxableGain)}</Text></View>)}
-        {num(r.longTermHoldingRate) !== undefined && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제 ({fmtRate(r.longTermHoldingRate)})</Text><Text style={s.val}>{ltdAmount > 0 ? `- ${fmt(ltdAmount)}` : "해당없음"}</Text></View>)}
+        <View style={s.row}><Text style={s.lbl}>전체 양도차익</Text><Text style={s.val}>{fmt(grossGain)}</Text></View>
+        {taxableGain !== grossGain && (<View style={s.row}><Text style={s.lblSub}>과세대상 양도차익</Text><Text style={s.val}>{fmt(taxableGain)}</Text></View>)}
+        {num(r.longTermHoldingRate) !== undefined && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제 ({fmtRate(lthRate)})</Text><Text style={s.val}>{ltdAmount > 0 ? `- ${fmt(ltdAmount)}` : "해당없음"}</Text></View>)}
         {codeLines("장기보유특별공제 코드")}
         <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(incomeAmount)}</Text></View>
         {num(r.nontaxableGainAmount) !== undefined && (r.nontaxableGainAmount as number) > 0 && (<View style={s.row}><Text style={s.lblSub}>{nontaxableIncomeLabel(rhDetail?.scenarioId)}</Text><Text style={s.val}>- {fmt(r.nontaxableGainAmount)}</Text></View>)}

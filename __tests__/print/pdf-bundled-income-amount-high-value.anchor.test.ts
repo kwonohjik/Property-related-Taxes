@@ -72,10 +72,10 @@ describe("일괄 PDF — 양도소득금액", () => {
     expect(Number((after(t, "양도소득금액") ?? "").replace(/,/g, "")) - agg.basicDeduction).toBe(agg.taxBase);
   });
 
-  it("짝 — 비과세 주택 + 토지(고가 아님)는 종전 그대로(양도소득금액 114,000,000 · 과세대상 줄 없음)", async () => {
+  it("짝 — 비과세 주택 + 토지(고가 아님)는 양도소득금액 114,000,000 불변 (전체·과세대상 양도차익 줄은 pdf-bundled-gross-gain-mixed가 고정: 250,000,000 / 150,000,000)", async () => {
     const { agg, t } = await pdfOf("500000000");
     expect(after(t, "양도소득금액")).toBe(won(114_000_000));
-    expect(after(t, "과세대상 양도차익")).toBeUndefined();
+    expect(after(t, "과세대상 양도차익")).toBe(won(150_000_000)); // 종전 줄 없음 — 비과세 주택 차익이 «전체 양도차익»에서 빠져 전체 = 과세대상으로 보였다
     expect(Number((after(t, "양도소득금액") ?? "").replace(/,/g, "")) - agg.basicDeduction).toBe(agg.taxBase);
   });
 });

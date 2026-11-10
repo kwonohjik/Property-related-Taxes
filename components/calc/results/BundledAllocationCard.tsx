@@ -81,7 +81,7 @@ interface Props {
  *
  * MultiTransferTaxResultView·BundledAllocationCard·DetailedCalculationStatementCard에서 공유.
  */
-export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult & { aggregateIncomeDeductionReducible: number; aggregateReductionEligibleIncome: number; aggregateTaxableGain: number } {
+export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult & { aggregateIncomeDeductionReducible: number; aggregateReductionEligibleIncome: number; aggregateTaxableGain: number; aggregateGrossGain: number } {
   return {
     isExempt: false,
     transferGain: a.totalTransferGain,
@@ -155,6 +155,12 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
      * 고가주택이 섞인 일괄에서 과세표준과 어긋났다(1,038,000,000 ↔ 158,000,000). 다른 소비처는 건드리지 않도록 별도 필드로 싣는다(NH-65 방식).
      */
     aggregateTaxableGain: a.totalIncomeBeforeOffset + a.totalLongTermHoldingDeduction,
+    /**
+     * 전체 양도차익 합 = 자산별 `effectiveGrossGain`(비과세는 `exemptGrossGain`, 입주권은 분기 합) 합 — 화면 신고서 표 합계 열의 「전체 양도차익」과 같은 leaf(`sumAssetGains`)다.
+     * `transferGain`은 비과세 자산을 0으로, 입주권 §89①4호 안분을 과세분으로 담아 PDF가 비과세·안분분을 뺀 채 «전체 양도차익»으로 찍었다
+     * (비과세 5억 주택 + 토지 → 150,000,000 · 화면 250,000,000). 별도 필드로 싣는다(NH-65 방식).
+     */
+    aggregateGrossGain: sumAssetGains(a.properties).gross,
   };
 }
 
@@ -163,6 +169,7 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
 
 // ─── 카드·요약 서브 컴포넌트 — BundledAllocationSubCards.tsx로 분리 (800줄 정책) ───
 import { PropertyCard, AggregatedTaxSummary } from "./BundledAllocationSubCards";
+import { sumAssetGains } from "./transfer/exempt-gross-gain";
 
 
 // ─── 메인 컴포넌트 ────────────────────────────────────────────
