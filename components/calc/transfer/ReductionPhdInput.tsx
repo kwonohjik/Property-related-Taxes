@@ -211,16 +211,16 @@ export function ReductionPhdInput({
           {/* 입력 그리드 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium">최초공시일자</label>
+              <label className="mb-1 block text-sm font-medium">최초공시일자</label>
               <DateInput
                 value={value.firstDisclosureDate ?? ""}
                 onChange={(v) => onChange({ firstDisclosureDate: v })}
               />
-              <p className="mt-1 text-micro text-muted-foreground">공동주택가격/개별주택가격 최초 고시일</p>
+              <p className="mt-1 text-xs text-muted-foreground">공동주택가격/개별주택가격 최초 고시일</p>
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium">최초공시 공동주택가격 (원)</label>
+              <label className="mb-1 block text-sm font-medium">최초공시 공동주택가격 (원)</label>
               <CurrencyInput
                 label=""
                 data-field={`reduction.${fieldType}.phdFirstDisclosurePrice`}
@@ -230,7 +230,7 @@ export function ReductionPhdInput({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium">토지면적 (㎡)</label>
+              <label className="mb-1 block text-sm font-medium">토지면적 (㎡)</label>
               <DecimalInput
                 data-field={`reduction.${fieldType}.phdLandAreaSqm`}
                 value={value.landAreaSqm ?? ""}
@@ -267,7 +267,7 @@ export function ReductionPhdInput({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium">취득시 건물 기준시가 (원, 선택)</label>
+              <label className="mb-1 block text-sm font-medium">취득시 건물 기준시가 (원, 선택)</label>
               <CurrencyInput
                 label=""
                 value={value.buildingStdAtAcq ?? ""}
@@ -299,11 +299,11 @@ export function ReductionPhdInput({
                   }
                 />
               </div>
-              <p className="mt-1 text-micro text-muted-foreground">국세청 건물기준시가 — 미입력 시 토지만 환산</p>
+              <p className="mt-1 text-xs text-muted-foreground">국세청 건물기준시가 — 미입력 시 토지만 환산</p>
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium">최초공시시 건물 기준시가 (원)</label>
+              <label className="mb-1 block text-sm font-medium">최초공시시 건물 기준시가 (원)</label>
               <CurrencyInput
                 label=""
                 data-field={`reduction.${fieldType}.phdBuildingStdAtFirst`}
@@ -337,7 +337,7 @@ export function ReductionPhdInput({
                   }
                 />
               </div>
-              <p className="mt-1 text-micro text-muted-foreground">취득시 건물 기준시가를 입력했다면 필수입니다 — 취득시 값을 대신 쓰면 §164⑦ 산식이 아닙니다.</p>
+              <p className="mt-1 text-caption text-muted-foreground">취득시 건물 기준시가를 입력했다면 필수입니다 — 취득시 값을 대신 쓰면 §164⑦ 산식이 아닙니다.</p>
             </div>
           </div>
 

@@ -49,7 +49,7 @@ export function New99LuxuryHouseFields({
   return (
     <div className="space-y-2" data-testid={`new${suffix}-luxury-fields`}>
       <div data-field={`reduction.${reductionType}.houseType${suffix}`}>
-        <p className="mb-1 text-xs font-medium">주택 유형 (고급주택 판정 — 기준일 당시 소득세법 시행령 §156)</p>
+        <p className="mb-1 text-sm font-medium">주택 유형 (고급주택 판정 — 기준일 당시 소득세법 시행령 §156)</p>
         <RadioCardGroup
           name={`new${suffix}-house-type`}
           tone="amber"
@@ -75,25 +75,25 @@ export function New99LuxuryHouseFields({
       {value.houseType === "detached" && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-medium">연면적 (㎡)</label>
+            <label className="mb-1 block text-sm font-medium">연면적 (㎡)</label>
             <DecimalInput
               data-field={`reduction.${reductionType}.grossFloorAreaSqm${suffix}`}
               value={value.grossFloorAreaSqm}
               onChange={(v) => onChange({ grossFloorAreaSqm: v })}
             />
-            <p className="mt-1 text-micro text-muted-foreground">주택으로 보는 부분과 주거전용 지하실을 포함합니다 — 264㎡ 이상이면 면적 기준 충족 · 딸린 토지가 이 연면적의 2배를 넘으면 결과에 확인 필요 고지가 나옵니다 (조특법 §99①·§99의3①)</p>
+            <p className="mt-1 text-caption text-muted-foreground">주택으로 보는 부분과 주거전용 지하실을 포함합니다 — 264㎡ 이상이면 면적 기준 충족 · 딸린 토지가 이 연면적의 2배를 넘으면 결과에 확인 필요 고지가 나옵니다 (조특법 §99①·§99의3①)</p>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium">딸린 토지 면적 (㎡)</label>
+            <label className="mb-1 block text-sm font-medium">딸린 토지 면적 (㎡)</label>
             <DecimalInput
               data-field={`reduction.${reductionType}.attachedLandAreaSqm${suffix}`}
               value={value.attachedLandAreaSqm}
               onChange={(v) => onChange({ attachedLandAreaSqm: v })}
             />
-            <p className="mt-1 text-micro text-muted-foreground">주택에 부수되는 토지 전체 면적 — 감면 대상 부수토지(건물 연면적 2배 이내)로 줄이지 않습니다. 495㎡ 이상이면 면적 기준 충족</p>
+            <p className="mt-1 text-caption text-muted-foreground">주택에 부수되는 토지 전체 면적 — 감면 대상 부수토지(건물 연면적 2배 이내)로 줄이지 않습니다. 495㎡ 이상이면 면적 기준 충족</p>
           </div>
           <div className="sm:col-span-2" data-field={`reduction.${reductionType}.stdPriceFloorMet${suffix}`}>
-            <p className="mb-1 text-xs font-medium">주택의 {floorLabel}인가요?</p>
+            <p className="mb-1 text-sm font-medium">주택의 {floorLabel}인가요?</p>
             <RadioCardGroup
               name={`new${suffix}-std-floor`}
               tone="amber"
@@ -104,7 +104,7 @@ export function New99LuxuryHouseFields({
             />
           </div>
           <div className="sm:col-span-2" data-field={`reduction.${reductionType}.luxuryFacility${suffix}`}>
-            <p className="mb-1 text-xs font-medium">엘리베이터·에스컬레이터·67㎡ 이상 수영장 중 하나라도 설치돼 있나요?</p>
+            <p className="mb-1 text-sm font-medium">엘리베이터·에스컬레이터·67㎡ 이상 수영장 중 하나라도 설치돼 있나요?</p>
             <RadioCardGroup
               name={`new${suffix}-facility`}
               tone="amber"
@@ -144,25 +144,25 @@ export function New99AppurtenantLandFields({
       <p className="text-xs font-medium">딸린 토지 범위 확인 (선택 · 단독주택만)</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs font-medium">건물 연면적 (㎡)</label>
+          <label className="mb-1 block text-sm font-medium">건물 연면적 (㎡)</label>
           <DecimalInput
             data-field={`reduction.${reductionType}.grossFloorAreaSqm${suffix}`}
             value={grossFloorAreaSqm}
             onChange={(v) => onChange({ grossFloorAreaSqm: v })}
           />
-          <p className="mt-1 text-micro text-muted-foreground">전체 층의 합계입니다</p>
+          <p className="mt-1 text-xs text-muted-foreground">전체 층의 합계입니다</p>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium">딸린 토지 면적 (㎡)</label>
+          <label className="mb-1 block text-sm font-medium">딸린 토지 면적 (㎡)</label>
           <DecimalInput
             data-field={`reduction.${reductionType}.attachedLandAreaSqm${suffix}`}
             value={attachedLandAreaSqm}
             onChange={(v) => onChange({ attachedLandAreaSqm: v })}
           />
-          <p className="mt-1 text-micro text-muted-foreground">주택에 부수되는 토지 전체 면적</p>
+          <p className="mt-1 text-xs text-muted-foreground">주택에 부수되는 토지 전체 면적</p>
         </div>
       </div>
-      <p className="text-micro text-muted-foreground" data-testid={`new${suffix}-appurtenant-land-hint`}>
+      <p className="text-caption text-muted-foreground" data-testid={`new${suffix}-appurtenant-land-hint`}>
         신축주택에는 건물 연면적의 2배 이내의 딸린 토지만 포함됩니다 (조특법 §99의3①). 토지가 2배를 넘으면 결과에 확인 필요 고지가 나옵니다 —
         초과분을 안분하는 방법이 법령에 없어 계산에는 반영하지 않습니다. 공동주택은 입력하지 마세요.
       </p>
@@ -188,7 +188,7 @@ export function New99FirstContractField({
 }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-xs font-medium">주택건설업자와 최초로 매매계약을 체결하고 계약금을 낸 사람이 본인인가요?</p>
+      <p className="text-sm font-medium">주택건설업자와 최초로 매매계약을 체결하고 계약금을 낸 사람이 본인인가요?</p>
       <RadioCardGroup
         name={`${testidPrefix}-first-contract`}
         tone="amber"
@@ -203,7 +203,7 @@ export function New99FirstContractField({
           "적용하지 않고 결과에 확인 필요로 표시합니다",
         )}
       />
-      <p className="text-micro text-muted-foreground">«주택건설업자와 최초로 매매계약을 체결하고 계약금을 납부한 자가 취득»한 주택만 대상입니다 ({lawLabel})</p>
+      <p className="text-caption text-muted-foreground">«주택건설업자와 최초로 매매계약을 체결하고 계약금을 납부한 자가 취득»한 주택만 대상입니다 ({lawLabel})</p>
     </div>
   );
 }

@@ -47,7 +47,7 @@ export function ReductionDetailWarnings({ detail }: { detail: ReductionWarningSo
   return (
     <div data-testid="reduction-detail-warnings" className="space-y-0.5 border-t border-amber-300/60 pt-1.5">
       {lines.map((w, i) => (
-        <p key={i} className="text-amber-700 dark:text-amber-300">
+        <p key={i} className="text-xs text-amber-700 dark:text-amber-300">
           ⚠ {w}
         </p>
       ))}
