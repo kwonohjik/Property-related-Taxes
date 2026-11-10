@@ -126,7 +126,7 @@ throwaway probe(`__tests__/calc/zz-probe-ra.test.ts`, 커밋하지 않고 삭제
 - V-1: 기존 테스트 11개(`__tests__/components/` 위주) 중 `refDeterminedTax` **값**을 고정한 단언의 범위 — 구현 단계에서 실행해 전수 확인한다. 이 계획서에서는 파일 목록과 일부 문맥만 읽었다.
 - V-2: 건수가 많은 경우(3건 이상)·비교과세·부분 비사업용·분할(GB) 자산에서 `reductionAggregated`와 `refCalculatedTax`가 어떻게 어긋나는지 — 2건 시료 1개만 측정했다. `max(0, …)` cap이 걸리는 경계(`reductionAggregated > refCalculatedTax`)는 측정하지 않았다.
 - V-3: PDF 건별 섹션(`ResultPdfTransferSections.tsx:564` 부근)이 읽는 `p`의 실제 필드와 출력 — 코드 한 줄만 읽었다.
-- V-4: 옛 저장 이력의 `refDeterminedTax`(혼합 기준)가 새 코드에서 그대로 표시되는 것의 허용 여부 — 재계산 없이 저장값을 읽는 구조라는 것만 확인했다.
+- V-4: 옛 저장 이력의 `refDeterminedTax`(혼합 기준)가 새 코드에서 그대로 표시되는지 — **후속 조사에서 표시 경로 없음으로 정리**(`multi-per-asset-display-followup.plan.md` §4). 위 «재계산 없이 저장값을 읽는 구조»는 확인한 적이 없는 서술이었다.
 - V-5: 브라우저 수동 확인은 하지 않았다(렌더 컴포넌트 출력이 아니라 어댑터·산식 함수를 직접 호출해 측정했다).
 - 합산 `aggregateReductions` 자체의 정확성은 이 조사 범위가 아니다(단건과 같은 값이 나온 것만 확인).
 
@@ -190,5 +190,5 @@ throwaway probe(`__tests__/calc/zz-probe-ra.test.ts`, 커밋하지 않고 삭제
 
 - 3건 이상·비교과세·분할(GB) 자산에서 `reductionAggregated`와 `refCalculatedTax` 관계 — 2건 시료(+ cap 경계 1건)만 측정했다.
 - 건별 `determinedTax`·PDF «결정세액 기여분 (참고)» (V-3, Q-3 a로 별건).
-- **옛 저장 이력**: `refDeterminedTax`가 저장돼 있으면 옛 혼합 기준 값이 그대로 표시된다(재계산하지 않는다). 대체 계산은 필드가 **없을 때만** 타며 그 값은 새 규칙이다 (V-4).
+- ~~**옛 저장 이력**: `refDeterminedTax`가 저장돼 있으면 옛 혼합 기준 값이 그대로 표시된다~~ → **정정(후속 조사 `multi-per-asset-display-followup.plan.md` §4)**: 저장된 다건 결과를 건별 뷰·PDF로 다시 그리는 경로를 찾지 못했다. 이 서술은 근거 없이 쓴 것이었다. 대체 계산(필드 부재 시)은 새 규칙이라는 부분만 코드로 확인된 사실이다 (V-4).
 

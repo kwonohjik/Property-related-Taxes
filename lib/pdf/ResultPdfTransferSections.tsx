@@ -19,6 +19,8 @@ import { incomeDeductionReducible } from "@/components/calc/results/transfer/red
 import { incomeDeductionRuralSurtax } from "@/components/calc/results/transfer/reduction-eligible-income";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { assetTaxableGain, sumAssetGains } from "@/components/calc/results/transfer/exempt-gross-gain";
+import { isGbPartCard } from "@/components/calc/results/transfer/gb-part-card";
+import { multiFormPropertyIdOf } from "@/components/calc/results/transfer/multi-result-groups";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 import {
   splitAcqBasisFormula,
@@ -540,6 +542,11 @@ export function TransferMultiSection({ r, selectedSectionIds, codeRows }: { r: R
               : [];
             // 자산별 농특세 = 그 자산 엔진의 소득금액차감 감면 detail 합(§99의3·§99·§98의8·하이브리드 — 화면 신고서 표와 같은 헬퍼). 종전에는 `new993Detail`만 읽어 §99 등이 빠졌다.
             const propRuralSurtax = incomeDeductionRuralSurtax(p as unknown as TransferTaxResult);
+            // 일반건물 분할 파트 판정 — 결과에는 폼 자산이 없어 자산별 상세(`generalBuildingDetailsByAsset`)의 부모 id 키로 일반건물 자산임을 알린다(`MultiGbAssetGroup`과 같은 키).
+            const propIsGbPart = isGbPartCard(
+              str(p.propertyId) ?? "",
+              (r.generalBuildingDetailsByAsset as Record<string, unknown> | undefined)?.[multiFormPropertyIdOf(str(p.propertyId) ?? "")] ? { assetKind: "general_building" } : undefined,
+            );
             // D-14 — 세액감면분은 소득금액에서 빼지 않는다(§90①은 세액만 감면)
             const propIncomeAfter = Math.max(0, propIncome - propNew993Reducible);
             return (
@@ -565,8 +572,10 @@ export function TransferMultiSection({ r, selectedSectionIds, codeRows }: { r: R
                     <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{propNew993Reducible > 0 ? fmt(propNew993Reducible) : "0"}</Text></View>
                     <View style={s.row}><Text style={s.lbl}>감면후 소득금액</Text><Text style={s.val}>{fmt(propIncomeAfter)}</Text></View>
                     <View style={s.rowBg}><Text style={s.lbl}>과세표준 기여분</Text><Text style={s.valAccent}>{fmt(p.taxBaseShare)}</Text></View>
-                    {num(p.calculatedTax) !== undefined && (<View style={s.row}><Text style={s.lblSub}>산출세액 기여분 (참고)</Text><Text style={s.val}>{fmt(p.calculatedTax)}</Text></View>)}
-                    {num(p.determinedTax) !== undefined && (<View style={s.row}><Text style={s.lblSub}>결정세액 기여분 (참고)</Text><Text style={s.val}>{fmt(p.determinedTax)}</Text></View>)}
+                    {/* 화면 아코디언·신고서 건별 열과 같은 값(`refCalculatedTax`·`refDeterminedTax`). 건별 `determinedTax`는 기본공제 전 단건 값이라 읽지 않는다(계획서 multi-per-asset-display-followup Q-1 a).
+                        일반건물 분할 파트(토지·건물)는 화면이 참고 세액을 숨기는 규칙(`gb-part-card.ts`)을 따른다 — 파트 값의 합이 합계와 맞지 않는다. */}
+                    {!propIsGbPart && num(p.refCalculatedTax) !== undefined && (<View style={s.row}><Text style={s.lblSub}>산출세액 기여분 (참고)</Text><Text style={s.val}>{fmt(p.refCalculatedTax)}</Text></View>)}
+                    {!propIsGbPart && num(p.refDeterminedTax) !== undefined && (<View style={s.row}><Text style={s.lblSub}>결정세액 기여분 (참고)</Text><Text style={s.val}>{fmt(p.refDeterminedTax)}</Text></View>)}
                     {propRuralSurtax > 0 && (<View style={s.rowLast}><Text style={s.lbl}>농어촌특별세</Text><Text style={s.val}>{fmt(propRuralSurtax)}</Text></View>)}
                   </View>
                 )}
