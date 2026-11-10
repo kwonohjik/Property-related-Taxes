@@ -35,6 +35,7 @@
  */
 import { applyRate } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
+import type { CalculationStep } from "./transfer-tax";
 
 /** 「농어촌특별세법」 §5①1호 — 조특법 감면세액에 대한 세율. */
 export const RURAL_SURTAX_RATE = 0.2;
@@ -170,4 +171,13 @@ export function resolveTaxCreditRuralSurtax(args: RuralSurtaxArgs): RuralSurtaxR
         : "농어촌특별세 비과세 대상으로 열거되지 않은 감면입니다",
     legalBasis: TRANSFER.RURAL_SURTAX_REDUCTION,
   };
+}
+
+/**
+ * 판정표에 없는 감면 유형(verdict `unknown`)의 「농어촌특별세 — 미판정」 step — 단건 3경로(finalize·다필지·재개발)와 일괄양도 집계가
+ * **같은 문구**를 쓰도록 한 단일 소스. 침묵 금지 — 근거를 못 찾아 부과하지 않았다는 사실 자체를 남긴다(세액 0 · 계산 불변).
+ */
+export const RURAL_SURTAX_UNKNOWN_LABEL = "농어촌특별세 — 미판정";
+export function ruralSurtaxUnknownStep(verdict: RuralSurtaxResolution): CalculationStep {
+  return { label: RURAL_SURTAX_UNKNOWN_LABEL, formula: verdict.reason, amount: 0, legalBasis: verdict.legalBasis };
 }

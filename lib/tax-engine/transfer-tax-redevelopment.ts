@@ -37,6 +37,7 @@ import { calcTax, calcReductions } from "./transfer-tax-rate-calc";
 import { expropriationAcquisitionDate } from "./public-expropriation-reduction";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
+import { ruralSurtaxUnknownStep } from "./transfer-tax-rural-surtax";
 import { pickIncomeDeductionDetails } from "./transfer-tax-income-deduction-details";
 import { selectActiveIncomeDeduction } from "./transfer-tax-income-deduction-details";
 import { applyIncomeDeductionSurtax } from "./transfer-tax-income-deduction-details";
@@ -486,12 +487,7 @@ export function calculateRedevelopmentTax(
         });
       } else if (verdict.verdict === "unknown") {
         // 침묵 금지 — 근거를 못 찾아 부과하지 않았다는 사실 자체를 남긴다.
-        steps.push({
-          label: "농어촌특별세 — 미판정",
-          formula: verdict.reason,
-          amount: 0,
-          legalBasis: verdict.legalBasis,
-        });
+        steps.push(ruralSurtaxUnknownStep(verdict));
       }
     }
   }
