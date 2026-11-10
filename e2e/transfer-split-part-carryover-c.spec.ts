@@ -411,7 +411,7 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
     await expect(page.locator('[data-field="carryover.donorHouseholdHoldingStartDate"]')).toHaveCount(1);
   });
 
-  test("다건 합산: C를 켠 자산은 ⑧이 막는다(요청 자체가 나가지 않는다) — 이월과세 호스트는 다건 미지원", async ({ page }) => {
+  test("다건 합산: C를 켠 자산도 계산된다(계획서 multi-carryover-bg-gb-shares 트랙 CO-PART · Q-4 b) — 차단 문구 없음 · 200 · «확인 필요» 고지", async ({ page }) => {
     test.setTimeout(180_000);
     const props = [
       { propertyId: "np1", propertyLabel: "건1", completionPercent: 100, form: multiForm(cAsset(), { transferDate: "2026-06-30", contractTotalPrice: "1200000000" }) },
@@ -434,13 +434,14 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
     await page.goto("/calc/transfer-tax/multi");
     await openHistoryModal(page, page.getByTestId("multi-load-history-btn").first(), page.getByText("파트 이월과세 C 다건 (E2E)"));
     await page.getByTestId("load-record-e2e-spco-c-multi").click();
-    let multiPosts = 0;
-    page.on("request", (r) => {
-      if (r.url().includes("/api/calc/transfer/multi") && r.method() === "POST") multiPosts++;
-    });
+    const resp = page.waitForResponse((r) => r.url().includes("/api/calc/transfer/multi") && r.request().method() === "POST", { timeout: 30_000 });
     await page.getByRole("button", { name: "세액 계산" }).click();
-    await expect(page.getByText("토지·건물을 나눈 이월과세(§97의2)는 단건 계산기에서만 지원됩니다.").first()).toBeVisible({ timeout: 30_000 });
-    expect(multiPosts).toBe(0);
+    const r = await resp;
+    const json = (await r.json()) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+    expect(r.status(), JSON.stringify(json).slice(0, 400)).toBe(200);
+    await expect(page.getByText("토지·건물을 나눈 이월과세(§97의2)는 단건 계산기에서만 지원됩니다.")).toHaveCount(0);
+    expect(json.data?.properties?.[0]?.splitDetail?.carryoverEvent).toBeTruthy();
+    expect((json.data?.warnings as string[]).some((w) => w.includes("그 자산의 결정세액만으로"))).toBe(true);
   });
 
   test("이력 복원: 저장된 C 입력을 「편집」으로 열면 토글·파트 카드·값이 복원되고 다시 계산하면 같은 결과다", async ({ page }) => {
