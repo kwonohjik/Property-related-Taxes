@@ -64,8 +64,8 @@ export interface PeriodCheckContext {
   /** 분양/매매계약일 — §99·§99의3·§99의2·§98 시리즈 일부 (계약 시점이 시한 판정 기준) */
   contractDate?: Date;
   /**
-   * 조문별 「최초 매매계약일」 칸 값(Q-19, US-41) — §98·§98의2·§98의3·§98의5·§98의7은 조문 칸이 정본이다.
-   * **키(객체)가 있으면** 이 다섯 조문은 자산-수준 `contractDate`를 읽지 않고 이 값만 본다(칸이 비면 undefined = 낙관 통과).
+   * 조문별 「최초 매매계약일」 칸 값(Q-19, US-41) — §98·§98의2·§98의3·§98의4·§98의5·§98의7·§99의2는 조문 칸이 정본이다.
+   * **키(객체)가 있으면** 이 일곱 조문은 자산-수준 `contractDate`를 읽지 않고 이 값만 본다(칸이 비면 undefined = 낙관 통과).
    * 키가 없으면(엔진 직접 호출·옛 테스트) 종전대로 `contractDate`를 쓴다.
    */
   articleContractDates?: Partial<Record<string, Date | undefined>>;

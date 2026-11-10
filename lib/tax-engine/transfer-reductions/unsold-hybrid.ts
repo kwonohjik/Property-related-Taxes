@@ -685,7 +685,7 @@ export function evaluateHybridFromReduction(
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
       houseType: r.houseType992 as Unsold992HouseType | undefined,
-      contractDate: toHybridDate(r.contractDate992) ?? ctx.assetContractDate,
+      contractDate: toHybridDate(r.contractDate992), // Q-19 — 조문 칸이 정본 (자산-수준 매매계약일 대체 제거)
       usageApprovalDate: toHybridDate(r.usageApprovalDate992),
       acquisitionPrice: r.acquisitionPrice992 as number | undefined,
       exclusiveAreaSqm: r.exclusiveAreaSqm992 as number | undefined,

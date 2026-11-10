@@ -471,6 +471,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           return fail(fieldError("reduction.unsold_98.contractDate98", "§98 적용: 최초 매매계약일을 입력하세요 (취득기간은 취득일 또는 매매계약 + 계약금 납부 중 하나로 판정합니다 — 자산의 매매계약일 칸은 읽지 않습니다)."));
         if (r.type === "unsold_98_2" && !r.contractDate982)
           return fail(fieldError("reduction.unsold_98_2.contractDate982", "§98의2 적용: 최초 매매계약일을 입력하세요 (취득기간은 취득일 또는 매매계약 + 계약금 납부 중 하나로 판정합니다 — 자산의 매매계약일 칸은 읽지 않습니다)."));
+        if (r.type === "unsold_98_4" && !r.contractDate984)
+          return fail(fieldError("reduction.unsold_98_4.contractDate984", "§98의4 적용: 최초 매매계약일을 입력하세요 (취득기간은 취득일 또는 매매계약 + 계약금 납부 중 하나로 판정합니다 — 자산의 매매계약일 칸은 읽지 않습니다)."));
         // US-15 · Q-1 (A) — §98의2 매매계약일 현재 입주 사실 3-state(없음/있음/모름). 모름은 통과(엔진이 불성립 처리),
         // 미선택만 차단한다 — ④가 미선택을 undefined(=모름)로 보내므로 UI 통과 ↔ 엔진 결과가 어긋나지 않는다.
         if (r.type === "unsold_98_2" && !r.occupiedAtContract982) {

@@ -162,6 +162,10 @@ export function refineReductionRequiredInputs(
     if (r.type === "unsold_98_7" && !r.contractDate987)
       issue("contractDate987", "§98의7 적용: 최초 매매계약일(contractDate987)이 필요합니다 (자산 매매계약일로 대신하지 않습니다).");
 
+    // §99의2(구매·미분양·1세대1주택) — 같은 규칙. 자기건설은 사용승인일 기준이라 제외 (엔진은 유형 미지정이면 계약일 트랙).
+    if (r.type === "unsold_99_2" && r.houseType992 !== "self_built" && !r.contractDate992)
+      issue("contractDate992", "§99의2 적용: 최초 매매계약일(contractDate992)이 필요합니다 (자산 매매계약일로 대신하지 않습니다).");
+
     if ((r.type === "rental_97_3" || r.type === "rental_97_5") && r.rentalContinuesToTransfer === undefined) {
       issue(
         "rentalContinuesToTransfer",
