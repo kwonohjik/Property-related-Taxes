@@ -1,6 +1,6 @@
 # 다건 건별 표시값 후속 — PDF «결정세액 기여분 (참고)» · 3건 이상 · 비교과세 · 분할(GB) · 옛 저장 이력
 
-- 상태: **결정 대기**(Q-1) — 기준 master `b59905494`.
+- 상태: **구현 완료**(Q-1 a 적용, §6) — 기준 master `b59905494`.
 - 출처: #3162(`multi-per-asset-reduction-display.plan.md` §7.6)의 «남은 확인 필요» 3개 — ① 건별 `determinedTax`·PDF ② 3건 이상·비교과세·분할 자산의 배분 감면 ③ 옛 저장 이력.
 - 방법: throwaway probe(`__tests__/api/zz-probe-rb.test.ts`, 커밋하지 않고 삭제) — 다건 route 직접 호출(주택 1~3건, 일반건물 분할 1건) + 집계 엔진 직접 호출(비교과세). 세율표는 route 폴백/`makeMockRates`. 주택 시료는 #3162 anchor와 같다(양도 900,000,000 · 취득 200,000,000 · 양도일 2025-08-01).
 
@@ -84,3 +84,39 @@
 - V-4: 비교과세에서 `Σ건별 산출 ≠ 합산 산출`이 되는 입력의 배분 감면 관계, 분할(GB) 자산의 §97·§99 계열 감면, 4건 이상.
 - V-5: 이력 → 결과뷰 경로의 라우트 전수 확인(이 조사는 `resultData` 사용처 grep 범위).
 - 브라우저 수동 확인은 하지 않았다.
+
+## 6. 구현 결과 (Q-1 a — 사용자 「Q-1 a로 진행해」)
+
+### 6.1 변경 — `lib/pdf/ResultPdfTransferSections.tsx` 한 곳
+
+- «산출세액 기여분 (참고)» → `refCalculatedTax`(종전 `p.calculatedTax` — 다건 결과에 없는 키라 행이 한 번도 뜨지 않았다), «결정세액 기여분 (참고)» → `refDeterminedTax`(종전 건별 `determinedTax` = 기본공제 전 단건 값). `num(...) !== undefined` 가드는 유지해 옛 결과는 행을 생략한다(NaN 없음).
+- **계획서에 없던 결정 1건(공개):** 일반건물 분할 파트(토지·건물 카드)는 두 행을 싣지 않는다. 화면이 파트의 참고 세액을 숨기는 규칙(`gb-part-card.ts:9` «합이 합계와 맞지 않아 표시하지 않는다»·신고서 건별 열 `isGbPartColumn` 공란)과 맞춘 것이다. 종전 PDF는 파트에도 `determinedTax`를 찍었다(§1.2 표 마지막 행: 77,814,000 ×2, 합산 178,389,000). 결과에는 폼 자산이 없어 `generalBuildingDetailsByAsset[multiFormPropertyIdOf(propertyId)]` 존재 여부로 일반건물 자산임을 알리고 기존 `isGbPartCard`를 재사용했다 (`MultiGbAssetGroup`이 같은 키로 `hasDetail`을 판정한다).
+- 건별 `determinedTax` 필드·route 가산세 대체값(`multi/route.ts:257`)·죽은 합산 `determinedTaxAll`은 건드리지 않았다.
+
+### 6.2 anchor (구현 전 실패 확인 → 통과)
+
+- `__tests__/print/pdf-multi-per-asset-ref-tax-q1.anchor.test.tsx` 4건 — 구현 전 **4건 모두 실패**(산출 행 부재 `[]`, 결정 행이 옛 값, 옛 결과에서 행이 남음, GB 가드 없음): 감면 없는 1건(PDF 결정 = `refDeterminedTax`, 전제로 건별 `determinedTax`와 다름을 확인) · 자경농지 2건(자산마다 산출·배분 기준 결정 — 87,326,355 포함) · 옛 결과는 두 행 생략 · GB 파트 합성 시료.
+- `__tests__/api/transfer.multi-route.gb-pdf-per-asset-ref-tax.anchor.test.ts` 2건 — **실제 다건 route 응답**(토지 + 일반건물 / 일반건물만, id `land#p2`·`building#p2`, `generalBuildingDetailsByAsset.p2`)으로 PDF를 렌더: 구현 전 2건 모두 실패, 구현 후 토지 1건분만 / 0행.
+
+### 6.3 뮤테이션 (백업 → 변이 → 복원 → `cmp` 일치)
+
+| # | 변이 | 결과 |
+|---|---|---|
+| M1 | 산출 행 → `calculatedTax` | 3건 실패 |
+| M2 | 결정 행 → `determinedTax` | 3건 실패 |
+| M3 | 산출 행 GB 가드 제거 | 1건 실패 |
+| M4 | 결정 행 GB 가드 제거 | 1건 실패 |
+| M5 | `propIsGbPart` 항상 false | 합성 1건 + 실제 응답 2건 실패 |
+| M6 | 결정 행 `num` 가드 제거 | 1건 실패 (옛 결과) |
+| M7 | 상세 키를 폼 id 대신 `propertyId` 그대로 | 실제 응답 2건 실패 (합성 시료는 못 잡는다 — 그래서 실제 응답 파일을 따로 뒀다) |
+
+### 6.4 검증
+
+- 회귀 5묶음 전부 통과: `__tests__/api` 518파일·7005건 · `tax-engine` 1520파일·19265건 · `calc` 848파일·11771건 · `lib` 265파일·3408건 · `components` 769파일·7032건. PDF 기존 테스트는 5묶음에 속하지 않아 `__tests__/print` 17파일·96건을 따로 실행해 통과.
+- `tsc --noEmit` 0건 · 변경·신규 파일 `eslint` 경고 0. 기존 테스트에서 옛 PDF 값을 고정한 단언은 없었다(반전 0).
+- **Playwright 생략**: PDF 생성은 브라우저 다운로드 흐름이고 기존 E2E에 건별 «기여분» 행을 보는 흐름이 없다. **PDF 바이너리를 실제로 생성해 보지는 않았다** — `TransferMultiSection`이 만든 요소 트리의 텍스트를 확인했다(기존 PDF anchor와 같은 방식). **브라우저 수동 확인 미수행.**
+
+### 6.5 남은 확인 필요
+
+§5의 V-2(아코디언에서 GB 카드 표시), V-3(route 가산세 대체값 도달 입력), V-4(비교과세 `Σ건별 산출 ≠ 합산 산출`·GB의 §97/§99 감면·4건 이상), V-5(이력 → 결과뷰 라우트 전수)는 이번 범위가 아니다. V-1은 요소 트리 수준까지 해소(PDF 바이너리는 미확인).
+
