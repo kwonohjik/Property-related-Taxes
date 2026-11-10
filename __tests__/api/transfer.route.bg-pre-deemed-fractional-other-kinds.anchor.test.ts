@@ -83,7 +83,8 @@ const VARIANTS: Variant[] = [
   { id: "상가 기준시가 §164⑥ 8칸", kind: "commercial_building", base: com("commercial_building"), mkt: 0, debt: 200000000, over: (s) => ({ ...STD, ...CB8(s) }), fixedA: -31090908, selected: "deemed_std" },
   { id: "건물 시가 ①승", kind: "building", base: com("building"), mkt: 920000000, debt: 460000000, over: (s) => ({ ...MARKET(s, 920000000), publishedValueAtInheritance: S(500000000, s) }), fixedA: 105000000, selected: "reported" },
   { id: "건물 시가 ③승", kind: "building", base: com("building"), mkt: 920000000, debt: 460000000, over: (s) => ({ ...MARKET(s, 920000000), publishedValueAtInheritance: S(300000000, s) }), fixedA: 113500000, selected: "converted" },
-  { id: "건물 시가 < 기준시가", kind: "building", base: com("building"), mkt: 300000000, debt: 150000000, over: (s) => ({ ...MARKET(s, 300000000), publishedValueAtInheritance: S(100000000, s) }), fixedA: 36000000, selected: "converted" },
+  // 시가 < 양도시 기준시가라 ③(시가 × 분자 ÷ 양도시 기준시가)이 분자보다 작다 — ② §164⑤ = 분자가 이긴다(건물 계획서 §9 Q-34 a · 종전 ③ 36,000,000)
+  { id: "건물 시가 < 기준시가", kind: "building", base: com("building"), mkt: 300000000, debt: 150000000, over: (s) => ({ ...MARKET(s, 300000000), publishedValueAtInheritance: S(100000000, s) }), fixedA: 25000000, selected: "sec164" },
   { id: "건물 기준시가 칸", kind: "building", base: com("building"), mkt: 0, debt: 200000000, over: () => ({ ...STD }), fixedA: 48500000, selected: "deemed_std" },
   { id: "재개발 시가 ①승", kind: "redevelopment_apt", base: REDEV, mkt: 525000000, debt: 210000000, over: (s) => ({ ...MARKET(s, 525000000), publishedValueAtInheritance: S(200000000, s) }), fixedA: 46443700, selected: "reported" },
   { id: "재개발 시가 ③승", kind: "redevelopment_apt", base: REDEV, mkt: 525000000, debt: 210000000, over: (s) => ({ ...MARKET(s, 525000000), publishedValueAtInheritance: S(100000000, s) }), fixedA: 57689185, selected: "converted" },
@@ -109,7 +110,7 @@ const FIXED_BUNDLE: Record<string, number> = {
   "주택 시가 ①승": 465000000, "주택 시가 ③승": 572996607, "주택 기준시가 칸": 775988550,
   "상가 시가 ①승": 315000000, "상가 시가 ③승": 340500000, "상가 시가 §164⑥ 8칸": -199636361, "상가 시가 ②승": -156818181,
   "상가 기준시가 칸": 145500000, "상가 기준시가 §164⑥ 8칸": -93272725,
-  "건물 시가 ①승": 315000000, "건물 시가 ③승": 340500000, "건물 시가 < 기준시가": 108000000, "건물 기준시가 칸": 145500000,
+  "건물 시가 ①승": 315000000, "건물 시가 ③승": 340500000, "건물 시가 < 기준시가": 75000000, "건물 기준시가 칸": 145500000,
   "재개발 시가 ①승": 139331100, "재개발 시가 ③승": 173067553, "재개발 기준시가 칸": 153431100,
 };
 

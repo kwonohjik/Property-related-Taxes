@@ -75,8 +75,19 @@ export function isSec164ClauseAFilled(asset: AssetForm): boolean {
     isFullyFilled(sec164HouseStatus(asset)) ||
     isFullyFilled(sec164CommercialStatus(asset)) ||
     isFullyFilled(sec164LandStatus(asset)) ||
-    isFullyFilled(sec164BuildingStatus(asset))
+    isFullyFilled(sec164BuildingStatus(asset)) ||
+    buildingPreDeemedSec164Filled(asset)
   );
+}
+
+/**
+ * 의제취득일 전 건물(토지 제외)의 ②(§164⑤)가 있는가 — ③ 분자(「의제취득일 기준시가」 칸)가 곧 ②다(사용자 결정 Q-34 a · Q-36 a).
+ * 건물 기준시가는 2001.1.1. 전 고시가 없어 1985.1.1. 기준시가는 §164⑤로만 산정된다. 엔진은 이 칸이 실리면(`preDeemedSentStdPrices` —
+ * 건물은 자동값이 없어 칸 값 그대로) ②로 주입한다(`inheritance-acquisition-helpers.ts`). 그러니 「①도 ②도 없음」 선언을 요구하지 않는다.
+ * 계획서: docs/00-pm/building-163-9-proviso-164-5.plan.md §9
+ */
+export function buildingPreDeemedSec164Filled(asset: AssetForm): boolean {
+  return asset.assetKind === "building" && isSec163_9PreDeemed(asset) && parseAmount(asset.standardPriceAtAcq) > 0;
 }
 
 /** ①(상증법 평가액)의 소스는 취득원인별로 다르다 — 상속은 공시가격 필드, 증여는 「증여 신고가액」. */

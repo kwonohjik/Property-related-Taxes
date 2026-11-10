@@ -373,7 +373,8 @@ function resolveInheritedAcquisitionInput(
 
   // 건물(토지 제외) + 건물 기준시가 고시 前 상속·증여: §164⑤ 취득당시 기준시가를 max 비교용(②)으로 주입 (소령 §163⑨2호).
   // 구간 = 기준일 연도 ≤ 2000 — 일반건물 건물 파트(`isBeforeBuildingStdPriceNotice` · `ACQ_BASE_RATE_MAX_ACQ_YEAR`)와 같은 사실에 같은 답
-  // (사용자 결정 Q-30 a · 계획서 building-163-9-proviso-164-5.plan.md). 의제취득일 전은 범위 밖(3자 max 경로 · V-3) — 받아도 쓰지 않는다.
+  // (사용자 결정 Q-30 a · 계획서 building-163-9-proviso-164-5.plan.md). 이 칸은 의제취득일 이후 전용이다 — 의제취득일 전은 아래
+  // `shouldInjectBuildingPreDeemedMax`(② = ③ 분자)가 받는다(받아도 이 칸은 쓰지 않는다).
   const shouldInjectBuildingMax =
     rawInput.propertyType === "building" &&
     (rawInput.inheritedBuildingSec164Value ?? 0) > 0 &&
@@ -456,6 +457,18 @@ function resolveInheritedAcquisitionInput(
     ...(shouldInjectBuildingMax && {
       buildingValuationStdPrice: applyRatio(rawInput.inheritedBuildingSec164Value!, currentInput.ownershipRatio ?? 1),
     }),
+    /**
+     * 의제취득일(1985.1.1.) 전 건물(토지 제외): ② §164⑤ = ③ 분자(의제취득일 기준시가) — 사용자 결정 Q-34 a(계획서 §9).
+     * 건물 기준시가는 2001.1.1. 전에 고시된 적이 없어 1985.1.1. 기준시가는 §164⑤로만 산정된다 ⇒ 같은 물리량이다
+     * (주택 B-2 · 상가 A안 · 토지 §164④와 같은 관계). 분자는 물건 전체 값이라 ②만 지분으로 안분한다(A07).
+     */
+    ...(rawInput.propertyType === "building" &&
+      isPreDeemed &&
+      // 증여세 계산기 「비주택 건물」(상가 포함)은 ②를 §164⑥ 8칸으로만 받는다(Q-37 a · Q-38)
+      !base.deemedStdNotSec164 &&
+      (standardPriceAtDeemedDate ?? 0) > 0 && {
+        buildingValuationStdPrice: applyRatio(standardPriceAtDeemedDate!, currentInput.ownershipRatio ?? 1),
+      }),
     transferDate: base.transferDate ?? rawInput.transferDate,
     transferPrice: base.transferPrice ?? rawInput.transferPrice,
   };

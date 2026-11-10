@@ -50,6 +50,11 @@ export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
       standardPriceAtDeemedDate: z.number().int().nonnegative().optional(),
       /** 양도시 기준시가 (원) */
       standardPriceAtTransfer: z.number().int().positive().optional(),
+      /**
+       * 건물(`propertyType: "building"`)의 의제취득일 기준시가를 ②(§164⑤)로 **쓰지 않는다** — 증여세 계산기 부담부증여 전용.
+       * 그 계산기의 「비주택 건물」은 상가를 포함하는 분류라 ②를 §164⑥ 8칸으로만 받는다(Q-38). 생략 = 양도세 계산기 규칙(② = 분자 · Q-34 a · Q-37 a).
+       */
+      deemedStdNotSec164: z.literal(true).optional(),
       ...apartNtsPriceShape,
       /**
        * ⚠️ **아래 3키와 refine은 현재 도달하지 않는다** (2026-09-05 · 코드리뷰 Q22).
