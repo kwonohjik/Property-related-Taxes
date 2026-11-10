@@ -46,11 +46,10 @@ describe.each(forms)("%s 폼", (_name, mount, badges) => {
       expect(l.className).toContain("text-sm");
       expect(l.className).not.toContain("text-xs");
     }
-    // §99는 공용 자식(New99LuxuryHouseFields·ReductionPhdInput — §99의3 등과 공유)의 text-micro hint가 남아 있어 폼 소스로 확인한다.
+    // 공용 자식(New99LuxuryHouseFields·ReductionPhdInput)도 정리됐으므로 §99도 렌더 결과로 확인한다.
+    expect(r.container.innerHTML).not.toMatch(/<p[^>]*text-micro/);
     if (_name === "§99") {
       expect(readFileSync("components/calc/transfer/New99InputForm.tsx", "utf8")).not.toMatch(/text-micro|SectionShell/);
-    } else {
-      expect(r.container.innerHTML).not.toMatch(/<p[^>]*text-micro/);
     }
   });
 });
