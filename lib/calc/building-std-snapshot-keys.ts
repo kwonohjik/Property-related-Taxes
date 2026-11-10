@@ -2,6 +2,7 @@
  * 건물 기준시가 스냅샷 키 유틸 (단일 출처).
  *
  * 키 규약: 상증 `bsp-estate-${id}` / 양도 `bsp-${assetId}-{gb|cb}-{acq|transfer}`
+ *   · 건물(토지 제외) 상속 · 증여 §164⑤ `bsp-${assetId}-bldinh-acq`(취득 시점 하나).
  *   · 겸용 주택분 주택건물 기준시가(나목) `bsp-${assetId}-mx-housing-{acq|transfer}` — 시점별 2키(S3-2).
  *   · PHD 3시점 `bsp-${assetId}-phd-{acq|first|transfer}` (상가분은 `…-commercial` 접미).
  *   · 겸용 asset-major 상가 통합 모달 `bsp-${assetId}-mx-commercial` — 취득·양도 2시점을 한 폼에서
@@ -28,7 +29,7 @@ export function idOfSnapshotKey(key: string): string {
         // 🪤 `gb-ext`(증축분 건물2)는 **`gb`보다 앞**이어야 한다 — 짧은 것이 먼저 매칭되면
         //    `-gb-ext-acq`가 통째로 걸리지 않아 id가 `{assetId}-gb-ext`로 잘못 환원되고,
         //    inputData 매칭이 실패해 **증축분 계산서가 조용히 미출력**된다(2026-08-12 실측).
-        .replace(/-(?:gb-ext|gb|cbinh|cb|phd|split)-(?:acq|first|transfer)(?:-commercial)?$/, "")
+        .replace(/-(?:gb-ext|gb|cbinh|cb|phd|split|bldinh)-(?:acq|first|transfer)(?:-commercial)?$/, "")
         .replace(/-mx-commercial$/, "")
         // 겸용 **주택분** 주택건물 기준시가(나목, S3-2) — 칸이 시점별(취득·양도)이라 시점 세그먼트가 있다.
         // `-mx-commercial`(상가 통합 모달 · 시점 없음)과 접미가 겹치지 않는다.
@@ -89,7 +90,7 @@ export function snapshotKeyTimepoint(key: string): "acquisition" | "transfer" | 
   //    `bsp-estate-*`와 같이 상속·증여 맥락 그대로 간다 — 추가하면 **증여 계산서가 양도
   //    계산서로 둔갑**한다. 「대칭을 맞춘다」는 이유로 넣지 말 것.
   // `mx-housing`(겸용 주택분 나목 — 시점별 2키)도 같은 접두 집합에 있어야 한다(한쪽만 고치면 화면·PDF 불일치).
-  if (/-(?:phd|gb-ext|gb|cbinh|cb|split|mx-housing)-acq(?:-commercial)?$/.test(key)) return "acquisition";
+  if (/-(?:phd|gb-ext|gb|cbinh|cb|split|mx-housing|bldinh)-acq(?:-commercial)?$/.test(key)) return "acquisition";
   if (/-(?:phd|gb-ext|gb|cbinh|cb|split|mx-housing)-transfer(?:-commercial)?$/.test(key)) return "transfer";
   return null;
 }
@@ -113,6 +114,8 @@ export function snapshotKindLabel(key: string): string | null {
   if (/-gb-ext-(?:acq|transfer)$/.test(key)) return "증축분(건물2)";
   if (/-gb-(?:acq|transfer)$/.test(key)) return "일반건물";
   if (/-cbinh-acq$/.test(key)) return "상가건물(상속취득)";
+  // 건물(토지 제외) 상속 · 증여 §164⑤ 취득당시 기준시가(`BuildingSec164Section`)
+  if (/-bldinh-acq$/.test(key)) return "건물(상속·증여 취득)";
   if (/-cb-(?:acq|transfer)$/.test(key)) return "상가건물";
   if (/-mx-commercial$/.test(key)) return "겸용 상가분";
   if (/-mx-housing-(?:acq|transfer)$/.test(key)) return "겸용 주택분";

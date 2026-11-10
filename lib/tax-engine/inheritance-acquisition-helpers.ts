@@ -20,6 +20,7 @@ import type { InheritanceHouseValuationResult } from "./types/inheritance-house-
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { Pre1990LandValuationResult } from "./pre-1990-land-valuation";
 import { applyRatio } from "./tax-utils";
+import { ACQ_BASE_RATE_MAX_ACQ_YEAR } from "./data/building-standard-price/acq-base-rate";
 import { isRedevelopmentActive } from "./redevelopment-dispatch";
 import { resolveRedevelopment166_3AcquisitionPrice } from "./redevelopment-166-3-price";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
@@ -370,6 +371,15 @@ function resolveInheritedAcquisitionInput(
     base.assetKind === "land" &&
     base.inheritanceDate.getTime() < LAND_FIRST_DISCLOSURE_DATE.getTime();
 
+  // 건물(토지 제외) + 건물 기준시가 고시 前 상속·증여: §164⑤ 취득당시 기준시가를 max 비교용(②)으로 주입 (소령 §163⑨2호).
+  // 구간 = 기준일 연도 ≤ 2000 — 일반건물 건물 파트(`isBeforeBuildingStdPriceNotice` · `ACQ_BASE_RATE_MAX_ACQ_YEAR`)와 같은 사실에 같은 답
+  // (사용자 결정 Q-30 a · 계획서 building-163-9-proviso-164-5.plan.md). 의제취득일 전은 범위 밖(3자 max 경로 · V-3) — 받아도 쓰지 않는다.
+  const shouldInjectBuildingMax =
+    rawInput.propertyType === "building" &&
+    (rawInput.inheritedBuildingSec164Value ?? 0) > 0 &&
+    !isPreDeemed &&
+    base.inheritanceDate.getUTCFullYear() <= ACQ_BASE_RATE_MAX_ACQ_YEAR;
+
   let standardPriceAtDeemedDate = base.standardPriceAtDeemedDate;
   // 분모 — 직접 보낸 양도시 기준시가가 있으면 그것(④는 「양도시 기준시가 직접 입력」 토글이 켜졌을 때만 싣는다 ·
   // `preDeemedSentStdPrices`). 주택 §164⑦ 미공시 구간이면 그다음은 양도 당시 공시 개별주택가격(PR-5 — 종전에는 직접 입력을 덮었다).
@@ -442,6 +452,9 @@ function resolveInheritedAcquisitionInput(
         pre1990LandResult!.standardPriceAtAcquisition,
         currentInput.ownershipRatio ?? 1,
       ),
+    }),
+    ...(shouldInjectBuildingMax && {
+      buildingValuationStdPrice: applyRatio(rawInput.inheritedBuildingSec164Value!, currentInput.ownershipRatio ?? 1),
     }),
     transferDate: base.transferDate ?? rawInput.transferDate,
     transferPrice: base.transferPrice ?? rawInput.transferPrice,

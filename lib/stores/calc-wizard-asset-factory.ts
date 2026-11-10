@@ -416,6 +416,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     supplementaryLandArea: "",
     supplementaryLandUnitPrice: "",
     supplementaryBuildingValue: "",
+    inhBuildingSec164Value: "",
     ...MIXED_USE_DEFAULTS,
     ...PRE_DEEMED_PURCHASE_DEFAULTS,
     rentalHousingException: { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS },

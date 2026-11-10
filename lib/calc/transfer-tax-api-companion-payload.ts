@@ -31,6 +31,7 @@ import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { buildInheritedAcquisitionPayload } from "./transfer-tax-api-inheritance";
 import { buildInheritedHouseValuationPayload } from "./transfer-tax-api-inheritance";
 import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-inheritance";
+import { buildBuildingSec164Payload } from "./transfer-tax-api-inheritance";
 import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { appurtenantCardAreaM2 } from "./transfer-tax-api-helpers";
@@ -576,6 +577,7 @@ export function buildAssetPayload(
           ...buildInheritedAcquisitionPayload(asset, ratio, fractional),
           ...buildInheritedHouseValuationPayload(asset, transferDate),
           ...buildCommercialInheritanceValuationPayload(asset),
+          ...buildBuildingSec164Payload(asset),
           // 토지를 출자한 원조합원도 — 단서 1호 구간(1990.8.30. 전 상속·증여)에서만(주 자산 `hasPre1990ForSec164`와 같은 식)
           ...((asset.assetKind === "land" ? isSec163_9Cause(asset.acquisitionCause) : isOriginalMemberLandAsset(asset) && sec164LandStatus(asset) !== null)
             ? buildPre1990LandPayload(asset, transferDate)

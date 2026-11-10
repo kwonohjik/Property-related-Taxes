@@ -9,6 +9,7 @@ const SEC164_AT: Record<BgSec163_9ProvisoKind, string> = {
   land: "같은 카드의 §164④",
   house: "같은 카드의 §164⑦",
   commercial: "아래 「§164⑥ 취득당시 기준시가」 칸의",
+  building: "아래 「§164⑤ 취득당시 건물 기준시가」 칸의",
 };
 
 interface Props {

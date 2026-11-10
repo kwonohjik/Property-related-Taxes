@@ -1334,6 +1334,14 @@ export interface TransferTaxInput {
   commercialInheritanceValuation?: CommercialInheritanceValuationInput;
 
   /**
+   * 건물(토지 제외 · `propertyType: "building"`) §164⑤ 취득당시 기준시가 (원, 물건 전체 100%) — 소령 §163⑨2호 ②.
+   * 의제취득일 이후 · 기준일 연도 ≤ 2000 상속·증여 건물에서만 읽는다(범위 밖은 무시). 결과는
+   * inheritedAcquisition.buildingValuationStdPrice에 지분 안분 후 주입(STEP 0.45). opt-in — 없으면 평가액만.
+   * 계획서: docs/00-pm/building-163-9-proviso-164-5.plan.md
+   */
+  inheritedBuildingSec164Value?: number;
+
+  /**
    * 겸용주택(1세대 1주택 + 상가) 분리계산 입력.
    * propertyType === "mixed-use-house" 일 때 필수.
    * 소득세법 시행령 §160 ① 단서 — 2022.1.1 이후 양도분 강제 분리.

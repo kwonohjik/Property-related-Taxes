@@ -12,6 +12,7 @@
  *
  * ⚠️ 목록을 두 곳에 **복사하지 않는다** — 두 벌이면 한쪽에 필드가 늘 때 다른 쪽만 빠진다(`splitAcquisitionShape` 규약).
  */
+import { z } from "zod";
 import { inheritedAcquisitionSchema, inheritanceHouseValuationSchema } from "./transfer-tax-schema-acq-deemed";
 import { commercialInheritanceValuationSchema } from "./transfer-tax-building-schemas";
 import { pre1990LandSchema } from "./transfer-tax-schema-pre1990-land";
@@ -25,4 +26,6 @@ export const sec163_9AcquisitionShape = {
   inheritedHouseValuation: inheritanceHouseValuationSchema.optional(),
   /** ⑫ 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 — 상가 + 상속개시일 < 2005-01-01 시 §163⑨2호 max */
   commercialInheritanceValuation: commercialInheritanceValuationSchema.optional(),
+  /** ⑫ 건물(토지 제외) §164⑤ 취득당시 기준시가(100%) — 기준일 연도 ≤ 2000 상속·증여 건물의 §163⑨2호 ②. 엔진이 범위를 다시 본다 */
+  inheritedBuildingSec164Value: z.number().int().positive().optional(),
 };

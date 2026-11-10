@@ -412,6 +412,7 @@ export function toMultiEngineItem(
         inheritedAcquisition: p.inheritedAcquisition,
         inheritedHouseValuation: p.inheritedHouseValuation,
         commercialInheritanceValuation: p.commercialInheritanceValuation,
+        inheritedBuildingSec164Value: p.inheritedBuildingSec164Value,
       },
       toDate(p.transferDate, "transferDate"),
       p.transferPrice,

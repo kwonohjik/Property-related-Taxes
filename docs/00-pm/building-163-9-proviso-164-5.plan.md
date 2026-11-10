@@ -2,7 +2,7 @@
 
 - 출발: `bg-163-9-proviso-post-deemed.plan.md` §9.1 별건 · 사용자 결정 2026-11-10 **Q-28 a(일반건물과 같은 방식으로 고친다 — 계획서부터)**.
 - 기준 master `00cdd4eb8`. 측정은 route POST · mock 세율(throwaway probe — 지웠다).
-- 상태: **계획 — 결정 대기(§6 Q-30 ~ Q-33)**. 코드 변경 없음.
+- 상태: **구현** — 사용자 결정 2026-11-10 「모두 권장안으로」(Q-30 ~ Q-33 전부 a). 결과는 §8.
 
 ## 1. 문제
 
@@ -77,3 +77,39 @@
 - V-2 2000.7.1.~12.31. 상속 · 증여 건물이 단서 구간인지(상증법 §61①2호 국세청장 고시 시행 여부).
 - V-3 의제취득일 전(1985.1.1. 전) `building` 상속의 일반 양도 동작(3자 max의 ②에 무엇이 들어가는지).
 - V-4 `deriveEngineInheritanceAssetKind`가 `building`을 `house_apart`로 싣는 것이 엔진 다른 판단(공동주택 국세청 고시 질문 · `apartGate`)에 영향이 있는지.
+
+## 8. 구현 (2026-11-10 · Q-30 ~ Q-33 전부 a)
+
+### 8.1 V 측정 [직접]
+
+- **V-1** 상속 · 증여 `building` ③에 취득시 기준시가 칸이 없다 — E2E BD-2(2001 상속: 「취득가액 의제 특례」 블록만 있고 §164 칸 없음)로 확인. 새 카드(`BuildingSec164Section`)를 ③ 상가 §164⑥ 카드 바로 아래에 붙였다(상속 · 증여 공용 — 상가 카드와 같은 자리 · 같은 방식).
+- **V-3** 의제취득일 전(1983 상속) `building`은 ①과 ③(환산 · 분자 = 취득시 기준시가 칸)만 비교한다 — ②(§164⑤)는 이 경로에도 없다(probe: ① 1억 · ③ 333,333,333 채택 · 양도차익 160,666,667). **범위는 계획대로 의제취득일 이후만** — 의제취득일 전 ②는 별건(아래 §8.4).
+- **V-4** `building` → 엔진 `assetKind: "house_apart"` 매핑은 이 구현에 영향이 없다 — 공동주택 ② 게이트(`apartSec164Open`)는 답이 없으면 닫혀 `houseValuationStdPrice`를 주입하지 않고, 건물 슬롯은 `propertyType === "building"`으로 따로 연다. 시료 전부 200 · 경고 없음.
+- **V-2**(2000.7.1. ~ 12.31.)는 Q-30 a로 「연도 ≤ 2000 = 단서 안」(일반건물과 같은 답) — 경계 2000-12-31을 anchor G2b로 고정.
+
+### 8.2 변경
+
+| 지점 | 내용 |
+|---|---|
+| 엔진 | `InheritanceAcquisitionInput.buildingValuationStdPrice`(슬롯) · `TransferTaxInput.inheritedBuildingSec164Value`(100%) · helpers `shouldInjectBuildingMax`(`propertyType === "building"` · 의제취득일 이후 · 기준일 연도 ≤ `ACQ_BASE_RATE_MAX_ACQ_YEAR`) · A07 지분 안분 · `calcPostDeemed` 종류 `building`(「§164⑤ · 건물 기준시가 고시 전」) · 법령 상수 `INHERITED_AFTER_DEEMED_BUILDING_MAX` |
+| ⑫⑭ | §163⑨ 공용 shape(`sec163_9AcquisitionShape` — 단건 · 컴패니언 · 다건)에 `inheritedBuildingSec164Value` · `toEngineSec163_9Inputs` · 다건 명시 키 |
+| ①②③ | `inhBuildingSec164Value`(새 칸 — Q-31 a) · 팩토리 · 마이그레이션 |
+| 술어 | `sec164BuildingStatus`(노출 · ④ · ⑧ 단일 소스) |
+| ④ | `buildBuildingSec164Payload` — 단건 · 컴패니언 · 다건 3곳 · `sec164Ready`(① 비움 + ②만 = 상속 통과) |
+| ⑧ | `isSec164ClauseAFilled`에 건물 — 칸 하나라 부분 입력 없음 · 비우면 평가액만(Q-32 a) |
+| ⑤ | `BuildingSec164Section`(칸 + 「취득당시 건물 기준시가 계산」 모달 · 스냅샷 키 `bsp-{id}-bldinh-acq`) |
+| 부담부증여 | `bgSec163_9ProvisoKind` → `"building"`(Q-33 a) · ② 카드는 ③ 칸을 가리킨다(상가와 같은 방식) |
+
+- 이름 주의: `buildingSec164Value`는 이미 D2-4(주택 건물 몫 §164⑦)가 쓰는 키라 새 키는 `inheritedBuildingSec164Value`다.
+
+### 8.3 검증
+
+- anchor `__tests__/api/transfer.route.building-163-9-proviso.anchor.test.ts` 15건: G1 상속 300,000,000 · G2 2001 400,000,000(싣지 않음) · G2b 2000-12-31 단서 안 · G3 증여 · G4 비움 · G5 ① 승 · G6 지분 1/2 150,000,000(= G1 ÷ 2) · G7 부담부증여 150,000,000(수정 전 200,000,000) · G7g 증여 · G7b 비움 · G8 기준시가 평가 불변 · G9 1983 불변 · G10 ⑫ 직접 호출(범위 밖 무시) · G11 ① 비움 · G12 컴패니언(취득가액 1억 → 2억 · 합계 양도차익 −1억).
+- 뮤테이션 9건 전부 검출: 엔진 연도 게이트 · 지분 안분 · ④ 전송 · 엔진 max · 술어 연도 · 술어 의제취득일 · `sec164Ready` · `isSec164ClauseAFilled` · 컴패니언 전송. (`!isPreDeemed` 엔진 가드는 `calcPreDeemed`가 건물 슬롯을 읽지 않아 동치 변이 — 방어로 둔다.)
+- E2E `e2e/building-163-9-proviso-164-5.spec.ts` BD-1~3.
+- 일반건물 건물 파트와의 값 대조(§5)는 하지 않았다 — 두 경로 모두 max(①, ②) 한 줄이라 같은 ①②면 같은 값이지만 실측은 **미수행**.
+
+### 8.4 남은 것
+
+- 의제취득일 전(1985.1.1. 전) 상속 · 증여 `building`의 ②(§164⑤) — 지금은 ① · ③만 비교한다(V-3). 다른 종류(주택 · 상가 · 토지)는 pre/post 구분 없이 ②를 넣는다. 열지 여부 · ③ 분자와의 관계(같은 값인지)는 결정 필요.
+

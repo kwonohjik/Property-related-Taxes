@@ -68,7 +68,7 @@ export function toEngineSec163_9Inputs(
   transferPrice: number,
 ): Pick<
   TransferTaxInput,
-  "pre1990Land" | "inheritedAcquisition" | "inheritedHouseValuation" | "commercialInheritanceValuation"
+  "pre1990Land" | "inheritedAcquisition" | "inheritedHouseValuation" | "commercialInheritanceValuation" | "inheritedBuildingSec164Value"
 > {
   const p = src.pre1990Land;
   const h = src.inheritedHouseValuation;
@@ -103,5 +103,7 @@ export function toEngineSec163_9Inputs(
     ...(src.commercialInheritanceValuation
       ? { commercialInheritanceValuation: src.commercialInheritanceValuation }
       : {}),
+    // 건물 §164⑤ 취득당시 기준시가(§163⑨2호 ②) — 숫자(Date 변환 불요). 범위 판정은 엔진 STEP 0.45가 한다
+    ...(src.inheritedBuildingSec164Value ? { inheritedBuildingSec164Value: src.inheritedBuildingSec164Value } : {}),
   };
 }

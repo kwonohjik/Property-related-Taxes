@@ -149,6 +149,16 @@ export interface InheritanceAcquisitionInput {
   commercialValuationStdPrice?: number;
 
   /**
+   * 건물(토지 제외) 기준시가 고시 前 상속·증여 건물의 §164⑤ 취득당시 기준시가 (원, 지분 안분 후).
+   * post-deemed(의제취득일 이후) 건물 & 기준일 연도 ≤ 2000(`ACQ_BASE_RATE_MAX_ACQ_YEAR` — 일반건물 경로와 같은 구간) 시,
+   * 취득가액 = max(reportedValue[① 상증법 평가액], 이 값[② §164⑤]). 소령 §163⑨2호.
+   * helpers가 `TransferTaxInput.inheritedBuildingSec164Value`(100%)를 지분으로 안분해 주입한다(A07 — 다른 슬롯과 같은 지점).
+   * (house/commercial/landValuationStdPrice와 배타 — 자산은 하나.)
+   * 계획서: docs/00-pm/building-163-9-proviso-164-5.plan.md
+   */
+  buildingValuationStdPrice?: number;
+
+  /**
    * 개별공시지가 미공시 상속·증여 토지의 §164④ 취득당시 기준시가 (원, 총액·미스케일).
    * 상속개시일·증여일 < 1990-08-30(개별공시지가 최초고시) 시,
    * 취득가액 = max(reportedValue[① 상증법 평가액], 이 값[② §164④]). 소령 §163⑨**1호**.
