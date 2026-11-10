@@ -10,7 +10,9 @@
  *   엔진 도달 시: §97의5 항목이 있으면 §97의3·§97의4는 **부적격 여부와 무관하게 «선택 사실»로** 배제하고
  *   (`has975` — 조문이 «선택»·«적용»을 가르지 않고 해석례도 없어 기준을 바꾸지 않았다. V-2,
  *   docs/00-pm/rental-97-5-has975-v2.plan.md), §97의3↔§97의4는 첫 항목만 평가한다 (배열 순서 우선).
- * - 세액감면 계열 ↔ §69 자경 등: 조특법 §127⑦ — calcReductions candidates max 패턴 합류.
+ * - 세액감면 계열 ↔ §69 자경 등 **다른** 계열: 조특법 §127⑦ — calcReductions candidates max 패턴 합류.
+ * - 세액감면 계열 **안**(§97 본문·단서·§97의2·§97의5): max가 돌지 않는다 — `evaluateRental97TaxAmount`는 첫 항목에서 return한다.
+ *   공존은 ⑧·⑫가 막는다(`rental-97-tax-amount-overlap.ts`). 엔진에 닿으면 배열 순서가 승자다.
  */
 
 import type { TransferReduction } from "../types/transfer.types";
@@ -233,6 +235,8 @@ export function evaluateRental97Lthd(
 
 /**
  * STEP 8 (감면세액) 용 — reductions에서 세액감면 계열(§97 본문/단서·§97의2·§97의5) 첫 항목 평가.
+ * **첫 항목만 평가한다** — 같은 입력에 순서만 바꿔도 세액이 달라지고, 앞 항목이 부적격이면 적격인 뒤 항목은 보지 않는다.
+ * 공존은 ⑧·⑫가 막는다(`rental-97-tax-amount-overlap.ts`) — 엔진은 방어선이다.
  */
 export function evaluateRental97TaxAmount(
   reductions: TransferReduction[] | undefined,

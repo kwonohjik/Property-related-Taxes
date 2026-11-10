@@ -182,8 +182,8 @@ describe("refine 단위 — 분류 · 임대 범주 제외 · 날짜 무관", ()
     expect(await run(["rental_97_4", "unsold_98_3"], "2024-01-01", "2025-01-01")).toHaveLength(1);
     expect(await run(["rental_97_4", "unsold_98_3"], "2015-01-01", "2025-01-01")).toHaveLength(1);
   });
-  it("단독과 세액감면형끼리(§97 본문·단서·§97의2·§97의5)는 막지 않는다 (명문 배제·§127⑦ 쌍은 V-6 anchor)", async () => {
-    for (const pair of [["rental_97_main", "rental_97_2"], ["rental_97_proviso", "rental_97_5"], ["rental_97_main", "rental_97_5"]]) {
+  it("단독과, 임대 세액감면 계열 ↔ 다른 계열 세액감면(§77)은 막지 않는다 (명문 배제·§127⑦ 쌍은 V-6 anchor, 임대 계열 안 쌍은 rental-97-tax-amount-pairs anchor)", async () => {
+    for (const pair of [["rental_97_main", "public_expropriation"], ["rental_97_proviso", "public_expropriation"], ["rental_97_5", "public_expropriation"]]) {
       expect(await run(pair, "2003-03-01", "2025-08-01"), pair.join("+")).toHaveLength(0);
     }
     expect(await run(["rental_97_4"], "2003-03-01", "2025-08-01")).toHaveLength(0);

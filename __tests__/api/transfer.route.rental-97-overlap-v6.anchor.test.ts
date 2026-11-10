@@ -171,10 +171,14 @@ describe("쌍 3 — §97 본문·§97의2 × §97의3/4 (명문 배제 없음 �
       expect((await post(f)).status).toBe(200);
     }
   });
-  it("세액감면형끼리(§97 본문 + §97의2)는 종전 그대로 막지 않는다", async () => {
+  it("세액감면형끼리(§97 본문 + §97의2)는 §127⑦ 트랙 교차가 아니라 세액감면 계열 쌍 문구로 막는다 (V-6 미측정분 · #3144 — 종전에는 200이었다)", async () => {
     const f = form([card(1, "housing", [r97main(), r972()], "1995-02-01")]);
-    expect(step8(f) ?? "").not.toMatch(CONFLICT_RE);
-    expect((await post(f)).status).toBe(200);
+    const m8 = step8(f) ?? "";
+    expect(m8).not.toMatch(CONFLICT_RE);
+    expect(m8).toMatch(/\(조특법 §127⑦\)\. 하나만 선택하세요\./);
+    const r = await post(f);
+    expect(r.status).toBe(400);
+    expect(Object.values(r.fieldErrors).flat()).toContain(m8);
   });
   it("카드가 다르면 막지 않는다 — 카드 1 §97의4 + 카드 2 §97 본문", async () => {
     const r = await post(form([card(1, "housing", [r974()]), card(2, "housing", [r97main()], "1995-02-01")]));
@@ -213,8 +217,8 @@ describe("refine · 판정 함수 단위", () => {
       }
     }
   });
-  it("세액감면형끼리·단독은 막지 않는다", async () => {
-    for (const pair of [["rental_97_main", "rental_97_2"], ["rental_97_proviso", "rental_97_5"], ["rental_97_main", "rental_97_5"], ["rental_97_4"]]) {
+  it("단독과, 임대 세액감면 계열 ↔ 다른 계열 세액감면(§77)은 막지 않는다 (임대 계열 안 쌍은 rental-97-tax-amount-pairs anchor)", async () => {
+    for (const pair of [["rental_97_4"], ["rental_97_main"], ["rental_97_main", "public_expropriation"], ["rental_97_5", "public_expropriation"]]) {
       expect(await run(pair), pair.join("+")).toHaveLength(0);
     }
   });
