@@ -2,7 +2,7 @@
 
 - 출발: `companion-inherit-valuation-share-vp2c.plan.md` §29(측정 #3157) · 사용자 결정 2026-11-10 **Q-22 a(고친다 — 계획서부터) · Q-23 a(D-3m 함께)**.
 - 기준 master `c169312e6`. 측정은 route POST · mock 세율. probe는 지웠다(원본 세션 scratchpad `d13/p17*.json` · `p18*.json`).
-- 상태: **계획 — 결정 대기(§6 Q-24 ~ Q-27)**. 코드 변경 없음.
+- 상태: **결정 완료 2026-11-10 — Q-24 a · Q-25 a · Q-26 a · Q-27 a(사용자 「모두 권장안으로」)**. PR-1(토지 · 단독주택 + D-3m) 구현 — §8.
 
 ## 1. 문제
 
@@ -96,3 +96,16 @@
 - V-2 `runBurdenedGiftStep`이 STEP 0.45 post-deemed 결과를 받을 수 있는 구조인지(의제취득일 전 `preDeemedParam`과 같은 자리).
 - V-3 ②가 이길 때 필요경비 — §163⑨ 의제 실지거래가액이라 실제 필요경비(개산공제 아님)인지 · 일반 양도 STEP 0.45와 같은지.
 - V-4 축 A · 축 B · 함께 양도에서 ②의 지분 안분 지점(A07 선례와 같은 주입 지점).
+
+## 8. PR-1 구현(토지 1호 · 단독주택 2호 + D-3m)
+
+- 범위 술어 `bgSec163_9ProvisoKind`(`lib/calc/bg-163-9-proviso.ts`): 부담부증여 × 상속 · 증여 × 시가 · 실지 × 의제취득일 이후 × 이월과세 아님 × (토지 `sec164LandStatus` 구간 | 단독주택 `sec164HouseStatus` 구간 · 겸용 · 공동주택 · 토지 · 건물 취득일 다름 · 소유자 분리 제외). ⑤ 칸 · ④ 전송 · 안내가 같은 술어다.
+- ④ `buildInheritedAcquisitionPayload`: 범위 안이고 ② 칸이 다 차 있을 때만 post-deemed를 싣는다. ① = 실지 칸(토지 `bgActualAcquisitionLand` · 주택 `bgActualAcquisitionTotal` · Q-24 a). ②가 비면 싣지 않는다 — 평가액만(Q-25 a · 종전 값). 일부만 차면 ⑧ `sec164PartialInputError`가 일반 양도와 같이 막는다.
+- 엔진: `runBurdenedGiftStep`이 STEP 0.45 post-deemed 결과(`postDeemedAcquisitionOf` · 지분 축소 후 · 안분 전)를 `postDeemedAcquisition`으로 넘기고, 실지(K-4) 분기가 A = max(실지 칸, 그 값) — 토지 · 건물은 실지 칸 비율(없으면 취득시 기준시가 비율). 필요경비는 실지 경로 그대로(V-3 — 개산공제 아님). 실지가 아니면(담보 승 · 다른 방식) STEP 0.45 단계를 지운다(`transfer-tax-precalc.ts` · 의제취득일 전 `deemed_std`와 같은 처리).
+- ⑤ `BgSec163_9ProvisoSection`: 「부담부증여」 카드 실지 칸 아래에 일반 양도와 같은 부품(`Pre1990LandValuationInput` · `HouseValuationSection`) · 「해석례 미확보」 문구(Q-27 a). 실지 칸 hint에 §163⑨ 평가액 안내.
+- D-3m `BgSec159AcqLead`: ③ 「취득가액 — 부담부증여 §159 자동 산정」 첫 문장 — 기준시가 평가 · 담보 승이면 종전 문구, 시가면 「‘부담부증여’ 카드의 산정방식 · 실지면 평가액(단서 구간이면 §164 가액과 큰 금액)」.
+- 검증: route anchor `transfer.route.bg-163-9-proviso-land-house.anchor.test.ts`(13 — L1 104,446,760 · H1 513,461,539 · 평가액 승 · ② 비움 · 일부 입력 · 단서 밖 · 기준시가 평가 · 축 A 1/2) · E2E `bg-163-9-proviso-land-house.spec.ts`(3).
+- 축 A 실측(토지 시료 60/40 · 물건 전체 재료 · 채무 × 지분율): 62,668,056 + 41,778,704 = 104,446,760 = 단건과 같다. master는 96,000,000 + 64,000,000 = 160,000,000(평가액만).
+- 🔴 축 B 실측(같은 시료 · 지분 2 상속 1988 · 토글 끔): **master와 지금 모두** ⑧ 칸 미지정 1건(field `undefined`) · ⑫ 400 `companionAssets.0.inheritanceValuation`(상속 지분 카드에 평가액 요구) — 이번 변경 전부터 있는 막다른 길이다(별건 · 측정만).
+- 남은 것: 축 B 지분 카드의 ② 칸(위 막다른 길 먼저) · 함께 양도 컴패니언 — PR-1 범위 밖. PR-2(상가 · 오피스텔 · 건물) · PR-3(일반건물 파트 · 재개발 · 입주권).
+

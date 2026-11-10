@@ -38,6 +38,11 @@ export interface BgAcquisitionContext {
   acqStdPriceForced: boolean;
   isRightToMoveInValuation: boolean;
   preDeemed?: BgWholePreDeemed;
+  /**
+   * 의제취득일 이후 상속 · 증여 자산의 「소득세법 시행령」 §163⑨ 결과(STEP 0.45 · 지분 축소 후 · 채무 안분 전) — 실지(K-4) A의 하한이다.
+   * 단서 1 · 2호 구간이면 평가액(①)과 §164④~⑦ 가액(②) 중 큰 금액이 실지거래가액으로 의제된다(계획서 `bg-163-9-proviso-post-deemed.plan.md` · Q-24 a).
+   */
+  postDeemedAcquisition?: number;
   params: { capitalExpenditure?: number; transferExpense?: number };
   isUnregistered: boolean;
 }
@@ -113,6 +118,7 @@ export function resolveWholeBgAcquisition(ctx: BgAcquisitionContext): BgAcquisit
     acqStdPriceForced,
     isRightToMoveInValuation,
     preDeemed,
+    postDeemedAcquisition,
     params,
     isUnregistered,
   } = ctx;
@@ -203,6 +209,19 @@ export function resolveWholeBgAcquisition(ctx: BgAcquisitionContext): BgAcquisit
       }
       landActualAcquisition = totalAcqStd === 0 ? 0 : safeMultiplyThenDivide(total, landStdPriceAtAcquisition, totalAcqStd);
       buildingActualAcquisition = total - landActualAcquisition;
+    }
+    // 의제취득일 이후 상속 · 증여 × §163⑨ 단서 — §164 가액(②)이 평가액(실지 칸 · ①)보다 크면 ②가 실지거래가액이다(§159①1호 A = 법 §97①1호 가액).
+    //   토지 · 건물은 실지 칸의 나눈 비율로(한 칸이면 그 칸에 전부), 칸이 하나도 없으면 취득시 기준시가 비율로 나눈다. 필요경비는 실지 경로 그대로(개산공제 아님).
+    const actualWhole = landActualAcquisition + buildingActualAcquisition;
+    if (!isRightToMoveInValuation && postDeemedAcquisition !== undefined && postDeemedAcquisition > actualWhole) {
+      const totalAcqStd = landStdPriceAtAcquisition + buildingStdPriceAtAcquisition;
+      landActualAcquisition =
+        actualWhole > 0
+          ? safeMultiplyThenDivide(postDeemedAcquisition, landActualAcquisition, actualWhole)
+          : totalAcqStd > 0
+            ? safeMultiplyThenDivide(postDeemedAcquisition, landStdPriceAtAcquisition, totalAcqStd)
+            : postDeemedAcquisition;
+      buildingActualAcquisition = postDeemedAcquisition - landActualAcquisition;
     }
     landAcquisitionPrice = apportionAcquisitionPrice(landActualAcquisition, assumedDebtAmount, giftValuation.max);
     buildingAcquisitionPrice = apportionAcquisitionPrice(buildingActualAcquisition, assumedDebtAmount, giftValuation.max);

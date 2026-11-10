@@ -18,6 +18,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { BgSec159AcqLead } from "./BgSec159AcqLead";
 
 interface BlockProps {
   acquisitionDate: string; // 증여일
@@ -40,6 +41,10 @@ interface BlockProps {
    * 「입력란을 표시하지 않습니다」 안내가 그 칸과 모순되므로 이 경우에는 취득가액 자리를 비운다.
    */
   bgPartReportedElsewhere?: boolean;
+  /** 부담부증여 안내 첫 문장(D-3m) — 취득가액이 취득시 기준시가 × 채무비율인가(기준시가 평가 · 담보 승). 미지정이면 그 문장(종전). */
+  bgStdBasis?: boolean;
+  /** §163⑨ 단서 구간(`bgSec163_9ProvisoKind`) */
+  bgProvisoKind?: "land" | "house" | null;
   /**
    * 신고가액 칸을 숨긴다 — 일반건물 분리 ON. 파트 카드(토지·건물)의 취득가액이 취득가액을 정하고 이 자산 전체 값은 세액에 쓰이지 않는다(⑧도 요구하지 않는다).
    * 필수로 표시된 쓰이지 않는 칸이 사용자를 헷갈리게 했다 — 매매 블록의 `hideAssetAcqAxis` 와 같은 처리다
@@ -111,9 +116,8 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
           titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §159" label="§159 부담부증여" />}
         >
           <p className="text-xs text-amber-800 dark:text-amber-200">
-            부담부증여에서 <strong>양도로 보는 부분</strong>의 취득가액은 취득당시 기준시가에
-            <strong> 채무비율</strong>을 곱해 산정합니다. 증여 신고가액을 따로 적어도 계산에 쓰이지
-            않으므로 입력란을 표시하지 않습니다. 위 <strong>증여일</strong>이 보유기간 기산일입니다
+            <BgSec159AcqLead cause="gift" stdBasis={props.bgStdBasis ?? true} provisoKind={props.bgProvisoKind ?? null} />
+            증여 신고가액을 이 칸에 따로 적어도 계산에 쓰이지 않으므로 입력란을 표시하지 않습니다. 위 <strong>증여일</strong>이 보유기간 기산일입니다
             (단순 증여의 세율 보유기간은 증여받은 날부터 — 소득세법 §104② 본문).
           </p>
         </ToneCard>

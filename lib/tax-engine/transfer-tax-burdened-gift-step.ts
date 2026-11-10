@@ -39,6 +39,15 @@ function preDeemedParamOf(inheritedStep: InheritedAcquisitionStepResult | undefi
   };
 }
 
+/**
+ * STEP 0.45가 의제취득일 **이후** 상속 · 증여 자산으로 계산한 §163⑨ 취득가액(지분 축소 후 · 안분 전). 단서 구간이면 평가액과 §164 가액 중 큰 금액이다
+ * (계획서 `bg-163-9-proviso-post-deemed.plan.md`). 실지(K-4)만 읽는다. 의제취득일 전(`bgPreDeemed`)은 위 `preDeemedParamOf`가 맡는다.
+ */
+function postDeemedAcquisitionOf(inheritedStep: InheritedAcquisitionStepResult | undefined): number | undefined {
+  if (!inheritedStep || inheritedStep.bgPreDeemed || inheritedStep.result.preDeemedBreakdown) return undefined;
+  return inheritedStep.result.acquisitionPrice;
+}
+
 export function runBurdenedGiftStep(
   rawInput: TransferTaxInput,
   workingInputIn: TransferTaxInput,
@@ -96,6 +105,7 @@ export function runBurdenedGiftStep(
       isUnregistered: rawInput.isUnregistered,
       ownershipRatio,
       ...preDeemedParam,
+      postDeemedAcquisition: postDeemedAcquisitionOf(inheritedStep),
     });
     /**
      * 재개발·재건축 완공 아파트(원조합원) × 시가 모드 × 환산(K-5) — 취득가액은 **종전 부동산**(기존건물과 그 부수토지)의 취득가액이고,

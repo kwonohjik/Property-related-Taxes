@@ -13,6 +13,7 @@ import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { buildApartNtsPricePayload } from "./apart-nts-price";
 import { isGiftPreDeemedConversionAsset } from "./gift-pre-deemed";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
+import { bgSec163_9ProvisoKind, bgSec163_9ReportedField } from "./bg-163-9-proviso";
 import { preDeemedSentStdPrices } from "./pre-deemed-auto-std-price";
 import {
   sec164HouseStatus,
@@ -54,7 +55,10 @@ export function buildInheritedAcquisitionPayload(
   if (effectiveBuildingCauseMix(primary)) return {};
   // 부담부증여는 §159가 취득가액을 정한다 — 의제취득일 전 토지·주택·상가·건물(`isBgPreDeemedAsset`)만 그 A를 3자 max·의제취득일 기준시가로 정하려고 싣는다
   // (계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18). 그 밖은 ①② 칸이 화면에 없어 남은 값이 엔진에 닿으면 안 된다(결함 R).
-  if (primary.transferType === "burdened_gift" && !isBgPreDeemedAsset(primary)) return {};
+  // 의제취득일 이후 × §163⑨ 단서 구간(토지 1호 · 단독주택 2호)은 예외 — §159①1호 A가 평가액과 §164 가액 중 큰 금액이라 ②와 비교하려고 싣는다
+  // (계획서 bg-163-9-proviso-post-deemed.plan.md). ①은 부담부증여 실지 칸(Q-24 a)이고, ② 칸이 다 차 있을 때만 싣는다 — 비우면 평가액만(Q-25 a · 종전과 같은 값).
+  const bgProviso = primary.transferType === "burdened_gift" ? bgSec163_9ProvisoKind(primary) : null;
+  if (primary.transferType === "burdened_gift" && !isBgPreDeemedAsset(primary) && !bgProviso) return {};
   const isGift = primary.acquisitionCause === "gift";
   const triggerable =
     isSec163_9Cause(primary.acquisitionCause) &&
@@ -68,10 +72,12 @@ export function buildInheritedAcquisitionPayload(
   if (!inheritanceStartDate) return {};
   const isPreDeemed = inheritanceStartDate < "1985-01-01";
 
-  /** ① 상증법 §60~66 평가액 — 상속은 공시가격 필드, 증여는 「증여 신고가액」 */
-  const reportedSource = isGift
-    ? primary.fixedAcquisitionPrice
-    : primary.publishedValueAtInheritance;
+  /** ① 상증법 §60~66 평가액 — 상속은 공시가격 필드, 증여는 「증여 신고가액」, 부담부증여 단서 구간은 그 카드의 실지 칸(③ 평가 칸은 화면에 없다) */
+  const reportedSource = bgProviso
+    ? primary[bgSec163_9ReportedField(bgProviso)]
+    : isGift
+      ? primary.fixedAcquisitionPrice
+      : primary.publishedValueAtInheritance;
 
   if (isPreDeemed) {
     // ③ 분자·분모 — 증여는 그 칸이 화면에 있을 때만 싣는다(`isGiftPreDeemedConversionAsset` · PR-5). 칸이 없는 증여 자산에
@@ -130,6 +136,7 @@ export function buildInheritedAcquisitionPayload(
     isFullyFilled(sec164LandStatus(primary));
   const isInheritanceCause = primary.acquisitionCause === "inheritance";
   if (reportedRaw <= 0 && !(isInheritanceCause && sec164Ready)) return {};
+  if (bgProviso && !sec164Ready) return {};
   // 지분 모드: 100% 기준 입력값에 × ratio 적용 (primaryInheritanceValuation과 일관)
   // 미적용 시 100% 송신으로 엔진에서 안분 잔여가 필요경비로 잘못 적재됨 (사례 27)
   const reportedValue = primaryFractional
