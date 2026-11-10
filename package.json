@@ -31,7 +31,7 @@
     "build:stdprice": "NODE_OPTIONS='--max-old-space-size=8192' tsx scripts/build-commercial-stdprice.ts",
     "verify:matrix": "tsx scripts/verify-matrix.ts",
     "build:admin-all": "npm run build:sigungu && npm run build:adjacency && npm run verify:matrix",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "NODE_OPTIONS='--max-old-space-size=8192' tsc --noEmit",
     "check:pre-pr": "npm run typecheck && npm run lint && npm run test",
     "prepare": "husky",
     "check:kiwoom": "node scripts/check-kiwoom-auth.mjs"
