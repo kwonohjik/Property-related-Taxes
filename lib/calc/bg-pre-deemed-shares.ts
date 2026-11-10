@@ -82,9 +82,12 @@ export function bgPreDeemedShareJudgmentFields(share: AssetForm, primary: AssetF
 export function bgShareCardJudgmentFields(share: AssetForm, primary: AssetForm): Partial<AssetForm> {
   const merged = mergePrimaryBasic(share, primary);
   // 재개발 승계조합원 지분(조합원 구분은 지분별) — 저장값 「일반 양도」면 일반 「취득가액」 칸이 떠 「승계조합원의 취득가액은 이 칸」이라 안내했는데
-  //   부담부증여 계산은 그 칸을 읽지 않는다(자산 1 `bgActualAcquisitionTotal` 병합 · vp2c §23 D-3k · Q-17 a). 원조합원 지분은 §166 블록이라 판정값과 무관해 종전 그대로.
-  const redevSuccessorShare = merged.assetKind === "redevelopment_apt" && merged.redevIsSuccessorMember === "yes";
-  if (merged.transferType !== "burdened_gift" || !(BG_SHARE_CARD_KINDS.has(merged.assetKind) || redevSuccessorShare)) return {};
+  //   부담부증여 계산은 그 칸을 읽지 않는다(자산 1 `bgActualAcquisitionTotal` 병합 · vp2c §23 D-3k · Q-17 a).
+  //   재개발 원조합원 · 입주권 원조합원 지분도 같다 — 저장값 「일반 양도」면 ⑤ 「실거래가 취득가액」 칸이 떴는데 부담부증여 계산은 그 칸을 읽지 않는다
+  //   (vp2c §25 D-3h · Q-19 a). 이 지분의 실지취득가액은 「이 지분의 취득가액을 자산 1과 따로 입력」이 받는다(D-3g). 승계 입주권 지분은 ③ 승계취득 정보라 종전 그대로.
+  const redevShare = merged.assetKind === "redevelopment_apt";
+  const rtmiOriginalShare = merged.assetKind === "right_to_move_in" && merged.isSuccessorRightToMoveIn !== true;
+  if (merged.transferType !== "burdened_gift" || !(BG_SHARE_CARD_KINDS.has(merged.assetKind) || redevShare || rtmiOriginalShare)) return {};
   return Object.fromEntries(
     Object.entries(merged).filter(([k]) => k === "transferType" || k.startsWith("bg")),
   ) as Partial<AssetForm>;

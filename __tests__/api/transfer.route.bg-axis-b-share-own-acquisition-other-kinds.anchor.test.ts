@@ -137,7 +137,8 @@ describe("OK-4 범위 밖 — 기준시가 평가는 토글이 켜져 있어도 
 describe("OK-5 leaf — 토글을 여는 종류", () => {
   const merged = (kind: string) => mergePrimaryBasic(share(), Object.assign({ ...makeDefaultAsset(1) }, x({ ...COMMON, assetKind: kind, acquisitionDate: "2015-01-01" })) as AssetForm);
   it.each(["general_building", ...KINDS])("%s 열림", (kind) => expect(bgShareOwnAcquisitionApplies(merged(kind))).toBe(true));
-  it.each(["redevelopment_apt", "right_to_move_in", "presale_right"])("%s 닫힘(측정 안 함)", (kind) => expect(bgShareOwnAcquisitionApplies(merged(kind))).toBe(false));
+  it.each(["redevelopment_apt", "right_to_move_in"])("%s 열림 — 실지취득가액 한 칸(vp2c §25 D-3g · Q-18 a)", (kind) => expect(bgShareOwnAcquisitionApplies(merged(kind))).toBe(true));
+  it("presale_right 닫힘(부담부증여 지원 종류 밖)", () => expect(bgShareOwnAcquisitionApplies(merged("presale_right"))).toBe(false));
 });
 
 describe("OK-6 지분 카드 ③ 판정값(D-3c) — 저장값 「일반 양도」 카드도 자산 1의 부담부증여로 판정", () => {
@@ -150,9 +151,12 @@ describe("OK-6 지분 카드 ③ 판정값(D-3c) — 저장값 「일반 양도�
   it("토글 켬 — 산정방식은 이 지분 값", () => {
     expect(bgShareCardJudgmentFields(share(OWN, { bgAcquisitionMethod: "salesCase" }), primary("housing")).bgAcquisitionMethod).toBe("salesCase");
   });
-  it("일반 양도 · 재개발 · 입주권 · 분양권은 빈 객체 — 종전 그대로", () => {
+  it("일반 양도 · 분양권은 빈 객체 — 종전 그대로", () => {
     expect(bgShareCardJudgmentFields(share(), primary("housing", { transferType: "regular" }))).toEqual({});
-    for (const assetKind of ["redevelopment_apt", "right_to_move_in", "presale_right"]) expect(bgShareCardJudgmentFields(share(), primary("housing", { assetKind }))).toEqual({});
+    expect(bgShareCardJudgmentFields(share(), primary("housing", { assetKind: "presale_right" }))).toEqual({});
+  });
+  it("재개발 · 입주권(원조합원) → 병합값 — 종전에는 빈 객체라 쓰이지 않는 ⑤ 실거래가 칸이 떴다(vp2c §25 D-3h · Q-19 a)", () => {
+    for (const assetKind of ["redevelopment_apt", "right_to_move_in"]) expect(bgShareCardJudgmentFields(share(), primary("housing", { assetKind })).transferType).toBe("burdened_gift");
   });
   it("일반건물(D-3e · vp2c §19.3 · Q-12 a) → 병합값 — 종전에는 빈 객체라 취득시 기준시가 칸이 숨었다", () => {
     expect(bgShareCardJudgmentFields(share(), primary("housing", { assetKind: "general_building" })).transferType).toBe("burdened_gift");

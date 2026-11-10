@@ -109,8 +109,8 @@ describe("SC-1 승계조합원 지분 카드 ③ 판정값 (D-3k)", () => {
     expect(f.transferType).toBe("burdened_gift");
     expect(f.bgAcquisitionMethod).toBe("actual");
   });
-  it("원조합원 지분(§166 블록) · 첫 카드 일반 양도 → 빈 객체(종전 그대로)", () => {
-    expect(bgShareCardJudgmentFields(mk(2, SHARE_COMMON(0)), mk(1, COMMON, REDEV(SET), K4))).toEqual({});
+  it("원조합원 지분도 병합값(vp2c §25 D-3h · Q-19 a) · 첫 카드 일반 양도 → 빈 객체(종전 그대로)", () => {
+    expect(bgShareCardJudgmentFields(mk(2, SHARE_COMMON(0)), mk(1, COMMON, REDEV(SET), K4)).transferType).toBe("burdened_gift");
     expect(bgShareCardJudgmentFields(mk(2, SUCC_SHARE), { ...primary, transferType: "regular" })).toEqual({});
   });
 });

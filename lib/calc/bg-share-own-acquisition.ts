@@ -9,11 +9,15 @@
  * 범위: **일반건물 · 주택 · 토지 · 상가 · 건물** · 시가 평가(산정방식이 쓰이는 모드). 의제취득일 전 상속·증여 · 이월과세 지분은 제외(각자 다른 취득 재료 규칙이 있다).
  *   주택 · 토지 · 상가 · 건물은 같은 결함을 측정해 넓혔다(계획서 §15 D-3 · Q-8 a). 재개발 · 입주권 · 분양권은 측정하지 않아 제외한다(입주권은 권리가액 규약이 따로다).
  *   겸용주택(주택 + `isMixedUseHouse`)의 축 B × 부담부증여는 ⑧ · 엔진 MB-6이 막는다(`transfer-tax-validate-mixed-use-bg.ts`).
+ *   재개발 APT · 조합원입주권(원조합원 지분)은 **실지취득가액 한 칸만** 지분별로 받는다 — 산정방식은 자산 1을 따른다(계획서 §25 D-3g · Q-18 a).
+ *   재개발은 시가 평가 · 실지(K-4) · 담보 승 아님일 때만 그 칸이 쓰이고(기준시가 · K-5 · 담보 승은 취득시 기준시가 · §166③), 입주권 원조합원은
+ *   평가 모드와 무관하게 쓰인다(부담부증여 입주권은 K-4 전용 — `redev-pre-approval-acq-mode.ts`). 승계 입주권 지분은 ③ 승계취득 정보가 정본이라 제외한다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { bgAnyCarryover } from "./bg-carryover-parts";
 import { gbBgThreeWayParts } from "./bg-pre-deemed-mode";
+import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
 
 /** 토글을 여는 자산 종류 — 측정한 종류만(§14 일반건물 · §15 주택 · 토지 · 상가 · 건물). */
 const SHARE_OWN_ACQ_KINDS: ReadonlySet<string> = new Set(["general_building", "housing", "land", "commercial_building", "building"]);
@@ -35,8 +39,25 @@ export const BG_SHARE_STD_TRANSFER_KINDS: ReadonlySet<string> = new Set(["housin
 /** 지분 카드가 따로 받을 수 있는 칸 — 그 밖의 §159 하위필드는 물건 단위 값이라 계속 자산 1을 승계한다. */
 export const BG_SHARE_OWN_ACQ_FIELDS = ["bgAcquisitionMethod", "bgActualAcquisitionLand", "bgActualAcquisitionBuilding", "bgActualAcquisitionTotal"] as const;
 
+/** 실지취득가액 한 칸만 지분별로 받는 종류(재개발 APT · 조합원입주권) — 산정방식은 자산 1. */
+const SHARE_OWN_ACTUAL_ONLY_KINDS: ReadonlySet<string> = new Set(["redevelopment_apt", "right_to_move_in"]);
+
+/** 지분 카드가 따로 받는 칸 — 재개발 · 입주권은 실지취득가액 한 칸, 그 밖은 산정방식 + 실지 세 칸. */
+export function bgShareOwnAcquisitionFields(merged: AssetForm): readonly (typeof BG_SHARE_OWN_ACQ_FIELDS)[number][] {
+  return SHARE_OWN_ACTUAL_ONLY_KINDS.has(merged.assetKind) ? ["bgActualAcquisitionTotal"] : BG_SHARE_OWN_ACQ_FIELDS;
+}
+
+/** 재개발 · 입주권 지분에서 실지취득가액이 계산에 쓰이는가(§25.1 — 0인 칸은 토글을 열지 않는다). */
+function actualOnlyKindUsesActual(merged: AssetForm): boolean {
+  if (merged.assetKind === "right_to_move_in") return merged.isSuccessorRightToMoveIn !== true;
+  return merged.bgValuationMode === "sangjeungbeop_market" && merged.bgAcquisitionMethod === "actual" && !bgCollateralForcesStdAcq(merged, true);
+}
+
 /** 토글을 보일 수 있는 지분인가 — `merged` = 자산 1 값을 병합한 지분 카드(평가 모드 · 자산 종류는 자산 1, 취득원인 · 취득일은 그 지분). */
 export function bgShareOwnAcquisitionApplies(merged: AssetForm): boolean {
+  if (merged.transferType === "burdened_gift" && SHARE_OWN_ACTUAL_ONLY_KINDS.has(merged.assetKind)) {
+    return actualOnlyKindUsesActual(merged) && !isBgPreDeemedAsset(merged) && !bgAnyCarryover(merged);
+  }
   return (
     merged.transferType === "burdened_gift" &&
     merged.bgValuationMode === "sangjeungbeop_market" &&

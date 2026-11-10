@@ -45,7 +45,9 @@ const judgmentStep = (page: Page, name: string) =>
 /** 판정 결과 → 계산기 → 보유 상황. 계산기 Step4의 취득 당시 토글을 돌려준다. */
 async function handoffToHoldingStep(page: Page) {
   await page.getByTestId("one-house-to-calculator").click();
-  await expect(page).toHaveURL(/\/calc\/transfer-tax$/);
+  // 샤드의 첫 이동이면 dev 서버가 계산기 라우트를 이때 컴파일한다 — CI에서 5초(기본)를 넘겨 실패했다(PR #3139 E2E 5/12 · 첫 테스트로 배치).
+  //   같은 이동을 기다리는 다른 스펙과 같은 값(`carryover-gift-debt-purchased-part-parts.spec.ts`)
+  await expect(page).toHaveURL(/\/calc\/transfer-tax$/, { timeout: 30_000 });
   await page.getByRole("button", { name: "보유 상황" }).first().click();
   return page.getByTestId("transfer-was-regulated").getByRole("switch");
 }
