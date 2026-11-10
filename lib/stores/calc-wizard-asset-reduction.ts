@@ -502,7 +502,14 @@ export type RentalReductionFormVariant =
       /** 임대개시일 (YYYY-MM-DD) — 사업자등록+임대사업자등록 후 개시일 기산 (령 §98의5⑤1호 준용) */
       /** 임대계약 체결일 (YYYY-MM-DD) — 2015.12.31 이전 한정 (법 §98의8① 괄호) */
       rentalContractDate988: string;
+      /** 실제 임대개시일 — 기산일은 max(사업자등록일, 임대사업자등록일, 이 날짜) (령 §98의7⑤ → §98의5⑤1호) */
       rentalStartDate988: string;
+      /** 사업자등록일 (소법 §168) */
+      businessRegistrationDate988: string;
+      /** 임대사업자등록일 (민특법 §5) */
+      rentalRegistrationDate988: string;
+      /** 공실 구간(양 끝 포함) — 임대기간에서 제외. 옛 기록은 migrate가 [] 로 채운다 */
+      rentalVacancyPeriods988: VacancyPeriodFormItem[];
       /** 임대종료일 (YYYY-MM-DD) — 빈값 = 양도일까지 계속 */
       rentalEndDate988: string;
       /** 상속 합산 피상속인 임대기간 (개월) */

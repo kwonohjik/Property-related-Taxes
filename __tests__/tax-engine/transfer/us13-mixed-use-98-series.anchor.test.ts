@@ -26,7 +26,7 @@ const U983 = {
 };
 const R988 = {
   type: "unsold_98_8", contractDate988: D("2015-06-01"), acquisitionPrice988: 550_000_000, exclusiveAreaSqm988: 84.5,
-  rentalContractDate988: D("2015-12-20"), rentalStartDate988: D("2016-01-01"),
+  rentalContractDate988: D("2015-12-20"), rentalStartDate988: D("2016-01-01"), businessRegistrationDate988: D("2015-12-10"), rentalRegistrationDate988: D("2015-12-10"),
   isUnsoldAfterCompletion988: true, isFirstContract988: true, isNotRecontract988: true,
   standardPriceAtAcquisition988: 200_000_000, standardPriceAt5Years988: 300_000_000, standardPriceAtTransfer988: 400_000_000,
 };

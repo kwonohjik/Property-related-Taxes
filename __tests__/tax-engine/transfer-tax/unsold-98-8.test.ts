@@ -5,7 +5,6 @@
 import { describe, it, expect } from "vitest";
 import {
   evaluateUnsold988,
-  fullMonthsBetween,
   type Unsold988Input,
 } from "@/lib/tax-engine/transfer-reductions/unsold-98-8";
 
@@ -19,6 +18,8 @@ function baseInput(overrides?: Partial<Unsold988Input>): Unsold988Input {
     exclusiveAreaSqm: 84.5,
     rentalContractDate: new Date("2015-12-20"), // 법 §98의8① 괄호 — 2015.12.31 이전 (D6-01)
     rentalStartDate: new Date("2016-01-01"),
+    businessRegistrationDate: new Date("2015-12-10"), // 법 §98의8① 괄호 — 등록도 2015.12.31 이내(§98의6 사용자 결정 준용)
+    rentalRegistrationDate: new Date("2015-12-10"),
     isUnsoldAfterCompletion: true,
     isFirstContract: true,
     isNotRecontract: true,
@@ -148,10 +149,6 @@ describe("§98의8 evaluator anchor", () => {
     expect(posNeg.reducibleTransferIncome).toBe(200_000_000);
   });
 
-  it("fullMonthsBetween — 월 경계·일 미달 절사", () => {
-    expect(fullMonthsBetween(new Date("2016-01-01"), new Date("2022-07-01"))).toBe(78);
-    expect(fullMonthsBetween(new Date("2016-01-15"), new Date("2016-02-14"))).toBe(0);
-    expect(fullMonthsBetween(new Date("2016-01-15"), new Date("2016-02-15"))).toBe(1);
-    expect(fullMonthsBetween(new Date("2016-02-01"), new Date("2016-01-01"))).toBe(0);
-  });
+  // fullMonthsBetween(비초일 만 개월)은 폐기 — 임대기간은 초일 산입 `completedMonthsInclusive`(공용 헬퍼)로 센다.
+  // 경계 anchor는 `unsold-98-8-rental-period-y.anchor.test.ts`.
 });

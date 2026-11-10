@@ -49,7 +49,11 @@ export function toUnsold988Payload(r: Extract<AssetReductionForm, { type: "unsol
     rentalContractDate988: r.rentalContractDate988 || undefined,
     rentalStartDate988: r.rentalStartDate988 || undefined,
     rentalEndDate988: r.rentalEndDate988 || undefined,
-    inheritedRentalMonths988: parseInt(r.inheritedRentalMonths988 || "") || undefined,
+    businessRegistrationDate988: r.businessRegistrationDate988 || undefined,
+    rentalRegistrationDate988: r.rentalRegistrationDate988 || undefined,
+    // 완성된 행만 싣는다(미완성 행은 ⑧이 막는다). §98의6 2호와 같은 헬퍼 — parseInt 절사·0 소거를 하지 않는다.
+    rentalVacancyPeriods988: toVacancyPeriods986(r.rentalVacancyPeriods988),
+    inheritedRentalMonths988: toInheritedMonths986(r.inheritedRentalMonths988),
     isUnsoldAfterCompletion988: r.isUnsoldAfterCompletion988,
     isFirstContract988: r.isFirstContract988,
     isNotRecontract988: r.isNotRecontract988,

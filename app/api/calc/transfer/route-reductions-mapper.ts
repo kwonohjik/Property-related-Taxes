@@ -144,6 +144,12 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
         contractDate988: toOptionalDate(r.contractDate988),
         rentalContractDate988: toOptionalDate(r.rentalContractDate988),
         rentalStartDate988: toOptionalDate(r.rentalStartDate988),
+        businessRegistrationDate988: toOptionalDate(r.businessRegistrationDate988),
+        rentalRegistrationDate988: toOptionalDate(r.rentalRegistrationDate988),
+        rentalVacancyPeriods988: r.rentalVacancyPeriods988?.map((v, i) => ({
+          startDate: toDate(v.startDate, `rentalVacancyPeriods988[${i}].startDate`),
+          endDate: toDate(v.endDate, `rentalVacancyPeriods988[${i}].endDate`),
+        })),
         rentalEndDate988: toOptionalDate(r.rentalEndDate988),
       } as TransferReduction;
     }

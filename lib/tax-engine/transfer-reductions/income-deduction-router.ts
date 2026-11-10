@@ -20,7 +20,7 @@ import { evaluateNew99, type New99Result } from "./new-99";
 import type { RedevMemberNewHouse } from "./new-99-redev-member";
 import { redevMemberGateCause } from "./new-99-redev-member";
 import { isLandOnlyOriginalMember, withRedevMemberGateNotice } from "./new-99-redev-member";
-import { evaluateUnsold988, type Unsold988Result } from "./unsold-98-8";
+import { evaluateUnsold988, type Unsold988Input, type Unsold988Result } from "./unsold-98-8";
 import { type UnsoldHybridResult } from "./unsold-hybrid";
 import { unsold982FormulaStepsOf, unsold982OutcomeLabel } from "./unsold-hybrid-p4";
 import {
@@ -487,6 +487,9 @@ function evalUnsold988(
       rentalContractDate: coerceOptionalDate(r988.rentalContractDate988 as Date | string | undefined),
       rentalStartDate: coerceOptionalDate(r988.rentalStartDate988 as Date | string | undefined),
       rentalEndDate: coerceOptionalDate(r988.rentalEndDate988 as Date | string | undefined),
+      businessRegistrationDate: coerceOptionalDate(r988.businessRegistrationDate988 as Date | string | undefined),
+      rentalRegistrationDate: coerceOptionalDate(r988.rentalRegistrationDate988 as Date | string | undefined),
+      rentalVacancies: r988.rentalVacancyPeriods988 as Unsold988Input["rentalVacancies"],
       inheritedRentalMonths: r988.inheritedRentalMonths988 as number | undefined,
       isResident: (r988.isResident988 as boolean | undefined) ?? true,
       isUnsoldAfterCompletion: r988.isUnsoldAfterCompletion988 as boolean | undefined,

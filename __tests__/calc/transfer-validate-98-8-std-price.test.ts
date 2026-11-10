@@ -14,7 +14,7 @@ function make988(std: { acq?: string; y5?: string; transfer?: string }, over: Pa
     acquisitionPrice988: "550,000,000",
     exclusiveAreaSqm988: "84.5",
     rentalContractDate988: "2015-12-20",
-    rentalStartDate988: "2016-01-01",
+    rentalStartDate988: "2016-01-01", businessRegistrationDate988: "2015-12-10", rentalRegistrationDate988: "2015-12-10",
     isUnsoldAfterCompletion988: true,
     isFirstContract988: true,
     isNotRecontract988: true,

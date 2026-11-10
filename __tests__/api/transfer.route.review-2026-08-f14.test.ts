@@ -245,10 +245,10 @@ const DATE_BEARING_VARIANTS: Array<[string, Record<string, unknown>, string[]]> 
     {
       type: "unsold_98_8",
       contractDate988: "2015-03-01",
-      rentalStartDate988: "2015-04-01",
+      rentalStartDate988: "2015-04-01", businessRegistrationDate988: "2015-04-01", rentalRegistrationDate988: "2015-04-01",
       rentalEndDate988: "2020-04-01",
     },
-    ["contractDate988", "rentalStartDate988", "rentalEndDate988"],
+    ["contractDate988", "rentalStartDate988", "businessRegistrationDate988", "rentalRegistrationDate988", "rentalEndDate988"],
   ],
   [
     "unsold_98_9",

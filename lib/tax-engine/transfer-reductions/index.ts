@@ -152,7 +152,6 @@ export {
 } from "./new-99";
 export {
   evaluateUnsold988,
-  fullMonthsBetween,
   UNSOLD_98_8_PRICE_LIMIT,
   UNSOLD_98_8_AREA_LIMIT_SQM,
   UNSOLD_98_8_DEDUCTION_RATE,

@@ -360,6 +360,9 @@ export type TransferReductionStub =
       exclusiveAreaSqm988?: number;
       rentalContractDate988?: Date;
       rentalStartDate988?: Date;
+      businessRegistrationDate988?: Date;
+      rentalRegistrationDate988?: Date;
+      rentalVacancyPeriods988?: Array<{ startDate: Date; endDate: Date }>;
       rentalEndDate988?: Date;
       inheritedRentalMonths988?: number;
       isResident988?: boolean;
