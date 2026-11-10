@@ -74,7 +74,8 @@ test.describe("부담부증여 × §163⑨ 단서 — 토지 · 단독주택", (
     await open(page, 2);
     const section = page.getByTestId("bg-163-9-proviso-section");
     await expect(section).toContainText("§164④ 가액 중 큰 금액");
-    await expect(section).toContainText("해석례는 확인하지 못했습니다");
+    // 양도일 2023-02-16 ≥ 2020.2.11. — 근거는 §163⑨ 본문 괄호(Q-29 a)
+    await expect(section).toContainText("「부담부증여의 채무액에 해당하는 부분」");
     await open(page, 3);
     await expect(page.getByText("카드에서 고른").first()).toBeVisible();
     await expect(page.getByText("§164④ 가액과 큰 금액을 씁니다").first()).toBeVisible();
