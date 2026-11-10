@@ -57,9 +57,16 @@ function attachDonorBuiltEcho(
   return chosen;
 }
 
-function donorBuiltAppliedEcho(db: DonorBuiltInput, chosenA: GeneralBuildingRouteResult, transferDate: Date, method: "estimated" | "appraisal"): DonorBuiltPenaltyEcho {
+/**
+ * A 채택 echo — 가산세 금액은 A 호출의 **건물 카드 결과**(`bld`)가 이미 냈다. 단건 F27과 연간 합산 펼침(`bundled-gb-carryover-units.ts`)이 같이 쓴다.
+ */
+export function donorBuiltAppliedEcho(
+  db: DonorBuiltInput,
+  bld: { penaltyTax?: number; penaltyBase?: number } | undefined,
+  transferDate: Date,
+  method: "estimated" | "appraisal",
+): DonorBuiltPenaltyEcho {
   const fifth = ymd(addYears(db.constructionDate, 5));
-  const bld = chosenA.aggregated.properties.find((p) => p.propertyId === "building");
   const penalty = bld?.penaltyTax ?? 0;
   if (penalty > 0)
     return {
@@ -211,6 +218,6 @@ export function calculateGeneralBuildingActualTransfer(
     ...(donorCapex > 0 ? { donorCapexAddedToExpense: donorCapex } : {}),
   };
   if (donorBuilt)
-    attachDonorBuiltEcho(chosen, adopted === "B" ? donorBuiltNotAppliedEcho(donorBuilt, "scenario_b") : donorBuiltAppliedEcho(donorBuilt, resultA, payload.transferDate, info.acquisitionMethod === "appraisal" ? "appraisal" : "estimated"));
+    attachDonorBuiltEcho(chosen, adopted === "B" ? donorBuiltNotAppliedEcho(donorBuilt, "scenario_b") : donorBuiltAppliedEcho(donorBuilt, resultA.aggregated.properties.find((p) => p.propertyId === "building"), payload.transferDate, info.acquisitionMethod === "appraisal" ? "appraisal" : "estimated"));
   return chosen;
 }

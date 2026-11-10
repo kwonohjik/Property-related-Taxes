@@ -18,6 +18,7 @@ import { GeneralBuilding3WayTable } from "@/components/calc/results/transfer/Gen
 import { gbAssetBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import { GbBurdenedGiftCarryoverCard } from "@/components/calc/results/transfer/GbBurdenedGiftCarryoverCard";
+import { CarryoverDonorBuiltPenaltyCard } from "@/components/calc/results/transfer/CarryoverDonorBuiltPenaltyCard";
 import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
@@ -74,6 +75,12 @@ export function MultiGbAssetGroup({
             <GbBurdenedGiftCarryoverCard detail={unit} assetLabel={unit.assetLabel} />
           </div>
         ))}
+        {/* 당초 증여자 신축·증축 §114조의2 — 단건 F27과 같은 echo 카드(적용 · B 채택 · 이월과세 배제 · 5년 밖 · 기준액 0). */}
+        {result.donorBuiltPenaltyByAsset?.[formPropertyId] && (
+          <div className="pt-3">
+            <CarryoverDonorBuiltPenaltyCard echo={result.donorBuiltPenaltyByAsset[formPropertyId].echo} />
+          </div>
+        )}
         <div className="pt-3 space-y-2">
           {cards.map((c) => (
             <PropertyBreakdownAccordion key={c.propertyId} breakdown={c} property={property} />

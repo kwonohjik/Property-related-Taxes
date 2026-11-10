@@ -24,12 +24,15 @@ export function gbResultDonorBuiltEchoes(
    * 건물 카드의 라벨로 귀속을 밝힌다. 카드 detail 경로와 상호배제다(부담부증여 카드는 `carryoverTaxationDetail` 이 없다).
    */
   aggregateEcho?: DonorBuiltPenaltyEcho,
+  /** 연간 합산 — 자산별 echo(`aggregated.donorBuiltPenaltyByAsset` · 트랙 GB-BG-CO-DNB). 라벨은 자산 이름이다. */
+  byAsset?: Readonly<Record<string, DonorBuiltEchoEntry>>,
 ): DonorBuiltEchoEntry[] {
   const perCard = properties.flatMap((p) => {
     const echo = p.carryoverTaxationDetail?.donorBuiltPenalty;
     return echo ? [{ label: p.propertyLabel ?? p.propertyId, echo }] : [];
   });
-  if (!aggregateEcho) return perCard;
+  const assets = Object.values(byAsset ?? {});
+  if (!aggregateEcho) return [...perCard, ...assets];
   const building = properties.find((p) => p.propertyId === "building");
-  return [...perCard, { label: building?.propertyLabel ?? "건물", echo: aggregateEcho }];
+  return [...perCard, { label: building?.propertyLabel ?? "건물", echo: aggregateEcho }, ...assets];
 }

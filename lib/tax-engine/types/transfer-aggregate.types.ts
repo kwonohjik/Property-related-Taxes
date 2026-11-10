@@ -686,6 +686,11 @@ export interface AggregateTransferResult {
    * 단건 경로의 `carryoverTaxationDetail.donorBuiltPenalty` 와 같은 모양이다(결과 4뷰가 한 표시 정본을 쓴다).
    */
   donorBuiltPenalty?: DonorBuiltPenaltyEcho;
+  /**
+   * 연간 합산의 일반건물 부담부증여 × 이월과세 × 당초 증여자 신축·증축 echo — **자산별**(키 = 자산 id). 위 `donorBuiltPenalty`(신고 1건)의 다건판이다.
+   * `label`은 그 자산 이름(결과 4뷰의 귀속 표시). 가산세 금액은 그 자산 건물 카드의 `penaltyTax`에 이미 있다.
+   */
+  donorBuiltPenaltyByAsset?: Record<string, { label: string; echo: DonorBuiltPenaltyEcho }>;
 
   /**
    * [echo] 지방소득세 과세표준에 산입되는 가산세 = 자산별 **§114조의2분 합계만**.

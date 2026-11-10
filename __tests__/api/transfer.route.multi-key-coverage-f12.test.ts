@@ -66,11 +66,12 @@ describe("F-12 다건 키 분류", () => {
     expect(issues({ acquisitionCause: "burdened_gift" })).toEqual([]);
     expect(issues({ transferType: "burdened_gift", burdenedGiftInfo: {} })).toEqual([]);
     expect(issues({ transferType: "burdened_gift", burdenedGiftInfo: {}, generalBuildingValuation: {} })).toEqual([]);
-    // 일반건물 부담부증여 × 이월과세는 ⑭가 A·B 비교 단위로 펼친다 — 당초 증여자 신축·증축(§114조의2)만 거부(⑧ 같은 모드). 묶음 명세는 값이 있으면 거부
+    // 일반건물 부담부증여 × 이월과세는 ⑭가 A·B 비교 단위로 펼친다 — 당초 증여자 신축·증축(§114조의2)도 받는다(트랙 GB-BG-CO-DNB).
+    //   지분 + 증여자 신축은 단건·다건 공용 ⑫(`refineGbBgDonorBuilt`)가 거부한다(`__tests__/calc/multi-gb-bg-carryover-donor-built.anchor.test.ts` DNB-5). 묶음 명세는 값이 있으면 거부
     expect(issues({ transferType: "burdened_gift", burdenedGiftInfo: {}, generalBuildingValuation: {}, carryoverTaxation: {} })).toEqual([]);
     expect(issues({ transferType: "burdened_gift", propertyType: "general_building", burdenedGiftInfo: { carryoverDonorBasis: {} }, carryoverTaxation: {} })).toEqual([]);
-    expect(issues({ transferType: "burdened_gift", propertyType: "general_building", burdenedGiftInfo: { carryoverDonorBasis: { donorBuilt: {} } }, carryoverTaxation: {} })).toEqual(["burdenedGiftInfo"]);
-    // 주택·건물의 당초 증여자 신축은 단건 엔진 안 단계라 합산도 같다 — 일반건물만 거부
+    expect(issues({ transferType: "burdened_gift", propertyType: "general_building", burdenedGiftInfo: { carryoverDonorBasis: { donorBuilt: {} } }, carryoverTaxation: {} })).toEqual([]);
+    // 주택·건물의 당초 증여자 신축은 단건 엔진 안 단계라 합산도 같다
     expect(issues({ transferType: "burdened_gift", propertyType: "housing", burdenedGiftInfo: { carryoverDonorBasis: { donorBuilt: {} } }, carryoverTaxation: {} })).toEqual([]);
     expect(issues({ burdenedGiftWholeInfo: {} })).toEqual(["burdenedGiftWholeInfo"]);
     // 물건 전체 명세는 일반건물 지분 × 부담부증여만 받는다 — 지분이 없거나(단건 자산·함께 양도) 부담부증여가 아니면 계속 거부
@@ -95,7 +96,7 @@ describe("F-12 다건 키 분류", () => {
     // 파트 이월과세 3키도 ⑭가 단건과 같은 합성기로 옮긴다(트랙 CO-PART · Q-4 b) — 다건 전용 거부 없음. 남은 거부 규칙은 아래 `rejected` 순회가 본다.
     expect(issues({ landCarryoverPart: {}, buildingCarryoverPart: {}, carryoverGiftEvent: {} })).toEqual([]);
     expect(issues({ acquisitionCause: "carryover_gift" })).toEqual([]);
-    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType", "burdenedGiftInfo"]);
+    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType"]);
     for (const k of rejected) {
       if (scalar.has(k)) continue;
       expect(issues({ [k]: {} })).toEqual([k]);

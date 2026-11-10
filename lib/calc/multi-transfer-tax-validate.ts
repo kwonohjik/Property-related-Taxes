@@ -7,8 +7,6 @@ import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-tra
 import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { validateStep } from "./transfer-tax-validate";
 import { phdFlagEffective } from "./phd-toggle-scope";
-import { MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
-import { donorBuiltBgActive } from "./donor-built-bg-scope";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
@@ -157,8 +155,7 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   //   그 자산의 결정세액으로 정한다. 다른 자산과 함께 신고하면 route가 «확인 필요»를 싣는다(`MULTI_SPLIT_CARRYOVER_ASSET_SCOPE_NOTICE`).
   // 부담부증여(소령 §159) — 자산 단위 info·`transferType`은 ④⑭가 단건과 같은 leaf로 옮긴다(트랙 BG · 자산별 §159 명세 echo).
   //   일반건물 부담부증여 × 이월과세는 단건처럼 카드 세트 A·B를 비교 단위로 펼친다 — 연간 합산은 그 해 전체 결정세액으로 비교한다(§97의2②3호).
-  //   당초 증여자 신축·증축 가산세(§114조의2)만 막는다 — 단건 route만 계산하고 펼침 카드 함수는 받지 않는다(⑫ 같은 문구).
-  if (a.assetKind === "general_building" && donorBuiltBgActive(a)) return MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE;
+  //   당초 증여자 신축·증축 가산세(§114조의2)도 연다(트랙 GB-BG-CO-DNB) — 펼침 카드 함수가 A 카드에만 신호를 싣고, 자산별 echo를 단건과 같은 사유로 싣는다.
   // 상속·증여 §163⑨ 취득가액(① 평가액 · ② §164 기준시가 · 의제 전 ③ 환산)은 다건도 단건과 같은 빌더로 싣는다
   //   (`buildPropertyPayload` — 계획서 multi-sec163-9-support.plan.md Q-1 a). ① 공란·② 부분 입력은 건별 ⑧(`validateStep` —
   //   `postDeemedClauseARequiredError` 등)이 단건과 같이 짚는다(Q-2 a). 종전 다건 전용 「상속 ① 공란」 가드와 #2888의 ② 입력 차단은 지웠다.
