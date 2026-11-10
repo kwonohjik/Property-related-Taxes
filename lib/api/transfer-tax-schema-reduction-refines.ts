@@ -16,6 +16,8 @@ import { new994CapitalRegionConflict } from "@/lib/tax-engine/transfer-reduction
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { assetKindGateMessage, reductionAssetKindFromWire } from "@/lib/tax-engine/transfer-reductions/asset-kind-gate";
 import { findTrack127_7Conflict } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
+import { findRental97StatutoryOverlap } from "@/lib/tax-engine/transfer-reductions/rental-97-statutory-overlap";
+import { rental97StatutoryOverlapMessage } from "@/lib/tax-engine/transfer-reductions/rental-97-statutory-overlap";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
 import { track127_7ConflictMessage } from "@/lib/tax-engine/transfer-reductions/track-127-7-message";
 
@@ -47,6 +49,7 @@ export function refineReductionAssetKindGate(
  * 같은 카드(자산)에 차감형 + 세액감면형(또는 §98·§98의2 + 다른 감면)을 함께 실으면 엔진이 둘 다 적용해 이중 혜택이 된다
  * (§99의3 + §77 총세액이 낮은 쪽 단독보다 14,745,605 적음 — NH-41). 카드가 다르면 «일부에 한 감면, 남은 부분에 다른 감면»(단서)이라 막지 않는다.
  * 하이브리드 8종은 5년 분기로 트랙이 갈린다 — 취득일·양도일 중 하나라도 비면 분기를 알 수 없어 두 경우 모두 충돌일 때만 막는다.
+ * 이어서 임대 범주 안 명문 배제 쌍(§97의3×§97의4 · §97의5×§97의3/4)도 ⑧ D2-05와 같은 단일 소스로 막는다(V-6).
  */
 export function refineReductionTrack127_7(
   reductions: ReadonlyArray<ReductionLike> | undefined,
@@ -63,9 +66,16 @@ export function refineReductionTrack127_7(
   const within5s = acq && tr ? [isWithin5YearsCheck(acq, tr)] : [true, false];
   const conflicts = within5s.map((w) => findTrack127_7Conflict(types, w));
   const conflict = conflicts[0];
-  if (!conflict || conflicts.some((c) => !c)) return;
-  const at = list.findIndex((r) => r.type === conflict.second.type);
-  ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, Math.max(at, 0), "type"], message: track127_7ConflictMessage(conflict) });
+  if (conflict && !conflicts.some((c) => !c)) {
+    const at = list.findIndex((r) => r.type === conflict.second.type);
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, Math.max(at, 0), "type"], message: track127_7ConflictMessage(conflict) });
+    return;
+  }
+  // 임대 범주 안 명문 배제 쌍(§97의3②·§97의5②) — ⑧과 같은 순서(§127⑦ 먼저)·같은 단일 소스·같은 문구
+  const overlap = findRental97StatutoryOverlap(types);
+  if (!overlap) return;
+  const at = list.findIndex((r) => r.type === overlap.other);
+  ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, Math.max(at, 0), "type"], message: rental97StatutoryOverlapMessage(overlap) });
 }
 
 export function refineReductionRequiredInputs(

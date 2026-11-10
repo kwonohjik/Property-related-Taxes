@@ -48,7 +48,6 @@ const rentalCommon = {
 };
 const r973 = () => ({ ...getReductionDefault("rental_97_3"), ...rentalCommon, stdPriceAtAcquisition: "100,000,000", stdPriceAtTransfer: "400,000,000" });
 const r974 = () => ({ ...getReductionDefault("rental_97_4"), ...rentalCommon, rental974Category: "purchase_a", region: "capital" });
-const r975 = () => ({ ...getReductionDefault("rental_97_5"), ...rentalCommon, isPurchaseRental: true });
 const r982 = () => ({
   ...getReductionDefault("unsold_98_2" as never),
   isNonCapitalUnsold982: true, isFirstOrFcfsContract982: true, occupiedAtContract982: "no", contractDate982: "2009-06-01",
@@ -158,28 +157,7 @@ describe("§97의3·§97의4 × §98의2(장특 표2 특례) — Q-2 a", () => {
   });
 });
 
-describe("임대 범주 안의 쌍 — Q-3 a: 현행 동작을 고정한다(법이 따로 정함)", () => {
-  it("§97의3 + §97의4 — ⑧ §127⑦ 오류 없음, ⑫ 200, §97의3만 적용(§97의3② 결과)", async () => {
-    const both = form([card(1, "housing", [r973(), r974()])]);
-    expect(step8(both) ?? "").not.toMatch(CONFLICT_RE);
-    const a = await post(both);
-    const b = await post(form([card(1, "housing", [r973()])]));
-    expect(a.status).toBe(200);
-    const tot = (r: typeof a) => (r.data?.result ?? r.data).totalTax;
-    expect(tot(a)).toBeGreaterThan(0);
-    expect(tot(a)).toBe(tot(b));
-  });
-  it.each([
-    ["§97의3 + §97의5", () => [r973(), r975()]],
-    ["§97의4 + §97의5", () => [r974(), r975()]],
-  ])("%s — ⑧은 §97의5②로 막고(§127⑦ 문구로 바뀌지 않음), ⑫는 막지 않는다", async (_n, mk) => {
-    const f = form([card(1, "housing", mk())]);
-    const m8 = step8(f) ?? "";
-    expect(m8).toMatch(/§97의5②/);
-    expect(m8).not.toMatch(CONFLICT_RE);
-    expect((await post(f)).status).toBe(200);
-  });
-});
+// 임대 범주 안의 쌍(§97의3×§97의4 · ×§97의5 · ×§97 본문·§97의2)은 V-6에서 막도록 바뀌었다 — transfer.route.rental-97-overlap-v6.anchor.test.ts 가 고정한다.
 
 describe("refine 단위 — 분류 · 임대 범주 제외 · 날짜 무관", () => {
   const run = async (types: string[], acq: unknown, tr: unknown) => {
@@ -204,11 +182,8 @@ describe("refine 단위 — 분류 · 임대 범주 제외 · 날짜 무관", ()
     expect(await run(["rental_97_4", "unsold_98_3"], "2024-01-01", "2025-01-01")).toHaveLength(1);
     expect(await run(["rental_97_4", "unsold_98_3"], "2015-01-01", "2025-01-01")).toHaveLength(1);
   });
-  it("임대 범주 안 쌍과 단독은 막지 않는다", async () => {
-    for (const pair of [
-      ["rental_97_3", "rental_97_4"], ["rental_97_3", "rental_97_5"], ["rental_97_4", "rental_97_5"],
-      ["rental_97_3", "rental_97_main"], ["rental_97_4", "rental_97_proviso"], ["rental_97_4", "rental_97_2"],
-    ]) {
+  it("단독과 세액감면형끼리(§97 본문·단서·§97의2·§97의5)는 막지 않는다 (명문 배제·§127⑦ 쌍은 V-6 anchor)", async () => {
+    for (const pair of [["rental_97_main", "rental_97_2"], ["rental_97_proviso", "rental_97_5"], ["rental_97_main", "rental_97_5"]]) {
       expect(await run(pair, "2003-03-01", "2025-08-01"), pair.join("+")).toHaveLength(0);
     }
     expect(await run(["rental_97_4"], "2003-03-01", "2025-08-01")).toHaveLength(0);

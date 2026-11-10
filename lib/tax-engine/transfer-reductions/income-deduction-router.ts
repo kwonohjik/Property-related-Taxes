@@ -14,6 +14,7 @@ import { coerceOptionalDate } from "../tax-utils";
 import { surchargeExclusionBasis, SURCHARGE_EXCLUSION_STEP_LABEL, type SurchargeHousehold } from "../surcharge-exclusion-basis";
 import { MULTI_HOUSE } from "../legal-codes/transfer";
 import { resolveHighValuePriceCheck } from "../one-house/threshold";
+import { RENTAL_STATUTORY_PAIR_IDS } from "./rental-97-statutory-overlap";
 import { evaluateNew993, type New993Result } from "./new-99-3";
 import { evaluateNew99, type New99Result } from "./new-99";
 import type { RedevMemberNewHouse } from "./new-99-redev-member";
@@ -93,14 +94,11 @@ const RATE_LTHD_SPECIAL_TRACK_IDS: ReadonlyArray<string> = ["unsold_98", "unsold
  *
  * 조심 2024서2915(2024.12.12., 기각)가 §97의4를 §127⑦의 «감면규정»으로 보아 §99의3과 병용 불가로 판단했다.
  * §97의3은 직접 재결이 없다 — §97의4와 같은 구조(공제율을 달리 적용)라 같게 둔다(계획서 `rental-97-3-4-track-127-7.plan.md` Q-1 a · V-1: 유추).
- * 임대 범주 **밖** 분류 조문과 보유연수와 무관하게 택일이다. 임대 범주 **안** 쌍은 법이 따로 정하므로(§97의3②·§97의5②) 여기서 다루지 않는다(Q-3 a).
+ * §97의3/4가 아닌 분류 조문과는 보유연수와 무관하게 택일이다(§97 본문·단서·§97의2 포함). 명문 배제 3쌍(§97의3②·§97의5②)만 `rental-97-statutory-overlap.ts`가 맡는다.
  */
 const RENTAL_LTHD_TRACK_IDS: ReadonlyArray<string> = ["rental_97_3", "rental_97_4"];
 
-/** 임대 범주(§97 시리즈 + legacy) — §97의3/4와의 쌍은 §127⑦이 아니라 §97의3②·§97의5②·패널 라디오·⑧ D2-05가 맡는다. */
-const RENTAL_97_SERIES_IDS: ReadonlyArray<string> = [
-  "rental_97_main", "rental_97_proviso", "rental_97_2", "rental_97_3", "rental_97_4", "rental_97_5", "long_term_rental",
-];
+/** 명문 배제 쌍(§97의3②·§97의5②)에 드는 id — 이 셋끼리는 §127⑦이 아니라 `rental-97-statutory-overlap.ts`가 맡는다(V-6 Q-3 a). */
 
 export type Track127_7Kind = "income_deduction" | "tax_amount" | "rate_lthd_special" | "rental_lthd";
 
@@ -129,7 +127,7 @@ export interface Track127_7Conflict {
 /**
  * §127⑦ 트랙 교차 단일 소스 — ⑧ validate·⑤ 패널이 공유한다.
  * 충돌: (a) 차감형 + 세액감면형 (D10-01), (b) 세율·장특 특례 + 다른 어떤 트랙 조문(US-45 Q-8 (a) — §98+§99 동시 충족 포함).
- * (c) 임대 장특 특례(§97의3·§97의4) + 임대 범주 밖 어떤 분류 조문(조심 2024서2915 · 계획서 `rental-97-3-4-track-127-7.plan.md`).
+ * (c) 임대 장특 특례(§97의3·§97의4) + 다른 어떤 분류 조문 — 명문 배제 3쌍 제외(조심 2024서2915 · 계획서 `rental-97-3-4-track-127-7.plan.md` · `rental-97-overlap-v6.plan.md`).
  * 차감형끼리·세액감면형끼리는 각자 경로(`resolveIncomeDeduction` 1건·`calcReductions` max)가 하나만 고른다.
  */
 export function findTrack127_7Conflict(
@@ -146,7 +144,7 @@ export function findTrack127_7Conflict(
   }
   const rentalLthd = classified.find((x) => x.kind === "rental_lthd");
   if (rentalLthd) {
-    const other = classified.find((x) => !RENTAL_97_SERIES_IDS.includes(x.type));
+    const other = classified.find((x) => !RENTAL_STATUTORY_PAIR_IDS.includes(x.type));
     return other ? { first: rentalLthd, second: other } : null;
   }
   const ded = classified.find((x) => x.kind === "income_deduction");
