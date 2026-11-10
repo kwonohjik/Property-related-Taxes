@@ -110,6 +110,24 @@ export function runBurdenedGiftStep(
       rawInput.redevelopment !== undefined &&
       rawInput.redevelopment.isSuccessorMember !== true &&
       transferBurdenedGiftBreakdown.acquisitionMethodUsed === "converted";
+    /**
+     * 시가 · 환산(K-5)인데 취득시 기준시가 합이 0 — 환산 분자가 없어 취득가액이 0이 되고 양도차익이 통째로 부풀지만 막히지 않는 오답이다
+     * (직접 API 실측 단건 292,800,000 → 600,000,000 · 계획서 vp2c §22 D-3i). ⑧이 화면에서 먼저 막는다(`transfer-tax-validate-bg.ts` K-5).
+     * ⑧과 같은 예외: 재개발 완공 아파트 §166③(종전 부동산을 §166③으로 환산 — 이 슬롯을 쓰지 않는다 · ⑧ `redevSec166`) ·
+     * 의제취득일 전 3자 max(의제취득일 기준시가로 바꿔 쓴다 · 자기 안내).
+     */
+    if (
+      transferBurdenedGiftBreakdown.acquisitionMethodUsed === "converted" &&
+      !redevSec166Conversion &&
+      !("preDeemed" in preDeemedParam) &&
+      rawInput.burdenedGiftInfo.landStdPriceAtAcquisition + rawInput.burdenedGiftInfo.buildingStdPriceAtAcquisition <= 0
+    ) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        "[burdened_gift] 환산취득가액으로 취득가액을 산정하는데 취득시 기준시가가 없습니다. 환산취득가액은 양도가액에 취득시 기준시가를 양도시 기준시가로 나눈 비율을 곱한 값이므로 " +
+          "(「소득세법 시행령」 제176조의2 제2항 제2호) 취득시 기준시가를 입력하세요.",
+      );
+    }
     const land = transferBurdenedGiftBreakdown.perAsset.land;
     const building = transferBurdenedGiftBreakdown.perAsset.building;
     const totalTransferPrice = land.transferPrice + building.transferPrice;
