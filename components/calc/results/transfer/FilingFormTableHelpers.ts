@@ -595,14 +595,14 @@ export function buildRows(
 
   if ((mode === "fourpart" || mode === "mixed-4col") && mu) {
     // 엔진 파트 echo가 정본, 옛 결과는 종전 근사 — `FilingFormTableFinancials.ts` `fourPartLthdSplitRows`.
-    fourPartLthdSplitRows(mu, holdingMs, residenceMs, useTable2, setNum);
+    fourPartLthdSplitRows(mu, holdingMs, residenceMs, useTable2, setNum, transferDate);
   } else if (mode === "split-2col" && sp) {
     // 보유분·거주분은 **엔진 echo가 정본**이다(E-1 — 파트별 정수 % 분해, 합 = 파트 공제액). 종전에는 파트 공제액을 여기서
     // `splitLtDeduction`(부동소수 율 재안분)으로 다시 쪼개 1원 어긋날 수 있었다. echo가 없는 구 이력은 종전대로 재안분한다.
     const lthdOfPart = (part: SplitPartResult) =>
       part.holdingDeductionAmount !== undefined && part.residenceDeductionAmount !== undefined
         ? { holdingAmount: part.holdingDeductionAmount, residenceAmount: part.residenceDeductionAmount }
-        : splitLtDeduction(part.longTermDeduction, Math.round(part.holdingYears * 12), residenceMs, useTable2);
+        : splitLtDeduction(part.longTermDeduction, Math.round(part.holdingYears * 12), residenceMs, useTable2, transferDate);
     const landSplit = lthdOfPart(sp.land);
     const buildSplit = lthdOfPart(sp.building);
     // 배율 초과 부수토지분 장특은 표1 **보유분** 단독이다(거주분 없음) — 토지 열의 보유 기간분에 싣는다(합계 열 `sumSplitLthdAmounts`와 같은 규약).
@@ -631,6 +631,7 @@ export function buildRows(
       holdingMs,
       residenceMs,
       useTable2,
+      transferDate,
     });
     setNum("ltHoldingPart", "total", split.holdingAmount);
     setNum("ltResidencePart", "total", split.residenceAmount);

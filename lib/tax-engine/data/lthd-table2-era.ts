@@ -35,6 +35,18 @@ export function resolveLthdTable2Era(transferDate: Date): LthdTable2Era {
   return "unsupported";
 }
 
+/**
+ * 표2가 **보유기간별 공제율 한 열뿐**(연 8%, 80% 한도 — 거주기간별 공제율 없음)인 양도일인가 — 2009.1.1.~2020.12.31.
+ * 2021.1.1. 이후에야 보유 4% + 거주 4%로 나뉜다(법률 제17757호 부칙 제2조② — 시행 이후 양도하는 분부터).
+ * 계산 축(`calcLongTermRate`)·산식 문구(`transfer-tax-lthd-steps.ts`)·신고서/명세서 보유분·거주분 재안분
+ * (`splitLtDeduction`)이 모두 이 술어 하나로 가른다 — 날짜 경계를 다시 쓰지 않는다.
+ * 2009.1.1. 전(`unsupported`)은 현행 식으로 계산하므로 여기 포함하지 않는다.
+ */
+export function isLthdTable2HoldingOnlyEra(transferDate: Date): boolean {
+  const era = resolveLthdTable2Era(transferDate);
+  return era === "holding_8pct" || era === "holding_8pct_residence_2y";
+}
+
 /** 2009~2020 표2 단일축 공제율 — 보유 3년 이상 연 8%, 80% 한도. 정수 %로 계산해 부동소수 누적을 피한다. */
 export function table2HoldingOnlyRate(holdingYears: number): number {
   if (holdingYears < 3) return 0;

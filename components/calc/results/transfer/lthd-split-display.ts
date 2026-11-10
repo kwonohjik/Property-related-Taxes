@@ -48,6 +48,8 @@ export function isTable2Applied(
   steps: CalculationStep[] | undefined,
   fallbackUseTable2: boolean,
 ): boolean {
+  // 2020.12.31. 이전 양도분 표2 — 거주 기간분이 0이어도 표2로 계산된 결과다(엔진이 보유 sub-step에 표지를 단다).
+  if (findStep(steps, HOLDING_LABEL)?.lthdTable2HoldingOnly === true) return true;
   const res = findStep(steps, RESIDENCE_LABEL);
   if (res) return res.amount > 0;
   return findStep(steps, HOLDING_LABEL) ? false : fallbackUseTable2;
@@ -61,7 +63,14 @@ export function isTable2Applied(
  */
 export function resolveLthdSplit(
   steps: CalculationStep[] | undefined,
-  fallback: { total: number; holdingMs: number; residenceMs: number; useTable2: boolean },
+  fallback: {
+    total: number;
+    holdingMs: number;
+    residenceMs: number;
+    useTable2: boolean;
+    /** 양도일 — 2020.12.31. 이전 표2는 보유 기간분 전액(`splitLtDeduction`). */
+    transferDate?: string | Date;
+  },
 ): LthdSplit {
   const h = findStep(steps, HOLDING_LABEL);
   if (h) {
@@ -73,6 +82,7 @@ export function resolveLthdSplit(
     fallback.holdingMs,
     fallback.residenceMs,
     fallback.useTable2,
+    fallback.transferDate,
   );
   return { ...split, fromEngine: false };
 }

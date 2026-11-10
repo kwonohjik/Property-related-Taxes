@@ -1893,6 +1893,12 @@ export interface CalculationStep {
   legalBasis?: string;
   /** 세부 항목 여부 — 들여쓰기로 표시 */
   sub?: boolean;
+  /**
+   * 「보유 기간분 장특」 sub-step 전용 — 소득세법 §95② **표2가 보유기간별 공제율 한 열뿐**인 양도분(2020.12.31. 이전,
+   * `isLthdTable2HoldingOnlyEra`)임을 알린다. 거주 기간분은 0이지만 표2로 계산됐다는 신호(부표1 ⑯ 코드 01)이며,
+   * 표시 계층(`isTable2Applied`)이 「거주분 금액 > 0」 휴리스틱 대신 읽는다. 표시 전용 — 세액 무관.
+   */
+  lthdTable2HoldingOnly?: boolean;
 }
 
 // TransferTaxResult interface — transfer-result.types.ts로 분리 (800줄 정책).
