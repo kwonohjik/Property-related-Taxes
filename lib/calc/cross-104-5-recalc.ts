@@ -99,7 +99,7 @@ function unsupportedRecalcReason(unsupported: string, label?: string): string {
  * 부동산 재계산 → `AggregateTransferResult`(호별 echo 포함).
  *
  * ⚠️ `annualBasicDeductionUsed`는 **문자열**로 넣는다 —
- *   `multi-transfer-tax-api.ts:267`이 `parseAmount(...)`로 파싱한다(계획서 X-1).
+ *   `multi-transfer-tax-api.ts:70`이 `parseAmount(...)`로 파싱한다(계획서 X-1).
  */
 export async function recalcRealEstate(
   record: CalculationRecord,
