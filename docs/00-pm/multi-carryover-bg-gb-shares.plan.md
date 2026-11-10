@@ -167,6 +167,8 @@
   - ⑧·⑫ 차단 해제(`MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE` 삭제). 지분 분할 취득·함께 양도 묶음 + 증여자 신축은 단건·다건 공용 ⑫(`refineGbBgDonorBuilt` · 지분 스키마)와 건별 ⑧이 계속 막는다(형제 안전망 DNB-5).
 - 비교 축: §97의2②3호 비교는 가산세 전 결정세액이다(`transfer-tax-aggregate-once.ts` `determinedTax: determinedTaxBeforePenalty`) — 단건 F27도 같은 값으로 비교한다. 연간 합산은 그 해 전체 결정세액으로 비교한다(트랙 GB-BG-CO와 같다).
 - 단건 = 연간 합산(실측 · `multi-gb-bg-carryover-donor-built.anchor.test.ts`): A 채택 135,291,640(가산세 2,500,000 = 건물 base 50,000,000 × 5%) · B 채택(증여세 2억) 108,900,000 · 이월과세 배제(2014 증여) 107,580,000 — echo·고지 모두 단건과 같다.
+- 뮤테이션 9건 중 7건 검출(A 신호 · 채택 판정 · 배제 echo · 고지 · 어댑터 · 카드 · route 연결). 생존 2건은 등가: B에도 신호(B는 수증자 증여일 평가액=실지라 §114조의2 신호가 서지 않는다 — DNB-2가 가산세 0 고정) · 카드 함수 입력 검사 생략(⑫ `refineBgDonorBuilt`가 먼저 같은 조건을 거부 — 단건 F27과 같은 이중 방어선).
+- E2E MDNB-E1(headless): 폼 → 본문 `donorBuilt` → 적용 echo · 고지 · 일반건물 행 카드. 픽스처 주의 — 건물 취득원인을 `purchase`로 두면 화면 normalize 뒤 건물이 증여받은 파트가 아니라서(`parts.building: false`) 토글이 범위 밖 → 보내지 않는다(3중 패턴대로). anchor도 화면이 닿는 `carryover_gift`로 둔다.
 - 시료 주의: 증여자 신축을 켜면 당초 증여자의 건물 취득일이 신축일(2022-01-10 · 사용승인일)이다(픽스처 `sameDayBuildingDonorDate`가 그렇게 채운다). 그래서 신축 ON·OFF는 가산세 2,500,000 말고도 건물 카드 장기보유특별공제가 다르다(15,952,000 · 4년 vs 43,868,000 · 11년) — 입력 사실이 다른 것이지 엔진 차이가 아니다.
 
 ### 공통
