@@ -171,6 +171,9 @@ export function buildGiftBgPreDeemedPayload(item: EstateItem, giftDate: string |
       ...(reported > 0 ? { reportedValue: reported } : {}),
       ...(stdAtDeemed > 0 ? { standardPriceAtDeemedDate: stdAtDeemed } : {}),
       ...(stdAtTransfer > 0 ? { standardPriceAtTransfer: stdAtTransfer } : {}),
+      // 이 계산기의 「비주택 건물」은 상가를 포함한다 — ②는 §164⑥ 8칸으로만 받고 의제취득일 기준시가를 ②(§164⑤)로 쓰지 않는다
+      // (사용자 결정 Q-37 a · 양도세 계산기 건물은 ② = 분자 — 계획서 building-163-9-proviso-164-5.plan.md §9)
+      ...(item.category === "real_estate_building" && !bgt.isHousing ? { deemedStdNotSec164: true as const } : {}),
     },
     ...(gradeStd !== null && giftDate ? { pre1990Land: pre1990LandPayload(item, bgt, giftDate) } : {}),
     ...(c164 ? { commercialInheritanceValuation: c164 } : {}),

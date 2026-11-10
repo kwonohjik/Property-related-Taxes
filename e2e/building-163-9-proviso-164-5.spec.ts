@@ -4,6 +4,8 @@
  * - BD-1 상속 1999: ③ 「§164⑤ 취득당시 건물 기준시가」 카드 · 칸에 2억을 입력 → 전송 · 양도차익 300,000,000.
  * - BD-2 상속 2001(구간 밖): 카드 없음(V-1 — 상속 · 증여 건물 ③에는 취득시 기준시가 칸이 없다).
  * - BD-3 상속 부담부증여(시가 · 실지): ② 카드가 ③ 칸을 가리킨다 · ③ 카드 부담부증여 문구 · 양도차익 150,000,000.
+ * - BD-4 상속 1983(의제취득일 전 · Q-34 a · Q-35 a): 의제취득일 기준시가 칸 §164⑤ 안내 · 계산 버튼 · ② = 분자 채택 → 양도차익 0.
+ * - BD-5 같은 시료 ① 비움: 「가목 확인 불가」 선언 토글 없음(Q-36 a) · 0.
  * 고정값은 route anchor(`transfer.route.building-163-9-proviso.anchor.test.ts`)와 같다.
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -93,4 +95,32 @@ test.describe("건물 × §163⑨ 단서 2호 · §164⑤", () => {
     expect(r.sent).toBe(200_000_000);
     expect(r.gain).toBe(150_000_000);
   });
+
+  test("BD-4 상속 1983 — 의제취득일 기준시가 칸 §164⑤ 안내 · 계산 버튼 · ② 채택 0", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seed(page, {
+      ...B, acquisitionDate: "1983-06-01", inheritanceStartDate: "1983-06-01", actualSalePrice: "200000000", standardPriceAtTransfer: "400000000",
+      publishedValueAtInheritance: "50000000", standardPriceAtAcq: "200000000",
+    }, "200000000");
+    await open(page, 3);
+    await expect(page.getByText("이 값이 ② §164⑤ 가액이자 ③ 환산취득가액의 분자입니다").first()).toBeVisible();
+    await expect(page.getByTestId("pre-deemed-building-164-5-calc")).toContainText("의제취득일 건물 기준시가 계산");
+    await expect(page.getByTestId("building-164-5-section")).toHaveCount(0);
+    const r = await calc(page);
+    expect(r.gain).toBe(0);
+  });
+
+  test("BD-5 상속 1983 · ① 비움 — 분자가 ②라 「가목 확인 불가」 선언 토글이 없다(Q-36 a) · 0", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seed(page, {
+      ...B, acquisitionDate: "1983-06-01", inheritanceStartDate: "1983-06-01", actualSalePrice: "200000000", standardPriceAtTransfer: "400000000",
+      publishedValueAtInheritance: "", standardPriceAtAcq: "200000000",
+    }, "200000000");
+    await open(page, 3);
+    await expect(page.getByText("이 값이 ② §164⑤ 가액이자 ③ 환산취득가액의 분자입니다").first()).toBeVisible();
+    await expect(page.locator('[data-field="preDeemedClauseAUnconfirmed"]')).toHaveCount(0);
+    const r = await calc(page);
+    expect(r.gain).toBe(0);
+  });
 });
+

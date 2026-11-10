@@ -151,12 +151,19 @@ export interface InheritanceAcquisitionInput {
   /**
    * 건물(토지 제외) 기준시가 고시 前 상속·증여 건물의 §164⑤ 취득당시 기준시가 (원, 지분 안분 후).
    * post-deemed(의제취득일 이후) 건물 & 기준일 연도 ≤ 2000(`ACQ_BASE_RATE_MAX_ACQ_YEAR` — 일반건물 경로와 같은 구간) 시,
+   * pre-deemed(의제취득일 전) 건물은 ③ 분자(`standardPriceAtDeemedDate`)와 같은 값을 helpers가 주입한다(Q-34 a — 3자 max의 ②),
    * 취득가액 = max(reportedValue[① 상증법 평가액], 이 값[② §164⑤]). 소령 §163⑨2호.
    * helpers가 `TransferTaxInput.inheritedBuildingSec164Value`(100%)를 지분으로 안분해 주입한다(A07 — 다른 슬롯과 같은 지점).
    * (house/commercial/landValuationStdPrice와 배타 — 자산은 하나.)
    * 계획서: docs/00-pm/building-163-9-proviso-164-5.plan.md
    */
   buildingValuationStdPrice?: number;
+
+  /**
+   * 의제취득일 전 건물의 ③ 분자를 ②(§164⑤)로 **쓰지 않는다** — 증여세 계산기 부담부증여 비주택 건물(상가 포함 분류 · ② = §164⑥ 8칸, Q-38).
+   * 생략 = 양도세 계산기 규칙(② = 분자 · 사용자 결정 Q-34 a · Q-37 a — 계획서 building-163-9-proviso-164-5.plan.md §9).
+   */
+  deemedStdNotSec164?: boolean;
 
   /**
    * 개별공시지가 미공시 상속·증여 토지의 §164④ 취득당시 기준시가 (원, 총액·미스케일).

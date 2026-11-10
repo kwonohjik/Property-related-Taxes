@@ -48,7 +48,7 @@ const bg = (actual = "100000000", debt = "250000000"): Loose => ({
 function form(a: Loose): TransferFormData {
   return rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2023-02-16", filingDate: "2023-04-30", totalTransferExpense: "0", householdHousingCount: "0", isOneHousehold: false,
-    householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, contractTotalPrice: "500000000",
+    householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, contractTotalPrice: (a.contractTotal as string) ?? "500000000",
     assets: [{ ...makeDefaultAsset(1), ...a } as AssetForm],
   })) as TransferFormData;
 }
@@ -121,7 +121,7 @@ describe("BLD164 — 건물 × §163⑨ 단서 2호 · §164⑤", () => {
     const r = await run({ ...B, ...V, ...bg(), bgValuationMode: "sangjeungbeop_standard", bgAcquisitionMethod: "", bgMortgageDebtAmount: "100000000" });
     expect([r.status, r.sentInh]).toEqual([200, false]);
   });
-  it("G9 의제취득일 전(상속 1983) — 범위 밖 · 싣지 않는다(3자 max 그대로)", async () => {
+  it("G9 의제취득일 전(상속 1983) — §164⑤ 칸(의제취득일 이후 전용)은 싣지 않는다 · ③이 크면 ③(Q-34 a 뒤에도 같은 값)", async () => {
     const r = await run({ ...B, ...V, ...at("1983-06-01") });
     expect([r.status, r.sent]).toEqual([200, undefined]);
     expect(r.gain).toBe(160_666_667);
@@ -163,3 +163,61 @@ describe("BLD164 — 건물 × §163⑨ 단서 2호 · §164⑤", () => {
     expect(gains[0] - gains[1]).toBe(100_000_000);
   });
 });
+
+/**
+ * Q-34 a · Q-35 a(계획서 §9) — 의제취득일(1985.1.1.) 전 상속 · 증여 건물: ② §164⑤ = ③ 분자(「의제취득일 기준시가」 칸).
+ * 건물 기준시가는 2001.1.1. 전 고시가 없어 1985.1.1. 기준시가는 §164⑤로만 산정된다. ②가 이기는 것은 양도가액 < 양도시 기준시가일 때뿐이다.
+ * 시료: 1983 상속 · 분자 2억 · 양도가액 2억 · 양도시 기준시가 4억 · ① 5천만 → ③ 1억(+개산공제 6백만) vs ② 2억(실지 의제 · 개산공제 없음).
+ */
+describe("BLD164-PD — 의제취득일 전 건물 ② = ③ 분자", () => {
+  const PD: Loose = { ...at("1983-06-01"), standardPriceAtAcq: "200000000" };
+  const LOW: Loose = { actualSalePrice: "200000000", contractTotal: "200000000", standardPriceAtTransfer: "400000000", publishedValueAtInheritance: "50000000" };
+  it("PD1 ③ > ② — ③ 그대로(160,666,667) · 산식에 ② 줄이 생긴다", async () => {
+    const r = await run({ ...B, ...PD });
+    expect([r.fe8, r.status]).toEqual([[], 200]);
+    expect(r.gain).toBe(160_666_667);
+    expect(r.formula).toContain("② §164 취득당시 기준시가: 200,000,000 (미적용");
+  });
+  it("PD2 양도가액 < 양도시 기준시가 — ② 2억 채택 · 양도차익 0(수정 전 94,000,000)", async () => {
+    const r = await run({ ...B, ...PD, ...LOW });
+    expect([r.fe8, r.status, r.err]).toEqual([[], 200, undefined]);
+    expect(r.gain).toBe(0);
+    expect(r.formula).toContain("→ 적용 (①②③ 중 큰 금액, ② §164 취득당시 기준시가): 200,000,000");
+  });
+  it("PD2g 증여 — 같은 값", async () => {
+    const r = await run({ ...B, ...PD, ...LOW, ...GIFT, fixedAcquisitionPrice: "50000000", donorAcquisitionDate: "1975-01-01" });
+    expect([r.fe8, r.status, r.err]).toEqual([[], 200, undefined]);
+    expect(r.gain).toBe(0);
+  });
+  it("PD3 지분 1/2 — ②도 1/2(1억)로 비교 · 양도차익 0(안분하지 않으면 −1억)", async () => {
+    const r = await run({ ...B, ...PD, ...LOW, ownershipNumerator: "1", ownershipDenominator: "2", ownershipRemainderThirdParty: "yes" });
+    expect([r.fe8, r.status, r.err]).toEqual([[], 200, undefined]);
+    expect(r.gain).toBe(0);
+    expect(r.formula).toContain("② §164 취득당시 기준시가: 100,000,000");
+  });
+  it("PD4 부담부증여(시가 · β 0.5) — ② 2억 × 0.5 · 양도차익 0(수정 전 47,000,000)", async () => {
+    const r = await run({ ...B, ...PD, ...LOW, ...bg("", "100000000"), bgMarketValueAtTransfer: "200000000" });
+    expect([r.fe8, r.status, r.err]).toEqual([[], 200, undefined]);
+    expect(r.gain).toBe(0);
+  });
+  it("PD5 분자를 비우면 ②도 없다", async () => {
+    const r = await run({ ...B, ...PD, ...LOW, standardPriceAtAcq: "" , publishedValueAtInheritance: "150000000" });
+    expect(r.formula).not.toContain("② §164");
+  });
+  it("PD6 부담부증여 기준시가 평가 — 의제취득일 기준시가 × β 그대로(② 주입과 무관)", async () => {
+    const r = await run({ ...B, ...PD, ...LOW, ...bg("", "100000000"), bgMarketValueAtTransfer: "", bgValuationMode: "sangjeungbeop_standard", bgAcquisitionMethod: "" });
+    expect([r.fe8, r.status, r.err]).toEqual([[], 200, undefined]);
+    expect(r.gain).toBe(48_500_000);
+  });
+  it("PD7 ① 비움 · 분자만 — ②가 있으므로 「가목 확인 불가」 선언을 요구하지 않는다(Q-36 a) · ② 채택 0", async () => {
+    const r = await run({ ...B, ...PD, ...LOW, publishedValueAtInheritance: "" });
+    expect([r.fe8, r.status, r.err]).toEqual([[], 200, undefined]);
+    expect(r.gain).toBe(0);
+  });
+  it("PD8 ⑫ `deemedStdNotSec164`(증여세 계산기 비주택 건물 전용) — ②를 넣지 않는다 · 94,000,000(Q-37 a)", async () => {
+    const body = (await captureBody(form({ ...B, ...PD, ...LOW }))) as Loose;
+    const r = await postTransfer({ ...body, inheritedAcquisition: { ...(body.inheritedAcquisition as Loose), deemedStdNotSec164: true } });
+    expect([r.status, ((r.result ?? {}) as Loose).transferGain]).toEqual([200, 94_000_000]);
+  });
+});
+

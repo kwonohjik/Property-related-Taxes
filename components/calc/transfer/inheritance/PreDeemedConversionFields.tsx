@@ -15,6 +15,8 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
 import { preDeemedAutoStdPrices } from "@/lib/calc/pre-deemed-auto-std-price";
+import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -38,6 +40,9 @@ export function PreDeemedConversionFields({ asset, onChange, transferDate, baseD
   // 상가는 §164⑥ 섹션(`CommercialInheritanceStdPriceSection`)이 이 칸보다 아래에 그려진다(`AssetSectionAcquisition` — 계획서
   // commercial-pre-deemed-converted-numerator.plan.md §3). 그 값이 ③의 분자로 자동으로 쓰인다(사용자 결정 A안).
   const isCommercial = asset.assetKind === "commercial_building";
+  // 건물(토지 제외) — 건물 기준시가는 2001.1.1. 전에 고시된 적이 없어 1985.1.1. 기준시가는 §164⑤(최초 고시 × 1985년 산정기준율)로만
+  // 산정된다. 그 값이 ② §164⑤ 가액이자 ③ 분자다(사용자 결정 Q-34 a · Q-35 a — 계획서 building-163-9-proviso-164-5.plan.md §9).
+  const isBuilding = asset.assetKind === "building";
   // hint 텍스트: 자산 종류에 따라 다르게 표시
   // 토지 등급 입력이 두 칸 사이(`between` — 상속)에 있으면 「아래」, 없으면(증여 — 위 §164④ 섹션) 「위」다.
   const stdPriceHint = isLand
@@ -46,7 +51,9 @@ export function PreDeemedConversionFields({ asset, onChange, transferDate, baseD
       : "1985.1.1. 개별공시지가 × 면적. 위 §164④ 토지등급을 모두 입력하면 그 환산값이 자동으로 쓰입니다."
     : isCommercial
       ? "국세청 기준시가 직접 입력. 아래 §164⑥ 취득당시 기준시가 8개 항목을 모두 입력하면 그 값이 자동으로 쓰입니다."
-      : "국세청 기준시가 직접 입력.";
+      : isBuilding
+        ? "§164⑤ — 국세청장이 처음 고시한 건물 기준시가 × 1985년 산정기준율. 아래 「건물 기준시가 계산」으로 산정합니다. 이 값이 ② §164⑤ 가액이자 ③ 환산취득가액의 분자입니다."
+        : "국세청 기준시가 직접 입력.";
 
   // 자동값 — ④ 전송 판단과 같은 단일 소스(`lib/calc/pre-deemed-auto-std-price.ts`).
   const auto = useMemo(
@@ -94,6 +101,20 @@ export function PreDeemedConversionFields({ asset, onChange, transferDate, baseD
           disabled={stdPriceAtAcqAutoActive}
         />
       </FieldCard>
+      {isBuilding && (
+        <div className="flex justify-end" data-testid="pre-deemed-building-164-5-calc">
+          <BuildingStdPriceModalButton
+            lockedTaxType="transfer"
+            buttonLabel="의제취득일 건물 기준시가 계산"
+            initialAddress={stdPriceAddressOf(asset)}
+            // 취득 시점 하나 — 의제취득일 이후 §164⑤ 칸(`BuildingSec164Section`)과 같은 키다(두 칸은 동시에 렌더되지 않는다)
+            snapshotKey={`bsp-${asset.assetId}-bldinh-acq`}
+            applyTimePoint="acquisition"
+            prefill={{ floorArea: asset.buildingFloorArea || undefined, acquisitionDate: "1985-01-01", transferDate }}
+            onApply={(v: number) => onChange({ standardPriceAtAcq: String(v) })}
+          />
+        </div>
+      )}
       {autoStdPriceAtAcq !== null && (
         <ToggleCard
           tone="amber"

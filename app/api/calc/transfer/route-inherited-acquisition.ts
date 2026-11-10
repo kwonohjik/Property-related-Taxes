@@ -31,6 +31,8 @@ export function buildInheritedAcquisition(
       reportedValue: ia.reportedValue, // ① 상증법 평가액 (3자 max 후보)
       standardPriceAtDeemedDate: ia.standardPriceAtDeemedDate,
       standardPriceAtTransfer: ia.standardPriceAtTransfer,
+      // 증여세 계산기 부담부증여 비주택 건물 — 의제취득일 기준시가를 ②로 쓰지 않는다(Q-37 a)
+      ...(ia.deemedStdNotSec164 && { deemedStdNotSec164: true }),
       transferDate,
       transferPrice,
     };

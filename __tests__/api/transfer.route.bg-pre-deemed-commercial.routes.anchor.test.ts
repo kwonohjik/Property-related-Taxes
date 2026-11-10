@@ -167,10 +167,10 @@ describe("증여 · 건물(토지 제외)", () => {
     expect(r.tax).toBe(39_492_000);
   });
 
-  it("B-1 건물(토지 제외) 시가 · ① 3억 → ③ 230,000,000 (② 후보 없음)", async () => {
+  it("B-1 건물(토지 제외) 시가 · ① 3억 → ③ 230,000,000 (② = 의제취득일 기준시가 칸 2억 — 건물 계획서 §9 Q-34 a · ③이 크다)", async () => {
     const r = await run({ ...MARKET, assetKind: "building", publishedValueAtInheritance: "300000000" });
     expect(r.issues).toEqual([]);
-    expect(r.bg?.preDeemed?.sec164).toBeNull();
+    expect(r.bg?.preDeemed?.sec164).toBe(200_000_000);
     expect(r.acq).toBe(230_000_000);
   });
 

@@ -149,3 +149,22 @@
 - a를 고르면 엔진은 `building` · 의제취득일 전에서 `buildingValuationStdPrice = 분자 × 지분`을 주입하고 `calcPreDeemed`의 ②에 건물을 더한다. ④ · ⑧ · ⑫ 변경은 없다(분자는 이미 실린다).
 - 부담부증여(시가 · 3자 max)도 같은 엔진 경로라 함께 바뀐다(P3). 기준시가 평가는 의제취득일 기준시가 × β 그대로.
 - 범위 밖(이번에 보지 않음): 증여세 계산기 부담부증여의 비주택 건물(§164⑥ 8칸 — `inheritance-pre-deemed-bg-pr7b.plan.md` Q-38). 그 계산기의 「건물」은 상가를 포함하는 분류라 축이 다르다.
+
+### 9.5 구현 (2026-11-11 · 사용자 결정 「모두 권장안으로」 — Q-34 a · Q-35 a)
+
+- 엔진: `building` · 의제취득일 전이면 helpers가 `buildingValuationStdPrice = 분자(standardPriceAtDeemedDate) × 지분`을 주입하고, `calcPreDeemed`의 ②에 건물을 더했다. ④ · ⑧ · ⑫ 변경 없음(분자는 이미 실린다). 의제취득일 이후 전용 칸(`inheritedBuildingSec164Value`)은 여전히 의제취득일 전에 쓰이지 않는다(G10).
+- 화면: `PreDeemedConversionFields` — 건물이면 「§164⑤ — 국세청장이 처음 고시한 건물 기준시가 × 1985년 산정기준율 … ② §164⑤ 가액이자 ③ 환산취득가액의 분자」 안내 + 「의제취득일 건물 기준시가 계산」 모달(취득일 1985.1.1. · 스냅샷 키 `bsp-{id}-bldinh-acq`).
+- anchor PD1~PD6: PD1 ③ 승(160,666,667 · 산식에 ② 줄) · PD2 상속 0(수정 전 94,000,000) · PD2g 증여 0 · PD3 지분 1/2(② 1억) · PD4 부담부증여 시가 0(수정 전 47,000,000) · PD5 분자 비움 = ② 없음 · PD6 부담부증여 기준시가 평가 48,500,000(주입을 꺼도 같은 값 — 무관 확인).
+- 뮤테이션 3건 검출(주입 · 지분 안분 · `calcPreDeemed` max). E2E BD-4.
+
+### 9.6 구현 중 발견 · 결정 (2026-11-11 · Q-36 a · Q-37 a)
+
+전체 회귀에서 기존 테스트 5건이 깨졌다(측정 [직접]).
+- 양도세 계산기 3건(`transfer.route.bg-pre-deemed-commercial` B-1 · `bg-pre-deemed-fractional-other-kinds` V-P1 · V-P2 「건물 시가 < 기준시가」) — Q-34 a의 의도한 결과다. 시가 < 양도시 기준시가면 ② = 분자가 ③보다 커 채택된다: 반 크기 단건 36,000,000 → 25,000,000(손계산: 시가 1.5억 · β 0.5 · ② 1억 → 취득가액 5천만 · 개산공제 없음) · 묶음 108,000,000 → 75,000,000. 기대값을 바꿨다.
+- 증여세 계산기 2건(`gift-burdened-pre-deemed-pr7b3` C-1 · `-pr7b3b` M-4) — 그 계산기의 「비주택 건물」은 상가를 포함하는 분류이고 ②를 §164⑥ 8칸으로만 받는다(Q-38). 같은 엔진이라 8칸이 비어도 ② = 분자가 들어갔다.
+- 의제취득일 전 건물에서 ①을 비우면 ⑧이 「①도 ②도 없음」 선언을 요구했다 — ②가 분자로 늘 있는데 선언은 「없음」이라 화면이 어긋났다(probe: 선언 없이 ⑧ 차단 · 선언하면 ② 채택 0).
+
+결정과 구현:
+- **Q-36 a** — 분자가 있으면 ②가 있다. `isSec164ClauseAFilled`에 `buildingPreDeemedSec164Filled`(건물 · 의제취득일 전 · `standardPriceAtAcq > 0`)를 더했다 → 선언을 요구하지 않고 선언 토글도 숨는다(`needsClauseADeclaration` 공유 술어). anchor PD7 · E2E BD-5.
+- **Q-37 a** — 양도세 계산기 건물만. 증여세 계산기 페이로드(`buildGiftBgPreDeemedPayload`)가 비주택 건물에 `inheritedAcquisition.deemedStdNotSec164: true`를 싣고(⑫ `z.literal(true)` · ⑭ route 매핑), 엔진은 그때 ②를 넣지 않는다. 증여세 계산기 2건은 종전 값 그대로 통과. anchor PD8(⑫ 직접 호출 94,000,000).
+- 뮤테이션 4건 검출(⑧ 술어 · 엔진 opt-out · 증여 페이로드 플래그 · route 매핑).
