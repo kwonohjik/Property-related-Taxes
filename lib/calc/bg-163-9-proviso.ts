@@ -1,5 +1,6 @@
 /**
- * 부담부증여 × 「소득세법 시행령」 §163⑨ 단서(의제취득일 이후 · 기준시가 고시 전) — PR-1(토지 1호 · 단독주택 2호) · PR-2(상가 · 오피스텔 2호 §164⑥).
+ * 부담부증여 × 「소득세법 시행령」 §163⑨ 단서(의제취득일 이후 · 기준시가 고시 전) — PR-1(토지 1호 · 단독주택 2호) · PR-2(상가 · 오피스텔 2호 §164⑥)
+ * · 건물(토지 제외) 2호 §164⑤(계획서 `building-163-9-proviso-164-5.plan.md` Q-33 a).
  * 계획서 `docs/00-pm/bg-163-9-proviso-post-deemed.plan.md` · 사용자 결정 Q-24 a · Q-25 a · Q-26 a · Q-27 a.
  *
  * §159①1호 A = 법 §97①1호 가액이고, 상속 · 증여 자산은 §163⑨에 따라 평가액이 실지거래가액이다. 단서 구간이면 평가액과 §164④(⑦) 가액 중
@@ -7,18 +8,20 @@
  * ②를 비우면 일반 양도처럼 평가액만으로 계산한다(Q-25 a — 막지 않는다).
  *
  * ⑤ 칸 노출 · ④ 전송 · 안내 문구가 이 술어를 쓴다. 겸용(자기 경로 `mixedSec163_9CompareOf`) · 의제취득일 전(`isBgPreDeemedAsset`) ·
- * 이월과세 · 토지 · 건물 취득일이 다른 주택 · 소유자 분리 · 공동주택 · 건물(토지 제외 — 일반 양도에도 §164⑤ 비교가 없다) · 일반건물 · 재개발 · 입주권은 이 범위 밖이다(PR-3).
- * 상가의 ② 칸(§164⑥ 8칸)은 ③ 취득정보 `CommercialInheritanceStdPriceSection`에 이미 있다 — 부담부증여 카드는 그 칸을 가리킨다.
+ * 이월과세 · 토지 · 건물 취득일이 다른 주택 · 소유자 분리 · 공동주택 · 일반건물 · 재개발 · 입주권은 이 범위 밖이다(PR-3).
+ * 상가의 ② 칸(§164⑥ 8칸)은 ③ 취득정보 `CommercialInheritanceStdPriceSection`에, 건물의 ② 칸(§164⑤)은 `BuildingSec164Section`에
+ * 이미 있다 — 부담부증여 카드는 그 칸을 가리킨다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { bgAnyCarryover } from "./bg-carryover-parts";
 import { sec164CommercialStatus, sec164HouseStatus, sec164LandStatus } from "./sec164-required-fields";
+import { sec164BuildingStatus } from "./sec164-required-fields";
 import { deriveInheritanceHouseKind } from "./transfer-tax-api-asset-basics";
 import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
 
-export type BgSec163_9ProvisoKind = "land" | "house" | "commercial";
+export type BgSec163_9ProvisoKind = "land" | "house" | "commercial" | "building";
 
 /** 단서 구간인 부담부증여 자산의 종류 — 토지(1호 · §164④) · 단독주택(2호 · §164⑦) · 상가 · 오피스텔(2호 · §164⑥). 범위 밖이면 null. */
 export function bgSec163_9ProvisoKind(asset: AssetForm): BgSec163_9ProvisoKind | null {
@@ -28,6 +31,7 @@ export function bgSec163_9ProvisoKind(asset: AssetForm): BgSec163_9ProvisoKind |
   if (isBgPreDeemedAsset(asset) || bgAnyCarryover(asset) || bgCollateralForcesStdAcq(asset)) return null;
   if (asset.assetKind === "land") return sec164LandStatus(asset) !== null ? "land" : null;
   if (asset.assetKind === "commercial_building") return sec164CommercialStatus(asset) !== null ? "commercial" : null;
+  if (asset.assetKind === "building") return sec164BuildingStatus(asset) !== null ? "building" : null;
   if (
     asset.assetKind === "housing" &&
     !asset.isMixedUseHouse &&
@@ -41,7 +45,7 @@ export function bgSec163_9ProvisoKind(asset: AssetForm): BgSec163_9ProvisoKind |
   return null;
 }
 
-/** ① 평가액이 들어 있는 부담부증여 실지 칸(Q-24 a) — 토지는 토지 칸, 주택 · 상가는 총액 칸(⑧ `transfer-tax-validate-bg.ts` K-4와 같은 칸). */
+/** ① 평가액이 들어 있는 부담부증여 실지 칸(Q-24 a) — 토지는 토지 칸, 주택 · 상가 · 건물은 총액 칸(⑧ `transfer-tax-validate-bg.ts` K-4와 같은 칸). */
 export function bgSec163_9ReportedField(kind: BgSec163_9ProvisoKind): "bgActualAcquisitionLand" | "bgActualAcquisitionTotal" {
   return kind === "land" ? "bgActualAcquisitionLand" : "bgActualAcquisitionTotal";
 }

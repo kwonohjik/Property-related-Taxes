@@ -17,7 +17,12 @@ import { HouseValuationSection } from "./inheritance/HouseValuationSection";
 import { sec164LandAreaField } from "@/lib/calc/transfer-163-9-base-date";
 import type { BgSec163_9ProvisoKind } from "@/lib/calc/bg-163-9-proviso";
 
-const SEC164: Record<BgSec163_9ProvisoKind, string> = { land: "§164④", house: "§164⑦", commercial: "§164⑥" };
+const SEC164: Record<BgSec163_9ProvisoKind, string> = { land: "§164④", house: "§164⑦", commercial: "§164⑥", building: "§164⑤" };
+/** ② 칸이 ③ 취득정보에 따로 있는 종류 — 이 카드는 그 칸을 가리킨다 */
+const POINTER: Partial<Record<BgSec163_9ProvisoKind, string>> = {
+  commercial: "「§164⑥ 취득당시 기준시가」 칸",
+  building: "「§164⑤ 취득당시 건물 기준시가」 칸",
+};
 /** 영 §163⑨ 본문 「부담부증여의 채무액에 해당하는 부분도 포함」 괄호 시행일(대통령령 제30395호 · 부칙 제2조② 이후 양도분) */
 const SEC163_9_BG_PAREN_FROM = "2020-02-11";
 
@@ -25,6 +30,7 @@ const NOT_YET: Record<BgSec163_9ProvisoKind, string> = {
   land: "개별공시지가가 고시되기 전(1990.8.30. 전)",
   house: "이 주택의 개별주택가격이 공시되기 전",
   commercial: "상가 · 오피스텔 기준시가가 처음 고시되기 전(2005.1.1. 전)",
+  building: "건물 기준시가가 고시되기 전(2000년 이전)",
 };
 
 interface Props {
@@ -46,8 +52,12 @@ export function BgSec163_9ProvisoSection({ asset, onChange, transferDate, kind }
     >
       <p className={`text-xs ${TONE.amber.title}`}>
         {baseLabel} 현재 {NOT_YET[kind]}이라, 위 실지취득가액 칸의 평가액과
-        {kind === "commercial" ? " ③ 취득정보의 「§164⑥ 취득당시 기준시가」 칸" : ` 아래 ${sec164}`} 가액 중 <strong>큰 금액</strong>을 취득가액으로 보고 채무비율을 곱합니다(소득세법 시행령 §159①1호 · §163⑨ 단서 {kind === "land" ? "1호" : "2호"}).
-        {kind === "commercial" ? " 그" : " 아래"} 칸을 <strong>모두</strong> 입력한 경우에만 비교하고, 비워 두면 평가액만으로 계산합니다.
+        {POINTER[kind] ? ` ③ 취득정보의 ${POINTER[kind]}` : ` 아래 ${sec164}`} 가액 중 <strong>큰 금액</strong>을 취득가액으로 보고 채무비율을 곱합니다(소득세법 시행령 §159①1호 · §163⑨ 단서 {kind === "land" ? "1호" : "2호"}).
+        {kind === "building" ? (
+          <> 그 칸을 입력한 경우에만 비교하고, 비워 두면 평가액만으로 계산합니다.</>
+        ) : (
+          <>{kind === "commercial" ? " 그" : " 아래"} 칸을 <strong>모두</strong> 입력한 경우에만 비교하고, 비워 두면 평가액만으로 계산합니다.</>
+        )}
       </p>
       <p className="text-caption text-muted-foreground">
         {transferDate && transferDate >= SEC163_9_BG_PAREN_FROM

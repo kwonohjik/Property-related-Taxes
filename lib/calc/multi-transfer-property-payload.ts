@@ -56,6 +56,7 @@ import { primaryAcquisitionModeFlags } from "./transfer-tax-api-primary-context"
 import { buildInheritedAcquisitionPayload } from "./transfer-tax-api-inheritance";
 import { buildInheritedHouseValuationPayload } from "./transfer-tax-api-inheritance";
 import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-inheritance";
+import { buildBuildingSec164Payload } from "./transfer-tax-api-inheritance";
 import { buildPrimaryCommercialBuildingValuation } from "./transfer-tax-api-commercial";
 import { buildCommercialAppurtenantLand } from "./transfer-tax-api-commercial";
 import { isInheritedCommercialBuilding } from "./transfer-tax-api-commercial";
@@ -483,6 +484,7 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     ...(primary ? optionalKey("commercialBuildingValuation", buildPrimaryCommercialBuildingValuation(primary, form.transferDate)) : {}),
     ...(primary ? optionalKey("commercialAppurtenantLand", buildCommercialAppurtenantLand(primary)) : {}),
     ...(primary ? buildCommercialInheritanceValuationPayload(primary) : {}),
+    ...(primary ? buildBuildingSec164Payload(primary) : {}),
     // ⑬ 일반건물 — 단건 ④와 같은 leaf(공유 지분 축 A 축소 포함). route ⑭가 단건과 같은 토지·건물 카드로 펼친다(`multi-gb-expansion.ts`).
     ...(primary
       ? optionalKey(

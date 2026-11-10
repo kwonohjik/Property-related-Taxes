@@ -42,6 +42,7 @@ import { DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
 import {
   isFullyFilled,
   sec164CommercialStatus,
+  sec164BuildingStatus,
   sec164HouseStatus,
   sec164LandStatus,
 } from "./sec164-required-fields";
@@ -73,7 +74,8 @@ export function isSec164ClauseAFilled(asset: AssetForm): boolean {
   return (
     isFullyFilled(sec164HouseStatus(asset)) ||
     isFullyFilled(sec164CommercialStatus(asset)) ||
-    isFullyFilled(sec164LandStatus(asset))
+    isFullyFilled(sec164LandStatus(asset)) ||
+    isFullyFilled(sec164BuildingStatus(asset))
   );
 }
 

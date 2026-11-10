@@ -234,19 +234,25 @@ function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisit
   //   토지(개별공시지가 미공시, <1990.8.30) = §164④ landValuationStdPrice      ← §163⑨**1호**
   //   주택(개별주택가격 미공시, <2005.4.30) = §164⑦ houseValuationStdPrice     ← §163⑨**2호**
   //   상가(기준시가 미공시, <2005.1.1)      = §164⑥ commercialValuationStdPrice ← §163⑨**2호**
+  //   건물(토지 제외 · 기준일 연도 ≤ 2000)  = §164⑤ buildingValuationStdPrice   ← §163⑨**2호**
   // ⚠️ **1호는 「의제취득일」과 무관하다** — 조건이 「1990.8.30. 고시 前 상속·증여받은 토지」뿐이라
   //    의제취득일 이후(1985.1.1.~1990.8.30.) 상속 토지도 당연히 대상이다(2호가 pre/post 구분 없는 것과 같다).
   // 자산은 셋 중 하나만 주입(배타). ③(환산취득가/양도가 스케일) 적용 불가.
   // ①·② 실지거래가액 의제 → 개산공제 없음(추가 처리 없이 acquisitionPrice만 반환).
   const sec164Std =
-    input.houseValuationStdPrice ?? input.commercialValuationStdPrice ?? input.landValuationStdPrice;
+    input.houseValuationStdPrice ??
+    input.commercialValuationStdPrice ??
+    input.landValuationStdPrice ??
+    input.buildingValuationStdPrice;
   if (sec164Std !== undefined && sec164Std > 0) {
-    const kind: "house" | "commercial" | "land" =
+    const kind: "house" | "commercial" | "land" | "building" =
       input.houseValuationStdPrice !== undefined
         ? "house"
         : input.commercialValuationStdPrice !== undefined
           ? "commercial"
-          : "land";
+          : input.landValuationStdPrice !== undefined
+            ? "land"
+            : "building";
     const reported =
       input.reportedValue !== undefined && input.reportedValue >= 0
         ? Math.floor(input.reportedValue)
@@ -257,7 +263,15 @@ function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisit
     // 공동주택은 「국세청 고시 가액 없었음」일 때만 여기 온다 — 첫 가격이 국세청 고시면 §164⑥, 국토교통부 공시면 ⑦(계획서 Q-1).
     const apartAgency = kind === "house" && input.assetKind === "house_apart" ? input.apartFirstPriceAgency : undefined;
     const clause =
-      kind === "house" ? (apartAgency === "nts" ? "§164⑥" : "§164⑦") : kind === "commercial" ? "§164⑥" : "§164④";
+      kind === "house"
+        ? apartAgency === "nts"
+          ? "§164⑥"
+          : "§164⑦"
+        : kind === "commercial"
+          ? "§164⑥"
+          : kind === "building"
+            ? "§164⑤"
+            : "§164④";
     const disclosureLabel =
       kind === "house"
         ? apartAgency === "nts"
@@ -267,7 +281,9 @@ function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisit
             : "개별주택가격 미공시"
         : kind === "commercial"
           ? "상가 기준시가 미공시"
-          : "개별공시지가 미공시";
+          : kind === "building"
+            ? "건물 기준시가 고시 전"
+            : "개별공시지가 미공시";
     return {
       acquisitionPrice,
       method: "supplementary",
@@ -278,7 +294,9 @@ function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisit
             : TRANSFER.INHERITED_AFTER_DEEMED_HOUSE_MAX
           : kind === "commercial"
             ? TRANSFER.INHERITED_AFTER_DEEMED_COMMERCIAL_MAX
-            : TRANSFER.INHERITED_AFTER_DEEMED_LAND_MAX,
+            : kind === "building"
+              ? TRANSFER.INHERITED_AFTER_DEEMED_BUILDING_MAX
+              : TRANSFER.INHERITED_AFTER_DEEMED_LAND_MAX,
       formula:
         `상증법 평가액 ${reported.toLocaleString()}과 ` +
         `${clause} 취득당시 기준시가 ${std.toLocaleString()} 중 큰 금액 = ${acquisitionPrice.toLocaleString()} ` +

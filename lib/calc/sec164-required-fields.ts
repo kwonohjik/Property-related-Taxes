@@ -19,6 +19,8 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { isSec163_9Cause, deriveSec163_9BaseDate, isSec163_9HouseAsset, isSec163_9LandAsset, sec164LandAreaField } from "./transfer-163-9-base-date";
 import { houseDisclosureBoundaryOf } from "./house-first-disclosure";
 import { apartSec164FormOpen, isApartSec163_9Asset } from "./apart-nts-price";
+import { isBeforeBuildingStdPriceNotice } from "./commercial-164-6-proviso";
+import { DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 개별공시지가 최초고시 — 이 날 前 상속·증여 토지가 §163⑨1호(§164④) 대상. */
@@ -201,6 +203,21 @@ export function sec164LandStatus(asset: AssetForm): Sec164FieldStatus | null {
       amountField("pre1990PricePerSqm_1990", "1990.1.1. 기준 개별공시지가(1990.8.30. 고시)"),
     ]),
   );
+}
+
+/**
+ * 건물(토지 제외) §164⑤ (§163⑨2호) — 칸 하나(`inhBuildingSec164Value`). 노출(⑤)·④ 전송·⑧이 이 술어를 쓴다.
+ *
+ * 구간 = 의제취득일(1985.1.1.) 이후 · 기준일 연도 ≤ 2000 — 일반건물 건물 파트와 같은 `isBeforeBuildingStdPriceNotice`
+ * (사용자 결정 Q-30 a). 의제취득일 전은 범위 밖이다(3자 max 경로 · 계획서 V-3).
+ * 칸이 하나라 부분 입력은 없다 — 비우면 평가액만 쓴다(Q-32 a).
+ * 계획서: docs/00-pm/building-163-9-proviso-164-5.plan.md
+ */
+export function sec164BuildingStatus(asset: AssetForm): Sec164FieldStatus | null {
+  if (asset.assetKind !== "building" || !isSec163_9Cause(asset.acquisitionCause)) return null;
+  const baseDate = deriveSec163_9BaseDate(asset);
+  if (!baseDate || baseDate < DEEMED_ACQUISITION_DATE || !isBeforeBuildingStdPriceNotice(baseDate)) return null;
+  return merge("§164⑤", tally(asset, [amountField("inhBuildingSec164Value", "§164⑤ 취득당시 건물 기준시가")]));
 }
 
 /**

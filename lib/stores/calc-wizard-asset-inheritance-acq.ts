@@ -45,4 +45,10 @@ export interface InheritanceAcquisitionFormSlice {
   supplementaryLandUnitPrice: string;
   /** 보조계산: 건물 공시가격 (원 총액) */
   supplementaryBuildingValue: string;
+  /**
+   * 건물(토지 제외) §164⑤ 취득당시 기준시가(원 총액 · 물건 전체) — 상속·증여 기준일 연도 ≤ 2000 건물의 §163⑨2호 ②.
+   * 매매 · 부담부증여의 `standardPriceAtAcq`와 칸을 나눈다(남은 값이 ②로 새지 않게 — 사용자 결정 Q-31 a).
+   * 노출·④·⑧은 `sec164BuildingStatus`(lib/calc/sec164-required-fields.ts) 한 술어를 쓴다.
+   */
+  inhBuildingSec164Value: string;
 }

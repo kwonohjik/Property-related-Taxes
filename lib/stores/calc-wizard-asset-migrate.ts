@@ -265,6 +265,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.supplementaryLandArea) a.supplementaryLandArea = "";
   if (!a.supplementaryLandUnitPrice) a.supplementaryLandUnitPrice = "";
   if (!a.supplementaryBuildingValue) a.supplementaryBuildingValue = "";
+  if (!a.inhBuildingSec164Value) a.inhBuildingSec164Value = "";
   if (a.inhHouseValEnabled === undefined) a.inhHouseValEnabled = false;
   if (!a.inhHouseValFirstDisclosureDate) a.inhHouseValFirstDisclosureDate = "2005-04-30";
   // 공동주택 국세청 고시 가액 유무 — 신규 필드. 미선택("")으로 채운다(답은 ⑧이 묻는다 — 기본값으로 답을 만들지 않는다).

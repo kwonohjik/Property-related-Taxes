@@ -18,6 +18,7 @@ import { preDeemedSentStdPrices } from "./pre-deemed-auto-std-price";
 import {
   sec164HouseStatus,
   sec164CommercialStatus,
+  sec164BuildingStatus,
   sec164LandStatus,
   isFullyFilled,
 } from "./sec164-required-fields";
@@ -133,7 +134,8 @@ export function buildInheritedAcquisitionPayload(
   const sec164Ready =
     isFullyFilled(sec164HouseStatus(primary)) ||
     isFullyFilled(sec164CommercialStatus(primary)) ||
-    isFullyFilled(sec164LandStatus(primary));
+    isFullyFilled(sec164LandStatus(primary)) ||
+    isFullyFilled(sec164BuildingStatus(primary));
   const isInheritanceCause = primary.acquisitionCause === "inheritance";
   if (reportedRaw <= 0 && !(isInheritanceCause && sec164Ready)) return {};
   if (bgProviso && !sec164Ready) return {};
@@ -201,6 +203,16 @@ export function buildCommercialInheritanceValuationPayload(
       buildingStdPriceAtFirstDisclosure,
     },
   };
+}
+
+/**
+ * 건물(토지 제외) §164⑤ 취득당시 기준시가 페이로드 (§163⑨2호 ② · 기준일 연도 ≤ 2000 상속·증여 건물).
+ * 물건 전체(100%) 값을 싣는다 — 지분 안분은 엔진 주입 지점(A07)이 한다(상가 §164⑥ 페이로드와 같다).
+ * 계획서: docs/00-pm/building-163-9-proviso-164-5.plan.md
+ */
+export function buildBuildingSec164Payload(primary: AssetForm): { inheritedBuildingSec164Value?: number } {
+  if (!isFullyFilled(sec164BuildingStatus(primary))) return {};
+  return { inheritedBuildingSec164Value: parseAmount(primary.inhBuildingSec164Value) };
 }
 
 /**

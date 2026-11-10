@@ -75,6 +75,7 @@ import {
   buildInheritedAcquisitionPayload,
   buildInheritedHouseValuationPayload,
   buildCommercialInheritanceValuationPayload,
+  buildBuildingSec164Payload,
 } from "./transfer-tax-api-inheritance";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 import { selfBuiltActive } from "./self-built-scope";
@@ -710,6 +711,8 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     ...buildInheritedHouseValuationPayload(primary, form.transferDate),
     // ── 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 (< 2005-01-01, §163⑨2호 max) — sibling 격리 ──
     ...buildCommercialInheritanceValuationPayload(primary),
+    // ── 상속·증여 건물(토지 제외) §164⑤ 취득당시 기준시가 (기준일 연도 ≤ 2000, §163⑨2호 max) ──
+    ...buildBuildingSec164Payload(primary),
     // ── 1990.8.30. 이전 취득 토지 기준시가 환산 (자산-수준 필드 사용, 단건·다건 공용 헬퍼) ──
     // ⑬ pre1990 토지등급 — 환산 모드(`hasPre1990`)뿐 아니라 §163⑨1호 ②(가목) 산출에도 필요하다.
     //    `hasPre1990ForSec164`는 override를 켜지 않고 payload만 공급한다(G-1 입력 계층 분리).
