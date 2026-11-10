@@ -81,7 +81,10 @@ export function bgPreDeemedShareJudgmentFields(share: AssetForm, primary: AssetF
  */
 export function bgShareCardJudgmentFields(share: AssetForm, primary: AssetForm): Partial<AssetForm> {
   const merged = mergePrimaryBasic(share, primary);
-  if (merged.transferType !== "burdened_gift" || !BG_SHARE_CARD_KINDS.has(merged.assetKind)) return {};
+  // 재개발 승계조합원 지분(조합원 구분은 지분별) — 저장값 「일반 양도」면 일반 「취득가액」 칸이 떠 「승계조합원의 취득가액은 이 칸」이라 안내했는데
+  //   부담부증여 계산은 그 칸을 읽지 않는다(자산 1 `bgActualAcquisitionTotal` 병합 · vp2c §23 D-3k · Q-17 a). 원조합원 지분은 §166 블록이라 판정값과 무관해 종전 그대로.
+  const redevSuccessorShare = merged.assetKind === "redevelopment_apt" && merged.redevIsSuccessorMember === "yes";
+  if (merged.transferType !== "burdened_gift" || !(BG_SHARE_CARD_KINDS.has(merged.assetKind) || redevSuccessorShare)) return {};
   return Object.fromEntries(
     Object.entries(merged).filter(([k]) => k === "transferType" || k.startsWith("bg")),
   ) as Partial<AssetForm>;
