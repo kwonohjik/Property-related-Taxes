@@ -6,9 +6,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { validateStep } from "./transfer-tax-validate";
-import { partCarryover } from "./transfer-land-part-cause";
 import { phdFlagEffective } from "./phd-toggle-scope";
-import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { donorBuiltBgActive } from "./donor-built-bg-scope";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
@@ -154,11 +152,9 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   //   일반건물 지분 분할 취득은 자산 2건 이상이라 아래 「한 건 내 다자산」 차단이 막는다(⑫는 `generalBuildingShares` 거부).
   // 배우자등 이월과세(§97의2) — 자산 단위 사건(`carryoverTaxation`)은 ④⑭가 단건과 같은 leaf로 옮긴다
   //   (계획서 multi-carryover-bg-gb-shares 트랙 CO). 연간 합산은 확정신고 1건이라 §97의2②3호 비교가 그 해 전체 결정세액으로 한다.
-  //   계속 막는 하위 모드 — ⑫ `MULTI_REJECT_RULES`와 같은 문구:
-  //   · 파트 이월과세(P3 A 토지만 · P4 B 건물만 · C 증여자 분리) — ④가 파트 키를 싣고 ⑫가 거부한다(⑧이 먼저 막는다).
   //   당초 증여 때 인수한 채무 부분(매입분)은 연다(트랙 CO-DEBT) — 집계가 조각으로 나누고, 예정신고 세액은 카드 1장짜리 집계로 한다.
-  const carryoverParts = partCarryover(a);
-  if (carryoverParts.land || carryoverParts.building) return MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE;
+  //   파트 이월과세(P3 A 토지만 · P4 B 건물만 · C 증여자 분리)도 연다(트랙 CO-PART · Q-4 b) — ⑭가 단건과 같은 합성기로 옮기고, 엔진이 파트 A/B를
+  //   그 자산의 결정세액으로 정한다. 다른 자산과 함께 신고하면 route가 «확인 필요»를 싣는다(`MULTI_SPLIT_CARRYOVER_ASSET_SCOPE_NOTICE`).
   // 부담부증여(소령 §159) — 자산 단위 info·`transferType`은 ④⑭가 단건과 같은 leaf로 옮긴다(트랙 BG · 자산별 §159 명세 echo).
   //   일반건물 부담부증여 × 이월과세는 단건처럼 카드 세트 A·B를 비교 단위로 펼친다 — 연간 합산은 그 해 전체 결정세액으로 비교한다(§97의2②3호).
   //   당초 증여자 신축·증축 가산세(§114조의2)만 막는다 — 단건 route만 계산하고 펼침 카드 함수는 받지 않는다(⑫ 같은 문구).

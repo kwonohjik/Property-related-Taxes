@@ -31,6 +31,7 @@ import { toMultiEngineItem } from "./route-property-input";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { computePreliminaryFilingTaxes } from "@/lib/tax-engine/transfer-tax-preliminary-filing";
 import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
+import { MULTI_SPLIT_CARRYOVER_ASSET_SCOPE_NOTICE } from "@/lib/calc/multi-transfer-support-messages";
 import { expandMultiGeneralBuildings } from "../multi-gb-expansion";
 import { gbPreliminaryUnits } from "../multi-gb-expansion";
 import { aggregateCarryoverDebtAlone, carryoverDebtPreliminaryUnits, isCarryoverDebtItem } from "../multi-carryover-debt-units";
@@ -315,6 +316,10 @@ export async function POST(request: NextRequest) {
       !result.warnings.includes(GB_BG_SELF_BUILT_NOTICE)
     ) {
       result.warnings = [...result.warnings, GB_BG_SELF_BUILT_NOTICE];
+    }
+    // 토지·건물 파트 이월과세(Q-4 b) — 엔진은 파트 A/B를 그 자산의 결정세액으로 정한다. 다른 자산과 함께 신고하면 그 해 전체 비교와 결론이 갈릴 수 있다.
+    if (data.properties.length > 1 && result.properties.some((p) => p.splitDetail?.carryoverEvent) && !result.warnings.includes(MULTI_SPLIT_CARRYOVER_ASSET_SCOPE_NOTICE)) {
+      result.warnings = [...result.warnings, MULTI_SPLIT_CARRYOVER_ASSET_SCOPE_NOTICE];
     }
     // 부담부증여 × 이월과세 [A]/[B] 비교 명세(키 = 자산 id · 지분은 복합 접미사) — A 채택 자산은 결과 상세를 A 카드 것으로 바꾼다.
     attachGbCarryoverUnits(calc, result, gbExpansion.carryoverDrafts, finalUnits, gbExpansion.detailsByAsset);

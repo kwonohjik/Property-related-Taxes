@@ -5,12 +5,15 @@
  */
 
 /**
- * 배우자등 이월과세(§97의2) — 자산 단위 사건(`carryoverTaxation`)은 다건도 단건과 같이 계산한다
- * (계획서 `docs/00-pm/multi-carryover-bg-gb-shares.plan.md` 트랙 CO). 아래 두 하위 모드만 계속 막는다.
+ * 배우자등 이월과세(§97의2) — 자산 단위 사건·채무 인수분·토지·건물 파트 이월과세 모두 다건도 계산한다
+ * (계획서 `docs/00-pm/multi-carryover-bg-gb-shares.plan.md` 트랙 CO·CO-DEBT·CO-PART).
  */
-/** 토지·건물을 나눈 이월과세(파트 — 토지만·건물만·증여자 분리) — 다건 ⑭가 파트 키를 옮기지 않는다(V-CO3). */
-export const MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE =
-  "토지·건물을 나눈 이월과세(§97의2)는 단건 계산기에서만 지원됩니다.";
+/**
+ * 파트 이월과세(토지만·건물만·증여자 분리) 고지(Q-4 b) — 엔진(STEP 0.476)은 파트 A/B를 **그 자산의 결정세액**으로 정한다. 연간 합산의 다른 이월과세는
+ * 그 해 전체 결정세액으로 비교한다(§97의2②3호 「양도소득 결정세액」 = §92③2호 · 기본공제는 인별·과세기간). 다른 자산과 함께 신고할 때만 싣는다.
+ */
+export const MULTI_SPLIT_CARRYOVER_ASSET_SCOPE_NOTICE =
+  "확인 필요: 토지·건물을 나눈 이월과세(소득세법 §97의2)는 그 자산의 결정세액만으로 적용 여부(§97의2 ② 3호)를 비교했습니다. 이 신고의 다른 이월과세는 그 해 전체 결정세액으로 비교하므로, 함께 신고한 자산에 따라 결론이 달라질 수 있습니다.";
 /**
  * F-12 — 합산 경로가 처리하지 못하는 서브객체 모드. ⑧(`validateMultiSupportedMode`)은 화면 폼으로,
  * ⑫(`transfer-tax-schema-multi-refines.ts`)는 API 본문으로 같은 모드를 막는다.

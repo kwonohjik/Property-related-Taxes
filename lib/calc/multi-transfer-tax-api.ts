@@ -84,6 +84,7 @@ import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 import { deemedOneHouseContextDeclared, rentalResidenceContextDeclared } from "./deemed-one-house-context";
 import { withRedevCarryoverAcqMode } from "./redev-carryover-acq-mode";
 import { primaryCarryoverTaxationPayload } from "./transfer-tax-api-carryover-primary";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { buildGeneralBuildingShares } from "./transfer-tax-api-gb-shares";
 import { burdenedGiftAssumedDebtOf } from "./burdened-gift-assumed-debt";
@@ -230,7 +231,7 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     rentalResidenceDeclared: rentalResidenceContextDeclared(form.assets?.[0]?.rentalHousingException),
     temporaryTwoHouseApplies: temporaryTwoHouseApplies({
       primaryKind: form.assets?.[0]?.assetKind,
-      primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? form.assets?.[0]?.acquisitionDate,
+      primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]), // 단건 body-blocks와 같은 leaf
       houses: form.houses,
       transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
@@ -280,7 +281,8 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
           : parseAmount(primary?.fixedAcquisitionPrice ?? "0");
       return primaryFractional ? applyRatio(raw, primaryRatio) : raw;
     })(),
-    acquisitionDate: primary?.acquisitionDate ?? "",
+    // 이월과세는 단건 ④와 같은 leaf(증여 등기접수일 — 자산 카드에 취득일 칸이 없어 원시값이 비거나 잔재일 수 있다). 파트 이월과세(P4 B·P2 C)는 빈 값이면 ⑫ 400.
+    acquisitionDate: primaryAcquisitionDateOf(primary) ?? "",
     // 자산-수준 매매계약일 — §99의3 등 매매계약일 기준 조문 시한 판정용
     assetContractDate: primary?.assetContractDate || undefined,
     // 분리 계산 자산은 이전 형식 총액을 파트 칸으로 옮긴다(⑧이 막는다 — 단건 ④와 같은 술어).

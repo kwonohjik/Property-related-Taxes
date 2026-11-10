@@ -92,8 +92,8 @@ describe("F-12 다건 키 분류", () => {
     expect(issues({ carryoverTaxation: {} })).toEqual([]);
     expect(issues({ carryoverTaxation: { giftAssumedDebt: 0 } })).toEqual([]);
     expect(issues({ carryoverTaxation: { giftAssumedDebt: 100_000_000 } })).toEqual([]);
-    // 파트 이월과세 3키는 계속 거부(형제 안전망 — 아래 `rejected` 순회도 같은 키를 본다)
-    expect(issues({ landCarryoverPart: {} })).toEqual(["landCarryoverPart"]);
+    // 파트 이월과세 3키도 ⑭가 단건과 같은 합성기로 옮긴다(트랙 CO-PART · Q-4 b) — 다건 전용 거부 없음. 남은 거부 규칙은 아래 `rejected` 순회가 본다.
+    expect(issues({ landCarryoverPart: {}, buildingCarryoverPart: {}, carryoverGiftEvent: {} })).toEqual([]);
     expect(issues({ acquisitionCause: "carryover_gift" })).toEqual([]);
     const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType", "burdenedGiftInfo"]);
     for (const k of rejected) {
