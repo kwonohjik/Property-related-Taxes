@@ -67,10 +67,10 @@ async function single(f: TransferFormData) {
   expect(x.status, JSON.stringify(x.json).slice(0, 300)).toBe(200);
   const r = x.r as Record<string, unknown>;
   const mh = r.multiHouseSurchargeEvaluation as { surchargeApplicable: boolean; exclusionReasons: { type: string }[] };
-  const d = r.new993Detail as { isEligible: boolean; ineligibleReasons: { code: string }[] } | undefined;
+  const d = r.new993Detail as { isEligible: boolean; signCase: string; ineligibleReasons: { code: string }[] } | undefined;
   return {
     tax: x.totalTax, surcharge: mh.surchargeApplicable, reasons: mh.exclusionReasons.map((e) => e.type),
-    step: ((r.steps ?? []) as Steps).some((s) => s.label === STEP), codes: d?.ineligibleReasons.map((x) => x.code), body: x.body,
+    step: ((r.steps ?? []) as Steps).some((s) => s.label === STEP), codes: d?.ineligibleReasons.map((x) => x.code), eligible: d?.isEligible, signCase: d?.signCase, body: x.body,
   };
 }
 async function judge(f: TransferFormData) {
@@ -92,9 +92,11 @@ describe("§99의3 분모 0 — 단건 route · 판정 메뉴 route", () => {
     const f = form({ trStd: "300,000,000", otherHouses: 2 });
     expect(validateStep(3, f)).toBeNull();
   });
-  it.each([1, 2])("다른 주택 %i채 · 분모 0 → 감면 불성립(확인 필요) · 중과 배제 · 단계 표시", async (n) => {
+  it.each([1, 2])("다른 주택 %i채 · 분모 0 → 전액 감면(US-36, 확인 필요 고지) · 중과 배제 · 단계 표시", async (n) => {
     const r = await single(form({ trStd: "300,000,000", otherHouses: n }));
-    expect(r.codes).toEqual(["ALLOCATION_DENOMINATOR_ZERO"]);
+    expect(r.eligible).toBe(true);
+    expect(r.signCase).toBe("pos_zero");
+    expect(r.codes).toEqual([]);
     expect(r.surcharge).toBe(false);
     expect(r.reasons).toEqual(["tax_special_exemption"]);
     expect(r.step).toBe(true);

@@ -1,6 +1,13 @@
 /**
- * anchor — §99·§99의3 안분 산식의 분모 0 (리뷰 NH-76 · Q-20)
+ * anchor — §99·§99의3 안분 산식의 분모 0 (리뷰 NH-76 · Q-20 → US-36으로 규칙 변경)
  *
+ * US-36 (2026-11-10 사용자 결정): 분모 0 규칙을 «계산 불가 + 확인 필요»(Q-20, #2979)에서 «전액»으로 바꾼다.
+ *   (분자>0, 분모=0) → 비율 1 · 전액(부동산납세과-412 요지 문언 — 양도시 = 취득시 < 5년시점) + 「확인 필요」 고지(직접 해석례 없음)
+ *   (분자=0, 분모=0)·(분자<0, 분모=0) → 0 (분자 ≤ 0이면 5년간 발생분 없음 — 재산세제과-274 · 부동산거래관리과-136 계열)
+ *   손계산 근거: 분모 ±1원 양옆이 이미 전액(+,+ 상한 · +,- )이므로 분모 0도 같은 값 — 감면 350,000,000 · 세액 22,612,000.
+ *   분자 ≤ 0은 («감면 없음» 대조) 124,366,000과 같다. 아래는 종전 Q-20 단언을 새 규칙으로 바꾼 것이다.
+ *
+ * (이하 종전 Q-20 헤더)
  * 결함: 양도 당시 기준시가 = 취득 당시 기준시가(분모 0)이면 `calcSignedAllocation`이 «그 외» 분기로 보내
  *   근거 없이 감면 0을 냈다. 분모가 1원만 달라져도 (+,+) 안분 또는 (+,-) 전액 감면이라 1원 절벽이었다.
  * 결정(Q-20): 분모 0은 안분 비율이 정의되지 않으므로 «계산 불가 + 확인 필요» — 감면을 계산하지 않고 사유를 알린다.
@@ -42,40 +49,54 @@ const OVER99 = { acquisitionDate: D("1999-01-01"), transferDate: D("2022-08-01")
 const T_NO_REDUCTION = 124_366_000;
 const T_FULL = 22_612_000;
 
-describe("NH-76 §99의3 — 분모 0은 계산 불가 + 확인 필요", () => {
-  it("분모 0 (양도시 = 취득시 1억): 불성립 · 감면 0 · 확인 필요 사유", () => {
-    const d = mk([R993(100_000_000, 100_000_000)]).new993Detail!;
-    expect(d.isEligible).toBe(false);
-    expect(d.signCase).toBe("ineligible");
-    expect(d.reducibleTransferIncome).toBe(0);
-    expect(d.ineligibleReasons.map((x) => x.code)).toEqual(["ALLOCATION_DENOMINATOR_ZERO"]);
-    expect(d.ineligibleReasons[0].message).toContain("확인 필요");
-    expect(d.ineligibleReasons[0].message).toContain("분모가 0");
-    expect(mk([R993(100_000_000, 100_000_000)]).totalTax).toBe(T_NO_REDUCTION);
+describe("US-36 §99의3 — 분모 0은 전액 + 확인 필요", () => {
+  it("분모 0 (양도시 = 취득시 1억, 5년시점 2억): 적격 · 전액 감면 350,000,000 · 세액 22,612,000 · 확인 필요 고지", () => {
+    const r = mk([R993(100_000_000, 100_000_000)]);
+    const d = r.new993Detail!;
+    expect(d.isEligible).toBe(true);
+    expect(d.signCase).toBe("pos_zero");
+    expect(d.fiveYearRatio).toBe(1);
+    expect(d.reducibleTransferIncome).toBe(350_000_000);
+    expect(d.ineligibleReasons).toEqual([]);
+    expect(d.warnings?.some((w) => w.includes("분모 0") && w.includes("부동산납세과-412") && w.includes("확인 필요"))).toBe(true);
+    expect(d.formulaSteps.some((x) => x.formula?.includes("확인 필요"))).toBe(true);
+    expect(r.totalTax).toBe(T_FULL);
   });
-  it("짝: 분모 +1은 종전대로 (+,+) 안분 — 감면 350,000,000 · 세액 22,612,000", () => {
-    const r = mk([R993(100_000_000, 100_000_001)]);
+  it("연속성: 분모 −1·0·+1이 모두 같은 전액 — 감면 350,000,000 · 세액 22,612,000", () => {
+    for (const [tr, sign] of [[99_999_999, "pos_neg"], [100_000_000, "pos_zero"], [100_000_001, "all_positive"]] as const) {
+      const r = mk([R993(100_000_000, tr)]);
+      expect(r.new993Detail!.signCase, String(tr)).toBe(sign);
+      expect(r.new993Detail!.reducibleTransferIncome, String(tr)).toBe(350_000_000);
+      expect(r.totalTax, String(tr)).toBe(T_FULL);
+    }
+  });
+  it("(분자=0, 분모=0): 5년시점 = 취득시 = 양도시 → 감면 0 · 적용 가능 상태 · 세액 = 감면 없음 124,366,000", () => {
+    const r = mk([R993(100_000_000, 100_000_000, { standardPriceAt5Years: 100_000_000 })]);
     expect(r.new993Detail!.isEligible).toBe(true);
-    expect(r.new993Detail!.signCase).toBe("all_positive");
-    expect(r.new993Detail!.reducibleTransferIncome).toBe(350_000_000);
-    expect(r.totalTax).toBe(T_FULL);
+    expect(r.new993Detail!.signCase).toBe("all_negative");
+    expect(r.new993Detail!.reducibleTransferIncome).toBe(0);
+    expect(r.totalTax).toBe(T_NO_REDUCTION);
   });
-  it("짝: 분모 −1은 종전대로 (+,-) 전액 감면 (부동산-525 선례 유지)", () => {
-    const r = mk([R993(100_000_000, 99_999_999)]);
-    expect(r.new993Detail!.signCase).toBe("pos_neg");
-    expect(r.totalTax).toBe(T_FULL);
+  it("(분자<0, 분모=0): 5년시점 < 취득시 = 양도시 → 감면 0 · 세액 = 감면 없음", () => {
+    const r = mk([R993(100_000_000, 100_000_000, { standardPriceAt5Years: 90_000_000 })]);
+    expect(r.new993Detail!.isEligible).toBe(true);
+    expect(r.new993Detail!.signCase).toBe("all_negative");
+    expect(r.new993Detail!.reducibleTransferIncome).toBe(0);
+    expect(r.totalTax).toBe(T_NO_REDUCTION);
   });
   it("짝: 5년 이내 양도(재개발 변형 아님)는 기준시가를 보지 않는다 — 분모 0이어도 전액 차감", () => {
     const r = mk([R993(100_000_000, 100_000_000)], { transferDate: D("2008-08-01") });
     expect(r.new993Detail!.isEligible).toBe(true);
     expect(r.new993Detail!.signCase).toBe("within_5_years");
   });
-  it("재개발 변형: 분모 = 양도시 − 종전주택 취득시 — 종전주택 기준시가 = 양도시이면 분모 0", () => {
+  it("재개발 변형: 분모 = 양도시 − 종전주택 취득시 — 종전주택 기준시가 = 양도시이면 분모 0 → 전액, 분모 +1과 같은 값", () => {
     const variant = { isRedevelopedNewHouse993: true, previousHouseStdPrice993: 400_000_000 };
-    const d = mk([R993(100_000_000, 400_000_000, variant)]).new993Detail!;
-    expect(d.isEligible).toBe(false);
-    expect(d.ineligibleReasons.map((x) => x.code)).toEqual(["ALLOCATION_DENOMINATOR_ZERO"]);
-    expect(d.ineligibleReasons[0].message).toContain("종전주택 취득 당시");
+    const z = mk([R993(100_000_000, 400_000_000, variant)]);
+    const near = mk([R993(100_000_000, 400_000_001, variant)]);
+    expect(z.new993Detail!.isEligible).toBe(true);
+    expect(z.new993Detail!.signCase).toBe("pos_zero");
+    expect(z.new993Detail!.reducibleTransferIncome).toBe(near.new993Detail!.reducibleTransferIncome);
+    expect(z.totalTax).toBe(near.totalTax);
   });
   it("법규재산2014-2035 (-,-) 사례(888 < 992, 737 < 888)는 종전대로 감면 0 · 적용 가능 상태", () => {
     const d = mk([R993(992_000_000, 737_000_000, { standardPriceAt5Years: 888_000_000 })]).new993Detail!;
@@ -85,21 +106,26 @@ describe("NH-76 §99의3 — 분모 0은 계산 불가 + 확인 필요", () => {
   });
 });
 
-describe("NH-76 §99 — 같은 규칙", () => {
-  it("분모 0: 불성립 · 확인 필요 · 세액 = 감면 없음", () => {
+describe("US-36 §99 — 같은 규칙", () => {
+  it("분모 0: 적격 · 전액 · 세액 22,612,000 · 확인 필요 고지", () => {
     const r = mk([R99(100_000_000, 100_000_000)], OVER99);
-    expect(r.new99Detail!.isEligible).toBe(false);
-    expect(r.new99Detail!.ineligibleReasons.map((x) => x.code)).toEqual(["ALLOCATION_DENOMINATOR_ZERO"]);
-    expect(r.new99Detail!.ineligibleReasons[0].message).toContain("확인 필요");
-    expect(r.totalTax).toBe(T_NO_REDUCTION);
-  });
-  it("짝: 분모 +1은 종전대로 안분 — 세액 22,612,000", () => {
-    const r = mk([R99(100_000_000, 100_000_001)], OVER99);
     expect(r.new99Detail!.isEligible).toBe(true);
-    expect(r.new99Detail!.signCase).toBe("all_positive");
+    expect(r.new99Detail!.signCase).toBe("pos_zero");
+    expect(r.new99Detail!.warnings?.some((w) => w.includes("확인 필요"))).toBe(true);
     expect(r.totalTax).toBe(T_FULL);
   });
-  it("재개발 변형 5년 이내: 분모 = 양도시 − 종전주택 취득시 → 0이면 계산 불가", () => {
+  it("연속성: 분모 −1·+1도 22,612,000 (분모 0과 같다)", () => {
+    for (const tr of [99_999_999, 100_000_001]) expect(mk([R99(100_000_000, tr)], OVER99).totalTax, String(tr)).toBe(T_FULL);
+  });
+  it("(분자=0, 분모=0)·(분자<0, 분모=0) → 감면 0 · 세액 = 감면 없음", () => {
+    for (const y5 of [100_000_000, 90_000_000]) {
+      const r = mk([R99(100_000_000, 100_000_000, { standardPriceAt5Years99: y5 })], OVER99);
+      expect(r.new99Detail!.isEligible, String(y5)).toBe(true);
+      expect(r.new99Detail!.reducibleTransferIncome, String(y5)).toBe(0);
+      expect(r.totalTax, String(y5)).toBe(T_NO_REDUCTION);
+    }
+  });
+  it("재개발 변형 5년 이내: 분모 = 양도시 − 종전주택 취득시 → 0이면 전액(양도소득금액 500,000,000)", () => {
     const r = evaluateNew99({
       transferDate: D("2002-01-01"), acquisitionDate: D("1999-01-01"), contractDate: D("1998-06-01"),
       transferIncome: 500_000_000, wholePropertyTransferPrice: 500_000_000, exclusiveAreaSqm: 84,
@@ -107,8 +133,8 @@ describe("NH-76 §99 — 같은 규칙", () => {
       standardPriceAtAcquisition: 100_000_000, standardPriceAtTransfer: 300_000_000,
       isRedevelopedNewHouse: true, previousHouseStdPriceAtAcquisition: 300_000_000,
     });
-    expect(r.isEligible).toBe(false);
-    expect(r.ineligibleReasons.map((x) => x.code)).toEqual(["ALLOCATION_DENOMINATOR_ZERO"]);
-    expect(r.ineligibleReasons[0].message).toContain("종전주택 취득 당시");
+    expect(r.isEligible).toBe(true);
+    expect(r.signCase).toBe("pos_zero");
+    expect(r.reducibleTransferIncome).toBe(500_000_000);
   });
 });
