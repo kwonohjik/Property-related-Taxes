@@ -7,7 +7,7 @@
  *   6·8·10·11호: 기산일+2년 / 9호: 멸실일+5년
  * - 단서: 부동산매매업 매매용부동산은 1·2호(건축허가·착공 제한) 배제.
  */
-import { addYears } from "date-fns";
+import { addYears } from "../utc-date";
 import type { DateInterval, GraceReasonCode } from "./types";
 
 export type GraceLengthKind =

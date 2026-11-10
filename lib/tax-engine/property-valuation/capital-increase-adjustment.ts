@@ -81,8 +81,8 @@ export function calcCapitalIncreaseAdjustment(
         fiscalYearStartDate = explicitStart;
       } else {
         fiscalYearStartDate = new Date(fiscalYearEndDate);
-        fiscalYearStartDate.setFullYear(fiscalYearStartDate.getFullYear() - 1);
-        fiscalYearStartDate.setDate(fiscalYearStartDate.getDate() + 1);
+        fiscalYearStartDate.setUTCFullYear(fiscalYearStartDate.getUTCFullYear() - 1);
+        fiscalYearStartDate.setUTCDate(fiscalYearStartDate.getUTCDate() + 1);
       }
 
       if (

@@ -9,7 +9,7 @@
  *   Step 3-3-1 도시지역 內 편입유예 → 사업용/비사업용
  */
 
-import { differenceInDays } from "date-fns";
+import { differenceInDays } from "../utc-date";
 import { NBL } from "../legal-codes";
 import type {
   AreaProportioning,

@@ -56,7 +56,7 @@ export function calculateCarryoverDebtTransfer(engineInput: TransferTaxInput, ra
   } as unknown as TransferTaxItemInput;
 
   const aggregateInput: AggregateTransferInput = {
-    taxYear: transferDate.getFullYear(),
+    taxYear: transferDate.getUTCFullYear(),
     properties: [item],
     annualBasicDeductionUsed: engineInput.annualBasicDeductionUsed,
     priorReductionUsage: engineInput.priorReductionUsage ?? [],

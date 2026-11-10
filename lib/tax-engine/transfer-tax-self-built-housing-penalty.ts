@@ -28,7 +28,7 @@
  *
  * 순환 의존을 피하려고 `transfer-tax-carryover-donor-penalty.ts` 를 import 하지 않는다(헬퍼를 직접 쓴다).
  */
-import { addYears } from "date-fns";
+import { addYears } from "./utc-date";
 import { TRANSFER } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { calculateEstimatedAcquisitionPrice } from "./tax-utils";

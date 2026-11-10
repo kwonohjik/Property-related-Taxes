@@ -23,7 +23,7 @@
  * 인가전·인가후 안분 미표시 — 단순 housing 양도와 동치 처리.
  */
 
-import { addYears } from "date-fns";
+import { addYears } from "./utc-date";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { computeEstimatedDeduction } from "./tax-utils";

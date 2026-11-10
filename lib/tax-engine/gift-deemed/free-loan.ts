@@ -1,5 +1,5 @@
 /** (6) 금전 무상대출 등에 따른 이익의 증여 (상증법 §41의4) + 다년 분할(§41의4②) */
-import { addDays, addYears, differenceInCalendarDays, format, parseISO } from "date-fns";
+import { addDays, addYears, differenceInCalendarDays, format, parseISO } from "../utc-date";
 import { GIFT } from "../legal-codes";
 import { applyRateFraction, safeMultiplyThenDivide } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";

@@ -18,7 +18,7 @@
  *
  * 순환 의존을 피하려고 `transfer-tax-carryover.ts`를 import하지 않는다 — 결과 모양은 구조 타입으로만 받는다.
  */
-import { addYears } from "date-fns";
+import { addYears } from "./utc-date";
 import { TRANSFER } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { calculateEstimatedAcquisitionPrice } from "./tax-utils";

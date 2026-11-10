@@ -14,7 +14,7 @@
  * 바꿔 본체 판정을 다시 돌려도 비과세 결론이 같으면(처분기한이 이미 지났거나 양도 주택의 보유·거주가 모자라 어차피 과세 등) 묻지 않는다.
  * 일시적 2주택 명부 행(종전·신규 주택)도 같은 규약이다(1주택 코드 리뷰 별건 ⑤) — 종전에는 게이트 없이 지구 한정 지정 구간이면 늘 냈다.
  */
-import { format } from "date-fns";
+import { format } from "../utc-date";
 import { isRegulatedByBjdCode } from "../data/regulated-areas";
 import { hwaseongSurchargeWindowNotice } from "./hwaseong-announcement-window";
 import { resolveResidenceJudgmentDates, type ResidenceReqInput } from "../transfer-tax-exemption-holding";

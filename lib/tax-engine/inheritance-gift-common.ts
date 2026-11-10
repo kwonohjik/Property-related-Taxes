@@ -8,7 +8,7 @@
  * - 1000원 미만 절사 (과세표준)
  */
 
-import { differenceInYears, isBefore, subYears } from "date-fns";
+import { differenceInYears, isBefore, subYears } from "./utc-date";
 import { INH, GIFT } from "./legal-codes";
 import {
   applyRate,

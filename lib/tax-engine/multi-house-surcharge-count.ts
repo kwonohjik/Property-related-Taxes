@@ -11,7 +11,7 @@
  */
 
 import { rentalCancellationStatus } from "./rental-cancellation-deeming";
-import { differenceInYears } from "date-fns";
+import { differenceInYears } from "./utc-date";
 import { MULTI_HOUSE } from "./legal-codes";
 import { isWithinDeadline } from "./civil-period";
 import { isSmallNewHouseSpecial, resolvePopulationDeclineSecondHome } from "./multi-house-surcharge-12ho";

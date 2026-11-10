@@ -15,7 +15,7 @@
  * 열흘의 판정은 데이터 leaf(`governingDesignationStart`)가 정한다 — 화성 동탄2 지구처럼 6.19. 전부터 지정이던 곳은 시작일이 2017-08-03이라
  * 걸리지 않는다. 사실 판정을 여기서 다시 하지 않는다(단일 진실).
  */
-import { format } from "date-fns";
+import { format } from "../utc-date";
 
 import { governingDesignationStart } from "../data/regulated-areas";
 import { PRE_DESIGNATION_CONTRACT_EXCLUSION } from "../legal-codes";

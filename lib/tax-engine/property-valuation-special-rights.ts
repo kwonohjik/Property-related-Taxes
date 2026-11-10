@@ -9,7 +9,7 @@
  * (memory `feedback_800line_split_export_preservation`).
  */
 
-import { addYears, differenceInYears } from "date-fns";
+import { addYears, differenceInYears } from "./utc-date";
 import { VALUATION } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { safeMultiply } from "./tax-utils";

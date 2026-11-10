@@ -9,7 +9,7 @@
  * 데이터·헬퍼를 **공유**한다. 별도 매칭/판정 함수 재정의 금지(dual-truth 회피).
  */
 
-import { addDays, format, parseISO, subDays } from "date-fns";
+import { addDays, format, parseISO, subDays } from "../utc-date";
 
 import { expandSigunguAliases } from "@/lib/geo/sigungu-code-alias";
 

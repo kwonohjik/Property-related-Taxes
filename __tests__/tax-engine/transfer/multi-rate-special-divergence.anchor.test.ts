@@ -88,7 +88,7 @@ function bothWays(o: Record<string, unknown>) {
   const single = calculateTransferTax(s as never, rates);
   const multi = calculateTransferTaxAggregate(
     {
-      taxYear: (s.transferDate as Date).getFullYear(),
+      taxYear: (s.transferDate as Date).getUTCFullYear(),
       annualBasicDeductionUsed: 0,
       properties: [{ ...s, propertyId: "A", propertyLabel: "A" } as unknown as TransferTaxItemInput],
     } as AggregateTransferInput,

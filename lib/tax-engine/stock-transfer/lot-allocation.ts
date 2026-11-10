@@ -26,7 +26,7 @@
  * (single 모드는 stock-transfer-tax.ts에서 기존 calcHoldingPeriod() 사용 유지)
  */
 
-import { differenceInDays } from "date-fns";
+import { differenceInDays } from "../utc-date";
 import type {
   AcquisitionLot,
   TransferLot,

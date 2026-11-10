@@ -11,7 +11,7 @@
  *   최댓값: 순자산가치 × 300% (상한 적용 여부는 실무 논란 → 상한 미적용 원칙)
  */
 
-import { differenceInDays } from "date-fns";
+import { differenceInDays } from "./utc-date";
 import { VALUATION } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { applyRate } from "./tax-utils";

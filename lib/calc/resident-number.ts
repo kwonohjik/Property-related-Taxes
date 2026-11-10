@@ -75,7 +75,7 @@ export function parseResidentNumber(raw: string): ParsedResidentNumber | null {
   if (mm < 1 || mm > 12) return null;
   // 해당 연·월의 말일 (윤년 자동 반영)
   const year = century + yy;
-  const lastDay = new Date(year, mm, 0).getDate();
+  const lastDay = new Date(Date.UTC(year, mm, 0)).getUTCDate();
   if (dd < 1 || dd > lastDay) return null;
 
   return {

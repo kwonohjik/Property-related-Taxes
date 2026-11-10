@@ -15,7 +15,7 @@
  * 법령 근거: 상증법 §20 (mst 276123, 시행 2026-01-02) — KoreanLaw 본문 축자 확인.
  */
 
-import { differenceInYears } from "date-fns";
+import { differenceInYears } from "../utc-date";
 import { INH } from "../legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
 import type {

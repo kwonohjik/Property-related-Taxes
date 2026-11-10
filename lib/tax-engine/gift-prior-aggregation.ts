@@ -15,7 +15,7 @@
  * Pure function. DB 호출 없음. UI display 책임 없음.
  */
 
-import { isBefore, parseISO, subYears } from "date-fns";
+import { isBefore, parseISO, subYears } from "./utc-date";
 import { GIFT } from "./legal-codes";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import type {

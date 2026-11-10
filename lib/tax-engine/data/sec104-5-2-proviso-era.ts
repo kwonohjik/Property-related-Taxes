@@ -22,7 +22,7 @@ export const SEC104_5_2_PROVISO_FROM = "2019-01-01";
 
 /** 로컬 달력 기준 일자 키 — UTC 변환(`toISOString`)은 KST 자정을 전날로 만든다(`nbl-rate-deferral-era.ts`와 같은 규약). */
 const dayKey = (d: Date): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 
 /** 양도일(경계일 포함) 기준 적용 여부. 다건은 한 과세기간이라 모든 자산이 같은 쪽에 놓인다. */
 export function isSec104_5_2ProvisoInForce(transferDate: Date): boolean {

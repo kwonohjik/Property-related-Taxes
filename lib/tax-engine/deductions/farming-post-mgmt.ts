@@ -15,14 +15,7 @@
  * 정수 연산: 이자상당액 BigInt 단일 floor (applyRate 다중 호출 정밀도 손실 회피)
  */
 
-import {
-  addMonths,
-  addYears,
-  differenceInDays,
-  endOfMonth,
-  isAfter,
-  parseISO,
-} from "date-fns";
+import { addMonths, addYears, differenceInDays, endOfMonth, isAfter, parseISO } from "../utc-date";
 
 import { calcInheritanceGiftTax } from "../inheritance-gift-common";
 import type {

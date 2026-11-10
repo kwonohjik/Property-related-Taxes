@@ -1,5 +1,5 @@
 /** (5) 부동산 무상사용에 따른 이익의 증여 (상증법 §37) + 다기간(시행령§27③⑤)·경정청구(§79②1호·§81⑨) */
-import { addMonths, addYears, differenceInMonths } from "date-fns";
+import { addMonths, addYears, differenceInMonths } from "../utc-date";
 import { GIFT } from "../legal-codes";
 import { applyRateFraction, safeMultiplyThenDivide } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";

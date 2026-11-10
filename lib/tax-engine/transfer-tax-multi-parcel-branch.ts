@@ -180,7 +180,7 @@ export function handleMultiParcelBranch(
   const mpCap = applyReductionStatutoryCap({
     reductionAmount: mpReduction,
     reductionTypeApplied: mpReductionTypeApplied,
-    transferYear: input.transferDate.getFullYear(),
+    transferYear: input.transferDate.getUTCFullYear(),
     priorUsage: input.priorReductionUsage ?? [],
   });
   const mpCappedReduction = mpCap.cappedAmount;

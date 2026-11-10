@@ -12,7 +12,7 @@
  *  · 인가일은 조정대상지역이었고 사용승인일에는 해제 — 법문대로 거주요건이 없지만 정면 해석례가 없다 — 거주요건을 적용하면 결론이 바뀔 때만
  *  · 세대원 건물 출자 통산을 적용했다 — 정면 해석례 없는 유추(#12) — 통산을 빼면 결론이 바뀔 때만
  */
-import { format } from "date-fns";
+import { format } from "./utc-date";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import { describeOneHouseResidenceRequirement } from "./transfer-tax-exemption-holding";
 import {

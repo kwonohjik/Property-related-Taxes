@@ -24,7 +24,7 @@
  * 두 벌이 되면 §154⑤ 용도변경·§154⑧3호 상속 통산이 한쪽에만 반영된다.
  */
 import { inheritedPresaleRightHouseholdNotices } from "../presale-right-definition-date";
-import { addDays, addYears } from "date-fns";
+import { addDays, addYears } from "../utc-date";
 import { doubleMergeOrderOf, REVERSE_DOUBLE_MERGE_NOTICE } from "./merge-deeming";
 import { INHERITED_SPECIAL_OVERLAP_NOTICE, INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID } from "./overlap-notice";
 

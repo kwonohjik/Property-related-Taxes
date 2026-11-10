@@ -37,7 +37,7 @@ import {
   type PenaltyStep,
 } from "./transfer-tax-penalty";
 import { resolveLateFilingReduction } from "./late-filing-reduction";
-import { parseISO } from "date-fns";
+import { parseISO } from "./utc-date";
 
 /** 신고 상태 — 「기한까지 신고했는가·언제」 축 */
 export type InheritanceGiftFilingStatus =

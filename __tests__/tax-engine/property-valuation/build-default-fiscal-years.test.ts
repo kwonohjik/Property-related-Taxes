@@ -26,41 +26,41 @@ describe("buildDefaultFiscalYears — 평가기준일 연도 기반 사업연도
     const [y1] = buildDefaultFiscalYears(2022);
     const start = y1.fiscalYearStartDate!;
     const end = y1.fiscalYearEndDate!;
-    expect(start.getFullYear()).toBe(2021);
-    expect(start.getMonth()).toBe(0);   // January
-    expect(start.getDate()).toBe(1);
-    expect(end.getFullYear()).toBe(2021);
-    expect(end.getMonth()).toBe(11);    // December
-    expect(end.getDate()).toBe(31);
+    expect(start.getUTCFullYear()).toBe(2021);
+    expect(start.getUTCMonth()).toBe(0);   // January
+    expect(start.getUTCDate()).toBe(1);
+    expect(end.getUTCFullYear()).toBe(2021);
+    expect(end.getUTCMonth()).toBe(11);    // December
+    expect(end.getUTCDate()).toBe(31);
   });
 
   it("BFY-3: 슬롯[1] 개시일·종료일 2020-01-01~2020-12-31", () => {
     const [, y2] = buildDefaultFiscalYears(2022);
-    expect(y2.fiscalYearStartDate!.getFullYear()).toBe(2020);
-    expect(y2.fiscalYearEndDate!.getFullYear()).toBe(2020);
-    expect(y2.fiscalYearStartDate!.getMonth()).toBe(0);
-    expect(y2.fiscalYearEndDate!.getMonth()).toBe(11);
+    expect(y2.fiscalYearStartDate!.getUTCFullYear()).toBe(2020);
+    expect(y2.fiscalYearEndDate!.getUTCFullYear()).toBe(2020);
+    expect(y2.fiscalYearStartDate!.getUTCMonth()).toBe(0);
+    expect(y2.fiscalYearEndDate!.getUTCMonth()).toBe(11);
   });
 
   it("BFY-4: 슬롯[2] 개시일·종료일 2019-01-01~2019-12-31", () => {
     const [, , y3] = buildDefaultFiscalYears(2022);
-    expect(y3.fiscalYearStartDate!.getFullYear()).toBe(2019);
-    expect(y3.fiscalYearEndDate!.getFullYear()).toBe(2019);
+    expect(y3.fiscalYearStartDate!.getUTCFullYear()).toBe(2019);
+    expect(y3.fiscalYearEndDate!.getUTCFullYear()).toBe(2019);
   });
 
   it("BFY-4b: 윤년 — evaluationYear=2022 → 슬롯[1]=2020-12-31 정상 (2020은 윤년)", () => {
     // evaluationYear=2022, 슬롯[1]=2년전=2020
     const [, y2] = buildDefaultFiscalYears(2022);
     // 2020년은 윤년이지만 종료일은 12월 31일이므로 무관
-    expect(y2.fiscalYearEndDate!.getFullYear()).toBe(2020);
-    expect(y2.fiscalYearEndDate!.getDate()).toBe(31);
+    expect(y2.fiscalYearEndDate!.getUTCFullYear()).toBe(2020);
+    expect(y2.fiscalYearEndDate!.getUTCDate()).toBe(31);
   });
 
   it("BFY-5: 연도 경계 — evaluationYear=2024 → 1년전=2023", () => {
     const [y1] = buildDefaultFiscalYears(2024);
     expect(y1.fiscalYearLabel).toBe("2023");
-    expect(y1.fiscalYearStartDate!.getFullYear()).toBe(2023);
-    expect(y1.fiscalYearEndDate!.getFullYear()).toBe(2023);
+    expect(y1.fiscalYearStartDate!.getUTCFullYear()).toBe(2023);
+    expect(y1.fiscalYearEndDate!.getUTCFullYear()).toBe(2023);
   });
 
   it("BFY-6: taxableIncome 기본값 0", () => {

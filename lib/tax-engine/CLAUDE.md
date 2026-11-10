@@ -63,6 +63,16 @@ lib/tax-engine/
 - `calculateHoldingPeriod(from, to)` — 윤년/월 경계 안전 처리 (UTC 달력 — `civil-period`의 `completedMonthsInclusive`·`addYearsUtc`·`addMonthsUtc`. date-fns 로컬 시간대 함수는 UTC 자정 Date에서 서머타임 구간 연수가 어긋나 쓰지 않는다 — `__tests__/tax-engine/holding-period-timezone.anchor.test.ts`).
 - `isSurchargeSuspended(rules, date, type)` — 중과 유예 판정.
 
+### 날짜 연산 — UTC 달력 (`utc-date.ts`, 강제)
+
+엔진·`lib/calc`·API의 날짜는 API `toDate`가 만든 **UTC 자정 Date**다. date-fns의 `addYears`·`differenceInDays`·`format`·`parseISO` 등과 `getFullYear()`·`setDate()`·`new Date(y, m, d)`는 **로컬 달력**이라 서버 시간대(UTC 서쪽 미주 ±1일, 서머타임 구간 ±1년·1일)마다 결과가 달라진다(양도연도·시한 상수·장특 연수·신고기한).
+
+- `lib/tax-engine/utc-date.ts` — date-fns와 같은 이름·같은 규칙의 UTC 달력 버전(`addYears`·`addMonths`·`addDays`·`sub*`·`differenceInYears/Months/Days/Calendar*`·`endOfMonth`·`startOfDay`·`getDaysInYear`·`isBefore/isAfter/isWithinInterval`·`parseISO`(날짜만 = UTC 자정)·`format`(`yyyy-MM-dd`/`yyyy.MM.dd`만)). **date-fns 직접 import 금지**(예외 `toDate`) — `__tests__/tax-engine/utc-date.anchor.test.ts`가 소스를 스캔해 막는다.
+- 연·월·일 getter/setter는 `getUTC*`/`setUTC*`, 달력 날짜 생성은 `new Date(Date.UTC(y, m, d))`, 시한 상수는 `new Date("2025-01-01T00:00:00.000Z")`(로컬 자정 `T00:00:00` 금지). `new Date()`(지금) 기반 값만 로컬이 허용된다.
+- 사용자에게 보이는 **타임스탬프**(저장 시각 등)는 사용자 로컬 날짜로 보이는 것이 맞다 — 날짜만 있는 문자열(`YYYY-MM-DD`)과 구별한다(`lib/storage/title-generator.ts`).
+- 테스트 입력도 UTC 자정으로 만든다(`new Date("2025-01-01")`·`Date.UTC`). 로컬 자정(`new Date(2025, 0, 1)`·`T00:00:00`)은 운영 경로에 없는 형태다.
+- 검증: 시간대 7종 anchor(`utc-date.anchor.test.ts`) + 수동 `TZ=America/New_York npx vitest run <경로>` 대조. UI 컴포넌트(`components/`)의 date-fns는 표시용이라 이 규칙 밖이다(후속 과제).
+
 **절대 금지**: `Math.round()` (세법은 floor), 부동소수 누적 (`0.1+0.2=0.30000000000000004`).
 
 ### 면적 안분 — `area-utils.ts` (전 세목 공통, 강제)

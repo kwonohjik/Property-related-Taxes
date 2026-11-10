@@ -20,7 +20,7 @@
  * Date 직접 비교 금지: parseISO → format → YYYY-MM-DD string 비교 (CLAUDE.md date-coerce 정책)
  */
 
-import { addMonths, endOfMonth, format, parseISO } from "date-fns";
+import { addMonths, endOfMonth, format, parseISO } from "../utc-date";
 import type { CasualtyLossInput } from "../types/inheritance-gift.types";
 import type { CasualtyLossDeductionDetail } from "../types/inheritance-deduction-detail.types";
 import { INH } from "../legal-codes/inheritance-gift";

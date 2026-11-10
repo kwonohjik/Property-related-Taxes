@@ -14,7 +14,7 @@
  * P0-2 원칙: 모든 세율×금액 곱셈은 Math.floor 적용.
  */
 
-import { addYears, differenceInDays, isWithinInterval } from "date-fns";
+import { addYears, differenceInDays, isWithinInterval } from "./utc-date";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import type { NewHousingMatrixData } from "./schemas/rate-table.schema";
 

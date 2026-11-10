@@ -449,7 +449,7 @@ export function calculatePropertyTax(
         // 단일 필지 → calculateSeparateAggregateTax로 위임
         const sepResult = calculateSeparateAggregateTax({
           taxpayerId: "single",
-          targetYear: new Date(targetDate).getFullYear(),
+          targetYear: new Date(targetDate).getUTCFullYear(),
           landList: [{ ...input.separateAggregateItem, taxBaseDate: targetDate }],
           previousYearTax: input.previousYearTax,
         });

@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
   const { taxYear, realEstate, otherAsset } = parsed.data;
 
   // 세율 로드 — 과세기간 말일 기준 1회 (다자산 라우트와 같은 패턴)
-  const rateDate = new Date(taxYear, 11, 31);
+  const rateDate = new Date(Date.UTC(taxYear, 11, 31));
   let rates;
   if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
     try {

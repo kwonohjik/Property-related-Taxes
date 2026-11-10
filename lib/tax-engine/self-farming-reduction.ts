@@ -79,7 +79,7 @@
  *   - 조특법 §133 — 감면 종합한도 (1년 1억원)
  */
 
-import { addYears } from "date-fns";
+import { addYears } from "./utc-date";
 import { TRANSFER } from "./legal-codes";
 import { safeMultiplyThenDivide } from "./tax-utils";
 

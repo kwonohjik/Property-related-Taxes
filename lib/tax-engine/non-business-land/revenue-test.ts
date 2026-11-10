@@ -8,7 +8,7 @@
  * §168의11③3호 연환산: 1과세기간 중 사업영위 기간이 1년 미만(토지 양도·신규개시·폐업 등)이면
  * 당해 기간 수입금액을 1년간으로 환산하여 연간수입금액을 산정한다. ①·② 분자 모두 환산값 사용.
  */
-import { differenceInCalendarDays, getDaysInYear } from "date-fns";
+import { differenceInCalendarDays, getDaysInYear } from "../utc-date";
 
 import type { RevenueTestInput, RevenueTestResult } from "./types";
 import { getNblRevenueThreshold } from "../legal-codes";
@@ -26,7 +26,7 @@ function computeDeemedRent(
   taxYear: number | undefined,
 ): number {
   if (!deposit || !rentDays || !rate || !taxYear) return 0;
-  const yearDays = getDaysInYear(new Date(taxYear, 0, 1)); // 365 / 366(윤년)
+  const yearDays = getDaysInYear(new Date(Date.UTC(taxYear, 0, 1))); // 365 / 366(윤년)
   return safeMultiplyThenDivide(safeMultiply(deposit, rentDays), rate.num, rate.den * yearDays);
 }
 
@@ -66,9 +66,9 @@ export function deriveCurrentBusinessDays(
   acquisitionDate: Date,
   startOverride?: Date,
 ): { days: number; taxYear: number } {
-  const taxYear = transferDate.getFullYear();
-  const starts: Date[] = [new Date(taxYear, 0, 1)];
-  if (acquisitionDate.getFullYear() === taxYear) starts.push(acquisitionDate);
+  const taxYear = transferDate.getUTCFullYear();
+  const starts: Date[] = [new Date(Date.UTC(taxYear, 0, 1))];
+  if (acquisitionDate.getUTCFullYear() === taxYear) starts.push(acquisitionDate);
   if (startOverride) starts.push(startOverride);
   const start = starts.reduce((latest, d) => (d > latest ? d : latest));
   return { days: deriveBusinessDays(transferDate, start), taxYear };
@@ -84,7 +84,7 @@ function annualizeRevenue(
   taxYear: number | undefined,
 ): { value: number; applied: boolean } {
   if (!businessDays || !taxYear || businessDays <= 0) return { value: revenue, applied: false };
-  const yearDays = getDaysInYear(new Date(taxYear, 0, 1)); // 365 / 366(윤년)
+  const yearDays = getDaysInYear(new Date(Date.UTC(taxYear, 0, 1))); // 365 / 366(윤년)
   if (businessDays >= yearDays) return { value: revenue, applied: false };
   return { value: Math.floor((revenue * yearDays) / businessDays), applied: true };
 }

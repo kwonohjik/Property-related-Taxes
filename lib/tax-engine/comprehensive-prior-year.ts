@@ -48,7 +48,7 @@ export function calcPreviousYearEquivalent(
   const py = currentYear - 1;
   const p = getComprehensiveParams(py);
   // 직전연도 과세기준일 = 직전연도 6월 1일 (연령·보유기간 재판정)
-  const priorAssessmentDate = new Date(py, 5, 1);
+  const priorAssessmentDate = new Date(Date.UTC(py, 5, 1));
 
   // D-4 (D 지점): 감면율·지분율 결합 effectiveFactor 적용
   // 직전연도 공시가격에 해당연도 감면율+지분율을 effectiveFactor로 결합 (종부세 과표·②ⓒ분모용)

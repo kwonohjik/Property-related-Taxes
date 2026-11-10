@@ -15,7 +15,7 @@
  * ⚠️ doneeRelation 자체는 **절대 덮지 않음** — 신고서 표시(InheritanceFilingFormTable RELATION_LABEL)가
  *    수증자 관점으로 바뀌면 표시가 깨짐. 변환값은 §53/§53의2 계산에만 사용.
  */
-import { differenceInYears } from "date-fns";
+import { differenceInYears } from "@/lib/tax-engine/utc-date";
 import type { DonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /**

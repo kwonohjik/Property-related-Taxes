@@ -23,7 +23,7 @@
  * 본 모듈은 UI 카운트다운(D-N일) 표시용이다. 본 결과(보충적 평가가액)에 영향 없음.
  */
 
-import { addMonths, differenceInCalendarDays, parseISO, subDays, subMonths } from "date-fns";
+import { addMonths, differenceInCalendarDays, parseISO, subDays, subMonths } from "@/lib/tax-engine/utc-date";
 import {
   getGiftFilingDueDates,
   getInheritanceFilingDueDates,
@@ -81,8 +81,8 @@ export function daysUntilDeadline(deadline: Date, today: Date = new Date()): num
 
 /** Date → "YYYY-MM-DD" (로컬 기준 — 정본 헬퍼가 parseISO로 로컬 자정을 쓴다). */
 function toISO(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }

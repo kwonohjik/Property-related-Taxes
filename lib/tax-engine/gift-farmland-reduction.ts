@@ -18,7 +18,7 @@
  * Pure function — DB 호출 없음.
  */
 
-import { subYears, isBefore, parseISO } from "date-fns";
+import { subYears, isBefore, parseISO } from "./utc-date";
 import { GIFT } from "./legal-codes";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import type { CalculationStep, EstateItem } from "./types/inheritance-gift.types";

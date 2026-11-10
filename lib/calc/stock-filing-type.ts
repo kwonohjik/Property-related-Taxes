@@ -76,7 +76,7 @@ function endOfMonth(year: number, month1: number): string {
     m -= 12;
     y += 1;
   }
-  const lastDay = new Date(y, m, 0).getDate();
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
   return `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 }
 

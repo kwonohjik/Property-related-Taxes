@@ -13,7 +13,7 @@
  * 관련 법령: 민법 §4(성년 19세) · 상증법 §57①(미성년+증여재산가액 20억 초과 40% 할증).
  */
 
-import { differenceInYears, parseISO } from "date-fns";
+import { differenceInYears, parseISO } from "@/lib/tax-engine/utc-date";
 import { parseResidentNumber } from "./resident-number";
 
 /**

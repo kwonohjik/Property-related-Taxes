@@ -230,7 +230,7 @@ export function isSeparateAggregateLand(
     // (완성 월 수만으로는 1년+1일 케이스가 초과 판정 안 되는 버그 수정)
     const demolishDateObj = new Date(land.demolishedDate ?? "");
     const gracePeriodEnd = new Date(demolishDateObj);
-    gracePeriodEnd.setMonth(gracePeriodEnd.getMonth() + graceMonths);
+    gracePeriodEnd.setUTCMonth(gracePeriodEnd.getUTCMonth() + graceMonths);
     const baseDateObj = new Date(taxBaseDate);
     const isGraceExceeded = !isNaN(gracePeriodEnd.getTime()) && baseDateObj > gracePeriodEnd;
 
@@ -655,11 +655,11 @@ export function calcElapsedMonths(fromDateStr: string, toDateStr: string): numbe
   if (from > to) return 0; // 철거일이 과세기준일 이후 → 0개월
 
   // 연·월 기반 계산 (일 수 차이는 고려하지 않고 월 단위로 판정)
-  const yearDiff = to.getFullYear() - from.getFullYear();
-  const monthDiff = to.getMonth() - from.getMonth();
+  const yearDiff = to.getUTCFullYear() - from.getUTCFullYear();
+  const monthDiff = to.getUTCMonth() - from.getUTCMonth();
   const totalMonths = yearDiff * 12 + monthDiff;
 
   // 동일 월 내 일 수 차이 (절상)
-  const dayAdjust = to.getDate() >= from.getDate() ? 0 : -1;
+  const dayAdjust = to.getUTCDate() >= from.getUTCDate() ? 0 : -1;
   return totalMonths + dayAdjust;
 }

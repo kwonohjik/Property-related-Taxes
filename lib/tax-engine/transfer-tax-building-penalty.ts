@@ -9,7 +9,7 @@
  *   (memory `feedback_800line_split_export_preservation`).
  */
 
-import { addYears } from "date-fns";
+import { addYears } from "./utc-date";
 import { applyRate, calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types";

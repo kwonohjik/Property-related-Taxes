@@ -8,7 +8,7 @@
  * - 임대료 5% 증액 제한·전월세 전환: 조특령 §97의3③1호 (민특법 §44④ 기준 준용)
  */
 
-import { addDays, addMonths, addYears, differenceInDays, differenceInYears } from "date-fns";
+import { addDays, addMonths, addYears, differenceInDays, differenceInYears } from "../utc-date";
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import type {
   Rental97IneligibleReason,

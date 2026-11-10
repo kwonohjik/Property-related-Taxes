@@ -13,7 +13,7 @@
  * 과소신고가산세는 붙지 않는다(§47의3① 괄호 「「농어촌특별세법」에 따른 신고는 제외」).
  */
 
-import { addMonths, addYears, isAfter } from "date-fns";
+import { addMonths, addYears, isAfter } from "./utc-date";
 import {
   AMENDMENT_REDUCTION_48_2,
   AMENDMENT_45,

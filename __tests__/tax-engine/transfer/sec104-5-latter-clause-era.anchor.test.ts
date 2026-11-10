@@ -34,9 +34,9 @@ describe("E-1: 시기 판정 경계", () => {
     expect(isSec104_5LatterClauseInForce("2018-03-31")).toBe(true); // 4.1. 전 3개월도 적용
     expect(isSec104_5LatterClauseInForce("2018-04-01")).toBe(true);
   });
-  it("Date 입력도 같다(로컬 달력 기준)", () => {
-    expect(isSec104_5LatterClauseInForce(new Date(2017, 11, 31))).toBe(false);
-    expect(isSec104_5LatterClauseInForce(new Date(2018, 0, 1))).toBe(true);
+  it("Date 입력도 같다(UTC 달력 기준)", () => {
+    expect(isSec104_5LatterClauseInForce(new Date(Date.UTC(2017, 11, 31)))).toBe(false);
+    expect(isSec104_5LatterClauseInForce(new Date(Date.UTC(2018, 0, 1)))).toBe(true);
     expect(isSec104_5LatterClauseInForce(new Date("2018-01-01"))).toBe(true);
   });
   it("과세기간: 2017 미적용 · 2018 적용", () => {

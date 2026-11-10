@@ -30,9 +30,9 @@ export const NBL_DEEMED_RENT_RATES: readonly DeemedRentRate[] = [
 function toDateStr(d: Date | string | number): string {
   if (typeof d === "number") return `${d}-12-31`;
   if (typeof d === "string") return d.length >= 10 ? d.slice(0, 10) : `${d}-12-31`;
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 

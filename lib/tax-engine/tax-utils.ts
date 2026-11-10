@@ -1,4 +1,5 @@
-import { addMonths, differenceInYears, subMonths, toDate } from "date-fns";
+import { addMonths, differenceInYears, subMonths } from "./utc-date";
+import { toDate } from "date-fns";
 import type { Heir } from "./types/inheritance-gift.types";
 import { SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW } from "./legal-codes/transfer";
 import { MULTI_HOUSE } from "./legal-codes/transfer-house";
@@ -572,10 +573,10 @@ export function isSurchargeSuspended(
  * 값은 `AMENDED_2025_TRANSFER_CUTOFF`(공익수용)와 같으나 **근거 법령이 무관**하므로
  * 공유하지 않고 별도 선언한다 — 한쪽 개정이 다른 쪽을 조용히 바꾸면 안 된다.
  *
- * 🔴 `"T00:00:00"` 필수: `new Date("2025-01-01")`은 **UTC 파싱**이라 KST 로컬 자정
- *    Date와 비교하면 2025-01-01 당일 양도가 게이트에서 누락된다.
+ * 🔴 **UTC 자정(`…T00:00:00.000Z`)** 이다 — 엔진 날짜는 API `toDate`가 만든 UTC 자정 Date가 규약이라, 로컬 자정으로 선언하면
+ *    서버 시간대가 UTC 서쪽(미주)일 때 2025-01-01 당일 양도(UTC 00:00)가 상수(로컬 자정 = UTC 05:00)보다 앞서 게이트에서 누락된다.
  */
-export const LTHD_CONVERSION_95_5_CUTOFF = new Date("2025-01-01T00:00:00");
+export const LTHD_CONVERSION_95_5_CUTOFF = new Date("2025-01-01T00:00:00.000Z");
 
 /**
  * 「소득세법 시행령」 제154조 제5항 **단서** 시행 — **2024-02-29 이후 양도분** (OH-59 정정).
@@ -585,4 +586,4 @@ export const LTHD_CONVERSION_95_5_CUTOFF = new Date("2025-01-01T00:00:00");
  * 종전 값 2024-03-01은 별표 2의 시행일을 옮겨 적은 오기였다.
  * 직전 버전(대통령령 제34061호, 2024-01-01 시행)에는 단서가 없음을 이분 탐색으로 확인했다.
  */
-export const CONVERSION_EXEMPTION_CUTOFF = new Date("2024-02-29T00:00:00");
+export const CONVERSION_EXEMPTION_CUTOFF = new Date("2024-02-29T00:00:00.000Z");

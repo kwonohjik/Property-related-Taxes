@@ -10,7 +10,7 @@
  * Design: docs/02-design/features/listed-stock-besshi-form-replica.engine.design.md §5-3
  */
 
-import { subMonths, addMonths, addDays } from "date-fns";
+import { subMonths, addMonths, addDays } from "@/lib/tax-engine/utc-date";
 import { splitTwoMonthSurroundingByMonthGroup } from "@/lib/kiwoom/two-month-grouping";
 import type { ListedStockMonthGroups } from "@/lib/tax-engine/types/listed-stock-valuation.types";
 

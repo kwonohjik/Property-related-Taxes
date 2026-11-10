@@ -9,7 +9,7 @@
  *    사전-2022-법규재산-0427이 「보유기간 = 취득일~양도일」을 명시한다. 이 leaf의 현재
  *    소비처는 **§95⑤ 경로뿐**이다(`transfer-tax-lthd.ts` — 그쪽은 법이 기간을 나눈다).
  */
-import { addDays } from "date-fns";
+import { addDays } from "./utc-date";
 import { calculateHoldingPeriod } from "./tax-utils";
 
 export interface UsagePeriodInfo {

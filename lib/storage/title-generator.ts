@@ -25,9 +25,11 @@ export function formatDate(dateStr: string | undefined | null): string | null {
   try {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return null;
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
+    // 날짜만 있는 문자열(`YYYY-MM-DD`)은 UTC 자정이라 UTC 달력으로 읽고, 저장 시각 같은 타임스탬프는 사용자의 로컬 날짜로 읽는다
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
+    const y = dateOnly ? d.getUTCFullYear() : d.getFullYear();
+    const m = String((dateOnly ? d.getUTCMonth() : d.getMonth()) + 1).padStart(2, "0");
+    const day = String(dateOnly ? d.getUTCDate() : d.getDate()).padStart(2, "0");
     return `${y}.${m}.${day}`;
   } catch {
     return null;

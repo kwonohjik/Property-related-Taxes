@@ -9,7 +9,7 @@
  *   납부세액 기준:    부칙 §12848호 제10조② (2015.7.1 이후 양도분)
  */
 
-import { differenceInCalendarDays, addDays, startOfDay } from "date-fns";
+import { differenceInCalendarDays, addDays, startOfDay } from "./utc-date";
 import { PENALTY, PENALTY_CONST } from "./legal-codes";
 import { applyRate, applyRateFraction, safeMultiply, truncateToWon } from "./tax-utils";
 import {
@@ -568,7 +568,7 @@ export function calculateDelayedPaymentPenalty(
 
   steps.push({
     label: "산정일수",
-    formula: `납부기한(${input.paymentDeadline.toLocaleDateString("ko-KR")}) 다음날 ~ 납부일(${calcDate.toLocaleDateString("ko-KR")}) 전날`,
+    formula: `납부기한(${input.paymentDeadline.toLocaleDateString("ko-KR", { timeZone: "UTC" })}) 다음날 ~ 납부일(${calcDate.toLocaleDateString("ko-KR", { timeZone: "UTC" })}) 전날`,
     amount: elapsedDays,
     legalBasis: PENALTY.DELAYED_PAYMENT,
   });

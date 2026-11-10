@@ -52,11 +52,11 @@ describe("N-1: 기간 경계와 판정", () => {
     expect(isNblRateDeferralWindow("2015-12-31")).toBe(true);
     expect(isNblRateDeferralWindow("2016-01-01")).toBe(false);
   });
-  it("Date 입력도 같다(로컬 달력 기준)", () => {
-    expect(isNblRateDeferralWindow(new Date(2009, 2, 15))).toBe(false);
-    expect(isNblRateDeferralWindow(new Date(2009, 2, 16))).toBe(true);
-    expect(isNblRateDeferralWindow(new Date(2015, 11, 31))).toBe(true);
-    expect(isNblRateDeferralWindow(new Date(2016, 0, 1))).toBe(false);
+  it("Date 입력도 같다(UTC 달력 기준)", () => {
+    expect(isNblRateDeferralWindow(new Date(Date.UTC(2009, 2, 15)))).toBe(false);
+    expect(isNblRateDeferralWindow(new Date(Date.UTC(2009, 2, 16)))).toBe(true);
+    expect(isNblRateDeferralWindow(new Date(Date.UTC(2015, 11, 31)))).toBe(true);
+    expect(isNblRateDeferralWindow(new Date(Date.UTC(2016, 0, 1)))).toBe(false);
   });
   it("판정 4종 — 모름·지정지역은 유예가 아니다", () => {
     expect(judgeNblRateDeferral({ transferDate: "2012-06-01", isDesignatedArea: false })).toBe("deferred");

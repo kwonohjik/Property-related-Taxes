@@ -6,7 +6,7 @@
  *    (개별 1천만 미만 건도 합산 대상 — 사례2 ㉮·㉯ 누락 차단)
  * 증여시기 = 합산 누계가 처음 1천만 이상이 되는 건의 loanDate (isThresholdCrossing).
  */
-import { addYears, format, parseISO } from "date-fns";
+import { addYears, format, parseISO } from "../utc-date";
 import { GIFT } from "../legal-codes";
 import { applyRateFraction } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";

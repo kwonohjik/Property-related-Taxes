@@ -11,7 +11,7 @@
  * 종전에는 `landType === "building_site"`를 이 모듈이 받아 주택 배율을 적용했다(A-BS-1, 2026-08-05 정정).
  */
 
-import { differenceInDays } from "date-fns";
+import { differenceInDays } from "../utc-date";
 import { NBL } from "../legal-codes";
 import type {
   AreaProportioning,

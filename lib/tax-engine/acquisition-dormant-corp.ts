@@ -151,7 +151,7 @@ function build5YearResult(
 ): DormantCorpAssessResult {
   const startDate = new Date(startDateStr);
   const endDate = new Date(startDate);
-  endDate.setFullYear(endDate.getFullYear() + 5);
+  endDate.setUTCFullYear(endDate.getUTCFullYear() + 5);
   const surchargeEndDate = endDate.toISOString().slice(0, 10);
 
   const refDate = referenceDateStr ? new Date(referenceDateStr) : new Date();

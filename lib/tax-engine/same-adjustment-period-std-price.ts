@@ -168,7 +168,7 @@ export function classifySameAdjustmentPeriod(
   }
 
   // ② §80①1호 본문 — 취득일이 속하는 연도의 다음 연도 말일 이전 양도
-  return transferDate.getFullYear() <= acquisitionDate.getFullYear() + 1
+  return transferDate.getUTCFullYear() <= acquisitionDate.getUTCFullYear() + 1
     ? "clause_1"
     : "clause_2";
 }

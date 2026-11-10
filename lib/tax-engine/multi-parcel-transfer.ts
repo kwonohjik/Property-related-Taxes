@@ -14,7 +14,7 @@
  *     다음날 (TRANSFER.REPLOTTING_ACQ_DATE)
  */
 
-import { addDays } from "date-fns";
+import { addDays } from "./utc-date";
 import { TRANSFER } from "./legal-codes";
 import {
   applyRate,

@@ -25,7 +25,7 @@
  * Design: docs/02-design/features/inheritance-unlisted-stock-pre-ipo-listing-section-63-2.engine.design.md
  */
 
-import { subMonths } from "date-fns";
+import { subMonths } from "../utc-date";
 
 export interface PreIpoListingInput {
   /** §57①1호 자본시장법상 금융위 기준 공모가격 (1주당) */

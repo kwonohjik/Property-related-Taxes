@@ -330,7 +330,7 @@ export function getDisposalDeadlineDate(
 ): string {
   const years = getDisposalDeadlineYears(balanceDate, prevRegion, newRegion);
   const date = new Date(balanceDate);
-  date.setFullYear(date.getFullYear() + years);
+  date.setUTCFullYear(date.getUTCFullYear() + years);
   return date.toISOString().slice(0, 10);
 }
 

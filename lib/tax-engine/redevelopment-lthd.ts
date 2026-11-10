@@ -22,7 +22,7 @@
  * - settlement (apt + pay): 2009-10-23 ~ 2023-02-16 ≈ 13년 3월 → 표1 26%
  */
 
-import { format } from "date-fns";
+import { format } from "./utc-date";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
 import { LTHD_CONVERSION_95_5_CUTOFF } from "./tax-utils";

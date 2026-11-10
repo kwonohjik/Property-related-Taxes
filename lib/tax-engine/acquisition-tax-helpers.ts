@@ -201,7 +201,7 @@ export function buildZeroResult(
   const today = new Date().toISOString().slice(0, 10);
   const addDays = (d: string, days: number) => {
     const dt = new Date(d);
-    dt.setDate(dt.getDate() + days);
+    dt.setUTCDate(dt.getUTCDate() + days);
     return dt.toISOString().slice(0, 10);
   };
 

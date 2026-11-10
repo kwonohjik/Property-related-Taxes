@@ -545,7 +545,7 @@ export const multiInputSchema = z
   .superRefine((data, ctx) => {
     // taxYear 일관성 — 모든 양도일이 taxYear 내에 있어야 함
     for (let i = 0; i < data.properties.length; i++) {
-      const year = new Date(data.properties[i].transferDate).getFullYear();
+      const year = new Date(data.properties[i].transferDate).getUTCFullYear();
       if (year !== data.taxYear) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

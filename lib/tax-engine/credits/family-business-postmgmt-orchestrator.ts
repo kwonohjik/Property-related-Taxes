@@ -9,7 +9,7 @@
  * 계획서: docs/00-pm/inheritance-family-business-postmgmt.plan.md (v3) §3
  */
 
-import { addMonths, addYears, differenceInDays, endOfMonth, format, parseISO } from "date-fns";
+import { addMonths, addYears, differenceInDays, endOfMonth, format, parseISO } from "../utc-date";
 
 import { INH } from "../legal-codes";
 import {

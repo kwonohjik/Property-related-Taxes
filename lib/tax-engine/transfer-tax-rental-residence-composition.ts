@@ -125,7 +125,7 @@ const RENTAL_RESIDENCE_VERIFIED_SPECIAL_ACT: ReadonlySet<string> = new Set([
 ]);
 
 const sameDay = (a: Date, b: Date) =>
-  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth() && a.getUTCDate() === b.getUTCDate();
 
 type Exclusions = ReturnType<typeof resolveExemptionHouseCountExclusions>;
 

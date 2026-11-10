@@ -27,9 +27,9 @@ export const NBL_RATE_DEFERRAL_TO = "2015-12-31";
 const dayKey = (d: string | Date): string => {
   if (typeof d === "string") return d.slice(0, 10);
   // 로컬 달력 기준 — UTC 변환(`toISOString`)은 KST 자정을 전날로 만든다.
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${m}-${day}`;
 };
 
 /** 양도일(경계일 포함)이 8호·9호 세율 유예 기간 안인가. 지정지역 여부는 보지 않는다. */

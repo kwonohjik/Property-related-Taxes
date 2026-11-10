@@ -24,7 +24,7 @@
  *    호출부(단건 `calcCarryoverScenarios` Step 6 · 다건 `resolveFilingUnitCarryoverScope` ·
  *    일반건물 §159 분기)가 각자 처리한다.
  */
-import { addYears } from "date-fns";
+import { addYears } from "./utc-date";
 import { isCarryoverRelationExcluded } from "./carryover-donor-death";
 import type { TransferTaxInput } from "./types/transfer.types";
 

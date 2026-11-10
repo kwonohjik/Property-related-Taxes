@@ -10,7 +10,7 @@
  *   - 정수 연산: safeMulDivRound(round-half-up) for ㉡, Math.floor for ㉢ (원 미만 절사)
  */
 
-import { differenceInDays, parseISO } from "date-fns";
+import { differenceInDays, parseISO } from "./utc-date";
 import { safeMulDivRound } from "./tax-utils";
 import type { EstateItem } from "./types/inheritance-gift.types";
 

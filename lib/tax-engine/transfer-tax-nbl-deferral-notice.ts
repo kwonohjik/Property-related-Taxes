@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format } from "./utc-date";
 import { judgeNblRateDeferral, NBL_RATE_DEFERRAL_FROM, NBL_RATE_DEFERRAL_TO } from "./data/nbl-rate-deferral-era";
 import type { TransferTaxInput } from "./types/transfer.types";
 

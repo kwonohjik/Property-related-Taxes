@@ -30,7 +30,7 @@
  * @see docs/reviews/penalty-code-review-2026-09.md §G-05
  */
 
-import { addMonths, isAfter, parseISO } from "date-fns";
+import { addMonths, isAfter, parseISO } from "./utc-date";
 import {
   LATE_FILING_45_3,
   LATE_FILING_REDUCTION_48_2_2,

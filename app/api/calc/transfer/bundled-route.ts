@@ -388,7 +388,7 @@ export function calculateBundledTransfer(
 
   // (6) 다건 엔진 호출
   const aggregateInput: AggregateTransferInput = {
-      taxYear: transferDate.getFullYear(),
+      taxYear: transferDate.getUTCFullYear(),
       properties: items,
       annualBasicDeductionUsed: data.annualBasicDeductionUsed,
       priorReductionUsage: data.priorReductionUsage ?? [],

@@ -39,7 +39,7 @@ npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 �
 - DB 기반 세율: `tax_rates` jsonb. key: `${tax_type}:${category}:${sub_category}`.
 - 감면 중복배제(양도세 조특법 §127⑦·취득세/재산세 지방세특례제한법 §180): 후보 배열 max 패턴.
 - 법령 조문 상수: 문자열 리터럴 금지. `lib/tax-engine/legal-codes/`의 `TRANSFER.*` 등 상수. 새 조문을 인용하면 **`lib/legal-verification/manifest/additions-{세목}.ts`에도 등록** — 안 하면 `npm run verify:legal` 대상에서 조용히 빠져 개정돼도 모른다(게이트: `__tests__/lib/legal-verification-coverage-complete.test.ts`). 키워드는 KoreanLaw MCP로 조회한 본문의 verbatim 표현(강학상 용어 금지), 등록 후 `npm run verify:legal`로 확인.
-- API Date 직렬화 — `lib/api/date-coerce.ts` 필수. JSON 경유 후 string 도달 → `Date < string` silent false 함정. `toDate(v, "field")` / `toOptionalDate(v)` / `coerceDates(obj, [...])`. **신규 코드 `new Date(x)` 직접 호출 금지**.
+- API Date 직렬화 — `lib/api/date-coerce.ts` 필수. JSON 경유 후 string 도달 → `Date < string` silent false 함정. `toDate(v, "field")` / `toOptionalDate(v)` / `coerceDates(obj, [...])`. **신규 코드 `new Date(x)` 직접 호출 금지**. 날짜 연산은 date-fns 대신 `lib/tax-engine/utc-date`(UTC 달력) — 로컬 달력 함수는 서버 시간대마다 결과가 달라진다([lib/tax-engine/CLAUDE.md](lib/tax-engine/CLAUDE.md)).
 - **자동 안분 fallback 금지**(예외: PHD §164⑦). 미입력은 검증 오류로 차단.
 - 법령 정확성 최우선. 납세자 유리/불리·절감 표현 금지.
 

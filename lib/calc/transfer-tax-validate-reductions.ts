@@ -5,7 +5,7 @@
  * 반환: 실패 시 ValidationIssue, 통과 시 null.
  */
 
-import { addYears } from "date-fns";
+import { addYears } from "@/lib/tax-engine/utc-date";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";

@@ -439,7 +439,7 @@ export function calculateRedevelopmentTax(
   const cap = applyReductionStatutoryCap({
     reductionAmount,
     reductionTypeApplied,
-    transferYear: input.transferDate.getFullYear(),
+    transferYear: input.transferDate.getUTCFullYear(),
     priorUsage: input.priorReductionUsage ?? [],
   });
   const cappedReductionAmount = cap.cappedAmount;

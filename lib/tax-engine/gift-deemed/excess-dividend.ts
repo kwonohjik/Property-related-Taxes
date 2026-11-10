@@ -313,7 +313,7 @@ function computeIncomeTaxEquivalent(
       excessDividendAmount,
       input.comprehensiveTaxBase ?? excessDividendAmount,
       input.comprehensiveTaxBaseExcluding,
-      input.incomeTaxYear ?? dividendDate.getFullYear(),
+      input.incomeTaxYear ?? dividendDate.getUTCFullYear(),
     );
   }
 

@@ -41,7 +41,7 @@
  * 5·7호는 **가산세**(§78⑨)라 축이 다르다 — 이 파일에서 계산하지 않는다.
  */
 
-import { addYears, format, isAfter, parseISO } from "date-fns";
+import { addYears, format, isAfter, parseISO } from "../utc-date";
 
 import { EXEMPTION } from "../legal-codes";
 import { applyRateFraction, safeMultiplyThenDivide } from "../tax-utils";

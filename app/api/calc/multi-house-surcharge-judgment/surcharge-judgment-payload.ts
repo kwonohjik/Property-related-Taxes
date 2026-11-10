@@ -7,7 +7,7 @@
  *
  * 시뮬레이션(D3c)은 route가 요청을 받았을 때 따로 붙인다(`surcharge-simulation.ts`).
  */
-import { format } from "date-fns";
+import { format } from "@/lib/tax-engine/utc-date";
 import { isRegulatedByBjdCode, type RegulatedAreaJudgment } from "@/lib/tax-engine/data/regulated-areas";
 import { resolveSurchargeAddonRate, MULTI_HOUSE_SURCHARGE_START_DATE } from "@/lib/tax-engine/data/multi-house-surcharge-rate-history";
 import { isMultiHouseLthdExclusionEra } from "@/lib/tax-engine/data/lthd-multi-house-exclusion-era";
