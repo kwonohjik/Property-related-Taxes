@@ -92,7 +92,12 @@ describe("NH-38 단건 route — 농특세 미납분 납부지연가산세(소�
     expect(r.ruralSurtaxDelayedPenalty).toMatchObject({
       ruralSurtax: 13_238_000, paidRuralSurtax: 0, unpaidRuralSurtax: 13_238_000, penalty: 1_060_099,
     });
-    expect(r.totalTax).toBe(117_624_688);
+    // US-29 — 지방소득세 가산세 1,998,130 별도 가산(손계산):
+    //  무신고 지방 base 74,870,000 × 10% = 7,487,000 × 20% = 1,497,400 (기한 후 날짜 입력 없음 → 감면 없음)
+    //  납부지연 지방 미납 7,487,000 · 지방 법정납부기한 2024-10-31 + 2개월 = 2024-12-31(화) · 2025-01-01 ~ 2025-10-31 = 304일
+    //   → 7,487,000 × 304 × 22 / 100,000 = 500,730.56 → 500,730
+    expect(r.localIncomePenalty.total).toBe(1_998_130);
+    expect(r.totalTax).toBe(117_624_688 + 1_998_130);
     // 지방소득세 base에 넣지 않는다
     expect(r.localIncomeTax).toBe(7_487_000);
     const step = r.steps.find((s: { label: string }) => s.label.startsWith("농어촌특별세 납부지연가산세"));
@@ -104,10 +109,10 @@ describe("NH-38 단건 route — 농특세 미납분 납부지연가산세(소�
     const part = await result(late99({ paidRuralSurtax: 3_238_000 }));
     expect(part.ruralSurtaxDelayedPenalty.unpaidRuralSurtax).toBe(10_000_000);
     expect(part.ruralSurtaxDelayedPenalty.penalty).toBe(800_800); // 10,000,000 × 364 × 0.022%
-    expect(part.totalTax).toBe(116_564_589 + 800_800);
+    expect(part.totalTax).toBe(116_564_589 + 800_800 + 1_998_130); // US-29 — 지방 가산세는 농특세 기납부와 무관
     const full = await result(late99({ paidRuralSurtax: 13_238_000 }));
     expect(full.ruralSurtaxDelayedPenalty).toBeUndefined();
-    expect(full.totalTax).toBe(116_564_589);
+    expect(full.totalTax).toBe(116_564_589 + 1_998_130);
   });
 
   it("소득세 직접 입력 0(완납)이어도 농특세는 기납부 농특세로 따로 판단한다(세목 간 상계 안 함)", async () => {
@@ -163,7 +168,12 @@ describe("NH-38 형제 경로", () => {
     );
     expect(r.ruralSurtax).toBe(5_284_890);
     expect(r.ruralSurtaxDelayedPenalty?.penalty).toBe(211_606);
-    expect(r.totalTax).toBe(plain.totalTax + (r.penaltyDetail?.totalPenalty ?? 0) + 211_606);
+    // US-29 — 지방소득세 납부지연가산세: 지방 미납 = 결정세액 × 10%, 지방 법정납부기한 2026-04-30 + 2개월 = 2026-06-30(화),
+    //  2026-07-01 ~ 2026-10-30 = 122일 × 10만분의 22 (무신고 입력 없음)
+    const localDelayed = Math.floor((Math.floor(plain.determinedTax / 10) * 122 * 22) / 100_000);
+    expect(r.localIncomePenalty?.delayed).toMatchObject({ days: 122, localDeadline: "2026-06-30" });
+    expect(r.localIncomePenalty?.total).toBe(localDelayed);
+    expect(r.totalTax).toBe(plain.totalTax + (r.penaltyDetail?.totalPenalty ?? 0) + 211_606 + localDelayed);
   });
 
   const house = () =>
@@ -186,7 +196,12 @@ describe("NH-38 형제 경로", () => {
     expect(agg.ruralSurtax).toBe(7_843_200);
     expect(agg.filingUnitRuralSurtaxDelayedPenalty?.penalty).toBe(628_083);
     expect(agg.ruralSurtaxDelayedPenalty).toBe(628_083);
-    expect(agg.totalTax).toBe(plain.totalTax + agg.penaltyTax + 628_083);
+    // US-29 — 지방소득세 납부지연가산세(신고서 단위): 지방 법정납부기한 2022-10-31 + 2개월 = 2022-12-31(토) → 2023-01-02(월),
+    //  2023-01-03 ~ 2023-10-31 = 302일 × 10만분의 22, 지방 미납 = 결정세액 × 10%
+    const localDelayed = Math.floor((Math.floor(agg.determinedTax / 10) * 302 * 22) / 100_000);
+    expect(agg.filingUnitLocalIncomePenalty?.delayed).toMatchObject({ days: 302, localDeadline: "2023-01-02" });
+    expect(agg.localIncomePenalty).toBe(localDelayed);
+    expect(agg.totalTax).toBe(plain.totalTax + agg.penaltyTax + 628_083 + localDelayed);
   });
 
   it("다건 자산별: route가 주입한 예정신고 농특세(ruralSurtaxForPenalty)가 base · 합계가 totalTax에 들어간다", () => {

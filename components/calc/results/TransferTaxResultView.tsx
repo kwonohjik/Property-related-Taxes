@@ -375,6 +375,8 @@ export function TransferTaxResultView({
                 const ruralSurtax = resolveRuralSurtax(result);
                 // NH-38 — 농특세 미납분 납부지연가산세(소득세분 가산세와 별도 줄 · totalTax에 포함)
                 const ruralPenalty = result.ruralSurtaxDelayedPenalty?.penalty ?? 0;
+                // US-29 — 지방소득세 가산세(지방세기본법 §53~§55 · 지방 법정기한 기준 · totalTax에 포함)
+                const localPenalty = result.localIncomePenalty?.total ?? 0;
                 return (
                   <>
                     <span>결정세액 {formatKRW(result.determinedTax)}</span>
@@ -398,11 +400,17 @@ export function TransferTaxResultView({
                         <span>농어촌특별세 납부지연가산세 {formatKRW(ruralPenalty)}</span>
                       </>
                     )}
+                    {localPenalty > 0 && (
+                      <>
+                        <span>+</span>
+                        <span>지방소득세 가산세 {formatKRW(localPenalty)}</span>
+                      </>
+                    )}
                   </>
                 );
               })()}
             </div>
-            {/* US-29 — 지방세기본법 §53~§55 가산세 미포함 고지 (세액 불변) */}
+            {/* US-29 — 지방세기본법 §53~§55 가산세 「포함됨 + 가정·확인 필요」 고지 */}
             {shouldShowLocalIncomePenaltyNotice(result) && <LocalIncomePenaltyNotice className="mt-3" />}
           </div>
         )}

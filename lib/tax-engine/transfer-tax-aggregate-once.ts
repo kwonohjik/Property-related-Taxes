@@ -17,6 +17,7 @@ import {
 import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveUnpaidTax } from "./transfer-tax-unpaid-tax";
 import { computeRuralSurtaxDelayedPenalty, ruralSurtaxDelayedPenaltyStep } from "./transfer-tax-rural-surtax-penalty";
+import { computeLocalIncomePenalty, localIncomePenaltySteps } from "./transfer-tax-local-income-penalty";
 import {
   calculateTransferTaxPenalty,
   formatDelayedPaymentFormula,
@@ -454,11 +455,24 @@ export function computeAggregateOnce(
   const filingUnitRuralSurtaxDelayedPenalty = computeRuralSurtaxDelayedPenalty(input.delayedPaymentDetails, ruralSurtaxAll);
   if (filingUnitRuralSurtaxDelayedPenalty) steps.push(ruralSurtaxDelayedPenaltyStep(filingUnitRuralSurtaxDelayedPenalty));
   const ruralPenaltyAll = perAssetRuralPenalty + (filingUnitRuralSurtaxDelayedPenalty?.penalty ?? 0);
-  const totalTax = determinedTaxBeforePenalty + penaltyTax + localIncomeTax + ruralSurtaxAll + ruralPenaltyAll;
+  /**
+   * US-29 — 지방소득세 가산세(지방세기본법 §53~§55). 소득세분 `penaltyTax`와 **별도**다.
+   *   · 자산별: 단건 엔진이 자산 결과에 이미 산정했다(`properties[i].localIncomePenalty`).
+   *   · 신고서 단위: 위 M-9b의 국세 가산세 결과를 기준으로 같은 leaf를 1회 부른다.
+   */
+  const perAssetLocalPenalty = assetRecords.reduce(
+    (s, r) => s + (r.result.isExempt ? 0 : r.result.localIncomePenalty?.total ?? 0),
+    0,
+  );
+  const filingUnitLocalIncomePenalty = computeLocalIncomePenalty(input.filingPenaltyDetails, filingUnitPenaltyDetail);
+  if (filingUnitLocalIncomePenalty) steps.push(...localIncomePenaltySteps(filingUnitLocalIncomePenalty));
+  const localPenaltyAll = perAssetLocalPenalty + (filingUnitLocalIncomePenalty?.total ?? 0);
+  const totalTax =
+    determinedTaxBeforePenalty + penaltyTax + localIncomeTax + ruralSurtaxAll + ruralPenaltyAll + localPenaltyAll;
 
   steps.push({
     label: "총 납부세액",
-    formula: `결정세액 ${determinedTaxBeforePenalty.toLocaleString()} + 가산세 ${penaltyTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtaxAll > 0 ? ` + 농특세 ${ruralSurtaxAll.toLocaleString()}` : ""}${ruralPenaltyAll > 0 ? ` + 농특세 납부지연가산세 ${ruralPenaltyAll.toLocaleString()}` : ""}`,
+    formula: `결정세액 ${determinedTaxBeforePenalty.toLocaleString()} + 가산세 ${penaltyTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtaxAll > 0 ? ` + 농특세 ${ruralSurtaxAll.toLocaleString()}` : ""}${ruralPenaltyAll > 0 ? ` + 농특세 납부지연가산세 ${ruralPenaltyAll.toLocaleString()}` : ""}${localPenaltyAll > 0 ? ` + 지방소득세 가산세 ${localPenaltyAll.toLocaleString()}` : ""}`,
     amount: totalTax,
   });
 
@@ -605,6 +619,7 @@ export function computeAggregateOnce(
       ...(!r.result.isExempt && r.result.ruralSurtaxDelayedPenalty
         ? { ruralSurtaxDelayedPenalty: r.result.ruralSurtaxDelayedPenalty }
         : {}),
+      ...(!r.result.isExempt && r.result.localIncomePenalty ? { localIncomePenalty: r.result.localIncomePenalty } : {}),
       steps: r.result.steps,
       // 파트가 있는 자산의 문구는 1패스 단건 값이 아니라 통산·기본공제를 반영한 재계산 값이다.
       shortTermNote: partAssetTax ? partAssetTax.note : r.result.shortTermNote,
@@ -656,6 +671,8 @@ export function computeAggregateOnce(
     ruralSurtax: ruralSurtaxAll,
     ...(ruralPenaltyAll > 0 ? { ruralSurtaxDelayedPenalty: ruralPenaltyAll } : {}),
     ...(filingUnitRuralSurtaxDelayedPenalty ? { filingUnitRuralSurtaxDelayedPenalty } : {}),
+    ...(localPenaltyAll > 0 ? { localIncomePenalty: localPenaltyAll } : {}),
+    ...(filingUnitLocalIncomePenalty ? { filingUnitLocalIncomePenalty } : {}),
     totalTax,
     steps,
     warnings,

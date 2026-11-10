@@ -625,6 +625,7 @@ async function callPenalty(body: object, withPenalty: boolean) {
     determinedTax: agg?.determinedTax as number,
     penaltyTax: agg?.penaltyTax as number,
     totalTax: agg?.totalTax as number,
+    localIncomePenalty: agg?.localIncomePenalty as number | undefined,
     filingUnitPenaltyDetail: agg?.filingUnitPenaltyDetail as { totalPenalty: number } | undefined,
   };
 }
@@ -648,7 +649,10 @@ describe("G-13 지분분할 GB 경로의 신고서 단위 가산세", () => {
     // 국세기본법 §47의2①2호 — 무신고 일반 20%
     expect(pen.penaltyTax).toBe(Math.floor(base.determinedTax * 0.2));
     expect(pen.filingUnitPenaltyDetail?.totalPenalty).toBe(pen.penaltyTax);
-    expect(pen.totalTax).toBe(base.totalTax + pen.penaltyTax);
+    // US-29 — 지방소득세 무신고가산세 = 결정세액 × 10% × 20%
+    const localPenalty = Math.floor(Math.floor(base.determinedTax / 10) * 0.2);
+    expect(pen.localIncomePenalty).toBe(localPenalty);
+    expect(pen.totalTax).toBe(base.totalTax + pen.penaltyTax + localPenalty);
   });
 
   it("GP-3: 지분 1개(단건 경로)와 2개(지분 경로)가 같은 규약이다 — 지분 수로 갈리면 안 된다", async () => {

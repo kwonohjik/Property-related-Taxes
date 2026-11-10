@@ -16,6 +16,7 @@ import type { TransferTaxInput, CalculationStep, TransferTaxResult } from "./typ
 import { TRANSFER } from "./legal-codes";
 import { calculateMultiParcelTransfer } from "./multi-parcel-transfer";
 import { type TransferTaxPenaltyResult, calculateTransferTaxPenalty } from "./transfer-tax-penalty";
+import { computeLocalIncomePenalty, localIncomePenaltySteps } from "./transfer-tax-local-income-penalty";
 import type { Pre1990LandValuationResult } from "./pre-1990-land-valuation";
 import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
@@ -271,6 +272,9 @@ export function handleMultiParcelBranch(
     });
     mpFilingDelayedPenalty = mpPenaltyDetail?.totalPenalty ?? 0;
   }
+  // US-29 — 지방소득세 가산세(지방세기본법 §53~§55) — 정상 경로 finalize와 같은 leaf
+  const mpLocalIncomePenalty = computeLocalIncomePenalty(input.filingPenaltyDetails, mpPenaltyDetail);
+  if (mpLocalIncomePenalty) steps.push(...localIncomePenaltySteps(mpLocalIncomePenalty));
 
   return {
     isExempt: false,
@@ -298,7 +302,9 @@ export function handleMultiParcelBranch(
     penaltyTax: mpPenaltyTax,
     localIncomeTax: mpLocalIncomeTax,
     ruralSurtax: mpRuralSurtax,
-    totalTax: mpDeterminedTaxWithPenalty + mpLocalIncomeTax + mpFilingDelayedPenalty + mpRuralSurtax,
+    totalTax:
+      mpDeterminedTaxWithPenalty + mpLocalIncomeTax + mpFilingDelayedPenalty + mpRuralSurtax + (mpLocalIncomePenalty?.total ?? 0),
+    ...(mpLocalIncomePenalty ? { localIncomePenalty: mpLocalIncomePenalty } : {}),
     steps,
     newHousingReductionDetail: mpNewHousingDetail,
     publicExpropriationDetail: mpExproDetail,

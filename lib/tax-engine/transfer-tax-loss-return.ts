@@ -17,6 +17,7 @@ import { applyRate } from "./tax-utils";
 import { calculateBuildingPenalty, resolveExtensionPenaltyBase } from "./transfer-tax-building-penalty";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { emitPenaltySteps } from "./transfer-tax-penalty-steps";
+import { computeLocalIncomePenalty, localIncomePenaltySteps } from "./transfer-tax-local-income-penalty";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { buildTransferResultDetails } from "./transfer-tax-finalize";
 import { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty";
@@ -146,11 +147,14 @@ export function buildLossTransferTaxResult({
    */
   const { penaltyDetail: lossPenaltyDetail, filingDelayedPenalty: lossFilingDelayed } =
     emitPenaltySteps(input, steps, 0, pt0, pb0, pr0?.note);
-  const lossTotalTax = pt0 + lit0 + lossFilingDelayed;
+  // US-29 — 지방소득세 가산세(지방세기본법 §53~§55). 초과환급·미납이 있는 차손 신고에서만 0보다 크다.
+  const lossLocalPenalty = computeLocalIncomePenalty(input.filingPenaltyDetails, lossPenaltyDetail);
+  if (lossLocalPenalty) steps.push(...localIncomePenaltySteps(lossLocalPenalty));
+  const lossTotalTax = pt0 + lit0 + lossFilingDelayed + (lossLocalPenalty?.total ?? 0);
   if (lossTotalTax > 0) {
     steps.push({
       label: "총 납부세액",
-      formula: `가산세 합계 ${(pt0 + lossFilingDelayed).toLocaleString()} + 지방소득세 ${lit0.toLocaleString()}`,
+      formula: `가산세 합계 ${(pt0 + lossFilingDelayed).toLocaleString()} + 지방소득세 ${lit0.toLocaleString()}${lossLocalPenalty && lossLocalPenalty.total > 0 ? ` + 지방소득세 가산세 ${lossLocalPenalty.total.toLocaleString()}` : ""}`,
       amount: lossTotalTax,
       legalBasis: TRANSFER.BUILDING_PENALTY,
     });
@@ -202,6 +206,7 @@ export function buildLossTransferTaxResult({
     localIncomeTax: lit0,
     // 국기법 §47의2~§47의4분(lossFilingDelayed)은 지방소득세 base에 넣지 않는다 — 위 주석 참조.
     penaltyDetail: lossPenaltyDetail,
+    ...(lossLocalPenalty ? { localIncomePenalty: lossLocalPenalty } : {}),
     totalTax: lossTotalTax,
     steps,
     /**

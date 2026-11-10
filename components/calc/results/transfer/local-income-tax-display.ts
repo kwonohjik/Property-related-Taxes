@@ -25,10 +25,10 @@
  *   · 집계 `transfer-tax-aggregate.ts`  STEP M-10 — applyRate(determinedTax + perAssetBuildingPenalty, 0.1)
  *   · 겸용 `transfer-tax-mixed-use-totals.ts` — applyRate(determinedTax, 0.10) (겸용엔 §114조의2가 없다)
  *
- * 🔴 US-29 — 반대로 **지방세기본법 §53~§55 가산세는 §103의2 3호가 열거하는데 엔진이 산정하지 않는다**.
- * 「대상이 아니다」는 국기법 가산세에 한정된 말이다. 지방 가산세는 계산하지 않고 결과 화면에
- * 미포함 고지(`@/lib/calc/local-income-penalty-notice`)를 둔다 — 지방 신고기한(소득세 기한 + 2개월,
- * §103의5①·§103의7①)·지방 신고 여부·§57② 감면 판정 기준일이 입력에 없어 확인 필요.
+ * 🔴 US-29 — 반대로 **지방세기본법 §53~§55 가산세는 §103의2 3호가 열거**한다. 「대상이 아니다」는 국기법 가산세에
+ * 한정된 말이다. 엔진(`transfer-tax-local-income-penalty.ts`)이 지방 법정기한(소득세 기한 + 2개월 → 지방세기본법 §24①)으로
+ * 지방 가산세를 **본세와 별도로** 산정해 총 납부세액에 더한다(`result.localIncomePenalty`) — 이 문구의 지방소득세
+ * 산출세액(본세)에는 넣지 않는다. 산정 가정은 결과 화면 고지(`@/lib/calc/local-income-penalty-notice`)에 있다.
  *
  * 🔴 **왜 이 파일이 생겼나** — 종전에는 표시부가 이 값을 **네 벌로 다시 계산**했고 그중 셋이
  * 국기법 가산세를 base에 넣었다. 「지방소득세 산출세액」이 「지방세 결정세액」보다 큰데
@@ -59,7 +59,7 @@ export function localTaxablePenaltyOf(
 export function localCalculatedTaxFormula(determinedTax: number, section114_2Penalty: number): string {
   // ⚠️ 묶음(`(a + b) × 10%`)을 풀지 않는다 — 항별로 나눠 적으면 절사가 두 번 일어나 엔진
   //    `applyRate(determinedTax + penalty, 0.1)` 값과 1원 어긋날 수 있다(표시 드리프트).
-  const note = "국세기본법 §47의2~§47의4 가산세는 대상이 아니다(지방세기본법 §53~§55 가산세는 미산정)";
+  const note = "국세기본법 §47의2~§47의4 가산세는 대상이 아니다(지방세기본법 §53~§55 가산세는 별도 행으로 산정)";
   if (section114_2Penalty > 0) {
     // ⚠️ 여는 괄호와 닫는 괄호를 **같은 줄**에 둔다 — 결과탭 표시 규약 anchor
     //    (`transfer-result-display-convention.anchor.test.ts` D-2)가 줄 단위로 검사한다.

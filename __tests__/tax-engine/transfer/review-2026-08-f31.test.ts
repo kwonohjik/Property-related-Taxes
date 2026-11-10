@@ -69,7 +69,12 @@ describe("F31 — 단건 신고서 양식의 가산세액 = §114조의2 + 국�
     expect(r.penaltyDetail?.delayedPaymentPenalty?.delayedPaymentPenalty).toBe(2_662_000);
     expect(r.penaltyDetail?.totalPenalty).toBe(30_874_000);
     expect(r.localIncomeTax).toBe(14_106_000);
-    expect(r.totalTax).toBe(186_040_000);
+    // US-29 — 지방소득세 가산세 2,951,000 가산(손계산):
+    //  무신고 지방 base 141,060,000 × 10% = 14,106,000 × 20% = 2,821,200 (기한 후 날짜 입력 없음 → 감면 없음)
+    //  납부지연 지방 미납 10,000,000, 지방 법정납부기한 2026-08-31 + 2개월 = 2026-10-31(토) → 11-02(월),
+    //   11-03 ~ 12-31 = 59일 × 10만분의 22 = 129,800
+    expect(r.localIncomePenalty?.total).toBe(2_951_000);
+    expect(r.totalTax).toBe(186_040_000 + 2_951_000);
   });
 
   it("신고서 표의 가산세액·총결정세액이 두 축을 합산한다", () => {

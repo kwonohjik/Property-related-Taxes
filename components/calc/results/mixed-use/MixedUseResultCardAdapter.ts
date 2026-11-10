@@ -179,6 +179,8 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
     ruralSurtax: t.ruralSurtax,
     // NH-38 — 농특세 미납분 납부지연가산세(totalPayable에 이미 포함) — 승계하지 않으면 신고서 칸·요약이 0이 된다.
     ...(t.ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty: t.ruralSurtaxDelayedPenalty } : {}),
+    // US-29 — 지방소득세 가산세(totalPayable에 이미 포함) — 승계하지 않으면 결과뷰·명세서가 합계와 어긋난다.
+    ...(t.localIncomePenalty ? { localIncomePenalty: t.localIncomePenalty } : {}),
     totalTax: t.totalPayable,
     // b.steps는 MixedUseStep[] (id/title/legalBasis/values 구조)라 형태를 변환해 싣는다 — 명세서 카드의
     // 「전체 엔진 계산 과정」 표가 겸용에서도 §99·§99의3 차감 step을 포함해 보인다(표시 전용).

@@ -126,7 +126,9 @@ describe("G-01 PDF 신고서 양식 — 가산세 두 축 합산", () => {
     const texts = collectRows(tree);
 
     const total = Number((valueAfter(texts, "총결정세액") ?? "0").replace(/,/g, ""));
-    // 엔진 totalTax = 총결정세액 + 지방소득세 + 농특세 (transfer-tax-finalize.ts:502)
-    expect(total + r.localIncomeTax + (r.ruralSurtax ?? 0)).toBe(r.totalTax);
+    // 엔진 totalTax = 총결정세액 + 지방소득세 + 농특세 + 지방소득세 가산세(US-29 — PDF에 별도 행) (transfer-tax-finalize.ts)
+    const localPenalty = Number((valueAfter(texts, "지방소득세 가산세 (지방세기본법 §53~§55)") ?? "0").replace(/,/g, ""));
+    expect(localPenalty).toBe(2_951_000); // F31 시료 손계산 — 무신고 2,821,200 + 납부지연 129,800
+    expect(total + r.localIncomeTax + (r.ruralSurtax ?? 0) + localPenalty).toBe(r.totalTax);
   });
 });

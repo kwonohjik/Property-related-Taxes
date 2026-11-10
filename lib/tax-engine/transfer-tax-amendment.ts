@@ -33,6 +33,7 @@ import {
   formatDelayedPaymentFormula,
   formatDelayedPaymentLabel,
 } from "./transfer-tax-penalty";
+import { computeAmendmentLocalPenalty, localIncomePenaltySteps } from "./transfer-tax-local-income-penalty";
 import type { CalculationStep } from "./types/transfer.types";
 import type {
   AmendmentInput,
@@ -382,6 +383,21 @@ function computeIncomeTaxAmendment(
   const additionalLocalIncomeTax = applyRate(additionalTax, 0.1);
   const totalPayable = additionalTax + underReportingPenalty + latePaymentPenalty;
 
+  // ── 지방소득세 추가 가산세 (US-29) — 지방세기본법 §54 과소신고(+§57②1호 감면) · §55 납부지연 ──
+  // 국세 `totalPayable`에는 넣지 않는다(국세 납부액). 지방소득세는 지방자치단체에 따로 신고·납부하므로 별도 줄이다.
+  const localIncomePenalty = computeAmendmentLocalPenalty({
+    additionalTax,
+    applyUnderReportingPenalty: amendment.applyUnderReportingPenalty,
+    underReportingReason: amendment.underReportingReason,
+    underExempt: underReportingExempt,
+    autoReduction: amendment.underReductionMode === "auto_48_2",
+    nationalDeadline: amendment.statutoryFilingDeadline,
+    amendedFilingDate: amendment.amendedFilingDate,
+    notified: amendment.priorAssessmentNotified,
+    applyLatePaymentPenalty: amendment.applyLatePaymentPenalty,
+    paymentDate: amendment.amendedPaymentDate,
+  });
+
   steps.push({
     label: "수정신고 총 납부세액",
     formula: `추가본세 ${additionalTax.toLocaleString()}${
@@ -390,6 +406,7 @@ function computeIncomeTaxAmendment(
     amount: totalPayable,
     legalBasis: AMENDMENT_45,
   });
+  if (localIncomePenalty) steps.push(...localIncomePenaltySteps(localIncomePenalty));
 
   return {
     originalDeterminedTax: amendment.originalDeterminedTax,
@@ -399,6 +416,7 @@ function computeIncomeTaxAmendment(
     underReportingPenalty,
     latePaymentPenalty,
     additionalLocalIncomeTax,
+    ...(localIncomePenalty ? { localIncomePenalty } : {}),
     totalPayable,
     steps,
   };

@@ -398,6 +398,10 @@ export function buildTotalStep(t: ReturnType<typeof buildTotalTax>): MixedUseSte
       ...(t.ruralSurtaxDelayedPenalty
         ? [{ label: "농어촌특별세 납부지연가산세", value: t.ruralSurtaxDelayedPenalty.penalty }]
         : []),
+      // US-29 — 지방소득세 가산세(지방세기본법 §53~§55)
+      ...(t.localIncomePenalty && t.localIncomePenalty.total > 0
+        ? [{ label: "지방소득세 가산세 (지방세기본법 §53~§55)", value: t.localIncomePenalty.total }]
+        : []),
       { label: "총 납부세액", value: t.totalPayable, isResult: true },
     ],
   };

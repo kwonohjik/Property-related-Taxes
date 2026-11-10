@@ -16,6 +16,7 @@ import { effectiveGrossGain, sumAssetGains } from "@/components/calc/results/tra
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/LocalIncomePenaltyNotice";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 
@@ -122,7 +123,9 @@ export function MultiTransferTaxSummaryCard({
   const ruralSurtax = result.ruralSurtax ?? 0;
   // NH-38 — 농특세 미납분 납부지연가산세(엔진 totalTax에 포함 · 정산 축 밖) — 농특세와 같은 축으로 따로 더한다.
   const ruralPenalty = result.ruralSurtaxDelayedPenalty ?? 0;
-  const finalDue = totalDue + ruralSurtax + ruralPenalty;
+  // US-29 — 지방소득세 가산세(지방세기본법 §53~§55 · 자산별 + 신고서 단위, 엔진 totalTax에 포함 · 정산 축 밖).
+  const localPenalty = result.localIncomePenalty ?? 0;
+  const finalDue = totalDue + ruralSurtax + ruralPenalty + localPenalty;
 
   return (
     <Card className="border-primary/20 bg-primary/5">
@@ -238,6 +241,12 @@ export function MultiTransferTaxSummaryCard({
         )}
         {ruralPenalty > 0 && (
           <ResultRow label="농어촌특별세 납부지연가산세" value={ruralPenalty} />
+        )}
+        {localPenalty > 0 && (
+          <>
+            <ResultRow label="지방소득세 가산세 (지방세기본법 §53~§55)" value={localPenalty} />
+            <LocalIncomePenaltyNotice className="pt-1" />
+          </>
         )}
 
         <Separator />

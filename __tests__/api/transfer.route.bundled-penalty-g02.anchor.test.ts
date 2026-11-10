@@ -108,8 +108,12 @@ describe("G-02/G-13 신고서 단위 가산세가 aggregate에 도달한다", ()
     expect(fp.penaltyBase).toBe(base.determinedTax);
     expect(fp.filingPenalty).toBe(Math.floor(base.determinedTax * 0.2));
 
-    // 총세액도 정확히 가산세만큼 늘어난다
-    expect(r.totalTax).toBe(base.totalTax + r.penaltyTax);
+    // US-29 — 지방소득세 무신고가산세: 결정세액 × 10% × 20% (지방세기본법 §53① · 기한 후 날짜 입력 없음 → 감면 없음)
+    const localPenalty = Math.floor(Math.floor(base.determinedTax / 10) * 0.2);
+    expect(r.localIncomePenalty).toBe(localPenalty);
+
+    // 총세액도 정확히 (국세 가산세 + 지방소득세 가산세)만큼 늘어난다
+    expect(r.totalTax).toBe(base.totalTax + r.penaltyTax + localPenalty);
   });
 
   it("B-3: 자산-수준과 신고서 단위가 함께 와도 신고서 단위 1회만 부과된다", () => {
@@ -117,6 +121,7 @@ describe("G-02/G-13 신고서 단위 가산세가 aggregate에 도달한다", ()
     const both = run({ assetLevel: true, filingUnit: true });
     expect(both.penaltyTax).toBe(only.penaltyTax);
     expect(both.totalTax).toBe(only.totalTax);
+    expect(both.localIncomePenalty).toBe(only.localIncomePenalty); // 지방 가산세도 신고서 단위 1회
   });
 });
 
@@ -146,6 +151,7 @@ interface Agg {
   penaltyTax: number;
   totalTax: number;
   filingUnitPenaltyDetail?: { totalPenalty: number };
+  localIncomePenalty?: number;
 }
 
 async function postBundled(withPenalty: boolean): Promise<Agg> {
@@ -196,6 +202,9 @@ describe("G-02 route — 일괄양도(companionAssets) 분기가 가산세를 �
     // 국세기본법 §47의2①2호 — 무신고 일반 20%
     expect(pen.penaltyTax).toBe(Math.floor(base.determinedTax * 0.2));
     expect(pen.filingUnitPenaltyDetail?.totalPenalty).toBe(pen.penaltyTax);
-    expect(pen.totalTax).toBe(base.totalTax + pen.penaltyTax);
+    // US-29 — 지방소득세 무신고가산세 = 결정세액 × 10% × 20%
+    const localPenalty = Math.floor(Math.floor(base.determinedTax / 10) * 0.2);
+    expect(pen.localIncomePenalty).toBe(localPenalty);
+    expect(pen.totalTax).toBe(base.totalTax + pen.penaltyTax + localPenalty);
   });
 });

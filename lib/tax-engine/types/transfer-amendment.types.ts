@@ -61,6 +61,11 @@ export interface AmendmentDetail {
   latePaymentPenalty: number;
   /** 참고 — 추가 지방소득세(지자체 별도 신고) */
   additionalLocalIncomeTax: number;
+  /**
+   * US-29 — 참고: 추가 지방소득세에 붙는 가산세(지방세기본법 §54 과소신고 · §57②1호 감면 · §55 납부지연).
+   * 지방자치단체에 따로 신고·납부하므로 국세 `totalPayable`에 넣지 않는다. 가산세 선택이 모두 꺼져 있으면 없다.
+   */
+  localIncomePenalty?: import("../transfer-tax-local-income-penalty").LocalIncomePenaltyDetail;
   /** 수정신고 총 납부세액 = 추가본세 + 가산세 */
   totalPayable: number;
   // ── 경정청구(refund_claim) 전용 — 미지정/amend=기존 수정신고(비파괴) ──

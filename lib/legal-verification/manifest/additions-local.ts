@@ -338,6 +338,26 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
     keywords: ["「국세기본법」 제45조 및 제45조의2에 따라", "납세지를 관할하는 지방자치단체의 장에게", "제49조 및 제50조에 따른 수정신고 또는 경정 등의 청구를 하여야 한다"],
     keywordMode: "ALL",
   },
+  // ── 양도소득분 개인지방소득세 신고기한·기장 불성실가산세 (US-29 · common.ts LOCAL_PENALTY) ──
+  // 원문 지방세법 MST 282559(시행 2026-01-01) 2026-11-10 실독.
+  {
+    id: "LOCAL_TAX.PRELIMINARY_DEADLINE_103_5",
+    citation: "지방세법 §103의5",
+    keywords: ["과세표준 예정신고와 납부", "해당 신고기한에 2개월을 더한 날", "예정신고기한"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "LOCAL_TAX.FINAL_DEADLINE_103_7",
+    citation: "지방세법 §103의7",
+    keywords: ["과세표준 확정신고와 납부", "해당 신고기한에 2개월을 더한 날", "확정신고기한"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "LOCAL_TAX.BOOKKEEPING_PENALTY_103_8",
+    citation: "지방세법 §103의8",
+    keywords: ["기장 불성실가산세", "그 더하는 금액의 100분의 10에 해당하는 금액", "그 중 큰 가산세액만 적용"],
+    keywordMode: "ALL",
+  },
   {
     id: "LOCAL_TAX.CORRECTION_CLAIM_BASIC_50",
     citation: "지방세기본법 §50",

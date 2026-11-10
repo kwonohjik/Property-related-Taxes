@@ -18,6 +18,7 @@ import {
   calculateTransferTaxPenalty,
   type TransferTaxPenaltyResult,
 } from "./transfer-tax-penalty";
+import { computeLocalIncomePenalty, type LocalIncomePenaltyDetail } from "./transfer-tax-local-income-penalty";
 import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
 import type { IncomeDeductionResolution } from "./transfer-reductions/income-deduction-router";
 import {
@@ -376,9 +377,10 @@ export function buildTotalTax(
     ...(post.penaltyDetail ? { penaltyDetail: post.penaltyDetail } : {}),
     ruralSurtax: post.ruralSurtax,
     ...(post.ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty: post.ruralSurtaxDelayedPenalty } : {}),
+    ...(post.localIncomePenalty ? { localIncomePenalty: post.localIncomePenalty } : {}),
     localTax,
     totalPayable:
-      determinedTax + localTax + post.penaltyTax + post.ruralSurtax + (post.ruralSurtaxDelayedPenalty?.penalty ?? 0),
+      determinedTax + localTax + post.penaltyTax + post.ruralSurtax + (post.ruralSurtaxDelayedPenalty?.penalty ?? 0) + (post.localIncomePenalty?.total ?? 0),
   };
 }
 
@@ -456,6 +458,8 @@ interface MixedUsePostTaxResult {
   penaltyDetail?: TransferTaxPenaltyResult;
   /** NH-38 — 농특세 미납분 납부지연가산세(소득세분 `penaltyTax`와 별도 · 단건 finalize와 같은 leaf) */
   ruralSurtaxDelayedPenalty?: RuralSurtaxDelayedPenaltyDetail;
+  /** US-29 — 지방소득세 가산세(지방세기본법 §53~§55 · 단건 finalize와 같은 leaf). `totalPayable`에 포함 */
+  localIncomePenalty?: LocalIncomePenaltyDetail;
 }
 
 /**
@@ -622,6 +626,8 @@ function computeMixedUsePostTax(
       : undefined;
   // NH-38 — 농특세 미납분 납부지연가산세(국세기본법 §2 1호 차목·§47의4①)
   const ruralSurtaxDelayedPenalty = computeRuralSurtaxDelayedPenalty(input.delayedPaymentDetails, surtax.surtax);
+  // US-29 — 지방소득세 가산세(지방세기본법 §53~§55)
+  const localIncomePenalty = computeLocalIncomePenalty(input.filingPenaltyDetails, penalty);
 
   return {
     reductionAmount,
@@ -650,5 +656,6 @@ function computeMixedUsePostTax(
     // 🔴 G-43: 산출근거 echo — 세액은 penaltyTax가 정본이고 여기서 다시 더하지 않는다.
     ...(penalty ? { penaltyDetail: penalty } : {}),
     ...(ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty } : {}),
+    ...(localIncomePenalty ? { localIncomePenalty } : {}),
   };
 }

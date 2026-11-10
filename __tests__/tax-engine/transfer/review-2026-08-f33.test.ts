@@ -69,7 +69,11 @@ describe("F33 — 양도차손 조기반환 경로의 신고불성실·납부지
     expect(r.penaltyDetail!.filingPenalty?.filingPenalty).toBe(5_000_000);
     expect(r.penaltyDetail!.delayedPaymentPenalty?.delayedPaymentPenalty).toBe(2_402_400);
     expect(r.penaltyDetail!.totalPenalty).toBe(7_402_400);
-    expect(r.totalTax).toBe(7_402_400);
+    // US-29 — 지방소득세 가산세 700,640 별도 가산(손계산):
+    //  과소신고 지방 base 50,000,000 × 10% = 5,000,000 × 10% = 500,000
+    //  납부지연 지방 미납 3,000,000 × 304일(2024-11-01 ~ 2025-08-31, 지방 기한 2024-10-31) × 10만분의 22 = 200,640
+    expect(r.localIncomePenalty?.total).toBe(700_640);
+    expect(r.totalTax).toBe(7_402_400 + 700_640);
 
     // 지방소득세 base는 §114조의2분만 — 국기법 가산세는 base에 들어가지 않는다.
     expect(r.penaltyTax).toBe(0);
@@ -106,7 +110,8 @@ describe("F33 — 양도차손 조기반환 경로의 신고불성실·납부지
     expect(r.penaltyDetail).toBeDefined();
     expect(r.penaltyDetail!.filingPenalty).toBeNull();
     expect(r.penaltyDetail!.totalPenalty).toBe(2_402_400);
-    expect(r.totalTax).toBe(2_402_400);
+    // US-29 — 지방 납부지연 200,640(3,000,000 × 304일 × 10만분의 22) 별도 가산
+    expect(r.totalTax).toBe(2_402_400 + 200_640);
   });
 
   it("가산세 미입력 차손: 종전 동작 보존 (penaltyDetail 없음 · totalTax 0)", () => {
