@@ -7,6 +7,7 @@
 import { partAcquisitionDates } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
+import { SHARE_ID_SEPARATOR } from "@/lib/tax-engine/general-building-share-id";
 import { purchasedPartParentIdOf } from "@/lib/tax-engine/general-building-share-id";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { table2ResidencePct } from "@/lib/tax-engine/data/lthd-table2-era";
@@ -116,9 +117,10 @@ export function gbCarryoverAcqDateOverride(
   pid: string,
 ): string | undefined {
   // 함께 부담부증여 묶음(자산 id)·지분 분할(지분 index)은 카드 접미사마다 채택이 다르다(PR-1·PR-2) — 단건 명세는 접미사 없는 카드에만 쓴다.
+  //   연간 합산 지분은 복합 접미사(`<자산id>.<지분번호>`)가 통째로 키다 — 자산 부분(`cardSuffixOf`)이 아니라 `#` 뒤 전체로 찾는다(단건·묶음은 둘이 같다).
   const suffix = cardSuffixOf(pid);
   const detail = suffix !== undefined && aggregated?.burdenedGiftCarryoverUnits
-    ? aggregated.burdenedGiftCarryoverUnits[suffix]
+    ? aggregated.burdenedGiftCarryoverUnits[pid.slice(pid.indexOf(SHARE_ID_SEPARATOR) + SHARE_ID_SEPARATOR.length)]
     : aggregated?.burdenedGiftCarryoverDetail;
   const a = detail?.adoptedScenario === "A" ? detail.scenarioA : undefined;
   if (!a) return undefined;

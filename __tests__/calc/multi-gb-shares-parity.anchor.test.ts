@@ -8,7 +8,7 @@
  * `shareIndexOf`는 지분 번호(지분 짝·지분 echo 키)를 돌려준다. 단건 축 B(`land#0`)·함께 양도(`land#asset-…`)는 점이 없어 종전 그대로다.
  *
  * 지분 × 부담부증여(GS-6)는 단건과 같은 지분 §159 카드로 펼치고, 물건 전체 §159·증여세 명세(`burdenedGiftWholeInfo`)를 결과 상세에 1회 싣는다(트랙 GS-BG).
- * 계속 막는 하위 모드(GS-6b): 지분 × 부담부증여 × 이월과세 — 지분별 A·B 비교 단위를 연간 합산 펼침이 받지 않는다.
+ * 지분 × 부담부증여 × 이월과세(GS-6b · 트랙 GB-BG-CO): 지분별 A·B 비교 단위(키 = 복합 접미사)로 펼친다 — 단건 지분 경로와 같은 조각 함수.
  * 지분 × 이월과세(지분 자산 단위·건물만)는 단건과 같아 막지 않는다(GS-5).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -31,11 +31,11 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
-import { MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { cardSuffixOf, shareIndexOf, isSameShare, shareCardSuffix, baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { gbAssetBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
 import { multiFormAssetOf, multiFormPropertyIdOf } from "@/components/calc/results/transfer/multi-result-groups";
 import { gbFormulaInputsOf } from "@/components/calc/results/transfer/DetailedStatementGbAsset";
+import { gbCarryoverAcqDateOverride } from "@/components/calc/results/transfer/FilingFormTableDateHelpers";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -188,18 +188,49 @@ describe("다건 — 일반건물 지분 분할 취득", () => {
     expect(gainsOf(both.props)).toEqual([79_200_000, 79_200_000, 52_800_000, 52_800_000, 300_000_000]);
   }, 60_000);
 
-  it("[GS-6b] ⑧↔⑫ — 지분 × 부담부증여 × 이월과세는 계속 막는다(같은 문구)", async () => {
+  it("[GS-6b] 🔴 지분 × 부담부증여 × 이월과세 — 지분별 [A]/[B] 비교 단위 · 단건과 같은 세액·채택·물건 전체 명세", async () => {
     const BG = {
       transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgMortgageDebtAmount: "300,000,000",
       bgDonorRelation: "lineal_descendant", bgAcquisitionMethod: "actual", landAcqMode: "actual", buildingAcqMode: "actual", useEstimatedAcquisition: false,
       bgActualAcquisitionLand: "60,000,000", bgActualAcquisitionBuilding: "60,000,000",
     } as Partial<AssetForm>;
-    // 둘째 지분은 부담부증여 표지 없이 이월과세만 — ④는 첫 자산 표지로 전 지분에 `carryoverTaxation`을 싣는다(지분 단독 ⑧ 검사로는 안 잡힌다)
-    const f = sharesForm({ acquisitionCause: "carryover_gift", carryover: CO } as Partial<AssetForm>, BG);
-    expect(validateMultiSupportedMode(f)).toBe(MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE);
-    const res = await postMulti(await buildMultiBody([f]));
-    expect(res.status).toBe(400);
-    expect(JSON.stringify(res.json)).toContain(MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE);
+    const share2 = {
+      ...BG, acquisitionCause: "carryover_gift", gbBuildingAcquisitionCause: "carryover_gift", acquisitionDate: "2021-06-01", carryover: CO,
+      bgActualAcquisitionLand: "40,000,000", bgActualAcquisitionBuilding: "40,000,000",
+      bgCoDonorActualAcquisitionLand: "5,000,000", bgCoDonorActualAcquisitionBuilding: "5,000,000",
+    } as Partial<AssetForm>;
+    const f = sharesForm(share2, BG);
+    expect(validateMultiSupportedMode(f)).toBeNull();
+    const s = await single(f);
+    const m = await multi([f]);
+    const data = m.json.data as Obj;
+    const sUnits = s.aggregated.burdenedGiftCarryoverUnits as Record<string, Obj>;
+    const mUnits = data.burdenedGiftCarryoverUnits as Record<string, Obj>;
+    expect([m.totalTax, Object.keys(mUnits)]).toEqual([s.aggregated.totalTax, ["p1.1"]]);
+    expect([s.aggregated.totalTax, mUnits["p1.1"].adoptedScenario, mUnits["p1.1"].determinedTaxA, mUnits["p1.1"].determinedTaxB]).toEqual([64_861_192, "B", 52_845_200, 58_964_720]);
+    for (const k of ["adoptedScenario", "determinedTaxA", "determinedTaxB"]) expect(mUnits["p1.1"][k], k).toEqual(sUnits["1"][k]);
+    expect(gainsOf(m.props)).toEqual(gainsOf(s.aggregated.properties as Obj[]));
+    const bd = ((data.generalBuildingDetailsByAsset as Obj).p1 as Obj).burdenedGiftBreakdown;
+    expect(bd).toEqual((s.json.data as Obj).transferBurdenedGiftBreakdown);
+
+    // A 채택 시료 — 당초 증여자 취득이 최근이면(장특 차이 작음) 취득가액 치환으로 A 결정세액이 커져 §97의2①을 적용한다.
+    //   지분 상세(산식 재료)·물건 전체 명세 취득 열이 A 조각으로 다시 조립되는지(`finalizeShareDetails`)를 단건과 대조한다.
+    const fa = sharesForm({ ...share2, carryover: { ...CO, donorAcquisitionDate: "2019-01-01" } } as Partial<AssetForm>, BG);
+    const sa = await single(fa);
+    const ma = await multi([fa]);
+    const ua = ((ma.json.data as Obj).burdenedGiftCarryoverUnits as Record<string, Obj>)["p1.1"];
+    expect([ma.totalTax, ua.adoptedScenario, ua.determinedTaxA, ua.determinedTaxB]).toEqual([sa.aggregated.totalTax, "A", 61_874_000, 58_964_720]);
+    expect(gainsOf(ma.props)).toEqual(gainsOf(sa.aggregated.properties as Obj[]));
+    const detailA = ((ma.json.data as Obj).generalBuildingDetailsByAsset as Obj).p1 as Obj;
+    expect(detailA.burdenedGiftBreakdown).toEqual((sa.json.data as Obj).transferBurdenedGiftBreakdown);
+    // 상세 전체 — 다건 카드 id는 복합 접미사(`land#p1.1`)라 자산 부분만 지우면 단건 지분 상세(`land#1`)와 같아야 한다(채택 조각으로 조립).
+    // 신고서·명세서 취득일 — A 채택 지분 카드는 당초 증여자 취득일(§95④ 단서). 키는 복합 접미사 통째(`p1.1`)로 찾는다.
+    const mAgg = ma.json.data as AggregateTransferResult;
+    expect([gbCarryoverAcqDateOverride(mAgg, "land#p1.1"), gbCarryoverAcqDateOverride(mAgg, "building#p1.1"), gbCarryoverAcqDateOverride(mAgg, "land#p1.0")])
+      .toEqual(["2019-01-01", "2019-01-01", undefined]);
+    const restA: Obj = { ...detailA };
+    delete restA.burdenedGiftBreakdown;
+    expect(JSON.stringify(restA).replaceAll("p1.", "")).toBe(JSON.stringify(sa.aggregated.generalBuildingValuationDetail));
   }, 60_000);
 
   it("[GS-7] ⑦ — 자산 블록 뷰는 지분별 블록을 그리고, 명세서·폼 조회는 그 카드 지분의 값을 읽는다", async () => {

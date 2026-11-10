@@ -28,6 +28,8 @@ import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { sameDayBuildingDonorDate } from "./_helpers/gb-bg-building-donor-date";
+import { runSingle, buildMultiBody, postMulti } from "../calc/_helpers/single-multi-route-parity";
+import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 
 beforeEach(() => { vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never); });
 afterEach(() => vi.unstubAllGlobals());
@@ -169,6 +171,20 @@ describe("지분 분할 50/50 × 이월과세 — 지분마다 A/B를 신고 단
     expect(acqOf(a.burdenedGiftCarryoverUnits["0"].scenarioA)).toEqual([25_000_000, 50_000_000]);
     expect(acqOf(a.burdenedGiftCarryoverUnits["0"].scenarioB)).toEqual([75_000_000, 75_000_000]);
     expect((await ok(single(gbShare(K7)))).determinedTax).toBe(82_627_700);
+  });
+
+  it("K-7 50/50 연간 합산 — 같은 세액·같은 채택 · 첫 지분이 이월과세 단위라 물건 전체 명세는 양도인 기준으로 읽는다(단건과 같은 명세)", async () => {
+    // 연간 합산 ④는 폼 전체(기본값 포함)를 읽는다 — 이 파일의 최소 폼에 기본값을 깐다(값은 같다).
+    const f = { ...createDefaultTransferFormData(), ...shares(gbShare(K7), gbShare(K7)) } as TransferFormData;
+    const s = await runSingle(f);
+    const m = await postMulti(await buildMultiBody([f]));
+    expect(m.status, JSON.stringify(m.json).slice(0, 300)).toBe(200);
+    const data = m.json.data as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+    expect(s.status).toBe(200);
+    const sAgg = (s.json.data as Record<string, any>).aggregated; // eslint-disable-line @typescript-eslint/no-explicit-any
+    expect([data.determinedTax, m.totalTax]).toEqual([82_627_700, sAgg.totalTax]);
+    expect(Object.fromEntries(Object.entries(unitsOf(data)).map(([k, v]) => [k.replace("p1.", ""), v]))).toEqual(unitsOf(sAgg));
+    expect(data.generalBuildingDetailsByAsset.p1.burdenedGiftBreakdown).toEqual((s.json.data as Record<string, unknown>).transferBurdenedGiftBreakdown);
   });
 
   it("②3호 — A가 적으면 B: 당초 증여자 기준시가가 양도인과 같으면 A 56,886,880 < B ⇒ 99,000,000(종전 56,286,880 · 97,800,000) · 신고 카드·산식 재료·명세는 B 그대로", async () => {

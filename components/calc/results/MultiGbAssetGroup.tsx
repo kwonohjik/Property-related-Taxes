@@ -17,6 +17,8 @@ import { GbResultBlocks } from "@/components/calc/results/transfer/GbResultBlock
 import { GeneralBuilding3WayTable } from "@/components/calc/results/transfer/GeneralBuilding3WayTable";
 import { gbAssetBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
+import { GbBurdenedGiftCarryoverCard } from "@/components/calc/results/transfer/GbBurdenedGiftCarryoverCard";
+import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 
@@ -36,6 +38,8 @@ export function MultiGbAssetGroup({
   const hasDetail = !!result.generalBuildingDetailsByAsset?.[formPropertyId];
   const view = hasDetail ? gbAssetBlockView(result, formPropertyId, label, property?.form?.assets[0]) : undefined;
   const bgBreakdown = result.generalBuildingDetailsByAsset?.[formPropertyId]?.burdenedGiftBreakdown;
+  // 부담부증여 × 이월과세 [A]/[B] 비교 — 키는 자산 id, 지분은 복합 접미사(`<자산id>.<지분번호>`). 자산 부분으로 이 물건 것만 고른다.
+  const carryoverUnits = Object.entries(result.burdenedGiftCarryoverUnits ?? {}).filter(([key]) => cardSuffixOf(`#${key}`) === formPropertyId);
   const taxBaseShare = cards.reduce((s, c) => s + (c.isExempt ? 0 : c.taxBaseShare), 0);
 
   return (
@@ -64,6 +68,12 @@ export function MultiGbAssetGroup({
             <BurdenedGiftDetailCard breakdown={bgBreakdown} propertyType="general_building" />
           </div>
         )}
+        {/* 연간 합산은 그 해 전체 결정세액으로 비교한다(§97의2②3호) — 함께 부담부증여 묶음과 같은 자산별 카드(신고 전체 A·B). */}
+        {carryoverUnits.map(([key, unit]) => (
+          <div key={key} className="pt-3">
+            <GbBurdenedGiftCarryoverCard detail={unit} assetLabel={unit.assetLabel} />
+          </div>
+        ))}
         <div className="pt-3 space-y-2">
           {cards.map((c) => (
             <PropertyBreakdownAccordion key={c.propertyId} breakdown={c} property={property} />

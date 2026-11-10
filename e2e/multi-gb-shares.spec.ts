@@ -5,6 +5,8 @@
  *   MGS-E1 차단 문구 없음 → 「세액 계산」 200 · 본문 `properties[0].generalBuildingShares` 2건 ·
  *          응답 카드 id 복합 접미사(`land#<항목 id>.<지분번호>` — Q-2 a) · 결과는 일반건물 1행이고 펼치면 두 지분의 카드가 보인다.
  *   MGS-E2 지분 × 부담부증여 → 200 · 본문 지분별 §159(채무 지분 안분)·물건 전체 §159 · 결과 일반건물 행에 §159 명세 카드.
+ *   MGS-E3 지분 × 부담부증여 × 이월과세(둘째 지분 · A 채택) → 200 · 본문 지분 `carryoverTaxation`(최상위 없음) · 단위 키 복합 접미사 ·
+ *          결과 일반건물 행에 그 지분의 [A]/[B] 비교 카드(트랙 GB-BG-CO — 단건 68,061,400과 같은 입력은 anchor GS-6b).
  * 사람이 브라우저로 직접 한 수동 확인은 아니다(headless Playwright). 워크트리는 `E2E_PORT=<포트> npx playwright test <spec>`.
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -112,4 +114,41 @@ test("MGS-E2: 다건 — 일반건물 지분 분할 × 부담부증여 → 계�
   const group = page.getByTestId("multi-gb-group-mgs-1");
   await expect(group).toBeVisible({ timeout: 15_000 });
   await expect(group.getByText("부담부증여 평가 명세 (소득세법 시행령 §159)").first()).toBeAttached();
+});
+
+/** 지분 × 부담부증여 × 이월과세(트랙 GB-BG-CO) — anchor GS-6b의 A 채택 시료와 같은 입력. */
+const CO_SHARE = {
+  ...BG, acquisitionCause: "carryover_gift", gbBuildingAcquisitionCause: "carryover_gift", acquisitionDate: "2021-06-01",
+  bgActualAcquisitionLand: "40,000,000", bgActualAcquisitionBuilding: "40,000,000",
+  bgCoDonorActualAcquisitionLand: "5,000,000", bgCoDonorActualAcquisitionBuilding: "5,000,000",
+  carryover: {
+    ...makeDefaultAsset(2).carryover, giftRegistryDate: "2021-06-01", donorAcquisitionDate: "2019-01-01", donorAcquisitionPrice: "10000000",
+    useEstimatedAcquisition: false, giftTaxAmount: "0", donorCapitalExpenditure: "", giftDateValuation: "300000000", donorRelation: "spouse", donorSameHousehold: "no",
+  },
+};
+
+test("MGS-E3: 다건 — 지분 × 부담부증여 × 이월과세 → 계산되고 일반건물 행에 그 지분의 [A]/[B] 비교 카드가 뜬다", async ({ page }) => {
+  test.setTimeout(150_000);
+  await seedMulti(page, [
+    formOf([{ ...SHARES[0], ...BG }, { ...SHARES[1], ...CO_SHARE }], "2024-06-01", "1000000000", { assetSplitMode: "fractional" }),
+  ]);
+  await expect(page.getByText(/단건 계산기에서만 지원/)).toHaveCount(0);
+
+  const resp = page.waitForResponse((r) => r.url().includes("/api/calc/transfer/multi") && r.request().method() === "POST", { timeout: 30_000 });
+  await page.getByRole("button", { name: "세액 계산" }).click();
+  const r = await resp;
+  const json = (await r.json()) as Loose;
+  const sent = r.request().postDataJSON() as Loose;
+  expect(r.status(), JSON.stringify(json).slice(0, 400)).toBe(200);
+  const p0 = sent.properties?.[0];
+  expect(p0?.carryoverTaxation).toBeUndefined();
+  expect((p0?.generalBuildingShares as Loose[]).map((s) => s.carryoverTaxation?.donorAcquisitionDate)).toEqual([undefined, "2019-01-01"]);
+  expect(json.data?.totalTax).toBe(68_061_400);
+  const unit = json.data?.burdenedGiftCarryoverUnits?.["mgs-1.1"];
+  expect([unit?.adoptedScenario, unit?.determinedTaxA, unit?.determinedTaxB]).toEqual(["A", 61_874_000, 58_964_720]);
+
+  const group = page.getByTestId("multi-gb-group-mgs-1");
+  await expect(group).toBeVisible({ timeout: 15_000 });
+  await expect(group.getByTestId("gb-bg-carryover-card")).toHaveCount(1);
+  await expect(group.getByTestId("gb-bg-carryover-card").first()).toContainText("이월과세 비교과세 결과");
 });
