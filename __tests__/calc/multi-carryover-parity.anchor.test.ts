@@ -9,7 +9,8 @@
  * `project_transfer_carryover_filing_unit_scope`). 그래서 다른 자산과 함께면 단건과 채택 시나리오가 **갈릴 수 있고
  * 그것이 정상이다** — CO-3이 그 시료(엔진 N1-01과 같은 물건)를 고정한다.
  *
- * 계속 막는 하위 모드(CO-4): 파트 이월과세(토지만·건물만·증여자 분리) · 당초 증여 때 인수한 채무 부분(매입분).
+ * 당초 증여 때 인수한 채무 부분(매입분 · CO-4a 트랙 CO-DEBT)도 단건과 같다 — 집계가 조각으로 나누고, 예정신고 세액은 카드 1장짜리 집계로 한다.
+ * 계속 막는 하위 모드(CO-4c): 파트 이월과세(토지만·건물만·증여자 분리).
  * 일반건물 이월과세는 트랙 G 펼침이 단건과 같은 카드로 옮겨 막지 않는다(CO-5).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -31,13 +32,13 @@ import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import {
-  MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE,
   MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE,
 } from "@/lib/calc/multi-transfer-support-messages";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { runSingle, buildMultiBody, postMulti } from "./_helpers/single-multi-route-parity";
+import { groupMultiResultRows } from "@/components/calc/results/transfer/multi-result-groups";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -175,17 +176,72 @@ describe("다건 — 배우자등 이월과세(§97의2)", () => {
   }, 60_000);
 });
 
-describe("다건 — 계속 막는 이월과세 하위 모드(⑧·⑫ 같은 문구)", () => {
-  it("[CO-4a] 채무 인수분(매입분) — ⑧ · ⑫", async () => {
-    const f = form({ ...CO_HOUSE, carryover: carryover({ giftDebtAssumed: true, giftAssumedDebt: "100000000" }) });
+describe("다건 — 이월과세 하위 모드: 채무 인수분(연다) · 파트 이월과세(⑧·⑫ 같은 문구로 막는다)", () => {
+  it("[CO-4a] 🔴 채무 인수분(매입분) — 단건과 같은 세액·조각 · 무신고 가산세 1회(조각마다 아님) · 아파트와 함께", async () => {
+    // A 채택(채무 1억 — 증여분·매입분 두 조각) · B 채택(채무 3억 — 조각 없음)
+    const cases: Array<[string, number, number, string, number]> = [
+      ["100000000", 146_806_000, 176_167_200, "A", 2],
+      ["300000000", 135_806_000, 162_967_200, "B", 1],
+    ];
+    for (const [debt, tax, taxWithPenalty, scenario, rows] of cases) {
+      const f = form({ ...CO_HOUSE, carryover: carryover({ giftDebtAssumed: true, giftAssumedDebt: debt }) });
+      const body = await buildMultiBody([f]);
+      // 화면이 채무를 실었는지부터 — 실리지 않으면 이 시료는 채무 경우가 아니다.
+      expect(((body.properties as Obj[])[0].carryoverTaxation as Obj | undefined)?.giftAssumedDebt).toBe(Number(debt));
+      expect(validateMultiSupportedMode(f)).toBeNull();
+      const s = await single(f);
+      const sAgg = (s.json.data as Obj).aggregated as Obj;
+      const m = await multi([f]);
+      expect([sAgg.totalTax, m.totalTax], debt).toEqual([tax, tax]);
+      expect(m.props.map((p) => p.transferGain)).toEqual((sAgg.properties as Obj[]).map((p) => p.transferGain));
+      expect([adopted(m.props[0]), m.props.length]).toEqual([scenario, rows]);
+      // 무신고 가산세 — 자산 1건 = 신고 1건(조각마다 부과하면 두 배)
+      const fp = form({ ...CO_HOUSE, carryover: carryover({ giftDebtAssumed: true, giftAssumedDebt: debt }) }, { enablePenalty: true, filingType: "none" });
+      const sp = (await single(fp)).json.data as Obj;
+      const mp = await multi([fp]);
+      expect([((sp.aggregated as Obj).totalTax), mp.totalTax, (mp.json.data as Obj).penaltyTax], debt).toEqual([taxWithPenalty, taxWithPenalty, (sp.aggregated as Obj).penaltyTax]);
+    }
+    // 아파트와 함께 — 채무 인수분 조각 양도차익 그대로
+    const f1 = form({ ...CO_HOUSE, carryover: carryover({ giftDebtAssumed: true, giftAssumedDebt: "100000000" }) });
+    const both = await multi([f1, APT]);
+    expect(both.props.map((p) => [p.propertyId, p.transferGain])).toEqual([["p1", 483_333_333], ["p2", 300_000_000], ["p1__purchased", 66_666_667]]);
+    // ⑦ 결과 행 — 매입분 꼬리 카드는 그 자산(폼 항목 p1)의 행으로 묶인다(종전엔 폼 항목이 없는 별도 행)
+    expect(groupMultiResultRows(both.props as Array<Obj & { propertyId: string }>).map((g) => [g.formPropertyId, g.rows.map((r) => r.propertyId)]))
+      .toEqual([["p1", ["p1", "p1__purchased"]], ["p2", ["p2"]]]);
+  }, 120_000);
+
+  it("[CO-4a2] 채무 인수분 × 같은 날 취득 분양권 — 같은 날 권리 고지 판정도 단건 엔진 대신 카드 1장짜리 집계로(종전 경로면 채무 키에서 멈춘다)", async () => {
+    const right = { id: "r1", type: "presale_right", acquisitionDate: "2024-06-01", region: "capital" } as unknown as TransferFormData["presaleRights"][number];
+    const f = form({ ...CO_HOUSE, carryover: carryover({ giftDebtAssumed: true, giftAssumedDebt: "100000000" }) }, { presaleRights: [right], householdNoPresaleRightsConfirmed: false });
     const body = await buildMultiBody([f]);
-    const ct = (body.properties as Obj[])[0].carryoverTaxation as Obj | undefined;
-    // 화면이 채무를 실었는지부터 — 실리지 않으면 이 시료는 채무 경우가 아니다.
-    expect(ct?.giftAssumedDebt).toBe(100_000_000);
-    expect(validateMultiSupportedMode(f)).toBe(MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE);
-    const m = await postMulti(body);
-    expect(m.status).toBe(400);
-    expect(JSON.stringify(m.json)).toContain(MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE);
+    expect(((body.properties as Obj[])[0].presaleRights as unknown[] | undefined)?.length).toBe(1);
+    const s = await single(f);
+    const sAgg = (s.json.data as Obj).aggregated as Obj;
+    const m = await multi([f]);
+    const notice = (w: unknown) => (w as string[]).some((x) => x.includes("같은 날"));
+    expect([m.totalTax, notice((m.json.data as Obj).warnings)]).toEqual([sAgg.totalTax, notice(sAgg.warnings)]);
+  }, 60_000);
+
+  it("[CO-4b] 🔴 일반건물 토지 파트 이월과세 × 채무 인수분 + 무신고 — 가산세 1회(종전 매입분 조각에도 부과돼 56,784,000 · 단건 28,392,000)", async () => {
+    // 일반건물은 파트 카드에 채무가 실려 트랙 G 펼침으로 이미 연간 합산에 들어왔다 — 세액은 같았고 가산세만 두 배였다.
+    const gb: Partial<AssetForm> = {
+      addressJibun: "서울 강남구 테스트동 1-1", regionCode: "1168010100", assetKind: "general_building", acquisitionCause: "carryover_gift", gbBuildingAcquisitionCause: "purchase",
+      acquisitionDate: "2021-03-01", useEstimatedAcquisition: true, landAcqMode: "estimated", buildingAcqMode: "estimated",
+      gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000",
+      gbZoneType: "general_residential", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
+      carryover: {
+        ...CARRYOVER_DEFAULTS, giftRegistryDate: "2021-03-01", donorAcquisitionDate: "2005-06-15", donorAcquisitionPrice: "150,000,000", giftDateValuation: "400,000,000",
+        giftTaxCalculated: "30,000,000", giftTaxBase: "1,000,000,000", donorRelation: "lineal", donorSameHousehold: "no", giftDebtAssumed: true, giftAssumedDebt: "100,000,000",
+      } as CarryoverTaxationForm,
+    };
+    const f = form(gb, { transferDate: "2026-03-01", contractTotalPrice: "1,000,000,000", enablePenalty: true, filingType: "none" });
+    expect(validateMultiSupportedMode(f)).toBeNull();
+    const sAgg = ((await single(f)).json.data as Obj).aggregated as Obj;
+    const m = await multi([f]);
+    const data = m.json.data as Obj;
+    expect(sAgg.penaltyTax).toBe(28_392_000);
+    expect([m.totalTax, data.penaltyTax]).toEqual([sAgg.totalTax, 28_392_000]);
+    expect(m.props.map((p) => p.propertyId)).toEqual(["land#p1", "building#p1", "land__purchased#p1"]);
   }, 60_000);
 
   it("[CO-4c] 파트 이월과세 키 — ⑫(API 직접)", async () => {

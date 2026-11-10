@@ -68,7 +68,9 @@ export function applyDebtUnits(
   for (const [i, u] of units) {
     if (overrides[i] !== "A") continue;
     props[i] = u.gift ?? u.purchased;
-    if (u.gift) tail.push(u.purchased);
+    // 매입분 꼬리 카드는 자산-수준 가산세 입력을 싣지 않는다 — 두 조각은 신고 1건(그 자산)이고 가산세 base는 자산 전체의 예정신고 세액이다
+    //   (연간 합산 route가 부모 카드에 주입). 부모를 복사한 채로 두면 가산세가 두 번 부과된다(실측 26,692,000 → 53,384,000).
+    if (u.gift) tail.push({ ...u.purchased, filingPenaltyDetails: undefined, delayedPaymentDetails: undefined });
   }
   return [...props, ...tail];
 }
