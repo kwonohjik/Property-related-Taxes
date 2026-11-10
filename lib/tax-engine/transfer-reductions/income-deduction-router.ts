@@ -128,7 +128,9 @@ export interface Track127_7Conflict {
  * §127⑦ 트랙 교차 단일 소스 — ⑧ validate·⑤ 패널이 공유한다.
  * 충돌: (a) 차감형 + 세액감면형 (D10-01), (b) 세율·장특 특례 + 다른 어떤 트랙 조문(US-45 Q-8 (a) — §98+§99 동시 충족 포함).
  * (c) 임대 장특 특례(§97의3·§97의4) + 다른 어떤 분류 조문 — 명문 배제 3쌍 제외(조심 2024서2915 · 계획서 `rental-97-3-4-track-127-7.plan.md` · `rental-97-overlap-v6.plan.md`).
- * 차감형끼리·세액감면형끼리는 각자 경로(`resolveIncomeDeduction` 1건·`calcReductions` max)가 하나만 고른다.
+ * 차감형끼리는 `resolveIncomeDeduction` 1건이, 세액감면형끼리는 `calcReductions` max가 하나만 고른다.
+ * 단 **임대 세액감면 계열(§97 본문·단서·§97의2·§97의5) 안 쌍은 max가 돌지 않는다** — `evaluateRental97TaxAmount`가 첫 항목만 평가해
+ * 후보가 하나뿐이라서다(순서로 세액이 갈렸다). 그 쌍은 ⑧·⑫가 막는다(`rental-97-tax-amount-overlap.ts`, 계획서 `rental-97-v6-proviso-pairs.plan.md`).
  */
 export function findTrack127_7Conflict(
   types: ReadonlyArray<string>,

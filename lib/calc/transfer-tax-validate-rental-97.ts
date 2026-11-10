@@ -15,6 +15,8 @@ import { rentalProrationIssue } from "./transfer-tax-validate-rental-proration";
 import { rentalConversionIssue } from "./transfer-tax-validate-rental-conversion";
 import { rental973LongRegistrationDate } from "./transfer-tax-validate-rental-conversion";
 import { findRental97StatutoryOverlap } from "@/lib/tax-engine/transfer-reductions/rental-97-statutory-overlap";
+import { findRental97TaxAmountOverlap } from "@/lib/tax-engine/transfer-reductions/rental-97-tax-amount-overlap";
+import { rental97TaxAmountOverlapMessage } from "@/lib/tax-engine/transfer-reductions/rental-97-tax-amount-overlap";
 import { rental97StatutoryOverlapMessage } from "@/lib/tax-engine/transfer-reductions/rental-97-statutory-overlap";
 import { hasRentIncreaseRule } from "./rental-rent-increase-label";
 import { RENT_INCREASE_VIOLATION_LABEL } from "./rental-rent-increase-label";
@@ -168,8 +170,14 @@ export function rental97SeriesIssue(args: {
     }
     // D2-05 — 명문 배제 쌍: 조특법 §97의5②(§97의5 × §97의3·§97의4) · §97의3②(§97의3 × §97의4). ⑫와 같은 단일 소스(`rental-97-statutory-overlap.ts`).
     // ⑧에도 같은 상호배타를 둬야 「UI 통과 ↔ 엔진 배제」 모순이 생기지 않는다.
-    const overlap = findRental97StatutoryOverlap((asset.reductions ?? []).map((o) => o.type));
+    const overlapTypes = (asset.reductions ?? []).map((o) => o.type);
+    const overlap = findRental97StatutoryOverlap(overlapTypes);
     if (overlap && overlap.subject === r.type) return fail(rental97StatutoryOverlapMessage(overlap));
+    // 세액감면 계열(§97 본문·단서·§97의2·§97의5) 안 쌍 — 엔진이 첫 항목만 평가해 순서로 세액이 갈리던 것을 막는다(V-6 미측정분 Q-2 b).
+    // 명문 배제 쌍과 한 카드에 함께 있으면 §127⑦ 트랙 교차(본문·단서·§97의2 × §97의3/4)가 항상 먼저 걸려 여기까지 오지 않는다 —
+    // 세액감면 쌍에는 §97의5가 아닌 구성원이 반드시 있고 그 구성원이 §97의3/4와 트랙 충돌이다. ⑫도 같은 순서라 문구가 일치한다.
+    const taxOverlap = findRental97TaxAmountOverlap(overlapTypes);
+    if (taxOverlap && taxOverlap.subject === r.type) return fail(rental97TaxAmountOverlapMessage(taxOverlap));
     // D2-06 — 안분이 있는 두 조문만(§97의3⑤·§97의5②). 안분 축 검사는 leaf로 분리했다 — 엔진과 같은 의제 개시일·양도일 구간.
     if (r.type === "rental_97_3" || r.type === "rental_97_5") {
       const prorationIssue = rentalProrationIssue({ r, label, asset, assetIndex: ai, form, redevHiddenStd });
