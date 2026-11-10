@@ -1,6 +1,6 @@
 # 다건 건별 표시값 후속 2 — 비교과세 · 분할(GB) 자산의 §97·§99 감면 · 4건 이상
 
-- 상태: **결정 대기**(Q-1) — 기준 master `639bf8798`.
+- 상태: **구현 완료**(Q-1 a 적용, §6) — 기준 master `639bf8798`.
 - 출처: `multi-per-asset-display-followup.plan.md` §6.5 V-4 — ① 비교과세에서 `Σ건별 산출 ≠ 합산 산출`이 되는 입력 ② 분할(GB) 자산의 §97·§99 계열 감면 ③ 4건 이상.
 - 방법: throwaway probe 2개(`__tests__/api/zz-probe-rc*.test.ts`, 커밋하지 않고 삭제) — ①③은 집계 엔진 직접 호출(`calculateTransferTaxAggregate` + `makeMockRates`, 중과 시료만 `makeMockRatesWithHouseEngine`), ②는 다건 route 직접 호출(세율표 route 폴백). 양도일 2024-06-01(GB는 2024-03-01), 코드 변경 없음.
 
@@ -85,3 +85,32 @@
 - V-5: **실제 비사업용 중과(`rateGroup = non_business_land` 등 고정 세율군) 시료** — 이번 시료의 `isNonBusinessLand`는 mock 세율표에서 중과로 이어지지 않아(E·H·J) 일반 누진으로 측정됐다. 중과·단기·미등기가 «고정 세율군이라 1건이면 일치» 한다는 결론은 B·C·D·F(단기·미등기·다주택 중과)로만 확인했다.
 - V-4: 엔진을 route 밖에서 직접 부르는 경로(일반건물 + §97)가 있는지 — 라우트·호출처 전수는 하지 않았다.
 - 브라우저 수동 확인은 하지 않았다(엔진·route 직접 호출).
+
+## 6. 구현 결과 (Q-1 a — 사용자 「Q-1 a로 진행해」)
+
+### 6.1 변경 — 주석 4곳 (동작·문구·테스트 불변)
+
+| 위치 | 변경 |
+|---|---|
+| `lib/tax-engine/transfer-tax-aggregate-group-tax.ts:139` | «비교과세의 본질» → «같은 세율군(일반 누진) 자산이 2건 이상이면 비교과세 유무와 무관하게 어긋난다» + 이 계획서 §1 링크. «타입 문서가 … 명시» 괄호는 타입 문서를 같이 고쳐 제거 |
+| `components/calc/results/transfer/FilingFormTableAggregateHelpers.ts:330` | 같은 정정 |
+| `components/calc/results/MultiTransferPropertyBreakdown.tsx:237` | 같은 정정 |
+| `lib/tax-engine/types/transfer-aggregate.types.ts:312` | 같은 정정 (**이 계획서 §1.3 표에 없던 4번째 위치** — 아래 정정) |
+
+- 변경 줄 7+/6− 전부 주석이다(`git diff`에서 주석 접두 외 변경 줄 0건 확인).
+- 주식(`stock-transfer-aggregate.ts:75`)은 측정하지 않아 손대지 않았다(Q-1 c 비채택).
+
+### 6.2 정정 (정직 공개)
+
+§1.3 표는 «양도세 3곳 + 주식 1곳»이라 적었으나 **`transfer-aggregate.types.ts:312`(타입 문서)가 빠져 있었다** — `group-tax.ts:139` 주석이 «타입 문서가 … 명시»라고 가리키던 그 문서다. 구현 때 `grep "차이 가능|비교과세 적용 시"`로 전수해 양도세 4곳을 확인했다. 내 첫 grep이 «비교과세의 본질» 등 특정 구절로만 걸러 이 문구를 놓쳤다.
+
+### 6.3 검증
+
+- 주석만 변경이라 anchor·뮤테이션은 해당 없음(동작 변경이 없어 실패시킬 대상이 없다).
+- `tsc --noEmit` · 변경 4파일 `eslint` · 회귀 5묶음: 아래 §6.4.
+
+### 6.4 실행 결과
+
+- `tsc --noEmit` 0건 · 변경 4파일 `eslint` 0(경고 포함).
+- 회귀: 주석만 바뀌어 5묶음을 따로 돌리지 않고 **pre-push 전체 vitest 게이트**(`lib/tax-engine/**` 포함 → 전체 범위)에 맡겼다. 결과는 아래 «pre-push 결과».
+
