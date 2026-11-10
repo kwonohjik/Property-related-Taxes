@@ -108,10 +108,15 @@ import { carryoverPurchasedPartLine } from "@/lib/tax-engine/transfer-tax-carryo
 import { splitCarryoverDebtNotices } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 import { splitCarryoverView } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
+import { companionRightStatementText } from "./companion-right-exemption-facts";
 export { findStepByLabel, buildPerAssetWithFormula };
 
 
 // ── 32 항목 빌더 ──────────────────────────────────────────────────
+
+function appendCompanionRightText(formula: string, text: string | undefined): string {
+  return text ? `${formula} · ${text}` : formula;
+}
 
 /**
  * 32 항목 → StatementItem 매핑 생성.
@@ -573,7 +578,9 @@ export function buildStatementItems(
                   Math.max(0, p.income) + p.longTermHoldingDeduction,
                 )
               : p.transferGain,
-          formula: buildTaxableGainFormula(p),
+          // 함께 양도(일괄) 컴패니언 입주권의 §89①4호 비과세·12억 안분 — 화면 카드(`CompanionRightExemptionNote`)와 같은 근거를 밝힌다.
+          // 다건(`propertyFormMap` 있음)은 자산마다 따로 양도하므로 「함께 양도 가액 안분」 문구가 맞지 않아 붙이지 않는다.
+          formula: appendCompanionRightText(buildTaxableGainFormula(p), aggregate?.propertyFormMap ? undefined : companionRightStatementText(p.redevelopmentDetail, p.transferPrice)),
         }))
       : undefined,
   });

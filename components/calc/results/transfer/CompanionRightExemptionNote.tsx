@@ -11,41 +11,29 @@
  */
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
-import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
-import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
+import { companionRightFacts, type CompanionRightDetail } from "./companion-right-exemption-facts";
 
-type Detail = Pick<RedevelopmentResult, "oneRightExemptionApplied" | "oneRightHighValueApplied" | "oneRightExemptionClause" | "highValueAllocation">;
-
-const CLAUSE_LABEL = { ga: "가목", na: "나목" } as const;
-const CLAUSE_BASIS = {
-  ga: "양도일 현재 다른 주택·분양권이 없는 1세대",
-  na: "양도일 현재 다른 주택 1채를 보유하고 그 취득일부터 기한 안에 양도하는 1세대",
-} as const;
-
-export function CompanionRightExemptionNote({ detail, transferPrice }: { detail: Detail | undefined; transferPrice: number }) {
-  const clause = detail?.oneRightExemptionClause;
-  if (!detail || !clause) return null;
-  const label = CLAUSE_LABEL[clause];
-  const alloc = detail.oneRightHighValueApplied ? detail.highValueAllocation : undefined;
-  if (alloc) {
-    const threshold = formatHighValueThresholdLabel(alloc.nontaxableThreshold);
+export function CompanionRightExemptionNote({ detail, transferPrice }: { detail: CompanionRightDetail | undefined; transferPrice: number }) {
+  const facts = companionRightFacts(detail);
+  if (!facts) return null;
+  if (facts.kind === "highValue") {
+    const { label, threshold } = facts;
     return (
       <ToneCard tone="amber" title={`§89①4호 ${label} — ${threshold} 초과 안분`} bodyClassName="space-y-1">
         <div data-testid="companion-right-high-value-note" className="space-y-1 text-caption leading-relaxed text-amber-900 dark:text-amber-200">
           <p>
-            이 입주권 몫의 양도가액: {formatKRW(transferPrice)} — {threshold}을 넘어 넘는 비율({(alloc.taxableRatio * 100).toFixed(2)}%)만 과세합니다.
-            비과세 양도차익 {formatKRW(alloc.nontaxableGain)} · 과세 양도차익 {formatKRW(alloc.taxableGain)}.
+            이 입주권 몫의 양도가액: {formatKRW(transferPrice)} — {threshold}을 넘어 넘는 비율({(facts.taxableRatio * 100).toFixed(2)}%)만 과세합니다.
+            비과세 양도차익 {formatKRW(facts.nontaxableGain)} · 과세 양도차익 {formatKRW(facts.taxableGain)}.
           </p>
           <p className="text-micro">{threshold} 비교는 함께 양도 가액을 안분한 이 입주권 몫의 양도가액으로 했습니다(확인 필요).</p>
         </div>
       </ToneCard>
     );
   }
-  if (!detail.oneRightExemptionApplied) return null;
   return (
-    <ToneCard tone="violet" title={`§89①4호 ${label} — 1세대1입주권 비과세`} bodyClassName="space-y-1">
+    <ToneCard tone="violet" title={`§89①4호 ${facts.label} — 1세대1입주권 비과세`} bodyClassName="space-y-1">
       <p data-testid="companion-right-exempt-note" className="text-caption leading-relaxed text-violet-900 dark:text-violet-200">
-        세대가 보유한 유일한 조합원입주권이고 {CLAUSE_BASIS[clause]}라는 입력을 기준으로 이 입주권의 양도소득을 비과세했습니다.
+        세대가 보유한 유일한 조합원입주권이고 {facts.basis}라는 입력을 기준으로 이 입주권의 양도소득을 비과세했습니다.
       </p>
     </ToneCard>
   );
