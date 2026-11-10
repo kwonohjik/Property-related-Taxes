@@ -10,7 +10,8 @@
  * 그것이 정상이다** — CO-3이 그 시료(엔진 N1-01과 같은 물건)를 고정한다.
  *
  * 당초 증여 때 인수한 채무 부분(매입분 · CO-4a 트랙 CO-DEBT)도 단건과 같다 — 집계가 조각으로 나누고, 예정신고 세액은 카드 1장짜리 집계로 한다.
- * 계속 막는 하위 모드(CO-4c): 파트 이월과세(토지만·건물만·증여자 분리).
+ * 파트 이월과세(토지만·건물만·증여자 분리 · CO-4c · 트랙 CO-PART · Q-4 b)도 1건은 단건과 같다 — 파트 A/B는 엔진이 그 자산의 결정세액으로 정하므로
+ * 다른 자산과 함께 신고하면 «확인 필요»를 싣는다(연간 합산의 다른 이월과세는 그 해 전체 결정세액으로 비교).
  * 일반건물 이월과세는 트랙 G 펼침이 단건과 같은 카드로 옮겨 막지 않는다(CO-5).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -32,13 +33,16 @@ import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import {
-  MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE,
+  MULTI_SPLIT_CARRYOVER_ASSET_SCOPE_NOTICE,
 } from "@/lib/calc/multi-transfer-support-messages";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { runSingle, buildMultiBody, postMulti } from "./_helpers/single-multi-route-parity";
 import { groupMultiResultRows } from "@/components/calc/results/transfer/multi-result-groups";
+import { aForm } from "./_helpers/split-carryover-a-form";
+import { bForm } from "./_helpers/split-carryover-b-form";
+import { cForm } from "./_helpers/split-carryover-c-form";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -118,6 +122,8 @@ describe("다건 — 배우자등 이월과세(§97의2)", () => {
   it("[CO-2] 🔴 아파트와 함께 — 이월과세 자산 양도차익 그대로 · 신고단위 비교 근거가 실린다", async () => {
     const m = await multi([form(CO_HOUSE), APT]);
     expect(m.props[0].transferGain).toBe(600_000_000);
+    // 자산 단위 이월과세는 그 해 전체로 비교한다 — 파트 이월과세 고지(그 자산 기준)를 싣지 않는다(CO-4c 짝)
+    expect((m.json.data as Obj).warnings).not.toContain(MULTI_SPLIT_CARRYOVER_ASSET_SCOPE_NOTICE);
     expect(adopted(m.props[0])).toBe("A");
     expect((m.props[0].carryoverTaxationDetail as Obj).filingUnitComparison).toEqual({
       determinedTaxWithCarryover: 250_290_000,
@@ -244,11 +250,27 @@ describe("다건 — 이월과세 하위 모드: 채무 인수분(연다) · 파
     expect(m.props.map((p) => p.propertyId)).toEqual(["land#p1", "building#p1", "land__purchased#p1"]);
   }, 60_000);
 
-  it("[CO-4c] 파트 이월과세 키 — ⑫(API 직접)", async () => {
-    const body = await buildMultiBody([form(CO_HOUSE)]);
-    const p = (body.properties as Obj[])[0];
-    const m = await postMulti({ ...body, properties: [{ ...p, landCarryoverPart: p.carryoverTaxation }] });
-    expect(m.status).toBe(400);
-    expect(JSON.stringify(m.json)).toContain(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE);
-  }, 60_000);
+  it("[CO-4c] 파트 이월과세 — 1건은 단건과 같다(A 토지만 189,486,000 · B 건물만 287,331,000 · C 증여자 분리 330,019,800) · 다른 자산과 함께면 «확인 필요»(Q-4 b)", async () => {
+    // 주택 split 파트 이월과세 격자의 대표 폼(`_helpers/split-carryover-*-form.ts`) — 다건 화면이 읽는 기본값을 깐다.
+    const full = (f: TransferFormData) => ({ ...createDefaultTransferFormData(), ...f, householdNoPresaleRightsConfirmed: true, householdNoOtherHousesConfirmed: true }) as TransferFormData;
+    const cases: Array<[string, TransferFormData, number]> = [
+      ["A", full(aForm("purchase")), 189_486_000],
+      ["B", full(bForm()), 287_331_000],
+      ["C", full(cForm()), 330_019_800],
+    ];
+    const aptLate = form(
+      { assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2018-02-01", actualSalePrice: "900000000", fixedAcquisitionPrice: "600000000", addressJibun: "테스트 2", regionCode: "2826010100" },
+      { contractTotalPrice: "900000000", transferDate: "2025-12-01" },
+    );
+    for (const [name, f, tax] of cases) {
+      expect(validateMultiSupportedMode(f), name).toBeNull();
+      const s = await single(f);
+      const m = await multi([f]);
+      expect([s.totalTax, m.totalTax], name).toEqual([tax, tax]);
+      expect((m.json.data as Obj).warnings, name).not.toContain(MULTI_SPLIT_CARRYOVER_ASSET_SCOPE_NOTICE);
+      // 아파트와 함께 — 파트 A/B는 그 자산 기준이라는 사실을 고지한다(세액은 엔진 그대로)
+      const both = await multi([f, aptLate]);
+      expect((both.json.data as Obj).warnings, name).toContain(MULTI_SPLIT_CARRYOVER_ASSET_SCOPE_NOTICE);
+    }
+  }, 120_000);
 });

@@ -14,7 +14,6 @@
  * 문구는 ⑧과 같은 상수를 쓴다. 이 파일은 서버 스키마가 import하므로 클라이언트 모듈을 끌어오지 않는다.
  */
 import { z } from "zod";
-import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_BURDENED_GIFT_WHOLE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
@@ -43,10 +42,7 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown, data?: Record<strin
   // 배우자등 이월과세(§97의2) — 자산 단위 사건(`carryoverTaxation`)은 ⑭가 단건과 같이 옮긴다(계획서 multi-carryover-bg-gb-shares 트랙 CO).
   //   원인만 있고 서브객체가 없는 입력은 공용 refine(`refinePrimaryAcquisitionInputs` — 「증여 정보가 필요합니다」)이 막는다.
   //   당초 증여 때 인수한 채무 부분(매입분)도 연다(트랙 CO-DEBT) — 집계가 조각으로 나누고, 자산 단독 계산은 카드 1장짜리 집계로 한다(`multi-carryover-debt-units.ts`).
-  // 주택 split 파트 이월과세(P1) — 다건 ⑭는 이 키를 옮기지 않고, ②3호 비교는 신고 전체 결정세액이 필요하다(N-1). 키가 오면 strip(200 + 이월과세 없는 세액) 대신 400. 토지 원인 `carryover_gift`만 있는(서브객체 없는) 입력은 공용 leaf(S1)가 종전 G-1처럼 막는다.
-  carryoverGiftEvent: whenPresent(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE),
-  landCarryoverPart: whenPresent(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE),
-  buildingCarryoverPart: whenPresent(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE),
+  // 주택 split 파트 이월과세 3키(`carryoverGiftEvent`·`landCarryoverPart`·`buildingCarryoverPart`)는 ⑭가 단건과 같은 합성기로 옮긴다(트랙 CO-PART · Q-4 b).
   // 부담부증여(소령 §159) 자산 단위 `burdenedGiftInfo`·`transferType`은 ⑭가 단건과 같이 옮긴다(트랙 BG). 물건·증여계약 전체 명세(`burdenedGiftWholeInfo`)는
   //   일반건물 지분 × 부담부증여만 받는다 — ⑭ 펼침이 그 물건 하나의 결과 명세로만 쓴다(단건 축 B와 같다). 그 밖(함께 양도 등)은
   //   합산 결과 명세가 다른 자산 증여와 섞이므로 거부한다.

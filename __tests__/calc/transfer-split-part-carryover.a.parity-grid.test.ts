@@ -27,7 +27,6 @@ import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { buildPropertyPayload } from "@/lib/calc/multi-transfer-tax-api";
 import { validateMultiSupportedMode } from "@/lib/calc/multi-transfer-tax-validate";
-import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { effectiveLandAcquisitionCause, effectiveLandCarryover, landCauseDisplay } from "@/lib/calc/transfer-land-part-cause";
 import { landRebuildHost } from "@/lib/calc/transfer-land-rebuild";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
@@ -174,8 +173,8 @@ for (const host of ["purchase", "newConstruction"] as const) {
       expect("landCarryoverPart" in body).toBe(false);
     });
 
-    it("다건 — ⑧ 지원 모드 아님(단건 전용 문구) · 우회 시 multi route가 400(strip 금지)", async () => {
-      expect(validateMultiSupportedMode(aForm(host) as never)).toBe(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE);
+    it("다건 — ⑧ 통과 · multi route 200 = 단건 결정세액(⑭ 합성기 · 파트 A/B는 그 자산 기준 — Q-4 b · 트랙 CO-PART)", async () => {
+      expect(validateMultiSupportedMode(aForm(host) as never)).toBeNull();
       const payload = buildPropertyPayload(aForm(host) as never) as Record<string, unknown>;
       expect(payload.landCarryoverPart).toBeTruthy();
       const res = await POST_MULTI(
@@ -185,7 +184,11 @@ for (const host of ["purchase", "newConstruction"] as const) {
           body: JSON.stringify({ taxYear: 2025, properties: [{ propertyId: "p1", propertyLabel: "p1", ...JSON.parse(JSON.stringify(payload)) }], annualBasicDeductionUsed: 0 }),
         }),
       );
-      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(res.status, JSON.stringify(json).slice(0, 300)).toBe(200);
+      const single = await routeOf(POST, await bodyOf(aForm(host)));
+      expect(json.data.determinedTax).toBe(single.json.data.result.determinedTax);
+      expect(json.data.properties[0].splitDetail?.carryoverEvent).toBeTruthy();
     });
 
     it("숨은 이전 형식 필요경비(양도비 입력으로 칸이 숨음) — ⑧ 통과 · ④ expenses 0 · 양도비만 입력한 것과 세액 동일(엔진 S8)", async () => {

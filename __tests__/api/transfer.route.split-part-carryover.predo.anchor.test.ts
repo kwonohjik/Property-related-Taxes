@@ -39,7 +39,6 @@ import {
   PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE,
   LAND_CAUSE_ABSENT_MESSAGE,
 } from "@/lib/tax-engine/transfer-split-part-cause";
-import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 
 const BASE = {
   propertyType: "housing",
@@ -605,14 +604,17 @@ describe("SPCO-T 목표 — 차단 게이트 (Q-5·Q-6·Q-7, 설계서 §6·§8)
     expect(o.r.splitDetail.carryoverEvent.oneHouseExclusion).toBeUndefined();
   });
 
-  it("SPCO-T11 다건(합산): 새 키·`landAcquisitionCause: carryover_gift` 모두 MULTI_REJECT_RULES로 명시 거부 — strip(200)이 아니다 (SPCO-0m 전환)", async () => {
+  it("SPCO-T11 다건(합산): 새 키는 ⑭가 단건과 같은 합성기로 옮긴다 — 단건과 같은 결정세액(2026-11-10 트랙 CO-PART · Q-4 b · 종전 MULTI_REJECT_RULES 거부) · 증여 원인 + 사건 키는 계속 400", async () => {
     const a = await postMulti({ ...A_NEW });
-    expect(a.status).toBe(400);
-    expect(Object.keys(fieldErrors(a))).toEqual(expect.arrayContaining(["properties.0.landCarryoverPart", "properties.0.carryoverGiftEvent"]));
-    expect(fieldErrors(a)["properties.0.landCarryoverPart"]).toContain(MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE);
+    expect(a.status, JSON.stringify(a.body).slice(0, 300)).toBe(200);
+    const one = await post({ ...A_NEW });
+    expect(one.status).toBe(200);
+    expect(a.r.determinedTax).toBe(one.r.determinedTax);
+    expect(a.r.properties[0].splitDetail?.carryoverEvent).toBeTruthy();
     const b = await postMulti({ ...A_FIELDS, landAcquisitionCause: "gift", carryoverGiftEvent: EVENT(), landCarryoverPart: LAND_PART() });
+    // 형제 안전망 — 토지 원인 「증여」인데 이월과세 파트 키가 오면 공용 leaf가 계속 400(다건 전용 규칙이 빠져도 거부가 남는다)
     expect(b.status).toBe(400);
-    expect(Object.keys(fieldErrors(b))).toEqual(expect.arrayContaining(["properties.0.carryoverGiftEvent"]));
+    expect(Object.keys(fieldErrors(b))).toEqual(expect.arrayContaining(["properties.0.landCarryoverPart"]));
   });
 
   it("SPCO-T12 컴패니언: 새 키는 400 (SPCO-0o 전환) — 첫 자산 전용", async () => {

@@ -11,6 +11,7 @@ import {
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { toEngineLandRebuild } from "@/lib/api/transfer-tax-schema-land-rebuild";
+import { composeSplitCarryover } from "@/lib/tax-engine/transfer-split-carryover-compose";
 import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route-map";
 import { mapGiftHouseholdBasis } from "@/lib/api/gift-household-basis-route-map";
 import {
@@ -116,6 +117,15 @@ export function toMultiEngineItem(
     houseFirstDisclosureDate: p.houseFirstDisclosureDate,
     landDonorAcquisitionDate: toOptionalDate(p.landDonorAcquisitionDate),
     landRebuildPriorHouse: toEngineLandRebuild(p.landRebuildPriorHouse),
+    // ⑭ 주택·건물 split 파트 이월과세(§97의2①) — 와이어(사건 1벌 + 파트 N벌) → 엔진 input. 단건 `engine-input.ts`와 같은 합성기(Date 변환·증여세 안분).
+    //   파트 A/B는 엔진(STEP 0.476)이 **그 자산의 결정세액**으로 정한다 — 연간 합산의 다른 이월과세(그 해 전체 비교)와 비교 단위가 다르다(Q-4 b · route 고지).
+    ...composeSplitCarryover({
+      carryoverGiftEvent: p.carryoverGiftEvent,
+      landCarryoverPart: p.landCarryoverPart,
+      buildingCarryoverPart: p.buildingCarryoverPart,
+      landAcquisitionPrice: p.landAcquisitionPrice,
+      buildingAcquisitionPrice: p.buildingAcquisitionPrice,
+    } as Parameters<typeof composeSplitCarryover>[0]),
     landAcqMode: p.landAcqMode,
     buildingAcqMode: p.buildingAcqMode,
     isSeparateAcquisition: p.isSeparateAcquisition,
