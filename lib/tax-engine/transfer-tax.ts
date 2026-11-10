@@ -507,6 +507,7 @@ function calculateTransferTaxCore(
       transferGain,
       usedEstimated,
       depreciationAmount,
+      appliedExpenses,
       estimatedBase,
       estimatedDeduction,
       parsedRates,

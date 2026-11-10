@@ -89,6 +89,8 @@ export interface RentalHousingStepArgs {
   usedEstimated: boolean;
   /** [echo] §97③ 엔진이 취득가액에서 실제로 공제한 감가상각비 — 표시 전용(세액 불변). */
   depreciationAmount?: number;
+  /** [echo] 엔진이 실제 적용한 필요경비(자본적지출+양도비 / 환산이면 개산공제) — 표시 전용(세액 불변). */
+  appliedExpenses: number;
   /** 환산취득가 (분리 표기용) */
   estimatedBase: number;
   /** 개산공제 (분리 표기용) */
@@ -173,7 +175,7 @@ export function runRentalHousingExceptionStep(
   args: RentalHousingStepArgs,
 ): TransferTaxResult | null {
   const {
-    effectiveInput, input, transferGain, usedEstimated, depreciationAmount,
+    effectiveInput, input, transferGain, usedEstimated, depreciationAmount, appliedExpenses,
     estimatedBase, estimatedDeduction, parsedRates, multiHouseSurchargeResult, splitDetail, steps,
     inheritedAcquisitionStep, generalHouseAcquisitionDate, specialHouseExclusionDetail,
     new994Detail, unsold989Detail, houseCountExclusionDetails,
@@ -689,6 +691,16 @@ export function runRentalHousingExceptionStep(
         ? phrp154_10Notice ? args.otherExemptReason : `장기임대주택 보유자 거주주택 비과세 (§155⑳${provisoLabel ? ` · ${provisoLabel}` : ""})`
         : undefined,
     transferGain,
+    /**
+     * [echo] 표시 전용 — 세액 불변. 이 경로는 `finalizeTransferTax`·`buildNormalReturn`을 거치지 않아 종전에는 세 키를 싣지 않았다.
+     *  - `exemptGrossGain`: 전액 비과세(`isExempt`)면 소비처가 `isExempt ? exemptGrossGain ?? 0 : transferGain`으로 gross를 읽는다
+     *    (`exempt-gross-gain.ts`). 없으면 「전체 양도차익」 0 · 취득가액 = 양도가액 전액으로 찍혔다(실측 10억 → 1,000,000,000, 정답 300,000,000).
+     *  - `expenses`·`capitalExpenditureForDisplay`: 없으면 양도비가 0으로 찍히고 취득가액에 흡수됐다(양도비 20,000,000 → 취득가액 320,000,000).
+     *    일반 경로(`transfer-tax-normal-return.ts`)와 같은 필드다. 부분과세(고가주택)에서도 마찬가지였다.
+     */
+    ...(totalTaxableIncomeBeforeDeduction === 0 ? { exemptGrossGain: Math.max(0, transferGain) } : {}),
+    expenses: appliedExpenses,
+    capitalExpenditureForDisplay: input.capitalExpenditure ?? 0,
     taxableGain: totalTaxableIncomeBeforeDeduction,
     splitDetail,
     usedEstimatedAcquisition: usedEstimated,
