@@ -7,7 +7,7 @@
  *
  * 엔진 입력의 `rentalHousingException`은 `TransferTaxInput` **top-level 단일 객체**다
  * (`transfer.types.ts:1032`) — 자산별이 아니다. 그래서 ④는 단건·다건 모두 primary만 보낸다
- * (`transfer-tax-api.ts:696` · `multi-transfer-tax-api.ts:170`).
+ * (`transfer-tax-api.ts:696` · `multi-transfer-property-payload.ts:213`).
  *
  * 그런데 ⑤는 모든 주택 자산에 카드를 띄우고 ⑧은 **모든 자산**을 돌았다
  * (`transfer-tax-validate.ts:378` 루프):
