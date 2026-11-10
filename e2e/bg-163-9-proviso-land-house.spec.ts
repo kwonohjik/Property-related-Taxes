@@ -4,6 +4,7 @@
  * - BP-1 토지 상속 1988: ② 「부담부증여」 카드에 §164④ 칸 · ③ 안내(D-3m)가 산정방식 · §164④를 가리킨다 · 양도차익 104,446,760.
  * - BP-2 단독주택 증여 2005-04-29: §164⑦ 칸 · 양도차익 513,461,539.
  * - BP-3 같은 주택 · 기준시가 평가: §164 칸 없음 · ③ 안내는 「취득당시 기준시가 × 채무비율」.
+ * - BP-4 상가 상속 2003(PR-2): ② 카드가 ③ §164⑥ 칸을 가리킨다 · ③ §164⑥ 섹션 부담부증여 문구 · 양도차익 205,454,546.
  * 고정값은 route anchor(`transfer.route.bg-163-9-proviso-land-house.anchor.test.ts`)와 같다.
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -102,5 +103,23 @@ test.describe("부담부증여 × §163⑨ 단서 — 토지 · 단독주택", (
     await expect(page.getByText("취득가액 — 부담부증여 §159 자동 산정").first()).toBeVisible();
     await expect(page.getByTestId("bg-163-9-proviso-section")).toHaveCount(0);
     await expect(page.getByText("취득당시 기준시가에").first()).toBeVisible();
+  });
+
+  test("BP-4 상가 상속 2003 — ③ §164⑥ 칸을 가리킨다 · 205,454,546", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seed(page, {
+      addressJibun: "서울 강남구 테스트동 1-1", assetKind: "commercial_building", acquisitionCause: "inheritance", acquisitionDate: "2003-06-01",
+      inheritanceStartDate: "2003-06-01", decedentAcquisitionDate: "1990-01-01", actualSalePrice: "920000000", standardPriceAtTransfer: "400000000",
+      standardPriceAtAcq: "200000000", cbExclusiveArea: "50", cbSharedArea: "20", cbLandArea: "100", cbUnitPriceAtFirstOrAcq: "10000000",
+      cbLandPricePerSqmAtAcq: "500000", cbLandPricePerSqmAtFirst: "700000", cbBuildingStdPriceAtAcq: "30000000", cbBuildingStdPriceAtFirst: "40000000",
+      cbAcqBuildingStdBy164_5: true, ...bg("920000000", "460000000"), bgActualAcquisitionTotal: "100000000",
+    }, "920000000");
+    await open(page, 2);
+    await expect(page.getByTestId("bg-163-9-proviso-section")).toContainText("「§164⑥ 취득당시 기준시가」 칸");
+    await open(page, 3);
+    await expect(page.getByTestId("cb164-6-bg-post-deemed-note")).toContainText("이 값 중 큰 금액");
+    const r = await calc(page);
+    expect(r.sent?.reportedValue).toBe(100_000_000);
+    expect(r.gain).toBe(205_454_546);
   });
 });

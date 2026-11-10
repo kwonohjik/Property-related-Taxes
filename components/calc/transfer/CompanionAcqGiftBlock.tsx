@@ -19,6 +19,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { BgSec159AcqLead } from "./BgSec159AcqLead";
+import type { BgSec163_9ProvisoKind } from "@/lib/calc/bg-163-9-proviso";
 
 interface BlockProps {
   acquisitionDate: string; // 증여일
@@ -44,7 +45,7 @@ interface BlockProps {
   /** 부담부증여 안내 첫 문장(D-3m) — 취득가액이 취득시 기준시가 × 채무비율인가(기준시가 평가 · 담보 승). 미지정이면 그 문장(종전). */
   bgStdBasis?: boolean;
   /** §163⑨ 단서 구간(`bgSec163_9ProvisoKind`) */
-  bgProvisoKind?: "land" | "house" | null;
+  bgProvisoKind?: BgSec163_9ProvisoKind | null;
   /**
    * 신고가액 칸을 숨긴다 — 일반건물 분리 ON. 파트 카드(토지·건물)의 취득가액이 취득가액을 정하고 이 자산 전체 값은 세액에 쓰이지 않는다(⑧도 요구하지 않는다).
    * 필수로 표시된 쓰이지 않는 칸이 사용자를 헷갈리게 했다 — 매매 블록의 `hideAssetAcqAxis` 와 같은 처리다

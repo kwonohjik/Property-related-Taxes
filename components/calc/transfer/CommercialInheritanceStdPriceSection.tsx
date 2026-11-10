@@ -38,6 +38,7 @@ import {
 import { sec164CommercialStatus } from "@/lib/calc/sec164-required-fields";
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
 import { bgPreDeemedUsesThreeWay } from "@/lib/calc/bg-pre-deemed-mode";
+import { bgSec163_9ProvisoKind } from "@/lib/calc/bg-163-9-proviso";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { DEEMED_ACQUISITION_DATE } from "@/lib/calc/transfer-163-9-base-date";
@@ -98,6 +99,21 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
           )}{" "}
           <b>{sec164Status ? `${sec164Status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한 경우에만 쓰고,{" "}
           <b>일부만 입력하면 계산할 때 오류로 안내</b>합니다.
+        </p>
+      ) : asset.transferType === "burdened_gift" ? (
+        // 의제취득일 이후 부담부증여 — §159①1호 A(계획서 bg-163-9-proviso-post-deemed.plan.md PR-2 · Q-24 a: ①은 ‘부담부증여’ 카드 실지 칸)
+        <p data-testid="cb164-6-bg-post-deemed-note" className="text-xs text-amber-700 dark:text-amber-300">
+          {bgSec163_9ProvisoKind(asset) === "commercial" ? (
+            <>
+              부담부증여를 시가 · 실지취득가액으로 계산하면 <b>② 양도정보 ‘부담부증여’ 카드의 실지취득가액 칸({dateLabel} 상증법 평가액)과 이 값 중 큰 금액</b>에
+              채무비율을 곱합니다. <b>{sec164Status ? `${sec164Status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한 경우에만 비교하고,
+              전부 비워두면 평가액만 쓰며, <b>일부만 입력하면 계산할 때 오류로 안내</b>합니다.
+            </>
+          ) : (
+            <>
+              부담부증여는 <b>시가 평가 · 실지취득가액</b>일 때만 이 값을 {dateLabel} 평가액과 비교합니다 — 지금 고른 평가 방식 · 산정방식에서는 계산에 쓰이지 않습니다.
+            </>
+          )}
         </p>
       ) : inheritanceDate && inheritanceDate < DEEMED_ACQUISITION_DATE ? (
         // 의제취득일 전 — ③ 분자도 이 값이다(사용자 결정 A안 · 계획서 commercial-pre-deemed-converted-numerator.plan.md)
