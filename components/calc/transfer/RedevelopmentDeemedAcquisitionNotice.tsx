@@ -17,11 +17,43 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 export function RedevelopmentDeemedAcquisitionNotice({
   acquisitionCause,
   isBurdenedGift = false,
+  bgPreDeemed = false,
+  bgActualFieldCause = null,
+  shareCard = false,
 }: {
   acquisitionCause?: string;
   /** 부담부증여 — ⑤ 실가·환산 라디오가 없고 의제취득일 전이면 §166③ 칸이 늘 뜬다(`redevPreApprovalAcqMode` · PR-7b-4) */
   isBurdenedGift?: boolean;
+  /** 부담부증여 · 의제취득일 전 상속·증여(`isBgPreDeemedAsset`) — ①②③ 3자 max 경로라 아래 종전 문구를 그대로 쓴다. */
+  bgPreDeemed?: boolean;
+  /**
+   * 부담부증여 · 의제취득일 이후 — §159①1호 A가 「실지취득가액」 칸 값이면 그 원인(`bgActualFieldSec163_9Cause`).
+   * 이 경로는 ③ 취득정보의 평가액 칸을 쓰지 않는다 — 종전 문구는 이 페이지에 없는 「상속개시일 평가액」·「증여 신고가액」 칸을 가리켰다(vp2c §27 D-3l).
+   */
+  bgActualFieldCause?: "inheritance" | "gift" | null;
+  /** 축 B 지분 카드(자산 2~N) — 입력 위치가 이 카드 위 지분 토글이다. */
+  shareCard?: boolean;
 }) {
+  if (isBurdenedGift && !bgPreDeemed) {
+    // 부담부증여(의제취득일 이후) — 실지취득가액 칸이 쓰이지 않는 방식(재개발 기준시가 · 환산 · 담보 승 · 승계 입주권)이면 평가액을 넣을 칸이 없어 띄우지 않는다
+    if (!bgActualFieldCause) return null;
+    const isGift = bgActualFieldCause === "gift";
+    const where = shareCard
+      ? "이 카드 위 「이 지분의 취득가액을 자산 1과 따로 입력」을 켜고 그 실지취득가액 칸(끄면 자산 1의 ② 양도정보 값을 씁니다)"
+      : "② 양도정보 ‘부담부증여’ 카드의 실지취득가액 칸";
+    return (
+      <ToneCard
+        tone={isGift ? "violet" : "amber"}
+        title={isGift ? "종전자산 취득가액 — 증여일 상증법 평가액" : "종전자산 취득가액 — 상속개시일 상증법 평가액"}
+        titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
+      >
+        <p className={`text-xs ${isGift ? "text-violet-800 dark:text-violet-200" : "text-amber-800 dark:text-amber-200"}`} data-testid="redev-bg-sec163-9-notice">
+          {isGift ? "증여" : "상속"}로 취득한 종전자산은 {isGift ? "증여일" : "상속개시일"} 현재 상증법 §60~66 평가액({isGift ? "증여세" : "상속세"} 신고·결정가액)을
+          취득당시 실지거래가액으로 봅니다. 부담부증여에서는 이 평가액을 {where}에 입력합니다 — 그 값에 채무비율을 곱합니다(같은 영 §159①1호).
+        </p>
+      </ToneCard>
+    );
+  }
   // ③(§166③)의 입력 위치 — 일반 양도는 ⑤ 라디오의 「환산취득가액」, 부담부증여는 아래 §166③ 칸(라디오 없음)
   const sec166Where = isBurdenedGift ? "아래 §166③ 칸" : "아래 ⑤에서 「환산취득가액」 선택 시";
   if (acquisitionCause === "inheritance") {

@@ -43,6 +43,7 @@ import { redevPreApprovalExpensesUnused, redevPreApprovalExpensesWinnerDependent
 import { redevPreApprovalExpensesScenarioDependent } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
+import { bgActualFieldSec163_9Cause } from "@/lib/calc/bg-share-own-acquisition";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -102,6 +103,8 @@ interface Props {
    * (`shareRedevRightsValueMismatch`). 경고만 하고 막지 않는다 — 계획서 `bg-axis-b-right-share-inputs.plan.md` §9.2.
    */
   firstCardRedevRightsValue?: number;
+  /** 축 B 지분 카드(자산 2~N) — §163⑨ 안내가 이 카드 위 지분 토글을 가리킨다(`shareAcquisitionOnly`와 같은 술어 · vp2c §27 D-3l). */
+  shareCard?: boolean;
   /*
    * 🔄 `wasRegulatedAtAcquisition`은 **지웠다** (P6-c-1). C-1 (a) 거주요건 경고를 그리던
    *    `RedevelopmentRightExemptionSection`이 판정 메뉴 전용이 되면서 이 블록에서 소비처가
@@ -111,7 +114,7 @@ interface Props {
    */
 }
 
-export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgmentLoaded, transferDate, firstCardRedevRightsValue }: Props) {
+export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgmentLoaded, transferDate, firstCardRedevRightsValue, shareCard }: Props) {
   /**
    * 공유지분 모드 여부 — ④ API 변환(`buildRedevelopmentPayload`)과 **같은 술어**를 쓴다.
    * 갈라지면 화면이 「지분 해당분」이라 하는데 엔진은 100%로 취급하는 사고가 난다.
@@ -155,7 +158,13 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
   return (
     <div className="space-y-3">
       {/* 상속·증여 종전자산 취득가액 안내 — §163⑨: 상속개시일/증여일 평가액을 취득가액(실가)으로 사용 */}
-      <RedevelopmentDeemedAcquisitionNotice acquisitionCause={asset.acquisitionCause} isBurdenedGift={asset.transferType === "burdened_gift"} />
+      <RedevelopmentDeemedAcquisitionNotice
+        acquisitionCause={asset.acquisitionCause}
+        isBurdenedGift={asset.transferType === "burdened_gift"}
+        bgPreDeemed={isBgPreDeemedAsset(asset)}
+        bgActualFieldCause={bgActualFieldSec163_9Cause(asset)}
+        shareCard={shareCard}
+      />
 
       {/*
         §⑥ 1세대1입주권 (사례 36 — subject="right" 전용).

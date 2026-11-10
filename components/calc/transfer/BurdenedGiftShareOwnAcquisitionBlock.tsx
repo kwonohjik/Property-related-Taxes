@@ -16,6 +16,8 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { BurdenedGiftAcquisitionMethodField } from "./BurdenedGiftPresumedAcquisitionSection";
 import { bgShareOwnAcquisitionApplies } from "@/lib/calc/bg-share-own-acquisition";
 import { bgShareOwnAcquisitionFields } from "@/lib/calc/bg-share-own-acquisition";
+import { bgActualFieldSec163_9Cause } from "@/lib/calc/bg-share-own-acquisition";
+import { sec163_9Hint } from "@/lib/calc/bg-share-own-acquisition";
 import { bgCollateralForcesStdAcq } from "@/lib/calc/burdened-gift-collateral-win";
 import { bgHouseSplitActive } from "@/lib/calc/bg-house-split";
 
@@ -37,8 +39,10 @@ export function BurdenedGiftShareOwnAcquisitionBlock({ asset, merged, primaryAss
   const actualOnly = fields.length === 1;
   const showActual = on && (actualOnly || (merged.bgAcquisitionMethod === "actual" && !bgCollateralForcesStdAcq(merged, true)));
   const twoParts = merged.assetKind === "general_building" || bgHouseSplitActive(merged, { isNonPrimary: true });
+  // 재개발 · 입주권 상속 · 증여 지분 — 그 칸에 넣을 값은 §163⑨ 평가액이다(vp2c §27 D-3l)
+  const sec163_9 = actualOnly ? sec163_9Hint(bgActualFieldSec163_9Cause(merged)) : undefined;
   const actualField = (key: "bgActualAcquisitionLand" | "bgActualAcquisitionBuilding" | "bgActualAcquisitionTotal", label: string) => (
-    <FieldCard label={label} hint="물건 전체(100%) 기준 — 이 지분 취득 당시 가액을 물건 전체로 환산해 입력하세요(지분율은 시스템이 곱합니다).">
+    <FieldCard label={label} hint={`물건 전체(100%) 기준 — 이 지분 취득 당시 가액을 물건 전체로 환산해 입력하세요(지분율은 시스템이 곱합니다).${sec163_9 ? ` ${sec163_9}` : ""}`}>
       <CurrencyInput label="" hideUnit value={asset[key]} data-field={key} onChange={(v) => onChange({ [key]: v })} />
     </FieldCard>
   );

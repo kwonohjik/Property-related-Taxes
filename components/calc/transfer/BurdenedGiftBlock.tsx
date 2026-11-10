@@ -66,6 +66,8 @@ import { bgAnyCarryover } from "@/lib/calc/bg-carryover-parts";
 import { bgConvertedCarryoverReadsGiftValuation } from "@/lib/calc/bg-carryover-parts";
 import { bgPartialCarryoverGiftValuationPart } from "@/lib/calc/bg-carryover-parts";
 import { isBgSuccessorRight } from "@/lib/calc/transfer-successor-right";
+import { bgActualFieldSec163_9Cause } from "@/lib/calc/bg-share-own-acquisition";
+import { sec163_9Hint } from "@/lib/calc/bg-share-own-acquisition";
 
 interface Props {
   asset: AssetForm;
@@ -537,7 +539,11 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               </FieldCard>
             ) : isSuccessorRight && !originalShareAcqOnSuccessor ? null : (
               <FieldCard
-                hint={originalShareAcqOnSuccessor ? "둘째 이후 원조합원 지분의 계산에 쓰입니다 — 물건 전체 기준으로 입력하면 지분율로 안분됩니다. 이 카드(승계)의 취득가액은 ③ 승계취득 정보의 값입니다." : undefined}
+                hint={
+                  originalShareAcqOnSuccessor
+                    ? "둘째 이후 원조합원 지분의 계산에 쓰입니다 — 물건 전체 기준으로 입력하면 지분율로 안분됩니다. 이 카드(승계)의 취득가액은 ③ 승계취득 정보의 값입니다."
+                    : sec163_9Hint(bgActualFieldSec163_9Cause(asset))
+                }
                 label={originalShareAcqOnSuccessor ? "원조합원 지분의 종전 부동산 실지취득가액" : isRightToMoveIn ? "종전 부동산 실지취득가액" : isMixed ? "실지취득가액 — 주택·상가 전체 (토지 포함)" : "실지취득가액 (주택·건물 전체)"}
               >
                 <CurrencyInput label="" hideUnit

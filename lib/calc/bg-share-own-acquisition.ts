@@ -69,6 +69,26 @@ export function bgShareOwnAcquisitionApplies(merged: AssetForm): boolean {
   );
 }
 
+/**
+ * 재개발 APT · 조합원입주권 부담부증여 — 양도인이 종전 부동산을 상속 · 증여로 취득했고 §159①1호 A가 「(종전 부동산) 실지취득가액」 칸 값인가.
+ * 그 칸에 상속개시일 · 증여일 현재 상증법 평가액을 넣어야 한다(「소득세법 시행령」 §163⑨ 본문 — 계획서 vp2c §27 D-3l · Q-20 a).
+ * 의제취득일 전(③ 3자 max)·이월과세 · 실지가 쓰이지 않는 칸(재개발 기준시가 · K-5 · 담보 승 · 승계 입주권)은 null.
+ * ③ 취득정보의 평가액 칸(`publishedValueAtInheritance` · `fixedAcquisitionPrice`)은 이 경로에서 쓰이지 않는다(`buildInheritedAcquisitionPayload`).
+ */
+export function bgActualFieldSec163_9Cause(asset: AssetForm): "inheritance" | "gift" | null {
+  if (asset.acquisitionCause !== "inheritance" && asset.acquisitionCause !== "gift") return null;
+  if (!SHARE_OWN_ACTUAL_ONLY_KINDS.has(asset.assetKind) || !bgShareOwnAcquisitionApplies(asset)) return null;
+  return asset.acquisitionCause;
+}
+
+/** 실지취득가액 칸 hint — 상속 · 증여 원인이면 그 칸에 넣을 값(§163⑨ 평가액). 그 밖은 undefined. */
+export function sec163_9Hint(cause: "inheritance" | "gift" | null): string | undefined {
+  if (!cause) return undefined;
+  return cause === "gift"
+    ? "증여로 취득했으면 증여일 현재 상증법 평가액(증여세 신고·결정가액)을 입력하세요 — 취득당시 실지거래가액으로 봅니다(소득세법 시행령 §163⑨)."
+    : "상속으로 취득했으면 상속개시일 현재 상증법 평가액(상속세 신고·결정가액)을 입력하세요 — 취득당시 실지거래가액으로 봅니다(소득세법 시행령 §163⑨).";
+}
+
 /** 지분 카드가 자기 네 칸을 쓰는가 — 토글이 켜져 있고 위 범위 안일 때만. */
 export function bgShareOwnAcquisitionActive(share: AssetForm, merged: AssetForm): boolean {
   return share.bgShareOwnAcquisition === true && bgShareOwnAcquisitionApplies(merged);
