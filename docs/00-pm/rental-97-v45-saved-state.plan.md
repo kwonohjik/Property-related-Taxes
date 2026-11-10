@@ -1,6 +1,6 @@
 # 레거시 `long_term_rental`·저장 상태 경로로 한 카드에 임대 조문이 둘 이상 담기는가 (V-6 계획서 V-4·V-5)
 
-- 상태: **결정 대기**. 기준 master `cc4b91094`.
+- 상태: **구현 완료(Q-1 a · Q-2 a, Q-3은 #3144로 이관)**. 기준 master `cc4b91094`. 구현 결과는 §7.
 - 출처: `docs/00-pm/rental-97-overlap-v6.plan.md` §5 V-4(legacy `long_term_rental` 도달 여부) · V-5(저장 이력·정규화로 UI에 임대 조문이 둘 이상 담길 수 있는지).
 - 도달 경로: 패널 라디오가 같은 범주를 하나만 남겨 클릭으로는 임대 조문이 하나만 담긴다(§2.4). 직접 API 호출은 ⑫가 막는다(V-6, #3126). 이번은 **저장 상태 경로**(sessionStorage 복원 · IndexedDB 이력 「편집」 · 백업 가져오기 · 다건 편입)다.
 
@@ -146,7 +146,13 @@ throwaway probe(`__tests__/lib/zz-probe-v45.test.ts` · UI는 `.test.tsx`, 커�
 
 `[97의3, 97의3]` · `[97의4, 97의4]` · `[본문, 본문]` · `[97의5, 97의5]`: ⑧ 통과 · ⑫ 200 · 결과(결정세액·장특·감면)가 **단독과 동일**(예 97의3: 131,726,666 · 장특 303,333,333). 해롭지 않다. 다만 서브폼은 첫 항목만 편집한다(§2.3).
 
-## 4. 결정 대기
+## 4. 결정 (Q-1 a · Q-2 a 확정 · Q-3은 #3144로 이관)
+
+- **Q-1 a 확정** — 구현 변경 없음, 고정 anchor 한 파일(§6·§7).
+- **Q-2 a 확정** — ⑤ 배너 추가 안 함, 코드 변경 없음. 짝이 되는 «패널 라디오가 범주째 비운다» 한 가지만 Q-1 anchor의 D절로 고정했다.
+- **Q-3 이관** — 세액감면형 임대 쌍의 순서 의존은 #3144에서 `src`를 바꿔 처리한다. 이 문서의 anchor는 그 6쌍의 ⑧·⑫ 동작을 고정하지 않는다(머지되면 400으로 반전되므로).
+
+아래 표는 결정 전 검토 내용을 그대로 둔다.
 
 문제가 «현재 사용자 경로»에서는 재현되지 않는다. 아래는 모두 UI·이관이 만들지 못하는 상태를 어떻게 다룰지에 관한 것이다.
 
@@ -189,9 +195,44 @@ throwaway probe(`__tests__/lib/zz-probe-v45.test.ts` · UI는 `.test.tsx`, 커�
 - 법령: §97의3②·§97의5②는 V-6·V-2 계획서의 실독 인용을 따랐고, 이번에 직접 재조회한 것은 §127⑦·§97의3②(MST 284389)뿐이다.
 - 부수 관찰(건드리지 않음): `calcReductions`의 `new_housing`·`unsold_housing` 레거시 분기는 아직 살아 있다(§3.1) — LTR와 같은 처지의 별건. `transfer-tax-reductions-calc.ts:424-426` 주석은 LTR 제거 뒤 낡았다.
 
-## 6. 구현 계획 (결정 후 — 계획만)
+## 6. 구현 계획 (Q-1 a · Q-2 a — 실행함)
 
-- Q-1 a: `__tests__/lib/rental-97-legacy-ltr-migration.anchor.test.ts` 한 파일. 뮤테이션: ① `.map`을 «같은 범주 하나만 남기기»로 바꾸기 ② `reductionSchema`에 LTR 추가 ③ LTR 치환을 건너뛰기. 코드 변경 없음.
-- Q-2 a: 변경 없음(필요하면 Q-1 anchor에 «저장 상태 [97의3, 97의4]를 라디오 클릭이 범주째 비운다» 한 건 추가).
-- Q-3 a(채택 시): 별도 계획서 → `findTrack127_7Conflict` 규칙 추가 + ⑧·⑫ 문구 동일 anchor + 순서 뒤집기 뮤테이션. 법리 확인(같은 조 호 분기) 선행.
-- 공통: 14지점 중 ⑧·⑫만 해당. 이번 PR은 이 계획서 1개만 담는다.
+1. 테스트 `__tests__/lib/rental-97-legacy-ltr-migration.anchor.test.ts` 한 파일(계획서 초안의 위치·이름 그대로. 순수 함수 + route + jsdom 불필요한 순수 호출). 구성: A-1 `migrateAsset` 1:1 치환 · A-2 나머지 이관 경로(세션 복원 · 구 폼-전역 · IndexedDB v4) · B ⑧·⑫ · C API 400 · D 패널 라디오(Q-2 a의 짝).
+2. 뮤테이션 10종(§7.2). 계획서 초안의 ③ «LTR 치환을 건너뛰기»·② «`reductionSchema`에 LTR 추가»·① «같은 범주 하나만 남기기»를 모두 포함했다.
+3. 소스 코드 변경 없음. tsc/eslint, 회귀 5묶음.
+
+## 7. 구현 결과 [직접]
+
+### 7.1 테스트
+
+- 새 anchor **28건** 통과(`vitest run`, node 환경). 이 테스트는 동작을 바꾸지 않는 **고정**이라 구현 전에 실패하는 것이 없다 — 안전망은 §7.2 뮤테이션으로 확인했다.
+- 전제 테스트: 시료가 정말 레거시 타입인지 · 채운 §97의3 단독이 ⑧을 통과하고 ⑫가 200인지(픽스처가 «채운 상태») · 이관 직후 빈 §97의3 단독은 «임대개시일» 문구로 막히는지 · 바꾸기 전 API 본문이 200인지 · 컴패니언 본문이 §97의3 한 건인지.
+- 고정한 것: ① 자산 폼 경로 `[LTR, 97의4/97의5/97의3/LTR/본문/신축/자경]`과 `[97의4, LTR]` 이관 결과(원소별 1:1 치환 · 순서 · 같은 id 둘을 합치지 않음 · 다른 원소의 사용자 입력 보존), 임대 6종 30쌍(15쌍 × 두 순서)이 입력 그대로 나옴 ② 세션 복원(`migratePersistedTransferForm`·`mergePersistedWizard`) · 구 폼-전역 `[97의3]`로 교체 · IndexedDB v4 `type`만 제자리 치환 ③ ⑧: 이관 직후 «임대개시일» → 채운 뒤 §97의3②·§97의5② 문구, ⑫도 같은 문구로 400, 신축·자경과는 §127⑦ ④ API `long_term_rental` 본 자산·컴패니언 400 ⑤ `toggleGroupRadio`가 범주째 비움.
+- **고정하지 않은 것**: 본문·단서·§97의2·§97의5 사이 6쌍의 ⑧·⑫ 동작(Q-3 → #3144) · 같은 id 둘(`[97의3, 97의3]`)의 ⑧ 통과 · `priorReductionUsage[].type`의 `long_term_rental` 허용(남은 참조 정리 때 바뀔 수 있다).
+
+### 7.2 뮤테이션 (백업 → 변이 → 새 파일 + 관련 기존 5파일 실행 → 복원 → `cmp`)
+
+| 변이 | 위치 | 새 파일 | 관련 기존 5파일(69건) |
+|---|---|---|---|
+| M1 LTR가 있으면 같은 범주의 다른 `rental_97_*`를 지움 | `calc-wizard-asset-migrate-rental-split.ts` | **10건 실패** | 통과 |
+| M2 같은 id·LTR→97의3 중복을 합침 | 〃 | **2건 실패** | 통과 |
+| M3 LTR 치환을 건너뜀 | 〃 | **15건 실패** | 1건 실패 |
+| M4 `reductionSchema`에 LTR 허용 | `transfer-tax-schema-reductions.ts` | **2건 실패**(본 자산·컴패니언 400) | 1건 실패 |
+| M5 ⑧ 명문 배제 호출 제거 | `transfer-tax-validate-rental-97.ts` | **3건 실패** | 18건 실패 |
+| M6 ⑫ 명문 배제 refine 제거 | `transfer-tax-schema-reduction-refines.ts` | **3건 실패** | 19건 실패 |
+| M7 구 폼-전역 LTR 분기 제거 | `calc-wizard-migration.ts` | **1건 실패** | 4건 실패 |
+| M8 IndexedDB v4 LTR 치환 제거 | `reduction-reclassification.ts` | **1건 실패** | 통과(새 파일만 잡음) |
+| M9 `toggleGroupRadio`가 같은 범주를 지우지 않음 | `UnifiedReductionPanel-defaults.ts` | **2건 실패** | 통과(새 파일만 잡음) |
+| M10 구 폼-전역이 `[97의3]` 외에 §97의4를 덧붙임 | `calc-wizard-migration.ts` | **1건 실패** | 통과(새 파일만 잡음) |
+
+10종 전부 검출, 변이한 8파일 모두 `cmp` 일치로 복원(작업 트리에는 새 테스트 파일만 남음). M8·M9·M10은 새 파일만 잡는 변이다. 한계: «본 자산 `[97의3, LTR]` → `reductions.1.type`» 건은 M4에서 실패하지 않는다 — LTR이 `income-deduction-router.ts`의 세액감면형 목록에 있어 §127⑦ refine이 같은 칸에 오류를 내기 때문이다(M4는 나머지 두 건이 잡는다).
+
+### 7.3 정적 검사·회귀
+
+- `npx tsc --noEmit` 0건 · `npx eslint`(변경 파일) 0건.
+- 회귀 5묶음 실패 0: `__tests__/api` 6,858(+todo 6) · `tax-engine` 19,183 · `calc` 11,721 · `lib` 3,396(새 28건 포함, 전 기준선 3,368) · `components` 6,971건.
+- Playwright 생략 — UI·소스 변경이 없다(테스트 1개와 이 문서만).
+
+### 7.4 변경 파일
+
+테스트 1개 신설 `__tests__/lib/rental-97-legacy-ltr-migration.anchor.test.ts` · 이 계획서. 소스 코드 변경 없음.
