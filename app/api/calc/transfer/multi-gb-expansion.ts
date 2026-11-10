@@ -12,11 +12,13 @@
  * - 예정신고 세액(가산세 base)은 카드 묶음을 한 번에 계산하는 단위(`cardUnits`)로 넘긴다.
  */
 import { buildGbCompanionItems } from "./general-building-part-cards";
-import { assembleShareDetail, buildSharePiece, shareTransferPrices } from "./general-building-fractional";
+import type { GbBgCarryoverUnitDraft } from "./general-building-part-cards";
+import { assembleShareDetail, buildShareScenarioPieces, shareTransferPrices } from "./general-building-fractional";
 import type { GeneralBuildingSharePayload } from "./general-building-fractional";
-import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
 import { shareCardSuffix } from "@/lib/tax-engine/general-building-share-id";
-import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
+import { calculateTransferTaxAggregateWithUnits } from "@/lib/tax-engine/transfer-tax-aggregate";
+import type { ExternalCarryoverUnit } from "@/lib/tax-engine/transfer-tax-aggregate";
+import { toTransferorBasisInfo } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { RatesByTransferDate } from "@/lib/tax-engine/transfer-tax-item-rates";
@@ -50,6 +52,16 @@ export interface MultiGbExpansion {
   cardUnits: number[][];
   /** 자산 id별 결과 상세(산식 재료) — 단건 슬롯 `generalBuildingValuationDetail`은 수정신고 판별자라 쓰지 않는다(일괄양도와 같은 맵). */
   detailsByAsset: Record<string, GbBundledAssetDetail>;
+  /**
+   * 일반건물 부담부증여 × 이월과세(§97의2) 비교 단위 재료 — 카드 순. 키는 자산 id(지분은 복합 접미사 `<자산id>.<지분번호>`).
+   * 단건 F27·지분 경로·함께 부담부증여 묶음과 같은 카드 세트 A·B다. route가 `toGbCarryoverUnits`로 집계 외부 단위를 만든다.
+   */
+  carryoverDrafts: GbBgCarryoverUnitDraft[];
+  /**
+   * 지분 물건의 결과 상세를 **채택된 시나리오** 조각으로 다시 조립한다(단건 지분 경로와 같은 순서 — 집계 뒤).
+   * `adoptedA(키)`는 그 비교 단위가 A로 채택됐는가. 이월과세 지분이 없는 물건은 펼칠 때 상세가 이미 정해졌다.
+   */
+  finalizeShareDetails: (adoptedA: (key: string) => boolean) => void;
 }
 
 export function expandMultiGeneralBuildings(
@@ -59,6 +71,8 @@ export function expandMultiGeneralBuildings(
   const properties: TransferTaxItemInput[] = [];
   const cardUnits: number[][] = [];
   const detailsByAsset: Record<string, GbBundledAssetDetail> = {};
+  const carryoverDrafts: GbBgCarryoverUnitDraft[] = [];
+  const shareFinalizers: Array<(adoptedA: (key: string) => boolean) => void> = [];
 
   items.forEach((item, index) => {
     /** 펼친 카드 묶음 1건 — 가산세 입력은 첫 카드에만 · 예정신고 단위는 그 묶음 전체. */
@@ -73,6 +87,7 @@ export function expandMultiGeneralBuildings(
       );
       cardUnits.push(cards.map((_, i) => start + i));
     };
+
     const gb = gbOf(index);
     if (!gb) {
       properties.push(item);
@@ -83,26 +98,35 @@ export function expandMultiGeneralBuildings(
       const { list, totalTransferPrice } = gb.shares;
       const prices = shareTransferPrices(list, totalTransferPrice);
       // 부담부증여(소령 §159) — 단건 축 B와 같이 지분마다 그 지분의 §159 정보로 카드를 만든다(채무 지분 안분 · 평가액은 지분율로 축소).
-      //   이월과세 지분(A·B 비교 단위)은 ⑧·⑫가 막아 여기 오지 않는다 — 시나리오는 B(양도인 기준) 하나다.
+      //   부담부증여 × 이월과세 지분은 카드 세트 A·B를 만들어 비교 단위로 넘긴다 — 단건 지분 경로와 같은 함수(`buildShareScenarioPieces`).
       const burdened = item.transferType === "burdened_gift" ? { date: item.transferDate } : undefined;
       const ctx = { transferDate: item.transferDate, totalTransferPrice, primaryReductions: item.reductions, burdened };
-      const pieces = list.map((share, i) => {
-        const info = burdened ? share.burdenedGiftInfo : undefined;
-        return buildSharePiece(ctx, share, i, shareCardSuffix(assetId, i), prices[i], coerceGeneralBuildingPayload(share.valuation), info, undefined, info ? false : undefined);
-      });
-      const cards = pieces.flatMap((p) => p.items);
-      const detail = assembleShareDetail(list, pieces, prices).detail as unknown as GbBundledAssetDetail;
-      // 결과 명세 — 단건 축 B 집계(`transfer-tax-aggregate-once.ts`)와 같은 두 함수: 물건 전체 §159·증여세 1회 + 취득 열은 지분 카드 합.
-      const whole = burdened && gb.shares.burdenedGiftWholeInfo
-        ? withCardAcquisitions(
-            buildBundleBurdenedGiftWhole({ burdenedGiftWholeInfo: gb.shares.burdenedGiftWholeInfo, burdenedGiftDate: burdened.date } as never),
-            cards.map((card) => ({ item: card, result: {} })),
-          )
-        : undefined;
-      detailsByAsset[assetId] = whole ? { ...detail, burdenedGiftBreakdown: whole } : detail;
+      const { piecesB, piecesA, drafts, firstIsCarryover } = buildShareScenarioPieces(list, ctx, prices, (i) => shareCardSuffix(assetId, i));
+      const cards = piecesB.flatMap((p) => p.items);
+      // 결과 상세 — 단건 축 B 집계(`transfer-tax-aggregate-once.ts`)와 같은 두 함수: 물건 전체 §159·증여세 1회 + 취득 열은 (채택된) 지분 카드 합.
+      //   첫 지분이 이월과세 단위면 물건 전체 명세는 양도인 기준으로 읽는다(단건 지분 경로와 같다).
+      const wholeInfo = gb.shares.burdenedGiftWholeInfo;
+      const assemble = (adopted: typeof piecesB) => {
+        const detail = assembleShareDetail(list, adopted, prices).detail as unknown as GbBundledAssetDetail;
+        const whole = burdened && wholeInfo
+          ? withCardAcquisitions(
+              buildBundleBurdenedGiftWhole({ burdenedGiftWholeInfo: firstIsCarryover ? toTransferorBasisInfo(wholeInfo) : wholeInfo, burdenedGiftDate: burdened.date } as never),
+              adopted.flatMap((p) => p.items).map((card) => ({ item: card, result: {} })),
+            )
+          : undefined;
+        detailsByAsset[assetId] = whole ? { ...detail, burdenedGiftBreakdown: whole } : detail;
+      };
+      assemble(piecesB);
+      if (drafts.length > 0)
+        shareFinalizers.push((adoptedA) =>
+          assemble(piecesB.map((b, i) => (piecesA[i] && adoptedA(shareCardSuffix(assetId, i)) ? piecesA[i]! : b))),
+        );
+      // A 카드의 가산세 입력은 route가 B 카드(가산세 주입 뒤)에서 옮긴다(`finalUnits`).
+      carryoverDrafts.push(...drafts);
       pushCards(cards);
       return;
     }
+    const draftsOfItem: GbBgCarryoverUnitDraft[] = [];
     const cards = buildGbCompanionItems(
       gb.valuation ?? {},
       item,
@@ -121,31 +145,56 @@ export function expandMultiGeneralBuildings(
       (assetId, detail) => {
         detailsByAsset[assetId] = detail;
       },
+      // 부담부증여 × 이월과세(§97의2) — 카드 세트 A·B 비교 단위(함께 부담부증여 묶음과 같은 재료). A가 채택되면 결과 상세는 A 카드 것으로 바뀐다
+      //   (`attachGbCarryoverUnits`) — A의 §159 명세도 함께 옮긴다(단건 F27은 채택 시나리오의 명세를 싣는다).
+      (draft) => {
+        const bgA = draft.cardsA[0]?.gbAssetBurdenedGift?.breakdown;
+        draftsOfItem.push(draft.detailA && bgA ? { ...draft, detailA: { ...draft.detailA, burdenedGiftBreakdown: bgA } } : draft);
+      },
     );
     // 부담부증여(소령 §159) — 카드마다 같은 자산 명세(`gbAssetBurdenedGift`)가 실린다. 자산 상세에 1회 옮겨 결과 행이 단건과 같은 명세 카드를 그린다(트랙 BG · V-BG2).
     const bg = cards[0]?.gbAssetBurdenedGift?.breakdown;
     const assetId = item.propertyId ?? `property-${index + 1}`;
     if (bg && detailsByAsset[assetId]) detailsByAsset[assetId] = { ...detailsByAsset[assetId], burdenedGiftBreakdown: bg };
+    carryoverDrafts.push(...draftsOfItem);
     pushCards(cards);
   });
 
-  return { properties, cardUnits, detailsByAsset };
+  return {
+    properties,
+    cardUnits,
+    detailsByAsset,
+    carryoverDrafts,
+    finalizeShareDetails: (adoptedA) => shareFinalizers.forEach((f) => f(adoptedA)),
+  };
 }
 
 /**
  * 일반건물 1건의 예정신고 세액 단위 — 카드 묶음을 단건 GB route와 같은 합산으로 한 번에 계산한다
  * (같은 날 양도한 파트라 §103② 순서가 서지 않아 파트 한계세율 순 — `PARTS_HIGHEST_RATE`, 단건 `calculateGeneralBuildingTransfer`와 같다).
+ *
+ * 부담부증여 × 이월과세 비교 단위(`carryoverUnits` — 펼친 카드 기준 위치)는 그 물건 안에서 A·B를 비교한다 — 예정신고는 물건 1건의 신고라
+ * 단건 F27·지분 경로와 같은 비교 범위다(확정신고 비교는 route의 연간 합산이 따로 한다).
  */
 export function gbPreliminaryUnits(
   cardUnits: readonly number[][],
   taxYear: number,
   rates: TaxRatesMap,
   ratesByTransferDate?: RatesByTransferDate,
+  carryoverUnits: readonly ExternalCarryoverUnit[] = [],
 ): PreliminaryCardUnit[] {
   return cardUnits.map((indices) => ({
     indices,
     calculate: (cards, annualBasicDeductionUsed) => {
-      const r = calculateTransferTaxAggregate(
+      // 예정신고 세액 계산은 가산세·정정 입력을 벗긴 카드로 한다(`computePreliminaryFilingTaxes`) — A 카드도 같게.
+      const local = carryoverUnits
+        .filter((u) => indices.includes(u.start))
+        .map((u) => ({
+          ...u,
+          start: indices.indexOf(u.start),
+          cardsA: u.cardsA.map((c) => ({ ...c, amendment: undefined, filingPenaltyDetails: undefined, delayedPaymentDetails: undefined })),
+        }));
+      const r = calculateTransferTaxAggregateWithUnits(
         {
           taxYear,
           properties: cards as unknown as TransferTaxItemInput[],
@@ -154,7 +203,8 @@ export function gbPreliminaryUnits(
         },
         rates,
         ratesByTransferDate,
-      );
+        local,
+      ).result;
       return { determinedTax: r.determinedTax, reductionAmount: r.reductionAmount, ruralSurtax: r.ruralSurtax, basicDeduction: r.basicDeduction };
     },
   }));

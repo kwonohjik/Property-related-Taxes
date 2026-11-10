@@ -11,9 +11,8 @@ import { carryoverPurchasedPartDebt } from "./carryover-gift-assumed-debt";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
-import { MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
-import { isGbBurdenedGift } from "./gb-bg-gift-tax-return";
-import { carryoverEventForm } from "./transfer-tax-api-carryover";
+import { MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { donorBuiltBgActive } from "./donor-built-bg-scope";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
@@ -164,8 +163,9 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   if (carryoverParts.land || carryoverParts.building) return MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE;
   if (carryoverPurchasedPartDebt(a) > 0) return MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE;
   // 부담부증여(소령 §159) — 자산 단위 info·`transferType`은 ④⑭가 단건과 같은 leaf로 옮긴다(트랙 BG · 자산별 §159 명세 echo).
-  //   일반건물 부담부증여 × 이월과세만 막는다 — 단건은 카드 세트 A·B를 신고 단위로 비교하는데 연간 합산 펼침은 그 단위를 받지 않는다(⑫ 같은 문구).
-  if (isGbBurdenedGift(a) && carryoverEventForm(a)) return MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE;
+  //   일반건물 부담부증여 × 이월과세는 단건처럼 카드 세트 A·B를 비교 단위로 펼친다 — 연간 합산은 그 해 전체 결정세액으로 비교한다(§97의2②3호).
+  //   당초 증여자 신축·증축 가산세(§114조의2)만 막는다 — 단건 route만 계산하고 펼침 카드 함수는 받지 않는다(⑫ 같은 문구).
+  if (a.assetKind === "general_building" && donorBuiltBgActive(a)) return MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE;
   // 상속·증여 §163⑨ 취득가액(① 평가액 · ② §164 기준시가 · 의제 전 ③ 환산)은 다건도 단건과 같은 빌더로 싣는다
   //   (`buildPropertyPayload` — 계획서 multi-sec163-9-support.plan.md Q-1 a). ① 공란·② 부분 입력은 건별 ⑧(`validateStep` —
   //   `postDeemedClauseARequiredError` 등)이 단건과 같이 짚는다(Q-2 a). 종전 다건 전용 「상속 ① 공란」 가드와 #2888의 ② 입력 차단은 지웠다.
@@ -206,9 +206,7 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
     // 일반건물 지분 분할 취득(같은 물건의 전 지분)만 연다 — ④가 단건과 같은 빌더(`buildGeneralBuildingShares`)로 지분 배열을 만들고 ⑭가 지분 카드로 펼친다(트랙 GS).
     //   그 밖의 한 건 내 다자산(함께 양도)은 계속 막는다.
     if (!isMultiGbSharesForm(form)) return MULTI_COMPANION_UNSUPPORTED_MESSAGE;
-    // 지분 × 부담부증여는 단건 축 B와 같은 지분 §159 카드로 펼친다. 부담부증여 × 이월과세 지분만 막는다 — ④는 첫 자산의 표지로 전 지분에
-    //   `carryoverTaxation`을 싣고(`buildGeneralBuildingShares`) 연간 합산 펼침은 지분별 A·B 비교 단위를 받지 않는다(⑫ `generalBuildingShares` 같은 문구).
-    if (isGbBurdenedGift(form.assets[0]) && form.assets.some((s) => carryoverEventForm(s))) return MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE;
+    // 지분 × 부담부증여(× 이월과세)는 단건 축 B와 같은 지분 §159 카드·지분별 A·B 비교 단위로 펼친다(`buildShareScenarioPieces`).
     // 위 차단은 첫 자산만 봤다 — 둘째 지분부터도 같은 규칙을 지분마다 적용한다(지분마다 취득원인·감면이 다를 수 있다).
     for (const share of form.assets.slice(1)) {
       const reason = validateMultiSupportedMode({ ...form, assets: [share] });

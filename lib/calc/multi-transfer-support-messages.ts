@@ -23,11 +23,11 @@ export const MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE =
  * ⑫(`transfer-tax-schema-multi-refines.ts`)는 API 본문으로 같은 모드를 막는다.
  */
 /**
- * 일반건물 부담부증여 × 배우자등 이월과세(§97의2) — 단건 route는 카드 세트 A·B를 신고 단위로 비교한다(`general-building-route-carryover.ts`).
- * 연간 합산 펼침(`multi-gb-expansion.ts`)은 그 비교 단위를 받지 않아 카드 빌더가 멈춘다(트랙 BG 실측 — 단건 71,321,800 · 다건 예외).
+ * 일반건물 부담부증여 × 이월과세 × 당초 증여자 신축·증축(소득세법 §114조의2) — 단건 route(`general-building-route-carryover.ts`)만 가산세를 계산한다.
+ * 연간 합산 펼침은 함께 부담부증여 묶음과 같은 카드 함수(`buildGbCompanionItems`)를 써서 그 입력을 받지 않는다(멈춘다). 지분은 지분 스키마가 거부한다.
  */
-export const MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE =
-  "일반건물 부담부증여 × 배우자등 이월과세(§97의2)는 단건 계산기에서만 지원됩니다.";
+export const MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE =
+  "일반건물 부담부증여 × 이월과세의 당초 증여자 신축·증축 가산세(소득세법 §114조의2)는 단건 계산기에서만 지원됩니다.";
 /** API 전용 — 연간 합산 자산은 각자 다른 증여다. 물건·증여계약 전체 §159 명세는 단건(축 B·함께 양도)에서만 받는다(트랙 BG). */
 export const MULTI_BURDENED_GIFT_WHOLE_UNSUPPORTED_MESSAGE =
   "부담부증여 물건 전체 명세(지분 묶음·함께 양도)는 단건 계산기에서만 지원됩니다.";

@@ -17,7 +17,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { rateDateKey, type RatesByTransferDate } from "@/lib/tax-engine/transfer-tax-item-rates";
 import {
-  calculateTransferTaxAggregate,
+  calculateTransferTaxAggregateWithUnits,
   type AggregateTransferInput,
   type TransferTaxItemInput,
 } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -33,6 +33,8 @@ import { computePreliminaryFilingTaxes } from "@/lib/tax-engine/transfer-tax-pre
 import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
 import { expandMultiGeneralBuildings } from "../multi-gb-expansion";
 import { gbPreliminaryUnits } from "../multi-gb-expansion";
+import { toGbCarryoverUnits } from "../bundled-gb-carryover-units";
+import { attachGbCarryoverUnits } from "../bundled-gb-carryover-units";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
 import { ratesForTransferDate } from "@/lib/tax-engine/transfer-tax-item-rates";
@@ -212,9 +214,12 @@ export async function POST(request: NextRequest) {
   };
 
   try {
+    // 일반건물 부담부증여 × 이월과세(§97의2) — 카드 세트 A·B를 집계 외부 비교 단위로 등록한다(함께 부담부증여 묶음·단건 지분 경로와 같은 함수).
+    //   연간 합산은 확정신고 1건이라 ②3호 비교가 그 해 전체 결정세액으로 한다 — 다른 자산의 이월과세(단건 엔진 단위)와 한 번의 순차 고정점.
+    const gbCarryoverUnits = toGbCarryoverUnits(gbExpansion.carryoverDrafts, gbExpansion.properties, (c) => c);
     // 자산별 가산세 2-pass — 자산별 단건 엔진 호출 시 결정세액을 사전 계산해 주입.
     // 1차: 가산세 미주입 상태로 자산별 결정세액 산출.
-    const baseResult = calculateTransferTaxAggregate(engineInput, rates, ratesByTransferDate);
+    const baseResult = calculateTransferTaxAggregateWithUnits(engineInput, rates, ratesByTransferDate, gbCarryoverUnits).result;
 
     /**
      * 🔴 가산세 base는 **예정신고 세액**이다 — 집계 1차 pass의 자산별 standalone 값이 아니다(F03).
@@ -234,7 +239,7 @@ export async function POST(request: NextRequest) {
       calculateTransferTax,
       ratesByTransferDate,
       // 일반건물 1건 = 예정신고 1건 — 카드 묶음을 한 번에 계산한다(`multi-gb-expansion.ts`).
-      gbPreliminaryUnits(gbExpansion.cardUnits, data.taxYear, rates, ratesByTransferDate),
+      gbPreliminaryUnits(gbExpansion.cardUnits, data.taxYear, rates, ratesByTransferDate, gbCarryoverUnits),
     );
 
     // 자산별 결정세액·미납세액 주입 후 2차 계산 (가산세 자산별 합산 반영).
@@ -263,7 +268,16 @@ export async function POST(request: NextRequest) {
     });
 
     const finalInput: AggregateTransferInput = { ...engineInput, properties: enrichedProperties };
-    const result = calculateTransferTaxAggregate(finalInput, rates, ratesByTransferDate);
+    // A 카드도 같은 자리 B 카드의 가산세 입력(첫 카드에만 · 예정신고 세액 주입 뒤)을 받는다 — 채택 시나리오와 무관하게 같은 가산세 입력으로 비교한다.
+    const finalUnits = gbCarryoverUnits.map((u) => ({
+      ...u,
+      cardsA: u.cardsA.map((c, i) => {
+        const b = enrichedProperties[u.start + i];
+        return { ...c, filingPenaltyDetails: b.filingPenaltyDetails, delayedPaymentDetails: b.delayedPaymentDetails };
+      }),
+    }));
+    const calc = calculateTransferTaxAggregateWithUnits(finalInput, rates, ratesByTransferDate, finalUnits);
+    const result = calc.result;
     // 양도일과 같은 날 취득한 권리를 보유로 세면 어느 자산의 결론이 달라질 때만 확인 필요를 싣는다(코드 리뷰 결정 #1) — 단건과 같은 고지.
     if (
       anySameDayRightChangesConclusion(finalInput.properties as unknown as TransferTaxInput[], (i) =>
@@ -291,6 +305,9 @@ export async function POST(request: NextRequest) {
     ) {
       result.warnings = [...result.warnings, GB_BG_SELF_BUILT_NOTICE];
     }
+    // 부담부증여 × 이월과세 [A]/[B] 비교 명세(키 = 자산 id · 지분은 복합 접미사) — A 채택 자산은 결과 상세를 A 카드 것으로 바꾼다.
+    attachGbCarryoverUnits(calc, result, gbExpansion.carryoverDrafts, finalUnits, gbExpansion.detailsByAsset);
+    gbExpansion.finalizeShareDetails((key) => calc.units[key]?.adoptedScenario === "A");
     if (Object.keys(gbExpansion.detailsByAsset).length > 0) result.generalBuildingDetailsByAsset = gbExpansion.detailsByAsset;
     // NaN·Infinity는 JSON에서 null이 되어 200으로 나간다 — 반환 전에 끊는다(E-14l).
     assertFiniteResponse(result);

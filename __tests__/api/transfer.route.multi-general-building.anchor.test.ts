@@ -12,7 +12,6 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
-import { MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { NextRequest } from "next/server";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 
@@ -229,7 +228,7 @@ describe("다건 — 일반건물이 단건 일반건물 route와 같은 세액�
   };
   // 지분 분할 취득은 2026-11-10 지원 전환(트랙 GS) — 폼 경로 parity는 `__tests__/calc/multi-gb-shares-parity.anchor.test.ts`가 고정한다.
   //   직접 API도 단건 지분 route와 같은 세액이어야 한다. 지분 × 부담부증여도 같은 날 열었다(트랙 GS-BG) — 부담부증여 × 이월과세 지분만 계속 거부한다.
-  it("[MG-8] ⑫ 지분 분할 취득(`generalBuildingShares`) — 단건 지분 route와 같은 세액 · 부담부증여 지분도 같은 세액 · 부담부증여 × 이월과세 지분만 거부", async () => {
+  it("[MG-8] ⑫ 지분 분할 취득(`generalBuildingShares`) — 단건 지분 route와 같은 세액 · 부담부증여 지분 · 부담부증여 × 이월과세 지분도 같은 세액", async () => {
     const { m } = await expectParity({ ...gbBody(gbAsset()), generalBuildingShares: SHARES });
     expect(m.totalTax).toBeGreaterThan(0);
     // 일반건물 부담부증여 — 양도시·취득시 기준시가 필수(⑫) · 채무는 지분율로 안분(④ `buildBurdenedGiftInfo` debtScaleRatio와 같은 형태)
@@ -247,18 +246,25 @@ describe("다건 — 일반건물이 단건 일반건물 route와 같은 세액�
     const bg = await expectParity(bgBody);
     // 부담부증여가 실제로 반영됐다 — 일반 양도로 조용히 계산되지 않는다(양도가액 = 채무 인수분)
     expect(bg.m.totalTax).not.toBe(m.totalTax);
-    const r = await post(MULTI, "http://l/api/calc/transfer/multi", {
-      taxYear: 2024,
-      annualBasicDeductionUsed: 0,
-      properties: [{
-        propertyId: "p1", propertyLabel: "p1", ...bgBody,
-        generalBuildingShares: bgBody.generalBuildingShares.map((sh, i) => (i === 1
-          ? { ...sh, carryoverTaxation: { giftRegistryDate: "2021-06-01", donorAcquisitionDate: "2005-01-01", donorAcquisitionPrice: 10_000_000, useEstimatedAcquisition: false, giftTaxAmount: 0, giftDateValuation: 300_000_000, donorRelation: "spouse" } }
-          : sh)),
-      }],
-    });
-    expect(r.status).toBe(400);
-    expect(JSON.stringify(r.json)).toContain(MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE);
+    // 부담부증여 × 이월과세 지분(둘째 지분) — 지분별 A·B 비교 단위로 펼친다(단건 지분 route와 같은 세액 · 같은 비교 키는 복합 접미사).
+    const coBody = {
+      ...bgBody,
+      generalBuildingShares: bgBody.generalBuildingShares.map((sh, i) => (i === 1
+        ? {
+            ...sh,
+            burdenedGiftInfo: { ...sh.burdenedGiftInfo, carryoverDonorBasis: { actualLandAcquisitionPrice: 5_000_000, actualBuildingAcquisitionPrice: 5_000_000 } },
+            carryoverTaxation: { giftRegistryDate: "2021-06-01", donorAcquisitionDate: "2005-01-01", donorAcquisitionPrice: 10_000_000, useEstimatedAcquisition: false, giftTaxAmount: 0, giftDateValuation: 300_000_000, donorRelation: "spouse" },
+          }
+        : sh)),
+    };
+    const co = await expectParity(coBody);
+    const units = co.m.burdenedGiftCarryoverUnits as Record<string, Obj>;
+    expect(Object.keys(units)).toEqual(["p1.1"]);
+    for (const k of ["adoptedScenario", "determinedTaxA", "determinedTaxB"])
+      expect(units["p1.1"][k], k).toEqual((co.s.burdenedGiftCarryoverUnits as Record<string, Obj>)["1"][k]);
+    // 이 시료는 B(양도인 기준 = 이월과세 없는 부담부증여)가 채택돼 세액이 위 부담부증여와 같다 — A는 따로 계산됐다(비교가 실제로 돌았다).
+    expect([units["p1.1"].adoptedScenario, co.m.totalTax]).toEqual(["B", bg.m.totalTax]);
+    expect(units["p1.1"].determinedTaxA).not.toBe(units["p1.1"].determinedTaxB);
   });
   // 일반건물 부담부증여 K-5 × 양도인 본인 신축 §114조의2 — 연간 합산은 가산세는 같았지만 «확인 필요» 고지(Q-14)를 싣지 않았다(2026-11-10 실측 · 트랙 BG #3119 경로).
   //   세액 축(`transfer.route.gb-burdened-gift-self-built-penalty.anchor.test.ts` K-5와 같은 입력)은 그대로 · 고지만 단건과 맞춘다.

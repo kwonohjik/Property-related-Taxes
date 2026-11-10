@@ -47,6 +47,13 @@ vi.mock("@/lib/tax-engine/transfer-tax-aggregate", async (importOriginal) => {
       const r = actual.calculateTransferTaxAggregate(...args);
       return inject.multi === undefined ? r : { ...r, totalTax: inject.multi };
     },
+    // 다건 route는 외부 비교 단위(일반건물 부담부증여 × 이월과세)를 받는 진입점을 부른다 — 같은 주입을 건다.
+    calculateTransferTaxAggregateWithUnits: (
+      ...args: Parameters<typeof actual.calculateTransferTaxAggregateWithUnits>
+    ) => {
+      const r = actual.calculateTransferTaxAggregateWithUnits(...args);
+      return inject.multi === undefined ? r : { ...r, result: { ...r.result, totalTax: inject.multi } };
+    },
   };
 });
 

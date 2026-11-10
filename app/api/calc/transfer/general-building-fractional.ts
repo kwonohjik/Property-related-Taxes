@@ -232,6 +232,78 @@ export function buildSharePiece(
 export type SharePiece = ReturnType<typeof buildSharePiece>;
 
 /**
+ * 지분 전부의 시나리오 조각 — 부담부증여 × 이월과세(§97의2) 지분은 요건(①괄호·②1·2호·③)을 충족하면 그 지분이 **비교 단위 하나**다(Q-1 a).
+ * 판정·fail-fast는 단건 F27·묶음(`buildGbCompanionItems`)과 같은 leaf다. ⑭ 날짜는 단건·컴패니언과 같은 변환 leaf.
+ * `suffixOf`는 카드 id 접미사이자 비교 단위 키다 — 단건 축 B는 지분 번호, 연간 합산은 복합 접미사(`shareCardSuffix`).
+ * 단건(`calculateGeneralBuildingFractional`)과 연간 합산 펼침(`multi-gb-expansion.ts`)이 같은 함수로 조각을 만든다.
+ */
+export function buildShareScenarioPieces(
+  shares: GeneralBuildingSharePayload[],
+  pieceCtx: SharePieceContext,
+  sharePrices: readonly number[],
+  suffixOf: (idx: number) => string,
+) {
+  const { transferDate, burdened } = pieceCtx;
+  const carryoverOf = shares.map((share, idx) => {
+    const ct = burdened && share.burdenedGiftInfo
+      ? toEngineCarryoverTaxation(share.carryoverTaxation, `generalBuildingShares[${idx}].carryoverTaxation`)
+      : undefined;
+    const eligibility = ct ? judgeCarryoverEligibility(ct, transferDate) : undefined;
+    if (!ct || !eligibility?.isEligible) return undefined;
+    assertCarryoverDonorBasis(share.burdenedGiftInfo!, ct);
+    return { ct, applicablePeriodYears: eligibility.applicablePeriodYears };
+  });
+
+  const piecesB: SharePiece[] = [];
+  const piecesA: Array<SharePiece | undefined> = [];
+  const drafts: GbBgCarryoverUnitDraft[] = [];
+
+  shares.forEach((share, idx) => {
+    const sharePrice = sharePrices[idx];
+    const suffix = suffixOf(idx);
+
+    /**
+     * (2) ⑭ **Date 변환 먼저** — 단건과 **같은 함수**를 쓴다.
+     *
+     * 🔴 이것을 건너뛰면 `conversionDate`·`extensionDate`가 문자열로 도달해
+     *    `getTime is not a function`으로 500이 난다(2026-08-10 실측).
+     *    변환 목록을 여기서 다시 나열하지 말 것 — `coerceGeneralBuildingPayload`가 단일 소스다.
+     */
+    const coerced = coerceGeneralBuildingPayload(share.valuation);
+    const info = burdened ? share.burdenedGiftInfo : undefined;
+    const co = carryoverOf[idx];
+    if (!co || !info) {
+      piecesB.push(buildSharePiece(pieceCtx, share, idx, suffix, sharePrice, coerced, info, undefined, info ? false : undefined));
+      piecesA.push(undefined);
+      return;
+    }
+    // B = 양도인(증여받은 사람) 기준 — K-6/K-7은 증여일 평가액(`actual*`)을 실지거래가액으로 읽는다(소령 §163⑨).
+    const b = buildSharePiece(pieceCtx, share, idx, suffix, sharePrice, coerced, toTransferorBasisInfo(info), undefined, false);
+    // A = ①1호 취득가액 치환 + ①3호 증여세 상당액(§159 안분 단계가 소비) · §95④ 단서 — 증여받은 파트의 기산일만 당초 증여자 취득일부터.
+    const donor = co.ct.donorAcquisitionDate;
+    const startA = carryoverHoldingStartsA(info, donor, b.holdingStart);
+    const donorCapex = carryoverDonorCapex(co.ct, transferDate);
+    const a = buildSharePiece(pieceCtx, share, idx, suffix, sharePrice, coerced, applyCarryoverDonorBasis(info, co.ct.giftTaxAmount, donorCapex), startA, true, donorCapex);
+    piecesB.push(b);
+    piecesA.push(a);
+    drafts.push({
+      assetId: suffix,
+      assetLabel: share.shareLabel,
+      cardsB: b.items,
+      cardsA: a.items,
+      applicablePeriodYears: co.applicablePeriodYears,
+      donorAcquisitionDate: donor,
+      giftTaxAmount: co.ct.giftTaxAmount,
+      holdingStartA: startA,
+      holdingStartB: b.holdingStart,
+      carryoverParts: carryoverPartsOf(info),
+      donorCapex,
+    });
+  });
+  return { piecesB, piecesA, drafts, firstIsCarryover: carryoverOf[0] !== undefined };
+}
+
+/**
  * 지분 양도가액 — **마지막 지분이 잔액을 흡수**해 `Σ = 총양도가` 불변식을 지킨다
  * (1/3 × 3 = 999,999,999 방지 · 메모리 `feedback_floor_residual_absorption`).
  *
@@ -417,74 +489,15 @@ export function calculateGeneralBuildingFractional(
   // (1) 지분 양도가액 — 마지막 지분이 잔액 흡수(`shareTransferPrices`).
   const sharePrices = shareTransferPrices(shares, totalTransferPrice);
 
-  /**
-   * 부담부증여 × 이월과세(§97의2) 지분 — 요건(①괄호·②1·2호·③)을 충족하면 그 지분이 **비교 단위 하나**다(Q-1 a).
-   * 판정·fail-fast는 단건 F27·묶음(`buildGbCompanionItems`)과 같은 leaf다. ⑭ 날짜는 단건·컴패니언과 같은 변환 leaf.
-   */
-  const carryoverOf = shares.map((share, idx) => {
-    const ct = burdened && share.burdenedGiftInfo
-      ? toEngineCarryoverTaxation(share.carryoverTaxation, `generalBuildingShares[${idx}].carryoverTaxation`)
-      : undefined;
-    const eligibility = ct ? judgeCarryoverEligibility(ct, transferDate) : undefined;
-    if (!ct || !eligibility?.isEligible) return undefined;
-    assertCarryoverDonorBasis(share.burdenedGiftInfo!, ct);
-    return { ct, applicablePeriodYears: eligibility.applicablePeriodYears };
-  });
-
-
   const pieceCtx: SharePieceContext = { transferDate, totalTransferPrice, primaryReductions, burdened };
-  const piecesB: SharePiece[] = [];
-  const piecesA: Array<SharePiece | undefined> = [];
-  const drafts: GbBgCarryoverUnitDraft[] = [];
-
-  shares.forEach((share, idx) => {
-    const sharePrice = sharePrices[idx];
-
-    /**
-     * (2) ⑭ **Date 변환 먼저** — 단건과 **같은 함수**를 쓴다.
-     *
-     * 🔴 이것을 건너뛰면 `conversionDate`·`extensionDate`가 문자열로 도달해
-     *    `getTime is not a function`으로 500이 난다(2026-08-10 실측).
-     *    변환 목록을 여기서 다시 나열하지 말 것 — `coerceGeneralBuildingPayload`가 단일 소스다.
-     */
-    const coerced = coerceGeneralBuildingPayload(share.valuation);
-    const info = burdened ? share.burdenedGiftInfo : undefined;
-    const co = carryoverOf[idx];
-    if (!co || !info) {
-      piecesB.push(buildSharePiece(pieceCtx, share, idx, String(idx), sharePrice, coerced, info, undefined, info ? false : undefined));
-      piecesA.push(undefined);
-      return;
-    }
-    // B = 양도인(증여받은 사람) 기준 — K-6/K-7은 증여일 평가액(`actual*`)을 실지거래가액으로 읽는다(소령 §163⑨).
-    const b = buildSharePiece(pieceCtx, share, idx, String(idx), sharePrice, coerced, toTransferorBasisInfo(info), undefined, false);
-    // A = ①1호 취득가액 치환 + ①3호 증여세 상당액(§159 안분 단계가 소비) · §95④ 단서 — 증여받은 파트의 기산일만 당초 증여자 취득일부터.
-    const donor = co.ct.donorAcquisitionDate;
-    const startA = carryoverHoldingStartsA(info, donor, b.holdingStart);
-    const donorCapex = carryoverDonorCapex(co.ct, transferDate);
-    const a = buildSharePiece(pieceCtx, share, idx, String(idx), sharePrice, coerced, applyCarryoverDonorBasis(info, co.ct.giftTaxAmount, donorCapex), startA, true, donorCapex);
-    piecesB.push(b);
-    piecesA.push(a);
-    drafts.push({
-      assetId: String(idx),
-      assetLabel: share.shareLabel,
-      cardsB: b.items,
-      cardsA: a.items,
-      applicablePeriodYears: co.applicablePeriodYears,
-      donorAcquisitionDate: donor,
-      giftTaxAmount: co.ct.giftTaxAmount,
-      holdingStartA: startA,
-      holdingStartB: b.holdingStart,
-      carryoverParts: carryoverPartsOf(info),
-      donorCapex,
-    });
-  });
+  const { piecesB, piecesA, drafts, firstIsCarryover } = buildShareScenarioPieces(shares, pieceCtx, sharePrices, String);
 
   // (5) aggregate는 **1회만** — 기본공제 250만원(법 §103①)·§104⑤ 비교과세가 전 지분에 1번 적용된다.
   //     이월과세 지분은 외부 비교 단위다 — 집계가 신고 단위 결정세액으로 A/B를 고르고 그 구간 카드를 갈아 끼운다(순차 고정점 · 카드 순 = 지분 순).
   allProperties.push(...piecesB.flatMap((p) => p.items));
   const units = toGbCarryoverUnits(drafts, allProperties, (c) => c);
   // 물건 전체 §159 명세(증여세·표시) — 첫 지분이 이월과세 단위면 양도인 기준으로 읽는다(K-6/K-7 첫 지분의 info로는 명세를 만들 수 없다 · 묶음 PR-1과 같다).
-  const wholeInfo = burdened?.wholeInfo && carryoverOf[0] ? toTransferorBasisInfo(burdened.wholeInfo) : burdened?.wholeInfo;
+  const wholeInfo = burdened?.wholeInfo && firstIsCarryover ? toTransferorBasisInfo(burdened.wholeInfo) : burdened?.wholeInfo;
   const calc = calculateTransferTaxAggregateWithUnits(
     {
       taxYear,

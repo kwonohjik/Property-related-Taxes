@@ -189,6 +189,10 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
   const isBurdenedGift =
     primary?.transferType === "burdened_gift" || primary?.acquisitionCause === "burdened_gift";
   const usesPhd = primary ? phdFlagEffective(primary) : false; // 단건 ④와 같은 술어(D1-2)
+  // 일반건물 지분 분할 취득 — 단건 ④(`transfer-tax-api-primary-context.ts` `gbShares`)와 같은 빌더·같은 인자. 전 자산이 같은 물건의 지분일 때만 생긴다.
+  const gbShares = primaryKind === "general_building"
+    ? buildGeneralBuildingShares(form.assets, form.transferDate, form.assetSplitMode, parseAmount(form.totalTransferExpense || "0"))
+    : undefined;
   const isSplitActive = primary ? isSplitPayloadActive(primary, isBurdenedGift, { transferDate: form.transferDate }) : false;
 
   // §97② 단서 swap 분리 입력 — 단건과 동일: 두 필드 중 하나라도 입력되면 분리 전송.
@@ -462,9 +466,9 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     ...((hasPre1990 || (primary ? primaryAcquisitionModeFlags(primary).hasPre1990ForSec164 : false)) && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     ...(primary ? buildInheritedAcquisitionPayload(primary, primaryRatio, primaryFractional) : {}),
     ...(primary ? buildInheritedHouseValuationPayload(primary, form.transferDate) : {}),
-    // ⑬ 배우자등 이월과세(§97의2) — 단건 ④와 **같은 leaf**(계획서 multi-carryover-bg-gb-shares 트랙 CO). 종전에는 이 키를 만들지 않았다(⑧·⑫가 막았다).
-    //    파트 이월과세·채무 인수분은 ⑧이 막는다(⑫ 같은 문구). 지분 묶음(축 B)은 다건 범위 밖이라 단건의 부담부증여 지분 예외가 필요 없다.
-    ...(primary ? primaryCarryoverTaxationPayload(primary, form.transferDate, primaryRatio) : {}),
+    // ⑬ 배우자등 이월과세(§97의2) — 단건 ④와 **같은 leaf·같은 예외**(계획서 multi-carryover-bg-gb-shares 트랙 CO). 종전에는 이 키를 만들지 않았다(⑧·⑫가 막았다).
+    //    파트 이월과세·채무 인수분은 ⑧이 막는다(⑫ 같은 문구). 부담부증여 지분 분할은 지분마다 싣는다(`generalBuildingShares[].carryoverTaxation`) — 최상위는 ⑫가 거부한다.
+    ...(primary && !(gbShares !== undefined && isBurdenedGift) ? primaryCarryoverTaxationPayload(primary, form.transferDate, primaryRatio) : {}),
     // ⑬ 부담부증여(소령 §159) — 단건 ④와 같은 leaf·같은 두 키(트랙 BG). 연간 합산 자산은 각자 다른 증여라 축 B·함께 양도 전용
     //    `burdenedGiftWholeInfo`는 싣지 않는다. 레거시 `acquisitionCause = burdened_gift`도 단건처럼 info를 싣고 `transferType`은 폼 값 그대로.
     ...(isBurdenedGift && primary
@@ -492,12 +496,7 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
       : {}),
     // ⑬ 일반건물 지분 분할 취득 — 단건 ④(`transfer-tax-api-primary-context.ts` `gbShares`)와 **같은 빌더·같은 인자**(트랙 GS).
     //    전 자산이 같은 물건의 지분일 때만 배열이 생긴다(`isFullFractionalBundle`) — ⑭가 지분 카드로 펼친다.
-    ...(primaryKind === "general_building"
-      ? optionalKey(
-          "generalBuildingShares",
-          buildGeneralBuildingShares(form.assets, form.transferDate, form.assetSplitMode, parseAmount(form.totalTransferExpense || "0")),
-        )
-      : {}),
+    ...optionalKey("generalBuildingShares", gbShares),
     // ⑬ 지분 × 부담부증여 — 물건 전체 §159 정보(채무 미안분 · 표시 전용). 단건 축 B ④와 같은 leaf·같은 인자(⑭ 펼침이 결과 명세를 만든다).
     ...(primaryKind === "general_building" && isBurdenedGift && primary && isFullFractionalBundle(form.assets, form.assetSplitMode)
       ? { burdenedGiftWholeInfo: buildBurdenedGiftInfo(primary, undefined, form.transferDate) }

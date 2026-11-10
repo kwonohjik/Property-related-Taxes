@@ -17,7 +17,7 @@ import { z } from "zod";
 import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_BURDENED_GIFT_WHOLE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
-import { MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
@@ -58,10 +58,12 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown, data?: Record<strin
     !(data?.transferType === "burdened_gift" && Array.isArray(data?.generalBuildingShares) && data.generalBuildingShares.length > 1)
       ? MULTI_BURDENED_GIFT_WHOLE_UNSUPPORTED_MESSAGE
       : null,
-  // 일반건물 부담부증여 × 이월과세 — 카드 세트 A·B 비교 단위를 연간 합산 펼침이 받지 않는다(⑧ `isGbBurdenedGift && carryoverEventForm` 같은 모드·같은 문구).
+  // 일반건물 부담부증여 × 이월과세는 ⑭가 카드 세트 A·B 비교 단위로 펼친다. 당초 증여자 신축·증축 가산세(§114조의2)만 거부한다 —
+  //   단건 route만 계산하고 펼침 카드 함수(`buildGbCompanionItems`)는 받지 않는다(⑧ `donorBuiltBgActive` 같은 모드·같은 문구). 지분은 지분 스키마가 거부한다.
   burdenedGiftInfo: (v, data) =>
-    v != null && data?.transferType === "burdened_gift" && data?.generalBuildingValuation != null && data?.carryoverTaxation != null
-      ? MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE
+    (v as { carryoverDonorBasis?: { donorBuilt?: unknown } } | null | undefined)?.carryoverDonorBasis?.donorBuilt != null &&
+    data?.propertyType === "general_building"
+      ? MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE
       : null,
   redevelopment: whenPresent(MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE),
   // 다건 ④는 §166 서브객체(`redevelopment`)를 만들지 않고 propertyType만 싣는다 — 서브객체 거부만으로는
@@ -76,13 +78,7 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown, data?: Record<strin
   // 의제취득일 전 매수 §176조의2④ — 다건 ④·⑭는 이 입력을 옮기지 않는다(계획서 realestate-pre-deemed-purchase Q-11 b).
   preDeemedPurchase: whenPresent(MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE),
   // 일반건물(`generalBuildingValuation`)은 ⑭가 단건과 같은 카드로 펼친다(`multi-gb-expansion.ts` · 트랙 G).
-  // 지분 분할 취득(`generalBuildingShares`)도 단건 지분 경로와 같은 지분 조각으로 펼친다(트랙 GS · 부담부증여 지분 포함).
-  //   부담부증여 × 이월과세 지분만 거부한다 — 지분별 A·B 비교 단위를 연간 합산 펼침이 받지 않는다(⑧ 같은 모드·같은 문구).
-  generalBuildingShares: (v) =>
-    Array.isArray(v) &&
-    v.some((s) => (s as { carryoverTaxation?: unknown } | null)?.carryoverTaxation != null)
-      ? MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE
-      : null,
+  // 지분 분할 취득(`generalBuildingShares`)도 단건 지분 경로와 같은 지분 조각으로 펼친다(트랙 GS · 부담부증여 · 부담부증여 × 이월과세 지분 포함).
   // 상업용건물·오피스텔 3키(`commercialBuildingValuation`·`commercialAppurtenantLand`·`commercialInheritanceValuation`)는
   // ⑭가 단건과 같이 옮긴다 — 단건 엔진이 직접 읽는 서브객체라 합산도 같은 세액이다(계획서 multi-building-valuation-support 트랙 C).
   preHousingDisclosure: whenPresent(MULTI_PHD_UNSUPPORTED_MESSAGE),

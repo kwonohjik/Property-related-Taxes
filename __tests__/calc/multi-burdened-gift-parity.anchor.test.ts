@@ -9,8 +9,8 @@
  * `PerPropertyBreakdown.transferBurdenedGiftBreakdown`, 일반건물은 `generalBuildingDetailsByAsset[자산].burdenedGiftBreakdown`).
  * 묶음(축 B·함께 양도 — `burdenedGiftWholeInfo`)은 물건 전체 1건이 맡으므로 자산별 echo를 싣지 않는다(BG-5 · V-BG1).
  *
- * 계속 막는 하위 모드(BG-6): 일반건물 부담부증여 × 배우자등 이월과세 — 단건은 카드 세트 A·B를 신고 단위로 비교하는데
- * 연간 합산 펼침(`multi-gb-expansion.ts`)은 그 단위를 받지 않아 카드 빌더가 멈춘다(실측: 단건 71,321,800 · 다건 예외).
+ * 일반건물 부담부증여 × 배우자등 이월과세(BG-6 · 트랙 GB-BG-CO): 카드 세트 A·B를 집계 외부 비교 단위로 넘긴다(단건 F27·묶음과 같은 재료) —
+ * 연간 합산은 그 해 전체 결정세액으로 비교한다. 1건이면 단건과 같다(B 71,321,800 · A 88,752,400 · 무신고 가산세 포함).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
@@ -30,13 +30,14 @@ import { buildPropertyPayload } from "@/lib/calc/multi-transfer-tax-api";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
-import { MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_BURDENED_GIFT_WHOLE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { runSingle, buildMultiBody, postMulti } from "./_helpers/single-multi-route-parity";
+import { sameDayBuildingDonorDate } from "../api/_helpers/gb-bg-building-donor-date";
+import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -44,7 +45,7 @@ beforeEach(() => {
 
 type Obj = Record<string, unknown>;
 
-function form(asset: Partial<AssetForm>, over: Obj = {}): TransferFormData {
+function baseForm(asset: Partial<AssetForm>, over: Obj = {}): TransferFormData {
   const f = createDefaultTransferFormData();
   Object.assign(f, {
     transferDate: "2024-06-01", isOneHousehold: false, residencePeriodMonths: "0", contractTotalPrice: "",
@@ -53,6 +54,8 @@ function form(asset: Partial<AssetForm>, over: Obj = {}): TransferFormData {
   f.assets = [{ ...makeDefaultAsset(1), ...asset } as AssetForm];
   return f;
 }
+
+const form = baseForm;
 
 const BG = {
   transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgDonorRelation: "lineal_descendant",
@@ -188,17 +191,62 @@ describe("다건 — 부담부증여(소령 §159)", () => {
     expect(bundle.burdenedGift).toBeDefined();
   });
 
-  it("[BG-6] ⑧↔⑫ — 일반건물 부담부증여 × 이월과세는 계속 막는다(같은 문구) · 묶음 명세 직접 입력도 거부", async () => {
+  it("[BG-6] 🔴 일반건물 부담부증여 × 이월과세 — 단건과 같은 세액(71,321,800) · [A]/[B] 비교 명세 · 묶음 명세 직접 입력은 거부", async () => {
+    // 당초 증여자의 건물 취득일(⑧ 필수)은 토지와 같은 날로 채운다(`sameDayBuildingDonorDate`).
+    const form = (asset: Partial<AssetForm>, over: Obj = {}) => {
+      const f0 = baseForm(asset, over);
+      return { ...f0, assets: f0.assets.map(sameDayBuildingDonorDate) };
+    };
     const f = form({
       ...BG_GB, acquisitionCause: "carryover_gift", gbBuildingAcquisitionCause: "carryover_gift", acquisitionDate: "2021-06-01",
       carryover: { ...CO, donorAcquisitionPrice: "10000000" }, bgCoDonorActualAcquisitionLand: "5,000,000", bgCoDonorActualAcquisitionBuilding: "5,000,000",
     });
-    expect(validateMultiSupportedMode(f)).toBe(MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE);
+    expect(validateMultiSupportedMode(f)).toBeNull();
+    expect([0, 1, 2, 3, 4].flatMap((st) => collectStepIssues(st, f))).toEqual([]);
     const s = await single(f);
-    expect(((s.json.data as Obj).aggregated as Obj).totalTax).toBe(71_321_800);
-    const res = await postMulti(await buildMultiBody([f]));
-    expect(res.status).toBe(400);
-    expect(JSON.stringify(res.json)).toContain(MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE);
+    const sAgg = (s.json.data as Obj).aggregated as Obj;
+    expect(sAgg.totalTax).toBe(71_321_800);
+    const m = await multi([f]);
+    expect(m.totalTax).toBe(71_321_800);
+    const mData = m.json.data as Obj;
+    const unit = (mData.burdenedGiftCarryoverUnits as Record<string, Obj>).p1;
+    const sDetail = sAgg.burdenedGiftCarryoverDetail as Obj;
+    for (const k of ["adoptedScenario", "determinedTaxA", "determinedTaxB", "applicablePeriodYears", "giftTaxAmount"]) expect(unit[k], k).toEqual(sDetail[k]);
+    // [A]/[B] 요약 — 다건 카드 id·라벨은 자산 접미사가 붙는다(`land#p1` · `p1 토지`). 금액·기산일만 단건과 같아야 한다.
+    const amounts = (sc: unknown) => {
+      const { parts, ...dates } = sc as { parts: Obj[] };
+      return { ...dates, parts: parts.map(({ acquisitionPrice, transferGain }) => ({ acquisitionPrice, transferGain })) };
+    };
+    expect(amounts(unit.scenarioA)).toEqual(amounts(sDetail.scenarioA));
+    expect(amounts(unit.scenarioB)).toEqual(amounts(sDetail.scenarioB));
+    expect([unit.adoptedScenario, unit.determinedTaxA, unit.determinedTaxB]).toEqual(["B", 50_132_000, 64_838_000]);
+    expect(((mData.generalBuildingDetailsByAsset as Record<string, Obj>).p1).burdenedGiftBreakdown).toEqual((s.json.data as Obj).transferBurdenedGiftBreakdown);
+    const withApt = await multi([f, APT]);
+    const aptUnit = ((withApt.json.data as Obj).burdenedGiftCarryoverUnits as Record<string, Obj>).p1;
+    expect([withApt.totalTax, (withApt.json.data as Obj).determinedTax, aptUnit.adoptedScenario, aptUnit.determinedTaxA, aptUnit.determinedTaxB]).toEqual([185_790_000, 168_900_000, "B", 153_420_000, 168_900_000]);
+
+    // A 채택 시료 — 증여세·당초 증여자 자본적지출 0이면 A 결정세액이 더 크다(②3호 미발동 → §97의2① 적용).
+    const fa = form({
+      ...BG_GB, acquisitionCause: "carryover_gift", gbBuildingAcquisitionCause: "carryover_gift", acquisitionDate: "2021-06-01",
+      carryover: { ...CO, donorAcquisitionDate: "2019-01-01", donorAcquisitionPrice: "10000000", giftTaxAmount: "0", donorCapitalExpenditure: "0" },
+      bgCoDonorActualAcquisitionLand: "5,000,000", bgCoDonorActualAcquisitionBuilding: "5,000,000",
+    });
+    const sa = await single(fa);
+    const saAgg = (sa.json.data as Obj).aggregated as Obj;
+    const ma = await multi([fa]);
+    const maData = ma.json.data as Obj;
+    const u = (maData.burdenedGiftCarryoverUnits as Record<string, Obj>).p1;
+    expect([ma.totalTax, saAgg.totalTax, u.adoptedScenario, u.determinedTaxA, u.determinedTaxB, u.giftTaxAmount]).toEqual([88_752_400, 88_752_400, "A", 80_684_000, 64_838_000, 0]);
+    expect((maData.burdenedGiftCarryoverUnits as Record<string, Obj>).p1.adoptedScenario).toBe((saAgg.burdenedGiftCarryoverDetail as Obj).adoptedScenario);
+    expect(((maData.generalBuildingDetailsByAsset as Record<string, Obj>).p1).burdenedGiftBreakdown).toEqual((sa.json.data as Obj).transferBurdenedGiftBreakdown);
+
+    // 무신고 가산세(A 채택) — A 카드의 첫 카드도 가산세 입력·예정신고 세액 base를 받는다(빠지면 A 채택 시 가산세가 0으로 사라진다).
+    const fp = { ...fa, enablePenalty: true, filingType: "none" } as TransferFormData;
+    const sp = await single(fp);
+    const mp = await multi([fp]);
+    const spAgg = (sp.json.data as Obj).aggregated as Obj;
+    expect(spAgg.penaltyTax).toBeGreaterThan(0);
+    expect([(mp.json.data as Obj).penaltyTax, mp.totalTax]).toEqual([spAgg.penaltyTax, spAgg.totalTax]);
 
     const body = await buildMultiBody([form(BG_HOUSE)]);
     const p = (body.properties as Obj[])[0];

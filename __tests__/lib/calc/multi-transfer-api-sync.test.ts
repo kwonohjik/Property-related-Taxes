@@ -23,7 +23,7 @@ import {
   validateMultiSettings,
 } from "@/lib/calc/multi-transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
-import { MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 
@@ -224,8 +224,13 @@ describe("[§155①] 다건 일시적 2주택 종전취득일 단일소스", () 
 describe("[H-2] 미지원 고급 모드 명시 차단", () => {
   const cases: Array<[string, (f: ReturnType<typeof baseForm>) => void]> = [
     // "부담부증여"는 2026-11-10 지원 전환(트랙 BG) — 단건 = 다건은 `__tests__/calc/multi-burdened-gift-parity.anchor.test.ts`가 고정한다.
-    //   일반건물 부담부증여 × 이월과세만 계속 막는다(같은 파일 BG-6).
-    ["일반건물 부담부증여 × 이월과세", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "general_building", transferType: "burdened_gift", acquisitionCause: "carryover_gift", carryover: { ...(f.assets[0].carryover ?? {}), giftRegistryDate: "2021-06-01" } as never }; }],
+    //   일반건물 부담부증여 × 이월과세도 2026-11-10 지원 전환(같은 파일 BG-6 — A·B 비교 단위). 당초 증여자 신축·증축(§114조의2)만 계속 막는다.
+    ["일반건물 부담부증여 × 이월과세 × 당초 증여자 신축", (f) => {
+      f.assets[0] = {
+        ...f.assets[0], assetKind: "general_building", transferType: "burdened_gift", acquisitionCause: "carryover_gift", bgValuationMode: "sangjeungbeop_market", bgAcquisitionMethod: "converted",
+        carryover: { ...(f.assets[0].carryover ?? {}), giftRegistryDate: "2021-06-01", donorBuilt: true } as never,
+      };
+    }],
     ["재개발", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "redevelopment_apt" }; }],
     // 2026-08-23 추가 — 종전에는 이 가드에 빠져 있어 §166 sub-object 없이 일반 양도로 조용히 오산됐다.
     ["입주권(원조합원)", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "right_to_move_in" }; }],
@@ -254,10 +259,12 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     expect(validateMultiSupportedMode(form)).not.toBeNull();
   });
 
-  it("일반건물 부담부증여 × 이월과세는 그 조합 전용 문구로 막는다(다른 사유가 대신 걸리지 않는다)", () => {
+  it("일반건물 부담부증여 × 이월과세 × 당초 증여자 신축은 그 조합 전용 문구로 막는다 · 토글을 끄면 막지 않는다", () => {
     const form = baseForm();
-    cases.find(([l]) => l === "일반건물 부담부증여 × 이월과세")![1](form);
-    expect(validateMultiSupportedMode(form)).toBe(MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE);
+    cases.find(([l]) => l === "일반건물 부담부증여 × 이월과세 × 당초 증여자 신축")![1](form);
+    expect(validateMultiSupportedMode(form)).toBe(MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE);
+    form.assets[0] = { ...form.assets[0], carryover: { ...form.assets[0].carryover, donorBuilt: false } as never };
+    expect(validateMultiSupportedMode(form)).toBeNull();
   });
 
   it("NH-72: §99·§99의3 + 양도 2016.1.1. 이후는 차단하지 않는다 (단건 = 합산은 transfer.route.multi-new-housing-99-993-nh72.anchor가 고정)", () => {
