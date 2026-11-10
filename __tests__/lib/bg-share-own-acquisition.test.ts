@@ -20,8 +20,15 @@ describe("bgShareOwnAcquisitionApplies — 범위", () => {
   it("토지 · 주택 · 상가 · 건물 → 연다(vp2c §15 D-3 · Q-8 a)", () => {
     for (const assetKind of ["land", "housing", "commercial_building", "building"] as const) expect(bgShareOwnAcquisitionApplies(base({ assetKind }))).toBe(true);
   });
-  it("재개발 · 입주권 · 분양권 → 닫는다(측정 안 함)", () => {
-    for (const assetKind of ["redevelopment_apt", "right_to_move_in", "presale_right"] as const) expect(bgShareOwnAcquisitionApplies(base({ assetKind }))).toBe(false);
+  it("분양권 → 닫는다(부담부증여 지원 종류 밖)", () => expect(bgShareOwnAcquisitionApplies(base({ assetKind: "presale_right" }))).toBe(false));
+  it("재개발 — 시가 · 실지(K-4)만 연다 · 환산(K-5) · 기준시가는 닫는다(vp2c §25 D-3g · Q-18 a)", () => {
+    expect(bgShareOwnAcquisitionApplies(base({ assetKind: "redevelopment_apt", bgAcquisitionMethod: "actual" }))).toBe(true);
+    expect(bgShareOwnAcquisitionApplies(base({ assetKind: "redevelopment_apt", bgAcquisitionMethod: "converted" }))).toBe(false);
+    expect(bgShareOwnAcquisitionApplies(base({ assetKind: "redevelopment_apt", bgAcquisitionMethod: "actual", bgValuationMode: "sangjeungbeop_standard" }))).toBe(false);
+  });
+  it("입주권 — 원조합원 지분은 평가 모드와 무관하게 연다 · 승계 지분은 닫는다(vp2c §25 D-3g)", () => {
+    expect(bgShareOwnAcquisitionApplies(base({ assetKind: "right_to_move_in", bgValuationMode: "sangjeungbeop_standard" }))).toBe(true);
+    expect(bgShareOwnAcquisitionApplies(base({ assetKind: "right_to_move_in", isSuccessorRightToMoveIn: true }))).toBe(false);
   });
   it("이월과세 지분 → 닫는다(당초 증여자 재료 규칙)", () =>
     expect(bgShareOwnAcquisitionApplies(base({ acquisitionCause: "carryover_gift", gbBuildingAcquisitionCause: "carryover_gift" }))).toBe(false));

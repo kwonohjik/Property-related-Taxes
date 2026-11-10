@@ -885,3 +885,33 @@ Q-11 (가) 착수 전 확인 필요: ⑫ 컴패니언 K-5 양도시 기준시가
 - 실세율(mock 세율만) · 지분 3장 이상.
 - 재개발 토지 출자 · 청산금 수령 · 의제취득일 전 × 지분별 실지(원조합원 주택 출자 · 청산금 납부만 쟀다).
 - 입주권 첫 카드 승계 + 둘째 원조합원 · 첫 카드 원조합원 + 둘째 승계에서 원조합원 지분이 둘 이상인 경우.
+
+## 26. D-3g · D-3h 수정 (2026-11-10 사용자 결정: Q-18 a · Q-19 a)
+
+### 26.1 구현
+
+| 층 | 파일 | 내용 |
+|---|---|---|
+| leaf(D-3g) | `lib/calc/bg-share-own-acquisition.ts` | `bgShareOwnAcquisitionApplies`가 재개발 APT · 조합원입주권도 연다 — **실지취득가액 한 칸만**(`bgShareOwnAcquisitionFields` → `["bgActualAcquisitionTotal"]` · 산정방식은 자산 1). 재개발은 시가 · K-4 실지 · 담보 승 아님일 때만(§25.1 — 그 밖은 칸이 쓰이지 않는다). 입주권은 원조합원 지분이면 평가 모드와 무관(부담부증여 입주권은 K-4 전용). 승계 입주권 지분 · 재개발 의제취득일 전 상속·증여 지분 · 이월과세 지분은 제외 |
+| ④ · ⑧ · 사이드바 | `lib/calc/transfer-tax-api-helpers.ts` `mergePrimaryBasic` | 토글 켬이면 `bgShareOwnAcquisitionFields(merged)`의 칸만 지분 카드 값으로 되돌린다(종전 네 칸 고정) |
+| ③ 판정값(D-3h) | `lib/calc/bg-pre-deemed-shares.ts` `bgShareCardJudgmentFields` | 재개발 원조합원 · 입주권 원조합원 지분도 병합값(부담부증여)으로 판정 — ⑤ 실가 · 환산 라디오와 「실거래가 취득가액」 칸이 숨는다(자산 1 카드와 같다). K-5는 §166③ 안내 + D · E 칸이 그대로 뜬다 |
+| ⑤ 토글 블록 | `components/calc/transfer/BurdenedGiftShareOwnAcquisitionBlock.tsx` | 재개발 · 입주권은 산정방식 라디오 없이 「이 지분 실지취득가액」(입주권 「이 지분 종전 부동산 실지취득가액」) 한 칸 · 설명 문구 「산정방식은 자산 1을 따릅니다」 |
+| ⑤ 안내 | `components/calc/transfer/CompanionAcqSpecialAssetNotices.tsx` | 부담부증여면 ① 입주권 원조합원 「종전 부동산 취득가액은 아래 ⑤에서 입력」 → ‘부담부증여’ 카드(지분 카드는 자산 1의 ② · 이 카드 위 토글) ② 재개발 「※ 환산취득가는 §166 섹션 내 환산취득가 토글」 → 산정방식 「환산취득가액」 ③ 지분 카드 산정방식 출처 — 재개발 · 입주권 토글 켬은 「산정방식은 자산 1 · 이 지분 실지취득가액은 이 카드 위」. ①②는 자산 1 카드에도 있던 문구다(⑤ 섹션은 부담부증여에서 원래 숨는다 — 판정값을 바꾸며 지분 카드에도 생겨 함께 고쳤다) |
+
+⑨~⑭ 무변경 — 토글은 와이어에 싣지 않는다(#3093과 같다).
+
+### 26.2 검증 [직접]
+
+| 항목 | 결과 |
+|---|---|
+| anchor `transfer.route.bg-axis-b-redev-rtmi-share-own-acquisition.anchor.test.ts` 22건 | RO-1 재개발 원 · 승계 K-4 · 입주권 원 + 원 기준시가 · K-4 × 60/40 · 30/70 = 지분별 재료 축 A 단건 합(382,331,100 · 373,331,101 · 438,000,000 · 429,000,000 · 424,000,000 · 412,000,000) · RO-2 토글 끔 종전 값 · RO-3 토글 켬 + 비움 → ⑧ `bgActualAcquisitionTotal` ∧ ⑫ 400 · RO-4 K-5 · 기준시가 · 담보 승은 토글 닫힘 · 값 그대로 · leaf 범위 · 산정방식은 자산 1 · RO-5 ③ 판정값 · RO-6 K-5 지분 카드 `useEstimatedAcquisition` 없이 475,865,550 |
+| E2E `e2e/bg-axis-b-redev-rtmi-share-own-acquisition.spec.ts` 3건 | ROE-1 재개발 원 K-4 — ⑤ 실거래가 칸 없음 · 라디오 없음 · 3억 → 382,331,100 · ROE-2 입주권 원 — 토글 켬 → 자산 1 값 3억으로 시작 · 안내가 자산 1의 ② → 440,000,000 · ROE-3 재개발 원 K-5 — §166③ 안내 · D 칸 · 토글 없음 → 475,865,550 |
+| 뮤테이션 11/11 KILLED | vitest 8(종류 분기 · 칸 목록 · 담보 승 · 승계 입주권 · ③ 판정 · K-4 조건 · 의제취득일 전 · 입주권 ③ 승계 제외) · E2E 3(라디오 숨김 · 입주권 안내 · 출처 문구) — cp 백업 → 복원 후 `cmp` |
+| 반전한 기존 단언 4곳 | 「재개발 · 입주권 닫힘 / 빈 객체」 범위 단언(`__tests__/lib/bg-share-own-acquisition.test.ts` · `bg-axis-b-share-own-acquisition-other-kinds` OK-5 · OK-6 · `axis-b-redev-land-area-successor-card` SC-1) — 분양권 닫힘 · 일반 양도 빈 객체 형제 단언은 남겼다 |
+| 회귀 | 관련 703파일 10,771건 · 관련 E2E 9스펙 22건 · tsc 0 · eslint 0 |
+
+### 26.3 남은 것
+
+- 재개발 지분별 산정방식(한 지분은 실지 · 다른 지분은 환산) — 이번은 실지 한 칸만(산정방식은 자산 1). 측정하지 않았다.
+- 입주권 원조합원 상속 · 증여 지분의 취득가액 칸 의미(§163⑨ 평가액인지) — 확인하지 않았다(의제취득일 전 술어 `isBgPreDeemedAsset`은 입주권을 포함하지 않는다).
+- 재개발 토지 출자 · 청산금 수령 · 지분 3장 이상 · 실세율.
