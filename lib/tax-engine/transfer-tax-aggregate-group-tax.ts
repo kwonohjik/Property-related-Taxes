@@ -137,8 +137,9 @@ export function aggregateByGroup(
    *
    * ❌ 이것은 **그룹 세액의 역안분이 아니다.** `refCalculatedTax`는 **자산 단독 참고값**이고
    *   `Σ ref ≠ 그룹 세액`은 원래 그런 값이다 — ref는 그 자산 단독 누진, 그룹 세액은 같은 세율군 과세표준을 더한 누진이라
-   *   같은 세율군(일반 누진)에 자산이 2건 이상이면 **비교과세 유무와 무관하게** 어긋난다(실측: 후속 2 계획서 §1 —
-   *   `docs/00-pm/multi-per-asset-display-followup2.plan.md`). 예정신고는 자산별, §104⑤는 확정신고에서 전체에 적용된다.
+   *   누진 세율을 쓰는 군(일반 누진·비사업용 중과)에 같은 군 자산이 2건 이상이면 **비교과세 유무와 무관하게** 어긋난다
+   *   (고정 세율군 — 단기 등 — 은 같은 군이 여럿이어도 맞는다. 실측: 후속 2·3 계획서 —
+   *   `docs/00-pm/multi-per-asset-display-followup{2,3}.plan.md`). 예정신고는 자산별, §104⑤는 확정신고에서 전체에 적용된다.
    */
   assetPartTax: { tax: number; note?: string }[];
   /**

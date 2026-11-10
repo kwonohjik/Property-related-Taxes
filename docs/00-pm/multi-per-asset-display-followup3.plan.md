@@ -1,6 +1,6 @@
 # 다건 건별 표시값 후속 3 — 잔여 확인 필요 7개 (주식 · 주택 분할 · 6건 이상 · 비사업용 중과 · 아코디언 GB 카드 · 가산세 대체값 · 이력 경로)
 
-- 상태: **결정 대기**(Q-1·Q-2) — 기준 master `a4ec3edda`.
+- 상태: **구현 완료**(Q-1 a · Q-2 a 적용, §6) — 기준 master `a4ec3edda`(구현 중 `d4dcd699e`까지 병합).
 - 출처: `multi-per-asset-display-followup2.plan.md` §5 + 메모리 «남은 확인 필요».
 - 방법: throwaway probe 3개(`__tests__/**/zz-probe-rd*.test.ts*`, 커밋하지 않고 삭제) — 집계 엔진 직접 호출(주택/토지·주식), 다건 route 직접 호출(일반건물·주택 분리 취득), 실제 응답 JSON을 jsdom에서 `MultiTransferTaxResultView`로 렌더. 코드 변경 없음.
 
@@ -118,3 +118,39 @@
 - V-4: 겸용주택·§164 분리 자산의 **단건 route 컴패니언**(다건 밖) 건별 표시 — 함께 양도 카드 경로는 이번 범위가 아니다.
 - V-5: 가산세 대체값을 실제 요청으로 실행해 확인하지 않았다(코드 읽기).
 - 브라우저 수동 확인은 하지 않았다(엔진·route 직접 호출 + jsdom 렌더).
+
+## 6. 구현 결과 (Q-1 a · Q-2 a — 사용자 「모두 권장안으로」)
+
+### 6.1 Q-1 a — 아코디언 일반건물 파트 카드
+
+- `PropertyBreakdownAccordion`에 선택 prop `hideRefTax`(기본 `false`) 추가 — «산출세액 (참고)»·«결정세액 (참고)» 두 행의 렌더 조건에 `!hideRefTax`만 더했다. `MultiGbAssetGroup`이 파트 카드마다 `hideRefTax`를 넘긴다. 일반 자산 카드·«감면세액»·과세표준 행은 불변. 세액 불변.
+- anchor `__tests__/api/transfer.multi-route.gb-part-accordion-ref-tax.anchor.test.ts` 3건 — **실제 다건 route 응답**(토지 + 일반건물 / 일반건물만 / 일반건물 + §77 이식)을 `renderToStaticMarkup`으로 서버 렌더. 구현 전 **3건 모두 실패**(`expected 2 to be 0` — 파트 2장이 두 행을 냄), 구현 후 통과: 파트 카드 두 행 0 · 일반 자산(토지) 카드는 두 행 1씩 유지 · 파트 카드의 «감면세액» 행은 숨기지 않을 때와 같은 개수.
+- 뮤테이션(백업 → 변이 → 복원 → `cmp` 일치) 5종 전부 검출:
+
+| # | 변이 | 결과 |
+|---|---|---|
+| M1 | `MultiGbAssetGroup`이 `hideRefTax`를 안 넘김 | 3건 실패 |
+| M2 | 산출 행 가드 제거 | 3건 실패 |
+| M3 | 결정 행 가드 제거 | 3건 실패 |
+| M4 | `hideRefTax` 기본값 `true` | 2건 실패 (일반 자산 카드가 행을 잃음) |
+| M5 | «감면세액» 행도 숨김 | 1건 실패 |
+
+### 6.2 Q-2 a — 주석 4곳 (주석만)
+
+«같은 세율군(일반 누진) 자산이 2건 이상» → «누진 세율을 쓰는 군(일반 누진·비사업용 중과)에 같은 군 자산이 2건 이상(고정 세율군은 해당 없음)»: `transfer-tax-aggregate-group-tax.ts:139-142` · `FilingFormTableAggregateHelpers.ts:330` · `MultiTransferPropertyBreakdown.tsx:244` · `transfer-aggregate.types.ts:312`. `git diff`에서 주석 외 변경 줄은 Q-1 구현 6줄뿐이다.
+
+### 6.3 구현 중 정정 (정직 공개)
+
+- anchor 초안의 «감면세액 라벨이 파트 2장에 정확히 2개» 단언이 틀렸다 — 일반건물 그룹의 다른 블록(3분 표 등)과 카드 내부에도 같은 라벨이 있어 4·2개로 집계됐다. 카드 단위로 «숨김 여부와 무관하게 개수가 같다»는 상대 비교로 고쳤다.
+- **`tsc --noEmit`이 기본 힙에서 exit 134(OOM)로 두 번 죽었다.** 원인은 이 테스트 파일의 실제 타입 오류(`createElement`에 `groupMultiResultRows` 제네릭 행을 그대로 넘김 — `PerPropertyBreakdown`이 아님)였고, 오류 진단이 힙을 터뜨린 것으로 보인다(힙을 8GB로 올리자 26초에 끝나며 TS2769를 출력). `as PerPropertyBreakdown[]`로 고친 뒤 **기본 힙·8GB 모두 exit 0**. 교훈: tsc exit 134가 반드시 `.next` 때문이거나 러너 메모리 때문은 아니다 — 힙을 올려 실제 오류 문구를 먼저 본다.
+
+### 6.4 검증
+
+- 회귀 5묶음 전부 통과: `__tests__/api` 521파일·7030건 · `tax-engine` 1520파일·19265건 · `calc` 848파일·11771건 · `lib` 265파일·3408건 · `components` 771파일·7054건. `__tests__/print` 19파일·106건 통과.
+- `tsc --noEmit` 0건(기본 힙) · 변경·신규 6파일 `eslint` 0 (회귀 실행 뒤에 anchor 파일의 타입 캐스트만 고쳤고 그 파일 3건을 다시 돌려 통과).
+- **Playwright 생략**: 기존 E2E에 일반건물 파트 카드의 «산출/결정세액 (참고)» 행을 보는 흐름이 없다. **브라우저 수동 확인은 하지 않았다** — 서버 렌더 마크업으로 확인했다.
+
+### 6.5 남은 확인 필요
+
+§5 그대로(V-1 조문 본문 · V-2 주식 items 성격 · V-3 시료 U 감면 0 원인 · V-4 단건 컴패니언 · V-5 가산세 대체값 실행 확인).
+
