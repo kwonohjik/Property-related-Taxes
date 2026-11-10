@@ -4,6 +4,7 @@
  *
  *   MGS-E1 차단 문구 없음 → 「세액 계산」 200 · 본문 `properties[0].generalBuildingShares` 2건 ·
  *          응답 카드 id 복합 접미사(`land#<항목 id>.<지분번호>` — Q-2 a) · 결과는 일반건물 1행이고 펼치면 두 지분의 카드가 보인다.
+ *   MGS-E2 지분 × 부담부증여 → 200 · 본문 지분별 §159(채무 지분 안분)·물건 전체 §159 · 결과 일반건물 행에 §159 명세 카드.
  * 사람이 브라우저로 직접 한 수동 확인은 아니다(headless Playwright). 워크트리는 `E2E_PORT=<포트> npx playwright test <spec>`.
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -79,4 +80,36 @@ test("MGS-E1: 다건 — 일반건물 지분 분할(60%·40%) + 아파트 → �
   await group.getByText("양도 1번").click();
   await expect(group.getByText(/자산 1/).first()).toBeVisible();
   await expect(group.getByText(/자산 2/).first()).toBeVisible();
+});
+
+/** 지분 × 부담부증여(트랙 GS-BG) — 단건 축 B와 같은 지분 §159 카드 · 물건 전체 §159·증여세 명세 1회(단건 59,564,296과 같은 입력은 anchor GS-6). */
+const BG = {
+  transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgMortgageDebtAmount: "300,000,000",
+  bgDonorRelation: "lineal_descendant", bgAcquisitionMethod: "actual", landAcqMode: "actual", buildingAcqMode: "actual", useEstimatedAcquisition: false,
+  bgActualAcquisitionLand: "60,000,000", bgActualAcquisitionBuilding: "60,000,000",
+};
+
+test("MGS-E2: 다건 — 일반건물 지분 분할 × 부담부증여 → 계산되고 일반건물 행에 물건 전체 §159 명세 카드가 뜬다", async ({ page }) => {
+  test.setTimeout(150_000);
+  await seedMulti(page, [
+    formOf([{ ...SHARES[0], ...BG }, { ...SHARES[1], transferType: "burdened_gift" }], "2024-06-01", "1000000000", { assetSplitMode: "fractional" }),
+  ]);
+  await expect(page.getByText(/단건 계산기에서만 지원/)).toHaveCount(0);
+
+  const resp = page.waitForResponse((r) => r.url().includes("/api/calc/transfer/multi") && r.request().method() === "POST", { timeout: 30_000 });
+  await page.getByRole("button", { name: "세액 계산" }).click();
+  const r = await resp;
+  const json = (await r.json()) as Loose;
+  const sent = r.request().postDataJSON() as Loose;
+  expect(r.status(), JSON.stringify(json).slice(0, 400)).toBe(200);
+  const p0 = sent.properties?.[0];
+  expect(p0?.transferType).toBe("burdened_gift");
+  expect(p0?.burdenedGiftWholeInfo?.mortgageDebtAmount).toBe(300_000_000);
+  expect((p0?.generalBuildingShares as Loose[]).map((s) => s.burdenedGiftInfo?.mortgageDebtAmount)).toEqual([180_000_000, 120_000_000]);
+  expect(json.data?.totalTax).toBe(59_564_296);
+  expect(json.data?.generalBuildingDetailsByAsset?.["mgs-1"]?.burdenedGiftBreakdown?.assumedDebtAmount).toBe(300_000_000);
+
+  const group = page.getByTestId("multi-gb-group-mgs-1");
+  await expect(group).toBeVisible({ timeout: 15_000 });
+  await expect(group.getByText("부담부증여 평가 명세 (소득세법 시행령 §159)").first()).toBeAttached();
 });

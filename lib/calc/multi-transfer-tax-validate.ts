@@ -12,7 +12,6 @@ import { phdFlagEffective } from "./phd-toggle-scope";
 import { MULTI_CARRYOVER_PART_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_CARRYOVER_DEBT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
-import { MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { isGbBurdenedGift } from "./gb-bg-gift-tax-return";
 import { carryoverEventForm } from "./transfer-tax-api-carryover";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
@@ -207,10 +206,9 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
     // 일반건물 지분 분할 취득(같은 물건의 전 지분)만 연다 — ④가 단건과 같은 빌더(`buildGeneralBuildingShares`)로 지분 배열을 만들고 ⑭가 지분 카드로 펼친다(트랙 GS).
     //   그 밖의 한 건 내 다자산(함께 양도)은 계속 막는다.
     if (!isMultiGbSharesForm(form)) return MULTI_COMPANION_UNSUPPORTED_MESSAGE;
-    // 부담부증여 지분은 막는다 — 펼침이 지분 §159 정보를 넘기지 않는다(⑫ `generalBuildingShares` 같은 문구 · V-GS2).
-    if (form.assets.some((s) => s.transferType === "burdened_gift" || s.acquisitionCause === "burdened_gift")) {
-      return MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE;
-    }
+    // 지분 × 부담부증여는 단건 축 B와 같은 지분 §159 카드로 펼친다. 부담부증여 × 이월과세 지분만 막는다 — ④는 첫 자산의 표지로 전 지분에
+    //   `carryoverTaxation`을 싣고(`buildGeneralBuildingShares`) 연간 합산 펼침은 지분별 A·B 비교 단위를 받지 않는다(⑫ `generalBuildingShares` 같은 문구).
+    if (isGbBurdenedGift(form.assets[0]) && form.assets.some((s) => carryoverEventForm(s))) return MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE;
     // 위 차단은 첫 자산만 봤다 — 둘째 지분부터도 같은 규칙을 지분마다 적용한다(지분마다 취득원인·감면이 다를 수 있다).
     for (const share of form.assets.slice(1)) {
       const reason = validateMultiSupportedMode({ ...form, assets: [share] });

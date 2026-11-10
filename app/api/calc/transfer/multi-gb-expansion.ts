@@ -22,6 +22,9 @@ import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { RatesByTransferDate } from "@/lib/tax-engine/transfer-tax-item-rates";
 import type { PreliminaryCardUnit } from "@/lib/tax-engine/transfer-tax-preliminary-filing";
 import type { GbBundledAssetDetail } from "@/lib/tax-engine/types/transfer-aggregate.types";
+import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import { buildBundleBurdenedGiftWhole } from "@/lib/tax-engine/transfer-tax-aggregate-burdened-gift";
+import { withCardAcquisitions } from "@/lib/tax-engine/transfer-tax-aggregate-burdened-gift";
 
 export interface MultiGbSource {
   valuation?: Record<string, unknown>;
@@ -30,7 +33,12 @@ export interface MultiGbSource {
    * (`buildSharePiece`)·같은 양도가액 분할(`shareTransferPrices`)·같은 결과 상세 조립(`assembleShareDetail`)을 쓴다.
    * 카드 id 접미사는 복합 `<자산id>.<지분번호>`다(계획서 `multi-carryover-bg-gb-shares.plan.md` Q-2 a).
    */
-  shares?: { list: GeneralBuildingSharePayload[]; totalTransferPrice: number };
+  shares?: {
+    list: GeneralBuildingSharePayload[];
+    totalTransferPrice: number;
+    /** 부담부증여 — 물건 전체 §159 정보(채무 미안분 · 표시 전용). 단건 축 B `burdenedGiftWholeInfo`와 같은 값 · 결과 명세 1회. */
+    burdenedGiftWholeInfo?: BurdenedGiftInfo;
+  };
   ownershipRatio?: number;
   /** 공유지분 — 그 물건 전체(100%) 양도가액(§100③ 계약서 구분 기재 판정 · 단건 `contractTotalPrice`와 같은 값) */
   totalPropertyTransferPrice?: number;
@@ -74,11 +82,25 @@ export function expandMultiGeneralBuildings(
       const assetId = item.propertyId ?? `property-${index + 1}`;
       const { list, totalTransferPrice } = gb.shares;
       const prices = shareTransferPrices(list, totalTransferPrice);
-      const ctx = { transferDate: item.transferDate, totalTransferPrice, primaryReductions: item.reductions };
-      const pieces = list.map((share, i) =>
-        buildSharePiece(ctx, share, i, shareCardSuffix(assetId, i), prices[i], coerceGeneralBuildingPayload(share.valuation), undefined, undefined, undefined));
-      detailsByAsset[assetId] = assembleShareDetail(list, pieces, prices).detail as unknown as GbBundledAssetDetail;
-      pushCards(pieces.flatMap((p) => p.items));
+      // 부담부증여(소령 §159) — 단건 축 B와 같이 지분마다 그 지분의 §159 정보로 카드를 만든다(채무 지분 안분 · 평가액은 지분율로 축소).
+      //   이월과세 지분(A·B 비교 단위)은 ⑧·⑫가 막아 여기 오지 않는다 — 시나리오는 B(양도인 기준) 하나다.
+      const burdened = item.transferType === "burdened_gift" ? { date: item.transferDate } : undefined;
+      const ctx = { transferDate: item.transferDate, totalTransferPrice, primaryReductions: item.reductions, burdened };
+      const pieces = list.map((share, i) => {
+        const info = burdened ? share.burdenedGiftInfo : undefined;
+        return buildSharePiece(ctx, share, i, shareCardSuffix(assetId, i), prices[i], coerceGeneralBuildingPayload(share.valuation), info, undefined, info ? false : undefined);
+      });
+      const cards = pieces.flatMap((p) => p.items);
+      const detail = assembleShareDetail(list, pieces, prices).detail as unknown as GbBundledAssetDetail;
+      // 결과 명세 — 단건 축 B 집계(`transfer-tax-aggregate-once.ts`)와 같은 두 함수: 물건 전체 §159·증여세 1회 + 취득 열은 지분 카드 합.
+      const whole = burdened && gb.shares.burdenedGiftWholeInfo
+        ? withCardAcquisitions(
+            buildBundleBurdenedGiftWhole({ burdenedGiftWholeInfo: gb.shares.burdenedGiftWholeInfo, burdenedGiftDate: burdened.date } as never),
+            cards.map((card) => ({ item: card, result: {} })),
+          )
+        : undefined;
+      detailsByAsset[assetId] = whole ? { ...detail, burdenedGiftBreakdown: whole } : detail;
+      pushCards(cards);
       return;
     }
     const cards = buildGbCompanionItems(
