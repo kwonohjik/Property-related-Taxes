@@ -933,7 +933,7 @@ Q-11 (가) 착수 전 확인 필요: ⑫ 컴패니언 K-5 양도시 기준시가
 | 칸 | 결과 |
 |---|---|
 | 부담부증여 「종전 부동산 실지취득가액」(`bgActualAcquisitionTotal`) 3억 → 4억 | 입주권 440,000,000 → 400,000,000 · 재개발 394,331,100 → 304,331,100 — **이 칸이 A다**(상속 · 증여 모두) |
-| ③ 상속 평가 칸(`publishedValueAtInheritance`) · 증여 신고가액(`fixedAcquisitionPrice`) 5억 추가 | 값 그대로 — 부담부증여는 쓰지 않는다. ④ `buildInheritedAcquisitionPayload`가 의제취득일 전(`isBgPreDeemedAsset`)이 아닌 부담부증여에는 싣지 않는다(`lib/calc/transfer-tax-api-inheritance.ts:58` 「그 밖은 ①② 칸이 화면에 없어 남은 값이 엔진에 닿으면 안 된다(결함 R)」) |
+| ③ 상속 평가 칸(`publishedValueAtInheritance`) · 증여 신고가액(`fixedAcquisitionPrice`) 5억 추가 | 값 그대로 — 부담부증여는 쓰지 않는다. ④ `buildInheritedAcquisitionPayload`가 의제취득일 전(`isBgPreDeemedAsset`)이 아닌 부담부증여에는 싣지 않는다(`lib/calc/transfer-tax-api-inheritance.ts:56-57` 「그 밖은 ①② 칸이 화면에 없어 남은 값이 엔진에 닿으면 안 된다(결함 R)」) |
 | 그 칸 비움 | ⑧ `bgActualAcquisitionTotal` ∧ ⑫ 400 |
 | 축 B 지분 2 상속 · 증여 · 토글 켬 4억(지분 1 매매 3억 · 60/40) | 424,000,000 = 축 A 단건 합(264,000,000 + 160,000,000) · ③ 칸 5억을 더해도 같다 |
 
