@@ -15,6 +15,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
 import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
@@ -47,28 +48,6 @@ interface Props {
   redevMember?: RedevMemberFormScope;
 }
 
-function SectionShell({
-  num, title, tone, children,
-}: { num: string; title: string; tone: "amber" | "violet" | "rose"; children: React.ReactNode }) {
-  const toneMap = {
-    amber: { box: "border-amber-200 bg-amber-50/40 dark:bg-amber-950/40", badge: "bg-amber-200 text-amber-800", title: "text-amber-700 dark:text-amber-300" },
-    violet: { box: "border-violet-200 bg-violet-50/40 dark:bg-violet-950/40", badge: "bg-violet-200 text-violet-800", title: "text-violet-700 dark:text-violet-300" },
-    rose: { box: "border-rose-200 bg-rose-50/40 dark:bg-rose-950/40", badge: "bg-rose-200 text-rose-800", title: "text-rose-700 dark:text-rose-300" },
-  } as const;
-  const t = toneMap[tone];
-  return (
-    <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
-      <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
-          {num}
-        </span>
-        <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
-      </div>
-      {children}
-    </div>
-  );
-}
-
 export function New99InputForm({
   value,
   onChange,
@@ -89,7 +68,7 @@ export function New99InputForm({
   const periodEndLabel = value.isNationalHousing99 ? "1999.12.31" : "1999.6.30";
   const previousHouseStdField = (
         <div>
-          <label className="mb-1 block text-xs font-medium">종전주택 취득 당시 기준시가</label>
+          <label className="mb-1 block text-sm font-medium">종전주택 취득 당시 기준시가</label>
           <CurrencyInput
             data-field="reduction.new_99.previousHouseStdPrice99"
             value={value.previousHouseStdPrice99}
@@ -106,7 +85,7 @@ export function New99InputForm({
         <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
       </div>
 
-      <SectionShell num="①" title="취득 유형·시기" tone="amber">
+      <ToneCard tone="amber" sectionNum="①" title="취득 유형·시기">
         {redevMember ? (
           <RedevMemberNewHouseFields
             article="new_99"
@@ -137,12 +116,12 @@ export function New99InputForm({
         />
         {redevMember ? null : isFromBuilder ? (
           <div>
-            <label className="mb-1 block text-xs font-medium">최초 매매계약일 (비우면 자산 매매계약일 사용)</label>
+            <label className="mb-1 block text-sm font-medium">최초 매매계약일 (비우면 자산 매매계약일 사용)</label>
             <DateInput data-field="reduction.new_99.contractDate99" value={value.contractDate99} onChange={(v) => onChange({ contractDate99: v })} />
           </div>
         ) : (
           <div>
-            <label className="mb-1 block text-xs font-medium">사용승인·사용검사일 (임시사용승인 포함)</label>
+            <label className="mb-1 block text-sm font-medium">사용승인·사용검사일 (임시사용승인 포함)</label>
             <DateInput data-field="reduction.new_99.usageApprovalDate99" value={value.usageApprovalDate99} onChange={(v) => onChange({ usageApprovalDate99: v })} />
           </div>
         )}
@@ -157,9 +136,9 @@ export function New99InputForm({
             />
           </div>
         )}
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="②" title="기준시가·면적" tone="amber">
+      <ToneCard tone="amber" sectionNum="②" title="기준시가·면적">
         <ReductionStdPriceSection
           phd={{
             phdMode: value.phdMode99,
@@ -226,14 +205,14 @@ export function New99InputForm({
             })
           }
         />
-      </SectionShell>
+      </ToneCard>
 
       {/* NH-32 — 재개발 완공 아파트 조합원은 출자 자산 사실이 정한다: 주택 출자면 항상 적용(토글 없음), 토지 출자·승계면 해당 없음(엔진·⑧과 같은 술어). */}
       {(!redevMember || redevMember.houseContributed) && (
-      <SectionShell num="③" title="재개발·재건축 신축주택 (해당 시)" tone="violet">
+      <ToneCard tone="violet" sectionNum="③" title="재개발·재건축 신축주택 (해당 시)">
         {redevMember ? (
           <>
-            <p className="text-micro text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               주택을 출자한 조합원의 신축주택이라 적용됩니다 — 5년 이내 양도도 안분하고 분모가 종전주택 취득 당시 기준시가입니다 (조특령 §99①1호 단서 · 법 §98의3②1호)
             </p>
             {previousHouseStdField}
@@ -249,10 +228,10 @@ export function New99InputForm({
           {previousHouseStdField}
         </ToggleCard>
         )}
-      </SectionShell>
+      </ToneCard>
       )}
 
-      <SectionShell num="④" title="적용 배제 사유 (해당 시 선택)" tone="rose">
+      <ToneCard tone="rose" sectionNum="④" title="적용 배제 사유 (해당 시 선택)">
         {isFromBuilder && (
           <ToggleCard
             tone="rose"
@@ -282,7 +261,7 @@ export function New99InputForm({
             />
           </ToggleCard>
         )}
-      </SectionShell>
+      </ToneCard>
 
       {/*
         D11-05 — 적용 주체 요건. 엔진에는 게이트가 있었으나(`new-99.ts:148·:156`) ①④⑤⑫ 어디에도
@@ -309,7 +288,7 @@ export function New99InputForm({
         />
       </div>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
+      <ToneCard tone="emerald" bodyClassName="space-y-1" className="text-caption text-emerald-900 dark:text-emerald-200">
         <p>
           · 적용 효과: 5년 이내 양도 시 취득일부터 양도일까지 발생한 양도소득금액 전액,
           5년 후 양도 시 취득일부터 5년간 발생한 양도소득금액을 과세대상소득금액에서 뺍니다 (법 §99①).
@@ -319,7 +298,7 @@ export function New99InputForm({
           · 다주택 중과: 본 감면 주택 양도 시 중과세율이 적용되지 않습니다
           (소득세법 시행령 §167의3①5호).
         </p>
-      </div>
+      </ToneCard>
     </div>
   );
 }

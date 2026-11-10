@@ -50,7 +50,7 @@ const within = (d: Date | undefined, start: Date, end: Date): boolean =>
   d !== undefined && d >= start && d <= end;
 
 /**
- * §98·§98의2·§98의3·§98의5·§98의7의 「최초 매매계약일」 — 조문 칸이 정본이다(Q-19).
+ * §98·§98의2·§98의3·§98의4·§98의5·§98의7·§99의2의 「최초 매매계약일」 — 조문 칸이 정본이다(Q-19).
  * `articleContractDates`가 있으면(UI) 자산-수준 `contractDate`를 읽지 않는다. 없으면(직접 호출) 종전대로 `contractDate`.
  */
 const articleContract = (c: PeriodCheckContext, id: string): Date | undefined =>
@@ -278,10 +278,13 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     label: "취득 2009.3.16~2010.2.11 (비거주자 일반주택)",
     // P4 (2026-06-12): 일자 미입력 시 낙관 통과 — 본 판정은 evaluateUnsold984 (취득 OR 계약).
     check: (c) => {
-      const t = c.contractDate ?? c.acquisitionDate;
+      const contract = articleContract(c, "unsold_98_4");
+      // Q-19 — 조문 칸이 정본이라 UI에서 칸이 비면 계약 트랙을 배제할 수 없다(낙관 통과)
+      if (c.articleContractDates && contract === undefined) return true;
+      const t = contract ?? c.acquisitionDate;
       return t === undefined ||
         within(c.acquisitionDate, D("2009-03-16"), D("2010-02-11")) ||
-        within(c.contractDate, D("2009-03-16"), D("2010-02-11"));
+        within(contract, D("2009-03-16"), D("2010-02-11"));
     },
     failReason: "비거주자 일반주택 취득기간(2009.3.16~2010.2.11) 시한 외 — 조특법 §98의4",
   },
@@ -336,7 +339,7 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     // P2 (2026-06-11): 낙관 통과 + contractDate만 (자기건설은 사용승인일 기준이라
     // 자산 계약일로 차단 불가 — 본 판정은 evaluateUnsold992. 취득일 fallback 금지)
     check: (c) =>
-      c.contractDate === undefined || within(c.contractDate, D("2013-04-01"), D("2013-12-31")),
+      articleContract(c, "unsold_99_2") === undefined || within(articleContract(c, "unsold_99_2"), D("2013-04-01"), D("2013-12-31")),
     failReason: "신축·미분양·1세대1주택 매매계약 시한(2013.4.1~2013.12.31) 외 — 조특법 §99의2",
   },
 

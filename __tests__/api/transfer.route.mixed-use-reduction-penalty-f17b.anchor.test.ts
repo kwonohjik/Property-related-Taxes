@@ -57,7 +57,7 @@ const RED_77 = [
 ];
 /** 차감형 대표 — 조특법 §98의3(양도소득금액 차감). */
 // 계산하지 않는 조문 — §98의3 등 §98 시리즈는 주택분 차감으로 계산한다(US-13). 남은 예시는 §99의2.
-const RED_DEFERRED = [{ type: "unsold_99_2" }];
+const RED_DEFERRED = [{ type: "unsold_99_2", contractDate992: "2013-05-01" }]; // W3a — 조문 칸 최초 매매계약일 필수(⑫)
 
 const PENALTY_NONE = {
   determinedTax: 0,

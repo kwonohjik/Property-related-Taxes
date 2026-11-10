@@ -16,6 +16,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
 import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
@@ -39,29 +40,6 @@ interface Props {
   assetPhdSnapshot?: ReductionPhdValue;
 }
 
-function SectionShell({
-  num, title, tone, children,
-}: { num: string; title: string; tone: "sky" | "amber" | "rose" | "violet"; children: React.ReactNode }) {
-  const toneMap = {
-    sky: { box: "border-sky-200 bg-sky-50/40 dark:bg-sky-950/40", badge: "bg-sky-200 text-sky-800", title: "text-sky-700 dark:text-sky-300" },
-    amber: { box: "border-amber-200 bg-amber-50/40 dark:bg-amber-950/40", badge: "bg-amber-200 text-amber-800", title: "text-amber-700 dark:text-amber-300" },
-    rose: { box: "border-rose-200 bg-rose-50/40 dark:bg-rose-950/40", badge: "bg-rose-200 text-rose-800", title: "text-rose-700 dark:text-rose-300" },
-    violet: { box: "border-violet-200 bg-violet-50/40 dark:bg-violet-950/40", badge: "bg-violet-200 text-violet-800", title: "text-violet-700 dark:text-violet-300" },
-  } as const;
-  const t = toneMap[tone];
-  return (
-    <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
-      <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
-          {num}
-        </span>
-        <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
-      </div>
-      {children}
-    </div>
-  );
-}
-
 export function Unsold992InputForm({
   value,
   onChange,
@@ -82,7 +60,7 @@ export function Unsold992InputForm({
         <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
       </div>
 
-      <SectionShell num="①" title="대상 주택 유형" tone="sky">
+      <ToneCard tone="sky" sectionNum="①" title="대상 주택 유형">
         <RadioCardGroup<Unsold992Form["houseType992"]>
           name="unsold992-house-type"
           tone="sky"
@@ -107,64 +85,64 @@ export function Unsold992InputForm({
             },
           ]}
         />
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="②" title="계약·승인 시기" tone="sky">
+      <ToneCard tone="sky" sectionNum="②" title="계약·승인 시기">
         {houseType === "self_built" ? (
           <div>
-            <label className="mb-1 block text-xs font-medium">사용승인·사용검사일 (임시사용승인 포함)</label>
+            <label className="mb-1 block text-sm font-medium">사용승인·사용검사일 (임시사용승인 포함)</label>
             <DateInput
               data-field="reduction.unsold_99_2.usageApprovalDate992"
               value={value.usageApprovalDate992}
               onChange={(v) => onChange({ usageApprovalDate992: v })}
             />
-            <p className="mt-1 text-micro text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               2013.4.1~2013.12.31 과세특례 취득기간 중 사용승인·사용검사 (조특령 §99의2①8호)
             </p>
           </div>
         ) : (
           <div>
-            <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
+            <label className="mb-1 block text-sm font-medium">최초 매매계약일</label>
             <DateInput
               data-field="reduction.unsold_99_2.contractDate992"
               value={value.contractDate992}
               onChange={(v) => onChange({ contractDate992: v })}
             />
-            <p className="mt-1 text-micro text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               2013.4.1~2013.12.31 중 최초로 체결한 매매계약 — 동기간 중 계약 체결 + 계약금
               지급한 경우 포함 (법 §99의2①)
             </p>
           </div>
         )}
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="③" title="가액·면적 요건 (하나만 충족해도 적용)" tone="sky">
+      <ToneCard tone="sky" sectionNum="③" title="가액·면적 요건 (하나만 충족해도 적용)">
         <div>
-          <label className="mb-1 block text-xs font-medium">실거래 취득가액</label>
+          <label className="mb-1 block text-sm font-medium">실거래 취득가액</label>
           <CurrencyInput
             data-field="reduction.unsold_99_2.acquisitionPrice992"
             value={value.acquisitionPrice992}
             onChange={(v) => onChange({ acquisitionPrice992: v })}
             label=""
           />
-          <p className="mt-1 text-micro text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             취득세 및 그 밖의 부대비용 제외 (조특령 §99의2②1호 후단)
           </p>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium">연면적 (공동주택·오피스텔은 전용면적, ㎡)</label>
+          <label className="mb-1 block text-sm font-medium">연면적 (공동주택·오피스텔은 전용면적, ㎡)</label>
           <DecimalInput
             data-field="reduction.unsold_99_2.exclusiveAreaSqm992"
             value={value.exclusiveAreaSqm992}
             onChange={(v) => onChange({ exclusiveAreaSqm992: v })}
           />
-          <p className="mt-1 text-micro text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             6억원 이하이거나 85㎡ 이하 — 둘 다 초과하는 경우에만 제외됩니다 (령 §99의2②1호)
           </p>
         </div>
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="④" title="자격 요건 확인" tone="rose">
+      <ToneCard tone="rose" sectionNum="④" title="자격 요건 확인">
         {houseType === "new_or_unsold" && (
           <ToggleCard
             tone="rose"
@@ -206,9 +184,9 @@ export function Unsold992InputForm({
           checked={value.hasConfirmationSeal992}
           onCheckedChange={(v) => onChange({ hasConfirmationSeal992: v })}
         />
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="⑤" title="오피스텔 (해당 시)" tone="violet">
+      <ToneCard tone="violet" sectionNum="⑤" title="오피스텔 (해당 시)">
         <ToggleCard
           tone="violet"
           title="오피스텔"
@@ -224,9 +202,9 @@ export function Unsold992InputForm({
             onCheckedChange={(v) => onChange({ meetsOfficetelRequirement992: v })}
           />
         </ToggleCard>
-      </SectionShell>
+      </ToneCard>
 
-      <SectionShell num="⑥" title="기준시가 (취득일부터 5년이 지난 후 양도 시 필수)" tone="amber">
+      <ToneCard tone="amber" sectionNum="⑥" title="기준시가 (취득일부터 5년이 지난 후 양도 시 필수)">
         <ReductionStdPriceSection
           phd={{
             phdMode: value.phdMode992,
@@ -271,12 +249,12 @@ export function Unsold992InputForm({
           fieldType="unsold_99_2"
           snapshotKeyPrefix="red992"
         />
-        <p className="mt-1 text-micro text-muted-foreground">
+        <p className="mt-1 text-xs text-muted-foreground">
           새로운 기준시가가 고시되기 전이면 직전 기준시가를 적용합니다 (조특령 §40①)
         </p>
-      </SectionShell>
+      </ToneCard>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
+      <ToneCard tone="emerald" bodyClassName="space-y-1" className="text-caption text-emerald-900 dark:text-emerald-200">
         <p>
           · 적용 효과: 취득일부터 5년 이내 양도 시 양도소득세 100%를 감면하고, 5년이 지난 후
           양도 시 취득일부터 5년간 발생한 양도소득금액을 과세대상소득금액에서 공제합니다 (법 §99의2①).
@@ -287,7 +265,7 @@ export function Unsold992InputForm({
           · 다주택 중과: 본 특례 적용 주택 양도 시 중과세율이 적용되지 않습니다
           (소득세법 시행령 §167의3①5호).
         </p>
-      </div>
+      </ToneCard>
     </div>
   );
 }

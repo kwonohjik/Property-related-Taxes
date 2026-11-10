@@ -209,7 +209,7 @@ export function evaluateUnsold982(input: Unsold982Input): UnsoldHybridResult {
 export interface Unsold984Input {
   transferDate: Date;
   acquisitionDate: Date;
-  /** 매매계약일 (선택) — 2010.2.11까지 계약+계약금 포함 */
+  /** 최초 매매계약일 — 조문 칸이 정본·필수(Q-19). 2010.2.11까지 계약+계약금 포함. 비면 MISSING_CONTRACT_DATE */
   contractDate?: Date;
   /** 국내사업장 없는 비거주자 확인 (소법 §120) — 미확인 시 적용 불가 (거주자 차단) */
   isNonResidentNoPe?: boolean;
@@ -304,7 +304,7 @@ export function evaluateP4FromReduction(
     return evaluateUnsold984({
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
-      contractDate: toHybridDate(r.contractDate984) ?? ctx.assetContractDate,
+      contractDate: toHybridDate(r.contractDate984), // Q-19 — 조문 칸이 정본 (자산-수준 매매계약일 대체 제거)
       isNonResidentNoPe: r.isNonResidentNoPe984 as boolean | undefined,
       isNotUnsold983House: r.isNotUnsold983House984 as boolean | undefined,
     });

@@ -189,7 +189,7 @@ export function ReductionStdPriceSection({
         {/* 취득시 기준시가 — PHD ON이면 echo(자동 산출), OFF면 수동 조회 위젯 */}
         {phdActive ? (
           <div className="sm:col-span-2" data-testid={`${testidPrefix}-stdprice-acq-echo`}>
-            <label className="mb-1 block text-xs font-medium">취득시 기준시가</label>
+            <label className="mb-1 block text-sm font-medium">취득시 기준시가</label>
             <div className="rounded-md border border-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2">
               <p className="text-xs text-amber-900 dark:text-amber-200">
                 최초공시 전 환산 자동 계산(§164⑦):{" "}
@@ -199,7 +199,7 @@ export function ReductionStdPriceSection({
                     : "위 환산 입력을 완료하세요"}
                 </span>
               </p>
-              <p className="mt-0.5 text-micro text-amber-800 dark:text-amber-300">
+              <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-300">
                 최초공시 전 취득 — 취득시 기준시가는 위 환산으로 자동 산출됩니다.
               </p>
             </div>
@@ -256,7 +256,7 @@ export function ReductionStdPriceSection({
 
         {showExclusiveArea && onExclusiveAreaChange && (
         <div className="sm:col-span-2">
-          <label className="mb-1 block text-xs font-medium">전용면적 (㎡)</label>
+          <label className="mb-1 block text-sm font-medium">전용면적 (㎡)</label>
           <div className="flex items-center gap-2">
             <div className="flex-1 min-w-0">
               <DecimalInput
@@ -276,13 +276,13 @@ export function ReductionStdPriceSection({
             </button>
           </div>
           {areaMsg ? (
-            <p className="mt-1 text-micro text-destructive" data-testid={`${testidPrefix}-area-status`}>
+            <p className="mt-1 text-xs text-destructive" data-testid={`${testidPrefix}-area-status`}>
               {areaMsg}
             </p>
           ) : !jibun ? (
-            <p className="mt-1 text-micro text-muted-foreground">소재지 지번 입력 시 조회 가능</p>
+            <p className="mt-1 text-xs text-muted-foreground">소재지 지번 입력 시 조회 가능</p>
           ) : null}
-          {areaHint && <p className="mt-1 text-micro text-muted-foreground">{areaHint}</p>}
+          {areaHint && <p className="mt-1 text-xs text-muted-foreground">{areaHint}</p>}
         </div>
         )}
       </div>
