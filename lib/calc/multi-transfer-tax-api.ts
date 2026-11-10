@@ -498,6 +498,10 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
           buildGeneralBuildingShares(form.assets, form.transferDate, form.assetSplitMode, parseAmount(form.totalTransferExpense || "0")),
         )
       : {}),
+    // ⑬ 지분 × 부담부증여 — 물건 전체 §159 정보(채무 미안분 · 표시 전용). 단건 축 B ④와 같은 leaf·같은 인자(⑭ 펼침이 결과 명세를 만든다).
+    ...(primaryKind === "general_building" && isBurdenedGift && primary && isFullFractionalBundle(form.assets, form.assetSplitMode)
+      ? { burdenedGiftWholeInfo: buildBurdenedGiftInfo(primary, undefined, form.transferDate) }
+      : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
     // ⑬ §89①4호 가·나목 분양권 게이트 — 단건(`transfer-tax-api.ts`)과 같은 echo(roster-required-other-assets §4-6).

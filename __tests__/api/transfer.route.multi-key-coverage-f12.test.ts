@@ -69,10 +69,15 @@ describe("F-12 다건 키 분류", () => {
     // 일반건물 부담부증여 × 이월과세만 거부(⑧ 같은 모드) — 묶음 명세는 값이 있으면 거부
     expect(issues({ transferType: "burdened_gift", burdenedGiftInfo: {}, generalBuildingValuation: {}, carryoverTaxation: {} })).toEqual(["burdenedGiftInfo"]);
     expect(issues({ burdenedGiftWholeInfo: {} })).toEqual(["burdenedGiftWholeInfo"]);
-    // 일반건물 지분 분할 취득(트랙 GS) — 지분 배열은 ⑭가 펼친다. 부담부증여 지분만 거부(⑧ 같은 모드)
+    // 물건 전체 명세는 일반건물 지분 × 부담부증여만 받는다 — 지분이 없거나(단건 자산·함께 양도) 부담부증여가 아니면 계속 거부
+    expect(issues({ burdenedGiftWholeInfo: {}, transferType: "burdened_gift", burdenedGiftInfo: {}, generalBuildingShares: [{}, {}] })).toEqual([]);
+    expect(issues({ burdenedGiftWholeInfo: {}, transferType: "burdened_gift", burdenedGiftInfo: {} })).toEqual(["burdenedGiftWholeInfo"]);
+    expect(issues({ burdenedGiftWholeInfo: {}, generalBuildingShares: [{}, {}] })).toEqual(["burdenedGiftWholeInfo"]);
+    expect(issues({ burdenedGiftWholeInfo: {}, transferType: "burdened_gift", generalBuildingShares: [{}] })).toEqual(["burdenedGiftWholeInfo"]);
+    // 일반건물 지분 분할 취득(트랙 GS) — 지분 배열은 ⑭가 펼친다(부담부증여 지분 포함). 부담부증여 × 이월과세 지분만 거부(⑧ 같은 모드)
     expect(issues({ generalBuildingShares: [{}, {}] })).toEqual([]);
-    expect(issues({ generalBuildingShares: [{ burdenedGiftInfo: {} }, {}] })).toEqual(["generalBuildingShares"]);
-    expect(issues({ generalBuildingShares: [{}, {}], transferType: "burdened_gift" })).toEqual(["generalBuildingShares"]);
+    expect(issues({ generalBuildingShares: [{ burdenedGiftInfo: {} }, { burdenedGiftInfo: {} }], transferType: "burdened_gift", burdenedGiftInfo: {} })).toEqual([]);
+    expect(issues({ generalBuildingShares: [{ burdenedGiftInfo: {} }, { burdenedGiftInfo: {}, carryoverTaxation: {} }], transferType: "burdened_gift" })).toEqual(["generalBuildingShares"]);
     expect(issues({ companionAssets: [{}] })).toEqual(["companionAssets"]);
     expect(issues({ reductions: [{ type: "self_farming" }] })).toEqual([]);
     expect(issues({ reductions: [{ type: "unsold_98" }] })).toEqual(["reductions"]);

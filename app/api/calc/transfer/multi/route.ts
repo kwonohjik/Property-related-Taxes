@@ -30,6 +30,7 @@ import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
 import { toMultiEngineItem } from "./route-property-input";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { computePreliminaryFilingTaxes } from "@/lib/tax-engine/transfer-tax-preliminary-filing";
+import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
 import { expandMultiGeneralBuildings } from "../multi-gb-expansion";
 import { gbPreliminaryUnits } from "../multi-gb-expansion";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
@@ -159,6 +160,8 @@ export async function POST(request: NextRequest) {
           list: p.generalBuildingShares as never,
           // 물건 전체(100%) 양도가액 — 단건 지분 경로와 같은 정본(`totalPropertyTransferPrice ?? transferPrice`).
           totalTransferPrice: p.totalPropertyTransferPrice ?? p.transferPrice,
+          // 부담부증여 — 물건 전체 §159 정보(표시 전용 · 단건 축 B와 같은 키). ⑫는 지분 × 부담부증여일 때만 받는다.
+          burdenedGiftWholeInfo: p.burdenedGiftWholeInfo as never,
         },
       };
     }
@@ -279,6 +282,14 @@ export async function POST(request: NextRequest) {
       )
     ) {
       result.warnings = [...result.warnings, SAME_DAY_RIGHT_NOTICE];
+    }
+    // 일반건물 부담부증여 × 양도인 본인 신축 §114조의2 가산세 — 단건 GB 경로(`general-building-route-actual.ts`·`-fractional.ts`)와 같은 고지(Q-14).
+    //   신호(`penaltyAxis`)는 발동 게이트가 열렸을 때만 실려 신호 유무가 곧 가산세 유무다. 증여자 신축분(이월과세)은 ⑧·⑫가 막아 오지 않는다.
+    if (
+      gbExpansion.properties.some((c) => c.gbAssetBurdenedGift && c.penaltyAxis && !c.penaltyDonorBuilt) &&
+      !result.warnings.includes(GB_BG_SELF_BUILT_NOTICE)
+    ) {
+      result.warnings = [...result.warnings, GB_BG_SELF_BUILT_NOTICE];
     }
     if (Object.keys(gbExpansion.detailsByAsset).length > 0) result.generalBuildingDetailsByAsset = gbExpansion.detailsByAsset;
     // NaN·Infinity는 JSON에서 null이 되어 200으로 나간다 — 반환 전에 끊는다(E-14l).

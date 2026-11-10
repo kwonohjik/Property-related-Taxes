@@ -7,8 +7,9 @@
  * 카드 id 접미사는 복합 `<자산id>.<지분번호>`다(Q-2 a) — `cardSuffixOf`는 자산 부분(결과 행 묶음·자산 상세 키),
  * `shareIndexOf`는 지분 번호(지분 짝·지분 echo 키)를 돌려준다. 단건 축 B(`land#0`)·함께 양도(`land#asset-…`)는 점이 없어 종전 그대로다.
  *
- * 계속 막는 하위 모드(GS-5): 지분 × 부담부증여 — 펼침이 지분 §159 정보를 넘기지 않아 일반 양도로 계산된다(V-GS2).
- * 지분 × 이월과세(지분 자산 단위·건물만)는 단건과 같아 막지 않는다(GS-3).
+ * 지분 × 부담부증여(GS-6)는 단건과 같은 지분 §159 카드로 펼치고, 물건 전체 §159·증여세 명세(`burdenedGiftWholeInfo`)를 결과 상세에 1회 싣는다(트랙 GS-BG).
+ * 계속 막는 하위 모드(GS-6b): 지분 × 부담부증여 × 이월과세 — 지분별 A·B 비교 단위를 연간 합산 펼침이 받지 않는다.
+ * 지분 × 이월과세(지분 자산 단위·건물만)는 단건과 같아 막지 않는다(GS-5).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
@@ -30,7 +31,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
-import { MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { cardSuffixOf, shareIndexOf, isSameShare, shareCardSuffix, baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { gbAssetBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
 import { multiFormAssetOf, multiFormPropertyIdOf } from "@/components/calc/results/transfer/multi-result-groups";
@@ -161,18 +162,44 @@ describe("다건 — 일반건물 지분 분할 취득", () => {
     }
   }, 60_000);
 
-  it("[GS-6] ⑧↔⑫ — 지분 × 부담부증여는 계속 막는다(같은 문구)", async () => {
+  it("[GS-6] 🔴 지분 × 부담부증여 — 단건과 같은 세액(59,564,296)·같은 카드 양도차익 · 물건 전체 §159·증여세 명세도 단건과 같다", async () => {
     const BG = {
       transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgMortgageDebtAmount: "300,000,000",
       bgDonorRelation: "lineal_descendant", bgAcquisitionMethod: "actual", landAcqMode: "actual", buildingAcqMode: "actual", useEstimatedAcquisition: false,
       bgActualAcquisitionLand: "60,000,000", bgActualAcquisitionBuilding: "60,000,000",
     } as Partial<AssetForm>;
     const f = sharesForm({ transferType: "burdened_gift" }, BG);
-    expect(validateMultiSupportedMode(f)).toBe(MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE);
-    expect((await single(f)).aggregated.totalTax).toBe(59_564_296);
+    expect(validateMultiSupportedMode(f)).toBeNull();
+    const s = await single(f);
+    expect(s.aggregated.totalTax).toBe(59_564_296);
+    const m = await multi([f]);
+    expect(m.totalTax).toBe(59_564_296);
+    // 양도가액 = 채무 인수분(지분 안분) — 일반 양도(132,951,280)로 조용히 계산되지 않는다
+    expect(gainsOf(m.props)).toEqual(gainsOf(s.aggregated.properties as Obj[]));
+    expect(gainsOf(m.props)).toEqual([79_200_000, 79_200_000, 52_800_000, 52_800_000]);
+    // 결과 명세 — 물건 전체 채무 3억·증여세 1회(지분마다 쪼개면 증여재산공제가 두 번 빠진다) · 단건 `transferBurdenedGiftBreakdown`과 같다
+    const data = m.json.data as Obj;
+    const bd = ((data.generalBuildingDetailsByAsset as Obj).p1 as Obj).burdenedGiftBreakdown as Obj;
+    expect(bd).toEqual((s.json.data as Obj).transferBurdenedGiftBreakdown);
+    expect(bd.assumedDebtAmount).toBe(300_000_000);
+    expect((bd.giftTax as Obj).finalTax).toBe(130_950_000);
+    // 아파트와 함께 — 지분 카드 양도차익 그대로
+    const both = await multi([f, APT]);
+    expect(gainsOf(both.props)).toEqual([79_200_000, 79_200_000, 52_800_000, 52_800_000, 300_000_000]);
+  }, 60_000);
+
+  it("[GS-6b] ⑧↔⑫ — 지분 × 부담부증여 × 이월과세는 계속 막는다(같은 문구)", async () => {
+    const BG = {
+      transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgMortgageDebtAmount: "300,000,000",
+      bgDonorRelation: "lineal_descendant", bgAcquisitionMethod: "actual", landAcqMode: "actual", buildingAcqMode: "actual", useEstimatedAcquisition: false,
+      bgActualAcquisitionLand: "60,000,000", bgActualAcquisitionBuilding: "60,000,000",
+    } as Partial<AssetForm>;
+    // 둘째 지분은 부담부증여 표지 없이 이월과세만 — ④는 첫 자산 표지로 전 지분에 `carryoverTaxation`을 싣는다(지분 단독 ⑧ 검사로는 안 잡힌다)
+    const f = sharesForm({ acquisitionCause: "carryover_gift", carryover: CO } as Partial<AssetForm>, BG);
+    expect(validateMultiSupportedMode(f)).toBe(MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE);
     const res = await postMulti(await buildMultiBody([f]));
     expect(res.status).toBe(400);
-    expect(JSON.stringify(res.json)).toContain(MULTI_GB_SHARES_BURDENED_GIFT_UNSUPPORTED_MESSAGE);
+    expect(JSON.stringify(res.json)).toContain(MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE);
   }, 60_000);
 
   it("[GS-7] ⑦ — 자산 블록 뷰는 지분별 블록을 그리고, 명세서·폼 조회는 그 카드 지분의 값을 읽는다", async () => {

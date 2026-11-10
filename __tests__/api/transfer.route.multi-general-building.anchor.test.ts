@@ -11,6 +11,8 @@
  * - MG-6·7 가산세(V-G2) — 신고 1건 = 1회 · base = 그 일반건물의 예정신고 세액(앞 자산이 기본공제를 쓰면 기본공제 없이)
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
+import { MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { NextRequest } from "next/server";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 
@@ -226,16 +228,66 @@ describe("다건 — 일반건물이 단건 일반건물 route와 같은 세액�
     landStdPriceAtTransfer: 0, buildingStdPriceAtTransfer: 0, landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 0,
   };
   // 지분 분할 취득은 2026-11-10 지원 전환(트랙 GS) — 폼 경로 parity는 `__tests__/calc/multi-gb-shares-parity.anchor.test.ts`가 고정한다.
-  //   직접 API도 단건 지분 route와 같은 세액이어야 하고, 부담부증여 지분만 계속 거부한다(조용히 일반 양도로 계산되지 않게).
-  it("[MG-8] ⑫ 지분 분할 취득(`generalBuildingShares`) — 단건 지분 route와 같은 세액 · 부담부증여 지분만 거부", async () => {
+  //   직접 API도 단건 지분 route와 같은 세액이어야 한다. 지분 × 부담부증여도 같은 날 열었다(트랙 GS-BG) — 부담부증여 × 이월과세 지분만 계속 거부한다.
+  it("[MG-8] ⑫ 지분 분할 취득(`generalBuildingShares`) — 단건 지분 route와 같은 세액 · 부담부증여 지분도 같은 세액 · 부담부증여 × 이월과세 지분만 거부", async () => {
     const { m } = await expectParity({ ...gbBody(gbAsset()), generalBuildingShares: SHARES });
     expect(m.totalTax).toBeGreaterThan(0);
+    // 일반건물 부담부증여 — 양도시·취득시 기준시가 필수(⑫) · 채무는 지분율로 안분(④ `buildBurdenedGiftInfo` debtScaleRatio와 같은 형태)
+    const info = (debt: number) => ({
+      ...BG_INFO, mortgageDebtAmount: debt, actualAcquisitionTotal: undefined, actualLandAcquisitionPrice: 60_000_000, actualBuildingAcquisitionPrice: 60_000_000,
+      landStdPriceAtTransfer: 200_000_000, buildingStdPriceAtTransfer: 200_000_000, landStdPriceAtAcquisition: 100_000_000, buildingStdPriceAtAcquisition: 100_000_000,
+    });
+    const bgBody = {
+      ...gbBody(gbAsset()), transferType: "burdened_gift", burdenedGiftInfo: info(180_000_000), burdenedGiftWholeInfo: info(300_000_000),
+      // 일반건물 부담부증여는 실지 경로만(⑫ `refineGbBurdenedGiftActualPath`)
+      generalBuildingShares: SHARES.map((sh) => ({
+        ...sh, valuation: { ...sh.valuation, actualPriceMode: true }, burdenedGiftInfo: info(sh.ownershipRatio === 0.6 ? 180_000_000 : 120_000_000),
+      })),
+    };
+    const bg = await expectParity(bgBody);
+    // 부담부증여가 실제로 반영됐다 — 일반 양도로 조용히 계산되지 않는다(양도가액 = 채무 인수분)
+    expect(bg.m.totalTax).not.toBe(m.totalTax);
     const r = await post(MULTI, "http://l/api/calc/transfer/multi", {
       taxYear: 2024,
       annualBasicDeductionUsed: 0,
-      properties: [{ propertyId: "p1", propertyLabel: "p1", ...gbBody(gbAsset()), generalBuildingShares: SHARES.map((sh) => ({ ...sh, burdenedGiftInfo: BG_INFO })) }],
+      properties: [{
+        propertyId: "p1", propertyLabel: "p1", ...bgBody,
+        generalBuildingShares: bgBody.generalBuildingShares.map((sh, i) => (i === 1
+          ? { ...sh, carryoverTaxation: { giftRegistryDate: "2021-06-01", donorAcquisitionDate: "2005-01-01", donorAcquisitionPrice: 10_000_000, useEstimatedAcquisition: false, giftTaxAmount: 0, giftDateValuation: 300_000_000, donorRelation: "spouse" } }
+          : sh)),
+      }],
     });
     expect(r.status).toBe(400);
-    expect(JSON.stringify(r.json)).toContain("일반건물 지분 분할 취득 × 부담부증여");
+    expect(JSON.stringify(r.json)).toContain(MULTI_GB_BG_CARRYOVER_UNSUPPORTED_MESSAGE);
+  });
+  // 일반건물 부담부증여 K-5 × 양도인 본인 신축 §114조의2 — 연간 합산은 가산세는 같았지만 «확인 필요» 고지(Q-14)를 싣지 않았다(2026-11-10 실측 · 트랙 BG #3119 경로).
+  //   세액 축(`transfer.route.gb-burdened-gift-self-built-penalty.anchor.test.ts` K-5와 같은 입력)은 그대로 · 고지만 단건과 맞춘다.
+  it("[MG-9] 부담부증여 × 본인 신축 가산세 — 단건과 같은 총납부(71,655,100)·가산세(6,250,000)·같은 고지", async () => {
+    const body = {
+      ...COMMON, propertyType: "general_building", transferDate: "2026-03-01", transferPrice: 1_000_000_000, acquisitionDate: "2022-01-10",
+      acquisitionPrice: 0, expenses: 0, householdHousingCount: 2, transferType: "burdened_gift", acquisitionCause: "purchase", useEstimatedAcquisition: false,
+      burdenedGiftInfo: {
+        valuationMode: "sangjeungbeop_market", acquisitionMethod: "converted", marketValueAtTransfer: 1_000_000_000, lendingDepositTotal: 0,
+        mortgageDebtAmount: 500_000_000, annualRentTotal: 0, mortgageSetAmount: 500_000_000, donorRelation: "lineal_descendant",
+        landStdPriceAtTransfer: 200_000_000, buildingStdPriceAtTransfer: 200_000_000, landStdPriceAtAcquisition: 100_000_000, buildingStdPriceAtAcquisition: 100_000_000,
+      },
+      generalBuildingValuation: {
+        landArea: 100, buildingArea: 200, buildingFootprintArea: 50, transferLandPricePerSqm: 2_000_000, transferBuildingStdPrice: 200_000_000,
+        zoneType: "general_residential", acquisitionLandPricePerSqm: 1_000_000, acquisitionBuildingStdPrice: 100_000_000, actualPriceMode: true,
+        buildingAcquisitionCause: "newConstruction", buildingAcquisitionDate: "2022-01-10", landAcquisitionDate: "2015-01-01",
+      },
+    };
+    const s = await single(body);
+    expect(s.totalTax).toBe(71_655_100);
+    expect(s.warnings).toContain(GB_BG_SELF_BUILT_NOTICE);
+    const r = await post(MULTI, "http://l/api/calc/transfer/multi", {
+      taxYear: 2026, annualBasicDeductionUsed: 0, basicDeductionAllocation: "EARLIEST_TRANSFER",
+      properties: [{ propertyId: "p1", propertyLabel: "p1", ...body }],
+    });
+    expect(r.status, JSON.stringify(r.json).slice(0, 400)).toBe(200);
+    const m = r.json.data as Obj;
+    expect(m.totalTax).toBe(71_655_100);
+    expect(m.penaltyTax).toBe(6_250_000);
+    expect(m.warnings).toContain(GB_BG_SELF_BUILT_NOTICE);
   });
 });
