@@ -186,6 +186,12 @@ function mergePrimaryBasicAll(a: AssetForm, primary: AssetForm): AssetForm {
     areaScenario: primary.areaScenario,
     landNature: primary.landNature,
     /**
+     * 재개발 · 입주권 종전 토지 면적(① 기본정보 「토지 면적」) — 같은 땅이라 **물건 단위 값**이다. 지분 카드에는 ①이 없어 칸이 없다.
+     * 병합하지 않으면 토지 출자 × 인가전 분 환산(§166③)에서 ⑧ 「토지면적(㎡)을 입력하세요」 · ⑫ 400의 막다른 길이었다(부담부증여 · 일반 양도 모두 ·
+     * 계획서 `companion-inherit-valuation-share-vp2c.plan.md` §23 D-3j · Q-16 a). ㎡당 공시지가는 지분 카드가 받는다(취득일 기준이라 지분마다 다를 수 있다).
+     */
+    redevLandArea: primary.redevLandArea,
+    /**
      * 🔴 **소재지·세대 — 2026-09-16 추가.** 종전 주석은 「소재지·좌표는 미emit·미검사 → 제외」
      *    였는데, 그 근거의 절반(**미검사**)이 사라졌다 — ⑧이 소재지를 필수로 막기 시작했다
      *    (계획서 §4-1). 이 목록의 규약이 「⑬ emit + ⑧ 검사의 **합집합**」이므로 함께 승계한다.

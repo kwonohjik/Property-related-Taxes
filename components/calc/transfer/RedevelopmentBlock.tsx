@@ -376,12 +376,24 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
             취득가액 출처는 상단 자산 카드 (상속·증여·매매 등 취득원인별 통합 처리). */}
         {asset.redevIsSuccessorMember === "yes" && (
           <div className="rounded-md border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/30 p-3 text-caption text-sky-900 dark:text-sky-200 space-y-1 leading-relaxed">
-            <div className="font-semibold">취득가액 — 자산 카드에서 입력</div>
-            <div>
-              승계조합원의 취득가액은 <span className="font-semibold">상단 자산 카드 &ldquo;취득가액&rdquo;</span> 입력값을 사용합니다.
-              상속·증여·매매 어느 취득원인이든 자산 카드의 취득원인 + 취득가액 입력 그대로 사용됩니다.
-            </div>
-            {parseAmount(asset.fixedAcquisitionPrice) > 0 && (
+            {/* 부담부증여 — 취득가액은 §159가 정하고 일반 「취득가액」 칸은 숨는다(축 B 지분 카드 포함 · vp2c §23 D-3k). 그 칸을 가리키면 없는 칸을 안내한다. */}
+            {asset.transferType === "burdened_gift" ? (
+              <>
+                <div className="font-semibold" data-testid="redev-successor-bg-acq-note">취득가액 — 부담부증여 §159로 산정</div>
+                <div>
+                  부담부증여로 양도하는 승계조합원 신축APT의 취득가액은 위 &lsquo;취득가액 — 부담부증여 §159 자동 산정&rsquo; 안내대로 정해집니다(소득세법 시행령 §159①1호).
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="font-semibold">취득가액 — 자산 카드에서 입력</div>
+                <div>
+                  승계조합원의 취득가액은 <span className="font-semibold">상단 자산 카드 &ldquo;취득가액&rdquo;</span> 입력값을 사용합니다.
+                  상속·증여·매매 어느 취득원인이든 자산 카드의 취득원인 + 취득가액 입력 그대로 사용됩니다.
+                </div>
+              </>
+            )}
+            {asset.transferType !== "burdened_gift" && parseAmount(asset.fixedAcquisitionPrice) > 0 && (
               <div className="pt-1">
                 현재 사용 중인 취득가액:{" "}
                 <span className="font-mono tabular-nums font-semibold">
