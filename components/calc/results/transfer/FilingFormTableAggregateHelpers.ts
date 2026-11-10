@@ -285,7 +285,7 @@ export function buildAggregateRows(
     const split =
       echoHolding !== undefined || echoResidence !== undefined
         ? { holdingAmount: echoHolding ?? longTermDed, residenceAmount: echoResidence ?? 0 }
-        : splitLtDeduction(longTermDed, holdingMs, residenceMs, residenceMs >= 24);
+        : splitLtDeduction(longTermDed, holdingMs, residenceMs, residenceMs >= 24, colTransferDate);
     setNum("ltDeduction", col, longTermDed);
     setNum("ltHoldingPart", col, split.holdingAmount);
     setNum("ltResidencePart", col, split.residenceAmount);

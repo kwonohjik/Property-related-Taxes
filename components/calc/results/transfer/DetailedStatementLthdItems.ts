@@ -109,7 +109,7 @@ export function setLongTermDeductionItems(
   const totalLth = isAggregate
     ? properties.reduce((s, p) => s + p.longTermHoldingDeduction, 0)
     : result.longTermHoldingDeduction;
-  const lthSplit = splitLtDeduction(totalLth, totalHoldingMs, residenceMs, useTable2);
+  const lthSplit = splitLtDeduction(totalLth, totalHoldingMs, residenceMs, useTable2, transferDate);
 
   // 다건 모드 자산별 보유/거주분 (자산별 holdingMs 기준)
   // 토지·건물 분리 자산은 엔진 echo(소유 파트 보유분·거주분 합)가 정본이다 — 공제 총액을 폼값으로 다시 안분하지 않는다.
@@ -138,6 +138,7 @@ export function setLongTermDeductionItems(
        *   0으로 눌렸다**. 엔진 신호가 있으면 그것이 우선인 것은 종전과 같다.
        */
       isTable2Applied(result.steps, rms >= 24),
+      transferDateOf(p.propertyId),
     );
   };
   /**
@@ -179,7 +180,7 @@ export function setLongTermDeductionItems(
     holdingFormula: lthHoldingFallbackFormula,
     residenceFormula: lthResidenceFallbackFormula,
   } = buildLthdFallbackFormulas({
-    result, isAggregate, totalHoldingMs, residenceMs, useTable2, totalLth, lthSplit,
+    result, isAggregate, totalHoldingMs, residenceMs, useTable2, totalLth, lthSplit, transferDate,
     lthd982HoldingRatePct: lthd982RatePct,
   });
 
@@ -200,7 +201,7 @@ export function setLongTermDeductionItems(
     const hSplit =
       h.holdingDeductionAmount !== undefined && h.residenceDeductionAmount !== undefined
         ? { holdingAmount: h.holdingDeductionAmount, residenceAmount: h.residenceDeductionAmount }
-        : splitLtDeduction(h.longTermDeductionAmount, totalHoldingMs, residenceMs, hT2);
+        : splitLtDeduction(h.longTermDeductionAmount, totalHoldingMs, residenceMs, hT2, transferDate);
     const cYears = c.holdingYears ?? Math.floor(totalHoldingMs / 12);
     // 토지·건물 공제율이 다르면 대표 연수·율(건물 기준) 한 줄로는 실제 공제액을 설명하지 못한다 —
     //   엔진 파트 echo(`partLthd`)로 토지분·건물분을 풀어 쓴다. 공제율이 같거나 echo가 없는 옛 결과는 종전 한 줄 그대로.

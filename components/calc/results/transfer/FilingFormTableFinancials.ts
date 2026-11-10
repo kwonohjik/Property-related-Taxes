@@ -263,6 +263,7 @@ export function fourPartLthdSplitRows(
   residenceMs: number,
   useTable2: boolean,
   setNum: (rowKey: string, col: ColumnKey, n: number | null) => void,
+  transferDate?: string,
 ) {
   const nbLtDeduction = mu.nonBusinessLandPart?.longTermDeductionAmount ?? 0;
   const hpPart = mu.housingPart.partLthd;
@@ -287,7 +288,7 @@ export function fourPartLthdSplitRows(
     setNum("ltResidencePart", "total", res.reduce((a, b) => a + b, 0));
     return;
   }
-  const hpSplit = splitLtDeduction(mu.housingPart.longTermDeductionAmount, holdingMs, residenceMs, useTable2);
+  const hpSplit = splitLtDeduction(mu.housingPart.longTermDeductionAmount, holdingMs, residenceMs, useTable2, transferDate);
   const cpSplit = { holdingAmount: mu.commercialPart.longTermDeductionAmount, residenceAmount: 0 };
   const hpLandRatio = mu.housingPart.transferGain > 0 ? mu.housingPart.landTransferGain / mu.housingPart.transferGain : 0.5;
   const hpBuildRatio = 1 - hpLandRatio;

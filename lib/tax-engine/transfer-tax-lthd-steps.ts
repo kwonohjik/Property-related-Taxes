@@ -19,7 +19,12 @@ import { TRANSFER_REDUCTION_ARTICLE } from "./legal-codes/transfer-house";
 import { applyRate } from "./tax-utils";
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
-import { LTHD_TABLE2_RESIDENCE_MIN_YEARS, resolveLthdTable2Era, table2ResidencePct } from "./data/lthd-table2-era";
+import {
+  isLthdTable2HoldingOnlyEra,
+  LTHD_TABLE2_RESIDENCE_MIN_YEARS,
+  resolveLthdTable2Era,
+  table2ResidencePct,
+} from "./data/lthd-table2-era";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import { buildSplitLthdFormula, buildSplitLthdSubFormulas } from "./transfer-tax-split-display";
 
@@ -153,8 +158,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
   // 2009~2020 양도분 표2 — 보유 연 8% 단일축(OH-31). 계산 축(`calcLongTermRate`)과 같은 leaf로 가른다.
   const era = transferDate ? resolveLthdTable2Era(transferDate) : undefined;
   const table2Era982 = era;
-  const singleAxisTable2 =
-    isOneHouseSpecial && !conv && (era === "holding_8pct" || era === "holding_8pct_residence_2y");
+  const singleAxisTable2 = isOneHouseSpecial && !conv && transferDate !== undefined && isLthdTable2HoldingOnlyEra(transferDate);
   // 보유분 공제율 — §95⑤이면 표1(비주택 기간) + 표2(주택 기간)의 합(40% 한도)이고,
   // 그 외 표2 경로는 총 보유기간 × 4%(단일축 시기는 × 8%, 80% 한도)다. sub-step 안분도 이 값을 기준으로 한다.
   const holdingPct = conv
@@ -244,7 +248,26 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
   // 비특례 케이스는 sub-step 미발생 (보유분 일률 표1 적용 — UI는 표1 안내 노출).
   // 단일축 시기(2009~2020 양도분 표2)는 거주분이 없어 나눌 것이 없다 — sub-step을 내지 않는다.
   const splitSub = splitFormula ? buildSplitLthdSubFormulas(splitArgs!) : null;
-  if (splitSub && isOneHouseSpecial && !singleAxisTable2 && longTermHoldingDeduction > 0) {
+  if (singleAxisTable2 && !lthd982Applied && longTermHoldingDeduction > 0) {
+    // 2009.1.1.~2020.12.31. 양도분 표2 — 보유기간별 공제율(연 8%, 80% 한도) 한 열뿐이라 공제 전액이 보유 기간분이고
+    // 거주 기간분은 0이다(거주기간별 공제율 자체가 없다 — 2021.1.1. 이후에야 보유 4% + 거주 4%로 나뉜다). 신고서·명세서가
+    // 2021 이후 방식(보유 4%/년 + 거주 4%/년)으로 총액을 다시 쪼개 보유분·거주분을 반반으로 적던 자리다. §98의2 특칙은 자기 경로.
+    steps.push({
+      label: LTHD_HOLDING_STEP_LABEL,
+      formula: `총 장기보유특별공제 ${longTermHoldingDeduction.toLocaleString()} 전액 (표2 보유 ${holdingPeriod.years}년×8% = ${tableRatePct}%, 80% 한도 — 2020.12.31. 이전 양도분은 보유기간별 공제율 한 열뿐)`,
+      amount: longTermHoldingDeduction,
+      legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+      sub: true,
+      lthdTable2HoldingOnly: true,
+    });
+    steps.push({
+      label: LTHD_RESIDENCE_STEP_LABEL,
+      formula: "0 (2020.12.31. 이전 양도분 표2는 거주기간별 공제율이 없음 — 거주 기간분 공제 대상 아님)",
+      amount: 0,
+      legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+      sub: true,
+    });
+  } else if (splitSub && isOneHouseSpecial && !singleAxisTable2 && longTermHoldingDeduction > 0) {
     // split — 파트별 분해의 합(거주분 = floor(공제액 × 거주% ÷ 총%), 보유분 = 잔액 흡수). 건물 보유연수 하나로 총액을
     // 안분하던 종전 금액은 신고서(split-2col)가 보이는 파트 합과 달랐다 — 합은 같고 배분만 틀렸다.
     steps.push({

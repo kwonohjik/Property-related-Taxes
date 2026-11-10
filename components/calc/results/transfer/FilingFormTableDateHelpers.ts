@@ -10,7 +10,8 @@ import { cardSuffixOf } from "@/lib/tax-engine/general-building-share-id";
 import { SHARE_ID_SEPARATOR } from "@/lib/tax-engine/general-building-share-id";
 import { purchasedPartParentIdOf } from "@/lib/tax-engine/general-building-share-id";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
-import { table2ResidencePct } from "@/lib/tax-engine/data/lthd-table2-era";
+import { isLthdTable2HoldingOnlyEra, table2ResidencePct } from "@/lib/tax-engine/data/lthd-table2-era";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 
 // ── 날짜·기간 포맷 헬퍼 ────────────────────────────────────────
@@ -153,15 +154,24 @@ export function purchasedPartAcqDateOverride(
 /**
  * 장기보유특별공제 보유/거주 분할 계산.
  * 소득세법 §95② 별표 — 보유기간분 공제율 : 거주기간분 공제율 비율로 안분.
+ *
+ * @param transferDate 양도일 — 표2 시행 구분. 2020.12.31. 이전 양도분의 표2는 보유기간별 공제율(연 8%) 한 열뿐이라
+ *   거주기간별 공제율이 없다 ⇒ 총액 전액이 보유 기간분이고 거주 기간분은 0이다(엔진 `isLthdTable2HoldingOnlyEra`가 정본).
+ *   미제공이면(날짜를 모르는 호출) 종전 그대로 2021.1.1. 이후 식(보유 4% + 거주 4%)으로 안분한다.
  */
 export function splitLtDeduction(
   totalAmount: number,
   holdingMonths: number,
   residenceMonths: number,
   useTable2: boolean,
+  transferDate?: string | Date,
 ): { holdingAmount: number; residenceAmount: number } {
   if (totalAmount <= 0) return { holdingAmount: 0, residenceAmount: 0 };
   if (!useTable2 || residenceMonths <= 0) {
+    return { holdingAmount: totalAmount, residenceAmount: 0 };
+  }
+  const transferAt = toOptionalDate(transferDate);
+  if (transferAt && isLthdTable2HoldingOnlyEra(transferAt)) {
     return { holdingAmount: totalAmount, residenceAmount: 0 };
   }
   const hY = Math.floor(holdingMonths / 12);
