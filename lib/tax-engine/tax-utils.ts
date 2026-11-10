@@ -1,8 +1,8 @@
-import { addDays, addMonths, addYears, differenceInDays, differenceInYears, subMonths, toDate } from "date-fns";
+import { addMonths, differenceInYears, subMonths, toDate } from "date-fns";
 import type { Heir } from "./types/inheritance-gift.types";
 import { SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW } from "./legal-codes/transfer";
 import { MULTI_HOUSE } from "./legal-codes/transfer-house";
-import { completedMonthsInclusive } from "./civil-period";
+import { addMonthsUtc, addYearsUtc, completedMonthsInclusive, utcDayDiff } from "./civil-period";
 
 // ============================================================
 // P0-2 원칙: 세율(rate) × 금액(amount) 곱셈은 반드시 applyRate()를 사용.
@@ -357,23 +357,24 @@ export function calculateHoldingPeriod(
   acquisitionDate: Date,
   disposalDate: Date,
 ): { years: number; months: number; days: number } {
-  // 초일 산입: 양도일까지 포함한 구간의 끝(양도일 다음날)과 취득일의 차이
-  const end = addDays(disposalDate, 1);
-
-  const years = differenceInYears(end, acquisitionDate);
-  const afterYears = addYears(acquisitionDate, years);
-
-  // 개월 성분은 「민법」 §160③(해당일 없는 월은 말일 만료)의 정본 `completedMonthsInclusive`로 구한다 —
-  // date-fns `differenceInMonths`는 2/29 기산에서 말일 보정으로 만료 전날(평년 2/27 양도)을 12개월로 센다(X4-2).
-  // `toDate`(date-fns)로 정규화한다 — 종전 date-fns 계산이 허용하던 문자열·undefined(→ Invalid Date → NaN)를 이 호출도 같게 받아,
+  // 🔴 전부 UTC 달력으로 계산한다 — API·화면의 날짜는 UTC 자정 Date(`toDate`)라서, date-fns `differenceInYears`·
+  // `addYears`·`addDays`·`differenceInDays`(로컬 시간대 함수)를 쓰면 서머타임 구간 취득분의 N년 만료일 당일이
+  // 시간대(Asia/Seoul 등)에 따라 1년 모자라게(또는 많게) 나왔다. 개월 성분과 같은 UTC 달력 함수로 일원화.
+  //
+  // `toDate`(date-fns)로 정규화한다 — 종전 계산이 허용하던 문자열·undefined(→ Invalid Date → NaN)를 이 호출도 같게 받아,
   //   UTC 달력일 함수(`civil-period`)가 Date가 아닌 값에서 TypeError로 화면·route를 깨뜨리지 않게 한다.
-  const months = Math.min(
-    11,
-    Math.max(0, completedMonthsInclusive(toDate(acquisitionDate), toDate(disposalDate)) - years * 12),
-  );
-  const afterMonths = addMonths(afterYears, months);
+  const acquisition = toDate(acquisitionDate);
+  const disposal = toDate(disposalDate);
 
-  const days = differenceInDays(end, afterMonths);
+  // 완성 개월 — 「민법」 §160③(해당일 없는 월은 말일 만료)의 정본. date-fns `differenceInMonths`는 2/29 기산에서
+  // 말일 보정으로 만료 전날(평년 2/27 양도)을 12개월로 센다(X4-2).
+  const totalMonths = completedMonthsInclusive(acquisition, disposal);
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths - years * 12;
+
+  // 일 성분: 초일 산입 — 양도일까지 포함한 구간의 끝(양도일 다음날)과 (취득일 + 연·월)의 UTC 달력일 차이
+  const afterMonths = addMonthsUtc(addYearsUtc(acquisition, years), months);
+  const days = utcDayDiff(disposal, afterMonths) + 1;
 
   return { years: Math.max(0, years), months: Math.max(0, months), days: Math.max(0, days) };
 }

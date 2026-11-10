@@ -60,7 +60,7 @@ lib/tax-engine/
 - `truncateToWon(n)` — 원 미만 절사 (결정세액).
 - `calculateEstimatedAcquisitionPrice(transfer, stdAtAcq, stdAtTransfer)` — 환산취득가 공식.
 - `calculateProgressiveTax(taxBase, brackets)` — 누진세율 적용.
-- `calculateHoldingPeriod(from, to)` — 윤년/월 경계 안전 처리 (date-fns 기반).
+- `calculateHoldingPeriod(from, to)` — 윤년/월 경계 안전 처리 (UTC 달력 — `civil-period`의 `completedMonthsInclusive`·`addYearsUtc`·`addMonthsUtc`. date-fns 로컬 시간대 함수는 UTC 자정 Date에서 서머타임 구간 연수가 어긋나 쓰지 않는다 — `__tests__/tax-engine/holding-period-timezone.anchor.test.ts`).
 - `isSurchargeSuspended(rules, date, type)` — 중과 유예 판정.
 
 **절대 금지**: `Math.round()` (세법은 floor), 부동소수 누적 (`0.1+0.2=0.30000000000000004`).
