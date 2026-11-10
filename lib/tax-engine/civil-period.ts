@@ -61,6 +61,25 @@ export function addYearsUtc(d: Date, years: number): Date {
   );
 }
 
+/**
+ * UTC 달력일 기준 월 단위 가감 — date-fns `addMonths`와 같은 규칙(없는 날은 그 달 말일)이되 로컬 시간대에 의존하지 않는다.
+ * `addYearsUtc`와 같은 이유(UTC 자정 Date를 로컬 달력으로 가감하면 서머타임·음수 오프셋 시간대에서 하루 어긋남)로 UTC 고정.
+ */
+export function addMonthsUtc(d: Date, months: number): Date {
+  const index = d.getUTCMonth() + months;
+  const y = d.getUTCFullYear() + Math.floor(index / 12);
+  const m = ((index % 12) + 12) % 12;
+  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  return new Date(
+    Date.UTC(y, m, Math.min(d.getUTCDate(), lastDay), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds()),
+  );
+}
+
+/** UTC 달력일 차이 `later − earlier`(일 단위, 시각 성분 무시). `later`가 앞서면 음수 */
+export function utcDayDiff(later: Date, earlier: Date): number {
+  return (dayKey(later) - dayKey(earlier)) / DAY_MS;
+}
+
 /** 「`event`한 날부터 `years`년」의 만료일(초일불산입) — B 유형 기한 「이 날짜까지」 */
 export function periodEndFrom(event: Date, years: number): Date {
   return civilPeriodEnd(new Date(dayKey(event) + DAY_MS), years * 12);
