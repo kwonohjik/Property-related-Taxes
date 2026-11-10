@@ -134,6 +134,7 @@ import {
   GbBgPreDeemedReportedCard,
 } from "./GeneralBuildingAcquisitionCardsParts";
 import { gbCarryoverEventSource } from "@/lib/calc/transfer-tax-api-gb-carryover";
+import { bgStdBasis } from "@/lib/calc/bg-163-9-proviso";
 
 export function GeneralBuildingAcquisitionCards({
   asset,
@@ -554,6 +555,7 @@ export function GeneralBuildingAcquisitionCards({
             }
             isBurdenedGift={asset.transferType === "burdened_gift"}
             bgPartReportedElsewhere={gbBgParts.land}
+            bgStdBasis={bgStdBasis(asset)}
             hideFixedAcquisitionPrice={isSeparate}
           />
         )}

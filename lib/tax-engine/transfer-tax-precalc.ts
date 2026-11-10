@@ -272,7 +272,11 @@ export function runPreCalculationSteps(
   workingInput = bgStep.workingInput;
   warnings.push(...bgStep.notices);
   // 의제취득일 전 자산을 기준시가로 평가한 부담부증여(Q-25)는 3자 max를 쓰지 않는다 — 적용되지 않는 ①②③ 비교 단계·카드를 남기지 않는다.
-  if (transferBurdenedGiftBreakdown?.preDeemed?.basis === "deemed_std" && inheritedAcquisitionStep) {
+  // 의제취득일 이후 §163⑨ 결과는 실지(K-4)에서만 A가 된다(`postDeemedAcquisitionOf`) — 담보 승 · 다른 산정방식이면 같은 이유로 지운다.
+  const bgPostDeemedUnused =
+    !!transferBurdenedGiftBreakdown && !inheritedAcquisitionStep?.bgPreDeemed &&
+    !inheritedAcquisitionStep?.result.preDeemedBreakdown && transferBurdenedGiftBreakdown.acquisitionMethodUsed !== "actual";
+  if ((transferBurdenedGiftBreakdown?.preDeemed?.basis === "deemed_std" || bgPostDeemedUnused) && inheritedAcquisitionStep) {
     const at = steps.indexOf(inheritedAcquisitionStep.step);
     if (at >= 0) steps.splice(at, 1);
     inheritedAcquisitionStep = undefined;

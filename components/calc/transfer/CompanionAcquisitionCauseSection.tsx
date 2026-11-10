@@ -40,6 +40,8 @@ import { buildingDatePatch, effectiveBuildingCauseMix, effectiveCarryoverDonorSp
 import { effectiveBuildingCarryoverMix } from "@/lib/calc/transfer-land-part-cause";
 import { isMixedBurdenedGift, mixedBgBlockedCause } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { isMixedBgDeemedPath } from "@/lib/calc/burdened-gift-mixed-use-scope";
+import { bgSec163_9ProvisoKind } from "@/lib/calc/bg-163-9-proviso";
+import { bgStdBasis } from "@/lib/calc/bg-163-9-proviso";
 import { bgPreDeemedUsesThreeWay } from "@/lib/calc/bg-pre-deemed-mode";
 
 const ACQUISITION_CAUSE_OPTIONS = [
@@ -356,6 +358,8 @@ export function CompanionAcquisitionCauseSection({
           isBurdenedGift={asset.transferType === "burdened_gift" && !bgPreDeemedUsesThreeWay(asset)}
           // 겸용 · 시가 평가 — 증여일 평가액(주택분·상가분)이 취득가액이고 그 칸은 겸용 「주택·상가 기준시가」에 있다(PR-7b-7a) — 「쓰이지 않는다」 안내를 띄우지 않는다
           bgPartReportedElsewhere={isMixedBgDeemedPath(asset)}
+          bgStdBasis={bgStdBasis(asset)}
+          bgProvisoKind={bgSec163_9ProvisoKind(asset)}
           // 겸용 — 증여일 평가액은 주택분·상가분 칸이 받는다(이 칸은 세액에 쓰이지 않는다 · 계획서 mixed-gift-fixed-acq-price Q-1 a)
           // ④(`buildMixedUsePayload`)·⑫와 같은 술어 — 주택이 아닌데 겸용 플래그만 남은 잔재(이력 복원)는 칸을 보인다(⑫가 요구하므로 숨기면 막다른 길)
           mixedUseReportedElsewhere={asset.assetKind === "housing" && !!asset.isMixedUseHouse}

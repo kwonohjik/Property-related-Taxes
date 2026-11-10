@@ -118,6 +118,8 @@ export function buildBurdenedGiftBreakdown(params: {
    * 일반건물 취득시 기준시가 칸이 이미 의제취득일 기준시가다(Q-25 · PR-7b-2).
    */
   preDeemedParts?: BgPreDeemedParts;
+  /** 의제취득일 이후 상속 · 증여 자산의 §163⑨ 결과(STEP 0.45) — 실지(K-4) A의 하한(`BgAcquisitionContext.postDeemedAcquisition`). */
+  postDeemedAcquisition?: number;
 }): TransferBurdenedGiftBreakdown {
   const { isUnregistered = false, ownershipRatio, preDeemed } = params;
   const rawInfo = preDeemed ? withDeemedAcquisitionStd(params.info, preDeemed.stdAtDeemed) : params.info;
@@ -350,6 +352,7 @@ export function buildBurdenedGiftBreakdown(params: {
     acqStdPriceForced: acqStdForced,
     isRightToMoveInValuation,
     preDeemed,
+    postDeemedAcquisition: params.postDeemedAcquisition,
     params: { capitalExpenditure: params.capitalExpenditure, transferExpense: params.transferExpense },
     isUnregistered,
   };

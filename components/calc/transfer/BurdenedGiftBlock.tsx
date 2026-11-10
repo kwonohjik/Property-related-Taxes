@@ -68,6 +68,8 @@ import { bgPartialCarryoverGiftValuationPart } from "@/lib/calc/bg-carryover-par
 import { isBgSuccessorRight } from "@/lib/calc/transfer-successor-right";
 import { bgActualFieldSec163_9Cause } from "@/lib/calc/bg-share-own-acquisition";
 import { sec163_9Hint } from "@/lib/calc/bg-share-own-acquisition";
+import { bgSec163_9ProvisoKind } from "@/lib/calc/bg-163-9-proviso";
+import { BgSec163_9ProvisoSection } from "./BgSec163_9ProvisoSection";
 
 interface Props {
   asset: AssetForm;
@@ -222,6 +224,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   const readsTransferorGiftValuation = isCarryoverPresumed || isCarryoverConverted || partialGiftedPart !== undefined;
   /** 주택·건물 × 토지·건물 취득일 다름 — 실지취득가액도 토지·건물 두 칸(총액 칸 없음 · ④·⑧과 같은 술어). */
   const houseSplit = bgHouseSplitActive(asset);
+  /** §163⑨ 단서 구간(토지 1호 · 단독주택 2호) — 실지 칸 아래에 ② §164 칸을 연다(④와 같은 술어). */
+  const bgProvisoKind = bgSec163_9ProvisoKind(asset);
   const fmt = (n: number) => n.toLocaleString("ko-KR");
 
   return (
@@ -532,7 +536,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                 )}
               </>
             ) : asset.assetKind === "land" ? (
-              <FieldCard label="토지 실지취득가액">
+              <FieldCard label="토지 실지취득가액" hint={bgProvisoKind ? sec163_9Hint(asset.acquisitionCause === "gift" ? "gift" : "inheritance") : undefined}>
                 <CurrencyInput label="" hideUnit
                   value={asset.bgActualAcquisitionLand} data-field="bgActualAcquisitionLand"
                   onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
@@ -542,7 +546,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                 hint={
                   originalShareAcqOnSuccessor
                     ? "둘째 이후 원조합원 지분의 계산에 쓰입니다 — 물건 전체 기준으로 입력하면 지분율로 안분됩니다. 이 카드(승계)의 취득가액은 ③ 승계취득 정보의 값입니다."
-                    : sec163_9Hint(bgActualFieldSec163_9Cause(asset))
+                    : sec163_9Hint(bgProvisoKind ? (asset.acquisitionCause === "gift" ? "gift" : "inheritance") : bgActualFieldSec163_9Cause(asset))
                 }
                 label={originalShareAcqOnSuccessor ? "원조합원 지분의 종전 부동산 실지취득가액" : isRightToMoveIn ? "종전 부동산 실지취득가액" : isMixed ? "실지취득가액 — 주택·상가 전체 (토지 포함)" : "실지취득가액 (주택·건물 전체)"}
               >
@@ -551,6 +555,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                   onChange={(v) => onChange({ bgActualAcquisitionTotal: v })} />
               </FieldCard>
             )}
+            {/* §163⑨ 단서 구간 — ② §164 가액 칸(①은 위 실지 칸 · 계획서 bg-163-9-proviso-post-deemed.plan.md) */}
+            {bgProvisoKind && <BgSec163_9ProvisoSection asset={asset} onChange={onChange} transferDate={transferDate} kind={bgProvisoKind} />}
             {/* 자본적지출·양도비는 ④ 한 곳에서만 받는다. 같은 상태를 이 박스도 받으면 ④의 「총 양도비」 비활성·지분·일부 양도 처리를
                 건너뛰고, 여기 넣은 값이 총 양도비보다 우선해 ④ 안내와 계산이 갈렸다(`burdened-gift-residuals-o3-o5-o8.plan.md` O-3). */}
           </div>
