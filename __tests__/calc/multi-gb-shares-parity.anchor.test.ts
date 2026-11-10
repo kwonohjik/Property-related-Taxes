@@ -36,6 +36,8 @@ import { gbAssetBlockView } from "@/components/calc/results/transfer/gb-result-b
 import { multiFormAssetOf, multiFormPropertyIdOf } from "@/components/calc/results/transfer/multi-result-groups";
 import { gbFormulaInputsOf } from "@/components/calc/results/transfer/DetailedStatementGbAsset";
 import { gbCarryoverAcqDateOverride } from "@/components/calc/results/transfer/FilingFormTableDateHelpers";
+import { sameDayBuildingDonorDate } from "../api/_helpers/gb-bg-building-donor-date";
+import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -96,6 +98,7 @@ async function multi(forms: TransferFormData[]) {
   return m;
 }
 const gainsOf = (rows: Obj[]) => rows.map((p) => p.transferGain);
+const withBuildingDonorDate = (f: TransferFormData): TransferFormData => ({ ...f, assets: f.assets.map(sameDayBuildingDonorDate) });
 
 describe("다건 — 일반건물 지분 분할 취득", () => {
   it("[GS-0] 카드 접미사 정본 — 복합 `<자산id>.<지분번호>`는 자산·지분을 따로 읽고, 단건 축 B·함께 양도는 종전 그대로", () => {
@@ -199,8 +202,10 @@ describe("다건 — 일반건물 지분 분할 취득", () => {
       bgActualAcquisitionLand: "40,000,000", bgActualAcquisitionBuilding: "40,000,000",
       bgCoDonorActualAcquisitionLand: "5,000,000", bgCoDonorActualAcquisitionBuilding: "5,000,000",
     } as Partial<AssetForm>;
-    const f = sharesForm(share2, BG);
+    // 당초 증여자의 건물 취득일(⑧ 필수)은 토지와 같은 날로 채운다(`sameDayBuildingDonorDate`) — 화면 검증을 지나는 폼이어야 한다.
+    const f = withBuildingDonorDate(sharesForm(share2, BG));
     expect(validateMultiSupportedMode(f)).toBeNull();
+    expect([0, 1, 2, 3, 4].flatMap((st) => collectStepIssues(st, f))).toEqual([]);
     const s = await single(f);
     const m = await multi([f]);
     const data = m.json.data as Obj;
@@ -215,7 +220,7 @@ describe("다건 — 일반건물 지분 분할 취득", () => {
 
     // A 채택 시료 — 당초 증여자 취득이 최근이면(장특 차이 작음) 취득가액 치환으로 A 결정세액이 커져 §97의2①을 적용한다.
     //   지분 상세(산식 재료)·물건 전체 명세 취득 열이 A 조각으로 다시 조립되는지(`finalizeShareDetails`)를 단건과 대조한다.
-    const fa = sharesForm({ ...share2, carryover: { ...CO, donorAcquisitionDate: "2019-01-01" } } as Partial<AssetForm>, BG);
+    const fa = withBuildingDonorDate(sharesForm({ ...share2, carryover: { ...CO, donorAcquisitionDate: "2019-01-01" } } as Partial<AssetForm>, BG));
     const sa = await single(fa);
     const ma = await multi([fa]);
     const ua = ((ma.json.data as Obj).burdenedGiftCarryoverUnits as Record<string, Obj>)["p1.1"];

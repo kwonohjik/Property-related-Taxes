@@ -125,6 +125,8 @@ const CO_SHARE = {
     ...makeDefaultAsset(2).carryover, giftRegistryDate: "2021-06-01", donorAcquisitionDate: "2019-01-01", donorAcquisitionPrice: "10000000",
     useEstimatedAcquisition: false, giftTaxAmount: "0", donorCapitalExpenditure: "", giftDateValuation: "300000000", donorRelation: "spouse", donorSameHousehold: "no",
   },
+  // 토지·건물 둘 다 이월과세 — 당초 증여자의 건물 취득일(⑧ 필수 · 토지와 같은 날)
+  buildingCarryover: { ...makeDefaultAsset(2).carryover, donorAcquisitionDate: "2019-01-01" },
 };
 
 test("MGS-E3: 다건 — 지분 × 부담부증여 × 이월과세 → 계산되고 일반건물 행에 그 지분의 [A]/[B] 비교 카드가 뜬다", async ({ page }) => {

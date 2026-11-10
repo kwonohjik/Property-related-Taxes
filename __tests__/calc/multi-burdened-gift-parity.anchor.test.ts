@@ -36,6 +36,8 @@ import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggrega
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { runSingle, buildMultiBody, postMulti } from "./_helpers/single-multi-route-parity";
+import { sameDayBuildingDonorDate } from "../api/_helpers/gb-bg-building-donor-date";
+import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -43,7 +45,7 @@ beforeEach(() => {
 
 type Obj = Record<string, unknown>;
 
-function form(asset: Partial<AssetForm>, over: Obj = {}): TransferFormData {
+function baseForm(asset: Partial<AssetForm>, over: Obj = {}): TransferFormData {
   const f = createDefaultTransferFormData();
   Object.assign(f, {
     transferDate: "2024-06-01", isOneHousehold: false, residencePeriodMonths: "0", contractTotalPrice: "",
@@ -52,6 +54,8 @@ function form(asset: Partial<AssetForm>, over: Obj = {}): TransferFormData {
   f.assets = [{ ...makeDefaultAsset(1), ...asset } as AssetForm];
   return f;
 }
+
+const form = baseForm;
 
 const BG = {
   transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgDonorRelation: "lineal_descendant",
@@ -188,11 +192,17 @@ describe("다건 — 부담부증여(소령 §159)", () => {
   });
 
   it("[BG-6] 🔴 일반건물 부담부증여 × 이월과세 — 단건과 같은 세액(71,321,800) · [A]/[B] 비교 명세 · 묶음 명세 직접 입력은 거부", async () => {
+    // 당초 증여자의 건물 취득일(⑧ 필수)은 토지와 같은 날로 채운다(`sameDayBuildingDonorDate`).
+    const form = (asset: Partial<AssetForm>, over: Obj = {}) => {
+      const f0 = baseForm(asset, over);
+      return { ...f0, assets: f0.assets.map(sameDayBuildingDonorDate) };
+    };
     const f = form({
       ...BG_GB, acquisitionCause: "carryover_gift", gbBuildingAcquisitionCause: "carryover_gift", acquisitionDate: "2021-06-01",
       carryover: { ...CO, donorAcquisitionPrice: "10000000" }, bgCoDonorActualAcquisitionLand: "5,000,000", bgCoDonorActualAcquisitionBuilding: "5,000,000",
     });
     expect(validateMultiSupportedMode(f)).toBeNull();
+    expect([0, 1, 2, 3, 4].flatMap((st) => collectStepIssues(st, f))).toEqual([]);
     const s = await single(f);
     const sAgg = (s.json.data as Obj).aggregated as Obj;
     expect(sAgg.totalTax).toBe(71_321_800);
