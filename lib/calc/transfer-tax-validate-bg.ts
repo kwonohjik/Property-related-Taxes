@@ -237,6 +237,13 @@ export function validateBurdenedGiftAsset(
       (asset.bgCoDonorBuildingStdPriceAtAcq ?? "").trim() !== "" && parseAmount(asset.bgCoDonorBuildingStdPriceAtAcq) === 0
     )
       return fieldError("bgCoDonorBuildingStdPriceAtAcq", `${label}: 일반건물의 당초 증여자 취득 당시 건물 기준시가는 0일 수 없습니다 — 당초 증여자가 건물을 신축했으면 사용승인일 당시(「소득세법 시행령」 제162조 제1항 제4호) 건물 기준시가를 입력하세요.`);
+    // 증여받은 파트의 당초 증여자 취득시 기준시가 합이 0 — 기준시가 평가 · 담보 승 · 환산(K-5)은 시나리오 A 취득가액이 0이 된다. 엔진은 세 경우 모두 400이다
+    //   (환산은 `transfer-tax-burdened-gift-step.ts` · 계획서 vp2c §22). 매매사례가액 · 감정가액(담보 승 아님)은 이 칸을 개산공제 base로만 쓴다.
+    const coParts = bgCarryoverParts(asset);
+    const coStdSum = (coParts.land ? parseAmount(asset.bgCoDonorLandStdPriceAtAcq) || 0 : 0) + (coParts.building ? parseAmount(asset.bgCoDonorBuildingStdPriceAtAcq) || 0 : 0);
+    const coPresumed = asset.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(asset.bgAcquisitionMethod) && !bgCollateralForcesStdAcq(asset);
+    if (bgCoDonorNeedsStdPrice(asset) && !coPresumed && coStdSum <= 0)
+      return fieldError(coParts.land ? "bgCoDonorLandStdPriceAtAcq" : "bgCoDonorBuildingStdPriceAtAcq", `${label}: 당초 증여자 취득 당시 기준시가가 모두 0입니다 — 이월과세 시 취득가액을 당초 증여자 취득 당시 기준시가로 구하므로(${asset.bgAcquisitionMethod === "converted" && !bgCollateralForcesStdAcq(asset) ? "환산취득가액의 분자 · 「소득세법 시행령」 제176조의2 제2항 제2호" : "「소득세법 시행령」 제159조 제1항 제1호 괄호"}) 0이면 취득가액이 0이 됩니다. 당초 증여자가 취득할 당시 기준시가를 입력하세요.`);
 
     /**
      * ⚠️ 엔진 `assertCarryoverDonorBasis`의 throw는 **둘**이다. 위 「당초 증여자 필드 미입력」

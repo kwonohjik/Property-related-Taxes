@@ -158,10 +158,14 @@ describe("가산세가 붙지 않는 경우 — echo 로 이유를 말한다 (R2
   });
 
   // 주택은 당초 증여자 기준시가 두 칸 합계로 환산한다(V-6 · `foldDonorStdForConverted`) — 「토지 1억 · 건물 0」은 「0 · 1억」과 같은 base라 합계 0으로 만든다.
-  it("가산세 기준액(채무비율 안분 후 건물분)이 0원이면 zero_base — 당초 증여자 기준시가 합계가 0", () => {
-    const r = run(info("converted", {}, NEW_DB, { landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 0 }));
+  // 종전에는 여기서 zero_base를 확인했다 — 당초 증여자 기준시가 합 0이면 환산취득가액(시나리오 A)이 0으로 통과했다. 이제 엔진이 막는다(계획서 vp2c §22 D-3i).
+  it("가산세 기준액(채무비율 안분 후 건물분)이 0원이면 zero_base — 감정가액 · 당초 증여자 건물 감정가액 0", () => {
+    const r = run(info("appraisal", {}, NEW_DB, { presumedBuildingAcquisitionPrice: 0, presumedLandAcquisitionPrice: 200_000_000 }));
     expect(r.penaltyTax).toBe(0);
     expect(echoOf(r)).toMatchObject({ applied: false, notAppliedReason: "zero_base", fifthAnniversary: "2027-01-10" });
+  });
+  it("당초 증여자 기준시가 합계가 0 · 환산 — 엔진 fail-fast(종전: 취득가액 0 · zero_base로 통과)", () => {
+    expect(() => run(info("converted", {}, NEW_DB, { landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 0 }))).toThrow(/환산취득가액으로 취득가액을 산정하는데 취득시 기준시가가 없습니다/);
   });
 
   it("주택 K-5: 당초 증여자 「토지 1억 · 건물 0」 = 「0 · 1억」 — 같은 base(500M × 1억 ÷ 800M = 62,500,000의 건물분 31,250,000) · 가산세 1,562,500", () => {

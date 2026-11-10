@@ -9,6 +9,9 @@
  * - KG-1 4종 × (단건 · 축 B · 함께 양도) 양도시 기준시가 0 → 400 · 문구
  * - KG-2 대조 — 정상 입력 200(292,800,000 · 585,600,000) · K-4 실지는 양도시 기준시가 0이어도 그대로(환산 분모를 쓰지 않는다 · 450,000,000)
  * - KG-3 시가 모드 산정방식 누락 — 단건 ⑫ · 컴패니언(축 B · 함께 양도)은 엔진이 이미 400(형제 안전망 고정)
+ * - KA-1 취득시 기준시가 0(D-3i · Q-15 a · §22) — 4종 × 3모양 400(종전 200 · 단건 600,000,000 · 축 B 415,680,000 · 묶음 892,800,000).
+ *   예외(재개발 §166③ · 의제취득일 전 · 이월과세 시나리오 B 증여일 평가액)는 `bg-axis-b-gb-redev-share-card` RD-1 · `bg-pre-deemed-redev.routes` ·
+ *   `bg-carryover-k5-donor-std-zero`가 지킨다.
  */
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -96,6 +99,40 @@ describe("KG-3 시가 모드 산정방식 누락 — 이미 400(형제 안전망
       const r = await post(make(k), (b) => { delete pick(b).acquisitionMethod; });
       expect(r.status).toBe(400);
       expect(r.err).toMatch(/산정방식/);
+    });
+  }
+});
+
+describe("KA-1 K-5 · 취득시 기준시가 0 → 엔진 400(D-3i)", () => {
+  for (const k of KINDS) for (const [shape, make, pick] of SHAPES) {
+    it(`${k} · ${shape}`, async () => {
+      const r = await post(make(k), (b) => {
+        const info = pick(b);
+        info.landStdPriceAtAcquisition = 0;
+        info.buildingStdPriceAtAcquisition = 0;
+      });
+      expect(r.status).toBe(400);
+      expect(r.err).toContain("환산취득가액으로 취득가액을 산정하는데 취득시 기준시가가 없습니다");
+    });
+  }
+});
+
+describe("KA-2 의제취득일 전 상속 · 시가 ③(환산) 채택 — 취득시 기준시가 슬롯을 의제취득일 기준시가로 바꿔 쓴다 → 막지 않는다", () => {
+  for (const k of ["land", "housing"] as const) {
+    it(`${k} · burdenedGiftInfo 취득시 기준시가 0이어도 200 · 381,997,738(정상과 같다)`, async () => {
+      const a = Object.assign({ ...makeDefaultAsset(1) }, {
+        addressJibun: "서울 강남구 테스트동 1-1", assetKind: k, acquisitionCause: "inheritance", acquisitionDate: "1983-07-26", inheritanceStartDate: "1983-07-26", decedentAcquisitionDate: "1970-01-01",
+        transferType: "burdened_gift", bgDonorRelation: "lineal_descendant", bgLendingDepositTotal: "0", bgAcquisitionMethod: "converted", standardPriceAtTransfer: "1243350000", standardPriceAtAcq: "202620000",
+        acquisitionArea: "184.2", transferArea: "184.2", landNature: "standalone", ...(k === "housing" ? { inheritanceAssetKind: "house_individual" } : {}),
+        bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "920000000", publishedValueAtInheritance: "20000000", bgMortgageDebtAmount: "460000000", bgMortgageSetAmount: "460000000",
+      }) as unknown as AssetForm;
+      const f = form([a], { householdHousingCount: "0", contractTotalPrice: "920000000" });
+      const ok = await post(f);
+      expect(ok.status, ok.err).toBe(200);
+      const zero = await post(f, (b) => { b.burdenedGiftInfo.landStdPriceAtAcquisition = 0; b.burdenedGiftInfo.buildingStdPriceAtAcquisition = 0; });
+      expect(zero.status, zero.err).toBe(200);
+      expect(zero.gain).toBe(ok.gain);
+      expect(zero.gain).toBe(381_997_738);
     });
   }
 });
