@@ -225,7 +225,7 @@ describe("B 비주택 — 1년 6개월 건물 차손이 다른 1년 6개월 건�
 describe("Q-2 소득공제형 감면(§98의8 미분양주택) — 건물 차손을 다른 자산에 넘기면 감면소득도 같은 비율로 늘어난다", () => {
   const r988 = {
     type: "unsold_98_8", acquisitionPrice988: 500_000_000, exclusiveAreaSqm988: 84, contractDate988: D("2015-06-01"),
-    rentalContractDate988: D("2015-06-10"), rentalStartDate988: D("2015-07-01"), rentalEndDate988: D("2021-01-01"),
+    rentalContractDate988: D("2015-06-10"), rentalStartDate988: D("2015-07-01"), businessRegistrationDate988: D("2015-07-01"), rentalRegistrationDate988: D("2015-07-01"), rentalEndDate988: D("2021-01-01"),
     isResident988: true, isUnsoldAfterCompletion988: true, isFirstContract988: true, isNotRecontract988: true,
     standardPriceAtAcquisition988: 400_000_000, standardPriceAt5Years988: 600_000_000, standardPriceAtTransfer988: 700_000_000,
   };

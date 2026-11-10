@@ -35,6 +35,7 @@ import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { engineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import { rental97SeriesIssue } from "./transfer-tax-validate-rental-97";
 import { unsold986RentalIssue } from "./transfer-tax-validate-unsold-986-rental";
+import { unsold988RentalIssue } from "./transfer-tax-validate-unsold-988-rental";
 
 /**
  * 「PHD 환산 모드」 메시지가 가리킬 입력칸 — 메시지는 5칸을 한꺼번에 묻지만(`canCalcReductionPhd`)
@@ -439,10 +440,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(fieldError("reduction.unsold_98_8.acquisitionPrice988", "§98의8 적용: 취득가액을 입력하세요."));
           if (!(parseDecimal(r.exclusiveAreaSqm988 || "") > 0))
             return fail(fieldError("reduction.unsold_98_8.exclusiveAreaSqm988", "§98의8 적용: 연면적(공동주택은 전용면적, ㎡)을 입력하세요."));
-          if (!r.rentalContractDate988)
-            return fail(fieldError("reduction.unsold_98_8.rentalContractDate988", "§98의8 적용: 임대계약 체결일을 입력하세요 (2015.12.31 이전 체결에 한정 — 법 §98의8① 괄호)."));
-          if (!r.rentalStartDate988)
-            return fail(fieldError("reduction.unsold_98_8.rentalStartDate988", "§98의8 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날)."));
+          const i988Rental = unsold988RentalIssue({ fail, r, form });
+          if (i988Rental) return i988Rental;
           // 5년 후 양도 안분 기준시가 — ⑤ 제목이 「필수」인데 ⑧이 묻지 않아 엔진이 `MISSING_STD_PRICE`로 차감을 0으로 냈다(하이브리드와 같은 헬퍼 · 리뷰 Q-3 (A)).
           //   PHD 환산 ON이면 취득시 기준시가는 환산 입력 충분성으로 검증한다(④ `transfer-tax-api-reductions.ts`와 같은 leaf · §98의7과 같은 규칙).
           let phdOk988 = false;

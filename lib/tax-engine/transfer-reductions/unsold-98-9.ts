@@ -18,6 +18,7 @@
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { UNSOLD_98_DECREE } from "../legal-codes/transfer-house";
 import { evaluateNew994Declarations, type New994MergeOrderContext } from "./new-99-4";
 import type {
   New994Result,
@@ -49,15 +50,15 @@ export function evaluateUnsold989(input: Unsold989EvaluationInput): Unsold989Res
   if (input.unsoldHouseAcquisitionPrice === undefined || input.unsoldHouseAcquisitionPrice <= 0) {
     reasons.push({
       code: "MISSING_PRICE",
-      message: "준공후미분양주택 취득가액이 입력되지 않았습니다 (7억 한도 검증 — 조특령 §98의8①2호).",
-      legalBasis: "조특령 §98의8①2호",
+      message: `준공후미분양주택 취득가액이 입력되지 않았습니다 (7억 한도 검증 — ${UNSOLD_98_DECREE.D98_9_PRICE}).`,
+      legalBasis: UNSOLD_98_DECREE.D98_9_PRICE,
     });
   }
   if (input.unsoldHouseExclusiveArea === undefined || input.unsoldHouseExclusiveArea <= 0) {
     reasons.push({
       code: "MISSING_AREA",
-      message: "준공후미분양주택 전용면적이 입력되지 않았습니다 (85㎡ 한도 검증 — 조특령 §98의8①1호).",
-      legalBasis: "조특령 §98의8①1호",
+      message: `준공후미분양주택 전용면적이 입력되지 않았습니다 (85㎡ 한도 검증 — ${UNSOLD_98_DECREE.D98_9_AREA}).`,
+      legalBasis: UNSOLD_98_DECREE.D98_9_AREA,
     });
   }
 
@@ -94,8 +95,8 @@ export function evaluateUnsold989(input: Unsold989EvaluationInput): Unsold989Res
     if (input.unsoldHouseAcquisitionPrice > UNSOLD_98_9_PRICE_LIMIT) {
       reasons.push({
         code: "PRICE_EXCEEDED",
-        message: "취득가액이 7억원을 초과합니다 (조특령 §98의8①2호).",
-        legalBasis: "조특령 §98의8①2호",
+        message: `취득가액이 7억원을 초과합니다 (${UNSOLD_98_DECREE.D98_9_PRICE}).`,
+        legalBasis: UNSOLD_98_DECREE.D98_9_PRICE,
       });
     }
   }
@@ -103,8 +104,8 @@ export function evaluateUnsold989(input: Unsold989EvaluationInput): Unsold989Res
     if (input.unsoldHouseExclusiveArea > UNSOLD_98_9_AREA_LIMIT_SQM) {
       reasons.push({
         code: "AREA_EXCEEDED",
-        message: "전용면적이 85㎡를 초과합니다 (조특령 §98의8①1호).",
-        legalBasis: "조특령 §98의8①1호",
+        message: `전용면적이 85㎡를 초과합니다 (${UNSOLD_98_DECREE.D98_9_AREA}).`,
+        legalBasis: UNSOLD_98_DECREE.D98_9_AREA,
       });
     }
   }
@@ -128,8 +129,8 @@ export function evaluateUnsold989(input: Unsold989EvaluationInput): Unsold989Res
     reasons.push({
       code: "SELLER_UNCONFIRMED",
       message:
-        "양도자 자격(사업주체·분양사업자·시공자)·최초 매매계약·선착순 공급·확인 날인 요건이 확인되지 않았습니다 (조특령 §98의8①3~5호·②).",
-      legalBasis: "조특령 §98의8①3~5호",
+        `양도자 자격(사업주체·분양사업자·시공자)·최초 매매계약·선착순 공급·확인 날인 요건이 확인되지 않았습니다 (${UNSOLD_98_DECREE.D98_9_SELLER}·②).`,
+      legalBasis: UNSOLD_98_DECREE.D98_9_SELLER,
     });
   }
 

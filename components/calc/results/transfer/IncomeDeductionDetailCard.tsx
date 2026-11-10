@@ -128,11 +128,11 @@ function surchargeNote(kind: Detail["kind"], basis: string | undefined): string 
   return ` · 본 감면 주택 양도 시 다주택 중과세율은 적용되지 않습니다 (${b})`;
 }
 
-/** §98의6 2호 — 엔진이 센 인정 임대기간(echo 표시 전용) */
-function Unsold986RentalPeriodLine({ echo }: { echo?: Unsold986RentalPeriodEcho }) {
+/** §98의6 2호·§98의8 — 엔진이 센 인정 임대기간(echo 표시 전용) */
+function Unsold986RentalPeriodLine({ echo, testId = "unsold986-rental-period" }: { echo?: Unsold986RentalPeriodEcho; testId?: string }) {
   if (!echo) return null;
   return (
-    <p className="text-caption text-foreground" data-testid="unsold986-rental-period">
+    <p className="text-caption text-foreground" data-testid={testId}>
       임대기간 {echo.rentalMonths}개월(기산일 {echo.basisDate}
       {echo.vacancyMonths > 0 ? `, 공실 ${echo.vacancyMonths}개월 제외` : ""}
       {echo.inheritedMonths > 0 ? `, 피상속인 ${echo.inheritedMonths}개월 합산` : ""})
@@ -167,6 +167,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
           </div>
         )}
         {kind === "unsold_98_6" && <Unsold986RentalPeriodLine echo={(result as UnsoldHybridResult).rentalPeriodEcho} />}
+        {kind === "unsold_98_8" && <Unsold986RentalPeriodLine testId="unsold988-rental-period" echo={(result as Unsold988Result).rentalPeriodEcho} />}
         {/* §99 확인 필요 고지 — 「모름」으로 고급주택 처리(NH-02) */}
         {kind === "new_99" && <ReductionDetailWarnings detail={result as New99Result} />}
         <p className="text-caption text-rose-700 dark:text-rose-400">근거 조문: {result.legalBasis}</p>
@@ -254,6 +255,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
       )}
 
       {kind === "unsold_98_6" && <Unsold986RentalPeriodLine echo={(result as UnsoldHybridResult).rentalPeriodEcho} />}
+        {kind === "unsold_98_8" && <Unsold986RentalPeriodLine testId="unsold988-rental-period" echo={(result as Unsold988Result).rentalPeriodEcho} />}
       {/* §99 확인 필요 고지 — 2015.12.31. 이전 양도 종전 규정(NH-49) */}
       {kind === "new_99" && <ReductionDetailWarnings detail={result as New99Result} />}
 

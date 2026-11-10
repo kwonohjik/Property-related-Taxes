@@ -11,8 +11,9 @@
  * - 거주자 · 2015.1.1~2015.12.31 사업주체등과 최초 매매계약
  * - 취득가 6억 이하 **이고** 연면적(전용) 135㎡ 이하 (AND — 령 ②1호는 "초과하거나" 제외형)
  * - 준공후미분양: 사용검사·사용승인 후 2014.12.31까지 분양계약 미체결 + 2015.1.1 이후 선착순 (령 ①)
- * - 5년 이상 임대 — 사업자등록(소법 §168) + 임대사업자등록(민특법 §5) 후 임대 개시일부터 기산,
- *   상속 시 피상속인 임대기간 합산 (령 §98의7⑤ → 령 §98의5⑤ 준용)
+ * - 5년 이상 임대 — 사업자등록(소법 §168) + 임대사업자등록(민특법 §5) 후 임대를 개시하는 날부터 기산(초일 산입),
+ *   공실 구간은 제외하고 구간별 만 개월 합산, 상속 시 피상속인 임대기간 합산 (령 §98의7⑤ → 령 §98의5⑤ 준용 —
+ *   계산은 `unsold-98-8-rental-period.ts`, §98의6 2호와 같은 공용 헬퍼)
  * - 계약 해제 후 본인·배우자·직계존비속·형제자매 재계약분 제외 (령 ②2·3호)
  *
  * 5년 발생분 산식 = 령 §40① 준용 (령 §98의7④) — §99의3 calcSignedAllocation 재사용.
@@ -21,12 +22,19 @@
 import { describeAllocationFormula } from "./unsold-allocation-display";
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { UNSOLD_98_DECREE } from "../legal-codes/transfer-house";
+import type { Unsold986VacancyDates } from "./unsold-98-6-rental-period";
+import type { Unsold986RentalPeriodEcho } from "./unsold-hybrid";
+import { evaluateUnsold988Rental, UNSOLD_98_8_RENTAL_CONTRACT_TO, UNSOLD_98_8_RENTAL_MONTHS } from "./unsold-98-8-rental-period";
+import type { Unsold988RentalReasonCode } from "./unsold-98-8-rental-period";
 import {
   calcSignedAllocation,
   isWithin5YearsCheck,
   type New993FormulaStep,
   type New993SignCase,
 } from "./new-99-3";
+
+export { UNSOLD_98_8_RENTAL_CONTRACT_TO, UNSOLD_98_8_RENTAL_MONTHS };
 
 // UTC 자정 파싱 (T suffix 없음) — §98의9 선례. JSON 경유 입력(new Date("YYYY-MM-DD"))과 동일 기준.
 export const UNSOLD_98_8_CONTRACT_FROM = new Date("2015-01-01");
@@ -37,18 +45,7 @@ export const UNSOLD_98_8_PRICE_LIMIT = 600_000_000;
 export const UNSOLD_98_8_AREA_LIMIT_SQM = 135;
 /** 법 §98의8① — 공제율 (5년 발생분의 50%) */
 export const UNSOLD_98_8_DEDUCTION_RATE = 0.5;
-/** 임대 의무기간 (5년 = 60개월) */
-export const UNSOLD_98_8_RENTAL_MONTHS = 60;
-/**
- * 법 §98의8① 괄호 — 임대계약 체결 시한.
- *
- * 「…5년 이상 임대한 주택(거주자가 「소득세법」 제168조에 따른 사업자등록과 「민간임대주택에
- * 관한 특별법」 제5조에 따른 임대사업자등록을 하고 **2015년 12월 31일 이전에 임대계약을
- * 체결한 경우로 한정한다**)을 양도하는 경우」 — 「…한 경우로 한정한다」는 요건이다.
- * 위임 시행령(령 §98의7⑤ → 령 §98의5⑤)은 임대기간 **계산**만 정하고 이 시한을 대체하지 않는다.
- * §98의6①2호의 `UNSOLD_98_6_RENTAL_CONTRACT_TO`(2011.12.31)와 같은 층위.
- */
-export const UNSOLD_98_8_RENTAL_CONTRACT_TO = new Date("2015-12-31");
+// 임대 의무기간(60개월)·임대계약 체결 시한(2015.12.31) 상수는 `unsold-98-8-rental-period.ts`에 있다 (위 re-export).
 
 export interface Unsold988Input {
   transferDate: Date;
@@ -64,6 +61,12 @@ export interface Unsold988Input {
   rentalContractDate?: Date;
   /** 임대개시일 — 사업자등록+임대사업자등록 후 개시한 날 (령 §98의5⑤1호 기산) */
   rentalStartDate?: Date;
+  /** 사업자등록일 (소법 §168) — 기산일 = max(사업자등록일, 임대사업자등록일, 실제 임대개시일) (령 §98의5⑤1호 준용) */
+  businessRegistrationDate?: Date;
+  /** 임대사업자등록일 (민특법 §5) */
+  rentalRegistrationDate?: Date;
+  /** 공실 구간(양 끝 포함) — 임대기간에서 제외, 구간별 만 개월 합산 */
+  rentalVacancies?: readonly Unsold986VacancyDates[];
   /** 임대종료일 — 미입력 시 양도일까지 임대 계속으로 봄 */
   rentalEndDate?: Date;
   /** 상속으로 합산하는 피상속인 임대기간 (개월 — 령 §98의5⑤2호) */
@@ -99,7 +102,7 @@ export type Unsold988IneligibleCode =
   | "MISSING_RENTAL_CONTRACT_DATE"
   | "RENTAL_CONTRACT_TOO_LATE"
   | "MISSING_RENTAL_START"
-  | "RENTAL_PERIOD_SHORT"
+  | Unsold988RentalReasonCode
   | "MISSING_STD_PRICE"
   | "TRANSFER_BEFORE_ACQUISITION";
 
@@ -121,8 +124,10 @@ export interface Unsold988Result {
   signCase: New993SignCase;
   /** 공제율 echo (0.5) */
   deductionRate: number;
-  /** 인정 임대기간 (개월 — 상속 합산 포함) */
+  /** 인정 임대기간 (개월 — 공실 제외·상속 합산 포함) */
   rentalMonths: number;
+  /** [echo] 인정 임대기간 상세(기산일·공실 제외·상속 합산) — 표시 전용, 판정 불변. 일자가 갖춰져 계산된 경우만 */
+  rentalPeriodEcho?: Unsold986RentalPeriodEcho;
   formulaSteps: New993FormulaStep[];
   /**
    * [echo] 3단계 상세명세 「소득금액 감면대상」 행의 Frac 분수 산식 표시용.
@@ -138,15 +143,7 @@ export interface Unsold988Result {
   legalBasis: string;
 }
 
-/** 두 일자 사이 만(滿) 개월 수 — 일 단위 미달 월 절사 */
-export function fullMonthsBetween(from: Date, to: Date): number {
-  if (to.getTime() <= from.getTime()) return 0;
-  let months = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
-  if (to.getDate() < from.getDate()) months -= 1;
-  return Math.max(0, months);
-}
-
-function ineligible(reasons: Unsold988IneligibleReason[], rentalMonths: number): Unsold988Result {
+function ineligible(reasons: Unsold988IneligibleReason[], rentalMonths: number, rentalPeriodEcho?: Unsold986RentalPeriodEcho): Unsold988Result {
   return {
     id: "unsold_98_8",
     isEligible: false,
@@ -157,6 +154,7 @@ function ineligible(reasons: Unsold988IneligibleReason[], rentalMonths: number):
     signCase: "ineligible",
     deductionRate: UNSOLD_98_8_DEDUCTION_RATE,
     rentalMonths,
+    ...(rentalPeriodEcho ? { rentalPeriodEcho } : {}),
     formulaSteps: [],
     taxReductionForRuralSurtax: 0,
     ruralSurtax: 0,
@@ -205,8 +203,8 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
   } else if (input.acquisitionPrice > UNSOLD_98_8_PRICE_LIMIT) {
     reasons.push({
       code: "PRICE_LIMIT_EXCEEDED",
-      message: "취득가액이 6억원을 초과합니다 (법 §98의8① · 령 §98의7②1호).",
-      legalBasis: "조특령 §98의7②1호",
+      message: `취득가액이 6억원을 초과합니다 (법 §98의8① · ${UNSOLD_98_DECREE.D98_8_PRICE_AREA}).`,
+      legalBasis: UNSOLD_98_DECREE.D98_8_PRICE_AREA,
     });
   }
   if (input.exclusiveAreaSqm === undefined || input.exclusiveAreaSqm <= 0) {
@@ -218,8 +216,8 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
   } else if (input.exclusiveAreaSqm > UNSOLD_98_8_AREA_LIMIT_SQM) {
     reasons.push({
       code: "AREA_LIMIT_EXCEEDED",
-      message: "연면적(전용면적)이 135㎡를 초과합니다 — 취득가액과 면적 요건을 모두 충족해야 합니다 (법 §98의8① · 령 §98의7②1호).",
-      legalBasis: "조특령 §98의7②1호",
+      message: `연면적(전용면적)이 135㎡를 초과합니다 — 취득가액과 면적 요건을 모두 충족해야 합니다 (법 §98의8① · ${UNSOLD_98_DECREE.D98_8_PRICE_AREA}).`,
+      legalBasis: UNSOLD_98_DECREE.D98_8_PRICE_AREA,
     });
   }
 
@@ -237,14 +235,14 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
     reasons.push({
       code: "NOT_UNSOLD_AFTER_COMPLETION",
       message:
-        "준공후미분양 요건(사용검사·사용승인 후 2014.12.31까지 분양계약 미체결 + 2015.1.1 이후 선착순 공급)이 확인되지 않았습니다 (조특령 §98의7①).",
-      legalBasis: "조특령 §98의7①",
+        `준공후미분양 요건(사용검사·사용승인 후 2014.12.31까지 분양계약 미체결 + 2015.1.1 이후 선착순 공급)이 확인되지 않았습니다 (${UNSOLD_98_DECREE.D98_8_REQ}).`,
+      legalBasis: UNSOLD_98_DECREE.D98_8_REQ,
     });
   }
   if (input.isFirstContract !== true) {
     reasons.push({
       code: "NOT_FIRST_CONTRACT",
-      message: "사업주체등과 최초로 매매계약을 체결한 요건이 확인되지 않았습니다 (법 §98의8① · 령 §98의7③).",
+      message: `사업주체등과 최초로 매매계약을 체결한 요건이 확인되지 않았습니다 (법 §98의8① · ${UNSOLD_98_DECREE.D98_8_SELLER}).`,
       legalBasis,
     });
   }
@@ -252,8 +250,8 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
     reasons.push({
       code: "RECONTRACT_EXCLUDED",
       message:
-        "계약 해제 후 본인·배우자(직계존비속·형제자매 포함)가 다시 계약한 주택이 아님이 확인되지 않았습니다 (조특령 §98의7②2·3호).",
-      legalBasis: "조특령 §98의7②2·3호",
+        `계약 해제 후 본인·배우자(직계존비속·형제자매 포함)가 다시 계약한 주택이 아님이 확인되지 않았습니다 (${UNSOLD_98_DECREE.D98_8_REBUY}).`,
+      legalBasis: UNSOLD_98_DECREE.D98_8_REBUY,
     });
   }
 
@@ -272,28 +270,21 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
     });
   }
 
-  // 7) 임대 5년 — 등록 후 임대개시일 기산 + 상속 합산 (령 §98의5⑤ 준용)
-  let rentalMonths = 0;
-  if (!input.rentalStartDate) {
-    reasons.push({
-      code: "MISSING_RENTAL_START",
-      message:
-        "임대개시일이 입력되지 않았습니다 (사업자등록과 임대사업자등록 후 임대를 개시한 날부터 기산 — 조특령 §98의5⑤1호 준용).",
-      legalBasis: "조특령 §98의7⑤",
-    });
-  } else {
-    const rentalEnd = input.rentalEndDate ?? input.transferDate;
-    rentalMonths = fullMonthsBetween(input.rentalStartDate, rentalEnd) + (input.inheritedRentalMonths ?? 0);
-    if (rentalMonths < UNSOLD_98_8_RENTAL_MONTHS) {
-      reasons.push({
-        code: "RENTAL_PERIOD_SHORT",
-        message: `임대기간이 5년(60개월) 미만입니다 (인정 임대기간 ${rentalMonths}개월 — 등록 후 임대개시일부터 기산${input.inheritedRentalMonths ? `, 피상속인 ${input.inheritedRentalMonths}개월 합산` : ""}).`,
-        legalBasis: "조특령 §98의7⑤",
-      });
-    }
-  }
+  // 7) 임대 5년 — 등록 후 임대를 개시하는 날부터 기산(초일 산입) · 공실 구간별 만 개월 합산 · 상속 합산 (령 §98의7⑤ → 령 §98의5⑤ 준용)
+  const rental = evaluateUnsold988Rental({
+    transferDate: input.transferDate,
+    rentalContractDate: input.rentalContractDate,
+    rentalStartDate: input.rentalStartDate,
+    rentalEndDate: input.rentalEndDate,
+    businessRegistrationDate: input.businessRegistrationDate,
+    rentalRegistrationDate: input.rentalRegistrationDate,
+    rentalVacancies: input.rentalVacancies,
+    inheritedRentalMonths: input.inheritedRentalMonths,
+  });
+  reasons.push(...rental.reasons);
+  const rentalMonths = rental.rentalMonths;
 
-  if (reasons.length > 0) return ineligible(reasons, rentalMonths);
+  if (reasons.length > 0) return ineligible(reasons, rentalMonths, rental.echo);
 
   // 8) 공제액 산출 — 5년 내 = §95① 전액 기준 / 5년 후 = 기준시가 안분 (령 §40① 준용)
   const isWithin5Years = isWithin5YearsCheck(input.acquisitionDate, input.transferDate);
@@ -323,8 +314,8 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
       return ineligible(
         [{
           code: "MISSING_STD_PRICE",
-          message: "5년 후 양도 안분에 필요한 기준시가(취득시·5년시점·양도시)가 입력되지 않았습니다 (조특령 §40① 준용 — 자동 안분 불가).",
-          legalBasis: "조특령 §98의7④",
+          message: `5년 후 양도 안분에 필요한 기준시가(취득시·5년시점·양도시)가 입력되지 않았습니다 (${UNSOLD_98_DECREE.CALC_40} 준용 — 자동 안분 불가).`,
+          legalBasis: UNSOLD_98_DECREE.D98_8_ALLOC,
         }],
         rentalMonths,
       );
@@ -371,6 +362,7 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
     signCase,
     deductionRate: UNSOLD_98_8_DEDUCTION_RATE,
     rentalMonths,
+    ...(rental.echo ? { rentalPeriodEcho: rental.echo } : {}),
     formulaSteps,
     // [echo] 3단계 명세 Frac 산식 표시용 — 안분에 쓰인 값 그대로(계산 무관)
     transferIncomeApplied: input.transferIncome,
