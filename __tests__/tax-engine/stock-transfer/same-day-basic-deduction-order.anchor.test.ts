@@ -123,17 +123,25 @@ describe("같은 날 양도 — 신고 세액이 가장 낮은 순서(재일4601
     }
   });
 
-  it("SD-2: 3억 경계 — 한계세율이 둘 다 25%여도 250만 전부가 25% 구간인 종목을 고른다", () => {
+  it("SD-2: 같은 가목 2) 대주주 종목끼리는 기본공제를 누구에게 주든 합계가 같다 — 3억 구간이 합계 과세표준에 1회라서", () => {
+    // 🔴 2026-11-11 갱신(계획서 `stock-major-shareholder-bracket-unit.plan.md`): 종전에는 3억 구간을 종목마다 따로 적용해
+    //   「250만 전부가 25% 구간인 종목(C)에 공제를 주면 120,450,000」으로 순서가 세액을 갈랐다. 그것은 구간을 종목별로
+    //   반복한 결함의 산물이다. 이제 세 종목이 모두 가목 2)이면 합계 과세표준(604,500,000 − 2,500,000 = 602,000,000)에
+    //   구간을 한 번 적용하므로 공제를 어느 종목에 주든 합계가 같다(60,000,000 + 302,000,000 × 25% = 135,500,000).
+    //   → 순서가 세액을 가르는 경우는 **서로 다른 세율 호**(SD-1 가목 1 30% · SD-3 · SD-5)로 남는다.
     const A = stock(1_000_000);
     const B = stock(301_000_000);
     const C = stock(302_500_000);
+    const seen = new Set<number>();
     for (const xs of [[A, B, C], [B, A, C], [C, B, A]]) {
       const r = run(xs);
-      // C에 250만: 200,000 + (60,000,000 + 1,000,000 × 25%) + 60,000,000 = 120,450,000
-      // (B에 주면 100만 × 25% + 150만 × 20%만 줄어 75,000 더 높다 — 「한계세율 먼저」로는 못 고른다)
-      expect(r.totalCalculatedTax).toBe(120_450_000);
-      expect(basicOf(xs, r, C)).toBe(2_500_000);
+      expect(r.totalCalculatedTax).toBe(135_500_000);
+      expect(r.majorProgressiveGroupTax?.aggregatedTaxBase).toBe(602_000_000);
+      // 어느 종목이 공제를 받든 합계 불변 — 단, 공제 총액은 250만 1회다.
+      expect(r.items.reduce((s, i) => s + i.basicDeduction, 0)).toBe(2_500_000);
+      seen.add(r.totalCalculatedTax);
     }
+    expect(seen.size).toBe(1);
   });
 
   it("SD-3: 기타자산 1호 3억 + 9호 3억 — 공제는 9호(+10%p) 종목으로", () => {

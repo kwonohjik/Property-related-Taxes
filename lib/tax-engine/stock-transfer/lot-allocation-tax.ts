@@ -36,6 +36,12 @@ export interface SplitModeTaxResult {
    */
   appliedRate?: number;
   progressiveDeduction?: number;
+  /**
+   * 이 종목에서 **가목 2) 대주주 누진표를 탄 과세표준** — `RateCalcResult.majorProgressiveBase`와 같은 뜻.
+   * 대주주 + 비중소기업이 단기·장기로 갈리면 **장기분만**이다(단기분은 가목 1) 30% 단일이라 3억 구간이 없다).
+   * 다종목 합산이 3억 구간을 과세기간 합계에 1회 적용하는 데 쓴다.
+   */
+  majorProgressiveBase?: number;
 }
 
 /**
@@ -72,6 +78,7 @@ export function resolveSplitRateResult(
       progressiveDeduction: splitTax.progressiveDeduction,
       appliedRuleRef: STOCK.SECTION_104_1_11_GA_2_PROGRESSIVE,
       isShortTermRate: lotDetail.matched.some((m) => m.isShortTerm),
+      majorProgressiveBase: splitTax.majorProgressiveBase,
     },
     mixedNote: splitTax.mixedNote,
   };
@@ -129,6 +136,7 @@ export function calcSplitModeTax(
       // 위임한 그 계산의 세율·누진공제를 그대로 echo 한다 — 표시 산식이 세액과 어긋나면 안 된다.
       appliedRate: single.appliedRate,
       progressiveDeduction: single.progressiveDeduction,
+      majorProgressiveBase: single.majorProgressiveBase,
     };
   }
 
@@ -156,8 +164,8 @@ export function calcSplitModeTax(
 
   const shortTax =
     shortBase > 0 ? applyStockTaxRate(shortBase, taxCategory, isSME, true).calculatedTax : 0;
-  const longTax =
-    longBase > 0 ? applyStockTaxRate(longBase, taxCategory, isSME, false).calculatedTax : 0;
+  const longResult = longBase > 0 ? applyStockTaxRate(longBase, taxCategory, isSME, false) : undefined;
+  const longTax = longResult?.calculatedTax ?? 0;
 
   const isMixedRate = shortBase > 0 && longBase > 0;
 
@@ -177,5 +185,6 @@ export function calcSplitModeTax(
     mixedNote: isMixedRate ? "단기(가목 1)·장기(가목 2) 세율 상이 (lotMatchingDetail 참조)" : undefined,
     appliedRate: soleGroup?.appliedRate,
     progressiveDeduction: soleGroup?.progressiveDeduction,
+    majorProgressiveBase: longResult?.majorProgressiveBase,
   };
 }

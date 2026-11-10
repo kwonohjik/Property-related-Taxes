@@ -61,7 +61,12 @@ import {
   type OtherAssetComparativeTax,
 } from "./stock-transfer-aggregate-104-5";
 
-export type { OtherAssetComparativeTax };
+import {
+  computeMajorProgressiveGroupTax,
+  type MajorProgressiveGroupTax,
+} from "./stock-transfer-aggregate-major-bracket";
+
+export type { OtherAssetComparativeTax, MajorProgressiveGroupTax };
 // ============================================================
 // 다자산 합산 결과 타입
 // ============================================================
@@ -71,8 +76,9 @@ export interface StockTransferAggregateResult {
    * 종목별 단건 결과 배열.
    *
    * ⚠️ **`Σ items.calculatedTax ≠ totalCalculatedTax`일 수 있다** — 기타자산 2건 이상이면
-   *   §104⑤ 비교과세가 합계에 적용되기 때문이다(`otherAssetComparativeTax`).
-   *   items는 **자산 단독 참고값**이며, 그 차이는 비교과세의 본질이다
+   *   §104⑤ 비교과세가(`otherAssetComparativeTax`), 대주주(가목 2)) 종목이 2건 이상이면
+   *   «3억원» 구간 합산 보정이(`majorProgressiveGroupTax`) 합계에 적용되기 때문이다.
+   *   items는 **자산 단독 참고값**이며, 그 차이는 호별 합산의 본질이다
    *   (부동산 정본 `PerPropertyBreakdown.refCalculatedTax`와 같은 규약).
    */
   items: StockTransferResult[];
@@ -92,8 +98,9 @@ export interface StockTransferAggregateResult {
 
   /**
    * 합산 산출세액.
-   * 기타자산 2건 이상이면 §104⑤ 비교과세가 반영되어 **`Σ items.calculatedTax`와 다르다**
-   * (`otherAssetComparativeTax` 참조).
+   * 기타자산 2건 이상이면 §104⑤ 비교과세가, 대주주(가목 2)) 종목이 2건 이상이면 «3억원» 구간 합산 보정이
+   * 반영되어 **`Σ items.calculatedTax`와 다를 수 있다**
+   * (`otherAssetComparativeTax` · `majorProgressiveGroupTax` 참조).
    */
   totalCalculatedTax: number;
 
@@ -124,6 +131,12 @@ export interface StockTransferAggregateResult {
    * `"aggregate"` 모드에서만 만들어진다(§103①·② 기본공제가 정상 배분되는 실제 신고 경로).
    */
   otherAssetComparativeTax?: OtherAssetComparativeTax;
+  /**
+   * 대주주 §104①11호 가목 2) «3억원» 구간 합산 echo — **과세기간 합계 과세표준에 1회** 적용한 보정이 생길 때만 실린다.
+   * 종목 행(`items[]`)은 종목 단독 산출이라 `Σ items.calculatedTax ≠ totalCalculatedTax`일 수 있다
+   * (`totalCalculatedTax`가 이 보정을 포함한다). 계획서 `stock-major-shareholder-bracket-unit.plan.md`.
+   */
+  majorProgressiveGroupTax?: MajorProgressiveGroupTax;
   /**
    * 영 §168② — **신고 단위** 대주주 기납부세액 차감액 합계(원). 차감이 있을 때만 실린다.
    * 종목별 내역은 `items[].clause168_2Credit` 에 있다.
@@ -357,6 +370,8 @@ function aggregateInOrder(
       .map((x) => x.i);
 
   const processedByIndex = new Array<StockTransferResult>(inputs.length);
+  // 종목별 «가목 2) 대주주 누진표를 탄 과세표준» — 세액을 낸 코드(`rateResult.majorProgressiveBase`)가 알려준 값.
+  const majorProgressiveBases = new Array<number>(inputs.length).fill(0);
   const processItem = (i: number): StockTransferResult => {
     const input = inputs[i];
     const r = rawItems[i];
@@ -412,6 +427,7 @@ function aggregateInOrder(
             r.isExempt, // 비과세 분기 산식 echo
           );
       const newCalculatedTax = floorTen(rateResult.calculatedTax);
+      majorProgressiveBases[i] = rateResult.majorProgressiveBase ?? 0;
 
       // 🔑 **국외주식은 여기서 `finalizeStockTax`를 타지 않는다.** 다만 이유가 종전 주석과
       //   다르다 — 「국외는 가산세가 없어서」가 **아니다**.
@@ -580,6 +596,12 @@ function aggregateInOrder(
   // 주식 그룹은 §104⑤ 대상이 아니라 종전대로 단건 합계다.
   const otherAssetComparativeTax = computeOtherAssetComparativeTax(processedItems, inputs);
 
+  // 대주주 §104①11호 가목 2) — «3억원» 구간은 과세기간 합계 과세표준에 1회(종목별 반복 금지).
+  const majorProgressiveGroupTax = computeMajorProgressiveGroupTax(
+    processedItems,
+    majorProgressiveBases,
+  );
+
   // 영 §168② — **§104⑤ MAX 「이후」** 차감(근거·소실 메커니즘은 헬퍼 주석 참조).
   const clause168_2Total = sumClause168_2Deductions(processedItems);
   const totalCalculatedTax = Math.max(
@@ -591,7 +613,8 @@ function aggregateInOrder(
             otherAssetComparativeTax.itemSumTax -
             // 비교과세가 상쇄해 버린 차감을 **여기서 한 번** 되돌린다.
             clause168_2Total
-          : 0),
+          : 0) +
+        (majorProgressiveGroupTax?.adjustment ?? 0),
     ),
   );
 
@@ -689,6 +712,7 @@ function aggregateInOrder(
         }
       : {}),
     ...(otherAssetComparativeTax ? { otherAssetComparativeTax } : {}),
+    ...(majorProgressiveGroupTax ? { majorProgressiveGroupTax } : {}),
     // 영 §168② 신고 단위 차감액 합계 — 결과 화면이 「무엇을 뺐는지」를 복원한다.
     ...(clause168_2Total > 0 ? { totalClause168_2Deducted: clause168_2Total } : {}),
     totalUnderReportPenalty,

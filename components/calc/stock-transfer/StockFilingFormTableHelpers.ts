@@ -448,7 +448,11 @@ export function buildRows(
       label: "24-1. 산출세액 (차감 전)",
       values: val(
         result.clause168_2Credit.grossCalculatedTax,
-        (agg) => agg.totalCalculatedTax + (agg.totalClause168_2Deducted ?? 0),
+        // 24-3 보정은 따로 한 행으로 싣는다 — 24-1 + 24-2 + 24-3 = 25가 성립해야 하므로 여기서는 뺀다.
+        (agg) =>
+          agg.totalCalculatedTax +
+          (agg.totalClause168_2Deducted ?? 0) -
+          (agg.majorProgressiveGroupTax?.adjustment ?? 0),
         (item) => item.clause168_2Credit?.grossCalculatedTax ?? item.calculatedTax,
       ),
     });
@@ -459,6 +463,24 @@ export function buildRows(
         (agg) => -(agg.totalClause168_2Deducted ?? 0),
         (item) => -(item.clause168_2Credit?.deducted ?? 0),
       ),
+    });
+  }
+
+  // 24-3. 대주주 §104①11호 가목 2) «3억원» 구간 합산 보정 — **합계 열에만** 싣는다.
+  //
+  // 종목 열의 산출세액은 종목 **단독** 산출이라 3억 구간이 종목마다 따로 적용돼 있다. 그런데 §104① 본문은 「해당
+  // 과세기간의 양도소득과세표준」에 세율을 적용하고, 별지 제84호서식 작성방법 4번은 세율이 같은 자산을 **합산**해
+  // 적게 한다(바로 위 23-1 행). 그 합산 세액과 종목별 단순 합의 차이가 이 행이다 — 종목에 안분하지 않는다
+  // (종목 열은 비워 두고 합계 열만 25행 합계와 이어진다).
+  if (isMulti && aggregate?.aggregated.majorProgressiveGroupTax) {
+    rows.push({
+      label: "24-3. ＋ 대주주 가목 2) «3억원» 구간 합산 보정 (§104①11호 가목 2) — 종목 열은 종목 단독 산출이라 비움)",
+      values: val(
+        null,
+        (agg) => agg.majorProgressiveGroupTax?.adjustment ?? 0,
+        () => null,
+      ),
+      indent: true,
     });
   }
 

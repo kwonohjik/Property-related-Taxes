@@ -30,6 +30,15 @@ export interface RateCalcResult {
   calculatedTax: number;
   appliedRuleRef: string;
   isShortTermRate: boolean;
+  /**
+   * 이 계산에서 **§104①11호 가목 2) 대주주 누진표(3억원 구간)가 적용된 과세표준**. 그 표를 타지 않았으면 `undefined`.
+   *
+   * 다종목 합산이 «3억원»을 **과세기간 합계 과세표준**에 1회만 적용하려면(소득세법 §104① 본문·별지 제84호서식
+   * 작성방법 4번) 어느 종목의 어느 과세표준이 그 표를 탔는지를 **세액을 낸 바로 그 코드**가 말해야 한다 —
+   * 호출부가 카테고리·보유기간 술어를 재구현하면 둘이 어긋난다(단기분 30%는 가목 1)이라 제외돼야 한다).
+   * 계획서 `docs/00-pm/stock-major-shareholder-bracket-unit.plan.md`.
+   */
+  majorProgressiveBase?: number;
 }
 
 // ============================================================
@@ -69,6 +78,18 @@ export function applyBasicProgressiveRate(taxBase: number): {
   tax: number;
 } {
   return calcProgressiveTaxFromBrackets(taxBase, BASIC_PROGRESSIVE_BRACKETS);
+}
+
+/**
+ * §104①11호 가목 2) 대주주 누진표(3억원 이하 20% / 초과 6천만원 + 초과액 × 25%)만 적용 —
+ * **다종목 합산 전용**. `applyStockTaxRate`의 대주주 분기와 같은 표(`STOCK_MAJOR_PROGRESSIVE_BRACKETS`)를 쓴다.
+ */
+export function applyMajorProgressiveRate(taxBase: number): {
+  rate: number;
+  deduction: number;
+  tax: number;
+} {
+  return calcProgressiveTaxFromBrackets(taxBase, STOCK_MAJOR_PROGRESSIVE_BRACKETS);
 }
 
 // ============================================================
@@ -281,6 +302,7 @@ export function applyStockTaxRate(
         calculatedTax: tax,
         appliedRuleRef: STOCK.SECTION_104_1_11_GA_2_PROGRESSIVE,
         isShortTermRate: false,
+        majorProgressiveBase: taxBase,
       };
     }
 
