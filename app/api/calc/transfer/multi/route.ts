@@ -37,6 +37,7 @@ import { gbPreliminaryUnits } from "../multi-gb-expansion";
 import { aggregateCarryoverDebtAlone, carryoverDebtPreliminaryUnits, isCarryoverDebtItem } from "../multi-carryover-debt-units";
 import { toGbCarryoverUnits } from "../bundled-gb-carryover-units";
 import { attachGbCarryoverUnits } from "../bundled-gb-carryover-units";
+import { attachGbDonorBuiltEchoes } from "../bundled-gb-carryover-units";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
 import { ratesForTransferDate } from "@/lib/tax-engine/transfer-tax-item-rates";
@@ -310,7 +311,7 @@ export async function POST(request: NextRequest) {
       result.warnings = [...result.warnings, SAME_DAY_RIGHT_NOTICE];
     }
     // 일반건물 부담부증여 × 양도인 본인 신축 §114조의2 가산세 — 단건 GB 경로(`general-building-route-actual.ts`·`-fractional.ts`)와 같은 고지(Q-14).
-    //   신호(`penaltyAxis`)는 발동 게이트가 열렸을 때만 실려 신호 유무가 곧 가산세 유무다. 증여자 신축분(이월과세)은 ⑧·⑫가 막아 오지 않는다.
+    //   신호(`penaltyAxis`)는 발동 게이트가 열렸을 때만 실려 신호 유무가 곧 가산세 유무다. 당초 증여자 신축분(`penaltyDonorBuilt`)은 아래 자산별 echo가 따로 고지한다.
     if (
       gbExpansion.properties.some((c) => c.gbAssetBurdenedGift && c.penaltyAxis && !c.penaltyDonorBuilt) &&
       !result.warnings.includes(GB_BG_SELF_BUILT_NOTICE)
@@ -324,6 +325,8 @@ export async function POST(request: NextRequest) {
     // 부담부증여 × 이월과세 [A]/[B] 비교 명세(키 = 자산 id · 지분은 복합 접미사) — A 채택 자산은 결과 상세를 A 카드 것으로 바꾼다.
     attachGbCarryoverUnits(calc, result, gbExpansion.carryoverDrafts, finalUnits, gbExpansion.detailsByAsset);
     gbExpansion.finalizeShareDetails((key) => calc.units[key]?.adoptedScenario === "A");
+    // 당초 증여자 신축·증축(§114조의2) — 자산별 적용 여부 echo + 단건과 같은 고지(트랙 GB-BG-CO-DNB).
+    attachGbDonorBuiltEchoes(calc, result, gbExpansion.carryoverDrafts, finalUnits, gbExpansion.donorBuiltExcluded);
     if (Object.keys(gbExpansion.detailsByAsset).length > 0) result.generalBuildingDetailsByAsset = gbExpansion.detailsByAsset;
     // NaN·Infinity는 JSON에서 null이 되어 200으로 나간다 — 반환 전에 끊는다(E-14l).
     assertFiniteResponse(result);

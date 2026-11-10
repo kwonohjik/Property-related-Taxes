@@ -39,5 +39,21 @@ describe("MultiGbAssetGroup — 부담부증여 × 이월과세 비교 카드", 
   it("단위가 없으면 카드를 그리지 않는다", () => {
     render(<MultiGbAssetGroup result={{} as AggregateTransferResult} formPropertyId="p1" cards={[]} />);
     expect(screen.queryByTestId("gb-bg-carryover-card")).toBeNull();
+    expect(screen.queryByTestId("donor-built-penalty-card")).toBeNull();
+  });
+
+  it("당초 증여자 신축·증축 §114조의2 echo(트랙 GB-BG-CO-DNB) — 이 물건 키의 것만 단건과 같은 카드로 그린다", () => {
+    const applied = { applied: true, buildingType: "new", constructionDate: "2022-01-10", fifthAnniversary: "2027-01-10", base: 50_000_000, penalty: 2_500_000, burdenedGift: { method: "estimated" } };
+    const result = {
+      donorBuiltPenaltyByAsset: {
+        p1: { label: "건1", echo: applied },
+        p10: { label: "다른 물건", echo: { applied: false, notAppliedReason: "scenario_b", buildingType: "new", constructionDate: "2022-01-10" } },
+      },
+    } as unknown as AggregateTransferResult;
+    render(<MultiGbAssetGroup result={result} formPropertyId="p1" cards={[]} />);
+    const cards = screen.getAllByTestId("donor-built-penalty-card");
+    expect(cards).toHaveLength(1);
+    expect(cards[0].getAttribute("data-applied")).toBe("true");
+    expect(screen.getByTestId("donor-built-penalty-line").textContent).toContain("2,500,000");
   });
 });

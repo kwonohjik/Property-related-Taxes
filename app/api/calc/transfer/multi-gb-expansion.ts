@@ -27,6 +27,8 @@ import type { GbBundledAssetDetail } from "@/lib/tax-engine/types/transfer-aggre
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { buildBundleBurdenedGiftWhole } from "@/lib/tax-engine/transfer-tax-aggregate-burdened-gift";
 import { withCardAcquisitions } from "@/lib/tax-engine/transfer-tax-aggregate-burdened-gift";
+import { donorBuiltNotAppliedEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-penalty";
+import type { DonorBuiltPenaltyEcho } from "@/lib/tax-engine/types/transfer-carryover.types";
 
 export interface MultiGbSource {
   valuation?: Record<string, unknown>;
@@ -62,6 +64,11 @@ export interface MultiGbExpansion {
    * `adoptedA(키)`는 그 비교 단위가 A로 채택됐는가. 이월과세 지분이 없는 물건은 펼칠 때 상세가 이미 정해졌다.
    */
   finalizeShareDetails: (adoptedA: (key: string) => boolean) => void;
+  /**
+   * 당초 증여자 신축·증축(§114조의2)을 보냈는데 이월과세가 배제(§97의2①괄호·②1·2호·③)돼 비교 단위가 없는 자산 — 단건 F27의 carryover_excluded echo와 같다.
+   * A·B 비교 단위의 echo는 route가 집계 뒤 `attachGbDonorBuiltEchoes`로 만든다.
+   */
+  donorBuiltExcluded: Record<string, { label: string; echo: DonorBuiltPenaltyEcho }>;
 }
 
 export function expandMultiGeneralBuildings(
@@ -73,6 +80,7 @@ export function expandMultiGeneralBuildings(
   const detailsByAsset: Record<string, GbBundledAssetDetail> = {};
   const carryoverDrafts: GbBgCarryoverUnitDraft[] = [];
   const shareFinalizers: Array<(adoptedA: (key: string) => boolean) => void> = [];
+  const donorBuiltExcluded: Record<string, { label: string; echo: DonorBuiltPenaltyEcho }> = {};
 
   items.forEach((item, index) => {
     /** 펼친 카드 묶음 1건 — 가산세 입력은 첫 카드에만 · 예정신고 단위는 그 묶음 전체. */
@@ -156,6 +164,10 @@ export function expandMultiGeneralBuildings(
     const bg = cards[0]?.gbAssetBurdenedGift?.breakdown;
     const assetId = item.propertyId ?? `property-${index + 1}`;
     if (bg && detailsByAsset[assetId]) detailsByAsset[assetId] = { ...detailsByAsset[assetId], burdenedGiftBreakdown: bg };
+    // 이월과세 배제로 비교 단위가 안 생겼는데 증여자 신축을 보냈다 — 입력을 받고도 말이 없으면 침묵 소실이라 중립 echo(단건 F27과 같다).
+    const donorBuilt = item.transferType === "burdened_gift" ? item.burdenedGiftInfo?.carryoverDonorBasis?.donorBuilt : undefined;
+    if (donorBuilt && draftsOfItem.length === 0)
+      donorBuiltExcluded[assetId] = { label: item.propertyLabel ?? "", echo: donorBuiltNotAppliedEcho(donorBuilt, "carryover_excluded") };
     carryoverDrafts.push(...draftsOfItem);
     pushCards(cards);
   });
@@ -166,6 +178,7 @@ export function expandMultiGeneralBuildings(
     detailsByAsset,
     carryoverDrafts,
     finalizeShareDetails: (adoptedA) => shareFinalizers.forEach((f) => f(adoptedA)),
+    donorBuiltExcluded,
   };
 }
 

@@ -47,6 +47,8 @@ import {
   withCarryoverDonorCapex,
 } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 import { carryoverDonorCapex } from "@/lib/tax-engine/transfer-tax-carryover";
+import { assertGbBgDonorBuiltInput } from "@/lib/tax-engine/general-building-bg-penalty-signal";
+import type { DonorBuiltInput } from "@/lib/tax-engine/types/transfer-carryover.types";
 
 export interface GbPartCards {
   cards: AssetCardForAggregate[];
@@ -389,7 +391,8 @@ export function buildGbCompanionItems(
   const info = engine.transferType === "burdened_gift" ? engine.burdenedGiftInfo : undefined;
 
   /** `carryoverApplied` — 이월과세 비교 단위의 카드 세트만 자산 명세를 싣는다(묶음 명세 Q-4 a). 그 밖의 묶음은 종전 그대로. */
-  const scenario = (bgInfo: BurdenedGiftInfo | undefined, bldDate: Date, landDate: Date, carryoverApplied?: boolean, donorCapex = 0) => {
+  /** `donorBuiltPenalty` — 당초 증여자 신축·증축(§114조의2) 신호. 단건 F27처럼 **A 호출에만** 싣는다(R2 — B는 수증자 기준이라 가산세 대상이 아니다). */
+  const scenario = (bgInfo: BurdenedGiftInfo | undefined, bldDate: Date, landDate: Date, carryoverApplied?: boolean, donorCapex = 0, donorBuiltPenalty?: DonorBuiltInput) => {
     /*
      * 자산 단위 실지 취득가액·필요경비 — 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축이다:
      * 증축 일괄값(`bundledAcquisitionPrice`·`bundledExpenses`)이 있으면 그것, 없으면 그 자산의 엔진 입력값
@@ -407,7 +410,7 @@ export function buildGbCompanionItems(
     );
     const capex = withCarryoverDonorCapex(bgMoved.gbv, bgMoved.legacyExpenses, donorCapex);
     const built = buildGbPartCards(
-      capex.gbv,
+      donorBuiltPenalty ? { ...capex.gbv, donorBuiltPenalty } : capex.gbv,
       engine.transferPrice,
       engine.transferDate,
       bldDate,
@@ -466,6 +469,14 @@ export function buildGbCompanionItems(
   };
 
   const ct = info ? engine.carryoverTaxation : undefined;
+  // 당초 증여자 신축·증축(§114조의2) — 단건 F27(`general-building-route-carryover.ts`)과 같은 직접 호출 방어선. 함께 부담부증여 묶음은 ⑫(`refineGbBgDonorBuilt`)가 입구에서 거부한다.
+  const donorBuilt = info?.carryoverDonorBasis?.donorBuilt;
+  if (donorBuilt && !ct)
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "당초 증여자 신축·증축 가산세(소득세법 §114조의2)는 이월과세(carryoverTaxation) 입력과 함께 보내야 합니다.",
+      { field: "burdenedGiftInfo.carryoverDonorBasis.donorBuilt" },
+    );
   // 부담부증여 × 이월과세가 아니거나 이월과세가 배제(§97의2①괄호·②1·2호·③)되면 종전 그대로 — 단건 F27의 배제 경로와 같다.
   const eligibility = ct ? judgeCarryoverEligibility(ct, engine.transferDate) : undefined;
   if (!ct || !info || !eligibility?.isEligible) {
@@ -477,19 +488,20 @@ export function buildGbCompanionItems(
   // 단건 F27(`general-building-route-carryover.ts`)과 같은 leaf·같은 치환 — 복사 금지.
   if (!onCarryoverUnit)
     throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, "일반건물 부담부증여 × 이월과세 비교 단위를 받을 곳이 없습니다.");
-  if (info.carryoverDonorBasis?.donorBuilt)
+  assertCarryoverDonorBasis(info, ct);
+  if (donorBuilt && !carryoverPartsOf(info).building)
     throw new TaxCalculationError(
       TaxErrorCode.INVALID_INPUT,
-      "당초 증여자 신축·증축 가산세(소득세법 §114조의2)는 함께 부담부증여 묶음에서 계산하지 않습니다.",
+      "당초 증여자 신축·증축 가산세(소득세법 §114조의2)는 건물을 증여받았을 때만 보낼 수 있습니다 — 토지만 이월과세입니다.",
       { field: "burdenedGiftInfo.carryoverDonorBasis.donorBuilt" },
     );
-  assertCarryoverDonorBasis(info, ct);
+  if (donorBuilt) assertGbBgDonorBuiltInput(info, ct, donorBuilt, gbv.buildingAcquisitionCause === "newConstruction", engine.transferDate);
   // B = 양도인(증여받은 사람) 기준 — K-6/K-7은 증여일 평가액(`actual*`)을 실지거래가액으로 읽는다(소령 §163⑨).
   const b = scenario(toTransferorBasisInfo(info), bldAcqDate, landAcqDate, false);
   // A = ①1호 취득가액 치환 + ①3호 증여세 상당액(§159 안분 단계가 소비) · §95④ 단서 — 토지·건물 카드 보유기간을 당초 증여자 취득일부터.
   const startA = carryoverHoldingStartsA(info, ct.donorAcquisitionDate, { land: landAcqDate, building: bldAcqDate });
   const donorCapex = carryoverDonorCapex(ct, engine.transferDate);
-  const a = scenario(applyCarryoverDonorBasis(info, ct.giftTaxAmount, donorCapex), startA.building, startA.land, true, donorCapex);
+  const a = scenario(applyCarryoverDonorBasis(info, ct.giftTaxAmount, donorCapex), startA.building, startA.land, true, donorCapex, donorBuilt);
   onDetail?.(src.assetId, b.detail);
   onCarryoverUnit({
     assetId: src.assetId,
@@ -504,6 +516,7 @@ export function buildGbCompanionItems(
     holdingStartB: { land: landAcqDate, building: bldAcqDate },
     carryoverParts: carryoverPartsOf(info),
     donorCapex,
+    ...(donorBuilt ? { donorBuilt: { input: donorBuilt, method: info.acquisitionMethod === "appraisal" ? ("appraisal" as const) : ("estimated" as const) } } : {}),
   });
   return b.items;
 }
@@ -533,4 +546,6 @@ export interface GbBgCarryoverUnitDraft {
   carryoverParts: { land: boolean; building: boolean };
   /** §97의2①2호 — A 필요경비에 더한 당초 증여자 자본적지출(`carryoverDonorCapex` · 표시 전용). */
   donorCapex: number;
+  /** 당초 증여자 신축·증축(§114조의2) — A 카드에만 신호가 실렸다. 결과 echo(적용/B 채택)는 집계 뒤 `gbDonorBuiltEchoes`가 만든다. */
+  donorBuilt?: { input: DonorBuiltInput; method: "estimated" | "appraisal" };
 }

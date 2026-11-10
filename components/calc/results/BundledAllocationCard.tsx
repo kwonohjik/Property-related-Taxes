@@ -118,7 +118,7 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     // §114조의2 산정방식 — 감정가액 건물 파트만 있으면 상세명세서 라벨을 「감정가액」으로(Q-13). 섞여 있으면 종전 표기(환산취득가액) 유지.
     ...((() => { const m = penaltyMethodSums(a.properties); return m.appraisal.tax > 0 && m.estimated.tax === 0; })() ? { penaltyMethod: "appraisal" as const } : {}),
     // 카드별 증여자 신축·증축 §114조의2 echo — 어댑터가 싣지 않으면 상세명세서·PDF 가 증여자 신축 근거를 읽을 수 없다(PR-5a).
-    ...((() => { const e = gbResultDonorBuiltEchoes(a.properties, a.donorBuiltPenalty); return e.length > 0 ? { donorBuiltPenaltyEchoes: e } : {}; })()),
+    ...((() => { const e = gbResultDonorBuiltEchoes(a.properties, a.donorBuiltPenalty, a.donorBuiltPenaltyByAsset); return e.length > 0 ? { donorBuiltPenaltyEchoes: e } : {}; })()),
     // 이월과세 × 당초 증여 채무 부분(매입분) 시나리오 A 조각 echo — 어댑터가 싣지 않으면 PDF·상세명세서가 «나누어 계산했다»는 고지를 낼 수 없다(UI 설계서 §5).
     ...((() => { const e = purchasedPartResultEchoes(a.properties); return e.length > 0 ? { purchasedPartEchoes: e } : {}; })()),
     // 카드별 일체 주택 본인 신축 §114조의2(건물분) echo — 어댑터가 싣지 않으면 상세명세서·신고서·PDF 가 건물분 근거를 읽을 수 없다(Q-12 PR-3).

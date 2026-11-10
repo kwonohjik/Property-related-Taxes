@@ -15,7 +15,6 @@
  */
 import { z } from "zod";
 import { MULTI_BURDENED_GIFT_WHOLE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
-import { MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
@@ -51,13 +50,8 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown, data?: Record<strin
     !(data?.transferType === "burdened_gift" && Array.isArray(data?.generalBuildingShares) && data.generalBuildingShares.length > 1)
       ? MULTI_BURDENED_GIFT_WHOLE_UNSUPPORTED_MESSAGE
       : null,
-  // 일반건물 부담부증여 × 이월과세는 ⑭가 카드 세트 A·B 비교 단위로 펼친다. 당초 증여자 신축·증축 가산세(§114조의2)만 거부한다 —
-  //   단건 route만 계산하고 펼침 카드 함수(`buildGbCompanionItems`)는 받지 않는다(⑧ `donorBuiltBgActive` 같은 모드·같은 문구). 지분은 지분 스키마가 거부한다.
-  burdenedGiftInfo: (v, data) =>
-    (v as { carryoverDonorBasis?: { donorBuilt?: unknown } } | null | undefined)?.carryoverDonorBasis?.donorBuilt != null &&
-    data?.propertyType === "general_building"
-      ? MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE
-      : null,
+  // 일반건물 부담부증여 × 이월과세 × 당초 증여자 신축·증축(§114조의2)은 거부하지 않는다(트랙 GB-BG-CO-DNB) — ⑭ 펼침 카드 함수가 단건 F27과 같은
+  //   방어선·같은 A 호출 신호로 계산한다. 지분·함께 양도 묶음은 단건·다건 공용 ⑫(`refineGbBgDonorBuilt`)가 계속 거부한다.
   redevelopment: whenPresent(MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE),
   // 다건 ④는 §166 서브객체(`redevelopment`)를 만들지 않고 propertyType만 싣는다 — 서브객체 거부만으로는
   // 완공APT·입주권이 일반 양도로 계산돼 새어 나온다(G2-2). ⑧(`validateMultiSupportedMode`)의 assetKind 차단과 같은 모드·같은 문구.

@@ -19,6 +19,11 @@ import type {
   GbBundledAssetDetail,
 } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { GbBgCarryoverUnitDraft } from "./general-building-part-cards";
+import type { DonorBuiltPenaltyEcho } from "@/lib/tax-engine/types/transfer-carryover.types";
+import { donorBuiltNotAppliedEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-penalty";
+import { donorBuiltPenaltyNotice } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
+import { SHARE_ID_SEPARATOR } from "@/lib/tax-engine/general-building-share-id";
+import { donorBuiltAppliedEcho } from "./general-building-route-carryover";
 
 const ymd = (d: Date): string => d.toISOString().slice(0, 10);
 
@@ -92,4 +97,38 @@ export function attachGbCarryoverUnits(
     if (adoptedA && detailsByAsset && d.detailA) detailsByAsset[d.assetId] = d.detailA;
   });
   aggregated.burdenedGiftCarryoverUnits = out;
+}
+
+/**
+ * 연간 합산 — 일반건물 부담부증여 × 이월과세 × **당초 증여자 신축·증축**(§114조의2) echo를 자산별로 싣는다
+ * (계획서 `multi-carryover-bg-gb-shares.plan.md` 트랙 GB-BG-CO-DNB). 사유 판별은 단건 F27(`general-building-route-carryover.ts`)과 같다:
+ * A 채택 → 그 자산 건물 카드(최종 결과)의 가산세로 적용 echo · B 채택 → scenario_b · 이월과세 배제 → carryover_excluded(`excluded` — 비교 단위가 없다).
+ * 비교는 단건과 같이 가산세 전 결정세액이다(`determinedTax` — 집계가 §114조의2분을 따로 더한다). 고지 문장도 단건과 같은 것을 `warnings`에 싣는다.
+ */
+export function attachGbDonorBuiltEchoes(
+  calc: ReturnType<typeof calculateTransferTaxAggregateWithUnits>,
+  aggregated: AggregateTransferResult,
+  drafts: readonly GbBgCarryoverUnitDraft[],
+  units: readonly ExternalCarryoverUnit[],
+  excluded: Readonly<Record<string, { label: string; echo: DonorBuiltPenaltyEcho }>>,
+): void {
+  const out: Record<string, { label: string; echo: DonorBuiltPenaltyEcho }> = { ...excluded };
+  drafts.forEach((d, i) => {
+    if (!d.donorBuilt) return;
+    const unit = units[i];
+    const adoptedA = calc.units[d.assetId]?.adoptedScenario === "A";
+    const building = aggregated.properties
+      .slice(unit.start, unit.start + unit.cardsA.length)
+      .find((p) => p.propertyId.split(SHARE_ID_SEPARATOR)[0] === "building");
+    out[d.assetId] = {
+      label: d.assetLabel,
+      echo: adoptedA
+        ? donorBuiltAppliedEcho(d.donorBuilt.input, building, d.cardsA[0].transferDate, d.donorBuilt.method)
+        : donorBuiltNotAppliedEcho(d.donorBuilt.input, "scenario_b"),
+    };
+  });
+  if (Object.keys(out).length === 0) return;
+  aggregated.donorBuiltPenaltyByAsset = out;
+  const notices = Object.values(out).flatMap(({ echo }) => donorBuiltPenaltyNotice(echo) ?? []);
+  aggregated.warnings = [...aggregated.warnings, ...new Set(notices.filter((n) => !aggregated.warnings.includes(n)))];
 }

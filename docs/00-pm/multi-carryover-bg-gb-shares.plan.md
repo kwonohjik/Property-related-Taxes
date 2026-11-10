@@ -128,7 +128,7 @@
   - 지분(GS-6b): B 채택 64,861,192 · A 채택 68,061,400(A 61,874,000 · B 58,964,720) · 지분 상세 전체·물건 전체 명세 단건과 같음
   - 지분 K-7 50/50(첫 지분 이월과세): 82,627,700 · 단위별 채택 단건과 같음 · 물건 전체 명세 같음
 - 뮤테이션: 11건 중 10건 검출. 생존 1건(M8 — 첫 지분 이월과세면 물건 전체 info를 양도인 기준으로 읽기)은 `withCardAcquisitions`가 취득 열을 카드 합으로 덮어 K-4·K-7 시료에서 결과가 같다(단건 지분 경로와 같은 줄을 유지).
-- 계속 막는 것: 당초 증여자 신축·증축 가산세(§114조의2) — 단건만.
+- 계속 막는 것: 당초 증여자 신축·증축 가산세(§114조의2) — 단건만. → 트랙 GB-BG-CO-DNB에서 해소(지분·묶음은 계속 차단).
 
 ### 트랙 CO-DEBT — 이월과세 × 당초 증여 때 인수한 채무 부분(매입분) (PR-6 · 2026-11-10 사용자 「2번 진행해」 · V-CO2)
 
@@ -157,6 +157,18 @@
 - 뮤테이션 5건 전부 검출(합성기 · 취득일 leaf · 고지 다건 조건 · 고지 · 고지 술어).
 - 한계(사용자 결정 b로 수용): 다른 자산과 함께면 파트 A/B 결론이 그 해 전체 비교와 갈릴 수 있다(2026-08-23 신고단위 전환 때 자산별 비교는 300 격자 중 7건 과소였다 — memory `project_transfer_carryover_filing_unit_scope`). 그 해 전체로 비교하려면 파트 A/B를 집계 외부 비교 단위로 올려야 한다(Q-4 a · 미착수).
 
+### 트랙 GB-BG-CO-DNB — 일반건물 부담부증여 × 이월과세 × 당초 증여자 신축·증축 §114조의2 (PR-8 · 2026-11-10 사용자 「1번 진행해」)
+
+- 원인(실측): 연간 합산 펼침이 쓰는 카드 함수(`buildGbCompanionItems`)가 `donorBuilt`를 받으면 던졌다(함께 부담부증여 묶음용 방어선). ⑧(`donorBuiltBgActive`)·⑫(`MULTI_REJECT_RULES.burdenedGiftInfo`)가 그 앞에서 `MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE`로 막았다. 다건 ④는 이미 `burdenedGiftInfo.carryoverDonorBasis.donorBuilt`를 단건과 같이 보냈다(실측).
+- 작업:
+  - 카드 함수 — 단건 F27(`general-building-route-carryover.ts`)과 같은 방어선(이월과세 없음·토지만 이월과세 → 400 · `assertGbBgDonorBuiltInput`)과 같은 신호(**A 호출에만** `donorBuiltPenalty` · R2). 비교 단위 재료(`GbBgCarryoverUnitDraft.donorBuilt`)에 입력·산정방식을 싣는다.
+  - echo — `attachGbDonorBuiltEchoes`(`bundled-gb-carryover-units.ts`): A 채택은 그 자산 건물 카드(최종 결과)의 가산세로 적용 echo(단건과 같은 `donorBuiltAppliedEcho` — 건물 카드 결과를 받도록 바꿔 export), B 채택은 scenario_b. 이월과세 배제(비교 단위 없음)는 펼침이 carryover_excluded echo를 만든다(`donorBuiltExcluded`). 결과는 자산별 `donorBuiltPenaltyByAsset`(키 = 자산 id) + 단건과 같은 고지 문장.
+  - ⑦ 자산 행 펼침에 단건과 같은 `CarryoverDonorBuiltPenaltyCard` · 상세명세서·신고서·PDF는 어댑터 echo 목록(`gbResultDonorBuiltEchoes` 셋째 인자)으로.
+  - ⑧·⑫ 차단 해제(`MULTI_GB_BG_DONOR_BUILT_UNSUPPORTED_MESSAGE` 삭제). 지분 분할 취득·함께 양도 묶음 + 증여자 신축은 단건·다건 공용 ⑫(`refineGbBgDonorBuilt` · 지분 스키마)와 건별 ⑧이 계속 막는다(형제 안전망 DNB-5).
+- 비교 축: §97의2②3호 비교는 가산세 전 결정세액이다(`transfer-tax-aggregate-once.ts` `determinedTax: determinedTaxBeforePenalty`) — 단건 F27도 같은 값으로 비교한다. 연간 합산은 그 해 전체 결정세액으로 비교한다(트랙 GB-BG-CO와 같다).
+- 단건 = 연간 합산(실측 · `multi-gb-bg-carryover-donor-built.anchor.test.ts`): A 채택 135,291,640(가산세 2,500,000 = 건물 base 50,000,000 × 5%) · B 채택(증여세 2억) 108,900,000 · 이월과세 배제(2014 증여) 107,580,000 — echo·고지 모두 단건과 같다.
+- 시료 주의: 증여자 신축을 켜면 당초 증여자의 건물 취득일이 신축일(2022-01-10 · 사용승인일)이다(픽스처 `sameDayBuildingDonorDate`가 그렇게 채운다). 그래서 신축 ON·OFF는 가산세 2,500,000 말고도 건물 카드 장기보유특별공제가 다르다(15,952,000 · 4년 vs 43,868,000 · 11년) — 입력 사실이 다른 것이지 엔진 차이가 아니다.
+
 ### 공통
 
 - 파일 크기: `lib/calc/multi-transfer-tax-api.ts` 722줄 · `app/api/calc/transfer/multi/route.ts` 738줄. 세 트랙 배관을 더하면 800 트리거를 넘을 수 있다 — 첫 PR에서 기회주의적 분리(≤700 착지)를 함께 한다.
@@ -180,7 +192,7 @@
 | V-CO4 | 일반건물 이월과세(`general-building-route-carryover.ts`) — 트랙 G 펼침이 이월과세를 넘기는지 |
 | V-CO5 | 연간 합산 결과 화면이 이월과세 A/B 카드·신고단위 비교 근거를 그리는지(브라우저) |
 | V-BG1 | ✅ 해소(트랙 BG) — 묶음 명세 입력이 있으면 자산별 echo를 싣지 않는다 |
-| V-BG2 | ✅ 해소(트랙 BG) — 세액 단건과 같음. 일반건물 부담부증여 × 이월과세도 트랙 GB-BG-CO로 단건과 같음(당초 증여자 신축만 계속 차단) |
+| V-BG2 | ✅ 해소(트랙 BG) — 세액 단건과 같음. 일반건물 부담부증여 × 이월과세도 트랙 GB-BG-CO로 단건과 같음 · 당초 증여자 신축도 트랙 GB-BG-CO-DNB로 단건과 같음(지분·묶음만 계속 차단) |
 | V-GS1 | ✅ 조사 완료(트랙 GS 절) — Q-2 a |
 | V-GS2 | ✅ 이월과세는 단건과 같음 · 부담부증여도 트랙 GS-BG로 · 지분 × 부담부증여 × 이월과세도 트랙 GB-BG-CO로 단건과 같음 |
 
