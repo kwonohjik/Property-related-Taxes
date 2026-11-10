@@ -64,7 +64,9 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
   // 양도차익(전체) − 장특 = §95① 양도소득금액, 엔진 `taxableGain`은 이미 **과세대상 양도소득금액**이라 다시 장특을 빼면 0이 된다(S06-8).
   const rhDetail = r.rentalHousingExceptionDetail as { applied?: boolean; scenarioId?: string } | undefined;
   const isRH = rhDetail?.applied === true;
-  const taxableGain = (isRH ? transferGain : (num(r.taxableGain) ?? transferGain)) as number;
+  // 함께 양도·다건 어댑터는 자산별 소득금액 합 + 장특 합을 따로 싣는다 — 있으면 그 값이 정본(화면 신고서 표 합계 열과 같은 축).
+  // 어댑터의 `taxableGain`은 자산별 `transferGain`의 합이라 고가주택(전체 차익)·비과세(0)·입주권 안분(과세분)이 섞여 양도소득금액이 틀어졌다.
+  const taxableGain = (isRH ? transferGain : (num(r.aggregateTaxableGain) ?? num(r.taxableGain) ?? transferGain)) as number;
   const incomeAmount = isRH ? transferGain - ltdAmount : Math.max(0, taxableGain - ltdAmount);
   const reducibleIncome = (num(r.reducibleIncome) ?? 0) as number;
   // 함께 양도·다건 어댑터(`aggregateToFilingResult`)는 자산별 ⑲의 합을 따로 싣는다(US-67) — 있으면 그 값이 정본(화면 신고서 표 합계 열과 같은 함수).
