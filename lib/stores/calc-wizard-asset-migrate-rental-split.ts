@@ -11,6 +11,17 @@
 import { legacyLongTermRentalToRental973 } from "./legacy-rental-reduction";
 import { isLegacyHousingReductionType, legacyHousingReductionToForm } from "./legacy-housing-reduction";
 
+/**
+ * §98의3 수도권과밀억제권역 3-state 이관 (리뷰 Q-20, 2026-11-10 결정).
+ * 종전 boolean: true → "yes". false·없음 → ""(미선택) — 기본값 false와 사용자가 고른 「아니오」를 구분할 수 없어,
+ * 확인하지 않은 과밀 사안이 조용히 100% 감면으로 가지 않도록 다시 묻는다. 이미 3-state 값("yes"·"no")은 그대로다(재실행 멱등).
+ */
+export function overconcentration983FromLegacy(v: unknown): "" | "yes" | "no" {
+  if (v === true || v === "yes") return "yes";
+  if (v === "no") return "no";
+  return "";
+}
+
 export function hasPositiveAmount(v: unknown): boolean {
   if (typeof v === "number") return v > 0;
   if (typeof v !== "string") return false;
@@ -283,7 +294,6 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           constructionStartDate983: "",
           usageApprovalDate983: "",
           isOutsideSeoulNotDesignated983: false,
-          isOverconcentration983: false,
           landAreaSqm983: "",
           floorAreaSqm983: "",
           isUnsoldConfirmed983: false,
@@ -295,6 +305,8 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           standardPriceAt5Years983: "",
           standardPriceAtTransfer983: "",
           ...r,
+          // Q-20 — 종전 boolean: true → "yes", false·없음 → ""(미선택). false는 기본값인지 선택인지 구분할 수 없어 다시 묻는다.
+          isOverconcentration983: overconcentration983FromLegacy((r as Record<string, unknown>).isOverconcentration983),
         };
       }
       if (r && r.type === "unsold_98_5") {

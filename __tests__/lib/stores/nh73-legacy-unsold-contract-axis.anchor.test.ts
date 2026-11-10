@@ -40,7 +40,9 @@ describe("NH-73 순수 규칙 — 계약일 축 우선", () => {
     // 계약일이 시한 밖이어도 취득일 규칙이 그대로 적용된다(계약일을 그대로 믿고 다른 조문으로 보내지 않는다)
     expect(reclassifiedLegacyHousingType(U, "2005-06-01", "2003-07-01")).toBe("new_99_3");
     expect(reclassifiedLegacyHousingType(U, "2005-06-01", "2009-02-11")).toBe("new_99_3");
-    expect(reclassifiedLegacyHousingType(U, "2011-06-01", "2010-02-12")).toBe("unsold_98_3");
+    // Q-28 — 취득일(2011.6.1.)도 §98의3 기간(~2010.2.11.) 뒤이므로 §98의3으로 열지 않고 조문 미정으로 둔다
+    expect(reclassifiedLegacyHousingType(U, "2011-06-01", "2010-02-12")).toBe("unresolved");
+    expect(reclassifiedLegacyHousingType(U, "2010-02-01", "2010-02-12")).toBe("unsold_98_3");
   });
 
   it("A4 계약일이 없으면 취득일로 가능한 조문만 — 2009.2.12. 전 취득은 §98의3 불가능이라 new_99_3", () => {

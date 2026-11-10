@@ -17,7 +17,7 @@
  *   ② 이미 레거시 타입이 들어 있는 자산 폼 → `calc-wizard-asset-migrate-rental-split.ts`
  */
 import { getReductionDefault } from "@/components/calc/transfer/UnifiedReductionPanel-defaults";
-import { reclassifiedLegacyHousingType } from "@/lib/storage/migrations/reduction-reclassification";
+import { reclassifiedLegacyHousingType, UNSOLD_HOUSING_UNRESOLVED_TYPE } from "@/lib/storage/migrations/reduction-reclassification";
 
 export const isLegacyHousingReductionType = (t: unknown): t is "new_housing" | "unsold_housing" =>
   t === "new_housing" || t === "unsold_housing";
@@ -29,5 +29,8 @@ export function legacyHousingReductionToForm(
   contractDate?: unknown,
 ): Record<string, unknown> {
   const str = (v: unknown) => (typeof v === "string" && v !== "" ? v : undefined);
-  return { ...getReductionDefault(reclassifiedLegacyHousingType(type, str(acquisitionDate), str(contractDate))) };
+  const target = reclassifiedLegacyHousingType(type, str(acquisitionDate), str(contractDate));
+  // Q-28 — 취득일이 §98의3 기간 밖이면 조문을 정하지 않고 「조문 미정」 항목으로 둔다(패널이 재선택을 안내하고 ⑧이 막는다).
+  if (target === "unresolved") return { type: UNSOLD_HOUSING_UNRESOLVED_TYPE };
+  return { ...getReductionDefault(target) };
 }
