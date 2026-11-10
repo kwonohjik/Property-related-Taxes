@@ -19,7 +19,7 @@
  */
 
 import { describeAllocationFormula } from "./unsold-allocation-display";
-import { applyRate } from "../tax-utils";
+import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import {
   calcSignedAllocation,
@@ -339,16 +339,26 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
     formulaSteps.push({
       label: "5년간 발생 양도소득금액 (기준시가 안분)",
       value: base,
-      formula: describeAllocationFormula({ signCase: allocation.signCase, transferIncome: input.transferIncome, stdAtAcq, stdAt5Y, stdAtTransfer }),
+      formula: describeAllocationFormula({ signCase: allocation.signCase, transferIncome: input.transferIncome, stdAtAcq, stdAt5Y, stdAtTransfer, rate: UNSOLD_98_8_DEDUCTION_RATE }),
     });
   }
 
   // 50% 공제 + "초과금액은 없는 것" (법 ① 후단)
-  const reducible = Math.min(applyRate(base, UNSOLD_98_8_DEDUCTION_RATE), Math.max(0, input.transferIncome));
+  //   분자 > 0 · 분모 ≤ 0(pos_neg·pos_zero)은 5년간 발생분을 상한 없는 값으로 보아 50% 적용 후 상한 = 양도소득금액 전액 (2026-11-10 사용자 결정 · 법규과-1181).
+  const incomeCap = Math.max(0, input.transferIncome);
+  const isNonPositiveDenominator = signCase === "pos_neg" || signCase === "pos_zero";
+  //   (+,+)는 hybrid(US-12)와 같이 상한 전 원값(raw) × 50% 뒤 양도소득금액 상한 — 분모 +1/0/−1 연속성(비율 > 1이면 전액).
+  const rawFiveYear =
+    signCase === "all_positive" && echoStdAcq != null && echoStd5Y != null && echoStdTransfer != null
+      ? Math.max(0, safeMultiplyThenDivide(input.transferIncome, echoStd5Y - echoStdAcq, echoStdTransfer - echoStdAcq))
+      : base;
+  const reducible = isNonPositiveDenominator ? incomeCap : Math.min(applyRate(rawFiveYear, UNSOLD_98_8_DEDUCTION_RATE), incomeCap);
   formulaSteps.push({
     label: "공제할 양도소득금액 (50%)",
     value: reducible,
-    formula: `5년간 발생분 ${base.toLocaleString()} × 50% = ${reducible.toLocaleString()}`,
+    formula: isNonPositiveDenominator
+      ? `5년간 발생분 × 50% 후 양도소득금액 ${incomeCap.toLocaleString()} 상한 = ${reducible.toLocaleString()} (양도소득금액 전액)`
+      : `5년간 발생분 ${rawFiveYear.toLocaleString()} × 50% = ${applyRate(rawFiveYear, UNSOLD_98_8_DEDUCTION_RATE).toLocaleString()}${applyRate(rawFiveYear, UNSOLD_98_8_DEDUCTION_RATE) > incomeCap ? `이나 양도소득금액 ${incomeCap.toLocaleString()}을 넘는 초과금액은 없는 것으로 하여 ${reducible.toLocaleString()}` : ""}`,
   });
 
   return {

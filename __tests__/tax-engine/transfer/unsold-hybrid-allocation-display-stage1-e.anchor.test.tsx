@@ -98,7 +98,10 @@ describe("US-79 — 1단계 산식이 부호 케이스를 구분한다", () => {
     const f = r.unsold986Detail!.formulaSteps[0].formula!;
     expect(r.unsold986Detail!.signCase).toBe("pos_neg");
     expect(f).toContain("분모가 음수");
-    expect(f).toContain("부동산거래관리과-525");
+    // 감면율 50%(§98의6): 분모 <= 0 = 율 적용 후 상한 = 전액 + 확인 필요 고지(525 단독 인용이 아니다)
+    expect(f).toContain("법규과-1181");
+    expect(f).toContain("확인 필요");
+    expect(r.unsold986Detail!.reducibleTransferIncome).toBe(120_000_000);
   });
 
   it("분자 음수(neg_pos): 0원 + 부동산거래관리과-136", () => {

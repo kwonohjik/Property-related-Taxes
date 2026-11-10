@@ -313,11 +313,14 @@ export function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResul
   //   공유하므로 그대로 두고, 여기서는 상한 전 원값(raw)을 따로 구한다. 율 100%인 조문은 결과가 같다.
   const stdNumerator = stdAt5Y - stdAtAcq;
   const stdDenominator = stdAtTransfer - stdAtAcq;
+  // 분자 > 0 · 분모 ≤ 0(pos_neg·pos_zero) — 분모 → 0+ 극한(5년간 발생분 → ∞)의 연장으로 보아 감면율을 곱한 뒤 상한 = 양도소득금액 전액
+  //   (2026-11-10 사용자 결정 · 법규과-1181). 율 100%는 종전과 같은 전액이다.
+  const isNonPositiveDenominator = allocation.signCase === "pos_neg" || allocation.signCase === "pos_zero";
   const allocated =
     allocation.signCase === "all_positive"
       ? Math.max(0, safeMultiplyThenDivide(input.transferIncome, stdNumerator, stdDenominator))
       : allocation.reducibleIncome;
-  const applied = applyRate(allocated, rate);
+  const applied = isNonPositiveDenominator ? incomeCap : applyRate(allocated, rate);
   const reducible = Math.min(applied, incomeCap);
   const isCappedByIncome = applied > incomeCap;
   const incomeText = input.transferIncome.toLocaleString();
@@ -327,6 +330,7 @@ export function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResul
     stdAtAcq,
     stdAt5Y,
     stdAtTransfer,
+    rate,
   });
   formulaSteps.push({
     label: "5년간 발생 양도소득금액 (기준시가 안분)",
@@ -341,7 +345,9 @@ export function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResul
       ? "과세대상소득금액에서 공제 (초과금액은 없는 것)"
       : `과세대상소득금액에서 공제 (5년간 발생분 × ${ratePct}%, 초과금액은 없는 것)`,
     value: reducible,
-    formula: rate === 1
+    formula: isNonPositiveDenominator && rate < 1
+      ? `5년간 발생분 × ${ratePct}% 후 양도소득금액 ${incomeText} 상한 = ${reducible.toLocaleString()}을 과세대상소득금액에서 공제 (양도소득금액 전액)`
+      : rate === 1
       ? `5년간 발생분 ${allocated.toLocaleString()}${isCappedByIncome ? `이 양도소득금액 ${incomeText}을 넘으므로 그 초과금액은 없는 것으로 하여 ${reducible.toLocaleString()}을 과세대상소득금액에서 공제` : "을 과세대상소득금액에서 공제"}`
       : `5년간 발생분 ${allocated.toLocaleString()} × ${ratePct}% = ${applied.toLocaleString()}${capText}`,
   });

@@ -20,7 +20,7 @@ import { createElement, Fragment, type ReactNode } from "react";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
-import { ALLOCATION_DENOMINATOR_ZERO_FULL_NOTICE } from "@/lib/tax-engine/transfer-reductions/new-99-3";
+import { ALLOCATION_DENOMINATOR_ZERO_FULL_NOTICE, ALLOCATION_NONPOSITIVE_DENOMINATOR_BELOW_FULL_RATE_NOTICE } from "@/lib/tax-engine/transfer-reductions/new-99-3";
 import { selfBuiltPenaltyBasisFormula } from "@/lib/tax-engine/transfer-tax-self-built-display";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { SplitAcqMode } from "@/lib/tax-engine/transfer-tax-split-display";
@@ -463,24 +463,21 @@ export function buildIncomeDeductionReducibleFormula(
   const rate = src.taxReductionRate ?? src.deductionRate ?? 1;
   if (rate < 1 && !src.isWithin5Years) {
     const ratePct = Math.round(rate * 100);
+    // 분자 > 0 · 분모 ≤ 0 — 5년간 발생분을 상한 없는 값으로 보아 율 적용 후 양도소득금액 전액 (엔진과 같은 정책)
+    if (src.signCase === "pos_neg" || src.signCase === "pos_zero") {
+      const why = src.signCase === "pos_zero" ? "양도시 기준시가가 취득시 기준시가와 같아 분모가 0" : "양도시 기준시가가 취득시 기준시가보다 낮아 분모가 음수";
+      return `${why}이므로 5년간 발생분 × ${ratePct}%가 양도소득금액 ${base.toLocaleString()}을 넘는 것으로 보아 초과금액은 없는 것으로 하여 ${reducible.toLocaleString()} (${article} §90② 소득금액차감) — ${ALLOCATION_NONPOSITIVE_DENOMINATOR_BELOW_FULL_RATE_NOTICE}`;
+    }
     // 5년간 발생분 = 령 §40① 산식 값(양도소득금액 한도 전) — 엔진이 쓴 부호 정책과 같다.
     const fiveYear =
-      src.signCase === "pos_neg" || src.signCase === "pos_zero"
-        ? Math.max(0, base)
-        : src.signCase === "all_positive"
-          ? Math.max(0, safeMultiplyThenDivide(base, numerator, denominator))
-          : 0;
+      src.signCase === "all_positive"
+        ? Math.max(0, safeMultiplyThenDivide(base, numerator, denominator))
+        : 0;
     const applied = applyRate(fiveYear, rate);
     const tail =
       applied > base
         ? ` = ${applied.toLocaleString()}이나 양도소득금액 ${base.toLocaleString()}을 넘는 초과금액은 없는 것으로 하여 ${reducible.toLocaleString()} (${article} §90② 소득금액차감)`
         : ` = ${reducible.toLocaleString()} (${article} §90② 소득금액차감)`;
-    if (src.signCase === "pos_zero") {
-      return `양도시 기준시가가 취득시 기준시가와 같아 분모가 0이므로 양도소득금액 ${base.toLocaleString()} 전액이 5년간 발생분 × ${ratePct}%${tail} — ${ALLOCATION_DENOMINATOR_ZERO_FULL_NOTICE}`;
-    }
-    if (src.signCase === "pos_neg") {
-      return `양도시 기준시가가 취득시 기준시가보다 낮아 양도소득금액 ${base.toLocaleString()} 전액이 5년간 발생분 × ${ratePct}%${tail}`;
-    }
     return createElement(
       Fragment,
       null,

@@ -6,6 +6,10 @@
  *   손계산: §98의7 분모 0 → 공제 246,000,000 · 총 14,518,000(±1 짝과 같다) / §98의8 → 공제 126,000,000 · 총 39,980,500.
  *   분자 ≤ 0(5년시점 ≤ 취득시) → 공제 0 · 총 = 감면 없음 대조(§98의7 79,849,000 · §98의8 82,357,000).
  *
+ * 2026-11-10 후속(분모 <= 0 = 감면율 무관 전액): §98의8(공제율 50%)도 분모 -1·0·+1 모두 양도소득금액 전액 252,000,000 차감.
+ *   손계산: 감면 없음 82,357,000 = 산출세액 74,870,000 × 1.1 -> 전액 차감 시 산출 0 · 농특세 = 74,870,000 × 20% = 14,974,000
+ *   (같은 방식 검산: §98의7 79,849,000 -> 72,590,000 × 20% = 14,518,000 = 위 §98의7 값). 종전 분모 0·-1 126,000,000 · 39,980,500은 50%만 차감한 값.
+ *
  * (이하 종전 Q-20 헤더)
  * #2951이 §99·§99의3에 한 규칙(`nh76-allocation-denominator-zero.anchor.test.ts`)을 같은 `calcSignedAllocation`을 쓰는
  * `unsold-hybrid.ts`·`unsold-98-8.ts`에도 적용한다 — 양도시 = 취득시 기준시가(분모 0)이면 안분 비율이 정의되지 않으므로
@@ -98,20 +102,20 @@ describe("US-36 하이브리드(§98의7) — 분모 0은 전액 + 확인 필요
 });
 
 describe("US-36 §98의8 — 같은 규칙", () => {
-  it("분모 0: 적격 · pos_zero · 공제 126,000,000 · 총 39,980,500", () => {
+  it("분모 0: 적격 · pos_zero · 공제 252,000,000(전액) · 총 14,974,000", () => {
     const r = mk([R988(200_000_000)], O988);
     const d = r.unsold988Detail!;
     expect(d.isEligible).toBe(true);
     expect(d.signCase).toBe("pos_zero");
-    expect(d.reducibleTransferIncome).toBe(126_000_000);
+    expect(d.reducibleTransferIncome).toBe(252_000_000);
     expect(d.formulaSteps.some((x) => x.formula?.includes("확인 필요"))).toBe(true);
-    expect(r.totalTax).toBe(39_980_500);
+    expect(r.totalTax).toBe(14_974_000);
   });
-  it("연속성: 분모 −1·+1도 126,000,000 · 39,980,500", () => {
+  it("연속성: 분모 -1·+1도 252,000,000 · 14,974,000", () => {
     for (const tr of [199_999_999, 200_000_001]) {
       const r = mk([R988(tr)], O988);
-      expect(r.unsold988Detail!.reducibleTransferIncome).toBe(126_000_000);
-      expect(r.totalTax).toBe(39_980_500);
+      expect(r.unsold988Detail!.reducibleTransferIncome).toBe(252_000_000);
+      expect(r.totalTax).toBe(14_974_000);
     }
   });
   it("(분자≤0, 분모=0) → 공제 0 · 총 82,357,000 (= 감면 없음 대조)", () => {

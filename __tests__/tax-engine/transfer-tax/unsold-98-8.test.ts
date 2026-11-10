@@ -137,15 +137,15 @@ describe("§98의8 evaluator anchor", () => {
     expect(r.ineligibleReasons.map((x) => x.code)).toContain("TRANSFER_BEFORE_ACQUISITION");
   });
 
-  it("부호 (−,+) → 차감 0 / (+,−) → 50%만 차감 (부호 정책 §99의3 동형)", () => {
+  it("부호 (−,+) → 차감 0 / (+,−) → 양도소득금액 전액 차감 (분모 <= 0 = 50% 적용 후 상한, 2026-11-10)", () => {
     const negPos = evaluateUnsold988(baseInput({ standardPriceAt5Years: 150_000_000 }));
     expect(negPos.isEligible).toBe(true);
     expect(negPos.reducibleTransferIncome).toBe(0);
     const posNeg = evaluateUnsold988(
       baseInput({ standardPriceAt5Years: 300_000_000, standardPriceAtTransfer: 150_000_000 }),
     );
-    // (+,−) 전액 감면 선례 → base = 200M → × 50% = 100M
-    expect(posNeg.reducibleTransferIncome).toBe(100_000_000);
+    // (+,-): 분모 -> 0+ 극한 연장 -- 5년간 발생분(상한 없음) × 50% 후 양도소득금액(200M) 상한 = 200M 전액 (종전 100M)
+    expect(posNeg.reducibleTransferIncome).toBe(200_000_000);
   });
 
   it("fullMonthsBetween — 월 경계·일 미달 절사", () => {
