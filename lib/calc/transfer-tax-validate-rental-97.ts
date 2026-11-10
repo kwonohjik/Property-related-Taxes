@@ -14,6 +14,8 @@ import { fieldError } from "./transfer-tax-validate-field";
 import { rentalProrationIssue } from "./transfer-tax-validate-rental-proration";
 import { rentalConversionIssue } from "./transfer-tax-validate-rental-conversion";
 import { rental973LongRegistrationDate } from "./transfer-tax-validate-rental-conversion";
+import { findRental97StatutoryOverlap } from "@/lib/tax-engine/transfer-reductions/rental-97-statutory-overlap";
+import { rental97StatutoryOverlapMessage } from "@/lib/tax-engine/transfer-reductions/rental-97-statutory-overlap";
 import { hasRentIncreaseRule } from "./rental-rent-increase-label";
 import { RENT_INCREASE_VIOLATION_LABEL } from "./rental-rent-increase-label";
 import { rental974AptDeadlineIssue } from "./apt-deadline-extension-scope";
@@ -164,15 +166,10 @@ export function rental97SeriesIssue(args: {
       if (aptIssue?.key === "isApartment974") return fail(fieldError(`reduction.${r.type}.isApartment974`, `${label} 적용: ${aptIssue.message}`));
       if (aptIssue) return fail(fieldError(`reduction.${r.type}.aptDeadlineExtension974`, `${label} 적용: ${aptIssue.message}`));
     }
-    // D2-05 — 조특법 §97의5②: §97의5 세액감면은 §97의3·§97의4 과세특례와 중복 적용 불가.
+    // D2-05 — 명문 배제 쌍: 조특법 §97의5②(§97의5 × §97의3·§97의4) · §97의3②(§97의3 × §97의4). ⑫와 같은 단일 소스(`rental-97-statutory-overlap.ts`).
     // ⑧에도 같은 상호배타를 둬야 「UI 통과 ↔ 엔진 배제」 모순이 생기지 않는다.
-    if (
-      (r.type === "rental_97_3" || r.type === "rental_97_4") &&
-(asset.reductions ?? []).some((o) => o.type === "rental_97_5")
-    )
-      return fail(
-        `${label} 적용: §97의5 세액감면과 중복하여 적용할 수 없습니다 (조특법 §97의5②). 하나만 선택하세요.`,
-      );
+    const overlap = findRental97StatutoryOverlap((asset.reductions ?? []).map((o) => o.type));
+    if (overlap && overlap.subject === r.type) return fail(rental97StatutoryOverlapMessage(overlap));
     // D2-06 — 안분이 있는 두 조문만(§97의3⑤·§97의5②). 안분 축 검사는 leaf로 분리했다 — 엔진과 같은 의제 개시일·양도일 구간.
     if (r.type === "rental_97_3" || r.type === "rental_97_5") {
       const prorationIssue = rentalProrationIssue({ r, label, asset, assetIndex: ai, form, redevHiddenStd });
