@@ -96,7 +96,14 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
   // — 별지84호 본 서식 ⑧ 과세표준 = ④+⑤−⑥−⑦에서 차감 대상 ⑥은 「소득감면대상 소득금액」이고,
   //   작성방법 6번이 이를 §90② 적용 시로 한정한다.
   // 종전에는 세액감면분(reducibleIncome)까지 빼서 화면(DetailedStatementHelpers)과 어긋났다.
-  const incomeAmountAfter = isRH ? ((num(r.taxableGain) ?? 0) as number) : Math.max(0, incomeAmount - incomeDeduction);
+  // 합산(일괄)은 §102② 통산 後 양도소득금액이 출발점이다(다건 PDF와 같다). 어댑터 필드가 없는 단건·구 이력은 종전 값.
+  const aggIncomeAfterOffset = isRH ? undefined : num(r.aggregateIncomeAfterOffset);
+  const incomeAmountAfter = isRH ? ((num(r.taxableGain) ?? 0) as number) : Math.max(0, (aggIncomeAfterOffset ?? incomeAmount) - incomeDeduction);
+  // 일괄 «양도소득금액» 표시 — 통산 前 자산별 합(차손 자산이 있으면 음수 가능). 0으로 접으면 아래 통산·소멸 차손이 어디서 왔는지 안 보인다.
+  const incomeAmountShown = !isRH && aggTaxable !== undefined ? aggTaxable - ltdAmount : incomeAmount;
+  const aggUnusedLoss = (num(r.aggregateUnusedLoss) ?? 0) as number;
+  const aggLossTable = Array.isArray(r.aggregateLossOffsetTable) ? (r.aggregateLossOffsetTable as R[]) : [];
+  const showLossOffset = aggIncomeAfterOffset !== undefined && (aggLossTable.length > 0 || aggUnusedLoss > 0);
   // 농특세 총액 echo가 정본 — 소득금액차감 detail 합은 총액 echo가 없는 옛 저장 결과 전용 폴백(화면 `resolveRuralSurtax`와 같은 순서).
   const ruralSurtax = (num(r.ruralSurtax) ?? incomeDeductionRuralSurtax(r as unknown as TransferTaxResult)) as number;
   // NH-38 — 농특세 미납분 납부지연가산세(엔진 echo · 소득세 가산세와 별도 줄)
@@ -148,7 +155,9 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
         {taxableGain !== grossGain && (<View style={s.row}><Text style={s.lblSub}>과세대상 양도차익</Text><Text style={s.val}>{fmt(taxableGain)}</Text></View>)}
         {num(r.longTermHoldingRate) !== undefined && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제 ({fmtRate(lthRate)})</Text><Text style={s.val}>{ltdAmount > 0 ? `- ${fmt(ltdAmount)}` : "해당없음"}</Text></View>)}
         {codeLines("장기보유특별공제 코드")}
-        <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(incomeAmount)}</Text></View>
+        <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(incomeAmountShown)}</Text></View>
+        {showLossOffset && (<View style={s.row}><Text style={s.lbl}>통산 후 양도소득금액</Text><Text style={s.val}>{fmt(aggIncomeAfterOffset)}</Text></View>)}
+        {showLossOffset && aggUnusedLoss > 0 && (<View style={s.row}><Text style={s.lblSub}>소멸 차손 (이월 불인정)</Text><Text style={s.val}>- {fmt(aggUnusedLoss)}</Text></View>)}
         {num(r.nontaxableGainAmount) !== undefined && (r.nontaxableGainAmount as number) > 0 && (<View style={s.row}><Text style={s.lblSub}>{nontaxableIncomeLabel(rhDetail?.scenarioId)}</Text><Text style={s.val}>- {fmt(r.nontaxableGainAmount)}</Text></View>)}
         <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{eligible19 > 0 ? fmt(eligible19) : "0"}</Text></View>
         <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{incomeDeduction > 0 ? fmt(incomeDeduction) : "0"}</Text></View>
@@ -182,6 +191,28 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
         {ruralPenalty > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세 납부지연가산세</Text><Text style={s.val}>{fmt(ruralPenalty)}</Text></View>)}
         {localPenalty > 0 && (<View style={s.row}><Text style={s.lbl}>지방소득세 가산세 (지방세기본법 §53~§55)</Text><Text style={s.val}>{fmt(localPenalty)}</Text></View>)}
         {num(r.localIncomeTax) !== undefined && (<View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>)}
+      </View>
+      {showLossOffset && <LossOffsetTable lossTable={aggLossTable} />}
+    </>
+  );
+}
+
+/** §102② 양도차손 통산 내역 표 — 다건·일괄 PDF 공용(자산 id 또는 라벨 → 받는 자산). 행이 없으면 아무것도 그리지 않는다. */
+function LossOffsetTable({ lossTable }: { lossTable: R[] }) {
+  if (lossTable.length === 0) return null;
+  return (
+    <>
+      <Text style={s.sectionTitle}>양도차손 통산 내역 (§102②)</Text>
+      <View style={s.table}>
+        {lossTable.map((row, i) => (
+          <View key={i} style={i === lossTable.length - 1 ? s.rowLast : s.row}>
+            <Text style={s.lbl}>
+              [{lossOffsetGiverText(str(row.fromPropertyId) ?? "", str(row.fromPart) as Parameters<typeof lossOffsetGiverText>[1])}] → [{str(row.toPropertyId) ?? ""}]{" "}
+              ({str(row.scope) === "same_group" ? "동일그룹" : "타군안분"})
+            </Text>
+            <Text style={s.val}>- {fmt(row.amount)}</Text>
+          </View>
+        ))}
       </View>
     </>
   );
@@ -486,22 +517,7 @@ export function TransferMultiSection({ r, selectedSectionIds, codeRows }: { r: R
         <View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>
       </View>
 
-      {lossTable.length > 0 && (
-        <>
-          <Text style={s.sectionTitle}>양도차손 통산 내역 (§102②)</Text>
-          <View style={s.table}>
-            {lossTable.map((row, i) => (
-              <View key={i} style={i === lossTable.length - 1 ? s.rowLast : s.row}>
-                <Text style={s.lbl}>
-                  [{lossOffsetGiverText(str(row.fromPropertyId) ?? "", str(row.fromPart) as Parameters<typeof lossOffsetGiverText>[1])}] → [{str(row.toPropertyId) ?? ""}]{" "}
-                  ({str(row.scope) === "same_group" ? "동일그룹" : "타군안분"})
-                </Text>
-                <Text style={s.val}>- {fmt(row.amount)}</Text>
-              </View>
-            ))}
-          </View>
-        </>
-      )}
+      <LossOffsetTable lossTable={lossTable} />
 
       {props.length > 0 && (
         <>

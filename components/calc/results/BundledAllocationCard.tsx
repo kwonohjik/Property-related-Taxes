@@ -81,7 +81,7 @@ interface Props {
  *
  * MultiTransferTaxResultView·BundledAllocationCard·DetailedCalculationStatementCard에서 공유.
  */
-export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult & { aggregateIncomeDeductionReducible: number; aggregateReductionEligibleIncome: number; aggregateTaxableGain: number; aggregateGrossGain: number } {
+export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult & { aggregateIncomeDeductionReducible: number; aggregateReductionEligibleIncome: number; aggregateTaxableGain: number; aggregateGrossGain: number; aggregateIncomeAfterOffset: number; aggregateUnusedLoss: number; aggregateLossOffsetTable: AggregateTransferResult["lossOffsetTable"] } {
   return {
     isExempt: false,
     transferGain: a.totalTransferGain,
@@ -161,6 +161,17 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
      * (비과세 5억 주택 + 토지 → 150,000,000 · 화면 250,000,000). 별도 필드로 싣는다(NH-65 방식).
      */
     aggregateGrossGain: sumAssetGains(a.properties).gross,
+    /**
+     * §102② 양도차손 통산 — 어댑터가 싣지 않으면 PDF `TransferSection`이 차손 자산이 낀 일괄에서 통산액·소멸 차손·통산 내역을 그릴 수 없다
+     * (양도소득금액 «0»만 찍혔다). 내역의 자산 id는 사용자에게 보이는 자산 라벨로 바꿔 싣는다(다건 PDF·화면 합산 신고서와 같은 정본 `lossOffsetTable`).
+     */
+    aggregateIncomeAfterOffset: a.totalIncomeAfterOffset,
+    aggregateUnusedLoss: a.unusedLoss,
+    aggregateLossOffsetTable: a.lossOffsetTable.map((row) => ({
+      ...row,
+      fromPropertyId: a.properties.find((p) => p.propertyId === row.fromPropertyId)?.propertyLabel ?? row.fromPropertyId,
+      toPropertyId: a.properties.find((p) => p.propertyId === row.toPropertyId)?.propertyLabel ?? row.toPropertyId,
+    })),
   };
 }
 
