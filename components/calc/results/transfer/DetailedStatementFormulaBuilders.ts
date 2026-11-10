@@ -60,6 +60,7 @@ export {
 } from "./DetailedStatementGbFormulas";
 import { fmt } from "./DetailedStatementGbFormulas";
 import { effectiveGrossGain, assetTaxableGain, capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
+import { rhPartialBasis, rhPartialTaxableGainFormula, rhPartialLthFormula, rhPartialIncomeFormula } from "./DetailedStatementRhPartialFormulas";
 
 // ── 단순 산식 (자산별 동일 산식) ──────────────────────────────────
 
@@ -90,6 +91,9 @@ export function buildTaxableGainFormula(p: PerPropertyBreakdown): string {
   const inc = Math.max(0, p.income);
   const lth = p.longTermHoldingDeduction;
   if (tg <= 0) return `차손 자산 — 양도차익 ${fmt(tg)} (음수)`;
+  // §155⑳ 특례 × 12억 초과 — 장특이 전체 차익 기준이라 «양도소득금액 + 장특» 역산이 법정 율에 안 맞는다(위 파일 머리 주석).
+  const rhBasis = rhPartialBasis(p);
+  if (rhBasis) return rhPartialTaxableGainFormula(rhBasis, assetTaxableGain(p));
   // 🔴 종전 문구는 `min(양도차익 A, 양도소득금액 B + 장특공제 C = sum) = 결과`였다
   //    (2026-09-08 · 산식 한국어 풀어쓰기). 두 가지가 규약 위반이었다 —
   //    ① 함수 표기 `min(...)` ② 괄호 안의 **중간 산술 결과** `= sum`
@@ -106,6 +110,8 @@ export function buildLthFormula(p: PerPropertyBreakdown): string {
     if (p.isExempt) return "비과세 자산 — 장특공제 미적용";
     return p.transferGain <= 0 ? "차손 자산 — 장특공제 미적용" : "보유 3년 미만 또는 비적용 자산";
   }
+  const rhBasis = rhPartialBasis(p);
+  if (rhBasis) return rhPartialLthFormula(rhBasis, p.longTermHoldingDeduction);
   // 과세대상양도차익 추정 (다건은 정확값 노출 없음 — taxable = min(tg, income+lth))
   const tg = p.transferGain;
   const inc = Math.max(0, p.income);
@@ -133,7 +139,8 @@ export function buildIncomeFormula(
   const inc = Math.max(0, p.income);
   const lth = p.longTermHoldingDeduction;
   const taxable = tg > 0 ? Math.min(tg, inc + lth) : tg;
-  const base = `${fmt(taxable)} - ${fmt(lth)} = ${fmt(p.income)}`;
+  const rhBasis = rhPartialBasis(p);
+  const base = rhBasis ? rhPartialIncomeFormula(rhBasis, lth, p.income) : `${fmt(taxable)} - ${fmt(lth)} = ${fmt(p.income)}`;
   if (p.income === p.incomeAfterOffset) return base;
   const received = p.lossOffsetFromSameGroup + p.lossOffsetFromOtherGroup;
   // **이익 자산**이 자기 파트(대개 건물) 차손을 다른 자산에 준 경우 — 토지·건물은 통산에서 각각의 자산이라(국심2007중3718) 그 차손이

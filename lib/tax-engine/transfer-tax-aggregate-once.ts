@@ -561,6 +561,7 @@ export function computeAggregateOnce(
       propertyLabel: r.item.propertyLabel,
       isExempt: r.result.isExempt,
       isPartialExempt: r.result.isPartialExempt, // [echo] §91② 범위 밖 고지 술어용 (표시 전용)
+      ...(r.result.rentalHousingExceptionDetail?.applied === true ? { rentalHousingApplied: true } : {}), // [echo] §155⑳ 경로 표지 — 장특 기준(전체 차익) 표시 분기 (표시 전용)
       exemptReason: r.result.exemptReason,
       transferPrice: effectiveTransferPrice,
       acquisitionPrice: effectiveAcquisitionPrice,

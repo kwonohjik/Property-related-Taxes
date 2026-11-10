@@ -217,6 +217,12 @@ export interface PerPropertyBreakdown
    * 소득세법 §91② 범위 밖 고지(`shouldShowFalseContractPriceNotice`)가 「비과세 또는 감면받았거나 받을 세액」 보유 여부를 읽는다.
    */
   isPartialExempt?: boolean;
+  /**
+   * [echo] §155⑳ 장기임대주택 보유자 거주주택 특례 경로를 탄 자산 — 표시 전용(세액 불변).
+   * 이 경로의 `longTermHoldingDeduction`은 **전체 양도차익**(12억 안분 전) 기준이라 일반 경로(과세분 기준)와 기준이 다르다.
+   * 명세서 자산별 행이 «과세대상 = min(차익, 양도소득금액 + 장특)» 역산을 쓰지 않도록 가른다(`DetailedStatementRhPartialFormulas.ts`).
+   */
+  rentalHousingApplied?: boolean;
   exemptReason?: string;
   /**
    * 양도가액 — **표시 전용**. 일반 자산은 입력값(`singleInput.transferPrice`), 토지·건물 분리 자산은 **소유 파트의 양도가 합**이다
