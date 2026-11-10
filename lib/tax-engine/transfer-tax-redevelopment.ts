@@ -70,6 +70,7 @@ import type {
   CarryoverTaxationDetail,
 } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
+import { ruralSurtaxDeductionBasis } from "./rural-surtax-basis";
 
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -378,7 +379,7 @@ export function calculateRedevelopmentTax(
         label: "차감형 감면 농어촌특별세 (감면세액 × 20%)",
         formula: `(감면 전 산출세액 ${taxResultBefore993.calculatedTax.toLocaleString()} − 감면 후 산출세액 ${taxResult.calculatedTax.toLocaleString()}) × 20% = ${ruralSurtax993.toLocaleString()}`,
         amount: ruralSurtax993,
-        legalBasis: TRANSFER.RURAL_SURTAX_DEDUCTION,
+        legalBasis: ruralSurtaxDeductionBasis(input.transferDate),
       });
     }
   }

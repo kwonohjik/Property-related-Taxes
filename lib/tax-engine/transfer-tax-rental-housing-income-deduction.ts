@@ -15,7 +15,6 @@
  * §98(세율 특칙)·§98의2(장특 특칙)는 각자의 고지로 보낸다(`transfer-tax-rental-housing-reductions.ts`).
  * 순수 함수 — `steps`에 단계를 push하는 부수효과만 있다.
  */
-import { TRANSFER } from "./legal-codes";
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
 import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
 import { buildIncomeDeductionStep, resolveIncomeDeduction } from "./transfer-reductions/income-deduction-router";
@@ -27,6 +26,7 @@ import {
 } from "./transfer-tax-income-deduction-details";
 import type { IncomeDeductionDetails } from "./transfer-tax-income-deduction-details";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
+import { ruralSurtaxDeductionBasis } from "./rural-surtax-basis";
 
 /**
  * 이 경로가 계산하는 차감형.
@@ -108,6 +108,8 @@ export function finalizeRentalHousingIncomeDeduction(args: {
   deduction: RentalHousingIncomeDeduction;
   taxBefore: number | undefined;
   taxAfter: number;
+  /** 양도일 — 차감형 농특세 시행령 항 번호(§5①/§5②) 선택용 */
+  transferDate: Date;
   steps: CalculationStep[];
 }): { details: IncomeDeductionDetails; ruralSurtax: number } {
   const { deduction, taxBefore, taxAfter, steps } = args;
@@ -121,7 +123,7 @@ export function finalizeRentalHousingIncomeDeduction(args: {
       label: `${active.articleLabel} 농어촌특별세 (감면세액 × 20%)`,
       formula: `(감면 전 산출세액 ${taxBefore.toLocaleString()} − 감면 후 산출세액 ${taxAfter.toLocaleString()}) × 20% = ${surtax.ruralSurtax.toLocaleString()}`,
       amount: surtax.ruralSurtax,
-      legalBasis: TRANSFER.RURAL_SURTAX_DEDUCTION,
+      legalBasis: ruralSurtaxDeductionBasis(args.transferDate),
     });
   }
   return { details, ruralSurtax: surtax.ruralSurtax };

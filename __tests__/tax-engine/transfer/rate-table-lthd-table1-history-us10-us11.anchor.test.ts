@@ -13,6 +13,7 @@ import { table1RateAt, table1StepRate } from "@/lib/tax-engine/data/lthd-table1-
 import { calcLongTermRate } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
 import { computeLthdRateSplit } from "@/lib/tax-engine/redevelopment-lthd-table2";
 import {
+  transferRateEraNotices,
   SEC104_6_THREE_HOUSE_UNSUPPORTED_NOTICE,
   TRANSFER_RATE_ERA_UNSUPPORTED_NOTICE,
 } from "@/lib/tax-engine/transfer-tax-rate-era-notice";
@@ -62,7 +63,8 @@ describe("US-10 누진세율 연혁 — 행 선택(effective_date ≤ 양도일 
 
   it.each([
     // [양도일 전날, 시행일 당일, 전날 표, 당일 표, 과세표준]
-    ["2008-03-20", "2008-03-21", null, T_2008, TB],
+    ["2001-12-31", "2002-01-01", null, T_2008, TB],
+    ["2008-03-20", "2008-03-21", T_2008, T_2008, TB], // 제8911호는 §104①을 바꾸지 않았다 — 같은 표
     ["2008-12-31", "2009-01-01", T_2008, T_2009, TB],
     ["2009-12-31", "2010-01-01", T_2009, T_2010, TB],
     ["2011-12-31", "2012-01-01", T_2010, T_2012, TB],
@@ -76,6 +78,7 @@ describe("US-10 누진세율 연혁 — 행 선택(effective_date ≤ 양도일 
 
   it("원 단위 법령상 값 (과표 397,500,000 / 637,500,000)", () => {
     expect(seedTax("2008-03-21", 397_500_000)).toBe(131_400_000);
+    expect(seedTax("2002-01-01", 397_500_000)).toBe(131_400_000);
     expect(seedTax("2009-01-01", 397_500_000)).toBe(124_985_000);
     expect(seedTax("2012-01-01", 397_500_000)).toBe(127_150_000);
     expect(seedTax("2014-01-01", 397_500_000)).toBe(131_650_000);
@@ -85,8 +88,43 @@ describe("US-10 누진세율 연혁 — 행 선택(effective_date ≤ 양도일 
     expect(seedTax("2018-01-01", 637_500_000)).toBe(232_350_000);
   });
 
-  it("2008-03-20 이전 양도: 종전 근사 행 유지(미지원) — 133,600,000", () => {
-    expect(seedTax("2008-03-20", 397_500_000)).toBe(133_600_000);
+  it("2002-01-01 전 양도: 종전 근사 행 유지(미지원) — 133,600,000 / 2008-03-20은 법정표 131,400,000", () => {
+    expect(seedTax("2001-12-31", 397_500_000)).toBe(133_600_000);
+    expect(seedTax("2008-03-20", 397_500_000)).toBe(131_400_000);
+  });
+
+  // 후속 W1 1a — 2002.1.1~2008.3.20 손계산(9/18/27/36: 1천만 이하 9% · 4천만 90만+18% · 8천만 630만+27% · 초과 1,710만+36%)
+  //   2005-06-15 과표 50,000,000 = 6,300,000(4천만) + 10,000,000×27% = 9,000,000
+  //   2005-06-15 과표 397,500,000 = 17,100,000(8천만) + 317,500,000×36% = 131,400,000
+  //   2007-06-15 과표 25,000,000 = 900,000 + 15,000,000×18% = 3,600,000
+  //   2007-06-15 과표 637,500,000 = 17,100,000 + 557,500,000×36% = 217,800,000
+  it.each([
+    ["2005-06-15", 50_000_000, 9_000_000],
+    ["2005-06-15", 397_500_000, 131_400_000],
+    ["2007-06-15", 25_000_000, 3_600_000],
+    ["2007-06-15", 637_500_000, 217_800_000],
+  ] as const)("1a %s 과표 %i → 산출세액 %i", (d, tb, expected) => {
+    expect(seedTax(d, tb)).toBe(expected);
+  });
+
+  it("1a 엔진: 2005-06-15 양도(보유 4년 5개월 — 표1 10%) 과표 87,500,000 → 산출세액 19,800,000, 세율표 고지 없음", () => {
+    // 양도차익 100,000,000 − 장특 10,000,000(10%) − 기본공제 2,500,000 = 87,500,000 → 17,100,000 + 7,500,000×36% = 19,800,000
+    const r = calculateTransferTax(
+      baseTransferInput({
+        transferPrice: 400_000_000,
+        acquisitionPrice: 300_000_000,
+        acquisitionDate: D("2001-01-10"),
+        transferDate: D("2005-06-15"),
+        householdHousingCount: 2,
+        expenses: 0,
+      }),
+      loadFallbackTransferRates(D("2005-06-15")),
+    );
+    expect(r.longTermHoldingDeduction).toBe(10_000_000);
+    expect(r.taxBase).toBe(87_500_000);
+    expect(r.calculatedTax).toBe(19_800_000);
+    expect(r.warnings ?? []).not.toContain(TRANSFER_RATE_ERA_UNSUPPORTED_NOTICE);
+    expect(r.warnings ?? []).not.toContain(LTHD_TABLE1_UNSUPPORTED_NOTICE);
   });
 
   it("구간 경계 원 단위 — 2009 표 4,600만·8,800만, 2012 표 3억", () => {
@@ -138,9 +176,22 @@ describe("US-11 장기보유특별공제 표1 연혁 leaf", () => {
     expect(calcLongTermRate(4, 0, false)).toBe(0.08);
   });
 
-  it("2008-01-01 경계: 전날은 종전 식(미지원·고지), 당일부터 단계표", () => {
-    expect(table1RateAt(4, D("2007-12-31"))).toBe(0.08);
+  it("2008-01-01 경계: 전날은 3단계표(4년 10), 당일부터 8단계표(4년 12)", () => {
+    expect(table1RateAt(4, D("2007-12-31"))).toBe(0.1);
     expect(table1RateAt(4, D("2008-01-01"))).toBe(0.12);
+  });
+
+  it("1c 1996-01-01~2007-12-31 3단계: 3~5년 10 · 5~10년 15 · 10년 이상 30 (보유 3년 미만 0)", () => {
+    for (const d of ["1996-01-01", "2000-06-15", "2006-06-15", "2007-12-31"]) {
+      expect([2, 3, 4, 5, 7, 9, 10, 12, 15, 20].map((y) => table1RateAt(y, D(d)))).toEqual([
+        0, 0.1, 0.1, 0.15, 0.15, 0.15, 0.3, 0.3, 0.3, 0.3,
+      ]);
+    }
+  });
+
+  it("1c 1995-12-31 이전은 미지원(종전 식 연 2%) — 1996-01-01부터 3단계", () => {
+    expect(table1RateAt(4, D("1995-12-31"))).toBe(0.08);
+    expect(table1RateAt(4, D("1996-01-01"))).toBe(0.1);
   });
 
   it("정본 calcLongTermRate · computeLthdRateSplit(표1)도 양도일 시행본을 따른다", () => {
@@ -172,6 +223,40 @@ describe("US-11 엔진 — 양도차익 3억, 보유 6년(2012-06-15 취득), �
   });
 });
 
+describe("1c 엔진 — 양도차익 1억원 일반 자산(건물) 표1 공제액 손계산 (3단계표 vs 종전 연 2% 근사)", () => {
+  // 보유 4년 → 10% 10,000,000 (근사 8%) · 7년 → 15% 15,000,000 (14%) · 9년 → 15% 15,000,000 (18%) · 12년 → 30% 30,000,000 (24%)
+  const run = (transferDate: string, acq: string) =>
+    calculateTransferTax(
+      baseTransferInput({
+        transferPrice: 400_000_000,
+        acquisitionPrice: 300_000_000,
+        acquisitionDate: D(acq),
+        transferDate: D(transferDate),
+        householdHousingCount: 2,
+        propertyType: "building",
+        expenses: 0,
+      }),
+      loadFallbackTransferRates(D(transferDate)),
+    );
+  it.each([
+    ["2006-06-15", "2002-03-01", 10_000_000],
+    ["2006-06-15", "1999-03-01", 15_000_000],
+    ["2006-06-15", "1997-03-01", 15_000_000],
+    ["2006-06-15", "1994-03-01", 30_000_000],
+    ["2000-12-20", "1996-03-01", 10_000_000],
+    ["2000-12-20", "1993-03-01", 15_000_000],
+    ["2000-12-20", "1991-03-01", 15_000_000],
+  ] as const)("양도 %s 취득 %s → 장특 %i", (t, a, expected) => {
+    const r = run(t, a);
+    expect(r.longTermHoldingDeduction).toBe(expected);
+    expect(r.warnings ?? []).not.toContain(LTHD_TABLE1_UNSUPPORTED_NOTICE);
+  });
+  it("2008~2018 단계표·2019 이후 연 2% 회귀 불변 (보유 7년: 21% / 14%)", () => {
+    expect(run("2012-06-15", "2005-03-01").longTermHoldingDeduction).toBe(21_000_000);
+    expect(run("2020-06-15", "2013-03-01").longTermHoldingDeduction).toBe(14_000_000);
+  });
+});
+
 describe("Q-30 (b) 미지원 고지 — 세액 불변", () => {
   const run = (transferDate: string, houses: number, propertyType: "building" | "housing" = "building", acq = "2000-01-10") =>
     calculateTransferTax(
@@ -185,19 +270,33 @@ describe("Q-30 (b) 미지원 고지 — 세액 불변", () => {
       }),
       loadFallbackTransferRates(D(transferDate)),
     );
-  const warns = (transferDate: string, houses: number, propertyType: "building" | "housing" = "building") =>
-    run(transferDate, houses, propertyType).warnings ?? [];
+  const warns = (transferDate: string, houses: number, propertyType: "building" | "housing" = "building", acq?: string) =>
+    run(transferDate, houses, propertyType, acq).warnings ?? [];
 
-  it("2008-03-20 양도: 세율표 연혁 미지원 고지(표1은 2008-01-01 이후라 지원) / 2008-03-21부터는 없다", () => {
-    const w = warns("2008-03-20", 2);
-    expect(w).toContain(TRANSFER_RATE_ERA_UNSUPPORTED_NOTICE);
-    expect(w).not.toContain(LTHD_TABLE1_UNSUPPORTED_NOTICE);
-    expect(warns("2008-03-21", 2)).not.toContain(TRANSFER_RATE_ERA_UNSUPPORTED_NOTICE);
+  it("2001-12-31 양도: 세율표 연혁 미지원 고지 / 2002-01-01·2008-03-20·2008-03-21은 없다", () => {
+    expect(warns("2001-12-31", 2, "building", "1996-01-10")).toContain(TRANSFER_RATE_ERA_UNSUPPORTED_NOTICE);
+    for (const d of ["2002-01-01", "2008-03-20", "2008-03-21"]) {
+      expect(warns(d, 2)).not.toContain(TRANSFER_RATE_ERA_UNSUPPORTED_NOTICE);
+    }
   });
 
-  it("2007-12-31 양도: 표1 연혁 미지원 고지(장특 발생) / 2008-01-01은 없다", () => {
-    expect(warns("2007-12-31", 2)).toContain(LTHD_TABLE1_UNSUPPORTED_NOTICE);
-    expect(warns("2008-01-01", 2)).not.toContain(LTHD_TABLE1_UNSUPPORTED_NOTICE);
+  it("1995-12-31 양도: 표1 연혁 미지원 고지(장특 발생) / 1996-01-01·2007-12-31은 없다", () => {
+    expect(warns("1995-12-31", 2, "building", "1990-09-10")).toContain(LTHD_TABLE1_UNSUPPORTED_NOTICE);
+    expect(warns("1996-01-01", 2, "building", "1990-09-10")).not.toContain(LTHD_TABLE1_UNSUPPORTED_NOTICE);
+    expect(warns("2007-12-31", 2)).not.toContain(LTHD_TABLE1_UNSUPPORTED_NOTICE);
+  });
+
+  it("1f 구 §104⑥1호 45% 고지 — 주택 수 + 조합원입주권 수 합 3 이상(영 §167의4)", () => {
+    const n = (houses: number, rights: number, d = "2009-02-01", type = "housing") =>
+      transferRateEraNotices({ transferDate: D(d), propertyType: type, householdHousingCount: houses, redevelopmentRightCount: rights, hasLongTermDeduction: false });
+    expect(n(2, 1)).toContain(SEC104_6_THREE_HOUSE_UNSUPPORTED_NOTICE);
+    expect(n(1, 2)).toContain(SEC104_6_THREE_HOUSE_UNSUPPORTED_NOTICE);
+    expect(n(3, 0)).toContain(SEC104_6_THREE_HOUSE_UNSUPPORTED_NOTICE);
+    expect(n(2, 0)).not.toContain(SEC104_6_THREE_HOUSE_UNSUPPORTED_NOTICE); // 주택만 2
+    expect(n(2, 1, "2009-03-16")).not.toContain(SEC104_6_THREE_HOUSE_UNSUPPORTED_NOTICE);
+    expect(n(2, 1, "2009-02-01", "land")).not.toContain(SEC104_6_THREE_HOUSE_UNSUPPORTED_NOTICE);
+    expect(SEC104_6_THREE_HOUSE_UNSUPPORTED_NOTICE).toContain("확인 필요");
+    expect(SEC104_6_THREE_HOUSE_UNSUPPORTED_NOTICE).toContain("§167의3·§167의4");
   });
 
   it("2009-01-01~03-15 양도 + 3주택 이상: 45% 미지원 고지 / 03-16·2주택·2008-12-31은 없다", () => {

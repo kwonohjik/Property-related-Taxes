@@ -432,7 +432,7 @@ test.describe("재개발 원조합원 §99의3·§99 (PR #2944) — 준공일 �
     });
   }
 
-  test("[B-3] 짝: 준공일이 신축주택취득기간 안(2002-06-30)이면 잔여주택 질문이 없다 → 53,417,071 · body completionDate", async ({ page }) => {
+  test("[B-3] 짝: 준공일이 신축주택취득기간 안(2002-06-30)이면 잔여주택 질문이 없다 → 50,723,998 · body completionDate", async ({ page }) => {
     test.setTimeout(120_000);
     await openRedev(page, {
       transferDate: "2006-03-01",
@@ -445,7 +445,7 @@ test.describe("재개발 원조합원 §99의3·§99 (PR #2944) — 준공일 �
     const { body, json } = await calculate(page);
     expect(body.redevelopment).toEqual(expect.objectContaining({ completionDate: "2002-06-30" }));
     expect(body.reductions![0]).not.toHaveProperty("remainderContract993");
-    expect(json.data!.result.totalTax).toBe(53_417_071);
+    expect(json.data!.result.totalTax).toBe(50_723_998);
   });
 
   test("[B-4] §99: 준공 2000-06-30(기간 뒤) → 잔여주택 질문(new99) 「예」 body remainderContract99 → 73,375,000", async ({ page }) => {
@@ -667,7 +667,7 @@ test.describe("보유 감면주택 §99·§99의3 유형 (PR #2951) — 명부 �
 // 4. 상속 원조합원 (PR #2963) — 종전주택 상속 + §99의3 → 「확인 필요 — 정면 해석례 없음」 고지 · 매매 대조와 같은 세액
 // ─────────────────────────────────────────────────────────────────────────────
 // 시료(`nh99-l14` route anchor Q-1 a S1): 종전주택 상속개시 1996-03-01 · 인가 2000-09-01 · 준공 2002-05-25 · 양도 2005-03-01 · 5억 · 권리가액 3억 · 청산금 납부 5천만.
-//   수정 전 98,476,714(불성립 ACQUIRED_BY_INHERITANCE_OR_GIFT) → 후 25,815,247 = 매매 대조.
+//   수정 전 98,476,714(불성립 ACQUIRED_BY_INHERITANCE_OR_GIFT) → 후 25,815,247 → 29,593,927(W1 #3154 — 2005 양도분 9/18/27/36 세율표·장특 표1 3단계, route anchor `nh99-l14` S1과 같음) = 매매 대조.
 const NOTICE_HEAD = "확인 필요: 종전주택을 상속·증여로 취득했으나 관리처분계획 인가일 전부터 조합원이므로";
 const NOTICE_TAIL = /정면으로 다룬 해석례는 확인하지 못했습니다/;
 
@@ -725,6 +725,6 @@ test.describe("상속 원조합원 §99의3 (PR #2963) — 종전주택 상속 �
     expect((pd.warnings ?? []).some((w) => NOTICE_TAIL.test(w))).toBe(false);
     await expect(page.getByText(NOTICE_HEAD, { exact: false })).toHaveCount(0);
     expect(inh.json.data!.result.totalTax).toBe(pur.json.data!.result.totalTax);
-    expect(inh.json.data!.result.totalTax).toBe(25_815_247);
+    expect(inh.json.data!.result.totalTax).toBe(29_593_927);
   });
 });

@@ -27,6 +27,7 @@ import { calculateBuildingPenalty } from "./transfer-tax-building-penalty";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
 import { ruralSurtaxUnknownStep } from "./transfer-tax-rural-surtax";
+import { ruralSurtaxDeductionBasis } from "./rural-surtax-basis";
 
 // ============================================================
 // H-MP: handleMultiParcelBranch — 다필지 분리 계산 (소령 §166)
@@ -211,7 +212,7 @@ export function handleMultiParcelBranch(
         label: `${HYBRID_ARTICLE[mpReductionTypeApplied]} 농어촌특별세 (감면세액 × 20%)`,
         formula: `감면세액 ${mpCappedReduction.toLocaleString()} × 20% = ${mpRuralSurtax.toLocaleString()}`,
         amount: mpRuralSurtax,
-        legalBasis: TRANSFER.RURAL_SURTAX_DEDUCTION,
+        legalBasis: ruralSurtaxDeductionBasis(effectiveInput.transferDate),
       });
     }
     if (mpHybridTaxDetail && mpHybridTaxDetail.id === mpReductionTypeApplied) {

@@ -53,18 +53,18 @@ const r99 = (over: Record<string, unknown>) => ({
 const d = (r: any) => r.result?.new993Detail ?? r.result?.new99Detail;
 
 describe("A — §99의3 · 주택 출자 원조합원 · 준공 2002-06-30(기간 안) · 양도 2006-03-01", () => {
-  it("5년은 준공일부터(이내) · 재개발 변형 고정 → (350,000,000 − 200,000,000) ÷ (350,000,000 − 100,000,000) = 0.6 · 총세액 53,417,071", async () => {
+  it("5년은 준공일부터(이내) · 재개발 변형 고정 → (350,000,000 − 200,000,000) ÷ (350,000,000 − 100,000,000) = 0.6 · 총세액 50,723,998", async () => {
     const r = await runCalc(form(apt({ redevCompletionDate: "2002-06-30", reductions: [r993({ usageApprovalDate993: "2002-06-30" })] }), "2006-03-01"));
     expect(r.issues).toEqual([]);
     expect(r.status).toBe(200);
     expect(d(r).isWithin5Years).toBe(true);
     expect(d(r).fiveYearRatio).toBe(0.6);
     expect(d(r).previousHouseStdPriceApplied).toBe(100_000_000);
-    expect(r.result.totalTax).toBe(53_417_071);
+    expect(r.result.totalTax).toBe(50_723_998);
   });
-  it("감면 없는 세액 불변 — 준공일을 실어도 다른 판정이 바뀌지 않는다(수정 전 126,657,142)", async () => {
+  it("감면 없는 세액 불변 — 준공일을 실어도 다른 판정이 바뀌지 않는다(수정 전 113,001,428)", async () => {
     const r = await runCalc(form(apt({ redevCompletionDate: "2002-06-30", reductions: [] }), "2006-03-01"));
-    expect(r.result.totalTax).toBe(126_657_142);
+    expect(r.result.totalTax).toBe(113_001_428);
   });
   it("④가 주택 출자 원조합원의 준공일을 싣는다 — 비우면 ⑧이 준공일 칸을, ⑫가 400을 낸다", async () => {
     const ok = await captureBody(form(apt({ redevCompletionDate: "2002-06-30", reductions: [r993({})] }), "2006-03-01"));
@@ -105,12 +105,12 @@ describe("C — §99 · 조특령 §99③2호 · 종전 1990 · 인가 1997-01-0
     const no = await runCalc(form(apt({ ...cOver, redevCompletionDate: "2000-06-30", reductions: [r99({ remainderContract99: "no" })] }), "2016-06-01"));
     expect(d(no).ineligibleReasons.map((x: { code: string }) => x.code)).toEqual(["NO_REMAINDER_CONTRACT"]);
   });
-  it("준공 1999-03-01(기간 안) · 양도 2003-06-01 → 5년 이내 변형 안분 2/3 · 총세액 43,052,499", async () => {
+  it("준공 1999-03-01(기간 안) · 양도 2003-06-01 → 5년 이내 변형 안분 2/3 · 총세액 43,804,284", async () => {
     const r = await runCalc(form(apt({ ...cOver, redevCompletionDate: "1999-03-01", reductions: [r99({})] }), "2003-06-01"));
     expect(r.issues).toEqual([]);
     expect(d(r).isWithin5Years).toBe(true);
     expect(d(r).fiveYearRatio).toBeCloseTo(2 / 3, 12);
-    expect(r.result.totalTax).toBe(43_052_499);
+    expect(r.result.totalTax).toBe(43_804_284);
   });
 });
 

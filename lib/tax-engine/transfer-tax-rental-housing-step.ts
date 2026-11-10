@@ -609,7 +609,7 @@ export function runRentalHousingExceptionStep(
   });
   // NH-37 — §99·§99의3 농특세(감면 전후 산출세액 차 × 20%) · 감면 상세 echo
   const deductionFinal = finalizeRentalHousingIncomeDeduction({
-    deduction: incomeDeduction, taxBefore: taxBeforeDeduction, taxAfter: rheTaxResult.calculatedTax, steps,
+    deduction: incomeDeduction, taxBefore: taxBeforeDeduction, taxAfter: rheTaxResult.calculatedTax, transferDate: effectiveInput.transferDate, steps,
   });
   const ruralSurtaxTotal = rheSurtaxVerdict.surtax + deductionFinal.ruralSurtax;
   const deductionOrderNotice = incomeDeduction.applied > 0 ? RENTAL_HOUSING_INCOME_DEDUCTION_ORDER_NOTICE : undefined;

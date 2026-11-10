@@ -81,28 +81,28 @@ const noticed = (w: string[]) => w.some((x) => NOTICE.test(x));
 
 describe("Q-1 a — §99의3 · 원조합원 · 종전주택 상속 (준공 2002-05-25)", () => {
   const A = { redevCompletionDate: "2002-05-25" };
-  it("S1 양도 2005-03-01(5년 이내) · 총세액 25,815,247 (수정 전 98,476,714 — 불성립 ACQUIRED_BY_INHERITANCE_OR_GIFT) = 매매 대조", async () => {
+  it("S1 양도 2005-03-01(5년 이내) · 총세액 29,593,927 (수정 전 104,374,285 — 불성립 ACQUIRED_BY_INHERITANCE_OR_GIFT) = 매매 대조", async () => {
     const inh = await go(apt({ ...A, reductions: [r993()] }), "2005-03-01");
     const pur = await go(apt({ ...A, ...PURCHASE, reductions: [r993()] }), "2005-03-01");
     expect(inh.issues).toEqual([]);
     expect(inh.eligible).toBe(true);
     expect(inh.codes).toEqual([]);
-    expect(inh.tax).toBe(25_815_247);
-    expect(pur.tax).toBe(25_815_247);
+    expect(inh.tax).toBe(29_593_927);
+    expect(pur.tax).toBe(29_593_927);
     expect(noticed(inh.warnings)).toBe(true);
     expect(noticed(pur.warnings)).toBe(false);
   });
-  it("감면 미선택 대조 98,476,714 — 감면이 없으면 세액이 바뀌지 않는다(원인은 세액 계산의 다른 축을 건드리지 않음)", async () => {
-    expect((await go(apt({ ...A, reductions: [] }), "2005-03-01")).tax).toBe(98_476_714);
+  it("감면 미선택 대조 104,374,285 — 감면이 없으면 세액이 바뀌지 않는다(원인은 세액 계산의 다른 축을 건드리지 않음)", async () => {
+    expect((await go(apt({ ...A, reductions: [] }), "2005-03-01")).tax).toBe(104_374_285);
   });
-  it("S2 증여 취득 원조합원 · 같은 25,815,247 (수정 전 98,476,714)", async () => {
+  it("S2 증여 취득 원조합원 · 같은 29,593,927 (수정 전 104,374,285)", async () => {
     const g = await go(apt({ ...A, ...GIFT, reductions: [r993()] }), "2005-03-01");
     expect(g.issues).toEqual([]);
     expect(g.eligible).toBe(true);
-    expect(g.tax).toBe(25_815_247);
+    expect(g.tax).toBe(29_593_927);
     expect(noticed(g.warnings)).toBe(true);
   });
-  it("V-11 이월과세 증여(carryover_gift) 취득 원조합원도 증여와 같다 — 25,815,247 (수정 전 98,476,714). 수증자 취득시기를 의제하지 않는 현행 정책은 그대로", async () => {
+  it("V-11 이월과세 증여(carryover_gift) 취득 원조합원도 증여와 같다 — 29,593,927 (수정 전 104,374,285). 수증자 취득시기를 의제하지 않는 현행 정책은 그대로", async () => {
     const CAR = {
       giftRegistryDate: "1996-03-01", donorAcquisitionDate: "1990-01-01", donorAcquisitionCause: "purchase", donorAcquisitionPrice: "100000000", useEstimatedAcquisition: false,
       estimationMode: "", giftTaxAmount: "0", donorCapitalExpenditure: "0", giftDateValuation: "100000000", exclusionDeclared: {}, donorHouseholdHoldingStartDate: "1990-01-01",
@@ -111,7 +111,7 @@ describe("Q-1 a — §99의3 · 원조합원 · 종전주택 상속 (준공 2002
     const x = await go(apt({ ...A, ...cg, reductions: [r993()] }), "2005-03-01");
     expect(x.issues).toEqual([]);
     expect(x.eligible).toBe(true);
-    expect(x.tax).toBe(25_815_247);
+    expect(x.tax).toBe(29_593_927);
     expect(noticed(x.warnings)).toBe(true);
   });
   it("S3 양도 2010-06-30(5년 경과) · 양도 당시 기준시가 4억 → 63,565,146 (수정 전 83,846,714)", async () => {
@@ -124,12 +124,12 @@ describe("Q-1 a — §99의3 · 원조합원 · 종전주택 상속 (준공 2002
 
 describe("Q-1 a — §99 · 원조합원 · 종전주택 상속 (인가 1996-09-01 · 준공 1999-03-01)", () => {
   const A = { redevApprovalDate: "1996-09-01", redevCompletionDate: "1999-03-01" };
-  it("S4 양도 2003-03-01 · 총세액 27,307,638 (수정 전 103,612,142) = 매매 대조", async () => {
+  it("S4 양도 2003-03-01 · 총세액 29,461,972 (수정 전 103,612,142) = 매매 대조", async () => {
     const inh = await go(apt({ ...A, reductions: [r99()] }), "2003-03-01");
     const pur = await go(apt({ ...A, ...PURCHASE, reductions: [r99()] }), "2003-03-01");
     expect(inh.issues).toEqual([]);
-    expect(inh.tax).toBe(27_307_638);
-    expect(pur.tax).toBe(27_307_638);
+    expect(inh.tax).toBe(29_461_972);
+    expect(pur.tax).toBe(29_461_972);
     expect(inh.eligible).toBe(true);
     expect(noticed(inh.warnings)).toBe(true);
     expect(noticed(pur.warnings)).toBe(false);
@@ -137,32 +137,32 @@ describe("Q-1 a — §99 · 원조합원 · 종전주택 상속 (인가 1996-09-
 });
 
 describe("Q-2 a — 인가일 뒤 상속 승계 (승계조합원)", () => {
-  it("S6 §99 · 사망 1998-08-01(인가 1996-09-01 뒤 · 준공 1999-03-01 전) → 적용 24,160,000 (수정 전 132,880,000) = 승계 매매 대조", async () => {
+  it("S6 §99 · 사망 1998-08-01(인가 1996-09-01 뒤 · 준공 1999-03-01 전) → 적용 23,400,000 (수정 전 128,700,000) = 승계 매매 대조", async () => {
     const o = { ...SUCC, acquisitionDate: "1998-08-01", redevApprovalDate: "1996-09-01", redevCompletionDate: "1999-03-01" };
     const inh = await go(apt({ ...o, reductions: [r99()] }), "2003-03-01");
     const pur = await go(apt({ ...o, ...PURCHASE, reductions: [r99()] }), "2003-03-01");
     expect(inh.issues).toEqual([]);
     expect(inh.eligible).toBe(true);
-    expect(inh.tax).toBe(24_160_000);
-    expect(pur.tax).toBe(24_160_000);
+    expect(inh.tax).toBe(23_400_000);
+    expect(pur.tax).toBe(23_400_000);
     expect(noticed(inh.warnings)).toBe(true);
     expect(inh.warnings.some((w) => w.includes("§99는 인가일 요건이 없음"))).toBe(true);
   });
-  it("S6x §99 · 준공 1999-03-01 뒤(1999-05-01) 상속 = 완성된 신축주택을 받은 것 → 불성립 유지 132,880,000", async () => {
+  it("S6x §99 · 준공 1999-03-01 뒤(1999-05-01) 상속 = 완성된 신축주택을 받은 것 → 불성립 유지 128,700,000", async () => {
     const x = await go(apt({ ...SUCC, acquisitionDate: "1999-05-01", redevApprovalDate: "1996-09-01", redevCompletionDate: "1999-03-01", reductions: [r99()] }), "2003-05-01");
     expect(x.eligible).toBe(false);
     expect(x.codes).toEqual(["ACQUIRED_BY_INHERITANCE_OR_GIFT"]);
-    expect(x.tax).toBe(132_880_000);
+    expect(x.tax).toBe(128_700_000);
   });
-  it("S7 §99의3 · 인가 2000-09-01 뒤 상속 승계 → NOT_MEMBER_AT_APPROVAL 유지 146,960,000(사유가 인가일 요건으로 바뀐다) = 승계 매매 대조", async () => {
+  it("S7 §99의3 · 인가 2000-09-01 뒤 상속 승계 → NOT_MEMBER_AT_APPROVAL 유지 144,540,000(사유가 인가일 요건으로 바뀐다) = 승계 매매 대조", async () => {
     const o = { ...SUCC, acquisitionDate: "2002-08-01", redevCompletionDate: "2002-12-20" };
     const inh = await go(apt({ ...o, reductions: [r993()] }), "2005-03-01");
     const pur = await go(apt({ ...o, ...PURCHASE, reductions: [r993()] }), "2005-03-01");
     expect(inh.eligible).toBe(false);
     expect(inh.codes).toEqual(["NOT_MEMBER_AT_APPROVAL"]);
-    expect(inh.tax).toBe(146_960_000);
+    expect(inh.tax).toBe(144_540_000);
     expect(pur.codes).toEqual(["NOT_MEMBER_AT_APPROVAL"]);
-    expect(pur.tax).toBe(146_960_000);
+    expect(pur.tax).toBe(144_540_000);
     expect(noticed(inh.warnings)).toBe(false);
   });
 });
@@ -186,12 +186,12 @@ describe("Q-3 b — 공유 종전주택 일부 지분 (축 B: 60% 매매 + 40% �
     const agg = r.json?.data?.aggregated as any;
     return { issues: allIssues(f), status: r.status, total: agg?.totalTax as number, props: (agg?.properties ?? []) as { incomeDeductionReducible?: number }[] };
   }
-  it("지분별 판정 — 40% 지분이 상속이어도 그 지분의 감면이 선다. 총세액 25,815,247 = 단건 S1 = 매매+매매 (수정 전 51,644,198: 상속 지분만 감면 소실)", async () => {
+  it("지분별 판정 — 40% 지분이 상속이어도 그 지분의 감면이 선다. 총세액 29,593,927 = 단건 S1 = 매매+매매 (수정 전 51,644,198: 상속 지분만 감면 소실)", async () => {
     const mixed = await axisB({ acquisitionCause: "inheritance" });
     const both = await axisB(PUR);
     expect(mixed.issues).toEqual([]);
-    expect(mixed.total).toBe(25_815_247);
-    expect(both.total).toBe(25_815_247);
+    expect(mixed.total).toBe(29_593_927);
+    expect(both.total).toBe(29_593_927);
     expect(mixed.props.map((p) => p.incomeDeductionReducible)).toEqual(both.props.map((p) => p.incomeDeductionReducible));
     expect(mixed.props.every((p) => (p.incomeDeductionReducible ?? 0) > 0)).toBe(true);
   });
@@ -210,14 +210,14 @@ describe("함께 양도(컴패니언) — 같은 엔진 (주택 1 + 원조합원
     return { issues: allIssues(f), status: r.status, total: r.json?.data?.aggregated?.determinedTax as number | undefined };
   };
   const C = { assetId: "c2", standardPriceAtTransfer: "250000000", redevCompletionDate: "2002-05-25", fixedAcquisitionPrice: "", reductions: [r993()] };
-  it("컴패니언 원조합원 상속 → 총세액 19,615,058 (수정 전 90,911,587) = 매매 대조", async () => {
+  it("컴패니언 원조합원 상속 → 총세액 23,419,549 (수정 전 94,742,857) = 매매 대조", async () => {
     const inh = await total(apt(C));
     const pur = await total(apt({ ...C, ...PURCHASE }));
     expect(inh.issues).toEqual([]);
     expect(inh.status).toBe(200);
-    expect(inh.total).toBe(19_615_058);
-    expect(pur.total).toBe(19_615_058);
-    expect((await total(apt({ ...C, reductions: [] }))).total).toBe(90_911_587);
+    expect(inh.total).toBe(23_419_549);
+    expect(pur.total).toBe(23_419_549);
+    expect((await total(apt({ ...C, reductions: [] }))).total).toBe(94_742_857);
   });
 });
 

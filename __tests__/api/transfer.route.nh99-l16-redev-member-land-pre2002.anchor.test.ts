@@ -79,31 +79,31 @@ const LAND = { redevOriginalAssetType: "land" };
 
 describe("L14-1 — 토지만 출자 원조합원 · §99의3 (준공 2002-05-25 · 양도 2005-03-01)", () => {
   const A = { ...LAND, redevCompletionDate: "2002-05-25" };
-  it("상속 → 총세액 17,904,857 (수정 전 98,476,714 — ACQUIRED_BY_INHERITANCE_OR_GIFT) = 매매 대조", async () => {
+  it("상속 → 총세액 18,977,142 (수정 전 104,374,285 — ACQUIRED_BY_INHERITANCE_OR_GIFT) = 매매 대조", async () => {
     const inh = await go(apt({ ...A, reductions: [r993()] }), "2005-03-01");
     const pur = await go(apt({ ...A, ...PURCHASE, reductions: [r993()] }), "2005-03-01");
     expect(inh.issues).toEqual([]);
     expect(inh.eligible).toBe(true);
     expect(inh.codes).toEqual([]);
-    expect(inh.tax).toBe(17_904_857);
-    expect(pur.tax).toBe(17_904_857);
+    expect(inh.tax).toBe(18_977_142);
+    expect(pur.tax).toBe(18_977_142);
     expect(noticed(inh.warnings)).toBe(true);
     expect(inh.warnings.some((w) => w.includes("종전 토지를 상속·증여로 취득했으나"))).toBe(true);
     expect(noticed(pur.warnings)).toBe(false);
   });
-  it("증여 → 같은 17,904,857 (수정 전 98,476,714)", async () => {
+  it("증여 → 같은 18,977,142 (수정 전 104,374,285)", async () => {
     const g = await go(apt({ ...A, ...GIFT, reductions: [r993()] }), "2005-03-01");
     expect(g.issues).toEqual([]);
     expect(g.eligible).toBe(true);
-    expect(g.tax).toBe(17_904_857);
+    expect(g.tax).toBe(18_977_142);
     expect(noticed(g.warnings)).toBe(true);
   });
-  it("짝 — 감면 미선택 대조 98,476,714 (감면이 실제로 서 있다)", async () => {
-    expect((await go(apt({ ...A, reductions: [] }), "2005-03-01")).tax).toBe(98_476_714);
+  it("짝 — 감면 미선택 대조 104,374,285 (감면이 실제로 서 있다)", async () => {
+    expect((await go(apt({ ...A, reductions: [] }), "2005-03-01")).tax).toBe(104_374_285);
   });
-  it("짝 — 주택 출자 원조합원은 L14 그대로 25,815,247 (토지만 출자와 분모만 다르다)", async () => {
+  it("짝 — 주택 출자 원조합원은 L14 그대로 29,593,927 (토지만 출자와 분모만 다르다)", async () => {
     const h = await go(apt({ redevCompletionDate: "2002-05-25", reductions: [r993()] }), "2005-03-01");
-    expect(h.tax).toBe(25_815_247);
+    expect(h.tax).toBe(29_593_927);
     expect(h.warnings.some((w) => w.includes("종전주택을 상속·증여로 취득했으나"))).toBe(true);
   });
   it("짝 — 종전 토지 취득이 인가일(2000-09-01) 뒤인 상속은 면제하지 않는다 — L19부터 ⑧(인가일 순서)·⑫가 먼저 막는다(수정 전 ⑧ 통과 · 엔진 날짜 가드 불성립 112,640,000)", async () => {
@@ -115,58 +115,58 @@ describe("L14-1 — 토지만 출자 원조합원 · §99의3 (준공 2002-05-25
 
 describe("L14-1 — 토지만 출자 원조합원 · §99 (인가 1996-09-01 · 준공 1999-03-01 · 양도 2003-03-01)", () => {
   const A = { ...LAND, redevApprovalDate: "1996-09-01", redevCompletionDate: "1999-03-01" };
-  it("상속 → 18,838,571 (수정 전 103,612,142) = 매매 대조 · 감면 미선택 103,612,142", async () => {
+  it("상속 → 18,900,000 (수정 전 103,950,000) = 매매 대조 · 감면 미선택 103,950,000", async () => {
     const inh = await go(apt({ ...A, reductions: [r99()] }), "2003-03-01");
     const pur = await go(apt({ ...A, ...PURCHASE, reductions: [r99()] }), "2003-03-01");
     expect(inh.issues).toEqual([]);
     expect(inh.eligible).toBe(true);
-    expect(inh.tax).toBe(18_838_571);
-    expect(pur.tax).toBe(18_838_571);
+    expect(inh.tax).toBe(18_900_000);
+    expect(pur.tax).toBe(18_900_000);
     expect(noticed(inh.warnings)).toBe(true);
-    expect((await go(apt({ ...A, reductions: [] }), "2003-03-01")).tax).toBe(103_612_142);
+    expect((await go(apt({ ...A, reductions: [] }), "2003-03-01")).tax).toBe(103_950_000);
   });
 });
 
 describe("L14-2 — §99의3 승계조합원 × 승계일 (인가 2000-09-01 · 준공 2002-05-25 · 양도 2005-03-01)", () => {
   const A = { ...SUCC, redevCompletionDate: "2002-05-25" };
   const PRIOR = /대통령령 제17458호 부칙 제11조/;
-  it("2001-06-01 매매 승계 → 26,720,000 (수정 전 146,960,000 — NOT_MEMBER_AT_APPROVAL) · 종전 규정 고지", async () => {
+  it("2001-06-01 매매 승계 → 26,280,000 (수정 전 144,540,000 — NOT_MEMBER_AT_APPROVAL) · 종전 규정 고지", async () => {
     const x = await go(apt({ ...A, acquisitionDate: "2001-06-01", ...PURCHASE, reductions: [r993()] }), "2005-03-01");
     expect(x.issues).toEqual([]);
     expect(x.eligible).toBe(true);
     expect(x.codes).toEqual([]);
-    expect(x.tax).toBe(26_720_000);
+    expect(x.tax).toBe(26_280_000);
     expect(x.warnings.some((w) => PRIOR.test(w))).toBe(true);
     expect(noticed(x.warnings)).toBe(false);
   });
-  it("🔑 경계 — 2001-12-31 승계 26,720,000 · 2002-01-01 승계 146,960,000(NOT_MEMBER_AT_APPROVAL 유지, 감면 미선택 대조와 같다)", async () => {
+  it("🔑 경계 — 2001-12-31 승계 26,280,000 · 2002-01-01 승계 144,540,000(NOT_MEMBER_AT_APPROVAL 유지, 감면 미선택 대조와 같다)", async () => {
     const last = await go(apt({ ...A, acquisitionDate: "2001-12-31", ...PURCHASE, reductions: [r993()] }), "2005-03-01");
     const first = await go(apt({ ...A, acquisitionDate: "2002-01-01", ...PURCHASE, reductions: [r993()] }), "2005-03-01");
     const ctl = await go(apt({ ...A, acquisitionDate: "2002-01-01", ...PURCHASE, reductions: [] }), "2005-03-01");
-    expect(last.tax).toBe(26_720_000);
+    expect(last.tax).toBe(26_280_000);
     expect(last.eligible).toBe(true);
     expect(first.eligible).toBe(false);
     expect(first.codes).toEqual(["NOT_MEMBER_AT_APPROVAL"]);
-    expect(first.tax).toBe(146_960_000);
-    expect(ctl.tax).toBe(146_960_000);
+    expect(first.tax).toBe(144_540_000);
+    expect(ctl.tax).toBe(144_540_000);
     expect(first.warnings.some((w) => PRIOR.test(w))).toBe(false);
   });
-  it("상속·증여 승계(2001-06-01) → 26,720,000 (수정 전 146,960,000) · 종전 규정 고지 + 「확인 필요」", async () => {
+  it("상속·증여 승계(2001-06-01) → 26,280,000 (수정 전 144,540,000) · 종전 규정 고지 + 「확인 필요」", async () => {
     const inh = await go(apt({ ...A, acquisitionDate: "2001-06-01", reductions: [r993()] }), "2005-03-01");
     const gift = await go(apt({ ...A, acquisitionDate: "2001-06-01", ...GIFT, fixedAcquisitionPrice: "100000000", reductions: [r993()] }), "2005-03-01");
     for (const x of [inh, gift]) {
       expect(x.issues).toEqual([]);
       expect(x.eligible).toBe(true);
-      expect(x.tax).toBe(26_720_000);
+      expect(x.tax).toBe(26_280_000);
       expect(x.warnings.some((w) => PRIOR.test(w))).toBe(true);
       expect(noticed(x.warnings)).toBe(true);
     }
   });
-  it("짝 — §99는 L14 그대로(인가일 요건이 없는 조문): 승계 1998-08-01 · 2001-12-31 모두 24,160,000 · 종전 규정 고지 없음", async () => {
+  it("짝 — §99는 L14 그대로(인가일 요건이 없는 조문): 승계 1998-08-01 · 2001-12-31 모두 23,400,000 · 종전 규정 고지 없음", async () => {
     const B = { ...SUCC, ...PURCHASE, redevApprovalDate: "1996-09-01", redevCompletionDate: "1999-03-01" };
     for (const d of ["1998-08-01", "2001-12-31"]) {
       const x = await go(apt({ ...B, acquisitionDate: d, reductions: [r99()] }), "2003-03-01");
-      expect(x.tax).toBe(24_160_000);
+      expect(x.tax).toBe(23_400_000);
       expect(x.warnings.some((w) => PRIOR.test(w))).toBe(false);
     }
   });
