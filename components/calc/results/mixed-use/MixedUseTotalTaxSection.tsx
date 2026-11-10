@@ -14,6 +14,7 @@ import { formatDelayedPaymentFormula } from "@/lib/tax-engine/transfer-tax-penal
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
+import { incomeDeductionReducible } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { FalseContractPriceNotice } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import {
   fmt,
@@ -286,6 +287,7 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
         isExempt={h.isExempt}
         isPartialExempt={breakdown.calculationRoute?.highValueRule === "above_threshold_prorated"}
         reductionAmount={t.reductionAmount}
+        incomeDeductionReducible={incomeDeductionReducible(t.reductionDetails ?? {})}
       />
     </>
   );
