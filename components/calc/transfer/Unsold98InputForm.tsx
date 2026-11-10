@@ -11,6 +11,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { MULTI_HOUSE } from "@/lib/tax-engine/legal-codes";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold98Form = Extract<AssetReductionForm, { type: "unsold_98" }>;
@@ -78,7 +79,7 @@ export function Unsold98InputForm({ value, onChange }: Props) {
         <ToggleCard
           tone="violet"
           title="5년 이상 임대 (다주택 중과 배제 판정)"
-          description="§98 적용 요건은 「5년 이상 보유 또는 임대」이고 보유기간은 취득일·양도일로 자동 검증합니다. 5년 이상 임대한 국민주택이면 다주택 중과세율이 적용되지 않습니다 (소득세법 시행령 §167의3①3호·§167의10①2호)"
+          description={`§98 적용 요건은 「5년 이상 보유 또는 임대」이고 보유기간은 취득일·양도일로 자동 검증합니다. 5년 이상 임대한 국민주택이면 다주택 중과세율이 적용되지 않습니다 (${MULTI_HOUSE.TAX_INCENTIVE_RENTAL_3_WITH_TWO_HOUSE_BASIS})`}
           checked={value.rentedFor5Years98}
           onCheckedChange={(v) => onChange({ rentedFor5Years98: v })}
         />
@@ -117,7 +118,7 @@ export function Unsold98InputForm({ value, onChange }: Props) {
         <p>· 농어촌특별세는 부과되지 않습니다.</p>
         <p>
           · 다주택 중과(소득세법 §104⑦) 대상이면 중과세율을 적용합니다. 5년 이상 임대한 국민주택은 중과가 배제되어 20%가
-          적용됩니다 (소득세법 시행령 §167의3①3호·§167의10①2호 — 감면대상장기임대주택). 20% 특례와 중과의 적용 순서를 정면으로 다룬
+          적용됩니다 ({MULTI_HOUSE.TAX_INCENTIVE_RENTAL_3_WITH_TWO_HOUSE_BASIS} — 감면대상장기임대주택). 20% 특례와 중과의 적용 순서를 정면으로 다룬
           해석례는 확인하지 못했습니다.
         </p>
       </ToneCard>

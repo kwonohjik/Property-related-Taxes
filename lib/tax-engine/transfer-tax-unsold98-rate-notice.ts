@@ -12,6 +12,7 @@
  *    같은 과세표준·같은 중과 판정으로 §104① 기본세율 산출세액을 함께 적는다. 어느 쪽을 고를지는 납세자 몫이라
  *    엔진은 고르지 않는다(자동 선택 (a) 아님). 유리·불리 표현은 쓰지 않는다.
  */
+import { MULTI_HOUSE } from "./legal-codes";
 import { resolveSurchargeApplication, type SurchargeApplicationInput } from "./transfer-tax-surcharge-predicate";
 import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
 
@@ -19,7 +20,7 @@ type SurchargeRulesArg = Parameters<typeof resolveSurchargeApplication>[2];
 
 export const UNSOLD_98_SURCHARGE_PRECEDENCE_NOTICE =
   "조세특례제한법 §98①1호의 세율 100분의 20은 소득세법 §104①(기본세율)에 갈음하는 특례입니다. 이 주택은 다주택 중과(소득세법 §104⑦) 대상이어서 " +
-  "중과세율을 적용하고 장기보유특별공제를 배제했습니다. 5년 이상 임대한 국민주택이면 소득세법 시행령 §167의3①3호·§167의10①2호에 따라 " +
+  "중과세율을 적용하고 장기보유특별공제를 배제했습니다. 5년 이상 임대한 국민주택이면 " + MULTI_HOUSE.TAX_INCENTIVE_RENTAL_3_WITH_TWO_HOUSE_BASIS + "에 따라 " +
   "중과가 배제되어 세율 20%가 적용됩니다 — §98 감면 카드의 「5년 이상 임대」를 확인하세요. 20% 특례와 중과의 적용 순서를 정면으로 다룬 해석례는 " +
   "확인하지 못했습니다(확인 필요).";
 

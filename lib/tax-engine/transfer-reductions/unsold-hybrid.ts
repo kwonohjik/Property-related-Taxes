@@ -22,7 +22,7 @@
 
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import { unsold987TransferGateReasons } from "./unsold-98-period-gates";
-import { describeAllocationFormula } from "./unsold-allocation-display";
+import { allocationNoticeWarnings, describeAllocationFormula } from "./unsold-allocation-display";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { UNSOLD_98_DECREE } from "../legal-codes/transfer-house";
 import type { Unsold982LthdEcho } from "./unsold-hybrid-p4";
@@ -100,6 +100,11 @@ export interface UnsoldHybridResult {
    * 공실 구간 제외·상속 합산 반영. 2호이고 일자가 갖춰져 계산이 이뤄졌을 때만 채운다.
    */
   rentalPeriodEcho?: Unsold986RentalPeriodEcho;
+  /**
+   * 「확인 필요」 고지 — §99·§99의3 결과(`warnings?: string[]`)와 같은 이름·형태. 고지가 없으면 필드를 두지 않는다.
+   * 5년 후 기준시가 안분의 분모 0(전액)·분모 ≤ 0(율 100% 미만, 감면율 적용 후 상한 = 전액)과 §98의3 과밀 5년 후 독법 고지를 싣는다.
+   */
+  warnings?: string[];
 }
 
 export interface Unsold986RentalPeriodEcho {
@@ -337,6 +342,7 @@ export function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResul
     value: allocated,
     formula: allocationFormula,
   });
+  const noticeWarnings = allocationNoticeWarnings(allocation.signCase, rate);
   const capText = isCappedByIncome
     ? `이나 공제하는 금액이 양도소득금액 ${incomeText}을 넘으므로 그 초과금액은 없는 것으로 하여 ${reducible.toLocaleString()}을 과세대상소득금액에서 공제`
     : `을 과세대상소득금액에서 공제`;
@@ -372,6 +378,7 @@ export function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResul
     ruralSurtax: 0,
     ruralSurtaxExempt,
     legalBasis: input.legalBasis,
+    ...(noticeWarnings.length > 0 ? { warnings: noticeWarnings } : {}),
   };
 }
 

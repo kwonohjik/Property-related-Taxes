@@ -37,3 +37,16 @@ export function describeAllocationFormula(args: {
       return `양도소득금액 ${incomeText} × (5년시점 기준시가 ${stdAt5Y.toLocaleString()} − 취득시 기준시가 ${stdAtAcq.toLocaleString()}) ÷ (양도시 기준시가 ${stdAtTransfer.toLocaleString()} − 취득시 기준시가 ${stdAtAcq.toLocaleString()})`;
   }
 }
+
+/**
+ * 결과 `warnings`에 싣는 «확인 필요» 고지 — `describeAllocationFormula`가 산식 step 문구에 붙이는 고지와 같은 조건·같은 상수.
+ * (분자 > 0 · 분모 0: 전액 / 분자 > 0 · 분모 ≤ 0 · 율 < 100%: 감면율 적용 후 상한 = 전액). 해당 없으면 빈 배열. 계산에는 쓰이지 않는다.
+ * 분모 음수 · 율 100%(부동산거래관리과-525)와 분자 ≤ 0(부동산거래관리과-136)은 해석례가 있어 고지하지 않는다.
+ */
+export function allocationNoticeWarnings(signCase: New993SignCase, rate: number): string[] {
+  if ((signCase === "pos_neg" || signCase === "pos_zero") && rate < 1) {
+    return [ALLOCATION_NONPOSITIVE_DENOMINATOR_BELOW_FULL_RATE_NOTICE];
+  }
+  if (signCase === "pos_zero") return [ALLOCATION_DENOMINATOR_ZERO_FULL_NOTICE];
+  return [];
+}
