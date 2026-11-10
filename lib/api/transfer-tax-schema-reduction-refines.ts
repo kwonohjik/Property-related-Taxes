@@ -60,6 +60,8 @@ export function refineReductionTrack127_7(
   transferDate: unknown,
   ctx: z.RefinementCtx,
   path: (string | number)[],
+  /** V-7 — 거주주택 특례(§155⑳) 선언이 실리는 첫 주택 자산이면 문구에 경로 안내를 붙인다(차단 기준 불변). 컴패니언은 선언이 없어 생략. */
+  opts?: { rentalHousingPath?: boolean },
 ) {
   const list = reductions ?? [];
   if (list.length < 2) return;
@@ -71,7 +73,7 @@ export function refineReductionTrack127_7(
   const conflict = conflicts[0];
   if (conflict && !conflicts.some((c) => !c)) {
     const at = list.findIndex((r) => r.type === conflict.second.type);
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, Math.max(at, 0), "type"], message: track127_7ConflictMessage(conflict) });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, Math.max(at, 0), "type"], message: track127_7ConflictMessage(conflict, opts) });
     return;
   }
   // 임대 범주 안 명문 배제 쌍(§97의3②·§97의5②) — ⑧과 같은 순서(§127⑦ 먼저)·같은 단일 소스·같은 문구

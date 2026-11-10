@@ -1,6 +1,6 @@
 # 거주주택 경로(§155⑳)에서 «계산에 반영되지 않는» §97의3·§97의4 선택이 §127⑦ 교차 차단을 거는가 (#3118 계획서 V-7)
 
-- 상태: **결정 대기** — 기준 master `cc4b91094`. 코드 변경 없음(측정·계획서만).
+- 상태: **구현 완료**(Q-1 a · Q-2 a · Q-3 a — 사용자 «모두 권장안으로») — 결과는 §7. 기준 master `708d7c5fb`.
 - 출처: `docs/00-pm/rental-97-3-4-track-127-7.plan.md` §5 V-7(«거주주택 경로는 §97의3·§97의4를 반영하지 않음 고지로 처리 → 반영되지도 않는 선택 때문에 막는 위양성 가능, 수치로는 측정하지 않았다»).
 - 도달 경로: ⑤ 감면 패널(배너)·⑧ `validateStep2Reductions`·⑫ `refineReductionTrack127_7`이 `findTrack127_7Conflict` 한 함수를 공유한다. 거주주택 경로의 입력(`rentalHousingException`)은 이 세 곳 어디에서도 읽지 않는다(§2.3).
 
@@ -120,7 +120,7 @@ throwaway probe(`__tests__/api/zz-probe-v7.test.ts`, 커밋하지 않고 삭제)
 
 → 완공 아파트에서는 §97의3이 계산에 들어가므로 §127⑦ 차단이 위양성이 아니다. 거주주택 «경로»를 하나로 뭉뚱그릴 수 없고, 자산 종류(`housing` vs `redevelopment_apt`)로 갈린다. 1건·mock 세율·route 미경유이므로 일반화하지 않는다(§5).
 
-## 4. 결정 대기
+## 4. 결정 (사용자 «모두 권장안으로»: Q-1 a · Q-2 a · Q-3 a)
 
 ### Q-1. ⑧⑫(⑤)의 차단 기준을 경로에 맞춰 풀 것인가
 
@@ -155,7 +155,7 @@ Q-2 a가 승인되면 패널은 이미 `asset`을 받으므로 같은 인자를 
 - V-6: 브라우저(⑤ 배너·마법사 흐름) 수동 확인은 하지 않았다. ⑧은 `validateStep2Reductions(2, form)` 직접 호출이고 전 단계 `collectStepIssues`는 돌리지 않았다.
 - V-7: 저장된 이력을 다시 열 때(#3118 V-4)의 거주주택 선언 입력 동작은 측정하지 않았다.
 
-## 6. 구현 계획 (결정 후 — 계획만, 코드는 하지 않았다)
+## 6. 구현 계획 (Q-1 a · Q-2 a · Q-3 a — 실행함)
 
 Q-1 a · Q-2 a · Q-3 a 기준.
 
@@ -165,3 +165,53 @@ Q-1 a · Q-2 a · Q-3 a 기준.
 4. 뮤테이션(백업/복원 + `cmp`): 선언 인자 무시 · ⑧만 문구 추가 · ⑫만 문구 추가 · 성립 범위 술어 반전 — 각각 anchor가 실패하는지.
 5. 회귀 5묶음(`__tests__/api`·`tax-engine`·`calc`·`lib`·`components`) + tsc + eslint(`| tail` 없이 `grep ✖`).
 6. **순서 충돌 주의**: Q-2의 수정 파일은 `track-127-7-message.ts`·`transfer-tax-validate-reductions.ts`·`transfer-tax-schema-reduction-refines.ts`·`transfer-tax-schema-refines.ts`·`transfer-tax-schema.ts`·`UnifiedReductionPanel.tsx`다. **`income-deduction-router.ts`·`findTrack127_7Conflict`는 건드리지 않는다.** 다만 같은 파일을 만지는 다른 열린 PR이 있는지는 이 계획서 작성 시점에 확인하지 못했다 → 착수 직전 `git log origin/master -- <파일>`로 확인. Q-1 b를 택하면 `findTrack127_7Conflict` 시그니처 변경이라 #3118 계열 PR과 순서를 맞춰야 한다.
+
+## 7. 구현 결과 [직접]
+
+### 7.1 변경
+
+- **차단 기준은 그대로다**(Q-1 a). ⑧·⑫·⑤의 §127⑦ 판정(`findTrack127_7Conflict`)은 건드리지 않았다 — `income-deduction-router.ts` 무변경.
+- 공용 술어·문구: `lib/tax-engine/transfer-reductions/track-127-7-message.ts`에 `rentalHousingPathApplies`(첫 자산 · `housing` · ④가 선언 payload를 싣는 경우) · `rentalHousingPathNotice`(충돌 쌍에 §97의3/4가 있을 때만) · `track127_7ConflictMessage(conflict, opts?)`의 선택 인자. 옵션이 없으면 종전 문구와 글자까지 같다.
+- ⑧ `transfer-tax-validate-reductions.ts`: `toRentalHousingExceptionApi(asset) !== undefined`(④와 같은 게이트)로 선언 여부를 읽는다. ⑫ `refineReductionTrack127_7(…, opts)` + `addPropertyRefines`의 `data.rentalHousingException?.applyException === true`. 컴패니언 호출처(`transfer-tax-schema.ts`)는 옵션을 넘기지 않는다(선언 없음).
+- ⑤ `UnifiedReductionPanel.tsx`: 배너에 같은 안내 문단(`data-testid="track-127-7-rental-housing-notice"`). 
+- **계획 §6.2·§6.3과 달라진 점**: «패널은 이미 `asset`을 받으므로 같은 인자를 넘길 수 있다»는 일부 틀렸다 — 패널은 자산 **위치**(첫 자산 여부)를 몰라 `assetIndex` prop을 새로 두었다. 선택 prop(기본 0)이라 기존 패널 테스트 10여 곳은 수정하지 않았고 프로덕션 호출처(`Step5.tsx`)는 항상 넘긴다.
+- 문구 끝에 붙는 안내: «참고: 장기임대주택 거주주택 비과세 특례(소득세법 시행령 §155⑳)를 선언한 계산입니다. 이 특례가 성립하면 이 경로는 §97의3·§97의4를 세액에 반영하지 않으므로 (성립하지 않으면 일반 경로에서 반영됩니다) §97의3·§97의4를 해제하고 다른 감면만 선택하면 그 감면이 계산됩니다.»
+
+### 7.2 시료 재측정
+
+계획서 §3의 프로브 원본이 남아 있지 않아 같은 입력으로 시료를 다시 만들었다(`e14gh` anchor의 거주주택 선언 틀 + V-6 감면 픽스처). 감면 없음 84,029,000 · §77 단독 73,716,350 · 거주 0개월 480,628,500은 §3과 **그대로 재현**됐다. §99의3 단독은 시료의 기준시가가 달라 §3의 54,844,999가 아니라 **69,436,998**이다 — 이 anchor는 제 시료의 실측값으로 고정했다(§3 수치와 별개).
+
+### 7.3 테스트
+
+- route anchor `__tests__/api/transfer.route.rental-housing-path-127-7-v7.anchor.test.ts` 18건: 단독 값 · 위양성 5조합(⑧=⑫ 문구, 안내 포함) · U2(선언했으나 불성립 → 400 유지) · 선언 끔·쌍에 §97의3/4 없음·명문 배제 쌍은 안내 없음 · 술어/문구/refine 단위. **구현 전 11건 실패**, 7건 통과(현행 고정분).
+- ⑤ 컴포넌트 `__tests__/calc/rental-housing-path-127-7-banner-v7.ui.test.tsx` 5건. 구현 전 2건 실패.
+- Playwright `e2e/transfer-rental-97-3-4-track-127-7.spec.ts`에 2건 추가(선언 시 안내 · 선언 없으면 안내 없음 대조): **현재 코드 4건 통과**, **master 코드(소스 stash)에서 V-7 테스트만 실패**(대조 3건은 통과).
+
+### 7.4 뮤테이션 (백업/복원 + `cmp`, 관련 4파일 60건)
+
+| 변이 | 결과 |
+|---|---|
+| V1 ⑧ 안내 옵션 미전달 | 7건 실패 |
+| V2 ⑫ 메시지에 옵션 미전달 | 7건 실패 |
+| V3 ⑫ 호출처 옵션 제거 | 6건 실패 |
+| V4 술어 첫 자산 조건 제거 | 2건 실패 |
+| V5 술어 housing 조건 제거 | 1건 실패 |
+| V6 ⑧ 선언 여부 무시 | 5건 실패 |
+| V7 §97의3/4 무관 안내 | 3건 실패 |
+| V8 ⑤ 배너 안내 제거 | 2건 실패 |
+| **V9 ⑫ 게이트 완화(Q-1 b)** | 8건 실패 |
+| **V10 ⑧ 게이트 완화(Q-1 b)** | 8건 실패 |
+
+10종 전부 검출, 복원은 `cmp` 일치. V9·V10은 «선언만으로 §127⑦ 차단을 푸는» 변이로, U2·R 계열이 그 회귀를 잡는다.
+
+### 7.5 회귀·정적 검사
+
+- 회귀 5묶음 실패 0: `__tests__/api` 6,981 · `tax-engine` 19,209 · `calc` 11,737 · `lib` 3,409 · `components` 7,000건.
+- `tsc --noEmit` 0건. eslint 오류 0 — 경고 4건(`Step5.tsx` 2 · `UnifiedReductionPanel.tsx` 2)은 **master에도 있는 기존 경고**(stash로 대조, 줄 번호만 이동)라 손대지 않았다.
+- **tsc 첫 실행은 종료코드 134(메모리 부족)였다.** 원인은 직전 Playwright 개발 서버가 만든 `.next`(642M)였다 — `tsconfig`의 `include`가 `**/*.ts`이고 `node_modules`만 제외해 `.next` 안 파일이 tsc 대상에 들어갔다. 제가 만든 빌드 산출물이라 지운 뒤 재실행해 0건이다. 코드 오류가 아니다.
+
+### 7.6 남은 확인 필요
+
+- §5 V 항목 그대로. 특히 시나리오 B·겸용주택 · 다건 `properties[]` · §99의3 5년 이내·§99·§98의3~ 하이브리드 조합은 측정하지 않았다.
+- `redevelopment_apt` 선언은 안내 대상이 아니다(`rentalHousingPathApplies`가 `housing`만 허용) — route·⑧⑫ 도달은 측정하지 않았고 엔진 직접 1건(§3.5)뿐이다.
+- 브라우저 수동 확인은 하지 않았다(Playwright 2건이 배너를 확인).
