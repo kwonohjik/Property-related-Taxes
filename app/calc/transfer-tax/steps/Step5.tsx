@@ -106,7 +106,7 @@ function AssetReductionBlock({
       <p className="text-sm font-semibold">{label}</p>
 
       {/* Round 8 (2026-05-06): 5개 카테고리 통합 패널 (5개 평면 체크박스 → 카테고리 라디오/체크박스) */}
-      <UnifiedReductionPanel asset={asset} transferDate={transferDate} onChange={onChange} />
+      <UnifiedReductionPanel asset={asset} assetIndex={assetIndex} transferDate={transferDate} onChange={onChange} />
 
       {/* 자경 + 수용 동시 선택 시 경고 */}
       {selfFarming && expropriation && (

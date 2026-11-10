@@ -62,3 +62,47 @@ test("대조 — §97의4 단독은 배너가 없다", async ({ page }) => {
   await expandReductionCategory(page, /장기임대주택/);
   await expect(page.getByText("조특법 §127⑦ — 두 감면은 택일입니다")).toHaveCount(0);
 });
+
+// V-7 — 거주주택 특례(§155⑳) 선언이 실리는 첫 주택 카드에서는 택일 배너에 경로 안내가 붙는다 (⑧·⑫ 400 문구와 같은 술어·문구).
+// 계획서 docs/00-pm/rental-97-v7-residence-path.plan.md Q-3 a. 차단 기준은 그대로다 — 안내는 «반영되지 않는 쪽을 해제하라»는 사실만 알린다.
+const RENTAL_HOUSING_DECLARED = {
+  applyException: true,
+  scenario: "A",
+  rentalUnits: [
+    {
+      businessRegistrationDate: "2015-06-01",
+      rentalRegistrationDate: "2015-06-01",
+      rentalInputMode: "direct",
+      rentalMonths: "120",
+      requirementsConfirmed: true,
+    },
+  ],
+};
+
+test("V-7 — 거주주택 특례 선언 + §97의4 + §99의3: 배너에 경로 안내", async ({ page }) => {
+  await gotoTransferHoldingsStep(page, {
+    houses: [otherHouse("h2", "2010-01-01")],
+    assetOver: { acquisitionDate: "2003-03-01", reductions: [R974, R993], rentalHousingException: RENTAL_HOUSING_DECLARED },
+    formOver: { transferDate: "2025-08-01" },
+  });
+  await page.getByRole("button", { name: "감면·공제" }).first().click();
+  await expandReductionCategory(page, /장기임대주택/);
+
+  await expect(page.getByText("조특법 §127⑦ — 두 감면은 택일입니다")).toBeVisible();
+  const note = page.getByTestId("track-127-7-rental-housing-notice");
+  await expect(note).toBeVisible();
+  await expect(note).toContainText("장기임대주택 거주주택 비과세 특례(소득세법 시행령 §155⑳)를 선언한 계산입니다");
+  await expect(note).toContainText("성립하지 않으면 일반 경로에서 반영됩니다");
+});
+
+test("V-7 대조 — 선언이 없으면 같은 충돌이어도 경로 안내가 없다", async ({ page }) => {
+  await gotoTransferHoldingsStep(page, {
+    houses: [otherHouse("h2", "2010-01-01")],
+    assetOver: { acquisitionDate: "2003-03-01", reductions: [R974, R993] },
+    formOver: { transferDate: "2025-08-01" },
+  });
+  await page.getByRole("button", { name: "감면·공제" }).first().click();
+  await expandReductionCategory(page, /장기임대주택/);
+  await expect(page.getByText("조특법 §127⑦ — 두 감면은 택일입니다")).toBeVisible();
+  await expect(page.getByTestId("track-127-7-rental-housing-notice")).toHaveCount(0);
+});

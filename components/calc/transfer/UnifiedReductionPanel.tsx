@@ -33,6 +33,9 @@ import {
   findTrack127_7Conflict,
   track127_7EffectLabel,
 } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
+import { rentalHousingPathApplies } from "@/lib/tax-engine/transfer-reductions/track-127-7-message";
+import { rentalHousingPathNotice } from "@/lib/tax-engine/transfer-reductions/track-127-7-message";
+import { toRentalHousingExceptionApi } from "@/lib/calc/transfer-tax-api-rental-housing";
 import {
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
@@ -63,6 +66,8 @@ import { ROW_COUNT_EXCLUSION_TYPES } from "@/lib/calc/house-count-exclusion-rows
 
 interface UnifiedReductionPanelProps {
   asset: AssetForm;
+  /** 자산 위치(0 = 첫 자산, 생략 시 0) — 거주주택 특례(§155⑳) 선언이 엔진에 실리는지(첫 자산만) 판정한다. 프로덕션 호출처(Step5)는 항상 넘긴다 */
+  assetIndex?: number;
   /** 양도일 (form-level) */
   transferDate: string;
   onChange: (patch: Partial<AssetForm>) => void;
@@ -185,7 +190,7 @@ export function buildAssetPhdSnapshot(asset: AssetForm): ReductionPhdValue | und
   return Object.values(snap).some((v) => v) ? snap : undefined;
 }
 
-export function UnifiedReductionPanel({ asset, transferDate, onChange }: UnifiedReductionPanelProps) {
+export function UnifiedReductionPanel({ asset, assetIndex = 0, transferDate, onChange }: UnifiedReductionPanelProps) {
   const reductions = asset.reductions ?? [];
   /**
    * 🔴 갱신 함수는 **렌더 시점의 `reductions`가 아니라 이 ref**를 읽는다 (NH-28).
@@ -387,13 +392,16 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     const label = (t: string) =>
       REDUCTION_METADATA[t as keyof typeof REDUCTION_METADATA]?.uiLabel ?? t;
     const { first, second } = conflict;
+    // V-7 — ⑧·⑫ 400 문구와 같은 안내(같은 술어·같은 문구). 차단 기준은 그대로다.
+    const rentalHousingPath = rentalHousingPathApplies({ assetIndex, assetKind: asset.assetKind, declared: toRentalHousingExceptionApi(asset) !== undefined });
     return {
       first: label(first.type),
       firstEffect: track127_7EffectLabel(first.type, first.kind),
       second: label(second.type),
       secondEffect: track127_7EffectLabel(second.type, second.kind),
+      rentalHousingNotice: rentalHousingPathNotice(conflict, rentalHousingPath),
     };
-  }, [acquisitionDate, transferDate, reductions]);
+  }, [acquisitionDate, transferDate, reductions, assetIndex, asset]);
 
   /**
    * 토지만 본인 소유(소유자 분리) 카드에서 §99·§99의3을 골랐으면 계산 전에 알린다 — 엔진이 신축주택 취득자가 아니라 적용 배제한다(NH-08 · Q-28).
@@ -458,6 +466,11 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           <p className="text-caption text-muted-foreground mt-1">
             어느 쪽이 유리한지는 각각 선택해 계산한 뒤 <b>총 납부세액</b>을 비교하면 됩니다.
           </p>
+          {trackConflict.rentalHousingNotice && (
+            <p className="text-caption text-muted-foreground mt-1" data-testid="track-127-7-rental-housing-notice">
+              {trackConflict.rentalHousingNotice}
+            </p>
+          )}
         </ToneCard>
       )}
       {/* ── 자경농지 (standalone) ── */}

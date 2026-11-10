@@ -17,6 +17,8 @@ import { redevMemberNewHouseIssue } from "./transfer-tax-validate-new99-member";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { findTrack127_7Conflict } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { track127_7ConflictMessage } from "@/lib/tax-engine/transfer-reductions/track-127-7-message";
+import { rentalHousingPathApplies } from "@/lib/tax-engine/transfer-reductions/track-127-7-message";
+import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import { axisBEffectiveAsset } from "./axis-b-effective-asset";
 import { canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import { assetKindGateMessage } from "@/lib/tax-engine/transfer-reductions";
@@ -148,7 +150,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         );
         const selected = (asset.reductions ?? []).map((x) => x.type);
         const conflict = findTrack127_7Conflict(selected, within5);
-        if (conflict) return fail(track127_7ConflictMessage(conflict));
+        // V-7 — 거주주택 특례(§155⑳) 선언이 ④로 실리는 첫 주택 자산이면 문구에 경로 안내를 붙인다. 차단 기준은 그대로다(선언 ≠ 성립).
+        const rentalHousingPath = rentalHousingPathApplies({ assetIndex: ai, assetKind: asset.assetKind, declared: toRentalHousingExceptionApi(asset) !== undefined });
+        if (conflict) return fail(track127_7ConflictMessage(conflict, { rentalHousingPath }));
       }
 
       for (const r of asset.reductions ?? []) {

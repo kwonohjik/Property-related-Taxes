@@ -13,6 +13,7 @@ import { refineRedevelopment166_3Inputs } from "./transfer-tax-schema-redev-166-
 import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
 import { refineReductionAssetKindGate, refineReductionTrack127_7 } from "./transfer-tax-schema-reduction-refines";
 import { refineNew994CapitalRegion } from "./transfer-tax-schema-reduction-refines";
+import { rentalHousingPathApplies } from "@/lib/tax-engine/transfer-reductions/track-127-7-message";
 import { refineMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refines";
 import { refineMixedUseInheritedSplitDate } from "./transfer-tax-schema-mixed-bg-refines";
 import { refineDonorBuiltOuter, type DonorBuiltWire } from "./transfer-tax-schema-donor-built";
@@ -66,6 +67,8 @@ export function refineCompanionGbUnregisteredAxis(
 export function addPropertyRefines(
   data: {
     propertyType?: string;
+    /** 거주주택 특례(§155⑳) 선언 — 요청 본문에 있으면 ④가 첫 자산에서 실은 것이다(V-7 문구 안내 판정에만 쓴다) */
+    rentalHousingException?: { applyException?: boolean } | null;
     useEstimatedAcquisition: boolean;
     standardPriceAtAcquisition?: number;
     standardPriceAtTransfer?: number;
@@ -163,7 +166,10 @@ export function addPropertyRefines(
   refineUnregisteredSelfFarming(data.isUnregistered, data.reductions, ctx, ["reductions"]);
   // 재개발 완공 아파트 조합원 갈래는 준공일을 요구한다(NH-36) — 서브객체는 base 스키마가 모양을 보장한다
   refineReductionAssetKindGate(data.reductions, data.propertyType, ctx, ["reductions"]);
-  refineReductionTrack127_7(data.reductions, data.acquisitionDate, data.transferDate, ctx, ["reductions"]);
+  refineReductionTrack127_7(data.reductions, data.acquisitionDate, data.transferDate, ctx, ["reductions"], {
+    // V-7 — 요청 본문의 거주주택 특례 선언(④가 첫 자산에서만 싣는다)이 있는 주택이면 안내 문구. ⑧과 같은 술어(`rentalHousingPathApplies`).
+    rentalHousingPath: rentalHousingPathApplies({ assetIndex: 0, assetKind: data.propertyType, declared: data.rentalHousingException?.applyException === true }),
+  });
   refineReductionRequiredInputs(data.reductions, data.assetContractDate, ctx, ["reductions"],
     data.redevelopment as { subject?: string; receiveOnlyMode?: boolean; completionDate?: string } | null | undefined);
   refineNew994CapitalRegion(data.reductions, data.transferDate, ctx, ["reductions"]);
