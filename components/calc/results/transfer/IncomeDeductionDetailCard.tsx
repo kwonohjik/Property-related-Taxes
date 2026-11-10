@@ -54,6 +54,8 @@ type Props = Detail &
     aggregateApplied?: number;
     /** STEP 0.45 중과 배제 근거(엔진 단계 `legalBasis`) — 단건 결과만 넘긴다(US-85). */
     surchargeExclusionBasis?: string;
+    /** 차감형 농특세 근거(엔진 단계 `legalBasis` — 양도일별 시행령 §5①/§5②). 없으면 현행(§5②). */
+    ruralSurtaxBasis?: string;
   };
 
 const TITLES: Record<Detail["kind"], string> = {
@@ -140,7 +142,7 @@ function Unsold986RentalPeriodLine({ echo, testId = "unsold986-rental-period" }:
   );
 }
 
-export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggregateApplied, surchargeExclusionBasis }: Props) {
+export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggregateApplied, surchargeExclusionBasis, ruralSurtaxBasis }: Props) {
   const title = TITLES[kind];
   // P2·P3 하이브리드 — 5년 내 양도 = 세액감면 경로 (소득금액 차감 아님)
   const isHybrid = HYBRID_KINDS.includes(kind);
@@ -239,12 +241,12 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
         </div>
       )}
 
-      {aggregateApplied !== undefined && result.ruralSurtax > 0 && <AggregateRuralSurtaxNote />}
+      {aggregateApplied !== undefined && result.ruralSurtax > 0 && <AggregateRuralSurtaxNote basis={ruralSurtaxBasis} />}
       {aggregateApplied === undefined && result.ruralSurtax > 0 && (
         <div className={cn("rounded-md border px-3 py-2", TONE.sky.card)}>
           <p className="text-caption text-sky-900 dark:text-sky-300">
             농어촌특별세: 감면세액 {result.taxReductionForRuralSurtax.toLocaleString()} × 20% ={" "}
-            {result.ruralSurtax.toLocaleString()} ({isTaxAmountMode ? TRANSFER.RURAL_SURTAX_REDUCTION : TRANSFER.RURAL_SURTAX_DEDUCTION} — 총 납부세액에 합산)
+            {result.ruralSurtax.toLocaleString()} ({isTaxAmountMode ? TRANSFER.RURAL_SURTAX_REDUCTION : (ruralSurtaxBasis ?? TRANSFER.RURAL_SURTAX_DEDUCTION)} — 총 납부세액에 합산)
           </p>
         </div>
       )}
@@ -281,11 +283,11 @@ export function AggregateAppliedNote({ single, applied }: { single: number; appl
 }
 
 /** 함께 양도·다건 — 농어촌특별세는 자산별 단건 값이 아니라 합산 과세 내역에서 감면 전·후 산출세액 차이로 정한다(NH-64). */
-export function AggregateRuralSurtaxNote() {
+export function AggregateRuralSurtaxNote({ basis }: { basis?: string } = {}) {
   return (
     <div data-testid="income-deduction-aggregate-rural" className={cn("rounded-md border px-3 py-2", TONE.sky.card)}>
       <p className="text-caption text-sky-900 dark:text-sky-300">
-        농어촌특별세는 합산 과세 내역에서 함께 양도 전체의 감면 전·후 산출세액 차이로 산정합니다({TRANSFER.RURAL_SURTAX_DEDUCTION}).
+        농어촌특별세는 합산 과세 내역에서 함께 양도 전체의 감면 전·후 산출세액 차이로 산정합니다({basis ?? TRANSFER.RURAL_SURTAX_DEDUCTION}).
       </p>
     </div>
   );

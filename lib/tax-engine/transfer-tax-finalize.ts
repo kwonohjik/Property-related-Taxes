@@ -67,6 +67,7 @@ import {
 } from "./transfer-tax-rural-surtax-penalty";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start"; // 로컬 사용(buildExemptEarlyResult) — 421행 re-export와 별개
 import type { AmendmentDetail } from "./types/transfer-amendment.types";
+import { ruralSurtaxDeductionBasis } from "./rural-surtax-basis";
 
 // `resolveSplitBuildingPenaltyAxis`는 `transfer-tax-building-penalty.ts`로 옮겼다(손실 경로와 공유) — 종전 import 경로 보존용 재수출.
 export { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty";
@@ -215,7 +216,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
         label: `${activeIncomeDeduction.articleLabel} 농어촌특별세 (감면세액 × 20%)`,
         formula: `(감면 전 산출세액 ${taxResultBefore993.calculatedTax.toLocaleString()} − 감면 후 산출세액 ${taxResult.calculatedTax.toLocaleString()}) × 20% = ${ruralSurtax993.toLocaleString()}`,
         amount: ruralSurtax993,
-        legalBasis: TRANSFER.RURAL_SURTAX_DEDUCTION,
+        legalBasis: ruralSurtaxDeductionBasis(input.transferDate),
       });
     }
   }

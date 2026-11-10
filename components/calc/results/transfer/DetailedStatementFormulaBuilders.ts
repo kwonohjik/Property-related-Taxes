@@ -304,7 +304,7 @@ export function buildSurtaxAndLocalTaxItems(
     formula: `(감면 전 산출세액 − 감면 후 산출세액) × 20% = ${ruralSurtaxValue.toLocaleString()} (§99의3·§99·§98의8 등 소득금액차감 감면 적용 시)`,
     // 근거는 엔진 농특세 단계(세액감면형 §5①1호 / 차감형 §5①1호·③·시행령 §5②)를 그대로 읽는다 — 단계가 없으면 차감형(US-83)
     legalBasis:
-      result.steps?.find((st) => st.legalBasis === TRANSFER.RURAL_SURTAX_REDUCTION || st.legalBasis === TRANSFER.RURAL_SURTAX_DEDUCTION)?.legalBasis ??
+      result.steps?.find((st) => st.legalBasis === TRANSFER.RURAL_SURTAX_REDUCTION || st.legalBasis === TRANSFER.RURAL_SURTAX_DEDUCTION || st.legalBasis === TRANSFER.RURAL_SURTAX_DEDUCTION_BEFORE_2013_08_27)?.legalBasis ??
       TRANSFER.RURAL_SURTAX_DEDUCTION,
     summaryOnly: true,
   });

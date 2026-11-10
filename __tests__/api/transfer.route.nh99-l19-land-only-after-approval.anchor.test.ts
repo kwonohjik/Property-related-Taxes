@@ -98,14 +98,14 @@ describe("L19 — §99의3 · 종전 부동산 취득이 인가일(2000-09-01) �
       expect(x.status).toBe(200);
     });
   }
-  it("🔑 토지만 출자 + 승계조합원 모드 · 인가 뒤 취득 → ⑧ 이슈 없음 · 200 · 26,720,000 = 주택 출자 승계와 같다 (수정 전 ⑧이 «종전 자산 취득가액» 요구)", async () => {
+  it("🔑 토지만 출자 + 승계조합원 모드 · 인가 뒤 취득 → ⑧ 이슈 없음 · 200 · 26,280,000 = 주택 출자 승계와 같다 (수정 전 ⑧이 «종전 자산 취득가액» 요구)", async () => {
     const land = await probe(apt({ ...A993, ...LAND, ...PURCHASE, ...SUCC, acquisitionDate: AFTER, reductions: [r993()] }), "2005-03-01");
     const house = await probe(apt({ ...A993, ...PURCHASE, ...SUCC, acquisitionDate: AFTER, reductions: [r993()] }), "2005-03-01");
     expect(land.issues).toEqual([]);
     expect(land.status).toBe(200);
     expect(land.eligible).toBe(true);
-    expect(land.tax).toBe(26_720_000);
-    expect(house.tax).toBe(26_720_000);
+    expect(land.tax).toBe(26_280_000);
+    expect(house.tax).toBe(26_280_000);
   });
   it("토지만 출자 · 인가일 비움 → ⑧이 인가일을 요구한다 (수정 전 ⑧ 통과 · ⑫ 400)", async () => {
     const x = await probe(apt({ ...A993, ...LAND, ...PURCHASE, acquisitionDate: "1996-03-01", redevApprovalDate: "", reductions: [r993()] }), "2005-03-01");
@@ -122,22 +122,22 @@ describe("L19 — §99 · 종전 부동산 취득이 인가일(1996-09-01) 뒤 (
       expect(x.status).toBe(400);
     });
   }
-  it("토지만 출자 + 승계조합원 모드 → 200 · 24,160,000 = 주택 출자 승계(§99는 사용승인일 현재 조합원이면 족하다)", async () => {
+  it("토지만 출자 + 승계조합원 모드 → 200 · 23,400,000 = 주택 출자 승계(§99는 사용승인일 현재 조합원이면 족하다)", async () => {
     const land = await probe(apt({ ...A99, ...LAND, ...PURCHASE, ...SUCC, acquisitionDate: "1998-03-01", reductions: [r99()] }), "2003-03-01");
     const house = await probe(apt({ ...A99, ...PURCHASE, ...SUCC, acquisitionDate: "1998-03-01", reductions: [r99()] }), "2003-03-01");
     expect(land.issues).toEqual([]);
     expect(land.status).toBe(200);
-    expect(land.tax).toBe(24_160_000);
-    expect(house.tax).toBe(24_160_000);
+    expect(land.tax).toBe(23_400_000);
+    expect(house.tax).toBe(23_400_000);
   });
 });
 
-describe("L19 — 짝: L16 토지만 출자 인가 전 상속·증여는 그대로 (17,904,857)", () => {
-  it("상속 1996-03-01 → 17,904,857 · 증여 → 17,904,857", async () => {
+describe("L19 — 짝: L16 토지만 출자 인가 전 상속·증여는 그대로 (18,977,142)", () => {
+  it("상속 1996-03-01 → 18,977,142 · 증여 → 18,977,142", async () => {
     const inh = await probe(apt({ ...A993, ...LAND, reductions: [r993()] }), "2005-03-01");
     const gift = await probe(apt({ ...A993, ...LAND, ...GIFT, reductions: [r993()] }), "2005-03-01");
     expect(inh.status).toBe(200);
-    expect(inh.tax).toBe(17_904_857);
-    expect(gift.tax).toBe(17_904_857);
+    expect(inh.tax).toBe(18_977_142);
+    expect(gift.tax).toBe(18_977_142);
   });
 });

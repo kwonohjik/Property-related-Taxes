@@ -682,6 +682,7 @@ function calculateTransferTaxCore(
     transferDate: effectiveInput.transferDate,
     propertyType: effectiveInput.propertyType,
     householdHousingCount: effectiveInput.householdHousingCount,
+    redevelopmentRightCount: (effectiveInput.presaleRights ?? []).filter((r) => r.type === "redevelopment_right").length,
     hasLongTermDeduction: longTermHoldingDeduction > 0,
   }));
   const nblDeferralNotice = nblDeferralNoticeOf(taxResult, nblNoticeInputOf(effectiveInput, splitDetail));

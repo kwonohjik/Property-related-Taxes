@@ -74,6 +74,7 @@ import type {
   PerPropertyBreakdown,
   AggregateTransferResult,
 } from "./types/transfer-aggregate.types";
+import { ruralSurtaxDeductionBasis } from "./rural-surtax-basis";
 
 /**
  * 기본공제 배분 전략 → 화면 라벨.
@@ -337,7 +338,7 @@ export function computeAggregateOnce(
         label: "농어촌특별세 (감면세액 × 20%)",
         formula: `(감면 전 산출세액 ${beforeTax.toLocaleString()} − 감면 후 산출세액 ${calculatedTax.toLocaleString()}) × 20% = ${ruralSurtax.toLocaleString()}`,
         amount: ruralSurtax,
-        legalBasis: TRANSFER.RURAL_SURTAX_DEDUCTION,
+        legalBasis: ruralSurtaxDeductionBasis(...assetRecords.map((r) => r.item.transferDate)),
       });
     }
   }

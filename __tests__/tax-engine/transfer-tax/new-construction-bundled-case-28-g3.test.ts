@@ -52,12 +52,12 @@ const F993_BUILDING_INCOME = BUILDING_GAIN; // 82,457,619
 //   양도소득금액 = 82,457,619 - floor(82,457,619 × 0.08) = 75,861,010
 //   taxBase(감면 전) = max(0, 75,861,010 - 2,500,000) = 73,361,010
 //   Mock 누진세율 구간: 50,000,001~88,000,000 → 24%, 누진공제 5,760,000
-//   calcTaxBefore = floor(73,361,010 × 0.24) - 5,760,000 = 11,846,642
+//   calcTaxBefore = floor(73,361,010 × 0.24) - 5,760,000 = 11,450,845
 //   §99의3 5년 이내 전액 감면 → calcTaxAfter = 0
-//   ruralSurtax = floor(11,846,642 × 0.20) = 2,369,328
-//   totalTax = 0(finalTax) + 0(localTax) + 2,369,328(ruralSurtax993) = 2,369,328
-const F993_CALC_TAX_BEFORE = 11_846_642; // 감면 전 산출세액
-const F993_RURAL_SURTAX    = 2_369_328;  // 농특세
+//   ruralSurtax = floor(11,450,845 × 0.20) = 2,290,169
+//   totalTax = 0(finalTax) + 0(localTax) + 2,290,169(ruralSurtax993) = 2,290,169
+const F993_CALC_TAX_BEFORE = 11_450_845; // 감면 전 산출세액
+const F993_RURAL_SURTAX    = 2_290_169;  // 농특세
 
 // §99의3 기준시가 (가상값)
 const F993_STD_AT_ACQ      = 50_000_000;
@@ -132,15 +132,15 @@ describe("사례 28 Group F — §99의3 감면 × 부수토지 일체과세 (G-
    *   양도소득금액 = 75,861,010
    *   §99의3 5년 이내 전액 감면 → 감면 후 양도소득금액 = 0
    *   과세표준 = max(0, 0 - 2,500,000) = 0 → 산출세액 = 0
-   *   totalTax = 0(finalTax) + 0(localTax) + 2,369,328(ruralSurtax993) = 2,369,328
+   *   totalTax = 0(finalTax) + 0(localTax) + 2,290,169(ruralSurtax993) = 2,290,169
    *
    * 부수토지 일체과세 70%는 토지 단건에 별도 작동 — 건물 §99의3과 독립.
    */
   it("T-25 §99의3 5년 이내 전액 감면 — 건물 산출세액 = 0, totalTax = ruralSurtax993", () => {
     const result = calculateTransferTax(makeBuildingInputWith993Within5Y(), makeMockRates());
     expect(result.calculatedTax).toBe(0);
-    // totalTax = ruralSurtax993(2,369,328) — §99의3 농특세가 포함됨
-    expect(result.totalTax).toBe(F993_RURAL_SURTAX); // 2,369,328
+    // totalTax = ruralSurtax993(2,290,169) — §99의3 농특세가 포함됨
+    expect(result.totalTax).toBe(F993_RURAL_SURTAX); // 2,290,169
     expect(result.new993Detail?.isEligible).toBe(true);
     expect(result.new993Detail?.isWithin5Years).toBe(true);
     // reducibleTransferIncome = max(0, 양도소득금액) = 75,861,010 (LTHD 차감 후)
@@ -152,15 +152,15 @@ describe("사례 28 Group F — §99의3 감면 × 부수토지 일체과세 (G-
   /**
    * T-26: §99의3 5년 이내 감면 — 농특세 검증
    *
-   * 감면 전 산출세액: floor(73,361,010 × 0.24) - 5,760,000 = 11,846,642
+   * 감면 전 산출세액: floor(73,361,010 × 0.24) - 5,760,000 = 11,450,845
    *   (Mock 세율표: 50,000,001~88,000,000 → 24%, 누진공제 5,760,000)
    * 감면 후 산출세액: 0
-   * 농특세 = floor(11,846,642 × 20%) = 2,369,328
+   * 농특세 = floor(11,450,845 × 20%) = 2,290,169
    */
-  it("T-26 §99의3 농특세 = 2,369,328 (감면세액 11,846,642 × 20%)", () => {
+  it("T-26 §99의3 농특세 = 2,290,169 (감면세액 11,450,845 × 20%)", () => {
     const result = calculateTransferTax(makeBuildingInputWith993Within5Y(), makeMockRates());
-    expect(result.new993Detail?.taxReductionForRuralSurtax).toBe(F993_CALC_TAX_BEFORE); // 11,846,642
-    expect(result.new993Detail?.ruralSurtax).toBe(F993_RURAL_SURTAX);                  // 2,369,328
+    expect(result.new993Detail?.taxReductionForRuralSurtax).toBe(F993_CALC_TAX_BEFORE); // 11,450,845
+    expect(result.new993Detail?.ruralSurtax).toBe(F993_RURAL_SURTAX);                  // 2,290,169
   });
 
   /**

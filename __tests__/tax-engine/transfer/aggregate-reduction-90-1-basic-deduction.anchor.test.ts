@@ -23,8 +23,13 @@
  * ── 세액 (실측 · §97① 본문 50% · 자산 1건) ────────────────────────
  * | | 단건 | 종전 다건 | 정정 |
  * |---|---|---|---|
- * | 감면 | 82,530,000 | 82,962,094 | **82,530,000** |
- * | 총부담 | 107,289,000 | 106,900,114 | **107,289,000** |
+ * | 감면 | 70,530,000 | 82,962,094 | **70,530,000** |
+ * | 총부담 | 91,689,000 | 106,900,114 | **91,689,000** |
+ *
+ * 🔄 후속 W1(2026-11-10) — 표1 연혁 leaf가 1996.1.1~2007.12.31 양도분에 3단계(10년 이상 30%)를 적용한다. 이 사안(취득 1995-03-01 → 양도 2005-06-01,
+ *    보유 10년 3개월)의 장특은 종전 연 2% 근사 20%에서 30%로 바뀌어 단건·정정 열이 갱신됐다(손계산: 양도차익 600,000,000 − 장특 180,000,000 −
+ *    기본공제 2,500,000 = 과세표준 417,500,000 → 417,500,000 × 40% − 25,940,000 = 산출세액 141,060,000 → 감면 50% 70,530,000 →
+ *    결정세액 70,530,000 + 지방소득세 7,053,000 + 농특세 14,106,000 = 총부담 91,689,000). 「종전 다건」 열은 종전 측정값이라 다시 재지 않았다.
  *
  * ── 🔴 정정 (2026-09-03) — 「net 유형」 분류는 틀렸었다 ────────────
  * 최초 구현은 §77·§77의2·§77의3을 「자체 산식에서 이미 기본공제를 뺐다」고 보아 C에서
@@ -87,14 +92,14 @@ function bothWays(o: Record<string, unknown>) {
 describe("§90① — 감면 자산만 있는 사안(C = 기본공제 전액)", () => {
   it("K1: 🔴 §97① 본문 50% — 다건 감면이 단건과 일치한다 (종전 82,962,094 과대)", () => {
     const { single, multi } = bothWays({ reductions: [R97] });
-    expect(single.reductionAmount).toBe(82_530_000);
-    expect(multi.reductionAmount).toBe(82_530_000);
+    expect(single.reductionAmount).toBe(70_530_000);
+    expect(multi.reductionAmount).toBe(70_530_000);
   });
 
   it("K2: 🔑 총부담도 원 단위까지 일치한다", () => {
     const { single, multi } = bothWays({ reductions: [R97] });
-    expect(single.totalTax).toBe(107_289_000);
-    expect(multi.totalTax).toBe(107_289_000);
+    expect(single.totalTax).toBe(91_689_000);
+    expect(multi.totalTax).toBe(91_689_000);
     expect((multi.totalTax ?? 0) - ((single.totalTax as number) ?? 0)).toBe(0);
   });
 
@@ -104,7 +109,7 @@ describe("§90① — 감면 자산만 있는 사안(C = 기본공제 전액)", 
     const B = single.reducibleIncome as number; // 기본공제 前 감면대상 양도소득금액
     const Dv = single.taxBase as number;
     expect(B - 2_500_000).toBe(Dv); // C = 기본공제 전액 (비감면소득 0)
-    expect(Math.floor((A * (B - 2_500_000)) / Dv / 2)).toBe(82_530_000);
+    expect(Math.floor((A * (B - 2_500_000)) / Dv / 2)).toBe(70_530_000);
   });
 });
 
@@ -135,7 +140,7 @@ describe("§103② — 비감면소득이 기본공제를 먼저 흡수하면 C 
       rates,
     );
     // C = 0이므로 분자는 감면대상 양도소득금액 × 50% 그대로다 — 이 값은 정정 前과 **같다**.
-    expect(multi.reductionAmount).toBe(87_269_647);
+    expect(multi.reductionAmount).toBe(74_662_062);
   });
 });
 
