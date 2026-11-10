@@ -9,9 +9,12 @@
  * ## 설계 가정 (결과 화면에 고지한다 — 모두 「확인 필요」)
  *  1. 지방소득세를 **국세와 같은 날** 신고·납부한 것으로 본다. 국세 신고를 지방소득세 신고로 보는 의제 규정은
  *     없다(지방세법 §103의5④⑤·§103의7⑨⑩은 지방자치단체가 보낸 납부서를 납부한 경우만 의제).
- *  2. 지방 법정신고·납부기한 = **입력한 국세 기한 + 2개월**(지방세법 §103의5①·§103의7①, 민법 §160 월 단위 —
- *     해당 일이 없으면 말일)에 지방세기본법 §24①(토·일·공휴일이면 다음 날)을 적용한다. 입력한 국세 기한을
- *     그대로 쓰므로 국세기본법 §5 연장 전·후 어느 쪽을 입력했는지에 따라 일수가 달라질 수 있다(리뷰 사례 304일 vs 301일).
+ *  2. 지방 법정신고·납부기한: 입력한 국세 기한이 **2020-03-01 이후면 국세 기한 + 2개월**(지방세법 §103의5①·§103의7①, 2019.12.31. 개정,
+ *     민법 §160 월 단위 — 해당 일이 없으면 말일), **그 전이면 소득세 기한과 같은 날**(2014~2019 시행본 「해당 신고기한까지」)이다.
+ *     어느 쪽이든 지방세기본법 §24①(토·일·공휴일이면 다음 날)을 적용한다. 입력한 국세 기한을 그대로 쓰므로 국세기본법 §5 연장
+ *     전·후 어느 쪽을 입력했는지에 따라 일수가 달라질 수 있다(리뷰 사례 304일 vs 301일).
+ *     지방 법정기한이 **2014-01-01 전**이면 소득세 부가세 체계라 독립 가산세를 산정하지 않는다(`unsupportedReason`).
+ *     시기별 규칙(이자율·75% 한도·§57② 계단)은 `transfer-tax-local-penalty-era.ts` 표.
  *  3. 지방 기납부·미납세액 = 국세 기준 금액의 10%(지방세법 §103의3 세율).
  *  4. 끝수는 원 미만 절사 — 지방세기본법 §59가 「국고금 관리법」 §47(10원 미만 끝수 불계산)을 준용하나, 본세
  *     (`localIncomeTax`)도 원 단위라 같은 축을 유지한다(10원 미만 절사 적용 여부 — 확인 필요).
@@ -26,6 +29,22 @@ import { applyRate, applyRateFraction, coerceOptionalDate, safeMultiply } from "
 import type { FilingPenaltyInput, PenaltyReason, TransferTaxPenaltyResult } from "./transfer-tax-penalty";
 import type { LateFilingReductionInput } from "./late-filing-reduction";
 import type { CalculationStep } from "./types/transfer.types";
+import {
+  LOCAL_PENALTY_2013_BOUNDARY_NOTICE,
+  LOCAL_PENALTY_BASE_NOTICE,
+  LOCAL_PENALTY_ERA as ERA,
+  LOCAL_PENALTY_NO_CAP_NOTICE,
+  LOCAL_PENALTY_OLD_CITES as OLD_CITES,
+  LOCAL_PENALTY_PRE_2014_NOTICE,
+  LOCAL_PENALTY_SIMULTANEOUS_NOTICE,
+  addsTwoMonths,
+  amendmentLadder,
+  hasPrelimToFinalReduction,
+  lateFilingLadder,
+  type LocalPenaltyUnsupportedReason,
+} from "./transfer-tax-local-penalty-era";
+
+export type { LocalPenaltyUnsupportedReason } from "./transfer-tax-local-penalty-era";
 
 // ============================================================
 // 타입
@@ -83,10 +102,15 @@ export interface LocalDelayedPenaltyDetail {
   rawPenalty: number;
   /** §55① 후단 한도 = 미납세액 × 75% */
   capAmount: number;
+  /** 한도가 있는 시기인가 — 부과일이 2015-05-18 이후일 때만(2015.5.18. 개정 부칙 §3) */
+  capInEffect: boolean;
   capApplied: boolean;
   penalty: number;
-  /** 이자율 근거가 없는 과거 기간 — 산정하지 않았다(확인 필요) */
+  /** 근거 조문 — 법정기한 2017-03-28 전이면 구 지방세기본법 §53의4 · 구 시행령 §33 */
+  basis: string;
+  /** 산정하지 않은 과거 기간(2014.1.1. 전 — 소득세 부가세 체계). 확인 필요 */
   unsupportedPeriod?: boolean;
+  unsupportedReason?: LocalPenaltyUnsupportedReason;
 }
 
 /** 양도소득분 지방소득세 가산세 결과 */
@@ -101,6 +125,8 @@ export interface LocalIncomePenaltyDetail {
   localFinalDeadline?: string;
   /** 산정에 둔 가정·확인 필요 목록(결과 화면 고지) */
   assumptions: string[];
+  /** 산정하지 않은 사유 — 지방 법정기한이 2014.1.1. 전(소득세 부가세 체계). 있으면 해당 가산세는 0으로 두었다 */
+  unsupportedReason?: LocalPenaltyUnsupportedReason;
 }
 
 // ============================================================
@@ -125,12 +151,19 @@ function isoOf(d: Date): string {
   return `${d.getUTCFullYear()}-${m}-${day}`;
 }
 
-/** 지방 법정기한 = 국세 기한 + 2개월 → 지방세기본법 §24① (토·일·공휴일이면 다음 날) */
+/**
+ * 지방 법정기한 → 지방세기본법 §24① (토·일·공휴일이면 다음 날).
+ *  · 국세 기한이 2020-03-01 이후: 국세 기한 + 2개월 (지방세법 2019.12.31. 개정 §103의5①·§103의7①)
+ *  · 그 전: 소득세법 신고기한 그대로 (2014~2019 시행본 「해당 신고기한까지」)
+ */
 export function localDeadlineOf(nationalDeadline: Date): { end: Date; extended: boolean } {
-  const calendar = addMonthsUtc(nationalDeadline, 2);
+  const calendar = addsTwoMonths(dayKey(nationalDeadline)) ? addMonthsUtc(nationalDeadline, 2) : nationalDeadline;
   const r = deadlineEnd(calendar);
   return { end: r.end, extended: r.extended };
 }
+
+/** 지방 법정기한이 독립세 체계(2014.1.1. 이후) 이전인가 */
+const isBeforeIndependentTax = (localEnd: Date): boolean => dayKey(localEnd) < ERA.INDEPENDENT_FROM;
 
 /** `date`가 `base`로부터 `months`개월이 지난 날(응당일)보다 늦은가 — 「N개월 이내」 판정의 부정 */
 const isAfterMonths = (date: Date, base: Date, months: number): boolean =>
@@ -140,22 +173,8 @@ const isAfterMonths = (date: Date, base: Date, months: number): boolean =>
 // 지방세기본법 §57② 감면 계단
 // ============================================================
 
-/** §57②1호 수정신고 — 법정신고기한 후 N개월 이내(§54 과소신고가산세만) */
-const AMENDMENT_STEPS = [
-  { maxMonths: 1, rate: 0.9, ref: "지방세기본법 §57②1호가목" },
-  { maxMonths: 3, rate: 0.75, ref: "지방세기본법 §57②1호나목" },
-  { maxMonths: 6, rate: 0.5, ref: "지방세기본법 §57②1호다목" },
-  { maxMonths: 12, rate: 0.3, ref: "지방세기본법 §57②1호라목" },
-  { maxMonths: 18, rate: 0.2, ref: "지방세기본법 §57②1호마목" },
-  { maxMonths: 24, rate: 0.1, ref: "지방세기본법 §57②1호바목" },
-] as const;
-
-/** §57②2호 기한 후 신고 — 법정신고기한 후 N개월 이내(§53 무신고가산세만) */
-const LATE_FILING_STEPS = [
-  { maxMonths: 1, rate: 0.5, ref: "지방세기본법 §57②2호가목" },
-  { maxMonths: 3, rate: 0.3, ref: "지방세기본법 §57②2호나목" },
-  { maxMonths: 6, rate: 0.2, ref: "지방세기본법 §57②2호다목" },
-] as const;
+// 1호 수정신고(§54 과소신고가산세만)·2호 기한 후 신고(§53 무신고가산세만) 계단은 신고일 기준 연혁이 있다
+// (`transfer-tax-local-penalty-era.ts` — 2017-03-28 전 / ~2019-12-31 / 2020-01-01 이후).
 
 /** §57②4호 — 예정신고기한 이후 확정신고기한까지 신고·수정신고 시 50% */
 const PRELIM_TO_FINAL_RATE = 0.5;
@@ -166,6 +185,10 @@ interface Reduction {
   ref: string;
 }
 const NO_REDUCTION: Reduction = { rate: 0, ref: "" };
+
+/** 감면을 받았고 신고일이 2016-01-01 전이면 구 §54③ 동시 납부 요건 고지가 필요하다 */
+const needsSimultaneousNotice = (r: Reduction, filingDate?: Date): boolean =>
+  r.rate > 0 && !!filingDate && dayKey(filingDate) < ERA.SIMULTANEOUS_PAYMENT_UNTIL;
 
 /**
  * 무신고(§53) 감면 — 2호 기한 후 신고 계단과 4호가목(예정신고를 못 했으나 지방 확정신고기한까지 신고) 중 큰 쪽.
@@ -181,10 +204,11 @@ export function resolveLocalNonFilingReduction(args: {
   if (args.notified || !prelimDeadline || !filingDate) return NO_REDUCTION;
   if (dayKey(filingDate) <= dayKey(prelimDeadline)) return NO_REDUCTION; // 기한 내 신고 — 무신고 아님
   let best: Reduction = NO_REDUCTION;
-  if (finalDeadline && dayKey(filingDate) <= dayKey(finalDeadline)) {
+  // 4호는 2017.12.26. 개정 신설 — 시행(2018-01-01) 후 도래하는 확정신고기한까지 신고하는 경우부터(부칙 §3)
+  if (finalDeadline && hasPrelimToFinalReduction(dayKey(finalDeadline)) && dayKey(filingDate) <= dayKey(finalDeadline)) {
     best = { rate: PRELIM_TO_FINAL_RATE, ref: PRELIM_TO_FINAL_NON_FILING };
   }
-  for (const s of LATE_FILING_STEPS) {
+  for (const s of lateFilingLadder(dayKey(filingDate))) {
     if (!isAfterMonths(filingDate, prelimDeadline, s.maxMonths)) {
       if (s.rate > best.rate) best = { rate: s.rate, ref: s.ref };
       break;
@@ -202,7 +226,7 @@ export function resolveLocalAmendmentReduction(args: {
   const { deadline, amendedDate } = args;
   if (args.notified || !deadline || !amendedDate) return NO_REDUCTION;
   if (dayKey(amendedDate) <= dayKey(deadline)) return NO_REDUCTION;
-  for (const s of AMENDMENT_STEPS) {
+  for (const s of amendmentLadder(dayKey(amendedDate))) {
     if (!isAfterMonths(amendedDate, deadline, s.maxMonths)) return { rate: s.rate, ref: s.ref };
   }
   return NO_REDUCTION;
@@ -212,21 +236,15 @@ export function resolveLocalAmendmentReduction(args: {
 // 납부지연가산세 (§55)
 // ============================================================
 
-/** 시행령 §34① 개정 2022-06-07 공포·시행 — 시행일 이후 기간분부터 10만분의 22(부칙 제2조) */
-const RATE_22_FROM = Date.UTC(2022, 5, 7);
-/** 2019-01-01 시행 개정 — 10만분의 25(2018.12.31 개정, 시행 전 사유 발생분은 종전 규정) */
-const RATE_25_FROM = Date.UTC(2019, 0, 1);
-/** 2018-01-01 시행 개정 — 1만분의 3(= 10만분의 30). 그 이전 이자율은 확인하지 못했다 */
-const RATE_30_FROM = Date.UTC(2018, 0, 1);
-
 const RATE_DENOM = 100_000;
 
 /**
- * 납부지연가산세 — `unpaidLocalTax × 일수 × 이자율`, 미납세액의 75% 한도.
+ * 납부지연가산세 — `unpaidLocalTax × 일수 × 이자율`, 미납세액의 75% 한도(부과일 2015-05-18 이후).
  *
  * 일수 = 법정납부기한의 **다음 날부터 자진납부일까지**(§55①1호, 납부일 포함). 국세기본법 §47의4(납부일 전날까지)와 다르다.
- * 이자율은 시행령 §34① 연혁: 사유 발생일(기한 다음 날)이 2019-01-01 이후면 10만분의 25, 2018년이면 10만분의 30 —
- * 어느 쪽이든 2022-06-07 이후 기간분은 10만분의 22(2022.6.7 시행령 부칙 제2조). 2018-01-01 이전은 산정하지 않는다.
+ * 이자율은 시행령 §34① 연혁(`transfer-tax-local-penalty-era.ts` 표): 사유 발생일(기한 다음 날)이 2019-01-01 전이면
+ * 1일 1만분의 3(10만분의 30), 이후면 10만분의 25 — 어느 쪽이든 2022-06-07 이후 기간분은 10만분의 22.
+ * 지방 법정기한이 2014-01-01 전이면 소득세 부가세 체계라 산정하지 않는다(`unsupportedReason`).
  */
 export function computeLocalDelayedPenalty(args: {
   unpaidLocalTax: number;
@@ -239,6 +257,7 @@ export function computeLocalDelayedPenalty(args: {
   const endKey = dayKey(paymentDate); // 자진납부일(포함)
   const days = Math.max(0, Math.round((endKey - startKey) / DAY_MS) + 1);
   const capAmount = applyRate(unpaidLocalTax, 0.75);
+  const oldStatute = dayKey(local.end) < ERA.OLD_STATUTE_UNTIL;
   const base: LocalDelayedPenaltyDetail = {
     unpaidLocalTax,
     nationalDeadline: isoOf(nationalDeadline),
@@ -250,13 +269,19 @@ export function computeLocalDelayedPenalty(args: {
     ratePer100k: 22,
     rawPenalty: 0,
     capAmount,
+    capInEffect: endKey >= ERA.CAP_FROM,
     capApplied: false,
     penalty: 0,
+    basis: oldStatute
+      ? `${OLD_CITES.DELAYED_PAYMENT} · ${OLD_CITES.DAILY_RATE}`
+      : `${LOCAL_PENALTY.DELAYED_PAYMENT} · ${LOCAL_PENALTY.DAILY_RATE}`,
   };
   if (unpaidLocalTax <= 0 || days <= 0) return base;
-  if (startKey < RATE_30_FROM) return { ...base, unsupportedPeriod: true };
+  if (isBeforeIndependentTax(local.end)) {
+    return { ...base, basis: "", unsupportedPeriod: true, unsupportedReason: "pre_2014_surtax" };
+  }
 
-  const oldRate = startKey >= RATE_25_FROM ? 25 : 30;
+  const oldRate = startKey >= ERA.RATE_25_FROM ? 25 : 30;
   const segments: LocalDelayedRateSegment[] = [];
   const pushSeg = (fromKey: number, toKey: number, ratePer100k: number) => {
     const segDays = Math.round((toKey - fromKey) / DAY_MS) + 1;
@@ -267,12 +292,12 @@ export function computeLocalDelayedPenalty(args: {
       amount: applyRateFraction(safeMultiply(unpaidLocalTax, segDays), ratePer100k, RATE_DENOM),
     });
   };
-  const lastOldKey = RATE_22_FROM - DAY_MS;
+  const lastOldKey = ERA.RATE_22_FROM - DAY_MS;
   pushSeg(startKey, Math.min(endKey, lastOldKey), oldRate);
-  pushSeg(Math.max(startKey, RATE_22_FROM), endKey, 22);
+  pushSeg(Math.max(startKey, ERA.RATE_22_FROM), endKey, 22);
 
   const rawPenalty = segments.reduce((s, g) => s + g.amount, 0);
-  const capApplied = rawPenalty > capAmount;
+  const capApplied = base.capInEffect && rawPenalty > capAmount;
   return {
     ...base,
     breakdown: segments,
@@ -296,11 +321,15 @@ function buildFilingPenalty(args: {
   fraudBase?: number;
   normalBase?: number;
   reduction: Reduction;
+  /** 법정기한 2017-03-28 전 — 구 지방세기본법 §53의2·§53의3 인용 */
+  oldStatute?: boolean;
 }): LocalFilingPenaltyDetail {
   const { kind, base, reason, reduction } = args;
   const isFraud = reason === "fraudulent" || reason === "offshore_fraud";
   const normalRate = kind === "non_filing" ? 0.2 : 0.1;
-  const basis = kind === "non_filing" ? LOCAL_PENALTY.NON_FILING : LOCAL_PENALTY.UNDER_FILING;
+  const basis = args.oldStatute
+    ? kind === "non_filing" ? OLD_CITES.NON_FILING : OLD_CITES.UNDER_FILING
+    : kind === "non_filing" ? LOCAL_PENALTY.NON_FILING : LOCAL_PENALTY.UNDER_FILING;
   let gross: number;
   let rate = normalRate;
   let fraudBase: number | undefined;
@@ -339,13 +368,20 @@ function buildFilingPenalty(args: {
 /** 결과 화면 고지 — 가정·확인 필요 (UI 단일 소스: `lib/calc/local-income-penalty-notice.ts`가 이 상수를 쓴다) */
 export const LOCAL_INCOME_PENALTY_ASSUMPTIONS: readonly string[] = [
   "지방소득세를 국세와 같은 날 신고·납부한 것으로 보고 계산했습니다. 국세 신고를 지방소득세 신고로 보는 규정은 없습니다(지방자치단체가 보낸 납부서를 납부한 경우만 의제 — 지방세법 §103의5⑤·§103의7⑩). 확인 필요.",
-  "지방 법정신고·납부기한은 입력한 국세 기한에 2개월을 더하고 토·일·공휴일이면 다음 날로 미룬 날입니다(지방세법 §103의5①·§103의7①, 지방세기본법 §24①). 국세 기한 연장(국세기본법 §5)을 입력에 반영했는지에 따라 일수가 달라질 수 있습니다. 확인 필요.",
+  "지방 법정신고·납부기한은 입력한 국세 기한이 2020년 3월 1일 이후면 그 기한에 2개월을 더한 날, 그 전이면 소득세 기한과 같은 날이며(지방세법 §103의5①·§103의7① — 2019.12.31. 개정, 2020.1.1. 시행), 어느 쪽이든 토·일·공휴일이면 다음 날로 미룹니다(지방세기본법 §24①). 국세 기한 연장(국세기본법 §5)을 입력에 반영했는지에 따라 일수가 달라질 수 있습니다. 확인 필요.",
   "끝수는 원 미만 절사입니다. 지방세기본법 §59가 「국고금 관리법」 §47(10원 미만 끝수 불계산)을 준용하므로 지방자치단체 고지액과 10원 미만 차이가 날 수 있습니다. 확인 필요.",
   "소득세법 §115 기장불성실가산세에 연동되는 지방세법 §103의8 가산세는 산정하지 않았습니다.",
+  "지방 법정기한이 2014년 1월 1일 전이면 구 지방세법상 소득세 부가세 체계(지방소득세 소득분)라 독립 가산세(지방세기본법 §53~§55)를 산정하지 않습니다. 확인 필요.",
 ];
 
 function toDate(v: Date | string | undefined): Date | undefined {
   return coerceOptionalDate(v);
+}
+
+/** 납부지연가산세 산정에서 나온 시기별 고지(2014 전 미산정 · 2015-05-18 전 한도 없음)를 가정 목록에 싣는다 */
+function pushDelayedAssumptions(d: LocalDelayedPenaltyDetail, assumptions: string[]): void {
+  if (d.unsupportedPeriod) return; // 미산정 고지는 호출부가 한 번만 싣는다(LOCAL_PENALTY_PRE_2014_NOTICE)
+  if (d.days > 0 && d.unpaidLocalTax > 0 && !d.capInEffect) assumptions.push(LOCAL_PENALTY_NO_CAP_NOTICE);
 }
 
 /**
@@ -366,61 +402,77 @@ export function computeLocalIncomePenalty(
   let prelimIso: string | undefined;
   let finalIso: string | undefined;
 
+  let unsupportedReason: LocalPenaltyUnsupportedReason | undefined;
+  const d = penalty.delayedPaymentPenalty;
   const f = penalty.filingPenalty;
   if (filing && f && filing.filingType !== "correct" && f.penaltyBase > 0) {
     const base = applyRate(f.penaltyBase, 0.1);
     const kind = filing.filingType === "none" ? "non_filing" : "under_filing";
+    // 무신고·과소신고 가산세의 시기 판정 기준일 — 법정신고기한(기한 후 신고 입력) 우선, 없으면 납부기한(양도소득세는 신고·납부기한이 같다)
+    const refNational = (kind === "non_filing" ? toDate(filing.lateFiling?.statutoryDeadline) : undefined) ?? d?.paymentDeadline;
+    const refLocal = refNational ? localDeadlineOf(refNational).end : undefined;
     let reduction = NO_REDUCTION;
     let filedWithinLocalDeadline = false;
-    if (kind === "non_filing" && filing.lateFiling) {
-      const lf: LateFilingReductionInput = filing.lateFiling;
-      const prelim = toDate(lf.statutoryDeadline);
-      const final = toDate(lf.finalReturnDeadline);
-      const prelimLocal = prelim ? localDeadlineOf(prelim).end : undefined;
-      const finalLocal = final ? localDeadlineOf(final).end : undefined;
-      if (prelimLocal) prelimIso = isoOf(prelimLocal);
-      if (finalLocal) finalIso = isoOf(finalLocal);
-      // 국세 예정신고기한은 넘겼어도 지방 예정신고기한(국세 기한 + 2개월) 이내에 신고했으면 지방소득세는 무신고가 아니다(§53①).
-      const filedAt = toDate(lf.actualFilingDate);
-      filedWithinLocalDeadline = !!(prelimLocal && filedAt && dayKey(filedAt) <= dayKey(prelimLocal));
-      reduction = resolveLocalNonFilingReduction({
-        prelimDeadline: prelimLocal,
-        finalDeadline: finalLocal,
-        filingDate: toDate(lf.actualFilingDate),
-        notified: lf.priorAssessmentNotified,
-      });
-    } else if (kind === "non_filing") {
-      assumptions.push("기한 후 신고 날짜 입력이 없어 지방세기본법 §57② 감면은 적용하지 않았습니다.");
+    let lateFilingDate: Date | undefined;
+    if (refLocal && isBeforeIndependentTax(refLocal)) {
+      unsupportedReason = "pre_2014_surtax";
+    } else {
+      if (kind === "non_filing" && filing.lateFiling) {
+        const lf: LateFilingReductionInput = filing.lateFiling;
+        const prelim = toDate(lf.statutoryDeadline);
+        const final = toDate(lf.finalReturnDeadline);
+        const prelimLocal = prelim ? localDeadlineOf(prelim).end : undefined;
+        const finalLocal = final ? localDeadlineOf(final).end : undefined;
+        if (prelimLocal) prelimIso = isoOf(prelimLocal);
+        if (finalLocal) finalIso = isoOf(finalLocal);
+        // 국세 예정신고기한은 넘겼어도 지방 예정신고기한 이내에 신고했으면 지방소득세는 무신고가 아니다(§53①).
+        lateFilingDate = toDate(lf.actualFilingDate);
+        filedWithinLocalDeadline = !!(prelimLocal && lateFilingDate && dayKey(lateFilingDate) <= dayKey(prelimLocal));
+        reduction = resolveLocalNonFilingReduction({
+          prelimDeadline: prelimLocal,
+          finalDeadline: finalLocal,
+          filingDate: lateFilingDate,
+          notified: lf.priorAssessmentNotified,
+        });
+      } else if (kind === "non_filing") {
+        assumptions.push("기한 후 신고 날짜 입력이 없어 지방세기본법 §57② 감면은 적용하지 않았습니다.");
+      }
+      if (!filedWithinLocalDeadline) {
+        filingDetail = buildFilingPenalty({
+          kind,
+          base,
+          reason: filing.penaltyReason,
+          fraudBase: f.fraudSplit ? applyRate(f.fraudSplit.fraudBase, 0.1) : undefined,
+          normalBase: f.fraudSplit ? applyRate(f.fraudSplit.normalBase, 0.1) : undefined,
+          reduction,
+          oldStatute: !!refLocal && dayKey(refLocal) < ERA.OLD_STATUTE_UNTIL,
+        });
+        if (refLocal && dayKey(refLocal) < ERA.BASE_UNCERTAIN_UNTIL) assumptions.push(LOCAL_PENALTY_BASE_NOTICE);
+        if (needsSimultaneousNotice(reduction, lateFilingDate)) assumptions.push(LOCAL_PENALTY_SIMULTANEOUS_NOTICE);
+      }
     }
-    if (!filedWithinLocalDeadline) {
-      filingDetail = buildFilingPenalty({
-        kind,
-        base,
-        reason: filing.penaltyReason,
-        fraudBase: f.fraudSplit ? applyRate(f.fraudSplit.fraudBase, 0.1) : undefined,
-        normalBase: f.fraudSplit ? applyRate(f.fraudSplit.normalBase, 0.1) : undefined,
-        reduction,
-      });
+    if (refLocal && dayKey(refLocal) >= ERA.INDEPENDENT_FROM && dayKey(refLocal) < ERA.AMBIGUOUS_2013_UNTIL) {
+      assumptions.push(LOCAL_PENALTY_2013_BOUNDARY_NOTICE);
     }
   }
 
-  const d = penalty.delayedPaymentPenalty;
   if (d && d.unpaidTax > 0) {
     delayedDetail = computeLocalDelayedPenalty({
       unpaidLocalTax: applyRate(d.unpaidTax, 0.1),
       nationalDeadline: d.paymentDeadline,
       paymentDate: d.calculationDate,
     });
-    if (delayedDetail.unsupportedPeriod) {
-      assumptions.push("납부지연가산세 이자율 근거를 확인하지 못한 2018년 이전 기간이라 지방소득세 납부지연가산세를 산정하지 않았습니다. 확인 필요.");
-    }
+    pushDelayedAssumptions(delayedDetail, assumptions);
+    if (delayedDetail.unsupportedReason) unsupportedReason = delayedDetail.unsupportedReason;
   }
+  if (unsupportedReason) assumptions.push(LOCAL_PENALTY_PRE_2014_NOTICE);
 
-  if (!filingDetail && !delayedDetail) return undefined;
+  if (!filingDetail && !delayedDetail && !unsupportedReason) return undefined;
   return {
     ...(filingDetail ? { filing: filingDetail } : {}),
     ...(delayedDetail ? { delayed: delayedDetail } : {}),
     total: (filingDetail?.penalty ?? 0) + (delayedDetail?.penalty ?? 0),
+    ...(unsupportedReason ? { unsupportedReason } : {}),
     ...(prelimIso ? { localPreliminaryDeadline: prelimIso } : {}),
     ...(finalIso ? { localFinalDeadline: finalIso } : {}),
     assumptions,
@@ -448,7 +500,8 @@ export interface LocalAmendmentPenaltyArgs {
 /**
  * 수정신고 경로의 지방소득세 추가 가산세 — §54 과소신고(+§57②1호 감면) · §55 납부지연.
  *
- * 수정신고일이 **지방** 법정신고기한(국세 기한 + 2개월) 이내면 지방소득세는 아직 기한 내라 과소신고가 아니다.
+ * 수정신고일이 **지방** 법정신고기한(국세 기한이 2020-03-01 이후면 +2개월, 그 전이면 소득세 기한과 같은 날) 이내면
+ * 지방소득세는 아직 기한 내라 과소신고가 아니다. 지방 법정기한이 2014-01-01 전이면 산정하지 않는다(`unsupportedReason`).
  */
 export function computeAmendmentLocalPenalty(a: LocalAmendmentPenaltyArgs): LocalIncomePenaltyDetail | undefined {
   if (a.additionalTax <= 0 || !a.nationalDeadline) return undefined;
@@ -458,8 +511,9 @@ export function computeAmendmentLocalPenalty(a: LocalAmendmentPenaltyArgs): Loca
   const localIso = isoOf(local.end);
   let filingDetail: LocalFilingPenaltyDetail | undefined;
   let delayedDetail: LocalDelayedPenaltyDetail | undefined;
+  const pre2014 = isBeforeIndependentTax(local.end);
 
-  if (a.applyUnderReportingPenalty) {
+  if (a.applyUnderReportingPenalty && !pre2014) {
     if (a.underExempt) {
       assumptions.push("국세 신고불성실가산세를 정당한 사유로 면제한 선택에 맞춰 지방소득세 과소신고가산세도 부과하지 않았습니다(지방세기본법 §57① — 확인 필요).");
     } else if (a.amendedFilingDate && dayKey(a.amendedFilingDate) > dayKey(local.end)) {
@@ -471,7 +525,10 @@ export function computeAmendmentLocalPenalty(a: LocalAmendmentPenaltyArgs): Loca
         base: localAdditional,
         reason: a.underReportingReason,
         reduction,
+        oldStatute: dayKey(local.end) < ERA.OLD_STATUTE_UNTIL,
       });
+      if (dayKey(local.end) < ERA.BASE_UNCERTAIN_UNTIL) assumptions.push(LOCAL_PENALTY_BASE_NOTICE);
+      if (needsSimultaneousNotice(reduction, a.amendedFilingDate)) assumptions.push(LOCAL_PENALTY_SIMULTANEOUS_NOTICE);
     }
   }
 
@@ -483,19 +540,22 @@ export function computeAmendmentLocalPenalty(a: LocalAmendmentPenaltyArgs): Loca
         nationalDeadline: a.nationalDeadline,
         paymentDate: pay,
       });
-      if (delayedDetail.unsupportedPeriod) {
-        assumptions.push("납부지연가산세 이자율 근거를 확인하지 못한 2018년 이전 기간이라 지방소득세 납부지연가산세를 산정하지 않았습니다. 확인 필요.");
-      }
+      pushDelayedAssumptions(delayedDetail, assumptions);
     }
   }
+  if (dayKey(local.end) >= ERA.INDEPENDENT_FROM && dayKey(local.end) < ERA.AMBIGUOUS_2013_UNTIL) {
+    assumptions.push(LOCAL_PENALTY_2013_BOUNDARY_NOTICE);
+  }
 
-  if (!filingDetail && !delayedDetail && !a.applyUnderReportingPenalty && !a.applyLatePaymentPenalty) return undefined;
+  if (!a.applyUnderReportingPenalty && !a.applyLatePaymentPenalty) return undefined;
+  if (pre2014) assumptions.push(LOCAL_PENALTY_PRE_2014_NOTICE);
   return {
     ...(filingDetail ? { filing: filingDetail } : {}),
     ...(delayedDetail ? { delayed: delayedDetail } : {}),
     total: (filingDetail?.penalty ?? 0) + (delayedDetail?.penalty ?? 0),
     localFinalDeadline: localIso,
     assumptions,
+    ...(pre2014 ? { unsupportedReason: "pre_2014_surtax" as const } : {}),
   };
 }
 
@@ -524,19 +584,26 @@ function delayedStep(d: LocalDelayedPenaltyDetail): CalculationStep {
   const body = d.breakdown.length > 1
     ? d.breakdown.map((s) => `${s.days}일 × ${rateText(s.ratePer100k)} = ${won(s.amount)}`).join(" + ")
     : `미납 지방소득세 ${won(d.unpaidLocalTax)} × ${d.days}일 × ${rateText(d.ratePer100k)}`;
-  const cap = d.capApplied ? ` → 미납세액의 75% 한도 ${won(d.capAmount)} 적용` : "";
+  const cap = d.capApplied
+    ? ` → 미납세액의 75% 한도 ${won(d.capAmount)} 적용`
+    : d.capInEffect ? "" : " (부과일이 2015.5.18. 전이라 75% 한도 없음)";
   return {
     label: `지방소득세 납부지연가산세 (${d.days}일)`,
     formula: `${body}${cap} (지방 법정납부기한 ${d.localDeadline} 다음 날부터 자진납부일 ${d.paymentDate}까지)`,
     amount: d.penalty,
-    legalBasis: `${LOCAL_PENALTY.DELAYED_PAYMENT} · ${LOCAL_PENALTY.DAILY_RATE}`,
+    legalBasis: d.basis,
     sub: true,
   };
 }
 
 /** 지방소득세 가산세 산출근거 — 합계 단계 하나와 세부 단계(sub). 가산세가 0이면 빈 배열 */
 export function localIncomePenaltySteps(d: LocalIncomePenaltyDetail): CalculationStep[] {
-  if (d.total <= 0) return [];
+  if (d.total <= 0) {
+    // 지방 법정기한이 2014.1.1. 전이라 산정하지 않은 경우 — 0원 단계로 사유를 밝힌다
+    return d.unsupportedReason
+      ? [{ label: "지방소득세 가산세 (미산정)", formula: LOCAL_PENALTY_PRE_2014_NOTICE, amount: 0, legalBasis: `${LOCAL_PENALTY.NON_FILING}~§55` }]
+      : [];
+  }
   const parts: CalculationStep[] = [];
   if (d.filing && d.filing.penalty > 0) parts.push(filingStep(d.filing));
   if (d.delayed && d.delayed.penalty > 0) parts.push(delayedStep(d.delayed));

@@ -205,14 +205,20 @@ describe("US-29 납부지연가산세 §55 — 일수·이자율 구간·한도"
     expect(r.penalty).toBe(313_200);
   });
   it("D-3: 2018년 기한 — 1만분의 3(10만분의 30): 기한 2018-05-31, 납부 2018-06-30 = 30일 → 1,000만원 × 30 × 30 / 100,000 = 90,000", () => {
-    const r = computeLocalDelayedPenalty({ unpaidLocalTax: 10_000_000, nationalDeadline: D("2018-03-31"), paymentDate: D("2018-06-30") });
+    // W2 정정: 2020-03-01 전 국세 기한은 지방 기한이 +2개월이 아니라 같은 날이다(지방세법 §103의5①·§103의7① 2018 시행본).
+    // 종전 입력은 국세 기한 2018-03-31 + 2개월이었다 — 지방 기한 2018-05-31이 되도록 국세 기한을 2018-05-31로 둔다(값 불변).
+    const r = computeLocalDelayedPenalty({ unpaidLocalTax: 10_000_000, nationalDeadline: D("2018-05-31"), paymentDate: D("2018-06-30") });
     expect(r.breakdown).toEqual([{ ratePer100k: 30, days: 30, amount: 90_000 }]);
     expect(r.penalty).toBe(90_000);
   });
-  it("D-4: 2018년 이전 기한은 이자율 근거가 없어 산정하지 않는다(unsupportedPeriod)", () => {
+  it("D-4: 2016-12-31 기한은 이제 산정한다(W2, 종전엔 unsupportedPeriod) — 1만분의 3", () => {
+    // 지방 기한 = 소득세 기한 같은 날 2016-12-31(토) → §24① 2017-01-02(월, 임시공휴일은 공휴일 표 밖). 다음 날 01-03 ~ 2017-06-30 = 179일
+    // 1,000만원 × 179 × 30 / 100,000 = 537,000
     const r = computeLocalDelayedPenalty({ unpaidLocalTax: 10_000_000, nationalDeadline: D("2016-12-31"), paymentDate: D("2017-06-30") });
-    expect(r.unsupportedPeriod).toBe(true);
-    expect(r.penalty).toBe(0);
+    expect(r.unsupportedPeriod).toBeUndefined();
+    expect(r.localDeadline).toBe("2017-01-02");
+    expect(r.breakdown).toEqual([{ ratePer100k: 30, days: 179, amount: 537_000 }]);
+    expect(r.penalty).toBe(537_000);
   });
   it("D-5: 미납세액의 75% 한도", () => {
     const r = computeLocalDelayedPenalty({ unpaidLocalTax: 1_000_000, nationalDeadline: D("2022-12-31"), paymentDate: D("2035-01-01") });
