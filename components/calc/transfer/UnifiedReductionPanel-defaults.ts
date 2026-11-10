@@ -348,7 +348,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       constructionStartDate983: "",
       usageApprovalDate983: "",
       isOutsideSeoulNotDesignated983: false,
-      isOverconcentration983: false,
+      isOverconcentration983: "",
       landAreaSqm983: "",
       floorAreaSqm983: "",
       isUnsoldConfirmed983: false,

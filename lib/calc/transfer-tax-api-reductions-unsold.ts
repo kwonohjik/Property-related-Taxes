@@ -125,9 +125,10 @@ export function toUnsold983Payload(r: Extract<AssetReductionForm, { type: "unsol
     downPaymentCompletedDate983:
       r.houseType983 !== "self_built" ? r.downPaymentCompletedDate983 || undefined : undefined,
     isOutsideSeoulNotDesignated983: r.isOutsideSeoulNotDesignated983,
-    isOverconcentration983: r.isOverconcentration983,
-    landAreaSqm983: r.isOverconcentration983 ? parseDecimal(r.landAreaSqm983 || "") || undefined : undefined,
-    floorAreaSqm983: r.isOverconcentration983 ? parseDecimal(r.floorAreaSqm983 || "") || undefined : undefined,
+    // Q-20 — 3-state → 엔진 boolean. 미선택("")은 undefined(⑧이 막아 정상 경로에선 닿지 않는다).
+    isOverconcentration983: r.isOverconcentration983 === "yes" ? true : r.isOverconcentration983 === "no" ? false : undefined,
+    landAreaSqm983: r.isOverconcentration983 === "yes" ? parseDecimal(r.landAreaSqm983 || "") || undefined : undefined,
+    floorAreaSqm983: r.isOverconcentration983 === "yes" ? parseDecimal(r.floorAreaSqm983 || "") || undefined : undefined,
     isUnsoldConfirmed983: r.isUnsoldConfirmed983,
     isFirstContract983: r.isFirstContract983,
     isNotOccupiedAtContract983: r.isNotOccupiedAtContract983,

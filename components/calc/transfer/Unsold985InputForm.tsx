@@ -11,6 +11,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
 import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
@@ -123,6 +124,12 @@ export function Unsold985InputForm({
           checked={value.isFirstContract985}
           onCheckedChange={(v) => onChange({ isFirstContract985: v })}
         />
+        <CollapsibleHintCard tone="rose" summary="취득기간 중 해제된 주택을 제3자가 다시 계약한 경우">
+          <p data-testid="unsold-98-5-rescinded-recontract-notice">
+            취득기간 중 계약이 해제된 주택을 제3자가 다시 계약해 취득한 경우도 미분양주택으로 봅니다(부동산거래관리과-130, 2011.2.10.).
+            해당하면 위 토글을 켜세요. 이 안내는 세액 계산에 영향을 주지 않습니다.
+          </p>
+        </CollapsibleHintCard>
         <ToggleCard
           tone="rose"
           title="매매계약일 현재 입주 사실 없음"

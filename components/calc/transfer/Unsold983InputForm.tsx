@@ -120,18 +120,26 @@ export function Unsold983InputForm({
           checked={value.isOutsideSeoulNotDesignated983}
           onCheckedChange={(v) => onChange({ isOutsideSeoulNotDesignated983: v })}
         />
-        <ToggleCard
-          tone="rose"
-          title="수도권과밀억제권역 소재"
-          description={
-            isSelfBuilt
+        <div data-field="reduction.unsold_98_3.isOverconcentration983" className="space-y-1">
+          <p className="text-sm font-medium">수도권과밀억제권역 소재 여부</p>
+          <RadioCardGroup
+            name="isOverconcentration983"
+            tone="rose"
+            layout="inline"
+            value={value.isOverconcentration983 ?? ""}
+            onChange={(v) => onChange({ isOverconcentration983: v as Unsold983Form["isOverconcentration983"] })}
+            options={[
+              { value: "no", label: "아니오 (감면율 100%)" },
+              { value: "yes", label: "예 (감면율 60%)" },
+            ]}
+          />
+          <p className="text-xs text-muted-foreground">
+            {isSelfBuilt
               ? "과밀억제권역이면 감면율이 60%로 낮아지고, 대지면적 660㎡ 이내 + 연면적(전용) 149㎡ 이내인 주택에 한정됩니다 (령 §98의3①단서 — 자기건설 신축주택에도 같은 한정을 적용합니다: 재산세과-1450·1537)"
-              : "과밀억제권역이면 감면율이 60%로 낮아지고, 대지면적 660㎡ 이내 + 연면적(전용) 149㎡ 이내인 주택에 한정됩니다 (령 §98의3①단서 — 매매계약일 현재 기준 령④)"
-          }
-          checked={value.isOverconcentration983}
-          onCheckedChange={(v) => onChange({ isOverconcentration983: v })}
-        >
-          {(
+              : "과밀억제권역이면 감면율이 60%로 낮아지고, 대지면적 660㎡ 이내 + 연면적(전용) 149㎡ 이내인 주택에 한정됩니다 (령 §98의3①단서 — 매매계약일 현재 기준 령④)"}
+            {" "}주소로 자동 판정하지 않으므로 직접 선택하세요.
+          </p>
+          {value.isOverconcentration983 === "yes" && (
             <div className="space-y-2">
               <div>
                 <label className="mb-1 block text-sm font-medium">대지면적 (㎡)</label>
@@ -143,7 +151,7 @@ export function Unsold983InputForm({
               </div>
             </div>
           )}
-        </ToggleCard>
+        </div>
       </ToneCard>
 
       <ToneCard tone="rose" sectionNum="③" title="자격 요건 확인">
@@ -185,6 +193,14 @@ export function Unsold983InputForm({
               onCheckedChange={(v) => onChange({ isNotRecontract983: v })}
             />
           </>
+        )}
+        {isSelfBuilt && (
+          <CollapsibleHintCard tone="rose" summary="주택신축판매업자가 지은 주택은 적용되지 않습니다">
+            <p data-testid="unsold-98-3-builder-seller-notice">
+              주택신축판매업자가 건설한 주택의 양도는 사업소득이어서 §98의3 양도소득세 과세특례가 적용되지 않습니다
+              (재산세과-984, 2009.5.20. · 재산세과-1079, 2009.6.1. · 부동산거래관리과-620, 2010.4.28.). 이 안내는 세액 계산에 영향을 주지 않습니다.
+            </p>
+          </CollapsibleHintCard>
         )}
         {isSelfBuilt && (
           <ToneCard tone="amber" title="토지를 신축주택보다 먼저 보유한 경우 — 해석과 판결의 차이" bodyClassName="space-y-1">

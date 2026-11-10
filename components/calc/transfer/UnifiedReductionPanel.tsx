@@ -21,6 +21,7 @@ import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-sto
 import type { RentalReductionFormVariant } from "@/lib/stores/calc-wizard-asset-reduction";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { Button } from "@/components/ui/button";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
 import { landOnlyOwnerMessage } from "@/lib/tax-engine/transfer-reductions/new-99-land-only-owner";
 import { MIXED_INCOME_DEDUCTION_COMPUTED_IDS } from "@/lib/tax-engine/transfer-reductions/mixed-use-computed-ids";
@@ -424,6 +425,26 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
               {landOnlyOwnerMessage(t)}
             </p>
           ))}
+        </ToneCard>
+      )}
+      {reductions.some((r) => r.type === "unsold_housing_unresolved") && (
+        <ToneCard tone="rose" title="미분양주택 감면 — 적용 조문을 다시 선택하세요" bodyClassName="space-y-2">
+          <div data-field="reduction.unsold_housing_unresolved" data-testid="unsold-housing-unresolved-notice" className="space-y-2">
+            <p className="text-xs">
+              이전에 저장된 「미분양주택」 감면 기록의 취득일이 §98의3 적용 기간(2009.2.12~2010.2.11) 밖이라, §98의3으로 옮기지 않고
+              조문을 정하지 않은 채 두었습니다. 이 항목을 해제한 뒤 아래 「미분양」 목록에서 해당 조문(§98의5·§98의7·§98의8 등)을 직접 선택하세요.
+              해제하기 전에는 계산할 수 없습니다.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              data-testid="unsold-housing-unresolved-remove"
+              onClick={() => commitReductions(reductionsRef.current.filter((r) => r.type !== "unsold_housing_unresolved"))}
+            >
+              조문 미정 항목 해제
+            </Button>
+          </div>
         </ToneCard>
       )}
       {trackConflict && (

@@ -81,7 +81,9 @@ export function Unsold986InputForm({
           tone="sky"
           layout="stack"
           value={value.hoType986}
-          onChange={(v) => onChange({ hoType986: v })}
+          // Q-21 — 1호(최초 임대개시 당시)↔2호(취득 당시)는 기준시점이 달라 값이 남으면 다른 시점 값이 6억 판정에 쓰인다.
+          // 전환하는 그 이벤트에서 함께 비운다(onChange 한 번 — useEffect→store 미러링 금지). ⑧이 재입력을 요구한다.
+          onChange={(v) => onChange(v === value.hoType986 ? { hoType986: v } : { hoType986: v, stdPriceSumAtBase986: "" })}
           options={[
             {
               value: "seller_rented",
@@ -95,6 +97,9 @@ export function Unsold986InputForm({
             },
           ]}
         />
+        <p className="text-xs text-muted-foreground" data-testid="unsold-98-6-ho-switch-notice">
+          1호와 2호는 기준시가 합계의 기준시점이 달라(최초 임대개시 당시 / 취득 당시) 유형을 바꾸면 아래 기준시가 합계가 비워집니다. 다시 입력하세요.
+        </p>
       </ToneCard>
 
       <ToneCard tone="sky" sectionNum="②" title="기준시가 합계·면적">
