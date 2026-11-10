@@ -34,7 +34,8 @@ export function getRefDeterminedTax(p: PerPropertyBreakdown): number {
     0,
     Math.floor((p.taxBaseShare ?? 0) * rate) - (p.progressiveDeduction ?? 0),
   );
-  return Math.max(0, refCalc - (p.reductionAmount ?? 0));
+  // 정상 경로(`transfer-tax-aggregate-once.ts`)와 같은 규칙 — 뺄셈의 감면은 배분액이다(없던 시절 이력은 단독값으로 내려간다).
+  return Math.max(0, refCalc - (p.reductionAggregated ?? p.reductionAmount ?? 0));
 }
 
 export function formatKRW(amount: number): string {

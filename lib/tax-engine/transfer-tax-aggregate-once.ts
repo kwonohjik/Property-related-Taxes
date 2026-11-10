@@ -554,7 +554,10 @@ export function computeAggregateOnce(
       ? 0
       : (partAssetTax?.tax ??
         Math.max(0, Math.floor(taxBaseShare * effectiveRate) - r.result.progressiveDeduction));
-    const refDeterminedTax = Math.max(0, refCalculatedTax - standalone);
+    // 🔴 감면은 **배분액(reductionAggregated)** 으로 뺀다 — `standalone`은 기본공제 전(skipBasicDeduction) 소득 기준이라
+    //    기본공제 후 `refCalculatedTax`에서 빼면 기준이 섞여 1건에서도 단건·합산 결정세액과 어긋나고 산식 «A − B = C»가 등식이 아니다
+    //    (§97 본문 84,030,000 ≠ 84,530,000 — 계획서 multi-per-asset-reduction-display.plan.md Q-1 a). 유형별 재계산 엔트리가 없으면 위에서 `standalone` 그대로다.
+    const refDeterminedTax = Math.max(0, refCalculatedTax - reductionAggregated);
 
     return {
       propertyId: r.item.propertyId,

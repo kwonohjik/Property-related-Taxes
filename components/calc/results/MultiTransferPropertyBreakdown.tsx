@@ -242,7 +242,7 @@ export function PropertyBreakdownAccordion({
   const refDeterminedTax =
     typeof breakdown.refDeterminedTax === "number"
       ? breakdown.refDeterminedTax
-      : Math.max(0, refCalculatedTax - (breakdown.reductionAmount ?? 0));
+      : Math.max(0, refCalculatedTax - (breakdown.reductionAggregated ?? breakdown.reductionAmount ?? 0));
 
   return (
     <Card>
@@ -406,12 +406,17 @@ export function PropertyBreakdownAccordion({
               )}
 
               {/* 감면세액 */}
-              {breakdown.reductionAmount > 0 && (
+              {breakdown.reductionAggregated > 0 && (
                 <DetailRow
                   label="감면세액"
-                  formula={reductionStep?.formula}
+                  // 단건 엔진 단계 문구는 건별 **단독** 감면액(기본공제 전 소득 기준)을 담는다 — 값(배분액)과 다르면 배분 사실을 덧붙여 값과 산식이 어긋나 보이지 않게 한다.
+                  formula={
+                    breakdown.reductionAggregated !== breakdown.reductionAmount
+                      ? `${reductionStep?.formula ?? "건별 단독 감면"} → 합산 재계산 후 배분 ${formatKRW(breakdown.reductionAggregated)}`
+                      : reductionStep?.formula
+                  }
                   legalBasis={reductionStep?.legalBasis}
-                  value={-breakdown.reductionAmount}
+                  value={-breakdown.reductionAggregated}
                 />
               )}
 
@@ -420,8 +425,8 @@ export function PropertyBreakdownAccordion({
                 <DetailRow
                   label="결정세액 (참고)"
                   formula={
-                    breakdown.reductionAmount > 0
-                      ? `산출세액 ${formatKRW(refCalculatedTax)} - 감면 ${formatKRW(breakdown.reductionAmount)}`
+                    breakdown.reductionAggregated > 0
+                      ? `산출세액 ${formatKRW(refCalculatedTax)} - 감면 ${formatKRW(breakdown.reductionAggregated)}`
                       : `산출세액 ${formatKRW(refCalculatedTax)}`
                   }
                   legalBasis="소득세법 §92③2호"
