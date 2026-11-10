@@ -365,8 +365,9 @@ export interface PerPropertyBreakdown
   transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
   /**
    * 자산별 결정세액 (다건 컨텍스트, 참고).
-   * = max(0, refCalculatedTax - reductionAmount)
-   * 기납부세액 자동 계산(앞 자산들의 결정세액 합) 등에 사용된다.
+   * = max(0, refCalculatedTax - reductionAggregated)
+   * 🔴 뺄셈의 감면은 배분액(`reductionAggregated`)이다 — 건별 단독(`reductionAmount`)은 기본공제 전 소득 기준이라 섞으면 1건에서도 단건과 어긋난다.
+   * 표시 전용이다(상세명세서 산식·신고서 건별 열·아코디언·건별 신고서 어댑터). 합산 세액 계산은 이 값을 읽지 않는다.
    */
   refDeterminedTax: number;
   /**

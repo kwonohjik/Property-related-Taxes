@@ -1,6 +1,6 @@
 # 다건 건별 «결정세액(참고)»·감면 표시값이 단건·합산 결과와 어긋난다 — 상세명세서 산식이 등식으로 성립하지 않는다
 
-- 상태: **결정 대기**(Q-1~Q-3) — 기준 master `cb9c88a37`.
+- 상태: **구현 완료**(Q-1 a · Q-2 a · Q-3 a 적용, §7) — 기준 master `cb9c88a37`(구현 중 `bbc75ff97`까지 병합).
 - 출처: #3146(V-3 다건 도달 고정) 조사 중 발견한 별건 — 다건 건별 `reductionAmount` 표시값이 단건과 다르다(§97 본문 단독 85,030,000 vs 84,530,000, 총세액은 같음).
 - 영향 범위: **표시만**이다. 합산 `totalTax`·`determinedTax`·`reductionAmount`는 단건과 같다(§3). 세액 계산에 쓰이는 경로는 못 찾았다(§2.3).
 
@@ -138,3 +138,57 @@ throwaway probe(`__tests__/calc/zz-probe-ra.test.ts`, 커밋하지 않고 삭제
 4. **기존 테스트 반전**: `refDeterminedTax` 참조 11개를 실행해 값 고정 단언을 찾고, 같은 단언을 쓰는 형제 테스트를 전수 grep한다(공유 단언 반전 — 옛 값 허용 금지).
 5. **뮤테이션**: `reductionAggregated` → `standalone` 되돌림 · cap `max(0,…)` 제거 · 아코디언만 되돌림 · 어댑터가 `refDeterminedTax` 대신 재계산.
 6. 회귀 5묶음(`__tests__/api` · `tax-engine` · `calc` · `lib` · `components`) + tsc + eslint. UI 문구·레이아웃 변경은 없다(숫자만 바뀜) — Playwright는 아코디언을 여는 흐름이 기존 spec에 있으면 1건, 없으면 생략하고 사유 기록.
+
+## 7. 구현 결과 (Q-1 a · Q-2 a · Q-3 a — 사용자 「모두 권장안으로」)
+
+### 7.1 변경
+
+| 파일 | 변경 |
+|---|---|
+| `lib/tax-engine/transfer-tax-aggregate-once.ts` | `refDeterminedTax = max(0, refCalculatedTax − reductionAggregated)` (종전 `standalone`). 유형별 재계산 엔트리가 없으면 `reductionAggregated`가 `standalone` 그대로라 그 경로는 값이 변하지 않는다 |
+| `lib/tax-engine/types/transfer-aggregate.types.ts` | `refDeterminedTax` 주석 정정. 종전 주석의 «기납부세액 자동 계산 등에 사용된다»는 현재 코드에 소비처가 없다(`lib`·`app` grep: 선언 외 `aggregate-once.ts` 대입 1곳뿐) — 표시 전용이라고 고쳤다 |
+| `components/calc/results/MultiTransferPropertyBreakdown.tsx` | 아코디언 «감면세액» 행 값과 노출 조건, «결정세액 (참고)» 산식 → `reductionAggregated`. 옛 이력 대체 계산도 `reductionAggregated ?? reductionAmount`. **계획서에 없던 추가 1건**: «감면세액» 행 아래 문구는 단건 엔진 단계(`steps`)의 문구라 단독값(100,000,000)을 담는다 → 값(배분)과 다르면 « → 합산 재계산 후 배분 N»을 덧붙인다 (§7.4) |
+| `components/calc/results/MultiTransferTaxSummaryCard.tsx` | `getRefDeterminedTax` 옛 이력 대체 계산을 같은 규칙으로 (기존 anchor `multi-breakdown-adapter-contract`가 «대체 값이 정상 경로와 같다»를 지켜 주고 있어 이 변경 없이는 실패했다) |
+
+건별 `determinedTax`(`:573`)·PDF «결정세액 기여분 (참고)»·«건별 단독감면» 열(표)은 손대지 않았다(Q-3 a · 의도된 설계).
+
+### 7.2 anchor (구현 전 실패 확인 → 구현 후 통과)
+
+- `__tests__/api/transfer.multi-route.per-asset-ref-determined-tax.anchor.test.ts` 11건. 구현 전 **7건 실패 · 4건 통과**(통과 4건은 §97의5 시료 3건과 cap 경계로, 종전에도 결정세액이 0이라 값을 고정하는 용도). 실패 값이 §3 측정과 정확히 일치: 84,030,000 vs 84,530,000 · 143,551,000 vs 143,701,000 · 2건 산식 76,167,980 vs 85,030,000.
+  - 1건 §97 본문·§77·§97의5: 건별 `refDeterminedTax`·어댑터 `determinedTax`·`localIncomeTax`가 단건 route와 같다.
+  - `buildDeterminedTaxFormula`의 «A − B = C» 문자열을 파싱해 산술 등식을 확인 (1건 2종 + 2건).
+  - `산출세액 − 결정세액 = 배분 감면` (신고서 건별 열 `reductionTax + determinedTax = calculatedTax`의 전제).
+  - **cap 경계**: §97의5 카드 + 감면 없는 카드 2건 — 배분 감면 210,863,773 > 건별 산출세액 193,380,000인 실제 시료를 찾아 `refDeterminedTax = 0`을 고정 (V-2 일부 해소).
+- `__tests__/components/multi-breakdown-accordion-ref-determined-q2.anchor.test.tsx` 4건 (자경농지 §69 2건 — 산출 148,340,000 · 단독 100,000,000 · 배분 61,013,645 · 결정 87,326,355; 종전 48,340,000): 엔진 관측값 · 산식 등식 «148,340,000 - 61,013,645 = 87,326,355» · 아코디언 감면 행/산식 · 옛 이력 대체 계산.
+
+### 7.3 뮤테이션 (백업 → 변이 → 복원 → `cmp` 일치)
+
+| # | 변이 | 결과 |
+|---|---|---|
+| M1 | 엔진 `reductionAggregated` → `standalone` | 11건 실패 (route anchor 7 · 아코디언 anchor 3 · 기존 어댑터 계약 1) |
+| M2 | 엔진 `max(0, …)` 제거 | cap 경계 1건 실패 |
+| M3 | 아코디언 감면 행 값 → `reductionAmount` | 1건 실패 |
+| M4 | 아코디언 «결정세액 (참고)» 산식 → `reductionAmount` | 1건 실패 |
+| M5 | 아코디언 옛 이력 대체 → `reductionAmount` | 1건 실패 |
+| M6 | 합계 카드 `getRefDeterminedTax` 대체 → `reductionAmount` | 1건 실패 (기존 계약 테스트) |
+| M7 | «배분 N» 덧붙임 제거 | 1건 실패 |
+
+### 7.4 기존 테스트와 계획서 대비 차이 (정직 공개)
+
+- `refDeterminedTax`를 참조하는 기존 테스트 11개를 실행했다 — **값을 고정한 단언은 없었다**(반전한 단언 0). 1건만 실패했고(`multi-breakdown-adapter-contract` E-2 «fallback 값이 형제 카드와 같다»), 값 반전이 아니라 대체 계산 두 곳을 정상 경로와 같은 규칙으로 맞추라는 요구였다.
+- 계획서 §2.3·Q-2는 «감면 행 값과 산식»으로 적었으나 **«감면세액» 행 아래 문구가 단건 엔진 단계 문구(단독값)** 라는 점은 구현 중 아코디언 렌더로 처음 확인했다. 값만 바꾸면 «문구 100,000,000 / 값 −61,013,645»가 새로 생겨 «배분» 덧붙임을 추가했다.
+- §6의 «어댑터가 `refDeterminedTax` 대신 재계산» 변이는 쓰지 않았다 — 어댑터가 `getRefDeterminedTax`(M6)를 부르는 구조라 M6이 같은 축을 덮는다.
+- 신고서 건별 열(`FilingFormTableAggregateHelpers.ts:363-366`)은 코드 변경이 없다. `reductionTax = max(0, 산출 − 결정)`이라 `refDeterminedTax`가 바뀌면 자동으로 따라간다 — 이 열을 직접 렌더한 테스트는 추가하지 않았고 위 «산출 − 결정 = 배분 감면» 필드 단언으로 갈음했다.
+
+### 7.5 검증
+
+- 회귀 5묶음 전부 통과: `__tests__/api` 517파일·7003건 · `tax-engine` 1520파일·19265건 · `calc` 847파일·11760건 · `lib` 265파일·3408건 · `components` 768파일·7029건.
+- `tsc --noEmit` 0건 · 변경 파일 `eslint` 오류 0 (`MultiTransferTaxSummaryCard.tsx:103` 미사용 `_properties` 경고 1건은 이 변경 밖의 기존분).
+- **Playwright 생략**: 기존 E2E에 아코디언의 «감면세액» 행·«결정세액 (참고)»를 보는 흐름이 없다(`e2e` grep 0건). **브라우저 수동 확인도 하지 않았다** — 렌더 컴포넌트를 jsdom으로 직접 렌더해 확인했다.
+
+### 7.6 남은 확인 필요
+
+- 3건 이상·비교과세·분할(GB) 자산에서 `reductionAggregated`와 `refCalculatedTax` 관계 — 2건 시료(+ cap 경계 1건)만 측정했다.
+- 건별 `determinedTax`·PDF «결정세액 기여분 (참고)» (V-3, Q-3 a로 별건).
+- **옛 저장 이력**: `refDeterminedTax`가 저장돼 있으면 옛 혼합 기준 값이 그대로 표시된다(재계산하지 않는다). 대체 계산은 필드가 **없을 때만** 타며 그 값은 새 규칙이다 (V-4).
+
