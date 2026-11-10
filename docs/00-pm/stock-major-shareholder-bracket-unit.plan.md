@@ -1,6 +1,6 @@
 # 대주주 주식 §104①11호 가목 2) «3억원» 구간 — 종목별 적용 vs 과세기간 합계 적용 계획서
 
-> 2026-11-11 · 문서 전용 PR(코드 변경 없음). 출처: `multi-per-asset-display-followup4.plan.md` §3.2 별건 후보 → 사용자 «Q-2 진행해».
+> 2026-11-11 · 계획서 + 구현(Q-1 a·Q-2 a·Q-3 a 결정 후 같은 PR에서 구현, §7). 출처: `multi-per-asset-display-followup4.plan.md` §3.2 별건 후보 → 사용자 «Q-2 진행해».
 > 표기: [직접] = 이번에 조문·서식을 읽거나 엔진을 실행해 확인 · [확인 필요] = 미검증.
 
 ## 0. 결론
@@ -13,7 +13,7 @@
 | 4 | 같은 문제가 이미 해결된 곳 | **한 종목 안의 로트 분할**은 «3억 구간이 lot 수만큼 반복돼 세액이 과소해진다»며 합산 후 1회 적용으로 고쳐져 있다(`lot-allocation-tax.ts:137`). **종목 사이**만 남아 있다. |
 | 5 | 이전 계획서 수치 | `followup4` §3.2의 «183,750,000원»은 **산술 오류**였다(합계 과세표준 7억 9,750만을 7억 9,500만으로 적음). 올바른 값은 184,375,000원 — 그 문서에 정정 문구를 달았다. |
 
-결정 대기: Q-1(수정 방향) · Q-2(종목별 표시 세액) · Q-3(범위).
+결정: **Q-1 a · Q-2 a · Q-3 a**(2026-11-11) → 구현 완료, 결과는 §7.
 
 ## 1. 조문 [직접: KoreanLaw MCP, 소득세법 시행 2026-01-01 본문]
 
@@ -83,3 +83,49 @@
 - **V-5** 수정 시 외국납부세액공제 한도(`incomeTax` 배분)·종목별 가산세·감면(조특) 상호작용 — 측정 전.
 - **V-6** 양도차손 통산(§102②)과 합산 순서 — 과세표준은 통산 후 값이라 합산 대상이 통산 후 값이어야 함(코드 읽기, 시료 미측정).
 - 브라우저 수동 확인 없음.
+
+## 7. 결정 · 구현 결과 (2026-11-11)
+
+사용자 결정: **Q-1 a · Q-2 a · Q-3 a** (모두 권장안). 같은 PR(#3183)에서 구현했다.
+
+### 7.1 구현 — 변경 파일
+
+| 파일 | 변경 |
+|---|---|
+| `lib/tax-engine/stock-transfer/stock-transfer-rate-calc.ts` | `RateCalcResult.majorProgressiveBase?` 신설(가목 2) 누진표를 탄 과세표준 — 세액을 낸 코드가 직접 알려줌) · `applyMajorProgressiveRate` 헬퍼 · 대주주 누진 분기에서만 값을 채움(단기 30%·나목·국외·기타자산은 `undefined`) |
+| `lib/tax-engine/stock-transfer/lot-allocation-tax.ts` | `SplitModeTaxResult.majorProgressiveBase` — 분할 로트는 **장기분 과세표준만**(단기분은 가목 1) 30%) 전달 · `resolveSplitRateResult`가 그대로 통과 |
+| `lib/tax-engine/stock-transfer/stock-transfer-aggregate-major-bracket.ts` (신설 94줄) | `computeMajorProgressiveGroupTax` — 과세표준 합산 → 누진 1회 → 종목별 단순 합과의 차이. **보정이 생길 때만** `MajorProgressiveGroupTax` echo 반환 |
+| `lib/tax-engine/stock-transfer/stock-transfer-aggregate.ts` (716→738줄) | STEP 3에서 `majorProgressiveBases[i]` 기록 · `totalCalculatedTax`에 `adjustment` 가산 · 결과 필드 `majorProgressiveGroupTax?` · `Σ items ≠ 합계` 주석 갱신 |
+| `components/calc/results/StockAggregateSummaryCard.tsx` | 보정이 있을 때만 «대주주 «3억원» 구간 합산» `ToneCard`(이유·합산 세액·종목별 합·차이·근거) |
+| `components/calc/stock-transfer/StockFilingFormTableHelpers.ts` | 행 24-3 «＋ 대주주 가목 2) «3억원» 구간 합산 보정» — **합계 열에만**(종목 열 비움) · 24-1 합계 열에서 보정을 빼 `24-1 + 24-2 + 24-3 = 25` 유지(§168② 동반 시) |
+
+- 14지점: **입력 필드 추가 없음**(결과 echo 1개만 추가) → ①~⑬ 해당 없음. ⑭ route는 `result`를 그대로 반환(`route.ts:147`)해 새 필드가 통과한다. 이력 저장(IndexedDB)은 결과 전체를 저장하고 필드가 optional이라 옛 이력은 영향 없음.
+- 하류가 따라오는 것: 결정세액·지방소득세·전자신고공제·신고 단위 가산세 base(`determinedTotal`)·§111③ 정산 — 모두 `totalCalculatedTax`에서 파생된다.
+
+### 7.2 검증
+
+| 항목 | 결과 |
+|---|---|
+| anchor (구현 **전**) | 14건 중 **9건 실패**(결함 재현: 169,375,000 vs 184,375,000 등), 5건 통과(비대상 4 + 종목 단독 값 유지 1) |
+| anchor (구현 후) | 엔진 `major-bracket-group-aggregate.anchor.test.ts` **15건**(MB-3b 상장+비상장 혼합 추가) · 화면 `stock-major-bracket-group-display.anchor.test.tsx` **8건** — 전부 통과 |
+| 뮤테이션 | **10종 전부 사망**(M1 합계 미반영 8 · M2 전 과세표준 기록 6 · M3 분할 로트 전체 과세표준 1 · M4 보정 0 가드 제거 1 · M5 단기 30% 표기 1 · M6 나목 표기 4 · M7 누진표 교체 14 · M8 24-1 보정 미차감 1 · M9 24-3 행 미출력 3 · M10 카드 미출력 1). 매 변이 후 백업 복원 `cmp` 일치 · `.mutbak` 잔존 0 |
+| 동등 변이(미사망 아님) | `targets.length < 2 → < 1`은 단건에서도 `adjustment = 0`이라 `undefined`가 되어 관측 동치 — 별도 테스트 불필요 |
+| 회귀 5묶음 | `__tests__/api` 522파일 7,045 · `tax-engine` 1,522파일(기존 **2건 실패 → 아래 7.3**) · `calc` 848파일 11,771 · `lib` 265파일 3,408 · `components` 772파일 7,062 — 2건 갱신 후 `stock-transfer`+`components` 재실행 882파일 8,535건 전부 통과 |
+| `tsc --noEmit`(힙 8GB) · eslint | 0건 · 오류 0(경고 6건은 HEAD에도 있던 미사용 선언 — 이번 변경 무관) |
+| Playwright / 브라우저 | **수행하지 않음.** 기존 E2E(`stock-multi-item-aggregate.spec.ts`)에 대주주 4억 시나리오가 없고, 새 화면은 실제 엔진 결과를 렌더하는 컴포넌트 anchor로 고정했다. CI의 E2E 샤드는 그대로 돈다 |
+
+### 7.3 기존 테스트 2건 갱신 — 옛 동작을 단언하고 있었다 (공유 단언 반전 → 근거 기록)
+
+| 테스트 | 종전 단언 | 갱신 | 이유 |
+|---|---|---|---|
+| `other-asset-104-5-comparative.anchor.test.ts` **A-3** | 주식 대주주 2종목 «합계 = Σ 종목별(종전대로 단건 합계)» | 비교과세 없음(`otherAssetComparativeTax` undefined)은 **유지**, 합계 = Σ items + `majorProgressiveGroupTax.adjustment` | 「주식은 §104⑤ 비대상」은 여전히 참. 「합계 = 단순 합」은 **3억 구간 반복 결함의 옛 동작**이었다. 두 문장은 다른 조항(§104⑤ vs §104① 본문) 이야기 |
+| `same-day-basic-deduction-order.anchor.test.ts` **SD-2** | 3억 경계: 250만을 «25% 구간인 종목»에 주면 120,450,000 | 세 종목 모두 가목 2) → 합계 과세표준 602,000,000에 1회 → **135,500,000, 공제를 누구에게 주든 불변**(3개 입력 순열 전부) | 순서가 세액을 가르던 것은 구간을 종목별로 반복한 결과였다. 순서가 세액을 가르는 경우는 **서로 다른 세율 호**(SD-1 · SD-3 · SD-5)로 남고 그 anchor는 그대로 통과 |
+
+### 7.4 미검증 레지스터 갱신
+
+- **V-3 (부분 해소):** 상장 대주주 + 비상장 대주주는 같은 가목 2)로 합산됨을 실측(MB-3b, 184,375,000). 서식 «세율이 같은 자산»의 키가 코드인지 세율인지의 **문언 확정은 못 했다** — 엔진은 «가목 2) 누진표를 탄 과세표준»을 기준으로 하며 서식 1-63(상장·비상장·중소·비중소 대주주를 한 칸으로 묶음)과 일치한다.
+- **V-5 (해소):** 외국납부세액공제 한도는 A = 국외 종목 자기 산출세액이라 대주주 합산 보정과 독립임을 실측(MB-7: 대주주 2종목 ↔ 비대주주 2종목에서 국외 종목 한도 동일). 가산세는 `determinedTotal`(= 보정 포함 합계)에서 파생된다.
+- **V-6 (해소):** 양도차손 통산 후 과세표준을 합산함을 실측(MB-6 — 통산 후 대주주 과세표준 합 × 25% − 1,500만).
+- **V-8 (신규, 미측정):** 합계 `floorTen` — 종목 안 단기+장기 로트가 섞인 경우 종목별 `floorTen(단기 + 장기)`와 보정 계산의 `floorTen`이 **최대 10원** 어긋날 수 있다(MB-5는 어긋나지 않는 시료). 법정 절사는 신고 단위 합계에서 한 번이라 합계값은 합산 기준 계산이 정본이다.
+- **V-9 (신규, 미측정):** 주식 **예정신고(반기 단위)** 와 확정신고 합산의 관계 — 이 엔진의 다종목 합산은 확정신고(연간 합산) 관점이며, 반기별 예정신고에서의 3억 구간 적용 단위는 확인하지 않았다.
+- **V-1·V-2·V-4:** 변동 없음(주식 직접 해석례 미확보 · 2008 회신 시점 구조 · 로트 주석의 §104⑤2호 인용 오귀속 후보).

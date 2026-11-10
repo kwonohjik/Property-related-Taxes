@@ -125,14 +125,21 @@ describe("§104⑤ — 기타자산 다건 비교과세", () => {
     expect(multi.totalTaxBase).toBe(single.taxBase);
   });
 
-  it("A-3: **주식(§94①3호)은 대상이 아니다** — 종전대로 단건 합계", () => {
-    // §104⑤ 본문이 「§94①1호ㆍ2호 및 제4호」로 3호를 열거하지 않는다.
+  it("A-3: **주식(§94①3호)은 §104⑤ 대상이 아니다** — 비교과세 없음, 합산은 §104① 본문(가목 2) 3억원 구간)", () => {
+    // §104⑤ 본문이 「§94①1호ㆍ2호 및 제4호」로 3호를 열거하지 않는다 — 이 사실은 그대로다.
     const r = calculateStockTransferTaxAggregate(
       [listedMajor(300_000_000), listedMajor(300_000_000)],
       "aggregate",
     );
     expect(r.otherAssetComparativeTax).toBeUndefined();
-    expect(r.totalCalculatedTax).toBe(r.items.reduce((s, x) => s + x.calculatedTax, 0));
+    // 🔴 2026-11-11 갱신(계획서 `stock-major-shareholder-bracket-unit.plan.md`): 종전 단언은 「합계 = 종목별 단순 합」이었다.
+    //   그것이 **3억 구간을 종목마다 반복하는 결함**의 옛 동작이었다. 주식은 §104⑤가 아니라 **§104① 본문**
+    //   (「해당 과세기간의 양도소득과세표준」)으로 가목 2) 대주주 종목의 과세표준을 합산해 구간을 1회 적용한다.
+    //   「주식은 §104⑤ 비대상」(위)과 「주식은 합산 대상」(아래)은 **다른 조항의 이야기**라 둘 다 참이다.
+    const g = r.majorProgressiveGroupTax;
+    expect(g).toBeDefined();
+    expect(g!.adjustment).toBeGreaterThan(0);
+    expect(r.totalCalculatedTax).toBe(r.items.reduce((s, x) => s + x.calculatedTax, 0) + g!.adjustment);
   });
 
   it("A-4: 혼재 — 기타자산만 합산되고 주식분은 그대로 더해진다", () => {

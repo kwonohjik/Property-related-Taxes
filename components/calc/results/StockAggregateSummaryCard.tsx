@@ -166,6 +166,41 @@ export function StockAggregateSummaryCard({
         </p>
       </ToneCard>
 
+      {/*
+        대주주 §104①11호 가목 2) «3억원» 구간 합산 — 종목 행은 종목 **단독** 산출이라 합계와 어긋난다.
+        합계 행(`totalCalculatedTax`)이 보정을 포함하므로, 어긋난 이유와 금액을 따로 보여 준다.
+        보정이 없으면(`undefined`) 아무것도 그리지 않는다.
+      */}
+      {aggregate.majorProgressiveGroupTax && (
+        <ToneCard tone="amber" title="대주주 «3억원» 구간 합산 (소득세법 §104①11호 가목 2))">
+          <p className="text-sm">
+            위 표의 종목별 산출세액은 종목마다 3억원 구간을 따로 적용한 <strong>단독 계산</strong>입니다.
+            같은 과세기간에 대주주 종목(가목 2))이 {aggregate.majorProgressiveGroupTax.itemCount}건이므로
+            과세표준 합계{" "}
+            <span className="font-mono tabular-nums">
+              {won(aggregate.majorProgressiveGroupTax.aggregatedTaxBase)}
+            </span>
+            에 구간을 한 번 적용한 산출세액{" "}
+            <span className="font-mono tabular-nums">
+              {won(aggregate.majorProgressiveGroupTax.aggregatedTax)}
+            </span>
+            과 종목별 합{" "}
+            <span className="font-mono tabular-nums">
+              {won(aggregate.majorProgressiveGroupTax.itemSumTax)}
+            </span>
+            의 차이{" "}
+            <strong className="font-mono tabular-nums">
+              {won(aggregate.majorProgressiveGroupTax.adjustment)}
+            </strong>
+            가 합계 산출세액에 더해졌습니다. 종목에는 나누지 않습니다.
+          </p>
+          <p className="text-caption text-muted-foreground">
+            근거: 소득세법 §104① 본문(해당 과세기간의 양도소득과세표준에 세율 적용) · §102①2호(주식은 하나의
+            소득) · 별지 제84호서식 작성방법 4번(세율이 같은 자산을 합산).
+          </p>
+        </ToneCard>
+      )}
+
       {aggregate.lossOffset && (
         <ToneCard tone="amber" title="양도차손 통산 (소득세법 §102②)">
           {/*
