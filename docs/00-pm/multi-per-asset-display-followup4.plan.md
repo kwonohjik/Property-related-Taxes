@@ -103,3 +103,26 @@
 - V-5: 컴패니언 겸용주택·§164 분리 카드의 렌더 출력.
 - V-6: 가산세 대체값은 테스트 입력 범위에서만 미도달.
 - 브라우저 수동 확인은 하지 않았다.
+
+## 9. 결정 · 구현 결과 (2026-11-10)
+
+사용자 결정: Q-1 a · Q-2 a · Q-3 a (모두 권장안).
+
+### 9.1 Q-1 a 구현 — 주석 4곳만 변경 (동작 불변)
+
+| 파일:줄 | 변경 후 |
+|---|---|
+| `lib/tax-engine/transfer-tax-aggregate-group-tax.ts:140` | «`comparedTaxApplied`(1호·2호 비교 결과)와 무관하게 어긋난다 (소득세법 §104⑤ 2호 — 같은 호·둘 이상 세율 자산은 과세표준을 합산)» |
+| `lib/tax-engine/types/transfer-aggregate.types.ts:312` | «`comparedTaxApplied`와 무관 · 소득세법 §104⑤ 2호 호별 합산, 고정 세율군은 해당 없음» |
+| `components/calc/results/MultiTransferPropertyBreakdown.tsx:244` | «`comparedTaxApplied`와 무관하게(소득세법 §104⑤ 2호 호별 합산)» |
+| `components/calc/results/transfer/FilingFormTableAggregateHelpers.ts:331` | «`comparedTaxApplied`와 무관 · 소득세법 §104⑤ 2호 호별 합산, 고정 세율군은 해당 없음» |
+
+- 줄 번호 정정: §7 Q-1 표의 `FilingFormTableAggregateHelpers.ts:330`은 실제 **331**줄이다(표기 오류, 문구 위치는 동일).
+- 전수 확인: `lib`·`components`·`__tests__`·`e2e`에서 «비교과세 유무와 무관» 잔존 0건(이 계획서의 §2·§7 인용 제외). 테스트가 옛 문구를 참조하는 곳도 0건.
+- `npx tsc --noEmit`(힙 8GB) 0건 · 변경 4파일 eslint 오류 0건.
+- 주석만 바꾸므로 anchor·뮤테이션은 해당 없음(동작 변화가 없어 실패시킬 대상이 없다).
+
+### 9.2 Q-2 a · Q-3 a
+
+- Q-2 a: 이 PR에서 하지 않는다. 별도 워크트리에서 대주주 3억 구간 적용 단위를 조사한다(§92·§104①11호 조문 → 별지 84호 작성요령 → 엔진 측정 순). §3.2의 169,375,000 vs 183,750,000은 손계산이며 미검증이다.
+- Q-3 a: 기록만 한다(§4). 코드 변경 없음.
