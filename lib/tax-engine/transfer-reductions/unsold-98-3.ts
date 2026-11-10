@@ -33,6 +33,16 @@ export const UNSOLD_98_3_OVERCON_LAND_LIMIT = 660;
 export const UNSOLD_98_3_OVERCON_FLOOR_LIMIT = 149;
 export const UNSOLD_98_3_OVERCON_RATE = 0.6;
 
+/**
+ * 과밀억제권역 5년 후 양도 «확인 필요» 고지 (사용자 결정 2026-11-10: 현행 «5년간 발생분 × 60%» 유지 + 고지).
+ * 법 §98의3① 5년 후 괄호 「(수도권과밀억제권역인 경우에는 양도소득금액의 100분의 60에 상당하는 금액)」은 문언상
+ * 「양도소득금액 전체의 60%」로 읽힐 여지가 있다. 이 계산기는 5년간 발생분(령 §40① 준용 안분) × 60%로 계산한다.
+ * 이를 직접 다룬 해석례는 확인하지 못했다.
+ */
+export const UNSOLD_98_3_OVERCON_READING_NOTICE =
+  "수도권과밀억제권역 5년 후 양도: 조특법 §98의3①의 「수도권과밀억제권역인 경우에는 양도소득금액의 100분의 60에 상당하는 금액」은 " +
+  "문언상 양도소득금액 전체의 60%로 읽힐 여지가 있습니다. 이 계산기는 취득일부터 5년간 발생한 양도소득금액(기준시가 안분)의 60%를 공제하는 것으로 계산했습니다 — 확인 필요";
+
 // ─────────────────────────────────────────────────────────────────
 // §98의3
 // ─────────────────────────────────────────────────────────────────
@@ -244,7 +254,7 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
 
   if (reasons.length > 0) return ineligibleHybrid("unsold_98_3", reasons, legalBasis, rate, true);
 
-  return computeHybridEffect({
+  const result = computeHybridEffect({
     id: "unsold_98_3",
     legalBasis,
     articleLabel: isOvercon ? "조특법 §98의3① (수도권과밀억제권역 60%)" : "조특법 §98의3①",
@@ -258,4 +268,9 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
     rate,
     ruralSurtaxExempt: true, // 농특세령 §4⑦1호
   });
+  // 과밀 5년 후 공제 경로(적격·income_deduction)에만 독법 고지 — 5년 내 세액감면(산출세액 × 60%)에는 해당 문언이 없다.
+  if (isOvercon && result.isEligible && !result.isWithin5Years) {
+    return { ...result, warnings: [...(result.warnings ?? []), UNSOLD_98_3_OVERCON_READING_NOTICE] };
+  }
+  return result;
 }

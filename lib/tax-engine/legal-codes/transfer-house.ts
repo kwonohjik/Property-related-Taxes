@@ -151,6 +151,8 @@ export const MULTI_HOUSE = {
   TAX_INCENTIVE_HOUSE_5_BASIS: "소득세법 시행령 §167의3①5호",
   /** §167의3①3호 — 조특법 §97·§97의2·§98 감면 임대주택으로서 5년 이상 임대한 국민주택(감면대상장기임대주택) */
   TAX_INCENTIVE_RENTAL_3_BASIS: "소득세법 시행령 §167의3①3호",
+  /** §167의3①3호 + 2주택 §167의10①2호 준용 병기 — §98 입력 폼·세율 고지 문구 (manifest: TRANSFER_DECREE.TAX_INCENTIVE_HOUSE_167_3 · TWO_HOUSE_167_10_REFERENCE) */
+  TAX_INCENTIVE_RENTAL_3_WITH_TWO_HOUSE_BASIS: "소득세법 시행령 §167의3①3호·§167의10①2호",
   /**
    * 주택 1 + 산입 조합원입주권·분양권 1(법 §104⑦2호) — 영 §167의11①2호가 「제167조의3제1항제2호부터 제8호까지 및 제8호의2 중
    * 어느 하나에 해당하는 주택」을 준용한다(MST 290841 · NH-82 · US-85).

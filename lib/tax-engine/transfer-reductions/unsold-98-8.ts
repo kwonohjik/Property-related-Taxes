@@ -19,7 +19,7 @@
  * 5년 발생분 산식 = 령 §40① 준용 (령 §98의7④) — §99의3 calcSignedAllocation 재사용.
  */
 
-import { describeAllocationFormula } from "./unsold-allocation-display";
+import { allocationNoticeWarnings, describeAllocationFormula } from "./unsold-allocation-display";
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { UNSOLD_98_DECREE } from "../legal-codes/transfer-house";
@@ -141,6 +141,8 @@ export interface Unsold988Result {
   taxReductionForRuralSurtax: number;
   ruralSurtax: number;
   legalBasis: string;
+  /** 「확인 필요」 고지 — §99·§99의3 결과와 같은 이름·형태. 고지가 없으면 필드를 두지 않는다. */
+  warnings?: string[];
 }
 
 function ineligible(reasons: Unsold988IneligibleReason[], rentalMonths: number, rentalPeriodEcho?: Unsold986RentalPeriodEcho): Unsold988Result {
@@ -344,6 +346,7 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
       ? Math.max(0, safeMultiplyThenDivide(input.transferIncome, echoStd5Y - echoStdAcq, echoStdTransfer - echoStdAcq))
       : base;
   const reducible = isNonPositiveDenominator ? incomeCap : Math.min(applyRate(rawFiveYear, UNSOLD_98_8_DEDUCTION_RATE), incomeCap);
+  const noticeWarnings = isWithin5Years ? [] : allocationNoticeWarnings(signCase, UNSOLD_98_8_DEDUCTION_RATE);
   formulaSteps.push({
     label: "공제할 양도소득금액 (50%)",
     value: reducible,
@@ -372,5 +375,6 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
     taxReductionForRuralSurtax: 0,
     ruralSurtax: 0,
     legalBasis,
+    ...(noticeWarnings.length > 0 ? { warnings: noticeWarnings } : {}),
   };
 }

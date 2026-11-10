@@ -256,8 +256,9 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
 
       {kind === "unsold_98_6" && <Unsold986RentalPeriodLine echo={(result as UnsoldHybridResult).rentalPeriodEcho} />}
         {kind === "unsold_98_8" && <Unsold986RentalPeriodLine testId="unsold988-rental-period" echo={(result as Unsold988Result).rentalPeriodEcho} />}
-      {/* §99 확인 필요 고지 — 2015.12.31. 이전 양도 종전 규정(NH-49) */}
-      {kind === "new_99" && <ReductionDetailWarnings detail={result as New99Result} />}
+      {/* 「확인 필요」 고지 — §99는 2015.12.31. 이전 양도 종전 규정(NH-49) 등, 하이브리드·§98의8은 기준시가 안분 분모 ≤ 0·§98의3 과밀 독법.
+          결과 타입 모두 `warnings?: string[]`이라 한 렌더러가 읽는다. 고지가 없으면 아무것도 그리지 않는다. */}
+      <ReductionDetailWarnings detail={result} />
 
       <p className="text-caption text-emerald-700 dark:text-emerald-400">
         근거 조문: {result.legalBasis}
