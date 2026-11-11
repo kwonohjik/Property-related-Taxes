@@ -5,6 +5,7 @@
  * Scenario B 계산 · §97의2②3호 비교 · 반환을 일반 양도·부담부증여 경로가 한 지점에서 쓴다.
  */
 import { calculateHoldingPeriod, computeLumpSumDeductionBase } from "./tax-utils";
+import { lthdDeemedFloor } from "./transfer-tax-lthd-start";
 import { lumpSumDeductionRatioOf } from "./tax-utils";
 import { isBurdenedGiftCarryover } from "./transfer-tax-carryover-burdened-gift";
 import { buildInputB, ownerSplitPartEcho } from "./transfer-tax-carryover-inputs";
@@ -71,7 +72,7 @@ export function finishScenarios(args: {
   const determinedTaxA = resultA.determinedTax;
 
   // Scenario A 보유연수 (§95④ 단서 — 당초 증여자 취득일 기산)
-  const holdingA = calculateHoldingPeriod(ct.donorAcquisitionDate, rawInput.transferDate);
+  const holdingA = calculateHoldingPeriod(lthdDeemedFloor(ct.donorAcquisitionDate), rawInput.transferDate); // 의제취득일 하한(부칙 제8조)
 
   // 재개발(§166) 비부담부증여 — 취득가액 echo는 신고서와 같은 §166 역산(인가 전·후·청산금 분 합)이다. 증여자 취득가액만 싣던 종전 값은 인가 후 분 취득을 빠뜨렸다.
   // 부담부증여는 호출부가 이미 역산 값을 넘긴다(`acquisitionIsRedevelopmentFiling`).

@@ -10,6 +10,18 @@ import type { TransferTaxInput } from "./types/transfer.types";
 import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import { usesNbl2016LthdAnchor } from "./data/lthd-non-business-land-era";
 import { NBL_LTHD_EXCLUSION_LIFTED } from "./data/lthd-non-business-land-era";
+import { DEEMED_ACQUISITION_DATE } from "./types/inheritance-acquisition.types";
+
+/**
+ * 의제취득일 하한 — 1984.12.31. 이전에 취득한 토지·건물(소득세법 §94①1호)은 1985.1.1.에 취득한 것으로 본다
+ * (법률 제4803호 「소득세법개정법률」 부칙 제8조 · 1995.12.29. 전문개정). 부동산에 관한 권리(§94①2호)도 같은 날이다
+ * (같은 부칙 제8조 후단 위임 · 소득세법 시행령 §162⑥1호 · ⑦1호). 보유기간은 「그 자산의 취득일부터」(소득세법 §95④ 본문)라
+ * 장기보유특별공제 기산일도 의제취득일이다 — 상속(상속개시일 · 시행령 §162①5호)·매매 모두. 종전에는 실제 날짜(예: 1983-06-01)를 썼다
+ * (공제율은 두 날짜 모두 표 1 15년 이상 · 표 2 10년 이상 구간이라 세액 차이 0원 · 계획서 remaining-4-measurements §I).
+ */
+export function lthdDeemedFloor(d: Date): Date {
+  return d.getTime() < DEEMED_ACQUISITION_DATE.getTime() ? DEEMED_ACQUISITION_DATE : d;
+}
 
 /** LTHD/세율 보유기간 기산일 (용도변경·승계조합원 신축APT 분기 반영) */
 export function resolveLTHDStartDate(input: TransferTaxInput): Date {
@@ -50,12 +62,13 @@ export function resolveLTHDStartDate(input: TransferTaxInput): Date {
     return new Date(NBL_LTHD_EXCLUSION_LIFTED);
   }
 
-  if (!input.houseToCommercialConversion) return input.acquisitionDate;
-  if (!input.wasMultiHouseAtConversion) return input.acquisitionDate;
+  const acquired = lthdDeemedFloor(input.acquisitionDate);
+  if (!input.houseToCommercialConversion) return acquired;
+  if (!input.wasMultiHouseAtConversion) return acquired;
   const conversionDate = input.conversionDate;
-  if (!conversionDate) return input.acquisitionDate;
+  if (!conversionDate) return acquired;
   // 2012.1.1~2018.3.31 용도변경분: 그 시기 §95② 괄호에 다주택이 없었으므로 배제 자산일 수 없다.
-  if (!isMultiHouseLthdExclusionEra(conversionDate)) return input.acquisitionDate;
+  if (!isMultiHouseLthdExclusionEra(conversionDate)) return acquired;
   return conversionDate;
 }
 

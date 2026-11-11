@@ -100,7 +100,7 @@ bundledAcq = gbv.bundledAcquisitionPrice ?? engineInput.acquisitionPrice ?? 0
 
 ## §6. 범위 밖
 
-- **취득시기 의제(1985.1.1)의 보유기간·세율 반영** — ✅ **종결(2026-08-07): 현행 유지.** 아래 §6-1.
+- **취득시기 의제(1985.1.1)의 보유기간·세율 반영** — ✅ **종결(2026-08-07): 현행 유지.** 아래 §6-1. → 🔄 **2026-11-11 사용자 결정으로 장기보유 기산일에 반영**(`resolveLTHDStartDate` · 재개발 원조합원 · 이월과세 A 보유연수 — `docs/00-pm/remaining-4-measurements.plan.md` §I). 공용 `calculateHoldingPeriod`는 그대로다.
 - 상속 × 증축 · 상속 × 부담부증여.
 
 ### §6-1. 의제취득일 × 보유기간 — 실측 후 「현행 유지」로 종결
