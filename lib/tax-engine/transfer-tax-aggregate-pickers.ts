@@ -17,6 +17,7 @@ import { aggregateByGroup } from "./transfer-tax-aggregate-group-tax";
 import type { AssetRecord } from "./transfer-tax-aggregate-helpers";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { activeIncomeDeductionHybrid } from "./income-deduction-hybrid-pick";
+import { SEPARATE_LAND_TAX_REDUCTION_IDS } from "./transfer-reductions/new-housing-appurtenant-land-2x";
 import type {
   TransferReductionDetailSource,
   TransferValuationDetailSource,
@@ -129,6 +130,16 @@ export function incomeDeductionSourceIdOf(r: SingleResult): string | undefined {
   if (r.new99Detail?.reducibleTransferIncome !== undefined) return "new_99";
   if (r.unsold988Detail?.reducibleTransferIncome !== undefined) return "unsold_98_8";
   return activeIncomeDeductionHybrid(r)?.id;
+}
+
+/**
+ * 5년 이내 **세액감면**으로 이 카드에 적용된 주택 감면의 조문 id(`SEPARATE_LAND_TAX_REDUCTION_IDS`) — 별도 토지 카드 고지용. 없으면 undefined.
+ * 소득금액 차감형은 `incomeDeductionSourceIdOf`가 맡는다(둘은 §127⑦ 택일이라 한 카드에 하나).
+ */
+export function housingTaxReductionIdOf(r: SingleResult): string | undefined {
+  if (r.isExempt || !(r.reductionAmount > 0)) return undefined;
+  const id = r.reductionTypeApplied;
+  return id !== undefined && SEPARATE_LAND_TAX_REDUCTION_IDS.has(id) ? id : undefined;
 }
 
 /** 농특세 비과세(§98의3·§98의5 — ruralSurtaxExempt) income-deduction 차감분. 해당분은 농특세 baseline에서 제외. */
