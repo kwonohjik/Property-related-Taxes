@@ -23,6 +23,7 @@
  */
 
 import { format } from "./utc-date";
+import { lthdDeemedFloor } from "./transfer-tax-lthd-start";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
 import { LTHD_CONVERSION_95_5_CUTOFF } from "./tax-utils";
@@ -296,7 +297,9 @@ export interface RedevelopmentLthdResult {
 export function computeRedevelopmentLthd(
   input: RedevelopmentLthdInput,
 ): RedevelopmentLthdResult {
-  const { redevelopment, acquisitionDate, transferDate, isSuccessorRightToMoveIn } = input;
+  const { redevelopment, transferDate, isSuccessorRightToMoveIn } = input;
+  // 의제취득일 하한(법률 제4803호 부칙 제8조 · 소득세법 §95④) — 장기보유 기산일만(`lthdDeemedFloor` · 계획서 remaining-4-measurements §I)
+  const acquisitionDate = lthdDeemedFloor(input.acquisitionDate);
   const { subject, approvalDate, settlementDirection, settlementSaleDate } = redevelopment;
 
   // ─ 사례 46 가드: exemptionEligibleAtApproval=false 시 표1 강등 ─
