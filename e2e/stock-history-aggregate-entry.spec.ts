@@ -46,7 +46,8 @@ function stockRecord(id: string, name: string, transferDate: string, finalTax: n
       // 예정신고 기한은 §105①2호로 **반기 말일 + 2개월** — 상·하반기가 다른 신고서다.
       filingDate: transferDate < `${transferDate.slice(0, 4)}-07-01` ? `${transferDate.slice(0, 4)}-08-31` : `${Number(transferDate.slice(0, 4)) + 1}-02-28`,
     },
-    resultData: { finalTax, localIncomeTax: Math.floor(finalTax / 10) },
+    // V-19: 합산 진입 자동 채움은 예정신고 산출세액(`calculatedTax`)을 읽는다 — 가산세·공제가 없는 일반 예정신고라 결정세액과 같다
+    resultData: { calculatedTax: finalTax, finalTax, localIncomeTax: Math.floor(finalTax / 10) },
     taxLawVersion: transferDate,
     linkedCalculationId: null,
     clientId: null,

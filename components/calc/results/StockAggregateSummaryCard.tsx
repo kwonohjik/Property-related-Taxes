@@ -338,6 +338,17 @@ export function StockAggregateSummaryCard({
               <dd className="font-mono tabular-nums">{won(aggregate.totalLatePaymentPenalty)}</dd>
             </div>
           )}
+          {/* V-21 — 전자신고를 선택했으나 공제 대상이 아닌 신고(확정·수정신고 · 2021-02-17 전 양도): 공제 0원이 된 사실을 알린다 */}
+          {aggregate.electronicFilingCreditNotice && (
+            <div>
+              <dd
+                data-testid="stock-electronic-credit-notice"
+                className="text-xs text-muted-foreground"
+              >
+                {aggregate.electronicFilingCreditNotice}
+              </dd>
+            </div>
+          )}
           <div className="flex justify-between">
             <dt>양도소득세 결정세액</dt>
             {/* 이력에 저장되는 값과 대조하는 E2E 셀렉터 — stock-multi-history-record.spec.ts */}

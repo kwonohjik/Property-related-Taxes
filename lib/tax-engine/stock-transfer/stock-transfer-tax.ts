@@ -31,6 +31,10 @@ import { calcHoldingPeriod, calcBasicDeduction, floorTaxBase, floorTen, applyDee
 import { computeCross89Adjustment } from "../comparative-104-5-cross";
 import { isSec104_5LatterClauseInForce } from "../data/sec104-5-latter-clause-era";
 import { stockFilingPenaltyEraNotice } from "../data/filing-penalty-base-era";
+import {
+  electronicFilingCreditNotice,
+  isElectronicFilingCreditApplicable,
+} from "../data/electronic-filing-credit-scope";
 import { NBL_HEAVY_CORP_BRACKETS, NBL_HEAVY_CORP_CATEGORIES } from "./stock-rate-tables";
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
@@ -600,6 +604,12 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     penalty: finalizeResult.underReportPenalty,
   });
   if (penaltyEraNotice) warnings.push(penaltyEraNotice);
+  // 전자신고를 켰는데 공제 대상이 아니면(확정·수정신고 또는 2021-02-17 전 양도) 0원이 된 사실을 알린다(V-21) — 조용한 0 금지.
+  const electronicCreditNotice = electronicFilingCreditNotice({
+    isElectronicFiling: input.isElectronicFiling,
+    applicable: isElectronicFilingCreditApplicable(input.filingType, input.transferDate),
+  });
+  if (electronicCreditNotice) warnings.push(electronicCreditNotice);
 
   // ──────────────────────────────────────────────────────────
   // STEP 12.5: 증권거래세 정보성 산출 (appended step)
