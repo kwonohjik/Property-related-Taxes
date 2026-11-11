@@ -27,7 +27,7 @@ import {
   isSuppValuedHouseInheritance,
 } from "@/lib/tax-engine/housing-excess-split";
 import { buildInheritedAcquisitionPayload } from "./transfer-tax-api-inheritance";
-import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
+import { sendsFamilyBusinessInheritance } from "./transfer-fb-gate";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { deriveLegacyPartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
@@ -74,7 +74,7 @@ function suppValuedInheritedAsset(asset: AssetForm, isNonPrimary: boolean): bool
   if (isNonPrimary) return false;
   // 취득원인(상속·단순 증여)·건물 상속 + 토지 매매 혼합(D2 — payload가 비어 있다)은 ④ `buildInheritedAcquisitionPayload`가 이미 걸러 `undefined`로 돌려준다 — 따로 보지 않는다.
   // 가업상속 의제 취득가액이 켜진 상속 — ④가 `familyBusinessInheritance`를 싣는 조건과 같다
-  if (asset.familyBusinessInheritance !== undefined && allowsFamilyBusinessInheritance(asset)) return false;
+  if (asset.familyBusinessInheritance !== undefined && sendsFamilyBusinessInheritance(asset)) return false;
   const ia = buildInheritedAcquisitionPayload(asset, 1, false).inheritedAcquisition as
     | { mode?: string; assetKind?: string; reportedMethod?: string; reportedValue?: number }
     | undefined;

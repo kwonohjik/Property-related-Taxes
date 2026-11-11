@@ -228,6 +228,12 @@ export function buildMixedUsePartCards(
      *   보조 2키(`inheritedHouseValuation`·`commercialInheritanceValuation`)는 이 키가 없으면 STEP 0.45가 읽지 않는다.
      */
     inheritedAcquisition: undefined,
+    /**
+     * · **가업상속공제 의제취득가액**(`familyBusinessInheritance` · §97의2④): 겸용 엔진 미지원(범위 밖)이다. 남기면 카드마다 STEP 0.42가
+     *   자산 전체 의제취득가액으로 취득가액을 덮는다(2026-11-11 실측: 주 자산 묶음 +19,410,112 · 지분 60/40 −55,078,862). ④·⑧은 화면 잔재를
+     *   막고(`sendsFamilyBusinessInheritance`), 여기는 직접 API 호출을 막는다 — 단건 겸용 엔진도 이 키를 읽지 않는다.
+     */
+    familyBusinessInheritance: undefined,
   } satisfies Partial<TransferTaxItemInput>;
 
   /** 주택이 아닌 파트 — 세대 축을 지운다(GB `buildProperties`와 같은 규약). */

@@ -453,6 +453,10 @@ export function validateAssetEntry(
     // 남아 있을 수 있다. 「침묵 오산보다 명시 차단」 규약(A04).
     return `${label}: 가업상속공제 §97의2④는 상속으로 취득한 자산에만 적용됩니다. 취득원인을 상속으로 되돌리거나 가업상속공제 입력을 해제하세요.`;
   }
+  // 겸용주택 잔재 — ④가 싣지 않는다(`sendsFamilyBusinessInheritance`). 조용히 버리지 않고 해제를 요구한다(사용자 결정 a · ⑤ 토글은 겸용이어도 끄기는 된다).
+  if (a.familyBusinessInheritance && a.isMixedUseHouse) {
+    return `${label}: 겸용주택은 가업상속공제 의제취득가액(§97의2④)을 지원하지 않습니다. 가업상속공제 입력을 해제하세요.`;
+  }
   if (a.familyBusinessInheritance) {
     const fb = a.familyBusinessInheritance;
     if (fb.decedentAcquisitionPrice == null || parseAmount(String(fb.decedentAcquisitionPrice)) < 0)

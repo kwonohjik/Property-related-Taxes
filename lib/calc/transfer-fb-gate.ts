@@ -39,3 +39,17 @@ export function allowsFamilyBusinessInheritance(
   if (effectiveBuildingCauseMix(asset)) return false;
   return asset.acquisitionCause === "inheritance";
 }
+
+/**
+ * ④가 `familyBusinessInheritance`를 **싣는** 조건 — 렌더 술어(`allowsFamilyBusinessInheritance`) ∧ 겸용주택 아님.
+ *
+ * 겸용주택은 가업상속공제 의제취득가액 미지원(범위 밖)이다 — ⑤ 토글은 겸용이면 켜지 못한다. 그런데 일반 주택에서 켜 두고
+ * 겸용으로 바꾸면 값이 남고, 종전에는 ④가 그대로 실어 **함께 양도 파트 카드마다** STEP 0.42가 자산 전체 의제취득가액으로
+ * 취득가액을 덮었다(2026-11-11 실측 · mock 세율: 주 자산 묶음 208,837,200 → 228,247,312 · 지분 60/40 173,866,000 → 118,787,138).
+ * 렌더 술어에는 넣지 않는다 — 넣으면 섹션이 사라져 남은 값을 끌 수 없다(⑧이 해제를 요구하므로 막다른 길). 사용자 결정 a(명시 해제 요구).
+ */
+export function sendsFamilyBusinessInheritance(
+  asset: Parameters<typeof allowsFamilyBusinessInheritance>[0],
+): boolean {
+  return allowsFamilyBusinessInheritance(asset) && !asset.isMixedUseHouse;
+}
