@@ -19,6 +19,10 @@ import { findSurchargeExclusionBasis } from "@/lib/tax-engine/surcharge-exclusio
 import { findRuralSurtaxDeductionBasis } from "@/lib/tax-engine/rural-surtax-basis";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { isBgSuccessorRight } from "@/lib/calc/transfer-successor-right";
+
+/** 승계조합원 입주권 부담부증여 — 결과 명세 취득가 라벨(V-2). 자산이 없으면 false. */
+const isBgSuccessorRightOf = (a: AssetForm | undefined): boolean => !!a && isBgSuccessorRight(a);
 
 /**
  * 단건 결과뷰의 ⑦ 「상세 산출근거 카드」 묶음이 **하나라도 렌더되는가**.
@@ -98,6 +102,7 @@ export function SingleDetailCards({
         <BurdenedGiftDetailCard
           breakdown={result.transferBurdenedGiftBreakdown}
           propertyType={asset?.assetKind ?? formData?.assets?.[0]?.assetKind}
+          successorRight={isBgSuccessorRightOf(asset ?? formData?.assets?.[0])}
           warnings={result.warnings}
           // 재개발 완공 아파트 × K-5 — 엔진이 §166③으로 계산한 값(명세의 일반 환산값 대신 표시)
           redevSec166={redevSec166DisplayOf(result)}

@@ -83,4 +83,13 @@ test.describe("승계 입주권 부담부증여 — 취득가액 입력 한 곳"
     expect(after.status).toBe(200);
     expect(after.tax).toBe(control.tax);
   });
+
+  test("SR-E3: 결과 명세 취득가 라벨 「입주권 취득가」(V-2 · 종전 「건물 취득가」)", async ({ page }) => {
+    await seed(page, { ...RIGHT, transferType: "burdened_gift" });
+    const r = await calcTax(page);
+    expect(r.status).toBe(200);
+    const spec = page.getByText("부담부증여 평가 명세 (소득세법 시행령 §159)").first().locator("xpath=ancestor::div[contains(@class,'rounded-lg')][1]");
+    await expect(spec).toContainText("입주권 취득가 = 실지취득가 400,000,000");
+    await expect(spec).not.toContainText("건물 취득가");
+  });
 });
