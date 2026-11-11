@@ -53,6 +53,14 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // 4년·8년은 2020.8.18. 개정 전 §2 4~6호 본문(시행 2019.10.24., MST 208479 실독)이다. 현행은 장기·공공지원 10년,
+    // 단기 6년(6의2호)이라 숫자를 키워드로 두면 영구 실패한다 — 용어가 남아 있는지만 지킨다(없어지면 인용을 다시 본다).
+    id: "PRIVATE_RENTAL.MANDATORY_PERIOD_TERMS",
+    citation: "민간임대주택에 관한 특별법 §2",
+    keywords: ["공공지원민간임대주택", "장기일반민간임대주택", "단기민간임대주택", "임대할 목적으로 취득하여 임대하는 민간임대주택"],
+    keywordMode: "ALL",
+  },
+  {
     id: "PRIVATE_RENTAL.MANDATORY_PERIOD",
     citation: "민간임대주택에 관한 특별법 §43",
     keywords: ["임대의무기간 및 양도 등", "그 기간이 지나지 아니하면 이를 양도할 수 없다"],
