@@ -68,6 +68,17 @@ export function PenaltyDetailBlock({
         onChange={(v) => onChange({ priorPaidTax: v })}
         hint="예정신고 시 이미 납부한 세액"
       />
+      {/*
+        V-13 — 이 칸은 §111③ 확정신고 정산의 «기납부 양도소득세»와 **다른 입력 축**이다(`stock-transfer-tax-schema.ts`
+        의 `preliminaryPaidTax` 주석 참조). 정산 칸에만 넣고 여기를 비우면 정산은 기납부를 반영하는데 가산세 기준금액은
+        결정세액 전액이 된다. 계산·전송은 건드리지 않고 관계만 알린다(계획서 stock-penalty-base-unit-v13.plan.md Q-1 a).
+      */}
+      <p data-testid="stock-penalty-prior-paid-hint" className="text-caption text-muted-foreground">
+        가산세 기준금액은 «그 신고로 납부할 세액»입니다(국세기본법 §47조의2①·§47조의3①). 확정신고라면 확정신고
+        정산(§111③)의 «기납부 양도소득세»에 넣은 값과 같은 금액을, 예정신고를 이미 신고한 양도소득금액과 합산하여
+        내는 경우(소득세법 §107②)에는 이미 신고한 예정신고 산출세액을 넣으세요. 이 칸은 정산 칸과 이어져 있지
+        않으며, 비워 두면 기준금액은 결정세액 전액입니다.
+      </p>
 
       {/*
         §47조의3①1호는 「**가목 + 나목을 합한** 금액」이다 —
