@@ -372,6 +372,8 @@ function aggregateInOrder(
   const processedByIndex = new Array<StockTransferResult>(inputs.length);
   // 종목별 «가목 2) 대주주 누진표를 탄 과세표준» — 세액을 낸 코드(`rateResult.majorProgressiveBase`)가 알려준 값.
   const majorProgressiveBases = new Array<number>(inputs.length).fill(0);
+  // 종목별 **절사 전** 산출세액 — 군 합계를 한 번만 절사하기 위한 입력(계획서 V-8).
+  const rawCalculatedTaxes = new Array<number>(inputs.length).fill(0);
   const processItem = (i: number): StockTransferResult => {
     const input = inputs[i];
     const r = rawItems[i];
@@ -428,6 +430,7 @@ function aggregateInOrder(
           );
       const newCalculatedTax = floorTen(rateResult.calculatedTax);
       majorProgressiveBases[i] = rateResult.majorProgressiveBase ?? 0;
+      rawCalculatedTaxes[i] = rateResult.calculatedTax;
 
       // 🔑 **국외주식은 여기서 `finalizeStockTax`를 타지 않는다.** 다만 이유가 종전 주석과
       //   다르다 — 「국외는 가산세가 없어서」가 **아니다**.
@@ -600,6 +603,7 @@ function aggregateInOrder(
   const majorProgressiveGroupTax = computeMajorProgressiveGroupTax(
     processedItems,
     majorProgressiveBases,
+    rawCalculatedTaxes,
   );
 
   // 영 §168② — **§104⑤ MAX 「이후」** 차감(근거·소실 메커니즘은 헬퍼 주석 참조).
