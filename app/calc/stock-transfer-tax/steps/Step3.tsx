@@ -36,6 +36,8 @@ import {
   LatePaymentPenaltyBlock,
 } from "@/components/calc/stock-transfer/PenaltyDetailBlock";
 import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
+import { judgePrelimMultiPeriod } from "@/lib/calc/stock-prelim-multi-period";
+import { StockPrelimMultiPeriodNotice } from "@/components/calc/stock-transfer/StockPrelimMultiPeriodNotice";
 
 interface Step3Props {
   form: StockTransferFormData;
@@ -94,6 +96,17 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
 
   /** 확정 종목이 있으면 합산신고다 — §111③ 정산은 합산 경로에만 실린다(④와 같은 술어). */
   const isMultiFiling = savedItems.length > 0;
+  const prelimMultiPeriod = useMemo(
+    () =>
+      judgePrelimMultiPeriod(
+        filingType,
+        [...savedItems, form].map((f) => ({
+          transferDate: effectiveTransferDate(f),
+          marketType: f.marketType,
+        })),
+      ),
+    [filingType, savedItems, form],
+  );
 
   /** 이 종목의 예정신고 기한 — 국외주식이면 `undefined`(대상 아님) */
   const filingDeadline = useMemo(
@@ -504,6 +517,11 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
               onChange={(v) => onChange({ filingDate: v })}
             />
           </FieldCard>
+
+          {/* V-10 — 예정 + 다반기 합산: 합계는 과세기간 누계라는 안내(세액·전송 불변) */}
+          {isMultiFiling && prelimMultiPeriod && (
+            <StockPrelimMultiPeriodNotice periods={prelimMultiPeriod.periods} />
+          )}
 
           {/**
             * §111③ 확정신고 기납부세액 정산 — **확정신고 + 2종목 이상 + 국내 종목 존재**에서만.

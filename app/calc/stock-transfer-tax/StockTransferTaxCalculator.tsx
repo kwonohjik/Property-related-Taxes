@@ -24,6 +24,9 @@ import { callStockTransferTaxAggregateAPI } from "@/lib/calc/stock-transfer-tax-
 import { validateFilingItems } from "@/lib/calc/stock-transfer-tax-validate";
 import { StockItemListCard } from "@/components/calc/stock-transfer/StockItemListCard";
 import { StockAggregateSummaryCard } from "@/components/calc/results/StockAggregateSummaryCard";
+import { StockPrelimMultiPeriodNotice } from "@/components/calc/stock-transfer/StockPrelimMultiPeriodNotice";
+import { judgePrelimMultiPeriod } from "@/lib/calc/stock-prelim-multi-period";
+import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
 // ⚠️ 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import를 지울 때
 //    같은 라인의 **사용 중인** named까지 함께 날린다(CLAUDE.md의 ESLint --fix 함정).
 import { validateStepByIndex } from "@/lib/calc/stock-transfer-tax-validate";
@@ -154,6 +157,18 @@ export default function StockTransferTaxCalculator() {
         ? ({ __multiStock: true, items: [...savedItems, formData] } as unknown as Record<string, unknown>)
         : (formData as unknown as Record<string, unknown>),
     [isMultiFiling, savedItems, formData],
+  );
+  // V-10 — 신고 유형이 예정인데 합산 종목이 여러 반기에 걸치는가(안내 전용, 세액·전송 불변)
+  const prelimMultiPeriod = useMemo(
+    () =>
+      judgePrelimMultiPeriod(
+        formData.filingType,
+        [...savedItems, formData].map((f) => ({
+          transferDate: effectiveTransferDate(f),
+          marketType: f.marketType,
+        })),
+      ),
+    [savedItems, formData],
   );
   // v2: pendingEditId·saveAsUpdate·saveAsNew API 폐기 — saveOrUpdateByContent 자동 dedup
   useAutoSaveCalculation({
@@ -447,6 +462,12 @@ export default function StockTransferTaxCalculator() {
                 */}
                 {aggregateResult && (
                   <div className="mt-8">
+                    {/* V-10 — 예정 + 다반기 합산: 합계가 과세기간 누계라는 안내(세액·전송 불변) */}
+                    {prelimMultiPeriod && (
+                      <div className="mb-4">
+                        <StockPrelimMultiPeriodNotice periods={prelimMultiPeriod.periods} />
+                      </div>
+                    )}
                     <StockAggregateSummaryCard
                       aggregate={aggregateResult}
                       names={[...savedItems, formData].map((f) => f.securityName)}
