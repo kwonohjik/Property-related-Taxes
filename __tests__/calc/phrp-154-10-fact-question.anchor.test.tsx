@@ -91,7 +91,7 @@ describe("판정 메뉴 — §154⑩ 사실 질문", () => {
     const f = jForm();
     expect(phrp154_10QuestionInScope(f.assets[0].rentalHousingException, f.transferDate)).toBe(true);
     expect(phrpErrors(f).map((e) => e.message)).toEqual([
-      "장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 양도한 적이 있는지 「예」 또는 「아니오」로 답하세요.",
+      "장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 §155⑳을 적용받아 다른 거주주택을 양도한 적이 있는지 「예」 또는 「아니오」로 답하세요.",
     ]);
   });
 

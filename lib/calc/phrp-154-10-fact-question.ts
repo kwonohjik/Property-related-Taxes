@@ -74,8 +74,17 @@ export function withPhrp154_10Answer(asset: AssetForm, answer: unknown): AssetFo
 
 export const PHRP_154_10_QUESTION_FIELD = "rentalHousingException.phrp154_10Answer";
 
+/**
+ * 직전거주주택 = §155⑳을 적용받아 양도한 「거주주택」(소령 §154⑩2호 → §155⑳ 후단 · ⑳ 본문의 「거주주택」 정의).
+ * 일시적 2주택(§155①) 등 다른 규정으로 양도한 주택은 직전거주주택이 아니다 — 거주주택 양도 때 §155①·⑳을 함께 충족하면
+ * 납세자가 §155①을 선택할 수 있고, 그 경우 이 주택은 기간 안분 없이 판정한다(사용자 확정 법리 2026-11-12).
+ * 화면 질문·⑳ 카드 안내가 같은 문장을 쓴다.
+ */
+export const PRIOR_RESIDENCE_155_20_ONLY_NOTE =
+  "직전거주주택은 §155⑳(장기임대주택 거주주택 특례)을 적용받아 양도한 주택만 해당합니다 — 일시적 2주택(소령 §155①) 등 다른 규정으로 양도했다면 직전거주주택이 아니어서 기간 안분 없이 계산합니다.";
+
 /** ⑧ — 질문이 보이는데 답이 없으면 막는다. 「모름」은 두지 않는다(본인이 한 등록·양도라 알 수 있는 사실 — 계획서 §5). */
 export function phrp154_10AnswerError(rh: Rh | undefined, transferDate: string | undefined): string | null {
   if (!rh || !phrp154_10QuestionInScope(rh, transferDate) || phrp154_10AnswerOf(rh)) return null;
-  return "장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 양도한 적이 있는지 「예」 또는 「아니오」로 답하세요.";
+  return "장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 §155⑳을 적용받아 다른 거주주택을 양도한 적이 있는지 「예」 또는 「아니오」로 답하세요.";
 }
