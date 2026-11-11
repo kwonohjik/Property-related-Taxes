@@ -37,6 +37,7 @@ import { collectStep1Issues } from "./transfer-tax-validate-step1";
 import { collectWithFields, type IssueField } from "./transfer-tax-validate-field";
 import { isMultiHouseSurchargeSuppressed, isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import { axisBEffectiveAsset } from "./axis-b-effective-asset";
+import { bgShareCauseMismatchMessage } from "./bg-share-own-acquisition";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
@@ -444,6 +445,11 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
       const entry = axisBEffectiveAsset(form, i);
       const message = fractionalModeWithoutBundle ? fractionalModeShareIssue(form.assets[i], i) : validateAssetEntry(entry, i, form);
       if (message) issues.push({ step, assetIndex: i, message });
+      // 축 B 상속 · 증여 지분 × 지분 토글 꺼짐 — 자산 1의 취득가액으로 계산되지 않게 토글을 요구한다(Q-42 a)
+      else if (fullFractional && i > 0 && primaryAsset) {
+        const mismatch = bgShareCauseMismatchMessage(form.assets[i], entry, primaryAsset, `자산 ${i + 1}`);
+        if (mismatch) issues.push({ step, assetIndex: i, field: "bgShareOwnAcquisition", message: mismatch });
+      }
     }
 
     /**

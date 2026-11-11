@@ -48,7 +48,7 @@ export function BurdenedGiftShareOwnAcquisitionBlock({ asset, merged, primaryAss
   );
 
   return (
-    <div data-testid="bg-share-own-acquisition">
+    <div data-testid="bg-share-own-acquisition" data-field="bgShareOwnAcquisition">
       <ToggleCard
         tone="violet"
         title="이 지분의 취득가액을 자산 1과 따로 입력"

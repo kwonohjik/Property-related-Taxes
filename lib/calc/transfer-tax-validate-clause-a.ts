@@ -221,6 +221,10 @@ export function postDeemedClauseARequiredError(asset: AssetForm, label: string):
    *    신고가액)이 **유일한 취득가액 입력 경로**다 — 비우면 대체 소스가 없다.
    */
   if (asset.isMixedUseHouse) return null;
+  // 부담부증여(의제취득일 이후)는 ①을 쓰지 않는다 — §159①1호 A는 「부담부증여」 카드의 실지취득가액 칸(평가액을 넣는다 · Q-24 a)이고,
+  //   화면도 이 칸을 숨긴다(`CompanionAcqInheritanceBlock` 「입력란을 표시하지 않습니다」). 요구하면 칸 없는 막다른 길이었다
+  //   (단건 · 축 A · 축 B 모두 · 계획서 remaining-4-measurements.plan.md §A · Q-40 a). 형제 `originalMemberClauseARequiredError`와 같다.
+  if (asset.transferType === "burdened_gift") return null;
   if (
     asset.assetKind === "commercial_building" ||
     asset.assetKind === "redevelopment_apt" ||

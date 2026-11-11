@@ -18,6 +18,11 @@
 - **Q-41 a** 단건 · 축 A · 함께 양도 · 축 B를 한 번에.
 - **Q-42 a** 지분 취득원인이 자산 1과 다르면(상속 · 증여) 지분 실지 칸(지분 토글)을 ⑧이 요구한다.
 
+### A.3 구현 (2026-11-11)
+- ⑧ `postDeemedClauseARequiredError` · 상가 `validateCommercialInheritanceAsset` · ⑫ `refineCompanionInheritedValue`에서 의제취득일 이후 부담부증여를 면제했다(Q-40 a · Q-41 a — 단건 · 축 A · 함께 양도 · 축 B 모두 같은 함수).
+- Q-42 a: `bgShareCauseMismatchMessage`(`lib/calc/bg-share-own-acquisition.ts`) — 축 B 지분이 상속 · 증여이고 자산 1과 원인이 다르며 지분 토글이 꺼져 있으면 ⑧ `bgShareOwnAcquisition`(토글 카드로 이동). **자산 1의 취득 금액을 그대로 쓰는 산정방식만**(K-4 · K-6 · K-7) — 환산(K-5)은 그 지분의 취득시 기준시가, 담보 승은 기준시가 × 채무비율이라 제외(전체 회귀에서 `gb-bg-carryover-bundled-block` 지분 분할 K-5 증여 지분 시료로 발견). 상속 지분 × K-5는 기존 규칙(상속 자산 = 평가액, 환산 불가)이 먼저 막는다.
+- anchor `transfer.route.bg-inherited-post-deemed-dead-end.anchor.test.ts` 17건(DE-1 축 B 462,000,000 · DE-2 단건 480,000,000이고 ① 무관 · DE-3 토글 요구 · DE-4 ⑫ 직접 호출 200 · DE-5 일반 양도는 종전대로 ① 요구) · 뮤테이션 5/5 · E2E `bg-inherited-post-deemed-dead-end.spec.ts` DE-E1.
+
 ## B. PR-3 — 부담부증여 K-4 × §163⑨ 단서 · 일반건물 · 재개발 · 입주권 (Q-43 ~ Q-46)
 
 ### B.1 실측(β 0.5)
