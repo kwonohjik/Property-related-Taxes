@@ -28,9 +28,21 @@ describe("US-34 ⑧ — §98 시리즈 감면주택 + 부수토지 별도 카드
     }
   });
 
-  it("A-3: 대조군 — 감면 없음 · 범위 밖 조문(§98의8·§99) · 독립 나대지 · 같은 물건 지분 분할은 막지 않는다", () => {
+  it("A-4: §98의8·§99의2도 같다(2026-11-11 사용자 결정 A) — 직접 해석례 미확인을 밝힌다", () => {
+    for (const id of ["unsold_98_8", "unsold_99_2"]) {
+      const iss = appurtenantIssues(form(withRed(id), LAND("l1", 300)));
+      expect(iss, id).toHaveLength(1);
+      expect(iss[0].message).toContain("직접 해석례는 확인하지 못해");
+      expect(iss[0].message).toContain("한 장의 주택 카드");
+    }
+    // §98 시리즈 조문이 함께 있으면 해석례가 직접 근거인 문구
+    const mixed = appurtenantIssues(form({ ...HOUSE(0), reductions: [getReductionDefault("unsold_98_7" as never), getReductionDefault("unsold_98_8" as never)] }, LAND("l1", 300)));
+    expect(mixed[0].message).not.toContain("직접 해석례는 확인하지 못해");
+  });
+
+  it("A-3: 대조군 — 감면 없음 · 범위 밖 조문(§98의4·§99) · 독립 나대지 · 같은 물건 지분 분할은 막지 않는다", () => {
     expect(appurtenantIssues(form(HOUSE(0), LAND("l1", 300)))).toEqual([]);
-    expect(appurtenantIssues(form(withRed("unsold_98_8"), LAND("l1", 300)))).toEqual([]);
+    expect(appurtenantIssues(form(withRed("unsold_98_4"), LAND("l1", 300)))).toEqual([]);
     expect(appurtenantIssues(form(withRed("new_99"), LAND("l1", 300)))).toEqual([]);
     expect(appurtenantIssues(form(withRed("unsold_98_7"), { ...LAND("l1", 300), landNature: "standalone" }))).toEqual([]);
     const frac = { ...(form(withRed("unsold_98_7"), LAND("l1", 300)) as object), assetSplitMode: "fractional" } as never;

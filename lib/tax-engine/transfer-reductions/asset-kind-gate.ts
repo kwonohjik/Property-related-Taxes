@@ -122,7 +122,8 @@ const UNSOLD_98_SERIES_ALLOWED_KINDS = new Set<ReductionAssetKind>(["housing"]);
  *    8호 가목에서 명문으로 뺀다(MST 288915). 같은 조 ⑦은 5년간 양도소득금액을 령 §40① 준용으로만 정해 재개발 변형(종전주택 기준시가)이 없다.
  * 종전에는 «이번 결정 범위 밖»이라 카테고리 게이트를 탔다 — 재개발APT가 §99의2를 고르면 5년 이내 100% 세액감면·5년 후 소득금액 공제가,
  * §98의8을 고르면 5년간 발생분 50% 차감이 일반 주택과 똑같이 적용됐다(2026-11-11 mock 실측).
- * ⚠ `UNSOLD_98_SERIES_HOUSING_ONLY_IDS`에 섞지 않는다 — 그 집합은 부수토지 분리 차단(US-34) 같은 다른 규칙도 키로 쓴다.
+ * ⚠ `UNSOLD_98_SERIES_HOUSING_ONLY_IDS`에 섞지 않는다 — 두 집합의 근거 강도가 다르다(6조문은 부수토지 해석례가 직접 근거, 이 둘은 유추).
+ *   부수토지 분리 차단(US-34, `transfer-tax-validate-asset.ts`)은 2026-11-11 두 집합을 모두 키로 쓰되 안내 문구로 그 차이를 밝힌다.
  * §98의4(비거주자 10% — 사업주체 최초 계약 요건 없음)·§98의9(주택 수 제외)는 이 이유가 없어 대상이 아니다.
  */
 export const UNSOLD_SPONSOR_FIRST_CONTRACT_EXTRA_IDS: ReadonlySet<string> = new Set(["unsold_98_8", "unsold_99_2"]);

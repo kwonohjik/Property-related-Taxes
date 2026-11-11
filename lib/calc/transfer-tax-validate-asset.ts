@@ -18,7 +18,7 @@
  * 799 → 697줄 (2026-08-07, 상가 3블록 위임 — 트리거 800 직하라 여유분 확보).
  */
 
-import { UNSOLD_98_SERIES_HOUSING_ONLY_IDS } from "@/lib/tax-engine/transfer-reductions/asset-kind-gate";
+import { UNSOLD_98_SERIES_HOUSING_ONLY_IDS, UNSOLD_SPONSOR_FIRST_CONTRACT_EXTRA_IDS } from "@/lib/tax-engine/transfer-reductions/asset-kind-gate";
 import { REDUCTION_METADATA } from "@/lib/tax-engine/transfer-reductions/metadata";
 import { validateMixedSaleSplit } from "./transfer-tax-validate-mixed-use-sale-split";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
@@ -289,20 +289,28 @@ export function validateAssetEntry(
      * US-34 — 조특법 §98 시리즈 감면주택의 부수토지를 별도 토지 카드로 나누면 토지분이 특례에서 빠진다(토지 카드에는 감면을 걸 수 없다 —
      * 조문 게이트 `UNSOLD_98_SERIES_HOUSING_ONLY_IDS`). 해석례는 실제 부수토지로 쓰는 부분도 특례 대상으로 본다(재산세과-861 · 재산세과-1685 ·
      * 부동산거래관리과-1097). 사용자 결정 2026-11-06 「조합 차단」 — 한 장의 주택 카드로 입력하게 안내한다(실측: 분리 시 §98의7 18,239,998 과대).
+     * 2026-11-11 사용자 결정(선택지 A): §98의8·§99의2(`UNSOLD_SPONSOR_FIRST_CONTRACT_EXTRA_IDS`)도 같이 막는다 — 같은 구조(분리 시 §99의2 +34,430,000 ·
+     * §98의8 +17,200,000 과대, mock 실측). 다만 위 해석례는 모두 §98의3 사건이고 이 두 조문의 부수토지 해석례는 확인하지 못했다(령 §99의2③만
+     * 감면대상기존주택의 부수토지를 명문으로 포함) — 그래서 안내 문구가 «직접 해석례 미확인»을 밝힌다.
      */
     if (a.landNature === "appurtenant" && form.assetSplitMode !== "fractional") {
       const unsoldIds = new Set(
         form.assets
           .filter((o) => o.assetId !== a.assetId && o.assetKind === "housing")
           .flatMap((o) => (o.reductions ?? []).map((r) => r.type))
-          .filter((t) => UNSOLD_98_SERIES_HOUSING_ONLY_IDS.has(t)),
+          .filter((t) => UNSOLD_98_SERIES_HOUSING_ONLY_IDS.has(t) || UNSOLD_SPONSOR_FIRST_CONTRACT_EXTRA_IDS.has(t)),
       );
       if (unsoldIds.size > 0) {
         const labels = [...unsoldIds].map((t) => REDUCTION_METADATA[t as keyof typeof REDUCTION_METADATA]?.uiLabel ?? t).join(" · ");
+        // §98 시리즈는 해석례(재산세과-861)가 직접 근거다. §98의8·§99의2만 고른 경우 그 해석례는 §98의3 사건이라 «같은 방식으로 본다»고 밝힌다.
+        const onlyExtra = [...unsoldIds].every((t) => UNSOLD_SPONSOR_FIRST_CONTRACT_EXTRA_IDS.has(t));
+        const basis = onlyExtra
+          ? "(§98 시리즈 해석례는 실제 주택 부수토지로 쓰는 부분도 특례 대상으로 봅니다 — 재산세과-861. 이 조문의 직접 해석례는 확인하지 못해 같은 방식으로 입력하게 합니다 — 확인 필요)"
+          : "(실제 주택 부수토지로 쓰는 부분도 특례 대상 — 재산세과-861)";
         return fieldError(
           "landNature",
           `${label}: 함께 양도하는 주택에 ${labels} 특례를 선택했습니다. 그 주택의 부수토지를 별도 토지 카드로 나누면 토지분이 특례에서 빠집니다 ` +
-            "(실제 주택 부수토지로 쓰는 부분도 특례 대상 — 재산세과-861). 주택과 부수토지를 한 장의 주택 카드로 입력하세요.",
+            `${basis}. 주택과 부수토지를 한 장의 주택 카드로 입력하세요.`,
         );
       }
     }
