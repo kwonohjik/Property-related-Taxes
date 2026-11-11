@@ -57,7 +57,7 @@ export function buildFailMessage(
       }
       return `${n}호: 해당 유형(${article}목)의 등록기준일 요건을 충족하지 않습니다(단기 6년 유형은 2025.6.4 이후 등록).`;
     case "SHORT_TO_LONG_CHANGE":
-      return `${n}호: 단기임대에서 장기일반으로 변경신고한 주택은 §155⑳ 특례 대상이 아닙니다.`;
+      return `${n}호: 단기임대를 2020.7.11. 이후 장기일반으로 변경신고한 주택은 §155⑳ 특례 대상이 아닙니다.`;
     case "NATIONAL_SIZE_REQUIRED":
       return `${n}호: 국민주택규모(전용 85㎡·수도권 도시지역 60㎡ 이하) 요건을 충족해야 합니다.`;
     case "REGION_RESTRICTED":

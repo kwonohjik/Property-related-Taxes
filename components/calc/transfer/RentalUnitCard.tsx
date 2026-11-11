@@ -190,7 +190,11 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
           />
         </FieldCard>
 
-        <FieldCard label="지자체 임대사업자등록신청일" required>
+        <FieldCard
+          label="지자체 임대사업자등록신청일"
+          required
+          hint="2020.7.10. 이전에 오피스텔 분양권 상태로 등록하고 2020.7.11. 이후 완공되어 주택으로 사용한 경우에도 §155⑳을 적용합니다(기획재정부 재산세제과-1413, 2023.12.22. — 임대기간 외 요건을 충족한 경우)."
+        >
           <DateInput
             data-testid={`rental-reg-date-${index}`}
             value={unit.rentalRegistrationDate}
@@ -422,7 +426,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
           variant="card"
           size="sm"
           tone="rose"
-          title="단기임대에서 장기일반으로 변경신고한 주택입니다."
+          title="단기임대를 2020.7.11. 이후 장기일반으로 변경신고한 주택입니다."
           description="해당하면 §155⑳ 특례가 배제됩니다."
           checked={unit.isExcludedShortToLongChange}
           onCheckedChange={(v) => set("isExcludedShortToLongChange", v)}
