@@ -14,6 +14,10 @@ const FIELD_LABEL: Record<string, string> = {
   acquisitionDate: "취득일자",
   transferPrice: "양도가액",
   acquisitionPrice: "취득가액",
+  // 400에서 와이어 경로가 그대로 보이던 금액 칸(계획서 remaining-4-measurements.plan.md §D · Q-51 a)
+  totalSalePrice: "양도가액 합계(함께 양도)",
+  "inheritedAcquisition.reportedValue": "상속·증여 평가액(상속세·증여세 신고가액)",
+  "burdenedGiftInfo.mortgageDebtAmount": "부담부증여 채무액(근저당)",
 
   // 환산취득가
   useEstimatedAcquisition: "환산취득가 사용",
@@ -159,6 +163,8 @@ const MESSAGE_PATTERNS: { test: RegExp; replace: string | ((m: RegExpMatchArray)
   // Zod v4 메시지: "Invalid input: expected X, received Y"
   { test: /^Invalid input:\s*expected\s+(\w+),\s*received\s+undefined$/i, replace: "필수 입력 항목입니다" },
   { test: /^Invalid input:\s*expected\s+(\w+),\s*received\s+nan$/i, replace: "숫자를 입력하세요" },
+  // 309자리 이상 금액은 `Infinity` → JSON `null`로 도착한다(Q-51 a)
+  { test: /^Invalid input:\s*expected\s+number,\s*received\s+null$/i, replace: "숫자가 너무 크거나 올바르지 않습니다" },
   { test: /^Invalid input:\s*expected\s+(\w+),\s*received\s+(\w+)$/i, replace: (m) => `예상 자료형 ${m[1]}, 입력값 ${m[2]}` },
   // Zod v3 메시지
   { test: /^Expected (\w+), received undefined$/i, replace: "필수 입력 항목입니다" },

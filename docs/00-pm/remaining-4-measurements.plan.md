@@ -88,6 +88,12 @@
 - **Q-50 a** `CurrencyInput` 입력 자릿수 상한(15자리).
 - **Q-51 a** `FIELD_LABEL`에 세 경로 라벨 · `received null` 문구 정정.
 
+### D.3 구현 (2026-11-11 · Q-49 a · Q-50 a · Q-51 a)
+- Q-49: 변경 없음(실세율 = mock = 시드 · 결정세액 차 0원).
+- Q-50: `CurrencyInput` 입력 자릿수 상한 `MAX_AMOUNT_DIGITS = 15`(부호 제외 · 붙여 넣기도 앞 15자리) — 전 세목 금액 칸 한 곳. 코드가 값을 넣는 경로(이력 복원 · 자동조회)와 합계 초과는 막지 못한다(측정상 현실 금액 아님).
+- Q-51: `FIELD_LABEL`에 `totalSalePrice` · `inheritedAcquisition.reportedValue` · `burdenedGiftInfo.mortgageDebtAmount` 라벨 · `received null` → 「숫자가 너무 크거나 올바르지 않습니다」.
+- 테스트 `__tests__/components/currency-input-digit-cap.test.tsx` 6건 · 뮤테이션 2/2.
+
 ## E. 부수 발견 — 기록만(확인 필요)
 
 - 승계조합원 재개발 K-5 양도차익에 개산공제가 빠진 것으로 보인다(주택 K-5는 넣는다 · 엔진 주석은 「K-5 개산공제 적용」 `burdened-gift-acquisition.ts:131 · 329`).
