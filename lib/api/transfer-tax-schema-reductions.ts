@@ -127,7 +127,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     constructionYear: z.number().int().optional(),
     isNationalHousing: z.boolean().optional(),
     ...rental97UnitCountShape,
-    _phase1Stub: z.literal(true).optional(),
   }),
   z.object({
     type: z.literal("rental_97_proviso"),
@@ -136,7 +135,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     isNationalHousing: z.boolean().optional(),
     ...rental97UnitCountShape,
     provisoCase: z.enum(["a_construction", "b_purchase", "c_10years"]).optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   z.object({
     type: z.literal("rental_97_2"),
@@ -151,7 +149,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     isMultiUnitHousing972: z.boolean().optional(),
     /** D9-01 — §97의2①1호 나목 「1999.8.20 현재 입주된 사실이 없는 주택」 */
     isUnoccupiedAt19990820: z.boolean().optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   z.object({
     type: z.literal("rental_97_3"),
@@ -178,7 +175,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     shortTermConversion: z
       .object({ reportedDate: z.string().date(), acceptedDate: z.string().date() })
       .optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   z.object({
     type: z.literal("rental_97_4"),
@@ -206,7 +202,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     aptDeadlineExtension974: aptDeadlineExtensionSchema.optional(),
     ...rental97CommonShape,
     region: z.enum(["capital", "non_capital"]).optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   z.object({
     type: z.literal("rental_97_5"),
@@ -237,7 +232,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     ...rental97CommonShape,
     officialPriceAtStart: z.number().int().nonnegative().optional(),
     region: z.enum(["capital", "non_capital"]).optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   // §99 — P1 본격 구현 (2026-06-11): 차감형 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
@@ -269,14 +263,12 @@ export const reductionSchema = z.discriminatedUnion("type", [
     firstContract99: z.enum(["yes", "no", "unknown"]).optional(),
     /** 재개발 완공 아파트 조합원 — 기간 경과 후 사용승인이면 조합의 기간 내 잔여주택 직접 계약 사실 (조특령 §99③2호 · NH-27 — ⑫ 누락 시 침묵 strip) */
     remainderContract99: z.enum(["yes", "no", "unknown"]).optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   // §99의3 — Phase 2 본격 구현 (2026-05-06): 본 요건 필드 추가 + Phase 1 stub 호환
   z.object({
     type: z.literal("new_99_3"),
     /** Phase 1 stub 호환 region 필드 (deprecated, 마이그레이션 전 임시) */
     region: z.enum(["metropolitan", "non_metropolitan"]).optional(),
-    _phase1Stub: z.literal(true).optional(),
     // ── Phase 2 본 요건 필드 (모두 optional — Phase 1 stub 호환 + UI에서 필수 검증) ──
     /** 분양계약일 (1호 적용) */
     contractDate993: z.string().date().optional(),
@@ -341,7 +333,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     ruralHouseType994: z.enum(["multi_unit", "other"]).optional(),
     ruralHouseAreaSqm994: z.number().positive().optional(),
     ruralHouseRegionCode: z.string().optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   z.object({
     type: z.literal("new_99_4_hometown"),
@@ -358,7 +349,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     ruralHouseAreaSqm994: z.number().positive().optional(),
     ruralHouseRegionCode: z.string().optional(),
     meetsHometownRequirement: z.boolean().optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   // §98 — P5 본격 구현 (2026-06-12, ⑫)
   z.object({
@@ -372,7 +362,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     isNotRentalHousing98: z.boolean().optional(),
     isFirstBuyerNoOccupancy98: z.boolean().optional(),
     rentedFor5Years98: z.boolean().optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   // §98의2 — P4 본격 구현 (2026-06-12, ⑫)
   z.object({
@@ -384,7 +373,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     isFirstOrFcfsContract982: z.boolean().optional(),
     /** US-15 · Q-1 (A) — 매매계약일 현재 입주 사실 3상태(미전송 = 모름 → 엔진 불성립). ⑫에 없으면 침묵 stripping된다. */
     occupiedAtContract982: z.enum(["yes", "no", "unknown"]).optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   // §98의3 — P3 본격 구현 (2026-06-12): 하이브리드 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
@@ -407,7 +395,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     standardPriceAtAcquisition983: z.number().int().nonnegative().optional(),
     standardPriceAt5Years983: z.number().int().nonnegative().optional(),
     standardPriceAtTransfer983: z.number().int().nonnegative().optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   // §98의4 — P4 본격 구현 (2026-06-12, ⑫)
   z.object({
@@ -415,7 +402,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     contractDate984: z.string().date().optional(),
     isNonResidentNoPe984: z.boolean().optional(),
     isNotUnsold983House984: z.boolean().optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   // §98의5 — P3 본격 구현 (2026-06-12)
   z.object({
@@ -436,7 +422,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     standardPriceAtAcquisition985: z.number().int().nonnegative().optional(),
     standardPriceAt5Years985: z.number().int().nonnegative().optional(),
     standardPriceAtTransfer985: z.number().int().nonnegative().optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   // §98의6 — P3 본격 구현 (2026-06-12)
   z.object({
@@ -461,7 +446,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     standardPriceAtAcquisition986: z.number().int().nonnegative().optional(),
     standardPriceAt5Years986: z.number().int().nonnegative().optional(),
     standardPriceAtTransfer986: z.number().int().nonnegative().optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   // §98의7 — P2 본격 구현 (2026-06-11): 하이브리드 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
@@ -477,7 +461,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     standardPriceAtAcquisition987: z.number().int().nonnegative().optional(),
     standardPriceAt5Years987: z.number().int().nonnegative().optional(),
     standardPriceAtTransfer987: z.number().int().nonnegative().optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   // §98의8 — P1 본격 구현 (2026-06-11): 차감형 50% 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
@@ -500,7 +483,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     standardPriceAtAcquisition988: z.number().int().nonnegative().optional(),
     standardPriceAt5Years988: z.number().int().nonnegative().optional(),
     standardPriceAtTransfer988: z.number().int().nonnegative().optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   // §98의9 — Phase 2 본격 구현 (2026-06-11): 주택수 제외 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
@@ -512,7 +494,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     isNonCapitalRegion: z.boolean().optional(),
     wasOneHouseholdAtAcquisition: z.boolean().optional(),
     meetsSellerAndContractRequirement: z.boolean().optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
   // §99의2 — P2 본격 구현 (2026-06-11): 하이브리드 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
@@ -532,6 +513,5 @@ export const reductionSchema = z.discriminatedUnion("type", [
     standardPriceAtAcquisition992: z.number().int().nonnegative().optional(),
     standardPriceAt5Years992: z.number().int().nonnegative().optional(),
     standardPriceAtTransfer992: z.number().int().nonnegative().optional(),
-    _phase1Stub: z.literal(true).optional(),
   }),
 ]);

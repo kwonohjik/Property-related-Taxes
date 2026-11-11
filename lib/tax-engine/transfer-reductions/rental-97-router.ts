@@ -53,7 +53,7 @@ function isRentalVariant(r: TransferReduction): r is RentalReductionVariant {
   return LTHD_IDS.has(r.type) || TAX_AMOUNT_IDS.has(r.type);
 }
 
-/** Phase 1 stub(_phase1Stub) 또는 본 필드 미입력 항목은 평가 제외 — 시한 검증만 받던 기존 동작 보존 */
+/** Phase 1 stub(type만 오던 시절) 또는 본 필드 미입력 항목은 평가 제외 — 시한 검증만 받던 기존 동작 보존 */
 function hasSubstantiveFields(r: RentalReductionVariant): boolean {
   return r.registrationDate !== undefined || r.rentalStartDate !== undefined;
 }

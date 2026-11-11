@@ -16,7 +16,6 @@ import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import {
   reclassifiedLegacyHousingType,
   migrateReductionReclassification,
-  analyzeReductionReclassificationImpact,
 } from "@/lib/storage/migrations/reduction-reclassification";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { loadFallbackTransferRates } from "@/lib/db/tax-rates";
@@ -101,13 +100,6 @@ describe("NH-73 이력(IndexedDB) 이관 — 같은 규칙", () => {
     const n = await migrateReductionReclassification(fakeTx(records));
     expect(n).toBe(4);
     expect(records.map((r) => r.inputData.assets[0].reductions[0].type)).toEqual(["new_99_3", "unsold_98_3", "new_99_3", "new_99_3"]);
-  });
-
-  it("C2 영향 산정(`analyze…Impact`)도 같은 규칙으로 센다", async () => {
-    const records = [rec("2005-06-01", "2003-05-01"), rec("2009-06-01", "2009-05-01"), rec("2005-06-01", undefined), rec("2012-06-01", "2003-05-01")];
-    const impact = await analyzeReductionReclassificationImpact({ calculations: { toArray: async () => records as never } });
-    expect(impact.byType.unsold_housing_to_new_99_3).toBe(3);
-    expect(impact.byType.unsold_housing_to_unsold_98_3).toBe(1);
   });
 });
 

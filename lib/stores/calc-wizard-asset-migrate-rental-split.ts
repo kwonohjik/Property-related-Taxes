@@ -144,7 +144,7 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           ...(r.type === "rental_97_4" && r.isApartment974 === undefined ? { isApartment974: "" } : {}),
         };
       }
-      // §99의4 (2026-06-11): 구 stub 데이터(_phase1Stub) 본 필드 누락 보정 (③)
+      // §99의4 (2026-06-11): 구 stub 데이터(본 필드 없이 type만 있던 항목) 본 필드 누락 보정 (③)
       // NH-30 — 연접 여부는 기본값을 채우지 않는다: 옛 토글 `isAdjacentArea`의 false는 기본값과 답을 구별할 수 없어
       // 미응답으로 강등한다(읽기 `new994AdjacentAnswer` — 명부 행 선언도 같은 함수로 읽는다). 면적 칸은 빈 값(범위 안이면 ⑧ 필수).
       if (r && (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown")) {

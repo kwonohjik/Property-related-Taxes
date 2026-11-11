@@ -500,11 +500,11 @@ export function toEngineReductions(
     // ── §98의9 수도권 밖 준공후미분양 (2026-06-11): 주택수 제외 본 변환 (④) ──
     // 날짜는 string 그대로 — Route handler(⑭ route-reductions-mapper)에서 Date 변환.
     if (r.type === "unsold_98_9") return toUnsold989Payload(r);
-    // ── Phase 1 stub 잔여: 본 요건 미구현 — type만 전달 (엔진은 시한 검증만 수행) ──
+    // ── Phase 1 stub 잔여: 본 요건 미구현 — type만 전달 (엔진은 시한 검증만 수행). 종전의 `_phase1Stub` 표지는 읽는 곳이 없어 걷었다 ──
     // 해당 ID들은 transfer.types.ts TransferReductionStub 정의 + Zod schema 통과 보장.
     // TypeScript narrowing이 모든 케이스를 소진해 never로 좁혀지므로 unknown 캐스트로 우회.
     const stubType = (r as unknown as { type: string }).type;
-    return { type: stubType, _phase1Stub: true as const };
+    return { type: stubType };
   });
 }
 

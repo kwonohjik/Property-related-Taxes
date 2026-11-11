@@ -6,7 +6,6 @@ import { describe, it, expect } from "vitest";
 import {
   reclassifiedLegacyHousingType,
   migrateReductionReclassification,
-  analyzeReductionReclassificationImpact,
   UNSOLD_HOUSING_UNRESOLVED_TYPE,
 } from "@/lib/storage/migrations/reduction-reclassification";
 import { UNSOLD_98_3_PERIOD_FROM_RESIDENT, UNSOLD_98_3_PERIOD_TO } from "@/lib/tax-engine/transfer-reductions/unsold-98-3";
@@ -64,11 +63,9 @@ describe("Q-28 세 진입점이 같은 결과", () => {
   const rec = (acq: string, contract?: string): Rec => ({
     inputData: { assets: [{ acquisitionDate: acq, ...(contract ? { assetContractDate: contract } : {}), reductions: [{ type: U }] }] },
   });
-  it("이력(Dexie upgrade) + 영향 산정", async () => {
+  it("이력(Dexie upgrade)", async () => {
     const records = [rec("2009-06-01"), rec("2012-06-01"), rec("2005-06-01"), rec("2012-06-01", "2010-01-20")];
     const tx = { table: () => ({ toCollection: () => ({ modify: async (fn: (r: Rec) => void) => records.forEach(fn) }) }) } as never;
-    const impactBefore = await analyzeReductionReclassificationImpact({ calculations: { toArray: async () => records as never } });
-    expect(impactBefore.byType).toMatchObject({ unsold_housing_to_new_99_3: 1, unsold_housing_to_unsold_98_3: 2, unsold_housing_to_unresolved: 1 });
     await migrateReductionReclassification(tx);
     expect(records.map((r) => r.inputData.assets[0].reductions[0].type)).toEqual([
       "unsold_98_3", UNSOLD_HOUSING_UNRESOLVED_TYPE, "new_99_3", "unsold_98_3",

@@ -34,7 +34,6 @@ interface Rental97CommonFields {
   vacancyPeriods?: { startDate: Date; endDate: Date }[];
   /** 임대기간 안분용 기준시가 3점 (조특령 §97의3⑤·§97의5② — 임대개시>취득 시 필수) */
   stdPriceAtRentalStart?: number;
-  _phase1Stub?: true;
   /** D2-06 — 임대가 양도일까지 계속되었는가 (조특령 §97의3⑤ B·§97의5②) */
   rentalContinuesToTransfer?: boolean;
   /** D2-06 — 실제 임대기간 마지막 날의 기준시가 (원) */
@@ -169,14 +168,12 @@ export type TransferReductionStub =
       /** (2호 · 매매) 최초 매매계약·계약금 납부자 본인 여부 — 조특법 §99①2호 (NH-03) */
       firstContract99?: "yes" | "no" | "unknown";
       /** 재개발 완공 아파트 조합원 — 기간 경과 후 사용승인 + 조합의 기간 내 잔여주택 직접 계약 사실 (조특령 §99③2호 · NH-27) */
-      remainderContract99?: "yes" | "no" | "unknown";
-      _phase1Stub?: true }
+      remainderContract99?: "yes" | "no" | "unknown"; }
   // §99의3 — Phase 2 본격 구현 (2026-05-06): 본 요건 필드 union 멤버
   | {
       type: "new_99_3";
       // Phase 1 stub 호환
       region?: "metropolitan" | "non_metropolitan";
-      _phase1Stub?: true;
       // Phase 2 본 요건 필드 (lib/tax-engine/transfer-reductions/new-99-3.ts New993Input 일부)
       contractDate993?: string;
       usageApprovalDate993?: string;
@@ -230,8 +227,7 @@ export type TransferReductionStub =
       ruralHouseType994?: "multi_unit" | "other";
       ruralHouseAreaSqm994?: number;
       /** 명부 행 법정동코드 — ⑫ 수도권 모순 판정 전용(NH-20). 엔진 평가에는 쓰지 않는다 */
-      ruralHouseRegionCode?: string;
-      _phase1Stub?: true }
+      ruralHouseRegionCode?: string; }
   | { type: "new_99_4_hometown";
       /** 판정 메뉴 명부 행 id — 「어느 주택인가」 */
       houseId?: string;
@@ -247,8 +243,7 @@ export type TransferReductionStub =
       ruralHouseAreaSqm994?: number;
       /** 명부 행 법정동코드 — ⑫ 수도권 모순 판정 전용(NH-20). 엔진 평가에는 쓰지 않는다 */
       ruralHouseRegionCode?: string;
-      meetsHometownRequirement?: boolean;
-      _phase1Stub?: true }
+      meetsHometownRequirement?: boolean; }
   // 미분양 §98 시리즈 + §99의2
   // §98 — P5 본격 구현 (2026-06-12): 세율 20% 본 필드
   | { type: "unsold_98";
@@ -259,8 +254,7 @@ export type TransferReductionStub =
       isUnsoldConfirmed98?: boolean;
       isNotRentalHousing98?: boolean;
       isFirstBuyerNoOccupancy98?: boolean;
-      rentedFor5Years98?: boolean;
-      _phase1Stub?: true }
+      rentedFor5Years98?: boolean; }
   // §98의2 — P4 본격 구현 (2026-06-12): 특칙 전용 본 필드
   | { type: "unsold_98_2";
       contractDate982?: Date;
@@ -268,8 +262,7 @@ export type TransferReductionStub =
       isNonCapitalUnsold982?: boolean;
       isFirstOrFcfsContract982?: boolean;
       /** 매매계약일 현재 입주 사실 3-state — "no"만 적용(US-15 · Q-1 (A)) */
-      occupiedAtContract982?: "yes" | "no" | "unknown";
-      _phase1Stub?: true }
+      occupiedAtContract982?: "yes" | "no" | "unknown"; }
   // §98의3 — P3 본격 구현 (2026-06-12): 하이브리드 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "unsold_98_3";
       residencyType983?: "resident" | "nonresident_no_pe" | "nonresident_with_pe";
@@ -290,14 +283,12 @@ export type TransferReductionStub =
       isNotExcludedSelfBuilt983?: boolean;
       standardPriceAtAcquisition983?: number;
       standardPriceAt5Years983?: number;
-      standardPriceAtTransfer983?: number;
-      _phase1Stub?: true }
+      standardPriceAtTransfer983?: number; }
   // §98의4 — P4 본격 구현 (2026-06-12): 비거주자 10% 본 필드
   | { type: "unsold_98_4";
       contractDate984?: Date;
       isNonResidentNoPe984?: boolean;
-      isNotUnsold983House984?: boolean;
-      _phase1Stub?: true }
+      isNotUnsold983House984?: boolean; }
   // §98의5 — P3 본격 구현 (2026-06-12)
   | { type: "unsold_98_5";
       /** US-42 — 거주자 또는 국내사업장 없는 비거주자. 미제공 = true */
@@ -315,8 +306,7 @@ export type TransferReductionStub =
       isNotRecontract985?: boolean;
       standardPriceAtAcquisition985?: number;
       standardPriceAt5Years985?: number;
-      standardPriceAtTransfer985?: number;
-      _phase1Stub?: true }
+      standardPriceAtTransfer985?: number; }
   // §98의6 — P3 본격 구현 (2026-06-12)
   | { type: "unsold_98_6";
       hoType986?: "seller_rented" | "buyer_rented";
@@ -338,8 +328,7 @@ export type TransferReductionStub =
       inheritedRentalMonths986?: number;
       standardPriceAtAcquisition986?: number;
       standardPriceAt5Years986?: number;
-      standardPriceAtTransfer986?: number;
-      _phase1Stub?: true }
+      standardPriceAtTransfer986?: number; }
   // §98의7 — P2 본격 구현 (2026-06-11): 하이브리드 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "unsold_98_7";
       contractDate987?: Date;
@@ -351,8 +340,7 @@ export type TransferReductionStub =
       isNotRecontract987?: boolean;
       standardPriceAtAcquisition987?: number;
       standardPriceAt5Years987?: number;
-      standardPriceAtTransfer987?: number;
-      _phase1Stub?: true }
+      standardPriceAtTransfer987?: number; }
   // §98의8 — P1 본격 구현 (2026-06-11): 차감형 50% 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "unsold_98_8";
       contractDate988?: Date;
@@ -371,8 +359,7 @@ export type TransferReductionStub =
       isNotRecontract988?: boolean;
       standardPriceAtAcquisition988?: number;
       standardPriceAt5Years988?: number;
-      standardPriceAtTransfer988?: number;
-      _phase1Stub?: true }
+      standardPriceAtTransfer988?: number; }
   // §98의9 — Phase 2 본격 구현 (2026-06-11): 주택수 제외 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "unsold_98_9";
       /** 판정 메뉴 명부 행 id — 「어느 주택인가」 */
@@ -382,8 +369,7 @@ export type TransferReductionStub =
       unsoldHouseExclusiveArea?: number;
       isNonCapitalRegion?: boolean;
       wasOneHouseholdAtAcquisition?: boolean;
-      meetsSellerAndContractRequirement?: boolean;
-      _phase1Stub?: true }
+      meetsSellerAndContractRequirement?: boolean; }
   // §99의2 — P2 본격 구현 (2026-06-11): 하이브리드 본 필드 (Date — route mapper ⑭ 변환)
   | { type: "unsold_99_2";
       houseType992?: "new_or_unsold" | "self_built" | "existing_one_house";
@@ -400,5 +386,4 @@ export type TransferReductionStub =
       hasConfirmationSeal992?: boolean;
       standardPriceAtAcquisition992?: number;
       standardPriceAt5Years992?: number;
-      standardPriceAtTransfer992?: number;
-      _phase1Stub?: true };
+      standardPriceAtTransfer992?: number; };
