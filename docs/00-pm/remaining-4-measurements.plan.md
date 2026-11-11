@@ -64,6 +64,12 @@
 - **Q-47 a** 재개발 지분별 산정방식(K-4 ↔ K-5)을 연다 — 클라이언트(④ 되돌림 칸 · 토글 노출 · 라디오 · 지분 카드 ③ 판정값 · ⑧)만.
 - **Q-48 a** 지분 카드 분기에서 K-6 · K-7 · K-5 · 기준시가 · 담보 승 문구를 함께 고친다(표시만).
 
+### C.3 구현 (2026-11-11 · Q-47 a · Q-48 a)
+- Q-47: `bgShareOwnAcquisitionFields` — 재개발은 `bgAcquisitionMethod` + `bgActualAcquisitionTotal`(입주권은 실지 한 칸 그대로) · 토글 노출은 재개발이면 시가 · 담보 승 아님(산정방식 무관) · 지분 블록에 산정방식 라디오(원조합원은 K-6 · K-7이 `bgPresumedBlock`으로 막힌다). 지분 카드 산정방식이 비면(그 전에 저장된 카드) 자산 1 값을 쓴다(`mergePrimaryBasic` — 화면 · ④ · ⑧ 공통). 엔진 변경 없음.
+- 의도한 기존 단언 반전 5곳: `__tests__/lib/bg-share-own-acquisition.test.ts`(재개발 K-5 열림) · RO-4(K-5 칸 · 실지 두 칸 · 지분 산정방식) · E2E ROE-1(라디오 있음 · 출처 안내) · ROE-3(토글 보임 · 꺼짐).
+- Q-48: `validateBurdenedGiftAsset` — 축 B 둘째 이후 지분 카드면 K-6 · K-7 · K-5 · 기준시가 · 담보 승 문구가 「이 지분 카드의 「이 지분의 취득시 기준시가 (물건 전체)」 칸」을 가리킨다(K-5 양도시 기준시가는 자산 1의 ②). 칸 키 · 조건 그대로.
+- 검증: anchor `transfer.route.bg-axis-b-redev-share-method.anchor.test.ts` 8건(원조합원 60/40 417,816,140 · 30/70 435,429,921 · 승계 360,000,000 · 292,500,000 · 반대 조합 431,251,770 · 397,791,436 · 348,000,000 · 384,000,000 = 측정 오라클) · `transfer.route.bg-axis-b-share-card-wording.anchor.test.ts` 7건 · 뮤테이션 3/3 · E2E ROE-4.
+
 ## D. 실세율 · MAX_SAFE (Q-49 · Q-50 · Q-51)
 
 ### D.1 실측

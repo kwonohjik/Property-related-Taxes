@@ -166,7 +166,12 @@ export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
   const merged = mergePrimaryBasicAll(a, primary);
   // 축 B × 부담부증여 — 지분 카드가 자기 산정방식 · 실지취득가액을 받기로 했으면 그 칸만 되돌린다(D-2 · 재개발 · 입주권은 실지 한 칸 — D-3g · `bg-share-own-acquisition.ts`).
   if (a !== primary && bgShareOwnAcquisitionActive(a, merged)) {
-    for (const k of bgShareOwnAcquisitionFields(merged)) (merged as unknown as Record<string, unknown>)[k] = a[k];
+    for (const k of bgShareOwnAcquisitionFields(merged)) {
+      // 재개발 지분의 산정방식은 Q-47 a(2026-11-11)부터 지분 칸이다 — 그 전에 저장된 카드(토글 켬 · 실지만)는 산정방식이 비어 있어 자산 1 값을 그대로 쓴다.
+      //   화면(병합값 표시) · ④ · ⑧이 모두 이 병합을 지나므로 세 층이 같다.
+      if (k === "bgAcquisitionMethod" && merged.assetKind === "redevelopment_apt" && !a[k]) continue;
+      (merged as unknown as Record<string, unknown>)[k] = a[k];
+    }
   }
   // 축 B × 부담부증여 — 양도시 기준시가는 같은 물건 · 같은 양도일의 물건 단위 값이다. 지분 카드에는 칸이 없다(②가 숨고 ③은 부담부증여로 판정한다).
   // 병합하지 않으면 기준시가 평가 · 환산(K-5)에서 ⑧이 숨은 ②를 요구해 막다른 길이었다(계획서 vp2c §17 D-3d · Q-11 (가)). 일반 양도 지분은 ③에 자기 칸이 있어 그대로 둔다.

@@ -175,6 +175,16 @@ export function validateBurdenedGiftAsset(
       ? `${label}: 원조합원 지분의 종전 부동산 실지취득가액을 첫 번째 지분 카드 「② 양도정보」에 물건 전체 기준으로 입력하세요(첫 카드가 승계조합원이면 「원조합원 지분의 종전 부동산 실지취득가액」, 원조합원이면 「종전 부동산 실지취득가액」 칸). 지분율로 안분됩니다.`
       : undefined;
 
+  /**
+   * 축 B 둘째 이후 지분 카드에는 「② 양도정보」가 없다 — 취득시 기준시가 칸은 그 카드의 「이 지분의 취득시 기준시가 (물건 전체)」다
+   * (`BurdenedGiftTrancheBasisBlock`). 양도시 기준시가는 자산 1에서 병합된다(`mergePrimaryBasic`). 문구만 바꾼다 — 칸 키 · 조건은 그대로
+   * (계획서 remaining-4-measurements.plan.md §C · Q-48 a).
+   */
+  const shareCard = isFractionalSplitAxis === true && isNonPrimaryShare === true;
+  const acqStdOnSecondPart = shareCard
+    ? "이 지분 카드의 「이 지분의 취득시 기준시가 (물건 전체)」 칸에 이 지분 취득일 현재 기준시가를"
+    : "「② 양도정보」의 취득시 기준시가를";
+
   // (1) F-3 (2026-05-12): commercial_building 확장
   if (!SUPPORTED_KINDS.includes(asset.assetKind)) {
     return `${label}: 부담부증여는 ${SUPPORTED_LABELS} 자산에서만 지원됩니다 (현재: ${ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind}).`;
@@ -448,9 +458,14 @@ export function validateBurdenedGiftAsset(
           !parseAmount(asset.standardPriceAtTransfer) ||
           (!redevSec166 && !bgConvertedCarryoverReadsGiftValuation(asset) && !parseAmount(asset.standardPriceAtAcq))
         ) {
+          const transferMissing = !parseAmount(asset.standardPriceAtTransfer);
           return fieldError(
-            !parseAmount(asset.standardPriceAtTransfer) ? "standardPriceAtTransfer" : "standardPriceAtAcq",
-            `${label}: 부담부증여 환산취득가액 — 「② 양도정보」의 양도시·취득시 기준시가를 입력하세요 (소령 §176의2②2호).`,
+            transferMissing ? "standardPriceAtTransfer" : "standardPriceAtAcq",
+            shareCard
+              ? transferMissing
+                ? `${label}: 부담부증여 환산취득가액 — 자산 1 카드 「② 양도정보」의 양도시 기준시가를 입력하세요(지분 카드는 자산 1 값을 씁니다 · 소령 §176의2②2호).`
+                : `${label}: 부담부증여 환산취득가액 — ${acqStdOnSecondPart} 입력하세요 (소령 §176의2②2호).`
+              : `${label}: 부담부증여 환산취득가액 — 「② 양도정보」의 양도시·취득시 기준시가를 입력하세요 (소령 §176의2②2호).`,
           );
         }
       }
@@ -576,7 +591,7 @@ export function validateBurdenedGiftAsset(
     // 시가 모드 담보 승 — 엔진이 같은 상태에서 400을 낸다(「취득시 기준시가를 입력하세요」). 칸은 ⑤가 같은 술어로 연다(O-5).
     if (bgCollateralForcesStdAcq(asset, isFractionalSplitAxis === true)) {
       const acqStdInput =
-        asset.assetKind === "land" ? "취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를" : "「② 양도정보」의 취득시 기준시가를";
+        asset.assetKind === "land" ? "취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를" : acqStdOnSecondPart;
       return fieldError("standardPriceAtAcq", `${label}: 부담부증여 — 담보평가액이 시가보다 커서 증여가액이 담보평가액(「상속세 및 증여세법」 제66조)이고, 취득가액은 산정방식과 관계없이 취득시 기준시가 × 채무비율입니다(「소득세법 시행령」 제159조 제1항 제1호 괄호). ${acqStdInput} 입력하세요.`);
     }
     // K-6/K-7도 이 칸이 개산공제 base다 — 위 금액 검사는 통과해도 이 값이 비면 개산공제가 0이 된다.
@@ -584,7 +599,7 @@ export function validateBurdenedGiftAsset(
       const acqStdInput =
         asset.assetKind === "land"
           ? "취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를"
-          : "「② 양도정보」의 취득시 기준시가를";
+          : acqStdOnSecondPart;
       return fieldError("standardPriceAtAcq", `${label}: 부담부증여 ${BG_PRESUMED_LABEL[asset.bgAcquisitionMethod]} — ${acqStdInput} 입력하세요. 필요경비는 개산공제(취득시 기준시가 × 채무비율 × 개산공제율)뿐이라 이 값이 비면 개산공제가 0으로 계산됩니다 (소득세법 시행령 제163조 제6항).`);
     }
     // 시가 + 환산(K-5)도 이 칸을 쓴다(B2) — 주택·건물은 위 K-5 검사가 먼저 잡으므로 여기 오는 것은 토지다
@@ -592,7 +607,7 @@ export function validateBurdenedGiftAsset(
       return fieldError("standardPriceAtAcq", `${label}: 부담부증여 환산취득가액 — 취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를 입력하세요. 환산취득가액은 양도가액에 「취득시 기준시가를 양도시 기준시가로 나눈 비율」을 곱한 값입니다 (소득세법 시행령 제176조의2 제2항 제2호).`);
     return fieldError("standardPriceAtAcq", asset.assetKind === "land"
       ? `${label}: 부담부증여 기준시가 모드 — 취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를 입력하세요. 취득가액 = 취득시 기준시가 × 채무비율입니다 (소득세법 시행령 제159조 제1항 제1호).`
-      : `${label}: 부담부증여 기준시가 모드 — 「② 양도정보」의 취득시 기준시가를 입력하세요. 취득가액 = 취득시 기준시가 × 채무비율이므로, 미입력 시 취득가액이 0으로 계산됩니다 (소득세법 시행령 제159조 제1항 제1호).`);
+      : `${label}: 부담부증여 기준시가 모드 — ${acqStdOnSecondPart} 입력하세요. 취득가액 = 취득시 기준시가 × 채무비율이므로, 미입력 시 취득가액이 0으로 계산됩니다 (소득세법 시행령 제159조 제1항 제1호).`);
   }
 
   /**
