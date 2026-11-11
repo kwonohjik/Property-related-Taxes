@@ -45,6 +45,13 @@
 - **Q-46 a** 안내 문구(`gbBgPre1990LandNote("market")` 등)를 함께.
 - 착수 전 확인(V): 지분 축소 지점(`scaleBurdenedGiftInfo`) · 재개발 §166 분할 경로에서 STEP 0.45 결과와 1원 일치 · 일반건물 한 파트 1985 전 + 다른 파트 이후 경계.
 
+### B.3 구현 B1 — 재개발 · 입주권 원조합원 (2026-11-11 · Q-44 a · Q-45 a)
+- `bgSec163_9ProvisoKind`: 재개발 완공 아파트 · 조합원입주권 원조합원 — 토지 출자 → `land`(§164④) · 단독주택 출자 → `house`(§164⑦). **의제취득일 이후만** — `isBgPreDeemedAsset`이 입주권을 받지 않아 1980 상속 입주권이 열렸다(전체 회귀 `bg-pre-deemed-redev` B-1 · Q-30 범위 밖 유지).
+- `bgSec163_9ReportedField(kind, asset)` — 원조합원은 토지 출자도 총액 칸(`bgActualAcquisitionTotal`).
+- 엔진 K-4 max의 입주권 가드(`!isRightToMoveInValuation`)를 풀었다.
+- 화면: 「부담부증여」 카드의 「종전 부동산 실지취득가액」 칸 아래에 `BgSec163_9ProvisoSection`(PR-1 부품 — 토지 면적은 `redevLandArea`).
+- 실측(V-b 해소): §166 경로에서도 기대값과 1원까지 같다 — 토지 출자 360,000,000 · 주택 출자 240,000,000 · ② 비움 450,000,000 · ① 승 200,000,000. anchor `transfer.route.bg-163-9-proviso-redev-rtmi.anchor.test.ts` 8건 · 뮤테이션 4/4 · E2E BR-1.
+
 ## C. 재개발 축 B 지분별 산정방식 · 지분 카드 ⑧ 문구 (Q-47 · Q-48)
 
 ### C.1 실측

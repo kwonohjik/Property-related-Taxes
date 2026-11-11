@@ -8,7 +8,8 @@
  * ②를 비우면 일반 양도처럼 평가액만으로 계산한다(Q-25 a — 막지 않는다).
  *
  * ⑤ 칸 노출 · ④ 전송 · 안내 문구가 이 술어를 쓴다. 겸용(자기 경로 `mixedSec163_9CompareOf`) · 의제취득일 전(`isBgPreDeemedAsset`) ·
- * 이월과세 · 토지 · 건물 취득일이 다른 주택 · 소유자 분리 · 공동주택 · 일반건물 · 재개발 · 입주권은 이 범위 밖이다(PR-3).
+ * 이월과세 · 토지 · 건물 취득일이 다른 주택 · 소유자 분리 · 공동주택 · 일반건물은 이 범위 밖이다(일반건물은 파트별 — PR-3 B2).
+ * 재개발 완공 아파트 · 조합원입주권 **원조합원**은 종전 토지(1호) · 종전 주택(2호)으로 연다(계획서 `remaining-4-measurements.plan.md` §B · Q-44 a · Q-45 a).
  * 상가의 ② 칸(§164⑥ 8칸)은 ③ 취득정보 `CommercialInheritanceStdPriceSection`에, 건물의 ② 칸(§164⑤)은 `BuildingSec164Section`에
  * 이미 있다 — 부담부증여 카드는 그 칸을 가리킨다.
  */
@@ -18,6 +19,8 @@ import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { bgAnyCarryover } from "./bg-carryover-parts";
 import { sec164CommercialStatus, sec164HouseStatus, sec164LandStatus } from "./sec164-required-fields";
 import { sec164BuildingStatus } from "./sec164-required-fields";
+import { isOriginalMemberLandAsset, isSec163_9HouseAsset } from "./transfer-163-9-base-date";
+import { deriveSec163_9BaseDate, DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
 import { deriveInheritanceHouseKind } from "./transfer-tax-api-asset-basics";
 import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
 
@@ -32,6 +35,15 @@ export function bgSec163_9ProvisoKind(asset: AssetForm): BgSec163_9ProvisoKind |
   if (asset.assetKind === "land") return sec164LandStatus(asset) !== null ? "land" : null;
   if (asset.assetKind === "commercial_building") return sec164CommercialStatus(asset) !== null ? "commercial" : null;
   if (asset.assetKind === "building") return sec164BuildingStatus(asset) !== null ? "building" : null;
+  // 재개발 · 입주권 원조합원 — 인가 전 상속 · 증여받은 종전 토지(§164④) · 종전 주택(§164⑦). 승계조합원은 종전자산을 받지 않았다(술어가 뺀다).
+  if (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") {
+    // 의제취득일 이후만 — `isBgPreDeemedAsset`은 입주권을 받지 않는다. 의제취득일 전 입주권 × 부담부증여는 범위 밖 결정(Q-30 · §166③ 환산 금지)이 유지된다.
+    const baseDate = deriveSec163_9BaseDate(asset);
+    if (!baseDate || baseDate < DEEMED_ACQUISITION_DATE) return null;
+    if (isOriginalMemberLandAsset(asset)) return sec164LandStatus(asset) !== null ? "land" : null;
+    if (isSec163_9HouseAsset(asset) && deriveInheritanceHouseKind(asset) === "house_individual") return sec164HouseStatus(asset) !== null ? "house" : null;
+    return null;
+  }
   if (
     asset.assetKind === "housing" &&
     !asset.isMixedUseHouse &&
@@ -46,8 +58,12 @@ export function bgSec163_9ProvisoKind(asset: AssetForm): BgSec163_9ProvisoKind |
 }
 
 /** ① 평가액이 들어 있는 부담부증여 실지 칸(Q-24 a) — 토지는 토지 칸, 주택 · 상가 · 건물은 총액 칸(⑧ `transfer-tax-validate-bg.ts` K-4와 같은 칸). */
-export function bgSec163_9ReportedField(kind: BgSec163_9ProvisoKind): "bgActualAcquisitionLand" | "bgActualAcquisitionTotal" {
-  return kind === "land" ? "bgActualAcquisitionLand" : "bgActualAcquisitionTotal";
+export function bgSec163_9ReportedField(
+  kind: BgSec163_9ProvisoKind,
+  asset: Pick<AssetForm, "assetKind">,
+): "bgActualAcquisitionLand" | "bgActualAcquisitionTotal" {
+  // 원조합원(재개발 · 입주권)은 토지 출자도 「종전 부동산 실지취득가액」 한 칸(총액)이다
+  return kind === "land" && asset.assetKind === "land" ? "bgActualAcquisitionLand" : "bgActualAcquisitionTotal";
 }
 
 /**

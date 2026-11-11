@@ -213,7 +213,9 @@ export function resolveWholeBgAcquisition(ctx: BgAcquisitionContext): BgAcquisit
     // 의제취득일 이후 상속 · 증여 × §163⑨ 단서 — §164 가액(②)이 평가액(실지 칸 · ①)보다 크면 ②가 실지거래가액이다(§159①1호 A = 법 §97①1호 가액).
     //   토지 · 건물은 실지 칸의 나눈 비율로(한 칸이면 그 칸에 전부), 칸이 하나도 없으면 취득시 기준시가 비율로 나눈다. 필요경비는 실지 경로 그대로(개산공제 아님).
     const actualWhole = landActualAcquisition + buildingActualAcquisition;
-    if (!isRightToMoveInValuation && postDeemedAcquisition !== undefined && postDeemedAcquisition > actualWhole) {
+    //   조합원입주권 원조합원도 같다 — 종전 부동산을 상속 · 증여받았으면 그 평가액(또는 §164 가액)이 종전 부동산 실지취득가액이다(영 §166① → §163⑨ ·
+    //   계획서 remaining-4-measurements.plan.md §B · Q-45 a). 의제취득일 전 입주권 범위 밖 결정(§166③ 환산 금지)과는 축이 다르다.
+    if (postDeemedAcquisition !== undefined && postDeemedAcquisition > actualWhole) {
       const totalAcqStd = landStdPriceAtAcquisition + buildingStdPriceAtAcquisition;
       landActualAcquisition =
         actualWhole > 0

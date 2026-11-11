@@ -75,7 +75,7 @@ export function buildInheritedAcquisitionPayload(
 
   /** ① 상증법 §60~66 평가액 — 상속은 공시가격 필드, 증여는 「증여 신고가액」, 부담부증여 단서 구간은 그 카드의 실지 칸(③ 평가 칸은 화면에 없다) */
   const reportedSource = bgProviso
-    ? primary[bgSec163_9ReportedField(bgProviso)]
+    ? primary[bgSec163_9ReportedField(bgProviso, primary)]
     : isGift
       ? primary.fixedAcquisitionPrice
       : primary.publishedValueAtInheritance;
