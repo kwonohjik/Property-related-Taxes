@@ -568,6 +568,8 @@ export interface TransferBurdenedGiftBreakdown {
    * `redevFilingAcquisition` — §166 자산(원조합원 입주권 등) 카드의 신고서 취득가액. 그 카드의 §159 슬롯은 인가 전 분뿐이다.
    * `redevFilingExpenses` — 같은 카드의 신고서 필요경비 분기별 구성(인가 전 · 인가 후 · 청산금 분 — 합이 신고서 필요경비).
    * `redevSec166` — 완공 아파트 × ③ 환산(K-5)에서 재개발 경로가 §166③으로 계산한 값(단건 `redevSec166DisplayOf`와 같다).
+   * `redevSuccessorExpense` — 승계조합원 완공 아파트 × 환산·기준시가 카드에서 승계 분기가 고른 필요경비(단건 `successorMemberDetail.burdenedGiftExpense`와 같다).
+   *   단서(나목)를 골랐으면 그 카드의 취득가액은 0 · 필요경비는 나목으로 합에 넣는다(§F.5).
    */
   cards?: Array<{
     propertyId: string;
@@ -576,6 +578,7 @@ export interface TransferBurdenedGiftBreakdown {
     redevFilingAcquisition?: number;
     redevFilingExpenses?: RedevExpenseParts;
     redevSec166?: { acquisition: number; lumpDeduction: number };
+    redevSuccessorExpense?: NonNullable<NonNullable<import("./transfer-redevelopment.types").RedevelopmentResult["successorMemberDetail"]>["burdenedGiftExpense"]>;
   }>;
 
   preDeemed?: {
