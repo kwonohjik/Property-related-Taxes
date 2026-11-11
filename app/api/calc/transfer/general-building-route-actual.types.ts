@@ -58,6 +58,9 @@ export interface GeneralBuildingActualPricePayload {
    */
   landPreDeemedClauseA?: GbPreDeemedClauseA;
   buildingPreDeemedClauseA?: GbPreDeemedClauseA;
+  /** 부담부증여 K-4 × §163⑨ 단서(의제취득일 이후 · 고시 전 상속 · 증여 파트) — 그 파트 A = max(실지, 취득시 기준시가) (Q-43 a · `gb-sec163-9`). */
+  landSec163_9Proviso?: true;
+  buildingSec163_9Proviso?: true;
   /**
    * 부담부증여 × 이월과세(F27) 시나리오 **A 호출에만** 싣는 «당초 증여자 신축·증축» 신호 입력(§114조의2, PR-5c) — B 호출·지분·컴패니언은 싣지 않는다(R2).
    * `burdenedGiftInfo.carryoverDonorBasis.donorBuilt` 와 같은 값이지만 **이 필드만** 카드 조립이 읽는다 — info 는 B 호출에도 같은 모양으로 흘러 가산세가 새면 안 된다.

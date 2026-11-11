@@ -10,6 +10,8 @@ import { LAND_PRICE_NOTICE_START } from "./transfer-pre1990-commercial-bridge";
 import { isBeforeBuildingStdPriceNotice } from "./commercial-164-6-proviso";
 import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { gbPreDeemedClauseAFields } from "./gb-pre-deemed";
+import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
+import { bgAnyCarryover } from "./bg-carryover-parts";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { GbSec1639Basis } from "@/lib/tax-engine/types/general-building.types";
@@ -208,9 +210,28 @@ export function gbSec1639Acquisition(asset: AssetForm, transferDate: string | un
           ? basisOf("gift", parseAmount(asset.buildingAcquisitionPrice), buildingSec164Applies, sec164BuildingValue)
           : undefined;
 
+  /**
+   * 부담부증여 K-4 × §163⑨ 단서(의제취득일 이후 · 고시 전) — 일반 양도와 같은 구간 술어(`landSec164Applies` · `buildingSec164Applies`)로 파트를 표시한다.
+   * ②는 부담부증여에서 이미 필수인 취득시 기준시가(토지 = 위 `acqLandPerSqm` × 면적 — 1990 전이면 등급 환산 · 건물 = `gbAcqBuildingValue`)라 값은 싣지 않는다.
+   * 의제취득일 전 파트(파트별 3자 max) · 담보 승(취득시 기준시가 × 채무비율) · 이월과세 파트는 제외(계획서 remaining-4-measurements.plan.md §B · Q-43 a).
+   */
+  const bgProvisoOn =
+    isBurdenedGiftGb &&
+    asset.bgValuationMode === "sangjeungbeop_market" &&
+    asset.bgAcquisitionMethod === "actual" &&
+    !bgCollateralForcesStdAcq(asset) &&
+    !bgAnyCarryover(asset);
+  const bgPostDeemedProvisoFields = bgProvisoOn
+    ? {
+        ...(landSec164Applies && !preDeemedFields.landPreDeemedClauseA ? { landSec163_9Proviso: true as const } : {}),
+        ...(buildingSec164Applies && !preDeemedFields.buildingPreDeemedClauseA ? { buildingSec163_9Proviso: true as const } : {}),
+      }
+    : {};
+
   return {
     gbInheritanceEcho,
     gbInheritanceFields,
+    bgPostDeemedProvisoFields,
     landPartPrice,
     buildingPartPrice,
     landSec1639Basis,

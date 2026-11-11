@@ -43,6 +43,12 @@ export interface BgAcquisitionContext {
    * 단서 1 · 2호 구간이면 평가액(①)과 §164④~⑦ 가액(②) 중 큰 금액이 실지거래가액으로 의제된다(계획서 `bg-163-9-proviso-post-deemed.plan.md` · Q-24 a).
    */
   postDeemedAcquisition?: number;
+  /**
+   * 일반건물 파트별 §163⑨ 단서(의제취득일 이후 · 고시 전 상속 · 증여 파트) — 그 파트의 실지(K-4) A는 실지 칸(평가액 ①)과 취득시 기준시가
+   * (= 영 §164④ · ⑤ 가액 ②) 중 큰 금액이다. 일반건물은 STEP 0.45를 타지 않아 자산 단위 `postDeemedAcquisition`이 없다(계획서
+   * `remaining-4-measurements.plan.md` §B · Q-43 a). ②는 이미 `landStdPriceAtAcquisition` · `buildingStdPriceAtAcquisition`(지분 축소 후)이다.
+   */
+  postDeemedProvisoParts?: { land?: boolean; building?: boolean };
   params: { capitalExpenditure?: number; transferExpense?: number };
   isUnregistered: boolean;
 }
@@ -119,6 +125,7 @@ export function resolveWholeBgAcquisition(ctx: BgAcquisitionContext): BgAcquisit
     isRightToMoveInValuation,
     preDeemed,
     postDeemedAcquisition,
+    postDeemedProvisoParts,
     params,
     isUnregistered,
   } = ctx;
@@ -225,6 +232,9 @@ export function resolveWholeBgAcquisition(ctx: BgAcquisitionContext): BgAcquisit
             : postDeemedAcquisition;
       buildingActualAcquisition = postDeemedAcquisition - landActualAcquisition;
     }
+    // 일반건물 파트별 단서 — 그 파트의 실지 칸(①)과 취득시 기준시가(②) 중 큰 금액(동점은 ① · 필요경비는 실지 경로 그대로)
+    if (postDeemedProvisoParts?.land && landStdPriceAtAcquisition > landActualAcquisition) landActualAcquisition = landStdPriceAtAcquisition;
+    if (postDeemedProvisoParts?.building && buildingStdPriceAtAcquisition > buildingActualAcquisition) buildingActualAcquisition = buildingStdPriceAtAcquisition;
     landAcquisitionPrice = apportionAcquisitionPrice(landActualAcquisition, assumedDebtAmount, giftValuation.max);
     buildingAcquisitionPrice = apportionAcquisitionPrice(buildingActualAcquisition, assumedDebtAmount, giftValuation.max);
   } else if (info.acquisitionMethod === "appraisal" || info.acquisitionMethod === "salesCase") {

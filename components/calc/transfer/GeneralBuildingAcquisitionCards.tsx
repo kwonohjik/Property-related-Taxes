@@ -495,7 +495,7 @@ export function GeneralBuildingAcquisitionCards({
             tone="amber"
             title={`1990.8.30. 이전 ${asset.acquisitionCause === "gift" ? "증여" : "상속"} 토지 — §164④ 등급환산 (소득세법 시행령 ${asset.transferType === "burdened_gift" ? "§159①1호" : "§163⑨1호"})`}
           >
-            {/* 부담부증여는 §159가 취득가액을 정한다 — §163⑨ 「많은 금액」·§176조의2④ 「셋 중 큰 금액」 안내를 쓰지 않는다(PR-7b-2 G-4). */}
+            {/* 부담부증여는 §159가 취득가액을 정한다 — 안내는 `gbBgPre1990LandNote`가 평가 방식별로 낸다(PR-7b-2 G-4 · 실지면 §163⑨1호 큰 금액 — Q-46 a). */}
             {asset.transferType === "burdened_gift" ? (
               <p data-testid="gb-bg-pre1990-land-note" className="text-xs text-amber-800 dark:text-amber-200">
                 {gbBgPre1990LandNote(

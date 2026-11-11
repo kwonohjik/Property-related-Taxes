@@ -457,6 +457,9 @@ export const generalBuildingValuationSchema = z.object({
   /** 의제취득일(1985.1.1.) 전 상속·증여 파트의 ① 평가액·② 영 §164 가액 — 엔진이 ③과 비교한다(PR-4). 침묵 strip 방지. */
   landPreDeemedClauseA: gbPreDeemedClauseASchema.optional(),
   buildingPreDeemedClauseA: gbPreDeemedClauseASchema.optional(),
+  /** 부담부증여 K-4 × §163⑨ 단서(의제취득일 이후) 파트 표시 — 엔진이 그 파트 A를 max(실지, 취득시 기준시가)로 한다(Q-43 a). 침묵 strip 방지. */
+  landSec163_9Proviso: z.literal(true).optional(),
+  buildingSec163_9Proviso: z.literal(true).optional(),
   /** §163⑨ 상속·증여 파트 취득가액의 근거(본문 평가액 / 단서 영 §164 가액) — 결과 산식 문구 전용 echo. 침묵 strip 방지. */
   landSec1639Basis: gbSec1639BasisSchema.optional(),
   buildingSec1639Basis: gbSec1639BasisSchema.optional(),
