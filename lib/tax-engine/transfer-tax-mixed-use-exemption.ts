@@ -24,6 +24,7 @@ import {
 } from "./transfer-tax-appurtenant-land";
 import { meetsOneHouseHoldingResidence, resolveDeemedOneHouseBy155 } from "./transfer-tax-exemption";
 import { resolveExemptionHoldingStartDate } from "./transfer-tax-exemption-holding";
+import { resolveWasRegulatedAtAcquisition } from "./transfer-tax-exemption-holding";
 import { resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
 import {
   giftHouseholdFactDecides,
@@ -546,7 +547,9 @@ export function judgeMixedUseOneHouseExemption(
       `${exemptionHoldingStart.getTime() === asset.buildingAcquisitionDate.getTime() ? "건물 보유기간" : "세대 통산 보유기간"} ` +
         `${exemptionHolding.years}년 ${exemptionHolding.months}개월 · ` +
         `거주기간 ${mixedUseResidenceYearsLabel(exemptionReqInput.residencePeriodMonths)} · ` +
-        `취득 당시 조정대상지역 ${asset.wasRegulatedAtAcquisition ? "해당" : "미해당"} — ` +
+        // 판정(`meetsOneHouseResidenceRequirement`)과 같은 술어 — 법정동 코드 · 통산 기산일(§154⑧3호 · 증여 세대 통산) 기준.
+        //   종전 입력 플래그를 그대로 써서 직접 API에서 판정과 반대 문구가 나왔다(V-3 · 2026-11-11 실측).
+        `취득 당시 조정대상지역 ${resolveWasRegulatedAtAcquisition(exemptionReqInput) ? "해당" : "미해당"} — ` +
         `1세대1주택 비과세 요건(보유 ${resolveOneHouseMinHoldingYears(transferDate, r.minHoldingYears)}년, 조정대상지역 취득 시 거주 ` +
         `${r.regulatedAreaMinResidenceYears}년, 소득세법 시행령 §154①) 미충족으로 주택분도 과세됩니다.`,
     );
