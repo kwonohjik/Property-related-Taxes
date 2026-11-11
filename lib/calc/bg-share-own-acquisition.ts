@@ -90,6 +90,24 @@ export function sec163_9Hint(cause: "inheritance" | "gift" | null): string | und
 }
 
 /** 지분 카드가 자기 네 칸을 쓰는가 — 토글이 켜져 있고 위 범위 안일 때만. */
+/**
+ * 축 B 지분 카드가 자산 1과 다른 원인(상속 · 증여)으로 취득했는데 지분 토글이 꺼져 있으면 ⑧ 문구 — 아니면 null.
+ * 토글을 끄면 ④가 자산 1의 산정방식 · 실지를 병합해 그 지분도 자산 1의 취득가액으로 계산한다(상속 지분이 매매 실지로 계산 · 실측 −12,000,000).
+ * 상속 · 증여 지분의 A는 그 지분의 상속개시일 · 증여일 현재 평가액이다(소득세법 시행령 §159①1호 · §163⑨). 계획서 remaining-4-measurements.plan.md §A · Q-42 a.
+ */
+export function bgShareCauseMismatchMessage(share: AssetForm, merged: AssetForm, primary: AssetForm, label: string): string | null {
+  const cause = share.acquisitionCause;
+  if (cause !== "inheritance" && cause !== "gift") return null;
+  if (cause === primary.acquisitionCause) return null;
+  if (share.bgShareOwnAcquisition === true || !bgShareOwnAcquisitionApplies(merged)) return null;
+  // 자산 1의 취득 금액을 그대로 쓰는 산정방식만 — 환산(K-5)은 그 지분의 취득시 기준시가로, 담보 승은 취득시 기준시가 × 채무비율로 계산해
+  //   자산 1의 실지 · 추계 금액을 읽지 않는다(`transfer.route.gb-bg-carryover-bundled-block` 지분 분할 K-5 시료).
+  if (merged.bgAcquisitionMethod === "converted" || bgCollateralForcesStdAcq(merged, true)) return null;
+  const causeLabel = cause === "inheritance" ? "상속" : "증여";
+  const dateLabel = cause === "inheritance" ? "상속개시일" : "증여일";
+  return `${label}: 이 지분은 ${causeLabel}으로 취득해 자산 1과 취득가액이 다릅니다 — 「이 지분의 취득가액을 자산 1과 따로 입력」을 켜고 이 지분의 ${dateLabel} 현재 평가액을 실지취득가액 칸에 입력하세요(소득세법 시행령 §159①1호 · §163⑨).`;
+}
+
 export function bgShareOwnAcquisitionActive(share: AssetForm, merged: AssetForm): boolean {
   return share.bgShareOwnAcquisition === true && bgShareOwnAcquisitionApplies(merged);
 }

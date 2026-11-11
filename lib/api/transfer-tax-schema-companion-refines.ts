@@ -258,6 +258,9 @@ function refineCompanionInheritedValue(c: CompanionAsset, i: number, ctx: z.Refi
   if (isBuildingCauseMixCompanion(c)) return;
   const baseDate = c.inheritanceValuation?.inheritanceDate ?? c.acquisitionDate;
   if (baseDate && baseDate < DEEMED_ACQUISITION_DATE) return;
+  // 부담부증여(의제취득일 이후)는 ①을 쓰지 않는다 — A는 `burdenedGiftInfo`의 실지 칸이다(⑧ `postDeemedClauseARequiredError`와 같은 면제 ·
+  //   계획서 remaining-4-measurements.plan.md §A · Q-40 a). 종전에는 화면에 칸이 없는 ①을 요구해 축 B 상속 지분 카드가 400이었다.
+  if (c.transferType === "burdened_gift") return;
   const clauseA1 = (c.inheritanceValuation?.publishedValueAtInheritance ?? 0) > 0;
   // 구 API 계약(P2c 이전) — route가 `inheritanceValuation`이 없으면 `fixedAcquisitionPrice`를 그대로 취득가액으로
   // 쓴다(`bundled-apportionment.ts` (2)). ④는 상속에 이 값을 싣지 않지만, 싣는 호출자는 명시 값을 준 것이다.

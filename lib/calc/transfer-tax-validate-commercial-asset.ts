@@ -65,7 +65,9 @@ export function validateCommercialInheritanceAsset(asset: AssetForm, label: stri
     parseAmount(asset.publishedValueAtInheritance) > 0 ||
     isFullyFilled(sec164CommercialStatus(asset)) ||
     (isSec163_9PreDeemed(asset) && asset.preDeemedClauseAUnconfirmed === true) ||
-    (isBgPreDeemedAsset(asset) && !bgPreDeemedUsesThreeWay(asset));
+    (isBgPreDeemedAsset(asset) && !bgPreDeemedUsesThreeWay(asset)) ||
+    // 의제취득일 이후 부담부증여는 ①을 쓰지 않는다 — A는 부담부증여 실지 칸(계획서 remaining-4-measurements.plan.md §A · Q-40 a)
+    (asset.transferType === "burdened_gift" && !isBgPreDeemedAsset(asset));
   if (!cbClauseAOk) return fieldError("publishedValueAtInheritance", `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요.`);
 
   // §164⑥ **부분 입력 차단은 진입부 `sec164PartialInputError`로 이관**(2026-08-06) — 증여도
