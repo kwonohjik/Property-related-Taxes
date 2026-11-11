@@ -271,7 +271,8 @@ function calcCarryoverScenariosCore(
       (rawInput.usedEstimatedAcquisition !== undefined && ct.useEstimatedAcquisition),
     // §95 ④ 단서 보유기간 기산. 조특법 §98 시리즈 기준일(증여자 vs 수증자)은 여기서 갈리지 않는다 — 증여 승계취득은 6조문 모두 배제한다
     // (리뷰 US-33 · Q-12 a): 진입부 게이트(`stripAcquisitionCauseGatedReductions`)가 원 입력 `carryover_gift`·이 A 입력 `gift`·B 입력
-    // `reductionAcquisitionCause`를 모두 걷어 낸다. 배우자 지분 증여 예외(기준-2025-법규재산-0033)는 구현이 없다(확인 필요).
+    // `reductionAcquisitionCause`를 모두 걷어 낸다. 배우자 지분 증여 예외(기준-2025-법규재산-0033)는 이 감면주택 자체의 양도가 아니라 **주택 수 제외(명부 행 ⑥)** 해석이라
+    // 여기서 다룰 일이 아니다 — 행 ⑥ 증여 토글은 기본 꺼짐(제외)이고 안내는 `SPOUSE_SHARE_GIFT_EXCEPTION_NOTE`에 있다.
     acquisitionDate: ct.donorAcquisitionDate,
     // 부담부증여 주택·건물 — 당초 증여자가 건물을 토지와 다른 날 취득했으면(`buildingDonorAcquisitionDate`) 건물은 그날, 토지는 증여자 취득일부터 센다.
     //   일반건물 route와 같은 leaf(`carryoverHoldingStartsA`)다. 날짜가 달라지면 부담부증여 단계가 토지·건물 파트로 나눠 계산한다(설계서 `bg-house-building-split.design.md` §5.1).

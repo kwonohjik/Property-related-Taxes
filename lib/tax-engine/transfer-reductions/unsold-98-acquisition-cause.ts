@@ -57,6 +57,17 @@ export function asksRowGiftQuestion(article: string): boolean {
   return ROW_CAUSE_GATED_ARTICLES.has(article);
 }
 
+/**
+ * 배우자 지분 증여 예외 안내 — 기준-2025-법규재산-0033(2025.4.1, 법규과-667): 부부가 공동으로 조특법 §98의3 미분양주택(분양권 포함)을 사업주체등과 최초로
+ * 매매계약한 뒤 한 명의 지분을 배우자에게 증여하는 경우, 소득세법 §89①3호 적용 시 **해당 주택 전체**를 세대의 소유주택으로 보지 않는다.
+ *
+ * 이 예외는 **주택 수 제외(명부 행 ⑥)** 에 관한 해석이다 — 그 감면주택 자체의 양도에 §98 감면을 적용하는 문제가 아니다(그쪽은 증여 취득 게이트가 그대로 막는다).
+ * 행 ⑥의 「증여 취득」 토글은 기본 꺼짐(= 제외)이라 이 사례는 토글을 켜지 않으면 된다. 해석례는 §98의3 사안뿐이라 다른 조문은 같은 방식의 유추다(확인 필요).
+ */
+export const SPOUSE_SHARE_GIFT_EXCEPTION_NOTE =
+  "다만 부부가 공동으로 사업주체등과 최초로 매매계약을 체결한 뒤 한 명의 지분을 배우자에게 증여한 경우는 주택 전체를 소유주택으로 보지 않습니다" +
+  "(기준-2025-법규재산-0033 — 조특법 §98의3 사안이며 다른 조문은 같은 방식으로 유추합니다, 확인 필요). 그 경우에는 증여 취득 칸을 켜지 마세요.";
+
 export interface Unsold98AcquisitionCauseReason {
   code: "ACQUIRED_BY_GIFT" | "ACQUIRED_BY_INHERITANCE" | "INHERITED_PRESALE_UNCONFIRMED";
   message: string;
