@@ -62,38 +62,74 @@ export function appurtenantLand2xNotice(
 const APPURTENANT_2X_IDS: ReadonlySet<string> = new Set(["new_99", "new_99_3"]);
 
 /**
- * 일괄양도(합산) 경로에서 주택 카드에 차감형 감면이 적용됐는데 별도 토지 카드가 함께 있으면, 토지 카드 소득이 차감 대상에서 빠진다는 고지.
- * `incomeDeductionReducible > 0`인 카드가 있고 `propertyType === "land"` 카드가 있을 때만(계산 불변).
+ * 5년 이내 **세액감면**으로 주택 카드에 적용되는 주택 감면 — 별도 토지 카드가 있으면 그 카드 세액은 감면에서 빠진다(소득금액 차감형과 같은 구조).
+ * §98의4(비거주자 10%)·§97 계열·자경·수용 등은 부수토지 포함 여부를 확인하지 못했거나 토지 대상이라 넣지 않았다.
+ */
+export const SEPARATE_LAND_TAX_REDUCTION_IDS: ReadonlySet<string> = new Set([
+  "new_99", "unsold_98_3", "unsold_98_5", "unsold_98_6", "unsold_98_7", "unsold_99_2",
+]);
+
+/**
+ * 일괄양도(합산) 경로에서 주택 카드에 감면이 적용됐는데 별도 토지 카드가 함께 있으면, 토지 카드가 감면에서 빠진다는 고지(계산 불변).
+ * 별도 토지 카드(`propertyType === "land"`)가 있고 아래 둘 중 하나일 때만 낸다.
+ *  - 소득금액 차감형: `incomeDeductionReducibles[i] > 0` — 5년 후 안분(§99의3 · §99 · §98의8 · 하이브리드 5년 후).
+ *  - 5년 이내 세액감면: `taxReductionIds[i]`가 있는 카드(`SEPARATE_LAND_TAX_REDUCTION_IDS`) — 2026-11-11 이전에는 고지가 없었다
+ *    (실측 §99의2 5년 이내: 한 장 카드 결정세액 0 · 주택+별도 토지 62,681,442, 고지 없음).
  *
- * 문구는 **차감을 낸 조문**에 따라 갈린다(`articleIds` — 카드와 같은 순서, `incomeDeductionSourceIdOf`):
+ * 문구는 **감면을 낸 조문**에 따라 갈린다(`articleIds` · `taxReductionIds` — 카드와 같은 순서):
  *  - §99·§99의3: 「해당 건물 연면적의 2배 이내」의 딸린 토지를 신축주택에 포함한다는 문언이 근거다(NH-31).
  *  - 그 밖(§98 시리즈·§98의8·§99의2): 그 문언이 없다. 부수토지 포함은 §98의3 해석례(재산세과-861 등)로만 확인했고 ⑧(US-34)이
  *    한 장의 주택 카드로 입력하게 막는다 — 이 고지는 그 확인을 거치지 않은 입력(API 직접 호출 등)에 붙는다.
- * `articleIds`를 생략하면 종전과 같이 §99 계열 문구다.
+ * 둘 다 생략하면 종전과 같이 §99 계열 소득금액 차감 문구다.
  */
 export function separateLandCardReductionNotice(
   items: ReadonlyArray<{ propertyType?: string }>,
   incomeDeductionReducibles: ReadonlyArray<number>,
   articleIds?: ReadonlyArray<string | undefined>,
+  taxReductionIds?: ReadonlyArray<string | undefined>,
 ): string | undefined {
-  const hasLandCard = items.some((i) => i.propertyType === "land");
-  const reducedIdx = incomeDeductionReducibles.flatMap((v, i) => (v > 0 ? [i] : []));
-  if (!hasLandCard || reducedIdx.length === 0) return undefined;
-  const ids = reducedIdx.map((i) => articleIds?.[i]);
-  const has2x = ids.some((id) => id === undefined || APPURTENANT_2X_IDS.has(id));
-  const others = [...new Set(ids.filter((id): id is string => id !== undefined && !APPURTENANT_2X_IDS.has(id)))];
+  if (!items.some((i) => i.propertyType === "land")) return undefined;
+  type Mech = "deduction" | "tax";
+  const entries: { id: string | undefined; mech: Mech }[] = [];
+  incomeDeductionReducibles.forEach((v, i) => {
+    if (v > 0) entries.push({ id: articleIds?.[i], mech: "deduction" });
+  });
+  taxReductionIds?.forEach((id) => {
+    if (id !== undefined) entries.push({ id, mech: "tax" });
+  });
+  if (entries.length === 0) return undefined;
+
+  const labelOf = (id: string) => REDUCTION_METADATA[id as TransferReductionId]?.article ?? id;
   const parts: string[] = [];
-  if (has2x) {
-    parts.push(
+  const push = (text: string) => {
+    if (!parts.includes(text)) parts.push(text);
+  };
+
+  // §99 계열(2배 문언) — 소득금액 차감 문구는 종전 그대로
+  if (entries.some((e) => e.mech === "deduction" && (e.id === undefined || APPURTENANT_2X_IDS.has(e.id)))) {
+    push(
       "일괄양도에 별도 토지 카드가 있습니다. 주택 카드에 선택한 §99·§99의3 감면은 그 주택 카드의 양도소득금액에서만 차감하고, 별도 토지 카드의 소득은 차감 대상에 넣지 않습니다. " +
         "신축주택에 포함되는 «해당 건물 연면적의 2배 이내»의 딸린 토지는 주택 카드에 합쳐 입력해야 차감 대상에 들어갑니다 " +
         "(별도 카드로 입력한 딸린 토지를 감면 대상에 연결하는 기능은 아직 없습니다 — 확인 필요).",
     );
   }
-  if (others.length > 0) {
-    const labels = others.map((id) => REDUCTION_METADATA[id as TransferReductionId]?.article ?? id).join("·");
-    parts.push(
-      `일괄양도에 별도 토지 카드가 있습니다. 주택 카드에 선택한 ${labels} 감면은 그 주택 카드의 양도소득금액에서만 차감하고, 별도 토지 카드의 소득은 차감 대상에 넣지 않았습니다. ` +
+  if (entries.some((e) => e.mech === "tax" && e.id !== undefined && APPURTENANT_2X_IDS.has(e.id))) {
+    push(
+      "일괄양도에 별도 토지 카드가 있습니다. 주택 카드에 선택한 §99 5년 이내 세액감면은 그 주택 카드의 산출세액에서만 감면하고, 별도 토지 카드의 세액은 감면 대상에 넣지 않습니다. " +
+        "신축주택에 포함되는 «해당 건물 연면적의 2배 이내»의 딸린 토지는 주택 카드에 합쳐 입력해야 감면 대상에 들어갑니다 " +
+        "(별도 카드로 입력한 딸린 토지를 감면 대상에 연결하는 기능은 아직 없습니다 — 확인 필요).",
+    );
+  }
+  // 그 밖 조문(2배 문언 없음)
+  for (const mech of ["deduction", "tax"] as const) {
+    const ids = [...new Set(entries.filter((e) => e.mech === mech && e.id !== undefined && !APPURTENANT_2X_IDS.has(e.id)).map((e) => e.id as string))];
+    if (ids.length === 0) continue;
+    const what =
+      mech === "deduction"
+        ? "감면은 그 주택 카드의 양도소득금액에서만 차감하고, 별도 토지 카드의 소득은 차감 대상에 넣지 않았습니다. "
+        : "5년 이내 세액감면은 그 주택 카드의 산출세액에서만 감면하고, 별도 토지 카드의 세액은 감면 대상에 넣지 않았습니다. ";
+    push(
+      `일괄양도에 별도 토지 카드가 있습니다. 주택 카드에 선택한 ${ids.map(labelOf).join("·")} ${what}` +
         "그 토지가 감면주택의 부수토지라면 토지분이 특례에서 빠진 것입니다 — 화면은 주택과 부수토지를 한 장의 주택 카드로 입력하게 막지만(해석례: 재산세과-861 등 §98의3 사건), " +
         "이 입력은 그 확인을 거치지 않았습니다(별도 카드로 입력한 부수토지를 감면 대상에 연결하는 기능은 없습니다 — 확인 필요).",
     );

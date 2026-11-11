@@ -5,6 +5,7 @@
 // 계산은 바꾸지 않는다 — 문구만 조문별로 갈린다.
 import { describe, it, expect } from "vitest";
 import { separateLandCardReductionNotice } from "@/lib/tax-engine/transfer-reductions/new-housing-appurtenant-land-2x";
+import { housingTaxReductionIdOf } from "@/lib/tax-engine/transfer-tax-aggregate-pickers";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { makeMockRates, baseTransferInput } from "./../_helpers/mock-rates";
 
@@ -47,6 +48,39 @@ describe("separateLandCardReductionNotice — 조문별 문구", () => {
   });
 });
 
+describe("5년 이내 세액감면 — 별도 토지 카드 고지 (2026-11-11 공백 메움)", () => {
+  it("T-1: 🔴 세액감면(차감액 0)만 있어도 토지 카드가 있으면 고지 — §99는 2배 문구 · 그 밖은 조문명 + 산출세액 표현", () => {
+    const m99 = separateLandCardReductionNotice(ITEMS, [0, 0], [undefined, undefined], ["new_99", undefined]);
+    expect(m99).toContain("§99 5년 이내 세액감면");
+    expect(m99).toContain(TWO_X);
+    expect(m99).toContain("산출세액에서만 감면");
+    for (const id of ["unsold_98_3", "unsold_98_5", "unsold_98_6", "unsold_98_7", "unsold_99_2"]) {
+      const m = separateLandCardReductionNotice(ITEMS, [0, 0], [undefined, undefined], [id, undefined]);
+      expect(m, id).toContain("5년 이내 세액감면");
+      expect(m, id).toContain("산출세액에서만 감면");
+      expect(m, id).not.toContain(TWO_X);
+      expect(m, id).toContain("한 장의 주택 카드");
+    }
+  });
+
+  it("T-2: 토지 카드가 없거나 세액감면 id가 없으면 고지 없음 · 차감형과 세액감면이 함께면 두 문구", () => {
+    expect(separateLandCardReductionNotice([{ propertyType: "housing" }], [0], [undefined], ["unsold_99_2"])).toBeUndefined();
+    expect(separateLandCardReductionNotice(ITEMS, [0, 0], [undefined, undefined], [undefined, undefined])).toBeUndefined();
+    const both = separateLandCardReductionNotice([{ propertyType: "housing" }, { propertyType: "housing" }, { propertyType: "land" }], [100, 0, 0], ["unsold_98_8", undefined, undefined], [undefined, "unsold_99_2", undefined]);
+    expect(both).toContain("§98의8");
+    expect(both).toContain("5년 이내 세액감면");
+  });
+
+  it("T-3: `housingTaxReductionIdOf` — 주택 감면 id만 · 감면액 0·비과세·토지 대상 감면은 제외", () => {
+    expect(housingTaxReductionIdOf({ reductionAmount: 1, reductionTypeApplied: "unsold_99_2" } as never)).toBe("unsold_99_2");
+    expect(housingTaxReductionIdOf({ reductionAmount: 0, reductionTypeApplied: "unsold_99_2" } as never)).toBeUndefined();
+    expect(housingTaxReductionIdOf({ isExempt: true, reductionAmount: 1, reductionTypeApplied: "unsold_99_2" } as never)).toBeUndefined();
+    for (const id of ["self_farming", "public_expropriation", "unsold_98_4", "rental_97_3"]) {
+      expect(housingTaxReductionIdOf({ reductionAmount: 1, reductionTypeApplied: id } as never), id).toBeUndefined();
+    }
+  });
+});
+
 describe("합산 엔진 — 주택 카드에 차감형 감면 + 별도 토지 카드", () => {
   const rates = makeMockRates();
   const R992 = { type: "unsold_99_2", houseType992: "new_or_unsold", contractDate992: new Date("2013-05-01"), acquisitionPrice992: 500_000_000, exclusiveAreaSqm992: 80,
@@ -58,12 +92,12 @@ describe("합산 엔진 — 주택 카드에 차감형 감면 + 별도 토지 �
     isUnsoldAfterCompletion988: true, isFirstContract988: true, isNotRecontract988: true,
     standardPriceAtAcquisition988: 200_000_000, standardPriceAt5Years988: 300_000_000, standardPriceAtTransfer988: 400_000_000 };
 
-  function warningsOf(red: unknown, acq: string, tr: string): string[] {
+  function warningsOf(red: unknown, acq: string, tr: string, withLand = true): string[] {
     const common = { transferDate: new Date(tr), acquisitionDate: new Date(acq), householdHousingCount: 2, isOneHousehold: false, residencePeriodMonths: 0, expenses: 0 } as Record<string, unknown>;
     const house = baseTransferInput({ ...common, propertyType: "housing", transferPrice: 600_000_000, acquisitionPrice: 200_000_000, reductions: [red] } as never) as unknown as Record<string, unknown>;
     const land = baseTransferInput({ ...common, propertyType: "land", transferPrice: 300_000_000, acquisitionPrice: 100_000_000, householdHousingCount: 0 } as never) as unknown as Record<string, unknown>;
     const r = calculateTransferTaxAggregate({ taxYear: Number(tr.slice(0, 4)), annualBasicDeductionUsed: 0,
-      properties: [{ ...house, propertyId: "H", propertyLabel: "H" }, { ...land, propertyId: "L", propertyLabel: "L" }] } as never, rates) as unknown as { warnings?: string[] };
+      properties: [{ ...house, propertyId: "H", propertyLabel: "H" }, ...(withLand ? [{ ...land, propertyId: "L", propertyLabel: "L" }] : [])] } as never, rates) as unknown as { warnings?: string[] };
     return (r.warnings ?? []).filter((w) => w.includes("별도 토지 카드가 있습니다"));
   }
 
@@ -72,6 +106,18 @@ describe("합산 엔진 — 주택 카드에 차감형 감면 + 별도 토지 �
     expect(w).toHaveLength(1);
     expect(w[0]).toContain("§99의2");
     expect(w[0]).not.toContain(TWO_X);
+  });
+
+  it("E-3: 🔴 §99의2 5년 이내 세액감면 — 종전에는 고지가 없었다(실측: 한 장 카드 0 · 분리 62,681,442)", () => {
+    const w = warningsOf(R992, "2013-06-01", "2016-06-01");
+    expect(w).toHaveLength(1);
+    expect(w[0]).toContain("§99의2");
+    expect(w[0]).toContain("5년 이내 세액감면");
+    expect(w[0]).not.toContain(TWO_X);
+  });
+
+  it("E-4: 대조 — 별도 토지 카드가 없으면 같은 감면도 고지 없음", () => {
+    expect(warningsOf(R992, "2013-06-01", "2016-06-01", false)).toEqual([]);
   });
 
   it("E-2: 🔴 §98의8 — «§98의8» 문구, «2배» 문구 없음", () => {
