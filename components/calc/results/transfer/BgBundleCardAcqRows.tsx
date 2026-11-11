@@ -14,6 +14,7 @@
 import { Fragment } from "react";
 import { BgPreDeemedThreeWayRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
 import { BgNecessaryExpenseRow, BUNDLE_CARD_EXPENSE_IDS } from "@/components/calc/results/transfer/BgNecessaryExpenseRow";
+import { BgRedevSuccessorExpenseRow } from "@/components/calc/results/transfer/BgNecessaryExpenseRow";
 import { BgRedevFilingExpenseRows } from "@/components/calc/results/transfer/BgRedevFilingExpenseRows";
 import { BgPreDeemedPartsRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
 import type {
@@ -61,7 +62,8 @@ export function BgBundleCardAcqRows({
         const title =
           b.ownershipRatio !== undefined ? `자산 ${i + 1} (지분 ${pct(b.ownershipRatio)})` : `자산 ${i + 1}${c.label ? ` (${c.label})` : ""}`;
         const basis = b.preDeemed ? undefined : basisOf(b);
-        const acqName = c.redevFilingAcquisition !== undefined ? "종전 부동산 취득가(인가 전 분)" : "취득가액";
+        // 승계조합원(§166 밖)은 종전 부동산이 아니다 — §159 안분 취득가액(택일 전 · 단서면 필요경비 줄이 사유를 적는다)
+        const acqName = c.redevFilingAcquisition !== undefined && !c.redevSuccessorExpense ? "종전 부동산 취득가(인가 전 분)" : "취득가액";
         return (
           <Fragment key={c.propertyId}>
             <tr data-testid="bg-bundle-card" data-basis={b.preDeemed?.basis ?? b.acquisitionMethodUsed}>
@@ -105,7 +107,9 @@ export function BgBundleCardAcqRows({
                 <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(c.redevFilingAcquisition)}</td>
               </tr>
             )}
-            {c.redevFilingExpenses !== undefined && <BgRedevFilingExpenseRows parts={c.redevFilingExpenses} />}
+            {/* 승계조합원 × 환산·기준시가 — 필요경비는 승계 분기가 고른 개산공제·단서 나목(단건 카드와 같은 줄 · §F.5) */}
+            {c.redevSuccessorExpense && <BgRedevSuccessorExpenseRow bg={b} expense={c.redevSuccessorExpense} ids={BUNDLE_CARD_EXPENSE_IDS} />}
+            {c.redevFilingExpenses !== undefined && !c.redevSuccessorExpense && <BgRedevFilingExpenseRows parts={c.redevFilingExpenses} />}
           </Fragment>
         );
       })}

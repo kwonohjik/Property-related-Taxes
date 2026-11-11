@@ -74,6 +74,7 @@ export function withCardAcquisitions(
     }
     const filing = bgRedevFiling(r.result);
     const sec166 = redevSec166DisplayOf(r.result);
+    const successor = r.result.redevelopmentDetail?.successorMemberDetail?.burdenedGiftExpense;
     return r.result.transferBurdenedGiftBreakdown
       ? [{
           propertyId: r.item.propertyId,
@@ -81,11 +82,19 @@ export function withCardAcquisitions(
           breakdown: r.result.transferBurdenedGiftBreakdown,
           ...(filing !== undefined ? { redevFilingAcquisition: filing.acquisition, redevFilingExpenses: filing.expenses } : {}),
           ...(sec166 !== undefined ? { redevSec166: sec166 } : {}),
+          ...(successor !== undefined ? { redevSuccessorExpense: successor } : {}),
         }]
       : [];
   });
   if (records.some((r) => !r.item.gbAssetBurdenedGift && !r.result.transferBurdenedGiftBreakdown)) return whole;
-  const sum = (pick: (b: TransferBurdenedGiftBreakdown) => number) => cards.reduce((s, c) => s + pick(c.breakdown), 0);
+  // 승계조합원 카드가 단서(나목)를 골랐으면 세액에 쓰인 취득가액은 0 · 필요경비는 나목이다(§159 명세의 슬롯은 택일 전 값 · §F.5).
+  const usedOf = (c: (typeof cards)[number]): TransferBurdenedGiftBreakdown => {
+    const swap = "redevSuccessorExpense" in c ? c.redevSuccessorExpense?.swap : undefined;
+    if (swap?.chosen !== "direct") return c.breakdown;
+    const { land, building } = c.breakdown.perAsset;
+    return { ...c.breakdown, perAsset: { land: { ...land, acquisitionPrice: 0, estimatedDeduction: 0 }, building: { ...building, acquisitionPrice: 0, estimatedDeduction: swap.directSide } } };
+  };
+  const sum = (pick: (b: TransferBurdenedGiftBreakdown) => number) => cards.reduce((s, c) => s + pick(usedOf(c)), 0);
   return {
     ...whole,
     perAsset: {
