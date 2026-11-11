@@ -125,8 +125,18 @@
 - `redevelopment-successor.ts` — 택일을 `chooseEstimatedOrDirect`로 묶어 매매 승계 추계와 공용. `successorMemberDetail.acquisitionMethod`는 `"actual"` 유지(매매 추계 산식 행 `SuccessorEstimateFormula`를 그리지 않는다 — 부담부증여 카드가 §159 명세를 그린다).
 - 테스트: `__tests__/api/transfer.route.redev-successor-bg-k5-estimated.anchor.test.ts` 8건 · 뮤테이션 6/6. 의도된 기대값 갱신 4파일(축 B 지분 RM-1·RM-2 · SC-2 · RD-2 · A-3 — 모두 개산공제만큼 감소).
 
-### F.4 남은 것 (확인 필요)
-- 단서가 실제 필요경비 쪽(나목)을 택하면 부담부증여 카드는 택일 전 §159 명세(환산 + 개산공제)를, 재개발 카드는 엔진 값(취득가액 0 · 필요경비)을 그린다 — 종전에도 어긋났다(그때는 개산공제 0). 표시 정합은 별건.
+### F.4 결과 카드 필요경비 줄 (2026-11-11 · 렌더 실측으로 정정)
+- ~~부담부증여 카드는 택일 전 §159 명세를, 재개발 카드는 엔진 값을 그린다~~ — 코드만 읽고 쓴 판단이었다. **단건** 카드(`SingleDetailCards`)는 재개발 자산이면 「신고서 필요경비」 줄(`BgRedevFilingExpenseRows` · 엔진 값)을 그려 **값은 엔진과 같았다**(K-5 7,200,000 · 기준시가 9,000,000 · 단서 360,000,000).
+- 실제 결함 두 가지:
+  1. 단건 — 줄 **이름**이 「인가 후 분 — 자본적지출·양도비 — 소득세법 §97①2·3호」 · 「인가 전 분은 개산공제와 실제 필요경비 중 택일 — 시행령 §166①1호」였다. 승계 × 환산·기준시가의 필요경비는 개산공제(§163⑥) 또는 §97②2호 단서 나목이다(#3199 뒤 개산공제가 「자본적지출·양도비」로 적혔다).
+  2. 다건 자산별 아코디언(`PropertyBreakdownAccordion`) — 신고서 필요경비 줄이 없어 §159 명세의 택일(`BgNecessaryExpenseRow`)을 그렸다 → 단서 시 「개산공제 7,200,000」 vs 엔진 360,000,000.
+- 구현: 엔진 echo `successorMemberDetail.burdenedGiftExpense`(택일 전 취득가액·개산공제·택일) → 카드 prop `redevSuccessorExpense`가 있으면 `BgRedevSuccessorExpenseRow`(개산공제 산식 또는 단서 설명)를 그리고 `BgNecessaryExpenseRow` · `BgRedevFilingExpenseRows`는 그리지 않는다. 단건 · 다건 두 곳 배선.
+- 「명세 단서 · 재개발 본문」 조합은 생기지 않는다(실측) — 재개발 나목(인가 후 필요경비 + 자본적지출 + 양도비) ⊇ 명세 나목(자본적지출 + 양도비).
+- 테스트 `__tests__/components/bg-redev-successor-expense-row.anchor.test.tsx` 8건 · 뮤테이션 6/6 · E2E `e2e/bg-redev-successor-expense-row.spec.ts` 2건.
+
+### F.5 남은 것 (확인 필요)
+- 「신고서 취득가액 합계」 줄 안내(「시행령 제166조 제1항 제1호에 따라 … 따로 계산」)는 승계조합원(§166 밖)에도 뜬다 — 값은 맞다(K-4 포함 · 종전부터).
+- 축 B · 함께 양도 카드별 행(`BgBundleCardAcqRows`)의 승계 × 환산 지분 필요경비 줄은 측정하지 않았다.
 
 ## G. 부담부증여 K-6 · K-7 × 취득시 기준시가 0 — 직접 API (2026-11-11)
 

@@ -754,6 +754,17 @@ export interface RedevelopmentResult {
     necessaryExpenseSwap?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
     /** 감정가액·환산 · 사용승인일부터 5년 이내 — 일반 신축이면 §114의2 가산세 대상. 승계조합원에는 적용하지 않고 고지만 한다(Q-2 a) */
     penalty114_2Unapplied?: boolean;
+    /**
+     * 부담부증여 × 환산(K-5)·기준시가 — 승계 분기가 고른 필요경비(Q-52 a). §159 명세의 택일은 재개발 전용 칸(인가 후 필요경비)을 모르므로
+     * 부담부증여 카드는 이 값으로 필요경비 줄을 그린다(계획서 remaining-4-measurements §F.4).
+     */
+    burdenedGiftExpense?: {
+      /** §159 안분 취득가액(택일 전) */
+      value: number;
+      /** 개산공제(택일 전) */
+      deduction: number;
+      swap?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
+    };
   };
 
   /**

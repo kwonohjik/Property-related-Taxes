@@ -512,6 +512,7 @@ export function PropertyBreakdownAccordion({
               <BurdenedGiftDetailCard
                 breakdown={breakdown.transferBurdenedGiftBreakdown}
                 propertyType={property?.form?.assets?.[0]?.assetKind}
+                redevSuccessorExpense={breakdown.redevelopmentDetail?.successorMemberDetail?.burdenedGiftExpense}
               />
             </div>
           )}

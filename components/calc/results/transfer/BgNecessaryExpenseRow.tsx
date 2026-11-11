@@ -72,3 +72,49 @@ export function BgNecessaryExpenseRow({
     </>
   );
 }
+
+/**
+ * 승계조합원 완공 APT × 부담부증여 × 환산(K-5)·기준시가 — 필요경비는 재개발 승계 분기가 고른 값(엔진 echo `successorMemberDetail.burdenedGiftExpense`)이다.
+ * §159 명세의 택일은 재개발 전용 칸(인가 후 필요경비)을 모르므로 `BgNecessaryExpenseRow` 대신 이 줄을 그린다(계획서 remaining-4-measurements §F.4).
+ * 재개발 나목(인가 후 필요경비 + 자본적지출 + 양도비) ⊇ 명세 나목(자본적지출 + 양도비)이라 「명세 단서 · 재개발 본문」 조합은 생기지 않는다(실측).
+ */
+export function BgRedevSuccessorExpenseRow({
+  bg,
+  expense,
+}: {
+  bg: TransferBurdenedGiftBreakdown;
+  expense: { value: number; deduction: number; swap?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" } };
+}) {
+  const rate = `${(bg.debtRatio * 100).toFixed(4)}%`;
+  const carryover = <BgCarryoverGiftTaxRow amount={bg.carryoverGiftTax?.applied ?? 0} />;
+  if (expense.swap?.chosen === "direct") {
+    return (
+      <>
+        <tr data-testid={SINGLE_IDS.expense} data-kind="swap">
+          <td className="py-1 pr-2 pl-3">
+            필요경비 = 자본적지출·양도비 등(인가 후 필요경비 포함) × 채무비율 {rate} (환산취득가액 {fmt(expense.value)} + 개산공제 {fmt(expense.deduction)} = {fmt(expense.swap.estimatedSide)}보다
+            커서 이 금액만 쓰고 환산취득가액은 빼지 않음 — 소득세법 제97조 제2항 제2호 단서 · 재개발·재건축 상세 참조)
+          </td>
+          <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(expense.swap.directSide)}</td>
+        </tr>
+        {carryover}
+      </>
+    );
+  }
+  const { land, building } = bg.perAsset;
+  const pct = building?.estimatedDeductionRate ?? land?.estimatedDeductionRate;
+  return (
+    <>
+      {expense.deduction > 0 && (
+        <tr data-testid={SINGLE_IDS.estimated} data-kind="estimated">
+          <td className="py-1 pr-2 pl-3">
+            개산공제 = 취득시 기준시가 {fmt((land?.stdPriceAtAcquisition ?? 0) + (building?.stdPriceAtAcquisition ?? 0))} × 채무비율 {rate}
+            {pct !== undefined && ` × 개산공제율 ${(pct * 100).toFixed(1).replace(/\.0$/, "")}%`}
+          </td>
+          <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(expense.deduction)}</td>
+        </tr>
+      )}
+      {carryover}
+    </>
+  );
+}
