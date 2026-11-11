@@ -21,9 +21,9 @@ describe("bgShareOwnAcquisitionApplies — 범위", () => {
     for (const assetKind of ["land", "housing", "commercial_building", "building"] as const) expect(bgShareOwnAcquisitionApplies(base({ assetKind }))).toBe(true);
   });
   it("분양권 → 닫는다(부담부증여 지원 종류 밖)", () => expect(bgShareOwnAcquisitionApplies(base({ assetKind: "presale_right" }))).toBe(false));
-  it("재개발 — 시가 · 실지(K-4)만 연다 · 환산(K-5) · 기준시가는 닫는다(vp2c §25 D-3g · Q-18 a)", () => {
+  it("재개발 — 시가면 산정방식과 무관하게 연다(지분별 산정방식 · Q-47 a) · 기준시가는 닫는다", () => {
     expect(bgShareOwnAcquisitionApplies(base({ assetKind: "redevelopment_apt", bgAcquisitionMethod: "actual" }))).toBe(true);
-    expect(bgShareOwnAcquisitionApplies(base({ assetKind: "redevelopment_apt", bgAcquisitionMethod: "converted" }))).toBe(false);
+    expect(bgShareOwnAcquisitionApplies(base({ assetKind: "redevelopment_apt", bgAcquisitionMethod: "converted" }))).toBe(true);
     expect(bgShareOwnAcquisitionApplies(base({ assetKind: "redevelopment_apt", bgAcquisitionMethod: "actual", bgValuationMode: "sangjeungbeop_standard" }))).toBe(false);
   });
   it("입주권 — 원조합원 지분은 평가 모드와 무관하게 연다 · 승계 지분은 닫는다(vp2c §25 D-3g)", () => {

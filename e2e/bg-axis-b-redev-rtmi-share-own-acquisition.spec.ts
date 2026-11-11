@@ -5,6 +5,7 @@
  * - ROE-1 재개발 원조합원 K-4: 지분 카드에 쓰이지 않던 ⑤ 「실거래가 취득가액」 칸이 없다 · 「이 지분 실지취득가액」 3억 → 382,331,100(= 지분별 축 A 단건 합).
  * - ROE-2 입주권 원조합원 기준시가: 토글을 켜면 자산 1 값(3억)으로 시작 → 440,000,000(= 토글 끔) · 안내가 숨은 ⑤ 대신 자산 1의 ② 를 가리킨다.
  * - ROE-3 재개발 원조합원 K-5: 판정값이 부담부증여로 바뀌어 ⑤ 라디오가 사라져도 §166③ D · E 칸이 뜬다 → 475,865,550(= 100% 단건).
+ * - ROE-4 지분별 산정방식(remaining-4-measurements Q-47 a): 자산 1 K-4 · 지분 2 K-5 → D · E 칸 · 417,816,140(= 축 A 단건 합).
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
@@ -76,12 +77,14 @@ test.describe("축 B × 부담부증여 — 재개발 · 입주권 원조합원 
     await expect(card.locator('[data-field="redevActualAcquisitionPrice"]')).toHaveCount(0);
     const block = page.getByTestId("bg-share-own-acquisition");
     await expect(block).toHaveCount(1);
-    // 산정방식은 자산 1 — 이 블록에는 산정방식 라디오가 없다
-    await expect(block.getByRole("radio")).toHaveCount(0);
+    // 재개발 지분은 산정방식도 지분 칸이다(Q-47 a) — 비어 있으면 자산 1의 실지(K-4)
+    await expect(block.locator('[data-field="bgAcquisitionMethod"]')).toHaveCount(1);
+    await expect(block.getByRole("radio", { name: /실지취득가액 안분/ })).toBeChecked();
     const input = block.locator('[data-field="bgActualAcquisitionTotal"] input, input[data-field="bgActualAcquisitionTotal"]').first();
     await input.fill("300000000");
     await expect(input).toHaveValue(/^300,?000,?000$/);
-    await expect(card.getByTestId("bg-acq-method-source")).toContainText("이 지분의 실지취득가액은 이 카드 위");
+    // 재개발 지분은 산정방식도 이 카드에서 고른다(Q-47 a) — 출처 안내가 그 블록을 가리킨다
+    await expect(card.getByTestId("bg-acq-method-source")).toContainText("이 카드 위 「이 지분의 취득가액을 자산 1과 따로 입력」에서 선택");
     const j = await calc(page);
     expect(j.data.aggregated.totalTransferGain).toBe(382_331_100);
   });
@@ -110,8 +113,21 @@ test.describe("축 B × 부담부증여 — 재개발 · 입주권 원조합원 
     const card = await shareCard(page);
     await expect(card.getByTestId("redev-bg-sec166-3-notice")).toBeVisible();
     await expect(card.locator('[data-field="redevManagementDisposalHousingPrice"]').first()).toBeVisible();
-    await expect(page.getByTestId("bg-share-own-acquisition")).toHaveCount(0);
+    // 지분별 산정방식(Q-47 a) — 토글은 보이지만 꺼져 있으면 자산 1의 K-5 그대로
+    await expect(page.getByTestId("bg-share-own-acquisition").getByRole("switch")).toHaveAttribute("aria-checked", "false");
     const j = await calc(page);
     expect(j.data.aggregated.totalTransferGain).toBe(475_865_550);
+  });
+
+  test("ROE-4 재개발 원조합원 — 자산 1 K-4 · 지분 2 K-5(지분별 산정방식 · Q-47 a) → §166③ D · E 칸 · 417,816,140", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seed(page, { ...REDEV, ...K4, redevSettlementAmount: "55668900" },
+      { ...REDEV_SHARE, bgShareOwnAcquisition: true, bgAcquisitionMethod: "converted", redevManagementDisposalHousingPrice: "300000000", redevAcquisitionHousingPrice: "200000000" }, "1000000000");
+    const card = await shareCard(page);
+    const block = page.getByTestId("bg-share-own-acquisition");
+    await expect(block.getByRole("radio", { name: /환산취득가액/ })).toBeChecked();
+    await expect(card.locator('[data-field="redevManagementDisposalHousingPrice"]').first()).toBeVisible();
+    const j = await calc(page);
+    expect(j.data.aggregated.totalTransferGain).toBe(417_816_140);
   });
 });

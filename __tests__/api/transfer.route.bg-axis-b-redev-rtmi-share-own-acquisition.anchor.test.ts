@@ -135,7 +135,6 @@ describe("RO-3 토글 켬 + 이 지분 실지취득가액 비움 → ⑧ 차단 
 
 describe("RO-4 범위 — 실지취득가액이 쓰이지 않는 칸에서는 토글이 숨고 켜 둔 값도 쓰지 않는다", () => {
   it.each([
-    ["재개발 시가 K-5 환산", () => redevB("orig", K5, 600_000_000, 0.6, { ...OWN("300000000"), useEstimatedAcquisition: true }), 475_865_550],
     ["재개발 기준시가", () => redevB("orig", STD, 400_000_000, 0.6, OWN("300000000")), 147_609_250],
     ["재개발 시가 K-4 담보 승(채무 12억)", () => redevB("orig", K4, 1_200_000_000, 0.6, { ...OWN("300000000"), standardPriceAtAcq: "400000000" }), 695_218_500],
   ] as const)("%s", async (_n, f, g) => {
@@ -143,6 +142,12 @@ describe("RO-4 범위 — 실지취득가액이 쓰이지 않는 칸에서는 �
     const primary = form.assets[0];
     expect(bgShareOwnAcquisitionApplies(mergePrimaryBasic(form.assets[1], primary))).toBe(false);
     expect(await gainOk(form)).toBe(g);
+  });
+  it("재개발 시가 K-5 — 토글은 열리지만(지분별 산정방식 · Q-47 a) 지분 산정방식이 비면 자산 1의 K-5라 남은 실지는 쓰지 않는다 · 475,865,550", async () => {
+    const form = redevB("orig", K5, 600_000_000, 0.6, { ...OWN("300000000"), useEstimatedAcquisition: true });
+    const merged = mergePrimaryBasic(form.assets[1], form.assets[0]);
+    expect([bgShareOwnAcquisitionApplies(merged), merged.bgAcquisitionMethod]).toEqual([true, "converted"]);
+    expect(await gainOk(form)).toBe(475_865_550);
   });
   it("leaf — 입주권 승계 지분 · 일반 양도 · 재개발 의제취득일 전 상속 지분은 닫힌다 · 재개발 · 입주권은 실지 한 칸만", () => {
     const rp = rtmiB(R_STD, 0.6).assets[0];
@@ -153,12 +158,14 @@ describe("RO-4 범위 — 실지취득가액이 쓰이지 않는 칸에서는 �
     expect(bgShareOwnAcquisitionApplies(mergePrimaryBasic(mk(2, share2Redev("orig", 0.4), { acquisitionCause: "inheritance", acquisitionDate: "1980-01-01" }), redevPrimary))).toBe(false);
     const redevMerged = mergePrimaryBasic(mk(2, share2Redev("orig", 0.4)), redevPrimary);
     expect(bgShareOwnAcquisitionApplies(redevMerged)).toBe(true);
-    expect(bgShareOwnAcquisitionFields(redevMerged)).toEqual(["bgActualAcquisitionTotal"]);
+    expect(bgShareOwnAcquisitionFields(redevMerged)).toEqual(["bgAcquisitionMethod", "bgActualAcquisitionTotal"]);
     expect(bgShareOwnAcquisitionFields(mergePrimaryBasic(mk(2, ORIG(0)), rp))).toEqual(["bgActualAcquisitionTotal"]);
   });
-  it("산정방식은 자산 1 — 지분 카드에 남은 산정방식은 되돌리지 않는다", () => {
+  it("재개발 지분 산정방식은 지분 칸이다(Q-47 a) — 비어 있으면 자산 1 값(그 전에 저장된 카드)", () => {
     const f = redevB("orig", K4, 600_000_000, 0.6, { ...OWN("300000000"), bgAcquisitionMethod: "converted" });
-    expect(mergePrimaryBasic(f.assets[1], f.assets[0]).bgAcquisitionMethod).toBe("actual");
+    expect(mergePrimaryBasic(f.assets[1], f.assets[0]).bgAcquisitionMethod).toBe("converted");
+    const g = redevB("orig", K4, 600_000_000, 0.6, OWN("300000000"));
+    expect(mergePrimaryBasic(g.assets[1], g.assets[0]).bgAcquisitionMethod).toBe("actual");
     expect(mergePrimaryBasic(f.assets[1], f.assets[0]).bgActualAcquisitionTotal).toBe("300000000");
   });
 });
