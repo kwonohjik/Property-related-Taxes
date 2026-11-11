@@ -68,6 +68,7 @@ export function buildActualGeneralBuildingCards(
     acquisitionLandPricePerSqm, acquisitionBuildingStdPrice,
     burdenedGiftInfo, burdenedGiftOwnershipRatio, lumpSumDeductionOwnershipRatio, donorBuiltPenalty,
     landPreDeemedClauseA, buildingPreDeemedClauseA,
+    landSec163_9Proviso, buildingSec163_9Proviso,
     houseToCommercialConversion, conversionDate, wasMultiHouseAtConversion,
     acquisitionByInheritance, buildingAcquisitionByInheritance,
     inheritedLandValue, inheritedBuildingValue, landSec1639Basis, buildingSec1639Basis,
@@ -295,6 +296,10 @@ export function buildActualGeneralBuildingCards(
       // 의제취득일(1985.1.1.) 전 상속·증여 파트 — 시가 평가면 그 파트만 3자 max(사용자 결정 Q-28 · PR-7b-6). 괄호(기준시가)면 §159가 쓰지 않는다.
       ...(landPreDeemedClauseA || buildingPreDeemedClauseA
         ? { preDeemedParts: { land: landPreDeemedClauseA, building: buildingPreDeemedClauseA } }
+        : {}),
+      // 의제취득일 이후 · 고시 전 상속 · 증여 파트 — K-4 파트 A = max(실지 칸, 취득시 기준시가)(계획서 remaining-4-measurements.plan.md §B · Q-43 a)
+      ...(landSec163_9Proviso || buildingSec163_9Proviso
+        ? { postDeemedProvisoParts: { land: landSec163_9Proviso === true, building: buildingSec163_9Proviso === true } }
         : {}),
       /**
        * K-4(실지취득가) 실비 — 채무비율 안분 후 `estimatedDeduction` 슬롯에 반영.

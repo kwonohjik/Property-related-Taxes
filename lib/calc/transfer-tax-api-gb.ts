@@ -308,6 +308,7 @@ export function buildGeneralBuildingValuation(
     landSec1639Basis,
     buildingSec1639Basis,
     preDeemedFields,
+    bgPostDeemedProvisoFields,
     acqLandPerSqm,
   } = gbSec1639Acquisition(asset, transferDate, isBurdenedGiftGb);
 
@@ -380,6 +381,7 @@ export function buildGeneralBuildingValuation(
       // 값(평가액)은 위 `partModePayload`의 파트 가격 슬롯으로 흐르므로 여기서는 **게이트만** 보낸다.
       ...gbInheritanceEcho,
       ...preDeemedFields,
+      ...bgPostDeemedProvisoFields,
       ...unregisteredFields,
       buildingAcquisitionDate: partAcquisitionDates(asset).building || undefined,
       landAcquisitionDate: partAcquisitionDates(asset).land || undefined,
@@ -620,6 +622,7 @@ export function buildGeneralBuildingValuation(
     // §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1)
     ...gbInheritanceFields,
     ...preDeemedFields,
+    ...bgPostDeemedProvisoFields,
     ...nblFields,
     ...unregisteredFields,
     // 사례 35: 주택→상가 용도변경 — actual 모드도 동일 LTHD 분기

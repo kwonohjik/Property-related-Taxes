@@ -52,6 +52,12 @@
 - 화면: 「부담부증여」 카드의 「종전 부동산 실지취득가액」 칸 아래에 `BgSec163_9ProvisoSection`(PR-1 부품 — 토지 면적은 `redevLandArea`).
 - 실측(V-b 해소): §166 경로에서도 기대값과 1원까지 같다 — 토지 출자 360,000,000 · 주택 출자 240,000,000 · ② 비움 450,000,000 · ① 승 200,000,000. anchor `transfer.route.bg-163-9-proviso-redev-rtmi.anchor.test.ts` 8건 · 뮤테이션 4/4 · E2E BR-1.
 
+### B.4 구현 B2 — 일반건물 파트별 (2026-11-11 · Q-43 a · Q-46 a)
+- ④ `gbSec1639Acquisition`이 부담부증여 · 시가 · 실지(K-4) · 담보 승 아님 · 이월과세 아님에서 단서 구간 파트(일반 양도와 같은 `landSec164Applies` · `buildingSec164Applies` · 의제취득일 전 파트 제외)에 `landSec163_9Proviso` · `buildingSec163_9Proviso` 표시만 싣는다 — ②는 부담부증여에서 이미 필수인 취득시 기준시가(토지 1990 전이면 등급 환산 · 건물 `gbAcqBuildingValue`)라 값은 싣지 않는다.
+- ⑫ `generalBuildingValuation` 두 키(`z.literal(true)`) · ⑭ route → `postDeemedProvisoParts` · 엔진 K-4가 파트 A = max(실지 칸, 취득시 기준시가)(지분 축소 후 같은 비율 — V-a 해소). 파트별 3자 max 경로(한 파트 의제취득일 전)도 사용자 파트는 같은 함수를 지난다.
+- 안내: 토지 등급 카드 `gbBgPre1990LandNote("market")` · 건물 취득시 기준시가 `gbBgAcqBuildingHint` market_actual에 「큰 금액」.
+- 실측: 두 파트 375,000,000 · 건물만 425,000,000 · 분리(토지 상속 · 건물 매매) 395,000,000 · 증여 375,000,000 · 단서 밖 445,000,000 그대로 · ① 승 320,000,000 · 지분 1/2 187,500,000. anchor `transfer.route.bg-163-9-proviso-gb-parts.anchor.test.ts` 9건 · 뮤테이션 6/6 · E2E BG-1.
+
 ## C. 재개발 축 B 지분별 산정방식 · 지분 카드 ⑧ 문구 (Q-47 · Q-48)
 
 ### C.1 실측

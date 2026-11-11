@@ -11,6 +11,7 @@
  * 의제취득일(1985.1.1.) 전 상속·증여 파트(시가 평가 · 담보 패)는 그 파트만 3자 max다(사용자 결정 Q-28) — `gbBgThreeWayParts`로 따로 본다.
  * 평가 모드 미선택("")은 ④가 기준시가 모드로 보낸다(`transfer-tax-api-burdened-gift.ts`).
  */
+import { isBeforeBuildingStdPriceNotice } from "./commercial-164-6-proviso";
 import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 import { bgCollateralForcesStdAcq, BG_COLLATERAL_PAREN_ERA_SUFFIX, bgCollateralParenEraUncertain } from "./burdened-gift-collateral-win";
 import { gbBgThreeWayParts } from "./bg-pre-deemed-mode";
@@ -81,6 +82,14 @@ export function gbBgAcqBuildingHint(asset: AssetForm, isFractionalSplit?: boolea
     case "market_collateral":
       return `${basis} 건물기준시가 총액. 이 금액 × 채무비율이 건물 취득가액이자 개산공제(§163⑥) 기준액입니다.`;
     case "market_actual":
+      // 의제취득일 이후 · 건물 기준시가 고시 전(연도 ≤ 2000) 상속 · 증여 건물 — §163⑨2호 ②(계획서 remaining-4-measurements.plan.md §B · Q-43 a · Q-46 a)
+      if (
+        (asset.gbBuildingAcquisitionCause === "inheritance" || asset.gbBuildingAcquisitionCause === "gift") &&
+        isBeforeBuildingStdPriceNotice(asset.acquisitionDate) &&
+        !gbBuildingPreDeemed(asset)
+      ) {
+        return `${basis} 건물기준시가 총액. 건물 기준시가 고시 전(2000년 이전)에 상속·증여받은 건물은 이 금액(§164⑤ 가액)과 건물 실지취득가액 칸의 평가액 중 큰 금액 × 채무비율이 건물 취득가액입니다 (소득세법 시행령 §163⑨2호).`;
+      }
       return `${basis} 건물기준시가 총액. 자본적지출을 토지·건물로 나누는 비율에만 쓰입니다 (취득가액은 실지취득가액 · 개산공제 미적용).`;
     case "market_converted":
       return `${basis} 건물기준시가 총액. 건물 환산취득가액 산정에 쓰이고, 이 금액 × 채무비율이 개산공제(§163⑥) 기준액입니다.`;
