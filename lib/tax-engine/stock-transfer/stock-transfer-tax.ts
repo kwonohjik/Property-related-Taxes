@@ -30,6 +30,7 @@ import { isSection94_4Category } from "./stock-classification";
 import { calcHoldingPeriod, calcBasicDeduction, floorTaxBase, floorTen, applyDeemedAcquisitionDate, buildAppliedThreshold } from "./stock-transfer-helpers";
 import { computeCross89Adjustment } from "../comparative-104-5-cross";
 import { isSec104_5LatterClauseInForce } from "../data/sec104-5-latter-clause-era";
+import { stockFilingPenaltyEraNotice } from "../data/filing-penalty-base-era";
 import { NBL_HEAVY_CORP_BRACKETS, NBL_HEAVY_CORP_CATEGORIES } from "./stock-rate-tables";
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
@@ -592,6 +593,13 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   // ──────────────────────────────────────────────────────────
   const finalizeResult = finalizeStockTax(calculatedTax, input);
   warnings.push(...(finalizeResult.appliedRules ?? []));
+  // 2015.7.1. 전 양도분은 종전 가산세 규정(산출세액 기준 등) — 현행 기준 계산임을 세액 불변으로 고지한다(V-18).
+  const penaltyEraNotice = stockFilingPenaltyEraNotice({
+    filingViolation: input.filingViolation,
+    transferDate: input.transferDate,
+    penalty: finalizeResult.underReportPenalty,
+  });
+  if (penaltyEraNotice) warnings.push(penaltyEraNotice);
 
   // ──────────────────────────────────────────────────────────
   // STEP 12.5: 증권거래세 정보성 산출 (appended step)

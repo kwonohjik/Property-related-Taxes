@@ -1,6 +1,6 @@
 # 확정신고 무신고가산세 기준 — «예정신고 산출세액을 뺀 값»(V-15) 해석례·재결례 조회 계획서
 
-> 2026-11-11 · 조문·해석례·재결례 조회 + 코드 읽기(코드 변경 없음). 출처: `stock-penalty-base-unit-v13.plan.md` §0-3 [해석] → V-15 → 사용자 «V-15 집행기준 조회: 확정 무신고납부세액은 예정신고 산출세액을 뺀 값임».
+> 2026-11-11 · 조문·해석례·재결례 조회 + 코드 읽기 + 시기 고지 구현(Q-1 a·Q-2 a 결정 후 같은 PR에서 구현, §6). 출처: `stock-penalty-base-unit-v13.plan.md` §0-3 [해석] → V-15 → 사용자 «V-15 집행기준 조회: 확정 무신고납부세액은 예정신고 산출세액을 뺀 값임».
 > 표기: [직접] = 이번에 조문·결정문을 읽어 확인 · [해석] = 법문에서 읽은 것 · [확인 필요] = 미검증.
 >
 > **사용자 진술의 취급:** 위 결론은 사용자가 제시한 것이다. 이번 조회로 **현행 법문과 일치함(2015.7.1. 이후 양도분)** 은 확인했지만, 그 문장을 **그대로 말하는 집행기준·해석례·재결례는 찾지 못했다**(§2). 그래서 «사용자 확인 + 법문 일치»로 기록하고, 직접 근거는 «미확보»로 남긴다. 집행기준(국세기본법 집행기준 본문)은 이 조회 도구에 없어 **조회하지 못했다**.
@@ -67,3 +67,22 @@
 - **V-19 (신규)** 소득세법 §111③의 공제 대상이 «예정신고 **산출세액**»인데 앱 정산 입력은 사용자가 쓰는 «기납부 양도소득세» — 감면·수시부과가 있을 때의 차이.
 - 조심2017부3616이 인용한 «2015년 국세청 개정세법 해설»·재일46014-686 원문은 열지 않았다.
 - 조심2010전2164 등 3건은 제목만 확인했다.
+
+## 6. 결정 · 구현 결과 (2026-11-11)
+
+결정: **Q-1 a · Q-2 a**(모두 권장안). **세액·가산세 금액·기준은 바뀌지 않는다** — 고지만 더한다.
+
+- **Q-1 a:** 현행 유지. V-15를 «법문 일치(2015.7.1. 이후 양도분) · 직접 근거(집행기준·해석례·재결례) 미확보»로 닫는다. #3203의 안내 문구(확정신고라면 정산의 기납부와 같은 값)와 모순이 없다.
+- **판정 헬퍼:** NEW `lib/tax-engine/data/filing-penalty-base-era.ts` — `sec104-5-latter-clause-era.ts` 패턴. 경계 `FILING_PENALTY_BASE_ERA_START = "2015-07-01"`(양도일), `isFilingPenaltyBaseEraBefore`, 고정 문구 `FILING_PENALTY_BASE_ERA_NOTICE`(부칙 §12848호 제10조②·국세기본법 §47의2·§47의3 상수 인용 · «확인 필요»), `stockFilingPenaltyEraNotice({filingViolation, transferDate, penalty})` — **위반을 선언했고 가산세가 실제로 > 0이고 양도일이 2015-07-01 전**일 때만 문구를 돌려준다(가산세 0이면 기준 차이가 금액에 영향이 없다).
+- **단건:** `stock-transfer-tax.ts` — `finalizeStockTax` 직후 위 조건이면 `warnings`에 고지(761줄).
+- **합산:** `stock-transfer-aggregate-penalty.ts` `penaltyEraEcho(unitPenalty, inputs)` — 신고 단위 1회, 가산세 축 종목의 위반 선언 + **가장 이른 양도일**로 판정해 합산 결과 `penaltyEraNotice`에 싣는다. `aggregate`(748줄)와 `each_item` 단축 경로(`stock-transfer-aggregate-each-item.ts`) 둘 다 배선. 종목 행에는 `stripItemPenalties`가 같은 고정 문구를 걷어내 **중복을 막는다**.
+- **화면:** `StockAggregateSummaryCard` 신고불성실 가산세 항목 아래에 `data-testid="stock-penalty-era-notice"` 한 줄(톤 하드코딩 없이 `text-muted-foreground`). 단건 경로는 기존 `warnings` 표시 경로를 그대로 쓴다.
+- **anchor 17건:** `__tests__/tax-engine/stock-transfer/filing-penalty-base-era.anchor.test.ts` 14건(순수 판정 경계 2015-06-30/07-01 · 단건 · 합산 · each_item·단건 단축 경로 · 종전·현행 혼재) + `__tests__/components/stock-filing-penalty-era-card.anchor.test.tsx` 3건(카드 렌더, 현행·위반 없음 대조군). 구현 **전** 모듈 부재로 전건 실패(`Cannot find package`).
+- **뮤테이션 10종 전부 사망**(복원 `cmp` 일치): 경계 포함(5건 실패) · 위반 선언 가드 제거 · 가산세 0 가드 제거 · 양도일 없음 가드 제거 · 종목 행 중복 제거 삭제 · 가장 늦은 양도일로 판정 · 단건 push 누락 · aggregate echo 누락(3) · each_item echo 누락(2) · 카드 미렌더(각 1).
+- **14지점:** 엔진 result에 `penaltyEraNotice` echo 1개 추가 + 단건은 기존 `warnings`. API 입력·Zod·전송 불변 → ⑤⑦(표시)와 result 타입만.
+- **Playwright/브라우저:** 하지 않음(새 입력·이벤트 없음, 카드 렌더 anchor로 고정).
+
+### 미검증 갱신
+- **V-18 해소(고지):** 시기 분기 부재는 고지로 알린다. **종전 규정 자체는 구현하지 않았다**(Q-2 b 비권고) — 2015.7.1. 전 양도분의 가산세 금액은 여전히 현행 기준 계산이다.
+- **V-15′·V-19** 그대로 열려 있다: 양도소득세 확정신고 무신고납부세액의 직접 근거(집행기준·해석례·재결례), §111③ «예정신고 산출세액» vs 앱 «기납부 양도소득세».
+- 국외주식(`foreign_stock`)·국외전출세 단건 경로는 이번에 배선하지 않았다 — 합산 경로의 `penaltyEraEcho`는 국외 종목도 `transferDate`로 읽지만, 국외 단건(`calculateForeignStockTax`) 결과에는 고지를 싣지 않는다 [확인 필요, V-20].

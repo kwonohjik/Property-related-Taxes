@@ -25,6 +25,7 @@ import {
   stripItemPenalties,
   computeFilingUnitPenalty,
   penaltyEcho,
+  penaltyEraEcho,
 } from "./stock-transfer-aggregate-penalty";
 import {
   sumSecuritiesTransactionTax,
@@ -159,6 +160,8 @@ export interface StockTransferAggregateResult {
   penaltyBase?: number;
   /** 🔴 G-46: 적용 조문 echo — 가산세가 0이면 넣지 않는다 */
   penaltyRuleRef?: string;
+  /** V-18: 2015.7.1. 전 양도분 가산세 시기 고지 echo(세액 불변) — 가산세가 0이거나 현행 양도일이면 넣지 않는다 */
+  penaltyEraNotice?: string;
   /** 🔴 G-46 · G-12: §47조의3①1호 가목·나목 분해 echo — 「부정행위로 인한 과소신고분」 입력 시 */
   fraudSplit?: FraudPortionSplit;
   /** 합산 전자신고 공제 (전체 1회) */
@@ -723,6 +726,7 @@ function aggregateInOrder(
     totalLatePaymentPenalty,
     // 🔴 G-46: 기준금액·조문·가목나목 분해 echo — 다종목에서 산식이 사라지지 않도록.
     ...penaltyEcho(unitPenalty),
+    ...penaltyEraEcho(unitPenalty, inputs),
     electronicFilingCredit,
     totalFinalTax,
     totalLocalIncomeTax,
