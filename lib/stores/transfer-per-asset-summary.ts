@@ -373,6 +373,16 @@ export function computeTransferPerAssetSummary(
       // 겸용 × 부담부증여 — 숨은 stale 취득 입력(`fixedAcquisitionPrice` 등)을 보이지 않는다. 취득가액은 채무비율 적용 후 엔진 값이다.
       acqPrice = 0;
       acqPending = true;
+    } else if (!result && a.isMixedUseHouse && (a.acquisitionCause === "inheritance" || a.acquisitionCause === "gift")) {
+      /**
+       * 겸용 × 상속·증여(§163⑨) — 취득가액은 겸용 엔진이 주택·상가 기준시가 섹션의 상속개시일·증여일 평가액으로 정한다
+       * (화면 안내 「겸용주택 상속개시일 평가액 자동 적용」 · 증여 신고가액 칸은 숨김 — `mixed-gift-fixed-acq-price.plan.md`).
+       * 종전 계산 전에는 숨은 칸 값을 보였다(2026-11-11 실측 · 엔진 537,500,000): 증여 단건·묶음 600,000,000 · 지분 60/40 360,000,000·240,000,000,
+       * 상속 단건 600,000,000(`publishedValueAtInheritance`) · 상속 묶음·지분 0(pending 아님 — 「-」). 계산 후는 위 `mixedResult`·아래 `bundledMatch`가 엔진 값이다.
+       * 「계산 후 표시」 규약은 겸용 부담부증여(바로 위)·청산금 수령 단독과 같다. 세액 무관(표시 전용).
+       */
+      acqPrice = 0;
+      acqPending = true;
     } else if (bundledMatch) {
       // 안분 행은 입력값이라 환산·감정·매매사례 첫째 자산이면 0이다 — 아래 필요경비와 같은 축(엔진 표시 echo · §97③ 공제 후)을 읽는다.
       acqPrice = (bundledEcho?.acq ?? bundledMatch.allocatedAcquisitionPrice) + (purchased?.acq ?? 0);
