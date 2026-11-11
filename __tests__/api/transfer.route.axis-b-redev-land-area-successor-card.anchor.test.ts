@@ -117,9 +117,9 @@ describe("SC-1 승계조합원 지분 카드 ③ 판정값 (D-3k)", () => {
 
 describe("SC-2 승계조합원 — 지분 카드에 보이는 칸만으로 양도차익 = 100% 단건", () => {
   for (const [name, mode, extra, fixed] of [
-    ["기준시가 보충", STD, { standardPriceAtAcq: "400000000" }, 200_000_000],
+    ["기준시가 보충", STD, { standardPriceAtAcq: "400000000" }, 194_000_000], // Q-52 a: 승계 × 부담부증여 × 환산·기준시가 — 개산공제(취득시 기준시가 × 채무비율 × 3%)를 뺀다(종전 0원)
     ["시가 K-4 실지", K4, {}, 450_000_000],
-    ["시가 K-5 환산", K5, { standardPriceAtAcq: "400000000" }, 300_000_000],
+    ["시가 K-5 환산", K5, { standardPriceAtAcq: "400000000" }, 292_800_000],
   ] as const) {
     it(name, async () => {
       const b = await gainOk(frac([SUCC, mode], [SUCC_SHARE, extra]));

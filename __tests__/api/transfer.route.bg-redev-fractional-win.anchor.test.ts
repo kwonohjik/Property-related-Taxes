@@ -148,7 +148,7 @@ describe("RD-2 시나리오 변형 — 청산금 수령 · 토지 출자 · 승�
   it.each([
     ["청산금 수령", "receive", 509_000_001],
     ["토지 출자", "land", 447_609_250],
-    ["승계조합원", "successor", 500_000_000],
+    ["승계조합원", "successor", 494_000_000], // Q-52 a: 승계 × 부담부증여 × 환산·기준시가 — 개산공제(취득시 기준시가 × 채무비율 × 3%)를 뺀다(종전 0원) — 담보가 이겨 기준시가
   ] as const)("%s 축 A 시가 · K-4 · 담보: 신규 통과 ∧ = 반 크기 단건", async (_n, v, gain) => {
     const w = debt("700000000");
     const f = form([redev("a", 1, v, HALF, w, v === "successor" ? {} : set(v, 0.5))]);
@@ -157,10 +157,10 @@ describe("RD-2 시나리오 변형 — 청산금 수령 · 토지 출자 · 승�
     expect(g).toBe(gain);
     expect(g).toBe(await single(v, 0.5, w));
   });
-  it("승계조합원은 K-5여도 열린다(§166 밖 — 취득시 기준시가 칸이 뜬다): 500,000,000", async () => {
+  it("승계조합원은 K-5여도 열린다(§166 밖 — 취득시 기준시가 칸이 뜬다): 494,000,000(개산공제 · Q-52 a)", async () => {
     const f = form([redev("a", 1, "successor", HALF, K5(1), debt("700000000"))]);
     expect(issues(f)).toEqual([]);
-    expect(ok(await post(f))).toBe(500_000_000);
+    expect(ok(await post(f))).toBe(494_000_000);
     expect(needsBgAcqStdPriceInput(f.assets[0], false)).toBe(true);
   });
 });

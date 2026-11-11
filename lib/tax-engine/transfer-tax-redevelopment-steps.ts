@@ -9,6 +9,7 @@
  */
 import { runRedevelopment } from "./redevelopment";
 import type { SuccessorEstimateInput } from "./redevelopment-successor";
+import type { SuccessorBurdenedGiftEstimateInput } from "./redevelopment-successor";
 import { resolveConversionDenominatorAtTransfer } from "./transfer-tax-expropriation-valuation";
 import {
   resolveHighValueHouseThreshold,
@@ -92,7 +93,7 @@ export function runRedevelopmentGainSteps(
     priorHouseResidenceMonths: input.redevelopment!.priorHouseResidenceMonths,
     newHouseResidenceMonths: input.redevelopment!.newHouseResidenceMonths,
     isSuccessorRightToMoveIn: input.isSuccessorRightToMoveIn,
-    ...(burdenedGift ? {} : successorEstimateOf(input)),
+    ...(burdenedGift ? successorBurdenedGiftEstimateOf(input, burdenedGift) : successorEstimateOf(input)),
     ownershipRatio: input.ownershipRatio,
     isUnregistered: input.isUnregistered,
     debtFraction: burdenedGift
@@ -560,6 +561,25 @@ export function runRedevelopmentGainSteps(
  * 부담부증여는 §159가 취득가액을 정한다(호출부가 뺀다). 판정 순서는 일반 경로 `calcTransferGain`과 같다(환산 > 감정 > 매매사례).
  * 환산 분모는 일반 경로와 같은 leaf(`resolveConversionDenominatorAtTransfer` — §164⑧·⑨ 반영)다.
  */
+/**
+ * 승계조합원 완공 APT × 부담부증여 × 환산(K-5)·기준시가 — §159 명세의 취득가액·개산공제를 **단서 택일 전 값**으로 넘긴다(Q-52 a).
+ * 택일은 승계 분기가 인가 후 필요경비(β 축소)로 다시 한다 — §159 명세의 택일은 재개발 전용 칸(인가 후 필요경비)을 모른다.
+ * 종전에는 이 입력이 없어 개산공제가 0원이었고, 입력한 실제 필요경비를 환산 취득가액과 함께 뺐다.
+ */
+function successorBurdenedGiftEstimateOf(
+  input: TransferTaxInput,
+  bg: TransferBurdenedGiftBreakdown,
+): { successorBurdenedGiftEstimate?: SuccessorBurdenedGiftEstimateInput } {
+  if (input.redevelopment?.isSuccessorMember !== true) return {};
+  const method = bg.acquisitionMethodUsed;
+  if (method !== "converted" && method !== "standard_price") return {};
+  const totals = burdenedGiftPerAssetTotals(bg);
+  const before = bg.convertedAcquisitionBeforeSwap;
+  const value = before ? before.land + before.building : totals.acquisitionPrice;
+  const deduction = bg.necessaryExpenseSwap?.chosen === "direct" ? bg.necessaryExpenseSwap.estimatedSide - value : totals.estimatedDeduction;
+  return { successorBurdenedGiftEstimate: { method, value, deduction } };
+}
+
 function successorEstimateOf(input: TransferTaxInput): { successorEstimate?: SuccessorEstimateInput } {
   if (input.redevelopment?.isSuccessorMember !== true || input.acquisitionCause !== "purchase") return {};
   const std = input.standardPriceAtAcquisition ?? 0;

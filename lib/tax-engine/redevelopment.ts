@@ -196,6 +196,8 @@ export interface RedevelopmentOrchestratorInput extends RedevelopmentSplitInput 
   newHouseResidenceMonths?: number;
   /** 승계조합원 완공 APT 취득가액 추계 — 매매 승계만(`transfer-tax-redevelopment-steps.ts`). 없으면 실지거래가액(종전). */
   successorEstimate?: import("./redevelopment-successor").SuccessorEstimateInput;
+  /** 승계조합원 완공 APT × 부담부증여 × 환산(K-5)·기준시가 — §159 안분 취득가액·개산공제(`transfer-tax-redevelopment-steps.ts`). 없으면 실지(종전). */
+  successorBurdenedGiftEstimate?: import("./redevelopment-successor").SuccessorBurdenedGiftEstimateInput;
 }
 
 // 800줄 분리 — 분기 실행부 3개 + 전용 헬퍼 2개는 `redevelopment-branches.ts` 로 이동했다.

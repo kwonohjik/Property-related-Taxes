@@ -83,7 +83,7 @@ async function gainOk(f: TransferFormData) {
 const OWN2_MAT = (v: V): A => (v === "orig" ? { redevAcquisitionHousingPrice: "200000000" } : { standardPriceAtAcq: "500000000" });
 
 describe("RM-1 지분 1 K-4 + 지분 2 K-5 — 축 B = 지분별 재료 축 A 단건 합(Q-47 a)", () => {
-  for (const [v, fixed] of [["orig", [417_816_140, 435_429_921]], ["succ", [360_000_000, 292_500_000]]] as const) {
+  for (const [v, fixed] of [["orig", [417_816_140, 435_429_921]], ["succ", [356_400_000, 286_200_000]]] as const) { // Q-52 a: 승계 × 부담부증여 × 환산·기준시가 — 개산공제(취득시 기준시가 × 채무비율 × 3%)를 뺀다(종전 0원) — 지분 2 K-5 5억 × 지분 × 0.6 × 3% = 3,600,000 · 6,300,000
     for (const [i, r1] of [0.6, 0.3].entries()) {
       it(`재개발 ${v === "orig" ? "원조합원" : "승계조합원"} · ${r1 * 100}/${100 - r1 * 100}`, async () => {
         const b = await gainOk(redevB(v, K4, 600_000_000, r1, { bgShareOwnAcquisition: true, bgAcquisitionMethod: "converted", ...OWN2_MAT(v) }));
@@ -94,7 +94,7 @@ describe("RM-1 지분 1 K-4 + 지분 2 K-5 — 축 B = 지분별 재료 축 A �
 });
 
 describe("RM-2 지분 1 K-5 + 지분 2 K-4 실지 3억 — 오라클과 같다(종전에는 지분 2에 실지 칸이 없어 전부 K-5)", () => {
-  for (const [v, fixed] of [["orig", [431_251_770, 397_791_436]], ["succ", [348_000_000, 384_000_000]]] as const) {
+  for (const [v, fixed] of [["orig", [431_251_770, 397_791_436]], ["succ", [343_680_000, 381_840_000]]] as const) { // Q-52 a: 승계 × 부담부증여 × 환산·기준시가 — 개산공제(취득시 기준시가 × 채무비율 × 3%)를 뺀다(종전 0원) — 지분 1 K-5 4억 × 지분 × 0.6 × 3% = 4,320,000 · 2,160,000
     for (const [i, r1] of [0.6, 0.3].entries()) {
       it(`재개발 ${v === "orig" ? "원조합원" : "승계조합원"} · ${r1 * 100}/${100 - r1 * 100}`, async () => {
         const b = await gainOk(redevB(v, K5, 600_000_000, r1, { bgShareOwnAcquisition: true, bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "300000000" }));

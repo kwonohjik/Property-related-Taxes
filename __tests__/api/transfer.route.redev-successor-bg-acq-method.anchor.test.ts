@@ -94,12 +94,12 @@ describe("A — 부담부증여 × 승계 × 매매: 종전 ⑧ 막다른 길(�
     expect(r.fields).toEqual([]);
     expect(r.gain).toBe(136_956_523);
   });
-  it("A-3 기준시가 평가 · 취득시 기준시가 300,000,000 → ⑧ 통과 · 150,000,000 (증여 취득과 같은 값)", async () => {
+  it("A-3 기준시가 평가 · 취득시 기준시가 300,000,000 → ⑧ 통과 · 145,500,000 = 150,000,000 − 개산공제 4,500,000(Q-52 a · 증여 취득과 같은 값)", async () => {
     const std = { ...BG, bgValuationMode: "sangjeungbeop_standard", bgMarketValueAtTransfer: "", standardPriceAtAcq: "300,000,000" };
     const purchase = await run(single(std));
     expect(purchase.fields).toEqual([]);
-    expect(purchase.gain).toBe(150_000_000);
-    expect((await run(single({ ...std, acquisitionCause: "gift" }))).gain).toBe(150_000_000);
+    expect(purchase.gain).toBe(145_500_000);
+    expect((await run(single({ ...std, acquisitionCause: "gift" }))).gain).toBe(145_500_000);
   });
 });
 
