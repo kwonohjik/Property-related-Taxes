@@ -201,7 +201,8 @@ describe("RH-3 차감형 감면 — 5년 안분 양도시 기준시가", () => {
   });
 
   /** 🔄 2026-11-06 US-44: §98의3은 완공APT에서 막혀(사용자 결정 Q-4) 같은 하이브리드 코어의 §99의2로 옮겼다. */
-  it("§99의2(⑧ 가드 없음 — Q-3 a): 숨은 옛 값은 엔진에 가지 않고, 엔진이 미입력 사유로 감면을 뺀다", async () => {
+  /** 🔄 2026-11-11: §99의2도 완공APT에서 막힌다(조특령 §99의2① — 조합원이 관리처분계획에 따라 취득하는 주택 제외). 하이브리드 코어는 이제 §99의3 행으로만 이 경로에 닿는다. */
+  it("§99의2: 완공APT에서는 ⑧이 막는다 — 숨은 옛 값이 엔진에 갈 일이 없다", async () => {
     const r992 = {
       type: "unsold_99_2",
       houseType992: "new_or_unsold",
@@ -222,12 +223,8 @@ describe("RH-3 차감형 감면 — 5년 안분 양도시 기준시가", () => {
     };
     for (const stale of [{}, { standardPriceAtTransfer: "250000000" }, { standardPriceAtTransfer: "500000000" }]) {
       const r = await runCalc(mainForm({ ...EST, ...stale, acquisitionDate: "2009-07-01", reductions: [r992] }));
+      expect(r.issues.some((i: { message: string }) => i.message.includes("§99의2") && i.message.includes("관리처분계획"))).toBe(true);
       expect(r.body.standardPriceAtTransfer).toBeUndefined();
-      // 감면 미입력 사유로 빠지므로 감면 없는 세액과 같다(RH-4 「주 자산 완공APT 환산」)
-      expect(r.result.totalTax).toBe(485_529_000);
-      const step = (r.result.steps as { label: string; formula?: string }[]).find((s) => s.label.startsWith("§99의2"));
-      expect(step?.label).toContain("적용 불가");
-      expect(step?.formula).toContain("입력되지 않았습니다");
     }
   });
 });
