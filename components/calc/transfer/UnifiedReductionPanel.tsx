@@ -41,7 +41,6 @@ import {
 import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import {
   REDUCTION_METADATA,
-  countActiveReductionsByCategory,
   evaluateAllPeriods,
   isReductionCategoryAllowedForAssetKind,
   getReductionsByCategory,
@@ -62,7 +61,6 @@ import {
 // ============================================================================
 
 import { GroupCategorySection } from "./UnifiedReductionGroupSection";
-import { ROW_COUNT_EXCLUSION_TYPES } from "@/lib/calc/house-count-exclusion-rows";
 
 interface UnifiedReductionPanelProps {
   asset: AssetForm;
@@ -236,10 +234,6 @@ export function UnifiedReductionPanel({ asset, assetIndex = 0, transferDate, onC
   });
 
   const periodCtx = useMemo(() => buildPeriodContext(asset, transferDate), [asset, transferDate]);
-  const counters = useMemo(
-    () => countActiveReductionsByCategory(periodCtx, ROW_COUNT_EXCLUSION_TYPES),
-    [periodCtx],
-  );
   const periodResults = useMemo(() => evaluateAllPeriods(periodCtx), [periodCtx]);
 
   // §99의3 감면 PHD 위젯 ↔ 자산-수준 PHD dual-truth 완화 (아래 buildAssetPhdSnapshot).
@@ -489,7 +483,6 @@ export function UnifiedReductionPanel({ asset, assetIndex = 0, transferDate, onC
           category={cat}
           isOpen={openCategories[cat]}
           onToggleOpen={() => setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }))}
-          counter={counters[cat]}
           housingAllowed={isReductionCategoryAllowedForAssetKind(cat, asset.assetKind)}
           assetKind={asset.assetKind}
           assetKindLabel={ASSET_KIND_LABEL[asset.assetKind]}

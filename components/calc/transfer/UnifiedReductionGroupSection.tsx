@@ -81,7 +81,6 @@ export function GroupCategorySection({
   category,
   isOpen,
   onToggleOpen,
-  counter,
   housingAllowed,
   assetKind,
   assetKindLabel,
@@ -120,7 +119,6 @@ export function GroupCategorySection({
   category: ReductionCategory;
   isOpen: boolean;
   onToggleOpen: () => void;
-  counter: { active: number; total: number };
   /** 자산 종류 게이트 — 주택 감면이 이 자산에 적용 가능한지 (false면 카테고리 전체 비활성) */
   housingAllowed: boolean;
   /**
@@ -187,6 +185,28 @@ export function GroupCategorySection({
     (id) => REDUCTION_METADATA[id].category === category && !ROW_COUNT_EXCLUSION_TYPES.has(id),
   );
   const rowHint = ROW_COUNT_EXCLUSION_HINTS[category];
+  /**
+   * 항목별 선택 가능 판정 — **헤더 「활성 N」과 목록이 같은 술어를 쓴다**.
+   * 종전 헤더는 시한(`inPeriod`)만 세는 `countActiveReductionsByCategory`를 써서, 재개발 아파트의 미분양 그룹이 「활성 9 / 전체 9」인데
+   * 실제 선택 가능한 것은 §98의4 하나뿐이었다(자산 종류 조문 게이트·취득 원인 게이트·미구현은 세지 않았다).
+   * 이미 선택된 항목은 항상 해제할 수 있어야 하므로(D9-03) 활성으로 센다.
+   */
+  const gateOf = (id: (typeof items)[number]) => {
+    const itemMeta = REDUCTION_METADATA[id];
+    const period = periodResults[id];
+    const isFullyImplemented = itemMeta.isFullyImplemented === true;
+    const isSelected = reductions.some((r) => r.type === id);
+    // 🔴 조문 단위 게이트 — 카테고리 게이트만 보면 ⑧이 막는 것을 ⑤가 못 막는다(US-44·§98의8·§99의2). ⑧과 같은 술어·같은 사유 문구.
+    const articleAllowed = isReductionAllowedForAssetKind(id, assetKind);
+    // US-07 — 취득 원인 게이트(⑧·엔진과 같은 leaf). 예외가 열려 있는 조문은 선택을 막지 않고 카드 안의 답으로 가른다.
+    const causeBlocked = unsold98AcquisitionCauseReason(id, assetAcquisitionCause, {
+      inheritedPresaleCompletedByHeir: "yes",
+      hoType986: "buyer_rented",
+    });
+    const isDisabled = !isSelected && (!housingAllowed || !articleAllowed || !!causeBlocked || !period.inPeriod || !isFullyImplemented);
+    return { itemMeta, period, isFullyImplemented, isSelected, articleAllowed, causeBlocked, isDisabled };
+  };
+  const activeCount = items.filter((id) => !gateOf(id).isDisabled).length;
   // 감면 조문 입력 폼 공통 자산 props — 기준시가 조회형 위젯 + PHD 환산용(§99·§99의2·§98의3/5/6/7/8·§99의3).
   const reductionAssetProps = {
     assetId,
@@ -213,11 +233,11 @@ export function GroupCategorySection({
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs">
-            <span className={housingAllowed && counter.active > 0 ? "font-semibold text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}>
-              활성 {housingAllowed ? counter.active : 0}
+            <span className={activeCount > 0 ? "font-semibold text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}>
+              활성 {activeCount}
             </span>
             <span className="mx-1 text-muted-foreground">/</span>
-            <span className="text-muted-foreground">전체 {counter.total}</span>
+            <span className="text-muted-foreground">전체 {items.length}</span>
           </span>
           <span className={expandToggleClass("slate")}>{expandToggleLabel(isOpen)}</span>
         </div>
@@ -266,43 +286,8 @@ export function GroupCategorySection({
           </div>
 
           {items.map((id) => {
-            const itemMeta = REDUCTION_METADATA[id];
-            const period = periodResults[id];
-            const isFullyImplemented = itemMeta.isFullyImplemented === true;
-            const isSelected = reductions.some((r) => r.type === id);
-            /**
-             * ⚠ **이미 선택된 것은 항상 해제할 수 있어야 한다** (D9-03).
-             *
-             * 같은 파일 `:467`(standalone 카드)에 이미 확립된 패턴인데 이 그룹에만 빠져 있었다.
-             *
-             * 증상: §97의4를 고르는 순간 `toggleGroupRadio`가 기존 항목을 제거하고
-             * `registrationDate: ""`인 기본값을 넣는다. 그러면 period ctx의 등록일이
-             * 취득일로 되돌아가고(`:139` fallback), 취득일이 2014-01-01 이전이면 시한 밖이
-             * 되어 **선택된 채로 disabled**가 된다. children은 계속 렌더되므로 등록일을
-             * 다시 넣으면 복구되지만, 그 전까지는 `onCheckedChange`가 막혀 **해제도 불가능한
-             * stuck 상태**이고 ⑧이 등록일 미입력을 차단해 계산도 막힌다.
-             *
-             * ⚠️ 근본 원인은 별개다 — §97의4의 「등록일 2014.1.1 이후」 시한은 법·령 어디에도
-             *    없다(CB-01). 그 규칙이 살아 있는 동안의 UI 증상을 여기서 막는다.
-             */
-            /**
-             * 🔴 조문 단위 게이트 — 카테고리 게이트만 보면 ⑧이 막는 것을 ⑤가 못 막는다.
-             *   §98 시리즈 6조문은 미분양주택 정의상 조합원 취득 자산(재개발APT·입주권)과 분양권에
-             *   적용될 수 없는데(US-44), 카테고리(`unsold_housing`)는 그 자산종류를 허용한다.
-             *   ⑧ `transfer-tax-validate-reductions.ts`와 **같은 술어·같은 사유 문구**를 쓴다.
-             */
-            const articleAllowed = isReductionAllowedForAssetKind(id, assetKind);
-            /**
-             * US-07 — 취득 원인 게이트(⑧·엔진과 같은 leaf). 예외가 열려 있는 조문(§98의3·§98의5·§98의7 분양권 상속, §98의6 2호 상속)은
-             * 선택을 막지 않고 카드 안의 답·호 선택으로 가른다 — 예외가 불가능한 조합(증여·이월과세 증여, §98·§98의2 상속)만 막는다.
-             */
-            const causeBlocked = unsold98AcquisitionCauseReason(id, assetAcquisitionCause, {
-              inheritedPresaleCompletedByHeir: "yes",
-              hoType986: "buyer_rented",
-            });
-            const isDisabled =
-              !isSelected &&
-              (!housingAllowed || !articleAllowed || !!causeBlocked || !period.inPeriod || !isFullyImplemented);
+            const { itemMeta, period, isFullyImplemented, isSelected, articleAllowed, causeBlocked, isDisabled } = gateOf(id);
+            // ⚠ 이미 선택된 것은 항상 해제할 수 있어야 한다(D9-03) — `gateOf`가 선택 항목을 활성으로 센다. 배경: §97의4 등록일 stuck 상태(CB-01).
 
             // 비활성 사유 (주택 게이트 > 조문 게이트 > 시한 외 > 미구현 — 가장 근본 차단 사유 우선)
             const disabledReason = !housingAllowed
