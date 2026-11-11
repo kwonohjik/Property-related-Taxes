@@ -168,8 +168,9 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
       tone="emerald"
       checked={isOn}
       onCheckedChange={handleToggle}
-      disabled={isMixedUse}
-      disabledReason={isMixedUse ? "겸용주택은 가업상속공제 의제취득가액 미지원(범위 밖)" : undefined}
+      // 겸용이면 켜지 못하되 남은 값은 끌 수 있어야 한다(⑧이 해제를 요구 — 막다른 길 방지)
+      disabled={isMixedUse && !isOn}
+      disabledReason={isMixedUse && !isOn ? "겸용주택은 가업상속공제 의제취득가액 미지원(범위 밖)" : undefined}
       title="가업상속공제 적용 자산 (소법 §97의2④)"
       description={
         isOn

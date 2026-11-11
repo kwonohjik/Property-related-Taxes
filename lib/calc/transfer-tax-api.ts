@@ -77,7 +77,7 @@ import {
   buildCommercialInheritanceValuationPayload,
   buildBuildingSec164Payload,
 } from "./transfer-tax-api-inheritance";
-import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
+import { sendsFamilyBusinessInheritance } from "./transfer-fb-gate";
 import { selfBuiltActive } from "./self-built-scope";
 import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
 import { withSelfBuiltHousing } from "./transfer-tax-api-self-built-housing";
@@ -688,7 +688,7 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     // A04(2026-09-02): 취득원인·자산종류 게이트 — ⑤ 렌더 조건과 **같은 술어**여야
     // 취득원인 변경 경로와 GB 전환 경로가 함께 닫힌다(실측 83,281,000 / 71,242,600원 과대).
     ...(primary.familyBusinessInheritance !== undefined &&
-    allowsFamilyBusinessInheritance(primary)
+    sendsFamilyBusinessInheritance(primary) // 겸용주택 잔재 제외(⑧이 해제 요구)
       ? { familyBusinessInheritance: primary.familyBusinessInheritance }
       : {}),
     /**
