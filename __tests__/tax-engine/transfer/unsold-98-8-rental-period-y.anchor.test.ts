@@ -298,6 +298,7 @@ describe("Y-9 route anchor — POST /api/calc/transfer (⑫ Zod → ⑭ 매퍼 �
   };
   const wire = {
     type: "unsold_98_8",
+    isResident988: true, // Q-23 — 거주자 여부는 ⑫ 필수(직접 API 호출에서 비우면 400)
     contractDate988: "2015-06-01",
     acquisitionPrice988: 550_000_000,
     exclusiveAreaSqm988: 84.5,

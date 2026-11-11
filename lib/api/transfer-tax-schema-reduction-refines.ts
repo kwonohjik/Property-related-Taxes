@@ -168,6 +168,25 @@ export function refineReductionRequiredInputs(
     if (r.type === "unsold_99_2" && r.houseType992 !== "self_built" && !r.contractDate992)
       issue("contractDate992", "§99의2 적용: 최초 매매계약일(contractDate992)이 필요합니다 (자산 매매계약일로 대신하지 않습니다).");
 
+    // Q-23 (a-1, 사용자 결정 2026-11-11) — 거주자·내국인·과밀 구분은 화면(⑧)이 반드시 받는 칸인데, ⑫에서 optional이라 API 직접 호출에서 빼면
+    // 엔진이 `?? true`(거주자·내국인)·`=== true`(비과밀 100%)로 가정해 **조용히 낮은 세액**이 나왔다. 칸이 없으면 400으로 막는다(⑧ 거울).
+    // 화면 경로는 폼 기본값(`UnifiedReductionPanel-defaults`)·마이그레이션이 항상 채워 영향이 없다. 엔진 기본값은 내부 호출·테스트의 안전망이라 그대로 둔다.
+    const needBool = (key: string, message: string) => {
+      if (typeof r[key] !== "boolean") issue(key, message);
+    };
+    if (r.type === "new_99") needBool("isResident99", "§99 적용: 거주자 여부(isResident99)가 필요합니다 — 비워 두면 거주자로 가정하지 않습니다 (법 §99① 「거주자」).");
+    if (r.type === "new_99_3") needBool("isResident993", "§99의3 적용: 거주자 여부(isResident993)가 필요합니다 — 비워 두면 거주자로 가정하지 않습니다 (법 §99의3① 「거주자」).");
+    if (r.type === "unsold_98") needBool("isResident98", "§98 적용: 거주자 여부(isResident98)가 필요합니다 — 비워 두면 거주자로 가정하지 않습니다.");
+    if (r.type === "unsold_98_2") needBool("isResident982", "§98의2 적용: 거주자 여부(isResident982)가 필요합니다 — 비워 두면 거주자로 가정하지 않습니다.");
+    if (r.type === "unsold_98_7") needBool("isDomestic987", "§98의7 적용: 내국인 여부(isDomestic987)가 필요합니다 — 비워 두면 내국인으로 가정하지 않습니다 (법 §98의7① 「내국인」).");
+    if (r.type === "unsold_98_8") needBool("isResident988", "§98의8 적용: 거주자 여부(isResident988)가 필요합니다 — 비워 두면 거주자로 가정하지 않습니다 (법 §98의8① 「거주자」).");
+    if (r.type === "unsold_98_3") {
+      if (r.residencyType983 === undefined)
+        issue("residencyType983", "§98의3 적용: 거주 구분(residencyType983 — resident·nonresident_no_pe·nonresident_with_pe)이 필요합니다 — 비워 두면 거주자로 가정하지 않습니다 (법 §98의3①).");
+      // Q-20 — 수도권과밀억제권역 여부는 3-state다. 비우면 엔진이 비과밀(100%)로 가정하므로 막는다(⑧과 같은 이유 — 과밀이면 감면율 60%·면적 한정).
+      needBool("isOverconcentration983", "§98의3 적용: 주택이 수도권과밀억제권역에 있는지(isOverconcentration983: true·false)가 필요합니다 — 비워 두면 비과밀(100%)로 가정하지 않습니다 (과밀억제권역이면 감면율 60%·면적 한정, 령 §98의3①단서).");
+    }
+
     if ((r.type === "rental_97_3" || r.type === "rental_97_5") && r.rentalContinuesToTransfer === undefined) {
       issue(
         "rentalContinuesToTransfer",

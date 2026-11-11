@@ -115,7 +115,7 @@ const r983 = (tr = "600000000") => ({
   constructionStartDate983: "",
   usageApprovalDate983: "",
   isOutsideSeoulNotDesignated983: true,
-  isOverconcentration983: false,
+  isOverconcentration983: "no", // 폼 3-state(예·아니오) — Q-23: 불린 false는 ④가 미선택(undefined)으로 바꿔 ⑫가 막는다
   landAreaSqm983: "",
   floorAreaSqm983: "",
   isUnsoldConfirmed983: true,
