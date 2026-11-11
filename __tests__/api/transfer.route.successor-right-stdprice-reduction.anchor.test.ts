@@ -114,8 +114,9 @@ const r993 = (tr = "") => ({
   isHousingConstructionBusiness993: false,
 });
 /**
- * §99의2 — ⑧ 양도시 가드 없음(#2346 Q-3 a). 같은 하이브리드 코어를 쓴다.
- * 🔄 2026-11-06 US-44: §98의3은 조합원입주권에서 막혀(사용자 결정 Q-4) §99의2로 옮겼다 — 기준시가 세 칸·결정세액이 같다.
+ * §99의2 — 하이브리드 코어. 🔄 2026-11-06 US-44로 §98의3이 조합원입주권에서 막히며 이 anchor를 §99의2로 옮겼으나,
+ * 🔄 2026-11-11 §99의2도 막혔다(조특령 §99의2① — 조합원이 관리처분계획에 따라 취득하는 주택 제외). 아래에서는 막힌다는 사실만 고정하고,
+ * 숨은 양도시 칸·안분 키 배관은 §99의3 행이 맡는다.
  */
 const r992 = () => ({
   type: "unsold_99_2",
@@ -179,13 +180,11 @@ describe("SR-1 주 자산 승계 입주권 × §99의3 — ⑧이 ④·엔진과
 });
 
 describe("SR-2 함께 양도 · 실가 거래 · 승계 입주권 실가 — 숨은 양도시 칸을 싣지 않는다 (D1)", () => {
-  it("§99의2: 옛 값과 무관하게 296,490,000 · 감면 0 (수정 전 7억 237,690,000 · 9억 257,290,000)", async () => {
+  it("§99의2: 승계 입주권에서는 ⑧이 막는다(조합원 몫은 사업주체와의 최초 매매계약이 아니다) — 숨은 옛 값이 엔진에 갈 일이 없다", async () => {
     for (const stale of [NO_STALE, STALE_7, STALE_9]) {
       const r = await runCalc(companion(successor({ ...stale, reductions: [r992()] })));
-      expect(r.status).toBe(200);
-      expect(comp(r.body).standardPriceAtTransfer).toBeUndefined();
-      expect(agg(r.json).determinedTax).toBe(296_490_000);
-      expect(agg(r.json).properties[1].incomeDeductionReducible ?? 0).toBe(0);
+      expect(r.status).toBe(400);
+      expect(r.issues.some((i: { message: string }) => i.message.includes("§99의2") && i.message.includes("관리처분계획"))).toBe(true);
     }
   });
 
@@ -199,23 +198,19 @@ describe("SR-2 함께 양도 · 실가 거래 · 승계 입주권 실가 — 숨
 });
 
 describe("SR-3 함께 양도 · 안분 · 승계 입주권 실가 — 화면에 있는 안분 키는 계속 인정한다 (Q-3 a)", () => {
-  it("§99의2: 안분 키 700,000,000을 싣고 237,460,909 · §99의3 ⑧ 통과", async () => {
-    const r = await runCalc(companion(successor({ ...STALE_7, reductions: [r992()] }), "apportioned"));
-    expect(comp(r.body).standardPriceAtTransfer).toBe(700_000_000);
-    expect(comp(r.body).standardPriceAtTransferForApportion).toBe(700_000_000);
-    expect(agg(r.json).determinedTax).toBe(237_460_909);
+  it("§99의3: 안분 키 700,000,000을 싣고 ⑧ 통과", async () => {
     const v = await runCalc(companion(successor({ ...STALE_7, reductions: [r993()] }), "apportioned"));
+    expect(comp(v.body).standardPriceAtTransfer).toBe(700_000_000);
+    expect(comp(v.body).standardPriceAtTransferForApportion).toBe(700_000_000);
     expect(fields(v.issues)).not.toContain(ISSUE_993);
   });
 });
 
 describe("SR-4 함께 양도 · 실가 거래 · 승계 입주권 환산 — §165① 합계만 쓴다", () => {
-  it("§99의2: 옛 값과 무관하게 600,000,000을 싣고 200,450,000 · §99의3 ⑧ 통과 (수정 전 차단)", async () => {
+  it("§99의3: 옛 값과 무관하게 600,000,000을 싣고 ⑧ 통과 (수정 전 차단)", async () => {
     for (const stale of [NO_STALE, STALE_7, STALE_9]) {
-      const r = await runCalc(companion(successor({ ...EST, ...stale, reductions: [r992()] })));
-      expect(comp(r.body).standardPriceAtTransfer).toBe(600_000_000);
-      expect(agg(r.json).determinedTax).toBe(200_450_000);
       const v = await runCalc(companion(successor({ ...EST, ...stale, reductions: [r993()] })));
+      expect(comp(v.body).standardPriceAtTransfer).toBe(600_000_000);
       expect(fields(v.issues)).not.toContain(ISSUE_993);
     }
   });

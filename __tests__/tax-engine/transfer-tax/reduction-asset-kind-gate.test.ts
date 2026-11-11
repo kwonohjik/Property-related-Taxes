@@ -24,7 +24,7 @@ describe("isReductionCategoryAllowedForAssetKind", () => {
     expect(isReductionCategoryAllowedForAssetKind("rental", PRESALE)).toBe(false);
   });
 
-  it("new_housing(§99)·unsold(§98·§99의2): 입주권·분양권 포함 허용", () => {
+  it("new_housing(§99)·unsold(카테고리 단위): 입주권·분양권 포함 허용", () => {
     for (const cat of ["new_housing", "unsold_housing"] as const) {
       expect(isReductionCategoryAllowedForAssetKind(cat, HOUSING)).toBe(true);
       expect(isReductionCategoryAllowedForAssetKind(cat, REDEV)).toBe(true);
@@ -52,7 +52,8 @@ describe("isReductionAllowedForAssetKind (id 단위)", () => {
   it("신규 조문 id: 카테고리 게이트와 동일", () => {
     expect(isReductionAllowedForAssetKind("rental_97_3", PRESALE)).toBe(false); // rental → 분양권 배제
     expect(isReductionAllowedForAssetKind("new_99_3", PRESALE)).toBe(true); // new_housing → 포함
-    expect(isReductionAllowedForAssetKind("unsold_99_2", MOVE_IN)).toBe(true); // unsold → 포함
+    expect(isReductionAllowedForAssetKind("unsold_98_4", MOVE_IN)).toBe(true); // unsold → 포함 (§99의2·§98의8은 2026-11-11 조문 단위로 주택만)
+    expect(isReductionAllowedForAssetKind("unsold_99_2", MOVE_IN)).toBe(false);
     expect(isReductionAllowedForAssetKind("rental_97_main", "land")).toBe(false);
   });
 

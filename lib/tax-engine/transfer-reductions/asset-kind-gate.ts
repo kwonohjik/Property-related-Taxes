@@ -7,7 +7,7 @@
  *
  * 카테고리별 집합 차이 (사용자 확정 2026-06-29):
  *   - rental(§97): { housing, redevelopment_apt } — 입주권·분양권은 물리적 임대 불가로 배제.
- *   - new_housing(§99)·unsold(§98의4·§98의8·§98의9·§99의2): + 입주권·분양권.
+ *   - new_housing(§99)·unsold(§98의4·§98의9): + 입주권·분양권. (§98의8·§99의2는 조문 단위로 주택만 — `UNSOLD_SPONSOR_FIRST_CONTRACT_EXTRA_IDS`)
  *   - §98·§98의2·§98의3·§98의5·§98의6·§98의7: 주택(housing)만 — 조문 단위 예외(`UNSOLD_98_SERIES_HOUSING_ONLY_IDS`, US-44).
  *     완공 뒤 양도는 assetKind가 housing이다. presale_right는 완공 전 권리 자체의 양도다.
  *
@@ -25,6 +25,7 @@
  */
 
 import { REDUCTION_METADATA } from "./metadata";
+import { UNSOLD_99_2_DECREE } from "../legal-codes/transfer-house";
 import type { TransferReductionId, ReductionCategory } from "./types";
 
 /**
@@ -101,7 +102,7 @@ const SELF_FARMING_KINDS = new Set<ReductionAssetKind>(["land"]);
  * - 완공 뒤 양도는 assetKind가 housing이므로 영향이 없다.
  *
  * ⚠ §98의2의 조합원 경로 배제(`UNSOLD_98_2_EXCLUDED_KINDS`, D5-05)는 이 집합에 흡수된다.
- *   §98의4·§98의8·§98의9·§99의2는 이번 결정 범위 밖이라 카테고리 게이트를 그대로 탄다.
+ *   §98의8·§99의2는 2026-11-11 같은 이유로 뒤따라 막았다(`UNSOLD_SPONSOR_FIRST_CONTRACT_EXTRA_IDS`). §98의4·§98의9는 이유가 없어 카테고리 게이트를 그대로 탄다.
  */
 export const UNSOLD_98_SERIES_HOUSING_ONLY_IDS: ReadonlySet<string> = new Set([
   "unsold_98",
@@ -112,6 +113,19 @@ export const UNSOLD_98_SERIES_HOUSING_ONLY_IDS: ReadonlySet<string> = new Set([
   "unsold_98_7",
 ]);
 const UNSOLD_98_SERIES_ALLOWED_KINDS = new Set<ReductionAssetKind>(["housing"]);
+
+/**
+ * §98의8·§99의2 — 위 6조문과 같은 이유로 조합원 경로·분양권을 막는다(사용자 결정 2026-11-11, US-77 후속 점검).
+ * 둘 다 「사업주체 등과 **최초로 매매계약을 체결**하고 취득」한 주택이 대상이다.
+ *  - §98의8①: 「…사업주체 등 대통령령으로 정하는 자와 2015년 1월 1일부터 2015년 12월 31일까지 최초로 매매계약을 체결하고…」(MST 284389)
+ *  - §99의2①·령 §99의2①: 신축주택등은 사업주체 등이 공급하는 주택이고, 자기건설 주택 중 정비조합 조합원이 관리처분계획에 따라 취득하는 주택은
+ *    8호 가목에서 명문으로 뺀다(MST 288915). 같은 조 ⑦은 5년간 양도소득금액을 령 §40① 준용으로만 정해 재개발 변형(종전주택 기준시가)이 없다.
+ * 종전에는 «이번 결정 범위 밖»이라 카테고리 게이트를 탔다 — 재개발APT가 §99의2를 고르면 5년 이내 100% 세액감면·5년 후 소득금액 공제가,
+ * §98의8을 고르면 5년간 발생분 50% 차감이 일반 주택과 똑같이 적용됐다(2026-11-11 mock 실측).
+ * ⚠ `UNSOLD_98_SERIES_HOUSING_ONLY_IDS`에 섞지 않는다 — 그 집합은 부수토지 분리 차단(US-34) 같은 다른 규칙도 키로 쓴다.
+ * §98의4(비거주자 10% — 사업주체 최초 계약 요건 없음)·§98의9(주택 수 제외)는 이 이유가 없어 대상이 아니다.
+ */
+export const UNSOLD_SPONSOR_FIRST_CONTRACT_EXTRA_IDS: ReadonlySet<string> = new Set(["unsold_98_8", "unsold_99_2"]);
 
 /** 엔진 propertyType 중 위 조문이 막히는 값 — API 직접 호출 방어용(`stripAssetKindGatedReductions`). */
 const UNSOLD_98_SERIES_BLOCKED_PROPERTY_TYPES: ReadonlySet<string> = new Set([
@@ -134,6 +148,14 @@ const GATED_SUBJECT: Record<string, string> = {
   unsold_98_5: "사업주체 등과 최초로 매매계약을 체결하고 취득한 미분양주택",
   unsold_98_6: "사업주체등과 최초로 매매계약을 체결하고 취득한 준공후미분양주택",
   unsold_98_7: "사업주체 등과 최초로 매매계약을 체결하거나 그 계약에 따라 취득한 미분양주택",
+  unsold_98_8: "사업주체 등과 최초로 매매계약을 체결하고 취득한 준공후미분양주택",
+  unsold_99_2: "사업주체 등이 공급하는 신축주택·미분양주택과 최초로 매매계약을 체결하고 취득한 주택",
+};
+
+/** 자산별 이유 문구가 다른 조문 — 기본 문구는 «미분양주택이 아닙니다»라 §99의2(신축주택 포함)에는 맞지 않는다. */
+const REDEVELOPMENT_NOTE_OVERRIDE: Record<string, string> = {
+  unsold_99_2:
+    `재개발·재건축 조합원 아파트·조합원입주권은 관리처분계획에 따라 배정·승계된 것이라 사업주체가 공급하는 신축주택등이 아닙니다(${UNSOLD_99_2_DECREE.D99_2_REQ} — 조합원이 관리처분계획에 따라 취득하는 주택은 자기건설 주택에서 제외).`,
 };
 
 /**
@@ -148,7 +170,8 @@ export function assetKindGateReason(id: string, assetKind: ReductionAssetKind | 
   const kindNote =
     assetKind === "presale_right"
       ? "분양권 상태의 양도는 주택 양도가 아닙니다(소득세법 §94①2호가목)."
-      : "재개발·재건축 조합원 아파트·조합원입주권은 관리처분계획에 따라 배정·승계된 것이라 미분양주택이 아닙니다.";
+      : REDEVELOPMENT_NOTE_OVERRIDE[id] ??
+        "재개발·재건축 조합원 아파트·조합원입주권은 관리처분계획에 따라 배정·승계된 것이라 미분양주택이 아닙니다.";
   return (
     `${label}: ${subject}의 양도에만 적용됩니다. ${kindNote} ` +
     "종전주택이 이 조문의 미분양주택이었다가 재건축된 경우는 이 계산기가 다루지 않으므로 별도 확인이 필요합니다."
@@ -279,7 +302,7 @@ export function isReductionAllowedForAssetKind(
   // 조문 단위 예외가 카테고리 판정보다 먼저다 — standalone은 카테고리로 묶이지만 §69만 토지 전용이다.
   if (id === "self_farming") return SELF_FARMING_KINDS.has(assetKind);
   // §98 시리즈 6조문 × 조합원 경로·분양권 — 미분양주택 정의상 성립 불가 (위 UNSOLD_98_SERIES_HOUSING_ONLY_IDS 주석)
-  if (UNSOLD_98_SERIES_HOUSING_ONLY_IDS.has(id)) return UNSOLD_98_SERIES_ALLOWED_KINDS.has(assetKind);
+  if (UNSOLD_98_SERIES_HOUSING_ONLY_IDS.has(id) || UNSOLD_SPONSOR_FIRST_CONTRACT_EXTRA_IDS.has(id)) return UNSOLD_98_SERIES_ALLOWED_KINDS.has(assetKind);
   const cat = REDUCTION_METADATA[id as TransferReductionId]?.category ?? LEGACY_REDUCTION_CATEGORY[id];
   if (!cat) return true; // 매핑 미존재 시 차단하지 않음 (방어적 — standalone·미지 타입)
   return isReductionCategoryAllowedForAssetKind(cat, assetKind);

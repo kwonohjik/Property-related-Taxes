@@ -150,9 +150,10 @@ const r993 = () => ({
 });
 
 /**
- * §99의2 — 같은 하이브리드 코어(5년 이내 세액감면 · 5년 후 안분)를 쓰는, §166 자산에 아직 열려 있는 조문.
- * 🔄 2026-11-06 US-44: §98의3·§98의7은 재개발APT·조합원입주권에서 막혀(사용자 결정 Q-4) 이 배관 anchor를 §99의2로 옮겼다.
- *   차감액은 같은 기준시가 세 칸에서 나오므로 §98의3 행과 같고, 농특세는 과세 조문이라 §99의3 행과 같다.
+ * §99의2 — 하이브리드 코어(5년 이내 세액감면 · 5년 후 안분)를 쓰는 조문. §166 자산(재개발APT·조합원입주권)에서는 막힌다.
+ * 🔄 2026-11-06 US-44: §98의3·§98의7이 막히며 이 배관 anchor를 §99의2로 옮겼으나,
+ * 🔄 2026-11-11: §99의2도 «사업주체 등과 최초로 매매계약을 체결하고 취득»한 주택만 대상이라(조특령 §99의2①) 막혔다 —
+ *   남은 §166 차감형 감면은 §99의3(조합원 갈래)이라 배관 행은 §99의3으로 고정하고, 여기서는 막힌다는 사실만 고정한다(RD-4).
  */
 const r992 = (tr = "600000000") => ({
   type: "unsold_99_2",
@@ -178,19 +179,15 @@ const agg = (json: any) => json.data.aggregated as { determinedTax: number; rura
 
 describe("RD-1 함께 양도 — §166 자산의 차감형 감면이 합산 세액에 들어간다", () => {
   it.each([
-    // [자산, 모드, 감면, 결정세액, 농특세, 자산 차감액]  — 수정 전 결정세액은 감면 없음과 같았다(RD-2)
-    ["입주권", "apportioned", "§99의2", 179_698_889, 8_200_888, 97_629_629],
-    ["입주권", "apportioned", "§99의3", 179_698_889, 8_200_888, 97_629_629],
-    ["입주권", "actual", "§99의2", 174_410_000, 11_312_000, 134_666_666],
-    ["입주권", "actual", "§99의3", 174_410_000, 11_312_000, 134_666_666],
-    ["완공APT", "apportioned", "§99의2", 157_030_370, 5_678_592, 69_629_629],
+    // [자산, 모드, 결정세액, 농특세, 자산 차감액]  — 수정 전 결정세액은 감면 없음과 같았다(RD-2)
+    ["입주권", "apportioned", 179_698_889, 8_200_888, 97_629_629],
+    ["입주권", "actual", 174_410_000, 11_312_000, 134_666_666],
     // 완공APT §99의3 — 조합원 갈래(NH-36·NH-63·NH-32): 준공 2021-09-01부터 5년 이내 · 재개발 변형 (600−300)/(600−100) = 0.6
-    ["완공APT", "apportioned", "§99의3", 134_748_889, 10_134_888, 125_333_333],
-    ["완공APT", "actual", "§99의2", 151_993_333, 8_739_333, 106_666_666],
-    ["완공APT", "actual", "§99의3", 117_860_000, 15_566_000, 192_000_000],
-  ] as const)("%s · %s · %s → 결정세액 %i · 농특세 %i", async (kind, mode, red, det, rural, reducible) => {
+    ["완공APT", "apportioned", 134_748_889, 10_134_888, 125_333_333],
+    ["완공APT", "actual", 117_860_000, 15_566_000, 192_000_000],
+  ] as const)("%s · %s · §99의3 → 결정세액 %i · 농특세 %i", async (kind, mode, det, rural, reducible) => {
     const mk = kind === "입주권" ? right : apt;
-    const reductions = [red === "§99의2" ? r992() : r993()];
+    const reductions = [r993()];
     // 함께 양도 자산으로 둘 때와 주 자산으로 둘 때가 같다
     for (const assets of [
       [house(), mk({ reductions })],
@@ -205,7 +202,7 @@ describe("RD-1 함께 양도 — §166 자산의 차감형 감면이 합산 세�
   });
 
   it("실가 거래 모드의 자산 차감액 = 같은 자산 단건 차감액 (양도가액이 같을 때)", async () => {
-    const s1 = await runCalc(single(right({ reductions: [r992()] })));
+    const s1 = await runCalc(single(right({ reductions: [r993()] })));
     expect(incomeDeductionReducible(s1.result)).toBe(134_666_666);
     const s2 = await runCalc(single(apt({ reductions: [r993()] })));
     expect(incomeDeductionReducible(s2.result)).toBe(192_000_000);
@@ -233,32 +230,20 @@ describe("RD-2 감면 없는 함께 양도 §166 자산 — 세액 불변", () =
 
 describe("RD-3 단건 §166 — 세액 불변 · 감면대상 소득금액과 확정된 상세가 실린다", () => {
   it.each([
-    ["입주권", "§99의2", 100_242_998, 10_640_666, 134_666_666],
-    ["입주권", "§99의3", 100_242_998, 10_640_666, 134_666_666],
-    ["완공APT", "§99의2", 74_370_998, 8_176_666, 106_666_666],
+    ["입주권", 100_242_998, 10_640_666, 134_666_666],
     // 완공APT §99의3은 조합원 갈래 수정(NH-36·NH-63·NH-32)으로 세액이 바뀐다 — 준공일부터 5년 이내 · 재개발 변형 0.6
-    ["완공APT", "§99의3", 45_848_500, 14_515_000, 192_000_000],
-  ] as const)("%s · %s → 총세액 %i · 농특세 %i · 감면대상 소득금액 %i (수정 전 0)", async (kind, red, total, rural, reducible) => {
+    ["완공APT", 45_848_500, 14_515_000, 192_000_000],
+  ] as const)("%s · §99의3 → 총세액 %i · 농특세 %i · 감면대상 소득금액 %i (수정 전 0)", async (kind, total, rural, reducible) => {
     const mk = kind === "입주권" ? right : apt;
-    const r = await runCalc(single(mk({ reductions: [red === "§99의2" ? r992() : r993()] })));
+    const r = await runCalc(single(mk({ reductions: [r993()] })));
     expect(r.result.totalTax).toBe(total);
     expect(r.result.ruralSurtax).toBe(rural);
     expect(incomeDeductionReducible(r.result)).toBe(reducible);
-    const d = red === "§99의2" ? r.result.unsold992Detail : r.result.new993Detail;
+    const d = r.result.new993Detail;
     expect(d.isEligible).toBe(true);
     expect(d.reducibleTransferIncome).toBe(reducible);
     // 농특세 2-pass 값이 상세에 채워진다(preliminary는 0)
     expect(d.ruralSurtax).toBe(rural);
-  });
-
-  it("두 감면(§99의3 부적격 + §99의2 적격)이면 §99의2만 확정된다", async () => {
-    const r = await runCalc(
-      // §99의3 부적격 — 조합원 갈래의 잔여주택 계약 사실 「아니오」(NH-16)
-      single(apt({ reductions: [{ ...r993(), remainderContract993: "no" }, r992()] })),
-    );
-    expect(r.result.totalTax).toBe(74_370_998);
-    expect(r.result.unsold992Detail.reducibleTransferIncome).toBe(106_666_666);
-    expect(r.result.ruralSurtax).toBe(8_176_666);
   });
 });
 
@@ -279,13 +264,12 @@ describe("RD-4 5년 이내 하이브리드 세액감면 농특세 — 정상 경
     expect(house5.result.ruralSurtax).toBe(0);
   });
 
-  it("§99의2(비과세 열거 없음): 완공APT 농특세 29,370,000 그대로 · 상세가 실린다", async () => {
+  it("§99의2: 완공APT에서는 ⑧이 막는다(2026-11-11 — 조특령 §99의2① 조합원 취득 주택 제외) · 감면은 반영되지 않는다", async () => {
     const r = await runCalc(
       single(apt({ acquisitionDate: "2013-01-01", redevApprovalDate: "2014-01-01", redevCompletionDate: "2015-06-01", reductions: [r992("")] }), W5b),
     );
-    expect(r.result.reductionAmount).toBe(146_850_000);
-    expect(r.result.ruralSurtax).toBe(29_370_000);
-    expect(r.result.unsold992Detail).toMatchObject({ reductionAmount: 146_850_000, ruralSurtax: 29_370_000 });
+    expect(r.issues.some((i: { message: string }) => i.message.includes("§99의2") && i.message.includes("관리처분계획"))).toBe(true);
+    expect(r.result).toBeUndefined();
   });
 });
 

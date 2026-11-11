@@ -58,8 +58,8 @@ describe("US-44 게이트 행렬 — ⑤⑧ 공용 술어", () => {
     }
   });
 
-  it("G-2: 범위 밖 조문(§98의4·§98의8·§99의2·§99)은 카테고리 게이트 그대로 — 결정 범위를 넘지 않는다", () => {
-    for (const id of ["unsold_98_4", "unsold_98_8", "unsold_99_2", "new_99"]) {
+  it("G-2: 범위 밖 조문(§98의4·§98의9·§99)은 카테고리 게이트 그대로 — §98의8·§99의2는 2026-11-11 별도 anchor로 막았다", () => {
+    for (const id of ["unsold_98_4", "unsold_98_9", "new_99"]) {
       expect(isReductionAllowedForAssetKind(id, "presale_right")).toBe(true);
       expect(isReductionAllowedForAssetKind(id, "redevelopment_apt")).toBe(true);
     }
