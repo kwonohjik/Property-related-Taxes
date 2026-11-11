@@ -243,6 +243,9 @@ export function runSuccessorMember(
             ...(successorPenalty114_2Applies(estimate!.method, completionDate, transferDate) ? { penalty114_2Unapplied: true } : {}),
           }
         : {}),
+      ...(!estimate && bgEstimate && estimated
+        ? { burdenedGiftExpense: { value: estimated.value, deduction: estimated.deduction, ...(estimated.swap ? { swap: estimated.swap } : {}) } }
+        : {}),
     },
   };
 }
