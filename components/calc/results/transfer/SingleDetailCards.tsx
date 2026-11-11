@@ -104,6 +104,7 @@ export function SingleDetailCards({
           // 원조합원 입주권·완공 아파트 — 인가 전 분과 신고서 합계(§166①1호)를 잇는다
           redevFilingAcquisition={bgRedevFiling(result)?.acquisition}
           redevFilingExpenses={bgRedevFiling(result)?.expenses}
+          redevFilingSuccessor={bgRedevFiling(result)?.successor}
           // 승계조합원 완공 아파트 × 환산·기준시가 — 재개발 승계 분기가 고른 필요경비(§159 명세의 택일 대신 · §F.4)
           redevSuccessorExpense={result.redevelopmentDetail?.successorMemberDetail?.burdenedGiftExpense}
         />

@@ -41,11 +41,13 @@ export function redevInverseTransferPrice(
  */
 export function bgRedevFiling(
   result: Pick<TransferTaxResult, "redevelopmentDetail" | "transferBurdenedGiftBreakdown">,
-): { acquisition: number; expenses: RedevExpenseParts } | undefined {
+): { acquisition: number; expenses: RedevExpenseParts; successor: boolean } | undefined {
   if (!result.redevelopmentDetail || !result.transferBurdenedGiftBreakdown) return undefined;
   return {
     acquisition: redevFilingTotals(result.redevelopmentDetail, redevInverseTransferPrice(result, 0)).acquisition,
     expenses: redevBranchExpenseParts(result.redevelopmentDetail),
+    // 승계조합원 신축주택은 §166 밖이다 — 카드 문구(「종전 부동산」 · 「§166①1호」 · 「인가 전 분 택일」)를 바꾸는 신호(계획서 remaining-4-measurements §J)
+    successor: result.redevelopmentDetail.successorMemberApplied === true,
   };
 }
 

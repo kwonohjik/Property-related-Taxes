@@ -577,6 +577,8 @@ export interface TransferBurdenedGiftBreakdown {
     breakdown: TransferBurdenedGiftBreakdown;
     redevFilingAcquisition?: number;
     redevFilingExpenses?: RedevExpenseParts;
+    /** 승계조합원 신축주택 카드 — §166 밖이라 「종전 부동산」 · 「§166①1호」 문구를 쓰지 않는다(§J) */
+    redevFilingSuccessor?: boolean;
     redevSec166?: { acquisition: number; lumpDeduction: number };
     redevSuccessorExpense?: NonNullable<NonNullable<import("./transfer-redevelopment.types").RedevelopmentResult["successorMemberDetail"]>["burdenedGiftExpense"]>;
   }>;

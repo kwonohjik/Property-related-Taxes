@@ -11,9 +11,17 @@ import type { RedevExpenseParts } from "@/lib/tax-engine/redev-acquisition-inver
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 const ACTUAL_BASIS = "자본적지출·양도비 — 「소득세법」 제97조 제1항 제2호·제3호";
 
-export function BgRedevFilingExpenseRows({ parts }: { parts: RedevExpenseParts }) {
+export function BgRedevFilingExpenseRows({ parts, successor = false }: { parts: RedevExpenseParts; successor?: boolean }) {
   const total = parts.preApproval + parts.postApproval + parts.settlement;
   if (total <= 0) return null;
+  // 승계조합원 신축주택(§166 밖) — 인가 전 · 인가 후 · 청산금 분이 없고 필요경비는 자본적지출·양도비 하나다(§J). 분기 줄을 그리지 않는다.
+  if (successor)
+    return (
+      <tr data-testid="bg-redev-filing-expense" data-successor="true">
+        <td className="py-1 pr-2 pl-3 text-caption text-fuchsia-700 dark:text-fuchsia-400">신고서 필요경비 — {ACTUAL_BASIS}</td>
+        <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(total)}</td>
+      </tr>
+    );
   // 인가 전 분 합에 이월과세 증여세 상당액이 들어 있으면 택일 몫(개산공제 또는 실비)과 따로 보인다.
   const giftTax = parts.preApprovalGiftTax ?? 0;
   const rows: Array<{ id: string; label: string; amount: number }> = [

@@ -81,6 +81,7 @@ export function withCardAcquisitions(
           label: r.item.propertyLabel,
           breakdown: r.result.transferBurdenedGiftBreakdown,
           ...(filing !== undefined ? { redevFilingAcquisition: filing.acquisition, redevFilingExpenses: filing.expenses } : {}),
+          ...(filing?.successor ? { redevFilingSuccessor: true } : {}),
           ...(sec166 !== undefined ? { redevSec166: sec166 } : {}),
           ...(successor !== undefined ? { redevSuccessorExpense: successor } : {}),
         }]

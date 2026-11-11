@@ -305,6 +305,12 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
             const primary = aggregated.properties.find((p) => p.propertyId === "primary");
             return primary?.redevelopmentDetail ? primary.acquisitionPrice : undefined;
           })()}
+          // §166 카드가 모두 승계조합원(§166 밖)이면 합계 안내를 승계 문구로(§J). 원조합원이 하나라도 있으면 종전 문구.
+          redevFilingSuccessor={(() => {
+            const redev = transferBurdenedGiftBreakdown.cards?.filter((c) => c.redevFilingAcquisition !== undefined) ?? [];
+            if (redev.length > 0) return redev.every((c) => c.redevFilingSuccessor === true);
+            return aggregated.properties.find((p) => p.propertyId === "primary")?.redevelopmentDetail?.successorMemberApplied === true;
+          })()}
         />
       )}
 
