@@ -174,7 +174,7 @@ describe("G-45 전자신고 세액공제 — 판정 소스가 하나다 (조특�
    * ⇒ 같은 「전자신고」 선언인데 **종목 수만으로** 공제가 갈리고, 그 20,000원이 곧바로
    *   가산세 base 를 움직였다(실측: 국외 1건 0원 공제 / 2건 20,000원 공제).
    */
-  it("B4-45-1: 🔴 국외 1건도 전자신고 공제가 적용된다 (종전 0원)", () => {
+  it("B4-45-1: 🔴 국외만 있는 신고는 예정신고가 아니라 전자신고 공제가 없다 (조특령 §104의5① · V-21)", () => {
     const agg = calculateStockTransferTaxAggregate([
       fx(100_000_000, {
         filingViolation: "under_report",
@@ -182,13 +182,14 @@ describe("G-45 전자신고 세액공제 — 판정 소스가 하나다 (조특�
         isElectronicFiling: true,
       }),
     ]);
-    expect(agg.electronicFilingCredit).toBe(20_000);
-    // base = 19,500,000 − 20,000 = 19,480,000 → × 40% = 7,792,000 (종전 7,800,000)
-    expect(agg.penaltyBase).toBe(19_480_000);
-    expect(agg.totalUnderReportPenalty).toBe(7_792_000);
+    expect(agg.electronicFilingCredit).toBe(0);
+    // 공제 0 → base = 산출세액 19,500,000 → × 40% = 7,800,000 (G-45 당시 20,000 공제 값 7,792,000에서 V-21로 환원)
+    expect(agg.penaltyBase).toBe(19_500_000);
+    expect(agg.totalUnderReportPenalty).toBe(7_800_000);
+    expect(agg.electronicFilingCreditNotice).toBeDefined();
   });
 
-  it("B4-45-2: 🔑 종목 수로 공제 여부가 갈리지 않는다 (1건 = 2건)", () => {
+  it("B4-45-2: 🔑 종목 수로 공제 여부가 갈리지 않는다 (1건 = 2건, 둘 다 0)", () => {
     const one = calculateStockTransferTaxAggregate([
       fx(100_000_000, { isElectronicFiling: true }),
     ]);
@@ -196,8 +197,17 @@ describe("G-45 전자신고 세액공제 — 판정 소스가 하나다 (조특�
       fx(100_000_000, { isElectronicFiling: true }),
       fx(1_000_000, { isElectronicFiling: true }),
     ]);
-    expect(one.electronicFilingCredit).toBe(20_000);
-    expect(two.electronicFilingCredit).toBe(20_000);
+    expect(one.electronicFilingCredit).toBe(0);
+    expect(two.electronicFilingCredit).toBe(0);
+  });
+
+  it("B4-45-4: 🔑 국내 예정신고 + 국외 혼합은 종목 순서와 무관하게 공제된다 (마지막이 국외여도 유형이 비지 않는다)", () => {
+    const d = dom({ filingType: "preliminary", isElectronicFiling: true });
+    const f = fx(1_000_000);
+    const a = calculateStockTransferTaxAggregate([d, f] as (StockTransferInput | ForeignStockInput)[]);
+    const b = calculateStockTransferTaxAggregate([f, d] as (StockTransferInput | ForeignStockInput)[]);
+    expect(a.electronicFilingCredit).toBe(20_000);
+    expect(b.electronicFilingCredit).toBe(20_000);
   });
 
   it("B4-45-3: ⛔ 선언하지 않으면 공제가 없다 (양성 대조군)", () => {

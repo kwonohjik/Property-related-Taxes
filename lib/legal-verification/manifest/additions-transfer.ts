@@ -449,6 +449,13 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // stock.ts ELECTRONIC_FILING_CREDIT_DECREE — 양도소득세 전자신고 공제는 예정신고만(V-21, KoreanLaw 조회 2026-11-11)
+    id: "SPECIAL.ELECTRONIC_FILING_CREDIT_DECREE",
+    citation: "조특령 §104의5",
+    keywords: ["전자신고 등에 대한 세액공제", "양도소득 과세표준 예정신고", "2만원"],
+    keywordMode: "ALL",
+  },
+  {
     id: "SPECIAL.DUPLICATE_SUPPORT_EXCLUSION",
     citation: "조특법 §127",
     keywords: ["중복지원의 배제", "하나만을 선택하여 적용받을 수 있다", "거주자가 토지등을 양도하여 둘 이상의 양도소득세의 감면규정"],

@@ -35,6 +35,7 @@ import {
   type FraudPortionSplit,
 } from "@/lib/tax-engine/transfer-tax-penalty";
 import { floorTen, floorLocalTax, calcElectronicFilingCredit } from "./stock-transfer-helpers";
+import { isElectronicFilingCreditApplicable } from "@/lib/tax-engine/data/electronic-filing-credit-scope";
 
 export interface FinalizeStockResult {
   underReportPenalty: number;
@@ -211,8 +212,12 @@ export function finalizeStockTax(
 ): FinalizeStockResult {
   const appliedRules: string[] = [];
 
-  // STEP 11: 전자신고 세액공제 (조특법 §104의8)
-  const electronicFilingCredit = calcElectronicFilingCredit(input.isElectronicFiling, calculatedTax);
+  // STEP 11: 전자신고 세액공제 (조특법 §104의8 · 조특령 §104의5① — 양도소득세는 예정신고, 2021-02-17 이후 양도분)
+  const electronicFilingCredit = calcElectronicFilingCredit(
+    input.isElectronicFiling,
+    calculatedTax,
+    isElectronicFilingCreditApplicable(input.filingType, input.transferDate),
+  );
   if (electronicFilingCredit > 0) {
     appliedRules.push(STOCK.ELECTRONIC_FILING_CREDIT);
   }

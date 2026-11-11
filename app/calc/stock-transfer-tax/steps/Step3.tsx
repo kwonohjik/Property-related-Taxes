@@ -581,7 +581,7 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
             checked={form.isElectronicFiling}
             onCheckedChange={(v) => onChange({ isElectronicFiling: v })}
             title="전자신고 (홈택스 직접 신고)"
-            description="납세자가 직접 전자신고하면 20,000원을 세액공제합니다 (조세특례제한법 §104의8①). 신고 1건에 1회 적용됩니다."
+            description="납세자가 직접 전자신고하면 20,000원을 세액공제합니다 (조세특례제한법 §104의8① · 같은 법 시행령 §104의5①②2호). 양도소득세는 예정신고에만 적용되고 2021년 2월 17일 이후 양도분부터입니다. 신고 1건에 1회 적용됩니다."
             tone="emerald"
           />
         </div>

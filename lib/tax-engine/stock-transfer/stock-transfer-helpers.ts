@@ -168,8 +168,10 @@ export function floorLocalTax(amount: number): number {
 export function calcElectronicFilingCredit(
   isElectronicFiling: boolean,
   calculatedTax: number,
+  /** 공제 대상 신고인가 — 예정신고 + 2021-02-17 이후 양도(`isElectronicFilingCreditApplicable`, 조특령 §104의5①). 필수 인자다. */
+  applicable: boolean,
 ): number {
-  if (!isElectronicFiling) return 0;
+  if (!isElectronicFiling || !applicable) return 0;
   // 공제액은 산출세액 한도
   return Math.min(STOCK_ELECTRONIC_FILING_CREDIT, calculatedTax);
 }

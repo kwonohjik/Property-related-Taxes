@@ -82,3 +82,25 @@ Q-1 a ↔ Q-2 a는 **한 PR**로 묶는다(어느 한쪽만 하면 정산이 ±2
 4. §0 #4 사례는 가산세가 붙은 예정신고를 가공한 것이다. 실제 이력에서 예정신고에 가산세가 붙은 채 저장되는 빈도는 모른다.
 5. 예정신고 가산세와 확정신고 가산세의 중복 배제(국세기본법 §47조의2⑤) 모델링은 V-17로 열려 있다 — Q-1 a는 그 문제를 해결하지 않고 «공제 기준»만 맞춘다.
 6. 부동산 양도세 다건(`multi-prior-filed`)이 같은 `finalTax` 계열을 읽는지는 이번에 보지 않았다.
+
+## 6. 결정 · 구현 결과 (2026-11-11)
+
+**결정:** Q-1 = a · Q-2 = a · Q-3 = 한 PR(사용자 «모두 권장안으로»).
+
+**구현 (이 PR):**
+- `lib/tax-engine/data/electronic-filing-credit-scope.ts` 신규 — 경계 `2021-02-17`, `isElectronicFilingCreditApplicable(filingType, transferDate)`(예정신고 + 경계 이후), 합산용 `electronicFilingCreditScope(items)`(신고 유형은 **유형을 가진 마지막 종목**, 양도일은 **가장 늦은** 양도일), 고정 문구 `ELECTRONIC_FILING_CREDIT_NOT_APPLIED_NOTICE`. 법령 상수 `STOCK.ELECTRONIC_FILING_CREDIT_DECREE`("조특령 §104의5") + 검증 매니페스트 `SPECIAL.ELECTRONIC_FILING_CREDIT_DECREE` 등록.
+- 공제 게이트 3곳 — 단건 `finalizeStockTax`(`calcElectronicFilingCredit`에 `applicable` 필수 인자 추가) · 합산 `stock-transfer-aggregate.ts` · 건별 `each_item`. 단건은 `warnings`, 합산은 결과 `electronicFilingCreditNotice` echo(신고 단위 1회, 종목 행 경고는 `stripItemPenalties`가 걷어냄), 카드는 «양도소득세 결정세액» 위 한 줄.
+- 이력 자동 채움 `paidTaxOf`(`stock-aggregate-entry.ts`) — `finalTax` → **`calculatedTax`**, 비과세(`isExempt`)는 0.
+- Step3 전자신고 토글 문구 — 시행령 §104의5·예정신고 한정·2021년 2월 17일 이후 명시.
+
+**실측 (구현 후):** §2(가) 확정 e=true → 공제 0·finalTax 5,500,000 · 2020-06-01 예정 e=true → 공제 0 · 합산 확정 e=true → 결정세액 9,500,000 · §0 #4 사례(무신고 예정신고 자동값) → 5,500,000(정산 추가납부 4,000,000 = 법문과 일치). 예정신고 2024-06 양도는 공제 20,000 그대로(대조군).
+
+**검증:**
+- anchor 신규 3파일 — `electronic-filing-credit-scope.anchor.test.ts`(12) · `stock-auto-prior-paid-calculated-tax.anchor.test.ts`(3) · `stock-electronic-credit-scope.anchor.test.tsx`(3). 구현 **전** 15건 중 8건 실패(AP-1-1·2, EC-1-2~5, EC-2-2·3) → 구현 후 전부 통과(AP-1-3은 대조군이라 사전에도 통과).
+- 뮤테이션 14종 전부 사망(예정신고 게이트·시행일 게이트·경계 `>=`·가장 늦은 양도일·유형 선택·고지 조건·helper·합산·건별·종목 행 고지 제거·단건 push·자동값 복귀·비과세 0·카드 렌더), 복원 `cmp` 일치.
+- **기존 테스트 갱신 2파일**(옛 동작 단언): `penalty-b4-axis.anchor` B4-45-1·2(국외만 있는 신고는 예정신고가 아니라 공제 0 — 가산세 base 19,500,000·가산세 7,800,000으로 환원 · 1건 = 2건 단일 소스는 유지) + 신규 B4-45-4(국내 예정 + 국외 혼합은 순서 무관 공제) · `stock-auto-prior-paid.predo.anchor` 픽스처에 `calculatedTax` 추가.
+- 구현 중 잡은 결함: 혼합 신고에서 마지막 종목이 국외(신고 유형 필드 없음)이면 유형이 비어 공제가 사라졌다 → «유형을 가진 마지막 종목»으로 선택(B4-45-4·뮤테이션 M5가 고정).
+
+**미검증 갱신:** §5의 1~6은 그대로. 추가로 — 신고 안에 2021-02-17 전·후 양도분이 섞일 때 «가장 늦은 양도일»로 판정한 것은 법문 해석이다(부칙은 «양도하는 분»을 단위로 말하고 신고 단위 혼합을 정하지 않는다) [확인 필요]. 법령 검증(`npm run verify:legal`) 실행 결과는 PR 본문에 기록.
+
+**추가 검증 결과:** 회귀 5묶음 통과(api 7,121 · tax-engine 19,403 · calc 11,785 · lib 3,407 · components 7,110) · `tsc`(힙 8GB) 0 · eslint 오류 0 · `verify:legal` 통과 478/실패 0(`SPECIAL.ELECTRONIC_FILING_CREDIT_DECREE` 포함) · Playwright 로컬 10건 통과(`stock-history-aggregate-entry` SA-1~6 · `stock-preliminary-paid-settlement` PS-1~4; 이력 시딩 픽스처에 `calculatedTax` 추가).

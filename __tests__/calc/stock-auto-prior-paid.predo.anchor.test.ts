@@ -38,7 +38,8 @@ function rec(
     taxType: "stock_transfer",
     title: `주식 양도세 — ${name}`,
     inputData: { securityName: name, marketType, transferDate, filingDate },
-    resultData: { finalTax, localIncomeTax },
+    // V-19: 자동값은 산출세액(`calculatedTax`)이다 — 이 픽스처는 가산세·공제가 없는 일반 예정신고라 결정세액과 같다
+    resultData: { calculatedTax: finalTax, finalTax, localIncomeTax },
     taxLawVersion: transferDate,
     linkedCalculationId: null,
     clientId: null,

@@ -21,6 +21,7 @@ import {
   FILING_PENALTY_BASE_ERA_NOTICE,
   stockFilingPenaltyEraNotice,
 } from "../data/filing-penalty-base-era";
+import { ELECTRONIC_FILING_CREDIT_NOT_APPLIED_NOTICE } from "../data/electronic-filing-credit-scope";
 import {
   computeStockFilingPenalty,
   computeStockLatePaymentPenalty,
@@ -90,7 +91,10 @@ export function stripItemPenalties(items: StockTransferResult[]): StockTransferR
       // 값과 함께 **조문 표시도** 걷는다 — 안 그러면 「가산세 0인데 §47조의3 40% 배지」가 남는다
       // (메모리 `feedback_engine_result_display_drift`).
       warnings: (r.warnings ?? []).filter(
-        (w) => !STOCK_PENALTY_RULE_REFS.includes(w) && w !== FILING_PENALTY_BASE_ERA_NOTICE,
+        (w) =>
+          !STOCK_PENALTY_RULE_REFS.includes(w) &&
+          w !== FILING_PENALTY_BASE_ERA_NOTICE &&
+          w !== ELECTRONIC_FILING_CREDIT_NOT_APPLIED_NOTICE,
       ),
     };
   });

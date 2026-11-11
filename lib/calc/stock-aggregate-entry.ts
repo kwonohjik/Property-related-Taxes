@@ -104,10 +104,17 @@ function filingDateOf(record: CalculationRecord): string {
   );
 }
 
-/** 이력 record 의 결정세액·지방소득세 — 주식은 결과가 최상위에 저장된다. */
+/**
+ * 이력 record 의 **예정신고 산출세액**·지방소득세 — 주식은 결과가 최상위에 저장된다.
+ *
+ * 소득세법 §111③은 확정신고납부 시 «제107조에 따른 예정신고 산출세액»을 공제하라고 한다. 산출세액은 `calculatedTax`이고
+ * `finalTax`(결정세액 + 가산세 − 전자신고 공제)가 아니다 — 종전에는 `finalTax`를 읽어 예정신고에 붙은 가산세만큼 정산이 과소해졌다
+ * (계획서 `stock-prelim-credit-v19.plan.md` V-19). 비과세 종목은 산출세액 echo가 남아 있어도 납부한 세액이 없으므로 0이다.
+ */
 function paidTaxOf(record: CalculationRecord): { national: number; local: number } {
-  const rd = (record.resultData ?? {}) as { finalTax?: number; localIncomeTax?: number };
-  return { national: rd.finalTax ?? 0, local: rd.localIncomeTax ?? 0 };
+  const rd = (record.resultData ?? {}) as { calculatedTax?: number; localIncomeTax?: number; isExempt?: boolean };
+  if (rd.isExempt) return { national: 0, local: 0 };
+  return { national: rd.calculatedTax ?? 0, local: rd.localIncomeTax ?? 0 };
 }
 
 /**
