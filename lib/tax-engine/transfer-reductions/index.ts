@@ -15,10 +15,9 @@
  */
 
 import { checkReductionPeriod } from "./period-check";
-import { ALL_REDUCTION_IDS, getReductionsByCategory } from "./metadata";
+import { ALL_REDUCTION_IDS } from "./metadata";
 import type {
   TransferReductionId,
-  ReductionCategory,
   PeriodCheckContext,
 } from "./types";
 
@@ -224,44 +223,6 @@ export {
   type SpecialHouseExclusionInput,
   type SpecialHouseExclusionResolution,
 } from "./unsold-hybrid-p5";
-
-/**
- * UI 펼침 헤더용 활성/전체 카운터 (사용자 결정사항 #3-4).
- *
- * 시한 검증 결과 `inPeriod === true` 인 항목 수를 카테고리별로 반환.
- * 자산 컨텍스트(취득일·양도일·등록일 등) 기반으로 useMemo 계산 권장
- * (memory `feedback_useeffect_store_mirror_forbidden.md` 정책 — useEffect 미러링 금지).
- *
- * @example
- * const counters = countActiveReductionsByCategory({
- *   transferDate: new Date("2023-02-16"),
- *   acquisitionDate: new Date("2003-09-23"),
- *   contractDate: new Date("2001-05-24"),
- * });
- * // counters.new_housing = { active: 1, total: 4 }  // §99의3만 활성
- */
-export function countActiveReductionsByCategory(
-  ctx: PeriodCheckContext,
-  /** 화면에 그리지 않는 조문 — 헤더 「가능 N / 전체 M」이 목록과 어긋나지 않게 함께 뺀다. */
-  exclude: ReadonlySet<string> = new Set(),
-): Record<ReductionCategory, { active: number; total: number }> {
-  const groups = getReductionsByCategory();
-  const result: Record<ReductionCategory, { active: number; total: number }> = {
-    rental: { active: 0, total: 0 },
-    new_housing: { active: 0, total: 0 },
-    unsold_housing: { active: 0, total: 0 },
-    standalone: { active: 0, total: 0 },
-  };
-  for (const cat of Object.keys(groups) as ReductionCategory[]) {
-    const items = groups[cat].filter((m) => !exclude.has(m.id));
-    result[cat].total = items.length;
-    for (const meta of items) {
-      const r = checkReductionPeriod(meta.id, ctx);
-      if (r.inPeriod) result[cat].active += 1;
-    }
-  }
-  return result;
-}
 
 /**
  * UI 항목별 활성 여부 일괄 조회. 펼침 패널 안의 24개 항목 disabled/enabled 결정.
