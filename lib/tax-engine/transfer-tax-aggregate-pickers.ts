@@ -119,6 +119,18 @@ export function incomeDeductionReducibleOf(r: SingleResult): number {
     activeIncomeDeductionHybrid(r)?.reducibleTransferIncome ?? 0);
 }
 
+/**
+ * `incomeDeductionReducibleOf`가 읽는 detail의 조문 id — 같은 `??` 체인이라 그 값이 어느 조문 것인지를 가리킨다(고지 문구가 조문별로 갈린다).
+ * 차감 detail이 없으면 undefined.
+ */
+export function incomeDeductionSourceIdOf(r: SingleResult): string | undefined {
+  if (r.isExempt) return undefined;
+  if (r.new993Detail?.reducibleTransferIncome !== undefined) return "new_99_3";
+  if (r.new99Detail?.reducibleTransferIncome !== undefined) return "new_99";
+  if (r.unsold988Detail?.reducibleTransferIncome !== undefined) return "unsold_98_8";
+  return activeIncomeDeductionHybrid(r)?.id;
+}
+
 /** 농특세 비과세(§98의3·§98의5 — ruralSurtaxExempt) income-deduction 차감분. 해당분은 농특세 baseline에서 제외. */
 export function ruralSurtaxExemptReducibleOf(r: SingleResult): number {
   if (r.isExempt) return 0;

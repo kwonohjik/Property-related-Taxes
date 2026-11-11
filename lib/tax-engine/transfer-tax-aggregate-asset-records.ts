@@ -64,7 +64,7 @@ import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { ratesForTransferDate, type RatesByTransferDate } from "./transfer-tax-item-rates";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { separateLandCardReductionNotice } from "./transfer-reductions/new-housing-appurtenant-land-2x";
-import { incomeDeductionReducibleOf } from "./transfer-tax-aggregate-pickers";
+import { incomeDeductionReducibleOf, incomeDeductionSourceIdOf } from "./transfer-tax-aggregate-pickers";
 import { landOnlyRateInput } from "./land-only-owner-household";
 // transfer-tax-penalty 직접 호출 없음 — 자산별 가산세는 단건 엔진이 처리, aggregate는 합산만 수행.
 
@@ -335,7 +335,11 @@ export function buildAssetRecords(
   }
 
   // NH-31 — 주택 카드에 §99·§99의3이 적용됐는데 별도 토지 카드가 함께 있으면 토지 카드 소득이 차감에서 빠진다는 고지(세액 불변).
-  const separateLandNotice = separateLandCardReductionNotice(unitItems, perAsset.map((pa) => incomeDeductionReducibleOf(pa.result)));
+  const separateLandNotice = separateLandCardReductionNotice(
+    unitItems,
+    perAsset.map((pa) => incomeDeductionReducibleOf(pa.result)),
+    perAsset.map((pa) => incomeDeductionSourceIdOf(pa.result)),
+  );
   if (separateLandNotice && !warnings.includes(separateLandNotice)) warnings.push(separateLandNotice);
 
   // M-2: 세율군 분류 — 정밀판정·이월과세 채택 교정 item 기준 (원시 플래그 오분류 방지)
