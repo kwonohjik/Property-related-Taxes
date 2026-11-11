@@ -27,7 +27,7 @@ import { Unsold989InputForm } from "@/components/calc/transfer/Unsold989InputFor
 import { SpecialHouseExclusionItemFields } from "@/components/calc/transfer/SpecialHouseExclusionSection";
 import { InheritedPresaleQuestion } from "@/components/calc/transfer/InheritedPresaleQuestion";
 import { asksInheritedPresaleQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
-import { asksRowGiftQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
+import { asksRowGiftQuestion, SPOUSE_SHARE_GIFT_EXCEPTION_NOTE } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { getReductionDefault } from "@/components/calc/transfer/UnifiedReductionPanel-defaults";
 import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
@@ -229,7 +229,7 @@ export function HouseEntryCountExclusionSection({
                     onUpdate({ countExclusion: { kind: "special", special: { ...current.special, acquiredByGift: v } } })
                   }
                   title="증여(배우자·직계존비속 이월과세 대상 증여 포함)로 취득한 주택"
-                  description="증여로 받은 이 조문의 주택은 증여받은 사람의 소유주택에서 빠지지 않습니다 — 켜면 주택 수에 그대로 셉니다."
+                  description={`증여로 받은 이 조문의 주택은 증여받은 사람의 소유주택에서 빠지지 않습니다 — 켜면 주택 수에 그대로 셉니다. ${SPOUSE_SHARE_GIFT_EXCEPTION_NOTE}`}
                 />
               </div>
             )}

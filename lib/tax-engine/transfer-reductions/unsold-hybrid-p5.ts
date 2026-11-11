@@ -16,7 +16,7 @@
  */
 
 import { UNSOLD_98_5_CONTRACT_FROM, specialHouseExclusionGateReason } from "./unsold-98-period-gates";
-import { unsold98AcquisitionCauseReason } from "./unsold-98-acquisition-cause";
+import { unsold98AcquisitionCauseReason, SPOUSE_SHARE_GIFT_EXCEPTION_NOTE } from "./unsold-98-acquisition-cause";
 import { evaluateNew99AcquisitionGate } from "./new-99-acquisition-cause";
 import { completedMonthsInclusive } from "../civil-period";
 import { UNSOLD_98_FLAT_RATE, UNSOLD_98_FLAT_RATE_LABEL, UNSOLD_98_HOLDING_YEARS } from "./unsold-98-constants";
@@ -600,7 +600,8 @@ function giftSpecialHouseReason(e: SpecialHouseExclusionInput): { message: strin
     return gate ? { message: gate.message } : undefined;
   }
   const r = unsold98AcquisitionCauseReason(e.article, "gift");
-  return r ? { message: r.message } : undefined;
+  // 행 ⑥(주택 수 제외)에서만 쓰는 경로라 배우자 지분 증여 예외(기준-2025-법규재산-0033)를 함께 안내한다 — 감면주택 자체의 양도 쪽 문구에는 붙이지 않는다.
+  return r ? { message: `${r.message} ${SPOUSE_SHARE_GIFT_EXCEPTION_NOTE}` } : undefined;
 }
 
 /**
