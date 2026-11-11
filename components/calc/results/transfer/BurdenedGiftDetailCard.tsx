@@ -61,6 +61,11 @@ interface Props {
    * 인가 후 분·청산금 납부분과의 관계를 한 줄로 잇는다(「소득세법 시행령」 제166조 제1항 제1호). 카드가 다시 계산하지 않는다.
    */
   redevFilingAcquisition?: number;
+  /**
+   * 승계조합원 입주권(`isBgSuccessorRight`) — 취득가액은 승계 블록(승계취득가액 + 추가분담금)이고 자산은 권리(소득세법 §94①2호가목)다.
+   * 종전에는 「건물 취득가」로 그렸다(계획서 `bg-successor-rtmi-acquisition-input.plan.md` V-2 · 2026-11-12 실측 — 값 400,000,000 × 채무비율은 맞다).
+   */
+  successorRight?: boolean;
   /** §166 자산의 신고서 필요경비 분기별 구성(인가 전 · 인가 후 · 청산금 분) — 신고서 취득가액 줄 아래에 잇는다. */
   redevFilingExpenses?: RedevExpenseParts;
   /** 승계조합원 완공 APT × 환산·기준시가 — 재개발 승계 분기가 고른 필요경비(엔진 echo · 있으면 필요경비 줄을 이 값으로 그린다 · §F.4) */
@@ -81,9 +86,13 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   right_to_move_in: "입주권",
 };
 
-export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166, redevFilingAcquisition, redevFilingExpenses, redevSuccessorExpense, redevFilingSuccessor = false }: Props) {
+export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166, redevFilingAcquisition, redevFilingExpenses, redevSuccessorExpense, redevFilingSuccessor = false, successorRight = false }: Props) {
   const fmt = (n: number) => n.toLocaleString("ko-KR");
-  const buildingAcqLabel = redevFilingAcquisition !== undefined && !redevFilingSuccessor ? "종전 부동산 취득가(인가 전 분)" : "건물 취득가";
+  const buildingAcqLabel = successorRight
+    ? "입주권 취득가"
+    : redevFilingAcquisition !== undefined && !redevFilingSuccessor
+      ? "종전 부동산 취득가(인가 전 분)"
+      : "건물 취득가";
   const rowSelected = (mode: string) =>
     bg.sangjeungbeopValuation.selectedMode === mode
       ? "font-semibold bg-fuchsia-100/70 dark:bg-fuchsia-900/40"
