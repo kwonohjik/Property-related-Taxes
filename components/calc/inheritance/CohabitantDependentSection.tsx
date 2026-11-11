@@ -15,7 +15,7 @@
  */
 
 import { useState } from "react";
-import { differenceInYears } from "date-fns";
+import { differenceInYears } from "@/lib/tax-engine/utc-date";
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";

@@ -23,7 +23,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RentalCommonFields, TaxRegistrationToggle } from "./RentalCommonFields";
 import { Rental975DeemedPeriodsField } from "./Rental975DeemedPeriodsField";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
-import { addMonths } from "date-fns";
+import { addMonths } from "@/lib/tax-engine/utc-date";
 import { RENTAL_97_5_REGISTRATION_MONTHS } from "@/lib/tax-engine/transfer-reductions";
 import { evaluateContinuousRental975 } from "@/lib/tax-engine/transfer-reductions/rental-97-5-period";
 import { toOptionalDate } from "@/lib/api/date-coerce";

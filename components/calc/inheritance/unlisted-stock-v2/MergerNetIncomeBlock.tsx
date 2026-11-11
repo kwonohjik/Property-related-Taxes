@@ -36,9 +36,9 @@ export interface MergerBlockState {
 
 function dateToStr(d: Date | undefined | null): string {
   if (!d || !(d instanceof Date) || isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
@@ -50,12 +50,12 @@ function strToDate(s: string): Date | undefined {
 
 function emptyAcquirerYear(): MergerAcquirerYear {
   const now = new Date();
-  return { shares: 0, netIncome: 0, startDate: new Date(now.getFullYear() - 1, 0, 1), endDate: new Date(now.getFullYear() - 1, 11, 31) };
+  return { shares: 0, netIncome: 0, startDate: new Date(Date.UTC(now.getFullYear() - 1, 0, 1)), endDate: new Date(Date.UTC(now.getFullYear() - 1, 11, 31)) };
 }
 
 function emptyTargetYear(): MergerTargetYear {
   const now = new Date();
-  return { netIncome: 0, startDate: new Date(now.getFullYear() - 1, 0, 1), endDate: new Date(now.getFullYear() - 1, 11, 31) };
+  return { netIncome: 0, startDate: new Date(Date.UTC(now.getFullYear() - 1, 0, 1)), endDate: new Date(Date.UTC(now.getFullYear() - 1, 11, 31)) };
 }
 
 export const MERGER_INITIAL_STATE: MergerBlockState = {

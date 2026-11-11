@@ -53,7 +53,7 @@ export function useStockFilingHeaderMeta({
   const filingYear = (() => {
     if (!transferDate) return undefined;
     const d = new Date(transferDate);
-    return isNaN(d.getTime()) ? undefined : d.getFullYear();
+    return isNaN(d.getTime()) ? undefined : d.getUTCFullYear();
   })();
 
   return {

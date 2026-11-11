@@ -199,6 +199,20 @@ export function isWithinInterval(date: Date, interval: { start: Date; end: Date 
   return time >= startTime && time <= endTime;
 }
 
+/** 유효한 날짜인가(Invalid Date가 아님) */
+export function isValid(date: Date): boolean {
+  return !Number.isNaN(date.getTime());
+}
+
+/**
+ * 사용자 달력의 「오늘」을 **UTC 자정 Date**로 — 화면의 D-day·기본값처럼 「지금」이 필요한 곳 전용.
+ * 입력 날짜는 UTC 자정이므로 `new Date()`(지금 시각)를 그대로 비교하면 한국 새벽(00~09시)에 하루 전으로 계산된다.
+ * 지금 시각의 **로컬** 달력일(사용자가 보는 오늘)을 UTC 자정으로 옮긴다 — 이 모듈에서 로컬 getter를 쓰는 유일한 함수.
+ */
+export function localTodayAsUtc(now: Date = new Date()): Date {
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+}
+
 // ── 문자열 ↔ Date ───────────────────────────────────────────────────────────
 
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;

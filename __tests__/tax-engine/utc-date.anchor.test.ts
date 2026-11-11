@@ -160,10 +160,33 @@ describe("엔진 함수 — 시간대와 무관하게 같은 값", () => {
   }
 });
 
-// ── 재도입 차단 — 엔진·계산 변환·API 라우트에서 date-fns 로컬 달력 함수를 쓰지 않는다 ───────────────
+describe("localTodayAsUtc — 사용자 달력의 오늘을 UTC 자정으로", () => {
+  // 같은 순간(지금)이라도 로컬 달력일이 시간대마다 다르다 — 화면 D-day는 사용자가 보는 오늘 기준이어야 한다
+  for (const tz of TIMEZONES) {
+    it(`[${tz}] 로컬 달력일 = 결과의 UTC 달력일, 시각은 00:00:00.000Z`, () => {
+      process.env.TZ = tz;
+      for (const now of [new Date("2025-01-01T00:30:00Z"), new Date("2025-06-30T23:59:00Z"), new Date("2024-02-29T15:30:00Z")]) {
+        const r = U.localTodayAsUtc(now);
+        expect([r.getUTCFullYear(), r.getUTCMonth(), r.getUTCDate()]).toEqual([now.getFullYear(), now.getMonth(), now.getDate()]);
+        expect(r.getUTCHours() + r.getUTCMinutes() + r.getUTCSeconds() + r.getUTCMilliseconds()).toBe(0);
+      }
+    });
+  }
+  it("한국 새벽(KST 2025-01-01 03:00 = UTC 12-31 18:00)도 오늘은 2025-01-01", () => {
+    process.env.TZ = "Asia/Seoul";
+    expect(iso(U.localTodayAsUtc(new Date("2024-12-31T18:00:00Z")))).toBe("2025-01-01");
+    expect(U.differenceInDays(utc("2025-01-31"), U.localTodayAsUtc(new Date("2024-12-31T18:00:00Z")))).toBe(30);
+  });
+  it("isValid", () => {
+    expect(U.isValid(utc("2025-01-01"))).toBe(true);
+    expect(U.isValid(new Date(Number.NaN))).toBe(false);
+  });
+});
+
+// ── 재도입 차단 — 엔진·계산 변환·API 라우트·화면에서 date-fns 로컬 달력 함수를 쓰지 않는다 ───────────────
 describe("date-fns 로컬 달력 함수 재도입 차단", () => {
   const ROOT = path.resolve(__dirname, "../..");
-  const DIRS = ["lib/tax-engine", "lib/calc", "app/api/calc"];
+  const DIRS = ["lib/tax-engine", "lib/calc", "app/api/calc", "components", "app/calc", "app/history"];
   const ALLOWED_NAMES = new Set(["toDate"]); // 시간대와 무관(Date 복제)
 
   function walk(dir: string, out: string[]): void {
@@ -174,7 +197,7 @@ describe("date-fns 로컬 달력 함수 재도입 차단", () => {
     }
   }
 
-  it("date-fns import는 `toDate`만 허용 — 나머지는 `lib/tax-engine/utc-date`", () => {
+  it("엔진·변환·API·화면 — date-fns import는 `toDate`만 허용 — 나머지는 `lib/tax-engine/utc-date`", () => {
     const files: string[] = [];
     for (const d of DIRS) walk(path.join(ROOT, d), files);
     const offenders: string[] = [];

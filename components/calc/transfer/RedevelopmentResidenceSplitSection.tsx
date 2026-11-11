@@ -162,9 +162,9 @@ function computeResidenceMonths(start: string, end: string): number | undefined 
   const e = new Date(end);
   if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return undefined;
   if (s.getTime() > e.getTime()) return undefined;
-  const y = e.getFullYear() - s.getFullYear();
-  const m = e.getMonth() - s.getMonth();
-  const d = e.getDate() - s.getDate();
+  const y = e.getUTCFullYear() - s.getUTCFullYear();
+  const m = e.getUTCMonth() - s.getUTCMonth();
+  const d = e.getUTCDate() - s.getUTCDate();
   return y * 12 + m - (d < 0 ? 1 : 0);
 }
 

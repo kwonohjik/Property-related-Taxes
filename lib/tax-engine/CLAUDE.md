@@ -71,7 +71,8 @@ lib/tax-engine/
 - 연·월·일 getter/setter는 `getUTC*`/`setUTC*`, 달력 날짜 생성은 `new Date(Date.UTC(y, m, d))`, 시한 상수는 `new Date("2025-01-01T00:00:00.000Z")`(로컬 자정 `T00:00:00` 금지). `new Date()`(지금) 기반 값만 로컬이 허용된다.
 - 사용자에게 보이는 **타임스탬프**(저장 시각 등)는 사용자 로컬 날짜로 보이는 것이 맞다 — 날짜만 있는 문자열(`YYYY-MM-DD`)과 구별한다(`lib/storage/title-generator.ts`).
 - 테스트 입력도 UTC 자정으로 만든다(`new Date("2025-01-01")`·`Date.UTC`). 로컬 자정(`new Date(2025, 0, 1)`·`T00:00:00`)은 운영 경로에 없는 형태다.
-- 검증: 시간대 7종 anchor(`utc-date.anchor.test.ts`) + 수동 `TZ=America/New_York npx vitest run <경로>` 대조. UI 컴포넌트(`components/`)의 date-fns는 표시용이라 이 규칙 밖이다(후속 과제).
+- **화면(`components/`·`app/calc`·`app/history`)도 같은 규칙**이다 — 화면의 날짜 문자열은 `new Date("YYYY-MM-DD")`(UTC 자정)로 엔진에 가므로, `Date → "YYYY-MM-DD"` 변환·개월수·D-day를 로컬 getter/date-fns로 하면 UTC 서쪽 브라우저에서 하루 어긋난다(입력한 2024-12-31이 12-30으로 다시 그려짐). 「오늘」이 필요하면 `new Date()` 대신 `localTodayAsUtc()`(사용자 달력의 오늘을 UTC 자정으로 — `setHours(0,0,0,0)`은 로컬 자정이라 UTC 자정 날짜와 섞으면 한국 새벽에 하루 틀린다). `new Date().getFullYear()`처럼 **지금의 연도만** 읽는 기본값은 로컬이 맞다.
+- 검증: 시간대 7종 anchor(`utc-date.anchor.test.ts`) + 화면 왕복 anchor(`__tests__/components/unlisted-fiscal-year-date-tz.anchor.test.tsx`) + 수동 `TZ=America/New_York npx vitest run <경로>` 대조.
 
 **절대 금지**: `Math.round()` (세법은 floor), 부동소수 누적 (`0.1+0.2=0.30000000000000004`).
 

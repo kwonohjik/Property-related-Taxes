@@ -282,8 +282,8 @@ export function PriorGiftHistoryModal({
   // 필터 기준 문자열 (10년 전 일자)
   const tenYearsAgo = useMemo(() => {
     const d = new Date(currentGiftDate);
-    d.setFullYear(d.getFullYear() - 10);
-    d.setDate(d.getDate() + 1); // "10년 이내" = differenceInYears <= 10
+    d.setUTCFullYear(d.getUTCFullYear() - 10);
+    d.setUTCDate(d.getUTCDate() + 1); // "10년 이내" = differenceInYears <= 10
     return d.toISOString().split("T")[0];
   }, [currentGiftDate]);
 

@@ -9,7 +9,7 @@
  */
 
 import { useMemo } from "react";
-import { parseISO } from "date-fns";
+import { parseISO } from "@/lib/tax-engine/utc-date";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";

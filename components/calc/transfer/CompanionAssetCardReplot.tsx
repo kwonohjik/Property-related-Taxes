@@ -10,7 +10,7 @@ export const AREA_INPUT_CLASS = "w-full border rounded-md px-3 py-2 text-sm bg-b
 
 export function calcDayAfter(dateStr: string): string {
   const d = new Date(dateStr);
-  d.setDate(d.getDate() + 1);
+  d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().split("T")[0];
 }
 

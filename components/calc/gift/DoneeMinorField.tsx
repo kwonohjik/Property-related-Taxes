@@ -12,7 +12,7 @@
  */
 
 import { useMemo } from "react";
-import { differenceInYears } from "date-fns";
+import { differenceInYears } from "@/lib/tax-engine/utc-date";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";

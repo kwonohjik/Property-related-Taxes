@@ -14,7 +14,7 @@
  */
 
 import { resolveS20Params } from "@/lib/tax-engine/deductions/personal-deduction-calc";
-import { differenceInYears } from "date-fns";
+import { differenceInYears } from "@/lib/tax-engine/utc-date";
 import type { CohabitantDependent } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // ============================================================

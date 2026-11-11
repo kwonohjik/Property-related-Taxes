@@ -16,7 +16,7 @@
  */
 
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { differenceInYears } from "date-fns";
+import { differenceInYears } from "@/lib/tax-engine/utc-date";
 import type { PriorGift } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 interface MinorAtGiftToggleBlockProps {

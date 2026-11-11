@@ -83,7 +83,7 @@ function extractCardSummary(
   }
   function year(raw: string | number | undefined | null, label: string): string | null {
     if (!raw) return null;
-    const y = typeof raw === "number" ? raw : new Date(raw).getFullYear();
+    const y = typeof raw === "number" ? raw : new Date(raw).getUTCFullYear();
     return isNaN(y) ? null : `${label} ${y}년`;
   }
 

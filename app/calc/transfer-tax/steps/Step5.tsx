@@ -512,7 +512,7 @@ function PriorReductionUsageInput({
    *
    * 양도일 미입력 시에는 목록을 비운다 — 오늘-fallback은 위 결함의 원인이므로 금지.
    */
-  const transferYear = transferDate ? new Date(transferDate).getFullYear() : null;
+  const transferYear = transferDate ? new Date(transferDate).getUTCFullYear() : null;
   const yearOptions = transferYear
     ? [transferYear - 1, transferYear - 2, transferYear - 3, transferYear - 4]
     : [];
