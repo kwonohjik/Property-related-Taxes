@@ -83,7 +83,12 @@ export function runSuccessorMember(
    * 감정·매매사례 플래그가 취득가액을 0으로 만든 화면 경로가 숨은 칸 값으로 조용히 계산됐고, API로 임의 평가액을 보내면 세액이 0이 됐다.
    */
   const estimate = input.successorEstimate;
-  const estimated = estimate ? resolveSuccessorEstimate(estimate, transferPrice, input) : undefined;
+  const bgEstimate = input.successorBurdenedGiftEstimate;
+  const estimated = estimate
+    ? resolveSuccessorEstimate(estimate, transferPrice, input)
+    : bgEstimate && bgEstimate.value > 0
+      ? resolveBurdenedGiftSuccessorEstimate(bgEstimate, input)
+      : undefined;
   const successorAcquisitionPrice = estimated
     ? estimated.acquisition
     : (input.actualAcquisitionPrice ?? 0) > 0
@@ -229,7 +234,7 @@ export function runSuccessorMember(
       shortTermRateApplied: totalMonthsForRate < 24,
       rateLabel,
       acquisitionMethod: estimate?.method ?? "actual",
-      ...(estimated
+      ...(estimate && estimated
         ? {
             estimatedDeduction: estimated.deduction,
             estimatedValue: estimated.value,
@@ -284,16 +289,50 @@ function resolveSuccessorEstimate(
     estimatedDeductionRate(input.isUnregistered),
     input.ownershipRatio,
   );
-  // §97②2호 단서 — 환산취득가액에만 · 가목(환산 + 개산공제) < 나목(자본적지출·양도비 등)이면 나목만 필요경비(취득가액은 빼지 않는다).
-  //   나목은 이 분기의 인가 후 필요경비(양도비 안분 포함)다. 일반 경로 `calcNecessaryExpense`와 같은 비교식(동률은 본문).
+  return chooseEstimatedOrDirect(estimate.method === "converted", value, deduction, input);
+}
+
+type ResolvedSuccessorEstimate = ReturnType<typeof resolveSuccessorEstimate>;
+
+/**
+ * §97②2호 — 추계면 필요경비는 개산공제(본문)이고, 환산취득가액에만 단서가 붙는다:
+ * 가목(환산 + 개산공제) < 나목(자본적지출·양도비 등)이면 나목만 필요경비(취득가액은 빼지 않는다).
+ * 나목은 이 분기의 인가 후 필요경비(양도비 안분 포함)다. 일반 경로 `calcNecessaryExpense`와 같은 비교식(동률은 본문).
+ */
+function chooseEstimatedOrDirect(
+  converted: boolean,
+  value: number,
+  deduction: number,
+  input: RedevelopmentOrchestratorInput,
+): ResolvedSuccessorEstimate {
   const directSide = input.redevelopment.postApprovalExpenses ?? 0;
-  if (estimate.method === "converted" && directSide > 0) {
+  if (converted && directSide > 0) {
     const estimatedSide = value + deduction;
     if (directSide > estimatedSide)
       return { acquisition: 0, expenses: directSide, deduction, value, swap: { estimatedSide, directSide, chosen: "direct" } };
     return { acquisition: value, expenses: deduction, deduction, value, swap: { estimatedSide, directSide, chosen: "estimated" } };
   }
   return { acquisition: value, expenses: deduction, deduction, value };
+}
+
+/**
+ * 승계조합원 완공 APT × 부담부증여 × 환산(K-5)·기준시가 — 취득가액·개산공제는 §159가 정한 값(채무비율 안분 후 · `buildBurdenedGiftBreakdown`)이다.
+ * 필요경비 규칙은 일반 주택 부담부증여·매매 승계 추계와 같다(계획서 `remaining-4-measurements.plan.md` §F · Q-52 a):
+ * 기준시가는 개산공제만, 환산은 §97②2호 단서 택일(나목 = β로 줄인 인가 후 필요경비). 실지(K-4)는 이 입력이 없다(종전 경로).
+ */
+export interface SuccessorBurdenedGiftEstimateInput {
+  method: "converted" | "standard_price";
+  /** §159 안분 취득가액(단서 택일 전) */
+  value: number;
+  /** §163⑥ 개산공제 = 취득시 기준시가 × 채무비율 × 율(단서 택일 전) */
+  deduction: number;
+}
+
+function resolveBurdenedGiftSuccessorEstimate(
+  estimate: SuccessorBurdenedGiftEstimateInput,
+  input: RedevelopmentOrchestratorInput,
+): ResolvedSuccessorEstimate {
+  return chooseEstimatedOrDirect(estimate.method === "converted", estimate.value, estimate.deduction, input);
 }
 
 /**
