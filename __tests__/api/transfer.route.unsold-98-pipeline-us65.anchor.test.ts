@@ -172,6 +172,7 @@ describe("US-65 — §98 시리즈 route 풀 파이프라인 anchor", () => {
    */
   const R982 = {
     type: "unsold_98_2" as const,
+    isResident982: true, // Q-23 — 거주자 여부는 ⑫ 필수(비우면 거주자로 가정하지 않는다)
     isNonCapitalUnsold982: true,
     isFirstOrFcfsContract982: true,
     occupiedAtContract982: "no" as const,
