@@ -25,7 +25,7 @@ import {
 import { meetsOneHouseHoldingResidence, resolveDeemedOneHouseBy155 } from "./transfer-tax-exemption";
 import { resolveExemptionHoldingStartDate } from "./transfer-tax-exemption-holding";
 import { resolveWasRegulatedAtAcquisition } from "./transfer-tax-exemption-holding";
-import { resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
+import { resolveMixedHouseCountExclusionDate } from "./one-house/gift-household-basis";
 import {
   giftHouseholdFactDecides,
   giftHouseholdNotice,
@@ -230,8 +230,8 @@ export function judgeMixedUseOneHouseExemption(
   let specialEntriesForMerge: SpecialHouseExclusionResolution["entries"] = [];
   if (asset.householdHousingCountForExclusion !== undefined) {
     const hce = resolveHouseCountExclusion(asset.reductions ?? [], {
-      // D4-05 — 단건(`transfer-tax-precalc.ts` `resolveHouseCountExclusionDate`)과 같은 leaf: 세대 통산이 확인되면 세대 보유 시작일.
-      generalHouseAcquisitionDate: resolveHouseCountExclusionDate(asset.buildingAcquisitionDate, asset.giftHouseholdBasis),
+      // D4-05 — 단건(`resolveHceGeneralHouseAcquisitionDate`)과 같은 우선순위: 동일세대 상속 개시일 → 증여 세대 통산 → 건물 취득일(V-4).
+      generalHouseAcquisitionDate: resolveMixedHouseCountExclusionDate(asset),
       transferDate,
       // §99의4 D5 합가 맥락 — 일반 경로와 **같은 함수**(`new994MergeOrderOf`). 겸용 명부(`multiHouse.houses`)에도 `mergeOrigin`이 실린다.
       mergeOrder: new994MergeOrderOf({

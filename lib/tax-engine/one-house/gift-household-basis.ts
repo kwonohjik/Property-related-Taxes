@@ -202,6 +202,20 @@ export function resolveHouseCountExclusionDate(
 }
 
 /**
+ * 겸용 경로의 같은 판정 날짜 — 일반 경로 `resolveHceGeneralHouseAcquisitionDate`(`transfer-tax-precalc.ts`)와 같은 우선순위다.
+ * 동일세대 상속(§154⑧3호)은 「1세대」가 보유한 날 = 피상속인과 동일세대로 보유하기 시작한 날(기준-2017-법령해석재산-0222)이고,
+ * 그다음 증여 세대 통산 · 건물 취득일이다. `sameHouseholdInheritance`는 route가 개시일 < 상속개시일일 때만 싣는다(`sameHouseholdInheritanceOf`).
+ * 종전 겸용은 증여 세대 통산만 봐서 동일세대 상속 겸용의 §99의4① 순서가 불성립했다(V-4 · 2026-11-11 실측: 일반 비과세 0 ↔ 겸용 과세 165,514,800).
+ */
+export function resolveMixedHouseCountExclusionDate(asset: {
+  buildingAcquisitionDate: Date;
+  giftHouseholdBasis?: GiftHouseholdBasis;
+  sameHouseholdInheritance?: { holdingStartDate: Date };
+}): Date {
+  return asset.sameHouseholdInheritance?.holdingStartDate ?? resolveHouseCountExclusionDate(asset.buildingAcquisitionDate, asset.giftHouseholdBasis);
+}
+
+/**
  * 이월과세 입력에서 세대 사실을 뽑는다 — 시나리오 A/B 입력과 D4-05가 같은 사실을 본다.
  * @param holdingAlreadyAtDonor 시나리오 A(보유 기산이 증여자 취득일)면 true
  */
