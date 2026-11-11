@@ -29,6 +29,7 @@ import {
   penaltyEraEcho,
 } from "./stock-transfer-aggregate-penalty";
 import { electronicFilingCreditScope } from "@/lib/tax-engine/data/electronic-filing-credit-scope";
+import { stockRevisedFilingNoticeOfFiling } from "@/lib/tax-engine/data/revised-filing-notice";
 // ⚠️ **타입 전용 import** — 값으로 가져오면 main 과 순환이 된다(main 이 이 파일을 부른다).
 import type { StockTransferAggregateResult } from "./stock-transfer-aggregate";
 
@@ -73,6 +74,7 @@ export function aggregateEachItem(
    */
   // 조특령 §104의5① — 긴 분기와 같은 게이트(예정신고 + 2021-02-17 이후 양도분). 같은 함수를 쓴다.
   const efScope = electronicFilingCreditScope(inputs);
+  const revisedNotice = stockRevisedFilingNoticeOfFiling(inputs);
   const electronicFilingCredit = efScope.requested && efScope.applicable ? 20_000 : 0;
   // §118의6①1호 외국납부세액공제는 **산출세액에서 차감**된다. 이 단축 분기(단건·each_item)도
   // 반드시 빼야 한다 — 국외 종목의 `finalTax`에는 이미 반영돼 있는데 총계에서 빠지면
@@ -118,6 +120,7 @@ export function aggregateEachItem(
     ...penaltyEraEcho(unitPenalty, inputs),
     electronicFilingCredit,
     ...(efScope.notice ? { electronicFilingCreditNotice: efScope.notice } : {}),
+    ...(revisedNotice ? { revisedFilingNotice: revisedNotice } : {}),
     totalFinalTax,
     totalLocalIncomeTax,
     totalSecuritiesTransactionTax: sumSecuritiesTransactionTax(items),

@@ -28,6 +28,7 @@ import {
   penaltyEraEcho,
 } from "./stock-transfer-aggregate-penalty";
 import { electronicFilingCreditScope } from "@/lib/tax-engine/data/electronic-filing-credit-scope";
+import { stockRevisedFilingNoticeOfFiling } from "@/lib/tax-engine/data/revised-filing-notice";
 import {
   sumSecuritiesTransactionTax,
   type SecuritiesTransactionTaxTotal,
@@ -167,6 +168,8 @@ export interface StockTransferAggregateResult {
   fraudSplit?: FraudPortionSplit;
   /** V-21: 전자신고를 선택했으나 공제 대상이 아닐 때(확정·수정신고 · 2021-02-17 전 양도) 고지 echo — 공제가 적용되면 넣지 않는다 */
   electronicFilingCreditNotice?: string;
+  /** V-14: 수정신고는 추가납부세액·가산세 감면을 계산하지 않는다는 고지 echo(세액 불변) — 수정신고가 아니면 넣지 않는다 */
+  revisedFilingNotice?: string;
   /** 합산 전자신고 공제 (전체 1회) */
   electronicFilingCredit: number;
   /** 합산 최종세액 */
@@ -631,6 +634,8 @@ function aggregateInOrder(
   // 전자신고 공제는 합산 1회
   // 조특령 §104의5① — 예정신고 + 2021-02-17 이후 양도분만 공제 대상(신고 유형은 편집기 종목, 양도일은 가장 늦은 종목)
   const efScope = electronicFilingCreditScope(inputs);
+  const revisedNotice = stockRevisedFilingNoticeOfFiling(inputs);
+  const revisedFilingEcho = revisedNotice ? { revisedFilingNotice: revisedNotice } : {};
   const electronicFilingCredit = efScope.requested && efScope.applicable && totalCalculatedTax > 0 ? 20_000 : 0;
 
   /**
@@ -733,6 +738,7 @@ function aggregateInOrder(
     ...penaltyEraEcho(unitPenalty, inputs),
     electronicFilingCredit,
     ...(efScope.notice ? { electronicFilingCreditNotice: efScope.notice } : {}),
+    ...revisedFilingEcho,
     totalFinalTax,
     totalLocalIncomeTax,
     totalSecuritiesTransactionTax: sumSecuritiesTransactionTax(processedItems),
