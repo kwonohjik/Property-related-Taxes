@@ -14,6 +14,7 @@ import {
   applyPhrp154_10Answer,
   phrp154_10AnswerOf,
   PHRP_154_10_QUESTION_FIELD,
+  PRIOR_RESIDENCE_155_20_ONLY_NOTE,
   type Phrp154_10Answer,
 } from "@/lib/calc/phrp-154-10-fact-question";
 
@@ -30,11 +31,15 @@ export function Phrp154_10FactQuestion({
     <div className="space-y-2" data-testid="phrp-154-10-question">
       <div className="flex items-start gap-2">
         <p className="text-sm font-medium text-violet-800 dark:text-violet-200">
-          이 주택을 민간임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 이 주택을 보유하는 동안 다른 거주주택을 양도한 적이
-          있습니까? <span className="text-rose-700 dark:text-rose-400">*</span>
+          이 주택을 민간임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 이 주택을 보유하는 동안 장기임대주택 거주주택
+          특례(소령 §155⑳)를 적용받아 다른 거주주택을 양도한 적이 있습니까? <span className="text-rose-700 dark:text-rose-400">*</span>
         </p>
         <LawArticleModal legalBasis="소득세법 시행령 §154" label="§154⑩" />
       </div>
+      {/* 직전거주주택 = ⑳으로 양도한 「거주주택」(§154⑩2호 → §155⑳ 후단). §155① 등으로 양도했으면 해당 없음(사용자 확정 법리 2026-11-12). */}
+      <p className="text-caption text-muted-foreground" data-testid="phrp-154-10-prior-155-20-only">
+        {PRIOR_RESIDENCE_155_20_ONLY_NOTE}
+      </p>
       <RadioCardGroup<Phrp154_10Answer>
         name={`phrp-154-10-answer-${assetId ?? "primary"}`}
         tone="violet"
@@ -50,7 +55,7 @@ export function Phrp154_10FactQuestion({
           {
             value: "no",
             label: "아니오",
-            description: "임대 등록·어린이집 운영 사실이 없거나, 보유 중 다른 거주주택을 양도한 적이 없습니다",
+            description: "임대 등록·어린이집 운영 사실이 없거나, 보유 중 §155⑳을 적용받아 양도한 다른 거주주택이 없습니다",
             testId: "phrp-154-10-answer-no",
           },
         ]}

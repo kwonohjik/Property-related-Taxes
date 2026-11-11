@@ -28,6 +28,7 @@ import { RentalLifetimeLimitBlock } from "./RentalLifetimeLimitBlock";
 import { RentalHousingCalcSummary } from "./RentalHousingCalcSummary";
 import { Phrp154_10FactQuestion } from "./Phrp154_10FactQuestion";
 import { phrp154_10QuestionInScope } from "@/lib/calc/phrp-154-10-fact-question";
+import { PRIOR_RESIDENCE_155_20_ONLY_NOTE } from "@/lib/calc/phrp-154-10-fact-question";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
@@ -231,7 +232,7 @@ export function RentalHousingExceptionSection({
               {
                 value: "B",
                 label: "임대주택을 거주주택으로 전환 후 양도 (시행령 제161조 제1항 안분 적용)",
-                description: "직전거주주택 양도일 이후 양도소득금액만 비과세 — §161① 기준시가 안분 적용",
+                description: `직전거주주택 양도일 이후 양도소득금액만 비과세 — §161① 기준시가 안분 적용. ${PRIOR_RESIDENCE_155_20_ONLY_NOTE}`,
               },
             ]}
             value={rh.scenario}
