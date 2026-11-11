@@ -13,6 +13,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
+import { RENTAL_REGISTRATION_4HO } from "@/lib/tax-engine/legal-codes";
 import { rental4hoFieldScope, type Rental4hoFormSlice } from "@/lib/calc/rental-4ho-proviso";
 import type { ProvisoMode } from "@/lib/calc/transfer-tax-api-helpers";
 
@@ -149,6 +150,10 @@ export function Rental4hoProvisoFields({ value, mode, onChange }: Props) {
               onChange={(v) => onChange({ proviso4hoDuringMandatory: v })}
               options={yesNoOptions("proviso-4ho-during-mandatory", "예", "아니오")}
             />
+            <p className="text-caption text-muted-foreground" data-testid="proviso-4ho-mandatory-hint">
+              임대의무기간은 단기민간임대주택 4년 이상 · 장기일반민간임대주택·공공지원민간임대주택 8년 이상입니다
+              (2020년 8월 18일 개정 전 정의 — {RENTAL_REGISTRATION_4HO.MANDATORY_PERIOD_TERMS}).
+            </p>
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">임대보증금·임대료를 연 5% 넘게 올린 적이 있나요?</label>

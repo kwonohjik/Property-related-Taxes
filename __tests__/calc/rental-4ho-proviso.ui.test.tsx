@@ -70,6 +70,19 @@ describe("OH-38 ⑤ — 4호 입력 칸의 노출", () => {
     expect((screen.getByTestId("proviso-4ho-status-auto_cancelled") as HTMLInputElement).checked).toBe(true);
   });
 
+  it("임대의무기간 질문 아래에 단기 4년·장기 8년 안내가 있고, 등록 유지일 때만 보인다", () => {
+    render(<Harness start={initial()} />);
+    click("proviso-reason-rental_4ho");
+    expect(has("proviso-4ho-mandatory-hint")).toBe(false);
+    click("proviso-4ho-status-maintained");
+    const hint = screen.getByTestId("proviso-4ho-mandatory-hint").textContent ?? "";
+    expect(hint).toContain("단기민간임대주택 4년 이상");
+    expect(hint).toContain("장기일반민간임대주택·공공지원민간임대주택 8년 이상");
+    expect(hint).toContain("민간임대주택에 관한 특별법 §2 4호~6호");
+    click("proviso-4ho-status-auto_cancelled");
+    expect(has("proviso-4ho-mandatory-hint")).toBe(false);
+  });
+
   it("2020-02-10 양도(부칙 제38조①)에는 신청 당시 1주택·증여 승계 질문을 하지 않는다", () => {
     render(<Harness start={initial({ transferDate: "2020-02-10", provisoReason: "rental_registration_4ho" })} />);
     expect(has("proviso-4ho-fields")).toBe(true);
