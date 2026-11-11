@@ -24,6 +24,13 @@ export function formatKRW(amount: number): string {
 }
 
 /**
+ * 금액 칸 자릿수 상한 — 15자리(999조 원대)에서 더 받지 않는다.
+ * API(⑫ Zod 4 `.int()` = 안전 정수 ±9,007,199,254,740,991 · 16자리)를 넘는 금액은 ⑧을 지나 400이 됐고, 309자리 이상은 `Infinity` → JSON `null`이었다
+ * (계획서 docs/00-pm/remaining-4-measurements.plan.md §D · Q-50 a). 상한 아래 금액은 엔진이 BigInt 손계산과 원 단위까지 같다(실측 1조 ~ 9,007조).
+ */
+export const MAX_AMOUNT_DIGITS = 15;
+
+/**
  * 외부 value(문자열, 소수점·콤마 포함 가능) → 순수 숫자 문자열.
  * allowNegative=true이면 선행 `-`를 보존.
  */
@@ -89,9 +96,12 @@ export function CurrencyInput({
     : formatWithCommas(localRaw, allowNegative);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = allowNegative
+    const cleaned = allowNegative
       ? e.target.value.replace(/[^0-9-]/g, "").replace(/(?!^)-/g, "") // 선행 `-` 1개만 보존
       : e.target.value.replace(/[^0-9]/g, "");
+    // 자릿수 상한(부호 제외) — 넘는 자리는 받지 않는다
+    const sign = cleaned.startsWith("-") ? "-" : "";
+    const raw = sign + cleaned.slice(sign.length, sign.length + MAX_AMOUNT_DIGITS);
     setLocalRaw(raw);
     onChange(raw);
   }
