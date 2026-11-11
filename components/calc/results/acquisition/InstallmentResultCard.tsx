@@ -12,7 +12,7 @@
  *  - 합산 간이 계산 안내
  */
 
-import { differenceInDays, parseISO } from "date-fns";
+import { differenceInDays, localTodayAsUtc, parseISO } from "@/lib/tax-engine/utc-date";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 
@@ -28,7 +28,7 @@ function formatKRW(amount: number): string {
 function addDays(dateStr: string, days: number): string {
   try {
     const d = new Date(dateStr);
-    d.setDate(d.getDate() + days);
+    d.setUTCDate(d.getUTCDate() + days);
     return d.toISOString().slice(0, 10);
   } catch {
     return "";
@@ -42,8 +42,7 @@ function addDays(dateStr: string, days: number): string {
 function DdayBadge({ deadline }: { deadline: string }) {
   let dday: number;
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = localTodayAsUtc();
     dday = differenceInDays(parseISO(deadline), today);
   } catch {
     return <span className="text-xs text-muted-foreground">-</span>;

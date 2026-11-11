@@ -11,7 +11,7 @@
  */
 
 import { useState } from "react";
-import { addMonths, endOfMonth, format } from "date-fns";
+import { addMonths, endOfMonth, format, localTodayAsUtc } from "@/lib/tax-engine/utc-date";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
 import {
@@ -86,7 +86,7 @@ export function InstallmentScheduleCard({
   const filingMonths = decedentType === "non_resident" ? 9 : 6;
   const filingDeadline = deathDate
     ? addMonths(endOfMonth(new Date(deathDate)), filingMonths)
-    : addMonths(endOfMonth(new Date()), filingMonths);
+    : addMonths(endOfMonth(localTodayAsUtc()), filingMonths);
 
   const fbValue = result.deductionDetail.familyBusinessDetail?.finalValue ?? 0;
   const useFb = familyBusiness && fbValue > 0;

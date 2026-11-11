@@ -21,7 +21,7 @@
 import { getShareThresholdByDate } from "@/lib/tax-engine/deductions/family-business-autoderive";
 import { ratePercent } from "@/lib/tax-engine/tax-utils";
 import { useMemo, useState } from "react";
-import { differenceInYears, parseISO } from "date-fns";
+import { differenceInYears, parseISO } from "@/lib/tax-engine/utc-date";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";

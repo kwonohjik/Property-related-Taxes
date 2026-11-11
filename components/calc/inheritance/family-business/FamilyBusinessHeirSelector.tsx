@@ -16,7 +16,7 @@
  */
 
 import { useMemo } from "react";
-import { differenceInYears, parseISO } from "date-fns";
+import { differenceInYears, parseISO } from "@/lib/tax-engine/utc-date";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import type { Heir } from "@/lib/tax-engine/types/inheritance-gift.types";

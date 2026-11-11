@@ -15,7 +15,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { useState, useMemo } from "react";
-import { differenceInYears } from "date-fns";
+import { differenceInYears } from "@/lib/tax-engine/utc-date";
 import { CorporateHeirFields } from "@/components/calc/inheritance/CorporateHeirFields";
 import {
   HEIR_RELATION_LABELS,

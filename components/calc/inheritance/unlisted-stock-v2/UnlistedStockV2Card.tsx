@@ -32,6 +32,7 @@ import { EvaluationCommitteeFilingGuideCard } from "./EvaluationCommitteeFilingG
 import type { EvaluationCommitteeInput } from "@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6";
 import { EstimatedProfitToggle } from "./EstimatedProfitToggle";
 import { PreIpoListingToggle } from "./PreIpoListingToggle";
+import { localTodayAsUtc } from "@/lib/tax-engine/utc-date";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type {
   UnlistedStockValuationInput,
@@ -61,9 +62,8 @@ const EMPTY_NET_ASSET: UnlistedNetAssetCalculation = {
 };
 
 function emptyFiscalYear(label: string, monthsAgo: number): FiscalYearAdjustment {
-  const date = new Date();
-  date.setFullYear(date.getFullYear() - Math.floor(monthsAgo / 12));
-  date.setMonth(11, 31); // 12월 31일 기본
+  // 12월 31일 기본 — UTC 자정 Date(화면 입력·엔진과 같은 달력)
+  const date = new Date(Date.UTC(new Date().getFullYear() - Math.floor(monthsAgo / 12), 11, 31));
   return {
     fiscalYearLabel: label,
     fiscalYearEndDate: date,
@@ -72,12 +72,12 @@ function emptyFiscalYear(label: string, monthsAgo: number): FiscalYearAdjustment
 }
 
 export function createDefaultUnlistedStockV2(): UnlistedStockValuationInput {
-  const now = new Date();
-  const currentYear = now.getFullYear();
+  const now = localTodayAsUtc();
+  const currentYear = now.getUTCFullYear();
   return {
     corpName: "",
     representative: undefined,
-    businessStartDate: new Date(currentYear - 10, 0, 1),
+    businessStartDate: new Date(Date.UTC(currentYear - 10, 0, 1)),
     evaluationDate: now,
     faceValuePerShare: 5_000,
     totalShares: 0,

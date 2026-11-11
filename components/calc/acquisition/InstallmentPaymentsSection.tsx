@@ -13,7 +13,7 @@
  */
 
 import { useMemo } from "react";
-import { differenceInMonths, parseISO } from "date-fns";
+import { differenceInMonths, parseISO } from "@/lib/tax-engine/utc-date";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToneCard } from "@/components/calc/shared/ToneCard";

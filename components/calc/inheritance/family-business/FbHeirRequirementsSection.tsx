@@ -15,7 +15,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { differenceInYears, parseISO } from "date-fns";
+import { differenceInYears, parseISO } from "@/lib/tax-engine/utc-date";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
 import {

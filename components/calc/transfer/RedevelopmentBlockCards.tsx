@@ -27,7 +27,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
 import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import { useMemo } from "react";
-import { addDays, subDays, isValid, parseISO, format } from "date-fns";
+import { addDays, subDays, isValid, parseISO, format } from "@/lib/tax-engine/utc-date";
 import { SettlementExemptionGuideCard } from "./SettlementExemptionGuideCard";
 import { RedevSuccessorGiftHouseholdSection } from "./RedevSuccessorGiftHouseholdSection";
 import { table2EntryBullet, table2ResidenceMonthsHint } from "@/lib/calc/lthd-table2-hint";
@@ -249,9 +249,9 @@ export function ExemptionAtApprovalCard({
     const extended =
       declaredEnd && !Number.isNaN(declaredEnd.getTime()) && declaredEnd.getTime() > app.getTime();
     const end = extended ? declaredEnd! : app;
-    const y = end.getFullYear() - acq.getFullYear();
-    const m = end.getMonth() - acq.getMonth();
-    const d = end.getDate() - acq.getDate();
+    const y = end.getUTCFullYear() - acq.getUTCFullYear();
+    const m = end.getUTCMonth() - acq.getUTCMonth();
+    const d = end.getUTCDate() - acq.getUTCDate();
     const months = y * 12 + m - (d < 0 ? 1 : 0);
     return { months, eligible: months >= 24, extended };
   }, [

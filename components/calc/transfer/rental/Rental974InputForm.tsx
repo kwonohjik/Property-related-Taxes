@@ -41,7 +41,7 @@ function diffYearsMonths(from: string, to: string): string {
   const d2 = new Date(to);
   if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return "—";
   const totalMonths =
-    (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+    (d2.getUTCFullYear() - d1.getUTCFullYear()) * 12 + (d2.getUTCMonth() - d1.getUTCMonth());
   if (totalMonths < 0) return "—";
   const years = Math.floor(totalMonths / 12);
   const months = totalMonths % 12;

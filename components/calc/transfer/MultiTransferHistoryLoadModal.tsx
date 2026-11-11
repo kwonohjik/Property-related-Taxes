@@ -41,7 +41,7 @@ function recordTaxYear(record: CalculationRecord, kind: "single" | "multi"): num
   const input = record.inputData as { taxYear?: number; transferDate?: string } | null;
   if (!input) return null;
   if (kind === "multi") return input.taxYear ?? null;
-  return input.transferDate ? new Date(input.transferDate).getFullYear() : null;
+  return input.transferDate ? new Date(input.transferDate).getUTCFullYear() : null;
 }
 
 function determinedTaxOf(record: CalculationRecord, kind: "single" | "multi"): number {

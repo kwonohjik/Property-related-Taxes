@@ -15,7 +15,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { useMemo } from "react";
-import { parseISO, getDaysInYear } from "date-fns";
+import { parseISO, getDaysInYear } from "@/lib/tax-engine/utc-date";
 import { deriveCurrentBusinessDays, computeRevenueTest } from "@/lib/tax-engine/non-business-land/revenue-test";
 import type { NblRevenueBusinessType } from "@/lib/tax-engine/legal-codes";
 import {
@@ -195,7 +195,7 @@ export function OtherLandDetailSection({
     return {
       days,
       taxYear,
-      yearDays: getDaysInYear(new Date(taxYear, 0, 1)),
+      yearDays: getDaysInYear(new Date(Date.UTC(taxYear, 0, 1))),
       annualized: res.annualizedCurrentRevenue,
       applied: res.annualizationApplied,
     };

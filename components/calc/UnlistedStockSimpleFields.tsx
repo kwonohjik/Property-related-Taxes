@@ -337,7 +337,7 @@ export function UnlistedStockSimpleFields({
   // 평가기준일 미입력 시 null → 기존 상대 표기("상속개시일 -1년")로 fallback.
   const fyYears = useMemo<[string, string, string] | null>(() => {
     if (!valuationDate) return null;
-    const y = new Date(valuationDate).getFullYear();
+    const y = new Date(valuationDate).getUTCFullYear();
     if (Number.isNaN(y)) return null;
     const fys = buildDefaultFiscalYears(y);
     return [fys[0].fiscalYearLabel, fys[1].fiscalYearLabel, fys[2].fiscalYearLabel];

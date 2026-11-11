@@ -24,7 +24,7 @@
  */
 
 import { useMemo } from "react";
-import { addDays } from "date-fns";
+import { addDays } from "@/lib/tax-engine/utc-date";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";

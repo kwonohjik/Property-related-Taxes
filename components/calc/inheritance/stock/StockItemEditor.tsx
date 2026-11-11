@@ -403,7 +403,7 @@ function UnlistedStockCard({
           defaultV2.evaluationDate = vd;
           // 평가기준일 연도(Y) 기준 직전 3 사업연도 자동 주입 (12월 결산 가정)
           // 사용자 이후 수정은 FiscalYearAdjustmentTable onChange로 보존
-          defaultV2.fiscalYears = buildDefaultFiscalYears(vd.getFullYear());
+          defaultV2.fiscalYears = buildDefaultFiscalYears(vd.getUTCFullYear());
         }
       }
       onUpdate({

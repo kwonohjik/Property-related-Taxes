@@ -17,7 +17,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { differenceInDays, parseISO } from "date-fns";
+import { differenceInDays, localTodayAsUtc, parseISO } from "@/lib/tax-engine/utc-date";
 import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -58,8 +58,7 @@ function formatRate(rate: number): string {
 function FilingDeadlineCounter({ deadline }: { deadline: string }) {
   let dday: number;
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = localTodayAsUtc();
     dday = differenceInDays(parseISO(deadline), today);
   } catch {
     return null;
@@ -235,8 +234,7 @@ function TemporaryTwoHouseDeadlineCard({
     return null;
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = localTodayAsUtc();
   const daysLeft = differenceInDays(deadline, today);
   const isExpired = daysLeft < 0;
   const isUrgent = !isExpired && daysLeft <= 5;

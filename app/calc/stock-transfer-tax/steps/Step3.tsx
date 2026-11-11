@@ -478,7 +478,7 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
                 {preliminaryClause === "105-1-1"
                   ? "그 달의 말일 +2개월"
                   : `${
-                      new Date(effTransferDate).getMonth() + 1 <= 6
+                      new Date(effTransferDate).getUTCMonth() + 1 <= 6
                         ? "상반기(1~6월)"
                         : "하반기(7~12월)"
                     } 말일 +2개월`}{" "}

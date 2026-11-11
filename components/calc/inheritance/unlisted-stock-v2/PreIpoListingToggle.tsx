@@ -43,9 +43,9 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 /** Date → "YYYY-MM-DD" (DateInput 인터페이스) */
 function toDateStr(d: Date | undefined): string {
   if (!d || isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
