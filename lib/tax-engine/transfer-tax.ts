@@ -82,6 +82,7 @@ export { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calcTax } from "./transfer-tax-rate-calc";
 import { unsold98RateNotices } from "./transfer-tax-unsold98-rate-notice";
 import { unregisteredReductionNotice } from "./transfer-tax-reductions-calc";
+import { selfFarmingRuleMissingNotice } from "./transfer-tax-reductions-calc";
 import type { PreDeemedPurchaseDetail } from "./types/transfer-pre-deemed-purchase.types";
 export { calcTax };
 
@@ -127,6 +128,13 @@ function calculateTransferTaxCore(
   // 막고, 결과 안내는 여기서 한 번만 싣는다.
   const unregisteredNotice = unregisteredReductionNotice(input);
   if (unregisteredNotice) warnings.push(unregisteredNotice);
+  // 자경농지 규칙 행이 양도일에 없으면 감면이 조용히 0이 된다 — 세액 불변 고지(계획서 self-farming-rule-row-missing Q-1 a).
+  const selfFarmingMissingNotice = selfFarmingRuleMissingNotice({
+    isUnregistered: input.isUnregistered,
+    reductions: input.reductions,
+    selfFarmingRules: parsedRates.selfFarmingRules,
+  });
+  if (selfFarmingMissingNotice) warnings.push(selfFarmingMissingNotice);
   // 조기반환 경로(다필지)는 이 `warnings`를 싣지 않는다 — 안내만 덧붙인다.
   // (§155⑳ 경로는 미등기면 특례 자체가 적용 불가라(§91① — F-8) 일반 경로로 온다.)
   // 비사업용 토지 8호 유예 기간인데 지정지역 여부 미선언 — 8호 중과가 **실제로 적용된 결과**에서만 고지한다(단기세율이 이기면 유예 여부가 세액을 바꾸지 않는다).
@@ -137,7 +145,7 @@ function calculateTransferTaxCore(
   const nblNoticeInputOf = (inp: TransferTaxInput, sd: TransferTaxResult["splitDetail"]): TransferTaxInput =>
     sd?.nonBusinessLandPart ? { ...inp, isNonBusinessLand: true } : inp;
   const withUnregisteredNotice = (r: TransferTaxResult, inp: TransferTaxInput): TransferTaxResult => {
-    const extra = [unregisteredNotice, nblDeferralNoticeOf(r, inp)].filter((n): n is string => !!n);
+    const extra = [unregisteredNotice, selfFarmingMissingNotice, nblDeferralNoticeOf(r, inp)].filter((n): n is string => !!n);
     return withNotices(r, [...assetGate.notices, ...extra]);
   };
 

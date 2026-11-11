@@ -127,6 +127,32 @@ export function unregisteredReductionNotice(input: {
   return `미등기양도자산에는 양도소득세 감면을 적용하지 않습니다(${TRANSFER.REDUCTION_UNREGISTERED_EXCLUSION}) — 선택한 감면을 계산에서 제외했습니다.`;
 }
 
+/**
+ * 자경농지 감면 규칙 행 부재 고지 (세액 불변) — 계획서 `docs/00-pm/self-farming-rule-row-missing.plan.md` Q-1 a.
+ *
+ * `tax_rates`의 `transfer:deduction:self_farming` 행은 운영 DB에도 effective 2023-01-01 **한 건뿐**이라 그 전 양도는
+ * `selfFarmingRules`가 `undefined`다. 필수 규칙(누진·장특·기본공제·중과·1세대1주택)은 행이 없으면
+ * `TaxRateNotFoundError`를 던지지만 이 규칙은 선택 항목이라, `calcReductions`의 자경농지 분기가 통째로 건너뛰어져
+ * **감면 0원·경고 0건**이었다. 감면을 입력한 사용자에게 «계산하지 못했다»는 사실을 알린다 — 세액은 건드리지 않는다.
+ *
+ * 연혁 행 추가·조특법 §133 한도 연혁 정정은 이번 범위가 아니다(계획서 Q-1 b — 부칙 적용례 미확정).
+ * 미등기양도는 감면 전부가 배제돼(§129②) `unregisteredReductionNotice`가 따로 안내하므로 여기서는 싣지 않는다.
+ */
+export function selfFarmingRuleMissingNotice(input: {
+  isUnregistered?: boolean;
+  reductions?: ReadonlyArray<{ type: string }>;
+  selfFarmingRules?: unknown;
+}): string | undefined {
+  if (input.isUnregistered) return undefined;
+  if (input.selfFarmingRules) return undefined;
+  if (!input.reductions?.some((r) => r.type === "self_farming")) return undefined;
+  return (
+    `자경농지 감면(${TRANSFER.REDUCTION_SELF_FARMING})을 선택했지만 양도일에 적용할 자경농지 감면 규칙이 세율표에 없어 ` +
+    `감면을 계산하지 못했습니다 — 감면 0원으로 계산한 결과입니다. 양도일 시점의 ${TRANSFER.REDUCTION_SELF_FARMING}·` +
+    `${TRANSFER.REDUCTION_ANNUAL_LIMIT}을 직접 확인하세요(확인 필요).`
+  );
+}
+
 export function calcReductions(
   calculatedTax: number,
   reductions: TransferReduction[],
