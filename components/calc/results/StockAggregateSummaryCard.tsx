@@ -180,11 +180,11 @@ export function StockAggregateSummaryCard({
             <span className="font-mono tabular-nums">
               {won(aggregate.majorProgressiveGroupTax.aggregatedTaxBase)}
             </span>
-            에 구간을 한 번 적용한 산출세액{" "}
+            에 구간을 한 번 적용한 대주주 군 산출세액(종목 안 단기분 30% 세액 포함){" "}
             <span className="font-mono tabular-nums">
               {won(aggregate.majorProgressiveGroupTax.aggregatedTax)}
             </span>
-            과 종목별 합{" "}
+            과 종목 행의 합{" "}
             <span className="font-mono tabular-nums">
               {won(aggregate.majorProgressiveGroupTax.itemSumTax)}
             </span>

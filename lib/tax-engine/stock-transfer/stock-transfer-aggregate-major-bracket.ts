@@ -41,9 +41,9 @@ export interface MajorProgressiveGroupTax {
   itemCount: number;
   /** 합산 과세표준(기본공제·양도차손 통산 후) */
   aggregatedTaxBase: number;
-  /** 종목별로 3억 구간을 따로 적용한 세액의 단순 합 — **참고값**(종전 합계) */
+  /** 군 소속 종목 행(종목 단독 산출·10원 절사)의 단순 합 — **참고값**(종전 합계) */
   itemSumTax: number;
-  /** 합산 과세표준에 3억 구간을 1회 적용한 세액 — 이 그룹의 결정 산출세액 */
+  /** 합산 과세표준에 3억 구간을 1회 적용한 세액(혼합 종목의 단기분 30% 세액 포함, **한 번** 10원 절사) — 이 그룹의 결정 산출세액 */
   aggregatedTax: number;
   /** `aggregatedTax − itemSumTax` — 합계 산출세액에 더해진 값(> 0) */
   adjustment: number;
@@ -51,11 +51,20 @@ export interface MajorProgressiveGroupTax {
 
 /**
  * @param bases 종목별 «가목 2) 누진표를 탄 과세표준»(없으면 0). 인덱스는 `items`와 같다.
+ * @param rawTaxes 종목별 **절사 전** 산출세액(`rateResult.calculatedTax`, 단기분 30% 포함). 인덱스는 `items`와 같다.
  * @returns 대상이 2건 미만이거나 합산 세액이 같으면 `undefined`
+ *
+ * 🔑 **군 단위 한 번 절사**(계획서 `stock-major-bracket-floorten-v8.plan.md` Q-1 b):
+ *   `aggregatedTax = floorTen( Σ rawᵢ + f(ΣL) − Σ f(Lᵢ) )` = `floorTen( f(ΣL) + Σ단기분 세액 )`.
+ *   종목 행은 `floorTen(단기 + 장기)`인데 보정의 «종목별 합»을 장기분만 따로 절사하면 절사 단위가 달라져,
+ *   단기+장기가 섞인 종목에서 합계가 −20~+20원 어긋났다(정확값을 넘는 경우 포함). 그래서 `itemSumTax`는
+ *   **군 소속 종목 행(`floorTen(rawᵢ)`)의 합**으로 둔다 — 합계가 더하는 행과 같은 수다.
+ *   단기분이 없는 종목끼리는 종전과 같은 값이다(`floorTen(f(Lᵢ))` = 행).
  */
 export function computeMajorProgressiveGroupTax(
   items: readonly StockTransferResult[],
   bases: readonly number[],
+  rawTaxes: readonly number[],
 ): MajorProgressiveGroupTax | undefined {
   const targets = bases
     .map((b, i) => ({ b, i }))
@@ -64,9 +73,14 @@ export function computeMajorProgressiveGroupTax(
   if (targets.length < 2) return undefined;
 
   const aggregatedTaxBase = targets.reduce((s, { b }) => s + b, 0);
-  // 종목별 누진 세액은 STEP 3의 `floorTen(rateResult.calculatedTax)`와 같은 절사 규약으로 맞춘다.
-  const itemSumTax = targets.reduce((s, { b }) => s + floorTen(applyMajorProgressiveRate(b).tax), 0);
-  const aggregatedTax = floorTen(applyMajorProgressiveRate(aggregatedTaxBase).tax);
+  // 군 소속 종목 행 — STEP 3의 `floorTen(rateResult.calculatedTax)`와 같은 수(합계가 더하는 값).
+  const itemSumTax = targets.reduce((s, { i }) => s + floorTen(rawTaxes[i] ?? 0), 0);
+  // 종목별 누진(장기분)을 합산 누진으로 바꾸고, 단기분 30% 세액은 그대로 둔 채 **한 번** 절사한다.
+  const rawGroupTax =
+    targets.reduce((s, { i }) => s + (rawTaxes[i] ?? 0), 0) -
+    targets.reduce((s, { b }) => s + applyMajorProgressiveRate(b).tax, 0) +
+    applyMajorProgressiveRate(aggregatedTaxBase).tax;
+  const aggregatedTax = floorTen(rawGroupTax);
   const adjustment = aggregatedTax - itemSumTax;
   if (adjustment <= 0) return undefined;
 

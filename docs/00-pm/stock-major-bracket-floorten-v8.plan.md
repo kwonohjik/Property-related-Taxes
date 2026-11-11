@@ -1,6 +1,6 @@
 # 대주주 3억원 구간 합산 보정 — 합계 `floorTen` 어긋남(V-8) 측정 계획서
 
-> 2026-11-11 · 계획서만(코드 변경 없음). 출처: `stock-major-shareholder-bracket-unit.plan.md` §7.4 **V-8** → 사용자 «합계 floorTen 진행해».
+> 2026-11-11 · 계획서 + 구현(Q-1 b·Q-2 a 결정 후 같은 PR에서 구현, §8). 출처: `stock-major-shareholder-bracket-unit.plan.md` §7.4 **V-8** → 사용자 «합계 floorTen 진행해».
 > 표기: [직접] = 이번에 엔진을 실행해 확인 · [확인 필요] = 미검증.
 
 ## 0. 결론
@@ -119,3 +119,19 @@ adjustment = groupTax − Σ(대주주 군 소속 종목의 행 산출세액)
 - **V-3** `adjustment ≤ 0 → undefined` 규칙을 새 정의에서 그대로 둬도 되는지(군 합계 절사 후 0 또는 음수가 되는 입력) 실측 안 함 [확인 필요].
 - **V-4** echo 의미 변경이 카드·신고서·PDF 문구와 `components`·`print` 테스트에 닿는 범위 측정 안 함 [확인 필요].
 - **V-5** 지방소득세(`totalLocalIncomeTax`)·결정세액·정산이 합계에서 파생되므로 합계 값이 ±10~20원 바뀌는 효과가 파생값에 어떻게 전파되는지(10원 절사 재적용) 실측 안 함 — 방향은 «법정 단일 절사값에 수렴»이다 [확인 필요].
+
+## 8. 결정 · 구현 결과 (2026-11-11)
+
+결정: **Q-1 b · Q-2 a**(모두 권장안).
+
+- **엔진:** `computeMajorProgressiveGroupTax(items, bases, rawTaxes)` — `aggregatedTax = floorTen(Σ rawᵢ − Σ f(Lᵢ) + f(ΣL))`(= `floorTen(f(ΣL) + Σ단기분 세액)`), `itemSumTax = Σ floorTen(rawᵢ)`(군 소속 종목 행 합). `stock-transfer-aggregate.ts`는 종목별 **절사 전** 산출세액 배열(`rawCalculatedTaxes`)만 추가로 넘긴다(744줄). 군 밖 종목·행 절사 규약은 그대로(Q-2 a).
+- **화면:** 결과 카드 문구를 새 의미에 맞췄다(«대주주 군 산출세액(종목 안 단기분 30% 세액 포함)» · «종목 행의 합»). 신고서 행 24-3은 값만 바뀌고 문구는 그대로.
+- **anchor:** NEW `__tests__/tax-engine/stock-transfer/major-bracket-floorten.anchor.test.ts` 5건(MF-1 재현 시료 3 · MF-2 시드 고정 600건 스윕 1 · MF-3 군 밖 비대주주 1). **구현 전 MF-1-1·MF-1-3·MF-2-1 3건 실패**(89,827,330 vs 89,827,320 등) → 구현 후 통과. 기존 `major-bracket-group-aggregate` 15건은 **수정 없이** 통과(단독 종목끼리는 값이 같다).
+- **뮤테이션 5종 전부 사망**(복원 `cmp` 일치): M1 `itemSumTax`를 장기분 절사로 환원(5건 실패) · M2 합산 세액에서 단기분 제외(6) · M3 종목별 장기 누진 차감 제거(13) · M4 군 절사 제거(1) · M5 절사 후 값을 raw로 전달(1).
+- **회귀 5묶음 통과:** api 7,054 · tax-engine 19,326 · calc 11,771 · lib 3,408 · components 7,062. `tsc`(힙 8GB) 0 · 변경 파일 eslint 0건.
+- **Playwright/브라우저:** 하지 않음(화면 변경은 문구 2곳이고 컴포넌트 anchor가 실제 엔진 결과로 렌더).
+
+### 미검증 갱신
+- **V-3 해소(논증):** `aggregatedTax = floorTen(Σraw + (f(ΣL) − Σf(Lᵢ)))`이고 누진표가 볼록해 괄호 안이 0 이상이므로 `aggregatedTax ≥ floorTen(Σraw) ≥ Σ floorTen(rawᵢ) = itemSumTax` → `adjustment ≥ 0`. 0이면 echo 생략 규칙 그대로.
+- **V-2 부분 해소:** 군 밖 비대주주 1건 혼합은 MF-3으로 확인. **영 §168② 동반·국외·기타자산을 혼합 종목과 함께 넣은 시료는 없다**(기존 MD-2-4 §168② 시료는 단기분 없음) [확인 필요].
+- **V-1·V-4(PDF·`print` 범위)·V-5 미해소:** V-4는 `components` 묶음 통과까지만 확인, V-5 지방소득세·정산 전파는 값 대조 없음(합계에서 파생이라 방향은 단일 절사값에 수렴) [확인 필요].
