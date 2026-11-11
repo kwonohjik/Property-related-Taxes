@@ -138,6 +138,23 @@ export function runBurdenedGiftStep(
           "(「소득세법 시행령」 제176조의2 제2항 제2호) 취득시 기준시가를 입력하세요.",
       );
     }
+    /**
+     * 시가 · 매매사례가액(K-6) · 감정가액(K-7)인데 취득시 기준시가 합이 0 — 그 값이 개산공제(소령 §163⑥)의 기준이라 0이면 개산공제가 조용히 0원이 된다
+     * (직접 API 실측 토지 단건 28,920,000 → 30,000,000 · 계획서 remaining-4-measurements §G · Q-53 a). 총액을 토지·건물로 나눌 때는
+     * `burdened-gift-acquisition.ts`가 이미 막지만 토지 단독·파트별 금액은 나눌 일이 없어 지나갔다. ⑧이 화면에서 먼저 막는다. K-5와 같은 합계 기준 · 같은 예외.
+     */
+    const k67 = transferBurdenedGiftBreakdown.acquisitionMethodUsed === "appraisal" || transferBurdenedGiftBreakdown.acquisitionMethodUsed === "salesCase";
+    if (
+      k67 &&
+      !("preDeemed" in preDeemedParam) &&
+      rawInput.burdenedGiftInfo.landStdPriceAtAcquisition + rawInput.burdenedGiftInfo.buildingStdPriceAtAcquisition <= 0
+    ) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        "[burdened_gift] 매매사례가액·감정가액으로 취득가액을 산정하는데 취득시 기준시가가 없습니다. 이때 필요경비는 개산공제(취득 당시 기준시가 × 채무비율 × 공제율)이므로 " +
+          "(「소득세법 시행령」 제163조 제6항) 취득시 기준시가를 입력하세요.",
+      );
+    }
     const land = transferBurdenedGiftBreakdown.perAsset.land;
     const building = transferBurdenedGiftBreakdown.perAsset.building;
     const totalTransferPrice = land.transferPrice + building.transferPrice;
