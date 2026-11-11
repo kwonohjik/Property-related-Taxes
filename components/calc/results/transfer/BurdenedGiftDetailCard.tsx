@@ -65,6 +65,8 @@ interface Props {
   redevFilingExpenses?: RedevExpenseParts;
   /** 승계조합원 완공 APT × 환산·기준시가 — 재개발 승계 분기가 고른 필요경비(엔진 echo · 있으면 필요경비 줄을 이 값으로 그린다 · §F.4) */
   redevSuccessorExpense?: Parameters<typeof BgRedevSuccessorExpenseRow>[0]["expense"];
+  /** 승계조합원 신축주택 — §166 밖이라 「종전 부동산」 · 「§166①1호」 문구를 쓰지 않는다(§J) */
+  redevFilingSuccessor?: boolean;
 }
 
 const PROPERTY_TYPE_LABEL: Record<string, string> = {
@@ -79,9 +81,9 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   right_to_move_in: "입주권",
 };
 
-export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166, redevFilingAcquisition, redevFilingExpenses, redevSuccessorExpense }: Props) {
+export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166, redevFilingAcquisition, redevFilingExpenses, redevSuccessorExpense, redevFilingSuccessor = false }: Props) {
   const fmt = (n: number) => n.toLocaleString("ko-KR");
-  const buildingAcqLabel = redevFilingAcquisition !== undefined ? "종전 부동산 취득가(인가 전 분)" : "건물 취득가";
+  const buildingAcqLabel = redevFilingAcquisition !== undefined && !redevFilingSuccessor ? "종전 부동산 취득가(인가 전 분)" : "건물 취득가";
   const rowSelected = (mode: string) =>
     bg.sangjeungbeopValuation.selectedMode === mode
       ? "font-semibold bg-fuchsia-100/70 dark:bg-fuchsia-900/40"
@@ -373,15 +375,16 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
           {redevFilingAcquisition !== undefined && (
             <tr data-testid="bg-redev-filing-acquisition">
               <td className="py-1 pr-2 pl-3 text-caption text-fuchsia-700 dark:text-fuchsia-400">
-                ※ 인가 후 분·청산금 납부분의 취득가액은 「소득세법 시행령」 제166조 제1항 제1호에 따라 재개발·재건축 상세에서 따로
-                계산합니다. 신고서 취득가액 합계
+                {redevFilingSuccessor
+                  ? "※ 승계조합원 신축주택은 「소득세법 시행령」 제166조 대상이 아닙니다 — 취득일은 사용승인일(같은 영 제162조 제1항 제4호)이고 취득가액은 재개발·재건축 상세에서 계산합니다. 신고서 취득가액 합계"
+                  : "※ 인가 후 분·청산금 납부분의 취득가액은 「소득세법 시행령」 제166조 제1항 제1호에 따라 재개발·재건축 상세에서 따로 계산합니다. 신고서 취득가액 합계"}
               </td>
               <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(redevFilingAcquisition)}</td>
             </tr>
           )}
           {/* 승계조합원 × 환산·기준시가 — 필요경비는 승계 분기가 고른 개산공제·단서 나목이다. 신고서 필요경비 줄(「자본적지출·양도비」 · §166①1호 택일)은 그 이름이 맞지 않는다(§F.4) */}
           {redevSuccessorExpense && !bg.cards && <BgRedevSuccessorExpenseRow bg={bg} expense={redevSuccessorExpense} />}
-          {redevFilingExpenses !== undefined && !redevSuccessorExpense && <BgRedevFilingExpenseRows parts={redevFilingExpenses} />}
+          {redevFilingExpenses !== undefined && !redevSuccessorExpense && <BgRedevFilingExpenseRows parts={redevFilingExpenses} successor={redevFilingSuccessor} />}
           <tr>
             <td className="py-1 pr-2 text-fuchsia-700 dark:text-fuchsia-300">무상이전분 (증여세 과세 가액)</td>
             <td className="text-right font-mono tabular-nums whitespace-nowrap text-fuchsia-700 dark:text-fuchsia-300">{fmt(bg.gratuitousPortion)}</td>

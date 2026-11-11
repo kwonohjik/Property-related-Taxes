@@ -52,7 +52,8 @@ export function BgBundleCardAcqRows({
 }) {
   const cards = bg.cards;
   if (!cards || cards.length === 0) return null;
-  const hasRedevCard = cards.some((c) => c.redevFilingAcquisition !== undefined);
+  // 원조합원(§166) 카드가 있을 때만 합계 이름에 「원조합원 지분은 인가 전 분」을 붙인다 — 승계조합원 카드는 §166 밖이다(§J)
+  const hasRedevCard = cards.some((c) => c.redevFilingAcquisition !== undefined && !c.redevFilingSuccessor);
   return (
     <>
       {cards.map((c, i) => {
@@ -63,7 +64,7 @@ export function BgBundleCardAcqRows({
           b.ownershipRatio !== undefined ? `자산 ${i + 1} (지분 ${pct(b.ownershipRatio)})` : `자산 ${i + 1}${c.label ? ` (${c.label})` : ""}`;
         const basis = b.preDeemed ? undefined : basisOf(b);
         // 승계조합원(§166 밖)은 종전 부동산이 아니다 — §159 안분 취득가액(택일 전 · 단서면 필요경비 줄이 사유를 적는다)
-        const acqName = c.redevFilingAcquisition !== undefined && !c.redevSuccessorExpense ? "종전 부동산 취득가(인가 전 분)" : "취득가액";
+        const acqName = c.redevFilingAcquisition !== undefined && !c.redevFilingSuccessor ? "종전 부동산 취득가(인가 전 분)" : "취득가액";
         return (
           <Fragment key={c.propertyId}>
             <tr data-testid="bg-bundle-card" data-basis={b.preDeemed?.basis ?? b.acquisitionMethodUsed}>
@@ -102,14 +103,16 @@ export function BgBundleCardAcqRows({
             {c.redevFilingAcquisition !== undefined && (
               <tr data-testid="bg-bundle-card-redev-filing">
                 <td className="py-1 pr-2 pl-3 text-caption text-fuchsia-700 dark:text-fuchsia-400">
-                  신고서 취득가액 (인가 후 분·청산금 납부분 포함 — 「소득세법 시행령」 제166조 제1항 제1호)
+                  {c.redevFilingSuccessor
+                    ? "신고서 취득가액 (승계조합원 — 재개발·재건축 상세의 계산 결과 · 「소득세법 시행령」 제162조 제1항 제4호)"
+                    : "신고서 취득가액 (인가 후 분·청산금 납부분 포함 — 「소득세법 시행령」 제166조 제1항 제1호)"}
                 </td>
                 <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(c.redevFilingAcquisition)}</td>
               </tr>
             )}
             {/* 승계조합원 × 환산·기준시가 — 필요경비는 승계 분기가 고른 개산공제·단서 나목(단건 카드와 같은 줄 · §F.5) */}
             {c.redevSuccessorExpense && <BgRedevSuccessorExpenseRow bg={b} expense={c.redevSuccessorExpense} ids={BUNDLE_CARD_EXPENSE_IDS} />}
-            {c.redevFilingExpenses !== undefined && !c.redevSuccessorExpense && <BgRedevFilingExpenseRows parts={c.redevFilingExpenses} />}
+            {c.redevFilingExpenses !== undefined && !c.redevSuccessorExpense && <BgRedevFilingExpenseRows parts={c.redevFilingExpenses} successor={c.redevFilingSuccessor} />}
           </Fragment>
         );
       })}
