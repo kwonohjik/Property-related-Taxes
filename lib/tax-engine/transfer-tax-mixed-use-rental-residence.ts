@@ -10,7 +10,7 @@
  * 🔑 B(직전거주주택보유주택)·§154⑩은 받지 않는다 — §161 안분을 겸용 4파트에 적용한 근거가 없다. ⑧·⑫가 막는다.
  */
 import { mergeRentalCarveoutMissingNotice, mergeRentalCarveoutNotice, withMergeRentalCarveout } from "./one-house/merge-rental-carveout";
-import { resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
+import { resolveMixedHouseCountExclusionDate } from "./one-house/gift-household-basis";
 import { assembleSurchargeHouseSet } from "./transfer-tax-judgment-steps";
 import {
   rentalNoticesForEarlyReturn,
@@ -61,7 +61,7 @@ export function resolveMixedUseRentalResidence(asset: MixedUseAssetInput, parsed
   }
   if (!source.isOneHousehold || source.isUnregistered) return undefined;
 
-  const generalDate = resolveHouseCountExclusionDate(asset.buildingAcquisitionDate, asset.giftHouseholdBasis);
+  const generalDate = resolveMixedHouseCountExclusionDate(asset); // 일반 경로 hce 날짜와 같은 우선순위(동일세대 상속 포함)
   const composition = resolveRentalResidenceComposition(source, parsedRates, generalDate);
   const unmet = resolvePrhpUnmet(source, composition);
   const roster = (source.houses ?? []).length > 0;
