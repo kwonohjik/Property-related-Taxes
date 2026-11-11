@@ -11,7 +11,7 @@
 |---|---|---|
 | 1 | 운영 DB에도 규칙 행이 없는가 | **없다.** `tax_rates`의 `transfer:deduction:self_farming` 행은 **1건(effective 2023-01-01)** 뿐이다. 같은 `deduction` 범주의 `basic`·`long_term_holding`은 1990-01-01부터 2행이다 [직접: SELECT]. 폴백 시드와 같은 상태이므로 **DB 로드가 성공해도 2023-01-01 전 양도는 규칙이 없다**(이전 계획서는 «폴백에서만»이라 적었으나 운영도 같았다). |
 | 2 | 동작 | 양도일 2010-06-01~2022-12-31의 8시료 전부 **감면 0원, `reductionTypeApplied` 없음, 경고 0건**. 2023-01-01·2024-06-01은 100,000,000원 [직접: 엔진 실측 §2]. 규칙 행이 없으면 `selfFarmingRules`가 `undefined`라 `if (reduction.type === "self_farming" && selfFarmingRules)` 분기(`transfer-tax-reductions-calc.ts:435`)가 **통째로 건너뛰어진다**. |
-| 3 | 필수 규칙과의 차이 | 같은 로더의 `progressive_rate`·`long_term_holding`·`basic`·`surcharge`·`one_house_exemption`은 행이 없으면 `TaxRateNotFoundError`를 **던진다**(`transfer-tax-helpers.ts:101-125`). `self_farming`만 선택 항목으로 두어 부재가 **조용한 0**이 된다 [직접: 코드]. |
+| 3 | 필수 규칙과의 차이 | 같은 로더의 `progressive_rate`·`long_term_holding`·`basic`·`surcharge`·`one_house_exemption`은 행이 없으면 `TaxRateNotFoundError`를 **던진다**(`transfer-tax-helpers.ts:102-128`). `self_farming`만 선택 항목으로 두어 부재가 **조용한 0**이 된다 [직접: 코드]. |
 | 4 | 법적으로 감면이 있는가 | **있다.** 조특법 §69①은 2012-01-01 시행본에도 «8년 이상 직접 경작 … 양도소득세의 100분의 100 감면»으로 존재한다 [직접: 조회]. 앱의 지원 기간은 1990-01-01부터이고(`transfer-supported-period.ts`) 사용자가 감면을 입력해도 2023 전 양도에는 반영되지 않는다. |
 | 5 | 행만 앞당기면 되는가 | **안 된다.** 현행 행의 한도값(연 1억·5년 2억)은 **연혁이 있다** — 조특법 §133 시행본별로 §69의 한도가 다르다(§3). 행을 1990년으로 그대로 넓히면 2015년 이전 양도에 연 1억을 씌워 **감면을 과소 적용**한다(손계산 §3). 게다가 `buildLimitGroups`(`aggregate-reduction-limits.ts`)가 2024 이하를 «연도 불변 1억/2억»으로 두는데 이것도 2018 이전에는 조문과 다르다 [직접: 조회 · 코드 읽기]. |
 | 6 | 결함인가 | **조용한 오답이다.** 감면 입력이 있는데 0원이고 경고가 없다. 결과 화면 세액이 법정보다 크다(2018~2022 양도 예: 법정 감면 100,000,000원 → 앱 0원, 손계산). 다만 «감면을 지원하지 않는다»는 설계 의도가 문서에 있는지는 확인하지 못했다 [확인 필요]. |
