@@ -8,7 +8,7 @@
  *   둘 다 미달 → 비사업용
  */
 
-import { differenceInDays } from "date-fns";
+import { differenceInDays } from "../utc-date";
 import { NBL } from "../legal-codes";
 import type {
   AreaProportioning,

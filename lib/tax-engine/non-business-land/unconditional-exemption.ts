@@ -8,7 +8,7 @@
  * 1호 공장 오염피해 인접토지·2호 이농 농지)·종중 등.
  */
 
-import { addYears } from "date-fns";
+import { addYears } from "../utc-date";
 import type {
   LandCategoryGroup,
   NonBusinessLandInput,

@@ -1,5 +1,5 @@
 /** (Phase 3) 재산 취득 후 재산가치 증가에 따른 이익의 증여 (§42의3 · 시행령 §32의3) */
-import { differenceInYears, parseISO, addYears, isAfter } from "date-fns";
+import { differenceInYears, parseISO, addYears, isAfter } from "../utc-date";
 import { GIFT } from "../legal-codes";
 import { safeMultiplyThenDivide } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";

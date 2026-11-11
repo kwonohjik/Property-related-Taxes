@@ -12,16 +12,7 @@
  *   - store=기초데이터, 엔진=resolve(미러링 없음).
  */
 
-import {
-  addMonths,
-  addYears,
-  differenceInDays,
-  differenceInYears,
-  endOfMonth,
-  format,
-  parseISO,
-  subYears,
-} from "date-fns";
+import { addMonths, addYears, differenceInDays, differenceInYears, endOfMonth, format, parseISO, subYears } from "../utc-date";
 
 import type { FamilyBusinessInheritanceInput } from "../types/inheritance-gift.types";
 import type { Heir } from "../types/inheritance-gift.types";

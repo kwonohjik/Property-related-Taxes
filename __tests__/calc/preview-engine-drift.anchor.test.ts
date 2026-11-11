@@ -6,13 +6,13 @@
  *
  * | 축 | 화면이 쓰던 것 | 엔진이 쓰는 것 |
  * |---|---|---|
- * | §97의5 3개월 (#29) | `setMonth` — 말일 **오버플로** | `date-fns addMonths` — 말일 **clamp** |
+ * | §97의5 3개월 (#29) | `setMonth` — 말일 **오버플로** | `utc-date addMonths` — 말일 **clamp** |
  * | §99의4 보유 (#27) | 월 단위 뺄셈 | `calculateHoldingPeriod` (일·초일불산입) |
  * | 토지출자 §166③ (#14) | 언제나 `권리가액 + 청산금` | `computeSalePriceTotal` (수령은 **−**) |
  * | §154① 단서 (#15) | 정규화 없는 `provisoReason` | `provisoGate` → `effectiveProvisoReason` |
  */
 import { describe, it, expect } from "vitest";
-import { addMonths } from "date-fns";
+import { addMonths } from "@/lib/tax-engine/utc-date";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { computeSalePriceTotal } from "@/lib/tax-engine/redevelopment-settlement";
 import { RENTAL_97_5_REGISTRATION_MONTHS } from "@/lib/tax-engine/transfer-reductions";
@@ -27,7 +27,7 @@ describe("§97의5 3개월 기한 — 말일 clamp (#29)", () => {
     expect(deadline.toISOString().slice(0, 10)).toBe("2019-02-28");
     // 종전 `setMonth` 방식은 2019-03-02가 되어 2019-03-01 등록을 「3개월 내」로 통과시켰다.
     const legacy = new Date("2018-11-30");
-    legacy.setMonth(legacy.getMonth() + 3);
+    legacy.setUTCMonth(legacy.getUTCMonth() + 3);
     expect(legacy.getTime()).toBeGreaterThan(deadline.getTime());
   });
 

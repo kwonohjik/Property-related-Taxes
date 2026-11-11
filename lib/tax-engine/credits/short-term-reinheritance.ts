@@ -11,7 +11,7 @@
  *   1년 이내 100% / 2년 이내 90% / 3년 이내 80% / … / 10년 이내 10% / 10년 초과 0%
  */
 
-import { differenceInYears, addYears, parseISO } from "date-fns";
+import { differenceInYears, addYears, parseISO } from "../utc-date";
 import { TAX_CREDIT } from "../legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";

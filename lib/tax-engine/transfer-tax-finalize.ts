@@ -275,7 +275,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   const cap = applyReductionStatutoryCap({
     reductionAmount,
     reductionTypeApplied,
-    transferYear: input.transferDate.getFullYear(),
+    transferYear: input.transferDate.getUTCFullYear(),
     priorUsage: input.priorReductionUsage ?? [],
   });
   const cappedReductionAmount = cap.cappedAmount;

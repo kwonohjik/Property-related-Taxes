@@ -33,7 +33,7 @@ import {
   sumDaysInWindow,
   threeYearsFrom,
 } from "./utils/period-math";
-import { addDays, differenceInDays } from "date-fns";
+import { addDays, differenceInDays } from "../utc-date";
 
 type FarmlandMode = "real" | "deemed";
 

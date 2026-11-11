@@ -337,5 +337,5 @@ export function determinePropertyTaxObject(
  */
 function getAssessmentDate(): Date {
   const now = new Date();
-  return new Date(now.getFullYear(), 5, 1); // month index 5 = June
+  return new Date(Date.UTC(now.getFullYear(), 5, 1)); // month index 5 = June
 }

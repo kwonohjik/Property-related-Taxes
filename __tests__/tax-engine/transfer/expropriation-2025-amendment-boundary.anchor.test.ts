@@ -55,9 +55,9 @@ const base = {
 
 describe("D7-01 §77① 감면율 경계 — 2025-01-01", () => {
   it("D7-01-1: 상수는 2025-01-01이다 (법률 제20778호 부칙 §10 — 시행일이 속한 과세연도)", () => {
-    expect(AMENDED_2025_TRANSFER_CUTOFF.getFullYear()).toBe(2025);
-    expect(AMENDED_2025_TRANSFER_CUTOFF.getMonth()).toBe(0);
-    expect(AMENDED_2025_TRANSFER_CUTOFF.getDate()).toBe(1);
+    expect(AMENDED_2025_TRANSFER_CUTOFF.getUTCFullYear()).toBe(2025);
+    expect(AMENDED_2025_TRANSFER_CUTOFF.getUTCMonth()).toBe(0);
+    expect(AMENDED_2025_TRANSFER_CUTOFF.getUTCDate()).toBe(1);
   });
 
   it("D7-01-2 경계 직전: 2024-12-31 양도 → 개정 전 10%", () => {

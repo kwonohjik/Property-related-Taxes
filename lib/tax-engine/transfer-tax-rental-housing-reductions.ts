@@ -134,7 +134,7 @@ export function applyRentalHousingReductions(args: {
   const cap = applyReductionStatutoryCap({
     reductionAmount: reductionResult.reductionAmount,
     reductionTypeApplied: reductionResult.reductionTypeApplied,
-    transferYear: effectiveInput.transferDate.getFullYear(),
+    transferYear: effectiveInput.transferDate.getUTCFullYear(),
     priorUsage: effectiveInput.priorReductionUsage ?? [],
   });
   const rheReductionAmount = cap.cappedAmount;

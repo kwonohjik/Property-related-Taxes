@@ -13,7 +13,7 @@
  * 법령: 상증령 §53⑧2 · §49①1·②1 (KoreanLaw 검증 2026-06-27, 시행 20260227)
  */
 
-import { addMonths, subMonths } from "date-fns";
+import { addMonths, subMonths } from "../utc-date";
 import { toDate } from "@/lib/api/date-coerce";
 import type {
   Section53_8_2Input,
@@ -23,7 +23,7 @@ import type {
 /** 시각 제거 — date-only 경계 비교 (JSON string·coerceDates 시분초 영향 차단) */
 function dateOnly(d: Date | string): number {
   const dt = toDate(d, "saleContractDate");
-  return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+  return Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate());
 }
 
 /**

@@ -79,8 +79,8 @@ export function calcConvertedShares(args: CalcConvertedSharesArgs): CalcConverte
   //   windowStart = 3년전 사업연도 개시일 (= 3년전 종료일 − 1년 + 1일, 12개월 가정 — §9 한계 공유)
   const thirdYearEnd = fiscalYearEndDates[2];
   const windowStart = new Date(thirdYearEnd);
-  windowStart.setFullYear(windowStart.getFullYear() - 1);
-  windowStart.setDate(windowStart.getDate() + 1);
+  windowStart.setUTCFullYear(windowStart.getUTCFullYear() - 1);
+  windowStart.setUTCDate(windowStart.getUTCDate() + 1);
 
   // 변동일 미입력(undefined) 행은 §56③ 단서 환산 대상에서 제외 (validate가 차단하므로 defensive)
   const W = capitalChanges

@@ -34,7 +34,7 @@ import { normalizeRentalAndSplitFields } from "@/lib/stores/calc-wizard-asset-mi
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
 import type { AssetReductionForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 
-const D = (s: string) => new Date(`${s}T00:00:00`);
+const D = (s: string) => new Date(`${s}T00:00:00Z`);
 const codes = (r: Rental97Result) => (r.isEligible ? [] : r.ineligibleReasons.map((x) => x.code));
 const reasonText = (r: Rental97Result) => (r.isEligible ? "" : r.ineligibleReasons.map((x) => x.message).join(" "));
 

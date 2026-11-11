@@ -7,7 +7,7 @@
  * property-valuation.ts에서 분리 (800줄 정책). evaluateEstateItem dispatch가 evaluateReceivable 호출.
  */
 
-import { differenceInYears, parseISO } from "date-fns";
+import { differenceInYears, parseISO } from "./utc-date";
 import { VALUATION } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { resolveReceivableDiscountRate } from "./data/gift-deemed-rates";

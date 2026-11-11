@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
         // 물건 전체(100%) 양도가액. 지분 모드에서는 `totalPropertyTransferPrice`가 정본이다.
         data.totalPropertyTransferPrice ?? data.transferPrice,
         transferDate,
-        transferDate.getFullYear(),
+        transferDate.getUTCFullYear(),
         data.annualBasicDeductionUsed,
         data.priorReductionUsage ?? [],
         rates,
@@ -342,7 +342,7 @@ export async function POST(request: NextRequest) {
         gbv,
         data.transferPrice, transferDate, acquisitionDate,
         bundledAcq, bundledExp,
-        transferDate.getFullYear(), data.annualBasicDeductionUsed,
+        transferDate.getUTCFullYear(), data.annualBasicDeductionUsed,
         data.priorReductionUsage ?? [], rates,
         burdenedGiftInfoForGb,
         // ⑭ §164⑨ 1호 공익수용 특례 (토지 전용 — D16-GB): top-level 특례 필드 전달.

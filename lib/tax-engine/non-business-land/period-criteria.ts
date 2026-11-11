@@ -26,7 +26,7 @@
  * (De Morgan: 사업용 = 각 목 미충족의 OR)로 재정의하되 필드명·개수는 불변.
  */
 
-import { addYears, differenceInDays } from "date-fns";
+import { addYears, differenceInDays } from "../utc-date";
 import type {
   DateInterval,
   GracePeriod,

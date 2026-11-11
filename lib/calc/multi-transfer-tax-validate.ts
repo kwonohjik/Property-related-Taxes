@@ -236,7 +236,7 @@ export function validateMultiSettings(form: MultiTransferFormData): string | nul
   // 모든 건의 양도일이 taxYear 내에 있어야 함
   for (const p of form.properties) {
     if (!p.form.transferDate) continue;
-    const year = new Date(p.form.transferDate).getFullYear();
+    const year = new Date(p.form.transferDate).getUTCFullYear();
     if (year !== form.taxYear) {
       return `"${p.propertyLabel}"의 양도일(${p.form.transferDate})이 과세연도(${form.taxYear})와 다릅니다.`;
     }

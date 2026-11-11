@@ -1,6 +1,6 @@
 /** (Phase 3) 특정법인과의 거래를 통한 이익의 증여 의제 (§45의5 · 시행령 §34의5) */
 import { GIFT } from "../legal-codes";
-import { addYears, format, parseISO } from "date-fns";
+import { addYears, format, parseISO } from "../utc-date";
 import { applyRate, applyRateFraction, safeMultiplyThenDivide } from "../tax-utils";
 import { resolveFilingCreditRate } from "../credits/filing-credit";
 import {

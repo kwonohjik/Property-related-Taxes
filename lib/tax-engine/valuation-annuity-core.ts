@@ -10,7 +10,7 @@
  */
 
 import { getLifeExpectancyFloor } from "./data/life-expectancy-2023";
-import { parseISO, differenceInYears } from "date-fns";
+import { parseISO, differenceInYears } from "./utc-date";
 
 /**
  * 1/(1.03)ⁿ floor 현재가치 — BigInt 거듭제곱 (103ⁿ > MAX_SAFE_INTEGER 정밀도 회피).

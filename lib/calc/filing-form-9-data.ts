@@ -14,7 +14,7 @@
  * Design: docs/02-design/features/inheritance-filing-form-9-replica.ui.design.md §3
  */
 
-import { format, parseISO } from "date-fns";
+import { format, parseISO } from "@/lib/tax-engine/utc-date";
 import { getInheritanceFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
 import type {
   FilingFormRow,

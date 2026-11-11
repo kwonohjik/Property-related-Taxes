@@ -53,7 +53,7 @@
  *    비과세 거주요건과 표2 대상 판정(거주 2년)에 더한다 — 표2 공제율의 보유·거주기간에는 더하지 않는다(결정 #38-9 · 사전-2025-법규재산-0506).
  */
 
-import { differenceInMonths } from "date-fns";
+import { differenceInMonths } from "../utc-date";
 import type { TransferTaxInput } from "../types/transfer.types";
 
 /** 증여받은 주택의 세대 사실 — 엔진 입력(`TransferTaxInput.giftHouseholdBasis`). */

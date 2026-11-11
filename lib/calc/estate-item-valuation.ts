@@ -6,7 +6,7 @@
  * 순환 의존 회피 + [[single-source-engine-helper]] 정책.
  */
 
-import { parseISO } from "date-fns";
+import { parseISO } from "@/lib/tax-engine/utc-date";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { computeStockValuation } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
 import {

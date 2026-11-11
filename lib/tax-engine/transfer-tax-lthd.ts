@@ -14,7 +14,7 @@
  *   L-2' §97의3·§97의4 장기임대 장특 특례
  *   L-3  1세대1주택 표2 / L-4 일반 표1
  */
-import { format } from "date-fns";
+import { format } from "./utc-date";
 import {
   applyRate,
   applyFairMarketRatio,

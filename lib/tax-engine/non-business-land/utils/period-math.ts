@@ -5,7 +5,7 @@
  * 모든 기간 계산에 사용.
  */
 
-import { addYears, differenceInDays } from "date-fns";
+import { addYears, differenceInDays } from "../../utc-date";
 import type { DateInterval } from "../types";
 
 /**
@@ -112,7 +112,7 @@ export function invertPeriods(
  */
 export function getOwnershipStart(acquisitionDate: Date): Date {
   const d = new Date(acquisitionDate);
-  d.setDate(d.getDate() + 1);
+  d.setUTCDate(d.getUTCDate() + 1);
   return d;
 }
 

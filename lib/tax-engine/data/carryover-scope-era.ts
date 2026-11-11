@@ -64,6 +64,6 @@ export function isWithinCarryoverPeriod(
   kind: keyof typeof CARRYOVER_PERIOD_YEARS,
 ): boolean {
   const limit = new Date(giftDate);
-  limit.setFullYear(limit.getFullYear() + CARRYOVER_PERIOD_YEARS[kind]);
+  limit.setUTCFullYear(limit.getUTCFullYear() + CARRYOVER_PERIOD_YEARS[kind]);
   return transferDate <= limit;
 }

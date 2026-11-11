@@ -50,7 +50,7 @@
  * 가드가 필요하다(현재 없음 — 별건).
  */
 
-import { differenceInDays } from "date-fns";
+import { differenceInDays } from "../utc-date";
 import { NBL } from "../legal-codes";
 import { judgeAppurtenantLandExcess } from "../appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "../tax-errors";

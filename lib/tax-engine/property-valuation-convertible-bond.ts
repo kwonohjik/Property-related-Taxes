@@ -14,7 +14,7 @@
  * 설계: docs/02-design/features/inheritance-gift-cb-valuation.engine.design.md
  */
 
-import { differenceInDays, parseISO, format } from "date-fns";
+import { differenceInDays, parseISO, format } from "./utc-date";
 import { VALUATION } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { resolveReceivableDiscountRate } from "./data/gift-deemed-rates";
@@ -79,7 +79,7 @@ function computeDividendDifference(item: EstateItem): number {
   if (face <= 0 || rate <= 0 || shares <= 0 || !item.cbDividendBaseDate) return 0;
   // 사업연도개시일 = 배당기산일이 속한 회계연도 1.1 (배당기산일 연도 기준)
   const dividendBase = asDate(item.cbDividendBaseDate);
-  const fyStart = parseISO(`${dividendBase.getFullYear()}-01-01`);
+  const fyStart = parseISO(`${dividendBase.getUTCFullYear()}-01-01`);
   const days = differenceInDays(dividendBase, fyStart);
   if (days <= 0) return 0;
   // 배당률%는 소수 — 1e4 스케일로 floorMulDiv 내부 반올림에 의한 소수부 소실 방지

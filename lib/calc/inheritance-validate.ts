@@ -19,7 +19,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { validateUnlistedStockV2 } from "./inheritance-validate-unlisted";
 export { validateUnlistedStockV2 };
 import { isCompleteResidentNumber } from "@/lib/calc/resident-number";
-import { endOfMonth, addMonths, format } from "date-fns";
+import { endOfMonth, addMonths, format } from "@/lib/tax-engine/utc-date";
 import { heirLacksBirthDateSource } from "@/lib/calc/inheritance-required-inputs";
 import { casualtyLossDateMissing } from "@/lib/calc/inheritance-required-inputs";
 import { ancillaryLandMissingKeys } from "@/lib/calc/inheritance-required-inputs";

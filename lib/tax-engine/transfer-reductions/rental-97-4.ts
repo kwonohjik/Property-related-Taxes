@@ -27,7 +27,7 @@
  *      돌려준다 — 「별표 조회가 막혔다」는 이 조문에 해당하지 않는 사유였다.
  */
 
-import { addDays, differenceInYears } from "date-fns";
+import { addDays, differenceInYears } from "../utc-date";
 import { RENTAL_97_4_PERIOD, TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { MULTI_HOUSE, RENTAL_REGISTRATION_4HO, TRANSFER_RENTAL_HOUSING } from "../legal-codes";
 import { aptDeadlineConfirmNotice } from "../rental-article/rules";

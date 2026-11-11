@@ -27,7 +27,7 @@
  * 공실 구간과 겹치면 겹친 부분을 공실에서 빼고, 남은 조각마다 6개월 판정을 한다.
  */
 
-import { addMonths, differenceInYears, subMonths } from "date-fns";
+import { addMonths, differenceInYears, subMonths } from "../utc-date";
 
 /** 령 §97의5①1호 — 공실 유예 6개월 (경계 「이내」 포함) */
 const VACANCY_GRACE_MONTHS = 6;

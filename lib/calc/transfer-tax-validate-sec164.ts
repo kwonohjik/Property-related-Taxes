@@ -165,8 +165,8 @@ export function sameAdjustmentPeriodError(
   // 그대로 계산하면 양도당시 기준시가가 새 기준시가를 넘어서 세액이 과대해진다.
   if (formula === "new" && asset.acquisitionDate && transferDate) {
     const months = calcStdPriceMonths(
-      new Date(`${asset.acquisitionDate}T00:00:00`),
-      new Date(`${transferDate}T00:00:00`),
+      new Date(`${asset.acquisitionDate}T00:00:00Z`),
+      new Date(`${transferDate}T00:00:00Z`),
     );
     const adj = asset.sapAdjustMonths
       ? Number(asset.sapAdjustMonths.replace(/,/g, ""))

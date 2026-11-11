@@ -61,9 +61,9 @@ import { giftHouseholdFactErrors } from "./gift-household-payload";
  */
 export function todayLocalISO(): string {
   const d = new Date();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${m}-${day}`;
 }
 
 // ─── ⑧ 취득가액 축 검증 — transfer-tax-validate-acquisition.ts로 분리 (800줄 정책, 재export 호환) ───

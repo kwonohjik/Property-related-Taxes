@@ -11,7 +11,7 @@
  *   G4: 주택부수토지 면적한도 차감 (소득세 시행령 §154⑦ 배율)
  */
 
-import { differenceInCalendarDays, differenceInYears } from "date-fns";
+import { differenceInCalendarDays, differenceInYears } from "../utc-date";
 import type {
   AncillaryLandRegion,
   CohabitReason,
@@ -162,7 +162,7 @@ function calcEffectiveStart(
     // 만 19세 도달일 = birthDate + 19년 (date-fns 생일 기념일 기반)
     const birthD = new Date(birthDate);
     const adultD = new Date(birthD);
-    adultD.setFullYear(adultD.getFullYear() + 19);
+    adultD.setUTCFullYear(adultD.getUTCFullYear() + 19);
 
     if (adultD > startD) {
       effectiveStart = adultD;

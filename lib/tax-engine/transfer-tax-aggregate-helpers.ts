@@ -43,7 +43,7 @@ export function validateInput(input: AggregateTransferInput): void {
       throw new Error(`중복된 propertyId: ${p.propertyId}`);
     }
     ids.add(p.propertyId);
-    const year = p.transferDate.getFullYear();
+    const year = p.transferDate.getUTCFullYear();
     if (year !== input.taxYear) {
       throw new Error(
         `자산 ${p.propertyId}의 양도일 연도(${year})가 과세기간(${input.taxYear})과 다릅니다.`,
@@ -151,9 +151,9 @@ export function classifyRateGroup(
 }
 
 export function monthsBetween(from: Date, to: Date): number {
-  const y = to.getFullYear() - from.getFullYear();
-  const m = to.getMonth() - from.getMonth();
-  const d = to.getDate() - from.getDate();
+  const y = to.getUTCFullYear() - from.getUTCFullYear();
+  const m = to.getUTCMonth() - from.getUTCMonth();
+  const d = to.getUTCDate() - from.getUTCDate();
   return y * 12 + m - (d < 0 ? 1 : 0);
 }
 

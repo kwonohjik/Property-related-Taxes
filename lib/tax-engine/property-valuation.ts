@@ -9,7 +9,7 @@
  * 이 모듈은 Pure Function — DB 호출 없음, 순수 계산만 수행.
  */
 
-import { addYears, differenceInYears } from "date-fns";
+import { addYears, differenceInYears } from "./utc-date";
 import { VALUATION } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { safeMultiply } from "./tax-utils";

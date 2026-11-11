@@ -23,7 +23,7 @@
  * §11 P10: 등거리 전체 평균
  */
 
-import { addMonths } from "date-fns";
+import { addMonths } from "@/lib/tax-engine/utc-date";
 
 // ============================================================
 // 타입 정의

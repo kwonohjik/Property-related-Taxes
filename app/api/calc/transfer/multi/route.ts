@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
       return loadFallbackTransferRates(date);
     }
   };
-  const rateDate = new Date(data.taxYear, 11, 31);
+  const rateDate = new Date(Date.UTC(data.taxYear, 11, 31));
   const transferDates = new Map<string, Date>();
   for (const p of data.properties) {
     const d = toDate(p.transferDate, "transferDate");

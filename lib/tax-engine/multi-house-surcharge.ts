@@ -14,7 +14,7 @@
  */
 
 import { inheritedPresaleRightHouseholdNotices } from "./presale-right-definition-date";
-import { format } from "date-fns";
+import { format } from "./utc-date";
 import { readSpouseHolding, marriageSubtractionWindowOpen } from "./spouse-holding-at-transfer";
 import { spouseHoldingNotices } from "./multi-house-surcharge-spouse-notice";
 import { rentalCancellationNotices } from "./rental-cancellation-deeming";

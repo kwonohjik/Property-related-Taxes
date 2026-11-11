@@ -4,7 +4,7 @@
  * 법령: §103① 기본공제 / §104② 보유기간 기산점 / 국고금 관리법 §47
  */
 
-import { differenceInDays, differenceInMonths } from "date-fns";
+import { differenceInDays, differenceInMonths } from "../utc-date";
 import { calculateHoldingPeriod } from "../tax-utils";
 import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
 import type { ClassificationResult } from "./stock-classification";

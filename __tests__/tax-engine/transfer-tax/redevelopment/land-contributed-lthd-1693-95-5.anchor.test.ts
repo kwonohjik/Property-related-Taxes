@@ -150,8 +150,8 @@ describe("2025-01-01 이후 양도 — 「소득세법」 §95⑤ 유추: 표1(�
   });
 
   it("경계 — 2024-12-31 양도는 1693, 2025-01-01 양도는 §95⑤", () => {
-    const before = landContributedExistingLthdRate({ acquisitionDate: D("2015-01-01"), completionDate: D("2019-06-01"), transferDate: new Date("2024-12-31T00:00:00"), residenceYears: 2 })!;
-    const after = landContributedExistingLthdRate({ acquisitionDate: D("2015-01-01"), completionDate: D("2019-06-01"), transferDate: new Date("2025-01-01T00:00:00"), residenceYears: 2 })!;
+    const before = landContributedExistingLthdRate({ acquisitionDate: D("2015-01-01"), completionDate: D("2019-06-01"), transferDate: new Date("2024-12-31T00:00:00Z"), residenceYears: 2 })!;
+    const after = landContributedExistingLthdRate({ acquisitionDate: D("2015-01-01"), completionDate: D("2019-06-01"), transferDate: new Date("2025-01-01T00:00:00Z"), residenceYears: 2 })!;
     expect(before.basis).toContain("재산세과-1693");
     expect(after.basis).toContain("§95⑤");
   });

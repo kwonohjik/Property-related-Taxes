@@ -9,7 +9,7 @@
  *   Step 3-2-2 도시지역 內 시업중: 편입유예 → 사업용/비사업용
  */
 
-import { addYears, differenceInDays } from "date-fns";
+import { addYears, differenceInDays } from "../utc-date";
 import { NBL } from "../legal-codes";
 import type {
   CategoryJudgeResult,

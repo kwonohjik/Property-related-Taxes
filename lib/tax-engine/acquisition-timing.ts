@@ -48,7 +48,7 @@ function earlierDate(a: string | undefined, b: string | undefined): string | und
  */
 function addDays(dateStr: string, days: number): string {
   const d = new Date(dateStr);
-  d.setDate(d.getDate() + days);
+  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
@@ -57,7 +57,7 @@ function addDays(dateStr: string, days: number): string {
  */
 function addMonths(dateStr: string, months: number): string {
   const d = new Date(dateStr);
-  d.setMonth(d.getMonth() + months);
+  d.setUTCMonth(d.getUTCMonth() + months);
   return d.toISOString().slice(0, 10);
 }
 
@@ -67,7 +67,7 @@ function addMonths(dateStr: string, months: number): string {
  */
 function endOfMonth(dateStr: string): string {
   const d = new Date(dateStr);
-  d.setMonth(d.getMonth() + 1, 0);
+  d.setUTCMonth(d.getUTCMonth() + 1, 0);
   return d.toISOString().slice(0, 10);
 }
 

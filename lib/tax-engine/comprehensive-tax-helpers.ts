@@ -7,7 +7,7 @@
  * 사후관리 위반 추징 (종합부동산세법 §17⑤ + 시행령 §10②)
  */
 
-import { differenceInCalendarDays } from "date-fns";
+import { differenceInCalendarDays } from "./utc-date";
 import { safeMultiplyThenDivide, safeMulDivRound, applyRateFraction, safeMultiply } from "./tax-utils";
 import {
   COMPREHENSIVE_CONST,
@@ -329,19 +329,19 @@ const DAILY_INTEREST_NUMER = Math.round(
  * 그 해 이자 기산일 — 종합부동산세 납부기한(매년 12월 15일, 「종합부동산세법」 §16①)의 **다음 날**.
  */
 function interestStartOf(taxYear: number): Date {
-  return new Date(taxYear, 11, 16);
+  return new Date(Date.UTC(taxYear, 11, 16));
 }
 
 /** 시각 성분을 떨어뜨린다 — `new Date()` fallback 이 섞이면 일수가 하루 흔들린다(R-4와 같은 축). */
 function startOfDayUtcSafe(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }
 
 /** `YYYY-MM-DD` — 표시용 echo */
 function toIsoDate(d: Date): string {
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${m}-${day}`;
 }
 
 /**

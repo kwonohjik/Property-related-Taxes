@@ -9,7 +9,7 @@
  *
  * 의존 방향은 **부모 → 이 파일** 한 방향뿐이다.
  */
-import { format } from "date-fns";
+import { format } from "./utc-date";
 import {
   type DeadlineEnd,
   deadlineEnd,

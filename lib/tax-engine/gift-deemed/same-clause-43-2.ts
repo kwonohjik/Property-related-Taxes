@@ -13,7 +13,7 @@
  *   증여일이 없으면 윈도를 정할 수 없으므로 **합산하지 않는다**(⑧이 증여일을 강제한다).
  * - 설계: `docs/00-pm/gift39-19-43-2-aggregation.plan.md`(§39) · `docs/00-pm/gift43-2-capital-axes.plan.md`(자본거래 4축).
  */
-import { addYears, format, parseISO } from "date-fns";
+import { addYears, format, parseISO } from "../utc-date";
 import { GIFT } from "../legal-codes";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 

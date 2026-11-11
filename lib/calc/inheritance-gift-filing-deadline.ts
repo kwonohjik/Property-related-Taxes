@@ -9,7 +9,7 @@
  * 모든 기간은 "그 날이 속하는 달의 말일"부터 기산(endOfMonth). 증여일/상속개시일에 직접
  * 개월을 더하면 최대 30일 이르게 계산되므로 반드시 말일 기산.
  */
-import { addMonths, endOfMonth, format, parseISO } from "date-fns";
+import { addMonths, endOfMonth, format, parseISO } from "@/lib/tax-engine/utc-date";
 
 export interface FilingDueDates {
   /** 신고기한 "YYYY-MM-DD" */

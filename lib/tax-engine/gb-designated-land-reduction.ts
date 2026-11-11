@@ -14,12 +14,12 @@
  * ⚠️ 소재지 "거주"의 세부(연접 시·군 등)는 시행령 위임 → 본 엔진은 사용자 확인 boolean(MVP).
  */
 
-import { subYears } from "date-fns";
+import { subYears } from "./utc-date";
 import { TRANSFER } from "./legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import { getInvoluntaryTransferLimits } from "./public-expropriation-reduction";
 
-export const GB_DESIGNATED_LAND_SUNSET = new Date("2028-12-31T23:59:59");
+export const GB_DESIGNATED_LAND_SUNSET = new Date("2028-12-31T23:59:59.999Z");
 
 export interface GbDesignatedLandInput {
   /** ①구역 내 / ②해제 후 */
@@ -144,7 +144,7 @@ export function calculateGbDesignatedLandReduction(
   input: GbDesignatedLandInput,
 ): GbDesignatedLandResult {
   const annualLimit = getInvoluntaryTransferLimits(
-    input.transferDate.getFullYear(),
+    input.transferDate.getUTCFullYear(),
   ).annual;
 
   if (

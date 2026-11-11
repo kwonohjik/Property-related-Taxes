@@ -97,7 +97,7 @@ export function isWithinAggregationWindow(
   // 「**최초로** 양도하는 날」이 최종 양도일보다 뒤일 수는 없다 — 입력 오류를 통과시키지 않는다.
   if (firstTransferDate.getTime() > transferDate.getTime()) return false;
   const limit = new Date(transferDate);
-  limit.setFullYear(limit.getFullYear() - BLOCK_SHAREHOLDER_AGGREGATION_YEARS);
+  limit.setUTCFullYear(limit.getUTCFullYear() - BLOCK_SHAREHOLDER_AGGREGATION_YEARS);
   // 「소급해 3년 내」 — 정확히 3년 전 당일은 창 **안**이다(경계 포함).
   return firstTransferDate.getTime() >= limit.getTime();
 }

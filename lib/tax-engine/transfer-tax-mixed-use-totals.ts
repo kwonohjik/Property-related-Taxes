@@ -594,7 +594,7 @@ function computeMixedUsePostTax(
   const cap = applyReductionStatutoryCap({
     reductionAmount: result.reductionAmount,
     reductionTypeApplied: result.reductionTypeApplied,
-    transferYear: input.transferDate.getFullYear(),
+    transferYear: input.transferDate.getUTCFullYear(),
     priorUsage: input.priorReductionUsage ?? [],
   });
   const reductionAmount = Math.min(cap.cappedAmount, calculatedTax);

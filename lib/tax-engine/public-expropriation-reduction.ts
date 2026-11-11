@@ -1,4 +1,4 @@
-import { subYears } from "date-fns";
+import { subYears } from "./utc-date";
 import { TRANSFER } from "./legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -72,13 +72,13 @@ export function getInvoluntaryTransferLimits(
     : { annual: 100_000_000, fiveYear: 200_000_000 };
 }
 
-export const AMENDED_2025_TRANSFER_CUTOFF = new Date("2025-01-01T00:00:00");
+export const AMENDED_2025_TRANSFER_CUTOFF = new Date("2025-01-01T00:00:00.000Z");
 /** 부칙 §53 「이 법 시행(2016-01-01) 전에 사업인정 고시가 된」 ⇒ 고시일 ≤ 2015-12-31 (원문 대조 ✅) */
-export const LEGACY_APPROVAL_CUTOFF = new Date("2015-12-31T23:59:59");
+export const LEGACY_APPROVAL_CUTOFF = new Date("2015-12-31T23:59:59.999Z");
 /** 부칙 §53 「2017년 12월 31일까지 … 양도한 경우」 ⇒ 양도일 ≤ 2017-12-31 (원문 대조 ✅) */
-export const LEGACY_TRANSFER_CUTOFF = new Date("2017-12-31T23:59:59");
+export const LEGACY_TRANSFER_CUTOFF = new Date("2017-12-31T23:59:59.999Z");
 /** 조특법 §77① 일몰 — 2026.12.31 이전 양도분에 한정(양도일 기준). */
-export const PUBLIC_EXPROPRIATION_SUNSET = new Date("2026-12-31T23:59:59");
+export const PUBLIC_EXPROPRIATION_SUNSET = new Date("2026-12-31T23:59:59.999Z");
 
 export interface PublicExpropriationReductionInput {
   cashCompensation: number;
@@ -267,7 +267,7 @@ export function calculatePublicExpropriationReduction(
           : "current_2018",
       cappedByAnnualLimit: false,
       appliedAnnualLimit: getInvoluntaryTransferLimits(
-        input.transferDate.getFullYear(),
+        input.transferDate.getUTCFullYear(),
       ).annual,
       legalBasis: TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION,
       warnings,
@@ -306,7 +306,7 @@ export function calculatePublicExpropriationReduction(
 
   // ── 연간 한도 (조특법 §133② — 양도연도 분기: 2025+ 2억 / 이전 1억) ──
   const annualLimit = getInvoluntaryTransferLimits(
-    input.transferDate.getFullYear(),
+    input.transferDate.getUTCFullYear(),
   ).annual;
 
   const cashRate = rateSet.cash;

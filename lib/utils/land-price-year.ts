@@ -21,9 +21,10 @@
  */
 export function recommendLandPriceYear(referenceDate: string | Date): number {
   const d = typeof referenceDate === "string" ? new Date(referenceDate) : referenceDate;
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1; // 0-indexed → 1-indexed
-  const day = d.getDate();
+  // UTC 달력 — 기준일 문자열(`new Date("YYYY-MM-DD")`)은 UTC 자정이라 로컬 getter는 시간대마다 전날로 읽힌다
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth() + 1; // 0-indexed → 1-indexed
+  const day = d.getUTCDate();
 
   // 5월 31일 이하 → 전년도
   if (month < 6 || (month === 6 && day === 1 && false)) {
@@ -80,8 +81,8 @@ export function landPriceYearOptions(
  */
 export function recommendHousingPriceYear(referenceDate: string | Date): number {
   const d = typeof referenceDate === "string" ? new Date(referenceDate) : referenceDate;
-  const year = d.getFullYear();
-  return d.getMonth() + 1 >= 5 ? year : year - 1;
+  const year = d.getUTCFullYear();
+  return d.getUTCMonth() + 1 >= 5 ? year : year - 1;
 }
 
 /** 주택가격 연도 선택 옵션 (추천 연도 ±2) */

@@ -22,9 +22,9 @@ export const SEC104_5_LATTER_CLAUSE_FROM = "2018-01-01";
 const dayKey = (d: string | Date): string => {
   if (typeof d === "string") return d.slice(0, 10);
   // 로컬 달력 기준(`new Date("2018-01-01")`은 UTC 자정이라 KST에서도 같은 날이지만, 다른 TZ에서 어긋나지 않게 로컬 필드로 만든다)
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${m}-${day}`;
 };
 
 /** 양도일(경계일 포함)로 본 후단 8호·9호 동일자산 의제 적용 여부. */

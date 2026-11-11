@@ -31,7 +31,7 @@
  *   조심 2023중9849 · 2025구0745 · 2025부2163 · 2025인3694도 같은 결론이다. ⇒ 멸실 여부를 받지 않고 법문대로 전입을 본다.
  * · `originalMemberDisposalDelayReason` — §155⑱ 각 호(기존주택 취득일부터 3년이 되는 날 현재). 기한만 치유한다.
  */
-import { format } from "date-fns";
+import { format } from "../utc-date";
 import { isRegulatedByBjdCode } from "../data/regulated-areas";
 import { resolveTemporaryTwoHouseDeadlineEra } from "../data/temporary-two-house-deadline-era";
 import { TRANSFER } from "../legal-codes";

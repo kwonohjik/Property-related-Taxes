@@ -13,7 +13,7 @@
  * 산식·절상 본체는 동일 — 차이는 보유월수 종점(상장일/양도일)뿐이라 `to` 인자로 일반화.
  */
 
-import { differenceInMonths, addMonths } from "date-fns";
+import { differenceInMonths, addMonths } from "../utc-date";
 
 /**
  * §81④ 보유월수 — 취득일부터 종점(상장일 또는 양도일)까지의 개월수.

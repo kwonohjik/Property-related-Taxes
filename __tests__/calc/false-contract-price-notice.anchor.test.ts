@@ -63,8 +63,8 @@ describe("§91② 고지 — 시행일 게이트 (법률 제10408호 부칙: 201
     expect(shouldShowFalseContractPriceNotice({ transferDate: "2011-01-01", isExempt: true })).toBe(false);
   });
   it("D-4 Date·ISO 문자열 입력도 같은 날짜로 읽는다", () => {
-    expect(shouldShowFalseContractPriceNotice({ transferDate: new Date(2011, 5, 30), isExempt: true })).toBe(false);
-    expect(shouldShowFalseContractPriceNotice({ transferDate: new Date(2011, 6, 1), isExempt: true })).toBe(true);
+    expect(shouldShowFalseContractPriceNotice({ transferDate: new Date(Date.UTC(2011, 5, 30)), isExempt: true })).toBe(false);
+    expect(shouldShowFalseContractPriceNotice({ transferDate: new Date(Date.UTC(2011, 6, 1)), isExempt: true })).toBe(true);
     expect(shouldShowFalseContractPriceNotice({ transferDate: "2011-06-30T00:00:00.000Z", isExempt: true })).toBe(false);
   });
   it("D-5 양도일을 모르면(미입력·파싱 불가) 띄운다 — 모르는 날짜로 고지를 거두지 않는다", () => {

@@ -45,9 +45,9 @@ function ymdOf(d: string | Date | null | undefined): string | null {
   if (!d) return null;
   if (d instanceof Date) {
     if (Number.isNaN(d.getTime())) return null;
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${d.getFullYear()}-${m}-${day}`;
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${d.getUTCFullYear()}-${m}-${day}`;
   }
   const head = d.slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(head) ? head : null;

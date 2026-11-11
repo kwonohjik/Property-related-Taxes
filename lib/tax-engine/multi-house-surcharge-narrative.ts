@@ -6,7 +6,7 @@
  * (11호 공고 전 계약·12의2 나·다목·감면 배제 주입)과 그 주택을 팔 때의 §154①·§155 사실은 비운다(모름 = 불성립). 그래서 간이
  * 결과가 중과일 때만 결론을 바꿀 수 있는 사실을 민감도(S1~S3)로 알린다(D6 「필요할 때만 확인 필요」).
  */
-import { format } from "date-fns";
+import { format } from "./utc-date";
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
 import { transitionExemptionMonths } from "./multi-house-surcharge-exclusion";
 import { withTaxIncentiveHouseNotices } from "./surcharge-tax-incentive-house-link";

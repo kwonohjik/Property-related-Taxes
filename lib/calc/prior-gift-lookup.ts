@@ -16,7 +16,7 @@
  * Plan:   docs/00-pm/gift-tax-prior-gift-history-lookup.plan.md
  */
 
-import { isBefore, subYears } from "date-fns";
+import { isBefore, subYears } from "@/lib/tax-engine/utc-date";
 import type {
   DonorRelation,
   GiftDonorRelation,

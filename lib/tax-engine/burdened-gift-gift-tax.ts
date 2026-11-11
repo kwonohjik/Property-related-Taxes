@@ -6,7 +6,7 @@
  * 증여세 = 무상이전분(C − B)에 대해 수증자가 납부. 양도자(증여자)와 별도 납세의무자.
  * 증여일은 양도일(= `giftDate`)이며 `giftDate`가 없거나 무상이전분이 0 이하면 `undefined`.
  */
-import { format } from "date-fns";
+import { format } from "./utc-date";
 import { calcGiftTax } from "./gift-tax";
 import type {
   BurdenedGiftInfo,

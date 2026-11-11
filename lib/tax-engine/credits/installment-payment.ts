@@ -17,7 +17,7 @@
  *   허가 시 1회분 납부 + 나머지를 연 1회씩 균등 납부
  */
 
-import { addYears, differenceInCalendarDays } from "date-fns";
+import { addYears, differenceInCalendarDays } from "../utc-date";
 import { TAX_CREDIT } from "../legal-codes";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import {

@@ -17,7 +17,7 @@
  * - §133 종합한도: §97의5는 §133 열거 대상 아님 — 한도 미적용
  */
 
-import { addMonths } from "date-fns";
+import { addMonths } from "../utc-date";
 import { safeMultiplyThenDivide } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { checkReductionPeriod } from "./period-check";
@@ -37,7 +37,7 @@ import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result 
 import { evaluateContinuousRental975 } from "./rental-97-5-period";
 
 const ymd = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 
 export const RENTAL_97_5_MANDATORY_YEARS = 10;
 /** §97의5①1호 — 취득일로부터 등록까지 허용 개월 */

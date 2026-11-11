@@ -38,7 +38,7 @@ import {
   RENTAL_VACANCY_GRACE_MONTHS_97_5,
 } from "@/lib/tax-engine/transfer-reductions/rental-97-shared-helpers";
 
-const D = (s: string) => new Date(`${s}T00:00:00`);
+const D = (s: string) => new Date(`${s}T00:00:00Z`);
 
 describe("조문별 유예 상수", () => {
   it("§97 계열 = 3월 (조특칙 §44) · §97의5 = 6개월 (조특령 §97의5①1호)", () => {

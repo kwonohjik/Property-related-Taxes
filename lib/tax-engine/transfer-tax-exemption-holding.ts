@@ -14,7 +14,7 @@
  *   E-4: §154① 보유·거주 요건 · 농어촌주택 · 부득이한 사유 수도권 밖
  */
 
-import { format } from "date-fns";
+import { format } from "./utc-date";
 import { isWithinDeadline } from "./civil-period";
 import { passesHouseholdGate } from "./transfer-inheritance-exclusion";
 import { declaredRowAlreadyExcluded } from "./declared-row-excluded";

@@ -16,12 +16,12 @@
  * ⚠️ sunset(2026-12-31)은 **양도일** 기준.
  */
 
-import { subYears } from "date-fns";
+import { subYears } from "./utc-date";
 import { TRANSFER } from "./legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import { getInvoluntaryTransferLimits } from "./public-expropriation-reduction";
 
-export const REPLACEMENT_LAND_SUNSET = new Date("2026-12-31T23:59:59");
+export const REPLACEMENT_LAND_SUNSET = new Date("2026-12-31T23:59:59.999Z");
 export const REPLACEMENT_LAND_RATE = 0.4;
 
 export interface ReplacementLandInput {
@@ -82,7 +82,7 @@ export function calculateReplacementLandReduction(
   input: ReplacementLandInput,
 ): ReplacementLandResult {
   const annualLimit = getInvoluntaryTransferLimits(
-    input.transferDate.getFullYear(),
+    input.transferDate.getUTCFullYear(),
   ).annual;
   const total = input.cashCompensation + input.replacementLandComp;
 

@@ -12,7 +12,7 @@
  * 근거: 「소득세법 시행령」 제154조제1항(취득 당시 조정대상지역이면 거주 2년) · 제10항(§155⑳ 표준 경로의 2019.2.12. 전 취득 분기).
  * 이 함수는 **읽기 쪽**만 맞춘다 — 주소가 있을 때 토글을 숨기거나 읽기 전용으로 바꾸는 정책은 별개다.
  */
-import { format } from "date-fns";
+import { format } from "@/lib/tax-engine/utc-date";
 import { z } from "zod";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import {

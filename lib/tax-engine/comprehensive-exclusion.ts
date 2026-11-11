@@ -3,7 +3,7 @@
  * 종합부동산세법 §8②, 시행령 §3(임대주택)·§4(기타)
  */
 
-import { addYears } from "date-fns";
+import { addYears } from "./utc-date";
 import {
   COMPREHENSIVE_EXCL,
   COMPREHENSIVE_EXCL_CONST,

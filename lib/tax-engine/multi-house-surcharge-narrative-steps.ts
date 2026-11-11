@@ -10,7 +10,7 @@
  * - 주택은 내부 id로만 가리킨다(`houseNotes`) — 문장에 id를 넣지 않는다. 화면이 행 이름으로 바꿔 보여 준다.
  * - 「유리/불리·절감」 표현과 금액의 「원」 접미는 쓰지 않는다.
  */
-import { format } from "date-fns";
+import { format } from "./utc-date";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
 import { classifyRegionCriteriaDetail, resolveLowPriceLocalHouse, type RegionCriteriaReason } from "./multi-house-surcharge-count";

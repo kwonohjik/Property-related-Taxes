@@ -4,7 +4,7 @@
  * `general-building-route-actual.ts` 800줄 정책 분리. 카드 조립(그쪽)과 **시나리오 비교**(이쪽)는
  * 층이 다르다 — 이쪽은 그쪽을 **두 번 호출**해 신고단위 결정세액을 비교한다.
  */
-import { addYears } from "date-fns";
+import { addYears } from "@/lib/tax-engine/utc-date";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { judgeCarryoverEligibility } from "@/lib/tax-engine/transfer-tax-carryover-eligibility";
 import {

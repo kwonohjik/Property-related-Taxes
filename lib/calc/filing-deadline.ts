@@ -35,10 +35,10 @@ export function getFilingDeadline(transferDate: string, isBurdenedGift = false):
   const monthsAfter = isBurdenedGift ? 3 : 2;
   // new Date(y, m + N, 0) → "(m+N-1+1)월의 말일" (JS month는 0-indexed; day=0이면 전월의 마지막날)
   // 양도월(1-indexed m)의 말일 + N개월 = 양도월+N의 말일
-  const deadline = new Date(y, m + monthsAfter, 0);
-  const yy = deadline.getFullYear();
-  const mm = String(deadline.getMonth() + 1).padStart(2, "0");
-  const dd = String(deadline.getDate()).padStart(2, "0");
+  const deadline = new Date(Date.UTC(y, m + monthsAfter, 0));
+  const yy = deadline.getUTCFullYear();
+  const mm = String(deadline.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(deadline.getUTCDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
 }
 

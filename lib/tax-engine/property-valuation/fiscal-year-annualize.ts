@@ -15,7 +15,7 @@
  * 설계: docs/02-design/features/inheritance-unlisted-fiscal-year-under-1year.design.md
  */
 
-import { differenceInCalendarMonths } from "date-fns";
+import { differenceInCalendarMonths } from "../utc-date";
 import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 import type { FiscalYearAdjustment } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
@@ -77,8 +77,8 @@ export function buildDefaultFiscalYears(
     const y = evaluationYear - yearsAgo;
     return {
       fiscalYearLabel: String(y),
-      fiscalYearStartDate: new Date(y, 0, 1),   // (Y-n)-01-01
-      fiscalYearEndDate: new Date(y, 11, 31),   // (Y-n)-12-31
+      fiscalYearStartDate: new Date(Date.UTC(y, 0, 1)),   // (Y-n)-01-01
+      fiscalYearEndDate: new Date(Date.UTC(y, 11, 31)),   // (Y-n)-12-31
       taxableIncome: 0,
     };
   }
