@@ -97,6 +97,7 @@ import { withRedevCarryoverAcqMode } from "./redev-carryover-acq-mode";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
+import { bgIgnoresCommercialEstimated } from "./bg-asset-acq-mode-scope";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -388,7 +389,7 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     // 매매사례가액 추계(salesCase)는 useEstimatedAcquisition과 별개 경로 — false 송신
     useEstimatedAcquisition: hasPre1990 || parcelModeActive || isMixed || isSalesCase ? false
       // §163⑨: 상속 상가는 환산 미적용 → false 송신(STEP 0.35 게이트 무력화·엔진 가드와 이중).
-      : isCommercialBuilding ? (primary.acquisitionCause === "inheritance" ? false : primary.useEstimatedAcquisition)
+      : isCommercialBuilding ? (primary.acquisitionCause === "inheritance" || bgIgnoresCommercialEstimated(primary) ? false : primary.useEstimatedAcquisition)
       : isGeneralBuilding ? primary.useEstimatedAcquisition
       : isCarryoverGeneral ? true
       // 재개발 × 부담부증여 — ⑤ 라디오(화면에 없다)가 아니라 부담부증여 K-4/K-5가 정한다(⑤⑧과 같은 leaf). 숨은 라디오의 stale 값이

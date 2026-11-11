@@ -67,6 +67,7 @@ import { HOUSE_FIRST_DISCLOSURE_KIND_REQUIRED_MESSAGE, houseFirstDisclosureIssue
 import { apartNtsPriceIssue, isApartSec163_9Asset } from "./apart-nts-price";
 import { HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
 import { bgIgnoresAssetAppraisalSalesCase } from "./bg-asset-acq-mode-scope";
+import { bgIgnoresCommercialEstimated } from "./bg-asset-acq-mode-scope";
 
 /** 다필지 자산 검증 — 다필지 모드일 때(A12: 컴패니언은 호출부에서 먼저 차단된다). */
 function validateParcelMode(primary: AssetForm, formTransferDate?: string): string | null {
@@ -260,7 +261,7 @@ function validateAssetAcquisitionBranches(
     asset.assetKind === "commercial_building" ? giftEstimatedModeError(asset, label) : null;
   if (cbGiftEstErr) return cbGiftEstErr;
 
-  if (asset.assetKind === "commercial_building" && asset.useEstimatedAcquisition) {
+  if (asset.assetKind === "commercial_building" && asset.useEstimatedAcquisition && !bgIgnoresCommercialEstimated(asset)) {
     return validateCommercialEstimatedAsset(asset, label, formTransferDate);
   }
 
