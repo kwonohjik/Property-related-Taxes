@@ -38,6 +38,7 @@ import {
 import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
 import { judgePrelimMultiPeriod } from "@/lib/calc/stock-prelim-multi-period";
 import { StockPrelimMultiPeriodNotice } from "@/components/calc/stock-transfer/StockPrelimMultiPeriodNotice";
+import { StockRevisedFilingNotice } from "@/components/calc/stock-transfer/StockRevisedFilingNotice";
 
 interface Step3Props {
   form: StockTransferFormData;
@@ -517,6 +518,9 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
               onChange={(v) => onChange({ filingDate: v })}
             />
           </FieldCard>
+
+          {/* V-14 — 수정신고는 추가납부세액·가산세 감면을 계산하지 않는다는 안내(세액·전송 불변) */}
+          {filingType === "revised" && <StockRevisedFilingNotice />}
 
           {/* V-10 — 예정 + 다반기 합산: 합계는 과세기간 누계라는 안내(세액·전송 불변) */}
           {isMultiFiling && prelimMultiPeriod && (

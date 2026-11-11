@@ -35,6 +35,7 @@ import {
   electronicFilingCreditNotice,
   isElectronicFilingCreditApplicable,
 } from "../data/electronic-filing-credit-scope";
+import { stockRevisedFilingNotice } from "../data/revised-filing-notice";
 import { NBL_HEAVY_CORP_BRACKETS, NBL_HEAVY_CORP_CATEGORIES } from "./stock-rate-tables";
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
@@ -610,6 +611,9 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     applicable: isElectronicFilingCreditApplicable(input.filingType, input.transferDate),
   });
   if (electronicCreditNotice) warnings.push(electronicCreditNotice);
+  // 수정신고는 추가납부세액·가산세 감면을 계산하지 않는다(V-14) — 세액 불변 고지.
+  const revisedNotice = stockRevisedFilingNotice(input.filingType);
+  if (revisedNotice) warnings.push(revisedNotice);
 
   // ──────────────────────────────────────────────────────────
   // STEP 12.5: 증권거래세 정보성 산출 (appended step)

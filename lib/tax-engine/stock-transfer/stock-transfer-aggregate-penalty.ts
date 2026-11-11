@@ -22,6 +22,7 @@ import {
   stockFilingPenaltyEraNotice,
 } from "../data/filing-penalty-base-era";
 import { ELECTRONIC_FILING_CREDIT_NOT_APPLIED_NOTICE } from "../data/electronic-filing-credit-scope";
+import { REVISED_FILING_NOT_COMPUTED_NOTICE } from "../data/revised-filing-notice";
 import {
   computeStockFilingPenalty,
   computeStockLatePaymentPenalty,
@@ -94,7 +95,8 @@ export function stripItemPenalties(items: StockTransferResult[]): StockTransferR
         (w) =>
           !STOCK_PENALTY_RULE_REFS.includes(w) &&
           w !== FILING_PENALTY_BASE_ERA_NOTICE &&
-          w !== ELECTRONIC_FILING_CREDIT_NOT_APPLIED_NOTICE,
+          w !== ELECTRONIC_FILING_CREDIT_NOT_APPLIED_NOTICE &&
+          w !== REVISED_FILING_NOT_COMPUTED_NOTICE,
       ),
     };
   });

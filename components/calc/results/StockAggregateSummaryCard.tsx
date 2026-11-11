@@ -349,6 +349,17 @@ export function StockAggregateSummaryCard({
               </dd>
             </div>
           )}
+          {/* V-14 — 수정신고는 추가납부세액·가산세 감면을 계산하지 않는다는 고지(세액 불변) */}
+          {aggregate.revisedFilingNotice && (
+            <div>
+              <dd
+                data-testid="stock-revised-filing-result-notice"
+                className="text-xs text-muted-foreground"
+              >
+                {aggregate.revisedFilingNotice}
+              </dd>
+            </div>
+          )}
           <div className="flex justify-between">
             <dt>양도소득세 결정세액</dt>
             {/* 이력에 저장되는 값과 대조하는 E2E 셀렉터 — stock-multi-history-record.spec.ts */}

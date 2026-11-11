@@ -55,3 +55,22 @@
 2. §48②1호의 «경정할 것을 미리 알고» 제외와 가목~바목 기간은 법문 인용이며, 주식 사례에 대한 해석례는 찾지 않았다.
 3. 수정신고가 «확정신고를 한 자»에 한정되는지(예정신고만 한 자의 수정신고 — 예정신고도 §45의 과세표준신고서) 구분은 이 계획서가 다루지 않았다.
 4. 주식 수정신고·경정청구 진입점의 사용 빈도 — 모른다.
+
+## 6. 결정 · 구현 결과 (2026-11-11)
+
+**결정:** Q-1 = a(고지만) · Q-2 = 수정신고를 고르면 항상 · Q-3 = 기납부 칸 닫아 둠 유지(사용자 «모두 권장안으로»).
+
+**구현 (이 PR):**
+- `lib/tax-engine/data/revised-filing-notice.ts` 신규 — 고정 문구 `REVISED_FILING_NOT_COMPUTED_NOTICE`(기존 상수 `AMENDMENT_45`·`AMENDMENT_48_2` 조합), `stockRevisedFilingNotice(filingType)`, 합산용 `stockRevisedFilingNoticeOfFiling(items)`(신고 유형은 **유형을 가진 마지막 종목** — 국외 입력은 신고 유형 필드가 없어 V-21과 같은 규약).
+- 단건: `stock-transfer-tax.ts`가 `warnings`에 고지. 합산·건별: 결과 `revisedFilingNotice` echo(신고 단위 1회), 종목 행 경고는 `stripItemPenalties`가 걷어낸다. 카드: «양도소득세 결정세액» 위 한 줄(`stock-revised-filing-result-notice`).
+- Step3: 수정신고를 고르면 `StockRevisedFilingNotice` 카드(`stock-revised-filing-notice`) — 추가납부세액·§48②1호 미계산, 결정세액은 수정 후 전체 세액, 당초 세액을 직접 빼라는 안내.
+- **세액 불변** — 수정신고와 확정신고의 결과가 `warnings`를 제외하고 동일함을 anchor가 고정한다(RV-1-3·RV-2-4).
+- Q-3 기납부(§111③) 칸은 코드 변경 없음.
+
+**검증:**
+- anchor 신규 2파일 16건(엔진 11 · 화면 5). 구현 **전**에는 고지 모듈이 없어 두 파일이 로드조차 되지 않았다(import 실패 — 단언 단위의 결함 재현은 아님).
+- 뮤테이션 10종 전부 사망(판정 반전·합산 유형 선택·단건 push·합산 echo·건별 echo·종목 행 고지 제거·카드 렌더·Step3 조건 제거/항상 노출·문구). 처음에 M2(합산 유형 «마지막 종목» 고정)가 **생존**했다 — 테스트 입력에 국외 종목이 없어서였다 → 국외 혼합 3케이스(RV-2-5~7) 추가 후 사망.
+- 회귀 5묶음 통과(api 7,124 · tax-engine 19,419 · calc 11,795 · lib 3,407 · components 7,123) · `tsc`(힙 8GB) 0 · eslint 오류 0 · Playwright 로컬 7건 통과(`stock-preliminary-paid-settlement` PS-1·2·3·4 · `stock-penalty-filing-unit` PE-1~3). 기존 테스트 변경 0건.
+- 구현 중 잡은 결함: 합산 헬퍼 파라미터 타입 `{ filingType?: string }`이 국외 입력과 겹치는 필드가 없어 TS 약한 타입 검사(TS2345)에 걸렸다 → `transferDate?: Date`를 겹치는 필드로 추가(`tsc` 0).
+
+**미검증 갱신:** §5의 1~4는 그대로. 수정신고 계산 자체(Q-1 b)는 하지 않았다 — 필요해지면 별도 계획서로 시작한다.
