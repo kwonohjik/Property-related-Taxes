@@ -26,6 +26,7 @@ import {
   stripItemPenalties,
   computeFilingUnitPenalty,
   penaltyEcho,
+  penaltyEraEcho,
 } from "./stock-transfer-aggregate-penalty";
 // ⚠️ **타입 전용 import** — 값으로 가져오면 main 과 순환이 된다(main 이 이 파일을 부른다).
 import type { StockTransferAggregateResult } from "./stock-transfer-aggregate";
@@ -111,6 +112,7 @@ export function aggregateEachItem(
     totalLatePaymentPenalty,
     // 🔴 G-46: 기준금액·조문·가목나목 분해 echo — 다종목에서 산식이 사라지지 않도록.
     ...penaltyEcho(unitPenalty),
+    ...penaltyEraEcho(unitPenalty, inputs),
     electronicFilingCredit,
     totalFinalTax,
     totalLocalIncomeTax,

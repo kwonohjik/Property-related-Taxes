@@ -18,6 +18,10 @@ import {
 import type { FraudPortionSplit } from "../transfer-tax-penalty";
 import { floorTen } from "./stock-transfer-helpers";
 import {
+  FILING_PENALTY_BASE_ERA_NOTICE,
+  stockFilingPenaltyEraNotice,
+} from "../data/filing-penalty-base-era";
+import {
   computeStockFilingPenalty,
   computeStockLatePaymentPenalty,
   STOCK_PENALTY_RULE_REFS,
@@ -85,7 +89,9 @@ export function stripItemPenalties(items: StockTransferResult[]): StockTransferR
       finalTax: Math.max(0, floorTen(r.calculatedTax - foreignCredit - r.electronicFilingCredit)),
       // 값과 함께 **조문 표시도** 걷는다 — 안 그러면 「가산세 0인데 §47조의3 40% 배지」가 남는다
       // (메모리 `feedback_engine_result_display_drift`).
-      warnings: (r.warnings ?? []).filter((w) => !STOCK_PENALTY_RULE_REFS.includes(w)),
+      warnings: (r.warnings ?? []).filter(
+        (w) => !STOCK_PENALTY_RULE_REFS.includes(w) && w !== FILING_PENALTY_BASE_ERA_NOTICE,
+      ),
     };
   });
 }
@@ -141,6 +147,30 @@ export function penaltyEcho(u: ReturnType<typeof computeFilingUnitPenalty>): {
     ...(u.ruleRef ? { penaltyRuleRef: u.ruleRef } : {}),
     ...(u.fraudSplit ? { fraudSplit: u.fraudSplit } : {}),
   };
+}
+
+/**
+ * 2015.7.1. 전 양도분 가산세 **시기 고지** echo (V-18, 계획서 `stock-penalty-base-guideline-v15.plan.md` Q-2 a) — 세액 불변.
+ *
+ * 가산세는 신고 단위 1회라 시기도 신고 단위로 한 번만 싣는다(종목 행에는 `stripItemPenalties`가 걷어낸다). 신고 안에 종전 양도일 종목이
+ * 하나라도 있으면 «가장 이른 양도일»로 판정한다. 위반 선언은 가산세 축을 든 종목(`pickFilingAxisInput`)의 값이다.
+ */
+export function penaltyEraEcho(
+  u: ReturnType<typeof computeFilingUnitPenalty>,
+  inputs: AggregateStockItemInput[],
+): { penaltyEraNotice?: string } {
+  const axis = pickFilingAxisInput(inputs);
+  let earliest: Date | undefined;
+  for (const i of inputs) {
+    const d = i.transferDate;
+    if (d instanceof Date && (!earliest || d.getTime() < earliest.getTime())) earliest = d;
+  }
+  const notice = stockFilingPenaltyEraNotice({
+    filingViolation: axis?.filingViolation,
+    transferDate: earliest,
+    penalty: u.filing,
+  });
+  return notice ? { penaltyEraNotice: notice } : {};
 }
 
 /** 합산 계산 본체 — 이월과세 A/B가 **이미 확정된** 입력을 받는다. */

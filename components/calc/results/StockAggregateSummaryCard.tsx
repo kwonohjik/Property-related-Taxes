@@ -319,6 +319,15 @@ export function StockAggregateSummaryCard({
                     </span>
                   )
                 )}
+                {/* V-18 — 2015.7.1. 전 양도분: 종전 가산세 규정과 다를 수 있다는 시기 고지(세액 불변) */}
+                {aggregate.penaltyEraNotice && (
+                  <span
+                    data-testid="stock-penalty-era-notice"
+                    className="block text-xs text-muted-foreground"
+                  >
+                    {aggregate.penaltyEraNotice}
+                  </span>
+                )}
               </dt>
               <dd className="font-mono tabular-nums">{won(aggregate.totalUnderReportPenalty)}</dd>
             </div>
