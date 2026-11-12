@@ -84,3 +84,21 @@ describe("AS-4 5개 과세기간 — 나목(§77 저율분 2억)", () => {
     expect(r.reductionAmount).toBe(E(0.5));
   });
 });
+
+describe("AS-5 2009-03-16~2010 — 연 가목 §77 (V-15 해소, 시행본 직접 대조)", () => {
+  for (const [y, d] of [[2009, "2009-06-01"], [2010, "2010-06-01"]] as const) {
+    it(`AS-5 ${y} §77 1건·2건 → 1억 (종전 2억)`, () => {
+      expect(run(y, d, ["e"]).reductionAmount).toBe(E(1));
+      expect(run(y, d, ["e", "e"]).reductionAmount).toBe(E(1));
+    });
+    it(`AS-5b ${y} §77 + 자경 → 2억 / 자경 2건 → 2억`, () => {
+      expect(run(y, d, ["e", "s"]).reductionAmount).toBe(E(2));
+      expect(run(y, d, ["s", "s"]).reductionAmount).toBe(E(2));
+    });
+  }
+  it("AS-5c 2010 고율분(채권 5년 보유)은 가목이 아니다 → 2억 / 2009는 감면율 한정이 없어 1억", () => {
+    const over = { cashCompensation: 0, bondCompensation: 5_000_000_000, bondHoldingYears: 5 };
+    expect(run(2010, "2010-06-01", ["e"], { e77Over: over }).reductionAmount).toBe(E(2));
+    expect(run(2009, "2009-06-01", ["e"], { e77Over: over }).reductionAmount).toBe(E(1));
+  });
+});
