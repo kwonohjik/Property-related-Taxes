@@ -54,7 +54,10 @@ export function effectiveSellingTaxIncentiveRental(se: SellingExclusion): TaxInc
   const sharesRental = sellingTaxIncentiveSharesRentalFacts(se);
   return {
     ...tir,
+    // 옛 기록의 연수도 같은 규칙으로 고른다(④는 보내지 않지만 양도 주택 교체가 옮긴다 — `swap-selling-house.ts`).
     rentalPeriodYears: sharesRental ? ltr?.rentalPeriodYears : tir.rentalPeriodYears,
+    rentalStartDate: sharesRental ? ltr?.rentalStartDate : tir.rentalStartDate,
+    rentalEndDate: sharesRental ? ltr?.rentalEndDate : tir.rentalEndDate,
     isApartment: sharesRental ? ltr?.isApartment : tir.isApartment,
     isNationalSizeHousing: sellingTaxIncentiveSharesNationalSize(se)
       ? ltr?.isNationalSizeHousing
@@ -108,7 +111,9 @@ export function taxIncentiveRentalPayload(f: TaxIncentiveRentalFacts | undefined
   if (!f?.isTaxIncentiveRental) return {};
   return {
     isTaxIncentiveRental: true,
-    rentalPeriodYears: f.rentalPeriodYears ? parseFloat(f.rentalPeriodYears) : undefined,
+    // 3호도 임대개시일·종료일만 — 엔진이 자르지 않고 센다(소령 §167의3③은 2호 한정). 상속 개월은 2호 전용이라 싣지 않는다.
+    rentalStartDate: f.rentalStartDate || undefined,
+    rentalEndDate: f.rentalEndDate || undefined,
     isNationalSizeHousing: f.isNationalSizeHousing ?? false,
     isTaxIncentiveRentalPurchase: f.isTaxIncentiveRentalPurchase,
     taxIncentiveRentalRegistrationType: f.taxIncentiveRentalRegistrationType,
@@ -118,9 +123,43 @@ export function taxIncentiveRentalPayload(f: TaxIncentiveRentalFacts | undefined
   };
 }
 
-/** ⑧ 임대기간 미입력 판정 — 엔진은 미입력을 0년으로 읽어 3호를 **조용히** 불적용한다. */
+/** ⑧ 임대개시일 미입력 판정 — 엔진은 미입력을 0년으로 읽어 3호를 **조용히** 불적용한다. */
 export function taxIncentiveRentalPeriodMissing(f: TaxIncentiveRentalFacts | undefined): boolean {
-  return !!f?.isTaxIncentiveRental && !(parseFloat(f.rentalPeriodYears ?? "") > 0);
+  return !!f?.isTaxIncentiveRental && !f.rentalStartDate;
+}
+
+/**
+ * ④ 2호 임대기간 사실 → `houseSchema` 필드(양도 주택 2호 선언·명부 행 공용). 연수는 싣지 않는다(Q-3).
+ * 피상속인 개월은 「상속받아 계속 임대」가 켜져 있고 값이 있을 때만(조특령 §97⑤3호).
+ */
+export function rentalPeriodDatesPayload(r: {
+  rentalStartDate?: string;
+  rentalEndDate?: string;
+  isInheritedRental?: boolean;
+  decedentRentalMonths?: string;
+}): object {
+  const decedent = r.isInheritedRental ? parseFloat(r.decedentRentalMonths ?? "") : NaN;
+  return {
+    rentalStartDate: r.rentalStartDate || undefined,
+    rentalEndDate: r.rentalEndDate || undefined,
+    decedentRentalMonths: decedent > 0 ? decedent : undefined,
+  };
+}
+
+/**
+ * ⑧ 2호 임대기간 입력 문제 — 개시일 필수 여부는 호출부가 정하고(현행과 같은 범위), 여기서는 날짜 역전·상속 개월 미입력만 본다.
+ */
+export function rentalPeriodDatesIssue(r: {
+  rentalStartDate?: string;
+  rentalEndDate?: string;
+  isInheritedRental?: boolean;
+  decedentRentalMonths?: string;
+}): string | null {
+  if (r.rentalStartDate && r.rentalEndDate && r.rentalEndDate < r.rentalStartDate)
+    return "임대 종료일은 임대개시일 이후여야 합니다.";
+  if (r.isInheritedRental && !(parseFloat(r.decedentRentalMonths ?? "") > 0))
+    return "상속받아 계속 임대하는 주택이면 피상속인 임대기간(개월)을 입력하세요.";
+  return null;
 }
 
 /**

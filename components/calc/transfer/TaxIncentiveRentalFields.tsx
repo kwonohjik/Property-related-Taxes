@@ -16,10 +16,10 @@
  * 정책: ToggleCard/RadioCardGroup/DateInput/DecimalInput 전용 · onChange 직접 patch(useEffect 미러링 금지).
  */
 
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { AptDeadlineExtensionFields } from "@/components/calc/transfer/AptDeadlineExtensionFields";
+import { RentalPeriodDatesFields } from "@/components/calc/transfer/RentalPeriodDatesFields";
 import type {
   TaxIncentiveRentalFacts,
   TaxIncentiveRentalRegistrationType,
@@ -67,17 +67,16 @@ export function TaxIncentiveRentalFields({
     <div className="space-y-3 pt-1">
       {rentalPeriodSharedWith2ho ? (
         <p className={HINT}>
-          임대기간·아파트 여부는 위 「장기임대주택」 칸에 적은 값을 함께 씁니다 (같은 주택의 같은 사실).
+          임대개시일·종료일·아파트 여부는 위 「장기임대주택」 칸에 적은 값을 함께 씁니다(3호는 등록일로 자르지 않고 셉니다) (같은 주택의 같은 사실).
         </p>
       ) : (
-        <div className="space-y-1" data-field={fieldRentalPeriod}>
-          <label className={LABEL}>임대기간 (년)</label>
-          <DecimalInput
-            value={v.rentalPeriodYears ?? ""}
-            onChange={(s) => onPatch({ rentalPeriodYears: s || undefined })}
-            placeholder="임대기간 입력"
+        <div data-field={fieldRentalPeriod}>
+          <RentalPeriodDatesFields
+            value={v}
+            onPatch={onPatch}
+            variant="tax_incentive"
+            testIdPrefix={`${idPrefix}-tax-incentive`}
           />
-          <p className={HINT}>5년 이상 임대해야 합니다 (소령 §167의3①3호).</p>
         </div>
       )}
 

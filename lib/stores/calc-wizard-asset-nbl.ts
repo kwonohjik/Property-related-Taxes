@@ -346,8 +346,22 @@ export interface HouseEntry {
   rentalRegistrationDate?: string;
   /** 사업자 등록일 */
   businessRegistrationDate?: string;
-  /** 임대기간(년) — 5년 이상이면 legacy 배제 충족 */
+  /**
+   * 임대기간(년) — **화면은 더 이상 받지 않는다**(옛 기록 값 · ④도 보내지 않음). 임대개시일(`rentalStartDate`)로
+   * 엔진이 계산한다(계획서 `surcharge-rental-period-dates.plan.md` Q-3).
+   */
   rentalPeriodYears?: string;
+  /**
+   * 임대개시일(YYYY-MM-DD) — 2호·3호 같은 칸. 엔진은 2호만 세무서 사업자등록일·지자체 등록일 중 늦은 날로 자른다
+   * (소령 §167의3③), 3호는 그대로 센다(`multi-house-rental-period.ts`).
+   */
+  rentalStartDate?: string;
+  /** 임대 종료일(YYYY-MM-DD) — 비우면 양도일까지 임대한 것으로 본다(Q-1) */
+  rentalEndDate?: string;
+  /** 2호 상속 — 상속받아 계속 임대(조특령 §97⑤3호, 소령 §167의3③ 준용). undefined = 아님 */
+  isInheritedRental?: boolean;
+  /** 2호 상속 — 피상속인 임대개월(문자열). `isInheritedRental`일 때만 ④가 싣는다 */
+  decedentRentalMonths?: string;
   /** 임대사업자 말소일 (양도일 이전 말소 시 임대 배제 해제) */
   rentalCancelledDate?: string;
   /** 말소 사유 — 자동말소면 가·다~마목은 §167의3①2호 단서로 임대기간요건 간주 충족. ""·undefined = 미선택 */

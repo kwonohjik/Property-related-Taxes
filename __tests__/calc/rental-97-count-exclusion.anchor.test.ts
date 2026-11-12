@@ -201,7 +201,7 @@ describe("R97-5 축 분리 — 3호 칩은 비과세 주택 수를 바꾸지 않
       row("r", "1998-01-01", {
         isTaxIncentiveRental: true,
         isTaxIncentiveRentalPurchase: false,
-        rentalPeriodYears: "20",
+        rentalStartDate: "1998-01-01", // PR-2 Q-3 — 연수 "20" 대신(3호 — 자르지 않음)
         isNationalSizeHousing: true,
       } as Partial<HouseEntry>),
     ]);
@@ -211,7 +211,7 @@ describe("R97-5 축 분리 — 3호 칩은 비과세 주택 수를 바꾸지 않
     const r = await runCalc([
       row("r", "1998-01-01", {
         isTaxIncentiveRental: true,
-        rentalPeriodYears: "20",
+        rentalStartDate: "1998-01-01", // PR-2 Q-3 — 연수 "20" 대신(3호 — 자르지 않음)
         isNationalSizeHousing: true,
         countExclusion: { kind: "special", special: special({}) },
       } as Partial<HouseEntry>),

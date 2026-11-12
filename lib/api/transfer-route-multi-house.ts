@@ -94,6 +94,9 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     rentalRegistrationDate: toOptionalDate(h.rentalRegistrationDate),
     businessRegistrationDate: toOptionalDate(h.businessRegistrationDate),
     rentalPeriodYears: h.rentalPeriodYears,
+    rentalStartDate: toOptionalDate(h.rentalStartDate),
+    rentalEndDate: toOptionalDate(h.rentalEndDate),
+    decedentRentalMonths: h.decedentRentalMonths,
     rentalCancelledDate: toOptionalDate(h.rentalCancelledDate),
     rentalCancellationReason: h.rentalCancellationReason, // §167의3①2호 단서
     // ⑭ 장기임대 9유형 매트릭스 18필드 — 폼/Zod 이름(rentalLandArea·rentalTotalFloorArea) →

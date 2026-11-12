@@ -68,7 +68,7 @@ function calcSeed() {
             businessRegistrationDate: "2018-01-01",
             rentalStartOfficialPrice: "300000000",
             rentIncreaseUnder5Pct: true,
-            rentalPeriodYears: "8",
+            rentalStartDate: "2018-01-01", // PR-2 Q-3 — 연수 칸 대신 임대개시일
             rentalAptDeadlineExtension: { status: "none" },
           },
         ],
@@ -144,7 +144,7 @@ test.describe("V11 계산기 명부 2호 장기임대 행 — 도시형 생활�
 function sellingSeed() {
   const s = calcSeed();
   const h2 = s.state.formData.houses[0];
-  const { rentalType, rentalRegistrationDate, businessRegistrationDate, rentalStartOfficialPrice, rentIncreaseUnder5Pct, rentalPeriodYears, rentalAptDeadlineExtension } = h2;
+  const { rentalType, rentalRegistrationDate, businessRegistrationDate, rentalStartOfficialPrice, rentIncreaseUnder5Pct, rentalStartDate, rentalAptDeadlineExtension } = h2;
   Object.assign(s.state.formData, {
     houses: [{ ...h2, isLongTermRental: false, isRegisteredRental: false, rentalType: undefined, rentalAptDeadlineExtension: undefined }],
     sellingHouseExclusion: {
@@ -157,7 +157,7 @@ function sellingSeed() {
         businessRegistrationDate,
         rentalStartOfficialPrice,
         rentIncreaseUnder5Pct,
-        rentalPeriodYears,
+        rentalStartDate,
         rentalAptDeadlineExtension,
       },
     },

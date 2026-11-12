@@ -41,7 +41,7 @@ import type {
   RegulatedAreaHistory,
 } from "./types/multi-house-surcharge.types";
 import {
-  calcRentalPeriodYears,
+  calcTaxIncentiveRentalPeriodYears,
   isSurchargeExemptRental,
   isSurchargeExemptInherited,
   isTaxIncentiveRentalHousingExempt,
@@ -506,7 +506,7 @@ export function determineSurchargeExclusion(
     if (isTaxIncentiveRentalHousingExempt(sellingHouse, input.transferDate)) {
       exclusionReasons.push({
         type: "tax_incentive_rental",
-        detail: `조특법 감면 장기임대주택 (국민주택 ${calcRentalPeriodYears(sellingHouse)}년 임대)`,
+        detail: `조특법 감면 장기임대주택 (국민주택 ${calcTaxIncentiveRentalPeriodYears(sellingHouse, input.transferDate)}년 임대)`,
       });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }

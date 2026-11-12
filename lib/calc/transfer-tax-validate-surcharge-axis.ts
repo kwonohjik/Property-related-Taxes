@@ -19,6 +19,8 @@ import {
   sellingRentalDeclarationView,
   taxIncentiveAptDeadlineIncomplete,
   taxIncentiveRentalPeriodMissing,
+  rentalPeriodDatesIssue,
+  sellingTaxIncentiveSharesRentalFacts,
 } from "./tax-incentive-rental-scope";
 import { aptDeadlineExtensionIncomplete, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import type { HouseEntry, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -51,8 +53,11 @@ export function houseRowSurchargeAxisIssue(
   if (h.isLongTermRental && h.isRegisteredRental) {
     if (!h.rentalRegistrationDate) return `${label}: 임대사업자 등록 신청일을 입력하세요.`;
     if (!h.businessRegistrationDate) return `${label}: 사업자 등록일을 입력하세요.`;
-    if (!h.rentalPeriodYears || parseFloat(h.rentalPeriodYears) <= 0)
-      return `${label}: 임대기간(년)을 입력하세요.`;
+    if (!h.rentalStartDate) return `${label}: 임대개시일을 입력하세요.`;
+  }
+  if (h.isLongTermRental) {
+    const periodIssue = rentalPeriodDatesIssue(h);
+    if (periodIssue) return `${label}: ${periodIssue}`;
   }
   // 장기임대 9유형: 유형별 필수 입력값(가액·면적·날짜) — 미입력 시 엔진 오판정
   // (특히 면적 미입력 → 엔진 0 간주 → 298㎡ 이하 통과 → 과대 적용). 판정 메뉴 ⑧과 **같은 leaf**(S09-1).
@@ -60,7 +65,7 @@ export function houseRowSurchargeAxisIssue(
   if (rentalTypeIssue) return `${label}: ${rentalTypeIssue.message}`;
   // §167의3①3호 감면대상장기임대주택 — 「5년 이상 임대」 판정 칸. 미입력이면 엔진이 0년으로 읽어 조용히 불적용.
   if (taxIncentiveRentalPeriodMissing(h))
-    return `${label}: 조특법 감면 임대주택이면 임대기간(년)을 입력하세요.`;
+    return `${label}: 조특법 감면 임대주택이면 임대개시일을 입력하세요.`;
   // §167의3⑪ 「연장 사유 있음」 입력이 덜 됐다(사실 없음 · 3호 이전고시 상태 없음) — 그대로면 선택이 조용히 사라지거나
   // 3호 기한을 정할 수 없다. 2호는 ⑤·④와 같은 범위 술어 안에서만, 3호는 ⑤가 칸을 여는 후단 대상에서만.
   const ext2Issue = rentalDeclarationAptDeadlineInScope(h) ? aptDeadlineExtensionIncomplete(h.rentalAptDeadlineExtension) : null;
@@ -100,7 +105,14 @@ export function collectSellingHouseSurchargeIssues(form: TransferFormData): Surc
 
   // ⑧ 양도 주택 §167의3①3호 — 2호 선언이 켜져 있으면 그 칸의 임대기간을 함께 쓴다(⑤·④와 같은 유효 사실).
   if (taxIncentiveRentalPeriodMissing(effectiveSellingTaxIncentiveRental(se)))
-    out.push({ field: "sellingHouseExclusion.taxIncentiveRentalYears", message: "양도 주택 조특법 감면 임대주택: 임대기간(년)을 입력하세요." });
+    out.push({ field: "sellingHouseExclusion.taxIncentiveRentalYears", message: "양도 주택 조특법 감면 임대주택: 임대개시일을 입력하세요." });
+  // ⑧ 양도 주택 2호 — 날짜 역전·상속 개월 미입력(명부 행과 같은 leaf)
+  const sellPeriodIssue = se?.longTermRental?.isLongTermRental ? rentalPeriodDatesIssue(se.longTermRental) : null;
+  if (sellPeriodIssue) out.push({ message: `양도 주택 장기임대: ${sellPeriodIssue}` });
+  const tirPeriodIssue = se?.taxIncentiveRental?.isTaxIncentiveRental && !sellingTaxIncentiveSharesRentalFacts(se)
+    ? rentalPeriodDatesIssue({ rentalStartDate: se.taxIncentiveRental.rentalStartDate, rentalEndDate: se.taxIncentiveRental.rentalEndDate })
+    : null;
+  if (tirPeriodIssue) out.push({ message: `양도 주택 조특법 감면 임대주택: ${tirPeriodIssue}` });
   // ⑧ 양도 주택 §167의3⑪ 「연장 사유 있음」 입력 미완 — 2호·3호 각자의 범위 술어(⑤·④와 같음)
   //   2호 범위는 3호 칸과 합친 도시형 생활주택 유효 사실로 본다(V-12 — ⑤·④와 같은 보기).
   const sell2Issue = rentalDeclarationAptDeadlineInScope(sellingRentalDeclarationView(se))

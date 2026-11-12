@@ -384,7 +384,8 @@ describe("#16-1 4호 가드 — ⑧ 주택이 중과 주택 수 2채 안에 있�
     expect(r.mhWarnings.some((w) => w.includes("§167의3①3호") && w.includes("확인이 필요합니다"))).toBe(true);
   });
   it("L8 3호 행에 「조특법 감면 임대주택(3호)」 사실이 있으면 고지하지 않는다(그 칩이 판정한다 — 여기서는 국민주택 아님이라 중과)", async () => {
-    const chip = { ...RENTAL97_ROW, isTaxIncentiveRental: true, rentalPeriodYears: "6", isNationalSizeHousing: false } as HouseEntry;
+    // PR-2 Q-3 — 화면은 연수 대신 임대개시일(3호는 자르지 않음 · 1999.6.1. 임대개시)
+    const chip = { ...RENTAL97_ROW, isTaxIncentiveRental: true, rentalStartDate: "1999-06-01", isNationalSizeHousing: false } as HouseEntry;
     const r = await run(form([UNAV_OUT, chip], { transferDate: TD_2021 }));
     expect(r).toMatchObject({ totalTax: 597_025_000, reasons: "" });
     expect(r.mhWarnings.some((w) => w.includes("§167의3①3호") && w.includes("확인이 필요합니다"))).toBe(false);

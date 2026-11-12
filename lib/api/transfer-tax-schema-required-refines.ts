@@ -56,6 +56,7 @@ type HouseRow = {
   dayCareInUse?: boolean;
   isTaxIncentiveRental?: boolean;
   rentalPeriodYears?: number;
+  rentalStartDate?: string;
   isUnavoidableOutsideCapital?: boolean;
 };
 
@@ -86,10 +87,11 @@ export function refineHouseExclusionInputs(
     // §167의3①8호의2 「사용하지 않게 된 날부터 6개월」 — 사용 종료일과 「사용 중」은 택일(⑧ `dayCareUsageStatusIssue`의 거울 + 모순).
     const dayCareIssue = dayCareUsageStatusIssue(h) ?? dayCareUsageStatusConflict(h);
     if (dayCareIssue) issue(["houses", i, dayCareIssue.field], dayCareIssue.message);
-    // 3호 「5년 이상 임대」 — 비우면 `calcRentalPeriodYears`가 0년으로 읽어 3호가 조용히 빠진다.
+    // 3호 「5년 이상 임대」 — 임대개시일·연수가 모두 없으면 `calcTaxIncentiveRentalPeriodYears`가 0년으로 읽어 3호가 조용히 빠진다.
     // ⑧ `taxIncentiveRentalPeriodMissing`의 거울: 양도 주택은 ④가 유효 사실(2호 선언 시 2호 칸)을 이 칸에 싣는다.
-    if (h.isTaxIncentiveRental === true && !positive(h.rentalPeriodYears))
-      issue(["houses", i, "rentalPeriodYears"], "조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대기간(년)이 필요합니다");
+    // 화면은 임대개시일만 보내고, 직접 API는 연수도 받는다(둘 중 하나).
+    if (h.isTaxIncentiveRental === true && !h.rentalStartDate && !positive(h.rentalPeriodYears))
+      issue(["houses", i, "rentalStartDate"], "조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대개시일이 필요합니다");
   });
   // §155⑧ 「각각 1개씩」 — ⑧ 표시 행은 한 채(⑧ `duplicateUnavoidableOutsideCapitalRows`의 거울). 둘째 행이 있으면 세대 판정과
   //   중과 4호가 서로 다른 행을 볼 수 있었다. ⑧은 양도일 현재 보유 행만 세는데(`duplicateOwnedUnavoidableOutsideCapitalRows`)

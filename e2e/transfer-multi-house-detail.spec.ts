@@ -97,16 +97,20 @@ test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () =>
     await toggleCardByTitle(dialog, "장기임대 등록주택");
     await expect(dialog.getByText("임대사업자 정식 등록", { exact: true })).toBeVisible();
 
-    // 등록사업자 ON → 등록일 2종 + 임대기간 노출
+    // 등록사업자 ON → 등록일 2종 노출 · 임대기간은 임대개시일로(PR-2 Q-3 — 「임대기간 (년)」 칸 없음)
     await toggleCardByTitle(dialog, "임대사업자 정식 등록");
     await expect(dialog.getByText("임대사업자 등록 신청일", { exact: true })).toBeVisible();
     await expect(dialog.getByText("사업자 등록일", { exact: true })).toBeVisible();
-    await expect(dialog.getByText("임대기간 (년)", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("임대기간 (년)", { exact: true })).toHaveCount(0);
 
-    // 임대기간 입력 (DecimalInput — placeholder)
-    const periodInput = dialog.getByPlaceholder("임대기간 입력");
-    await periodInput.fill("8");
-    await expect(periodInput).toHaveValue("8");
+    // 임대개시일 입력 (DateInput — 연/월/일 3칸, 이 행의 임대기간 묶음 안)
+    const period = dialog.locator('[data-testid$="-rental-period"]').first();
+    await expect(period.getByText("임대개시일", { exact: true })).toBeVisible();
+    const startYear = period.getByRole("textbox", { name: "연도" }).first();
+    await startYear.fill("2016");
+    await period.getByRole("textbox", { name: "월" }).first().fill("1");
+    await period.getByRole("textbox", { name: "일" }).first().fill("1");
+    await expect(startYear).toHaveValue("2016");
 
     // 완료 → 모달 닫힘
     await dialog.getByRole("button", { name: "완료" }).click();

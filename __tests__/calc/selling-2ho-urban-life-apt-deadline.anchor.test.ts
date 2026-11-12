@@ -54,7 +54,7 @@ const ltr = (patch: Partial<RentalDeclaration> = {}): RentalDeclaration => ({
   businessRegistrationDate: "2018-01-01",
   rentalStartOfficialPrice: "300000000",
   rentIncreaseUnder5Pct: true,
-  rentalPeriodYears: "8",
+  rentalStartDate: "2018-01-01", // PR-2 Q-3 — 연수 "8" 대신(등록일과 같은 날 · 양도 2027~2028까지 5년 이상)
   rentalAptDeadlineExtension: { status: "none" },
   ...patch,
 });

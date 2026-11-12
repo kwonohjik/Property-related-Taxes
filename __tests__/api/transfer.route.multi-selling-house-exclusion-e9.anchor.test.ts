@@ -158,7 +158,8 @@ const THREE_PLUS: [string, Exclusion, string?][] = [
         isRegisteredRental: true,
         rentalRegistrationDate: "2017-01-01",
         businessRegistrationDate: "2017-01-01",
-        rentalPeriodYears: "6",
+        // PR-2 Q-3 — 화면은 연수 대신 임대개시일(2020-09-18 → 양도 2026-09-18까지 6년)
+        rentalStartDate: "2020-09-18",
       },
     },
   ],

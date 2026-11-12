@@ -1,6 +1,10 @@
 /**
  * anchor — ⑫ 소령 §167의3①3호 선언 시 **임대기간 필수** (⑧ `taxIncentiveRentalPeriodMissing`의 거울).
  *
+ * 2026-11-12 PR-2(계획서 `surcharge-rental-period-dates.plan.md` Q-3): 화면은 「임대기간 (년)」 대신 **임대개시일**을 받고
+ * ④는 날짜만 싣는다. ⑫는 임대개시일 또는 연수(직접 API) 중 하나를 요구한다 — 옛 기록의 연수만 남은 폼은 ⑧이 막고
+ * ④가 연수를 싣지 않으므로 ⑫도 400(같은 결론).
+ *
  * ## 결함 — 선언만 오고 임대기간이 없으면 200 + 중과
  *
  * 3호는 「…감면되는 임대주택으로서 **5년 이상 임대한** 국민주택」이다(MST 290841 실독). 엔진은
@@ -11,7 +15,7 @@
  *
  * ⑧ 명부 행 `taxIncentiveRentalPeriodMissing(h)` · 양도 주택 `taxIncentiveRentalPeriodMissing(effectiveSellingTaxIncentiveRental(se))`
  * — 양도 주택은 2호 선언이 켜져 있으면 **2호 칸의 임대기간**을 쓴다(같은 사실). ④는 그 유효 사실을
- * `houses[i].rentalPeriodYears`로 싣는다 ⇒ ⑫는 행 단위 `isTaxIncentiveRental === true && !(rentalPeriodYears > 0)`
+ * `houses[i].rentalStartDate`로 싣는다 ⇒ ⑫는 행 단위 `isTaxIncentiveRental === true && !rentalStartDate && !(rentalPeriodYears > 0)`
  * 하나로 두 경로를 다 덮는다. 아래 각 케이스는 **⑧ 차단 여부와 ⑫ 400 여부가 같다**는 것을 함께 본다
  * (「UI 통과 ↔ API 400」 모순 금지).
  *
@@ -48,7 +52,7 @@ type Obj = Record<string, unknown>;
 type SellingExclusion = NonNullable<Form["sellingHouseExclusion"]>;
 
 const GANGNAM = "1168010100";
-const MSG = "조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대기간(년)이 필요합니다";
+const MSG = "조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대개시일이 필요합니다";
 
 const general = (id: string, over: Partial<HouseEntry> = {}): HouseEntry => ({
   id,
@@ -128,7 +132,9 @@ async function multi(f: Form) {
   return outcome(await post(MULTI, "http://l/api/calc/transfer/multi", body));
 }
 /** ⑧ — 3호 임대기간 문구가 step 1 issue로 나오는가 */
-const blockedBy8 = (f: Form) => collectStep1Issues(f).some((i) => i.message.includes("조특법 감면 임대주택") && i.message.includes("임대기간"));
+const blockedBy8 = (f: Form) => collectStep1Issues(f).some((i) => i.message.includes("조특법 감면 임대주택") && i.message.includes("임대개시일"));
+/** 2026-08-01 양도 기준 12년 임대 */
+const START = "2014-01-01";
 
 const sellingSe = (se: SellingExclusion): Partial<Form> => ({ sellingHouseExclusion: se });
 const TIR = { isTaxIncentiveRental: true, isNationalSizeHousing: true, isApartment: true } as const;
@@ -141,23 +147,23 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("P-1 양도 주택 3호 — 단건 route", () => {
-  it("선언 + 임대기간 없음 → ⑧ 차단 · ⑫ 400(houses.0.rentalPeriodYears)", async () => {
+  it("선언 + 임대개시일 없음 → ⑧ 차단 · ⑫ 400(houses.0.rentalStartDate)", async () => {
     const f = form([general("h2")], sellingSe({ taxIncentiveRental: { ...TIR } }));
     expect(blockedBy8(f)).toBe(true);
     const r = await single(f);
     expect(r.status).toBe(400);
     expect(r.messages).toContain(MSG);
-    expect(r.fieldKeys).toContain("houses.0.rentalPeriodYears");
+    expect(r.fieldKeys).toContain("houses.0.rentalStartDate");
   });
 
-  it("선언 + 임대기간 \"0\" → ⑧ 차단 · ⑫ 400 (0년은 「5년 이상 임대」 판정 불가)", async () => {
-    const f = form([general("h2")], sellingSe({ taxIncentiveRental: { ...TIR, rentalPeriodYears: "0" } }));
+  it("옛 기록 — 연수(6)만 있고 임대개시일 없음 → ⑧ 차단 · ⑫ 400 (④는 연수를 싣지 않는다 · Q-3)", async () => {
+    const f = form([general("h2")], sellingSe({ taxIncentiveRental: { ...TIR, rentalPeriodYears: "6" } }));
     expect(blockedBy8(f)).toBe(true);
     expect((await single(f)).status).toBe(400);
   });
 
-  it("선언 + 임대기간 6년 → ⑧ 통과 · 200 (3호 중과 배제 412,071,000 — 기존 anchor A2와 같은 값)", async () => {
-    const f = form([general("h2")], sellingSe({ taxIncentiveRental: { ...TIR, rentalPeriodYears: "6" } }));
+  it("선언 + 임대개시일(12년) → ⑧ 통과 · 200 (3호 중과 배제 412,071,000 — 기존 anchor A2와 같은 값)", async () => {
+    const f = form([general("h2")], sellingSe({ taxIncentiveRental: { ...TIR, rentalStartDate: START } }));
     expect(blockedBy8(f)).toBe(false);
     const r = await single(f);
     expect(r.status).toBe(200);
@@ -176,7 +182,7 @@ describe("P-1 양도 주택 3호 — 단건 route", () => {
     const f = form(
       [general("h2")],
       sellingSe({
-        longTermRental: { isLongTermRental: true, rentalPeriodYears: "6", isApartment: true },
+        longTermRental: { isLongTermRental: true, rentalStartDate: START, isApartment: true },
         taxIncentiveRental: { ...TIR },
       } as SellingExclusion),
     );
@@ -190,7 +196,7 @@ describe("P-1 양도 주택 3호 — 단건 route", () => {
       [general("h2")],
       sellingSe({
         longTermRental: { isLongTermRental: true, isApartment: true },
-        taxIncentiveRental: { ...TIR, rentalPeriodYears: "6" },
+        taxIncentiveRental: { ...TIR, rentalStartDate: START },
       } as SellingExclusion),
     );
     expect(blockedBy8(f)).toBe(true);
@@ -204,16 +210,16 @@ describe("P-2 다른 보유 주택 3호 (명부 행) — 단건 route", () => {
   const rental3ho = (over: Partial<HouseEntry> = {}) =>
     general("h2", { isTaxIncentiveRental: true, isNationalSizeHousing: true, ...over });
 
-  it("선언 + 임대기간 없음 → ⑧ 차단 · ⑫ 400(houses.1.rentalPeriodYears)", async () => {
+  it("선언 + 임대개시일 없음 → ⑧ 차단 · ⑫ 400(houses.1.rentalStartDate)", async () => {
     const f = form([rental3ho()]);
     expect(blockedBy8(f)).toBe(true);
     const r = await single(f);
     expect(r.status).toBe(400);
-    expect(r.fieldKeys).toContain("houses.1.rentalPeriodYears");
+    expect(r.fieldKeys).toContain("houses.1.rentalStartDate");
   });
 
-  it("선언 + 임대기간 6년 → ⑧ 통과 · 200 (10호 412,071,000)", async () => {
-    const f = form([rental3ho({ rentalPeriodYears: "6" })]);
+  it("선언 + 임대개시일(12년) → ⑧ 통과 · 200 (10호 412,071,000)", async () => {
+    const f = form([rental3ho({ rentalStartDate: START })]);
     expect(blockedBy8(f)).toBe(false);
     const r = await single(f);
     expect(r.status).toBe(200);
@@ -232,7 +238,7 @@ describe("P-3 「합산 계산」(다건 route)도 같은 refine", () => {
     const missing = await multi(form([general("h2")], sellingSe({ taxIncentiveRental: { ...TIR } })));
     expect(missing.status).toBe(400);
     expect(missing.messages).toContain(MSG);
-    const ok = await multi(form([general("h2")], sellingSe({ taxIncentiveRental: { ...TIR, rentalPeriodYears: "6" } })));
+    const ok = await multi(form([general("h2")], sellingSe({ taxIncentiveRental: { ...TIR, rentalStartDate: START } })));
     expect(ok.status).toBe(200);
   });
 });

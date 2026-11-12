@@ -69,7 +69,8 @@ const rentalRow = (ext?: AptDeadlineExtensionForm, over: Partial<HouseEntry> = {
   isRegisteredRental: true,
   rentalRegistrationDate: "2018-01-01",
   businessRegistrationDate: "2018-01-01",
-  rentalPeriodYears: "9",
+  // PR-2 Q-3 — 화면은 연수 대신 임대개시일(등록일과 같은 날 · 양도일까지 8년 이상)
+  rentalStartDate: "2018-01-01",
   rentalType: "A",
   rentalStartOfficialPrice: "300000000",
   rentIncreaseUnder5Pct: true,
@@ -227,7 +228,8 @@ describe("다주택 중과 — 명부 행 2호 가목 아파트 (§167의10①10
             isRegisteredRental: true,
             rentalRegistrationDate: "2018-01-01",
             businessRegistrationDate: "2018-01-01",
-            rentalPeriodYears: "9",
+            // PR-2 Q-3 — 화면은 연수 대신 임대개시일(등록일과 같은 날 · 양도일까지 8년 이상)
+            rentalStartDate: "2018-01-01",
             rentalType: "A",
             rentalStartOfficialPrice: "300000000",
             rentIncreaseUnder5Pct: true,
@@ -278,7 +280,8 @@ describe("다주택 중과 — 3호 후단 「연장 사유 없음」", () => {
       sellingHouseExclusion: {
         taxIncentiveRental: {
           isTaxIncentiveRental: true,
-          rentalPeriodYears: "6",
+          // PR-2 Q-3 — 3호 임대개시일(자르지 않음 · 양도일까지 12년 이상)
+          rentalStartDate: "2014-01-01",
           isNationalSizeHousing: true,
           isApartment: true,
           isTaxIncentiveRentalPurchase: true,

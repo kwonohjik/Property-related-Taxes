@@ -15,6 +15,7 @@ import { deriveHouseRegionFromCode } from "./house-region";
 import { preDesignationContractInScope } from "./pre-designation-contract-scope";
 import { rentIncreaseContractDatePayload } from "./rent-cap-contract-date-scope";
 import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from "./tax-incentive-rental-scope";
+import { rentalPeriodDatesPayload } from "./tax-incentive-rental-scope";
 import { effectiveSellingUrbanLife, sellingRentalDeclarationView } from "./tax-incentive-rental-scope";
 import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { rentalDeclarationUrbanLifeQuestionInScope } from "./apt-deadline-extension-scope";
@@ -44,7 +45,8 @@ export function buildSellingRentalPayload(ltr: RentalDeclaration | undefined): o
     isRegisteredRental: ltr.isRegisteredRental,
     rentalRegistrationDate: ltr.rentalRegistrationDate || undefined,
     businessRegistrationDate: ltr.businessRegistrationDate || undefined,
-    rentalPeriodYears: ltr.rentalPeriodYears ? parseFloat(ltr.rentalPeriodYears) : undefined,
+    // 임대기간은 날짜로만 싣는다 — 연수(옛 기록)는 보내지 않는다(계획서 surcharge-rental-period-dates Q-3).
+    ...rentalPeriodDatesPayload(ltr),
     rentalCancelledDate: ltr.rentalCancelledDate || undefined,
     // 말소 사유(§167의3①2호 단서) — 말소일이 있을 때만(⑤가 그때만 묻는다)
     rentalCancellationReason: (ltr.rentalCancelledDate && ltr.rentalCancellationReason) || undefined,
@@ -363,8 +365,8 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       isRegisteredRental: h.isLongTermRental ? h.isRegisteredRental : undefined,
       rentalRegistrationDate: h.isLongTermRental ? h.rentalRegistrationDate || undefined : undefined,
       businessRegistrationDate: h.isLongTermRental ? h.businessRegistrationDate || undefined : undefined,
-      rentalPeriodYears:
-        h.isLongTermRental && h.rentalPeriodYears ? parseFloat(h.rentalPeriodYears) : undefined,
+      // 임대기간은 날짜로만(Q-3). 3호가 켜져 있으면 아래 `taxIncentiveRentalPayload`가 같은 날짜를 다시 싣는다.
+      ...(h.isLongTermRental ? rentalPeriodDatesPayload(h) : {}),
       rentalCancelledDate: h.isLongTermRental ? h.rentalCancelledDate || undefined : undefined,
       // 말소 사유(§167의3①2호 단서) — 말소일이 있을 때만(⑤가 그때만 묻는다)
       rentalCancellationReason:

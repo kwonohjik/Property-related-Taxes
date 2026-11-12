@@ -16,6 +16,7 @@
  */
 
 import { DateInput } from "@/components/ui/date-input";
+import { RentalPeriodDatesFields } from "@/components/calc/transfer/RentalPeriodDatesFields";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -276,7 +277,8 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
                         // 도시형 생활주택 아파트는 2호 양도기한에도 쓰는 같은 칸 — 2호가 켜져 있으면 남긴다(임대기간과 같은 규칙)
                         isUrbanLifeHousingApartment: house.isLongTermRental ? house.isUrbanLifeHousingApartment : undefined,
                         taxIncentiveRentalAptDeadlineExtension: undefined,
-                        rentalPeriodYears: house.isLongTermRental ? house.rentalPeriodYears : undefined,
+                        rentalStartDate: house.isLongTermRental ? house.rentalStartDate : undefined,
+                        rentalEndDate: house.isLongTermRental ? house.rentalEndDate : undefined,
                       },
                 )
               }
@@ -548,8 +550,11 @@ function LongTermRentalSection({
             isRegisteredRental: v ? house.isRegisteredRental : undefined,
             rentalRegistrationDate: v ? house.rentalRegistrationDate : undefined,
             businessRegistrationDate: v ? house.businessRegistrationDate : undefined,
-            // 임대기간은 §167의3①3호와 같은 칸 — 3호가 켜져 있으면 지우지 않는다.
-            rentalPeriodYears: v || house.isTaxIncentiveRental ? house.rentalPeriodYears : undefined,
+            // 임대개시일·종료일은 §167의3①3호와 같은 칸 — 3호가 켜져 있으면 지우지 않는다. 상속 합산은 2호 전용.
+            rentalStartDate: v || house.isTaxIncentiveRental ? house.rentalStartDate : undefined,
+            rentalEndDate: v || house.isTaxIncentiveRental ? house.rentalEndDate : undefined,
+            isInheritedRental: v ? house.isInheritedRental : undefined,
+            decedentRentalMonths: v ? house.decedentRentalMonths : undefined,
             rentalCancelledDate: v ? house.rentalCancelledDate : undefined,
             rentalCancellationReason: v ? house.rentalCancellationReason : undefined,
           });
@@ -592,16 +597,13 @@ function LongTermRentalSection({
             </div>
           </ToggleCard>
 
-          {/* 임대기간(년) */}
-          <div className="space-y-1">
-            <label className="block text-caption text-muted-foreground font-medium">임대기간 (년)</label>
-            <DecimalInput
-              value={house.rentalPeriodYears ?? ""}
-              onChange={(v) => onUpdate({ rentalPeriodYears: v || undefined })}
-              placeholder="임대기간 입력"
-            />
-            <p className="text-caption text-muted-foreground">5년 이상 시 중과 대상에서 제외 (주택 수에는 산입)</p>
-          </div>
+          {/* 임대기간 — 임대개시일·종료일로 엔진이 계산(소령 §167의3③ 등록일 기산 · 연수 칸 없음) */}
+          <RentalPeriodDatesFields
+            value={house}
+            onPatch={onUpdate}
+            variant="long_term"
+            testIdPrefix={`house-${house.id}-rental`}
+          />
 
           {/* 임대사업자 말소일 (optional) */}
           <div className="space-y-1">

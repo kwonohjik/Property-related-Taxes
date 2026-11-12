@@ -56,7 +56,7 @@ function form(rentalRegistrationDate: string, businessRegistrationDate: string) 
         businessRegistrationDate,
         rentalStartOfficialPrice: "700000000",
         rentIncreaseUnder5Pct: true,
-        rentalPeriodYears: "1",
+        rentalStartDate: "2025-06-01", // PR-2 Q-3 — 연수 "1" 대신(양도 2026-06-01까지 1년 · 두 등록일보다 뒤라 자르지 않음)
         hasMinimum2Units: true,
         rentalLandArea: "200",
         rentalTotalFloorArea: "100",

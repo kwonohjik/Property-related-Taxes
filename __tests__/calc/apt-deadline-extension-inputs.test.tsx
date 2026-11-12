@@ -162,11 +162,11 @@ describe("AE-7 ⑧ 「연장 사유 있음」 + 빈 날짜 차단 (⑤·④와 �
   it("명부 행 — 가목 아파트 「있음」+빈 날짜 → 차단 / 「없음」 → 통과 / 비아파트(범위 밖 stale) → 통과", () => {
     const f = createDefaultTransferFormData();
     f.householdHousingCount = "2";
-    f.houses = [row({ rentalAptDeadlineExtension: { status: "has" }, rentalPeriodYears: "9", rentalStartOfficialPrice: "300000000" })];
+    f.houses = [row({ rentalAptDeadlineExtension: { status: "has" }, rentalStartDate: "2018-01-01", rentalStartOfficialPrice: "300000000" })];
     expect(msg(collectStep1Issues(f))).toBe(true);
-    f.houses = [row({ rentalAptDeadlineExtension: { status: "none" }, rentalPeriodYears: "9", rentalStartOfficialPrice: "300000000" })];
+    f.houses = [row({ rentalAptDeadlineExtension: { status: "none" }, rentalStartDate: "2018-01-01", rentalStartOfficialPrice: "300000000" })];
     expect(msg(collectStep1Issues(f))).toBe(false);
-    f.houses = [row({ isApartment: false, rentalAptDeadlineExtension: { status: "has" }, rentalPeriodYears: "9", rentalStartOfficialPrice: "300000000" })];
+    f.houses = [row({ isApartment: false, rentalAptDeadlineExtension: { status: "has" }, rentalStartDate: "2018-01-01", rentalStartOfficialPrice: "300000000" })];
     expect(msg(collectStep1Issues(f))).toBe(false);
   });
   it("§155⑳ 임대주택 — 가목 아파트 「있음」+빈 날짜 → 차단 / 날짜 있음 → 이 사유로는 막지 않는다", () => {
@@ -275,7 +275,8 @@ describe("AE-10 ⑧ 3호 이전고시 상태 필수 (사용자 결정 2026-10-04
   it("명부 행 · 양도 주택 2호 섹션 — 인가일만 → 차단 / 이전고시일 추가 → 통과", () => {
     const f = createDefaultTransferFormData();
     f.householdHousingCount = "2";
-    const base = { rentalPeriodYears: "9", rentalStartOfficialPrice: "300000000" };
+    // PR-2 Q-3 — 연수 "9" 대신 임대개시일(등록일과 같은 날)
+    const base = { rentalStartDate: "2018-01-01", rentalStartOfficialPrice: "300000000" };
     f.houses = [row({ ...base, rentalAptDeadlineExtension: AUTH_ONLY })];
     expect(msg(collectStep1Issues(f))).toBe(true);
     f.houses = [row({ ...base, rentalAptDeadlineExtension: { ...AUTH_ONLY, relocationAnnouncementDate: "2033-05-01" } })];

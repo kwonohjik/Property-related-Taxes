@@ -67,8 +67,9 @@ const HOUSE_ROW_CASES: FieldJumpCase[] = [
     form: holding([rental({ isRegisteredRental: true, rentalRegistrationDate: "2018-01-01", businessRegistrationDate: "" })]),
   },
   {
-    name: "step1: 보유 주택 임대기간", field: R, step: 1, message: /^보유 주택 1: 임대기간\(년\)을 입력하세요/,
-    form: holding([rental({ isRegisteredRental: true, rentalRegistrationDate: "2018-01-01", businessRegistrationDate: "2018-01-01", rentalPeriodYears: "" })]),
+    // PR-2 Q-3 — 「임대기간 (년)」 칸 대신 임대개시일
+    name: "step1: 보유 주택 임대개시일", field: R, step: 1, message: /^보유 주택 1: 임대개시일을 입력하세요/,
+    form: holding([rental({ isRegisteredRental: true, rentalRegistrationDate: "2018-01-01", businessRegistrationDate: "2018-01-01", rentalStartDate: "" })]),
   },
   { name: "step1: 보유 주택 임대개시 당시 공시가격", field: R, step: 1, message: /^보유 주택 1: 임대개시 당시 공시가격을 입력하세요/, form: holding([rental({ rentalType: "A", rentalStartOfficialPrice: "" })]) },
   { name: "step1: 보유 주택 취득 당시 공시가격", field: R, step: 1, message: /^보유 주택 1: 취득 당시 공시가격을 입력하세요/, form: holding([rental({ rentalType: "B", acquisitionOfficialPrice: "" })]) },
@@ -87,7 +88,7 @@ const HOUSE_ROW_CASES: FieldJumpCase[] = [
   { name: "step1: 보유 주택 사목 면적", field: R, step: 1, message: /^보유 주택 1: 사목 base 목의 대지면적·연면적/, form: holding([sa({ saMokBaseArticle: "다", rentalLandArea: "", rentalTotalFloorArea: "" })]) },
   { name: "step1: 보유 주택 사목 라목 최초 분양계약일", field: R, step: 1, message: /^보유 주택 1: 사목 base 라목의 최초 분양계약일/, form: holding([sa({ saMokBaseArticle: "라", firstSaleContractDate: "" })]) },
   { name: "step1: 보유 주택 부득이 거주기간", field: R, step: 1, message: /^보유 주택 1: 부득이한 사유 주택의 거주기간\(년\)/, form: holding([row({ isUnavoidableReason: true, unavoidableResidenceYears: "", acquisitionOfficialPrice: "300000000" })]) },
-  { name: "step1: 보유 주택 조특법 감면 임대주택 임대기간", field: R, step: 1, message: /^보유 주택 1: 조특법 감면 임대주택이면 임대기간/, form: holding([row({ isTaxIncentiveRental: true })]) },
+  { name: "step1: 보유 주택 조특법 감면 임대주택 임대개시일", field: R, step: 1, message: /^보유 주택 1: 조특법 감면 임대주택이면 임대개시일/, form: holding([row({ isTaxIncentiveRental: true })]) },
   { name: "step1: 보유 주택 부득이 취득 당시 기준시가", field: R, step: 1, message: /^보유 주택 1: 부득이한 사유 주택의 취득 당시 기준시가/, form: holding([row({ isUnavoidableReason: true, unavoidableResidenceYears: "2", acquisitionOfficialPrice: "" })]) },
   // §167의10①3호·7호 기산 상태 — 날짜 또는 「양도일 현재 미해소·진행 중」 택일(2026-10-04 · 빈 값 = 「모름」 차단)
   { name: "step1: 보유 주택 부득이 사유 해소 상태", field: R, step: 1, message: /^보유 주택 1: 부득이한 사유 주택: 사유 해소일을 입력하거나/, form: holding([row({ isUnavoidableReason: true, unavoidableResidenceYears: "2", acquisitionOfficialPrice: "250000000" })]) },
@@ -121,7 +122,7 @@ const SELLING_CASES: FieldJumpCase[] = [
     form: holding([row()], { [SE]: { isLitigationHousing: true } }),
   },
   {
-    name: "step1: 양도 주택 조특법 감면 임대주택 임대기간", field: `${SE}.taxIncentiveRentalYears`, step: 1, message: /^양도 주택 조특법 감면 임대주택: 임대기간/,
+    name: "step1: 양도 주택 조특법 감면 임대주택 임대개시일", field: `${SE}.taxIncentiveRentalYears`, step: 1, message: /^양도 주택 조특법 감면 임대주택: 임대개시일/,
     form: holding([row()], { [SE]: { taxIncentiveRental: { isTaxIncentiveRental: true } } }),
   },
   {

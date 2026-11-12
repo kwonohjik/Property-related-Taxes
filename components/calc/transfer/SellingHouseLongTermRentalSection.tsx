@@ -20,7 +20,7 @@
  */
 
 import { DateInput } from "@/components/ui/date-input";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { RentalPeriodDatesFields } from "@/components/calc/transfer/RentalPeriodDatesFields";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
@@ -109,17 +109,12 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
             </div>
           </ToggleCard>
 
-          <div className="space-y-1">
-            <label className="block text-caption text-muted-foreground font-medium">임대기간 (년)</label>
-            <DecimalInput
-              value={ltr.rentalPeriodYears ?? ""}
-              onChange={(s) => patch({ rentalPeriodYears: s || undefined })}
-              placeholder="임대기간 입력"
-            />
-            <p className="text-caption text-muted-foreground">
-              가목·다목은 5년, 마목·바목은 10년, 아목·자목은 6년이 의무임대기간입니다.
-            </p>
-          </div>
+          <RentalPeriodDatesFields
+            value={ltr}
+            onPatch={patch}
+            variant="long_term"
+            testIdPrefix="selling-rental"
+          />
 
           <div className="space-y-1">
             <label className="block text-caption text-muted-foreground font-medium">

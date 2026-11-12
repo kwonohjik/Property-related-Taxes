@@ -262,6 +262,12 @@ export const houseSchema = z.object({
   rentalRegistrationDate: z.string().date().optional(),
   businessRegistrationDate: z.string().date().optional(),
   rentalPeriodYears: z.number().nonnegative().optional(),
+  /** 임대개시일 — 있으면 엔진이 날짜로 임대기간을 계산(2호는 등록일로 자름 — `multi-house-rental-period.ts`). 화면은 이것만 보낸다 */
+  rentalStartDate: z.string().date().optional(),
+  /** 임대 종료일 — 없으면 판정 양도일까지 */
+  rentalEndDate: z.string().date().optional(),
+  /** 2호 상속 — 피상속인 임대개월(조특령 §97⑤3호) */
+  decedentRentalMonths: z.number().nonnegative().optional(),
   rentalCancelledDate: z.string().date().optional(),
   /** 말소 사유 — 자동말소면 §167의3①2호 단서(임대기간요건 간주 충족) */
   rentalCancellationReason: z.enum(["auto", "voluntary"]).optional(),

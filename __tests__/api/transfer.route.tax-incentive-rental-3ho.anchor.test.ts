@@ -72,7 +72,8 @@ const general = (id: string): HouseEntry => ({
 /** 양도 주택 3호 선언 — 감면 임대주택 · 6년 임대 · 국민주택 (후단 사실은 모름) */
 const SELLING_3HO: SellingTir = {
   isTaxIncentiveRental: true,
-  rentalPeriodYears: "6",
+  // PR-2 Q-3 — 화면은 연수 대신 임대개시일(3호는 자르지 않음 · 양도 2026-08-01까지 6년)
+  rentalStartDate: "2020-08-01",
   isNationalSizeHousing: true,
   isApartment: true,
 };
@@ -188,7 +189,7 @@ describe("3호 — 양도 주택 자신이 감면대상장기임대주택 (단�
     expect((body.houses as Obj[])[0]).toMatchObject({
       id: "selling",
       isTaxIncentiveRental: true,
-      rentalPeriodYears: 6,
+      rentalStartDate: "2020-08-01", // PR-2 Q-3 — ④는 날짜만 싣는다(연수 미전송)
       isNationalSizeHousing: true,
       isApartment: true,
     });
@@ -221,7 +222,7 @@ describe("3호 — 양도 주택 자신이 감면대상장기임대주택 (단�
 
   it("요건 미충족 음성 짝 — 4년 임대 · 국민주택 초과 · 감면대상 아님이면 중과 유지", async () => {
     const two = (tir: SellingTir) => single(form([general("h2")], sellingTir(tir)));
-    expect((await two({ ...SELLING_3HO, rentalPeriodYears: "4" })).totalTax).toBe(926_678_500);
+    expect((await two({ ...SELLING_3HO, rentalStartDate: "2022-08-01" })).totalTax).toBe(926_678_500); // 4년(PR-2 Q-3)
     expect((await two({ ...SELLING_3HO, isNationalSizeHousing: false })).totalTax).toBe(926_678_500);
     expect((await two({ ...SELLING_3HO, isTaxIncentiveRental: false })).totalTax).toBe(926_678_500);
   });
@@ -236,7 +237,8 @@ describe("3호 — 다른 보유 주택이 감면대상장기임대주택 (10호
   const rental3ho = (o: Partial<HouseEntry> = {}): HouseEntry => ({
     ...general("h2"),
     isTaxIncentiveRental: true,
-    rentalPeriodYears: "6",
+    // PR-2 Q-3 — 화면은 연수 대신 임대개시일(양도 2026-08-01까지 6년)
+    rentalStartDate: "2020-08-01",
     isNationalSizeHousing: true,
     ...o,
   });
@@ -247,14 +249,14 @@ describe("3호 — 다른 보유 주택이 감면대상장기임대주택 (10호
     expect((body.houses as Obj[])[1]).toMatchObject({
       id: "h2",
       isTaxIncentiveRental: true,
-      rentalPeriodYears: 6,
+      rentalStartDate: "2020-08-01", // PR-2 Q-3 — ④는 날짜만 싣는다(연수 미전송)
       isNationalSizeHousing: true,
     });
     expect((await singleBody(body)).totalTax).toBe(412_071_000);
   });
 
   it("§167의3④ — 의무기간(5년)만 미달이면 10호 의제로 배제가 유지된다", async () => {
-    const r = await single(form([rental3ho({ rentalPeriodYears: "3" })]));
+    const r = await single(form([rental3ho({ rentalStartDate: "2023-08-01" })])); // 3년(PR-2 Q-3)
     expect(r.totalTax).toBe(412_071_000);
   });
 

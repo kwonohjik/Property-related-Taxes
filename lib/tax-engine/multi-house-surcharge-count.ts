@@ -11,7 +11,8 @@
  */
 
 import { rentalCancellationStatus } from "./rental-cancellation-deeming";
-import { differenceInYears } from "./utc-date";
+import { calcLongTermRentalPeriodYears } from "./multi-house-rental-period";
+import { calcTaxIncentiveRentalPeriodYears } from "./multi-house-rental-period";
 import { MULTI_HOUSE } from "./legal-codes";
 import { isWithinDeadline } from "./civil-period";
 import { isSmallNewHouseSpecial, resolvePopulationDeclineSecondHome } from "./multi-house-surcharge-12ho";
@@ -197,14 +198,8 @@ export function classifyRegionCriteriaDetail(regionCode: string): RegionCriteria
 // 소령 §167-3 ① 2호
 // ============================================================
 
-export function calcRentalPeriodYears(house: HouseInfo): number {
-  if (house.rentalPeriodYears != null) return house.rentalPeriodYears;
-  if (house.rentalStartDate && house.rentalEndDate) {
-    // 임대기간은 §167의3③ → 조특령 §97 준용이라 E-11(초일 규칙) 범위 밖이다 — 계획서 Q-2(근거 확인 전 유지).
-    return differenceInYears(house.rentalEndDate, house.rentalStartDate);
-  }
-  return 0;
-}
+// 임대기간(년) 계산은 `multi-house-rental-period.ts`(2호 = 등록일로 자름 · 3호 = 자르지 않음). 기존 import 경로 유지용 재수출.
+export { calcLongTermRentalPeriodYears, calcTaxIncentiveRentalPeriodYears } from "./multi-house-rental-period";
 
 /**
  * 「사업자등록등 완비」 원시 술어 — **UI(⑤)와 엔진이 공유한다**.
@@ -246,7 +241,7 @@ function toNormalizedFromHouse(house: HouseInfo, transferDate: Date): Normalized
     isUrbanLifeHousingApartment: house.isUrbanLifeHousingApartment,
     rentalStartOfficialPrice: house.rentalStartOfficialPrice ?? house.officialPrice,
     acquisitionOfficialPrice: house.acquisitionOfficialPrice ?? house.officialPrice,
-    rentalYears: calcRentalPeriodYears(house),
+    rentalYears: calcLongTermRentalPeriodYears(house, transferDate),
     landAreaM2: house.landArea,
     totalFloorAreaM2: house.totalFloorArea,
     hasMinimum2Units: house.hasMinimum2Units ?? false,
@@ -294,7 +289,7 @@ export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Da
   if (cancellation === "not_deemed") return false;
 
   if (!house.rentalType) {
-    return hasBasicRegistration(house) && calcRentalPeriodYears(house) >= LEGACY_RENTAL_YEARS;
+    return hasBasicRegistration(house) && calcLongTermRentalPeriodYears(house, transferDate) >= LEGACY_RENTAL_YEARS;
   }
 
   // 사업자등록등 완비 — isRegisteredRental flag 포함(공용 predicate가 검사하지 않는 다주택 전용 요건).
@@ -367,7 +362,7 @@ export function isLongTermRentalDutyPeriodPending(house: HouseInfo, transferDate
    *   함께 없앤다** — 종전에는 그 관용도가 ④를 우연히 대신하고 있었다. 조이기는 2호에만,
    *   ④는 그대로 살린다.
    */
-  if (!house.rentalType) return calcRentalPeriodYears(house) < LEGACY_RENTAL_YEARS;
+  if (!house.rentalType) return calcLongTermRentalPeriodYears(house, transferDate) < LEGACY_RENTAL_YEARS;
   const article = ARTICLE_BY_RENTAL_TYPE[house.rentalType];
   if (article === "사") return false;
   if (!passesRegistrationCap(house, article)) return false;
@@ -394,10 +389,10 @@ export function getRentalTypeLabel(rentalType?: RentalHousingType): string {
 // ③ 조특법 감면 임대주택 판정
 // ============================================================
 
-function isTaxIncentiveRentalBaseEligible(house: HouseInfo): boolean {
+function isTaxIncentiveRentalBaseEligible(house: HouseInfo, transferDate: Date): boolean {
   return !!(
     house.isTaxIncentiveRental &&
-    calcRentalPeriodYears(house) >= 5 &&
+    calcTaxIncentiveRentalPeriodYears(house, transferDate) >= 5 &&
     house.isNationalSizeHousing
   );
 }
@@ -428,7 +423,7 @@ export function isTaxIncentiveRentalAptGateApplicable(house: HouseInfo): boolean
  * `taxIncentiveRentalAptDeadlineConfirmReasons`(연장 사실)가 확인 필요 고지를 담당한다.
  */
 export function isTaxIncentiveRentalHousingExempt(house: HouseInfo, transferDate: Date): boolean {
-  if (!isTaxIncentiveRentalBaseEligible(house)) return false;
+  if (!isTaxIncentiveRentalBaseEligible(house, transferDate)) return false;
   if (!house.isApartment) return true; // 후단은 아파트에만 걸린다
   if (transferDate.getTime() <= APT_TRANSFER_DEADLINE_FLOOR) return true;
 
@@ -445,7 +440,7 @@ export function isTaxIncentiveRentalHousingExempt(house: HouseInfo, transferDate
  * 성공·실패 경로 모두에서 보이도록 호출부가 결과 분기 전에 싣는다(feedback_success_only_breakdown_hides_failures).
  */
 export function isTaxIncentiveRentalAptDeadlinePending(house: HouseInfo, transferDate: Date): boolean {
-  if (!isTaxIncentiveRentalBaseEligible(house)) return false;
+  if (!isTaxIncentiveRentalBaseEligible(house, transferDate)) return false;
   if (!house.isApartment) return false;
   if (transferDate.getTime() <= APT_TRANSFER_DEADLINE_FLOOR) return false;
   if (isTaxIncentiveRentalAptGateApplicable(house) !== undefined) return false;
@@ -460,7 +455,7 @@ export function taxIncentiveRentalAptDeadlineConfirmReasons(
   house: HouseInfo,
   transferDate: Date,
 ): AptDeadlinePendingReason[] {
-  if (!isTaxIncentiveRentalBaseEligible(house) || !house.isApartment) return [];
+  if (!isTaxIncentiveRentalBaseEligible(house, transferDate) || !house.isApartment) return [];
   if (transferDate.getTime() <= APT_TRANSFER_DEADLINE_FLOOR) return [];
   if (isTaxIncentiveRentalAptGateApplicable(house) === false) return [];
   return judgeAptTransferDeadline(transferDate, house.taxIncentiveRentalAptDeadlineExtension).pending;
