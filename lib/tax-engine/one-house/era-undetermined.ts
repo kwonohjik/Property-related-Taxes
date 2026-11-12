@@ -45,6 +45,7 @@ import {
   ruralTemporaryTwoHouseOverlapCountHolds,
   twoHouseSpecialCountHolds,
 } from "../transfer-tax-exemption-requirements";
+import { waivesPriorHouseOneYearGap } from "../transfer-tax-exemption-requirements";
 import { isWinWinLeaseEndDateRequired, qualifiesWinWinRental } from "../transfer-tax-exemption-residence-waivers";
 import {
   describeOneHouseHoldingRequirement,
@@ -63,6 +64,7 @@ import { resolveDisposalDelay } from "../data/temporary-two-house-delay-era";
 import { MERGED_SPECIAL_CITY_START } from "@/lib/geo/relocation-region-unit";
 import { relocationRegionReadingsDiverge } from "@/lib/geo/relocation-region-unit";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
+import { resolveTempTwoHouseRemnantDisposalDate } from "./expropriation-remnant-155-1";
 import { resolveRegulatedShortenedClauseRef } from "../data/temporary-two-house-regulated-clause";
 import { holidayTableNoticeKind } from "./holiday-notice-deadlines";
 import {
@@ -506,6 +508,23 @@ export function collectEraUndetermined(
       });
     }
   }
+  /*
+   * J-3 — 합가 D8 상대 쪽 짝(B → C)의 1년 요건은 양도 주택 A의 §154① 단서로 면제하지 않았다(사용자 결정 2026-11-12). 직접 근거가
+   * 없어 「확인 필요」다 — 면제했다면 짝의 타이밍이 성립하는 경우에만 낸다(#32).
+   */
+  if (tt?.previousHouseIsRosterRow && twoHouseRule && waivesPriorHouseOneYearGap(input)) {
+    const base = evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall;
+    const waived = evaluateTemporaryTwoHouseTiming(input, twoHouseRule, { forceProvisoOneYearWaiver: true }).timing.overall;
+    if (!base && waived) {
+      out.push({
+        id: "155-1-roster-pair-one-year-waiver-unverified",
+        reason:
+          `합가 전 상대 쪽 일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)은 종전 주택을 취득한 날부터 1년이 지난 뒤 신규 주택을 ` +
+          `취득해야 합니다. 양도하는 주택에 해당하는 ${TRANSFER.ONE_HOUSE_REQUIREMENT}① 단서 사유로 상대 쪽 짝의 이 요건을 ` +
+          `면제하는 근거를 찾지 못해 면제하지 않고 판정했습니다 — 면제된다면 결론이 달라지므로 확인이 필요합니다.`,
+      });
+    }
+  }
   if (input.householdHousingCount === 2 && tt && twoHouseRule) {
     if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).transition2002Unverified) {
       out.push({
@@ -535,6 +554,8 @@ export function collectEraUndetermined(
           oneYearWaived: true, // 요건 A는 이 판단과 무관하다
           disposalDelayReason: tt.disposalDelayReason,
           disposalDelayDisposedByThatMethod,
+          // §155① 후단(E-5) — 수용일로 이미 충족하면 방법 확인이 결론에 닿지 않는다(정본과 같은 값)
+          remnantDisposalDate: resolveTempTwoHouseRemnantDisposalDate(input),
         }).threeYearMet;
       const delay = resolveDisposalDelay({
         reason: tt.disposalDelayReason,

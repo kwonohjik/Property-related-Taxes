@@ -34,6 +34,7 @@ import type { TemporaryTwoHouseDelayReason, TransferTaxInput } from "@/lib/tax-e
 import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
 import { judgeNewHouseOrigin, temporaryTwoHouseOrderReason } from "@/lib/tax-engine/one-house/new-house-origin";
 import type { RightThreeYearException } from "@/lib/tax-engine/types/transfer.types";
+import { resolveTempTwoHouseRemnantDisposalDate } from "@/lib/tax-engine/one-house/expropriation-remnant-155-1";
 
 /**
  * §155① **본문** 처분기한 3년 — 엔진 규칙 행 `temporary_two_house.disposalDeadlineYears`와 같은 값
@@ -59,6 +60,8 @@ export type TempTwoHouseVerdict =
       /** §155①2호 단서(기존 임차인)로 기한이 날짜로 늘어났는가 — 카드가 「N년 내」 대신 날짜를 말한다 */
       deadlineExtendedByTenant: boolean;
       threeYearMet: boolean;
+      /** §155① 후단(E-5) — 잔존 주택 양도일로는 기한을 넘었지만 종전 주택 일부 수용일로 요건 B를 충족 */
+      remnantApplied?: boolean;
       /**
        * §155①2호 — 신규 취득일 기준 조정 여부와 새 입력의 노출 판단(⑤ 게이트).
        *   `relevant`: 두 주택 조정 여부가 기한을 바꾸는 양도 시기 · `previous`/`next`: 판정값(미입력 undefined)
@@ -198,6 +201,9 @@ export function judgeTempTwoHouseFromForm(p: {
     p.newHouseInDesignatedDistrict,
     p.previousHouse,
   );
+  // J-3 — 합가 D8 상대 쪽 짝(B → C)이면 양도 주택 A의 §154① 단서로 짝의 1년 요건을 면제하지 않는다
+  //   (엔진 `waivesTempTwoHousePairOneYearGap`과 같은 규칙 · 2026-11-12 사용자 결정).
+  if (facts.previousHouseIsRosterRow) oneYearWaived = false;
   const optDate = (v: string | undefined) => {
     if (!v) return undefined;
     const x = new Date(v);
@@ -255,6 +261,24 @@ export function judgeTempTwoHouseFromForm(p: {
     disposalDelayDisposedByThatMethod: p.disposalDelayDisposedByThatMethod,
     deadlineDate: era.deadlineDate,
     moveInMet: era.moveInMet,
+    // §155① 후단(E-5) — 엔진과 같은 leaf: 종전 주택 일부 수용 뒤 잔존 주택 양도면 요건 B를 수용일로도 판정한다.
+    remnantDisposalDate:
+      p.provisoReason === "expropriation"
+        ? resolveTempTwoHouseRemnantDisposalDate({
+            acquisitionDate: validOr(p.sellingAcquisitionDate, prev),
+            transferDate: transfer,
+            oneHouseExemptionProviso: {
+              reason: "expropriation",
+              expropriationDate: optDate(p.provisoExpropriationDate),
+              businessApprovalDate: optDate(p.provisoBusinessApprovalDate),
+            },
+            temporaryTwoHouse: {
+              previousAcquisitionDate: prev,
+              newAcquisitionDate: nw,
+              previousHouseIsRosterRow: facts.previousHouseIsRosterRow,
+            },
+          })
+        : undefined,
   });
 
   // 신규 주택이 권리(분양권·조합원입주권)로 취득한 주택이면 갈래를 가른다 — 엔진 `evaluateTemporaryTwoHouseTiming`과 같은 함수(결정 #43).
@@ -294,6 +318,7 @@ export function judgeTempTwoHouseFromForm(p: {
     deadlineYears,
     deadlineExtendedByTenant: era.deadlineDate !== undefined,
     threeYearMet: t.threeYearMet,
+    remnantApplied: t.remnantApplied,
     regulated: {
       relevant: relevance.regulatedAxis && !relocationOverridesRegulated,
       previous: reg.previous,

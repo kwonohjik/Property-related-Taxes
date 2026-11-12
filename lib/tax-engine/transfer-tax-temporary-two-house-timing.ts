@@ -90,6 +90,11 @@ export function judgeTemporaryTwoHouseTiming(p: {
    * 충족한 경우」가 깨져 특례 불성립. `undefined`는 해당 없음 또는 미판정(고지로 알린다).
    */
   moveInMet?: boolean;
+  /**
+   * §155① 후단 — 종전 주택 일부가 수용된 날(`one-house/expropriation-remnant-155-1.ts`가 성립 여부까지 따져 준다). 있으면 잔존 주택
+   * 양도가 「종전의 주택 … 의 양도 또는 수용에 포함」되므로 요건 B를 이 날짜로도 판정한다(E-5).
+   */
+  remnantDisposalDate?: Date;
 }): {
   oneYearThreshold: Date;
   /** 신규 주택을 종전 주택보다 나중에(같은 날 제외) 취득했는가 — 거짓이면 `oneYearMet`도 거짓이다 */
@@ -99,6 +104,8 @@ export function judgeTemporaryTwoHouseTiming(p: {
   /** 말일이 민법 §161로 늘어났거나 공휴일 표 밖이면 한 줄 설명 */
   deadlineNote?: string;
   threeYearMet: boolean;
+  /** §155① 후단 — 잔존 주택 양도일로는 기한을 넘었는데 수용일로 요건 B를 충족했다(E-5) */
+  remnantApplied: boolean;
   /** §155①2호 가목 — 입력 그대로(해당 없음·미판정이면 `undefined`) */
   moveInMet?: boolean;
   /** §155⑱ 사유 판정 — 양도일 연혁(방법 요건·호별 신설 시기)을 반영한 **실제 적용 여부**와 미적용 사유(S15-14) */
@@ -128,7 +135,11 @@ export function judgeTemporaryTwoHouseTiming(p: {
     disposedByThatMethod: p.disposalDelayDisposedByThatMethod,
     transferDate: p.transferDate,
   });
-  const threeYearMet = delay.applied || isOnOrBeforeDay(p.transferDate, deadline);
+  const byTransfer = isOnOrBeforeDay(p.transferDate, deadline);
+  // §155① 후단(E-5) — 잔존 주택 양도는 종전 주택의 수용에 포함된다: 수용일이 기한 안이면 충족.
+  const remnantApplied =
+    !delay.applied && !byTransfer && p.remnantDisposalDate !== undefined && isOnOrBeforeDay(p.remnantDisposalDate, deadline);
+  const threeYearMet = delay.applied || byTransfer || remnantApplied;
   // ⑱은 양도 기한만 치유한다 — 가목(전입)은 「각 목의 요건을 모두 충족」의 별개 요건이다.
   const moveInOk = p.moveInMet !== false;
   return {
@@ -138,6 +149,7 @@ export function judgeTemporaryTwoHouseTiming(p: {
     deadline,
     ...(deadlineNote ? { deadlineNote } : {}),
     threeYearMet,
+    remnantApplied,
     ...(p.moveInMet !== undefined ? { moveInMet: p.moveInMet } : {}),
     delay,
     overall: oneYearMet && threeYearMet && moveInOk,

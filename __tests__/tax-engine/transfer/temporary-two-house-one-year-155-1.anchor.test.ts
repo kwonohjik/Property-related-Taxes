@@ -154,7 +154,9 @@ describe("일시적 2주택 §155① 1년 경과 요건 (D1 앵커)", () => {
         oneHouseExemptionProviso: {
           reason: "expropriation",
           businessApprovalDate: new Date("2020-06-01"),
-          expropriationDate: new Date("2023-06-01"), // 양도일부터 5년 내
+          // 양도일부터 5년 내 · 처분기한(2023-06-01) **다음 날** — 기한 안이었다면 §155① 후단(잔존 주택 양도는 종전 주택의
+          //   수용에 포함 · 2026-11-12 리뷰 E-5)으로 요건 B를 충족한다. 이 케이스는 「1년 면제 + 요건 B 미달」을 지키므로 기한 밖에 둔다.
+          expropriationDate: new Date("2023-06-02"),
         },
       }),
       mockRates,
