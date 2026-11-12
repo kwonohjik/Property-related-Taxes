@@ -225,7 +225,9 @@ describe("결과 카드", () => {
     expect(text).not.toContain("나목");
     expect(text).toContain(`청산금 수령분 단독 신고 — 종전 부동산의 분할양도로, 양도차익은 청산금 수령액 − 안분 취득가액 − 안분 필요경비입니다 (${GUIDELINE} · ${RULING}).`);
     expect(text).toContain("시행령 §166④1호");
-    expect(text).toContain("미신고 — 청산금 수령분 단독 신고");
+    // 인가전·인가후 칸은 그리지 않는다(사용자 결정 2026-11-12 a — `redev-receive-only-result-card.anchor.test.tsx`).
+    expect(text).not.toContain("미신고");
+    expect(text).toContain("청산금 수령분 단독 신고 양도차익");
   });
 
   it("동시신고 카드는 §166②2호 구조를 유지한다", () => {

@@ -130,15 +130,15 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
   // 완공APT 안분 가이드의 고가주택 기준금액 — 양도일 기준(안내 전용, 세액은 엔진이 다시 정한다)
   const highValueLabel = highValueThresholdForDisplay(transferDate).label;
 
-  // 분양가 미리보기 (useMemo 순수 계산 — useEffect 미러링 금지)
+  // 분양가 미리보기 (useMemo 순수 계산 — useEffect 미러링 금지) — **청산금 납부(§166②1호) 전용**.
+  // 수령은 §166②2호 구조라 이 비율(권리가액·청산금 ÷ 분양가)이 100%를 넘고 문구도 맞지 않는다 — 분양가액은 `SalePriceTotalPreviewCard`가 보인다.
   const preview = useMemo(() => {
+    if (asset.redevSettlementDirection === "receive") return null;
     const rights = parseAmount(asset.redevRightsValue);
     const settlement = parseAmount(asset.redevSettlementAmount);
     if (rights <= 0 || settlement < 0) return null;
 
-    const isPay = asset.redevSettlementDirection === "pay";
-    const salePriceTotal = isPay ? rights + settlement : Math.max(0, rights - settlement);
-    if (salePriceTotal <= 0) return null;
+    const salePriceTotal = rights + settlement;
 
     const existingRatio = (rights / salePriceTotal) * 100;
     const settlementRatio = (settlement / salePriceTotal) * 100;
@@ -147,7 +147,6 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
       salePriceTotal,
       existingRatio: existingRatio.toFixed(2),
       settlementRatio: settlementRatio.toFixed(2),
-      sign: isPay ? "+" : "−",
     };
   }, [asset.redevRightsValue, asset.redevSettlementAmount, asset.redevSettlementDirection]);
 
@@ -526,7 +525,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           <div className="mt-2 rounded-md bg-violet-100/60 border border-violet-200 p-2 text-xs space-y-1 dark:bg-violet-900/40">
             <p className="font-semibold text-violet-800 dark:text-violet-200">미리보기 — 분양가 (인가후 분 취득가) 자동 산정</p>
             <p className="text-violet-700 dark:text-violet-300">
-              분양가 = 권리가액 {preview.sign} 청산금 = <span className="font-mono tabular-nums font-semibold">{preview.salePriceTotal.toLocaleString()}</span>
+              분양가 = 권리가액 + 청산금 = <span className="font-mono tabular-nums font-semibold">{preview.salePriceTotal.toLocaleString()}</span>
             </p>
             <p className="text-caption text-violet-700 dark:text-violet-400">
               ※ §166②1호 인가후 분 양도차익 산정 시 양도가액에서 차감되는 분양가. 상단 일반 &ldquo;취득가액&rdquo; 입력 대신 본 값이 자동 사용됩니다.
