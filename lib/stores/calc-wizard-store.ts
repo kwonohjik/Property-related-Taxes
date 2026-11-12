@@ -7,6 +7,8 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { deriveRightValuationTotal } from "@/lib/calc/burdened-gift-right-valuation";
+import { bgOwnerSplitActive } from "@/lib/calc/bg-owner-split-scope";
+import { bgOwnerSplitTransferStd } from "@/lib/calc/bg-owner-split-info";
 import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
 import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
@@ -499,7 +501,8 @@ export function computeTransferSummary(
     // 시가 모드 시 marketValueAtTransfer 직접 사용. 기준시가 모드는 단순 보수적 계산.
     let approxValuation = 0;
     if (primary!.bgValuationMode === "sangjeungbeop_market") {
-      approxValuation = parseRaw(primary!.bgMarketValueAtTransfer);
+      // 토지·건물 소유자 분리 범위 안은 증여한 부분의 시가 — 총액 칸을 읽지 않는다(④ `bgOwnerSplitInfoPatch`와 같은 술어).
+      approxValuation = parseRaw(bgOwnerSplitActive(primary!) ? primary!.bgMarketValueOwnedPart : primary!.bgMarketValueAtTransfer);
     } else {
       // 보충적 평가 추정: standardPriceAtTransfer (housing·building·land 단일) + bgMortgageSet/임대 보조
       //
@@ -508,7 +511,9 @@ export function computeTransferSummary(
       const standard =
         primary!.assetKind === "right_to_move_in"
           ? deriveRightValuationTotal(primary!)
-          : parseRaw(primary!.standardPriceAtTransfer);
+          : bgOwnerSplitActive(primary!)
+            ? bgOwnerSplitTransferStd(primary!).land + bgOwnerSplitTransferStd(primary!).building // 증여한 부분의 양도시 기준시가(단일 칸은 숨는다)
+            : parseRaw(primary!.standardPriceAtTransfer);
       const annualRent = parseRaw(primary!.bgAnnualRentTotal);
       const mortgageSet = primary!.bgMortgageSetAmount
         ? parseRaw(primary!.bgMortgageSetAmount)

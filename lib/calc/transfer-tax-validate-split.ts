@@ -22,8 +22,7 @@ import { isSplitPairOverflow } from "@/lib/tax-engine/transfer-tax-split-gain";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import { withoutBgHiddenAcqFlags } from "./bg-asset-acq-mode-scope";
-import { bgOwnerSplitUnsupported } from "./bg-owner-split-scope";
-import { BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE } from "./bg-owner-split-scope";
+import { bgOwnerSplitActive, bgOwnerSplitUnsupported } from "./bg-owner-split-scope";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { requiresAcqStdPricePart } from "./transfer-tax-split-acq-mode";
 import { requiresAcqStdPrice } from "./transfer-tax-split-acq-mode";
@@ -372,8 +371,10 @@ export function validateSplitDirectInputs(
   //   (`validateSplitCarryoverInputs`)가 C 사실로 이미 걸었으므로 여기서는 양도가액 구분·양도시 기준시가·파트 자본적지출만 본다.
   const carryoverSplit = effectiveCarryoverDonorSplit(asset);
   if (!isSplitValidationActive(rawAsset)) return null;
-  // 부담부증여 × 소유자 분리 — 아직 계산하지 않는다(⑤ 토글 잠금 · ⑫ 같은 leaf · `bg-owner-split-scope.ts`)
-  if (bgOwnerSplitUnsupported(asset)) return fieldError("selfOwns", `${label}: ${BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE}`);
+  // 부담부증여 × 소유자 분리 — 범위 밖만 막고(⑤ 토글 잠금 · ⑫ 같은 leaf · `bg-owner-split-scope.ts`), 범위 안은 본인 몫 입력을 부담부증여 블록이 받는다(`validateBgOwnerSplit`)
+  const bgOwnerErr = bgOwnerSplitUnsupported(asset, { bundled: !!(opts?.isNonPrimary || opts?.hasCompanions) });
+  if (bgOwnerErr) return fieldError("selfOwns", `${label}: ${bgOwnerErr}`);
+  if (bgOwnerSplitActive(asset)) return null;
   // 주택·건물 부담부증여 × 토지·건물 취득일 다름 — 파트 값은 부담부증여 블록이 받고(§159 · `validateBgHouseSplit`) 일반 분리 칸(취득가액·방식·양도가액 구분)은
   //   화면에 없다(`LandBuildingSplitSection`은 부담부증여면 그리지 않는다). 여기서 요구하면 칸 없는 차단이다(계획서 `bg-carryover-non-gb-building-date.plan.md` §8 V-1).
   if (bgHouseSplitActive(rawAsset)) return null;

@@ -1,4 +1,7 @@
 /**
+ * 🔄 2026-11-12 PR-3 — 범위가 «건물 종류만»으로 열렸다(`bg-owner-split-159.plan.md` Q-1 b). 이 파일은 **범위 밖**(주택 · 함께 양도 묶음)이 계속 막힘을 고정한다 —
+ * 단언은 그대로이고 사유별 문구만 따라간다. 범위 안 계산·그 밖 사유(취득원인·매매사례/감정·공유지분·채무 미확인)는 `transfer.route.bg-owner-split-calc.anchor.test.ts`.
+ *
  * 부담부증여 × 토지·건물 소유자 분리 — ⑧·⑫가 같은 leaf로 막는다(`lib/calc/bg-owner-split-scope.ts` · 사용자 결정 c 2026-11-12).
  *
  * 「소득세법 시행령」 §159①의 평가액·증여가액은 증여한 부분의 값이어야 하는데, ④가 부담부증여면 분리 payload를 끄고 엔진은 물건 전체 값으로
@@ -16,11 +19,13 @@ import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { captureBody } from "../calc/_one-house-pr3a-calc-route";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
-import { BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE } from "@/lib/calc/bg-owner-split-scope";
+import { BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE, bgOwnerSplitReasonMessage } from "@/lib/calc/bg-owner-split-scope";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 const MSG = BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE;
+/** 주택(개별주택가격)은 범위 밖 — 사유별 문구(계획서 Q-1 b). 이 파일의 시료는 모두 범위 밖이다. */
+const HOUSING_MSG = bgOwnerSplitReasonMessage("housing");
 const FORM = { transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", isOneHousehold: false, householdHousingCount: "2", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true };
 /** 기준시가 모드 부담부증여 주택(`transfer.route.bg-std-mode-acq-std-required` SA-1과 같은 시료) — 단건 양도차익 194,000,000 */
 const BG = {
@@ -58,7 +63,7 @@ describe("부담부증여 × 소유자 분리 차단", () => {
 
   it.each(["building_only", "land_only"] as const)("주 자산 %s → ⑧ 「토지·건물 소유자 다름」 칸 · ⑫ 400 같은 문구", async (own) => {
     const r = await run([house(1, { selfOwns: own, ...(own === "land_only" ? { buildingOwnerSameHousehold: false } : {}) })]);
-    expect(r.step0).toContainEqual(expect.objectContaining({ assetIndex: 0, field: "selfOwns", message: `자산: ${MSG}` }));
+    expect(r.step0).toContainEqual(expect.objectContaining({ assetIndex: 0, field: "selfOwns", message: `자산: ${HOUSING_MSG}` }));
     expect(r.status).toBe(400);
     expect(r.text).toContain(MSG);
   });

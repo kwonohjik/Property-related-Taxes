@@ -10,8 +10,7 @@
 import { z } from "zod";
 import { directResidenceMonthsOverflowError } from "@/lib/calc/residence-interval-validate";
 import { residenceStartWithMerge } from "@/lib/calc/self-owns-scope";
-import { bgOwnerSplitUnsupportedBody } from "@/lib/calc/bg-owner-split-scope";
-import { BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE } from "@/lib/calc/bg-owner-split-scope";
+import { refineBgOwnerSplit } from "./transfer-tax-schema-bg-owner-split";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx): Issue => (path, message) =>
@@ -36,6 +35,10 @@ export type HouseholdRefineInput = {
   acquisitionCause?: string;
   transferType?: string;
   burdenedGiftInfo?: unknown;
+  /** 소유자 분리 범위 판정(`bgOwnerSplitUnsupportedBody`)이 읽는다 — 공유지분율·지분 분할(축 B) 표지·함께 양도 자산 */
+  ownershipRatio?: number;
+  burdenedGiftWholeInfo?: unknown;
+  companionAssets?: ReadonlyArray<unknown>;
   selfOwns?: string;
   buildingOwnerSameHousehold?: boolean;
   buildingOwnerHouseholdMerged?: boolean;
@@ -169,8 +172,8 @@ export function refineHouseholdRequiredInputs(data: HouseholdRefineInput, ctx: z
    */
   const ncMsg = newConstructionLandOnlyIssue(data);
   if (ncMsg) issue(["selfOwns"], ncMsg);
-  // 부담부증여 × 소유자 분리 — 아직 계산하지 않는다(⑧ 같은 leaf · `bg-owner-split-scope.ts`). 단건·다건 공용 진입점이다.
-  if (bgOwnerSplitUnsupportedBody(data)) issue(["selfOwns"], BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE);
+  // 부담부증여 × 소유자 분리 — 범위 밖만 400 + 본인 몫 계약(⑧ 같은 leaf · `bg-owner-split-scope.ts`). 단건·다건 공용 진입점이다.
+  refineBgOwnerSplit(data, ctx);
 
   const lohMsg = landOnlyHouseholdIssue(data);
   if (lohMsg) issue(["buildingOwnerSameHousehold"], lohMsg);

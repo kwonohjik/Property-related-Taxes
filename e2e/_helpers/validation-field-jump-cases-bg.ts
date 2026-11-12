@@ -45,14 +45,42 @@ const carry = (patch: Record<string, unknown> = {}) =>
     carryover: { ...CARRYOVER_DEFAULTS, giftRegistryDate: "2014-01-01", donorAcquisitionDate: "2010-01-01", donorRelation: "spouse", giftDateValuation: "300000000", donorAcquisitionPrice: "200000000" },
     ...patch,
   });
+/** 부담부증여 × 소유자 분리 범위 안 — 건물만 본인(건물 종류 · 매매 · 기준시가 모드). 증여한 건물분 양도시 3억 · 취득시 1억 · 채무 1억. */
+const ownerBldg = (patch: Record<string, unknown> = {}) =>
+  bg({
+    assetKind: "building", selfOwns: "building_only", hasSeperateLandAcquisitionDate: true,
+    buildingStandardPriceAtTransfer: "300000000", buildingStandardPriceAtAcq: "100000000", bgOwnerSplitDebtConfirmed: true,
+    ...patch,
+  });
 const priorRow = (patch: Record<string, unknown>) => ({ giftDate: "2020-01-01", giftAmount: "100000000", giftTaxPaid: "", computedTax: "5000000", giftTaxBase: "50000000", ...patch });
 
 export const BG_FIELD_JUMP_CASES: FieldJumpCase[] = [
   {
-    // 부담부증여 × 소유자 분리 — 아직 계산하지 않는다(⑤ 토글은 켜는 방향만 잠김 · 켜진 저장값은 끌 수 있다 · `bg-owner-split-scope.ts`)
+    // 부담부증여 × 소유자 분리 — 범위 밖(주택)은 계속 막는다(⑤ 토글은 켜는 방향만 잠김 · 켜진 저장값은 끌 수 있다 · `bg-owner-split-scope.ts`). 건물 종류는 아래 «소유자 분리 …» 케이스가 본인 몫을 받는다.
     name: "bg: 소유자 분리 미지원", field: "selfOwns", step: 0, assetIndex: A,
-    message: /^자산: 토지·건물 소유자가 다른 자산의 부담부증여는 아직 계산하지 않습니다/,
+    message: /^자산: 토지·건물 소유자가 다른 자산의 부담부증여는 이 경우 계산하지 않습니다 — 주택\(개별주택가격\)은/,
     form: market({ selfOwns: "building_only", standardPricePerSqmAtAcq: "1000000", acquisitionArea: "100" }),
+  },
+  // 부담부증여 × 소유자 분리 범위 안(건물·매매·단독 소유) — 증여한 건물분만 입력한다(`bgOwnerSplitActive` · ⑤ `BurdenedGiftOwnerSplitCard`).
+  {
+    name: "bg: 소유자 분리 채무 확인", field: "bgOwnerSplitDebtConfirmed", step: 0, assetIndex: A,
+    message: /^자산: 인수한 채무\(임대보증금 포함\)가 증여자 본인 채무이고 증여한 건물에만 관련된다는 것을 확인하세요/,
+    form: ownerBldg({ bgOwnerSplitDebtConfirmed: false }),
+  },
+  {
+    name: "bg: 소유자 분리 양도시 건물 기준시가", field: "buildingStandardPriceAtTransfer", step: 0, assetIndex: A,
+    message: /^자산: 토지·건물 소유자가 다르면 증여한 건물분의 평가액으로 계산합니다 — 양도시 건물 기준시가를 입력하세요/,
+    form: ownerBldg({ buildingStandardPriceAtTransfer: "" }),
+  },
+  {
+    name: "bg: 소유자 분리 취득시 건물 기준시가", field: "buildingStandardPriceAtAcq", step: 0, assetIndex: A,
+    message: /^자산: 토지·건물 소유자가 다르면 증여한 건물분의 취득 당시 기준시가로 취득가액을 정합니다/,
+    form: ownerBldg({ buildingStandardPriceAtAcq: "" }),
+  },
+  {
+    name: "bg: 소유자 분리 증여한 부분 시가", field: "bgMarketValueOwnedPart", step: 0, assetIndex: A,
+    message: /^자산: 부담부증여 시가 모드 — 증여한 건물분의 양도시 시가 평가액을 입력하세요/,
+    form: ownerBldg({ bgValuationMode: "sangjeungbeop_market", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "100000000", bgMarketValueOwnedPart: "" }),
   },
   { name: "bg: 평가 유형", field: "bgValuationMode", step: 0, assetIndex: A, message: /^자산: 부담부증여 평가 유형/, form: bg({ bgValuationMode: "" }) },
   { name: "bg: 인수 채무액", field: "bgLendingDepositTotal", step: 0, assetIndex: A, message: /^자산: 부담부증여 인수 채무액\(임대보증금 \+ 담보차입금\)을 입력하세요\.$/, form: bg({ bgLendingDepositTotal: "" }) },

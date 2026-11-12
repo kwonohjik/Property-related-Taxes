@@ -13,7 +13,7 @@
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { TransferTaxInput } from "./types/transfer.types";
 
-type OwnerSplit = "building_only" | "land_only";
+export type OwnerSplit = "building_only" | "land_only";
 
 /** 부담부증여 주택·건물에서 한 파트만 본인 소유(한 파트만 증여)인가. */
 export function bgOwnerSplitOf(input: Pick<TransferTaxInput, "transferType" | "propertyType" | "selfOwns">): OwnerSplit | undefined {
@@ -24,28 +24,38 @@ export function bgOwnerSplitOf(input: Pick<TransferTaxInput, "transferType" | "p
 
 const PART_LABEL = { land: "토지", building: "건물" } as const;
 
-/** 입력 계약 검사 — 비소유 파트의 기준시가·실지취득가액은 0(또는 없음), 증여한 파트의 양도시 기준시가는 양수. */
-export function assertBgOwnerSplitInputs(owner: OwnerSplit, info: NonNullable<TransferTaxInput["burdenedGiftInfo"]>): void {
+type OwnerSplitInfo = NonNullable<TransferTaxInput["burdenedGiftInfo"]>;
+export type BgOwnerSplitContractViolation = { detail: string; field: string };
+
+/** 입력 계약 위반 첫 건 — 비소유 파트의 기준시가·실지취득가액은 0(또는 없음), 증여한 파트의 양도시 기준시가는 양수. 없으면 null. ⑫도 같은 판정을 쓴다. */
+export function bgOwnerSplitContractViolation(owner: OwnerSplit, info: OwnerSplitInfo): BgOwnerSplitContractViolation | null {
   const owned = owner === "building_only" ? "building" : "land";
   const other = owned === "building" ? "land" : "building";
-  const fail = (detail: string, field: string): never => {
-    throw new TaxCalculationError(
-      TaxErrorCode.INVALID_INPUT,
-      `[burdened_gift] 토지·건물 소유자가 다르면 증여한 부분(${PART_LABEL[owned]})의 값만 보내야 합니다 — ${detail} ` +
-        "평가액·증여가액은 증여한 자산의 값입니다(「소득세법 시행령」 제159조 제1항).",
-      { field },
-    );
-  };
   const std = {
     land: { transfer: info.landStdPriceAtTransfer, acq: info.landStdPriceAtAcquisition },
     building: { transfer: info.buildingStdPriceAtTransfer, acq: info.buildingStdPriceAtAcquisition },
   };
   if ((std[other].transfer ?? 0) !== 0 || (std[other].acq ?? 0) !== 0)
-    fail(`${PART_LABEL[other]}은 본인 소유가 아니므로 양도시·취득시 ${PART_LABEL[other]} 기준시가는 0이어야 합니다.`, `burdenedGiftInfo.${other}StdPriceAtTransfer`);
-  if (!(std[owned].transfer > 0)) fail(`양도시 ${PART_LABEL[owned]} 기준시가를 입력하세요.`, `burdenedGiftInfo.${owned}StdPriceAtTransfer`);
+    return { detail: `${other === "land" ? "토지는" : "건물은"} 본인 소유가 아니므로 양도시·취득시 ${PART_LABEL[other]} 기준시가는 0이어야 합니다.`, field: `burdenedGiftInfo.${other}StdPriceAtTransfer` };
+  if (!(std[owned].transfer > 0)) return { detail: `양도시 ${PART_LABEL[owned]} 기준시가를 입력하세요.`, field: `burdenedGiftInfo.${owned}StdPriceAtTransfer` };
   const otherActual = other === "land" ? info.actualLandAcquisitionPrice : info.actualBuildingAcquisitionPrice;
   if ((otherActual ?? 0) !== 0)
-    fail(`${PART_LABEL[other]} 실지취득가액은 보내지 않습니다.`, `burdenedGiftInfo.actual${other === "land" ? "Land" : "Building"}AcquisitionPrice`);
+    return { detail: `${PART_LABEL[other]} 실지취득가액은 보내지 않습니다.`, field: `burdenedGiftInfo.actual${other === "land" ? "Land" : "Building"}AcquisitionPrice` };
   if (info.marketValueByPart !== undefined)
-    fail("토지분·건물분 시가(날짜 분리 전용)는 보내지 않습니다 — 증여한 부분의 시가는 양도시 시가 평가액 한 칸입니다.", "burdenedGiftInfo.marketValueByPart");
+    return { detail: "토지분·건물분 시가(날짜 분리 전용)는 보내지 않습니다 — 증여한 부분의 시가는 양도시 시가 평가액 한 칸입니다.", field: "burdenedGiftInfo.marketValueByPart" };
+  return null;
+}
+
+/** 위 계약 위반 문구(`[burdened_gift] … 증여한 부분(…)`) — 엔진 throw와 ⑫ 400이 같은 문장을 쓴다. */
+export function bgOwnerSplitContractMessage(owner: OwnerSplit, detail: string): string {
+  return (
+    `[burdened_gift] 토지·건물 소유자가 다르면 증여한 부분(${PART_LABEL[owner === "building_only" ? "building" : "land"]})의 값만 보내야 합니다 — ${detail} ` +
+    "평가액·증여가액은 증여한 자산의 값입니다(「소득세법 시행령」 제159조 제1항)."
+  );
+}
+
+/** 입력 계약 검사 — 위반이면 던진다(엔진이 0으로 바꾸지 않는다). */
+export function assertBgOwnerSplitInputs(owner: OwnerSplit, info: OwnerSplitInfo): void {
+  const v = bgOwnerSplitContractViolation(owner, info);
+  if (v) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, bgOwnerSplitContractMessage(owner, v.detail), { field: v.field });
 }
