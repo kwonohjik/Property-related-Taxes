@@ -10,7 +10,7 @@
  *  · DP-3 단일 소스 항등: echo 분모 = 양도차익의 환산 분모 = 특례 detail 분모, base = 환산취득가액 × 취득 당시 건물 비율
  *  · DP-4 불변: 특례 없음 · 불발(수치) · 보상 미입력 · ②3호 B 채택 · 5년 경과 · 최상위 환산 OFF · donorBuilt 없음
  *  · DP-5 함께 양도(컴패니언): 93,750,000 / 4,687,500 → 125,000,000 / 6,250,000
- *  · DP-6 범위 밖 고정: 비주택 건물 단독 신축은 이번 PR 이 건드리지 않는다
+ *  · DP-6 비주택 건물 단독 신축 정렬: 공매 경락 2억 → base 300,000,000 (종전 150,000,000)
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -346,15 +346,15 @@ describe("DP-5 함께 양도(컴패니언) — ⑭ 가 §164⑨ 키를 엔진에
   });
 });
 
-describe("DP-6 범위 밖 고정 — 비주택 건물 단독 신축은 이번 PR 이 건드리지 않는다 (확인 필요: 같은 부류의 분모 불일치 — 보고서 참조)", () => {
-  it("비주택 건물 × 공매: 가산세 base 가 종전 150,000,000 그대로", async () => {
+describe("DP-6 비주택 건물 단독 신축도 같은 분모로 정렬한다 (계획서 donor-nonhousing-building-penalty-base-dp6.plan.md · Q-1 a)", () => {
+  it("비주택 건물 × 공매(경락 2억): 가산세 base = 3억 × 2억 ÷ 2억 = 300,000,000 (종전 150,000,000) — 상세 격자는 transfer.route.carryover-donor-built-nonhousing-164-9.anchor.test.ts", async () => {
     const r = await call({
       ...single({ ...AUCTION, auctionPrice: 200_000_000 }),
       propertyType: "building",
       carryoverTaxation: { ...CT, donorBuilt: DB_NEW },
     });
     OK(r);
-    expect(r.result!.penaltyBase).toBe(150_000_000);
+    expect(r.result!.penaltyBase).toBe(300_000_000);
     expect(r.result!.carryoverTaxationDetail!.donorBuiltPenalty!.housingSplit).toBeUndefined();
   });
 });
