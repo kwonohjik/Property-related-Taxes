@@ -10,6 +10,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
 import { deriveRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
+import { deriveHalfDutyRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isRentalHousingExceptionApplicable } from "./rental-housing-exception-scope";
 import { aptDeadlineExtensionPayload, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
@@ -85,6 +86,8 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
         ? (u.firstSaleContractDate.includes('T') ? u.firstSaleContractDate : `${u.firstSaleContractDate}T00:00:00.000Z`)
         : undefined,
       rentalMonths: deriveRentalMonths(u),
+      // V-5 — ㉓1호 1/2은 민특법 임대의무기간 기준(지자체 등록일부터). 말소 토글 ON일 때만(⑤가 그때만 노출 — 3중 패턴).
+      halfDutyRentalMonths: rentalUnitTerminationInScope(u) ? deriveHalfDutyRentalMonths(u) : undefined,
       // S16-3 — 말소 표시는 ㉓ 대상 목(가·다·라·마)일 때만 효력이 있다. 목이 바뀌어 토글이 화면에서 사라진 stale 값은 보내지 않는다.
       rentalAutoTermination: rentalUnitTerminationInScope(u),
       // I-4 — ㉓ 말소일. 말소 토글 ON일 때만 보낸다(⑤가 그때만 노출 — 3중 패턴). 미입력("")·stale(undefined)은
