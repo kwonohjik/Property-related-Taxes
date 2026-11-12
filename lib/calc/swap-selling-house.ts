@@ -28,6 +28,7 @@ type Disposition = "carried" | string;
 
 const RENTAL_KEYS = [
   "isLongTermRental", "isApartment", "isRegisteredRental", "rentalRegistrationDate", "businessRegistrationDate", "rentalPeriodYears",
+  "rentalStartDate", "rentalEndDate", "isInheritedRental", "decedentRentalMonths",
   "rentalCancelledDate", "rentalCancellationReason", "rentalType", "rentIncreaseUnder5Pct", "rentIncreaseContractDate",
   "isNationalSizeHousing", "hasMinimum2Units", "hasMinimum5UnitsInCity", "rentalLandArea", "rentalTotalFloorArea", "isConvertedToSale",
   "firstSaleContractDate", "acquisitionOfficialPrice", "rentalStartOfficialPrice", "hasHalfDutyPeriodMet", "isSoldWithin1YearOfCancellation",
@@ -39,7 +40,7 @@ const RENTAL_KEYS = [
 
 const TAX_INCENTIVE_KEYS = [
   "isTaxIncentiveRental", "isTaxIncentiveRentalPurchase", "taxIncentiveRentalRegistrationType", "isUrbanLifeHousingApartment",
-  "taxIncentiveRentalAptDeadlineExtension", "rentalPeriodYears", "isNationalSizeHousing", "isApartment",
+  "taxIncentiveRentalAptDeadlineExtension", "rentalPeriodYears", "rentalStartDate", "rentalEndDate", "isNationalSizeHousing", "isApartment",
 ] as const satisfies readonly (keyof TaxIncentiveRentalFacts)[];
 
 /** 양쪽에 같은 이름·같은 뜻으로 있는 중과 배제 사실(§167의3①4·8·8의2호 · §167의10①3·7호) */
@@ -121,6 +122,10 @@ export const ROW_FIELD_DISPOSITION = {
   rentalRegistrationDate: "carried",
   businessRegistrationDate: "carried",
   rentalPeriodYears: "carried",
+  rentalStartDate: "carried",
+  rentalEndDate: "carried",
+  isInheritedRental: "carried",
+  decedentRentalMonths: "carried",
   rentalCancelledDate: "carried",
   rentalCancellationReason: "carried",
   rentalType: "carried",

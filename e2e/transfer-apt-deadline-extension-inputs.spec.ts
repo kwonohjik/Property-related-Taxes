@@ -63,7 +63,7 @@ function seedForm(transferDate = "2028-03-01") {
             isRegisteredRental: true,
             rentalRegistrationDate: "2018-01-01",
             businessRegistrationDate: "2018-01-01",
-            rentalPeriodYears: "9",
+            rentalStartDate: "2018-01-01", // PR-2 Q-3 — 연수 칸 대신 임대개시일
             rentalType: "A",
             rentalStartOfficialPrice: "300000000",
             rentIncreaseUnder5Pct: true,

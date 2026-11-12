@@ -13,7 +13,7 @@ import { isWithinDeadline, isWithinDeadlineMonths } from "./civil-period";
 import { MULTI_HOUSE } from "./legal-codes";
 import type { HouseInfo } from "./types/multi-house-surcharge.types";
 import {
-  calcRentalPeriodYears,
+  calcTaxIncentiveRentalPeriodYears,
   isSurchargeExemptRental,
   isSurchargeExemptInherited,
   getRentalTypeLabel,
@@ -113,7 +113,7 @@ export function dutyPeriodPendingReason(house: HouseInfo, transferDate: Date): s
   if (isLongTermRentalDutyPeriodPending(house, transferDate)) {
     return `② 장기임대주택 (${getRentalTypeLabel(house.rentalType)} · ${basis})`;
   }
-  if (house.isTaxIncentiveRental && house.isNationalSizeHousing && calcRentalPeriodYears(house) < 5) {
+  if (house.isTaxIncentiveRental && house.isNationalSizeHousing && calcTaxIncentiveRentalPeriodYears(house, transferDate) < 5) {
     return `③ 조특법 감면 임대주택 (${basis})`;
   }
   if (house.isEmployeeHousing && (house.freeProvisionYears ?? 0) < 10) {

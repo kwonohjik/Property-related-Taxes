@@ -82,7 +82,8 @@ const rentalRow = (ext?: AptDeadlineExtensionForm): HouseEntry => ({
   isRegisteredRental: true,
   rentalRegistrationDate: "2018-01-01",
   businessRegistrationDate: "2018-01-01",
-  rentalPeriodYears: "9",
+  // PR-2 Q-3 — 화면은 연수 대신 임대개시일(등록일과 같은 날 · 양도일까지 8년 이상)
+  rentalStartDate: "2018-01-01",
   rentalType: "A",
   rentalStartOfficialPrice: "300000000",
   rentIncreaseUnder5Pct: true,
@@ -343,7 +344,8 @@ describe("⑪3호 조건 — 감면대상장기임대주택(3호 후단) 경로"
       sellingHouseExclusion: {
         taxIncentiveRental: {
           isTaxIncentiveRental: true,
-          rentalPeriodYears: "6",
+          // PR-2 Q-3 — 3호 임대개시일(자르지 않음 · 양도일까지 12년 이상)
+          rentalStartDate: "2014-01-01",
           isNationalSizeHousing: true,
           isApartment: true,
           isTaxIncentiveRentalPurchase: true,

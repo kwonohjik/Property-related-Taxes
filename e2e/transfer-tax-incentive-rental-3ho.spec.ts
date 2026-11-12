@@ -3,7 +3,7 @@
  *
  * 🔴 종전에는 이 호에 닿는 입력 칸이 화면에 없었다(엔진만 판정). 여기서는 2주택 세대가 보유 상황
  *    단계의 「양도 주택이 조특법 감면 임대주택인 경우」 칸을 켜고 임대기간·국민주택을 넣으면
- *    ① 양도 주택 행에 `isTaxIncentiveRental`·`rentalPeriodYears`·`isNationalSizeHousing`이 실려 가고
+ *    ① 양도 주택 행에 `isTaxIncentiveRental`·`rentalStartDate`·`isNationalSizeHousing`이 실려 가고
  *    ② 결과에 「조특법 감면 임대주택」 배제 사유가 나오는지 본다.
  *
  * 세액은 dev 서버의 세율 원천(DB/fallback)에 따라 달라질 수 있어 단언하지 않는다 — 금액 anchor는
@@ -81,7 +81,11 @@ test.describe("§167의3①3호 감면대상장기임대주택 — 입력 → �
     const card = page.getByTestId("selling-tax-incentive-rental-toggle");
     await expect(card).toBeVisible();
     await card.getByRole("switch", { name: /^양도 주택이 조특법 감면 임대주택/ }).click();
-    await card.getByPlaceholder("임대기간 입력").fill("6");
+    // PR-2 Q-3 — 「임대기간 (년)」 대신 임대개시일(양도 2026-08-01까지 6년)
+    const period = card.getByTestId("selling-tax-incentive-period");
+    await period.getByRole("textbox", { name: "연도" }).first().fill("2020");
+    await period.getByRole("textbox", { name: "월" }).first().fill("8");
+    await period.getByRole("textbox", { name: "일" }).first().fill("1");
     await card.getByRole("switch", { name: /^국민주택/ }).click();
 
     for (const step of ["감면·공제", "가산세"]) {
@@ -100,7 +104,7 @@ test.describe("§167의3①3호 감면대상장기임대주택 — 입력 → �
     expect(sent.houses?.[0]).toMatchObject({
       id: "selling",
       isTaxIncentiveRental: true,
-      rentalPeriodYears: 6,
+      rentalStartDate: "2020-08-01",
       isNationalSizeHousing: true,
     });
     expect(sent.houses?.[1]).not.toHaveProperty("isTaxIncentiveRental");

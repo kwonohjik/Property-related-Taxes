@@ -55,7 +55,8 @@ describe("⑤ 양도 주택 3호 섹션", () => {
       />,
     );
     expect(sw(SELLING_TOGGLE)).toHaveAttribute("data-checked");
-    expect(screen.getByText("임대기간 (년)")).toBeTruthy();
+    // PR-2 Q-3 — 「임대기간 (년)」 대신 임대개시일·종료일
+    expect(screen.getByText("임대개시일")).toBeTruthy();
     expect(sw("국민주택")).not.toBeNull();
     expect(sw("임대주택이 아파트")).not.toBeNull();
     expect(screen.queryByTestId("tax-incentive-rental-apt-gate-selling")).toBeNull();
@@ -116,13 +117,13 @@ describe("⑤ 양도 주택 3호 섹션", () => {
     render(
       <SellingHouseTaxIncentiveRentalSection
         value={{
-          longTermRental: { isLongTermRental: true, isApartment: true, rentalPeriodYears: "8" },
+          longTermRental: { isLongTermRental: true, isApartment: true, rentalStartDate: "2018-01-01" },
           taxIncentiveRental: { isTaxIncentiveRental: true },
         }}
         onChange={() => {}}
       />,
     );
-    expect(screen.queryByText("임대기간 (년)")).toBeNull();
+    expect(screen.queryByText("임대개시일")).toBeNull();
     expect(sw("임대주택이 아파트")).toBeNull();
     // 아파트 여부는 2호 칸 값(true)으로 후단을 연다
     expect(screen.queryByTestId("tax-incentive-rental-apt-gate-selling")).not.toBeNull();
@@ -132,7 +133,7 @@ describe("⑤ 양도 주택 3호 섹션", () => {
     const onChange = vi.fn();
     render(
       <SellingHouseTaxIncentiveRentalSection
-        value={{ isCulturalHeritage: true, taxIncentiveRental: { isTaxIncentiveRental: true, rentalPeriodYears: "6" } }}
+        value={{ isCulturalHeritage: true, taxIncentiveRental: { isTaxIncentiveRental: true, rentalStartDate: "2019-01-01" } }}
         onChange={onChange}
       />,
     );
@@ -159,32 +160,32 @@ describe("⑤ 명부 행 「특례 구분」 3호 칩", () => {
     expect(sw("국민주택")).not.toBeNull();
   });
 
-  it("TU-8 칩 OFF는 3호 전용 사실을 지우되, 2호가 켜져 있으면 공유 칸(임대기간)을 남긴다", () => {
+  it("TU-8 칩 OFF는 3호 전용 사실을 지우되, 2호가 켜져 있으면 공유 칸(임대개시일)을 남긴다", () => {
     const onUpdate = vi.fn();
     render(
       <HouseEntryEditor
-        house={makeHouse({ isTaxIncentiveRental: true, isLongTermRental: true, rentalPeriodYears: "6", isTaxIncentiveRentalPurchase: true })}
+        house={makeHouse({ isTaxIncentiveRental: true, isLongTermRental: true, rentalStartDate: "2019-01-01", isTaxIncentiveRentalPurchase: true })}
         onUpdate={onUpdate}
         taxIncentiveRentalEnabled
       />,
     );
     (sw(ROW_CHIP) as HTMLElement).click();
     expect(onUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ isTaxIncentiveRental: false, isTaxIncentiveRentalPurchase: undefined, rentalPeriodYears: "6" }),
+      expect.objectContaining({ isTaxIncentiveRental: false, isTaxIncentiveRentalPurchase: undefined, rentalStartDate: "2019-01-01" }),
     );
   });
 
-  it("TU-9 2호 OFF도 3호가 켜져 있으면 임대기간을 지우지 않는다 (공유 칸 보존)", () => {
+  it("TU-9 2호 OFF도 3호가 켜져 있으면 임대개시일을 지우지 않는다 (공유 칸 보존)", () => {
     const onUpdate = vi.fn();
     render(
       <HouseEntryEditor
-        house={makeHouse({ isTaxIncentiveRental: true, isLongTermRental: true, rentalPeriodYears: "6" })}
+        house={makeHouse({ isTaxIncentiveRental: true, isLongTermRental: true, rentalStartDate: "2019-01-01" })}
         onUpdate={onUpdate}
         taxIncentiveRentalEnabled
       />,
     );
     (sw("장기임대 등록주택") as HTMLElement).click();
-    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ isLongTermRental: false, rentalPeriodYears: "6" }));
+    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ isLongTermRental: false, rentalStartDate: "2019-01-01" }));
   });
 });
 

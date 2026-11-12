@@ -100,7 +100,8 @@ const rental = (id = "r", over: Partial<SpecialHouseExclusionFormItem> = {}): Ho
 const THREE_HO: Partial<HouseEntry> = {
   isTaxIncentiveRental: true,
   isTaxIncentiveRentalPurchase: false,
-  rentalPeriodYears: "20",
+  // PR-2 Q-3 — 화면은 연수 대신 임대개시일(3호는 자르지 않음 · 1999.3.1. 임대개시 → 27년)
+  rentalStartDate: "1999-03-01",
   isNationalSizeHousing: true,
   isApartment: false,
 };

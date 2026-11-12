@@ -71,13 +71,13 @@ const ROSTER_ROW: HouseEntry = {
   isUnsoldHousing: false,
 };
 
-/** 등록 완비 + 6년 임대 (유형 미선택 = legacy 경로) */
+/** 등록 완비 + 2017-01-01 임대개시 (유형 미선택 = legacy 경로) — PR-2 Q-3: 연수 대신 임대개시일 */
 const REGISTERED: RentalDeclaration = {
   isLongTermRental: true,
   isRegisteredRental: true,
   rentalRegistrationDate: "2017-01-01",
   businessRegistrationDate: "2017-01-01",
-  rentalPeriodYears: "6",
+  rentalStartDate: "2017-01-01",
 };
 
 function form(ltr?: RentalDeclaration): TransferFormData {
@@ -102,20 +102,21 @@ describe("LR ④⑬ — 양도 주택의 장기임대 선언이 페이로드에 
     expect(s.rentalType).toBeUndefined();
   });
 
-  it("LR-2 등록 경로 — 등록 플래그·등록일 2종·임대기간이 실린다", () => {
-    const s = sellingRow(REGISTERED);
+  it("LR-2 등록 경로 — 등록 플래그·등록일 2종·임대개시일이 실린다(연수는 싣지 않는다 · PR-2 Q-3)", () => {
+    const s = sellingRow({ ...REGISTERED, rentalPeriodYears: "6" });
     expect(s.isLongTermRental).toBe(true);
     expect(s.isRegisteredRental).toBe(true);
     expect(s.rentalRegistrationDate).toBe("2017-01-01");
     expect(s.businessRegistrationDate).toBe("2017-01-01");
-    expect(s.rentalPeriodYears).toBe(6);
+    expect(s.rentalStartDate).toBe("2017-01-01");
+    expect(s.rentalPeriodYears).toBeUndefined();
   });
 
   it("LR-3 토글 OFF면 등록 정보가 남아 있어도 싣지 않는다", () => {
     const s = sellingRow({ ...REGISTERED, isLongTermRental: false });
     expect(s.isLongTermRental).toBe(false);
     expect(s.isRegisteredRental).toBeUndefined();
-    expect(s.rentalPeriodYears).toBeUndefined();
+    expect(s.rentalStartDate).toBeUndefined();
   });
 
   it("LR-4 9유형 매트릭스는 `rentalType`을 고른 때만 나간다 (명부 행과 같은 규약)", () => {

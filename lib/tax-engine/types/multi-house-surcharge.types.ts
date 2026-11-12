@@ -182,12 +182,16 @@ export interface HouseInfo {
   rentalCancellationReason?: "auto" | "voluntary";
   /** 임대사업자 자진·자동 말소일 (사목 G형 판정용) */
   rentalCancellationDate?: Date;
-  /** 임대 시작일 */
+  /**
+   * 임대개시일 — 있으면 임대기간을 날짜로 계산한다(2호는 등록일로 자름 — `multi-house-rental-period.ts`).
+   */
   rentalStartDate?: Date;
-  /** 임대 종료일 */
+  /** 임대 종료일 — 없으면 판정 양도일까지 임대한 것으로 본다 */
   rentalEndDate?: Date;
-  /** 임대기간(년) — 직접 입력 가능, 없으면 startDate~endDate로 계산 */
+  /** 임대기간(년) — `rentalStartDate`가 없을 때만 쓴다(직접 API·⑳ 카드 명부 행·옛 기록) */
   rentalPeriodYears?: number;
+  /** 2호 상속 — 피상속인 임대개월(조특령 §97⑤3호, 소령 §167의3③ 준용). 3호에는 더하지 않는다 */
+  decedentRentalMonths?: number;
   /** 임대료 증가율 5% 이하 충족 여부 */
   rentIncreaseUnder5Pct?: boolean;
   /**

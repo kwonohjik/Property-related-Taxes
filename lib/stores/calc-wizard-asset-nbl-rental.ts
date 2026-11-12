@@ -34,6 +34,10 @@ export type RentalDeclaration = Partial<
     | "rentalRegistrationDate"
     | "businessRegistrationDate"
     | "rentalPeriodYears"
+    | "rentalStartDate"
+    | "rentalEndDate"
+    | "isInheritedRental"
+    | "decedentRentalMonths"
     | "rentalCancelledDate"
     | "rentalCancellationReason"
     // 9유형 매트릭스 (가~자목)
@@ -113,6 +117,8 @@ export type TaxIncentiveRentalFacts = Partial<
     | "isUrbanLifeHousingApartment"
     | "taxIncentiveRentalAptDeadlineExtension"
     | "rentalPeriodYears"
+    | "rentalStartDate"
+    | "rentalEndDate"
     | "isNationalSizeHousing"
     | "isApartment"
   >

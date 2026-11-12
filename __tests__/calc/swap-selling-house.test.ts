@@ -73,12 +73,14 @@ describe("SW-2 옛 양도 주택 → 행", () => {
   it("장기임대·조특 감면 임대 — 공유 칸(임대기간·아파트)은 2호 칸 값으로 행 한 칸에", () => {
     const f = form({
       sellingHouseExclusion: {
-        longTermRental: { isLongTermRental: true, rentalType: "B", rentalPeriodYears: "8", isApartment: true, isNationalSizeHousing: true },
-        taxIncentiveRental: { isTaxIncentiveRental: true, rentalPeriodYears: "3", isApartment: false },
+        longTermRental: { isLongTermRental: true, rentalType: "B", rentalPeriodYears: "8", rentalStartDate: "2013-01-01", isApartment: true, isNationalSizeHousing: true },
+        taxIncentiveRental: { isTaxIncentiveRental: true, rentalPeriodYears: "3", rentalStartDate: "2018-01-01", isApartment: false },
       },
     });
     const row = swapSellingHouse(f, "h2").form.houses[1];
     expect([row.isLongTermRental, row.rentalType, row.rentalPeriodYears, row.isApartment, row.isTaxIncentiveRental]).toEqual([true, "B", "8", true, true]);
+    // PR-2 — 임대개시일도 같은 공유 칸(2호 값)으로 옮긴다
+    expect(row.rentalStartDate).toBe("2013-01-01");
   });
 });
 

@@ -47,9 +47,10 @@ const rowsOf = (f: TransferFormData) =>
   buildHousesPayload(f.assets[0], f.houses, 0, f.sellingHouseExclusion, undefined) as Payload[];
 const sellingOf = (f: TransferFormData) => rowsOf(f).find((r) => r.id === "selling")!;
 
+// PR-2 Q-3 — 화면 경로는 연수 대신 임대개시일을 싣는다
 const TIR: TaxIncentiveRentalFacts = {
   isTaxIncentiveRental: true,
-  rentalPeriodYears: "6",
+  rentalStartDate: "2019-01-01",
   isNationalSizeHousing: true,
   isApartment: true,
 };
@@ -58,7 +59,7 @@ const REG_2HO: RentalDeclaration = {
   isRegisteredRental: true,
   rentalRegistrationDate: "2017-01-01",
   businessRegistrationDate: "2017-01-01",
-  rentalPeriodYears: "8",
+  rentalStartDate: "2017-01-01",
   isApartment: false,
 };
 
@@ -67,7 +68,7 @@ describe("④ 양도 주택 — 3호 선언", () => {
     const s = sellingOf(form());
     expect(s).not.toHaveProperty("isTaxIncentiveRental");
     expect(s.isApartment).toBe(false);
-    expect(s.rentalPeriodYears).toBeUndefined();
+    expect(s.rentalStartDate).toBeUndefined();
     // 토글 OFF면 남은 값도 싣지 않는다
     expect(sellingOf(form({ ...TIR, isTaxIncentiveRental: false }))).not.toHaveProperty("isTaxIncentiveRental");
   });
@@ -76,11 +77,12 @@ describe("④ 양도 주택 — 3호 선언", () => {
     const s = sellingOf(form(TIR));
     expect(s).toMatchObject({
       isTaxIncentiveRental: true,
-      rentalPeriodYears: 6,
+      rentalStartDate: "2019-01-01",
       isNationalSizeHousing: true,
       isApartment: true,
       isLongTermRental: false,
     });
+    expect(s.rentalPeriodYears).toBeUndefined();
     expect(s.isTaxIncentiveRentalPurchase).toBeUndefined();
     expect(s.taxIncentiveRentalRegistrationType).toBeUndefined();
     expect(s.isUrbanLifeHousingApartment).toBeUndefined();
@@ -112,11 +114,11 @@ describe("④ 양도 주택 — 3호 선언", () => {
     });
   });
 
-  it("TI-4 2호도 켜져 있으면 임대기간·아파트는 2호 칸 값이다 (같은 주택의 같은 사실)", () => {
+  it("TI-4 2호도 켜져 있으면 임대개시일·아파트는 2호 칸 값이다 (같은 주택의 같은 사실)", () => {
     const s = sellingOf(form(TIR, REG_2HO));
     expect(s.isLongTermRental).toBe(true);
     expect(s.isTaxIncentiveRental).toBe(true);
-    expect(s.rentalPeriodYears).toBe(8);
+    expect(s.rentalStartDate).toBe("2017-01-01");
     expect(s.isApartment).toBe(false);
     // 국민주택규모는 2호가 나목(B)일 때만 2호 칸을 쓴다
     expect(s.isNationalSizeHousing).toBe(true);
@@ -128,25 +130,25 @@ describe("④ 양도 주택 — 3호 선언", () => {
     const body = buildPropertyPayload(form(TIR)) as Payload;
     const s = (body.houses as Payload[]).find((r) => r.id === "selling")!;
     expect(s.isTaxIncentiveRental).toBe(true);
-    expect(s.rentalPeriodYears).toBe(6);
+    expect(s.rentalStartDate).toBe("2019-01-01");
   });
 });
 
 describe("④ 명부 행 — 3호 선언", () => {
-  it("TI-6 2호 미선언이어도 임대기간·국민주택이 실린다 (같은 행 칸)", () => {
+  it("TI-6 2호 미선언이어도 임대개시일·국민주택이 실린다 (같은 행 칸)", () => {
     const row = rowsOf(
-      form(undefined, undefined, [{ ...ROW, isTaxIncentiveRental: true, rentalPeriodYears: "6", isNationalSizeHousing: true }]),
+      form(undefined, undefined, [{ ...ROW, isTaxIncentiveRental: true, rentalStartDate: "2019-01-01", isNationalSizeHousing: true }]),
     ).find((r) => r.id === "h1")!;
-    expect(row).toMatchObject({ isTaxIncentiveRental: true, rentalPeriodYears: 6, isNationalSizeHousing: true });
+    expect(row).toMatchObject({ isTaxIncentiveRental: true, rentalStartDate: "2019-01-01", isNationalSizeHousing: true });
     expect(row.isLongTermRental).toBe(false);
   });
 
   it("TI-7 OFF면 남은 값을 싣지 않는다 (2호 미선언 → 임대기간도 미전송)", () => {
     const row = rowsOf(
-      form(undefined, undefined, [{ ...ROW, isTaxIncentiveRental: false, rentalPeriodYears: "6", isNationalSizeHousing: true }]),
+      form(undefined, undefined, [{ ...ROW, isTaxIncentiveRental: false, rentalStartDate: "2019-01-01", isNationalSizeHousing: true }]),
     ).find((r) => r.id === "h1")!;
     expect(row).not.toHaveProperty("isTaxIncentiveRental");
-    expect(row.rentalPeriodYears).toBeUndefined();
+    expect(row.rentalStartDate).toBeUndefined();
     expect(row.isNationalSizeHousing).toBeUndefined();
   });
 });
@@ -201,12 +203,12 @@ describe("⑤ 노출 게이트 — 2호와 같은 2채", () => {
   });
 });
 
-describe("⑧ 검증 — 임대기간 미입력은 막는다 (엔진은 0년으로 읽어 조용히 불적용)", () => {
+describe("⑧ 검증 — 임대개시일 미입력은 막는다 (엔진은 0년으로 읽어 조용히 불적용)", () => {
   const messages = (f: TransferFormData) => collectStep1Issues(f).map((i) => i.message);
 
-  it("TI-11 양도 주택 — 임대기간 미입력이면 차단, 입력하면 통과", () => {
-    expect(messages(form({ ...TIR, rentalPeriodYears: undefined }))).toContain(
-      "양도 주택 조특법 감면 임대주택: 임대기간(년)을 입력하세요.",
+  it("TI-11 양도 주택 — 임대개시일 미입력이면 차단(옛 기록 연수만 있어도), 입력하면 통과", () => {
+    expect(messages(form({ ...TIR, rentalStartDate: undefined, rentalPeriodYears: "6" }))).toContain(
+      "양도 주택 조특법 감면 임대주택: 임대개시일을 입력하세요.",
     );
     expect(messages(form(TIR)).some((m) => m.includes("조특법 감면 임대주택"))).toBe(false);
   });
@@ -214,12 +216,12 @@ describe("⑧ 검증 — 임대기간 미입력은 막는다 (엔진은 0년으�
   it("TI-12 양도 주택 — 2호가 켜져 있으면 2호 칸의 임대기간으로 판정한다", () => {
     const shared = form({ isTaxIncentiveRental: true }, REG_2HO);
     expect(messages(shared).some((m) => m.includes("조특법 감면 임대주택"))).toBe(false);
-    const empty2ho = form({ ...TIR }, { ...REG_2HO, rentalPeriodYears: undefined });
-    expect(messages(empty2ho)).toContain("양도 주택 조특법 감면 임대주택: 임대기간(년)을 입력하세요.");
+    const empty2ho = form({ ...TIR }, { ...REG_2HO, rentalStartDate: undefined });
+    expect(messages(empty2ho)).toContain("양도 주택 조특법 감면 임대주택: 임대개시일을 입력하세요.");
   });
 
-  it("TI-13 명부 행 — 3호 선언 + 임대기간 미입력이면 차단", () => {
+  it("TI-13 명부 행 — 3호 선언 + 임대개시일 미입력이면 차단", () => {
     const f = form(undefined, undefined, [{ ...ROW, isTaxIncentiveRental: true }]);
-    expect(messages(f)).toContain("보유 주택 1: 조특법 감면 임대주택이면 임대기간(년)을 입력하세요.");
+    expect(messages(f)).toContain("보유 주택 1: 조특법 감면 임대주택이면 임대개시일을 입력하세요.");
   });
 });
