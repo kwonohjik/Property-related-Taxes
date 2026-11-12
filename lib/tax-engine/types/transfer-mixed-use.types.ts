@@ -351,8 +351,10 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
    *
    * 겸용 서브엔진이 이것으로 §155① 의제 성립을 선판정해(`resolveDeemedOneHouseBy155`)
    * 중과 배제(영 §167의10①15호 ① 요소)에 넘긴다. 미주입 시 의제 미성립 — 종전 동작 불변.
+   * 단건과 **같은 타입**이다 — 두 날짜로 좁혀 두면 §155⑯·⑱ 필드를 서브엔진이 읽지 않아도 컴파일러가 알리지 않는다
+   * (구 8호 ⑯ 5년 누락 — 2026-11-12 리뷰 E-2).
    */
-  temporaryTwoHouse?: { previousAcquisitionDate: Date; newAcquisitionDate: Date };
+  temporaryTwoHouse?: TransferTaxInput["temporaryTwoHouse"];
   /**
    * 1세대 여부 — **폼-전역** 값(route 주입). §155 의제(①·④⑤)를 비과세 주택 수 축에 반영할 때
    * 정본 `resolveDeemedOneHouseBy155`가 첫 게이트로 본다(OH-09). `multiHouse`(명부가 있을 때만 조립)에
