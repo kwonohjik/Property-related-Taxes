@@ -228,7 +228,7 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
           checked={value.isNationalHousingScale}
           onCheckedChange={(v) => onChange({ isNationalHousingScale: v })}
           title="국민주택규모 이하"
-          description="전용 85㎡(수도권 외 읍면 100㎡) 이하 — 령 §97의3③2호"
+          description="전용 85㎡(수도권 외 읍면 100㎡) 이하 · 다가구주택은 전체 면적 합이 아니라 가구당 전용면적으로 판정 — 령 §97의3③2호"
           tone="sky"
         />
       </ToneCard>
