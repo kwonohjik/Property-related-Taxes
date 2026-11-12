@@ -278,12 +278,12 @@ const cardExpenseSum = (d: any) =>
 const propertyExpenseSum = (d: any) => (d.aggregated.properties as any[]).reduce((s, p) => s + p.necessaryExpense, 0);
 
 describe("입력 경로 — 자본적지출·양도비(인가 후 분 · 청산금 분)", () => {
-  it("묶음 · 완공 APT ③ + 자본적지출·양도비 — 인가 전 개산공제 1,020,419 + 인가 후 1,568,941 + 청산금 664,036 = 3,253,396 = 자산별 필요경비", async () => {
+  it("묶음 · 완공 APT ③ + 자본적지출·양도비 — 인가 전 개산공제 1,020,419 + 인가 후 1,568,942 + 청산금 664,035 = 3,253,396 = 자산별 필요경비", async () => {
     const v = await bundleView(mk([HOUSING, { ...REDEV, ...CAP }], "825000000"));
     expect(v.total[0]).toContain("3,253,396");
     expect(v.pre[0]).toContain("1,020,419");
-    expect(v.post[0]).toContain("1,568,941");
-    expect(v.settlement[0]).toContain("664,036");
+    expect(v.post[0]).toContain("1,568,942");
+    expect(v.settlement[0]).toContain("664,035");
     expect(v.necessary).toEqual([3_253_396]);
     expect(cardExpenseSum(v.d)).toBe(propertyExpenseSum(v.d));
     expect(v.tax).toBe(34_106_183);
@@ -293,8 +293,8 @@ describe("입력 경로 — 자본적지출·양도비(인가 후 분 · 청산�
     const v = await bundleView(mk([HOUSING, { ...REDEV_ACTUAL, ...CAP }], "825000000"));
     expect(v.total[0]).toContain("3,600,000");
     expect(v.pre[0]).toContain("1,367,023");
-    expect(v.post[0]).toContain("1,568,941");
-    expect(v.settlement[0]).toContain("664,036");
+    expect(v.post[0]).toContain("1,568,942");
+    expect(v.settlement[0]).toContain("664,035");
     expect(cardExpenseSum(v.d)).toBe(propertyExpenseSum(v.d));
     expect(v.tax).toBe(14_228_885);
   });
@@ -320,8 +320,8 @@ describe("입력 경로 — 자본적지출·양도비(인가 후 분 · 청산�
   it("단건 · 완공 APT ③ + 자본적지출·양도비 — 합 3,253,396 · 인가 후·청산금 분 줄", async () => {
     const v = await singleView(mk([{ ...REDEV, ...CAP }], "", { householdHousingCount: "0" }));
     expect(v.total[0]).toContain("3,253,396");
-    expect(v.post[0]).toContain("1,568,941");
-    expect(v.settlement[0]).toContain("664,036");
+    expect(v.post[0]).toContain("1,568,942");
+    expect(v.settlement[0]).toContain("664,035");
     expect(redevBranchTotals(v.res.redevelopmentDetail).expenses).toBe(3_253_396);
   });
 

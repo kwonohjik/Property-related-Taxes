@@ -145,4 +145,16 @@ test.describe("청산금 수령분 단독 신고 — 신고서 합계 열", () =
     await expect(page.getByText(/안분 필요경비 등/).first()).toBeVisible();
     await expect(page.locator("div").filter({ hasText: /^안분 필요경비 등.*2,280,000$/ }).first()).toBeVisible();
   });
+  /**
+   * 동시신고(수령) — 결과 카드 세 열마다 필요경비 행(2026-11-12). 인가 전 실비 4,000,000 · 자본적지출 5,000,000.
+   * ① 4,000,000 × 386,000,000 ÷ 500,000,000 = 3,088,000 · ② 인가후 5,000,000 · ③ 4,000,000 − 3,088,000 = 912,000
+   */
+  test("결과 카드 — 동시신고 세 열 필요경비 행", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seedAndCalc(page, { redevReceiveOnlyMode: "no", redevPreApprovalExpenses: "4000000", capitalExpenditure: "5000000" });
+    await expect(page.getByRole("heading", { name: "재개발/재건축 양도차익 3분할" })).toBeVisible();
+    await expect(page.locator("div").filter({ hasText: /^안분 필요경비\(=필요경비 × .*3,088,000$/ }).first()).toBeVisible();
+    await expect(page.locator("div").filter({ hasText: /^인가후 필요경비5,000,000$/ }).first()).toBeVisible();
+    await expect(page.locator("div").filter({ hasText: /^안분 필요경비 등\(=인가전 필요경비 등 × .*912,000$/ }).first()).toBeVisible();
+  });
 });
