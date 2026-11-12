@@ -35,8 +35,54 @@ export interface LimitGroup {
    * 한 그룹에 뭉뚱그리면 §77의3에 법 근거 없는 5년 한도를 씌우게 된다(D7-03).
    */
   fiveYearTypes?: readonly string[];
+  /**
+   * 그룹 한도 **앞에** 먼저 걸리는 하위 한도 — §133①이 «가목/나목 중 **큰 금액**은 감면하지 아니한다»로 정한 구조의 구현이다.
+   * 허용 = min(비하위분 + min(하위분, 하위 한도), 그룹 한도). 하위분은 `types`의 감면세액 중 **저율 몫**(`lowRateShare`, 기본 1)이다
+   * (조특법 §133① 가목의 «§77(저율 감면율을 적용받는 경우에 한한다)»). 계획서 `self-farming-history-rows.plan.md` §9.
+   * `scope`가 "annual"이면 연 1호 가목, "fiveYear"이면 5개 과세기간 2호 나목이다.
+   */
+  subCaps?: readonly SubCap[];
   /** 법적 근거 (표시용) */
   legalBasis: string;
+}
+
+/** `LimitGroup.subCaps`의 한 항목 */
+export interface SubCap {
+  scope: "annual" | "fiveYear";
+  types: readonly string[];
+  limit: number;
+  legalBasis: string;
+}
+
+/**
+ * 하위 한도 초과분을 유형별 **저율 몫 비례**로 뺀다(원 미만 절사, 말단 보정).
+ * @returns 조정된 Map(원본 불변) — 초과가 없으면 같은 값을 복사해 돌려준다.
+ */
+function applySubCap(
+  amounts: Map<string, number>,
+  sub: SubCap,
+  limit: number,
+  lowRateShare: ReadonlyMap<string, number> | undefined,
+): Map<string, number> {
+  const out = new Map(amounts);
+  const lowParts: [string, number][] = [];
+  for (const t of sub.types) {
+    const v = amounts.get(t);
+    if (v === undefined || v <= 0) continue;
+    const share = lowRateShare?.get(t) ?? 1;
+    lowParts.push([t, share >= 1 ? v : share <= 0 ? 0 : Math.floor(v * share)]);
+  }
+  const lowTotal = lowParts.reduce((a, [, v]) => a + v, 0);
+  const excess = Math.max(0, lowTotal - Math.max(0, limit));
+  if (excess <= 0) return out;
+  let cut = 0;
+  const live = lowParts.filter(([, v]) => v > 0);
+  live.forEach(([t, v], i) => {
+    const c = i === live.length - 1 ? excess - cut : safeMultiplyThenDivide(excess, v, lowTotal);
+    cut += c;
+    out.set(t, (amounts.get(t) ?? 0) - c);
+  });
+  return out;
 }
 
 /**
@@ -165,9 +211,46 @@ export function buildLimitGroups(transferYear: number): readonly LimitGroup[] {
       fiveYearLimit,
       // ①2호나목에 §77의3(gb_designated_land)이 없다 — 5년 한도 대상에서 제외.
       fiveYearTypes: [...SELF_FARMING_TYPES, "public_expropriation", "replacement_land_comp"],
+      subCaps: preAmendmentSubCaps(transferYear),
       legalBasis: "조특법 §133 ①",
     },
   ] as const;
+}
+
+/**
+ * §133①의 가목/나목 «큰 금액» 구조 — §77 저율분 하위 한도 (계획서 §9). 조문은 시행본별로 직접 대조했다(KoreanLaw MCP).
+ *
+ * | 양도연도 | 연(1호) | 5개 과세기간(2호) |
+ * |---|---|---|
+ * | 2011~2015 | 가목 1억: §77(저율분)·§77의3 | 나목 2억: §70 + §77(저율분) — MST 109448·120467·131389·153922·165311 |
+ * | 2016~2017 | 단일 열거 1억(하위 한도 없음) | 나목 2억: §70 + §77(저율분) + §77의2 — MST 177204 |
+ * | 2009-03-16~2010-12-31 | **미조회**(2009.1.30. 본문은 §77 전체가 가목·5년 열거 없음, 2010.1.1. 시행본 미확인) | 〃 — 하위 한도를 두지 않는다 |
+ *
+ * 저율 = 현금·채권(만기 특약 없음) 감면율, 고율 = 채권 3·5년 보유 특약(30·40%)분 — 가목에 없다(`lowRateShare`).
+ * 고율 몫을 모르는 호출부(단건 이력 경로)는 기본 1(저율)로 본다.
+ */
+function preAmendmentSubCaps(transferYear: number): readonly SubCap[] {
+  if (transferYear >= 2011 && transferYear <= 2015) {
+    return [
+      { scope: "annual", types: ["public_expropriation", "gb_designated_land"], limit: 100_000_000, legalBasis: "조특법 §133 ①1호 가목" },
+      { scope: "fiveYear", types: ["public_expropriation"], limit: 200_000_000, legalBasis: "조특법 §133 ①2호 나목" },
+    ];
+  }
+  if (transferYear >= 2016 && transferYear <= 2017) {
+    return [
+      { scope: "fiveYear", types: ["public_expropriation", "replacement_land_comp"], limit: 200_000_000, legalBasis: "조특법 §133 ①2호 나목" },
+    ];
+  }
+  return [];
+}
+
+/**
+ * §77 감면세액 중 **저율 몫**의 소득 기준 상한 — 가목(연)·나목(5년)의 «§77(저율 감면율을 적용받는 경우에 한한다)».
+ * 2011~2015는 20·25%(2014~ 15·20%), 2016~2017은 10·15%. 엔진이 쓰는 감면율 집합에서 현금·채권(특약 없음)은 모두 이 값 이하,
+ * 채권 3·5년 보유 특약분(30·40%)은 초과한다.
+ */
+export function lowRateCeiling(transferYear: number): number {
+  return transferYear <= 2015 ? 0.25 : 0.15;
 }
 
 /**
@@ -219,6 +302,7 @@ export function lookupLimit(
 export function applyAnnualLimits(
   rawByType: Map<string, number>,
   groups: readonly LimitGroup[] = DEFAULT_LIMIT_GROUPS,
+  lowRateShare?: ReadonlyMap<string, number>,
 ): {
   cappedByType: Map<string, number>;
   capInfoByType: Map<string, { annualLimit: number; legalBasis: string; cappedByLimit: boolean }>;
@@ -236,9 +320,16 @@ export function applyAnnualLimits(
     const typesInGroup = group.types.filter((t) => rawByType.has(t));
     if (typesInGroup.length === 0) continue;
 
-    const totalRaw = typesInGroup.reduce((s, t) => s + (rawByType.get(t) ?? 0), 0);
+    // §133①1호 가목 — 저율 몫 하위 한도를 그룹 한도보다 먼저 적용한다(`LimitGroup.subCaps`).
+    let workRaw = rawByType;
+    for (const sub of group.subCaps ?? []) {
+      if (sub.scope === "annual") workRaw = applySubCap(workRaw, sub, sub.limit, lowRateShare);
+    }
+
+    const totalRawOriginal = typesInGroup.reduce((s, t) => s + (rawByType.get(t) ?? 0), 0);
+    const totalRaw = typesInGroup.reduce((s, t) => s + (workRaw.get(t) ?? 0), 0);
     const totalCapped = Math.min(totalRaw, group.annualLimit);
-    const cappedByLimit = totalCapped < totalRaw;
+    const cappedByLimit = totalCapped < totalRawOriginal;
 
     if (totalRaw <= 0) {
       for (const t of typesInGroup) {
@@ -257,7 +348,7 @@ export function applyAnnualLimits(
     let accumulated = 0;
     for (let i = 0; i < typesInGroup.length; i++) {
       const t = typesInGroup[i];
-      const raw = rawByType.get(t) ?? 0;
+      const raw = workRaw.get(t) ?? 0;
       let capped: number;
       if (i === typesInGroup.length - 1) {
         capped = totalCapped - accumulated;
@@ -343,6 +434,7 @@ export function applyFiveYearLimits(
   priorReductionUsage: PriorReductionRecord[],
   transferYear: number,
   groups: readonly LimitGroup[] = DEFAULT_LIMIT_GROUPS,
+  lowRateShare?: ReadonlyMap<string, number>,
 ): {
   fiveYearCappedByType: Map<string, number>;
   fiveYearCapInfoByType: Map<string, FiveYearCapInfo>;
@@ -373,14 +465,26 @@ export function applyFiveYearLimits(
 
     const remaining = Math.max(0, group.fiveYearLimit - priorGroupSum);
 
+    // §133①2호 나목 — 5년 합계 기준 저율 몫 하위 한도(과거 4년 사용분을 뺀 잔여)를 그룹 잔여보다 먼저 적용한다.
+    let workAnnual = annuallyCappedByType;
+    for (const sub of group.subCaps ?? []) {
+      if (sub.scope !== "fiveYear") continue;
+      const priorSub = priorFiltered.filter((r) => sub.types.includes(r.type)).reduce((s, r) => s + r.amount, 0);
+      workAnnual = applySubCap(workAnnual, sub, sub.limit - priorSub, lowRateShare);
+    }
+
     // 당해 연간 한도 후 그룹 합계
     const currentGroupTotal = typesInGroup.reduce(
+      (s, t) => s + (workAnnual.get(t) ?? 0),
+      0,
+    );
+    const currentGroupTotalOriginal = typesInGroup.reduce(
       (s, t) => s + (annuallyCappedByType.get(t) ?? 0),
       0,
     );
 
     const fiveYearGroupCapped = Math.min(currentGroupTotal, remaining);
-    const cappedByFiveYear = fiveYearGroupCapped < currentGroupTotal;
+    const cappedByFiveYear = fiveYearGroupCapped < currentGroupTotalOriginal;
 
     if (currentGroupTotal <= 0) {
       for (const t of typesInGroup) {
@@ -403,12 +507,13 @@ export function applyFiveYearLimits(
     for (let i = 0; i < typesInGroup.length; i++) {
       const t = typesInGroup[i];
       const annual = annuallyCappedByType.get(t) ?? 0;
+      const annualWork = workAnnual.get(t) ?? 0; // 저율 몫 하위 한도 반영 후 (없으면 annual과 같다)
       let capped: number;
       if (i === typesInGroup.length - 1) {
         capped = fiveYearGroupCapped - accumulated;
       } else {
         // 동상 — 5년 한도 안분도 같은 자릿수 위험이 있다 (D8-09).
-        capped = safeMultiplyThenDivide(fiveYearGroupCapped, annual, currentGroupTotal);
+        capped = safeMultiplyThenDivide(fiveYearGroupCapped, annualWork, currentGroupTotal);
         accumulated += capped;
       }
       fiveYearCappedByType.set(t, capped);

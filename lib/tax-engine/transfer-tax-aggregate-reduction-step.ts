@@ -17,6 +17,7 @@ import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import {
   applyAnnualLimits,
   applyFiveYearLimits,
+  lowRateCeiling,
   buildLimitGroups,
   lookupLimit,
 } from "./aggregate-reduction-limits";
@@ -255,7 +256,21 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
   // §133 한도는 양도연도 분기 그룹(2025+ §77 그룹 2억/3억, 이전 1억/2억).
   const transferYear = input.taxYear;
   const limitGroups = buildLimitGroups(transferYear);
-  const { cappedByType: annuallyCapped, capInfoByType } = applyAnnualLimits(rawByType, limitGroups);
+  // §133①1호 가목·2호 나목은 §77을 «저율 감면율을 적용받는 경우에 한한다» — 채권 3·5년 보유 특약분(고율)은 하위 한도 대상이 아니다.
+  // 자산 버킷의 감면율로 §77 감면세액 중 저율 몫을 구한다(율 가중 소득 비). 버킷이 없으면 1(저율)로 본다.
+  const lowRateShare = new Map<string, number>();
+  const expro = reducibleByType.get("public_expropriation");
+  if (expro && expro.buckets.length > 0) {
+    const ceiling = lowRateCeiling(transferYear);
+    let low = 0;
+    let all = 0;
+    for (const b of expro.buckets) {
+      all += b.income * b.rate;
+      if (b.rate <= ceiling) low += b.income * b.rate;
+    }
+    if (all > 0) lowRateShare.set("public_expropriation", low / all);
+  }
+  const { cappedByType: annuallyCapped, capInfoByType } = applyAnnualLimits(rawByType, limitGroups, lowRateShare);
 
   // §133 5년 누적 한도 추가 capping
   const { fiveYearCappedByType, fiveYearCapInfoByType } = applyFiveYearLimits(
@@ -263,6 +278,7 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     input.priorReductionUsage ?? [],
     transferYear,
     limitGroups,
+    lowRateShare,
   );
   const cappedByType = fiveYearCappedByType;
 
