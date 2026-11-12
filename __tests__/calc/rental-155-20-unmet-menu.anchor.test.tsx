@@ -27,7 +27,7 @@ import type { OneHouseJudgment } from "@/lib/tax-engine/one-house/types";
 const unit = {
   unitId: "b",
   businessRegistrationDate: "2023-02-01",
-  rentalRegistrationDate: "2023-02-01",
+  rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01",
   rentalCategory: "long_general",
   rentalAcquisitionType: "purchase",
   isApartment: false,

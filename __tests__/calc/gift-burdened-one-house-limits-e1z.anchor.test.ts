@@ -129,7 +129,7 @@ describe("G2 ⑧ — 판정 메뉴와 같은 필수값 규칙·문구 · §155�
     const unit = {
       ...makeDefaultRentalUnit(),
       businessRegistrationDate: "2018-06-01",
-      rentalRegistrationDate: "2018-06-01",
+      rentalRegistrationDate: "2018-06-01", rentalRegisteredDate: "2018-06-01",
       standardPriceAtRentalStart: "300,000,000",
       rentalInputMode: "direct" as const,
       rentalMonths: "30",

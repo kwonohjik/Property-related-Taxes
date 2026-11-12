@@ -42,7 +42,7 @@ const other = (id: string, acq: string, o: object = {}) =>
 const unit = (o: object = {}) => ({
   ...makeDefaultRentalUnit(),
   businessRegistrationDate: "2019-09-26",
-  rentalRegistrationDate: "2019-09-26",
+  rentalRegistrationDate: "2019-09-26", rentalRegisteredDate: "2019-09-26",
   standardPriceAtRentalStart: "250,000,000",
   rentalInputMode: "direct" as const,
   rentalMonths: "48",

@@ -40,7 +40,7 @@ test("[MTE-1] 혼인 2022 → 임대주택 2023 취득(일시적 2주택 신규 
           {
             ...makeDefaultRentalUnit(),
             businessRegistrationDate: "2023-02-01",
-            rentalRegistrationDate: "2023-02-01",
+            rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01",
             standardPriceAtRentalStart: "250,000,000",
             rentalInputMode: "direct",
             rentalMonths: "16",

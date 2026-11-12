@@ -27,7 +27,7 @@ type SellingExclusion = NonNullable<OneHouseJudgmentFormData["sellingHouseExclus
 type Disposition = "carried" | string;
 
 const RENTAL_KEYS = [
-  "isLongTermRental", "isApartment", "isRegisteredRental", "rentalRegistrationDate", "businessRegistrationDate", "rentalPeriodYears",
+  "isLongTermRental", "isApartment", "isRegisteredRental", "rentalRegistrationDate", "rentalRegisteredDate", "businessRegistrationDate", "rentalPeriodYears",
   "rentalStartDate", "rentalEndDate", "isInheritedRental", "decedentRentalMonths",
   "rentalCancelledDate", "rentalCancellationReason", "rentalType", "rentIncreaseUnder5Pct", "rentIncreaseContractDate",
   "isNationalSizeHousing", "hasMinimum2Units", "hasMinimum5UnitsInCity", "rentalLandArea", "rentalTotalFloorArea", "isConvertedToSale",
@@ -120,6 +120,7 @@ export const ROW_FIELD_DISPOSITION = {
   taxIncentiveRentalAptDeadlineExtension: "carried",
   isRegisteredRental: "carried",
   rentalRegistrationDate: "carried",
+  rentalRegisteredDate: "carried",
   businessRegistrationDate: "carried",
   rentalPeriodYears: "carried",
   rentalStartDate: "carried",

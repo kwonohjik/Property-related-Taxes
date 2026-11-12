@@ -99,7 +99,7 @@ describe("S09-3 판정 메뉴 B 충족 — 배지·이력·불러오기·출처 
 
 // ───────────────────────── S06-13 ─────────────────────────
 const T = "2023-03-03";
-const UNIT = { ...makeDefaultRentalUnit(), businessRegistrationDate: "2014-01-01", rentalRegistrationDate: "2014-01-01", standardPriceAtRentalStart: "200,000,000", rentalInputMode: "direct" as const, rentalMonths: "100", requirementsConfirmed: true };
+const UNIT = { ...makeDefaultRentalUnit(), businessRegistrationDate: "2014-01-01", rentalRegistrationDate: "2014-01-01", rentalRegisteredDate: "2014-01-01", standardPriceAtRentalStart: "200,000,000", rentalInputMode: "direct" as const, rentalMonths: "100", requirementsConfirmed: true };
 function bCalcForm(units: 0 | 1) {
   const f = createDefaultTransferFormData();
   Object.assign(f, { transferDate: T, householdHousingCount: "1", isOneHousehold: true, isRegulatedArea: false, wasRegulatedAtAcquisition: false, contractTotalPrice: "800,000,000" });
@@ -166,7 +166,7 @@ export function a2Form(rental: boolean) {
   Object.assign(f, { householdNoPresaleRightsConfirmed: true, householdNoOtherHousesConfirmed: !rental, transferDate: "2026-03-01", contractTotalPrice: "1,500,000,000", residencePeriodMonths: "40", householdHousingCount: rental ? "2" : "1", isRegulatedArea: true, wasRegulatedAtAcquisition: false, houses: rental ? [RENTAL] : [] });
   if (rental) {
     const a = f.assets[0];
-    a.rentalHousingException = { ...a.rentalHousingException, applyException: true, scenario: "A", rentalUnits: [{ ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-03-01", rentalRegistrationDate: "2019-03-01", standardPriceAtRentalStart: "250,000,000", rentalInputMode: "direct", rentalMonths: "80", requirementsConfirmed: true }] };
+    a.rentalHousingException = { ...a.rentalHousingException, applyException: true, scenario: "A", rentalUnits: [{ ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-03-01", rentalRegistrationDate: "2019-03-01", rentalRegisteredDate: "2019-03-01", standardPriceAtRentalStart: "250,000,000", rentalInputMode: "direct", rentalMonths: "80", requirementsConfirmed: true }] };
   }
   return f;
 }

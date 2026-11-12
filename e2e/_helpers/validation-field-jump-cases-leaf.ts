@@ -365,7 +365,7 @@ const SPLIT_CASES: FieldJumpCase[] = [
 const unit = (o: Record<string, unknown> = {}) => ({
   ...makeDefaultRentalUnit(),
   businessRegistrationDate: "2018-01-01",
-  rentalRegistrationDate: "2018-01-01",
+  rentalRegistrationDate: "2018-01-01", rentalRegisteredDate: "2018-01-01",
   standardPriceAtRentalStart: "300000000",
   requirementsConfirmed: true,
   ...o,

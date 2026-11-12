@@ -221,7 +221,7 @@ describe("N4 — 장기임대 거주주택 특례의 거주주택 취득일(⑧ 
       ...RENTAL_HOUSING_EXCEPTION_DEFAULTS,
       applyException: true,
       scenario: "A",
-      rentalUnits: [{ ...makeDefaultRentalUnit(), businessRegistrationDate: "2016-06-01", rentalRegistrationDate: "2016-06-01", standardPriceAtRentalStart: "300,000,000", rentalInputMode: "direct", rentalMonths: "96", requirementsConfirmed: true }],
+      rentalUnits: [{ ...makeDefaultRentalUnit(), businessRegistrationDate: "2016-06-01", rentalRegistrationDate: "2016-06-01", rentalRegisteredDate: "2016-06-01", standardPriceAtRentalStart: "300,000,000", rentalInputMode: "direct", rentalMonths: "96", requirementsConfirmed: true }],
     }) as AssetForm["rentalHousingException"];
   const withRh = (a: AssetForm) =>
     ({ ...a, rentalHousingException: rh(), residenceInputMode: "direct", residencePeriodMonthsAsset: "30" }) as AssetForm;

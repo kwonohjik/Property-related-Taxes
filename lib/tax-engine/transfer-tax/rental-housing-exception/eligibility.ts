@@ -64,6 +64,7 @@ import {
 } from "../../rental-article/check";
 import { buildFailMessage, TERMINATED_DUTY_YEARS } from "./fail-messages";
 import { checkPhrp154_10Eligibility } from "./phrp-154-10";
+import { registeredDateOf } from "../../rental-article/registered-date";
 import type {
   RentalUnitInput,
   RentalCategory,
@@ -178,15 +179,15 @@ const CUT_2020_07_11 = new Date("2020-07-11").getTime();
 // ============================================================
 
 /**
- * 등록기준일 = max(세무서 §168, 지자체 민특법§5) — 둘 중 늦은 날.
+ * 등록기준일 = max(세무서 §168, 지자체 민특법§5 **등록일**) — 둘 중 늦은 날(지자체 등록일 미입력이면 신청일 — V-3).
  * 두 등록이 모두 완료된 날 = "사업자등록등" 완비일 = 임대개시 가능 시점.
  * 하나라도 미입력(Invalid Date)이면 null 반환 → 상위에서 BOTH_REG_REQUIRED로 배제.
  */
 export function deriveEffectiveRegDate(
-  unit: Pick<RentalUnitInput, "businessRegistrationDate" | "rentalRegistrationDate">,
+  unit: Pick<RentalUnitInput, "businessRegistrationDate" | "rentalRegistrationDate" | "rentalRegisteredDate">,
 ): Date | null {
   const bTs = unit.businessRegistrationDate?.getTime?.();
-  const rTs = unit.rentalRegistrationDate?.getTime?.();
+  const rTs = registeredDateOf(unit.rentalRegisteredDate, unit.rentalRegistrationDate)?.getTime?.();
   if (bTs == null || rTs == null || Number.isNaN(bTs) || Number.isNaN(rTs)) return null;
   return new Date(Math.max(bTs, rTs));
 }
@@ -211,14 +212,17 @@ export type CategoryAvailability = { available: boolean; reason?: string };
  * 배제 기준은 `rental-article/check.ts` checkArticleGates의 REG_DATE_GATE와 1:1(단일 소스, RA_CUT 재사용).
  *   - existing_business(나): 지자체 등록일 > 2003.10.29 또는 세무서 등록일 > 2004.6.30(의제 기한) 이면 배제
  *     (`passesExistingBusinessRegGate` — check.ts와 같은 술어. 날짜 하나만 있어도 그 날짜만으로 확정되면 배제)
- *   - short_6y(아·자): 지자체 등록(신청)일 < 2025.6.4 이면 배제 (regDateMin — 부칙<제35349호> 제15조② · 세무서 등록일은 보지 않는다)
+ *   - short_6y(아·자): 지자체 등록일 < 2025.6.4 이면 배제 (regDateMin — 부칙<제35349호> 제15조② · 세무서 등록일은 보지 않는다)
+ * 지자체 날짜는 등록일(V-3) — 미입력이면 신청일.
  * long_general·unsold_08_09(라)·pre_2018(구법)은 등록일 단독 배제 게이트가 없어 항상 활성.
  * 판정 불가(날짜 미입력)면 available=true — 조기 차단 금지(엔진 `?? 0` fail보다 관대·불리 미적용).
  */
 export function deriveCategoryAvailability(
   businessRegistrationDate: Date | null,
-  rentalRegistrationDate: Date | null,
+  rentalApplicationDate: Date | null,
+  rentalRegisteredDate?: Date | null,
 ): Record<RentalCategory, CategoryAvailability> {
+  const rentalRegistrationDate = registeredDateOf(rentalRegisteredDate, rentalApplicationDate);
   const bizTs = businessRegistrationDate?.getTime();
   const bizValid = bizTs != null && !Number.isNaN(bizTs);
   // 가드-내로잉: deriveEffectiveRegDate는 non-null Date 2개(types.ts:43,45)를 받으므로
@@ -227,7 +231,7 @@ export function deriveCategoryAvailability(
     businessRegistrationDate && rentalRegistrationDate
       ? deriveEffectiveRegDate({ businessRegistrationDate, rentalRegistrationDate })
       : null;
-  // 아·자 하한은 지자체 등록(신청)일 — 엔진 `checkArticleGates` regDateMin과 같은 날(두 등록이 모두 있을 때만 판정)
+  // 아·자 하한은 지자체 등록일 — 엔진 `checkArticleGates` regDateMin과 같은 날(두 등록이 모두 있을 때만 판정)
   const regAppTs = effRegDate && rentalRegistrationDate ? rentalRegistrationDate.getTime() : null;
 
   // 나목 — 판정 불가(날짜 하나 미입력)는 활성. 엔진 술어(`passesExistingBusinessRegGate`)와 같은 두 경계를 각각 본다(한 날짜만으로 확정되면 배제).
@@ -286,7 +290,7 @@ export function deriveRequiredYears(
 
 /**
  * 도출 목·지역·등록일별 기준시가 상한(원). 공용 `rental-article/rules.ts` 위임(단일 소스).
- * 바목은 지자체 등록(신청)일 2025.2.28. 경계로 6억/9억 분기(부칙<제35349호> 제15조① — `deriveRegApplicationDate`를 넘긴다).
+ * 바목은 지자체 등록일 2025.2.28. 경계로 6억/9억 분기(부칙<제35349호> 제15조① 「등록한」 — V-3, 등록일을 넘긴다).
  */
 export function deriveStdPriceCap(
   article: RentalArticle,
@@ -475,6 +479,7 @@ export function checkEligibility(
     const normalized: NormalizedRentalUnit = {
       businessRegistrationDate: unit.businessRegistrationDate,
       rentalRegistrationDate: unit.rentalRegistrationDate,
+      rentalRegisteredDate: unit.rentalRegisteredDate ?? null,
       isCapitalArea: unit.region === "seoul-metro",
       isApartment: unit.isApartment,
       isUrbanLifeHousingApartment: unit.isUrbanLifeHousingApartment, // 가목2) 괄호 — 양도기한 게이트만
@@ -530,7 +535,7 @@ export function checkEligibility(
      */
     if (
       ctx &&
-      [unit.businessRegistrationDate, unit.rentalRegistrationDate].some(
+      [unit.businessRegistrationDate, registeredDateOf(unit.rentalRegisteredDate, unit.rentalRegistrationDate)].some(
         (d) => d && !Number.isNaN(d.getTime()) && dayOf(d) > dayOf(ctx.transferDate),
       )
     ) {

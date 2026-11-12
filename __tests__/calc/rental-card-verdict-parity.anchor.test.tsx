@@ -43,7 +43,7 @@ const rental: AssetForm["rentalHousingException"] = {
     {
       ...makeDefaultRentalUnit(),
       businessRegistrationDate: "2018-06-01",
-      rentalRegistrationDate: "2018-06-01",
+      rentalRegistrationDate: "2018-06-01", rentalRegisteredDate: "2018-06-01",
       rentalCategory: "long_general",
       rentalAcquisitionType: "purchase",
       standardPriceAtRentalStart: "300,000,000",
@@ -84,7 +84,7 @@ function form(formOver: Record<string, unknown> = {}, assetOver: Record<string, 
 }
 
 
-const unitR = () => ({ ...makeDefaultRentalUnit(), businessRegistrationDate: "2015-01-01", rentalRegistrationDate: "2015-01-01", standardPriceAtRentalStart: "250,000,000", rentalInputMode: "direct" as const, rentalMonths: "110", requirementsConfirmed: true });
+const unitR = () => ({ ...makeDefaultRentalUnit(), businessRegistrationDate: "2015-01-01", rentalRegistrationDate: "2015-01-01", rentalRegisteredDate: "2015-01-01", standardPriceAtRentalStart: "250,000,000", rentalInputMode: "direct" as const, rentalMonths: "110", requirementsConfirmed: true });
 const LATER = { transferDate: "2025-03-03", filingDate: "2025-05-31" };
 const WIN_WIN_FACTS = {
   ...oneHouseJudgmentExtraDefaults, winWinRentalSpecial: true, winWinRentalContractDate: "2022-03-01",

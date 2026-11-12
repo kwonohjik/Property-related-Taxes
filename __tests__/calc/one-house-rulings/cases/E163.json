@@ -22,7 +22,7 @@
             {
               "unitId": "a",
               "businessRegistrationDate": "2014-04-30",
-              "rentalRegistrationDate": "2015-07-01",
+              "rentalRegistrationDate": "2015-07-01", "rentalRegisteredDate": "2015-07-01",
               "rentalCategory": "pre_2018",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,
@@ -37,7 +37,7 @@
             {
               "unitId": "b",
               "businessRegistrationDate": "2014-07-10",
-              "rentalRegistrationDate": "2015-07-01",
+              "rentalRegistrationDate": "2015-07-01", "rentalRegisteredDate": "2015-07-01",
               "rentalCategory": "pre_2018",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,
@@ -83,7 +83,7 @@
             {
               "unitId": "a",
               "businessRegistrationDate": "2014-04-30",
-              "rentalRegistrationDate": "2014-05-02",
+              "rentalRegistrationDate": "2014-05-02", "rentalRegisteredDate": "2014-05-02",
               "rentalCategory": "pre_2018",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,
@@ -98,7 +98,7 @@
             {
               "unitId": "b",
               "businessRegistrationDate": "2014-07-10",
-              "rentalRegistrationDate": "2014-07-12",
+              "rentalRegistrationDate": "2014-07-12", "rentalRegisteredDate": "2014-07-12",
               "rentalCategory": "pre_2018",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,
@@ -144,7 +144,7 @@
             {
               "unitId": "a",
               "businessRegistrationDate": "2014-04-30",
-              "rentalRegistrationDate": "2014-08-22",
+              "rentalRegistrationDate": "2014-08-22", "rentalRegisteredDate": "2014-08-22",
               "rentalCategory": "pre_2018",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,
@@ -159,7 +159,7 @@
             {
               "unitId": "b",
               "businessRegistrationDate": "2014-07-10",
-              "rentalRegistrationDate": "2014-08-22",
+              "rentalRegistrationDate": "2014-08-22", "rentalRegisteredDate": "2014-08-22",
               "rentalCategory": "pre_2018",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,

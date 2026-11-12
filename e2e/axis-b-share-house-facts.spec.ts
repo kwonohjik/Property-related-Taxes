@@ -16,7 +16,7 @@ const share = (n: number, num: string, over: object = {}) => ({
 
 test("[ASH-1] ★ 60/40 지분 + ⑳ → 둘째 지분 카드도 비과세 · 총세액 0", async ({ page }) => {
   const unit = {
-    ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26", standardPriceAtRentalStart: "250000000",
+    ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26", rentalRegisteredDate: "2019-09-26", standardPriceAtRentalStart: "250000000",
     rentalInputMode: "direct", rentalMonths: "48", requirementsConfirmed: true,
   };
   const formData = {

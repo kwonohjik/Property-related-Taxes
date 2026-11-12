@@ -22,7 +22,7 @@
       {
        "unitId": "r1",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -37,7 +37,7 @@
       {
        "unitId": "r2",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -52,7 +52,7 @@
       {
        "unitId": "r3",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -67,7 +67,7 @@
       {
        "unitId": "r4",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -82,7 +82,7 @@
       {
        "unitId": "r5",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -177,7 +177,7 @@
       {
        "unitId": "r1",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -192,7 +192,7 @@
       {
        "unitId": "r2",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -207,7 +207,7 @@
       {
        "unitId": "r3",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -222,7 +222,7 @@
       {
        "unitId": "r4",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -237,7 +237,7 @@
       {
        "unitId": "r5",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -283,7 +283,7 @@
       {
        "unitId": "r1",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -298,7 +298,7 @@
       {
        "unitId": "r2",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -313,7 +313,7 @@
       {
        "unitId": "r3",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -328,7 +328,7 @@
       {
        "unitId": "r4",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -343,7 +343,7 @@
       {
        "unitId": "r5",
        "businessRegistrationDate": "2006-06-15",
-       "rentalRegistrationDate": "2006-04-10",
+       "rentalRegistrationDate": "2006-04-10", "rentalRegisteredDate": "2006-04-10",
        "rentalCategory": "pre_2018",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -389,7 +389,7 @@
       {
        "unitId": "r1",
        "businessRegistrationDate": "2018-03-15",
-       "rentalRegistrationDate": "2018-03-15",
+       "rentalRegistrationDate": "2018-03-15", "rentalRegisteredDate": "2018-03-15",
        "rentalCategory": "long_general",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -404,7 +404,7 @@
       {
        "unitId": "r2",
        "businessRegistrationDate": "2018-03-15",
-       "rentalRegistrationDate": "2018-03-15",
+       "rentalRegistrationDate": "2018-03-15", "rentalRegisteredDate": "2018-03-15",
        "rentalCategory": "long_general",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -419,7 +419,7 @@
       {
        "unitId": "r3",
        "businessRegistrationDate": "2018-03-15",
-       "rentalRegistrationDate": "2018-03-15",
+       "rentalRegistrationDate": "2018-03-15", "rentalRegisteredDate": "2018-03-15",
        "rentalCategory": "long_general",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -434,7 +434,7 @@
       {
        "unitId": "r4",
        "businessRegistrationDate": "2018-03-15",
-       "rentalRegistrationDate": "2018-03-15",
+       "rentalRegistrationDate": "2018-03-15", "rentalRegisteredDate": "2018-03-15",
        "rentalCategory": "long_general",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,
@@ -449,7 +449,7 @@
       {
        "unitId": "r5",
        "businessRegistrationDate": "2018-03-15",
-       "rentalRegistrationDate": "2018-03-15",
+       "rentalRegistrationDate": "2018-03-15", "rentalRegisteredDate": "2018-03-15",
        "rentalCategory": "long_general",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,

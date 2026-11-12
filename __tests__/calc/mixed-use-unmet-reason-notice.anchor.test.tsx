@@ -56,7 +56,7 @@ const totalOf = (r: R) => (r.result as { total: { totalPayable: number } }).tota
 const exemptOf = (r: R) => (r.result as { housingPart: { isExempt: boolean } }).housingPart.isExempt;
 
 const RHE_UNIT = {
-  ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26",
+  ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26", rentalRegisteredDate: "2019-09-26",
   standardPriceAtRentalStart: "250,000,000", rentalInputMode: "direct", rentalMonths: "48", requirementsConfirmed: true,
 };
 const withRhe = (f: ReturnType<typeof sale>, o: object) => {

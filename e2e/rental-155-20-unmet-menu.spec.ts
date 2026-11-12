@@ -26,7 +26,7 @@ test("[UOE-2] 불성립 + 명부에 임대주택 → 판정 메뉴 비과세(일
             {
               unitId: "b",
               businessRegistrationDate: "2023-02-01",
-              rentalRegistrationDate: "2023-02-01",
+              rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01",
               rentalCategory: "long_general",
               rentalAcquisitionType: "purchase",
               isApartment: false,
@@ -79,7 +79,7 @@ test("[CRE-2] §98 행 + 명부에 임대주택 · 호별 성립 → 판정 메�
   const unit = {
     unitId: "b",
     businessRegistrationDate: "2023-02-01",
-    rentalRegistrationDate: "2023-02-01",
+    rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01",
     rentalCategory: "long_general",
     rentalAcquisitionType: "purchase",
     isApartment: false,

@@ -14,7 +14,7 @@ function validUnit(): AssetForm["rentalHousingException"]["rentalUnits"][number]
   return {
     ...makeDefaultRentalUnit(),
     businessRegistrationDate: "2019-01-01",
-    rentalRegistrationDate: "2019-01-01",
+    rentalRegistrationDate: "2019-01-01", rentalRegisteredDate: "2019-01-01",
     rentalCategory: "long_general",
     rentalAcquisitionType: "purchase",
     standardPriceAtRentalStart: "300,000,000",

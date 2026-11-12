@@ -22,7 +22,7 @@
             {
               "unitId": "a",
               "businessRegistrationDate": "2015-04-10",
-              "rentalRegistrationDate": "2015-04-10",
+              "rentalRegistrationDate": "2015-04-10", "rentalRegisteredDate": "2015-04-10",
               "rentalCategory": "long_general",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,
@@ -72,7 +72,7 @@
             {
               "unitId": "a",
               "businessRegistrationDate": "2015-04-10",
-              "rentalRegistrationDate": "2015-04-10",
+              "rentalRegistrationDate": "2015-04-10", "rentalRegisteredDate": "2015-04-10",
               "rentalCategory": "long_general",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,
@@ -121,7 +121,7 @@
             {
               "unitId": "b",
               "businessRegistrationDate": "2003-01-20",
-              "rentalRegistrationDate": "2003-01-20",
+              "rentalRegistrationDate": "2003-01-20", "rentalRegisteredDate": "2003-01-20",
               "rentalCategory": "long_general",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,
@@ -169,7 +169,7 @@
             {
               "unitId": "a",
               "businessRegistrationDate": "2003-01-20",
-              "rentalRegistrationDate": "2003-01-20",
+              "rentalRegistrationDate": "2003-01-20", "rentalRegisteredDate": "2003-01-20",
               "rentalCategory": "long_general",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,
@@ -187,7 +187,7 @@
             {
               "unitId": "b",
               "businessRegistrationDate": "2003-01-25",
-              "rentalRegistrationDate": "2003-01-25",
+              "rentalRegistrationDate": "2003-01-25", "rentalRegisteredDate": "2003-01-25",
               "rentalCategory": "long_general",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,

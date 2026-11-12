@@ -108,7 +108,7 @@ describe("S06-10 §154⑩ 경로(B · 임대 0호) — 직전거주주택 양도
       rentalHousingException: {
         ...a.rentalHousingException, applyException: true, scenario: "B", postRegistrationResidenceMonths: "30",
         rentalUnits: [{
-          ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-03-01", rentalRegistrationDate: "2019-03-01",
+          ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-03-01", rentalRegistrationDate: "2019-03-01", rentalRegisteredDate: "2019-03-01",
           rentalCategory: "long_general", rentalAcquisitionType: "purchase", standardPriceAtRentalStart: "250000000",
           rentalInputMode: "direct", rentalMonths: "80", requirementsConfirmed: true,
         }],
@@ -122,9 +122,9 @@ describe("S06-10 §154⑩ 경로(B · 임대 0호) — 직전거주주택 양도
 
 // ───────────────────────── S16-6 — facts ⑧은 호별 요건 「충족」 토글을 막지 않는다 ─────────────────────────
 type Unit = AssetForm["rentalHousingException"]["rentalUnits"][number];
-const NA = { businessRegistrationDate: "2003-05-01", rentalRegistrationDate: "2003-05-01", rentalCategory: "existing_business", rentalAcquisitionType: "purchase", region: "seoul-metro", acquisitionOfficialPrice: "200000000", standardPriceAtRentalStart: "200000000", isNationalSizeHousing: true, hasMinimum2Units: true };
-const LA = { businessRegistrationDate: "2009-05-01", rentalRegistrationDate: "2009-05-01", rentalCategory: "unsold_08_09", rentalAcquisitionType: "purchase", region: "non-metro", acquisitionOfficialPrice: "200000000", standardPriceAtRentalStart: "200000000", firstSaleContractDate: "2008-12-01", hasMinimum5UnitsInCity: true, rentalLandArea: "200", rentalTotalFloorArea: "100" };
-const DA = { businessRegistrationDate: "2015-05-01", rentalRegistrationDate: "2015-05-01", rentalCategory: "long_general", rentalAcquisitionType: "construction", standardPriceAtRentalStart: "300000000", hasMinimum2Units: true, rentalLandArea: "200", rentalTotalFloorArea: "100" };
+const NA = { businessRegistrationDate: "2003-05-01", rentalRegistrationDate: "2003-05-01", rentalRegisteredDate: "2003-05-01", rentalCategory: "existing_business", rentalAcquisitionType: "purchase", region: "seoul-metro", acquisitionOfficialPrice: "200000000", standardPriceAtRentalStart: "200000000", isNationalSizeHousing: true, hasMinimum2Units: true };
+const LA = { businessRegistrationDate: "2009-05-01", rentalRegistrationDate: "2009-05-01", rentalRegisteredDate: "2009-05-01", rentalCategory: "unsold_08_09", rentalAcquisitionType: "purchase", region: "non-metro", acquisitionOfficialPrice: "200000000", standardPriceAtRentalStart: "200000000", firstSaleContractDate: "2008-12-01", hasMinimum5UnitsInCity: true, rentalLandArea: "200", rentalTotalFloorArea: "100" };
+const DA = { businessRegistrationDate: "2015-05-01", rentalRegistrationDate: "2015-05-01", rentalRegisteredDate: "2015-05-01", rentalCategory: "long_general", rentalAcquisitionType: "construction", standardPriceAtRentalStart: "300000000", hasMinimum2Units: true, rentalLandArea: "200", rentalTotalFloorArea: "100" };
 
 function asset(unit: Record<string, unknown>): AssetForm {
   const a = makeDefaultAsset(1);

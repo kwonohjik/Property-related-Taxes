@@ -64,7 +64,7 @@ function calcSeed() {
             isUnsoldHousing: false,
             isRegisteredRental: true,
             rentalType: "A",
-            rentalRegistrationDate: "2018-01-01",
+            rentalRegistrationDate: "2018-01-01", rentalRegisteredDate: "2018-01-01",
             businessRegistrationDate: "2018-01-01",
             rentalStartOfficialPrice: "300000000",
             rentIncreaseUnder5Pct: true,
@@ -144,7 +144,7 @@ test.describe("V11 계산기 명부 2호 장기임대 행 — 도시형 생활�
 function sellingSeed() {
   const s = calcSeed();
   const h2 = s.state.formData.houses[0];
-  const { rentalType, rentalRegistrationDate, businessRegistrationDate, rentalStartOfficialPrice, rentIncreaseUnder5Pct, rentalStartDate, rentalAptDeadlineExtension } = h2;
+  const { rentalType, rentalRegistrationDate, rentalRegisteredDate, businessRegistrationDate, rentalStartOfficialPrice, rentIncreaseUnder5Pct, rentalStartDate, rentalAptDeadlineExtension } = h2;
   Object.assign(s.state.formData, {
     houses: [{ ...h2, isLongTermRental: false, isRegisteredRental: false, rentalType: undefined, rentalAptDeadlineExtension: undefined }],
     sellingHouseExclusion: {
@@ -154,6 +154,7 @@ function sellingSeed() {
         isRegisteredRental: true,
         rentalType,
         rentalRegistrationDate,
+        rentalRegisteredDate,
         businessRegistrationDate,
         rentalStartOfficialPrice,
         rentIncreaseUnder5Pct,
@@ -238,7 +239,7 @@ function judgmentSeed() {
                 {
                   unitId: "u1",
                   businessRegistrationDate: "2018-03-01",
-                  rentalRegistrationDate: "2018-03-01",
+                  rentalRegistrationDate: "2018-03-01", rentalRegisteredDate: "2018-03-01",
                   rentalCategory: "long_general",
                   rentalAcquisitionType: "purchase",
                   isApartment: true,

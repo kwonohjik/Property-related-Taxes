@@ -342,8 +342,10 @@ export interface HouseEntry {
    * (가~자목 9유형 세부 매트릭스는 후속 과제 — rentalType 미노출.)
    */
   isRegisteredRental?: boolean;
-  /** 임대사업자 등록일 */
+  /** 임대사업자 등록 신청일 — 「등록 신청」 경계(2020.7.11.·8.18.) */
   rentalRegistrationDate?: string;
+  /** 지자체 임대사업자 등록일(등록증) — 「등록을 한」 경계·§167의3③ 기산(V-3). ⑧ 필수 */
+  rentalRegisteredDate?: string;
   /** 사업자 등록일 */
   businessRegistrationDate?: string;
   /**

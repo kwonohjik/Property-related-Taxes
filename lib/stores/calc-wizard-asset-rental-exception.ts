@@ -27,8 +27,13 @@ export interface RentalHousingExceptionFormSlice {
       unitId: string;
       /** 세무서 사업자등록일 §168 (YYYY-MM-DD) */
       businessRegistrationDate: string;
-      /** 지자체 임대사업자등록신청일 민특법§5 (YYYY-MM-DD) */
+      /** 지자체 임대사업자등록신청일 민특법§5 (YYYY-MM-DD) — 「등록 신청」 경계(⑳ 본문 2020.7.10.·8.18.) */
       rentalRegistrationDate: string;
+      /**
+       * 지자체 임대사업자 등록일(등록증, YYYY-MM-DD) — 「등록을 한」 경계·§167의3③ 기산·㉓1호 1/2 기산(V-3 ·
+       * 서면-2021-법규재산-3280). ⑤가 신청일 입력 때 비어 있으면 같은 날로 채운다. ⑧ 필수.
+       */
+      rentalRegisteredDate: string;
       /** 임대구분 (의무기간·cap 파생 소스). existing_business=나목·unsold_08_09=라목(미분양) */
       rentalCategory: 'long_general' | 'short_6y' | 'pre_2018' | 'existing_business' | 'unsold_08_09';
       rentalAcquisitionType: 'purchase' | 'construction';

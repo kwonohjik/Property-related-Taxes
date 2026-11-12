@@ -24,7 +24,7 @@ import { fillDateAndVerify } from "./_helpers/tax-flow";
 function rentalUnit(over: Record<string, unknown> = {}) {
   return {
     businessRegistrationDate: "2020-08-18",
-    rentalRegistrationDate: "2020-08-18",
+    rentalRegistrationDate: "2020-08-18", rentalRegisteredDate: "2020-08-18",
     rentalCategory: "long_general",
     rentalAcquisitionType: "purchase",
     isApartment: false,
@@ -236,7 +236,7 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
     await gotoRentalSection(page, {
       rentalCategory: "short_6y",
       businessRegistrationDate: "2025-06-04",
-      rentalRegistrationDate: "2025-06-04",
+      rentalRegistrationDate: "2025-06-04", rentalRegisteredDate: "2025-06-04",
     });
 
     // 초기: 유효 short_6y 선택 → 아목

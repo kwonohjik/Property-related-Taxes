@@ -157,6 +157,11 @@ export function validateRentalHousingException(
     // 사업자등록등 — 세무서·지자체 둘 다 필수
     if (!u.businessRegistrationDate) return `${unitLabel}: 세무서 사업자등록일을 입력하세요.`;
     if (!u.rentalRegistrationDate) return `${unitLabel}: 지자체 임대사업자등록신청일을 입력하세요.`;
+    // V-3 — 「등록을 한」 경계·기산은 등록일(서면-2021-법규재산-3280). 신청일로 간주하지 않는다.
+    if (!u.rentalRegisteredDate) return `${unitLabel}: 지자체 임대사업자 등록일(등록증의 등록일)을 입력하세요.`;
+    if (u.rentalRegisteredDate.slice(0, 10) < u.rentalRegistrationDate.slice(0, 10)) {
+      return `${unitLabel}: 지자체 임대사업자 등록일은 등록신청일(${u.rentalRegistrationDate.slice(0, 10)}) 이후여야 합니다.`;
+    }
 
     // 임대기간 interval 모드 — malformed(종료<시작)·구간 겹침만 차단(월수 부족은 엔진 RENTAL_PERIOD_SHORT 위임, direct 대칭)
     if (u.rentalInputMode === "interval") {

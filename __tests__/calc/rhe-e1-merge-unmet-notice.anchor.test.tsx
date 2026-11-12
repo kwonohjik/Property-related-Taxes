@@ -31,7 +31,7 @@ const GANGNAM = "1168010100";
 const NC = "4682025021";
 const RH0 = makeDefaultAsset(1).rentalHousingException;
 const unit = () => ({
-  ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26",
+  ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26", rentalRegisteredDate: "2019-09-26",
   standardPriceAtRentalStart: "250,000,000", rentalInputMode: "direct" as const, rentalMonths: "48", requirementsConfirmed: true,
 });
 const A_RHE = (o: object = {}) => ({ ...RH0, applyException: true, scenario: "A", rentalUnits: [unit()], priorRentalExemptionHistory: "none", ...o }) as AssetForm["rentalHousingException"];

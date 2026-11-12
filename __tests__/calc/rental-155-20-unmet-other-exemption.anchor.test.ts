@@ -47,7 +47,7 @@ const NR = "4682025021";
 const unit = (price = "700,000,000") => ({
   ...makeDefaultRentalUnit(),
   businessRegistrationDate: "2023-02-01",
-  rentalRegistrationDate: "2023-02-01",
+  rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01",
   standardPriceAtRentalStart: price,
   rentalInputMode: "direct" as const,
   rentalMonths: "16",

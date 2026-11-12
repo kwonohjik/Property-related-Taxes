@@ -55,7 +55,7 @@ const NC = { region: "non_capital", regionCode: "4682025021", officialPrice: "10
 const unit = () => ({
   ...makeDefaultRentalUnit(),
   businessRegistrationDate: "2023-02-01",
-  rentalRegistrationDate: "2023-02-01",
+  rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01",
   standardPriceAtRentalStart: "250,000,000",
   rentalInputMode: "direct" as const,
   rentalMonths: "16",
@@ -209,7 +209,7 @@ describe("판정 메뉴 — 같은 사실의 ⑳ 카드", () => {
               {
                 unitId: "b",
                 businessRegistrationDate: "2023-02-01",
-                rentalRegistrationDate: "2023-02-01",
+                rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01",
                 rentalCategory: "long_general",
                 rentalAcquisitionType: "purchase",
                 isApartment: false,

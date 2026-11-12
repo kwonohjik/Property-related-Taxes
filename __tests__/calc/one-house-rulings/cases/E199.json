@@ -22,7 +22,7 @@
             {
               "unitId": "b",
               "businessRegistrationDate": "2014-05-15",
-              "rentalRegistrationDate": "2014-05-15",
+              "rentalRegistrationDate": "2014-05-15", "rentalRegisteredDate": "2014-05-15",
               "rentalCategory": "long_general",
               "rentalAcquisitionType": "purchase",
               "isApartment": true,
@@ -69,7 +69,7 @@
             {
               "unitId": "b",
               "businessRegistrationDate": "2014-05-15",
-              "rentalRegistrationDate": "2014-05-15",
+              "rentalRegistrationDate": "2014-05-15", "rentalRegisteredDate": "2014-05-15",
               "rentalCategory": "long_general",
               "rentalAcquisitionType": "purchase",
               "isApartment": true,

@@ -224,7 +224,14 @@ export const ONE_HOUSE_FIELD_CATALOG_ASSET = [
     path: "asset.rentalHousingException.rentalUnits[].rentalRegistrationDate",
     kind: "date",
     label: "지자체 임대사업자등록신청일",
-    hint: "지자체 임대사업자 등록 신청일(민특법 §5).",
+    hint: "지자체 임대사업자 등록 신청일(민특법 §5). 2020.7.10./7.11.·2020.8.18. 경계는 이 날로 본다.",
+    when: "asset.rentalHousingException.applyException = true",
+  },
+  {
+    path: "asset.rentalHousingException.rentalUnits[].rentalRegisteredDate",
+    kind: "date",
+    label: "지자체 임대사업자 등록일",
+    hint: "임대사업자 등록증의 등록일. 2018.3.31. 등록 기한·임대기간 기산·1/2 임대 판정은 이 날로 본다(서면-2021-법규재산-3280). 신청일과 같으면 같은 날.",
     when: "asset.rentalHousingException.applyException = true",
   },
   {

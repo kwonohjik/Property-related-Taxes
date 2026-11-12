@@ -169,8 +169,13 @@ export interface HouseInfo {
    * 제공 시 유형별 세부 요건 검증, 미제공 시 isLongTermRental boolean으로 폴백.
    */
   rentalType?: RentalHousingType;
-  /** 임대사업자 등록일 */
+  /** 지자체 임대사업자 등록 **신청일** — 「등록 신청」 경계(2020.7.11.·8.18.) */
   rentalRegistrationDate?: Date;
+  /**
+   * 지자체 임대사업자 **등록일**(등록증) — 「등록을 한」 경계(가·다목 2018.4.2.·나목·바·아·자목)와
+   * §167의3③ 기산(V-3 · `registeredDateOf`). 미제공이면 신청일(직접 API·옛 기록).
+   */
+  rentalRegisteredDate?: Date;
   /** 사업자 등록일 */
   businessRegistrationDate?: Date;
   /** 임대사업자 말소일 (말소 시 중과 산정에 포함됨) */

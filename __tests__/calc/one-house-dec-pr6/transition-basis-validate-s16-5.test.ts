@@ -45,7 +45,7 @@ const aPath = (over: Partial<Rh> = {}, acq = "2019-06-01") =>
         {
           ...makeDefaultRentalUnit(),
           businessRegistrationDate: "2016-06-01",
-          rentalRegistrationDate: "2016-06-01",
+          rentalRegistrationDate: "2016-06-01", rentalRegisteredDate: "2016-06-01",
           rentalCategory: "long_general",
           rentalAcquisitionType: "purchase",
           standardPriceAtRentalStart: "300,000,000",

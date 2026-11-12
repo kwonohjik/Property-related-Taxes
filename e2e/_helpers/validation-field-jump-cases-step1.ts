@@ -61,15 +61,15 @@ const HOUSE_ROW_CASES: FieldJumpCase[] = [
   { name: "step1: 보유 주택 취득일", field: R, step: 1, message: /^보유 주택 1: 취득일을 입력하세요/, form: holding([row({ acquisitionDate: "" })]) },
   { name: "step1: 보유 주택 기준시가", field: R, step: 1, message: /^보유 주택 1: 기준시가\(공시가격\)를 입력하세요/, form: holding([row({ officialPrice: "" })]) },
   { name: "step1: 보유 주택 상속개시일", field: R, step: 1, message: /^보유 주택 1: 상속주택이면 상속개시일/, form: holding([row({ isInherited: true, inheritedDate: "" })]) },
-  { name: "step1: 보유 주택 임대사업자 등록일", field: R, step: 1, message: /^보유 주택 1: 임대사업자 등록 신청일을 입력하세요/, form: holding([rental({ isRegisteredRental: true, rentalRegistrationDate: "" })]) },
+  { name: "step1: 보유 주택 임대사업자 등록일", field: R, step: 1, message: /^보유 주택 1: 임대사업자 등록 신청일을 입력하세요/, form: holding([rental({ isRegisteredRental: true, rentalRegistrationDate: "", rentalRegisteredDate: "" })]) },
   {
     name: "step1: 보유 주택 사업자 등록일", field: R, step: 1, message: /^보유 주택 1: 사업자 등록일을 입력하세요/,
-    form: holding([rental({ isRegisteredRental: true, rentalRegistrationDate: "2018-01-01", businessRegistrationDate: "" })]),
+    form: holding([rental({ isRegisteredRental: true, rentalRegistrationDate: "2018-01-01", rentalRegisteredDate: "2018-01-01", businessRegistrationDate: "" })]),
   },
   {
     // PR-2 Q-3 — 「임대기간 (년)」 칸 대신 임대개시일
     name: "step1: 보유 주택 임대개시일", field: R, step: 1, message: /^보유 주택 1: 임대개시일을 입력하세요/,
-    form: holding([rental({ isRegisteredRental: true, rentalRegistrationDate: "2018-01-01", businessRegistrationDate: "2018-01-01", rentalStartDate: "" })]),
+    form: holding([rental({ isRegisteredRental: true, rentalRegistrationDate: "2018-01-01", rentalRegisteredDate: "2018-01-01", businessRegistrationDate: "2018-01-01", rentalStartDate: "" })]),
   },
   { name: "step1: 보유 주택 임대개시 당시 공시가격", field: R, step: 1, message: /^보유 주택 1: 임대개시 당시 공시가격을 입력하세요/, form: holding([rental({ rentalType: "A", rentalStartOfficialPrice: "" })]) },
   { name: "step1: 보유 주택 취득 당시 공시가격", field: R, step: 1, message: /^보유 주택 1: 취득 당시 공시가격을 입력하세요/, form: holding([rental({ rentalType: "B", acquisitionOfficialPrice: "" })]) },

@@ -442,6 +442,7 @@ export function toMultiEngineItem(
           rentalUnits: p.rentalHousingException.rentalUnits.map((u) => ({
             businessRegistrationDate: toDate(u.businessRegistrationDate, "rentalUnits.businessRegistrationDate"),
             rentalRegistrationDate: toDate(u.rentalRegistrationDate, "rentalUnits.rentalRegistrationDate"),
+            rentalRegisteredDate: toOptionalDate(u.rentalRegisteredDate), // V-3 (단건과 동일)
             rentalCategory: u.rentalCategory,
             rentalAcquisitionType: u.rentalAcquisitionType,
             isApartment: u.isApartment,

@@ -55,7 +55,7 @@ const NC = { region: "non_capital", regionCode: NR, officialPrice: "100000000", 
 const unit = (price: string) => ({
   ...makeDefaultRentalUnit(),
   businessRegistrationDate: "2023-02-01",
-  rentalRegistrationDate: "2023-02-01",
+  rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01",
   standardPriceAtRentalStart: price,
   rentalInputMode: "direct" as const,
   rentalMonths: "16",

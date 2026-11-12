@@ -32,7 +32,7 @@ const GANGNAM = "1168010100";
 const NC = "4682025021";
 const RH0 = makeDefaultAsset(1).rentalHousingException;
 const unit = () => ({
-  ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26",
+  ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26", rentalRegisteredDate: "2019-09-26",
   standardPriceAtRentalStart: "250,000,000", rentalInputMode: "direct" as const, rentalMonths: "48", requirementsConfirmed: true,
 });
 /** §154⑩ 단독 경로(B · 임대 0호) */

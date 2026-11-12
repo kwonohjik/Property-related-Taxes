@@ -71,7 +71,7 @@ function propertyForm(houses: HouseEntry[]) {
         {
           ...makeDefaultRentalUnit(),
           businessRegistrationDate: "2019-03-01",
-          rentalRegistrationDate: "2019-03-01",
+          rentalRegistrationDate: "2019-03-01", rentalRegisteredDate: "2019-03-01",
           standardPriceAtRentalStart: "250,000,000",
           rentalInputMode: "direct",
           rentalMonths: "90",

@@ -44,6 +44,7 @@ export function buildSellingRentalPayload(ltr: RentalDeclaration | undefined): o
     isApartment: ltr.isApartment ?? false,
     isRegisteredRental: ltr.isRegisteredRental,
     rentalRegistrationDate: ltr.rentalRegistrationDate || undefined,
+    rentalRegisteredDate: ltr.rentalRegisteredDate || undefined, // V-3 「등록을 한」 경계·기산
     businessRegistrationDate: ltr.businessRegistrationDate || undefined,
     // 임대기간은 날짜로만 싣는다 — 연수(옛 기록)는 보내지 않는다(계획서 surcharge-rental-period-dates Q-3).
     ...rentalPeriodDatesPayload(ltr),
@@ -364,6 +365,7 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       // 장기임대 legacy 등록 경로 — isLongTermRental=true 일 때만 등록정보 전달
       isRegisteredRental: h.isLongTermRental ? h.isRegisteredRental : undefined,
       rentalRegistrationDate: h.isLongTermRental ? h.rentalRegistrationDate || undefined : undefined,
+      rentalRegisteredDate: h.isLongTermRental ? h.rentalRegisteredDate || undefined : undefined, // V-3
       businessRegistrationDate: h.isLongTermRental ? h.businessRegistrationDate || undefined : undefined,
       // 임대기간은 날짜로만(Q-3). 3호가 켜져 있으면 아래 `taxIncentiveRentalPayload`가 같은 날짜를 다시 싣는다.
       ...(h.isLongTermRental ? rentalPeriodDatesPayload(h) : {}),

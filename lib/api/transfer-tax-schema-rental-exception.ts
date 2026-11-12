@@ -35,6 +35,8 @@ export const PriorRentalExemptionHistoryEnum = z.enum(['none', 'used']);
 export const rentalUnitSchema = z.object({
   businessRegistrationDate: z.string().datetime(),
   rentalRegistrationDate: z.string().datetime(),
+  /** V-3 지자체 등록일 — 미제공이면 엔진이 신청일로 본다(직접 API 호환) */
+  rentalRegisteredDate: z.string().datetime().optional(),
   rentalCategory: RentalCategoryEnum,
   rentalAcquisitionType: RentalAcqTypeEnum,
   isApartment: z.boolean(),
