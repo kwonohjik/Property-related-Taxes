@@ -2,7 +2,7 @@
 
 > 2026-11-12 · 코드 읽기 + throwaway probe(API route 직접 POST, `makeMockRates`) + KoreanLaw MCP(소득세법 §114조의2). 출처: `self-built-housing-164-9-plan.md` §9 «확인 필요 1»·DP-6 / 메모리 `project_self_built_housing_building_base_plan`.
 > 표기: **[직접]** 이번 세션 조회·실측 · **[이전 실측]** 이전 PR 보고서의 값(이번 재확인 안 함) · **[해석]** · **[확인 필요]**.
-> 상태: **결정 대기(Q-1)** — 코드 변경 없음.
+> 상태: **구현 완료(§6)** — 결정 Q-1 a(2026-11-12, 사용자 «a»).
 
 ## 0. 결론
 
@@ -59,4 +59,16 @@
 
 ## 5. 결정 요청
 
-- **Q-1 (권고 a):** a 비주택 건물 donor 가산세 base를 A 양도차익의 환산 분모(영 §164⑨ 특례 반영)로 정렬한다 — 출하 수치가 위 §2대로 바뀐다(정상 폼 입력은 불변) / b 현행 유지 — 도달 경로가 직접 API·stale 플래그뿐이라 «완료 처리»하고 한계로 기록한다.
+- **Q-1 → 결정 a.** (선택지: a 비주택 건물 donor 가산세 base를 A 양도차익의 환산 분모(영 §164⑨ 특례 반영)로 정렬한다 — 출하 수치가 위 §2대로 바뀐다(정상 폼 입력은 불변) / b 현행 유지 — 도달 경로가 직접 API·stale 플래그뿐이라 «완료 처리»하고 한계로 기록한다.)
+
+## 6. 결정 · 구현 결과 (2026-11-12)
+
+결정: **Q-1 a**(정렬한다).
+
+- **변경(엔진 입출력·API 불변 → 14지점 동기화 없음):** `lib/tax-engine/transfer-tax-carryover-donor-penalty.ts` 한 곳.
+  - **증축:** 분모를 `resolveConversionDenominatorAtTransfer(rawInput).denominator`로 — 특례가 없으면 `rawInput.standardPriceAtTransfer` 그대로라 종전과 바이트 동일. echo `formula.denominator`도 같은 값.
+  - **단독 신축:** 특례(수용 1호·주택 총액·공매 2호)가 걸리고 PHD 경로가 아닐 때만 `calculateEstimatedAcquisitionPrice(transferPrice, standardPriceAtAcquisition, conv.denominator)`로 다시 구한다. 그 외는 `detail.scenarioA.acquisitionPrice` 그대로(§97②2호 단서 swap 전 값이라는 기존 주석 유지). echo의 `formula`는 신축에 새로 싣지 않았다(표시 변경 없음).
+- **측정(구현 후, §2 시료):** 신축 · 공매/수용 base **300,000,000**·가산세 **15,000,000**·총납부 **16,500,000**(종전 150,000,000 / 7,500,000 / 8,250,000) · 증축 · 공매/수용 **45,000,000 / 2,250,000 / 2,475,000**(종전 22,500,000 / 1,125,000 / 1,237,500) · 특례 없음·수용 불발 불변(150,000,000 / 22,500,000) · A 양도차익 −6,000,000 불변.
+- **anchor:** NEW `__tests__/api/transfer.route.carryover-donor-built-nonhousing-164-9.anchor.test.ts`(NH-1~NH-3, 13건) · 반전 `transfer.route.carryover-donor-built-164-9.anchor.test.ts` DP-6(150,000,000 → 300,000,000). 구현 전 6건 실패 → 통과.
+- **뮤테이션 7종 전부 사망**(복원 `cmp` 일치): 신축 특례 판정 끄기 · 증축 구 분모 · 신축 분자 0 · 공매 판정 제거 · 수용 판정 제거 · 신축이 특례 전 분모 사용 · 증축 분자 뒤바꿈.
+- **한계(완료 처리 대상 아님, 미측정):** V-2(일반건물 이월과세 라우트·함께 양도 컴패니언의 비주택 donor) · V-3(지분 양도 척도) · V-5(A 카드 «취득가액» 표시값 드리프트)는 그대로 열려 있다. 도달 경로는 여전히 직접 API·stale 플래그뿐이다(V-1, 재확인 안 함).
