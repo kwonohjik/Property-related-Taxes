@@ -154,8 +154,11 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
           <p className="mb-1 text-xs font-medium">임대주택 취득 유형</p>
           <p className="mb-1.5 text-micro text-muted-foreground">
             §97의5①1호 — 민간매입임대주택(민특법 §2 3호 「매매 등으로 소유권을 취득」) 또는 공공매입임대주택만 대상입니다.
-            증여·분양으로 취득한 주택도 매입임대입니다. 건설임대주택(민특법 §2 2호 — 임대 목적으로 건설하거나 주택건설사업자가
+            상속·증여·분양으로 취득한 주택도 매입임대입니다. 건설임대주택(민특법 §2 2호 — 임대 목적으로 건설하거나 주택건설사업자가
             건설 후 미분양으로 임대)은 대상이 아닙니다.
+          </p>
+          <p className="mb-1.5 text-micro text-muted-foreground">
+            3개월은 자산 카드의 취득일(상속은 상속개시일, 증여는 증여일)부터 셉니다.
           </p>
           <RadioCardGroup
             data-field={`reduction.${value.type}.isPurchaseRental`}
@@ -165,7 +168,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             value={value.isPurchaseRental === null ? "" : value.isPurchaseRental ? "purchase" : "construction"}
             onChange={(v) => onChange({ isPurchaseRental: v === "purchase" })}
             options={[
-              { value: "purchase", label: "매입임대 (매매·증여·분양 등으로 취득)" },
+              { value: "purchase", label: "매입임대 (매매·상속·증여·분양 등으로 취득)" },
               { value: "construction", label: "건설임대 (건설·미분양 임대)" },
             ]}
           />
@@ -175,7 +178,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium">지자체 임대사업자 등록일</label>
+          <label className="mb-1 block text-xs font-medium">장기일반·공공지원 민간임대주택 등록일</label>
           <DateInput
             data-field={`reduction.${value.type}.registrationDate`}
             value={value.registrationDate}
@@ -183,6 +186,10 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
           />
           {/* 3개월 검증 배지 */}
           <ThreeMonthBadge badge={regBadge} />
+          <p className="mt-1 text-micro text-muted-foreground">
+            단기임대로 등록했다가 장기일반으로 변경 신고한 주택은 변경 신고 수리일을 넣으세요 — 취득일부터 3개월 안에
+            장기일반민간임대주택등으로 등록해야 합니다 (§97의5①1호).
+          </p>
           {!acquisitionDate && (
             <p className="mt-1 text-micro text-muted-foreground">
               ※ 3개월 검증 배지는 자산 카드의 취득일 입력 후 표시됩니다.
@@ -248,7 +255,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
           checked={value.isNationalHousingScale}
           onCheckedChange={(v) => onChange({ isNationalHousingScale: v })}
           title="국민주택규모 이하"
-          description="전용 85㎡(수도권 외 읍면 100㎡) 이하 — §97의5①3호 → 령 §97의3③2호"
+          description="전용 85㎡(수도권 외 읍면 100㎡) 이하 · 다가구주택은 전체 면적 합이 아니라 가구당 전용면적으로 판정 — §97의5①3호 → 령 §97의3③2호"
           tone="sky"
         />
 
