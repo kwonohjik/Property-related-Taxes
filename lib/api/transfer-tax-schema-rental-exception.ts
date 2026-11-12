@@ -57,6 +57,8 @@ export const rentalUnitSchema = z.object({
   hasMinimum5UnitsInCity: z.boolean(),
   firstSaleContractDate: z.string().datetime().optional(),
   rentalMonths: z.number().nonnegative(),
+  /** §155㉓1호 1/2 판정용 임대개월 — 지자체 등록일부터(V-5). 미제공이면 엔진이 rentalMonths를 쓴다 */
+  halfDutyRentalMonths: z.number().nonnegative().optional(),
   rentalAutoTermination: z.boolean(),
   /** §155㉓ 등록 말소일 — 「말소 이후 5년 이내」 기산일 (I-4) */
   registrationCancellationDate: z.string().datetime().optional(),

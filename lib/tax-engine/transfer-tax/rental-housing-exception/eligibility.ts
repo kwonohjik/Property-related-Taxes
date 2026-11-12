@@ -578,7 +578,7 @@ export function checkEligibility(
       terminationEligibleArticle &&
       !terminationOutsideAddendum &&
       dutyYears != null &&
-      unit.rentalMonths >= dutyYears * 6;
+      (unit.halfDutyRentalMonths ?? unit.rentalMonths) >= dutyYears * 6;
     if (
       unit.rentalAutoTermination &&
       terminationEligibleArticle &&

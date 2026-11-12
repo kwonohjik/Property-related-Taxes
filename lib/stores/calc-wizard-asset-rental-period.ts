@@ -122,6 +122,27 @@ export function rentalRegistrationBasisDate(unit: {
 }
 
 /**
+ * §155㉓1호 「민특법 §43 임대의무기간의 2분의 1 이상 임대」 판정용 임대개월(V-5).
+ *
+ * 민특령 §34①2호 — 민간매입임대주택의 임대의무기간은 **임대사업자 등록일**(그 뒤 임대가 개시되면 실제 임대개시일)부터
+ * 센다. 국세청도 ㉓1호·㉒2호라목1)·§167의3①2호사목의 1/2 기산일을 같게 본다(서면-2021-부동산-7820, 2022.9.26. ·
+ * 서면-2022-부동산-4280, 2022.12.15. — 세무서 사업자등록이 늦은 사실관계에서도 지자체 등록일부터). 그래서
+ * `deriveRentalMonths`(소령 §167의3③ — 세무서·지자체 중 늦은 날)와 달리 **지자체 등록일로만** 자른다.
+ * 지자체 날짜는 화면의 「등록신청일」 칸이다(등록일 칸 없음 — PR-1 V-3과 같은 미확보).
+ * 3개월 이내 공실 산입·피상속인 개월 합산은 `deriveRentalMonths`와 같게 둔다(종전 동작 유지 — 민특법 기준 해석 미확보).
+ */
+export function deriveHalfDutyRentalMonths(unit: {
+  rentalInputMode?: "interval" | "direct";
+  rentalPeriods?: RentalPeriod[];
+  rentalMonths?: string;
+  rentalRegistrationDate?: string;
+  isInheritedRental?: boolean;
+  decedentRentalMonths?: string;
+}): number {
+  return deriveRentalMonths({ ...unit, businessRegistrationDate: "" });
+}
+
+/**
  * 실제 임대개월 도출 — API 변환·validation·UI 총합 공용(단일 소스, residence deriveResidencePeriodMonths 대칭).
  * interval 모드 + 구간 있으면 인정 개월(`recognizedRentalMonths`), 아니면 direct 개월(rentalMonths) 파싱 —
  * direct는 사용자가 계산한 값이라 자르지 않는다(옛 기록·AI 필드 경로).

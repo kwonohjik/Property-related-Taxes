@@ -13,6 +13,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { deadlineEndNote } from "@/lib/tax-engine/civil-period";
 import { terminationDeadline } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
+import { deriveHalfDutyRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 type RentalUnitForm = AssetForm["rentalHousingException"]["rentalUnits"][number];
@@ -87,6 +88,16 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
           value={unit.terminatedRegistrationType ?? ""}
           onChange={(v) => set("terminatedRegistrationType", v)}
         />
+        {/* V-5 — 1/2 판정 개월은 ④가 엔진에 싣는 값과 같다(`deriveHalfDutyRentalMonths` 단일 소스). */}
+        {(unit.rentalPeriods ?? []).some((p) => p.start && p.end) && (
+          <p className="text-xs px-1 pt-1" data-testid={`rental-half-duty-months-${index}`}>
+            1/2 판정에 쓰는 임대기간: <strong>{deriveHalfDutyRentalMonths(unit)}개월</strong>
+            <span className="text-muted-foreground">
+              {" "}— 임대사업자 등록 신청일(그 뒤 임대를 시작했으면 실제 임대개시일)부터 셉니다. 세무서 사업자등록일은
+              기산에 쓰지 않습니다(민특령 §34①2호 · 서면-2021-부동산-7820).
+            </span>
+          </p>
+        )}
       </FieldCard>
       {/*
         I-4 — ㉓ 「말소 이후 5년 이내」는 선언이 아니라 말소일로 판정한다. 2호 이상이면 엔진이 입력한 말소 호 중

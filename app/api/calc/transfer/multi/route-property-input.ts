@@ -461,6 +461,7 @@ export function toMultiEngineItem(
             hasMinimum5UnitsInCity: u.hasMinimum5UnitsInCity,
             firstSaleContractDate: toOptionalDate(u.firstSaleContractDate),
             rentalMonths: u.rentalMonths,
+            halfDutyRentalMonths: u.halfDutyRentalMonths, // V-5 §155㉓1호 1/2(지자체 등록일 기산)
             rentalAutoTermination: u.rentalAutoTermination,
             registrationCancellationDate: toOptionalDate(u.registrationCancellationDate), // I-4 §155㉓
             terminatedRegistrationType: u.terminatedRegistrationType,
