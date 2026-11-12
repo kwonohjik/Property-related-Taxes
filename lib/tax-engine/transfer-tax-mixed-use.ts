@@ -69,6 +69,7 @@ import { calcMixedSec163_9Compare } from "./mixed-use-sec163-9-compare";
 import { buildMixedIncomeDeductionStep, mixedLandPriorNotice, resolveMixedIncomeDeduction } from "./transfer-tax-mixed-use-income-deduction";
 import { assertMixedInheritedSplitDateSupported } from "./mixed-use-inherited-split-date";
 import { buildingDirectShare, hasMixedBuildingExtras, isConversionAcq, prepareMixedSaleSplit, salePartsFor } from "./mixed-use-sale-split";
+import { assetContractDateForCause } from "./transfer-reductions/asset-contract-date";
 
 // ──────────────────────────────────────────
 // 메인 함수
@@ -92,13 +93,18 @@ export function calcMixedUseTransferTax(
   amendment?: AmendmentInput,
 ): MixedUseGainBreakdown {
   const core = (a: MixedUseAssetInput) => calcMixedUseCore(transferPriceInput, transferDate, a, rates, amendment);
+  // V-11 — 상속 자산은 매매계약일을 읽지 않는다(단건 진입부와 같은 leaf · 겸용은 `calculateTransferTax`를 거치지 않는다).
+  const asset =
+    assetInput.assetContractDate && !assetContractDateForCause(assetInput.acquisitionCause, assetInput.assetContractDate)
+      ? { ...assetInput, assetContractDate: undefined }
+      : assetInput;
   // §163⑨ 단서 자산 합계 비교(PR-6) — 후보마다 아래 본문을 다시 부른다. 2022 전 양도(거부)는 비교하지 않는다.
   // 부담부증여(§159)도 같다 — 후보를 채무비율 곱하기 전 금액으로 비교하고 이긴 후보의 결과(부분별 채무비율 적용)를 쓴다(PR-7b-7a-2·7b · Q-36).
   //   의제취득일 전의 ③ 후보는 prepare가 `converted_pre_deemed` 경로로 계산한다(양도가액 = 증여가액의 쪽 몫).
-  if (assetInput.sec163_9Compare && isMixedUseSplitTransfer(transferDate)) {
-    return calcMixedSec163_9Compare(assetInput, core);
+  if (asset.sec163_9Compare && isMixedUseSplitTransfer(transferDate)) {
+    return calcMixedSec163_9Compare(asset, core);
   }
-  return core(assetInput);
+  return core(asset);
 }
 
 function calcMixedUseCore(

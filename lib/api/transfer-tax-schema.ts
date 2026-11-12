@@ -202,7 +202,7 @@ export const propertySchema = z
       refineUnregisteredSelfFarming(c.isUnregistered, c.reductions, ctx, ["companionAssets", i, "reductions"]);
       refineReductionAssetKindGate(c.reductions, c.assetKind, ctx, ["companionAssets", i, "reductions"]);
       refineReductionTrack127_7(c.reductions, c.acquisitionDate, data.transferDate, ctx, ["companionAssets", i, "reductions"]);
-      refineReductionRequiredInputs(c.reductions, c.assetContractDate, ctx, ["companionAssets", i, "reductions"], c.redevelopment);
+      refineReductionRequiredInputs(c.reductions, c.assetContractDate, ctx, ["companionAssets", i, "reductions"], c.redevelopment, c.acquisitionCause);
       refineCompanionGbUnregisteredAxis(c, ctx, ["companionAssets", i, "isUnregistered"]);
       // PD-1 — 의제 전 상속·증여 취득가액 원천(주 자산과 같은 규칙 · CP-3로 열린 운반 경로)
       refineCompanionPreDeemedAcquisitionSource(c, ctx, ["companionAssets", i]);

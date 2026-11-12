@@ -65,7 +65,7 @@ export function Unsold988InputForm({
       <ToneCard tone="sky" sectionNum="①" title="최초 매매계약 정보">
         <div>
           <label className="mb-1 block text-sm font-medium">최초 매매계약일</label>
-          <DateInput value={value.contractDate988} onChange={(v) => onChange({ contractDate988: v })} />
+          <DateInput data-field="reduction.unsold_98_8.contractDate988" value={value.contractDate988} onChange={(v) => onChange({ contractDate988: v })} />
           <p className="mt-1 text-xs text-muted-foreground">
             2015.1.1~2015.12.31 중 사업주체등과 최초로 체결한 매매계약 (법 §98의8①).
             취득일·양도일은 자산 기본 입력을 사용합니다

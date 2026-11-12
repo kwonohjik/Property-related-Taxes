@@ -35,6 +35,7 @@ import {
 import { stripAssetKindGatedReductions } from "./transfer-reductions/asset-kind-gate";
 import { stripAcquisitionCauseGatedReductions } from "./transfer-reductions/unsold-98-acquisition-cause";
 import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
+import { assetContractDateForCause } from "./transfer-reductions/asset-contract-date";
 import { runHouseCountExclusionStep, special15HoPendingNotice } from "./transfer-tax-house-exclusion-step";
 import { mergeRentalCarveoutSurchargeNotice, withMergeRentalCarveout } from "./one-house/merge-rental-carveout";
 import { runIncomeAndBaseSteps } from "./transfer-tax-income-steps";
@@ -108,7 +109,12 @@ function calculateTransferTaxCore(
   //   감면주택 중과 배제(STEP 0.45)도 감면 선택을 근거로 하므로 모든 STEP보다 먼저 걷어 낸다.
   //   US-07: 상속·증여·이월과세 증여 취득도 같은 자리에서 걷어 낸다(실제 취득 원인 — `reductionAcquisitionCauseOf`).
   const assetGate = stripUnsold98GatedReductions(rawInput);
-  const gatedInput = assetGate.notices.length > 0 ? { ...rawInput, reductions: assetGate.reductions ?? [] } : rawInput;
+  const gatedReductionsInput = assetGate.notices.length > 0 ? { ...rawInput, reductions: assetGate.reductions ?? [] } : rawInput;
+  // V-11 — 상속 자산은 매매계약일을 읽지 않는다(직접 API·옛 이력 방어 · ⑤④와 같은 leaf).
+  const gatedInput =
+    rawInput.assetContractDate && !assetContractDateForCause(reductionAcquisitionCauseOf(rawInput), rawInput.assetContractDate)
+      ? { ...gatedReductionsInput, assetContractDate: undefined }
+      : gatedReductionsInput;
   warnings.push(...assetGate.notices);
   const pre = runPreCalculationSteps(withMergeRentalCarveout(gatedInput), rates, options, steps, warnings, calculateTransferTax);
   echo.preDeemedPurchaseDetail = pre.preDeemedPurchaseDetail;

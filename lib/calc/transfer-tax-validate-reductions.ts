@@ -12,6 +12,7 @@ import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99
 import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
 import { isNew993PriorRuleEraIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
 import { needsFirstContractAnswer } from "@/lib/tax-engine/transfer-reductions/new-99-acquisition-cause";
+import { assetContractDateForCause } from "@/lib/tax-engine/transfer-reductions/asset-contract-date";
 import { redevMemberNewHouseScope } from "./redev-field-scope";
 import { redevMemberNewHouseIssue } from "./transfer-tax-validate-new99-member";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
@@ -286,7 +287,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             if (isAddenda29_2WindowIso(r.acquisitionType993, r.usageApprovalDate993) && !r.constructionStartedBefore2003_993)
               return fail(fieldError("reduction.new_99_3.constructionStartedBefore2003_993", `§99의3 2호 적용: 사용승인일이 2003.1.1.~2003.6.30.이면 2003.1.1. 전에 공사에 착수했는지(예·아니오·모름) 선택하세요 (${NEW_99_3_ADDENDA_6762.PRIOR_CONSTRUCTION_STARTED}).`));
           } else {
-            const hasContractDate = !!(r.contractDate993 || asset.assetContractDate);
+            // V-11 — 상속은 자산 매매계약일 칸이 숨고 엔진도 읽지 않는다. §99의3은 상속 취득이면 엔진이 취득 원인으로 불적용(⑫와 같은 술어).
+            const hasContractDate = asset.acquisitionCause === "inheritance" || !!(r.contractDate993 || assetContractDateForCause(asset.acquisitionCause, asset.assetContractDate));
             if (!hasContractDate) return fail(fieldError("assetContractDate", "§99의3 1호 적용: 매매계약일을 펼침 영역 상단에 입력하세요."));
           }
           // 취득시 기준시가 필수 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API source ternary와 동일 소스).
@@ -387,7 +389,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(fieldError("reduction.new_99.usageApprovalDate99", "§99 적용: 자기건설 주택의 사용승인일을 입력하세요."));
           // 조특법 §99①2호 — 「최초로 매매계약을 체결하고 계약금을 납부한 자」. 비우면 엔진이 취득일로
           // 대신 읽어 기간 판정이 바뀌었다. §99의3(위)과 같은 자산-수준 fallback 규약.
-          if (!member99 && r.acquisitionType99 !== "self_built" && !(r.contractDate99 || asset.assetContractDate))
+          if (!member99 && r.acquisitionType99 !== "self_built" && asset.acquisitionCause !== "inheritance" && !(r.contractDate99 || assetContractDateForCause(asset.acquisitionCause, asset.assetContractDate)))
             return fail(fieldError("reduction.new_99.contractDate99", "§99 적용: 매매계약일을 입력하세요 (자산 매매계약일도 비어 있습니다)."));
           // 취득시 기준시가 필수 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API source ternary·UI echo와 동일 소스, ⑧ 3중 미러).
           if (r.phdMode99) {
@@ -443,8 +445,11 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // ⑧ 자산-수준 `assetContractDate` fallback — §99의3(:188)과 **같은 규약**이다 (Q15).
           //    엔진도 같은 fallback을 읽으므로(income-deduction-router `evalUnsold988`) 3중이 맞는다.
           //    종전에는 여기만 조문 전용 필드를 요구해 **같은 날짜를 두 번** 입력해야 했다.
-          if (!(r.contractDate988 || asset.assetContractDate))
-            return fail(fieldError("assetContractDate", "§98의8 적용: 최초 매매계약일을 펼침 영역 상단에 입력하세요."));
+          // V-11 — 상속은 자산 매매계약일 칸이 숨는다(엔진도 읽지 않음) → 조문 칸 「최초 매매계약일」로 안내한다.
+          if (!(r.contractDate988 || assetContractDateForCause(asset.acquisitionCause, asset.assetContractDate)))
+            return fail(asset.acquisitionCause === "inheritance"
+              ? fieldError("reduction.unsold_98_8.contractDate988", "§98의8 적용: 최초 매매계약일을 입력하세요.")
+              : fieldError("assetContractDate", "§98의8 적용: 최초 매매계약일을 펼침 영역 상단에 입력하세요."));
           if (parseAmount(r.acquisitionPrice988 || "0") <= 0)
             return fail(fieldError("reduction.unsold_98_8.acquisitionPrice988", "§98의8 적용: 취득가액을 입력하세요."));
           if (!(parseDecimal(r.exclusiveAreaSqm988 || "") > 0))

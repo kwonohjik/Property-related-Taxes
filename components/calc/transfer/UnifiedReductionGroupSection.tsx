@@ -271,6 +271,8 @@ export function GroupCategorySection({
           {/* Round 9 (2026-05-06): 매매계약일 입력 — 펼침 활성화 시에만 노출.
               3개 그룹(장기임대·신축·미분양) 펼침 영역 상단에 표시되며, 자산-수준 단일 필드를 공유.
               어느 그룹에서 입력하든 즉시 동기화. */}
+          {/* V-11 — 상속에는 상속인의 매매계약이 없다. 칸을 숨기고 ④·엔진도 남은 값을 읽지 않는다(`assetContractDateForCause`). */}
+          {assetAcquisitionCause !== "inheritance" && (
           <div className="rounded-md border border-border bg-muted/30 dark:bg-muted/10 px-3 py-2 mb-2">
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-xs font-semibold whitespace-nowrap">매매계약일 (분양/매매)</span>
@@ -282,8 +284,12 @@ export function GroupCategorySection({
               ※ 분양·매매계약 + 계약금 납부 시점. <strong>신축·미분양·임대 감면 시한 판정의 1차 기준</strong>.
               미입력 시 자산의 취득일을 사용합니다 (조문 단서 &ldquo;매매계약 + 계약금 = 취득&rdquo;).
               단 §98·§98의2·§98의3·§98의4·§98의5·§98의7·§99의2는 이 칸을 읽지 않습니다 — 선택하면 나오는 조문 안의 <strong>최초 매매계약일</strong> 칸이 정본이며 필수입니다.
+              {(assetAcquisitionCause === "gift" || assetAcquisitionCause === "carryover_gift") && (
+                <> 증여받은 자산은 <strong>본인이 맺은</strong> 매매·분양계약일만 넣으세요 — 증여자의 계약일은 넣지 않습니다.</>
+              )}
             </p>
           </div>
+          )}
 
           {items.map((id) => {
             const { itemMeta, period, isFullyImplemented, isSelected, articleAllowed, causeBlocked, isDisabled } = gateOf(id);

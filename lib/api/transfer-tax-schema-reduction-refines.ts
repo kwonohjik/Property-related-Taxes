@@ -22,6 +22,7 @@ import { findRental97TaxAmountOverlap } from "@/lib/tax-engine/transfer-reductio
 import { rental97TaxAmountOverlapMessage } from "@/lib/tax-engine/transfer-reductions/rental-97-tax-amount-overlap";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
 import { track127_7ConflictMessage } from "@/lib/tax-engine/transfer-reductions/track-127-7-message";
+import { assetContractDateForCause } from "@/lib/tax-engine/transfer-reductions/asset-contract-date";
 
 type ReductionLike = { type: string } & Record<string, unknown>;
 
@@ -100,8 +101,15 @@ export function refineReductionRequiredInputs(
    * 준공일(`redevelopment.completionDate`)을 요구한다 (엔진 `redevMemberNewHouseOf` · ⑧과 같은 술어 · NH-36).
    */
   redevelopment?: { subject?: string; receiveOnlyMode?: boolean; completionDate?: string } | null,
+  /**
+   * V-11 — 상속 자산은 자산-수준 매매계약일을 읽지 않는다(`assetContractDateForCause` — ⑤ 칸 숨김·④·엔진과 같은 leaf).
+   * §99·§99의3은 상속 취득이면 엔진이 취득 원인으로 불적용한다(`evaluateNew99AcquisitionGate`) — 매매계약일을 요구하지 않는다(⑧과 같은 술어).
+   */
+  acquisitionCause?: string,
 ) {
   const member = redevelopment?.subject === "apt" && redevelopment.receiveOnlyMode !== true;
+  const contractFallback = assetContractDateForCause(acquisitionCause, assetContractDate);
+  const inherited = acquisitionCause === "inheritance";
   const memberCompletion = member ? redevelopment?.completionDate : undefined;
   (reductions ?? []).forEach((r, i) => {
     const at = (key: string) => [...path, i, key];
@@ -122,7 +130,7 @@ export function refineReductionRequiredInputs(
         memberIssue("§99의3");
       } else if (r.acquisitionType993 === "self_built") {
         if (!r.usageApprovalDate993) issue("usageApprovalDate993", "§99의3 2호 적용: 사용승인일이 필요합니다.");
-      } else if (!r.contractDate993 && !assetContractDate) {
+      } else if (!inherited && !r.contractDate993 && !contractFallback) {
         issue("contractDate993", "§99의3 1호 적용: 매매계약일(contractDate993 또는 assetContractDate)이 필요합니다.");
       }
       if (r.houseType993 !== "detached" && !positive(r.exclusiveAreaSqm993))
@@ -146,7 +154,7 @@ export function refineReductionRequiredInputs(
         memberIssue("§99");
       } else if (r.acquisitionType99 === "self_built") {
         if (!r.usageApprovalDate99) issue("usageApprovalDate99", "§99 적용: 자기건설 주택의 사용승인일이 필요합니다.");
-      } else if (!r.contractDate99 && !assetContractDate) {
+      } else if (!inherited && !r.contractDate99 && !contractFallback) {
         // 조특법 §99①2호 — 「신축주택취득기간 중에 … 최초로 매매계약을 체결하고 계약금을 납부한 자」
         issue("contractDate99", "§99 적용: 매매계약일(contractDate99 또는 assetContractDate)이 필요합니다.");
       }
