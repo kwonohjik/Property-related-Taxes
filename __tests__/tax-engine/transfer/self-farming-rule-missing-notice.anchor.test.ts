@@ -10,7 +10,8 @@
  *
  * ## 기대 (구현 후) — 세액 불변
  * 감면이 입력됐는데 규칙 행이 없으면 결과 `warnings`에 고지를 싣는다. 세액·감면액은 그대로(0원).
- * 연혁 행 추가·§133 한도 연혁 정정은 이번 범위가 아니다(계획서 Q-1 b, 부칙 적용례 미확정).
+ * 연혁 행(2009-03-16~)·§133 한도 연혁 정정은 계획서 `self-farming-history-rows.plan.md`에서 추가했다 — 그래서 이 파일의 «규칙 행 없는 양도일»은
+ * 연혁 행 시작일(2009-03-16) **전**(1995·2005·2009-03-15)으로 옮겼다. 시작일 이후 양도의 감면·한도는 `self-farming-history-rows.anchor.test.ts`.
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
@@ -39,8 +40,8 @@ function farmland(date: string, o: Partial<TransferTaxInput> = {}): TransferTaxI
 const run = (input: TransferTaxInput) =>
   calculateTransferTax(input, loadFallbackTransferRates(input.transferDate));
 
-describe("SF-1 규칙 행이 없는 양도일 — 고지가 붙고 세액은 그대로다", () => {
-  for (const d of ["2010-06-01", "2015-06-01", "2018-06-01", "2022-12-31"]) {
+describe("SF-1 규칙 행이 없는 양도일(2009-03-16 전) — 고지가 붙고 세액은 그대로다", () => {
+  for (const d of ["1995-06-01", "2005-06-01", "2009-03-15"]) {
     it(`SF-1 ${d}: 감면 0원 + 고지 1건`, () => {
       const r = run(farmland(d));
       expect(r.reductionAmount).toBe(0);
@@ -51,19 +52,19 @@ describe("SF-1 규칙 행이 없는 양도일 — 고지가 붙고 세액은 그
   }
 
   it("SF-1-5 고지는 조특법 §69와 감면 종합한도를 법령 상수로 인용한다", () => {
-    const w = (run(farmland("2021-06-01")).warnings ?? []).find((x) => NOTICE.test(x)) ?? "";
+    const w = (run(farmland("2005-06-01")).warnings ?? []).find((x) => NOTICE.test(x)) ?? "";
     expect(w).toContain("조특법 §69");
     expect(w).toContain("조특법 §133");
   });
 
-  it("SF-1-6 세액 불변 — 고지만 더한다(산출세액·감면·결정세액이 종전 측정값 그대로)", () => {
-    const r = run(farmland("2022-12-31"));
-    expect(r.calculatedTax).toBe(169_600_000);
+  it("SF-1-6 세액 불변 — 고지만 더한다(산출세액 163,800,000 · 감면 0)", () => {
+    const r = run(farmland("2005-06-01"));
+    expect(r.calculatedTax).toBe(163_800_000);
     expect(r.reductionAmount).toBe(0);
   });
 });
 
-describe("SF-2 규칙 행이 있는 양도일 — 고지가 없다(양성 대조군)", () => {
+describe("SF-2 규칙 행이 있는 양도일 — 고지가 없다(양성 대조군: 현행 행)", () => {
   for (const d of ["2023-01-01", "2024-06-01"]) {
     it(`SF-2 ${d}: 감면 100,000,000원 + 고지 없음`, () => {
       const r = run(farmland(d));
@@ -75,17 +76,17 @@ describe("SF-2 규칙 행이 있는 양도일 — 고지가 없다(양성 대조
 
 describe("SF-3 고지하지 않는 입력", () => {
   it("SF-3-1 감면을 입력하지 않았으면 규칙이 없어도 고지하지 않는다", () => {
-    const r = run(farmland("2021-06-01", { reductions: [] }));
+    const r = run(farmland("2005-06-01", { reductions: [] }));
     expect((r.warnings ?? []).filter((w) => NOTICE.test(w))).toHaveLength(0);
   });
 
   it("SF-3-2 자경농지가 아닌 감면만 입력했으면 고지하지 않는다", () => {
-    const r = run(farmland("2021-06-01", { reductions: [{ type: "unsold_housing" }] as never }));
+    const r = run(farmland("2005-06-01", { reductions: [{ type: "unsold_housing" }] as never }));
     expect((r.warnings ?? []).filter((w) => NOTICE.test(w))).toHaveLength(0);
   });
 
   it("SF-3-3 미등기양도는 감면 전부가 배제된다(§129②) — 그 안내만 싣고 이 고지는 싣지 않는다", () => {
-    const r = run(farmland("2021-06-01", { isUnregistered: true }));
+    const r = run(farmland("2005-06-01", { isUnregistered: true }));
     expect((r.warnings ?? []).filter((w) => NOTICE.test(w))).toHaveLength(0);
     expect((r.warnings ?? []).some((w) => /미등기양도자산/.test(w))).toBe(true);
   });
@@ -137,7 +138,7 @@ describe("SF-5 다필지 조기반환 경로도 같은 고지를 싣는다", () 
     } as Partial<TransferTaxInput>);
 
   it("SF-5-1 규칙 행이 없는 양도일 — 고지 1건", () => {
-    const r = run(parcels("2021-06-01"));
+    const r = run(parcels("2005-06-01"));
     expect((r.warnings ?? []).filter((w) => NOTICE.test(w))).toHaveLength(1);
   });
 

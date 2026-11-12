@@ -54,7 +54,7 @@ export interface LimitGroup {
  */
 export const DEFAULT_LIMIT_GROUPS: readonly LimitGroup[] = [
   {
-    // 자경농지·축산업·어업 1년 1억원, 5년 2억원 종합한도 (§133① — 연도 불변)
+    // 자경농지·축산업·어업 1년 1억원, 5년 2억원 종합한도 (§133① — 2018 이후 값. 그 전 시행본은 `preAmendmentLimitAmounts`)
     types: [
       "self_farming",
       "self_farming_inherited",
@@ -105,13 +105,34 @@ const INVOLUNTARY_TYPES = [
 ] as const;
 
 /**
+ * 2025 개정 **전** §133① 한도 금액 — 양도일(연도) 기준이다(조특법 부칙 제13560호·제15227호 제2조③ «시행 이후 양도하는 경우부터 적용»).
+ * 자경농지(§69) 단독 기준이며, §77 계열 100% 감면분도 같은 나목·다목에 열거돼 같다(계획서 `docs/00-pm/self-farming-history-rows.plan.md` §2).
+ *
+ * | 양도연도 | 연(과세기간별) | 5개 과세기간 | 조문 |
+ * |---|---|---|---|
+ * | ~2015 | 2억 | 3억 | §133①1호 나목 · 2호 다목 (2009-03-16 이후 시행본 조회) |
+ * | 2016~2017 | 1억 | 3억 | §133①1호(단일 열거) · 2호 다목 (제13560호) |
+ * | 2018~2024 | 1억 | 2억 | §133①1호 · 2호(다목 삭제) (제15227호) |
+ *
+ * ⚠️ 한계: (1) §77 중 감면율 20%·25%분과 §77의3은 2015 이전에 가목(1억)이라 «가목/나목 중 큰 초과금액» 구조인데 `LimitGroup`이 표현하지 못한다
+ *    — 이 함수는 자경·§77 100%분 기준이다(§77의3·§77의2의 자산별 연 한도는 `getInvoluntaryTransferLimits`가 따로 1억으로 유지). (2) 2015-07-01
+ *    전에는 §133 열거가 «제69조·제69조의2·제70조·제77조 …»였고(제66조~제68조 제외) 같은 날부터 «제66조부터 제69조까지»다 — 유형 집합은 연도로 안 쪼갠다.
+ *    (3) 공익사업 수용 경과특례(사업인정고시 2016.1.1. 전 → 연 2억 ~2017-12-31 양도, 5개 과세기간 3억 ~2019-12-31 양도)는 미구현.
+ */
+function preAmendmentLimitAmounts(transferYear: number): { annualLimit: number; fiveYearLimit: number } {
+  if (transferYear <= 2015) return { annualLimit: 200_000_000, fiveYearLimit: 300_000_000 };
+  if (transferYear <= 2017) return { annualLimit: 100_000_000, fiveYearLimit: 300_000_000 };
+  return { annualLimit: 100_000_000, fiveYearLimit: 200_000_000 };
+}
+
+/**
  * 양도연도별 §133 한도 그룹.
  *
  * 🔴 **그룹 «구성» 자체가 연도로 갈린다** — 금액만 갈리는 게 아니다(코드리뷰 D7-03).
  *
  * | 시점 | 조문 구조 | 그룹 |
  * |---|---|---|
- * | 개정 전 | §133①1호가 자경(§66~§69 등)과 **§77·§77의2·§77의3을 같은 열거·같은 합계액**으로 묶어 과세기간별 1억원. §133②는 **토지분할 의제**(한도 아님). | **1개 그룹** 연 1억 / 5년 2억 |
+ * | 개정 전 | §133①1호가 자경(§66~§69 등)과 **§77·§77의2·§77의3을 같은 열거·같은 합계액**으로 묶는다(금액은 양도연도별 `preAmendmentLimitAmounts` — 2018~2024는 연 1억, 그 전은 연 2억·1억). §133②는 **토지분할 의제**(한도 아님). | **1개 그룹** (2018~2024: 연 1억 / 5년 2억) |
  * | 2025 개정 | §133①에서 §77 계열이 **삭제**되고 §133②가 신설(연 2억·5년 3억), 종전 ②는 ③으로 밀림. | **2개 그룹** |
  *
  * 개정 전 5년(①2호나목)의 열거는 「제66조부터 제69조까지, 제69조의2부터 제69조의4까지,
@@ -126,7 +147,7 @@ const INVOLUNTARY_TYPES = [
 export function buildLimitGroups(transferYear: number): readonly LimitGroup[] {
   if (transferYear >= 2025) {
     return [
-      DEFAULT_LIMIT_GROUPS[0], // 자경농지·축산·어업 (§133① — 연도 불변 1억/2억)
+      DEFAULT_LIMIT_GROUPS[0], // 자경농지·축산·어업 (§133① — 1억/2억, 2018 이후와 같은 값)
       {
         types: INVOLUNTARY_TYPES,
         annualLimit: 200_000_000,
@@ -135,12 +156,13 @@ export function buildLimitGroups(transferYear: number): readonly LimitGroup[] {
       },
     ] as const;
   }
-  // 개정 전 — 자경과 §77 계열이 §133①의 **하나의 1억원**을 공유한다.
+  // 개정 전 — 자경과 §77 계열이 §133①의 **하나의 한도**를 공유한다. 금액은 시행본별로 갈린다(`preAmendmentLimitAmounts`).
+  const { annualLimit, fiveYearLimit } = preAmendmentLimitAmounts(transferYear);
   return [
     {
       types: [...SELF_FARMING_TYPES, ...INVOLUNTARY_TYPES],
-      annualLimit: 100_000_000,
-      fiveYearLimit: 200_000_000,
+      annualLimit,
+      fiveYearLimit,
       // ①2호나목에 §77의3(gb_designated_land)이 없다 — 5년 한도 대상에서 제외.
       fiveYearTypes: [...SELF_FARMING_TYPES, "public_expropriation", "replacement_land_comp"],
       legalBasis: "조특법 §133 ①",

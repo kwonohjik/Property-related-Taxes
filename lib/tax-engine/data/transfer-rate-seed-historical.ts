@@ -371,4 +371,74 @@ export const historicalSeeds = [
     special_rules: HOUSE_COUNT_EXCLUSION_RULES,
     is_active: true,
   },
+
+  // ── deduction:self_farming (조특법 §69 — 8년 이상 자경농지) ──────────────────────────────────
+  //
+  // 현행 행(2023-01-01)은 메인 seed에 있고, 여기는 그 앞 시행본이다(계획서 `docs/00-pm/self-farming-history-rows.plan.md`).
+  // 값 차이는 **§133① 종합한도의 시행본별 금액**뿐이다 — 감면율 100%·«8년 이상»은 2009-03-16~현행 불변(시행본별 §69① 본문 조회).
+  // 한도는 **양도일 기준**이다(조특법 부칙 제13560호·제15227호 제2조③ «시행 이후 양도하는 경우부터 적용»).
+  //
+  //   양도일                     연(과세기간별)  5개 과세기간   근거
+  //   2009-03-16 ~ 2015-12-31   2억            3억            §133①1호 나목 · 2호 다목 (MST 91272 ~ 165311)
+  //   2016-01-01 ~ 2017-12-31   1억            3억            §133①1호(단일 열거) · 2호 다목 (MST 177204)
+  //   2018-01-01 ~ 2022-12-31   1억            2억            §133①1호 · 2호(다목 삭제) (MST 199744)
+  //
+  // ⚠️ `maxAmount`는 **단건·이력 없음** 경로의 연 한도이고, 5개 과세기간 한도(`cumulativeMax`)와 이력 있음·다건 경로의 연 한도는
+  //    `buildLimitGroups`(`aggregate-reduction-limits.ts`)가 정한다 — 두 곳을 같은 PR에서 같은 값으로 맞춘다.
+  // ⚠️ `periodYears`·`cumulativeMax`·`requiresProof`·`maxResidenceDistance`는 엔진이 읽지 않는다(표시·문서용). 거리는 시행령 §66 기준:
+  //    직선 20km(~2015-02-02) → 30km(2015-02-03~). 첫 행에 20을 적었지만 2015-02-03~2015-12-31 양도도 같은 행이다.
+  // ⚠️ 2009-03-16 **전**으로 내리지 않는다 — 그 전 시행본은 조회하지 않았다(그 양도일은 «계산하지 못함» 고지가 계속 붙는다).
+  // ⚠️ 공익사업 수용 경과특례(사업인정고시 2016.1.1. 전 → 연 2억 ~2017-12-31 양도, 5개 과세기간 3억 ~2019-12-31 양도 —
+  //    부칙 제13560호 제63조·제15227호 제61조)는 구현하지 않았다(대통령령 요건 미조회).
+  {
+    tax_type: "transfer",
+    category: "deduction",
+    sub_category: "self_farming",
+    effective_date: "2009-03-16",
+    rate_table: null,
+    deduction_rules: {
+      type: "self_farming",
+      maxRate: 1.0,
+      maxAmount: 200000000, // 연 2억원
+      periodYears: 5,
+      cumulativeMax: 300000000, // 5개 과세기간 3억원
+      conditions: { minFarmingYears: 8, requiresProof: true, maxResidenceDistance: 20 },
+    },
+    special_rules: null,
+    is_active: true,
+  },
+  {
+    tax_type: "transfer",
+    category: "deduction",
+    sub_category: "self_farming",
+    effective_date: "2016-01-01",
+    rate_table: null,
+    deduction_rules: {
+      type: "self_farming",
+      maxRate: 1.0,
+      maxAmount: 100000000, // 연 1억원
+      periodYears: 5,
+      cumulativeMax: 300000000, // 5개 과세기간 3억원
+      conditions: { minFarmingYears: 8, requiresProof: true, maxResidenceDistance: 30 },
+    },
+    special_rules: null,
+    is_active: true,
+  },
+  {
+    tax_type: "transfer",
+    category: "deduction",
+    sub_category: "self_farming",
+    effective_date: "2018-01-01",
+    rate_table: null,
+    deduction_rules: {
+      type: "self_farming",
+      maxRate: 1.0,
+      maxAmount: 100000000, // 연 1억원
+      periodYears: 5,
+      cumulativeMax: 200000000, // 5개 과세기간 2억원
+      conditions: { minFarmingYears: 8, requiresProof: true, maxResidenceDistance: 30 },
+    },
+    special_rules: null,
+    is_active: true,
+  },
 ] as const;
