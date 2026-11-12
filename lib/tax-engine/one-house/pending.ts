@@ -201,7 +201,7 @@ export function collectPendingConditions(
     input.temporaryTwoHouse &&
     twoHouseRule
   ) {
-    const { provisoRelaxesHolding, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
+    const { provisoRelaxesHolding, timing, origin } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
     /**
      * 📌 `!timing.threeYearMet`는 **현재 도달 불가능한 방어 조건**이다(뮤테이션 M13 SURVIVED).
      *    나머지 네 조건이 모두 참이면 E-3가 비과세를 내고, 그러면 `checkExemption`의 `settled`
@@ -214,6 +214,9 @@ export function collectPendingConditions(
       timing.oneYearMet &&
       // §155①2호 가목(전입) 미충족이면 기한 내 양도로도 치유되지 않는다 — 기한을 약속하지 않는다.
       timing.moveInMet !== false &&
+      // 신규 주택 취득 경위로 §155①이 막혔으면(순차 사례·권리 취득일 모름 — 결정 #43) 기한 내 양도로도 치유되지 않는다.
+      //   `origin.blocked`는 `timing.overall`만 거짓으로 바꾸고 `oneYearMet`·`threeYearMet`은 그대로 둔다(2026-11-12 리뷰 J-1).
+      !origin.blocked &&
       meetsTemporaryTwoHousePrevHolding(input, rule, provisoRelaxesHolding) &&
       meetsOneHouseHoldingResidence(input, rule)
     ) {

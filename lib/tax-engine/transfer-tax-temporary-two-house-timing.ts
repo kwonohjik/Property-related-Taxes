@@ -24,6 +24,7 @@ import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import { governingDesignationStart, isRegulatedByBjdCode } from "./data/regulated-areas";
 import { PRE_DESIGNATION_CONTRACT_EXCLUSION } from "./legal-codes";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
+import { classifyRelocationRegion } from "@/lib/geo/relocation-region-unit";
 import {
   resolveTemporaryTwoHouseDeadlineEra,
   isOneYearHoldRequiredForTemporaryTwoHouse,
@@ -160,10 +161,9 @@ export function meetsPublicInstitutionRelocationRegion(
   const from = p.relocatedSigunguCode;
   const to = p.newHouseSigunguCode;
   if (!from || !to) return true; // 코드 미입력 → 자기선언 유지
-  if (from === to) return true; // 「이전한 시·군」
-  const adjacent = adjacentCodes(from);
-  if (adjacent.length === 0) return true; // 매트릭스 미보유 지역 → 판정 불가, 자기선언 유지
-  return adjacent.includes(to); // 「이와 연접한 시·군」
+  // 판정 단위는 시·군(광역시 전체·일반구의 소속 시) — 구 단위로 비교하면 같은 광역시 안의 다른 구가 미충족이 된다
+  //   (2026-11-12 리뷰 E-1 · `lib/geo/relocation-region-unit.ts`). 매트릭스 미보유 지역은 판정 불가 → 자기선언 유지.
+  return classifyRelocationRegion(from, to, adjacentCodes) !== "not_adjacent";
 }
 
 /**

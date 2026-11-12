@@ -7,6 +7,16 @@
 import type { VerificationRule } from "../verifier-types";
 
 export const TRANSFER_ADDITIONS: VerificationRule[] = [
+  {
+    /** §155⑯ 지역 요건을 통합특별시 구역에서 판정할 때의 두 읽기(①·⑩) — 판정 메뉴 고지 `155-16-merged-special-city-unit` · KoreanLaw 현행 MST 291147 실측(2026-11-12). */
+    id: "TRANSFER.MERGED_SPECIAL_CITY_OTHER_LAWS",
+    citation: "전남광주통합특별시 설치를 위한 특별법 §11",
+    keywords: [
+      "다른 법령에서 지방자치단체, 광역시 또는 도를 인용한 경우에는 각각 통합특별시를 포함한 것으로 보아",
+      "자치구의 관할구역에 대해서는 광역시에 적용되는 법령을 적용하고",
+    ],
+    keywordMode: "ALL",
+  },
   // ── 소득세법 ──────────────────────────────────────────────────────
   {
     id: "TRANSFER.DIVIDEND_INCOME",

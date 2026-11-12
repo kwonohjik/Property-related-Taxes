@@ -60,6 +60,9 @@ import {
   resolveTemporaryTwoHouseDeadlineFor,
 } from "../transfer-tax-temporary-two-house-timing";
 import { resolveDisposalDelay } from "../data/temporary-two-house-delay-era";
+import { MERGED_SPECIAL_CITY_START } from "@/lib/geo/relocation-region-unit";
+import { relocationRegionReadingsDiverge } from "@/lib/geo/relocation-region-unit";
+import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import { resolveRegulatedShortenedClauseRef } from "../data/temporary-two-house-regulated-clause";
 import { holidayTableNoticeKind } from "./holiday-notice-deadlines";
 import {
@@ -540,6 +543,40 @@ export function collectEraUndetermined(
       });
       if (delay.methodPending && !threeYearMet(false) && threeYearMet(true) && delay.note) {
         out.push({ id: "155-18-disposal-method-unverified", reason: delay.note });
+      }
+    }
+    /*
+     * E-1 — §155⑯ 지역 요건을 전남광주통합특별시 구역에서 판정할 때 「옛 광주 5개 자치구 = 한 시」로 읽었다(사용자 결정 2026-11-12).
+     * 2026.7.1. 이후 양도분은 특별법 §11①·⑩ 사이의 해석이라, 읽기에 따라 지역 요건이 갈리고 그것이 §155① 결론을 가를 때만 낸다(#32).
+     */
+    const from = tt.relocatedSigunguCode;
+    const to = tt.newHouseSigunguCode;
+    if (
+      tt.publicInstitutionRelocation &&
+      from &&
+      to &&
+      input.transferDate.getTime() >= MERGED_SPECIAL_CITY_START.getTime() &&
+      relocationRegionReadingsDiverge(from, to, getAdjacentSigunguCodes)
+    ) {
+      const overall = (relocationMet: boolean) =>
+        evaluateTemporaryTwoHouseTiming(
+          {
+            ...input,
+            temporaryTwoHouse: relocationMet
+              ? { ...tt, relocatedSigunguCode: undefined, newHouseSigunguCode: undefined }
+              : { ...tt, publicInstitutionRelocation: false },
+          },
+          twoHouseRule,
+        ).timing.overall;
+      if (overall(true) !== overall(false)) {
+        out.push({
+          id: "155-16-merged-special-city-unit",
+          reason:
+            `공공기관·법인 지방이전 특례(${TRANSFER.TEMPORARY_TWO_HOUSE}⑯)의 지역 요건을 전남광주통합특별시(2026. 7. 1. 설치) 구역에서 ` +
+            `옛 광주광역시 5개 자치구를 하나의 시로, 옛 전라남도 시·군을 각각의 시·군으로 보아 판정했습니다. ` +
+            `${TRANSFER.MERGED_SPECIAL_CITY_OTHER_LAWS}①(다른 법령의 「광역시」에 통합특별시를 포함)과 같은 조 ⑩(광역시·도 규정이 ` +
+            `다르면 자치구 구역에는 광역시, 시·군 구역에는 도 규정) 중 어느 쪽으로 읽느냐에 따라 이 양도의 결론이 달라집니다 — 확인이 필요합니다.`,
+        });
       }
     }
   }

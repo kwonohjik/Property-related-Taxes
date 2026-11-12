@@ -42,6 +42,8 @@ const AUDITED_FILES = [
   "lib/tax-engine/data/one-house-holding-residence-era.ts",
   // 조특법 §99의4①1호가목1) 단서 수도권 예외 군(연천·가평·강화·옹진) — 리뷰 NH-20
   "lib/tax-engine/transfer-reductions/new-99-4-size.ts",
+  // §155⑯ 판정 단위 — 전남광주통합특별시 안 옛 광주 5개 자치구(동·서·남·북·광산) — 리뷰 E-1(2026-11-12)
+  "lib/geo/relocation-region-unit.ts",
 ] as const;
 
 /**

@@ -9,6 +9,7 @@ import { linkTaxIncentiveHouse5ho, withTaxIncentiveHouseNotices } from "./surcha
 import { surchargeHousehold } from "./surcharge-tax-incentive-house-link";
 import { withSurchargeExclusionRegime } from "./transfer-reductions";
 import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
+import { meetsPublicInstitutionRelocationRegion } from "./transfer-tax-temporary-two-house-timing";
 import { withRentalResidenceSurchargeHouses, type resolveMixedUseRentalResidence } from "./transfer-tax-mixed-use-rental-residence";
 import {
   resolveMixedReductionSurchargeExclusion,
@@ -101,6 +102,10 @@ export function judgeMixedUseMultiHouseSurcharge(args: MixedSurchargeJudgeArgs) 
           householdHousingCount: asset.householdHousingCountForExclusion,
           transferDate,
           temporaryTwoHouse: asset.temporaryTwoHouse,
+          // §155⑯ 세대 5년 — 재산세제과-129. 단건(`transfer-tax-judgment-steps.ts`)과 같은 지역 술어.
+          publicInstitutionRelocationMet:
+            asset.temporaryTwoHouse !== undefined &&
+            meetsPublicInstitutionRelocationRegion(asset.temporaryTwoHouse),
         }),
       },
       houseCountExclusionRules!,
