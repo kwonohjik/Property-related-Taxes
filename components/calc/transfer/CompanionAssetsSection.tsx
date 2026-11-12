@@ -9,6 +9,9 @@ import { CompanionAssetCard } from "./CompanionAssetCard";
 import type { BundledSaleMode } from "./CompanionSaleModeBlock";
 import type { AssetSplitMode } from "./OwnershipRatioInput";
 import { appurtenantLimitShareOfAssets } from "@/lib/calc/housing-excess-split";
+import { maxAssetCards } from "@/lib/calc/asset-card-count-cap";
+import { assetCardCapMessage } from "@/lib/calc/asset-card-count-cap";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 interface Props {
   assets: AssetForm[];
@@ -87,6 +90,11 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
   // #17 후속(K1) — 배율 한도를 주 자산 주택 카드 토지와 부수토지 카드들이 함께 쓴다(일체과세 배지가 route와 같은 몫을 잰다).
   const appurtenantLimitShare = assets.length > 1 ? appurtenantLimitShareOfAssets(assets[0], assets.slice(1)) : undefined;
 
+  // 카드 수 상한(⑫ 배열 상한과 같은 값 · `asset-card-count-cap.ts`). 지분 모드면 새 카드가 지분이 되므로 선언 모드로 판정한다 —
+  // ⑧은 지분율이 다 찬 뒤 ④와 같은 술어(`isFullFractionalBundle`)로 같은 상한을 다시 본다.
+  const cardCapGb = splitMode === "fractional" && assets[0]?.assetKind === "general_building";
+  const atCardCap = assets.length >= maxAssetCards(cardCapGb);
+
   // 언마운트 뒤 늦게 도착한 카드 패치를 가르기 위한 표지(아래 updateAsset)
   const mountedRef = useRef(false);
   useEffect(() => {
@@ -152,7 +160,7 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           onFormChange={onFormChange}
           contractTotalPrice={contractTotalPrice}
           totalTransferExpense={totalTransferExpense}
-          onAddAsset={(patch) => addAsset(patch)}
+          onAddAsset={atCardCap ? undefined : (patch) => addAsset(patch)}
           hasIncrementAsset={assets.some((a) => a.isReplotIncrement)}
           primaryAsset={idx > 0 ? assets[0] : undefined}
           appurtenantLimitShare={idx > 0 ? appurtenantLimitShare : undefined}
@@ -171,10 +179,18 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
         />
       ))}
 
+      {assets.length > 1 && atCardCap && (
+        <div data-testid="asset-card-cap-notice">
+          <ToneCard tone="amber">
+            <p className="text-xs text-amber-900 dark:text-amber-200">{assetCardCapMessage(cardCapGb)}</p>
+          </ToneCard>
+        </div>
+      )}
       {assets.length > 1 && (
         <Button
           type="button"
           variant="outline"
+          disabled={atCardCap}
           onClick={() =>
             addAsset(
               splitMode === "fractional"

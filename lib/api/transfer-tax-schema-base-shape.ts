@@ -11,6 +11,7 @@
 
 import { preDeemedPurchaseSchema } from "./transfer-tax-schema-pre-deemed-purchase";
 import { z } from "zod";
+import { COMPANION_ASSETS_MAX } from "@/lib/calc/asset-card-count-cap";
 import { rentalHousingExceptionSchema } from "./transfer-tax-schema-rental-exception";
 import { splitCarryoverShape } from "./transfer-tax-schema-split-carryover";
 import { donorBuiltShape, refineDonorBuiltInCarryover } from "./transfer-tax-schema-donor-built";
@@ -508,7 +509,7 @@ export const propertyBaseShape = {
 
   // ─── 일괄양도 안분 (소득세법 시행령 §166 ⑥) ────────────────
   /** 함께 양도된 자산들 (2개 이상 일괄 양도 시). 없거나 빈 배열이면 단건으로 처리. */
-  companionAssets: z.array(companionAssetSchema).max(10).optional(),
+  companionAssets: z.array(companionAssetSchema).max(COMPANION_ASSETS_MAX).optional(),
   // appurtenantLandRateMode 제거됨 (2026-05-07): 자산별 landNature 명시 입력으로 대체.
   /** 매매계약 상 총 양도가액 (일괄양도 시 필수). 없으면 transferPrice가 총액으로 간주. */
   totalSalePrice: z.number().int().positive().optional(),

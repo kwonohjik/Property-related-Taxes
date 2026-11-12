@@ -19,6 +19,8 @@ import {
   TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE,
 } from "@/lib/tax-engine/data/transfer-supported-period";
 import { parseAmount } from "@/lib/calc/number-parse";
+import { assetCardCapMessage } from "./asset-card-count-cap";
+import { maxAssetCards } from "./asset-card-count-cap";
 import { isFractionalRatioSumOutOfTolerance } from "./fractional-ratio-sum-tolerance";
 import { receiveOnlyShareIssue } from "./axis-b-receive-only";
 import { bundleReceiveOnlyIssue } from "./bundle-receive-only";
@@ -122,6 +124,8 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
     // 일반건물 × 지분 분할 — ④가 `generalBuildingShares` 전용 배열을 보내고 `companionAssets`를
     // 아예 만들지 않는 경로(`transfer-tax-api.ts:672`). companion 축 가드·병합 양쪽이 이 술어를 쓴다.
     const isGbFractional = fullFractional && primaryAsset?.assetKind === "general_building";
+    // 카드 수 상한 — ⑫ `generalBuildingShares`/`companionAssets` 배열 상한과 같은 값(`asset-card-count-cap.ts`). 넘으면 계산 단계에서 400이 난다.
+    if (form.assets.length > maxAssetCards(isGbFractional)) issues.push({ step, message: assetCardCapMessage(isGbFractional) });
 
     // 지분 모드 미지원 조합 차단 — 지분별 안분 UI 부재 또는 양도가액 모델 비양립.
     if (fullFractional && primaryAsset) {
