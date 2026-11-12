@@ -37,6 +37,11 @@ type RelocationProps = {
   onChange: (patch: Partial<TempTwoHouseDeadlineExceptionFields>) => void;
   relocationRegionVerdict: RelocationRegionVerdict | null;
   onNewHouseAddress?: (v: AddressValue) => void;
+  /**
+   * 신규 주택이 보유 주택 목록 행으로 특정되고 그 행에 주소가 있다 — 판정은 그 주소로 한다(C-1). 별도 「신규 주택 소재지」 칸을 그리지
+   * 않는다(같은 사실을 두 번 받으면 어긋나도 아무도 잡지 못한다). 판정 메뉴만 넘긴다.
+   */
+  newHouseLocationFromRoster?: boolean;
 };
 
 type DelayReasonFields = Pick<TempTwoHouseDeadlineExceptionFields, "disposalDelayReason" | "disposalDelayDisposedByThatMethod">;
@@ -68,6 +73,7 @@ export function TempTwoHouseRelocationInputs({
   onChange,
   relocationRegionVerdict,
   onNewHouseAddress,
+  newHouseLocationFromRoster,
 }: RelocationProps) {
   return (
     <ToggleCard
@@ -107,6 +113,11 @@ export function TempTwoHouseRelocationInputs({
         </div>
         <div className="space-y-1.5">
           <label className="text-sm font-medium">신규 주택 소재지</label>
+          {newHouseLocationFromRoster ? (
+            <p data-testid="relocation-new-house-from-roster" className="text-xs text-muted-foreground">
+              보유 주택 목록에 입력한 신규 주택의 주소로 판정합니다 — 목록의 주소를 고치면 판정도 함께 바뀝니다.
+            </p>
+          ) : (
           <AddressSearch
             // 위 칸과 같다 — 동·호를 쓰지 않는다(계획서 address-detail-dead-input.plan.md R1)
             disableUnits
@@ -129,6 +140,7 @@ export function TempTwoHouseRelocationInputs({
                   })
             }
           />
+          )}
         </div>
       </div>
       {relocationRegionVerdict && (
