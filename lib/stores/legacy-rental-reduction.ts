@@ -43,6 +43,7 @@ export function legacyLongTermRentalToRental973(
     region: "capital",
     officialPriceAtStart: "",
     isNationalHousingScale: false,
+    clause4Grandfather: "",
     isConvertedFromShortTerm: false,
     shortTermConversionMode: "none",
     conversionReportedDate: "",

@@ -94,6 +94,8 @@ export type TransferReductionStub =
       officialPriceAtStart?: number;
       /** 국민주택규모 이하 (령 §97의3③2호) — 사용자 확인 */
       isNationalHousingScale?: boolean;
+      /** 대통령령 제29241호 부칙 §2② — 2018.9.13. 이전 주택(분양권·입주권 포함) 취득 또는 매매계약·계약금 지급을 사용자가 확인 → 6억/3억 한도 미적용 (PR-B) */
+      clause4Grandfathered?: boolean;
       region?: "capital" | "non_capital";
       propertyType?: "apartment" | "non_apartment";
       rentalHousingType?: "long_term_private" | "public_support_private";
@@ -129,6 +131,8 @@ export type TransferReductionStub =
   | ({ type: "rental_97_5";
       /** CA-01 — §97의5①3호가 준용하는 조특령 §97의3③2호 (국민주택규모 이하) */
       isNationalHousingScale?: boolean;
+      /** 대통령령 제29241호 부칙 §2② — 2018.9.13. 이전 주택(분양권·입주권 포함) 취득 또는 매매계약·계약금 지급을 사용자가 확인 → 6억/3억 한도 미적용 (PR-B) */
+      clause4Grandfathered?: boolean;
       /** §97의5①2호 — 양도 전 임대 종료 시 실제 임대기간의 마지막 날 (`rentalContinuesToTransfer === false`이면 필수) */
       rentalEndDate?: Date;
       /** §97의5①1호 — 매입임대주택(매매·증여 등으로 소유권 취득) 여부. `true`만 충족 */

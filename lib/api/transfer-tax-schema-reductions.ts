@@ -165,6 +165,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
     ...rental97CommonShape,
     officialPriceAtStart: z.number().int().nonnegative().optional(),
     isNationalHousingScale: z.boolean().optional(),
+    /** PR-B — 대통령령 제29241호 부칙 §2② 사용자 확인. ⑫에 없으면 침묵 stripping된다. */
+    clause4Grandfathered: z.boolean().optional(),
     region: z.enum(["capital", "non_capital"]).optional(),
     rentalHousingType: z.enum(["long_term_private", "public_support_private"]).optional(),
     isConvertedFromShortTerm: z.boolean().optional(),
@@ -207,6 +209,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
     type: z.literal("rental_97_5"),
     /** CA-01 — §97의5①3호 준용 (조특령 §97의3③2호 국민주택규모) */
     isNationalHousingScale: z.boolean().optional(),
+    /** PR-B — 대통령령 제29241호 부칙 §2② 사용자 확인. ⑫에 없으면 침묵 stripping된다. */
+    clause4Grandfathered: z.boolean().optional(),
     /** §97의5①2호 — 양도 전 임대 종료 시 실제 임대기간의 마지막 날. ⑫에 없으면 침묵 stripping된다. */
     rentalEndDate: z.string().date().optional(),
     /** §97의5①1호 — 매입임대주택 여부 (true만 충족) */

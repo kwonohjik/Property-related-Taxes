@@ -298,6 +298,8 @@ export function toEngineReductions(
           ...common,
           officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
           isNationalHousingScale: r.isNationalHousingScale,
+          // PR-B — 부칙 §2② 확인. 미응답("")은 싣지 않는다(= 한도 적용, 종전 동작)
+          ...(r.clause4Grandfather ? { clause4Grandfathered: r.clause4Grandfather === "yes" } : {}),
           region: r.region,
           rentalHousingType: r.rentalHousingType,
           // PR-C — 정본은 `shortTermConversionMode`. 구 세션 boolean과 같은 의미(after = 적용 제외)로 파생한다.
@@ -349,6 +351,8 @@ export function toEngineReductions(
           type: "rental_97_5" as const,
           ...common,
           isNationalHousingScale: r.isNationalHousingScale, // CA-01
+          // PR-B — 부칙 §2② 확인. 미응답("")은 싣지 않는다(= 한도 적용, 종전 동작)
+          ...(r.clause4Grandfather ? { clause4Grandfathered: r.clause4Grandfather === "yes" } : {}),
           // §97의5①2호 — 조기 종료 시 10년 판정의 종점. 「계속 임대」면 싣지 않는다(종점 = 양도일).
           ...(r.rentalContinuesToTransfer === false && r.rentalEndDate
             ? { rentalEndDate: r.rentalEndDate }

@@ -22,6 +22,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RentalCommonFields, TaxRegistrationToggle } from "./RentalCommonFields";
 import { Rental975DeemedPeriodsField } from "./Rental975DeemedPeriodsField";
+import { Clause4GrandfatherQuestion } from "./Clause4GrandfatherQuestion";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 import { addMonths } from "@/lib/tax-engine/utc-date";
 import { RENTAL_97_5_REGISTRATION_MONTHS } from "@/lib/tax-engine/transfer-reductions";
@@ -37,6 +38,8 @@ interface Props {
   acquisitionDate?: string;
   /** 자산의 양도일 — 임대기간 미리보기용 */
   transferDate?: string;
+  /** 자산-수준 매매계약일 — 가액요건 부칙 §2② 질문 표시 조건 */
+  assetContractDate?: string;
 }
 
 /**
@@ -90,7 +93,7 @@ function ThreeMonthBadge({ badge }: { badge: { ok: boolean; text: string } | nul
 }
 
 
-export function Rental975InputForm({ value, onChange, acquisitionDate, transferDate }: Props) {
+export function Rental975InputForm({ value, onChange, acquisitionDate, transferDate, assetContractDate }: Props) {
   const uid = useId();
   const patchCommon = (patch: Partial<RentalCommonFormFields>) => {
     onChange(patch as Partial<Rental975Form>);
@@ -228,6 +231,15 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             주택+부속토지 합계 — 6억(수도권 밖 3억) 이하 요건 (§97의5①3호 → 령 §97의3③4호)
           </p>
         </div>
+
+        <Clause4GrandfatherQuestion
+          dataField={`reduction.${value.type}.clause4Grandfather`}
+          value={value.clause4Grandfather ?? ""}
+          onChange={(v) => onChange({ clause4Grandfather: v })}
+          acquisitionDate={acquisitionDate}
+          transferDate={transferDate}
+          assetContractDate={assetContractDate}
+        />
 
         {/* CA-01 — §97의5①3호가 준용하는 조특령 §97의3③2호 */}
         <ToggleCard

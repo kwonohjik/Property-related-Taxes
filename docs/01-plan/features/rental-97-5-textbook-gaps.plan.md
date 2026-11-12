@@ -23,7 +23,7 @@
 | PR | 상태 |
 |---|---|
 | PR-A (#1·#2) | 구현·회귀 통과(양도세 23,946 + lib·calc·components 22,384, 실패 0) · tsc 0 · 브라우저 확인(Playwright: 세무서 3개월 초과 배지 · 2014 취득 시 §97의5 시한 외 사유 표시) |
-| PR-B (#3) | 대기 |
+| PR-B (#3) | 구현 중 — 아래 「PR-B 구현 메모」 |
 | PR-C (#4~#6) | 대기 |
 
 - Pre-Do 실측: 현행 엔진이 2014-12-31 취득(L-1)·세무서 4개월째 등록(T-2)을 모두 감면 50,000,000원 적격으로 통과 → 전제 확인.
@@ -32,6 +32,15 @@
   - `rental-housing-97-5-housing-only-b`: 2006 취득·2020 양도 시료라 +9년 이동 → 양도연도 구간이 바뀌어 금액 갱신(엔진 출력 + §90① 산식 검산, 파일 머리 주석에 기록).
   - `rental-97-5-rent-interval-taxreg-region` (b): 기존 사유 유지 + `TAX_REGISTRATION_AFTER_3_MONTHS` 추가.
 - `acquisition-cost-review` 게이트: FAIL 0. 권장 반영 — 월말 clamp 케이스를 비윤년으로(+1년 이동이 2020 윤년에 걸려 2/28이 말일 경계가 아니게 됐다), API 부적격 사유 격리 케이스 추가, 세무서 배지 컴포넌트 anchor 추가. 확인 필요 3건은 §8 V-8~V-10.
+
+### PR-B 구현 메모 (2026-11-12)
+- **계획 대비 확장 — 자산 매매계약일(②2호)을 §97의3에도 쓴다.** V-5를 닫은 결과 그 칸(`UnifiedReductionGroupSection.tsx` 「매매계약일 (분양/매매)」)의 안내문이 「분양·매매계약 + 계약금 납부 시점」이고 장기임대 그룹 전체에 표시된다. 라우터 `base`도 §97의3·§97의5 모두에 `contractDate`를 싣는다(`rental-97-router.ts` `buildInput`). 부칙 §2②2호의 사실과 같으므로 §97의5에만 한정할 이유가 없다 — 납세자 유리·법령 근거 있음. 종전 헬퍼 주석의 「의미가 다르다」 판단은 이 칸의 화면 안내와 맞지 않아 정정했다.
+- 엔진 필드명 `clause4Grandfathered?: boolean`, 폼 필드 `clause4Grandfather: "yes" | "no" | ""`. 미응답은 API가 싣지 않는다(= 한도 적용, 종전 동작).
+- 질문 표시 조건은 엔진과 같은 `isClause4Applicable`(취득일·계약일만으로 이미 예외면 묻지 않음) — `components/calc/transfer/rental/Clause4GrandfatherQuestion.tsx`(§97의3·§97의5 공용).
+- ⑦ 결과 카드: 별도 표시를 두지 않는다. 예외가 적용되면 `OFFICIAL_PRICE_EXCEEDED`가 사라질 뿐이고, 한도가 적용될 때는 사유 문구가 질문을 가리킨다. ⑧ validate: 변경 없음(미응답 허용).
+- Pre-Do 대조: 헬퍼를 되돌리면 신규 엔진 anchor 6건 실패 · 라우터 §97의5 매핑을 빼면 API 관통 「예」 케이스 실패(명시 매핑 load-bearing 확인).
+- 🔴 `acquisition-cost-review` 게이트 D-1′(FAIL, 반영함): §97의3 장기보유특별공제 경로는 세액감면 경로와 **다른 호출부**(`transfer-tax-lthd.ts` · `transfer-tax-redevelopment-steps.ts`의 `evaluateRental97Lthd`)라 자산 매매계약일이 엔진에 닿지 않았다. 화면은 계약일 ≤ 2018-09-13이면 질문을 숨겨 보정 수단도 없었다(리뷰 probe: 결정세액 459,435,000 → 올바른 값 324,810,000). 두 호출부에 `contractDate: input.assetContractDate`를 추가하고 §97의3 라우트 관통 anchor를 추가했다(호출부를 되돌리면 실패). 엔진 직접 호출 anchor(G-4)가 contractDate를 손으로 넣어 이 결함을 가렸다.
+- 리뷰 확인 필요(남김): V-11 — 자산 매매계약일 칸은 취득원인과 무관하게 전송되고 원인 전환 시 지워지지 않는다. 매매로 입력한 ≤ 2018-09-13 계약일을 남긴 채 상속·증여로 바꾸면 한도가 면제될 수 있다(§97의5 시한 판정도 같은 값을 읽던 선례). 재개발 §97의3 경로(`transfer-tax-redevelopment-steps.ts`)는 관통 anchor 없음. ⑧은 부칙 예외 구간에서도 임대개시 기준시가를 요구한다(종전부터, 엔진 C4-8과 의미 차이 — 막힘은 아님).
 
 ## 1. 요약
 
@@ -241,11 +250,13 @@ failReasonFor: (c) => 하한 미달이면 "2015.1.1. 전 취득 — …부칙 §
 | V-2 | ✅ 닫음 — 예. `UnifiedReductionPanel.tsx:118~160`이 `acquisitionDate`를 시한 ctx에 싣고, 시한 외 항목은 **미선택일 때만** 비활성(`:568` `disabled = !allowed && !checked` — 이미 고른 항목은 해제 가능). 취득일 미입력은 종전처럼 상한이 막는다 | 코드 읽기 |
 | V-3 | 상속 자산이 §97의5 경로에 넘기는 `acquisitionDate`가 상속개시일인가 / 상속을 민간매입임대주택으로 본 해석례 | `transfer-tax-reductions-calc.ts` 추적 + 국세청 검색 |
 | V-4 | `rental-97-router.ts`의 `base`가 `contractDate`를 §97의5 평가 입력에 싣는가 | 라우터 읽기 + G-3 anchor |
-| V-5 | 자산-수준 매매계약일 칸의 화면 의미가 「매매계약 체결 + 계약금 납부」인가 | 칸 라벨·hint 확인 |
+| V-5 | ✅ 닫음 — 예. `UnifiedReductionGroupSection.tsx` 「매매계약일 (분양/매매)」 안내 「※ 분양·매매계약 + 계약금 납부 시점」, 장기임대 그룹에도 표시 → §97의3에도 적용(위 「PR-B 구현 메모」) | 칸 라벨·hint 확인 |
+| V-4 보충 | ✅ 닫음 — 라우터 `buildInput`의 `base`가 모든 임대 조문에 `contractDate: ctx.contractDate`를 싣는다 | 라우터 읽기 |
 | V-6 | ✅ 닫음 — 원문 일치(§2.7). 「이하 이 항에서 같다」로 2호에도 권리 포함 | KoreanLaw 부칙 조회(MST 204913) |
 | V-7 | 세무서 3개월 요건 근거 해석례·심판례 추가 탐색 | taxlaw.nts.go.kr 직접 검색(키워드: 사업자등록·3개월·장기일반) |
 | V-8 | (PR-A 리뷰) 이월과세 시나리오 A — 엔진 재귀 입력의 `acquisitionDate`는 증여자 취득일(`transfer-tax-carryover.ts:276`), 화면 시한 ctx는 증여 등기접수일 — 하한이 화면·엔진에서 다르게 작동하는가 | probe 실측 |
 | V-9 | (PR-A 리뷰) 재개발 완공주택 카드에서 화면 `acquisitionDate`가 종전자산 취득일이면 §97의5 라디오가 하한으로 비활성되는가 / 그 사안이 실재하는가 | probe + 화면 확인 |
+| V-11 | (PR-B 리뷰) 자산 매매계약일 칸의 취득원인 무관 전송·원인 전환 시 잔존 — 상속·증여 자산에서 그 칸이 보이는지, 남은 계약일이 §97의3·§97의5 한도·시한을 잘못 풀어 주는지 | 브라우저 + probe |
 | V-10 | (PR-A 리뷰) 상속 — 상속개시일 < 2015-01-01이면 하한에 걸린다. 부칙 §34 「최초로 취득」을 상속개시일로 보는 근거 해석례 | 국세청 검색 |
 
 ## 9. 범위 밖

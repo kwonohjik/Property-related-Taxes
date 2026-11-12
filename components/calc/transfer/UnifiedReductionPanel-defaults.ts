@@ -143,6 +143,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       region: "capital",
       officialPriceAtStart: "",
       isNationalHousingScale: false,
+      clause4Grandfather: "", // PR-B — 대통령령 제29241호 부칙 §2② (미응답 = 한도 적용)
       isConvertedFromShortTerm: false,
       shortTermConversionMode: "none", // PR-C — 조특령 §97의3④ 후단
       conversionReportedDate: "",
@@ -177,6 +178,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       officialPriceAtStart: "",
       region: "capital",
       isNationalHousingScale: false, // CA-01 — 확인 토글(ToggleCard 패턴, §97의3과 동일)
+      clause4Grandfather: "", // PR-B — 대통령령 제29241호 부칙 §2② (미응답 = 한도 적용)
       isPurchaseRental: null, // §97의5①1호 — 3-state. 미선택을 매입임대로 읽지 않는다.
       taxRegistrationDate: "", // 조특령 §97의5③ — 임대개시 기산의 한 축
       hasDeemedRentalPeriod: false,

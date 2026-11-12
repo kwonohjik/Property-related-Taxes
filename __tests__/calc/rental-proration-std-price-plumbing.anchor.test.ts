@@ -30,6 +30,7 @@ function form(over: Record<string, unknown> = {}): AssetReductionForm {
     region: "capital",
     officialPriceAtStart: "400,000,000",
     isNationalHousingScale: true,
+    clause4Grandfather: "", // PR-B
     isConvertedFromShortTerm: false,
     shortTermConversionMode: "none", // PR-C
     conversionReportedDate: "",
