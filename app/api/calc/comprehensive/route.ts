@@ -28,6 +28,7 @@ import type {
   OtherExclusionInput,
 } from "@/lib/tax-engine/types/comprehensive.types";
 import type { ComprehensiveTaxInputSchema } from "@/lib/validators/comprehensive-input";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 // ─────────────────────────────────────────────────────────────
 // 날짜 변환 헬퍼 — Zod 검증된 string 날짜 → Date 객체
@@ -58,6 +59,7 @@ function toEngineInput(
           ...p.rentalInfo,
           rentalRegistrationDate: parseDate(p.rentalInfo.rentalRegistrationDate),
           rentalStartDate: parseDate(p.rentalInfo.rentalStartDate),
+          businessRegistrationDate: toOptionalDate(p.rentalInfo.businessRegistrationDate),
           registrationRevokedDate: p.rentalInfo.registrationRevokedDate
             ? parseDate(p.rentalInfo.registrationRevokedDate)
             : undefined,

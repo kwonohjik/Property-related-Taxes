@@ -183,3 +183,59 @@ describe("C1·C2 — API 직접 호출", () => {
     expect(paths(r.json)).toContain("previousYearTotalTax");
   });
 });
+
+/**
+ * §3①1호·2호 단서 — 민간건설·민간매입은 2018.3.31.(4.2.) 이전 사업자등록등 주택만(대통령령 제28645호).
+ * 세무서 사업자등록일 칸을 ⑤가 그 두 유형에서만 묻고, ⑧이 비면 막고, ④가 싣고, ⑫·⑭가 엔진까지 넘긴다.
+ */
+describe("2018.3.31. 단서 — 세무서 사업자등록일 (⑤④⑧⑫⑭)", () => {
+  const form = (over: Record<string, unknown>): ComprehensiveFormData => ({
+    ...defaultFormData,
+    assessmentYear: "2025",
+    properties: [
+      {
+        ...makeProperty(),
+        assessedValue: "300,000,000",
+        exclusionType: "private_purchase_rental_short",
+        rentalRegistrationType: "private_purchase_short",
+        rentalRegistrationDate: "2017-06-01",
+        rentalStartDate: "2017-07-01",
+        area: "59",
+        currentRent: "1,000,000",
+        ...over,
+      },
+      { ...makeProperty(), assessedValue: "1,500,000,000" },
+    ],
+  } as ComprehensiveFormData);
+
+  it("RC-7 ★ ⑧ 민간매입(2호)에서 세무서 사업자등록일이 비면 막고, 장기일반(8호)이면 묻지 않는다", () => {
+    expect(validateRequiredExclusionAndLandInputs(form({}))).toMatch(/세무서 사업자등록일/);
+    expect(validateRequiredExclusionAndLandInputs(form({ businessRegistrationDate: "2017-06-01" }))).toBeNull();
+    expect(
+      validateRequiredExclusionAndLandInputs(
+        form({ exclusionType: "private_purchase_rental_long", rentalRegistrationType: "private_purchase_long" }),
+      ),
+    ).toBeNull();
+  });
+
+  it("RC-8 ★ ④ 2호면 싣고 8호면 남은 값을 싣지 않는다", async () => {
+    const info = async (over: Record<string, unknown>) =>
+      ((await bodyOf(form(over))).properties as { rentalInfo?: Record<string, unknown> }[])[0].rentalInfo!;
+    expect((await info({ businessRegistrationDate: "2017-06-01" })).businessRegistrationDate).toBe("2017-06-01");
+    expect(
+      (await info({ businessRegistrationDate: "2017-06-01", exclusionType: "private_purchase_rental_long", rentalRegistrationType: "private_purchase_long" }))
+        .businessRegistrationDate,
+    ).toBeUndefined();
+  });
+
+  it("RC-9 ★ ⑫⑭ 경유 — 세무서 2017 등록은 합산배제, 2019 등록은 과세", async () => {
+    const run = async (biz: string) => {
+      const body = await bodyOf(form({ businessRegistrationDate: biz }));
+      const r = await post(body);
+      expect(r.status).toBe(200);
+      return (r.json.data!.aggregationExclusion as { excludedCount: number }).excludedCount;
+    };
+    expect(await run("2017-06-01")).toBe(1);
+    expect(await run("2019-01-15")).toBe(0);
+  });
+});

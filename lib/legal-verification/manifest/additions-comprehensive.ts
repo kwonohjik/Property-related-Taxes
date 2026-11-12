@@ -50,6 +50,13 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     keywords: ["합산배제 임대주택", "공공주택사업자", "임대사업자", "사업자등록"],
     keywordMode: "ALL",
   },
+  /** §3①1호·2호 단서 — 민간건설·민간매입임대는 2018.3.31. 이전 사업자등록등 주택으로 한정(대통령령 제28645호) */
+  {
+    id: "COMPREHENSIVE_DECREE.EXCLUDED_RENTAL_REG_CAP_2018",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["2018년 3월 31일 이전에", "사업자등록등", "민간매입임대주택의 경우에는"],
+    keywordMode: "ALL",
+  },
   {
     id: "COMPREHENSIVE_DECREE.EXCLUDED_EMPLOYEE_HOUSE",
     citation: "종합부동산세법 시행령 §4",

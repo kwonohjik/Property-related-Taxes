@@ -165,6 +165,9 @@ describe("validateRentalExclusion — 의무임대기간 (GAP-1)", () => {
     const result = validateRentalExclusion({
       ...baseRentalInput,
       registrationType: "private_purchase_short",
+      // 2호 민간매입은 2018.3.31.(4.2.) 이전 사업자등록등 주택만(시행령 §3①2호 단서) — 이 테스트는 의무기간 경고만 본다
+      rentalRegistrationDate: new Date("2017-01-01"),
+      businessRegistrationDate: new Date("2017-01-01"),
       assessedValue: 500_000_000,  // 일반 임대 수도권 6억 이하
       actualRentalYears: 3,
     });

@@ -96,7 +96,12 @@ export interface RentalExclusionInput {
     | "existing_rental"              // 기존임대주택 2005년 이전 등록 (시행령 §3①3호)
     | "private_short_term_6y_construction"  // 단기민간임대 건설 (시행령 §3①10호)
     | "private_short_term_6y_purchase";     // 단기민간임대 매입 (시행령 §3①11호)
-  rentalRegistrationDate: Date;    // 임대사업자 등록일
+  rentalRegistrationDate: Date;    // 지자체 임대사업자 등록일(등록증 — 신청일 아님, 서면-2021-법규재산-3280)
+  /**
+   * 세무서 사업자등록일(소득세법 §168·법인세법 §111) — §3①1호·2호 단서 「2018년 3월 31일 이전에 … 사업자등록등」
+   * 판정용(민간건설·민간매입). 그 두 유형에서 없으면 요건 확인 불가로 불성립.
+   */
+  businessRegistrationDate?: Date;
   rentalStartDate: Date;           // 임대개시일
   assessedValue: number;           // 공시가격 (원)
   area: number;                    // 전용면적 (㎡)

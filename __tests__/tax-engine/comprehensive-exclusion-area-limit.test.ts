@@ -16,7 +16,9 @@ import type { RentalExclusionInput } from "@/lib/tax-engine/types/comprehensive.
 
 const BASE: RentalExclusionInput = {
   registrationType: "private_construction",
-  rentalRegistrationDate: new Date("2020-01-01"),
+  // 1호 민간건설은 2018.3.31.(4.2.) 이전 사업자등록등 주택만(시행령 §3①1호 단서) — 이 파일은 면적만 본다
+  rentalRegistrationDate: new Date("2017-01-01"),
+  businessRegistrationDate: new Date("2017-01-01"),
   rentalStartDate: new Date("2020-02-01"),
   assessedValue: 400_000_000,
   area: 85,
