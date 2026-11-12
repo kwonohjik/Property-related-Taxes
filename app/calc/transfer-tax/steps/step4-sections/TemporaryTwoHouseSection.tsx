@@ -331,6 +331,8 @@ function TempTwoHouseVerdictCard({
                     종전주택 양도
                     {` (처분기한 ${tempTwoHouseVerdict.deadline.toISOString().slice(0, 10)})`}
                     {tempTwoHouseVerdict.delayReasonApplied && " — §155⑱ 사유로 기한 요건 충족 간주"}
+                    {tempTwoHouseVerdict.remnantApplied &&
+                      " — 종전 주택 일부가 수용된 날이 기한 안이라 남은 주택 양도도 그 수용에 포함(§155① 후단)"}
                   </p>
                   {tempTwoHouseVerdict.delayNote && (
                     <p data-testid="temp-two-house-delay-note" className="text-caption">

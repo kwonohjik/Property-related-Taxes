@@ -166,7 +166,7 @@ function temporaryTwoHouseItems(
   judgmentBaseDate: Date | undefined,
 ): OneHouseRequirementCheck[] {
   const tth = input.temporaryTwoHouse!;
-  const { provisoRelaxesHolding, timing, era, origin } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
+  const { provisoRelaxesHolding, oneYearWaived, timing, era, origin } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
   const basis155 = `${TRANSFER.TEMPORARY_TWO_HOUSE}①`;
   const items: OneHouseRequirementCheck[] = [];
 
@@ -238,12 +238,12 @@ function temporaryTwoHouseItems(
         ? { note: orderNote }
         : !oneYearNatural && timing.oneYearMet
         ? {
-            note: provisoRelaxesHolding
+            note: oneYearWaived
               ? "§154① 단서 사유에 해당해 1년 요건을 적용하지 않습니다."
               : "§155⑯ 법인·공공기관 지방이전에 해당해 1년 요건을 적용하지 않습니다.",
           }
         : {}),
-      legalBasis: oneYearNatural || provisoRelaxesHolding || !timing.oneYearMet ? basis155 : `${TRANSFER.TEMPORARY_TWO_HOUSE}⑯`,
+      legalBasis: oneYearNatural || oneYearWaived || !timing.oneYearMet ? basis155 : `${TRANSFER.TEMPORARY_TWO_HOUSE}⑯`,
     });
   }
 

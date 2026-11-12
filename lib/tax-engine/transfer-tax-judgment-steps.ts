@@ -49,7 +49,7 @@ import {
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
 import { judgeNewHouseOrigin, OLD_CLAUSE_8_ORIGIN_DIVERGENCE_NOTE } from "./one-house/new-house-origin";
-import { waivesPriorHouseOneYearGap } from "./transfer-tax-exemption-requirements";
+import { waivesTempTwoHousePairOneYearGap } from "./transfer-tax-exemption-requirements";
 import { classifyRegionCriteriaByCode } from "./multi-house-surcharge-count";
 import type { IncomeDeductionId } from "./transfer-reductions";
 import { translateRedevAptForHousingJudgment } from "./one-house/redev-apt-judgment-input";
@@ -607,7 +607,8 @@ export function runMultiHouseSurchargeStep(
     );
     // 구 8호(2023.2.28. 전 양도분)는 신규 주택의 취득 경위 갈래 분리를 적용하지 않는다 — 비과세는 그 갈래로 불성립인데 8호가 성립한 경우만 알린다(결정 #43 하위 1 나).
     if (mhInput.oldClause8TemporaryTwoHouse === true && workingInput.temporaryTwoHouse?.newHouseOrigin) {
-      const originVerdict = judgeNewHouseOrigin(workingInput, waivesPriorHouseOneYearGap(workingInput));
+      // 짝의 1년 요건 면제와 같은 술어 — D8 상대 쪽 짝이면 A의 단서로 면제하지 않는다(J-3).
+      const originVerdict = judgeNewHouseOrigin(workingInput, waivesTempTwoHousePairOneYearGap(workingInput));
       if (originVerdict.blocked) {
         multiHouseSurchargeResult = {
           ...multiHouseSurchargeResult,

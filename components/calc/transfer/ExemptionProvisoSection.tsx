@@ -194,7 +194,11 @@ export function ExemptionProvisoSection({
             field="provisoExpropriationDate"
             label="수용일"
             required
-            hint="필수 — 수용된 주택 자체를 양도하면 양도일과 같은 날, 잔존주택이면 수용일부터 5년(2013.2.15. 전 양도는 2년) 내 양도해야 합니다"
+            hint={
+              mode === "temporary_two_house"
+                ? "필수 — 수용된 주택 자체를 양도하면 양도일과 같은 날. 종전 주택 일부가 수용되고 남은 주택을 파는 경우 일시적 2주택 처분기한은 수용일로도 판정합니다(수용일부터 5년 안 양도 — 2017.2.3. 전 양도는 3년, 2012.6.29. 전은 2년 · §155① 후단)"
+                : "필수 — 수용된 주택 자체를 양도하면 양도일과 같은 날, 잔존주택이면 수용일부터 5년(2013.2.15. 전 양도는 2년) 내 양도해야 합니다"
+            }
           >
             <DateInput
               value={provisoExpropriationDate}

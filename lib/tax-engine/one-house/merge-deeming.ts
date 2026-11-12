@@ -28,6 +28,7 @@ import { marriageRentalSidesOf, resolveDoubleMergeComposition, resolveMergeCompo
 import { parentalCareAgeVerdict, PARENTAL_CARE_AGE_CONFIRM_NOTICE } from "./parental-care-age";
 import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "../types/transfer.types";
 import { judgeNewHouseOrigin, type NewHouseOriginVerdict } from "./new-house-origin";
+import { resolveTempTwoHouseRemnantDisposalDate } from "./expropriation-remnant-155-1";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { DeemedOneHouseBasis, HouseInfo } from "../types/multi-house-surcharge.types";
 import {
@@ -107,6 +108,18 @@ export function waivesPriorHouseOneYearGap(input: ResidenceReqInput): boolean {
 }
 
 /**
+ * §155① 후단 1년 요건 면제를 **이 짝에** 적용하는가 — `waivesPriorHouseOneYearGap` + 짝의 종전 주택이 양도 주택일 것.
+ *
+ * 합가 D8 상대 쪽 짝(B → C · `previousHouseIsRosterRow`)에서는 종전 주택이 양도 주택 A가 아니라 B다(사전-2026-법규재산-0643).
+ * §154① 1호·2호가목·3호는 그 주택의 양도·수용 사실이라 A의 단서를 B→C 짝의 1년 요건으로 옮기는 직접 근거가 없다 ⇒ 면제하지
+ * 않는다(2026-11-12 리뷰 J-3 · 사용자 결정). 면제했다면 결론이 바뀌는 경우는 `era-undetermined.ts`가 「확인 필요」로 알린다.
+ * A 자신의 보유 2년 면제(`provisoRelaxesHolding`)는 그대로다 — A가 양도 주택이라 단서가 직접 걸린다.
+ */
+export function waivesTempTwoHousePairOneYearGap(input: ResidenceReqInput & Pick<TransferTaxInput, "temporaryTwoHouse">): boolean {
+  return input.temporaryTwoHouse?.previousHouseIsRosterRow !== true && waivesPriorHouseOneYearGap(input);
+}
+
+/**
  * §155① 일시적 2주택 **타이밍 요건(A·B)** 판정 — 비과세(E-3)와 중과 배제(§167의10①15호) 공용.
  *
  * `provisoRelaxesHolding`(§154① 단서 화이트리스트 → 1년 요건 면제)까지 함께 산출해
@@ -116,8 +129,12 @@ export function waivesPriorHouseOneYearGap(input: ResidenceReqInput): boolean {
 export function evaluateTemporaryTwoHouseTiming(
   input: DeemedOneHouseReqInput,
   twoHouseRule: NonNullable<OneHouseSpecialRulesData["temporary_two_house"]>,
+  /** 반사실 판정 전용(`era-undetermined.ts` J-3 고지) — D8 짝에도 A의 단서로 1년 요건을 면제했다면? */
+  opts?: { forceProvisoOneYearWaiver?: boolean },
 ): {
   provisoRelaxesHolding: boolean;
+  /** 이 짝의 1년 요건을 §154① 단서로 면제했는가 — D8 짝이면 `provisoRelaxesHolding`이어도 거짓(J-3) */
+  oneYearWaived: boolean;
   timing: ReturnType<typeof judgeTemporaryTwoHouseTiming>;
   /** 처분기한 연혁(연수·임차인 단서 말일) — 요건 검토 카드가 「N년」 문구에 쓴다 */
   era: ReturnType<typeof resolveTemporaryTwoHouseDeadline>;
@@ -130,6 +147,8 @@ export function evaluateTemporaryTwoHouseTiming(
   // 나·다목(출국일 1주택)·5호(무주택·residence_only)는 일시적 2주택과 양립 불가라 화이트리스트로 제외.
   // resolveExemptionProviso는 input.acquisitionDate(=종전주택 취득일, previousAcquisitionDate와 동일 의도) 기준.
   const provisoRelaxesHolding = waivesPriorHouseOneYearGap(input);
+  // 1년 요건 면제는 짝의 종전 주택이 양도 주택일 때만(J-3) — 보유 면제(`provisoRelaxesHolding`)와 분리한다.
+  const oneYearWaived = opts?.forceProvisoOneYearWaiver ? provisoRelaxesHolding : waivesTempTwoHousePairOneYearGap(input);
 
   // §155① 요건 A(1년 경과)·B(3년 내) 판정 — 1년 요건은 보유면제 화이트리스트(§154①1·2가·3호) 시 면제.
   // OH-01 — 연혁 기한 + 2019-12-17 체제의 임차인 단서 기한·전입 요건을 한 번에 받는다(A2b).
@@ -141,18 +160,20 @@ export function evaluateTemporaryTwoHouseTiming(
     deadlineYears: era.years,
     deadlineDate: era.deadlineDate,
     moveInMet: era.moveInMet,
-    oneYearWaived: provisoRelaxesHolding,
+    oneYearWaived,
     // §155⑯ 후단(1년 면제) · §155⑱(기한 예외) — 정본 한 곳에서 전달해 비과세·중과가 같은 값을 쓴다.
     //   ⑯ 후단 「이 경우」는 전단의 지역 요건(이전한 시·군 또는 연접 시·군) 충족을 받는다 — 기한 5년과
     //   **같은 술어**로 연다(OH-35 · 원시 토글을 넘기면 비연접에도 1년 요건이 면제됐다).
     publicInstitutionRelocation: meetsPublicInstitutionRelocationRegion(input.temporaryTwoHouse!),
     disposalDelayReason: input.temporaryTwoHouse!.disposalDelayReason,
     disposalDelayDisposedByThatMethod: input.temporaryTwoHouse!.disposalDelayDisposedByThatMethod,
+    // §155① 후단(E-5) — 종전 주택 일부 수용 뒤 잔존 주택 양도면 요건 B를 수용일로도 판정한다.
+    remnantDisposalDate: resolveTempTwoHouseRemnantDisposalDate(input),
   });
 
   // 신규 주택이 권리(분양권·조합원입주권)로 취득해 완공된 주택이면 갈래를 가른다 — 순차 사례는 §155① 부적용(결정 #43 · G6-4).
-  const origin = judgeNewHouseOrigin(input, provisoRelaxesHolding);
-  return { provisoRelaxesHolding, timing: origin.blocked ? { ...timing, overall: false } : timing, era, origin };
+  const origin = judgeNewHouseOrigin(input, oneYearWaived);
+  return { provisoRelaxesHolding, oneYearWaived, timing: origin.blocked ? { ...timing, overall: false } : timing, era, origin };
 }
 
 /**
