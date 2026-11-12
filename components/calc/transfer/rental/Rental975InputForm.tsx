@@ -59,6 +59,36 @@ function registrationDeadline(dateStr: string): Date | null {
   return addMonths(d, RENTAL_97_5_REGISTRATION_MONTHS);
 }
 
+/** 취득일 대비 3개월 이내인가 — 지자체 등록일·세무서 사업자등록일 공용. 날짜가 없으면 배지 없음. */
+function threeMonthBadge(
+  acquisitionDate: string | undefined,
+  dateStr: string,
+  okText: string,
+  failText: string,
+): { ok: boolean; text: string } | null {
+  if (!acquisitionDate || !dateStr) return null;
+  const deadline = registrationDeadline(acquisitionDate);
+  if (!deadline) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  return d <= deadline ? { ok: true, text: okText } : { ok: false, text: failText };
+}
+
+function ThreeMonthBadge({ badge }: { badge: { ok: boolean; text: string } | null }) {
+  if (!badge) return null;
+  return (
+    <div
+      className={`mt-1 rounded px-2 py-1 text-micro font-medium ${
+        badge.ok
+          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+          : "bg-amber-100 text-amber-800 border border-amber-200"
+      }`}
+    >
+      {badge.text}
+    </div>
+  );
+}
+
 
 export function Rental975InputForm({ value, onChange, acquisitionDate, transferDate }: Props) {
   const uid = useId();
@@ -67,17 +97,18 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
   };
 
   // 3개월 검증 배지 (useMemo — store 미기록)
-  const regBadge = useMemo(() => {
-    if (!acquisitionDate || !value.registrationDate) return null;
-    const deadline = registrationDeadline(acquisitionDate);
-    if (!deadline) return null;
-    const regDate = new Date(value.registrationDate);
-    if (isNaN(regDate.getTime())) return null;
-    if (regDate <= deadline) {
-      return { ok: true, text: "✓ 취득 후 3개월 내 등록" };
-    }
-    return { ok: false, text: "취득 후 3개월 초과 — §97의5①1호 불충족" };
-  }, [acquisitionDate, value.registrationDate]);
+  const regBadge = useMemo(
+    () => threeMonthBadge(acquisitionDate, value.registrationDate, "✓ 취득 후 3개월 내 등록", "취득 후 3개월 초과 — §97의5①1호 불충족"),
+    [acquisitionDate, value.registrationDate],
+  );
+  // 세무서 사업자등록 3개월 — 엔진 `TAX_REGISTRATION_AFTER_3_MONTHS`와 같은 기한(사용자 정책 결정 2026-11-12 · 법령 문언에는 없는 요건이라 호를 적지 않는다)
+  const taxRegBadge = useMemo(
+    () =>
+      value.isTaxRegistered
+        ? threeMonthBadge(acquisitionDate, value.taxRegistrationDate, "✓ 취득 후 3개월 내 사업자등록", "취득 후 3개월 초과 — 감면 요건 불충족")
+        : null,
+    [acquisitionDate, value.isTaxRegistered, value.taxRegistrationDate],
+  );
 
   // emerald 자동 표시
   // 종점 — 양도 전 임대 종료면 임대 종료일(§97의5①2호), 아니면 양도일
@@ -148,17 +179,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             onChange={(v) => onChange({ registrationDate: v })}
           />
           {/* 3개월 검증 배지 */}
-          {regBadge && (
-            <div
-              className={`mt-1 rounded px-2 py-1 text-micro font-medium ${
-                regBadge.ok
-                  ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                  : "bg-amber-100 text-amber-800 border border-amber-200"
-              }`}
-            >
-              {regBadge.text}
-            </div>
-          )}
+          <ThreeMonthBadge badge={regBadge} />
           {!acquisitionDate && (
             <p className="mt-1 text-micro text-muted-foreground">
               ※ 3개월 검증 배지는 자산 카드의 취득일 입력 후 표시됩니다.
@@ -179,6 +200,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
               value={value.taxRegistrationDate}
               onChange={(v) => onChange({ taxRegistrationDate: v })}
             />
+            <ThreeMonthBadge badge={taxRegBadge} />
             <p className="mt-1 text-micro text-muted-foreground">
               조특령 §97의5③ — 사업자등록·임대사업자 등록·임대개시 중 가장 늦은 날부터 임대를 개시한 것으로 봅니다.
             </p>

@@ -112,6 +112,27 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
     }
   }
 
+  /**
+   * 2-1) 세무서 사업자등록도 취득일로부터 3개월 이내 — **사용자 정책 결정** (2026-11-12 Q-1·Q-2,
+   *      `docs/01-plan/features/rental-97-5-textbook-gaps.plan.md` §3.2).
+   *
+   * ⚠️ 법령 문언에는 없는 요건이다. 법 §97의5①1호의 3개월은 「「민간임대주택에 관한 특별법」에 따라 …
+   *    등록」뿐이고, 「소득세법」 §168 사업자등록은 조특령 §97의5③의 **임대개시 기산** 축이다(아래 4)).
+   *    국세청 해석례 9건에서도 근거를 찾지 못했다. 교재(실무서) 서술을 따르기로 한 사용자 결정이므로
+   *    메시지에 호(①1호)를 붙이지 않는다 — 그 호에 없는 요건이라 오귀속이 된다.
+   * 취득 전 사업자등록(다른 임대주택으로 이미 등록)은 통과한다.
+   */
+  if (input.acquisitionDate && input.isTaxRegistered && input.taxRegistrationDate) {
+    const deadline = addMonths(input.acquisitionDate, RENTAL_97_5_REGISTRATION_MONTHS);
+    if (input.taxRegistrationDate.getTime() > deadline.getTime()) {
+      reasons.push({
+        code: "TAX_REGISTRATION_AFTER_3_MONTHS",
+        message: "취득일로부터 3개월 이내에 세무서 사업자등록을 하지 않았습니다.",
+        legalBasis,
+      });
+    }
+  }
+
   // 3) ①3호 — 임대료 증액 제한 (§97의3①2호 준용)
   if (input.rentHistory && input.rentHistory.length >= 2) {
     // 임대개시일(령 §97의3④·§97의5③ 기산일) 이후 체결·갱신한 계약의 증액만 판정한다

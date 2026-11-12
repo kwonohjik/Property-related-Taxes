@@ -89,7 +89,9 @@ describe("(a) 조특령 §97의3③1호 후단 — 증액 후 1년 이내 재증
 describe("(b) 조특령 §97의5③ — 세무서 사업자등록일도 임대개시 기산의 한 축", () => {
   it("🔴 사업자등록 2019-03-01(늦음) → 기산 2019-03-01 → 9년 10개월 → 미달", () => {
     const r = evaluateRental975({ ...BASE, taxRegistrationDate: D("2019-03-01") });
-    expect(codes(r)).toEqual(["RENTAL_PERIOD_SHORT"]);
+    // 기산일 이동(RENTAL_PERIOD_SHORT)은 그대로 — 취득(2018-06-01) 후 3개월을 넘긴 사업자등록이라
+    // 사용자 정책 사유(TAX_REGISTRATION_AFTER_3_MONTHS, 2026-11-12)도 함께 붙는다.
+    expect(codes(r)).toEqual(["TAX_REGISTRATION_AFTER_3_MONTHS", "RENTAL_PERIOD_SHORT"]);
   });
 
   it("사업자등록이 등록일·임대개시보다 빠르면 기산일을 바꾸지 않는다", () => {

@@ -311,22 +311,23 @@ describe("겸용주택 — §97의5 감면대상 소득(B)은 주택분만 (리�
    * 주택분 양도소득금액만 B로 넘겨 「소득세법」 §90① A × (B − C) ÷ D로 계산한다.
    */
   it("🔴 감면세액 = 산출세액 × 주택분 소득 ÷ 과세표준 — 상가분 세액은 감면하지 않는다", () => {
+    // 날짜는 §97의5 취득 하한(법률 제12853호 부칙 §34)에 맞춰 양도일까지 전부 +1년 옮겼다(2026-11-12) — 기간이 같아 금액 단언은 그대로다.
     const r = calcMixedUseIdN(
       2_600_000_000,
-      new Date("2026-06-01"),
+      new Date("2027-06-01"),
       {
         ...mixedUseCase14(),
-        landAcquisitionDate: D("2014-06-01"),
-        buildingAcquisitionDate: D("2014-06-01"),
+        landAcquisitionDate: D("2015-06-01"),
+        buildingAcquisitionDate: D("2015-06-01"),
         residencePeriodYears: 0,
         table2ResidencePeriodYears: 0,
         reductions: [
           {
             type: "rental_97_5",
             isPurchaseRental: true, // §97의5①1호 매입임대 (리뷰 6번 — 미입력은 불충족)
-            taxRegistrationDate: D("2014-08-01"), // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
-            registrationDate: D("2014-08-01"),
-            rentalStartDate: D("2014-09-01"),
+            taxRegistrationDate: D("2015-08-01"), // 조특령 §97의5③ (리뷰 9번 — 사업자등록 확인 시 필수)
+            registrationDate: D("2015-08-01"),
+            rentalStartDate: D("2015-09-01"),
             isTaxRegistered: true,
             isNationalHousingScale: true,
             region: "capital",
