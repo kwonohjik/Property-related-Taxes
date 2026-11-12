@@ -37,4 +37,26 @@ describe("V-5 말소 블록 1/2 판정 개월", () => {
     render(<RentalTerminationBlock unit={{ ...base, rentalPeriods: [] }} index={0} set={vi.fn()} onChange={vi.fn()} />);
     expect(screen.queryByTestId("rental-half-duty-months-0")).toBeNull();
   });
+
+  /** 1/2 계산의 공실·상속 처리는 해석례 미확보 — 해당할 때만 확인 필요 고지(사용자 결정 2026-11-12 · 세액 불변). */
+  const renderWith = (patch: Record<string, unknown>) =>
+    render(<RentalTerminationBlock unit={{ ...base, ...patch }} index={0} set={vi.fn()} onChange={vi.fn()} />);
+
+  it("NT-1 ★ 3개월을 넘는 공백이 있으면 공실 확인 필요 고지", () => {
+    renderWith({ rentalPeriods: [{ start: "2018-01-01", end: "2019-01-01" }, { start: "2019-06-01", end: "2022-03-01" }] });
+    expect(screen.getByTestId("rental-half-duty-gap-notice-0").textContent).toContain("확인 필요");
+  });
+
+  it("NT-2 공백이 3개월 이내면 고지하지 않는다", () => {
+    renderWith({ rentalPeriods: [{ start: "2018-01-01", end: "2019-01-01" }, { start: "2019-03-01", end: "2022-03-01" }] });
+    expect(screen.queryByTestId("rental-half-duty-gap-notice-0")).toBeNull();
+    expect(screen.queryByTestId("rental-half-duty-inherited-notice-0")).toBeNull();
+  });
+
+  it("NT-3 ★ 상속 토글 ON이면 5310 유추 확인 필요 고지", () => {
+    renderWith({ rentalPeriods: [{ start: "2018-01-01", end: "2022-03-01" }], isInheritedRental: true, decedentRentalMonths: "12" });
+    const t = screen.getByTestId("rental-half-duty-inherited-notice-0").textContent ?? "";
+    expect(t).toContain("서면-2020-법규재산-5310");
+    expect(t).toContain("확인 필요");
+  });
 });
