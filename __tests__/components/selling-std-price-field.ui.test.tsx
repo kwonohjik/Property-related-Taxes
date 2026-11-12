@@ -71,6 +71,8 @@ describe("SP-4 범위 안(가액기준·조정) — 같은 사실 칸은 정확�
     ["상속 · 의제취득일 전 — 환산 분모 칸", { acquisitionCause: "inheritance", acquisitionDate: "1980-01-01", inheritanceDate: "1980-01-01" } as Partial<AssetForm>, {}, false],
     ["증여", { acquisitionCause: "gift", giftDate: "2015-01-01" } as Partial<AssetForm>, {}, true],
     ["부담부증여(기준시가) — 안분 칸", { transferType: "burdened_gift" } as Partial<AssetForm>, {}, false],
+    ["부담부증여 시가 비환산(O-5) — 새 칸이 유일", { transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgAcquisitionMethod: "actual" } as Partial<AssetForm>, {}, true],
+    ["부담부증여 시가 환산(K-5) — 환산 분모 칸", { transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgAcquisitionMethod: "converted" } as Partial<AssetForm>, {}, false],
     ["완공 재개발 아파트", { assetKind: "redevelopment_apt" }, {}, true],
     ["함께 양도 · 구분 기재", {}, { single: false, mode: "actual" }, true],
     ["함께 양도 · 기준시가 안분 — 안분 칸", {}, { single: false, mode: "apportioned" }, false],
@@ -86,7 +88,8 @@ describe("SP-4 범위 밖 — 새 칸 없음", () => {
     ["조정대상지역 해제 뒤 양도", {}, { date: "2023-06-01" }],
     ["2018-04-01 전 양도", { regionCode: GANGNAM }, { date: "2018-03-31" }],
     ["겸용주택(V-3)", { isMixedUseHouse: true } as Partial<AssetForm>, {}],
-    ["부담부증여 시가 모드", { transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market" } as Partial<AssetForm>, {}],
+    ["부담부증여 시가 · 의제취득일 전", { transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgAcquisitionMethod: "actual", acquisitionCause: "inheritance", acquisitionDate: "1983-05-01", inheritanceStartDate: "1983-05-01" } as Partial<AssetForm>, {}],
+    ["부담부증여 시가 · 재개발 APT", { transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgAcquisitionMethod: "actual", assetKind: "redevelopment_apt" } as Partial<AssetForm>, {}],
     ["입주권 양도", { assetKind: "right_to_move_in" }, {}],
     ["둘째 자산", {}, { single: false, index: 1 }],
   ])("%s", (_l, over, opt) => {

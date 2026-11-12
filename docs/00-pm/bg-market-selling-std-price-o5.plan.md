@@ -2,7 +2,7 @@
 
 > 2026-11-12 · 코드 읽기 + throwaway probe 실측 + 법령 본문 조회. 출처: 메모리 «기준시가 칸 O-4·O-5» (`calc-selling-house-std-price-value-region.plan.md` PR-1·PR-2 범위 밖 2건).
 > 표기: [직접] = 이번에 코드·법령·실측으로 확인 · [해석] = 읽은 것에서 이은 추론 · [확인 필요] = 미검증.
-> 상태: **계획 — Q 결정 대기.** 결정 후 같은 PR에서 구현한다(워크플로).
+> 상태: **구현 완료(§6)** — 결정 Q-1 a · Q-2 a(2026-11-12, 사용자 «모두 권장안으로»).
 
 ## 0. 결론
 
@@ -72,3 +72,17 @@
 - **V-2** 닿는 시기(지방 조정대상지역 해제 시점)는 앱의 조정대상지역 데이터 기준. 법령 연혁 직접 조회는 하지 않았다.
 - **V-3** 양도 주택이 BG이고 «양도 당시 기준시가»가 §159 안분 분모 C(시가)와 별개 개념임을 법령(소령 §159①1호 · §167의3①1호) 대조로 확인하지 않았다 — 코드 구조(별개 입력 경로)와 1표본 실측만 근거.
 - **O-4 겸용:** 근거 확보가 착수 조건. 해석례 0건(국세청 법령해석·조세심판원 «겸용주택 기준시가 3억원» 검색).
+
+## 6. 결정 · 구현 결과 (2026-11-12)
+
+결정: **Q-1 a · Q-2 a**(모두 권장안).
+
+- **V-1 측정(Pre-Do) [직접: throwaway probe]:** 함께 양도(2채)·축 B(50/50 지분)에서도 단건과 같다 — 기준시가 비움 = 4억이면 결정세액이 같고(함께 양도 163,790,000 · 축 B 89,072,500), 2.5억만 1호로 갈린다(85,401,250 · 33,467,500). 값은 §159 안분에 쓰이지 않는다. 의제취득일 전·재개발 APT 시가는 Q-1 a대로 범위 밖(측정하지 않음).
+- **변경(2파일, 엔진·API·⑫⑬⑭ 불변):**
+  - NEW `bgMarketHousingSellingStdPriceCell`(`lib/calc/burdened-gift-transfer-price-scope.ts`) = 부담부증여 ∧ 주택 ∧ 시가 모드 ∧ 환산 아님 ∧ 의제취득일 후.
+  - `isHouseSale`(`lib/calc/selling-std-price-scope.ts`)가 `!stdPriceAtTransferComesFromElsewhere(asset) || bgMarketHousingSellingStdPriceCell(asset)`로 BG 시가 비환산 주택을 연다. ⑤(`AssetSectionTransfer`의 `showSellingStdPrice`)·⑧(`sellingStdPriceIssue`)·④(`sellingHouseStdPriceAtTransfer`·`buildHousesPayload`)는 같은 leaf라 따라온다. 칸 문구는 기존 hint 그대로(Q-2 a).
+  - 머리 주석의 «칸을 열면 안분 분모가 움직일 수 있다»를 실측 결과로 정정.
+- **anchor:** `selling-std-price-scope.test.ts`(BG 시가 행 반전 + 환산·기준시가 모드·의제 전·재개발 APT·겸용·일반건물·해제 뒤 대조군 8행) · `selling-std-price-field.ui.test.tsx`(칸이 화면에 정확히 하나 — BG 시가 비환산 1, 환산 1(환산 분모 칸), 범위 밖 2) · NEW `selling-std-price-bg-market.anchor.test.ts`(⑧ 3건 + ④→⑭ 단건 80,975,000 / 80,975,000 / 30,425,000 · 함께 양도·축 B 비움 = 4억 단언). 구현 전에는 새 «범위 안» 두 행만 실패했다(나머지 대조군 통과 = 비반사 확인).
+- **뮤테이션(백업/복원·`cmp` 일치):** 예외 술어 제거(3건 실패) · 의제 전 가드 제거(3) · housing 가드 제거(2) · 시가 모드 가드 반전(3) 사망. **생존 2종은 동치 변이** — BG 가드 제거(비-BG는 `!stdPriceAtTransferComesFromElsewhere`가 이미 참)·환산 가드 제거(환산 비-의제는 같은 식의 앞 항이 이미 참).
+- **미측정(남은 한계):** 재개발 APT 부담부증여 시가 모드·의제취득일 전 시가 모드는 칸이 안 열린다(종전 그대로). 브라우저 수동 확인·Playwright는 하지 않았다 — 칸 노출은 자산 카드 렌더 anchor(`calc-selling-std-price` 유일성)로 고정.
+- **O-4(겸용):** 변경 없음 — 근거 확보가 착수 조건(§0-4).

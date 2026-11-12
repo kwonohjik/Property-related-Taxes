@@ -11,9 +11,12 @@
  * - 판정 메뉴(M1 · `surcharge-price-criteria.ts`)는 조정대상지역과 관계없이 필수다 — 메뉴 자체가 중과 판정이라 결과 표가 모든 행을 그린다.
  *
  * 범위 밖(④는 종전 값을 그대로 싣는다):
- * - 겸용주택(V-3) — 1호의 「해당 주택 … 기준시가」가 주택분만인지 판단할 법령 근거를 아직 확인하지 않았다.
- * - 부담부증여 시가 모드(`stdPriceAtTransferComesFromElsewhere`) — 그 모드에서도 ④가 `standardPriceAtTransfer`를 §159 본문의
- *   건물 기준시가로 싣는다(`transfer-tax-api-burdened-gift.ts`). 칸을 열면 중과와 무관한 안분 분모가 함께 움직일 수 있다.
+ * - 겸용주택(V-3, O-4) — 1호의 「해당 주택 … 기준시가」가 주택분만인지 판단할 법령 근거를 확인하지 못했다(현행 본문에 겸용 규정이 없고 해석례 0건).
+ * - 부담부증여 중 일반건물·입주권·의제취득일 전 시가 모드·재개발 APT 시가 모드(`stdPriceAtTransferComesFromElsewhere`) — 값이 다른 칸으로 오거나 측정하지 않았다.
+ *
+ * 범위 안으로 푼 것(O-5, 계획서 `bg-market-selling-std-price-o5.plan.md`): 부담부증여 시가 모드(환산 아님 · 의제취득일 후) **주택** —
+ * 이 모드에서는 공용 칸이 없어 비우면 backstop이 «산입»으로 읽는데(실측 80,975,000 · 2.5억이면 1호 배제 30,425,000), 칸 값은 §159 안분에 쓰이지 않고
+ * 양도 주택 행 `officialPrice`에만 닿는다(단건·함께 양도·축 B 실측: 비움 = 4억).
  */
 import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
@@ -25,18 +28,18 @@ import { ownerSplitHousingNeedsTransferTotal } from "./transfer-tax-split-acq-mo
 import { effectiveBuildingCarryoverMix, effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { isGiftPreDeemedConversionAsset } from "./gift-pre-deemed";
 import { isRedev166_3PreDeemedAsset } from "./transfer-tax-validate-clause-a";
-import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
+import { bgMarketHousingSellingStdPriceCell, stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
 import { DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
 
 /** §104⑦ 다주택 중과 시행일 — 그 전 양도는 중과가 없다 */
 const SURCHARGE_START = "2018-04-01";
 
-/** 주택 양도인가 — 입주권·분양권 양도는 §104⑦ 밖. 겸용·부담부증여 시가 모드는 범위 밖(머리 주석) */
+/** 주택 양도인가 — 입주권·분양권 양도는 §104⑦ 밖. 겸용·부담부증여(시가 비환산 주택 제외)는 범위 밖(머리 주석) */
 function isHouseSale(asset: AssetForm): boolean {
   return (
     (asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt") &&
     !asset.isMixedUseHouse &&
-    !stdPriceAtTransferComesFromElsewhere(asset)
+    (!stdPriceAtTransferComesFromElsewhere(asset) || bgMarketHousingSellingStdPriceCell(asset))
   );
 }
 

@@ -114,3 +114,19 @@ export function stdPriceAtTransferComesFromElsewhere(asset: AssetForm): boolean 
       (asset.bgValuationMode === "sangjeungbeop_market" && (asset.bgAcquisitionMethod !== "converted" || isBgPreDeemedAsset(asset))))
   );
 }
+
+/**
+ * 시가 모드(환산 아님 · 의제취득일 후) **주택**의 「양도 당시 기준시가」 — 위 술어가 공용 칸을 숨기는 갈래 중, 그 값이 §159 안분이 아니라
+ * 다주택 중과 §167의3①1호 판정(양도 주택 행 `officialPrice`)에만 닿는 경우다(계획서 `docs/00-pm/bg-market-selling-std-price-o5.plan.md` §1.2 ·
+ * 단건·함께 양도·축 B 실측: 칸 비움 = 4억이면 결정세액이 같고 2.5억만 1호로 갈린다). 이 경우에만 `selling-std-price-scope.ts`가 칸을 연다.
+ * 일반건물·겸용·입주권은 `isHouseSale`의 자산 종류 조건이 먼저 거르고, 의제취득일 전(의제 섹션이 분모 칸을 받음)·재개발 APT는 범위 밖이다.
+ */
+export function bgMarketHousingSellingStdPriceCell(asset: AssetForm): boolean {
+  return (
+    asset.transferType === "burdened_gift" &&
+    asset.assetKind === "housing" &&
+    asset.bgValuationMode === "sangjeungbeop_market" &&
+    asset.bgAcquisitionMethod !== "converted" &&
+    !isBgPreDeemedAsset(asset)
+  );
+}
