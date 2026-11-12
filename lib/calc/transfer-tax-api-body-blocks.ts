@@ -26,6 +26,7 @@ import { exemptionCountExcludedHouseIds } from "./temp-two-house-candidate-exclu
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
+import { resolveTempTwoHouseNewHouseSigunguCode } from "./temp-two-house-new-house-sigungu";
 
 /**
  * ④⑬ 기한 후 신고 감면 축 — 「국세기본법」 §48②2호·§48②3호라목 (🔴 G-05)
@@ -170,8 +171,14 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
         temporaryTwoHouse: {
           previousAcquisitionDate: tempTwoHouse.previousAcquisitionDate,
           newAcquisitionDate: tempTwoHouse.newAcquisitionDate,
-          // §155⑯·⑱ — 증여세 부담부증여 경로와 공용 leaf(E-1 한계 G3).
-          ...buildTempTwoHouseDeadlineExceptionFacts(form),
+          // §155⑯·⑱ — 증여세 부담부증여 경로와 공용 leaf(E-1 한계 G3). 신규 주택 소재 시·군은 명부 행 주소가 정본(C-1).
+          ...buildTempTwoHouseDeadlineExceptionFacts({
+            ...form,
+            newHouseSigunguCode: resolveTempTwoHouseNewHouseSigunguCode(
+              form.newHouseSigunguCode,
+              tempTwoHouse.newHouseRegionCode,
+            ),
+          }),
           // §155①2호 — 신규 취득 당시 두 주택의 조정 여부·계약일·전입·임차인 단서 (OH-01 A2b).
           //   ⑤ 판정 카드와 같은 leaf로 편다. 신규 주택 코드는 명부 행에서만 온다.
           ...toTemporaryTwoHouseEraFacts(

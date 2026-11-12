@@ -24,6 +24,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
 import type { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { DateInput } from "@/components/ui/date-input";
+import { Button } from "@/components/ui/button";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
@@ -95,6 +96,16 @@ type FullOnlyProps = {
    */
   derivedNewHouseOrigin?: { kind: string; rightAcquisitionDate?: string };
   /**
+   * 신규 주택으로 도출된 명부 행의 법정동코드 — 있으면 §155⑯ 「신규 주택 소재지」는 이 주소로 판정한다(④·⑤ 공용 leaf
+   * `resolveTempTwoHouseNewHouseSigunguCode` · C-1). 위젯은 별도 주소 칸 대신 그 사실을 알린다.
+   */
+  derivedNewHouseRegionCode?: string;
+  /**
+   * 신규 주택 취득일의 출처(`TemporaryTwoHouseDates.source`) — `"declared"`면 명부 행이 아니라 직접 선언(옛 기록·AI 추출)에서 왔다.
+   * 그때는 「목록에서 자동 반영」이라고 말하지 않고, 선언을 지울 수 있게 한다(2026-11-12 리뷰 C-2).
+   */
+  derivedNewHouseSource?: "roster" | "declared";
+  /**
    * 비과세 판정이 보는 **제외 후 세대 주택 수**(`judgmentExemptionHouseCount` — 명부 파생값 − 주택 수 제외 행).
    * 3채 이상이면 판정 카드가 「요건 충족」을 말하지 않는다 — §155①은 「1주택을 소유한 1세대가 … 일시적으로 2주택이 된 경우」라
    * 농어촌주택(§155⑦)·합가(§155④⑤)와 겹친 경우가 아니면 대상이 아니다(S15-9).
@@ -128,6 +139,8 @@ function TempTwoHouseCoreBlocks({
   primaryAcquisitionDate,
   derivedNewHouseAcquisitionDate,
   derivedNewHouseOrigin,
+  derivedNewHouseRegionCode,
+  derivedNewHouseSource,
 }: BaseProps &
   Pick<
     FullOnlyProps,
@@ -136,6 +149,8 @@ function TempTwoHouseCoreBlocks({
     | "primaryAcquisitionDate"
     | "derivedNewHouseAcquisitionDate"
     | "derivedNewHouseOrigin"
+    | "derivedNewHouseRegionCode"
+    | "derivedNewHouseSource"
   >) {
   /**
    * 명부에서 신규 주택을 도출하지 못하면 이 특례 축 자체를 그리지 않는다.
@@ -177,12 +192,39 @@ function TempTwoHouseCoreBlocks({
                    있지만, 섹션 순서가 바뀌면 그 표현이 조용히 틀려진다. 위치에 의존하지 않는
                    표현으로 둔다(종전 「② 보유 주택 목록」도 재배치로 번호가 어긋났다).
               */}
-              <p className="text-xs text-muted-foreground">
-                같은 화면의 <strong>보유 주택 목록</strong>에서{" "}
-                <strong>양도 주택보다 나중에 취득한 주택</strong>을 자동으로 찾아 반영합니다(혼인·동거봉양 합가
-                세대는 합가 전 같은 쪽 안에서 나중에 취득한 주택이나 합가 후 취득한 주택) — 목록을 고치면 판정도
-                함께 바뀝니다.
-              </p>
+              {derivedNewHouseSource === "declared" ? (
+                <>
+                  {/* C-2 — 명부 행이 아니라 직접 선언(옛 기록·AI 추출)에서 온 날짜다. 출처를 바로 말하고 지울 수 있게 한다. */}
+                  <p data-testid="temp-two-house-declared-source" className="text-xs text-muted-foreground">
+                    보유 주택 목록에서 찾은 날짜가 아니라 <strong>직접 선언된</strong> 신규 주택 취득일입니다(이전 기록 또는
+                    자동 추출). 신규 주택이 있으면 보유 주택 목록에 넣는 것이 정확합니다 — 이 선언으로 판정하지 않으려면 지우세요.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    data-testid="temp-two-house-declared-clear"
+                    onClick={() =>
+                      onChange({
+                        temporaryTwoHouseSpecial: false,
+                        newHouseAcquisitionDate: "",
+                        newHouseOriginKind: "",
+                        newHouseRightAcquisitionDate: "",
+                        newHouseRightApprovalDate: "",
+                      })
+                    }
+                  >
+                    직접 선언 지우기
+                  </Button>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  같은 화면의 <strong>보유 주택 목록</strong>에서{" "}
+                  <strong>양도 주택보다 나중에 취득한 주택</strong>을 자동으로 찾아 반영합니다(혼인·동거봉양 합가
+                  세대는 합가 전 같은 쪽 안에서 나중에 취득한 주택이나 합가 후 취득한 주택) — 목록을 고치면 판정도
+                  함께 바뀝니다.
+                </p>
+              )}
             </div>
           </div>
 
@@ -193,6 +235,7 @@ function TempTwoHouseCoreBlocks({
               form={form}
               onChange={onChange}
               relocationRegionVerdict={relocationRegionVerdict}
+              newHouseLocationFromRoster={!!derivedNewHouseRegionCode}
             />
 
             {/* §155①2호 조정대상지역 — 결론을 바꾸는 양도 시기에만(OH-01 A2b). 게이트는 판정 카드와 같은 leaf. */}

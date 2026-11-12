@@ -17,6 +17,7 @@ import { judgmentSaleIsHousing, type OneHouseJudgmentFormData } from "@/lib/stor
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
+import { resolveTempTwoHouseNewHouseSigunguCode } from "./temp-two-house-new-house-sigungu";
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 
 /** §155① 신규 주택 — 명부에서 도출(④ 변환과 같은 정본 `resolveTemporaryTwoHouse`). */
@@ -66,7 +67,8 @@ export function judgmentTempTwoHouseVerdict(
     publicInstitutionRelocation: form.publicInstitutionRelocation,
     // §155⑯ 지역 요건 — 엔진과 같이 처분기한 5년 적용 여부를 가른다(OH-57).
     relocatedSigunguCode: form.relocatedSigunguCode,
-    newHouseSigunguCode: form.newHouseSigunguCode,
+    // 신규 주택 소재 시·군 — 명부 행 주소가 정본, 없을 때만 ⑯ 칸(C-1 · ④와 같은 leaf).
+    newHouseSigunguCode: resolveTempTwoHouseNewHouseSigunguCode(form.newHouseSigunguCode, derivedNewHouse?.newHouseRegionCode),
     disposalDelayReason: form.disposalDelayReason,
     disposalDelayDisposedByThatMethod: form.disposalDelayDisposedByThatMethod,
     // §155①2호 (OH-01 A2b) — ④(`one-house-exemption-api.ts`)가 싣는 값과 같은 소스.

@@ -60,6 +60,7 @@ import {
 import { LegacyCountExclusionNotice } from "./LegacyCountExclusionNotice";
 import { RentalUnitsMarriageOriginSection } from "./RentalUnitsMarriageOriginSection";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
+import { resolveTempTwoHouseNewHouseSigunguCode } from "@/lib/calc/temp-two-house-new-house-sigungu";
 import {
   deriveJudgmentHouseCount,
   judgmentSaleIsHousing,
@@ -111,9 +112,13 @@ export function Step2({ form, onChange, menu = "one_house" }: Props) {
       judgeRelocationRegion({
         publicInstitutionRelocation: form.publicInstitutionRelocation,
         relocatedSigunguCode: form.relocatedSigunguCode,
-        newHouseSigunguCode: form.newHouseSigunguCode,
+        // 신규 주택 소재 시·군 — 명부 행 주소가 정본, 없을 때만 ⑯ 칸(C-1 · 카드·④와 같은 leaf).
+        newHouseSigunguCode: resolveTempTwoHouseNewHouseSigunguCode(
+          form.newHouseSigunguCode,
+          derivedNewHouse?.newHouseRegionCode,
+        ),
       }),
-    [form.publicInstitutionRelocation, form.relocatedSigunguCode, form.newHouseSigunguCode],
+    [form.publicInstitutionRelocation, form.relocatedSigunguCode, form.newHouseSigunguCode, derivedNewHouse?.newHouseRegionCode],
   );
 
   /**
@@ -229,6 +234,8 @@ export function Step2({ form, onChange, menu = "one_house" }: Props) {
           primaryAcquisitionDate={derivedNewHouse?.previousAcquisitionDate ?? primaryAcquisitionDate}
           derivedNewHouseAcquisitionDate={derivedNewHouse?.newAcquisitionDate}
           derivedNewHouseOrigin={derivedNewHouse?.newHouseOrigin}
+          derivedNewHouseRegionCode={derivedNewHouse?.newHouseRegionCode}
+          derivedNewHouseSource={derivedNewHouse?.source}
           householdHousingCount={judgmentExemptionHouseCount(form)}
           replacementHouseVisible={judgmentReplacementHouseVisible(form)}
           /*
