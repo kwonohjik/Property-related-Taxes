@@ -11,6 +11,8 @@
  * |---|---|
  * | CO-1 | 마목(장기일반·매입·신청일 2020-08-01)이면 안내가 보인다 |
  * | CO-2 | 가목(장기일반·매입·2018-01-02 등록)이면 안 보인다 — 1291은 가목 「1호 이상 임대하고 있는 거주자」를 답하지 않았다 |
+ * | CO-3 | 가목이면 대신 「확인 필요」 고지가 보인다 — 직접 해석 없음 · 지분비율 원칙(재산세제과-525)은 조특법 §97 사안이라 판정은 1호 그대로(사용자 결정 2026-11-12) |
+ * | CO-4 | 마목이면 가목 고지를 띄우지 않는다 |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -45,5 +47,18 @@ describe("임대 호 카드 — 공동소유 안내(재산세제과-1291)", () =
     renderCard({ businessRegistrationDate: "2018-01-02", rentalRegistrationDate: "2018-01-02" });
     expect(screen.getByTestId("rental-verdict-badge-0").textContent).toContain("가목");
     expect(screen.queryByTestId("rental-co-owned-1291-0")).toBeNull();
+  });
+
+  it("CO-3 ★ 가목이면 「확인 필요」 고지 — 판정은 1호 그대로", () => {
+    renderCard({ businessRegistrationDate: "2018-01-02", rentalRegistrationDate: "2018-01-02" });
+    const t = (screen.getByTestId("rental-co-owned-ga-0").textContent ?? "").replace(/\s+/g, " ");
+    expect(t).toContain("「민간매입임대주택을 1호 이상 임대하고 있는 거주자」 요건을 충족하는지 직접 다룬 해석을 확인하지 못했습니다(확인 필요)");
+    expect(t).toContain("이 계산은 1호로 판정합니다");
+    expect(t).toContain("기획재정부 재산세제과-525, 2018.6.18.");
+  });
+
+  it("CO-4 마목이면 가목 고지를 띄우지 않는다", () => {
+    renderCard({ businessRegistrationDate: "2020-08-01", rentalRegistrationDate: "2020-08-01" });
+    expect(screen.queryByTestId("rental-co-owned-ga-0")).toBeNull();
   });
 });
