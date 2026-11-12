@@ -22,7 +22,7 @@ import { ESTIMATED_DEDUCTION_RATE } from "@/lib/tax-engine/legal-codes";
 import { capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
 import { splitAcqFormulaText, splitExpenseText } from "./split-acq-text";
 import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
-import { buildBgAcquisitionFormula, buildBgExpenseFormula } from "./DetailedStatementBgFormulas";
+import { buildBgAcquisitionFormula, buildBgExpenseFormula, bgOwnerSplitPerAssetFormulas } from "./DetailedStatementBgFormulas";
 import { buildGbCarryoverExpenseFormula } from "./DetailedStatementGbCarryoverFormulas";
 import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
 
@@ -296,6 +296,9 @@ function buildGbAcquisitionFormulaCore(
    * 토지·건물 별개 취득(split) 분리 자산 — 파트별 산정방식·취득가액을 엔진 `splitDetail` echo로 그린다(H-5 표시 보강).
    * 종전에는 이 자산이 `!gb` fallback으로 떨어져 「자산별 취득가액 = 0」이라 적혔다. 값은 엔진 echo(E-U1)가 정본이다.
    */
+  // 부담부증여 × 소유자 분리 — 증여한 파트의 §159 산식(분리 문구가 기준시가 안분을 「환산취득가」로 적던 것을 대신한다).
+  const ownerSplitFormulas = bgOwnerSplitPerAssetFormulas(p);
+  if (ownerSplitFormulas) return ownerSplitFormulas.acquisition;
   const splitText = splitAcqFormulaText(p.splitDetail);
   if (splitText) return splitText;
 
@@ -585,6 +588,9 @@ export function buildGbExpenseFormula(
     }
   }
 
+  // 부담부증여 × 소유자 분리 — 증여한 파트의 개산공제 산식(취득가액 줄과 같은 슬롯 echo).
+  const ownerSplitFormulas = bgOwnerSplitPerAssetFormulas(p);
+  if (ownerSplitFormulas) return ownerSplitFormulas.expense;
   // 토지·건물 별개 취득(split) 분리 자산 — 파트별 자본적지출·양도비 + 개산공제(echo). 개산공제 파트가 없으면 종전 문구.
   const splitExpText = splitExpenseText(p.splitDetail);
   if (splitExpText) return splitExpText;

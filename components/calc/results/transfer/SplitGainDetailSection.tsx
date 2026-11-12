@@ -10,10 +10,19 @@ function hasProration(part: SplitPart): boolean {
 }
 
 /**
+ * 부담부증여 × 소유자 분리의 비소유 파트 칸 — 엔진은 그 파트를 계산하지 않는다(입력 계약상 값이 0이다).
+ * 0원·「환산취득가」·「취득시 기준시가 0 × 3%」를 찍으면 계산한 값처럼 읽히므로 「—」로 비운다(칸 설명은 표 위 한 줄).
+ */
+function NotOwnedCell({ testId }: { testId?: string }) {
+  return <span className="text-right text-muted-foreground" data-testid={testId ?? "split-card-not-owned-cell"}>—</span>;
+}
+
+/**
  * 취득가액 셀 — §97②2호 단서 swap이 발동한 파트는 **차감되지 않았음**을 밝힌다.
  * 금액은 그대로 보여 준다(사용자가 입력·산정한 값이므로 숨기면 그것대로 혼란이다).
  */
-function AcqCell({ owned, part, testId }: { owned: boolean; part: SplitPart; testId: string }) {
+function AcqCell({ owned, part, testId, hideNotOwned = false }: { owned: boolean; part: SplitPart; testId: string; hideNotOwned?: boolean }) {
+  if (hideNotOwned && !owned) return <NotOwnedCell testId={testId} />;
   // 표의 다른 금액 칸과 같은 클래스를 쓴다 — 비소유 파트는 종전대로 취소선·연회색이다.
   const cls = owned
     ? "font-mono tabular-nums text-right"
@@ -62,6 +71,7 @@ import {
 } from "@/lib/tax-engine/transfer-tax-split-display";
 import { formatLumpRate } from "./split-acq-text";
 import { cn } from "@/lib/utils";
+import { BG_NOT_OWNED_NOTE } from "@/lib/calc/bg-owner-split-result";
 import { appurtenantLandLthdNoticeText } from "@/lib/tax-engine/appurtenant-land-lthd-rate";
 
 type SplitDetail = NonNullable<TransferTaxResult["splitDetail"]>;
@@ -72,8 +82,14 @@ export function SplitGainDetailSection({
   exemptionNote,
   saleSplitActual,
   isExempt,
+  bgOwnerSplit = false,
 }: {
   splitDetail: SplitDetail;
+  /**
+   * 부담부증여 × 소유자 분리(증여한 부분만 §159) — 비소유 파트는 계산하지 않았으므로 0원 열 대신 「—」로 비운다.
+   * 호출부가 엔진 결과(`bgOwnedPartOfResult`)로 판정한다. 일반 소유자 분리(부담부증여 아님)는 종전대로 취소선 참고 열이다.
+   */
+  bgOwnerSplit?: boolean;
   /**
    * 자산 종류 — 안내 문구가 `building`일 때만 달라진다(아래 §99①1호 나목 분기).
    * 종전에는 `formData.assets[0].assetKind`를 직접 읽었으나, 일괄에서는 **자산별**로 달라지므로
@@ -100,6 +116,9 @@ export function SplitGainDetailSection({
     const landIsOwned = selfOwns !== "building_only";
     const buildingIsOwned = selfOwns !== "land_only";
     const ownerLabel = selfOwns === "building_only" ? "건물" : selfOwns === "land_only" ? "토지" : null;
+    // 비소유 파트 칸을 비우는가(부담부증여 소유자 분리만) — 열별로 소유 여부와 함께 읽는다.
+    const hideLand = bgOwnerSplit && !landIsOwned;
+    const hideBuilding = bgOwnerSplit && !buildingIsOwned;
     const colCls = (owned: boolean) =>
       owned ? "font-mono tabular-nums text-right" : "font-mono text-right text-muted-foreground line-through";
     const headerCls = (owned: boolean) =>
@@ -131,9 +150,14 @@ export function SplitGainDetailSection({
             <span />
             <span className={headerCls(landIsOwned)}>토지{!landIsOwned && " (타인 소유)"}</span>
             <span className={headerCls(buildingIsOwned)}>건물{!buildingIsOwned && " (타인 소유)"}</span>
+            {bgOwnerSplit && ownerLabel && (
+              <span className="col-span-3 text-caption text-muted-foreground leading-snug" data-testid="split-card-bg-not-owned-note">
+                {landIsOwned ? "건물" : "토지"}: {BG_NOT_OWNED_NOTE} (증여한 부분: {ownerLabel})
+              </span>
+            )}
             <span className="text-muted-foreground">취득 방식</span>
-            <span className={cn(headerCls(landIsOwned), "font-normal")} data-testid="split-card-acq-mode-land">{acqModeLabel(splitDetail.land.acqMode)}</span>
-            <span className={cn(headerCls(buildingIsOwned), "font-normal")} data-testid="split-card-acq-mode-building">{acqModeLabel(splitDetail.building.acqMode)}</span>
+            {hideLand ? <NotOwnedCell testId="split-card-acq-mode-land" /> : <span className={cn(headerCls(landIsOwned), "font-normal")} data-testid="split-card-acq-mode-land">{acqModeLabel(splitDetail.land.acqMode)}</span>}
+            {hideBuilding ? <NotOwnedCell testId="split-card-acq-mode-building" /> : <span className={cn(headerCls(buildingIsOwned), "font-normal")} data-testid="split-card-acq-mode-building">{acqModeLabel(splitDetail.building.acqMode)}</span>}
             {/*
               D1-3 — 토지·건물 취득원인이 다를 때만(엔진 `mixedCause`) 원인·세율 기산일 행을 낸다(같으면 종전 화면 그대로).
               값은 엔진 echo를 그대로 읽는다 — 「세율 기산일」은 파트 세율 판정에 쓰인 `appliedRateBasisDate`다.
@@ -177,8 +201,8 @@ export function SplitGainDetailSection({
               </div>
             )}
             <span className="text-muted-foreground">양도가액</span>
-            <span className={colCls(landIsOwned)}>{splitDetail.land.transferPrice.toLocaleString()}</span>
-            <span className={colCls(buildingIsOwned)}>{splitDetail.building.transferPrice.toLocaleString()}</span>
+            {hideLand ? <NotOwnedCell /> : <span className={colCls(landIsOwned)}>{splitDetail.land.transferPrice.toLocaleString()}</span>}
+            {hideBuilding ? <NotOwnedCell /> : <span className={colCls(buildingIsOwned)}>{splitDetail.building.transferPrice.toLocaleString()}</span>}
             {/*
               🔴 **§97②2호 단서 swap이 발동한 파트는 취득가액이 차감되지 않는다**
                  (2026-09-07 UI 리뷰). 엔진은 그 파트에서 취득가액을 **전혀 빼지 않는다**
@@ -187,8 +211,8 @@ export function SplitGainDetailSection({
                  표와 그것을 반영하지 않은 양도차익이 나란히 놓였다.
             */}
             <span className="text-muted-foreground">취득가액</span>
-            <AcqCell owned={landIsOwned} part={splitDetail.land} testId="split-card-acq-land" />
-            <AcqCell owned={buildingIsOwned} part={splitDetail.building} testId="split-card-acq-building" />
+            <AcqCell owned={landIsOwned} part={splitDetail.land} testId="split-card-acq-land" hideNotOwned={bgOwnerSplit} />
+            <AcqCell owned={buildingIsOwned} part={splitDetail.building} testId="split-card-acq-building" hideNotOwned={bgOwnerSplit} />
             {/*
               D1-4 — 1990.8.30. 전 상속·증여 토지: 취득가액은 평가액과 영 §164④ 가액 중 **많은 금액**이다(D2-4 — 2005.4.30. 전
               상속·증여 건물은 평가액과 영 §164⑦ 가액의 건물 몫). 두 값과 채택을 보인다
@@ -222,20 +246,20 @@ export function SplitGainDetailSection({
               </div>
             )}
             <span className="text-muted-foreground">필요경비 (개산공제)</span>
-            <span className={colCls(landIsOwned)}>
+            {hideLand ? <NotOwnedCell /> : <span className={colCls(landIsOwned)}>
               {splitDetail.land.appraisalDeduction.toLocaleString()}
               {/* base는 엔진이 실제로 쓴 값(지분 기준시가)을 노출한다 — 100% 값을 쓰면
                   지분 자산에서 산식이 표시된 개산공제를 못 만든다. */}
               {splitDetail.land.stdPriceAtAcq != null && (
                 <span className="block text-muted-foreground font-normal" data-testid="split-card-lump-base-land">취득시 기준시가 {(splitDetail.land.lumpDeductionBase ?? splitDetail.land.stdPriceAtAcq).toLocaleString()} × {lumpRateLabel(splitDetail.land.lumpDeductionRate)}</span>
               )}
-            </span>
-            <span className={colCls(buildingIsOwned)}>
+            </span>}
+            {hideBuilding ? <NotOwnedCell /> : <span className={colCls(buildingIsOwned)}>
               {splitDetail.building.appraisalDeduction.toLocaleString()}
               {splitDetail.building.stdPriceAtAcq != null && (
                 <span className="block text-muted-foreground font-normal" data-testid="split-card-lump-base-building">취득시 기준시가 {(splitDetail.building.lumpDeductionBase ?? splitDetail.building.stdPriceAtAcq).toLocaleString()} × {lumpRateLabel(splitDetail.building.lumpDeductionRate)}</span>
               )}
-            </span>
+            </span>}
             {/*
               S3-1 — 개별주택가격(부수토지 포함 결합 공시)을 토지·건물 기준시가 비율로 **비례 안분**한 내역.
               엔진이 `stdSplit`을 실을 때(일반 주택 비-별개)만 렌더하고 그 값을 **그대로 읽는다**(재계산 금지 —
@@ -291,13 +315,13 @@ export function SplitGainDetailSection({
             {(splitDetail.land.directExpenses > 0 || splitDetail.building.directExpenses > 0) && (
               <>
                 <span className="text-muted-foreground">자본적지출·양도비</span>
-                <span className={colCls(landIsOwned)}>{splitDetail.land.directExpenses.toLocaleString()}</span>
-                <span className={colCls(buildingIsOwned)}>{splitDetail.building.directExpenses.toLocaleString()}</span>
+                {hideLand ? <NotOwnedCell /> : <span className={colCls(landIsOwned)}>{splitDetail.land.directExpenses.toLocaleString()}</span>}
+                {hideBuilding ? <NotOwnedCell /> : <span className={colCls(buildingIsOwned)}>{splitDetail.building.directExpenses.toLocaleString()}</span>}
               </>
             )}
             <span className="text-muted-foreground">양도차익</span>
-            <span className={cn(colCls(landIsOwned), landIsOwned && "font-semibold")}>{splitDetail.land.gain.toLocaleString()}</span>
-            <span className={cn(colCls(buildingIsOwned), buildingIsOwned && "font-semibold")}>{splitDetail.building.gain.toLocaleString()}</span>
+            {hideLand ? <NotOwnedCell /> : <span className={cn(colCls(landIsOwned), landIsOwned && "font-semibold")}>{splitDetail.land.gain.toLocaleString()}</span>}
+            {hideBuilding ? <NotOwnedCell /> : <span className={cn(colCls(buildingIsOwned), buildingIsOwned && "font-semibold")}>{splitDetail.building.gain.toLocaleString()}</span>}
             {/*
               🔴 **장특공제액의 base는 12억 안분 후 과세 양도차익이다** (2026-09-07 UI 리뷰).
                  `calcLongTermHoldingDeduction`의 split 분기는
@@ -311,24 +335,24 @@ export function SplitGainDetailSection({
             {(hasProration(splitDetail.land) || hasProration(splitDetail.building)) && (
               <>
                 <span className="text-muted-foreground">과세 양도차익 (비과세분 제외 후)</span>
-                <span className={colCls(landIsOwned)}>
+                {hideLand ? <NotOwnedCell /> : <span className={colCls(landIsOwned)}>
                   {(splitDetail.land.taxableGainAfterProration ?? splitDetail.land.gain).toLocaleString()}
-                </span>
-                <span className={colCls(buildingIsOwned)}>
+                </span>}
+                {hideBuilding ? <NotOwnedCell /> : <span className={colCls(buildingIsOwned)}>
                   {(splitDetail.building.taxableGainAfterProration ?? splitDetail.building.gain).toLocaleString()}
-                </span>
+                </span>}
               </>
             )}
             {/* 원인이 다르면 보유연수(장특 — 상속개시일부터)와 세율 기산일(피상속인 취득일부터)이 다른 개념임을 라벨로 가른다. */}
             <span className="text-muted-foreground">{mixedCause ? "보유연수 (장기보유특별공제)" : "보유연수"}</span>
-            <span className={colCls(landIsOwned)}>{splitDetail.land.holdingYears}년</span>
-            <span className={colCls(buildingIsOwned)}>{splitDetail.building.holdingYears}년</span>
+            {hideLand ? <NotOwnedCell /> : <span className={colCls(landIsOwned)}>{splitDetail.land.holdingYears}년</span>}
+            {hideBuilding ? <NotOwnedCell /> : <span className={colCls(buildingIsOwned)}>{splitDetail.building.holdingYears}년</span>}
             <span className="text-muted-foreground">장특공제율</span>
-            <span className={colCls(landIsOwned)}>{(splitDetail.land.longTermRate * 100).toFixed(0)}%</span>
-            <span className={colCls(buildingIsOwned)}>{(splitDetail.building.longTermRate * 100).toFixed(0)}%</span>
+            {hideLand ? <NotOwnedCell /> : <span className={colCls(landIsOwned)}>{(splitDetail.land.longTermRate * 100).toFixed(0)}%</span>}
+            {hideBuilding ? <NotOwnedCell /> : <span className={colCls(buildingIsOwned)}>{(splitDetail.building.longTermRate * 100).toFixed(0)}%</span>}
             <span className="text-muted-foreground">장특공제액</span>
-            <span className={colCls(landIsOwned)}>{splitDetail.land.longTermDeduction.toLocaleString()}</span>
-            <span className={colCls(buildingIsOwned)}>{splitDetail.building.longTermDeduction.toLocaleString()}</span>
+            {hideLand ? <NotOwnedCell /> : <span className={colCls(landIsOwned)}>{splitDetail.land.longTermDeduction.toLocaleString()}</span>}
+            {hideBuilding ? <NotOwnedCell /> : <span className={colCls(buildingIsOwned)}>{splitDetail.building.longTermDeduction.toLocaleString()}</span>}
             {isExempt && (
               <span className="col-span-3 text-caption text-muted-foreground leading-snug" data-testid="split-card-exempt-lthd-note">
                 비과세 — 장기보유특별공제 없음

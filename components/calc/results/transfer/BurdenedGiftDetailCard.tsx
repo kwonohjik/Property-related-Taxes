@@ -25,6 +25,14 @@ import { BgPreDeemedStdCaption } from "@/components/calc/results/transfer/BgPreD
 import { BgPreDeemedPartsRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
 import { BgBundleCardAcqRows } from "@/components/calc/results/transfer/BgBundleCardAcqRows";
 import { BurdenedGiftGiftTaxRows } from "@/components/calc/results/transfer/BurdenedGiftGiftTaxRows";
+import {
+  BG_NOT_OWNED_NOTE,
+  BG_PART_LABEL,
+  bgOtherPart,
+  bgOwnedPartHeadline,
+  bgOwnedPartPhrase,
+  type BgOwnedPart,
+} from "@/lib/calc/bg-owner-split-result";
 
 const SELECTED_LABEL: Record<string, string> = {
   supplementary: "보충적평가 (상증법 §61)",
@@ -72,6 +80,11 @@ interface Props {
   redevSuccessorExpense?: Parameters<typeof BgRedevSuccessorExpenseRow>[0]["expense"];
   /** 승계조합원 신축주택 — §166 밖이라 「종전 부동산」 · 「§166①1호」 문구를 쓰지 않는다(§J) */
   redevFilingSuccessor?: boolean;
+  /**
+   * 토지·건물 소유자 분리 — 증여한 부분(본인 소유분). 호출부가 엔진 결과(`bgOwnedPartOfResult`)에서 읽어 넘긴다.
+   * 있으면 평가액·기준시가·채무비율이 물건 전체가 아니라 증여한 부분의 값임을 밝히고, 비소유 파트는 0원 줄 대신 「계산하지 않음」으로 적는다.
+   */
+  ownerPart?: BgOwnedPart;
 }
 
 const PROPERTY_TYPE_LABEL: Record<string, string> = {
@@ -86,7 +99,7 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   right_to_move_in: "입주권",
 };
 
-export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166, redevFilingAcquisition, redevFilingExpenses, redevSuccessorExpense, redevFilingSuccessor = false, successorRight = false }: Props) {
+export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166, redevFilingAcquisition, redevFilingExpenses, redevSuccessorExpense, redevFilingSuccessor = false, successorRight = false, ownerPart }: Props) {
   const fmt = (n: number) => n.toLocaleString("ko-KR");
   const buildingAcqLabel = successorRight
     ? "입주권 취득가"
@@ -98,6 +111,8 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
       ? "font-semibold bg-fuchsia-100/70 dark:bg-fuchsia-900/40"
       : "";
   const ptLabel = propertyType ? PROPERTY_TYPE_LABEL[propertyType] : undefined;
+  // 소유자 분리 — 기준시가 줄 접두(증여한 건물분)
+  const acqStdLabel = ownerPart ? `${bgOwnedPartPhrase(ownerPart)} 취득시 기준시가` : "취득기준시가";
 
   return (
     <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-4 space-y-2 print:break-inside-avoid dark:bg-fuchsia-950/40">
@@ -123,6 +138,13 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
       </div>
       <table className="w-full text-xs border-collapse">
         <tbody>
+          {ownerPart && (
+            <tr data-testid="bg-owner-split-headline">
+              <td colSpan={2} className="py-1 pr-2 text-caption text-fuchsia-800 dark:text-fuchsia-200">
+                <b>{bgOwnedPartHeadline(ownerPart)}</b> — 아래 평가액·증여가액·채무비율은 물건 전체가 아니라 {bgOwnedPartPhrase(ownerPart)}의 값입니다(소령 §159①의 A·C는 증여한 자산의 값).
+              </td>
+            </tr>
+          )}
           {bg.ownershipRatio !== undefined && (
             <tr>
               <td colSpan={2} className="py-1 pr-2 text-caption text-fuchsia-800 dark:text-fuchsia-200">
@@ -148,14 +170,14 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
           )}
           <tr>
             <td colSpan={2} className="py-1 pr-2 text-caption font-semibold text-fuchsia-700 dark:text-fuchsia-300">
-              양도세 보충적평가 (자산별 양도가액 안분 분모)
+              양도세 보충적평가 ({ownerPart ? `${bgOwnedPartPhrase(ownerPart)} · 양도가액 안분 분모` : "자산별 양도가액 안분 분모"})
             </td>
           </tr>
           <tr className={rowSelected("supplementary")}>
             <td className="py-1 pr-2">
               {bg.assetKind === "right_to_move_in"
                 ? "① 보충적평가 (상증법 §61③ — 조합원입주권)"
-                : "① 보충적평가 (양도세 §99)"}
+                : `① 보충적평가 (양도세 §99)${ownerPart ? ` — ${bgOwnedPartPhrase(ownerPart)}` : ""}`}
             </td>
             <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.sangjeungbeopValuation.supplementary)}</td>
           </tr>
@@ -210,7 +232,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
             <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.assumedDebtAmount)}</td>
           </tr>
           <tr>
-            <td className="py-1 pr-2">채무비율 = <Frac top="채무액" bottom="증여재산 평가액" /></td>
+            <td className="py-1 pr-2">채무비율 = <Frac top="채무액" bottom="증여재산 평가액" />{ownerPart && ` (${bgOwnedPartPhrase(ownerPart)} 기준)`}</td>
             <td className="text-right font-mono tabular-nums whitespace-nowrap">{(bg.debtRatio * 100).toFixed(4)}%</td>
           </tr>
           {/* 자산별 취득가액 산식 (소령 §159①1호) — 3경로 분기 (8개 동기화 지점 ⑦) */}
@@ -353,7 +375,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
               {bg.perAsset.land.acquisitionPrice > 0 && (
                 <tr>
                   <td className="py-1 pr-2 pl-3">
-                    토지 취득가 = 취득기준시가 {fmt(bg.perAsset.land.stdPriceAtAcquisition)} × 채무비율{" "}
+                    토지 취득가 = {acqStdLabel} {fmt(bg.perAsset.land.stdPriceAtAcquisition)} × 채무비율{" "}
                     {(bg.debtRatio * 100).toFixed(4)}%
                   </td>
                   <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.land.acquisitionPrice)}</td>
@@ -362,13 +384,19 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
               {bg.perAsset.building.acquisitionPrice > 0 && (
                 <tr>
                   <td className="py-1 pr-2 pl-3">
-                    {buildingAcqLabel} = 취득기준시가 {fmt(bg.perAsset.building.stdPriceAtAcquisition)} × 채무비율{" "}
+                    {buildingAcqLabel} = {acqStdLabel} {fmt(bg.perAsset.building.stdPriceAtAcquisition)} × 채무비율{" "}
                     {(bg.debtRatio * 100).toFixed(4)}%
                   </td>
                   <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.building.acquisitionPrice)}</td>
                 </tr>
               )}
             </>
+          )}
+          {ownerPart && (
+            <tr data-testid="bg-owner-split-not-owned">
+              <td className="py-1 pr-2 pl-3 text-muted-foreground">{BG_PART_LABEL[bgOtherPart(ownerPart)]} 취득가</td>
+              <td className="text-right whitespace-nowrap text-muted-foreground">{BG_NOT_OWNED_NOTE}</td>
+            </tr>
           )}
           <BgPreDeemedStdCaption bg={bg} />
           {/*

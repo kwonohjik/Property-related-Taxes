@@ -36,6 +36,7 @@ import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/Burde
 import { isSaleSplitActual } from "@/components/calc/results/transfer/sale-split-unentered-notice";
 import { isPhdApartment } from "@/components/calc/results/transfer/phd-housing-term";
 import { nblExclusionBadgeText } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
+import { bgOwnedPartOfResult } from "@/lib/calc/bg-owner-split-result";
 
 
 /**
@@ -504,6 +505,7 @@ export function PropertyBreakdownAccordion({
               : {})}
             {...(isSaleSplitActual(property?.form?.assets?.[0]) ? { saleSplitActual: true } : {})}
             phdApartment={isPhdApartment(property?.form?.assets?.[0])}
+            {...(bgOwnedPartOfResult(breakdown) ? { bgOwnerSplit: true } : {})}
           />
           {/* 부담부증여 §159·증여세 명세 — 단건(`SingleDetailCards`)과 같은 카드. 연간 합산은 자산마다 다른 증여라 자산 행에 그린다(트랙 BG · Q-3 a).
               경고 배너는 합산 결과 화면이 한 번 그리므로 넘기지 않는다. */}
@@ -512,6 +514,7 @@ export function PropertyBreakdownAccordion({
               <BurdenedGiftDetailCard
                 breakdown={breakdown.transferBurdenedGiftBreakdown}
                 propertyType={property?.form?.assets?.[0]?.assetKind}
+                ownerPart={bgOwnedPartOfResult(breakdown)}
                 redevSuccessorExpense={breakdown.redevelopmentDetail?.successorMemberDetail?.burdenedGiftExpense}
               />
             </div>

@@ -57,6 +57,8 @@ interface Props {
    * 다자산 모드에서는 자산별로 다르므로 `assetKind`와 같은 층위에서 자산별로 넘긴다.
    */
   exemptionNote?: string;
+  /** 부담부증여 × 소유자 분리(증여한 부분만 §159) — 호출부가 엔진 결과(`bgOwnedPartOfResult`)로 판정해 넘긴다(`SplitGainDetailSection`의 비소유 파트 열). */
+  bgOwnerSplit?: boolean;
   /** 사용자가 양도가액 구분 방식을 «구분 기재»로 골랐는가 — 엔진 미전송이라 폼에서 읽어 내려온다(`SplitGainDetailSection`). */
   saleSplitActual?: boolean;
   /** PHD(§164⑦ 환산) 주택 종류가 공동주택인가 — 엔진 미전송(표시 축)이라 폼(`phdHousingType`)에서 읽어 내려온다. */
@@ -76,6 +78,7 @@ export function ValuationDetailCards({
   saleSplitActual,
   phdApartment,
   isExempt,
+  bgOwnerSplit,
 }: Props) {
   const hasAny =
     !!result.commercialBuildingValuationDetail ||
@@ -169,6 +172,7 @@ export function ValuationDetailCards({
           {...(exemptionNote ? { exemptionNote } : {})}
           {...(saleSplitActual ? { saleSplitActual } : {})}
           {...(isExempt ? { isExempt } : {})}
+          {...(bgOwnerSplit ? { bgOwnerSplit } : {})}
         />
       )}
     </div>
