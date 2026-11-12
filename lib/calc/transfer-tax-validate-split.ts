@@ -21,6 +21,7 @@ import { parseDecimal } from "@/lib/calc/number-parse";
 import { isSplitPairOverflow } from "@/lib/tax-engine/transfer-tax-split-gain";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
+import { withoutBgHiddenAcqFlags } from "./bg-asset-acq-mode-scope";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { requiresAcqStdPricePart } from "./transfer-tax-split-acq-mode";
 import { requiresAcqStdPrice } from "./transfer-tax-split-acq-mode";
@@ -229,7 +230,8 @@ export function validateLandPartCause(
   // P3 A·P4 B — 토지만·건물만 이월과세: 이월과세 입력 칸(화면 위→아래)과 같은 leaf를 그 사실로 건다(`transfer-tax-validate-split-carryover.ts`). 함께 양도 자산도 그 파일이 S0로 막는다.
   if (anyPartCarryover(rawAsset))
     return validateSplitCarryoverParts(rawAsset, label, opts?.formTransferDate, { hasCompanions: opts?.hasCompanions, isNonPrimary: opts?.isNonPrimary });
-  const asset = normalizeBuildingCauseInputs(rawAsset); // D2: ④와 같은 사본(stale 분리 입력 무시 · 건물 방식 실가 고정)
+  // D2: ④와 같은 사본(stale 분리 입력 무시 · 건물 방식 실가 고정) · V-5: 부담부증여의 숨은 감정·매매사례 플래그 무시(④와 같은 술어)
+  const asset = withoutBgHiddenAcqFlags(normalizeBuildingCauseInputs(rawAsset));
   const selfOwnsEff = effectiveSelfOwns(asset) ?? "both";
   const selfOwnsSplit = selfOwnsEff !== "both";
   // ④ `buildSplitPayload`의 토지 취득일 식 그대로 — 토지 취득일 칸 값, 없으면 PHD·소유자 분리의 건물 취득일 후퇴.
@@ -355,7 +357,8 @@ export function validateSplitDirectInputs(
   formTransferDate?: string,
   opts?: { isNonPrimary?: boolean; hasCompanions?: boolean },
 ): string | null {
-  const asset = normalizeBuildingCauseInputs(rawAsset); // D2: ④와 같은 사본(stale 분리 입력 무시 · 건물 방식 실가 고정)
+  // D2: ④와 같은 사본(stale 분리 입력 무시 · 건물 방식 실가 고정) · V-5: 부담부증여의 숨은 감정·매매사례 플래그 무시(④와 같은 술어)
+  const asset = withoutBgHiddenAcqFlags(normalizeBuildingCauseInputs(rawAsset));
   // ⚠️ 게이트는 **API 전송 조건(`isSplitPayloadActive`)과 같아야** 한다(2026-07-30).
   //    종전엔 `hasSeperateLandAcquisitionDate`만 봤는데, 비-매매 취득원인의 소유자 분리는
   //    그 플래그를 켜지 않으므로(취득일 2열 UI가 없다) validate 전체가 early-return돼
