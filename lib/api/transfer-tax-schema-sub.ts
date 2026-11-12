@@ -374,6 +374,12 @@ export const presaleRightSchema = z.object({
     .optional(),
   /** ⑫ 위 사유의 「해당 각 호의 매각 등의 방법으로 양도」 — 2022-02-15 전 양도분의 요건 */
   originalMemberDisposalDelayDisposedByThatMethod: z.boolean().optional(),
+  /** ⑫ 기존주택 원조합원 — 기존주택 매매계약 체결·계약금 지급일(§155①2호 괄호·연혁 부칙 · 리뷰 E-3) */
+  originalMemberContractDate: z.string().date().optional(),
+  /** ⑫ 기존주택 원조합원 §155⑯ 공공기관·법인 지방이전 특례 자기선언 */
+  originalMemberPublicInstitutionRelocation: z.boolean().optional(),
+  /** ⑫ 기존주택 원조합원 §155⑯ 「이전한 시·군」 코드(10자리) */
+  originalMemberRelocatedSigunguCode: z.string().regex(/^\d{10}$/).optional(),
   isInherited: z.boolean().optional(),
   /** ⑫ 상속인이 아닌 사람이 유증·사인증여로 받은 권리 — §156의2⑥⑦·§156의3④⑤의 상속 권리로 보지 않는다 */
   nonHeirBequest: z.boolean().optional(),

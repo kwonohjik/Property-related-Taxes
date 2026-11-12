@@ -521,6 +521,15 @@ export interface PresaleRight {
   originalMemberDisposalDelayReason?: TemporaryTwoHouseDelayReason;
   /** 위 §155⑱ 사유의 「해당 각 호의 매각 등의 방법으로 양도」 선언 — 2022-02-15 전 양도분의 요건(`temporaryTwoHouse.disposalDelayDisposedByThatMethod`와 같은 값) */
   originalMemberDisposalDelayDisposedByThatMethod?: boolean;
+  /**
+   * 기존주택 매매계약 체결·계약금 지급일 — §155①2호 괄호(조정대상지역 공고 전 계약 제외)와 연혁 부칙의 계약일 기준
+   * (`temporaryTwoHouse.newHouseContractDate`와 같은 의미 · 2026-11-13 리뷰 E-3)
+   */
+  originalMemberContractDate?: Date;
+  /** §155⑯ 공공기관·법인 지방이전 특례 자기선언(`temporaryTwoHouse.publicInstitutionRelocation`과 같은 의미 · E-3) */
+  originalMemberPublicInstitutionRelocation?: boolean;
+  /** §155⑯ 「이전한 시·군」 코드 — 기존주택 소재 시·군은 이 행의 `regionCode`에서 파생한다(E-3) */
+  originalMemberRelocatedSigunguCode?: string;
   isInherited?: boolean;
   /**
    * 상속인이 아닌 사람이 유증·사인증여로 받은 권리 — isInherited === true 인 행에서만 의미. §156의2⑥⑦ · §156의3④⑤의
