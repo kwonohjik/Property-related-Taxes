@@ -546,14 +546,18 @@ export function toEngineRedevelopment(
  * 약속은 「총 양도비 한 번 입력 ≡ 각 자산 양도비 칸에 그 몫 직접 입력」이다(`transfer.route.gb-bundled-common-expense` BC-4).
  *
  * 일반건물 `withBundledCommonExpense`와 같은 규칙 — 실가이고 선언 채널이 없으면 `expenses`가 몫을 그대로 싣으므로 건드리지 않는다.
- * 재개발(§166 — 아래 `withRedevCommonExpense`)·부담부증여(§159)는 각자 경로가 몫을 다룬다. 겸용·일반건물은 호출부가 거른다.
+ *
+ * 부담부증여(소령 §159)는 **항상** 양도비 칸에 싣는다 — §159 안분(`burdened-gift-acquisition.ts`)은 선언 채널만 읽어 옛 덩어리 `expenses`가
+ * 통째로 버려졌다(2026-11-12 실측: 토지 2건 · 총 양도비 2천만이 세액 0원 반영 · 자산 칸 양도비 1천만씩과 비교해 +1,872,000). 일반건물 부담부증여
+ * `withBurdenedGiftCommonExpense`와 같은 성질 판단이다(폼 「총 양도비」= 양도비 · 소득세법 §97①3호 · §100② 후문).
+ * 재개발(§166 — 아래 `withRedevCommonExpense`)은 자기 경로가 몫을 다룬다. 겸용·일반건물은 호출부가 거른다.
  */
 export function withCommonExpenseInDeclaredChannel<
   T extends { capitalExpenditure?: number; transferExpense?: number; useEstimatedAcquisition?: boolean; redevelopment?: unknown; burdenedGiftInfo?: unknown },
 >(item: T, commonExpense: number | undefined): T {
-  if (!commonExpense || commonExpense <= 0 || item.redevelopment || item.burdenedGiftInfo) return item;
+  if (!commonExpense || commonExpense <= 0 || item.redevelopment) return item;
   const declared = item.capitalExpenditure !== undefined || item.transferExpense !== undefined;
-  if (!declared && !item.useEstimatedAcquisition) return item;
+  if (!declared && !item.useEstimatedAcquisition && !item.burdenedGiftInfo) return item;
   return { ...item, transferExpense: (item.transferExpense ?? 0) + commonExpense };
 }
 
