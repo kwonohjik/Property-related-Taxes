@@ -27,6 +27,9 @@ const GANGNAM = "1168010100"; // 지역기준 · 조정대상지역
 const asset = (over: Partial<AssetForm> = {}): AssetForm =>
   ({ ...makeDefaultAsset(1), assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-01-01", regionCode: JEONJU, addressJibun: "전북 전주시 완산구 중앙동1가 1", ...over }) as AssetForm;
 
+/** 부담부증여 · 시가 모드 · 환산 아님(실가 취득) — O-5 */
+const BGM = { transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgAcquisitionMethod: "actual" } as Partial<AssetForm>;
+
 describe("SP-1 노출·필수 격자", () => {
   const cases: [string, Partial<AssetForm>, string, boolean, boolean][] = [
     ["가액기준 · 조정", {}, "2021-06-01", true, true],
@@ -39,7 +42,15 @@ describe("SP-1 노출·필수 격자", () => {
     ["입주권 양도", { assetKind: "right_to_move_in" }, "2021-06-01", false, false],
     ["완공 재개발 아파트", { assetKind: "redevelopment_apt" }, "2021-06-01", true, true],
     ["겸용 — 범위 밖(V-3)", { isMixedUseHouse: true } as Partial<AssetForm>, "2021-06-01", false, false],
-    ["부담부증여 시가 모드 — 범위 밖", { transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market" } as Partial<AssetForm>, "2021-06-01", false, false],
+    // O-5(계획서 `bg-market-selling-std-price-o5.plan.md`) — 시가 비환산 주택은 공용 칸이 없어 비우면 backstop이 «산입»으로 읽었다. 칸 값은 안분에 쓰이지 않는다(실측).
+    ["부담부증여 시가 비환산 주택 — O-5 범위 안", BGM, "2021-06-01", true, true],
+    ["부담부증여 시가 환산(K-5) — 환산 분모 칸이 이미 있다", { ...BGM, bgAcquisitionMethod: "converted" } as Partial<AssetForm>, "2021-06-01", true, true],
+    ["부담부증여 기준시가 모드 — 안분 칸이 이미 있다", { transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_standard" } as Partial<AssetForm>, "2021-06-01", true, true],
+    ["부담부증여 시가 · 의제취득일 전 — 의제 섹션 칸(범위 밖)", { ...BGM, acquisitionCause: "inheritance", acquisitionDate: "1983-05-01", inheritanceStartDate: "1983-05-01" } as Partial<AssetForm>, "2021-06-01", false, false],
+    ["부담부증여 시가 · 재개발 APT — 미측정(범위 밖)", { ...BGM, assetKind: "redevelopment_apt" } as Partial<AssetForm>, "2021-06-01", false, false],
+    ["부담부증여 시가 · 겸용 — O-4 범위 밖", { ...BGM, isMixedUseHouse: true } as Partial<AssetForm>, "2021-06-01", false, false],
+    ["부담부증여 시가 · 일반건물 — 범위 밖", { ...BGM, assetKind: "general_building" } as Partial<AssetForm>, "2021-06-01", false, false],
+    ["부담부증여 시가 비환산 · 해제 뒤 양도", BGM, "2023-06-01", false, false],
   ];
   it.each(cases)("%s", (_l, over, date, shown, required) => {
     expect([sellingStdPriceInScope(asset(over), date), sellingStdPriceRequired(asset(over), date)]).toEqual([shown, required]);
