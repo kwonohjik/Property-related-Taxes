@@ -170,6 +170,20 @@ describe("이월과세 A — 본인 필요경비 접기 (PR-1, 함께양도·leg
     expect(c.transferGain).toBe(364_285_714);
   });
 
+  it("FOLD-3b Q-5 컴패니언 자본적지출 10,000,000 + 공통 양도비 20,000,000 → 몫 5,714,286 도 A 필요경비에 (수정 전 40,000,000 — 몫 소실)", async () => {
+    const c = await companionOf({ ...PRIMARY_LAND, commonTransferExpense: 20_000_000, companionAssets: [{ ...COMPANION, capitalExpenditure: 10_000_000 }] });
+    expect(c.necessaryExpense).toBe(30_000_000 + 10_000_000 + 5_714_286);
+    expect(c.transferGain).toBe(368_571_428);
+    // 오라클 — 같은 몫을 자산 양도비 칸에 직접 입력한 것과 같다
+    const o = await companionOf({ ...PRIMARY_LAND, companionAssets: [{ ...COMPANION, capitalExpenditure: 10_000_000, transferExpense: 5_714_286 }] });
+    expect(c.transferGain).toBe(o.transferGain);
+  });
+
+  it("FOLD-3c Q-5 직접 API — 컴패니언 양도비 1,000,000 + 공통 몫은 더한다(덮어쓰지 않는다)", async () => {
+    const c = await companionOf({ ...PRIMARY_LAND, commonTransferExpense: 20_000_000, companionAssets: [{ ...COMPANION, transferExpense: 1_000_000 }] });
+    expect(c.necessaryExpense).toBe(30_000_000 + 1_000_000 + 5_714_286);
+  });
+
   it("FOLD-4 legacy 단건 expenses 10,000,000 → A 양도차익 374,285,714", async () => {
     const { status, json } = await run({ ...SINGLE, expenses: 10_000_000 });
     expect(status).toBe(200);

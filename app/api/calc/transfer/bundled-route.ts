@@ -27,6 +27,7 @@ import { ROW_COUNT_EXCLUSION_TYPES } from "@/lib/calc/house-count-exclusion-rows
 import { resolveHceGeneralHouseAcquisitionDate } from "@/lib/tax-engine/transfer-tax-precalc";
 import { buildGbCompanionItems, type GbBgCarryoverUnitDraft } from "./general-building-part-cards";
 import { withRedevCommonExpense } from "./engine-input";
+import { withCommonExpenseInDeclaredChannel } from "./engine-input";
 import { attachGbCarryoverUnits, toGbCarryoverUnits } from "./bundled-gb-carryover-units";
 import { toTransferorBasisInfo } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 import {
@@ -295,7 +296,9 @@ export function calculateBundledTransfer(
           },
         }, onGbDetail, onGbCarryoverUnit);
       }
-      return reverseUnit ? splitReversePrimaryLand(primaryItem, reverseUnit, transferDate) : [primaryItem];
+      // 총 양도비 몫을 엔진이 읽는 칸에 — 겸용·일반건물은 위에서 각자 처리했다(Q-5 · 컴패니언과 같은 leaf).
+      const plainPrimary = withCommonExpenseInDeclaredChannel(primaryItem, a.allocatedCommonExpense);
+      return reverseUnit ? splitReversePrimaryLand(plainPrimary, reverseUnit, transferDate) : [plainPrimary];
     }
     // 컴패니언 자산 빌드 + 한도 초과 split — bundled-split-helpers.ts로 추출
     const rawC = companions[idx - 1];
