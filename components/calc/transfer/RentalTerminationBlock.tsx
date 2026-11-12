@@ -15,6 +15,9 @@ import { deadlineEndNote } from "@/lib/tax-engine/civil-period";
 import { terminationDeadline } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
 import { deriveHalfDutyRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
 import { recognizedRentalSegments } from "@/lib/stores/calc-wizard-asset-rental-period";
+import { halfDutyRentalPeriods } from "@/lib/stores/calc-wizard-asset-rental-period";
+import { hasRentalAfterCancellation } from "@/lib/stores/calc-wizard-asset-rental-period";
+import { rentalRegisteredDateOf } from "@/lib/stores/calc-wizard-asset-rental-period";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 type RentalUnitForm = AssetForm["rentalHousingException"]["rentalUnits"][number];
@@ -94,8 +97,8 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
           <p className="text-xs px-1 pt-1" data-testid={`rental-half-duty-months-${index}`}>
             1/2 판정에 쓰는 임대기간: <strong>{deriveHalfDutyRentalMonths(unit)}개월</strong>
             <span className="text-muted-foreground">
-              {" "}— 지자체 임대사업자 등록일(그 뒤 임대를 시작했으면 실제 임대개시일)부터 셉니다. 세무서 사업자등록일은
-              기산에 쓰지 않습니다(민특령 §34①2호 · 서면-2021-부동산-7820).
+              {" "}— 지자체 임대사업자 등록일(그 뒤 임대를 시작했으면 실제 임대개시일)부터 등록 말소일까지 셉니다. 세무서
+              사업자등록일은 기산에 쓰지 않습니다(민특령 §34①2호 · 서면-2021-부동산-7820).
             </span>
           </p>
         )}
@@ -103,7 +106,14 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
           1/2 계산의 공실·상속 처리는 해석례 미확보 — 계산은 ⑳ 규칙 그대로 두고 해당할 때만 확인 필요를 고지한다
           (사용자 결정 2026-11-12). 공실: 자진말소 해석 29건·국토부 해석 16건에 없음. 상속: 포괄양수 해석 5310 유추뿐.
         */}
-        {recognizedRentalSegments(unit.rentalPeriods, unit.rentalRegistrationDate ?? "").length > 1 && (
+        {/* 말소 뒤 임대분은 1/2에 넣지 않는다(사용자 결정 2026-11-12 · 정면 해석례 없음) — 잘린 구간이 있을 때만 고지 */}
+        {hasRentalAfterCancellation(unit) && (
+          <p className="text-xs px-1 pt-1 text-amber-800 dark:text-amber-300" data-testid={`rental-half-duty-after-cancel-notice-${index}`}>
+            등록 말소일 뒤의 임대분은 1/2 계산에서 뺐습니다. ㉓1호는 민특법 §43 임대의무기간(등록한 임대사업자의 임대)의
+            2분의 1을 묻기 때문입니다. 이 점을 직접 다룬 해석례는 찾지 못했습니다(확인 필요).
+          </p>
+        )}
+        {recognizedRentalSegments(halfDutyRentalPeriods(unit), rentalRegisteredDateOf(unit)).length > 1 && (
           <p className="text-xs px-1 pt-1 text-amber-800 dark:text-amber-300" data-testid={`rental-half-duty-gap-notice-${index}`}>
             임대 구간 사이 3개월을 넘는 공실은 1/2 계산에서 뺐습니다. 민특법 임대의무기간에서 공실을 어떻게 세는지는
             해석례를 찾지 못했습니다(확인 필요).
