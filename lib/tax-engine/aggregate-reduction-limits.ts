@@ -51,6 +51,8 @@ export interface SubCap {
   scope: "annual" | "fiveYear";
   types: readonly string[];
   limit: number;
+  /** true면 감면율 등급과 무관하게 `types` 전부가 하위 한도 대상이다(2009: 가목이 «제77조» 전체). 기본은 저율 몫만. */
+  allRates?: boolean;
   legalBasis: string;
 }
 
@@ -69,7 +71,7 @@ function applySubCap(
   for (const t of sub.types) {
     const v = amounts.get(t);
     if (v === undefined || v <= 0) continue;
-    const share = lowRateShare?.get(t) ?? 1;
+    const share = sub.allRates ? 1 : (lowRateShare?.get(t) ?? 1);
     lowParts.push([t, share >= 1 ? v : share <= 0 ? 0 : Math.floor(v * share)]);
   }
   const lowTotal = lowParts.reduce((a, [, v]) => a + v, 0);
@@ -210,7 +212,10 @@ export function buildLimitGroups(transferYear: number): readonly LimitGroup[] {
       annualLimit,
       fiveYearLimit,
       // ①2호나목에 §77의3(gb_designated_land)이 없다 — 5년 한도 대상에서 제외.
-      fiveYearTypes: [...SELF_FARMING_TYPES, "public_expropriation", "replacement_land_comp"],
+      fiveYearTypes:
+        transferYear <= 2010
+          ? [...SELF_FARMING_TYPES] // 2009~2010 ①2호나목: «제69조와 제70조» / «제69조, 제70조 또는 제77조(고율만)» — 저율 §77은 5년 열거에 없다
+          : [...SELF_FARMING_TYPES, "public_expropriation", "replacement_land_comp"],
       subCaps: preAmendmentSubCaps(transferYear),
       legalBasis: "조특법 §133 ①",
     },
@@ -224,12 +229,28 @@ export function buildLimitGroups(transferYear: number): readonly LimitGroup[] {
  * |---|---|---|
  * | 2011~2015 | 가목 1억: §77(저율분)·§77의3 | 나목 2억: §70 + §77(저율분) — MST 109448·120467·131389·153922·165311 |
  * | 2016~2017 | 단일 열거 1억(하위 한도 없음) | 나목 2억: §70 + §77(저율분) + §77의2 — MST 177204 |
- * | 2009-03-16~2010-12-31 | **미조회**(2009.1.30. 본문은 §77 전체가 가목·5년 열거 없음, 2010.1.1. 시행본 미확인) | 〃 — 하위 한도를 두지 않는다 |
+ * | 2010 | 가목 1억: §77(저율 20·25%)·§77의3 (MST 98336·109448) | 나목 3억: §69·§70·§77(**고율 40·50%만**) — 저율 §77은 5년 열거에 없다 |
+ * | 2009-03-16~2009-12-31 | 가목 1억: §77(**감면율 한정 없음**)·§77의3 (MST 91272·92377) | 나목 3억: «제69조와 제70조» — §77 없음 |
+ *
+ * 2009~2010의 5년 열거에서 §77을 뺀 것은 `fiveYearTypes`(buildLimitGroups)다 — 2010의 고율 §77(채권 3·5년 보유 특약)만 열거에 있으나,
+ * 몫을 가를 수 없어 5년 한도 밖으로 둔다(저율 몫이 지배적이고 고율은 드물다 — 근사).
  *
  * 저율 = 현금·채권(만기 특약 없음) 감면율, 고율 = 채권 3·5년 보유 특약(30·40%)분 — 가목에 없다(`lowRateShare`).
  * 고율 몫을 모르는 호출부(단건 이력 경로)는 기본 1(저율)로 본다.
  */
 function preAmendmentSubCaps(transferYear: number): readonly SubCap[] {
+  if (transferYear === 2009 || transferYear === 2010) {
+    // 연 1호 가목만 — 5년은 §77 저율이 열거에 없어 하위 한도 대신 `fiveYearTypes`에서 뺀다(buildLimitGroups).
+    return [
+      {
+        scope: "annual",
+        types: ["public_expropriation", "gb_designated_land"],
+        limit: 100_000_000,
+        allRates: transferYear === 2009,
+        legalBasis: "조특법 §133 ①1호 가목",
+      },
+    ];
+  }
   if (transferYear >= 2011 && transferYear <= 2015) {
     return [
       { scope: "annual", types: ["public_expropriation", "gb_designated_land"], limit: 100_000_000, legalBasis: "조특법 §133 ①1호 가목" },

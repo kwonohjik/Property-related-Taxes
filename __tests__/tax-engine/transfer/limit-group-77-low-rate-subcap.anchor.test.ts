@@ -80,8 +80,46 @@ describe("LS-2 연 — 하위 한도가 없는 해", () => {
   it("LS-2-3 2025+: §77 별도 그룹 연 2억 — 하위 한도 없음", () => {
     expect(total(annual(2025, { [EXPRO]: E(2.2) }))).toBe(E(2));
   });
-  it("LS-2-4 2009~2010: 2010.1.1. 시행본 미조회 — 하위 한도를 두지 않는다(종전 동작 유지)", () => {
-    expect(total(annual(2010, { [EXPRO]: E(2.2) }))).toBe(E(2));
+});
+
+describe("LS-5 2009-03-16~2010-12-31 — 연 가목 §77 (2009: 전체 감면율 · 2010: 저율 20·25%) · 5년 열거에서 §77 제외", () => {
+  // 법문 [직접 — KoreanLaw MCP]: 2009.1.30.(MST 91272)·2009.10.2.(MST 92377) §133① —
+  //   1호 가목 1억 = §33·§43·§70·§77(감면율 한정 없음)·§77의3 / 나목 2억 / 2호 가목 §70 1억 · 나목 «제69조와 제70조» 3억 (§77 없음).
+  //   2010.1.1.(MST 98336)·2010.12.27.(MST 109448) — 1호 가목 §77(100분의 20 및 100분의 25) / 2호 나목 «제69조, 제70조 또는
+  //   제77조(100분의 40 및 100분의 50의 감면율을 적용받는 경우에 한한다)» 3억 — 저율 §77은 5년 열거에 없다.
+  for (const y of [2009, 2010]) {
+    it(`LS-5-1 ${y}: §77 2.2억 단독 → 1억 (가목)`, () => {
+      expect(total(annual(y, { [EXPRO]: E(2.2) }))).toBe(E(1));
+    });
+    it(`LS-5-2 ${y}: §77 2.26억 + 자경 15억 → 2억 (나목이 큰 금액)`, () => {
+      expect(total(annual(y, { [EXPRO]: E(2.26), [SELF]: E(15) }))).toBe(E(2));
+    });
+    it(`LS-5-3 ${y}: §77의3(gb)도 가목 — §77 0.7억 + §77의3 0.7억 → 1억`, () => {
+      expect(total(annual(y, { [EXPRO]: E(0.7), [GB]: E(0.7) }))).toBe(E(1));
+    });
+  }
+  it("LS-5-4 2009는 가목이 §77 전체(감면율 한정 없음) — 저율 몫 0이어도 하위 한도가 걸린다", () => {
+    expect(total(annual(2009, { [EXPRO]: E(2.2) }, { [EXPRO]: 0 }))).toBe(E(1));
+  });
+  it("LS-5-5 2010은 저율(20·25%)만 가목 — 저율 몫 0이면 하위 한도 없음 → 나목 2억", () => {
+    expect(total(annual(2010, { [EXPRO]: E(2.2) }, { [EXPRO]: 0 }))).toBe(E(2));
+  });
+
+  const five = (year: number, cur: Record<string, number>, prior: { year: number; type: string; amount: number }[]) =>
+    applyFiveYearLimits(new Map(Object.entries(cur)), prior, year, buildLimitGroups(year)).fiveYearCappedByType;
+  for (const y of [2009, 2010]) {
+    it(`LS-5-6 ${y} 5년: 과거 §77 3억이 있어도 당해 자경은 5년 3억에 영향받지 않는다 (§77 저율은 5년 열거에 없음)`, () => {
+      expect(total(five(y, { [SELF]: E(1) }, [{ year: y - 1, type: EXPRO, amount: E(3) }]))).toBe(E(1));
+    });
+    it(`LS-5-7 ${y} 5년: 당해 §77은 5년 한도를 받지 않는다 — 과거 자경 2.8억 + 당해 §77 1억 → 1억`, () => {
+      expect(total(five(y, { [EXPRO]: E(1) }, [{ year: y - 1, type: SELF, amount: E(2.8) }]))).toBe(E(1));
+    });
+    it(`LS-5-8 ${y} 5년: 자경은 3억 한도 — 과거 자경 2.5억 + 당해 자경 1억 → 0.5억`, () => {
+      expect(total(five(y, { [SELF]: E(1) }, [{ year: y - 1, type: SELF, amount: E(2.5) }]))).toBe(E(0.5));
+    });
+  }
+  it("LS-5-9 2011은 5년 열거에 §77(저율) 포함 — 과거 §77 3억이면 당해 자경 0 (경계 대조군)", () => {
+    expect(total(five(2011, { [SELF]: E(1) }, [{ year: 2010, type: EXPRO, amount: E(3) }]))).toBe(0);
   });
 });
 
@@ -134,8 +172,8 @@ describe("LS-3 5개 과세기간 — 나목(§70 + §77 저율분 2억) 후 다�
 });
 
 describe("LS-4 buildLimitGroups 구성", () => {
-  it("LS-4-1 하위 한도 정의는 2011~2017에만 있다", () => {
+  it("LS-4-1 하위 한도 정의는 2009~2017에만 있다", () => {
     const has = (y: number) => buildLimitGroups(y).some((g) => (g.subCaps?.length ?? 0) > 0);
-    expect([2010, 2011, 2015, 2016, 2017, 2018, 2024, 2025].map(has)).toEqual([false, true, true, true, true, false, false, false]);
+    expect([2008, 2009, 2010, 2011, 2015, 2016, 2017, 2018, 2024, 2025].map(has)).toEqual([false, true, true, true, true, true, true, false, false, false]);
   });
 });
