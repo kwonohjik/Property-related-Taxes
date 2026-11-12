@@ -88,6 +88,17 @@ const successorRight = (patch: Record<string, unknown> = {}) => () =>
 /** 1세대1주택 — 거주기간·사실상 주거용 카드의 렌더 조건(폼 전역 `isOneHouseSingle`) */
 const ONE_HOUSE = { isOneHousehold: true, householdHousingCount: "1" };
 
+/**
+ * OH-48 — 축 B 완공APT 50/50: 첫 카드가 종전주택 거주를 분리 입력(Step4 거주 대체) · 둘째 카드는 빈칸.
+ * 둘째 카드 칸이 비면 서버가 숨은 Step4 값을 승계해 지분마다 거주가 갈렸다 → ⑧이 둘째 카드 입주일 칸에서 막는다.
+ */
+const aptAxisBSplitResidence = () => {
+  const f = apt({ redevPriorResidenceStartDate: "2015-03-01", redevPriorResidenceEndDate: "2018-03-01", redevPriorHouseResidenceMonths: "36" }, ONE_HOUSE)() as { assets: Record<string, unknown>[] };
+  const p = { ...f.assets[0], ownershipNumerator: "50", ownershipDenominator: "100" };
+  const share2 = { ...p, assetId: "share2", assetLabel: "지분 2", redevPriorResidenceStartDate: "", redevPriorResidenceEndDate: "", redevPriorHouseResidenceMonths: "" };
+  return { ...f, assetSplitMode: "fractional", assets: [p, share2] };
+};
+
 const NEGATIVE =
   "금액 칸(`CurrencyInput`)은 `allowNegative` 없이 쓰여 「-」를 지운다 — 사용자가 음수를 넣을 수 없다";
 const MONTHS =
@@ -245,6 +256,10 @@ export const REDEV_FIELD_JUMP_CASES: FieldJumpCase[] = [
   {
     name: "redev: redevPriorResidenceStartDate (입주일 > 퇴거일)", field: "redevPriorResidenceStartDate", step: 0, assetIndex: A,
     message: /^자산: 종전주택 입주일이 퇴거일보다 이후/, form: apt({ redevPriorResidenceStartDate: "2017-06-01", redevPriorResidenceEndDate: "2016-01-01" }, ONE_HOUSE),
+  },
+  {
+    name: "redev: redevPriorResidenceStartDate (축 B 둘째 지분 분리 거주 빈칸 · OH-48)", field: "redevPriorResidenceStartDate", step: 0, assetIndex: 1,
+    message: /^자산 2: 첫 지분 카드에 종전·신축주택 거주기간을 나눠 입력했습니다/, form: aptAxisBSplitResidence,
   },
 
   // ── 승계조합원 입주권(§97①1호 가목) ──

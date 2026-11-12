@@ -21,6 +21,8 @@ import {
 import { parseAmount } from "@/lib/calc/number-parse";
 import { assetCardCapMessage } from "./asset-card-count-cap";
 import { maxAssetCards } from "./asset-card-count-cap";
+import { shareSplitResidenceMissingField } from "./axis-b-share-residence";
+import { SHARE_SPLIT_RESIDENCE_MISSING_MESSAGE } from "./axis-b-share-residence";
 import { isFractionalRatioSumOutOfTolerance } from "./fractional-ratio-sum-tolerance";
 import { receiveOnlyShareIssue } from "./axis-b-receive-only";
 import { bundleReceiveOnlyIssue } from "./bundle-receive-only";
@@ -453,6 +455,9 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
       else if (fullFractional && i > 0 && primaryAsset) {
         const mismatch = bgShareCauseMismatchMessage(form.assets[i], entry, primaryAsset, `자산 ${i + 1}`);
         if (mismatch) issues.push({ step, assetIndex: i, field: "bgShareOwnAcquisition", message: mismatch });
+        // OH-48 — 완공APT 지분 카드 분리 거주가 비면 서버가 숨은 Step4 값을 승계해 지분마다 거주가 갈린다
+        const splitField = shareSplitResidenceMissingField(form.assets[i], primaryAsset, form);
+        if (splitField) issues.push({ step, assetIndex: i, field: splitField, message: `자산 ${i + 1}: ${SHARE_SPLIT_RESIDENCE_MISSING_MESSAGE}` });
       }
     }
 
