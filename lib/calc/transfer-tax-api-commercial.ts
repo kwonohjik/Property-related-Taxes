@@ -12,6 +12,7 @@ import { effectiveCommercialLandPriceAtAcq } from "./transfer-pre1990-commercial
 import { resolveCbEra } from "./commercial-cb-era";
 import { judgeAppurtenantLandExcess } from "@/lib/tax-engine/appurtenant-land-excess";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { bgIgnoresCommercialEstimated } from "./bg-asset-acq-mode-scope";
 
 // ─── ④ 상업용건물·오피스텔 환산취득가 API 변환 헬퍼 (소령 §164⑥, §176조의2②2호) ───
 
@@ -88,7 +89,7 @@ export function buildCommercialBuildingValuation(
   asset: AssetForm,
   transferDate = "",
 ): object | undefined {
-  if (asset.assetKind !== "commercial_building" || !asset.useEstimatedAcquisition) {
+  if (asset.assetKind !== "commercial_building" || !asset.useEstimatedAcquisition || bgIgnoresCommercialEstimated(asset)) {
     return undefined;
   }
   // 취득일에서 자동 판정(2005-01-01 경계) — UI 표시·validate와 **같은 함수**를 쓴다(3중 패턴).

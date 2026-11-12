@@ -72,6 +72,7 @@ import { isRedevSuccessorAptActualOnly } from "./redev-acquisition-price-source"
 import { assetStdPriceAtTransferInput } from "./engine-std-price-at-transfer";
 import { companionEngineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import { bgIgnoresAssetAppraisalSalesCase } from "./bg-asset-acq-mode-scope";
+import { bgIgnoresCommercialEstimated } from "./bg-asset-acq-mode-scope";
 import {
   isSuccessorRightTransfer,
   successorRightActualAcquisition,
@@ -108,7 +109,7 @@ export function fixedAcquisitionPriceRaw(asset: AssetForm): number | undefined {
   ) {
     return redevActualAcquisitionPriceRaw(asset) || undefined;
   }
-  return (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition && asset.fixedAcquisitionPrice) ||
+  return (asset.acquisitionCause === "purchase" && !(asset.useEstimatedAcquisition && !bgIgnoresCommercialEstimated(asset)) && asset.fixedAcquisitionPrice) ||
     (asset.acquisitionCause === "gift" && asset.fixedAcquisitionPrice) ||
     // 사례 28 — 신축(자가건축): fixedAcquisitionPrice = 신축비용(취득가액)
     (asset.acquisitionCause === "newConstruction" && asset.fixedAcquisitionPrice)
@@ -423,7 +424,7 @@ export function buildAssetPayload(
         ? successorRightStdPriceAtAcq(asset) || undefined
         : undefined
       : ((asset.acquisitionCause === "purchase" && !successorAptActualOnly &&
-          (asset.useEstimatedAcquisition || asset.isAppraisalAcquisition)) ||
+          ((asset.useEstimatedAcquisition && !bgIgnoresCommercialEstimated(asset)) || asset.isAppraisalAcquisition)) ||
           (splitActive && !isSeparateAcquisition(asset))) &&
         asset.standardPriceAtAcq &&
         !redevHiddenStd.acq
@@ -624,7 +625,7 @@ export function buildAssetPayload(
     // §166③을 ③으로 쓴다(`resolvePreDeemedRedevelopment166_3Price`) — 주 자산 ④(`transfer-tax-api.ts`)와 같은 판정(PR-7b-4)
     useEstimatedAcquisition:
       asset.acquisitionCause === "purchase"
-        ? asset.useEstimatedAcquisition && !successorAptActualOnly
+        ? (asset.useEstimatedAcquisition && !bgIgnoresCommercialEstimated(asset)) && !successorAptActualOnly
         : isBgPreDeemedAsset(asset) && asset.assetKind === "redevelopment_apt" && redevPreApprovalAcqMode(asset) === "estimated"
           ? true
           : undefined,
