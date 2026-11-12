@@ -251,6 +251,14 @@ export function RentalHousingExceptionSection({
                 label="§167조의3"
               />
             </div>
+            {/*
+              서면-2023-부동산-0964 — 다가구 8호 중 7호만 등록·1호 거주 + B 양도 → ⑳ 불가. 엔진은 미등록 호실을 일반 주택으로 넣으면
+              세대 구성 `exceeded`로 같은 결론을 내지만, 빠뜨리면 `met`(probe 2026-11-12) — 입력 방법을 여기서 알린다(세액 산식 무변경).
+            */}
+            <p className="text-caption text-muted-foreground px-1" data-testid="rental-multifamily-partial-0964">
+              다가구주택의 일부 호실만 임대등록했다면, 등록하지 않은 호실(본인 거주 포함)은 임대주택이 아니라 별도 주택으로 세대 주택
+              수·보유 주택 목록에 넣으세요 — 이 경우 거주주택 특례가 적용되지 않습니다(서면-2023-부동산-0964, 2023.11.14.).
+            </p>
 
             <div className="space-y-3">
               {rh.rentalUnits.map((unit, i) => (
