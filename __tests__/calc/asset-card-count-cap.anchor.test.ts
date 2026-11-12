@@ -57,7 +57,7 @@ describe("자산 카드 수 상한", () => {
 
   it("⑧ 일반건물이어도 함께 양도(서로 다른 물건)면 11장까지 — ④가 `companionAssets`로 보낸다", () => {
     const form = {
-      ...landCompanionForm(11),
+      ...(landCompanionForm(11) as object),
       assets: Array.from({ length: 11 }, (_, i) => ({ ...makeDefaultAsset(i + 1), assetKind: "general_building" })),
     } as never;
     expect(messages(form)).not.toContain(GB_MSG);
