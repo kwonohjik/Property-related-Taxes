@@ -48,6 +48,12 @@ const carry = (patch: Record<string, unknown> = {}) =>
 const priorRow = (patch: Record<string, unknown>) => ({ giftDate: "2020-01-01", giftAmount: "100000000", giftTaxPaid: "", computedTax: "5000000", giftTaxBase: "50000000", ...patch });
 
 export const BG_FIELD_JUMP_CASES: FieldJumpCase[] = [
+  {
+    // 부담부증여 × 소유자 분리 — 아직 계산하지 않는다(⑤ 토글은 켜는 방향만 잠김 · 켜진 저장값은 끌 수 있다 · `bg-owner-split-scope.ts`)
+    name: "bg: 소유자 분리 미지원", field: "selfOwns", step: 0, assetIndex: A,
+    message: /^자산: 토지·건물 소유자가 다른 자산의 부담부증여는 아직 계산하지 않습니다/,
+    form: market({ selfOwns: "building_only", standardPricePerSqmAtAcq: "1000000", acquisitionArea: "100" }),
+  },
   { name: "bg: 평가 유형", field: "bgValuationMode", step: 0, assetIndex: A, message: /^자산: 부담부증여 평가 유형/, form: bg({ bgValuationMode: "" }) },
   { name: "bg: 인수 채무액", field: "bgLendingDepositTotal", step: 0, assetIndex: A, message: /^자산: 부담부증여 인수 채무액\(임대보증금 \+ 담보차입금\)을 입력하세요\.$/, form: bg({ bgLendingDepositTotal: "" }) },
   {
