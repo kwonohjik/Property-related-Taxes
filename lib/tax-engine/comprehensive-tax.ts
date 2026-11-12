@@ -150,7 +150,10 @@ export function calculateComprehensiveTax(
     area: p.area ?? 0,
     location: p.location ?? "metro",
     exclusionType: p.exclusionType ?? "none",
-    rentalInfo: p.rentalInfo ? { ...p.rentalInfo, assessmentDate } : undefined,
+    // ownerType: 8호 나목 1)=개인·2)=법인 — 납세자 구분은 신고서 단위 taxpayerType 단일 소스
+    rentalInfo: p.rentalInfo
+      ? { ...p.rentalInfo, assessmentDate, ownerType: isCorporate ? "corporate" : "individual" }
+      : undefined,
     otherInfo: p.otherInfo,
   }));
 

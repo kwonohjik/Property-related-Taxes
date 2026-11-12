@@ -15,6 +15,7 @@ import type {
   RentalExclusionInput,
   OtherExclusionInput,
 } from "../../lib/tax-engine/types/comprehensive.types";
+import { NA8_NOT_APPLICABLE } from "./_helpers/comprehensive-8na-not-applicable";
 
 const ASSESSMENT_DATE = new Date("2024-06-01");
 
@@ -25,6 +26,7 @@ const ASSESSMENT_DATE = new Date("2024-06-01");
 describe("validateRentalExclusion — 임대주택 합산배제", () => {
   const baseRentalInput: RentalExclusionInput = {
     registrationType: "private_purchase_long",
+    ...NA8_NOT_APPLICABLE,
     rentalRegistrationDate: new Date("2020-01-01"),
     rentalStartDate: new Date("2020-02-01"),
     assessedValue: 500_000_000,  // 5억 (수도권 6억 이하)
@@ -118,6 +120,7 @@ describe("validateRentalExclusion — 임대주택 합산배제", () => {
 describe("validateRentalExclusion — 의무임대기간 (GAP-1)", () => {
   const baseRentalInput: RentalExclusionInput = {
     registrationType: "public_support_construction",  // 10년 의무 — §3①7호 (공공지원 건설형)
+    ...NA8_NOT_APPLICABLE,
     rentalRegistrationDate: new Date("2020-01-01"),
     rentalStartDate: new Date("2020-02-01"),
     assessedValue: 800_000_000,  // 8억 (공공지원 수도권 9억 이하)
@@ -322,6 +325,7 @@ describe("applyAggregationExclusion — 일괄 판정", () => {
         exclusionType: "private_purchase_rental_long",
         rentalInfo: {
           registrationType: "private_purchase_long",
+          ...NA8_NOT_APPLICABLE,
           rentalRegistrationDate: new Date("2020-01-01"),
           rentalStartDate: new Date("2020-02-01"),
           assessedValue: 300_000_000,
@@ -358,6 +362,7 @@ describe("applyAggregationExclusion — 일괄 판정", () => {
         exclusionType: "private_purchase_rental_long",
         rentalInfo: {
           registrationType: "private_purchase_long",
+          ...NA8_NOT_APPLICABLE,
           rentalRegistrationDate: new Date("2020-01-01"),
           rentalStartDate: new Date("2020-02-01"),
           assessedValue: 400_000_000,
@@ -398,6 +403,7 @@ describe("applyAggregationExclusion — 일괄 판정", () => {
         exclusionType: "private_purchase_rental_long",
         rentalInfo: {
           registrationType: "private_purchase_long",
+          ...NA8_NOT_APPLICABLE,
           rentalRegistrationDate: new Date("2020-01-01"),
           rentalStartDate: new Date("2020-02-01"),
           assessedValue: 500_000_000,
@@ -416,6 +422,7 @@ describe("applyAggregationExclusion — 일괄 판정", () => {
         exclusionType: "private_purchase_rental_long",
         rentalInfo: {
           registrationType: "private_purchase_long",
+          ...NA8_NOT_APPLICABLE,
           rentalRegistrationDate: new Date("2020-01-01"),
           rentalStartDate: new Date("2020-02-01"),
           assessedValue: 250_000_000,

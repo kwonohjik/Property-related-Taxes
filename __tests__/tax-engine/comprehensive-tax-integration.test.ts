@@ -15,6 +15,7 @@ import { calculateComprehensiveTax } from "../../lib/tax-engine/comprehensive-ta
 import type {
   ComprehensiveTaxInput,
 } from "../../lib/tax-engine/types/comprehensive.types";
+import { NA8_NOT_APPLICABLE } from "./_helpers/comprehensive-8na-not-applicable";
 
 // 공통 과세기준일: 2024년
 const ASSESSMENT_YEAR = 2024;
@@ -216,6 +217,7 @@ describe("SC3: 3주택 합산과세 — 9억 기본공제", () => {
           exclusionType: "private_purchase_rental_long",
           rentalInfo: {
             registrationType: "private_purchase_long",  // 10년 의무
+            ...NA8_NOT_APPLICABLE,
             rentalRegistrationDate: new Date("2021-01-01"),
             rentalStartDate: new Date("2021-03-01"),
             assessedValue: 500_000_000,
@@ -267,6 +269,7 @@ describe("SC4: 합산배제 통합 — 과세표준에서 배제 주택 제외",
           exclusionType: "private_purchase_rental_long",
           rentalInfo: {
             registrationType: "private_purchase_long",
+            ...NA8_NOT_APPLICABLE,
             rentalRegistrationDate: new Date("2020-01-01"),
             rentalStartDate: new Date("2020-02-01"),
             assessedValue: 250_000_000,
@@ -308,6 +311,7 @@ describe("SC4: 합산배제 통합 — 과세표준에서 배제 주택 제외",
           exclusionType: "private_purchase_rental_long",
           rentalInfo: {
             registrationType: "private_purchase_long",
+            ...NA8_NOT_APPLICABLE,
             rentalRegistrationDate: new Date("2020-01-01"),
             rentalStartDate: new Date("2020-02-01"),
             assessedValue: 250_000_000,
@@ -326,6 +330,7 @@ describe("SC4: 합산배제 통합 — 과세표준에서 배제 주택 제외",
           exclusionType: "private_purchase_rental_long",
           rentalInfo: {
             registrationType: "private_purchase_long",
+            ...NA8_NOT_APPLICABLE,
             rentalRegistrationDate: new Date("2019-01-01"),
             rentalStartDate: new Date("2019-06-01"),
             assessedValue: 300_000_000,

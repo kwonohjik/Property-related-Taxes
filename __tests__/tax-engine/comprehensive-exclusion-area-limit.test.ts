@@ -13,9 +13,11 @@ import { describe, it, expect } from "vitest";
 import { validateRentalExclusion } from "@/lib/tax-engine/comprehensive-exclusion";
 import { COMPREHENSIVE_EXCL } from "@/lib/tax-engine/legal-codes";
 import type { RentalExclusionInput } from "@/lib/tax-engine/types/comprehensive.types";
+import { NA8_NOT_APPLICABLE } from "./_helpers/comprehensive-8na-not-applicable";
 
 const BASE: RentalExclusionInput = {
   registrationType: "private_construction",
+  ...NA8_NOT_APPLICABLE,
   // 1호 민간건설은 2018.3.31.(4.2.) 이전 사업자등록등 주택만(시행령 §3①1호 단서) — 이 파일은 면적만 본다
   rentalRegistrationDate: new Date("2017-01-01"),
   businessRegistrationDate: new Date("2017-01-01"),

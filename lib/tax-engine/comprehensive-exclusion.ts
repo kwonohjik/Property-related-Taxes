@@ -4,6 +4,7 @@
  */
 
 import { addYears } from "./utc-date";
+import { excludedUnder8hoNa } from "./comprehensive-exclusion-8ho-na";
 import {
   COMPREHENSIVE_EXCL,
   COMPREHENSIVE_EXCL_CONST,
@@ -82,6 +83,7 @@ export function validateRentalExclusion(
   } else {
     const capIssue = regCap2018Issue(input);
     if (capIssue) failReasons.push(capIssue);
+    failReasons.push(...excludedUnder8hoNa(input));
   }
 
   const areaLimit = getAreaLimit(input);
