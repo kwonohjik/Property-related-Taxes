@@ -60,3 +60,27 @@ describe("V-5 말소 블록 1/2 판정 개월", () => {
     expect(t).toContain("확인 필요");
   });
 });
+
+/** HD-5 — 말소일 뒤 임대분은 1/2에서 뺀다(사용자 결정 2026-11-12 · 정면 해석례 없음 → 잘린 구간이 있을 때만 확인 필요). */
+describe("HD-5 말소 블록 — 말소일까지 셈", () => {
+  const renderAt = (patch: Record<string, unknown>) =>
+    render(
+      <RentalTerminationBlock
+        unit={{ ...base, rentalRegistrationDate: "2019-01-01", rentalRegisteredDate: "2019-01-01", ...patch }}
+        index={0}
+        set={vi.fn()}
+        onChange={vi.fn()}
+      />,
+    );
+
+  it("★ 구간이 말소일 뒤로 이어지면 말소일까지 개월(17)과 확인 필요 고지", () => {
+    renderAt({ rentalPeriods: [{ start: "2019-01-01", end: "2022-01-01" }], registrationCancellationDate: "2020-06-01" });
+    expect(screen.getByTestId("rental-half-duty-months-0").textContent).toContain("17개월");
+    expect(screen.getByTestId("rental-half-duty-after-cancel-notice-0").textContent).toContain("확인 필요");
+  });
+
+  it("짝 — 구간이 말소일에서 끝나면 고지하지 않는다", () => {
+    renderAt({ rentalPeriods: [{ start: "2019-01-01", end: "2020-06-01" }], registrationCancellationDate: "2020-06-01" });
+    expect(screen.queryByTestId("rental-half-duty-after-cancel-notice-0")).toBeNull();
+  });
+});

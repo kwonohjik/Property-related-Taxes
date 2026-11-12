@@ -43,6 +43,30 @@ describe("HD-1 기산일", () => {
       deriveHalfDutyRentalMonths({ ...UNIT_FORM, rentalPeriods: [{ start: "2019-01-01", end: "2022-03-01" }] }),
     ).toBe(38);
   });
+  /**
+   * HD-5 — 말소일까지만 센다(사용자 결정 2026-11-12). ㉓1호 「등록 말소 신청으로 등록이 말소된 경우(§43 임대의무기간의
+   * 2분의 1 이상을 임대한 경우)」 — §43①의 임대의무는 등록 임대사업자의 임대라 말소 뒤 임대는 넣지 않는다.
+   * 정면 해석례 없음(국세청 「2분의 1」 3건은 기산일만). 실측(변경 전): 등록 2019-01-01·말소 2020-06-01·구간 ~2022-01-01 → 36.
+   */
+  it("HD-5 ★ 말소일 뒤 임대분은 넣지 않는다 — 36 → 17", () => {
+    expect(
+      deriveHalfDutyRentalMonths({
+        rentalRegistrationDate: "2019-01-01",
+        rentalInputMode: "interval",
+        rentalPeriods: [{ start: "2019-01-01", end: "2022-01-01" }],
+        registrationCancellationDate: "2020-06-01",
+      }),
+    ).toBe(17);
+  });
+  it("HD-5 짝 — 말소일 뒤에 시작한 구간은 통째로 빠지고, 말소일이 비면 종전대로", () => {
+    const form = {
+      rentalRegistrationDate: "2019-01-01",
+      rentalInputMode: "interval" as const,
+      rentalPeriods: [{ start: "2019-01-01", end: "2020-01-01" }, { start: "2020-03-01", end: "2022-01-01" }],
+    };
+    expect(deriveHalfDutyRentalMonths({ ...form, registrationCancellationDate: "2020-02-01" })).toBe(12);
+    expect(deriveHalfDutyRentalMonths({ ...form, registrationCancellationDate: "" })).toBe(36);
+  });
   it("피상속인 개월은 ⑳과 같이 더한다(종전 동작 유지)", () => {
     expect(deriveHalfDutyRentalMonths({ ...UNIT_FORM, isInheritedRental: true, decedentRentalMonths: "10" })).toBe(60);
   });

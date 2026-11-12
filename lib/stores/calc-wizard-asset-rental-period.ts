@@ -162,6 +162,8 @@ export function rentalRegistrationBasisDate(unit: {
  * `deriveRentalMonths`(소령 §167의3③ — 세무서·지자체 중 늦은 날)와 달리 **지자체 등록일로만** 자른다.
  * 지자체 날짜는 「등록일」 칸이다(V-3 — 비면 신청일).
  * 3개월 이내 공실 산입·피상속인 개월 합산은 `deriveRentalMonths`와 같게 둔다(종전 동작 유지 — 민특법 기준 해석 미확보).
+ * 구간은 **등록 말소일까지만** 센다(`halfDutyRentalPeriods` — 사용자 결정 2026-11-12, 정면 해석례 없음).
+ * direct 개월(옛 기록·AI 필드)은 사용자가 계산한 값이라 자르지 않는다.
  */
 export function deriveHalfDutyRentalMonths(unit: {
   rentalInputMode?: "interval" | "direct";
@@ -171,8 +173,32 @@ export function deriveHalfDutyRentalMonths(unit: {
   rentalRegisteredDate?: string;
   isInheritedRental?: boolean;
   decedentRentalMonths?: string;
+  registrationCancellationDate?: string;
 }): number {
-  return deriveRentalMonths({ ...unit, businessRegistrationDate: "" });
+  return deriveRentalMonths({ ...unit, rentalPeriods: halfDutyRentalPeriods(unit), businessRegistrationDate: "" });
+}
+
+/**
+ * ㉓1호 1/2 판정 구간 — 임대 구간을 등록 말소일에서 자른다(말소일 뒤에 시작한 구간은 길이 0이 되어 빠진다).
+ * 「등록 말소 신청으로 등록이 말소된 경우(민특법 §43에 따른 임대의무기간의 2분의 1 이상을 임대한 경우)」 — §43①의
+ * 임대의무는 등록한 임대사업자의 임대라 말소 뒤 임대는 넣지 않는다. 말소일이 비면 그대로.
+ */
+export function halfDutyRentalPeriods(unit: {
+  rentalPeriods?: RentalPeriod[];
+  registrationCancellationDate?: string;
+}): RentalPeriod[] | undefined {
+  const cancel = (unit.registrationCancellationDate ?? "").slice(0, 10);
+  if (!cancel) return unit.rentalPeriods;
+  return unit.rentalPeriods?.map((p) => (p.end && p.end > cancel ? { ...p, end: cancel } : p));
+}
+
+/** 임대 구간 중 등록 말소일 뒤로 이어진 부분이 있는가 — ㉓1호 1/2에서 그 부분을 뺐다는 확인 필요 고지 조건. */
+export function hasRentalAfterCancellation(unit: {
+  rentalPeriods?: RentalPeriod[];
+  registrationCancellationDate?: string;
+}): boolean {
+  const cancel = (unit.registrationCancellationDate ?? "").slice(0, 10);
+  return !!cancel && (unit.rentalPeriods ?? []).some((p) => p.start && p.end && p.end > cancel);
 }
 
 /**
