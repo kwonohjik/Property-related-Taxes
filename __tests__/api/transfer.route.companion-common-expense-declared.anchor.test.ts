@@ -10,7 +10,7 @@
  * 약속(BC-4와 같다): **총 양도비 N 한 번 입력 ≡ 각 자산 양도비 칸에 몫(양도가액 비례 · 마지막 자산 잔액 흡수) 직접 입력** (소득세법 §100② 후문).
  *   총 양도비를 넣으면 자산 칸 양도비는 꺼진다(O-9) — 그래서 선언 채널은 자본적지출로 잰다.
  *
- * 범위 밖(별건 · 이번 변경 없음): 부담부증여(§159) 묶음은 총 양도비가 전혀 반영되지 않는다 · 겸용 컴패니언은 직접 입력이 없어도 몫이 빠진다.
+ * 부담부증여(§159) 묶음은 후속 수정 — `transfer.route.bg-bundle-common-expense.anchor.test.ts`. 범위 밖(별건): 겸용 컴패니언은 직접 입력이 없어도 몫이 빠진다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -154,9 +154,13 @@ describe("Q5-5 leaf 규칙 — 어느 칸에 싣는가", () => {
   it("환산 → 선언 없어도 양도비 칸에(§97②2호 단서 비교)", () => {
     expect(W({ useEstimatedAcquisition: true }, 5)).toEqual({ useEstimatedAcquisition: true, transferExpense: 5 });
   });
-  it("재개발(§166 — `withRedevCommonExpense`)·부담부증여(§159)·몫 0은 건드리지 않는다", () => {
+  it("부담부증여(§159)는 선언 채널이 없어도 항상 양도비 칸에(§159 안분은 선언 채널만 읽는다 — `transfer.route.bg-bundle-common-expense`)", () => {
+    expect(W({ burdenedGiftInfo: {} }, 5)).toEqual({ burdenedGiftInfo: {}, transferExpense: 5 });
+    expect(W({ capitalExpenditure: 10, burdenedGiftInfo: {} }, 5)).toEqual({ capitalExpenditure: 10, burdenedGiftInfo: {}, transferExpense: 5 });
+  });
+  it("재개발(§166 — `withRedevCommonExpense`)·몫 0은 건드리지 않는다", () => {
     expect(W({ capitalExpenditure: 10, redevelopment: {} }, 5)).toEqual({ capitalExpenditure: 10, redevelopment: {} });
-    expect(W({ capitalExpenditure: 10, burdenedGiftInfo: {} }, 5)).toEqual({ capitalExpenditure: 10, burdenedGiftInfo: {} });
+    expect(W({ redevelopment: {}, burdenedGiftInfo: {} }, 5)).toEqual({ redevelopment: {}, burdenedGiftInfo: {} });
     expect(W({ capitalExpenditure: 10 }, 0)).toEqual({ capitalExpenditure: 10 });
     expect(W({ capitalExpenditure: 10 }, undefined)).toEqual({ capitalExpenditure: 10 });
   });
