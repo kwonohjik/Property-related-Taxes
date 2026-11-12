@@ -107,6 +107,10 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           ...(r.type === "rental_97_2" && r.hasNewRentalPlus2Units === undefined
             ? { hasNewRentalPlus2Units: null }
             : {}),
+          // PR-B — 대통령령 제29241호 부칙 §2② 확인. 구 세션엔 없다(= 미응답 · 한도 적용, 종전 동작).
+          ...((r.type === "rental_97_3" || r.type === "rental_97_5") && r.clause4Grandfather === undefined
+            ? { clause4Grandfather: "" as const }
+            : {}),
           // 리뷰 6번 — §97의5①1호 매입임대 확인(3-state). 구 세션은 미선택으로 둔다(다시 묻는다).
           ...(r.type === "rental_97_5" && r.isPurchaseRental === undefined ? { isPurchaseRental: null } : {}),
           // 리뷰 9번 — 조특령 §97의5③ 세무서 사업자등록일. 구 세션엔 없다(⑧이 다시 묻는다).

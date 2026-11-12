@@ -457,20 +457,28 @@ const CLAUSE4_GRANDFATHER_ACQUISITION = new Date("2018-09-13");
 /**
  * 조특령 §97의3③**4호**(기준시가 한도)를 적용할 사안인가 — 대통령령 제29241호 부칙 §2.
  *
+ * 부칙 ②의 「주택」은 1호 괄호의 「주택을 취득할 수 있는 권리를 포함한다. **이하 이 항에서 같다**」라
+ * 1호·2호 모두 분양권·입주권을 포함한다(2026-11-12 MST 204913 원문).
+ * - ②1호 주택 취득일 ≤ 2018-09-13 — `acquisitionDate`
+ * - ②2호 매매계약 + 계약금 지급 ≤ 2018-09-13 — 자산-수준 `contractDate`(화면 「매매계약일(분양/매매)」 칸 —
+ *   안내문 「분양·매매계약 + 계약금 납부 시점」, 장기임대 그룹에 표시된다)
+ * - ②1호 권리 취득·②2호 증빙을 사용자가 확인 — `clause4Grandfathered === true`
+ *   (주택 취득일·계약일 칸만으로는 분양권·입주권을 먼저 취득한 사실이 드러나지 않는다)
+ *
  * 취득일이 없으면 부칙②1호를 성립시킬 수 없어 원칙(①)대로 적용한다. 실제 계산 경로에서는
  * 자산-수준 `acquisitionDate`가 항상 주입되므로 이 분기는 단위 호출에서만 도달한다.
  */
 export function isClause4Applicable(args: {
   transferDate: Date;
   acquisitionDate?: Date;
+  contractDate?: Date;
+  clause4Grandfathered?: boolean;
 }): boolean {
   if (args.transferDate.getTime() < CLAUSE4_EFFECTIVE_FROM.getTime()) return false; // 부칙 §2①
-  if (
-    args.acquisitionDate !== undefined &&
-    args.acquisitionDate.getTime() <= CLAUSE4_GRANDFATHER_ACQUISITION.getTime()
-  ) {
-    return false; // 부칙 §2②1호
-  }
+  const onOrBefore = (d?: Date) => d !== undefined && d.getTime() <= CLAUSE4_GRANDFATHER_ACQUISITION.getTime();
+  if (onOrBefore(args.acquisitionDate)) return false; // 부칙 §2②1호
+  if (onOrBefore(args.contractDate)) return false; // 부칙 §2②2호
+  if (args.clause4Grandfathered === true) return false; // 부칙 §2②1호(권리)·2호 — 사용자 확인
   return true;
 }
 
@@ -508,11 +516,12 @@ export function isClause4Applicable(args: {
  *      통째로 잃었다(양도 2018-10-01 · 취득 2010-01-01 등 부칙 예외 구간 전부).
  *      [[feedback_no_unfavorable_application_without_legal_basis]]
  *
- * ⚠️ **부칙②2호(계약금 지급 증빙)는 판정하지 않는다** — 그 사실을 담는 입력 필드가 없다.
- *    `contractDate`는 §99·§99의3·§98 시리즈의 **시한 판정용 분양/매매계약일**이라 의미가 다르므로
- *    전용하지 않는다([[feedback_ui_mode_flag_not_domain_semantics]]). 대신 그 구간
- *    (취득일 > 2018-09-13 · 양도일 ≥ 2018-10-23)에서는 배제 메시지에 2호 안내를 덧붙여
- *    **침묵하지 않는다**.
+ * ✅ **부칙②2호·권리 취득을 판정한다 (2026-11-12, `rental-97-5-textbook-gaps.plan.md` §3.3 PR-B).**
+ *    종전에는 「`contractDate`는 시한 판정용이라 의미가 다르다」며 판정하지 않고 안내만 붙였다.
+ *    그 칸의 화면 안내는 「분양·매매계약 + 계약금 납부 시점」이고 장기임대 그룹에도 표시된다 — 부칙②2호의
+ *    사실(「매매계약을 체결하고 계약금을 지급한」)과 같다. 분양권·입주권을 먼저 취득한 사실(②1호 괄호)은
+ *    그 칸으로 드러나지 않아 질문(`clause4Grandfathered`)으로 받는다. 종전 동작은 2018.9.13. 이전 분양권으로
+ *    그 뒤 완공된 주택에 한도를 적용해 납세자에게 불리했다.
  */
 export function checkRental973Clause24(
   input: {
@@ -522,6 +531,10 @@ export function checkRental973Clause24(
     /** 부칙 §2 게이트 축 — 4호 적용 여부만 가른다(2호는 부칙 대상이 아니다). */
     transferDate: Date;
     acquisitionDate?: Date;
+    /** 부칙 §2②2호 — 자산-수준 매매계약일(분양·매매계약 + 계약금 납부) */
+    contractDate?: Date;
+    /** 부칙 §2② — 2018.9.13. 이전 권리 취득·매매계약을 사용자가 확인 */
+    clause4Grandfathered?: boolean;
   },
   legalBasisPrefix: string,
 ): Rental97IneligibleReason[] {
@@ -544,15 +557,16 @@ export function checkRental973Clause24(
   if (!isClause4Applicable(input)) return reasons;
 
   /**
-   * 부칙②**2호**(2018-09-13 이전 매매계약 + 계약금 지급) 해당 가능 구간 — 판정 불가라 고지한다.
-   * 취득일이 2018-09-13을 넘는데 양도가 시행일 이후인 사안만 해당한다.
+   * 부칙②(2018-09-13 이전 권리 취득·매매계약 + 계약금 지급)로 빠질 수 있는 구간 — 질문을 안내한다.
+   * 취득일이 2018-09-13을 넘는데 양도가 시행일 이후인 사안만 해당한다(여기 도달했으면 계약일·질문으로도 빠지지 않았다).
    */
   const mayQualifyByContract =
     input.acquisitionDate !== undefined &&
     input.acquisitionDate.getTime() > CLAUSE4_GRANDFATHER_ACQUISITION.getTime();
   const contractNote = mayQualifyByContract
-    ? " 다만 2018.9.13. 이전에 매매계약을 체결하고 계약금을 지급한 사실이 증빙서류로 확인되면 " +
-      "종전 규정에 따라 이 한도가 적용되지 않습니다 (대통령령 제29241호 부칙 §2②2호 — 본 계산기는 이 사실을 판정하지 않습니다)."
+    ? " 다만 2018.9.13. 이전에 이 주택(분양권·입주권 포함)을 취득했거나 매매계약을 체결하고 계약금을 지급한 사실이 " +
+      "증빙서류로 확인되면 종전 규정에 따라 이 한도가 적용되지 않습니다 — 「2018.9.13. 이전 취득·계약」 질문에서 확인하세요 " +
+      "(대통령령 제29241호 부칙 §2②)."
     : "";
 
   if (input.officialPriceAtStart === undefined || input.officialPriceAtStart <= 0) {

@@ -346,6 +346,8 @@ export function GroupCategorySection({
                       value={rentalForm}
                       onChange={(patch) => onUpdateRentalVariant("rental_97_3", patch as Partial<RentalReductionFormVariant>)}
                       transferDate={transferDate}
+                      acquisitionDate={acquisitionDate}
+                      assetContractDate={assetContractDate}
                     />
                   )}
                   {/* §97의5 입력 폼 */}
@@ -355,6 +357,7 @@ export function GroupCategorySection({
                       onChange={(patch) => onUpdateRentalVariant("rental_97_5", patch as Partial<RentalReductionFormVariant>)}
                       acquisitionDate={acquisitionDate}
                       transferDate={transferDate}
+                      assetContractDate={assetContractDate}
                     />
                   )}
                   {/* §97 본문 입력 폼 */}

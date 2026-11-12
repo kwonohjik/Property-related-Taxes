@@ -381,6 +381,8 @@ export function runRedevelopmentGainSteps(
     : evaluateRental97Lthd(input.reductions, {
         transferDate: input.transferDate,
         acquisitionDate: input.acquisitionDate,
+        // PR-B — 대통령령 제29241호 부칙 §2②2호(2018.9.13. 이전 매매계약·계약금) 판정 축. 세액감면 경로(`calcReductions`)와 같은 자산 매매계약일.
+        contractDate: input.assetContractDate,
         stdPriceAtAcquisition: input.standardPriceAtAcquisition,
         stdPriceAtTransfer: input.standardPriceAtTransfer,
       });

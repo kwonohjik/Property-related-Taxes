@@ -92,6 +92,8 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         ...base,
         officialPriceAtStart: r.officialPriceAtStart,
         isNationalHousingScale: r.isNationalHousingScale,
+        // PR-B — 대통령령 제29241호 부칙 §2② 사용자 확인. ⚠️ 명시 매핑.
+        clause4Grandfathered: r.clause4Grandfathered,
         region: r.region,
         // D2-07 — ⚠️ 명시 매핑이라 적지 않으면 조용히 사라진다.
         isPrivateConstructionRental: r.isPrivateConstructionRental,
@@ -131,6 +133,8 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         // CA-01 — §97의5①3호가 조특령 §97의3③2호(국민주택규모)를 준용한다.
         // ⚠️ 이 case도 **명시 매핑**이라 적지 않으면 조용히 사라진다.
         isNationalHousingScale: r.isNationalHousingScale,
+        // PR-B — 대통령령 제29241호 부칙 §2② 사용자 확인 (§97의5①3호 → 령 §97의3③4호). ⚠️ 명시 매핑.
+        clause4Grandfathered: r.clause4Grandfathered,
         // §97의5①2호 — 조기 종료 시 10년 판정의 종점. ⚠️ 명시 매핑.
         rentalEndDate: r.rentalEndDate,
         // §97의5①1호 매입임대 · 령 §97의5①2호·3호 간주기간. ⚠️ 명시 매핑.

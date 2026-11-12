@@ -26,6 +26,7 @@ import { RentalCommonFields, RegistrationFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 import { rental973DeemedStartString } from "@/lib/calc/rental-97-effective-start";
 import { rental973LongRegistrationDate } from "@/lib/calc/transfer-tax-validate-rental-conversion";
+import { Clause4GrandfatherQuestion } from "./Clause4GrandfatherQuestion";
 
 type Rental973Form = Extract<RentalReductionFormVariant, { type: "rental_97_3" }>;
 
@@ -34,6 +35,9 @@ interface Props {
   onChange: (patch: Partial<Rental973Form>) => void;
   /** 자산의 양도일 — 임대기간 미리보기용 */
   transferDate?: string;
+  /** 자산 취득일·매매계약일 — 가액요건 부칙 §2② 질문 표시 조건 */
+  acquisitionDate?: string;
+  assetContractDate?: string;
 }
 
 function diffYearsMonths(from: string, to: string): string {
@@ -49,7 +53,7 @@ function diffYearsMonths(from: string, to: string): string {
   return months > 0 ? `${years}년 ${months}개월` : `${years}년`;
 }
 
-export function Rental973InputForm({ value, onChange, transferDate }: Props) {
+export function Rental973InputForm({ value, onChange, transferDate, acquisitionDate, assetContractDate }: Props) {
   const patchCommon = (patch: Partial<RentalCommonFormFields>) => {
     onChange(patch as Partial<Rental973Form>);
   };
@@ -250,6 +254,15 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
               " 단기→장기 변경신고 주택은 단기 임대기간 산입을 반영한 임대개시일(자동 산출 박스의 기산일) 당시 값을 입력합니다."}
           </p>
         </div>
+
+        <Clause4GrandfatherQuestion
+          dataField={`reduction.${value.type}.clause4Grandfather`}
+          value={value.clause4Grandfather ?? ""}
+          onChange={(v) => onChange({ clause4Grandfather: v })}
+          acquisitionDate={acquisitionDate}
+          transferDate={transferDate}
+          assetContractDate={assetContractDate}
+        />
 
         <div>
           <p className="mb-1 text-xs font-medium">소재지</p>

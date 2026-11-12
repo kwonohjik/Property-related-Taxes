@@ -279,6 +279,11 @@ export type RentalReductionFormVariant =
       /** 국민주택규모 이하 확인 (령 §97의3③2호) */
       isNationalHousingScale: boolean;
       /**
+       * PR-B — 대통령령 제29241호 부칙 §2②: 2018.9.13. 이전에 이 주택(분양권·입주권 포함)을 취득했거나 매매계약·계약금을 지급했는가.
+       * "" = 미응답(한도 적용 — 종전 동작). 질문은 취득일 > 2018-09-13 · 양도일 ≥ 2018-10-23일 때만 보인다.
+       */
+      clause4Grandfather: "yes" | "no" | "";
+      /**
        * 2020.7.11 이후 단기→장기 변경 신고분 (§97의3① 괄호 — 적용 제외).
        * PR-C 이후 정본은 `shortTermConversionMode`다 — ⑤가 `mode === "after"`로 함께 쓴다(구 세션 호환).
        */
@@ -334,6 +339,11 @@ export type RentalReductionFormVariant =
       region: "capital" | "non_capital";
       /** CA-01 — §97의5①3호 준용 (조특령 §97의3③2호 국민주택규모 이하) */
       isNationalHousingScale: boolean;
+      /**
+       * PR-B — 대통령령 제29241호 부칙 §2②: 2018.9.13. 이전에 이 주택(분양권·입주권 포함)을 취득했거나 매매계약·계약금을 지급했는가.
+       * "" = 미응답(한도 적용 — 종전 동작). 질문은 취득일 > 2018-09-13 · 양도일 ≥ 2018-10-23일 때만 보인다.
+       */
+      clause4Grandfather: "yes" | "no" | "";
       /** §97의5①1호 — 매입임대주택(매매·증여 등으로 소유권 취득)인가 (3-state, null = 미선택) */
       isPurchaseRental: boolean | null;
       /** 조특령 §97의5③ — 세무서 사업자등록일 (YYYY-MM-DD). 사업자등록 확인 시 필수 — 임대개시 기산의 한 축 */

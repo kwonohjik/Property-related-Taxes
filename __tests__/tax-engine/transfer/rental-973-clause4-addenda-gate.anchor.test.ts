@@ -25,10 +25,10 @@
  * 그 특례를 **통째로** 잃는다. 실측: 기준시가 7억·임대 10년 사안에서
  * `OFFICIAL_PRICE_EXCEEDED`가 **단독 배제 사유**였다.
  *
- * ── ⚠️ 부칙②2호는 판정하지 않는다 ────────────────────────────────
- * 「매매계약 체결 + 계약금 지급」 사실을 담는 입력 필드가 없다. `contractDate`는 §99·§99의3·
- * §98 시리즈의 **시한 판정용 분양/매매계약일**이라 의미가 달라 전용하지 않는다.
- * 대신 해당 가능 구간에서 배제 메시지에 안내를 덧붙여 **침묵하지 않는다**(C4-7).
+ * ── 부칙②2호·권리 취득 (2026-11-12 PR-B로 판정 시작) ──────────────
+ * 종전에는 판정하지 않고 안내만 붙였다. 이제 자산 매매계약일(화면 「분양·매매계약 + 계약금 납부 시점」)과
+ * 「2018.9.13. 이전 취득·계약」 질문으로 판정한다(`rental-97-clause4-grandfather.anchor.test.ts`).
+ * 그래도 한도가 걸리면 배제 메시지가 그 질문을 가리켜 **침묵하지 않는다**(C4-7).
  */
 import { describe, it, expect } from "vitest";
 import { evaluateRental973 } from "@/lib/tax-engine/transfer-reductions/rental-97-3";
@@ -106,8 +106,10 @@ describe("§97의3③4호 부칙 게이트 — 평가 결과", () => {
     const msg = r.isEligible
       ? ""
       : r.ineligibleReasons.find((x) => x.code === "OFFICIAL_PRICE_EXCEEDED")?.message ?? "";
-    expect(msg).toContain("2018.9.13. 이전에 매매계약을 체결하고 계약금을 지급");
-    expect(msg).toContain("부칙 §2②2호");
+    // PR-B — 판정하게 됐으므로 안내는 「판정하지 않는다」가 아니라 질문을 가리킨다
+    expect(msg).toContain("매매계약을 체결하고 계약금을 지급");
+    expect(msg).toContain("「2018.9.13. 이전 취득·계약」 질문");
+    expect(msg).toContain("부칙 §2②");
   });
 
   it("C4-8: 🔑 4호 미적용 구간에서는 **기준시가 미입력도 문제 삼지 않는다**", () => {
