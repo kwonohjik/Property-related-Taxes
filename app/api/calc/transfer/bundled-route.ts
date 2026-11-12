@@ -28,6 +28,7 @@ import { resolveHceGeneralHouseAcquisitionDate } from "@/lib/tax-engine/transfer
 import { buildGbCompanionItems, type GbBgCarryoverUnitDraft } from "./general-building-part-cards";
 import { withRedevCommonExpense } from "./engine-input";
 import { withCommonExpenseInDeclaredChannel } from "./engine-input";
+import { withMixedUseCommonExpense } from "./engine-input";
 import { attachGbCarryoverUnits, toGbCarryoverUnits } from "./bundled-gb-carryover-units";
 import { toTransferorBasisInfo } from "@/lib/tax-engine/transfer-tax-carryover-burdened-gift";
 import {
@@ -260,7 +261,7 @@ export function calculateBundledTransfer(
        */
       if (data.propertyType === "mixed-use-house" && data.mixedUse) {
         return buildMixedUseCompanionItems(
-          data.mixedUse,
+          withMixedUseCommonExpense(data.mixedUse, a.allocatedCommonExpense),
           primaryItem,
           {
             transferDate,

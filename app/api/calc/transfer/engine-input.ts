@@ -561,6 +561,18 @@ export function withCommonExpenseInDeclaredChannel<
   return { ...item, transferExpense: (item.transferExpense ?? 0) + commonExpense };
 }
 
+/**
+ * 겸용주택 — 총 양도비의 이 자산 몫(§100② 후문)을 겸용 서브객체의 **자산 단위 양도비**(`mixedUse.transferExpense`)에 더한다(2026-11-12).
+ *
+ * 겸용 엔진은 그 칸만 읽어 양도시 기준시가로 주택분·상가분에 나누고(`transfer-mixed-use.types.ts` `transferExpense`), 파트 카드는 엔진 칸
+ * (`capitalExpenditure`·`transferExpense`)을 비운다(`mixed-use-part-cards.ts` neutralized — 카드마다 다시 빼는 배가 방지). 그래서 몫이 옛 덩어리
+ * `expenses`로만 와서 통째로 버려졌다 — 주 자산·컴패니언 모두, 선언 채널 유무와 무관(실측: 겸용 + 주택 · 총 양도비 2천만 → 과세표준 445,300,002 ↔
+ * 자산 칸 양도비 1천만씩 438,300,003). 자산 칸 양도비로 넣은 것과 같은 칸·같은 안분이다.
+ */
+export function withMixedUseCommonExpense<T extends { transferExpense?: number }>(mixedUse: T, commonExpense: number | undefined): T {
+  return commonExpense && commonExpense > 0 ? { ...mixedUse, transferExpense: (mixedUse.transferExpense ?? 0) + commonExpense } : mixedUse;
+}
+
 /** 총 양도비의 이 자산 몫(§100② 후문)을 §166 양도비에 더한다 — 안분 결과의 `expenses`는 §166 산식이 읽지 않는다. 일반건물 `withBundledCommonExpense`와 같은 자리. */
 export function withRedevCommonExpense<T extends { transferExpense?: number }>(redev: T, commonExpense: number | undefined): T {
   return commonExpense && commonExpense > 0 ? { ...redev, transferExpense: (redev.transferExpense ?? 0) + commonExpense } : redev;

@@ -6,6 +6,7 @@
  */
 import { test, expect } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
 
 const land = (id: number, sale: string, over: Record<string, unknown> = {}) => ({
   ...makeDefaultAsset(id), addressJibun: `서울 강남구 테스트동 ${id}-${id}`, assetKind: "land", acquisitionCause: "purchase", acquisitionDate: "2012-01-01",
@@ -80,4 +81,45 @@ test("Q5-E2 부담부증여 묶음 × 총 양도비 — 몫이 채무비율만�
   const j = await res.json();
   expect((j.data.aggregated.properties as { necessaryExpense: number }[]).map((p) => p.necessaryExpense)).toEqual([3_000_000, 3_000_000]);
   expect(j.data.aggregated.calculatedTax).toBe(111_588_000);
+});
+
+/**
+ * Q5-E3 겸용 컴패니언 × 총 양도비 20,000,000 — 겸용 엔진은 `mixedUse.transferExpense`만 읽어 몫이 버려졌다(수정 전 과세표준 445,300,002).
+ * 수정 후: 자산 칸 양도비 1천만씩 직접 입력과 같은 438,300,003. 시료는 `transfer.route.companion-mixed-use` 와 같다(주택 + 겸용 · 기준시가 같게 50:50).
+ */
+test("Q5-E3 겸용 컴패니언 × 총 양도비 — 몫이 겸용 양도비로 들어간다", async ({ page }) => {
+  test.setTimeout(90_000);
+  const base = { acquisitionCause: "purchase", acquisitionDate: "2015-03-01", useEstimatedAcquisition: false, fixedAcquisitionPrice: "300000000",
+    actualSalePrice: "600000000", standardPriceAtTransfer: "500000000", standardPriceAtAcq: "250000000" };
+  const mixed = { isMixedUseHouse: true, acquisitionDate: "2009-03-01", residentialFloorArea: "60", nonResidentialFloorArea: "40", buildingFootprintArea: "50",
+    mixedUseTotalLandArea: "600", mixedZoneType: "general_residential", mixedTransferHousingPrice: "900000000", mixedTransferCommercialBuildingPrice: "300000000",
+    mixedTransferLandPricePerSqm: "2000000", mixedAcqHousingPrice: "300000000", mixedAcqCommercialBuildingPrice: "100000000", mixedAcqLandPricePerSqm: "1000000",
+    mixedAcqHousingBuildingStdPrice: "1", mixedTransferHousingBuildingStdPrice: "180000000" };
+  const assets = [
+    { ...makeDefaultAsset(1), addressJibun: "제주특별자치도 강남구 테스트동 1-1", assetKind: "housing", ...base },
+    { ...makeDefaultAsset(2), addressJibun: "제주특별자치도 강남구 테스트동 2-2", assetKind: "housing", ...base, ...mixed },
+  ];
+  await page.goto("/calc/transfer-tax");
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  const seed = seedWithDeclaredRoster({
+    state: {
+      formData: {
+        assets, assetSplitMode: "companion", bundledSaleMode: "actual", contractTotalPrice: "1200000000", totalTransferExpense: "20000000",
+        transferDate: "2024-06-01", filingDate: "2024-08-31", isOneHousehold: false, householdHousingCount: "2",
+        householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, isRegulatedArea: false, wasRegulatedAtAcquisition: false, isUnregistered: false,
+      },
+      pendingMigration: false,
+    },
+    version: 0,
+  });
+  await page.evaluate((sd) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(sd)), seed);
+  await page.reload();
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  const responsePromise = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST");
+  await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+  await page.getByRole("button", { name: "세금 계산하기" }).click();
+  const res = await responsePromise;
+  expect(res.status()).toBe(200);
+  const j = await res.json();
+  expect(j.data.aggregated.taxBase).toBe(438_300_003);
 });
