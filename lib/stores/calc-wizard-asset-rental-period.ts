@@ -88,6 +88,20 @@ export function recognizedRentalMonths(
   periods: RentalPeriod[] | undefined,
   registrationBasisDate: string,
 ): number {
+  return recognizedRentalSegments(periods, registrationBasisDate).reduce(
+    (sum, p) => sum + diffMonthsClamped(p.start, p.end),
+    0,
+  );
+}
+
+/**
+ * `recognizedRentalMonths`의 구간 단계 — 기산일로 자른 뒤 3개월 이내 공백을 이어 붙인 구간 목록.
+ * 길이가 2 이상이면 3개월을 넘는 공백이 있어 그 기간이 빠졌다는 뜻이다(㉓1호 확인 필요 고지가 쓴다).
+ */
+export function recognizedRentalSegments(
+  periods: RentalPeriod[] | undefined,
+  registrationBasisDate: string,
+): RentalPeriod[] {
   const clipped = (periods ?? [])
     .filter((p) => p.start && p.end)
     .map((p) => ({
@@ -96,7 +110,7 @@ export function recognizedRentalMonths(
     }))
     .filter((p) => p.end > p.start)
     .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
-  if (clipped.length === 0) return 0;
+  if (clipped.length === 0) return [];
 
   const merged: RentalPeriod[] = [{ ...clipped[0] }];
   for (const p of clipped.slice(1)) {
@@ -108,7 +122,7 @@ export function recognizedRentalMonths(
       merged.push({ ...p });
     }
   }
-  return merged.reduce((sum, p) => sum + diffMonthsClamped(p.start, p.end), 0);
+  return merged;
 }
 
 /** 기산 기준일 — 세무서 사업자등록일·지자체 등록신청일 중 늦은 날(빈 값은 무시). 둘 다 비면 "". */
