@@ -29,6 +29,7 @@
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { toEngineRedevelopment } from "./engine-input";
 import { withRedevCommonExpense } from "./engine-input";
+import { withCommonExpenseInDeclaredChannel } from "./engine-input";
 import { buildGbCompanionItems } from "./general-building-part-cards";
 import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
@@ -544,6 +545,9 @@ export function buildCompanionEngineInputs(
     );
   }
 
+  // 총 양도비 몫을 엔진이 읽는 칸에 — 겸용·일반건물은 위에서 각자 처리했다(Q-5 · `withCommonExpenseInDeclaredChannel`).
+  const plainEngine = withCommonExpenseInDeclaredChannel(companionEngine, a.allocatedCommonExpense);
+
   // G-2 한도 초과 split (세율 축 — 영 §167의5)
   if (ctx.primaryCtxForSplit) {
     const splitResult = resolveCompanionSplit(
@@ -569,16 +573,16 @@ export function buildCompanionEngineInputs(
       ctx.transferDate,
     );
     if (splitResult.applied) {
-      return splitCompanionIntoTwo(companionEngine, splitResult, ctx.primaryCtxForSplit);
+      return splitCompanionIntoTwo(plainEngine, splitResult, ctx.primaryCtxForSplit);
     }
     // F-13 — 배율 이내로 **확인된** 부수토지는 짝 주택과 「1세대1주택 단위」를 이룬다.
     //   판정이 불가능했던 카드(면적·정착면적 없음)는 넣지 않는다 — 초과분이 비과세로 새지 않게.
     if (splitResult.withinLimit) {
-      return [{ ...companionEngine, oneHouseUnitRole: "appurtenant_land" as const }];
+      return [{ ...plainEngine, oneHouseUnitRole: "appurtenant_land" as const }];
     }
   }
 
-  return [companionEngine];
+  return [plainEngine];
 }
 
 // ─── 한도초과 분리 (영 §167의5) — `bundled-companion-split.ts`로 분리 (800줄 정책) ───

@@ -537,6 +537,26 @@ export function toEngineRedevelopment(
   };
 }
 
+/**
+ * 총 양도비의 이 자산 몫(§100② 후문 · `allocatedCommonExpense`)을 엔진이 실제로 읽는 칸에 싣는다 — Q-5(2026-11-12).
+ *
+ * 엔진은 자본적지출·양도비(선언 채널)가 하나라도 있으면 `expenses`(= 직접 + 공통 몫)를 읽지 않고, 환산이면 선언 채널만
+ * §97②2호 단서 비교에 쓴다(`transfer-tax-helpers.ts`). 그래서 몫이 통째로 사라졌다 — 실측(토지 2건 · 총 양도비 2천만):
+ * 실가 자본적지출 주 자산 +3,291,428 · 컴패니언 +2,468,571 · 양도비 +864,000 · 환산 단서 미발동 +5,823,772.
+ * 약속은 「총 양도비 한 번 입력 ≡ 각 자산 양도비 칸에 그 몫 직접 입력」이다(`transfer.route.gb-bundled-common-expense` BC-4).
+ *
+ * 일반건물 `withBundledCommonExpense`와 같은 규칙 — 실가이고 선언 채널이 없으면 `expenses`가 몫을 그대로 싣으므로 건드리지 않는다.
+ * 재개발(§166 — 아래 `withRedevCommonExpense`)·부담부증여(§159)는 각자 경로가 몫을 다룬다. 겸용·일반건물은 호출부가 거른다.
+ */
+export function withCommonExpenseInDeclaredChannel<
+  T extends { capitalExpenditure?: number; transferExpense?: number; useEstimatedAcquisition?: boolean; redevelopment?: unknown; burdenedGiftInfo?: unknown },
+>(item: T, commonExpense: number | undefined): T {
+  if (!commonExpense || commonExpense <= 0 || item.redevelopment || item.burdenedGiftInfo) return item;
+  const declared = item.capitalExpenditure !== undefined || item.transferExpense !== undefined;
+  if (!declared && !item.useEstimatedAcquisition) return item;
+  return { ...item, transferExpense: (item.transferExpense ?? 0) + commonExpense };
+}
+
 /** 총 양도비의 이 자산 몫(§100② 후문)을 §166 양도비에 더한다 — 안분 결과의 `expenses`는 §166 산식이 읽지 않는다. 일반건물 `withBundledCommonExpense`와 같은 자리. */
 export function withRedevCommonExpense<T extends { transferExpense?: number }>(redev: T, commonExpense: number | undefined): T {
   return commonExpense && commonExpense > 0 ? { ...redev, transferExpense: (redev.transferExpense ?? 0) + commonExpense } : redev;

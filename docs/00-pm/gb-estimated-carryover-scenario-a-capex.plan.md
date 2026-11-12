@@ -214,6 +214,9 @@ const effectiveCapex = (rawInput.capitalExpenditure ?? 0) + ownDirect + effectiv
 ### 6.4 함께양도·legacy (PR-1 범위)
 PR-1의 엔진 접기가 `bundled-split-helpers.ts:285`(`expenses: a.allocatedExpenses`)·`engine-input.ts:56`·legacy `directExpenses`를 별도 수정 없이 닫는다(선언 채널이 비어 있을 때만 접으므로 `capitalExpenditure`를 선언한 컴패니언은 종전 그대로). 선언 채널이 있고 `expenses`에 공통 양도비가 따로 있는 조합(자본적지출 선언 컴패니언 × 공통 양도비)은 비-이월과세 컴패니언에서도 `expenses`가 버려진다 — **별건**(Q-5, 측정: 자본적지출 20,000,000 + 공통 양도비 20,000,000 → 컴패니언 필요경비 20,000,000으로 몫 5,714,286 소실).
 
+> ✅ **Q-5 해소(2026-11-12 · 사용자 지시)** — `withCommonExpenseInDeclaredChannel`(`app/api/calc/transfer/engine-input.ts`)을 주 자산(`bundled-route.ts`)·컴패니언(`bundled-split-helpers.ts`)이 같이 쓴다. 선언 채널이 있거나 환산이면 총 양도비 몫을 양도비 칸에 더한다(일반건물 `withBundledCommonExpense`와 같은 규칙). 수정 전 실측(토지 2건 · 총 양도비 2천만 · 4억:3억): 실가 자본적지출 주 자산 세액 +3,291,428 · 컴패니언 +2,468,571 · 환산 §97②2호 단서 미발동 +5,823,772 · 축 B 지분 +3,456,000 · 이월과세 A 컴패니언 필요경비 40,000,000 → 45,714,286. 주 자산도 같은 결함이었다. Anchor `transfer.route.companion-common-expense-declared.anchor.test.ts` 47 · FOLD-3b·3c · E2E `companion-common-expense-declared.spec.ts` · 뮤테이션 7/7(재개발·부담부증여 제외 조건은 route 시료로 효과가 안 보여 leaf 단위로 고정).
+> 🟠 **별건(이번 범위 밖 · 변경 없음)**: ① 부담부증여(§159) 토지 2건 묶음은 총 양도비 2천만을 넣어도 세액·필요경비가 그대로(몫 전체 소실 · 선언 채널 유무 무관). ② 겸용 컴패니언은 선언 채널이 없어도 겸용 자산 몫이 빠진다(과세표준 445,300,002 ↔ 오라클 438,300,003). 총 양도비를 넣으면 자산 칸 양도비가 꺼지는 것(O-9)은 설계라 「양도비 + 총 양도비」 조합은 대상 아님.
+
 ### 6.5 14개 동기화 지점
 
 | 지점 | 변동 |
