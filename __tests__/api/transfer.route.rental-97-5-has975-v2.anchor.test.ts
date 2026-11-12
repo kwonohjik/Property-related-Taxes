@@ -1,4 +1,6 @@
 /**
+ * 픽스처 날짜는 §97의5 취득 하한(법률 제12853호 부칙 §34 — 2015.1.1. 이후 취득)에 맞춰 전부 +1년 옮겼다(2026-11-12). 금액 단언은 그대로다.
+ *
  * anchor — §97의5 «선택 사실» 기준으로 §97의3·§97의4를 배제하는 현행 동작 고정 (V-6 계획서 V-2).
  * 계획서 docs/00-pm/rental-97-5-has975-v2.plan.md (Q-1 a · Q-2 a).
  *
@@ -43,7 +45,7 @@ const STAT_5 = /\(조특법 §97의5②\)/;
 
 // ── route 쪽 픽스처 (V-6 anchor와 같은 틀) ─────────────────────────────────────
 const rentalCommon = {
-  registrationDate: "2014-01-01", rentalStartDate: "2014-01-01", isTaxRegistered: true, taxRegistrationDate: "2014-01-01",
+  registrationDate: "2015-01-01", rentalStartDate: "2015-01-01", isTaxRegistered: true, taxRegistrationDate: "2015-01-01",
   rentIncreaseViolationMode: "none", rentalContinuesToTransfer: true, hasVacancyOverGrace: false,
   officialPriceAtStart: "300,000,000", isNationalHousingScale: true,
 };
@@ -51,10 +53,10 @@ const r973 = () => ({ ...getReductionDefault("rental_97_3"), ...rentalCommon, st
 const r974 = () => ({ ...getReductionDefault("rental_97_4"), ...rentalCommon, rental974Category: "purchase_a", region: "capital" });
 const r975 = () => ({ ...getReductionDefault("rental_97_5"), ...rentalCommon, isPurchaseRental: true });
 
-// 취득일 2003-03-01 → 등록(2014-01-01)이 취득일부터 3개월을 넘어 §97의5 부적격(REGISTRATION_AFTER_3_MONTHS)
-const ACQ_INELIGIBLE = "2003-03-01";
-// 취득일 2014-01-01 → 등록과 같은 날이라 §97의5 적격
-const ACQ_ELIGIBLE = "2014-01-01";
+// 취득일 2004-03-01 → 등록(2015-01-01)이 취득일부터 3개월을 넘어 §97의5 부적격(REGISTRATION_AFTER_3_MONTHS) — 취득 하한 사유(OUT_OF_PERIOD)도 함께 붙는다(사유 격리는 아래 별도 케이스)
+const ACQ_INELIGIBLE = "2004-03-01";
+// 취득일 2015-01-01 → 등록과 같은 날이라 §97의5 적격
+const ACQ_ELIGIBLE = "2015-01-01";
 
 function card(reductions: unknown[], acq: string): AssetForm {
   return Object.assign({ ...makeDefaultAsset(1) }, x({
@@ -66,7 +68,7 @@ function card(reductions: unknown[], acq: string): AssetForm {
 }
 function form(c: AssetForm): TransferFormData {
   return Object.assign(createDefaultTransferFormData(), {
-    transferDate: "2025-08-01", contractTotalPrice: "900000000", assets: [c], isOneHousehold: false, householdHousingCount: "2",
+    transferDate: "2026-08-01", contractTotalPrice: "900000000", assets: [c], isOneHousehold: false, householdHousingCount: "2",
   }) as TransferFormData;
 }
 async function post(f: TransferFormData) {
@@ -81,15 +83,15 @@ const step8 = (f: TransferFormData) => validateStep2Reductions(2, f)?.message;
 
 // ── 엔진 쪽 픽스처 (rental-97-5-overlap-exclusion.anchor 와 같은 틀) ───────────────
 const D = (s: string) => new Date(`${s}T00:00:00`);
-const CTX = { transferDate: D("2029-01-01"), acquisitionDate: D("2018-06-01"), stdPriceAtAcquisition: 500_000_000, stdPriceAtTransfer: 900_000_000, calculatedTax: 100_000_000 };
+const CTX = { transferDate: D("2030-01-01"), acquisitionDate: D("2019-06-01"), stdPriceAtAcquisition: 500_000_000, stdPriceAtTransfer: 900_000_000, calculatedTax: 100_000_000 };
 const E973 = {
-  type: "rental_97_3", registrationDate: D("2018-08-01"), rentalStartDate: D("2018-09-01"), isTaxRegistered: true, taxRegistrationDate: D("2018-08-01"),
+  type: "rental_97_3", registrationDate: D("2019-08-01"), rentalStartDate: D("2019-09-01"), isTaxRegistered: true, taxRegistrationDate: D("2019-08-01"),
   officialPriceAtStart: 600_000_000, stdPriceAtRentalStart: 600_000_000, isNationalHousingScale: true, region: "capital", rentalContinuesToTransfer: true,
 };
 const E974 = { ...E973, type: "rental_97_4" };
 const E975 = { ...E973, type: "rental_97_5", isPurchaseRental: true };
-// 취득일(2018-06-01)로부터 3개월을 넘긴 2019-01-01 등록 → §97의5 부적격
-const E975_INELIGIBLE = { ...E975, registrationDate: D("2019-01-01"), rentalStartDate: D("2019-01-01"), taxRegistrationDate: D("2019-01-01") };
+// 취득일(2019-06-01)로부터 3개월을 넘긴 2020-01-01 등록 → §97의5 부적격
+const E975_INELIGIBLE = { ...E975, registrationDate: D("2020-01-01"), rentalStartDate: D("2020-01-01"), taxRegistrationDate: D("2020-01-01") };
 const codes = (r: Any) => (r && !r.isEligible ? (r.ineligibleReasons ?? []).map((i: Any) => i.code) : []);
 
 describe("엔진 — §97의5가 부적격이어도 선택돼 있으면 §97의3·§97의4를 배제한다 (현행 기준 고정)", () => {
@@ -144,6 +146,15 @@ describe("대조 — 단독은 각자 200이고 §97의5 부적격은 결과 상
     expect(r.status).toBe(200);
     expect(r.result.rental97TaxDetail?.isEligible).toBe(false);
     expect((r.result.rental97TaxDetail?.ineligibleReasons ?? []).map((i: Any) => i.code)).toContain("REGISTRATION_AFTER_3_MONTHS");
+    expect(r.result.reductionAmount).toBe(0);
+  });
+  it("부적격 사유 격리 — 취득 2015-01-01 · 등록 2015-06-01(5개월) · 사업자등록은 취득 당일 → REGISTRATION_AFTER_3_MONTHS 하나만", async () => {
+    // ACQ_INELIGIBLE(2004)은 취득 하한(법률 제12853호 부칙 §34) 사유 OUT_OF_PERIOD도 함께 붙는다 — 3개월 사유만 격리해 본다(2026-11-12 리뷰 L-2)
+    const r = await post(
+      form(card([{ ...r975(), registrationDate: "2015-06-01", rentalStartDate: "2015-06-01", taxRegistrationDate: "2015-01-01" }], "2015-01-01")),
+    );
+    expect(r.status).toBe(200);
+    expect((r.result.rental97TaxDetail?.ineligibleReasons ?? []).map((i: Any) => i.code)).toEqual(["REGISTRATION_AFTER_3_MONTHS"]);
     expect(r.result.reductionAmount).toBe(0);
   });
   it("§97의3 단독: 200 · 적격 · 총세액 144,899,332(부적격 §97의5 단독 185,966,000보다 적다)", async () => {

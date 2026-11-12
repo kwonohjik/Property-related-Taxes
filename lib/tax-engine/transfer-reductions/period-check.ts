@@ -12,6 +12,7 @@
  */
 
 import type { TransferReductionId, PeriodCheckContext, PeriodCheckResult } from "./types";
+import { TRANSFER } from "../legal-codes/transfer";
 import {
   UNSOLD_98_5_CONTRACT_FROM,
   unsold982PeriodGateReasons,
@@ -55,6 +56,9 @@ const within = (d: Date | undefined, start: Date, end: Date): boolean =>
  */
 const articleContract = (c: PeriodCheckContext, id: string): Date | undefined =>
   c.articleContractDates ? c.articleContractDates[id] : c.contractDate;
+
+/** §97의5 취득 하한 — 법률 제12853호 시행일(부칙 §1·§34) */
+const RENTAL_97_5_ACQUIRED_FROM = D("2015-01-01");
 
 /** 일자가 end 일자 이전(또는 같음) */
 const before = (d: Date | undefined, end: Date): boolean =>
@@ -162,8 +166,12 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
       "2014.1.1 이후 양도분부터 적용됩니다",
   },
   rental_97_5: {
-    label: "매매계약·취득 ~2018.12.31",
+    label: "취득 2015.1.1~2018.12.31 (매매계약 ~2018.12.31 포함)",
     check: (c) =>
+      // 하한 — 법률 제12853호 부칙 §34 「이 법(2015.1.1. 시행) 시행 후 최초로 **취득**하는 분부터」.
+      //   축은 취득일뿐이다: 2014년 계약·2015년 잔금 주택도 대상(서면-2015-부동산-0715) — 상한처럼
+      //   `contractDate ?? acquisitionDate`로 묶으면 그 사례가 뒤집힌다. 취득일 미입력은 아래 상한이 이미 막는다.
+      (c.acquisitionDate === undefined || c.acquisitionDate >= RENTAL_97_5_ACQUIRED_FROM) &&
       // 조특법 §97의5 ① 1호: "2018.12.31까지 ... 매입임대주택 ... 을 취득(2018.12.31까지 매매계약을 체결하고 계약금을 납부한 경우를 포함한다)"
       // 2026-07-29 정정(#591 감사 R7): fallback에서 `registrationDate`를 제거했다.
       //   §97의5①1호는 "2018.12.31.까지 …매입임대주택…을 **취득**(2018.12.31.까지 **매매계약**을
@@ -190,6 +198,10 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
       //      ⇒ 아래 `rental_97_4`의 축을 **양도일**로 옮겼다.
       before(c.contractDate ?? c.acquisitionDate, D("2018-12-31")),
     failReason: "취득일(또는 매매계약일)이 2018.12.31 이후 — 조특법 §97의5①1호 취득 시한 외",
+    failReasonFor: (c) =>
+      c.acquisitionDate !== undefined && c.acquisitionDate < RENTAL_97_5_ACQUIRED_FROM
+        ? `취득일이 2015.1.1 이전 — 조특법 §97의5는 2015.1.1 이후 취득한 주택부터 적용됩니다 (${TRANSFER.RENTAL_97_5_ADDENDUM})`
+        : undefined,
   },
 
   // ── 신축 §99 시리즈 ──

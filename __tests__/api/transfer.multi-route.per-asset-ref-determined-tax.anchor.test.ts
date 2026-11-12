@@ -34,7 +34,7 @@ beforeEach(() => {
 const x = (o: Record<string, unknown>) => o as unknown as Partial<AssetForm>;
 
 const rentalCommon = {
-  registrationDate: "2014-01-01", rentalStartDate: "2014-01-01", isTaxRegistered: true, taxRegistrationDate: "2014-01-01",
+  registrationDate: "2015-01-01", rentalStartDate: "2015-01-01", isTaxRegistered: true, taxRegistrationDate: "2015-01-01",
   rentIncreaseViolationMode: "none", rentalContinuesToTransfer: true, hasVacancyOverGrace: false,
   officialPriceAtStart: "300,000,000", isNationalHousingScale: true,
 };
@@ -54,8 +54,8 @@ const r77 = () => ({
 
 const ACQ = "2003-03-01";
 const ACQ_OLD = "1995-02-01";
-/** §97의5 적격 취득일(등록과 같은 날) */
-const ACQ_97_5 = "2014-01-01";
+/** §97의5 적격 취득일(등록과 같은 날) — 취득 하한(법률 제12853호 부칙 §34 · 2015.1.1. 이후)에 맞춰 2014→2015 (2026-11-12) */
+const ACQ_97_5 = "2015-01-01";
 
 function card(reductions: unknown[], acq: string): AssetForm {
   return Object.assign({ ...makeDefaultAsset(1) }, x({
