@@ -30,6 +30,7 @@ import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggrega
 import { toEngineRedevelopment } from "./engine-input";
 import { withRedevCommonExpense } from "./engine-input";
 import { withCommonExpenseInDeclaredChannel } from "./engine-input";
+import { withMixedUseCommonExpense } from "./engine-input";
 import { buildGbCompanionItems } from "./general-building-part-cards";
 import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
@@ -510,7 +511,7 @@ export function buildCompanionEngineInputs(
    * ⚠️ `mixedUse`가 없으면 이 분기가 안 타고 평범한 주택으로 계산된다 — ⑩ refine이 막는다.
    */
   if (c.assetKind === "mixed_use_house" && c.mixedUse) {
-    return buildMixedUseCompanionItems(c.mixedUse, companionEngine, ctx, {
+    return buildMixedUseCompanionItems(withMixedUseCommonExpense(c.mixedUse, a.allocatedCommonExpense), companionEngine, ctx, {
       ownershipRatio: c.ownershipRatio,
       isUnregistered: c.isUnregistered,
       totalPropertyTransferPrice: c.totalPropertyTransferPrice,
