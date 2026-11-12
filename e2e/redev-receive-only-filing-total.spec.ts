@@ -131,4 +131,18 @@ test.describe("청산금 수령분 단독 신고 — 신고서 합계 열", () =
     await expect(page.getByRole("row", { name: /양도차익.*68,400,000/ }).first()).toBeVisible();
     await expect(page.getByTestId("redev-receive-only-proviso")).toContainText("103,000,000");
   });
+  /**
+   * 결과 카드 한 칸 구조(사용자 결정 2026-11-12 a) — 제목 · 인가전/인가후 칸 없음 · 「안분 필요경비 등」 행.
+   * 필요경비 10,000,000 × 114,000,000 ÷ 500,000,000 = 2,280,000 → 114,000,000 − 45,600,000 − 2,280,000 = 66,120,000
+   */
+  test("결과 카드 — 단독 신고 한 칸 · 안분 필요경비 등 2,280,000", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seedAndCalc(page, { redevPreApprovalExpenses: "4000000", capitalExpenditure: "5000000", transferExpense: "1000000" });
+    const title = page.getByRole("heading", { name: "청산금 수령분 단독 신고 양도차익" });
+    await expect(title).toBeVisible();
+    await expect(page.getByText("재개발/재건축 양도차익 3분할")).toHaveCount(0);
+    await expect(page.getByText("미신고 — 청산금 수령분 단독 신고")).toHaveCount(0);
+    await expect(page.getByText(/안분 필요경비 등/).first()).toBeVisible();
+    await expect(page.locator("div").filter({ hasText: /^안분 필요경비 등.*2,280,000$/ }).first()).toBeVisible();
+  });
 });

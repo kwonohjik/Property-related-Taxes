@@ -122,11 +122,12 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           ) : (
             <>
               <span className="rounded-full bg-violet-200 px-2 py-0.5 text-micro font-bold text-violet-800">{isReceiveOnly ? REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE : isAptReceive ? "시행령 §166②2호" : "시행령 §166②1호"}</span>
-              <h3 className="text-sm font-semibold text-violet-900 dark:text-violet-200">재개발/재건축 양도차익 3분할</h3>
+              <h3 className="text-sm font-semibold text-violet-900 dark:text-violet-200">{isReceiveOnly ? "청산금 수령분 단독 신고 양도차익" : "재개발/재건축 양도차익 3분할"}</h3>
             </>
           )}
         </div>
-        {!successorMemberApplied && !isRightSubject && salePriceTotal != null && (
+        {/* 단독 신고는 분양가를 계산에 쓰지 않는다(집행기준 100-166-10 — 청산금 ÷ 평가액) */}
+        {!successorMemberApplied && !isRightSubject && !isReceiveOnly && salePriceTotal != null && (
           <div className="text-xs text-violet-700 dark:text-violet-300">
             분양가 <span className="font-mono tabular-nums font-semibold">{fmt(salePriceTotal)}</span>
           </div>
@@ -559,9 +560,10 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </div>
         </div>
       ) : (
-      /* 기존 3분할 표 — subject="apt" 또는 subject="right"+pay */
-      <div className={`grid grid-cols-1 gap-3 ${isRightSubject ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
+      /* 기존 3분할 표 — subject="apt" 또는 subject="right"+pay · 단독 신고는 청산금 수령분 한 칸(인가전·인가후 분은 신고하지 않는다) */
+      <div className={`grid grid-cols-1 gap-3 ${isRightSubject ? "md:grid-cols-2" : isReceiveOnly ? "" : "md:grid-cols-3"}`}>
         {/* 인가전 분 */}
+        {!isReceiveOnly && (
         <div className="rounded-md bg-white dark:bg-gray-900 border border-violet-200 p-3 space-y-1.5">
           <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">① 인가전 분</p>
           <p className="text-micro text-violet-700 dark:text-violet-400">
@@ -569,8 +571,6 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               ? "미적용 — 승계조합원은 §166 안분을 하지 않습니다"
               : isRightSubject
               ? "§166①1호 · §166⑤1호 (취득일 → 관리처분 인가일 기산)"
-              : isReceiveOnly
-                ? "미신고 — 청산금 수령분 단독 신고"
               : isAptReceive
                 ? "§166②2호 · §166①2호 나목 (수령 안분)"
                 : "§166①1호 · §166⑤2호나목 (취득일 기산)"}
@@ -592,16 +592,15 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           {preApproval.lthdRateBasis && <p className="text-micro text-violet-700 dark:text-violet-400">{preApproval.lthdRateBasis}</p>}
           <Row label="장기보유특별공제" value={preApproval.lthd} />
         </div>
+        )}
 
         {/* 인가후 기존건물분 — subject="apt" 시만 표시 */}
-        {!isRightSubject && (
+        {!isRightSubject && !isReceiveOnly && (
         <div className="rounded-md bg-white dark:bg-gray-900 border border-violet-200 p-3 space-y-1.5">
           <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">② 인가후 기존건물분</p>
           <p className="text-micro text-violet-700 dark:text-violet-400">
             {successorMemberApplied
               ? "소득세법 시행령 §162①4호 (안분 없음 — 단순 차감)"
-              : isReceiveOnly
-              ? "미신고 — 청산금 수령분 단독 신고"
               : isAptReceive
               ? "§166②2호 · §166①2호 가목 (양도가액 − (평가액 − 지급받은 청산금))"
               : "§166②1호 안분 (권리가액/분양가) · §166⑤2호나목"}
@@ -628,7 +627,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               : isRightSubject
               ? "② 인가후·청산금 분 (§166①1호)"
               : isAptReceive
-              ? `③ 청산금 수령분${detail.settlementExemptionApplied ? " (1세대1주택 비과세)" : ""}`
+              ? `${isReceiveOnly ? "" : "③ "}청산금 수령분${detail.settlementExemptionApplied ? " (1세대1주택 비과세)" : ""}`
               : `③ 청산금 분${detail.settlementExemptionApplied ? " (1세대1주택 비과세)" : ""}`}
           </p>
           <p className="text-micro text-violet-700 dark:text-violet-400">
@@ -653,6 +652,10 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             }
             value={settlement.apportionedAcquisition}
           />
+          {/* 단독 신고 — 필요경비 등(환산이면 개산공제 · 이월과세 증여세 상당액 포함)의 청산금분 몫(집행기준 100-166-10). 없으면 화면 산식이 양도차익과 맞지 않았다. */}
+          {isReceiveOnly && (
+            <Row label={<>안분 필요경비 등(=필요경비 등 × <Frac top="청산금" bottom="권리가액" />)</>} value={settlement.expenses ?? 0} />
+          )}
           {isRightSubject && !detail.settlementExemptionApplied ? (
             // 사례 36 입주권 양도 (subject="right") — §95② 본문 괄호 LTHD=0 명시
             <>
