@@ -171,7 +171,7 @@ export function addPropertyRefines(
     rentalHousingPath: rentalHousingPathApplies({ assetIndex: 0, assetKind: data.propertyType, declared: data.rentalHousingException?.applyException === true }),
   });
   refineReductionRequiredInputs(data.reductions, data.assetContractDate, ctx, ["reductions"],
-    data.redevelopment as { subject?: string; receiveOnlyMode?: boolean; completionDate?: string } | null | undefined);
+    data.redevelopment as { subject?: string; receiveOnlyMode?: boolean; completionDate?: string } | null | undefined, data.acquisitionCause);
   refineNew994CapitalRegion(data.reductions, data.transferDate, ctx, ["reductions"]);
   // §164⑦ PHD 경로: 3-시점 입력으로 기준시가 자동 도출되므로 standardPriceAt* 불요
   // 겸용주택 모드는 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회

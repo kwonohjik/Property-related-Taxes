@@ -98,6 +98,7 @@ import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 import { bgIgnoresCommercialEstimated } from "./bg-asset-acq-mode-scope";
+import { assetContractDateForCause } from "@/lib/tax-engine/transfer-reductions/asset-contract-date";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -348,7 +349,8 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
         ? carryoverAcquisitionDateFallback(primary) // 컴패니언과 같은 leaf (CP-5)
         : primary.acquisitionDate,
     // Round 9 (2026-05-06): 자산-수준 매매계약일 — §99의3 등 13개 매매계약일 기준 조문 시한 판정용
-    assetContractDate: primary.assetContractDate || undefined,
+    // V-11 — 상속 자산은 싣지 않는다(⑤ 칸 숨김·엔진 진입부와 같은 leaf).
+    assetContractDate: assetContractDateForCause(primary.acquisitionCause, primary.assetContractDate || undefined),
     expenses:
       // P2 C·P3 A·P4 B — 자산 단위 필요경비 총액(이전 입력 형식)은 파트에 안분되지 않는다(엔진 S8). 파트 자본적지출 칸이 정본이라 숨은 잔재는 싣지 않는다.
       // 그 밖의 분리 계산 자산도 이전 형식 총액은 파트 칸으로 옮긴다(⑧이 막는다 — `legacyExpenseMovesToParts`).

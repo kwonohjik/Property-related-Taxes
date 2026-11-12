@@ -61,6 +61,7 @@ import {
 // ============================================================================
 
 import { GroupCategorySection } from "./UnifiedReductionGroupSection";
+import { assetContractDateForCause } from "@/lib/tax-engine/transfer-reductions/asset-contract-date";
 
 interface UnifiedReductionPanelProps {
   asset: AssetForm;
@@ -120,7 +121,9 @@ export function buildPeriodContext(asset: AssetForm, transferDate: string): Peri
   // Round 9 (2026-05-06): 자산-수준 매매계약일 주입.
   // 신축·미분양·임대 감면 13개 조문은 매매계약일 + 계약금 납부 기준으로 시한 판정.
   // 미입력 시 acquisitionDate fallback (조문 단서 "매매계약 + 계약금 = 취득" 정책 준수).
-  const assetContract = asset.assetContractDate ? new Date(asset.assetContractDate) : undefined;
+  // V-11 — 상속 자산은 매매계약일을 읽지 않는다(④·엔진과 같은 leaf).
+  const assetContractStr = assetContractDateForCause(asset.acquisitionCause, asset.assetContractDate);
+  const assetContract = assetContractStr ? new Date(assetContractStr) : undefined;
   // Phase 2 (2026-06-11): 장기임대 §97 시리즈 — 선택된 rental 항목의 등록일·임대개시일 주입.
   // 미입력 시 acquisitionDate 낙관 fallback (period-check의 before(undefined)=false 가 라디오를
   // 영구 disabled로 만드는 것을 방지 — 표시용 낙관. 본 요건 검증은 엔진 evaluator·validate 담당).
@@ -503,7 +506,7 @@ export function UnifiedReductionPanel({ asset, assetIndex = 0, transferDate, onC
           onUpdate982={update982}
           onUpdate984Hybrid={update984}
           onUpdate98={update98}
-          assetContractDate={asset.assetContractDate ?? ""}
+          assetContractDate={assetContractDateForCause(asset.acquisitionCause, asset.assetContractDate) ?? ""}
           onAssetContractDateChange={(v) => onChange({ assetContractDate: v })}
           assetId={asset.assetId}
           acquisitionDate={acquisitionDate}
