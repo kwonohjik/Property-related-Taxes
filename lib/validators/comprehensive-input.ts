@@ -98,6 +98,12 @@ const rentalExclusionInfoSchema = z.object({
     .nonnegative({ message: "임대 경과 연수는 0년 이상이어야 합니다." })
     .optional(),
 
+  /** 세무서 사업자등록일 (YYYY-MM-DD) — §3①1호·2호 단서 2018.3.31. 판정(민간건설·민간매입). 없으면 그 두 유형은 불성립 */
+  businessRegistrationDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
+    .optional(),
+
   /** 임대등록 말소일 (YYYY-MM-DD, 선택) — 과세기준일 이전이면 합산배제 거부 */
   registrationRevokedDate: z
     .string()

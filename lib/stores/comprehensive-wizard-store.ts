@@ -35,7 +35,9 @@ export interface PropertyEntry {
   rentalRegistrationType: string;
   isEupMyeonArea: boolean;       // 읍·면 지역 여부 (existing_rental §3①3호 전용 — 읍면 100㎡ / 그외 85㎡)
   isThirtyPlusUnits: boolean;    // 30호 이상 여부 (§3①1·2·7·8호 공시가격 상한 tier)
-  rentalRegistrationDate: string;  // YYYY-MM-DD
+  rentalRegistrationDate: string;  // YYYY-MM-DD — 지자체 임대사업자 등록일(등록증)
+  /** 세무서 사업자등록일 YYYY-MM-DD — 1호 민간건설·2호 민간매입의 2018.3.31. 단서 판정(⑤가 그 두 유형에서만 묻는다) */
+  businessRegistrationDate?: string;
   rentalStartDate: string;         // YYYY-MM-DD
   currentRent: string;             // 현재 임대료 (원)
   previousRent: string;            // 직전 임대료 (원)
@@ -187,6 +189,7 @@ function makeProperty(): PropertyEntry {
     isEupMyeonArea: false,
     isThirtyPlusUnits: false,
     rentalRegistrationDate: "",
+    businessRegistrationDate: "",
     rentalStartDate: "",
     currentRent: "",
     previousRent: "",

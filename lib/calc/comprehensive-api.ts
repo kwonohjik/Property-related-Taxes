@@ -92,6 +92,12 @@ export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFo
     if (!RENTAL_TYPES.has(p.exclusionType)) continue;
     const label = `주택 ${i + 1}`;
     if (!p.rentalRegistrationDate) return `${label}: 합산배제 임대주택은 임대사업자 등록일을 입력하세요 (종합부동산세법 시행령 §3①).`;
+    if (
+      asksBusinessRegistrationDate(p.rentalRegistrationType || toRegistrationType(p.exclusionType)) &&
+      !p.businessRegistrationDate
+    ) {
+      return `${label}: 민간건설·민간매입임대는 세무서 사업자등록일을 입력하세요 — 2018.3.31. 이전 사업자등록등 주택만 합산배제됩니다 (종합부동산세법 시행령 §3①1호·2호 단서).`;
+    }
     if (!p.rentalStartDate) return `${label}: 합산배제 임대주택은 임대개시일을 입력하세요 (종합부동산세법 시행령 §3①).`;
     if (!(parseDecimal(p.area) > 0)) return `${label}: 합산배제 임대주택은 전용면적(㎡)을 입력하세요 (종합부동산세법 시행령 §3① 면적 요건).`;
   }
@@ -244,6 +250,11 @@ const OTHER_INFO_TYPES = new Set([
 // store의 exclusionType → validator의 registrationType 매핑
 // (임대주택 합산배제 신청 시 UI 선택값을 API 검증 스키마 값으로 변환)
 // export: PropertyListInput onChange 자동매칭에서 재사용 (단일 출처 — UI 설계 §3)
+/** §3①1호·2호 단서(2018.3.31. 사업자등록등)가 걸리는 유형 — 민간건설·민간매입(구법 5년). ⑤·④·⑧ 공용 */
+export function asksBusinessRegistrationDate(registrationType: string): boolean {
+  return registrationType === "private_construction" || registrationType === "private_purchase_short";
+}
+
 export function toRegistrationType(exclusionType: string): string {
   const map: Record<string, string> = {
     private_construction_rental:        "private_construction",
@@ -349,6 +360,10 @@ export async function callComprehensiveApi(
           // 빈 칸을 채우지 않는다 — ⑧ `validateRequiredExclusionAndLandInputs`가 막는다(종전엔
           // `과세연도-01-01`·60㎡로 채워 합산배제가 조용히 적용됐다).
           rentalRegistrationDate: p.rentalRegistrationDate,
+          // §3①1호·2호 단서 판정에만 쓴다 — ⑤가 그 두 유형에서만 묻는다(`asksBusinessRegistrationDate`)
+          businessRegistrationDate: asksBusinessRegistrationDate(registrationType)
+            ? p.businessRegistrationDate || undefined
+            : undefined,
           rentalStartDate: p.rentalStartDate,
           assessedValue: base.assessedValue,
           area: parseDecimal(p.area),

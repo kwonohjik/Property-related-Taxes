@@ -47,6 +47,31 @@ const MANDATORY_PERIOD_BY_TYPE: Record<
   private_short_term_6y_purchase:     COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT_TERM_6Y, // 6 — §3①11호
 };
 
+/**
+ * §3①1호 단서(민간건설임대)·2호 단서(민간매입임대) 「2018년 3월 31일 이전에 … 임대사업자 등록과 사업자등록을 한 주택으로 한정」.
+ * - 대통령령 제28645호(2018.2.13. 시행) 부칙 제2조 — 시행 이후 납세의무 성립분(2018 과세기준일)부터.
+ * - 3.31.이 토요일이라 국세기본법 §5로 4.2.까지(서면-2021-법규재산-3280 — 같은 문언의 소령 §167의3①2호 가목 회신 유추 ·
+ *   종부령 직접 해석 없음). 지자체 날짜는 등록일(같은 회신).
+ * - 공공건설·공공매입(같은 호)은 단서 밖. 세무서 사업자등록일을 모르면 확인 불가 → 불성립(「모름」은 혜택 불성립).
+ */
+const REG_CAP_2018_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
+  "private_construction",
+  "private_purchase_short",
+]);
+const REG_CAP_2018_ERA_START = Date.UTC(2018, 1, 13);
+const REG_CAP_2018_LAST_DAY = Date.UTC(2018, 3, 2);
+
+function regCap2018Issue(input: RentalExclusionInput): string | null {
+  if (!REG_CAP_2018_TYPES.has(input.registrationType)) return null;
+  if (input.assessmentDate.getTime() < REG_CAP_2018_ERA_START) return null;
+  const biz = input.businessRegistrationDate;
+  if (!biz || Number.isNaN(biz.getTime())) return COMPREHENSIVE_EXCL.BUSINESS_REGISTRATION_DATE_UNKNOWN;
+  if (input.rentalRegistrationDate.getTime() > REG_CAP_2018_LAST_DAY || biz.getTime() > REG_CAP_2018_LAST_DAY) {
+    return COMPREHENSIVE_EXCL.REGISTERED_AFTER_2018_03_31;
+  }
+  return null;
+}
+
 export function validateRentalExclusion(
   input: RentalExclusionInput,
 ): ExclusionValidationResult {
@@ -54,6 +79,9 @@ export function validateRentalExclusion(
 
   if (!input.rentalRegistrationDate) {
     failReasons.push(COMPREHENSIVE_EXCL.NO_RENTAL_REGISTRATION);
+  } else {
+    const capIssue = regCap2018Issue(input);
+    if (capIssue) failReasons.push(capIssue);
   }
 
   const areaLimit = getAreaLimit(input);
