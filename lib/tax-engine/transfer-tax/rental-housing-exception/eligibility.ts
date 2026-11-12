@@ -153,6 +153,20 @@ export function firstTerminationCancellation(
 
 const dayOf = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 
+/**
+ * 말소되지 않고 등록·임대 중인 **폐지되는 유형** 호인가 — 법률 제17482호 부칙 제5조① 「이 법 시행(2020.8.18.) 당시 종전의 규정에
+ * 따라 장기일반민간임대주택 중 아파트를 임대하는 민간매입임대주택 또는 단기민간임대주택을 등록한」 주택. 화면의 등록 유형에
+ * 종전 단기(4년)는 없어(2025.6.4. 이후 단기 6년만 — 아·자목) 장기일반 아파트 매입만 남는다. ㉓ 대상 목(가·다·라·마)만 본다.
+ */
+function isRegisteredAbolishedTypeUnit(u: RentalUnitInput): boolean {
+  if (u.rentalAutoTermination || !u.isApartment || u.rentalAcquisitionType !== "purchase" || u.rentalCategory !== "long_general") {
+    return false;
+  }
+  const app = deriveRegApplicationDate(u);
+  if (!app || !validDate(app) || dayOf(app) >= RA_CUT.Y2020_08_18) return false;
+  return isTerminationEligibleArticle(deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, app));
+}
+
 // ============================================================
 // 날짜 경계 상수 (§167조의3①2호·§155⑳)
 // ============================================================
@@ -630,6 +644,25 @@ export function checkEligibility(
         "이미 양도했거나 거주주택으로 전환한 장기임대주택이 이보다 먼저 말소됐다면 그 말소일부터 5년입니다" +
         "(기획재정부 재산세제과-1308, 2022.10.18. — 양도일 현재 보유 여부 불문 · 법규과-864, 2025.4.24.). " +
         "이 계산은 입력한 임대주택만으로 판정했습니다.",
+    );
+  } else if (
+    ctx &&
+    residenceFailReasons.length === 0 &&
+    allUnitsPassed &&
+    rentalUnits.some(isRegisteredAbolishedTypeUnit)
+  ) {
+    /**
+     * 말소된 호를 입력하지 않았어도 남은 호가 폐지되는 유형이면 ㉓ 5년 창이 걸릴 수 있다 — 이미 양도했거나 거주주택으로
+     * 전환한 장기임대주택이 먼저 말소됐다면 그 최초 말소일부터 5년(재산세제과-1308 「양도일 현재 보유 여부 불문」).
+     * 그 호는 입력 칸이 없어 계산에 넣지 않고 확인 필요만 고지한다(사용자 결정 2026-11-12 · 세액 무변경). 남은 호가 모두
+     * 폐지되지 않는 유형이면 ㉓ 양도기한 제한이 없어(재산세제과-1420 · 서면-2021-법규재산-8212) 고지하지 않는다.
+     */
+    notices.push(
+      `입력한 임대주택 중 폐지되는 유형(종전 장기일반민간임대주택 중 아파트 매입임대 — 법률 제17482호 민간임대주택에 관한 ` +
+        `특별법 일부개정법률 부칙 제5조제1항)이 있습니다 — 이미 양도했거나 거주주택으로 전환한 장기임대주택이 먼저 자진·자동말소됐다면 ` +
+        `그 최초 말소일부터 5년 이내에 거주주택을 양도해야 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}이 적용됩니다` +
+        `(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} · 기획재정부 재산세제과-1308, 2022.10.18. — 양도일 현재 보유 여부 불문). ` +
+        "이 계산은 입력한 임대주택만으로 판정했습니다(확인 필요).",
     );
   }
 
