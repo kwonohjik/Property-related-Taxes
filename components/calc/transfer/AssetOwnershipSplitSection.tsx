@@ -44,6 +44,8 @@ export function AssetOwnershipSplitSection(props: {
   // Q-5(D1 U-3) — 「토지는 다른 원인으로 취득」과 상호 잠금(엔진은 소유자 분리에서 토지 원인을 읽지 않는다).
   //    켜진 상태는 끌 수 있게 「켜는 방향」만 막는다.
   const landCauseOn = landCauseMixActive(asset); // D1(토지 상속·증여) 또는 D2(건물 상속·증여 + 토지 매매)
+  // 부담부증여 × 소유자 분리 — 아직 계산하지 않는다(⑧·⑫ 차단 · `bg-owner-split-scope.ts`). 켜진 저장값은 끌 수 있게 「켜는 방향」만 막는다.
+  const bgBlocked = asset.transferType === "burdened_gift";
 
   return (
     // data-field — ⑧ 「신축 · 토지만 본인」 차단(`newConstructionLandOnly`)이 이 칸으로 이동한다.
@@ -53,8 +55,12 @@ export function AssetOwnershipSplitSection(props: {
         tone="amber"
         title="토지·건물 소유자 다름"
         description="배우자·공유자 등"
-        disabled={landCauseOn && selfOwns === "both"}
-        disabledReason="「토지는 다른 원인으로 취득」을 켠 자산에는 쓸 수 없습니다 — 그 토글을 끄면 켤 수 있습니다"
+        disabled={(landCauseOn || bgBlocked) && selfOwns === "both"}
+        disabledReason={
+          bgBlocked
+            ? "부담부증여에서는 아직 토지·건물 소유자 분리를 계산하지 않습니다 (소득세법 시행령 §159① — 증여한 부분의 값으로 계산해야 함)"
+            : "「토지는 다른 원인으로 취득」을 켠 자산에는 쓸 수 없습니다 — 그 토글을 끄면 켤 수 있습니다"
+        }
         checked={selfOwns !== "both"}
         onCheckedChange={(checked) => {
           // 다중 키를 **단일 배치 update**로 — 나눠 부르면 stale spread로 한쪽이 덮인다

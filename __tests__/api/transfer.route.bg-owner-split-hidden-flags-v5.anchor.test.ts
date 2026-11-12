@@ -13,6 +13,9 @@
  * | 감정 · 매매사례 | **차단** | 200 | 210,000,000 |
  *
  * 환산(`useEstimatedAcquisition`)은 ⑧·⑫가 함께 막아 범위 밖이다(#2629 Q-2).
+ *
+ * 🔄 2026-11-12 후속 — 부담부증여 × 소유자 분리 조합 자체를 ⑤⑧⑫가 막는다(`bg-owner-split-scope.ts` · 사용자 결정 c). 이 격자는 이제
+ *    «숨은 플래그와 무관하게 ⑧과 ⑫가 같은 차단을 낸다»를 고정한다. `withoutBgHiddenAcqFlags`는 엔진 구현(결정 b) 때 다시 닿는다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -26,6 +29,7 @@ import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { captureBody } from "../calc/_one-house-pr3a-calc-route";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { validateSplitDirectInputs } from "@/lib/calc/transfer-tax-validate-split";
+import { BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE } from "@/lib/calc/bg-owner-split-scope";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 
@@ -50,22 +54,23 @@ async function run(o: Record<string, unknown>) {
   const step0 = collectStepIssues(0, f).map((i) => i.message);
   const body = await captureBody(f);
   const res = await POST(new NextRequest("http://localhost/api/calc/transfer", { method: "POST", headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" }, body: JSON.stringify(body) }));
-  const j = (await res.json()) as { data?: { result?: { transferGain?: number } } };
-  return { step0, status: res.status, gain: j.data?.result?.transferGain };
+  const text = await res.text();
+  return { step0, status: res.status, text };
 }
 
-describe("V-5 부담부증여 × 소유자 분리 — 숨은 감정·매매사례 플래그는 분리 검증을 바꾸지 않는다", () => {
+describe("V-5 부담부증여 × 소유자 분리 — 숨은 감정·매매사례 플래그는 판정을 바꾸지 않는다", () => {
   beforeEach(() => {
     vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
   });
 
   for (const [own, oo] of Object.entries(OWN)) {
     for (const [flag, fo] of Object.entries(FLAGS)) {
-      it(`${own} · ${flag}: ⑧ 소유자 분리 기준시가 요구 없음 · 200 · 양도차익 210,000,000`, async () => {
+      it(`${own} · ${flag}: ⑧ V8 요구 없음 · ⑧·⑫ 같은 차단(부담부증여 × 소유자 분리 미지원)`, async () => {
         const r = await run({ ...oo, ...fo });
         expect(r.step0.some((m) => m.includes(OWNER_SPLIT_MSG))).toBe(false);
-        expect(r.status).toBe(200);
-        expect(r.gain).toBe(210_000_000);
+        expect(r.step0).toContain(`자산: ${BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE}`);
+        expect(r.status).toBe(400);
+        expect(r.text).toContain(BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE);
       });
     }
   }
