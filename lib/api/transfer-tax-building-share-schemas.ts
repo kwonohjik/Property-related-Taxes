@@ -9,6 +9,7 @@ import { generalBuildingValuationSchema, carryoverTaxationEngineShape, rejectDeb
 import { reductionSchema } from "./transfer-tax-schema-reductions";
 import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 import { isFractionalRatioSumOutOfTolerance } from "@/lib/calc/fractional-ratio-sum-tolerance";
+import { GB_SHARES_MAX } from "@/lib/calc/asset-card-count-cap";
 
 // ── ⑫ 일반건물 × 지분(%) 분할 취득 ──────────────────────────────────────
 
@@ -171,7 +172,7 @@ function atPath(obj: unknown, path: string): unknown {
 export const generalBuildingSharesSchema = z
   .array(generalBuildingShareSchema)
   .min(2)
-  .max(10)
+  .max(GB_SHARES_MAX)
   .superRefine((shares, ctx) => {
     // (1) 물건-수준 동일성 — 어긋나면 지분마다 다른 물건을 계산하게 된다.
     const first = shares[0]?.valuation as Record<string, unknown> | undefined;
