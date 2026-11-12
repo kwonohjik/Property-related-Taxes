@@ -178,6 +178,11 @@ export function validateRentalHousingException(
       }
     }
 
+    // 상속 임대주택 — 피상속인 임대개월 미입력은 차단(자동 간주 없음 · 조특령 §97⑤3호 합산 대상)
+    if (u.isInheritedRental && !(parseFloat(u.decedentRentalMonths ?? "") > 0)) {
+      return `${unitLabel}: 상속받은 임대주택이면 피상속인 임대기간(개월)을 입력하세요.`;
+    }
+
     // 도출 목 재사용(deriveRentalArticle · 지자체 등록 신청일 기준 — D-1) — UI 조건부 노출·엔진 판정과 3중 동기화
     const eff = deriveRegApplicationDate({
       businessRegistrationDate: new Date(u.businessRegistrationDate),

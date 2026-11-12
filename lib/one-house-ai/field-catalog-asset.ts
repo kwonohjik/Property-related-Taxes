@@ -288,8 +288,22 @@ export const ONE_HOUSE_FIELD_CATALOG_ASSET = [
     path: "asset.rentalHousingException.rentalUnits[].rentalMonths",
     kind: "intString",
     label: "실제 임대 개월 수",
-    hint: "실제 임대한 총 개월. 화면은 임대 시작일~종료일 구간(rentalPeriods — 사전 밖)으로 받고, 구간이 없을 때(직접 입력 모드·기본값) 이 개월 수가 쓰인다. 의무임대기간을 채우기 전 양도도 적용되나 이후 미충족 시 추징된다. (UI 라벨 미확인)",
+    hint: "실제 임대한 총 개월. 화면은 임대 시작일~종료일 구간(rentalPeriods — 사전 밖)으로 받고, 구간이 없을 때(직접 입력 모드·기본값) 이 개월 수가 그대로 쓰인다(자르지 않는다). 세무서 사업자등록·임대주택 등록 후 임대한 날부터 세고, 임차인이 바뀌는 사이 3개월 이내 공실은 넣고 넘는 공실은 뺀 개월이다(소령 §167의3③ · 조특칙 §44). 피상속인 기간은 넣지 않는다(decedentRentalMonths). 의무임대기간을 채우기 전 양도도 적용되나 이후 미충족 시 추징된다. (UI 라벨 미확인)",
     when: "asset.rentalHousingException.applyException = true",
+  },
+  {
+    path: "asset.rentalHousingException.rentalUnits[].isInheritedRental",
+    kind: "boolean",
+    label: "상속받아 계속 임대하는 주택입니다.",
+    hint: "상속으로 취득해 계속 임대하면 피상속인 임대기간을 더한다(조특령 §97⑤3호).",
+    when: "asset.rentalHousingException.applyException = true",
+  },
+  {
+    path: "asset.rentalHousingException.rentalUnits[].decedentRentalMonths",
+    kind: "intString",
+    label: "피상속인 임대기간",
+    hint: "피상속인이 사업자등록과 임대주택 등록을 한 뒤 임대한 개월(3개월 이내 공실 포함). 상속인 임대 구간과 따로 받아 더한다.",
+    when: "isInheritedRental = true (같은 rentalUnits[] 행)",
   },
   {
     path: "asset.rentalHousingException.rentalUnits[].standardPriceAtRentalStart",

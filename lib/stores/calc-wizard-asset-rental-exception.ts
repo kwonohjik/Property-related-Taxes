@@ -75,6 +75,13 @@ export interface RentalHousingExceptionFormSlice {
       rentalInputMode: "interval" | "direct";
       /** 임대 구간 (interval 모드, 비연속 허용). 개월은 API 변환 시 deriveRentalMonths로 합산 */
       rentalPeriods: Array<{ start: string; end: string }>;
+      /**
+       * 상속받아 계속 임대하는 주택 — 피상속인 임대기간을 합산한다(조특령 §97⑤3호, 소득세법 시행령 §167의3③ 준용).
+       * optional — 이 칸 신설 전 복원분(undefined)은 false와 같다.
+       */
+      isInheritedRental?: boolean;
+      /** 피상속인 임대개월(문자열) — `isInheritedRental`일 때만 `deriveRentalMonths`가 더한다. 상속인 등록일로 자르지 않는다. */
+      decedentRentalMonths?: string;
       /** 임대주택 지번 주소 — 임대개시일 기준시가 Vworld 조회용(UI 상태·엔진 미전송) */
       rentalAddressJibun: string;
       /** 공동주택 동(예: "324") — 임대개시일 기준시가 세대 식별용(UI 상태·엔진 미전송) */

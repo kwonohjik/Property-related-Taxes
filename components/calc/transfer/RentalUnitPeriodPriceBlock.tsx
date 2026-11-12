@@ -14,6 +14,9 @@ import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdP
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PeriodRangeEditor } from "./PeriodRangeEditor";
 import { rentalUnitLowPriceInScope } from "@/lib/calc/rental-unit-low-price-scope";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { recognizedRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
+import { rentalRegistrationBasisDate } from "@/lib/stores/calc-wizard-asset-rental-period";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 type RentalUnitForm = AssetForm["rentalHousingException"]["rentalUnits"][number];
@@ -69,11 +72,48 @@ export function RentalUnitPeriodPriceBlock({
             onChange({ ...unit, rentalInputMode: "interval", rentalPeriods: patch.periods })
           }
         />
+        {(unit.rentalPeriods ?? []).some((p) => p.start && p.end) && (
+          <p className="text-xs px-1" data-testid={`rental-recognized-months-${index}`}>
+            의무임대기간 판정에 쓰는 임대기간:{" "}
+            <strong>
+              {recognizedRentalMonths(unit.rentalPeriods, rentalRegistrationBasisDate(unit))}개월
+            </strong>
+            <span className="text-muted-foreground">
+              {" "}— 세무서 사업자등록일·지자체 등록신청일 중 늦은 날 전의 임대분은 빼고(소령 §167의3③), 임차인이
+              바뀌는 사이 3개월 이내 공실은 넣어 셉니다(조특령 §97⑤5호 · 조특칙 §44). 3개월을 넘는 공실은 뺍니다.
+            </span>
+          </p>
+        )}
         <p className="text-xs text-muted-foreground px-1">
           의무임대기간 {reqYears}년({reqYears * 12}개월) — 채우기 전에 거주주택을 양도해도 특례를 적용하며,
           이후 채우지 못하면 특례가 없었을 경우의 세액과의 차액을 신고·납부합니다(소령 §155㉑·㉒).
         </p>
       </div>
+
+      {/* 상속받아 계속 임대 — 피상속인 임대기간 합산(조특령 §97⑤3호). 구간은 상속인 등록일로 잘리므로 따로 받는다. */}
+      <ToggleCard
+        variant="card"
+        size="sm"
+        tone="violet"
+        data-testid={`rental-inherited-${index}`}
+        title="상속받아 계속 임대하는 주택입니다."
+        description="피상속인의 임대기간을 상속인의 임대기간에 더합니다(조특령 §97⑤3호 · 소령 §167의3③ 준용)."
+        checked={unit.isInheritedRental === true}
+        onCheckedChange={(v) => set("isInheritedRental", v)}
+      >
+        <FieldCard
+          label="피상속인 임대기간"
+          required
+          unit="개월"
+          hint="피상속인이 세무서 사업자등록과 임대주택 등록을 한 뒤 임대한 기간입니다. 임차인이 바뀌는 사이 3개월 이내 공실은 넣고, 넘는 공실은 빼서 셉니다. 위 「실제 임대 기간」에는 상속 후 상속인이 임대한 구간만 넣으세요."
+        >
+          <DecimalInput
+            value={unit.decedentRentalMonths ?? ""}
+            onChange={(v) => set("decedentRentalMonths", v)}
+            placeholder="피상속인 임대 개월"
+          />
+        </FieldCard>
+      </ToggleCard>
 
       {/* 기준시가 — 나·라목은 취득당시(3억), 그 외는 임대개시일(Vworld 자동조회) */}
       {showAcqPrice ? (

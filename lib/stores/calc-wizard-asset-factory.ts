@@ -69,6 +69,8 @@ export function makeDefaultRentalUnit(): AssetForm["rentalHousingException"]["re
     rentalMonths: "",
     rentalInputMode: "direct",
     rentalPeriods: [],
+    isInheritedRental: false,
+    decedentRentalMonths: "",
     rentalAddressJibun: "",
     rentalDong: "",
     rentalHo: "",
