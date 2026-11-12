@@ -84,7 +84,8 @@ describe("RO-C2 동시신고(수령) — 3분할 그대로", () => {
     expect(t).toContain("② 인가후 기존건물분");
     expect(t).toContain("③ 청산금 수령분");
     expect(t).toContain("분양가 386,000,000");
-    expect(t).not.toContain("안분 필요경비 등");
+    // 동시신고도 열마다 필요경비 행을 그린다 — `redev-simultaneous-card-expenses.anchor.test.tsx`
+    expect(t).toContain("안분 필요경비 등(=인가전 필요경비 등 × 청산금권리가액)2,280,000");
   });
 });
 

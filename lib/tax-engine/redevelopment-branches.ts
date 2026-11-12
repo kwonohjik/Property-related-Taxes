@@ -554,11 +554,17 @@ export function runOriginalMember(
     // (`splitAptPay`의 양도차익 분할과 같은 규약 — memory `feedback_floor_residual_absorption`).
     const salePriceTotal = redevelopment.rightsValue + redevelopment.settlementAmount;
     if (salePriceTotal <= 0) return { existingHouse: rawPostApprovalExpenses, settlement: 0 };
-    const existingHouse = safeMultiplyThenDivide(
-      rawPostApprovalExpenses,
-      redevelopment.rightsValue,
-      salePriceTotal,
-    );
+    /*
+     * 기존주택분 몫 = 그 열의 양도가액 − 취득가액 − 양도차익(잔액). 양도가액·양도차익이 각각 절사돼 비율을 따로 곱하면
+     * 열 산식이 1원 어긋났다(평가 3억·청산 5천만·양도 4.2억·인가후 4백만: 3,428,571 ↔ 산식 3,428,572 — 2026-11-12 실측).
+     * 청산금분은 원액에서 뺀 나머지라 두 몫의 합은 원액 그대로다. 잔액이 범위를 벗어나면(엔진 밖 보정) 종전 비율 몫을 쓴다.
+     */
+    const ex = split.postApprovalExistingHouse;
+    const residual = ex.apportionedTransfer - ex.apportionedAcquisition - ex.gain;
+    const existingHouse =
+      residual >= 0 && residual <= rawPostApprovalExpenses
+        ? residual
+        : safeMultiplyThenDivide(rawPostApprovalExpenses, redevelopment.rightsValue, salePriceTotal);
     return { existingHouse, settlement: rawPostApprovalExpenses - existingHouse };
   })();
 

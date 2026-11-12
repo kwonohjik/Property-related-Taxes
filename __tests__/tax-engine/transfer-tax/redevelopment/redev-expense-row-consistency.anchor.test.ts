@@ -141,14 +141,14 @@ describe("E1-06 · 인가후 필요경비 — 두 열에 원액이 각각 붙지
     });
 
     it("E1-06-02: 기존주택분이 평가액 몫, 청산금분이 잔차를 갖는다 (§166②1호 비율)", () => {
-      // floor(9,000,000 × 650,000,000 / 950,000,000) = 6,157,894 · 잔차 2,842,106
-      expect(d.postApprovalExistingHouse.expenses).toBe(6_157_894);
-      expect(d.settlement.expenses).toBe(2_842_106);
+      // 기존주택분 = 그 열의 양도가액 − 취득가액 − 양도차익(2026-11-12 — 비율 floor 6,157,894는 열 산식과 1원 어긋났다) · 청산금분 = 원액 − 기존주택분
+      expect(d.postApprovalExistingHouse.expenses).toBe(6_157_895);
+      expect(d.settlement.expenses).toBe(2_842_105);
     });
 
-    it("E1-06-03: 두 열의 잔차가 ≤2원이다 (종전 2,842,105 · 6,157,896)", () => {
-      expect(Math.abs(rowResidual(d.postApprovalExistingHouse))).toBeLessThanOrEqual(2);
-      expect(Math.abs(rowResidual(d.settlement))).toBeLessThanOrEqual(2);
+    it("E1-06-03: 두 열의 잔차가 0원이다 (종전 ≤2원 허용 — 2,842,105 · 6,157,896 → 1원)", () => {
+      expect(rowResidual(d.postApprovalExistingHouse)).toBe(0);
+      expect(rowResidual(d.settlement)).toBe(0);
     });
   });
 
