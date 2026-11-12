@@ -100,8 +100,8 @@ export function TransferBuildingStdFields({
   transferDate,
   placement,
 }: FieldProps & {
-  /** hint 문안 분기 — 축 A는 안분 분모를 겸하지만, 파트 배치에서는 환산 분모 전용이다 */
-  placement: "saleAxis" | "part";
+  /** hint 문안 분기 — 축 A는 안분 분모를 겸하지만, 파트 배치에서는 환산 분모 전용이다. `ownedPart` = 부담부증여 소유자 분리의 증여한 건물분(§159 평가액) */
+  placement: "saleAxis" | "part" | "ownedPart";
 }) {
   return (
     <FieldCard
@@ -111,7 +111,9 @@ export function TransferBuildingStdFields({
       hint={
         placement === "saleAxis"
           ? "안분 분모 겸 환산취득가 분모 — 계산기로 산정 (§99①1호 나목)"
-          : "환산취득가 분모 — 계산기로 산정 (§99①1호 나목). 위치지수·부속토지 값은 계산기 안에서 입력합니다"
+          : placement === "ownedPart"
+            ? "증여한 건물분의 평가액(증여가액·양도가액 산정 기준) — 계산기로 산정 (§99①1호 나목). 위치지수·부속토지 값은 계산기 안에서 입력합니다"
+            : "환산취득가 분모 — 계산기로 산정 (§99①1호 나목). 위치지수·부속토지 값은 계산기 안에서 입력합니다"
       }
     >
       <div className="space-y-1.5">

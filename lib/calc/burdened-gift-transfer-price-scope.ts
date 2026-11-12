@@ -36,6 +36,7 @@ import { isFullFractionalBundle } from "./transfer-tax-api-asset-basics";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { burdenedGiftPerAssetTotals } from "@/lib/tax-engine/burdened-gift-totals";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
+import { bgOwnerSplitActive } from "./bg-owner-split-scope";
 
 /**
  * 이 자산의 양도가액을 **엔진이 스스로 산정**하는가(= 입력칸이 없고, 넣어도 쓰이지 않는다).
@@ -93,6 +94,8 @@ export function stdPriceAtTransferComesFromElsewhere(asset: AssetForm): boolean 
   return (
     asset.transferType === "burdened_gift" &&
     (asset.assetKind === "general_building" ||
+      // 토지·건물 소유자 분리 범위 안 — 증여한 부분의 양도시 기준시가를 소유자 분리 카드가 받는다(공용 칸이 화면에 없다 · `bg-owner-split-scope.ts`).
+      bgOwnerSplitActive(asset) ||
       /**
        * 겸용주택 — 양도시 기준시가는 4부분 겸용 패널(`mixedTransfer*`)이 정본이고 엔진은 `standardPriceAtTransfer` 총액을 읽지 않는다.
        * 공용 칸을 띄우면 **엔진이 쓰지 않는 값**을 입력받게 된다(설계 UI R2 §4 DUP-1). ⑧도 같은 술어라 요구하지 않는다.

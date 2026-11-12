@@ -34,6 +34,16 @@ export interface BurdenedGiftFormSlice {
    */
   bgMarketValueLand: string;
   bgMarketValueBuilding: string;
+  /**
+   * 시가 모드 × 토지·건물 소유자 분리(`bgOwnerSplitActive`) — **증여한 부분(본인 소유분)** 의 양도시 시가. ④가 기존 info 키 `marketValueAtTransfer`로 싣는다(새 와이어 키 없음).
+   * 총액 칸(`bgMarketValueAtTransfer`)과 갈라 둔 이유: 소유자 분리를 끄거나 켜도 두 값이 서로를 덮어쓰지 않아 저장값을 잘못 읽지 않는다(계획서 Q-4).
+   */
+  bgMarketValueOwnedPart: string;
+  /**
+   * 소유자 분리 × 부담부증여 — 「채무(보증금 포함)가 증여자 본인 채무이고 증여한 부분에만 관련된다」는 확인(계획서 Q-3 a). 공동담보 안분은 입력 칸이 없어 계산하지 않는다.
+   * 폼 확인 항목이라 요청 본문에 키가 없다 — ⑧만 요구한다.
+   */
+  bgOwnerSplitDebtConfirmed: boolean;
   /** 시가 모드 취득시 평가액 (총액). sangjeungbeop_market 시 필수. */
   bgMarketValueAtAcquisition: string;
   /**

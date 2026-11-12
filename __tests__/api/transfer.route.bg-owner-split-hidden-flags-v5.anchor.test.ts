@@ -29,7 +29,10 @@ import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { captureBody } from "../calc/_one-house-pr3a-calc-route";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { validateSplitDirectInputs } from "@/lib/calc/transfer-tax-validate-split";
-import { BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE } from "@/lib/calc/bg-owner-split-scope";
+import { bgOwnerSplitReasonMessage } from "@/lib/calc/bg-owner-split-scope";
+
+/** 이 격자의 시료는 주택 — 범위 밖(Q-1 b)이라 사유 «주택» 문구로 막는다. 범위 안(건물) 숨은 플래그는 `transfer.route.bg-owner-split-calc.anchor.test.ts`가 다시 고정한다. */
+const BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE = bgOwnerSplitReasonMessage("housing");
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 

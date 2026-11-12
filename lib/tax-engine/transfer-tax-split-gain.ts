@@ -73,7 +73,8 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
 
   // 부담부증여 × 토지·건물 취득일 다름 — §159 파트 값이 이미 완성돼 있다(부담부증여 단계). 다시 안분하지 않는다.
   //   아래 파트 원인 규칙의 BG-D(⑧·⑫ 차단)보다 **앞**이다 — 이 경로가 바로 그 입력을 계산한다(설계서 `bg-house-building-split.design.md` §5.1).
-  if (input.burdenedGiftSplitParts && input.landAcquisitionDate) return bgSplitGainResult(input);
+  // 소유자 분리(`burdened-gift-owner-split.ts`)도 이 통로다 — 토지 취득일이 없으면 자산 취득일로 센다(`bgSplitGainResult`).
+  if (input.burdenedGiftSplitParts) return bgSplitGainResult(input);
 
   // 토지 파트 취득원인 규칙(D0 G-1~G-3 · D1 결합 제외·토지 취득일·§163⑨ 단서 1호 · P1 파트 이월과세 S0~S8 — S9는 P5에서 해결자 ②2호로 대체) — ⑫·⑧과 같은 leaf.
   // 토지 취득일 조기 반환보다 **앞**이다: 토지 상속·증여가 지정됐는데 토지 취득일이 없으면 토지 파트가

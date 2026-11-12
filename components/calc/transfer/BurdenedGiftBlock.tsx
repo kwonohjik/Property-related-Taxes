@@ -17,6 +17,8 @@
 
 import { BurdenedGiftHouseSplitCard } from "./BurdenedGiftHouseSplitCard";
 import { bgHouseSplitActive } from "@/lib/calc/bg-house-split";
+import { bgOwnerSplitActive } from "@/lib/calc/bg-owner-split-scope";
+import { BgOwnerSplitDebtConfirm, BgOwnerSplitMarketValueField, BurdenedGiftOwnerSplitCard } from "./BurdenedGiftOwnerSplitCard";
 import { useMemo } from "react";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
@@ -224,6 +226,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   const readsTransferorGiftValuation = isCarryoverPresumed || isCarryoverConverted || partialGiftedPart !== undefined;
   /** 주택·건물 × 토지·건물 취득일 다름 — 실지취득가액도 토지·건물 두 칸(총액 칸 없음 · ④·⑧과 같은 술어). */
   const houseSplit = bgHouseSplitActive(asset);
+  /** 토지·건물 소유자 분리 범위 안 — 증여한 부분(본인 소유분)만 입력한다(시가·실지취득가·기준시가 · ④·⑧·⑫와 같은 술어). */
+  const ownerSplit = bgOwnerSplitActive(asset);
+  const ownedName = asset.selfOwns === "land_only" ? "토지" : "건물";
   /** §163⑨ 단서 구간(토지 1호 · 단독주택 2호) — 실지 칸 아래에 ② §164 칸을 연다(④와 같은 술어). */
   const bgProvisoKind = bgSec163_9ProvisoKind(asset);
   const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -348,6 +353,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             />
           </FieldCard>
         </div>
+        {/* 토지·건물 소유자 분리 — 증여한 부분에 대한 채무만 + 공동담보 아님 확인(⑧ 필수) */}
+        <BgOwnerSplitDebtConfirm asset={asset} onChange={onChange} />
         {/* 겸용주택 — 채무가 주택·상가 어디에 속하는지(부동산거래관리과-119). 총액은 위 두 칸이 정본이다. */}
         {isMixed && <BurdenedGiftDebtAttributionCard asset={asset} onChange={onChange} />}
       </div>
@@ -356,13 +363,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
       {isMarketMode && (
         <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-3 dark:bg-amber-950/40">
           <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">시가 모드 — 상증법 §60②~④</p>
-          <FieldCard label="양도시 시가 평가액 (총액)">
-            <CurrencyInput label=""
-              hideUnit
-              value={asset.bgMarketValueAtTransfer} data-field="bgMarketValueAtTransfer"
-              onChange={(v) => onChange({ bgMarketValueAtTransfer: v })}
-            />
-          </FieldCard>
+          <BgOwnerSplitMarketValueField asset={asset} onChange={onChange} />
 
           {/* 겸용주택 — 구분 감정평가가액 유무 선언(G-13): 시가를 주택·상가로 나누는 법정 안분의 근거 */}
           {isMixed && <BurdenedGiftHousingAppraisalField asset={asset} onChange={onChange} />}
@@ -415,12 +416,12 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           {collateralForced && !preDeemed && (
             <ToneCard tone="violet">
               <p className="text-xs text-violet-900 dark:text-violet-200" data-testid="bg-collateral-forced-notice">
-                담보평가액 {fmt(valuationPreview.mortgage)}원이 시가 {fmt(parseAmount(asset.bgMarketValueAtTransfer) || 0)}원보다 커서 증여가액이 담보평가액입니다
+                담보평가액 {fmt(valuationPreview.mortgage)}원이 시가 {fmt(parseAmount(ownerSplit ? asset.bgMarketValueOwnedPart : asset.bgMarketValueAtTransfer) || 0)}원보다 커서 증여가액이 담보평가액입니다
                 (「상속세 및 증여세법」 제66조). 취득가액은 위 산정방식과 관계없이 <b>취득시 기준시가 × 채무비율</b>로 산정하고(「소득세법 시행령」 제159조
                 제1항 제1호 괄호), 필요경비는 개산공제입니다.{" "}
                 {asset.assetKind === "general_building"
                   ? "취득시 기준시가는 아래 일반건물 취득 정보의 취득시 토지·건물 기준시가를 씁니다."
-                  : "취득시 기준시가는 「② 양도정보」에 입력하세요."}
+                  : ownerSplit ? `취득시 기준시가는 아래 「증여한 ${ownedName}분의 기준시가」 카드에 입력하세요.` : "취득시 기준시가는 「② 양도정보」에 입력하세요."}
                 {isCarryover && " 이월과세이므로 당초 증여자의 취득 당시 기준시가도 아래 「이월과세」 칸에 입력하세요."}
                 {bgCollateralParenEraUncertain(transferDate) &&
                   " 다만 양도일이 2023.2.28. 전이라 그 당시 괄호에는 담보채권액 평가(「상속세 및 증여세법」 제66조)가 열거되어 있지 않았습니다 — 이 취득가액은 현행 문언대로 계산한 것이라 확인이 필요합니다(결과 화면에서 다시 안내합니다)."}
@@ -455,7 +456,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                 ? " 아래 일반건물 취득 정보의 취득시 토지·건물 기준시가를 입력하세요."
                 : isMixed
                   ? " 겸용주택은 「③ 취득정보 > 겸용주택」의 양도시·취득시 기준시가(주택·상가 4부분)로 계산합니다."
-                  : " 아래 「② 양도정보」에서 양도시·취득시 기준시가를 입력하세요."}
+                  : ownerSplit ? ` 아래 「증여한 ${ownedName}분의 기준시가」 카드에서 양도시·취득시 기준시가를 입력하세요.` : " 아래 「② 양도정보」에서 양도시·취득시 기준시가를 입력하세요."}
               {" "}개산공제(§163⑥ 3%) 자동 적용.
             </div>
           )}
@@ -477,6 +478,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
 
       {/* 주택·건물 × 토지·건물 취득일 다름 — 파트 평가액·기준시가(설계서 `bg-house-building-split.design.md` §5.2) */}
       <BurdenedGiftHouseSplitCard asset={asset} onChange={onChange} transferDate={transferDate} />
+      {/* 토지·건물 소유자 분리 — 증여한 부분의 양도시·취득시 기준시가(단일 기준시가 칸은 숨는다 · 술어 `bgOwnerSplitActive`) */}
+      <BurdenedGiftOwnerSplitCard asset={asset} onChange={onChange} transferDate={transferDate} />
 
       {/* 의제 첫 지분이라도 범위 밖 지분이 있으면 그 지분의 실지취득가액을 여기서 받는다(위 라디오와 같은 판정 · ⑧이 요구 — PR-7b-5) */}
       {((isMarketMode && !collateralForced && (!preDeemed || methodForOtherShares) && !noMethod && (asset.bgAcquisitionMethod === "actual" || readsTransferorGiftValuation)) || isRightToMoveIn) && (
@@ -548,7 +551,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                     ? "둘째 이후 원조합원 지분의 계산에 쓰입니다 — 물건 전체 기준으로 입력하면 지분율로 안분됩니다. 이 카드(승계)의 취득가액은 ③ 승계취득 정보의 값입니다."
                     : sec163_9Hint(bgProvisoKind ? (asset.acquisitionCause === "gift" ? "gift" : "inheritance") : bgActualFieldSec163_9Cause(asset))
                 }
-                label={originalShareAcqOnSuccessor ? "원조합원 지분의 종전 부동산 실지취득가액" : isRightToMoveIn ? "종전 부동산 실지취득가액" : isMixed ? "실지취득가액 — 주택·상가 전체 (토지 포함)" : "실지취득가액 (주택·건물 전체)"}
+                label={originalShareAcqOnSuccessor ? "원조합원 지분의 종전 부동산 실지취득가액" : isRightToMoveIn ? "종전 부동산 실지취득가액" : isMixed ? "실지취득가액 — 주택·상가 전체 (토지 포함)" : ownerSplit ? `증여한 ${ownedName}분 실지취득가액` : "실지취득가액 (주택·건물 전체)"}
               >
                 <CurrencyInput label="" hideUnit
                   value={asset.bgActualAcquisitionTotal} data-field="bgActualAcquisitionTotal"
@@ -579,7 +582,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
 
       {isMixed && <BurdenedGiftMixedUsePanel asset={asset} transferDate={transferDate} />}
 
-      {!isMixed && !isMarketMode && asset.assetKind !== "land" && !isRightToMoveIn && (
+      {!isMixed && !isMarketMode && asset.assetKind !== "land" && !isRightToMoveIn && !ownerSplit && (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-2 dark:bg-emerald-950/40">
         <div className="flex flex-wrap items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">

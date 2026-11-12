@@ -825,7 +825,7 @@ export interface TransferTaxInput {
     building?: SplitCarryoverPartBasis;
   };
   /**
-   * ⚠️ 엔진 내부 전달용 — 주택·건물 부담부증여 × 토지·건물 취득일 다름(`bgPartDatesDiffer`)에서 부담부증여 단계가 싣는 §159 파트 값.
+   * ⚠️ 엔진 내부 전달용 — 주택·건물 부담부증여 × 토지·건물 취득일 다름(`bgPartDatesDiffer`) 또는 소유자 분리(`bgOwnerSplitOf` — 비소유 파트 0)에서 부담부증여 단계가 싣는 §159 파트 값.
    * `calcSplitGain`이 다시 안분하지 않고 그대로 쓴다(설계서 `bg-house-building-split.design.md` §5.1). 와이어(⑫)에는 없다.
    */
   burdenedGiftSplitParts?: {

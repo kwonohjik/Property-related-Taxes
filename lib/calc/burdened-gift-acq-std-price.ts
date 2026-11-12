@@ -22,6 +22,7 @@ import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { bgConvertedCarryoverReadsGiftValuation } from "./bg-carryover-parts";
+import { bgOwnerSplitActive } from "./bg-owner-split-scope";
 
 type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause" | "redevIsSuccessorMember" | "isMixedUseHouse">> & Pick<
   AssetForm,
@@ -61,6 +62,12 @@ type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause" | "redevIsSuccesso
  * 취득가액을 취득시 기준시가로 강제하고, 이 칸이 비면 400을 낸다(`burdened-gift-residuals-o3-o5-o8.plan.md` O-5).
  */
 export function needsBgAcqStdPriceInput(asset: AcqStdAsset, isFractionalSplit?: boolean): boolean {
+  // 토지·건물 소유자 분리 범위 안(`bgOwnerSplitActive`)은 단일 취득시 기준시가 칸을 쓰지 않는다 — 증여한 부분의 취득시 기준시가를 소유자 분리 카드가 받는다(`bgAcqStdPriceNeededBase`가 그 칸의 노출 조건).
+  return !bgOwnerSplitActive(asset as AssetForm) && bgAcqStdPriceNeededBase(asset, isFractionalSplit);
+}
+
+/** 위 노출 조건의 본체 — 소유자 분리 제외 전. 소유자 분리 카드(⑤)·⑧(`validateBgOwnerSplit`)이 「증여한 부분의 취득시 기준시가」 필요 여부로 읽는다. */
+export function bgAcqStdPriceNeededBase(asset: AcqStdAsset, isFractionalSplit?: boolean): boolean {
   return (
     asset.transferType === "burdened_gift" &&
     (asset.bgValuationMode !== "sangjeungbeop_market" ||

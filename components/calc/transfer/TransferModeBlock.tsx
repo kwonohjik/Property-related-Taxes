@@ -24,6 +24,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ASSET_KIND_LABELS } from "./asset-labels";
 import { BurdenedGiftBlock } from "./BurdenedGiftBlock";
+import { BurdenedGiftOwnerSplitNotice } from "./BurdenedGiftOwnerSplitCard";
 import { neutralizeCarryoverDonorSplitForCompanion } from "@/lib/calc/transfer-land-part-cause";
 import { ExpropriationBlock } from "./ExpropriationBlock";
 import { AuctionBlock } from "./AuctionBlock";
@@ -221,6 +222,9 @@ export function TransferModeBlock({ asset, onChange, transferDate, isFractionalS
           </div>
         </ToneCard>
       )}
+
+      {/* 토지·건물 소유자 분리 × 부담부증여 — 증여한 부분만 계산한다는 안내(범위 안일 때만 · `bgOwnerSplitActive`) */}
+      {isBurdenedGift && isSupported && <BurdenedGiftOwnerSplitNotice asset={asset} />}
 
       {/* 부담부증여 펼침 — BurdenedGiftBlock 재사용 */}
       {isBurdenedGift && isSupported && (

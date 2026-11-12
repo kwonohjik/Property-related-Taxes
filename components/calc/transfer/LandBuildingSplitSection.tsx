@@ -141,6 +141,8 @@ export function PartAcqStdPrice(props: {
   calcUnusedNote?: string;
   /** (building 전용) 양도시 칸을 같은 카드에 배치하고 런처를 2시점 통합 모달로 전환 */
   showTransfer?: boolean;
+  /** (building · showTransfer 전용) 양도시 칸 hint 문안 — 기본은 환산취득가 분모 안내. 부담부증여 소유자 분리는 증여한 건물분의 평가액이다. */
+  transferHint?: string;
 }) {
   const { asset, onChange } = props;
   const stdPriceAddress = stdPriceAddressOf(asset);
@@ -220,7 +222,7 @@ export function PartAcqStdPrice(props: {
               field="buildingStandardPriceAtTransfer"
               label="양도시 건물 기준시가"
               unit="원"
-              hint="환산취득가 분모 (§99①1호 나목). 위치지수·부속토지 값은 계산기 안에서 입력합니다"
+              hint={props.transferHint ?? "환산취득가 분모 (§99①1호 나목). 위치지수·부속토지 값은 계산기 안에서 입력합니다"}
             >
               <CurrencyInput
                 label=""

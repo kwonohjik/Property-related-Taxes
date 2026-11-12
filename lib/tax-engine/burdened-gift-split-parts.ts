@@ -101,7 +101,7 @@ export function assertBgSplitInputs(info: NonNullable<TransferTaxInput["burdened
   );
 }
 
-/** 분리 계산 결과 — 파트 값은 그대로, 보유연수는 파트 취득일(토지 = `landAcquisitionDate` · 건물 = `acquisitionDate`)부터. */
+/** 분리 계산 결과 — 파트 값은 그대로, 보유연수는 파트 취득일(토지 = `landAcquisitionDate` · 건물 = `acquisitionDate`)부터. 소유자 분리면 `selfOwns`를 그대로 돌려준다(계획서 `bg-owner-split-159.plan.md` §5). */
 export function bgSplitGainResult(input: TransferTaxInput): SplitGainResult {
   const parts = input.burdenedGiftSplitParts!;
   const partResult = (p: BurdenedGiftSplitPart, from: Date): SplitPartResult => ({
@@ -118,12 +118,17 @@ export function bgSplitGainResult(input: TransferTaxInput): SplitGainResult {
     acqMode: p.acqMode,
     stdPriceDerivedFromTotal: false,
   });
-  const land = partResult(parts.land, input.landAcquisitionDate!);
+  // 소유자 분리는 토지 취득일이 없으면 자산 취득일이다(④ `landAcquisitionDate` 후퇴와 같다) — 날짜 분리는 토지 취득일이 있어야 파트가 생긴다.
+  const land = partResult(parts.land, input.landAcquisitionDate ?? input.acquisitionDate);
   const building = partResult(parts.building, input.acquisitionDate);
+  const selfOwns = input.selfOwns ?? "both";
   return {
     land,
     building,
-    note: `토지 ${land.holdingYears}년 + 건물 ${building.holdingYears}년 분리 (부담부증여 — 「소득세법 시행령」 제159조 파트별 안분)`,
-    selfOwns: "both",
+    note:
+      selfOwns === "both"
+        ? `토지 ${land.holdingYears}년 + 건물 ${building.holdingYears}년 분리 (부담부증여 — 「소득세법 시행령」 제159조 파트별 안분)`
+        : `${selfOwns === "building_only" ? "건물" : "토지"}만 증여 ${(selfOwns === "building_only" ? building : land).holdingYears}년 (부담부증여 — 「소득세법 시행령」 제159조 증여한 부분만)`,
+    selfOwns,
   };
 }

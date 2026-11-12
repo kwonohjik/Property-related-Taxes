@@ -195,7 +195,7 @@ export function CompanionAcquisitionCauseSection({
       {/* 「토지·건물 소유자 다름」 — 취득원인 라디오 직하(2026-07-30 이동).
           이 토글이 「취득일 다름」을 강제로 켜므로 그보다 **앞**에 와야 위→아래 연쇄가 된다.
           현재 노출은 매매 전용(컴포넌트 내부 게이트) — 상속·증여 확대는 별도 PR. */}
-      <AssetOwnershipSplitSection asset={asset} onChange={onChange} />
+      <AssetOwnershipSplitSection asset={asset} onChange={onChange} bundled={!!(isNonPrimaryAsset || hasCompanions)} />
 
       {/* 토지를 상속·증여로 취득하고 그 위에 건물을 신축한 경우 — 토지 파트 입력.
           취득원인이 자산 단위 단일값이라 종전엔 토지 취득일·취득가액 칸이 아예 없었다. */}
