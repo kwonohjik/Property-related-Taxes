@@ -92,6 +92,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     isRankingDisqualifiedInheritedHouse: h.isRankingDisqualifiedInheritedHouse,
     isRegisteredRental: h.isRegisteredRental,
     rentalRegistrationDate: toOptionalDate(h.rentalRegistrationDate),
+    rentalRegisteredDate: toOptionalDate(h.rentalRegisteredDate), // V-3
     businessRegistrationDate: toOptionalDate(h.businessRegistrationDate),
     rentalPeriodYears: h.rentalPeriodYears,
     rentalStartDate: toOptionalDate(h.rentalStartDate),

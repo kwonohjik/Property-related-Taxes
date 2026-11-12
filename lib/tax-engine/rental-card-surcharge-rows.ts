@@ -91,6 +91,7 @@ function rowFor(unit: RentalUnitInput, index: number, transferDate: Date, rental
     rentalType,
     businessRegistrationDate: unit.businessRegistrationDate,
     rentalRegistrationDate: unit.rentalRegistrationDate,
+    rentalRegisteredDate: unit.rentalRegisteredDate,
     rentalPeriodYears: unit.rentalMonths / 12,
     rentIncreaseUnder5Pct: unit.requirementsConfirmed,
     rentalStartOfficialPrice: unit.standardPriceAtRentalStart,

@@ -23,7 +23,7 @@ function unit(over: Partial<Unit> = {}): Unit {
   return {
     ...makeDefaultRentalUnit(),
     businessRegistrationDate: "2018-06-01",
-    rentalRegistrationDate: "2018-06-01",
+    rentalRegistrationDate: "2018-06-01", rentalRegisteredDate: "2018-06-01",
     standardPriceAtRentalStart: "300,000,000",
     requirementsConfirmed: true,
     rentalMonths: "30",
@@ -88,7 +88,7 @@ describe("V-1·V-2·V-3 ⑧", () => {
     const ba = unit({
       rentalAcquisitionType: "construction",
       businessRegistrationDate: "2021-01-01",
-      rentalRegistrationDate: "2021-01-01",
+      rentalRegistrationDate: "2021-01-01", rentalRegisteredDate: "2021-01-01",
       rentalLandArea: "200",
       rentalTotalFloorArea: "140",
       hasMinimum2Units: true,

@@ -21,6 +21,8 @@
 
 import { DateInput } from "@/components/ui/date-input";
 import { RentalPeriodDatesFields } from "@/components/calc/transfer/RentalPeriodDatesFields";
+import { REGISTERED_DATE_HINT } from "@/components/calc/transfer/RentalPeriodDatesFields";
+import { registeredDateAfterApplicationChange } from "@/lib/stores/calc-wizard-asset-rental-period";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
@@ -81,6 +83,7 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
               patch({
                 isRegisteredRental: b,
                 rentalRegistrationDate: b ? ltr.rentalRegistrationDate : undefined,
+                rentalRegisteredDate: b ? ltr.rentalRegisteredDate : undefined,
                 businessRegistrationDate: b ? ltr.businessRegistrationDate : undefined,
               })
             }
@@ -94,8 +97,25 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
                 </label>
                 <DateInput
                   value={ltr.rentalRegistrationDate ?? ""}
-                  onChange={(s) => patch({ rentalRegistrationDate: s || undefined })}
+                  onChange={(s) =>
+                    patch({
+                      rentalRegistrationDate: s || undefined,
+                      rentalRegisteredDate:
+                        registeredDateAfterApplicationChange(ltr.rentalRegistrationDate, ltr.rentalRegisteredDate, s) || undefined,
+                    })
+                  }
                 />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-caption text-muted-foreground font-medium">
+                  임대사업자 등록일
+                </label>
+                <DateInput
+                  data-testid="selling-rental-registered-date"
+                  value={ltr.rentalRegisteredDate ?? ""}
+                  onChange={(s) => patch({ rentalRegisteredDate: s || undefined })}
+                />
+                <p className="text-caption text-muted-foreground">{REGISTERED_DATE_HINT}</p>
               </div>
               <div className="space-y-1">
                 <label className="block text-caption text-muted-foreground font-medium">

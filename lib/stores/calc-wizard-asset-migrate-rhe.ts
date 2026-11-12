@@ -31,6 +31,8 @@ export function migrateRentalHousingException(a: Record<string, unknown>): void 
         }
         if (u.businessRegistrationDate === undefined) u.businessRegistrationDate = "";
         if (u.rentalRegistrationDate === undefined) u.rentalRegistrationDate = "";
+        // V-3 등록일 칸 신설 — 옛 기록은 빈 값(⑧이 입력을 요구한다 · 신청일로 간주하지 않는다)
+        if (u.rentalRegisteredDate === undefined) u.rentalRegisteredDate = "";
         // rentalType 5값 → rentalCategory 3값 (short-4는 pre_2018로: 의무기간 4→5년 상향·재입력 유도)
         if (u.rentalCategory === undefined) {
           const t = u.rentalType;

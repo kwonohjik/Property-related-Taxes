@@ -28,7 +28,7 @@ function asset(over: Partial<AssetForm> = {}): AssetForm {
         {
           ...makeDefaultRentalUnit(),
           businessRegistrationDate: "2018-06-01",
-          rentalRegistrationDate: "2018-06-01",
+          rentalRegistrationDate: "2018-06-01", rentalRegisteredDate: "2018-06-01",
           rentalCategory: "long_general",
           rentalAcquisitionType: "purchase",
           standardPriceAtRentalStart: "300,000,000",

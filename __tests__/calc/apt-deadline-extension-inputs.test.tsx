@@ -53,7 +53,7 @@ const row = (over: Partial<HouseEntry> = {}): HouseEntry => ({
   isOfficetel: false,
   isUnsoldHousing: false,
   isRegisteredRental: true,
-  rentalRegistrationDate: "2018-01-01",
+  rentalRegistrationDate: "2018-01-01", rentalRegisteredDate: "2018-01-01",
   businessRegistrationDate: "2018-01-01",
   rentalType: "A",
   ...over,
@@ -122,7 +122,7 @@ type Unit = AssetForm["rentalHousingException"]["rentalUnits"][number];
 const unit = (over: Partial<Unit> = {}): Unit => ({
   ...makeDefaultRentalUnit(),
   businessRegistrationDate: "2016-06-01",
-  rentalRegistrationDate: "2016-06-01",
+  rentalRegistrationDate: "2016-06-01", rentalRegisteredDate: "2016-06-01",
   isApartment: true,
   ...over,
 });

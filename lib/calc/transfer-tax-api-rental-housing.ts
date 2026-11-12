@@ -55,6 +55,10 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
       rentalRegistrationDate: u.rentalRegistrationDate
         ? (u.rentalRegistrationDate.includes('T') ? u.rentalRegistrationDate : `${u.rentalRegistrationDate}T00:00:00.000Z`)
         : undefined,
+      // V-3 지자체 등록일 — 「등록을 한」 경계(엔진 `registeredDateOf`). 비면 보내지 않는다(엔진이 신청일로 본다)
+      rentalRegisteredDate: u.rentalRegisteredDate
+        ? (u.rentalRegisteredDate.includes('T') ? u.rentalRegisteredDate : `${u.rentalRegisteredDate}T00:00:00.000Z`)
+        : undefined,
       rentalCategory: u.rentalCategory,
       rentalAcquisitionType: u.rentalAcquisitionType,
       // boolean 요건 필드는 stale sessionStorage·이력 로드(migrateAsset 우회) 유닛에서 undefined일 수 있어

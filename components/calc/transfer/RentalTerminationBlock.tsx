@@ -94,7 +94,7 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
           <p className="text-xs px-1 pt-1" data-testid={`rental-half-duty-months-${index}`}>
             1/2 판정에 쓰는 임대기간: <strong>{deriveHalfDutyRentalMonths(unit)}개월</strong>
             <span className="text-muted-foreground">
-              {" "}— 임대사업자 등록 신청일(그 뒤 임대를 시작했으면 실제 임대개시일)부터 셉니다. 세무서 사업자등록일은
+              {" "}— 지자체 임대사업자 등록일(그 뒤 임대를 시작했으면 실제 임대개시일)부터 셉니다. 세무서 사업자등록일은
               기산에 쓰지 않습니다(민특령 §34①2호 · 서면-2021-부동산-7820).
             </span>
           </p>

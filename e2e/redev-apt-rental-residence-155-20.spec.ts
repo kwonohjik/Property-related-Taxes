@@ -43,7 +43,7 @@ test("[RRE-1] 완공APT + §155⑳ 선언 — 카드가 선언을 요약하고 �
           {
             ...makeDefaultRentalUnit(),
             businessRegistrationDate: "2015-01-01",
-            rentalRegistrationDate: "2015-01-01",
+            rentalRegistrationDate: "2015-01-01", rentalRegisteredDate: "2015-01-01",
             standardPriceAtRentalStart: "250,000,000",
             rentalInputMode: "direct",
             rentalMonths: "110",

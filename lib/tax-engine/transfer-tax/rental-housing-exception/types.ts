@@ -44,8 +44,10 @@ export type RentalArticle = "가" | "나" | "다" | "라" | "마" | "바" | "아
 export type RentalUnitInput = {
   /** 세무서 사업자등록일 (소득세법 §168) */
   businessRegistrationDate: Date;
-  /** 지자체 임대사업자등록신청일 (민특법 §5) */
+  /** 지자체 임대사업자등록신청일 (민특법 §5) — 「등록 신청」 경계(⑳ 본문 2020.7.10.·8.18.) */
   rentalRegistrationDate: Date;
+  /** 지자체 임대사업자 등록일(등록증) — 「등록을 한」 경계·기산(V-3 · `registeredDateOf`). 미제공이면 신청일 */
+  rentalRegisteredDate?: Date;
   /** 임대구분 (도출 목·의무기간·cap의 파생 소스) */
   rentalCategory: RentalCategory;
   /** 매입임대 / 건설임대 구분 */

@@ -22,7 +22,7 @@
             {
               "unitId": "b",
               "businessRegistrationDate": "2018-09-17",
-              "rentalRegistrationDate": "2018-09-17",
+              "rentalRegistrationDate": "2018-09-17", "rentalRegisteredDate": "2018-09-17",
               "rentalCategory": "long_general",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,
@@ -67,7 +67,7 @@
             {
               "unitId": "b",
               "businessRegistrationDate": "2018-09-17",
-              "rentalRegistrationDate": "2018-09-17",
+              "rentalRegistrationDate": "2018-09-17", "rentalRegisteredDate": "2018-09-17",
               "rentalCategory": "long_general",
               "rentalAcquisitionType": "purchase",
               "isApartment": false,

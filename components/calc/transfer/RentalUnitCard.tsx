@@ -35,6 +35,8 @@ import { AptDeadlineExtensionFields } from "./AptDeadlineExtensionFields";
 import { RentalTerminationBlock } from "./RentalTerminationBlock";
 import { RentalUnitPeriodPriceBlock } from "./RentalUnitPeriodPriceBlock";
 import { rentalUnitApartmentInScope } from "@/lib/calc/rental-unit-apartment-scope";
+import { rentalRegisteredDateOf } from "@/lib/stores/calc-wizard-asset-rental-period";
+import { registeredDateAfterApplicationChange } from "@/lib/stores/calc-wizard-asset-rental-period";
 
 /** 도출 목 → 사람이 읽는 라벨 */
 const ARTICLE_LABEL: Record<string, string> = {
@@ -68,13 +70,16 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
   }
 
   // ── 파생 (useMemo — store 미러링 금지, 표시 전용) ──
+  // 등록 완비일·「등록을 한」 경계는 지자체 **등록일**(V-3 — 비면 신청일 · 엔진 `registeredDateOf`와 같은 규칙)
+  const registeredDate = rentalRegisteredDateOf(unit);
   const effRegDate = useMemo(() => {
     if (!unit.businessRegistrationDate || !unit.rentalRegistrationDate) return null;
     return deriveEffectiveRegDate({
       businessRegistrationDate: new Date(unit.businessRegistrationDate),
       rentalRegistrationDate: new Date(unit.rentalRegistrationDate),
+      rentalRegisteredDate: new Date(registeredDate),
     });
-  }, [unit.businessRegistrationDate, unit.rentalRegistrationDate]);
+  }, [unit.businessRegistrationDate, unit.rentalRegistrationDate, registeredDate]);
 
   // 목 도출·마목 2) 아파트 제한·마·바목 의무기간은 지자체 등록 **신청일** 기준(엔진 `deriveRegApplicationDate`와 같은 규칙 — D-1).
   const regAppDate = useMemo(() => {
@@ -102,16 +107,22 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
       deriveCategoryAvailability(
         unit.businessRegistrationDate ? new Date(unit.businessRegistrationDate) : null,
         unit.rentalRegistrationDate ? new Date(unit.rentalRegistrationDate) : null,
+        unit.rentalRegisteredDate ? new Date(unit.rentalRegisteredDate) : null,
       ),
-    [unit.businessRegistrationDate, unit.rentalRegistrationDate],
+    [unit.businessRegistrationDate, unit.rentalRegistrationDate, unit.rentalRegisteredDate],
   );
 
   // 등록일 변경 시 무효화된 현재 선택만 유효 유형(long_general)으로 auto-reset (onChange 이벤트 구동 — useEffect 아님)
-  function setRegDate(key: "businessRegistrationDate" | "rentalRegistrationDate", v: string) {
+  function setRegDate(key: "businessRegistrationDate" | "rentalRegistrationDate" | "rentalRegisteredDate", v: string) {
     const next = { ...unit, [key]: v };
+    // V-3 — 신청일을 넣을 때 등록일이 비었거나 종전 신청일과 같으면 같은 날로 채운다(다르면 사용자가 고쳐 쓴다)
+    if (key === "rentalRegistrationDate") {
+      next.rentalRegisteredDate = registeredDateAfterApplicationChange(unit.rentalRegistrationDate, unit.rentalRegisteredDate, v);
+    }
     const avail = deriveCategoryAvailability(
       next.businessRegistrationDate ? new Date(next.businessRegistrationDate) : null,
       next.rentalRegistrationDate ? new Date(next.rentalRegistrationDate) : null,
+      next.rentalRegisteredDate ? new Date(next.rentalRegisteredDate) : null,
     );
     // avail[...]가 undefined일 수 있음(stale/legacy rentalCategory) — 옵셔널 체이닝으로
     // 크래시 방지 + 유효 기본값(long_general)으로 self-heal
@@ -119,7 +130,8 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
     onChange(next);
   }
   const reqYears = deriveRequiredYears(article, regAppDate);
-  const cap = deriveStdPriceCap(article, unit.region, regAppDate);
+  // 바목 2025.2.28. 상한은 「등록한」 — 지자체 등록일(V-3)
+  const cap = deriveStdPriceCap(article, unit.region, effRegDate && registeredDate ? new Date(registeredDate) : null);
   // 묻지 않는 구분(아·자)의 남은 「아파트」 값은 ④가 보내지 않으므로 경고에도 쓰지 않는다(SYNC-3).
   const aptRestricted = isApartmentRestricted(article, regAppDate, rentalUnitApartmentInScope(unit) && unit.isApartment);
 
@@ -180,7 +192,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
         )}
       </div>
 
-      {/* 세무서 사업자등록일 (§168) · 지자체 임대사업자등록신청일 (민특법 §5) — 같은 행 */}
+      {/* 세무서 사업자등록일 (§168) · 지자체 임대사업자등록신청일·등록일 (민특법 §5) */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FieldCard label="세무서 사업자등록일" required>
           <DateInput
@@ -201,11 +213,23 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
             onChange={(v) => setRegDate("rentalRegistrationDate", v)}
           />
         </FieldCard>
+
+        <FieldCard
+          label="지자체 임대사업자 등록일"
+          required
+          hint="등록증의 등록일. 신청일을 넣으면 같은 날로 채워지니 다르면 고쳐 주세요. 2018.3.31. 등록 기한·임대기간 기산·1/2 판정은 이 날로 봅니다(서면-2021-법규재산-3280)."
+        >
+          <DateInput
+            data-testid={`rental-registered-date-${index}`}
+            value={unit.rentalRegisteredDate ?? ""}
+            onChange={(v) => setRegDate("rentalRegisteredDate", v)}
+          />
+        </FieldCard>
       </div>
-      {/* D10 — 엔진은 입력한 날짜를 양도일과 비교한다. 신청일과 실제 등록일이 다를 수 있음을 알린다. */}
+      {/* D10 — 엔진은 등록일을 양도일과 비교한다. */}
       <p className="text-caption text-muted-foreground px-1">
         ※ 두 등록은 거주주택 양도일 현재 마쳐져 있어야 합니다. 신청은 양도 전에 했어도 등록이 양도일 뒤에
-        됐다면 특례가 적용되지 않으므로, 이 경우 실제 등록일을 확인하세요.
+        됐다면 특례가 적용되지 않습니다(위 「등록일」 기준).
       </p>
 
       {/* 취득 방법 (나·라목은 매입임대 전용 — 숨김) */}

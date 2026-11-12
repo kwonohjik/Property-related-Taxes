@@ -31,7 +31,7 @@
       {
        "unitId": "mapo",
        "businessRegistrationDate": "2016-09-20",
-       "rentalRegistrationDate": "2016-08-22",
+       "rentalRegistrationDate": "2016-08-22", "rentalRegisteredDate": "2016-08-22",
        "rentalCategory": "long_general",
        "rentalAcquisitionType": "purchase",
        "isApartment": false,

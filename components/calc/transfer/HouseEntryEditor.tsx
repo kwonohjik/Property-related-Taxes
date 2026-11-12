@@ -17,6 +17,8 @@
 
 import { DateInput } from "@/components/ui/date-input";
 import { RentalPeriodDatesFields } from "@/components/calc/transfer/RentalPeriodDatesFields";
+import { REGISTERED_DATE_HINT } from "@/components/calc/transfer/RentalPeriodDatesFields";
+import { registeredDateAfterApplicationChange } from "@/lib/stores/calc-wizard-asset-rental-period";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -549,6 +551,7 @@ function LongTermRentalSection({
             isLongTermRental: v,
             isRegisteredRental: v ? house.isRegisteredRental : undefined,
             rentalRegistrationDate: v ? house.rentalRegistrationDate : undefined,
+            rentalRegisteredDate: v ? house.rentalRegisteredDate : undefined,
             businessRegistrationDate: v ? house.businessRegistrationDate : undefined,
             // 임대개시일·종료일은 §167의3①3호와 같은 칸 — 3호가 켜져 있으면 지우지 않는다. 상속 합산은 2호 전용.
             rentalStartDate: v || house.isTaxIncentiveRental ? house.rentalStartDate : undefined,
@@ -573,6 +576,7 @@ function LongTermRentalSection({
               onUpdate({
                 isRegisteredRental: v,
                 rentalRegistrationDate: v ? house.rentalRegistrationDate : undefined,
+                rentalRegisteredDate: v ? house.rentalRegisteredDate : undefined,
                 businessRegistrationDate: v ? house.businessRegistrationDate : undefined,
               });
             }}
@@ -584,8 +588,23 @@ function LongTermRentalSection({
                 <label className="block text-caption text-muted-foreground font-medium">임대사업자 등록 신청일</label>
                 <DateInput
                   value={house.rentalRegistrationDate ?? ""}
-                  onChange={(v) => onUpdate({ rentalRegistrationDate: v || undefined })}
+                  onChange={(v) =>
+                    onUpdate({
+                      rentalRegistrationDate: v || undefined,
+                      rentalRegisteredDate:
+                        registeredDateAfterApplicationChange(house.rentalRegistrationDate, house.rentalRegisteredDate, v) || undefined,
+                    })
+                  }
                 />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-caption text-muted-foreground font-medium">임대사업자 등록일</label>
+                <DateInput
+                  data-testid="house-rental-registered-date"
+                  value={house.rentalRegisteredDate ?? ""}
+                  onChange={(v) => onUpdate({ rentalRegisteredDate: v || undefined })}
+                />
+                <p className="text-caption text-muted-foreground">{REGISTERED_DATE_HINT}</p>
               </div>
               <div className="space-y-1">
                 <label className="block text-caption text-muted-foreground font-medium">사업자 등록일</label>

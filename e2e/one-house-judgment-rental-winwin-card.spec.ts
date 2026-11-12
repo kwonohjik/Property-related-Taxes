@@ -41,7 +41,7 @@ function seedForm(win: boolean) {
                 {
                   ...makeDefaultRentalUnit(),
                   businessRegistrationDate: "2015-01-01",
-                  rentalRegistrationDate: "2015-01-01",
+                  rentalRegistrationDate: "2015-01-01", rentalRegisteredDate: "2015-01-01",
                   standardPriceAtRentalStart: "250,000,000",
                   rentalInputMode: "direct",
                   rentalMonths: "110",
@@ -70,7 +70,7 @@ function seedForm(win: boolean) {
             isLongTermRental: true,
             rentalType: "A",
             rentalStartOfficialPrice: "250000000",
-            rentalRegistrationDate: "2015-01-01",
+            rentalRegistrationDate: "2015-01-01", rentalRegisteredDate: "2015-01-01",
             rentalStartDate: "2015-01-01",
           },
         ],

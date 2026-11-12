@@ -260,6 +260,8 @@ export const houseSchema = z.object({
   // 장기임대 legacy 등록 경로 (등록사업자 + 등록일 2종 + 임대기간 5년↑)
   isRegisteredRental: z.boolean().optional(),
   rentalRegistrationDate: z.string().date().optional(),
+  /** V-3 지자체 임대사업자 등록일 — 미제공이면 엔진이 신청일로 본다 */
+  rentalRegisteredDate: z.string().date().optional(),
   businessRegistrationDate: z.string().date().optional(),
   rentalPeriodYears: z.number().nonnegative().optional(),
   /** 임대개시일 — 있으면 엔진이 날짜로 임대기간을 계산(2호는 등록일로 자름 — `multi-house-rental-period.ts`). 화면은 이것만 보낸다 */

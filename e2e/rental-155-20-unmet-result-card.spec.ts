@@ -11,7 +11,7 @@ import { makeDefaultRentalUnit } from "../lib/stores/calc-wizard-asset-factory";
 const NA = {
   ...makeDefaultRentalUnit(),
   businessRegistrationDate: "2003-05-01",
-  rentalRegistrationDate: "2003-05-01",
+  rentalRegistrationDate: "2003-05-01", rentalRegisteredDate: "2003-05-01",
   rentalCategory: "existing_business",
   rentalAcquisitionType: "purchase",
   region: "seoul-metro",

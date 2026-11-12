@@ -195,7 +195,7 @@ describe("C §155⑳ 거주주택 특례 — ③ · 합성 자산 · ⑧", () =>
   const unit = (over: Record<string, unknown> = {}) => ({
     ...makeDefaultRentalUnit(),
     businessRegistrationDate: "2018-06-01",
-    rentalRegistrationDate: "2018-06-01",
+    rentalRegistrationDate: "2018-06-01", rentalRegisteredDate: "2018-06-01",
     standardPriceAtRentalStart: "300,000,000",
     rentalInputMode: "direct" as const,
     rentalMonths: "30",

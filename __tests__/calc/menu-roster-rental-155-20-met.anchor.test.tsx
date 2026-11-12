@@ -26,7 +26,7 @@ const DEEMED = "장기임대주택 — 거주주택 특례 요건 충족으로 �
 const unit = (price = "250000000", extra: object = {}) => ({
   unitId: "b",
   businessRegistrationDate: "2023-02-01",
-  rentalRegistrationDate: "2023-02-01",
+  rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01",
   rentalCategory: "long_general",
   rentalAcquisitionType: "purchase",
   isApartment: false,

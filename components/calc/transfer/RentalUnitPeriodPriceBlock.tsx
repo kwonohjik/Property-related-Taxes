@@ -79,7 +79,7 @@ export function RentalUnitPeriodPriceBlock({
               {recognizedRentalMonths(unit.rentalPeriods, rentalRegistrationBasisDate(unit))}개월
             </strong>
             <span className="text-muted-foreground">
-              {" "}— 세무서 사업자등록일·지자체 등록신청일 중 늦은 날 전의 임대분은 빼고(소령 §167의3③), 임차인이
+              {" "}— 세무서 사업자등록일·지자체 임대사업자 등록일 중 늦은 날 전의 임대분은 빼고(소령 §167의3③), 임차인이
               바뀌는 사이 3개월 이내 공실은 넣어 셉니다(조특령 §97⑤5호 · 조특칙 §44). 3개월을 넘는 공실은 뺍니다.
             </span>
           </p>

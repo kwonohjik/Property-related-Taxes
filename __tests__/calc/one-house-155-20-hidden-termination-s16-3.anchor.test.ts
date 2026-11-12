@@ -14,7 +14,7 @@ const STALE = { rentalAutoTermination: true, registrationCancellationDate: "2021
 function mk(unitOver: Record<string, unknown>): RulingCase {
   const asset = { ...(base.form!.asset as Record<string, unknown>) };
   const rhe = asset.rentalHousingException as { rentalUnits: Record<string, unknown>[] } & Record<string, unknown>;
-  const unit = { ...rhe.rentalUnits[0], businessRegistrationDate: "2018-06-01", rentalRegistrationDate: "2018-06-01", rentalMonths: "20", rentalCategory: "pre_2018", ...unitOver };
+  const unit = { ...rhe.rentalUnits[0], businessRegistrationDate: "2018-06-01", rentalRegistrationDate: "2018-06-01", rentalRegisteredDate: "2018-06-01", rentalMonths: "20", rentalCategory: "pre_2018", ...unitOver };
   return { ...base, form: { ...base.form!, asset: { ...asset, fixedAcquisitionPrice: "300000000", addressJibun: "서울특별시 종로구 청운동 1", rentalHousingException: { ...rhe, rentalUnits: [unit] } } } };
 }
 

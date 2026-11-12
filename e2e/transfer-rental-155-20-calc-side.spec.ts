@@ -33,7 +33,7 @@ import { fillDateAndVerify } from "./_helpers/tax-flow";
 function rentalUnit(over: Record<string, unknown> = {}) {
   return {
     businessRegistrationDate: "2020-08-18",
-    rentalRegistrationDate: "2020-08-18",
+    rentalRegistrationDate: "2020-08-18", rentalRegisteredDate: "2020-08-18",
     rentalCategory: "long_general",
     rentalAcquisitionType: "purchase",
     isApartment: false,

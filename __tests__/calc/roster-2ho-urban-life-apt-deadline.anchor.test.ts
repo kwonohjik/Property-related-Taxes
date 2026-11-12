@@ -46,7 +46,7 @@ const rentalRow = (patch: Partial<HouseEntry> = {}): HouseEntry =>
     isUnsoldHousing: false,
     isRegisteredRental: true,
     rentalType: "A",
-    rentalRegistrationDate: "2018-01-01",
+    rentalRegistrationDate: "2018-01-01", rentalRegisteredDate: "2018-01-01",
     businessRegistrationDate: "2018-01-01",
     rentalStartOfficialPrice: "300000000",
     rentIncreaseUnder5Pct: true,

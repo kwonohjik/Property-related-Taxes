@@ -48,7 +48,7 @@ const NR = "4682025021";
 const unit = (months = "110") => ({
   ...makeDefaultRentalUnit(),
   businessRegistrationDate: "2015-01-01",
-  rentalRegistrationDate: "2015-01-01",
+  rentalRegistrationDate: "2015-01-01", rentalRegisteredDate: "2015-01-01",
   standardPriceAtRentalStart: "250,000,000",
   rentalInputMode: "direct" as const,
   rentalMonths: months,
@@ -195,7 +195,7 @@ describe("완공APT × §155⑳ — 화면 경로", () => {
   });
 
   it("RR-10 §155⑳ 불성립이어도 임대주택이 §155① 신규 주택이면 일시적 2주택 비과세", async () => {
-    const newUnit = { ...unit("16"), businessRegistrationDate: "2023-02-01", rentalRegistrationDate: "2023-02-01" };
+    const newUnit = { ...unit("16"), businessRegistrationDate: "2023-02-01", rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01" };
     const base = await runCalc(
       redevAptForm({
         price: "1000000000",

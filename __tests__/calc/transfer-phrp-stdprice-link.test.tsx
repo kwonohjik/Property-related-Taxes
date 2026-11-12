@@ -45,6 +45,7 @@ function makeScenarioBRhe(
   const unit = makeDefaultRentalUnit();
   unit.businessRegistrationDate = "2009-10-01";
   unit.rentalRegistrationDate = "2009-10-01";
+  unit.rentalRegisteredDate = "2009-10-01";
   unit.standardPriceAtRentalStart = "300,000,000";
   unit.rentalMonths = "96";
   unit.requirementsConfirmed = true;

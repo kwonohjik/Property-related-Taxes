@@ -50,7 +50,7 @@ function seedState(assetOver: Record<string, unknown>) {
               rentalUnits: [
                 {
                   businessRegistrationDate: "2018-06-01",
-                  rentalRegistrationDate: "2018-06-01",
+                  rentalRegistrationDate: "2018-06-01", rentalRegisteredDate: "2018-06-01",
                   rentalCategory: "long_general",
                   rentalAcquisitionType: "purchase",
                   isApartment: false,

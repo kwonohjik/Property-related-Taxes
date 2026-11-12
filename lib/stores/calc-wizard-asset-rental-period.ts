@@ -75,8 +75,8 @@ export const RENTAL_TENANT_GAP_GRACE_MONTHS = 3;
  * §155⑳ 의무임대기간 판정에 쓰는 **인정 임대개월** — 입력 구간에 법정 계산 규칙 두 가지를 적용한다.
  *
  * 1. 기산일: 소득세법 시행령 §167의3③ 후단 「사업자등록등을 하고 임대주택으로 등록하여 임대하는 날부터 임대를
- *    개시한 것으로 본다」 → 각 구간 시작을 `registrationBasisDate`(세무서 사업자등록일·지자체 등록신청일 중 늦은 날)
- *    이후로 자른다. 지자체 날짜는 화면의 「등록신청일」 칸을 쓴다(계획서 Q-1 a — 신청일·등록일 구분 해석 미확보, V-3).
+ *    개시한 것으로 본다」 → 각 구간 시작을 `registrationBasisDate`(세무서 사업자등록일·지자체 등록일 중 늦은 날)
+ *    이후로 자른다. 지자체 날짜는 「등록일」 칸이다(V-3 · 서면-2021-법규재산-3280 — 비면 신청일).
  * 2. 공실: 조특령 §97⑤5호 → 조특칙 §44 — 앞 구간 종료일(퇴거일)부터 다음 구간 시작일(입주일)까지가 달력 3개월
  *    이내(경계 포함)면 공백까지 이어서 센다. 3개월을 넘으면 공백 전체를 뺀다(§97 감면 헬퍼
  *    `calculateEffectiveRentalDays`와 같은 기준).
@@ -125,13 +125,31 @@ export function recognizedRentalSegments(
   return merged;
 }
 
-/** 기산 기준일 — 세무서 사업자등록일·지자체 등록신청일 중 늦은 날(빈 값은 무시). 둘 다 비면 "". */
+/** 지자체 임대사업자 등록일(V-3) — 비어 있으면 신청일(옛 기록·AI 필드 경로). 엔진 `registeredDateOf`와 같은 규칙. */
+export function rentalRegisteredDateOf(unit: { rentalRegistrationDate?: string; rentalRegisteredDate?: string }): string {
+  return unit.rentalRegisteredDate || unit.rentalRegistrationDate || "";
+}
+
+/**
+ * 신청일 칸을 바꿀 때 등록일 칸의 새 값(V-3 · ⑤ onChange 전용 — useEffect 미러링 아님).
+ * 등록일이 비었거나 종전 신청일과 같으면 새 신청일로 따라가고, 사용자가 다르게 고친 등록일은 그대로 둔다.
+ */
+export function registeredDateAfterApplicationChange(
+  prevApplication: string | undefined,
+  prevRegistered: string | undefined,
+  nextApplication: string,
+): string {
+  return !prevRegistered || prevRegistered === prevApplication ? nextApplication : prevRegistered;
+}
+
+/** 기산 기준일 — 세무서 사업자등록일·지자체 등록일 중 늦은 날(빈 값은 무시). 둘 다 비면 "". */
 export function rentalRegistrationBasisDate(unit: {
   businessRegistrationDate?: string;
   rentalRegistrationDate?: string;
+  rentalRegisteredDate?: string;
 }): string {
   const a = unit.businessRegistrationDate ?? "";
-  const b = unit.rentalRegistrationDate ?? "";
+  const b = rentalRegisteredDateOf(unit);
   return a > b ? a : b;
 }
 
@@ -142,7 +160,7 @@ export function rentalRegistrationBasisDate(unit: {
  * 센다. 국세청도 ㉓1호·㉒2호라목1)·§167의3①2호사목의 1/2 기산일을 같게 본다(서면-2021-부동산-7820, 2022.9.26. ·
  * 서면-2022-부동산-4280, 2022.12.15. — 세무서 사업자등록이 늦은 사실관계에서도 지자체 등록일부터). 그래서
  * `deriveRentalMonths`(소령 §167의3③ — 세무서·지자체 중 늦은 날)와 달리 **지자체 등록일로만** 자른다.
- * 지자체 날짜는 화면의 「등록신청일」 칸이다(등록일 칸 없음 — PR-1 V-3과 같은 미확보).
+ * 지자체 날짜는 「등록일」 칸이다(V-3 — 비면 신청일).
  * 3개월 이내 공실 산입·피상속인 개월 합산은 `deriveRentalMonths`와 같게 둔다(종전 동작 유지 — 민특법 기준 해석 미확보).
  */
 export function deriveHalfDutyRentalMonths(unit: {
@@ -150,6 +168,7 @@ export function deriveHalfDutyRentalMonths(unit: {
   rentalPeriods?: RentalPeriod[];
   rentalMonths?: string;
   rentalRegistrationDate?: string;
+  rentalRegisteredDate?: string;
   isInheritedRental?: boolean;
   decedentRentalMonths?: string;
 }): number {
@@ -169,6 +188,7 @@ export function deriveRentalMonths(unit: {
   rentalMonths?: string;
   businessRegistrationDate?: string;
   rentalRegistrationDate?: string;
+  rentalRegisteredDate?: string;
   isInheritedRental?: boolean;
   decedentRentalMonths?: string;
 }): number {

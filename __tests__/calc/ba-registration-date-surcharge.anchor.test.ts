@@ -53,6 +53,7 @@ function form(rentalRegistrationDate: string, businessRegistrationDate: string) 
         isRegisteredRental: true,
         rentalType: "F",
         rentalRegistrationDate,
+        rentalRegisteredDate: rentalRegistrationDate,
         businessRegistrationDate,
         rentalStartOfficialPrice: "700000000",
         rentIncreaseUnder5Pct: true,

@@ -30,7 +30,7 @@ function unit(over: Partial<Unit> = {}): Unit {
   return {
     ...makeDefaultRentalUnit(),
     businessRegistrationDate: "2016-06-01",
-    rentalRegistrationDate: "2016-06-01",
+    rentalRegistrationDate: "2016-06-01", rentalRegisteredDate: "2016-06-01",
     rentalCategory: "long_general",
     rentalAcquisitionType: "purchase",
     standardPriceAtRentalStart: "300,000,000",
@@ -146,7 +146,7 @@ describe("V-39 · V-41 — 호별 판정 사실", () => {
         rentalUnits: [
           unit({
             businessRegistrationDate: "2003-01-01",
-            rentalRegistrationDate: "2003-01-01",
+            rentalRegistrationDate: "2003-01-01", rentalRegisteredDate: "2003-01-01",
             rentalCategory: "existing_business",
             acquisitionOfficialPrice: "200,000,000",
             isNationalSizeHousing: true,

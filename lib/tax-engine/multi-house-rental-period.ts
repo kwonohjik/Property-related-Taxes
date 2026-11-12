@@ -17,6 +17,7 @@
 import { differenceInMonths } from "./utc-date";
 import { differenceInYears } from "./utc-date";
 import type { HouseInfo } from "./types/multi-house-surcharge.types";
+import { registeredDateOf } from "./rental-article/registered-date";
 
 function periodEnd(house: HouseInfo, referenceDate: Date): Date {
   const end = house.rentalEndDate;
@@ -25,7 +26,7 @@ function periodEnd(house: HouseInfo, referenceDate: Date): Date {
 
 /**
  * §167의3①2호 장기임대주택 임대기간(년, 소수 — 개월/12). 판정기는 `rentalYears < 의무연수`로만 비교한다.
- * 개시일을 세무서 사업자등록일·지자체 임대사업자 등록일 중 늦은 날 이후로 자른다.
+ * 개시일을 세무서 사업자등록일·지자체 임대사업자 등록일(미입력이면 신청일 — V-3) 중 늦은 날 이후로 자른다.
  */
 export function calcLongTermRentalPeriodYears(house: HouseInfo, referenceDate: Date): number {
   const decedentMonths = house.decedentRentalMonths ?? 0;
@@ -34,7 +35,7 @@ export function calcLongTermRentalPeriodYears(house: HouseInfo, referenceDate: D
     return house.rentalPeriodYears + decedentMonths / 12;
   }
   let start = house.rentalStartDate;
-  for (const d of [house.businessRegistrationDate, house.rentalRegistrationDate]) {
+  for (const d of [house.businessRegistrationDate, registeredDateOf(house.rentalRegisteredDate, house.rentalRegistrationDate)]) {
     if (d && d.getTime() > start.getTime()) start = d;
   }
   const end = periodEnd(house, referenceDate);

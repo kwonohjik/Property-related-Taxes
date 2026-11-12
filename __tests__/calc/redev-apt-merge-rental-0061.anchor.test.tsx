@@ -29,7 +29,7 @@ const other = (id: string, o: object = {}) =>
   houseRow(id, "2018-09-27", { region: "non_capital", regionCode: NC, officialPrice: "100000000", isApartment: false, acquisitionOrigin: "general", mergeOrigin: "counterpart_side", ...o } as never);
 const PRICEY = { region: "capital", regionCode: GANGNAM, officialPrice: "400000000", isApartment: true };
 const unit = () => ({
-  ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26",
+  ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26", rentalRegisteredDate: "2019-09-26",
   standardPriceAtRentalStart: "250,000,000", rentalInputMode: "direct" as const, rentalMonths: "48", requirementsConfirmed: true,
 });
 const RHE = (answer: "" | "yes" | "no" = "yes") => ({ applyException: true, scenario: "A", rentalUnits: [unit()], priorRentalExemptionHistory: "none", counterpartHouseResidedTwoYears: answer });

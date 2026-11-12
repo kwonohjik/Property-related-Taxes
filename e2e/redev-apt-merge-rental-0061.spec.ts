@@ -17,7 +17,7 @@ const other = (id: string, over: Record<string, unknown> = {}) =>
 const unit = () => ({
   ...makeDefaultRentalUnit(),
   businessRegistrationDate: "2019-09-26",
-  rentalRegistrationDate: "2019-09-26",
+  rentalRegistrationDate: "2019-09-26", rentalRegisteredDate: "2019-09-26",
   standardPriceAtRentalStart: "250,000,000",
   rentalInputMode: "direct",
   rentalMonths: "48",
@@ -161,7 +161,7 @@ test("[RME-4] ★ 판정 메뉴에서 답하고 넘어와 완공APT로 바꿔도
       rentalHousingException: {
         applyException: true, scenario: "A", priorRentalExemptionHistory: "none",
         rentalUnits: [{
-          unitId: "b", businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26", rentalCategory: "long_general", rentalAcquisitionType: "purchase",
+          unitId: "b", businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26", rentalRegisteredDate: "2019-09-26", rentalCategory: "long_general", rentalAcquisitionType: "purchase",
           isApartment: false, region: "seoul-metro", standardPriceAtRentalStart: "300000000", acquisitionOfficialPrice: "300000000", isNationalSizeHousing: true, hasMinimum2Units: true,
           rentalMonths: "48", requirementsConfirmed: true,
         }],

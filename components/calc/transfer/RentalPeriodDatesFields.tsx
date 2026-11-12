@@ -17,6 +17,10 @@ import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 
+/** 중과배제 명부 행·양도 주택의 「임대사업자 등록일」 칸 안내(V-3) — 두 화면 공용 */
+export const REGISTERED_DATE_HINT =
+  "등록증의 등록일. 신청일을 넣으면 같은 날로 채워지니 다르면 고쳐 주세요. 가·다목 2018.3.31. 등록 기한과 임대기간 기산은 이 날로 봅니다(서면-2021-법규재산-3280).";
+
 export interface RentalPeriodDatesValue {
   rentalStartDate?: string;
   rentalEndDate?: string;
@@ -58,7 +62,7 @@ export function RentalPeriodDatesFields({ value, onPatch, variant, testIdPrefix 
       </div>
       <p className={HINT} data-testid={`${testIdPrefix}-period-hint`}>
         {longTerm
-          ? "임대기간은 세무서 사업자등록일·임대사업자 등록 신청일 중 늦은 날 전의 임대분을 빼고 양도일(임대 종료일을 넣으면 그날)까지 셉니다(소령 §167의3③). 의무임대기간: 가·나·다·라목 5년, 마·바목 10년(2020.8.18. 전 등록 신청분은 8년), 아·자목 6년."
+          ? "임대기간은 세무서 사업자등록일·임대사업자 등록일 중 늦은 날 전의 임대분을 빼고 양도일(임대 종료일을 넣으면 그날)까지 셉니다(소령 §167의3③). 의무임대기간: 가·나·다·라목 5년, 마·바목 10년(2020.8.18. 전 등록 신청분은 8년), 아·자목 6년."
           : "임대개시일부터 양도일(임대 종료일을 넣으면 그날)까지 셉니다. 5년 이상 임대해야 합니다(소령 §167의3①3호)."}{" "}
         임차인이 바뀌는 사이 3개월을 넘는 공실이 있었다면 그 기간은 이 계산에 반영되지 않습니다(조특칙 §44 — 확인 필요).
       </p>

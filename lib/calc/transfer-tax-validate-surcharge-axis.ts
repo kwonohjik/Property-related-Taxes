@@ -52,6 +52,10 @@ export function houseRowSurchargeAxisIssue(
   // 장기임대 등록 경로: 등록사업자 선택 시 등록일 2종·임대기간 필수
   if (h.isLongTermRental && h.isRegisteredRental) {
     if (!h.rentalRegistrationDate) return `${label}: 임대사업자 등록 신청일을 입력하세요.`;
+    // V-3 — 2018.3.31. 등록 기한·임대기간 기산은 등록일(서면-2021-법규재산-3280). 신청일로 간주하지 않는다.
+    if (!h.rentalRegisteredDate) return `${label}: 임대사업자 등록일(등록증의 등록일)을 입력하세요.`;
+    if (h.rentalRegisteredDate < h.rentalRegistrationDate)
+      return `${label}: 임대사업자 등록일은 등록 신청일(${h.rentalRegistrationDate}) 이후여야 합니다.`;
     if (!h.businessRegistrationDate) return `${label}: 사업자 등록일을 입력하세요.`;
     if (!h.rentalStartDate) return `${label}: 임대개시일을 입력하세요.`;
   }

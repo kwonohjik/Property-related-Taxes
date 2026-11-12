@@ -71,7 +71,7 @@ const RENTAL_HOUSING_DECLARED = {
   rentalUnits: [
     {
       businessRegistrationDate: "2015-06-01",
-      rentalRegistrationDate: "2015-06-01",
+      rentalRegistrationDate: "2015-06-01", rentalRegisteredDate: "2015-06-01",
       rentalInputMode: "direct",
       rentalMonths: "120",
       requirementsConfirmed: true,

@@ -39,7 +39,7 @@ test("[UOE-1] §155⑳ 불성립 + 임대주택이 일시적 2주택 신규 주�
           {
             ...makeDefaultRentalUnit(),
             businessRegistrationDate: "2023-02-01",
-            rentalRegistrationDate: "2023-02-01",
+            rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01",
             standardPriceAtRentalStart: "700,000,000",
             rentalInputMode: "direct",
             rentalMonths: "16",
@@ -106,7 +106,7 @@ test("[UOE-3] §155⑳ 불성립 B + 임대주택이 일시적 2주택 신규 �
           {
             ...makeDefaultRentalUnit(),
             businessRegistrationDate: "2023-02-01",
-            rentalRegistrationDate: "2023-02-01",
+            rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01",
             standardPriceAtRentalStart: "700,000,000",
             rentalInputMode: "direct",
             rentalMonths: "16",

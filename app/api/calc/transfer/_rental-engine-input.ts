@@ -23,6 +23,7 @@ export function toRentalHousingExceptionEngineInput(
     rentalUnits: rhe.rentalUnits.map((u) => ({
       businessRegistrationDate: toDate(u.businessRegistrationDate, "businessRegistrationDate"),
       rentalRegistrationDate: toDate(u.rentalRegistrationDate, "rentalRegistrationDate"),
+      rentalRegisteredDate: toOptionalDate(u.rentalRegisteredDate), // V-3
       rentalCategory: u.rentalCategory,
       rentalAcquisitionType: u.rentalAcquisitionType,
       isApartment: u.isApartment,

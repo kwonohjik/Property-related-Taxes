@@ -18,6 +18,7 @@ import { isWithinDeadline } from "./civil-period";
 import { isSmallNewHouseSpecial, resolvePopulationDeclineSecondHome } from "./multi-house-surcharge-12ho";
 import { isCapitalAreaHouse } from "./multi-house-surcharge-12ho";
 import { checkRentalArticle, type NormalizedRentalUnit } from "./rental-article/check";
+import { registeredDateOf } from "./rental-article/registered-date";
 import {
   RA_CUT,
   APT_TRANSFER_DEADLINE_FLOOR,
@@ -235,6 +236,7 @@ function toNormalizedFromHouse(house: HouseInfo, transferDate: Date): Normalized
   return {
     businessRegistrationDate: house.businessRegistrationDate ?? null,
     rentalRegistrationDate: house.rentalRegistrationDate ?? null,
+    rentalRegisteredDate: house.rentalRegisteredDate ?? null,
     isCapitalArea: isCapitalAreaHouse(house),
     isApartment: house.isApartment,
     // 같은 사실(「주택법」 도시형 생활주택인 아파트)이 2호 가목2) 괄호에도 걸린다 — 양도기한 게이트만 비적용.
@@ -334,7 +336,8 @@ function passesRegistrationCap(house: HouseInfo, article: SharedRentalArticle): 
   const regBoundArticle = article === "사" ? house.saMokBaseArticle : article;
   if (regBoundArticle === "가" || regBoundArticle === "다") {
     const bizTs = house.businessRegistrationDate!.getTime();
-    const rentTs = house.rentalRegistrationDate!.getTime();
+    // 「2018년 3월 31일까지 사업자등록등」 — 지자체는 등록일(서면-2021-법규재산-3280 · V-3)
+    const rentTs = registeredDateOf(house.rentalRegisteredDate, house.rentalRegistrationDate)!.getTime();
     if (bizTs > RA_CUT.Y2018_04_02 || rentTs > RA_CUT.Y2018_04_02) return false;
   }
   return true;

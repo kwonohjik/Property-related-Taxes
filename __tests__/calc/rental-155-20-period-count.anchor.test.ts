@@ -64,14 +64,14 @@ describe("recognizedRentalMonths — 기산일 자르기(소령 §167의3③)", 
   });
 
   it("기산 기준일 = 세무서 사업자등록일·지자체 등록신청일 중 늦은 날", () => {
-    expect(rentalRegistrationBasisDate({ businessRegistrationDate: "2016-03-01", rentalRegistrationDate: "2016-01-01" })).toBe("2016-03-01");
-    expect(rentalRegistrationBasisDate({ businessRegistrationDate: "", rentalRegistrationDate: "2016-01-01" })).toBe("2016-01-01");
+    expect(rentalRegistrationBasisDate({ businessRegistrationDate: "2016-03-01", rentalRegistrationDate: "2016-01-01", rentalRegisteredDate: "2016-01-01" })).toBe("2016-03-01");
+    expect(rentalRegistrationBasisDate({ businessRegistrationDate: "", rentalRegistrationDate: "2016-01-01", rentalRegisteredDate: "2016-01-01" })).toBe("2016-01-01");
     expect(rentalRegistrationBasisDate({})).toBe("");
   });
 });
 
 describe("deriveRentalMonths — 모드·상속 합산", () => {
-  const base = { businessRegistrationDate: "2016-01-01", rentalRegistrationDate: "2016-01-01" };
+  const base = { businessRegistrationDate: "2016-01-01", rentalRegistrationDate: "2016-01-01", rentalRegisteredDate: "2016-01-01" };
 
   it("RP-6 direct 59는 그대로(사용자가 계산한 값 — 자르지 않는다)", () => {
     expect(deriveRentalMonths({ ...base, rentalInputMode: "direct", rentalMonths: "59" })).toBe(59);
@@ -81,7 +81,7 @@ describe("deriveRentalMonths — 모드·상속 합산", () => {
     expect(
       deriveRentalMonths({
         businessRegistrationDate: "2018-01-01",
-        rentalRegistrationDate: "2018-01-01",
+        rentalRegistrationDate: "2018-01-01", rentalRegisteredDate: "2018-01-01",
         rentalInputMode: "interval",
         rentalPeriods: [P("2019-01-01", "2021-01-01"), P("2022-01-01", "2025-01-01")],
       }),
@@ -131,7 +131,7 @@ function asset(unitOver: Record<string, unknown>): AssetForm {
         {
           ...makeDefaultRentalUnit(),
           businessRegistrationDate: "2015-01-01",
-          rentalRegistrationDate: "2015-01-01",
+          rentalRegistrationDate: "2015-01-01", rentalRegisteredDate: "2015-01-01",
           rentalCategory: "long_general",
           rentalAcquisitionType: "purchase",
           standardPriceAtRentalStart: "300,000,000",

@@ -61,7 +61,7 @@ function seedForm(transferDate = "2028-03-01") {
             isOfficetel: false,
             isUnsoldHousing: false,
             isRegisteredRental: true,
-            rentalRegistrationDate: "2018-01-01",
+            rentalRegistrationDate: "2018-01-01", rentalRegisteredDate: "2018-01-01",
             businessRegistrationDate: "2018-01-01",
             rentalStartDate: "2018-01-01", // PR-2 Q-3 — 연수 칸 대신 임대개시일
             rentalType: "A",

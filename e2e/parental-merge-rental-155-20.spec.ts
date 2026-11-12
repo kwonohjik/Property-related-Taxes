@@ -8,7 +8,7 @@ import { gotoJudgmentHoldingsStep } from "./_helpers/judgment-seed";
 
 const NC = "4682025021";
 const UNIT = {
-  unitId: "b", businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26", rentalCategory: "long_general", rentalAcquisitionType: "purchase",
+  unitId: "b", businessRegistrationDate: "2019-09-26", rentalRegistrationDate: "2019-09-26", rentalRegisteredDate: "2019-09-26", rentalCategory: "long_general", rentalAcquisitionType: "purchase",
   isApartment: false, region: "seoul-metro", standardPriceAtRentalStart: "300000000", acquisitionOfficialPrice: "300000000", isNationalSizeHousing: true, hasMinimum2Units: true,
   rentalMonths: "48", requirementsConfirmed: true,
 };

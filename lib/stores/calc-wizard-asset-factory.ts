@@ -49,6 +49,7 @@ export function makeDefaultRentalUnit(): AssetForm["rentalHousingException"]["re
     unitId: nextRentalUnitId(),
     businessRegistrationDate: "",
     rentalRegistrationDate: "",
+    rentalRegisteredDate: "",
     rentalCategory: "long_general",
     rentalAcquisitionType: "purchase",
     isApartment: false,

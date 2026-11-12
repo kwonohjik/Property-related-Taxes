@@ -32,6 +32,7 @@ export type RentalDeclaration = Partial<
     // legacy 등록 경로 (rentalType 미선택 시)
     | "isRegisteredRental"
     | "rentalRegistrationDate"
+    | "rentalRegisteredDate"
     | "businessRegistrationDate"
     | "rentalPeriodYears"
     | "rentalStartDate"

@@ -40,7 +40,7 @@ test("[CRE-1] ⑳ 성립 + §98 감면주택 행(Q-4 (c)) · 임대주택 2007 �
           {
             ...makeDefaultRentalUnit(),
             businessRegistrationDate: "2023-02-01",
-            rentalRegistrationDate: "2023-02-01",
+            rentalRegistrationDate: "2023-02-01", rentalRegisteredDate: "2023-02-01",
             standardPriceAtRentalStart: "250,000,000",
             rentalInputMode: "direct",
             rentalMonths: "16",

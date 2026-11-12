@@ -11,6 +11,7 @@ import type { RentalDeclaration } from "@/lib/stores/calc-wizard-asset-nbl";
 import { ARTICLE_BY_RENTAL_TYPE } from "@/lib/tax-engine/multi-house-surcharge-count";
 import { RENT_CAP_29523_ARTICLES, isRentCapContractSubject } from "@/lib/tax-engine/rental-article/check";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { rentalRegisteredDateOf } from "@/lib/stores/calc-wizard-asset-rental-period";
 
 export function rentIncreaseContractDateInScope(d: RentalDeclaration | undefined): boolean {
   if (!d?.isLongTermRental || !d.rentalType || d.rentIncreaseUnder5Pct) return false;
@@ -19,8 +20,9 @@ export function rentIncreaseContractDateInScope(d: RentalDeclaration | undefined
   const biz = (d.businessRegistrationDate ?? "").slice(0, 10);
   const rent = (d.rentalRegistrationDate ?? "").slice(0, 10);
   if (!d.isRegisteredRental || !biz || !rent) return false;
-  // 등록기준일 = 두 등록 중 늦은 날(엔진 `deriveEffectiveRegDate`와 같은 규약)
-  const effective = toOptionalDate(biz > rent ? biz : rent);
+  // 등록기준일 = 세무서 등록일·지자체 등록일(비면 신청일 — V-3) 중 늦은 날(엔진 `deriveEffectiveRegDate`와 같은 규약)
+  const registered = rentalRegisteredDateOf(d).slice(0, 10);
+  const effective = toOptionalDate(biz > registered ? biz : registered);
   return !!effective && !isRentCapContractSubject(effective);
 }
 

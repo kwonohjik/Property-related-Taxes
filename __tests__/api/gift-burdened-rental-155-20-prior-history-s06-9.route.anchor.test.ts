@@ -32,7 +32,7 @@ import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheri
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
 
 type Obj = Record<string, unknown>;
-const unit = () => ({ ...makeDefaultRentalUnit(), businessRegistrationDate: "2016-06-01", rentalRegistrationDate: "2016-06-01",
+const unit = () => ({ ...makeDefaultRentalUnit(), businessRegistrationDate: "2016-06-01", rentalRegistrationDate: "2016-06-01", rentalRegisteredDate: "2016-06-01",
   standardPriceAtRentalStart: "300,000,000", rentalInputMode: "direct" as const, rentalMonths: "96", requirementsConfirmed: true });
 const giftForm = { giftDate: "2024-06-01", donor: "father", donorRelation: "lineal_ascendant_adult", priorGifts: [] } as unknown as FormState;
 const item = (h: string) => ({
