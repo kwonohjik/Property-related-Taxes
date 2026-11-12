@@ -25,3 +25,14 @@ export function bgIgnoresCommercialEstimated(asset: Pick<AssetForm, "transferTyp
 export function bgIgnoresAssetAppraisalSalesCase(asset: Pick<AssetForm, "transferType">): boolean {
   return asset.transferType === "burdened_gift";
 }
+
+/**
+ * 부담부증여면 자산 단위 감정가액·매매사례가액 플래그를 끈 사본 — 플래그로 파트 취득 방식을 파생하는 leaf(`effectivePartAcqMode`)용.
+ * 분리 검증(`transfer-tax-validate-split.ts`)이 원본을 읽어 소유자 분리 기준시가(V8)를 요구했다 — 깨끗하면 ⑧ 통과 · 서버 200인데
+ * 숨은 플래그만으로 ⑧이 막혔다(V-5 실측 2026-11-12: 시가 모드 · 소유자 분리 · 파트 취득가액 직접 입력 · 양도차익 210,000,000 불변).
+ * 플래그가 없거나 부담부증여가 아니면 원본을 그대로 돌려준다.
+ */
+export function withoutBgHiddenAcqFlags<T extends Pick<AssetForm, "transferType" | "isAppraisalAcquisition" | "isSalesCaseAcquisition">>(asset: T): T {
+  if (!bgIgnoresAssetAppraisalSalesCase(asset) || (!asset.isAppraisalAcquisition && !asset.isSalesCaseAcquisition)) return asset;
+  return { ...asset, isAppraisalAcquisition: false, isSalesCaseAcquisition: false };
+}
