@@ -24,8 +24,8 @@ import type { InheritedAcquisitionStepResult } from "./inheritance-acquisition-h
 import { assertBgSplitInputs, bgPartDatesDiffer, bgSplitPartsOf } from "./burdened-gift-split-parts";
 import { assertBgOwnerSplitInputs, bgOwnerSplitOf } from "./burdened-gift-owner-split";
 
-/** 소유자 분리 §159 산식 문구의 평가 모드 이름 — 상증법 §61 보충적평가(시가 평가면 시가) · §66 담보평가 · §61⑤ 임대평가(결과 카드 ①②③과 같은 어휘). */
-const ownerSplitModeLabel = (mode: "supplementary" | "mortgage" | "rental", market: boolean): string =>
+/** §159 산식 문구의 평가 모드 이름 — 상증법 §61 보충적평가(시가 평가면 시가) · §66 담보평가 · §61⑤ 임대평가(결과 카드 ①②③과 같은 어휘). */
+const bgModeLabel = (mode: "supplementary" | "mortgage" | "rental", market: boolean): string =>
   mode === "mortgage" ? "담보평가" : mode === "rental" ? "임대평가" : market ? "시가" : "보충적평가";
 
 /** STEP 0.45가 부담부증여 × 의제취득일 전으로 판정한 결과(`bgPreDeemed`)만 §159에 넘긴다 — 그 밖은 빈 객체(종전 그대로). */
@@ -342,10 +342,8 @@ export function runBurdenedGiftStep(
       formula:
         `양도가 = 인수채무 ${transferBurdenedGiftBreakdown.assumedDebtAmount.toLocaleString()} ` +
         `(${
-          // 소유자 분리 — 평가액은 물건 전체가 아니라 증여한 부분의 값이다(「소득세법 시행령」 제159조 제1항 A·C). 모드 영문 키 대신 한국어로 적는다.
-          ownerSplit
-            ? `증여한 ${ownerSplit === "building_only" ? "건물" : "토지"}분 ${ownerSplitModeLabel(transferBurdenedGiftBreakdown.sangjeungbeopValuation.selectedMode, rawInput.burdenedGiftInfo.valuationMode === "sangjeungbeop_market")}`
-            : `${transferBurdenedGiftBreakdown.sangjeungbeopValuation.selectedMode} 평가`
+          // 모드는 영문 키 대신 결과 카드 ①②③과 같은 한국어로 적는다. 소유자 분리면 평가액은 물건 전체가 아니라 증여한 부분의 값이다(「소득세법 시행령」 제159조 제1항 A·C).
+          `${ownerSplit ? `증여한 ${ownerSplit === "building_only" ? "건물" : "토지"}분 ` : ""}${bgModeLabel(transferBurdenedGiftBreakdown.sangjeungbeopValuation.selectedMode, rawInput.burdenedGiftInfo.valuationMode === "sangjeungbeop_market")}`
         } ${transferBurdenedGiftBreakdown.sangjeungbeopValuation.max.toLocaleString()} 중 ` +
         `${(transferBurdenedGiftBreakdown.debtRatio * 100).toFixed(4)}% 안분)`,
       amount: totalTransferPrice,

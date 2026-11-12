@@ -23,7 +23,7 @@ import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { ALLOCATION_DENOMINATOR_ZERO_FULL_NOTICE, ALLOCATION_NONPOSITIVE_DENOMINATOR_BELOW_FULL_RATE_NOTICE } from "@/lib/tax-engine/transfer-reductions/new-99-3";
 import { selfBuiltPenaltyBasisFormula } from "@/lib/tax-engine/transfer-tax-self-built-display";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
-import type { SplitAcqMode } from "@/lib/tax-engine/transfer-tax-split-display";
+import type { AggHeadingMode } from "./split-acq-text";
 import { LOSS_OFFSET_PART_LABEL } from "@/lib/tax-engine/transfer-tax-split-display";
 import {
   aggregateAcqHeading,
@@ -529,7 +529,7 @@ export function buildAcquisitionPriceFormula(
    * 집계 자산들의 산정방식 집합(echo 파생 — `aggregateAcqModes`). 어댑터가 `usedEstimatedAcquisition`을 상수로 내려
    * 보내므로 집계 소제목은 이 집합이 정본이다. 미지정이면 종전 플래그로 후퇴한다.
    */
-  aggModes?: Set<SplitAcqMode>,
+  aggModes?: Set<AggHeadingMode>,
 ): ReactNode {
   const capExStr = capEx > 0 ? ` + 자본적지출 ${capEx.toLocaleString()}` : "";
   const depStr = depreciation > 0 ? ` − 감가상각비 ${depreciation.toLocaleString()} (소득세법 §97③)` : "";
@@ -681,7 +681,7 @@ export function buildNecessaryExpenseFormula(
    */
   lumpRate?: number,
   /** 집계 자산들의 산정방식 집합 — `buildAcquisitionPriceFormula`의 같은 인자. */
-  aggModes?: Set<SplitAcqMode>,
+  aggModes?: Set<AggHeadingMode>,
 ): string {
   if (isAggregate) {
     const heading = aggModes && aggregateExpenseHeading(aggModes);

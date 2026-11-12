@@ -222,6 +222,8 @@ export function splitExpenseText(
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MODE_ORDER: SplitAcqMode[] = ["actual", "estimated", "appraisal", "salesCase"];
+/** 부담부증여 기준시가 평가 취득가액의 표기(「소득세법 시행령」 제159조 제1항 제1호 괄호). */
+const BG_STANDARD_LABEL = "취득시 기준시가 × 채무액 ÷ 증여가액";
 
 /**
  * 집계 자산들의 취득가액 산정방식 집합 — **응답에 실재하는 echo 세 종**에서 파생한다(우선순위):
@@ -262,6 +264,33 @@ export function aggregateAcqModes(
   return modes;
 }
 
+/** 집계 소제목 전용 산정방식 — 부담부증여 기준시가 평가의 취득가액(취득시 기준시가 × 채무액 ÷ 증여가액, 「소득세법 시행령」 제159조 제1항 제1호)은 환산도 실거래가도 아니다. */
+export type AggHeadingMode = SplitAcqMode | "bgStandard";
+
+const BG_METHOD_TO_HEADING_MODE: Record<NonNullable<PerPropertyBreakdown["transferBurdenedGiftBreakdown"]>["acquisitionMethodUsed"], AggHeadingMode> = {
+  actual: "actual",
+  converted: "estimated",
+  appraisal: "appraisal",
+  salesCase: "salesCase",
+  standard_price: "bgStandard",
+};
+
+/**
+ * 집계 소제목(상세 명세서 취득가액·필요경비 머리)용 산정방식 집합. 부담부증여 자산은 §159 명세가 실제로 쓴 방식(`acquisitionMethodUsed`)이 정본이다 —
+ * 그 밖의 echo로 읽으면 기준시가 × 채무비율이 분리 파트에서는 「환산」(파트 `acqMode`), 단일 카드에서는 「실거래가」로, 시가 환산은 「실거래가」로 적혔다.
+ * 그 밖의 자산은 `aggregateAcqModes`와 같다. 어댑터의 `usedEstimatedAcquisition`(`allEstimated`)은 이 집합을 쓰지 않는다.
+ */
+export function aggregateHeadingModes(properties: PerPropertyBreakdown[], gb: GeneralBuildingOutput | undefined): Set<AggHeadingMode> {
+  const modes = new Set<AggHeadingMode>();
+  for (const p of properties) {
+    if (isPurchasedPieceId(p.propertyId)) continue;
+    const bg = p.transferBurdenedGiftBreakdown;
+    if (bg) modes.add(BG_METHOD_TO_HEADING_MODE[bg.acquisitionMethodUsed]);
+    else for (const m of aggregateAcqModes([p], gb)) modes.add(m);
+  }
+  return modes;
+}
+
 /** 전부 환산취득가인가 — 집계 어댑터가 단일 `usedEstimatedAcquisition` 플래그를 채울 때만 쓴다(자산이 없으면 false). */
 export function allEstimated(modes: Set<SplitAcqMode>): boolean {
   return modes.size === 1 && modes.has("estimated");
@@ -270,21 +299,27 @@ export function allEstimated(modes: Set<SplitAcqMode>): boolean {
 const MIXED_LAW = "소득세법 §97①1호 가목·나목";
 
 /** 취득가액 집계 소제목 — 전부 실거래가/전부 환산취득가는 종전 문구, 그 밖은 산정방식을 밝힌다. 자산이 없으면 `undefined`. */
-export function aggregateAcqHeading(modes: Set<SplitAcqMode>): string | undefined {
+export function aggregateAcqHeading(modes: Set<AggHeadingMode>): string | undefined {
   if (modes.size === 0) return undefined;
   if (modes.size === 1 && modes.has("actual")) return "자산별 실제 거래가액 합계 (자본적지출은 필요경비 — §97① 2호)";
   if (modes.size === 1 && modes.has("estimated")) return "자산별 환산취득가 합계 — 시행령 §163·§176의2②";
-  const names = MODE_ORDER.filter((m) => modes.has(m)).map(splitAcqModeLabel).join("·");
+  if (modes.size === 1 && modes.has("bgStandard")) return `자산별 취득가액 합계 — ${BG_STANDARD_LABEL} (시행령 §159①1호)`;
+  const names = [
+    ...MODE_ORDER.filter((m) => modes.has(m)).map(splitAcqModeLabel),
+    ...(modes.has("bgStandard") ? [`부담부증여 ${BG_STANDARD_LABEL}(시행령 §159①1호)`] : []),
+  ].join("·");
   return `자산별 취득가액 합계 (산정방식: ${names} — 자산·파트별로 다름, ${MIXED_LAW})`;
 }
 
 /** 필요경비 집계 소제목 — 위와 같은 규칙. */
-export function aggregateExpenseHeading(modes: Set<SplitAcqMode>): string | undefined {
+export function aggregateExpenseHeading(modes: Set<AggHeadingMode>): string | undefined {
   if (modes.size === 0) return undefined;
   if (modes.size === 1 && modes.has("actual")) return "자산별 양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목";
-  if (modes.size === 1 && modes.has("estimated")) return "자산별 개산공제·양도비 합계 — §97① 나목·시행령 §163⑥";
+  // 부담부증여 기준시가 평가의 취득가액도 개산공제(취득시 기준시가 × 채무비율 × 3%)를 쓴다 — 환산과 같은 머리.
+  if (modes.size === 1 && (modes.has("estimated") || modes.has("bgStandard"))) return "자산별 개산공제·양도비 합계 — §97① 나목·시행령 §163⑥";
   const parts: string[] = [];
   if (modes.has("actual")) parts.push("실거래가 파트는 자본적지출·양도비");
-  if ([...modes].some((m) => m !== "actual")) parts.push("환산취득가·감정가액·매매사례가액 파트는 개산공제");
+  if ([...modes].some((m) => m !== "actual"))
+    parts.push(`환산취득가·감정가액·매매사례가액${modes.has("bgStandard") ? `·부담부증여 ${BG_STANDARD_LABEL}` : ""} 파트는 개산공제`);
   return `자산별 필요경비 합계 (${parts.join(", ")} — 소득세법 §97②2호·시행령 §163⑥)`;
 }
