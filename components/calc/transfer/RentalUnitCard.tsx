@@ -294,6 +294,13 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
                     ? " · 아파트 제외 유형"
                     : " · 아파트 허용"}
               </p>
+              {/* 재산세제과-1291 — 질의1 마목·질의2 사목만 답했다. 가목(「1호 이상 임대하고 있는 거주자」)은 답이 없어 띄우지 않는다. */}
+              {article === "마" && (
+                <p className="text-muted-foreground" data-testid={`rental-co-owned-1291-${index}`}>
+                  별도세대와 지분으로 공동소유한 임대주택(세대 기준 1호 미만)도 이 카드에 1호로 입력합니다 — 마목·사목
+                  장기임대주택에 해당합니다(기획재정부 재산세제과-1291, 2024.11.06.).
+                </p>
+              )}
             </>
           )}
         </div>
