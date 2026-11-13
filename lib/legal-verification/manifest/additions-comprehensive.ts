@@ -85,6 +85,20 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     keywords: ["2020년 7월 11일 이후 같은 법 제5조제3항에 따라", "장기일반민간임대주택으로 변경신고한 주택"],
     keywordMode: "ALL",
   },
+  /** §3①11호 나목1) — 이미 공고된 조정대상지역은 2018.9.13. 기준(대통령령 제35352호 · 2025.6.4. 시행) */
+  {
+    id: "COMPREHENSIVE_DECREE.EXCLUDED_11NA1_REGULATED_NEW_ACQ",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["이미 공고된 조정대상지역의 경우 2018년 9월 13일을 말한다", "제2조제6호의2에 따른 단기민간임대주택"],
+    keywordMode: "ALL",
+  },
+  /** §3①11호 나목2) — 법인이 공고 후 사업자등록등을 신청한 조정대상지역 단기민간임대주택(대통령령 제35352호) */
+  {
+    id: "COMPREHENSIVE_DECREE.EXCLUDED_11NA2_CORP_REGULATED_APP",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["법인 또는 법인으로 보는 단체가", "제2조제6호의2에 따른 단기민간임대주택"],
+    keywordMode: "ALL",
+  },
   {
     id: "COMPREHENSIVE_DECREE.EXCLUDED_EMPLOYEE_HOUSE",
     citation: "종합부동산세법 시행령 §4",

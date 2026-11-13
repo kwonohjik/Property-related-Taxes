@@ -9,9 +9,12 @@
 import { describe, it, expect } from "vitest";
 import { validateRentalExclusion } from "@/lib/tax-engine/comprehensive-exclusion";
 import type { RentalExclusionInput } from "@/lib/tax-engine/types/comprehensive.types";
+import { NA8_NOT_APPLICABLE } from "./_helpers/comprehensive-8na-not-applicable";
 
 const base = (over: Partial<RentalExclusionInput>): RentalExclusionInput => ({
   registrationType: "private_short_term_6y_construction",
+  // 11호 나목 1)·2) 해당 없음 확정 — 나목 판정은 comprehensive-exclusion-11ho-na.anchor.test.ts
+  ...NA8_NOT_APPLICABLE,
   rentalRegistrationDate: new Date("2025-01-01"),
   rentalStartDate: new Date("2025-01-01"),
   assessedValue: 500_000_000,

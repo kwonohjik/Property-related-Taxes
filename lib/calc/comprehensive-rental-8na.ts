@@ -1,8 +1,9 @@
 /**
- * 종부령 §3①8호 나목 1)~4)·7호 단서 — 화면이 「무엇을 묻는가」의 단일 소스.
+ * 종부령 §3①8호 나목 1)~4)·7호 단서·11호 나목 1)·2)·10·11호 2025년도 특례(부칙<제35352호> 제3조 아파트)
+ * — 화면이 「무엇을 묻는가」의 단일 소스.
  * ⑤ 칸 표시(RentalExclusion8NaFields) · ⑧ 차단(validate8NaInputs) · ④ 전송(rental8NaApiFields)이 모두 `na8Asks`를 쓴다.
  * 판정 자체는 엔진 `lib/tax-engine/comprehensive-exclusion-8ho-na.ts` — 여기의 날짜 경계는 그 파일과 같아야 한다.
- * 계획서: docs/01-plan/features/comprehensive-rental-excl-8ho-na.plan.md
+ * 계획서: docs/01-plan/features/comprehensive-rental-excl-8ho-na.plan.md · comprehensive-rental-excl-11ho-na.plan.md
  */
 import type { ComprehensiveFormData, PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 import { governingDesignationStart, isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
@@ -15,6 +16,14 @@ const NA1_GRANDFATHER_LAST_DAY = "2018-09-13";
 const NA2_ALREADY_NOTICED_BASE = "2020-06-17";
 const JULY_11_2020 = "2020-07-11";
 const NA4_TYPES = new Set(["private_purchase_long", "public_support_purchase", "public_support_construction"]);
+/** 11호 첫 적용 과세기준일(부칙<제35352호> 제3조) · 전면 적용(제2조②) */
+const ERA_11 = "2025-06-01";
+const FULL_11 = "2026-06-01";
+const SHORT_11 = "private_short_term_6y_purchase";
+const SHORT_TYPES = new Set([SHORT_11, "private_short_term_6y_construction"]);
+
+/** 10·11호(단기민간임대주택 6년) 여부 — ⑤ 카드 제목·⑧ 문구가 쓴다 */
+export const isShortTerm6y = (registrationType: string) => SHORT_TYPES.has(registrationType);
 
 export interface Na8Context {
   registrationType: string;
@@ -53,10 +62,11 @@ const atOrBefore = (s: string | undefined, limit: string) => v(s) !== "" && v(s)
 /** 이 주택에서 물어야 하는 칸. 앞 칸 답에 따라 뒤 칸이 열린다(엔진의 판정 순서와 같다). */
 export function na8Asks(p: PropertyEntry, ctx: Na8Context): Na8Asks {
   const isLong = ctx.registrationType === "private_purchase_long";
+  const is11 = ctx.registrationType === SHORT_11;
   const asmt = ctx.assessmentDate;
 
-  // 1) 개인 — 취득일(또는 계약금 지급일)이 2018.9.13. 뒤일 때만 보유 주택·조정 여부를 묻는다
-  const na1 = isLong && ctx.taxpayerType === "individual" && asmt >= ERA_NA1;
+  // 1) 개인 — 취득일(또는 계약금 지급일)이 2018.9.13. 뒤일 때만 보유 주택·조정 여부를 묻는다(8호·11호 같은 경계)
+  const na1 = ctx.taxpayerType === "individual" && ((isLong && asmt >= ERA_NA1) || (is11 && asmt >= ERA_11));
   const earliest = [v(p.rentalAcquisitionDate), v(p.rentalDepositPaidDate)].filter((d) => d !== "").sort()[0] ?? "";
   const na1Open =
     na1 && earliest > NA1_GRANDFATHER_LAST_DAY && !(p.rentalMergedAcquisition === true && asmt >= ERA_NA2);
@@ -64,7 +74,7 @@ export function na8Asks(p: PropertyEntry, ctx: Na8Context): Na8Asks {
   const na1Regulated = na1Open && p.householdOwnedAtAcquisition === "yes";
 
   // 2) 법인 — 두 신청이 2020.6.17. 이전으로 확정되면 조정 여부를 묻지 않는다
-  const na2 = isLong && ctx.taxpayerType === "corporate" && asmt >= ERA_NA2;
+  const na2 = ctx.taxpayerType === "corporate" && ((isLong && asmt >= ERA_NA2) || (is11 && asmt >= ERA_11));
   const rentalAppBefore =
     atOrBefore(p.rentalApplicationDate, NA2_ALREADY_NOTICED_BASE) ||
     atOrBefore(p.rentalRegistrationDate, NA2_ALREADY_NOTICED_BASE);
@@ -76,6 +86,9 @@ export function na8Asks(p: PropertyEntry, ctx: Na8Context): Na8Asks {
   const na3 = isLong && asmt >= ERA_NA34 && v(p.rentalRegistrationDate) >= JULY_11_2020;
   const na3App = na3 && p.isApartment === "yes";
 
+  // 10·11호 2025년도 특례 — 아파트(도시형 생활주택 아닌 것)는 적용 안 됨(부칙<제35352호> 제3조)
+  const short2025 = SHORT_TYPES.has(ctx.registrationType) && asmt >= ERA_11 && asmt < FULL_11;
+
   // 4)·7호 단서
   const na4 = NA4_TYPES.has(ctx.registrationType) && asmt >= ERA_NA34;
 
@@ -85,7 +98,7 @@ export function na8Asks(p: PropertyEntry, ctx: Na8Context): Na8Asks {
     regulated: na1Regulated || na2Regulated,
     rentalApplicationDate: na2RentalApp || na3App,
     businessRegistrationApplicationDate: na2,
-    isApartment: na3,
+    isApartment: na3 || short2025,
     convertedFromShortTerm: na4,
     shortTermConversionDate: na4 && p.convertedFromShortTerm === "yes",
   };
@@ -153,11 +166,11 @@ export function rental8NaApiFields(p: PropertyEntry, ctx: Na8Context) {
   };
 }
 
-const BASIS = "(종합부동산세법 시행령 §3①8호 나목";
-
 /** ⑧ — 보이는 칸이 비면 차단(Q-4 b). 반환: 첫 오류 문구 또는 null. */
 export function validate8NaInputs(p: PropertyEntry, ctx: Na8Context, label: string): string | null {
   const a = na8Asks(p, ctx);
+  const short = isShortTerm6y(ctx.registrationType);
+  const BASIS = `(종합부동산세법 시행령 §3①${short ? "11" : "8"}호 나목`;
   if (a.acquisitionDate && !v(p.rentalAcquisitionDate)) return `${label}: 임대주택 취득일을 입력하세요 ${BASIS}1)).`;
   if (a.householdOwned && !p.householdOwnedAtAcquisition) {
     return `${label}: 취득 당시 세대가 다른 주택을 보유했는지 고르세요 ${BASIS}1)).`;
@@ -170,9 +183,13 @@ export function validate8NaInputs(p: PropertyEntry, ctx: Na8Context, label: stri
   if (a.businessRegistrationApplicationDate && !v(p.businessRegistrationApplicationDate)) {
     return `${label}: 법인은 세무서 사업자등록(업종 추가 정정) 신청일을 입력하세요 ${BASIS}2)).`;
   }
-  if (a.isApartment && !p.isApartment) return `${label}: 아파트인지 고르세요 ${BASIS}3)).`;
+  if (a.isApartment && !p.isApartment) {
+    return short
+      ? `${label}: 아파트인지 고르세요 (종합부동산세법 시행령 부칙<대통령령 제35352호> 제3조).`
+      : `${label}: 아파트인지 고르세요 ${BASIS}3)).`;
+  }
   if (a.rentalApplicationDate && !v(p.rentalApplicationDate)) {
-    return `${label}: 지자체 임대사업자 등록 신청일을 입력하세요 ${BASIS}2)·3)).`;
+    return `${label}: 지자체 임대사업자 등록 신청일을 입력하세요 ${BASIS}${short ? "2))" : "2)·3))"}.`;
   }
   if (a.convertedFromShortTerm && !p.convertedFromShortTerm) {
     return `${label}: 단기민간임대에서 변경신고한 주택인지 고르세요 (종합부동산세법 시행령 §3①7호 단서·8호 나목4)).`;

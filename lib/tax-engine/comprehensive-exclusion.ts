@@ -73,6 +73,34 @@ function regCap2018Issue(input: RentalExclusionInput): string | null {
   return null;
 }
 
+/**
+ * §3①10호·11호(단기민간임대주택 6년) 시행 시점 — 부칙<대통령령 제35352호, 2025.2.28.>.
+ * - 제1조 단서: 2025.6.4. 시행 · 제2조②: 그 뒤 납세의무 성립분(2026 과세기준일)부터.
+ * - 제3조: 2025 과세기준일은 아파트(도시형 생활주택 아닌 것) 아닌 주택을 보유현황 신고기간 종료일(종부법 §8③ — 9.30.)까지
+ *   단기로 등록하면 적용(「등록하는」=지자체 등록일 · 신고기간 연장 여부는 확인 필요 — 계획서 V-3).
+ */
+const SHORT_TERM_6Y_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
+  "private_short_term_6y_construction",
+  "private_short_term_6y_purchase",
+]);
+const SHORT_TERM_6Y_FIRST_ASSESSMENT = Date.UTC(2025, 5, 1);
+const SHORT_TERM_6Y_FULL_ASSESSMENT = Date.UTC(2026, 5, 1);
+const SHORT_TERM_6Y_2025_REG_DEADLINE = Date.UTC(2025, 8, 30);
+
+function shortTerm6yEraIssues(input: RentalExclusionInput): string[] {
+  if (!SHORT_TERM_6Y_TYPES.has(input.registrationType)) return [];
+  const asmt = input.assessmentDate.getTime();
+  if (asmt >= SHORT_TERM_6Y_FULL_ASSESSMENT) return [];
+  if (asmt < SHORT_TERM_6Y_FIRST_ASSESSMENT) return [COMPREHENSIVE_EXCL.SHORT_TERM_6Y_NOT_IN_FORCE];
+  const issues: string[] = [];
+  if (input.rentalRegistrationDate.getTime() > SHORT_TERM_6Y_2025_REG_DEADLINE) {
+    issues.push(COMPREHENSIVE_EXCL.SHORT_TERM_6Y_2025_REGISTERED_LATE);
+  }
+  if (input.isApartment === true) issues.push(COMPREHENSIVE_EXCL.SHORT_TERM_6Y_2025_APARTMENT);
+  else if (input.isApartment == null) issues.push(COMPREHENSIVE_EXCL.SHORT_TERM_6Y_2025_APARTMENT_UNKNOWN);
+  return issues;
+}
+
 export function validateRentalExclusion(
   input: RentalExclusionInput,
 ): ExclusionValidationResult {
@@ -83,6 +111,7 @@ export function validateRentalExclusion(
   } else {
     const capIssue = regCap2018Issue(input);
     if (capIssue) failReasons.push(capIssue);
+    failReasons.push(...shortTerm6yEraIssues(input));
     failReasons.push(...excludedUnder8hoNa(input));
   }
 
