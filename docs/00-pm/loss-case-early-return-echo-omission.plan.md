@@ -11,7 +11,7 @@
 | 1 | 원인 | **양도차손 조기 반환 빌더(`buildLossTransferTaxResult`)가 정상 반환·비과세 조기 반환이 싣는 표시 echo를 싣지 않는다.** `expenses`·`estimatedBase`·`estimatedDeduction`·`estimatedStdPriceAt{Acquisition,Transfer}`·`swapApplied`·`swapComparison`·`capitalExpenditureForDisplay`·§164⑨ 특례 상세 3종이 결과에 없다 [직접: §1]. 표시 코드는 이 값이 없으면 0으로 떨어지거나(명세서) 취득가액에서 역산한다(신고서). |
 | 2 | 범위 | **환산뿐 아니라 실가·이월과세 A를 포함한 단건 양도차손 전부.** 같은 입력의 양도차익 건은 정상이다 [직접: §2 표]. 이월과세·§164⑨와 무관하다 — DP-6 Playwright 시료가 공매 주입 이월과세였을 뿐이다. |
 | 3 | 화면 영향 | ① 신고서 표: 필요경비가 **취득가액에 흡수**되고 필요경비 칸은 비어 있다(환산 손실: 취득가액 297,000,000 → **302,940,000**). ② 상세명세서 1단계: 환산 손실은 취득가액·필요경비 **0·0**, 실가 손실은 필요경비 **0**. ③ §164⑨ 근거 카드가 뜨지 않는다. ④ 다건 합산: 특례+손실이면 취득가액·필요경비 배분이 틀린다(합계는 맞다) [직접: §2]. |
-| 4 | 세액 영향 | **없음.** 양도차손은 결정세액 0이고 §114조의2 가산세 base는 손실 빌더가 별도로 이미 계산한다(`transfer-tax-loss-return.ts:85-110`). 어긋나는 것은 **표시 축뿐**이다 [직접]. |
+| 4 | 세액 영향 | **없음.** 양도차손은 결정세액 0이고 §114조의2 가산세 base는 손실 빌더가 별도로 이미 계산한다(`transfer-tax-loss-return.ts:98-120`). 어긋나는 것은 **표시 축뿐**이다 [직접]. |
 | 5 | 도달성 | **정상 폼으로 닿는다.** 환산·실가 양도차손은 평범한 입력이다. (공매·수용 특례 셀만 정상 폼에 칸이 없어 직접 API다 — DP-6 V-1.) |
 | 6 | 선례 | 같은 병이 **비과세 조기 반환**에서 이미 두 번 고쳐졌다 — `transfer-tax-finalize.ts:604-652` 주석(«신고서가 필요경비를 취득가액에 흡수 … 실측: 경비 20,000,000 · 취득가액 400,000,000 → 420,000,000으로 표시»). 손실 조기 반환만 남았다 [직접]. memory `feedback_early_return_branch_skips_pipeline_stages`. |
 | 7 | 권고 | **Q-1 a** — 손실 빌더가 정상 반환과 같은 echo를 싣는다(표시 필드 한정, 세액 불변). |
@@ -19,7 +19,7 @@
 ## 1. 현행 코드 [직접: 코드 읽기]
 
 - **조기 반환 지점:** `lib/tax-engine/transfer-tax.ts:456-458` `if (transferGain <= 0 && lossTaxableGain <= 0) return buildLossTransferTaxResult({...})`. 이 시점에 이미 `calcTransferGain` 결과(`transfer-tax.ts:368`: `usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, swapApplied, swapComparison, depreciationAmount, expropriationValuationDetail, auctionValuationDetail, housingExpropriationValuationDetail`)가 스코프에 있다.
-- **손실 빌더 반환부:** `lib/tax-engine/transfer-tax-loss-return.ts:185` `usedEstimatedAcquisition: usedEstimated`, `depreciationAmount` 만 싣는다. `estimatedBase`는 인자로 받지만 **§114조의2 base(`pb0`) 계산에만** 쓰고 결과에는 싣지 않는다(`:71-110`).
+- **손실 빌더 반환부:** `lib/tax-engine/transfer-tax-loss-return.ts:185` `usedEstimatedAcquisition: usedEstimated`, `depreciationAmount` 만 싣는다. `estimatedBase`는 인자로 받지만 **§114조의2 base(`pb0`) 계산에만** 쓰고 결과에는 싣지 않는다(`:98-102`).
 - **정상 반환(대조):** `lib/tax-engine/transfer-tax-normal-return.ts:157-168` — `estimatedBase`·`estimatedDeduction`·`estimatedStdPriceAtAcquisition/Transfer`·`expenses: appliedExpenses`·`swapApplied`·`swapComparison`·`expropriationValuationDetail`·`auctionValuationDetail`·`housingExpropriationValuationDetail`·`capitalExpenditureForDisplay`.
 - **비과세 조기 반환(선례):** `transfer-tax-finalize.ts:621`(`expenses`)·`:637-638`(`swapApplied`·`swapComparison`)·`:651-652`(`estimatedBase`·`estimatedDeduction`) — 같은 이유로 추가됐다.
 - **소비처 1 — 신고서 표:** `components/calc/results/transfer/FilingFormTableHelpers.ts:323-326` `estimatedDisplay = swapApplied ? null : (usedEstimatedAcquisition && estimatedBase !== undefined) ? {...} : null` → 손실이면 `null`이라 «양도가 − 차익»으로 취득가액을 **역산**하고 필요경비는 비운다.
