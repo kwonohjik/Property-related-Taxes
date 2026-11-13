@@ -35,165 +35,16 @@ import {
   HousingPayableTaxCalcCard,
   LandPayableTaxCalcCard,
 } from "@/components/calc/results/comprehensive-payable-calc";
-
-// ============================================================
-// 포맷 헬퍼
-// ============================================================
-
-function formatRate(rate: number, digits = 2): string {
-  return (rate * 100).toFixed(digits).replace(/\.?0+$/, "") + "%";
-}
-
-// ============================================================
-// 공통 행 컴포넌트
-// ============================================================
-
-/** 금액 대신 라벨 문자열을 표시하는 행 (기본공제 "적용 없음" 등) */
-function TaxLabelRow({
-  label,
-  valueLabel,
-  sub = false,
-  badge,
-  legalBasis,
-}: {
-  label: string;
-  valueLabel: string;
-  sub?: boolean;
-  badge?: string;
-  /** 있으면 badge 옆에 LawArticleModal(조문 클릭 팝업) 렌더. badge 텍스트는 그대로 보존. */
-  legalBasis?: string;
-}) {
-  return (
-    <div
-      className={`flex items-start justify-between py-2 gap-2 ${
-        sub ? "pl-4 text-sm text-muted-foreground" : "text-sm"
-      }`}
-    >
-      <span className="flex items-center gap-1.5 flex-wrap">
-        {label}
-        {badge && (
-          <span className="inline-flex items-center gap-1">
-            <span className="text-xs font-medium bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-              {badge}
-            </span>
-            {legalBasis && <LawArticleModal legalBasis={legalBasis} label={badge} />}
-          </span>
-        )}
-      </span>
-      <span className="shrink-0 text-muted-foreground italic">{valueLabel}</span>
-    </div>
-  );
-}
-
-function TaxRow({
-  label,
-  amount,
-  highlight = false,
-  sub = false,
-  note,
-  badge,
-  legalBasis,
-}: {
-  label: string;
-  amount: number;
-  highlight?: boolean;
-  sub?: boolean;
-  note?: string;
-  badge?: string;
-  /** 있으면 badge 옆에 LawArticleModal(조문 클릭 팝업) 렌더. badge 텍스트는 그대로 보존. */
-  legalBasis?: string;
-}) {
-  return (
-    <div
-      className={`flex items-start justify-between py-2 gap-2 ${
-        highlight
-          ? "border-t-2 border-foreground font-bold text-base"
-          : sub
-          ? "pl-4 text-sm text-muted-foreground"
-          : "text-sm"
-      }`}
-    >
-      <span className="flex items-center gap-1.5 flex-wrap">
-        {label}
-        {note && (
-          <span className="text-xs text-muted-foreground">({note})</span>
-        )}
-        {badge && (
-          <span className="inline-flex items-center gap-1">
-            <span className="text-xs font-medium bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-              {badge}
-            </span>
-            {legalBasis && <LawArticleModal legalBasis={legalBasis} label={badge} />}
-          </span>
-        )}
-      </span>
-      <span className={`shrink-0 tabular-nums ${highlight ? "text-primary" : ""}`}>
-        {formatKRW(amount)}
-      </span>
-    </div>
-  );
-}
-
-function SectionHeader({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-      {children}
-    </h3>
-  );
-}
-
-// ============================================================
-// 합산배제 내역 섹션
-// ============================================================
-
-function AggregationExclusionSection({
-  result,
-}: {
-  result: ComprehensiveTaxResult;
-}) {
-  const { aggregationExclusion } = result;
-  if (aggregationExclusion.excludedCount === 0) return null;
-
-  return (
-    <section className="space-y-2">
-      <SectionHeader>합산배제 적용 내역</SectionHeader>
-      <div className="rounded-md border bg-blue-50/50 divide-y dark:bg-blue-950/40">
-        <div className="flex justify-between px-3 py-2 text-sm">
-          <span>합산배제 주택 수</span>
-          <span className="font-medium">{aggregationExclusion.excludedCount}건</span>
-        </div>
-        <div className="flex justify-between px-3 py-2 text-sm">
-          <span>합산배제 공시가격 합계</span>
-          <span className="font-medium text-blue-700 dark:text-blue-300">
-            {formatKRW(aggregationExclusion.totalExcludedValue)}
-          </span>
-        </div>
-        <div className="flex justify-between px-3 py-2 text-sm">
-          <span>과세 대상 주택 수</span>
-          <span className="font-medium">{aggregationExclusion.includedCount}건</span>
-        </div>
-      </div>
-
-      {/* 의무임대기간 미충족 경고 (시행령 §3① — 사후 추징 위험) */}
-      {aggregationExclusion.propertyResults.some(
-        (r) => r.warnings && r.warnings.length > 0,
-      ) && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 dark:bg-amber-950/40">
-          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">의무임대기간 확인 필요</p>
-          <ul className="mt-1 space-y-1">
-            {aggregationExclusion.propertyResults.flatMap((r, idx) =>
-              (r.warnings ?? []).map((w, wi) => (
-                <li key={`${idx}-${wi}`} className="text-xs text-amber-700 dark:text-amber-300">
-                  임대주택 {idx + 1}번째: {w}
-                </li>
-              )),
-            )}
-          </ul>
-        </div>
-      )}
-    </section>
-  );
-}
+import {
+  formatRate,
+  TaxLabelRow,
+  TaxRow,
+  SectionHeader,
+} from "@/components/calc/results/comprehensive-result/result-rows";
+import {
+  AggregationExclusionSection,
+  hasAggregationExclusionContent,
+} from "@/components/calc/results/comprehensive-result/AggregationExclusionSection";
 
 // ============================================================
 // 주택분 과세표준 섹션
@@ -644,7 +495,7 @@ export function ComprehensiveTaxResultView({ result }: Props) {
   const availablePrintIds = useMemo<Set<ComprehensivePrintSectionId>>(() => {
     const s = new Set<ComprehensivePrintSectionId>();
     const hasHouses = result.properties.length > 0; // 0채(토지전용) 시 주택분 섹션 제외
-    if (result.aggregationExclusion.excludedCount > 0) s.add("aggregation-exclusion");
+    if (hasAggregationExclusionContent(result)) s.add("aggregation-exclusion");
     if (hasHouses) s.add("housing-tax-base");
     if (result.isSubjectToHousingTax) s.add("housing-tax");
     if (result.aggregateLandTax) s.add("aggregate-land");

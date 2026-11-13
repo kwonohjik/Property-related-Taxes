@@ -11,6 +11,9 @@ import type { ComprehensiveFormData, LandParcelForm } from "@/lib/stores/compreh
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 import { resolveCorporateHousingClass } from "@/lib/tax-engine/comprehensive-corporate-class";
 import { formatComprehensiveErrors } from "./comprehensive-error-format";
+import { na8Context } from "./comprehensive-rental-8na";
+import { rental8NaApiFields } from "./comprehensive-rental-8na";
+import { validate8NaInputs } from "./comprehensive-rental-8na";
 
 /**
  * 법인 §9② class 도출 (시행령 §4의4) — 엔진과 동일 헬퍼로 단일 진실. 개인이면 undefined.
@@ -100,6 +103,13 @@ export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFo
     }
     if (!p.rentalStartDate) return `${label}: 합산배제 임대주택은 임대개시일을 입력하세요 (종합부동산세법 시행령 §3①).`;
     if (!(parseDecimal(p.area) > 0)) return `${label}: 합산배제 임대주택은 전용면적(㎡)을 입력하세요 (종합부동산세법 시행령 §3① 면적 요건).`;
+    // §3①8호 나목·7호 단서 — ⑤가 보이는 칸과 같은 술어(na8Asks)
+    const na8Error = validate8NaInputs(
+      p,
+      na8Context(formData, p.rentalRegistrationType || toRegistrationType(p.exclusionType)),
+      label,
+    );
+    if (na8Error) return na8Error;
   }
   const aggParcelsMode = formData.hasAggregateLand && formData.landAggregateMode === "parcels";
   const sepParcelsMode = formData.hasSeparateLand && formData.landSeparateMode === "parcels";
@@ -375,6 +385,8 @@ export async function callComprehensiveApi(
           registrationRevokedDate: p.registrationRevokedDate || undefined,
           isEupMyeonArea: p.isEupMyeonArea || undefined,
           isThirtyPlusUnits: p.isThirtyPlusUnits || undefined,
+          // §3①8호 나목·7호 단서 — 묻는 칸만(na8Asks). 조정대상지역은 PNU 자동 판정 또는 직접 입력
+          ...rental8NaApiFields(p, na8Context(formData, registrationType)),
         },
       };
     }

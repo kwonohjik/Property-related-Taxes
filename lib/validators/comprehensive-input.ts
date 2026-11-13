@@ -50,6 +50,11 @@ const rentalRegistrationTypeSchema = z.enum([
   "private_short_term_6y_purchase",
 ]);
 
+const isoDateOptional = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
+  .optional();
+
 const rentalExclusionInfoSchema = z.object({
   /** 임대등록 유형 */
   registrationType: rentalRegistrationTypeSchema,
@@ -114,6 +119,19 @@ const rentalExclusionInfoSchema = z.object({
   isEupMyeonArea: z.boolean().optional(),
   /** 30호 이상 여부 (§3①1·2·7·8호 공시가격 상한 tier) */
   isThirtyPlusUnits: z.boolean().optional(),
+
+  // ── §3①8호 나목 1)~4)·7호 단서 (엔진 comprehensive-exclusion-8ho-na.ts) — 없으면 엔진이 「모름」=불성립 ──
+  acquisitionDate: isoDateOptional,
+  depositPaidDate: isoDateOptional,
+  acquiredViaMergedPeriod: z.boolean().optional(),
+  householdOwnedHouseAtAcquisition: z.boolean().nullable().optional(),
+  regulatedAtAssessment: z.boolean().nullable().optional(),
+  regulatedNoticeDate: isoDateOptional,
+  rentalApplicationDate: isoDateOptional,
+  businessRegistrationApplicationDate: isoDateOptional,
+  isApartment: z.boolean().nullable().optional(),
+  convertedFromShortTerm: z.boolean().nullable().optional(),
+  shortTermConversionDate: isoDateOptional,
 });
 
 // ============================================================

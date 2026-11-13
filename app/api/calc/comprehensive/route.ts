@@ -60,6 +60,13 @@ function toEngineInput(
           rentalRegistrationDate: parseDate(p.rentalInfo.rentalRegistrationDate),
           rentalStartDate: parseDate(p.rentalInfo.rentalStartDate),
           businessRegistrationDate: toOptionalDate(p.rentalInfo.businessRegistrationDate),
+          // §3①8호 나목·7호 단서 (⑭) — ownerType은 엔진(comprehensive-tax)이 taxpayerType에서 주입
+          acquisitionDate: toOptionalDate(p.rentalInfo.acquisitionDate),
+          depositPaidDate: toOptionalDate(p.rentalInfo.depositPaidDate),
+          regulatedNoticeDate: toOptionalDate(p.rentalInfo.regulatedNoticeDate),
+          rentalApplicationDate: toOptionalDate(p.rentalInfo.rentalApplicationDate),
+          businessRegistrationApplicationDate: toOptionalDate(p.rentalInfo.businessRegistrationApplicationDate),
+          shortTermConversionDate: toOptionalDate(p.rentalInfo.shortTermConversionDate),
           registrationRevokedDate: p.rentalInfo.registrationRevokedDate
             ? parseDate(p.rentalInfo.registrationRevokedDate)
             : undefined,

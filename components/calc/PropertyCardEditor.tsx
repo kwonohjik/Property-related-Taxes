@@ -147,7 +147,8 @@ export function PropertyCardEditor({
             onChange={(v) => {
               // 동·호는 세대 드롭다운이 싣는 값만 쓴다 — 상세주소 칸이 없어 파싱할 입력이 없다.
               //   남는 경로(주소 선택·지우기·동 선택·호 선택)에서 종전 파싱과 결과가 같음을 실측했다(계획서 R2)
-              onUpdate({ jibun: v.jibun, road: v.road, building: v.building, dong: v.dong ?? "", ho: v.ho ?? "" });
+              //   pnu: 조정대상지역 자동 판정용 법정동코드(종부령 §3①8호 나목 — lib/calc/comprehensive-rental-8na.ts)
+              onUpdate({ jibun: v.jibun, road: v.road, building: v.building, dong: v.dong ?? "", ho: v.ho ?? "", pnu: v.pnu ?? "" });
             }}
           />
         </div>
