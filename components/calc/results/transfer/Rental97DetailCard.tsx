@@ -110,6 +110,11 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
         decedent?: { start: string; end: string };
         endReason: "transfer" | "auto_cancel" | "voluntary_cancel";
       };
+      // [echo] V-14 — §97의3 상속 합산 구간(조특령 §97의3④ → §97⑤3호). 구 이력은 없다.
+      rentalPeriod973?: {
+        decedent: { start: string; end: string };
+        heir: { start: string; end: string };
+      };
       // [echo] PR-C — 단기→장기 변경신고 주택의 임대개시 의제(조특령 §97의3④ 후단). 구 이력은 없다.
       shortTermConversionDetail?: {
         era: "old" | "old_grandfathered" | "new_before_end" | "new_after_end";
@@ -216,6 +221,27 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
                   ? " · 상속 주택의 「2018.3.31까지 사업자등록등」 요건과 기준시가 한도는 피상속인 기준으로 판정했습니다 — 정면 해석례가 없어 확인이 필요합니다"
                   : ""}
                 .
+              </p>
+            </div>
+          )}
+          {lthdEffect.rentalPeriod973 && (
+            <div data-testid="rental973-period-detail" className="space-y-0.5">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">피상속인 임대기간 (조특령 §97⑤3호 합산)</span>
+                <span className="font-mono">
+                  {lthdEffect.rentalPeriod973.decedent.start} ~ {lthdEffect.rentalPeriod973.decedent.end}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">상속인 임대기간</span>
+                <span className="font-mono">
+                  {lthdEffect.rentalPeriod973.heir.start} ~ {lthdEffect.rentalPeriod973.heir.end}
+                </span>
+              </div>
+              <p className="text-micro text-muted-foreground">
+                두 기간을 통산했습니다(공실 3개월 초과 구간과 상속개시일부터 상속인 임대개시 전까지는 제외 · 조특령 §97의3④ → §97⑤3호).
+                기준시가 한도와 임대기간 분 양도차익 안분은 피상속인 임대개시일 기준으로, 등록 시한·8년 50% 경과규정은 상속인 등록일로
+                판정했습니다 — §97의3에 피상속인 기간 합산을 적용한 해석례가 없어 확인이 필요합니다.
               </p>
             </div>
           )}

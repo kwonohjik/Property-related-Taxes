@@ -30,6 +30,7 @@ import { toUnsold987Payload } from "./transfer-tax-api-reductions-unsold";
 import { toUnsold992Payload } from "./transfer-tax-api-reductions-unsold";
 import { toUnsold989Payload } from "./transfer-tax-api-reductions-unsold";
 import { rental975InheritancePayload } from "./rental-97-5-inheritance";
+import { rental973InheritancePayload } from "./rental-97-3-inheritance";
 
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
 /**
@@ -313,6 +314,11 @@ export function toEngineReductions(
           // §97의3①1호 — 조기 종료 시 임대기간 종점 · 조특령 §97의3④ 사업자등록일 (§97의5와 같은 조건)
           ...(r.rentalContinuesToTransfer === false && r.rentalEndDate ? { rentalEndDate: r.rentalEndDate } : {}),
           ...(r.isTaxRegistered && r.taxRegistrationDate ? { taxRegistrationDate: r.taxRegistrationDate } : {}),
+          // V-14 — 조특령 §97의3④ → §97⑤3호 상속 합산. 상속 자산·토글 ON·세 날짜(상속개시일 = 카드 취득일)일 때만.
+          ...(() => {
+            const inheritance973 = rental973InheritancePayload(r, ownerAsset);
+            return inheritance973 ? { inheritance973 } : {};
+          })(),
         };
       }
       if (r.type === "rental_97_4") {

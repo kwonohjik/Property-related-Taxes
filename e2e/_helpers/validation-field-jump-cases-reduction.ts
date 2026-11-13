@@ -235,6 +235,8 @@ const dateRows = (label: string): Row[] => [
   { name: "등록일", prop: "registrationDate", message: new RegExp(`^${label} 적용: 임대사업자 등록일`), patch: { registrationDate: "" } },
 ];
 
+/** V-13·V-14 — 상속 자산(상속개시일 = 카드 취득일 2015-03-01) · 상속 취득가액 칸은 acq 점프 케이스와 같은 값 */
+const R975_INHERITED = { acquisitionCause: "inheritance", publishedValueAtInheritance: "300000000", decedentAcquisitionDate: "2010-01-01" };
 const r973Ok = { ...rentalBase, taxRegistrationDate: "2019-06-01", isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };
 const RENTAL_97_3 = table("rental_97_3", hybrid("rental_97_3"), r973Ok, {}, [
   ...dateRows("§97의3"),
@@ -250,6 +252,11 @@ const RENTAL_97_3 = table("rental_97_3", hybrid("rental_97_3"), r973Ok, {}, [
   { name: "세무서 사업자등록일", prop: "taxRegistrationDate", message: /^§97의3 적용: 세무서 사업자등록일을 입력/, patch: { taxRegistrationDate: "" } },
   { name: "안분 취득 당시 기준시가", prop: "stdPriceAtAcquisition", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtAcquisition: "" } },
   { name: "안분 양도 당시 기준시가", prop: "stdPriceAtTransfer", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtTransfer: "" } },
+  // V-14 — 조특령 §97의3④ → §97⑤3호 상속 합산(상속 자산에서만 보인다 · 상속개시일 = 카드 취득일 2015-03-01)
+  { name: "피상속인 등록등일", prop: "decedentRegistrationDate973", message: /^§97의3 적용: 피상속인의 장기일반·공공지원 등록등일/, asset: R975_INHERITED, patch: { isInherited973: true, decedentRegistrationDate973: "", decedentRentalStartDate973: "2012-01-01" } },
+  { name: "피상속인 임대개시일", prop: "decedentRentalStartDate973", message: /^§97의3 적용: 피상속인의 임대개시일을 입력/, asset: R975_INHERITED, patch: { isInherited973: true, decedentRegistrationDate973: "2012-01-01", decedentRentalStartDate973: "" } },
+  { name: "피상속인 날짜 순서", prop: "decedentRentalStartDate973", message: /^§97의3 적용: 피상속인의 임대개시일·등록등일은 상속개시일/, asset: R975_INHERITED, patch: { isInherited973: true, decedentRegistrationDate973: "2012-01-01", decedentRentalStartDate973: "2016-01-01" } },
+  { name: "상속 합산 × 변경신고", prop: "isInherited973", message: /^§97의3 적용: 피상속인 임대기간 합산과 2020\.7\.10 이전 단기→장기 변경신고/, asset: R975_INHERITED, patch: { isInherited973: true, decedentRegistrationDate973: "2012-01-01", decedentRentalStartDate973: "2012-01-01", shortTermConversionMode: "before" } },
 ]);
 
 const r974Ok = { ...rentalBase, taxRegistrationDate: "2019-06-01", rental974Category: "purchase_a", officialPriceAtStart: "300000000", region: "capital" };
@@ -279,8 +286,6 @@ const RENTAL_97_4 = table("rental_97_4", hybrid("rental_97_4"), r974Ok, {}, [
   RENTAL_97_4.push({ ...c, form: () => ({ ...base(), transferDate: "2028-07-03", filingDate: "2028-09-30" }) });
 }
 
-/** V-13 — 상속 자산(상속개시일 = 카드 취득일 2015-03-01) · 상속 취득가액 칸은 acq 점프 케이스와 같은 값 */
-const R975_INHERITED = { acquisitionCause: "inheritance", publishedValueAtInheritance: "300000000", decedentAcquisitionDate: "2010-01-01" };
 const r975Ok = { ...rentalBase, isPurchaseRental: true, taxRegistrationDate: "2019-06-01", hasDeemedRentalPeriod: false, deemedRentalPeriods: [], isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };
 const RENTAL_97_5 = table("rental_97_5", hybrid("rental_97_5"), r975Ok, {}, [
   ...dateRows("§97의5"),

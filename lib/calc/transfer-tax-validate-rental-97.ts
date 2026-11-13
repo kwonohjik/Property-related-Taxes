@@ -22,6 +22,8 @@ import { hasRentIncreaseRule } from "./rental-rent-increase-label";
 import { RENT_INCREASE_VIOLATION_LABEL } from "./rental-rent-increase-label";
 import { rental974AptDeadlineIssue } from "./apt-deadline-extension-scope";
 import { rental975InheritanceInScope } from "./rental-97-5-inheritance";
+import { rental973InheritanceInScope } from "./rental-97-3-inheritance";
+import { rental973InheritanceConflictsConversion } from "./rental-97-3-inheritance";
 
 export function rental97SeriesIssue(args: {
   fail: (message: string) => ValidationIssue;
@@ -102,6 +104,20 @@ export function rental97SeriesIssue(args: {
       // 엔진 INVALID_INHERITANCE_DATES와 같은 조건 (YYYY-MM-DD 문자열 비교) — 상속개시일 > 양도일은 자산 날짜 검증이 먼저 막는다
       if (r.decedentRegistrationDate975 >= asset.acquisitionDate || r.decedentRentalStartDate975 >= asset.acquisitionDate)
         return fail(fieldError(`reduction.${r.type}.decedentRentalStartDate975`, `${label} 적용: 피상속인의 임대개시일·등록등일은 상속개시일(${asset.acquisitionDate})보다 앞서야 합니다.`));
+    }
+    // V-14 — §97의3 상속 합산(조특령 §97의3④ → §97⑤3호). §97의5와 같은 규칙 + 단기→장기 변경신고와 함께 쓸 수 없다(Q-2 · 엔진 사유와 같은 조건).
+    if (r.type === "rental_97_3" && r.isInherited973 && rental973InheritanceInScope(asset.acquisitionCause)) {
+      if (rental973InheritanceConflictsConversion(r))
+        return fail(fieldError(`reduction.${r.type}.isInherited973`, `${label} 적용: 피상속인 임대기간 합산과 2020.7.10 이전 단기→장기 변경신고 산입은 함께 계산하지 않습니다 — 둘 중 하나를 끄세요 (조특령 §97의3④).`));
+      if (!asset.acquisitionDate)
+        return fail(fieldError("acquisitionDate", `${label} 적용: 피상속인 임대기간을 합산하려면 자산의 상속개시일을 먼저 입력하세요.`));
+      if (!r.decedentRegistrationDate973)
+        return fail(fieldError(`reduction.${r.type}.decedentRegistrationDate973`, `${label} 적용: 피상속인의 장기일반·공공지원 등록등일(임대사업자 등록·세무서 사업자등록 중 늦은 날)을 입력하세요.`));
+      if (!r.decedentRentalStartDate973)
+        return fail(fieldError(`reduction.${r.type}.decedentRentalStartDate973`, `${label} 적용: 피상속인의 임대개시일을 입력하세요.`));
+      // 엔진 INVALID_INHERITANCE_DATES와 같은 조건 (YYYY-MM-DD 문자열 비교)
+      if (r.decedentRegistrationDate973 >= asset.acquisitionDate || r.decedentRentalStartDate973 >= asset.acquisitionDate)
+        return fail(fieldError(`reduction.${r.type}.decedentRentalStartDate973`, `${label} 적용: 피상속인의 임대개시일·등록등일은 상속개시일(${asset.acquisitionDate})보다 앞서야 합니다.`));
     }
     // D2-07 — 2023.1.1 이후 등록분은 §97의3①이 민간건설임대주택에 한정한다.
     //          그 전 등록분은 법률 제19199호 부칙 §38 경과조치로 종전 규정을 따른다.

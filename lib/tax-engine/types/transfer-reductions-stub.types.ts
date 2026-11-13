@@ -103,6 +103,8 @@ export type TransferReductionStub =
       isConvertedFromShortTerm?: boolean;
       /** 조특령 §97의3④ 후단 — 2020.7.10 이전 단기→장기 변경신고 (registrationDate = 단기 지자체 등록일) */
       shortTermConversion?: { reportedDate: Date; acceptedDate: Date };
+      /** 조특령 §97의3④ → §97⑤3호 — 상속받은 임대주택의 피상속인 임대기간 (엔진 `Rental97EvaluationInput.inheritance973` · V-14) */
+      inheritance973?: { inheritanceDate: Date; decedentRegistrationDate: Date; decedentRentalStartDate: Date };
       /** §97의3①1호 — 양도 전 임대 종료 시 실제 임대기간의 마지막 날 */
       rentalEndDate?: Date;
       /** 조특령 §97의3④ — 세무서 사업자등록일 (isTaxRegistered면 필수) */

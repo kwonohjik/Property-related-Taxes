@@ -177,6 +177,14 @@ export const reductionSchema = z.discriminatedUnion("type", [
     shortTermConversion: z
       .object({ reportedDate: z.string().date(), acceptedDate: z.string().date() })
       .optional(),
+    /** V-14 — 조특령 §97의3④ → §97⑤3호 상속 합산. ⑫에 없으면 침묵 stripping된다. 상속 자산만·변경신고와 함께 불가(`refineReductionRequiredInputs`) */
+    inheritance973: z
+      .object({
+        inheritanceDate: z.string().date(),
+        decedentRegistrationDate: z.string().date(),
+        decedentRentalStartDate: z.string().date(),
+      })
+      .optional(),
   }),
   z.object({
     type: z.literal("rental_97_4"),

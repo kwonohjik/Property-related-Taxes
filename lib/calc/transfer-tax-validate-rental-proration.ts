@@ -21,6 +21,7 @@ import { fieldError } from "./transfer-tax-validate-field";
 import { engineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import { rental97EffectiveStartString } from "./rental-97-effective-start";
 import { rental973DeemedStartString } from "./rental-97-effective-start";
+import { rental973MergedDecedentStart } from "./rental-97-3-inheritance";
 
 type ProrationReduction = Extract<AssetReductionForm, { type: "rental_97_3" | "rental_97_5" }>;
 
@@ -68,10 +69,12 @@ export function rentalProrationIssue(args: {
    *    비율 1을 돌려준다. 그 경우까지 막으면 필요 없는 값을 요구하는 오탐이 된다.
    *    §97의5②는 분자의 감수가 취득당시라 계속 임대면 개시일과 무관하게 비율 1이다.
    */
+  // V-14 — §97의3 상속 합산이면 안분 개시일 = 피상속인 의제 개시일(엔진 `effectiveRentalStartDate`와 같은 축 · Q-3 Y).
+  const prorationStart = (r.type === "rental_97_3" ? rental973MergedDecedentStart(r, asset) : undefined) ?? start;
   const prorationNeeded =
     !wholeGain &&
     (r.rentalContinuesToTransfer === false ||
-      (r.type !== "rental_97_5" && !!start && !!asset.acquisitionDate && start > asset.acquisitionDate));
+      (r.type !== "rental_97_5" && !!prorationStart && !!asset.acquisitionDate && prorationStart > asset.acquisitionDate));
   if (!prorationNeeded) return null;
 
   const hasAcqStd =

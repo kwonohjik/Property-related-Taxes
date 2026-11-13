@@ -105,6 +105,8 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         // §97의3①1호 종점 · 조특령 §97의3④ 사업자등록일 (§97의5와 같은 축). ⚠️ 명시 매핑.
         rentalEndDate: r.rentalEndDate,
         taxRegistrationDate: r.taxRegistrationDate,
+        // V-14 — 조특령 §97의3④ → §97⑤3호 피상속인 임대기간 합산. ⚠️ 명시 매핑 — 적지 않으면 조용히 사라진다.
+        inheritance973: r.inheritance973,
       };
     case "rental_97_4":
       // D2-04 — 종전에는 region만 넘겨 기준시가 한도를 판정할 입력이 없었다.

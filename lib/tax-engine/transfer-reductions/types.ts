@@ -196,6 +196,16 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
    */
   inheritance975?: NonNullable<Rental97EvaluationInput["inheritance974"]>;
   /**
+   * §97의3 — 상속받은 임대주택 (조특령 §97의3④ → §97⑤3호 「피상속인의 주택임대기간을 상속인의 주택임대기간에 합산」 · V-14).
+   * 모양은 `inheritance974`와 같다. 있으면 `registrationDate`·`taxRegistrationDate`·`rentalStartDate`는 **상속인 본인** 값이다.
+   * - 령 ② 「통산」 — 피상속인 분 [max(피상속인 임대개시일, 장기일반·공공지원 등록등일), 상속개시일]과 상속인 분
+   *   [max(상속인 의제 개시일, 상속개시일), 종점]의 일수를 더한다. 그 사이 간격은 세지 않는다(Q-0 · §97의4와 같은 식)
+   * - 기준시가 한도·안분 ⑤의 개시일은 피상속인 의제 개시일(Q-3 Y) · 임대료 5%는 피상속인 분 계약부터(Q-4)
+   * - 등록 시한·건설 한정·8년 경과규정의 등록일은 상속인 기준 그대로(Q-1) · 단기→장기 변경신고와 함께 쓸 수 없다(Q-2)
+   * 사용자 결정 2026-11-13 (`docs/01-plan/features/rental-97-3-inheritance-merge.plan.md` §7 권장안) — §97의3 정면 해석례 없음.
+   */
+  inheritance973?: NonNullable<Rental97EvaluationInput["inheritance974"]>;
+  /**
    * §97의4 — 임대사업자 등록이 자동말소된 날(민간임대주택에 관한 특별법 §6⑤ — 임대의무기간 종료일).
    * 임대기간 종점 = min(양도일, 이 날) (국세청 서면-2021-법규재산-1422, 2022.6.21. — 「임대개시일부터 자동말소일까지」).
    */
@@ -372,6 +382,14 @@ export interface RentalLthdEffect {
     heir?: { start: string; end: string };
     decedent?: { start: string; end: string };
     endReason: "transfer" | "auto_cancel" | "voluntary_cancel";
+  };
+  /**
+   * [echo] §97의3 상속 합산(V-14) — 피상속인 분·상속인 분 임대기간 구간(YYYY-MM-DD). 결과 카드 표시 전용.
+   * 합산하지 않았으면 undefined.
+   */
+  rentalPeriod973?: {
+    decedent: { start: string; end: string };
+    heir: { start: string; end: string };
   };
   /**
    * [echo] §97의3 — 양도일 기준 안분 구간(`data/rental-97-3-proration-era.ts`). 결과 카드 고지용.
