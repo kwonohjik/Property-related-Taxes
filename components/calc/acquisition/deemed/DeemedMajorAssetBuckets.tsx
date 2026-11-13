@@ -22,9 +22,10 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { deemedProvisoRate } from "@/lib/tax-engine/acquisition-deemed-proviso";
 import type { DeemedAssetBucketRow } from "../shared";
+import { GolfCourseScopeNote } from "./GolfCourseScopeNote";
 
 const LUXURY_OPTIONS = [
-  { value: "golf_course", label: "골프장" },
+  { value: "golf_course", label: "골프장 (회원제 구분등록 대상)" },
   { value: "luxury_housing", label: "고급주택" },
   { value: "luxury_entertainment", label: "고급오락장" },
   { value: "luxury_vessel", label: "고급선박" },
@@ -178,6 +179,7 @@ export function DeemedMajorAssetBuckets({ rows, taxableRatio, onChange }: Props)
                   onChange={(v) => update(row.id, { luxuryType: v })}
                   options={LUXURY_OPTIONS}
                 />
+                {row.luxuryType === "golf_course" && <GolfCourseScopeNote majorShareholder />}
               </div>
             )}
 

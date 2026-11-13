@@ -93,7 +93,9 @@ test.describe("취득세 간주취득 — §15② 단서 입력 경로", () => {
     // 1번 물건 — 골프장 30억 (사치성)
     await rows.getByPlaceholder("결산서·장부상 가액 (§10의6④)").first().fill("3000000000");
     await rows.getByText(/사치성\(§13⑤\) — 10%/).first().click();
-    await rows.getByText("골프장", { exact: true }).first().click();
+    await rows.getByText("골프장 (회원제 구분등록 대상)", { exact: true }).first().click();
+    // §13⑤ 후단 적용 범위 + 과점주주 U-2 고지가 그 행에 뜬다
+    await expect(rows.getByTestId("deemed-golf-scope-major-shareholder")).toBeVisible();
 
     // 2번 물건 — 일반 토지 70억
     await page.getByTestId("deemed-bucket-add").click();
