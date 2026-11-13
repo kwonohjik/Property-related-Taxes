@@ -18,6 +18,7 @@ import { MULTI_BURDENED_GIFT_WHOLE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_PARCELS_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
@@ -62,6 +63,10 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown, data?: Record<strin
         ? MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE
         : null,
   mixedUse: whenPresent(MULTI_MIXED_USE_UNSUPPORTED_MESSAGE),
+  // 다필지(§114⑦) — 화면은 ⑧이 막는데(`validateMultiSupportedMode` `parcelMode`) 서버가 받아 200으로 계산했다. 집계 표시 echo(`resolveDisplayAcquisitionAndExpense`)가
+  //   `parcelDetails`를 읽지 않고 역산해 자산 행이 취득가액 0 · 필요경비 406,000,000(진짜 400,000,000 / 6,000,000)으로 틀렸고, 합산 세액 정합은 검증된 적이 없다
+  //   (계획서 `early-return-mixed-use-aggregate-audit.plan.md` F-2 · Q-1 a). 빈 배열은 단건 엔진도 다필지로 보지 않으므로(`handleMultiParcelBranch`) 통과시킨다.
+  parcels: (v) => (Array.isArray(v) && v.length > 0 ? MULTI_PARCELS_UNSUPPORTED_MESSAGE : null),
   // 의제취득일 전 매수 §176조의2④ — 다건 ④·⑭는 이 입력을 옮기지 않는다(계획서 realestate-pre-deemed-purchase Q-11 b).
   preDeemedPurchase: whenPresent(MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE),
   // 일반건물(`generalBuildingValuation`)은 ⑭가 단건과 같은 카드로 펼친다(`multi-gb-expansion.ts` · 트랙 G).

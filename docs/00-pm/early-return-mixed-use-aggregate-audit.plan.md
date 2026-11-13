@@ -2,7 +2,7 @@
 
 > 2026-11-13 · 코드 읽기 + throwaway probe(겸용 엔진 `calcMixedUseTransferTax` → `mixedUseToFilingResult` → `buildRows`, 컴패니언 `buildMixedUsePartCards` → `calculateTransferTaxAggregate`, 다건 라우트 `POST /api/calc/transfer/multi`). 출처: `early-return-branches-echo-audit.plan.md` §5 V-2.
 > 표기: **[직접]** 이번 세션 코드 읽기·실측 · **[해석]** · **[확인 필요]**.
-> 상태: **계획 단계 — 사용자 결정 대기(Q-1)**. 코드 변경 없음. probe는 커밋 전에 삭제했다.
+> 상태: **Q-1 a 결정(2026-11-13, 「권고대로 진행」) → 구현·검증 완료(§7)**. 세액 불변. probe는 커밋 전에 삭제했다.
 
 ## 0. 결론
 
@@ -15,7 +15,7 @@
 | 5 | 다건 집계 × 전액 비과세 | **정상 + #3310 효과 전파 확인.** 환산 비과세 400,000,000 / 6,000,000, 환산 + 공매 640,000,000 / 6,000,000. 집계 `properties[]`에 `auctionValuationDetail`이 실린다(`pickValuationDetails`가 §164⑨ 3종을 옮긴다) [직접: §2 AG3·AG4·AG4d]. |
 | 6 | 집계 엔진 자체의 조기 반환 | **echo 손실 없음.** `computeAggregateOnce`의 `finishWith({})`(비교 그룹 없음)와 `calculateTransferTaxAggregateWithUnits`의 `eligible.length === 0`(baseline 반환)은 같은 결과 형태로 반환한다 [직접: 코드 읽기 `transfer-tax-aggregate-once.ts:697`·`transfer-tax-aggregate.ts:160` + 위 probe 값]. |
 | 7 | 세액 영향 | **없음.** 모두 표시 축이다 [직접]. |
-| 8 | 권고 | **Q-1 a**(⑫에 다필지 거부 규칙 추가 — ⑧과 정합). |
+| 8 | 권고 | **Q-1 a**(⑫에 다필지 거부 규칙 추가 — ⑧과 정합) → §7에서 구현. |
 
 ## 1. 분기 목록 [직접: 코드 읽기]
 
@@ -95,3 +95,29 @@
 ## 6. 결정 요청
 
 - **Q-1:** a ⑫에 다필지 거부 규칙 추가(권고) / b 집계 echo가 `parcelDetails`를 읽는다 / c 현행 유지·한계 기록.
+
+## 7. 결정·구현·검증 결과 [직접: 2026-11-13]
+
+**결정:** Q-1 a — ⑫에 다필지 거부 규칙을 추가한다(「권고대로 진행」).
+
+**변경(4곳, 세액 로직·표시 함수 불변)**
+- `lib/calc/multi-transfer-support-messages.ts`: `MULTI_PARCELS_UNSUPPORTED_MESSAGE = "다필지 토지는 단건 계산기에서만 지원됩니다."` 신설 — ⑧이 쓰던 문구 그대로.
+- `lib/calc/multi-transfer-tax-validate.ts`(⑧): 리터럴을 위 상수로 교체(문구·동작 불변).
+- `lib/api/transfer-tax-schema-multi-refines.ts`(⑫): `MULTI_REJECT_RULES.parcels` — 배열이고 1개 이상이면 거부, 빈 배열·값 없음은 통과(`handleMultiParcelBranch`가 빈 배열을 다필지로 보지 않는다 — `transfer-tax-multi-parcel-branch.ts:68`).
+- `__tests__/api/transfer.route.multi-key-coverage-f12.test.ts`: 거부 키 순회가 `{}`로 모든 규칙을 시험하는데 `parcels`는 `companionAssets`처럼 배열값 규칙이라 값별 규칙 목록(`scalar`)에 넣고 명시 단언 2줄(`[{}]` → 거부, `[]` → 통과)을 추가했다.
+
+**남긴 것:** `route-property-input.ts:420`의 `parcels` 매핑(⑭)은 이제 ⑫가 거부해 도달하지 않는다. 가드(`multi-key-coverage-f12`)는 «매핑 또는 거부»를 요구하므로 둘 중 하나만 있어도 통과하며, 사용자 요청 범위 밖이라 지우지 않았다.
+
+**anchor** `__tests__/api/transfer.route.multi-parcels-reject.anchor.test.ts` (5건) + 가드 보정, 합 10건:
+
+| 시료 | 종전 | 이후 |
+|---|---|---|
+| PR-1 다건 + 다필지 2개 직접 API | 200, 자산 행 취득가액 0 / 필요경비 406,000,000 | **400**, 문구 + path `parcels` |
+| PR-2 ⑧ ≡ ⑫ | ⑫ 규칙 없음 | 두 문구가 같은 상수 |
+| PR-3 빈 `parcels: []` | 200 | 200 (통과) |
+| PR-4 다필지 없는 다건 | 200 · 400,000,000 / 6,000,000 | 불변 |
+| PR-5 단건 다필지 | 200 · 필요경비 6,000,000 · 양도차익 394,000,000 | 불변 |
+
+**뮤테이션 3종 전부 포착, 복원 `cmp` 일치:** M1 규칙 삭제(PR-1·PR-2·가드 3건 실패 — 구현 전 상태와 같다) · M2 빈 배열도 거부(PR-3·가드 2건) · M3 ⑧ 문구 이탈(PR-2).
+
+**V 레지스터 갱신:** F-2 해소. 다건 다필지는 지원하지 않기로 했으므로 V-5(합산 세액 정합)는 불필요해졌다. V-1~V-4·V-6은 여전히 미측정.
