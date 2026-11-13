@@ -17,13 +17,14 @@ import { na8Context } from "@/lib/calc/comprehensive-rental-8na";
 import { isShortTerm6y } from "@/lib/calc/comprehensive-rental-8na";
 import { resolveRegulated8Na } from "@/lib/calc/comprehensive-rental-8na";
 
-type Tri = "yes" | "no";
+export type Tri = "yes" | "no";
 const YES_NO = (testId: string, yes: string, no: string) => [
   { value: "yes" as const, label: yes, testId: `${testId}-yes` },
   { value: "no" as const, label: no, testId: `${testId}-no` },
 ];
 
-function DateField({
+/** 날짜 칸 — 6호 칸(RentalExclusion6hoFields)도 쓴다 */
+export function DateField({
   label,
   testId,
   value,
@@ -49,7 +50,8 @@ function DateField({
   );
 }
 
-function YesNoField({
+/** 예/아니오 칸 — 6호 칸(RentalExclusion6hoFields)도 쓴다 */
+export function YesNoField({
   label,
   name,
   value,

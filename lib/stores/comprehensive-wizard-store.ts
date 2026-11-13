@@ -53,6 +53,15 @@ export interface PropertyEntry {
   isApartment?: "" | "yes" | "no";             // 나목3) 아파트(도시형 생활주택 제외)
   convertedFromShortTerm?: "" | "yes" | "no";  // 나목4)·7호 단서 — 단기에서 변경신고
   shortTermConversionDate?: string;            // 그 변경신고일
+  // ── §3①6호 미분양매입임대 — 묻는 조건은 lib/calc/comprehensive-rental-6ho.ts 한 곳(⑤⑧④ 공유). 빈 값 = 미입력 ──
+  unsoldContractDate?: string;                  // 최초 분양계약·계약금 납부일(2008.6.11.~2009.6.30.)
+  isUnsoldFirstComeSupply?: "" | "yes" | "no";  // 선착순 공급 미분양주택
+  unsoldDocsSubmitted?: "" | "yes" | "no";      // 라목 — 확인서·계약서 사본 제출
+  unsoldUnitCount?: number;                     // 후단 — 같은 시·도 미분양매입임대 호수(이 주택 포함)
+  purchaseRental2hoCount?: number;              // 후단 — 2호 매입임대 호수
+  existingRental3hoSameRegionCount?: number;    // 후단 — 같은 시·도 3호 임대주택 호수
+  reitRental5hoCount?: number;                  // 후단 — 5호 임대주택 호수
+  rentalRegistrationKind?: "" | "short_term" | "long_term_general" | "public_support" | "other"; // 가목 단서 — 민특법 등록 종류
   rentalStartDate: string;         // YYYY-MM-DD
   currentRent: string;             // 현재 임대료 (원)
   previousRent: string;            // 직전 임대료 (원)

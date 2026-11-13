@@ -505,10 +505,11 @@ export function PropertyCardEditor({
                 value={property.exclusionType}
                 onChange={(e) => {
                   const v = e.target.value;
-                  // 단기 2종 선택 시 rentalRegistrationType 자동 매칭 (단일 출처 toRegistrationType)
+                  // 단기 2종·미분양매입임대(6호) 선택 시 rentalRegistrationType 자동 매칭 (단일 출처 toRegistrationType)
                   const isShort =
                     v === "private_short_term_rental_6y_construction" ||
-                    v === "private_short_term_rental_6y_purchase";
+                    v === "private_short_term_rental_6y_purchase" ||
+                    v === "unsold_purchase_rental";
                   onUpdate(
                     isShort
                       ? { exclusionType: v, rentalRegistrationType: toRegistrationType(v) }

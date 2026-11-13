@@ -23,6 +23,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { asksBusinessRegistrationDate } from "@/lib/calc/comprehensive-api";
 import { toRegistrationType } from "@/lib/calc/comprehensive-api";
 import { RentalExclusion8NaFields } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
+import { RentalExclusion6hoFields } from "@/components/calc/comprehensive/RentalExclusion6hoFields";
 
 // ============================================================
 // 임대 등록 유형 레이블
@@ -39,6 +40,7 @@ const RENTAL_REG_TYPE_OPTIONS: [string, string][] = [
   ["existing_rental", "기존임대주택 (2005년 이전 등록, §3호)"],
   ["private_short_term_6y_construction", "민간건설 단기민간임대 (6년)"],
   ["private_short_term_6y_purchase", "민간매입 단기민간임대 (6년)"],
+  ["unsold_purchase", "미분양매입임대 (§3①6호, 2008.6.11.~2009.6.30. 계약)"],
 ];
 
 // 임대주택 합산배제 유형 집합
@@ -53,6 +55,7 @@ const RENTAL_EXCLUSION_TYPES = new Set([
   "existing_rental",
   "private_short_term_rental_6y_construction",
   "private_short_term_rental_6y_purchase",
+  "unsold_purchase_rental",
 ]);
 
 // 기타 합산배제 (별도 상세정보 불필요)
@@ -198,6 +201,13 @@ function RentalExclusionDetail({
 
       {/* §3①8호 나목·7호 단서 — 묻는 칸은 na8Asks(⑧·④와 같은 술어) */}
       <RentalExclusion8NaFields
+        property={property}
+        registrationType={property.rentalRegistrationType || toRegistrationType(property.exclusionType)}
+        onUpdate={onUpdate}
+      />
+
+      {/* §3①6호 미분양매입임대 — 묻는 칸은 ho6Asks(⑧·④와 같은 술어) */}
+      <RentalExclusion6hoFields
         property={property}
         registrationType={property.rentalRegistrationType || toRegistrationType(property.exclusionType)}
         onUpdate={onUpdate}
