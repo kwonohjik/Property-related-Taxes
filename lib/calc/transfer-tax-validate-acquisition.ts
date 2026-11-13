@@ -68,6 +68,10 @@ import { apartNtsPriceIssue, isApartSec163_9Asset } from "./apart-nts-price";
 import { HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
 import { bgIgnoresAssetAppraisalSalesCase } from "./bg-asset-acq-mode-scope";
 import { bgIgnoresCommercialEstimated } from "./bg-asset-acq-mode-scope";
+import {
+  MIXED_USE_CARRYOVER_UNSUPPORTED_MESSAGE,
+  isMixedCarryoverUnsupported,
+} from "./mixed-use-carryover-scope";
 
 /** 다필지 자산 검증 — 다필지 모드일 때(A12: 컴패니언은 호출부에서 먼저 차단된다). */
 function validateParcelMode(primary: AssetForm, formTransferDate?: string): string | null {
@@ -361,6 +365,10 @@ function validateAssetAcquisitionBranches(
    */
   const nblErr = validateNblDetailedJudgment(asset, label, formTransferDate);
   if (nblErr) return nblErr;
+
+  // 겸용주택 분리계산 × 이월과세는 지원하지 않는다 — 아래 이월과세 분기가 겸용 분기보다 먼저라 통과한 뒤 서버가 이월과세를 조용히 무시했다
+  // (계획서 `docs/00-pm/mixed-use-4col-separate-acq-bg-carryover.plan.md` Q-1 a · ⑫ `refineMixedUseNoCarryover`와 같은 술어·문구).
+  if (isMixedCarryoverUnsupported(asset)) return fieldError("acquisitionCause", `${label}: ${MIXED_USE_CARRYOVER_UNSUPPORTED_MESSAGE}`);
 
   // ── 이월과세(증여) 전용 검증 — carryover_gift 시 일반 취득 검증 스킵 (본체는 transfer-tax-validate-carryover-asset.ts, 800줄 정책) ──
   if (asset.acquisitionCause === "carryover_gift") {

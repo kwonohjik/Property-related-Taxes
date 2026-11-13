@@ -427,7 +427,12 @@ export function buildRows(
     }
   }
 
-  setNum("transferPrice", "total", (bgSingle?.transferPrice ?? totalTransferPrice) || null);
+  // 겸용 × 부담부증여 — 화면에 폼 계약금액 칸이 없어(양도가액 = 양도로 보는 채무액 · 소령 §159①2호) `totalTransferPrice`가 0이라 합계 열만 «-»였다.
+  // 4열에 표시한 값의 합으로 채운다 — 합계 열 항등식이 4열과 같은 값으로 성립한다(계획서 `mixed-use-4col-separate-acq-bg-carryover.plan.md` Q-2 a).
+  const mixedBgTransferPrice = mu?.burdenedGift
+    ? mu.housingPart.landTransferPrice + mu.housingPart.buildingTransferPrice + mu.commercialPart.landTransferPrice + mu.commercialPart.buildingTransferPrice
+    : undefined;
+  setNum("transferPrice", "total", (bgSingle?.transferPrice ?? mixedBgTransferPrice ?? totalTransferPrice) || null);
   if (isRedevMode && result.redevelopmentDetail) {
     const r = result.redevelopmentDetail;
     // ★ 재개발/재건축 합계 취득가액 — 역산 규칙 (memory: feedback_redev_filing_form_acquisition_inverse)
