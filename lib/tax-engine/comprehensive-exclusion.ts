@@ -162,6 +162,10 @@ export function validateRentalExclusion(
   const priceLimit = getPriceLimit(input);
   if (input.assessedValue > priceLimit) {
     failReasons.push(COMPREHENSIVE_EXCL.PRICE_EXCEEDED);
+    // 30호 이상을 골랐지만 그 구간이 아직 없던 과세연도 — 왜 30호 미만 금액으로 봤는지 알린다
+    if (input.isThirtyPlusUnits === true && !thirtyPlusTierApplies(input)) {
+      failReasons.push(COMPREHENSIVE_EXCL.THIRTY_PLUS_TIER_NOT_IN_FORCE);
+    }
   }
 
   // 임대료 증가율 요건은 1·2·7·8·10·11호에만 있다 — 3호(2005.1.5. 이전 임대)·6호(미분양매입)는 없다(§3① 각 호 · §3⑧)
@@ -247,9 +251,20 @@ function getAreaLimit(input: RentalExclusionInput): number {
   }
 }
 
+/**
+ * §3①1·2·7·8호 가목 「30호 이상」 상향 구간은 대통령령 제35352호(2025.2.28. 시행)에서 신설 —
+ * 같은 영 부칙 제2조①로 그 뒤 납세의무 성립분(2025 과세기준일)부터. 2024 이하 과세연도에는 토글이 켜져 있어도 30호 미만 금액.
+ * (2023.9.5.·2024.11.12. 시행본에 30호 구간 없음 — 계획서 comprehensive-rental-excl-price-cap-eras.plan.md §1)
+ */
+const THIRTY_PLUS_TIER_IN_FORCE = Date.UTC(2025, 1, 28);
+
+function thirtyPlusTierApplies(input: RentalExclusionInput): boolean {
+  return input.isThirtyPlusUnits === true && input.assessmentDate.getTime() >= THIRTY_PLUS_TIER_IN_FORCE;
+}
+
 function getPriceLimit(input: RentalExclusionInput): number {
   const metro = input.location === "metro";
-  const over30 = input.isThirtyPlusUnits === true; // 30호 이상 tier (§3①1·2·7·8호)
+  const over30 = thirtyPlusTierApplies(input); // 30호 이상 tier (§3①1·2·7·8호 · 2025 과세연도부터)
   switch (input.registrationType) {
     // 단기건설 (§3①10호) — 6억, 수도권·호수 무관
     case "private_short_term_6y_construction":

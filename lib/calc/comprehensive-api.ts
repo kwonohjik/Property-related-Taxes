@@ -285,6 +285,24 @@ const OTHER_INFO_TYPES = new Set([
 // (임대주택 합산배제 신청 시 UI 선택값을 API 검증 스키마 값으로 변환)
 // export: PropertyListInput onChange 자동매칭에서 재사용 (단일 출처 — UI 설계 §3)
 /** §3①1호·2호 단서(2018.3.31. 사업자등록등)가 걸리는 유형 — 민간건설·민간매입(구법 5년). ⑤·④·⑧ 공용 */
+/**
+ * §3①1·2·7·8호 가목 「30호 이상」 상향 구간 — 대통령령 제35352호(2025.2.28.) 신설·2025 과세연도부터.
+ * ⑤ 토글 표시 · ④ 전송이 같은 술어를 쓴다(엔진 `thirtyPlusTierApplies`와 같은 경계).
+ */
+const THIRTY_PLUS_REG_TYPES = new Set([
+  "private_construction",
+  "public_construction",
+  "public_support_construction",
+  "private_purchase_long",
+  "private_purchase_short",
+  "public_purchase",
+  "public_support_purchase",
+]);
+export function asksThirtyPlusUnits(registrationType: string, assessmentYear: string): boolean {
+  const year = parseInt(assessmentYear) || new Date().getFullYear();
+  return THIRTY_PLUS_REG_TYPES.has(registrationType) && year >= 2025;
+}
+
 export function asksBusinessRegistrationDate(registrationType: string): boolean {
   return registrationType === "private_construction" || registrationType === "private_purchase_short";
 }
@@ -409,7 +427,9 @@ export async function callComprehensiveApi(
           actualRentalYears: p.actualRentalYears ? parseDecimal(p.actualRentalYears) : undefined,
           registrationRevokedDate: p.registrationRevokedDate || undefined,
           isEupMyeonArea: p.isEupMyeonArea || undefined,
-          isThirtyPlusUnits: p.isThirtyPlusUnits || undefined,
+          isThirtyPlusUnits: asksThirtyPlusUnits(registrationType, formData.assessmentYear)
+            ? p.isThirtyPlusUnits || undefined
+            : undefined,
           // §3①8호 나목·7호 단서 — 묻는 칸만(na8Asks). 조정대상지역은 PNU 자동 판정 또는 직접 입력
           ...rental8NaApiFields(p, na8Context(formData, registrationType)),
           // §3①6호 — 6호일 때만 값이 있다(그 밖 유형은 빈 객체라 위 8호 칸 값을 덮지 않는다)

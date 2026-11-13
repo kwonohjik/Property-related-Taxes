@@ -99,6 +99,13 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     keywords: ["법인 또는 법인으로 보는 단체가", "제2조제6호의2에 따른 단기민간임대주택"],
     keywordMode: "ALL",
   },
+  /** §3①1·2·7·8호 가목 — 30호 이상 상향 가격 구간(대통령령 제35352호 · 2025.2.28. 신설, 부칙 §2① 2025 과세연도부터) */
+  {
+    id: "COMPREHENSIVE_DECREE.THIRTY_PLUS_PRICE_TIER",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["30호 이상의 주택을 임대하는 경우", "30호 이상의 주택의 임대를 개시한 날", "12억원"],
+    keywordMode: "ALL",
+  },
   /** §3①7호 나목·8호 가목2) — 장기일반민간임대주택등 의무임대기간 10년(2020.8.18. 이후 등록 신청분 · 부칙<제31085호> §3·§4) */
   {
     id: "COMPREHENSIVE_DECREE.MANDATORY_PERIOD_LONG_10Y",
