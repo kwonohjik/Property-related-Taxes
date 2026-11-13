@@ -22,7 +22,7 @@ import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gi
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { InheritedAcquisitionStepResult } from "./inheritance-acquisition-helpers";
 import { assertBgSplitInputs, bgPartDatesDiffer, bgSplitPartsOf } from "./burdened-gift-split-parts";
-import { assertBgOwnerSplitInputs, bgOwnerSplitOf } from "./burdened-gift-owner-split";
+import { assertBgOwnerSplitInputs, bgOwnerSplitOf, foldOwnerSplitBreakdown } from "./burdened-gift-owner-split";
 
 /** §159 산식 문구의 평가 모드 이름 — 상증법 §61 보충적평가(시가 평가면 시가) · §66 담보평가 · §61⑤ 임대평가(결과 카드 ①②③과 같은 어휘). */
 const bgModeLabel = (mode: "supplementary" | "mortgage" | "rental", market: boolean): string =>
@@ -115,6 +115,8 @@ export function runBurdenedGiftStep(
       ...preDeemedParam,
       postDeemedAcquisition: postDeemedAcquisitionOf(inheritedStep),
     });
+    // 소유자 분리 — 비소유 파트로 흘러간 안분 잔액을 증여한 파트로 접는다(`foldOwnerSplitBreakdown`).
+    if (ownerSplit) transferBurdenedGiftBreakdown = foldOwnerSplitBreakdown(ownerSplit, transferBurdenedGiftBreakdown);
     /**
      * 재개발·재건축 완공 아파트(원조합원) × 시가 모드 × 환산(K-5) — 취득가액은 **종전 부동산**(기존건물과 그 부수토지)의 취득가액이고,
      * 그것을 확인할 수 없으면 「소득세법 시행령」 제166조 제3항의 환산식(평가액 × 취득일 기준시가 ÷ 관리처분계획등 인가일 기준시가)을 쓴다.

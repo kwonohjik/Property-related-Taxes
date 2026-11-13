@@ -10,6 +10,7 @@
  *   · BGO-E6 회귀 — 소유자 같음 부담부증여는 증여한 부분 표기 없음
  *   · BGO-E8 인쇄(print 미디어) — 같은 표기
  *   · BGO-E7 연간 합산(/multi) 1물건 — 단건과 같은 본인 몫 본문·결정세액 · 자산 행에 증여한 부분 표기
+ *   · BGO-E9 토지만 · 시가 × 실지 — 기준시가 카드가 닫히고(쓰지 않는 칸) 비운 채 계산 → 결정세액 5,385,000 · 요청 본문 기준시가 0
  *
  * 실행(워크트리): E2E_PORT=3159 npx playwright test e2e/bg-owner-split-calc.spec.ts
  */
@@ -126,6 +127,24 @@ test.describe("부담부증여 × 토지·건물 소유자 분리 — 건물 종
     await expect(page.getByTestId("bg-owner-split-not-owned")).toHaveCount(0);
     await expect(page.getByTestId("split-card-bg-not-owned-note")).toHaveCount(0);
     expect(await page.locator("body").innerText()).not.toContain("증여한 부분");
+  });
+
+  test("BGO-E9 토지만 · 시가 × 실지 → 기준시가 카드 없음 · 비운 채 계산 · 결정세액 5,385,000", async ({ page }) => {
+    test.setTimeout(180_000);
+    const landMarket = bldg({
+      selfOwns: "land_only", buildingStandardPriceAtTransfer: "", buildingStandardPriceAtAcq: "",
+      bgValuationMode: "sangjeungbeop_market", bgMarketValueOwnedPart: "200000000", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "80000000",
+    });
+    await seedWizard(page, singleSeed([landMarket], { contractTotalPrice: "1000000000" }));
+    await expandAssetSection(page, 2);
+    await expect(page.getByTestId("bg-owner-split-debt-confirm")).toBeVisible();
+    await expect(page.getByTestId("bg-owner-split-card")).toHaveCount(0);
+    const body = (await calculate(page)) as Wire;
+    expect(body.selfOwns).toBe("land_only");
+    expect(body.burdenedGiftInfo).toMatchObject({ landStdPriceAtTransfer: 0, buildingStdPriceAtTransfer: 0, marketValueAtTransfer: 200_000_000, actualAcquisitionTotal: 80_000_000 });
+    const text = await page.locator("body").innerText();
+    expect(text).toContain("5,385,000");
+    expect(text).not.toMatch(/NaN|undefined|Infinity/);
   });
 
   test("BGO-E2 범위 밖(주택)은 토글이 잠기고 범위 안(건물)은 켤 수 있다 · 안내 카드", async ({ page }) => {

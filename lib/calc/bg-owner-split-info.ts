@@ -11,7 +11,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { parseAmount, parseDecimal } from "@/lib/calc/number-parse";
-import { bgOwnerSplitActive, bgOwnerSplitOwnedPart } from "./bg-owner-split-scope";
+import { bgOwnerSplitActive, bgOwnerSplitOwnedPart, bgOwnerSplitTransferStdNeeded } from "./bg-owner-split-scope";
 import { calcLandStdPriceAtAcq, resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 
 type StdPair = { land: number; building: number };
@@ -59,7 +59,8 @@ export interface BgOwnerSplitInfoPatch {
  */
 export function bgOwnerSplitInfoPatch(asset: AssetForm): BgOwnerSplitInfoPatch {
   if (!bgOwnerSplitActive(asset)) return {};
-  const t = bgOwnerSplitTransferStd(asset);
+  // 시가 × 실지는 양도시 기준시가 칸이 닫혀 있다(⑤) — 닫힌 칸에 남은 값은 싣지 않는다(엔진은 이 값을 쓰지 않는다 · `bgOwnerSplitNeedsTransferStd`).
+  const t = bgOwnerSplitTransferStdNeeded(asset) ? bgOwnerSplitTransferStd(asset) : { land: 0, building: 0 };
   const a = bgOwnerSplitAcqStd(asset);
   return {
     landStdPriceAtTransfer: t.land,

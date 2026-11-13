@@ -158,3 +158,32 @@ describe("V-6 — 비소유 파트의 취득일은 세액에 닿지 않는다(�
     expect(r.determinedTax).toBe(5_244_600);
   });
 });
+
+describe("M — 시가 × 실지: 증여한 부분 양도시 기준시가를 쓰지 않는다 · 안분 잔액은 증여한 파트로 접는다(`foldOwnerSplitBreakdown`)", () => {
+  /** 시가 2억 · 채무 1억 · 실지취득가액 8천만 → 양도가액 1억 − 취득가액 4천만 = 60,000,000 · 결정세액 5,385,000(기준시가를 넣은 같은 입력과 같다). */
+  const mkt = (over: Partial<BurdenedGiftInfo> = {}) =>
+    info({ landT: 0, bldT: 0, landA: 0, bldA: 0 }, { valuationMode: "sangjeungbeop_market", marketValueAtTransfer: 200_000_000, acquisitionMethod: "actual", actualAcquisitionTotal: 80_000_000, ...over });
+  it("건물만 · 양도·취득시 기준시가 모두 0 → 5,385,000 (계약 위반 아님)", () => {
+    const r = run({ selfOwns: "building_only", burdenedGiftInfo: mkt() });
+    expect(r.determinedTax).toBe(5_385_000);
+    expect(r.splitDetail?.building).toMatchObject({ transferPrice: 100_000_000, acquisitionPrice: 40_000_000 });
+  });
+  it("토지만 · 기준시가 모두 0 → 5,385,000 · 양도가액·취득가액이 토지에 실린다(접기 전: 건물로 가 12,360,000)", () => {
+    const r = run({ selfOwns: "land_only", burdenedGiftInfo: mkt() });
+    expect(r.determinedTax).toBe(5_385_000);
+    expect(r.splitDetail?.land).toMatchObject({ transferPrice: 100_000_000, acquisitionPrice: 40_000_000 });
+    expect(r.splitDetail?.building).toMatchObject({ transferPrice: 0, acquisitionPrice: 0 });
+    expect(r.transferBurdenedGiftBreakdown?.perAsset.land).toMatchObject({ sangjeungbeopValue: 200_000_000, transferPrice: 100_000_000, actualAcquisition: 80_000_000 });
+    expect(r.transferBurdenedGiftBreakdown?.perAsset.building).toMatchObject({ sangjeungbeopValue: 0, transferPrice: 0, acquisitionPrice: 0 });
+  });
+  it("토지만 · 양도시 기준시가는 있고 취득시 기준시가만 0 → 5,385,000 (실지취득가액이 비소유 건물로 가던 결함)", () => {
+    const r = run({ selfOwns: "land_only", burdenedGiftInfo: mkt({ landStdPriceAtTransfer: 200_000_000 }) });
+    expect(r.determinedTax).toBe(5_385_000);
+    expect(r.splitDetail?.land).toMatchObject({ acquisitionPrice: 40_000_000 });
+  });
+  it("시가 × 환산은 양도시 기준시가가 분모라 계속 요구한다 — 0이면 던진다", () => {
+    expect(() => run({ selfOwns: "building_only", burdenedGiftInfo: mkt({ acquisitionMethod: "converted", actualAcquisitionTotal: undefined, buildingStdPriceAtAcquisition: 80_000_000 }) })).toThrow(
+      /양도시 건물 기준시가를 입력하세요/,
+    );
+  });
+});

@@ -90,16 +90,18 @@ describe("입력 격자 — 범위 안에서 한 칸씩 비움", () => {
     { name: "토지 취득일", field: "landAcquisitionDate", patch: { landAcquisitionDate: "" } },
     { name: "채무 확인", field: "bgOwnerSplitDebtConfirmed", patch: { bgOwnerSplitDebtConfirmed: false } },
   ];
-  const mkt: Omit_[] = [
-    { name: "증여한 부분 시가", field: "bgMarketValueOwnedPart", patch: { bgMarketValueOwnedPart: "" } },
-    { name: "양도시 기준시가(엔진 입력 계약)", field: "buildingStandardPriceAtTransfer", patch: { buildingStandardPriceAtTransfer: "" } },
+  const mkt: Omit_[] = [{ name: "증여한 부분 시가", field: "bgMarketValueOwnedPart", patch: { bgMarketValueOwnedPart: "" } }];
+  // 양도시 기준시가는 시가 × 환산의 분모일 때만 요구한다(`bgOwnerSplitNeedsTransferStd`) — 시가 × 실지는 아래 별도 it에서 «양쪽 통과»를 단언한다.
+  const mktConvertedOnly: Omit_[] = [
+    { name: "양도시 기준시가(환산 분모)", field: "buildingStandardPriceAtTransfer", patch: { buildingStandardPriceAtTransfer: "" } },
+    { name: "취득시 건물 기준시가", field: "buildingStandardPriceAtAcq", patch: { buildingStandardPriceAtAcq: "" } },
   ];
 
   const table: Array<{ id: string; field: string; form: () => ReturnType<typeof asset> }> = [];
   for (const o of stdBldg) table.push({ id: `건물만 · 기준시가 · ${o.name}`, field: o.field, form: () => asset(1, { ...OWN.building_only, ...o.patch }) });
   for (const o of stdLand) table.push({ id: `토지만 · 기준시가 · ${o.name}`, field: o.field, form: () => asset(1, { ...OWN.land_only, ...o.patch }) });
   for (const o of mkt) table.push({ id: `건물만 · 시가 실지 · ${o.name}`, field: o.field, form: () => asset(1, { ...OWN.building_only, ...VALUATION["market-actual"], ...o.patch }) });
-  for (const o of [...mkt, { name: "취득시 건물 기준시가", field: "buildingStandardPriceAtAcq", patch: { buildingStandardPriceAtAcq: "" } }])
+  for (const o of [...mkt, ...mktConvertedOnly])
     table.push({ id: `건물만 · 시가 환산 · ${o.name}`, field: o.field, form: () => asset(1, { ...OWN.building_only, ...VALUATION["market-converted"], ...o.patch }) });
   table.push({ id: "건물만 · 시가 실지 · 실지취득가액 총액", field: "bgActualAcquisitionTotal", form: () => asset(1, { ...OWN.building_only, ...VALUATION["market-actual"], bgActualAcquisitionTotal: "" }) });
 

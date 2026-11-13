@@ -77,6 +77,31 @@ describe("시가 평가 — 증여한 부분 시가(bgMarketValueOwnedPart → m
     expect(r.body.burdenedGiftInfo).toMatchObject({ marketValueAtTransfer: 200_000_000, actualAcquisitionTotal: 80_000_000 });
   });
 
+  it("실지취득가액은 양도시 기준시가를 요구하지 않는다 — 건물만·토지만 모두 칸을 비워도 ⑧ 통과 · 200 · 기준시가를 넣은 입력과 같은 5,385,000", async () => {
+    const actual = { ...MKT, bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "80,000,000" };
+    for (const a of [bldg("", "", actual), land("", "", "", "", actual), bldg("200,000,000", "80,000,000", actual), land("1,000,000", "200", "400,000", "200", actual)]) {
+      const r = await run([asset(1, a)]);
+      expect(r.issues, JSON.stringify(a)).toEqual([]);
+      expect(r.status).toBe(200);
+      expect(r.result.determinedTax, JSON.stringify(a)).toBe(5_385_000);
+    }
+  });
+
+  it("실지취득가액 · 닫힌 양도시 기준시가 칸에 남은 값은 싣지 않는다(⑤가 칸을 닫는다)", async () => {
+    const r = await run([asset(1, bldg("999,000,000", "", { ...MKT, bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "80,000,000" }))]);
+    expect(r.body.burdenedGiftInfo).toMatchObject({ landStdPriceAtTransfer: 0, buildingStdPriceAtTransfer: 0 });
+    expect(r.result.determinedTax).toBe(5_385_000);
+  });
+
+  it("환산취득가액은 양도시 기준시가가 분모라 요구한다 — ⑧ 그 칸 · 직접 API 400(burdenedGiftInfo.buildingStdPriceAtTransfer)", async () => {
+    const conv = { ...MKT, bgAcquisitionMethod: "converted" };
+    expect(fieldsOf(await run([asset(1, bldg("", "80,000,000", conv))]))).toEqual(["buildingStandardPriceAtTransfer"]);
+    const ok = await run([asset(1, bldg("200,000,000", "80,000,000", conv))]);
+    const res = await post({ ...ok.body, burdenedGiftInfo: { ...(ok.body.burdenedGiftInfo as Record<string, unknown>), buildingStdPriceAtTransfer: 0 } });
+    expect(res.status).toBe(400);
+    expect(Object.keys(res.json?.error?.fieldErrors ?? {})).toEqual(["burdenedGiftInfo.buildingStdPriceAtTransfer"]);
+  });
+
   it("환산취득가액: 시가 2억 · 양도시 기준시가 2억 · 취득시 8천만 → 58,800,000 (A2와 같다)", async () => {
     const r = await run([asset(1, bldg("200,000,000", "80,000,000", { ...MKT, bgAcquisitionMethod: "converted" }))]);
     expect(r.issues).toEqual([]);
