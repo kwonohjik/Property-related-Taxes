@@ -21,6 +21,7 @@ import { rental97StatutoryOverlapMessage } from "@/lib/tax-engine/transfer-reduc
 import { hasRentIncreaseRule } from "./rental-rent-increase-label";
 import { RENT_INCREASE_VIOLATION_LABEL } from "./rental-rent-increase-label";
 import { rental974AptDeadlineIssue } from "./apt-deadline-extension-scope";
+import { rental975InheritanceInScope } from "./rental-97-5-inheritance";
 
 export function rental97SeriesIssue(args: {
   fail: (message: string) => ValidationIssue;
@@ -88,6 +89,19 @@ export function rental97SeriesIssue(args: {
       const rows = r.deemedRentalPeriods ?? [];
       if (rows.length === 0 || rows.some((p) => !p.startDate || !p.endDate || p.startDate > p.endDate))
         return fail(fieldError(`reduction.${r.type}.deemedRentalPeriods`, `${label} 적용: 수용·정비사업으로 임대할 수 없던 기간의 시작일·종료일(정비사업은 인가일·준공일)을 확인하세요 (조특령 §97의5①2호·3호).`));
+    }
+    // V-13 — §97의5 상속 합산(조특령 §97의5③ → §97⑤3호). ④는 상속 자산·세 날짜가 다 있을 때만 싣는다 → 빈 칸은 여기서 막는다.
+    //   상속개시일은 자산 카드 취득일이다(`rental975InheritancePayload` — ⑤④와 같은 leaf). 상속 자산이 아니면 토글이 숨어 읽지 않는다.
+    if (r.type === "rental_97_5" && r.isInherited975 && rental975InheritanceInScope(asset.acquisitionCause)) {
+      if (!asset.acquisitionDate)
+        return fail(fieldError("acquisitionDate", `${label} 적용: 피상속인 임대기간을 합산하려면 자산의 상속개시일을 먼저 입력하세요.`));
+      if (!r.decedentRegistrationDate975)
+        return fail(fieldError(`reduction.${r.type}.decedentRegistrationDate975`, `${label} 적용: 피상속인의 장기일반·공공지원 등록등일(임대사업자 등록·세무서 사업자등록 중 늦은 날)을 입력하세요.`));
+      if (!r.decedentRentalStartDate975)
+        return fail(fieldError(`reduction.${r.type}.decedentRentalStartDate975`, `${label} 적용: 피상속인의 임대개시일을 입력하세요.`));
+      // 엔진 INVALID_INHERITANCE_DATES와 같은 조건 (YYYY-MM-DD 문자열 비교) — 상속개시일 > 양도일은 자산 날짜 검증이 먼저 막는다
+      if (r.decedentRegistrationDate975 >= asset.acquisitionDate || r.decedentRentalStartDate975 >= asset.acquisitionDate)
+        return fail(fieldError(`reduction.${r.type}.decedentRentalStartDate975`, `${label} 적용: 피상속인의 임대개시일·등록등일은 상속개시일(${asset.acquisitionDate})보다 앞서야 합니다.`));
     }
     // D2-07 — 2023.1.1 이후 등록분은 §97의3①이 민간건설임대주택에 한정한다.
     //          그 전 등록분은 법률 제19199호 부칙 §38 경과조치로 종전 규정을 따른다.

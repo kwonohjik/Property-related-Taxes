@@ -124,6 +124,10 @@ export function refineReductionRequiredInputs(
         );
     };
 
+    // V-13 — 조특령 §97⑤3호는 「상속인이 상속으로 인하여」 취득한 경우다. 상속 자산이 아니면 합산 입력을 받지 않는다(④는 싣지 않는다 — 직접 API 방어).
+    if (r.type === "rental_97_5" && r.inheritance975 && !inherited)
+      issue("inheritance975", "§97의5 피상속인 임대기간 합산(조특령 §97의5③ → §97⑤3호)은 상속받은 주택(acquisitionCause = inheritance)에만 적용됩니다.");
+
     if (r.type === "new_99_3") {
       // 라우터 기본값이 from_builder다(`income-deduction-router.ts`) — 미지정도 1호로 본다.
       if (member) {

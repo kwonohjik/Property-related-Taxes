@@ -27,6 +27,9 @@ import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/s
 import { addMonths } from "@/lib/tax-engine/utc-date";
 import { RENTAL_97_5_REGISTRATION_MONTHS } from "@/lib/tax-engine/transfer-reductions";
 import { evaluateContinuousRental975 } from "@/lib/tax-engine/transfer-reductions/rental-97-5-period";
+import { inheritanceMergeSpan975 } from "@/lib/tax-engine/transfer-reductions/rental-97-5-period";
+import { rental975InheritanceInScope } from "@/lib/calc/rental-97-5-inheritance";
+import { Rental975InheritanceBlock } from "./Rental975InheritanceBlock";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 
 type Rental975Form = Extract<RentalReductionFormVariant, { type: "rental_97_5" }>;
@@ -40,6 +43,8 @@ interface Props {
   transferDate?: string;
   /** 자산-수준 매매계약일 — 가액요건 부칙 §2② 질문 표시 조건 */
   assetContractDate?: string;
+  /** 자산 취득원인 — 상속이면 피상속인 임대기간 합산 토글을 보인다(V-13 · `rental975InheritanceInScope`) */
+  acquisitionCause?: string;
 }
 
 /**
@@ -93,7 +98,8 @@ function ThreeMonthBadge({ badge }: { badge: { ok: boolean; text: string } | nul
 }
 
 
-export function Rental975InputForm({ value, onChange, acquisitionDate, transferDate, assetContractDate }: Props) {
+export function Rental975InputForm({ value, onChange, acquisitionDate, transferDate, assetContractDate, acquisitionCause }: Props) {
+  const inheritanceInScope = rental975InheritanceInScope(acquisitionCause);
   const uid = useId();
   const patchCommon = (patch: Partial<RentalCommonFormFields>) => {
     onChange(patch as Partial<Rental975Form>);
@@ -125,9 +131,19 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
     const dates = [value.rentalStartDate, value.registrationDate, value.isTaxRegistered ? value.taxRegistrationDate : ""]
       .map((d) => toOptionalDate(d))
       .filter((d): d is Date => d !== undefined);
-    const start = toOptionalDate(value.rentalStartDate) ? new Date(Math.max(...dates.map((d) => d.getTime()))) : undefined;
+    const ownStart = toOptionalDate(value.rentalStartDate) ? new Date(Math.max(...dates.map((d) => d.getTime()))) : undefined;
     const end = toOptionalDate(ended ? value.rentalEndDate : transferDate);
-    if (!start || !end) return null;
+    if (!ownStart || !end) return null;
+    // V-13 — 상속 합산(엔진과 같은 leaf `inheritanceMergeSpan975`). 날짜 순서가 어긋나면 합산하지 않는다(⑧·엔진이 막는다).
+    const inhDate = toOptionalDate(acquisitionDate);
+    const decReg = toOptionalDate(value.decedentRegistrationDate975);
+    const decStart = toOptionalDate(value.decedentRentalStartDate975);
+    const inh =
+      inheritanceInScope && value.isInherited975 && inhDate && decReg && decStart && decReg < inhDate && decStart < inhDate
+        ? { inheritanceDate: inhDate, decedentRegistrationDate: decReg, decedentRentalStartDate: decStart }
+        : undefined;
+    const span = inheritanceMergeSpan975(ownStart, inh);
+    const start = span.start;
     const toSpans = (rows: { startDate: string; endDate: string }[]) =>
       rows
         .map((r) => ({ startDate: toOptionalDate(r.startDate), endDate: toOptionalDate(r.endDate) }))
@@ -135,14 +151,14 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
     return evaluateContinuousRental975({
       start,
       end,
-      vacancyPeriods: value.hasVacancyOverGrace ? toSpans(value.vacancyPeriods ?? []) : [],
+      vacancyPeriods: [...(value.hasVacancyOverGrace ? toSpans(value.vacancyPeriods ?? []) : []), ...span.gapVacancies],
       deemedRentalPeriods: value.hasDeemedRentalPeriod
         ? (value.deemedRentalPeriods ?? [])
             .map((p) => ({ reason: p.reason, startDate: toOptionalDate(p.startDate), endDate: toOptionalDate(p.endDate) }))
             .filter((p): p is { reason: typeof p.reason; startDate: Date; endDate: Date } => !!p.startDate && !!p.endDate)
         : [],
     });
-  }, [value, ended, transferDate]);
+  }, [value, ended, transferDate, acquisitionDate, inheritanceInScope]);
 
   return (
     <div className="mt-2 ml-4 space-y-3">
@@ -176,6 +192,18 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
           )}
         </div>
+
+        {/* V-13 — 상속 여부가 아래 등록·임대일의 주체(상속인 본인)를 바꾸므로 그 입력 직전에 둔다(§97의4와 같은 이유) */}
+        {inheritanceInScope && (
+          <Rental975InheritanceBlock
+            reductionType={value.type}
+            checked={value.isInherited975 ?? false}
+            decedentRegistrationDate={value.decedentRegistrationDate975 ?? ""}
+            decedentRentalStartDate={value.decedentRentalStartDate975 ?? ""}
+            inheritanceDate={acquisitionDate}
+            onChange={onChange}
+          />
+        )}
 
         <div>
           <label className="mb-1 block text-xs font-medium">장기일반·공공지원 민간임대주택 등록일</label>
@@ -236,6 +264,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
           />
           <p className="mt-1 text-micro text-muted-foreground">
             주택+부속토지 합계 — 6억(수도권 밖 3억) 이하 요건 (§97의5①3호 → 령 §97의3③4호)
+            {inheritanceInScope && value.isInherited975 && " · 피상속인 임대기간을 합산하면 피상속인 임대개시일 당시 가격을 넣으세요 (§97의4와 같은 기준 — 해석례가 없어 확인 필요)"}
           </p>
         </div>
 

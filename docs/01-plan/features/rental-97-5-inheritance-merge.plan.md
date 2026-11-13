@@ -3,7 +3,7 @@
 > **출처**: `rental-97-5-textbook-gaps.plan.md` §8 V-13 (2026-11-13 등록)
 > **범위**: 조특법 §97의5(장기일반민간임대주택등 양도소득세 100% 감면)에 조특령 §97의5③ → §97⑤3호 「피상속인의 주택임대기간을 상속인의 주택임대기간에 합산」을 넣는다.
 > **세액 변경**: 있음 — 감면 확대 방향(현재 상속인 기간만 세어 10년 미달로 부적격인 사안이 적격으로 바뀐다)
-> **상태**: 계획 — Q 결정 대기. Plan 입력: 엔진(long-term-rental-tax-senior)·UI(transfer-tax-ui-senior) 병렬 검토 2026-11-13, 인용 file:line은 작성자가 재확인.
+> **상태**: 구현(2026-11-13) — Q-A~Q-G 모두 권장안(사용자 결정 2026-11-13). anchor 엔진 15·라우트 5·컴포넌트 7 + ⑧ 점프 케이스 3, 뮤테이션 5종(라우터 매핑·④ 상속 범위·⑫ 차단·간격 공실·임대료 기산) 실패 확인. Plan 입력: 엔진(long-term-rental-tax-senior)·UI(transfer-tax-ui-senior) 병렬 검토 2026-11-13, 인용 file:line은 작성자가 재확인.
 
 ---
 
@@ -60,7 +60,7 @@
 ### 3.2 UI
 - **상속개시일 = 자산 카드 취득일**(상속 자산은 「상속개시일」 칸) — 감면 폼에 상속개시일 칸을 따로 두지 않는다(Q-F 권장).
   - 따로 두면 3개월 판정(카드 취득일)과 피상속인 분 종점(감면 칸)이 다른 날을 쓸 수 있다. ④·⑧·⑤ 미리보기가 모두 `asset.acquisitionDate`를 읽는 3중 패턴.
-- **노출**: 상속 자산(`acquisitionCause === "inheritance"`)에서만 토글을 보인다(Q-G 권장). `UnifiedReductionGroupSection.tsx:361-367`이 `Rental975InputForm`에 `acquisitionCause`를 넘기도록 prop 1개 추가.
+- **노출**: 상속 자산(`acquisitionCause === "inheritance"`)에서만 토글을 보인다(Q-G). 원인을 바꿔 남은 토글은 ④가 싣지 않고 ⑧도 막지 않는다(숨은 칸 막다른 길 방지) — 직접 API는 ⑫가 400. 단일 소스 `lib/calc/rental-97-5-inheritance.ts`. `UnifiedReductionGroupSection.tsx:361-367`이 `Rental975InputForm`에 `acquisitionCause`를 넘기도록 prop 1개 추가.
 - **위치**: ① 등록·신분 안, 「임대주택 취득 유형」(`Rental975InputForm.tsx:153-178`)과 등록일(`:180`) 사이 — 상속 여부가 아래 등록·임대일의 주체(상속인 본인)를 정한다(계산 순서 = 표시 순서, §97의4 `:74` 주석과 같은 이유).
 - **구성**: 새 파일 `components/calc/transfer/rental/Rental975InheritanceBlock.tsx`(≈60줄) — ToggleCard 「상속받은 임대주택」 + DateInput 2칸(피상속인 장기일반·공공지원 등록등일, 피상속인 임대개시일) + 끝 안내 「아래 등록일·임대개시일은 상속인 본인의 날짜」. 끄면 두 칸 비움. §97의4 블록은 §97의4 전용 hint·필드명에 묶여 있어 공유하지 않는다.
 - **결과 카드**: `Rental97DetailCard.tsx` §97의5 분기에 `rentalPeriod975` 행(피상속인 임대기간 · 상속인 임대기간) + 확인 필요 fine-print(Q-A·Q-C 근거 상태).
@@ -98,7 +98,7 @@
 | H-8 | 피상속인 개시일 ≥ 상속개시일 · 상속개시일 > 양도일 | — | `INVALID_INHERITANCE_DATES` |
 | H-9 | 기준시가: 피상속인 개시 시점 5.9억 · 상속인 개시 시점 6.1억 | — | Q-C에 따라 갈림 |
 | H-10 | 상속개시 2019-01-01 | `OUT_OF_PERIOD` | 같음 |
-| H-11 | 매매 자산에 토글 값이 남은 직접 API body | — | 엔진은 `inheritance975`를 받으면 쓴다 — ⑧·⑫에서 막을지 Q-G와 함께 결정 |
+| H-11 | 매매 자산에 토글 값이 남은 화면 / 직접 API body | — | 화면: ④ 미전송·⑧ 통과(숨은 칸으로 막지 않는다) / 직접 API: ⑫ 400 |
 
 ## 5. 테스트 계획
 - 엔진 anchor: H-1~H-10 (`__tests__/tax-engine/transfer/rental-97-5-inheritance-merge.anchor.test.ts`)
@@ -124,10 +124,10 @@
 ## 8. 미검증 (V)
 | # | 항목 | 닫는 방법 |
 |---|---|---|
-| V-1 | §2.4 미확인 해석 4건 본문 — 상속받은 장기임대주택 임대기간 계산 방식(기산·간격 처리) | 국세청 본문 조회 |
-| V-2 | H-4 경계 — 기존 `evaluateContinuousRental975`가 정확히 6개월 공실을 계속으로 보는가 | Pre-Do anchor |
-| V-3 | 상속인 임대개시일 < 상속개시일 입력(사망 전 상속인이 임차 관리)의 처리 | §97의4 `rental-97-4.ts:337` `max` 동작 확인 + anchor |
-| V-4 | ⑥ 사이드바 영향 · ⑨⑩ Zod enum · ⑬ body spread 신규 키 통과 | grep + 라우트 anchor |
+| V-1 | ✅ 닫음 — 4건 모두 §97⑤3호(또는 같은 구조) 합산 인정: 재삼46014-415(1998 — 구 조감법 §67) · 재산세과-1495(2008 — 소령 §167의3) · 서면인터넷방문상담5팀-1689(2007 — 소령 §167의3③) · 서면-2015-부동산-1813(2015.10.26. — §97의4, 상속 2010.1.2. 후 구청 정정 2010.5.27.(약 5개월)에도 합산). 간격 처리를 정면으로 다룬 것은 없다 | 국세청 본문 조회 |
+| V-2 | ✅ 닫음 — `rental-97-5-period.ts` 단절 조건 `frag.end > addMonths(frag.start, 6)` — 정확히 6개월은 계속(H-4 anchor) | Pre-Do anchor |
+| V-3 | ✅ 닫음 — 상속인 분은 max(상속인 의제 개시일, 상속개시일)부터(`inheritanceMergeSpan975`) · anchor 「상속인 임대개시가 상속개시일보다 앞이면」 | anchor |
+| V-4 | ✅ 닫음 — ⑬ 라우트 anchor가 body `reductions[].inheritance975` 통과를 단언 · ⑨⑩ enum 변경 없음(감면 type 불변) · ⑥ 사이드바 파일(`WizardSidebar.tsx` 등 sidebar 명칭 파일)에서 rental_97 참조 0건 grep — 입력 필드 영향 없음 | 라우트 anchor |
 
 ## 9. 범위 밖
 - **V-14(신규 등록 제안) §97의3 같은 공백** — 현행 조특령 §97의3④(MST 288915)도 「제97조제5항제1호·제3호 및 제5호를 준용」하는데 `rental-97-3.ts`에 상속 합산이 없다(엔진 검토 2026-11-13: `inherit|상속|피상속` 0건, 기산 `rental97EffectiveStart` `:176-178`). §97의3는 장특 경로·8년/10년 이중 기준이라 별건.

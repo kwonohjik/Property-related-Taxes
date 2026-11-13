@@ -279,6 +279,8 @@ const RENTAL_97_4 = table("rental_97_4", hybrid("rental_97_4"), r974Ok, {}, [
   RENTAL_97_4.push({ ...c, form: () => ({ ...base(), transferDate: "2028-07-03", filingDate: "2028-09-30" }) });
 }
 
+/** V-13 — 상속 자산(상속개시일 = 카드 취득일 2015-03-01) · 상속 취득가액 칸은 acq 점프 케이스와 같은 값 */
+const R975_INHERITED = { acquisitionCause: "inheritance", publishedValueAtInheritance: "300000000", decedentAcquisitionDate: "2010-01-01" };
 const r975Ok = { ...rentalBase, isPurchaseRental: true, taxRegistrationDate: "2019-06-01", hasDeemedRentalPeriod: false, deemedRentalPeriods: [], isNationalHousingScale: true, officialPriceAtStart: "300000000", rentalContinuesToTransfer: true, stdPriceAtAcquisition: "100000000", stdPriceAtTransfer: "300000000" };
 const RENTAL_97_5 = table("rental_97_5", hybrid("rental_97_5"), r975Ok, {}, [
   ...dateRows("§97의5"),
@@ -290,6 +292,10 @@ const RENTAL_97_5 = table("rental_97_5", hybrid("rental_97_5"), r975Ok, {}, [
   { name: "임대주택 취득 유형", prop: "isPurchaseRental", message: /^§97의5 적용: 임대주택 취득 유형/, patch: { isPurchaseRental: null } },
   { name: "수용·정비사업 간주기간", prop: "deemedRentalPeriods", message: /^§97의5 적용: 수용·정비사업으로 임대할 수 없던 기간/, patch: { hasDeemedRentalPeriod: true, deemedRentalPeriods: [{ reason: "redevelopment", startDate: "", endDate: "" }] } },
   { name: "임대 종료일", prop: "rentalEndDate", message: /^§97의5 적용: 양도 전에 임대를 종료했으면 임대 종료일/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "200000000", rentalEndDate: "" } },
+  // V-13 — 조특령 §97의5③ → §97⑤3호 상속 합산(상속 자산에서만 보인다 · 상속개시일 = 카드 취득일 2015-03-01)
+  { name: "피상속인 등록등일", prop: "decedentRegistrationDate975", message: /^§97의5 적용: 피상속인의 장기일반·공공지원 등록등일/, asset: R975_INHERITED, patch: { isInherited975: true, decedentRegistrationDate975: "", decedentRentalStartDate975: "2012-01-01" } },
+  { name: "피상속인 임대개시일", prop: "decedentRentalStartDate975", message: /^§97의5 적용: 피상속인의 임대개시일을 입력/, asset: R975_INHERITED, patch: { isInherited975: true, decedentRegistrationDate975: "2012-01-01", decedentRentalStartDate975: "" } },
+  { name: "피상속인 날짜 순서", prop: "decedentRentalStartDate975", message: /^§97의5 적용: 피상속인의 임대개시일·등록등일은 상속개시일/, asset: R975_INHERITED, patch: { isInherited975: true, decedentRegistrationDate975: "2012-01-01", decedentRentalStartDate975: "2016-01-01" } },
 ]);
 
 const rMainOk = { rentalStartDate: "2000-01-01", constructionYear: "1995", rentIncreaseViolationMode: "none", hasVacancyOverGrace: false, hasMin5RentalUnits: true, belowMin5UnitsPeriods: [] };
