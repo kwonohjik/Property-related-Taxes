@@ -141,6 +141,8 @@ export type TransferReductionStub =
       taxRegistrationDate?: Date;
       /** 조특령 §97의5①2호·3호 — 수용·정비사업 간주기간 (redevelopment는 인가일~준공일 입력, 엔진이 ±6개월) */
       deemedRentalPeriods?: { reason: "expropriation" | "redevelopment"; startDate: Date; endDate: Date }[];
+      /** 조특령 §97의5③ → §97⑤3호 — 상속받은 임대주택의 피상속인 임대기간 (엔진 `Rental97EvaluationInput.inheritance975` · V-13) */
+      inheritance975?: { inheritanceDate: Date; decedentRegistrationDate: Date; decedentRentalStartDate: Date };
       officialPriceAtStart?: number;
       region?: "capital" | "non_capital";
     } & Rental97CommonFields)

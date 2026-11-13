@@ -187,6 +187,15 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
     decedentRentalStartDate: Date;
   };
   /**
+   * §97의5 — 상속받은 임대주택 (조특령 §97의5③ → §97⑤3호 「피상속인의 주택임대기간을 상속인의 주택임대기간에 합산」 · V-13).
+   * 모양은 `inheritance974`와 같다. 있으면 `registrationDate`·`taxRegistrationDate`·`rentalStartDate`는 **상속인 본인** 값이다.
+   * - 피상속인 분 = [max(피상속인 임대개시일, 피상속인 장기일반·공공지원 등록등일), 상속개시일] — 10년 「계속 등록·임대」에 합산(Q-A)
+   * - 상속개시일 ~ 상속인 의제 임대개시일 간격은 공실로 본다 — 6개월을 넘으면 계속 임대가 끊긴다(Q-D)
+   * - 임대료 5% 증액 제한은 피상속인 분 계약부터 센다(Q-E) · 3개월 등록·취득 시한은 상속인(상속개시일) 기준 그대로
+   * 사용자 결정 2026-11-13 (`docs/01-plan/features/rental-97-5-inheritance-merge.plan.md` §7) — §97의5 정면 해석례 없음.
+   */
+  inheritance975?: NonNullable<Rental97EvaluationInput["inheritance974"]>;
+  /**
    * §97의4 — 임대사업자 등록이 자동말소된 날(민간임대주택에 관한 특별법 §6⑤ — 임대의무기간 종료일).
    * 임대기간 종점 = min(양도일, 이 날) (국세청 서면-2021-법규재산-1422, 2022.6.21. — 「임대개시일부터 자동말소일까지」).
    */
@@ -417,6 +426,14 @@ export interface RentalTaxAmountEffect {
   /** 같은 비율의 정수 분수(§97의5 안분 시) — 금액 안분은 이것으로(`applyRentalGainShare`). */
   rentalGainFraction?: { num: number; den: number };
   isFullExemption: boolean;
+  /**
+   * [echo] §97의5 상속 합산 구간(YYYY-MM-DD, V-13) — 결과 카드 표시 전용. 상속 합산이 없으면 undefined.
+   * `decedent` = 피상속인 분 [의제 임대개시일, 상속개시일] · `heir` = 상속인 분 [의제 임대개시일, 종점].
+   */
+  rentalPeriod975?: {
+    decedent: { start: string; end: string };
+    heir: { start: string; end: string };
+  };
   /**
    * [echo] 「소득세법」 §90① 산식 값 — §97의5 안분 사안에서만 채운다(결과 카드 표시용).
    * 감면세액 = 산출세액 × (reducibleIncome − basicDeductionAllocated) ÷ taxBase × 감면율

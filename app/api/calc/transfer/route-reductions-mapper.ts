@@ -90,6 +90,16 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
               },
             }
           : {}),
+        // V-13 — §97의5 조특령 §97의5③ → §97⑤3호 상속 합산. `...r`만 믿으면 string이 엔진에 도달한다.
+        ...("inheritance975" in r && r.inheritance975
+          ? {
+              inheritance975: {
+                inheritanceDate: toDate(r.inheritance975.inheritanceDate, "inheritance975.inheritanceDate"),
+                decedentRegistrationDate: toDate(r.inheritance975.decedentRegistrationDate, "inheritance975.decedentRegistrationDate"),
+                decedentRentalStartDate: toDate(r.inheritance975.decedentRentalStartDate, "inheritance975.decedentRentalStartDate"),
+              },
+            }
+          : {}),
         // 소령 §167의3⑪ 연장 사실 — 날짜 Date 변환 (isApartment974는 boolean이라 `...r`로 온다)
         ...("aptDeadlineExtension974" in r && r.aptDeadlineExtension974
           ? { aptDeadlineExtension974: toEngineAptDeadlineExtension(r.aptDeadlineExtension974) }

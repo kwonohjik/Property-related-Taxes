@@ -183,6 +183,9 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       taxRegistrationDate: "", // 조특령 §97의5③ — 임대개시 기산의 한 축
       hasDeemedRentalPeriod: false,
       deemedRentalPeriods: [],
+      isInherited975: false, // V-13 — 상속 합산(조특령 §97의5③ → §97⑤3호)
+      decedentRegistrationDate975: "",
+      decedentRentalStartDate975: "",
     };
   }
   if (id === "rental_97_main") {

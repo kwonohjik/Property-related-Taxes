@@ -133,3 +133,23 @@ export function evaluateContinuousRental975(args: {
   }
   return { years: best?.years ?? 0, ...(best ? { longestSegment: best.span } : {}), breaks };
 }
+
+/**
+ * §97의5 상속 합산 구간 (조특령 §97의5③ → §97⑤3호 · V-13) — 엔진(`rental-97-5.ts`)과 화면 미리보기의 단일 소스.
+ *
+ * - 피상속인 의제 개시일 = max(피상속인 임대개시일, 피상속인 장기일반·공공지원 등록등일) — 계속 임대의 기산일이 된다(Q-A).
+ * - 상속인 분은 상속개시일 전으로 거슬러 가지 않는다 — max(상속인 의제 개시일, 상속개시일).
+ * - 상속개시일 ~ 상속인 분 시작 간격은 공실로 넘긴다 — 6개월 이내면 계속, 넘으면 끊긴다(Q-D · 령 §97의5①1호 유추).
+ * 날짜 순서 검증(피상속인 날짜 < 상속개시일 ≤ 양도일)은 호출부 몫이다 — 어긋난 입력은 넘기지 않는다.
+ */
+export function inheritanceMergeSpan975(
+  effectiveStart: Date,
+  inh: { inheritanceDate: Date; decedentRegistrationDate: Date; decedentRentalStartDate: Date } | undefined,
+): { start: Date; heirStart: Date; decedentStart?: Date; gapVacancies: { startDate: Date; endDate: Date }[] } {
+  if (!inh) return { start: effectiveStart, heirStart: effectiveStart, gapVacancies: [] };
+  const decedentStart = new Date(Math.max(inh.decedentRentalStartDate.getTime(), inh.decedentRegistrationDate.getTime()));
+  const heirStart = new Date(Math.max(effectiveStart.getTime(), inh.inheritanceDate.getTime()));
+  const gapVacancies =
+    heirStart.getTime() > inh.inheritanceDate.getTime() ? [{ startDate: inh.inheritanceDate, endDate: heirStart }] : [];
+  return { start: decedentStart, heirStart, decedentStart, gapVacancies };
+}

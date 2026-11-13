@@ -29,6 +29,7 @@ import { toUnsold986Payload } from "./transfer-tax-api-reductions-unsold";
 import { toUnsold987Payload } from "./transfer-tax-api-reductions-unsold";
 import { toUnsold992Payload } from "./transfer-tax-api-reductions-unsold";
 import { toUnsold989Payload } from "./transfer-tax-api-reductions-unsold";
+import { rental975InheritancePayload } from "./rental-97-5-inheritance";
 
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
 /**
@@ -61,7 +62,7 @@ export function toEngineReductions(
   owner:
     | AssetForm["acquisitionCause"]
     | (Pick<AssetForm, "acquisitionCause" | "nonHeirBequest"> &
-        Partial<Pick<AssetForm, "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "redevOriginalAssetType" | "redevReceiveOnlyMode" | "redevCompletionDate">>),
+        Partial<Pick<AssetForm, "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "redevOriginalAssetType" | "redevReceiveOnlyMode" | "redevCompletionDate" | "acquisitionDate">>),
   // 파급C: 매퍼는 asset 컨텍스트 없음 → §77 고시일 fallback 소스를 명시 주입
   expropriationNoticeDate?: string,
 ) {
@@ -371,6 +372,11 @@ export function toEngineReductions(
                   .map((p) => ({ reason: p.reason, startDate: p.startDate, endDate: p.endDate })),
               }
             : {}),
+          // V-13 — 조특령 §97의5③ → §97⑤3호 상속 합산. 상속 자산·토글 ON·세 날짜(상속개시일 = 카드 취득일)일 때만.
+          ...(() => {
+            const inheritance975 = rental975InheritancePayload(r, ownerAsset);
+            return inheritance975 ? { inheritance975 } : {};
+          })(),
           officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
           region: r.region,
         };

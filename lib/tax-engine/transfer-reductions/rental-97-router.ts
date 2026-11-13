@@ -141,6 +141,8 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         isPurchaseRental: r.isPurchaseRental,
         taxRegistrationDate: r.taxRegistrationDate,
         deemedRentalPeriods: r.deemedRentalPeriods,
+        // V-13 — 조특령 §97의5③ → §97⑤3호 피상속인 임대기간 합산. ⚠️ 명시 매핑 — 빠지면 조용히 사라진다.
+        inheritance975: r.inheritance975,
         // 「소득세법」 §90① 감면세액 산식 입력 — §97의5 evaluator만 읽는다.
         transferIncome: ctx.transferIncome,
         basicDeduction: ctx.basicDeduction,

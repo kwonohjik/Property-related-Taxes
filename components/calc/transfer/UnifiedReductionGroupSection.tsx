@@ -364,6 +364,7 @@ export function GroupCategorySection({
                       acquisitionDate={acquisitionDate}
                       transferDate={transferDate}
                       assetContractDate={assetContractDate}
+                      acquisitionCause={assetAcquisitionCause}
                     />
                   )}
                   {/* §97 본문 입력 폼 */}

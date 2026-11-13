@@ -731,6 +731,16 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // §97의5 임대기간 계산 준용·임대개시 의제(`RENTAL_97_5_PERIOD.PERIOD_CALC`). 원문 MST 288915 실독 2026-11-13 (V-13).
+    id: "TRANSFER_DECREE.LONG_RENTAL_97_5_PERIOD",
+    citation: "조특령 §97의5",
+    keywords: [
+      "제97조제5항제1호 및 제3호를 준용한다",
+      "장기일반민간임대주택등으로 등록하여 임대하는 날부터 임대를 개시한 것으로 본다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     // ⑤1호 기산일·3호 상속 합산(`RENTAL_97_4_PERIOD.INHERITANCE_MERGE`). 원문 MST 288915 실독 2026-11-02.
     id: "TRANSFER_DECREE.LONG_RENTAL_97",
     citation: "조특령 §97",

@@ -351,6 +351,15 @@ export type RentalReductionFormVariant =
       /** 조특령 §97의5①2호·3호 — 수용·정비사업으로 임대할 수 없던 기간이 있는가 */
       hasDeemedRentalPeriod: boolean;
       deemedRentalPeriods: DeemedRentalPeriodFormItem[];
+      /**
+       * V-13 — 조특령 §97의5③ → §97⑤3호 상속받은 임대주택(피상속인 임대기간 합산). 상속 자산에서만 묻는다(`rental975InheritanceInScope`).
+       * true면 위 등록·임대일은 상속인 본인 값이다. 상속개시일은 자산 카드 취득일을 쓴다(칸 없음).
+       */
+      isInherited975: boolean;
+      /** 피상속인 장기일반·공공지원 등록등일 — 임대사업자 등록·세무서 사업자등록 중 늦은 날 (YYYY-MM-DD) */
+      decedentRegistrationDate975: string;
+      /** 피상속인이 그 주택을 임대하기 시작한 날 (YYYY-MM-DD) */
+      decedentRentalStartDate975: string;
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_main" | "rental_97_proviso";

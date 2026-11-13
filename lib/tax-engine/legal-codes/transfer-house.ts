@@ -537,6 +537,15 @@ export const RENTAL_97_4_PERIOD = {
   INHERITANCE_MERGE: "조특령 §97⑤3호",
 } as const;
 
+/**
+ * 조특법 §97의5 임대기간 계산 — 조특령 §97의5③ 「장기일반민간임대주택등의 임대기간의 계산에 관하여는 제97조제5항제1호 및
+ * 제3호를 준용한다」 → 조특령 §97⑤3호 피상속인 임대기간 합산 (`transfer-reductions/rental-97-5-inheritance.ts` · V-13)
+ */
+export const RENTAL_97_5_PERIOD = {
+  PERIOD_CALC: "조특령 §97의5③",
+  INHERITANCE_MERGE: "조특령 §97⑤3호",
+} as const;
+
 export const RENTAL_HOUSE_COUNT_EXCLUSION = {
   RENTAL_97: "조특법 §97②",
   RENTAL_97_2: "조특법 §97의2②",

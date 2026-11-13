@@ -20,6 +20,7 @@
 import { addMonths } from "../utc-date";
 import { safeMultiplyThenDivide } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { RENTAL_97_5_PERIOD } from "../legal-codes/transfer";
 import { checkReductionPeriod } from "./period-check";
 import {
   calcRentalGainFraction,
@@ -35,6 +36,7 @@ import {
 } from "./rental-97-shared-helpers";
 import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result } from "./types";
 import { evaluateContinuousRental975 } from "./rental-97-5-period";
+import { inheritanceMergeSpan975 } from "./rental-97-5-period";
 
 const ymd = (d: Date) =>
   `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
@@ -81,6 +83,31 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
       legalBasis: "조특령 §97의5③",
     });
   }
+
+  /**
+   * 1-0) 상속받은 임대주택 — 조특령 §97의5③ → §97⑤3호 피상속인 임대기간 합산 (V-13 · `inheritance975` 타입 주석).
+   * 날짜 순서가 어긋나면 피상속인 분이 양도일까지 잘리거나 음수가 된다 — §97의4(`rental-97-4.ts` 1-0)와 같은 조건으로 막는다.
+   */
+  const inh = input.inheritance975;
+  const inhInvalid =
+    inh !== undefined &&
+    (inh.decedentRentalStartDate.getTime() >= inh.inheritanceDate.getTime() ||
+      inh.decedentRegistrationDate.getTime() >= inh.inheritanceDate.getTime() ||
+      inh.inheritanceDate.getTime() > input.transferDate.getTime());
+  if (inhInvalid) {
+    reasons.push({
+      code: "INVALID_INHERITANCE_DATES",
+      message:
+        "피상속인의 임대개시일·등록등일은 상속개시일보다 앞서고, 상속개시일은 양도일 이전이어야 합니다 (조특령 §97의5③ → §97⑤3호 — 피상속인 임대기간 합산).",
+      legalBasis: RENTAL_97_5_PERIOD.PERIOD_CALC,
+    });
+  }
+  /** 합산에 쓸 상속 입력 — 날짜가 어긋나면 합산하지 않는다(위 사유로 이미 부적격) */
+  const mergeInh = inh && !inhInvalid ? inh : undefined;
+  /** 피상속인 의제 임대개시일 — 임대개시일·장기일반·공공지원 등록등일 중 늦은 날(령 §97의5③ 후단과 같은 규칙) */
+  const decedentStart = mergeInh
+    ? new Date(Math.max(mergeInh.decedentRentalStartDate.getTime(), mergeInh.decedentRegistrationDate.getTime()))
+    : undefined;
 
   /**
    * 1-1) ①1호 — 「민간매입임대주택 및 … 공공매입임대주택을 취득」 (리뷰 6번)
@@ -139,7 +166,8 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
   // 3) ①3호 — 임대료 증액 제한 (§97의3①2호 준용)
   if (input.rentHistory && input.rentHistory.length >= 2) {
     // 임대개시일(령 §97의3④·§97의5③ 기산일) 이후 체결·갱신한 계약의 증액만 판정한다
-    const rentStart = rental97EffectiveStart(input);
+    // 상속 합산이면 피상속인 분부터 — 합산된 「임대기간 중」 요건이다(V-13 Q-E).
+    const rentStart = decedentStart ?? rental97EffectiveStart(input);
     const capViolations = rentViolationsFromRentalStart(
       validateRentIncrease(input.rentHistory, input.jeonseConversionRate ?? DEFAULT_JEONSE_CONVERSION_RATE).violations,
       rentStart,
@@ -193,6 +221,7 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
 
   // 4) ①2호 — 10년 이상 계속 임대
   let eligibleRentalYears = 0;
+  let rentalPeriod975: { decedent: { start: string; end: string }; heir: { start: string; end: string } } | undefined;
   if (input.rentalStartDate) {
     /**
      * 조특령 §97의5③ — 「…사업자등록과 임대사업자등록을 하고 장기일반민간임대주택등으로
@@ -239,13 +268,21 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
     }
 
     if (periodEnd) {
+      // 상속 합산(V-13) — 피상속인 분을 앞에 붙여 한 구간으로 「계속」을 본다(Q-A·Q-D · `inheritanceMergeSpan975`).
+      const span = inheritanceMergeSpan975(effectiveStart, mergeInh);
       // 리뷰 2·5번 — 6개월 초과 공실은 계속성을 끊고(가장 긴 연속 구간으로 판정), 수용·정비사업 간주기간은 계속 임대로 본다.
       const cont = evaluateContinuousRental975({
-        start: effectiveStart,
+        start: span.start,
         end: periodEnd,
-        vacancyPeriods: input.vacancyPeriods ?? [],
+        vacancyPeriods: [...(input.vacancyPeriods ?? []), ...span.gapVacancies],
         deemedRentalPeriods: input.deemedRentalPeriods ?? [],
       });
+      if (mergeInh && span.decedentStart) {
+        rentalPeriod975 = {
+          decedent: { start: ymd(span.decedentStart), end: ymd(mergeInh.inheritanceDate) },
+          heir: { start: ymd(span.heirStart), end: ymd(periodEnd) },
+        };
+      }
       eligibleRentalYears = cont.years;
       if (eligibleRentalYears < RENTAL_97_5_MANDATORY_YEARS) {
         const restartNote =
@@ -254,9 +291,12 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
               `끊겨, 가장 긴 계속 임대 구간(${ymd(cont.longestSegment.start)}~${ymd(cont.longestSegment.end)})으로 ` +
               `판정했습니다 (조특령 §97의5①1호 — 6개월 이내 공실만 계속 임대로 봄).`
             : "";
+        const mergeNote = rentalPeriod975
+          ? ` 피상속인 임대기간(${rentalPeriod975.decedent.start}~${rentalPeriod975.decedent.end})을 합산했습니다 (${RENTAL_97_5_PERIOD.PERIOD_CALC} → ${RENTAL_97_5_PERIOD.INHERITANCE_MERGE}).`
+          : "";
         reasons.push({
           code: "RENTAL_PERIOD_SHORT",
-          message: `계속 임대기간 ${eligibleRentalYears}년 — 10년 이상 계속 임대 요건 미달 (§97의5①2호).${restartNote}`,
+          message: `계속 임대기간 ${eligibleRentalYears}년 — 10년 이상 계속 임대 요건 미달 (§97의5①2호).${restartNote}${mergeNote}`,
           legalBasis,
         });
       }
@@ -336,6 +376,7 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
     rentalGainRatio,
     rentalGainFraction,
     isFullExemption: true,
+    ...(rentalPeriod975 ? { rentalPeriod975 } : {}),
     ...(section90 ? { section90 } : {}),
   };
 }
