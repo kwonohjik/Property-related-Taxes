@@ -651,6 +651,22 @@ export function buildExemptEarlyResult(p: {
     ...(grossForEcho.usedEstimated
       ? { estimatedBase: grossForEcho.estimatedBase, estimatedDeduction: grossForEcho.estimatedDeduction }
       : {}),
+    /**
+     * [echo] 환산 기준시가 + 영 §164⑨ 특례 상세 3종 — 표시 전용, 세액 불변(비과세는 0).
+     *
+     * 🔴 종전에는 싣지 않아 **환산 + 수용/공매 전액 비과세** 건에서 §164⑨ 산출근거 카드와 환산 기준시가 표시가 화면에서 사라졌다
+     *   (금액 칸은 `estimatedBase`·`expenses`로 정확했다). 정상 경로(`transfer-tax-normal-return.ts`)·양도차손 경로
+     *   (`transfer-tax-loss-return.ts`)와 같은 조건·같은 값이다 — 계획서 `early-return-branches-echo-audit.plan.md` F-2.
+     */
+    ...(p.effectiveInput.useEstimatedAcquisition && !grossForEcho.splitDetail
+      ? {
+          estimatedStdPriceAtAcquisition: p.effectiveInput.standardPriceAtAcquisition,
+          estimatedStdPriceAtTransfer: p.effectiveInput.standardPriceAtTransfer,
+        }
+      : {}),
+    expropriationValuationDetail: grossForEcho.expropriationValuationDetail,
+    auctionValuationDetail: grossForEcho.auctionValuationDetail,
+    housingExpropriationValuationDetail: grossForEcho.housingExpropriationValuationDetail,
     longTermHoldingDeduction: 0,
     longTermHoldingRate: 0,
     lthdStartDate: resolveLTHDStartDate(p.effectiveInput),
