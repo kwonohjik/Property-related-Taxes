@@ -23,6 +23,8 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { asksBusinessRegistrationDate } from "@/lib/calc/comprehensive-api";
 import { toRegistrationType } from "@/lib/calc/comprehensive-api";
 import { asksThirtyPlusUnits } from "@/lib/calc/comprehensive-api";
+import { asksUsageApprovalDate } from "@/lib/calc/comprehensive-api";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
 import { RentalExclusion8NaFields } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
 import { RentalPeriodApplicationDateField } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
@@ -191,6 +193,27 @@ function RentalExclusionDetail({
           />
           <p className="text-xs text-muted-foreground">
             민간건설·민간매입임대는 2018.3.31. 이전에 임대사업자 등록과 사업자등록을 모두 한 주택만 합산배제됩니다(시행령 §3①1호·2호 단서 · 3.31.이 토요일이라 4.2.까지).
+          </p>
+        </div>
+      )}
+
+      {/* §3①1호·7호 가목 6억/9억 — 사용승인일(선택). 묻는 조건은 asksUsageApprovalDate(④와 같은 술어) */}
+      {asksUsageApprovalDate(
+        property.rentalRegistrationType || toRegistrationType(property.exclusionType),
+        assessmentYear,
+        parseAmount(property.assessedValue),
+      ) && (
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">
+            사용승인일 <span className="text-muted-foreground font-normal text-xs">(선택)</span>
+          </label>
+          <DateInput
+            data-testid="comprehensive-usage-approval-date"
+            value={property.usageApprovalDate ?? ""}
+            onChange={(v) => onUpdate({ usageApprovalDate: v })}
+          />
+          <p className="text-xs text-muted-foreground">
+            2021.2.17. 이후 사용승인(사용검사)받은 건설임대만 공시가격 9억, 그 전은 6억입니다(부칙&lt;제31447호&gt; §2). 비우면 6억으로 봅니다.
           </p>
         </div>
       )}

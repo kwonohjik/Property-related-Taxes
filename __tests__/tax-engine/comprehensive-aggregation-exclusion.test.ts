@@ -60,6 +60,8 @@ describe("validateRentalExclusion — 임대주택 합산배제", () => {
       ...baseRentalInput,
       registrationType: "public_support_construction",
       assessedValue: 800_000_000,
+      // 9억 기준은 2021.2.17. 이후 사용승인분만(부칙<제31447호> §2) — 그 전·모름이면 6억(comprehensive-exclusion-price-era.anchor.test.ts)
+      usageApprovalDate: new Date("2022-01-01"),
     });
     expect(result.isExcluded).toBe(true);
     expect(result.reason).toBe(COMPREHENSIVE_EXCL.PUBLIC_SUPPORT_CONSTRUCTION_RENTAL);
@@ -120,6 +122,7 @@ describe("validateRentalExclusion — 임대주택 합산배제", () => {
 describe("validateRentalExclusion — 의무임대기간 (GAP-1)", () => {
   const baseRentalInput: RentalExclusionInput = {
     registrationType: "public_support_construction",  // 10년 의무 — §3①7호 (공공지원 건설형)
+    usageApprovalDate: new Date("2022-01-01"),  // 8억이 9억 구간에 들도록(부칙<제31447호> §2 — 2021.2.17. 이후 사용승인)
     ...NA8_NOT_APPLICABLE,
     rentalRegistrationDate: new Date("2020-01-01"),
     rentalStartDate: new Date("2020-02-01"),

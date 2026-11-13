@@ -40,6 +40,8 @@ export interface PropertyEntry {
   rentalRegistrationDate: string;  // YYYY-MM-DD — 지자체 임대사업자 등록일(등록증)
   /** 세무서 사업자등록일 YYYY-MM-DD — 1호 민간건설·2호 민간매입의 2018.3.31. 단서 판정(⑤가 그 두 유형에서만 묻는다) */
   businessRegistrationDate?: string;
+  /** 사용승인일 YYYY-MM-DD — 1·7호 건설임대 6억/9억(부칙<제31447호> §2). 묻는 조건은 asksUsageApprovalDate(⑤④ 공유) */
+  usageApprovalDate?: string;
   // ── §3①8호 나목 1)~4)·7호 단서 — 묻는 조건은 lib/calc/comprehensive-rental-8na.ts 한 곳(⑤⑧④ 공유). 빈 값 "" = 미입력 ──
   rentalAcquisitionDate?: string;              // 나목1) 취득일
   rentalDepositPaidDate?: string;              // 나목1) 괄호 — 매매계약·계약금 지급일(선택)

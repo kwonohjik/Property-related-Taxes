@@ -109,6 +109,8 @@ export interface RentalExclusionInput extends RentalExclusion8NaFacts, RentalExc
    * 판정용(민간건설·민간매입). 그 두 유형에서 없으면 요건 확인 불가로 불성립.
    */
   businessRegistrationDate?: Date;
+  /** 사용승인일(사용검사 확인증일) — 1·7호 가목 6억/9억 적용례(대통령령 제31447호 부칙 제2조). 없으면 6억 + 확인 필요 */
+  usageApprovalDate?: Date;
   rentalStartDate: Date;           // 임대개시일
   assessedValue: number;           // 공시가격 (원)
   area: number;                    // 전용면적 (㎡)

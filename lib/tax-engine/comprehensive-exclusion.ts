@@ -6,6 +6,7 @@
 import { addYears } from "./utc-date";
 import { excludedUnder8hoNa } from "./comprehensive-exclusion-8ho-na";
 import { unsoldPurchase6hoIssues } from "./comprehensive-exclusion-6ho";
+import { builtRentalBaseCap } from "./comprehensive-exclusion-price-era";
 import {
   COMPREHENSIVE_EXCL,
   COMPREHENSIVE_EXCL_CONST,
@@ -166,6 +167,9 @@ export function validateRentalExclusion(
     if (input.isThirtyPlusUnits === true && !thirtyPlusTierApplies(input)) {
       failReasons.push(COMPREHENSIVE_EXCL.THIRTY_PLUS_TIER_NOT_IN_FORCE);
     }
+    // 건설임대 6억 기준을 쓴 까닭(2021.2.17. 전 사용승인 · 사용승인일 모름)
+    const builtReason = thirtyPlusTierApplies(input) ? null : builtRentalBaseCap(input)?.reason;
+    if (builtReason) failReasons.push(builtReason);
   }
 
   // 임대료 증가율 요건은 1·2·7·8·10·11호에만 있다 — 3호(2005.1.5. 이전 임대)·6호(미분양매입)는 없다(§3① 각 호 · §3⑧)
@@ -284,9 +288,10 @@ function getPriceLimit(input: RentalExclusionInput): number {
     case "private_construction":
     case "public_construction":
     case "public_support_construction":
+      // 30호 미만 9억은 2021.2.17. 이후 사용승인(2021년분 민간건설은 등록)분만 — 그 밖 6억(부칙<제31447호> §2)
       return over30
         ? COMPREHENSIVE_EXCL_CONST.BUILT_RENTAL_PRICE_OVER30 // 12억
-        : COMPREHENSIVE_EXCL_CONST.BUILT_RENTAL_PRICE_UNDER30; // 9억
+        : (builtRentalBaseCap(input)?.cap ?? COMPREHENSIVE_EXCL_CONST.BUILT_RENTAL_PRICE_UNDER30); // 9억/6억
     // 매입임대 (§3①2·8호) — 30호미만 6억/3억 / 30호이상 9억/6억
     case "private_purchase_long":
     case "private_purchase_short":
