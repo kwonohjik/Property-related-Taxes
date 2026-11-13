@@ -27,6 +27,12 @@ import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/s
 import { rental973DeemedStartString } from "@/lib/calc/rental-97-effective-start";
 import { rental973LongRegistrationDate } from "@/lib/calc/transfer-tax-validate-rental-conversion";
 import { Clause4GrandfatherQuestion } from "./Clause4GrandfatherQuestion";
+import { Rental973InheritanceBlock } from "./Rental973InheritanceBlock";
+import { rental973InheritanceInScope } from "@/lib/calc/rental-97-3-inheritance";
+import { rental973InheritanceConflictsConversion } from "@/lib/calc/rental-97-3-inheritance";
+import { rental973MergedDecedentStart } from "@/lib/calc/rental-97-3-inheritance";
+import { mergedRentalYears97 } from "@/lib/tax-engine/transfer-reductions/rental-97-shared-helpers";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 type Rental973Form = Extract<RentalReductionFormVariant, { type: "rental_97_3" }>;
 
@@ -38,6 +44,8 @@ interface Props {
   /** 자산 취득일·매매계약일 — 가액요건 부칙 §2② 질문 표시 조건 */
   acquisitionDate?: string;
   assetContractDate?: string;
+  /** 자산 취득원인 — V-14 상속 합산 토글은 상속 자산에서만 보인다(`rental973InheritanceInScope`) */
+  acquisitionCause?: string;
 }
 
 function diffYearsMonths(from: string, to: string): string {
@@ -53,7 +61,7 @@ function diffYearsMonths(from: string, to: string): string {
   return months > 0 ? `${years}년 ${months}개월` : `${years}년`;
 }
 
-export function Rental973InputForm({ value, onChange, transferDate, acquisitionDate, assetContractDate }: Props) {
+export function Rental973InputForm({ value, onChange, transferDate, acquisitionDate, assetContractDate, acquisitionCause }: Props) {
   const patchCommon = (patch: Partial<RentalCommonFormFields>) => {
     onChange(patch as Partial<Rental973Form>);
   };
@@ -71,6 +79,22 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
     () => diffYearsMonths(effectiveStart, transferDate ?? ""),
     [effectiveStart, transferDate],
   );
+
+  // V-14 — 상속 합산(조특령 §97의3④ → §97⑤3호). 상속 자산에서만 묻고, 합산이 실제로 일어나는 조건은 엔진·④·⑧과 같은 leaf.
+  const inheritanceInScope = rental973InheritanceInScope(acquisitionCause);
+  const owner = { acquisitionCause, acquisitionDate };
+  const mergedDecedentStart = rental973MergedDecedentStart(value, owner);
+  const mergedPreview = useMemo(() => {
+    const own = toOptionalDate(effectiveStart);
+    const end = toOptionalDate(transferDate);
+    const inheritanceDate = toOptionalDate(acquisitionDate);
+    const decedentRegistrationDate = toOptionalDate(value.decedentRegistrationDate973);
+    const decedentRentalStartDate = toOptionalDate(value.decedentRentalStartDate973);
+    if (!mergedDecedentStart || !own || !end || !inheritanceDate || !decedentRegistrationDate || !decedentRentalStartDate) return null;
+    // 공실은 넣지 않는다 — 아래 안내대로 공실 차감은 엔진이 한다(기존 미리보기와 같은 기준)
+    const m = mergedRentalYears97(own, end, { inheritanceDate, decedentRegistrationDate, decedentRentalStartDate }, [], 3);
+    return { years: m.years, decedent: `${mergedDecedentStart} ~ ${acquisitionDate}` };
+  }, [mergedDecedentStart, effectiveStart, transferDate, acquisitionDate, value.decedentRegistrationDate973, value.decedentRentalStartDate973]);
 
   // 등록일별 공제율 안내 (R-1: 2022.12.31 이전 등록분 8년 50% 경과규정) — store 미기록
   const rateGuide = useMemo(() => {
@@ -146,6 +170,19 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
               </p>
             </div>
           </>
+        )}
+
+        {/* V-14 — 상속 여부가 아래 등록·임대일의 주체(상속인 본인)를 정하므로 그 직전에 둔다. 변경신고는 등록일의 의미를 바꾸므로 그 앞. */}
+        {inheritanceInScope && (
+          <Rental973InheritanceBlock
+            reductionType={value.type}
+            checked={value.isInherited973 === true}
+            decedentRegistrationDate={value.decedentRegistrationDate973 ?? ""}
+            decedentRentalStartDate={value.decedentRentalStartDate973 ?? ""}
+            inheritanceDate={acquisitionDate}
+            conflictsConversion={rental973InheritanceConflictsConversion(value)}
+            onChange={onChange}
+          />
         )}
 
         <RegistrationFields
@@ -249,7 +286,9 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
           </p>
           <p className="mt-1 text-micro text-muted-foreground">
             임대개시일은 실제 임대일·임대사업자 등록일·세무서 사업자등록일 중 늦은 날입니다 (령 §97의3④).
-            그날이 취득일보다 늦으면 이 값이 임대기간 분 양도차익 안분의 개시일 기준시가로도 쓰입니다 (령 §97의3⑤).
+            {mergedDecedentStart
+              ? " 피상속인 임대기간을 합산하면 피상속인 임대개시일(등록등일이 늦으면 그날) 당시 값을 넣으세요 — 이때 안분은 취득일(상속개시일) 기준시가로 계산해 이 값을 쓰지 않습니다 (확인 필요)."
+              : " 그날이 취득일보다 늦으면 이 값이 임대기간 분 양도차익 안분의 개시일 기준시가로도 쓰입니다 (령 §97의3⑤)."}
             {value.shortTermConversionMode === "before" &&
               " 단기→장기 변경신고 주택은 단기 임대기간 산입을 반영한 임대개시일(자동 산출 박스의 기산일) 당시 값을 입력합니다."}
           </p>
@@ -311,6 +350,12 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
           <span className="text-muted-foreground">양도일 기준 임대기간 (임대개시일→양도일, 임대개시일 = 임대일·등록일·사업자등록일 중 늦은 날)</span>
           <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">{rentalDuration}</span>
         </div>
+        {mergedPreview && (
+          <div className="flex items-center justify-between text-xs" data-testid="rental973-merged-preview">
+            <span className="text-muted-foreground">피상속인 임대기간({mergedPreview.decedent}) 통산 후 (공실 차감 전)</span>
+            <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">{mergedPreview.years}년</span>
+          </div>
+        )}
         <p className="text-micro text-emerald-700 dark:text-emerald-300">
           ※ 2022.12.31 이전 등록분은 8년 이상 50%, 10년 이상 70%. 2023.1.1 이후 등록분은 10년 이상 70%만 적용됩니다.
           공실 차감 후 실제 유효임대기간은 엔진이 계산합니다.

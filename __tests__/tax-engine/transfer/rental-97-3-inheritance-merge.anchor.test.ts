@@ -20,7 +20,7 @@ const D = (s: string) => new Date(s);
 const codes = (r: Rental97Result) => (r.isEligible ? [] : r.ineligibleReasons.map((x) => x.code));
 const shortMsg = (r: Rental97Result) =>
   r.isEligible ? "" : (r.ineligibleReasons.find((x) => x.code === "RENTAL_PERIOD_SHORT")?.message ?? "");
-const lthd = (r: Rental97Result) => r as Extract<Rental97Result, { isEligible: true; effectCategory: "long_term_holding_special" }>;
+const lthd = (r: Rental97Result) => r as unknown as { rentalGainRatio: number; rentalGainFraction?: { num: number; den: number } };
 
 const inh = (o: Partial<{ inheritanceDate: string; decedentRegistrationDate: string; decedentRentalStartDate: string }> = {}) => ({
   inheritanceDate: D(o.inheritanceDate ?? "2019-01-01"),

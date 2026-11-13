@@ -150,6 +150,9 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       conversionAcceptedDate: "",
       isPrivateConstructionRental: false, // D2-07 — 확인 토글
       taxRegistrationDate: "", // 조특령 §97의3④ — 임대개시 기산의 한 축
+      isInherited973: false, // V-14 — 상속 합산(조특령 §97의3④ → §97⑤3호)
+      decedentRegistrationDate973: "",
+      decedentRentalStartDate973: "",
     };
   }
   if (id === "rental_97_4") {

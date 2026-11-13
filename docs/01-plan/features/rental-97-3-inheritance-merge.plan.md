@@ -3,7 +3,7 @@
 > **출처**: `rental-97-5-inheritance-merge.plan.md` §9 「V-14 §97의3 같은 공백」(2026-11-13 등록 제안)
 > **범위**: 조특법 §97의3(장기일반민간임대주택등 장기보유특별공제 70%/50% 과세특례)에 조특령 §97의3④ → §97⑤3호 「피상속인의 주택임대기간을 상속인의 주택임대기간에 합산」을 넣는다.
 > **세액 변경**: 있음. 방향은 장기보유특별공제 확대다. 지금은 상속인 기간만 세어 8년·10년에 못 미쳐 부적격인 사안이 적격(50% 또는 70%)으로 바뀐다. Q-3 권장안 Y면 안분 비율도 1로 오른다.
-> **상태**: 계획(2026-11-13). Q-0~Q-6은 사용자 결정 대기다.
+> **상태**: 구현(2026-11-13). Q-0~Q-6은 모두 권장안이다(사용자 지시 「구현 시작해」, 2026-11-13). anchor 엔진 30·라우트 8·컴포넌트 9 + ⑧ 점프 케이스 4. 뮤테이션 13종(엔진 7·연동 6)이 모두 실패하는 것을 확인했다. 구현 중 바뀐 점은 §11에 있다.
 > **Plan 입력**: 엔진(long-term-rental-tax-senior)과 UI(transfer-tax-ui-senior)를 2026-11-13 병렬로 검토했다. 인용한 file:line은 작성자가 다시 확인했다. 「probe 실측」은 엔진 에이전트가 저장소 밖 throwaway로 돌린 값이다. Pre-Do에서 anchor로 다시 잰다.
 
 ---
@@ -194,9 +194,15 @@
 - 령 ② 「계속하여 등록」(말소·재등록) 검증은 지금도 입력 칸이 없다(`rental-97-3.ts:282-284`). 이번에도 추가하지 않는다.
 
 ## 10. 완료 기준
-- [ ] Q-0~Q-6 결정
-- [ ] PR-0 분리(≤700줄, 동작 변경 0)
-- [ ] §4 anchor 전부 통과, 라우터 매핑 뮤테이션 실패 확인
-- [ ] 14지점 grep 자가 점검(⑫⑬⑭)
-- [ ] `npx tsc --noEmit` 0, transfer·calc 회귀 통과
-- [ ] 브라우저 확인(토글 노출 조건, request body `inheritance973`, 결과 카드 구간 행)
+- [x] Q-0~Q-6 결정(권장안)
+- [x] PR-0 분리 — `calc-wizard-asset-reduction.ts` 895 → 264줄 + `calc-wizard-asset-reduction-rental.ts` 646줄(재-export, 동작 변경 0)
+- [x] §4 anchor 전부 통과, 라우터 매핑 뮤테이션 실패 확인
+- [x] 14지점 — ④⑫⑭·라우터·⑧ 안분 개시일·⑫ 변경신고 refine을 각각 지우는 뮤테이션이 라우트 anchor에서 실패한다
+- [x] `npx tsc --noEmit` 0
+- [ ] 브라우저 확인(토글 노출 조건, request body `inheritance973`, 결과 카드 구간 행) — 미수행
+
+## 11. 구현 중 바뀐 점 (2026-11-13)
+- **⑧ 안분 검사 정합(계획서에 없던 지점)**: ⑧ `rentalProrationIssue`는 상속인 의제 개시일 > 취득일이면 「안분 필요」로 보고 취득·양도 기준시가를 요구한다. 합산하면 엔진은 안분 개시일을 피상속인 의제 개시일(< 상속개시일)로 보아 계속 임대이면 비율 1이고 기준시가가 필요 없다. 그대로 두면 ⑧이 엔진에 필요 없는 칸을 요구한다. 그래서 단일 소스 `rental973MergedDecedentStart`(`lib/calc/rental-97-3-inheritance.ts`)로 ⑧·⑤가 엔진과 같은 개시일을 쓰게 했다. 라우트 anchor 「⑧ 안분」이 지킨다.
+- **Q-2 화면**: 토글·라디오 잠금 대신 상속 블록 안 경고(rose) + ⑧ 차단(토글 칸으로 점프)으로 했다. 두 입력이 모두 보이는 상태라 막다른 길이 아니다.
+- **법령 상수 파일 분리**: `legal-codes/transfer-house.ts`도 852줄(#3294 전 843줄)이라 임대주택 상수 묶음(`RENTAL_REGISTRATION_4HO`·`TRANSFER_RENTAL_HOUSING`·`RENTAL_97_*_PERIOD`·`RENTAL_HOUSE_COUNT_EXCLUSION`)을 `legal-codes/transfer-rental-housing.ts`로 옮겼다(698 + 172줄). `transfer-house.ts`가 이름을 재export하고, `coverage-collect.ts`가 새 모듈을 직접 수집한다. `verify:legal` 486건 통과.
+- **manifest**: 새 항목 대신 기존 `TRANSFER_DECREE.LONG_GENERAL_RENTAL_97_3`에 keyword 「장기일반민간임대주택등의 임대기간의 계산에 관하여는 제97조제5항제1호ㆍ제3호 및 제5호를 준용한다」를 더했다(`additions-transfer-decree.ts` 774줄 — 새 항목이면 784줄).

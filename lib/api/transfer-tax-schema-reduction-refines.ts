@@ -127,6 +127,11 @@ export function refineReductionRequiredInputs(
     // V-13 — 조특령 §97⑤3호는 「상속인이 상속으로 인하여」 취득한 경우다. 상속 자산이 아니면 합산 입력을 받지 않는다(④는 싣지 않는다 — 직접 API 방어).
     if (r.type === "rental_97_5" && r.inheritance975 && !inherited)
       issue("inheritance975", "§97의5 피상속인 임대기간 합산(조특령 §97의5③ → §97⑤3호)은 상속받은 주택(acquisitionCause = inheritance)에만 적용됩니다.");
+    // V-14 — §97의3도 같다. 단기→장기 변경신고 의제(조특령 §97의3④ 후단)와는 함께 받지 않는다(Q-2 · 엔진 사유와 같은 조건).
+    if (r.type === "rental_97_3" && r.inheritance973 && !inherited)
+      issue("inheritance973", "§97의3 피상속인 임대기간 합산(조특령 §97의3④ → §97⑤3호)은 상속받은 주택(acquisitionCause = inheritance)에만 적용됩니다.");
+    if (r.type === "rental_97_3" && r.inheritance973 && r.shortTermConversion)
+      issue("inheritance973", "§97의3 피상속인 임대기간 합산과 단기→장기 변경신고 임대개시 의제(shortTermConversion)는 함께 계산하지 않습니다.");
 
     if (r.type === "new_99_3") {
       // 라우터 기본값이 from_builder다(`income-deduction-router.ts`) — 미지정도 1호로 본다.

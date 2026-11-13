@@ -125,6 +125,10 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           ...(r.type === "rental_97_5" && r.isInherited975 === undefined
             ? { isInherited975: false, decedentRegistrationDate975: "", decedentRentalStartDate975: "" }
             : {}),
+          // V-14 — §97의3 상속 합산 신규 필드. 구 세션엔 없다(= 해당 없음).
+          ...(r.type === "rental_97_3" && r.isInherited973 === undefined
+            ? { isInherited973: false, decedentRegistrationDate973: "", decedentRentalStartDate973: "" }
+            : {}),
           // PR-C — 단기→장기 변경신고 구분. 구 세션의 boolean(2020.7.11 이후 변경분 = 적용 제외)을 그대로 옮긴다.
           ...(r.type === "rental_97_3" && r.shortTermConversionMode === undefined
             ? {

@@ -126,6 +126,15 @@ export type RentalReductionFormVariant =
       isPrivateConstructionRental: boolean;
       /** 조특령 §97의3④ — 세무서 사업자등록일 (YYYY-MM-DD). 사업자등록 확인 시 필수 — 임대개시 기산의 한 축 */
       taxRegistrationDate: string;
+      /**
+       * V-14 — 조특령 §97의3④ → §97⑤3호 상속받은 임대주택(피상속인 임대기간 합산). 상속 자산에서만 묻는다(`rental973InheritanceInScope`).
+       * true면 위 등록·임대일은 상속인 본인 값이다. 상속개시일은 자산 카드 취득일을 쓴다(칸 없음).
+       */
+      isInherited973: boolean;
+      /** 피상속인 장기일반·공공지원 등록등일 — 임대사업자 등록·세무서 사업자등록 중 늦은 날 (YYYY-MM-DD) */
+      decedentRegistrationDate973: string;
+      /** 피상속인이 그 주택을 임대하기 시작한 날 (YYYY-MM-DD) */
+      decedentRentalStartDate973: string;
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_4";
