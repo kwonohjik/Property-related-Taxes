@@ -39,6 +39,10 @@ import { allowsFamilyBusinessInheritance } from "@/lib/calc/transfer-fb-gate";
 import { buildingDatePatch, effectiveBuildingCauseMix, effectiveCarryoverDonorSplit } from "@/lib/calc/transfer-land-part-cause";
 import { effectiveBuildingCarryoverMix } from "@/lib/calc/transfer-land-part-cause";
 import { isMixedBurdenedGift, mixedBgBlockedCause } from "@/lib/calc/burdened-gift-mixed-use-scope";
+import {
+  MIXED_USE_CARRYOVER_OPTION_HINT,
+  isMixedCarryoverUnsupported,
+} from "@/lib/calc/mixed-use-carryover-scope";
 import { isMixedBgDeemedPath } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { bgSec163_9ProvisoKind } from "@/lib/calc/bg-163-9-proviso";
 import { bgStdBasis } from "@/lib/calc/bg-163-9-proviso";
@@ -125,7 +129,10 @@ export function CompanionAcquisitionCauseSection({
         options={ACQUISITION_CAUSE_OPTIONS.map((o) => {
           // 겸용 × 부담부증여는 증여자가 매매로 취득한 경우만 계산한다 — **현재 선택되지 않은** 옵션만 막는다(현재 값이 막힌 값이면 ⑧이 이 칸으로 점프시키고 다른 옵션은 눌린다).
           const blocked = isMixedBurdenedGift(asset) && o.value !== asset.acquisitionCause ? mixedBgBlockedCause(o.value) : null;
-          return { value: o.value, label: o.label, ...(blocked ? { disabled: true, hint: blocked.short } : {}) };
+          // 겸용 × 이월과세는 지원하지 않는다(⑧·⑫와 같은 술어) — 현재 선택되지 않은 옵션만 막는다(이미 고른 값은 ⑧이 이 칸으로 점프시킨다).
+          const noCarryover = o.value !== asset.acquisitionCause && isMixedCarryoverUnsupported({ ...asset, acquisitionCause: o.value });
+          const hint = blocked ? blocked.short : noCarryover ? MIXED_USE_CARRYOVER_OPTION_HINT : null;
+          return { value: o.value, label: o.label, ...(hint ? { disabled: true, hint } : {}) };
         })}
         onChange={(value) =>
           onChange({

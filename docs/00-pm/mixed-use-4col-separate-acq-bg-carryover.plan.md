@@ -2,7 +2,7 @@
 
 > 2026-11-13 · throwaway probe 2종(vitest: 엔진 `calcMixedUseTransferTax` → `mixedUseToFilingResult` → `buildRows`; Playwright headless: 폼 시드 → «세금 계산하기» → 신고서·명세서 텍스트). 둘 다 커밋 전에 삭제했다.
 > 표기: **[직접]** 이번 세션 코드 읽기·실측 · **[해석]** · **[확인 필요]**.
-> 상태: **결정 대기(Q-1·Q-2)**. 이 PR은 계획서만이다 — 코드는 바꾸지 않았다.
+> 상태: **Q-1 a · Q-2 a 결정(2026-11-13, 「모두 권장안으로」) → 구현·검증 완료(§6)**.
 
 ## 0. 결론
 
@@ -93,4 +93,23 @@
 | **a (권고)** | 합계 열 양도가액을 겸용 부담부증여일 때 `양도로 보는 채무액`(= 4열 합)으로 채운다 | 표시만 바뀐다 · 세액 불변. 약 40분 |
 | c | 두지 않는다 | 합계 열이 «-»로 남는다 |
 
-권고대로면 「모두 권장안으로」라고 하시면 됩니다. 이 계획서만 머지하려면 「머지해」입니다.
+
+## 6. 구현·검증 결과 (Q-1 a · Q-2 a)
+
+**V-5 실측(구현 전) [직접]:** 컴패니언 겸용 + `carryover_gift`는 ④·⑧을 통과해 200이 나오고, 파트 카드 5장이 각각 증여자 취득가액 전액(100,000,000)을 받아 취득가액 합이 500,000,000이 됐다(같은 조건 매매는 약 300,000,000). 단건과 같은 규칙으로 막는다.
+
+**Q-1 a — 겸용주택 × 이월과세 거부** (단일 소스 `lib/calc/mixed-use-carryover-scope.ts`: 문구 `MIXED_USE_CARRYOVER_UNSUPPORTED_MESSAGE` · 술어 2종)
+- ⑧ `transfer-tax-validate-acquisition.ts` — 이월과세 전용 분기보다 **앞에서** 막는다(종전엔 그 분기가 겸용 분기보다 먼저라 통과). 필드 `acquisitionCause`.
+- ⑫ 단건 `refineMixedUseNoCarryover`(`transfer-tax-schema-mixed-use.ts`) → `refinePropertyRequiredInputs`에서 호출 · 컴패니언 `refineCompanionMixedUseNoCarryover` → `addCompanionAcquisitionCauseRefines`에서 호출(path `companionAssets.i.acquisitionCause`).
+- ⑤ `CompanionAcquisitionCauseSection.tsx` — 겸용에서 «이월과세(증여)» 옵션 비활성(힌트 «겸용주택 미지원»). 이미 고른 값은 막지 않는다(⑧이 점프시킨다).
+- 규칙 밖: 겸용 × **부담부증여**(MB-9가 따로 막는다 · `transferType`/`burdenedGiftInfo`로 가름) · 겸용 아닌 주택 × 이월과세.
+
+**Q-2 a — 합계 열 양도가액** `FilingFormTableHelpers.ts` — 겸용 부담부증여면 4열 양도가액의 합(= 양도로 보는 채무액 600,000,000)을 합계 열에 쓴다. 그 외 겸용은 종전 그대로 폼 계약금액.
+
+**anchor 11건** — `transfer.route.mixed-use-carryover-reject.anchor.test.ts` MC-1~5 · `mixed-use-carryover-option-disabled.render.test.tsx` CD-1~3 · `mixed-use-bg-filing-total-transfer-price.anchor.test.ts` BT-1~3. 수정 전 MC-1~4·BT-1·2 실패, 짝(MC-5·BT-3)·CD는 구현 후 통과.
+
+**뮤테이션 9종 전부 사망**(백업·복원·`cmp`): M1 ⑧ 규칙 제거 · M2 ⑫ 단건 호출 제거(이때 라우트가 200 `mixed-use`로 이월과세를 무시한 채 계산함이 재현됨) · M3 ⑫ 컴패니언 호출 제거 · M4 부담부증여 제외(UI 술어) 제거 · M5 부담부증여 제외(⑫ 술어) 제거 · M6 옵션 비활성 제거 · M7 현재값 면제 제거 · M8 합계 열 보정 제거 · M9 합계에서 상가 건물 항 누락.
+
+**회귀·정적 검사:** 회귀 5배치 전건 통과 — `__tests__/api` 7466 · `tax-engine` 19866 · `calc` 11963 · `lib` 3423 · `components` 7259 (실패 0). `tsc --noEmit`(힙 8GB) 0건. eslint 변경 파일 오류·경고 0건.
+
+**미수행·남은 것:** 브라우저(Playwright) 재확인은 하지 않았다(CI E2E에 맡김) — 겸용 자산에서 «이월과세(증여)» 옵션이 실제 화면에서 회색으로 보이는지, 합계 열 양도가액이 600,000,000으로 보이는지는 요청 시 확인한다 [확인 필요]. `FilingFormTableHelpers.ts`가 765줄이 됐다(분리 트리거 800 · 기회주의적 분리 구간 ≥750) — 이번 PR에서는 분리하지 않았다. 겸용 × 상속·증여(비-부담부증여) 4열은 이번 범위 밖(V-6)으로 남는다.

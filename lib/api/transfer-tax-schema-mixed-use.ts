@@ -14,6 +14,10 @@ import {
 } from "@/lib/tax-engine/mixed-use-housing-std";
 import { mixedPartAcqNeedsOf } from "@/lib/tax-engine/mixed-use-part-acq";
 import { mixedSeparateAcquisitionSchema, refineMixedSeparateAcquisition } from "./transfer-tax-schema-mixed-use-part-acq";
+import {
+  MIXED_USE_CARRYOVER_UNSUPPORTED_MESSAGE,
+  isMixedCarryoverRequest,
+} from "@/lib/calc/mixed-use-carryover-scope";
 // preHousingDisclosureSchema를 직접 참조하면 순환 참조 발생 — 필요 필드만 인라인으로 정의
 // 겸용주택 PHD는 landArea를 omit하므로 최소 필드만 포함한 별도 정의 사용.
 
@@ -291,6 +295,32 @@ export function refineMixedUsePresence(
       message: "겸용주택(propertyType=mixed-use-house)은 주택·상가 면적과 기준시가 정보(mixedUse)가 필요합니다",
     });
   }
+}
+
+/**
+ * 겸용주택 분리계산 × 이월과세(증여) — 지원하지 않는다(계획서 `docs/00-pm/mixed-use-4col-separate-acq-bg-carryover.plan.md` Q-1 a).
+ * 겸용 엔진에 이월과세 처리가 없어 라우트의 겸용 분기가 `carryoverTaxation`을 읽지 않고 **조용히 무시**했다. ⑧(`isMixedCarryoverUnsupported`)과 같은 문구.
+ * 단건 본체용 — 다건은 겸용 자체를 `MULTI_REJECT_RULES`가 거부한다. 부담부증여(`burdenedGiftInfo`)는 MB-9가 따로 막는다.
+ */
+export function refineMixedUseNoCarryover(
+  data: { mixedUse?: unknown; acquisitionCause?: string; transferType?: string; burdenedGiftInfo?: unknown },
+  ctx: z.RefinementCtx,
+): void {
+  if (isMixedCarryoverRequest(data)) {
+    ctx.addIssue({ code: "custom", path: ["acquisitionCause"], message: MIXED_USE_CARRYOVER_UNSUPPORTED_MESSAGE });
+  }
+}
+
+/** 컴패니언 겸용용 — 같은 규칙, path만 `companionAssets.i.acquisitionCause`. */
+export function refineCompanionMixedUseNoCarryover(
+  companions: ReadonlyArray<{ mixedUse?: unknown; acquisitionCause?: string; transferType?: string; burdenedGiftInfo?: unknown }>,
+  ctx: z.RefinementCtx,
+): void {
+  companions.forEach((c, i) => {
+    if (isMixedCarryoverRequest(c)) {
+      ctx.addIssue({ code: "custom", path: ["companionAssets", i, "acquisitionCause"], message: MIXED_USE_CARRYOVER_UNSUPPORTED_MESSAGE });
+    }
+  });
 }
 
 /**

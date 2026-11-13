@@ -22,7 +22,10 @@ import { bgActualAcquisitionMissing } from "./transfer-tax-schema-collateral-win
 import { refineCarryoverTaxation } from "./transfer-tax-schema-companion-refines";
 import { refineRedevOriginalMemberOrder } from "./transfer-tax-schema-redev-order-refine";
 import { carryoverDebtPiecesUnsupportedReason } from "@/lib/tax-engine/carryover-debt-pieces-scope";
-import { refineMixedUsePresence } from "./transfer-tax-schema-mixed-use";
+import {
+  refineMixedUsePresence,
+  refineMixedUseNoCarryover,
+} from "./transfer-tax-schema-mixed-use";
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
 import { refineGbValuationPresent } from "./transfer-tax-schema-required-refines-gb";
 import { refineHouseholdRequiredInputs, type HouseholdRefineInput } from "./transfer-tax-schema-household-refines";
@@ -530,6 +533,7 @@ export function refinePropertyRequiredInputs(
   refineBgMarketValueByPart(data as Parameters<typeof refineBgMarketValueByPart>[0], ctx); // 주택·건물 부담부증여 토지·건물 취득일 다름 — 시가 파트 평가액 (bg-house-building-split Q-3 a)
   refinePrimaryAcquisitionInputs(data, ctx);
   refineMixedUsePresence(data, ctx); // MU-7 (2차 점검)
+  refineMixedUseNoCarryover(data, ctx); // 겸용 × 이월과세 거부 (⑧ `isMixedCarryoverUnsupported`와 같은 술어·문구)
   refineHouseholdRequiredInputs(data, ctx); // O3·O4·H-3·유예 나목·M2 (2차 점검)
   refineGbValuationPresent(data as Parameters<typeof refineGbValuationPresent>[0], ctx); // 일반건물 서브객체 필수 (gb-without-valuation-subobject)
   refineGbPropertyRequired(data, ctx); // 일반건물 I1·I3·X1·Z4·Z5·C1~C4 (2차 점검)
