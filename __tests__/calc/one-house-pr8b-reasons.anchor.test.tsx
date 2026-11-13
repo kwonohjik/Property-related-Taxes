@@ -75,7 +75,7 @@ async function judge(c: RulingCase, renderView = true) {
       unmet: Object.fromEntries((j.unmetExceptions ?? []).map((u: any) => [u.id, u.reasons as string[]])) as Record<string, string[]>,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       undeterminedReasons: (j.undetermined ?? []).map((u: any) => `${u.id} :: ${u.reason}`) as string[],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       reviewScheme: j.requirementReview?.scheme as string | undefined,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       reviewItems: (j.requirementReview?.items ?? []) as any[],
@@ -288,7 +288,15 @@ describe("X2-1 조정대상지역 단축 규정 인용 — 양도일 연혁", ()
       ...over,
     });
     const labels = (transferDate: string) => {
-      const { container } = render(<ImportedOneHouseFactsCard facts={undefined} specials={f({})} transferDate={transferDate} />);
+      // §155①2호 행은 ④가 `temporaryTwoHouse`를 보낼 때만 그린다(2026-11-12 리뷰 C-3) — 도출된 짝을 넘긴다.
+      const { container } = render(
+        <ImportedOneHouseFactsCard
+          facts={undefined}
+          specials={f({})}
+          transferDate={transferDate}
+          temporaryTwoHouse={{ previousAcquisitionDate: "2019-01-01", newAcquisitionDate: "2021-01-01", source: "roster" }}
+        />,
+      );
       const t = container.textContent ?? "";
       cleanup();
       return t;
