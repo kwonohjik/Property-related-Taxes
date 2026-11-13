@@ -33,6 +33,7 @@ import { assertBgDonorBuiltInput, assertDonorBuiltInput, bgDonorBuiltOf, withDon
 import { carryoverGiftHouseholdBasis } from "./one-house/gift-household-basis";
 import { bgRedevFilingAcquisition } from "./burdened-gift-totals";
 import { finishScenarios } from "./transfer-tax-carryover-finish";
+import { resolveConversionDenominatorAtTransfer } from "./transfer-tax-expropriation-valuation";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { redevelopmentConsumesCarryoverGiftTax } from "./redevelopment-branch-gate";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
@@ -212,13 +213,18 @@ function calcCarryoverScenariosCore(
       donorAcqPrice = phdResult.totalEstimatedAcquisitionPrice;
     } else {
       // 기준시가 직접 입력 환산 (§97 ① 1호 나목, 시행령 §163 ⑨)
+      // 분모 = A 양도차익이 실제로 쓰는 환산 분모 — 영 §164⑨ 특례(공익수용 1호·주택 총액·공매·경락 2호)가 걸리면 낮춘 값이다(`calcTransferGain` 과 같은 leaf).
+      //   종전에는 원시 `standardPriceAtTransfer` 라 A 카드 «취득가액»·환산 분모 echo·합산 신고서 취득가액/필요경비(역산)가 특례 셀에서 어긋났다(DP-6 후속 V-5).
+      //   특례가 없으면 분기를 타지 않아 종전과 바이트 동일. 재개발 자산(redevelopment_apt·right_to_move_in)은 §164⑨ 적격 자산종류가 아니라 특례가 애초에 걸리지 않는다(`expropriation-scope.ts` ELIGIBLE_PROPERTY_TYPES).
       const stdAtAcq = rawInput.standardPriceAtAcquisition ?? 0;
-      const stdAtTransfer = rawInput.standardPriceAtTransfer ?? 1;
+      const conv = resolveConversionDenominatorAtTransfer(rawInput);
+      const specialApplies = Boolean(conv.expropriationValuationDetail || conv.housingExpropriationValuationDetail || conv.auctionValuationDetail);
+      const stdAtTransfer = specialApplies ? conv.denominator : (rawInput.standardPriceAtTransfer ?? 1);
       donorAcqPrice = stdAtTransfer > 0
         ? calculateEstimatedAcquisitionPrice(rawInput.transferPrice, stdAtAcq, stdAtTransfer)
         : 0;
       echoStdAtAcq = rawInput.standardPriceAtAcquisition;
-      echoStdAtTransfer = rawInput.standardPriceAtTransfer;
+      echoStdAtTransfer = specialApplies ? conv.denominator : rawInput.standardPriceAtTransfer;
     }
   } else {
     donorAcqPrice = ct.donorAcquisitionPrice ?? 0;

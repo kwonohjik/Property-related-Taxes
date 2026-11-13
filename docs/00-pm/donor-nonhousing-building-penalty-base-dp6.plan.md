@@ -2,7 +2,7 @@
 
 > 2026-11-12 · 코드 읽기 + throwaway probe(API route 직접 POST, `makeMockRates`) + KoreanLaw MCP(소득세법 §114조의2). 출처: `self-built-housing-164-9-plan.md` §9 «확인 필요 1»·DP-6 / 메모리 `project_self_built_housing_building_base_plan`.
 > 표기: **[직접]** 이번 세션 조회·실측 · **[이전 실측]** 이전 PR 보고서의 값(이번 재확인 안 함) · **[해석]** · **[확인 필요]**.
-> 상태: **구현 완료(§6)** — 결정 Q-1 a(2026-11-12, 사용자 «a»).
+> 상태: **구현 완료(§6)** — 결정 Q-1 a(2026-11-12, 사용자 «a»). 후속 §7 실측 · §8 Q-2 a 구현 완료(2026-11-13).
 
 ## 0. 결론
 
@@ -133,6 +133,16 @@ base = A의 환산취득가액이 모든 칸에서 성립한다 [직접]. 전체
 
 ### 7.6 결정 요청
 
-- **Q-2 (V-5):** a **A 환산취득가(`donorAcqPrice`)와 echo 분모를 §164⑨ 특례 분모로 정렬한다** — 한 곳(`transfer-tax-carryover.ts:217-221`)에서 `resolveConversionDenominatorAtTransfer`를 읽는다. A 카드·합산 신고서·`necessaryExpense`가 실제 값(300,000,000 / 6,000,000)이 된다. 세액·양도차익은 불변이어야 하며 anchor로 고정한다. 재개발(V-6)은 건드리지 않는다 / b **현행 유지** — 도달 경로가 직접 API·stale 플래그뿐이라 «완료 처리»하고 한계로 기록한다.
+- **Q-2 (V-5) → 결정 a (2026-11-13, 사용자 «a»).** 선택지: a **A 환산취득가(`donorAcqPrice`)와 echo 분모를 §164⑨ 특례 분모로 정렬한다** — 한 곳(`transfer-tax-carryover.ts:217-221`)에서 `resolveConversionDenominatorAtTransfer`를 읽는다. A 카드·합산 신고서·`necessaryExpense`가 실제 값(300,000,000 / 6,000,000)이 된다. 세액·양도차익은 불변이어야 하며 anchor로 고정한다. 재개발(V-6)은 건드리지 않는다 / b **현행 유지** — 도달 경로가 직접 API·stale 플래그뿐이라 «완료 처리»하고 한계로 기록한다.
   - **권고 a.** DP-6에서 일체 주택·비주택 가산세를 같은 단일 소스로 맞췄는데 그 옆 표시만 남는 것은 일관되지 않고, 한 곳 수정이다. 단 `donorAcqPrice`는 세액 갈래(`:423`·`:443`)에도 들어가므로 «세액 불변» 증명이 구현의 핵심이다(역산 구조상 같아야 하지만 anchor로 확인).
 - V-2·V-3은 결정 불필요(정렬 확인). §7.3은 법령 근거 확보 전까지 착수하지 않는다.
+
+## 8. Q-2 a 구현 결과 (2026-11-13)
+
+- **변경(엔진 입출력·API 불변 → 14지점 동기화 없음):** `lib/tax-engine/transfer-tax-carryover.ts` 한 곳(+import 1줄). 기준시가 환산 갈래(PHD 아님)에서 `resolveConversionDenominatorAtTransfer(rawInput)`를 읽어, 특례(수용 1호 per-sqm·주택 총액, 공매·경락 2호) 중 하나라도 걸리면 `donorAcqPrice`와 `echoStdAtTransfer`를 그 분모로 계산한다. 특례가 없으면 종전 식 그대로(바이트 동일).
+- **재개발 가드는 넣지 않는다:** 처음엔 `!rawInput.redevelopment`를 넣었으나 뮤테이션 M7이 살아남았고, 근거를 확인하니 재개발 자산종류(`redevelopment_apt`·`right_to_move_in`)는 §164⑨ 적격 목록(`expropriation-scope.ts` ELIGIBLE_PROPERTY_TYPES = land·building·general_building·commercial_building·housing)에 없어 특례가 애초에 걸리지 않는다 — 도달 불가 코드라 제거했다 [직접]. V-6은 이로써 해소(재개발은 이 값을 특례 분모로 받는 경로가 없다).
+- **측정(공매 경락 2억 시료):** A 카드 «취득가액» 150,000,000 → **300,000,000** · 환산 분모 400,000,000 → **200,000,000** · 합산 신고서 취득가액 150,000,000 → **300,000,000**, 필요경비 156,000,000 → **6,000,000** · 경락가 3.99억·증여세 2천만 시료의 `expenses` 26,375,939 → **26,000,000**, 결과 최상위 `estimatedBase`(150,375,939)와 A 카드 값이 같아짐. **양도차익·결정세액은 모든 칸에서 불변**(−6,000,000/0 · 143,624,061/29,931,947 · 123,624,061/23,491,947) [직접].
+- **anchor:** NEW `__tests__/api/transfer.route.carryover-a-acq-display-164-9.anchor.test.ts`(CA-1~CA-4, 16건) — 구현 전 8건 실패 → 통과. 세액 불변·특례 없음·수용 불발·직접 입력 취득가액·DP-6 가산세 base(300,000,000)는 구현 전후 통과.
+- **뮤테이션 7종:** M1 특례 판정 끄기(9건 실패) · M2 echo 원시값(5) · M3 취득가 원시 분모(9) · M4 수용 per-sqm 판정 제거(1) · M5 주택 총액 판정 제거(1) · M6 공매 판정 제거(7) 사망, M7 재개발 가드 제거는 생존 → 위 사유로 가드 자체를 제거. 복원 `cmp` 일치.
+- **회귀:** api 546파일 7,318건 · tax-engine 1,550파일 19,667건 · calc 864파일 11,877건 · lib 265파일 3,413건 · components 803파일 7,202건 전부 통과, tsc·eslint 0건. 기존 테스트 반전 없음.
+- **한계(미측정):** 화면 렌더(Playwright 미실행) · 도달 경로는 여전히 직접 API·stale 플래그(V-1 재확인 안 함) · §7.3(특례 분모의 지분 척도) · P6·BG 실측 · GB 건물의 §164⑨ 적용 여부(법령 문제).
