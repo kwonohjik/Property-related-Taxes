@@ -18,6 +18,7 @@ import { refineMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refin
 import { refineMixedUseInheritedSplitDate } from "./transfer-tax-schema-mixed-bg-refines";
 import { refineDonorBuiltOuter, type DonorBuiltWire } from "./transfer-tax-schema-donor-built";
 import { refineSelfBuiltHousing, isSeparatedLike } from "./transfer-tax-schema-self-built-housing";
+import { refineTemporaryTwoHouseCross } from "./transfer-tax-schema-temp-two-house";
 /**
  * Q-1(D15) — 미등기 + 자경농지 감면(조특법 §69) 동시 입력 거부.
  *
@@ -124,9 +125,14 @@ export function addPropertyRefines(
     houses?: ReadonlyArray<{ isInherited: boolean; inheritedDate?: string }>;
     decedentSameHouseholdBeforeInheritance?: boolean;
     decedentCohabitationHoldingStartDate?: string;
+    /** §155① 교차 검증(`refineTemporaryTwoHouseCross`) — 주택 수·일시적 2주택·§154① 단서 */
+    householdHousingCount?: number;
+    temporaryTwoHouse?: { newAcquisitionDate: string } | null;
+    oneHouseExemptionProviso?: { reason?: string } | null;
   },
   ctx: z.RefinementCtx,
 ) {
+  refineTemporaryTwoHouseCross(data, ctx);
   // 보유 주택 명부 — 상속주택이면 상속개시일 (⑧ `transfer-tax-validate.ts` 명부 검증·
   // `one-house-exemption-validate.ts`와 같은 조건). 비우면 엔진이 「상속 당시 보유」로 읽어
   // 주택 수·비과세 판정이 바뀌었다(`inheritance-general-house-era.ts` — 2026-09-30).
