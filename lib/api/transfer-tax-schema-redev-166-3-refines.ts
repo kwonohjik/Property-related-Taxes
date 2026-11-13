@@ -10,6 +10,7 @@ import { z } from "zod";
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 import { computeSangjeungbeopValuation } from "@/lib/tax-engine/burdened-gift-valuation";
 import { resolveBgAcquisitionBasis } from "@/lib/tax-engine/burdened-gift-valuation";
+import { scaleBurdenedGiftInfo } from "@/lib/tax-engine/burdened-gift-valuation";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
 type Redev166_3Like = {
@@ -18,6 +19,8 @@ type Redev166_3Like = {
   transferType?: string;
   burdenedGiftInfo?: unknown;
   propertyType?: string;
+  /** 공유지분(0<r<1) — 엔진처럼 시가를 지분분으로 줄여 승자를 판정한다(`scaleBurdenedGiftInfo`). */
+  ownershipRatio?: number;
   /** 컴패니언은 `assetKind`로 온다 */
   assetKind?: string;
   acquisitionDate?: string | Date;
@@ -74,6 +77,8 @@ export function refineRedevelopment166_3Inputs(
     // 엔진 판정 그대로: 괄호 미발동(시가 평가 · 담보 승 아님 — `resolveBgAcquisitionBasis`) ∧ 「환산」 ∧ 재개발 완공 아파트(입주권 아님).
     // 기준시가 평가·담보 승은 취득가액을 취득시 기준시가로 강제해 §166③을 쓰지 않는다 — 남은 「환산」 값으로 막으면 화면에 칸이 없는
     // 400이다(리뷰 게이트 D-1 · 실측 10,824,283 · 100,661,180).
+    // 지분 자산은 엔진처럼 시가를 지분분으로 줄여 비교한다(`transfer-tax-burdened-gift-step.ts` · ⑫ `collateralForcesStdAcquisition`과 같은 경로) —
+    // 줄이지 않으면 지분 담보 승을 보충 승으로 읽어 엔진이 쓰지 않는 §166③ 칸을 요구한다(계획서 `bg-redev-fractional-k5-full-open.plan.md` §1.2 ②).
     const info = data.burdenedGiftInfo as BurdenedGiftInfo | null | undefined;
     const bgConverted =
       data.transferType === "burdened_gift" &&
@@ -84,7 +89,7 @@ export function refineRedevelopment166_3Inputs(
       data.assetKind !== "right_to_move_in" &&
       !resolveBgAcquisitionBasis(
         info,
-        computeSangjeungbeopValuation(info.landStdPriceAtTransfer, info.buildingStdPriceAtTransfer, info).selectedMode,
+        computeSangjeungbeopValuation(info.landStdPriceAtTransfer, info.buildingStdPriceAtTransfer, scaleBurdenedGiftInfo(info, data.ownershipRatio)).selectedMode,
       ).acqStdPriceForced;
     if ((useEstimated || bgConverted) && !isHousingEstimated && rd.isSuccessorMember !== true) {
       if (rd.originalAssetType === "land") {
