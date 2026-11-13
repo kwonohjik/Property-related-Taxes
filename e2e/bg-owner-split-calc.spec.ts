@@ -10,6 +10,7 @@
  *   · BGO-E6 회귀 — 소유자 같음 부담부증여는 증여한 부분 표기 없음
  *   · BGO-E8 인쇄(print 미디어) — 같은 표기
  *   · BGO-E7 연간 합산(/multi) 1물건 — 단건과 같은 본인 몫 본문·결정세액 · 자산 행에 증여한 부분 표기
+ *   · BGO-E10 건물만 · 기준시가 — 「증여한 건물분의 증여일 건물 기준시가」 칸이 열리고 2.2억 → 결정세액 5,682,818 · 토지만은 칸 없음
  *   · BGO-E9 토지만 · 시가 × 실지 — 기준시가 카드가 닫히고(쓰지 않는 칸) 비운 채 계산 → 결정세액 5,385,000 · 요청 본문 기준시가 0
  *
  * 실행(워크트리): E2E_PORT=3159 npx playwright test e2e/bg-owner-split-calc.spec.ts
@@ -145,6 +146,24 @@ test.describe("부담부증여 × 토지·건물 소유자 분리 — 건물 종
     const text = await page.locator("body").innerText();
     expect(text).toContain("5,385,000");
     expect(text).not.toMatch(/NaN|undefined|Infinity/);
+  });
+
+  test("BGO-E10 건물만 · 기준시가 → 증여한 건물분 증여일 건물 기준시가 칸 · 2.2억 → 5,682,818 · 토지만은 칸 없음", async ({ page }) => {
+    test.setTimeout(180_000);
+    await seedWizard(page, singleSeed([bldg()], { contractTotalPrice: "1000000000" }));
+    await expandAssetSection(page, 2);
+    const gift = page.getByTestId("bg-gift-building-std");
+    await expect(gift).toBeVisible();
+    await expect(page.getByText("증여한 건물분의 증여일 건물 기준시가")).toBeVisible();
+    await gift.fill("220000000");
+    const body = (await calculate(page)) as Wire;
+    expect(body.burdenedGiftInfo).toMatchObject({ giftBuildingStdPriceAtTransfer: 220_000_000 });
+    expect(await page.locator("body").innerText()).toContain("5,682,818");
+    // 토지만 — 건물은 증여재산이 아니라 칸이 없다
+    await seedWizard(page, singleSeed([bldg({ selfOwns: "land_only", standardPricePerSqmAtTransfer: "1000000", transferArea: "200", standardPricePerSqmAtAcq: "400000", acquisitionArea: "200" })]));
+    await expandAssetSection(page, 2);
+    await expect(page.getByTestId("bg-owner-split-card")).toBeVisible();
+    await expect(page.getByTestId("bg-gift-building-std")).toHaveCount(0);
   });
 
   test("BGO-E2 범위 밖(주택)은 토글이 잠기고 범위 안(건물)은 켤 수 있다 · 안내 카드", async ({ page }) => {

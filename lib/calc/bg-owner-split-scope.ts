@@ -126,3 +126,13 @@ export function bgOwnerSplitActiveBody(d: BgOwnerSplitBody): boolean {
 export function bgOwnerSplitTransferStdNeeded(asset: Pick<AssetForm, "bgValuationMode" | "bgAcquisitionMethod">): boolean {
   return bgOwnerSplitNeedsTransferStd({ valuationMode: asset.bgValuationMode, acquisitionMethod: asset.bgAcquisitionMethod });
 }
+
+/**
+ * 건물만 증여(소유자 분리)의 「증여한 건물분 증여일 건물 기준시가」(상증법 §61①2호) 칸을 여는가 — ⑤ 칸·계산기 합산 규칙·④ 송신 공용.
+ * 증여가액 C는 증여한 건물의 상증법 가액이다. 상증법 건물 기준시가에는 양도세 값에 없는 조정률·잔가율이 붙는다(「국세청 건물 기준시가
+ * 계산방법 고시」 제5조 제2항·제10조 제2항·제11조) — 일반 부담부증여와 같은 선택 입력이다(비우면 엔진이 양도시 건물 기준시가로 계산).
+ * 토지만 증여는 해당 없다(토지는 두 법 모두 개별공시지가 — 「상속세 및 증여세법」 제61조 제1항 제1호).
+ */
+export function bgOwnerSplitGiftBuildingStdOpen(asset: Parameters<typeof bgOwnerSplitActive>[0] & Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns">): boolean {
+  return bgOwnerSplitActive(asset) && bgOwnerSplitOwnedPart(asset) === "building";
+}

@@ -63,6 +63,8 @@ export function bgOwnerSplitContractViolation(owner: OwnerSplit, info: OwnerSpli
   const otherActual = other === "land" ? info.actualLandAcquisitionPrice : info.actualBuildingAcquisitionPrice;
   if ((otherActual ?? 0) !== 0)
     return { detail: `${PART_LABEL[other]} 실지취득가액은 보내지 않습니다.`, field: `burdenedGiftInfo.actual${other === "land" ? "Land" : "Building"}AcquisitionPrice` };
+  if (owned === "land" && (info.giftBuildingStdPriceAtTransfer ?? 0) !== 0)
+    return { detail: "증여일 건물 기준시가(상속세 및 증여세법 평가용)는 보내지 않습니다 — 건물은 본인 소유가 아니라 증여가액에 들어가지 않습니다.", field: "burdenedGiftInfo.giftBuildingStdPriceAtTransfer" };
   if (info.marketValueByPart !== undefined)
     return { detail: "토지분·건물분 시가(날짜 분리 전용)는 보내지 않습니다 — 증여한 부분의 시가는 양도시 시가 평가액 한 칸입니다.", field: "burdenedGiftInfo.marketValueByPart" };
   return null;
