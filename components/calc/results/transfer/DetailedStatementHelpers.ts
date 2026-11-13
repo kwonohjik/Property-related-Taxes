@@ -72,7 +72,7 @@ import {
   buildBgMixedAcquisitionFormula,
   buildBgMixedExpenseFormula,
 } from "./DetailedStatementBgMixedFormulas";
-import { aggregateAcqModes } from "./split-acq-text";
+import { aggregateHeadingModes } from "./split-acq-text";
 import { isOwnerSplitCarryoverA } from "./split-acq-text";
 import { collectSaleSplitUnenteredNotices } from "./sale-split-unentered-notice";
 
@@ -351,7 +351,7 @@ export function buildStatementItems(
       });
   // 단건: 실제 변수값을 풀어쓴 산식 (양도차익 항목과 동일 표기). 다건은 자산별 perAsset이 담당.
   // 집계 소제목은 어댑터 상수 플래그가 아니라 자산별 echo(`splitDetail`·GB 카드 `acquisitionMode`·`filingDisplay`)에서 파생한다(G-4).
-  const aggModes = isAggregate ? aggregateAcqModes(properties, gbDetail) : undefined;
+  const aggModes = isAggregate ? aggregateHeadingModes(properties, gbDetail) : undefined;
   // 이월과세 A는 「증여자 취득가액 승계」 문구(`buildAcquisitionPriceFormula`)가 이미 맞다 — 값만 슬롯으로 바뀐다. B는 이월과세가 아닌 단건과 같은 슬롯 산식을 쓴다(Q-2 a).
   const acqFormula = bgSingle
     ? buildBgSingleAcquisitionFormula(bgSingle)
