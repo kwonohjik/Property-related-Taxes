@@ -66,6 +66,15 @@ export interface PropertyEntry {
   existingRental3hoSameRegionCount?: number;    // 후단 — 같은 시·도 3호 임대주택 호수
   reitRental5hoCount?: number;                  // 후단 — 5호 임대주택 호수
   rentalRegistrationKind?: "" | "short_term" | "long_term_general" | "public_support" | "other"; // 가목 단서 — 민특법 등록 종류
+  // ── §3①4·5·9호 — 묻는 조건은 lib/calc/comprehensive-rental-459ho.ts 한 곳(⑤⑧④ 공유). 빈 값 = 미입력 ──
+  // (4호 사용승인일은 usageApprovalDate · 5호 호수는 위 reitRental5hoCount를 함께 쓴다)
+  neverRentedSinceApproval?: "" | "yes" | "no";  // 4호 다목 — 사용승인 뒤 임대된 사실 없음
+  reitAcquisitionDate?: string;                   // 5호 — 부동산투자회사 등 취득일(2008년)
+  reitPrice2008Under6eok?: "" | "yes" | "no";     // 5호 가목 — 2008년도 공시가격 6억 이하
+  conversionBase?: "" | "construction" | "purchase"; // 9호 — 공공건설(1호)/공공매입(2호)
+  isConversionPublicRental?: "" | "yes" | "no";   // 9호 — 분양전환공공임대주택
+  mandatoryPeriodEndDate?: string;                // 9호 — 임대의무기간 만료일
+  conversionCompleted?: "" | "yes" | "no";        // 9호 — 분양전환이 이루어짐
   rentalStartDate: string;         // YYYY-MM-DD
   currentRent: string;             // 현재 임대료 (원)
   previousRent: string;            // 직전 임대료 (원)

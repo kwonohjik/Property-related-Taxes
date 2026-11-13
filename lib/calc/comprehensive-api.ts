@@ -18,6 +18,10 @@ import { rental6hoApiFields } from "./comprehensive-rental-6ho";
 import { validate6hoInputs } from "./comprehensive-rental-6ho";
 import { qualifyingUnitHo } from "./comprehensive-rental-units";
 import { validateQualifyingUnits } from "./comprehensive-rental-units";
+import { isOwnedRentalType } from "./comprehensive-rental-459ho";
+import { priceRegistrationType } from "./comprehensive-rental-459ho";
+import { rental459hoApiFields } from "./comprehensive-rental-459ho";
+import { validate459hoInputs } from "./comprehensive-rental-459ho";
 
 /**
  * 법인 §9② class 도출 (시행령 §4의4) — 엔진과 동일 헬퍼로 단일 진실. 개인이면 undefined.
@@ -108,7 +112,10 @@ export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFo
     ) {
       return `${label}: 민간건설·민간매입임대는 세무서 사업자등록일을 입력하세요 — 2018.3.31. 이전 사업자등록등 주택만 합산배제됩니다 (종합부동산세법 시행령 §3①1호·2호 단서).`;
     }
-    if (!p.rentalStartDate) return `${label}: 합산배제 임대주택은 임대개시일을 입력하세요 (종합부동산세법 시행령 §3①).`;
+    // 4·9호는 「소유」 — 임대개시일을 묻지 않는다(⑫ refine과 같은 조건)
+    if (!p.rentalStartDate && !isOwnedRentalType(p.rentalRegistrationType || toRegistrationType(p.exclusionType))) {
+      return `${label}: 합산배제 임대주택은 임대개시일을 입력하세요 (종합부동산세법 시행령 §3①).`;
+    }
     if (!(parseDecimal(p.area) > 0)) return `${label}: 합산배제 임대주택은 전용면적(㎡)을 입력하세요 (종합부동산세법 시행령 §3① 면적 요건).`;
     // §3①8호 나목·7호 단서 — ⑤가 보이는 칸과 같은 술어(na8Asks)
     const na8Error = validate8NaInputs(
@@ -128,6 +135,9 @@ export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFo
     const regType = p.rentalRegistrationType || toRegistrationType(p.exclusionType);
     const unitsError = validateQualifyingUnits(p, regType, asksThirtyPlusUnits(regType, formData.assessmentYear), label);
     if (unitsError) return unitsError;
+    // §3①4·5·9호 — ⑤가 보이는 칸과 같은 술어(ho459)
+    const ho459Error = validate459hoInputs(p, regType, label);
+    if (ho459Error) return ho459Error;
   }
   const aggParcelsMode = formData.hasAggregateLand && formData.landAggregateMode === "parcels";
   const sepParcelsMode = formData.hasSeparateLand && formData.landSeparateMode === "parcels";
@@ -267,6 +277,9 @@ const RENTAL_TYPES = new Set([
   "private_short_term_rental_6y_construction",
   "private_short_term_rental_6y_purchase",
   "unsold_purchase_rental",
+  "vacant_construction_rental",
+  "reit_purchase_rental",
+  "public_conversion_pending_rental",
 ]);
 
 /** 임대주택 합산배제 유형인가(시행령 §3) — ⑤ 첫 드롭다운 선택 시 임대등록 유형 동기화에 쓴다 */
@@ -339,6 +352,9 @@ export function toRegistrationType(exclusionType: string): string {
     private_short_term_rental_6y_construction: "private_short_term_6y_construction",
     private_short_term_rental_6y_purchase:     "private_short_term_6y_purchase",
     unsold_purchase_rental:                    "unsold_purchase",
+    vacant_construction_rental:                "vacant_construction",
+    reit_purchase_rental:                      "reit_purchase",
+    public_conversion_pending_rental:          "public_conversion_pending",
   };
   return map[exclusionType] ?? "private_purchase_long";
 }
@@ -425,6 +441,8 @@ export async function callComprehensiveApi(
     // 임대주택 합산배제 상세
     if (RENTAL_TYPES.has(p.exclusionType)) {
       const registrationType = p.rentalRegistrationType || toRegistrationType(p.exclusionType);
+      // 9호는 가격·30호 칸을 바탕 유형(공공건설/공공매입)으로 묻는다 — 구분을 모르면 묻지 않는다(⑤와 같은 술어)
+      const priceType = priceRegistrationType(p, registrationType) ?? "";
       return {
         ...base,
         rentalInfo: {
@@ -436,8 +454,9 @@ export async function callComprehensiveApi(
           businessRegistrationDate: asksBusinessRegistrationDate(registrationType)
             ? p.businessRegistrationDate || undefined
             : undefined,
-          rentalStartDate: p.rentalStartDate,
-          usageApprovalDate: asksUsageApprovalDate(registrationType, formData.assessmentYear, base.assessedValue)
+          // 4·9호(「소유」)는 비어 있을 수 있다 — 그 밖은 ⑧이 막는다
+          rentalStartDate: p.rentalStartDate || undefined,
+          usageApprovalDate: asksUsageApprovalDate(priceType, formData.assessmentYear, base.assessedValue)
             ? p.usageApprovalDate || undefined
             : undefined,
           assessedValue: base.assessedValue,
@@ -449,7 +468,7 @@ export async function callComprehensiveApi(
           actualRentalYears: p.actualRentalYears ? parseDecimal(p.actualRentalYears) : undefined,
           registrationRevokedDate: p.registrationRevokedDate || undefined,
           isEupMyeonArea: p.isEupMyeonArea || undefined,
-          isThirtyPlusUnits: asksThirtyPlusUnits(registrationType, formData.assessmentYear)
+          isThirtyPlusUnits: asksThirtyPlusUnits(priceType, formData.assessmentYear)
             ? p.isThirtyPlusUnits || undefined
             : undefined,
           // §3①1·3·7·10호 「2호 이상」 — 그 네 호에서만(⑤⑧과 같은 술어)
@@ -458,6 +477,8 @@ export async function callComprehensiveApi(
           ...rental8NaApiFields(p, na8Context(formData, registrationType)),
           // §3①6호 — 6호일 때만 값이 있다(그 밖 유형은 빈 객체라 위 8호 칸 값을 덮지 않는다)
           ...rental6hoApiFields(p, na8Context(formData, registrationType)),
+          // §3①4·5·9호 — 그 호일 때만 값이 있다(4호 사용승인일은 위 칸을 덮어 필수로 보낸다)
+          ...rental459hoApiFields(p, registrationType),
         },
       };
     }

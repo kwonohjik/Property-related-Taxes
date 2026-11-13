@@ -46,6 +46,9 @@ describe("라벨 조문 번호 — 종부령 §3① 현행 호", () => {
     ["private_short_term_rental_6y_construction", "§3①10호"],
     ["private_short_term_rental_6y_purchase", "§3①11호"],
     ["unsold_purchase_rental", "§3①6호"],
+    ["vacant_construction_rental", "§3①4호"],
+    ["reit_purchase_rental", "§3①5호"],
+    ["public_conversion_pending_rental", "§3①9호"],
   ])("%s → %s", (k, ho) => {
     expect(label(k)).toContain(ho);
   });
@@ -57,7 +60,7 @@ describe("라벨 조문 번호 — 종부령 §3① 현행 호", () => {
 describe("⑤ 첫 드롭다운 → 임대등록 유형 동기화 대상", () => {
   it("선택지의 임대 키는 모두 동기화 대상이고 toRegistrationType이 기본값(장기일반 매입)으로 떨어지지 않는다", () => {
     const rental = keys.filter(isRentalExclusionType);
-    expect(rental).toHaveLength(11);
+    expect(rental).toHaveLength(14); // 11 + 4·5·9호 3개
     for (const k of rental) {
       if (k === "private_purchase_rental_long") continue;
       expect(toRegistrationType(k), k).not.toBe("private_purchase_long");

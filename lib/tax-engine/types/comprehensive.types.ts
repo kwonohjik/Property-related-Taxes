@@ -118,7 +118,7 @@ export interface RentalExclusionInput extends RentalExclusion8NaFacts, RentalExc
   businessRegistrationDate?: Date;
   /** 사용승인일(사용검사 확인증일) — 1·7호 가목 6억/9억 적용례(대통령령 제31447호 부칙 제2조). 없으면 6억 + 확인 필요 */
   usageApprovalDate?: Date;
-  rentalStartDate: Date;           // 임대개시일
+  rentalStartDate?: Date;          // 임대개시일 — 4·9호(「소유」)는 없을 수 있다(Zod가 그 밖 유형은 필수로 막는다)
   assessedValue: number;           // 공시가격 (원)
   area: number;                    // 전용면적 (㎡)
   location: "metro" | "non_metro"; // 수도권 여부

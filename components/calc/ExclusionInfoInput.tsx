@@ -32,6 +32,10 @@ import { RentalExclusion6hoFields } from "@/components/calc/comprehensive/Rental
 import { CountField } from "@/components/calc/comprehensive/RentalExclusion6hoFields";
 import { qualifyingUnitHo } from "@/lib/calc/comprehensive-rental-units";
 import { qualifyingUnitHint } from "@/lib/calc/comprehensive-rental-units";
+import { RentalExclusion459hoFields } from "@/components/calc/comprehensive/RentalExclusion459hoFields";
+import { ho459 } from "@/lib/calc/comprehensive-rental-459ho";
+import { isOwnedRentalType } from "@/lib/calc/comprehensive-rental-459ho";
+import { priceRegistrationType } from "@/lib/calc/comprehensive-rental-459ho";
 
 // ============================================================
 // 임대 등록 유형 레이블
@@ -49,6 +53,9 @@ const RENTAL_REG_TYPE_OPTIONS: [string, string][] = [
   ["private_short_term_6y_construction", "민간건설 단기민간임대 (6년)"],
   ["private_short_term_6y_purchase", "민간매입 단기민간임대 (6년)"],
   ["unsold_purchase", "미분양매입임대 (§3①6호, 2008.6.11.~2009.6.30. 계약)"],
+  ["vacant_construction", "미임대 민간건설임대 (§3①4호, 사용승인 후 2년 이내)"],
+  ["reit_purchase", "부동산투자회사 2008년 취득 매입임대 (§3①5호)"],
+  ["public_conversion_pending", "분양전환공공임대 임대의무기간 만료 후 2년 (§3①9호)"],
 ];
 
 // 임대주택 합산배제 유형 집합
@@ -64,6 +71,9 @@ const RENTAL_EXCLUSION_TYPES = new Set([
   "private_short_term_rental_6y_construction",
   "private_short_term_rental_6y_purchase",
   "unsold_purchase_rental",
+  "vacant_construction_rental",
+  "reit_purchase_rental",
+  "public_conversion_pending_rental",
 ]);
 
 // 기타 합산배제 (별도 상세정보 불필요)
@@ -100,7 +110,13 @@ function RentalExclusionDetail({
     property.registrationRevokedDate !== "",
   );
   const assessmentYear = useComprehensiveWizardStore((s) => s.formData.assessmentYear);
-  const unitHo = qualifyingUnitHo(property.rentalRegistrationType || toRegistrationType(property.exclusionType));
+  const regType = property.rentalRegistrationType || toRegistrationType(property.exclusionType);
+  const unitHo = qualifyingUnitHo(regType);
+  // 4·5·9호: 9호는 가격·30호 칸을 바탕 유형으로 묻는다(④와 같은 술어) · 4·9호는 「소유」라 임대개시일 선택 · 4·5호는 임대료 요건 없음
+  const priceType = priceRegistrationType(property, regType) ?? "";
+  const ho = ho459(regType);
+  const owned = isOwnedRentalType(regType);
+  const asksRent = ho !== "4" && ho !== "5";
 
   return (
     <div className="space-y-4">
@@ -171,7 +187,7 @@ function RentalExclusionDetail({
       )}
 
       {/* 30호 이상 여부 — 건설·매입 임대(§3①1·2·7·8호) · 2025 과세연도부터(그 전엔 30호 구간 없음 — ④와 같은 술어) */}
-      {asksThirtyPlusUnits(property.rentalRegistrationType, assessmentYear) && (
+      {asksThirtyPlusUnits(priceType, assessmentYear) && (
         <ToggleCard
           tone="sky"
           title="30호 이상 임대"
@@ -225,7 +241,7 @@ function RentalExclusionDetail({
 
       {/* §3①1호·7호 가목 6억/9억 — 사용승인일(선택). 묻는 조건은 asksUsageApprovalDate(④와 같은 술어) */}
       {asksUsageApprovalDate(
-        property.rentalRegistrationType || toRegistrationType(property.exclusionType),
+        priceType,
         assessmentYear,
         parseAmount(property.assessedValue),
       ) && (
@@ -258,17 +274,28 @@ function RentalExclusionDetail({
         onUpdate={onUpdate}
       />
 
-      {/* 임대개시일 */}
+      {/* §3①4·5·9호 — 묻는 칸은 ho459(⑧·④와 같은 술어) */}
+      <RentalExclusion459hoFields property={property} registrationType={regType} onUpdate={onUpdate} />
+
+      {/* 임대개시일 — 4·9호는 「소유」라 묻지 않는다(선택) */}
       <div className="space-y-1.5">
         <label className="block text-sm font-medium">
-          임대개시일 <span className="text-destructive">*</span>
+          임대개시일{" "}
+          {owned ? (
+            <span className="text-muted-foreground font-normal text-xs">(선택)</span>
+          ) : (
+            <span className="text-destructive">*</span>
+          )}
         </label>
         <DateInput
+          data-testid="comprehensive-rental-start-date"
           value={property.rentalStartDate}
           onChange={(v) => onUpdate({ rentalStartDate: v })}
         />
         <p className="text-xs text-muted-foreground">
-          과세기준일(6월 1일) 이전에 임대가 개시되어야 합니다.
+          {owned
+            ? "4호·9호는 소유만 요건이라 임대개시일을 보지 않습니다."
+            : "과세기준일(6월 1일) 이전에 임대가 개시되어야 합니다."}
         </p>
       </div>
 
@@ -321,7 +348,8 @@ function RentalExclusionDetail({
         </div>
       </ToggleCard>
 
-      {/* 최초 계약 여부 */}
+      {/* 최초 계약 여부 — 4호(미임대)·5호(임대료 요건 없음)는 묻지 않는다 */}
+      {asksRent && (<>
       <ToggleCard
         tone="violet"
         title="최초 임대차 계약"
@@ -368,6 +396,7 @@ function RentalExclusionDetail({
           }
           return null;
         })()}
+      </>)}
     </div>
   );
 }

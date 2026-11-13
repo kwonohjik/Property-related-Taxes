@@ -24,6 +24,9 @@ const exclusionTypeSchema = z.enum([
   "private_short_term_rental_6y_construction",
   "private_short_term_rental_6y_purchase",
   "unsold_purchase_rental",
+  "vacant_construction_rental",
+  "reit_purchase_rental",
+  "public_conversion_pending_rental",
   "unsold_housing",
   "daycare_housing",
   "employee_housing",
@@ -50,6 +53,9 @@ const rentalRegistrationTypeSchema = z.enum([
   "private_short_term_6y_construction",
   "private_short_term_6y_purchase",
   "unsold_purchase",
+  "vacant_construction",
+  "reit_purchase",
+  "public_conversion_pending",
 ]);
 
 const isoDateOptional = z
@@ -66,10 +72,8 @@ const rentalExclusionInfoSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." }),
 
-  /** 임대개시일 (YYYY-MM-DD) */
-  rentalStartDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." }),
+  /** 임대개시일 (YYYY-MM-DD) — 4·9호(「소유」)는 없어도 된다(아래 refine). 그 밖은 필수 */
+  rentalStartDate: isoDateOptional,
 
   /** 공시가격 (원, 양의 정수) */
   assessedValue: z
@@ -152,7 +156,20 @@ const rentalExclusionInfoSchema = z.object({
   existingRental3hoSameRegionCount: z.number().int().nonnegative().optional(),
   reitRental5hoCount: z.number().int().nonnegative().optional(),
   rentalRegistrationKind: z.enum(["short_term", "long_term_general", "public_support", "other"]).optional(),
-});
+
+  // ── §3①4·5·9호 (엔진 comprehensive-exclusion-{4,5,9}ho.ts) — 없으면 엔진이 「모름」=불성립 ──
+  neverRentedSinceApproval: z.boolean().nullable().optional(),
+  reitAcquisitionDate: isoDateOptional,
+  reitPrice2008Under6eok: z.boolean().nullable().optional(),
+  conversionBase: z.enum(["construction", "purchase"]).optional(),
+  isConversionPublicRental: z.boolean().nullable().optional(),
+  mandatoryPeriodEndDate: isoDateOptional,
+  conversionCompleted: z.boolean().nullable().optional(),
+}).refine(
+  // §3① 각 호 외의 부분 — 4·9호는 「소유」라 임대개시일이 없을 수 있다. 그 밖 유형은 임대개시일 필수(종전과 같음)
+  (r) => r.rentalStartDate !== undefined || r.registrationType === "vacant_construction" || r.registrationType === "public_conversion_pending",
+  { message: "임대개시일을 입력하세요 (YYYY-MM-DD).", path: ["rentalStartDate"] },
+);
 
 // ============================================================
 // 기타 합산배제 입력 스키마 (시행령 §4)
