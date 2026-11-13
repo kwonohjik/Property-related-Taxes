@@ -28,6 +28,8 @@ import { rental973DeemedStartString } from "@/lib/calc/rental-97-effective-start
 import { rental973LongRegistrationDate } from "@/lib/calc/transfer-tax-validate-rental-conversion";
 import { Clause4GrandfatherQuestion } from "./Clause4GrandfatherQuestion";
 import { Rental973InheritanceBlock } from "./Rental973InheritanceBlock";
+import { Rental973AutoCancelToggle } from "./Rental973AutoCancelToggle";
+import { autoCancelDeemed973Applies } from "@/lib/tax-engine/transfer-reductions/rental-97-3-auto-cancel";
 import { rental973InheritanceInScope } from "@/lib/calc/rental-97-3-inheritance";
 import { rental973InheritanceConflictsConversion } from "@/lib/calc/rental-97-3-inheritance";
 import { rental973MergedDecedentStart } from "@/lib/calc/rental-97-3-inheritance";
@@ -95,6 +97,14 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
     const m = mergedRentalYears97(own, end, { inheritanceDate, decedentRegistrationDate, decedentRentalStartDate }, [], 3);
     return { years: m.years, decedent: `${mergedDecedentStart} ~ ${acquisitionDate}` };
   }, [mergedDecedentStart, effectiveStart, transferDate, acquisitionDate, value.decedentRegistrationDate973, value.decedentRentalStartDate973]);
+
+  // 구 조특령 §97의3②2호 — 자동말소 8년 간주가 성립하는지(엔진·⑧·⑫와 같은 leaf). 말소일 = 공용 종료 칸.
+  const autoCancelDeemed = autoCancelDeemed973Applies({
+    autoCancelled: value.autoCancelled973,
+    rentalContinuesToTransfer: value.rentalContinuesToTransfer,
+    cancelledDate: value.rentalEndDate,
+    longRegistrationDate,
+  });
 
   // 등록일별 공제율 안내 (R-1: 2022.12.31 이전 등록분 8년 50% 경과규정) — store 미기록
   const rateGuide = useMemo(() => {
@@ -327,6 +337,12 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
         value={value}
         onChange={patchCommon}
         sectionOffset={3}
+        endExtra={
+          <Rental973AutoCancelToggle
+            checked={value.autoCancelled973 ?? false}
+            onChange={(v) => onChange({ autoCancelled973: v })}
+          />
+        }
       />
 
       {/* emerald 자동 표시 박스 */}
@@ -354,6 +370,12 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
           <div className="flex items-center justify-between text-xs" data-testid="rental973-merged-preview">
             <span className="text-muted-foreground">피상속인 임대기간({mergedPreview.decedent}) 통산 후 (공실 차감 전)</span>
             <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">{mergedPreview.years}년</span>
+          </div>
+        )}
+        {autoCancelDeemed && (
+          <div className="flex items-center justify-between text-xs" data-testid="rental973-auto-cancel-preview">
+            <span className="text-muted-foreground">자동말소({value.rentalEndDate}) — 8년 등록·임대 간주 (구 조특령 §97의3②2호)</span>
+            <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">8년 · 50%</span>
           </div>
         )}
         <p className="text-micro text-emerald-700 dark:text-emerald-300">

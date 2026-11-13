@@ -135,6 +135,11 @@ export type RentalReductionFormVariant =
       decedentRegistrationDate973: string;
       /** 피상속인이 그 주택을 임대하기 시작한 날 (YYYY-MM-DD) */
       decedentRentalStartDate973: string;
+      /**
+       * 구 조특령 §97의3②2호 — 종전 장기일반 아파트 매입임대가 임대의무기간 종료로 자동말소(민특법 §6⑤)됐다.
+       * 말소일은 공용 종료 칸(`rentalEndDate`)이다 — 「양도 전에 임대 종료 또는 등록 말소」를 골랐을 때만 묻고 싣는다.
+       */
+      autoCancelled973: boolean;
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_4";

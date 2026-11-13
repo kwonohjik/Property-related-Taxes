@@ -2,7 +2,7 @@
 
 - 작성일: 2026-11-13
 - 출발점: `rental-97-5-deregistration-end.plan.md` V-1 조사(같은 날) — 「구 령 ②2호가 지금도 적용되는가, 엔진에 있는가」
-- 상태: **Q-1~Q-7 결정 대기**
+- 상태: **구현** — Q-1~Q-7 권장안 (사용자 결정 2026-11-13 「권장안대로」)
 
 ## 0. 요약
 
@@ -171,3 +171,11 @@
 - [ ] Pre-Do anchor 실패 확인 → 구현 → 14지점 → 뮤테이션 3건
 - [ ] `npx tsc --noEmit` · `__tests__/tax-engine/transfer/ calc/ components/ api/` · `npm run verify:legal`
 - [ ] Playwright M-13
+
+## 10. 구현 중 바뀐 것·확인한 것
+
+- **V-1 해소** — 법령 검증 커버리지는 조문 단위(`articleKeys` → 「조특령 §97의3」)로 센다. 새 상수 `RENTAL_97_3_PERIOD.AUTO_CANCEL_DEEMED`(「조특령 §97의3②2호(대통령령 제33264호로 개정되기 전의 것)」)는 이미 등록된 `TRANSFER_DECREE.LONG_GENERAL_RENTAL_97_3`에 묶인다 — manifest 변경 없음. 삭제된 문언을 키워드로 두면 verify:legal이 영구 실패하므로 두지 않는다(선례 `PRESALE_RIGHT_NO_HOUSE_PROVISO` 주석).
+- 판정 leaf `lib/tax-engine/transfer-reductions/rental-97-3-auto-cancel.ts` — `autoCancelDeemed973Applies`(엔진·⑤ 미리보기)와 `autoCancelDeemed973Issue`(⑧·⑫ 같은 문구·같은 칸)를 한 파일에 둔다.
+- ⑤ 토글은 공용 `RentalCommonFields`에 `endExtra` 슬롯을 더해 종료 칸 바로 아래에 넣었다(§97의3 폼만 넘긴다 — §97의5 폼에는 없다).
+- ⑫ 오류 경로는 leaf가 돌려준 칸(`rentalEndDate` 또는 `autoCancelled973`)이다 — ⑧과 같은 칸.
+- E2E 칸 이동 표(`validation-field-jump-cases-reduction.ts`)에 ⑧ 오류 2행을 더했다.

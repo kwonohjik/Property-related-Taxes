@@ -206,6 +206,12 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
    */
   inheritance973?: NonNullable<Rental97EvaluationInput["inheritance974"]>;
   /**
+   * §97의3 — 등록이 임대의무기간 종료로 자동말소됐다(민간임대주택에 관한 특별법 §6⑤ · 종전 장기일반 아파트 매입임대).
+   * 말소일은 `rentalEndDate`(`rentalContinuesToTransfer === false`)다. 말소일 ≥ 2020-08-18 · 장기 등록일 < 2020-08-18이면
+   * 구 조특령 §97의3②2호로 8년 등록·임대 간주 → 50% (`rental-97-3-auto-cancel.ts` · 기준-2024-법규재산-0079).
+   */
+  autoCancelled973?: boolean;
+  /**
    * §97의4 — 임대사업자 등록이 자동말소된 날(민간임대주택에 관한 특별법 §6⑤ — 임대의무기간 종료일).
    * 임대기간 종점 = min(양도일, 이 날) (국세청 서면-2021-법규재산-1422, 2022.6.21. — 「임대개시일부터 자동말소일까지」).
    */
@@ -394,6 +400,11 @@ export interface RentalLthdEffect {
     decedent: { start: string; end: string };
     heir: { start: string; end: string };
   };
+  /**
+   * [echo] §97의3 자동말소 8년 등록·임대 간주(구 조특령 §97의3②2호) — 말소일과 간주 전 실제 통산 연수. 결과 카드 표시 전용.
+   * 간주했으면 `eligibleRentalYears`는 8, `overrideRate`는 0.5다. 간주하지 않았으면 undefined.
+   */
+  autoCancelDeemed973?: { cancelledDate: string; actualYears: number };
   /**
    * [echo] §97의3 — 양도일 기준 안분 구간(`data/rental-97-3-proration-era.ts`). 결과 카드 고지용.
    * `whole_gain`이면 안분하지 않았다(비율 1). §97의4는 undefined.

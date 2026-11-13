@@ -129,6 +129,8 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
           ...(r.type === "rental_97_3" && r.isInherited973 === undefined
             ? { isInherited973: false, decedentRegistrationDate973: "", decedentRentalStartDate973: "" }
             : {}),
+          // 구 조특령 §97의3②2호 자동말소 간주 — 구 세션엔 없다(= 아님).
+          ...(r.type === "rental_97_3" && r.autoCancelled973 === undefined ? { autoCancelled973: false } : {}),
           // PR-C — 단기→장기 변경신고 구분. 구 세션의 boolean(2020.7.11 이후 변경분 = 적용 제외)을 그대로 옮긴다.
           ...(r.type === "rental_97_3" && r.shortTermConversionMode === undefined
             ? {

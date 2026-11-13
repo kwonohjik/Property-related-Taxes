@@ -39,6 +39,7 @@ function form(over: Record<string, unknown> = {}): AssetReductionForm {
     isInherited973: false, // V-14
     decedentRegistrationDate973: "",
     decedentRentalStartDate973: "",
+    autoCancelled973: false,
     ...over,
   } as AssetReductionForm;
 }

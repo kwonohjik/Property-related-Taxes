@@ -54,6 +54,9 @@ import {
   DEFAULT_JEONSE_CONVERSION_RATE,
 } from "./rental-97-shared-helpers";
 import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result } from "./types";
+import { autoCancelDeemed973Applies } from "./rental-97-3-auto-cancel";
+import { AUTO_CANCEL_DEEMED_973_YEARS } from "./rental-97-3-auto-cancel";
+import { AUTO_CANCEL_DEEMED_973_RATE } from "./rental-97-3-auto-cancel";
 
 /** §97의3 장특공제율 특례 — 10년 이상 임대 (①항 본문 — 100분의 70) */
 export const RENTAL_97_3_OVERRIDE_RATE = 0.7;
@@ -307,6 +310,8 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
   let eligibleRentalYears = 0;
   /** [echo] 상속 합산 구간 — 결과 카드 표시용(V-14) */
   let rentalPeriod973: { decedent: { start: string; end: string }; heir: { start: string; end: string } } | undefined;
+  /** [echo] 자동말소 8년 간주(구 령 ②2호) — 결과 카드 표시용 */
+  let autoCancelDeemed973: { cancelledDate: string; actualYears: number } | undefined;
   let overrideRate = RENTAL_97_3_OVERRIDE_RATE; // 10년 70% 기본
   if (input.rentalStartDate) {
     /**
@@ -380,6 +385,20 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
 
     if (!periodEnd) {
       // 종점을 정할 수 없다 — 위에서 사유를 붙였다(기간 미달로 이중 표시하지 않는다)
+    } else if (
+      autoCancelDeemed973Applies({
+        autoCancelled: input.autoCancelled973,
+        rentalContinuesToTransfer: input.rentalContinuesToTransfer,
+        cancelledDate: periodEnd,
+        longRegistrationDate,
+      })
+    ) {
+      // 구 조특령 §97의3②2호 — 자동말소(민특법 §6⑤)된 종전 장기일반 아파트 매입임대는 8년 등록·임대 간주 → 본문 50%만
+      // (기준-2024-법규재산-0079 · 서면-2020-법령해석재산-3286 「단서는 적용하지 않는」). 공실·단기 산입 비율과 무관하고,
+      // 실제 통산이 10년이어도 70%가 아니다. 상속 합산(V-14)보다 우선한다(Q-7) — 합산 구간은 echo로만 남는다.
+      autoCancelDeemed973 = { cancelledDate: toIsoDay(periodEnd), actualYears: eligibleRentalYears };
+      eligibleRentalYears = AUTO_CANCEL_DEEMED_973_YEARS;
+      overrideRate = AUTO_CANCEL_DEEMED_973_RATE;
     } else if (eligibleRentalYears >= RENTAL_97_3_MANDATORY_YEARS) {
       overrideRate = RENTAL_97_3_OVERRIDE_RATE; // 10년↑ → 70% (등록일 무관)
     } else if (isPre2023Registration && eligibleRentalYears >= RENTAL_97_3_MANDATORY_YEARS_8YEAR) {
@@ -457,6 +476,7 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
     eligibleRentalYears,
     prorationEra,
     ...(rentalPeriod973 ? { rentalPeriod973 } : {}),
+    ...(autoCancelDeemed973 ? { autoCancelDeemed973 } : {}),
     ...(conversion?.deemedStartDate
       ? {
           shortTermConversionDetail: {
