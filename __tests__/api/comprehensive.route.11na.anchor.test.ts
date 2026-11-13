@@ -105,6 +105,7 @@ describe("⑧ 11호 묻는 순서 — 8호 칸을 그대로 쓴다", () => {
     const c10 = {
       exclusionType: "private_short_term_rental_6y_construction" as const,
       rentalRegistrationType: "private_short_term_6y_construction",
+      qualifyingUnitCount: 2, // 10호 「2호 이상」 — comprehensive.route.two-plus-units.anchor
     };
     expect(validateRequiredExclusionAndLandInputs(form(c10, y25))).toMatch(/아파트인지/);
     expect(validateRequiredExclusionAndLandInputs(form(c10))).toBeNull();

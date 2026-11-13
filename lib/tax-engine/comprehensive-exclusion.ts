@@ -131,6 +131,26 @@ function shortTerm6yEraIssues(input: RentalExclusionInput): string[] {
   return issues;
 }
 
+/**
+ * §3①1·3·7·10호 「다음 각 목의 요건을 모두 갖춘 주택이 2호 이상인 경우 그 주택」 — 2·6·8·11호에는 이 문언이 없다(6호는 5호 이상 · 6호 모듈).
+ * 호수는 사용자가 센다(1·7·10호 같은 시·도 §3⑤ · 3호 전국 · 1호는 민간·공공건설 합산). 직접 해석 0건 — 계획서
+ * comprehensive-rental-excl-two-plus-units.plan.md V-1~V-3. 「모름」은 불성립 + 확인 필요.
+ */
+const TWO_PLUS_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
+  "private_construction",
+  "public_construction",
+  "existing_rental",
+  "public_support_construction",
+  "private_short_term_6y_construction",
+]);
+
+function twoPlusUnitsIssue(input: RentalExclusionInput): string | null {
+  if (!TWO_PLUS_TYPES.has(input.registrationType)) return null;
+  const u = input.qualifyingUnitCount;
+  if (typeof u !== "number" || !Number.isFinite(u)) return COMPREHENSIVE_EXCL.TWO_PLUS_UNITS_UNKNOWN;
+  return u >= 2 ? null : COMPREHENSIVE_EXCL.TWO_PLUS_UNITS_UNDER_2;
+}
+
 const NO_RENT_LIMIT_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
   "existing_rental",
   "unsold_purchase",
@@ -149,6 +169,8 @@ export function validateRentalExclusion(
     failReasons.push(...shortTerm6yEraIssues(input));
     failReasons.push(...excludedUnder8hoNa(input));
     failReasons.push(...unsoldPurchase6hoIssues(input));
+    const unitsIssue = twoPlusUnitsIssue(input);
+    if (unitsIssue) failReasons.push(unitsIssue);
   }
 
   const areaLimit = getAreaLimit(input);

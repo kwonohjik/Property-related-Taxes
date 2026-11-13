@@ -28,6 +28,8 @@ async function run(page: import("@playwright/test").Page, approval: [string, str
   await approvalBox.getByLabel("연도").fill(approval[0]);
   await approvalBox.getByLabel("월").fill(approval[1]);
   await approvalBox.getByLabel("일").fill(approval[2]);
+  // §3①1호 「2호 이상」 — 이 스펙은 가격 축만 본다
+  await page.getByTestId("comprehensive-qualifying-unit-count").locator("input").fill("2");
   const startBox = page.locator('div.space-y-1\\.5:has(> label:has-text("임대개시일"))');
   await startBox.getByLabel("연도").fill("2018");
   await startBox.getByLabel("월").fill("2");

@@ -14,6 +14,7 @@ import type { RentalExclusionInput } from "@/lib/tax-engine/types/comprehensive.
 
 const d = (s: string) => new Date(s);
 const BASE: RentalExclusionInput = {
+  qualifyingUnitCount: 2, // §3①1·3·7·10호 「2호 이상」 충족 — 그 게이트는 two-plus-units anchor
   registrationType: "unsold_purchase",
   rentalRegistrationDate: d("2019-05-01"), // 2호였다면 2018.3.31. 상한으로 불성립(P2)
   businessRegistrationDate: d("2019-05-01"),

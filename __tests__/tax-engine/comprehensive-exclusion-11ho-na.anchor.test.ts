@@ -13,6 +13,7 @@ import type { RentalExclusionInput } from "@/lib/tax-engine/types/comprehensive.
 
 const d = (s: string) => new Date(s);
 const BASE: RentalExclusionInput = {
+  qualifyingUnitCount: 2, // §3①1·3·7·10호 「2호 이상」 충족 — 그 게이트는 two-plus-units anchor
   registrationType: "private_short_term_6y_purchase",
   rentalRegistrationDate: d("2025-07-01"),
   businessRegistrationDate: d("2025-07-01"),

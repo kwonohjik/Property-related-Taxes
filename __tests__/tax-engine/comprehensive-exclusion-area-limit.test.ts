@@ -16,6 +16,7 @@ import type { RentalExclusionInput } from "@/lib/tax-engine/types/comprehensive.
 import { NA8_NOT_APPLICABLE } from "./_helpers/comprehensive-8na-not-applicable";
 
 const BASE: RentalExclusionInput = {
+  qualifyingUnitCount: 2, // §3①1·3·7·10호 「2호 이상」 충족 — 그 게이트는 two-plus-units anchor
   registrationType: "private_construction",
   ...NA8_NOT_APPLICABLE,
   // 1호 민간건설은 2018.3.31.(4.2.) 이전 사업자등록등 주택만(시행령 §3①1호 단서) — 이 파일은 면적만 본다

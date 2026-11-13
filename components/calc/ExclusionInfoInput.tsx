@@ -29,6 +29,9 @@ import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-s
 import { RentalExclusion8NaFields } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
 import { RentalPeriodApplicationDateField } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
 import { RentalExclusion6hoFields } from "@/components/calc/comprehensive/RentalExclusion6hoFields";
+import { CountField } from "@/components/calc/comprehensive/RentalExclusion6hoFields";
+import { qualifyingUnitHo } from "@/lib/calc/comprehensive-rental-units";
+import { qualifyingUnitHint } from "@/lib/calc/comprehensive-rental-units";
 
 // ============================================================
 // 임대 등록 유형 레이블
@@ -97,6 +100,7 @@ function RentalExclusionDetail({
     property.registrationRevokedDate !== "",
   );
   const assessmentYear = useComprehensiveWizardStore((s) => s.formData.assessmentYear);
+  const unitHo = qualifyingUnitHo(property.rentalRegistrationType || toRegistrationType(property.exclusionType));
 
   return (
     <div className="space-y-4">
@@ -163,6 +167,17 @@ function RentalExclusionDetail({
           description="30호 이상이면 공시가격 상한 상향 — 건설 12억 / 매입 수도권 9억·비수도권 6억 (시행령 §3①1·2·7·8호)"
           checked={property.isThirtyPlusUnits}
           onCheckedChange={(v) => onUpdate({ isThirtyPlusUnits: v })}
+        />
+      )}
+
+      {/* §3①1·3·7·10호 「요건을 모두 갖춘 주택이 2호 이상」 — 묻는 조건은 qualifyingUnitHo(⑧·④와 같은 술어) */}
+      {unitHo && (
+        <CountField
+          label={`${unitHo}호 요건을 모두 갖춘 임대주택 호수`}
+          testId="comprehensive-qualifying-unit-count"
+          value={property.qualifyingUnitCount}
+          onChange={(v) => onUpdate({ qualifyingUnitCount: v })}
+          hint={qualifyingUnitHint(unitHo)}
         />
       )}
 

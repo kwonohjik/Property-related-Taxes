@@ -1,6 +1,10 @@
 # 종부세 합산배제 §3①1·3·7·10호 「2호 이상」 요건 판정 (§3⑤ 같은 시·도 합산 포함)
 
-- 작성: 2026-11-13 · 상태: **Q 결정 대기** (코드 변경 없음 — 실태 조사 + 계획서)
+- 작성: 2026-11-13 · 상태: **구현(2026-11-13) — Q-1~Q-7 권장안(a), 단 Q-5·Q-8은 아래처럼 바꿈**
+  - 엔진 `twoPlusUnitsIssue`(`comprehensive-exclusion.ts`) · 필드 `qualifyingUnitCount` · 사유 `TWO_PLUS_UNITS_UNDER_2`/`_UNKNOWN` · manifest `COMPREHENSIVE_DECREE.TWO_PLUS_UNITS`(PASS) · 화면 술어 `lib/calc/comprehensive-rental-units.ts`(⑤⑧④ 공유).
+  - Q-5: 「토글 끔 & 호수 ≥ 30」만 ⑧ 차단. 「토글 켬 & 호수 < 30」은 막지 않는다 — 30호 문언은 「30호 이상의 주택을 **임대하는**」이라 요건 미충족 주택(예: 가격 초과)이 섞이면 호수 < 30이어도 토글이 맞다.
+  - Q-8: PR 1개. 엔진만 먼저 머지하면 화면에 칸이 없어 1·10호 E2E(성립 기대)가 CI에서 깨진다.
+  - V-8 실측: 헬퍼 없이 기존 테스트 **8파일 35건**이 실패 → 각 BASE에 `qualifyingUnitCount: 2`(게이트 자체는 전용 anchor가 값 없는 케이스까지 검증 · 변이 2건 확인).
 - 계기: 6호 유형 신설 계획서(`comprehensive-rental-excl-6ho-unsold-purchase.plan.md` §3 「관련 발견」)가 「1·3·7·10호 「2호 이상」 요건도 엔진이 판정하지 않는다」고 적었다. 6호 「5호 이상」은 #3309·#3311에서 호수 숫자 칸으로 해결했고, 이 계획은 같은 축의 남은 4개 호를 다룬다.
 - 선례: 엔진 `lib/tax-engine/comprehensive-exclusion-6ho.ts` `unitIssue` · 화면 술어 `lib/calc/comprehensive-rental-6ho.ts` `ho6Asks`/`validate6hoInputs`/`rental6hoApiFields`(⑤⑧④ 공유) · 칸 `components/calc/comprehensive/RentalExclusion6hoFields.tsx` `CountField`.
 

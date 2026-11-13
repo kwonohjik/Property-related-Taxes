@@ -56,6 +56,7 @@ const FIELD_LABEL: Record<string, string> = {
   rentalRegistrationDate: "임대사업자 등록일",
   rentalStartDate: "임대개시일",
   usageApprovalDate: "사용승인일",
+  qualifyingUnitCount: "요건을 모두 갖춘 임대주택 호수",
   currentRent: "현재 임대료",
   isInitialContract: "최초 계약 여부",
   isEupMyeonArea: "읍·면 지역 여부",

@@ -26,7 +26,7 @@ const KIND_OPTIONS: { value: Kind; label: string; testId: string }[] = [
   { value: "other", label: "그 밖(구 임대주택법 매입임대 등)", testId: "comprehensive-6ho-kind-other" },
 ];
 
-function CountField({
+export function CountField({
   label,
   testId,
   value,

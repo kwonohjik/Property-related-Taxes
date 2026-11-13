@@ -12,6 +12,7 @@ import { NA8_NOT_APPLICABLE } from "./_helpers/comprehensive-8na-not-applicable"
 
 const d = (s: string) => new Date(s);
 const BASE: RentalExclusionInput = {
+  qualifyingUnitCount: 2, // §3①1·3·7·10호 「2호 이상」 충족 — 그 게이트는 two-plus-units anchor
   registrationType: "private_purchase_long",
   ...NA8_NOT_APPLICABLE,
   rentalRegistrationDate: d("2017-03-01"),
