@@ -33,6 +33,7 @@ import {
   type DeemedProviso,
 } from "@/lib/tax-engine/acquisition-deemed-proviso";
 import type { FormState } from "../shared";
+import { GolfCourseScopeNote } from "./GolfCourseScopeNote";
 
 /** 간주취득 유형별 컨텍스트 — 사치성 유형 선택지를 물건에 맞게 좁힌다 */
 export type DeemedProvisoContext = "major_shareholder" | "land_category" | "renovation";
@@ -125,6 +126,9 @@ export function DeemedProvisoCard({ form, set, context, disabled, disabledReason
           options={optionsFor(context)}
           data-testid="deemed-proviso-type"
         />
+        {form.luxuryType === "golf_course" && (
+          <GolfCourseScopeNote majorShareholder={context === "major_shareholder"} />
+        )}
       </div>
     </ToggleCard>
   );
