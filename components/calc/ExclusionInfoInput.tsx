@@ -36,6 +36,7 @@ import { RentalExclusion459hoFields } from "@/components/calc/comprehensive/Rent
 import { ho459 } from "@/lib/calc/comprehensive-rental-459ho";
 import { isOwnedRentalType } from "@/lib/calc/comprehensive-rental-459ho";
 import { priceRegistrationType } from "@/lib/calc/comprehensive-rental-459ho";
+import { asksRegistrationRevokedDate } from "@/lib/calc/comprehensive-rental-459ho";
 
 // ============================================================
 // 임대 등록 유형 레이블
@@ -320,7 +321,8 @@ function RentalExclusionDetail({
         onUpdate={onUpdate}
       />
 
-      {/* 임대등록 말소 (예외 케이스 — 기본 접힘) */}
+      {/* 임대등록 말소 (예외 케이스 — 기본 접힘) · 9호는 묻지 않는다(④와 같은 술어 asksRegistrationRevokedDate) */}
+      {asksRegistrationRevokedDate(regType) && (
       <ToggleCard
         tone="rose"
         title="임대등록 말소"
@@ -347,6 +349,7 @@ function RentalExclusionDetail({
           </p>
         </div>
       </ToggleCard>
+      )}
 
       {/* 최초 계약 여부 — 4호(미임대)·5호(임대료 요건 없음)는 묻지 않는다 */}
       {asksRent && (<>
