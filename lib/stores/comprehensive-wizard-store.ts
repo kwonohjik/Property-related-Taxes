@@ -31,6 +31,8 @@ export interface PropertyEntry {
   building: string;                // 건물명
   dong: string;                    // 동 (공동주택)
   ho: string;                      // 호수 (공동주택)
+  /** 주소검색 PNU(19자리) — 앞 10자리 법정동코드로 조정대상지역 자동 판정(종부령 §3①8호 나목1)·2)) */
+  pnu?: string;
   // ── 임대주택 합산배제 상세 ──
   rentalRegistrationType: string;
   isEupMyeonArea: boolean;       // 읍·면 지역 여부 (existing_rental §3①3호 전용 — 읍면 100㎡ / 그외 85㎡)
@@ -38,6 +40,19 @@ export interface PropertyEntry {
   rentalRegistrationDate: string;  // YYYY-MM-DD — 지자체 임대사업자 등록일(등록증)
   /** 세무서 사업자등록일 YYYY-MM-DD — 1호 민간건설·2호 민간매입의 2018.3.31. 단서 판정(⑤가 그 두 유형에서만 묻는다) */
   businessRegistrationDate?: string;
+  // ── §3①8호 나목 1)~4)·7호 단서 — 묻는 조건은 lib/calc/comprehensive-rental-8na.ts 한 곳(⑤⑧④ 공유). 빈 값 "" = 미입력 ──
+  rentalAcquisitionDate?: string;              // 나목1) 취득일
+  rentalDepositPaidDate?: string;              // 나목1) 괄호 — 매매계약·계약금 지급일(선택)
+  rentalMergedAcquisition?: boolean;           // 나목1) 괄호 — 상속·재건축 등 임대기간 합산 취득
+  householdOwnedAtAcquisition?: "" | "yes" | "no"; // 나목1) 취득 당시 1세대 1주택 이상 보유
+  regulated8NaMode?: "auto" | "manual";        // 조정대상지역 — auto: PNU로 판정
+  regulatedAtAssessment?: "" | "yes" | "no";   // manual: 과세기준일 현재 조정대상지역
+  regulatedNoticeDate?: string;                // manual: 그 지정의 공고일
+  rentalApplicationDate?: string;              // 나목2)·3) 지자체 등록 신청일(추가 변경신고 포함)
+  businessRegistrationApplicationDate?: string; // 나목2) 법인 세무서 사업자등록(정정) 신청일
+  isApartment?: "" | "yes" | "no";             // 나목3) 아파트(도시형 생활주택 제외)
+  convertedFromShortTerm?: "" | "yes" | "no";  // 나목4)·7호 단서 — 단기에서 변경신고
+  shortTermConversionDate?: string;            // 그 변경신고일
   rentalStartDate: string;         // YYYY-MM-DD
   currentRent: string;             // 현재 임대료 (원)
   previousRent: string;            // 직전 임대료 (원)
@@ -190,6 +205,7 @@ function makeProperty(): PropertyEntry {
     isThirtyPlusUnits: false,
     rentalRegistrationDate: "",
     businessRegistrationDate: "",
+    regulated8NaMode: "auto",
     rentalStartDate: "",
     currentRent: "",
     previousRent: "",

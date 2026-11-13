@@ -22,6 +22,7 @@ import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { asksBusinessRegistrationDate } from "@/lib/calc/comprehensive-api";
 import { toRegistrationType } from "@/lib/calc/comprehensive-api";
+import { RentalExclusion8NaFields } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
 
 // ============================================================
 // 임대 등록 유형 레이블
@@ -194,6 +195,13 @@ function RentalExclusionDetail({
           </p>
         </div>
       )}
+
+      {/* §3①8호 나목·7호 단서 — 묻는 칸은 na8Asks(⑧·④와 같은 술어) */}
+      <RentalExclusion8NaFields
+        property={property}
+        registrationType={property.rentalRegistrationType || toRegistrationType(property.exclusionType)}
+        onUpdate={onUpdate}
+      />
 
       {/* 임대개시일 */}
       <div className="space-y-1.5">

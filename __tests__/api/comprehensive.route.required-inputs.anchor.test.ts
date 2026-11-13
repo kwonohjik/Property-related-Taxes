@@ -41,6 +41,8 @@ async function post(body: unknown) {
   );
   return { status: res.status, json: (await res.json()) as Json };
 }
+/** 8호 나목 1)·4) 「해당 없음」 — 2018.9.13. 이전 취득·단기 변경신고 없음(나목 판정은 comprehensive.route.8na.anchor.test.ts) */
+const NA8_NONE = { rentalAcquisitionDate: "2017-05-01", convertedFromShortTerm: "no" } as const;
 const paths = (json: Json) => (json.error?.issues ?? []).map((i) => i.path.join("."));
 
 /** ④가 보내는 본문 — fetch를 가로챈다 */
@@ -92,7 +94,8 @@ describe("C4 — 합산배제 임대주택 빈 칸 (UI 도달)", () => {
   it("🟢 ⑧ 모두 있으면 통과", () => {
     expect(
       validateRequiredExclusionAndLandInputs(
-        form({ rentalRegistrationDate: "2020-01-01", rentalStartDate: "2020-01-01", area: "84" }),
+        // 8호 나목·4) 「해당 없음」 사실 — 2017 취득(2018.9.13. 이전)·단기 변경신고 없음
+        form({ rentalRegistrationDate: "2020-01-01", rentalStartDate: "2020-01-01", area: "84", ...NA8_NONE }),
       ),
     ).toBeNull();
   });
@@ -213,7 +216,7 @@ describe("2018.3.31. 단서 — 세무서 사업자등록일 (⑤④⑧⑫⑭)",
     expect(validateRequiredExclusionAndLandInputs(form({ businessRegistrationDate: "2017-06-01" }))).toBeNull();
     expect(
       validateRequiredExclusionAndLandInputs(
-        form({ exclusionType: "private_purchase_rental_long", rentalRegistrationType: "private_purchase_long" }),
+        form({ exclusionType: "private_purchase_rental_long", rentalRegistrationType: "private_purchase_long", ...NA8_NONE }),
       ),
     ).toBeNull();
   });
