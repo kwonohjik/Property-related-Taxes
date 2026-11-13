@@ -278,6 +278,16 @@ export function handleMultiParcelBranch(
     transferGain: mpTaxableGain,
     taxableGain: mpTaxableGain,
     usedEstimatedAcquisition: false,
+    /**
+     * [echo] 표시 전용 — 세액 불변. 필요경비 = Σ(필지 `expenses` + `estimatedDeduction`).
+     *
+     * 🔴 종전에는 싣지 않아 신고서·명세서가 「취득가액 = 양도가액 − 양도차익 − 필요경비」 역산에서 필요경비를 0으로 보고
+     *   필요경비만큼 취득가액을 부풀렸다(두 필지 취득 2억·경비 3백만: 406,000,000 / 비어 있음 — 진짜 400,000,000 / 6,000,000).
+     * 필지별 값은 `multi-parcel-transfer.ts`가 이미 상호 배타로 만든다 — 환산 필지는 개산공제(`estimatedDeduction`), swap 필지는
+     * 직접 지출(`expenses`, 개산공제 0), 실가 필지는 `expenses` — 그래서 합이 이중 계상되지 않는다.
+     * `estimatedBase`는 싣지 않는다(환산·실가 혼합이라 단일 환산 근거가 없다).
+     */
+    expenses: mpResult.parcelResults.reduce((sum, pr) => sum + pr.expenses + pr.estimatedDeduction, 0),
     penaltyBase: 0, // 다필지 분기: 가산세는 §114조의2 건물 한정으로 토지 다필지 경로에 미적용
     longTermHoldingDeduction: mpLtd,
     longTermHoldingRate: mpTaxableGain > 0 ? mpLtd / mpTaxableGain : 0,

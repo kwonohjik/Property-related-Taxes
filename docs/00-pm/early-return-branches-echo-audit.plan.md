@@ -2,7 +2,7 @@
 
 > 2026-11-13 · 코드 읽기 + throwaway probe(`calculateTransferTax` 직접 호출 → `buildRows`·`buildStatementItems`, `makeMockRates`). 출처: `loss-case-early-return-echo-omission.plan.md` §5 V-3 / memory `feedback_early_return_branch_skips_pipeline_stages`.
 > 표기: **[직접]** 이번 세션 코드 읽기·실측 · **[해석]** · **[확인 필요]**.
-> 상태: **계획 단계 — 사용자 결정 대기(Q-1·Q-2)**. 코드 변경 없음.
+> 상태: **Q-1 a · Q-2 a 결정(2026-11-13, 「모두 권장안으로」) → 구현·검증 완료(§7)**. 세액 불변.
 
 ## 0. 결론
 
@@ -83,3 +83,27 @@ M3의 필지별 값(`parcelDetails`): p1 `acquisitionPrice 83,333,333 · expense
 
 - **Q-1:** a 다필지 결과에 `expenses`(필지 합)를 싣는다(권고) / b 표시 함수 보정 / c 현행 유지·한계 기록.
 - **Q-2:** a 비과세 조기 반환에 `estimatedStdPrice*`·특례 상세 3종을 싣는다(권고) / c 현행 유지.
+
+## 7. 결정·구현·검증 결과 [직접: 2026-11-13]
+
+**결정:** Q-1 a(다필지 엔진이 `expenses`를 싣는다) · Q-2 a(비과세 조기 반환이 기준시가·특례 3종을 싣는다) — 「모두 권장안으로」.
+
+**변경(엔진 2곳, 표시 함수·세액 로직 손대지 않음)**
+- `lib/tax-engine/transfer-tax-multi-parcel-branch.ts`: 결과에 `expenses = Σ(필지 expenses + 필지 estimatedDeduction)` 추가. 필지 값은 `multi-parcel-transfer.ts:444-454`가 이미 상호 배타(환산=개산공제, swap=직접 지출·개산공제 0, 실가=expenses)로 만들어 이중 계상이 없다. `estimatedBase`·`usedEstimatedAcquisition`은 그대로(혼합이라 단일 환산 근거 없음).
+- `lib/tax-engine/transfer-tax-finalize.ts`(`buildExemptEarlyResult`): `estimatedStdPriceAtAcquisition/Transfer`(조건 = 손실 빌더와 같은 `useEstimatedAcquisition && !splitDetail`) + `expropriationValuationDetail`·`auctionValuationDetail`·`housingExpropriationValuationDetail`(모두 이미 스코프에 있는 `calcTransferGain` 결과).
+
+**anchor** `__tests__/api/transfer.route.early-return-echo-audit.anchor.test.ts` (10건): 구현 전 6건 실패·3건 통과 → 구현 후 10/10.
+
+| 시료 | 종전 | 이후 |
+|---|---|---|
+| MP-1 두 필지 취득 2억·경비 3백만씩 | 신고서 406,000,000 / 비어 있음 · 명세서 406,000,000 / 0 | 400,000,000 / 6,000,000 (신고서·명세서) |
+| MP-2 다필지 손실(취득 7억씩) | 1,406,000,000 / 비어 있음 | 1,400,000,000 / 6,000,000 |
+| MP-3 환산 + 실가 혼합 | 흡수 | Σ(expenses + 개산공제)로 항등식 성립 |
+| MP-5 swap 필지(엔진 직접) | — | 개산공제 0 · expenses = 직접 지출 → 이중 계상 없음 (V-4 해소) |
+| EX-1 환산 비과세 | 기준시가 echo 없음 | 200,000,000 / 400,000,000 echo |
+| EX-2 환산 + 공매 비과세 | §164⑨ 카드 없음 | `auctionValuationDetail` 실림 · 환산취득가 640,000,000 |
+| EX-3 환산 + 일체 주택 수용 비과세 | 카드 없음 | `housingExpropriationValuationDetail` 실림 |
+
+**뮤테이션 4종 전부 포착, 복원 `cmp` 일치:** M1 `expenses` 줄 삭제(MP-1·2·3 실패) · M2 `estimatedDeduction` 합 제외(MP-3) · M3 공매·주택 수용 echo 삭제(EX-2·3) · M4 기준시가 echo 조건 무력화(EX-1).
+
+**V 레지스터 갱신:** V-4 해소(위 MP-5). V-1·V-2·V-3·V-5·V-6·V-7은 여전히 미측정이다 — 특히 V-3(브라우저 렌더)은 Playwright 미실행.
