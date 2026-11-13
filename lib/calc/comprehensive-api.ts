@@ -303,6 +303,19 @@ export function asksThirtyPlusUnits(registrationType: string, assessmentYear: st
   return THIRTY_PLUS_REG_TYPES.has(registrationType) && year >= 2025;
 }
 
+/**
+ * §3①1호·7호 가목 건설임대 6억/9억 — 사용승인일(선택) 칸을 묻는가. 엔진 `builtRentalBaseCap`과 같은 경계:
+ * 2021~2024 과세연도(2021년분 민간건설은 등록일로 보므로 공공건설만) · 공시가격이 6억 초과일 때만(6억 이하면 어느 쪽이든 성립).
+ * 비면 엔진이 6억 + 확인 필요(⑧ 차단 없음 — 계획서 Q-2 a). 2025 이후는 전면 9억/12억(Q-3 a)이라 묻지 않는다.
+ */
+const BUILT_REG_TYPES = new Set(["private_construction", "public_construction", "public_support_construction"]);
+export function asksUsageApprovalDate(registrationType: string, assessmentYear: string, assessedValue: number): boolean {
+  if (!BUILT_REG_TYPES.has(registrationType) || !(assessedValue > 600_000_000)) return false;
+  const year = parseInt(assessmentYear) || new Date().getFullYear();
+  if (year < 2021 || year > 2024) return false;
+  return !(year === 2021 && registrationType !== "public_construction");
+}
+
 export function asksBusinessRegistrationDate(registrationType: string): boolean {
   return registrationType === "private_construction" || registrationType === "private_purchase_short";
 }
@@ -418,6 +431,9 @@ export async function callComprehensiveApi(
             ? p.businessRegistrationDate || undefined
             : undefined,
           rentalStartDate: p.rentalStartDate,
+          usageApprovalDate: asksUsageApprovalDate(registrationType, formData.assessmentYear, base.assessedValue)
+            ? p.usageApprovalDate || undefined
+            : undefined,
           assessedValue: base.assessedValue,
           area: parseDecimal(p.area),
           location: p.location,

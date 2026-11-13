@@ -28,6 +28,8 @@ const BASE: RentalExclusionInput = {
   ownerType: "individual",
   acquisitionDate: d("2017-01-01"),
   isThirtyPlusUnits: true,
+  // 건설 30호 미만 9억은 2021.2.17. 이후 사용승인분만(부칙<제31447호> §2) — 이 파일은 30호 구간만 보므로 9억 구간으로 고정
+  usageApprovalDate: d("2022-01-01"),
 };
 const v = (over: Partial<RentalExclusionInput>) => validateRentalExclusion({ ...BASE, ...over });
 

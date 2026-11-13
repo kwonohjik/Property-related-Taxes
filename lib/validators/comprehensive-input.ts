@@ -111,6 +111,12 @@ const rentalExclusionInfoSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
     .optional(),
 
+  /** 사용승인일 (YYYY-MM-DD, 선택) — §3①1호·7호 가목 6억/9억 적용례(대통령령 제31447호 부칙 제2조). 없으면 6억 + 확인 필요 */
+  usageApprovalDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
+    .optional(),
+
   /** 임대등록 말소일 (YYYY-MM-DD, 선택) — 과세기준일 이전이면 합산배제 거부 */
   registrationRevokedDate: z
     .string()
