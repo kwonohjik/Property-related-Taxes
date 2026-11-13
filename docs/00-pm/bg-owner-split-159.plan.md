@@ -133,7 +133,7 @@
 - PR-3까지 채무 확인(`bgOwnerSplitDebtConfirmed`)은 ⑧ 화면 검증뿐이라 직접 API 본문은 확인 없이 계산됐다. 새 와이어 키 `burdenedGiftInfo.ownerSplitDebtConfirmed`(§6 ⑬⑭ 「새 와이어 키 없음」 전제를 이 키 하나가 바꾼다 — ⑭는 `burdenedGiftInfo` 통째 패스스루라 변경 없음)를 ④ `bgOwnerSplitInfoPatch`가 싣는다.
 - 판정은 엔진 계약 `bgOwnerSplitContractViolation` 첫 검사 하나다 — 엔진 직접 호출은 INVALID_INPUT으로 던지고 ⑫ `refineBgOwnerSplit`은 같은 함수로 400(`burdenedGiftInfo.ownerSplitDebtConfirmed`). ⑧과 순서가 같다(확인 → 기준시가). 소유자 분리가 아니면 읽지 않는다.
 - 근거 인용 상수 `BURDENED_GIFT_TRANSFER.SANGJEUNGBEOP_DECREE_JOINT_MORTGAGE_63_1_2`(상증령 §63①2호 · 현행 MST 290845 본문 확인) · 매니페스트 `INH_DECREE.JOINT_MORTGAGE_VALUATION`.
-- 남은 한계: 「토지만」의 토지 취득일 필수(Q-8)는 여전히 ⑧뿐이다(⑪ 자산 취득일 fallback).
+- 「토지만」의 토지 취득일 필수(Q-8)가 ⑧뿐인 것은 **한계가 아니라 의도된 설계다(2026-11-13 사용자 확인 · 재제안 금지).** 화면은 「토지·건물 취득일 다름」 두 칸이라 토지 칸이 비면 «같은 날»인지 모르므로 ⑧이 막는다. API에는 이 토글이 없고, 토지만 본인이면 자산 취득일(`acquisitionDate`) 하나가 곧 증여한 토지의 취득일이라 모호하지 않다(설계 주석 `lib/calc/separate-land-date-required.ts:22` · 엔진 anchor V-6 「토지 취득일을 보내지 않으면 자산 취득일로 센다」). 400으로 막으면 정상 직접 호출이 막힌다.
 
 ## 9. Pre-Do 앵커 (손계산 · 건물만 · 기준시가 · 보충적 승 · 매매 2015-01-01 → 양도 2026-02-16 · 장특 22% · 중과 없음)
 
