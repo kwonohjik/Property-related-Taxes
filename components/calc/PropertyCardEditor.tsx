@@ -32,6 +32,7 @@ import {
 } from "@/components/calc/property-list-shared";
 import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 import { toRegistrationType } from "@/lib/calc/comprehensive-api";
+import { isRentalExclusionType } from "@/lib/calc/comprehensive-api";
 
 // ============================================================
 // 섹션 카드 (번호 + 색상 — 정적 tone 매핑)
@@ -505,13 +506,11 @@ export function PropertyCardEditor({
                 value={property.exclusionType}
                 onChange={(e) => {
                   const v = e.target.value;
-                  // 단기 2종·미분양매입임대(6호) 선택 시 rentalRegistrationType 자동 매칭 (단일 출처 toRegistrationType)
-                  const isShort =
-                    v === "private_short_term_rental_6y_construction" ||
-                    v === "private_short_term_rental_6y_purchase" ||
-                    v === "unsold_purchase_rental";
+                  // 임대주택 유형을 고르면 임대등록 유형(다음 단계 둘째 드롭다운)을 늘 맞춘다(단일 출처 toRegistrationType).
+                  // 종전엔 단기 2종·6호만 맞춰, 공공건설·공공매입·민간건설을 골라도 둘째가 기본값(장기일반 매입)으로 남아
+                  // 엔진이 8호로 판정했다.
                   onUpdate(
-                    isShort
+                    isRentalExclusionType(v)
                       ? { exclusionType: v, rentalRegistrationType: toRegistrationType(v) }
                       : { exclusionType: v },
                   );

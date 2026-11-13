@@ -94,6 +94,9 @@ export function validateLandParcels(formData: ComprehensiveFormData): string | n
  */
 export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFormData): string | null {
   for (const [i, p] of formData.properties.entries()) {
+    if (RETIRED_EXCLUSION_TYPES.has(p.exclusionType)) {
+      return `주택 ${i + 1}: 합산배제 유형을 다시 고르세요 — 공공지원민간임대는 건설(시행령 §3①7호)과 매입(§3①8호)으로 나뉩니다.`;
+    }
     if (!RENTAL_TYPES.has(p.exclusionType)) continue;
     const label = `주택 ${i + 1}`;
     if (!p.rentalRegistrationDate) return `${label}: 합산배제 임대주택은 임대사업자 등록일을 입력하세요 (종합부동산세법 시행령 §3①).`;
@@ -259,6 +262,17 @@ const RENTAL_TYPES = new Set([
   "private_short_term_rental_6y_purchase",
   "unsold_purchase_rental",
 ]);
+
+/** 임대주택 합산배제 유형인가(시행령 §3) — ⑤ 첫 드롭다운 선택 시 임대등록 유형 동기화에 쓴다 */
+export function isRentalExclusionType(exclusionType: string): boolean {
+  return RENTAL_TYPES.has(exclusionType);
+}
+
+/**
+ * 폐기된 합산배제 유형 키 — #464(2026-07-02)가 공공지원을 건설·매입으로 나눴는데 화면 선택지에 옛 키가 남아
+ * 고르면 계산이 400이었다. 세션·이력에 남은 값은 건설/매입을 알 수 없어 자동으로 바꾸지 않고 ⑧에서 다시 고르게 한다.
+ */
+const RETIRED_EXCLUSION_TYPES = new Set(["public_support_rental"]);
 
 // 기타 합산배제 유형 (otherInfo 필드 구성에 사용)
 const OTHER_INFO_TYPES = new Set([
