@@ -9,6 +9,9 @@
  *  · `building`         — ④는 **토지+건물 통합 총액**. API가 `landStdPriceAtTransfer = 0`으로 두고
  *    `standardPriceAtTransfer` 한 값에 통째로 싣기 때문이다(같은 파일 :205-214).
  *    합치지 않으면 **부수토지가 통째로 누락**된다.
+ *    ⚠️ 단 **토지·건물 소유자 분리로 건물만 증여**하면(`ownerSplitBuilding`) ④는 **건물분 단독**이다 — 증여재산은 건물뿐이고
+ *    토지는 본인 소유가 아니다(증여가액 C = 증여한 건물의 「상속세 및 증여세법」 제61조 제1항 제2호 가액 · 건물 기준시가는 부속토지를
+ *    포함하지 않는다 — 「국세청 건물 기준시가 계산방법 고시」 제3조 제2항). 합치면 비소유 토지가 증여가액에 들어간다.
  *
  * 두 실수 모두 화면에 아무 오류를 띄우지 않으므로, 분기를 호출부에 흩지 않고 여기 한 곳에 둔다.
  * anchor: `__tests__/calc/burdened-gift-std-price-launcher.anchor.test.ts`
@@ -62,6 +65,7 @@ export function bgGiftStdPriceLauncherSpec(
     | "transferArea"
     | "standardPricePerSqmAtTransfer"
   >,
+  opts: { ownerSplitBuilding?: boolean } = {},
 ): BgGiftStdPriceLauncherSpec | null {
   if (asset.assetKind === "general_building") {
     return {
@@ -92,8 +96,8 @@ export function bgGiftStdPriceLauncherSpec(
       // `building`은 통합 「양도시 기준시가」 카드의 ㎡당 단가를 그대로 쓴다
       // (`AssetSectionTransfer.tsx:40` — `standardPricePerSqmAtTransfer`)
       landPricePerSqm: asset.standardPricePerSqmAtTransfer,
-      compose: (b, land) => b + (land ?? 0),
-      needsAppurtenantLand: true,
+      compose: opts.ownerSplitBuilding ? (b) => b : (b, land) => b + (land ?? 0),
+      needsAppurtenantLand: !opts.ownerSplitBuilding,
     };
   }
   return null;

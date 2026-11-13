@@ -17,7 +17,7 @@
 
 import { BurdenedGiftHouseSplitCard } from "./BurdenedGiftHouseSplitCard";
 import { bgHouseSplitActive } from "@/lib/calc/bg-house-split";
-import { bgOwnerSplitActive } from "@/lib/calc/bg-owner-split-scope";
+import { bgOwnerSplitActive, bgOwnerSplitGiftBuildingStdOpen } from "@/lib/calc/bg-owner-split-scope";
 import { BgOwnerSplitDebtConfirm, BgOwnerSplitMarketValueField, BurdenedGiftOwnerSplitCard } from "./BurdenedGiftOwnerSplitCard";
 import { useMemo } from "react";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
@@ -40,7 +40,7 @@ import { BurdenedGiftPriorGiftsBlock } from "./BurdenedGiftPriorGiftsBlock";
 import { BurdenedGiftCarryoverBlock } from "./BurdenedGiftCarryoverBlock";
 import { BurdenedGiftDonorTaxBlock } from "./BurdenedGiftDonorTaxBlock";
 import { VALUATION_MODE_OPTIONS } from "./burdened-gift-block-options";
-import { GIFT_STD_PRICE_FIELD } from "./burdened-gift-block-options";
+import { GIFT_STD_PRICE_FIELD, OWNER_SPLIT_GIFT_STD_FIELD } from "./burdened-gift-block-options";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { formatOwnershipPercent } from "@/lib/calc/transfer-tax-api-helpers";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
@@ -115,7 +115,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
    * ④ 상속·증여 계산기 런처 사양 — null이면 미노출.
    * ⚠️ 주입 규칙(건물분 단독 vs 부수토지 합산)이 자산마다 반대다. 판단은 전부 이 함수에 있다.
    */
-  const stdPriceLauncher = bgGiftStdPriceLauncherSpec(asset);
+  /** 건물만 증여(소유자 분리) — 증여일 기준시가 칸은 증여한 건물분만(부수토지 제외 · 계산기도 토지를 더하지 않는다). */
+  const ownerSplitGiftBuilding = bgOwnerSplitGiftBuildingStdOpen(asset);
+  const stdPriceLauncher = bgGiftStdPriceLauncherSpec(asset, { ownerSplitBuilding: ownerSplitGiftBuilding });
   // 건물 기준시가 모달 prefill — 자산 카드 소재지 재사용(이중입력 방지)
   const stdPriceAddress = stdPriceAddressOf(asset);
   // 인수 채무액 = 임대보증금 + 담보차입금 (소령 §159 — 양도가액)
@@ -582,7 +584,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
 
       {isMixed && <BurdenedGiftMixedUsePanel asset={asset} transferDate={transferDate} />}
 
-      {!isMixed && !isMarketMode && asset.assetKind !== "land" && !isRightToMoveIn && !ownerSplit && (
+      {!isMixed && !isMarketMode && asset.assetKind !== "land" && !isRightToMoveIn && (!ownerSplit || ownerSplitGiftBuilding) && (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-2 dark:bg-emerald-950/40">
         <div className="flex flex-wrap items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
@@ -626,8 +628,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           </p>
         )}
         <FieldCard
-          label={GIFT_STD_PRICE_FIELD[asset.assetKind]?.label ?? "증여일 현재 기준시가"}
-          hint={GIFT_STD_PRICE_FIELD[asset.assetKind]?.hint}
+          label={ownerSplitGiftBuilding ? OWNER_SPLIT_GIFT_STD_FIELD.label : (GIFT_STD_PRICE_FIELD[asset.assetKind]?.label ?? "증여일 현재 기준시가")}
+          hint={ownerSplitGiftBuilding ? OWNER_SPLIT_GIFT_STD_FIELD.hint : GIFT_STD_PRICE_FIELD[asset.assetKind]?.hint}
         >
           <CurrencyInput
             label=""

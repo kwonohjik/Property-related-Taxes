@@ -118,13 +118,13 @@ describe("시가 평가 — 증여한 부분 시가(bgMarketValueOwnedPart → m
 });
 
 describe("④ 전송 본문 — 본인 몫만 싣는다 (Network request body)", () => {
-  it("건물만: selfOwns · 건물 기준시가 양시점 · 토지 0 · 양도가액 직접 분할/파트 취득가/파트 시가/증여일 기준시가 없음", async () => {
+  it("건물만: selfOwns · 건물 기준시가 양시점 · 토지 0 · 양도가액 직접 분할/파트 취득가/파트 시가 없음", async () => {
     const r = await run([
       asset(1, {
         ...A2,
         // 비소유(토지) 칸·날짜 분리·증여일 기준시가에 남은 값 — 읽지 않는다
         standardPricePerSqmAtTransfer: "9,000,000", transferArea: "300", standardPricePerSqmAtAcq: "9,000,000", acquisitionArea: "300",
-        bgMarketValueLand: "1", bgMarketValueBuilding: "1", bgGiftBuildingStdPriceAtTransfer: "999,000,000",
+        bgMarketValueLand: "1", bgMarketValueBuilding: "1",
         bgActualAcquisitionLand: "5", bgActualAcquisitionBuilding: "5", landTransferPrice: "7", buildingTransferPrice: "7", landAcquisitionPrice: "7", buildingAcquisitionPrice: "7",
       }),
     ]);
@@ -135,6 +135,22 @@ describe("④ 전송 본문 — 본인 몫만 싣는다 (Network request body)",
     for (const k of ["marketValueByPart", "giftBuildingStdPriceAtTransfer", "actualLandAcquisitionPrice", "actualBuildingAcquisitionPrice"]) expect(info[k], k).toBeUndefined();
     for (const k of ["landTransferPrice", "buildingTransferPrice", "landAcquisitionPrice", "buildingAcquisitionPrice", "landStandardPriceAtTransfer", "buildingStandardPriceAtTransfer"]) expect(r.body[k], k).toBeUndefined();
     expect(r.result.determinedTax).toBe(5_244_600);
+  });
+
+  it("건물만: 증여한 건물분 증여일 건물 기준시가(상증법 §61①2호)를 넣으면 증여가액 C로 싣는다 — 2.2억이면 취득가액 8천만 × 1억 / 2.2억 → 5,682,818", async () => {
+    const r = await run([asset(1, { ...A2, bgGiftBuildingStdPriceAtTransfer: "220,000,000" })]);
+    expect(r.issues).toEqual([]);
+    expect(r.body.burdenedGiftInfo).toMatchObject({ giftBuildingStdPriceAtTransfer: 220_000_000, landStdPriceAtTransfer: 0 });
+    expect(r.result.determinedTax).toBe(5_682_818);
+  });
+
+  it("토지만: 증여일 건물 기준시가 칸에 남은 값은 싣지 않는다(건물은 증여재산이 아니다) · 직접 API로 보내면 400", async () => {
+    const r = await run([asset(1, land("1,000,000", "200", "400,000", "200", { bgGiftBuildingStdPriceAtTransfer: "999,000,000" }))]);
+    expect((r.body.burdenedGiftInfo as Record<string, unknown>).giftBuildingStdPriceAtTransfer).toBeUndefined();
+    expect(r.result.determinedTax).toBe(5_244_600);
+    const res = await post({ ...r.body, burdenedGiftInfo: { ...(r.body.burdenedGiftInfo as Record<string, unknown>), giftBuildingStdPriceAtTransfer: 50_000_000 } });
+    expect(res.status).toBe(400);
+    expect(Object.keys(res.json?.error?.fieldErrors ?? {})).toEqual(["burdenedGiftInfo.giftBuildingStdPriceAtTransfer"]);
   });
 
   it("토지만: 건물 칸에 남은 값은 읽지 않는다 · 건물 기준시가 0", async () => {

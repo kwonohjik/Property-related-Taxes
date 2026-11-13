@@ -187,3 +187,18 @@ describe("M — 시가 × 실지: 증여한 부분 양도시 기준시가를 쓰
     );
   });
 });
+
+describe("G — 증여한 건물분 증여일 건물 기준시가(상증법 §61①2호 · `giftBuildingStdPriceAtTransfer`)", () => {
+  /** 증여가액 C = 증여한 건물의 상증법 가액. 상증법 기준시가는 조정률이 붙어 양도세 값과 다르다(국세청 건물 기준시가 계산방법 고시 제5조②·제11조). */
+  it("건물만 · 2.2억 → 취득가액 8천만 × 1억 / 2.2억 = 36,363,636 · 결정세액 5,682,818 (비우면 양도시 건물 기준시가 2억 → 5,244,600)", () => {
+    const r = bldgOnly({ bldT: 200_000_000, bldA: 80_000_000 }, { giftBuildingStdPriceAtTransfer: 220_000_000 });
+    expect(r.splitDetail?.building?.acquisitionPrice).toBe(36_363_636);
+    expect(r.determinedTax).toBe(5_682_818);
+    expect(bldgOnly({ bldT: 200_000_000, bldA: 80_000_000 }).determinedTax).toBe(5_244_600);
+  });
+  it("토지만 · 증여일 건물 기준시가를 보내면 던진다(건물은 증여재산이 아니다)", () => {
+    expect(() => run({ selfOwns: "land_only", burdenedGiftInfo: info({ landT: 200_000_000, bldT: 0, landA: 80_000_000, bldA: 0 }, { giftBuildingStdPriceAtTransfer: 50_000_000 }) })).toThrow(
+      /증여일 건물 기준시가/,
+    );
+  });
+});

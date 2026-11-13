@@ -56,6 +56,12 @@ export const GIFT_STD_PRICE_FIELD: Partial<
   },
 };
 
+/** 건물만 증여(소유자 분리 · `bgOwnerSplitGiftBuildingStdOpen`) — 증여한 건물분만. 부수토지는 본인 소유가 아니라 증여재산이 아니다. */
+export const OWNER_SPLIT_GIFT_STD_FIELD = {
+  label: "증여한 건물분의 증여일 건물 기준시가",
+  hint: "건물분만 입력하세요(상증법 §61①2호 — 부수토지 제외). 상속·증여용 기준시가는 조정률이 붙어 양도세용과 다를 수 있습니다. 비우면 양도시 건물 기준시가로 계산합니다.",
+} as const;
+
 // Phase 3: 증여자-수증자 관계 (상증법 §53 증여재산공제)
 // 주의: enum 값 의미
 //   lineal_descendant       = 수증자가 직계비속(성년) — 증여자가 직계비속(자녀→부모 방향) (§53③)

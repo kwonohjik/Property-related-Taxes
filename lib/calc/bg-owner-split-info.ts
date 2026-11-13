@@ -11,7 +11,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { parseAmount, parseDecimal } from "@/lib/calc/number-parse";
-import { bgOwnerSplitActive, bgOwnerSplitOwnedPart, bgOwnerSplitTransferStdNeeded } from "./bg-owner-split-scope";
+import { bgOwnerSplitActive, bgOwnerSplitGiftBuildingStdOpen, bgOwnerSplitOwnedPart, bgOwnerSplitTransferStdNeeded } from "./bg-owner-split-scope";
 import { calcLandStdPriceAtAcq, resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 
 type StdPair = { land: number; building: number };
@@ -53,7 +53,8 @@ export interface BgOwnerSplitInfoPatch {
  * ④ info의 본인 몫 값 — 범위 안(`bgOwnerSplitActive`)일 때만 덮는다. 단건·다건이 `buildBurdenedGiftInfo`를 거쳐 같은 값을 쓴다.
  *  · 기준시가 4칸: 증여한 부분만, 비소유 파트 0.
  *  · 실지취득가: 총액 칸(`bgActualAcquisitionTotal`)이 증여한 부분의 실지취득가액이다 — 토지·건물 파트 칸에 남은 값은 싣지 않는다.
- *  · 증여일 현재 건물 기준시가(`giftBuildingStdPriceAtTransfer`): 소유자 분리에서 본인분인지 결합 공시가격인지 확인하지 못했다(계획서 V-U1) — 싣지 않는다(⑤도 칸을 숨긴다).
+ *  · 증여일 현재 건물 기준시가(`giftBuildingStdPriceAtTransfer`): 건물만 증여는 ⑤가 「증여한 건물분」 칸을 연다(`bgOwnerSplitGiftBuildingStdOpen` · 상증법 §61①2호 ·
+ *    부수토지 제외) — 기본 info 값을 그대로 둔다(빈칸이면 undefined → 엔진이 양도시 건물 기준시가로 계산). 토지만 증여는 싣지 않는다(엔진 계약이 막는다).
  *  · 시가 모드: `marketValueAtTransfer` = 증여한 부분 시가. 비어 있으면 총액 칸으로 대신하지 않는다(⑧이 막는다).
  *  · 채무 확인(`bgOwnerSplitDebtConfirmed`) → `ownerSplitDebtConfirmed` — 엔진 계약·⑫가 `true`를 요구한다(⑧과 같은 칸).
  */
@@ -70,7 +71,7 @@ export function bgOwnerSplitInfoPatch(asset: AssetForm): BgOwnerSplitInfoPatch {
     actualLandAcquisitionPrice: undefined,
     actualBuildingAcquisitionPrice: undefined,
     marketValueByPart: undefined,
-    giftBuildingStdPriceAtTransfer: undefined,
+    ...(bgOwnerSplitGiftBuildingStdOpen(asset) ? {} : { giftBuildingStdPriceAtTransfer: undefined }),
     ownerSplitDebtConfirmed: asset.bgOwnerSplitDebtConfirmed === true,
     ...(asset.bgValuationMode === "sangjeungbeop_market" ? { marketValueAtTransfer: parseAmount(asset.bgMarketValueOwnedPart) || undefined } : {}),
   };

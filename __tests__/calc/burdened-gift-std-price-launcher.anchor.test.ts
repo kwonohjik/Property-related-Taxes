@@ -67,6 +67,14 @@ describe("A-7 general_building — 건물분 단독(부수토지 인자 무시)"
   });
 });
 
+describe("A-8b building × 건물만 증여(소유자 분리) — 건물분 단독(부수토지는 증여재산 아님)", () => {
+  it("토지를 더하지 않는다 · 부수토지 안내 없음", () => {
+    const spec = bgGiftStdPriceLauncherSpec(make({ assetKind: "building" }), { ownerSplitBuilding: true });
+    expect(spec!.compose(BUILDING_STD, LAND_STD)).toBe(BUILDING_STD);
+    expect(spec!.needsAppurtenantLand).toBe(false);
+  });
+});
+
 describe("A-8 building — 건물 + 부수토지 합산", () => {
   it("두 값을 더한다", () => {
     const spec = bgGiftStdPriceLauncherSpec(make({ assetKind: "building" }));
