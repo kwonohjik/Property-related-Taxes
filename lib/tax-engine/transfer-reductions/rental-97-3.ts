@@ -33,6 +33,7 @@
  */
 
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
+import { RENTAL_97_3_PERIOD } from "../legal-codes/transfer-rental-housing";
 import { checkReductionPeriod } from "./period-check";
 import { resolveRental973ProrationEra } from "../data/rental-97-3-proration-era";
 import { resolveShortTermConversion, toIsoDay } from "./rental-97-short-term-conversion";
@@ -45,6 +46,8 @@ import {
   validateRentIncrease,
   validateRentIncreaseInterval,
   rental97EffectiveStart,
+  inheritanceDatesInvalid97,
+  mergedRentalYears97,
   rentViolationsFromRentalStart,
   rentIntervalViolationsFromRuleDate,
   DEFAULT_JEONSE_CONVERSION_RATE,
@@ -172,10 +175,41 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
       legalBasis,
     });
   }
+  /**
+   * 2-0′) 상속받은 임대주택 — 조특령 §97의3④ → §97⑤3호 피상속인 임대기간 합산 (V-14 · `inheritance973` 타입 주석).
+   * 날짜 순서가 어긋나면 합산하지 않는다(§97의4·§97의5와 같은 조건). 단기→장기 변경신고와는 함께 쓸 수 없다(Q-2) —
+   * 누구의 단기 기간을 어느 날부터 역산할지(령 ④ 후단·민특령 §34①3호) 정할 근거가 없다.
+   */
+  const inh = input.inheritance973;
+  const inhInvalid = inh !== undefined && inheritanceDatesInvalid97(inh, input.transferDate);
+  if (inhInvalid) {
+    reasons.push({
+      code: "INVALID_INHERITANCE_DATES",
+      message:
+        "피상속인의 임대개시일·등록등일은 상속개시일보다 앞서고, 상속개시일은 양도일 이전이어야 합니다 (조특령 §97의3④ → §97⑤3호 — 피상속인 임대기간 합산).",
+      legalBasis: RENTAL_97_3_PERIOD.PERIOD_CALC,
+    });
+  }
+  if (inh !== undefined && conv !== undefined) {
+    reasons.push({
+      code: "INHERITANCE_WITH_SHORT_TERM_CONVERSION",
+      message:
+        "피상속인 임대기간 합산(조특령 §97⑤3호)과 단기→장기 변경신고 주택의 임대개시 의제(조특령 §97의3④ 후단)는 함께 계산하지 않습니다 — " +
+        "누구의 단기 임대기간을 어느 날부터 산입할지 정한 규정·해석이 없습니다. 합산을 끄면 상속인 기간만으로 계산합니다.",
+      legalBasis: RENTAL_97_3_PERIOD.PERIOD_CALC,
+    });
+  }
+  /** 합산에 쓸 상속 입력 — 날짜가 어긋나거나 변경신고와 겹치면 합산하지 않는다(위 사유로 이미 부적격) */
+  const mergeInh = inh && !inhInvalid && conv === undefined ? inh : undefined;
+  /** 피상속인 의제 임대개시일 — 임대개시일·장기일반·공공지원 등록등일 중 늦은 날(령 ④ 전단과 같은 규칙) */
+  const decedentStart = mergeInh
+    ? new Date(Math.max(mergeInh.decedentRentalStartDate.getTime(), mergeInh.decedentRegistrationDate.getTime()))
+    : undefined;
+
   // 의제 개시일 — 변경신고 주택이면 단기 임대기간 산입을 반영한 날(Q-4·Q-5), 아니면 ④ 전단(임대일·등록일·사업자등록일 중 늦은 날)
   const deemedStart = conversion?.deemedStartDate ?? rental97EffectiveStart(input);
-  // 임대료 증액 판정 기산 — 변경신고 주택은 장기 변경 수리일(Q-7), 아니면 의제 개시일
-  const rentCheckStart = conversion?.rentCheckStartDate ?? rental97EffectiveStart(input);
+  // 임대료 증액 판정 기산 — 상속 합산이면 피상속인 의제 개시일(V-14 Q-4), 변경신고 주택은 장기 변경 수리일(Q-7), 아니면 의제 개시일
+  const rentCheckStart = decedentStart ?? conversion?.rentCheckStartDate ?? rental97EffectiveStart(input);
   // 장기일반민간임대주택등 「등록」일 — 등록 시한·건설한정·8년 경과규정의 축. 변경신고 주택은 수리일이다.
   const longRegistrationDate = conv?.acceptedDate ?? input.registrationDate;
 
@@ -266,6 +300,8 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
   //    · 등록 ~2022.12.31: 8년↑ 50% / 10년↑ 70%
   //    · 등록 2023.1.1~  : 10년↑ 70%만 (8년 유형 폐지)
   let eligibleRentalYears = 0;
+  /** [echo] 상속 합산 구간 — 결과 카드 표시용(V-14) */
+  let rentalPeriod973: { decedent: { start: string; end: string }; heir: { start: string; end: string } } | undefined;
   let overrideRate = RENTAL_97_3_OVERRIDE_RATE; // 10년 70% 기본
   if (input.rentalStartDate) {
     /**
@@ -314,9 +350,25 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
       }
     }
 
-    eligibleRentalYears = periodEnd
-      ? calculateEffectiveRentalPeriod(effectiveStart, periodEnd, input.vacancyPeriods ?? [], RENTAL_VACANCY_GRACE_MONTHS_97)
-      : 0;
+    if (periodEnd && mergeInh) {
+      // 조특령 §97⑤3호 — 피상속인 분 + 상속인 분 일수 통산(V-14 Q-0 A · 간격은 세지 않는다)
+      const merged = mergedRentalYears97(
+        effectiveStart,
+        periodEnd,
+        mergeInh,
+        input.vacancyPeriods ?? [],
+        RENTAL_VACANCY_GRACE_MONTHS_97,
+      );
+      eligibleRentalYears = merged.years;
+      rentalPeriod973 = {
+        decedent: { start: toIsoDay(merged.decedentStart), end: toIsoDay(merged.decedentEnd) },
+        heir: { start: toIsoDay(merged.heirStart), end: toIsoDay(periodEnd) },
+      };
+    } else {
+      eligibleRentalYears = periodEnd
+        ? calculateEffectiveRentalPeriod(effectiveStart, periodEnd, input.vacancyPeriods ?? [], RENTAL_VACANCY_GRACE_MONTHS_97)
+        : 0;
+    }
     const isPre2023Registration =
       longRegistrationDate !== undefined &&
       longRegistrationDate.getTime() < RENTAL_97_3_PRE_2023_REG_CUTOFF.getTime();
@@ -328,11 +380,16 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
     } else if (isPre2023Registration && eligibleRentalYears >= RENTAL_97_3_MANDATORY_YEARS_8YEAR) {
       overrideRate = RENTAL_97_3_OVERRIDE_RATE_8YEAR; // 2022.12.31 이전 등록 + 8~10년 → 50%
     } else {
+      const mergeNote = rentalPeriod973
+        ? ` 피상속인 임대기간(${rentalPeriod973.decedent.start}~${rentalPeriod973.decedent.end})을 합산했습니다(조특령 §97⑤3호).`
+        : "";
       reasons.push({
         code: "RENTAL_PERIOD_SHORT",
-        message: isPre2023Registration
-          ? `임대기간 ${eligibleRentalYears}년 — 2022.12.31 이전 등록분은 8년 이상(50%) 또는 10년 이상(70%) 임대 요건 미달 (§97의3①1호).`
-          : `임대기간 ${eligibleRentalYears}년 — 2023.1.1 이후 등록분은 10년 이상 계속 임대 요건 미달 (§97의3①1호). 8년 50% 경과규정은 2022.12.31 이전 등록분에 한합니다.`,
+        message:
+          (isPre2023Registration
+            ? `임대기간 ${eligibleRentalYears}년 — 2022.12.31 이전 등록분은 8년 이상(50%) 또는 10년 이상(70%) 임대 요건 미달 (§97의3①1호).`
+            : `임대기간 ${eligibleRentalYears}년 — 2023.1.1 이후 등록분은 10년 이상 계속 임대 요건 미달 (§97의3①1호). 8년 50% 경과규정은 2022.12.31 이전 등록분에 한합니다.`) +
+          mergeNote,
         legalBasis,
       });
     }
@@ -342,7 +399,8 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
   //    양도일 구간(#4): 2020.12.31 이전 양도는 법 ①이 「양도함으로써 발생하는 소득」이라 안분하지 않는다.
   const prorationEra = resolveRental973ProrationEra(input.transferDate);
   // 조특령 §97의3⑤ C 「실제 임대기간의 개시일」 = ④가 의제한 개시일(#2 — 가정 A-2). 임대기간 판정(:6)과 같은 축.
-  const effectiveRentalStartDate = deemedStart;
+  // 상속 합산이면 합산된 임대기간의 개시일 = 피상속인 의제 개시일(V-14 Q-3 Y) — 취득일(상속개시일) 전이라 C = E로 계산된다.
+  const effectiveRentalStartDate = decedentStart ?? deemedStart;
   let rentalGainRatio = 1;
   let rentalGainFraction: RentalGainFraction | undefined;
   if (prorationEra !== "whole_gain" && effectiveRentalStartDate && input.acquisitionDate) {
@@ -360,9 +418,11 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
     if (fraction === null) {
       reasons.push({
         code: "MISSING_PRORATION_PRICES",
-        message:
-          "임대개시일(임대사업자 등록일·세무서 사업자등록일·실제 임대일 중 늦은 날)이 취득일보다 늦거나 양도 전에 임대를 종료해 " +
-          "임대기간 분 양도차익 안분(조특령 §97의3⑤)이 필요하지만 취득시·임대개시시·양도시 기준시가가 모두 입력되지 않았습니다. 자동 안분은 수행하지 않습니다.",
+        message: decedentStart
+          ? "양도 전에 임대를 종료해 임대기간 분 양도차익 안분(조특령 §97의3⑤)이 필요하지만 취득시·임대 종료시·양도시 기준시가가 모두 입력되지 않았습니다. " +
+            "피상속인 임대기간을 합산하면 임대기간 개시일이 취득일(상속개시일) 전이라 개시일 기준시가 대신 취득시 기준시가를 씁니다. 자동 안분은 수행하지 않습니다."
+          : "임대개시일(임대사업자 등록일·세무서 사업자등록일·실제 임대일 중 늦은 날)이 취득일보다 늦거나 양도 전에 임대를 종료해 " +
+            "임대기간 분 양도차익 안분(조특령 §97의3⑤)이 필요하지만 취득시·임대개시시·양도시 기준시가가 모두 입력되지 않았습니다. 자동 안분은 수행하지 않습니다.",
         legalBasis: "조특령 §97의3⑤",
       });
     } else {
@@ -391,6 +451,7 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
     rentalGainFraction,
     eligibleRentalYears,
     prorationEra,
+    ...(rentalPeriod973 ? { rentalPeriod973 } : {}),
     ...(conversion?.deemedStartDate
       ? {
           shortTermConversionDetail: {

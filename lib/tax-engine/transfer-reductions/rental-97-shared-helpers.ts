@@ -136,6 +136,49 @@ export function calculateEffectiveRentalDays(
   return Math.max(0, totalDays - deductDays);
 }
 
+/** 조특령 §97⑤3호 합산 입력 — `Rental97EvaluationInput.inheritance974`·`975`·`973`과 같은 모양 */
+export interface Rental97InheritanceDates {
+  inheritanceDate: Date;
+  decedentRegistrationDate: Date;
+  decedentRentalStartDate: Date;
+}
+
+/**
+ * 피상속인 날짜 순서 무효 — 피상속인 임대개시일·등록등일 ≥ 상속개시일 또는 상속개시일 > 양도일.
+ * 어긋나면 피상속인 분이 음수가 되거나 양도일까지 늘어난다. §97의4(`rental-97-4.ts` 1-0)·§97의5(`rental-97-5.ts` 1-0)와
+ * 같은 조건이다 — 그 둘은 인라인 그대로 두었다(V-14 Q-5: 이번에는 §97의3만 이 헬퍼를 쓴다).
+ */
+export function inheritanceDatesInvalid97(inh: Rental97InheritanceDates, transferDate: Date): boolean {
+  return (
+    inh.decedentRentalStartDate.getTime() >= inh.inheritanceDate.getTime() ||
+    inh.decedentRegistrationDate.getTime() >= inh.inheritanceDate.getTime() ||
+    inh.inheritanceDate.getTime() > transferDate.getTime()
+  );
+}
+
+/**
+ * 「통산」 임대기간에 피상속인 분을 합산한다 — 조특령 §97⑤3호(§97의3④·§97의4② 준용).
+ * - 상속인 분 = [max(상속인 의제 개시일, 상속개시일), 종점]
+ * - 피상속인 분 = [max(피상속인 임대개시일, 피상속인 등록등일), min(상속개시일, 종점)]
+ * - 두 구간의 유효 일수(공실 규칙 동일)를 더해 피상속인 개시일 기준 만 연수로 바꾼다. 그 사이 간격은 세지 않는다.
+ * `rental-97-4.ts`의 §97의4 인라인 합산과 같은 식이다(V-14 Q-0 A). 날짜 순서 검증은 호출부 몫이다.
+ */
+export function mergedRentalYears97(
+  ownStart: Date,
+  end: Date,
+  inh: Rental97InheritanceDates,
+  vacancyPeriods: Rental97VacancyPeriod[],
+  graceMonths: number,
+): { years: number; heirStart: Date; decedentStart: Date; decedentEnd: Date } {
+  const heirStart = new Date(Math.max(ownStart.getTime(), inh.inheritanceDate.getTime()));
+  const decedentStart = new Date(Math.max(inh.decedentRentalStartDate.getTime(), inh.decedentRegistrationDate.getTime()));
+  const decedentEnd = new Date(Math.min(inh.inheritanceDate.getTime(), end.getTime()));
+  const days =
+    calculateEffectiveRentalDays(heirStart, end, vacancyPeriods, graceMonths) +
+    calculateEffectiveRentalDays(decedentStart, decedentEnd, vacancyPeriods, graceMonths);
+  return { years: differenceInYears(addDays(decedentStart, days), decedentStart), heirStart, decedentStart, decedentEnd };
+}
+
 /**
  * 환산보증금 = 보증금 + (월세 × 12 / 전월세전환율). 원 미만 절사.
  */
