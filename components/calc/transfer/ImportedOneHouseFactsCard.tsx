@@ -23,6 +23,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { OneHouseJudgmentExtraFields } from "@/lib/stores/one-house-extra-fields.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import type { TemporaryTwoHouseDates } from "@/lib/calc/household-house-count";
+import { eraFormWithOriginDates } from "@/lib/calc/temporary-two-house-era-facts";
 import { effectiveProvisoReason, type ProvisoMode } from "@/lib/calc/transfer-tax-api-helpers";
 import { completionDeadlineYearsLabel, regulatedShortenedClauseRefOf } from "@/lib/calc/one-house-era-labels";
 
@@ -160,6 +161,23 @@ function specialsRows(
     push("처분기한 예외 사유 (§155⑱)", f.disposalDelayReason ? DELAY_REASON[f.disposalDelayReason] ?? "선언함" : undefined);
     // 2022. 2. 15. 전 양도분의 요건 — 사유를 골랐고 선언했을 때만 적는다(미선언은 엔진이 적용하지 않는다).
     if (f.disposalDelayReason && f.disposalDelayDisposedByThatMethod) push("사유의 매각 등의 방법으로 양도 (§155⑱)", "예");
+    /**
+     * §155①2호 조정대상지역 사실(OH-01 A2b) — **입력된 것만** 적는다. 신규 필드라 옛 record에는 없다(`?? ""` 대신 falsy 스킵).
+     * ④는 `temporaryTwoHouse`를 만들 때만 이 사실을 싣으므로 이 블록 안에 둔다(2026-11-12 리뷰 C-3 — 종전에는 밖에 있어 ④가 보내지 않는
+     * 사실도 보였다). 계약일은 ④와 같은 leaf(`eraFormWithOriginDates`)로 정한다 — 권리 유래 신규 주택은 행의 권리 취득일이다(C-4).
+     */
+    const REG: Record<string, string> = { yes: "조정대상지역", no: "조정대상지역 아님" };
+    push(`신규 주택 취득 당시 종전 주택 (§155${regulatedClause})`, REG[f.prevHouseRegulatedAtNewAcquisition ?? ""]);
+    push(`신규 주택 취득 당시 신규 주택 (§155${regulatedClause})`, REG[f.newHouseRegulatedAtAcquisition ?? ""]);
+    const era = eraFormWithOriginDates(f, temporaryTwoHouse.newHouseOrigin);
+    push(
+      era === f ? "신규 주택 매매계약·계약금 지급일" : "신규 주택을 취득할 수 있는 권리의 취득일",
+      era.newHouseContractDate || undefined,
+    );
+    push("세대전원 전입일 (§155①2호 가목)", f.newHouseMoveInDate || undefined);
+    if (f.newHouseExistingTenant) {
+      push("기존 임차인 임대차 종료일 (§155①2호 단서)", f.newHouseTenantLeaseEndDate || "미입력");
+    }
   }
   /**
    * 🔑 §154① 단서는 **`temporary_two_house` 맥락일 때만** 적는다. `one_house` 맥락의 같은
@@ -170,18 +188,6 @@ function specialsRows(
     // ④가 싣지 않는 미완 4호는 「적용」으로 적지 않는다.
     const reason = effectiveProvisoReason(provisoMode, f.provisoReason);
     if (!unconfirmedTempTwoHouseProviso4ho(provisoMode, reason, f)) push("§154① 단서 사유", PROVISO_REASON[reason]);
-  }
-  /**
-   * §155①2호 조정대상지역 사실(OH-01 A2b) — 명부 도출 경로에서도 ④가 싣으므로 토글과 무관하게
-   * **입력된 것만** 적는다. 신규 필드라 옛 record에는 없다(`?? ""` 대신 falsy 스킵).
-   */
-  const REG: Record<string, string> = { yes: "조정대상지역", no: "조정대상지역 아님" };
-  push(`신규 주택 취득 당시 종전 주택 (§155${regulatedClause})`, REG[f.prevHouseRegulatedAtNewAcquisition ?? ""]);
-  push(`신규 주택 취득 당시 신규 주택 (§155${regulatedClause})`, REG[f.newHouseRegulatedAtAcquisition ?? ""]);
-  push("신규 주택 매매계약·계약금 지급일", f.newHouseContractDate || undefined);
-  push("세대전원 전입일 (§155①2호 가목)", f.newHouseMoveInDate || undefined);
-  if (f.newHouseExistingTenant) {
-    push("기존 임차인 임대차 종료일 (§155①2호 단서)", f.newHouseTenantLeaseEndDate || "미입력");
   }
   if (f.culturalHeritageHouseSpecial) push("문화유산 주택 보유 (§155⑥1호)", "예");
   if (f.ruralHouseSpecial) push("농어촌주택 보유 (§155⑦)", RURAL_KIND[f.ruralHouseKind] ?? "예");

@@ -27,7 +27,6 @@ import { DateInput } from "@/components/ui/date-input";
 import { Button } from "@/components/ui/button";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { TempTwoHouseRegulatedInputs } from "@/components/calc/transfer/TempTwoHouseRegulatedInputs";
 import { MergeDateSection } from "@/components/calc/transfer/MergeDateSection";

@@ -38,6 +38,8 @@ import { houseRowFactIssues } from "./house-row-fact-issues";
 import { confirmedNoOtherHousesDiverges } from "./household-house-count";
 import { declaredNewHouseOriginIssue } from "./declared-new-house-origin";
 import { deriveCalcTemporaryTwoHouse } from "./transfer-tax-api-body-blocks";
+import { eraFormWithOriginDates } from "./temporary-two-house-era-facts";
+import { temporaryTwoHouseEraIssues } from "./temporary-two-house-era-facts";
 import { sellingHouseOriginIssue } from "./selling-house-origin-scope";
 import { duplicateOwnedUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
 import { houseRowSurchargeAxisIssue } from "./transfer-tax-validate-surcharge-axis";
@@ -141,6 +143,25 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   // §155① 신규 주택으로 도출된 행 — 그 행의 취득 경위를 답하게 한다(④ 전송·⑤ 노출과 같은 도출 `deriveCalcTemporaryTwoHouse`).
   const derivedTempTwoHouse = deriveCalcTemporaryTwoHouse(householdView, householdView.assets?.[0]);
   const newHouseRowId = derivedTempTwoHouse?.newHouseRowId;
+  /*
+   * §155①2호 넘겨받은 사실의 모순(2026-11-12 리뷰 C-6 · 사용자 결정 「오류로 막기」) — 계약일 칸은 판정 메뉴에만 있지만(P6-b) 계산기에서
+   * 명부의 신규 주택 취득일을 고치면 넘겨받은 계약일이 그보다 늦어질 수 있다. ④가 싣는 값(`eraFormWithOriginDates`)으로 판정 메뉴·증여세 경로와
+   * 같은 규칙(`temporaryTwoHouseEraIssues`)을 돌린다 — 그 밖의 칸(임차인 단서·전입)은 이 화면에 없어 보지 않는다(moveInRelevant: false).
+   */
+  if (derivedTempTwoHouse) {
+    const contractError = temporaryTwoHouseEraIssues(eraFormWithOriginDates(form, derivedTempTwoHouse.newHouseOrigin), {
+      newAcquisitionDate: derivedTempTwoHouse.newAcquisitionDate,
+      determined: true,
+      moveInRelevant: false,
+    }).find((x) => x.severity === "error" && x.field === "newHouseContractDate");
+    if (contractError) {
+      const rowIndex = houses.findIndex((h) => h.id === newHouseRowId);
+      const message =
+        `${contractError.message} 신규 주택 취득일(${derivedTempTwoHouse.newAcquisitionDate})이 맞다면 1세대1주택 판정 메뉴에서 ` +
+        "계약일을 고쳐 다시 가져오세요.";
+      issues.push({ step, message: rowIndex >= 0 ? fieldError(`houses.${rowIndex}`, message) : message });
+    }
+  }
   // 결정 #43-3 — 신규 주택 취득일을 직접 선언한 경로(명부 행 없음)의 경위 답이 앞뒤가 맞지 않으면 막는다. 미답은 막지 않는다(not_collected).
   //   게이트는 ⑤ 마운트(`Step4`: 섹션 노출 + `source === "declared"`)와 같다 — 칸이 없는 화면에서 막지 않는다.
   if (

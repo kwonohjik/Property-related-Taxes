@@ -19,6 +19,8 @@ import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exc
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { resolveTempTwoHouseNewHouseSigunguCode } from "./temp-two-house-new-house-sigungu";
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
+import { effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
+import { judgmentProvisoMode } from "./one-house-judgment-section-scope";
 
 /** §155① 신규 주택 — 명부에서 도출(④ 변환과 같은 정본 `resolveTemporaryTwoHouse`). */
 export function judgmentDerivedNewHouse(form: OneHouseJudgmentFormData): TemporaryTwoHouseDates | undefined {
@@ -51,7 +53,9 @@ export function judgmentTempTwoHouseVerdict(
     sellingAcquisitionDate: primary?.acquisitionDate,
     newHouseAcquisitionDate: derivedNewHouse?.newAcquisitionDate ?? "",
     transferDate: form.transferDate,
-    provisoReason: form.provisoReason,
+    // ④(`one-house-exemption-api.ts`)·⑧과 같은 유효 사유 — 단서 카드를 열지 않는 맥락(mode null)이면 ④가 사유를 버리므로 카드도
+    //   1년 요건을 면제하지 않는다(2026-11-12 리뷰 C-5).
+    provisoReason: effectiveProvisoReason(judgmentProvisoMode(form), form.provisoReason),
     provisoDepartureDate: form.provisoDepartureDate,
     provisoExpropriationDate: form.provisoExpropriationDate,
     provisoBusinessApprovalDate: form.provisoBusinessApprovalDate,
