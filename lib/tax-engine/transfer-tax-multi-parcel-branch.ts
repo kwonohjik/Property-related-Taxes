@@ -118,7 +118,15 @@ export function handleMultiParcelBranch(
   const mpTaxableGain = mpResult.totalTransferGain;
   const mpLtd = mpResult.totalLongTermHoldingDeduction;
   const mpTransferIncome = mpResult.totalTransferIncome;
-  steps.push({ label: "양도차익 합계", formula: "필지별 합산", amount: mpTaxableGain, legalBasis: TRANSFER.TRANSFER_GAIN });
+  // 명세서 «전체 양도차익» 산식이 이 step을 고른다 — 필지별 값을 그대로 적어 문구만으로 합계를 검산하게 한다(음수 필지는 뺀다).
+  const mpGainFormula = mpResult.parcelResults
+    .map((pr, pi) => {
+      const term = `필지 ${pi + 1} ${Math.abs(pr.transferGain).toLocaleString()}`;
+      if (pi === 0) return pr.transferGain < 0 ? `필지 1 -${Math.abs(pr.transferGain).toLocaleString()}` : term;
+      return pr.transferGain < 0 ? ` - ${term}` : ` + ${term}`;
+    })
+    .join("");
+  steps.push({ label: "양도차익 합계", formula: mpGainFormula, amount: mpTaxableGain, legalBasis: TRANSFER.TRANSFER_GAIN });
   steps.push({ label: "장기보유특별공제 합계", formula: "필지별 합산", amount: mpLtd, legalBasis: TRANSFER.LONG_TERM_DEDUCTION, sub: true });
   steps.push({ label: "양도소득금액 합계", formula: `${mpTaxableGain.toLocaleString()} - ${mpLtd.toLocaleString()}`, amount: mpTransferIncome });
 
