@@ -22,6 +22,8 @@ import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { asksBusinessRegistrationDate } from "@/lib/calc/comprehensive-api";
 import { toRegistrationType } from "@/lib/calc/comprehensive-api";
+import { asksThirtyPlusUnits } from "@/lib/calc/comprehensive-api";
+import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
 import { RentalExclusion8NaFields } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
 import { RentalPeriodApplicationDateField } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
 import { RentalExclusion6hoFields } from "@/components/calc/comprehensive/RentalExclusion6hoFields";
@@ -92,6 +94,7 @@ function RentalExclusionDetail({
   const [showRevoke, setShowRevoke] = useState(
     property.registrationRevokedDate !== "",
   );
+  const assessmentYear = useComprehensiveWizardStore((s) => s.formData.assessmentYear);
 
   return (
     <div className="space-y-4">
@@ -150,16 +153,8 @@ function RentalExclusionDetail({
         />
       )}
 
-      {/* 30호 이상 여부 — 건설·매입 임대(§3①1·2·7·8호) 선택 시만 표시 */}
-      {[
-        "private_construction",
-        "public_construction",
-        "public_support_construction",
-        "private_purchase_long",
-        "private_purchase_short",
-        "public_purchase",
-        "public_support_purchase",
-      ].includes(property.rentalRegistrationType) && (
+      {/* 30호 이상 여부 — 건설·매입 임대(§3①1·2·7·8호) · 2025 과세연도부터(그 전엔 30호 구간 없음 — ④와 같은 술어) */}
+      {asksThirtyPlusUnits(property.rentalRegistrationType, assessmentYear) && (
         <ToggleCard
           tone="sky"
           title="30호 이상 임대"
