@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
 
 /**
  * ⑫ §155① 일시적 2주택 — `temporaryTwoHouse` 하위 스키마.
@@ -62,3 +63,44 @@ export const temporaryTwoHouseSchema = z.object({
     })
     .optional(),
 });
+
+/**
+ * ⑩ `temporaryTwoHouse` 교차 검증 — 직접 API에서만 닿는 모순 입력(2026-11-12 리뷰 A-3 · E-4=J-8).
+ * 단건·다건·판정 메뉴가 `addPropertyRefines`로 함께 부른다.
+ *
+ * 1. 신규 주택 취득일 ≥ 양도일 → 400. 명부 경로는 양도일 전(같은 날 제외)에 취득한 행만 신규 주택 후보로 본다(`isOwnedAtTransfer`) —
+ *    엔진은 이 순서를 보지 않아 양도일 뒤에 취득한 「신규 주택」으로도 §155① 비과세가 났다(실측 192,159,000 → 0).
+ * 2. 주택 수 2 이상 + §154① 단서 사유가 일시적 2주택에서 받는 사유(`TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS`) 밖(나·다목) → 400.
+ *    ④ `effectiveProvisoReason`이 같은 집합으로 지워 화면 경로는 싣지 않는다. 직접 API로 오면 비과세는 받지 않는데
+ *    중과 배제(§167의10①15호)는 §154① 충족으로 보아 두 판정이 엇갈렸다(실측). 주택 수 1은 ④도 지우지 않는 1주택 모드라 막지 않는다.
+ *
+ * 계약일 > 신규 취득일 · 임차 종료일 ≤ 신규 취득일(A-2)은 여기서 막지 않는다 — ⑧은 칸이 보일 때만 막고 ④는 칸이 숨어도 싣는다.
+ * 여기서 막으면 화면 통과 ↔ API 400 모순이 된다. 엔진은 두 값을 무시한다(실측 세액 불변).
+ */
+export function refineTemporaryTwoHouseCross(
+  data: {
+    transferDate: string;
+    householdHousingCount?: number;
+    temporaryTwoHouse?: { newAcquisitionDate: string } | null;
+    oneHouseExemptionProviso?: { reason?: string } | null;
+  },
+  ctx: z.RefinementCtx,
+) {
+  const tt = data.temporaryTwoHouse;
+  if (!tt) return;
+  if (tt.newAcquisitionDate >= data.transferDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["temporaryTwoHouse", "newAcquisitionDate"],
+      message: "신규 주택 취득일은 양도일보다 앞서야 합니다 — 양도일 이후(같은 날 포함)에 취득한 주택은 일시적 2주택의 신규 주택이 아닙니다",
+    });
+  }
+  const reason = data.oneHouseExemptionProviso?.reason;
+  if (reason && (data.householdHousingCount ?? 0) >= 2 && !TEMP_TWO_HOUSE_ACCEPTED_PROVISO_REASONS.has(reason)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["oneHouseExemptionProviso", "reason"],
+      message: "일시적 2주택(temporaryTwoHouse)에는 이 §154① 단서 사유를 적용하지 않습니다 — 출국일 현재 1주택 요건(나·다목)은 2주택 세대와 맞지 않습니다",
+    });
+  }
+}

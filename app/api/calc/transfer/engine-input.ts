@@ -132,8 +132,8 @@ export function buildTransferEngineInput(
     isOneHousehold: data.isOneHousehold,
     temporaryTwoHouse: data.temporaryTwoHouse
       ? {
-          previousAcquisitionDate: new Date(data.temporaryTwoHouse.previousAcquisitionDate),
-          newAcquisitionDate: new Date(data.temporaryTwoHouse.newAcquisitionDate),
+          previousAcquisitionDate: toDate(data.temporaryTwoHouse.previousAcquisitionDate, "temporaryTwoHouse.previousAcquisitionDate"),
+          newAcquisitionDate: toDate(data.temporaryTwoHouse.newAcquisitionDate, "temporaryTwoHouse.newAcquisitionDate"),
           // ⑭ §155⑯·⑱ — 날짜가 아닌 boolean·enum이라 변환 없이 그대로 통과시킨다.
           //    여기서 명시 전달하지 않으면 침묵 strip되어 처분기한 5년·기한 예외가 미도달한다.
           publicInstitutionRelocation: data.temporaryTwoHouse.publicInstitutionRelocation,

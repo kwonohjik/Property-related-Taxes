@@ -522,6 +522,9 @@ export function resolveTemporaryTwoHouse(
 
   const fallback = (): TemporaryTwoHouseDates | undefined => {
     if (!(args.declaredSpecial && prev && args.declaredNewHouseDate)) return undefined;
+    // 명부 경로와 같은 규칙 — 양도일 이후(같은 날 포함)에 취득한 주택은 신규 주택이 아니다(`isOwnedAtTransfer`).
+    //   ⑫ `refineTemporaryTwoHouseCross`가 같은 순서를 400으로 막는다 — 여기서 거르지 않으면 화면 통과 ↔ API 400이 된다(리뷰 A-3).
+    if (!isOwnedAtTransfer(args.declaredNewHouseDate, args.transferDate)) return undefined;
     const origin = args.declaredNewHouseOrigin ?? { kind: "not_collected" as const };
     return {
       previousAcquisitionDate: prev,
