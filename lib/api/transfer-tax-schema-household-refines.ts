@@ -11,6 +11,7 @@ import { z } from "zod";
 import { directResidenceMonthsOverflowError } from "@/lib/calc/residence-interval-validate";
 import { residenceStartWithMerge } from "@/lib/calc/self-owns-scope";
 import { refineBgOwnerSplit } from "./transfer-tax-schema-bg-owner-split";
+import { refineBgGiftBuildingStd } from "./transfer-tax-schema-bg-gift-std";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx): Issue => (path, message) =>
@@ -174,6 +175,8 @@ export function refineHouseholdRequiredInputs(data: HouseholdRefineInput, ctx: z
   if (ncMsg) issue(["selfOwns"], ncMsg);
   // 부담부증여 × 소유자 분리 — 범위 밖만 400 + 본인 몫 계약(⑧ 같은 leaf · `bg-owner-split-scope.ts`). 단건·다건 공용 진입점이다.
   refineBgOwnerSplit(data, ctx);
+  // 부담부증여 × 건물·일반건물 기준시가 평가 — 증여일 건물 기준시가 필수(⑧ 같은 술어 · `bg-gift-building-std-required.ts`).
+  refineBgGiftBuildingStd(data, ctx);
 
   const lohMsg = landOnlyHouseholdIssue(data);
   if (lohMsg) issue(["buildingOwnerSameHousehold"], lohMsg);

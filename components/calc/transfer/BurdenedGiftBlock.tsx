@@ -72,6 +72,8 @@ import { bgActualFieldSec163_9Cause } from "@/lib/calc/bg-share-own-acquisition"
 import { sec163_9Hint } from "@/lib/calc/bg-share-own-acquisition";
 import { bgSec163_9ProvisoKind } from "@/lib/calc/bg-163-9-proviso";
 import { BgSec163_9ProvisoSection } from "./BgSec163_9ProvisoSection";
+import { bgGiftBuildingStdRequired } from "@/lib/calc/bg-gift-building-std-required";
+import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 
 interface Props {
   asset: AssetForm;
@@ -630,11 +632,13 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         <FieldCard
           label={ownerSplitGiftBuilding ? OWNER_SPLIT_GIFT_STD_FIELD.label : (GIFT_STD_PRICE_FIELD[asset.assetKind]?.label ?? "증여일 현재 기준시가")}
           hint={ownerSplitGiftBuilding ? OWNER_SPLIT_GIFT_STD_FIELD.hint : GIFT_STD_PRICE_FIELD[asset.assetKind]?.hint}
+          required={bgGiftBuildingStdRequired({ kind: asset.assetKind, transferType: asset.transferType, valuationMode: asset.bgValuationMode, selfOwns: effectiveSelfOwns(asset) })}
         >
           <CurrencyInput
             label=""
             hideUnit
             data-testid="bg-gift-building-std"
+            data-field="bgGiftBuildingStdPriceAtTransfer"
             value={asset.bgGiftBuildingStdPriceAtTransfer}
             onChange={(v) => onChange({ bgGiftBuildingStdPriceAtTransfer: v })}
           />

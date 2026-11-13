@@ -48,7 +48,7 @@ export interface BurdenedGiftFormSlice {
   bgMarketValueAtAcquisition: string;
   /**
    * 증여재산 평가용 양도시 건물 기준시가 (상증법 §61 — 층별 가감율 적용).
-   * 양도세용 양도시 건물기준시가와 분리. 미입력 시 양도세용 값 fallback (양도세=증여세 가정).
+   * 양도세용 양도시 건물기준시가와 분리. 건물·일반건물 × 기준시가 평가는 필수(⑧·⑫ `bg-gift-building-std-required.ts`) — 그 밖은 미입력 시 양도세용 값 fallback.
    * 산식: 채무비율 분모 C = 토지 양도시 기준시가 + 본 필드.
    */
   bgGiftBuildingStdPriceAtTransfer: string;

@@ -37,7 +37,7 @@ beforeEach(() => {
 const BASE: Partial<AssetForm> = {
   assetKind: "general_building", addressJibun: "서울 강남구 역삼동 1",
   gbAcqLandPricePerSqm: "1000000", gbAcqBuildingValue: "150000000", gbLandArea: "205", gbBuildingArea: "300", gbBuildingFootprintArea: "135",
-  gbZoneType: "general_residential", gbTransferLandPricePerSqm: "5514000", gbTransferBuildingValue: "259072400", actualSalePrice: "1600000000",
+  gbZoneType: "general_residential", gbTransferLandPricePerSqm: "5514000", gbTransferBuildingValue: "259072400", bgGiftBuildingStdPriceAtTransfer: "259072400", actualSalePrice: "1600000000",
   acquisitionCause: "purchase", gbBuildingAcquisitionCause: "purchase", hasSeperateLandAcquisitionDate: false,
   acquisitionDate: "2010-05-01", useEstimatedAcquisition: false,
 };
@@ -64,7 +64,7 @@ const asset = (id: number, t: string, r: string) =>
 const scaled = (id: number, t: string, k: number) =>
   Object.assign({ ...makeDefaultAsset(id) }, BASE, base, MK[t] as unknown as Partial<AssetForm>, {
     gbLandArea: String(205 * k), gbBuildingArea: String(300 * k), gbBuildingFootprintArea: String(135 * k),
-    gbAcqBuildingValue: String(150000000 * k), gbTransferBuildingValue: String(259072400 * k),
+    gbAcqBuildingValue: String(150000000 * k), gbTransferBuildingValue: String(259072400 * k), bgGiftBuildingStdPriceAtTransfer: String(259072400 * k),
     bgActualAcquisitionLand: String(205000000 * k), bgActualAcquisitionBuilding: String(150000000 * k),
     bgCoDonorLandStdPriceAtAcq: (10_000_000 * k).toLocaleString("en-US"), bgCoDonorBuildingStdPriceAtAcq: (40_000_000 * k).toLocaleString("en-US"),
     ...(MK[t].bgMarketValueAtTransfer ? { bgMarketValueAtTransfer: (1_000_000_000 * k).toLocaleString("en-US") } : {}),

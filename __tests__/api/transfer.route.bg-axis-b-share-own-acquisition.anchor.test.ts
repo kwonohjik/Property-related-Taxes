@@ -35,7 +35,7 @@ const COMMON = { addressJibun: "제주특별자치도 강남구 테스트동 1-1
   bgValuationMode: "sangjeungbeop_market", bgLendingDepositTotal: "0", bgMortgageDebtAmount: "0", bgMortgageSetAmount: "0", bgAcquisitionMethod: "actual",
   assetKind: "general_building", bgMarketValueAtTransfer: "1000000000", standardPriceAtTransfer: "800000000", standardPriceAtAcq: "400000000",
   gbAcqLandPricePerSqm: "2000000", gbAcqBuildingValue: "200000000", gbLandArea: "100", gbBuildingArea: "300", gbBuildingFootprintArea: "135", gbZoneType: "general_residential",
-  gbTransferLandPricePerSqm: "6000000", gbTransferBuildingValue: "200000000", actualSalePrice: "1600000000", gbBuildingAcquisitionCause: "purchase",
+  gbTransferLandPricePerSqm: "6000000", gbTransferBuildingValue: "200000000", bgGiftBuildingStdPriceAtTransfer: "200000000", actualSalePrice: "1600000000", gbBuildingAcquisitionCause: "purchase",
   hasSeperateLandAcquisitionDate: false, landAcquisitionDate: "2015-01-01", useEstimatedAcquisition: false, bgActualAcquisitionTotal: "",
   bgActualAcquisitionLand: "100000000", bgActualAcquisitionBuilding: "150000000" };
 const card = (id: string, ...over: Record<string, unknown>[]) => Object.assign({ ...makeDefaultAsset(1) }, x({ assetId: id, ...COMMON }), ...over.map(x)) as AssetForm;

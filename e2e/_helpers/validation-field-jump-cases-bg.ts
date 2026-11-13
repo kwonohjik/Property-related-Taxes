@@ -49,7 +49,7 @@ const carry = (patch: Record<string, unknown> = {}) =>
 const ownerBldg = (patch: Record<string, unknown> = {}) =>
   bg({
     assetKind: "building", selfOwns: "building_only", hasSeperateLandAcquisitionDate: true,
-    buildingStandardPriceAtTransfer: "300000000", buildingStandardPriceAtAcq: "100000000", bgOwnerSplitDebtConfirmed: true,
+    buildingStandardPriceAtTransfer: "300000000", buildingStandardPriceAtAcq: "100000000", bgGiftBuildingStdPriceAtTransfer: "300000000", bgOwnerSplitDebtConfirmed: true,
     ...patch,
   });
 const priorRow = (patch: Record<string, unknown>) => ({ giftDate: "2020-01-01", giftAmount: "100000000", giftTaxPaid: "", computedTax: "5000000", giftTaxBase: "50000000", ...patch });
@@ -150,11 +150,11 @@ export const BG_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "bg: 증여자-수증자 관계", field: "bgDonorRelation", step: 0, assetIndex: A, message: /^자산: 부담부증여 — 증여자-수증자 관계/, form: bg({ bgDonorRelation: "" }) },
   {
     name: "bg: 일반건물 취득시 토지 공시지가", field: "gbAcqLandPricePerSqm", step: 0, assetIndex: A, message: /^자산: 부담부증여 — 취득시 토지 ㎡당 공시지가/,
-    form: bg({ assetKind: "general_building", gbAcqLandPricePerSqm: "", gbAcqBuildingValue: "50000000" }),
+    form: bg({ assetKind: "general_building", gbAcqLandPricePerSqm: "", gbAcqBuildingValue: "50000000", bgGiftBuildingStdPriceAtTransfer: "300000000" }),
   },
   {
     name: "bg: 일반건물 취득시 건물 기준시가", field: "gbAcqBuildingValue", step: 0, assetIndex: A, message: /^자산: 부담부증여 — 취득시 건물 기준시가/,
-    form: bg({ assetKind: "general_building", gbAcqLandPricePerSqm: "1000000", gbAcqBuildingValue: "" }),
+    form: bg({ assetKind: "general_building", gbAcqLandPricePerSqm: "1000000", gbAcqBuildingValue: "", bgGiftBuildingStdPriceAtTransfer: "300000000" }),
   },
   { name: "bg: 기준시가 모드 취득시 기준시가 (주택)", field: "standardPriceAtAcq", step: 0, assetIndex: A, message: /^자산: 부담부증여 기준시가 모드 — 「② 양도정보」의 취득시 기준시가/, form: bg({ standardPriceAtAcq: "" }) },
   {

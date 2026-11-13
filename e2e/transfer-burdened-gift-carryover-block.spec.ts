@@ -67,6 +67,8 @@ function seedForm(over: Record<string, unknown> = {}) {
             gbZoneType: "commercial",
             gbTransferLandPricePerSqm: "6215000",
             gbTransferBuildingValue: "631846500",
+            // 건물·일반건물 × 기준시가 평가는 증여일 건물 기준시가 필수(`bg-gift-building-std-required.ts`) — 종전 fallback(양도시 건물분)과 같은 값
+            bgGiftBuildingStdPriceAtTransfer: "631846500",
             gbAcqLandPricePerSqm: "2130000",
             gbAcqBuildingValue: "424472064",
             ...over,
@@ -142,6 +144,7 @@ test.describe("부담부증여 × 이월과세(증여) — 지원 개시", () =>
      */
     await seedAndCalc(page, {
       assetKind: "housing",
+      bgGiftBuildingStdPriceAtTransfer: "", // 주택은 일반건물 시드의 증여일 건물 기준시가를 쓰지 않는다(종전 fallback 그대로)
       standardPriceAtTransfer: "8580831500",
       standardPriceAtAcq: "3148142064",
       bgCoDonorLandStdPriceAtAcq: "0",
@@ -177,6 +180,7 @@ test.describe("부담부증여 × 이월과세(증여) — 지원 개시", () =>
     const req = page.waitForRequest((r) => r.url().includes("/api/calc/transfer") && r.method() === "POST");
     await seedAndCalc(page, {
       assetKind: "housing",
+      bgGiftBuildingStdPriceAtTransfer: "", // 주택은 일반건물 시드의 증여일 건물 기준시가를 쓰지 않는다(종전 fallback 그대로)
       standardPriceAtTransfer: "8580831500",
       standardPriceAtAcq: "3148142064",
       bgCoDonorLandStdPriceAtAcq: "0",

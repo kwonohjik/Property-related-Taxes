@@ -18,7 +18,7 @@ const gbHalf = (over: Record<string, unknown> = {}) => ({
   ownershipNumerator: "50", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes",
   gbBuildingAcquisitionCause: "purchase", hasSeperateLandAcquisitionDate: false, landAcquisitionDate: "2015-01-01", useEstimatedAcquisition: false,
   gbLandArea: "100", gbBuildingArea: "300", gbBuildingFootprintArea: "135", gbZoneType: "general_residential",
-  gbTransferLandPricePerSqm: "6000000", gbTransferBuildingValue: "200000000", gbAcqLandPricePerSqm: "2000000", gbAcqBuildingValue: "200000000",
+  gbTransferLandPricePerSqm: "6000000", gbTransferBuildingValue: "200000000", bgGiftBuildingStdPriceAtTransfer: "200000000", gbAcqLandPricePerSqm: "2000000", gbAcqBuildingValue: "200000000",
   standardPriceAtTransfer: "800000000", standardPriceAtAcq: "400000000", actualSalePrice: "1600000000",
   transferType: "burdened_gift", bgDonorRelation: "lineal_descendant", bgValuationMode: "sangjeungbeop_standard", bgMarketValueAtTransfer: "",
   bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "", bgActualAcquisitionLand: "100000000", bgActualAcquisitionBuilding: "150000000",

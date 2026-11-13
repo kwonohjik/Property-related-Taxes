@@ -42,6 +42,7 @@ const bgGb = (over: Record<string, unknown> = {}) =>
     bgValuationMode: "sangjeungbeop_standard",
     bgLendingDepositTotal: "100000000",
     bgDonorRelation: "lineal_ascendant",
+    bgGiftBuildingStdPriceAtTransfer: "300000000", // 증여일 건물 기준시가 필수(`bg-gift-building-std-required.ts`) — gbTransferBuildingValue와 같은 값
     ...over,
   });
 
@@ -123,6 +124,11 @@ export const GB_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "gb: gbTransferLandPricePerSqm (부담부증여)", field: "gbTransferLandPricePerSqm", step: 0, assetIndex: A, message: /^자산: 양도시 토지 공시지가/, form: bgGb({ gbTransferLandPricePerSqm: "" }) },
   { name: "gb: gbTransferBuildingValue (부담부증여)", field: "gbTransferBuildingValue", step: 0, assetIndex: A, message: /^자산: 양도시 건물기준시가 총액/, form: bgGb({ gbTransferBuildingValue: "" }) },
   { name: "gb: gbZoneType (부담부증여)", field: "gbZoneType", step: 0, assetIndex: A, message: /^자산: 용도지역을 선택하세요/, form: bgGb({ gbZoneType: "" }) },
+  {
+    name: "gb: bgGiftBuildingStdPriceAtTransfer (부담부증여 증여일 건물 기준시가)", field: "bgGiftBuildingStdPriceAtTransfer", step: 0, assetIndex: A,
+    message: /^자산: 부담부증여 기준시가 평가 — 증여일 건물 기준시가\(건물분\)를 입력하세요/,
+    form: bgGb({ bgGiftBuildingStdPriceAtTransfer: "" }),
+  },
 
   // ── 상속 ──
   {

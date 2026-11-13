@@ -104,7 +104,7 @@ const GB: Record<string, unknown> = {
   gbBuildingArea: "200",
   gbBuildingFootprintArea: "50",
   gbTransferLandPricePerSqm: "2,000,000",
-  gbTransferBuildingValue: "200,000,000",
+  gbTransferBuildingValue: "200,000,000", bgGiftBuildingStdPriceAtTransfer: "200,000,000",
   gbAcqLandPricePerSqm: "300,000",
   gbAcqBuildingValue: "30,000,000",
   gbZoneType: "general_residential",

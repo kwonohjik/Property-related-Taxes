@@ -47,11 +47,12 @@ const H: A = { ...BG, ...BUY, ...MORT, assetKind: "housing", standardPriceAtTran
 const GB: A = {
   ...BG, ...BUY, ...MORT, assetKind: "general_building", useEstimatedAcquisition: false, landAcqMode: "actual", buildingAcqMode: "actual",
   gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000", gbZoneType: "general_residential",
-  gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000",
+  gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000", bgGiftBuildingStdPriceAtTransfer: "200,000,000",
 };
 const KINDS: [string, A][] = [
   ["토지", { ...H, assetKind: "land", transferArea: "100", acquisitionArea: "100" }],
-  ["건물", { ...H, assetKind: "building" }],
+  // 건물 기준시가 평가는 증여일 기준시가 필수 — 양도시 기준시가와 같은 값(종전 엔진 대체값)이라 세액 불변
+  ["건물", { ...H, assetKind: "building", bgGiftBuildingStdPriceAtTransfer: "400000000" }],
   ["상업용건물", { ...H, assetKind: "commercial_building" }],
   ["일반건물", GB],
 ];

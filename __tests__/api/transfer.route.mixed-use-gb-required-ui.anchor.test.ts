@@ -213,7 +213,7 @@ describe("일반건물 용도지역", () => {
     gbBuildingArea: "200",
     gbBuildingFootprintArea: "50",
     gbTransferLandPricePerSqm: "2000000",
-    gbTransferBuildingValue: "200000000",
+    gbTransferBuildingValue: "200000000", bgGiftBuildingStdPriceAtTransfer: "200000000",
     gbAcqLandPricePerSqm: "1000000",
     gbAcqBuildingValue: "100000000",
     gbBuildingAcquisitionCause: "purchase",

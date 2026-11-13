@@ -69,7 +69,8 @@ async function route(f: TransferFormData) {
 describe("S-1~S-5 — 비우면 ⑧이 칸을 짚고, ⑧을 건너뛰어도 400", () => {
   const cases: [string, A, A][] = [
     ["S-1 주택", H, { standardPriceAtTransfer: "" }],
-    ["S-2 건물", { ...H, assetKind: "building" }, { standardPriceAtTransfer: "" }],
+    // 건물은 증여일 기준시가도 필수 — 양도시 기준시가와 같은 값(종전 엔진 대체값)이라 세액 불변 · 비운 칸은 양도시 기준시가가 먼저 짚힌다
+    ["S-2 건물", { ...H, assetKind: "building", bgGiftBuildingStdPriceAtTransfer: "400000000" }, { standardPriceAtTransfer: "" }],
     ["S-3 상가", { ...H, assetKind: "commercial_building" }, { standardPriceAtTransfer: "" }],
     ["S-4 토지", { ...H, assetKind: "land", transferArea: "100", acquisitionArea: "100" }, { standardPriceAtTransfer: "", standardPricePerSqmAtTransfer: "" }],
   ];
@@ -149,7 +150,7 @@ describe("S-9·S-10 — ⑧이 다른 규칙으로 막는 경로도 API 직접 �
     const GB: A = {
       ...BG, ...BUY, ...MORT, assetKind: "general_building", useEstimatedAcquisition: false, landAcqMode: "actual", buildingAcqMode: "actual",
       gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000", gbZoneType: "general_residential",
-      gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000",
+      gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000", bgGiftBuildingStdPriceAtTransfer: "200,000,000",
     };
     expect((await route(form([GB]))).tax).toBe(11_332_800);
     const r = await route(form([{ ...GB, gbTransferLandPricePerSqm: "", gbTransferBuildingValue: "" }]));

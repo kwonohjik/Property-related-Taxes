@@ -193,7 +193,8 @@ export interface BurdenedGiftInfo {
    * 증여재산 평가용 양도시 건물 기준시가 (상증법 §61 — 층별 가감율 적용).
    * 양도세 보충적평가는 `buildingStdPriceAtTransfer` (양도세 §99 기준시가),
    * 증여세 보충적평가는 본 필드 (층별 가감율 반영) — 토지는 동일 값 사용.
-   * 미입력 시 `buildingStdPriceAtTransfer`로 fallback (양도세=증여세 가정).
+   * 미입력 시 `buildingStdPriceAtTransfer`로 fallback (양도세=증여세 가정) — 엔진 직접 호출 호환용이다. 건물·일반건물 × 기준시가 평가는
+   * 화면(⑧)·API(⑫)가 이 값을 필수로 받는다(`lib/calc/bg-gift-building-std-required.ts` — 상증법 건물 기준시가는 조정률이 붙어 양도세용과 다르다).
    *
    * 산식에서 채무비율 분모 C = `landStdPriceAtTransfer + giftBuildingStdPriceAtTransfer`.
    * Excel C37 = D37(=D31) + E37(층별 합계)에 대응.

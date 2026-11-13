@@ -18,7 +18,8 @@ export const BASE = {
   assetKind: "building", ...DEBT_A, bgOwnerSplitDebtConfirmed: true,
 };
 /** 건물만 본인 — 증여한 건물분 양도시·취득시 기준시가(토글이 강제로 켜는 취득일 분리 플래그 포함) */
-export const bldg = (t: string, a: string, o: Record<string, unknown> = {}) => ({ selfOwns: "building_only", hasSeperateLandAcquisitionDate: true, buildingStandardPriceAtTransfer: t, buildingStandardPriceAtAcq: a, ...o });
+/** 증여일 건물 기준시가(상증법 §61①2호 · 기준시가 평가 필수)는 증여한 건물분 양도시 기준시가와 같은 값 — 종전 엔진 대체값과 같아 세액 불변. */
+export const bldg = (t: string, a: string, o: Record<string, unknown> = {}) => ({ selfOwns: "building_only", hasSeperateLandAcquisitionDate: true, buildingStandardPriceAtTransfer: t, buildingStandardPriceAtAcq: a, bgGiftBuildingStdPriceAtTransfer: t, ...o });
 /** 토지만 본인 — 증여한 토지분: ㎡당 공시지가 × 면적 */
 export const land = (tPerSqm: string, tArea: string, aPerSqm: string, aArea: string, o: Record<string, unknown> = {}) => ({
   selfOwns: "land_only", hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2015-01-01", standardPricePerSqmAtTransfer: tPerSqm, transferArea: tArea, standardPricePerSqmAtAcq: aPerSqm, acquisitionArea: aArea, ...o,

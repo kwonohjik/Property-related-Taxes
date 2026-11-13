@@ -253,6 +253,9 @@ function mergePrimaryBasicAll(a: AssetForm, primary: AssetForm): AssetForm {
     bgMortgageSetAmount: primary.bgMortgageSetAmount,
     bgMarketValueAtTransfer: primary.bgMarketValueAtTransfer,
     bgMarketValueAtAcquisition: primary.bgMarketValueAtAcquisition,
+    // 증여일 건물 기준시가(상증법 §61) — 같은 물건 · 같은 증여일의 물건 단위 값이다(양도시 기준시가와 같은 축). 지분 카드에는 칸이 없다 —
+    //   병합하지 않으면 건물·일반건물 기준시가 평가에서 ⑧·⑫가 숨은 칸을 요구하는 막다른 길이 된다(`bg-gift-building-std-required.ts`). 지분 안분은 ④가 한다.
+    bgGiftBuildingStdPriceAtTransfer: primary.bgGiftBuildingStdPriceAtTransfer,
     bgAcquisitionMethod: primary.bgAcquisitionMethod,
     bgActualAcquisitionLand: primary.bgActualAcquisitionLand,
     bgActualAcquisitionBuilding: primary.bgActualAcquisitionBuilding,

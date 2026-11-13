@@ -104,7 +104,7 @@ const gbBg = (over: Record<string, unknown> = {}) =>
   ({
     ...makeDefaultAsset(1), assetId: "gb", addressJibun: "서울 강남구 테스트동 8-8", assetKind: "general_building", acquisitionCause: "purchase",
     gbBuildingAcquisitionCause: "purchase", acquisitionDate: "2009-03-01", useEstimatedAcquisition: false, landAcqMode: "actual", buildingAcqMode: "actual",
-    gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000",
+    gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000", bgGiftBuildingStdPriceAtTransfer: "200,000,000",
     gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000", gbZoneType: "general_residential", fixedAcquisitionPrice: "200000000",
     transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_standard", bgDonorRelation: "lineal_descendant", bgMortgageDebtAmount: "200000000", ...over,
   }) as AssetForm;

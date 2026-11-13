@@ -36,7 +36,7 @@ beforeEach(() => {
 const BASE: Partial<AssetForm> = {
   assetKind: "general_building", addressJibun: "서울 강남구 역삼동 1",
   gbAcqLandPricePerSqm: "1000000", gbAcqBuildingValue: "150000000", gbLandArea: "205", gbBuildingArea: "300", gbBuildingFootprintArea: "135",
-  gbZoneType: "general_residential", gbTransferLandPricePerSqm: "5514000", gbTransferBuildingValue: "259072400", actualSalePrice: "1600000000",
+  gbZoneType: "general_residential", gbTransferLandPricePerSqm: "5514000", gbTransferBuildingValue: "259072400", bgGiftBuildingStdPriceAtTransfer: "259072400", actualSalePrice: "1600000000",
   acquisitionCause: "purchase", gbBuildingAcquisitionCause: "purchase", hasSeperateLandAcquisitionDate: false,
   acquisitionDate: "2010-05-01", useEstimatedAcquisition: false,
 };

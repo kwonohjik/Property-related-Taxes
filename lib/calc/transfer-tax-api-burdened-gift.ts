@@ -619,7 +619,11 @@ export function buildCompanionBurdenedGiftWholeInfo(
     buildingStdPriceAtTransfer: sum((p) => p.buildingStdPriceAtTransfer),
     landStdPriceAtAcquisition: sum((p) => p.landStdPriceAtAcquisition),
     buildingStdPriceAtAcquisition: sum((p) => p.buildingStdPriceAtAcquisition),
-    giftBuildingStdPriceAtTransfer: sumOptional((p) => p.giftBuildingStdPriceAtTransfer),
+    // 증여일 건물 기준시가 — 칸이 빈 자산(주택 등 선택 입력)은 엔진 대체값과 같은 규칙으로 그 자산의 양도시 건물 기준시가를 더한다.
+    //   0으로 세면 섞인 묶음(일반건물 입력 + 주택 미입력)의 증여가액 C에서 빈 자산이 통째로 빠진다.
+    giftBuildingStdPriceAtTransfer: sumOptional((p) => p.giftBuildingStdPriceAtTransfer) === undefined
+      ? undefined
+      : sum((p) => p.giftBuildingStdPriceAtTransfer ?? p.buildingStdPriceAtTransfer),
     marketValueAtTransfer: sumOptional((p) => p.marketValueAtTransfer),
     marketValueAtAcquisition: sumOptional((p) => p.marketValueAtAcquisition),
     // 자산별 합산 — 채무·임대
