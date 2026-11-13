@@ -55,7 +55,7 @@ const COMMON = { addressJibun: "제주특별자치도 강남구 테스트동 1-1
 const gb = (sc: number, v: "base" | "sepdate"): Record<string, unknown> => {
   const b: Record<string, unknown> = { assetKind: "general_building", bgMarketValueAtTransfer: S(1_000_000_000, sc), standardPriceAtTransfer: S(800_000_000, sc), standardPriceAtAcq: S(400_000_000, sc),
     gbAcqLandPricePerSqm: S(2_000_000, sc), gbAcqBuildingValue: S(200_000_000, sc), gbLandArea: "100", gbBuildingArea: "300", gbBuildingFootprintArea: "135", gbZoneType: "general_residential",
-    gbTransferLandPricePerSqm: S(6_000_000, sc), gbTransferBuildingValue: S(200_000_000, sc), actualSalePrice: S(1_600_000_000, sc), gbBuildingAcquisitionCause: "purchase",
+    gbTransferLandPricePerSqm: S(6_000_000, sc), gbTransferBuildingValue: S(200_000_000, sc), bgGiftBuildingStdPriceAtTransfer: S(200_000_000, sc), actualSalePrice: S(1_600_000_000, sc), gbBuildingAcquisitionCause: "purchase",
     hasSeperateLandAcquisitionDate: false, landAcquisitionDate: "2015-01-01", useEstimatedAcquisition: false, bgActualAcquisitionTotal: "",
     bgActualAcquisitionLand: S(100_000_000, sc), bgActualAcquisitionBuilding: S(150_000_000, sc) };
   if (v === "sepdate") Object.assign(b, { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2012-01-01" });

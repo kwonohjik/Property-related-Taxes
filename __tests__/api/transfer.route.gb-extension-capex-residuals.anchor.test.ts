@@ -41,7 +41,7 @@ const BASE: Partial<AssetForm> = {
   gbBuildingFootprintArea: "135",
   gbZoneType: "general_residential",
   gbTransferLandPricePerSqm: "5514000",
-  gbTransferBuildingValue: "259072400",
+  gbTransferBuildingValue: "259072400", bgGiftBuildingStdPriceAtTransfer: "259072400",
   actualSalePrice: String(T),
   ownershipNumerator: "100",
   ownershipDenominator: "100",

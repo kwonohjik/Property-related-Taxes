@@ -10,6 +10,7 @@
 import { refineMixedSaleSplitSingleOnly } from "./transfer-tax-schema-mixed-use";
 import { z } from "zod";
 import { refineBgOwnerSplit } from "./transfer-tax-schema-bg-owner-split";
+import { refineBgGiftBuildingStd } from "./transfer-tax-schema-bg-gift-std";
 import { newConstructionLandOnlyIssue } from "./transfer-tax-schema-household-refines";
 import { landOnlyHouseholdIssue } from "./transfer-tax-schema-household-refines";
 import { landOnlyHouseholdMergeIssue } from "./transfer-tax-schema-household-refines";
@@ -237,6 +238,7 @@ export const propertySchema = z
       const ncMsg = newConstructionLandOnlyIssue(c);
       if (ncMsg) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "selfOwns"], message: ncMsg });
       refineBgOwnerSplit({ ...c, propertyType: c.assetKind }, ctx, ["companionAssets", i], { bundled: true });
+      refineBgGiftBuildingStd({ ...c, propertyType: c.assetKind }, ctx, ["companionAssets", i]);
       const lohMsg = landOnlyHouseholdIssue({ ...c, propertyType: c.assetKind });
       if (lohMsg) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "buildingOwnerSameHousehold"], message: lohMsg });
       const mergeIssue = landOnlyHouseholdMergeIssue({ ...c, propertyType: c.assetKind, transferDate: data.transferDate });

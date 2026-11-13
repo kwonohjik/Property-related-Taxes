@@ -198,7 +198,7 @@ describe("함께 양도 × 일반건물·재개발 — 리뷰 게이트 해제(Q
     const gb = {
       ...makeDefaultAsset(2), addressJibun: "서울 강남구 테스트동 2-2", assetKind: "general_building", acquisitionCause: "purchase", acquisitionDate: "2015-03-01",
       gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbZoneType: "general_residential",
-      gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
+      gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000", bgGiftBuildingStdPriceAtTransfer: "200,000,000", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
       gbBuildingAcquisitionCause: "purchase", ...BG_STD,
     };
     const landA = { ...makeDefaultAsset(1), ...LAND, ...GRADE, addressJibun: "서울 A 1", ...BG_STD, bgMortgageDebtAmount: "200000000" };

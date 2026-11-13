@@ -48,11 +48,12 @@ describe("다건 상세 명세서 머리 — 부담부증여 취득가액 산정
       {
         hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2010-01-01", standardPricePerSqmAtTransfer: "1,000,000", transferArea: "100",
         buildingStandardPriceAtTransfer: "100,000,000", standardPricePerSqmAtAcq: "300,000", acquisitionArea: "100", buildingStandardPriceAtAcq: "50,000,000", standardPriceAtTransfer: "200,000,000",
+        bgGiftBuildingStdPriceAtTransfer: "100,000,000", // 증여일 건물 기준시가 — 날짜 분리의 건물분(종전 엔진 대체값)과 같다
       },
       BG_STD_HEAD,
       LUMP_HEAD,
     ],
-    ["분리 없음 · 기준시가", { standardPriceAtTransfer: "200,000,000", standardPriceAtAcq: "80,000,000", bgOwnerSplitDebtConfirmed: false }, BG_STD_HEAD, LUMP_HEAD],
+    ["분리 없음 · 기준시가", { standardPriceAtTransfer: "200,000,000", standardPriceAtAcq: "80,000,000", bgGiftBuildingStdPriceAtTransfer: "200,000,000", bgOwnerSplitDebtConfirmed: false }, BG_STD_HEAD, LUMP_HEAD],
     ["시가 + 환산취득가액", { ...MKT, bgAcquisitionMethod: "converted" }, "자산별 환산취득가 합계 — 시행령 §163·§176의2②", LUMP_HEAD],
     ["시가 + 실지취득가액", { ...MKT, bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "80,000,000" }, "자산별 실제 거래가액 합계 (자본적지출은 필요경비 — §97① 2호)", "자산별 양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목"],
   ] as const)("%s", async (_n, o, acq, exp) => {
@@ -72,7 +73,7 @@ describe("다건 상세 명세서 머리 — 부담부증여 취득가액 산정
 
 describe("§159 단계 산식 — 평가 모드는 한국어", () => {
   it.each([
-    ["분리 없음 · 보충적평가", { standardPriceAtTransfer: "200,000,000", standardPriceAtAcq: "80,000,000", bgOwnerSplitDebtConfirmed: false }, "(보충적평가 200,000,000 중 50.0000% 안분)"],
+    ["분리 없음 · 보충적평가", { standardPriceAtTransfer: "200,000,000", standardPriceAtAcq: "80,000,000", bgGiftBuildingStdPriceAtTransfer: "200,000,000", bgOwnerSplitDebtConfirmed: false }, "(보충적평가 200,000,000 중 50.0000% 안분)"],
     ["소유자 분리 · 보충적평가", bldg("200,000,000", "80,000,000"), "(증여한 건물분 보충적평가 200,000,000 중 50.0000% 안분)"],
     ["분리 없음 · 시가", { ...MKT, bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "80,000,000" }, "(시가 200,000,000 중 50.0000% 안분)"],
   ] as const)("%s", async (_n, o, frag) => {

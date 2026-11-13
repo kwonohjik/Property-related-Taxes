@@ -175,6 +175,8 @@ describe("CO-3 ✅ ⑧ validate — 차단 대신 **「두 벌 모두 입력」*
     gbAcqLandPricePerSqm: "2130000",
     gbAcqBuildingValue: "424472064",
     gbLandArea: "1279",
+    // 증여일 건물 기준시가(상증법 §61①2호) — 기준시가 평가 필수(`bg-gift-building-std-required.ts`). 이 시료는 ⑧ 판정만 본다.
+    bgGiftBuildingStdPriceAtTransfer: "500000000",
   };
 
   it("이월과세 + 「당초 증여자」 미입력 → **차단**(fallback 금지)", () => {

@@ -99,6 +99,7 @@ const BASE = {
     annualRentTotal: 0,
     landStdPriceAtTransfer: LAND_AREA * T_LAND,
     buildingStdPriceAtTransfer: T_BLDG,
+    giftBuildingStdPriceAtTransfer: T_BLDG, // 증여일 건물 기준시가(기준시가 평가 필수) — 종전 엔진 대체값과 같아 세액 불변
     landStdPriceAtAcquisition: LAND_AREA * A_LAND,
     buildingStdPriceAtAcquisition: A_BLDG,
     donorRelation: "lineal_descendant" as const,

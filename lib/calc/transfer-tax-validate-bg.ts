@@ -76,6 +76,8 @@ import { validateBgHouseSplit } from "./transfer-tax-validate-bg-house-split";
 import { missingCoDonorBasisLabel } from "./transfer-tax-validate-bg-co-donor";
 import { validateBgOwnerSplit } from "./transfer-tax-validate-bg-owner-split";
 import { bgOwnerSplitActive } from "./bg-owner-split-scope";
+import { bgGiftBuildingStdMissingMessage, bgGiftBuildingStdRequired } from "./bg-gift-building-std-required";
+import { effectiveSelfOwns } from "./self-owns-scope";
 
 /**
  * 부담부증여 지원 자산 종류 — **⑧ validate 층 게이트**(3층 중 하나).
@@ -575,6 +577,13 @@ export function validateBurdenedGiftAsset(
       return fieldError("standardPriceAtTransfer", `${label}: 부담부증여 기준시가 평가 — ${what} 입력하세요. 증여가액과 양도가액이 이 값으로 정해지므로 비우면 계산할 수 없습니다 (소득세법 시행령 제159조 제1항 제2호).`);
     }
   }
+
+  // (5-c⁰′) 건물·일반건물 기준시가 평가 — 증여일 건물 기준시가(상속·증여용) 필수(⑤·⑫와 같은 술어 `bgGiftBuildingStdRequired`).
+  if (
+    bgGiftBuildingStdRequired({ kind: asset.assetKind, transferType: asset.transferType, valuationMode: asset.bgValuationMode, selfOwns: effectiveSelfOwns(asset) }) &&
+    !(parseAmount(asset.bgGiftBuildingStdPriceAtTransfer) > 0)
+  )
+    return fieldError("bgGiftBuildingStdPriceAtTransfer", `${label}: ${bgGiftBuildingStdMissingMessage(asset.assetKind)}`);
 
   /**
    * (5-c) 기준시가 모드 — **취득시 기준시가 필수** (2026-08-12 신설 · O-1).

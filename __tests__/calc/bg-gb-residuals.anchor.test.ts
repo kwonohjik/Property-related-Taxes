@@ -44,7 +44,7 @@ const MKT: A = {
 const GB: A = {
   ...BG, ...BUY, ...MORT, assetKind: "general_building", useEstimatedAcquisition: false, landAcqMode: "actual", buildingAcqMode: "actual",
   gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000", gbZoneType: "general_residential",
-  gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000",
+  gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000", bgGiftBuildingStdPriceAtTransfer: "200,000,000",
 };
 const SEP: A = { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2021-06-01" };
 const H: A = { ...BG, ...BUY, ...MORT, assetKind: "housing", standardPriceAtTransfer: "400000000", standardPriceAtAcq: "200000000" };

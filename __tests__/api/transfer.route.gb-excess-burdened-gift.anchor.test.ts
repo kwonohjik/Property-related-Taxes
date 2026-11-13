@@ -49,7 +49,7 @@ const KIND: Record<string, Record<string, unknown>> = {
   housing: { assetKind: "housing", bgActualAcquisitionTotal: "250000000" },
   general_building: {
     assetKind: "general_building", gbAcqLandPricePerSqm: "2000000", gbAcqBuildingValue: "200000000", gbLandArea: "100", gbBuildingArea: "300", gbBuildingFootprintArea: "135",
-    gbZoneType: "general_residential", gbTransferLandPricePerSqm: "6000000", gbTransferBuildingValue: "200000000", actualSalePrice: "1600000000",
+    gbZoneType: "general_residential", gbTransferLandPricePerSqm: "6000000", gbTransferBuildingValue: "200000000", bgGiftBuildingStdPriceAtTransfer: "200000000", actualSalePrice: "1600000000",
     gbBuildingAcquisitionCause: "purchase", hasSeperateLandAcquisitionDate: false, landAcquisitionDate: "2015-01-01", useEstimatedAcquisition: false,
     bgActualAcquisitionTotal: "", bgActualAcquisitionLand: "100000000", bgActualAcquisitionBuilding: "150000000",
   },
@@ -146,7 +146,7 @@ describe("GE-5 이월과세 시나리오 A·B (V-1)", () => {
       ...makeDefaultAsset(1),
       addressJibun: "서울 강남구 테스트동 1-1", assetKind: "general_building", acquisitionCause: "carryover_gift", acquisitionDate: "2024-05-01", gbBuildingAcquisitionCause: "purchase",
       gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbZoneType: "general_residential",
-      gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
+      gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000", bgGiftBuildingStdPriceAtTransfer: "200,000,000", gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
       transferType: "burdened_gift", transferCause: "general", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgDonorRelation: "lineal_descendant",
       bgLendingDepositTotal: "0", bgMortgageDebtAmount: debt, bgMortgageSetAmount: "0", bgAcquisitionMethod: "converted", bgActualAcquisitionLand: "250,000,000", bgActualAcquisitionBuilding: "250,000,000",
       bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000",

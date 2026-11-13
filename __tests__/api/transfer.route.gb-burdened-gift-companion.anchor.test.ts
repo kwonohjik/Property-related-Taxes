@@ -51,7 +51,7 @@ function gb(id: number, over: Record<string, unknown> = {}): AssetForm {
     acquisitionCause: "purchase",
     acquisitionDate: "2015-03-01",
     gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbZoneType: "general_residential",
-    gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000",
+    gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000", bgGiftBuildingStdPriceAtTransfer: "200,000,000",
     gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
     gbBuildingAcquisitionCause: "purchase",
     ...over,

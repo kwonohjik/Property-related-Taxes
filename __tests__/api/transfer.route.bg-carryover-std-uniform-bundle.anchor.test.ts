@@ -58,7 +58,7 @@ const asset = (kind: Kind, win: Win, id: number, carry: boolean, ...over: Partia
     })
     : x({
       assetId: `g${id}`, assetKind: "general_building", acquisitionCause: cause, gbBuildingAcquisitionCause: cause, acquisitionDate: carry ? "2023-06-01" : "2015-03-01",
-      gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbZoneType: "general_residential", gbTransferLandPricePerSqm: "2000000", gbTransferBuildingValue: "200000000",
+      gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbZoneType: "general_residential", gbTransferLandPricePerSqm: "2000000", gbTransferBuildingValue: "200000000", bgGiftBuildingStdPriceAtTransfer: "200000000",
       gbAcqLandPricePerSqm: "1000000", gbAcqBuildingValue: "100000000",
       ...(carry ? { buildingCarryover: { ...CARRYOVER_DEFAULTS, donorAcquisitionDate: "2000-06-01" }, bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000" } : {}),
     });

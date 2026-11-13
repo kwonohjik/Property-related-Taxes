@@ -118,7 +118,8 @@ describe("BLD164 — 건물 × §163⑨ 단서 2호 · §164⑤", () => {
     expect(r.gain).toBe(200_000_000);
   });
   it("G8 부담부증여 기준시가 평가 — §163⑨를 쓰지 않는다(inheritedAcquisition 없음)", async () => {
-    const r = await run({ ...B, ...V, ...bg(), bgValuationMode: "sangjeungbeop_standard", bgAcquisitionMethod: "", bgMortgageDebtAmount: "100000000" });
+    // 증여일 기준시가(기준시가 평가 필수) — 양도시 기준시가와 같은 값(종전 엔진 대체값)이라 세액 불변
+    const r = await run({ ...B, ...V, ...bg(), bgValuationMode: "sangjeungbeop_standard", bgAcquisitionMethod: "", bgMortgageDebtAmount: "100000000", bgGiftBuildingStdPriceAtTransfer: "300000000" });
     expect([r.status, r.sentInh]).toEqual([200, false]);
   });
   it("G9 의제취득일 전(상속 1983) — §164⑤ 칸(의제취득일 이후 전용)은 싣지 않는다 · ③이 크면 ③(Q-34 a 뒤에도 같은 값)", async () => {
@@ -205,7 +206,8 @@ describe("BLD164-PD — 의제취득일 전 건물 ② = ③ 분자", () => {
     expect(r.formula).not.toContain("② §164");
   });
   it("PD6 부담부증여 기준시가 평가 — 의제취득일 기준시가 × β 그대로(② 주입과 무관)", async () => {
-    const r = await run({ ...B, ...PD, ...LOW, ...bg("", "100000000"), bgMarketValueAtTransfer: "", bgValuationMode: "sangjeungbeop_standard", bgAcquisitionMethod: "" });
+    // 증여일 기준시가(기준시가 평가 필수) — 양도시 기준시가(LOW)와 같은 값(종전 엔진 대체값)이라 세액 불변
+    const r = await run({ ...B, ...PD, ...LOW, ...bg("", "100000000"), bgMarketValueAtTransfer: "", bgValuationMode: "sangjeungbeop_standard", bgAcquisitionMethod: "", bgGiftBuildingStdPriceAtTransfer: "400000000" });
     expect([r.fe8, r.status, r.err]).toEqual([[], 200, undefined]);
     expect(r.gain).toBe(48_500_000);
   });

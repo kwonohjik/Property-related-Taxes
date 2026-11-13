@@ -41,8 +41,10 @@ const K6 = { bgAcquisitionMethod: "salesCase", bgPresumedInputKind: "total", bgP
 const OWN = { bgShareOwnAcquisition: true };
 
 /** 자산 1(주 자산) — 2015 취득 · 실지 2.5억. */
+/** 건물 기준시가 평가는 증여일 기준시가(상증법 §61①2호) 필수 — 양도시 기준시가와 같은 값(종전 엔진 대체값)이라 세액 불변. 토지·주택·상가에는 싣지 않는다. */
+const GIFT_STD = { bgGiftBuildingStdPriceAtTransfer: "800000000" };
 const primary = (k: Kind, ...over: Record<string, unknown>[]) =>
-  Object.assign({ ...makeDefaultAsset(1) }, x({ assetId: "p", ...COMMON, assetKind: k, acquisitionDate: "2015-01-01", ...(k === "land" ? LAND : {}), [FIELD[k]]: "250000000" }), ...over.map(x)) as AssetForm;
+  Object.assign({ ...makeDefaultAsset(1) }, x({ assetId: "p", ...COMMON, assetKind: k, acquisitionDate: "2015-01-01", ...(k === "land" ? LAND : {}), ...(k === "building" ? GIFT_STD : {}), [FIELD[k]]: "250000000" }), ...over.map(x)) as AssetForm;
 /**
  * 「+ 지분 추가」로 만든 지분 카드 — 저장값은 기본값(양도 형태 「일반 양도」 · 자산 종류 「주택」). 2018 취득.
  * 취득시 기준시가는 지분 카드의 「이 지분의 취득시 기준시가 (물건 전체)」 칸 값(K-6 개산공제 · 기준시가 평가가 읽는다 — `BurdenedGiftTrancheBasisBlock`).
@@ -51,7 +53,7 @@ const share = (...over: Record<string, unknown>[]) =>
   Object.assign({ ...makeDefaultAsset(2) }, x({ assetId: "s", acquisitionCause: "purchase", acquisitionDate: "2018-01-01", standardPriceAtAcq: "400000000" }), ...over.map(x)) as AssetForm;
 /** 오라클용 축 A 단건 — 그 지분 재료로 넣은 같은 종류 단건(나머지 제3자). */
 const single = (k: Kind, id: string, acq: string, actual: string, ...over: Record<string, unknown>[]) =>
-  Object.assign({ ...makeDefaultAsset(1) }, x({ assetId: id, ...COMMON, assetKind: k, acquisitionDate: acq, ...(k === "land" ? LAND : {}), [FIELD[k]]: actual }), ...over.map(x)) as AssetForm;
+  Object.assign({ ...makeDefaultAsset(1) }, x({ assetId: id, ...COMMON, assetKind: k, acquisitionDate: acq, ...(k === "land" ? LAND : {}), ...(k === "building" ? GIFT_STD : {}), [FIELD[k]]: actual }), ...over.map(x)) as AssetForm;
 const form = (assets: AssetForm[], over: Record<string, unknown> = {}) =>
   rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false,

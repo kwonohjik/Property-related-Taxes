@@ -43,6 +43,8 @@ const INFO = (over: object = {}) => ({
   valuationMode: "sangjeungbeop_market" as const, acquisitionMethod: "converted" as const, marketValueAtTransfer: 1_000_000_000,
   lendingDepositTotal: 0, mortgageDebtAmount: 500_000_000, annualRentTotal: 0, mortgageSetAmount: 500_000_000,
   landStdPriceAtTransfer: 200_000_000, buildingStdPriceAtTransfer: 200_000_000, landStdPriceAtAcquisition: 100_000_000, buildingStdPriceAtAcquisition: 100_000_000,
+  // 증여일 건물 기준시가(기준시가 평가 필수) — 양도시 건물분(종전 엔진 대체값)과 같아 세액 불변
+  giftBuildingStdPriceAtTransfer: 200_000_000,
   donorRelation: "lineal_descendant" as const, ...over,
 });
 const K7 = (over: object = {}) => INFO({ acquisitionMethod: "appraisal", presumedLandAcquisitionPrice: 200_000_000, presumedBuildingAcquisitionPrice: 300_000_000, ...over });

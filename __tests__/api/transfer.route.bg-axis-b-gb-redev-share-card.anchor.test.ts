@@ -37,7 +37,7 @@ const COMMON: A = { addressJibun: "서울 강남구 테스트동 1-1", acquisiti
 /** 일반건물 — `bg-gb-fractional-win` base 재료(양도시 기준시가 8억 · 취득시 4억 · 시가 10억 · 실지 토지 1억 + 건물 1.5억). */
 const GB: A = { assetKind: "general_building", acquisitionDate: "2015-01-01", standardPriceAtTransfer: "800000000", standardPriceAtAcq: "400000000",
   gbAcqLandPricePerSqm: "2000000", gbAcqBuildingValue: "200000000", gbLandArea: "100", gbBuildingArea: "300", gbBuildingFootprintArea: "135", gbZoneType: "general_residential",
-  gbTransferLandPricePerSqm: "6000000", gbTransferBuildingValue: "200000000", gbBuildingAcquisitionCause: "purchase", hasSeperateLandAcquisitionDate: false, landAcquisitionDate: "2015-01-01",
+  gbTransferLandPricePerSqm: "6000000", gbTransferBuildingValue: "200000000", bgGiftBuildingStdPriceAtTransfer: "200000000", gbBuildingAcquisitionCause: "purchase", hasSeperateLandAcquisitionDate: false, landAcquisitionDate: "2015-01-01",
   useEstimatedAcquisition: false, bgActualAcquisitionLand: "100000000", bgActualAcquisitionBuilding: "150000000" };
 /** 일반건물 지분 카드 ③에 보이는 칸 — 취득일 · 취득시 토지 공시지가 · 건물 기준시가. */
 const GB_SHARE: A = { acquisitionDate: "2015-01-01", gbAcqLandPricePerSqm: "2000000", gbAcqBuildingValue: "200000000" };

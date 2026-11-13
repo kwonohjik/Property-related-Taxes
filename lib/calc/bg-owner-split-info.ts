@@ -54,7 +54,7 @@ export interface BgOwnerSplitInfoPatch {
  *  · 기준시가 4칸: 증여한 부분만, 비소유 파트 0.
  *  · 실지취득가: 총액 칸(`bgActualAcquisitionTotal`)이 증여한 부분의 실지취득가액이다 — 토지·건물 파트 칸에 남은 값은 싣지 않는다.
  *  · 증여일 현재 건물 기준시가(`giftBuildingStdPriceAtTransfer`): 건물만 증여는 ⑤가 「증여한 건물분」 칸을 연다(`bgOwnerSplitGiftBuildingStdOpen` · 상증법 §61①2호 ·
- *    부수토지 제외) — 기본 info 값을 그대로 둔다(빈칸이면 undefined → 엔진이 양도시 건물 기준시가로 계산). 토지만 증여는 싣지 않는다(엔진 계약이 막는다).
+ *    부수토지 제외) — 기본 info 값을 그대로 둔다(필수 입력 — ⑧·⑫ `bg-gift-building-std-required.ts`). 토지만 증여는 싣지 않는다(엔진 계약이 막는다).
  *  · 시가 모드: `marketValueAtTransfer` = 증여한 부분 시가. 비어 있으면 총액 칸으로 대신하지 않는다(⑧이 막는다).
  *  · 채무 확인(`bgOwnerSplitDebtConfirmed`) → `ownerSplitDebtConfirmed` — 엔진 계약·⑫가 `true`를 요구한다(⑧과 같은 칸).
  */

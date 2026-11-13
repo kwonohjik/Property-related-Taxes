@@ -32,7 +32,7 @@ const COMMON_SC = (sc: number) => ({ ...COMMON, bgMarketValueAtTransfer: S(10000
 // GB 시료 — 양도시 기준시가 8억(토지 6,000,000×100㎡ + 건물 2억) · 취득시 4억(2,000,000×100㎡ + 2억) · 시가 10억 · 실지 2.5억(토지 1억 + 건물 1.5억)
 const redev = (sc: number, v: string): Record<string, unknown> => {
   const b: Record<string, unknown> = { assetKind: "general_building", gbAcqLandPricePerSqm: S(2000000, sc), gbAcqBuildingValue: S(200000000, sc), gbLandArea: "100", gbBuildingArea: "300", gbBuildingFootprintArea: "135",
-    gbZoneType: "general_residential", gbTransferLandPricePerSqm: S(6000000, sc), gbTransferBuildingValue: S(200000000, sc), actualSalePrice: S(1600000000, sc), gbBuildingAcquisitionCause: "purchase",
+    gbZoneType: "general_residential", gbTransferLandPricePerSqm: S(6000000, sc), gbTransferBuildingValue: S(200000000, sc), bgGiftBuildingStdPriceAtTransfer: S(200000000, sc), actualSalePrice: S(1600000000, sc), gbBuildingAcquisitionCause: "purchase",
     hasSeperateLandAcquisitionDate: false, landAcquisitionDate: "2015-01-01", useEstimatedAcquisition: false, bgActualAcquisitionTotal: "", bgActualAcquisitionLand: S(100000000, sc), bgActualAcquisitionBuilding: S(150000000, sc) };
   if (v === "sepdate") Object.assign(b, { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2012-01-01" });
   return b;

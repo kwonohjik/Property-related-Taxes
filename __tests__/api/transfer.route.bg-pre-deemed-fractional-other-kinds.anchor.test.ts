@@ -45,6 +45,8 @@ const FORM = { transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransf
 const COM = (sc: number, kind: "commercial_building" | "building"): Record<string, unknown> => ({
   addressJibun: "서울 강남구 테스트동 1-1", assetKind: kind, acquisitionCause: "inheritance", acquisitionDate: "1983-07-26", inheritanceStartDate: "1983-07-26", decedentAcquisitionDate: "1970-01-01",
   transferType: "burdened_gift", bgDonorRelation: "lineal_descendant", bgLendingDepositTotal: "0", standardPriceAtTransfer: S(400000000, sc), standardPriceAtAcq: S(200000000, sc),
+  // 증여일 기준시가(건물 기준시가 평가 필수) — 양도시 기준시가와 같은 값(종전 엔진 대체값)이라 세액 불변
+  bgGiftBuildingStdPriceAtTransfer: S(400000000, sc),
 });
 /** 상가 §164⑥ 8칸 — 규모에 비례하는 가격 칸만 줄이고 면적은 그대로 */
 const CB8 = (sc: number) => ({

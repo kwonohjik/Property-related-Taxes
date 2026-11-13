@@ -25,6 +25,7 @@ function gb(id: number, over: Record<string, unknown> = {}): AssetForm {
     acquisitionDate: "2015-03-01",
     gbLandArea: "100", gbBuildingArea: "200", gbBuildingFootprintArea: "50", gbZoneType: "general_residential",
     gbTransferLandPricePerSqm: "2,000,000", gbTransferBuildingValue: "200,000,000",
+    bgGiftBuildingStdPriceAtTransfer: "200,000,000", // 증여일 건물 기준시가(기준시가 평가 필수) — 종전 엔진 대체값과 같아 세액 불변
     gbAcqLandPricePerSqm: "1,000,000", gbAcqBuildingValue: "100,000,000",
     gbBuildingAcquisitionCause: "purchase",
     ...over,

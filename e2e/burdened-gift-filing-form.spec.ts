@@ -159,6 +159,7 @@ test.describe("부담부증여 결과탭 — 일반건물(bundled) 경로", () =
       gbZoneType: "commercial" as const,
       gbTransferLandPricePerSqm: "7500000",
       gbTransferBuildingValue: "631846500",
+      bgGiftBuildingStdPriceAtTransfer: "631846500", // 증여일 건물 기준시가 필수 — 종전 fallback(양도시 건물분)과 같은 값
       gbAcqLandPricePerSqm: "2130000",
       gbAcqBuildingValue: "424472064",
     };

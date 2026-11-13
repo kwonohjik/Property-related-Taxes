@@ -132,7 +132,9 @@ describe("④ 전송 본문 — 본인 몫만 싣는다 (Network request body)",
     expect(r.body.selfOwns).toBe("building_only");
     expect(r.body.burdenedGiftInfo).toMatchObject({ landStdPriceAtTransfer: 0, buildingStdPriceAtTransfer: 200_000_000, landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 80_000_000, ownerSplitDebtConfirmed: true });
     const info = r.body.burdenedGiftInfo as Record<string, unknown>;
-    for (const k of ["marketValueByPart", "giftBuildingStdPriceAtTransfer", "actualLandAcquisitionPrice", "actualBuildingAcquisitionPrice"]) expect(info[k], k).toBeUndefined();
+    for (const k of ["marketValueByPart", "actualLandAcquisitionPrice", "actualBuildingAcquisitionPrice"]) expect(info[k], k).toBeUndefined();
+    // 증여일 건물 기준시가는 증여한 건물분 값(기준시가 평가 필수 · 픽스처 = 양도시 건물분)이라 싣는다
+    expect(info.giftBuildingStdPriceAtTransfer).toBe(200_000_000);
     for (const k of ["landTransferPrice", "buildingTransferPrice", "landAcquisitionPrice", "buildingAcquisitionPrice", "landStandardPriceAtTransfer", "buildingStandardPriceAtTransfer"]) expect(r.body[k], k).toBeUndefined();
     expect(r.result.determinedTax).toBe(5_244_600);
   });

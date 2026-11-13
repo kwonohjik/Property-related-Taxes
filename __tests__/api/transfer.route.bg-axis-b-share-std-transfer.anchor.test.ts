@@ -42,8 +42,10 @@ const STD = { bgValuationMode: "sangjeungbeop_standard", bgMarketValueAtTransfer
 const K5 = { bgAcquisitionMethod: "converted" };
 const debt = (d: number) => ({ bgMortgageDebtAmount: String(d), bgMortgageSetAmount: String(d) });
 const pct = (n: number) => ({ ownershipNumerator: String(n), ownershipDenominator: "100" });
+/** 건물 기준시가 평가는 증여일 기준시가(상증법 §61①2호) 필수 — 양도시 기준시가와 같은 값(종전 엔진 대체값)이라 세액 불변. 토지·주택·상가에는 싣지 않는다. */
+const GIFT_STD = { bgGiftBuildingStdPriceAtTransfer: "800000000" };
 const primary = (k: Kind, ...o: Record<string, unknown>[]) =>
-  Object.assign({ ...makeDefaultAsset(1) }, x({ assetId: "p", ...COMMON, assetKind: k, acquisitionDate: "2015-01-01", ...(k === "land" ? LAND : {}), [FIELD[k]]: "250000000" }), ...o.map(x)) as AssetForm;
+  Object.assign({ ...makeDefaultAsset(1) }, x({ assetId: "p", ...COMMON, assetKind: k, acquisitionDate: "2015-01-01", ...(k === "land" ? LAND : {}), ...(k === "building" ? GIFT_STD : {}), [FIELD[k]]: "250000000" }), ...o.map(x)) as AssetForm;
 /** 「+ 지분 추가」 기본값 지분 카드 — 양도시 기준시가 칸 없음(빈 값). */
 const share = (...o: Record<string, unknown>[]) =>
   Object.assign({ ...makeDefaultAsset(2) }, x({ assetId: "s", acquisitionCause: "purchase", acquisitionDate: "2018-01-01", standardPriceAtAcq: "400000000" }), ...o.map(x)) as AssetForm;

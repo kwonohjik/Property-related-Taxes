@@ -68,6 +68,8 @@ const stdCarry = (bStd: string, over: Partial<AssetForm> = {}) =>
 const SPLIT_C = {
   carryoverDonorSplit: true,
   standardPricePerSqmAtTransfer: "3,000,000", transferArea: "100", buildingStandardPriceAtTransfer: "300,000,000",
+  // 증여일 건물 기준시가(건물 기준시가 평가 필수) — 분리 계산의 양도시 건물분(종전 엔진 대체값)과 같은 값
+  bgGiftBuildingStdPriceAtTransfer: "300,000,000",
   standardPricePerSqmAtAcq: "1,000,000", acquisitionArea: "100", buildingStandardPriceAtAcq: "150,000,000",
   buildingCarryover: { ...CARRYOVER_DEFAULTS, donorAcquisitionDate: "2015-01-01" },
 } as Partial<AssetForm>;

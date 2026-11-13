@@ -45,7 +45,7 @@ const HSUPF = x({ standardPriceAtTransfer: "1500000000", bgLendingDepositTotal: 
 /** 부담부증여 일반건물(기준시가 모드): 보증금 0 · 차입금 5억 → 보충 승. */
 const gb = (id: number, ...over: Partial<AssetForm>[]) => Object.assign({ ...makeDefaultAsset(id) }, x({
   assetKind: "general_building", addressJibun: "서울 강남구 역삼동 1", gbAcqLandPricePerSqm: "1000000", gbAcqBuildingValue: "150000000", gbLandArea: "205", gbBuildingArea: "300", gbBuildingFootprintArea: "135",
-  gbZoneType: "general_residential", gbTransferLandPricePerSqm: "5514000", gbTransferBuildingValue: "259072400", actualSalePrice: "1600000000",
+  gbZoneType: "general_residential", gbTransferLandPricePerSqm: "5514000", gbTransferBuildingValue: "259072400", bgGiftBuildingStdPriceAtTransfer: "259072400", actualSalePrice: "1600000000",
   acquisitionCause: "purchase", gbBuildingAcquisitionCause: "purchase", hasSeperateLandAcquisitionDate: false, acquisitionDate: "2010-05-01", useEstimatedAcquisition: false,
   transferType: "burdened_gift", transferCause: "general", bgDonorRelation: "lineal_descendant", bgCoDonorLandStdPriceAtAcq: "10,000,000", bgCoDonorBuildingStdPriceAtAcq: "40,000,000",
   bgAcquisitionMethod: "actual", bgActualAcquisitionLand: "205000000", bgActualAcquisitionBuilding: "150000000", landAcquisitionDate: "2010-05-01",

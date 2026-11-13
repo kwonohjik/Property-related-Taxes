@@ -15,7 +15,7 @@ type A = Record<string, unknown>;
 const COMMON: A = { addressJibun: "서울 강남구 테스트동 1-1", acquisitionCause: "purchase", transferType: "burdened_gift", bgDonorRelation: "lineal_descendant", bgLendingDepositTotal: "0", ownershipNumerator: "60", ownershipDenominator: "100" };
 const GB: A = { assetKind: "general_building", acquisitionDate: "2015-01-01", standardPriceAtTransfer: "800000000", standardPriceAtAcq: "400000000",
   gbAcqLandPricePerSqm: "2000000", gbAcqBuildingValue: "200000000", gbLandArea: "100", gbBuildingArea: "300", gbBuildingFootprintArea: "135", gbZoneType: "general_residential",
-  gbTransferLandPricePerSqm: "6000000", gbTransferBuildingValue: "200000000", gbBuildingAcquisitionCause: "purchase", hasSeperateLandAcquisitionDate: false, landAcquisitionDate: "2015-01-01",
+  gbTransferLandPricePerSqm: "6000000", gbTransferBuildingValue: "200000000", bgGiftBuildingStdPriceAtTransfer: "200000000", gbBuildingAcquisitionCause: "purchase", hasSeperateLandAcquisitionDate: false, landAcquisitionDate: "2015-01-01",
   useEstimatedAcquisition: false, bgActualAcquisitionLand: "100000000", bgActualAcquisitionBuilding: "150000000" };
 const REDEV: A = { assetKind: "redevelopment_apt", acquisitionDate: "2015-01-01", standardPriceAtTransfer: "800000000", standardPriceAtAcq: "400000000", redevSubject: "apt", redevApprovalLawBasis: "urban_renovation_art_74", redevApprovalDate: "2018-06-01",
   redevRightsValue: "219218500", redevSettlementDirection: "pay", redevSettlementAmount: "55668900", redevCompletionDate: "2022-09-01", redevPreApprovalExpenses: "0", redevOriginalAssetType: "housing",

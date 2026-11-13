@@ -46,7 +46,7 @@ const gb = (id: string, sc: number, ...over: Record<string, unknown>[]) =>
     bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: S(1_000_000_000, sc), bgLendingDepositTotal: "0", bgMortgageDebtAmount: "0", bgMortgageSetAmount: "0", bgAcquisitionMethod: "actual",
     standardPriceAtTransfer: S(800_000_000, sc), standardPriceAtAcq: S(400_000_000, sc),
     assetKind: "general_building", gbAcqLandPricePerSqm: S(2_000_000, sc), gbAcqBuildingValue: S(200_000_000, sc), gbLandArea: "100", gbBuildingArea: "300", gbBuildingFootprintArea: "135",
-    gbZoneType: "general_residential", gbTransferLandPricePerSqm: S(6_000_000, sc), gbTransferBuildingValue: S(200_000_000, sc), actualSalePrice: S(1_600_000_000, sc),
+    gbZoneType: "general_residential", gbTransferLandPricePerSqm: S(6_000_000, sc), gbTransferBuildingValue: S(200_000_000, sc), bgGiftBuildingStdPriceAtTransfer: S(200_000_000, sc), actualSalePrice: S(1_600_000_000, sc),
     gbBuildingAcquisitionCause: "purchase", hasSeperateLandAcquisitionDate: false, landAcquisitionDate: "2015-01-01", useEstimatedAcquisition: false,
     bgActualAcquisitionTotal: "", bgActualAcquisitionLand: S(100_000_000, sc), bgActualAcquisitionBuilding: S(150_000_000, sc),
   }), ...over.map(x)) as AssetForm;

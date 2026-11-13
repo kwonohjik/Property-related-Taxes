@@ -2,7 +2,7 @@
  * E2E — 부담부증여 × 토지·건물 소유자 분리(건물 종류) → 증여한 부분(본인 소유분)만 §159로 계산 (계획서 `docs/00-pm/bg-owner-split-159.plan.md` PR-3)
  *
  * 종전(#3272): 같은 입력을 ⑤ 토글 잠금·⑧·⑫가 막았다. 이제 건물 종류(매매·단독 소유)는 본인 몫을 받아 계산한다. 주택 등 범위 밖은 계속 막는다.
- *   · BGO-E1 건물만 본인 · 기준시가 평가 — 요청 본문에 selfOwns · 건물 기준시가 양시점 · 비소유(토지) 0 · 결과 화면에 NaN·undefined 없음
+ *   · BGO-E1 건물만 본인 · 기준시가 평가 — 요청 본문에 selfOwns · 건물 기준시가 양시점 · 비소유(토지) 0 · 증여일 건물 기준시가 · 결과 화면에 NaN·undefined 없음
  *   · BGO-E2 범위 밖(주택) 토글 잠금 · 범위 안(건물) 토글은 켤 수 있고 안내 카드가 뜬다
  *   · BGO-E3 채무 확인을 비우고 «다음» → 그 칸으로 이동 · 확인하면 진행
  *   · BGO-E4 소유자 분리를 끄면(토지·건물 취득일이 다르면) 날짜 분리 카드가 이어서 뜬다
@@ -45,6 +45,8 @@ const bldg = (over: Over = {}): Over => ({
   bgDonorRelation: "lineal_descendant",
   buildingStandardPriceAtTransfer: "200000000",
   buildingStandardPriceAtAcq: "80000000",
+  // 증여한 건물분 증여일 건물 기준시가 — 건물만 증여 × 기준시가 평가는 필수(`bg-gift-building-std-required.ts`) · 종전 fallback(양도시 건물분)과 같은 값
+  bgGiftBuildingStdPriceAtTransfer: "200000000",
   bgOwnerSplitDebtConfirmed: true,
   ...over,
 });
@@ -66,7 +68,9 @@ test.describe("부담부증여 × 토지·건물 소유자 분리 — 건물 종
       buildingStdPriceAtAcquisition: 80_000_000,
     });
     // 비소유 파트 값·양도가액 직접 분할·증여일 기준시가는 싣지 않는다
-    for (const k of ["marketValueByPart", "giftBuildingStdPriceAtTransfer", "actualLandAcquisitionPrice", "actualBuildingAcquisitionPrice"]) expect(body.burdenedGiftInfo?.[k], k).toBeUndefined();
+    for (const k of ["marketValueByPart", "actualLandAcquisitionPrice", "actualBuildingAcquisitionPrice"]) expect(body.burdenedGiftInfo?.[k], k).toBeUndefined();
+    // 증여한 건물분 증여일 건물 기준시가(상증법 §61①2호) — 건물만 증여 × 기준시가 평가는 필수 칸이라 싣는다(`bg-gift-building-std-required.ts`)
+    expect(body.burdenedGiftInfo?.giftBuildingStdPriceAtTransfer).toBe(200_000_000);
     for (const k of ["landTransferPrice", "buildingTransferPrice", "landAcquisitionPrice", "buildingAcquisitionPrice"]) expect((body as Record<string, unknown>)[k], k).toBeUndefined();
     // 결과 화면 — 빈 값·NaN 없음
     const table = page.locator('[data-print-id="form-table"]').first();
@@ -150,7 +154,8 @@ test.describe("부담부증여 × 토지·건물 소유자 분리 — 건물 종
 
   test("BGO-E10 건물만 · 기준시가 → 증여한 건물분 증여일 건물 기준시가 칸 · 2.2억 → 5,682,818 · 토지만은 칸 없음", async ({ page }) => {
     test.setTimeout(180_000);
-    await seedWizard(page, singleSeed([bldg()], { contractTotalPrice: "1000000000" }));
+    // 빈 칸으로 시드하고 화면에서 입력한다(시드 기본값 2억이 있으면 서식 입력 위에 이어 붙는 경합이 있다 — 부하 시 실측 200000000220000)
+    await seedWizard(page, singleSeed([bldg({ bgGiftBuildingStdPriceAtTransfer: "" })], { contractTotalPrice: "1000000000" }));
     await expandAssetSection(page, 2);
     const gift = page.getByTestId("bg-gift-building-std");
     await expect(gift).toBeVisible();
