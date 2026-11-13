@@ -225,7 +225,7 @@ export function validateRentalExclusion(
   }
 
   // 4·9호는 「소유」 — 임대 개시를 보지 않는다
-  if (!OWNED_TYPES.has(input.registrationType) && input.assessmentDate < input.rentalStartDate) {
+  if (!OWNED_TYPES.has(input.registrationType) && input.rentalStartDate && input.assessmentDate < input.rentalStartDate) {
     failReasons.push(COMPREHENSIVE_EXCL.RENTAL_NOT_STARTED);
   }
 

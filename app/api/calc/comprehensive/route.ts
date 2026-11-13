@@ -58,7 +58,8 @@ function toEngineInput(
       ? {
           ...p.rentalInfo,
           rentalRegistrationDate: parseDate(p.rentalInfo.rentalRegistrationDate),
-          rentalStartDate: parseDate(p.rentalInfo.rentalStartDate),
+          // 4·9호(「소유」)는 없을 수 있다 — 그 밖 유형은 Zod refine이 필수로 막는다
+          rentalStartDate: toOptionalDate(p.rentalInfo.rentalStartDate),
           businessRegistrationDate: toOptionalDate(p.rentalInfo.businessRegistrationDate),
           usageApprovalDate: toOptionalDate(p.rentalInfo.usageApprovalDate),
           // §3①8호 나목·7호 단서 (⑭) — ownerType은 엔진(comprehensive-tax)이 taxpayerType에서 주입
@@ -70,6 +71,9 @@ function toEngineInput(
           shortTermConversionDate: toOptionalDate(p.rentalInfo.shortTermConversionDate),
           // §3①6호 미분양매입임대 (⑭)
           unsoldContractDate: toOptionalDate(p.rentalInfo.unsoldContractDate),
+          // §3①5·9호 (⑭)
+          reitAcquisitionDate: toOptionalDate(p.rentalInfo.reitAcquisitionDate),
+          mandatoryPeriodEndDate: toOptionalDate(p.rentalInfo.mandatoryPeriodEndDate),
           registrationRevokedDate: p.rentalInfo.registrationRevokedDate
             ? parseDate(p.rentalInfo.registrationRevokedDate)
             : undefined,
