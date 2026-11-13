@@ -29,6 +29,16 @@ export function withMoveInWithinYear(input: OneHouseJudgeInput): OneHouseJudgeIn
 }
 
 /**
+ * 「§155⑱ 사유의 매각 등의 방법으로 양도했다」고 읽은 입력 — 2022-02-15 전 양도분의 방법 요건을 확인한 독법(S15-14).
+ * 사유를 고르지 않았으면 만들지 않는다(방법은 사유에 딸린 사실 · 2026-11-12 리뷰 J-6).
+ */
+export function withDisposalDelayByThatMethod(input: OneHouseJudgeInput): OneHouseJudgeInput | undefined {
+  const tt = input.temporaryTwoHouse;
+  if (!tt?.disposalDelayReason) return undefined;
+  return { ...input, temporaryTwoHouse: { ...tt, disposalDelayDisposedByThatMethod: true } };
+}
+
+/**
  * 반사실 입력으로 본체 판정을 다시 돌려 비과세·부분과세 결론이 달라지는가 — §89② 배제가 확정이면 본체 판정과 무관하게 과세라 가르지 않는다.
  * `core`는 `checkExemptionCore`다(순환 import를 피하려고 함수로 받는다).
  */

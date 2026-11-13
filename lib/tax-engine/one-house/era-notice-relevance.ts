@@ -13,6 +13,7 @@ import type { GiftHouseholdBasis } from "./gift-household-basis";
 import { giftHouseholdFactDecides, giftPriorResidenceDecides } from "./gift-household-notice";
 import { withUnconfirmedFactsFavorable } from "./rural-return-to-farm-facts";
 import { counterfactualVerdictDiffers, withMoveInWithinYear, withNotBothRegulated } from "./temp-two-house-counterfactual";
+import { withDisposalDelayByThatMethod } from "./temp-two-house-counterfactual";
 import type { OneHouseCoreVerdict, OneHouseJudgeInput, OneHouseJudgment } from "./types";
 
 /** 거주 요건을 채운 반사실 판정에 넣는 거주 개월 — 어떤 거주요건(2년·신도시 2년)도 넘는 값이다. */
@@ -151,5 +152,8 @@ export function buildEraNoticeRelevance(ctx: {
       counterfactualVerdictDiffers(input, core, article89Excluded, withNotBothRegulated),
     moveInDecides: () =>
       counterfactualVerdictDiffers(input, core, article89Excluded, withMoveInWithinYear),
+    // §155⑱ 「그 방법으로 양도」 미확인(S15-14) — 방법을 확인했다고 읽은 반사실 판정이 결론을 바꿀 때만(리뷰 J-6).
+    disposalMethodDecides: () =>
+      counterfactualVerdictDiffers(input, core, article89Excluded, withDisposalDelayByThatMethod),
   };
 }

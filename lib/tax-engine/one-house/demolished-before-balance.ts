@@ -13,7 +13,7 @@
  * |---|---|
  * | 입력 없음 / 입주권 양도 | 변화 없음 |
  * | 계약일 < 2022-12-20 | 변화 없음(종전 기본통칙 89-154-12 — 매매계약일 기준) |
- * | 계약일 ≥ 2022-12-20 + 주택으로 보면 과세 | 변화 없음(어차피 과세 — 고지도 없다) |
+ * | 계약일 ≥ 2022-12-20 + 주택으로 보면 과세 | 결론 불변(고지 없음) — 기한형 안내(`pending`)가 있으면 비우고 사유만 밝힌다(리뷰 J-5) |
  * | 계약일 ≥ 2022-12-20 + 주택으로 보면 비과세·부분과세 | 과세로 거두고 + 확인 필요 고지 |
  *
  * 범위: 판정 메뉴만. 계산기는 이 입력을 보내지 않고, 판정 결과를 넘길 때 ⑧ 경고가 「단순토지로 입력」을 안내한다.
@@ -26,6 +26,7 @@ import {
   isBalanceDateStatusContract,
 } from "../data/demolished-before-balance-era";
 import { revokeOneHouseExemption } from "./revoke-exemption";
+import { deriveLegalBasis } from "./legal-basis";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { OneHouseJudgment } from "./types";
 
@@ -39,21 +40,24 @@ export function applyDemolishedBeforeBalanceVerdict(
   if (!d || isRightSale || input.propertyType !== "housing") return judgment;
   if (!isBalanceDateStatusContract(d.contractDate)) return judgment;
   // 주택으로 봤을 때 비과세·부분과세가 나오는 경우에만 — 다른 사유로 이미 과세인 주택에는 붙이지 않는다.
-  if (!judgment.isExempt && !judgment.isPartialExempt) return judgment;
+  if (!judgment.isExempt && !judgment.isPartialExempt) {
+    /*
+     * 다만 본체의 기한형 안내(「이 날까지 양도하면 비과세」 — `pending`)는 주택 양도를 전제한 약속이라 나대지 양도에는 성립하지 않는다
+     * (2026-11-12 리뷰 J-5). 비우고 이유를 밝힌다 — 비거주자 경로(`non-resident.ts`)와 같은 규칙이다. 예외 결정례 고지는 내지 않는다
+     * (주택 양도로 봐도 과세라 결론을 가르지 않는다 · #32).
+     */
+    if (judgment.pending.length === 0) return judgment;
+    return {
+      ...judgment,
+      pending: [],
+      legalBasis: deriveLegalBasis(judgment.appliedExceptions, []),
+      unmetExceptions: [...judgment.unmetExceptions, demolishedUnmet()],
+    };
+  }
   const base = revokeOneHouseExemption(judgment);
   return {
     ...base,
-    unmetExceptions: [
-      ...base.unmetExceptions,
-      {
-        id: DEMOLISHED_BEFORE_BALANCE_UNMET_ID,
-        label: "잔금청산 전 매매특약 멸실 — 주택 양도로 보지 않음",
-        legalBasis: `${TRANSFER.ONE_HOUSE_REQUIREMENT}①`,
-        reasons: [
-          `매매계약을 2022.12.20. 이후 체결하고 그 매매특약에 따라 잔금청산 전에 주택을 멸실했으므로, 양도물건은 양도일(잔금청산일) 현황으로 판정합니다 — 잔금청산일 현재 주택이 아닌 나대지를 양도한 것이라 1세대1주택 비과세(§89①3호)를 적용하지 않습니다(${TRANSFER.ONE_HOUSE_REQUIREMENT}① 「양도일 현재」 · ${TRANSFER.ACQUISITION_TRANSFER_TIMING} · 기획재정부 재산세제과-1543, 2022.12.20. — 회신일 이후 매매계약을 체결하는 경우부터 적용).`,
-        ],
-      },
-    ],
+    unmetExceptions: [...base.unmetExceptions, demolishedUnmet()],
     undetermined: [
       ...base.undetermined,
       {
@@ -64,6 +68,18 @@ export function applyDemolishedBeforeBalanceVerdict(
           "조세심판원 조심2024중1920(2024.6.11.: 중도금까지 대금의 92.7%를 받은 뒤 멸실해 주택 양도로 봄), " +
           "조심2025서3871(2026.3.11.: 계약금 20%만 받은 상태에서 멸실하고 재작성한 계약서의 목적물이 토지여서 과세).",
       },
+    ],
+  };
+}
+
+/** 잔금청산 전 매매특약 멸실 — 주택 양도로 보지 않는 사유(과세로 거둘 때 · 기한 안내를 비울 때 같은 문장). */
+function demolishedUnmet(): OneHouseJudgment["unmetExceptions"][number] {
+  return {
+    id: DEMOLISHED_BEFORE_BALANCE_UNMET_ID,
+    label: "잔금청산 전 매매특약 멸실 — 주택 양도로 보지 않음",
+    legalBasis: `${TRANSFER.ONE_HOUSE_REQUIREMENT}①`,
+    reasons: [
+      `매매계약을 2022.12.20. 이후 체결하고 그 매매특약에 따라 잔금청산 전에 주택을 멸실했으므로, 양도물건은 양도일(잔금청산일) 현황으로 판정합니다 — 잔금청산일 현재 주택이 아닌 나대지를 양도한 것이라 1세대1주택 비과세(§89①3호)를 적용하지 않습니다(${TRANSFER.ONE_HOUSE_REQUIREMENT}① 「양도일 현재」 · ${TRANSFER.ACQUISITION_TRANSFER_TIMING} · 기획재정부 재산세제과-1543, 2022.12.20. — 회신일 이후 매매계약을 체결하는 경우부터 적용).`,
     ],
   };
 }

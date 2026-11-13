@@ -51,6 +51,8 @@ import {
   type OneHouseResidenceBasis,
 } from "../transfer-tax-exemption-requirements";
 import { twoHouseSpecialCountHolds } from "../transfer-tax-exemption-holding";
+import { meetsTemporaryTwoHouseHoldingOnDeadline } from "./pending";
+import { baseRequirementPhrase } from "./base-requirement-phrase";
 import {
   formatHighValueThresholdLabel,
   resolveHighValueHouseThreshold,
@@ -264,7 +266,14 @@ function temporaryTwoHouseItems(
     deadlineNotes.push(
       judgmentBaseDate && !isDeadlineStillReachable(timing.deadline, judgmentBaseDate)
         ? `처분기한이 판정 기준일(${fmt(judgmentBaseDate)}) 전에 지나 양도일을 조정해도 충족할 수 없습니다.`
-        : reachableDeadlineNote(timing.deadline),
+        : // 양도일 현재는 §154① 보유·거주를 채우지만 기한 말일에는 못 채우면 「이 날까지 양도하면」은 이룰 수 없는 약속이다(리뷰 J-4 —
+          //   `pending`의 `155-1-disposal-deadline`과 같은 술어 · ⑦3호·⑧ 축의 `deadlineHoldingUnmetReason`과 같은 문장 구조).
+          //   양도일 현재도 못 채웠으면 보유·거주 행이 이미 미충족을 말한다 — 여기서 겹쳐 말하지 않는다.
+          meetsTemporaryTwoHouseHoldingOnDeadline(input, rule, provisoRelaxesHolding, input.transferDate) &&
+          !meetsTemporaryTwoHouseHoldingOnDeadline(input, rule, provisoRelaxesHolding, timing.deadline)
+          ? `처분기한(${fmt(timing.deadline)})에 양도했더라도 그 날에는 종전주택이 ${baseRequirementPhrase(timing.deadline, rule)} ` +
+            "요건을 충족하지 못해, 기한 안에 양도하는 것으로는 이 특례가 성립하지 않습니다."
+          : reachableDeadlineNote(timing.deadline),
     );
   }
   if (timing.deadlineNote) deadlineNotes.push(timing.deadlineNote);
