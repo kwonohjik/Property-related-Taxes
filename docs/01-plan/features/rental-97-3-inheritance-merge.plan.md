@@ -199,7 +199,7 @@
 - [x] §4 anchor 전부 통과, 라우터 매핑 뮤테이션 실패 확인
 - [x] 14지점 — ④⑫⑭·라우터·⑧ 안분 개시일·⑫ 변경신고 refine을 각각 지우는 뮤테이션이 라우트 anchor에서 실패한다
 - [x] `npx tsc --noEmit` 0
-- [ ] 브라우저 확인(토글 노출 조건, request body `inheritance973`, 결과 카드 구간 행) — 미수행
+- [x] 브라우저 확인 — Playwright `e2e/transfer-rental-97-3-inheritance.spec.ts` 2/2(화면에서 토글 켜기·피상속인 날짜 입력 → 미리보기 10년 · request body `inheritance973` · 결과 70%·구간 행 / 매매 자산 토글 없음, 2026-11-13)
 
 ## 11. 구현 중 바뀐 점 (2026-11-13)
 - **⑧ 안분 검사 정합(계획서에 없던 지점)**: ⑧ `rentalProrationIssue`는 상속인 의제 개시일 > 취득일이면 「안분 필요」로 보고 취득·양도 기준시가를 요구한다. 합산하면 엔진은 안분 개시일을 피상속인 의제 개시일(< 상속개시일)로 보아 계속 임대이면 비율 1이고 기준시가가 필요 없다. 그대로 두면 ⑧이 엔진에 필요 없는 칸을 요구한다. 그래서 단일 소스 `rental973MergedDecedentStart`(`lib/calc/rental-97-3-inheritance.ts`)로 ⑧·⑤가 엔진과 같은 개시일을 쓰게 했다. 라우트 anchor 「⑧ 안분」이 지킨다.
