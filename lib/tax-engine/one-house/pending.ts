@@ -99,6 +99,23 @@ export function meetsTemporaryTwoHousePrevHolding(
 }
 
 /**
+ * §155① 처분기한 **말일에 양도했다면** 종전주택이 §154① 보유·거주를 채우는가 — 위 두 술어(E-3와 같은 게이트)를 양도일만 바꿔 부른다.
+ * ⑦3호·⑧ 축의 `meetsHoldingResidenceOnDeadline`(S07-4)과 같은 확인이다 — 기한 안내(`pending`)와 안내하지 않는 사유(`unmet-exceptions.ts`)가 같이 쓴다.
+ * (2026-11-12 리뷰 J-4 — 2012-06-29 전 양도분의 보유 3년·⑯ 1년 면제 + 조정 단축 기한에서 기한 말일에는 보유를 못 채웠다.)
+ */
+export function meetsTemporaryTwoHouseHoldingOnDeadline(
+  input: OneHouseJudgeInput,
+  rule: OneHouseRule,
+  provisoRelaxesHolding: boolean,
+  deadlineEnd: Date,
+): boolean {
+  return (
+    meetsTemporaryTwoHousePrevHolding({ ...input, transferDate: deadlineEnd }, rule, provisoRelaxesHolding) &&
+    meetsHoldingResidenceOnDeadline(input, rule, deadlineEnd)
+  );
+}
+
+/**
  * §154① **보유요건만** 미충족인가 — 거주요건은 충족한 상태인가.
  *
  * 🔑 `meetsHolding`을 다시 구현하지 않는다. `meetsOneHouseHoldingResidence`가
@@ -218,7 +235,10 @@ export function collectPendingConditions(
       //   `origin.blocked`는 `timing.overall`만 거짓으로 바꾸고 `oneYearMet`·`threeYearMet`은 그대로 둔다(2026-11-12 리뷰 J-1).
       !origin.blocked &&
       meetsTemporaryTwoHousePrevHolding(input, rule, provisoRelaxesHolding) &&
-      meetsOneHouseHoldingResidence(input, rule)
+      meetsOneHouseHoldingResidence(input, rule) &&
+      // 기한 말일에 양도했더라도 §154① 보유·거주를 채워야 이룰 수 있는 약속이다 — ⑦3호·⑧ 축과 같은 확인(S07-4 · 리뷰 J-4).
+      //   사유는 `unmet-exceptions.ts`(`collectTemporaryTwoHouseUnmet`)가 말한다.
+      meetsTemporaryTwoHouseHoldingOnDeadline(input, rule, provisoRelaxesHolding, timing.deadline)
     ) {
       pending.push({
         id: "155-1-disposal-deadline",
