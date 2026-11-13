@@ -10,6 +10,7 @@
  * 매매계약일은 ⑧·라우터와 같이 자산-수준 `assetContractDate`로 대신할 수 있다.
  */
 import { z } from "zod";
+import { autoCancelDeemed973Issue } from "@/lib/tax-engine/transfer-reductions/rental-97-3-auto-cancel";
 import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { new994CapitalRegionConflict } from "@/lib/tax-engine/transfer-reductions/new-99-4-size";
@@ -132,6 +133,16 @@ export function refineReductionRequiredInputs(
       issue("inheritance973", "§97의3 피상속인 임대기간 합산(조특령 §97의3④ → §97⑤3호)은 상속받은 주택(acquisitionCause = inheritance)에만 적용됩니다.");
     if (r.type === "rental_97_3" && r.inheritance973 && r.shortTermConversion)
       issue("inheritance973", "§97의3 피상속인 임대기간 합산과 단기→장기 변경신고 임대개시 의제(shortTermConversion)는 함께 계산하지 않습니다.");
+    // 구 조특령 §97의3②2호 자동말소 8년 간주 — ⑧과 같은 leaf(말소일 = rentalEndDate · 장기 등록일 = 변경신고 수리일 우선)
+    if (r.type === "rental_97_3" && r.autoCancelled973) {
+      const conv = r.shortTermConversion as { acceptedDate?: string } | undefined;
+      const msg = autoCancelDeemed973Issue({
+        rentalContinuesToTransfer: r.rentalContinuesToTransfer as boolean | undefined,
+        cancelledDate: r.rentalEndDate as string | undefined,
+        longRegistrationDate: conv?.acceptedDate ?? (r.registrationDate as string | undefined),
+      });
+      if (msg) issue(msg.field, msg.message);
+    }
 
     if (r.type === "new_99_3") {
       // 라우터 기본값이 from_builder다(`income-deduction-router.ts`) — 미지정도 1호로 본다.

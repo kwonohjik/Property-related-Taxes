@@ -185,6 +185,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
         decedentRentalStartDate: z.string().date(),
       })
       .optional(),
+    /** 구 조특령 §97의3②2호 — 자동말소(민특법 §6⑤) 8년 간주. ⑫에 없으면 침묵 stripping된다. 조건 위반은 `refineReductionRequiredInputs` 400 */
+    autoCancelled973: z.boolean().optional(),
   }),
   z.object({
     type: z.literal("rental_97_4"),

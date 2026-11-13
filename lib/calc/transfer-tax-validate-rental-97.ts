@@ -6,6 +6,7 @@
  */
 
 import { parseAmount } from "@/lib/calc/number-parse";
+import { autoCancelDeemed973Issue } from "@/lib/tax-engine/transfer-reductions/rental-97-3-auto-cancel";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -128,6 +129,13 @@ export function rental97SeriesIssue(args: {
     const conversionIssue = r.type === "rental_97_3" ? rentalConversionIssue(r, label) : null;
     if (conversionIssue) return fail(conversionIssue);
     const longReg = r.type === "rental_97_3" ? rental973LongRegistrationDate(r) : "";
+    // 구 조특령 §97의3②2호 자동말소 8년 간주 — 토글은 「양도 전에 임대 종료 또는 등록 말소」에서만 보이고 ④도 그때만 싣는다.
+    // ⑫ `refineReductionRequiredInputs`와 같은 leaf(`autoCancelDeemed973Issue`).
+    if (r.type === "rental_97_3" && r.autoCancelled973 && r.rentalContinuesToTransfer === false) {
+      const ac = autoCancelDeemed973Issue({ rentalContinuesToTransfer: false, cancelledDate: r.rentalEndDate, longRegistrationDate: longReg });
+      if (ac?.field === "rentalEndDate") return fail(fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: ${ac.message}`));
+      if (ac) return fail(fieldError("reduction.rental_97_3.autoCancelled973", `${label} 적용: ${ac.message}`));
+    }
     if (
       r.type === "rental_97_3" &&
       longReg > "2020-12-31" &&

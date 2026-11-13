@@ -153,6 +153,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       isInherited973: false, // V-14 — 상속 합산(조특령 §97의3④ → §97⑤3호)
       decedentRegistrationDate973: "",
       decedentRentalStartDate973: "",
+      autoCancelled973: false, // 구 조특령 §97의3②2호 — 자동말소 8년 간주
     };
   }
   if (id === "rental_97_4") {

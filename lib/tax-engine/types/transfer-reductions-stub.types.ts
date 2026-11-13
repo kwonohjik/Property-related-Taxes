@@ -105,6 +105,8 @@ export type TransferReductionStub =
       shortTermConversion?: { reportedDate: Date; acceptedDate: Date };
       /** 조특령 §97의3④ → §97⑤3호 — 상속받은 임대주택의 피상속인 임대기간 (엔진 `Rental97EvaluationInput.inheritance973` · V-14) */
       inheritance973?: { inheritanceDate: Date; decedentRegistrationDate: Date; decedentRentalStartDate: Date };
+      /** 구 조특령 §97의3②2호 — 민특법 §6⑤ 자동말소(종전 장기일반 아파트 매입임대) · 말소일 = rentalEndDate (엔진 `autoCancelled973`) */
+      autoCancelled973?: boolean;
       /** §97의3①1호 — 양도 전 임대 종료 시 실제 임대기간의 마지막 날 */
       rentalEndDate?: Date;
       /** 조특령 §97의3④ — 세무서 사업자등록일 (isTaxRegistered면 필수) */

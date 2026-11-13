@@ -107,6 +107,8 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         taxRegistrationDate: r.taxRegistrationDate,
         // V-14 — 조특령 §97의3④ → §97⑤3호 피상속인 임대기간 합산. ⚠️ 명시 매핑 — 적지 않으면 조용히 사라진다.
         inheritance973: r.inheritance973,
+        // 구 조특령 §97의3②2호 — 자동말소 8년 간주(말소일 = rentalEndDate). ⚠️ 명시 매핑 — 적지 않으면 조용히 사라진다.
+        autoCancelled973: r.autoCancelled973,
       };
     case "rental_97_4":
       // D2-04 — 종전에는 region만 넘겨 기준시가 한도를 판정할 입력이 없었다.

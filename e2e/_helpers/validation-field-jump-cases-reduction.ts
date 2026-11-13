@@ -249,6 +249,9 @@ const RENTAL_97_3 = table("rental_97_3", hybrid("rental_97_3"), r973Ok, {}, [
   { name: "임대 계속 여부", prop: "rentalContinuesToTransfer", message: /^§97의3 적용: 임대가 양도일까지 계속되었는지/, patch: { rentalContinuesToTransfer: null } },
   { name: "임대 종료일 기준시가", prop: "stdPriceAtRentalEnd", message: /^§97의3 적용: 임대 종료일 당시 기준시가/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "" } },
   { name: "임대 종료일", prop: "rentalEndDate", message: /^§97의3 적용: 양도 전에 임대를 종료했으면 임대 종료일/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "200000000", rentalEndDate: "" } },
+  // 구 조특령 §97의3②2호 자동말소 8년 간주 — 말소일 2020.8.18. 전(부칙 제31086호 §2) · 종전 민특법 등록이 아님
+  { name: "자동말소 말소일 2020.8.18. 전", prop: "rentalEndDate", message: /^§97의3 적용: 자동말소 8년 간주\(구 조특령 §97의3②2호\)는 2020\.8\.18\. 이후 말소분부터/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "200000000", rentalEndDate: "2020-08-17", autoCancelled973: true } },
+  { name: "자동말소 장기 등록 2020.8.18. 이후", prop: "autoCancelled973", message: /^§97의3 적용: 자동말소 8년 간주\(구 조특령 §97의3②2호\)는 종전 민간임대주택법/, patch: { registrationDate: "2020-09-01", rentalStartDate: "2020-09-01", taxRegistrationDate: "2020-09-01", rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "200000000", rentalEndDate: "2023-06-01", autoCancelled973: true } },
   { name: "세무서 사업자등록일", prop: "taxRegistrationDate", message: /^§97의3 적용: 세무서 사업자등록일을 입력/, patch: { taxRegistrationDate: "" } },
   { name: "안분 취득 당시 기준시가", prop: "stdPriceAtAcquisition", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtAcquisition: "" } },
   { name: "안분 양도 당시 기준시가", prop: "stdPriceAtTransfer", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtTransfer: "" } },

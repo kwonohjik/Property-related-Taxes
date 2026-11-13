@@ -153,6 +153,12 @@ export const TRANSFER_RENTAL_HOUSING = {
 export const RENTAL_97_3_PERIOD = {
   PERIOD_CALC: "조특령 §97의3④",
   INHERITANCE_MERGE: "조특령 §97⑤3호",
+  /**
+   * 구 조특령 §97의3②2호(대통령령 제31086호 신설 · 제33264호 2023.2.28. 삭제) — 종전 장기일반 아파트 매입임대가
+   * 민특법 §6⑤로 자동말소되면 8년 등록·임대 간주. 2020.12.31. 이전 등록분은 2023.2.28. 이후 양도에도 적용
+   * (기준-2024-법규재산-0079) · `transfer-reductions/rental-97-3-auto-cancel.ts`
+   */
+  AUTO_CANCEL_DEEMED: "조특령 §97의3②2호(대통령령 제33264호로 개정되기 전의 것)",
 } as const;
 
 /**

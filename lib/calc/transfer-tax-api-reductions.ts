@@ -319,6 +319,8 @@ export function toEngineReductions(
             const inheritance973 = rental973InheritancePayload(r, ownerAsset);
             return inheritance973 ? { inheritance973 } : {};
           })(),
+          // 구 조특령 §97의3②2호 — 자동말소 8년 간주. 종료(말소) 선택 시에만 — 「양도일까지 유지」면 남은 토글을 싣지 않는다.
+          ...(r.rentalContinuesToTransfer === false && r.autoCancelled973 ? { autoCancelled973: true } : {}),
         };
       }
       if (r.type === "rental_97_4") {
