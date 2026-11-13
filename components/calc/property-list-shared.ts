@@ -22,12 +22,15 @@ export type Section8Para4Type =
 
 export const EXCLUSION_TYPE_OPTIONS: [string, string][] = [
   ["none", "합산배제 미신청"],
-  ["private_purchase_rental_long", "민간매입임대 장기일반 (시행령 §3①2호)"],
-  ["private_purchase_rental_short", "민간매입임대 단기 구법"],
+  // 키는 ExclusionType·Zod exclusionTypeSchema와 같아야 한다(없는 키는 계산 400). 조문 번호는 종부령 §3① 현행 호.
+  ["private_purchase_rental_long", "민간매입임대 장기일반 (시행령 §3①8호)"],
+  ["private_purchase_rental_short", "민간매입임대 단기 구법 (시행령 §3①2호)"],
   ["private_construction_rental", "민간건설임대 (시행령 §3①1호)"],
-  ["public_support_rental", "공공지원민간임대 (시행령 §3①3호)"],
-  ["public_construction_rental", "공공건설임대 (시행령 §3①4호)"],
-  ["public_purchase_rental", "공공매입임대 (시행령 §3①5호)"],
+  ["public_support_construction_rental", "공공지원민간임대 건설 (시행령 §3①7호)"],
+  ["public_support_purchase_rental", "공공지원민간임대 매입 (시행령 §3①8호)"],
+  ["public_construction_rental", "공공건설임대 (시행령 §3①1호)"],
+  ["public_purchase_rental", "공공매입임대 (시행령 §3①2호)"],
+  ["existing_rental", "기존임대주택 2005.1.5. 이전 임대 (시행령 §3①3호)"],
   ["private_short_term_rental_6y_construction", "민간건설 단기민간임대 6년 (시행령 §3①10호)"],
   ["private_short_term_rental_6y_purchase", "민간매입 단기민간임대 6년 (시행령 §3①11호)"],
   ["unsold_purchase_rental", "미분양매입임대 (시행령 §3①6호)"],
