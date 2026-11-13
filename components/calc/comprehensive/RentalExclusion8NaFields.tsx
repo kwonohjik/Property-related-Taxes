@@ -14,6 +14,7 @@ import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
 import { na8Asks } from "@/lib/calc/comprehensive-rental-8na";
 import { na8Context } from "@/lib/calc/comprehensive-rental-8na";
+import { isShortTerm6y } from "@/lib/calc/comprehensive-rental-8na";
 import { resolveRegulated8Na } from "@/lib/calc/comprehensive-rental-8na";
 
 type Tri = "yes" | "no";
@@ -101,9 +102,16 @@ export function RentalExclusion8NaFields({
   const manual = property.regulated8NaMode === "manual";
 
   if (!Object.values(asks).some(Boolean)) return null;
+  const short = isShortTerm6y(registrationType);
+  // 10호(건설)는 나목이 없다 — 2025 특례(아파트) 칸만 열린다
+  const title = !short
+    ? "장기일반·공공지원 임대주택 제외 요건 (시행령 §3①7호 단서·8호 나목)"
+    : registrationType === "private_short_term_6y_construction"
+      ? "단기민간임대주택 2025년도 특례 요건 (부칙<제35352호> 제3조)"
+      : "단기민간임대주택 제외 요건 (시행령 §3①11호 나목·부칙<제35352호> 제3조)";
 
   return (
-    <ToneCard tone="slate" title="장기일반·공공지원 임대주택 제외 요건 (시행령 §3①7호 단서·8호 나목)" bodyClassName="space-y-3">
+    <ToneCard tone="slate" title={title} bodyClassName="space-y-3">
       {asks.acquisitionDate && (
         <>
           <DateField
@@ -111,7 +119,11 @@ export function RentalExclusion8NaFields({
             testId="comprehensive-8na-acquisition-date"
             value={property.rentalAcquisitionDate}
             onChange={(v) => onUpdate({ rentalAcquisitionDate: v })}
-            hint="2018.9.13. 이전 취득분은 종전 규정(제외 요건 없음)입니다."
+            hint={
+              short
+                ? "2018.9.13. 이전 취득분은 이미 공고된 조정대상지역 기준일 전이라 해당 없습니다."
+                : "2018.9.13. 이전 취득분은 종전 규정(제외 요건 없음)입니다."
+            }
           />
           <DateField
             label="매매계약·계약금 지급일"

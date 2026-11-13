@@ -120,12 +120,12 @@ function RentalExclusionDetail({
         </select>
         {property.rentalRegistrationType === "private_short_term_6y_construction" && (
           <p className="text-xs text-muted-foreground">
-            단기민간임대(건설, §3①10호): 공시가격 6억원 이하 · 전용 149㎡ 이하 · 6년 이상 임대 · 임대료 5% 초과 금지 · 2호 이상
+            단기민간임대(건설, §3①10호): 공시가격 6억원 이하 · 전용 149㎡ 이하 · 6년 이상 임대 · 임대료 5% 초과 금지 · 2호 이상 · 2024년 이전 과세연도 적용 안 됨
           </p>
         )}
         {property.rentalRegistrationType === "private_short_term_6y_purchase" && (
           <p className="text-xs text-muted-foreground">
-            단기민간임대(매입, §3①11호): 공시가격 {property.location === "non_metro" ? "비수도권 2억원" : "수도권 4억원"} 이하 · 6년 이상 임대 · 임대료 5% 금지 · ⚠ 아파트 제외 · 조정대상지역 신규취득 제외(자동판정 안 됨 — 직접 확인)
+            단기민간임대(매입, §3①11호): 공시가격 {property.location === "non_metro" ? "비수도권 2억원" : "수도권 4억원"} 이하 · 6년 이상 임대 · 임대료 5% 금지 · ⚠ 아파트 제외 · 조정대상지역 신규취득·법인 신청분 제외(아래 칸으로 판정) · 2024년 이전 과세연도 적용 안 됨
           </p>
         )}
         {property.rentalRegistrationType === "existing_rental" && (
